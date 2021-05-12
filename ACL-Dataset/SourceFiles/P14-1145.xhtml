@@ -1,0 +1,1253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>ConnotationWordNet: Learning Connotation over the Word+Sense Network</title>
+<!--Generated on Wed Jun 11 19:06:14 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">ConnotationWordNet: 
+<br class="ltx_break"/>Learning Connotation over the Word+Sense Network</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jun Seok Kang   Song Feng   Leman Akoglu   Yejin Choi
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>Stony Brook University
+<br class="ltx_break"/>Stony Brook, NY 11794-4400
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">junkang, songfeng, leman, ychoi@cs.stonybrook.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We introduce <em class="ltx_emph">ConnotationWordNet</em>, a connotation lexicon over the network of <em class="ltx_emph">words</em> in conjunction with <em class="ltx_emph">senses</em>. We formulate the lexicon induction problem as collective inference over pairwise-Markov Random Fields, and present a loopy belief propagation algorithm for inference.
+The key aspect of our method is that it is the <em class="ltx_emph">first unified</em> approach that assigns the polarity of <em class="ltx_emph">both</em> word- and sense-level connotations, exploiting the innate bipartite graph structure encoded in WordNet.
+We present comprehensive evaluation to demonstrate the quality and utility of the resulting lexicon in comparison to existing connotation and sentiment lexicons.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">We introduce <em class="ltx_emph">ConnotationWordNet</em>, a connotation lexicon over the network of <em class="ltx_emph">words</em> in conjunction with <em class="ltx_emph">senses</em>, as defined in WordNet.
+A connotation lexicon, as introduced first by <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Learning general connotation of words using graph-based algorithms" class="ltx_ref">2011</a>)</cite>, aims to encompass subtle shades of sentiment a word may conjure, even for seemingly objective words such as <em class="ltx_emph">“sculpture”</em>, <em class="ltx_emph">“Ph.D.”</em>, <em class="ltx_emph">“rosettes”</em>. Understanding the rich and complex layers of connotation remains to be a challenging task. As a starting point, we study a more feasible task of learning the <em class="ltx_emph">polarity</em> of connotation.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">For non-polysemous words, which constitute a significant portion of English vocabulary, learning the <em class="ltx_emph">general</em> connotation at the <em class="ltx_emph">word-level</em> (rather than at the <em class="ltx_emph">sense-level</em>) would be a natural operational choice. However, for polysemous words, which correspond to most frequently used words, it would be an overly crude assumption that the same connotative polarity should be assigned for all senses of a given word. For example, consider <em class="ltx_emph">“abound”</em>, for which lexicographers of WordNet prescribe two different senses:</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">(v) <span class="ltx_text ltx_font_bold">abound</span>: (be abundant of plentiful; exist in large quantities)</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">(v) <span class="ltx_text ltx_font_bold">abound, burst, bristle</span>: (be in a state of movement or action) <em class="ltx_emph">“The room abounded with screaming children”</em>; <em class="ltx_emph">“The garden bristled with toddlers”</em></p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">For the first sense, which is the most commonly used sense for <em class="ltx_emph">“abound”</em>, the general overtone of the connotation would seem positive. That is, although one can use this sense in both positive and negative contexts, this sense of <em class="ltx_emph">“abound”</em> seems to collocate more often with items that are good to be abundant (e.g., <em class="ltx_emph">“resources”</em>), than unfortunate items being abundant (e.g., <em class="ltx_emph">“complaints”</em>).</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">However, as for the second sense, for which <em class="ltx_emph">“burst”</em> and <em class="ltx_emph">“bristle”</em> can be used interchangeably with respect to this particular sense,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Hence a <em class="ltx_emph">sense</em> in WordNet is defined by <em class="ltx_emph">synset (= synonym set)</em>, which is the set of words sharing the same sense.</span></span></span> the general overtone is slightly more negative with a touch of unpleasantness, or at least not as positive as that of the first sense. Especially if we look up the WordNet entry for <em class="ltx_emph">“bristle”</em>, there are noticeably more negatively connotative words involved in its gloss and examples.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This word sense issue has been a universal challenge for a range of Natural Language Processing applications, including sentiment analysis. Recent studies have shown that it is fruitful to tease out subjectivity and objectivity corresponding to different senses of the same word, in order to improve computational approaches to sentiment analysis (e.g. <cite class="ltx_cite">Pestian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Sentiment analysis of suicide notes: a shared task" class="ltx_ref">2012</a>)</cite>, <cite class="ltx_cite">Mihalcea<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib17" title="Multilingual subjectivity and sentiment analysis" class="ltx_ref">2012</a>)</cite> <cite class="ltx_cite">Balahur<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="Computational approaches to subjectivity and sentiment analysis: present and envisaged methods and applications" class="ltx_ref">2014</a>)</cite>). Encouraged by these recent successes, in this study, we investigate if we can attain similar gains if we model the connotative polarity of senses separately.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">There is one potential practical issue we would like to point out in building a sense-level lexical resource, however. End-users of such a lexicon may not wish to deal with Word Sense Disambiguation (WSD), which is known to be often too noisy to be incorporated into the pipeline with respect to other NLP tasks. As a result, researchers often would need to aggregate labels across different senses to derive the word-level label. Although such aggregation is not entirely unreasonable, it does not seem to be the most optimal and principled way of integrating available resources.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Therefore, in this work, we present the first unified approach that learns <em class="ltx_emph">both</em> sense- and word-level connotations simultaneously. This way, end-users will have access to more accurate sense-level connotation labels if needed, while also having access to more general word-level connotation labels.
+We formulate the lexicon induction problem as collective inference over pairwise-Markov Random Fields (pairwise-MRF) and derive a loopy belief propagation algorithm for inference.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">The key aspect of our approach is that we exploit the innate bipartite graph structure between words and senses encoded in WordNet. Although our approach seems conceptually natural, previous approaches, to our best knowledge, have not directly exploited these relations between words and senses for the purpose of deriving lexical knowledge over words and senses collectively. In addition, previous studies
+(for both sentiment and connotation lexicons) aimed to produce only either of the two aspects of the polarity: word-level or sense-level, while we address both.</p>
+</div>
+<div id="S1.p10" class="ltx_para">
+<p class="ltx_p">Another contribution of our work is the introduction of loopy belief propagation (loopy-BP) as a lexicon induction algorithm. Loopy-BP in our study achieves statistically significantly better performance over the constraint optimization approaches previously explored. In addition, it runs much faster and it is considerably easier to implement.
+Last but not least, by using probabilistic representation of pairwise-MRF in conjunction with Loopy-BP as inference, the resulting solution has the natural interpretation as the intensity of connotation. This contrasts to approaches that seek discrete solutions such as Integer Linear Programming<cite class="ltx_cite">[<a href="#bib.bib2" title="Combinatorial optimization: algorithms and complexity" class="ltx_ref">21</a>]</cite>.</p>
+</div>
+<div id="S1.p11" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">ConnotationWordNet</em>, the final outcome of our study, is a new lexical resource that has connotation labels over both words and senses following the structure of WordNet. The lexicon is publicly available at: <a href="http://www.cs.sunysb.edu/~junkang/connotation_wordnet" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.sunysb.edu/~junkang/connotation_wordnet</span></a>.)</p>
+</div>
+<div id="S1.p12" class="ltx_para">
+<p class="ltx_p">In what follows, we will first describe the network of words and senses (Section <a href="#S2" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), then introduce the representation of the network structure as pairwise Markov Random Fields, and a loopy belief propagation algorithm as collective inference (Section <a href="#S3" title="3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). We then present comprehensive evaluation (Section <a href="#S4" title="4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> &amp; <a href="#S5" title="5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> &amp; <a href="#S6" title="6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>), followed by related work (Section <a href="#S7" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>) and conclusion (Section <a href="#S8" title="8 Conclusion ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>).</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Network of Words and Senses</h2>
+
+<div id="S2.F1" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><img src="P14-1145/image001.png" id="S2.F1.g1" class="ltx_graphics" width="676" height="574" alt=""/></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> with words and senses.
+</div>
+</div>
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The connotation graph, called <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, is a heterogeneous graph with multiple types of nodes and edges. As shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, it contains two types of nodes; (i) lemmas (i.e., words, 115K) and (ii) synsets (63K), and four types of edges; (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math>) predicate-argument (179K), (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math>) argument-argument (144K), (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="t_{3}" display="inline"><msub><mi>t</mi><mn>3</mn></msub></math>) argument-synset (126K), and (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="t_{4}" display="inline"><msub><mi>t</mi><mn>4</mn></msub></math>) synset-synset (3.4K) edges.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The predicate-argument edges, first introduced by <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Learning general connotation of words using graph-based algorithms" class="ltx_ref">2011</a>)</cite>, depict the selectional preference of connotative predicates (i.e., the polarity of a predicate indicates the polarity of its arguments)
+and encode their co-occurrence relations based on the Google Web 1T corpus.
+The argument-argument edges are based on the distributional similarities among the arguments.
+The argument-synset edges capture the synonymy between argument nodes through the corresponding synsets.
+Finally, the synset-synset edges depict the antonym relations between synset pairs.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">In general, our graph construction is similar to that of <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">2013</a>)</cite>, but there are a few important differences. Most notably, we model both words and synsets explicitly, and exploit the membership relations between words and senses. We expect that edges between words and senses will encourage <em class="ltx_emph">senses that belong to the same word</em> to receive the same connotation label. Conversely, we expect that these edges will also encourage <em class="ltx_emph">words that belong to the same sense</em> (i.e., synset definition) to receive the same connotation label.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Another benefit of our approach is that for various WordNet relations (e.g., antonym relations), which are defined over synsets (not over words), we can add edges directly between corresponding synsets, rather than projecting (i.e., approximating) those relations over words. Note that the latter, which has been employed by several previous studies (e.g., <cite class="ltx_cite">Kamps<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib15" title="Using wordnet to measure semantic orientations of adjectives" class="ltx_ref">2004</a>)</cite>, <cite class="ltx_cite">Takamura<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Extracting semantic orientations of words using spin model" class="ltx_ref">2005</a>)</cite>, <cite class="ltx_cite">Andreevskaia and Bergler (<a href="#bib.bib4" title="Mining wordnet for a fuzzy sentiment: sentiment tag extraction from wordnet glosses." class="ltx_ref">2006</a>)</cite>, <cite class="ltx_cite">Su and Markert (<a href="#bib.bib5" title="Subjectivity recognition on word senses via semi-supervised mincuts" class="ltx_ref">2009</a>)</cite>, <cite class="ltx_cite">Lu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Automatic construction of a context-aware sentiment lexicon: an optimization approach" class="ltx_ref">2011</a>)</cite>, <cite class="ltx_cite">Kaji and Kitsuregawa (<a href="#bib.bib21" title="Building lexicon for sentiment analysis from massive collection of html documents." class="ltx_ref">2007</a>)</cite>, <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">2013</a>)</cite>), could be a source of noise, as one needs to assume that the semantic relation between a pair of synsets transfers over the pair of words corresponding to that pair of synsets. For polysemous words, this assumption may be overly strong.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Pairwise Markov Random Fields and Loopy Belief Propagation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We formulate the task of learning sense- and word-level connotation lexicon as a graph-based classification task <cite class="ltx_cite">[<a href="#bib.bib38" title="Collective classification in network data." class="ltx_ref">26</a>]</cite>.
+More formally, we denote the connotation graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math>,
+in which a total of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> word and synset nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="V=\{v_{1},\ldots,v_{n}\}" display="inline"><mrow><mi>V</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>v</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>v</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math>
+are connected with typed edges
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="e(v_{i},v_{j},t)\in E" display="inline"><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><msub><mi>v</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></math>, where edge types <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="t\in\{pred" display="inline"><mrow><mi>t</mi><mo>∈</mo><mrow><mo>{</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>d</mi></mrow></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m7" class="ltx_Math" alttext="arg,arg" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow><mo>,</mo><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m8" class="ltx_Math" alttext="arg,syn" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m9" class="ltx_Math" alttext="arg,syn" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m10" class="ltx_Math" alttext="syn\}" display="inline"><mrow><mi>s</mi><mi>y</mi><mi>n</mi><mo>}</mo></mrow></math> depict the four edge types as described in Section <a href="#S2" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+A neighborhood function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m11" class="ltx_Math" alttext="\mathcal{N}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒩</mi></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m12" class="ltx_Math" alttext="\mathcal{N}_{v}=\{u|\;e(u,v)\in E\}\subseteq V" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒩</mi><mi>v</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mi>u</mi><mo separator="true">| </mo><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></mrow><mo>}</mo></mrow><mo>⊆</mo><mi>V</mi></mrow></math>, describes the underlying network structure.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In our collective classification formulation, each node in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is represented as a random variable that takes a value from an appropriate class label domain; in our case,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="\mathcal{L}=\{+,-\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>=</mo><mrow><mo>{</mo><mo>+</mo><mo>,</mo><mo>-</mo><mo>}</mo></mrow></mrow></math> for positive and negative connotation.
+In this classification task, we denote by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="\mathcal{Y}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒴</mi></math> the nodes the labels of which need to be assigned, and let
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> refer to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="Y_{i}" display="inline"><msub><mi>Y</mi><mi>i</mi></msub></math>’s label.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Pairwise Markov Random Fields</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We next define our objective function.
+We propose to use an objective formulation that utilizes pairwise Markov Random Fields (MRFs) <cite class="ltx_cite">[<a href="#bib.bib39" title="Markov Random Fields and Their Applications" class="ltx_ref">14</a>]</cite>, which we adapt to our problem setting.
+MRFs are a class of probabilistic graphical models that are suited for solving inference problems in networked data.
+An MRF consists of an undirected graph where each node can be in any of a finite number of states (i.e., class labels).
+The state of a node is assumed to be dependent on each of its neighbors and independent of other nodes in the graph.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>This assumption yields a <span class="ltx_text ltx_font_italic">pairwise</span> Markov Random Field (MRF); a special case of general MRFs <cite class="ltx_cite">[<a href="#bib.bib41" title="Understanding belief propagation and its generalizations" class="ltx_ref">37</a>]</cite>.</span></span></span> In pairwise MRFs, the joint probability of the graph can be written as a product of pairwise factors, parameterized over the edges.
+These factors are referred to as clique potentials in general MRFs, which are essentially functions that collectively determine the graph’s joint probability.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Specifically, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math> denote a network of random variables,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> consists of the unobserved variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mathcal{Y}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒴</mi></math> that need to be assigned values from
+label set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\mathcal{L}" display="inline"><mi class="ltx_font_mathcaligraphic">ℒ</mi></math>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="\Psi" display="inline"><mi mathvariant="normal">Ψ</mi></math> denote a set of clique potentials that consists of two types of factors:</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">For each <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="Y_{i}\in\mathcal{Y}" display="inline"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="\psi_{i}\in\Psi" display="inline"><mrow><msub><mi>ψ</mi><mi>i</mi></msub><mo>∈</mo><mi mathvariant="normal">Ψ</mi></mrow></math> is a <span class="ltx_text ltx_font_italic">prior</span> mapping <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="\psi_{i}:\mathcal{L}\rightarrow\mathbb{R}_{\geq 0}" display="inline"><mrow><msub><mi>ψ</mi><mi>i</mi></msub><mo>:</mo><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>→</mo><msub><mi>ℝ</mi><mrow><mi/><mo>≥</mo><mn>0</mn></mrow></msub></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m4" class="ltx_Math" alttext="\mathbb{R}_{\geq 0}" display="inline"><msub><mi>ℝ</mi><mrow><mi/><mo>≥</mo><mn>0</mn></mrow></msub></math> denotes non-negative real numbers.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">For each <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="e(Y_{i},Y_{j},t)\in E" display="inline"><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>Y</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="\psi_{ij}^{t}\in\Psi" display="inline"><mrow><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup><mo>∈</mo><mi mathvariant="normal">Ψ</mi></mrow></math> is a <span class="ltx_text ltx_font_italic">compatibility</span> mapping <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="\psi_{ij}^{t}:\mathcal{L}\times\mathcal{L}\rightarrow\mathbb{R}_{\geq 0}" display="inline"><mrow><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup><mo>:</mo><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow><mo>→</mo><msub><mi>ℝ</mi><mrow><mi/><mo>≥</mo><mn>0</mn></mrow></msub></mrow></mrow></math>.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Objective formulation</h4>
+
+<div id="S3.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Given an assignment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="\mathbf{y}" display="inline"><mi>𝐲</mi></math> to all the
+unobserved variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathcal{Y}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒴</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m3" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math> to observed ones <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m4" class="ltx_Math" alttext="\mathcal{X}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒳</mi></math> (variables with known labels, if any), our objective function is associated with the following joint probability distribution</p>
+</div>
+<div id="S3.SS1.SSS0.P1.p2" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="P(\mathbf{y}|\mathbf{x})=\frac{1}{Z(\mathbf{x})}\prod\limits_{Y_{i}\in\mathcal%&#10;{Y}}\psi_{i}(y_{i})\prod\limits_{e(Y_{i},Y_{j},t)\in E}\psi_{ij}^{t}(y_{i},y_{%&#10;j})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mfrac><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi></mrow></munder><msub><mi>ψ</mi><mi>i</mi></msub><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>Y</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></munder><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p3.m1" class="ltx_Math" alttext="Z(\mathbf{x})" display="inline"><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math> is the normalization function.
+Our goal is then to infer the maximum likelihood assignment of states (i.e., labels) to unobserved variables (i.e., nodes) that will maximize Equation (<a href="#S3.E1" title="(1) ‣ Objective formulation ‣ 3.1 Pairwise Markov Random Fields ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Problem Definition</h4>
+
+<div id="S3.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Having introduced our graph-based classification task and objective formulation, we define our problem more formally.</p>
+</div>
+<div id="S3.SS1.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Given</span></p>
+<ul id="I3" class="ltx_itemize">
+<li id="I3.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I3.ix1.p1" class="ltx_para">
+<p class="ltx_p">a connotation graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.ix1.p1.m1" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math> of words and synsets connected with <span class="ltx_text ltx_font_italic">typed</span> edges,</p>
+</div></li>
+<li id="I3.ix2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I3.ix2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">prior</span> knowledge (i.e., probabilities) of (some or all) nodes belonging to each class,</p>
+</div></li>
+<li id="I3.ix3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I3.ix3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">compatibility</span> of two nodes with a given pair of labels
+being connected to each other;</p>
+</div></li>
+</ul>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Classify</span> the nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p2.m1" class="ltx_Math" alttext="Y_{i}\in\mathcal{Y}" display="inline"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi></mrow></math>, into one of two classes; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p2.m2" class="ltx_Math" alttext="\mathcal{L}=\{+,-\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>=</mo><mrow><mo>{</mo><mo>+</mo><mo>,</mo><mo>-</mo><mo>}</mo></mrow></mrow></math>,
+such that the class assignments <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p2.m3" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> maximize our objective in Equation (<a href="#S3.E1" title="(1) ‣ Objective formulation ‣ 3.1 Pairwise Markov Random Fields ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S3.SS1.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">We can further <span class="ltx_text ltx_font_italic">rank</span> the network objects by the probability of their connotation polarity.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Loopy Belief Propagation</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Finding the best assignments to unobserved variables in our objective function is the inference problem.
+The brute force approach through enumeration of all possible assignments is exponential and thus intractable.
+In general, exact inference is known to be NP-hard and there is no known algorithm which can be theoretically shown to solve the inference problem for general MRFs.
+Therefore in this work, we employ a computationally tractable (in fact linearly scalable with network size)
+approximate inference algorithm called Loopy Belief Propagation (LBP) <cite class="ltx_cite">[<a href="#bib.bib41" title="Understanding belief propagation and its generalizations" class="ltx_ref">37</a>]</cite>, which we extend to handle typed graphs like our connotation graph.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Our inference algorithm is based on iterative message passing and the core of it can be concisely expressed as the following two equations:</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle m_{i\rightarrow j}" display="inline"><msub><mi>m</mi><mrow><mi>i</mi><mo>→</mo><mi>j</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m2" class="ltx_Math" alttext="\displaystyle(y_{j})=\alpha\sum\limits_{y_{i}\in\mathcal{L}}\bigg(\psi_{ij}^{t%&#10;}(y_{i},y_{j})\text{ }\psi_{i}(y_{i})" display="inline"><mrow><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>α</mi><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></munder></mstyle><mrow><mo mathsize="2.0em" stretchy="false">(</mo><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow><mtext> </mtext><msub><mi>ψ</mi><mi>i</mi></msub><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m2" class="ltx_Math" alttext="\displaystyle\prod\limits_{Y_{k}\in\mathcal{N}_{i}\cap\mathcal{Y}\backslash Y_%&#10;{j}}m_{k\rightarrow i}(y_{i})\bigg),\text{ }\text{ }\forall y_{j}\in\mathcal{L}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><msub><mi>Y</mi><mi>k</mi></msub><mo>∈</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒩</mi><mi>i</mi></msub><mo>∩</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>\</mo><msub><mi>Y</mi><mi>j</mi></msub></mrow></mrow></mrow></munder></mstyle><msub><mi>m</mi><mrow><mi>k</mi><mo>→</mo><mi>i</mi></mrow></msub><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow><mo mathsize="2.0em" stretchy="false">)</mo><mo>,</mo><mrow><mtext> </mtext><mtext> </mtext></mrow><mo>∀</mo><mi>y</mi><msub><mi/><mi>j</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="b_{i}(y_{i})=\beta\text{ }\psi_{i}(y_{i})\prod\limits_{Y_{j}\in\mathcal{N}_{i}%&#10;\cap\mathcal{Y}}m_{j\rightarrow i}(y_{i}),\forall y_{i}\in\mathcal{L}" display="block"><mrow><mrow><mrow><msub><mi>b</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>β</mi><mo>⁢</mo><mtext> </mtext><mo>⁢</mo><msub><mi>ψ</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><msub><mi>Y</mi><mi>j</mi></msub><mo>∈</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒩</mi><mi>i</mi></msub><mo>∩</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi></mrow></mrow></munder><mrow><msub><mi>m</mi><mrow><mi>j</mi><mo>→</mo><mi>i</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>,</mo><mrow><mrow><mo>∀</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">A message <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="m_{i\rightarrow j}" display="inline"><msub><mi>m</mi><mrow><mi>i</mi><mo>→</mo><mi>j</mi></mrow></msub></math> is sent from node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> to node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> and captures the belief of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> about <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>, which is the probability distribution over the labels of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>; i.e. what <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> “thinks” <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>’s label is, given the current label of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and the <span class="ltx_text ltx_font_italic">type</span> of the edge that connects <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m10" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m11" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>. Beliefs refer to marginal probability distributions of nodes over labels; for example
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m12" class="ltx_Math" alttext="b_{i}(y_{i})" display="inline"><mrow><msub><mi>b</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> denotes the <span class="ltx_text ltx_font_italic">belief</span> of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m13" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> having label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m14" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m15" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m16" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> are the normalization constants, which respectively ensure that each message and each set of marginal probabilities sum to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m17" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>.
+At every iteration, each node computes its belief based on messages received from its neighbors, and uses the compatibility mapping to transform its belief into messages for its neighbors. The key idea is that after enough iterations of message passes between the nodes, the “conversations” are likely to come to a consensus, which determines the marginal probabilities of all the unknown variables.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">[!ht]
+<span class="ltx_ERROR undefined">\DontPrintSemicolon</span><span class="ltx_ERROR undefined">\SetAlgorithmName</span>AlgorithmprocedureList of procedures
+<span class="ltx_text ltx_caption ltx_font_smallcaps">Connotation Inference</span> 
+<span class="ltx_ERROR undefined">\SetAlgoNlRelativeSize</span>-5
+<span class="ltx_text ltx_font_bold">Input:</span> Connotation graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m1" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m2" class="ltx_Math" alttext="(V,E)" display="inline"><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></math>, prior potentials <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m3" class="ltx_Math" alttext="\psi_{s}" display="inline"><msub><mi>ψ</mi><mi>s</mi></msub></math> for seed words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m4" class="ltx_Math" alttext="s\in S" display="inline"><mrow><mi>s</mi><mo>∈</mo><mi>S</mi></mrow></math>, and compatibility potentials <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m5" class="ltx_Math" alttext="\psi_{ij}^{t}" display="inline"><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup></math> 
+<span class="ltx_text ltx_font_bold">Output:</span> Connotation label probabilities for each node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m6" class="ltx_Math" alttext="i\in V\backslash P" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mi>V</mi><mo>\</mo><mi>P</mi></mrow></mrow></math>  
+<span class="ltx_ERROR undefined">\ForEach</span>(// <span class="ltx_text ltx_font_italic">initialize msg.s</span>)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m7" class="ltx_Math" alttext="e(Y_{i},Y_{j},t)\in E" display="inline"><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>Y</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></math> 
+<span class="ltx_ERROR undefined">\ForEach</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m8" class="ltx_Math" alttext="y_{j}\in\mathcal{L}" display="inline"><mrow><msub><mi>y</mi><mi>j</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m9" class="ltx_Math" alttext="m_{i\rightarrow j}(y_{j})\leftarrow 1" display="inline"><mrow><mrow><msub><mi>m</mi><mrow><mi>i</mi><mo>→</mo><mi>j</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>←</mo><mn>1</mn></mrow></math>  
+
+
+<span class="ltx_ERROR undefined">\ForEach</span>(// <span class="ltx_text ltx_font_italic">initialize priors</span>)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m10" class="ltx_Math" alttext="i\in V" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>V</mi></mrow></math> 
+<span class="ltx_ERROR undefined">\ForEach</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m11" class="ltx_Math" alttext="y_{j}\in\mathcal{L}" display="inline"><mrow><msub><mi>y</mi><mi>j</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math>
+<span class="ltx_ERROR undefined">\lIf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m12" class="ltx_Math" alttext="i\in S" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>S</mi></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m13" class="ltx_Math" alttext="\phi_{i}(y_{j})\leftarrow\psi_{i}(y_{j})" display="inline"><mrow><mrow><msub><mi>ϕ</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>←</mo><mrow><msub><mi>ψ</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\lElse</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m14" class="ltx_Math" alttext="\phi_{i}(y_{j})\leftarrow 1/|\mathcal{L}|" display="inline"><mrow><mrow><msub><mi>ϕ</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>←</mo><mrow><mn>1</mn><mo>/</mo><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo fence="true">|</mo></mrow></mrow></mrow></math>
+
+
+<span class="ltx_ERROR undefined">\Repeat</span>( // <span class="ltx_text ltx_font_italic">iterative message passing</span>)<span class="ltx_text ltx_font_italic">all messages stop changing</span>
+<span class="ltx_ERROR undefined">\ForEach</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m15" class="ltx_Math" alttext="e(Y_{i},Y_{j},t)\in E" display="inline"><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>Y</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><mi>E</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m16" class="ltx_Math" alttext="Y_{j}\in\mathcal{Y}^{V\backslash S}" display="inline"><mrow><msub><mi>Y</mi><mi>j</mi></msub><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒴</mi><mrow><mi>V</mi><mo>\</mo><mi>S</mi></mrow></msup></mrow></math>
+<span class="ltx_ERROR undefined">\ForEach</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m17" class="ltx_Math" alttext="y_{j}\in\mathcal{L}" display="inline"><mrow><msub><mi>y</mi><mi>j</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math>
+Use Equation (<a href="#S3.Ex1" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>)  
+
+
+
+<span class="ltx_ERROR undefined">\ForEach</span>(// <span class="ltx_text ltx_font_italic">compute final beliefs</span>)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m18" class="ltx_Math" alttext="Y_{i}\in\mathcal{Y}^{V\backslash S}" display="inline"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒴</mi><mrow><mi>V</mi><mo>\</mo><mi>S</mi></mrow></msup></mrow></math>
+<span class="ltx_ERROR undefined">\ForEach</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m19" class="ltx_Math" alttext="y_{i}\in\mathcal{L}" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math>
+Use Equation (<a href="#S3.E3" title="(3) ‣ 3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</p>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">The pseudo-code of our method is given in Algorithm <a href="#S3.SS2" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>. It first initializes all messages to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m1" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> and <span class="ltx_text ltx_font_italic">prior</span>s to unbiased (i.e., equal) probabilities for all nodes except the seed nodes for which the sentiment is known (lines 3-9).
+It then proceeds by making each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m2" class="ltx_Math" alttext="Y_{i}\in\mathcal{Y}" display="inline"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi></mrow></math>
+communicate messages with their neighbors in an iterative fashion until the messages stabilize (lines 10-14), i.e. convergence is reached.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Although convergence is not theoretically guaranteed, in practice LBP converges to beliefs within a small threshold of change (e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m3" class="ltx_Math" alttext="10^{-6}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>6</mn></mrow></msup></math>) fairly quickly with
+accurate results <cite class="ltx_cite">[<a href="#bib.bib42" title="Netprobe: a fast and scalable system for fraud detection in online auction networks" class="ltx_ref">20</a>, <a href="#bib.bib27" title="SNARE: a link analytic system for graph labeling and risk detection." class="ltx_ref">16</a>, <a href="#bib.bib28" title="Opinion fraud detection in online reviews by network effects" class="ltx_ref">2</a>]</cite>.</span></span></span>
+At convergence, we calculate the marginal probabilities, that is of assigning <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m4" class="ltx_Math" alttext="Y_{i}" display="inline"><msub><mi>Y</mi><mi>i</mi></msub></math> with label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m5" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>, by computing the final beliefs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m6" class="ltx_Math" alttext="b_{i}(y_{i})" display="inline"><mrow><msub><mi>b</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> (lines 15-17).
+We use these maximum likelihood probabilities for label assignment; for each node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, we assign the label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m8" class="ltx_Math" alttext="\mathcal{L}_{i}\leftarrow\max_{\;y_{i}}b_{i}(y_{i})" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mi>i</mi></msub><mo>←</mo><mrow><msub><mo>max</mo><msub><mpadded lspace="2.8pt" width="+2.8pt"><mi>y</mi></mpadded><mi>i</mi></msub></msub><mo>⁡</mo><mrow><msub><mi>b</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.p8" class="ltx_para">
+<p class="ltx_p">To completely define our algorithm, we need to instantiate the potentials <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p8.m1" class="ltx_Math" alttext="\Psi" display="inline"><mi mathvariant="normal">Ψ</mi></math>, in particular the priors and the compatibilities, which we discuss next.</p>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Priors</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">prior</span> beliefs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="\psi_{i}" display="inline"><msub><mi>ψ</mi><mi>i</mi></msub></math> of nodes can be suitably initialized if there is any prior knowledge for their connotation sentiment (e.g., <span class="ltx_text ltx_font_typewriter">enjoy</span> is positive, <span class="ltx_text ltx_font_typewriter">suffer</span> is negative).
+As such, our method is flexible to integrate available side information.
+In case there is no prior knowledge available, each node is
+initialized equally likely to have any of the possible labels, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="\frac{1}{|\mathcal{L}|}" display="inline"><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo fence="true">|</mo></mrow></mfrac></math> as in Algorithm <a href="#S3.SS2" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> (line 9).</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Compatibilities</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">compatibility</span> potentials can be thought of as matrices, with entries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="\psi_{ij}^{t}(y_{i},y_{j})" display="inline"><mrow><msubsup><mi>ψ</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mi>t</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> that give the likelihood of a node having
+label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>, given that it has a neighbor with label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math> to which it is connected through a type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m4" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> edge.
+A key difference of our method from earlier models is that we use clique potentials that differ for edge types, since the connotation graph is heterogeneous.
+This is exactly because the compatibility of class labels of two adjacent nodes depends on the type of the edge connecting them: e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m5" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m6" class="ltx_Math" alttext="\xrightarrow{syn\text{-}arg}" display="inline"><mover accent="true"><mo>→</mo><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></mover></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math> is highly compatible, whereas
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m9" class="ltx_Math" alttext="\xrightarrow{syn\text{-}syn}" display="inline"><mover accent="true"><mo>→</mo><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></mover></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m10" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math> is unlikely; as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m11" class="ltx_Math" alttext="syn" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m12" class="ltx_Math" alttext="arg" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math> edges capture synonymy; i.e., words-sense memberships, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m13" class="ltx_Math" alttext="syn" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m14" class="ltx_Math" alttext="syn" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></math> edges depict antonym relations.</p>
+</div>
+<div id="S3.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">A sample instantiation of the compatibilities is shown in Table <a href="#S3.T1" title="Table 1 ‣ Compatibilities ‣ 3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+Notice that the potentials for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="pred\text{-}arg" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="arg\text{-}arg" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="syn\text{-}arg" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math> capture homophily, i.e., nodes with the same label are likely to connect to each other through these types of edges.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m4" class="ltx_Math" alttext="arg\text{-}arg" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math> edges are based on co-occurrence (see Section <a href="#S2" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), which does not carry as strong indication of the same connotation as e.g., synonymy. Thus, we enforce less homophily for nodes connected through edges of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m5" class="ltx_Math" alttext="arg\text{-}arg" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math> type.
+</span></span></span>
+On the other hand, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m6" class="ltx_Math" alttext="syn\text{-}syn" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext>-</mtext><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></math> edges connect nodes that are antonyms of each other, and thus the compatibilities capture the reverse relationship among their labels.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Instantiation of compatibility potentials. Entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m8" class="ltx_Math" alttext="\psi^{t}_{ij}(y_{i},y_{j})" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">ψ</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">j</mi></mrow><mi mathsize="normal" stretchy="false">t</mi></msubsup><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">j</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> is the compatibility
+of a node with label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m9" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> having a neighbor
+labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m10" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">j</mi></msub></math>, given the edge between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m11" class="ltx_Math" alttext="i" display="inline"><mi mathsize="normal" stretchy="false">i</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m12" class="ltx_Math" alttext="j" display="inline"><mi mathsize="normal" stretchy="false">j</mi></math> is type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m13" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>, for small <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m14" class="ltx_Math" alttext="\epsilon" display="inline"><mi mathsize="normal" stretchy="false">ϵ</mi></math>.</div>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">
+<table class="ltx_tabular ltx_minipage ltx_align_bottom" style="width:173.4pt;">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m15" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math><span class="ltx_text ltx_font_small">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m16" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m17" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m18" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m19" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m20" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m21" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m22" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m23" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m24" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+</table></td>
+<td class="ltx_td ltx_align_justify" style="width:0.1pt;" width="0.1pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small"></span>
+<table class="ltx_tabular ltx_minipage ltx_align_bottom" style="width:173.4pt;">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m25" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math><span class="ltx_text ltx_font_small">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m26" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m27" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m28" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m29" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1-2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m30" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m31" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m32" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m33" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1-2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m34" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+</table></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m35" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math><span class="ltx_text ltx_font_small">) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m36" class="ltx_Math" alttext="pred\text{-}arg" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mtext mathsize="small" stretchy="false">-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:0.1pt;" width="0.1pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m37" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math><span class="ltx_text ltx_font_small">) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m38" class="ltx_Math" alttext="arg\text{-}arg" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mtext mathsize="small" stretchy="false">-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">
+<table class="ltx_tabular ltx_minipage ltx_align_bottom" style="width:173.4pt;">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m39" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math><span class="ltx_text ltx_font_small">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m40" class="ltx_Math" alttext="t_{3}" display="inline"><msub><mi>t</mi><mn>3</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">S</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m41" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m42" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m43" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m44" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m45" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m46" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m47" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m48" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+</table></td>
+<td class="ltx_td ltx_align_justify" style="width:0.1pt;" width="0.1pt"/>
+<td class="ltx_td ltx_align_center">
+<table class="ltx_tabular ltx_minipage ltx_align_bottom" style="width:173.4pt;">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m49" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math><span class="ltx_text ltx_font_small">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m50" class="ltx_Math" alttext="t_{4}" display="inline"><msub><mi>t</mi><mn>4</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">S</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">S</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m51" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m52" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m53" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m54" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m55" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m56" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1-</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m57" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m58" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math></td></tr>
+</table></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m59" class="ltx_Math" alttext="t_{3}" display="inline"><msub><mi>t</mi><mn>3</mn></msub></math><span class="ltx_text ltx_font_small">) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m60" class="ltx_Math" alttext="syn\text{-}arg" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext mathsize="small" stretchy="false">-</mtext><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:0.1pt;" width="0.1pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m61" class="ltx_Math" alttext="t_{4}" display="inline"><msub><mi>t</mi><mn>4</mn></msub></math><span class="ltx_text ltx_font_small">) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m62" class="ltx_Math" alttext="syn\text{-}syn" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mtext mathsize="small" stretchy="false">-</mtext><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>n</mi></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(synonym relations)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:0.1pt;" width="0.1pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">(antonym relations)</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Complexity analysis</h4>
+
+<div id="S3.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Most demanding component of Algorithm <a href="#S3.SS2" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> is the iterative message passing over the edges (lines 10-14),
+with time complexity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="O(ml^{2}r)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>m</mi><mo>⁢</mo><msup><mi>l</mi><mn>2</mn></msup><mo>⁢</mo><mi>r</mi></mrow><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="m=|E|" display="inline"><mrow><mi>m</mi><mo>=</mo><mrow><mo fence="true">|</mo><mi>E</mi><mo fence="true">|</mo></mrow></mrow></math> is the number of edges in the connotation graph, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="l=|\mathcal{L}|" display="inline"><mrow><mi>l</mi><mo>=</mo><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo fence="true">|</mo></mrow></mrow></math>, the classes, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>, the iterations until convergence. Often, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m5" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> is quite small (in our case, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m6" class="ltx_Math" alttext="l=2" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>2</mn></mrow></math>) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m7" class="ltx_Math" alttext="r\ll m" display="inline"><mrow><mi>r</mi><mo>≪</mo><mi>m</mi></mrow></math>. Thus running time grows linearly with the number of edges and is scalable to large datasets.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation I: Agreement with Sentiment Lexicons</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">ConnotationWordNet</em> is expected to be the superset of a sentiment lexicon, as it is highly likely for any word with positive/negative sentiment to carry connotation of the same polarity. Thus, we use two conventional sentiment lexicons, General Inquirer (<span class="ltx_text ltx_font_smallcaps">GenInq</span>) <cite class="ltx_cite">[<a href="#bib.bib37" title="The general inquirer: a computer approach to content analysis" class="ltx_ref">27</a>]</cite> and <span class="ltx_text ltx_font_smallcaps">MPQA</span> <cite class="ltx_cite">[<a href="#bib.bib36" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">36</a>]</cite>, as surrogates to measure the performance of our inference algorithm.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Variants of Graph Construction</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The construction of the connotation graph, denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, which includes words and synsets, has been described in Section <a href="#S2" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. In addition to this graph, we tried several other graph constructions, the first three of which have previously been used in <cite class="ltx_cite">[<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">10</a>]</cite>. We briefly describe these graphs below, and compare performance on all the graphs in the proceeding.</p>
+</div>
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Pred-Arg</span>:</h4>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">This is a (bipartite) subgraph of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, which only includes the connotative predicates and their arguments. As such, it contains only type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P1.p1.m2" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math> edges.
+The edges between the predicates and the arguments can be weighted by their Point-wise Mutual Information (PMI)<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>PMI scores are widely used in previous studies to measure association between words (e.g., <cite class="ltx_cite">[<a href="#bib.bib35" title="Word association norms, mutual information, and lexicography" class="ltx_ref">7</a>]</cite>, <cite class="ltx_cite">[<a href="#bib.bib29" title="Mining the Web for synonyms: PMI-IR versus LSA on TOEFL" class="ltx_ref">31</a>]</cite>, <cite class="ltx_cite">[<a href="#bib.bib26" title="External evaluation of topic models" class="ltx_ref">19</a>]</cite>).</span></span></span> based on the Google Web 1T corpus.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Overlay</span>:</h4>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The second graph is also a proper subgraph of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, which includes the predicates and all the argument words. Predicate words are connected to their arguments as before. In addition, argument pairs (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m2" class="ltx_Math" alttext="a_{1}" display="inline"><msub><mi>a</mi><mn>1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m3" class="ltx_Math" alttext="a_{2}" display="inline"><msub><mi>a</mi><mn>2</mn></msub></math>) are connected if they occurred together in the “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m4" class="ltx_Math" alttext="a_{1}" display="inline"><msub><mi>a</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m5" class="ltx_Math" alttext="a_{2}" display="inline"><msub><mi>a</mi><mn>2</mn></msub></math>” or “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m6" class="ltx_Math" alttext="a_{2}" display="inline"><msub><mi>a</mi><mn>2</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m7" class="ltx_Math" alttext="a_{1}" display="inline"><msub><mi>a</mi><mn>1</mn></msub></math>” coordination <cite class="ltx_cite">[<a href="#bib.bib24" title="Predicting the semantic orientation of adjectives" class="ltx_ref">11</a>, <a href="#bib.bib25" title="The representation of verbs: evidence from syntactic priming in language production" class="ltx_ref">24</a>]</cite>.
+This graph contains both type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m8" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p1.m9" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math> edges.
+The edges can also be weighted based on the distributional similarities of the word pairs.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math>:</h4>
+
+<div id="S4.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The third graph is a super-graph of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Overlay</span>, with additional edges, where argument pairs in synonym and antonym relation are connected to each other.
+Note that unlike the connotation graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p1.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, it does <span class="ltx_text ltx_font_italic">not</span> contain any synset nodes. Rather, the words that are synonyms or antonyms of each other are directly linked in the graph.
+As such, this graph contains all edge types <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p1.m3" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math> through <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p1.m4" class="ltx_Math" alttext="t_{4}" display="inline"><msub><mi>t</mi><mn>4</mn></msub></math>.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ SynSim</span>:</h4>
+
+<div id="S4.SS1.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">This is a super-graph of our original <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> graph; that is, it has all the predicate, arguments, and synset nodes, as well as the four types of edges between them.
+In addition, we add edges of a fifth type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m2" class="ltx_Math" alttext="t_{5}" display="inline"><msub><mi>t</mi><mn>5</mn></msub></math> between the synset nodes to capture their similarity. To define similarity, we use the glossary definitions of the synsets and derive three different scores. Each score utilizes the <span class="ltx_text ltx_font_typewriter">count</span>(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m3" class="ltx_Math" alttext="s_{1},s_{2}" display="inline"><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow></math>) of overlapping nouns, verbs, and adjectives/adverbs among the glosses of the two synsets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m4" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m5" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math>.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p2.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ SynSim1</span>: We discard edges with <span class="ltx_text ltx_font_typewriter">count</span> less than 3. The weighted version has the <span class="ltx_text ltx_font_typewriter">count</span>s normalized between 0 and 1.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ SynSim2</span>: We normalize the <span class="ltx_text ltx_font_typewriter">count</span>s by the length of the gloss (the avg of two lengths), that is, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m2" class="ltx_Math" alttext="p=" display="inline"><mrow><mi>p</mi><mo>=</mo><mi/></mrow></math> <span class="ltx_text ltx_font_typewriter">count / avg(len_gloss(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m3" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn mathvariant="normal">1</mn></msub></math>), len_gloss(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m4" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn mathvariant="normal">2</mn></msub></math>))</span> and discard edges with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m5" class="ltx_Math" alttext="p&lt;0.5" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.5</mn></mrow></math>. The weighted version contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m6" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> values as edge weights.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p4.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ SynSim3</span>: To further sparsify the graph we discard edges with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p4.m2" class="ltx_Math" alttext="p&lt;0.6" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.6</mn></mrow></math>. To weigh the edges, we use the cosine similarity between the gloss vectors of the synsets based on the TF-IDF values of the words the glosses contain.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p5" class="ltx_para">
+<p class="ltx_p">Note that the connotation inference algorithm, as given in Algorithm <a href="#S3.SS2" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>, remains exactly the same for all the graphs described above.
+The only difference is the set of parameters used; while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Pred-Arg</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m2" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Overlay</span> contain one and two edge types, respectively and only use compatibilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m3" class="ltx_Math" alttext="(t_{1})" display="inline"><mrow><mo>(</mo><msub><mi>t</mi><mn>1</mn></msub><mo>)</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m4" class="ltx_Math" alttext="(t_{2})" display="inline"><mrow><mo>(</mo><msub><mi>t</mi><mn>2</mn></msub><mo>)</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m5" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math> uses all four as given in Table <a href="#S3.T1" title="Table 1 ‣ Compatibilities ‣ 3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m6" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ SynSim</span> graphs use an additional compatibility matrix for the synset similarity edges of type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m7" class="ltx_Math" alttext="t_{5}" display="inline"><msub><mi>t</mi><mn>5</mn></msub></math>, which is the same as the one used for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p5.m8" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math>, i.e., similar synsets are likely to have the same connotation label.
+This flexibility is one of the key advantages of our algorithm as new types of nodes and edges can be added to the graph seamlessly.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Sentiment-Lexicon based Performance</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we first compare the performance of our connotation graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> to graphs that do not include synset nodes but only words.
+Then we analyze the performance when the additional synset similarity edges are added.
+First, we briefly describe our performance measures.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The sentiment lexicons we use as gold standard are small, compared to the size (i.e., number of words) our graphs contain. Thus, we first find the <span class="ltx_text ltx_font_typewriter">overlap</span> between each graph and a sentiment lexicon. Note that the <span class="ltx_text ltx_font_typewriter">overlap</span> size may be smaller than the <span class="ltx_text ltx_font_typewriter">lexicon size</span>, as some sentiment words may be missing from our graphs.
+Then, we calculate the number of <span class="ltx_text ltx_font_typewriter">correct</span> label assignments. As such,
+precision is defined as (<span class="ltx_text ltx_font_typewriter">correct</span> / <span class="ltx_text ltx_font_typewriter">overlap</span>), and
+recall as (<span class="ltx_text ltx_font_typewriter">correct</span> / <span class="ltx_text ltx_font_typewriter">lexicon size</span>). Finally, F1-score is their harmonic mean and reflects the overall accuracy.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">As shown in Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Sentiment-Lexicon based Performance ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (top), we first observe that including the synonym and antonym relations in the graph, as with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math>, improve the performance significantly, almost by an order of magnitude, over graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Pred-Arg</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word</mtext></msup></math><span class="ltx_text ltx_font_smallcaps"> w/ Overlay</span> that do not contain those relation types.
+Furthermore, we
+notice that the performances on the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> graph are better than those on the word-only graphs.
+This shows that including the synset nodes explicitly in the graph structure is beneficial. What is more, it gives us a means to obtain connotation labels for the synsets themselves, which we use in the evaluations in the next sections.
+Finally, we note that using the unweighted versions of the graphs provide relatively more robust performance, potentially due to noise in the relative edge weights.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">GenInq</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Mpqa</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t" colspan="5"><span class="ltx_text ltx_font_italic ltx_font_small">Variations of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word</mtext></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ Pred-Arg</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">88.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">67.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">76.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">57.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ Pred-Arg</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">84.9</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">68.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">76.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">57.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ Overlay</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">87.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">70.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">78.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">58.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ Overlay</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">82.2</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">67.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">74.2</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word</mtext></msup></math></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">88.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">83.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">85.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">69.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="\text{G}^{\text{Word}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word</mtext></msup></math><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">75.5</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">71.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">73.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">53.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t" colspan="5"><span class="ltx_text ltx_font_italic ltx_font_small">Variations of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">88.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">84.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">86.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">70.0</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">76.8</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">73.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">74.9</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.6</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">87.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">83.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">85.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">67.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim2</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">83.9</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">80.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">82.3</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">65.1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim3</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">86.5</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">83.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">84.8</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">67.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim1</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">88.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">84.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">86.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">69.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim2</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">86.4</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">83.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">85.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">68.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/ SynSim3</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">86.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">83.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_small">85.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">68.2</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Connotation inference performance on various graphs. ‘-<span class="ltx_text ltx_font_smallcaps">w</span>’ indicates weighted versions (see §<a href="#S4.SS1" title="4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>). <span class="ltx_text ltx_font_bold">P</span>: precision, <span class="ltx_text ltx_font_bold">R</span>: recall, <span class="ltx_text ltx_font_bold">F</span>: F1-score (%).</div>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">Next we analyze the performance when the new edges between synsets are introduced, as given in Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Sentiment-Lexicon based Performance ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (bottom). We observe that connecting the synset nodes by their gloss-similarity (at least in the ways we tried) does not yield better performance than on our original <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> graph. Different from earlier, the weighted versions of the similarity based graphs provide better performance than their unweighted counterparts. This suggests that glossary similarity would be a more robust means to correlate nodes; we leave it as future work to explore this direction for predicate-argument and argument-argument relations.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Parameter Sensitivity</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Our belief propagation based connotation sentiment inference algorithm has one user-specified parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math> (see Table <a href="#S3.T1" title="Table 1 ‣ Compatibilities ‣ 3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+To study the sensitivity of its performance to the choice of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>, we reran our experiments for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m3" class="ltx_Math" alttext="\epsilon=\{0.02,0.04,\ldots,0.24\}" display="inline"><mrow><mi>ϵ</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>0.02</mn><mo>,</mo><mn>0.04</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>0.24</mn></mrow><mo>}</mo></mrow></mrow></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>Note that for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m4" class="ltx_Math" alttext="\epsilon&gt;0.25" display="inline"><mrow><mi>ϵ</mi><mo>&gt;</mo><mn>0.25</mn></mrow></math>, compatibilities of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m5" class="ltx_Math" alttext="\psi^{t_{2}}" display="inline"><msup><mi>ψ</mi><msub><mi>t</mi><mn>2</mn></msub></msup></math> in Table <a href="#S3.T1" title="Table 1 ‣ Compatibilities ‣ 3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> are reversed, hence the maximum of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m6" class="ltx_Math" alttext="0.24" display="inline"><mn>0.24</mn></math>.</span></span></span> and report the accuracy results on our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m7" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathvariant="normal">G</mtext><mtext mathvariant="normal">Word+Sense</mtext></msup></math> in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.3 Parameter Sensitivity ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for the two lexicons. The results indicate that the performances remain quite stable across a wide range of the parameter choice.</p>
+</div>
+<div id="S4.F2" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><img src="P14-1145/image002.png" id="S4.F2.g1" class="ltx_graphics" width="359" height="252" alt=""/></td>
+<td class="ltx_td ltx_align_center"><img src="P14-1145/image003.png" id="S4.F2.g2" class="ltx_graphics" width="351" height="247" alt=""/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">(a) <span class="ltx_text ltx_font_smallcaps">GenInq Eval</span></td>
+<td class="ltx_td ltx_align_center">(b) <span class="ltx_text ltx_font_smallcaps">MPQA Eval</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Performance is stable across various <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m2" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>.
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Evaluation II: Human Evaluation on ConnotationWordNet</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present the result of human evaluation we executed using Amazon Mechanical Turk (AMT).
+We collect two separate sets of labels: a set of labels at the word-level, and another set at the sense-level. We first describe the labeling process of sense-level connotation:
+We selected 350 polysemous words and one of their senses, and each Turker was asked to rate the connotative polarity of a given word (or of a given sense), from -5 to 5, 0 being the neutral.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Because senses in WordNet can be tricky to understand, care should be taken in designing the task so that the Turkers will focus only on the corresponding sense of a word. Therefore, we provided the part of speech tag, the WordNet gloss of the selected sense, and a few examples as given in WordNet. As an incentive, each Turker was rewarded $0.07 per hit which consists of 10 words to label. </span></span></span> For each word, we asked 5 Turkers to rate and we took the average of the 5 ratings as the connotative intensity score of the word. We labeled a word as <span class="ltx_text ltx_font_italic">negative</span> if its intensity score is less than 0 and <span class="ltx_text ltx_font_italic">positive</span> otherwise.
+For word-level labels we apply similar procedure as above.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Word-Level Evaluation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We first evaluate the word-level assignment of connotation, as shown in Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Word-Level Evaluation ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+The agreement between the new lexicon and human judges varies between 84% and 86.98%.
+Sentiment lexicons such as SentiWordNet (<cite class="ltx_cite">Baccianella<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib34" title="SentiWordNet 3.0: an enhanced lexical resource for sentiment analysis and opinion mining." class="ltx_ref">2010</a>)</cite>) and OpinionFinder (<cite class="ltx_cite">Wilson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="OpinionFinder: a system for subjectivity analysis" class="ltx_ref">2005a</a>)</cite>) show low agreement rate with human, which is somewhat as expected: human judges in this study are labeling for subtle connotation, not for more explicit sentiment.
+OpinionFinder’s low agreement rate was mainly due to the low hit rate of the words (successful look-up rate, 33.43%). Feng2013 is the lexicon presented in <cite class="ltx_cite">[<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">10</a>]</cite> and it showed a relatively higher 72.13% hit rate.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Note that belief propagation was run until 95% and 99% of the nodes were converged in their beliefs.
+In addition, the seed words with known connotation labels originally consist of 20 positive and 20 negative predicates.
+We also extended the seed set with the sentiment lexicon words and denote these runs with <span class="ltx_text ltx_font_smallcaps">e-</span> for ‘<span class="ltx_text ltx_font_smallcaps">e</span>xtended’.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Lexicon</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Word-level</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Sense-level </span><span class="ltx_ERROR undefined">\bigstrut</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">SentiWordNet</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27.22</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">14.29</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">OpinionFinder</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">31.95</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Feng2013</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">62.72</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">84.91</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">83.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">84.91</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">83.71</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">86.98</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">86.29</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">86.69</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">85.71</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Word-/Sense-level evaluation results</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Sense-Level Evaluation</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We also examined the agreement rates on the sense-level. Since OpinionFinder and Feng2013 do not provide the polarity scores at the sense-level, we excluded them from this evaluation.
+Because sense-level polarity assignment is a harder (more subtle) task, the performance of all lexicons decreased to some degree in comparison to that of word-level evaluations.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Pair-wise Intensity Ranking</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">A notable goodness of our induction algorithm is that the outcome of the algorithm can be interpreted as an <em class="ltx_emph">intensity</em> of the corresponding connotation. But are these values meaningful? We answer this question in this section.
+We formulate a pair-wise ranking task as a binary decision task as follows: given a pair of words, we ask which one is more positive (or more negative) than the other. Since we collect human labels based on <em class="ltx_emph">scales</em>, we already have this information at hand. Because different human judges have different notion of scales however, subtle differences are more likely to be noisy. Therefore, we experiment with varying degrees of differences in their scales, as shown in Figure <a href="#S5.F3" title="Figure 3 ‣ 5.3 Pair-wise Intensity Ranking ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Threshold values (ranging from 0.5 to 3.0) indicate the minimum differences in scales for any pair of words, for the pair to be included in the test set. As expected, we observe that the performance improves as we increase the threshold (as pairs get better separated). Within range [0.5, 1.5] (249 pairs examined), the accuracies are as high as 68.27%, which shows that even the subtle differences of the connotative intensities are relatively well reflected in the new lexicons.</p>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="P14-1145/image004.png" id="S5.F3.g1" class="ltx_graphics ltx_centering" width="663" height="387" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Trend of accuracy for pair-wise intensity evaluation over threshold </div>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">The results for pair-wise intensity evaluation (threshold=2.0, 1,208 pairs) are given in Table <a href="#S5.T4" title="Table 4 ‣ 5.3 Pair-wise Intensity Ranking ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+Despite that intensity is generally a harder property to measure (than the coarser binary categorization of polarities), our connotation lexicons perform surprisingly well, reaching up to 74.83% accuracy.
+Further study on the incorrect cases reveals that SentiWordNet has many pair of words with the same polarity score (23.34%). Such cases seems to be due to the limited score patterns of SentiWordNet. The ratio of such cases are accounted as <span class="ltx_text ltx_font_italic">Undecided</span> in Table <a href="#S5.T4" title="Table 4 ‣ 5.3 Pair-wise Intensity Ranking ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Lexicon</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Correct</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Undecided  </span><span class="ltx_ERROR undefined">\bigstrut</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">SentiWordNet</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">33.77</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">23.34</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">74.83</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.58</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">73.01</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.58</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">73.84</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1.16</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">74.01</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">1.16</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span>Results of pair-wise intensity evaluation, for intensity difference threshold = 2.0</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Evaluation III: Sentiment Analysis using ConnotationWordNet</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Finally, to show the utility of the resulting lexicon in the context of a concrete sentiment analysis task, we perform lexicon-based sentiment analysis.
+We experiment with SemEval dataset <cite class="ltx_cite">[<a href="#bib.bib32" title="Semeval-2007 task 14: affective text" class="ltx_ref">28</a>]</cite> that includes the human labeled dataset for predicting whether a news headline is a <em class="ltx_emph">good news</em> or a <em class="ltx_emph">bad news</em>, which we expect to have a correlation with the use of <em class="ltx_emph">connotative</em> words that we focus on in this paper.
+The good/bad news are annotated with scores (ranging from -100 to 87). We construct several data sets by applying different thresholds on scores. For example, with the threshold set to 60, we discard the instances whose scores lie between -60 and 60. For comparison, we also test the connotation lexicon from <cite class="ltx_cite">[<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">10</a>]</cite> and the combined sentiment lexicon <span class="ltx_text ltx_font_smallcaps">GenInq</span>+<span class="ltx_text ltx_font_smallcaps">MPQA</span>.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Note that there is a difference in how humans judge the orientation and the degree of connotation for a given word out of context, and how the use of such words in context can be perceived as <em class="ltx_emph">good/bad</em> news. In particular, we conjecture that humans may have a bias toward the use of positive words, which in turn requires calibration from the readers’ minds <cite class="ltx_cite">[<a href="#bib.bib31" title="Words of wisdom: language use over the life span." class="ltx_ref">22</a>]</cite>.
+That is, we might need to tone down the level of positiveness in order to correctly measure the actual intended positiveness of the message.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">With this in mind, we tune the appropriate calibration from a small training data, by using 1 fold from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> fold cross validation, and using the remaining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m2" class="ltx_Math" alttext="N-1" display="inline"><mrow><mi>N</mi><mo>-</mo><mn>1</mn></mrow></math> folds as testing. We simply learn the mixture coefficient <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> to scale the contribution of positive and negative connotation values. We tune this parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m4" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>What is reported is based on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m5" class="ltx_Math" alttext="\lambda\in\{20,40,60,80\}" display="inline"><mrow><mi>λ</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>20</mn><mo>,</mo><mn>40</mn><mo>,</mo><mn>60</mn><mo>,</mo><mn>80</mn></mrow><mo>}</mo></mrow></mrow></math>. More detailed parameter search does not change the results much.</span></span></span> for other lexicons we compare against as well. Note that due to this parameter learning, we are able to report better performance for the connotation lexicon of <cite class="ltx_cite">[<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">10</a>]</cite> than what the authors have reported in their paper (labeled with *) in Table <a href="#S6.T5" title="Table 5 ‣ 6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows the results for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m2" class="ltx_Math" alttext="15" display="inline"><mn>15</mn></math>, where the new lexicon consistently outperforms other competitive lexicons. In addition, Figure <a href="#S6.F4" title="Figure 4 ‣ 6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows that the performance does not change much based on the size of training data used for parameter tuning (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m4" class="ltx_Math" alttext="\{5,10,15,20\}" display="inline"><mrow><mo>{</mo><mrow><mn>5</mn><mo>,</mo><mn>10</mn><mo>,</mo><mn>15</mn><mo>,</mo><mn>20</mn></mrow><mo>}</mo></mrow></math>).</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">4</span><span class="ltx_text ltx_font_small">]*Lexicon</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">SemEval Threshold   </span><span class="ltx_ERROR undefined">\bigstrut</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">40</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">60</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">80 </span><span class="ltx_ERROR undefined">\bigstrut</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Instance Size</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">955</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">649</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">341</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">86</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Feng2013</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">71.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">77.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">81.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">90.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">GenInq</span><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">MPQA</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">72.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">77.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">80.4</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">86.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m1" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">74.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">79.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">86.5</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">91.9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m2" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">74.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">79.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">86.8</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">91.9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m3" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(95%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">72.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">76.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">82.3</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">87.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">e-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m4" class="ltx_Math" alttext="\text{G}^{\text{Word+Sense}}" display="inline"><msup><mtext mathsize="small" mathvariant="normal" stretchy="false">G</mtext><mtext mathsize="small" mathvariant="normal" stretchy="false">Word+Sense</mtext></msup></math></span><span class="ltx_text ltx_font_small">(99%)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">72.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">76.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">82.5</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">87.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Feng2013*</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">70.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">74.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">80.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">93.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">GenInq</span><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">MPQA</span><span class="ltx_text ltx_font_small">*</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">64.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">69.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">74.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">80.5</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>SemEval evaluation results, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m7" class="ltx_Math" alttext="N" display="inline"><mi mathsize="normal" stretchy="false">N</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m8" class="ltx_Math" alttext="15" display="inline"><mn mathsize="normal" stretchy="false">15</mn></math></div>
+</div>
+<div id="S6.F4" class="ltx_figure"><img src="P14-1145/image005.png" id="S6.F4.g1" class="ltx_graphics ltx_centering" width="663" height="387" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Trend of SemEval performance over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>, the number of CV folds</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Related Work</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Several previous approaches explored the use of graph propagation for sentiment lexicon induction <cite class="ltx_cite">[<a href="#bib.bib13" title="The viability of web-derived polarity lexicons" class="ltx_ref">32</a>]</cite> and connotation lexicon induction <cite class="ltx_cite">[<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">10</a>]</cite>. Our work introduces the use of loopy belief propagation over pairwise-MRF as an alternative solution to these tasks. At a high-level, both approaches share the general idea of propagating confidence or belief over the graph connectivity. The key difference, however, is that in our MRF representation, we can explicitly model various types of word-word, sense-sense and word-sense relations as edge potentials. In particular, we can naturally encode relations that encourage the same assignment (e.g., synonym) as well as the opposite assignment (e.g., antonym) of the polarity labels. Note that integration of the latter is not straightforward in the graph propagation framework.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">There have been a number of previous studies that aim to construct a word-level sentiment lexicon <cite class="ltx_cite">[<a href="#bib.bib1" title="Annotating expressions of opinions and emotions in language" class="ltx_ref">34</a>, <a href="#bib.bib30" title="Expanding domain sentiment lexicon through double propagation." class="ltx_ref">25</a>]</cite> and a sense-level sentiment lexicon <cite class="ltx_cite">[<a href="#bib.bib12" title="SENTIWORDNET: a publicly available lexical resource for opinion mining" class="ltx_ref">8</a>]</cite>. But none of these approaches considered to induce the polarity labels at both the word-level and sense-level. Although we focus on learning connotative polarity of words and senses in this paper, the same approach would be applicable to constructing a sentiment lexicon as well.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">There have been recent studies that address word sense disambiguation issues for sentiment analysis.
+SentiWordNet <cite class="ltx_cite">[<a href="#bib.bib12" title="SENTIWORDNET: a publicly available lexical resource for opinion mining" class="ltx_ref">8</a>]</cite> was the very first lexicon developed for sense-level labels of sentiment polarity. In recent years,
+<cite class="ltx_cite">Akkaya<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Subjectivity word sense disambiguation" class="ltx_ref">2009</a>)</cite> report a successful empirical result where WSD helps improving sentiment analysis, while <cite class="ltx_cite">Wiebe and Mihalcea (<a href="#bib.bib8" title="Word sense and subjectivity" class="ltx_ref">2006</a>)</cite> study the distinction between objectivity and subjectivity in each different sense of a word, and their empirical effects in the context of sentiment analysis. Our work shares the high-level spirit of accessing the sense-level polarity, while also deriving the word-level polarity.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">In recent years, there has been a growing research interest in investigating more fine-grained aspects of lexical sentiment beyond positive and negative sentiment. For example, <cite class="ltx_cite">Mohammad and Turney (<a href="#bib.bib7" title="Emotions evoked by common words and phrases: using mechanical turk to create an emotion lexicon" class="ltx_ref">2010</a>)</cite> study the affects words can <em class="ltx_emph">evoke</em> in people’s minds, while <cite class="ltx_cite">Bollen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Modeling public mood and emotion: twitter sentiment and socio-economic phenomena." class="ltx_ref">2011</a>)</cite> study various moods, e.g., “tension”, “depression”, beyond simple dichotomy of positive and negative sentiment. Our work, and some recent work by <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Learning general connotation of words using graph-based algorithms" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Feng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="Connotation lexicon: a dash of sentiment beneath the surface meaning." class="ltx_ref">2013</a>)</cite> share this spirit by targeting more subtle, nuanced sentiment even from those words that would be considered as objective in early studies of sentiment analysis.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Conclusion</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">We have introduced a novel formulation of lexicon induction operating over both words and senses, by exploiting the innate structure between the words and senses as encoded in WordNet. In addition, we introduce the use of loopy belief propagation over <em class="ltx_emph">pairwise</em>-Markov Random Fields as an effective lexicon induction algorithm. A notable strength of our approach is its expressiveness: various types of prior knowledge and lexical relations can be encoded as node potentials and edge potentials. In addition, it leads to a lexicon of better quality while also offering faster run-time and easiness of implementation. The resulting lexicon, called <em class="ltx_emph">ConnotationWordNet</em>, is the first lexicon that has polarity labels over both words and senses. <em class="ltx_emph">ConnotationWordNet</em> is publicly available for research and practical use.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was supported by the Army Research
+Office under Contract No. W911NF-14-1-0029, Stony Brook University
+Office of Vice President for Research, and gifts from
+Northrop Grumman Aerospace Systems and Google. We thank reviewers for many insightful
+comments and suggestions.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Akkaya, J. Wiebe and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Subjectivity word sense disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 190–199</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p3" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Akoglu, R. Chandy and C. Faloutsos</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion fraud detection in online reviews by network effects</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p7" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Andreevskaia and S. Bergler</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining wordnet for a fuzzy sentiment: sentiment tag extraction from wordnet glosses.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 209–216</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Baccianella, A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SentiWordNet 3.0: an enhanced lexical resource for sentiment analysis and opinion mining.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 2200–2204</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 Word-Level Evaluation ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Balahur, R. Mihalcea and A. Montoyo</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Computational approaches to subjectivity and sentiment analysis: present and envisaged methods and applications</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech &amp; Language</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–6</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Bollen, H. Mao and A. Pepe</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling public mood and emotion: twitter sentiment and socio-economic phenomena.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. W. Church and P. Hanks</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word association norms, mutual information, and lexicography</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">16</span>), <span class="ltx_text ltx_bib_pages"> pp. 22–29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="GWord w/ Pred-Arg: ‣ 4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SENTIWORDNET: a publicly available lexical resource for opinion mining</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 417–422</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p2" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>,
+<a href="#S7.p3" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Feng, R. Bose and Y. Choi</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning general connotation of words using graph-based algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1092–1103</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S7.p4" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Feng, J. S. Kang, P. Kuznetsova and Y. Choi</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Connotation lexicon: a dash of sentiment beneath the surface meaning.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1774–1784</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Word-Level Evaluation ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.p1" title="6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p3" title="6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S7.p1" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>,
+<a href="#S7.p4" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Hatzivassiloglou and K. McKeown</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting the semantic orientation of adjectives</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 174–181</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P2.p1" title="GWord w/ Overlay: ‣ 4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Kaji and M. Kitsuregawa</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building lexicon for sentiment analysis from massive collection of html documents.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1075–1083</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kamps, M. Marx, R. J. Mokken and M. De Rijke</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using wordnet to measure semantic orientations of adjectives</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Kindermann and J. L. Snell</span><span class="ltx_text ltx_bib_year">(1980)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Markov Random Fields and Their Applications</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Pairwise Markov Random Fields ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Lu, M. Castellanos, U. Dayal and C. Zhai</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic construction of a context-aware sentiment lexicon: an optimization approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 347–356</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. McGlohon, S. Bay, M. G. Anderle, D. M. Steier and C. Faloutsos</span><span class="ltx_text ltx_bib_year">(2009-07-02)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SNARE: a link analytic system for graph labeling and risk detection.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1265–1274</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-495-9</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p7" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea, C. Banea and J. Wiebe</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual subjectivity and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 4–4</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Mohammad and P. Turney</span><span class="ltx_text ltx_bib_year">(2010-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Emotions evoked by common words and phrases: using mechanical turk to create an emotion lexicon</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Los Angeles, CA</span>, <span class="ltx_text ltx_bib_pages"> pp. 26–34</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-0204" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Newman, S. Karimi and L. Cavedon</span><span class="ltx_text ltx_bib_year">(2009-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">External evaluation of topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney</span>, <span class="ltx_text ltx_bib_pages"> pp. 11–18</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-74210-171-2</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="GWord w/ Pred-Arg: ‣ 4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Pandit, D. H. Chau, S. Wang and C. Faloutsos</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Netprobe: a fast and scalable system for fraud detection in online auction networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 201–210</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p7" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. H. Papadimitriou and K. Steiglitz</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combinatorial optimization: algorithms and complexity</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Courier Dover Publications</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p10" title="1 Introduction ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. W. Pennebaker and L. D. Stone</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Words of wisdom: language use over the life span.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of personality and social psychology</span> <span class="ltx_text ltx_bib_volume">85</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 291</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. P. Pestian, P. Matykiewicz, M. Linn-Gust, B. South, O. Uzuner, J. Wiebe, K. B. Cohen, J. Hurdle and C. Brew</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis of suicide notes: a shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Biomedical Informatics Insights</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">Suppl. 1</span>), <span class="ltx_text ltx_bib_pages"> pp. 3</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. J. Pickering and H. P. Branigan</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The representation of verbs: evidence from syntactic priming in language production</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Memory and Language</span> <span class="ltx_text ltx_bib_volume">39</span>, <span class="ltx_text ltx_bib_pages"> pp. 633–651</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P2.p1" title="GWord w/ Overlay: ‣ 4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Qiu, B. Liu, J. Bu and C. Chen</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Expanding domain sentiment lexicon through double propagation.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">9</span>, <span class="ltx_text ltx_bib_pages"> pp. 1199–1204</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p2" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Sen, G. Namata, M. Bilgic, L. Getoor, B. Gallagher and T. Eliassi-Rad</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collective classification in network data.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">AI Magazine</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 93–106</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. J. Stone, D. C. Dunphy, M. S. Smith and D. M. Ogilvie</span><span class="ltx_text ltx_bib_year">(1966)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The general inquirer: a computer approach to content analysis</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Strapparava and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semeval-2007 task 14: affective text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 70–74</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Evaluation III: Sentiment Analysis using ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Su and K. Markert</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Subjectivity recognition on word senses via semi-supervised mincuts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Takamura, T. Inui and M. Okumura</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting semantic orientations of words using spin model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 133–140</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Network of Words and Senses ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining the Web for synonyms: PMI-IR versus LSA on TOEFL</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Freiburg, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 491–502</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="GWord w/ Pred-Arg: ‣ 4.1 Variants of Graph Construction ‣ 4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Velikovich, S. Blair-Goldensohn, K. Hannan and R. McDonald</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The viability of web-derived polarity lexicons</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word sense and subjectivity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1065–1072</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p3" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe, T. Wilson and C. Cardie</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Annotating expressions of opinions and emotions in language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language Resources and Evaluation (formerly Computers and the Humanities)</span> <span class="ltx_text ltx_bib_volume">39</span> (<span class="ltx_text ltx_bib_number">2/3</span>), <span class="ltx_text ltx_bib_pages"> pp. 164–210</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p2" title="7 Related Work ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, P. Hoffmann, S. Somasundaran, J. Kessler, J. Wiebe, Y. Choi, C. Cardie, E. Riloff and S. Patwardhan</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">OpinionFinder: a system for subjectivity analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 34–35</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 Word-Level Evaluation ‣ 5 Evaluation II: Human Evaluation on ConnotationWordNet ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Vancouver, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Evaluation I: Agreement with Sentiment Lexicons ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. S. Yedidia, W. T. Freeman and Y. Weiss</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Understanding belief propagation and its generalizations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Exploring AI in the new millennium</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 239–269</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Pairwise Markov Random Fields ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Loopy Belief Propagation ‣ 3 Pairwise Markov Random Fields and Loopy Belief Propagation ‣ ConnotationWordNet:  Learning Connotation over the Word+Sense Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 19:06:14 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

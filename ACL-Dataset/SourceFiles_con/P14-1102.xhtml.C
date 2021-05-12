@@ -1,0 +1,623 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Bootstrapping into Filler-Gap: An Acquisition Story.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Analyses of filler-gap dependencies usually involve complex syntactic rules or heuristics; however recent results suggest that filler-gap comprehension begins earlier than seemingly simpler constructions such as ditransitives or passives.
+Therefore, this work models filler-gap acquisition as a byproduct of learning word orderings (e.g. SVO vs OSV), which must be done at a very young age anyway in order to extract meaning from language.
+Specifically, this model, trained on part-of-speech tags, represents the preferred locations of semantic roles relative to a verb as Gaussian mixtures over real numbers.
+      </p>
+      <p class="ltx_p">
+       This approach learns role assignment in filler-gap constructions in a manner consistent with current developmental findings and is extremely robust to initialization variance.
+Additionally, this model is shown to be able to account for a characteristic error made by learners during this period (
+       A and B gorped
+       interpreted as
+       A gorped B
+       ).
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The phenomenon of filler-gap, where the argument of a predicate appears outside its canonical position in the phrase structure (e.g.
+        [the apple]i that the boy ate ti
+        or
+        [what]i did the boy eat ti
+        ), has long been an object of study for syntacticians
+        []
+        due to its apparent processing complexity.
+Such complexity is due, in part, to the arbitrary length of the dependency between a filler and its gap (e.g.
+        [the apple]i that Mary said the boy ate ti
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Recent studies indicate that comprehension of filler-gap constructions begins around 15 months
+        []
+        .
+This finding raises the question of how such a complex phenomenon could be acquired so early since children at that age do not yet have a very advanced grasp of language (e.g. ditransitives do not seem to be generalized until at least 31 months; Goldberg et al. 2004
+        , Bello 2012
+        ).
+This work shows that filler-gap comprehension in English may be acquired through learning word orderings rather than relying on hierarchical syntactic knowledge.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        This work describes a cognitive model of the developmental timecourse of filler-gap comprehension with the goal of setting a lower bound on the modeling assumptions necessary for an ideal learner to display filler-gap comprehension.
+In particular, the model described in this paper takes chunked child-directed speech as input and learns orderings over semantic roles.
+These orderings then permit the model to successfully resolve filler-gap dependencies.
+        Further, the model presented here is also shown to initially reflect an idiosyncratic role assignment error observed in development (e.g.
+        A and B kradded
+        interpreted as
+        A kradded B
+        ; Gertner and Fisher, 2012
+        ), though after training, the model is able to avoid the error.
+As such, this work may be said to model a learner from 15 months to between 25 and 30 months.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Background
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The developmental timeline during which children acquire the ability to process filler-gap constructions is not well-understood.
+Language comprehension precedes production, and the developmental literature on the acquisition of filler-gap constructions is sparsely populated due to difficulties in designing experiments to test filler-gap comprehension in preverbal infants.
+Older studies typically looked at verbal children and the mistakes they make to gain insight into the acquisition process
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Recent studies, however, indicate that filler-gap comprehension likely begins earlier than production
+        []
+        .
+Therefore, studies of verbal children are probably actually testing the acquisition of production mechanisms (planning, motor skills, greater facility with lexical access, etc) rather than the acquisition of filler-gap.
+Note that these may be related since filler-gap could introduce greater processing load which could overwhelm the child’s fragile production capacity
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        showed that children are able to process
+        wh
+        -extractions from subject position (e.g.
+        [who]i ti ate pie
+        ) as young as 15 months while similar extractions from object position (e.g.
+        [what]i did the boy eat ti
+        ) remain unparseable until around 20 months of age.
+        This line of investigation has been reopened and expanded by
+        whose results suggest that the experimental methodology employed by
+        was flawed in that it presumed infants have ideal performance mechanisms.
+By providing more trials of each condition and controlling for the pragmatic felicity of test statements,
+        provide evidence that 15-month old infants can process
+        wh
+        -extractions from both subject and object positions.
+Object extractions are more difficult to comprehend than subject extractions, however, perhaps due to additional processing load in object extractions
+        []
+        .
+Similarly,
+        show that relativized extractions with a
+        wh
+        -relativizer (e.g.
+        find [the boy]i who ti ate the apple
+        ) are easier to comprehend than relativized extractions with
+        that
+        as the relativizer (e.g.
+        find [the boy]i that ti ate the apple
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        demonstrate that 19-month olds use their knowledge of nouns to learn both verbs and their associated argument structure.
+In their study, infants were shown video of a person talking on a phone using a nonce verb with either one or two nouns (e.g.
+        Mary kradded Susan
+        ).
+Under the assumption that infants look longer at things that correspond to their understanding of a prompt, the infants were then shown two images that potentially depicted the described action – one picture where two actors acted independently (reflecting an intransitive proposition) and one picture where one actor acted on the other (reflecting a transitive proposition).
+        Even though the infants had no extralinguistic knowledge about the verb, they consistently treated the verb as transitive if two nouns were present and intransitive if only one noun was present.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Similarly,
+        show that intransitive phrases with conjoined subjects (e.g.
+        John and Mary gorped
+        ) are given a transitive interpretation (i.e.
+        John gorped Mary
+        ) at 21 months (henceforth termed ‘1-1 role bias’), though this effect is no longer present at 25 months
+        []
+        .
+This finding suggests both that learners will ignore canonical structure in favor of using all possible arguments and that children have a bias to assign a unique semantic role to each argument.
+It is important to note, however, that cross-linguistically children do not seem to generalize beyond two arguments until after at least 31 months of age
+        []
+        , so a predicate occurring with three nouns would still likely be interpreted as merely transitive rather than ditransitive.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        Computational modeling provides a way to test the computational level of processing
+        []
+        .
+That is, given the input (child-directed speech, adult-directed speech, and environmental experiences), it is possible to probe the computational processes that result in the observed output.
+However, previous computational models of grammar induction
+        []
+        , including infant grammar induction
+        []
+        , have not addressed filler-gap comprehension.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        The closest work to that presented here is the work on BabySRL
+        []
+        .
+BabySRL is a computational model of semantic role acquistion using a similar set of assumptions to the current work.
+BabySRL learns weights over ordering constraints (e.g. preverbal, second noun, etc.) to acquire semantic role labelling while still exhibiting 1-1 role bias.
+However, no analysis has evaluated the ability of BabySRL to acquire filler-gap constructions.
+Further comparison to BabySRL may be found in Section
+        6
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Assumptions
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        The present work restricts itself to acquiring filler-gap comprehension in English.
+The model presented here learns a single, non-recursive ordering for the semantic roles in each sentence relative to the verb since several studies have suggested that early child grammars may consist of simple linear grammars that are dictated by semantic roles
+        []
+        .
+This work assumes learners can already identify nouns and verbs, which is supported by
+        who show that children at an extremely young age can distinguish between content and function words and by
+        who show that children can distinguish between different types of content words.
+Further, since
+        demonstrate that, by 14 months, children are able to distinguish nouns from modifiers, this work assumes learners can already chunk nouns and access the nominal head.
+To handle recursion, this work assumes that children treat the final verb in each sentence as the main verb (implicitly assuming sentence segmentation), which ideally assigns roles to each of the nouns in the sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Due to the findings of
+        , this work adopts a ‘syntactic bootstrapping’ theory of acquisition
+        []
+        , where structural properties (e.g. number of nouns) inform the learner about semantic properties of a predicate (e.g. how many semantic roles it confers).
+Since infants infer the number of semantic roles, this work further assumes they already have expectations about where these roles tend to be realized in sentences, if they appear.
+These positions may correspond to different semantic roles for different predicates (e.g. the subject of
+        run
+        and of
+        melt
+        ); however, the role for predicates with a single argument is usually assigned to the noun that precedes the verb while a second argument is usually assigned after the verb.
+The semantic properties of these roles may be learned lexically for each predicate, but that is beyond the scope of this work.
+Therefore, this work uses syntactic and semantic roles interchangeably (e.g.
+        subject
+        and
+        agent
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Finally, following the finding by
+        that children interpret intransitives with conjoined subjects as transitives, this work assumes that semantic roles have a one-to-one correspondence with nouns in a sentence (similarly used as a soft constraint in the semantic role labelling work of Titov and Klementiev, 2012)
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Model
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The model represents the preferred locations of semantic roles relative to the verb as distributions over real numbers.
+This idea is adapted from
+        who uses it to learn constraint rankings in optimality theory.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        In this work, the final (main) verb is placed at position 0; words (and chunks) before the verb are given progressively more negative positions, and words after the verb are given progressively more positive positions (see Table
+        1
+        ).
+Learner expectations of where an argument will appear relative to the verb are modelled as two-component Gaussian mixtures: one mixture of Gaussians (
+        GS⁣⋅
+        ) corresponds to the subject argument, another (
+        GO⁣⋅
+        ) corresponds to the object argument.
+There is no mixture for a third argument since children do not generalize beyond two arguments until later in development
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        One component of each mixture learns to represent the canonical position for the argument (
+        G⋅C
+        ) while the other (
+        G⋅N
+        ) represents some alternate, non-canonical position such as the filler position in filler-gap constructions.
+To reflect the fact that learners have had 15 months of exposure to their language before acquiring filler-gap, the mixture is initialized so that there is a stronger probability associated with the canonical Gaussian than with the non-canonical Gaussian of each mixture.
+        Finally, the one-to-one role bias is explicitly encoded such that the model cannot use a label that has already been used elsewhere in the sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        Thus, the initial model conditions (see Figure
+        2
+        ) are most likely to realize an SVO ordering, although it is possible to obtain SOV (by sampling a negative number from the blue curve) or even OSV (by also sampling the red curve very close to 0).
+The model is most likely to hypothesize a preverbal object when it has already assigned the subject role to something and, in addition, there is no postverbal noun competing for the object label.
+In other words, the model infers that an object extraction may have occurred if there is a ‘missing’ postverbal argument.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        Finally, the probability of a given sequence is the product of the label probabilities for the component argument positions (e.g.
+        GS⁢C
+        generating an argument at position -2, etc).
+Since many sentences have more than two nouns, the model is allowed to skip nouns by multiplying a penalty term (
+        Φ
+        ) into the product for each skipped noun; the cost is set at 0.00001 for this study, though see Section
+        7
+        for a discussion of the constraints on this parameter.
+See Table
+        2
+        for initialization parameters and Figure
+        2
+        for a visual representation of the initial expectations of the model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        This work uses a model with 2-component mixtures for both subjects and objects (termed the
+        symmetric model
+        ).
+This formulation achieves the best fit to the training data according to the Bayesian Information Criterion (BIC).
+        However, follow-up experiments find that the non-canonical subject Gaussian only improves the likelihood of the data by erroneously modeling postverbal nouns in imperative statements.
+The lack of a canonical subject in English imperatives allows the model to improve the likelihood of the data by using the non-canonical subject Gaussian to capture fictitious postverbal arguments.
+When imperatives are filtered out of the training corpus, the symmetric model obtains a worse BIC fit than a model that lacks the non-canonical subject Gaussian.
+Therefore, if one makes the assumption that imperatives are prosodically-marked for learners (e.g. the learner is the implicit subject), the best model is one that lacks a non-canonical subject.
+        The remainder of this paper assumes a symmetric model to demonstrate what happens if such an assumption is not made; for the evaluations described in this paper, the results are similar in either case.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        This model differs from other non-recursive computational models of grammar induction (e.g. Goldwater and Griffiths, 2007)
+        since it is not based on Hidden Markov Models.
+Instead, it determines the best ordering for the sentence as a whole.
+This approach bears some similarity to a Generalized Mallows model
+        []
+        , but the current formulation was chosen due to being independently posited as cognitively plausible
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p8">
+       <p class="ltx_p">
+        Figure
+        2
+        (Right) shows the converged, final state of the model.
+The model expects the first argument (usually agent) to be assigned preverbally and expects the second (say, patient) to be assigned postverbally; however, there is now a larger chance that the second argument will appear preverbally.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        The model in this work is trained using transcribed child-directed speech (CDS) from the BabySRL portions
+        []
+        of CHILDES
+        []
+        .
+Chunking is performed using a basic noun-chunker from NLTK
+        []
+        .
+Based on an initial analysis of chunker performance,
+        yes
+        is hand-corrected to not be a noun.
+Poor chunker perfomance is likely due to a mismatch in chunker training and testing domains (Wall Street Journal text vs transcribed speech), but chunking noise may be a good estimation of learner uncertainty, so the remaining text is left uncorrected.
+All noun phrase chunks are then replaced with their final noun (presumed the head) to approximate the ability of children to distinguish nouns from modifiers
+        []
+        .
+Finally, for each sentence, the model assigns sentence positions to each word with the final verb at zero.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Viterbi Expectation-Maximization is performed over each sentence in the corpus to infer the parameters of the model.
+During the Expectation step, the model uses the current Gaussian parameters to label the nouns in each sentence with argument roles.
+Since the model is not lexicalized, these roles correspond to the semantic roles most commonly associated with subject and object.
+The model then chooses the best label sequence for each sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        These newly labelled sentences are used during the Maximization step to determine the Gaussian parameters that maximize the likelihood of that labelling.
+The mean of each Gaussian is updated to the mean position of the words it labels.
+Similarly, the standard deviation of each Gaussian is updated with the standard deviation of the positions it labels.
+A learning rate of 0.3 is used to prevent large parameter jumps.
+The prior probability of each Gaussian is updated as the ratio of that Gaussian’s labellings to the total number of labellings from that mixture in the corpus:
+       </p>
+       πρ⁢θ=∣Gρ⁢θ∣∣Gρ⁣⋅∣
+
+(1)
+       <p class="ltx_p">
+        where
+        ρ∈{S,O}
+        and
+        θ∈{C,N}
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        Best results seem to be obtained when the skip-penalty is loosened by an order of magnitude during testing.
+Essentially, this forces the model to tightly adhere to the perceived argument structure during training to learn more rigid parameters, but the model is allowed more leeway to skip arguments it has less confidence in during testing.
+Convergence (see Figure
+        2
+        ) tends to occur after four iterations but can take up to ten iterations depending on the initial parameters.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p5">
+       <p class="ltx_p">
+        Since the model is unsupervised, it is trained on a given corpus (e.g. Eve) before being tested on the role annotations of that same corpus.
+The Eve corpus was used for development purposes,
+        and the Adam data was used only for testing.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p6">
+       <p class="ltx_p">
+        For testing, this study uses the semantic role annotations in the BabySRL corpus.
+These annotations were obtained by automatically semantic role labelling portions of CHILDES with the system of
+        before roughly hand-correcting them
+        []
+        .
+The BabySRL corpus is annotated with 5 different roles, but the model described in this paper only uses 2 roles.
+Therefore, overall accuracy results (see Table
+        3
+        ) are presented both for the raw BabySRL corpus and for a collapsed BabySRL corpus where all non-agent roles are collapsed into a single role (denoted by a subscript
+        c
+        in all tables).
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p7">
+       <p class="ltx_p">
+        Since children do not generalize above two arguments during the modelled age range
+        []
+        , the collapsed numbers more closely reflect the performance of a learner at this age than the raw numbers.
+The increase in accuracy obtained from collapsing non-agent arguments indicates that children may initially generalize incorrectly to some verbs and would need to learn lexically-specific role assignments (e.g. double-object constructions of
+        give
+        ).
+Since the current work is interested in general filler-gap comprehension at this age, including over unknown verbs, the remaining analyses in this paper consider performance when non-agent arguments are collapsed.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p8">
+       <p class="ltx_p">
+        Next, a filler-gap version of the BabySRL corpus is created using a coarse filtering process:
+the new corpus is comprised of all sentences where an associated object precedes the final verb and all sentences where the relevant subject is not immediately followed by the final verb (see Table
+        4
+        ).
+For these filler-gap evaluations, the model is trained on the full version of the corpus in question (e.g. Eve) before being tested on the filler-gap subset of that corpus.
+The overall results of the filler-gap evaluation (see Table
+        4
+        ) indicate that the model improves significantly at parsing filler-gap constructions after training.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p9">
+       <p class="ltx_p">
+        The performance of the model on role-assignment in filler-gap constructions may be analyzed further in terms of how the model performs on subject-extractions compared with object-extractions and in terms of how the model performs on
+        that
+        -relatives compared with
+        wh
+        -relatives (see Table
+        5
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p10">
+       <p class="ltx_p">
+        The model actually performs worse at subject-extractions after training than before training.
+This is unsurprising because, prior to training, subjects have little-to-no competition for preverbal role assignments; after training, there is a preverbal extracted object category, which the model can erroneously use.
+This slight, though significant in Eve, deficit is counter-balanced by a very substantial and significant improvement in object-extraction labelling accuracy.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p11">
+       <p class="ltx_p">
+        Similarly, training confers a large and significant improvement for role assignment in
+        wh
+        -relative constructions, but it yields less of an improvement for
+        that
+        -relative constructions.
+This difference mimics
+a finding observed in the developmental literature where
+children seem slower to acquire comprehension of
+        that
+        -relatives than of
+        wh
+        -relatives
+        []
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Comparison to BabySRL
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        The acquisition of semantic role labelling (SRL) by the BabySRL model
+        []
+        bears many similarities to the current work and is, to our knowledge, the only comparable line of inquiry to the current one.
+The primary function of BabySRL is to model the acquisition of semantic role labelling while making an idiosyncratic error which infants also make
+        []
+        , the 1-1 role bias error (
+        John and Mary gorped
+        interpreted as
+        John gorped Mary
+        ).
+Similar to the model presented in this paper, BabySRL is based on simple ordering features such as argument position relative to the verb and argument position relative to the other arguments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        This section will demonstrate that the model in this paper initially reflects 1-1 role bias comparably to BabySRL, though it progresses beyond this bias after training.
+        Further, the model in this paper is able to reflect the concurrent acquisition of filler-gap whereas BabySRL does not seem well-suited to such a task.
+Finally, BabySRL performs undesirably in intransitive settings whereas the model in this paper does not.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        demonstrate that a supervised perceptron classifier, based on positional features and trained on the silver role label annotations of the BabySRL corpus, manifests 1-1 role bias errors.
+Follow-up studies show that supervision may be lessened
+        []
+        or removed
+        []
+        and BabySRL will still reflect a substantial 1-1 role bias.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        and
+        run direct analyses of how frequently their models make 1-1 role bias errors.
+A comparable evaluation may be run on the current model by generating 1000 sentences with a structure of NNV and reporting how many times the model chooses a subject-first labelling (see Table
+        6
+        ).
+        The results of
+        and
+        depend on whether BabySRL uses argument-argument relative position as a feature or argument-verb relative position as a feature (there is no combined model).
+Further, the model presented here from
+        has a unique argument constraint, similar to the model in this paper, in order to make comparison as direct as possible.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        The 1-1 role bias error rate (before training) of the model presented in this paper is comparable to that of
+        and
+        , which shows that the current model provides comparable developmental modeling benefits to the BabySRL models.
+Further, similar to real children (see Figure
+        1
+        ) the model presented in this paper develops beyond this error by the end of its training,
+        whereas the BabySRL models still make this error after training.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p6">
+       <p class="ltx_p">
+        look at how frequently their model correctly labels the agent in transitive and intransitive sentences with unknown verbs (to demonstrate that it exhibits an agent-first bias).
+This evaluation can be replicated for the current study by generating 1,000 sentences with the transitive form of NVN and a further 1,000 sentences with the intransitive form of NV (see Table
+        7
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p7">
+       <p class="ltx_p">
+        Since
+        investigate the effects of different initial lexicons, this evaluation compares against the resulting BabySRL from each initializer:
+they initially seed their part-of-speech tagger with either the 10 or 365 most frequent nouns in the corpus or they dispense with the tagger and use gold part-of-speech tags.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p8">
+       <p class="ltx_p">
+        As with subject extraction, the model in this paper gets less accurate after training because of the newly minted extracted object category that can be mistakenly used in these canonical settings.
+While the model of
+        outperforms the model presented here when in a transitive setting, their model does much worse in an intransitive setting.
+The difference in transitive settings stems from increased lexicalization, as is apparent from their results alone; the model presented here initially performs close to their weakly lexicalized model, though training impedes agent-prediction accuracy due to an increased probability of non-canonical objects.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p9">
+       <p class="ltx_p">
+        For the intransitive case, however, whereas the model presented in this paper is generally able to successfully label the lone noun as the subject, the model of
+        chooses to label lone nouns as objects about 40% of the time.
+This likely stems from their model’s reliance on argument-argument relative position as a feature; when there is no additional argument to use for reference, the model’s accuracy decreases.
+This is borne out by their model (not shown in Table
+        7
+        ) that omits the argument-argument relative position feature and solely relies on verb-argument position, which achieves up to 70% accuracy in intransitive settings.
+Even in that case, however, BabySRL still chooses to label lone nouns as objects 30% of the time.
+The fact that intransitive sentences are more common than transitive sentences in both the Eve and Adam sections of the BabySRL corpus suggests that learners should be more likely to assign correct roles in an intransitive setting, which is not reflected in the BabySRL results.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p10">
+       <p class="ltx_p">
+        The overall reason for the different results between the current work and BabySRL is that BabySRL relies on positional features that measure the relative position of two individual elements (e.g. where a given noun is relative to the verb).
+Since the model in this paper operates over global orderings, it implicitly takes into account the positions of other nouns as it models argument position relative to the verb; object and subject are in competition as labels for preverbal nouns, so a preverbal object is usually only assigned once a subject has already been detected.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p11">
+       <p class="ltx_p">
+        Further, while BabySRL consistently reflects 1-1 role bias (corresponding to a pre 25-month old learner), it also learns to productively label five roles, which developmental studies have shown does not take place until at least 31 months
+        []
+        .
+Finally, it does not seem likely that BabySRL could be easily extended to capture filler-gap acquisition.
+The argument-verb position features impede acquisition of filler-gap by classifying preverbal arguments as agents, and the argument-argument position features inhibit accurate labelling in intransitive settings and result in an agent-first bias which would tend to label extracted objects as agents.
+In fact, these observations suggest that any linear classifier which relies on positioning features will have difficulties modeling filler-gap acquisition.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p12">
+       <p class="ltx_p">
+        In sum, the unlexicalized model presented in this paper is able to achieve greater labelling accuracy than the lexicalized BabySRL models in intransitive settings, though this model does perform slightly worse in the less common transitive setting.
+Further, the unsupervised model in this paper initially reflects developmental 1-1 role bias as well as the supervised BabySRL models, and it is able to progress beyond this bias.
+Finally, unlike BabySRL, the model presented here provides a cognitive model of the acquisition of filler-gap comprehension, which BabySRL does not seem well-suited to model.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S8">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        8
+       </span>
+       Acknowledgements
+      </h2>
+      <div class="ltx_para" id="S8.p1">
+       <p class="ltx_p">
+        Thanks to Peter Culicover, William Schuler, Laura Wagner, and the attendees of the OSU 2013 Fall Linguistics Colloquium Fest for feedback on this work.
+This work was partially funded by an OSU Dept. of Linguistics Targeted Investment for Excellence (TIE) grant for collaborative interdisciplinary projects conducted during the academic year 2012-13.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,1253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>That’s sick dude!: Automatic identification of word sense change across different timescales</title>
+<!--Generated on Tue Jun 10 18:26:00 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">That’s sick dude!: 
+<br class="ltx_break"/>Automatic identification of word sense change across different timescales</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Sunny Mitra<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn>1</mn></msup></math>, Ritwik Mitra<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn>1</mn></msup></math>, Martin Riedl<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{{}^{2}}" display="inline"><msup><mi/><mn>2</mn></msup></math>, 
+<br class="ltx_break"/><span class="ltx_text ltx_font_bold">Chris Biemann<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{{}^{2}}" display="inline"><msup><mi/><mn mathvariant="normal">2</mn></msup></math>, Animesh Mukherjee<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn mathvariant="normal">1</mn></msup></math>, Pawan Goyal<math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn mathvariant="normal">1</mn></msup></math></span> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn>1</mn></msup></math>Dept. of Computer Science and Engineering,
+<br class="ltx_break"/>Indian Institute of Technology Kharagpur, India – 721302 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m8" class="ltx_Math" alttext="{{}^{2}}" display="inline"><msup><mi/><mn>2</mn></msup></math> FG Language Technology, Computer Science Department, TU Darmstadt, Germany
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m9" class="ltx_Math" alttext="{{}^{1}}" display="inline"><msup><mi/><mn>1</mn></msup></math>{<span class="ltx_text ltx_font_typewriter">sunnym,ritwikm,animeshm,pawang</span>}<span class="ltx_text ltx_font_typewriter">@cse.iitkgp.ernet.in</span> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m10" class="ltx_Math" alttext="{{}^{2}}" display="inline"><msup><mi/><mn>2</mn></msup></math>{<span class="ltx_text ltx_font_typewriter">riedl,biem</span>}<span class="ltx_text ltx_font_typewriter">@cs.tu-darmstadt.de</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper, we propose an unsupervised method to identify noun sense changes based on rigorous analysis of time-varying text data available in the form of millions of digitized books. We construct distributional thesauri based networks from data at different time points and cluster each of them separately to obtain word-centric sense clusters corresponding to the different time points. Subsequently, we compare these sense clusters of two different time points to find if (i) there is birth of a new sense or (ii) if an older sense has got split into more than one sense or (iii) if a newer sense has been formed from the joining of older senses or (iv) if a particular sense has died. We conduct a thorough evaluation of the proposed methodology both manually as well as through comparison with WordNet. Manual evaluation indicates that the algorithm could correctly identify 60.4% birth cases from a set of 48 randomly picked samples and 57% split/join cases from a set of 21 randomly picked samples. Remarkably, in 44% cases the birth of a novel sense is attested by WordNet, while in 46% cases and 43% cases split and join are respectively confirmed by WordNet. Our approach can be applied for lexicography, as well as for applications like word sense disambiguation or semantic search.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Two of the fundamental components of a natural language communication are word sense discovery <cite class="ltx_cite">[<a href="#bib.bibx26" title="" class="ltx_ref">Jones1986</a>]</cite> and word sense disambiguation <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Ide and Veronis1998</a>]</cite>. While discovery corresponds to acquisition of vocabulary, disambiguation forms the basis of understanding. These two aspects are not only important from the perspective of developing computer applications for natural languages but also form the key components of language evolution and change.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Words take different senses in different contexts while appearing with other words. Context plays a vital role in disambiguation of word senses as well as in the interpretation of the actual meaning of words. For instance, the word “bank” has several distinct interpretations, including that of a “financial institution” and the “shore of a river.” Automatic discovery and disambiguation of word senses from a given text is an important and challenging problem which has been extensively studied in the literature <cite class="ltx_cite">[<a href="#bib.bibx26" title="" class="ltx_ref">Jones1986</a>, <a href="#bib.bibx10" title="" class="ltx_ref">Ide and Veronis1998</a>, <a href="#bib.bibx25" title="" class="ltx_ref">Schütze1998</a>, <a href="#bib.bibx20" title="" class="ltx_ref">Navigli2009</a>]</cite>. However, another equally important aspect that has not been so far well investigated corresponds to one or more changes that a word might undergo in its sense. This particular aspect is getting increasingly attainable as more and more time-varying text data become available in the form of millions of digitized books <cite class="ltx_cite">[<a href="#bib.bibx8" title="" class="ltx_ref">Goldberg and Orwant2013</a>]</cite> gathered over the last centuries. As a motivating example one could consider the word “sick” – while according to the standard English dictionaries the word is normally used to refer to some sort of illness, a new meaning of “sick” referring to something that is “crazy” or “cool” is currently getting popular in the English vernacular. This change is further interesting because while traditionally “sick” has been associated to something negative in general, the current meaning associates positivity with it. In fact, a rock band by the name of “Sick Puppies” has been founded which probably is inspired by the newer sense of the word sick. The title of this paper has been motivated by the above observation. Note that this phenomena of change in word senses has existed ever since the beginning of human communication <cite class="ltx_cite">[<a href="#bib.bibx2" title="" class="ltx_ref">Bamman and Crane2011</a>, <a href="#bib.bibx17" title="" class="ltx_ref">Michel et al.2011</a>, <a href="#bib.bibx29" title="" class="ltx_ref">Wijaya and Yeniterzi2011</a>, <a href="#bib.bibx18" title="" class="ltx_ref">Mihalcea and Nastase2012</a>]</cite>; however, with the advent of modern technology and the availability of huge volumes of time-varying data it now has become possible to automatically track such changes and, thereby, help the lexicographers in word sense discovery, and design engineers in enhancing various NLP/IR applications (e.g., disambiguation, semantic search etc.) that are naturally sensitive to change in word senses.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The above motivation forms the basis of the central objective set in this paper, which is to devise a completely unsupervised approach to track noun sense changes in large texts available over multiple timescales. Toward this objective we make the following contributions: (a) devise a time-varying graph clustering based sense induction algorithm, (b) use the time-varying sense clusters to develop a split-join based approach for identifying new senses of a word, and (c) evaluate the performance of the algorithms on various datasets using different suitable approaches along with a detailed error analysis. Remarkably, comparison with the English WordNet indicates that in 44% cases, as identified by our algorithm, there has been a birth of a completely novel sense, in 46% cases a new sense has split off from an older sense and in 43% cases two or more older senses have merged in to form a new sense.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The remainder of the paper is organized as follows. In the next section we present a short review of the literature. In Section <a href="#S3" title="3 Datasets and graph construction ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> we briefly describe the datasets and outline the process of co-occurrence graph construction. In Section <a href="#S4" title="4 Tracking sense changes ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> we present an approach based on graph clustering to identify the time-varying sense clusters and in Section <a href="#S5" title="5 Experimental framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> we present the split-merge based approach for tracking word sense changes. Evaluation methods are summarized in Section <a href="#S6" title="6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. Finally, conclusions and further research directions are outlined in Section <a href="#S7" title="7 Conclusions ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Word sense disambiguation as well as word sense discovery have both remained key areas of research right from the very early initiatives in natural language processing research. Ide and Veronis <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Ide and Veronis1998</a>]</cite> present a very concise survey of the history of ideas used in word sense disambiguation; for a recent survey of the state-of-the-art one can refer to <cite class="ltx_cite">[<a href="#bib.bibx20" title="" class="ltx_ref">Navigli2009</a>]</cite>. Some of the first attempts to automatic word sense discovery were made by Karen Spärck Jones <cite class="ltx_cite">[<a href="#bib.bibx26" title="" class="ltx_ref">Jones1986</a>]</cite>; later in lexicography, it has been extensively used as a pre-processing step for preparing mono- and multi-lingual dictionaries <cite class="ltx_cite">[<a href="#bib.bibx12" title="" class="ltx_ref">Kilgarriff and Tugwell2001</a>, <a href="#bib.bibx11" title="" class="ltx_ref">Kilgarriff2004</a>]</cite>. However, as we have already pointed out that none of these works consider the temporal aspect of the problem.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In contrast, the current study, is inspired by works on language dynamics and opinion spreading <cite class="ltx_cite">[<a href="#bib.bibx19" title="" class="ltx_ref">Mukherjee et al.2011</a>, <a href="#bib.bibx15" title="" class="ltx_ref">Maity et al.2012</a>, <a href="#bib.bibx14" title="" class="ltx_ref">Loreto et al.2012</a>]</cite> and automatic topic detection and tracking <cite class="ltx_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Allan et al.1998</a>]</cite>. However, our work differs significantly from those proposed in the above studies. Opinion formation deals with the self-organisation and emergence of shared vocabularies whereas our work focuses on how the different senses of these vocabulary words change over time and thus become “out-of-vocabulary”. Topic detection involves detecting the occurrence of a new event such as a plane crash, a murder, a jury trial result, or a political scandal in a stream of news stories from multiple sources and tracking is the process of monitoring a stream of news stories to find those that track (or discuss) the same event. This is done on shorter timescales (hours, days), whereas our study focuses on larger timescales (decades, centuries) and we are interested in common nouns, verbs and adjectives as opposed to events that are characterized mostly by named entities. Other similar works on dynamic topic modelling can be found in <cite class="ltx_cite">[<a href="#bib.bibx5" title="" class="ltx_ref">Blei and Lafferty2006</a>, <a href="#bib.bibx28" title="" class="ltx_ref">Wang and McCallum2006</a>]</cite>. Google books n-gram viewer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="https://books.google.com/ngrams" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">␣https://books.google.com/ngrams</span></a></span></span></span> is a phrase-usage graphing tool which charts the yearly count of selected letter combinations, words, or phrases as found in over 5.2 million digitized books. It only reports frequency of word usage over the years, but does not give any correlation among them as e.g., in <cite class="ltx_cite">[<a href="#bib.bibx9" title="" class="ltx_ref">Heyer et al.2009</a>]</cite>, and does not analyze their senses.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">A few approaches suggested by <cite class="ltx_cite">[<a href="#bib.bibx6" title="" class="ltx_ref">Bond et al.2009</a>, <a href="#bib.bibx21" title="" class="ltx_ref">Pääkkö and Lindén2012</a>]</cite> attempt to augment WordNet synsets primarily using methods of annotation. Another recent work by Cook et al. <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Cook et al.2013</a>]</cite> attempts to induce word senses and then identify novel senses by comparing two different corpora: the “focus corpora” (i.e., a recent version of the corpora) and the “reference corpora” (older version of the corpora). However, this method is limited as it only considers two time points to identify sense changes as opposed to our approach which is over a much larger timescale, thereby, effectively allowing us to track the points of change and the underlying causes. One of the closest work to what we present here has been put forward by <cite class="ltx_cite">[<a href="#bib.bibx27" title="" class="ltx_ref">Tahmasebi et al.2011</a>]</cite>, where the authors analyze a newspaper corpus containing articles between 1785 and 1985. The authors mainly report the frequency patterns of certain words that they found to be candidates for change; however a detailed cause analysis as to why and how a particular word underwent a sense change has not been demonstrated. Further, systematic evaluation of the results obtained by the authors has not been provided.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">All the above points together motivated us to undertake the current work where we introduce, for the first time, a completely unsupervised and automatic method to identify the change of a word sense and the cause for the same. Further, we also present an extensive evaluation of the proposed algorithm in order to test its overall accuracy and performance.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Datasets and graph construction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we outline a brief description of the dataset used for our experiments and the graph construction procedure. The primary source of data have been the millions of digitized books made available through the Google Book project <cite class="ltx_cite">[<a href="#bib.bibx8" title="" class="ltx_ref">Goldberg and Orwant2013</a>]</cite>.
+The Google Book syntactic n-grams dataset provides dependency fragment counts by the years. However, instead of using the plain syntactic n-grams, we use a far richer representation of the data in the form of a distributional thesaurus <cite class="ltx_cite">[<a href="#bib.bibx13" title="" class="ltx_ref">Lin1997</a>, <a href="#bib.bibx24" title="" class="ltx_ref">Rychlý and Kilgarriff2007</a>]</cite>. In specific, we prepare a distributional thesaurus (DT) for each of the time periods separately and subsequently construct the required networks. We briefly outline the procedure of thesauri construction here referring the reader to <cite class="ltx_cite">[<a href="#bib.bibx22" title="" class="ltx_ref">Riedl and Biemann2013</a>]</cite> for further details. In this approach, we first extract each word and a set of its context features, which are formed by labeled and directed dependency parse edges as provided in the dataset. Following this, we compute the frequencies of the word, the context and the words along with their context. Next we calculate the lexicographer’s mutual information LMI <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Kilgarriff2004</a>]</cite> between a word and its features and retain only the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> ranked features for every word. Finally, we construct the DT network as follows: each word is a node in the network and the edge weight between two nodes is defined as the number of features that the two corresponding words share in common.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Tracking sense changes</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The basic idea of our algorithm for tracking sense changes is as follows. If a word undergoes a sense change, this can be detected by comparing its senses obtained from two different time periods. Since we aim to detect this change automatically, we require distributional representations corresponding to word senses for different time periods. We, therefore, utilize the basic hypothesis of unsupervised sense induction to induce the sense clusters over various time periods and then compare these clusters to detect sense change. The basic premises of the ‘unsupervised sense induction’ are briefly described below.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Unsupervised sense induction</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the co-occurrence based graph clustering framework introduced in <cite class="ltx_cite">[<a href="#bib.bibx3" title="" class="ltx_ref">Biemann2006</a>]</cite>. The algorithm proceeds in three basic steps. Firstly, a co-occurrence graph is created for every target word found in DT. Next, the neighbourhood/ego graph is clustered using the Chinese Whispers (CW) algorithm (see <cite class="ltx_cite">[<a href="#bib.bibx16" title="" class="ltx_ref">McAuley and Leskovec2012</a>]</cite> for similar approaches). The algorithm, in particular, produces a set of clusters for each target word by decomposing its open neighborhood. We hypothesize that each different cluster corresponds to a particular sense of the target word. For a detailed description, the reader is referred to <cite class="ltx_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">Biemann2011</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">If a word undergoes sense change, this can be detected by comparing the sense clusters obtained from two different time periods by the algorithm outlined above. For this purpose, we use statistics from the DT corresponding to two different time intervals, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>. We then run the sense induction algorithm over these two different datasets. Now, for a given word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> that appears in both the datasets, we get two different set of clusters, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="C_{i}" display="inline"><msub><mi>C</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="C_{j}" display="inline"><msub><mi>C</mi><mi>j</mi></msub></math>. Without loss of generality, let us assume that our algorithm detects <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> sense clusters for the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m9" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> sense clusters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m10" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m11" class="ltx_Math" alttext="C_{i}=\{s_{i1},s_{i2},\ldots,s_{im}\}" display="inline"><mrow><msub><mi>C</mi><mi>i</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi></mrow></msub></mrow><mo>}</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m12" class="ltx_Math" alttext="C_{j}=\{s_{j1},s_{j2},\ldots,s_{jn}\}" display="inline"><mrow><msub><mi>C</mi><mi>j</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mi>n</mi></mrow></msub></mrow><mo>}</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m13" class="ltx_Math" alttext="s_{kz}" display="inline"><msub><mi>s</mi><mrow><mi>k</mi><mo>⁢</mo><mi>z</mi></mrow></msub></math> denotes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m14" class="ltx_Math" alttext="z^{th}" display="inline"><msup><mi>z</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> sense cluster for word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m15" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> during time interval <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m16" class="ltx_Math" alttext="tv_{k}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>k</mi></msub></mrow></math>. We next describe our algorithm for detecting sense change from these sets of sense clusters.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Split, join, birth and death</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We hypothesize that word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> can undergo sense change from one time interval (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math>) to another (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>) as per one of the following scenarios:</p>
+<dl id="I1" class="ltx_description">[leftmargin=*]
+
+<dt id="I1.ix1" class="ltx_item"><span class="ltx_tag ltx_tag_description">Split</span></dt>
+<dd class="ltx_item">
+<div id="I1.ix1.p1" class="ltx_para">
+<p class="ltx_p">A sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m1" class="ltx_Math" alttext="s_{iz}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mi>z</mi></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m2" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> <span class="ltx_text ltx_font_italic">splits</span> into two (or more) sense clusters, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m3" class="ltx_Math" alttext="s_{jp_{1}}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><msub><mi>p</mi><mn>1</mn></msub></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m4" class="ltx_Math" alttext="s_{jp_{2}}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><msub><mi>p</mi><mn>2</mn></msub></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m5" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math></p>
+</div></dd>
+<dt id="I1.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_description">Join</span></dt>
+<dd class="ltx_item">
+<div id="I1.ix2.p1" class="ltx_para">
+<p class="ltx_p">Two sense clusters <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m1" class="ltx_Math" alttext="s_{iz_{1}}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><msub><mi>z</mi><mn>1</mn></msub></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m2" class="ltx_Math" alttext="s_{iz_{2}}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><msub><mi>z</mi><mn>2</mn></msub></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m3" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> <span class="ltx_text ltx_font_italic">join</span> to make a single cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m4" class="ltx_Math" alttext="s_{jp}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m5" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math></p>
+</div></dd>
+<dt id="I1.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_description">Birth</span></dt>
+<dd class="ltx_item">
+<div id="I1.ix3.p1" class="ltx_para">
+<p class="ltx_p">A new sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix3.p1.m1" class="ltx_Math" alttext="s_{jp}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math> appears in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix3.p1.m2" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>, which was absent in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix3.p1.m3" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math></p>
+</div></dd>
+<dt id="I1.ix4" class="ltx_item"><span class="ltx_tag ltx_tag_description">Death</span></dt>
+<dd class="ltx_item">
+<div id="I1.ix4.p1" class="ltx_para">
+<p class="ltx_p">A sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix4.p1.m1" class="ltx_Math" alttext="s_{iz}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mi>z</mi></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix4.p1.m2" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> dies out and does not appear in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix4.p1.m3" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math></p>
+</div></dd>
+</dl>
+<p class="ltx_p">To detect split, join, birth or death, we build an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="(m+1)\times(n+1)" display="inline"><mrow><mrow><mo>(</mo><mrow><mi>m</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></math> matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="I" display="inline"><mi>I</mi></math> to capture the intersection between sense clusters of two different time periods. The first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> rows and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> columns correspond to the sense clusters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m8" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m9" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math> espectively. We append an additional row and column to capture the fraction of words, which did not show up in any of the sense clusters in another time interval. So, an element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m10" class="ltx_Math" alttext="I_{kl}" display="inline"><msub><mi>I</mi><mrow><mi>k</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> of the matrix</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="1\leq k\leq m,1\leq l\leq n" display="inline"><mrow><mrow><mn>1</mn><mo>≤</mo><mi>k</mi><mo>≤</mo><mi>m</mi></mrow><mo>,</mo><mrow><mn>1</mn><mo>≤</mo><mi>l</mi><mo>≤</mo><mi>n</mi></mrow></mrow></math>: denotes the fraction of words in a newer sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="s_{jl}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math>, that were also present in an older sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="s_{ik}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mi>k</mi></mrow></msub></math>.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="k=m+1,1\leq l\leq n" display="inline"><mrow><mrow><mi>k</mi><mo>=</mo><mrow><mi>m</mi><mo>+</mo><mn>1</mn></mrow></mrow><mo>,</mo><mrow><mn>1</mn><mo>≤</mo><mi>l</mi><mo>≤</mo><mi>n</mi></mrow></mrow></math>: denotes the fraction of words in the sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="s_{jl}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math>, that were not present in any of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> clusters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m4" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math>.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="1\leq k\leq m,l=n+1" display="inline"><mrow><mrow><mn>1</mn><mo>≤</mo><mi>k</mi><mo>≤</mo><mi>m</mi></mrow><mo>,</mo><mrow><mi>l</mi><mo>=</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></mrow></mrow></math>: denotes the fraction of words in the sense cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m2" class="ltx_Math" alttext="s_{ik}" display="inline"><msub><mi>s</mi><mrow><mi>i</mi><mo>⁢</mo><mi>k</mi></mrow></msub></math>, that did not show up in any of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> clusters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m4" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>.</p>
+</div></li>
+</ul>
+<p class="ltx_p">Thus, the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m11" class="ltx_Math" alttext="I" display="inline"><mi>I</mi></math> captures all the four possible scenarios for sense change. Since we can not expect a perfect split, birth etc., we used certain threshold values to detect if a candidate word is undergoing sense change via one of these four cases. In Figure <a href="#S4.F1" title="Figure 1 ‣ 4.2 Split, join, birth and death ‣ 4 Tracking sense changes ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, as an example, we illustrate the birth of a new sense for the word ‘compiler’.</p>
+</div>
+<div id="S4.F1" class="ltx_figure"><img src="P14-1096/image002.png" id="S4.F1.g1" class="ltx_graphics ltx_centering" width="511" height="226" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example of the birth of a new sense for the word ‘compiler’</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Multi-stage filtering</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">To make sure that the candidate words obtained via our algorithm are meaningful, we applied multi-stage filtering to prune the candidate word list. The following criterion were used for the filtering:</p>
+<dl id="I3" class="ltx_description">[leftmargin=*]
+
+<dt id="I3.ix1" class="ltx_item"><span class="ltx_tag ltx_tag_description">Stage 1</span></dt>
+<dd class="ltx_item">
+<div id="I3.ix1.p1" class="ltx_para">
+<p class="ltx_p">We utilize the fact that the CW algorithm is non-deterministic in nature. We apply CW three times over the source and target time intervals. We obtain the candidate word lists using our algorithm for the three runs, then take the intersection to output those words, which came up in all the three runs.</p>
+</div></dd>
+<dt id="I3.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_description">Stage 2</span></dt>
+<dd class="ltx_item">
+<div id="I3.ix2.p1" class="ltx_para">
+<p class="ltx_p">From the above list, we retain only those candidate words, which have a part-of-speech tag ‘NN’ or ‘NNS’, as we focus on nouns for this work.</p>
+</div></dd>
+<dt id="I3.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_description">Stage 3</span></dt>
+<dd class="ltx_item">
+<div id="I3.ix3.p1" class="ltx_para">
+<p class="ltx_p">We sort the candidate list obtained in Stage 2 as per their occurrence in the first time period. Then, we remove the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.ix3.p1.m1" class="ltx_Math" alttext="20\%" display="inline"><mrow><mn>20</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> and the bottom <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.ix3.p1.m2" class="ltx_Math" alttext="20\%" display="inline"><mrow><mn>20</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> words from this list. Therefore, we consider the <span class="ltx_text ltx_font_italic">torso</span> of the frequency distribution which is the most informative part for this type of an analysis.</p>
+</div></dd>
+</dl>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental framework</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">For our experiments, we utilized DTs created for 8 different time periods: 1520-1908, 1909-1953, 1954-1972, 1973-1986, 1987-1995, 1996-2001, 2002-2005 and 2006-2008 <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Riedl et al.2014</a>]</cite>. The time periods were set such that the amount of data in each time period is roughly the same. We will also use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="T_{8}" display="inline"><msub><mi>T</mi><mn>8</mn></msub></math> to denote these time periods. The parameters for CW clustering were set as follows. The size of the neighbourhood (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>) to be clustered was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="200" display="inline"><mn>200</mn></math>. The parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> regulating the edge density in this neighbourhood was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m6" class="ltx_Math" alttext="200" display="inline"><mn>200</mn></math> as well. The parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m7" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m8" class="ltx_Math" alttext="lin" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></math>, which corresponds to favouring smaller clusters by hub downweighing<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>data available at <a href="http://sf.net/p/jobimtext/wiki/LREC2014_Google_DT/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://sf.net/p/jobimtext/wiki/LREC2014_Google_DT/</span></a></span></span></span>. The threshold values used to detect the sense changes were as follows. For birth, at least <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m9" class="ltx_Math" alttext="80\%" display="inline"><mrow><mn>80</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> words of the target cluster should be novel. For split, each split cluster should have at least <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m10" class="ltx_Math" alttext="30\%" display="inline"><mrow><mn>30</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> words of the source cluster and the total intersection of all the split clusters should be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m11" class="ltx_Math" alttext="&gt;80\%" display="inline"><mrow><mi/><mo>&gt;</mo><mrow><mn>80</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>. The same parameters were used for the join and death case with the interchange of source and target clusters.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Signals of sense change</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Making comparisons between all the pairs of time periods gave us 28 candidate words lists. For each of these comparison, we applied the multi-stage filtering to obtain the pruned list of candidate words. Table <a href="#S5.T1" title="Table 1 ‣ 5.1 Signals of sense change ‣ 5 Experimental framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> provides some statistics about the number of candidate words obtained corresponding to the birth case. The rows correspond to the source time-period and the columns correspond to the target time periods. An element of the table shows the number of candidate words obtained by comparing the corresponding source and target time periods.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Number of candidate birth senses between all time periods</div>
+<span class="ltx_inline-block ltx_align_center" style="width:219.1pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="T_{3}" display="inline"><msub><mi>T</mi><mn>3</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="T_{4}" display="inline"><msub><mi>T</mi><mn>4</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m4" class="ltx_Math" alttext="T_{5}" display="inline"><msub><mi>T</mi><mn>5</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m5" class="ltx_Math" alttext="T_{6}" display="inline"><msub><mi>T</mi><mn>6</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m6" class="ltx_Math" alttext="T_{7}" display="inline"><msub><mi>T</mi><mn>7</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m7" class="ltx_Math" alttext="T_{8}" display="inline"><msub><mi>T</mi><mn>8</mn></msub></math></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m8" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2498</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">3319</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">3901</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4220</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4238</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4092</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">3578</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m9" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1451</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2330</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2789</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2834</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2789</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2468</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m10" class="ltx_Math" alttext="T_{3}" display="inline"><msub><mi>T</mi><mn>3</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">917</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1460</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1660</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1827</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1815</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m11" class="ltx_Math" alttext="T_{4}" display="inline"><msub><mi>T</mi><mn>4</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">517</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">769</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1099</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1416</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m12" class="ltx_Math" alttext="T_{5}" display="inline"><msub><mi>T</mi><mn>5</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">401</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">818</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1243</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m13" class="ltx_Math" alttext="T_{6}" display="inline"><msub><mi>T</mi><mn>6</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">682</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1107</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m14" class="ltx_Math" alttext="T_{7}" display="inline"><msub><mi>T</mi><mn>7</mn></msub></math></td>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">609</td>
+<td class="ltx_td ltx_border_b ltx_border_t"/></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">The table clearly shows a trend. For most of the cases, the number of candidate birth senses tends to increase as we go from left to right. Similarly, this number decreases as we go down in the table. This is quite intuitive since going from left to right corresponds to increasing the gap between two time periods while going down corresponds to decreasing this gap. As the gap increases (decreases), one would expect more (less) new senses coming in. Even while moving diagonally, the candidate words tend to decrease as we move downwards. This corresponds to the fact that the number of years in the time periods decreases as we move downwards, and therefore, the gap also decreases.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Stability analysis &amp; sense change location</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Formally, we consider a sense change from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math> <span class="ltx_text ltx_font_bold">stable</span> if it was also detected while comparing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> with the following time periods <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="tv_{k}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>k</mi></msub></mrow></math>s. This number of subsequent time periods, where the same sense change is detected, helps us to determine the <span class="ltx_text ltx_font_bold">age</span> of a new sense. Similarly, for a candidate sense change from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m5" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m6" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>, we say that the <span class="ltx_text ltx_font_bold">location</span> of the sense change is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m7" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math> if and only if that sense change does not get detected by comparing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m8" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> with any time interval <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m9" class="ltx_Math" alttext="tv_{k}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>k</mi></msub></mrow></math>, intermediate between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m10" class="ltx_Math" alttext="tv_{i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m11" class="ltx_Math" alttext="tv_{j}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub></mrow></math>.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5.1 Signals of sense change ‣ 5 Experimental framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> gives a lot of candidate words for sense change. However, not all the candidate words were stable. Thus, it was important to prune these results using stability analysis. Also, it is to be noted that these results do not pin-point to the exact time-period, when the sense change might have taken place. For instance, among the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="4238" display="inline"><mn>4238</mn></math> candidate birth sense detected by comparing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="T_{6}" display="inline"><msub><mi>T</mi><mn>6</mn></msub></math>, many of these new senses might have come up in between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="T_{5}" display="inline"><msub><mi>T</mi><mn>5</mn></msub></math> as well. We prune these lists further based on the stability of the sense, as well as to locate the approximate time interval, in which the sense change might have occurred.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Stability analysis &amp; sense change location ‣ 5 Experimental framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the number of stable (at least twice) senses as well as the number of stable sense changes located in that particular time period. While this decreases recall, we found this to be beneficial for the accuracy of the method.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Number of candidate birth senses obtained for different time periods</div>
+<span class="ltx_inline-block ltx_align_center" style="width:219.1pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="T_{3}" display="inline"><msub><mi>T</mi><mn>3</mn></msub></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="T_{4}" display="inline"><msub><mi>T</mi><mn>4</mn></msub></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="T_{5}" display="inline"><msub><mi>T</mi><mn>5</mn></msub></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="T_{6}" display="inline"><msub><mi>T</mi><mn>6</mn></msub></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="T_{7}" display="inline"><msub><mi>T</mi><mn>7</mn></msub></math></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2498</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">3319</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">3901</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4220</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4238</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4092</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">stable</td>
+<td class="ltx_td ltx_align_right ltx_border_r">537</td>
+<td class="ltx_td ltx_align_right ltx_border_r">989</td>
+<td class="ltx_td ltx_align_right ltx_border_r">1368</td>
+<td class="ltx_td ltx_align_right ltx_border_r">1627</td>
+<td class="ltx_td ltx_align_right ltx_border_r">1540</td>
+<td class="ltx_td ltx_align_right ltx_border_r">1299</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">located</td>
+<td class="ltx_td ltx_align_right ltx_border_r">537</td>
+<td class="ltx_td ltx_align_right ltx_border_r">754</td>
+<td class="ltx_td ltx_align_right ltx_border_r">772</td>
+<td class="ltx_td ltx_align_right ltx_border_r">686</td>
+<td class="ltx_td ltx_align_right ltx_border_r">420</td>
+<td class="ltx_td ltx_align_right ltx_border_r">300</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1451</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2330</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2789</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2834</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2789</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">stable</td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_right ltx_border_r">343</td>
+<td class="ltx_td ltx_align_right ltx_border_r">718</td>
+<td class="ltx_td ltx_align_right ltx_border_r">938</td>
+<td class="ltx_td ltx_align_right ltx_border_r">963</td>
+<td class="ltx_td ltx_align_right ltx_border_r">810</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">located</td>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">343</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">561</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">517</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">357</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">227</td>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">Once we were able to locate the senses as well as to find the age of the senses, we attempted to select some representative words and plotted them on a timeline as per the birth period and their age in Figure <a href="#S5.F2" title="Figure 2 ‣ 5.2 Stability analysis &amp; sense change location ‣ 5 Experimental framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. The source time period here is 1909-1953.</p>
+</div>
+<div id="S5.F2" class="ltx_figure"><img src="P14-1096/image001.png" id="S5.F2.g1" class="ltx_graphics ltx_centering" width="497" height="213" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Examples of birth senses placed on a timeline as per their location as well as age</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Evaluation framework</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">During evaluation, we considered the clusters obtained using the 1909-1953 time-slice as our reference and attempted to track sense change by comparing these with the clusters obtained for 2002-2005. The sense change detected was categorized as to whether it was a new sense (birth), a single sense got split into two or more senses (split) or two or more senses got merged (join) or a particular sense died (death). We present a few instances of the resulting clusters in the paper and refer the reader to the supplementary material<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://cse.iitkgp.ac.in/resgrp/cnerg/acl2014_wordsense/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://cse.iitkgp.ac.in/resgrp/cnerg/acl2014_wordsense/</span></a></span></span></span> for the rest of the results.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Manual evaluation</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">The algorithm detected a lot of candidate words for the cases of birth, split/join as well as death. Since it was difficult to go through all the candidate sense changes for all the comparisons manually, we decided to randomly select some candidate words, which were flagged by our algorithm as undergoing sense change, while comparing 1909-1953 and 2002-2005 DT. We selected 48 random samples of candidate words for birth cases and 21 random samples for split/join cases. One of the authors annotated each of the birth cases identifying whether or not the algorithm signalled a true sense change while another author did the same task for the split/join cases. The accuracy as per manual evaluation was found to be 60.4% for the birth cases and 57% for the split/join cases.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T3" title="Table 3 ‣ 6.1 Manual evaluation ‣ 6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the evaluation results for a few candidate words, flagged due to birth. Columns correspond to the candidate words, words obtained in the cluster of each candidate word (we will use the term ‘birth cluster’ for these words, henceforth), which indicated a new sense, the results of manual evaluation as well as the possible sense this birth cluster denotes.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Manual evaluation for seven randomly chosen candidate birth clusters between time periods 1909-1953 and 2002-2005  </div>
+<span class="ltx_inline-block ltx_align_center" style="width:404.0pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Sl</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Candidate</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">birth cluster</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Evaluation judgement,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">No.</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Word</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">comments</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">implant</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">gel, fibre, coatings, cement, materials, metal, filler</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">No</span>, New set of words but</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">silicone, composite, titanium, polymer, coating</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">similar sense already existed</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">passwords</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">browsers, server, functionality, clients, workstation</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Yes</span>, New sense related</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">printers, software, protocols, hosts, settings, utilities</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">to ‘a computer sense’</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">giants</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">multinationals, conglomerates, manufacturers</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Yes</span>, New sense as ‘an</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">corporations, competitors, enterprises, companies</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">organization with very great</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">businesses, brands, firms</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">size or force’</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">donation</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">transplantation, donation, fertilization, transfusions</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Yes</span>, The new usage of donation</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">transplant, transplants, insemination, donors, donor …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">associated with body organs etc.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">novice</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">negro, fellow, emigre, yankee, realist, quaker, teen</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">No</span>, this looks like a false</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">male, zen, lady, admiring, celebrity, thai, millionaire …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">positive</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">6</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">partitions</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">server, printers, workstation, platforms, arrays</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Yes</span>, New usage related to</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">modules, computers, workstations, kernel …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">the ‘computing’ domain</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">yankees</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">athletics, cubs, tigers, sox, bears, braves, pirates</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Yes</span>, related to the ‘New</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">cardinals, dodgers, yankees, giants, cardinals …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">York Yankees’ team</td></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T4" title="Table 4 ‣ 6.1 Manual evaluation ‣ 6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the corresponding evaluation results for a few candidate words, flagged due to split or join.</p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Manual evaluation for five randomly chosen candidate split/join clusters between time periods 1909-1953 and 2002-2005 </div>
+<span class="ltx_inline-block ltx_align_center" style="width:398.3pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Sl</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Candidate</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Source and target clusters</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">No.</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Word</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">intonation</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m1" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>: <span class="ltx_text ltx_font_slanted">whisper, glance, idioms, gesture, chant, sob, inflection, diction, sneer, rhythm, accents …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(<span class="ltx_text ltx_font_bold">split)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m2" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math>: <span class="ltx_text ltx_font_slanted">nod, tone, grimace, finality, gestures, twang, shake, shrug, irony, scowl, twinkle …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m3" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math>: <span class="ltx_text ltx_font_slanted">accents, phrase, rhythm, style, phonology, diction, utterance, cadence, harmonies …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Yes</span>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m4" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math> corresponds to intonation in normal conversations while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m5" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math> corresponds to the use of accents in</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2">formal and research literature</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">diagonal</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m6" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>: <span class="ltx_text ltx_font_slanted">coast, edge, shoreline, coastline, border, surface, crease, edges, slope, sides, seaboard …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(<span class="ltx_text ltx_font_bold">split)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m7" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math>: <span class="ltx_text ltx_font_slanted">circumference, center, slant, vertex, grid, clavicle, margin, perimeter, row, boundary ..</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m8" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math>: <span class="ltx_text ltx_font_slanted">border, coast, seaboard, seashore, shoreline, waterfront, shore, shores, coastline, coasts</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Yes</span>, the split <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m9" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math> is based on mathematics where as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m10" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math> is based on geography</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">mantra</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m11" class="ltx_Math" alttext="S_{1}" display="inline"><msub><mi>S</mi><mn>1</mn></msub></math>: <span class="ltx_text ltx_font_slanted">sutra, stanza, chanting, chants, commandments, monologue, litany, verse, verses …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(<span class="ltx_text ltx_font_bold">join)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m12" class="ltx_Math" alttext="S_{2}" display="inline"><msub><mi>S</mi><mn>2</mn></msub></math>: <span class="ltx_text ltx_font_slanted">praise, imprecation, benediction, praises, curse, salutation, benedictions, eulogy …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m13" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>: <span class="ltx_text ltx_font_slanted">blessings, spell, curses, spells, rosary, prayers, blessing, prayer, benediction …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Yes</span>, the two seemingly distinct senses of mantra - a contextual usage for chanting and prayer (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m14" class="ltx_Math" alttext="S_{1}" display="inline"><msub><mi>S</mi><mn>1</mn></msub></math>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2">and another usage in its effect - salutations, benedictions (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m15" class="ltx_Math" alttext="S_{2}" display="inline"><msub><mi>S</mi><mn>2</mn></msub></math>) have now merged in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m16" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">continuum</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m17" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>: <span class="ltx_text ltx_font_slanted">circumference, ordinate, abscissa, coasts, axis, path, perimeter, arc, plane axis …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(<span class="ltx_text ltx_font_bold">split)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m18" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math>: <span class="ltx_text ltx_font_slanted">roadsides, corridors, frontier, trajectories, coast, shore, trail, escarpment, highways …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m19" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math>: <span class="ltx_text ltx_font_slanted">arc, ellipse, meridians, equator, axis, axis, plane, abscissa, ordinate, axis, meridian ….</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Yes</span>, the split <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m20" class="ltx_Math" alttext="S_{1}" display="inline"><msub><mi>S</mi><mn>1</mn></msub></math> denotes the usage of ‘continuum’ with physical objects while the</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2">the split <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m21" class="ltx_Math" alttext="S_{2}" display="inline"><msub><mi>S</mi><mn>2</mn></msub></math> corresponds to its usages in mathematics domain.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">headmaster</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m22" class="ltx_Math" alttext="S_{1}" display="inline"><msub><mi>S</mi><mn>1</mn></msub></math>: <span class="ltx_text ltx_font_slanted">master, overseer, councillor, chancellor, tutors, captain, general, principal …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(<span class="ltx_text ltx_font_bold">join)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m23" class="ltx_Math" alttext="S_{2}" display="inline"><msub><mi>S</mi><mn>2</mn></msub></math>: <span class="ltx_text ltx_font_slanted">mentor, confessor, tutor, founder, rector, vicar, graduate, counselor, lawyer …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m24" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>: <span class="ltx_text ltx_font_slanted">chaplain, commander, surveyor, coordinator, consultant, lecturer, inspector …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">No</span>, it seems a false positive</td></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p">A further analysis of the words marked due to birth in the random samples indicates that there are 22 technology-related words, 2 slangs, 3 economics related words and 2 general words. For the split-join case we found that there are 3 technology-related words while the rest of the words are general. Therefore one of the key observations is that most of the technology related words (where the neighborhood is completely new) could be extracted from our birth results. In contrast, for the split-join instances most of the results are from the general category since the neighborhood did not change much here; it either got split or merged from what it was earlier.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Automated evaluation with WordNet</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">In addition to manual evaluation, we also performed automated evaluation for the candidate words. We chose WordNet for automated evaluation because not only does it have a wide coverage of word senses but also it is being maintained and updated regularly to incorporate new senses. We did this evaluation for the candidate birth, join and split sense clusters obtained by comparing 1909-1953 time period with respect to 2002-2005. For our evaluation, we developed an aligner to align the word clusters obtained with WordNet senses. The aligner constructs a WordNet dictionary for the purpose of synset alignment. The CW cluster is then aligned to WordNet synsets by comparing the clusters with WordNet graph and the synset with the maximum alignment score is returned as the output. In summary, the aligner tool takes as input the CW cluster and returns a WordNet synset id that corresponds to the cluster words. The evaluation settings were as follows:</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<dl id="I4" class="ltx_description">[leftmargin=*]
+
+<dt id="I4.ix1" class="ltx_item"><span class="ltx_tag ltx_tag_description">Birth:</span></dt>
+<dd class="ltx_item">
+<div id="I4.ix1.p1" class="ltx_para">
+<p class="ltx_p">For a candidate word flagged as birth, we first find out the set of all WordNet synset ids for its CW clusters in the source time period (1909-1953 in this case). Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix1.p1.m1" class="ltx_Math" alttext="S_{init}" display="inline"><msub><mi>S</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math> denote the union of these synset ids. We then find WordNet synset id for its birth-cluster, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix1.p1.m2" class="ltx_Math" alttext="s_{new}" display="inline"><msub><mi>s</mi><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math>. Then, if <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix1.p1.m3" class="ltx_Math" alttext="s_{new}\notin S_{init}" display="inline"><mrow><msub><mi>s</mi><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></msub><mo>∉</mo><msub><mi>S</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi></mrow></msub></mrow></math>, it implies that this is a new sense that was not present in the source clusters and we call it a ‘success’ as per WordNet.</p>
+</div></dd>
+<dt id="I4.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_description">Join:</span></dt>
+<dd class="ltx_item">
+<div id="I4.ix2.p1" class="ltx_para">
+<p class="ltx_p">For the join case, we find WordNet synset ids <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m1" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m2" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math> for the clusters obtained in the source time period and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m3" class="ltx_Math" alttext="s_{new}" display="inline"><msub><mi>s</mi><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> for the join cluster in the target time period. If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m4" class="ltx_Math" alttext="s_{1}\neq s_{2}" display="inline"><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>s</mi><mn>2</mn></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m5" class="ltx_Math" alttext="s_{new}" display="inline"><msub><mi>s</mi><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> is either <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m6" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix2.p1.m7" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math>, we call it a ‘success’.</p>
+</div></dd>
+<dt id="I4.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_description">Split:</span></dt>
+<dd class="ltx_item">
+<div id="I4.ix3.p1" class="ltx_para">
+<p class="ltx_p">For the split case, we find WordNet synset id <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m1" class="ltx_Math" alttext="s_{old}" display="inline"><msub><mi>s</mi><mrow><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> for the source cluster and synset ids <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m2" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m3" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math> for the target split clusters. If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m4" class="ltx_Math" alttext="s_{1}\neq s_{2}" display="inline"><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>s</mi><mn>2</mn></msub></mrow></math> and either <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m5" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math>, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m6" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math> retains the id <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.ix3.p1.m7" class="ltx_Math" alttext="s_{old}" display="inline"><msub><mi>s</mi><mrow><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>, we call it a ‘success’.</p>
+</div></dd>
+</dl>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6.2 Automated evaluation with WordNet ‣ 6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> show the results of WordNet based evaluation. In case of birth we observe a success of 44% while for split and join we observe a success of 46% and 43% respectively.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Results of the automatic evaluation using WordNet</div>
+<span class="ltx_inline-block ltx_align_center" style="width:219.1pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Category</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">No. of Candidate Words</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Success Cases</span></th>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Birth</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">810</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">44<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m1" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Split</th>
+<td class="ltx_td ltx_align_left ltx_border_r">24</td>
+<td class="ltx_td ltx_align_left ltx_border_r">46<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m2" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Join</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">28</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">43<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m3" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">We then manually verified some of the words that were deemed as successes, as well as investigated WordNet sense they were mapped to. Table <a href="#S6.T6" title="Table 6 ‣ 6.2 Automated evaluation with WordNet ‣ 6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows some of the words for which the evaluation detected success along with WordNet senses. Clearly, the cluster words correspond to a newer sense for these words and the mapped WordNet synset matches the birth cluster to a very high degree.</p>
+</div>
+<div id="S6.T6" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Example of randomly chosen candidate birth clusters mapped to WordNet</div>
+<span class="ltx_inline-block ltx_align_center" style="width:404.0pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Sl</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Candidate</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">birth cluster</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Synset Id,</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">No.</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Word</span></th>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">WordNet sense</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">macro</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">code, query, handler, program, procedure, subroutine</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">6582403</span>, a set sequence of steps,</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">module, script</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">part of larger computer program</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">caller</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">browser, compiler, sender, routers, workstation, cpu</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">4175147</span>, a computer that</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">host, modem, router, server</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">provides client stations with access to files</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">searching</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">coding, processing, learning, computing, scheduling</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">1144355</span>, programming: setting an</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">planning, retrieval, routing, networking, navigation</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">order and time for planned events</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">hooker</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">bitch, whore, stripper, woman slut, prostitute</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">10485440</span>, a woman who</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">girl, dancer …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">engages in sexual intercourse for money</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">drones</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">helicopters, fighters, rockets, flights, planes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">4264914</span>, a craft capable of</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">vehicles, bomber, missions, submarines …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">traveling in outer space</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">6</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">amps</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">inverters, capacitor, oscillators, switches, mixer</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">2955247</span>, electrical device characterized</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">transformer, windings, capacitors, circuits …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">by its capacity to store an electric charge</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">compilers</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">interfaces, algorithms, programming, software</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">6566077</span>, written programs pertaining</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">modules, libraries, routines, tools, utilities …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">to the operation of a computer system</td></tr>
+</tbody>
+</table>
+</span>
+</div>
+<div id="S6.T7" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7: </span>Some representative examples for candidate death sense clusters</div>
+<span class="ltx_inline-block ltx_align_center" style="width:404.0pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Sl</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Candidate</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">death cluster</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Vanished meaning</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">No.</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Word</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">slop</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">jeans, velveteen, tweed, woollen, rubber, sealskin, wear</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">clothes and bedding supplied to</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">oilskin, sheepskin, velvet, calico, deerskin, goatskin, cloth …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">sailors by the navy</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">2</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">blackmail</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">subsidy, rent, presents, tributes, money, fine, bribes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Origin: denoting protection money</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">dues, tolls, contributions, contribution, customs, duties …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">levied by Scottish chiefs</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">3</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">repertory</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">dictionary, study, compendium, bibliography, lore, directory</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Origin: denoting an index</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">catalogues, science, catalog, annals, digest, literature …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">or catalog: from late Latin repertorium</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">4</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">phrasing</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">contour, outline, construction, handling, grouping, arrangement</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">in the sense ‘style or manner of</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">structure, modelling, selection, form …</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">expression’: via late Latin Greek phrasis</td></tr>
+</tbody>
+</table>
+</span>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Evaluation with a slang list</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">Slangs are words and phrases that are regarded as very informal, and are typically restricted to a particular context. New slang words come up every now and then, and this plays an integral part in the phenomena of sense change. We therefore decided to perform an evaluation as to how many slang words were being detected by our candidate birth clusters. We used a list of slangs available from the slangcity website<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://slangcity.com/email_archive/index_2003.htm" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://slangcity.com/email_archive/index_2003.htm</span></a></span></span></span>. We collected slangs for the years 2002-2005 and found the intersection with our candidate birth words. Note that the website had a large number of multi-word expressions that we did not consider in our study. Further, some of the words appeared as either erroneous or very transient (not existing more than a few months) entires, which had to be removed from the list. All these removal left us with a very little space for comparison; however, despite this we found 25 slangs from the website that were present in our birth results, e.g. ‘bum’, ‘sissy’, ‘thug’, ‘dude’ etc.</p>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Evaluation of candidate death clusters</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">Much of our evaluation was focussed on the birth sense clusters, mainly because these are more interesting from a lexicographic perspective. Additionally, the main theme of this work was to detect new senses for a given word. To detect a true death of a sense, persistence analysis was required, that is, to verify if the sense was persisting earlier and vanished after a certain time period. While such an analysis goes beyond the scope of this paper, we selected some interesting candidate “death” senses. Table <a href="#S6.T7" title="Table 7 ‣ 6.2 Automated evaluation with WordNet ‣ 6 Evaluation framework ‣ That’s sick dude!:  Automatic identification of word sense change across different timescales" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> shows some of these interesting candidate words, their death cluster along with the possible vanished meaning, identified by the authors. While these words are still used in a related sense, the original meaning does not exist in the modern usage.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we presented a completely unsupervised method to detect word sense changes by analyzing millions of digitized books archived spanning several centuries. In particular, we constructed DT networks over eight different time windows, clustered these networks and compared these clusters to identify the emergence of novel senses. The performance of our method has been evaluated manually as well as by comparison with WordNet and a list of slang words. Through manual evaluation we found that the algorithm could correctly identify 60.4% birth cases from a set of 48 random samples and 57% split/join cases from a set of 21 randomly picked samples. Quite strikingly, we observe that (i) in 44% cases the birth of a novel sense is attested by WordNet, (ii) in 46% cases the split of an older sense is signalled on comparison with WordNet and (iii) in 43% cases the join of two senses is attested by WordNet. These results might have strong lexicographic implications – even if one goes by very moderate estimates almost half of the words would be candidate entries in WordNet if they were not already part of it. This method can be extremely useful in the construction of lexico-semantic networks for low-resource languages, as well as for keeping lexico-semantic resources up to date in general.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Future research directions based on this work are manifold. On one hand, our method can be used by lexicographers in designing new dictionaries where candidate new senses can be semi-automatically detected and included, thus greatly reducing the otherwise required manual effort. On the other hand, this method can be directly used for various NLP/IR applications like semantic search, automatic word sense discovery as well as disambiguation. For semantic search, taking into account the newer senses of the word can increase the relevance of the query result. Similarly, a disambiguation engine informed with the newer senses of a word can increase the efficiency of disambiguation, and recognize senses uncovered by the inventory that would otherwise have to be wrongly assigned to covered senses. In addition, this method can be also extended to the ‘NNP’ part-of-speech (i.e., named entities) to identify changes in role of a person/place. Furthermore, it would be interesting to apply this method to languages other than English and to try to align new senses of cognates across languages.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">AM would like to thank DAAD for supporting the faculty exchange programme to TU Darmstadt. PG would like to thank Google India Private Ltd. for extending travel support to attend the conference. MR and CB have been supported by an IBM SUR award and by LOEWE as part of the research center <span class="ltx_text ltx_font_italic">Digital Humanities</span>.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bibx1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Allan et al.1998</span>
+<span class="ltx_bibblock">
+J. Allan, R. Papka and V. Lavrenko.
+
+</span>
+<span class="ltx_bibblock">1998.
+
+</span>
+<span class="ltx_bibblock">On-line new event detection and tracking.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">SIGIR</span>, 37–45, Melbourne, Australia.
+
+</span></li>
+<li id="bib.bibx2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Bamman and Crane2011</span>
+<span class="ltx_bibblock">
+D. Bamman and G. Crane.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Measuring Historical Word Sense Variation.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">JCDL</span>, 1–10, New York, NY, USA.
+
+</span></li>
+<li id="bib.bibx3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Biemann2006</span>
+<span class="ltx_bibblock">
+C. Biemann.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">Chinese whispers - an efficient graph clustering algorithm and its application to natural language processing problems.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">TextGraphs</span>, 73–80, New York, USA.
+
+</span></li>
+<li id="bib.bibx4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Biemann2011</span>
+<span class="ltx_bibblock">
+C. Biemann.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Structure Discovery in Natural Language</span>.
+
+</span>
+<span class="ltx_bibblock">Springer Heidelberg Dordrecht London New York. ISBN 978-3-642-25922-7.
+
+</span></li>
+<li id="bib.bibx5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Blei and Lafferty2006</span>
+<span class="ltx_bibblock">
+D. Blei and J. Lafferty.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">Dynamic topic models.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">ICML</span>, 113–120, Pittsburgh, Pennsylvania.
+
+</span></li>
+<li id="bib.bibx6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Bond et al.2009</span>
+<span class="ltx_bibblock">
+F. Bond, H. Isahara, S. Fujita, K. Uchimoto, T. Kuribayash and K. Kanzaki.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Enhancing the Japanese WordNet.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">workshop on Asian Language Resources</span>, 1–8, Suntec, Singapore.
+
+</span></li>
+<li id="bib.bibx7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Cook et al.2013</span>
+<span class="ltx_bibblock">
+P. Cook, J. H. Lau, M. Rundell, D. McCarthy, T. Baldwin.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">A lexicographic appraisal of an automatic approach for detecting new word senses.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">eLex</span>, 49-65, Tallinn, Estonia.
+
+</span></li>
+<li id="bib.bibx8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Goldberg and Orwant2013</span>
+<span class="ltx_bibblock">
+Y. Goldberg and J. Orwant.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">A dataset of syntactic-ngrams over time from a very large corpus of English books.
+
+</span>
+<span class="ltx_bibblock">In proceedings of the <span class="ltx_text ltx_font_italic">Joint Conference on Lexical and Computational Semantics (*SEM)</span>, 241–247, Atlanta, GA, USA.
+
+</span></li>
+<li id="bib.bibx9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Heyer et al.2009</span>
+<span class="ltx_bibblock">
+G. Heyer, F. Holz and S. Teresniak.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Change of topics over time – tracking topics by their change of meaning.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">KDIR</span>, Madeira, Portugal.
+
+</span></li>
+<li id="bib.bibx10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Ide and Veronis1998</span>
+<span class="ltx_bibblock">
+N. Ide and J. Veronis.
+
+</span>
+<span class="ltx_bibblock">1998.
+
+</span>
+<span class="ltx_bibblock">Introduction to the special issue on word sense disambiguation: The state of the art.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Computational Linguistics</span>, 24(1):1–40.
+
+</span></li>
+<li id="bib.bibx11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Kilgarriff2004</span>
+<span class="ltx_bibblock">
+A. Kilgarriff, P. Rychly, P. Smrz, and D. Tugwell.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">The sketch engine.
+
+</span>
+<span class="ltx_bibblock">In Proceedings of <span class="ltx_text ltx_font_italic">EURALEX</span>, 105–116, Lorient, France.
+
+</span></li>
+<li id="bib.bibx12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Kilgarriff and Tugwell2001</span>
+<span class="ltx_bibblock">
+A. Kilgarriff and D. Tugwell.
+
+</span>
+<span class="ltx_bibblock">2001.
+
+</span>
+<span class="ltx_bibblock">Word sketch: Extraction and display of significant collocations for lexicography.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">COLLOCATION: Computational Extraction, Analysis and Exploitation</span>, 32–38, Toulouse, France.
+
+</span></li>
+<li id="bib.bibx13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Lin1997</span>
+<span class="ltx_bibblock">
+D. Lin.
+
+</span>
+<span class="ltx_bibblock">1997.
+
+</span>
+<span class="ltx_bibblock">Using syntactic dependency as local context to resolve word sense ambiguity.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">ACL/EACL</span>, 64–71, Madrid, Spain.
+
+</span></li>
+<li id="bib.bibx14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Loreto et al.2012</span>
+<span class="ltx_bibblock">
+V. Loreto, A. Mukherjee and F. Tria.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">On the origin of the hierarchy of color names.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">PNAS</span>, 109(18), 6819–6824.
+
+</span></li>
+<li id="bib.bibx15" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Maity et al.2012</span>
+<span class="ltx_bibblock">
+S. K. Maity, T. M. Venkat and A. Mukherjee.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Opinion formation in time-varying social networks: The case of the naming game.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Phys. Rev. E</span>, 86, 036110.
+
+</span></li>
+<li id="bib.bibx16" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">McAuley and Leskovec2012</span>
+<span class="ltx_bibblock">
+J. McAuley and J. Leskovec.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Learning to discover social circles in ego networks.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">NIPS</span>, 548–556, Nevada, USA.
+
+</span></li>
+<li id="bib.bibx17" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Michel et al.2011</span>
+<span class="ltx_bibblock">
+J.-B. Michel, Y. K. Shen, A. P. Aiden, A. Veres, M. K. Gray, J. P. Pickett, D. Hoiberg, D. Clancy, P. Norvig, J. Orwant, S. Pinker, M. A. Nowak and E. L. Aiden.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Quantitative analysis of culture using millions of digitized books.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Science</span>, 331(6014):176–182.
+
+</span></li>
+<li id="bib.bibx18" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mihalcea and Nastase2012</span>
+<span class="ltx_bibblock">
+R. Mihalcea and V. Nastase.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Word epoch disambiguation: finding how words change over time.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">ACL</span>, 259–263, Jeju Island, Korea.
+
+</span></li>
+<li id="bib.bibx19" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mukherjee et al.2011</span>
+<span class="ltx_bibblock">
+A. Mukherjee, F. Tria, A. Baronchelli, A. Puglisi and V. Loreto.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Aging in language dynamics.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">PLoS ONE</span>, 6(2): e16677.
+
+</span></li>
+<li id="bib.bibx20" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Navigli2009</span>
+<span class="ltx_bibblock">
+R. Navigli.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Word sense disambiguation: a survey.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">ACM Computing Surveys</span>, 41(2):1–69.
+
+</span></li>
+<li id="bib.bibx21" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Pääkkö and Lindén2012</span>
+<span class="ltx_bibblock">
+P. Pääkkö and K. Lindén.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Finding a location for a new word in WordNet.
+
+</span>
+<span class="ltx_bibblock">In proceedings of the <span class="ltx_text ltx_font_italic">Global WordNet Conference</span>, Matsue, Japan.
+
+</span></li>
+<li id="bib.bibx22" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Riedl and Biemann2013</span>
+<span class="ltx_bibblock">
+M. Riedl and C. Biemann.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Scaling to large<math xmlns="http://www.w3.org/1998/Math/MathML" id="bib.bibx22.m1" class="ltx_Math" alttext="{}^{3}" display="inline"><msup><mi/><mn>3</mn></msup></math> data: An efficient and effective method to compute distributional thesauri.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">EMNLP</span>, 884–890, Seattle, Washington, USA.
+
+</span></li>
+<li id="bib.bibx23" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Riedl et al.2014</span>
+<span class="ltx_bibblock">
+M. Riedl, R. Steuer and C. Biemann.
+
+</span>
+<span class="ltx_bibblock">2014.
+
+</span>
+<span class="ltx_bibblock">Distributed distributional similarities of Google books over the centuries.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">LREC</span>, Reykjavik, Iceland.
+
+</span></li>
+<li id="bib.bibx24" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Rychlý and Kilgarriff2007</span>
+<span class="ltx_bibblock">
+P. Rychlý and A. Kilgarriff.
+
+</span>
+<span class="ltx_bibblock">2007.
+
+</span>
+<span class="ltx_bibblock">An efficient algorithm for building a distributional thesaurus (and other sketch engine developments).
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">ACL, poster and demo sessions</span>, 41–44, Prague, Czech Republic.
+
+</span></li>
+<li id="bib.bibx25" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Schütze1998</span>
+<span class="ltx_bibblock">
+H. Schütze.
+
+</span>
+<span class="ltx_bibblock">1998.
+
+</span>
+<span class="ltx_bibblock">Automatic word sense discrimination.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Computational Linguistics</span>, 24(1):97–123.
+
+</span></li>
+<li id="bib.bibx26" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Jones1986</span>
+<span class="ltx_bibblock">
+K. Spärk-Jones.
+
+</span>
+<span class="ltx_bibblock">1986.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Synonymy and Semantic Classification</span>.
+
+</span>
+<span class="ltx_bibblock">Edinburgh University Press. ISBN 0-85224-517-3.
+
+</span></li>
+<li id="bib.bibx27" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Tahmasebi et al.2011</span>
+<span class="ltx_bibblock">
+N. Tahmasebi, T. Risse and S. Dietze.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Towards automatic language evolution tracking: a study on word sense tracking.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">EvoDyn</span>, vol. 784, Bonn, Germany.
+
+</span></li>
+<li id="bib.bibx28" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Wang and McCallum2006</span>
+<span class="ltx_bibblock">
+X. Wang and A. McCallum.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">Topics over time: a non-Markov continuous-time model of topical trends.
+
+</span>
+<span class="ltx_bibblock">In proceedings of <span class="ltx_text ltx_font_italic">KDD</span>, 424–433, Philadelphia, PA, USA.
+
+</span></li>
+<li id="bib.bibx29" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Wijaya and Yeniterzi2011</span>
+<span class="ltx_bibblock">
+D. Wijaya and R. Yeniterzi.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Understanding semantic change of words over centuries.
+
+</span>
+<span class="ltx_bibblock">In proceedings of the workshop on <span class="ltx_text ltx_font_italic">Detecting and Exploiting Cultural Diversity on the Social Web</span>, 35–40, Glasgow, Scotland, UK.
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:26:00 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

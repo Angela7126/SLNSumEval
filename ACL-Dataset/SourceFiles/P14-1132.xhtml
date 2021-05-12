@@ -1,0 +1,1732 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Is this a wampimuk?Cross-modal mapping between distributional semanticsand the visual world</title>
+<!--Generated on Tue Jun 10 19:20:23 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Is this a wampimuk?
+<br class="ltx_break"/>Cross-modal mapping between distributional semantics
+<br class="ltx_break"/>and the visual world</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Angeliki Lazaridou 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Elia Bruni 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Marco Baroni
+<br class="ltx_break"/>Center for Mind/Brain Sciences
+<br class="ltx_break"/>University of Trento
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">angeliki.lazaridou|elia.bruni|marco.baroni</span>}<span class="ltx_text ltx_font_typewriter">@unitn.it</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Following up on recent work on establishing a mapping between
+vector-based semantic embeddings of words and the visual
+representations of the corresponding objects from natural images, we
+first present a simple approach to cross-modal vector-based
+semantics for the task of <em class="ltx_emph">zero-shot learning</em>, in which an
+image of a previously unseen object is mapped to a linguistic
+representation denoting its word. We then introduce <em class="ltx_emph">fast
+mapping</em>, a challenging and more cognitively plausible variant of
+the zero-shot task, in which the learner is exposed to new objects
+and the corresponding words in very limited linguistic contexts. By
+combining prior linguistic and visual knowledge acquired about
+words and their objects, as well as exploiting the
+limited new evidence available, the learner must learn to associate
+new objects with words. Our results on this task pave the way to
+realistic simulations of how children or robots could use existing
+knowledge to bootstrap grounded semantic knowledge about new
+concepts.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Computational models of meaning that rely on corpus-extracted context
+vectors, such as LSA <cite class="ltx_cite">[<a href="#bib.bib266" title="A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">31</a>]</cite>, HAL
+<cite class="ltx_cite">[<a href="#bib.bib291" title="Producing high-dimensional semantic spaces from lexical co-occurrence" class="ltx_ref">36</a>]</cite>, Topic Models <cite class="ltx_cite">[<a href="#bib.bib196" title="Topics in semantic representation" class="ltx_ref">20</a>]</cite> and
+more recent neural-network approaches
+<cite class="ltx_cite">[<a href="#bib.bib111" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">11</a>, <a href="#bib.bib319" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">38</a>]</cite> have successfully
+tackled a number of lexical semantics tasks, where context vector
+similarity highly correlates with various indices of semantic
+relatedness <cite class="ltx_cite">[<a href="#bib.bib454" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">53</a>]</cite>. Given that these models are
+learned from naturally occurring data using simple associative
+techniques, various authors have advanced the claim that they might be
+also capturing some crucial aspects of how humans acquire and use
+language <cite class="ltx_cite">[<a href="#bib.bib266" title="A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">31</a>, <a href="#bib.bib271" title="Distributional approaches in linguistic and cognitive research" class="ltx_ref">33</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">However, the models induce the meaning of words entirely from their
+co-occurrence with other words, without links to the external
+world. This constitutes a serious blow to claims of cognitive
+plausibility in at least two respects. One is the <em class="ltx_emph">grounding
+problem</em> <cite class="ltx_cite">[<a href="#bib.bib207" title="The symbol grounding problem" class="ltx_ref">24</a>, <a href="#bib.bib403" title="Minds, brains and science" class="ltx_ref">43</a>]</cite>. Irrespective of their
+relatively high performance on various semantic tasks, it is debatable
+whether models that have no access to visual and perceptual
+information can capture the holistic, grounded knowledge that humans
+have about concepts. However, a possibly even more serious pitfall of
+vector models is <em class="ltx_emph">lack of reference</em>: natural language is,
+fundamentally, a means to communicate, and thus our words must be able
+to <em class="ltx_emph">refer</em> to objects, properties and events in the outside world
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Reference" class="ltx_ref">1</a>]</cite>. Current vector models are purely
+language-internal, solipsistic models of meaning. Consider the very
+simple scenario in which visual information is being provided to an
+agent about the current state of the world, and the agent’s task is to
+determine the truth of a statement similar to <span class="ltx_text ltx_font_italic">There is a dog
+in the room</span>. Although the agent is equipped with a powerful
+context vector model, this will not suffice to successfully complete
+the task. The model might suggest that the concepts of <em class="ltx_emph">dog</em> and
+<em class="ltx_emph">cat</em> are semantically related, but it has no means to determine
+the visual appearance of dogs, and consequently no way to verify the
+truth of such a simple statement.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Mapping words to the objects they denote is such a core function of
+language that humans are highly optimized for it, as shown by
+the so-called <em class="ltx_emph">fast mapping</em> phenomenon, whereby children can
+learn to associate a word to an object or property by a single
+exposure to it
+<cite class="ltx_cite">[<a href="#bib.bib61" title="How children learn the meanings of words" class="ltx_ref">2</a>, <a href="#bib.bib90" title="The child as a word learner" class="ltx_ref">8</a>, <a href="#bib.bib91" title="Acquiring a single new word" class="ltx_ref">7</a>, <a href="#bib.bib215" title="Word learning in children: an examination of fast mapping" class="ltx_ref">25</a>]</cite>. But
+lack of reference is not only a theoretical weakness: Without the
+ability to refer to the outside world, context vectors are arguably
+useless for practical goals such as learning to execute natural
+language instructions <cite class="ltx_cite">[<a href="#bib.bib7" title="Reinforcement learning for mapping instructions to actions" class="ltx_ref">3</a>, <a href="#bib.bib96" title="Learning to interpret natural language navigation instructions from observations" class="ltx_ref">10</a>]</cite>, that
+could greatly benefit from the rich network of lexical
+meaning such vectors encode, in order to scale up to real-life
+challenges.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Very recently, a number of papers have exploited advances in automated
+feature extraction form images and videos to enrich context vectors
+with visual information
+<cite class="ltx_cite">[<a href="#bib.bib79" title="Multimodal distributional semantics" class="ltx_ref">5</a>, <a href="#bib.bib159" title="Visual information in semantic representation" class="ltx_ref">16</a>, <a href="#bib.bib274" title="Going beyond text: a hybrid image-text approach for measuring word relatedness" class="ltx_ref">34</a>, <a href="#bib.bib376" title="Grounding action descriptions in videos" class="ltx_ref">42</a>, <a href="#bib.bib409" title="Models of semantic representation with visual attributes" class="ltx_ref">44</a>]</cite>. This
+line of research tackles the grounding problem: Word representations
+are no longer limited to their linguistic contexts but also
+encode visual information present in images associated with the
+corresponding objects. In this paper, we rely on the same image
+analysis techniques but instead focus on the reference problem: We do
+not aim at enriching word representations with visual information,
+although this might be a side effect of our approach, but we address
+the issue of automatically mapping objects, as depicted in images, to
+the context vectors representing the corresponding words. This is
+achieved by means of a simple neural network trained to project
+image-extracted feature vectors to text-based vectors through a hidden
+layer that can be interpreted as a cross-modal semantic space.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We first test the effectiveness of our cross-modal semantic space on
+the so-called <em class="ltx_emph">zero-shot learning</em>
+task <cite class="ltx_cite">[<a href="#bib.bib351" title="Zero-shot learning with semantic output codes" class="ltx_ref">40</a>]</cite>, which has recently been explored in
+the machine learning community
+<cite class="ltx_cite">[<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">18</a>, <a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">49</a>]</cite>. In this setting, we assume
+that our system possesses linguistic and visual information for a set
+of concepts in the form of text-based representations of words
+and image-based vectors of the corresponding objects, used for vision-to-language-mapping training.
+The system is then provided with visual information for a previously
+unseen object, and the task is to associate it with a word by cross-modal mapping.
+Our approach is competitive
+with respect to the recently proposed alternatives, while being overall
+simpler.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">The aforementioned task is very demanding and interesting from an
+engineering point of view. However, from a cognitive angle, it relies
+on strong,
+unrealistic assumptions: The learner is asked to establish a link
+between a new object and a word for which they possess a full-fledged
+text-based vector extracted from a billion-word corpus. On the
+contrary, the first time a learner is exposed to a new object, the
+linguistic information available is likely also very limited. Thus,
+in order to consider vision-to-language mapping under more plausible
+conditions, similar to the ones that children or robots in a new
+environment are faced with, we next simulate a scenario akin to fast
+mapping. We show that the induced cross-modal semantic space is
+powerful enough that sensible guesses about the correct word denoting
+an object can be made, even when the linguistic context vector
+representing the word has been created from as little as 1 sentence
+containing it.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">The contributions of this work are three-fold. First, we conduct
+experiments with simple image- and text-based vector representations
+and compare alternative methods to perform cross-modal mapping. Then,
+we complement recent work <cite class="ltx_cite">[<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">18</a>]</cite> and show that
+zero-shot learning scales to a large and noisy dataset. Finally, we
+provide preliminary evidence that cross-modal projections can be used
+effectively to simulate a fast mapping scenario, thus strengthening
+the claims of this approach as a full-fledged, fully inductive theory
+of meaning acquisition.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The problem of establishing word reference has been extensively
+explored in computational simulations of cross-situational learning
+(see <cite class="ltx_cite">Fazly<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib157" title="A probabilistic computational model of cross-situational word learning" class="ltx_ref">2010</a>)</cite> for a recent proposal and extended
+review of previous work). This line of research has traditionally
+assumed artificial models of the external world, typically a set of
+linguistic or logical labels for objects, actions and possibly other
+aspects of a scene <cite class="ltx_cite">[<a href="#bib.bib410" title="A computational study of cross-situational techniques for learning word-to-meaning mappings" class="ltx_ref">46</a>]</cite>. Recently,
+<cite class="ltx_cite">Yu and Siskind (<a href="#bib.bib479" title="Grounded language learning from video described with sentences" class="ltx_ref">2013</a>)</cite> presented a system that induces word-object
+mappings from features extracted from short videos paired with
+sentences. Our work complements theirs in two ways. First, unlike
+<cite class="ltx_cite">Yu and Siskind (<a href="#bib.bib479" title="Grounded language learning from video described with sentences" class="ltx_ref">2013</a>)</cite> who considered a limited lexicon of 15 items
+with only 4 nouns, we conduct experiments in a large search space
+containing a highly ambiguous set of potential target words for every
+object (see Section <a href="#S4.SS1" title="4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>). Most importantly, by
+projecting visual representations of objects into a shared
+<em class="ltx_emph">semantic space</em>, we do not limit ourselves to establishing a
+link between objects and words. We induce a rich semantic
+representation of the multimodal concept, that can lead, among other
+things, to the discovery of important properties of an object even
+when we lack its linguistic label. Nevertheless, Yu and Siskind’s
+system could in principle be used to initialize the vision-language
+mapping that we rely upon.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Closer to the spirit of our work are two very recent studies coming
+from the machine learning community. <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite> and
+<cite class="ltx_cite">Frome<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">2013</a>)</cite> focus on zero-shot learning in the
+vision-language domain by exploiting a shared visual-linguistic
+semantic space. <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite> learn to project
+unsupervised vector-based image representations onto a word-based
+semantic space using a neural network architecture. Unlike us, Socher
+and colleagues train an outlier detector to decide whether a test
+image should receive a known-word label by means of a standard
+supervised object classifier, or be assigned an unseen label by
+vision-to-language mapping. In our zero-shot experiments, we assume no
+access to an outlier detector, and thus, the search for the correct
+label is performed in the full concept space. Furthermore, Socher and
+colleagues present a much more constrained evaluation setup, where
+only 10 concepts are considered, compared to our experiments with
+hundreds or thousands of concepts.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Frome<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">2013</a>)</cite> use linear regression to transform
+vector-based image representations onto vectors representing the same
+concepts in linguistic semantic space.
+Unlike <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite> and the current study that adopt
+simple unsupervised techniques for constructing image representations,
+<cite class="ltx_cite">Frome<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">2013</a>)</cite> rely on a supervised state-of-the-art
+method: They feed low-level features to a deep neural network trained
+on a supervised object recognition task <cite class="ltx_cite">[<a href="#bib.bib1a" title="Imagenet classification with deep convolutional neural networks" class="ltx_ref">29</a>]</cite>.
+Furthermore, their text-based vectors encode very rich
+information, such as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\vec{king}-\vec{man}+\vec{woman}=\vec{queen}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>-</mo><mover accent="true"><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>w</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover></mrow><mo>=</mo><mover accent="true"><mrow><mi>q</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib317" title="Linguistic regularities in continuous space word representations" class="ltx_ref">39</a>]</cite>.
+A natural question we aim to answer is whether the success of
+cross-modal mapping is due to the high-quality embeddings or to
+the general algorithmic design. If the latter is the case,
+then these results could be extended to traditional distributional
+vectors bearing other desirable properties, such as high
+interpretability of dimensions.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Zero-shot learning and fast mapping</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">“We found a cute, hairy <em class="ltx_emph">wampimuk</em> sleeping behind the tree.”
+Even though the previous statement is certainly the first time
+one hears about <em class="ltx_emph">wampimuks</em>, the linguistic context
+already creates some visual expectations: Wampimuks probably
+resemble small animals (Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Zero-shot learning and fast mapping ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+This is the scenario of <em class="ltx_emph">zero-shot learning</em>.
+Moreover, if this is also the first linguistic encounter
+of that concept, then we refer to the task as <em class="ltx_emph">fast mapping</em>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b].25
+<img src="P14-1132/image002.jpg" id="S3.F1.g1" class="ltx_graphics" width="486" height="365" alt=""/>
+<span class="ltx_ERROR undefined">\subcaption</span>
+
+<span class="ltx_ERROR undefined">{subfigure}</span>[b].24
+<img src="P14-1132/image006.png" id="S3.F1.g2" class="ltx_graphics" width="541" height="406" alt=""/>
+<span class="ltx_ERROR undefined">\subcaption</span></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>A potential <span class="ltx_text ltx_font_italic">wampimuk</span> (a) together with its
+projection onto the linguistic space (b).</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Concretely, we assume that concepts, denoted for convenience by word
+labels, are represented in linguistic terms by vectors in a text-based
+distributional semantic space (see Section <a href="#S4.SS3" title="4.3 Linguistic Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>).
+Objects corresponding to concepts are represented in visual terms by vectors in an image-based
+semantic space (Section <a href="#S4.SS2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>).
+For a subset of concepts (e.g., a set of animals, a set of vehicles),
+we possess information related to both their linguistic and visual
+representations.
+During training, this cross-modal vocabulary is used to induce a
+projection function (Section <a href="#S4.SS4" title="4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>), which – intuitively –
+represents a mapping between visual and linguistic dimensions. Thus, this
+function, given a visual vector, returns its corresponding linguistic
+representation.
+At test time, the system is presented with a previously unseen object
+(e.g., <em class="ltx_emph">wampimuk</em>). This object is projected onto the linguistic
+space and associated with the word label of the nearest neighbor in that
+space (<em class="ltx_emph">degus</em> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Zero-shot learning and fast mapping ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">The fast mapping setting can be seen as a special case of the
+zero-shot task. Whereas for the latter our system assumes that all
+concepts have rich linguistic representations (i.e., representations
+estimated from a large corpus), in the case of the former, new concepts
+are assumed to be encounted in a limited linguistic context and therefore
+lacking rich linguistic representations.
+This is operationalized by constructing the
+text-based vector for these concepts from a context of just
+a few occurrences. In this way, we simulate the first encounter of a
+learner with a concept that is new in both visual and linguistic
+terms.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Setup</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Visual Datasets</h3>
+
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">CIFAR-100</h5>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The CIFAR-100 dataset <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning multiple layers of features from tiny images" class="ltx_ref">30</a>]</cite> consists of 60,000
+32x32 colour images (note the extremely small size) representing 100
+distinct concepts, with 600 images per concept. The dataset covers a
+wide range of concrete domains and is organized into 20
+broader categories. Table <a href="#S4.T1" title="Table 1 ‣ CIFAR-100 ‣ 4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> lists the concepts
+used in our experiments organized by category.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Category</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Seen Concepts</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">Unseen (Test) Concepts</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">aquatic mammals</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">beaver, otter, seal, whale</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">dolphin</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">fish</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">ray, trout</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">shark</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">flowers</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">orchid, poppy, sunflower, tulip</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">rose</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">food containers</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bottle, bowl, can ,plate</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">cup</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">fruit vegetable</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">apple, mushroom, pear</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">orange</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">household electrical devices</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">keyboard, lamp, telephone, television</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">clock</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">household furniture</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">chair, couch, table, wardrobe</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">bed</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">insects</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bee, beetle, caterpillar, cockroach</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">butterfly</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">large carnivores</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bear, leopard, lion, wolf</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">tiger</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">large man-made outdoor things</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bridge, castle, house, road</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">skyscraper</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">large natural outdoor scenes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">cloud, mountain, plain, sea</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">forest</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">large omnivores and herbivores</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">camel, cattle, chimpanzee, kangaroo</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">elephant</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">medium-sized mammals</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">fox, porcupine, possum, skunk</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">raccoon</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">non-insect invertebrates</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">crab, snail, spider, worm</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">lobster</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">people</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">baby, girl, man, woman</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">boy</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">reptiles</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">crocodile, dinosaur, snake, turtle</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">lizard</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">small mammals</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">hamster, mouse, rabbit, shrew</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">squirrel</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">vehicles 1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bicycle, motorcycle, train</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">bus</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">vehicles 2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">rocket, tank, tractor</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">streetcar</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 1: </span>Concepts in our version of the CIFAR-100 data set</div>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">ESP</h5>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our second dataset consists of 100K images from the ESP-Game data
+set, labeled through a “game with a purpose”
+<cite class="ltx_cite">[<a href="#bib.bib456" title="Games with a purpose" class="ltx_ref">55</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://www.cs.cmu.edu/~biglou/resources/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.cmu.edu/~biglou/resources/</span></a></span></span></span>
+The ESP image tags form a vocabulary of 20,515 unique words. Unlike
+other datasets used for zero-shot learning, it covers adjectives and
+verbs in addition to nouns. On average, an image has 14 tags and a
+word appears as a tag for 70 images. Unlike the CIFAR-100 images,
+which were chosen specifically for image object recognition tasks
+(i.e., each image is clearly depicting a single object in the
+foreground), ESP contains a random selection of images from the Web.
+Consequently, objects do not appear in most images in their
+prototypical display, but rather as elements of complex scenes (see
+Figure <a href="#S4.F2" title="Figure 2 ‣ ESP ‣ 4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). Thus, ESP constitutes a more realistic,
+and at the same time more challenging, simulation of how things are
+encountered in real life, testing the potentials of cross-modal
+mapping in dealing with the complex scenes that one would encounter in
+event recognition and caption generation tasks.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.25
+<img src="P14-1132/image005.jpg" id="S4.F2.g1" class="ltx_graphics ltx_centering ltx_centering ltx_centering" width="77" height="77" alt=""/>
+
+
+<span class="ltx_ERROR undefined ltx_centering ltx_centering">{subfigure}</span>.22
+<img src="P14-1132/image003.jpg" id="S4.F2.g2" class="ltx_graphics ltx_centering ltx_centering" width="88" height="66" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Images of <em class="ltx_emph">chair</em> as extracted from CIFAR-100 (left) and
+ESP (right).</div>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Visual Semantic Spaces</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Image-based vectors are extracted using the unsupervised
+bag-of-visual-words (BoVW) representational architecture
+<cite class="ltx_cite">[<a href="#bib.bib411" title="Video Google: A text retrieval approach to object matching in videos" class="ltx_ref">47</a>, <a href="#bib.bib121" title="Visual categorization with bags of keypoints" class="ltx_ref">12</a>]</cite>, that has been widely and successfully
+applied to computer vision tasks such as object recognition and image
+retrieval <cite class="ltx_cite">[<a href="#bib.bib476" title="Evaluating bag-of-visual-words representations in scene classification" class="ltx_ref">56</a>]</cite>. First, low-level visual features
+<cite class="ltx_cite">[<a href="#bib.bib429" title="Computer vision : algorithms and applications" class="ltx_ref">52</a>]</cite> are extracted from a large collection of images
+and clustered into a set of “visual words”. The low-level features
+of a specific image are then mapped to the corresponding visual words,
+and the image is represented by a count vector recording the number of
+occurrences of each visual word in it. We do not attempt any parameter
+tuning of the pipeline.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">As low-level features, we use Scale Invariant Feature Transform (SIFT)
+features <cite class="ltx_cite">[<a href="#bib.bib289" title="Distinctive image features from scale-invariant keypoints" class="ltx_ref">35</a>]</cite>. SIFT features are tailored to capture
+object parts and to be invariant to several image transformations such
+as rotation, illumination and scale change. These features are
+clustered into vocabularies of 5,000 (ESP) and 4,096 (CIFAR-100)
+visual words.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>For selecting the size of the vocabulary size,
+we relied on standard settings found in the relevant literature <cite class="ltx_cite">[<a href="#bib.bib79" title="Multimodal distributional semantics" class="ltx_ref">5</a>, <a href="#bib.bib7a" title="The devil is in the details: an evaluation of recent feature encoding methods" class="ltx_ref">9</a>]</cite>.</span></span></span>
+To preserve spatial information in the BoVW representation, we use
+the spatial pyramid technique <cite class="ltx_cite">[<a href="#bib.bib26" title="Beyond bags of features: spatial pyramid matching for recognizing natural scene categories" class="ltx_ref">32</a>]</cite>, which consists in
+dividing the image into several regions, computing BoVW vectors for
+each region and concatenating them.
+In particular, we divide ESP images into 16 regions and the
+smaller CIFAR-100 images into 4. The vectors resulting from region
+concatenation have dimensionality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="5000\times 16=80,000" display="inline"><mrow><mrow><mn>5000</mn><mo>×</mo><mn>16</mn></mrow><mo>=</mo><mrow><mn>80</mn><mo>,</mo><mn>000</mn></mrow></mrow></math> (ESP) and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="4,096\times 4=16,384" display="inline"><mrow><mrow><mrow><mn>4</mn><mo>,</mo><mrow><mn>096</mn><mo>×</mo><mn>4</mn></mrow></mrow><mo>=</mo><mn>16</mn></mrow><mo>,</mo><mn>384</mn></mrow></math> (CIFAR-100), respectively. We apply Local Mutual
+Information (LMI, <cite class="ltx_cite">[<a href="#bib.bib153" title="The statistics of word cooccurrences" class="ltx_ref">13</a>]</cite>) as weighting scheme and reduce
+the full co-occurrence space to 300 dimensions using the Singular
+Value Decomposition.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">For CIFAR-100, we extract distinct visual vectors for single
+images. For ESP, given the size and amount of noise in this dataset,
+we build vectors for visual <em class="ltx_emph">concepts</em>, by normalizing and
+summing the BoVW vectors of all the images that have the relevant
+concept as a tag. Note that relevant
+literature <cite class="ltx_cite">[<a href="#bib.bib4" title="Early biases and developmental changes in self-generated object views" class="ltx_ref">41</a>]</cite> has emphasized the importance of
+learners self-generating multiple views when faced with new objects.
+Thus, our multiple-image assumption should not be considered as
+problematic in the current setup.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We implement the entire visual pipeline with VSEM, an open library for
+visual semantics <cite class="ltx_cite">[<a href="#bib.bib5" title="VSEM: an open library for visual semantics representation" class="ltx_ref">4</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://clic.cimec.unitn.it/vsem/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://clic.cimec.unitn.it/vsem/</span></a></span></span></span></p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Linguistic Semantic Spaces</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">For constructing the text-based vectors, we follow a standard pipeline in distributional semantics
+<cite class="ltx_cite">[<a href="#bib.bib454" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">53</a>]</cite> without tuning its parameters and collect
+co-occurrence statistics from the concatenation of
+ukWaC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://wacky.sslmit.unibo.it" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://wacky.sslmit.unibo.it</span></a></span></span></span> and the Wikipedia,
+amounting to 2.7 billion tokens in total.
+Semantic vectors are constructed for a
+set of 30K target words (lemmas), namely the top 20K most frequent
+nouns, 5K most frequent adjectives and 5K most frequent verbs, and the
+same 30K lemmas are also employed as contextual elements.
+We collect co-occurrences in a symmetric context window of 20 elements around a
+target word. Finally, similarly to the visual semantic space, raw
+counts are transformed by applying LMI and then reduced to 300
+dimensions with SVD.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>We also experimented with the image- and
+text-based vectors of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite>,
+but achieved better performance with the reported setup.</span></span></span></p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Cross-modal Mapping</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">The process of learning to map objects to the their word label is
+implemented by training a projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub></math>
+from the visual onto the linguistic semantic space. For the learning,
+we use a set of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m2" class="ltx_Math" alttext="N_{s}" display="inline"><msub><mi>N</mi><mi>s</mi></msub></math> <em class="ltx_emph">seen</em> concepts for which we have
+both image-based visual representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m3" class="ltx_Math" alttext="\mathbf{V}_{s}\in\mathbb{R}^{N_{s}\times d_{v}}" display="inline"><mrow><msub><mi>𝐕</mi><mi>s</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>N</mi><mi>s</mi></msub><mo>×</mo><msub><mi>d</mi><mi>v</mi></msub></mrow></msup></mrow></math> and text-based linguistic representations
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m4" class="ltx_Math" alttext="\mathbf{W}_{s}\in\mathbb{R}^{N_{s}\times d_{w}}" display="inline"><mrow><msub><mi>𝐖</mi><mi>s</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>N</mi><mi>s</mi></msub><mo>×</mo><msub><mi>d</mi><mi>w</mi></msub></mrow></msup></mrow></math>. The
+projection function is subject to an
+objective that aims at minimizing some cost function between the
+induced text-based representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m5" class="ltx_Math" alttext="\mathbf{\hat{W}}_{s}\in\mathbb{R}^{N_{s}\times d_{w}}" display="inline"><mrow><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>N</mi><mi>s</mi></msub><mo>×</mo><msub><mi>d</mi><mi>w</mi></msub></mrow></msup></mrow></math> and the gold ones <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m6" class="ltx_Math" alttext="\mathbf{W}_{s}" display="inline"><msub><mi>𝐖</mi><mi>s</mi></msub></math>.
+The induced <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m7" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub></math> is then
+applied to the image-based representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m8" class="ltx_Math" alttext="\mathbf{V}_{u}\in\mathbb{R}^{N_{u}\times d_{v}}" display="inline"><mrow><msub><mi>𝐕</mi><mi>u</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>N</mi><mi>u</mi></msub><mo>×</mo><msub><mi>d</mi><mi>v</mi></msub></mrow></msup></mrow></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m9" class="ltx_Math" alttext="N_{u}" display="inline"><msub><mi>N</mi><mi>u</mi></msub></math> unseen objects to transform them
+into text-based representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m10" class="ltx_Math" alttext="\mathbf{\hat{W}}_{u}\in\mathbb{R}^{N_{u}\times d_{w}}" display="inline"><mrow><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>u</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>N</mi><mi>u</mi></msub><mo>×</mo><msub><mi>d</mi><mi>w</mi></msub></mrow></msup></mrow></math>. We implement 4 alternative learning
+algorithms for inducing the cross-modal projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m11" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub></math>.</p>
+</div>
+<div id="S4.SS4.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Linear Regression (<span class="ltx_text ltx_font_bold ltx_font_small">lin</span>)</h5>
+
+<div id="S4.SS4.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Our first model is a very simple linear mapping between the two
+modalities estimated by solving a least-squares problem. This method
+is similar to the one introduced by <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Exploiting similarities among languages for machine translation" class="ltx_ref">2013a</a>)</cite> for
+estimating a translation matrix, only solved analytically. In our
+setup, we can see the two different modalities as if they were
+different languages. By using least-squares regression, the projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P1.p1.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub></math> can be
+derived as</p>
+<table id="S4.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}={(\mathbf{V}_{s}^{T}\mathbf{V}_{s})}^{-1}%&#10;\mathbf{V}_{s}^{T}\mathbf{W}_{s}" display="block"><mrow><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub><mo>=</mo><mrow><msup><mrow><mo>(</mo><mrow><msubsup><mi>𝐕</mi><mi>s</mi><mi>T</mi></msubsup><mo>⁢</mo><msub><mi>𝐕</mi><mi>s</mi></msub></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><msubsup><mi>𝐕</mi><mi>s</mi><mi>T</mi></msubsup><mo>⁢</mo><msub><mi>𝐖</mi><mi>s</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S4.SS4.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Canonical Correlation Analysis (<span class="ltx_text ltx_font_bold ltx_font_small">CCA</span>)</h5>
+
+<div id="S4.SS4.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">CCA <cite class="ltx_cite">[<a href="#bib.bib6" title="Canonical correlation analysis: an overview with application to learning methods" class="ltx_ref">22</a>, <a href="#bib.bib5a" title="Relations between two sets of variates" class="ltx_ref">27</a>]</cite> and variations thereof
+have been successfully used in the past for annotation of
+regions <cite class="ltx_cite">[<a href="#bib.bib12" title="Connecting modalities: semi-supervised segmentation and annotation of images using unaligned text corpora" class="ltx_ref">48</a>]</cite> and complete
+images <cite class="ltx_cite">[<a href="#bib.bib13" title="A correlation approach for automatic image annotation" class="ltx_ref">21</a>, <a href="#bib.bib14" title="Framing image description as a ranking task: data, models and evaluation metrics" class="ltx_ref">26</a>]</cite>. Given two paired
+observation matrices, in our case <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{V}_{s}" display="inline"><msub><mi>𝐕</mi><mi>s</mi></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathbf{W}_{s}" display="inline"><msub><mi>𝐖</mi><mi>s</mi></msub></math>, CCA aims at capturing the linear relationship that
+exists between these variables. This is achieved by finding a pair
+of matrices, in our case <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m3" class="ltx_Math" alttext="\mathbf{C}_{V}\in\mathbb{R}^{d_{v}\times d}" display="inline"><mrow><msub><mi>𝐂</mi><mi>V</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>d</mi><mi>v</mi></msub><mo>×</mo><mi>d</mi></mrow></msup></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m4" class="ltx_Math" alttext="\mathbf{C}_{W}\in\mathbb{R}^{d_{w}\times d}" display="inline"><mrow><msub><mi>𝐂</mi><mi>W</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>d</mi><mi>w</mi></msub><mo>×</mo><mi>d</mi></mrow></msup></mrow></math>, such that the
+correlation between the projections of the two multidimensional
+variables into a common, lower-rank space is maximized. The resulting
+multimodal space has been shown to provide a good approximation to
+human concept similarity judgments <cite class="ltx_cite">[<a href="#bib.bib408" title="Grounded models of semantic representation" class="ltx_ref">45</a>]</cite>. In our
+setup, after applying CCA on the two spaces <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m5" class="ltx_Math" alttext="\mathbf{V}_{s}" display="inline"><msub><mi>𝐕</mi><mi>s</mi></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P2.p1.m6" class="ltx_Math" alttext="\mathbf{W}_{s}" display="inline"><msub><mi>𝐖</mi><mi>s</mi></msub></math>, we obtain the two projection mappings onto the
+common space and thus our projection function can be derived as:</p>
+<table id="S4.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E2.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}=\mathbf{C}_{V}{\mathbf{C}_{W}}^{-1}" display="block"><mrow><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub><mo>=</mo><mrow><msub><mi>𝐂</mi><mi>V</mi></msub><mo>⁢</mo><mmultiscripts><mi>𝐂</mi><mi>W</mi><none/><none/><mrow><mo>-</mo><mn>1</mn></mrow></mmultiscripts></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S4.SS4.SSS0.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Singular Value Decomposition (<span class="ltx_text ltx_font_bold ltx_font_small">SVD</span>)</h5>
+
+<div id="S4.SS4.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">SVD is the most
+widely used dimensionality reduction technique in distributional
+semantics <cite class="ltx_cite">[<a href="#bib.bib454" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">53</a>]</cite>, and it has recently been
+exploited to combine visual and linguistic dimensions in the multimodal
+distributional semantic model of <cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib79" title="Multimodal distributional semantics" class="ltx_ref">2014</a>)</cite>. SVD
+smoothing is also a way to infer values of unseen dimensions in
+partially incomplete matrices, a technique that has been applied to
+the task of inferring word tags of unannotated images
+<cite class="ltx_cite">[<a href="#bib.bib206" title="Semantic spaces revisited: Investigating the performance of auto-annotation and semantic retrieval using semantic spaces" class="ltx_ref">23</a>]</cite>. Assuming that the concept-representing rows of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m1" class="ltx_Math" alttext="\mathbf{V}_{s}" display="inline"><msub><mi>𝐕</mi><mi>s</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m2" class="ltx_Math" alttext="\mathbf{W}_{s}" display="inline"><msub><mi>𝐖</mi><mi>s</mi></msub></math> are ordered in the same way, we
+apply the (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-truncated) SVD to the concatenated matrix
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m4" class="ltx_Math" alttext="[\mathbf{V}_{s}\mathbf{W}_{s}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>𝐕</mi><mi>s</mi></msub><mo>⁢</mo><msub><mi>𝐖</mi><mi>s</mi></msub></mrow><mo>]</mo></mrow></math>, such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m5" class="ltx_Math" alttext="[\mathbf{\hat{V}}_{s}\mathbf{\hat{W}_{s}}]=\mathbf{U}_{k}\mathbf{\Sigma}_{k}%&#10;\mathbf{Z}_{k}^{T}" display="inline"><mrow><mrow><mo>[</mo><mrow><msub><mover accent="true"><mi>𝐕</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub><mo>⁢</mo><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>𝐬</mi></msub></mrow><mo>]</mo></mrow><mo>=</mo><mrow><msub><mi>𝐔</mi><mi>k</mi></msub><mo>⁢</mo><msub><mi>𝚺</mi><mi>k</mi></msub><mo>⁢</mo><msubsup><mi>𝐙</mi><mi>k</mi><mi>T</mi></msubsup></mrow></mrow></math> is
+a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-rank approximation of the original matrix.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We denote
+the right singular vectors matrix by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m7" class="ltx_Math" alttext="\mathbf{Z}" display="inline"><mi>𝐙</mi></math> instead of the
+customary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p1.m8" class="ltx_Math" alttext="\mathbf{V}" display="inline"><mi>𝐕</mi></math> to avoid confusion with the visual matrix.</span></span></span>
+The projection function is then:</p>
+</div>
+<div id="S4.SS4.SSS0.P3.p2" class="ltx_para">
+<table id="S4.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}=\mathbf{Z}_{k}\mathbf{Z}_{k}^{T}" display="block"><mrow><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub><mo>=</mo><mrow><msub><mi>𝐙</mi><mi>k</mi></msub><mo>⁢</mo><msubsup><mi>𝐙</mi><mi>k</mi><mi>T</mi></msubsup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where the input is appropriately padded with 0s (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p2.m1" class="ltx_Math" alttext="[\mathbf{V}_{u}\mathbf{0}_{Nu\times{}W}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>𝐕</mi><mi>u</mi></msub><mo>⁢</mo><msub><mn>𝟎</mn><mrow><mrow><mi>N</mi><mo>⁢</mo><mi>u</mi></mrow><mo>×</mo><mi>W</mi></mrow></msub></mrow><mo>]</mo></mrow></math>) and we discard the visual block of the
+output matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P3.p2.m2" class="ltx_Math" alttext="[\mathbf{\hat{V}}_{u}\mathbf{\hat{W}}_{u}]" display="inline"><mrow><mo>[</mo><mrow><msub><mover accent="true"><mi>𝐕</mi><mo stretchy="false">^</mo></mover><mi>u</mi></msub><mo>⁢</mo><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>u</mi></msub></mrow><mo>]</mo></mrow></math>.</p>
+</div>
+</div>
+<div id="S4.SS4.SSS0.P4" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Neural Network (<span class="ltx_text ltx_font_bold ltx_font_small">NNet</span>)</h5>
+
+<div id="S4.SS4.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">The last model that we
+introduce is a neural network with one hidden layer. The projection
+function in this model can be described as:</p>
+<table id="S4.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}=\boldsymbol{\Theta}_{\mathrm{v\rightarrow w}}" display="block"><mrow><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub><mo>=</mo><msub><mi>𝚯</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m1" class="ltx_Math" alttext="\boldsymbol{\Theta}_{v\rightarrow w}" display="inline"><msub><mi>𝚯</mi><mrow><mi>v</mi><mo>→</mo><mi>w</mi></mrow></msub></math> consists of the model
+weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m2" class="ltx_Math" alttext="\boldsymbol{\theta}^{(1)}\in\mathbb{R}^{d_{v}\times h}" display="inline"><mrow><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>d</mi><mi>v</mi></msub><mo>×</mo><mi>h</mi></mrow></msup></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m3" class="ltx_Math" alttext="\boldsymbol{\theta}^{(2)}\in\mathbb{R}^{h\times d_{w}}" display="inline"><mrow><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>h</mi><mo>×</mo><msub><mi>d</mi><mi>w</mi></msub></mrow></msup></mrow></math> that map the
+input image-based vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m4" class="ltx_Math" alttext="\mathbf{V}_{s}" display="inline"><msub><mi>𝐕</mi><mi>s</mi></msub></math> first to the hidden layer
+and then to the output layer in order to obtain text-based vectors,
+i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m5" class="ltx_Math" alttext="\mathbf{\hat{W}}_{s}=\sigma^{(2)}(\sigma^{(1)}(\boldsymbol{\mathbf{V}_{s}%&#10;\theta}^{(1)})\boldsymbol{\theta}^{(2)})" display="inline"><mrow><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub><mo>=</mo><mrow><msup><mi>σ</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>σ</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐕</mi><mi>𝒔</mi></msub><mo>⁢</mo><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m6" class="ltx_Math" alttext="\sigma^{(1)}" display="inline"><msup><mi>σ</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m7" class="ltx_Math" alttext="\sigma^{(2)}" display="inline"><msup><mi>σ</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math> are the non-linear activation
+functions. We experimented with sigmoid, hyperbolic tangent and
+linear; hyperbolic tangent yielded the highest performance. The
+weights are estimated by minimizing the objective function</p>
+<table id="S4.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="J(\mathbf{\Theta}_{\mathrm{v\rightarrow w}})=\frac{1}{2}(1-sim(\mathbf{W}_{s},%&#10;\mathbf{\hat{W}}_{s}))" display="block"><mrow><mrow><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>𝚯</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐖</mi><mi>s</mi></msub><mo>,</mo><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m8" class="ltx_Math" alttext="sim" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi></mrow></math> is some similarity function. In our experiments we used
+<span class="ltx_text ltx_font_italic">cosine</span> as similarity function, so that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m9" class="ltx_Math" alttext="sim(\mathbf{A},\mathbf{B})=\frac{AB}{\lVert A\rVert\lVert B\rVert}" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐀</mi><mo>,</mo><mi>𝐁</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>A</mi><mo>⁢</mo><mi>B</mi></mrow><mrow><mrow><mo fence="true">∥</mo><mi>A</mi><mo fence="true">∥</mo></mrow><mo>⁢</mo><mrow><mo fence="true">∥</mo><mi>B</mi><mo fence="true">∥</mo></mrow></mrow></mfrac></mrow></math>,
+thus penalizing parameter settings leading to a low cosine between the
+target linguistic representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m10" class="ltx_Math" alttext="\mathbf{W}_{s}" display="inline"><msub><mi>𝐖</mi><mi>s</mi></msub></math> and those produced
+by the projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.SSS0.P4.p1.m11" class="ltx_Math" alttext="\mathbf{\hat{W}}_{s}" display="inline"><msub><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub></math>. The cosine has been
+widely used in the distributional semantic literature, and it has been
+shown to outperform Euclidean distance
+<cite class="ltx_cite">[<a href="#bib.bib84" title="Extracting semantic representations from word co-occurrence statistics: a computational study" class="ltx_ref">6</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We also experimented with the
+same objective function as <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite>, however, our
+objective function yielded consistently better results in all
+experimental settings.</span></span></span> Parameters were
+estimated with standard backpropagation and L-BFGS.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our experiments focus on the tasks of zero-shot learning (Sections
+<a href="#S5.SS1" title="5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a> and <a href="#S5.SS2" title="5.2 Zero-shot Learning in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>) and fast mapping
+(Section <a href="#S5.SS3" title="5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>). In both tasks, the projected
+vector of the unseen concept is labeled with the word associated to
+its cosine-based nearest neighbor vector in the corresponding semantic
+space.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For the zero-shot task we report the <span class="ltx_text ltx_font_italic">accuracy</span> of retrieving
+the correct label among the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> neighbors from a semantic space
+populated with the <em class="ltx_emph">union of seen and unseen</em> concepts. For fast
+mapping, we report the <span class="ltx_text ltx_font_italic">mean rank</span> of the correct concept among
+fast mapping candidates.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Zero-shot Learning in CIFAR-100</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">For this experiment, we use the intersection of our linguistic space
+with the concepts present in CIFAR-100, containing a total of 90 concepts.
+For each concept category, we treat all concepts but one as seen
+concepts (Table <a href="#S4.T1" title="Table 1 ‣ CIFAR-100 ‣ 4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). The 71 seen concepts correspond
+to 42,600 distinct visual vectors and are used to induce the projection
+function. Table <a href="#S5.T2" title="Table 2 ‣ 5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> reports results obtained by averaging
+the performance on the 11,400 distinct vectors of the 19 unseen
+concepts.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Our 4 models introduced in Section <a href="#S4.SS4" title="4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a> are compared to a
+theoretically derived baseline <span class="ltx_text ltx_font_bold ltx_font_small">Chance</span> simulating selecting a
+label at random. For the neural network <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, we use prior
+knowledge about the number of concept categories to set the number of
+hidden units to 20 in order to avoid tuning of this parameter.
+For the <span class="ltx_text ltx_font_bold ltx_font_small">SVD</span> model, we
+set the number of dimensions to 300, a common choice in distributional
+semantics, coherent with the settings we used for the visual and
+linguistic spaces.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">First and foremost, all 4 models outperform <span class="ltx_text ltx_font_bold ltx_font_small">Chance</span> by a large
+margin. Surprisingly, the very simple <span class="ltx_text ltx_font_bold ltx_font_small">lin</span> method outperforms
+both <span class="ltx_text ltx_font_bold ltx_font_small">CCA</span> and <span class="ltx_text ltx_font_bold ltx_font_small">SVD</span>. However, <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, an architecture
+that can capture more complex, non-linear relations in features across
+modalities, emerges as the best performing model, confirming on a larger
+scale the recent findings of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib417" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_ERROR undefined">\backslashbox</span><span class="ltx_text ltx_font_footnote">Modelk</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">1</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">2</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">3</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">5</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">10</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote" style="width:10.0pt;">20</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Chance</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">1.1</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">2.2</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">3.3</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">5.5</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">11.0</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">22.0</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">SVD</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">5.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">8.1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">14.5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">29.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">48.6</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">CCA</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">3.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">6.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">10.7</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">17.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">31.7</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">51.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">lin</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">2.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">6.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">10.5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">18.7</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">33.0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">55.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">NN</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">3.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">6.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">10.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">21.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">37.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">58.2</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 2: </span>Percentage accuracy among top k nearest neighbors on CIFAR-100.</div>
+</div>
+<div id="S5.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.1.1 </span>Concept Categorization</h4>
+
+<div id="S5.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">In order to gain qualitative insights into the performance of the
+projection process of <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, we attempt to investigate the role
+and interpretability of the <span class="ltx_text ltx_font_italic">hidden layer</span>. We achieve this by
+looking at which visual concepts result in the <span class="ltx_text ltx_font_italic">highest</span> hidden
+unit activation.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>For this post-hoc analysis, we include a
+sparsity parameter in the objective function of Equation <a href="#S4.E5" title="(5) ‣ Neural Network (NNet) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>
+in order to get more interpretable results; hidden units are
+therefore maximally activated by a only few concepts.</span></span></span> This is
+inspired by analogous qualitative analysis conducted in Topic
+Models <cite class="ltx_cite">[<a href="#bib.bib196" title="Topics in semantic representation" class="ltx_ref">20</a>]</cite>, where “topics” are interpreted in
+terms of the words with the highest probability under each of them.</p>
+</div>
+<div id="S5.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5.1.1 Concept Categorization ‣ 5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents both seen and unseen concepts
+corresponding to visual vectors that trigger the highest activation for
+a subset of hidden units. The table further reports, for each hidden unit,
+the “correct” unseen concept for the category of the top seen concepts,
+together with its rank in terms of activation of the unit.
+The analysis demonstrates that, although
+prior knowledge about categories was not explicitly used to train the
+network, the latter induced an organization of concepts into superordinate
+categories in which the hidden layer acts as a cross-modal concept
+categorization/organization system.
+When the induced projection function maps an object onto the linguistic space,
+the derived text vector will inherit a mixture of textual features from
+the concepts that activated the same hidden unit as the object.
+This suggests a bias towards seen concepts. Furthermore, in many cases
+of miscategorization, the concepts are still semantically coherent with the
+induced category, confirming that the projection function is indeed capturing
+a latent, cross-modal semantic space. A <em class="ltx_emph">squirrel</em>, although not a
+“<em class="ltx_emph">large</em> omnivore”, is still an animal, while <span class="ltx_text ltx_font_italic">butterflies</span>
+are not <em class="ltx_emph">flowers</em> but often feed on their nectar.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Seen Concepts</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Unseen Concept</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Rank of Correct</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">CIFAR-100 Category</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Unseen Concept</span></th>
+<th class="ltx_td"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">Unit 1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_footnote">sunflower</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">tulip</span><span class="ltx_text ltx_font_footnote">, pear</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">butterfly</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">2 (</span><span class="ltx_text ltx_font_bold ltx_font_footnote">rose</span><span class="ltx_text ltx_font_footnote">)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">flowers</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">cattle</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">camel</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">bear</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">squirrel</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">2 (</span><span class="ltx_text ltx_font_bold ltx_font_footnote">elephant</span><span class="ltx_text ltx_font_footnote">)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">large omnivores and herbivores</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 3</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">castle</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">bridge</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">house</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bus</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">4 (</span><span class="ltx_text ltx_font_bold ltx_font_footnote">skyscraper</span><span class="ltx_text ltx_font_footnote">)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">large man-made outdoor things</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">man</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">girl</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">baby</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">boy</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">people</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">motorcycle</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">bicycle</span><span class="ltx_text ltx_font_footnote">, tractor</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">streetcar</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">2 (</span><span class="ltx_text ltx_font_bold ltx_font_footnote">bus</span><span class="ltx_text ltx_font_footnote">)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">vehicles 1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">sea</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">plain</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">cloud</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">forest</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">large natural outdoor scenes</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 7</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">chair</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">couch</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">table</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">bed</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">household furniture</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 8</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">plate</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">bowl</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">can</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">clock</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">3 (</span><span class="ltx_text ltx_font_bold ltx_font_footnote">cup</span><span class="ltx_text ltx_font_footnote">)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">food containers</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">Unit 9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">apple</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">pear</span><span class="ltx_text ltx_font_footnote">, </span><span class="ltx_text ltx_font_bold ltx_font_footnote">mushroom</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">orange</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">fruit and vegetables</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 3: </span>Categorization induced by the hidden layer of the <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>; concepts belonging in the same CIFAR-100 categories, reported in the last column, are marked in bold.
+Example: Unit 1 receives the highest activation during training by the category <span class="ltx_text ltx_font_italic">flowers</span>
+and at test time by <span class="ltx_text ltx_font_italic">butterfly</span>, belonging to <span class="ltx_text ltx_font_italic">insects</span>.
+The same unit receives the second highest activation by the “correct” test concept, the <span class="ltx_text ltx_font_italic">flower</span> <em class="ltx_emph">rose</em>. </div>
+</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Zero-shot Learning in ESP</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">For this experiment, we focus on <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, the best performing model in the previous
+experiment.
+We use a set of approximately 9,500 concepts, the
+intersection of the ESP-based visual semantic space with the
+linguistic space. For tuning the number of hidden units of <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, we use the
+MEN-concrete dataset of <cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib79" title="Multimodal distributional semantics" class="ltx_ref">2014</a>)</cite>. Finally, we randomly pick
+70% of the concepts to induce the projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\mathrm{f_{proj_{v\rightarrow w}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></msub></msub></math> and
+report results on the remaining 30%. Note that the search space for
+the correct label in this experiment is approximately 95 times larger than the one
+used for the experiment presented in Section <a href="#S5.SS1" title="5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Although our experimental setup differs from the one of
+<cite class="ltx_cite">Frome<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib169" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">2013</a>)</cite>, thus preventing a direct comparison, the
+results reported in Table <a href="#S5.T5" title="Table 5 ‣ 5.2 Zero-shot Learning in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> are on a comparable scale to
+theirs. We note that previous work on zero-shot learning has used
+standard object recognition benchmarks. To the best of our knowledge,
+this is the first time this task has been performed on a dataset as
+noisy as ESP. Overall, the results suggest that cross-modal mapping
+could be applied in tasks where images exhibit a more complex
+structure, e.g., caption generation and event recognition.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">Unseen Concept</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">Nearest Neighbors</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">tiger</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">cat, microchip, kitten, vet, pet</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">bike</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">spoke, wheel, brake, tyre, motorcycle</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">blossom</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">bud, leaf, jasmine, petal, dandelion</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">bakery</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">quiche, bread, pie, bagel, curry</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 4: </span>Top 5 neighbors in linguistic space after visual vector projection of 4 unseen concepts.</div>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_ERROR undefined">\backslashbox</span><span class="ltx_text ltx_font_small">[1cm]Modelk</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small" style="width:10.0pt;">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small" style="width:10.0pt;">2</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small" style="width:10.0pt;">5</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small" style="width:10.0pt;">10</span></th>
+<th class="ltx_td ltx_align_justify" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small" style="width:10.0pt;">50</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Chance</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.01</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.02</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.05</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.10</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NN</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">0.8</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">1.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">5.6</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">9.7</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">30.9</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>Percentage accuracy among top k nearest neighbors on ESP.</div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Fast Mapping in ESP</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we aim at simulating a fast mapping scenario in which
+the learner has been just exposed to a new concept, and thus has
+limited linguistic evidence for that concept. We operationalize this
+by considering the 34 concrete concepts introduced by
+<cite class="ltx_cite">Frassinelli and Keller (<a href="#bib.bib3" title="The plausibility of semantic properties generated by a distributional model: evidence from a visual world experiment" class="ltx_ref">2012</a>)</cite>, and deriving their text-based
+representations from just a few sentences randomly picked from the
+corpus. Concretely, we implement 5 models: <span class="ltx_text ltx_font_bold ltx_font_small">context 1</span>,
+<span class="ltx_text ltx_font_bold ltx_font_small">context 5</span>, <span class="ltx_text ltx_font_bold ltx_font_small">context 10</span>, <span class="ltx_text ltx_font_bold ltx_font_small">context 20</span> and
+<span class="ltx_text ltx_font_bold ltx_font_small">context full</span>, where the name of the model denotes the number
+of sentences used to construct the text-based representations. The
+derived vectors were reduced with the same SVD projection induced from
+the complete corpus. Cross-modal mapping is done via <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">The zero-shot framework leads us to frame fast mapping as the task of
+projecting visual representations of new objects onto language space
+for retrieving their word labels (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m1" class="ltx_Math" alttext="\mathrm{v\rightarrow w}" display="inline"><mrow><mi mathvariant="normal">v</mi><mo>→</mo><mi mathvariant="normal">w</mi></mrow></math>). This
+mapping from visual to textual representations is arguably a more
+plausible task than <em class="ltx_emph">vice versa</em>. If we think about how
+linguistic reference is acquired, a scenario in which a learner
+<em class="ltx_emph">first</em> encounters a new object and <em class="ltx_emph">then</em> seeks its
+reference in the language of the surrounding environment (e.g., adults
+having a conversation, the text of a book with an illustration of an
+unknown object) is very natural. Furthermore, since not all new
+concepts in the linguistic environment refer to new objects (they
+might denote abstract concepts or out-of-scene objects), it seems more
+reasonable for the learner to be more alerted to linguistic cues about
+a recently-spotted new object than <em class="ltx_emph">vice versa</em>. Moreover, once
+the learner observes a new object, she can easily construct a full
+visual representation for it (and the acquisition literature has shown
+that humans are wired for good object segmentation and
+recognition <cite class="ltx_cite">[<a href="#bib.bib420" title="Initial knowledge: six suggestions" class="ltx_ref">50</a>]</cite>) – the more challenging task is to
+scan the ongoing and very ambiguous linguistic communication for
+contexts that might be relevant and informative about the new
+object. However, fast mapping is often described in the psychological
+literature as the opposite task: The learner is exposed to a new word
+in context and has to search for the right object referring to it. We
+implement this second setup (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m2" class="ltx_Math" alttext="\mathrm{w\rightarrow v}" display="inline"><mrow><mi mathvariant="normal">w</mi><mo>→</mo><mi mathvariant="normal">v</mi></mrow></math>) by training
+the projection function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m3" class="ltx_Math" alttext="\mathrm{f_{proj_{w\rightarrow v}}}" display="inline"><msub><mi mathvariant="normal">f</mi><msub><mi>proj</mi><mrow><mi mathvariant="normal">w</mi><mo>→</mo><mi mathvariant="normal">v</mi></mrow></msub></msub></math> which
+maps linguistic vectors to visual ones. The adaptation of <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>
+is straightforward; the new objective function is derived as</p>
+<table id="S5.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E6.m1" class="ltx_Math" alttext="J(\mathbf{\Theta}_{\mathrm{w\rightarrow v}})=\frac{1}{2}(1-sim(\mathbf{V}_{s},%&#10;\mathbf{\hat{V}}_{s}))" display="block"><mrow><mrow><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>𝚯</mi><mrow><mi mathvariant="normal">w</mi><mo>→</mo><mi mathvariant="normal">v</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐕</mi><mi>s</mi></msub><mo>,</mo><msub><mover accent="true"><mi>𝐕</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m4" class="ltx_Math" alttext="\mathbf{\hat{V}}_{s}=\sigma^{(2)}(\sigma^{(1)}(\boldsymbol{\mathbf{W}_{s}%&#10;\theta}^{(1)})\boldsymbol{\theta}^{(2)})" display="inline"><mrow><msub><mover accent="true"><mi>𝐕</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub><mo>=</mo><mrow><msup><mi>σ</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>σ</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐖</mi><mi>𝒔</mi></msub><mo>⁢</mo><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m5" class="ltx_Math" alttext="\boldsymbol{\theta}^{(1)}\in\mathbb{R}^{d_{w}\times h}" display="inline"><mrow><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>d</mi><mi>w</mi></msub><mo>×</mo><mi>h</mi></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m6" class="ltx_Math" alttext="\boldsymbol{\theta}^{(2)}\in\mathbb{R}^{h\times d_{v}}" display="inline"><mrow><msup><mi>𝜽</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>h</mi><mo>×</mo><msub><mi>d</mi><mi>v</mi></msub></mrow></msup></mrow></math>.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T7" title="Table 7 ‣ 5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> presents the results. Not surprisingly,
+performance increases with the number of sentences that are used to
+construct the textual representations. Furthermore, all models
+perform better than <span class="ltx_text ltx_font_bold ltx_font_small">Chance</span>, including those that are based on
+just <span class="ltx_text ltx_font_bold ltx_font_small">1</span> or <span class="ltx_text ltx_font_bold ltx_font_small">5</span> sentences. This suggests that the system
+can make reasonable inferences about object-word connections even when
+linguistic evidence is very scarce.</p>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="\mathrm{v}" display="inline"><mi mathvariant="normal">v</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m3" class="ltx_Math" alttext="\mathrm{w}" display="inline"><mi mathvariant="normal">w</mi></math></th>
+<th class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m4" class="ltx_Math" alttext="\mathrm{w}" display="inline"><mi mathvariant="normal">w</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m6" class="ltx_Math" alttext="\mathrm{v}" display="inline"><mi mathvariant="normal">v</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_footnote">cooker</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m7" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">potato</span></td>
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_footnote">dishwasher</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m8" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote"> corkscrew</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">clarinet</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m9" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote"> drum</span></td>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">potato</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m10" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote"> corn</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">gorilla</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m11" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote"> elephant</span></td>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">guitar</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m12" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote"> violin</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">scooter</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m13" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote"> car</span></td>
+<th class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">scarf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m14" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math></th>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote"> trouser</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 6: </span>Top-ranked concepts in cases where the gold concepts received numerically high ranks.</div>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Regarding the sources of error, a qualitative analysis of predicted
+word labels and objects as presented in Table <a href="#S5.T6" title="Table 6 ‣ 5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>
+suggests that both textual and visual representations, although
+capturing relevant “topical” or “domain” information, are not
+enough to single out the properties of the target concept. As an
+example, the textual vector of <em class="ltx_emph">dishwasher</em> contains
+kitchen-related dimensions such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p4.m1" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">fridge</span>, <span class="ltx_text ltx_font_bold ltx_font_small">oven</span>, <span class="ltx_text ltx_font_bold ltx_font_small">gas</span>, <span class="ltx_text ltx_font_bold ltx_font_small">hob</span>, …,
+<span class="ltx_text ltx_font_bold ltx_font_small">sink<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p4.m2" class="ltx_Math" alttext="\rangle" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">⟩</mo></math></span>. After projecting onto the visual space, its
+nearest visual neighbours are the visual ones of the same-domain
+concepts <em class="ltx_emph">corkscrew</em> and <em class="ltx_emph">kettle</em>. The latter is shown in
+Figure <a href="#S5.F5" title="Figure 5 ‣ 5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, with a <em class="ltx_emph">gas hob</em> well in evidence.
+As a further example, the visual vector for <em class="ltx_emph">cooker</em> is extracted
+from pictures such as the one in Figure <a href="#S5.F5" title="Figure 5 ‣ 5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Not
+surprisingly, when projecting it onto the linguistic space, the
+nearest neighbours are other kitchen-related terms, i.e.,
+<em class="ltx_emph">potato</em> and <em class="ltx_emph">dishwasher</em>.</p>
+</div>
+<div id="S5.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_ERROR undefined">\backslashbox</span><span class="ltx_text ltx_font_footnote">ContextMapping</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote" style="width:30.0pt;"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m1" class="ltx_Math" alttext="\mathrm{v\rightarrow w}" display="inline"><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">w</mi></mrow></math></span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote" style="width:30.0pt;"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m2" class="ltx_Math" alttext="\mathrm{w\rightarrow v}" display="inline"><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">w</mi><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">v</mi></mrow></math></span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Chance</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">17</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">17</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">context 1</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">12.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">14.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">context 5</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">8.08</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">13.29</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">context 10</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">7.29</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">13.44</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">context 20</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">6.02</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">12.17</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">context full</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">5.52</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">5.88</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 7: </span>Mean rank results averaged across 34 concepts when mapping an image-based vector and retrieving its linguistic neighbors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m5" class="ltx_Math" alttext="\mathrm{v\rightarrow w}" display="inline"><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">w</mi></mrow></math>)
+as well as when mapping a text-based vector and retrieving its visual neighbors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m6" class="ltx_Math" alttext="\mathrm{w\rightarrow v}" display="inline"><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">w</mi><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">v</mi></mrow></math>). Lower numbers cue better performance.</div>
+</div>
+<div id="S5.F5" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.25
+<img src="P14-1132/image004.jpg" id="S5.F5.g1" class="ltx_graphics ltx_centering" width="94" height="63" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>A kettle</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.25
+<img src="P14-1132/image001.jpg" id="S5.F5.g2" class="ltx_graphics ltx_centering ltx_centering" width="96" height="64" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>A cooker</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Two images from ESP.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">At the outset of this work, we considered the problem of linking
+purely language-based distributional semantic spaces with objects in
+the visual world by means of cross-modal mapping. We compared recent
+models for this task both on a benchmark object recognition dataset
+and on a more realistic and noisier dataset covering a wide range of
+concepts. The neural network architecture emerged as the best
+performing approach, and our qualitative analysis revealed that it
+induced a categorical organization of concepts. Most importantly, our
+results suggest the viability of cross-modal mapping for grounded
+word-meaning acquisition in a simulation of fast mapping.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Given the success of <span class="ltx_text ltx_font_bold ltx_font_small">NN</span>, we plan to experiment in the future
+with more sophisticated neural network architectures inspired by
+recent work in machine translation <cite class="ltx_cite">[<a href="#bib.bib11" title="Learning semantic representations for the phrase translation model" class="ltx_ref">19</a>]</cite> and multimodal
+deep learning <cite class="ltx_cite">[<a href="#bib.bib15" title="Multimodal learning with deep boltzmann machines" class="ltx_ref">51</a>]</cite>. Furthermore, we
+intend to adopt <em class="ltx_emph">visual attributes</em>
+<cite class="ltx_cite">[<a href="#bib.bib155" title="Describing objects by their attributes" class="ltx_ref">14</a>, <a href="#bib.bib409" title="Models of semantic representation with visual attributes" class="ltx_ref">44</a>]</cite> as visual representations,
+since they should allow a better understanding of how cross-modal
+mapping works, thanks to their linguistic interpretability. The error
+analysis in Section <a href="#S5.SS3" title="5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a> suggests that automated
+<em class="ltx_emph">localization</em> techniques <cite class="ltx_cite">[<a href="#bib.bib46" title="Segmentation as selective search for object recognition" class="ltx_ref">54</a>]</cite>, distinguishing
+an object from its surroundings, might drastically improve mapping
+accuracy. Similarly, in the textual domain, models that extract
+collocates of a word that are more likely to denote conceptual
+properties <cite class="ltx_cite">[<a href="#bib.bib247" title="Semi-supervised learning for automatic conceptual property extraction" class="ltx_ref">28</a>]</cite> might lead to more informative and
+discriminative linguistic vectors. Finally, the lack of large
+child-directed speech corpora constrained the experimental design of
+fast mapping simulations; we plan to run more realistic experiments
+with true nonce words and using source corpora (e.g., the Simple
+Wikipedia, child stories, portions of CHILDES) that contain sentences
+more akin to those a child might effectively hear or read in her
+word-learning years.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Adam Liška for helpful discussions and the 3 anonymous
+reviewers for useful comments.
+This work was supported by
+ERC 2011 Starting Independent Research Grant
+n. 283554 (COMPOSES).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Abbott</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reference</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Oxford University Press</span>, <span class="ltx_text ltx_bib_place">Oxford, UK</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Bloom</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">How children learn the meanings of words</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. R. K. Branavan, H. Chen, L. S. Zettlemoyer and R. Barzilay</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning for mapping instructions to actions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 82–90</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, U. Bordignon, A. Liska, J. Uijlings and I. Sergienya</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">VSEM: an open library for visual semantics representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p4" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib79" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, N. K. Tran and M. Baroni</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multimodal distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">49</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–47</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS4.SSS0.P3.p1" title="Singular Value Decomposition (SVD) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Zero-shot Learning in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Bullinaria and J. Levy</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting semantic representations from word co-occurrence statistics: a computational study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods</span> <span class="ltx_text ltx_bib_volume">39</span>, <span class="ltx_text ltx_bib_pages"> pp. 510–526</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P4.p1" title="Neural Network (NNet) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib91" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Carey and E. Bartlett</span><span class="ltx_text ltx_bib_year">(1978)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Acquiring a single new word</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Papers and Reports on Child Language Development</span> <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 17–29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Carey</span><span class="ltx_text ltx_bib_year">(1978)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The child as a word learner</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">M. Halle, J. Bresnan and G. Miller (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Linguistics Theory and Psychological Reality</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Chatfield, V. Lempitsky, A. Vedaldi and A. Zisserman</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The devil is in the details: an evaluation of recent feature encoding methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Dundee, UK</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib96" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chen and R. Mooney</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to interpret natural language navigation instructions from observations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Francisco, CA</span>, <span class="ltx_text ltx_bib_pages"> pp. 859–865</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib111" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Helsinki, Finland</span>, <span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib121" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Csurka, C. Dance, L. Fan, J. Willamowski and C. Bray</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Visual categorization with bags of keypoints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–22</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib153" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Evert</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The statistics of word cooccurrences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D dissertation</span>, <span class="ltx_text ltx_bib_publisher">Stuttgart University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib155" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Farhadi, I. Endres, D. Hoiem and D. Forsyth</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Describing objects by their attributes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Miami Beach, FL</span>, <span class="ltx_text ltx_bib_pages"> pp. 1778–1785</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib157" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fazly, A. Alishahi and S. Stevenson</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A probabilistic computational model of cross-situational word learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Science</span> <span class="ltx_text ltx_bib_volume">34</span>, <span class="ltx_text ltx_bib_pages"> pp. 1017–1063</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib159" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Feng and M. Lapata</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Visual information in semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Los Angeles, CA</span>, <span class="ltx_text ltx_bib_pages"> pp. 91–99</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Frassinelli and F. Keller</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The plausibility of semantic properties generated by a distributional model: evidence from a visual world experiment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1560–1565</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib169" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Frome, G. Corrado, J. Shlens, S. Bengio, J. Dean, M. Ranzato and T. Mikolov</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DeViSE: a deep visual-semantic embedding model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2129</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p7" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.p2" title="5.2 Zero-shot Learning in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gao, X. He, W. Yih and L. Deng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning semantic representations for the phrase translation model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1312.0482</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib196" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Griffiths, M. Steyvers and J. Tenenbaum</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topics in semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">114</span>, <span class="ltx_text ltx_bib_pages"> pp. 211–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.SSS1.p1" title="5.1.1 Concept Categorization ‣ 5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. R. Hardoon, C. Saunders, S. Szedmak and J. Shawe-Taylor</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A correlation approach for automatic image annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Advanced Data Mining and Applications</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 681–692</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. R. Hardoon, S. Szedmak and J. Shawe-Taylor</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Canonical correlation analysis: an overview with application to learning methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Computation</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">12</span>), <span class="ltx_text ltx_bib_pages"> pp. 2639–2664</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib206" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hare, S. Samangooei, P. Lewis and M. Nixon</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic spaces revisited: Investigating the performance of auto-annotation and semantic retrieval using semantic spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Niagara Falls, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 359–368</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P3.p1" title="Singular Value Decomposition (SVD) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib207" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Harnad</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The symbol grounding problem</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Physica D: Nonlinear Phenomena</span> <span class="ltx_text ltx_bib_volume">42</span> (<span class="ltx_text ltx_bib_number">1-3</span>), <span class="ltx_text ltx_bib_pages"> pp. 335–346</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib215" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Heibeck and E. Markman</span><span class="ltx_text ltx_bib_year">(1987)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word learning in children: an examination of fast mapping</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Child Development</span> <span class="ltx_text ltx_bib_volume">58</span>, <span class="ltx_text ltx_bib_pages"> pp. 1021–1024</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hodosh, P. Young and J. Hockenmaier</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Framing image description as a ranking task: data, models and evaluation metrics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">47</span>, <span class="ltx_text ltx_bib_pages"> pp. 853–899</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib5a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Hotelling</span><span class="ltx_text ltx_bib_year">(1936)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Relations between two sets of variates</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Biometrika</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">3/4</span>), <span class="ltx_text ltx_bib_pages"> pp. 321–377</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib247" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Kelly, B. Devereux and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised learning for automatic conceptual property extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 11–20</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib1a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky, I. Sutskever and G. Hinton</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Imagenet classification with deep convolutional neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1106–1114</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning multiple layers of features from tiny images</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Master’s Thesis</span>, <span class="ltx_text ltx_bib_publisher">Citeseer</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="CIFAR-100 ‣ 4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib266" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Landauer and S. Dumais</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">104</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 211–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Lazebnik, C. Schmid and J. Ponce</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Beyond bags of features: spatial pyramid matching for recognizing natural scene categories</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Washington, DC</span>, <span class="ltx_text ltx_bib_pages"> pp. 2169–2178</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib271" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Lenci</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional approaches in linguistic and cognitive research</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Italian Journal of Linguistics</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–31</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib274" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. W. Leong and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Going beyond text: a hybrid image-text approach for measuring word relatedness</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1403–1407</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib289" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lowe</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distinctive image features from scale-invariant keypoints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Computer Vision</span> <span class="ltx_text ltx_bib_volume">60</span> (<span class="ltx_text ltx_bib_number">2</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib291" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Lund and C. Burgess</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Producing high-dimensional semantic spaces from lexical co-occurrence</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods</span> <span class="ltx_text ltx_bib_volume">28</span>, <span class="ltx_text ltx_bib_pages"> pp. 203–208</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, Q. V. Le and I. Sutskever</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting similarities among languages for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1309.4168</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P1.p1" title="Linear Regression (lin) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib319" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 3111–3119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib317" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib351" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Palatucci, D. Pomerleau, G. Hinton and T. Mitchell</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Zero-shot learning with semantic output codes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Vancouver, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 1410–1418</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Pereira, K. H. James, S. S. Jones and L. B. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Early biases and developmental changes in self-generated object views</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of vision</span> <span class="ltx_text ltx_bib_volume">10</span> (<span class="ltx_text ltx_bib_number">11</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p3" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib376" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Regneri, M. Rohrbach, D. Wetzel, S. Thater, B. Schiele and M. Pinkal</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grounding action descriptions in videos</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the Association for Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 25–36</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib403" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Searle</span><span class="ltx_text ltx_bib_year">(1984)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minds, brains and science</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Harvard University Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib409" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Silberer, V. Ferrari and M. Lapata</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Models of semantic representation with visual attributes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 572–582</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib408" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Silberer and M. Lapata</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grounded models of semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1423–1433</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib410" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Siskind</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A computational study of cross-situational techniques for learning word-to-meaning mappings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognition</span> <span class="ltx_text ltx_bib_volume">61</span>, <span class="ltx_text ltx_bib_pages"> pp. 39–91</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib411" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[47]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Sivic and A. Zisserman</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Video Google: A text retrieval approach to object matching in videos</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nice, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 1470–1477</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[48]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher and L. Fei-Fei</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Connecting modalities: semi-supervised segmentation and annotation of images using unaligned text corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 966–973</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.SSS0.P2.p1" title="Canonical Correlation Analysis (CCA) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib417" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[49]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, M. Ganjoo, C. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Zero-shot learning through cross-modal transfer</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 935–943</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Linguistic Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.SSS0.P4.p1" title="Neural Network (NNet) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S5.SS1.p3" title="5.1 Zero-shot Learning in CIFAR-100 ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib420" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[50]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Spelke</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Initial knowledge: six suggestions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognition</span> <span class="ltx_text ltx_bib_volume">50</span>, <span class="ltx_text ltx_bib_pages"> pp. 431–445</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p2" title="5.3 Fast Mapping in ESP ‣ 5 Results ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[51]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Srivastava and R. Salakhutdinov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multimodal learning with deep boltzmann machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 2231–2239</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib429" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[52]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Szeliski</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Computer vision : algorithms and applications</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>, <span class="ltx_text ltx_bib_place">Berlin</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib454" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[53]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Turney and P. Pantel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From frequency to meaning: vector space models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">37</span>, <span class="ltx_text ltx_bib_pages"> pp. 141–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Linguistic Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.SSS0.P3.p1" title="Singular Value Decomposition (SVD) ‣ 4.4 Cross-modal Mapping ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[54]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. van de Sande, J. Uijlings, T. Gevers and A. Smeulders</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Segmentation as selective search for object recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 1879–1886</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib456" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[55]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Von Ahn</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Games with a purpose</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 92–94</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P2.p1" title="ESP ‣ 4.1 Visual Datasets ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib476" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[56]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Yang, Y. Jiang, A. Hauptmann and C. Ngo</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating bag-of-visual-words representations in scene classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 197–206</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Visual Semantic Spaces ‣ 4 Experimental Setup ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib479" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[57]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Yu and J. Siskind</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grounded language learning from video described with sentences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 53–63</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Is this a wampimuk? Cross-modal mapping between distributional semantics and the visual world" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:20:23 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

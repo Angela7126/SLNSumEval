@@ -1,0 +1,1184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Lattice Desegmentation for Statistical Machine Translation</title>
+<!--Generated on Tue Jun 10 17:15:55 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Lattice Desegmentation for Statistical Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mohammad Salameh<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>    Colin Cherry<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>    Grzegorz Kondrak<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>Department of Computing Science</th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>National Research Council Canada</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">University of Alberta</th>
+<td class="ltx_td ltx_align_center">1200 Montreal Road</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">Edmonton, AB, T6G 2E8, Canada</th>
+<td class="ltx_td ltx_align_center">Ottawa, ON, K1A 0R6, Canada</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">{<span class="ltx_text ltx_font_typewriter">msalameh,gkondrak</span>}<span class="ltx_text ltx_font_typewriter">@ualberta.ca</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_typewriter">Colin.Cherry@nrc-cnrc.gc.ca</span></td></tr>
+</tbody>
+</table>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Morphological segmentation is an effective sparsity reduction strategy for statistical machine translation (SMT) involving morphologically complex languages.
+When translating into a segmented language, an extra step is required to desegment the output;
+previous studies have desegmented the 1-best output from the decoder.
+In this paper, we expand our translation options by desegmenting <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists or lattices.
+Our novel lattice desegmentation algorithm
+effectively combines both segmented and desegmented views of the target language
+for a large subspace of possible translation outputs,
+which allows for inclusion of features related to the desegmentation process,
+as well as an unsegmented language model (LM).
+We investigate this technique in the context of English-to-Arabic and English-to-Finnish translation,
+showing significant improvements
+in translation quality
+over desegmentation of 1-best decoder outputs.</p>
+</div><span class="ltx_ERROR undefined">\setarab</span><span class="ltx_ERROR undefined">\novocalize</span>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Morphological segmentation is considered to be indispensable when translating between English and morphologically complex languages such as Arabic.
+Morphological complexity leads to much higher type to token ratios than English,
+which can create sparsity problems during translation model estimation.
+Morphological segmentation addresses this issue by splitting surface forms into meaningful morphemes,
+while also performing orthographic transformations to further reduce sparsity.
+For example, the Arabic noun ¡laldwl¿ <span class="ltx_text ltx_font_italic">lldwl</span> “to the countries”
+is segmented as <span class="ltx_text ltx_font_italic">l+</span> “to” <span class="ltx_text ltx_font_italic">Aldwl</span> “the countries”.
+When translating from Arabic, this segmentation process is performed as input preprocessing and is otherwise transparent to the translation system.
+However, when translating into Arabic, the decoder produces segmented output,
+which
+must be <span class="ltx_text ltx_font_bold">desegmented</span> to produce readable text.
+For example, <span class="ltx_text ltx_font_italic">l+ Aldwl</span> must be converted
+to <span class="ltx_text ltx_font_italic">lldwl</span>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Desegmentation is typically performed as a post-processing step
+that is independent from the decoding process.
+While this division of labor is useful,
+the pipeline approach may prevent the desegmenter
+from recovering from errors made by the decoder.
+Despite the efforts of the decoder’s various component models, the system
+may produce mismatching segments,
+such as <span class="ltx_text ltx_font_italic">s+ hzymp</span>, which pairs the future particle <span class="ltx_text ltx_font_italic">s+</span> “will” with a noun <span class="ltx_text ltx_font_italic">hzymp</span> “defeat”, instead of a verb.
+In this scenario, there is no right desegmentation; the post-processor has been dealt a losing hand.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this work, we show that it is possible to maintain the sparsity-reducing benefit of segmentation
+while translating directly into unsegmented text.
+We desegment a large set of possible decoder outputs
+by processing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists or lattices,
+which allows us to consider both the segmented and desegmented output
+before locking in the decoder’s decision.
+We demonstrate that significant improvements in translation quality
+can be achieved by training a linear model to re-rank this
+transformed translation space.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Translating into morphologically complex languages is a challenging and interesting task that has received much recent attention.
+Most techniques approach the problem by transforming
+the target language in some manner before training the translation model.
+They differ in what transformations are performed and at what stage they are reversed.
+The transformation might take the form of a morphological analysis
+or a morphological segmentation.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Morphological Analysis</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Many languages have access to morphological analyzers,
+which annotate surface forms with their lemmas and morphological features.
+<cite class="ltx_cite">Bojar (<a href="#bib.bib30" title="English-to-Czech factored machine translation" class="ltx_ref">2007</a>)</cite> incorporates such analyses into a factored model, to either include a language model over target morphological tags, or model the generation of morphological features.
+Other approaches train an SMT system to predict lemmas instead of surface forms, and then inflect the SMT output as a post-processing step <cite class="ltx_cite">[<a href="#bib.bib24" title="Generating complex morphology for machine translation" class="ltx_ref">21</a>, <a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">7</a>, <a href="#bib.bib34" title="Modeling inflection and word-formation in SMT" class="ltx_ref">11</a>, <a href="#bib.bib23" title="Translate, predict or generate: modeling rich morphology in statistical machine translation" class="ltx_ref">10</a>]</cite>.
+Alternatively, one can reparameterize existing phrase tables as exponential models, so that translation probabilities account for source context and morphological features <cite class="ltx_cite">[<a href="#bib.bib32" title="A discriminative lexicon model for complex morphology" class="ltx_ref">16</a>, <a href="#bib.bib31" title="An exponential translation model for target language morphology" class="ltx_ref">30</a>]</cite>.
+Of these approaches, ours is most similar to the translate-then-inflect approach, except we translate and then desegment.
+In particular, <cite class="ltx_cite">Toutanova<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Applying morphology generation models to machine translation" class="ltx_ref">2008</a>)</cite> inflect and re-rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists in a similar manner to how we desegment and re-rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists or lattices.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Morphological Segmentation</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Instead of producing an abstract feature layer, morphological segmentation transforms the target sentence by segmenting relevant morphemes, which are then handled as regular tokens during alignment and translation.
+This is done to reduce sparsity and to improve correspondence with the source language (usually English).
+Such a segmentation can be produced as a byproduct of analysis <cite class="ltx_cite">[<a href="#bib.bib35" title="Exploring different representational units in English-to-Turkish statistical machine translation" class="ltx_ref">24</a>, <a href="#bib.bib9" title="Segmentation for English-to-Arabic statistical machine translation" class="ltx_ref">2</a>, <a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">9</a>]</cite>,
+or may be produced using an unsupervised morphological segmenter such as Morfessor <cite class="ltx_cite">[<a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">20</a>, <a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">7</a>]</cite>.
+Work on target language morphological segmentation for SMT can be divided into three subproblems: segmentation, desegmentation and integration.
+Our work is concerned primarily with the integration problem, but we will discuss each subproblem in turn.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The usefulness of a target segmentation depends on its correspondence to the source language.
+If a morphological feature does not manifest itself as a separate token in the source, then it may be best to leave its corresponding segment attached to the stem.
+A number of studies have looked into what granularity of segmentation is best suited for a particular language pair <cite class="ltx_cite">[<a href="#bib.bib35" title="Exploring different representational units in English-to-Turkish statistical machine translation" class="ltx_ref">24</a>, <a href="#bib.bib9" title="Segmentation for English-to-Arabic statistical machine translation" class="ltx_ref">2</a>, <a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">7</a>, <a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">9</a>]</cite>.
+Since our focus here is on integrating segmentation into the decoding process,
+we simply adopt the segmentation strategies recommended by previous work:
+the Penn Arabic Treebank scheme for English-Arabic <cite class="ltx_cite">[<a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">9</a>]</cite>,
+and an unsupervised scheme for English-Finnish <cite class="ltx_cite">[<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Desegmentation is the process of converting segmented words into their original surface form.
+For many segmentations, especially unsupervised ones, this amounts to simple concatenation.
+However, more complex segmentations, such as the Arabic tokenization provided by MADA <cite class="ltx_cite">[<a href="#bib.bib14" title="MADA+tokan: a toolkit for Arabic tokenization, diacritization, morphological disambiguation, POS tagging, stemming and lemmatization" class="ltx_ref">12</a>]</cite>,
+require further orthographic adjustments to reverse normalizations performed during segmentation.
+<cite class="ltx_cite">Badr<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib9" title="Segmentation for English-to-Arabic statistical machine translation" class="ltx_ref">2008</a>)</cite> present two Arabic desegmentation schemes: table-based and rule-based.
+<cite class="ltx_cite">El Kholy and Habash (<a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">2012</a>)</cite> provide an extensive study on the influence of segmentation and desegmentation on English-to-Arabic SMT.
+They introduce an additional desegmentation technique that augments the table-based approach with an unsegmented language model.
+<cite class="ltx_cite">Salameh<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib26" title="Reversing morphological tokenization in English-to-Arabic SMT" class="ltx_ref">2013</a>)</cite> replace rule-based desegmentation with a discriminatively-trained character transducer.
+In this work, we adopt the Table+Rules approach of <cite class="ltx_cite">El Kholy and Habash (<a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">2012</a>)</cite> for English-Arabic,
+while concatenation is sufficient for English-Finnish.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">Work on integration attempts to improve SMT performance for morphologically complex target languages by going beyond simple pre- and post-processing.
+<cite class="ltx_cite">Oflazer and Durgar El-Kahlout (<a href="#bib.bib35" title="Exploring different representational units in English-to-Turkish statistical machine translation" class="ltx_ref">2007</a>)</cite> desegment 1000-best lists for English-to-Turkish translation to enable scoring with an unsegmented language model.
+Unlike our work, they <em class="ltx_emph">replace</em> the segmented language model with the unsegmented one, allowing them to tune the linear model parameters by hand.
+We use both segmented and unsegmented language models, and tune automatically to optimize BLEU.</p>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">Like us, <cite class="ltx_cite">Luong<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">2010</a>)</cite> tune on unsegmented references,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>
+Tuning on unsegmented references does not require substantial modifications to the standard SMT pipeline.
+For example, <cite class="ltx_cite">Badr<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib9" title="Segmentation for English-to-Arabic statistical machine translation" class="ltx_ref">2008</a>)</cite> also tune on unsegmented references by simply desegmenting SMT output before MERT collects sufficient statistics for BLEU.</span></span></span>
+and translate with both segmented and unsegmented language models for English-to-Finnish translation.
+However, they adopt a scheme of word-boundary-aware morpheme-level phrase extraction, meaning that target phrases include only complete words, though those words are segmented into morphemes.
+This enables full decoder integration, where we do <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best and lattice re-ranking.
+But it also comes at a substantial cost:
+when target phrases include only complete words,
+the system can only generate word forms that were seen during training.
+In this setting, the sparsity reduction from segmentation helps word alignment and target language modeling, but it does not result in a more expressive translation model.
+Furthermore, it becomes substantially more difficult to have non-adjacent source tokens contribute morphemes to a single target word.
+For example, when translating “with his blue car” into the Arabic ¡bsyArth alzrqA’—¿ <span class="ltx_text ltx_font_italic">bsyArth AlzrqA’</span>,
+the target word
+<span class="ltx_text ltx_font_italic">bsyArth</span>
+is composed of three tokens: <span class="ltx_text ltx_font_italic">b+</span> “with”, <span class="ltx_text ltx_font_italic">syArp</span> “car” and <span class="ltx_text ltx_font_italic">+h</span> “his”.
+With word-boundary-aware phrase extraction, a phrase pair
+containing all of “with his blue car” must have been seen in the parallel data
+to translate the phrase correctly at test time.
+With lattice desegmentation, we need only to have seen <span class="ltx_text ltx_font_italic">AlzrqA’</span> “blue” and the three
+morphological pieces of <span class="ltx_text ltx_font_italic">bsyArth</span> for the decoder and desegmenter to assemble the phrase.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Methods</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our goal in this work is to benefit from the sparsity-reducing properties of morphological segmentation
+while simultaneously allowing the system to reason about the final surface forms of the target language.
+We approach this problem by augmenting an SMT system built over target segments with features that reflect
+the desegmented target words.
+In this section, we describe our various strategies for desegmenting the SMT system’s output space,
+along with the features that we add to take advantage of this desegmented view.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Baselines</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The two obvious baseline approaches each decode using one view of the target language.
+The <span class="ltx_text ltx_font_bold">unsegmented</span> approach translates without segmenting the target.
+This trivially allows for an unsegmented language model and never makes desegmentation errors.
+However, it suffers from data sparsity and poor token-to-token correspondence with the source language.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_bold">one-best desegmentation</span> approach segments the target language at training time
+and then desegments the one-best output in post-processing.
+This resolves the sparsity issue, but does not allow the decoder to
+take into account features of the desegmented target.
+To the best of our knowledge,
+we are the first group to go beyond one-best desegmentation
+for English-to-Arabic translation. In English-to-Finnish, although alternative integration strategies have seen some success <cite class="ltx_cite">[<a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">20</a>]</cite>,
+the current state-of-the-art performs one-best-desegmentation <cite class="ltx_cite">[<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best Desegmentation</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The one-best approach can be extended easily by desegmenting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists of segmented decoder output.
+Doing so enables the inclusion of an unsegmented target language model, and with a small amount of bookkeeping,
+it also allows the inclusion of features related to the operations performed during desegmentation (see Section <a href="#S3.SS4" title="3.4 Desegmentation Features ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>).
+With new features reflecting the desegmented output, we can re-tune
+our enhanced linear model on a development set.
+Following previous work, we will desegment 1000-best lists <cite class="ltx_cite">[<a href="#bib.bib35" title="Exploring different representational units in English-to-Turkish statistical machine translation" class="ltx_ref">24</a>]</cite>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Once <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists have been desegmented, we can tune on unsegmented references as a side-benefit.
+This could improve translation quality, as it brings our training scenario closer to our test scenario
+(test BLEU is always measured on unsegmented references).
+In particular, it could address issues with translation length mismatch. Previous work that has tuned on unsegmented references has reported mixed results <cite class="ltx_cite">[<a href="#bib.bib9" title="Segmentation for English-to-Arabic statistical machine translation" class="ltx_ref">2</a>, <a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Lattice Desegmentation</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">An <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best list reflects a tiny portion of a decoder’s search space, typically fixed at 1000 hypotheses.
+Lattices<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Or forests for hierarchical and syntactic decoders.</span></span></span> can represent an exponential number of hypotheses
+in a compact structure.
+In this section, we discuss how a lattice from a multi-stack phrase-based decoder such as Moses <cite class="ltx_cite">[<a href="#bib.bib16" title="Moses: open source toolkit for statistical machine translation" class="ltx_ref">17</a>]</cite> can be desegmented
+to enable word-level features.</p>
+</div>
+<div id="S3.SS3.SSSx1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Finite State Analogy</h4>
+
+<div id="S3.F1" class="ltx_figure"><img src="P14-1010/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="608" height="456" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> The finite state pipeline for a
+lattice translating the English fragment “with the child’s game”.
+The input morpheme lattice (a) is desegmented by
+composing it with the desegmenting transducer (b) to produce the word
+lattice (c). The tokens in (a) are: <span class="ltx_text ltx_font_italic">b+</span> “with”, <span class="ltx_text ltx_font_italic">lEbp</span> “game”, <span class="ltx_text ltx_font_italic">+hm</span> “their”, <span class="ltx_text ltx_font_italic">+hA</span> “her”, and
+<span class="ltx_text ltx_font_italic">AlTfl</span> “the child”.</div>
+</div>
+<div id="S3.SS3.SSSx1.p1" class="ltx_para">
+<p class="ltx_p">A phrase-based decoder produces its output from left to right,
+with each operation appending the translation of a source phrase to a growing target hypothesis.
+Translation continues until each source word has been covered exactly once <cite class="ltx_cite">[<a href="#bib.bib40" title="Statistical phrase-based translation" class="ltx_ref">19</a>]</cite>.</p>
+</div>
+<div id="S3.SS3.SSSx1.p2" class="ltx_para">
+<p class="ltx_p">The search graph of a phrase-based decoder can be interpreted as a lattice, which can be interpreted as a finite state acceptor over target strings.
+In its most natural form, such an acceptor emits target phrases on
+each edge, but it can easily be
+transformed into a form with one edge per token, as shown in Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>a.
+This is sometimes referred to as a word graph <cite class="ltx_cite">[<a href="#bib.bib41" title="Generation of word graphs in statistical machine translation" class="ltx_ref">32</a>]</cite>, although in our case the segmented phrase table also produces tokens that correspond to morphemes.</p>
+</div>
+<div id="S3.SS3.SSSx1.p3" class="ltx_para">
+<p class="ltx_p">Our goal is to desegment the decoder’s output lattice, and in doing so, gain access to a compact, desegmented view of a large portion of the translation search space.
+This can be accomplished by composing the lattice with a <span class="ltx_text ltx_font_bold">desegmenting transducer</span>
+that consumes morphemes and outputs desegmented words.
+This transducer must be able to consume every word in our lattice’s output vocabulary.
+We define a word using the following regular expression:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\textrm{[prefix]* [stem] [suffix]*}\mid\textrm{[prefix]+ [suffix]+}" display="block"><mrow><mtext>[prefix]* [stem] [suffix]*</mtext><mo>∣</mo><mtext>[prefix]+ [suffix]+</mtext></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where [prefix], [stem] and [suffix] are non-overlapping sets of morphemes, whose members are easily determined using the
+segmenter’s segment boundary markers.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>
+Throughout this paper, we use “+” to mark morphemes as prefixes or suffixes, as in <span class="ltx_text ltx_font_italic">w+</span> or <span class="ltx_text ltx_font_italic">+h</span>.
+In Equation <a href="#S3.E1" title="(1) ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> only, we overload “+” as the Kleene cross: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx1.p3.m1" class="ltx_Math" alttext="X+==XX*" display="inline"><mrow><mi>X</mi><mo>+</mo><mo>=</mo><mo>=</mo><mi>X</mi><mi>X</mi><mo>*</mo></mrow></math>.</span></span></span>
+The second disjunct of Equation <a href="#S3.E1" title="(1) ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> covers words that have no clear stem,
+such as the Arabic ¡lh¿ <span class="ltx_text ltx_font_italic">lh</span> “for him”, segmented as
+<span class="ltx_text ltx_font_italic">l+</span> “for” <span class="ltx_text ltx_font_italic">+h</span> “him”.
+Equation <a href="#S3.E1" title="(1) ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> may need to be modified for other languages or segmentation schemes, but our techniques generalize to any definition
+that can be written as a regular expression.</p>
+</div>
+<div id="S3.SS3.SSSx1.p4" class="ltx_para">
+<p class="ltx_p">A desegmenting transducer can be constructed by first
+encoding our desegmenter as a table that maps morpheme sequences to words.
+Regardless of whether the original desegmenter was based on concatenation, rules or table-lookup, it can be encoded as a lattice-specific table by applying it to an enumeration of all words found in the lattice.
+We can then transform that table into a finite state transducer with one path per table entry.
+Finally, we take the closure of this transducer, so that the resulting machine can transduce any sequence of words.
+The desegmenting transducer for our running example is shown in Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>b. Note that tokens requiring no desegmentation simply emit themselves.
+The lattice (Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>a) can then be desegmented by composing it with the transducer (<a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>b),
+producing a desegmented lattice (<a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>c).
+This is a natural place to introduce features
+that describe the desegmentation process,
+such as scores provided by a desegmentation table,
+which can be incorporated into the desegmenting transducer’s edge weights.</p>
+</div>
+<div id="S3.SS3.SSSx1.p5" class="ltx_para">
+<p class="ltx_p">We now have a desegmented lattice, but it has not been annotated with an unsegmented (word-level) language model.
+In order to annotate lattice edges with an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx1.p5.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram LM,
+every path coming into a node must end with the same sequence of (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx1.p5.m2" class="ltx_Math" alttext="n-1" display="inline"><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></math>) tokens.
+If this property does not hold, then nodes must be split until it does.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>
+Or the LM composition can be done dynamically, effectively decoding the lattice with a beam or cube-pruned search <cite class="ltx_cite">[<a href="#bib.bib43" title="Forest rescoring: faster decoding with integrated language models" class="ltx_ref">13</a>]</cite>.
+</span></span></span>
+This property is maintained by the decoder’s recombination rules for the segmented LM, but it is not guaranteed for the desegmented LM.
+Indeed, the expanded word-level context is one of the main benefits of incorporating a word-level LM.
+Fortunately, LM annotation as well as any necessary lattice modifications can be performed simultaneously by composing the desegmented lattice
+with a finite state acceptor encoding the LM <cite class="ltx_cite">[<a href="#bib.bib42" title="Lexicographic semirings for exact automata encoding of sequence models" class="ltx_ref">26</a>]</cite>.</p>
+</div>
+<div id="S3.SS3.SSSx1.p6" class="ltx_para">
+<p class="ltx_p">In summary, we are given a segmented lattice, which encodes the decoder’s translation space as an acceptor over morphemes.
+We compose this acceptor with a desegmenting transducer, and then with an unsegmented LM acceptor, producing a fully annotated, desegmented lattice.
+Instead of using a tool kit such as OpenFst <cite class="ltx_cite">[<a href="#bib.bib27" title="OpenFst: a general and efficient weighted finite-state transducer library" class="ltx_ref">1</a>]</cite>,
+we implement both the desegmenting transducer and the LM acceptor
+programmatically.
+This eliminates the need to construct intermediate machines, such as the lattice-specific desegmenter in Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>b,
+and facilitates working with edges annotated with feature vectors as opposed to single weights.</p>
+</div>
+</div>
+<div id="S3.SS3.SSSx2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Programmatic Desegmentation</h4>
+
+<div id="S3.SS3.SSSx2.p1" class="ltx_para">
+<p class="ltx_p">Lattice desegmentation is a non-local lattice transformation.
+That is, the morphemes forming a word might span several edges, making desegmentation non-trivial.
+<cite class="ltx_cite">Luong<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">2010</a>)</cite> address this problem by forcing the decoder’s phrase table to respect word boundaries, guaranteeing that each desegmentable token sequence is local to an edge.
+Inspired by the use of non-local features in forest decoding <cite class="ltx_cite">[<a href="#bib.bib37" title="Forest reranking: discriminative parsing with non-local features" class="ltx_ref">14</a>]</cite>, we present an algorithm to find <span class="ltx_text ltx_font_bold">chains</span> of edges that correspond to desegmentable token sequences,
+allowing lattice desegmentation with no phrase-table restrictions.
+This algorithm can be seen as implicitly constructing a customized desegmenting transducer and composing it with the input lattice on the fly.</p>
+</div>
+<div id="S3.SS3.SSSx2.p2" class="ltx_para">
+<p class="ltx_p">Before describing the algorithm, we define some notation.
+An input morpheme lattice is a triple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m1" class="ltx_Math" alttext="\langle n_{s},\mathcal{N},\mathcal{E}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>n</mi><mi>s</mi></msub><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℰ</mi></mrow><mo>⟩</mo></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m2" class="ltx_Math" alttext="\mathcal{N}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒩</mi></math> is a set of nodes, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m3" class="ltx_Math" alttext="\mathcal{E}" display="inline"><mi class="ltx_font_mathcaligraphic">ℰ</mi></math> is a set of edges, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m4" class="ltx_Math" alttext="n_{s}\in\mathcal{N}" display="inline"><mrow><msub><mi>n</mi><mi>s</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi></mrow></math> is the start node that begins each path through the lattice.
+Each edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m5" class="ltx_Math" alttext="e\in\mathcal{E}" display="inline"><mrow><mi>e</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℰ</mi></mrow></math> is a 4-tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m6" class="ltx_Math" alttext="\langle\mathit{from},\mathit{to},\mathit{lex},w\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>𝑓𝑟𝑜𝑚</mi><mo>,</mo><mi>𝑡𝑜</mi><mo>,</mo><mi>𝑙𝑒𝑥</mi><mo>,</mo><mi>w</mi></mrow><mo>⟩</mo></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m7" class="ltx_Math" alttext="\mathit{from}" display="inline"><mi>𝑓𝑟𝑜𝑚</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m8" class="ltx_Math" alttext="\mathit{to}\in\mathcal{N}" display="inline"><mrow><mi>𝑡𝑜</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi></mrow></math> are head and tail nodes, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m9" class="ltx_Math" alttext="\mathit{lex}" display="inline"><mi>𝑙𝑒𝑥</mi></math> is a single token accepted by this edge, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m10" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is the (potentially vector-valued) edge weight.
+Tokens are drawn from one of three non-overlapping morpho-syntactic sets: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m11" class="ltx_Math" alttext="\mathit{lex}\in\mathit{Prefix}\cup\mathit{Stem}\cup\mathit{Suffix}" display="inline"><mrow><mi>𝑙𝑒𝑥</mi><mo>∈</mo><mrow><mi>𝑃𝑟𝑒𝑓𝑖𝑥</mi><mo>∪</mo><mi>𝑆𝑡𝑒𝑚</mi><mo>∪</mo><mi>𝑆𝑢𝑓𝑓𝑖𝑥</mi></mrow></mrow></math>, where tokens that do not require desegmentation,
+such as complete words, punctuation and numbers, are considered to be in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m12" class="ltx_Math" alttext="\mathit{Stem}" display="inline"><mi>𝑆𝑡𝑒𝑚</mi></math>.
+It is also useful to consider the set of all outgoing edges for a node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p2.m13" class="ltx_Math" alttext="n.\mathit{out}=\{e\in\mathcal{E}|e.\mathit{from}=n\}" display="inline"><mrow><mi>n</mi><mo separator="true">.</mo><mrow><mi>𝑜𝑢𝑡</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mi>e</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℰ</mi></mrow><mo separator="true">|</mo><mrow><mi>e</mi><mo separator="true">.</mo><mrow><mi>𝑓𝑟𝑜𝑚</mi><mo>=</mo><mi>n</mi></mrow></mrow></mrow><mo>}</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS3.SSSx2.p3" class="ltx_para">
+<p class="ltx_p">With this notation in place, we can define a <span class="ltx_text ltx_font_bold">chain</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> to be a sequence of edges <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m2" class="ltx_Math" alttext="[e_{1}\ldots e_{l}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>]</mo></mrow></math> such that for
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m3" class="ltx_Math" alttext="1\leq i&lt;l:e_{i}.\mathit{to}=e_{i+1}.\mathit{from}" display="inline"><mrow><mn>1</mn><mo>≤</mo><mi>i</mi><mo>&lt;</mo><mi>l</mi><mo>:</mo><msub><mi>e</mi><mi>i</mi></msub><mo>.</mo><mi>𝑡𝑜</mi><mo>=</mo><msub><mi>e</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>.</mo><mi>𝑓𝑟𝑜𝑚</mi></mrow></math>.
+We denote singleton chains with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m4" class="ltx_Math" alttext="[e]" display="inline"><mrow><mo>[</mo><mi>e</mi><mo>]</mo></mrow></math>, and when unambiguous, we abbreviate longer chains with their start and end node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m5" class="ltx_Math" alttext="[e_{1}.\mathit{from}\to e_{l}.\mathit{to}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo separator="true">.</mo><mrow><mi>𝑓𝑟𝑜𝑚</mi><mo>→</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo separator="true">.</mo><mi>𝑡𝑜</mi></mrow><mo>]</mo></mrow></math>.
+A chain is <span class="ltx_text ltx_font_bold">valid</span> if it emits the beginning of a word as defined by the regular expression in Equation <a href="#S3.E1" title="(1) ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+A valid chain is <span class="ltx_text ltx_font_bold">complete</span> if its edges form an entire word, and if it is part of a path through the lattice that consists only of words.
+In Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>a, the complete chains are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m6" class="ltx_Math" alttext="[0\to 2]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>→</mo><mn>2</mn></mrow><mo>]</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m7" class="ltx_Math" alttext="[0\to 4]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>→</mo><mn>4</mn></mrow><mo>]</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m8" class="ltx_Math" alttext="[0\to 5]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>→</mo><mn>5</mn></mrow><mo>]</mo></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m9" class="ltx_Math" alttext="[2\to 3]" display="inline"><mrow><mo>[</mo><mrow><mn>2</mn><mo>→</mo><mn>3</mn></mrow><mo>]</mo></mrow></math>.
+The path restriction on complete chains forces
+words to be bounded by other words in order to be complete.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>
+Sentence-initial suffix morphemes and sentence-final prefix morphemes represent a special case that we omit for the sake of brevity.
+Lacking stems, they are left segmented.
+</span></span></span>
+For example, if we removed the edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m10" class="ltx_Math" alttext="2\to 3" display="inline"><mrow><mn>2</mn><mo>→</mo><mn>3</mn></mrow></math> (<span class="ltx_text ltx_font_italic">AlTfl</span>) from Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>a, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p3.m11" class="ltx_Math" alttext="[0\to 2]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>→</mo><mn>2</mn></mrow><mo>]</mo></mrow></math> ([<span class="ltx_text ltx_font_italic">b+ lEbp</span>]) would cease to be a complete chain,
+but it would still be a valid chain.
+Note that in the finite-state analogy, the path restriction is implicit in the composition operation.</p>
+</div>
+<div id="S3.SS3.SSSx2.p4" class="ltx_para">
+<p class="ltx_p">Algorithm <a href="#S3.SS3.SSSx2" title="Programmatic Desegmentation ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a> desegments a lattice by finding all complete chains and replacing each one with a single edge.
+It maintains a work list of nodes that lie on the boundary between words,
+and for each node on this list, it launches a depth first search to find all complete chains extending from it.
+The search recognizes the valid chain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> to be complete by finding an edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m3" class="ltx_Math" alttext="c+e" display="inline"><mrow><mi>c</mi><mo>+</mo><mi>e</mi></mrow></math> forms a chain, but not a valid one.
+By inspection of Equation <a href="#S3.E1" title="(1) ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, this can only happen when a prefix or stem follows a stem or suffix, which always marks a word boundary.
+The chains found by this search are desegmented and then added to the output lattice as edges.
+The nodes at end points of these chains are added to the work list, as they lie at word boundaries by definition.
+Note that although this algorithm creates completely new edges, the resulting node set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m4" class="ltx_Math" alttext="\mathcal{N}^{\prime}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup></math> will be a subset of the input node set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m5" class="ltx_Math" alttext="\mathcal{N}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒩</mi></math>.
+The complement <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p4.m6" class="ltx_Math" alttext="\mathcal{N}-\mathcal{N}^{\prime}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>-</mo><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup></mrow></math> will consist of nodes that are word-internal in all paths through the input lattice, such as node 1 in Figure <a href="#S3.F1" title="Figure 1 ‣ Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>a.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS3.SSSx2.p5" class="ltx_para">
+<p class="ltx_p">[t]</p>
+</div>
+<div id="S3.SS3.SSSx2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_caption">Desegment a lattice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m1" class="ltx_Math" alttext="\langle n_{s},\mathcal{N},\mathcal{E}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>n</mi><mi>s</mi></msub><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℰ</mi></mrow><mo>⟩</mo></mrow></math></span>
+<span class="ltx_ERROR undefined">{algorithmic}</span>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\COMMENT</span>Initialize output lattice and work list <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m2" class="ltx_Math" alttext="\mathit{WL}" display="inline"><mi>𝑊𝐿</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m3" class="ltx_Math" alttext="n_{s}^{\prime}=n_{s}" display="inline"><mrow><msubsup><mi>n</mi><mi>s</mi><mo>′</mo></msubsup><mo>=</mo><msub><mi>n</mi><mi>s</mi></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m4" class="ltx_Math" alttext="\mathcal{N}^{\prime}=\emptyset" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m5" class="ltx_Math" alttext="\mathcal{E}^{\prime}=\emptyset" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">ℰ</mi><mo>′</mo></msup><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m6" class="ltx_Math" alttext="\mathit{WL}=[n_{s}]" display="inline"><mrow><mi>𝑊𝐿</mi><mo>=</mo><mrow><mo>[</mo><msub><mi>n</mi><mi>s</mi></msub><mo>]</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\WHILE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m7" class="ltx_Math" alttext="n=\mathit{WL}.\textrm{pop}()" display="inline"><mrow><mrow><mi>n</mi><mo>=</mo><mi>𝑊𝐿</mi></mrow><mo separator="true">.</mo><mrow><mtext>pop</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow/><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\COMMENT</span>Work on each node only once
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_text ltx_font_bold">if</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m8" class="ltx_Math" alttext="n\in\mathcal{N}^{\prime}" display="inline"><mrow><mi>n</mi><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup></mrow></math> <span class="ltx_text ltx_font_bold">then continue</span>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m9" class="ltx_Math" alttext="\mathcal{N}^{\prime}=\mathcal{N}^{\prime}\cup\{n\}" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup><mo>=</mo><mrow><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup><mo>∪</mo><mrow><mo>{</mo><mi>n</mi><mo>}</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\COMMENT</span>Initialize the chain stack <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m10" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m11" class="ltx_Math" alttext="\mathcal{C}=\emptyset" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m12" class="ltx_Math" alttext="e\in n.\mathit{out}" display="inline"><mrow><mrow><mi>e</mi><mo>∈</mo><mi>n</mi></mrow><mo separator="true">.</mo><mi>𝑜𝑢𝑡</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_text ltx_font_bold">if</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m13" class="ltx_Math" alttext="[e]" display="inline"><mrow><mo>[</mo><mi>e</mi><mo>]</mo></mrow></math> is valid <span class="ltx_text ltx_font_bold"> then </span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m14" class="ltx_Math" alttext="\mathcal{C}.\textrm{push}([e])" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo separator="true">.</mo><mrow><mtext>push</mtext><mo>⁢</mo><mrow><mo fence="true">([</mo><mi>e</mi><mo fence="true">])</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\COMMENT</span>Depth-first search for complete chains
+<span class="ltx_ERROR undefined">\WHILE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m15" class="ltx_Math" alttext="[e_{1},\ldots,e_{l}]=\mathcal{C}.pop()" display="inline"><mrow><mrow><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>]</mo></mrow><mo>=</mo><mi class="ltx_font_mathcaligraphic">𝒞</mi></mrow><mo separator="true">.</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow/><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\COMMENT</span>Attempt to extend chain
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m16" class="ltx_Math" alttext="e\in e_{l}.\mathit{to}.\mathit{out}" display="inline"><mrow><mrow><mi>e</mi><mo>∈</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo separator="true">.</mo><mi>𝑡𝑜</mi><mo separator="true">.</mo><mi>𝑜𝑢𝑡</mi></mrow></math>
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m17" class="ltx_Math" alttext="[e_{1}\ldots e_{l},e]" display="inline"><mrow><mo>[</mo><mrow><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>,</mo><mi>e</mi></mrow><mo>]</mo></mrow></math> is valid
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m18" class="ltx_Math" alttext="\mathcal{C}.push([e_{1},\ldots,e_{l},e])" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo separator="true">.</mo><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>l</mi></msub><mo>,</mo><mi>e</mi></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ELSE</span><span class="ltx_ERROR undefined">\STATE</span>Mark <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m19" class="ltx_Math" alttext="[e_{1},\ldots,e_{l}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>]</mo></mrow></math> as complete
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\COMMENT</span>Desegment complete chains
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m20" class="ltx_Math" alttext="[e_{1},\ldots,e_{l}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>]</mo></mrow></math> is complete
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m21" class="ltx_Math" alttext="\mathit{WL}.\mathrm{push}(e_{l}.\mathit{to})" display="inline"><mrow><mi>𝑊𝐿</mi><mo>.</mo><mi>push</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>l</mi></msub><mo>.</mo><mi>𝑡𝑜</mi><mo>)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m22" class="ltx_Math" alttext="\mathcal{E}^{\prime}=\mathcal{E}^{\prime}\cup\{\mathrm{deseg}([e_{1},\ldots,e_%&#10;{l}])\}" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">ℰ</mi><mo>′</mo></msup><mo>=</mo><mrow><msup><mi class="ltx_font_mathcaligraphic">ℰ</mi><mo>′</mo></msup><mo>∪</mo><mrow><mo>{</mo><mrow><mi>deseg</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>l</mi></msub></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx2.p6.m23" class="ltx_Math" alttext="\langle n_{s}^{\prime},\mathcal{N}^{\prime},\mathcal{E}^{\prime}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msubsup><mi>n</mi><mi>s</mi><mo>′</mo></msubsup><mo>,</mo><msup><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>′</mo></msup><mo>,</mo><msup><mi class="ltx_font_mathcaligraphic">ℰ</mi><mo>′</mo></msup></mrow><mo>⟩</mo></mrow></math></p>
+</div>
+</div>
+<div id="S3.SS3.SSSx3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Programmatic LM Integration</h4>
+
+<div id="S3.SS3.SSSx3.p1" class="ltx_para">
+<p class="ltx_p">Programmatic composition of a lattice with an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram LM acceptor is a well understood problem.
+We use a dynamic program to enumerate all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx3.p1.m2" class="ltx_Math" alttext="(n-1)" display="inline"><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></math>-word contexts leading into a node,
+and then split the node into multiple copies, one for each context.
+With each node corresponding to a single LM context, annotation of outgoing edges with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSSx3.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram LM scores is straightforward.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Desegmentation Features</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">Our re-ranker has access to all of the features used by the decoder, in addition to a number of features enabled by desegmentation.</p>
+</div>
+<div id="S3.SS4.SSSx3.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Desegmentation Score</h5>
+
+<div id="S3.SS4.SSSx3.P1.p1" class="ltx_para">
+<p class="ltx_p">We use a table-based desegmentation method for Arabic, which is based on segmenting an Arabic training corpus and memorizing the observed transformations to reverse them later.
+Finnish does not require a table, as all words can be desegmented with simple concatenation.
+The Arabic table consists of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m1" class="ltx_Math" alttext="X\rightarrow Y" display="inline"><mrow><mi>X</mi><mo>→</mo><mi>Y</mi></mrow></math> entries, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m2" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is a target morpheme sequence and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m3" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math> is a desegmented surface form.
+Several entries may share the same <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m4" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>, resulting in multiple desegmentation options.
+For the sake of symmetry with the unambiguous Finnish case, we augment Arabic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists or lattices with only the most frequent desegmentation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m6" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>
+Allowing the re-ranker to choose between multiple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m7" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>s is a natural avenue for future work.</span></span></span>
+We provide the desegmentation score
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m8" class="ltx_Math" alttext="\log p(Y|X)" display="inline"><mrow><mi>log</mi><mi>p</mi><mrow><mo>(</mo><mi>Y</mi><mo>|</mo><mi>X</mi><mo>)</mo></mrow></mrow></math>=
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m9" class="ltx_Math" alttext="\log\left(\frac{\text{count of $X\rightarrow Y$}}{\text{count of X}}\right)" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mfrac><mrow><mtext mathvariant="italic">count of </mtext><mrow><mi>X</mi><mo>→</mo><mi>Y</mi></mrow></mrow><mtext>count of X</mtext></mfrac><mo>)</mo></mrow></mrow></math>
+as a feature, to indicate the entry’s ambiguity in the training data.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>
+We also experimented on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m10" class="ltx_Math" alttext="\log p(X|Y)" display="inline"><mrow><mi>log</mi><mi>p</mi><mrow><mo>(</mo><mi>X</mi><mo>|</mo><mi>Y</mi><mo>)</mo></mrow></mrow></math> as an additional feature, but observed no improvement in translation quality.</span></span></span>
+When an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.SSSx3.P1.p1.m11" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is missing from the table, we fall back on a set of desegmentation rules <cite class="ltx_cite">[<a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">9</a>]</cite> and this feature is set to 0.
+This feature is always 0 for English-Finnish.</p>
+</div>
+</div>
+<div id="S3.SS4.SSSx3.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Contiguity</h5>
+
+<div id="S3.SS4.SSSx3.P2.p1" class="ltx_para">
+<p class="ltx_p">One advantage of our approach is that it allows discontiguous source words to translate into a single target word.
+In order to maintain some control over this powerful capability,
+we create three binary features
+that indicate the contiguity of a desegmentation.
+The first feature indicates that the desegmented morphemes were translated from contiguous source words.
+The second indicates that the source words contained a single discontiguity, as in a word-by-word translation of the “with his blue car” example from Section <a href="#S2.SS2" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+The third indicates two or more discontiguities.</p>
+</div>
+</div>
+<div id="S3.SS4.SSSx3.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Unsegmented LM</h5>
+
+<div id="S3.SS4.SSSx3.P3.p1" class="ltx_para">
+<p class="ltx_p">A 5-gram LM trained on unsegmented target text
+is used to assess the fluency of the desegmented word sequence.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Setup</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We train our English-to-Arabic system using 1.49 million sentence pairs drawn from the NIST 2012 training set, excluding the UN data.
+This training set contains about 40 million Arabic tokens before segmentation,
+and 47 million after segmentation.
+We tune on the NIST 2004 evaluation set (1353 sentences) and evaluate on NIST 2005 (1056 sentences).
+As these evaluation sets are intended for Arabic-to-English translation, we select the first English reference to use as our source text.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Our English-to-Finnish system is trained on the same Europarl corpus as <cite class="ltx_cite">Luong<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib36" title="A hybrid morpheme-word representation for machine translation of morphologically rich languages" class="ltx_ref">2010</a>)</cite> and <cite class="ltx_cite">Clifton and Sarkar (<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">2011</a>)</cite>, which has roughly one million sentence pairs.
+We also use their development and test sets (2000 sentences each).</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Segmentation</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">For Arabic,
+morphological segmentation
+is performed by MADA
+3.2 <cite class="ltx_cite">[<a href="#bib.bib14" title="MADA+tokan: a toolkit for Arabic tokenization, diacritization, morphological disambiguation, POS tagging, stemming and lemmatization" class="ltx_ref">12</a>]</cite>, using the Penn Arabic Treebank (PATB) segmentation
+scheme as recommended by <cite class="ltx_cite">El Kholy and Habash (<a href="#bib.bib1" title="Orthographic and morphological processing for English—Arabic statistical machine translation" class="ltx_ref">2012</a>)</cite>.
+For both segmented and unsegmented Arabic, we further normalize the script by converting different forms of Alif ¡a ’A ’a ’i ¿ and Ya ¡y _A¿ to bare Alif ¡a¿ and dotless Ya ¡_A¿.
+To generate the desegmentation table, we analyze the segmentations from the Arabic side of the parallel training data to collect mappings from morpheme sequences to surface forms.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For Finnish, we adopt the
+Unsup L-match segmentation technique of <cite class="ltx_cite">Clifton and Sarkar (<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">2011</a>)</cite>,
+which uses Morfessor <cite class="ltx_cite">[<a href="#bib.bib2" title="Inducing the morphological lexicon of a natural language from unannotated text" class="ltx_ref">8</a>]</cite> to analyze the 5,000 most frequent Finnish words.
+The analysis is then applied to the Finnish side of the parallel text, and a list of segmented suffixes is collected.
+To improve coverage, words are further segmented according to their longest matching suffix from the list.
+As Morfessor does not perform any orthographic normalizations, it can be desegmented with simple concatenation.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Systems</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We align the parallel data with GIZA++ <cite class="ltx_cite">[<a href="#bib.bib4" title="A systematic comparison of various statistical alignment models" class="ltx_ref">22</a>]</cite> and decode using Moses <cite class="ltx_cite">[<a href="#bib.bib16" title="Moses: open source toolkit for statistical machine translation" class="ltx_ref">17</a>]</cite>.
+The decoder’s log-linear model includes a standard feature set.
+Four translation model features encode phrase translation probabilities and lexical scores in both directions.
+Seven distortion features encode a standard distortion penalty as well as a bidirectional lexicalized reordering model.
+A KN-smoothed 5-gram language model is trained on the target side of the parallel data with SRILM <cite class="ltx_cite">[<a href="#bib.bib15" title="SRILM - an extensible language modeling toolkit" class="ltx_ref">29</a>]</cite>.
+Finally, we include word and phrase penalties.
+The decoder uses the default parameters for English-to-Arabic, except that
+the maximum phrase length is set to 8.
+For English-to-Finnish, we follow <cite class="ltx_cite">Clifton and Sarkar (<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">2011</a>)</cite> in setting the hypothesis stack size to 100, distortion limit to 6, and maximum phrase length to 20.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The decoder’s log-linear model is tuned with MERT <cite class="ltx_cite">[<a href="#bib.bib5" title="Minimum error rate training for statistical machine translation" class="ltx_ref">23</a>]</cite>.
+Re-ranking models are tuned using a batch variant of hope-fear MIRA <cite class="ltx_cite">[<a href="#bib.bib6" title="Online large-margin training of syntactic and structural translation features" class="ltx_ref">5</a>, <a href="#bib.bib7" title="Batch tuning strategies for statistical machine translation" class="ltx_ref">4</a>]</cite>,
+using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best variant for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best desegmentation, and the lattice variant for lattice desegmentation.
+MIRA was selected over MERT because we have an in-house implementation that can tune on lattices very quickly.
+During development, we confirmed that MERT and MIRA perform similarly, as is expected with fewer than 20 features.
+Both the decoder’s log-linear model and the re-ranking models are trained on the same development set.
+Historically, we have not seen improvements from using different tuning sets for decoding and re-ranking.
+Lattices are pruned to a density of 50 edges per word before re-ranking.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We test four different systems.
+Our first baseline is <span class="ltx_text ltx_font_bold">Unsegmented</span>, where we train on unsegmented target text, requiring no desegmentation step.
+Our second baseline is <span class="ltx_text ltx_font_bold">1-best Deseg</span>, where we train on segmented target text and desegment the decoder’s 1-best output.
+Starting from the system that produced 1-best Deseg, we then output either 1000-best lists or lattices to create our two experimental systems.
+The <span class="ltx_text ltx_font_bold">1000-best Deseg</span> system desegments, augments and re-ranks the decoder’s 1000-best list, while
+<span class="ltx_text ltx_font_bold">Lattice Deseg</span> does the same in the lattice.
+We augment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists and lattices using the features
+described in Section <a href="#S3.SS4" title="3.4 Desegmentation Features ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>Development experiments on
+a small-data English-to-Arabic scenario
+indicated that the Desegmentation Score was not particularly useful,
+so we exclude it from the main comparison, but include it in the
+ablation experiments.</span></span></span></p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We evaluate our system using BLEU <cite class="ltx_cite">[<a href="#bib.bib17" title="BLEU: a method for automatic evaluation of machine translation" class="ltx_ref">25</a>]</cite> and TER <cite class="ltx_cite">[<a href="#bib.bib28" title="A study of translation edit rate with targeted human annotation" class="ltx_ref">28</a>]</cite>.
+Following <cite class="ltx_cite">Clark<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Better hypothesis testing for statistical machine translation: controlling for optimizer instability" class="ltx_ref">2011</a>)</cite>, we report average scores over five random tuning replications to account for optimizer instability.
+For the baselines, this means 5 runs of decoder tuning.
+For the desegmenting re-rankers, this means 5 runs of re-ranker tuning, each working on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists or lattices produced by the same (representative) decoder weights.
+We measure statistical significance using MultEval <cite class="ltx_cite">[<a href="#bib.bib8" title="Better hypothesis testing for statistical machine translation: controlling for optimizer instability" class="ltx_ref">6</a>]</cite>, which implements a stratified approximate randomization test to account for multiple tuning replications.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Tables <a href="#S5.T1" title="Table 1 ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> report results
+averaged over 5 tuning replications
+on English-to-Arabic and English-to-Finnish, respectively.
+In all scenarios, both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math>-best Deseg and Lattice Deseg significantly outperform the 1-best Deseg baseline (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>).</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For English-to-Arabic, 1-best desegmentation results in a 0.7 BLEU point improvement over training on unsegmented Arabic.
+Moving to lattice desegmentation more than doubles that improvement,
+resulting in a BLEU score of 34.4 and an improvement of 1.0 BLEU point over 1-best desegmentation.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math>-best desegmentation also works well, resulting in a 0.6 BLEU point improvement over 1-best.
+Lattice desegmentation is significantly better (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>) than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math>-best desegmentation.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">For English-to-Finnish, the Unsup L-match segmentation with 1-best desegmentation does not improve over the unsegmented baseline.
+The segmentation may be addressing issues with model sparsity, but it is also introducing errors that would have been impossible had words been left unsegmented.
+In fact, even with our lattice desegmenter providing a boost, we are unable to see a significant improvement over the unsegmented model.
+As we attempted to replicate the approach of <cite class="ltx_cite">Clifton and Sarkar (<a href="#bib.bib33" title="Combining morpheme-based machine translation with post-processing morpheme prediction" class="ltx_ref">2011</a>)</cite> exactly by working with their segmented data,
+this difference is likely due to changes in Moses since the publication of their result.
+Nonetheless, the 1000-best and lattice desegmenters both produce significant improvements over the 1-best desegmentation baseline,
+with Lattice Deseg achieving a 1-point improvement in TER.
+These results match the established state-of-the-art on this data set,
+but also indicate that
+there is still room for improvement in identifying the
+best segmentation strategy for English-to-Finnish translation.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">We also tried a similar Morfessor-based segmentation for Arabic, which has an unsegmented test set BLEU of 32.7.
+As in Finnish, the 1-best desegmentation using Morfessor did not surpass the unsegmented baseline, producing a test BLEU of only 31.4 (not shown in Table <a href="#S5.T1" title="Table 1 ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+Lattice desegmentation was able to boost this to 32.9, slightly above 1-best desegmentation, but well below our best MADA desegmentation result of 34.4.
+There appears to be a large advantage to using MADA’s supervised segmentation in this scenario.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Dev</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Test</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">BLEU</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">BLEU</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">TER</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Unsegmented</th>
+<td class="ltx_td ltx_align_center ltx_border_t">24.4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">32.7</td>
+<td class="ltx_td ltx_align_center ltx_border_t">49.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">1-best Deseg</th>
+<td class="ltx_td ltx_align_center">24.4</td>
+<td class="ltx_td ltx_align_center">33.4</td>
+<td class="ltx_td ltx_align_center">48.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">1000-best Deseg</th>
+<td class="ltx_td ltx_align_center">25.0</td>
+<td class="ltx_td ltx_align_center">34.0</td>
+<td class="ltx_td ltx_align_center">48.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b">Lattice Deseg</th>
+<td class="ltx_td ltx_align_center ltx_border_b">25.2</td>
+<td class="ltx_td ltx_align_center ltx_border_b">34.4</td>
+<td class="ltx_td ltx_align_center ltx_border_b">47.7</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Results for English-to-Arabic translation
+using MADA’s PATB segmentation.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Dev</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Test</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">BLEU</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">BLEU</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">TER</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Unsegmented</th>
+<td class="ltx_td ltx_align_center ltx_border_t">15.4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">15.1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">70.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">1-best Deseg</th>
+<td class="ltx_td ltx_align_center">15.3</td>
+<td class="ltx_td ltx_align_center">14.8</td>
+<td class="ltx_td ltx_align_center">71.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">1000-best Deseg</th>
+<td class="ltx_td ltx_align_center">15.4</td>
+<td class="ltx_td ltx_align_center">15.1</td>
+<td class="ltx_td ltx_align_center">71.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b">Lattice Deseg</th>
+<td class="ltx_td ltx_align_center ltx_border_b">15.5</td>
+<td class="ltx_td ltx_align_center ltx_border_b">15.1</td>
+<td class="ltx_td ltx_align_center ltx_border_b">70.9</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results for English-to-Finnish translation
+using unsupervised segmentation.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Ablation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We conducted an ablation experiment on English-to-Arabic to measure the impact of the various features described in Section <a href="#S3.SS4" title="3.4 Desegmentation Features ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Ablation ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> compares different combinations of features using lattice desegmentation.
+The unsegmented LM alone yields a 0.4 point improvement over the 1-best desegmentation score.
+Adding contiguity indicators on top of the unsegmented LM results in another 0.6 point improvement.
+As anticipated, the tuner assigns negative weights to discontiguous cases, encouraging the re-ranker to select a safer translation path when possible.
+Judging from the output on the NIST 2005 test set, the system uses these discontiguous desegmentations very rarely: only 5% of desegmented tokens align to discontiguous source phrases.
+Adding the desegmentation score to these two feature groups does not improve performance, confirming the results we observed during development.
+The desegmentation score would likely be useful in a scenario where we provide multiple desegmentation options to the re-ranker; for now,
+it indicates only the ambiguity of a fixed choice, and is likely redundant with information provided by the language model.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Features</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">dev</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">1-best Deseg</th>
+<td class="ltx_td ltx_align_right ltx_border_t">24.5</td>
+<td class="ltx_td ltx_align_right ltx_border_t">33.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\phantom{+}" display="inline"><mi/></math>+ Unsegmented LM</th>
+<td class="ltx_td ltx_align_right">24.9</td>
+<td class="ltx_td ltx_align_right">33.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="\phantom{++}" display="inline"><mi/></math>+ Contiguity</th>
+<td class="ltx_td ltx_align_right">25.2</td>
+<td class="ltx_td ltx_align_right">34.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="\phantom{+++}" display="inline"><mi/></math>+ Desegmentation Score</th>
+<td class="ltx_td ltx_align_right ltx_border_b">25.2</td>
+<td class="ltx_td ltx_align_right ltx_border_b">34.3</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>The effect of feature ablation on BLEU score
+for English-to-Arabic translation with lattice desegmentation.</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Error Analysis</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In order to better understand the source of our improvements in the English-to-Arabic scenario, we conducted an extensive manual analysis of the differences
+between 1-best and lattice desegmentation on our test set.
+We compared the output of the two systems using the Unix tool <span class="ltx_text ltx_font_italic">wdiff</span>, which transforms a solution to the longest-common-subsequence problem into a sequence of multi-word insertions and deletions <cite class="ltx_cite">[<a href="#bib.bib3" title="An algorithm for differential file comparison" class="ltx_ref">15</a>]</cite>.
+We considered adjacent insertion-deletion pairs to be (potentially phrasal) substitutions, and collected them into a file, omitting any unpaired insertions or deletions.
+We then sampled 650 cases where the two sides of the substitution were deemed to be related, and divided these cases into categories based on how the lattice desegmentation differs from the one-best desegmentation.
+We consider a phrase to be correct only if it can be found in the reference.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Error Analysis ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> breaks down per-phrase accuracy according to four manually-assigned categories:
+(1) <span class="ltx_text ltx_font_bold">clitical</span> –
+the two systems agree on a stem, but at least one clitic, often a prefix denoting
+a preposition or determiner,
+was dropped, added or replaced;
+(2) <span class="ltx_text ltx_font_bold">lexical</span> – a word was changed to a
+morphologically unrelated word with a similar meaning;
+(3) <span class="ltx_text ltx_font_bold">inflectional</span> – the words have the same stem, but different inflection due to a change in gender, number or verb tense;
+(4) <span class="ltx_text ltx_font_bold">part-of-speech</span> – the two systems agree on the lemma,
+but have selected different parts of speech.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">For each case covering a single phrasal difference, we compare the phrases from each system to the reference.
+We report the number of instances where each system matched the reference, as well as cases where they were both incorrect.
+The majority of differences correspond to clitics,
+whose correction appears to be
+a major source of the improvements obtained by lattice desegmentation.
+This category is challenging for the decoder because English prepositions
+tend to correspond to multiple possible forms when translated into Arabic.
+It also includes the frequent cases involving
+the nominal determiner prefix <span class="ltx_text ltx_font_italic">Al</span> “the” (left unsegmented by the PATB scheme), and
+the sentence-initial conjunction <span class="ltx_text ltx_font_italic">w+</span> “and”. The second most common category is lexical,
+where the unsegmented LM
+has drastically altered the choice of translation.
+The remaining categories show no major advantage for either system.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Lattice</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Correct</td></tr>
+</table></th>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">1-best</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Correct</td></tr>
+</table></th>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Both</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Incorrect</td></tr>
+</table></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Clitical</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">157</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">71</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">79</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Lexical</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">39</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Inflectional</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">37</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">32</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">47</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Part-of-speech</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">19</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">17</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">11</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Error analysis for English-to-Arabic
+translation based on 650 sampled instances.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have explored deeper integration of morphological desegmentation into the statistical machine translation pipeline.
+We have presented a novel, finite-state-inspired approach to lattice desegmentation, which allows the system to account for a desegmented view of many possible translations,
+without any modification to the decoder or any restrictions on phrase extraction.
+When applied to English-to-Arabic translation, lattice desegmentation results in a 1.0 BLEU point improvement over one-best desegmentation,
+and a 1.7 BLEU point improvement over unsegmented translation.
+We have also applied our approach to English-to-Finnish translation, and although segmentation in general does not currently help, we are able to show significant improvements over a 1-best desegmentation baseline.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">In the future, we plan to explore introducing multiple segmentation options into the lattice, and the application of our method to a full morphological analysis (as opposed to segmentation) of the target language.
+Eventually, we would like to replace the functionality of factored translation models <cite class="ltx_cite">[<a href="#bib.bib29" title="Factored translation models" class="ltx_ref">18</a>]</cite> with lattice transformation and augmentation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">Thanks to Ann Clifton for generously providing the data and segmentation for our English-to-Finnish experiments,
+and to Marine Carpuat and Roland Kuhn for their helpful comments on an earlier draft.
+This research was supported by the Natural Sciences and Engineering
+Research Council of Canada.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Allauzen, M. Riley, J. Schalkwyk, W. Skut and M. Mohri</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">OpenFst: a general and efficient weighted finite-state transducer library</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Lecture Notes in Computer Science</span>, Vol. <span class="ltx_text ltx_bib_volume">4783</span>, <span class="ltx_text ltx_bib_pages"> pp. 11–23</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_text ltx_font_typewriter">http://www.openfst.org</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx1.p6" title="Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Badr, R. Zbib and J. Glass</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Segmentation for English-to-Arabic statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 153–156</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p5" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS2.p2" title="3.2 n-best Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Bojar</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">English-to-Czech factored machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 232–239</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W07/W07-0735" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Cherry and G. Foster</span><span class="ltx_text ltx_bib_year">(2012-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Batch tuning strategies for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang, Y. Marton and P. Resnik</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of syntactic and structural translation features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 224–233</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Clark, C. Dyer, A. Lavie and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Better hypothesis testing for statistical machine translation: controlling for optimizer instability</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 176–181</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p4" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Clifton and A. Sarkar</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining morpheme-based machine translation with post-processing morpheme prediction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 32–42</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-1004" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Baselines ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Segmentation ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.p2" title="4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p3" title="5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Creutz and K. Lagus</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing the morphological lexicon of a natural language from unannotated text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 106–113</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Segmentation ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. El Kholy and N. Habash</span><span class="ltx_text ltx_bib_year">(2012-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Orthographic and morphological processing for English—Arabic statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Translation</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 25–45</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0922-6567</span>,
+<a href="http://dx.doi.org/10.1007/s10590-011-9110-0" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/s10590-011-9110-0" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS4.SSSx3.P1.p1" title="Desegmentation Score ‣ 3.4 Desegmentation Features ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Segmentation ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. El Kholy and N. Habash</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Translate, predict or generate: modeling rich morphology in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceeding of the Meeting of the European Association for Machine Translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fraser, M. Weller, A. Cahill and F. Cap</span><span class="ltx_text ltx_bib_year">(2012-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling inflection and word-formation in SMT</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Avignon, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 664–674</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/E12-1068" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Habash, O. Rambow and R. Roth</span><span class="ltx_text ltx_bib_year">(22-23)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MADA+tokan: a toolkit for Arabic tokenization, diacritization, morphological disambiguation, POS tagging, stemming and lemmatization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Cairo, Egypt</span> (<span class="ltx_text ltx_bib_language">english</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 2-9517408-5-9</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Segmentation ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang and D. Chiang</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Forest rescoring: faster decoding with integrated language models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 144–151</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1019" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx1.p5" title="Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Forest reranking: discriminative parsing with non-local features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 586–594</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1067" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx2.p1" title="Programmatic Desegmentation ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. W. Hunt and M. D. McIlroy</span><span class="ltx_text ltx_bib_year">(1976-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An algorithm for differential file comparison</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Bell Laboratories</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Error Analysis ‣ 5 Results ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Jeong, K. Toutanova, H. Suzuki and C. Quirk</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A discriminative lexicon model for complex morphology</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, H. Hoang, A. Birch, C. Callison-Burch, M. Federico, N. Bertoldi, B. Cowan, W. Shen, C. Moran, R. Zens, C. Dyer, O. Bojar, A. Constantin and E. Herbst</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Moses: open source toolkit for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 177–180</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-2045" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn and H. Hoang</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factored translation models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 868–876</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D/D07/D07-1091" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Conclusion ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, F. J. Och and D. Marcu</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 127–133</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx1.p1" title="Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Luong, P. Nakov and M. Kan</span><span class="ltx_text ltx_bib_year">(2010-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hybrid morpheme-word representation for machine translation of morphologically rich languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Cambridge, MA</span>, <span class="ltx_text ltx_bib_pages"> pp. 148–157</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D10-1015" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p5" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Baselines ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 n-best Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.SSSx2.p1" title="Programmatic Desegmentation ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S4.p2" title="4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Minkov, K. Toutanova and H. Suzuki</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating complex morphology for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 128–135</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1017" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och, H. Ney, F. Josef and O. H. Ney</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A systematic comparison of various statistical alignment models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimum error rate training for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Oflazer and I. Durgar El-Kahlout</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring different representational units in English-to-Turkish statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 25–32</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W07/W07-0704" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p4" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 n-best Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLEU: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 311–318</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p4" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Roark, R. Sproat and I. Shafran</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexicographic semirings for exact automata encoding of sequence models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–5</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-2001" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx1.p5" title="Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Salameh, C. Cherry and G. Kondrak</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reversing morphological tokenization in English-to-Arabic SMT</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 47–53</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-2007" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Morphological Segmentation ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Snover, B. Dorr, R. Schwartz, L. Micciulla and J. Makhoul</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study of translation edit rate with targeted human annotation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p4" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Stolcke</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SRILM - an extensible language modeling toolkit</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 901–904</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Systems ‣ 4 Experimental Setup ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Subotin</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An exponential translation model for target language morphology</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 230–238</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-1024" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, H. Suzuki and A. Ruopp</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Applying morphology generation models to machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 514–522</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1059" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Morphological Analysis ‣ 2 Related Work ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Ueffing, F. J. Och and H. Ney</span><span class="ltx_text ltx_bib_year">(2002-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generation of word graphs in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Philadelphia, PA</span>, <span class="ltx_text ltx_bib_pages"> pp. 156–163</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSSx1.p2" title="Finite State Analogy ‣ 3.3 Lattice Desegmentation ‣ 3 Methods ‣ Lattice Desegmentation for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:15:55 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

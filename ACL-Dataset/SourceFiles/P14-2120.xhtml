@@ -1,0 +1,680 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Recognizing Implied Predicate-Argument Relationshipsin Textual Inference</title>
+<!--Generated on Wed Jun 11 18:25:25 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-ulem.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Recognizing Implied Predicate-Argument Relationships
+<br class="ltx_break"/>in Textual Inference</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Asher Stern 
+<br class="ltx_break"/>Computer Science Department 
+<br class="ltx_break"/>Bar-Ilan University 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">astern7@cs.biu.ac.il</span> 
+<br class="ltx_break"/>&amp;Ido Dagan 
+<br class="ltx_break"/>Computer Science Department 
+<br class="ltx_break"/>Bar-Ilan University 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">dagan@cs.biu.ac.il</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We investigate recognizing implied predicate-argument relationships which are not explicitly expressed in syntactic structure.
+While prior works addressed such relationships as an extension to semantic role labeling, our work investigates them in the context of textual inference scenarios.
+Such scenarios provide prior information, which substantially eases
+the task.
+We provide
+a large and freely available evaluation dataset for our task setting,
+and
+propose methods to cope with it, while obtaining promising results in empirical evaluations.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Motivation and Task</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">This paper addresses a typical sub-task in textual inference scenarios, of recognizing implied predicate-argument relationships which are not expressed explicitly through syntactic structure.
+Consider the following example:
+
+<br class="ltx_break"/>
+(i)  
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_sansserif ltx_font_small">The crucial role <span class="ltx_text ltx_ulem_uline">Vioxx</span> plays in Merck’s portfolio was apparent last week when Merck’s shares plunged 27 percent to 33 dollars after the <span class="ltx_text ltx_ulem_uline">withdrawal</span> announcement.</span></p>
+</span>
+<br class="ltx_break"/>
+While a human reader understands that the withdrawal refers to Vioxx, and hence an implied predicate-argument relationship holds between them, this relationship is not expressed in the syntactic structure,
+and will be missed by syntactic parsers or standard semantic role labelers.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">This paper targets such types of implied relationships in textual inference scenarios.
+Particularly, we investigate the setting of <em class="ltx_emph">Recognizing Textual Entailment (RTE)</em> as a typical scenario of textual inference.
+We suggest, however, that the same challenge, as well as the solutions proposed in our work, are applicable, with proper adaptations, to other textual-inference scenarios, like <em class="ltx_emph">Question Answering</em>, and <em class="ltx_emph">Information Extraction</em> (see Section <a href="#S6" title="6 Discussion and Conclusions ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">An RTE problem instance is composed of two text fragments, termed <em class="ltx_emph">Text</em> and <em class="ltx_emph">Hypothesis</em>, as input. The task is to recognize whether a human reading the Text would infer that the Hypothesis is most likely true <cite class="ltx_cite">[<a href="#bib.bib1" title="The pascal recognising textual entailment challenge" class="ltx_ref">3</a>]</cite>.
+For our problem, consider a positive Text Hypothesis pair, where the Text is example (<a href="#S1" title="1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) above and the Hypothesis is:
+
+<br class="ltx_break"/>
+(ii)  
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_sansserif ltx_font_small">Merck withdrew Vioxx.</span></p>
+</span>
+<br class="ltx_break"/>
+A common approach for recognizing textual entailment
+is to verify that all the textual elements of the Hypothesis are <em class="ltx_emph">covered</em>, or <em class="ltx_emph">aligned</em>, by elements of the Text.
+These elements typically include lexical terms as well as relationships between them.
+In our example, the Hypothesis lexical terms (“Merck”, “withdrew” and “Vioxx”) are indeed covered by the Text.
+Yet, the predicate-argument relationships (e.g., “withdrawal-Vioxx”) are not expressed in the text explicitly.
+In such a case, an RTE system has to verify that the predicate-argument relationships which are explicitly expressed in the Hypothesis, are <em class="ltx_emph">implied</em> from the Text discourse.
+Such cases are quite frequent (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="\sim\!\!\!17\%" display="inline"><mrow><mi/><mo rspace="0pt">∼</mo><mrow><mn>17</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>) in the settings of our dataset, described in Section <a href="#S3" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt"><em class="ltx_emph">#</em></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt"><em class="ltx_emph">Hypothesis</em></th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt"><em class="ltx_emph">Text</em></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt"><em class="ltx_emph">Y/N</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:4.3pt;" width="4.3pt"><span class="ltx_ERROR undefined">\Xhline</span>3
+1</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:138.8pt;" width="138.8pt">Merck [withdrew]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m1" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> [Vioxx]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m2" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math> from the market.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:225.5pt;" width="225.5pt">The crucial role [Vioxx]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m3" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> plays in Merck’s portfolio was apparent last week when Merck’s shares plunged 27 percent to 33 dollars after the [withdrawal]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m4" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math> announcement.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:13.0pt;" width="13.0pt">Y</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt">2</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt">Barbara Cummings heard the tale of a woman who was coming to Crawford to [join]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m5" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> Cindy Sheehanâs [protest]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m6" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math>.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt">Sheehan’s [protest]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m7" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> is misguided and is hurting troop morale.
+…</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:13.0pt;" width="13.0pt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:4.3pt;" width="4.3pt">Sheehan never wanted Casey to [join]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m8" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math> the military.</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:138.8pt;" width="138.8pt">N</th>
+<td class="ltx_td ltx_align_justify" style="width:225.5pt;" width="225.5pt"/>
+<td class="ltx_td ltx_align_justify" style="width:13.0pt;" width="13.0pt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt">3</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt">Casey Sheehan was [killed]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m9" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> in [Iraq]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m10" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math>.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt">5 days after he arrived in [Iraq]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m11" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> last year, Casey Sheehan was [killed]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m12" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math>.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">Y</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt">4</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt">Hurricane Rita [threatened]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m13" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> [New Orleans]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m14" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math>.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt">Hurricane Rita was upgraded from a tropical storm as it [threatened]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m15" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math> the <span class="ltx_text ltx_ulem_dashuline">southeastern United States</span>, forcing an alert in southern Florida and scuttling plans to repopulate [New Orleans]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m16" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> after Hurricane Katrina turned it into a ghost city 3 weeks earlier.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">Y</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt">5</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt">Alberto Gonzales defends [renewal]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m17" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> of the [Patriot Act]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m18" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math> to Congress.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt">A senior official defended the [Patriot Act]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m19" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> …</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:13.0pt;" width="13.0pt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:4.3pt;" width="4.3pt">…President Bush has urged Congress to [renew]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m20" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math> <span class="ltx_text ltx_ulem_dashuline">the law</span> …</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:138.8pt;" width="138.8pt">Y</th>
+<td class="ltx_td ltx_align_justify" style="width:225.5pt;" width="225.5pt"/>
+<td class="ltx_td ltx_align_justify" style="width:13.0pt;" width="13.0pt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:4.3pt;" width="4.3pt">6</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:138.8pt;" width="138.8pt">The [train]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m21" class="ltx_Math" alttext="{}_{\text{arg}}" display="inline"><msub><mi/><mtext>arg</mtext></msub></math> [crash]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m22" class="ltx_Math" alttext="{}_{\text{pred}}" display="inline"><msub><mi/><mtext>pred</mtext></msub></math> injured nearly 200 people.</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:225.5pt;" width="225.5pt">At least 10 people were killed …in the [crash]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m23" class="ltx_Math" alttext="{}_{\text{cand-pred}}" display="inline"><msub><mi/><mtext>cand-pred</mtext></msub></math> …</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:13.0pt;" width="13.0pt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:4.3pt;" width="4.3pt">Alvarez is accused of …causing the derailment of one [train]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m24" class="ltx_Math" alttext="{}_{\text{cand-arg}}" display="inline"><msub><mi/><mtext>cand-arg</mtext></msub></math> …</th>
+<th class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:138.8pt;" width="138.8pt">Y</th>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:225.5pt;" width="225.5pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:13.0pt;" width="13.0pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Example task instances from our dataset. The last column specifies the Yes/No annotation, indicating whether the sought predicate-argument relationship is implied in the Text. For illustration, a dashed line indicates an explicit argument that is related to the candidate argument through some kind of discourse reference.
+Pred, arg and cand abbreviate predicate, argument and candidate respectively.</div>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Consequently, we define the task of recognizing implied predicate-argument relationships, with illustrating examples in Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, as follows.
+The input includes a <em class="ltx_emph">Text</em> and a <em class="ltx_emph">Hypothesis</em>. Two terms in the Hypothesis, <em class="ltx_emph">predicate</em> and <em class="ltx_emph">argument</em>, are marked, where a predicate-argument relationship between them is explicit in the Hypothesis syntactic structure.
+Two terms in the Text, <em class="ltx_emph">candidate-predicate</em> and <em class="ltx_emph">candidate-argument</em>, aligned to the Hypothesis predicate and argument, are marked as well. However, no predicate-argument relationship between them is expressed syntactically.
+The task is to recognize whether the predicate-argument relationship, as expressed in the Hypothesis, holds implicitly also in the Text.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">To address this task, we provide a large and freely available annotated dataset,
+and propose methods for coping with it.
+A related task, described in the next section, deals with such implied predicate-argument relationships as an extension to <em class="ltx_emph">Semantic Role Labeling</em>.
+While the results reported so far on that annotation task were relatively low,
+we suggest that the task itself may be more complicated than what is actually required in textual inference scenarios.
+On the other hand, the results obtained for our task, which does fit textual inference scenarios, are promising, and encourage utilizing algorithms for this task in actual inference systems.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Prior Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The most notable work targeting implied predicate-argument relationships is the 2010 SemEval task of <em class="ltx_emph">Linking Events and Their Participants in Discourse</em> <cite class="ltx_cite">[<a href="#bib.bib2" title="SemEval-2010 task 10: linking events and their participants in discourse" class="ltx_ref">15</a>]</cite>. <cite class="ltx_cite"/>
+This task extends <em class="ltx_emph">Semantic Role Labeling</em> to cases in which a core argument of a predicate is missing in the syntactic structure but a filler for the corresponding semantic role appears elsewhere and can be inferred from discourse.
+For example, in the following sentence the semantic role <em class="ltx_emph">goal</em> is unfilled:
+
+<br class="ltx_break"/>
+(iii)  
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_sansserif ltx_font_small">He <span class="ltx_text" style="text-decoration:underline;">arrived</span> (<em class="ltx_emph">0</em><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="{}^{\text{\emph{Goal}}}" display="inline"><msup><mi/><mtext mathsize="small" stretchy="false"><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">Goal</em></mtext></msup></math>) at 8pm.</span></p>
+</span>
+<br class="ltx_break"/>
+Yet, we can expect to find an implied filler for <em class="ltx_emph">goal</em> elsewhere in the document.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The SemEval task, termed henceforth as <em class="ltx_emph">Implied SRL</em>, involves three major sub-tasks.
+First, for each predicate, the unfilled roles, termed <em class="ltx_emph">Null Instantiations (NI)</em>, should be detected. Second, each NI should be classified as <em class="ltx_emph">Definite NI (DNI)</em>, meaning that the role filler must exist in the discourse, or <em class="ltx_emph">Indefinite NI</em> otherwise.
+Third, the DNI fillers should be found (DNI linking).</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Later works that followed the SemEval challenge include <cite class="ltx_cite">[<a href="#bib.bib9" title="Casting implicit role linking as an anaphora resolution task" class="ltx_ref">17</a>]</cite> and <cite class="ltx_cite">[<a href="#bib.bib10" title="Automatically identifying implicit arguments to improve argument linking and coherence modeling" class="ltx_ref">14</a>]</cite>, which proposed automatic dataset generation methods and features which capture discourse phenomena. Their highest result was 12% F1-score.
+Another work is the probabilistic model of <cite class="ltx_cite">Laparra and Rigau (<a href="#bib.bib12" title="Exploiting explicit annotations and semantic types for implicit argument resolution" class="ltx_ref">2012</a>)</cite>,
+which is trained by properties captured not only from implicit arguments but also from explicit ones, resulting in 19% F1-score.
+Another notable work is <cite class="ltx_cite">[<a href="#bib.bib11" title="Semantic role labeling of implicit arguments for nominal predicates" class="ltx_ref">6</a>]</cite>,
+which was limited to
+ten carefully selected nominal predicates.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Annotations vs. Recognition</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Comparing to the implied SRL task,
+our task may better fit the needs of textual inference.
+First,
+some relatively complex steps of the implied SRL task are avoided in our setting, while on the other hand it
+covers more relevant cases.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">More concretely,
+in textual inference
+the candidate predicate and argument are typically identified, as they are aligned by the RTE system to a predicate and an argument of the Hypothesis.
+Thus, the only remaining challenge is to verify that the sought relationship is implied in the text.
+Therefore,
+the sub-tasks of identifying and classifying DNIs can be avoided.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">On the other hand,
+in some cases the candidate argument is not a DNI,
+but is still required in textual inference.
+One type of such cases are non-core arguments, which cannot be
+<em class="ltx_emph">Definite NIs</em>. However, textual inference deals with non-core arguments as well (see example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> in Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">Another case is
+when an implied predicate-argument relationship holds even though the corresponding role is already filled by another argument, hence not an NI. Consider example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> of Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+While the object of “threatened” is filled (in the Text) by “southeastern United States”, a human reader also infers the “threatened-New Orleans” relationship.
+Such cases might follow a meronymy relation between the filler (“southeastern United States”) and the candidate argument (“New Orleans”), or certain types of discourse (co-)references (e.g., example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> in Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), or some other linguistic phenomena. Either way, they are crucial for textual inference, while not being NIs.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Dataset</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">This section describes a semi-automatic method for extracting candidate instances of implied predicate-argument relationship from an RTE dataset.
+This extraction process
+directly follows our task formalization.
+Given a Text Hypothesis pair, we locate a predicate-argument relationship in the Hypothesis, where both the predicate and the argument appear also in the Text, while the relationship between them is not expressed in its syntactic structure.
+This process is performed automatically, based on syntactic parsing (see below).
+Then, a human reader annotates each instance as “Yes” – meaning that the implied relationship indeed holds in the Text, or “No” otherwise.
+Example instances, constructed by this process, are shown in Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In this work we used lemma-level lexical matching, as well as nominalization matching, to align the Text predicates and arguments to the Hypothesis.
+We note that more advanced matching, e.g., by utilizing knowledge resources (like WordNet), can be performed as well.
+To identify
+<em class="ltx_emph">explicit</em> predicate-argument relationships
+we utilized dependency parsing by the Easy-First parser <cite class="ltx_cite">[<a href="#bib.bib19" title="An efficient algorithm for easy-first non-directional dependency parsing" class="ltx_ref">7</a>]</cite>. <cite class="ltx_cite"/> <cite class="ltx_cite"/>
+Nominalization matching (e.g., example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> of Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) was performed with Nomlex <cite class="ltx_cite">[<a href="#bib.bib17" title="NOMLEX: a lexicon of nominalizations" class="ltx_ref">13</a>]</cite>.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">By applying this method on the RTE-6 dataset <cite class="ltx_cite">[<a href="#bib.bib15" title="The sixth pascal recognizing textual entailment challenge" class="ltx_ref">1</a>]</cite>,
+we constructed a dataset of
+4022 instances,
+where 2271 (56%) are annotated as positive instances, and 1751 as negative ones.
+This dataset is significantly larger than prior datasets for the implied SRL task.
+To calculate inter-annotator agreement, the first author also annotated 185 randomly-selected instances. We have reached high agreement
+score of 0.80 Kappa.
+The dataset is freely available at
+<a href="www.cs.biu.ac.il/~nlp/resources/downloads/implied-relationships" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.cs.biu.ac.il/~nlp/resources/downloads/implied-relationships</span></a>.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Recognition Algorithm</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/>
+<cite class="ltx_cite"/></p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">#</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:47.7pt;" width="47.7pt">Category</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">Feature</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">Prev. work</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:13.0pt;" width="13.0pt"><span class="ltx_ERROR undefined">\Xhline</span>3
+1</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:281.9pt;" width="281.9pt">co-occurring predicate (explained in subsection <a href="#S4.SS1" title="4.1 Statistical discourse features ‣ 4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">2</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" rowspan="-2" width="47.7pt">statistical discourse</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">co-occurring argument (explained in subsection <a href="#S4.SS1" title="4.1 Statistical discourse features ‣ 4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:13.0pt;" width="13.0pt"><span class="ltx_ERROR undefined">\Xhline</span>23</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:281.9pt;" width="281.9pt">co-reference: whether an explicit argument of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> co-refers with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">4</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">last known location: If the NE of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is “location”, and it is the last location mentioned before <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> in the document.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">5</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">argument prominence: The frequency of the lemma of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in a two-sentence windows of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, relative to all entities in that window.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">S&amp;F</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">6</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" rowspan="-4" width="47.7pt">local discourse</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">predicate frequency in document: The frequency of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> in the document, relative to all predicates appear in the document.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:13.0pt;" width="13.0pt"><span class="ltx_ERROR undefined">\Xhline</span>27</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:281.9pt;" width="281.9pt">statistical argument frequency: The Unigram-model likelihood of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in English documents, calculated from a large corpus.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">8</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">definite NP: Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m9" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is a definite NP</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">9</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">indefinite NP: Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m10" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is an indefinite NP</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">10</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">quantified predicate: Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m11" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is quantified (i.e., by expressions like “every …”, “a good deal of …”, etc.)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">11</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" rowspan="-5" width="47.7pt">local candidate properties</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">NE mismatch: Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m12" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is a named entity but the corresponding argument in the hypothesis is not, or vice versa.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt"><em class="ltx_emph">New</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:13.0pt;" width="13.0pt"><span class="ltx_ERROR undefined">\Xhline</span>212</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:281.9pt;" width="281.9pt">predicate-argument frequency:
+The likelihood of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m13" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> to be an argument of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m14" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> (formally: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m15" class="ltx_Math" alttext="Pr(a|p)" display="inline"><mrow><mi>P</mi><mi>r</mi><mrow><mo>(</mo><mi>a</mi><mo>|</mo><mi>p</mi><mo>)</mo></mrow></mrow></math>)
+in a large corpus.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:60.7pt;" width="60.7pt">similar feature in G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">13</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">sentence distance: The distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m16" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m17" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in sentences.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C, S&amp;F</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">14</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">mention distance: The distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m18" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m19" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in entity-mentions.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">S&amp;F</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt">15</th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:47.7pt;" rowspan="-4" width="47.7pt">predicate-argument relatedness</th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:281.9pt;" width="281.9pt">shared head-predicate: Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m20" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m21" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> are themselves arguments of another predicate.</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:60.7pt;" width="60.7pt">G&amp;C</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:13.0pt;" width="13.0pt"/>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:47.7pt;" width="47.7pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:281.9pt;" width="281.9pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:60.7pt;" width="60.7pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Algorithmic features. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m24" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m25" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> denote the candidate predicate and argument respectively.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We defined 15 features, summarized in Table <a href="#S4.T2" title="Table 2 ‣ 4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, which capture local and discourse phenomena.
+These features do not depend on manually built resources, and hence are portable to resource-poor languages.
+Some features were proposed in prior works, and are marked by
+G&amp;C <cite class="ltx_cite">[<a href="#bib.bib11" title="Semantic role labeling of implicit arguments for nominal predicates" class="ltx_ref">6</a>]</cite> or S&amp;F <cite class="ltx_cite">[<a href="#bib.bib9" title="Casting implicit role linking as an anaphora resolution task" class="ltx_ref">17</a>]</cite>.
+Our best results were obtained with the <em class="ltx_emph">Random Forests</em> learning algorithm <cite class="ltx_cite">[<a href="#bib.bib37" title="Random forests" class="ltx_ref">2</a>]</cite>. <cite class="ltx_cite"/>
+The first two features are described in the next subsection, while the others are explained in the table itself.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Statistical discourse features</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Statistical features in prior works mostly capture general properties of the predicate and the argument, like selectional preferences, lexical similarities, etc.
+On the contrary,
+our statistical features follow the intuition that <em class="ltx_emph">explicit</em> predicate-argument relationships in the discourse provide plausible indication that an <em class="ltx_emph">implied</em> relationship holds as well.
+In our experiments we collected the statistics from Reuters corpus RCV1 (<a href="trec.nist.gov/data/reuters/reuters.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">trec.nist.gov/data/reuters/reuters.html</span></a>), which contains more than 806,000 documents.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We defined
+two features: <em class="ltx_emph">Co-occurring predicate</em> and <em class="ltx_emph">Co-occurring argument</em>.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> be the candidate predicate and the argument in the text. While they are not connected syntactically, each of them often has an explicit relationships with <em class="ltx_emph">other</em> terms in the text,
+that might support the sought (implied) relationship between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">More concretely,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is often an <em class="ltx_emph">explicit</em> argument of another predicate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="p^{\prime}" display="inline"><msup><mi>p</mi><mo>′</mo></msup></math>.
+For example, example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> in Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> includes the explicit relationship “derailment of train”, which might indicate the implied relationship “crash of train”. Hence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>=“crash”, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>=“train” and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m5" class="ltx_Math" alttext="p^{\prime}" display="inline"><msup><mi>p</mi><mo>′</mo></msup></math>=“derailment”.
+The <em class="ltx_emph">Co-occurring predicate</em> feature estimates
+the probability that a document would contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m6" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> as an argument of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m7" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, given that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> appears elsewhere in that document as an argument of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m9" class="ltx_Math" alttext="p^{\prime}" display="inline"><msup><mi>p</mi><mo>′</mo></msup></math>, based on explicit predicate-argument relationships
+in a large corpus.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Similarly, the <em class="ltx_emph">Co-occurring argument</em> feature captures cases where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> has another <em class="ltx_emph">explicit</em> argument, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="a^{\prime}" display="inline"><msup><mi>a</mi><mo>′</mo></msup></math>. This is exemplified in example <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> of Table <a href="#S1.T1" title="Table 1 ‣ 1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>=“renew”, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>=“Patriot Act” and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m5" class="ltx_Math" alttext="a^{\prime}" display="inline"><msup><mi>a</mi><mo>′</mo></msup></math>=“law”.
+Accordingly, the feature quantifies the probability that a document including the relationship <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m6" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m7" class="ltx_Math" alttext="a^{\prime}" display="inline"><msup><mi>a</mi><mo>′</mo></msup></math> would also include the relationship <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m8" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m9" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">More details about these features can be found in the first author’s Ph.D. thesis at <a href="www.cs.biu.ac.il/~nlp/publications/theses/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.cs.biu.ac.il/~nlp/publications/theses/</span></a></p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Configuration</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Accuracy %</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math><span class="ltx_text ltx_font_small"> %</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_ERROR undefined">\Xhline</span><span class="ltx_text ltx_font_small">3Full algorithm</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">81.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Union of prior work</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">78.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">3.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Major category (all true)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">56.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">24.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="3"><span class="ltx_ERROR undefined">\Xhline</span><span class="ltx_text ltx_font_small">3  Ablation tests</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">no statistical discourse</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">no local discourse</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">79.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">no local candidate properties</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">79.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">no predicate-argument relatedness</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">79.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1.3</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Accuracy of our method, followed by baselines and ablation tests.
+</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We tested our method in a cross-validation setting,
+and obtained high result as shown in the first row of Table <a href="#S5.T3" title="Table 3 ‣ 5 Results ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+Since our task and dataset are novel, there is no direct baseline with which we can compare this result. As a reference point we mention the majority class proportion, and also report a configuration in which only features adopted from prior works (G&amp;C and S&amp;F) are utilized. This comparison shows that the contribution of our new features (3%) is meaningful, which is also statistically significant with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math> using <em class="ltx_emph">Bootstrap Resampling</em> test <cite class="ltx_cite">[<a href="#bib.bib45" title="Statistical significance tests for machine translation evaluation" class="ltx_ref">11</a>]</cite>.
+The high results show that this task is feasible, and its solutions can be adopted as a component in textual inference systems.
+The positive contribution of each feature category is shown in ablation tests.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Configuration (input)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Recall</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Precision</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F1 %</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_ERROR undefined">\Xhline</span><span class="ltx_text ltx_font_small">3Explicit only</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">44.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Human annotations</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">50.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">43.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">46.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Algorithm recognition</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">48.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_small">42.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">45.2</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span>RTE-6 Experiment</div>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">An additional experiment tests the contribution of recognizing implied predicate-argument relationships for overall RTE, specifically on the RTE-6 dataset.
+For the scope of this experiment we developed a simple RTE system, which uses the F1 optimized logistic regression classifier of <cite class="ltx_cite">Jansche (<a href="#bib.bib46" title="Maximum expected f-measure training of logistic regression models" class="ltx_ref">2005</a>)</cite> with two features:
+lexical coverage and predicate-argument relationships coverage.
+We ran three configurations for the second feature, where in the first only syntactically expressed relationships are used, in the second all the implied relationships, as detected by a human annotator, are added, and in the third only the implied relationships detected by our
+algorithm are added.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">The results,
+presented in Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, first demonstrate the full potential of the implied relationship recognition task to improve textual entailment recognition (Human annotation vs. Explicit only).
+One third of this potential improvement is achieved by our algorithm<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Following the relatively modest size of the RTE dataset, the Algorithm vs. Explicit result is not statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="p\simeq 0.1" display="inline"><mrow><mi>p</mi><mo>≃</mo><mn>0.1</mn></mrow></math>). However, the Human annotation vs. Explicit result is statistically significant with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>.</span></span></span>.
+Note that
+all these results are higher than the median result in the RTE-6 challenge (36.14%).
+While the delta in the F1 score is small in absolute terms, such magnitudes are typical in RTE for most resources and tools (see <cite class="ltx_cite">[<a href="#bib.bib15" title="The sixth pascal recognizing textual entailment challenge" class="ltx_ref">1</a>]</cite>).</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Discussion and Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We formulated the task of recognizing implied predicate-argument relationships
+within
+textual inference scenarios.
+We compared this task to the labeling task of SemEval 2010, where no prior information about candidate arguments in the text is available.
+We point out that in textual inference scenarios the candidate predicate and argument are given by the Hypothesis, while the challenge is only to verify that a predicate-argument relationship between these candidates is implied from the given Text.
+Accordingly,
+some complex steps
+necessitated in the SemEval task can be avoided,
+while additional relevant cases are covered.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Moreover, we have shown that this simpler task is more feasibly solvable, where our 15 features achieved more than 80% accuracy.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">While our dataset and algorithm were presented in the context of RTE, the same challenge and methods are applicable to other textual inference tasks as well.
+Consider, for example, the <em class="ltx_emph">Question Answering (QA)</em> task. Typically QA systems detect a candidate predicate that matches the question’s predicate. Similarly, candidate arguments, which match either the expected answer type or other arguments in the question are detected too.
+Consequently, our methods which exploit the availability of the candidate predicate and argument can be adapted to this scenario as well.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Similarly, a typical approach for <em class="ltx_emph">Event Extraction</em> (a sub task of <em class="ltx_emph">Information Extraction</em>)
+is to start by applying an entity extractor, which identifies argument candidates.
+Accordingly, candidate predicate and arguments are detected in this scenario too, while the remaining challenge is to assess the likelihood that a predicate-argument relationship holds between them.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">Following this observation, we propose future work of applying our methods to other tasks.
+An additional direction for future work is to further develop new methods for our task, possibly by incorporating
+SRL resources and/or linguistically oriented rules, in order to improve the results we achieved so far.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was partially supported by the EC-funded project EXCITEMENT (FP7ICT-287923).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Bentivogli, P. Clark, I. Dagan, H. T. Dang and D. Giampiccolo</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The sixth pascal recognizing textual entailment challenge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p3" title="5 Results ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Breiman</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random forests</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">1</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Dagan, O. Glickman and B. Magnini</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The pascal recognising textual entailment challenge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning Challenges. Evaluating Predictive Uncertainty, Visual Object Classification, and Recognising Tectual Entailment</span>, <span class="ltx_text ltx_bib_pages"> pp. 177–190</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Motivation and Task ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The stanford typed dependencies representation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel, T. Grenager and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incorporating non-local information into information extraction systems by gibbs sampling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gerber and J. Y. Chai</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic role labeling of implicit arguments for nominal predicates</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and M. Elhadad</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient algorithm for easy-first non-directional dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi and D. Klein</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Simple coreference resolution with rich syntactic and semantic features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hall, E. Frank, G. Holmes, B. Pfahringer, P. Reutemann and I. H. Witten</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The weka data mining software: an update</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">SIGKDD Explorations</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Jansche</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum expected f-measure training of logistic regression models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Results ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical significance tests for machine translation evaluation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Results ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Laparra and G. Rigau</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting explicit annotations and semantic types for implicit argument resolution</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Macleod, R. Grishman, A. Meyers, L. Barrett and R. Reeves</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NOMLEX: a lexicon of nominalizations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Roth and A. Frank</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically identifying implicit arguments to improve argument linking and coherence modeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ruppenhofer, C. Sporleder, R. Morante, C. Baker and M. Palmer</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2010 task 10: linking events and their participants in discourse</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ruppenhofer, C. Sporleder, R. Morante, C. Baker and M. Palmer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2010 task 10: linking events and their participants in discourse</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Silberer and A. Frank</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Casting implicit role linking as an anaphora resolution task</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Prior Work ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Recognition Algorithm ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Dataset ‣ Recognizing Implied Predicate-Argument Relationships in Textual Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:25:25 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,957 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Inferring User Political Preferences from Streaming Communications</title>
+<!--Generated on Tue Jun 10 17:19:00 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Inferring User Political Preferences from Streaming Communications</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Svitlana Volkova,<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math> Glen Coppersmith<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math> and Benjamin Van Durme<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{1,2}" display="inline"><msup><mi/><mrow><mn>1</mn><mo>,</mo><mn>2</mn></mrow></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>Center for Language and Speech Processing,
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>Human Language Technology Center of Excellence,
+<br class="ltx_break"/>Johns Hopkins University, Baltimore, MD 21218
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">svitlana@jhu.edu, coppersmith@jhu.edu, vandurme@cs.jhu.edu</span>
+
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Existing models for social media personal analytics assume access to
+thousands of messages per user, even though most users author content
+only sporadically over time. Given this sparsity, we: (i) leverage
+content from the local neighborhood of a user; (ii) evaluate batch
+models as a function of size and the amount of messages in various
+types of neighborhoods; and (iii) estimate the amount of time and
+tweets required for a dynamic model to predict user preferences. We
+show that even when limited or no self-authored data is available,
+language from friend, retweet and user mention communications provide
+sufficient evidence for prediction. When updating models over time
+based on Twitter, we find that political preference can be often be
+predicted using roughly 100 tweets, depending on the context of user
+selection, where this could mean hours, or weeks, based on the
+author’s tweeting frequency.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Inferring latent user attributes such as gender, age, and political preferences <cite class="ltx_cite">[<a href="#bib.bib12" title="Hierarchical Bayesian models for latent attribute detection in social media" class="ltx_ref">30</a>, <a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">42</a>, <a href="#bib.bib107" title="Classifying Political Orientation on Twitter: It’s Not Easy!" class="ltx_ref">6</a>]</cite> automatically from
+personal communications and social media including emails, blog posts or
+public discussions has become increasingly popular with the web getting more social and volume of data available. Resources like Twitter<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://www.demographicspro.com/</span></span></span> or Facebook<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://www.wolframalpha.com/facebook/</span></span></span> become extremely valuable for studying the underlying properties of such informal communications because of its volume, dynamic nature, and diverse population <cite class="ltx_cite">[<a href="#bib.bib40" title="Analyst: twitter passed 500M users in june 2012, 140m of them in US; Jakarta ‘biggest tweeting’ city" class="ltx_ref">18</a>, <a href="#bib.bib39" title="May 2013 by the numbers: 16 amazing Twitter stats" class="ltx_ref">33</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The existing batch models for predicting latent user attributes rely on thousands of tweets per author <cite class="ltx_cite">[<a href="#bib.bib11" title="Classifying latent user attributes in Twitter" class="ltx_ref">31</a>, <a href="#bib.bib29" title="Predicting the political alignment of Twitter users" class="ltx_ref">7</a>, <a href="#bib.bib28" title="Democrats, republicans and starbucks afficionados: user classification in twitter" class="ltx_ref">27</a>, <a href="#bib.bib25" title="Discriminating gender on Twitter" class="ltx_ref">5</a>, <a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">42</a>, <a href="#bib.bib65" title="”How old do you think I am?” A study of language and age in Twitter" class="ltx_ref">21</a>]</cite>. However, most Twitter users are less prolific than those examined in these works, and thus do not produce the thousands of tweets required to obtain their levels of accuracy e.g., the median number of tweets produced by a random Twitter user per day is 10. Moreover, recent changes to Twitter API querying rates further restrict the speed of access to this resource, effectively reducing the amount of data that can be collected in a given time period.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper we analyze and go beyond static models formulating personal analytics in social media as a streaming task. We first evaluate batch models that are cognizant of low-resource prediction setting described above, maximizing the efficiency of content in calculating personal analytics. To the best of our knowledge, this is the first work that makes explicit the tradeoff between accuracy and cost (manifest as calls to the Twitter API), and optimizes to a different tradeoff than state-of-the-art approaches, seeking maximal performance when limited data is available. In addition, we propose streaming models for personal analytics that dynamically update user labels based on their stream of communications which has been addressed previously by <cite class="ltx_cite">Van Durme (<a href="#bib.bib14" title="Streaming analysis of discourse participants" class="ltx_ref">2012b</a>)</cite>. Such models better capture the real-time nature of evidence being used in latent author attribute predictions tasks. Our main contributions include:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I1.ix1.p1" class="ltx_para">
+<p class="ltx_p">develop low-resource and real-time dynamic approaches for personal analytics using as an example the prediction of political preference of Twitter users;</p>
+</div></li>
+<li id="I1.ix2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I1.ix2.p1" class="ltx_para">
+<p class="ltx_p">examine the relative utility of six different notions of “similarity” between users in an implicit Twitter social network for personal analytics;</p>
+</div></li>
+<li id="I1.ix3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">-</span> 
+<div id="I1.ix3.p1" class="ltx_para">
+<p class="ltx_p">experiments are performed across multiple datasets supporting the prediction of political preference in Twitter, to highlight the significant differences in performance that arise from the underlying collection and annotation strategies.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Identifying Twitter Social Graph</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Twitter users interact with one another and engage in direct communication in different ways e.g., using retweets, user mentions e.g., <span class="ltx_text ltx_font_italic">@youtube</span> or hashtags e.g., <span class="ltx_text ltx_font_italic">#tcot</span>, in addition to having explicit connections among themselves such as following, friending. To investigate all types of social relationships between Twitter users and construct Twitter social graphs we collect lists of followers and friends, and extract user mentions, hashtags, replies and retweets from communications.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The code and detailed explanation on how we collected all six types of user neighbors and their communications using Twitter API can be found here: http://www.cs.jhu.edu/ svitlana/</span></span></span></p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Social Graph Definition</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Lets define an attributed, undirected graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is a set of vertices and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> is a set of edges. Each vertex <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> represents someone in a communication graph i.e., <span class="ltx_text ltx_font_italic">communicant</span>: here a Twitter user. Each vertex is attributed with a feature vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="\vec{f}(v_{i})" display="inline"><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> which encodes communications e.g., tweets available for a given user. Each vertex is associated with a latent attribute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m6" class="ltx_Math" alttext="a(v_{i})" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>, in our case it is binary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m7" class="ltx_Math" alttext="a(v_{i})\in\{D,R\}" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>∈</mo><mrow><mo>{</mo><mrow><mi>D</mi><mo>,</mo><mi>R</mi></mrow><mo>}</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m8" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> stands for Democratic and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m9" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> for Republican users. Each edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m10" class="ltx_Math" alttext="e_{ij}\in E" display="inline"><mrow><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>∈</mo><mi>E</mi></mrow></math> represents a connection between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m11" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m12" class="ltx_Math" alttext="v_{j}" display="inline"><msub><mi>v</mi><mi>j</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m13" class="ltx_Math" alttext="e_{ij}=(v_{i},v_{j})" display="inline"><mrow><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><msub><mi>v</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> and defines different social circles between Twitter users e.g., follower <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m14" class="ltx_Math" alttext="(f)" display="inline"><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></math>, friend <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m15" class="ltx_Math" alttext="(b)" display="inline"><mrow><mo>(</mo><mi>b</mi><mo>)</mo></mrow></math>, user mention <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m16" class="ltx_Math" alttext="(m)" display="inline"><mrow><mo>(</mo><mi>m</mi><mo>)</mo></mrow></math>, hashtag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m17" class="ltx_Math" alttext="(h)" display="inline"><mrow><mo>(</mo><mi>h</mi><mo>)</mo></mrow></math>, reply <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m18" class="ltx_Math" alttext="(y)" display="inline"><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></math> and retweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m19" class="ltx_Math" alttext="(w)" display="inline"><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></math>. Thus, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m20" class="ltx_Math" alttext="E\in V^{(2)}\times\{f,b,h,m,w,y\}" display="inline"><mrow><mi>E</mi><mo>∈</mo><mrow><msup><mi>V</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>×</mo><mrow><mo>{</mo><mrow><mi>f</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>}</mo></mrow></mrow></mrow></math>. We denote a set of edges of a given type as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m21" class="ltx_Math" alttext="\phi_{r}(E)" display="inline"><mrow><msub><mi>ϕ</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>E</mi><mo>)</mo></mrow></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m22" class="ltx_Math" alttext="r\in\{f,b,h,m,w,y\}" display="inline"><mrow><mi>r</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mi>f</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>}</mo></mrow></mrow></math>. We denote a set of vertices adjacent to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m23" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> by social circle type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m24" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m25" class="ltx_Math" alttext="N_{r}(v_{i})" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> which is equivalent to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m26" class="ltx_Math" alttext="\{v_{j}\mid e_{ij}\in\phi_{r}(E)\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi>v</mi><mi>j</mi></msub><mo separator="true">∣</mo><mrow><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>∈</mo><mrow><msub><mi>ϕ</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>E</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>}</mo></mrow></math>. Following <cite class="ltx_cite">Filippova (<a href="#bib.bib99" title="User demographics and language in an implicit social network" class="ltx_ref">2012</a>)</cite> we refer to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m27" class="ltx_Math" alttext="N_{r}(v_{i})" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m28" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>’s social circle, otherwise known as a neighborhood. In most cases, we only work with a sample of a social circle, denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m29" class="ltx_Math" alttext="N_{r}^{\prime}(v_{i})" display="inline"><mrow><msubsup><mi>N</mi><mi>r</mi><mo>′</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m30" class="ltx_Math" alttext="|N_{r}^{\prime}(v_{i})|=k" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><msubsup><mi>N</mi><mi>r</mi><mo>′</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>=</mo><mi>k</mi></mrow></math> is its size for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m31" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1018/image017.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="243" height="155" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>An example of a social graph with follower, friend, @mention, reply, retweet and hashtag social circles for each user of interest e.g., blue: Democratic, red: Republican.</div>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Social Graph Definition ‣ 2 Identifying Twitter Social Graph ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents an example of a social graph derived from Twitter. Notably, users from different social circles can be shared across the users of the same or different classes e.g., a user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="v_{j}" display="inline"><msub><mi>v</mi><mi>j</mi></msub></math> can be in both follower circle <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="v_{j}\in N_{f}(v_{i}),v_{i}\in D" display="inline"><mrow><mrow><msub><mi>v</mi><mi>j</mi></msub><mo>∈</mo><mrow><msub><mi>N</mi><mi>f</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>∈</mo><mi>D</mi></mrow></mrow></math> and retweet circle <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="v_{j}\in N_{w}(v_{k}),v_{k}\in R" display="inline"><mrow><mrow><msub><mi>v</mi><mi>j</mi></msub><mo>∈</mo><mrow><msub><mi>N</mi><mi>w</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo><mrow><msub><mi>v</mi><mi>k</mi></msub><mo>∈</mo><mi>R</mi></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Candidate-Centric Graph</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">We construct candidate-centric graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> by looking into following relationships between the users and Democratic or Republican candidates during the 2012 US Presidential election. In the Fall of 2012, leading up to the elections, we randomly sampled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="n=516" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>516</mn></mrow></math> Democratic and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="m=515" display="inline"><mrow><mi>m</mi><mo>=</mo><mn>515</mn></mrow></math> Republican users.
+We labeled users as Democratic if they exclusively follow both Democratic candidates<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>As of Oct 12, 2012, the number of followers for Obama, Biden, Romney and Ryan were 2m, 168k, 1.3m and 267k.</span></span></span> – BarackObama and JoeBiden but do not follow both Republican candidates – MittRomney and RepPaulRyan and vice versa. We collectively refer to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> as our “users of interest” for which we aim to predict political preference. For each such user we collect recent tweets and randomly sample their immediate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="k=10" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>10</mn></mrow></math> neighbors from follower, friend, user mention, reply, retweet and hashtag social circles.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Geo-Centric Graph</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">We construct a geo-centric graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m1" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> by collecting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m2" class="ltx_Math" alttext="n=135" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>135</mn></mrow></math> Democratic and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m3" class="ltx_Math" alttext="m=135" display="inline"><mrow><mi>m</mi><mo>=</mo><mn>135</mn></mrow></math> Republican users from the Maryland, Virginia and Delaware region of the US with self-reported political preference in their biographies. Similar to the candidate-centric graph, for each user we collect recent tweets and randomly sample user social circles in the Fall of 2012. We collect this data to get a sample of politically less active users compared to the users from candidate-centric graph.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>ZLR Graph</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">We also consider a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m1" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graph constructed from a dataset previously used for political affiliation classification <cite class="ltx_cite">[<a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">42</a>]</cite>. This dataset consists of 200 Republican and 200 Democratic users associated with 925 tweets on average per user.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>The original dataset was collected in 2012 and has been recently released at http://icwsm.cs.mcgill.ca/. Political labels are extracted from http://www.wefollow.com as described by <cite class="ltx_cite">Pennacchiotti and Popescu (<a href="#bib.bib26" title="A machine learning approach to Twitter user classification" class="ltx_ref">2011a</a>)</cite>.</span></span></span> Each user has on average 6155 friends with 642 tweets per friend. Sharing restrictions and rate limits on Twitter data collection only allowed us to recreate a semblance of ZLR data<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>This inability to perfectly replicate prior work based on Twitter is a recognized problem throughout the community of computational social science, arising from the data policies of Twitter itself, it is not specific to this work.</span></span></span> – 193 Democratic and 178 Republican users with 1K tweets per user, and 20 neighbors of four types including follower, friends, user mention and retweet with 200 tweets per neighbor for each user of interest.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Batch Models</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Baseline User Model</span> As input we are given a set of vertices representing users of interest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="v_{i}\in V" display="inline"><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>∈</mo><mi>V</mi></mrow></math> along with feature vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="\vec{f}(v_{i})" display="inline"><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> derived from content authored by the user of interest. Each user is associated with a non-zero number of publicly posted tweets. Our goal is assign to a category each user of interest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> based on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="\vec{f}(v_{i})" display="inline"><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>. Here we focus on a binary assignment into the categories Democratic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> or Republican <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math>. The log-linear model<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We use log-linear models over reasonable alternatives such as perceptron or SVM, following the practice of a wide range of previous work in related areas <cite class="ltx_cite">[<a href="#bib.bib5" title="Log-linear models" class="ltx_ref">34</a>, <a href="#bib.bib111" title="Log-linear models for word alignment" class="ltx_ref">17</a>, <a href="#bib.bib109" title="Unsupervised morphological segmentation with log-linear models" class="ltx_ref">29</a>]</cite> including text classification in social media <cite class="ltx_cite">[<a href="#bib.bib14" title="Streaming analysis of discourse participants" class="ltx_ref">38</a>, <a href="#bib.bib110" title="A log-linear model for unsupervised text normalization" class="ltx_ref">39</a>]</cite>.</span></span></span> for such binary classification is:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\Phi_{v_{i}}=\left\{\begin{array}[]{l l}D&amp;(1+\exp[-\vec{\theta}\cdot\vec{f}(v_%&#10;{i})])^{-1}\geq 0.5,\\&#10;R&amp;\text{otherwise.}\end{array}\right." display="block"><mrow><msub><mi mathvariant="normal">Φ</mi><msub><mi>v</mi><mi>i</mi></msub></msub><mo>=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mi>D</mi></mtd><mtd columnalign="left"><mrow><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>[</mo><mrow><mo>-</mo><mrow><mrow><mover accent="true"><mi>θ</mi><mo stretchy="false">→</mo></mover><mo>⋅</mo><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>≥</mo><mn>0.5</mn></mrow><mo>,</mo></mrow></mtd></mtr><mtr><mtd columnalign="left"><mi>R</mi></mtd><mtd columnalign="left"><mtext>otherwise.</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where features are normalized word ngram counts extracted from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m7" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>’s tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m8" class="ltx_Math" alttext="\vec{f}_{t}(v_{i}):D\times t(v_{i})\rightarrow\mathbb{R}" display="inline"><mrow><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mi>t</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>:</mo><mrow><mrow><mrow><mi>D</mi><mo>×</mo><mi>t</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>→</mo><mi>ℝ</mi></mrow></mrow></math>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The proposed baseline model follows the same trends as the existing state-of-the-art approaches for user attribute classification in social media as described in Section <a href="#S8" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>. Next we propose to extend the baseline model by taking advantage of language in user social circles as describe below.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Neighbor Model</span> As input we are given user-local neighborhood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="N_{r}(v_{i})" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is a neighborhood type. Besides the neighborhood’s type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>, each is characterized by:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">the number of communications per neighbor <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="\vec{f}_{t}(N_{r})" display="inline"><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mi>t</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>N</mi><mi>r</mi></msub><mo>)</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="t=\{5,10,15,25,50,100,200\}" display="inline"><mrow><mi>t</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>5</mn><mo>,</mo><mn>10</mn><mo>,</mo><mn>15</mn><mo>,</mo><mn>25</mn><mo>,</mo><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn></mrow><mo>}</mo></mrow></mrow></math>;</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">the order of the social circle – the number of neighbors per user of interest <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="|N_{r}|=deg(v_{i})" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="n=\{1,2,5,10\}" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>10</mn></mrow><mo>}</mo></mrow></mrow></math>.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Our goal is to classify users of interest using evidence (e.g., communications) from their local neighborhood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\sum\limits_{n}\vec{f}_{t}[N_{r}(v_{i})]\equiv\vec{f}(N_{r})" display="inline"><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>n</mi></munder><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mi>t</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>≡</mo><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>N</mi><mi>r</mi></msub><mo>)</mo></mrow></mrow></mrow></math> as Democratic or Republican. The corresponding log-linear model is defined as:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\Phi_{N_{r}}=\left\{\begin{array}[]{l l}D&amp;(1+\exp[-\vec{\theta}\cdot\vec{f}(N_%&#10;{r})])^{-1}\geq 0.5,\\&#10;R&amp;\text{otherwise.}\end{array}\right." display="block"><mrow><msub><mi mathvariant="normal">Φ</mi><msub><mi>N</mi><mi>r</mi></msub></msub><mo>=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mi>D</mi></mtd><mtd columnalign="left"><mrow><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>[</mo><mrow><mo>-</mo><mrow><mrow><mover accent="true"><mi>θ</mi><mo stretchy="false">→</mo></mover><mo>⋅</mo><mover accent="true"><mi>f</mi><mo stretchy="false">→</mo></mover></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>N</mi><mi>r</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>≥</mo><mn>0.5</mn></mrow><mo>,</mo></mrow></mtd></mtr><mtr><mtd columnalign="left"><mi>R</mi></mtd><mtd columnalign="left"><mtext>otherwise.</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">To check whether our static models are cognizant of low-resource prediction settings we compare the performance of the user model from Eq.<a href="#S3.E1" title="(1) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and the neighborhood model from Eq.<a href="#S3.E2" title="(2) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Following the streaming nature of social media, we see the scarce available resource as the number of requests allowed per day to the Twitter API. Here we abstract this to a model assumption where we receive one tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="t_{k}" display="inline"><msub><mi>t</mi><mi>k</mi></msub></math> at a time and aim to maximize classification performance with as few tweets per user as possible:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>The separate issue is that many authors simply don’t tweet very often. For instance, 85.3% of all Twitter users post less than one update per day as reported at http://www.sysomos.com/insidetwitter/. Thus, their communications are scare even if we could get all of them without rate limiting from Twitter API.</span></span></span></p>
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">for the baseline user model:</p>
+<table id="S3.E3" class="ltx_equationgroup">
+
+<tr id="S3.E3X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3X.m2" class="ltx_Math" alttext="\displaystyle\underset{k}{\text{minimize}}" display="inline"><munder accentunder="true"><mtext>minimize</mtext><mo>𝑘</mo></munder></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3X.m4" class="ltx_Math" alttext="\displaystyle\sum\limits_{k}t_{k}(v_{i})," display="inline"><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>k</mi></munder></mstyle><mrow><msub><mi>t</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(3)</span></td></tr>
+</table>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">for the neighborhood model:</p>
+<table id="S3.E4" class="ltx_equationgroup">
+
+<tr id="S3.E4X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4X.m2" class="ltx_Math" alttext="\displaystyle\underset{k}{\text{minimize}}" display="inline"><munder accentunder="true"><mtext>minimize</mtext><mo>𝑘</mo></munder></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4X.m4" class="ltx_Math" alttext="\displaystyle\sum\limits_{n}\sum\limits_{k}t_{k}[N_{r}(v_{i})]." display="inline"><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>n</mi></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>k</mi></munder></mstyle><mrow><msub><mi>t</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(4)</span></td></tr>
+</table>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Streaming Models</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We rely on straightforward Bayesian rule update to our batch models
+in order to simulate a real-time streaming prediction scenario as a
+first step beyond the existing models as shown in
+Figure <a href="#S4.F2" title="Figure 2 ‣ 4 Streaming Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-1018/image001.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="332" height="148" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Stream-based classification of an attribute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m6" class="ltx_Math" alttext="a(v_{i})\in\{R,D\}" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>∈</mo><mrow><mo>{</mo><mrow><mi>R</mi><mo>,</mo><mi>D</mi></mrow><mo>}</mo></mrow></mrow></math> given a stream of communications <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m7" class="ltx_Math" alttext="t_{1},t_{2},\dots,t_{k}" display="inline"><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>t</mi><mi>k</mi></msub></mrow></math> authored by a user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m8" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> or user immediate neighbors from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m9" class="ltx_Math" alttext="N_{r}" display="inline"><msub><mi>N</mi><mi>r</mi></msub></math> social circles at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m10" class="ltx_Math" alttext="\tau_{1},\tau_{2},\dots,\tau_{k}" display="inline"><mrow><msub><mi>τ</mi><mn>1</mn></msub><mo>,</mo><msub><mi>τ</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>τ</mi><mi>k</mi></msub></mrow></math>.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The model makes predictions of a latent user attribute e.g., Republican under a model assumption of sequentially arriving, independent and identically distributed observations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="T=(t_{1},\dots,t_{k})" display="inline"><mrow><mi>T</mi><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>t</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Given the dynamic character of online discourse it will clearly be of interest in the future to consider models that go beyond the iid assumption.</span></span></span>. The model dynamically updates posterior probability estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="p(a(v_{i})=R|t_{k})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>R</mi><mo>|</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math> for a given user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> as an additional evidence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="t_{k}" display="inline"><msub><mi>t</mi><mi>k</mi></msub></math> is acquired, as defined in a general form below for any latent attribute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="a(v_{i})\in A" display="inline"><mrow><mrow><mi>a</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>∈</mo><mi>A</mi></mrow></math> given the tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> of user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m7" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>:</p>
+<table id="S4.E5" class="ltx_equationgroup">
+
+<tr id="S4.E5X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5X.m2" class="ltx_Math" alttext="\displaystyle p(a(v_{i})=x\in A\mid T)=" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>x</mi><mo>∈</mo><mi>A</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="3" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(5)</span></td></tr>
+<tr id="S4.E5Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5Xa.m2" class="ltx_Math" alttext="\displaystyle\frac{p(T\mid a(v_{i})=x)\cdot p(a(v_{i})=x)}{\sum_{y\in A}p(T%&#10;\mid a(v_{i})=y)\cdot p(a(v_{i})=y)}=" display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><mi>p</mi><mrow><mo>(</mo><mi>T</mi><mo>∣</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>x</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>x</mi><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>y</mi><mo>∈</mo><mi>A</mi></mrow></msub><mi>p</mi><mrow><mo>(</mo><mi>T</mi><mo>∣</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>y</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>y</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.E5Xb" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5Xb.m2" class="ltx_Math" alttext="\displaystyle\frac{\prod_{k}p(t_{k}\mid a(v_{i})=x)\cdot p(a(v_{i})=x)}{\sum_{%&#10;y\in A}\prod_{k}p(t_{k}\mid a(v_{i})=y)\cdot p(a(v_{i})=y),}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>k</mi></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>∣</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>x</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>x</mi><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>y</mi><mo>∈</mo><mi>A</mi></mrow></msub><msub><mo largeop="true" symmetric="true">∏</mo><mi>k</mi></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>∣</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>y</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>a</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>y</mi><mo>)</mo></mrow><mo>,</mo></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m8" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is the number of all possible attribute values, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m9" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> is the number of tweets per user.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">For example, to predict user political preference, we start with a prior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="P(R)=0.5" display="inline"><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow><mo>=</mo><mn>0.5</mn></mrow></math>, and sequentially update the posterior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="p(R\mid T)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> by accumulating evidence from the likelihood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="p(t_{k}|R)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>|</mo><mi>R</mi><mo>)</mo></mrow></mrow></math>:</p>
+<table id="S4.E6" class="ltx_equationgroup">
+
+<tr id="S4.E6X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6X.m2" class="ltx_Math" alttext="\displaystyle p(R\mid T)=" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(6)</span></td></tr>
+<tr id="S4.E6Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6Xa.m2" class="ltx_Math" alttext="\displaystyle\frac{\prod_{k}p(t_{k}|R)\cdot p(R)}{\prod_{k}P(t_{k}|R)\cdot p(R%&#10;)+\prod_{k}P(t_{k}|D)\cdot p(D).}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>k</mi></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>|</mo><mi>R</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>k</mi></msub><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>|</mo><mi>R</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow><mo>+</mo><msub><mo largeop="true" symmetric="true">∏</mo><mi>k</mi></msub><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>|</mo><mi>D</mi><mo>)</mo></mrow><mo>⋅</mo><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>)</mo></mrow><mo>.</mo></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">Our goal is to maximize posterior probability estimates given a stream of communications for each user in the data over (a) time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> and (b) the number of tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>. For that, for each user we take tweets that arrive continuously over time and apply two different streaming models:</p>
+<ul id="I4" class="ltx_itemize">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">User Model with Dynamic Updates:</span> relies exclusively on user tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m1" class="ltx_Math" alttext="t_{1}^{(v_{i})},\dots,t_{k}^{(v_{i})}" display="inline"><mrow><msubsup><mi>t</mi><mn>1</mn><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>t</mi><mi>k</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup></mrow></math> following the order they arrive over time <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math>, where for each user <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m3" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> we dynamically update the posterior <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m4" class="ltx_Math" alttext="p(R\mid t_{1}^{(v_{i})},\dots,t_{k}^{(v_{i})})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><msubsup><mi>t</mi><mn>1</mn><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>t</mi><mi>k</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">User-Neighbor Model with Dynamic Updates:</span> relies on both neighbor <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="N_{r}" display="inline"><msub><mi>N</mi><mi>r</mi></msub></math> communications including friend, follower, retweet, user mention and user tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m2" class="ltx_Math" alttext="t_{1}^{(v_{i})},\dots,t_{k}^{(N_{r})}" display="inline"><mrow><msubsup><mi>t</mi><mn>1</mn><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>t</mi><mi>k</mi><mrow><mo>(</mo><msub><mi>N</mi><mi>r</mi></msub><mo>)</mo></mrow></msubsup></mrow></math> following the order they arrive over time <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m3" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math>; here we dynamically update the posterior probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m4" class="ltx_Math" alttext="p(R\mid t_{1}^{(v_{i})},\dots,t_{k}^{(N_{r})})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><msubsup><mi>t</mi><mn>1</mn><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>t</mi><mi>k</mi><mrow><mo>(</mo><msub><mi>N</mi><mi>r</mi></msub><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Setup</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We design a set of experiments to analyze static and dynamic models for political
+affiliation classification defined in Sections <a href="#S3" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S4" title="4 Streaming Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Batch Classification Experiments</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We first answer whether communications from user-local neighborhoods can
+help predict political preference for the user. To explore the contribution of different neighborhood types we learn static user and neighbor models on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m3" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graphs. We also examine the ability of our static models to predict user political preferences in low-resource setting e.g., 5 tweets.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">The existing models follow a standard setup when either user or neighbor tweets are available during train and test. For a static neighbor model we go beyond that, and train our the model on all data available per user, but only apply part of the data at the test time, pushing the boundaries of how little is truly required for classification. For example, we only use follower tweets for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="G^{test}" display="inline"><msup><mi>G</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math>, but we use tweets from all types of neighbors for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="G^{train}" display="inline"><msup><mi>G</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msup></math>. Such setup will simulate different real-world prediction scenarios which have not been previously explored, to our knowledge e.g., when a user has a private profile or has not tweeted yet, and only user neighbor tweets are available.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">We experiment with our static neighbor model defined in Eq.<a href="#S3.E2" title="(2) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> with the aim to:</p>
+<ol id="I5" class="ltx_enumerate">
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p">evaluate neighborhood size influence, we change the number of neighbors and try <math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i1.p1.m1" class="ltx_Math" alttext="n=[1,2,5,10]" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>10</mn></mrow><mo>]</mo></mrow></mrow></math> neighbor(s) per user;</p>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p">estimate neighbor content influence, we alternate the amount of content per neighbor and try <math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i2.p1.m1" class="ltx_Math" alttext="t=[5,10,15,25,50,100,200]" display="inline"><mrow><mi>t</mi><mo>=</mo><mrow><mo>[</mo><mrow><mn>5</mn><mo>,</mo><mn>10</mn><mo>,</mo><mn>15</mn><mo>,</mo><mn>25</mn><mo>,</mo><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn></mrow><mo>]</mo></mrow></mrow></math> tweets.</p>
+</div></li>
+</ol>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">We perform 10-fold cross validation<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>For each fold we split the data into 3 parts: 70% train, 10% development and 20% test.</span></span></span> and run 100 random restarts for every <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> parameter combination. We compare our static neighbor and user models using the cost functions from Eq.<a href="#S3.E3" title="(3) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and Eq.<a href="#S3.E4" title="(4) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. For all experiments we use <span class="ltx_text ltx_font_typewriter">LibLinear</span> <cite class="ltx_cite">[<a href="#bib.bib13" title="LIBLINEAR: a library for large linear classification" class="ltx_ref">9</a>]</cite>, integrated in the <span class="ltx_text ltx_font_typewriter">Jerboa</span> toolkit <cite class="ltx_cite">[<a href="#bib.bib2" title="Jerboa: a toolkit for randomized and streaming algorithms" class="ltx_ref">37</a>]</cite>. Both models defined in Eq.<a href="#S3.E1" title="(1) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and Eq.<a href="#S3.E2" title="(2) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> are learned using normalized count-based word ngram features extracted from either user or neighbor tweets.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>For brevity we omit reporting results for bigram and trigram features, since unigrams showed superior performance.</span></span></span></p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Streaming Classification Experiments</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our models with dynamic Bayesian updates on a continuous stream of communications over time as shown in Figure <a href="#S4.F2" title="Figure 2 ‣ 4 Streaming Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Unlike static model experiments, we are not modeling the influence of the number of neighbors or the amount of content per neighbor. Here, we order user and neighbor communication streams by real world time of posting and measure changes in posterior probabilities over time. The main purpose of these experiments is to quantitatively evaluate (1) the number of tweets and (2) the amount of real world time it takes to observe enough evidence on Twitter to make reliable predictions.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">We experiment with log-linear models defined in Eq. <a href="#S3.E1" title="(1) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S3.E2" title="(2) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> and continuously estimate the posterior probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="P(R\mid T)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> as defined in Eq.<a href="#S4.E6" title="(6) ‣ 4 Streaming Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. We average the posterior probability results over the users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graphs. We train streaming models on an attribute balanced subset of tweets for each user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> excluding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m6" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>’s tweets (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m7" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>’s neighbor tweets for a joint model). This setup is similar to leave-one-out classification. The classifier is learned using binary word ngram features extracted from user or user-neighbor communications. We prefer binary to normalized count-based features to overcome sparsity issues caused by making predictions on each tweet individually.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Static Classification Results</h2>
+
+<div id="S6.F3" class="ltx_figure"><img src="P14-1018/image009.png" id="S6.F3.g1" class="ltx_graphics ltx_centering" width="257" height="257" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Classification probabilities for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F3.m3" class="ltx_Math" alttext="\Phi_{v_{i}}" display="inline"><msub><mi mathvariant="normal">Φ</mi><msub><mi>v</mi><mi>i</mi></msub></msub></math> estimated over 100 users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F3.m4" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> tested on 5 (blue) vs. 100 (green) tweets per user where Republican = 1, Democratic = 0, filled markers = correctly classified, not filled = misclassified users.</div>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Modeling User Content Influence</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">We investigate classification decision probabilities for our static user model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m1" class="ltx_Math" alttext="\Phi_{v_{i}}" display="inline"><msub><mi mathvariant="normal">Φ</mi><msub><mi>v</mi><mi>i</mi></msub></msub></math> by making predictions on a random set of 5 vs. 100 tweets per user. To our knowledge only limited work on personal analytics <cite class="ltx_cite">[<a href="#bib.bib25" title="Discriminating gender on Twitter" class="ltx_ref">5</a>, <a href="#bib.bib14" title="Streaming analysis of discourse participants" class="ltx_ref">38</a>]</cite> have performed this straight-forward comparison. For that purpose, we take a random partition containing 100 users of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> graph and perform four independent classification experiments – two runs using 5 and two runs using 100 tweets per user.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S6.F3" title="Figure 3 ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> demonstrates that more tweets during prediction time lead to higher accuracy by showing that more users with 100 tweets are correctly classified e.g., filled green markers in the right upper quadrant are true Republicans and in the left lower quadrant are true Democrats. Moreover, a lot of users with 100 tweets are close to 0.5 decision probability which suggests that the classifier is just uncertain rather then being completely off, e.g., misclassified Republican users with 5 tweets (not filled blue markers in the right lower quadrant) are close to 0. These results follow naturally from the underlying feature representation: having more tweets per user leads to a lower variance
+estimate of a target multinomial distribution. The more robustly this distribution is estimated (based on having more tweets) the more confident we should be in the classifier output.</p>
+</div>
+<div id="S6.F4" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\subfloat</span>
+<p class="ltx_p ltx_align_center">[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m1" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>: 2 neighbors]<img src="P14-1018/image010.png" id="S6.F4.g1" class="ltx_graphics" width="138" height="138" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m2" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>: 10 neighbors]<img src="P14-1018/image011.png" id="S6.F4.g2" class="ltx_graphics" width="138" height="138" alt=""/>
+<br class="ltx_break"/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m3" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>: 2 neighbors]<img src="P14-1018/image012.png" id="S6.F4.g3" class="ltx_graphics" width="138" height="138" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m4" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>: 10 neighbors]<img src="P14-1018/image013.png" id="S6.F4.g4" class="ltx_graphics" width="138" height="138" alt=""/>
+<br class="ltx_break"/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Modeling the influence of the number of tweets per neighbor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m9" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m10" class="ltx_Math" alttext="[5,..,200]" display="inline"><mrow><mo>[</mo><mn>5</mn><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><mn>200</mn><mo>]</mo></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m11" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m12" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> graphs.</div>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Modeling Neighbor Content Influence</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">Here we discuss the results for our static neighborhood model. We study the influence of the neighborhood type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> and size in terms of the number of neighbors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> and tweets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> per neighbor.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S6.F4" title="Figure 4 ‣ 6.1 Modeling User Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> we present accuracy results for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m2" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> graphs. Following Eq.<a href="#S3.E3" title="(3) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S3.E4" title="(4) ‣ 3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we spent an equal amount of resources to obtain 100 user tweets and 10 tweets from 10 neighbors. We annotate these ‘points of equal number of communications’ with a line on top marked with a corresponding number of user tweets.</p>
+</div>
+<div id="S6.F5" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\subfloat</span>
+<p class="ltx_p ltx_align_center">[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>: 5 tweets]<img src="P14-1018/image014.png" id="S6.F5.g1" class="ltx_graphics" width="138" height="138" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>: 200 tweets]<img src="P14-1018/image015.png" id="S6.F5.g2" class="ltx_graphics" width="138" height="138" alt=""/>
+<br class="ltx_break"/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m3" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>: 5 tweets]<img src="P14-1018/image016.png" id="S6.F5.g3" class="ltx_graphics" width="138" height="138" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m4" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>: 200 tweets]<img src="P14-1018/image002.png" id="S6.F5.g4" class="ltx_graphics" width="138" height="138" alt=""/>
+<br class="ltx_break"/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Modeling the influence of the number of neighbors per user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m9" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m10" class="ltx_Math" alttext="[1,..,10]" display="inline"><mrow><mo>[</mo><mn>1</mn><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><mn>10</mn><mo>]</mo></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m11" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F5.m12" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> graphs.</div>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">We show that three of six social circles – friend, retweet and user-mention yield better accuracy compared to the user model for all graphs when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m1" class="ltx_Math" alttext="t\geq 250" display="inline"><mrow><mi>t</mi><mo>≥</mo><mn>250</mn></mrow></math>. Thus, for effectively classifying a given user <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m2" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> it is better to take 200 tweets each from 10 neighbors rather than 2,000 tweets from the user.</p>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">The best accuracy for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> is 0.75 for friend, follower, retweet and user-mention neighborhoods which is 0.03 higher than the user baseline; for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m2" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> is 0.67 for user-mention and 0.64 for retweet circles compared to 0.57 for the user model; for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m3" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> is 0.863 for retweet and 0.849 for friend circles which is 0.11 higher that the user baseline. Finally, similarly to the results for the user model given in Figure <a href="#S6.F3" title="Figure 3 ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, increasing the number of tweets per neighbor from 5 to 200 leads to a significant gain in performance for all neighborhood types.</p>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Modeling Neighborhood Size</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S6.F5" title="Figure 5 ‣ 6.2 Modeling Neighbor Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> we present accuracy results to show neighborhood size influence on classification performance for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m1" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> graphs. Our results demonstrate that even small changes to the neighborhood size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> lead to better performance which does not support the claims by <cite class="ltx_cite">Zamal<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">2012</a>)</cite>. We demonstrate that increasing the size of the neighborhood leads to better performance across six neighborhood types. Friend, user mention and retweet neighborhoods yield the highest accuracy for all graphs. We observe that when the number of neighbors is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m4" class="ltx_Math" alttext="n=1" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow></math>, the difference in accuracy across all neighborhood types is less significant but for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m5" class="ltx_Math" alttext="n\geq 2" display="inline"><mrow><mi>n</mi><mo>≥</mo><mn>2</mn></mrow></math> it becomes more significant.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Streaming Classification Results</h2>
+
+<div id="S7.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">7.1 </span>Modeling Dynamic Posterior Updates from a User Stream</h3>
+
+<div id="S7.SS1.p1" class="ltx_para">
+<p class="ltx_p">Figures <a href="#S7.F6" title="Figure 6 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and <a href="#S7.F6" title="Figure 6 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> demonstrate dynamic user model prediction results averaged over users from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m2" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graphs. Each figure outlines changes in sequential average probability estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m3" class="ltx_Math" alttext="p_{\mu}(R\mid T)" display="inline"><mrow><msub><mi>p</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> for each individual self-authored tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m4" class="ltx_Math" alttext="t_{k}" display="inline"><msub><mi>t</mi><mi>k</mi></msub></math> as defined in Eq. <a href="#S4.E6" title="(6) ‣ 4 Streaming Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. The average probability estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m5" class="ltx_Math" alttext="p_{\mu}(R\mid T)" display="inline"><mrow><msub><mi>p</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> are reported for every 5 tweets in a stream <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m6" class="ltx_Math" alttext="T=(t_{1},\dots t_{k})" display="inline"><mrow><mi>T</mi><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><mrow><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>t</mi><mi>k</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m7" class="ltx_Math" alttext="\frac{\sum{{}_{n}}P(R\mid t_{k})}{n}" display="inline"><mfrac><mrow><mo largeop="true" symmetric="true">∑</mo><mmultiscripts><mi>P</mi><mprescripts/><mi>n</mi><none/></mmultiscripts><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow><mi>n</mi></mfrac></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m8" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the total number of users with the same attribute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m9" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m10" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>. We represent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p1.m11" class="ltx_Math" alttext="p_{\mu}(R\mid T)" display="inline"><mrow><msub><mi>p</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> as a box and whisker plot with the median, lower and upper quantiles to show the variance; the length of whiskers indicate lower and upper extreme values.</p>
+</div>
+<div id="S7.F6" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\subfloat</span>
+<p class="ltx_p ltx_align_center">[User <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F6.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>]<img src="P14-1018/image003.png" id="S7.F6.g1" class="ltx_graphics" width="138" height="230" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[User <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F6.m2" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>]<img src="P14-1018/image004.png" id="S7.F6.g2" class="ltx_graphics" width="138" height="230" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Streaming classification results from user communications for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F6.m5" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F6.m6" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graphs averaged over every 5 tweets (red - Republican, blue - Democratic).</div>
+</div>
+<div id="S7.SS1.p2" class="ltx_para">
+<p class="ltx_p">We find similar behavior across all three graphs. In particular, the posterior estimates converge faster when predicting Democratic than Republican users but it has been trained on an equal number of tweets per class. We observe that average posterior estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p2.m1" class="ltx_Math" alttext="P_{\mu}(R\mid T)" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> converge faster to 0 (Democratic) than to 1 (Republican) in Figures <a href="#S7.F6" title="Figure 6 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and <a href="#S7.F6" title="Figure 6 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. It suggests that language of Democrats is more expressive of their political preference than language of Republicans. For example, frequent politically influenced terms used widely by Democratic users include <span class="ltx_text ltx_font_italic">faith4liberty, constitutionally, pass, vote2012, terroristic.</span></p>
+</div>
+<div id="S7.SS1.p3" class="ltx_para">
+<p class="ltx_p">The variance for average posterior estimates decreases when the number of tweets increases for all three datasets. Moreover, we detect that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m1" class="ltx_Math" alttext="P_{\mu}(R|T)" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> estimates for users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> converge 2-3 times faster in terms of number of tweets than for users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m3" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>. The lowest convergence is detected for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m4" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> where after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m5" class="ltx_Math" alttext="t_{k}=250" display="inline"><mrow><msub><mi>t</mi><mi>k</mi></msub><mo>=</mo><mn>250</mn></mrow></math> tweets the average posterior estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m6" class="ltx_Math" alttext="P_{\mu}(R\mid t_{k})=0.904\pm 0.044" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow><mo>=</mo><mn>0.904</mn><mo>±</mo><mn>0.044</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m7" class="ltx_Math" alttext="P_{\mu}(D\mid t_{k})=0.861\pm 0.008" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>D</mi><mo>∣</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow><mo>=</mo><mn>0.861</mn><mo>±</mo><mn>0.008</mn></mrow></math>. It means that users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m8" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> are more politically vocal compared to users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m9" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m10" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>. As a result, less active users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p3.m11" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> just need more than 250 tweets to converge to a true 0 or 1 class. These results are coherent with the outcomes for our static models shown in Figures <a href="#S6.F4" title="Figure 4 ‣ 6.1 Modeling User Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and <a href="#S6.F5" title="Figure 5 ‣ 6.2 Modeling Neighbor Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. These findings further confirm that differences in performance are caused by various biases present in the data due to distinct sampling and annotation approaches.</p>
+</div>
+<div id="S7.F7" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\subfloat</span>
+<p class="ltx_p ltx_align_center">[User <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F7.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>]<img src="P14-1018/image005.png" id="S7.F7.g1" class="ltx_graphics" width="167" height="119" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[User <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F7.m2" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>]<img src="P14-1018/image006.png" id="S7.F7.g2" class="ltx_graphics" width="167" height="119" alt=""/>
+<br class="ltx_break"/>
+<span class="ltx_ERROR undefined">\subfloat</span>[User-Neigh <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F7.m3" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>]<img src="P14-1018/image007.png" id="S7.F7.g3" class="ltx_graphics" width="167" height="119" alt=""/>
+<span class="ltx_ERROR undefined">\subfloat</span>[User-Neigh <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.F7.m4" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>]<img src="P14-1018/image008.png" id="S7.F7.g4" class="ltx_graphics" width="167" height="119" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Time needed for (a) - (b) dynamic user model and (c) - (d) joint user-neighbor model to infer political preferences of Democratic (blue) and Republican (red) users at 75% (dotted line) and 95% (solid line) accuracy levels.</div>
+</div>
+<div id="S7.SS1.p4" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S7.F7" title="Figure 7 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>a and <a href="#S7.F7" title="Figure 7 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>b illustrate the amount of time required for the user model to infer political preferences estimated for 1,031 users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p4.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and 371 users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p4.m2" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>. The amount of time needed can be evaluated for different accuracy levels e.g., 0.75 and 0.95. Thus, with 75% accuracy we classify:</p>
+<ul id="I6" class="ltx_itemize">
+<li id="I6.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i1.p1" class="ltx_para">
+<p class="ltx_p">100 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i1.p1.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>20%) Republican users in 3.6 hours and Democratic users in 2.2 hours for <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i1.p1.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>;</p>
+</div></li>
+<li id="I6.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i2.p1" class="ltx_para">
+<p class="ltx_p">100 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>56%) <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> users in 20 weeks and 100 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>52%) <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> users in 8.9 weeks for <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m5" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> which is 800 times longer that for <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m6" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>;</p>
+</div></li>
+<li id="I6.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i3.p1" class="ltx_para">
+<p class="ltx_p">100 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i3.p1.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>75%) <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i3.p1.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> users in 12 weeks and 80 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i3.p1.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>60%) <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i3.p1.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> users in 19 weeks for <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i3.p1.m5" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>.</p>
+</div></li>
+</ul>
+</div>
+<div id="S7.SS1.p5" class="ltx_para">
+<p class="ltx_p">Such extreme divergences in the amount of time required for classification across all graphs should be of strong interest to researchers concerned with latent attribute prediction tasks because Twitter users produce messages with extremely different frequencies. In our case, users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p5.m1" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> tweet approximately 800 times less frequently than users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS1.p5.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>.</p>
+</div>
+</div>
+<div id="S7.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">7.2 </span>Modeling Dynamic Posterior Updates from a Joint User-Neighbor Stream</h3>
+
+<div id="S7.SS2.p1" class="ltx_para">
+<p class="ltx_p">We estimate dynamic posterior updates from a joint stream of user and neighbor communications in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p1.m1" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p1.m2" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p1.m3" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> graphs. To make a fair comparison with a streaming user model, we start with the same user tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p1.m4" class="ltx_Math" alttext="t_{0}(v_{i})" display="inline"><mrow><msub><mi>t</mi><mn>0</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>. Then instead of waiting for the next user tweet we rely on any neighbor tweets that appear until the user produces the next tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p1.m5" class="ltx_Math" alttext="t_{1}(v_{i})" display="inline"><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>. We rely on communications from four types of neighbors such as friends, followers, retweets and user mentions.</p>
+</div>
+<div id="S7.SS2.p2" class="ltx_para">
+<p class="ltx_p">The convergence rate for the average posterior probability estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m1" class="ltx_Math" alttext="P_{\mu}(R|T)" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> depending on the number of tweets is similar to the user model results presented in Figure <a href="#S7.F6" title="Figure 6 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. However, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m2" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math> the variance for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m3" class="ltx_Math" alttext="P_{\mu}(R|T)" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> is higher for Democratic users; for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m4" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m5" class="ltx_Math" alttext="P_{\mu}(R|T)\rightarrow 1" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow><mo>→</mo><mn>1</mn></mrow></math> for Republicans in less than 110 tweets which is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m6" class="ltx_Math" alttext="\Delta t=40" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>t</mi></mrow><mo>=</mo><mn>40</mn></mrow></math> tweets faster than the user model; for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m7" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> the convergence for both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m8" class="ltx_Math" alttext="P_{\mu}(R|T)\rightarrow 1" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow><mo>→</mo><mn>1</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p2.m9" class="ltx_Math" alttext="P_{\mu}(D|T)\rightarrow 0" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>D</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow><mo>→</mo><mn>0</mn></mrow></math> is not significantly different than the user model.</p>
+</div>
+<div id="S7.SS2.p3" class="ltx_para">
+<p class="ltx_p">Figures <a href="#S7.F7" title="Figure 7 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>c and <a href="#S7.F7" title="Figure 7 ‣ 7.1 Modeling Dynamic Posterior Updates from a User Stream ‣ 7 Streaming Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>d show the amount of time required for a joint user-neighbor model to infer political preferences estimated for users in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p3.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p3.m2" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>. We find that with 75% accuracy we can classify 100 users for:</p>
+<ul id="I7" class="ltx_itemize">
+<li id="I7.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I7.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i1.p1.m1" class="ltx_Math" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>: Republican users in 23 minutes and Democratic users in 10 minutes;</p>
+</div></li>
+<li id="I7.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I7.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i2.p1.m1" class="ltx_Math" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i2.p1.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> users in 3.2 weeks and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i2.p1.m3" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> users in 1.1 weeks which is 7 times faster on average across attributes than for the user model;</p>
+</div></li>
+<li id="I7.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I7.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i3.p1.m1" class="ltx_Math" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i3.p1.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> users in 1.2 weeks and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I7.i3.p1.m3" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> users in 3.5 weeks which is on average 6 times faster across attributes than for the user model.</p>
+</div></li>
+</ul>
+</div>
+<div id="S7.SS2.p4" class="ltx_para">
+<p class="ltx_p">Similar or better <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.p4.m1" class="ltx_Math" alttext="P_{\mu}(R|T)" display="inline"><mrow><msub><mi>P</mi><mi>μ</mi></msub><mrow><mo>(</mo><mi>R</mi><mo>|</mo><mi>T</mi><mo>)</mo></mrow></mrow></math> convergence in terms of the number of tweets and, especially, in the amount of time needed for user and user-neighbor models further confirms that neighborhood content is useful for political preference prediction. Moreover, communications from a joint stream allow to make an inference up to 7 times faster.</p>
+</div>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Related Work</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Supervised Batch Approaches</span> The vast majority of work on predicting latent user attributes in social media apply supervised static SVM models for discrete categorical e.g., gender and regression models for continuous attributes e.g., age with lexical bag-of-word features for classifying user gender <cite class="ltx_cite">[<a href="#bib.bib23" title="Modeling latent biographic attributes in conversational genres" class="ltx_ref">11</a>, <a href="#bib.bib11" title="Classifying latent user attributes in Twitter" class="ltx_ref">31</a>, <a href="#bib.bib25" title="Discriminating gender on Twitter" class="ltx_ref">5</a>, <a href="#bib.bib14" title="Streaming analysis of discourse participants" class="ltx_ref">38</a>]</cite>, age <cite class="ltx_cite">[<a href="#bib.bib11" title="Classifying latent user attributes in Twitter" class="ltx_ref">31</a>, <a href="#bib.bib64" title="Author age prediction from text using linear regression" class="ltx_ref">22</a>, <a href="#bib.bib65" title="”How old do you think I am?” A study of language and age in Twitter" class="ltx_ref">21</a>]</cite> or political orientation. We present an overview of the existing models for political preference prediction in Table <a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S8.p2" class="ltx_para">
+<p class="ltx_p">Bergsma et al. <cite class="ltx_cite">[<a href="#bib.bib47" title="Stylometric analysis of scientific articles" class="ltx_ref">2</a>]</cite> following up on Rao’s work <cite class="ltx_cite">[<a href="#bib.bib11" title="Classifying latent user attributes in Twitter" class="ltx_ref">31</a>]</cite> on adding socio-linguistic features to improve gender, ethnicity and political preference prediction show that incorporating stylistic and syntactic information to the bag-of-word features improves gender classification.</p>
+</div>
+<div id="S8.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr" style="background-color:#BFBFBF;">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small ltx_align_center" style="background-color:#BFBFBF;"> Approach</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small ltx_align_center" style="background-color:#BFBFBF;">Users</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small ltx_align_center" style="background-color:#BFBFBF;">Tweets</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small ltx_align_center" style="background-color:#BFBFBF;">Features</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small ltx_align_center" style="background-color:#BFBFBF;">Accur.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><cite class="ltx_cite ltx_centering">Rao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Classifying latent user attributes in Twitter" class="ltx_ref">2010</a>)</cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">1K</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">2M</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">ngrams socio-ling stacked</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.824</span><span class="ltx_text ltx_font_small"> 0.634 0.809</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><cite class="ltx_cite ltx_centering">Pennacchiotti and Popescu (<a href="#bib.bib28" title="Democrats, republicans and starbucks afficionados: user classification in twitter" class="ltx_ref">2011b</a>)</cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">10.3K</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">ling-all soc-all full</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">0.770 0.863 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.889</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><cite class="ltx_cite ltx_centering">Conover<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib29" title="Predicting the political alignment of Twitter users" class="ltx_ref">2011</a>)</cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">1,000</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">1M</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">full-text hashtags clusters</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">0.7920.908 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.949</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><cite class="ltx_cite ltx_centering">Zamal<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">2012</a>)</cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">400</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">400K 3.85M 4.25M</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">UserOnly Nbr User-Nbr</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m1" class="ltx_centering" alttext="{}^{\text{11}}" display="inline"><msup><mi/><mtext mathsize="small" stretchy="false">11</mtext></msup></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">0.890 0.920 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.932</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><cite class="ltx_cite ltx_centering">Cohen and Ruths (<a href="#bib.bib107" title="Classifying Political Orientation on Twitter: It’s Not Easy!" class="ltx_ref">2013</a>)</cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">397 1.8K 262 196</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">397K 1.8M 262K 196K</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">features from </span><cite class="ltx_cite ltx_centering"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">42</a><span class="ltx_text ltx_font_small">]</span></cite></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.910</span><span class="ltx_text ltx_font_small"> 0.840 0.680 0.870</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">This paper (batch classification)</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m2" class="ltx_centering" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 1,031 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m3" class="ltx_centering" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 270 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m4" class="ltx_centering" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 371</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">206K 2M 54K 540K 371K 1.5M</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">user ngrams neighbor user ngrams neighbor user ngrams neighbor</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">0.720 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.750</span><span class="ltx_text ltx_font_small"> 0.570 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.670</span><span class="ltx_text ltx_font_small"> 0.886 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.920</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_l ltx_border_r ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">This paper (dynamic Bayesian update classification)</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_r ltx_border_t" style="width:19.9pt;" width="19.9pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m5" class="ltx_centering" alttext="G_{cand}" display="inline"><msub><mi>G</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 1,031 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m6" class="ltx_centering" alttext="G_{geo}" display="inline"><msub><mi>G</mi><mrow><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>o</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 270 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S8.T1.m7" class="ltx_centering" alttext="G_{ZLR}" display="inline"><msub><mi>G</mi><mrow><mi>Z</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math><span class="ltx_text ltx_font_small"> 371</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">103K 130K 54K 67K 74K 185K</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_r ltx_border_t" style="width:44.1pt;" width="44.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">user stream user-neigh. user stream user-neigh. user stream user-neigh.</span></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_r ltx_border_t" style="width:21.3pt;" width="21.3pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_small">0.995 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.999</span><span class="ltx_text ltx_font_small"> 0.843 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.882</span><span class="ltx_text ltx_font_small"> 0.892 </span><span class="ltx_text ltx_font_bold ltx_font_small ltx_align_center">0.999</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Overview of the existing approaches for political preference classification in Twitter.</div>
+</div>
+<div id="S8.p3" class="ltx_para">
+<p class="ltx_p">Other methods characterize Twitter users by applying limited amounts of network structure information in addition to lexical features.
+Connover et al. <cite class="ltx_cite">[<a href="#bib.bib29" title="Predicting the political alignment of Twitter users" class="ltx_ref">7</a>]</cite> rely on identifying strong partisan clusters of Democratic and Republican users in a Twitter network based on retweet and user mention degree of connectivity, and then combine this clustering information with the follower and friend neighborhood size features. Pennacchiotti et al. <cite class="ltx_cite">[<a href="#bib.bib28" title="Democrats, republicans and starbucks afficionados: user classification in twitter" class="ltx_ref">27</a>, <a href="#bib.bib26" title="A machine learning approach to Twitter user classification" class="ltx_ref">26</a>]</cite> focus on user behavior, network structure and linguistic features. Similar to our work, they assume that users from a particular class tend to reply and retweet messages of the users from the same class. We extend this assumption and study other relationship types e.g., friends, user mentions etc. Recent work by Wong et al. <cite class="ltx_cite">[<a href="#bib.bib76" title="Quantifying political leaning from tweets and retweets" class="ltx_ref">20</a>]</cite> investigates tweeting and retweeting behavior for political learning during 2012 US Presidential election. The most similar work to ours is by  <cite class="ltx_cite">Zamal<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib31" title="Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors" class="ltx_ref">2012</a>)</cite>, where the authors apply features from the tweets authored by a user’s friend to infer attributes of that user. In this paper, we study different types of user social circles in addition to a friend network.</p>
+</div>
+<div id="S8.p4" class="ltx_para">
+<p class="ltx_p">Additionally, using social media for mining political opinions <cite class="ltx_cite">[<a href="#bib.bib36" title="From tweets to polls: linking text sentiment to public opinion time series" class="ltx_ref">23</a>, <a href="#bib.bib77" title="Automatic detection of political opinions in tweets" class="ltx_ref">19</a>]</cite> or understanding socio-political trends and voting outcomes <cite class="ltx_cite">[<a href="#bib.bib71" title="Predicting elections with Twitter: What 140 characters reveal about political sentiment" class="ltx_ref">36</a>, <a href="#bib.bib72" title="No, you cannot predict elections with Twitter" class="ltx_ref">12</a>, <a href="#bib.bib41" title="A user-centric model of voting intention from social media" class="ltx_ref">15</a>]</cite> is becoming a common practice. For instance, Lampos et al. <cite class="ltx_cite">[<a href="#bib.bib41" title="A user-centric model of voting intention from social media" class="ltx_ref">15</a>]</cite> propose a bilinear user-centric model for predicting voting intentions in the UK and Australia from social media data. Other works explore political blogs to predict what content will get the most comments <cite class="ltx_cite">[<a href="#bib.bib69" title="A penny for your tweets: campaign contributions and capitol hill microblogs" class="ltx_ref">41</a>]</cite> or analyze communications from Capitol Hill<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>http://www.tweetcongress.org</span></span></span> to predict campaign contributors based on this content <cite class="ltx_cite">[<a href="#bib.bib70" title="What’s worthy of comment? content and comment volume in political blogs" class="ltx_ref">40</a>]</cite>.</p>
+</div>
+<div id="S8.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Unsupervised Batch Approaches</span> Bergsma et al. <cite class="ltx_cite">[<a href="#bib.bib101" title="Broadly improving user classification via communication-based name and location clustering on Twitter" class="ltx_ref">1</a>]</cite> show that large-scale clustering of user names improves gender, ethnicity and location classification on Twitter. O’Connor et al. <cite class="ltx_cite">[<a href="#bib.bib50" title="A mixture model of demographic lexical variation" class="ltx_ref">24</a>]</cite> following the work by Eisenstein <cite class="ltx_cite">[<a href="#bib.bib49" title="A latent variable model for geographic lexical variation" class="ltx_ref">8</a>]</cite> propose a Bayesian generative model to discover demographic language variations in Twitter. Rao et al. <cite class="ltx_cite">[<a href="#bib.bib12" title="Hierarchical Bayesian models for latent attribute detection in social media" class="ltx_ref">30</a>]</cite> suggest a hierarchical Bayesian model which takes advantage of user name morphology for predicting user gender and ethnicity. Golbeck et al. <cite class="ltx_cite">[<a href="#bib.bib74" title="Twitter use by the u.s. congress" class="ltx_ref">13</a>]</cite> incorporate Twitter data in a spatial model of political ideology.</p>
+</div>
+<div id="S8.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Streaming Approaches</span> <cite class="ltx_cite">Van Durme (<a href="#bib.bib14" title="Streaming analysis of discourse participants" class="ltx_ref">2012b</a>)</cite> proposed streaming models to predict user gender in Twitter. Other works suggested to process text streams for a variety of NLP tasks e.g., real-time opinion mining and sentiment analysis in social media <cite class="ltx_cite">[<a href="#bib.bib118" title="Opinion mining and sentiment analysis" class="ltx_ref">25</a>]</cite>, named entity disambiguation <cite class="ltx_cite">[<a href="#bib.bib116" title="An approach to web-scale named-entity disambiguation" class="ltx_ref">32</a>]</cite>, statistical machine translation <cite class="ltx_cite">[<a href="#bib.bib117" title="Multiple-stream language models for statistical machine translation" class="ltx_ref">16</a>]</cite>, first story detection <cite class="ltx_cite">[<a href="#bib.bib123" title="Streaming first story detection with application to Twitter" class="ltx_ref">28</a>]</cite>, and unsupervised dependency parsing <cite class="ltx_cite">[<a href="#bib.bib122" title="Approximate scalable bounded space sketch for large data NLP" class="ltx_ref">14</a>]</cite>. Massive Online Analysis (MOA) toolkit developed by <cite class="ltx_cite">Bifet<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib115" title="MOA: massive online analysis, a framework for stream classification and clustering" class="ltx_ref">2010</a>)</cite> is an alternative to the Jerboa package used in this work developed by <cite class="ltx_cite">Van Durme (<a href="#bib.bib2" title="Jerboa: a toolkit for randomized and streaming algorithms" class="ltx_ref">2012a</a>)</cite>. MOA has been effectively used to detect sentiment changes in Twitter streams <cite class="ltx_cite">[<a href="#bib.bib114" title="Detecting sentiment change in Twitter streaming data" class="ltx_ref">4</a>]</cite>.</p>
+</div>
+</div>
+<div id="S9" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">9 </span>Conclusions and Future Work</h2>
+
+<div id="S9.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we extensively examined state-of-the-art static approaches and proposed novel models with dynamic Bayesian updates for streaming personal analytics on Twitter. Because our streaming models rely on communications from Twitter users and content from various notions of user-local neighborhood they can be effectively applied to real-time dynamic data streams. Our results support several key findings listed below.</p>
+</div>
+<div id="S9.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Neighborhood content is useful for personal analytics.</span>
+Content extracted from various notions of a user-local neighborhood can be as effective or more effective for political preference classification than user self-authored content. This may be an effect of ‘sparseness’ of relevant user data, in that users talk about politics very sporadically compared to a random sample of their neighbors.</p>
+</div>
+<div id="S9.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Substantial signal for political preference prediction is distributed in the neighborhood.</span>
+Querying for more neighbors per user is more beneficial than querying for extra content from the existing neighbors e.g., 5 tweets from 10 neighbors leads to higher accuracy than 25 tweets from 2 neighbors or 50 tweets from 1 neighbor. This may be also the effect of data heterogeneity in social media compared to e.g., political debate text <cite class="ltx_cite">[<a href="#bib.bib68" title="Get out the vote: determining support or opposition from congressional floor-debate transcripts" class="ltx_ref">35</a>]</cite>. These findings demonstrate that a substantial signal is distributed over the neighborhood content.</p>
+</div>
+<div id="S9.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Neighborhoods constructed from friend, user mention and retweet relationships are most effective.</span> Friend, user mention and retweet neighborhoods show the best accuracy for predicting political preferences of Twitter users. We think that friend relationships are more effective than e.g., follower relationships because it is very likely that users share common interests and preferences with their friends, e.g. Facebook friends can even be used to predict a user’s credit score.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>http://money.cnn.com/2013/08/26/technology/social/
+<br class="ltx_break"/>facebook-credit-score/</span></span></span> User mentions and retweets are two primary ways of interaction on Twitter. They both allow to share information e.g., political news, events with others and to be involved in direct communication e.g., live political discussions, political groups.</p>
+</div>
+<div id="S9.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Streaming models are more effective than batch models for personal analytics.</span> The predictions made using dynamic models with Bayesian updates over user and joint user-neighbor communication streams demonstrate higher performance with lower resources spent compared to the batch models. Depending on user political involvement, expressiveness and activeness, the perfect prediction (approaching 100% accuracy) can be made using only 100 - 500 tweets per user.</p>
+</div>
+<div id="S9.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Generalization of the classifiers for political preference prediction.</span> This work raises a very important but under-explored problem of the generalization of classifiers for personal analytics in social media, also recently discussed by Cohen and Ruth <cite class="ltx_cite">[<a href="#bib.bib107" title="Classifying Political Orientation on Twitter: It’s Not Easy!" class="ltx_ref">6</a>]</cite>. For instance, the existing models developed for political preference prediction are all trained on Twitter data but report significantly different results even for the same baseline models trained using bag-of-word lexical features as shown in Table <a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. In this work we experiment with three different datasets. Our results for both static and dynamic models show that the accuracy indeed depends on the way the data was constructed. Therefore, publicly available datasets need to be released for a meaningful comparison of the approaches for personal analytics in social media.</p>
+</div>
+<div id="S9.p7" class="ltx_para">
+<p class="ltx_p">In future work, we plan to incorporate iterative model updates from newly classified communications similar to online perceptron-style updates. In addition, we aim to experiment with neighborhood-specific classifiers applied towards the tweets from neighborhood-specific streams e.g., friend classifier used for friend tweets, retweet classifier applied to retweet tweets etc.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The authors would like to thank the anonymous reviewers for their helpful comments.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bergsma, M. Dredze, B. Van Durme, T. Wilson and D. Yarowsky</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Broadly improving user classification via communication-based name and location clustering on Twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1010–1019</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p5" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bergsma, M. Post and D. Yarowsky</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stylometric analysis of scientific articles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 327–337</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p2" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib115" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Bifet, G. Holmes, B. Pfahringer, P. Kranen, H. Kremer, T. Jansen and T. Seidl</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MOA: massive online analysis, a framework for stream classification and clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">11</span>, <span class="ltx_text ltx_bib_pages"> pp. 44–50</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib114" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Bifet, G. Holmes, B. Pfahringer and R. Gavaldà</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detecting sentiment change in Twitter streaming data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">17</span>, <span class="ltx_text ltx_bib_pages"> pp. 5–11</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Burger, J. Henderson, G. Kim and G. Zarrella</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminating gender on Twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1301–1309</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Modeling User Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib107" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Cohen and D. Ruths</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Classifying Political Orientation on Twitter: It’s Not Easy!</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 91–99</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S9.p6" title="9 Conclusions and Future Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Conover, B. Gonçalves, J. Ratkiewicz, A. Flammini and F. Menczer</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting the political alignment of Twitter users</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 192–199</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p3" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Eisenstein, B. O’Connor, N. A. Smith and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A latent variable model for geographic lexical variation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1277–1287</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p5" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. E. Fan, K. W. Chang, C. J. Hsieh, X. R. Wang and C. J. Lin</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBLINEAR: a library for large linear classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">9</span>, <span class="ltx_text ltx_bib_pages"> pp. 1871–1874</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p4" title="5.1 Batch Classification Experiments ‣ 5 Experimental Setup ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib99" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Filippova</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">User demographics and language in an implicit social network</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1478–1488</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Social Graph Definition ‣ 2 Identifying Twitter Social Graph ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Garera and D. Yarowsky</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling latent biographic attributes in conversational genres</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 710–718</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gayo-Avello</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">No, you cannot predict elections with Twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Internet Computing, IEEE</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 91–94</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib74" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Golbeck, J. M. Grimes and A. Rogers</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter use by the u.s. congress</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Society for Information Science and Technology</span> <span class="ltx_text ltx_bib_volume">61</span> (<span class="ltx_text ltx_bib_number">8</span>), <span class="ltx_text ltx_bib_pages"> pp. 1612–1621</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p5" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib122" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Goyal and H. Daumé,III</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Approximate scalable bounded space sketch for large data NLP</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 250–261</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Lampos, D. Preotiuc-Pietro and T. Cohn</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A user-centric model of voting intention from social media</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 993–1003</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib117" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Levenberg, M. Osborne and D. Matthews</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiple-stream language models for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 177–186</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib111" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Liu, Q. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Log-linear models for word alignment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 459–466</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Lunden</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Analyst: twitter passed 500M users in june 2012, 140m of them in US; Jakarta ‘biggest tweeting’ city</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://techcrunch.com/2012/07/30/analyst-twitter-passed-500m-users-in-june-2012-140m-of-them-in-us-jakarta-biggest-tweeting-city/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Maynard and A. Funk</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic detection of political opinions in tweets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 88–99</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib76" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Ming Fai Wong, C. Wei Tan, S. Sen and M. Chiang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Quantifying political leaning from tweets and retweets</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p3" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Nguyen, R. Gravel, D. Trieschnigg and T. Meder</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">”How old do you think I am?” A study of language and age in Twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 439–448</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Nguyen, N. A. Smith and C. P. Rosé</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Author age prediction from text using linear regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 115–123</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. O’Connor, R. Balasubramanyan, B. R. Routledge and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From tweets to polls: linking text sentiment to public opinion time series</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 122–129</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. O’Connor, J. Eisenstein, E. P. Xing and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A mixture model of demographic lexical variation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p5" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib118" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2008-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion mining and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations of Trends in Information Retrieval</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–135</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Pennacchiotti and A. M. Popescu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A machine learning approach to Twitter user classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 281–288</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS4.p1" title="2.4 ZLR Graph ‣ 2 Identifying Twitter Social Graph ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>,
+<a href="#S8.p3" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Pennacchiotti and A. Popescu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Democrats, republicans and starbucks afficionados: user classification in twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 430–438</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p3" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib123" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrović, M. Osborne and V. Lavrenko</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Streaming first story detection with application to Twitter</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib109" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Poon, C. Cherry and K. Toutanova</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised morphological segmentation with log-linear models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 209–217</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Rao, M. Paul, C. Fink, D. Yarowsky, T. Oates and G. Coppersmith</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical Bayesian models for latent attribute detection in social media</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p5" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Rao, D. Yarowsky, A. Shreevats and M. Gupta</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Classifying latent user attributes in Twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 37–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>,
+<a href="#S8.p2" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib116" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Sarmento, A. Kehlenbeck, E. Oliveira and L. Ungar</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An approach to web-scale named-entity disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 689–703</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">May 2013 by the numbers: 16 amazing Twitter stats</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://expandedramblings.com/index.php/march-2013-by-the-numbers-a-few-amazing-twitter-stats/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. A. Smith</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Log-linear models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Thomas, B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Get out the vote: determining support or opposition from congressional floor-debate transcripts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 327–335</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S9.p3" title="9 Conclusions and Future Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Tumasjan, T. O. Sprenger, P. G. Sandner and I. M. Welpe</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting elections with Twitter: What 140 characters reveal about political sentiment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 178–185</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Van Durme</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Jerboa: a toolkit for randomized and streaming algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Human Language Technology Center of Excellence</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p4" title="5.1 Batch Classification Experiments ‣ 5 Experimental Setup ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Van Durme</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Streaming analysis of discourse participants</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 48–58</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Modeling User Content Influence ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S8.p1" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>,
+<a href="#S8.p6" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Yang,Yi and J. Eisenstein</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A log-linear model for unsupervised text normalization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 61–72</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Batch Models ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Yano and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What’s worthy of comment? content and comment volume in political blogs</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Yano, D. Yogatama and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A penny for your tweets: campaign contributions and capitol hill microblogs</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p4" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. A. Zamal, W. Liu and D. Ruths</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Homophily and latent attribute inference: inferring latent attributes of Twitter users from neighbors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 387–390</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS4.p1" title="2.4 ZLR Graph ‣ 2 Identifying Twitter Social Graph ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>,
+<a href="#S6.SS3.p1" title="6.3 Modeling Neighborhood Size ‣ 6 Static Classification Results ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.3</span></a>,
+<a href="#S8.T1" title="Table 1 ‣ 8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p3" title="8 Related Work ‣ Inferring User Political Preferences from Streaming Communications" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:19:00 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

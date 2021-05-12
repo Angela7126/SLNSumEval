@@ -1,0 +1,38 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:31, WORD_NUM:911">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">In this paper, we have studied paracoherent semantics for answer set programs, that is, semantics that ascribes models to (disjunctive) logic programs with non-monotonic negation even if no answer set (respectively stable model) exists, due to a lack of stability in models caused by cyclic dependency through negation, or due to constraints.</a>
+<a href="#1" id="1">Ideally, such a semantics approximates the answer set semantics faithfully and delivers models whenever possible, as expressed by the properties (D1)–(D3); this can be beneficially exploited in scenarios where unexpected inconsistency arises and one needs to stay operational, such as in inconsistency tolerant query answering.</a>
+<a href="#2" id="2">Among few well-known semantics which feature these properties are the semi-stable model semantics [49], and the novel semi-equilibrium model semantics, which amends the semi-stable model semantics by eliminating some anomalies.</a>
+<a href="#3" id="3">For both semantics, which are defined by program transformations, we have given model-theoretic characterizations in terms of bi-models and HT-models, respectively; in particular, semi-equilibrium models relax the notion of equilibrium models, which reconstruct answer sets in HT-logic, by allowing for minimal sets of unsupported assumptions.</a>
+<a href="#4" id="4">We have then refined the semi-equilibrium model semantics with regard to modular program structure, by defining models via splitting sets and splitting sequences; this constrains the set of semi-equilibrium models, in a way that is amenable to modular bottom up evaluation of programs.</a>
+<a href="#5" id="5">For that, we have presented canonical semi-equilibrium models for which, in analogy to the classical Stratification Theorem for logic programs, the particular evaluation order does not matter, and we have identified modularity properties for these semantics that allow for flexible rearrangement in evaluation.</a>
+<a href="#6" id="6">Furthermore, we have characterized the complexity of major reasoning tasks of all these semantics, and we have compared semi-equilibrium semantics to related proposals for paracoherent semantics and approximations of answer sets in the literature.</a>
+<a href="#7" id="7">Notably, it appeared that semi-equilibrium models coincide with evidential stable models in [51]; our semantic and computational results thus carry over to them.</a>
+<a href="#8" id="8">Different from other formalisms such as CR-Prolog [4] or generalized stable models [30], unsupported assumptions in semi-stable and semi-equilibrium models serve to block rules but not to establish positive evidence for deriving atoms from rules.</a>
+<a href="#9" id="9">Furthermore, we have shown that the well-founded model of a normal logic program is refined by semi-equilibrium models, and that the program can be easily modified such that all semi-equilibrium models refine the well-founded model; the same holds also for canonical semi-equilibrium models.</a>
+<a href="#10" id="10">This provides a paracoherent way to refine the well-founded semantics for inconsistency-tolerant query answering, which coincides with the answer set semantics for coherent programs and is in general more informative than the well-founded semantics and supports reasoning by cases, being as close to answer sets as possible.</a>
+<a href="#11" id="11">As for computation, an attractive feature is that canonical semi-equilibrium semantics allows for easy switching from a coherent (answer set) mode to a “paracoherent” evaluation mode in the bottom up evaluation of a program, if incoherence is encountered.</a>
+<a href="#12" id="12">And notably, this is possible also for disjunctive logic programs.</a>
+<a href="#13" id="13">Several issues remain for future work and investigations.</a>
+<a href="#14" id="14">A natural issue is to introduce paracoherence for further language extensions besides strong negation and non-ground programs.</a>
+<a href="#15" id="15">Fortunately, the generic framework of equilibrium logic makes it easy to define {a mathematical formula}SEQ-semantics for many such extensions, among them those mentioned in Section 9.3.</a>
+<a href="#16" id="16">It remains to consider modularity in these extensions and to define suitable refinements of {a mathematical formula}SEQ-models.</a>
+<a href="#17" id="17">Particularly interesting are modular logic programs [29], [15], where modules can be organized non-hierarchically and explicit (by module encapsulation) and implicit modularity (by splitting sets) occur at the same time.</a>
+<a href="#18" id="18">Related to the latter are multi-context systems [10], in which knowledge bases exchange beliefs via non-monotonic bridge rules; based on ideas and results of this paper, paracoherent semantics for certain classes of such multi-context systems may be devised.</a>
+<a href="#19" id="19">Besides language extensions, another issue is generalizing the model selection.</a>
+<a href="#20" id="20">To this end, preference in gap minimization may be supported, especially if domain-specific information is available; subset-minimality is a natural instance of Occam's razor in lack of such information.</a>
+<a href="#21" id="21">Furthermore, preference of higher over lower program components may be considered; however, this intuitively requires more guessing and hinders bottom up evaluation.</a>
+<a href="#22" id="22">On the computation side, developing efficient algorithms and their implementation remain to be done, as well as integration into an answer set building framework.</a>
+<a href="#23" id="23">Currently, experimental prototypes for computing {a mathematical formula}SST(P) and {a mathematical formula}SEQ(P) based on the semantic characterizations are available.</a>
+<a href="#24" id="24">Another computation method is filtering the answer sets of the epistemic transformation {a mathematical formula}Pκ resp.</a>
+<a href="#25" id="25">its extension {a mathematical formula}PHT or the evidential transform {a mathematical formula}PE, which are computed with an ASP solver.</a>
+<a href="#26" id="26">However such simple postprocessing is not efficient in general; indeed, the {a mathematical formula}Σ3P/{a mathematical formula}Π3P-completeness of brave/cautious reasoning, respectively, calls for better methods.</a>
+<a href="#27" id="27">An interesting issue in this context is a polynomial transformation of the evaluation of normal and hcf-programs into disjunctive ASP, which by our results is feasible.</a>
+<a href="#28" id="28">We have considered paracoherence based on program transformation, as introduced by Inoue and Sakama [49].</a>
+<a href="#29" id="29">Other notions, like forward chaining construction and strong compatibility [58], [35] might be alternative candidates to deal with paracoherent reasoning in logic programs; this remains to be explored.</a>
+<a href="#30" id="30">Finally, another issue is to investigate the use of paracoherent semantics in AI applications such as diagnosis, where assumptions may be exploited to generate candidate diagnoses, in the vein of the generalized stable model semantics [30], or in systems for planning and reasoning about actions based on ASP, where emerging incoherence should be meaningfully tolerated.</a>
+</body>
+</html>

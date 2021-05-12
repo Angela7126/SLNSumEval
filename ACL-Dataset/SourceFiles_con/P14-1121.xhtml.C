@@ -1,0 +1,735 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Looking at Unbalanced Specialized Comparable Corporafor Bilingual Lexicon Extraction.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       The main work in bilingual lexicon extraction from comparable corpora is based on the implicit hypothesis that corpora are balanced. However,
+the historical context-based projection method dedicated to this task is relatively insensitive to the sizes of each part of the comparable corpus. Within this context, we have carried out a study on the influence of unbalanced specialized comparable corpora on the quality of bilingual terminology extraction through different experiments. Moreover, we have introduced a regression model that boosts the observations of word co-occurrences used in the context-based projection method. Our results show that the use of unbalanced specialized comparable corpora induces a significant gain in the quality of extracted lexicons.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The bilingual lexicon extraction task from bilingual corpora was initially addressed by using parallel corpora (i.e. a corpus that contains source texts and their translation). However, despite good results in the compilation of bilingual lexicons, parallel corpora are scarce resources, especially for technical domains and for language pairs not involving English. For these reasons, research in bilingual lexicon extraction has focused on another kind of bilingual corpora comprised of texts sharing common features such as domain, genre, sampling period, etc. without having a source text/target text relationship
+        [21]
+        . These corpora, well known now as
+        comparable corpora
+        , have also initially been introduced as
+        non-parallel corpora
+        [11, 28]
+        , and
+        non-aligned corpora
+        [31]
+        . According to Fung and Cheung (2004)
+        , who range bilingual corpora from parallel corpora to quasi-comparable corpora going through comparable corpora, there is a continuum from parallel to comparable corpora (i.e. a kind of filiation).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The bilingual lexicon extraction task from comparable corpora inherits this filiation. For instance, the historical context-based projection method
+        [11, 28]
+        , known as the
+        standard approach
+        , dedicated to this task seems implicitly to lead to work with balanced comparable corpora in the same way as for parallel corpora (i.e. each part of the corpus is composed of the same amount of data).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper we want to show that the assumption that comparable corpora should be balanced for bilingual lexicon extraction task is unfounded. Moreover, this assumption is prejudicial for specialized comparable corpora, especially when involving the English language for which many documents are available due the prevailing position of this language as a standard for international scientific publications. Within this context, our main contribution consists in a re-reading of the standard approach putting emphasis on the unfounded assumption of the balance of the specialized comparable corpora. In specialized domains, the comparable corpora are traditionally of small size (around 1 million words) in comparison with comparable corpus-based general language (up to 100 million words). Consequently, the observations of word co-occurrences which is the basis of the standard approach are unreliable. To make them more reliable, our second contribution is to contrast different regression models in order to boost the observations of word co-occurrences. This strategy allows to improve the quality of extracted bilingual lexicons from comparable corpora.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Bilingual Lexicon Extraction
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In this section, we first describe the standard approach that deals with the task of bilingual lexicon extraction from comparable corpora. We then present an extension of this approach based on regression models. Finally, we discuss works related to this study.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Standard Approach
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The main work in bilingual lexicon extraction from comparable corpora is based on lexical context analysis and relies on the simple observation that a word and its translation tend to appear in the same lexical contexts. The basis of this observation consists in the identification of “first-order affinities” for each source and target language: “
+         First-order affinities describe what other words are likely to be found in the immediate vicinity of a given word
+         ”
+         [14, p. 279]
+         . These affinities can be represented by context vectors, and each vector element represents a word which occurs within the window of the word to be translated (e.g. a seven-word window approximates syntactic dependencies). In order to emphasize significant words in the context vector and to reduce word-frequency effects, the context vectors are normalized according to an association measure. Then, the translation is obtained by comparing the source context vector to each translation candidate vector after having translated each element of the source vector with a general dictionary.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         The implementation of the standard approach can be carried out by applying the following three steps
+         [29, 3, 7, 22, 18, among others]
+         :
+        </p>
+        <dl class="ltx_description" id="I1">
+         <dt class="ltx_item" id="I1.ix1">
+          <span class="ltx_tag ltx_tag_description">
+           Computing context vectors
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix1.p1">
+           <p class="ltx_p">
+            We collect all the words in the context of each word
+            i
+            and count their occurrence frequency in a window of
+            n
+            words around
+            i
+            . For each word
+            i
+            of the source and the target languages, we obtain a context vector
+            vi
+            which gathers the set of co-occurrence words
+            j
+            associated with the number of times that
+            j
+            and
+            i
+            occur together
+            c⁢o⁢o⁢c⁢(i,j)
+            . In order to identify specific words in the lexical context and to reduce word-frequency effects, we normalize context vectors using an association score such as Mutual Information, Log-likelihood, or the discounted log-odds (LO)
+            [8]
+            (see equation 1 and Table
+            1
+            where
+            N=a+b+c+d
+            ).
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I1.ix2">
+          <span class="ltx_tag ltx_tag_description">
+           Transferring context vectors
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix2.p1">
+           <p class="ltx_p">
+            Using a bilingual dictionary, we translate the elements of the source context vector. If the bilingual dictionary provides several translations for an element, we consider all of them but weight the different translations according to their frequency in the target language.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I1.ix3">
+          <span class="ltx_tag ltx_tag_description">
+           Finding candidate translations
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix3.p1">
+           <p class="ltx_p">
+            For a word to be translated, we compute the similarity between the translated context vector and all target vectors through vector distance measures such as Jaccard or Cosine (see equation 2 where
+            a⁢s⁢s⁢o⁢cji
+            stands for “association score”,
+            vk
+            is the transferred context vector of the word
+            k
+            to translate, and
+            vl
+            is the context vector of the word
+            l
+            in the target language). Finally, the candidate translations of a word are the target words ranked following the similarity score.
+           </p>
+          </div>
+         </dd>
+        </dl>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        L⁢O⁢(i,j)=log⁡(a+12)×(d+12)(b+12)×(c+12)
+
+(1)
+       </div>
+       <div class="ltx_para" id="S2.SS1.p4">
+        C⁢o⁢s⁢i⁢n⁢evlvk=∑ta⁢s⁢s⁢o⁢ctl⁢a⁢s⁢s⁢o⁢ctk∑ta⁢s⁢s⁢o⁢ctl2⁢∑ta⁢s⁢s⁢o⁢ctk2
+
+(2)
+       </div>
+       <div class="ltx_para" id="S2.SS1.p5">
+        <p class="ltx_p">
+         This approach is sensitive to the choice of parameters such as the size of the context, the choice of the association and similarity measures. The most complete study about the influence of these parameters on the quality of word alignment has been carried out by Laroche and Langlais
+         [18]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p6">
+        <p class="ltx_p">
+         The standard approach is used by most researchers so far
+         [28, 12, 25, 29, 3, 7, 13, 22, 18, 26, 2, among others]
+         with the implicit hypothesis that comparable corpora are balanced. As McEnery and Xiao (2007, p. 21)
+         observe, a specialized comparable corpus is built as balanced by analogy with a parallel corpus: “
+         Therefore, in relation to parallel corpora, it is more likely for comparable corpora to be designed as general balanced corpora.
+         ”. For instance, Table
+         2
+         describes the comparable corpora used in the main work dedicated to bilingual lexicon extraction for which the ratio between the size of the source and the target texts is comprised between 1 and 1.8.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p7">
+        <p class="ltx_p">
+         In fact, the assumption that words which have the same meaning in different languages should have the same lexical context distributions does not involve working with balanced comparable corpora. To our knowledge, no attention
+         has been paid to the problem of using unbalanced comparable corpora for bilingual lexicon extraction. Since the context vectors are computed from each part of the comparable corpus rather than through the parts of the comparable corpora, the standard approach is relatively insensitive to differences in corpus sizes. The only precaution for using the standard approach with unbalanced corpora is to normalize the association measure (for instance, this can be done by dividing each entry of a given context vector by the sum of its association scores).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Prediction Model
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Since comparable corpora are usually small in specialized domains (see Table
+         2
+         ), the discriminative power of context vectors (i.e. the observations of word co-occurrences) is reduced. One way to deal with this problem is to re-estimate co-occurrence counts by a prediction function
+         [15]
+         . This consists in assigning to each observed co-occurrence count of a small comparable corpora, a new value learned beforehand from a large training corpus.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         In order to make co-occurrence counts more discriminant and in the same way as Hazem and Morin
+         [15]
+         , one strategy consists in addressing this problem through regression: given training corpora of small and large size (abundant in the general domain), we predict word co-occurrence counts in order to make them more reliable. We then apply the resulting regression function to each word co-occurrence count as a pre-processing step of the standard approach. Our work differs from Hazem and Morin
+         [15]
+         in two ways. First, while they experienced the linear regression model, we propose to contrast different regression models. Second, we apply regression to unbalanced comparable corpora and study the impact of prediction when applied to the source texts, the target texts and both source and target texts of the used comparable corpora.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         We use regression analysis to describe the relationship between word co-occurrence counts in a large corpus (the response variable) and word co-occurrence counts in a small corpus (the predictor variable). As most regression models have already been described in great detail
+         [5, 1]
+         , the derivation of most models is only briefly introduced in this work.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         As we can not claim that the prediction of word co-occurrence counts is a linear problem, we consider in addition to the simple linear regression model (
+         L⁢i⁢n
+         ), a generalized linear model which is the logistic regression model (
+         L⁢o⁢g⁢i⁢t
+         ) and non linear regression models such as polynomial regression model (
+         P⁢o⁢l⁢yn
+         ) of order
+         n
+         .
+Given an input vector
+         x∈ℝm
+         , where
+         x1
+         ,…,
+         xm
+         represent features, we find a prediction
+         y^∈ℝm
+         for the co-occurrence count of a couple of words
+         y∈ℝ
+         using one of the regression models presented below:
+        </p>
+        y^L⁢i⁢n=β0+β1⁢x
+
+(3)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        y^L⁢o⁢g⁢i⁢t=11+exp⁡(-(β0+β1⁢x))
+
+(4)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p6">
+        y^P⁢o⁢l⁢yn=β0+β1⁢x+β2⁢x2+…+βn⁢xn
+
+(5)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p7">
+        <p class="ltx_p">
+         where
+         βi
+         are the parameters to estimate.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p8">
+        <p class="ltx_p">
+         Let us denote by
+         f
+         the regression function and by
+         c⁢o⁢o⁢c⁢(wi,wj)
+         the co-occurrence count of the words
+         wi
+         and
+         wj
+         . The resulting predicted value of
+         c⁢o⁢o⁢c⁢(wi,wj)
+         , noted
+         c⁢o⁢o⁢c^⁢(wi,wj)
+         is given by the following equation:
+        </p>
+        c⁢o⁢o⁢c^⁢(wi,wj)=f⁢(c⁢o⁢o⁢c⁢(wi,wj))
+
+(6)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Related Work
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         In the past few years, several contributions have been proposed to improve each step of the standard approach.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        <p class="ltx_p">
+         Prochasson et al. (2009)
+         enhance the representativeness of the context vector by strengthening the context words that happen to be transliterated words and scientific compound words in the target language. Ismail and Manandhar (2010)
+         also suggest that context vectors should be based on the most important contextually relevant words (in-domain terms), and thus propose a method for filtering the noise of the context vectors. In another way, Rubino and Linarès (2011)
+         improve the context words based on the hypothesis that a word and its candidate translations share thematic similarities. Yu and Tsujii (2009)
+         and Otero (2007)
+         propose, for their part, to replace the window-based method by a syntax-based method in order to improve the representation of the lexical context.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p3">
+        <p class="ltx_p">
+         To improve the transfer context vectors step, and increase the number of elements of translated context vectors, Chiao and Zweigenbaum (2003)
+         and Morin and Prochasson (2011)
+         combine a standard general language dictionary with a specialized dictionary, whereas Déjean et al. (2002)
+         use the hierarchical properties of a specialized thesaurus. Koehn and Knight (2002)
+         automatically induce the initial seed bilingual dictionary by using identical spelling features such as cognates and similar contexts. As regards the problem of words ambiguities, Bouamor et al. (2013)
+         carried out word sense disambiguation process only in the target language whereas Gaussier et al. (2004)
+         solve the problem through the source and target languages by using approaches based on CCA (Canonical Correlation Analysis) and multilingual PLSA (Probabilistic Latent Semantic Analysis).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p4">
+        <p class="ltx_p">
+         The rank of candidate translations can be improved by integrating different heuristics. For instance, Chiao and Zweigenbaum (2002)
+         introduce a heuristic based on word distribution symmetry. From the ranked list of candidate translations, the standard approach is applied in the reverse direction to find the source counterparts of the first target candidate translations. And then only the target candidate translations that had the initial source word among the first reverse candidate translations are kept. Laroche and Langlais (2010)
+         suggest a heuristic based on the graphic similarity between source and target terms. Here, candidate translations which are cognates of the word to be translated are ranked first among the list of translation candidates.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Linguistic Resources
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we outline the different textual resources used for our experiments: the comparable corpora, the bilingual dictionary and the terminology reference lists.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Specialized Comparable Corpora
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         For our experiments, we used two specialized French/English comparable corpora:
+        </p>
+        <dl class="ltx_description" id="I2">
+         <dt class="ltx_item" id="I2.ix1">
+          <span class="ltx_tag ltx_tag_description">
+           Breast cancer corpus
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I2.ix1.p1">
+           <p class="ltx_p">
+            This comparable corpus is composed of documents collected from the Elsevier website
+            . The documents were taken from the medical domain within the sub-domain of “breast cancer”. We have automatically selected the documents published between 2001 and 2008 where the title or the keywords contain the term
+            cancer du sein
+            in French and
+            breast cancer
+            in English. We collected 130 French documents (about 530,000 words) and 1,640 English documents (about 7.4 million words). We split the English documents into 14 parts each containing about 530,000 words.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I2.ix2">
+          <span class="ltx_tag ltx_tag_description">
+           Diabetes corpus
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I2.ix2.p1">
+           <p class="ltx_p">
+            The documents making up the French part of the comparable corpus have been craweled from the web using three keywords:
+            diabète
+            (diabetes),
+            alimentation
+            (food), and
+            obésité
+            (obesity). After a manual selection, we only kept the documents which were relative to the medical domain. As a result, 65 French documents were extracted (about 257,000 words). The English part has been extracted from the medical website PubMed
+            using the keywords:
+            diabetes
+            ,
+            nutrition
+            and
+            feeding
+            . We only kept the free fulltext available documents. As a result, 2,339 English documents were extracted (about 3,5 million words). We also split the English documents into 14 parts each containing about 250,000 words.
+           </p>
+          </div>
+         </dd>
+        </dl>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The French and English documents were then normalised through the following linguistic pre-processing steps: tokenisation, part-of-speech tagging, and lemmatisation. These steps were carried out using the TTC TermSuite
+         that applies the same method to several languages including French and English. Finally, the function words were removed and the words occurring less than twice in the French part and in each English part were discarded. Table
+         3
+         shows the number of distinct words (# words) after these steps. It also indicates the comparability degree in percentage (comp.) between the French part and each English part of each comparable corpus. The comparability measure
+         [19]
+         is based on the expectation of finding the translation for each word in the corpus and gives a good idea about how two corpora are comparable. We can notice that all the comparable corpora have a high degree of comparability with a better comparability of the breast cancer corpora as opposed to the diabetes corpora.
+In the remainder of this article,
+         [
+         breast cancer corpus
+         i]
+         for instance stands for the breast cancer comparable corpus composed of the unique French part and the English part
+         i
+         (
+         i∈[1,14]
+         ).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Bilingual Dictionary
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The bilingual dictionary used in our experiments is the French/English dictionary ELRA-M0033 available from the ELRA catalogue
+         . This resource is a general language dictionary which contains only a few terms related to the medical domain.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Terminology Reference Lists
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         To evaluate the quality of terminology extraction, we built a bilingual terminology reference list for each comparable corpus. We selected all French/English single words from the UMLS
+         meta-thesaurus. We kept only i) the French single words which occur more than four times in the French part and ii) the English single words which occur more than four times in each English part
+         i
+         .
+As a result of filtering, 169 French/English single words were extracted for the breast cancer corpus and 244 French/English single words were extracted for the diabetes corpus. It should be noted that the evaluation of terminology extraction using specialized comparable corpora often relies on lists of a small size: 95 single words in Chiao and Zweigenbaum
+         [3]
+         , 100 in Morin et al.
+         [22]
+         , 125 and 79 in Bouamor et al.
+         [2]
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments and Results
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In this section, we present experiments to evaluate the influence of comparable corpus size and prediction models on the quality of bilingual terminology extraction.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We present the results obtained for the terms belonging to the reference list for English to French direction measured in terms of the Mean Average Precision (MAP)
+        [20]
+        as follows:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx1">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          M⁢A⁢P⁢(R⁢e⁢f)=1|R⁢e⁢f|⁢∑i=1|R⁢e⁢f|1ri
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (7)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        |R⁢e⁢f|
+        is the number of terms of the reference list and
+        ri
+        the rank of the correct candidate translation
+        i
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Standard Approach Evaluation
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         In order to evaluate the influence of corpus size on the bilingual terminology extraction task, two experiments have been carried out using the standard approach. We first performed an experiment using each comparable corpus independently of the others (we refer to these corpora as balanced corpora). We then conducted a second experiment where we varied the size of the English part of the comparable corpus, from 530,000 to 7.4 million words for the breast cancer corpus in 530,000 words steps, and from 250,000 to 3.5 million words for the diabetes corpus in 250,000 words steps (we refer to these corpora as unbalanced corpora). In the experiments reported here, the size of the context window
+         w
+         was set to 3 (i.e. a seven-word window that approximates syntactic dependencies), the retained association and similarity measures were the discounted log-odds and the Cosine (see Section
+         2.1
+         ). The results shown were those that give the best performance for the comparable corpora used individually.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Table
+         4
+         shows the results of the standard approach on the balanced and the unbalanced breast cancer and diabetes comparable corpora. Each column corresponds to the English part
+         i
+         (
+         i∈[1,14]
+         ) of a given comparable corpus. The first line presents the results for each individual comparable corpus and the second line presents the results for the cumulative comparable corpus. For instance, the column 3 indicates the MAP obtained by using a comparable corpus that is composed i) only of
+         [
+         breast cancer corpus 3
+         ]
+         (MAP of 21.0%), and ii) of
+         [
+         breast cancer corpus 1, 2 and 3
+         ]
+         (MAP of 34.7%).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         As a preliminary remark, we can notice that the results differ noticeably according to the comparable corpus used individually (MAP variation between 21.0% and 29.6% for the breast cancer corpora and between 10.5% and 16.5% for the diabetes corpora). We can also note that the MAP of all the unbalanced comparable corpora is always higher than any individual comparable corpus. Overall, starting with a MAP of 26.1% as provided by the balanced
+         [
+         breast cancer corpus 1
+         ]
+         , we are able to increase it to 42.3% with the unbalanced
+         [
+         breast cancer corpus 12
+         ]
+         (the variation observed for some unbalanced corpora such as
+         [
+         diabetes corpus 12, 13 and 14
+         ]
+         can be explained by the fact that adding more data in the source language increases the error rate of the translation phase of the standard approach, which leads to the introduction of additional noise in the translated context vectors).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Prediction Evaluation
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The aim of this experiment is two-fold: first, we want to evaluate the usefulness of predicting word co-occurrence counts and second, we want to find out whether it is more appropriate to apply prediction to the source side, the target side or both sides of the bilingual comparable corpora.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.1
+         </span>
+         Regression Models Comparison
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS1.p1">
+         <p class="ltx_p">
+          We contrast the prediction models presented in Section
+          2.2
+          to findout which is the most appropriate model to use as a pre-processing step of the standard approach. We chose the balanced corpora where the standard approach has shown the best results in the previous experiment, namely
+          [
+          breast cancer corpus
+          12]
+          and
+          [
+          diabetes corpus
+          7]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS1.p2">
+         <p class="ltx_p">
+          Table
+          6
+          shows a comparison between the standard approach without prediction noted
+          N⁢o
+          p⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+          and the standard approach with prediction models. We contrast the simple linear regression model (
+          L⁢i⁢n
+          ) with the second and the third order polynomial regressions (
+          P⁢o⁢l⁢y2
+          and
+          P⁢o⁢l⁢y3
+          ) and the logistic regression model (
+          L⁢o⁢g⁢i⁢t
+          ). We can notice that except for the
+          L⁢o⁢g⁢i⁢t
+          model, all the regression models outperform the baseline (
+          N⁢o
+          p⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+          ). Also, as we can see, the results obtained with the linear and polynomial regressions are very close. This suggests that both linear and polynomial regressions are suitable as a pre-processing step of the standard approach, while the logistic regression seems to be inappropriate according to the results shown in Table
+          6
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS1.p3">
+         <p class="ltx_p">
+          That said, the gain of regression models is not significant. This may be due to the regression parameters that have been learned from a training corpus of the general domain. Another reason that could explain these results is the prediction process. We applied the same regression function to all co-occurrence counts while learning models for low and high frequencies should have been more appropriate. In the light of the above results, we believe that prediction can be beneficial to our task.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.2
+         </span>
+         Source versus Target Prediction
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS2.p1">
+         <p class="ltx_p">
+          Table
+          5
+          shows a comparison between the standard approach without prediction noted
+          N⁢o
+          p⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+          and the standard approach based on the prediction of the source side noted
+          S⁢o⁢u⁢r⁢c⁢ep⁢r⁢e⁢d
+          , the target side noted
+          T⁢a⁢r⁢g⁢e⁢tp⁢r⁢e⁢d
+          and both sides noted
+          S⁢o⁢u⁢r⁢c⁢ep⁢r⁢e⁢d+T⁢a⁢r⁢g⁢e⁢tp⁢r⁢e⁢d
+          . If prediction can not replace a large amount of data, it aims at increasing co-occurrence counts as if large amounts of data were at our disposal. In this case, applying prediction to the source side may simulate a configuration of using unbalanced comparable corpora where the source side is
+          n
+          times bigger than the target side. Predicting the target side only, may leads us to the opposite configuration where the target side is
+          n
+          times bigger than the source side. Finally, predicting both sides may simulate a large comparable corpora on both sides. In this experiment, we chose to use the linear regression model (
+          L⁢i⁢n
+          ) for the prediction part. That said, the other regression models have shown the same behavior as
+          L⁢i⁢n
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS2.p2">
+         <p class="ltx_p">
+          We can see that the best results are obtained by the
+          S⁢o⁢u⁢r⁢c⁢ep⁢r⁢e⁢d
+          approach for both comparable corpora. We can also notice that predicting the target side and both sides of the comparable corpora degrades the results. It is not surprising that predicting the target side only leads to lower results, since it is well known that a better characterization of a word to translate (given from the source side) leads to better results. We can deduce from Table
+          5
+          that source prediction is the most appropriate configuration to improve the quality of extracted lexicons. This configuration which simulates the use of unbalanced corpora leads us to think that using prediction with unbalanced comparable corpora should also increase the performance of the standard approach. This assumption is evaluated in the next Subsection.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Predicting Unbalanced Corpora
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         In this last experiment we contrast the standard approach applied to the balanced and unbalanced corpora noted
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         and
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         with the standard approach combined with the prediction model noted
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         and
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         Figure
+         1
+         illustrates the results of the experiments conducted on the breast cancer corpus. We can see that the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         approach significantly outperforms the baseline (
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         ). The big difference between the
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         and the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         approaches would indicate that the latter is optimal. We can also notice that the prediction model applied to the balanced corpus (
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         ) slightly outperforms the baseline while the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         approach significantly outperforms the three other approaches (moreover the variation observed with the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         approach are lower than the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         approach). Overall, the prediction increases the performance of the standard approach especially for unbalanced corpora.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         The results of the experiments conducted on the diabetes corpus are shown in Figure
+         1
+         . As for the previous experiment, we can see that the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         approach significantly outperforms the
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d
+         approach. This confirms the unbalanced hypothesis and would motivate the use of unbalanced corpora when they are available. We can also notice that the
+         B⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         approach slightly outperforms the baseline while the
+         U⁢n⁢b⁢a⁢l⁢a⁢n⁢c⁢e⁢d+P⁢r⁢e⁢d⁢i⁢c⁢t⁢i⁢o⁢n
+         approach gives the best results. Here also, the prediction increases the performance of the standard approach especially for unbalanced corpora. It is clear that in addition to the benefit of using unbalanced comparable corpora, prediction shows a positive impact on the performance of the standard approach.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

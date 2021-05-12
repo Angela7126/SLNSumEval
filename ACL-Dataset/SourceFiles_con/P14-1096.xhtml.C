@@ -1,0 +1,755 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   That’s sick dude!: Automatic identification of word sense change across different timescales.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       In this paper, we propose an unsupervised method to identify noun sense changes based on rigorous analysis of time-varying text data available in the form of millions of digitized books. We construct distributional thesauri based networks from data at different time points and cluster each of them separately to obtain word-centric sense clusters corresponding to the different time points. Subsequently, we compare these sense clusters of two different time points to find if (i) there is birth of a new sense or (ii) if an older sense has got split into more than one sense or (iii) if a newer sense has been formed from the joining of older senses or (iv) if a particular sense has died. We conduct a thorough evaluation of the proposed methodology both manually as well as through comparison with WordNet. Manual evaluation indicates that the algorithm could correctly identify 60.4% birth cases from a set of 48 randomly picked samples and 57% split/join cases from a set of 21 randomly picked samples. Remarkably, in 44% cases the birth of a novel sense is attested by WordNet, while in 46% cases and 43% cases split and join are respectively confirmed by WordNet. Our approach can be applied for lexicography, as well as for applications like word sense disambiguation or semantic search.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Two of the fundamental components of a natural language communication are word sense discovery
+        [Jones1986]
+        and word sense disambiguation
+        [Ide and Veronis1998]
+        . While discovery corresponds to acquisition of vocabulary, disambiguation forms the basis of understanding. These two aspects are not only important from the perspective of developing computer applications for natural languages but also form the key components of language evolution and change.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Words take different senses in different contexts while appearing with other words. Context plays a vital role in disambiguation of word senses as well as in the interpretation of the actual meaning of words. For instance, the word “bank” has several distinct interpretations, including that of a “financial institution” and the “shore of a river.” Automatic discovery and disambiguation of word senses from a given text is an important and challenging problem which has been extensively studied in the literature
+        [Jones1986, Ide and Veronis1998, Schütze1998, Navigli2009]
+        . However, another equally important aspect that has not been so far well investigated corresponds to one or more changes that a word might undergo in its sense. This particular aspect is getting increasingly attainable as more and more time-varying text data become available in the form of millions of digitized books
+        [Goldberg and Orwant2013]
+        gathered over the last centuries. As a motivating example one could consider the word “sick” – while according to the standard English dictionaries the word is normally used to refer to some sort of illness, a new meaning of “sick” referring to something that is “crazy” or “cool” is currently getting popular in the English vernacular. This change is further interesting because while traditionally “sick” has been associated to something negative in general, the current meaning associates positivity with it. In fact, a rock band by the name of “Sick Puppies” has been founded which probably is inspired by the newer sense of the word sick. The title of this paper has been motivated by the above observation. Note that this phenomena of change in word senses has existed ever since the beginning of human communication
+        [Bamman and Crane2011, Michel et al.2011, Wijaya and Yeniterzi2011, Mihalcea and Nastase2012]
+        ; however, with the advent of modern technology and the availability of huge volumes of time-varying data it now has become possible to automatically track such changes and, thereby, help the lexicographers in word sense discovery, and design engineers in enhancing various NLP/IR applications (e.g., disambiguation, semantic search etc.) that are naturally sensitive to change in word senses.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The above motivation forms the basis of the central objective set in this paper, which is to devise a completely unsupervised approach to track noun sense changes in large texts available over multiple timescales. Toward this objective we make the following contributions: (a) devise a time-varying graph clustering based sense induction algorithm, (b) use the time-varying sense clusters to develop a split-join based approach for identifying new senses of a word, and (c) evaluate the performance of the algorithms on various datasets using different suitable approaches along with a detailed error analysis. Remarkably, comparison with the English WordNet indicates that in 44% cases, as identified by our algorithm, there has been a birth of a completely novel sense, in 46% cases a new sense has split off from an older sense and in 43% cases two or more older senses have merged in to form a new sense.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The remainder of the paper is organized as follows. In the next section we present a short review of the literature. In Section
+        3
+        we briefly describe the datasets and outline the process of co-occurrence graph construction. In Section
+        4
+        we present an approach based on graph clustering to identify the time-varying sense clusters and in Section
+        5
+        we present the split-merge based approach for tracking word sense changes. Evaluation methods are summarized in Section
+        6
+        . Finally, conclusions and further research directions are outlined in Section
+        7
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Word sense disambiguation as well as word sense discovery have both remained key areas of research right from the very early initiatives in natural language processing research. Ide and Veronis
+        [Ide and Veronis1998]
+        present a very concise survey of the history of ideas used in word sense disambiguation; for a recent survey of the state-of-the-art one can refer to
+        [Navigli2009]
+        . Some of the first attempts to automatic word sense discovery were made by Karen Spärck Jones
+        [Jones1986]
+        ; later in lexicography, it has been extensively used as a pre-processing step for preparing mono- and multi-lingual dictionaries
+        [Kilgarriff and Tugwell2001, Kilgarriff2004]
+        . However, as we have already pointed out that none of these works consider the temporal aspect of the problem.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        In contrast, the current study, is inspired by works on language dynamics and opinion spreading
+        [Mukherjee et al.2011, Maity et al.2012, Loreto et al.2012]
+        and automatic topic detection and tracking
+        [Allan et al.1998]
+        . However, our work differs significantly from those proposed in the above studies. Opinion formation deals with the self-organisation and emergence of shared vocabularies whereas our work focuses on how the different senses of these vocabulary words change over time and thus become “out-of-vocabulary”. Topic detection involves detecting the occurrence of a new event such as a plane crash, a murder, a jury trial result, or a political scandal in a stream of news stories from multiple sources and tracking is the process of monitoring a stream of news stories to find those that track (or discuss) the same event. This is done on shorter timescales (hours, days), whereas our study focuses on larger timescales (decades, centuries) and we are interested in common nouns, verbs and adjectives as opposed to events that are characterized mostly by named entities. Other similar works on dynamic topic modelling can be found in
+        [Blei and Lafferty2006, Wang and McCallum2006]
+        . Google books n-gram viewer
+        is a phrase-usage graphing tool which charts the yearly count of selected letter combinations, words, or phrases as found in over 5.2 million digitized books. It only reports frequency of word usage over the years, but does not give any correlation among them as e.g., in
+        [Heyer et al.2009]
+        , and does not analyze their senses.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        A few approaches suggested by
+        [Bond et al.2009, Pääkkö and Lindén2012]
+        attempt to augment WordNet synsets primarily using methods of annotation. Another recent work by Cook et al.
+        [Cook et al.2013]
+        attempts to induce word senses and then identify novel senses by comparing two different corpora: the “focus corpora” (i.e., a recent version of the corpora) and the “reference corpora” (older version of the corpora). However, this method is limited as it only considers two time points to identify sense changes as opposed to our approach which is over a much larger timescale, thereby, effectively allowing us to track the points of change and the underlying causes. One of the closest work to what we present here has been put forward by
+        [Tahmasebi et al.2011]
+        , where the authors analyze a newspaper corpus containing articles between 1785 and 1985. The authors mainly report the frequency patterns of certain words that they found to be candidates for change; however a detailed cause analysis as to why and how a particular word underwent a sense change has not been demonstrated. Further, systematic evaluation of the results obtained by the authors has not been provided.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        All the above points together motivated us to undertake the current work where we introduce, for the first time, a completely unsupervised and automatic method to identify the change of a word sense and the cause for the same. Further, we also present an extensive evaluation of the proposed algorithm in order to test its overall accuracy and performance.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Datasets and graph construction
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we outline a brief description of the dataset used for our experiments and the graph construction procedure. The primary source of data have been the millions of digitized books made available through the Google Book project
+        [Goldberg and Orwant2013]
+        .
+The Google Book syntactic n-grams dataset provides dependency fragment counts by the years. However, instead of using the plain syntactic n-grams, we use a far richer representation of the data in the form of a distributional thesaurus
+        [Lin1997, Rychlý and Kilgarriff2007]
+        . In specific, we prepare a distributional thesaurus (DT) for each of the time periods separately and subsequently construct the required networks. We briefly outline the procedure of thesauri construction here referring the reader to
+        [Riedl and Biemann2013]
+        for further details. In this approach, we first extract each word and a set of its context features, which are formed by labeled and directed dependency parse edges as provided in the dataset. Following this, we compute the frequencies of the word, the context and the words along with their context. Next we calculate the lexicographer’s mutual information LMI
+        [Kilgarriff2004]
+        between a word and its features and retain only the top
+        1000
+        ranked features for every word. Finally, we construct the DT network as follows: each word is a node in the network and the edge weight between two nodes is defined as the number of features that the two corresponding words share in common.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Tracking sense changes
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The basic idea of our algorithm for tracking sense changes is as follows. If a word undergoes a sense change, this can be detected by comparing its senses obtained from two different time periods. Since we aim to detect this change automatically, we require distributional representations corresponding to word senses for different time periods. We, therefore, utilize the basic hypothesis of unsupervised sense induction to induce the sense clusters over various time periods and then compare these clusters to detect sense change. The basic premises of the ‘unsupervised sense induction’ are briefly described below.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Unsupervised sense induction
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We use the co-occurrence based graph clustering framework introduced in
+         [Biemann2006]
+         . The algorithm proceeds in three basic steps. Firstly, a co-occurrence graph is created for every target word found in DT. Next, the neighbourhood/ego graph is clustered using the Chinese Whispers (CW) algorithm (see
+         [McAuley and Leskovec2012]
+         for similar approaches). The algorithm, in particular, produces a set of clusters for each target word by decomposing its open neighborhood. We hypothesize that each different cluster corresponds to a particular sense of the target word. For a detailed description, the reader is referred to
+         [Biemann2011]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         If a word undergoes sense change, this can be detected by comparing the sense clusters obtained from two different time periods by the algorithm outlined above. For this purpose, we use statistics from the DT corresponding to two different time intervals, say
+         t⁢vi
+         and
+         t⁢vj
+         . We then run the sense induction algorithm over these two different datasets. Now, for a given word
+         w
+         that appears in both the datasets, we get two different set of clusters, say
+         Ci
+         and
+         Cj
+         . Without loss of generality, let us assume that our algorithm detects
+         m
+         sense clusters for the word
+         w
+         in
+         t⁢vi
+         and
+         n
+         sense clusters in
+         t⁢vj
+         . Let
+         Ci={si⁢1,si⁢2,…,si⁢m}
+         and
+         Cj={sj⁢1,sj⁢2,…,sj⁢n}
+         , where
+         sk⁢z
+         denotes
+         zt⁢h
+         sense cluster for word
+         w
+         during time interval
+         t⁢vk
+         . We next describe our algorithm for detecting sense change from these sets of sense clusters.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Split, join, birth and death
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We hypothesize that word
+         w
+         can undergo sense change from one time interval (
+         t⁢vi
+         ) to another (
+         t⁢vj
+         ) as per one of the following scenarios:
+        </p>
+        <dl class="ltx_description" id="I1">
+         [leftmargin=*]
+         <dt class="ltx_item" id="I1.ix1">
+          <span class="ltx_tag ltx_tag_description">
+           Split
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix1.p1">
+           <p class="ltx_p">
+            A sense cluster
+            si⁢z
+            in
+            t⁢vi
+            splits
+            into two (or more) sense clusters,
+            sj⁢p1
+            and
+            sj⁢p2
+            in
+            t⁢vj
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I1.ix2">
+          <span class="ltx_tag ltx_tag_description">
+           Join
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix2.p1">
+           <p class="ltx_p">
+            Two sense clusters
+            si⁢z1
+            and
+            si⁢z2
+            in
+            t⁢vi
+            join
+            to make a single cluster
+            sj⁢p
+            in
+            t⁢vj
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I1.ix3">
+          <span class="ltx_tag ltx_tag_description">
+           Birth
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix3.p1">
+           <p class="ltx_p">
+            A new sense cluster
+            sj⁢p
+            appears in
+            t⁢vj
+            , which was absent in
+            t⁢vi
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I1.ix4">
+          <span class="ltx_tag ltx_tag_description">
+           Death
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I1.ix4.p1">
+           <p class="ltx_p">
+            A sense cluster
+            si⁢z
+            in
+            t⁢vi
+            dies out and does not appear in
+            t⁢vj
+           </p>
+          </div>
+         </dd>
+        </dl>
+        <p class="ltx_p">
+         To detect split, join, birth or death, we build an
+         (m+1)×(n+1)
+         matrix
+         I
+         to capture the intersection between sense clusters of two different time periods. The first
+         m
+         rows and
+         n
+         columns correspond to the sense clusters in
+         t⁢vi
+         and
+         t⁢vj
+         espectively. We append an additional row and column to capture the fraction of words, which did not show up in any of the sense clusters in another time interval. So, an element
+         Ik⁢l
+         of the matrix
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            1≤k≤m,1≤l≤n
+            : denotes the fraction of words in a newer sense cluster
+            sj⁢l
+            , that were also present in an older sense cluster
+            si⁢k
+            .
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            k=m+1,1≤l≤n
+            : denotes the fraction of words in the sense cluster
+            sj⁢l
+            , that were not present in any of the
+            m
+            clusters in
+            t⁢vi
+            .
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            1≤k≤m,l=n+1
+            : denotes the fraction of words in the sense cluster
+            si⁢k
+            , that did not show up in any of the
+            n
+            clusters in
+            t⁢vj
+            .
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         Thus, the matrix
+         I
+         captures all the four possible scenarios for sense change. Since we can not expect a perfect split, birth etc., we used certain threshold values to detect if a candidate word is undergoing sense change via one of these four cases. In Figure
+         1
+         , as an example, we illustrate the birth of a new sense for the word ‘compiler’.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Multi-stage filtering
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         To make sure that the candidate words obtained via our algorithm are meaningful, we applied multi-stage filtering to prune the candidate word list. The following criterion were used for the filtering:
+        </p>
+        <dl class="ltx_description" id="I3">
+         [leftmargin=*]
+         <dt class="ltx_item" id="I3.ix1">
+          <span class="ltx_tag ltx_tag_description">
+           Stage 1
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I3.ix1.p1">
+           <p class="ltx_p">
+            We utilize the fact that the CW algorithm is non-deterministic in nature. We apply CW three times over the source and target time intervals. We obtain the candidate word lists using our algorithm for the three runs, then take the intersection to output those words, which came up in all the three runs.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I3.ix2">
+          <span class="ltx_tag ltx_tag_description">
+           Stage 2
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I3.ix2.p1">
+           <p class="ltx_p">
+            From the above list, we retain only those candidate words, which have a part-of-speech tag ‘NN’ or ‘NNS’, as we focus on nouns for this work.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I3.ix3">
+          <span class="ltx_tag ltx_tag_description">
+           Stage 3
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I3.ix3.p1">
+           <p class="ltx_p">
+            We sort the candidate list obtained in Stage 2 as per their occurrence in the first time period. Then, we remove the top
+            20⁢%
+            and the bottom
+            20⁢%
+            words from this list. Therefore, we consider the
+            torso
+            of the frequency distribution which is the most informative part for this type of an analysis.
+           </p>
+          </div>
+         </dd>
+        </dl>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experimental framework
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        For our experiments, we utilized DTs created for 8 different time periods: 1520-1908, 1909-1953, 1954-1972, 1973-1986, 1987-1995, 1996-2001, 2002-2005 and 2006-2008
+        [Riedl et al.2014]
+        . The time periods were set such that the amount of data in each time period is roughly the same. We will also use
+        T1
+        to
+        T8
+        to denote these time periods. The parameters for CW clustering were set as follows. The size of the neighbourhood (
+        N
+        ) to be clustered was set to
+        200
+        . The parameter
+        n
+        regulating the edge density in this neighbourhood was set to
+        200
+        as well. The parameter
+        a
+        was set to
+        l⁢i⁢n
+        , which corresponds to favouring smaller clusters by hub downweighing
+        . The threshold values used to detect the sense changes were as follows. For birth, at least
+        80⁢%
+        words of the target cluster should be novel. For split, each split cluster should have at least
+        30⁢%
+        words of the source cluster and the total intersection of all the split clusters should be
+        &gt;80⁢%
+        . The same parameters were used for the join and death case with the interchange of source and target clusters.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Signals of sense change
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         Making comparisons between all the pairs of time periods gave us 28 candidate words lists. For each of these comparison, we applied the multi-stage filtering to obtain the pruned list of candidate words. Table
+         1
+         provides some statistics about the number of candidate words obtained corresponding to the birth case. The rows correspond to the source time-period and the columns correspond to the target time periods. An element of the table shows the number of candidate words obtained by comparing the corresponding source and target time periods.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         The table clearly shows a trend. For most of the cases, the number of candidate birth senses tends to increase as we go from left to right. Similarly, this number decreases as we go down in the table. This is quite intuitive since going from left to right corresponds to increasing the gap between two time periods while going down corresponds to decreasing this gap. As the gap increases (decreases), one would expect more (less) new senses coming in. Even while moving diagonally, the candidate words tend to decrease as we move downwards. This corresponds to the fact that the number of years in the time periods decreases as we move downwards, and therefore, the gap also decreases.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Stability analysis &amp; sense change location
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Formally, we consider a sense change from
+         t⁢vi
+         to
+         t⁢vj
+         stable
+         if it was also detected while comparing
+         t⁢vi
+         with the following time periods
+         t⁢vk
+         s. This number of subsequent time periods, where the same sense change is detected, helps us to determine the
+         age
+         of a new sense. Similarly, for a candidate sense change from
+         t⁢vi
+         to
+         t⁢vj
+         , we say that the
+         location
+         of the sense change is
+         t⁢vj
+         if and only if that sense change does not get detected by comparing
+         t⁢vi
+         with any time interval
+         t⁢vk
+         , intermediate between
+         t⁢vi
+         and
+         t⁢vj
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Table
+         1
+         gives a lot of candidate words for sense change. However, not all the candidate words were stable. Thus, it was important to prune these results using stability analysis. Also, it is to be noted that these results do not pin-point to the exact time-period, when the sense change might have taken place. For instance, among the
+         4238
+         candidate birth sense detected by comparing
+         T1
+         and
+         T6
+         , many of these new senses might have come up in between
+         T2
+         to
+         T5
+         as well. We prune these lists further based on the stability of the sense, as well as to locate the approximate time interval, in which the sense change might have occurred.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         Table
+         2
+         shows the number of stable (at least twice) senses as well as the number of stable sense changes located in that particular time period. While this decreases recall, we found this to be beneficial for the accuracy of the method.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         Once we were able to locate the senses as well as to find the age of the senses, we attempted to select some representative words and plotted them on a timeline as per the birth period and their age in Figure
+         2
+         . The source time period here is 1909-1953.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Evaluation framework
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        During evaluation, we considered the clusters obtained using the 1909-1953 time-slice as our reference and attempted to track sense change by comparing these with the clusters obtained for 2002-2005. The sense change detected was categorized as to whether it was a new sense (birth), a single sense got split into two or more senses (split) or two or more senses got merged (join) or a particular sense died (death). We present a few instances of the resulting clusters in the paper and refer the reader to the supplementary material
+        for the rest of the results.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Manual evaluation
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         The algorithm detected a lot of candidate words for the cases of birth, split/join as well as death. Since it was difficult to go through all the candidate sense changes for all the comparisons manually, we decided to randomly select some candidate words, which were flagged by our algorithm as undergoing sense change, while comparing 1909-1953 and 2002-2005 DT. We selected 48 random samples of candidate words for birth cases and 21 random samples for split/join cases. One of the authors annotated each of the birth cases identifying whether or not the algorithm signalled a true sense change while another author did the same task for the split/join cases. The accuracy as per manual evaluation was found to be 60.4% for the birth cases and 57% for the split/join cases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         Table
+         3
+         shows the evaluation results for a few candidate words, flagged due to birth. Columns correspond to the candidate words, words obtained in the cluster of each candidate word (we will use the term ‘birth cluster’ for these words, henceforth), which indicated a new sense, the results of manual evaluation as well as the possible sense this birth cluster denotes.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p3">
+        <p class="ltx_p">
+         Table
+         4
+         shows the corresponding evaluation results for a few candidate words, flagged due to split or join.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p4">
+        <p class="ltx_p">
+         A further analysis of the words marked due to birth in the random samples indicates that there are 22 technology-related words, 2 slangs, 3 economics related words and 2 general words. For the split-join case we found that there are 3 technology-related words while the rest of the words are general. Therefore one of the key observations is that most of the technology related words (where the neighborhood is completely new) could be extracted from our birth results. In contrast, for the split-join instances most of the results are from the general category since the neighborhood did not change much here; it either got split or merged from what it was earlier.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Automated evaluation with WordNet
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         In addition to manual evaluation, we also performed automated evaluation for the candidate words. We chose WordNet for automated evaluation because not only does it have a wide coverage of word senses but also it is being maintained and updated regularly to incorporate new senses. We did this evaluation for the candidate birth, join and split sense clusters obtained by comparing 1909-1953 time period with respect to 2002-2005. For our evaluation, we developed an aligner to align the word clusters obtained with WordNet senses. The aligner constructs a WordNet dictionary for the purpose of synset alignment. The CW cluster is then aligned to WordNet synsets by comparing the clusters with WordNet graph and the synset with the maximum alignment score is returned as the output. In summary, the aligner tool takes as input the CW cluster and returns a WordNet synset id that corresponds to the cluster words. The evaluation settings were as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p2">
+        <dl class="ltx_description" id="I4">
+         [leftmargin=*]
+         <dt class="ltx_item" id="I4.ix1">
+          <span class="ltx_tag ltx_tag_description">
+           Birth:
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I4.ix1.p1">
+           <p class="ltx_p">
+            For a candidate word flagged as birth, we first find out the set of all WordNet synset ids for its CW clusters in the source time period (1909-1953 in this case). Let
+            Si⁢n⁢i⁢t
+            denote the union of these synset ids. We then find WordNet synset id for its birth-cluster, say
+            sn⁢e⁢w
+            . Then, if
+            sn⁢e⁢w∉Si⁢n⁢i⁢t
+            , it implies that this is a new sense that was not present in the source clusters and we call it a ‘success’ as per WordNet.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I4.ix2">
+          <span class="ltx_tag ltx_tag_description">
+           Join:
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I4.ix2.p1">
+           <p class="ltx_p">
+            For the join case, we find WordNet synset ids
+            s1
+            and
+            s2
+            for the clusters obtained in the source time period and
+            sn⁢e⁢w
+            for the join cluster in the target time period. If
+            s1≠s2
+            and
+            sn⁢e⁢w
+            is either
+            s1
+            or
+            s2
+            , we call it a ‘success’.
+           </p>
+          </div>
+         </dd>
+         <dt class="ltx_item" id="I4.ix3">
+          <span class="ltx_tag ltx_tag_description">
+           Split:
+          </span>
+         </dt>
+         <dd class="ltx_item">
+          <div class="ltx_para" id="I4.ix3.p1">
+           <p class="ltx_p">
+            For the split case, we find WordNet synset id
+            so⁢l⁢d
+            for the source cluster and synset ids
+            s1
+            and
+            s2
+            for the target split clusters. If
+            s1≠s2
+            and either
+            s1
+            , or
+            s2
+            retains the id
+            so⁢l⁢d
+            , we call it a ‘success’.
+           </p>
+          </div>
+         </dd>
+        </dl>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p3">
+        <p class="ltx_p">
+         Table
+         5
+         show the results of WordNet based evaluation. In case of birth we observe a success of 44% while for split and join we observe a success of 46% and 43% respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p4">
+        <p class="ltx_p">
+         We then manually verified some of the words that were deemed as successes, as well as investigated WordNet sense they were mapped to. Table
+         6
+         shows some of the words for which the evaluation detected success along with WordNet senses. Clearly, the cluster words correspond to a newer sense for these words and the mapped WordNet synset matches the birth cluster to a very high degree.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.3
+        </span>
+        Evaluation with a slang list
+       </h3>
+       <div class="ltx_para" id="S6.SS3.p1">
+        <p class="ltx_p">
+         Slangs are words and phrases that are regarded as very informal, and are typically restricted to a particular context. New slang words come up every now and then, and this plays an integral part in the phenomena of sense change. We therefore decided to perform an evaluation as to how many slang words were being detected by our candidate birth clusters. We used a list of slangs available from the slangcity website
+         . We collected slangs for the years 2002-2005 and found the intersection with our candidate birth words. Note that the website had a large number of multi-word expressions that we did not consider in our study. Further, some of the words appeared as either erroneous or very transient (not existing more than a few months) entires, which had to be removed from the list. All these removal left us with a very little space for comparison; however, despite this we found 25 slangs from the website that were present in our birth results, e.g. ‘bum’, ‘sissy’, ‘thug’, ‘dude’ etc.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.4
+        </span>
+        Evaluation of candidate death clusters
+       </h3>
+       <div class="ltx_para" id="S6.SS4.p1">
+        <p class="ltx_p">
+         Much of our evaluation was focussed on the birth sense clusters, mainly because these are more interesting from a lexicographic perspective. Additionally, the main theme of this work was to detect new senses for a given word. To detect a true death of a sense, persistence analysis was required, that is, to verify if the sense was persisting earlier and vanished after a certain time period. While such an analysis goes beyond the scope of this paper, we selected some interesting candidate “death” senses. Table
+         7
+         shows some of these interesting candidate words, their death cluster along with the possible vanished meaning, identified by the authors. While these words are still used in a related sense, the original meaning does not exist in the modern usage.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

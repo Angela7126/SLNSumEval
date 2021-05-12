@@ -1,0 +1,1190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Sentiment-Specific Word Embedding for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia.</title>
+<!--Generated on Tue Jun 10 19:39:12 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Sentiment-Specific Word Embedding 
+<br class="ltx_break"/>for Twitter Sentiment Classification<span class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>  This work was done when the first and third authors were visiting Microsoft Research Asia.</span></span></span></h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Duyu Tang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Furu Wei<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math> , Nan Yang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\natural}" display="inline"><msup><mi/><mi mathvariant="normal">♮</mi></msup></math>, Ming Zhou<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>, Ting Liu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Bing Qin<math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>Research Center for Social Computing and Information Retrieval 
+<br class="ltx_break"/>Harbin Institute of Technology, China 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m8" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Microsoft Research, Beijing, China 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m9" class="ltx_Math" alttext="{}^{\natural}" display="inline"><msup><mi/><mi mathvariant="normal">♮</mi></msup></math>University of Science and Technology of China, Hefei, China
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">dytang, tliu, qinb</span>}<span class="ltx_text ltx_font_typewriter">@ir.hit.edu.cn
+<br class="ltx_break"/></span>{<span class="ltx_text ltx_font_typewriter">fuwei, v-nayang, mingzhou</span>}<span class="ltx_text ltx_font_typewriter">@microsoft.com</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a method that learns word embedding for Twitter sentiment classification in this paper.
+Most existing algorithms for learning continuous word representations typically only model the syntactic context of words but ignore the sentiment of text. This is problematic for sentiment analysis as they usually map words with similar syntactic context but opposite sentiment polarity, such as <span class="ltx_text ltx_font_italic">good</span> and <span class="ltx_text ltx_font_italic">bad</span>, to neighboring word vectors.
+We address this issue by learning sentiment-specific word embedding (<span class="ltx_text ltx_font_bold">SSWE</span>),
+which encodes sentiment information in the continuous representation of words.
+Specifically, we develop three neural networks to effectively incorporate the supervision from sentiment polarity of text (e.g. sentences or tweets) in their loss functions.
+To obtain large scale training corpora, we learn the sentiment-specific word embedding from massive distant-supervised tweets collected by positive and negative emoticons.
+Experiments on applying SSWE to a benchmark Twitter sentiment classification dataset in SemEval 2013 show that
+(1) the SSWE feature performs comparably with hand-crafted features in the top-performed system; (2) the performance is further improved by concatenating SSWE with existing feature set.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Twitter sentiment classification has attracted increasing research interest in recent years <cite class="ltx_cite">[<a href="#bib.bib72" title="Target-dependent twitter sentiment classification" class="ltx_ref">21</a>, <a href="#bib.bib69" title="Unsupervised sentiment analysis with emotional signals" class="ltx_ref">20</a>]</cite>. The objective is to classify the sentiment polarity of a tweet as positive, negative or neutral. The majority of existing approaches follow Pang et al. <cite class="ltx_cite">[<a href="#bib.bib142" title="Thumbs up?: sentiment classification using machine learning techniques" class="ltx_ref">33</a>]</cite> and employ machine learning algorithms to build classifiers from tweets with manually annotated sentiment polarity. Under this direction, most studies focus on designing effective features to obtain better classification performance. For example, <cite class="ltx_cite">Mohammad<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib130" title="NRC-canada: building the state-of-the-art in sentiment analysis of tweets" class="ltx_ref">2013</a>)</cite> build the top-performed system in the Twitter sentiment classification track of SemEval 2013 <cite class="ltx_cite">[<a href="#bib.bib135" title="SemEval-2013 task 2: sentiment analysis in twitter" class="ltx_ref">31</a>]</cite>, using diverse sentiment lexicons and a variety of hand-crafted features.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Feature engineering is important but labor-intensive. It is therefore desirable to discover explanatory factors from the data and make the learning algorithms less dependent on extensive feature engineering <cite class="ltx_cite">[<a href="#bib.bib7" title="Deep learning of representations: looking forward" class="ltx_ref">4</a>]</cite>. For the task of sentiment classification, an effective feature learning method is to compose the representation of a sentence (or document) from the representations of the words or phrases it contains <cite class="ltx_cite">[<a href="#bib.bib161" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">40</a>, <a href="#bib.bib193" title="Compositional matrix-space models for sentiment analysis" class="ltx_ref">47</a>]</cite>. Accordingly, it is a crucial step to learn the word representation (or word embedding), which is a dense, low-dimensional and real-valued vector for a word.
+Although existing word embedding learning algorithms <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>, <a href="#bib.bib123" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">27</a>]</cite> are intuitive choices,
+they are not effective enough if directly used for sentiment classification.
+The most serious problem is that traditional methods typically model the syntactic context of words but ignore the sentiment information of text. As a result, words with opposite polarity, such as <span class="ltx_text ltx_font_italic">good</span> and <span class="ltx_text ltx_font_italic">bad</span>, are mapped into close vectors. It is meaningful for some tasks such as pos-tagging <cite class="ltx_cite">[<a href="#bib.bib198" title="Deep learning for chinese word segmentation and pos tagging" class="ltx_ref">49</a>]</cite> as the two words have similar usages and grammatical roles, but it becomes a disaster for sentiment analysis as they have the opposite sentiment polarity.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we propose learning sentiment-specific word embedding (<span class="ltx_text ltx_font_bold">SSWE</span>) for sentiment analysis.
+We encode the sentiment information into the continuous representation of words, so that it is able to separate <span class="ltx_text ltx_font_italic">good</span> and <span class="ltx_text ltx_font_italic">bad</span> to opposite ends of the spectrum. To this end, we extend the existing word embedding learning algorithm <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>]</cite> and develop three neural networks to effectively incorporate the supervision from sentiment polarity of text (e.g. sentences or tweets) in their loss functions.
+We learn the sentiment-specific word embedding from tweets, leveraging massive tweets with emoticons as distant-supervised corpora without any manual annotations. These automatically collected tweets contain noises so they cannot be directly used as gold training data to build sentiment classifiers, but they are effective enough to provide weakly supervised signals for training the sentiment-specific word embedding.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We apply SSWE as features in a supervised learning framework for Twitter sentiment classification, and evaluate it on the benchmark dataset in SemEval 2013. In the task of predicting positive/negative polarity of tweets, our method yields 84.89% in macro-F1 by only using SSWE as feature, which is comparable to the top-performed system based on hand-crafted features (84.70%).
+After concatenating the SSWE feature with existing feature set, we push the state-of-the-art to 86.58% in macro-F1.
+The quality of SSWE is also directly evaluated by measuring the word similarity in the embedding space for sentiment lexicons. In the accuracy of polarity consistency between each sentiment word and its top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> closest words, SSWE outperforms existing word embedding learning algorithms.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The major contributions of the work presented in this paper are as follows.</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We develop three neural networks to learn sentiment-specific word embedding (SSWE) from massive distant-supervised tweets without any manual annotations;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">To our knowledge, this is the first work that exploits word embedding for Twitter sentiment classification. We report the results that the SSWE feature performs comparably with hand-crafted features in the top-performed system in SemEval 2013;</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">We release the sentiment-specific word embedding learned from 10 million tweets, which can be adopted off-the-shell in other sentiment analysis tasks.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present a brief review of the related work from two perspectives, Twitter sentiment classification and learning continuous representations for sentiment classification.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Twitter Sentiment Classification</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Twitter sentiment classification, which identifies the sentiment polarity of short, informal tweets, has attracted increasing research interest <cite class="ltx_cite">[<a href="#bib.bib72" title="Target-dependent twitter sentiment classification" class="ltx_ref">21</a>, <a href="#bib.bib69" title="Unsupervised sentiment analysis with emotional signals" class="ltx_ref">20</a>]</cite> in recent years. Generally, the methods employed in Twitter sentiment classification follow traditional sentiment classification approaches.
+The lexicon-based approaches <cite class="ltx_cite">[<a href="#bib.bib174" title="Thumbs up or thumbs down?: semantic orientation applied to unsupervised classification of reviews" class="ltx_ref">44</a>, <a href="#bib.bib39" title="A holistic lexicon-based approach to opinion mining" class="ltx_ref">11</a>, <a href="#bib.bib165" title="Lexicon-based methods for sentiment analysis" class="ltx_ref">41</a>, <a href="#bib.bib168" title="Sentiment strength detection for the social web" class="ltx_ref">42</a>]</cite> mostly use a dictionary of sentiment words with their associated sentiment polarity, and incorporate negation and intensification to compute the sentiment polarity for each sentence (or document).</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The learning based methods for Twitter sentiment classification follow <cite class="ltx_cite">Pang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib142" title="Thumbs up?: sentiment classification using machine learning techniques" class="ltx_ref">2002</a>)</cite>’s work, which treat sentiment classification of texts as a special case of text categorization issue.
+Many studies on Twitter sentiment classification <cite class="ltx_cite">[<a href="#bib.bib138" title="Twitter as a corpus for sentiment analysis and opinion mining" class="ltx_ref">32</a>, <a href="#bib.bib33" title="Enhanced sentiment learning using twitter hashtags and smileys" class="ltx_ref">10</a>, <a href="#bib.bib5" title="Robust sentiment detection on twitter from biased and noisy data" class="ltx_ref">1</a>, <a href="#bib.bib88" title="Twitter sentiment analysis: the good the bad and the omg!" class="ltx_ref">22</a>, <a href="#bib.bib195" title="MoodLens: an emoticon-based sentiment analysis system for chinese tweets" class="ltx_ref">48</a>]</cite> leverage massive noisy-labeled tweets selected by positive and negative emoticons as training set and build sentiment classifiers directly, which is called <span class="ltx_text ltx_font_italic">distant supervision</span> <cite class="ltx_cite">[<a href="#bib.bib55" title="Twitter sentiment classification using distant supervision" class="ltx_ref">17</a>]</cite>.
+Instead of directly using the distant-supervised data as training set, Liu et al. <cite class="ltx_cite">[<a href="#bib.bib106" title="Emoticon smoothed language models for twitter sentiment analysis" class="ltx_ref">25</a>]</cite> adopt the tweets with emoticons to smooth the language model and Hu et al. <cite class="ltx_cite">[<a href="#bib.bib69" title="Unsupervised sentiment analysis with emotional signals" class="ltx_ref">20</a>]</cite> incorporate the emotional signals into an unsupervised learning framework for Twitter sentiment classification.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">Many existing learning based methods on Twitter sentiment classification focus on feature engineering. The reason is that the performance of sentiment classifier being heavily dependent on the choice of feature representation of tweets. The most representative system is introduced by Mohammad et al. <cite class="ltx_cite">[<a href="#bib.bib130" title="NRC-canada: building the state-of-the-art in sentiment analysis of tweets" class="ltx_ref">30</a>]</cite>, which is the state-of-the-art system (the top-performed system in SemEval 2013 Twitter Sentiment Classification Track) by implementing a number of hand-crafted features. Unlike the previous studies, we focus on learning discriminative features automatically from massive distant-supervised tweets.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Learning Continuous Representations for Sentiment Classification</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Pang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib142" title="Thumbs up?: sentiment classification using machine learning techniques" class="ltx_ref">2002</a>)</cite> pioneer this field by using bag-of-word representation, representing each word as a one-hot vector. It has the same length as the size of the vocabulary, and only one dimension is 1, with all others being 0.
+Under this assumption, many feature learning algorithms are proposed to obtain better classification performance <cite class="ltx_cite">[<a href="#bib.bib140" title="Opinion mining and sentiment analysis" class="ltx_ref">34</a>, <a href="#bib.bib101" title="Sentiment analysis and opinion mining" class="ltx_ref">24</a>, <a href="#bib.bib49" title="Techniques and applications for sentiment analysis" class="ltx_ref">14</a>]</cite>. However, the one-hot word representation cannot sufficiently capture the complex linguistic characteristics of words.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">With the revival of interest in deep learning <cite class="ltx_cite">[<a href="#bib.bib9" title="Representation learning: a review and new perspectives" class="ltx_ref">2</a>]</cite>, incorporating the continuous representation of a word as features has been proving effective in a variety of NLP tasks, such as parsing <cite class="ltx_cite">[<a href="#bib.bib153" title="Parsing with compositional vector grammars" class="ltx_ref">35</a>]</cite>, language modeling <cite class="ltx_cite">[<a href="#bib.bib10" title="A neural probabilistic language model" class="ltx_ref">3</a>, <a href="#bib.bib129" title="A scalable hierarchical distributed language model" class="ltx_ref">29</a>]</cite> and NER <cite class="ltx_cite">[<a href="#bib.bib171" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">43</a>]</cite>.
+In the field of sentiment analysis, Bespalov et al. <cite class="ltx_cite">[<a href="#bib.bib12" title="Sentiment classification based on supervised latent n-gram analysis" class="ltx_ref">5</a>, <a href="#bib.bib13" title="Sentiment classification with supervised sequence embedding" class="ltx_ref">6</a>]</cite> initialize the word embedding by Latent Semantic Analysis and further represent each document as the linear weighted of ngram vectors for sentiment classification.
+Yessenalina and Cardie <cite class="ltx_cite">[<a href="#bib.bib193" title="Compositional matrix-space models for sentiment analysis" class="ltx_ref">47</a>]</cite> model each word as a matrix and combine words using iterated matrix multiplication. Glorot et al. <cite class="ltx_cite">[<a href="#bib.bib54" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">16</a>]</cite> explore Stacked Denoising Autoencoders for domain adaptation in sentiment classification. Socher et al. propose Recursive Neural Network (RNN) <cite class="ltx_cite">[<a href="#bib.bib158" title="Parsing natural scenes and natural language with recursive neural networks" class="ltx_ref">38</a>]</cite>, matrix-vector RNN <cite class="ltx_cite">[<a href="#bib.bib156" title="Semantic Compositionality Through Recursive Matrix-Vector Spaces" class="ltx_ref">37</a>]</cite> and Recursive Neural Tensor Network (RNTN) <cite class="ltx_cite">[<a href="#bib.bib161" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">40</a>]</cite> to learn the compositionality of phrases of any length based on the representation of each pair of children recursively. Hermann et al. <cite class="ltx_cite">[<a href="#bib.bib63" title="The role of syntax in vector space models of compositional semantics" class="ltx_ref">18</a>]</cite> present Combinatory Categorial Autoencoders to learn the compositionality of sentence, which marries the Combinatory Categorial Grammar with Recursive Autoencoder.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The representation of words heavily relies on the applications or tasks in which it is used <cite class="ltx_cite">[<a href="#bib.bib90" title="Re-embedding words" class="ltx_ref">23</a>]</cite>.
+This paper focuses on learning sentiment-specific word embedding, which is tailored for sentiment analysis.
+Unlike <cite class="ltx_cite">Maas<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib110" title="Learning word vectors for sentiment analysis" class="ltx_ref">2011</a>)</cite> that follow the probabilistic document model <cite class="ltx_cite">[<a href="#bib.bib14" title="Latent dirichlet allocation" class="ltx_ref">7</a>]</cite> and give an sentiment predictor function to each word, we develop neural networks and map each ngram to the sentiment polarity of sentence.
+Unlike <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib160" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">2011c</a>)</cite> that utilize manually labeled texts to learn the meaning of phrase (or sentence) through compositionality, we focus on learning the meaning of word, namely word embedding, from massive distant-supervised tweets.
+Unlike <cite class="ltx_cite">Labutov and Lipson (<a href="#bib.bib90" title="Re-embedding words" class="ltx_ref">2013</a>)</cite> that produce task-specific embedding from an existing word embedding, we learn sentiment-specific word embedding from scratch.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Sentiment-Specific Word Embedding for Twitter Sentiment Classification</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present the details of learning sentiment-specific word embedding (<span class="ltx_text ltx_font_bold">SSWE</span>) for Twitter sentiment classification. We propose incorporating the sentiment information of sentences to learn continuous representations for words and phrases.
+We extend the existing word embedding learning algorithm <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>]</cite> and develop three neural networks to learn SSWE.
+In the following sections, we introduce the traditional method before presenting the details of SSWE learning algorithms.
+We then describe the use of SSWE in a supervised learning framework for Twitter sentiment classification.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>C&amp;W Model</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite> introduce C&amp;W model to learn word embedding based on the syntactic contexts of words.
+Given an ngram <span class="ltx_text ltx_font_italic">“cat chills on a mat”</span>, C&amp;W replaces the center word with a random word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="w^{r}" display="inline"><msup><mi>w</mi><mi>r</mi></msup></math> and derives a <span class="ltx_text ltx_font_bold">corrupted</span> ngram <span class="ltx_text ltx_font_italic">“cat chills <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="w^{r}" display="inline"><msup><mi>w</mi><mi>r</mi></msup></math> a mat”</span>. The training objective is that the original ngram is expected to obtain a higher language model score than the corrupted ngram by a margin of 1. The ranking objective function can be optimized by a hinge loss,</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="loss_{cw}(t,t^{r})=max(0,1-f^{cw}(t)+f^{cw}(t^{r}))" display="block"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>-</mo><mrow><msup><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><msup><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><msup><mi>t</mi><mi>r</mi></msup><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is the original ngram, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="t^{r}" display="inline"><msup><mi>t</mi><mi>r</mi></msup></math> is the corrupted ngram, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="f^{cw}(\cdot)" display="inline"><mrow><msup><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is a one-dimensional scalar representing the language model score of the input ngram.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1146/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering ltx_centering" width="675" height="506" alt=""/>
+<div class="ltx_caption ltx_centering ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>The traditional C&amp;W model and our neural networks (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m3" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> and SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>) for learning sentiment-specific word embedding.</div>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a) illustrates the neural architecture of C&amp;W, which consists of four layers, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="lookup\rightarrow linear\rightarrow hTanh\rightarrow linear" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi></mrow><mo>→</mo><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow><mo>→</mo><mrow><mi>h</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi></mrow><mo>→</mo><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></mrow></math> (from bottom to top).
+The original and corrupted ngrams are treated as inputs of the feed-forward neural network, respectively.
+The output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="f^{cw}" display="inline"><msup><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msup></math> is the language model score of the input, which is calculated as given in Equation <a href="#S3.E2" title="(2) ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is the lookup table of word embedding, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="w_{1},w_{2},b_{1},b_{2}" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub></mrow></math> are the parameters of linear layers.</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="f^{cw}(t)=w_{2}(a)+b_{2}" display="block"><mrow><mrow><msup><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="a=hTanh(w_{1}L_{t}+b_{1})" display="block"><mrow><mi>a</mi><mo>=</mo><mrow><mi>h</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>L</mi><mi>t</mi></msub></mrow><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="hTanh(x)=\begin{cases}-1&amp;\text{if}\ x&lt;-1\\&#10;x&amp;\text{if}\ -1\leq x\leq 1\\&#10;1&amp;\text{if}\ x&gt;1\end{cases}" display="block"><mrow><mrow><mi>h</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mo>-</mo><mn>1</mn></mrow></mtd><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mtext>if</mtext></mpadded><mo>⁢</mo><mi>x</mi></mrow><mo>&lt;</mo><mrow><mo>-</mo><mn>1</mn></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mi>x</mi></mtd><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mtext>if</mtext></mpadded><mo>-</mo><mn>1</mn></mrow><mo>≤</mo><mi>x</mi><mo>≤</mo><mn>1</mn></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mtext>if</mtext></mpadded><mo>⁢</mo><mi>x</mi></mrow><mo>&gt;</mo><mn>1</mn></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Sentiment-Specific Word Embedding</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Following the traditional C&amp;W model <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>]</cite>, we incorporate the sentiment information into the neural network to learn sentiment-specific word embedding. We develop three neural networks with different strategies to integrate the sentiment information of tweets.</p>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Basic Model 1 (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>).</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">As an unsupervised approach, C&amp;W model does not explicitly capture the sentiment information of texts. An intuitive solution to integrate the sentiment information is predicting the sentiment distribution of text based on input ngram.
+We do not utilize the entire sentence as input because the length of different sentences might be variant. We therefore slide the window of ngram across a sentence, and then predict the sentiment polarity based on each ngram with a shared neural network.
+In the neural network, the distributed representation of higher layer are interpreted as features describing the input. Thus, we utilize the continuous vector of top layer to predict the sentiment distribution of text.</p>
+</div>
+<div id="S3.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Assuming there are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> labels, we modify the dimension of top layer in C&amp;W model as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m2" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> and add a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m3" class="ltx_Math" alttext="softmax" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></math> layer upon the top layer. The neural network (<span class="ltx_text ltx_font_bold">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m4" class="ltx_Math" alttext="\bm{{}_{h}}" display="inline"><msub><mi/><mi>h</mi></msub></math></span>) is given in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m5" class="ltx_Math" alttext="Softmax" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></math> layer is suitable for this scenario because its outputs are interpreted as conditional probabilities. Unlike C&amp;W, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m6" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> does not generate any corrupted ngram.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m7" class="ltx_Math" alttext="\bm{f}^{g}(t)" display="inline"><mrow><msup><mi>𝒇</mi><mi>g</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m8" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> denotes the number of sentiment polarity labels, be the gold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m9" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math>-dimensional multinomial distribution of input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m10" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m11" class="ltx_Math" alttext="\sum_{k}\bm{f}_{k}^{g}(t)=1" display="inline"><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><msubsup><mi>𝒇</mi><mi>k</mi><mi>g</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mrow><mo>=</mo><mn>1</mn></mrow></math>.
+For positive/negative classification, the distribution is of the form [1,0] for positive and [0,1] for negative. The cross-entropy error of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m12" class="ltx_Math" alttext="softmax" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></math> layer is :</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\centering loss_{h}(t)=-\sum_{k=\{0,1\}}\bm{f}_{k}^{g}(t)\cdot log(\bm{f}_{k}^%&#10;{h}(t))\@add@centering" display="block"><mrow><mrow><mi class="ltx_centering">l</mi><mo>⁢</mo><mi class="ltx_centering">o</mi><mo>⁢</mo><mi class="ltx_centering">s</mi><mo>⁢</mo><msub><mi class="ltx_centering">s</mi><mi>h</mi></msub><mo>⁢</mo><mrow class="ltx_centering"><mo>(</mo><mi class="ltx_centering">t</mi><mo>)</mo></mrow></mrow><mo class="ltx_centering">=</mo><mrow><mo class="ltx_centering">-</mo><mrow><munder><mo class="ltx_centering" largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow></mrow></munder><mrow><mrow><mrow><msubsup><mi class="ltx_centering">𝒇</mi><mi>k</mi><mi>g</mi></msubsup><mo>⁢</mo><mrow class="ltx_centering"><mo>(</mo><mi class="ltx_centering">t</mi><mo>)</mo></mrow></mrow><mo class="ltx_centering">⋅</mo><mi class="ltx_centering">l</mi></mrow><mo>⁢</mo><mi class="ltx_centering">o</mi><mo>⁢</mo><mi class="ltx_centering">g</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi class="ltx_centering">𝒇</mi><mi>k</mi><mi>h</mi></msubsup><mo>⁢</mo><mrow class="ltx_centering"><mo>(</mo><mi class="ltx_centering">t</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m13" class="ltx_Math" alttext="\bm{f}^{g}(t)" display="inline"><mrow><msup><mi>𝒇</mi><mi>g</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> is the gold sentiment distribution and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m14" class="ltx_Math" alttext="\bm{f}^{h}(t)" display="inline"><mrow><msup><mi>𝒇</mi><mi>h</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> is the predicted sentiment distribution.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Basic Model 2 (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.m1" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math>).</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> is trained by predicting the positive ngram as [1,0] and the negative ngram as [0,1]. However, the constraint of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> is too strict. The distribution of [0.7,0.3] can also be interpreted as a positive label because the positive score is larger than the negative score. Similarly, the distribution of [0.2,0.8] indicates negative polarity. Based on the above observation, the hard constraints in SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> should be relaxed. If the sentiment polarity of a tweet is positive, the predicted positive score is expected to be larger than the predicted negative score, and the exact reverse if the tweet has negative polarity.</p>
+</div>
+<div id="S3.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">We model the relaxed constraint with a ranking objective function and borrow the bottom four layers from SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="lookup\rightarrow linear\rightarrow hTanh\rightarrow linear" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi></mrow><mo>→</mo><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow><mo>→</mo><mrow><mi>h</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi></mrow><mo>→</mo><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></mrow></math> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b), to build the relaxed neural network (<span class="ltx_text ltx_font_bold">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="\bm{{}_{r}}" display="inline"><msub><mi/><mi>r</mi></msub></math></span>). Compared with SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m4" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m5" class="ltx_Math" alttext="softmax" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></math> layer is removed because SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m6" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> does not require probabilistic interpretation. The hinge loss of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m7" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> is modeled as described below.</p>
+<table id="S3.E6" class="ltx_equationgroup">
+
+<tr id="S3.E6X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6X.m2" class="ltx_Math" alttext="\displaystyle loss_{r}(t)=max(0,1" display="inline"><mrow><mi>l</mi><mi>o</mi><mi>s</mi><msub><mi>s</mi><mi>r</mi></msub><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><mo>=</mo><mi>m</mi><mi>a</mi><mi>x</mi><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mn>1</mn></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6X.m3" class="ltx_Math" alttext="\displaystyle-\delta_{s}(t)\bm{f}_{0}^{r}(t)" display="inline"><mrow><mo>-</mo><mrow><msub><mi>δ</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>𝒇</mi><mn>0</mn><mi>r</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(6)</span></td></tr>
+<tr id="S3.E6Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6Xa.m2" class="ltx_Math" alttext="\displaystyle+\delta_{s}(t)\bm{f}_{1}^{r}(t)\ )" display="inline"><mrow><mo>+</mo><msub><mi>δ</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><msubsup><mi>𝒇</mi><mn>1</mn><mi>r</mi></msubsup><mrow><mo>(</mo><mi>t</mi><mo rspace="7.5pt">)</mo></mrow><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m8" class="ltx_Math" alttext="\bm{f}_{0}^{r}" display="inline"><msubsup><mi>𝒇</mi><mn>0</mn><mi>r</mi></msubsup></math> is the predicted positive score, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m9" class="ltx_Math" alttext="\bm{f}_{1}^{r}" display="inline"><msubsup><mi>𝒇</mi><mn>1</mn><mi>r</mi></msubsup></math> is the predicted negative score,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m10" class="ltx_Math" alttext="\delta_{s}(t)" display="inline"><mrow><msub><mi>δ</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> is an indicator function reflecting the sentiment polarity of a sentence,</p>
+<table id="S3.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\delta_{s}(t)=\begin{cases}1&amp;\text{if}\ \bm{f}^{g}(t)=[1,0]\\&#10;-1&amp;\text{if}\ \bm{f}^{g}(t)=[0,1]\end{cases}" display="block"><mrow><mrow><msub><mi>δ</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mtext>if</mtext></mpadded><mo>⁢</mo><msup><mi>𝒇</mi><mi>g</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mn>0</mn></mrow><mo>]</mo></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mo>-</mo><mn>1</mn></mrow></mtd><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mtext>if</mtext></mpadded><mo>⁢</mo><msup><mi>𝒇</mi><mi>g</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">Similar with SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m11" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m12" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> also does not generate the corrupted ngram.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Unified Model (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>).</h4>
+
+<div id="S3.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The C&amp;W model learns word embedding by modeling syntactic contexts of words but ignoring sentiment information. By contrast, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> and SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> learn sentiment-specific word embedding by integrating the sentiment polarity of sentences but leaving out the syntactic contexts of words. We develop a unified model (<span class="ltx_text ltx_font_bold">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="\bm{{}_{u}}" display="inline"><msub><mi/><mi>u</mi></msub></math></span>) in this part, which captures the sentiment information of sentences as well as the syntactic contexts of words.
+SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> is illustrated in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(c).</p>
+</div>
+<div id="S3.SS2.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Given an original (or corrupted) ngram and the sentiment polarity of a sentence as the input, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> predicts a two-dimensional vector for each input ngram. The two scalars (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m2" class="ltx_Math" alttext="\bm{f}_{0}^{u}" display="inline"><msubsup><mi>𝒇</mi><mn>0</mn><mi>u</mi></msubsup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m3" class="ltx_Math" alttext="\bm{f}_{1}^{u}" display="inline"><msubsup><mi>𝒇</mi><mn>1</mn><mi>u</mi></msubsup></math>) stand for language model score and sentiment score of the input ngram, respectively. The training objectives of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> are that (1) the original ngram should obtain a higher language model score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m5" class="ltx_Math" alttext="\bm{f}_{0}^{u}(t)" display="inline"><mrow><msubsup><mi>𝒇</mi><mn>0</mn><mi>u</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> than the corrupted ngram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m6" class="ltx_Math" alttext="\bm{f}_{0}^{u}(t^{r})" display="inline"><mrow><msubsup><mi>𝒇</mi><mn>0</mn><mi>u</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><msup><mi>t</mi><mi>r</mi></msup><mo>)</mo></mrow></mrow></math>, and (2) the sentiment score of original ngram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m7" class="ltx_Math" alttext="\bm{f}_{1}^{u}(t)" display="inline"><mrow><msubsup><mi>𝒇</mi><mn>1</mn><mi>u</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> should be more consistent with the gold polarity annotation of sentence than corrupted ngram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m8" class="ltx_Math" alttext="\bm{f}_{1}^{u}(t^{r})" display="inline"><mrow><msubsup><mi>𝒇</mi><mn>1</mn><mi>u</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><msup><mi>t</mi><mi>r</mi></msup><mo>)</mo></mrow></mrow></math>.
+The loss function of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m9" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> is the linear combination of two hinge losses,</p>
+<table id="S3.E8" class="ltx_equationgroup">
+
+<tr id="S3.E8X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8X.m2" class="ltx_Math" alttext="\displaystyle loss_{u}(t,t^{r})\ =" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mi>u</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8X.m3" class="ltx_Math" alttext="\displaystyle\alpha\cdot loss_{cw}(t,t^{r})+" display="inline"><mrow><mrow><mrow><mi>α</mi><mo>⋅</mo><mi>l</mi></mrow><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow><mo>+</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(8)</span></td></tr>
+<tr id="S3.E8Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8Xa.m2" class="ltx_Math" alttext="\displaystyle(1-\alpha)\cdot loss_{us}(t,t^{r})" display="inline"><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⋅</mo><mi>l</mi></mrow><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mrow><mi>u</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m10" class="ltx_Math" alttext="loss_{cw}(t,t^{r})" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mrow><mi>c</mi><mo>⁢</mo><mi>w</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow></math> is the syntactic loss as given in Equation <a href="#S3.E1" title="(1) ‣ 3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m11" class="ltx_Math" alttext="loss_{us}(t,t^{r})" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>s</mi><mrow><mi>u</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup></mrow><mo>)</mo></mrow></mrow></math> is the sentiment loss as described in Equation <a href="#S3.E9" title="(9) ‣ Unified Model (SSWEu). ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>. The hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m12" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> weighs the two parts.</p>
+<table id="S3.E9" class="ltx_equationgroup">
+
+<tr id="S3.E9X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9X.m2" class="ltx_Math" alttext="\displaystyle loss_{us}(t,t^{r})=max(0,1" display="inline"><mrow><mi>l</mi><mi>o</mi><mi>s</mi><msub><mi>s</mi><mrow><mi>u</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mrow><mo>(</mo><mi>t</mi><mo>,</mo><msup><mi>t</mi><mi>r</mi></msup><mo>)</mo></mrow><mo>=</mo><mi>m</mi><mi>a</mi><mi>x</mi><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mn>1</mn></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9X.m3" class="ltx_Math" alttext="\displaystyle-\delta_{s}(t)\bm{f}_{1}^{u}(t)" display="inline"><mrow><mo>-</mo><mrow><msub><mi>δ</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>𝒇</mi><mn>1</mn><mi>u</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(9)</span></td></tr>
+<tr id="S3.E9Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9Xa.m2" class="ltx_Math" alttext="\displaystyle+\delta_{s}(t)\bm{f}_{1}^{u}(t^{r})\ )" display="inline"><mrow><mo>+</mo><msub><mi>δ</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><msubsup><mi>𝒇</mi><mn>1</mn><mi>u</mi></msubsup><mrow><mo>(</mo><msup><mi>t</mi><mi>r</mi></msup><mo rspace="7.5pt">)</mo></mrow><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Model Training.</h4>
+
+<div id="S3.SS2.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">We train sentiment-specific word embedding from massive distant-supervised tweets collected with positive and negative emoticons<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We use the emoticons selected by Hu et al. <cite class="ltx_cite">[<a href="#bib.bib69" title="Unsupervised sentiment analysis with emotional signals" class="ltx_ref">20</a>]</cite>. The positive emoticons are :) : ) :-) :D =), and the negative emoticons are :( : ( :-( .</span></span></span>. We crawl tweets from April 1st, 2013 to April 30th, 2013 with TwitterAPI. We tokenize each tweet with TwitterNLP <cite class="ltx_cite">[<a href="#bib.bib53" title="Part-of-speech tagging for twitter: annotation, features, and experiments" class="ltx_ref">15</a>]</cite>, remove the <span class="ltx_text ltx_font_italic">@user</span> and <span class="ltx_text ltx_font_italic">URLs</span> of each tweet, and filter the tweets that are too short (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P4.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 7 words). Finally, we collect 10M tweets, selected by 5M tweets with positive emoticons and 5M tweets with negative emoticons.</p>
+</div>
+<div id="S3.SS2.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">We train SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P4.p2.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P4.p2.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> and SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P4.p2.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> by taking the derivative of the loss through back-propagation with respect to the whole set of parameters <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>]</cite>, and use AdaGrad <cite class="ltx_cite">[<a href="#bib.bib42" title="Adaptive subgradient methods for online learning and stochastic optimization" class="ltx_ref">12</a>]</cite> to update the parameters.
+We empirically set the window size as 3, the embedding length as 50, the length of hidden layer as 20 and the learning rate of AdaGrad as 0.1 for all baseline and our models.
+We learn embedding for unigrams, bigrams and trigrams separately with same neural network and same parameter setting. The contexts of unigram (bigram/trigram) are the surrounding unigrams (bigrams/trigrams), respectively.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Twitter Sentiment Classification</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We apply sentiment-specific word embedding for Twitter sentiment classification under a supervised learning framework as in previous work <cite class="ltx_cite">[<a href="#bib.bib142" title="Thumbs up?: sentiment classification using machine learning techniques" class="ltx_ref">33</a>]</cite>.
+Instead of hand-crafting features, we incorporate the continuous representation of words and phrases as the feature of a tweet.
+The sentiment classifier is built from tweets with manually annotated sentiment polarity.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">We explore <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="min" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="average" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="max" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></math> convolutional layers <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>, <a href="#bib.bib155" title="Dynamic pooling and unfolding recursive autoencoders for paraphrase detection" class="ltx_ref">36</a>]</cite>, which have been used as simple and effective methods for compositionality learning in vector-based semantics <cite class="ltx_cite">[<a href="#bib.bib127" title="Composition in distributional models of semantics" class="ltx_ref">28</a>]</cite>, to obtain the tweet representation. The result is the concatenation of vectors derived from different convolutional layers.</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="z(tw)=[z_{max}(tw),z_{min}(tw),z_{average}(tw)]" display="block"><mrow><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>[</mo><mrow><mrow><msub><mi>z</mi><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>z</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>z</mi><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="z(tw)" display="inline"><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> is the representation of tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="tw" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m6" class="ltx_Math" alttext="z_{x}(tw)" display="inline"><mrow><msub><mi>z</mi><mi>x</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> is the results of the convolutional layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m7" class="ltx_Math" alttext="x\in\{min,max,average\}" display="inline"><mrow><mi>x</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow><mo>,</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow><mo>,</mo><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi></mrow></mrow><mo>}</mo></mrow></mrow></math>.
+Each convolutional layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m8" class="ltx_Math" alttext="z_{x}" display="inline"><msub><mi>z</mi><mi>x</mi></msub></math> employs the embedding of unigrams, bigrams and trigrams separately and conducts the matrix-vector operation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m9" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> on the sequence represented by columns in each lookup table. The output of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m10" class="ltx_Math" alttext="z_{x}" display="inline"><msub><mi>z</mi><mi>x</mi></msub></math> is the concatenation of results obtained from different lookup tables.</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="z_{x}(tw)=[w_{x}\langle L_{uni}\rangle^{tw},w_{x}\langle L_{bi}\rangle^{tw},w_%&#10;{x}\langle L_{tri}\rangle^{tw}]" display="block"><mrow><mrow><msub><mi>z</mi><mi>x</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>[</mo><mrow><mrow><msub><mi>w</mi><mi>x</mi></msub><mo>⁢</mo><msup><mrow><mo>⟨</mo><msub><mi>L</mi><mrow><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>i</mi></mrow></msub><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow></msup></mrow><mo>,</mo><mrow><msub><mi>w</mi><mi>x</mi></msub><mo>⁢</mo><msup><mrow><mo>⟨</mo><msub><mi>L</mi><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi></mrow></msub><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow></msup></mrow><mo>,</mo><mrow><msub><mi>w</mi><mi>x</mi></msub><mo>⁢</mo><msup><mrow><mo>⟨</mo><msub><mi>L</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi></mrow></msub><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow></msup></mrow></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m11" class="ltx_Math" alttext="w_{x}" display="inline"><msub><mi>w</mi><mi>x</mi></msub></math> is the convolutional function of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m12" class="ltx_Math" alttext="z_{x}" display="inline"><msub><mi>z</mi><mi>x</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m13" class="ltx_Math" alttext="\langle L\rangle^{tw}" display="inline"><msup><mrow><mo>⟨</mo><mi>L</mi><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>⁢</mo><mi>w</mi></mrow></msup></math> is the concatenated column vectors of the words in the tweet. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m14" class="ltx_Math" alttext="L_{uni}" display="inline"><msub><mi>L</mi><mrow><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m15" class="ltx_Math" alttext="L_{bi}" display="inline"><msub><mi>L</mi><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m16" class="ltx_Math" alttext="L_{tri}" display="inline"><msub><mi>L</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> are the lookup tables of the unigram, bigram and trigram embedding, respectively.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiment</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments to evaluate SSWE by incorporating it into a supervised learning framework for Twitter sentiment classification. We also directly evaluate the effectiveness of the SSWE by measuring the word similarity in the embedding space for sentiment lexicons.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Twitter Sentiment Classification</h3>
+
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Experiment Setup and Datasets.</h4>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments on the latest Twitter sentiment classification benchmark dataset in SemEval 2013
+ <cite class="ltx_cite">[<a href="#bib.bib135" title="SemEval-2013 task 2: sentiment analysis in twitter" class="ltx_ref">31</a>]</cite>. The training and development sets were completely in full to task participants. However, we were unable to download all the training and development sets because some tweets were deleted or not available due to modified authorization status. The test set is directly provided to the participants. The distribution of our dataset is given in Table <a href="#S4.T1" title="Table 1 ‣ Experiment Setup and Datasets. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. We train sentiment classifier with LibLinear <cite class="ltx_cite">[<a href="#bib.bib48" title="LIBLINEAR: a library for large linear classification" class="ltx_ref">13</a>]</cite> on the training set, tune parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="-c" display="inline"><mrow><mo>-</mo><mi>c</mi></mrow></math> on the dev set and evaluate on the test set. Evaluation metric is the Macro-F1 of positive and negative categories <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We investigate 2-class Twitter sentiment classification (positive/negative) instead of 3-class Twitter sentiment classification (positive/negative/neutral) in SemEval2013.</span></span></span>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Positive</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Negative</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Neutral</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Total</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Train</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2,642</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">994</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3,436</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">7,072</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">Dev</td>
+<td class="ltx_td ltx_align_center ltx_border_r">408</td>
+<td class="ltx_td ltx_align_center ltx_border_r">219</td>
+<td class="ltx_td ltx_align_center ltx_border_r">493</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1,120</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">Test</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">1,570</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">601</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">1,639</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">3,810</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of the SemEval 2013 Twitter sentiment classification dataset.</div>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Baseline Methods.</h4>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We compare our method with the following sentiment classification algorithms:</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">(1) <span class="ltx_text ltx_font_italic">DistSuper</span>: We use the 10 million tweets selected by positive and negative emoticons as training data, and build sentiment classifier with LibLinear and ngram features <cite class="ltx_cite">[<a href="#bib.bib55" title="Twitter sentiment classification using distant supervision" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">(2) <span class="ltx_text ltx_font_italic">SVM</span>: The ngram features and Support Vector Machine are widely used baseline methods to build sentiment classifiers <cite class="ltx_cite">[<a href="#bib.bib142" title="Thumbs up?: sentiment classification using machine learning techniques" class="ltx_ref">33</a>]</cite>. LibLinear is used to train the SVM classifier.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">(3) <span class="ltx_text ltx_font_italic">NBSVM</span>: NBSVM <cite class="ltx_cite">[<a href="#bib.bib179" title="Baselines and bigrams: simple, good sentiment and topic classification" class="ltx_ref">45</a>]</cite> is a state-of-the-art performer on many sentiment classification datasets, which trades-off between Naive Bayes and NB-enhanced SVM.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">(4) <span class="ltx_text ltx_font_italic">RAE</span>: Recursive Autoencoder <cite class="ltx_cite">[<a href="#bib.bib160" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">39</a>]</cite> has been proven effective in many sentiment analysis tasks by learning compositionality automatically. We run RAE with randomly initialized word embedding.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p6" class="ltx_para">
+<p class="ltx_p">(5) <span class="ltx_text ltx_font_italic">NRC</span>: NRC builds the top-performed system in SemEval 2013 Twitter sentiment classification track which incorporates diverse sentiment lexicons and many manually designed features. We re-implement this system because the codes are not publicly available <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>For 3-class sentiment classification in SemEval 2013, our re-implementation of NRC achieved 68.3%, 0.7% lower than NRC (69%) due to less training data.</span></span></span>. <span class="ltx_text ltx_font_italic">NRC-ngram</span> refers to the feature set of <span class="ltx_text ltx_font_italic">NRC</span> leaving out ngram features.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p7" class="ltx_para">
+<p class="ltx_p">Except for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p7.m1" class="ltx_Math" alttext="DistSuper" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></math>, other baseline methods are conducted in a supervised manner. We do not compare with RNTN <cite class="ltx_cite">[<a href="#bib.bib161" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">40</a>]</cite> because we cannot efficiently train the RNTN model. The reason lies in that the tweets in our dataset do not have accurately parsed results or fine grained sentiment labels for phrases. Another reason is that the RNTN model trained on movie reviews cannot be directly applied on tweets due to the differences between domains <cite class="ltx_cite">[<a href="#bib.bib15" title="Biographies, bollywood, boom-boxes and blenders: domain adaptation for sentiment classification" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Results and Analysis.</h4>
+
+<div id="S4.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ Results and Analysis. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the macro-F1 of the baseline systems as well as the SSWE-based methods on positive/negative sentiment classification of tweets.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Method</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Macro-F1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">DistSuper + unigram</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61.74</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">DistSuper + uni/bi/tri-gram</th>
+<td class="ltx_td ltx_align_center ltx_border_r">63.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">SVM + unigram</th>
+<td class="ltx_td ltx_align_center ltx_border_r">74.50</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">SVM + uni/bi/tri-gram</th>
+<td class="ltx_td ltx_align_center ltx_border_r">75.06</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">NBSVM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">75.28</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">RAE</th>
+<td class="ltx_td ltx_align_center ltx_border_r">75.12</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">NRC (<span class="ltx_text ltx_font_bold">Top System</span> in SemEval)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">84.73</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">NRC - ngram</th>
+<td class="ltx_td ltx_align_center ltx_border_r">84.17</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">84.98</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>+NRC</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">86.58</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>+NRC-ngram</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">86.48</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Macro-F1 on positive/negative classification of tweets.</div>
+</div>
+<div id="S4.SS1.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Distant supervision is relatively weak because the noisy-labeled tweets are treated as the gold standard, which affects the performance of classifier. The results of bag-of-ngram (uni/bi/tri-gram) features are not satisfied because the one-hot word representation cannot capture the latent connections between words. NBSVM and RAE perform comparably and have a big gap in comparison with the NRC and SSWE-based methods. The reason is that RAE and NBSVM learn the representation of tweets from the small-scale manually annotated training set, which cannot well capture the comprehensive linguistic phenomenons of words.</p>
+</div>
+<div id="S4.SS1.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">NRC implements a variety of features and reaches 84.73% in macro-F1, verifying the importance of a better feature representation for Twitter sentiment classification. We achieve 84.98% by using only SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p3.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> as features without borrowing any sentiment lexicons or hand-crafted rules. The results indicate that SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p3.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> automatically learns discriminative features from massive tweets and performs comparable with the state-of-the-art manually designed features. After concatenating SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p3.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> with the feature set of <span class="ltx_text ltx_font_italic">NRC</span>, the performance is further improved to 86.58%. We also compare SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p3.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> with the ngram feature by integrating SSWE into <span class="ltx_text ltx_font_italic">NRC-ngram</span>. The concatenated features <span class="ltx_text ltx_font_italic">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p3.m5" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>+NRC-ngram</span> (86.48%) outperform the original feature set of NRC (84.73%).</p>
+</div>
+<div id="S4.SS1.SSS0.P3.p4" class="ltx_para">
+<p class="ltx_p">As a reference, we apply SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p4.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> on subjective classification of tweets, and obtain 72.17% in macro-F1 by using only SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p4.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> as feature. After combining SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P3.p4.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> with the feature set of <span class="ltx_text ltx_font_italic">NRC</span>, we improve NRC from 74.86% to 75.39% for subjective classification.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Comparision between Different Word Embedding.</h4>
+
+<div id="S4.SS1.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">We compare sentiment-specific word embedding (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p1.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>) with baseline embedding learning algorithms by only using word embedding as features for Twitter sentiment classification. We use the embedding of unigrams, bigrams and trigrams in the experiment. The embeddings of C&amp;W <cite class="ltx_cite">[<a href="#bib.bib29" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>]</cite>, word2vec<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Available at https://code.google.com/p/word2vec/. We utilize the Skip-gram model because it performs better than CBOW in our experiments.</span></span></span>, WVSA <cite class="ltx_cite">[<a href="#bib.bib110" title="Learning word vectors for sentiment analysis" class="ltx_ref">26</a>]</cite> and our models are trained with the same dataset and same parameter setting.
+We compare with C&amp;W and word2vec as they have been proved effective in many NLP tasks.
+The trade-off parameter of ReEmb <cite class="ltx_cite">[<a href="#bib.bib90" title="Re-embedding words" class="ltx_ref">23</a>]</cite> is tuned on the development set of SemEval 2013.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the performance on the positive/negative classification of tweets<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>MVSA and ReEmb are not suitable for learning bigram and trigram embedding because their sentiment predictor functions only utilize the unigram embedding.</span></span></span>. ReEmb(C&amp;W) and ReEmb(w2v) stand for the use of embeddings learned from 10 million distant-supervised tweets with C&amp;W and word2vec, respectively.
+Each row of Table <a href="#S4.T3" title="Table 3 ‣ Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> represents a word embedding learning algorithm. Each column stands for a type of embedding used to compose features of tweets.
+The column <span class="ltx_text ltx_font_italic">uni+bi</span> denotes the use of unigram and bigram embedding, and the column <span class="ltx_text ltx_font_italic">uni+bi+tri</span> indicates the use of unigram, bigram and trigram embedding.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:59.8pt;" width="59.8pt">Embedding</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">unigram</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">uni+bi</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">uni+bi+tri</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:59.8pt;" width="59.8pt">C&amp;W</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">74.89</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">75.24</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">75.89</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">Word2vec</th>
+<td class="ltx_td ltx_align_center ltx_border_r">73.21</td>
+<td class="ltx_td ltx_align_center ltx_border_r">75.07</td>
+<td class="ltx_td ltx_align_center ltx_border_r">76.31</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">ReEmb(C&amp;W)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">75.87</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">ReEmb(w2v)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">75.21</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">WVSA</th>
+<td class="ltx_td ltx_align_center ltx_border_r">77.04</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:59.8pt;" width="59.8pt">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">81.33</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">83.16</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">83.37</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">80.45</td>
+<td class="ltx_td ltx_align_center ltx_border_r">81.52</td>
+<td class="ltx_td ltx_align_center ltx_border_r">82.60</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:59.8pt;" width="59.8pt">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">83.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">84.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">84.98</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Macro-F1 on positive/negative classification of tweets with different word embeddings.</div>
+</div>
+<div id="S4.SS1.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p">From the first column of Table <a href="#S4.T3" title="Table 3 ‣ Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we can see that the performance of C&amp;W and word2vec are obviously lower than sentiment-specific word embeddings by only using unigram embedding as features.
+The reason is that C&amp;W and word2vec do not explicitly exploit the sentiment information of the text, resulting in that the words with opposite polarity such as <span class="ltx_text ltx_font_italic">good</span> and <span class="ltx_text ltx_font_italic">bad</span> are mapped to close word vectors. When such word embeddings are fed as features to a Twitter sentiment classifier, the discriminative ability of sentiment words are weakened thus the classification performance is affected.
+Sentiment-specific word embeddings (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>) effectively distinguish words with opposite sentiment polarity and perform best in three settings. SSWE outperforms MVSA by exploiting more contextual information in the sentiment predictor function. SSWE outperforms ReEmb by leveraging more sentiment information from massive distant-supervised tweets. Among three sentiment-specific word embeddings, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> captures more context information and yields best performance. SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m5" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> and SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P4.p3.m6" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> obtain comparative results.</p>
+</div>
+<div id="S4.SS1.SSS0.P4.p4" class="ltx_para">
+<p class="ltx_p">From each row of Table <a href="#S4.T3" title="Table 3 ‣ Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we can see that the bigram and trigram embeddings consistently improve the performance of Twitter sentiment classification. The underlying reason is that
+a phrase, which cannot be accurately represented by unigram embedding, is directly encoded into the ngram embedding as an idiomatic unit.
+A typical case in sentiment analysis is that the composed phrase and multiword expression may have a different sentiment polarity than the individual words it contains, such as <span class="ltx_text ltx_font_italic">not [bad]</span> and <span class="ltx_text ltx_font_italic">[great] deal of</span> (the word in the bracket has different sentiment polarity with the ngram). A very recent study by Mikolov et al. <cite class="ltx_cite">[<a href="#bib.bib123" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">27</a>]</cite> also verified the effectiveness of phrase embedding for analogically reasoning phrases.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Effect of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> in SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math></h4>
+
+<div id="S4.SS1.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">We tune the hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p1.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> on the development set by using unigram embedding as features. As given in Equation <a href="#S3.E8" title="(8) ‣ Unified Model (SSWEu). ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p1.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is the weighting score of syntactic loss of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p1.m4" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> and trades-off the syntactic and sentiment losses. SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p1.m5" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> is trained from 10 million distant-supervised tweets.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-1146/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="323" height="418" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Macro-F1 of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> on the development set of SemEval 2013 with different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>. </div>
+</div>
+<div id="S4.SS1.SSS0.P5.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F2" title="Figure 2 ‣ Effect of α in SSWEu ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the macro-F1 of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> on positive/negative classification of tweets with different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> on our development set.
+We can see that SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> performs better when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is in the range of [0.5, 0.6], which balances the syntactic context and sentiment information. The model with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>=1 stands for C&amp;W model, which only encodes the syntactic contexts of words. The sharp decline at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P5.p2.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>=1 reflects the importance of sentiment information in learning word embedding for Twitter sentiment classification.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P6" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Effect of Distant-supervised Data in SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math></h4>
+
+<div id="S4.SS1.SSS0.P6.p1" class="ltx_para">
+<p class="ltx_p">We investigate how the size of the distant-supervised data affects the performance of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.p1.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> feature for Twitter sentiment classification. We vary the number of distant-supervised tweets from 1 million to 12 million, increased by 1 million. We set the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.p1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.p1.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> as 0.5, according to the experiments shown in Figure <a href="#S4.F2" title="Figure 2 ‣ Effect of α in SSWEu ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Results of positive/negative classification of tweets on our development set are given in Figure <a href="#S4.F3" title="Figure 3 ‣ Effect of Distant-supervised Data in SSWEu ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S4.F3" class="ltx_figure"><img src="P14-1146/image003.png" id="S4.F3.g1" class="ltx_graphics ltx_centering" width="323" height="418" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Macro-F1 of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> with different size of distant-supervised data on our development set.</div>
+</div>
+<div id="S4.SS1.SSS0.P6.p2" class="ltx_para">
+<p class="ltx_p">We can see that when more distant-supervised tweets are added, the accuracy of SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.p2.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> consistently improves. The underlying reason is that when more tweets are incorporated, the word embedding is better estimated as the vocabulary size is larger and the context and sentiment information are richer. When we have 10 million distant-supervised tweets, the SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P6.p2.m2" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> feature increases the macro-F1 of positive/negative classification of tweets to 82.94% on our development set.
+When we have more than 10 million tweets, the performance remains stable as the contexts of words have been mostly covered.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Word Similarity of Sentiment Lexicons</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The quality of SSWE has been implicitly evaluated when applied in Twitter sentiment classification in the previous subsection.
+We explicitly evaluate it in this section through word similarity in the embedding space for sentiment lexicons.
+The evaluation metric is the accuracy of polarity consistency between each sentiment word and its top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> closest words in the sentiment lexicon,</p>
+<table id="S4.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10.m1" class="ltx_Math" alttext="Accuracy=\frac{\sum_{i=1}^{\#Lex}\sum_{j=1}^{N}\beta(w_{i},c_{ij})}{\#Lex%&#10;\times N}" display="block"><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>y</mi></mrow><mo>=</mo><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msubsup><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup><mrow><mi>β</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mrow><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow><mo>×</mo><mi>N</mi></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="\#Lex" display="inline"><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></math> is the number of words in the sentiment lexicon, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> is the <span class="ltx_text ltx_font_italic">i-th</span> word in the lexicon, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="c_{ij}" display="inline"><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the <span class="ltx_text ltx_font_italic">j-th</span> closest word to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> in the lexicon with cosine similarity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="\beta(w_{i},c_{ij})" display="inline"><mrow><mi>β</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math> is an indicator function that is equal to 1 if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m8" class="ltx_Math" alttext="c_{ij}" display="inline"><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> have the same sentiment polarity and 0 for the opposite case. The higher accuracy refers to a better polarity consistency of words in the sentiment lexicon. We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m9" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> as 100 in our experiment.</p>
+</div>
+<div id="S4.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Experiment Setup and Datasets</h4>
+
+<div id="S4.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We utilize the widely-used sentiment lexicons, namely <span class="ltx_text ltx_font_italic">MPQA</span> <cite class="ltx_cite">[<a href="#bib.bib187" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">46</a>]</cite> and <span class="ltx_text ltx_font_italic">HL</span> <cite class="ltx_cite">[<a href="#bib.bib68" title="Mining and summarizing customer reviews" class="ltx_ref">19</a>]</cite>, to evaluate the quality of word embedding. For each lexicon, we remove the words that do not appear in the lookup table of word embedding. We only use unigram embedding in this section because these sentiment lexicons do not contain phrases. The distribution of the lexicons used in this paper is listed in Table <a href="#S4.T4" title="Table 4 ‣ Experiment Setup and Datasets ‣ 4.2 Word Similarity of Sentiment Lexicons ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Lexicon</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Positive</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Negative</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Total</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">HL</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1,331</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2,647</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3,978</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">MPQA</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1,932</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2,817</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4,749</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Joint</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">1,051</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">2,024</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">3,075</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Statistics of the sentiment lexicons. <span class="ltx_text ltx_font_italic">Joint</span> stands for the words that occur in both <span class="ltx_text ltx_font_italic">HL</span> and <span class="ltx_text ltx_font_italic">MPQA</span> with the same sentiment polarity.</div>
+</div>
+</div>
+<div id="S4.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Results.</h4>
+
+<div id="S4.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T5" title="Table 5 ‣ Results. ‣ 4.2 Word Similarity of Sentiment Lexicons ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows our results compared to other word embedding learning algorithms. The accuracy of <span class="ltx_text ltx_font_italic">random</span> result is 50% as positive and negative words are randomly occurred in the nearest neighbors of each word. Sentiment-specific word embeddings (SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math>, SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math>) outperform existing neural models (C&amp;W, word2vec) by large margins.</p>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Embedding</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">HL</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">MPQA</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Joint</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Random</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">50.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">50.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">50.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">C&amp;W</th>
+<td class="ltx_td ltx_align_center ltx_border_r">63.10</td>
+<td class="ltx_td ltx_align_center ltx_border_r">58.13</td>
+<td class="ltx_td ltx_align_center ltx_border_r">62.58</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Word2vec</th>
+<td class="ltx_td ltx_align_center ltx_border_r">66.22</td>
+<td class="ltx_td ltx_align_center ltx_border_r">60.72</td>
+<td class="ltx_td ltx_align_center ltx_border_r">65.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">ReEmb(C&amp;W)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">64.81</td>
+<td class="ltx_td ltx_align_center ltx_border_r">59.76</td>
+<td class="ltx_td ltx_align_center ltx_border_r">64.09</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">ReEmb(w2v)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">67.16</td>
+<td class="ltx_td ltx_align_center ltx_border_r">61.81</td>
+<td class="ltx_td ltx_align_center ltx_border_r">66.39</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">WVSA</th>
+<td class="ltx_td ltx_align_center ltx_border_r">68.14</td>
+<td class="ltx_td ltx_align_center ltx_border_r">64.07</td>
+<td class="ltx_td ltx_align_center ltx_border_r">67.12</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m1" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">74.17</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">68.36</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">74.03</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m2" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">73.65</td>
+<td class="ltx_td ltx_align_center ltx_border_r">68.02</td>
+<td class="ltx_td ltx_align_center ltx_border_r">73.14</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m3" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">77.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">71.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">77.33</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Accuracy of the polarity consistency of words in different sentiment lexicons.</div>
+</div>
+<div id="S4.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="{}_{u}" display="inline"><msub><mi/><mi>u</mi></msub></math> performs best in three lexicons. SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="{}_{h}" display="inline"><msub><mi/><mi>h</mi></msub></math> and SSWE<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="{}_{r}" display="inline"><msub><mi/><mi>r</mi></msub></math> have comparable performances.
+Experimental results further demonstrate that sentiment-specific word embeddings are able to capture the sentiment information of texts and distinguish words with opposite sentiment polarity, which are not well solved in traditional neural models like C&amp;W and word2vec.
+SSWE outperforms MVSA and ReEmb by exploiting more context information of words and sentiment information of sentences, respectively.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we propose learning continuous word representations as features for Twitter sentiment classification under a supervised learning framework. We show that the word embedding learned by traditional neural networks are not effective enough for Twitter sentiment classification.
+These methods typically only model the context information of words so that they cannot distinguish words with similar context but opposite sentiment polarity (e.g. <span class="ltx_text ltx_font_italic">good</span> and <span class="ltx_text ltx_font_italic">bad</span>).
+We learn sentiment-specific word embedding (SSWE) by integrating the sentiment information into the loss functions of three neural networks.
+We train SSWE with massive distant-supervised tweets selected by positive and negative emoticons.
+The effectiveness of SSWE has been implicitly evaluated by using it as features in sentiment classification on the benchmark dataset in SemEval 2013, and explicitly verified by measuring word similarity in the embedding space for sentiment lexicons.
+Our unified model combining syntactic context of words and sentiment information of sentences yields the best performance in both experiments.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Yajuan Duan, Shujie Liu, Zhenghua Li, Li Dong, Hong Sun and Lanjun Zhou for their great help.
+This research was partly supported by National Natural Science Foundation of China (No.61133012, No.61273321, No.61300113).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Barbosa and J. Feng</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Robust sentiment detection on twitter from biased and noisy data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 36–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, A. Courville and P. Vincent</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Representation learning: a review and new perspectives</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Trans. Pattern Analysis and Machine Intelligence</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Janvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep learning of representations: looking forward</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1305.0445</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Bespalov, B. Bai, Y. Qi and A. Shokoufandeh</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment classification based on supervised latent n-gram analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 375–382</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Bespalov, Y. Qi, B. Bai and A. Shokoufandeh</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment classification with supervised sequence embedding</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning and Knowledge Discovery in Databases</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 159–174</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">the Journal of machine Learning research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer, M. Dredze and F. Pereira</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biographies, bollywood, boom-boxes and blenders: domain adaptation for sentiment classification</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">7</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P2.p7" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 C&amp;W Model ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.SSS0.P4.p2" title="Model Training. ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Twitter Sentiment Classification ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.p1" title="3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS1.SSS0.P4.p1" title="Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Davidov, O. Tsur and A. Rappoport</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Enhanced sentiment learning using twitter hashtags and smileys</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 241–249</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Ding, B. Liu and P. S. Yu</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A holistic lexicon-based approach to opinion mining</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 231–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive subgradient methods for online learning and stochastic optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P4.p2" title="Model Training. ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Fan, K. Chang, C. Hsieh, X. Wang and C. Lin</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBLINEAR: a library for large linear classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">9</span>, <span class="ltx_text ltx_bib_pages"> pp. 1871–1874</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="Experiment Setup and Datasets. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Feldman</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Techniques and applications for sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">56</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 82–89</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Gimpel, N. Schneider, B. O’Connor, D. Das, D. Mills, J. Eisenstein, M. Heilman, D. Yogatama, J. Flanigan and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Part-of-speech tagging for twitter: annotation, features, and experiments</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 42–47</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-2008" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P4.p1" title="Model Training. ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation for large-scale sentiment classification: a deep learning approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of International Conference on Machine Learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Go, R. Bhayani and L. Huang</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter sentiment classification using distant supervision</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CS224N Project Report, Stanford</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS1.SSS0.P2.p2" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. M. Hermann and P. Blunsom</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The role of syntax in vector space models of compositional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 894–904</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1088" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hu and B. Liu</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining and summarizing customer reviews</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 168–177</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Experiment Setup and Datasets ‣ 4.2 Word Similarity of Sentiment Lexicons ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Hu, J. Tang, H. Gao and H. Liu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised sentiment analysis with emotional signals</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 607–618</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.SS2.SSS0.P4.p1" title="Model Training. ‣ 3.2 Sentiment-Specific Word Embedding ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Jiang, M. Yu, M. Zhou, X. Liu and T. Zhao</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Target-dependent twitter sentiment classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Proceeding of Annual Meeting of the Association for Computational
+Linguistics</span> <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 151–160</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib88" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Kouloumpis, T. Wilson and J. Moore</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter sentiment analysis: the good the bad and the omg!</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Labutov and H. Lipson</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Re-embedding words</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS1.SSS0.P4.p1" title="Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Liu</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis and opinion mining</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Synthesis Lectures on Human Language Technologies</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib106" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Liu, W. Li and M. Guo</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Emoticon smoothed language models for twitter sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. L. Maas, R. E. Daly, P. T. Pham, D. Huang, A. Y. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning word vectors for sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS1.SSS0.P4.p1" title="Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib123" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Conference on Neural Information Processing Systems</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.SSS0.P4.p4" title="Comparision between Different Word Embedding. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib127" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mitchell and M. Lapata</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Composition in distributional models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Science</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">8</span>), <span class="ltx_text ltx_bib_pages"> pp. 1388–1429</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p2" title="3.3 Twitter Sentiment Classification ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib129" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Mnih and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A scalable hierarchical distributed language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1081–1088</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib130" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. M. Mohammad, S. Kiritchenko and X. Zhu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NRC-canada: building the state-of-the-art in sentiment analysis of tweets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of the International Workshop on Semantic Evaluation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p3" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib135" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Nakov, S. Rosenthal, Z. Kozareva, V. Stoyanov, A. Ritter and T. Wilson</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2013 task 2: sentiment analysis in twitter</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">13</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.SSS0.P1.p1" title="Experiment Setup and Datasets. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib138" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Pak and P. Paroubek</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter as a corpus for sentiment analysis and opinion mining</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2010</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib142" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang, L. Lee and S. Vaithyanathan</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Thumbs up?: sentiment classification using machine learning techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 79–86</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS3.p1" title="3.3 Twitter Sentiment Classification ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S4.SS1.SSS0.P2.p3" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib140" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion mining and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations and trends in information retrieval</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–135</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib153" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Annual Meeting of the Association for Computational Linguistics</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib155" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, E. H. Huang, J. Pennington, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic pooling and unfolding recursive autoencoders for paraphrase detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Conference on Neural Information Processing Systems</span> <span class="ltx_text ltx_bib_volume">24</span>, <span class="ltx_text ltx_bib_pages"> pp. 801–809</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p2" title="3.3 Twitter Sentiment Classification ‣ 3 Sentiment-Specific Word Embedding for Twitter Sentiment Classification ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib156" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, B. Huval, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic Compositionality Through Recursive Matrix-Vector Spaces</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib158" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, C. C. Lin, A. Ng and C. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing natural scenes and natural language with recursive neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 129–136</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib160" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E.H. Huang, A.Y. Ng and C.D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS1.SSS0.P2.p5" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib161" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Wu, J. Chuang, C. D. Manning, A. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive deep models for semantic compositionality over a sentiment treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1631–1642</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1170" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS1.SSS0.P2.p7" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib165" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Taboada, J. Brooke, M. Tofiloski, K. Voll and M. Stede</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexicon-based methods for sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 267–307</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib168" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Thelwall, K. Buckley and G. Paltoglou</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment strength detection for the social web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Society for Information Science and Technology</span> <span class="ltx_text ltx_bib_volume">63</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 163–173</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib171" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Annual Meeting of the Association for Computational Linguistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib174" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Thumbs up or thumbs down?: semantic orientation applied to unsupervised classification of reviews</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 417–424</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib179" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Wang and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Baselines and bigrams: simple, good sentiment and topic classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 90–94</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P2.p4" title="Baseline Methods. ‣ 4.1 Twitter Sentiment Classification ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib187" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 347–354</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Experiment Setup and Datasets ‣ 4.2 Word Similarity of Sentiment Lexicons ‣ 4 Experiment ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib193" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[47]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yessenalina and C. Cardie</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Compositional matrix-space models for sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 172–182</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Learning Continuous Representations for Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib195" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[48]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Zhao, L. Dong, J. Wu and K. Xu</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MoodLens: an emoticon-based sentiment analysis system for chinese tweets</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Twitter Sentiment Classification ‣ 2 Related Work ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib198" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[49]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zheng, H. Chen and T. Xu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep learning for chinese word segmentation and pos tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 647–657</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Sentiment-Specific Word Embedding  for Twitter Sentiment Classification  This work was done when the first and third authors were visiting Microsoft Research Asia." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:39:12 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

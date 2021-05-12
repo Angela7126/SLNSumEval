@@ -1,0 +1,695 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>POS induction with distributional and morphological informationusing a distance-dependent Chinese restaurant process</title>
+<!--Generated on Wed Jun 11 17:44:00 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">POS induction with distributional and morphological information
+<br class="ltx_break"/>using a distance-dependent Chinese restaurant process</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Kairit Sirts 
+<br class="ltx_break"/>Institute of Cybernetics at 
+<br class="ltx_break"/>Tallinn University of Technology 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sirts@ioc.ee</span> 
+<br class="ltx_break"/>&amp;Jacob Eisenstein 
+<br class="ltx_break"/>School of Interactive Computing 
+<br class="ltx_break"/>Georgia Institute of Technology 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">jacobe@gatech.edu</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Micha Elsner
+<br class="ltx_break"/>Department of Linguistics
+<br class="ltx_break"/>The Ohio State University
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">melsner0@gmail.com
+<br class="ltx_break"/>&amp;</span>Sharon Goldwater
+<br class="ltx_break"/>ILCC, School of Informatics
+<br class="ltx_break"/>University of Edinburgh
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sgwater@inf.ed.ac.uk</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a new approach to inducing the syntactic categories of words, combining their distributional and morphological properties in a joint nonparametric Bayesian model based on the distance-dependent Chinese Restaurant Process.
+The prior distribution over word clusterings uses a log-linear model of morphological similarity;
+the likelihood function is the probability of generating vector word embeddings. The weights of the morphology model are learned jointly while inducing part-of-speech clusters,
+encouraging them to cohere with the distributional features. The resulting algorithm outperforms competitive alternatives on English POS induction.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The morphosyntactic function of words is reflected in two ways: their distributional properties, and their morphological structure. Each information source has its own advantages and disadvantages. Distributional similarity varies smoothly with syntactic function, so that words with similar syntactic functions should have similar distributional properties. In contrast, there can be multiple paradigms for a single morphological inflection (such as past tense in English). But accurate computation of distributional similarity requires large amounts of data, which may not be available for rare words; morphological rules can be applied to any word regardless of how often it appears.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">These observations suggest that a general approach to the induction of syntactic categories should leverage both distributional and morphological features <cite class="ltx_cite">[<a href="#bib.bib9" title="Combining distributional and morphological information for part of speech induction" class="ltx_ref">9</a>, <a href="#bib.bib7" title="Two decades of unsupervised POS induction: how far have we come?" class="ltx_ref">7</a>]</cite>. But these features are difficult to combine because of their disparate representations. Distributional information is typically represented in numerical vectors, and recent work has demonstrated the utility of continuous vector representations, or “embeddings” <cite class="ltx_cite">[<a href="#bib.bib16" title="Linguistic regularities in continuous space word representations" class="ltx_ref">16</a>, <a href="#bib.bib15" title="Better word representations with recursive neural networks for morphology" class="ltx_ref">15</a>, <a href="#bib.bib13" title="Deriving adjectival scales from continuous space word representations" class="ltx_ref">13</a>, <a href="#bib.bib24" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">24</a>]</cite>. In contrast, morphology is often represented in terms of sparse, discrete features (such as morphemes), or via pairwise measures such as string edit distance. Moreover, the mapping between a surface form and morphology is complex and nonlinear, so that simple metrics such as edit distance will only weakly approximate morphological similarity.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper we present a new approach for inducing part-of-speech (POS) classes, combining morphological and distributional information in a non-parametric Bayesian generative model based on the <em class="ltx_emph">distance-dependent Chinese restaurant process</em> (ddCRP; Blei and Frazier, 2011)<cite class="ltx_cite"/>.
+In the ddCRP, each data point (word type) selects another point to “follow”; this chain of following links corresponds to a partition of the data points into clusters. The probability of word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> following <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m2" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math> depends on two factors:
+1) the <span class="ltx_text ltx_font_italic">distributional</span> similarity between all words in the proposed partition containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m3" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m4" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math>, which is encoded using a Gaussian likelihood function over the word embeddings; and
+2) the <span class="ltx_text ltx_font_italic">morphological</span> similarity between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m5" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m6" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math>, which
+acts as a prior distribution on the induced clustering.
+We use a log-linear model to capture suffix similarities between words, and learn the feature weights by iterating between sampling and weight learning.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We apply our model to the English section of the the Multext-East corpus <cite class="ltx_cite">[<a href="#bib.bib11" title="MULTEXT-East version 3: multilingual morphosyntactic specifications, lexicons and corpora" class="ltx_ref">11</a>]</cite> in order to evaluate both against the coarse-grained and fine-grained tags, where the fine-grained tags encode detailed morphological classes. We find that our model effectively combines morphological features with distributional similarity, outperforming comparable alternative approaches.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Unsupervised POS tagging has a long history in NLP. This paper focuses on the POS induction problem (i.e., no tag dictionary is available), and here we limit our discussion to very recent systems. A review and comparison of older systems is provided by <cite class="ltx_cite">Christodoulopoulos<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Two decades of unsupervised POS induction: how far have we come?" class="ltx_ref">2010</a>)</cite>, who found that imposing a one-tag-per-word-type constraint to reduce model flexibility tended to improve system performance; like other recent systems, we impose that constraint here.
+Recent work also shows that the combination of morphological and distributional information yields the best results, especially cross-linguistically <cite class="ltx_cite">[<a href="#bib.bib9" title="Combining distributional and morphological information for part of speech induction" class="ltx_ref">9</a>, <a href="#bib.bib3" title="Painless unsupervised learning with features" class="ltx_ref">3</a>]</cite>. Since then, most systems have incorporated morphology in some way, whether as an initial step to obtain prototypes for clusters <cite class="ltx_cite">[<a href="#bib.bib1" title="Improved unsupervised pos induction through prototype discovery" class="ltx_ref">1</a>]</cite>, or as features in a generative model <cite class="ltx_cite">[<a href="#bib.bib14" title="Simple type-level unsupervised pos tagging" class="ltx_ref">14</a>, <a href="#bib.bib8" title="A Bayesian mixture model for part-of-speech induction using multiple features" class="ltx_ref">8</a>, <a href="#bib.bib21" title="A hierarchical Dirichlet process model for joint part-of-speech and morphology induction" class="ltx_ref">21</a>]</cite>, or a representation-learning algorithm <cite class="ltx_cite">[<a href="#bib.bib27" title="Learning syntactic categories using paradigmatic representations of word context" class="ltx_ref">27</a>]</cite>. Several of these systems use a small fixed set of orthographic and/or suffix features, sometimes obtained from an unsupervised morphological segmentation system <cite class="ltx_cite">[<a href="#bib.bib1" title="Improved unsupervised pos induction through prototype discovery" class="ltx_ref">1</a>, <a href="#bib.bib14" title="Simple type-level unsupervised pos tagging" class="ltx_ref">14</a>, <a href="#bib.bib8" title="A Bayesian mixture model for part-of-speech induction using multiple features" class="ltx_ref">8</a>, <a href="#bib.bib27" title="Learning syntactic categories using paradigmatic representations of word context" class="ltx_ref">27</a>]</cite>. Blunsom and Cohn’s <cite class="ltx_cite">[<a href="#bib.bib6" title="A hierarchical pitman-yor process hmm for unsupervised part of speech induction" class="ltx_ref">6</a>]</cite> model learns an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram character model over the words in each cluster; we learn a log-linear model, which can incorporate arbitrary features. <cite class="ltx_cite">Berg-Kirkpatrick<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Painless unsupervised learning with features" class="ltx_ref">2010</a>)</cite> also include a log-linear model of morphology in POS induction, but they use morphology in the likelihood term of a parametric sequence model, thereby encouraging all elements that share a tag to have the same morphological features. In contrast, we use <em class="ltx_emph">pairwise morphological similarity</em> as a prior in a non-parametric clustering model. This means that the membership of a word in a cluster requires only morphological similarity to some other element in the cluster, not to the cluster centroid; which may be more appropriate for languages with multiple morphological paradigms. Another difference is that our non-parametric formulation makes it unnecessary to know the number of tags in advance.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Distance-dependent CRP</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The ddCRP <cite class="ltx_cite">[<a href="#bib.bib5" title="Distance dependent chinese restaurant processes" class="ltx_ref">5</a>]</cite> is an extension of the CRP; like the CRP, it defines a distribution over partitions (“table assignments”) of data points (“customers”).
+Whereas in the regular CRP each customer chooses a table with probability proportional to the number of customers already sitting there, in the ddCRP each customer chooses another <span class="ltx_text ltx_font_italic">customer</span> to follow, and sits at the same table with that customer.
+By identifying the connected components in this graph, the ddCRP equivalently defines a prior over clusterings.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> is the index of the customer followed by customer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, then the ddCRP prior can be written</p>
+<table id="S3.E1" class="ltx_equationgroup">
+
+<tr id="S3.E1X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1X.m2" class="ltx_Math" alttext="\displaystyle P(c_{i}=j)\propto\begin{cases}f(d_{ij})&amp;\mbox{if }i\neq j\\&#10;\alpha&amp;\mbox{if }i=j,\end{cases}" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>=</mo><mi>j</mi><mo>)</mo></mrow><mo>∝</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>d</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>i</mi></mrow><mo>≠</mo><mi>j</mi></mrow></mtd></mtr><mtr><mtd columnalign="left"><mi>α</mi></mtd><mtd columnalign="left"><mrow><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>i</mi></mrow><mo>=</mo><mi>j</mi></mrow><mo>,</mo></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="d_{ij}" display="inline"><msub><mi>d</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the distance between customers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> is a decay function. A ddCRP is <span class="ltx_text ltx_font_italic">sequential</span> if customers can only follow previous customers, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="d_{ij}=\infty" display="inline"><mrow><msub><mi>d</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mi mathvariant="normal">∞</mi></mrow></math> when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m8" class="ltx_Math" alttext="i&gt;j" display="inline"><mrow><mi>i</mi><mo>&gt;</mo><mi>j</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m9" class="ltx_Math" alttext="f(\infty)=0" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi mathvariant="normal">∞</mi><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow></math>. In this case, if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m10" class="ltx_Math" alttext="d_{ij}=1" display="inline"><mrow><msub><mi>d</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m11" class="ltx_Math" alttext="i&lt;j" display="inline"><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi></mrow></math> then the ddCRP reduces to the CRP.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Separating the distance and decay function makes sense for “natural” distances (e.g., the number of words between word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> in a document, or the time between two events), but they can also be collapsed into a single similarity function. We wish to assign higher similarities to pairs of words that share meaningful suffixes. Because we do not know which suffixes are meaningful <span class="ltx_text ltx_font_italic">a priori</span>, we use a maximum entropy model whose features include all suffixes up to length three that are shared by at least one pair of words. Our prior is then:</p>
+<table id="S3.E2" class="ltx_equationgroup">
+
+<tr id="S3.E2X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2X.m2" class="ltx_Math" alttext="\displaystyle P(c_{i}=j|\mathbf{w},\alpha)\propto\begin{cases}e^{\mathbf{w}^{%&#10;\textsf{T}}\mathbf{g}(i,j)}&amp;\mbox{if }i\neq j\\&#10;\alpha&amp;\mbox{if }i=j,\\&#10;\end{cases}" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>=</mo><mi>j</mi><mo>|</mo><mi>𝐰</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow><mo>∝</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><msup><mi>e</mi><mrow><msup><mi>𝐰</mi><mtext>𝖳</mtext></msup><mo>⁢</mo><mi>𝐠</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></msup></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>i</mi></mrow><mo>≠</mo><mi>j</mi></mrow></mtd></mtr><mtr><mtd columnalign="left"><mi>α</mi></mtd><mtd columnalign="left"><mrow><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>i</mi></mrow><mo>=</mo><mi>j</mi></mrow><mo>,</mo></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="g_{s}(i,j)" display="inline"><mrow><msub><mi>g</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> is 1 if suffix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> is shared by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>th words, and 0 otherwise.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">We can create an infinite mixture model by combining the ddCRP prior with a likelihood function defining the probability of the data given the cluster assignments. Since we are using continuous-valued vectors (word embeddings) to represent the distributional characteristics of words,
+we use a multivariate Gaussian likelihood. We will marginalize over the mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> and covariance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> of each cluster, which in turn are drawn from Gaussian and inverse-Wishart (IW) priors respectively:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\Sigma\sim IW(\nu_{0},\Lambda_{0})\qquad\mu\sim\mathcal{N}(\mu_{0},{}^{\Sigma}%&#10;\!/_{\kappa_{0}})" display="block"><mrow><mi mathvariant="normal">Σ</mi><mo>∼</mo><mi>I</mi><mi>W</mi><mrow><mo>(</mo><msub><mi>ν</mi><mn>0</mn></msub><mo>,</mo><msub><mi mathvariant="normal">Λ</mi><mn>0</mn></msub><mo>)</mo></mrow><mo mathvariant="italic" separator="true">  </mo><mi>μ</mi><mo>∼</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi><mrow><mo>(</mo><msub><mi>μ</mi><mn>0</mn></msub><mo>,</mo><mmultiscripts><mo>/</mo><msub><mi>κ</mi><mn>0</mn></msub><none/><mprescripts/><none/><mi mathvariant="normal">Σ</mi></mmultiscripts><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">The full model is then:</p>
+<table id="S6.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle P(\mathbf{X}," display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>𝐗</mi><mo>,</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m2" class="ltx_Math" alttext="\displaystyle\mathbf{c},\boldsymbol{\mu},\boldsymbol{\Sigma}|\Theta,\mathbf{w}%&#10;,\alpha)" display="inline"><mrow><mi>𝐜</mi><mo>,</mo><mi>𝝁</mi><mo>,</mo><mi>𝚺</mi><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>,</mo><mi>𝐰</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m2" class="ltx_Math" alttext="\displaystyle\prod_{k=1}^{K}{P(\Sigma_{k}|\Theta)p(\mu_{k}|\Sigma_{k},\Theta)}" display="inline"><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi mathvariant="normal">Σ</mi><mi>k</mi></msub><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>μ</mi><mi>k</mi></msub><mo>|</mo><msub><mi mathvariant="normal">Σ</mi><mi>k</mi></msub><mo>,</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m2" class="ltx_Math" alttext="\displaystyle\times\prod_{i=1}^{n}{\left(P(c_{i}|\mathbf{w},\alpha)P(\mathbf{x%&#10;}_{i}|\mu_{z_{i}},\Sigma_{z_{i}})\right)}," display="inline"><mrow><mo>×</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mrow><mo>(</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>|</mo><mi>𝐰</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>|</mo><msub><mi>μ</mi><msub><mi>z</mi><mi>i</mi></msub></msub><mo>,</mo><msub><mi mathvariant="normal">Σ</mi><msub><mi>z</mi><mi>i</mi></msub></msub><mo>)</mo></mrow><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="\Theta" display="inline"><mi mathvariant="normal">Θ</mi></math> are the hyperparameters for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="(\boldsymbol{\mu},\boldsymbol{\Sigma})" display="inline"><mrow><mo>(</mo><mrow><mi>𝝁</mi><mo>,</mo><mi>𝚺</mi></mrow><mo>)</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m3" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> is the (implicit) cluster assignment of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m5" class="ltx_Math" alttext="\mathbf{x}_{i}" display="inline"><msub><mi>𝐱</mi><mi>i</mi></msub></math>.
+With a CRP prior, this model would be an infinite Gaussian mixture model (IGMM; Rasmussen, 2000)<cite class="ltx_cite"/>, and we will use the IGMM as a baseline.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Inference</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The Gibbs sampler for the ddCRP integrates over
+the Gaussian parameters,
+sampling only follower variables. At each step, the follower link <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> for a single customer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is sampled, which can implicitly shift the entire block of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> customers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="\mbox{fol}(i)" display="inline"><mrow><mtext>fol</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> who follow <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> into a new cluster. Since we marginalize over the cluster parameters, computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="P(c_{i}=j)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>=</mo><mi>j</mi><mo>)</mo></mrow></mrow></math> requires computing the likelihood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m7" class="ltx_Math" alttext="P(\mbox{fol}(i),\mathbf{X}_{j}|\Theta)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>fol</mtext><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>,</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m8" class="ltx_Math" alttext="\mathbf{X}_{j}" display="inline"><msub><mi>𝐗</mi><mi>j</mi></msub></math> are the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m9" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> customers already clustered with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m10" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>.
+However, if we do <em class="ltx_emph">not</em> merge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m11" class="ltx_Math" alttext="\mbox{fol}(i)" display="inline"><mrow><mtext>fol</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m12" class="ltx_Math" alttext="\mathbf{X}_{j}" display="inline"><msub><mi>𝐗</mi><mi>j</mi></msub></math>, then we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m13" class="ltx_Math" alttext="P(\mathbf{X}_{j}|\Theta)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow></mrow></math> in the overall joint probability. Therefore, we can decompose <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m14" class="ltx_Math" alttext="P(\mbox{fol}(i),\mathbf{X}_{j}|\Theta)=P(\mbox{fol}(i)|\mathbf{X}_{j},\Theta)P%&#10;(\mathbf{X}_{j}|\Theta)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>fol</mtext><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>,</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><mtext>fol</mtext><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>,</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>|</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow></mrow></math> and need only compute the change in likelihood due to merging in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m15" class="ltx_Math" alttext="\mbox{fol}(i)" display="inline"><mrow><mtext>fol</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math>:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://www.stats.ox.ac.uk/~teh/re-" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.stats.ox.ac.uk/~teh/re-</span></a> <a href="search/notes/GaussianInverseWishart.pdf" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">search/notes/GaussianInverseWishart.pdf</span></a></span></span></span>:</p>
+<table id="S6.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m1" class="ltx_Math" alttext="\displaystyle P(\mbox{fol}(i)|\mathbf{X}_{j},\Theta)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>fol</mtext><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>,</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m2" class="ltx_Math" alttext="\displaystyle=\pi^{-nd/2}\frac{\kappa_{k}^{d/2}|\Lambda_{k}|^{\nu_{k}/2}}{%&#10;\kappa_{n+k}^{d/2}|\Lambda_{n+k}|^{\nu_{n+k}/2}}" display="inline"><mrow><mi/><mo>=</mo><mrow><msup><mi>π</mi><mrow><mo>-</mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow><mo>/</mo><mn>2</mn></mrow></mrow></msup><mo>⁢</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>κ</mi><mi>k</mi><mrow><mi>d</mi><mo>/</mo><mn>2</mn></mrow></msubsup><mo>⁢</mo><msup><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Λ</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mrow><msub><mi>ν</mi><mi>k</mi></msub><mo>/</mo><mn>2</mn></mrow></msup></mrow><mrow><msubsup><mi>κ</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow><mrow><mi>d</mi><mo>/</mo><mn>2</mn></mrow></msubsup><mo>⁢</mo><msup><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Λ</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo fence="true">|</mo></mrow><mrow><msub><mi>ν</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>/</mo><mn>2</mn></mrow></msup></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m2" class="ltx_Math" alttext="\displaystyle\times\prod_{i=1}^{d}{\frac{\Gamma\left(\frac{\nu_{n+k}+1-i}{2}%&#10;\right)}{\Gamma\left(\frac{\nu_{k}+1-i}{2}\right)}}," display="inline"><mrow><mo>×</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>d</mi></munderover></mstyle><mstyle displaystyle="true"><mfrac><mrow><mi mathvariant="normal">Γ</mi><mo>⁢</mo><mrow><mo>(</mo><mfrac><mrow><msub><mi>ν</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>+</mo><mn>1</mn><mo>-</mo><mi>i</mi></mrow><mn>2</mn></mfrac><mo>)</mo></mrow></mrow><mrow><mi mathvariant="normal">Γ</mi><mo>⁢</mo><mrow><mo>(</mo><mfrac><mrow><msub><mi>ν</mi><mi>k</mi></msub><mo>+</mo><mn>1</mn><mo>-</mo><mi>i</mi></mrow><mn>2</mn></mfrac><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where the hyperparameters are updated as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m16" class="ltx_Math" alttext="\kappa_{n}=\kappa_{0}+n" display="inline"><mrow><msub><mi>κ</mi><mi>n</mi></msub><mo>=</mo><mrow><msub><mi>κ</mi><mn>0</mn></msub><mo>+</mo><mi>n</mi></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m17" class="ltx_Math" alttext="\nu_{n}=\nu_{0}+n" display="inline"><mrow><msub><mi>ν</mi><mi>n</mi></msub><mo>=</mo><mrow><msub><mi>ν</mi><mn>0</mn></msub><mo>+</mo><mi>n</mi></mrow></mrow></math>, and</p>
+<table id="S6.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\displaystyle\mu_{n}" display="inline"><msub><mi>μ</mi><mi>n</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m2" class="ltx_Math" alttext="\displaystyle=\frac{\kappa_{0}\mathbf{\mu}_{0}+\bar{x}}{\kappa_{0}+n}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mrow><msub><mi>κ</mi><mn>0</mn></msub><mo>⁢</mo><msub><mi>μ</mi><mn>0</mn></msub></mrow><mo>+</mo><mover accent="true"><mi>x</mi><mo stretchy="false">¯</mo></mover></mrow><mrow><msub><mi>κ</mi><mn>0</mn></msub><mo>+</mo><mi>n</mi></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr id="S4.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\displaystyle\Lambda_{n}" display="inline"><msub><mi mathvariant="normal">Λ</mi><mi>n</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m2" class="ltx_Math" alttext="\displaystyle=\Lambda_{0}+Q+\kappa_{0}\mathbf{\mu_{0}}\mathbf{\mu_{0}}^{T}-%&#10;\kappa_{n}\mathbf{\mu}_{n}\mathbf{\mu}_{n}^{T}," display="inline"><mrow><mrow><mi/><mo>=</mo><mrow><msub><mi mathvariant="normal">Λ</mi><mn>0</mn></msub><mo>+</mo><mi>Q</mi><mo>+</mo><mrow><msub><mi>κ</mi><mn>0</mn></msub><mo>⁢</mo><msub><mi>μ</mi><mn>𝟎</mn></msub><mo>⁢</mo><mmultiscripts><mi>μ</mi><mn>𝟎</mn><none/><none/><mi>T</mi></mmultiscripts></mrow><mo>-</mo><mrow><msub><mi>κ</mi><mi>n</mi></msub><mo>⁢</mo><msub><mi>μ</mi><mi>n</mi></msub><mo>⁢</mo><msubsup><mi>μ</mi><mi>n</mi><mi>T</mi></msubsup></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m18" class="ltx_Math" alttext="Q=\sum_{i=1}^{n}{\mathbf{x}_{i}\mathbf{x}_{i}^{T}}" display="inline"><mrow><mi>Q</mi><mo>=</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>⁢</mo><msubsup><mi>𝐱</mi><mi>i</mi><mi>T</mi></msubsup></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Combining this likelihood term with the prior, the probability of customer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> following <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> is</p>
+<table id="S4.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m1" class="ltx_Math" alttext="P(c_{i}=j|\mathbf{X}_{,}\Theta,\mathbf{w},\alpha)\\&#10;\propto P(\mbox{fol}(i)|\mathbf{X}_{j},\Theta)P(c_{i}=j|\mathbf{w},\alpha)." display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>=</mo><mi>j</mi><mo>|</mo><msub><mi>𝐗</mi><mo>,</mo></msub><mi mathvariant="normal">Θ</mi><mo>,</mo><mi>𝐰</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow><mo>∝</mo><mi>P</mi><mrow><mo>(</mo><mtext>fol</mtext><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>𝐗</mi><mi>j</mi></msub><mo>,</mo><mi mathvariant="normal">Θ</mi><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>=</mo><mi>j</mi><mo>|</mo><mi>𝐰</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Our non-sequential ddCRP introduces cycles into the follower structure, which are handled in the sampler as described by <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib22" title="Spectral chinese restaurant processes: nonparametric clustering based on similarities" class="ltx_ref">2011</a>)</cite>. Also,
+the block of customers being moved around can potentially be very large, which makes it easy for the likelihood term to swamp the prior. In practice we found that introducing an additional parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> (used to exponentiate the prior) improved results—although we report results without this exponent as well.
+This technique
+was also used by <cite class="ltx_cite">Titov and Klementiev (<a href="#bib.bib23" title="A bayesian approach to unsupervised semantic role induction" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Elsner<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Bootstrapping a unified model of lexical and phonetic acquisition" class="ltx_ref">2012</a>)</cite>.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">Inference also includes optimizing the feature weights for the log-linear model in the ddCRP prior <cite class="ltx_cite">[<a href="#bib.bib23" title="A bayesian approach to unsupervised semantic role induction" class="ltx_ref">23</a>]</cite>. We
+interleave L-BFGS optimization within sampling, as in Monte Carlo Expectation-Maximization (Wei and Tanner, 1990)<cite class="ltx_cite"/>.
+We do not apply the exponentiation parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> when training the weights because this procedure affects the follower structure only, and we do not have to worry about the magnitude of the likelihood.
+Before the first iteration we initialize the follower structure: for each word, we choose randomly a word to follow from amongst those with the longest shared suffix of up to 3 characters.
+The number of clusters starts around 750, but decreases
+substantially after the first sampling iteration.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Data</h3>
+
+<div id="S5.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">For our experiments we used the English word embeddings from the Polyglot project <cite class="ltx_cite">[<a href="#bib.bib2" title="Polyglot: distributed word representations for multilingual nlp" class="ltx_ref">2</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="https://sites.google.com/site/rmyeid/projects/polyglot" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://sites.google.com/site/rmyeid/projects/polyglot</span></a></span></span></span>, which provides embeddings trained on Wikipedia texts for 100,000 of the most frequent words in many languages.</p>
+</div>
+<div id="S5.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">We evaluate on the English part of the Multext-East (MTE) corpus <cite class="ltx_cite">[<a href="#bib.bib11" title="MULTEXT-East version 3: multilingual morphosyntactic specifications, lexicons and corpora" class="ltx_ref">11</a>]</cite>,
+which provides both coarse-grained and fine-grained POS labels for the text of Orwell’s “1984”.
+Coarse labels consist of 11 main word classes, while the fine-grained tags (104 for English) are sequences of detailed morphological attributes.
+Some of these attributes are not well-attested in English (e.g. gender) and some are mostly distinguishable via semantic analysis (e.g. 1st and 2nd person verbs).
+Many tags are assigned only to one or a few words.
+Scores for the fine-grained tags will be lower for these reasons, but we argue below that they are still informative.</p>
+</div>
+<div id="S5.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">Since Wikipedia and MTE are from different domains
+their lexicons do not fully overlap;
+we take the intersection of these two sets for training and evaluation.
+Table <a href="#S5.T1" title="Table 1 ‣ Data ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows corpus statistics.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Wikipedia tokens</th>
+<th class="ltx_td ltx_align_left ltx_border_tt">1843M</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Multext-East tokens</th>
+<th class="ltx_td ltx_align_left">118K</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Multext-East types</td>
+<td class="ltx_td ltx_align_left">9193</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb">Multext-East &amp; Wiki types</td>
+<td class="ltx_td ltx_align_left ltx_border_bb">7540</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_small">Statistics for the English Polyglot word embeddings and English part of MTE: number of Wikipedia tokens used to train the embeddings, number of tokens/types in MTE, and number of types shared by both datasets.</span></div>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Evaluation</h3>
+
+<div id="S5.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">With a few exceptions <cite class="ltx_cite">[<a href="#bib.bib4" title="Unsupervised part-of-speech tagging employing efficient graph clustering" class="ltx_ref">4</a>, <a href="#bib.bib25" title="The infinite HMM for unsupervised PoS tagging" class="ltx_ref">25</a>]</cite>, POS induction systems normally require the user to specify the number of desired clusters, and the systems are evaluated with that number set to the number of tags in the gold standard.
+For corpora such as MTE with both fine-grained and coarse-grained tages, previous evaluations have scored against the coarse-grained tags. Though coarse-grained tags have their place <cite class="ltx_cite">[<a href="#bib.bib17" title="A universal part-of-speech tagset" class="ltx_ref">17</a>]</cite>, in many cases the distributional and morphological distinctions between words are more closely aligned with the fine-grained tagsets, which typically distinguish between verb tenses, noun number and gender, and adjectival scale (comparative, superlative, etc.), so we feel that the evaluation against fine-grained tagset is more relevant here.
+For better comparison with previous work, we also evaluate against the coarse-grained tags; however, these numbers are not strictly comparable to other scores reported on MTE because we are only able to train and evaluate on the subset of words that also have Polyglot embeddings. To provide some measure
+of the difficulty of the task, we report baseline scores using K-means clustering, which is relatively strong baseline in this task <cite class="ltx_cite">[<a href="#bib.bib8" title="A Bayesian mixture model for part-of-speech induction using multiple features" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+<div id="S5.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">There are several measures commonly used for unsupervised POS induction.
+We report greedy one-to-one mapping accuracy (1-1) <cite class="ltx_cite">[<a href="#bib.bib12" title="Prototype-driven learning for sequence models" class="ltx_ref">12</a>]</cite> and the information-theoretic score V-measure (V-m), which also varies from 0 to 100% <cite class="ltx_cite">[<a href="#bib.bib20" title="V-measure: a conditional entropy-based external cluster evaluation measure" class="ltx_ref">20</a>]</cite>.
+In previous work it has been common to also report many-to-one (m-1) mapping but this measure is particularly sensitive to the number of induced clusters (more clusters yield higher scores), which is variable for our models.
+V-m can be somewhat sensitive to the number of clusters <cite class="ltx_cite">[<a href="#bib.bib19" title="The nvi clustering evaluation measure" class="ltx_ref">19</a>]</cite> but much less so than m-1 <cite class="ltx_cite">[<a href="#bib.bib7" title="Two decades of unsupervised POS induction: how far have we come?" class="ltx_ref">7</a>]</cite>.
+With different number of induced and gold standard clusters the 1-1 measure suffers because some induced clusters cannot be mapped to gold clusters or vice versa.
+However, almost half the gold standard clusters in MTE contain just a few words and we do not expect our model to be able to learn them anyway, so the 1-1 measure is still useful for telling us how well the model learns the bigger and more distinguishable classes.</p>
+</div>
+<div id="S5.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">In unsupervised POS induction it is standard to report accuracy on tokens even when the model itself works on types.
+Here we report also type-based measures because these can reveal differences in model behavior even when token-based measures are similar.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Experimental setup</h3>
+
+<div id="S5.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">For baselines we use K-means and the IGMM, which both only learn from the word embeddings.
+The CRP prior in the IGMM has one hyperparameter (the concentration parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>); we report results for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m2" class="ltx_Math" alttext="\alpha=5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>5</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m3" class="ltx_Math" alttext="20" display="inline"><mn>20</mn></math>.
+Both the IGMM and ddCRP have four hyperparameters controlling the prior over the Gaussian cluster parameters: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m4" class="ltx_Math" alttext="\Lambda_{0}" display="inline"><msub><mi mathvariant="normal">Λ</mi><mn>0</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m5" class="ltx_Math" alttext="\mu_{0}" display="inline"><msub><mi>μ</mi><mn>0</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m6" class="ltx_Math" alttext="\nu_{0}" display="inline"><msub><mi>ν</mi><mn>0</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m7" class="ltx_Math" alttext="\kappa_{0}" display="inline"><msub><mi>κ</mi><mn>0</mn></msub></math>.
+We set the prior scale matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m8" class="ltx_Math" alttext="\Lambda_{0}" display="inline"><msub><mi mathvariant="normal">Λ</mi><mn>0</mn></msub></math> by using the average covariance from a K-means run with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m9" class="ltx_Math" alttext="K=200" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>200</mn></mrow></math>.
+When setting the average covariance as the expected value of the IW distribution the suitable scale matrix can be computed as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m10" class="ltx_Math" alttext="\Lambda_{0}=E\left[X\right](\nu_{0}-d-1)" display="inline"><mrow><msub><mi mathvariant="normal">Λ</mi><mn>0</mn></msub><mo>=</mo><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>X</mi><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>ν</mi><mn>0</mn></msub><mo>-</mo><mi>d</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m11" class="ltx_Math" alttext="\nu_{0}" display="inline"><msub><mi>ν</mi><mn>0</mn></msub></math> is the prior degrees of freedom (which we set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m12" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> + 10) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m13" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the data dimensionality (64 for the Polyglot embeddings).
+We set the prior mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m14" class="ltx_Math" alttext="\mu_{0}" display="inline"><msub><mi>μ</mi><mn>0</mn></msub></math> equal to the sample mean of the data and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m15" class="ltx_Math" alttext="\kappa_{0}" display="inline"><msub><mi>κ</mi><mn>0</mn></msub></math> to 0.01.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Fine types</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Fine tokens</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Coarse tokens</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">i3-4
+i5-6
+i7-8
+</span><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">K</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">K-means</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">K-means</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">K-means</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">K-means</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">104 or 11</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">16.1 / 47.3</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">39.2 / 62.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">44.4 / 45.5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">IGMM, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="\alpha=5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>5</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">55.6</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">41.0 / 45.9</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">23.1 / 49.5</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">48.0 / 64.8</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">37.2 / 61.0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">48.3 / 58.3</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">40.8 / 55.0</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">IGMM, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="\alpha=20" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>20</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">121.2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">35.0 / 47.1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">14.7 / 46.9</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">50.6 / 67.8</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">44.7 / 65.5</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">48.7 / 60.0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">48.3 / 57.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">ddCRP uniform</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">80.4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">50.5 / 52.9</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">18.6 / 48.2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">52.4 / 68.7</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">35.1 / 60.3</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">52.1 / 62.2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">40.3 / 54.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">ddCRP learned</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.6</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">50.1 / 55.1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">17.6 / 48.0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">51.1 / </span><span class="ltx_text ltx_font_bold ltx_font_small">69.7</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">39.0 / 63.2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">48.9 / 62.0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">41.1 / 55.1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">ddCRP exp, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="a=5" display="inline"><mrow><mi>a</mi><mo>=</mo><mn>5</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">47.2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">64.0 / 60.3</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">25.0 / 50.3</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">55.1</span><span class="ltx_text ltx_font_small"> / 66.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">33.0 / 59.1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">47.8 / 55.1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">36.9 / 53.1</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results of baseline and ddCRP models evaluated on word types and tokens using fine-grained tags, and on tokens using coarse-grained tags. For each model we present the number of induced clusters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="K" display="inline"><mi mathsize="normal" stretchy="false">K</mi></math> (or fixed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="K" display="inline"><mi mathsize="normal" stretchy="false">K</mi></math> for K-means) and 1-1 / V-m scores. The second column under each evaluation setting gives the scores for K-means with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m9" class="ltx_Math" alttext="K" display="inline"><mi mathsize="normal" stretchy="false">K</mi></math> equal to the number of clusters induced by the model in that row.</div>
+</div>
+<div id="S5.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">We experiment with three different priors for the ddCRP model.
+All our ddCRP models are non-sequential <cite class="ltx_cite">[<a href="#bib.bib22" title="Spectral chinese restaurant processes: nonparametric clustering based on similarities" class="ltx_ref">22</a>]</cite>, allowing cycles to be formed.
+The simplest model, <em class="ltx_emph">ddCRP uniform</em>, uses a uniform prior that sets the distance between any two words equal to one.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>In the sequential case this model would be equivalent to the IGMM <cite class="ltx_cite">[<a href="#bib.bib5" title="Distance dependent chinese restaurant processes" class="ltx_ref">5</a>]</cite>. Due to the nonsequentiality this equivalence does not hold, but we do expect to see similar results to the IGMM.</span></span></span>
+The second model, <em class="ltx_emph">ddCRP learned</em>, uses the log-linear prior with weights learned between each two Gibbs iterations as explained in section <a href="#S4" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+The final model, <em class="ltx_emph">ddCRP exp</em>, adds the prior exponentiation.
+The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p2.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>
+parameter for the ddCRP is set to 1 in all experiments.
+For <em class="ltx_emph">ddCRP exp</em>, we report results with the exponent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p2.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> set to 5.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Results and discussion</h3>
+
+<div id="S5.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ Experimental setup ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> presents all results.
+Each number is an average of 5 experiments with different random initializations.
+For each evaluation setting we provide two sets of scores—first are the 1-1 and V-m scores for the given model, second are the comparable scores for K-means run with the same number of clusters as induced by the non-parametric model.</p>
+</div>
+<div id="S5.SS0.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">These results show that all non-parametric models perform better than K-means, which is a strong baseline in this task <cite class="ltx_cite">[<a href="#bib.bib8" title="A Bayesian mixture model for part-of-speech induction using multiple features" class="ltx_ref">8</a>]</cite>.
+The poor performace of K-means can be explained by the fact that it tends to find clusters of relatively equal size, although the POS clusters are rarely of similar size.
+The common noun singular class is by far the largest in English, containing roughly a quarter of the word types.
+Non-parametric models are able to produce cluster of different sizes when the evidence indicates so, and this is clearly the case here.</p>
+</div>
+<div id="S5.SS0.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p">From the token-based evaluation it is hard to say which IGMM hyperparameter value is better even though the number of clusters induced differs by a factor of 2.
+The type-base evaluation, however, clearly prefers the smaller value with fewer clusters.
+Similar effects can be seen when comparing IGMM and ddCRP uniform.
+We expected these two models perform on the same level, and their token-based scores are similar,
+but on the type-based evaluation the ddCRP is clearly superior.
+The difference could be due to the non-sequentiality, or becuase the samplers are different—IGMM enabling resampling only one item at a time, ddCRP performing blocked sampling.</p>
+</div>
+<div id="S5.SS0.SSS0.P4.p4" class="ltx_para">
+<p class="ltx_p">Further we can see that the ddCRP uniform and learned perform roughly the same.
+Although the prior in those models is different they work mainly using the the likelihood.
+The ddCRP with learned prior does produce nice follower structures within each cluster but the prior is in general too weak compared to the likelihood to influence the clustering decisions.
+Exponentiating
+the prior reduces the number of induced clusters and improves
+results, as it can change the cluster assignment for some words
+where the likelihood strongly prefers one cluster but the prior clearly indicates another.</p>
+</div>
+<div id="S5.SS0.SSS0.P4.p5" class="ltx_para">
+<p class="ltx_p">The last column shows the token-based evaluation against the coarse-grained tagset.
+This is the most common evaluation framework used previously in the literature.
+Although our scores are not directly comparable with the previous results, our V-m scores are
+similar to
+the best published 60.5 <cite class="ltx_cite">[<a href="#bib.bib7" title="Two decades of unsupervised POS induction: how far have we come?" class="ltx_ref">7</a>]</cite> and 66.7 <cite class="ltx_cite">[<a href="#bib.bib21" title="A hierarchical Dirichlet process model for joint part-of-speech and morphology induction" class="ltx_ref">21</a>]</cite>.</p>
+</div>
+<div id="S5.SS0.SSS0.P4.p6" class="ltx_para">
+<p class="ltx_p">In preliminary experiments, we found that directly applying the
+best-performing English model to other languages is not effective.
+Different languages may require different parametrizations of the model.
+Further study is also needed to verify that word embeddings effectively
+capture syntax across languages, and to determine the amount of unlabeled
+text necessary to learn good embeddings.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">This paper demonstrates that morphology and distributional features can be combined in a flexible, joint probabilistic model, using the distance-dependent Chinese Restaurant Process. A key advantage of this framework is the ability to include arbitrary features in the prior distribution. Future work may exploit this advantage more thoroughly: for example, by using features that incorporate prior knowledge of the language’s morphological structure. Another important goal is the evaluation of this method on languages beyond English.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Acknowledgments</span>:
+KS was supported by the Tiger University program of the Estonian Information Technology Foundation for Education. JE was supported by a visiting fellowship from the Scottish Informatics &amp; Computer Science Alliance. We thank the reviewers for their helpful feedback.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Abend, R. Reichart and A. Rappoport</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved unsupervised pos induction through prototype discovery</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1298–1307</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Al-Rfou’, B. Perozzi and S. Skiena</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Polyglot: distributed word representations for multilingual nlp</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 183–192</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P1.p1" title="Data ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Berg-Kirkpatrick, A. B. Côté, J. DeNero and D. Klein</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Painless unsupervised learning with features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 582–590</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Biemann</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised part-of-speech tagging employing efficient graph clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 7–12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p1" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei and P. I. Frazier</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distance dependent chinese restaurant processes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2461–2488</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Distance-dependent CRP ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS0.SSS0.P3.p2" title="Experimental setup ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Blunsom and T. Cohn</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hierarchical pitman-yor process hmm for unsupervised part of speech induction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 865–874</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Christodoulopoulos, S. Goldwater and M. Steedman</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two decades of unsupervised POS induction: how far have we come?</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">This is an updated version that corrects a minor bug in
+the computation of the vmb measure in Figure 1 and Table 1.
+Thanks to Andreas Zollmann for pointing this out.</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS0.SSS0.P2.p2" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS0.SSS0.P4.p5" title="Results and discussion ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Christodoulopoulos, S. Goldwater and M. Steedman</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Bayesian mixture model for part-of-speech induction using multiple features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS0.SSS0.P2.p1" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS0.SSS0.P4.p2" title="Results and discussion ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Clark</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining distributional and morphological information for part of speech induction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Elsner, S. Goldwater and J. Eisenstein</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bootstrapping a unified model of lexical and phonetic acquisition</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Erjavec</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MULTEXT-East version 3: multilingual morphosyntactic specifications, lexicons and corpora</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS0.SSS0.P1.p2" title="Data ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi and D. Klein</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Prototype-driven learning for sequence models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p2" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kim and M. de Marneffe</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deriving adjectival scales from continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. K. Lee, A. Haghighi and R. Barzilay</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Simple type-level unsupervised pos tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 853–861</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Luong, R. Socher and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Better word representations with recursive neural networks for morphology</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov, D. Das and R. McDonald</span><span class="ltx_text ltx_bib_year">(2012-05)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A universal part-of-speech tagset</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p1" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Rasmussen</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The infinite Gaussian mixture model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Distance-dependent CRP ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Reichart and A. Rappoport</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The nvi clustering evaluation measure</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 165–173</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p2" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Rosenberg and J. Hirschberg</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">V-measure: a conditional entropy-based external cluster evaluation measure</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 410–42</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p2" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Sirts and T. Alumäe</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hierarchical Dirichlet process model for joint part-of-speech and morphology induction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 407–416</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS0.SSS0.P4.p5" title="Results and discussion ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. L. Maas and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Spectral chinese restaurant processes: nonparametric clustering based on similarities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 698–706</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS0.SSS0.P3.p2" title="Experimental setup ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Titov and A. Klementiev</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A bayesian approach to unsupervised semantic role induction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p4" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P10-1040" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Van Gael, A. Vlachos and Z. Ghahramani</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The infinite HMM for unsupervised PoS tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Singapore</span>, <span class="ltx_text ltx_bib_pages"> pp. 678–687</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P2.p1" title="Evaluation ‣ 5 Experiments ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. C. Wei and M. A. Tanner</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A monte carlo implementation of the em algorithm and the poor man’s data augmentation algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Statistical Association</span> <span class="ltx_text ltx_bib_volume">85</span> (<span class="ltx_text ltx_bib_number">411</span>), <span class="ltx_text ltx_bib_pages"> pp. 699–704</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p4" title="4 Inference ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. A. Yatbaz, E. Sert and D. Yuret</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning syntactic categories using paradigmatic representations of word context</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 940–951</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ POS induction with distributional and morphological information using a distance-dependent Chinese restaurant process" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:44:00 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

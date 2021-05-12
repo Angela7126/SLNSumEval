@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Can You Repeat That? Using Word Repetition to Improve Spoken Term Detection</title>
+<!--Generated on Tue Jun 10 19:06:05 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Can You Repeat That? 
+<br class="ltx_break"/>Using Word Repetition to Improve Spoken Term Detection</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jonathan Wintrode and Sanjeev Khudanpur
+<br class="ltx_break"/>Center for Language and Speech Processing 
+<br class="ltx_break"/>Johns Hopkins University
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">jcwintr@cs.jhu.edu , khudanpur@jhu.edu</span> 
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We aim to improve <em class="ltx_emph">spoken term detection</em> performance by incorporating contextual information beyond traditional N-gram language models. Instead of taking a broad view of topic context in spoken documents, variability of word co-occurrence statistics across corpora leads us to focus instead the on phenomenon of word repetition within single documents. We show that given the detection of one instance of a term we are more likely to find additional instances of that term in the same document. We leverage this <em class="ltx_emph">burstiness</em> of keywords by taking the most confident keyword hypothesis in each document and interpolating with lower scoring hits. We then develop a principled approach to select interpolation weights using only the ASR training data. Using this re-weighting approach we demonstrate consistent improvement in the term detection performance across all five languages in the <span class="ltx_text ltx_font_small">BABEL</span> program.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">spoken term detection</span> task arises as a key subtask in applying NLP applications to spoken content. Tasks like topic identification and named-entity detection require transforming a continuous acoustic signal into a stream of discrete tokens which can then be handled by NLP and other statistical machine learning techniques. Given a small vocabulary of interest (1000-2000 words or multi-word terms) the aim of the term detection task is to enumerate occurrences of the keywords within a target corpus. Spoken term detection converts the raw acoustics into time-marked keyword occurrences, which may subsequently be fed (e.g. as a bag-of-terms) to standard NLP algorithms.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Although spoken term detection does not require the use of word-based automatic speech recognition (ASR), it is closely related. If we had perfectly accurate ASR in the language of the corpus, term detection is reduced to an exact string matching task. The word error rate (WER) and term detection performance are clearly correlated. Given resource constraints, domain, channel, and vocabulary limitations, particularly for languages other than English, the errorful token stream makes term detection a non-trivial task.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In order to improve detection performance, and restricting ourselves to an existing ASR system or systems at our disposal, we focus on leveraging <span class="ltx_text ltx_font_italic">broad document context</span> around detection hypotheses. ASR systems traditionally use N-gram language models to incorporate prior knowledge of word occurrence patterns into prediction of the next word in the token stream. N-gram models cannot, however, capture complex linguistic or topical phenomena that occur outside the typical 3-5 word scope of the model. Yet, though many language models more sophisticated than N-grams have been proposed, N-grams are empirically hard to beat in terms of WER.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We consider term detection rather than the transcription task in considering how to exploit topic context, because in evaluating the retrieval of certain key terms we need not focus on improving the entire word sequence. Confidence scores from an ASR system (which incorporate N-gram probabilities) are optimized in order to produce the most likely sequence of words rather than the accuracy of individual word detections. Looking at broader document context within a more limited task might allow us to escape the limits of N-gram performance. We will show that by focusing on contextual information in the form of word repetition within documents, we obtain consistent improvement <span class="ltx_text ltx_font_italic">across five languages</span> in the so called Base Phase of the <span class="ltx_text ltx_font_small">IARPA BABEL</span> program.</p>
+</div>
+<div id="S1.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">1.1 </span>Task Overview</h3>
+
+<div id="S1.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate term detection and word repetition-based re-scoring on the <span class="ltx_text ltx_font_small">IARPA BABEL</span> training and development corpora<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Language collection releases IARPA-babel101-v0.4c, IARPA-babel104b-v0.4bY, IARPA-babel105b-v0.4, IARPA-babel106-v0.2g and IARPA-babel107b-v0.7 respectively.</span></span></span> for five languages Cantonese, Pashto, Turkish, Tagalog and Vietnamese <cite class="ltx_cite">[]</cite>. The <span class="ltx_text ltx_font_small">BABEL</span> task is modeled on the 2006 NIST Spoken Term Detection evaluation <cite class="ltx_cite">[]</cite> but focuses on limited resource conditions. We focus specifically on the so called <em class="ltx_emph">no target audio reuse</em> (NTAR) condition to make our method broadly applicable.</p>
+</div>
+<div id="S1.SS1.p2" class="ltx_para">
+<p class="ltx_p">In order to arrive at our eventual solution, we take the <span class="ltx_text ltx_font_small">BABEL</span> Tagalog corpus and analyze word co-occurrence and repetition statistics in detail. Our observation of the variability in co-occurrence statistics between Tagalog training and development partitions leads us to narrow the scope of document context to same word co-occurrences, i.e. <span class="ltx_text ltx_font_italic">word repetitions</span>.</p>
+</div>
+<div id="S1.SS1.p3" class="ltx_para">
+<p class="ltx_p">We then analyze the tendency towards within-document repetition. The strength of this phenomenon suggests it may be more viable for improving term-detection than, say, topic-sensitive language models. We validate this by developing an interpolation formula to boost putative word repetitions in the search results, and then investigate a method for setting interpolation weights without manually tuning on a development set.</p>
+</div>
+<div id="S1.SS1.p4" class="ltx_para">
+<p class="ltx_p">We then demonstrate that the method generalizes well, by applying it to the 2006 English data and the remaining four 2013 <span class="ltx_text ltx_font_small">BABEL</span> languages. We demonstrate consistent improvements in all languages in both the Full LP (80 hours of ASR training data) and Limited LP (10 hours) settings.</p>
+</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Motivation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We seek a workable definition of <span class="ltx_text ltx_font_bold ltx_font_italic">broad document context</span> beyond N-gram models that will improve term detection performance on an arbitrary set of queries. Given the rise of unsupervised latent topic modeling with Latent Dirchlet Allocation <cite class="ltx_cite">[]</cite> and similar latent variable approaches for discovering meaningful word co-occurrence patterns in large text corpora, we ought to be able to leverage these topic contexts instead of merely N-grams. Indeed there is work in the literature that shows that various topic models, latent or otherwise, can be useful for improving language model perplexity and word error rate (Khudanpur and Wu, 1999; Chen, 2009; Naptali et al., 2012). However, given the preponderance of highly frequent non-content words in the computation of a corpus’ WER, it’s not clear that a 1-2% improvement in WER would translate into an improvement in term detection.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Still, intuition suggests that knowing the topic context of a detected word ought to be useful in predicting whether or not a term does belong in that context. For example, if we determine the context of the detection hypothesis is about computers, containing words like ‘monitor,’ ‘internet’ and ‘mouse,’ then we would be more confident of a term such as ‘keyboard’ and less confident of a term such as ‘cheese board’. The difficulty in this approach arises from the variability in word co-occurrence statistics. Using topic information will be helpful if ‘monitor,’ ‘keyboard’ and ‘mouse’ consistently predict that ‘keyboard’ is present. Unfortunately, estimates of co-occurrence from small corpora are not very consistent, and often over- or underestimate concurrence probabilities needed for term detection.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We illustrate this variability by looking at how consistent word co-occurrences are between two separate corpora in the same language: i.e., if we observe words that frequently co-occur with a keyword in the training corpus, do they also co-occur with the keywords in a second held-out corpus? Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, based on the <span class="ltx_text ltx_font_small">BABEL</span> Tagalog corpus, suggests this is true only for high frequency keywords.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="" id="S2.F1.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Correlation between the co-occurrence counts in the training and held-out sets for a fixed keyword (term) and all its “context” words.</div>
+</div>
+<div id="S2.F4" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45
+<img src="" id="S2.F4.g1" class="ltx_graphics ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>High frequency keyword ‘bukas’</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45
+<img src="" id="S2.F4.g2" class="ltx_graphics ltx_centering ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Low frequency keyword ‘Davao’</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>The number of times a fixed keyword <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F4.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> co-occurs with a vocabulary word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F4.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the training speech collection — <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F4.m7" class="ltx_Math" alttext="T(k,w)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> — versus the search collection — <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F4.m8" class="ltx_Math" alttext="D(k,w)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math>.</div>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Each point in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> represents one of 355 Tagalog keywords used for system development by all <span class="ltx_text ltx_font_small">BABEL</span> participants. For each keyword <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, we count how often it co-occurs in the same conversation as a vocabulary word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the ASR training data and the development data, and designate the counts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="T(k,w)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="D(k,w)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> respectively. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>-coordinate of each point in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is the frequency of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> in the training data, and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m7" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-coordinate is the correlation coefficient <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m8" class="ltx_Math" alttext="\rho_{k}" display="inline"><msub><mi>ρ</mi><mi>k</mi></msub></math> between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m9" class="ltx_Math" alttext="T(k,w)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m10" class="ltx_Math" alttext="D(k,w)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math>. A high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m11" class="ltx_Math" alttext="\rho_{k}" display="inline"><msub><mi>ρ</mi><mi>k</mi></msub></math> implies that words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m12" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> that co-occur frequently with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m13" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> in the training data also do so in the search collection.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">To further illustrate how Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> was obtained, consider the high-frequency keyword <span class="ltx_text ltx_font_italic">bukas</span> (count <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m1" class="ltx_Math" alttext="={\bf 879}" display="inline"><mrow><mi/><mo>=</mo><mn>𝟖𝟕𝟗</mn></mrow></math>) and the low-frequency keyword <span class="ltx_text ltx_font_italic">Davao</span> (count <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m2" class="ltx_Math" alttext="={\bf 11}" display="inline"><mrow><mi/><mo>=</mo><mn>𝟏𝟏</mn></mrow></math>), and plot <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m3" class="ltx_Math" alttext="T(k,\cdot)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo separator="true">, </mo><mo>⋅</mo></mrow><mo>)</mo></mrow></mrow></math> versus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m4" class="ltx_Math" alttext="D(k,\cdot)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo separator="true">, </mo><mo>⋅</mo></mrow><mo>)</mo></mrow></mrow></math>, as done in Figure <a href="#S2.F4" title="Figure 4 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. The correlation coefficients <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m5" class="ltx_Math" alttext="\rho_{\mathrm{\textit{bukas}}}" display="inline"><msub><mi>ρ</mi><mtext>𝑏𝑢𝑘𝑎𝑠</mtext></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m6" class="ltx_Math" alttext="\rho_{\mathrm{\textit{Davao}}}" display="inline"><msub><mi>ρ</mi><mtext>𝐷𝑎𝑣𝑎𝑜</mtext></msub></math> from the two plots end up as two points in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> suggests that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m1" class="ltx_Math" alttext="(k,w)" display="inline"><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></math> co-occurrences are consistent between the two corpora (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m2" class="ltx_Math" alttext="\rho_{k}&gt;0.8" display="inline"><mrow><msub><mi>ρ</mi><mi>k</mi></msub><mo>&gt;</mo><mn>0.8</mn></mrow></math>) for keywords occurring 100 or more times. However, if the goal is to help a speech retrieval system detect content-rich (and presumably infrequent) keywords, then using word co-occurrence information (i.e. topic context) does not appear to be too promising, even though intuition suggests that such information ought to be helpful.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">In light of this finding, we will restrict the type of <span class="ltx_text ltx_font_bold ltx_font_italic">context</span> we use for term detection to the co-occurrence of the term itself elsewhere within the document. As it turns out this ‘burstiness’ of words within documents, as the term is defined by Church and Gale in their work on Poisson mixtures (1995), provides a more reliable framework for successfully exploiting document context.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Related Work</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">A number of efforts have been made to augment traditional N-gram models with latent topic information (Khudanpur and Wu, 1999; Florian and
+Yarowsky, 1999; Liu and Liu, 2008; Hsu and Glass, 2006; Naptali et al., 2012) including some of the early work on Probabilistic Latent Semantic Analysis by <cite class="ltx_cite"/>. In all of these cases WER gains in the 1-2% range were observed by interpolating latent topic information with N-gram models.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">The re-scoring approach we present is closely related to adaptive or cache language models (Jelinek, 1997; Kuhn and De Mori, 1990; Kneser and Steinbiss, 1993). The primary difference between this and previous work on similar language models is the narrower focus here on the term detection task, in which we consider each search term in isolation, rather than all words in the vocabulary. Most recently, <cite class="ltx_cite"/> looked at word bursts in the <span class="ltx_text ltx_font_small">IARPA BABEL</span> conversational corpora, and were also able to successfully improve performance by leveraging the burstiness of language. One advantage of the approach proposed here, relative to their approach, is its simplicity and its not requiring an additional tuning set to estimate parameters.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+<div id="S2.F7" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45</p><img src="" id="S2.F7.g1" class="ltx_graphics" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F7.m3" class="ltx_Math" alttext="f_{w}" display="inline"><msub><mi>f</mi><mi>w</mi></msub></math> versus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F7.m4" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> </div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45
+‘
+<img src="" id="S2.F7.g2" class="ltx_graphics ltx_centering ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Obsered versus predicted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F7.m6" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math></div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Tagalog corpus frequency statistics, unigrams</div>
+</div>
+<div id="S2.SS1.p5" class="ltx_para">
+<p class="ltx_p">In the information retrieval community, clustering and latent topic models have yielded improvements over traditional vector space models. We will discuss in detail in the following section related works by Church and Gale (1995, 1999, and 2000). Work by <cite class="ltx_cite"/> and <cite class="ltx_cite"/> take a language model-based approach to information retrieval, and again, interpolate latent topic models with N-grams to improve retrieval performance. However, in many text retrieval tasks, queries are often tens or hundreds of words in length rather than short spoken phrases. In these efforts, the topic model information was helpful in boosting retrieval performance above the baseline vector space or N-gram models.</p>
+</div>
+<div id="S2.SS1.p6" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/>
+Clearly topic or context information is relevant to a retrieval type task, but we need a stable, consistent framework in which to apply it.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Term and Document Frequency Statistics</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">To this point we have assumed an implicit property of low-frequency words which Church and Gale state concisely in their 1999 study of <span class="ltx_text ltx_font_italic">inverse document frequency</span>:</p>
+<blockquote class="ltx_quote">
+<p class="ltx_p">Low frequency words tend to be rich in content, and vice versa. But not all equally frequent words are equally meaningful. <cite class="ltx_cite"/>.</p>
+</blockquote>
+<p class="ltx_p">The typical use of Document Frequency (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\mathrm{DF}" display="inline"><mi>DF</mi></math>) in information retrieval or text categorization is to emphasize words that occur in only a few documents and are thus more “rich in content”. Close examination of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="\mathrm{DF}" display="inline"><mi>DF</mi></math> statistics by Church and Gale in their work on Poisson Mixtures (1995) resulted in an analysis of the <span class="ltx_text ltx_font_italic">burstiness</span> of content words.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In this section we look at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="\mathrm{DF}" display="inline"><mi>DF</mi></math> and <span class="ltx_text ltx_font_italic">burstiness</span> statistics applying some of the analyses of <cite class="ltx_cite"/> to the <span class="ltx_text ltx_font_small">BABEL</span> Tagalog corpus. We observe, in 648 Tagalog conversations, similar phenomena as observed by Church and Gale on 89,000 AP English newswire articles. We proceed in this fashion to make a case for why burstiness ought to help in the term detection task.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">For the Tagalog conversations, as with English newswire, we observe that the document frequency, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="\mathrm{DF}_{w}" display="inline"><msub><mi>DF</mi><mi>w</mi></msub></math>, of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is not a linear function of word frequency <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="f_{w}" display="inline"><msub><mi>f</mi><mi>w</mi></msub></math> in the log domain, as would be expected under a naive Poisson generative assumption. The implication of deviations from a Poisson model is that <span class="ltx_text ltx_font_italic">words tend to be concentrated in a small number of documents</span> rather than occurring uniformly across the corpus. This is the <span class="ltx_text ltx_font_italic">burstiness</span> we leverage to improve term detection.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The first illustration of word burstiness can be seen by plotting observed inverse document frequency, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math>, versus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="f_{w}" display="inline"><msub><mi>f</mi><mi>w</mi></msub></math> in the log domain (Figure <a href="#S2.F7" title="Figure 7 ‣ 2.1 Related Work ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>). We use the same definition of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> as <cite class="ltx_cite"/>:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m2" class="ltx_Math" alttext="\displaystyle=-\log_{2}\frac{\mathrm{DF}_{w}}{N}," display="inline"><mrow><mrow><mi/><mo>=</mo><mrow><mo>-</mo><mrow><msub><mi>log</mi><mn>2</mn></msub><mo>⁡</mo><mstyle displaystyle="true"><mfrac><msub><mi>DF</mi><mi>w</mi></msub><mi>N</mi></mfrac></mstyle></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of documents (i.e. conversations) in the corpus.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">There is good linear correlation (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="\rho=0.73" display="inline"><mrow><mi>ρ</mi><mo>=</mo><mn>0.73</mn></mrow></math>) between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="\log{f_{w}}" display="inline"><mrow><mi>log</mi><mo>⁡</mo><msub><mi>f</mi><mi>w</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m3" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math>. Yet, visually, the relationship in Figure <a href="#S2.F7" title="Figure 7 ‣ 2.1 Related Work ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> is clearly not linear. In contrast, the AP English data exhibits a correlation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m4" class="ltx_Math" alttext="\rho=0.93" display="inline"><mrow><mi>ρ</mi><mo>=</mo><mn>0.93</mn></mrow></math> <cite class="ltx_cite">[]</cite>. Thus the deviation in the Tagalog corpus is more pronounced, i.e. words are less uniformly distributed across documents.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">A second perspective on word burstiness that follows from <cite class="ltx_cite"/> is that a Poisson assumption should lead us to predict:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\widehat{\mathrm{IDF}}_{w}=-\log_{2}{\left(1-e^{-\frac{f_{w}}{N}}\right)}." display="block"><mrow><mrow><msub><mover accent="true"><mi>IDF</mi><mo>^</mo></mover><mi>w</mi></msub><mo>=</mo><mrow><mo>-</mo><mrow><msub><mi>log</mi><mn>2</mn></msub><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><msup><mi>e</mi><mrow><mo>-</mo><mfrac><msub><mi>f</mi><mi>w</mi></msub><mi>N</mi></mfrac></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">For the AP newswire, Church and Gale found the largest deviation between the predicted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="\widehat{\mathrm{IDF}_{w}}" display="inline"><mover accent="true"><msub><mi>IDF</mi><mi>w</mi></msub><mo>^</mo></mover></math> and observed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> to occur in the middle of the frequency range. We see a somewhat different picture for Tagalog speech in Figure <a href="#S2.F7" title="Figure 7 ‣ 2.1 Related Work ‣ 2 Motivation ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>. Observed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m3" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> values again deviate significantly from their predictions (<a href="#S3.E2" title="(2) ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), but all along the frequency range.</p>
+</div>
+<div id="S3.p8" class="ltx_para">
+<p class="ltx_p">There is a noticeable quantization effect occurring in the high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m1" class="ltx_Math" alttext="\mathrm{IDF}" display="inline"><mi>IDF</mi></math> range, given that our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is at least a factor of 100 smaller than the number of AP articles they studied: 648 vs. 89,000. Figure <a href="#S3.F8" title="Figure 8 ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a> also shows the difference between and observed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m3" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> and Poisson estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m4" class="ltx_Math" alttext="\widehat{\mathrm{IDF}}_{w}" display="inline"><msub><mover accent="true"><mi>IDF</mi><mo>^</mo></mover><mi>w</mi></msub></math> and further illustrates the high variance in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m5" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> for low frequency words.</p>
+</div>
+<div id="S3.F8" class="ltx_figure"><img src="" id="S3.F8.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>Difference between observed and predicted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F8.m2" class="ltx_Math" alttext="\mathrm{IDF}_{w}" display="inline"><msub><mi>IDF</mi><mi>w</mi></msub></math> for Tagalog unigrams.</div>
+</div>
+<div id="S3.p9" class="ltx_para">
+<p class="ltx_p">Two questions arise: what is happening with infrequent words, and why does this matter for term detection? To look at the data from a different perspective, we consider the random variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, which is the number of times a word occurs in a particular document. In Figure <a href="#S3.F9" title="Figure 9 ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> we plot the following ratio, which <cite class="ltx_cite"/> define as <span class="ltx_text ltx_font_italic">burstiness</span> :</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\displaystyle E_{w}[k|k&gt;0]" display="inline"><mrow><msub><mi>E</mi><mi>w</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mrow><mi>k</mi><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>k</mi><mo>&gt;</mo></mrow><mo>⁢</mo><mn>0</mn></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m2" class="ltx_Math" alttext="\displaystyle=\frac{f_{w}}{\mathrm{DF}_{w}}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><msub><mi>f</mi><mi>w</mi></msub><msub><mi>DF</mi><mi>w</mi></msub></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">as a function of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m2" class="ltx_Math" alttext="f_{w}" display="inline"><msub><mi>f</mi><mi>w</mi></msub></math>. We denote this as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m3" class="ltx_Math" alttext="E[k]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></mrow></math> and can interpret burstiness as the expected word count given we see <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> at least once.</p>
+</div>
+<div id="S3.p10" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S3.F9" title="Figure 9 ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> we see two classes of words emerge. A similar phenomenon is observed concerning adaptive language models <cite class="ltx_cite">[]</cite>. In general, we can think of using word repetitions to re-score term detection as applying a limited form of adaptive or cache language model <cite class="ltx_cite">[]</cite>. Likewise, Katz attempts to capture these two classes in his G model of word frequencies (1996). <cite class="ltx_cite"/></p>
+</div>
+<div id="S3.p11" class="ltx_para">
+<p class="ltx_p">For the first class, burstiness increases slowly but steadily as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> occurs more frequently. Let us label these Class A words. Since our corpus size is fixed, we might expect this to occur, as more word occurrences must be pigeon-holed into the same number of documents</p>
+</div>
+<div id="S3.F9" class="ltx_figure"><img src="" id="S3.F9.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 9: </span>Tagalog <span class="ltx_text ltx_font_italic">burstiness</span>.</div>
+</div>
+<div id="S3.p12" class="ltx_para">
+<p class="ltx_p">Looking close to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p12.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-axis in Figure <a href="#S3.F9" title="Figure 9 ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>, we observe a second class of exclusively low frequency words whose burstiness ranges from highly concentrated to singletons. We will refer to these as Class B words. If we take the Class A concentration trend as typical, we can argue that most Class B words exhibit a larger than average concentration. In either case we see evidence that <span class="ltx_text ltx_font_italic">both high and low frequency words tend towards repeating within a document</span>.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Unigram Probabilities</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In applying the <span class="ltx_text ltx_font_italic">burstiness</span> quantity to term detection, we recall that the task requires us to locate a particular instance of a term, not estimate a count, hence the utility of N-gram language models predicting words in sequence.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We encounter the burstiness property of words again by looking at unigram occurrence probabilities. We compare the unconditional unigram probability (the probability that a given word token is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>) with the conditional unigram probability, <span class="ltx_text ltx_font_italic">given the term has occurred once in the document</span>. We compute the conditional probability for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> using frequency information.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle P(w|k&gt;0)" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>k</mi><mo>&gt;</mo></mrow><mo>⁢</mo><mn>0</mn></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m2" class="ltx_Math" alttext="\displaystyle=\frac{f_{w}-\mathrm{DF}_{w}}{\sum_{D:w\in D}{|D|}}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>f</mi><mi>w</mi></msub><mo>-</mo><msub><mi>DF</mi><mi>w</mi></msub></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>D</mi><mo>:</mo><mrow><mi>w</mi><mo>∈</mo><mi>D</mi></mrow></mrow></msub><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F10" title="Figure 10 ‣ 3.1 Unigram Probabilities ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a> shows the difference between conditional and unconditional unigram probabilities. Without any other information, Zipf’s law suggests that most word types do not occur in a particular document. However, conditioning on one occurrence, most word types are more likely to occur again, due to their burstiness.</p>
+</div>
+<div id="S3.F10" class="ltx_figure"><img src="" id="S3.F10.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 10: </span>Difference between conditional and unconditional unigram probabilities for Tagalog</div>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">Finally we measure the <span class="ltx_text ltx_font_italic">adaptation</span> of a word, which is defined by <cite class="ltx_cite"/> as:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="P_{adapt}(w)=P_{w}(k&gt;1|k&gt;0)" display="block"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>P</mi><mi>w</mi></msub><mrow><mo>(</mo><mi>k</mi><mo>&gt;</mo><mn>1</mn><mo>|</mo><mi>k</mi><mo>&gt;</mo><mn>0</mn><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">When we plot adaptation versus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="f_{w}" display="inline"><msub><mi>f</mi><mi>w</mi></msub></math> (Figure <a href="#S4.F11" title="Figure 11 ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">11</span></a>) we see that all high-frequency and a significant number of low-frequency terms have adaptation greater that 50%. To be precise, 26% of all tokens and 25% of low-frequency (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m2" class="ltx_Math" alttext="f_{w}&lt;100" display="inline"><mrow><msub><mi>f</mi><mi>w</mi></msub><mo>&lt;</mo><mn>100</mn></mrow></math>) have at least 50% adaptation. Given that adaptation values are roughly an order of magnitude higher than the conditional unigram probabilities, in the next two sections we describe how we use adaptation to boost term detection scores.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Term Detection Re-scoring</h2>
+
+<div id="S4.F11" class="ltx_figure"><img src="" id="S4.F11.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 11: </span>Tagalog word adaptation probability</div>
+</div>
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We summarize our re-scoring of repeated words with the observation: <span class="ltx_text ltx_font_italic">given a correct detection, the likelihood of additional terms in the same documents should increase</span>. When we observe a term detection score with high confidence, we boost the other lower-scoring terms in the same document to reflect this increased likelihood of repeated terms.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">For each term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> and document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> we propose interpolating the ASR confidence score for a particular detection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="t_{d}" display="inline"><msub><mi>t</mi><mi>d</mi></msub></math> with the top scoring hit in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> which we’ll call <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="\widehat{t}_{d}" display="inline"><msub><mover accent="true"><mi>t</mi><mo>^</mo></mover><mi>d</mi></msub></math>.</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\displaystyle S(t_{d})" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>d</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m2" class="ltx_Math" alttext="\displaystyle=(1-\alpha)P_{\mathrm{asr}}(t_{d}|O)+\alpha P_{\mathrm{asr}}(%&#10;\widehat{t}_{d}|O)" display="inline"><mrow><mo>=</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>α</mi><mo>)</mo></mrow><msub><mi>P</mi><mi>asr</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>d</mi></msub><mo>|</mo><mi>O</mi><mo>)</mo></mrow><mo>+</mo><mi>α</mi><msub><mi>P</mi><mi>asr</mi></msub><mrow><mo>(</mo><msub><mover accent="true"><mi>t</mi><mo>^</mo></mover><mi>d</mi></msub><mo>|</mo><mi>O</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We will we develop a principled approach to selecting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> using the adaptation property of the corpus. However to verify that this approach is worth pursuing, we sweep a range of small <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> values, on the assumption that we still do want to mostly rely on the ASR confidence score for term detection. For the Tagalog data, we let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> range from 0 (the baseline) to 0.4 and re-score each term detection score according to (<a href="#S4.E6" title="(6) ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>). Table <a href="#S4.T1" title="Table 1 ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the results of this parameter sweep and yields us 1 to 2% absolute performance gains in a number of term detection metrics.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">ATWV</span></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">0.00</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.470</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.430</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.05</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.481</td>
+<td class="ltx_td ltx_align_right">0.422</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.10</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.483</td>
+<td class="ltx_td ltx_align_right">0.420</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.15</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.484</td>
+<td class="ltx_td ltx_align_right">0.418</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.20</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.483</td>
+<td class="ltx_td ltx_align_right">0.416</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.25</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.480</td>
+<td class="ltx_td ltx_align_right">0.417</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.30</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.477</td>
+<td class="ltx_td ltx_align_right">0.417</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.35</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.475</td>
+<td class="ltx_td ltx_align_right">0.415</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.40</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.471</td>
+<td class="ltx_td ltx_align_right">0.413</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">0.45</th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.465</td>
+<td class="ltx_td ltx_align_right">0.413</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_r">0.50</th>
+<td class="ltx_td ltx_align_right ltx_border_bb ltx_border_r">0.462</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">0.410</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Term detection scores for swept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> values on Tagalog development data</div>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">The primary metric for the <span class="ltx_text ltx_font_small">BABEL</span> program, Actual Term Weighted Value (ATWV) is defined by NIST using a cost function of the false alarm probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="P(\mathrm{FA})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>FA</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math>, averaged over a set of queries <cite class="ltx_cite">[]</cite>. The manner in which the components of ATWV are defined:</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\displaystyle P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m2" class="ltx_Math" alttext="\displaystyle=1-N_{\mathrm{true}}(\mathrm{term})/f_{\mathrm{term}}" display="inline"><mrow><mi/><mo>=</mo><mrow><mn>1</mn><mo>-</mo><mrow><mrow><msub><mi>N</mi><mi>true</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>term</mi><mo>)</mo></mrow></mrow><mo>/</mo><msub><mi>f</mi><mi>term</mi></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+<tr id="S4.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m1" class="ltx_Math" alttext="\displaystyle P(\mathrm{FA})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>FA</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m2" class="ltx_Math" alttext="\displaystyle=N_{\mathrm{false}}/Duration_{\mathrm{corpus}}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><msub><mi>N</mi><mi>false</mi></msub><mo>/</mo><mi>D</mi></mrow><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>n</mi><mi>corpus</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">implies that cost of a miss is inversely proportional to the frequency of the term in the corpus, but the cost of a false alarm is fixed. For this reason, we report both ATWV and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m1" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math> component. A decrease in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m2" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math> reflects the fact that we are able to boost correct detections of the repeated terms.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Interpolation Weights</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We would prefer to use prior knowledge rather than naive tuning to select an interpolation weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>. Our analysis of word burstiness suggests that <span class="ltx_text ltx_font_italic">adaptation</span>, is a reasonable candidate. Adaptation also has the desirable property that we can estimate it for each word in the training vocabulary directly from training data and not post-hoc on a per-query basis. We consider several different estimates and we can show that the favorable result extends across languages.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Intuition suggests that we prefer per-term interpolation weights related to the term’s <span class="ltx_text ltx_font_italic">adaptation</span>. But despite the strong evidence of the adaptation phenomenon in both high and low-frequency words (Figure <a href="#S4.F11" title="Figure 11 ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">11</span></a>), we have less confidence in the adaptation strength of any particular word.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">As with word co-occurrence, we consider if estimates of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="P_{adapt}(w)" display="inline"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> from training data are consistent when estimated on development data. Figure <a href="#S4.F12" title="Figure 12 ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">12</span></a> shows the difference between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="P_{adapt}(w)" display="inline"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> measured on the two corpora (for words occurring in both).</p>
+</div>
+<div id="S4.F12" class="ltx_figure"><img src="" id="S4.F12.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 12: </span>Difference in adaptation estimates between Tagalog training and development corpora</div>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We see that the adaptation estimates are only consistent between corpora for high-frequency words. Using this <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="P_{adapt}(w)" display="inline"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> estimate directly actually hurts ATWV performance by 4.7% absolute on the 355 term development query set (Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">Given the variability in estimating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="P_{adapt}(w)" display="inline"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math>, an alternative approach would be take <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="\widehat{P_{w}}" display="inline"><mover accent="true"><msub><mi>P</mi><mi>w</mi></msub><mo>^</mo></mover></math> as an upper bound on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, reached as the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m4" class="ltx_Math" alttext="\mathrm{DF}_{w}" display="inline"><msub><mi>DF</mi><mi>w</mi></msub></math> increases (cf. Equation <a href="#S4.E9" title="(9) ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>). We would discount the adaptation factor when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m5" class="ltx_Math" alttext="\mathrm{DF}_{w}" display="inline"><msub><mi>DF</mi><mi>w</mi></msub></math> is low and we are unsure of the effect.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">Interpolation Weight</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">ATWV</span></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">None</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.470</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.430</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="P_{adapt}(w)" display="inline"><mrow><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.423</td>
+<td class="ltx_td ltx_align_right">0.474</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="(1-e^{-\mathrm{DF}_{w}})P_{adapt}(w)" display="inline"><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><msup><mi>e</mi><mrow><mo>-</mo><msub><mi>DF</mi><mi>w</mi></msub></mrow></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>P</mi><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_right ltx_border_r">0.477</td>
+<td class="ltx_td ltx_align_right">0.415</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math><span class="ltx_text ltx_font_bold"> = 0.20</span></th>
+<td class="ltx_td ltx_align_right ltx_border_bb ltx_border_r"><span class="ltx_text ltx_font_bold">0.483</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold">0.416</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Term detection performance using various interpolation weight strategies on Tagalog dev data</div>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<table id="Sx1.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9.m1" class="ltx_Math" alttext="\displaystyle\alpha_{w}" display="inline"><msub><mi>α</mi><mi>w</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9.m2" class="ltx_Math" alttext="\displaystyle=(1-e^{-\mathrm{DF}_{w}})\cdot\widehat{P}_{adapt}(w)" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><msup><mi>e</mi><mrow><mo>-</mo><msub><mi>DF</mi><mi>w</mi></msub></mrow></msup></mrow><mo>)</mo></mrow><mo>⋅</mo><msub><mover accent="true"><mi>P</mi><mo>^</mo></mover><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p">This approach shows a significant improvement (0.7% absolute) over the baseline. However, considering this estimate in light of the two classes of words in Figure <a href="#S3.F9" title="Figure 9 ‣ 3 Term and Document Frequency Statistics ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>, there are clearly words in Class B with high burstiness that will be ignored by trying to compensate for the high adaptation variability in the low-frequency range.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">Language</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">ATWV (%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="\pm" display="inline"><mo mathvariant="normal">±</mo></math>)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_bold"> (%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m4" class="ltx_Math" alttext="\pm" display="inline"><mo mathvariant="normal">±</mo></math>)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="4">Full LP setting</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Tagalog</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">0.20</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">0.523</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m5" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+1.1)</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.396 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m6" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.9)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Cantonese</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.23</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.418 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m7" class="ltx_Math" alttext="\," display="inline"><mi/></math></span> (+1.3)</td>
+<td class="ltx_td ltx_align_right">0.458 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m8" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.9)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Pashto</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.19</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.419</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m9" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+1.1)</td>
+<td class="ltx_td ltx_align_right">0.453 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m10" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.6)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Turkish</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.14</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.466</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m11" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+0.8)</td>
+<td class="ltx_td ltx_align_right">0.430 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m12" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.3)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Vietnamese</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.30</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.420</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m13" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+0.7)</td>
+<td class="ltx_td ltx_align_right">0.445 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m14" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.0)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic">English (Dev06)</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.20</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.670 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m15" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+0.3)</span></td>
+<td class="ltx_td ltx_align_right">0.240 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m16" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-0.4)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="4">Limited LP setting</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Tagalog</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">0.22</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">0.228</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m17" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+0.9)</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.692 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m18" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.7)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Cantonese</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.26</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.205</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m19" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+1.0)</td>
+<td class="ltx_td ltx_align_right">0.684 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m20" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-1.3)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Pashto</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.21</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.206 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m21" class="ltx_Math" alttext="\," display="inline"><mi/></math></span> (+0.9)</td>
+<td class="ltx_td ltx_align_right">0.682 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m22" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-0.9)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Turkish</th>
+<th class="ltx_td ltx_align_left ltx_border_r">0.16</th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">0.202</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m23" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+1.1)</td>
+<td class="ltx_td ltx_align_right">0.700 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m24" class="ltx_Math" alttext="\," display="inline"><mi/></math> (-0.8)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_r">Vietnamese</th>
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_r">0.34</th>
+<td class="ltx_td ltx_align_right ltx_border_bb ltx_border_r"><span class="ltx_text ltx_font_bold">0.227</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m25" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+1.0)</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">0.646 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m26" class="ltx_Math" alttext="\," display="inline"><mi/></math> (+0.4)</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Word-repetition re-scored results for available CTS term detection corpora</div>
+</div>
+<div id="S4.SS1.p8" class="ltx_para">
+<p class="ltx_p">Alternatively, we take a weighted average of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m1" class="ltx_Math" alttext="\alpha_{w}" display="inline"><msub><mi>α</mi><mi>w</mi></msub></math>’s estimated on training transcripts to obtain a single <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m2" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math> per language (cf. Equation <a href="#S4.E10" title="(10) ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>).</p>
+<table id="Sx1.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10.m1" class="ltx_Math" alttext="\displaystyle\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10.m2" class="ltx_Math" alttext="\displaystyle=\operatorname*{Avg}\limits_{w}\left[\left(1-e^{-\mathrm{DF}_{w}}%&#10;\right)\cdot\widehat{P}_{adapt}(w)\right]" display="inline"><mrow><mi/><mo>=</mo><mrow><munder><mo movablelimits="false">Avg</mo><mi>w</mi></munder><mo>⁡</mo><mrow><mo>[</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><msup><mi>e</mi><mrow><mo>-</mo><msub><mi>DF</mi><mi>w</mi></msub></mrow></msup></mrow><mo>)</mo></mrow><mo>⋅</mo><msub><mover accent="true"><mi>P</mi><mo>^</mo></mover><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi></mrow></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">Using this average as a single interpolation weight for all terms gives near the best performance as we observed in our parameter sweep. Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> contrasts the results for using the three different interpolation heuristics on the Tagalog development queries. Using the mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m3" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math> instead of individual <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m4" class="ltx_Math" alttext="\alpha_{w}" display="inline"><msub><mi>α</mi><mi>w</mi></msub></math>’s provides an additional 0.5% absolute improvement, suggesting that we find additional gains boosting low-frequency words.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Now that we have tested word repetition-based re-scoring on a small Tagalog development set we want to know if our approach, and particularly our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math> estimate is sufficiently robust to apply broadly. At our disposal, we have the five <span class="ltx_text ltx_font_small">BABEL</span> languages — Tagalog, Cantonese, Pashto, Turkish and Vietnamese — as well as the development data from the NIST 2006 English evaluation. The <span class="ltx_text ltx_font_small">BABEL</span> evaluation query sets contain roughly 2000 terms each and the 2006 English query set contains roughly 1000 terms.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The procedure we follow for each language condition is as follows. We first estimate adaptation probabilities from the ASR training transcripts. From these we take the weighted average as described previously to obtain a single interpolation weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math> for each training condition. We train ASR acoustic and language models from the training corpus using the Kaldi speech recognition toolkit <cite class="ltx_cite">[]</cite> following the default <span class="ltx_text ltx_font_small">BABEL</span> training and search recipe which is described in detail by <cite class="ltx_cite"/>. Lastly, we re-score the search output by interpolating the top term detection score for a document with subsequent hits according to Equation <a href="#S4.E6" title="(6) ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math> estimated for this training condition.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">For each of the <span class="ltx_text ltx_font_small">BABEL</span> languages we consider both the FullLP (80 hours) and LimitedLP (10 hours) training conditions. For the English system, we also train a Kaldi system on the 240 hours of the Switchboard conversational English corpus. Although Kaldi can produce multiple types of acoustic models, for simplicity we report results using discriminatively trained Subspace Gaussian Mixture Model (SGMM) acoustic output densities, but we do find that similar results can be obtained with other acoustic model configurations.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Using our final algorithm, we are able to boost repeated term detections and improve results in <span class="ltx_text ltx_font_bold">all languages and training conditions</span>. Table <a href="#S4.T3" title="Table 3 ‣ 4.1 Interpolation Weights ‣ 4 Term Detection Re-scoring ‣ Can You Repeat That?  Using Word Repetition to Improve Spoken Term Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> lists complete results and the associated estimates for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m1" class="ltx_Math" alttext="\widehat{\alpha}" display="inline"><mover accent="true"><mi>α</mi><mo>^</mo></mover></math>. For the <span class="ltx_text ltx_font_small">BABEL</span> languages, we observe improvements in ATWV from 0.7% to 1.3% absolute and reductions in the miss rate of 0.8% to 1.9%. The only test for which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m2" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math> did not improve was the Vietnamese Limited LP setting, although overall ATWV did improve, reflecting a lower <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m3" class="ltx_Math" alttext="P(\mathrm{FA})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>FA</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">In all conditions we also obtain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> estimates which correspond to our expectations for particular languages. For example, adaptation is lowest for the agglutinative Turkish language where longer word tokens should be less likely to repeat. For Vietnamese, with shorter, syllable length word tokens, we observe the lowest adaptation estimates.</p>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">Lastly, the reductions in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m1" class="ltx_Math" alttext="P(\mathrm{Miss})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>Miss</mi><mo>)</mo></mrow></mrow></math> suggests that we are improving the term detection metric, which is sensitive to threshold changes, by doing what we set out to do, which is to boost lower confidence repeated words and correctly asserting them as true hits. Moreover, we are able to accomplish this in a wide variety of languages.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Leveraging the <span class="ltx_text ltx_font_bold">burstiness</span> of content words, we have developed a simple technique to consistently boost term detection performance across languages. Using word repetitions, we effectively use a broad document context outside of the typical 2-5 N-gram window. Furthermore, we see improvements across a broad spectrum of languages: languages with syllable-based word tokens (Vietnamese, Cantonese), complex morphology (Turkish), and dialect variability (Pashto).</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Secondly, our results are not only effective but also intuitive, given that the interpolation weight parameter matches our expectations for the burstiness of the word tokens in the language on which it is estimated.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">We have focused primarily on re-scoring results for the term detection task. Given the effectiveness of the technique across multiple languages, we hope to extend our effort to exploit our human tendency towards redundancy to decoding or other aspects of the spoken document processing pipeline.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was partially supported by the Intelligence Advanced Research Projects Activity (IARPA) via Department of Defense U.S. Army Research Laboratory (DoD / ARL) contract number W911NF-12-C-0015. The U.S. Government is authorized to reproduce and distribute reprints for Governmental purposes notwithstanding any copyright annotation thereon. Disclaimer: The views and conclusions contained herein are those of the authors and should not be interpreted as necessarily representing the official policies or endorsements, either expressed or implied, of IARPA, DoD/ARL, or the U.S. Government.</p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p">Insightful discussions with <cite class="ltx_cite"/> are also gratefully acknowledged.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:06:05 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

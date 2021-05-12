@@ -1,0 +1,28 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:21, WORD_NUM:756">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">The most relevant outcome here reported is the proof that there is no system of spheres-based definition of multiple contraction functions which generates all the transitively relational partial meet multiple contractions.</a>
+<a href="#1" id="1">This fact has been thoroughly exposed in Section 4 and constitutes a noteworthy difference among the multiple and the singleton contractions since, in the case of the latter it is a very well-known result that Grove's class of system of spheres-based (singleton) contractions is identical to the class of transitively relational partial meet (singleton) contractions.</a>
+<a href="#2" id="2">Before providing this general impossibility result, in Section 3 we considered the particular case of the class of spheres filtration-based multiple contractions proposed in [17], [5].</a>
+<a href="#3" id="3">There we presented two counterexamples clarifying that neither the class of spheres filtration-based multiple contractions is subsumed by the class of transitively relational partial meet multiple contractions, nor the converse inclusion is satisfied.</a>
+<a href="#4" id="4">Finally, another significant contribution of this paper, is the proposal of two system of spheres-based constructive methods for defining multiple contractions and the proof that the two classes of functions that arise of those methods (differ from the class of spheres filtration-based multiple contractions presented in [17], [5] and) are subsumed by the class of transitively relational partial meet multiple contractions.</a>
+<a href="#5" id="5">Next we list some investigation topics that arise naturally from the research reported in the present paper and in some of the related works described in Section 6, and which deserve to be addressed in future studies:</a>
+<a href="#6" id="6">To find out whether the impossibility result presented in this paper remains valid when the underlying language is built from an infinite set of propositional symbols.</a>
+<a href="#7" id="7">The proofs we provided for Theorem 4.3, Theorem 4.4 rely on the assumption that the underlying language {a mathematical formula}L is based on a finite alphabet.</a>
+<a href="#8" id="8">To be more precise, the proof of Theorem 4.3 relies on the fact that there is a bijective relation between the sets {a mathematical formula}H(〈B∩K〉) and {a mathematical formula}K⊥B (as proven in Corollary 2.13).</a>
+<a href="#9" id="9">On the other hand the proof of Theorem 4.4 makes use of the finiteness of the set of (all) possible worlds and, additionally, involves the construction of a set ({a mathematical formula}H×H′) of sentences, which can only be defined when there is only a finite number of literals in every possible world.</a>
+<a href="#10" id="10">{sup:13} Furthermore, the sentences and structures (namely systems of spheres and the binary (transitive) relations on the set of all remainders of K) that were introduced in Counterexample 3.2 (which was used to prove the impossibility of defining all TRPMMCs by means of a system of spheres based construction), can only be defined as proposed, provided that the underlying language is finite.</a>
+<a href="#11" id="11">To obtain axiomatic characterizations for the two classes of multiple contraction functions proposed in Section 5.</a>
+<a href="#12" id="12">These characterizations would clarify the main differences concerning the behaviour of those two kinds of operation.</a>
+<a href="#13" id="13">Furthermore, since those two classes are subclasses of the class of TRPMMCs, their axiomatic characterizations might provide some insight towards an axiomatic characterization of the TRPMMCs — a problem that was originally raised by Fuhrmann and Hansson in [7] and which is still unsolved.</a>
+<a href="#14" id="14">These three axiomatic characterizations would possibly contribute to the identification of some necessary and sufficient properties for a TRPMMC to be constructable by means of a systems of spheres-based procedure.</a>
+<a href="#15" id="15">To identify the extra constraint(s) that a transitive relation ⊑ on the set {a mathematical formula}⋃B⊆LK⊥B needs to satisfy in order for the TRPMMCs based on it to belong to each one of the two classes of multiple contraction functions introduced in Definition 5.3, Definition 5.4.</a>
+<a href="#16" id="16">To investigate if there is a method for defining multiple contractions by means of total preorders over {a mathematical formula}2ML which is such that: (i) the class of functions thus obtained is identical with the class of TRPMMCs and, (ii) different total preorders over {a mathematical formula}2ML correspond to different TRPMMC functions.</a>
+<a href="#17" id="17">We notice that this investigation would also be a significant step towards the identification of a possible-worlds semantics for set contractions.</a>
+<a href="#18" id="18">Or, more precisely, towards the characterization of the set contractions in terms of systems of spheres.</a>
+<a href="#19" id="19">To obtain an explicit definition as well as an axiomatic characterization for the multiple revision functions that are obtained by means of Hansson's generalized Levi identity (equation (14)) from each one of the two classes of multiple contraction functions introduced in Definition 5.3, Definition 5.4.</a>
+<a href="#20" id="20">And, additionally, to investigate the relationship between the thus obtained classes of multiple revision functions and the class of system of spheres-based multiple revisions introduced in [15].</a>
+</body>
+</html>

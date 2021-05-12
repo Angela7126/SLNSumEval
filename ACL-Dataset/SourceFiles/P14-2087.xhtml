@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Applying a Naive Bayes Similarity Measure toWord Sense
+Disambiguation</title>
+<!--Generated on Wed Jun 11 17:59:10 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Applying a Naive Bayes Similarity Measure to
+<br class="ltx_break"/>Word Sense
+Disambiguation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Tong Wang 
+<br class="ltx_break"/>University of Toronto
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">tong@cs.toronto.edu</span> &amp;Graeme Hirst 
+<br class="ltx_break"/>University of Toronto
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">gh@cs.toronto.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We replace the overlap mechanism of the Lesk algorithm with a
+simple, general-purpose Naive Bayes model that measures
+<span class="ltx_text ltx_font_italic">many-to-many</span> association between two sets of random
+variables. Even with simple probability estimates such as maximum
+likelihood, the model gains significant improvement over the Lesk
+algorithm on word sense disambiguation tasks. With additional
+lexical knowledge from WordNet, performance is further improved to
+surpass the state-of-the-art results.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">To disambiguate a homonymous word in a given context,
+<cite class="ltx_cite"/> proposed a method that measured the degree
+of overlap between the glosses of the target and context words. Known
+as the Lesk algorithm, this simple and intuitive method has since been
+extensively cited and extended in the word sense disambiguation (WSD)
+community. Nonetheless, its performance in several WSD benchmarks is
+less than satisfactory
+<cite class="ltx_cite">()</cite>. Among the
+popular explanations is a key limitation of the algorithm, that
+“Lesk’s approach is very sensitive to the exact wording of
+definitions, so the absence of a certain word can radically change the
+results.” <cite class="ltx_cite">()</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Compounding this problem is the fact that many Lesk variants limited
+the concept of overlap to the literal interpretation of string
+matching (with their own variants such as length-sensitive matching
+<cite class="ltx_cite">()</cite>, etc.), and it was not until recently that
+overlap started to take on other forms such as tree-matching
+<cite class="ltx_cite">()</cite> and vector space models
+<cite class="ltx_cite">()</cite>. To
+address this limitation, a Naive Bayes model (NBM) is proposed in this
+study as a novel, probabilistic treatment of overlap in gloss-based
+WSD.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In the extraordinarily rich literature on WSD, we focus our review on
+those closest to the topic of Lesk and NBM. In particular, we opt for
+the “simplified Lesk” <cite class="ltx_cite">()</cite>, where
+inventory senses are assessed by gloss-context overlap rather than
+gloss-gloss overlap. This particular variant prevents proliferation of
+gloss comparison on larger contexts <cite class="ltx_cite">()</cite> and
+is shown to outperform the original Lesk algorithm
+<cite class="ltx_cite">()</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">To the best of our knowledge, NBMs have been employed exclusively as
+classifiers in WSD — that is, in contrast to their use as a
+similarity measure in this study. <cite class="ltx_cite"/> used NB
+classifier resembling an information retrieval system: a WSD instance
+is regarded as a document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>, and candidate senses are scored in
+terms of “relevance” to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>. When evaluated on a WSD benchmark
+<cite class="ltx_cite">()</cite>, the algorithm compared favourably to
+Lesk variants (as expected for a supervised
+method). <cite class="ltx_cite"/> proposed an ensemble model with
+multiple NB classifiers differing by context window size.
+<cite class="ltx_cite"/> trained an unsupervised NB classifier using
+the EM algorithm and empirically demonstrated the benefits of
+WordNet-assisted <cite class="ltx_cite">()</cite> feature selection over local
+syntactic features.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Among Lesk variants, <cite class="ltx_cite"/> extended the gloss of
+both inventory senses and the context words to include words in their
+related synsets in WordNet. Senses were scored by the sum of overlaps
+across all relation pairs, and the effect of individual relation pairs
+was evaluated in a later work <cite class="ltx_cite">()</cite>. Overlap
+was assessed by string matching, with the number of matching words
+squared so as to assign higher scores to multi-word overlaps.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Breaking away from string matching, <cite class="ltx_cite"/>
+measured overlap as similarity between gloss- and context-vectors,
+which were aggregated word vectors encoding second order co-occurrence
+information in glosses. An extension by <cite class="ltx_cite"/>
+differentiated context word senses and extended shorter glosses with
+related glosses in WordNet. <cite class="ltx_cite"/> measured
+overlap by <span class="ltx_text ltx_font_italic">concept similarity</span>
+<cite class="ltx_cite">()</cite> between each inventory sense and the
+context words. Gloss overlaps from their earlier work actually
+out-performed all five similarity-based methods.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">More recently, <cite class="ltx_cite"/> proposed a
+tree-matching algorithm that measured gloss-context overlap as the
+weighted sum of dependency-induced lexical
+distance. <cite class="ltx_cite"/> constructed a
+<span class="ltx_text ltx_font_italic">sentential</span> similarity measure <cite class="ltx_cite">()</cite> using
+<span class="ltx_text ltx_font_italic">lexical</span> similarity measures <cite class="ltx_cite">()</cite>,
+and overlap was measured by the cosine of their respective sentential
+vectors. A related approach <cite class="ltx_cite">()</cite> also used
+Wikipedia-induced concepts to encoded sentential vectors. These
+systems compared favourably to existing methods in WSD performance,
+although by using sense frequency information, they are essentially
+supervised methods.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">Distributional methods have been used in many WSD systems in quite
+different flavours than the current
+study. <cite class="ltx_cite"/> proposed a Lesk variant where
+each gloss word is weighted by its <span class="ltx_text ltx_font_italic">idf</span> score in relation to
+all glosses, and gloss-context association was incremented by these
+weights rather than binary, overlap counts. <cite class="ltx_cite"/>
+used distributional thesauri as a knowledge base to increase overlaps,
+which were, again, assessed by string matching.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">In conclusion, the majority of Lesk variants focused on extending the
+gloss to increase the chance of overlapping, while the proposed NBM
+aims to make better use of the limited lexical knowledge available. In
+contrast to string matching, the probabilistic nature of our model
+offers a “softer” measurement of gloss-context association,
+resulting in a novel approach to unsupervised WSD with
+state-of-the-art performance in more than one WSD benchmark (Section
+<a href="#S4" title="4 Evaluation ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Model and Task Descriptions</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>The Naive Bayes Model</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Formally, given two sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{e}=\{e_{i}\}" display="inline"><mrow><mi>𝐞</mi><mo>=</mo><mrow><mo>{</mo><msub><mi>e</mi><mi>i</mi></msub><mo>}</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{f}=\{f_{j}\}" display="inline"><mrow><mi>𝐟</mi><mo>=</mo><mrow><mo>{</mo><msub><mi>f</mi><mi>j</mi></msub><mo>}</mo></mrow></mrow></math>
+each consisting of multiple random events, the proposed model measures
+the probabilistic association <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="p(\mathbf{f}|\mathbf{e})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>𝐟</mi><mo>|</mo><mi>𝐞</mi><mo>)</mo></mrow></mrow></math> between
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math>. Under the assumption of conditional
+independence among the events in each set, a Naive Bayes treatment of
+the measure can be formulated as:</p>
+<table id="S3.E1" class="ltx_equationgroup">
+
+<tr id="S3.E1X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1X.m2" class="ltx_Math" alttext="\displaystyle p(\mathbf{f}|\mathbf{e})=" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>𝐟</mi><mo>|</mo><mi>𝐞</mi><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1X.m3" class="ltx_Math" alttext="\displaystyle\prod_{j}p(f_{j}|\{e_{i}\})=\prod_{j}\frac{p(\{e_{i}\}|f_{j})p(f_%&#10;{j})}{p(\{e_{i}\})}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>j</mi></munder></mstyle><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><mrow><mo>{</mo><msub><mi>e</mi><mi>i</mi></msub><mo>}</mo></mrow><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>j</mi></munder></mstyle><mstyle displaystyle="true"><mfrac><mrow><mi>p</mi><mrow><mo>(</mo><mrow><mo>{</mo><msub><mi>e</mi><mi>i</mi></msub><mo>}</mo></mrow><mo>|</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>{</mo><msub><mi>e</mi><mi>i</mi></msub><mo>}</mo></mrow><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(1)</span></td></tr>
+<tr id="S3.E1Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1Xa.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1Xa.m3" class="ltx_Math" alttext="\displaystyle\frac{\prod_{j}[p(f_{j})\prod_{i}p(e_{i}|f_{j})]}{\prod_{j}\prod_%&#10;{i}p(e_{i})}," display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>j</mi></msub><mrow><mo>[</mo><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>i</mi></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>|</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow><mo>]</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>j</mi></msub><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>i</mi></msub><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></mfrac></mstyle><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">In the second expression, Bayes’s rule is applied not only
+to take advantage of the conditional independence among <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math>’s, but
+also to facilitate probability estimation, since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="p(\{e_{i}\}|f_{j})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mrow><mo>{</mo><msub><mi>e</mi><mi>i</mi></msub><mo>}</mo></mrow><mo>|</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is
+easier to estimate in the context of WSD, where sample spaces of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math> become asymmetric (Section
+<a href="#S3.SS2" title="3.2 Model Application in WSD ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Model Application in WSD</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the context of WSD, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math> can be regarded as an instance of
+a polysemous word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math> represents certain lexical
+knowledge about the sense <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> manifested by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Think of the notations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math> mnemonically as <span class="ltx_text ltx_font_italic">exemplars</span> and
+<span class="ltx_text ltx_font_italic">features</span>, respectively.</span></span></span> WSD is thus formulated as
+identifying the sense <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="s^{*}" display="inline"><msup><mi>s</mi><mo>*</mo></msup></math> in the sense inventory <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> s.t.:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="s^{*}=\operatorname*{arg\,max}_{s\in\mathcal{S}}p(\mathbf{f}|\mathbf{e})" display="block"><mrow><msup><mi>s</mi><mo>*</mo></msup><mo>=</mo><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><mi>s</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒮</mi></mrow></msub><mi>p</mi><mrow><mo>(</mo><mi>𝐟</mi><mo>|</mo><mi>𝐞</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In one of their simplest forms, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math>’s correspond to co-occurring
+words in the instance of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math>’s consist of the gloss words
+of sense <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>. Consequently, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="p(\mathbf{f}|\mathbf{e})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>𝐟</mi><mo>|</mo><mi>𝐞</mi><mo>)</mo></mrow></mrow></math> is essentially
+measuring the association between context words of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and definition
+texts of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>, i.e., the gloss-context association in the simplified
+Lesk algorithm <cite class="ltx_cite">()</cite>. A major difference,
+however, is that instead of using hard, overlap counts between the two
+sets of words from the gloss and the context, this probabilistic
+treatment can implicitly model the distributional similarity among the
+elements <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math> (and consequently between the sets
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="\mathbf{e}" display="inline"><mi>𝐞</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m11" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math>) over a wider range of contexts. The
+result is a “softer” proxy of association than the binary view of
+overlaps in existing Lesk variants.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">The foregoing discussion offers a second motivation for applying
+Bayes’s rule on the second expression in Equation (<a href="#S3.E1" title="(1) ‣ 3.1 The Naive Bayes Model ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>): it
+is easier to estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="p(e_{i}|f_{j})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>|</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="p(f_{j}|e_{i})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>, since the
+vocabulary for the lexical knowledge features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math>) is usually more
+limited than that of the contexts (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math>) and hence estimation of the
+former suffices on a smaller amount of data than that of the latter.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Incorporating Additional Lexical Knowledge</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">The input of the proposed NBM is bags of words, and thus it is
+straightforward to incorporate various forms of lexical knowledge (LK)
+for word senses: by concatenating a tokenized knowledge source to the
+existing knowledge representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="\mathbf{f}" display="inline"><mi>𝐟</mi></math>, while the similarity
+measure remains unchanged.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The availability of LK largely depends on the sense inventory used in
+a WSD task. WordNet senses are often used in Senseval and SemEval
+tasks, and hence senses (or synsets, and possibly their corresponding
+word forms) that are semantic related to the inventory senses under
+WordNet relations are easily obtainable and have been exploited by
+many existing studies.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">As pointed out by <cite class="ltx_cite"/>, however, “not all of
+these relations are equally helpful.” Relation pairs involving
+hyponyms were shown to result in better F-measure when used in gloss
+overlaps <cite class="ltx_cite">()</cite>. The authors attributed the
+phenomenon to the the multitude of hyponyms compared to other
+relations. We further hypothesize that, beyond sheer numbers, synonyms
+and hyponyms offer stronger semantic specification that helps
+distinguish the senses of a given ambiguous word, and thus are more
+effective knowledge sources for WSD.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center" style="width:208.1pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt">Senses</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:45.5pt;" width="45.5pt">Hypernyms</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:45.5pt;" width="45.5pt">Hyponyms</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:45.5pt;" width="45.5pt">Synonyms</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">factory</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:45.5pt;" width="45.5pt">building complex, complex</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:45.5pt;" width="45.5pt">brewery,
+factory, mill, …</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:45.5pt;" width="45.5pt">works, industrial plant</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">life form</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_t" style="width:45.5pt;" width="45.5pt">organism, being</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_t" style="width:45.5pt;" width="45.5pt">perennial, crop…</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_t" style="width:45.5pt;" width="45.5pt">flora, plant life</td></tr>
+</tbody>
+</table>
+</span>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Lexical knowledge for the word <span class="ltx_text ltx_font_italic">plant</span>
+under its two meanings <span class="ltx_text ltx_font_italic">factory</span> and <span class="ltx_text ltx_font_italic">life form</span>.</div>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">Take the word <span class="ltx_text ltx_font_italic">plant</span> for example. Selected hypernyms,
+hyponyms, and synonyms pertaining to its two senses <span class="ltx_text ltx_font_italic">factory</span>
+and <span class="ltx_text ltx_font_italic">life form</span> are listed in Table
+<a href="#S3.T1" title="Table 1 ‣ 3.3 Incorporating Additional Lexical Knowledge ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Hypernyms can be overly general terms
+(e.g., <span class="ltx_text ltx_font_italic">being</span>). Although conceptually helpful for humans in
+coarse-grained WSD, this generality is likely to inflate the
+hypernyms’ probabilistic estimation. Hyponyms, on the other hand, help
+specify their corresponding senses with information that is possibly
+missing from the often overly brief glosses: the many technical terms
+as hyponyms in Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Incorporating Additional Lexical Knowledge ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> — though rare —
+are likely to occur in the (possibly domain-specific) contexts that
+are highly typical of the corresponding senses. Particularly for the
+NBM, the co-occurrence is likely to result in stronger
+gloss-definition associations when similar contexts appear in a WSD
+instance.</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p">We also observe that some semantically related words appear under rare
+senses (e.g., <span class="ltx_text ltx_font_italic">still</span> as an alcohol-manufacturing plant, and
+<span class="ltx_text ltx_font_italic">annual</span> as a one-year-life-cycle plant; omitted from Table
+<a href="#S3.T1" title="Table 1 ‣ 3.3 Incorporating Additional Lexical Knowledge ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). This is a general phenomenon in
+gloss-based WSD and is beyond the scope of the current
+discussion.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We do, however, refer curious readers to the work
+of <cite class="ltx_cite"/> for a novel treatment of a similar
+problem.</span></span></span> Overall, all three sources of LK may complement each other
+in WSD tasks, with hyponyms particularly promising in both quantity
+and quality compared to hypernyms and synonyms.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Note that LK
+expansion is a feature of our model rather than a requirement. What
+type of knowledge to include is eventually a decision made by the
+user based on the application and LK availability.</span></span></span></p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Probability Estimation</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">A most open-ended question is how to estimate the probabilities in
+Equation (<a href="#S3.E1" title="(1) ‣ 3.1 The Naive Bayes Model ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). In WSD in particular, the estimation concerns
+the marginal and conditional probabilities of and between word
+tokens. Many options are available to this end in statistical machine
+learning (MLE, MAP, etc.), information theory
+<cite class="ltx_cite">()</cite>, as well as the rich body
+of research in lexical semantic similarity
+<cite class="ltx_cite"/>).</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">Here we choose maximum likelihood — not only for its simplicity, but
+also to demonstrate model strength with a relatively crude probability
+estimation. To avoid underflow, Equation (<a href="#S3.E1" title="(1) ‣ 3.1 The Naive Bayes Model ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) is estimated as the following log probability:</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\hskip{-4.267913pt}\begin{aligned}&amp;\displaystyle\sum_{i}\log\frac{c(f_{j})}{c(%&#10;\cdot)}+\sum_{i}\sum_{j}\log\frac{c(e_{i},f_{j})}{c(f_{j})}-|\mathbf{f}|\sum_{%&#10;j}\log\frac{c(e_{i})}{c(\cdot)}\\&#10;\displaystyle=&amp;\displaystyle(1-|\mathbf{e}|)\sum_{i}\log c(f_{j})-|\mathbf{f}|%&#10;\sum_{j}\log c(e_{i})\\&#10;&amp;\displaystyle+\sum_{i}\sum_{j}\log c(e_{i},f_{j})+|\mathbf{f}|(|\mathbf{e}|-1%&#10;)\log c(\cdot),\end{aligned}" display="block"><mpadded lspace="-4.3pt" width="-4.3pt"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd/><mtd columnalign="left"><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mfrac></mrow></mrow><mo>+</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>,</mo><msub><mi>f</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow><mo>-</mo><mrow><mrow><mo fence="true">|</mo><mi>𝐟</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="right"><mo>=</mo></mtd><mtd columnalign="left"><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mrow><mo fence="true">|</mo><mi>𝐞</mi><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><mrow><mi>log</mi><mo>⁡</mo><mi>c</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow><mo>-</mo><mrow><mrow><mo fence="true">|</mo><mi>𝐟</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mrow><mrow><mi>log</mi><mo>⁡</mo><mi>c</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mtd></mtr><mtr><mtd/><mtd columnalign="left"><mrow><mrow><mo>+</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mrow><mrow><mi>log</mi><mo>⁡</mo><mi>c</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>,</mo><msub><mi>f</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>+</mo><mrow><mrow><mo fence="true">|</mo><mi>𝐟</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo fence="true">|</mo><mi>𝐞</mi><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>c</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></mtd></mtr></mtable></mpadded></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="c(x)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is the count of word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="c(\cdot)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is the corpus size,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="c(x,y)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> is the joint count of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m7" class="ltx_Math" alttext="|\mathbf{v}|" display="inline"><mrow><mo fence="true">|</mo><mi>𝐯</mi><mo fence="true">|</mo></mrow></math> is the
+dimension of vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m8" class="ltx_Math" alttext="\mathbf{v}" display="inline"><mi>𝐯</mi></math>.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">Nonetheless, we do investigate how model performance responds to
+estimation quality. Specifically in WSD, a <span class="ltx_text ltx_font_italic">source corpus</span> is
+defined as the source of the majority of the WSD instances in a given
+dataset, and a <span class="ltx_text ltx_font_italic">baseline corpus</span> of a smaller size and less
+resemblance to the instances is used for all datasets. The assumption
+is that a source corpus offers better estimates for the model than the
+baseline corpus, and difference in model performance is expected when
+using probability estimation of different quality.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Data, Scoring, and Pre-processing</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Various aspects of the model discussed in Section
+<a href="#S3" title="3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> are evaluated in the English lexical
+sample tasks from Senseval-2 <cite class="ltx_cite">()</cite> and
+SemEval-2007 <cite class="ltx_cite">()</cite>. Training sections are used as
+development data and test sections held out for final testing. Model
+performance is evaluated in terms of WSD accuracy using Equation
+(<a href="#S3.E2" title="(2) ‣ 3.2 Model Application in WSD ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) as the scoring function. Accuracy is defined as the
+number of correct responses over the number of instances. Because it
+is a rare event for the NBM to produce identical scores,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>This
+has never occurred in the hundreds of thousands of runs in our
+development process.</span></span></span> the model always proposes a unique answer and
+accuracy is thus equivalent to F-score commonly used in existing
+reports.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Multiword expressions (MWEs) in the Senseval-2 sense inventory are not
+explicitly marked in the contexts. Several of the top-ranking systems
+implemented their own MWE detection algorithms
+<cite class="ltx_cite">()</cite>. Without
+digressing to the details of MWE detection — and meanwhile, to
+ensure fair comparison with existing systems — we implement two
+variants of the prediction module, one completely ignorant of MWE and
+defaulting to <span class="ltx_text ltx_font_typewriter">INCORRECT</span> for all MWE-related answers,
+while the other assuming perfect MWE detection and performing regular
+disambiguation algorithm on the MWE-related senses (<span class="ltx_text ltx_font_italic">not</span>
+defaulting to <span class="ltx_text ltx_font_typewriter">CORRECT</span>). All results reported for Senseval-2
+below are harmonic means of the two outcomes.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Each inventory sense is represented by a set of LK tokens (e.g.,
+definition texts, synonyms, etc.) from their corresponding WordNet
+synset (or in the coarse-grained case, a concatenation of tokens from
+all synsets in a sense group).
+The <span class="ltx_text ltx_font_italic">MIT-JWI</span> library <cite class="ltx_cite">()</cite> is used for accessing
+WordNet. Usage examples in glosses (included by the library by
+default) are removed in our experiments.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>We also compared the
+two Lesk baselines (with and without usage examples) on the
+development data but did not observe significant differences as
+reported by <cite class="ltx_cite"/>.</span></span></span></p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Basic pre-processing is performed on the contexts and the glosses,
+including lower-casing, stopword removal, lemmatization on both
+datasets, and tokenization on the Senseval-2 instances.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>The
+SemEval-2007 instances are already tokenized.</span></span></span> <span class="ltx_text ltx_font_italic">Stanford
+CoreNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup><a href="http://nlp.stanford.edu/software/corenlp.shtml" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_upright">http://nlp.stanford.edu/software/corenlp.shtml</span></a><span class="ltx_text ltx_font_upright">.</span></span></span></span></span>
+is used for lemmatization and tokenization. Identical procedures are
+applied to all corpora used for probability estimation.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">Binomial test is used for significance testing, and with one exception
+explicitly noted in Section <a href="#S4.SS3" title="4.3 Probability Estimation ‣ 4 Evaluation ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>, all
+differences presented are statistically highly significant
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="p&lt;0.001" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.001</mn></mrow></math>).</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Comparing Lexical Knowledge Sources</h3>
+
+<div id="S4.T2" class="ltx_table">
+<span class="ltx_inline-block" style="width:338.2pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_rr ltx_border_tt">Dataset</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">glo</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">syn</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">hpr</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">hpo</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">all</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>1st</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>2nd</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span><span class="ltx_text ltx_font_italic ltx_align_center">Lesk</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic">Senseval-2 Coarse</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.475</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span>.478</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.494</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.518</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.<span class="ltx_text ltx_font_bold ltx_align_center">523</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.469</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.367</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.262</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_italic">Senseval-2 Fine</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.362</td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span>.371</td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.326</td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.379</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.388</td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.<span class="ltx_text ltx_font_bold ltx_align_center">412</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.293</td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.163</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_bb ltx_border_rr"><span class="ltx_text ltx_font_italic">SemEval-2007</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.494</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span>.511</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.507</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.550</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.<span class="ltx_text ltx_font_bold ltx_align_center">573</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.538</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>.521</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:22.8pt;" width="22.8pt"><span class="ltx_ERROR undefined ltx_centering ltx_centering">\arraybackslash</span>–</td></tr>
+</tbody>
+</table>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Lexical knowledge sources and WSD performance (<span class="ltx_text ltx_font_italic">F-measure</span>) on the Senseval-2 (fine- and coarse-grained) and the SemEval-2007 dataset.</div>
+</div>
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">To study the effect of different types of LK in WSD (Section
+<a href="#S3.SS3" title="3.3 Incorporating Additional Lexical Knowledge ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>), for each inventory sense, we choose
+synonyms (<span class="ltx_text ltx_font_italic">syn</span>), hypernyms (<span class="ltx_text ltx_font_italic">hpr</span>), and hyponyms
+(<span class="ltx_text ltx_font_italic">hpo</span>) as extended LK in addition to its gloss. The WSD model
+is evaluated with gloss-only (<span class="ltx_text ltx_font_italic">glo</span>), individual extended LK
+sources, and the combination of all four sources (<span class="ltx_text ltx_font_italic">all</span>). The
+results are listed in Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Comparing Lexical Knowledge Sources ‣ 4 Evaluation ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> together with
+existing results (1st and 2nd correspond to the results of the top two
+unsupervised methods in each dataset).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>We excluded the
+results of <span class="ltx_text ltx_font_italic">UNED</span> <cite class="ltx_cite">()</cite> in Senseval-2
+because, by using sense frequency information that is only
+obtainable from sense-annotated corpora, it is essentially a
+supervised system.</span></span></span></p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">By using only glosses, the proposed model already shows statistically
+significant improvement over the basic Lesk algorithm (92.4% and
+140.5% relative improvement in Senseval-2 coarse- and fine-grained
+tracks, respectively).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Comparisons are made against the
+simplified Lesk algorithm <cite class="ltx_cite">()</cite> without
+usage examples. The comparison is unavailable in SemEval2007 since
+we have not found existing experiments with this exact
+configuration.</span></span></span> Moreover, comparison between coarse- and
+fine-grained tracks reveals interesting properties of different LK
+sources. Previous hypotheses (Section <a href="#S3.SS3" title="3.3 Incorporating Additional Lexical Knowledge ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>)
+are empirically confirmed that WSD performance benefits most from
+hyponyms and least from hypernyms. Specifically, highly similar,
+fine-grained sense candidates apparently share more hypernyms in the
+fine-grained case than in the coarse-grained case; adding to the
+generality of hypernyms (both semantic and distributional), we
+postulate that their probability in the NBM is uniformly inflated
+among many sense candidates, and hence they decrease in
+distinguishability. Synonyms might help with regard to semantic
+specification, though their limited quantity also limits their
+benefits. These patterns on the LK types are consistent in all three
+experiments.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">When including all four LK sources, our model outperforms the
+state-of-the-art systems with statistical significance in both
+coarse-grained tasks. For the fine-grained track, it achieves 2nd
+place after that of <cite class="ltx_cite"/>, which used a decision
+list <cite class="ltx_cite">()</cite> on <span class="ltx_text ltx_font_italic">manually selected</span>
+corpora evidence for each inventory sense, and thus is not subject to
+loss of distinguishability in the glosses as Lesk variants are.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Probability Estimation</h3>
+
+<div id="S4.F1" class="ltx_figure"><img src="" id="S4.F1.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Model response to probability estimates of different
+quality on the SemEval-2007 dataset. Error bars indicate
+confidence intervals (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F1.m2" class="ltx_Math" alttext="p&lt;.001" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow></math>), and the dashed line corresponds
+to the best reported result. </div>
+</div>
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">To evaluate model response to probability estimation of different
+quality (Section <a href="#S3.SS4" title="3.4 Probability Estimation ‣ 3 Model and Task Descriptions ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>), source corpora are chosen as
+the majority value of the <span class="ltx_text ltx_font_italic">doc-source</span> attribute of instances
+in each dataset, namely, the <span class="ltx_text ltx_font_italic">British National Corpus</span> for
+Senseval-2 (94%) and the <span class="ltx_text ltx_font_italic">Wall Street Journal</span> for
+SemEval-2007 (86%). The <span class="ltx_text ltx_font_italic">Brown Corpus</span> is shared by both
+datasets as the baseline corpus. Figure <a href="#S4.F1" title="Figure 1 ‣ 4.3 Probability Estimation ‣ 4 Evaluation ‣ Applying a Naive Bayes Similarity Measure to Word Sense&#10;Disambiguation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows
+the comparison on the SemEval-2007 dataset. Across all experiments,
+higher WSD accuracy is consistently witnessed using the source corpus;
+differences are statistically highly significant except for
+<span class="ltx_text ltx_font_italic">hpo</span> (which is significant with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>).</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have proposed a general-purpose Naive Bayes model for measuring
+association between two sets of random events. The model replaced
+string matching in the Lesk algorithm for word sense disambiguation
+with a probabilistic measure of gloss-context overlap. The base model
+on average more than doubled the accuracy of Lesk in Senseval-2 on
+both fine- and coarse-grained tracks. With additional lexical
+knowledge, the model also outperformed state of the art results with
+statistical significance on two coarse-grained WSD tasks.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For future work, we plan to apply the model in other shared tasks,
+including open-text WSD, so as to compare with more recent Lesk
+variants. We would also like to explore how to incorporate syntactic
+features and employ alternative statistical methods (e.g., parametric
+models) to improve probability estimation and inference. Other NLP
+problems involving compositionality in general might also benefit from
+the proposed many-to-many similarity measure.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This study is funded by the Natural Sciences and Engineering Research
+Council of Canada. We thank Afsaneh Fazly, Navdeep Jaitly, and Varada
+Kolhatkar for the many inspiring discussions, as well as the anonymous
+reviewers for their constructive advice.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_font_small ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:59:10 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

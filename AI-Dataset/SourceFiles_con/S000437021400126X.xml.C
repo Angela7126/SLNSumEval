@@ -1,0 +1,818 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Realizing RCC8 networks using convex regions.
+   </title>
+   <abstract>
+    RCC8 is a popular fragment of the region connection calculus, in which qualitative spatial relations between regions, such as adjacency, overlap and parthood, can be expressed. While RCC8 is essentially dimensionless, most current applications are confined to reasoning about two-dimensional or three-dimensional physical space. In this paper, however, we are mainly interested in conceptual spaces, which typically are high-dimensional Euclidean spaces in which the meaning of natural language concepts can be represented using convex regions. The aim of this paper is to analyze how the restriction to convex regions constrains the realizability of networks of RCC8 relations. First, we identify all ways in which the set of RCC8 base relations can be restricted to guarantee that consistent networks can be convexly realized in respectively 1D, 2D, 3D, and 4D. Most surprisingly, we find that if the relation ‘partially overlaps’ is disallowed, all consistent atomic RCC8 networks can be convexly realized in 4D. If instead refinements of the relation ‘part of’ are disallowed, all consistent atomic RCC8 relations can be convexly realized in 3D. We furthermore show, among others, that any consistent RCC8 network with 2n+1 variables can be realized using convex regions in the n-dimensional Euclidean space.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      RCC8 is a well-known constraint language for modelling and reasoning about the qualitative spatial relationships that hold between regions [1]. It is based on eight relations which are jointly exhaustive and pairwise disjoint: equals (EQ), partially overlaps (PO), externally connected (EC), disconnected (DC), tangential proper part (TPP) and its inverse ({a mathematical formula}TPP−1), and non-tangential proper part (NTPP) and its inverse ({a mathematical formula}NTPP−1). The intended meaning of these and a number of related relations is summarized in Table 1. RCC5 is a variant of RCC8 which is instead based on the following five coarser basic relations: equals (EQ), partially overlaps (PO), disjoint (DR), proper part (PP) and its inverse ({a mathematical formula}PP−1). In general, constraint networks over RCC8 (or RCC5) relations could be realized using regions from arbitrary topological spaces that satisfy the axioms of the RCC [1].
+     </paragraph>
+     <paragraph>
+      In practice, most applications use RCC8 to reason about two-dimensional or three-dimensional Euclidean space. For example, Ref. [2] uses RCC8 to encode how different objects in a video are spatially related to each other, and how these relations change over time. This high-level representation is then used to recognize particular types of events. On the semantic web, RCC8 is used to encode geographic information in OWL ontologies [3], [4] and linked data [5], [6], and to reason about the integrity of spatial databases [7]. It can be shown that focusing on Euclidean spaces of fixed dimension does not affect the notion of consistency which is used in RCC8 [8] (see Section 2).
+     </paragraph>
+     <paragraph>
+      RCC8 could potentially also play a crucial role in reasoning about higher-dimensional Euclidean spaces. In such applications, however, it is often natural to consider convex regions only. For example, in the theory of conceptual spaces proposed in [9], the meaning of natural properties and concepts is represented using convex regions in a suitable metric space, which is most often taken to be Euclidean [9]. The concepts car and vehicle would both correspond to convex regions and the constraint {a mathematical formula}carPPvehicle then means that every car is a vehicle, while {a mathematical formula}vehiclePOwooden-object means that some but not all vehicles are wooden objects (e.g. a dugout canoe) and not all wooden objects are vehicles. While the idea that natural concepts tend to be convex is a conjecture, among other examples, Ref. [9] points to evidence from cognitive studies on color spaces, showing that natural language terms for colors tend to correspond to convex regions in a suitable conceptual space. Requiring convexity is also closely related to prototype theory [10]. Indeed, a common approach is to represent prototypes as points in a feature space and to define the extension of concepts as the cells of the Voronoi diagram induced from these points, which are convex. In machine learning, convex hull based classifiers have been proposed [11], which are explicitly based on the assumption that categories tend to correspond to convex regions in a feature space. In particular, in a convex hull based classifier, every category {a mathematical formula}Ci is represented geometrically as the convex hull of the points (i.e. entities) that are known to belong to {a mathematical formula}Ci. A test item x is then assigned to the category whose convex hull is closest. While such classifiers are often effective, classification decisions require solving a quadratic program and is thus computationally expensive. As an alternative, in [12] a classifier is introduced which encodes the intuition that when x is located between two items from class {a mathematical formula}Ci in the feature space, then x is also likely to belong to class {a mathematical formula}Ci. Such a betweenness based classifier also implicitly uses the assumption that categories correspond to convex regions, while being more efficient than a convex hull based classifier.
+     </paragraph>
+     <paragraph>
+      In computational linguistics, methods are studied to learn representations for the meaning of natural language terms as convex regions from large corpora [13]. In the context of conceptual spaces, EC and TPP relate to some notion of conceptual neighborhood (cf. [14]). For example, {a mathematical formula}orangeECred means that there is a continuous transition from colors which are considered red to colors which are considered orange, without passing through any other colors. This also entails that while orange and red are considered as separate colors, there may exist borderline colors for which it is hard to judge whether they are red or orange. This notion of conceptual neighborhood has proven useful for defining commonsense reasoning approaches to merge conflicting propositional knowledge bases [15]. Alternatively, the exact boundaries of what it means for an object to be orange may be considered to be vague, but we may still use an RCC8 based representation in such a case [9], e.g. by relying on the Egg-Yolk calculus [16] or on a fuzzy region connection calculus [17]. In any case, qualitative spatial reasoning based on (a variant of) RCC8 is well-suited for formalizing particular forms of commonsense reasoning about natural language concepts [9]. This application is likely to inspire further extensions and variants of RCC8 and RCC5; e.g. in [18], RCC5 is combined with a notion of betweenness to formalize interpolation, a particular form of commonsense reasoning.
+     </paragraph>
+     <paragraph>
+      As another example of qualitative reasoning about convex regions in higher-dimensional Euclidean spaces, we consider species distribution models [19], which are used in ecology to specify the environmental parameters within which the occurrence of a given species can be sustained. Typically, the distribution model of a given organism is encoded as a convex region in a Euclidean space in which the dimensions correspond to environmental parameters (e.g. related to climate and land cover). Several ecological constraints can naturally be expressed using RCC8 relations between these models. For example, knowing that the mountain lion is a predator of the bighorn sheep,{sup:1} we know that {a mathematical formula}mountain-lionPObighorn-sheep needs to hold for the corresponding distribution models. Similarly, since a harlequin ladybird is a kind of ladybird, we should require {a mathematical formula}harlequin-ladybirdPPladybird. RCC8 could thus allow us to reason about ecological information extracted from text (e.g. the encyclopedia of life{sup:2}), which could be useful to derive constraints that can be taken into account when learning distribution models from sparse data.
+     </paragraph>
+     <paragraph>
+      As a final example, we consider imprecise probability theory [20], which is a theory of uncertainty in which the beliefs of an agent are encoded as a convex region called a credal set. Specifically, these regions are subsets of the standard simplex and each point of this simplex corresponds to a probability distribution in the domain of discourse. For example if A and B are the regions encoding the beliefs of agents a and b, then aPPb means that a is better informed than b, i.e. the beliefs of a and b are compatible and a could not learn anything by sharing its information with b. Similarly, aDCb means that the beliefs of a and b are incompatible. RCC8 could thus be used as the basis for a qualitative counterpart to the theory of imprecise probabilities.
+     </paragraph>
+     <paragraph label="Example 1">
+      A natural question is then: how does the requirement that all regions be convex affect the realizability of RCC8 constraint networks? It is easy to see that deciding whether an RCC8 network has a convex solution in {a mathematical formula}R can be reduced to consistency checking in the interval algebra [21], which is NP-complete [22]. It is moreover well known that many consistent RCC8 constraint networks cannot be realized by convex regions in {a mathematical formula}R2. Consider the following set of constraints:{a mathematical formula}{a mathematical formula}Fig. 1 shows a configuration which satisfies all of these constraints except for xECv. Since {a mathematical formula}a∩u, {a mathematical formula}a∩v, {a mathematical formula}x∩b and {a mathematical formula}y∩b are necessarily all intervals of the same line, it is easy to show that additionally satisfying xECv is not possible (see Section 5.2).
+     </paragraph>
+     <paragraph>
+      In [23] it was shown that deciding whether an RCC8 constraint network can be realized as convex regions in {a mathematical formula}R2 is decidable, but computationally hard. Specifically, this problem was shown to be as hard as deciding consistency in the existential theory of the real numbers [24]. From this result, we can derive a similar result for regions in {a mathematical formula}Rk, for any fixed {a mathematical formula}k≥2. We provide a proof in Appendix A. Moreover, Ref. [23] shows that any RCC8 network which has a convex solution in {a mathematical formula}Rk can be realized using convex polytopes.
+     </paragraph>
+     <paragraph>
+      In this paper, we show that despite these intractability results, RCC8 can still be used to efficiently reason about convex regions. The key insight is that every consistent RCC8 constraint network can be realized using convex regions, provided that the number of dimensions is sufficiently high. Note that as the required number of dimensions depends on the number of variables in the constraint network, this result does not contradict the result from [23], which applies only if the number of dimensions k is fixed in advance. In particular, we make the following contributions:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       For all subsets of the RCC8 relations, we derive the minimal number of dimensions k which are needed to guarantee that all consistent constraint networks which only use relations from this subset can be realized by convex regions in {a mathematical formula}Rk. For the full RCC8, it is clear that a finite bound k does not exist. However, among others we show that if PO is not allowed, all consistent networks can be realized in {a mathematical formula}R4. If only the relations in {a mathematical formula}{PO,EC,DC,EQ} or only the relations in {a mathematical formula}{EC,DC,NTPP,NTPP−1,EQ} are allowed, all consistent networks can be realized in {a mathematical formula}R3.
+      </list-item>
+      <list-item label="2.">
+       We analyze how the required number of dimensions relates to the number of variables. Among others we show that all consistent RCC8 constraint networks with {a mathematical formula}2n+1 regions can be realized using convex regions in {a mathematical formula}Rn.
+      </list-item>
+     </list>
+     <paragraph>
+      In this way, we establish important sufficient conditions to use standard RCC8 reasoners for sound and complete reasoning about convex regions. In computational linguistics, for instance, it is common to consider high-dimensional Euclidean spaces of 100 to 500 dimensions to represent the meaning of natural language terms [13], [25]. If we use RCC8 to reason about convex regions in these spaces, we can use standard RCC8 reasoners [26] if the number of considered regions is at most {a mathematical formula}2n+1=1001 (in the case of 500 dimensions). In fact, {a mathematical formula}2n+1 is the worst-case bound we obtain, and for most problem instances with more than 1001 regions, the methodology from Section 5 will still allow us to derive that convex solutions in {a mathematical formula}Rn must exist.
+     </paragraph>
+     <paragraph>
+      In other words, the aim of this paper is to identify sufficient conditions on the required number of dimensions to guarantee that a convex solution exists. The paper is structured as follows. In the next section, we recall some basic results about RCC8 and RCC5. Then in Section 3, we give an overview of the results that are established in this paper. The remainder of the paper focuses on the proofs of these results. In particular, in Section 4, we derive the minimal number of dimensions that are needed to guarantee convex solutions when only a subset of the RCC8 relations is allowed. Based on these results, we then show in Section 5 how the number of regions and the number of occurrences of particular RCC8 relations can be used to derive finite bounds on the number of regions even for RCC8 constraint networks in which all RCC8 relations are used.
+     </paragraph>
+     <paragraph>
+      Finally note that Section 5 of this paper presents a substantially revised and extended version of the results from [27]. The results presented in Section 4 are completely new.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we provide some background about the region connection calculus, convex polytopes and the moment curve. We will assume that the reader is familiar with basic notions from topology such as open and closed sets and the interior and closure operators, and with basic notions from geometry such as the convex hull.
+     </paragraph>
+     <paragraph>
+      Throughout the paper, we will use Greek uppercase letters such as Θ and Ψ for sets of RCC8 or RCC5 formulas, and uppercase letters such as S for other sets. We will use lowercase Greek letters such as λ and θ for real numbers, and lowercase letters such as p and q for points. We will use bold lowercase letters such as h for vectors.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       The region connection calculus
+      </section-title>
+      <paragraph>
+       We write:{a mathematical formula}{a mathematical formula} A non-empty subset {a mathematical formula}R⊆R8 is called an RCC8 relation. Without cause for confusion, we can identify a singleton {a mathematical formula}{r} with the corresponding relation r from {a mathematical formula}R8 or {a mathematical formula}R5. These singletons are called the RCC8 and RCC5 base relations respectively. For convenience, we also use the following abbreviations:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Let {a mathematical formula}V={v1,...,vm} be a fixed set of variables. An RCC8 constraint is an expression of the form {a mathematical formula}viRvj where R is an RCC8 relation. Intuitively, such a constraint imposes that the spatial relation between {a mathematical formula}vi and {a mathematical formula}vj is among those in R. If {a mathematical formula}R={r} is a base relation, we usually write {a mathematical formula}virvj instead of {a mathematical formula}vi{r}vj. A set of RCC8 constraints is called an RCC8 network. An RCC8 network Θ is called atomic if for each {a mathematical formula}i≠j it contains a constraint of the form {a mathematical formula}viRvj or {a mathematical formula}vjRvi where R is a singleton, i.e. an atomic network explicitly specifies for each pair of variables what is the corresponding RCC8 base relation. Let {a mathematical formula}R be a non-empty subset of {a mathematical formula}R8. If every constraint {a mathematical formula}viRvj is such that {a mathematical formula}R⊆R, then we call Θ a network over {a mathematical formula}R. For {a mathematical formula}V′⊆V, we write {a mathematical formula}Θ↓V′ for the restriction of Θ to the variables in {a mathematical formula}V′, i.e.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Recall that a set X is called regular closed if {a mathematical formula}cl(i(X))=X, where cl and i are the closure and interior operators. We say that an RCC8 network Θ is consistent iff there exists a mapping {a mathematical formula}S from V to the set of nonempty regular closed subsets of {a mathematical formula}Rn, for a given {a mathematical formula}n≥1, such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For each {a mathematical formula}v∈V, {a mathematical formula}S(v) is regular closed.
+       </list-item>
+       <list-item label="•">
+        For each constraint {a mathematical formula}viRvj in Θ, it holds that the unique RCC8 base relation which holds between {a mathematical formula}S(vi) and {a mathematical formula}S(vj) in the sense of Table 1 is among those in R.
+       </list-item>
+      </list>
+      <paragraph>
+       In such a case, {a mathematical formula}S is called an n-dimensional solution of Θ. If Θ has an n-dimensional solution, we also say that Θ is realizable in {a mathematical formula}Rn. It can be shown that the number of dimensions does not affect consistency: if Θ is realizable in {a mathematical formula}Rn, it is realizable in {a mathematical formula}Rk for any {a mathematical formula}k≥1[8]. Moreover, there are several alternative ways of defining consistency, e.g. in terms of topological spaces or algebras [29], which are equivalent to the aforementioned notion of consistency [30].
+      </paragraph>
+      <paragraph>
+       For atomic networks, consistency can be decided in {a mathematical formula}O(n3) by checking path consistency. Specifically, it suffices to check for each i, j, k whether {a mathematical formula}ρik is among the relations in {a mathematical formula}ρij∘ρjk, where the composition {a mathematical formula}ρij∘ρjk of {a mathematical formula}ρij and {a mathematical formula}ρjk is defined by the RCC8 composition table, shown in Table 2. For example, {a mathematical formula}Θ={v1TPPv2,v2POv3,v1EQv3} is not consistent, because EQ is not among {a mathematical formula}TPP∘PO={DC,EC,PO,TPP,NTPP}. For arbitrary RCC8 networks, consistency can be decided by using a combination of backtracking and path consistency checking [31].
+      </paragraph>
+      <paragraph>
+       We say that Θ entails a constraint {a mathematical formula}viRvj, written {a mathematical formula}Θ⊨viRvj, if every solution of Θ is also a solution of {a mathematical formula}{viRvj}. Similarly, we say that Θ entails a network Ψ, written {a mathematical formula}Θ⊨Ψ if Θ entails every constraint in Ψ. If {a mathematical formula}Θ⊨Ψ and {a mathematical formula}Ψ⊨Θ, we say that Θ and Ψ are equivalent, written {a mathematical formula}Θ≡Ψ. For atomic networks, it holds that {a mathematical formula}Θ⊨viRvj iff Θ contains a constraint {a mathematical formula}vi{r}vj such that {a mathematical formula}r∈R or a constraint {a mathematical formula}vj{r}vi such that {a mathematical formula}r−1∈R, where we define {a mathematical formula}DC−1=DC, {a mathematical formula}EC−1=EC, {a mathematical formula}PO−1=PO, {a mathematical formula}EQ−1=EQ, {a mathematical formula}(TPP−1)−1=TPP and {a mathematical formula}(NTPP−1)−1=NTPP.
+      </paragraph>
+      <paragraph>
+       The notion of realizability can be refined by imposing additional requirements on the kind of regions which are considered. For example, if all regions are required to be internally connected (i.e. no region is the union of two disjoint non-empty regions), some consistent RCC8 networks cannot be realized in {a mathematical formula}R or in {a mathematical formula}R2, although all consistent RCC8 networks can be realized using internally connected regions in {a mathematical formula}R3[8]. In this paper, we analyze the realizability of consistent RCC8 networks when all regions are required to be convex. A solution of a network Θ which maps every region to a convex set in {a mathematical formula}Rn is called a convex solution. If such a convex solution exists, we say that Θ is convexly realizable in {a mathematical formula}Rn.
+      </paragraph>
+      <paragraph>
+       A non-empty subset {a mathematical formula}R⊆R5 is called an RCC5 relation. Entirely analogously as for RCC8 relation, we can define the notion of RCC5 constraint, RCC5 network, consistency, entailment and equivalence.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Convex polytopes and the moment curve
+      </section-title>
+      <paragraph>
+       We first recall a number of notions and results about convex polytopes. A convex polytope V in {a mathematical formula}Rn is the intersection of a finite set of half-spaces, i.e.{a mathematical formula} where {a mathematical formula}hi∈Rn is a vector and {a mathematical formula}ci∈R is a constant. The corresponding hyperplanes {a mathematical formula}Hi={x|hi⋅x=ci,x∈Rn} are called the bounding hyperplanes of V. We call F an {a mathematical formula}n−1 dimensional face of V if {a mathematical formula}F=Hi∩V and {a mathematical formula}dim⁡(F)=n−1, where {a mathematical formula}Hi is one of the bounding hyperplanes of V. A family of convex polytopes {a mathematical formula}{V1,...,Vm} in {a mathematical formula}Rn is called neighborly if {a mathematical formula}dim⁡(Vi∩Vj)=n−1 for all {a mathematical formula}1≤i&lt;j≤m. It is well known that neighborly families in {a mathematical formula}R2 can have at most 3 elements. A key result which we will use in this paper (cf. Proposition 13, Proposition 14) is that there exist neighborly families of arbitrary size in {a mathematical formula}R3[32].
+      </paragraph>
+      <paragraph>
+       The Voronoi diagram induced by a set of points {a mathematical formula}p1,...,pm in {a mathematical formula}Rn is the set of convex polytopes {a mathematical formula}V1,...,Vm defined as follows:{a mathematical formula} The n-dimensional moment curve is the set of points {a mathematical formula}{(t,t2,...,tn)|t∈R}. Let us write {a mathematical formula}M(t) for the point {a mathematical formula}(t,t2,...,tn). Note that the two-dimensional moment curve is a parabola. In higher dimensional spaces, the moment curve has a number of interesting properties. For any {a mathematical formula}n≥3, it can be shown that the Voronoi diagram of the points {a mathematical formula}{(t,t2,...,tn)|t∈{1,...,m}} is a neighborly family [32], and more generally that the Voronoi diagram of any finite set of points on the positive half of the moment curve is a neighborly family [33]. Using a similar construction based on the helix {a mathematical formula}{(t,cos⁡t,sin⁡t)|t∈R}, Ref. [34] shows that an arbitrarily large neighborly family of congruent convex polyhedra in {a mathematical formula}R3 can be constructed.
+      </paragraph>
+      <paragraph>
+       In particular, it can be shown that any n points on the n-dimensional moment curve are linearly independent (i.e. in general linear position). Moreover, a hyperplane H intersects the moment curve in at most n points [35, Lemma 6.4] and if H intersects the moment curve in exactly n points, the moment curve crosses H in each of these points [36, Lemma 1.6.4].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Overview of the results
+     </section-title>
+     <paragraph>
+      In some applications, particular RCC8 relations do not occur. For example, when modelling natural language concepts, it is often possible to organize concepts in a single subsumption hierarchy. It is common to interpret such hierarchies in the following way: if concept A is a descendant of concept B, then {a mathematical formula}A{TPP,NTPP}B and if A is (the descendant of) a sibling of B, then {a mathematical formula}A{EC,DC}B. In particular, in such applications, there are no concepts which partially overlap. As we will show, any consistent atomic RCC8 network without PO has a convex realization in {a mathematical formula}R4. When different (sets of) base relations are excluded, similar upper bounds on the required number of dimensions can be found. Fig. 2 presents an overview of the results which will be established in Section 4. For completeness, we also consider subsets of RCC5 base relations, for which the results are summarized in Fig. 3. For some fragments, we will show that there exists no finite upper bound on the number of dimensions.
+     </paragraph>
+     <paragraph>
+      Note that throughout this paper we will not consider RCC8 and RCC5 networks in which the relation EQ occurs, as we can easily avoid using this relation by appropriately renaming variables. Furthermore, note that if NTPP is allowed then we also need to allow {a mathematical formula}NTPP−1, and similarly if TPP is allowed then {a mathematical formula}TPP−1 needs to be allowed. This means that the total number of non-empty subsets of RCC8 relations that we need to consider is {a mathematical formula}25−1=31. Fig. 2 shows the result for each of these subsets. Similarly, for RCC5, the total number of subsets to consider is {a mathematical formula}23−1=7, all of which are shown in Fig. 3.
+     </paragraph>
+     <paragraph label="Remark 1">
+      The results from Fig. 2, Fig. 3 only apply to atomic networks. For example, as shown in [23], it is possible to encode an RCC8 network using only EC and TPP which is not realizable in {a mathematical formula}R2. Indeed, let Θ be an arbitrary network over {a mathematical formula}{EC,PO,TPP,TPP−1} which is not realizable in {a mathematical formula}R2 (we will show in Section 4.5 that such networks exist), then we can construct a set of constraints Ψ as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       For each pair of variables a, b such that {a mathematical formula}Θ⊨aTPPb, we add to Ψ the constraint aTPPb.
+      </list-item>
+      <list-item label="•">
+       For each pair of variables a, b such that {a mathematical formula}Θ⊨aECb, we add to Ψ the constraint aECb.
+      </list-item>
+      <list-item label="•">
+       For each pair of variables a, b such that {a mathematical formula}Θ⊨aPOb, we add to Ψ the constraints xTPPa, xECb, yTPPb, yECa, zTPPa and zTPPb, where x, y and z are fresh variables.
+      </list-item>
+     </list>
+     <paragraph>
+      The correctness of the results which are summarized in Fig. 2, Fig. 3 is shown in Section 4. These results are then used in Section 5 to obtain an upper bound for general RCC8 networks. The idea is to identify a subset {a mathematical formula}V′⊆V such that the restriction {a mathematical formula}Θ↓V′ belongs to one of the fragments from Fig. 2 which is guaranteed to have a convex solution in {a mathematical formula}R, {a mathematical formula}R2, {a mathematical formula}R3 or {a mathematical formula}R4. This partial solution of Θ is then incrementally extended to a full solution, based on the following key property, which is shown in Section 5:
+     </paragraph>
+     <list>
+      <list-item>
+       Let Θ be a consistent atomic RCC8 network. Suppose that {a mathematical formula}Θ↓V′ has a k-dimensional convex solution in which every O-clique{sup:3} in {a mathematical formula}Θ↓V′ has a common part, and suppose that Θ entails the following constraints:{a mathematical formula}{a mathematical formula}{a mathematical formula} It holds that {a mathematical formula}Θ↓(V′∪{a1,...,ar,b1,...,bs}) has a {a mathematical formula}(k+1)-dimensional convex solution in which every O-clique has a common part.
+      </list-item>
+     </list>
+     <paragraph>
+      Among others, this property allows us to show that if {a mathematical formula}V′⊆V is such that {a mathematical formula}Θ↓V′ does not contain any occurrences of PO, Θ has a convex solution in {a mathematical formula}R|V∖V′|+4. Moreover, we can also establish that every consistent RCC8 network with {a mathematical formula}2n+1 variables, for {a mathematical formula}n≥2, can be convexly realized by using at most n dimensions.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Restricting the set of RCC8 and RCC5 base relations
+     </section-title>
+     <paragraph>
+      The aim of this section is to prove the results which are summarized in Fig. 2, Fig. 3. Specifically, in Section 4.1 we focus on the fragments which can be convexly realized in {a mathematical formula}R; in Section 4.2 we focus on the fragments which can be convexly realized in {a mathematical formula}R2 and we show that these fragments cannot be convexly realized in {a mathematical formula}R in general. Similarly, in Section 4.3 we focus on the fragments which can be convexly realized in {a mathematical formula}R3 but not in {a mathematical formula}R2. The most substantial result is presented in Section 4.4 where we present a construction based on the four-dimensional moment curve to show that consistent atomic networks over {a mathematical formula}{EC,DC,TPP,TPP−1,NTPP,NTPP−1} can be convexly realized in {a mathematical formula}R4. We also provide a counterexample to show that networks over {a mathematical formula}{EC,DC,TPP,TPP−1} cannot be convexly realized in {a mathematical formula}R3 in general. Finally, in Section 4.5 we use Radon's theorem to identify fragments which do not in general allow convex realizations in {a mathematical formula}Rn for any fixed n.
+     </paragraph>
+     <section label="4.1">
+      Fragments with convex solutions in {a mathematical formula}R
+      <paragraph>
+       In this section, we identify a number of fragments of RCC8 and of RCC5 for which consistent networks always have a convex solution in {a mathematical formula}R, i.e. for which consistent networks can always be realized as intervals. The proofs are all constructive and more or less straightforward.
+      </paragraph>
+      <paragraph label="Proof">
+       Every atomic RCC8 network over{a mathematical formula}{PO}has a convex solution in{a mathematical formula}R.We have {a mathematical formula}Θ≡{viPOvj|1≤i≠j≤m}. Let {a mathematical formula}S be defined as:{a mathematical formula} where {a mathematical formula}l1&lt;l2&lt;...&lt;lm&lt;u1&lt;u2&lt;...&lt;um. It is clear that {a mathematical formula}S(vi) is convex. Moreover, for {a mathematical formula}i&lt;j we have that {a mathematical formula}li∈S(vi)∖S(vj), {a mathematical formula}lj+ui2∈i(S(vi))∩i(S(vj)) and {a mathematical formula}uj∈S(vj)∖S(vi), i.e. we have {a mathematical formula}S(vi)POS(vj). In other words, {a mathematical formula}S is a convex solution in {a mathematical formula}R.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Every consistent atomic RCC8 network over{a mathematical formula}{TPP,TPP−1}has a convex solution in{a mathematical formula}R.In a consistent network over {a mathematical formula}{TPP,TPP−1}, we can always order the variables such that {a mathematical formula}viTPPvj iff {a mathematical formula}i&lt;j. A convex solution of Θ is then given by the mapping {a mathematical formula}S, defined as:{a mathematical formula} where {a mathematical formula}l&lt;u1&lt;u2&lt;...&lt;un. Clearly, {a mathematical formula}S is a convex solution of Θ.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Every consistent atomic RCC8 network over{a mathematical formula}{DC,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R.For an atomic network over {a mathematical formula}{DC,NTPP,NTPP−1} we can partition the set of variables V as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}A1={a11,...,an11} corresponds to the set of regions which are not contained in any of the other regions, i.e. for any {a mathematical formula}a∈A1 and any {a mathematical formula}v∈V∖{a}, it holds that {a mathematical formula}Θ⊭aNTPPv.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Ai={a1i,...,anii} ({a mathematical formula}i≥2) corresponds to the set of regions which are contained in some region of {a mathematical formula}Ai−1 and which are not contained in any region from {a mathematical formula}V∖(A1∪...∪Ai−1), i.e. for any {a mathematical formula}ai∈Ai there is an {a mathematical formula}ai−1∈Ai−1 such that {a mathematical formula}Θ⊨aiNTPPai−1, and for any {a mathematical formula}ai∈Ai and any {a mathematical formula}v∈V∖(A1∪...∪Ai−1∪{ai}), it holds that {a mathematical formula}Θ⊭aiNTPPv.
+       </list-item>
+      </list>
+      <paragraph label="Corollary 2">
+       Every consistent atomic RCC8 network over{a mathematical formula}{DC}or over{a mathematical formula}{NTPP,NTPP−1}has a convex solution in{a mathematical formula}R.Every consistent atomic RCC5 network over the following sets of base relations has a convex solution in{a mathematical formula}R:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}{PO}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{PP,PP−1}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{DR}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{DR,PP,PP−1}
+       </list-item>
+      </list>
+     </section>
+     <section label="4.2">
+      Fragments with convex solutions in {a mathematical formula}R2
+      <paragraph>
+       In this section, we look at restrictions on the set of RCC8 or RCC5 base relations which guarantee that networks can be convexly realized in {a mathematical formula}R2. To show that this bound on the number of dimensions cannot be strengthened in general, we first show in Section 4.2.1 that the considered fragments cannot always be convexly realized in {a mathematical formula}R.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Lower bounds
+       </section-title>
+       <paragraph>
+        The following propositions are shown by identifying examples of consistent atomic RCC8 networks which cannot be realized as intervals of the real line.
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC8 network Θ over{a mathematical formula}{DC,TPP,TPP−1}which has no convex solution in{a mathematical formula}R.It is easy to see that the following atomic network is consistent, but it cannot be realized by intervals:{a mathematical formula} Indeed, if {a mathematical formula}S(d) were an interval, then aTPPd, bTPPd and cTPPd mean that {a mathematical formula}S(a), {a mathematical formula}S(b) and {a mathematical formula}S(c) all share one of the two end points of the interval {a mathematical formula}S(d), which means that {a mathematical formula}S(a), {a mathematical formula}S(b) and {a mathematical formula}S(c) cannot all be disconnected from each other.  □
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC5 network over{a mathematical formula}{PO,PP,PP−1}which has no convex solution in{a mathematical formula}R.Consider the following atomic network:{a mathematical formula}Fig. 4 shows a convex solution of this network in {a mathematical formula}R2. We now show that a convex solution in {a mathematical formula}R does not exist. Suppose {a mathematical formula}S were a convex solution of Θ in {a mathematical formula}R. Let {a mathematical formula}S(a)=[a−,a+] and similar for b, c, d, e, f. Due to the symmetry of the problem, we can assume that {a mathematical formula}d−≤min⁡(e−,f−) and {a mathematical formula}e+≥max⁡(d+,f+). Because d and e are both contained in a, this would mean that f were also contained in a, a contradiction since fPOa is required.  □
+       </paragraph>
+       <paragraph label="Corollary 4">
+        The previous result remains valid if we replace PP by either NTPP or TPP. Hence we obtain the following corollaries. There exists a consistent atomic RCC8 network over{a mathematical formula}{PO,TPP,TPP−1}which has no convex solution in{a mathematical formula}R.There exists a consistent atomic RCC8 network over{a mathematical formula}{PO,NTPP,NTPP−1}which has no convex solution in{a mathematical formula}R.
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC8 network over{a mathematical formula}{TPP,TPP−1,NTPP,NTPP−1}which has no convex solution in{a mathematical formula}R.Consider the following atomic network:{a mathematical formula} Suppose {a mathematical formula}S were a convex solution of Θ in {a mathematical formula}R. Let {a mathematical formula}S(ai)=[ui,vi]. From {a mathematical formula}a1TPPa2 we derive that either {a mathematical formula}u1=u2 or {a mathematical formula}v1=v2. Assume for instance {a mathematical formula}u1=u2 (the other case is entirely analogous). Then we also have {a mathematical formula}v1&lt;v2. From {a mathematical formula}a2TPPa3 we moreover find {a mathematical formula}v1&lt;v2≤v3. Since {a mathematical formula}a1TPPa3, this means that {a mathematical formula}u1=u2=u3 and thus {a mathematical formula}v2&lt;v3. Similarly, from {a mathematical formula}a2TPPa4 we find {a mathematical formula}u2=u4. However, since {a mathematical formula}u1=u2 it follows that {a mathematical formula}u1=u4 and thus {a mathematical formula}S violates the constraint {a mathematical formula}a1NTPPa4.  □
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC8 network over{a mathematical formula}{EC}which has no convex solution in{a mathematical formula}R.It is easy to verify that {a mathematical formula}{aECb,aECc,bECc} has no convex solution in {a mathematical formula}R.  □
+       </paragraph>
+       <paragraph label="Corollary 5">
+        There exist consistent atomic RCC8 networks over the following set of base relations which have no convex solution in{a mathematical formula}R:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}{DC,TPP,TPP−1,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{PO,TPP,TPP−1,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC,TPP,TPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC,TPP,TPP−1,NTPP,NTPP−1}
+        </list-item>
+       </list>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Upper bounds
+       </section-title>
+       <paragraph label="Example 2">
+        We now prove for a number of fragments of RCC8 that consistent atomic networks can always be convexly realized in {a mathematical formula}R2. The following example illustrates the basic construction which is used in the proofs. Consider the RCC8 network Θ defined by{a mathematical formula} It is easy to verify that this network does not have a convex solution in {a mathematical formula}R. However, as Fig. 5 shows, it is possible to construct a convex solution of Θ in {a mathematical formula}R2.
+       </paragraph>
+       <paragraph>
+        In a similar way, we can realize any consistent atomic RCC8 network Θ over {a mathematical formula}{DC,TPP,TPP−1,NTPP,NTPP−1}. To show this, we first consider of a weakened version Ψ of Θ, in which TPP and {a mathematical formula}TPP−1 are weakened to PP and {a mathematical formula}PP−1. From Proposition 3 we know that Ψ can be realized using intervals of the real line. Let {a mathematical formula}[li,ui] be the realization of {a mathematical formula}vi and assume that {a mathematical formula}li,ui≥0. We can then construct a convex solution {a mathematical formula}T of Θ as follows:{a mathematical formula} where CH denotes the convex hull and {a mathematical formula}Sθij(lj,lj2) is the disc with radius {a mathematical formula}θij and center {a mathematical formula}(lj,lj2). By carefully choosing the values of {a mathematical formula}θij we can ensure that {a mathematical formula}T is indeed a solution of Θ, as we show in the proof of the following proposition. Note that the points {a mathematical formula}(li,li2) and {a mathematical formula}(ui,ui2) are on the positive half of the two-dimensional moment curve. Sections 4.3 and 4.4 will use constructions that are based on choosing points on the three-dimensional and four-dimensional moment curve, respectively.
+       </paragraph>
+       <paragraph label="Proof">
+        We say that a region {a mathematical formula}v∈V′ is at level t if there is a chain of {a mathematical formula}t−1 regions {a mathematical formula}u1,...,ut−1 in {a mathematical formula}V′ such that {a mathematical formula}Θ⊨{u1NTPPu2,...,ut−2NTPPut−1,ut−1NTPPv} and there is no chain of t regions for which this is the case. Let {a mathematical formula}Δ(v) be the level of region {a mathematical formula}v∈V′. Note that {a mathematical formula}Δ(v)=1 iff there is no region {a mathematical formula}u∈V′ such that {a mathematical formula}Θ⊨uNTPPv. Every consistent atomic RCC8 network over{a mathematical formula}{DC,TPP,TPP−1,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R2.Let Θ be a consistent atomic RCC8 network over {a mathematical formula}{DC,TPP,TPP−1,NTPP,NTPP−1}. We show that Θ can be convexly realized in {a mathematical formula}R2. Let Ψ be the atomic RCC8 network which is obtained from Θ by replacing every constraint of the form {a mathematical formula}viTPPvj by {a mathematical formula}viNTPPvj and every constraint of the form {a mathematical formula}viTPP−1vj by {a mathematical formula}viNTPP−1vj. Clearly, Ψ is consistent, and hence by Proposition 3, we know that Ψ has a convex solution {a mathematical formula}S in {a mathematical formula}R. Let {a mathematical formula}S(vi)=[li,ui]. Without loss of generality, we can assume that {a mathematical formula}li&gt;0 for each i. With each region {a mathematical formula}vi we associate two points {a mathematical formula}pi,qi∈R2:{a mathematical formula}{a mathematical formula} Let {a mathematical formula}θ&gt;0 be a constant. We can then define a convex solution {a mathematical formula}T as follows:{a mathematical formula} where for a point p, {a mathematical formula}Sθ(p)={q|d(q,p)≤θ} is a disc with radius {a mathematical formula}θ&gt;0 centered around p. By choosing θ sufficiently small, we can ensure that {a mathematical formula}Sm⋅θ(p′)∩Sm⋅θ(q′)=∅ if {a mathematical formula}p′≠q′, where m denotes the number of regions in Θ. Accordingly, we can assume that {a mathematical formula}T(vi)DCT(vj) holds for any regions {a mathematical formula}vi,vj such that {a mathematical formula}Θ⊨viDCvj. By construction, it is immediate that {a mathematical formula}T(vi)PT(vj) if {a mathematical formula}Θ⊨viPvj. If θ is sufficiently small, {a mathematical formula}Sθ(pj) and {a mathematical formula}Sθ(qj) will not be included in {a mathematical formula}CH(⋃l≠jSm⋅θ(pl)∪Sm⋅θ(ql)), for any j. Then we have that {a mathematical formula}T(vi)PPT(vj) if {a mathematical formula}Θ⊨viPPvj. If {a mathematical formula}Θ⊨viNTPPvj we have that {a mathematical formula}Δ(vj)&gt;Δ(vi), from which it is easy to see that {a mathematical formula}T(vi)NTPPT(vj) will hold. Finally, if {a mathematical formula}Θ⊨viTPPvj, {a mathematical formula}T(vi) and {a mathematical formula}T(vj) will share a boundary point of {a mathematical formula}Sθ(pi) and {a mathematical formula}Sθ(qi), and thus we can assume that {a mathematical formula}T(vi)TPPT(vj).  □
+       </paragraph>
+       <paragraph label="Example 3">
+        The next fragment we consider is {a mathematical formula}{PO,TPP,TPP−1,NTPP,NTPP−1}. Before presenting the proof, we first give an example. Consider the RCC8 network Θ defined by{a mathematical formula} An example of a convex solution in {a mathematical formula}R2 is shown in Fig. 6.
+       </paragraph>
+       <paragraph>
+        More generally, we fix two points {a mathematical formula}q0 and {a mathematical formula}q1 on the positive half of the two-dimensional moment curve, as well as one point {a mathematical formula}pi for each variable {a mathematical formula}vi. As we will show in the proof of Proposition 9, we can always find a solution {a mathematical formula}S of the following form:{a mathematical formula} The proof of Proposition 9 will make clear how {a mathematical formula}θ′, {a mathematical formula}θ″, {a mathematical formula}θl can be chosen such that {a mathematical formula}S is a solution of Θ.
+       </paragraph>
+       <paragraph label="Proof">
+        Every consistent atomic RCC8 network over{a mathematical formula}{PO,TPP,TPP−1,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R2.Let Θ be a consistent atomic RCC8 network over {a mathematical formula}{PO,TPP,TPP−1,NTPP,NTPP−1}. Let {a mathematical formula}q0=(0,0), {a mathematical formula}q1=(1,1) and {a mathematical formula}pi=(i,i2), and let {a mathematical formula}θ&gt;0 be a constant. We define {a mathematical formula}S for {a mathematical formula}vj∈Θ as follows:{a mathematical formula} Entirely analogously as in the proof of Proposition 8, we can then show that {a mathematical formula}S is a solution of Θ, provided that θ is chosen sufficiently small.  □
+       </paragraph>
+       <paragraph label="Example 4">
+        The last fragment we consider in this section is {a mathematical formula}{EC,TPP,TPP−1,NTPP,NTPP−1}. Again we start with an example. Consider the RCC8 network Θ defined by{a mathematical formula} An example of a convex solution in {a mathematical formula}R2 is shown in Fig. 7.
+       </paragraph>
+       <paragraph>
+        More generally, note that we can always partition the set of variables V in two sets {a mathematical formula}V′ and {a mathematical formula}V∖V′ such that {a mathematical formula}Θ↓V′ is a network over {a mathematical formula}{EC,TPP,TPP−1}, {a mathematical formula}Θ↓(V∖V′) is a network over {a mathematical formula}{TPP,TPP−1,NTPP,NTPP−1} and {a mathematical formula}viPPvj for any {a mathematical formula}vi∈V′ and {a mathematical formula}vj∈V∖V′ (see the following proof of Proposition 10). It is then straightforward to find a convex solution of {a mathematical formula}Θ↓V′. As we show in the proof of Proposition 10, this solution of {a mathematical formula}Θ↓V′ can always be extended to a solution of Θ.
+       </paragraph>
+       <paragraph label="Proof">
+        Every consistent atomic RCC8 network over{a mathematical formula}{EC,TPP,TPP−1,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R2.Let Θ be a consistent atomic RCC8 network over {a mathematical formula}{EC,TPP,TPP−1,NTPP,NTPP−1}. First note that it is not possible to have aECb and cNTPPa for any {a mathematical formula}a,b,c∈V since this would entail cDCb, i.e. Θ would not be an atomic network over {a mathematical formula}{EC,TPP,TPP−1,NTPP,NTPP−1}. Let {a mathematical formula}V′={v|v∈V,∃u∈V.Θ⊨uECv}. Then {a mathematical formula}Θ↓V′ is a network over {a mathematical formula}{EC,TPP,TPP−1}, {a mathematical formula}Θ↓(V∖V′) is a network over {a mathematical formula}{TPP,TPP−1,NTPP,NTPP−1} and for each {a mathematical formula}vi∈V′ and {a mathematical formula}vj∈V∖V′ it holds that {a mathematical formula}Θ⊨viPPvj.Let Ψ be the network obtained from {a mathematical formula}Θ↓V′ by replacing all occurrences of EC by DC, all occurrences of TPP by NTPP and all occurrences of {a mathematical formula}TPP−1 by {a mathematical formula}NTPP−1. From Proposition 3 we know that Ψ has a convex solution {a mathematical formula}S in {a mathematical formula}R. Assume that {a mathematical formula}S(vi)=[li,ui]. Without loss of generality, we can assume that {a mathematical formula}li&gt;0 for each i. With each region {a mathematical formula}vi we associate two points {a mathematical formula}pi,qi∈R2:{a mathematical formula}{a mathematical formula} Now we define a solution {a mathematical formula}T in {a mathematical formula}R2. For {a mathematical formula}vj∈V′, define:{a mathematical formula} where {a mathematical formula}r0=(0,0). Clearly, {a mathematical formula}T is a solution of {a mathematical formula}Θ↓V′. Now we extend {a mathematical formula}T to a solution of Θ. Let {a mathematical formula}V∖V′={a1,...,ak}. With each {a mathematical formula}ai we associate an arbitrary point {a mathematical formula}ri=(wi,wi2) on the positive half of the two-dimensional moment curve such that all the points {a mathematical formula}pi, {a mathematical formula}qj and {a mathematical formula}rl are distinct. Let {a mathematical formula}θ&gt;0 be a constant. For {a mathematical formula}aj∈V∖V′, we define:{a mathematical formula} As in the proof of Proposition 8 we can show that {a mathematical formula}T is a solution of Θ, provided that θ is chosen sufficiently small.  □
+       </paragraph>
+       <paragraph label="Corollary 6">
+        Every consistent atomic RCC8 network over the following sets of base relations has a convex solution in{a mathematical formula}R2:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}{DC,TPP,TPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{PO,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{TPP,TPP−1,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{PO,TPP,TPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC,NTPP,NTPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC,TPP,TPP−1}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{EC}
+        </list-item>
+       </list>
+       <paragraph label="Corollary 7">
+        Every consistent atomic RCC5 network over{a mathematical formula}{PO,PP,PP−1}has a convex solution in{a mathematical formula}R2.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      Fragments with convex solutions in {a mathematical formula}R3
+      <paragraph>
+       We now turn our attention to restrictions on the set of RCC8 or RCC5 base relations which guarantee that networks can be convexly realized in {a mathematical formula}R3. Again, we first show in Section 4.3.1 that these results cannot be strengthened in general.
+      </paragraph>
+      <section label="4.3.1">
+       <section-title>
+        Lower bounds
+       </section-title>
+       <paragraph>
+        Recall that a graph {a mathematical formula}(N,V) defined by a set of nodes N and a set of edges {a mathematical formula}V⊆N×N is called planar if it is possible to identify every node {a mathematical formula}ni∈N with a point {a mathematical formula}pi∈R2 and every edge {a mathematical formula}(ni,nj) with a planar curve segment {a mathematical formula}Aij⊆R2 with endpoints {a mathematical formula}pi and {a mathematical formula}pj, such that for every {a mathematical formula}Aij≠Ars it holds that {a mathematical formula}Aij∩Ars={pi,pj}∩{pr,ps}. The graph {a mathematical formula}K3,3 depicted in Fig. 8 is a well-known example of a non-planar graph.
+       </paragraph>
+       <paragraph>
+        The proofs of Proposition 11, Proposition 12 below proceed by showing that if particular RCC8 networks were convexly realizable in {a mathematical formula}R2, then {a mathematical formula}K3,3 would be planar, thus showing the propositions by contradiction.
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC5 network over{a mathematical formula}{DR,PO}which has no convex solution in{a mathematical formula}R2.Consider the consistent atomic RCC5 network Θ containing the following constraints:{a mathematical formula} and moreover the constraint xDRy for every pair of variables {a mathematical formula}(x,y) from {a mathematical formula}{a,b,c,u,v,w,rau,rav,raw,rbu,rbv,rbw,rcu,rcv,rcw} which does not appear in the list above.Assume that a convex solution {a mathematical formula}S of Θ in the plane exists. We can then draw {a mathematical formula}K3,3 in the plane as follows. For the nodes of {a mathematical formula}K3,3, we can choose arbitrary points {a mathematical formula}pa, {a mathematical formula}pb, {a mathematical formula}pc, {a mathematical formula}pu, {a mathematical formula}pv, {a mathematical formula}pw in the interiors of respectively {a mathematical formula}S(a), {a mathematical formula}S(b), {a mathematical formula}S(c), {a mathematical formula}S(u), {a mathematical formula}S(v), {a mathematical formula}S(w). To connect {a mathematical formula}pa with {a mathematical formula}pu, first, we connect {a mathematical formula}pa by a line segment to an arbitrary point of {a mathematical formula}δ(S(a))∩i(S(rau)), where {a mathematical formula}δ(X) denotes the boundary of X and {a mathematical formula}i(X) is the interior of X. This point is connected by a line segment to an arbitrary point of {a mathematical formula}δ(S(u))∩i(S(rau)). The latter point is finally connected with a line segment to {a mathematical formula}pu. In a similar way we connect each of {a mathematical formula}pa, {a mathematical formula}pb, {a mathematical formula}pc to each of {a mathematical formula}pu, {a mathematical formula}pv, {a mathematical formula}pw. It is clear that the edges thus drawn can only intersect at their endpoints, i.e. we have shown that {a mathematical formula}K3,3 is planar, a contradiction.  □
+       </paragraph>
+       <paragraph label="Corollary 8">
+        Note that this proof moreover shows that there are RCC5 networks over {a mathematical formula}{DR,PO} which have no solution in {a mathematical formula}R2 using internally connected regions. The previous proof remains valid if we replace DR by either EC or DC, hence we obtain the following corollary. There exist consistent atomic RCC8 networks over{a mathematical formula}{DC,PO}and over{a mathematical formula}{EC,PO}which have no convex solution in{a mathematical formula}R2.
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC8 network over{a mathematical formula}{EC,DC}which has no convex solution in{a mathematical formula}R2.Consider the consistent atomic RCC8 network Θ containing the following constraints:{a mathematical formula} as well as the constraint xDCy for every pair of variables {a mathematical formula}(x,y) from {a mathematical formula}{a,b,c,u,v,w} which does not appear in the list above.Assuming that a convex solution {a mathematical formula}S of Θ in the plane exists, we can draw {a mathematical formula}K3,3 as follows. For the nodes of {a mathematical formula}K3,3, we choose arbitrary points {a mathematical formula}pa, {a mathematical formula}pb, {a mathematical formula}pc, {a mathematical formula}pu, {a mathematical formula}pv, {a mathematical formula}pw in the interiors of respectively {a mathematical formula}S(a), {a mathematical formula}S(b), {a mathematical formula}S(c), {a mathematical formula}S(u), {a mathematical formula}S(v), {a mathematical formula}S(w). For {a mathematical formula}x∈{a,b,c} and {a mathematical formula}y∈{u,v,w}, let {a mathematical formula}qxy be an arbitrary point from {a mathematical formula}S(x)∩S(y) (which must exist because of the constraint xECy). Note that {a mathematical formula}qxy∉S(x′) and {a mathematical formula}qxy∉S(y′) for {a mathematical formula}x′∈{a,b,c}∖{x} and {a mathematical formula}y′∈{u,v,w}∖{y} because of the constraints {a mathematical formula}xDCx′ and {a mathematical formula}yDCy′. Then we can connect x and y as follows: draw a line segment from {a mathematical formula}px to {a mathematical formula}qx,y and a second line segment from {a mathematical formula}qx,y to {a mathematical formula}py. It is clear that the edges thus drawn can only intersect at their endpoints, which means that {a mathematical formula}K3,3 would be planar, a contradiction.  □
+       </paragraph>
+       <paragraph>
+        Again the proof shows a slightly stronger property than what we need, i.e. that there are consistent RCC8 networks over {a mathematical formula}{EC,DC} which have no solution in {a mathematical formula}R2 using internally connected regions.
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        Upper bounds
+       </section-title>
+       <paragraph>
+        We now show that consistent atomic RCC8 networks over {a mathematical formula}{EC,DC,PO} and {a mathematical formula}{EC,DC,NTPP,NTPP−1} can be realized in {a mathematical formula}R3. Where the results in Section 4.2.2 rely on a construction based on the two-dimensional moment curve, here we will use a property of the three-dimensional moment curve.
+       </paragraph>
+       <paragraph label="Proof">
+        Every consistent atomic RCC8 network over{a mathematical formula}{EC,DC,PO}has a convex solution in{a mathematical formula}R3.Let Θ be a consistent atomic RCC8 network over {a mathematical formula}{EC,DC,PO} involving the variables in {a mathematical formula}V={v1,...,vm}. Let {a mathematical formula}{A1,...,Am} be a neighborly family of convex polytopes in {a mathematical formula}R3 such that each two polytopes {a mathematical formula}Ai, {a mathematical formula}Aj share a face. It is known that an arbitrarily large family of this kind is obtained by taking the cells of the Voronoi diagram induced by any set of points on the positive half of the three-dimensional moment curve (see Section 2.2).Note that {a mathematical formula}AiECAj holds for any {a mathematical formula}i≠j. We now modify these polytopes {a mathematical formula}A1,...,An to obtain a solution of Θ. Let {a mathematical formula}Hij be the unique plane which contains {a mathematical formula}Ai∩Aj. Let {a mathematical formula}Hijε be the plane which is parallel to {a mathematical formula}Hij, at distance ε from {a mathematical formula}Hij and which is in the same half-space (induced by {a mathematical formula}Hij) as {a mathematical formula}Ai. Let {a mathematical formula}Hij≥ε be the half-space induced by {a mathematical formula}Hijε which does not contain {a mathematical formula}Hij. Let {a mathematical formula}cij be an arbitrary interior point of {a mathematical formula}Ai∩Aj. Finally, let {a mathematical formula}Lij be the line through {a mathematical formula}cij which is orthogonal to {a mathematical formula}Hij and let {a mathematical formula}cijε=Lij∩Hijε. In the following we assume that {a mathematical formula}ε&gt;0 is chosen small enough such that {a mathematical formula}cijε∈i(Ai).If {a mathematical formula}Θ⊨aiDCaj, we replace {a mathematical formula}Ai by {a mathematical formula}Ai∩Hij≥ε; the region {a mathematical formula}Aj can be similarly replaced by a smaller region, but it is sufficient that one of {a mathematical formula}Ai, {a mathematical formula}Aj is modified. It is clear that then {a mathematical formula}AiDCAj and that this operation does not affect the RCC8 relations that hold between the other pairs of regions (assuming ε is sufficiently small). Indeed, if {a mathematical formula}AiECAz then {a mathematical formula}Ai and {a mathematical formula}Az are sharing a two-dimensional face ({a mathematical formula}z≠i,j). By replacing {a mathematical formula}Ai by {a mathematical formula}Ai∩Hij≥ε, this face may be replaced by a smaller face, but provided that ε is sufficiently small, {a mathematical formula}Ai∩Az will still be non-empty, and a two-dimensional shared face.Once all DC relations have been made to hold using this process, we turn to the relations of the form PO. If {a mathematical formula}Θ⊨aiPOaj, we replace {a mathematical formula}Aj by {a mathematical formula}CH(Aj∪{cijε}); we may similarly replace {a mathematical formula}Ai by a larger region, but it is again sufficient that one of {a mathematical formula}Ai, {a mathematical formula}Aj is modified. Then we have that {a mathematical formula}cijε is an interior point of {a mathematical formula}Aj and thus {a mathematical formula}AiPOAj, and this operation does not affect the RCC8 relations that hold between the other pairs of regions if we choose ε to be sufficiently small. Indeed, for a sufficiently small ε it holds that {a mathematical formula}CH(Aj∪{cijε})⊆Aj∪i(Ai), from which it easily follows that {a mathematical formula}(Aj∪{cijε})ECAz iff {a mathematical formula}AjECAz and {a mathematical formula}(Aj∪{cijε})DCAz iff {a mathematical formula}AjDCAz, for any {a mathematical formula}Az ({a mathematical formula}z≠i,j).  □
+       </paragraph>
+       <paragraph label="Corollary 9">
+        Every consistent atomic RCC5 network over{a mathematical formula}{DR,PO}has a convex solution in{a mathematical formula}R3.
+       </paragraph>
+       <paragraph label="Proof">
+        Every consistent atomic RCC8 network over{a mathematical formula}{EC,DC,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R3.Let Θ be a consistent atomic RCC8 network over {a mathematical formula}{EC,DC,NTPP,NTPP−1}. We show this proposition by induction on the number k of NTPP or {a mathematical formula}NTPP−1 relations in Θ. If {a mathematical formula}k=0, then the result follows from Proposition 13. Assume that {a mathematical formula}k&gt;0. Let {a mathematical formula}V′ be the set of regions which are not contained in any other region, i.e. {a mathematical formula}v∈V′ iff there is no region {a mathematical formula}u∈V such that {a mathematical formula}Θ⊨vNTPPu. The network {a mathematical formula}Ψ=Θ↓V′ satisfies the conditions of Proposition 13 and thus has a convex solution {a mathematical formula}S in {a mathematical formula}R3. We extend {a mathematical formula}S to a solution of Θ as follows. Let {a mathematical formula}v∈V′ and let {a mathematical formula}Uv={u∈V|Θ⊨uNTPPv}. Then {a mathematical formula}Θ↓Uv has strictly fewer occurrences of NTPP and {a mathematical formula}NTPP−1 and thus has a convex solution {a mathematical formula}Tv by induction. We can modify this solution {a mathematical formula}Tv by a linear transformation to a solution {a mathematical formula}Sv such that for all {a mathematical formula}u∈Uv it holds that {a mathematical formula}Sv(u)⊆i(S(v)). Indeed, any linear transformation will preserve convexity and topological relations (including those in RCC8). Noting that {a mathematical formula}Θ⊨u1DCu2 for {a mathematical formula}u1∈Uv1 and {a mathematical formula}u2∈Uv2, with {a mathematical formula}v1≠v2, it follows easily that {a mathematical formula}S and {a mathematical formula}{Sv|v∈V′} together define a convex solution of Θ.  □
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.4">
+      Fragments with convex solutions in {a mathematical formula}R4
+      <paragraph>
+       Somewhat surprisingly, there are two fragments in Fig. 2 for which consistent atomic networks are only guaranteed to have a convex solution if the number of dimensions is at least four. The largest of these fragments contains all relations apart from PO, which is an important fragment from a practical point of view, since there are many applications in which the relation PO is not used.
+      </paragraph>
+      <section label="4.4.1">
+       <section-title>
+        Lower bounds
+       </section-title>
+       <paragraph>
+        While it is relatively straightforward to find examples of consistent RCC8 networks which do not have a convex solution {a mathematical formula}R2, it is much harder to find consistent RCC8 networks which do not have a convex solution in {a mathematical formula}R3 (but which have a convex solution in {a mathematical formula}R4). The main idea of the following proof is to start with a constraint aECb and then essentially construct a 2D counterexample in {a mathematical formula}a∩b.
+       </paragraph>
+       <paragraph label="Proof">
+        There exists a consistent atomic RCC8 network over{a mathematical formula}{EC,DC,TPP,TPP−1}which has no convex solution in{a mathematical formula}R3.Let Θ contain the following constraints (for all {a mathematical formula}1≤i≠j≤5):{a mathematical formula} For illustration purposes, Fig. 9 depicts a realization of a restriction of Θ. Assume that a convex solution {a mathematical formula}S in {a mathematical formula}R3 existed. For each i, let {a mathematical formula}Hi be a plane separating {a mathematical formula}S(xi) from {a mathematical formula}S(yi) and let {a mathematical formula}Gi be a plane separating {a mathematical formula}S(ui) from {a mathematical formula}S(vi). Let K be a plane separating {a mathematical formula}S(a) and {a mathematical formula}S(b).For {a mathematical formula}i≠j, let {a mathematical formula}pij be a point in {a mathematical formula}Hi∩Gj∩K∩S(zi)∩S(wj). To see why such a point exists, note that because of the constraints {a mathematical formula}xiECuj, {a mathematical formula}xiECvj, {a mathematical formula}yiECuj, {a mathematical formula}yiECvj there exist points {a mathematical formula}pxiuj∈S(xi)∩S(uj)∩K, {a mathematical formula}pxivj∈S(xi)∩S(vj)∩K, {a mathematical formula}pyiuj∈S(yi)∩S(uj)∩K and {a mathematical formula}pyivj∈S(yi)∩S(vj)∩K. Since {a mathematical formula}pxiuj and {a mathematical formula}pxivj are at different sides of the hyperplane {a mathematical formula}Gj and both points are contained in the convex region {a mathematical formula}S(xi)∩S(wj), there exists a point {a mathematical formula}q1∈S(xi)∩Gj∩K∩S(wj) which is collinear with and between {a mathematical formula}pxiuj and {a mathematical formula}pxivj. Similarly we find that there must exist a point {a mathematical formula}S(q2)∈S(yi)∩Gj∩K∩S(wj) which is between {a mathematical formula}pyiuj and {a mathematical formula}pyivj. Moreover, the points {a mathematical formula}q1 and {a mathematical formula}q2 are at opposite sides of {a mathematical formula}Hi and both points are contained in the convex set {a mathematical formula}zi. It follows that there must be a point {a mathematical formula}pij∈Hi∩Gj∩K∩S(zi)∩S(wj).We define the line segments {a mathematical formula}Li=CH({pij|j≠i})⊆Hi∩K∩S(zi) and {a mathematical formula}Mj=CH({pij|i≠j})⊆Gj∩K∩S(wj). It is clear that the line segments {a mathematical formula}L1,...,L5 are all disjoint and that the line segments {a mathematical formula}M1,...,M5 are all disjoint. Indeed, if {a mathematical formula}Li∩Lj for {a mathematical formula}i≠j contained a point q, we would have {a mathematical formula}q∈S(zi)∩S(zj), contradicting the assumption {a mathematical formula}S(zi)DCS(zi) and similarly {a mathematical formula}Mi∩Mj≠∅ would contradict {a mathematical formula}S(zi)DCS(zi).The points {a mathematical formula}pi1,...,pi5 occur in the same order on each line segment {a mathematical formula}Li. Indeed, assume that this were not the case, and e.g. on the line segment {a mathematical formula}L4 the points {a mathematical formula}p41, {a mathematical formula}p42, {a mathematical formula}p43 occur in that order, while on {a mathematical formula}L5 the corresponding points occur in the order {a mathematical formula}p51, {a mathematical formula}p52, {a mathematical formula}p53. Since the points {a mathematical formula}p41, {a mathematical formula}p42, {a mathematical formula}p43, {a mathematical formula}p51, {a mathematical formula}p52, {a mathematical formula}p53 are coplanar, this means that at least two of the line segments {a mathematical formula}p41p51, {a mathematical formula}p42p52, {a mathematical formula}p43p53 would have a non-empty intersection, contradicting the fact that the line segments {a mathematical formula}M1, {a mathematical formula}M2 and {a mathematical formula}M3 are disjoint. Similarly, we find that the points {a mathematical formula}p1j,...,p5j occur in the same order on each line segment {a mathematical formula}Mj.In particular, there exists a permutation {a mathematical formula}σ1,...,σ5 of {a mathematical formula}{1,...,5} such that the points {a mathematical formula}piσ1,...,piσ5 occur in that order on each line segment {a mathematical formula}Li (where {a mathematical formula}piσj for {a mathematical formula}σj=i is excluded). Similarly, there exists a permutation {a mathematical formula}τ1,...,τ5 such that the points {a mathematical formula}pτ1j,...,pτ5j occur in that order on each line segment {a mathematical formula}Mj (excluding {a mathematical formula}pτij for {a mathematical formula}τi=j). First assume that {a mathematical formula}{σ1,σ5}∩{τ1,τ5}=∅ and let {a mathematical formula}l∈{1,...,5}∖{σ1,σ5,τ1,τ5}. By the previous construction, the following betweenness relations hold:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}pσ1l is between {a mathematical formula}pσ1τ1 and {a mathematical formula}pσ1τ5.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}pσ5l is between {a mathematical formula}pσ5τ1 and {a mathematical formula}pσ5τ5.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}plτ1 is between {a mathematical formula}pσ1τ1 and {a mathematical formula}pσ5τ1.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}plτ5 is between {a mathematical formula}pσ1τ5 and {a mathematical formula}pσ5τ5.
+        </list-item>
+       </list>
+      </section>
+      <section label="4.4.2">
+       <section-title>
+        Upper bounds
+       </section-title>
+       <paragraph label="Proposition 16">
+        The main aim of this section is to prove the following result. Every consistent atomic RCC8 network over{a mathematical formula}{EC,DC,TPP,TPP−1}has a convex solution in{a mathematical formula}R4.
+       </paragraph>
+       <paragraph>
+        A similar result for networks over {a mathematical formula}{EC,DC,TPP,TPP−1,NTPP,NTPP−1} will then follow easily.
+       </paragraph>
+       <paragraph>
+        Before we present the details of the proof, we briefly sketch its intuition. We will assume that the variables in V can be organized in a binary tree, such that the descendants of a region x are those regions that are contained in x. It is always possible to ensure that such a binary tree exists by introducing additional regions in a way which does not affect the consistency of Θ.
+       </paragraph>
+       <paragraph>
+        Then we will associate each region x with a point {a mathematical formula}M(tx) on the four-dimensional moment curve. Let x and y be siblings in the tree, and let {a mathematical formula}Xx and {a mathematical formula}Xy be the cells of the Voronoi diagram that is induced by {a mathematical formula}{M(tx),M(ty)}. Then, as we will show in Lemma 3, we can choose the values {a mathematical formula}ta such that {a mathematical formula}M(ta)∈Xx for any descendant a of x (for any choice of x).
+       </paragraph>
+       <paragraph>
+        For each x, we can then consider the set {a mathematical formula}Yx=Xx∩{Xu|u is an ancestor of x}. For each region a and each region b such that a is not a descendant of b and vice versa, it is clear that {a mathematical formula}YaDRYb. We will show in Lemma 4, Lemma 5 that for each such regions a and b, we can find a point {a mathematical formula}qab which belongs to {a mathematical formula}Ya∩Yb, showing that {a mathematical formula}YaECYb. The proof of these lemmas crucially relies on a property of the moment curve which we show in Lemma 1, being a variant of the well-known property that for any four points on the four-dimensional moment curve there exists a hyperplane that intersects the moment curve at exactly these points, and moreover crosses the moment curve at these points.
+       </paragraph>
+       <paragraph>
+        The points {a mathematical formula}qab will allow us to construct a convex solution of Θ by realizing each leaf node a as the convex hull of a small sphere centered around {a mathematical formula}M(ta) and the points {a mathematical formula}{qab|Θ⊨aECb}. The realization of a non-leaf node is defined as the convex hull of the union of the realizations of its children, which trivially guarantees that all required TPP relations are satisfied. A key result is shown in Lemma 6, which guarantees that these convex hulls cannot introduce spurious EC relations.
+       </paragraph>
+       <paragraph>
+        The remainder of this section is organized in three parts. First we show two properties of the four-dimensional moment curve which we will rely on in the proof. Then we discuss how the points {a mathematical formula}M(ta) and {a mathematical formula}qab are chosen, and we show that they have the required properties. Finally, we show how we can use these points to define a convex solution of Θ.
+       </paragraph>
+       <section label="4.4.2.1">
+        <section-title>
+         Preliminaries
+        </section-title>
+        <paragraph label="Lemma 1">
+         The proof of Proposition 17 below relies on a number of properties about the moment curve in {a mathematical formula}R4 (see Section 2.2). We will also use the following lemma.Let{a mathematical formula}m1&lt;t1&lt;t2&lt;m2and consider the hyperplane{a mathematical formula}H={x|h⋅x=θ}. It is possible to choosehand θ such that H intersects the four-dimensional moment curve at{a mathematical formula}M(t1)and{a mathematical formula}M(t2)and such that the function{a mathematical formula}f:R→Rdefined by{a mathematical formula}f(t)=h⋅M(t)−θreaches an extremum at{a mathematical formula}m1and{a mathematical formula}m2.
+        </paragraph>
+        <paragraph label="Proof">
+         The function f takes the following form ({a mathematical formula}a,b,c,d∈R):{a mathematical formula} Note in particular that f is a polynomial in t of degree 4. The required conditions are that {a mathematical formula}f(t1)=f(t2)=f′(m1)=f′(m2)=0. To see why a suitable polynomial f exists, consider the family {a mathematical formula}g(δ1,δ2) of quartic polynomials defined as ({a mathematical formula}δ1,δ2≥0):{a mathematical formula} Clearly {a mathematical formula}g(δ1,δ2)′ has exactly one root {a mathematical formula}c(δ1,δ2)− between {a mathematical formula}m1−δ1 and {a mathematical formula}t1 and exactly one root {a mathematical formula}c(δ1,δ2)+ between {a mathematical formula}t2 and {a mathematical formula}m2+δ2. From the root dragging theorem [37], we know that increasing the value of {a mathematical formula}δ1 will continuously decrease the values of {a mathematical formula}c(δ1,δ2)− and {a mathematical formula}c(δ1,δ2)+. From the polynomial root motion theorem [38], we moreover know that {a mathematical formula}c(δ1,δ2)− will decrease faster than {a mathematical formula}c(δ1,δ2)+. Similarly, when increasing the value of {a mathematical formula}δ2, {a mathematical formula}c(δ1,δ2)+ will increase faster than {a mathematical formula}c(δ1,δ2)−. Since the values of the {a mathematical formula}c(δ1,δ2)− and {a mathematical formula}c(δ1,δ2)+ depend continuously on {a mathematical formula}θ1 and {a mathematical formula}θ2, and {a mathematical formula}c0−≥m1 and {a mathematical formula}c0+≤m2, it follows that values of {a mathematical formula}θ1 and {a mathematical formula}θ2 must exist such that {a mathematical formula}c(δ1,δ2)−=m1 and {a mathematical formula}c(δ1,δ2)+=m2.  □
+        </paragraph>
+        <paragraph label="Proof">
+         Note that if {a mathematical formula}‖h‖=1, {a mathematical formula}f(t) is the signed distance between {a mathematical formula}M(t) and H, i.e. {a mathematical formula}|f(t)|=d(M(t),H). Also note that in the case of the previous lemma, H will also intersect the moment curve at some points {a mathematical formula}M(t0) and {a mathematical formula}M(t3) such that {a mathematical formula}t0&lt;m1&lt;t1&lt;t2&lt;m2&lt;t3 and f will reach another extremum between {a mathematical formula}t1 and {a mathematical formula}t2. We will also use the following lemma. Let P and Q be sets of points in{a mathematical formula}Rnwhich are separated by the hyperplane H, with{a mathematical formula}Q∩H=∅. Let{a mathematical formula}r∈Hand let{a mathematical formula}h≠0be a vector which is orthogonal to H such that{a mathematical formula}r+his in the same half-space induced by H as P. For sufficiently large{a mathematical formula}λ&gt;0it holds that{a mathematical formula}Without loss of generality, we can assume that {a mathematical formula}‖h‖=1. Let {a mathematical formula}p∈P and {a mathematical formula}q∈Q. Let {a mathematical formula}p0,q0∈H, {a mathematical formula}λp≥0 and {a mathematical formula}λq&gt;0 be such that {a mathematical formula}p=p0+λp⋅h and {a mathematical formula}q=q0−λq⋅h. It holds that{a mathematical formula} Since {a mathematical formula}λp+λq&gt;0 it follows that by taking λ sufficiently large the latter expression can always be made positive, in which case we have:{a mathematical formula}  □
+        </paragraph>
+        <paragraph>
+         Note that in the lemma above we do not require {a mathematical formula}P∩H=∅.
+        </paragraph>
+        <paragraph label="Proof">
+         Let H be a hyperplane,{a mathematical formula}r∈H,{a mathematical formula}h≠0a vector which is orthogonal to H. Let p and q be two points which are both in the opposite half-space induced by H as{a mathematical formula}r+h. If{a mathematical formula}d(p,H)&lt;d(q,H), it holds for sufficiently large{a mathematical formula}λ&gt;0that{a mathematical formula}d(p,r+λ⋅h)&lt;d(q,r+λ⋅h).Indeed, we can consider a hyperplane {a mathematical formula}H′ which is parallel to H and which separates p and q. The result then easily follows from the previous lemma by taking {a mathematical formula}H:=H′, {a mathematical formula}P={p} and {a mathematical formula}Q={q}.  □
+        </paragraph>
+        <paragraph label="Corollary 11">
+         Let H be a hyperplane,{a mathematical formula}r∈H,{a mathematical formula}h≠0a vector which is orthogonal to H. Let p and q be two points which are both in the same half-space induced by H as{a mathematical formula}r+h. If{a mathematical formula}d(p,H)&gt;d(q,H), it holds for sufficiently large{a mathematical formula}λ&gt;0that{a mathematical formula}d(p,r+λ⋅h)&lt;d(q,r+λ⋅h).
+        </paragraph>
+       </section>
+       <section label="4.4.2.2">
+        <section-title>
+         Associating variables with points on the moment curve
+        </section-title>
+        <paragraph label="Assumption 4">
+         Every non-leaf node in this tree has exactly two children.If {a mathematical formula}Θ⊨aECb and a is not a leaf node, then there is a leaf node c such that {a mathematical formula}Θ⊨{cTPPa,cECb}.If {a mathematical formula}Θ⊨aECb and a is a leaf node, then there is a non-leaf node c such that {a mathematical formula}Θ⊨{aTPPc,cECb}.There are regions {a mathematical formula}z1, {a mathematical formula}z2, {a mathematical formula}z3 in V such that {a mathematical formula}z1 and {a mathematical formula}z2 are leaf nodes, {a mathematical formula}Θ⊨{z1TPPz3,z2TPPz3} and for every other region a, it holds that {a mathematical formula}Θ⊨{z1ECa,z2ECa,z3ECa}.
+        </paragraph>
+        <paragraph>
+         Indeed, we can always make Assumption 1 satisfied by adding extra regions (e.g. if a has three children x, y, z, we could add a new region u together with the constraints yTPPu, zTPPu and uTPPa). Assumption 2 can be made satisfied by introducing two new regions {a mathematical formula}c1 and {a mathematical formula}c2 (to ensure that Assumption 1 remains satisfied) and adding the constraints {a mathematical formula}c1TPPa, {a mathematical formula}c2TPPa, {a mathematical formula}c1DCc2 and {a mathematical formula}c1ECb to Θ. Similarly, we can always satisfy Assumption 3, by introducing new regions c and {a mathematical formula}a′ and adding the constraints aTPPc, {a mathematical formula}a′TPPc, {a mathematical formula}aDCa′ and cECb as well as cTPPv for every region {a mathematical formula}v∈V such that {a mathematical formula}Θ⊨aTPPv. Note that Assumption 3 implies that when a and b are siblings and leaf nodes, it follows that {a mathematical formula}Θ⊨aDCb. Finally, Assumption 4 can be satisfied by introducing new regions {a mathematical formula}z1, {a mathematical formula}z2, {a mathematical formula}z3 and adding to Θ the constraints {a mathematical formula}z1TPPz3, {a mathematical formula}z2TPPz3, {a mathematical formula}z1DCz2, as well as {a mathematical formula}z1ECa, {a mathematical formula}z2ECa and {a mathematical formula}z3ECa for every other region a in V. It is clear that adding these latter relations cannot introduce any inconsistencies, as Θ does not contain any relations of the form NTPP or {a mathematical formula}NTPP−1 and the composition {a mathematical formula}R∘EC includes EC for any other RCC8 base relation R (see Table 2).
+        </paragraph>
+        <paragraph>
+         Each variable v in V will be associated with a point {a mathematical formula}M(tv) on the four-dimensional moment curve (with {a mathematical formula}tv&gt;0). To choose the values {a mathematical formula}tv we use the following recursive procedure Assign starting with {a mathematical formula}x=root and arbitrary values for {a mathematical formula}λ1 and {a mathematical formula}λ2 satisfying {a mathematical formula}0&lt;λ1&lt;λ2:
+        </paragraph>
+        <list>
+         <list-item>
+          Assign({a mathematical formula}x,λ1,λ2)
+         </list-item>
+        </list>
+        <paragraph>
+         The variables in the tree in Fig. 10 are labelled such that they reflect the order in which the corresponding points occur on the moment curve, i.e. the following condition is satisfied:{a mathematical formula} Below, we will impose particular constraints on the values {a mathematical formula}δx and {a mathematical formula}εx. For now, the main observation is that for every left child x and its sibling y, it holds that the points corresponding to regions which are contained in x occur before {a mathematical formula}M(tx) on the moment curve and the points corresponding to regions which are contained in y occur after {a mathematical formula}M(ty) on the moment curve. In other words, we have the following lemma.
+        </paragraph>
+        <paragraph label="Corollary 12">
+         Let x and y be siblings in{a mathematical formula}T, with x being left of y. Let a be a descendant of x and let b be a descendant of y. It holds that{a mathematical formula}ta&lt;tx&lt;ty&lt;tb.Let x and y be siblings in{a mathematical formula}T, with x being left of y. Let a be a descendant of x and let b be a descendant of y. It holds that{a mathematical formula}d(M(ta),M(tx))&lt;d(M(ta),M(ty))and{a mathematical formula}d(M(tb),M(ty))&lt;d(M(tb),M(tx)).
+        </paragraph>
+        <paragraph>
+         Let x be an ancestor of a ({a mathematical formula}a≠x) and y an ancestor of b ({a mathematical formula}b≠y) such that x and y are siblings and {a mathematical formula}ta&lt;tx&lt;ty&lt;tb. Let {a mathematical formula}Hab={w|hab⋅w=θab,w∈R4}, for given {a mathematical formula}hab∈R4 and {a mathematical formula}θab∈R, be a hyperplane intersecting the moment curve at {a mathematical formula}M(tx) and {a mathematical formula}M(ty) and such that the function {a mathematical formula}fab:R→R defined by {a mathematical formula}fab(t)=hab⋅M(t)−θab reaches an extremum at {a mathematical formula}ta and {a mathematical formula}tb. Note that the hyperplane {a mathematical formula}Hab is guaranteed to exist by Lemma 1. Let {a mathematical formula}λ⁎&gt;0. We define:{a mathematical formula} where{a mathematical formula} Without loss of generality, we can assume that {a mathematical formula}hab is such that {a mathematical formula}M(ta) and {a mathematical formula}M(tb) are at the same side of {a mathematical formula}Hab as {a mathematical formula}qab.
+        </paragraph>
+        <paragraph label="Proof">
+         Let x and y be siblings in{a mathematical formula}T, with x being left of y. Let a be a descendant of x ({a mathematical formula}a≠x) and let b be a descendant of y ({a mathematical formula}b≠y). Let u be a descendant of x ({a mathematical formula}u≠a,{a mathematical formula}u≠x). If{a mathematical formula}λ⁎is sufficiently large, it holds that{a mathematical formula}Similarly, if v is a descendant of y ({a mathematical formula}v≠b,{a mathematical formula}v≠y), then for a sufficiently large{a mathematical formula}λ⁎we have{a mathematical formula}Because of the way in which {a mathematical formula}Hab was chosen, we have that {a mathematical formula}fab reaches its only extremum left of {a mathematical formula}tx at {a mathematical formula}ta. Since {a mathematical formula}tv&lt;tx, one of the following cases must hold:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          {a mathematical formula}tv and {a mathematical formula}ta are located at the same side of {a mathematical formula}Hab (which is the side at which {a mathematical formula}qab is located), and {a mathematical formula}d(tv,Hab)&lt;d(ta,Hab); or
+         </list-item>
+         <list-item label="2.">
+          {a mathematical formula}tv is located at the opposite side of H as {a mathematical formula}ta and {a mathematical formula}qab.
+         </list-item>
+        </list>
+        <paragraph label="Proof">
+         Let x and y be siblings in{a mathematical formula}T, with x being left of y. Let a be a descendant of x ({a mathematical formula}a≠x) and let b be a descendant of y ({a mathematical formula}b≠y). Let{a mathematical formula}u≠abe an ancestor of a or b and let v be the sibling of u. If{a mathematical formula}λ⁎is chosen to be sufficiently large, it holds that{a mathematical formula}Let x and y be defined as before. We consider the following cases:
+        </paragraph>
+        <list>
+         <list-item label="•">
+          If {a mathematical formula}tu&lt;ta, then a, b, x and y are all descendants of u. It follows that {a mathematical formula}tv&lt;tu&lt;ta. Then (6) easily follows from the fact that {a mathematical formula}ta is the only maximum of {a mathematical formula}fab left of {a mathematical formula}tx (as in the proof of Lemma 4).
+         </list-item>
+         <list-item label="•">
+          If {a mathematical formula}ta&lt;tu&lt;tx, then by construction, u is a descendant of x and an ancestor of a. It then holds that {a mathematical formula}ta&lt;tu&lt;tv&lt;tx. Again we obtain (6)from the fact that {a mathematical formula}ta is the only maximum of {a mathematical formula}fab left of {a mathematical formula}tx.
+         </list-item>
+         <list-item label="•">
+          If {a mathematical formula}tu=tx then {a mathematical formula}tv=ty and it follows that {a mathematical formula}d(qab,M(tu))=d(qab,M(tv)) by construction of {a mathematical formula}qab.
+         </list-item>
+         <list-item label="•">
+          The case where {a mathematical formula}tx&lt;tu&lt;ty is not possible.
+         </list-item>
+         <list-item label="•">
+          If {a mathematical formula}tu=ty then {a mathematical formula}tv=tx and it again follows that {a mathematical formula}d(qab,M(tu))=d(qab,M(tv)).
+         </list-item>
+         <list-item label="•">
+          If {a mathematical formula}ty&lt;tu&lt;tb then u is a descendant of y and an ancestor of b, and we have {a mathematical formula}ty&lt;tv&lt;tu&lt;tb, and (6) follows from the fact that {a mathematical formula}tb is the only maximum of {a mathematical formula}fab right of {a mathematical formula}ty.
+         </list-item>
+         <list-item label="•">
+          If {a mathematical formula}tb&lt;tu then a, b, x and y are all descendants of u and it follows that {a mathematical formula}tb&lt;tu&lt;tv, from which we can show (6) using the fact that {a mathematical formula}tb is the only maximum of {a mathematical formula}fab right of {a mathematical formula}ty.
+         </list-item>
+        </list>
+        <paragraph>
+         In the following, we assume that {a mathematical formula}λ⁎ is chosen sufficiently large such that (4), (5), (6) hold for every a and b.
+        </paragraph>
+        <paragraph label="Assumption 5">
+         We now turn to the question how the values {a mathematical formula}δx and {a mathematical formula}εx in the procedure Assign need to be chosen. Intuitively, if x and y are siblings in the tree {a mathematical formula}T such that x is left of y, we want to ensure that the values {a mathematical formula}tv corresponding to the descendants of y are sufficiently close to each other, and that they are sufficiently far from the values {a mathematical formula}tv corresponding to the descendants of x. In particular, the hyperplane {a mathematical formula}Hab intersects the moment curve at points {a mathematical formula}M(sab), {a mathematical formula}M(tx), {a mathematical formula}M(ty) and {a mathematical formula}M(rab), where {a mathematical formula}sab&lt;ta and {a mathematical formula}rab&gt;tb. Let z be the parent of x and y in the tree {a mathematical formula}T. Note that {a mathematical formula}sab and {a mathematical formula}rab depend on the choice of {a mathematical formula}ta and {a mathematical formula}tb: the smaller {a mathematical formula}ta and {a mathematical formula}tb, the smaller the values of {a mathematical formula}sab and {a mathematical formula}rab will be. However, from the polynomial root motion theorem ([38], see also the proof of Lemma 1), we know that moving {a mathematical formula}ta will have a greater impact on {a mathematical formula}sab than on {a mathematical formula}rab. In particular, if {a mathematical formula}rab is sufficiently far from {a mathematical formula}sab, {a mathematical formula}tx and {a mathematical formula}ty, the impact on {a mathematical formula}rab of moving the value of {a mathematical formula}ta will be negligible. By choosing {a mathematical formula}δz sufficiently small, we can ensure that the points {a mathematical formula}ra1b,...,rakb, where {a mathematical formula}a1,...,ak are the descendants of x, are arbitrarily close to each other. This means that the vectors {a mathematical formula}ha1b,...,hakb are all approximately located in (i.e. arbitrarily close to) the same two-dimensional plane G. As a result, it is clear that the following assumption will be satisfied. Let {a mathematical formula}a1, {a mathematical formula}a2 and c be descendants of x such that {a mathematical formula}tc&lt;ta1 or {a mathematical formula}tc&gt;ta2. Let d be a descendant of y and let {a mathematical formula}h⁎ be a vector bisecting {a mathematical formula}ha1d and {a mathematical formula}ha2d. It holds that{a mathematical formula}
+        </paragraph>
+        <paragraph label="Assumption 6">
+         If moreover {a mathematical formula}εz is sufficiently small, the angles {a mathematical formula}(hab,hab′) will be negligible compared to {a mathematical formula}(hab,ha′b), where a and {a mathematical formula}a′ are descendants of x and b and {a mathematical formula}b′ are descendants of y. This means that the following stronger assumption will also be satisfied. Let {a mathematical formula}a1, {a mathematical formula}a2 and c be descendants of x such that {a mathematical formula}tc&lt;ta1 or {a mathematical formula}tc&gt;ta2. Let d be a descendant of y and let {a mathematical formula}h⁎ be a vector bisecting {a mathematical formula}ha1d and {a mathematical formula}ha2d. It holds that{a mathematical formula} for every descendant {a mathematical formula}d′ of y.
+        </paragraph>
+        <paragraph>
+         This latter assumption allows us to prove the following lemma.
+        </paragraph>
+        <paragraph label="Lemma 6">
+         Let x and y be siblings such that{a mathematical formula}tx&lt;tyand let a be a descendant of x (or{a mathematical formula}a=x). Consider the following regions:{a mathematical formula}{a mathematical formula}It holds that{a mathematical formula}A+∩A−=∅.
+        </paragraph>
+        <paragraph label="Proof">
+         There exist values {a mathematical formula}ta− and {a mathematical formula}ta+ such that for every region c, it holds that c is a descendant of a iff {a mathematical formula}tc∈[ta−,ta+]. Fix a descendant {a mathematical formula}d⁎ of y. Let {a mathematical formula}h⁎ be the unique vector of unit length bisecting {a mathematical formula}ha−d⁎ and {a mathematical formula}ha+d⁎ and let {a mathematical formula}q⁎=pxy+λ⁎⋅h⁎. Let {a mathematical formula}H⁎ be the hyperplane which is orthogonal to {a mathematical formula}h⁎ and which contains {a mathematical formula}pxy (where {a mathematical formula}pxy is defined as in (3)). Furthermore, we define {a mathematical formula}Hθ⁎ as the hyperplane which is parallel to and at distance θ from {a mathematical formula}H⁎, where {a mathematical formula}Hθ⁎ for {a mathematical formula}θ&gt;0 is located in the same half-space induced by {a mathematical formula}H⁎ as {a mathematical formula}qxy. Let us in particular consider the following choice for θ:{a mathematical formula} where the minimum is taken over all descendants c of a and all descendants d of y. We will show that {a mathematical formula}Hθ⁎ is a hyperplane separating {a mathematical formula}A− from {a mathematical formula}A+. It is sufficient to show that for every c which is not a descendant of a and every descendant d of y, it holds that{a mathematical formula} We have that either {a mathematical formula}tc&lt;ta− or {a mathematical formula}tc&gt;ta−, which by Assumption 6 means that for all descendants d and {a mathematical formula}d′ of y{a mathematical formula} The minimum in (7) is attained for either {a mathematical formula}c=a− or {a mathematical formula}c=a+. It follows that (8) holds, and thus that {a mathematical formula}Hθ⁎ is a hyperplane separating {a mathematical formula}A− and {a mathematical formula}A+.  □
+        </paragraph>
+       </section>
+       <section label="4.4.2.3">
+        <section-title>
+         Associating variables with convex regions
+        </section-title>
+        <paragraph label="Proof">
+         For each region x and its sibling y in the tree, we can consider the Voronoi diagram induced by the corresponding points on the moment curve {a mathematical formula}M(tx) and {a mathematical formula}M(ty). Let us denote the corresponding cells as {a mathematical formula}Xx and {a mathematical formula}Xy. For each node a we define:{a mathematical formula} If a and b are leaf nodes such that {a mathematical formula}Θ⊨aECb, it follows from Assumption 3 that a has an ancestor x ({a mathematical formula}a≠x) and b has an ancestor y ({a mathematical formula}b≠y) such that x and y are siblings in {a mathematical formula}T. We then have that {a mathematical formula}qab is well-defined. For all leaf nodes a and b such that{a mathematical formula}Θ⊨aECb, it holds that{a mathematical formula}qab∈Ya∩Yb.Let {a mathematical formula}a′ be the sibling of a in the tree. From Lemma 4, it follows that {a mathematical formula}d(qab,M(ta))≤d(qab,M(ta′)) which means {a mathematical formula}qab∈Xa. Now let u be an arbitrary ancestor of a and let v be the sibling of x. By Lemma 5 we then know that {a mathematical formula}d(qab,M(tu))≤d(qab,M(tv)), which implies {a mathematical formula}qab∈Xu. Since this holds for every ancestor of a, it follows that {a mathematical formula}qab∈Ya. In entirely the same way, we find {a mathematical formula}qab∈Yb.  □
+        </paragraph>
+        <paragraph>
+         Let {a mathematical formula}Sa be a small hypersphere centered around {a mathematical formula}M(ta):{a mathematical formula} for {a mathematical formula}ε&gt;0 a sufficiently small constant. We realize each variable a corresponding to a leaf node in the tree as the convex region {a mathematical formula}Za defined as:{a mathematical formula} Each region a which is not a leaf node is realized as{a mathematical formula} From Lemma 7, it follows that {a mathematical formula}Za⊆Ya, which implies {a mathematical formula}ZaDRZb unless a is a descendant or ancestor of b. Moreover, from Assumption 2, we know that when {a mathematical formula}Θ⊨aECb it will hold that {a mathematical formula}ZaECZb. Moreover, by construction, it is clear that {a mathematical formula}aPb when a is a descendant of b ({a mathematical formula}a≠b). From Assumption 1, it follows that then aPPb, and because of Assumption 4 we moreover have aTPPb.
+        </paragraph>
+        <paragraph>
+         It remains to be shown that {a mathematical formula}ZaDCZb if {a mathematical formula}Θ⊨aDCb. Assume {a mathematical formula}Θ⊨aDCb. Let x be an ancestor of a (or {a mathematical formula}x=a) and y be an ancestor of b (or {a mathematical formula}y=b) such that x and y are siblings. First assume that neither of x and y is a leaf node. Now consider the sets {a mathematical formula}Pa and {a mathematical formula}Pb defined as follows:{a mathematical formula}{a mathematical formula} Let {a mathematical formula}Gxy be the hyperplane which separates {a mathematical formula}Xx from {a mathematical formula}Xy. Noting that {a mathematical formula}Gxy then also separates {a mathematical formula}Za from {a mathematical formula}Zb, we have {a mathematical formula}CH(Pa)=Za∩Gxy and {a mathematical formula}CH(Pb)=Zb∩Gxy. To show that {a mathematical formula}Za∩Zb=∅, it thus suffices to show that {a mathematical formula}CH(Pa)∩CH(Pb)=∅. Note that if {a mathematical formula}qcd∈Pb it must be the case that c is not a descendant of a, since {a mathematical formula}qcd∈Pb implies cECd and {a mathematical formula}d{TPP,EQ}b and thus cECb. Also note that {a mathematical formula}qcd∈Pa or {a mathematical formula}qcd∈Pb means that {a mathematical formula}c≠x and {a mathematical formula}d≠y since x and y are not leaf nodes, i.e. all elements of {a mathematical formula}Pa and {a mathematical formula}Pb are well-defined. It follows that {a mathematical formula}CH(Pa)⊆A+ and {a mathematical formula}CH(Pb)⊆A− in the sense of Lemma 6, from which we can derive that indeed {a mathematical formula}CH(Pa)∩CH(Pb)=∅. Now assume that x is a leaf node (and thus {a mathematical formula}x=a). Then it is clear that y cannot have any descendant c such that {a mathematical formula}Θ⊨xECc, as by Assumption 3, this would mean that x has an ancestor z such that {a mathematical formula}Θ⊨zECc and thus {a mathematical formula}Θ⊨zECy, which means that x and y would not be siblings. Hence we have that {a mathematical formula}Za∩Gxy=Zb∩Gxy=∅ from which we again find {a mathematical formula}ZaDCZb. Finally, the case where y is a leaf node is entirely similar.
+        </paragraph>
+        <paragraph label="Proof">
+         This completes the proof of Proposition 16. Additionally considering NTPP relations does not introduce any additional difficulties, i.e. we also have the following result. Every consistent atomic RCC8 network over{a mathematical formula}{EC,DC,TPP,TPP−1,NTPP,NTPP−1}has a convex solution in{a mathematical formula}R4.The proof proceeds by induction on the number of NTPP or {a mathematical formula}NTPP−1 relations in Θ, entirely analogously to the proof of Proposition 14.  □
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Fragments requiring an arbitrarily high number of dimensions
+      </section-title>
+      <paragraph label="Proposition 18">
+       To prove the existence of particular types of RCC5 or RCC8 networks which cannot be realized in {a mathematical formula}Rn, for a fixed n, the following well-known result is particularly useful. Radon's theoremFor any set{a mathematical formula}{p1,...,pn+2}of points in{a mathematical formula}Rnthere exists a partition{a mathematical formula}P∪Q={p1,...,pn+2}such that{a mathematical formula}CH(P)∩CH(Q)≠∅.
+      </paragraph>
+      <paragraph label="Proof">
+       Using Radon's theorem we can show the following result. For every{a mathematical formula}n≥1there exists a consistent atomic RCC5 network Θ over{a mathematical formula}{DR,PO,PP,PP−1}which has no convex solution in{a mathematical formula}Rn.Let {a mathematical formula}n≥1 be arbitrary and consider the following set of RCC5 constraints Θ. For {a mathematical formula}1≤i&lt;j≤n+2, add the following constraints to Θ:{a mathematical formula} For each subset {a mathematical formula}I⊆{1,...,n+2} we introduce a variable {a mathematical formula}bI and for each {a mathematical formula}i∈I we add the following constraint to Θ:{a mathematical formula} For each {a mathematical formula}j∉I, we moreover add the following constraint:{a mathematical formula} For any two (different) subsets I and J of {a mathematical formula}{1,...,n+2}:
+       <list>
+        If {a mathematical formula}I⊂J, we add to Θ the constraint {a mathematical formula}bIPPbJ.Else, if {a mathematical formula}I⊃J, we add to Θ the constraint {a mathematical formula}bIPP−1bJ.Else, if {a mathematical formula}I∩J≠∅, we add to Θ the constraint {a mathematical formula}bIPObJ.Else, we add to Θ the constraint {a mathematical formula}bIDRbJ.Suppose
+       </list>
+       <paragraph>
+        Θ had a convex solution {a mathematical formula}S in {a mathematical formula}Rn. Fix an arbitrary point {a mathematical formula}pi in the interior of each region {a mathematical formula}S(ai). It is clear that the points {a mathematical formula}p1,...,pn+2 are distinct, because of (9). Because of Radon's theorem, there exists a set {a mathematical formula}I⊆{1,...,n+2} such that {a mathematical formula}CH(⋃i∈Ipi)∩CH(⋃i∉Ipi)≠∅. As each {a mathematical formula}pi is an interior point of {a mathematical formula}S(ai), it follows that there exists an {a mathematical formula}ε&gt;0 such that{a mathematical formula} In particular, this means that {a mathematical formula}dim⁡(S(bI)∩S(bcoI))=n, where {a mathematical formula}coI={1,...,n+2}∖I. This contradicts the constraint {a mathematical formula}bIDRbcoI which is entailed by Θ.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 13">
+       The proof of Proposition 19 remains valid if we replace the role of PP by either TPP or NTPP and if we replace DR by either EC or DC. Thus we obtain the following corollary. For every{a mathematical formula}n≥1, there exist consistent atomic RCC8 networks over the following sets of base relations which have no convex solutions in{a mathematical formula}Rn:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}{DC,PO,TPP,TPP−1}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{EC,PO,TPP,TPP−1}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{DC,PO,NTPP,NTPP−1}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{EC,PO,NTPP,NTPP−1}
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Upper bounds on the number of dimensions for general RCC8 networks
+     </section-title>
+     <paragraph>
+      Throughout this section, let Θ be an atomic and consistent RCC8 network which does not contain any occurrences of EQ. The aim of this section is to establish an upper bound on the number of dimensions which are needed to guarantee that Θ can be convexly realized. Our strategy is to start with a restricted network {a mathematical formula}Θ↓V′, with {a mathematical formula}V′⊆V, for which the results from the previous section guarantee a convex solution in {a mathematical formula}R, {a mathematical formula}R2, {a mathematical formula}R3 or {a mathematical formula}R4. Then we incrementally build a convex solution for Θ from the convex solution of {a mathematical formula}Θ↓V′. The main technique we use to extend the initial solution for {a mathematical formula}Θ↓V′ is the following proposition, where a subnetwork {a mathematical formula}Θ↓Z ({a mathematical formula}Z⊆V) is called an O-clique if {a mathematical formula}Θ⊨z1Oz2 for every {a mathematical formula}z1,z2∈Z. We say that an O-clique {a mathematical formula}Θ↓Z has a common part in a solution {a mathematical formula}S if {a mathematical formula}⋂z∈ZS(z) is a non-empty regularly closed region.
+     </paragraph>
+     <paragraph label="Proposition 20">
+      Let Θ be a consistent atomic RCC8 network. Suppose that{a mathematical formula}Θ↓V′has a k-dimensional convex solution in which everyO-clique has a common part, and moreover that Θ entails the following constraints:{a mathematical formula}{a mathematical formula}{a mathematical formula}It holds that{a mathematical formula}Θ↓(V′∪{a1,...,ar,b1,...,bs})has a{a mathematical formula}(k+1)-dimensional convex solution in which everyO-clique has a common part.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}S be a convex solution of {a mathematical formula}Θ↓V′ in {a mathematical formula}Rk; we construct a convex solution {a mathematical formula}T of {a mathematical formula}Θ↓(V′∪{a1,...,ar,b1,...,bs}) in {a mathematical formula}Rk+1. Let {a mathematical formula}Ar+1=Bs+1 be an arbitrary non-empty convex region which strictly contains {a mathematical formula}S(v) for every {a mathematical formula}v∈V′. Let {a mathematical formula}Ai and {a mathematical formula}Bj for {a mathematical formula}i∈{1,...,r} and {a mathematical formula}j∈{1,...,s} be defined as:{a mathematical formula}{a mathematical formula} where {a mathematical formula}Eδ is the erosion operator defined by {a mathematical formula}Eδ(X)={p|∀q.(d(p,q)≤δ)⇒(q∈X)}. We will assume that {a mathematical formula}δi is sufficiently small to ensure the following three conditions:
+      <list>
+       {a mathematical formula}Ai is non-empty and {a mathematical formula}dim⁡(Ai)=k.For every {a mathematical formula}v,w∈V′ if {a mathematical formula}Θ⊨vNTPPw it holds that {a mathematical formula}S(v)⊆Eδi(S(w)).For every {a mathematical formula}v∈V′ and {a mathematical formula}i∈{1,...,n} such that {a mathematical formula}S(v)⊆i(Ai+1) it holds that {a mathematical formula}S(v)⊂Eδi(Ai+1),Let
+      </list>
+      <paragraph>
+       {a mathematical formula}0&lt;ar−&lt;ar−1−&lt;...&lt;a1−&lt;a1+&lt;a2+&lt;...&lt;ar+ and {a mathematical formula}bs−&lt;bs−1−&lt;...&lt;b1−&lt;b1+&lt;b2+&lt;...&lt;bs+&lt;0. We define {a mathematical formula}T for {a mathematical formula}ai and {a mathematical formula}bj as:{a mathematical formula}{a mathematical formula} Since {a mathematical formula}AiNTPPAj and {a mathematical formula}[ai−,ai+]NTPP[aj−,aj+] for {a mathematical formula}i&lt;j we immediately find {a mathematical formula}T(ai)NTPPT(aj) and similarly we find {a mathematical formula}T(bi)NTPPT(bj). Moreover, since {a mathematical formula}bs+&lt;0&lt;ar− we have {a mathematical formula}T(ai)DCT(bj) for {a mathematical formula}1≤i≤r and {a mathematical formula}1≤j≤s. For {a mathematical formula}v∈V′ we define:{a mathematical formula} where {a mathematical formula}v−&lt;v+ are defined as follows. Let the level {a mathematical formula}Δ(v) of a region v be defined as in Section 4.2.2. We define:{a mathematical formula}{a mathematical formula} where {a mathematical formula}ε&gt;0 is sufficiently small. First note that {a mathematical formula}v−&lt;v+. Indeed, if {a mathematical formula}Θ⊭vPar and {a mathematical formula}Θ⊭vPbs, it holds that {a mathematical formula}v−&lt;0&lt;v+. Now consider {a mathematical formula}Θ⊨vPar and let i be the smallest i for which {a mathematical formula}Θ⊨vPai, then we have {a mathematical formula}ai−≤v−&lt;ai−+ai−1−2&lt;v+&lt;ai−1− if {a mathematical formula}i&gt;1 and {a mathematical formula}a1−≤v−&lt;a1−+a1+2&lt;v+&lt;a1+ otherwise. The case where {a mathematical formula}Θ⊨vPbs is entirely similar.It is straightforward to verify that the RCC8 relations which hold between {a mathematical formula}T(v), on the one hand, and {a mathematical formula}T(a1),...,T(ar),T(b1),...,T(bs), on the other, are those which are imposed by Θ. Finally, we need to show that {a mathematical formula}T is also a solution of {a mathematical formula}Θ↓V′, given that {a mathematical formula}S is a solution of {a mathematical formula}Θ↓V′. Let {a mathematical formula}u1,u2∈V′.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The cases where {a mathematical formula}Θ⊨u1DCu2 or {a mathematical formula}Θ⊨u1TPPu2 are trivial.
+       </list-item>
+       <list-item label="•">
+        Assume that {a mathematical formula}Θ⊨u1NTPPu2. By construction it is clear that {a mathematical formula}T(u1)PPT(u2). The fact that {a mathematical formula}T(u1)NTPPT(u2) follows easily from the observation that {a mathematical formula}Δ(u1)&lt;Δ(u2).
+       </list-item>
+       <list-item label="•">
+        Assume that {a mathematical formula}Θ⊨u1ECu2 and let {a mathematical formula}(x1,...,xk)∈S(u1)∩S(u2). It is clear that {a mathematical formula}T(u1)DRT(u2); we show that {a mathematical formula}T(u1)∩T(u2)≠∅:
+       </list-item>
+       <list-item label="•">
+        Assume that {a mathematical formula}Θ⊨u1POu2 and let {a mathematical formula}(x1,...,xk)∈i(S(u1))∩i(S(u2)). We show that {a mathematical formula}i(T(u1))∩i(T(u2))≠∅ from which it easily follows that {a mathematical formula}T(u1)POT(u2).
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Example 5">
+      Consider the consistent atomic network Θ which contains the following constraints{a mathematical formula} as well as all constraints which are implied by the above constraints. Fig. 11 shows a possible convex realization in {a mathematical formula}R of the restricted network {a mathematical formula}Θ↓{x,y,z,u}. The remaining regions, {a mathematical formula}a1, {a mathematical formula}a2, {a mathematical formula}b1, {a mathematical formula}b2, satisfy the condition of Proposition 20. By applying the construction from the proof of Proposition 20, a two-dimensional convex solution of Θ is obtained, which is shown in Fig. 12.
+     </paragraph>
+     <paragraph>
+      Note that in the above proposition, it is possible that {a mathematical formula}r=0, or {a mathematical formula}s=0, or {a mathematical formula}r=s=1. We have the following corollary.
+     </paragraph>
+     <paragraph label="Corollary 14">
+      Let Θ be a consistent atomic RCC8 network. If{a mathematical formula}Θ↓V′has a convex solution in{a mathematical formula}Rkin which everyO-clique has a common part and{a mathematical formula}Θ⊨a{DC,NTPP}b, then{a mathematical formula}Θ↓(V′∪{a,b})has a convex solution{a mathematical formula}Rk+1in which everyO-clique has a common part.
+     </paragraph>
+     <paragraph label="Corollary 15">
+      Moreover, we can generate a convex solution for any network, using the following corollary. Let Θ be a consistent atomic RCC8 network. If{a mathematical formula}Θ↓V′has a convex solution in{a mathematical formula}Rkin which everyO-clique has a common part, then{a mathematical formula}Θ↓(V′∪{a})has a convex solution{a mathematical formula}Rk+1in which everyO-clique has a common part.
+     </paragraph>
+     <paragraph label="Corollary 16">
+      Together with Proposition 17, we obtain the following upper bound. Let Θ be a consistent atomic RCC8 network and let{a mathematical formula}V′⊆Vbe such that{a mathematical formula}Θ↓V′does not contain any occurrences ofPO. It holds that Θ has a convex solution in{a mathematical formula}R|V∖V′|+4.
+     </paragraph>
+     <paragraph>
+      Similar results can be obtained based on the fragments of RCC8, identified in Fig. 2, which guarantee convex solutions in {a mathematical formula}R, {a mathematical formula}R2 and {a mathematical formula}R3.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Upper bounds
+      </section-title>
+      <paragraph>
+       We now turn our attention to the problem of deriving an upper bound on the number of required dimensions which only depends on the number of variables. In particular, we will show that a consistent network with at most {a mathematical formula}2n+1 regions can be convexly realized in {a mathematical formula}Rn, provided that {a mathematical formula}n≥2. This result does not hold for {a mathematical formula}n=1: although most consistent networks of three variables are convexly realizable on the real line, there are two exceptions, as made explicit in the following lemma.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network over the set of variables V. If{a mathematical formula}|V|=3then Θ has a convex solution in{a mathematical formula}Runless Θ is isomorphic to one of the following networks:{a mathematical formula}{a mathematical formula}Let us write {a mathematical formula}V={a,b,c}. If Θ contains an instance of the relation DC or NTPP then the result follows immediately from Proposition 20 (e.g. if {a mathematical formula}Θ⊨aDCb, then we can extend a 0-dimensional realization of c to a 1-dimensional convex realization of Θ). Assume that Θ contains an instance of TPP, e.g. {a mathematical formula}Θ⊨aTPPb. We define the solution of Θ as follows, only considering the cases where Θ does not contain any instances of DC or NTPP:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If cTPPa and cTPPb: {a mathematical formula}S(a)=[0,2], {a mathematical formula}S(b)=[0,3] and {a mathematical formula}S(c)=[0,1].
+       </list-item>
+       <list-item label="•">
+        If aTPPc and bTPPc: {a mathematical formula}S(a)=[0,1], {a mathematical formula}S(b)=[0,2] and {a mathematical formula}S(c)=[0,3].
+       </list-item>
+       <list-item label="•">
+        If aTPPc and cPOb: {a mathematical formula}S(a)=[0,1], {a mathematical formula}S(b)=[−1,1] and {a mathematical formula}S(c)=[0,2].
+       </list-item>
+       <list-item label="•">
+        If cPOa and cTPPb: {a mathematical formula}S(a)=[0,2], {a mathematical formula}S(b)=[−1,2] and {a mathematical formula}S(c)=[−1,1].
+       </list-item>
+       <list-item label="•">
+        If cPOa and cPOb: {a mathematical formula}S(a)=[0,2], {a mathematical formula}S(b)=[0,3] and {a mathematical formula}S(c)=[−1,1].
+       </list-item>
+       <list-item label="•">
+        If cECa and cTPPb: {a mathematical formula}S(a)=[0,1], {a mathematical formula}S(b)=[0,2] and {a mathematical formula}S(c)=[1,2].
+       </list-item>
+       <list-item label="•">
+        If cECa and cECb: {a mathematical formula}S(a)=[0,1], {a mathematical formula}S(b)=[0,2] and {a mathematical formula}S(c)=[−1,0].
+       </list-item>
+       <list-item label="•">
+        If cECa and cPOb: {a mathematical formula}S(a)=[0,1], {a mathematical formula}S(b)=[0,2] and {a mathematical formula}S(c)=[1,3].
+       </list-item>
+      </list>
+      <paragraph>
+       To show that consistent networks with {a mathematical formula}2n+1 variables have a convex solution in {a mathematical formula}Rn we first need a number of technical lemmas. Let {a mathematical formula}Θ′ be the RCC8 network which is obtained from Θ by replacing every constraint of the form aTPPb by aPPb and every constraint of the form aECb by aDRb. We say that {a mathematical formula}S is a weak solution of Θ iff {a mathematical formula}S is a solution of {a mathematical formula}Θ′.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network and assume that{a mathematical formula}Θ↓V′has a convex weak solution in{a mathematical formula}Rkin which everyO-clique has a common part. Let{a mathematical formula}u∈V∖V′be such that{a mathematical formula}Θ↓(V′∪{u})is a network over{a mathematical formula}{EC,PO,TPP,TPP−1}and assume that one of the following conditions is satisfied:{a mathematical formula}{a mathematical formula}It holds that{a mathematical formula}Θ↓(V′∪{u})has a convex solution in{a mathematical formula}Rk+1in which everyO-clique has a common part.Let {a mathematical formula}S be a k-dimensional convex weak solution of {a mathematical formula}Θ↓V′. We now define a {a mathematical formula}(k+1) dimensional solution {a mathematical formula}T of {a mathematical formula}Θ↓(V′∪{u}) as follows.Let us first consider the case where {a mathematical formula}Θ⊭vTPPu and {a mathematical formula}Θ⊭uTPPv for all {a mathematical formula}v∈V′. Let A be a non-empty k-dimensional convex region which strictly contains {a mathematical formula}S(v) for every {a mathematical formula}v∈V′. We define:{a mathematical formula} and for {a mathematical formula}v∈V′:{a mathematical formula} where {a mathematical formula}λv&gt;0 depends on the relation between v and u:{a mathematical formula} Given that {a mathematical formula}(0,...,0)∈⋂v∈V′T(v), we then indeed have that {a mathematical formula}T is a solution of {a mathematical formula}Θ↓V′. It is moreover clear that for each {a mathematical formula}v∈V′, the RCC8 relation between {a mathematical formula}T(u) and {a mathematical formula}T(v) is the one required by Θ.Now consider the case where {a mathematical formula}Θ⊭vECu and {a mathematical formula}Θ⊭uTPPv for any v in {a mathematical formula}V′. Let A be defined as before. We define for all v in {a mathematical formula}V′:{a mathematical formula}{a mathematical formula}{a mathematical formula}  □
+      </paragraph>
+      <paragraph label="Example 6">
+       Consider the consistent atomic network Θ which contains the following constraints{a mathematical formula}Fig. 13 shows a possible convex weak realization in {a mathematical formula}R of the restricted network {a mathematical formula}Θ↓{x,y,z}. By applying the construction from the proof of Lemma 9, a two-dimensional convex solution of Θ is obtained, which is shown in Fig. 14.
+      </paragraph>
+      <paragraph label="Remark 2">
+       Let Θ be a consistent atomic RCC8 network and assume that {a mathematical formula}Θ↓V′ is a network over {a mathematical formula}{EC,PO,TPP,TPP−1}. Then region {a mathematical formula}u∈V′ does not satisfy conditions (12) and (13) if and only if one of the following conditions is satisfied:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        there exists {a mathematical formula}v∈V′ such that {a mathematical formula}Θ⊨uTPPv;
+       </list-item>
+       <list-item label="•">
+        there exist {a mathematical formula}v1,v2∈V′ such that {a mathematical formula}Θ⊨v1TPPu and {a mathematical formula}Θ⊨v2ECu.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       This can be checked by case-by-case analysis. We verified this using a computer program. The code of the program is available from the authors.  □
+      </paragraph>
+      <paragraph label="Corollary 17">
+       We note that each {a mathematical formula}N4i{a mathematical formula}(i=1,2,3) contains an EC relation. The following result is clear. Let Θ be an RCC8 constraint network over{a mathematical formula}{PO,TPP,TPP−1}that involves four variables. Suppose Θ is consistent. Then Θ has a convex weak solution in{a mathematical formula}R.
+      </paragraph>
+      <paragraph>
+       We need a number of additional lemmas before we can present the main result.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network over{a mathematical formula}{EC,PO,TPP,TPP−1}. If{a mathematical formula}|V|=5then Θ has a convex solution in{a mathematical formula}R2in which everyO-clique has a common part.The proof is provided in the online appendix.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network. If{a mathematical formula}|V|=5then Θ has a convex solution in{a mathematical formula}R2in which everyO-clique has a common part.The proof is provided in the online appendix.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network over{a mathematical formula}{EC,PO,TPP,TPP−1}and{a mathematical formula}V={x,y,c1,c2,d1,d2}. If{a mathematical formula}Θ⊨{c1ECd1,c2ECd2}then Θ has a convex weak solution in{a mathematical formula}R2in which everyO-clique has a common part.The proof is provided in the online appendix.  □
+      </paragraph>
+      <paragraph label="Lemma 14">
+       Suppose Θ is a basic RCC8 network over{a mathematical formula}{EC,PO,TPP,TPP−1}and{a mathematical formula}V={x,y,z,a,b,c,d}. In addition, assume that Θ satisfies
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Θ↓{a,b,c,d}is{a mathematical formula}N41,{a mathematical formula}N42or{a mathematical formula}N43;
+       </list-item>
+       <list-item label="•">
+        there is no u in V which satisfies the conditions ofLemma 9;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Θ⊨{yTPPx,zECx,zECy}and{a mathematical formula}Θ⊭xTPPvfor{a mathematical formula}v∈{a,b,c,d}.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The proof is provided in the online appendix.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Let Θ be a consistent atomic RCC8 network over the set of variables V. If{a mathematical formula}|V|≤2n+1with{a mathematical formula}n≥2then Θ has a convex solution in{a mathematical formula}Rn.Suppose {a mathematical formula}|V|=2n+1 (the case where {a mathematical formula}|V|&lt;2n+1 follows trivially) and {a mathematical formula}n≥2. Let {a mathematical formula}W={a1,...,al,b1,...,bl} be such that:
+       <list>
+        for each {a mathematical formula}i∈{1,...,l} it holds that {a mathematical formula}Θ⊨ai{DC,NTPP}bi;{a mathematical formula}Θ↓(V∖W) is a network over {a mathematical formula}{EC,PO,TPP,TPP−1}.Note that the number of elements in
+       </list>
+       <paragraph>
+        {a mathematical formula}V∖W is odd. If {a mathematical formula}|V∖W|=1, then {a mathematical formula}l=n, and we can start with a zero-dimensional solution of the unique element in {a mathematical formula}V∖W and extend it to an n-dimensional convex solution of Θ by repeatedly applying Proposition 20. If {a mathematical formula}|V∖W|=3, we know from Lemma 12 that a 2-dimensional convex solution of {a mathematical formula}Θ↓((V∖W)∪{a1,b1}) exists. This solution can then be extended to a {a mathematical formula}2+(l−1) dimensional convex solution of Θ by repeatedly applying Proposition 20, where {a mathematical formula}2l=2n+1−3 and thus {a mathematical formula}2+(l−1)=n. Similarly, if {a mathematical formula}|V∖W|=5 it follows from Lemma 11 that a 2-dimensional convex solution of {a mathematical formula}Θ↓(V∖W) exists, which can be extended to an n-dimensional convex solution of Θ by repeated application of Proposition 20.Now assume that {a mathematical formula}|V∖W|≥7. First assume that there is a region {a mathematical formula}z∈V∖W which satisfies the conditions of Lemma 9. Then there exists a {a mathematical formula}U={c1,...,ck,d1,...,dk}⊆V∖(W∪{z}) such that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         for each {a mathematical formula}i∈{1,...,k} it holds that {a mathematical formula}Θ⊨ciECdi;
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Θ↓(V∖(W∪U∪{z})) is a network over {a mathematical formula}{PO,TPP,TPP−1}.
+        </list-item>
+       </list>
+       <paragraph>
+        Note that {a mathematical formula}V∖(W∪U∪{z}) contains an even number of elements. If {a mathematical formula}|V∖(W∪U∪{z})|≥6 we start with a 2-dimensional convex solution of {a mathematical formula}Θ↓(V∖(W∪U∪{z})), whose existence is guaranteed by Corollary 3. This solution is then extended to a {a mathematical formula}k+2 dimensional weak convex solution of {a mathematical formula}Θ↓(V∖(W∪{z})), by repeatedly applying the method from Proposition 20, and then extended to a {a mathematical formula}k+3 dimensional convex solution of {a mathematical formula}Θ↓(V∖W) by applying the method from Lemma 9. Finally, by repeatedly applying the method from Proposition 20, we obtain a {a mathematical formula}k+l+3 dimensional convex solution of Θ. Note that {a mathematical formula}2n+1=|W∪U∪{z}|+|V∖(W∪U∪{z})|=2k+2l+1+|V∖(W∪U∪{z})|≥2k+2l+7, from which we obtain {a mathematical formula}k+l+3≤n.If {a mathematical formula}|V∖(W∪U∪{z})|=4, we know by Corollary 17 that {a mathematical formula}Θ↓(V∖(W∪U∪{z})) has a convex weak solution in {a mathematical formula}R. By applying Proposition 20 and Lemma 9, as before, we can extend this weak solution to a convex solution of Θ in {a mathematical formula}Rk+l+2, with {a mathematical formula}k+l+2≤n.Suppose {a mathematical formula}|V∖(W∪U∪{z})|=2, and write {a mathematical formula}V∖(W∪U∪{z})={x,y}. Note that {a mathematical formula}U={ci,di:1≤i≤k} for some {a mathematical formula}k≥2 and we have {a mathematical formula}Θ⊨ciECdi for {a mathematical formula}1≤i≤k. By Lemma 13, we know {a mathematical formula}Θ↓{x,y,c1,d1,c2,d2} has a convex weak solution in {a mathematical formula}R2, which can be extended to a convex solution in {a mathematical formula}Rk+l+1, using Proposition 20 and Lemma 9 as before.Suppose {a mathematical formula}|V∖(W∪U∪{z})|=0. Then {a mathematical formula}U={ci,di:1≤i≤k} for some {a mathematical formula}k≥3. By Lemma 13, we know {a mathematical formula}Θ↓{c1,c2,c3,d1,d2,d3} has a convex weak solution in {a mathematical formula}R2, which can be extended to a convex solution in {a mathematical formula}Rk+l+1, using Proposition 20 and Lemma 9 as before.Now assume that there is no region {a mathematical formula}z∈V∖W which satisfies the conditions of Lemma 9. By Remark 2, this implies that for each {a mathematical formula}u∈V∖W, we have either {a mathematical formula}Θ⊨uTPPv for some {a mathematical formula}v∈V∖W or there exist {a mathematical formula}v1, {a mathematical formula}v2 such that {a mathematical formula}Θ⊨{v1TPPu,v2ECu}. In particular, there are {a mathematical formula}x,y,z∈V∖W such that {a mathematical formula}Θ⊨{yTPPx,xECz,yECz} and {a mathematical formula}Θ⊭xTPPv for any {a mathematical formula}v∈V∖W.If {a mathematical formula}|V∖(W∪{x,y,z})|≥6, we can proceed similarly as before. In particular, we construct a convex weak solution of {a mathematical formula}V∖(W∪{x,y,z}) in {a mathematical formula}Rl, with {a mathematical formula}|V∖(W∪{x,y,z})|=2l+2. Then we extend it to a convex weak solution of {a mathematical formula}V∖W in {a mathematical formula}Rl+1 using the method from Proposition 20, and we modify it to a convex solution in {a mathematical formula}Rl+2 of {a mathematical formula}V∖W. Finally, we extend it to a convex solution in {a mathematical formula}Rn of Θ.The only remaining case is where {a mathematical formula}|V∖(W∪{x,y,z})|=4. If {a mathematical formula}V∖(W∪{x,y,z}) is not isomorphic to one of the networks {a mathematical formula}N41, {a mathematical formula}N42, {a mathematical formula}N43, we can construct a convex weak solution in {a mathematical formula}R and extend it to a convex solution in {a mathematical formula}Rn of Θ as before. Let us write {a mathematical formula}V∖(W∪{x,y,z})={a,b,c,d} and assume that {a mathematical formula}Θ↓{a,b,c,d} is isomorphic to one of {a mathematical formula}N41, {a mathematical formula}N42, {a mathematical formula}N43. By Lemma 14 we know that {a mathematical formula}Θ↓(V∖W) has a convex weak solution in {a mathematical formula}R2, from which it follows that {a mathematical formula}Θ↓(V∖W) has a convex solution in {a mathematical formula}R3.  □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Lower bounds
+      </section-title>
+      <paragraph>
+       2 dimensions Consider the RCC8 network {a mathematical formula}Θ2D from Example 1. Clearly {a mathematical formula}Θ2D is consistent. However, it does not have any convex realizations in two dimensions. Indeed, if {a mathematical formula}S were a two-dimensional convex solution, we clearly would have {a mathematical formula}dim⁡(S(a)∩S(b))≤1. If {a mathematical formula}dim⁡(S(a)∩S(b))=0 then {a mathematical formula}S(x), {a mathematical formula}S(y), {a mathematical formula}S(u) and {a mathematical formula}S(v) could only meet in one point, which means that xECu, uECy and xDCy could not be jointly satisfied. If {a mathematical formula}dim⁡(S(a)∩S(b))=1 then {a mathematical formula}S(x)∩S(u), {a mathematical formula}S(x)∩S(v), {a mathematical formula}S(y)∩S(u) and {a mathematical formula}S(y)∩S(v) are nonempty and pairwise disjoint. Take four points {a mathematical formula}Pi{a mathematical formula}(i=1,2,3,4) from these sets and suppose {a mathematical formula}Pj1&lt;Pj2&lt;Pj3&lt;Pj4. We note that {a mathematical formula}P1 and {a mathematical formula}P2 are both in {a mathematical formula}S(x), and {a mathematical formula}P3 and {a mathematical formula}P4 are both in {a mathematical formula}S(y). Because x and y are disjoint, we know {a mathematical formula}{P1,P2}={Pj1,Pj2} or {a mathematical formula}{P1,P2}={Pj3,Pj4}. Similarly, note that {a mathematical formula}P1 and {a mathematical formula}P3 are both in {a mathematical formula}S(u), and {a mathematical formula}P2 and {a mathematical formula}P4 are both in {a mathematical formula}S(v). Because u and v are disjoint, we know {a mathematical formula}{P1,P3}={Pj1,Pj2} or {a mathematical formula}{P2,P4}={Pj3,Pj4}. This is a contradiction.
+      </paragraph>
+      <paragraph>
+       3 dimensions Consider the network {a mathematical formula}Θ3D obtained by adding the following constraints to {a mathematical formula}Θ2D:{a mathematical formula} To see that {a mathematical formula}Θ3D is indeed not realizable in three dimensions, we show that {a mathematical formula}dim⁡(S(a)∩S(b)∩S(c)∩S(d))≤1 for any three-dimensional convex solution {a mathematical formula}S, which leads to a contradiction as in the two-dimensional case.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}H1 be a hyperplane that separates {a mathematical formula}S(a) and {a mathematical formula}S(b), and let {a mathematical formula}H2 be a hyperplane that separates {a mathematical formula}S(c) and {a mathematical formula}S(d). This implies that {a mathematical formula}S(a)∩S(b)⊆H1 and {a mathematical formula}S(c)∩S(d)⊆H2. All we need to show is that {a mathematical formula}H1≠H2. This is clear, however, because if {a mathematical formula}H1=H2 then {a mathematical formula}H1 would separate {a mathematical formula}S(a) from {a mathematical formula}S(c) or {a mathematical formula}S(d), which means that {a mathematical formula}S(a) could not partially overlap with both {a mathematical formula}S(c) and {a mathematical formula}S(d). Thus {a mathematical formula}dim⁡(H1∩H2)≤1 which also means {a mathematical formula}dim⁡(S(a)∩S(b)∩S(c)∩S(d))≤1.
+      </paragraph>
+      <paragraph>
+       n dimensions For any {a mathematical formula}n≥4 we consider the network {a mathematical formula}ΘnD obtained by adding the following constraints to {a mathematical formula}Θ2D for {a mathematical formula}i∈{0,...,n−3}{a mathematical formula} and the following constraints for {a mathematical formula}i∈{1,...,n−3}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We show that {a mathematical formula}dim⁡(S(a)∩S(gn−3))≤1 for any n-dimensional convex solution {a mathematical formula}S, which again leads to a contradiction, and thus that {a mathematical formula}ΘnD is not realizable by n-dimensional convex regions.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Gi be a hyperplane separating {a mathematical formula}S(gi) and {a mathematical formula}S(fi) for {a mathematical formula}i∈{0,...,n−3}, and let {a mathematical formula}H1 be a hyperplane separating {a mathematical formula}S(a) and {a mathematical formula}S(b) as before. We show by induction that {a mathematical formula}dim⁡(H1∩G0∩....∩Gk)≤n−k−2 for every {a mathematical formula}k∈{0,...,n−3}, from which the stated immediately follows.
+      </paragraph>
+      <paragraph>
+       First assume that {a mathematical formula}k=0. It suffices to show that {a mathematical formula}H1≠G0 to show that {a mathematical formula}dim⁡(H1∩G0)≤n−2. If {a mathematical formula}H1=G0, we would have that {a mathematical formula}S(a)∩S(b)⊆G0, and in particular that {a mathematical formula}G0 contains a boundary point of {a mathematical formula}S(e0); call this point P. However, since {a mathematical formula}S(e0)NTPPS(f0), P would also belong to {a mathematical formula}S(f0), and since {a mathematical formula}G0 only contains boundary points of {a mathematical formula}S(f0), we would have that P is a boundary point of {a mathematical formula}S(f0) as well. This is a contradiction, since {a mathematical formula}e0NTPPf0 means that {a mathematical formula}S(e0) can only contain internal points of {a mathematical formula}S(f0).
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}k&gt;0, we show that {a mathematical formula}H1∩G0∩...∩Gk−1⊈Gk in a similar way. Suppose {a mathematical formula}H1∩G0∩...∩Gk−1⊆Gk did hold. We have that {a mathematical formula}H1,G0,...,Gk−1 all separate {a mathematical formula}S(a) from {a mathematical formula}S(gk−1), hence {a mathematical formula}S(a)∩S(gk−1)⊆H1∩G0∩...∩Gk−1⊆Gk. Since {a mathematical formula}S(ek)⊆S(a) and {a mathematical formula}S(ek)∩S(gk−1)≠∅, there must exist a point P in {a mathematical formula}S(ek)∩S(gk−1) which is thus also in {a mathematical formula}Gk. Clearly the point P is a boundary point of {a mathematical formula}S(ek), and since {a mathematical formula}ekNTPPfk, we have that P is an internal point of {a mathematical formula}S(fk). This is a contraction, since {a mathematical formula}Gk was assumed to be a hyperplane separating {a mathematical formula}S(fk) from {a mathematical formula}S(gk).
+      </paragraph>
+      <paragraph>
+       For any number of dimensions n we can thus find an RCC network which is consistent but cannot be realized by convex n-dimensional regions. The counterexamples we have provided for two and three dimensions are optimal, in the sense that they involve {a mathematical formula}2n+2 regions, i.e. any convex network with fewer regions would necessarily be realizable by convex regions in n dimensions. The counterexample for {a mathematical formula}n≥4 dimensions, on the other hand, uses 3n regions, and the question whether counterexamples with fewer regions exist remains open.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Complexity of deciding convex realizability in {a mathematical formula}Rk
+     <paragraph>
+      In [23] it was shown that deciding whether a set of RCC8 constraints has a convex solution in {a mathematical formula}R2 is as hard as deciding the consistency of a set of algebraic equations (of similar size) over the real numbers. This latter problem belongs to the complexity class ∃R, which has been introduced in [43]. The class ∃R is known to be in PSPACE and to contain NP, but its exact relationship with the polynomial hierarchy is yet to be determined. Here we show that deciding whether a set of RCC8 constraints has a convex solution in {a mathematical formula}Rk is ∃R-complete for any fixed {a mathematical formula}k≥2. The membership proof follows easily from the membership proof for the 2-dimensional case (cf. the remark after Corollary 2 in [23]).
+     </paragraph>
+     <paragraph>
+      We show by induction that deciding whether a (not necessarily atomic) consistent RCC8 network over {a mathematical formula}{PP,EC} has a convex solution in {a mathematical formula}Rk is ∃R-hard. The case {a mathematical formula}k=2 has been shown in [23]. Now suppose that we have already shown this result for {a mathematical formula}k=n−1. Let Θ be any consistent RCC8 network over {a mathematical formula}{PP,EC} and let V be the set of variables occurring in Θ. We construct the RCC8 network Ψ by adding to Θ the following constraints:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       aECb (for a and b fresh variables);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}v1PPv, {a mathematical formula}v2PPv, {a mathematical formula}v1PPa and {a mathematical formula}v2PPb for every {a mathematical formula}v∈V (where {a mathematical formula}v1 and {a mathematical formula}v2 are fresh variables);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}u1ECv1 and {a mathematical formula}u2ECv2 for every constraint of the form uECv in Θ.
+      </list-item>
+     </list>
+     <paragraph>
+      We show that Ψ has a convex solution in {a mathematical formula}Rn iff Θ has a convex solution in {a mathematical formula}Rn−1. First suppose that Θ has a convex solution {a mathematical formula}S in {a mathematical formula}Rn−1 and let {a mathematical formula}X=CH{S(v)|v∈V}. Then we can define a convex solution {a mathematical formula}T of Ψ in {a mathematical formula}Rn as follows:{a mathematical formula}{a mathematical formula} and for each {a mathematical formula}u∈V{a mathematical formula}{a mathematical formula}{a mathematical formula} It is straightforward to verify that {a mathematical formula}T is indeed a convex solution of Ψ.
+     </paragraph>
+     <paragraph>
+      Conversely, assume that Ψ has a convex solution {a mathematical formula}T in {a mathematical formula}Rn. From aECb it follows that there is an {a mathematical formula}n−1 dimensional hyperplane H separating {a mathematical formula}T(a) and {a mathematical formula}T(b). For {a mathematical formula}v∈V, we define:{a mathematical formula} Because {a mathematical formula}T(v1) and {a mathematical formula}T(v2) are at opposite sides of H, we find that {a mathematical formula}H∩T(v) corresponds to a regular closed region in {a mathematical formula}Rn−1. It is also clear from the convexity of {a mathematical formula}T(v) that {a mathematical formula}S(v) is convex. Finally, we need to show that {a mathematical formula}S is a solution of Θ.
+     </paragraph>
+     <paragraph>
+      For a constraint of the form {a mathematical formula}uECv∈Θ, we know that Ψ contains the constraints {a mathematical formula}u1ECv1 and {a mathematical formula}u2ECv2, and we can thus choose points {a mathematical formula}p∈T(u1)∩T(v1) and {a mathematical formula}q∈T(u2)∩T(v2). The line segment between p and q intersects the hyperplane H at a point r. Since {a mathematical formula}p∈T(u)∩T(v) and {a mathematical formula}q∈T(u)∩T(v), because of the convexity of {a mathematical formula}T(u) and {a mathematical formula}T(v), we find {a mathematical formula}r∈T(u)∩T(v), and thus {a mathematical formula}S(u)∩S(v)≠∅. Furthermore it is clear that {a mathematical formula}S(u) and {a mathematical formula}S(v) cannot overlap, hence we find that {a mathematical formula}S satisfies the constraint uECv.
+     </paragraph>
+     <paragraph>
+      For a constraint of the form {a mathematical formula}uPPv∈Θ, it is clear from {a mathematical formula}T(u)⊂T(v) that {a mathematical formula}S(u)⊆S(v). Moreover, we can assume without loss of generality that whenever {a mathematical formula}uPPv∈Θ there is a {a mathematical formula}z∈V such that uECz and zTPPv (i.e. we can always introduce such variables z without affecting the consistency of Θ). It then easily follows from {a mathematical formula}S(u)⊆S(v) that {a mathematical formula}S(u)⊂S(v).
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Supplementary material
+     </section-title>
+     <paragraph>
+      The following is the Supplementary material related to this article.{a mathematical formula}
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

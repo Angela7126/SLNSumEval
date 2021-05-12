@@ -1,0 +1,20 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:13, WORD_NUM:484">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">Since their inception in 1988, the main motivation for introducing modular robots has been to create versatile robots constructed from a number of building blocks called modules so that they can assume different morphologies to conform to changes in their tasks and environment.</a>
+<a href="#1" id="1">Challenges of enhancing MRS not only are limited to designing reliable, responsive, robust, and scalable hardware components, but also include developing solvers in the form of planning/control methods and algorithms that can contribute to versatility of such systems.</a>
+<a href="#2" id="2">Considering the ultimate expectations from modular robots to perform various sophisticated tasks for real-world applications in different morphologies, the software aspect of modular robots needs to be extended beyond mere planners of self-reconfiguration, self-assembly, locomotion, etc.</a>
+<a href="#3" id="3">On the other hand, developing a truly universal solver that ‘knows’ how to perform various tasks in different morphologies is very challenging, and hence, currently impractical.</a>
+<a href="#4" id="4">Such a solver must be able to exhibit self-configuration, self-optimization, and self-evolving in its computation unit.</a>
+<a href="#5" id="5">For such future perspective, a viable resolution might be through implementing Self-Adaptive Software[123], [140] in MRS, as a result of which behaviors or attributes of the software can be adapted during the runtime to the changes in the self (the whole body of the software) and the context (the environment).</a>
+<a href="#6" id="6">Such an effort can be seen in a recent work by Roehr et al. [136] which aims to realize adaptability and flexibility of modular robots through making changes in both hardware and software dimensions and take advantage of using configuration properties of software modules for generating more sophisticated reconfiguration approaches.</a>
+<a href="#7" id="7">This cutting edge vision in the software side of MRS has the potential to play key roles in shaping the future of modular robot algorithms, expanding the science and practice of MRS, and facilitating their deployment in real world, along with serving as an advanced research subject in the field.</a>
+<a href="#8" id="8">In conclusion, this paper attempts to provide an up-to-date and comprehensive survey of algorithms and solution methods for performing nine basic operations of self-reconfiguration, flow, gait, self-assembly, self-disassembly, self-adaptation, grasping, collective actuation, and enveloping by modular robots.</a>
+<a href="#9" id="9">The methods' capabilities in modeling and simplifying problems, as well as their contribution toward developing controllers and synchronization mechanisms have been particularly emphasized.</a>
+<a href="#10" id="10">We identified 64 major abstraction, solution, control, and synchronization methods and algorithms that were developed in 125 research papers and employed in different operations by modular robotic systems, and through a consistent classification, studied their underlying theoretic and technical properties verified by supporting citations.</a>
+<a href="#11" id="11">In addition, the main challenges that these methods may confront while dealing with a particular problem are mentioned and their strengths and weaknesses are investigated, and a number of open problems or improvements outlooks are suggested to overcome their drawbacks.</a>
+<a href="#12" id="12">The paper has been written with the hope of providing a handy guide to researchers for studying the state-of-the-art of this exciting discipline and exploring promising research directions for the future.</a>
+</body>
+</html>

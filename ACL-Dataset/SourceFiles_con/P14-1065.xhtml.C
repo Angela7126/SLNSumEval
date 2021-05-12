@@ -1,0 +1,1141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Using Discourse Structure Improves Machine Translation Evaluation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We present experiments in using discourse structure for improving
+machine translation evaluation. We first design two
+discourse-aware similarity measures, which use all-subtree
+kernels to compare discourse parse trees in accordance with the
+Rhetorical Structure Theory. Then, we show that these measures
+can help improve a number of existing machine translation
+evaluation metrics both at the segment- and at the system-level.
+Rather than proposing a single new metric, we show that
+discourse information is complementary to the state-of-the-art
+evaluation metrics, and thus should be taken into account in the
+development of future richer evaluation metrics.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        From its foundations, Statistical Machine Translation (SMT) had two defining characteristics:
+first, translation was modeled as a generative process
+        at the sentence-level
+        .
+Second, it was purely statistical over words or word sequences
+and made
+        little to no use of linguistic information
+        .
+Although modern SMT systems have switched to a discriminative log-linear framework,
+which allows for additional sources as features,
+it is generally hard to incorporate dependencies beyond a small window of adjacent words,
+thus making it difficult to use linguistically-rich models.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Recently, there have been two promising research directions for improving SMT and its evaluation:
+(
+        a
+        )  by using more structured linguistic information,
+such as syntax
+        []
+        ,
+hierarchical structures
+        []
+        , and semantic roles
+        []
+        ,
+and (
+        b
+        )  by going beyond the sentence-level, e.g., translating at the document level
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Going beyond the sentence-level is important since
+sentences rarely stand on their own in a well-written text.
+Rather, each sentence follows smoothly from the ones before it, and leads into the ones that come afterwards.
+The logical relationship between sentences carries important information that allows the text to express a meaning as a whole beyond the sum of its separate parts.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Note that sentences can be made of several clauses,
+which in turn can be interrelated through the same logical relations.
+Thus, in a coherent text, discourse units (sentences or clauses) are logically connected:
+the meaning of a unit relates to that of the previous and the following units.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Discourse analysis seeks to uncover this coherence structure underneath the text.
+Several formal theories of discourse have been proposed to describe the coherence
+structure
+        []
+        .
+For example, the Rhetorical Structure Theory
+        []
+        , or RST,
+represents text by labeled hierarchical structures called Discourse Trees (DTs),
+which can incorporate several layers of other linguistic information,
+e.g., syntax, predicate-argument structure, etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Modeling discourse brings together the above research directions (a) and (b),
+which makes it an attractive goal for MT.
+This is demonstrated by the establishment of a recent workshop dedicated to Discourse in Machine
+Translation
+        []
+        , collocated with the 2013 annual meeting of the Association of
+Computational Linguistics.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        The area of discourse analysis for SMT is still nascent and, to the best of our knowledge,
+no previous research has attempted to use rhetorical structure for SMT or machine translation
+evaluation. One possible reason could be the unavailability of accurate discourse parsers.
+However, this situation is likely to change given the most recent advances in automatic
+discourse analysis
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        We believe that the semantic and pragmatic information captured in the form of DTs
+(
+        i
+        )  can help develop discourse-aware SMT systems that produce coherent translations,
+and
+(
+        ii
+        )  can yield better MT evaluation metrics.
+While in this work we focus on the latter, we think that the former is also within reach, and that SMT systems would benefit from preserving the coherence relations in the source language when generating target-language translations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p9">
+       <p class="ltx_p">
+        In this paper, rather than proposing yet another MT evaluation metric,
+we show that discourse information is complementary to many existing
+evaluation metrics,
+and thus should not be ignored.
+We first design two discourse-aware similarity measures,
+which use DTs generated by a publicly-available discourse parser
+        []
+        ;
+then, we show that they can help improve a number of MT evaluation metrics at the segment- and at the system-level
+in the context of the WMT11 and the WMT12 metrics shared tasks
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p10">
+       <p class="ltx_p">
+        These metrics tasks are based on sentence-level evaluation,
+which arguably can limit the benefits of using global discourse properties.
+Fortunately, several sentences are long and complex enough to present
+rich discourse structures connecting their basic clauses.
+Thus, although limited, this setting is able to demonstrate the potential of
+discourse-level information for MT evaluation.
+Furthermore, sentence-level scoring
+(
+        i
+        )  is compatible with most translation systems, which work on a
+sentence-by-sentence basis,
+(
+        ii
+        )  could be beneficial to modern MT tuning mechanisms
+such as PRO
+        []
+        and MIRA
+        []
+        ,
+which also work at the sentence-level, and
+(
+        iii
+        )  could be used for re-ranking
+        n
+        -best lists of translation hypotheses.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Addressing discourse-level phenomena in machine translation is relatively new as a research direction.
+Some recent work has looked at anaphora resolution
+        [5]
+        and discourse connectives
+        [1]
+        ,
+to mention two examples.
+        However, so far the attempts to incorporate discourse-related knowledge in MT
+have been only moderately successful, at best.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        A common argument, is that current automatic evaluation metrics such as BLEU are inadequate to capture discourse-related aspects of translation quality
+        [5]
+        .
+Thus, there is consensus that discourse-informed MT evaluation metrics are needed
+in order to advance research in this direction.
+Here we suggest some simple ways to create such metrics, and
+we also show that they yield better correlation with human judgments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        The field of automatic evaluation metrics for MT is very active, and new metrics are
+continuously being proposed, especially in the context of the evaluation campaigns
+that run as part of the
+Workshops on Statistical Machine Translation (WMT 2008-2012),
+and NIST Metrics for Machine Translation Challenge (MetricsMATR), among others.
+For example, at WMT12, 12 metrics were compared
+        []
+        , most of them new.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        There have been several attempts to incorporate
+syntactic and semantic linguistic knowledge into MT evaluation.
+For instance, at the syntactic level, we find metrics that measure the structural similarity between
+shallow syntactic sequences
+        [3]
+        or between constituency trees
+        [7]
+        .
+In the semantic case, there are metrics that exploit the similarity over named entities
+and predicate-argument structures
+        [3]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        In this work, instead of proposing a new metric, we
+focus on enriching current
+MT evaluation metrics with discourse information. Our
+experiments show
+that
+many existing metrics can benefit from additional knowledge about discourse structure.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        In comparison to the syntactic and semantic extensions of MT metrics,
+there have been very few attempts to incorporate discourse information so far.
+One example are the semantics-aware metrics of
+        Giménez and Màrquez (2009)
+        and
+        Comelles et al. (2010)
+        ,
+which use the Discourse Representation Theory
+        []
+        and tree-based discourse representation structures (DRS) produced by a semantic parser.
+They calculate the similarity between the MT output and references
+based on DRS subtree matching, as defined in
+        [7]
+        ,
+DRS lexical overlap,
+and DRS morpho-syntactic overlap.
+However, they could not improve correlation with human judgments,
+as evaluated on the MetricsMATR dataset.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        Compared to the previous work,
+(
+        i
+        )  we use a different discourse representation (RST),
+(
+        ii
+        )  we compare discourse parses using
+        all-subtree
+        kernels
+        []
+        ,
+(
+        iii
+        )  we evaluate on much larger datasets, for several language pairs and for multiple metrics,
+and
+(
+        iv
+        )  we do demonstrate better correlation with human judgments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        Wong and Kit (2012)
+        recently proposed an extension of MT metrics
+with a measure of document-level
+        lexical cohesion
+        []
+        .
+Lexical cohesion is achieved using word repetitions
+and semantically similar words such as synonyms, hypernyms, and hyponyms.
+For BLEU and TER, they observed improved correlation with human judgments on the MTC4 dataset when linearly interpolating these metrics with their
+        lexical cohesion
+        score.
+Unlike their work, which measures lexical cohesion at the document-level,
+here we are concerned with
+        coherence (rhetorical) structure
+        ,
+primarily at the sentence-level.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Our Discourse-Based Measures
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Our working hypothesis is that the similarity between the discourse structures of an automatic and of a reference translation provides additional information that can be valuable for evaluating MT systems.
+In particular, we believe that good translations should tend to preserve discourse relations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        As an example, consider the three discourse trees (DTs) shown in Figure
+        4
+        : (
+        a
+        ) for a reference (human) translation, and (
+        b
+        ) and (
+        c
+        ) for translations of two different systems
+on the WMT12 test dataset.
+The leaves of a DT correspond to contiguous atomic text spans, called
+        Elementary Discourse Units
+        or EDUs (three in Figure
+        4
+        ). Adjacent spans are connected by certain coherence relations (e.g.,
+        Elaboration
+        ,
+        Attribution
+        ), forming larger discourse units, which in turn are also subject to this relation linking. Discourse units linked by a relation are further distinguished based on their relative importance in the text:
+        nuclei
+        are the core parts of the relation while
+        satellites
+        are supportive ones. Note that the nuclearity and relation labels in the reference translation are also realized in the system translation in (b), but not in (c), which makes (b) a better translation compared to (c), according to our hypothesis. We argue that existing metrics that only use lexical and syntactic information
+cannot distinguish well between (b) and (c).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        In order to develop a discourse-aware evaluation metric,
+we first generate discourse trees for the reference and the system-translated sentences
+using a discourse parser, and then we measure the similarity between the two discourse trees.
+We describe these two steps below.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Generating Discourse Trees
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         In Rhetorical Structure Theory, discourse analysis involves two subtasks: (
+         i
+         )
+         discourse segmentation
+         , or breaking the text into a sequence of EDUs, and (
+         ii
+         )
+         discourse parsing
+         , or the task of linking the units (EDUs and larger discourse units) into labeled discourse trees. Recently,
+         proposed discriminative models for both discourse segmentation and discourse parsing at the sentence level. The segmenter uses a maximum entropy model that achieves state-of-the-art accuracy on this task, having an
+         F1
+         -score of
+         90.5⁢%
+         , while human agreement is
+         98.3⁢%
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The discourse parser uses a dynamic Conditional Random Field
+         []
+         as a parsing model in order to infer the probability of all possible discourse tree constituents. The inferred (posterior) probabilities are then used in a probabilistic CKY-like bottom-up parsing algorithm to find the most likely DT. Using the standard set of 18 coarse-grained relations defined in
+         []
+         , the parser achieved an
+         F1
+         -score of 79.8%, which is very close to the human agreement of 83%. These high scores allowed us to develop successful discourse similarity metrics.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Measuring Similarity
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         A number of metrics have been proposed to measure the similarity between two labeled trees, e.g., Tree Edit Distance
+         []
+         and Tree Kernels
+         []
+         . Tree kernels (TKs) provide an effective way to integrate arbitrary tree structures in kernel-based machine learning algorithms like SVMs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         In the present work, we use the convolution TK defined in
+         []
+         , which efficiently calculates the number of common subtrees in two trees. Note that this kernel was originally designed for syntactic parsing, where the subtrees are subject to the constraint that their nodes are taken with either all or none of the children. This constraint of the TK imposes some limitations on the type of substructures that can be compared.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         One way to cope with the limitations of the TK is to change the representation of the trees to a form that is suitable to capture the relevant information for our task. We experiment with TKs applied to two different representations of the discourse tree: non-lexicalized (DR), and lexicalized (DR-
+         lex
+         ). In Figure
+         7
+         we show the two representations for the subtree that spans the text:
+         “suggest the ECB should be the lender of last resort”
+         , which is highlighted in Figure
+         4
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         As shown in Figure
+         7
+         , DR does not include any lexical item, and therefore measures the similarity between two translations in terms of their discourse structures only.
+On the contrary, DR-
+         lex
+         includes the lexical items to account for lexical matching;
+moreover, it separates the structure (the skeleton) of the tree from its labels, i.e. the nuclearity and the relations, in order to allow the tree kernel to give partial credit to subtrees that differ in labels but match in their skeletons.
+More specifically, it uses the tags SPAN and EDU to build the skeleton of the tree, and considers the nuclearity and/or the relation labels as properties, added as children, of these tags.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         For example, a SPAN has two properties (its nuclearity and its relation), and an EDU has one property (its nuclearity). The words of an EDU are placed under the predefined children NGRAM. In order to allow the tree kernel to find subtree matches at the word level, we include an additional layer of
+         dummy
+         leaves as was done in
+         []
+         ;
+not shown in Figure
+         7
+         , for simplicity.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In our experiments, we used the data available for the WMT12
+and the WMT11 metrics shared tasks for translations into English.
+        This included the output from the systems that participated in the WMT12 and the WMT11 MT evaluation campaigns, both consisting of 3,003 sentences, for four different language pairs: Czech-English (
+        cs-en
+        ), French-English (
+        fr-en
+        ), German-English (
+        de-en
+        ), and Spanish-English (
+        es-en
+        ); as well as a dataset with the English references.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We measured the correlation of the metrics with the human judgments provided by the organizers.
+The judgments represent rankings of the output of five systems chosen at random, for a particular
+sentence, also chosen at random. Note that each judgment effectively constitutes 10 pairwise
+system rankings. The overall coverage, i.e. the number of unique sentences that were evaluated,
+was only a fraction of the total; the total number of judgments, along with other information of the datasets are shown in Table
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        MT Evaluation Metrics
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         In this study, we evaluate to what extent existing evaluation metrics can benefit from additional
+discourse information. To do so, we contrast different MT evaluation metrics with and without discourse
+information. The evaluation metrics we used are described below.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P1">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Metrics from WMT12.
+        </h5>
+        <div class="ltx_para" id="S4.SS1.SSS0.P1.p1">
+         <p class="ltx_p">
+          We used the publicly available scores for all metrics that participated in the WMT12 metrics task
+          []
+          :
+          spede07pP
+          , AMBER,
+          Meteor
+          ,
+          TerrorCat
+          , SIMPBLEU,
+          XEnErrCats
+          ,
+          WordBlockEC
+          ,
+          BlockErrCats
+          , and
+          posF
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P2">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Metrics from
+         Asiya
+         .
+        </h5>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p1">
+         <p class="ltx_p">
+          We used the freely available version of the
+          Asiya
+          toolkit
+          in order to extend the set of evaluation measures
+contrasted in this study beyond those from the WMT12 metrics task.
+          Asiya
+          []
+          is a suite for MT evaluation
+that provides a large set of metrics that use different levels of linguistic
+information.
+For reproducibility, below we explain the individual metrics with the exact names required by the toolkit to calculate them.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p2">
+         <p class="ltx_p">
+          First, we used
+          Asiya
+          ’s ULC
+          []
+          , which was the
+best performing metric at the system and the segment levels at the WMT08 and WMT09
+metrics tasks. This is a uniform linear combination of 12 individual metrics.
+From the original ULC, we only replaced TER and Meteor individual metrics by newer versions taking into account
+synonymy lookup and paraphrasing: TERp-A and
+          Meteor
+          -pa in
+          Asiya
+          ’s terminology.
+We will call this combined metric Asiya-
+          0809
+          in our experiments.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p3">
+         <p class="ltx_p">
+          To complement the set of individual metrics that participated at the WMT12 metrics task,
+we also computed the scores of other commonly-used evaluation metrics: BLEU
+          []
+          , NIST
+          []
+          ,
+TER
+          []
+          ,
+          Rouge
+          -W
+          []
+          , and three
+          Meteor
+          variants
+          []
+          :
+          Meteor
+          -ex (exact match),
+          Meteor
+          -st (+stemming) and
+          Meteor
+          -sy (+synonyms).
+The uniform linear combination of the previous 7 individual metrics plus the 12 from Asiya-
+          0809
+          is reported as Asiya-
+          all
+          in the experimental section.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p4">
+         <p class="ltx_p">
+          The individual metrics combined in Asiya-
+          all
+          can be naturally categorized according to the
+type of linguistic information they use to compute the quality scores. We grouped
+them in the following four families and calculated the uniform linear
+combination of the metrics in each group:
+         </p>
+         <ol class="ltx_enumerate" id="I1">
+          <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+           <span class="ltx_tag ltx_tag_enumerate">
+            1.
+           </span>
+           <div class="ltx_para" id="I1.i1.p1">
+            <p class="ltx_p">
+             Asiya-
+             lex
+             . Combination of five metrics based on lexical similarity:
+BLEU, NIST,
+             Meteor
+             -ex,
+             Rouge
+             -W, and TERp-A.
+            </p>
+           </div>
+          </li>
+          <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+           <span class="ltx_tag ltx_tag_enumerate">
+            2.
+           </span>
+           <div class="ltx_para" id="I1.i2.p1">
+            <p class="ltx_p">
+             Asiya-
+             syn
+             . Combination of four metrics ba-sed on syntactic information
+from constituency and dependency parse trees:
+‘CP-STM-4’, ‘DP-HWCM_c-4’, ‘DP-HWCM_r-4’, and ‘DP-Or(*)’.
+            </p>
+           </div>
+          </li>
+          <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+           <span class="ltx_tag ltx_tag_enumerate">
+            3.
+           </span>
+           <div class="ltx_para" id="I1.i3.p1">
+            <p class="ltx_p">
+             Asiya-
+             srl
+             . Combination of three metric variants based on predicate argument structures
+(semantic role labeling): ‘SR-Mr(*)’, ‘SR-Or(*)’, and ‘SR-Or’.
+            </p>
+           </div>
+          </li>
+          <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+           <span class="ltx_tag ltx_tag_enumerate">
+            4.
+           </span>
+           <div class="ltx_para" id="I1.i4.p1">
+            <p class="ltx_p">
+             Asiya-
+             sem
+             . Combination of two metrics variants based on semantic parsing:
+             ‘DR-Or(*)’ and ‘DR-Orp(*)’.
+            </p>
+           </div>
+          </li>
+         </ol>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p5">
+         <p class="ltx_p">
+          All uniform linear combinations are calculated outside
+          Asiya
+          . In order to make the scores of the different metrics comparable,
+we performed a
+          min
+          –
+          max
+          normalization, for each metric, and for each language pair combination.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Human Judgements and Learning
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The human-annotated data from the WMT campaigns encompasses series of rankings on the output of different MT systems for every source sentence. Annotators rank the output of five systems according to perceived translation quality.
+The organizers relied on a random selection of systems, and a large number of comparisons between pairs of them, to make comparisons across systems feasible
+         []
+         . As a result, for each source sentence, only relative rankings were available.
+As in the WMT12 experimental setup, we use these rankings to calculate correlation with human judgments
+at the sentence-level, i.e. Kendall’s Tau; see
+         []
+         for details.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         For the experiments reported in Section
+         5
+         .4, we used pairwise rankings
+to discriminatively learn the weights of the linear combinations of individual metrics.
+In order to use the WMT12 data for training a learning-to-rank model, we transformed the five-way relative rankings into ten pairwise comparisons. For instance, if a judge ranked the output of systems
+         A
+         ,
+         B
+         ,
+         C
+         ,
+         D
+         ,
+         E
+         as
+         A&gt;B&gt;C&gt;D&gt;E
+         , this would entail that
+         A&gt;B
+         ,
+         A&gt;C
+         ,
+         A&gt;D
+         and
+         A&gt;E
+         , etc.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         To determine the relative weights for the tuned combinations, we followed a similar approach to the one used by PRO to tune the relative weights
+of the components of a log-linear SMT model
+         []
+         , also using Maximum Entropy as the
+base learning algorithm. Unlike PRO,
+(
+         i
+         )  we use
+         human judgments
+         , not automatic scores, and
+(
+         ii
+         )  we train on
+         all pairs
+         , not on a subsample.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experimental Results
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this section, we explore how discourse information can be used to improve machine translation evaluation metrics. Below we present the evaluation results at the system- and segment-level,
+using our two basic metrics on discourse trees (Section
+        3.1
+        ), which are
+referred to as DR and DR-
+        lex
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Evaluation
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         In our experiments, we only consider translation into English, and use the data described in Table
+         1
+         . For evaluation, we follow the setup of the metrics task of WMT12
+         []
+         : at the system-level, we use the official script from WMT12 to calculate the Spearman’s correlation, where higher
+         absolute
+         values indicate better metrics performance;
+at the segment-level, we use Kendall’s Tau for measuring correlation, where
+negative values are worse than positive ones.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         In our experiments, we combine DR and DR-
+         lex
+         to other metrics in two different ways: using uniform linear interpolation (at system- and segment-level), and using a tuned linear interpolation for the segment-level. We only present the average results over all four language pairs. For simplicity, in our tables we show results divided into evaluation groups:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <ol class="ltx_enumerate" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Group I: contains our evaluation metrics, DR and DR-
+            lex
+            .
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Group II: includes the metrics that participated in the WMT12 metrics task, excluding
+metrics which did not have results for all language pairs.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Group III: contains other important evaluation metrics,
+which were not considered in the WMT12 metrics task: NIST and
+            Rouge
+            for both system- and segment-level, and BLEU and TER at segment-level.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           4.
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            Group IV: includes the metric combinations calculated with
+            Asiya
+            and
+described in Section
+            4
+            .
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p">
+         For each metric in groups II, III and IV, we present the results for the original metric
+as well for the linear interpolation of that metric with DR and with DR-
+         lex
+         .
+The combinations with DR and DR-
+         lex
+         that improve over the original metrics are
+shown in
+         bold
+         , and those that degrade are in
+         italic
+         .
+Furthermore, we also present overall results for: (
+         i
+         ) the average score over all metrics,
+excluding DR and DR-
+         lex
+         , and (
+         ii
+         ) the differences in the correlations for the
+DR/DR-
+         lex
+         -combined and the original metrics.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        System-level Results
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Table
+         2
+         shows the system-level experimental results for WMT12.
+We can see that DR is already competitive by itself: on average, it has a correlation of .807, very close to BLEU and TER scores (.810 and .812, respectively). Moreover, DR yields improvements when combined with 15 of the 19 metrics;
+worsening only four of the metrics. Overall, we observe an average improvement of +.024, in the correlation with the human judgments.
+This suggests that DR contains information that is complementary to that used by the other metrics.
+Note that this is true both for the individual metrics from groups II and III,
+as well as for the metric combinations in group IV.
+Combinations in the last group involve several metrics that already use linguistic information at different levels and are hard to improve over; yet, adding DR does improve, which shows that it has some
+complementary information to offer.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         As expected, DR-
+         lex
+         performs better than DR since it is lexicalized (at the
+unigram level), and also gives partial credit to correct structures.
+Individually, DR-
+         lex
+         outperforms most of the metrics from group II, and ranks as the second best metric in that group. Furthermore, when combined with individual metrics in group II, DR-
+         lex
+         is able to improve consistently over each one of them.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         Note that, even though DR-
+         lex
+         has better individual performance than DR,
+it does not yield improvements when combined with most of the metrics in group IV.
+         However, over all metrics and all language pairs, DR-
+         lex
+         is able to obtain an average
+improvement in correlation of +.035, which is remarkably higher than that of DR.
+Thus, we can conclude that at the system-level, adding discourse information to a metric, even using the simplest of the combination schemes, is a good idea for most of the metrics, and can help to significantly improve the correlation
+with human judgments.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Segment-level Results: Non-tuned
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Table
+         3
+         shows the results for WMT12 at the segment-level.
+We can see that DR performs badly, with a high negative Kendall’s Tau of -.433.
+This should not be surprising:
+(a) the discourse tree structure alone does not contain enough information for a good evaluation at the segment-level, and (b) this metric is more sensitive to the quality of the DT, which can be wrong or void.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         Additionally, DR is more likely to produce a high number of ties, which is harshly penalized by WMT12’s definition of Kendall’s Tau.
+Conversely, ties and incomplete discourse analysis were not a problem at the system-level, where evidence from all 3,003 test sentences is aggregated, and allows to rank systems more precisely.
+Due to the low score of DR as an individual metric,
+it fails to yield improvements when uniformly combined with other metrics.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         Again, DR-
+         lex
+         is better than DR; with a positive Tau of +.133,
+yet as an individual metric, it ranks poorly compared to other metrics in group II.
+However, when linearly combined with other metrics, DR-
+         lex
+         outperforms 14 of the 19 metrics in Table
+         3
+         .
+Across all metrics, DR-
+         lex
+         yields an average Tau improvement of +.026,
+i.e. from .165 to .190. This is a large improvement, taking into account that the combinations are just
+uniform linear combinations. In subsection
+         5.4
+         , we present the results of tuning the linear combination
+in a discriminative way.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Segment-level Results: Tuned
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         We experimented with tuning the weights of the individual metrics in the metric combinations,
+using the learning method described in Section
+         4.2
+         .
+First, we did this using cross-validation to tune and test on WMT12. Later we tuned on WMT12 and evaluated on WMT11.
+For cross-validation in WMT12, we used ten folds of approximately equal sizes,
+each containing about 300 sentences: we constructed the folds by putting together entire documents,
+thus not allowing sentences from a document to be split over two different folds.
+During each cross-validation run, we trained our pairwise ranker using the human judgments corresponding to nine of the ten folds. We aggregated the data for different language pairs, and produced a single set of tuning weights for all language pairs.
+         We then used the remaining fold for evaluation
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         The results are shown in Table
+         4
+         . As in previous sections we
+present the average results over all four language pairs.
+We can see that the tuned combinations with DR-
+         lex
+         improve over most of the individual metrics in groups II and III. Interestingly, the tuned combinations that include the much weaker metric DR now improve over 12 out of 13
+of the individual metrics in groups II and III, and only slightly degrades the score of the 13th one (
+         spede07pP
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p3">
+        <p class="ltx_p">
+         Note that the
+         Asiya
+         metrics are combinations of several metrics, and these combinations (which exclude DR and DR-
+         lex
+         )
+can be also tuned;
+this yields sizable improvements over the untuned versions as column three in the table shows.
+Compared to this baseline, DR improves for three of the six
+         Asiya
+         metrics,
+while DR-
+         lex
+         improves for four of them.
+Note that improving over the last two
+         Asiya
+         metrics is very hard:
+they have very high scores of .296 and .295;
+for comparison, the best segment-level system at WMT12 (
+         spede07pP
+         ) achieved a Tau of .254.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p4">
+        <p class="ltx_p">
+         On average, DR improves Tau from .165 to .201, which is +.036,
+while DR-
+         lex
+         improves to .222, or +.057. These much larger improvements highlight
+the importance of tuning the linear combination when working at the segment-level.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS4.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.4.1
+         </span>
+         Testing on WMT11
+        </h4>
+        <div class="ltx_para" id="S5.SS4.SSS1.p1">
+         <p class="ltx_p">
+          In order to rule out the possibility that the improvement of the tuned metrics on WMT12 comes from over-fitting, and to verify that the tuned metrics do generalize when applied to other sentences, we also tested on a new test set: WMT11.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS4.SSS1.p2">
+         <p class="ltx_p">
+          Therefore, we tuned the weights on
+          all
+          WMT12 pairwise judgments (no cross-validation), and we evaluated on WMT11.
+Since the metrics that participated in WMT11 and WMT12 are different
+(and even when they have the same name, there is no guarantee that they have not changed from 2011 to 2012),
+we only report results for the versions of NIST,
+          Rouge
+          , TER, and BLEU available in
+          Asiya
+          ,
+as well as for the
+          Asiya
+          metrics, thus ensuring that the metrics in the experiments are consistent for 2011 and 2012.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS4.SSS1.p3">
+         <p class="ltx_p">
+          The results are shown in Table
+          5
+          . Once again, tuning yields sizable improvements over the simple combination for the
+          Asiya
+          metrics (third column in Table
+          5
+          ). Adding DR and DR-
+          lex
+          to the combinations manages to improve over five and four of the six tuned
+          Asiya
+          metrics, respectively. However, some of the differences are very small.
+On the contrary, DR and DR-
+          lex
+          significantly improve over NIST,
+          Rouge
+          , TER, and BLEU.
+Overall, DR improves the average Tau from .207 to .244, which is +.037,
+while DR-
+          lex
+          improves to .267 or +.061.
+These improvements are very close to those for the WMT12 cross-validation.
+This shows that the weights learned on WMT12 generalize well,
+as they are also good for WMT11.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS4.SSS1.p4">
+         <p class="ltx_p">
+          What is also interesting to note is that when tuning is used, DR helps achieve sizeable improvements,
+even if not as strong as for DR-
+          lex
+          . This is remarkable given that DR has a strong negative
+Tau as an individual metric at the sentence-level. This suggests that both DR and DR-
+          lex
+          contain information that is complementary to that of the individual metrics that we experimented with.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS4.SSS1.p5">
+         <p class="ltx_p">
+          Overall, from the experimental results in this section, we can conclude that discourse structure
+is an important information source to be taken into account in the automatic evaluation of machine
+translation output.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

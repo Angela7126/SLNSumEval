@@ -1,0 +1,20 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:13, WORD_NUM:548">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">Case-base Editing is an important aspect of CBM research that adopts an instance selection approach for handling concept drift.</a>
+<a href="#1" id="1">Editing the case-base properly can continuously tune a case-based learner according to concept drift.</a>
+<a href="#2" id="2">In this paper, we first present a competence enhancement method – NEFCS, to prevent noise from being included and to quickly adapt the case-base according to concept drift by the safe removal of obsolete cases.</a>
+<a href="#3" id="3">Instead of blindly trusting all the most recent cases, NEFCS incorporates a concept drift detection method to differentiate the treatment on new cases based on whether there is concept drift.</a>
+<a href="#4" id="4">In addition, as an on-line learning algorithm, NEFCS can take immediate advantage of any system feedback, enabling a fast response to possible concept drift.</a>
+<a href="#5" id="5">Since it is almost impossible to increase the case-base size without limit, we have also proposed a competence preservation method – SRR – to restrict the storage requirement.</a>
+<a href="#6" id="6">Two main features of SRR are that: First, SRR tries to preserve the case distribution during each iteration, which is very important for concept drift problems, e.g., to prevent competence holes, to aid concept drift detection.</a>
+<a href="#7" id="7">Second, as a competence-guided method, SRR preserves the competence of the case-base, i.e., it ensures that any removed instance can still be solved by the remaining case-base.</a>
+<a href="#8" id="8">Several interesting findings have been revealed through our experiments: 1) FISH2 is not suitable for static tasks, because it forces to take into account the time factor whether or not concept drift occurs; 2) When sudden concept drift occurs, a certain degree of redundancy removal can help the learner to adapt more quickly to a novel concept; 3) Before concept drift can be detected, our proposed NEFCS-SRR tries to preserve previously learnt concepts; therefore compared to sudden concept drift it is believed to be more suitable for gradual concept drift; 4) In the spam filtering domain, where the problem space is very sparse, a competence-based instance selection technique has a clear advantage over other instance selection techniques; 5) Although each method behaves very differently based on the dataset, our proposed NEFCS-SRR approach constantly reports good overall accuracy across the datasets compared, and we therefore believe it is more general than the other methods compared; 6) Finally, in term of efficiency, all competence-based methods require extra time for maintaining the competence models; this makes a competence-based method inappropriate for applications that require real time decisions, such as network intrusion detection where an extremely high volume of packages arrives every second.</a>
+<a href="#9" id="9">However, for spam filtering, the effect of a little extra time is trivial.</a>
+<a href="#10" id="10">From this research, we conclude that: 1) differentiating new cases according to drift detection is better than retaining or discarding all new cases indiscriminately; 2) a competence-guided, controllable, and conservative method is preferable to a non-competence-guided, uncontrollable, and unbalanced method of conducting competence preservation for time-varying tasks.</a>
+<a href="#11" id="11">Instead of either retaining or removing a case completely, our next attempt will target the discovery of a fuzzy case weighting schema which will better balance the decision as to whether a case is noisy or whether it represents a novel concept.</a>
+<a href="#12" id="12">In addition, it would be interesting to consider our work in relation to the machine learning field, and to discover whether it is possible to plug our instance selection technique into other learning models.</a>
+</body>
+</html>

@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    An SMT-based approach to weak controllability for disjunctive temporal problems with uncertainty.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Many practical settings, such as planning and scheduling, require the solution of sets of constraints over time points, that typically represent the time at which activities begin and end. For example, constraints may represent a bound on the overall time span, or lower/upper bounds on the distance between two activities.
+     </paragraph>
+     <paragraph>
+      The Temporal Problem (TP) [18], [36] is a well studied formalism to model such temporal constraints. In the basic form of TP, also referred to as TP without uncertainty, the durations of activities are assumed to be controllable by the executor. This means that the executor assumes to have the possibility of choosing any duration that it may want. A solution is an assignment to all the time points (i.e., the beginning time and the end time of the activities), that satisfies the constraints. Depending on the structure of the constraints, TPs range from simple temporal problems (STP) [18], to temporal constraint satisfaction problems (TCSP) [18], to disjunctive temporal problems (DTP) [36].
+     </paragraph>
+     <paragraph>
+      In practice, activities may also have uncertain (and uncontrollable) durations. For example, it may be impossible to know precisely the time taken by a drilling or locomotion procedure; yet, the production of an overall schedule must be able to take this uncertainty into account. The formal framework of TPs has been extended with uncertainty (TPU), thus obtaining STPU, TCSPU, and DTPU [38], [32], [37]. Because of uncertainty, TPUs are much more complicated than TPs without uncertainty. In fact, they can be thought in terms of games, where the scheduler/executor must play against an “adversarial” environment. Intuitively, the variables representing the time points are separated into controllable ones (that are existentially quantified), and uncontrollable ones (universally quantified).
+     </paragraph>
+     <paragraph>
+      Within this setting, several degrees of solution have been identified for TPUs [38]. In strong controllability, a solution is a fixed, unconditioned assignment to each controllable time point, that will satisfy the constraints regardless of the uncontrollable duration of the activities. This corresponds to devising a time-triggered program, where activities are started at fixed times.
+     </paragraph>
+     <paragraph>
+      In dynamic controllability, a solution is a strategy where the values of controllable variables may depend on the values of the uncontrollable ones, as long as they can be observed, i.e. they occur in the past. The corresponding execution must deal with branching, and may interleave the start of activities with the observation of the uncontrollable (but observable) “end of activity” events.
+     </paragraph>
+     <paragraph>
+      In this paper we focus on weak controllability, that is concerned with the existence of a strategy that associates values to the controllable starting points of each activity, as a function of the uncontrollable durations. The values for the uncontrollable durations are not known at the moment of solving the problem; however, the executor is given the actual value of such durations just before the execution starts.
+     </paragraph>
+     <paragraph>
+      There are several reasons for studying weak controllability. From the temporal problems perspective, weak controllability is a conceptually interesting dual of the strong controllability problem. In addition, deciding whether a given TPU is weakly controllable may serve as a pre-check for more complex problems such as dynamic controllability. In fact, weak controllability is a necessary condition for dynamic controllability [38].
+     </paragraph>
+     <paragraph>
+      From the practical standpoint, weak controllability allows for the modeling of a setting where a number of tasks is to be repeatedly executed, but with modalities that depend on some environmental parameters that become available just prior to execution. For example, an automated production line may be required to perform a set of activities, whose duration functionally depends on the measured size of the objects to be manipulated. The duration of the activities is unknown a priori, except for an upper and lower bound, but it becomes precise once the actual objects materialize. Similarly, in a multi-core processor, the power management may dynamically control the actual clock speeds, thus affecting the duration of jobs. An on-line scheduler may be required to decide the appropriate allocation based on information that may be made available by the power management unit. Another example of application is given in the setting of remote systems (such as space exploration rovers or satellites), where the degradation due to use causes many activities to change duration over time. For example, the movement speed of many components may decrease with the age of the system. These domains share the fact that the tasks may be repeated multiple times, on platforms of limited capacity, and in conditions that can be estimated prior to execution. As such, they can be encoded as weak controllability problems.
+     </paragraph>
+     <paragraph>
+      In this paper, we tackle weak controllability for DTPUs (i.e. in its most general form), making the following contributions. First, we propose a general decision procedure for the problem of weak controllability for DTPUs. Our approach makes use of the framework of Satisfiability Modulo Theory (SMT) [4], a formal framework that allows for the analysis of problems in decidable fragments of First Order Logic. The decision procedure is based on a reduction to an SMT problem for the theory of Quantified Linear Real Arithmetic ({a mathematical formula}LRA). The encoding can be thought as working by refutation: we state the existence of an assignment to uncontrollable time points that cannot be countered by any controllable assignment. This means that the SMT problem is satisfiable if and only if the TPU is not weakly controllable. The problem can thus be directly provided to an efficient SMT solver. This approach accounts for the first implemented decision procedure for weak controllability of DTPUs.
+     </paragraph>
+     <paragraph>
+      Then, we investigate the problem of on-line strategy execution, i.e. given a weakly controllable DTPU, how to repeatedly produce a suitable schedule for the controllable time points as a function of a valuation to the uncontrollable ones. We propose an approach, referred to as implicit strategy execution, based on the run-time execution of a solver for TP without uncertainty: any valuation to the uncontrollable durations removes the uncertainty from the problem, and thus transforms the TPU at hand into a TP. The solver is then invoked to solve the consistency problem yielding an assignment to the controllable time points. Unfortunately, this solution imposes strong requirements on the run-time: most notably, the control platform must support the execution of a solver; in addition, at each iteration it is required to solve an NP-hard problem, i.e. a DTP (without uncertainty).
+     </paragraph>
+     <paragraph>
+      This motivates the investigation of efficient run-time execution for weakly controllable TPUs. We analyze the spectrum of explicit strategies, expressed in a form that does not require reasoning, and can thus be directly evaluated. We consider linear strategies, that are strategies in which the values for the controllable time points are a linear function of the uncontrollable ones; and piecewise-linear strategies, that are combinations of different linear strategies, each associated with an activation condition defined over the uncontrollable time points. Linear strategies turn out not to be expressive enough in general: we prove that even for the STPU problem class, a weakly controllable instance is not guaranteed to have a linear strategy. We also prove that piecewise-linear strategies are sufficiently expressive: a piecewise-linear strategy is guaranteed to exist for every weakly controllable DTPU.
+     </paragraph>
+     <paragraph>
+      Finally, we address the synthesis problem: given a weakly controllable temporal problem, we algorithmically synthesize a function from an assignment to uncontrollable time points to an assignment to the controllable ones. We propose a number of algorithms for the synthesis of a strategy. We start by considering linear strategies, developing two algorithms to produce linear strategies for the STPU and DTPU cases. Then, we generalize to the case of piecewise-linear strategies, and we propose several algorithms for the STPU and DTPU cases.
+     </paragraph>
+     <paragraph>
+      All the proposed algorithms have been implemented in a tool for solving temporal problems under uncertainty. The tool is developed on top of, and fully leverages, state-of-the-art SMT solvers [17], [7]. To the best of our knowledge, this is the first implementation for weak controllability and strategy extraction. We carried out an extensive experimental evaluation on a comprehensive set of benchmarks. Our implementation, available on-line, demonstrates high scalability, and is able to automatically extract strategies of significant size. The experimental evaluation highlights a dramatic speed-up in the execution of the synthesized explicit strategies.
+     </paragraph>
+     <section>
+      <section-title>
+       Structure of the paper
+      </section-title>
+      <paragraph>
+       In Section 2, we provide some background and we define the addressed problem. In Section 3 we formally introduce TPUs and weak controllability. In Section 4 we describe our SMT-based decision procedure. In Section 5 we formalize the concept of weak strategy and we prove that linear strategies are not always present for a weakly controllable problem, but piecewise-linear strategies are. In Section 6 we analyze the problem of strategy synthesis for all the different problem classes and strategy types. In Section 7 we present an experimental evaluation of the approach. In Section 8 we summarize the most relevant work. Finally, in Section 9 we draw some conclusions and discuss future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Technical preliminaries
+      </section-title>
+      <paragraph>
+       Our setting is standard First Order Logic [24]. The first-order signature is composed of constants, variables, function symbols, Boolean variables, and predicate symbols. A term is either a constant, a variable, or the application of a function symbol of arity n to n terms. A theory constraint (also called a theory atom) is the application of a predicate symbol of arity n to n terms. An atom is either a theory constraint or a Boolean variable. A literal is either an atom or its negation. A clause is a finite disjunction of literals. A formula is either true (⊤), false (⊥), a Boolean variable, a theory constraint, the application of a propositional connective (¬, ∧, ∨, →, ↔) of arity n to n formulae, or the application of a quantifier (∀, ∃) to an individual variable and a formula. If {a mathematical formula}t1 and {a mathematical formula}t2 are terms, and ϕ is a formula, an if-then-else (ITE) term is {a mathematical formula}ite(ϕ,t1,t2). The semantics of an ITE term is the usual if-then-else semantics from programming languages. For example, the term {a mathematical formula}ite(x&gt;y,x,y) where x and y are numeric variables, corresponds to the maximum between x and y. An ITE term {a mathematical formula}ite(ϕ,t1,t2) occurring in a formula ψ can be rewritten by substituting each occurrence with a fresh variable v and by conjoining {a mathematical formula}(¬ϕ∨(v=t1))∧(ϕ∨(v=t2)). See [23] for a thorough discussion. We use {a mathematical formula}x,y,v,… for variables, and {a mathematical formula}x→,y→,v→,… for vectors of individual or Boolean variables. Terms and formulae are referred to as expressions. Formulae are denoted with {a mathematical formula}ϕ,ψ,… . Let {a mathematical formula}x→ be a vector of variables, we indicate the i-th variable in the vector with {a mathematical formula}xi. We write {a mathematical formula}ϕ(x) to highlight the fact that x is free in ϕ, and {a mathematical formula}ϕ(x→) to highlight the fact that the free variables of ϕ are variables in {a mathematical formula}x→. We indicate with {a mathematical formula}Qx→.ϕ(x→) the formula {a mathematical formula}Qx1.Qx2.…Qxn.ϕ(x1,…,xn), where {a mathematical formula}Q∈{∀,∃}.
+      </paragraph>
+      <paragraph>
+       Substitution is defined in the standard way. We write {a mathematical formula}ϕ[s/v] for the substitution of every occurrence of the variable v in ϕ with the term s. Let {a mathematical formula}v→ be a vector of variables and {a mathematical formula}s→ be a vector of terms, we write {a mathematical formula}ϕ[s→/v→] for the parallel substitution of every occurrence of {a mathematical formula}vi in ϕ with {a mathematical formula}si. With a slight abuse of notation, if {a mathematical formula}ϕ(x→,y→) is a formula, we write {a mathematical formula}ϕ(ψ(t→),y→) as a shorthand for {a mathematical formula}ϕ[ψ(t→)/x→].
+      </paragraph>
+      <paragraph>
+       We use the standard semantic notion of interpretation and satisfiability [24]. We call model μ of a formula {a mathematical formula}ϕ(x→) a pair composed of an assignment that maps each variable {a mathematical formula}xi into an element of its domain and an interpretation for the non-logical symbols that satisfies the formula. A formula {a mathematical formula}ϕ(x→) is satisfiable if and only if it has a model. Thus, the problem of checking the satisfiability of a formula consists in determining whether there exists a model for that formula.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Satisfiability modulo theory
+      </section-title>
+      <paragraph>
+       In propositional logic, the satisfiability problem is approached with enhancements of the DPLL algorithm [15]: the formula is converted into an equi-satisfiable one in Conjunctive Normal Form (CNF); then, a satisfying assignment is incrementally built, until either all the clauses are satisfied, or a conflict is found, in which case back-jumping takes place (i.e. certain assignments are undone). Keys to efficiency are heuristics for the variable selection, and learning of conflicts [30].
+      </paragraph>
+      <paragraph>
+       Given a first-order formula ψ with non-logical symbols interpreted in a decidable background theory T, Satisfiability Modulo Theory (SMT) [4] is the problem of deciding whether there exists a satisfying assignment to the free variables in ψ. For example, consider the formula {a mathematical formula}(x≤y)∧((x+3=z)∨(z≥y)) in the theory of real arithmetic. The theory of real arithmetic interprets the constant symbol “3” as the real number 3 and the operators {a mathematical formula}+,=,&lt;,&gt;,≤,≥ as the usual functions and relations. The formula is satisfiable and a satisfying assignment is {a mathematical formula}{x↦5,y↦6,z↦8}.
+      </paragraph>
+      <paragraph>
+       In this work we primarily concentrate on the theory of linear arithmetic over the real numbers ({a mathematical formula}LRA). A formula in {a mathematical formula}LRA is an arbitrary Boolean combination, a universal (∀) or an existential (∃) quantification, of atoms in the form {a mathematical formula}∑iaixi⋈c where {a mathematical formula}⋈∈{&gt;,&lt;,≤,≥,≠,=}, every {a mathematical formula}xi is a real variable and every {a mathematical formula}ai and c is a real constant. Difference logic ({a mathematical formula}RDL) is the subset of {a mathematical formula}LRA such that atoms have the form {a mathematical formula}xi−xj⋈c. If a formula in {a mathematical formula}RDL is satisfiable, then there exists infinitely many models for such formula [13]. This is because in {a mathematical formula}RDL we can only express “distances” between variables, thus the absolute value of at least one variable can always be chosen. We denote with {a mathematical formula}QF_LRA and {a mathematical formula}QF_RDL the quantifier-free fragments of {a mathematical formula}LRA and {a mathematical formula}RDL, respectively. This means that a formula ϕ is in {a mathematical formula}QF_LRA (resp. in {a mathematical formula}QF_RDL) if it is in {a mathematical formula}LRA (resp. in {a mathematical formula}RDL) and no first-order quantifier appears in ϕ.
+      </paragraph>
+      <paragraph>
+       A conjunction of atoms in {a mathematical formula}LRA over n variables represents a (non-necessarily closed) convex polyhedron in n dimensions: each point of the polyhedron is a model of the formula. Similarly, an {a mathematical formula}LRA formula represents the union of finitely many non-necessarily closed convex polyhedra. If {a mathematical formula}ϕ(x→) and {a mathematical formula}ψ(x→) are {a mathematical formula}LRA formulae, the formula {a mathematical formula}ϕ(x→)→ψ(x→) geometrically corresponds to the constraint {a mathematical formula}ϕ(x→)⊆ψ(x→). Similarly, the conjunction of two formulae corresponds to intersection, the disjunction to union and the negation to the complement. A model μ of an {a mathematical formula}LRA formula ϕ ({a mathematical formula}μ⊨LRAϕ) corresponds to a geometric point {a mathematical formula}μ→ (that is the vector of values assigned by μ to each dimension) that belongs to the region represented by ϕ (that is {a mathematical formula}μ→∈ϕ).
+      </paragraph>
+      <paragraph>
+       Given an {a mathematical formula}LRA formula {a mathematical formula}ϕ(x→) we denote with {a mathematical formula}Atoms(ϕ(x→)) the set of its atoms ({a mathematical formula}∑xi∈x→cixi⋈b, with {a mathematical formula}ci and b being rational coefficients). Given an atom {a mathematical formula}a(x→)∈Atoms(ϕ(x→)) ({a mathematical formula}a(x→)≐∑xi∈x→cixi⋈b{sup:1}), let {a mathematical formula}Eq(a(x→))=∑xi∈x→cixi=b. Let {a mathematical formula}Equalities(ϕ(x→)) be the conjunction of all the equalities in a given formula, namely {a mathematical formula}Equalities(ϕ(x→))≐⋀ai(x→)∈Atoms(ϕ(x→))Eq(ai(x→)) if {a mathematical formula}ai(x→)=∑xi∈x→cixi⋈b with ⋈ restricted to {a mathematical formula}{≤,≥,=}.
+      </paragraph>
+      <paragraph>
+       We write {a mathematical formula}x−y∈[a,b] where x and y are variables and a and b are constants, meaning the formula {a mathematical formula}(x−y)≥a∧(x−y)≤b. If a is −∞ then the first conjunct is omitted and similarly, if b is ∞ then the second conjunct is omitted. In presence of constant bounds, we write the intervals with the usual open-closed notation: {a mathematical formula}[a,b], {a mathematical formula}[a,∞) or {a mathematical formula}(−∞,b] for some {a mathematical formula}a,b∈R.
+      </paragraph>
+      <paragraph>
+       A second theory of interest for this work is the theory of Equality and Uninterpreted Functions ({a mathematical formula}EUF), in which variables range over an unspecified infinite domain and function symbols are introduced. The only interpreted symbol in the theory is =, the equality predicate. There is no restriction on the interpretation of function symbols: the only property assumed for a function f is {a mathematical formula}∀x.∀y.(x=y)→(f(x)=f(y)). In addition, we can have formulae defined over the combination of two or more theories. For example, an atom like {a mathematical formula}x=f(y+z)+w combines the + operator of {a mathematical formula}LRA with function symbols of {a mathematical formula}EUF, therefore this formula is expressed in the combination of {a mathematical formula}EUF and {a mathematical formula}LRA (indicated {a mathematical formula}EUF∪LRA). Different techniques can be adopted to address the theory combination problem (e.g. Nelson–Oppen [31], Delayed Theory Combination [5], Model-based Theory Combination [16]).
+      </paragraph>
+      <paragraph>
+       An SMT solver [4] is a decision procedure which solves the satisfiability problem for a formula expressed in a decidable subset of First Order Logic. The most efficient implementations of SMT solvers use the so-called “lazy approach” [34]. In order to decide a formula ϕ expressed in the theory T, a SAT solver is tightly integrated with a T-solver, that is used to decide conjunctions of constraints in the theory T. The role of the SAT solver is to enumerate the truth assignments to the Boolean abstraction of the first-order formula. The Boolean abstraction has the same Boolean structure of the first-order formula, but “replaces” the predicates which contain T information with fresh Boolean variables. The Boolean abstraction of {a mathematical formula}(x≤y)∧((x+3=z)∨(z≥y)) is {a mathematical formula}P∧(Q∨R), where P, Q, R are fresh Boolean variables. The T-solver is invoked when the SAT solver finds a satisfying assignment for the Boolean abstraction: the satisfying assignment to Boolean abstraction maps directly to a conjunction of T atoms, which the T-solver can handle. If the conjunction is satisfiable also the original formula is satisfiable. Otherwise the T-solver returns a conflict set which identifies a reason for the unsatisfiability. Then, the negation of the conflict set is learned by the SAT solver in order to prune the search. Examples of solvers based on the “lazy approach” are MathSAT5[7], Z3[17], Yices[19] and OpenSMT[6].
+      </paragraph>
+      <paragraph>
+       In order to deal with quantifiers in {a mathematical formula}LRA, many techniques have been developed and implemented in SMT solvers. Some solvers (e.g. Z3) natively support quantifiers. However, many others (e.g. MathSAT5) cannot deal with them. For some theories of interest, it is possible to apply algorithms that remove quantifiers from any given formula in the theory. A theory T is said to admit quantifier elimination, if for every quantified formula ϕ in T, there exists a quantifier-free formula {a mathematical formula}ϕ′ that is logically equivalent to ϕ. It was proved that {a mathematical formula}LRA admits quantifier elimination, and there are techniques (e.g. Fourier–Motzkin [33], Loos–Weispfenning [25], [26]) that transform any {a mathematical formula}LRA formula containing quantifiers into an equivalent{a mathematical formula}QF_LRA formula. These techniques, at a cost that is doubly exponential in time and space in the original formula size [33], [26], [25], enable for the use of solvers with no native support for quantifiers.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Temporal problems with uncertainty
+     </section-title>
+     <paragraph>
+      The formalism of TP is used to model temporal constraints over time-valued variables representing time points. This formalism is often used to characterize scheduling problems, where activities must be ordered in time according to some specified constraints. The variables in a TP typically represent the beginning time and the end time of activities. For example, given two activities {a mathematical formula}A1 and {a mathematical formula}A2, it is possible to state that the distance between the beginning of {a mathematical formula}A1 and the end of {a mathematical formula}A2 is less than or equal to 2. The TP formalism is expressive enough to model Allen's interval algebra [1], and also metric constraints in the form of arbitrary Boolean combination of atoms {a mathematical formula}(x−y)∈[l,u], where {a mathematical formula}x,y are time points and {a mathematical formula}l,u∈R∪{+∞,−∞}[18].
+     </paragraph>
+     <paragraph>
+      Two families of TPs have been presented in literature over the years: TP without Uncertainty, and TP with Uncertainty (TPU). In the first, simply called TP, all the time points (i.e. both beginning and end points) can be decided by the scheduler/executor [18], [36]. The case of TPU represents the more complex situation where the executor is only able to decide the beginning time of activities, whereas the end of activities is to be decided by an adversarial environment [38]. In this work we focus on TPUs.
+     </paragraph>
+     <paragraph label="Definition 1">
+      A TPU is a tuple {a mathematical formula}(Xc,Xu,Cc,Cf), where {a mathematical formula}Xc≐{b1,…,bn} is the set of controllable time points, {a mathematical formula}Xu≐{e1,…,em} ({a mathematical formula}n≥m) is the set of uncontrollable time points, {a mathematical formula}Cc≐{cc1,…,ccm} is the set of contingent constraints, and {a mathematical formula}Cf≐{cf1,…,cfh} is the set of free constraints.{a mathematical formula} such that: {a mathematical formula}li,jf,ui,jf∈R∪{+∞,−∞}, {a mathematical formula}li,jc,ui,jc∈R+, {a mathematical formula}li,jf≤ui,jf, {a mathematical formula}li,jc≤ui,jc, {a mathematical formula}Di is the number of disjuncts for the i-th free constraint, {a mathematical formula}Ei is the number of disjuncts for the i-th contingent constraint, {a mathematical formula}vi,j,wi,j∈Xc∪Xu and {a mathematical formula}vi,j≠wi,j.
+     </paragraph>
+     <paragraph>
+      Variables in {a mathematical formula}Xc represent time decisions that can be controlled by the executor. Variables in {a mathematical formula}Xu represent time decisions that are under the control of the environment (and are thus uncontrollable from the point of view of the executor). We use the letters b and e as mnemonics for the beginning and end of activities, respectively.{sup:2}
+     </paragraph>
+     <paragraph>
+      The constraints are separated in two sets: free constraints {a mathematical formula}Cf are constraints that the executor is required to fulfill; contingent constraints {a mathematical formula}Cc are the assumptions that the environment will fulfill. Intuitively, free constraints are the requirements of the problem, while contingent constraints are the assumptions under which the problem must be solved. Notice that, differently from free constraints, each contingent constraint is required to be expressed using exactly two variables ({a mathematical formula}bi and {a mathematical formula}ei) sharing the same index i. As in [38], we consider only contingent constraints involving exactly one controllable time point and one uncontrollable time point. Thus, each uncontrollable time point {a mathematical formula}ei is linked by exactly one contingent constraint to a controllable time point {a mathematical formula}bi and {a mathematical formula}|Cc|=|Xu|. In fact, we have a number of controllable time points that is at least as big as the number of uncontrollable ones (hence {a mathematical formula}n≥m) because we allow for controllable time points that are not linked to an uncontrollable via a contingent constraint. This formulation is customary in the literature, and assumes a complete independence between contingent constraints: the framework can express disjunctions in the contingent constraints but assumes the independence between different uncontrollable activities.
+     </paragraph>
+     <paragraph>
+      An example of TPU is depicted in Fig. 1. The example is composed of two activities {a mathematical formula}A1 and {a mathematical formula}A2. {a mathematical formula}A1 starts at time point {a mathematical formula}b1 and ends in {a mathematical formula}e1; similarly, {a mathematical formula}A2 starts at {a mathematical formula}b2 and ends in {a mathematical formula}e2. The two activities have uncontrollable duration: {a mathematical formula}A1 has duration between 0 and 3 time units, while {a mathematical formula}A2 lasts for at least 1 and at most 2 time units. We require {a mathematical formula}b1 to be scheduled before {a mathematical formula}b2 ({a mathematical formula}b2−b1∈[0,+∞)), {a mathematical formula}b2 before {a mathematical formula}e1 ({a mathematical formula}e1−b2∈[0,+∞)), {a mathematical formula}e2 to happen at most 1 time unit before {a mathematical formula}e1 ({a mathematical formula}e1−e2∈(−∞,1]) and {a mathematical formula}e2 at most 2 time units after {a mathematical formula}b1 ({a mathematical formula}e2−b1∈(−∞,2]).
+     </paragraph>
+     <paragraph>
+      Depending on the form of the constraints in {a mathematical formula}Cc and {a mathematical formula}Cf, we consider three classes of TPUs. Definition 1 captures the most general class, referred to in the literature definition as Disjunctive Temporal Problem with Uncertainty (DTPU) [32], [37]. If each disjunction is restricted to refer to a single pair of variables, the resulting problem is a Temporal Constraint Satisfaction Problem with Uncertainty (TCSPU) [32], [37]. If disjunctions are disallowed, we obtain a Simple Temporal Problem with Uncertainty (STPU) [38], [29], [28], [21], [22]. The problem in Fig. 1 is an STPU.
+     </paragraph>
+     <paragraph>
+      Following the classification of Peintner et al. [32], we also say that a problem is simple-natured if the contingent constraints have no disjunctions ({a mathematical formula}Ei=1 for each i).
+     </paragraph>
+     <paragraph>
+      We define an assignment to the time points as a total function from time points to real values. Given a TP without uncertainty, checking consistency corresponds to deciding the existence of an assignment that fulfills all the constraints of the problem. We call such an assignment a consistent schedule, and we say that the TP is consistent.
+     </paragraph>
+     <paragraph>
+      Given a TPU, values for controllable time points can be decided, namely they can be scheduled in time by an executor, while an uncontrollable time point {a mathematical formula}ei just happens after its activation time point {a mathematical formula}bi has been scheduled. The only assumption is that the i-th contingent constraint will be satisfied by the values of {a mathematical formula}bi and {a mathematical formula}ei. Given this intuitive meaning, we rephrased the concept of situation for a TPU [38] for the DTPU problem class.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Let {a mathematical formula}P≐(Xc,Xu,Cc,Cf) be a TPU where {a mathematical formula}|Xu|=m. The space of situations for P is {a mathematical formula}ΩP≐S1×⋯×Sm, where {a mathematical formula}Si≐⋃j=1Ei[li,jc,ui,jc]. A situation is an element ω of {a mathematical formula}ΩP.
+     </paragraph>
+     <paragraph>
+      Intuitively, a situation is a choice of the actual duration for each activity with uncontrollable duration. For example, the activity representation of the running example in Fig. 2, represents a possible situation in which {a mathematical formula}yi is the duration of {a mathematical formula}Ai.
+     </paragraph>
+     <paragraph>
+      For a TPU, three different problems can be addressed [38]: strong controllability, dynamic controllability and weak controllability. In all these problems, the executor is required to find a winning strategy, i.e. an assignment to the controllable time points that “works” in any situation. More specifically, the assignment to the controllable time points must fulfill all the free constraints in any situation for the given problem. The difference depends on the extent to which the executor can use (or, observe) the situation to decide the assignments to the controllable time points.
+     </paragraph>
+     <paragraph>
+      In strong controllability, the executor is “blind”, i.e. it cannot observe the situation at all. Therefore, the solution to a strong controllability problem is a fixed schedule, that assigns a time value to each controllable time point. This schedule must fulfill all the free constraints in any situation. The example problem in Fig. 1(a) is not strongly controllable, as there is no way of statically assign {a mathematical formula}b2 without knowing in advance the time at which {a mathematical formula}e2 will happen. In fact, scheduling {a mathematical formula}b2 too early could violate the {a mathematical formula}e1−e2≤1 constraint.
+     </paragraph>
+     <paragraph>
+      In weak controllability, the executor is allowed to act based on the situation, i.e. knowing in advance the uncontrollable durations. In this setting, the solution to a weak controllability problem has the form of a strategy that given a situation computes an assignment to the controllable time points.
+     </paragraph>
+     <paragraph>
+      Dynamic controllability limits the observations of the executor to the past events only. This problem can be seen as a restriction of weak controllability, in which it is possible for the executor to condition the assignments to situations, as long as they have become apparent. In other works, if a choice depends on the duration of an activity, this must have already terminated.
+     </paragraph>
+     <paragraph>
+      In the rest of this paper, we focus on weak controllability, addressing the decision problem (i.e. determining whether there exists a winning strategy), and the synthesis problem (i.e. extracting such a strategy in an executable form).
+     </paragraph>
+     <paragraph label="Definition 3">
+      We now formally define the concept of weak controllability. Let {a mathematical formula}P≐(Xc,Xu,Cc,Cf) be a TPU and let {a mathematical formula}ω≐(ω1,…,ω|Xu|) be a situation in {a mathematical formula}ΩP. The projection {a mathematical formula}Pω of the problem P with respect to the situation ω is the TP {a mathematical formula}(Xc∪Xu,∅,∅,Cf∪Cc′), where {a mathematical formula}Cc′ is derived from {a mathematical formula}Cc by replacing each contingent constraint {a mathematical formula}⋁j=1Ei(ei−bi)∈[li,jc,ui,jc] with a free constraint {a mathematical formula}ei−bi∈[ωi,ωi].
+     </paragraph>
+     <paragraph label="Definition 4">
+      Intuitively, the projection {a mathematical formula}Pω is the problem without uncertainty in which each uncontrollable duration has been fixed to a given value. Let {a mathematical formula}P≐(Xc,Xu,Cc,Cf) be a TPU. P is weakly controllable if and only if for each situation {a mathematical formula}ω∈ΩP the projection {a mathematical formula}Pω is consistent.
+     </paragraph>
+     <paragraph>
+      Definition 4 captures the weak controllability concept by requiring the existence of a schedule for each situation. This definition implicitly models a strategy as a function {a mathematical formula}f:ΩP→R|Xc| that maps each situation ω in a schedule for the controllable time points that fulfills the constraints of the projection {a mathematical formula}Pω. If such a function exists, the problem is weakly controllable.
+     </paragraph>
+     <paragraph>
+      Weak controllability is, in terms of games, the dual of strong controllability: in strong controllability, the executor is required to make its move (i.e. all its decisions) without observing the situation (i.e. the move of the environment); in weak controllability, the environment is required to make all its decisions before the executor.
+     </paragraph>
+     <paragraph>
+      Finally, we note that the constraints of a TPU are essentially {a mathematical formula}RDL formulae. As such, if there exists a weak strategy that fulfills all the problem constraints, there are infinitely many other strategies obtained by adding the same constant value to each strategy decision. In the example of Fig. 1, the value of {a mathematical formula}b1 can be arbitrarily chosen because it precedes all the other time points, and the chosen value acts only as a shift for all the other time points.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Deciding weak controllability
+     </section-title>
+     <paragraph>
+      In order to logically define weak controllability, we first perform some manipulations on the problem definition. We encode each uncontrollable time point {a mathematical formula}ei in terms of the time difference with its starting time point {a mathematical formula}bi by means of an uncontrollable duration variable {a mathematical formula}yi. Intuitively, if we take an activity view, {a mathematical formula}yi measures the duration of the i-th activity. For every contingent constraint {a mathematical formula}cci=⋁j=1Ei(ei−bi)∈[li,j,ui,j], let {a mathematical formula}yi∈R be the uncontrollable duration variable associated to {a mathematical formula}ei such that {a mathematical formula}⋁j=1Ei(yi∈[li,j,ui,j]). {a mathematical formula}yi represents the duration of the interval {a mathematical formula}[bi,ei] that is constrained by the i-th contingent constraint. We are thus symbolically encoding a situation {a mathematical formula}ω≐(ω1,…,ω|Xu|) in which {a mathematical formula}yi models the value of {a mathematical formula}ωi. Fig. 2 gives a pictorial representation of this encoding interpreted at the activity level.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Given a TPU {a mathematical formula}(Xc,Xu,Cc,Cf), let {a mathematical formula}Y→u be the vector of uncontrollable duration variables {a mathematical formula}(y1,y2,…,ym), with {a mathematical formula}m=|Xu|. We define the encoding of the problem as a tuple {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)) where{a mathematical formula} and{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Intuitively, {a mathematical formula}Γ(Y→u) is the formula representing the conjunction of all the contingent constraints after the recoding, and {a mathematical formula}Ψ(X→c,Y→u) is the conjunction of all the free constraints rewritten in terms of {a mathematical formula}X→c and {a mathematical formula}Y→u.
+     </paragraph>
+     <paragraph>
+      We remark that the use of this encoding yields two consequences. First, thanks to the redefinition of each {a mathematical formula}ei in terms of {a mathematical formula}yi, we managed to encode the contingent constraints in terms of {a mathematical formula}Y→u only, therefore they are independent of the values of the controllable time points ({a mathematical formula}X→c). Intuitively, {a mathematical formula}Γ(Y→u) encodes the set of all possible situations ({a mathematical formula}ΩP) for the given problem P: each model of {a mathematical formula}Γ(Y→u) corresponds to a situation ω. Second, the constraints in this formulation are expressed in the {a mathematical formula}LRA theory (the original formulation was expressed in the {a mathematical formula}RDL fragment of {a mathematical formula}LRA). This encoding applied to the STPU problem in Fig. 1 is shown in Fig. 3.
+     </paragraph>
+     <paragraph>
+      From here on, we assume an encoded problem {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)) is given. Intuitively, a temporal problem is weakly controllable if there exists a strategy that maps every situation to a corresponding assignment to controllable time points, in such a way that all free constraints are satisfied. We can rephrase the concept of weak controllability presented in Definition 4 as a satisfiability problem modulo the {a mathematical formula}LRA theory as follows.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      Let{a mathematical formula}P≐(Xc,Xu,Cc,Cf)be a TPU and let{a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u))be its encoding. P is weakly controllable if and only if the following formula is valid in the{a mathematical formula}LRAtheory.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The formula in Eq. (1) is a direct formalization of the intuitive notion of weak controllability, and of the original definition in [38]. The universal quantifier captures the uncertainty in the decision of the duration variables. The implication ensures that free constraints are checked only when {a mathematical formula}Γ(Y→u) is satisfied, that is only on assignments that encode situations of the original temporal problem. In fact, if {a mathematical formula}Γ(Y→u) is not satisfied, the implication is automatically satisfied.
+     </paragraph>
+     <paragraph>
+      If we interpret the vector of time points {a mathematical formula}X→c and the vector of durations {a mathematical formula}Y→u as vectors of real variables, and the set of constraints {a mathematical formula}Γ(Y→u) and {a mathematical formula}Ψ(X→c,Y→u) as formulae in {a mathematical formula}QF_LRA, Eq. (1) becomes a formula in {a mathematical formula}LRA that is valid if and only if the problem is weakly controllable.
+     </paragraph>
+     <paragraph>
+      For example, the problem depicted in Fig. 1(a) is weakly controllable if and only if the following formula is valid.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Looking at the weak controllability formal characterization in Proposition 1 from an SMT perspective, it is clear that we are solving the validity problem of an {a mathematical formula}LRA formula. Any SMT solver supporting {a mathematical formula}LRA is able to deal with such a formula directly and it can correctly solve the problem. However, due to the high computational cost of directly handling quantifiers, an optimized encoding is required.
+     </paragraph>
+     <paragraph>
+      We first rewrite the formula encoding weak controllability in Proposition 1 by transforming the external universal quantifier into the negation of an existential one, and we consider the negation of the resulting formula. We call the resulting formula inverted encoding.{a mathematical formula} If this formula is unsatisfiable, then the problem is weakly controllable, while if it is satisfiable, then the problem is not weakly controllable. Note that in Eq. (2) we dropped the outermost {a mathematical formula}¬∃Y→u as any SMT problem is inherently an existential quantification and we consider the negation by reversing the interpretation of the result. Intuitively, we are searching for an assignment to the uncontrollable time points that is able to violate the free constraints under any possible strategy (it is a winning strategy for the environment). In fact, if the formula is satisfiable, each model corresponds to a situation for which no strategy of controllable time-point assignment exists. Therefore, differently from Eq. (1), this encoding is also helpful for debugging a non-weakly controllable problem. This encoding still requires a solver with full support of {a mathematical formula}LRA, but is able to exploit the searching power of the SMT framework and, in case of non-weak controllability, it allows for the extraction of debug information by providing a model of the formula. An example of this encoding for the running example problem is shown in Fig. 4(a).
+     </paragraph>
+     <paragraph>
+      A further improvement can be achieved by limiting as much as possible the scope of the existential quantifier. To this extent, we push the existential quantifier over the implication, and thus the quantification is limited to the free constraints only (ref. as assumption-extraction encoding):{a mathematical formula} The assumption-extraction encoding for the running example problem is reported in Fig. 4(b).
+     </paragraph>
+     <paragraph>
+      The following proposition states that the inverted and assumption-extraction encodings are logically equivalent.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      Eqs.(2)and(3)are logically equivalent.
+     </paragraph>
+     <paragraph label="Proof">
+      We show how to convert Eq. (2) into Eq. (3), using logically equivalent rewritings.{a mathematical formula}  □
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Strategies for weak controllability
+     </section-title>
+     <paragraph>
+      We now consider the problem of actually executing a control strategy that is associated with a given weakly controllable TPU. A TPU is a modeling framework that represents a set of assumptions over the environment and imposes a set of requirements to be fulfilled. We consider the use-case in which a strategy for scheduling the controllable time points is repeatedly executed by reading the inputs from the environment in the form of a situation. Such a situation is generated by reading the parameters on which the uncontrollable durations depends, by means of appropriate sensors and estimators. The strategy computes an assignment to the controllable time points that fulfills the problem constraints and is then deployed to an actuator for execution.
+     </paragraph>
+     <paragraph>
+      The problem we tackle here is to automatically synthesize such a strategy: we discuss two approaches. First, we use a TP solver to do on-line reasoning, thus executing a control strategy that is implicitly defined in the TPU, if solvable. Then, we investigate the idea of explicit strategies, that can be readily executed without resorting to on-line reasoning.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Implicit strategies
+      </section-title>
+      <paragraph>
+       A way of obtaining a strategy for a weakly controllable TPU is given by Definition 3 and depicted in Fig. 5: when a situation {a mathematical formula}S¯ is read,{sup:3} we eliminate the uncertainty by substituting the uncontrollable duration variables in the TPU formulation with the values obtained from the situation (obtaining a TP that is the projection of the TPU). Then, we solve the resulting temporal problem, that is now without uncertainty, and return the assignment to the controllable time points {a mathematical formula}X¯c for execution. Formally, given the encoding of a TPU {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)) and an assignment to all the uncontrollable durations {a mathematical formula}S¯ fulfilling {a mathematical formula}Γ(S¯) (a situation), we can find an assignment to the controllable variables {a mathematical formula}X→c by finding a model for the formula {a mathematical formula}Ψ(X→c,S¯). This strategy requires a solver to be executed once the situation {a mathematical formula}S¯ is known. In practice, we can implement this idea using any SMT solver by searching for a model for {a mathematical formula}Ψ(X→c,S¯). However, this approach (called Implicit-SMT) requires one to solve a separate SMT problem for each situation. A more advanced approach is to exploit the incrementality feature of modern SMT solvers [4], allowing the solver to “recycle” discovered clauses and lemmas among different situations. For this purpose, we designed an incremental approach, described in Algorithm 1. Implicit-SMT-Incremental takes the encoding of a TPU {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)), and initializes the SMT solver by asserting the problem constraints {a mathematical formula}Ψ(X→c,Y→u). Then, it enters a (possibly infinite) loop, and processes a sequence of situations {a mathematical formula}S¯1,S¯2,⋯ . The problem description is asserted in the solver once and for all, while the situation is first asserted, and once an assignment is found, it is retracted.
+      </paragraph>
+      <paragraph>
+       The main drawback of the implicit approach is the requirement of on-line reasoning. In fact, once the situation is known, a solver is invoked to discover the assignment for the controllable time points. Solving the TP resulting from the projection of a TPU is hard in general. If the problem belongs to the STPU problem class the resulting STP can be solved in polynomial time, but for the general case of DTPU, the projection results in a DTP that is, in general, NP-hard [37]. In addition, having a solver as part of the run-time may require much more expensive platforms.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Explicit strategies
+      </section-title>
+      <paragraph label="Theorem 1">
+       We avoid the burden of on-line reasoning by providing techniques for the synthesis of functions that are simple and fast to execute. Consider the formalization in Proposition 1. Interestingly, we can apply skolemization [24], thus replacing the existential quantifier by means of a fresh function symbol. A TPU{a mathematical formula}(Xc,Xu,Cc,Cf)is weakly controllable if and only if the formula{a mathematical formula}is satisfiable.
+      </paragraph>
+      <paragraph label="Proof">
+       Eq. (4) is the result of applying the skolemization [24] procedure to Eq. (1). Since skolemization produces an equi-satisfiable formula, Eq. (4) is equi-satisfiable to Eq. (1). Since Eq. (1) has no free variables nor has uninterpreted terms, satisfiability coincides with validity. Therefore Eq. (1) is valid if and only if Eq. (4) is satisfiable, and Proposition 1 states that the TPU is weakly controllable if and only if Eq. (1) is valid.  □
+      </paragraph>
+      <paragraph>
+       We transform the inner existential quantifier into a function f that models the weak strategy for the problem. In fact, in Eq. (4), the interpretation of the function f is exactly a strategy that solves the problem. Eq. (4) gives a clear vision of what a strategy is: a function that gets in input the uncontrollable durations and returns an assignment to the controllable time points that fulfills all the problem constraints.
+      </paragraph>
+      <paragraph>
+       In principle, one would like to exploit this formulation to query an SMT solver, and extract, from the model, a closed form for the strategy f. However, Eq. (4) is a quantified first-order formula involving uninterpreted functions,{sup:4} that is in general undecidable.
+      </paragraph>
+      <paragraph>
+       In the following, we focus on two types of strategies: linear strategies, where each controllable variable is computed as a linear combination of the uncontrollable durations; piecewise-linear strategies, where different linear strategies are executed depending on the input situation.
+      </paragraph>
+      <paragraph label="Definition 6">
+       From here on, we assume the encoding {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)) of a TPU is given. In general, a weak strategy is a function that maps each assignment to uncontrollable durations satisfying {a mathematical formula}Γ(Y→u) (i.e. each situation) into an assignment to the controllable time points, such that all the free constraints are satisfied. A weak strategy for a TPU is a function {a mathematical formula}f:R|Yu|→R|Xc| defined for every point {a mathematical formula}Y→u in {a mathematical formula}Γ(Y→u) and such that {a mathematical formula}Ψ(f(Y→u),Y→u) holds for every {a mathematical formula}Y→u in {a mathematical formula}Γ(Y→u). Note that, this definition does not impose any constraint (e.g.  linearity, continuity) on f other than being a function.
+      </paragraph>
+      <paragraph>
+       In Definition 6 we modeled a weak strategy as a single function {a mathematical formula}f:R|Yu|→R|Xc|, but we can equivalently consider a set of functions {a mathematical formula}f1,…,f|Xc| each computing a schedule for a single controllable time point given the situation. The two formalizations are equivalent because if there exists a unique function f, we can obtain the set of function by projection of f and vice-versa.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}f¯(Y→u):R|Yu|→R|Xc| be a strategy. The strategy imposes a relation between the controllable time points and the uncontrollable durations: {a mathematical formula}X→c=f¯(Y→). If such a relation is expressible as a formula in a theory {a mathematical formula}T we can check whether {a mathematical formula}f¯ is a weak strategy for a given temporal problem by checking the existence of a point in {a mathematical formula}Γ(Y→u) that violates the free constraints.{a mathematical formula} If Eq. (5) is satisfiable modulo {a mathematical formula}T∪QF_LRA, then {a mathematical formula}f¯(Y→u) is not a valid weak strategy, because there exists a situation for which the strategy violates the free constraints. In this case, {a mathematical formula}T can be any theory needed to express the relation imposed by the strategy, for example it could be {a mathematical formula}LRA or even Nonlinear Real Arithmetic. Note that, this check is very useful in practice if {a mathematical formula}f¯(Y→u) can be expressed in {a mathematical formula}QF_LRA because the entire check would fit in {a mathematical formula}QF_LRA. In the following, we describe two possible shapes of strategies, namely linear and piecewise-linear. Both the shapes can be expressed in {a mathematical formula}QF_LRA. Therefore checking if such strategies are weak strategies for a given problem is possible by performing a single call to an SMT solver in {a mathematical formula}QF_LRA.
+      </paragraph>
+      <section>
+       <section-title>
+        Linear strategies
+       </section-title>
+       <paragraph>
+        A linear strategy is such that the value of every controllable time point is obtained as a linear combination of {a mathematical formula}Y→u. Let {a mathematical formula}n≐|Xc| and {a mathematical formula}m≐|Xu|. A linear strategy can be represented with a matrix A of real coefficients of size {a mathematical formula}n×m and a vector {a mathematical formula}c→ of size n. Every controllable variable is scheduled according to a linear function of the uncontrollable durations. The strategy {a mathematical formula}f(Y→u) can be then expressed as {a mathematical formula}A⋅Y→u+c→ in which each {a mathematical formula}bi∈Xc can be computed as {a mathematical formula}Ai,1y1+…+Ai,mym+ci. Therefore, the matrix A must have one column for every duration and the vector {a mathematical formula}c→ contains the constant additive terms. The problem of synthesizing a linear strategy is then equivalent to the problem of finding a suitable matrix A and vector {a mathematical formula}c→.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Piecewise-linear strategies
+       </section-title>
+       <paragraph label="Definition 7">
+        A more general form of strategy is the piecewise-linear strategy, that is the composition of a finite number of linear strategies. A piecewise-linear strategy is defined by cases over a finite partition of the situations (a partition of the region represented by {a mathematical formula}Γ(Y→u)). For each case we have a linear strategy that is a valid weak strategy for that subset of the situations. We can compose these linear strategies by first checking in which element of the partition the observed situation belongs, and then applying the corresponding linear strategy. In this setting, a linear strategy is a particular case of a piecewise-linear strategy in which we have a partition of cardinality one. A piecewise-linear strategy is a function{a mathematical formula} where each {a mathematical formula}fi is a linear strategy and {a mathematical formula}ηi(Y→u) are sub-regions of {a mathematical formula}Γ(Y→u) such that {a mathematical formula}Γ(Y→u)⊆(⋃i=1kηi(Y→u)). Note that, even this kind of strategy can be directly encoded in {a mathematical formula}QF_LRA. We call each pair {a mathematical formula}(fi(Y→u),ηi(Y→u)) a “piece” of the strategy. In order to compactly represent a piecewise-linear strategy in the algorithms we abstract a piecewise-linear strategy {a mathematical formula}f(Y→u) as the ordered list of its pieces. For example, the strategy {a mathematical formula}f(Y→u) in Definition 7 can be represented as the following list of pieces:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Following Definition 7, no continuity requirement is imposed on a piecewise-linear strategy. Continuity is not required by the weak controllability definition and is not a useful requirement for our setting, as we assume that the parameters yielding the situation are fully specified before scheduling the problem. Continuity is instead an important issue in dynamic strategies as small variations in the situation should not yield substantial variations in the strategy outcome. However this discussion is out of the scope of this paper.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Linearity is not enough
+       </section-title>
+       <paragraph>
+        A linear strategy is very useful in practice: it is compact to represent and easy to evaluate. In fact, it can be represented using just a matrix and a vector; moreover, given an assignment to the uncontrollable duration, we can compute the resulting assignment to the controllable variables by means of a single matrix multiplication. In general, unfortunately, a weakly controllable TPU is not guaranteed to have such a strategy. In fact, this holds even for the STPU class of problems.
+       </paragraph>
+       <paragraph label="Proof">
+        The system admits no solution in the real numbers. Therefore there exists no linear strategy for the given problem as there exists no assignment to the coefficients that are able to fulfill the four situations at the same time.  □
+       </paragraph>
+       <paragraph>
+        In order to graphically explain the reason why no linear strategy exists for the given problem, we plotted the space of free constraints of the STPU problem in the space {a mathematical formula}(y1,y2,b2) regions in Figs. 7(a) and 7(b) (without loss of generality, we assigned {a mathematical formula}b1=0 as we can always freely assign a reference controllable time point thanks to the {a mathematical formula}RDL property of shifting solutions). The plot clearly shows that there exists no linear strategy for {a mathematical formula}b2. Considering the vertex {a mathematical formula}(0,1) in the space {a mathematical formula}(y1,y2), a linear solution must contain point {a mathematical formula}(0,1,0) as it is the only feasible point for the vertex {a mathematical formula}(0,1). Similarly, considering {a mathematical formula}(0,2) we must include {a mathematical formula}(0,2,0); considering {a mathematical formula}(3,1) we must include {a mathematical formula}(3,1,1) and for {a mathematical formula}(3,2) the linear solution must include the point {a mathematical formula}(3,2,0). However, no linear solution can exist because no plane contains all the four points. In fact, the only plane containing {a mathematical formula}(0,1,0), {a mathematical formula}(0,2,0) and {a mathematical formula}(3,2,0) is {a mathematical formula}b2=0, but this plane does not contain the point {a mathematical formula}(3,1,1).
+       </paragraph>
+       <paragraph>
+        We can also exploit the encodings for the decision problem to show that the STPU in Fig. 6 is weakly controllable. The inverted SMT encoding of Eq. (2) for the example problem is as follows.{a mathematical formula} This formula can be shown to be unsatisfiable by any {a mathematical formula}LRA SMT solver. Therefore the problem is indeed weakly controllable. The unsatisfiability of the formula is also shown by Eqs. (6) and (7) that provide a witness strategy for the existential quantifier, making the formula false. In fact, if {a mathematical formula}(y2&gt;y1−1) holds, Eq. (8) is unsatisfiable because {a mathematical formula}b1=0 and {a mathematical formula}b2=0 is a model of Eq. (6). Similarly, if {a mathematical formula}(y2≤y1−1) holds, Eq. (8) is unsatisfiable because {a mathematical formula}b1=0 and {a mathematical formula}b2=y1−y2−1 is a model of Eq. (7).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Piecewise-linear strategy is enough
+       </section-title>
+       <paragraph label="Proof">
+        We now prove that a piecewise-linear strategy always exists for any weakly controllable TPU. For any given TPU P, if P is weakly controllable, then P admits a piecewise-linear strategy.Let {a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u)) be the encoding of P. Since P is weakly controllable, we know that{a mathematical formula} is valid.We want to prove that there exists a piecewise-linear strategy f such that{a mathematical formula} is valid.By construction, both {a mathematical formula}Γ(Y→u) and {a mathematical formula}Ψ(X→c,Y→u) are formulae in {a mathematical formula}QF_LRA and hence they geometrically correspond to the union of finitely many closed convex polyhedra (the polyhedra are closed because all the inequalities are non-strict by problem definition).We now show that from each face we can extract a linear strategy that correctly work for a sub-region of {a mathematical formula}Γ(Y→u). By combining these linear strategies for all the faces of the polyhedron we obtain a weak strategy for P.Without loss of generality we can assume {a mathematical formula}Ψ(X→c,Y→u) being a bounded set (meaning that it can be completely contained in a ball of finite radius). This is because we already have bounds for all the uncontrollable variables in {a mathematical formula}Γ(Y→u) (because of the assumptions in Definition 1) and we can always add upper and lower bounds on controllable variables as follows. Since the problem is weakly controllable, let {a mathematical formula}g(Y→) be any weak strategy. For each variable {a mathematical formula}x∈X→c, let {a mathematical formula}ux≐max({g(Y→u)|Y→u⊨Γ(Y→u)}) and {a mathematical formula}lx≐min({g(Y→u)|Y→u⊨Γ(Y→u)}). We can then add the following constraint to the problem without altering its weak controllability: {a mathematical formula}x∈[lx,ux].Let {a mathematical formula}ϕ1(X→c,Y→u),⋯,ϕw(X→c,Y→u) be the formulae corresponding to the faces of {a mathematical formula}Ψ(X→c,Y→u). Each face {a mathematical formula}ϕz(X→c,Y→u) is a convex polyhedron and can be expressed as a system of inequalities {a mathematical formula}A(X→c|Y→u)≤b with at least one inequality satisfied as an equality. From this system is easy to extract a linear strategy {a mathematical formula}fz(Y→u) by reducing the augmented matrix {a mathematical formula}(A|b) into reduced row echelon form and applying substitution to extract the relation between {a mathematical formula}X→c and {a mathematical formula}Y→u in closed form.For each face {a mathematical formula}ϕz(X→c,Y→u) we define its projection {a mathematical formula}χz(Y→u)≐∃X→c.ϕz(X→c,Y→u). Since {a mathematical formula}QF_LRA admits quantifier elimination, also {a mathematical formula}χz(Y→u) can be expressed as a {a mathematical formula}QF_LRA formula, and geometrically corresponds to a finite union of convex polyhedra.Therefore, we can build the piecewise-linear weak strategy f defined as follows.{a mathematical formula} Clearly, {a mathematical formula}∀Y→u.(⋁i=1wχi(Y→u))→Γ(Y→u) because we know that P is weakly controllable and we assumed {a mathematical formula}Ψ(X→c,Y→u) to be bounded (being bounded, the projection of all the faces corresponds to the projection of the polyhedral union itself). In addition, each {a mathematical formula}fz(Y→u) applied to a point in {a mathematical formula}χz(Y→u) yields a point belonging to a face of the polyhedron, hence belonging to {a mathematical formula}Ψ(X→c,Y→u). Thus, the strategy is a valid weak strategy for P.  □
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Synthesis of strategies for weak controllability
+     </section-title>
+     <paragraph>
+      We are interested in generating strategies that can be efficiently executed once the situation is known. Given this requirement, linear strategies are very helpful, because they are compact (the size is quadratic in the number of time points) and can be executed by performing a linear computation in the size of the strategy. Piecewise-linear strategies are also helpful because they can be executed in linear time in the size of the strategy as they require only a case switch before applying the linear executor.
+     </paragraph>
+     <paragraph>
+      The problem of synthesizing weak strategies can be classified along two dimensions; we distinguish between (i) convex (STPU) vs. disjunctive (DTPU) temporal problems and (ii) linear vs. piecewise-linear strategies. Table 1 summarizes this classification and indicates the algorithms we developed for each problem class.
+     </paragraph>
+     <paragraph>
+      All the algorithms assume that the given problem is weakly controllable, but it is not known in advance whether the problem admits a linear strategy. Thus, the algorithms listed in the “Linear” column of Table 1 return ⊥ in case no linear strategy exists. The others are guaranteed to find a piecewise-linear strategy. In the rest of this section we analyze each combination of temporal problem class and strategy type separately.
+     </paragraph>
+     <paragraph label="SMT notation">
+      <paragraph>
+       In the following, we present algorithms that use different features provided by modern SMT solvers, such as optimization [35]. We indicate with the prefix “SMT.” the functions that are related with SMT solving. In particular, the function SMT.declareTypeVar(v) declares an SMT variable named v with type Type (e.g. SMT.declareRealVar(v) is the function that declares a real-valued SMT variable). SMT.solve({a mathematical formula}ϕ(x→)) is a function that checks the satisfiability of the formula {a mathematical formula}ϕ(x→) and returns “SAT” if and only if the formula is satisfiable, otherwise the function returns “UNSAT”. SMT.getModel() returns a satisfying assignment to the formula that was checked using SMT.solve if the answer was “SAT”. Finally, the function SMT.solveMaximizing({a mathematical formula}ϕ(x→),{a mathematical formula}h(x→)) behaves like SMT.solve({a mathematical formula}ϕ(x→)) but generates the model that maximizes the function {a mathematical formula}h(x→).
+      </paragraph>
+      <paragraph>
+       In an incremental setting [7], [17], we assume a stateful SMT solver that has the following capabilities. SMT.assert({a mathematical formula}ϕ(x→)) conjoins the formula {a mathematical formula}ϕ(x→) to the state of the SMT solver without performing any solving operation. SMT.push() records a backtrack point in the sate of the SMT solver in a stack. The last recorded state can be restored by calling the SMT.pop() function. Finally, when using incrementality we assume that the SMT.solve function can be called without arguments to check the satisfiability of the conjunction of the currently asserted set of formulae.
+      </paragraph>
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Linear strategies for STPU
+      </section-title>
+      <paragraph>
+       In the following, we discuss two algorithms that are able to synthesize linear strategies for a given STPU problem. They both leverage the convexity in the constraints of the STPU problem class.
+      </paragraph>
+      <section label="6.1.1">
+       <section-title>
+        Vertex encoding
+       </section-title>
+       <paragraph>
+        If the problem is an STPU, then the free constraints represent a convex space: given any two points in the space of free constraints, any point in the line connecting these two points is also a solution. Following this idea we can generalize the result of weak controllability on bounds in [38] to the search of linear strategies. We consider all the vertexes of the uncontrollable space {a mathematical formula}Γ(Y→u) that, by definition of {a mathematical formula}Γ(Y→u), are the elements of the set {a mathematical formula}VΓ≐{l1,1c,u1,1c}×⋯×{lm,1c,um,1c}.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}P≐(Xc,Xu,Cc,Cf)be an STPU,{a mathematical formula}(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u))be its encoding and let{a mathematical formula}f¯:R|Yu|→R|Xc|be a linear strategy. If{a mathematical formula}f¯fulfills{a mathematical formula}Ψ(X→c,Y→u)in all the vertexes{a mathematical formula}vi∈VΓ, then{a mathematical formula}f¯is a weak linear strategy for P.For the sake of contradiction, let us suppose that there exists a point {a mathematical formula}p¯ in the space of {a mathematical formula}Y→u such that {a mathematical formula}Γ(p¯) holds and {a mathematical formula}Ψ(f¯(p¯),p¯) does not hold.Then, there must exist a free constraint {a mathematical formula}ck that is violated by {a mathematical formula}p¯. Since the problem is an STPU, each free constraint is geometrically either a half-space (for example {a mathematical formula}a−b∈[1,∞)) or the intersection of two half-spaces (for example, {a mathematical formula}a−b∈[10,15] is the intersection of the half-space {a mathematical formula}a−b≤15 with {a mathematical formula}a−b≥10). Therefore, {a mathematical formula}p¯ does not belong to one of the half-spaces encoded by {a mathematical formula}ck. Let H be the violating half-space.However, for each vertex {a mathematical formula}vi∈VΓ, {a mathematical formula}f¯(vi) must belong to H because the free constraints are fulfilled in all the vertexes.The point {a mathematical formula}f¯(p¯) belongs to the convex hull of the points {a mathematical formula}f¯(vi), but then it must belong to the half-space H. Hence, we have a contradiction.  □
+       </paragraph>
+       <paragraph>
+        Based on this insight, the idea is to create a single formula that encodes the problem with a symbolic strategy in all the vertexes of the uncontrollable region. The encoding is obtained instantiating the problem constraint in all the vertexes {a mathematical formula}vi∈VΓ and by enforcing a single hyperplane to contain all of them. If such a hyperplane exists, then it is a valid linear strategy for the entire problem.
+       </paragraph>
+       <paragraph>
+        Algorithm 2 shows the pseudo-code for extracting a linear strategy with such encoding. We create a matrix A and a vector {a mathematical formula}c→ of real SMT variables representing the coefficients of the linear strategy. The function VertexAssignments generates all the vertexes of the convex polyhedron corresponding to {a mathematical formula}Γ(Y→u). In order to achieve this result if {a mathematical formula}Γ(Y→u) is generated as in Definition 5, it suffices to generate all the possible combinations of assignments of contingent constraints bounds. We remark that each {a mathematical formula}p¯ is a vector of constants, and therefore the only variables occurring in the formula {a mathematical formula}ϕ(A,c→) are the coefficients of the linear strategy {a mathematical formula}f(Y→u)≐A⋅Y→u+c→. The function SMT.solve checks the satisfiability of the given formula using an SMT solver, while SMT.getModel returns the produced model in case of SAT answer.
+       </paragraph>
+       <paragraph>
+        We presented this algorithm for an encoded problem as formalized in Definition 5, but the same idea can be applied when {a mathematical formula}Γ(Y→u) and {a mathematical formula}Ψ(X→c,Y→u) are simply conjunctive {a mathematical formula}QF_LRA formulae (so that they represent convex polyhedra). The only modification needed for the algorithm is to change the VertexAssignments so that it is able to produce the vertexes of general formulae. For doing this we can employ well known techniques for enumerating the vertexes of a convex polyhedron [3].
+       </paragraph>
+       <paragraph>
+        Consider for example the STPU problem in Fig. 1. The resulting problem admits a linear strategy. The encoding obtained by the application of Algorithm 2 is as follows.{a mathematical formula} The encoding is satisfiable and a possible model (encoding a linear strategy) is reported in Eq. (9).{a mathematical formula} Therefore, the assignments for the controllable time points {a mathematical formula}b1 and {a mathematical formula}b2 are {a mathematical formula}b1≐0 and {a mathematical formula}b2≐−y2+2.
+       </paragraph>
+       <paragraph>
+        Note that, this approach leads to an exponential blowup in the size of the SMT problem, caused by the fact that the number of vertexes is {a mathematical formula}2|Yu|.
+       </paragraph>
+      </section>
+      <section label="6.1.2">
+       <section-title>
+        Incremental weakening
+       </section-title>
+       <paragraph>
+        In order to limit the exponential blowup of the previous encoding to the worst case only, we developed another approach called “incremental weakening”, that tries to limit the number of coefficients to search for and to reduce the amount of variables that are used in the linear strategy. This idea amounts to finding a matrix A in which some (possibly many) columns are null vectors; in fact, if the i-th column is null in A, the strategy does not depend on the actual values of {a mathematical formula}yi. In the limit case in which A is the null matrix, the strategy degenerates to an assignment of constant values to each controllable time points, and thus to a strong controllability solution.
+       </paragraph>
+       <paragraph>
+        We start by solving a relaxed problem, in which no uncontrollable duration is observed. This coincides with the definition of a strong controllability problem. If a solution is found, the strong assignment is a valid weak linear strategy for the problem, because strong controllability implies weak controllability. Otherwise, a subset of the uncontrollable durations {a mathematical formula}p→⊆Y→u is picked and marked as “usable” by the strategy. The algorithm then tries to build a linear strategy that uses uncontrollable durations in {a mathematical formula}p→ only. In this way, we are limiting the observations available to our strategy. Using the previous algorithm, we build the coefficients for the p-th column of the matrix A and we encode the problem as in the previous algorithm, limiting the exponential explosion only to the durations marked as “usable”. If the algorithm fails to find a linear strategy for a particular set of “usable” durations, a different subset of the durations is picked and the approach is iterated, until all the uncontrollable durations are marked as “usable” and the encoding coincides with the previous approach.
+       </paragraph>
+       <paragraph>
+        The pseudo-code of this method is reported in Algorithm 3. The function GetUsableDurations returns a heuristically computed subset of {a mathematical formula}Y→u that constitutes the set of “observed” durations. The function is stateful as it is assumed to return a different subset at each call. The termination of the algorithm requires that this function eventually returns the entire {a mathematical formula}Y→u that exits the repeat loop fulfilling the condition at line 9. In this termination condition, the algorithm behaves like the VertexEncoding procedure executed on the entire problem. The function SC_Encode produces the encoding of a strong controllability problem in SMT (as in [11]). This encoding is used to prevent the observation of non-used durations, leaving the others untouched. The function VertexEncoding is the function described in Algorithm 2. If the VertexEncoding function returns a strategy that works for a subset of the uncontrollable duration variables, we return the same linear strategy completed by the function AddNullColumns. The function adds columns of 0s in the positions of the durations that were not used. This guarantees that the strategy is independent of the actual values of those durations.
+       </paragraph>
+       <paragraph>
+        This algorithm tries to abstract the problem by limiting the set of “usable” durations in a strategy, and refines the abstraction if no linear strategy is found. The process is iterated until a strategy is found or the entire set of durations is marked as “usable”.
+       </paragraph>
+       <paragraph>
+        As shown in the previous section, if we consider the running example in Fig. 1, we can derive a strategy in which {a mathematical formula}y1 is never observed. The advantage of IncrementalWeakening over the previous algorithm is that if we choose to use {a mathematical formula}y2 but not {a mathematical formula}y1 in our strategy we can get to the same result reported in Eq. (9) with a smaller and simpler encoding.
+       </paragraph>
+       <paragraph>
+        This algorithm depends on the heuristic used for selecting the “usable” durations. In fact, the number of cycles of the algorithm directly depends on the heuristic.
+       </paragraph>
+       <paragraph>
+        In our experiments we implemented a heuristic based on a topological sorting of the uncontrollable time points. The heuristic first generates all the singleton subsets and, if the algorithm is not terminated, considers prefixes of the topological order of increasing size until all the durations are marked as “usable” and the algorithm terminates.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Piecewise-linear strategies for STPU
+      </section-title>
+      <paragraph>
+       In the following, we present two algorithms for extracting a piecewise-linear strategy for a given weakly controllable STPU.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Simplexes decomposition
+       </section-title>
+       <paragraph>
+        A direct approach to extract a piecewise-linear strategy consists in partitioning the region of the uncontrollable durations in a set of m-simplexes (hyper-tetrahedra in m dimensions) with {a mathematical formula}m=|Yu|. In geometry, a k-simplex is the generalization of a triangle to k-dimensions. A k-simplex is a k-dimensional polytope which is the convex hull of {a mathematical formula}k+1 linearly independent (i.e. not aligned) vertexes. For example, a 2-simplex is a triangle and a 3-simplex is a tetrahedron. We consider these polyhedra because they can be used to triangulate more complex regions [20]. The following theorem states the existence of a linear strategy in any simplex contained in the uncontrollable space.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}P≐(X→c,Y→u,Γ(Y→u),Ψ(X→c,Y→u))be an encoded weakly controllable STPU. For each{a mathematical formula}|Yu|-simplex{a mathematical formula}σ(Yu→)such that{a mathematical formula}σ(Yu→)⊆Γ(Y→)there exists a valid weak linear strategy f such that{a mathematical formula}∀Y→u.((σ(Y→u)∧X→c=f(Y→u))→Ψ(X→c,Y→u))is valid.Let {a mathematical formula}m≐|Yu→| and V be the set of {a mathematical formula}m+1 vertexes of {a mathematical formula}σ(Yu→). By definition of simplex, {a mathematical formula}σ(Yu→) is the convex hull of the points in V. P is weakly controllable by assumption, therefore for each {a mathematical formula}vi∈V, there exists a point {a mathematical formula}ti that extends {a mathematical formula}vi in the space of {a mathematical formula}X→c∪Y→u such that {a mathematical formula}ti∈Ψ(X→c,Y→u). Let T be {a mathematical formula}{ti|vi∈V}.Let f be a linear strategy {a mathematical formula}A⋅Y→u+c→, such that for each controllable time point {a mathematical formula}bi∈Xc, {a mathematical formula}bi=Ai,1y1+⋯+Ai,mym+ci is the hyperplane passing through all the points {a mathematical formula}ti∈T. Such a hyperplane exists and is unique because it is the m-hyperplane containing the {a mathematical formula}m+1 not-collinear [14] points {a mathematical formula}ti∈T (points in T are not collinear as they are the results of an extension of the points in V that are not collinear because are the {a mathematical formula}m+1 vertexes of a simplex).We now prove that f is a strategy such that {a mathematical formula}∀Y→u.(σ(Y→u)∧X→c=f(Y→u))→Ψ(X→c,Y→u) is valid by showing that the hyperplane {a mathematical formula}bi=Ai,1y1+⋯+Ai,mym+ci is contained in {a mathematical formula}Ψ(X→c,Y→u) for each {a mathematical formula}Y→u⊨σ(Yu→). Since the hyperplane contains all the {a mathematical formula}ti∈T, for each point k in the convex hull of V, the hyperplane computed in k is contained in {a mathematical formula}Ψ(X→c,Y→u) because of the convexity of {a mathematical formula}Ψ(X→c,Y→u). This proves the thesis because {a mathematical formula}σ(Yu→) is the convex hull of the points in V.  □
+       </paragraph>
+       <paragraph>
+        In order to exploit Theorem 5 we need to be able to split the uncontrollable space into simplexes. Doing so would allow us to split the problem of finding a piecewise-linear strategy for the whole problem in the problem of finding linear strategies for each simplex and then combine them.
+       </paragraph>
+       <paragraph>
+        The uncontrollable region {a mathematical formula}Γ(Y→u) is a hyper-rectangle, and the minimum number of simplexes needed to cover a hyper-rectangle is an open mathematical problem [20]. However, it is known that any hyper-rectangle in m dimensions can be split in a factorial number of simplexes (m!). For example, a rectangle can be split in 2 triangles, and a rectangular cuboid can be covered by 6 tetrahedrons.
+       </paragraph>
+       <paragraph>
+        Given {a mathematical formula}Γ(Y→u), we can obtain all the simplexes using the following idea. Suppose that the bounds for all the uncontrollable variables are {a mathematical formula}[0,1]. Then, let R be the region satisfying the sequence of inequalities {a mathematical formula}yp1≤yp2≤⋯≤ypm where {a mathematical formula}(p1,…,pm) is a permutation of {a mathematical formula}(1,…,m) and m is the number of uncontrollable duration variables. It can be shown that R is a simplex and that the simplexes generated for all the permutations form a partition of the uncontrollable space [20]. In the general case, when we can have arbitrary bounds, we apply the very same idea, permuting the variables and considering the inequalities arising from considering the concrete lower/upper bounds.
+       </paragraph>
+       <paragraph>
+        Using this approach, we have to enumerate all the permutations of the uncontrollable variables. Thus, the number of considered simplexes is factorial in the number of uncontrollable variables (i.e. {a mathematical formula}|Yu|!).
+       </paragraph>
+       <paragraph>
+        For each simplex it is possible to find a linear strategy separately by enforcing a hyperplane to satisfy the problem constraints in all the simplex vertexes. In Fig. 8 we depicted an example of this idea for the running example problem.
+       </paragraph>
+       <paragraph>
+        Algorithm 4 shows the pseudo-code for extracting a piecewise linear strategy by enumerating all the simplexes and finding a linear strategy for every simplex. The computational complexity of this algorithm is factorial due to the enumeration of all the {a mathematical formula}(|Yu|!) simplexes.
+       </paragraph>
+       <paragraph>
+        In the pseudo-code, the function GetMaximalSimplexes enumerates a sequence of {a mathematical formula}|Yu|-simplexes needed to cover the {a mathematical formula}Γ(Y→u) polyhedron, while VertexEncoding returns a linear strategy suitable for the given simplex.{sup:5} We obtain the resulting piecewise-linear strategy f by adding a piece for each simplex by means of the function AddPieceToStrategy.
+       </paragraph>
+       <paragraph>
+        Consider the problem in Fig. 6; the algorithm works as follows. We first consider the simplex with vertexes {a mathematical formula}{(0,1),(0,2),(3,1)} in the space of {a mathematical formula}y1 and {a mathematical formula}y2. A possible linear strategy in this simplex is {a mathematical formula}f1=A1⋅Y→u+c→1 as follows.{a mathematical formula} We then consider the second maximal simplex with vertexes {a mathematical formula}{(0,2),(3,1),(3,2)}. A possible linear strategy in this simplex is {a mathematical formula}f2=A2⋅Y→u+c→2 as follows.{a mathematical formula} The algorithm combines such strategies in a valid piecewise-linear weak strategy f as follows.{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Lazy expansion
+       </section-title>
+       <paragraph>
+        To overcome the complexity limitation of the previous approach we developed a second technique, called Lazy Expansion, that first selects a simplex in the uncontrollable region and finds a linear strategy in that simplex. Second, we symbolically compute the region of the uncontrollable durations that is satisfied by the computed strategy. In this way, we perform a “widening” of the portion of the uncontrollable space that can be satisfied using the computed linear strategy. This widened region is guaranteed to cover at least the simplex, but it might be larger. We then associate the computed strategy to the resulting region. Finally, we search a new simplex in the remaining part of the space of uncontrollable durations. The algorithm terminates when the space of uncontrollable durations is completely covered. The idea behind the approach is to generalize the strategy found for a particular simplex to cover a wider potion of the space of the uncontrollable durations. The algorithm lazily picks a simplex from the region of the uncontrollable durations to be covered and gets a strategy that is able to cover that particular simplex. We then generalize the applicability of the returned strategy and proceed until we completely cover the uncontrollable space. The main advantage of this algorithm with respect to the previous one is that it is not forced to enumerate all the possible simplexes, because the computed strategy once found is exploited in all the possible points of the space where it is applicable.
+       </paragraph>
+       <paragraph>
+        Algorithm 5 shows the pseudo-code for extracting a piecewise linear strategy exploiting lazy expansion. The function GetUncoveredSimplex returns any simplex {a mathematical formula}σ(Y→u) completely contained in the uncontrollable region {a mathematical formula}Γ(Y→u). At each step we compute the widening of the simplex {a mathematical formula}o(Y→u), that is the region in which the computed linear strategy {a mathematical formula}fsub is applicable. In order to symbolically obtain this region, we substitute the {a mathematical formula}LRA encoding of the strategy {a mathematical formula}fsub in the free constraints {a mathematical formula}Ψ(X→c,Y→u). In this way, each controllable time point variable {a mathematical formula}bi∈X→c is replaced by the linear term that computes it according to {a mathematical formula}fsub, and we are left with a formula defined over {a mathematical formula}Y→u. Each model of such formula, is a point in the uncontrollable region for which the application of {a mathematical formula}fsub fulfills the free constraints of the problem. We use this procedure to create “bigger” pieces and reduce the number of iterations of the algorithm.
+       </paragraph>
+       <paragraph>
+        In general, this algorithm is not guaranteed to terminate. In fact, termination can be assured with the following two requirements. First, each region {a mathematical formula}σ(Y→u) covers a non-empty volume of the space of the uncontrollable durations. This is needed for progression: the piece of strategy computed at each step is guaranteed to cover at least the simplex that originated it (at each step {a mathematical formula}σ(Y→u)⊨LRAo(Y→u)). The second requirement is to have progression, that is we disallow infinite decomposition chains for finite regions. If we avoid empty regions and infinite subdivisions of finite regions, we will eventually get to the empty region, and thus to unsatisfiability and termination.
+       </paragraph>
+       <paragraph>
+        In our implementation, we do not guarantee termination. However, the algorithm correctly terminated in all our experiments and in many cases it performed much faster than the SimplexesDecomposition algorithm. One possibility to guarantee the termination would be to hybridize this algorithm with the SimplexesDecomposition approach by bounding the number of loops of the LazyExpansion procedure or to take a portfolio approach.
+       </paragraph>
+       <paragraph>
+        One key issue for the efficiency of this approach resides in finding good simplexes to cover a (possibly non-convex) region {a mathematical formula}η(Y→u). Defining what a “good” simplex is for the algorithm performance is a non-trivial task because the aim is to terminate with a minimum number of iterations, and thus to obtain a decomposition of {a mathematical formula}Γ(Y→u) in a minimal set of {a mathematical formula}oi(Y→u) regions.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Linear strategies for DTPU
+      </section-title>
+      <paragraph>
+       We now consider the DTPU problem class and we provide algorithms for strategy synthesis starting from the linear case.
+      </paragraph>
+      <paragraph>
+       A way of computing the elements of matrix A and vector {a mathematical formula}c→ for a linear strategy is an encoding of the constraints in the theory of Nonlinear Real Arithmetic over Polynomials ({a mathematical formula}NRA). In fact, we can compactly express the properties of each entry of A and {a mathematical formula}c→ by imposing constraints on polynomials. Eq. (10) is an encoding into {a mathematical formula}NRA for extracting a linear strategy for any TPU problem in a single check.{a mathematical formula} The idea is to let the solver search for the {a mathematical formula}Ai,j and {a mathematical formula}ci coefficients of the linear combination of {a mathematical formula}Y→u that represent the set of hyper-planes that are strategies for each {a mathematical formula}bi∈X→c. If the solver reports unsatisfiable, it means that no linear strategy exists for the given problem. This approach directly follows from the definition of linear strategy and is applicable to the entire spectrum of temporal problems with uncertainty because no assumption on the convexity of the search space is made.
+      </paragraph>
+      <paragraph>
+       As an example we show the encoding of Eq. (10) applied to the TPU in Fig. 6, to remark the fact that no linear strategy exists for this problem.{a mathematical formula} The running example problem is an STPU, but the approach presented here is more general. In fact, given a procedure that is able to decide {a mathematical formula}NRA formulae with arbitrary disjunctions we can deal with DTPU as well. For example, the Cylindrical Algebraic Decomposition (CAD) procedure [12] can deal with this kind of formulae.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Piecewise-linear strategies for DTPU
+      </section-title>
+      <paragraph>
+       In this section we analyze the synthesis of a piecewise-linear strategy for a DTPU. When dealing with a DTPU, the convexity assumptions holding for the STPU case are not valid anymore. We present two algorithms for the strategy synthesis in the DTPU problem class. The “skin crawler” method searches a strategy by considering the faces of the DTPU solution space considered as a polyhedron. The “convex region enumerator” approach, instead, decomposes the DTPU in a number of convex regions and applies the techniques for the STPU problem class on each of them.
+      </paragraph>
+      <section label="6.4.1">
+       <section-title>
+        Skin crawler
+       </section-title>
+       <paragraph>
+        An intuition that can be exploited to synthesize a weak strategy for the DTPU problem class is obtained from the proof of Theorem 3. The idea is to iterate on the faces of {a mathematical formula}Ψ(Xc→,Yu→) and to project each of them in the space of {a mathematical formula}Y→u until the entire {a mathematical formula}Γ(Y→u) region is covered by the projections. Such an iteration can be done efficiently by exploiting the optimization features of many modern SMT solvers.
+       </paragraph>
+       <paragraph>
+        The top-level procedure, shown in Algorithm 6, iterates over the faces and extracts a linear strategy for each face, accumulating this result in a piecewise-linear strategy.
+       </paragraph>
+       <paragraph>
+        The face extraction procedure (Algorithm 7) starts by extracting all the equalities from the free constraints. Since the free constraints are made of non-strict inequalities, we aim at extracting the skin of the free constraints by considering the equality {a mathematical formula}a−b=k derived from {a mathematical formula}a−b&lt;=k. The algorithm uses an optimization procedure that maximizes the number of equalities satisfied at each step represented by the variable satEqualities. In this way, considering the conjunction of all the satisfied equalities, we first explore the vertexes, then the edges and finally the faces. The conjunction of equalities is actually a system of linear equalities representing a face. In order to extract a strategy from a face, we transform a conjunction of linear equalities into matrix form. As an optimization we discard systems that have dimension lower than the number of uncontrollable durations. This prevents the creation of pieces representing regions having null volume.
+       </paragraph>
+       <paragraph>
+        The algorithm termination depends only on the termination of the GetFaceStrategies procedure. The procedure is guaranteed to terminate because at each step we add a new clause to {a mathematical formula}χ(Xc→,Yu→) that forces at least one equality that was positive in the found model to be false. Therefore we can have at most an exponential number of cycles with respect to the number of equalities in {a mathematical formula}Equalities(Ψ(Xc→,Yu→)).
+       </paragraph>
+      </section>
+      <section label="6.4.2">
+       <section-title>
+        Convex region enumerator
+       </section-title>
+       <paragraph>
+        We can exploit the possibility of generating a strategy for the convex case by enumerating the convex regions in the space of free constraints.
+       </paragraph>
+       <paragraph>
+        This idea requires the possibility to deal with a possibly non-convex {a mathematical formula}Γ(Y→u) because the projection of a convex polyhedron space intersected with the non-convex {a mathematical formula}Γ(Y→u) can generate non-convex (and non-rectangular) regions. The LazyExpansion algorithm is able to deal with such constraints, because no constraint is imposed on the shape of {a mathematical formula}Γ(Y→u) during the algorithm execution.
+       </paragraph>
+       <paragraph>
+        In this case, we need to enumerate a set of convex formulae {a mathematical formula}{μi(X→c,Y→u)|i∈[1,I]} such that {a mathematical formula}⋁i=1Iμi⇔Ψ(X→c,Y→u). Such formulae can be obtained by computing the Disjunctive Normal Form (DNF) of the formula {a mathematical formula}Ψ(X→c,Y→u). From the practical point of view, each disjunct is either an atom of the original formula or its negation. The DNF can be efficiently computed in the SMT framework using an incremental mechanism.
+       </paragraph>
+       <paragraph>
+        Algorithm 8 shows the pseudo-code for the Convex Region Enumerator algorithm for the weak strategy synthesis of DTPU problems.
+       </paragraph>
+       <paragraph>
+        The algorithm works as follows. First it selects any consistent temporal evolution by solving the SMT problem of the conjunction of the contingent and free constraints. Given the consistent model, the algorithm extracts the free constraints atoms that are satisfied and the atoms that are not fulfilled. The region obtained by conjoining all those atoms is a convex (non-necessarily closed) polyhedron. We compute the projection of such a polyhedron in the region of the uncontrollable durations and we compute a strategy for this quasi-STPU problem.{sup:6} The obtained strategy is applied in the covered region that is removed from the problem together with the polyhedron. This ensures the algorithm termination, because at each step we remove a model of the Boolean abstraction from the {a mathematical formula}ρ(Xc→,Yu→) formula.
+       </paragraph>
+       <paragraph>
+        In the pseudo-code, the function Project performs a quantifier elimination in order to compute the projection of a given polyhedron onto the given space and is used to compute the uncontrollable region that is covered by the selected polyhedron.
+       </paragraph>
+       <paragraph>
+        Termination is not guaranteed, because we internally use the LazyExpansion algorithm that is incomplete; however, also in this case, the algorithm terminated in all the benchmarks.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      In order to empirically test the effectiveness of the proposed approaches, we implemented a tool for deciding weak controllability and synthesizing weak strategies for a TPU. Our tool is implemented in Python. It reads a TPU problem, and applies to it the portfolio of encodings and algorithms we presented in this paper. The tool can synthesize explicit strategies as C++ functions (taking in input a situation), that can be compiled and linked in any program. We used the Z3[17] SMT solver for the weak controllability decision problem; we rely on the Python API provided by the MathSAT5[7] SMT solver for all the strategy-synthesis techniques.
+     </paragraph>
+     <paragraph>
+      We tested the tool on a set of benchmarks described in detail below. We remark that, as far as our knowledge is concerned, there are no competitor tools or solvers able to deal with the weak controllability decision problem, nor with the synthesis of a weak strategy. Thus, in the experimental evaluation, we do not compare with any other tool or approach. All the experiments have been performed on a Scientific-Linux server equipped with two quad-core Xeon processors @ 2.70 GHz. We used a memory limit of 2 GB, a time-out of 300 seconds and we used sequential, single-core computation only. The tool, together with all the benchmarks and the results of the evaluation, can be downloaded from https://es.fbk.eu/people/roveri/tests/aij-weakcontr.
+     </paragraph>
+     <paragraph>
+      The randomly-generated benchmarks were obtained by modifying the generator of temporal problems presented in [2] by introducing uncertainty in the problem: each constraint introduced by the consistency problem generator is turned into a contingent constraint with a given probability, and its destination node is considered as uncontrollable. We used random instance generators because they are typically used in the literature (e.g. [2]), and because they can be easily scaled to stress the solvers.
+     </paragraph>
+     <paragraph>
+      We tested the decision problem encoding over a set of 2442 randomly generated DTPU, TCSPU and STPU instances, with a number of time points ranging from 6 to 20000. For the evaluation of the strategy-extraction techniques, we used 1354 weakly controllable STPU benchmarks and 2112 weakly controllable DTPU instances ranging from 4 to 50 time points.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Decision problem
+      </section-title>
+      <paragraph>
+       The results of checking the decision problem over the set of TPUs are plotted in Fig. 9. The cactus plot (a) reports, in the horizontal axis, the number of solved instances and, on the vertical axis, the cumulative time, in logarithmic scale, taken by the SMT solver for each encoding. For example, the Assumption-Extraction encoding takes about 10000 seconds to solve the easiest 750 instances. We compared the formulation of Proposition 1 called Direct with the Inverted and Assumption-Extraction encodings.
+      </paragraph>
+      <paragraph>
+       The figure highlights the fact that Z3 performs much better when the Assumption-Extraction encoding of the problem is considered: in fact, this approach is able to solve, in less time, a higher number of instances with respect to the Inverted and Direct encodings. The Direct encoding performs almost identically to the Inverted one. This behavior is due to the fact that the Inverted encoding has the same shape as the Direct one. The only difference is the negation of the Direct encoding, that does not affect the solver performance.
+      </paragraph>
+      <paragraph>
+       In Figs. 9(b) and 9(c) we reported the scatter plots comparing the performances of the Assumption-Extraction with the Inverted encodings, distinguishing between weakly controllable and non-weakly controllable instances. We note that, in the weakly controllable case, the Assumption-Extraction encoding outperforms the Inverted encoding in most of the benchmarks. For non-weakly controllable instances, the two encodings perform similarly in terms of speed. However, the Inverted encoding is able to solve 86 instances that are unsolvable by the Assumption-Extraction encoding due to the imposed memory limit.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       STPU strategy synthesis
+      </section-title>
+      <paragraph>
+       The results for the evaluation of the strategy-extraction techniques for the 1354 STPU benchmarks are reported in Fig. 10(a). The plot considers only those benchmarks that admit a linear strategy, and compares the four different approaches. The plot clearly shows that for linear strategies, the IncrementalWeakening approach outperforms all the others. The SimplexesDecomposition method quickly explodes due to the factorial complexity of simplexes enumeration. Although the techniques for piecewise-linear strategy extraction are penalized as they are strictly more general than the others, the plot shows that LazyExpansion approach is much faster than the SimplexesDecomposition. In Fig. 10(b) we plotted the number of “pieces” of the strategies for the LazyExpansion and SimplexesDecomposition methods. The plot clearly shows that, although for small problems the LazyExpansion approach generates additional, unneeded “pieces”, when the problem size increases the number of “pieces” identified by the LazyExpansion method is much smaller than for the SimplexesDecomposition one. In general, the LazyExpansion approach has a huge gain in performances and in strategy size.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       DTPU strategy synthesis
+      </section-title>
+      <paragraph>
+       In Fig. 11 we report the results on the DTPU problem class. The plots clearly show that the ConvexRegionEnumerator algorithm performs better than the SkinCrawler one. This is because of two main reasons. First, the SkinCrawler approach solves a costly minimization problem and has to traverse all the faces of the space of free constraints while the ConvexRegionEnumerator algorithm applies the cheap LazyExpansion approach to each convex region that is generated by a single call to the SMT solver. Second, the linear strategy generated by the LazyExpansion approach is generalized and applied wherever possible, therefore if the problem allows for a linear strategy the ConvexRegionEnumerator algorithm is able to quickly synthesize it, while the SkinCrawler has to enumerate enough faces to cover the entire uncontrollable space.
+      </paragraph>
+      <paragraph>
+       There is an interesting peak on the rightmost part of the ConvexRegionEnumerator curve in the plot. This is due to a particular instance that is solved in 287.28 seconds generating a strategy with 3750 pieces (thus using the same number of iterations to terminate). This is one example in which the splitting done by the LazyExpansion approach gets lost in splitting the uncontrollable space in simplexes.
+      </paragraph>
+      <paragraph>
+       Finally, we did not experimented the effectiveness of the {a mathematical formula}NRA encoding for two reasons. First, since a linear strategy is not guaranteed to exist for STPUs, it is also not guaranteed to exist in DTPUs. Second, the {a mathematical formula}NRA approach needs a solver supporting the quantification over the real polynomial arithmetic (the full polynomial {a mathematical formula}NRA theory), and to the best of our knowledge, no SMT solver fully supports this theory due to its complexity, even if the problem is decidable [12].
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Strategy execution
+      </section-title>
+      <paragraph>
+       In this paper we proposed a number of approaches to synthesize weak strategies arguing that their execution is practically more efficient than solving the individual problems without uncertainty obtained by projecting the uncertainty away. In this section we provide experimental evidence supporting this claim on a number of STPU and DTPU instances.
+      </paragraph>
+      <paragraph>
+       We conducted the experiment as follows. For each TPU, we randomly generated 1000 situations, represented as complete assignments for the uncontrollable durations. We implemented the Implicit-SMT and Implicit-SMT-Incremental general strategies described in Section 5.1 using the MathSAT5 SMT solver. Other TP solvers can, in principle, be employed to create implicit strategies, but SMT solvers showed to be effective in dealing with consistency problems [11]. For this reason, and for the lack of publicly available implemented solvers, we limited our experimentation to the SMT based techniques described in Section 5.1.
+      </paragraph>
+      <paragraph>
+       In addition, we considered three ways to compile in machine code the problem-specific strategies generated by the algorithms presented in this paper. We translated the linear or piecewise-linear strategy synthesized by any of our algorithms into a C++ code. The translation for linear strategies is straight-forward: we create a function that takes in input a numeric value for each uncontrollable duration and we compute the output of the strategy by solving the matrix multiplication as described in Section 5.2. Given a piecewise-linear strategy, we translate it using a sequence of if statements, one for each piece. The condition of each if is the transposition in C++ syntax of the piece condition. Each conditional statement returns the value computed by the translation of the linear strategy relative to the particular piece. We used three different datatypes to represent numeric values and perform the arithmetic operations. In particular, we used the (finite-precision) C++ float and double and the GNU-GMP library for arbitrary precision arithmetic.{sup:7} The float and double datatypes are a finite-precision representation of rational numbers. As such, they suffer from both numeric stability and rounding problems that may, in principle, cause unsoundness in the strategy output. On the other hand, GNU-GMP is the same library employed by the MathSAT5 SMT solver and does not suffer from any kind of numeric stability or rounding problems.
+      </paragraph>
+      <paragraph>
+       Fig. 12 shows the results of the comparison: in our experiments the explicit strategies outperform projection-based implicit strategies. Implicit-SMT-Incremental performs better than Implicit-SMT, thanks to the incrementality feature of the SMT solver, but the explicit strategies bring a significant speedup on all the instances. Arbitrary-precision arithmetic (that fairly compares with the SMT precision) outperforms projection-based techniques by two orders of magnitude. The compiled strategies with native C++ datatypes perform even better, but the numerical stability problems can, in principle, lead to unsound results. We checked the output of each technique on each situation in order to assess the soundness, but all the results were correct. Nevertheless, studying under which condition we can guarantee that such finite-precision implementations are correct is subject of future work. We highlight that the compilations using native C++ datatypes can be translated to Boolean circuits, and open for the possibility to create very efficient hardware implementations of these strategies.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The literature in temporal problems is vast. Starting from the seminal paper of Dechter [18] describing STP and TCSP, many authors worked in the field of temporal reasoning without uncertainty [2], [36]. Armando et al. [2] were the first proposing the use of SMT in the field of temporal problems tackling the DTP problem class. This work focuses on temporal problems without uncertainty, and is thus limited to checking the consistency of a given TP.
+     </paragraph>
+     <paragraph>
+      Fargier and Vidal introduced the concept of STPU and described the three controllability levels [38]. This work has been extended for TCSPU and DTPU in [32], [37].
+     </paragraph>
+     <paragraph>
+      Concerning strong controllability, this work already contained a polynomial algorithm for schedule synthesis of STPU. For TCSPU and DTPU, the strong controllability problem has been studied, from a theoretical point of view, by Peintner et al. in [32]; a number of techniques that leverage SMT solvers to obtain a practical solver are presented in our previous work [11].
+     </paragraph>
+     <paragraph>
+      For the decision problem of weak controllability, in [38] a basic algorithm for the STPU class is presented. In [37], Venable et al. approached the problem of deciding weak controllability of DTPU using an explicit algorithm that enumerates the STPU components of a DTPU. In this work we also tackle the DTPU class, but we exploit symbolic techniques to avoid this explicit enumeration, delegating it to the SMT solver, that can exploit advanced mitigation techniques, such as variable selection heuristics and conflict learning. In addition, both [38] and [37] take a purely theoretical point of view of the problem, while here we formalize and encode the weak controllability decision problem in the SMT framework to obtain practical experimental results.
+     </paragraph>
+     <paragraph>
+      The only work in the literature for the strategy extraction problem for weak controllability is our previous work [10]. In [10] we presented the algorithms for linear and piecewise-linear strategy extraction for the STPU problem class. In this paper, we cover the more general DTPU problem class, considering the strategy synthesis problem in presence of disjunctions. We provide a more detailed theory discussion, we add the proof of existence of piecewise linear strategies for any weakly controllable TPU, and proofs and explanations that were not included in [10]. Also, the experimental evaluation has been extended and clarified.
+     </paragraph>
+     <paragraph>
+      There exists another form of controllability for TPUs, namely dynamic controllability. The key difference is that in the case of dynamic controllability the strategy is not allowed to observe the entire situation, but each decision can only depend on past events. The problem of dynamic controllability for STPU is a widely studied problem [29], [28], [27], [21], [22], in fact many algorithms have been devised for deciding the dynamic controllability of a STPU. For the disjunctive problem classes, in [37], Venable et al. present an algorithm for deciding dynamic controllability for TCSPU, while in [8] we, Hunsberger and Poseanto present a decision procedure for DTPUs based on a reduction of the dynamic controllability problem to the reachability problem in a Timed Game Automaton. Also in the field of dynamic controllability, strategy synthesis is a relevant topic: many authors presented implicit strategies for the runtime scheduling of time points [27], [22] for STPU. Those strategies require on-line reasoning and are based on generating networks that can be dispatched by a runtime algorithm using constraint propagation techniques. Recently, we started a research line aiming at synthesizing explicit strategies for dynamic controllability in the STPU problem class [9] and in the DTPU problem class [8]. In these works, we present encodings of the dynamic controllability problem into reachability games in Timed Gamed Automata for which constructive solution techniques exist. The strategies generated can be converted in implicit strategies for the TPU that are similar to the one we synthesize in this paper, for weak controllability.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      In this paper we presented the first comprehensive approach to the problem of weak controllability for TPUs. We cover the problem in its full generality, in the case of TPUs with disjunctions. We work in a logic-based framework, that relies on SMT techniques to achieve an efficient implementation. We make the following contributions: we provide the first effective procedure for deciding the weak controllability of DTPU; we investigate the problem of repeated execution; we propose various constructive forms of strategy extraction. The experimental evaluation shows the feasibility of the method, and demonstrates dramatic speed ups on explicit over implicit strategy execution.
+     </paragraph>
+     <paragraph>
+      In the future, we will investigate the following research lines. The “incremental weakening” approach for linear strategy extraction and the “lazy decomposition” approach for piecewise-linear strategy extraction are strongly influenced by the selection heuristics. We will investigate the possibility of using topological information for the generation of effective subsets of {a mathematical formula}y→ in “incremental weakening”, and the use of extremal simplexes in the “lazy decomposition” approach. We plan to study the applicability to the strategy construction problem of SMT proof-extraction techniques: the capability of modern solvers to extract proofs of unsatisfiability could provide a way to extract the strategy while proving weak controllability. In addition, determining under which conditions a finite state representation is guaranteed to be applicable, can open the way to more efficient and even hardware-implemented strategies. Finally, we believe that the techniques we described can pave the way to efficient explicit strategies for dynamic controllability, where strategies are required to rely only on the observation of events that have already occurred. In particular, we plan to combine the approaches to strong and weak controllability, to explore the continuum in between.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

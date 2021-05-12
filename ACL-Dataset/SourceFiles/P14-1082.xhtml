@@ -1,0 +1,1178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Translation Assistance by Translation of L1 Fragments in an L2 Context</title>
+<!--Generated on Tue Jun 10 18:10:44 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Translation Assistance by Translation of L1 Fragments in an L2 Context</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Maarten van Gompel &amp; Antal van den Bosch 
+<br class="ltx_break"/>Centre for Language Studies 
+<br class="ltx_break"/>Radboud University Nijmegen 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">proycon@anaproy.nl</span>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper we present new research in translation assistance. We
+describe a system capable of translating native language (L1)
+fragments to foreign language (L2) fragments in an L2
+context. Practical applications of this research can be framed in
+the context of second language learning. The type of translation
+assistance system under investigation here encourages language
+learners to write in their target language while allowing them to
+fall back to their native language in case the correct word or
+expression is not known. These code switches are subsequently
+translated to L2 given the L2 context. We study the
+feasibility of exploiting cross-lingual context to obtain
+high-quality translation suggestions that improve over statistical
+language modelling and word-sense disambiguation baselines. A
+classification-based approach is presented that is indeed found to
+improve significantly over these baselines by making use of a
+contextual window spanning a small number of neighbouring words.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Whereas machine translation generally concerns the translation of
+whole sentences or texts from one language to the other, this study
+focusses on the translation of native language (henceforth L1) words
+and phrases, i.e. smaller fragments, in a foreign language (L2)
+context. Despite the major efforts and improvements, automatic
+translation does not yet rival human-level quality. Vexing issues are
+morphology, word-order change and long-distance dependencies. Although
+there is a morpho-syntactic component in this research, our
+scope is more constrained; its focus is on the faithful preservation
+of meaning from L1 to L2, akin to the role of the translation model in
+Statistical Machine Translation (SMT).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The cross-lingual context in our research question may at first seem
+artificial, but its design explicitly aims at applications related to
+computer-aided language learning <cite class="ltx_cite">[]</cite> and computer-aided
+translation <cite class="ltx_cite">[]</cite>. Currently, language learners need to refer to a
+bilingual dictionary when in doubt about a translation of a word or phrase.
+Yet, this problem arises in a context, not in isolation; the learner may have
+already translated successfully a part of the text into L2 leading up to the
+problematic word or phrase. Dictionaries are not the best source to look up
+context; they may contain example usages, but remain biased towards single
+words or short expressions.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The proposed application allows code switching and produces context-sensitive
+suggestions as writing progresses. In this research we test the feasibility of
+the foundation of this idea.The following examples serve to illustrate the idea
+and demonstrate what output the proposed translation assistance system would
+ideally produce. The parts in bold correspond to respectively the inserted
+fragment and the system translation.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Input (L1=English,L2=Spanish): <em class="ltx_emph">“Hoy vamos a <span class="ltx_text ltx_font_bold">the swimming
+pool</span>.”</em> 
+<br class="ltx_break"/>Desired output: <em class="ltx_emph">“Hoy vamos a <span class="ltx_text ltx_font_bold">la piscina</span>.”</em></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Input (L1-English, L2=German): <em class="ltx_emph">“Das wetter ist wirklich
+<span class="ltx_text ltx_font_bold">abominable</span>.”</em> 
+<br class="ltx_break"/>Desired output: <em class="ltx_emph">“Das wetter ist wirklich <span class="ltx_text ltx_font_bold">ekelhaft</span>.”</em></p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Input (L1=French,L2=English): <em class="ltx_emph">“I <span class="ltx_text ltx_font_bold">rentre à la maison</span> because
+I am tired.”</em> 
+<br class="ltx_break"/>Desired output: <em class="ltx_emph">“I <span class="ltx_text ltx_font_bold">return home</span> because I am tired.”</em></p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">Input (L1=Dutch, L2=English): <em class="ltx_emph">“Workers are facing a massive <span class="ltx_text ltx_font_bold">aanval
+op</span> their employment and social rights.”</em> 
+<br class="ltx_break"/>Desired output: <em class="ltx_emph">“Workers are facing a massive <span class="ltx_text ltx_font_bold">attack on</span>
+their employment and social rights.”</em></p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The main research question in this research is how to disambiguate an L1 word
+or phrase to its L2 translation based on an L2 context, and whether such
+cross-lingual contextual approaches provide added value compared to baseline
+models that are not context informed or compared to standard language models.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Data preparation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Preparing the data to build training and test data for our intended
+translation assistance system is not trivial, as the type of
+interactive translation assistant we aim to develop does not exist yet. We
+need to generate training and test data that realistically emulates
+the task. We start with a parallel corpus that is tokenised for both
+L1 and L2. No further linguistic processing such as part-of-speech
+tagging or lemmatisation takes place in our experiments; adding this
+remains open for future research.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The parallel corpus is randomly sampled into two large and
+equally-sized parts. One is the basis for the training set, and the
+other is the basis for the test set. The reason for such a large test
+split shall become apparent soon.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">From each of the splits (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>), a phrase-translation table is constructed
+automatically in an unsupervised fashion. This is done using the scripts
+provided by the Statistical Machine Translation system Moses <cite class="ltx_cite">[]</cite>. It
+invokes GIZA++ <cite class="ltx_cite">[]</cite> to establish statistical word alignments based on
+the IBM Models and subsequently extracts phrases using the
+<span class="ltx_text ltx_font_typewriter">grow-diag-final</span> algorithm <cite class="ltx_cite">[]</cite>. The result, independent
+for each set, will be a phrase-translation table (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>) that maps phrases in L1
+to L2. For each phrase-pair (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="f_{s},f_{t}" display="inline"><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>,</mo><msub><mi>f</mi><mi>t</mi></msub></mrow></math>) this phrase-translation table holds the computed
+translation probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="P(f_{s}|f_{t})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>s</mi></msub><mo>|</mo><msub><mi>f</mi><mi>t</mi></msub><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="P(f_{t}|f_{s})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>t</mi></msub><mo>|</mo><msub><mi>f</mi><mi>s</mi></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Given these phrase-translation tables, we can now extract both training data
+and test data using the algorithm in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Data preparation ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. In our discourse, the source language (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>) corresponds to L1, the
+fallback language used for by the end-user for inserting fragments, whilst the
+target language (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>) is L2.</p>
+</div>
+<div id="S2.F1" class="ltx_figure">
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">using phrase-translation table <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> and parallel corpus split <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math></p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">for</span> each aligned sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="({sentence}_{s}\in S_{s},{sentence}_{t}\in S_{t})" display="inline"><mrow><mo>(</mo><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>s</mi></msub></mrow><mo>∈</mo><msub><mi>S</mi><mi>s</mi></msub></mrow><mo>,</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>t</mi></msub></mrow><mo>∈</mo><msub><mi>S</mi><mi>t</mi></msub></mrow></mrow><mo>)</mo></mrow></math> in the parallel corpus split (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="S_{s}" display="inline"><msub><mi>S</mi><mi>s</mi></msub></math>,<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="S_{t}" display="inline"><msub><mi>S</mi><mi>t</mi></msub></math>):</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">for</span> each fragment <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="(f_{s}\in{sentence}_{s},f_{t}\in{sentence}_{t})" display="inline"><mrow><mo>(</mo><mrow><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>∈</mo><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>s</mi></msub></mrow></mrow><mo>,</mo><mrow><msub><mi>f</mi><mi>t</mi></msub><mo>∈</mo><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>t</mi></msub></mrow></mrow></mrow><mo>)</mo></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m2" class="ltx_Math" alttext="(f_{s},f_{t})\in T" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>,</mo><msub><mi>f</mi><mi>t</mi></msub></mrow><mo>)</mo></mrow><mo>∈</mo><mi>T</mi></mrow></math>:</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">if</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m1" class="ltx_Math" alttext="P(f_{s}|f_{t})\cdot P(f_{t}|f_{s})\geq\lambda_{1}" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>s</mi></msub><mo>|</mo><msub><mi>f</mi><mi>t</mi></msub><mo>)</mo></mrow><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>t</mi></msub><mo>|</mo><msub><mi>f</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>≥</mo><msub><mi>λ</mi><mn>1</mn></msub></mrow></math>
+<span class="ltx_text ltx_font_bold">and</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m2" class="ltx_Math" alttext="P(f_{s}|f_{t})\cdot P(f_{t}|f_{s})\geq\lambda_{2}\cdot P(f_{s}|f_{strongest\_t%&#10;})\cdot P(f_{strongest\_t}|f_{s})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>s</mi></msub><mo>|</mo><msub><mi>f</mi><mi>t</mi></msub><mo>)</mo></mrow><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>t</mi></msub><mo>|</mo><msub><mi>f</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>≥</mo><msub><mi>λ</mi><mn>2</mn></msub><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>s</mi></msub><mo>|</mo><msub><mi>f</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>)</mo></mrow><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>|</mo><msub><mi>f</mi><mi>s</mi></msub><mo>)</mo></mrow></mrow></math>:</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">5.</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">Output a pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i5.p1.m1" class="ltx_Math" alttext="({sentence}_{t}^{\prime},{sentence}_{t})" display="inline"><mrow><mo>(</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msubsup><mi>e</mi><mi>t</mi><mo>′</mo></msubsup></mrow><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>t</mi></msub></mrow></mrow><mo>)</mo></mrow></math> where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i5.p1.m2" class="ltx_Math" alttext="{sentence}_{t}^{\prime}" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msubsup><mi>e</mi><mi>t</mi><mo>′</mo></msubsup></mrow></math> is a copy of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i5.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> but with
+fragment <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i5.p1.m4" class="ltx_Math" alttext="f_{t}" display="inline"><msub><mi>f</mi><mi>t</mi></msub></math> substituted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i5.p1.m5" class="ltx_Math" alttext="f_{s}" display="inline"><msub><mi>f</mi><mi>s</mi></msub></math>, i.e. the introduction of an L1 word or phrase in an L2 sentence.</p>
+</div></li>
+</ol>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Algorithm for extracting training and test data on the basis of a
+phrase-translation table (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>) and subset/split from a parallel corpus (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m4" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>).
+The indentation indicates the nesting.</div>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Step 4 is effectively a filter: two thresholds can be configured to discard
+weak alignments, i.e. those with low probabilities, from the phrase-translation
+table so that only strong couplings make it into the generated set. The
+parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="\lambda_{1}" display="inline"><msub><mi>λ</mi><mn>1</mn></msub></math> adds a constraint based on the product of the two
+conditional probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="(P(f_{t}|f_{s})\cdot P(f_{s}|f_{t}))" display="inline"><mrow><mo>(</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>t</mi></msub><mo>|</mo><msub><mi>f</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>s</mi></msub><mo>|</mo><msub><mi>f</mi><mi>t</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow></math>, and sets a threshold
+that has to be surpassed. A second parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="\lambda_{2}" display="inline"><msub><mi>λ</mi><mn>2</mn></msub></math> further limits the
+considered phrase pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="(f_{s},f_{t})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>,</mo><msub><mi>f</mi><mi>t</mi></msub></mrow><mo>)</mo></mrow></math> to have the product of their conditional
+probabilities not not deviate more than a fraction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m5" class="ltx_Math" alttext="\lambda_{2}" display="inline"><msub><mi>λ</mi><mn>2</mn></msub></math> from the joint
+probability for the strongest possible pairing for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m6" class="ltx_Math" alttext="f_{s}" display="inline"><msub><mi>f</mi><mi>s</mi></msub></math>, the source fragment.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m7" class="ltx_Math" alttext="f_{strongest\_t}" display="inline"><msub><mi>f</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math> in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Data preparation ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> corresponds to the best scoring
+translation for a given source fragment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m8" class="ltx_Math" alttext="f_{s}" display="inline"><msub><mi>f</mi><mi>s</mi></msub></math>. This metric thus effectively
+prunes weaker alternative translations in the phrase-translation table from
+being considered if there is a much stronger candidate. Nevertheless, it has to
+be noted that even with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m9" class="ltx_Math" alttext="\lambda_{1}" display="inline"><msub><mi>λ</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m10" class="ltx_Math" alttext="\lambda_{2}" display="inline"><msub><mi>λ</mi><mn>2</mn></msub></math>, the test set will include
+a certain amount of errors. This is due to the nature of the unsupervised
+method with which the phrase-translation table is constructed. For our purposes
+however, the test set suffices to test our hypothesis.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">In our experiments, we choose fixed values for these parameters, by
+manual inspection and judgement of the output. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m1" class="ltx_Math" alttext="\lambda_{1}" display="inline"><msub><mi>λ</mi><mn>1</mn></msub></math>
+parameter was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m2" class="ltx_Math" alttext="0.01" display="inline"><mn>0.01</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m3" class="ltx_Math" alttext="\lambda_{2}" display="inline"><msub><mi>λ</mi><mn>2</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m4" class="ltx_Math" alttext="0.8" display="inline"><mn>0.8</mn></math>. Whilst other
+thresholds may possibly produce cleaner sets, this is hard to evaluate
+as finding optimal values causes a prohibitive increase in complexity
+of the search space, and again this is not necessary to test our hypothesis.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">The output of the algorithm in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Data preparation ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is a modified set of sentence pairs
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m1" class="ltx_Math" alttext="({sentence}_{t}^{\prime},{sentence}_{t})" display="inline"><mrow><mo>(</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msubsup><mi>e</mi><mi>t</mi><mo>′</mo></msubsup></mrow><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><msub><mi>e</mi><mi>t</mi></msub></mrow></mrow><mo>)</mo></mrow></math>, in which the same sentence pair may be used multiple times
+with different L1 substitutions for different fragments.
+The final
+test set is created by randomly sampling the desired number of test
+instances.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">Note that the training set and test set are constructed on their own
+respective and independently generated phrase-translation tables. This
+ensures complete independence of training and test data. Generating
+test data using the same phrase-translation table as the training data
+would introduce a bias. The fact that a phrase-translation table needs
+to be constructed for the test data is also the reason that the
+parallel corpus split from which the test data is derived has to be
+large enough, ensuring better quality.</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p">We concede that our current way of testing is a mere approximation of
+the real-world scenario. An ideal test corpus would consist of L2
+sentences with L1 fallback as crafted by L2 language learners with an
+L1 background. However, such corpora do not exist as
+yet. Nevertheless, we hope to show that our automated way of test set
+generation is sufficient to test the feasibility of our core
+hypothesis that L1 fragments can be translated to L2 using L2 context
+information.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>System</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We develop a classifier-based system composed of so-called “classifier
+experts”. Numerous classifiers are trained and each is an expert in
+translating a single word or phrase. In other words, for each word type or phrase type that
+occurs as a fragment in the training set, and which does not map to just a
+single translation, a classifier is trained. The classifier maps the L1 word
+or phrase in its L2 context to its L2 translation. Words or phrases that always
+map to a single translation are stored in a simple mapping table, as a
+classifier would have no added value in such cases. The classifiers use the IB1
+algorithm <cite class="ltx_cite">[]</cite> as implemented in TiMBL
+<cite class="ltx_cite">[]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://ilk.uvt.nl/timbl" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://ilk.uvt.nl/timbl</span></a></span></span></span> IB1 implements
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest neighbour classification. The choice for this algorithm is
+motivated by the fact that it handles multiple classes with ease, but first and
+foremost because it has been successfully employed for word sense
+disambiguation in other studies <cite class="ltx_cite">[]</cite>, in particular in
+cross-lingual word sense disambiguation, a task closely resembling our current
+task <cite class="ltx_cite">[]</cite>. It has also been used in machine translation studies in which
+local source context is used to classify source phrases into target phrases,
+rather than looking them up in a phrase table <cite class="ltx_cite">[]</cite>. The
+idea of local phrase selection with a discriminative machine learning
+classifier using additional local (source-language) context was introduced in
+parallel to Stroppa <span class="ltx_text ltx_font_italic">et al.</span> <cite class="ltx_cite">[]</cite> by Carpuat and Wu
+<cite class="ltx_cite">[]</cite> and Giménez and Márquez <cite class="ltx_cite">[]</cite>;
+cf. Haque <span class="ltx_text ltx_font_italic">et al.</span> <cite class="ltx_cite">[]</cite> for an overview of more recent
+methods.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The feature vector for the classifiers represents a local context of
+neighbouring words, and optionally also global context keywords in a
+binary-valued bag-of-words configuration. The local context consists
+of an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> number of L2 words to the left of the L1 fragment, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>
+words to the right.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">When presented with test data, in which the L1 fragment is explicitly marked,
+we first check whether there is ambiguity for this L1 fragment and if a direct
+translation is available in our simple mapping table. If so, we are done
+quickly and need not rely on context information. If not, we check for the
+presence of a classifier expert for the offered L1 fragment; only then we can
+proceed by extracting the desired number of L2 local context words to the
+immediate left and right of this fragment and adding those to the feature
+vector. The classifier will return a probability distribution of the most likely
+translations given the context and we can replace the L1 fragment with the
+highest scoring L2 translation and present it back to the user.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">In addition to local context features, we also experimented with
+global context features. These are a set of L2 contextual keywords for
+each L1 word/phrase and its L2 translation occurring in the same
+sentence, not necessarily in the immediate neighbourhood of the L1
+word/phrase. The keywords are selected to be indicative for a specific
+translation. We used the method of extraction by <cite class="ltx_cite"/> and
+encoded all keywords in a binary bag of words model. The experiments
+however showed that inclusion of such keywords did not make any
+noticeable impact on any of the results, so we restrict ourselves to
+mentioning this negative result.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Our full system, including the scripts for data preparation, training, and
+evaluation, is implemented in Python and freely available as open-source from
+<a href="http://github.com/proycon/colibrita/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://github.com/proycon/colibrita/</span></a> . Version tag <span class="ltx_text ltx_font_typewriter">v0.2.1</span> is
+representative for the version used in this research.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Language Model</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We also implement a statistical language model as an optional component of our
+classifier-based system and also as a baseline to compare our system to. The
+language model is a trigram-based back-off language model with Kneser-Ney
+smoothing, computed using SRILM <cite class="ltx_cite">[]</cite> and trained on the same training
+data as the translation model. No additional external data was brought in, to
+keep the comparison fair.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">For any given hypothesis <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>, results from the L1 to L2 classifier are combined with
+results from the L2 language model. We do so by normalising the class
+probability from the classifier (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="score_{T}(H)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>T</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow></math>), which is our translation model, and the language model
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="score_{lm}(H)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mrow><mi>l</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow></math>), in such a way that the highest classifier score for
+the alternatives under consideration is always <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math>, and the highest
+language model score of the sentence is always <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math>. Take <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="score_{T}(H)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>T</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="score_{lm}(H)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mrow><mi>l</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow></math> to be log probabilities, the search for the best (most
+probable) translation hypothesis <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="\hat{H}" display="inline"><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover></math> can then be expressed as:</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\hat{H}=\arg\max_{H}(score_{T}(H)+score_{lm}(H))" display="block"><mrow><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mrow><mi>arg</mi><mo>⁢</mo><mrow><munder><mo movablelimits="false">max</mo><mi>H</mi></munder><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>T</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mrow><mi>l</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>H</mi><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">If desired, the search can be parametrised with variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="\lambda_{3}" display="inline"><msub><mi>λ</mi><mn>3</mn></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="\lambda_{4}" display="inline"><msub><mi>λ</mi><mn>4</mn></msub></math>, representing the weights we want to attach to the classifier-based
+translation model and the language model, respectively. In the current study we
+simply left both weights set to one, thereby assigning equal importance to
+translation model and language model.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Several automated metrics exist for the evaluation of L2 system
+output against the L2 reference output in the test set. We first
+measure absolute accuracy by simply counting all output fragments that
+exactly match the reference fragments, as a fraction of the total
+amount of fragments. This measure may be too strict, so we add a more
+flexible <em class="ltx_emph">word accuracy</em> measure which takes into account partial
+matches at the word level. If output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="o" display="inline"><mi>o</mi></math> is a subset of reference <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>
+then a score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="\frac{|o|}{|r|}" display="inline"><mfrac><mrow><mo fence="true">|</mo><mi>o</mi><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><mi>r</mi><mo fence="true">|</mo></mrow></mfrac></math> is assigned for that sentence
+pair. If instead, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is a subset of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="o" display="inline"><mi>o</mi></math>, then a score of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="\frac{|r|}{|o|}" display="inline"><mfrac><mrow><mo fence="true">|</mo><mi>r</mi><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><mi>o</mi><mo fence="true">|</mo></mrow></mfrac></math> will be assigned. A perfect match will result
+in a score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m7" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> whereas a complete lack of overlap will be
+scored <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m8" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math>. The word accuracy for the entire set is then computed by
+taking the sum of the word accuracies per sentence pair, divided by
+the total number of sentence pairs.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We also compute a recall metric that measures the number of fragments that the
+system provided a translation for as a fraction of the total number of
+fragments in the input, regardless of whether the fragment is translated
+correctly or not. The system may skip fragments for which it can find no
+solution at all.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">In addition to these, the system’s output can be compared against the
+L2 reference translation(s) using established Machine Translation
+evaluation metrics. We report on BLEU, NIST, METEOR, and word error
+rate metrics WER and PER. These scores should generally be much
+better than the typical MT system performances as only local changes
+are made to otherwise “perfect” L2 sentences.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Baselines</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">A context-insensitive yet informed baseline was constructed to assess
+the impact of L2 context information in translating L1 fragments. The
+baseline selects the most probable L1 fragment per L2 fragment
+according to the phrase-translation table. This baseline, henceforth
+referred to as the ’most likely fragment’ baseline (MLF) is analogous
+to the ’most frequent sense’-baseline common in evaluating WSD
+systems.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">A second baseline was constructed by weighing the probabilities from
+the translation table directly with the L2 language model described
+earlier. It adds a LM component to the MLF baseline. This LM baseline
+allows the comparison of classification through L1 fragments in an L2
+context, with a more traditional L2 context modelling (i.e. target
+language modelling) which is also customary in MT decoders. Computing
+this baseline is done in the same fashion as previously illustrated in
+Equation <a href="#S3.E1" title="(1) ‣ 3.1 Language Model ‣ 3 System ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="score_{T}" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>T</mi></msub></mrow></math> then represents the normalised
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="p(t|s)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>s</mi><mo>)</mo></mrow></mrow></math> score from the phrase-translation table rather than the class
+probability from the classifier.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments &amp; Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">The data for our experiments were drawn from the Europarl parallel corpus
+<cite class="ltx_cite">[]</cite> from which we extracted two sets of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m1" class="ltx_Math" alttext="200,000" display="inline"><mrow><mn>200</mn><mo>,</mo><mn>000</mn></mrow></math> sentence
+pairs each for several language pairs. These were used to form the
+training and test sets. The final test sets are a randomly sampled
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m2" class="ltx_Math" alttext="5,000" display="inline"><mrow><mn>5</mn><mo>,</mo><mn>000</mn></mrow></math> sentence pairs from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m3" class="ltx_Math" alttext="200,000" display="inline"><mrow><mn>200</mn><mo>,</mo><mn>000</mn></mrow></math>-sentence test split for each
+language pair.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">All input data for the experiments in this section are publicly available<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Download and
+unpack <a href="http://lst.science.ru.nl/~proycon/colibrita-acl2014-data.zip" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://lst.science.ru.nl/~proycon/colibrita-acl2014-data.zip</span></a></span></span></span>.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Let us first zoom in to convey a sense of scale on a specific
+language pair. The actual Europarl training set we generate for
+English (L1) to Spanish (L2), i.e. English fallback in a Spanish
+context, consists of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m1" class="ltx_Math" alttext="5,608,015" display="inline"><mrow><mn>5</mn><mo>,</mo><mn>608</mn><mo>,</mo><mn>015</mn></mrow></math> sentence pairs. This number is much
+larger than the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m2" class="ltx_Math" alttext="200,000" display="inline"><mrow><mn>200</mn><mo>,</mo><mn>000</mn></mrow></math> we mentioned before because single sentence
+pairs may be reused multiple times with different marked fragments.
+From this training set of sentence pairs over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m3" class="ltx_Math" alttext="100,000" display="inline"><mrow><mn>100</mn><mo>,</mo><mn>000</mn></mrow></math> classifier
+experts are derived. The eleven largest classifiers are shown in
+Table <a href="#S6.T1" title="Table 1 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, along with the number of training
+instances per classifier. The full table would reveal a Zipfian
+distribution.</p>
+</div>
+<div id="S6.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Fragment</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Training instances</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Translations</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">the</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">256,772</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">la, el, los, las</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">of</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">139,273</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">de, del</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">and</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">128,074</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">y, de, e</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">to</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">66,565</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">a, para, que, de</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">a</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">54,306</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">un, una</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">is</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">40,511</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">es, está, se</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">for</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">34,054</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">para, de, por</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">this</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">29,691</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">este, esta, esto</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">European</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">26,543</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_ERROR undefined">\pbox</span><span class="ltx_text ltx_font_footnote">3cmEuropea, Europeo</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">Europeas, Europeos</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">on</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">23,147</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">sobre, en</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">of the</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">22,361</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">de la, de los</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 1: </span>The top eleven classifier experts for English to Spanish. The eleventh
+entry is included as an example of a common phrasal fragment</div>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Among the classifier experts are only words and phrases that are
+ambiguous and may thus map to multiple translations. This implies that
+such words and phrases must have occurred at least twice in the
+corpus, though this threshold is made configurable and could have been
+set higher to limit the number of classifiers. The remaining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m1" class="ltx_Math" alttext="246,380" display="inline"><mrow><mn>246</mn><mo>,</mo><mn>380</mn></mrow></math>
+unambiguous mappings are stored in a separate mapping table.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">For the classifier-based system, we tested various different feature
+vector configurations. The first experiment, of which the results are
+shown in Figure <a href="#S6.F2" title="Figure 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, sets a fixed and symmetric local
+context size across all classifiers, and tests three context
+widths. Here we observe that a context width of one yields the best
+results. The BLEU scores, not included in the figure but shown in
+Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, show a similar trend. This trend holds for
+all the MT metrics.</p>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the results for English to Spanish in
+more detail and adds a comparison with the two baseline systems. The various
+<span class="ltx_text ltx_font_typewriter">lXrY</span> configurations use the same feature vector setup for all classifier
+experts. Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p6.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> indicates the left context size and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p6.m2" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math> the right context
+size.
+The <span class="ltx_text ltx_font_typewriter">auto</span> configuration
+does not uniformly apply the same feature vector setup to all classifier
+experts but instead seeks to find the optimal setup per
+classifier expert. This shall be further discussed in
+Section <a href="#S6.SS1" title="6.1 Context optimisation ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.</p>
+</div>
+<div id="S6.F2" class="ltx_figure"><img src="" id="S6.F2.g1" class="ltx_graphics" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Accuracy for different local context sizes, Europarl English to Spanish</div>
+</div>
+<div id="S6.T2" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">Configuration</td>
+<td class="ltx_td ltx_align_left ltx_border_t">Accuracy</td>
+<td class="ltx_td ltx_align_left ltx_border_t">Word Accuracy</td>
+<td class="ltx_td ltx_align_left ltx_border_t">BLEU</td>
+<td class="ltx_td ltx_align_left ltx_border_t">METEOR</td>
+<td class="ltx_td ltx_align_left ltx_border_t">NIST</td>
+<td class="ltx_td ltx_align_left ltx_border_t">WER</td>
+<td class="ltx_td ltx_align_left ltx_border_t">PER</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">MLF baseline</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.6164</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.6662</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.972</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9705</td>
+<td class="ltx_td ltx_align_left ltx_border_t">17.0784</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.4465</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.4209</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">LM baseline</td>
+<td class="ltx_td ltx_align_left">0.7158</td>
+<td class="ltx_td ltx_align_left">0.7434</td>
+<td class="ltx_td ltx_align_left">0.9785</td>
+<td class="ltx_td ltx_align_left">0.9739</td>
+<td class="ltx_td ltx_align_left">17.1573</td>
+<td class="ltx_td ltx_align_left">1.1735</td>
+<td class="ltx_td ltx_align_left">1.1574</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">l1r1</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.7588</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.7824</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9801</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9747</td>
+<td class="ltx_td ltx_align_left ltx_border_t">17.1550</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.1625</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.1444</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">l2r2</td>
+<td class="ltx_td ltx_align_left">0.7574</td>
+<td class="ltx_td ltx_align_left">0.7801</td>
+<td class="ltx_td ltx_align_left">0.9800</td>
+<td class="ltx_td ltx_align_left">0.9746</td>
+<td class="ltx_td ltx_align_left">17.1550</td>
+<td class="ltx_td ltx_align_left">1.1750</td>
+<td class="ltx_td ltx_align_left">1.1569</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">l3r3</td>
+<td class="ltx_td ltx_align_left">0.7514</td>
+<td class="ltx_td ltx_align_left">0.7742</td>
+<td class="ltx_td ltx_align_left">0.9796</td>
+<td class="ltx_td ltx_align_left">0.9744</td>
+<td class="ltx_td ltx_align_left">17.1445</td>
+<td class="ltx_td ltx_align_left">1.1946</td>
+<td class="ltx_td ltx_align_left">1.1780</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m1" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>LM</td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">0.7810</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">0.7973</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">0.9816</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">0.9754</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">17.1685</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">1.0946</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">1.077</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">auto</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.7626</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.7850</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9803</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9748</td>
+<td class="ltx_td ltx_align_left ltx_border_t">17.1544</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.1594</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.1424</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">auto<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m2" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>LM</td>
+<td class="ltx_td ltx_align_left">0.7796</td>
+<td class="ltx_td ltx_align_left">0.7966</td>
+<td class="ltx_td ltx_align_left">0.9815</td>
+<td class="ltx_td ltx_align_left">0.9754</td>
+<td class="ltx_td ltx_align_left">17.1664</td>
+<td class="ltx_td ltx_align_left">1.1021</td>
+<td class="ltx_td ltx_align_left">1.0845</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">l1r0</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.6924</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.7223</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9757</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.9723</td>
+<td class="ltx_td ltx_align_left ltx_border_t">17.1087</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.3415</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.3249</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">l2r0</td>
+<td class="ltx_td ltx_align_left">0.6960</td>
+<td class="ltx_td ltx_align_left">0.7245</td>
+<td class="ltx_td ltx_align_left">0.9759</td>
+<td class="ltx_td ltx_align_left">0.9724</td>
+<td class="ltx_td ltx_align_left">17.1091</td>
+<td class="ltx_td ltx_align_left">1.3364</td>
+<td class="ltx_td ltx_align_left">1.3193</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b">l2r1</td>
+<td class="ltx_td ltx_align_left ltx_border_b">0.7624</td>
+<td class="ltx_td ltx_align_left ltx_border_b">0.7849</td>
+<td class="ltx_td ltx_align_left ltx_border_b">0.9803</td>
+<td class="ltx_td ltx_align_left ltx_border_b">0.9748</td>
+<td class="ltx_td ltx_align_left ltx_border_b">17.1558</td>
+<td class="ltx_td ltx_align_left ltx_border_b">1.1554</td>
+<td class="ltx_td ltx_align_left ltx_border_b">1.1378</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Europarl results for English to Spanish (i.e English fallback in
+Spanish context). Recall <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m4" class="ltx_Math" alttext="=0.9422" display="inline"><mrow><mi/><mo>=</mo><mn>0.9422</mn></mrow></math></div>
+</div>
+<div id="S6.p8" class="ltx_para">
+<p class="ltx_p">As expected, the LM baseline substantially outperforms the
+context-insensitive MLF baseline. Second, our classifier approach
+attains a substantially higher accuracy than the LM baseline. Third,
+we observe that adding the language model to our classifier leads to
+another significant gain (configuration <span class="ltx_text ltx_font_typewriter">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p8.m1" class="ltx_Math" alttext="+" display="inline"><mo mathvariant="normal">+</mo></math>LM</span> in the
+results in Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). It appears that the classifier
+approach and the L2 language model are able to complement each other.</p>
+</div>
+<div id="S6.p9" class="ltx_para">
+<p class="ltx_p">Statistical significance on the BLEU scores was tested using pairwise bootstrap
+sampling <cite class="ltx_cite">[]</cite>. All significance tests were performed with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m1" class="ltx_Math" alttext="5,000" display="inline"><mrow><mn>5</mn><mo>,</mo><mn>000</mn></mrow></math> iterations. We compared the outcomes of several key configurations. We
+first tested <span class="ltx_text ltx_font_typewriter">l1r1</span> against both baselines; both differences are
+significant at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math> for both. The same significance level was found when
+comparing <span class="ltx_text ltx_font_typewriter">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m3" class="ltx_Math" alttext="+" display="inline"><mo mathvariant="normal">+</mo></math>LM</span> against <span class="ltx_text ltx_font_typewriter">l1r1</span>, <span class="ltx_text ltx_font_typewriter">auto<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m4" class="ltx_Math" alttext="+" display="inline"><mo mathvariant="normal">+</mo></math>LM</span> against
+<span class="ltx_text ltx_font_typewriter">auto</span>, as well as the LM baseline against the MLF baseline. Automatic
+feature selection <span class="ltx_text ltx_font_typewriter">auto</span> was found to perform statistically better than
+<span class="ltx_text ltx_font_typewriter">l1r1</span>, but only at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m5" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>. Conclusions with regard to context width
+may have to be tempered somewhat, as the performance of the <span class="ltx_text ltx_font_typewriter">l1r1</span>
+configuration was found to not be significantly better than that of the
+<span class="ltx_text ltx_font_typewriter">l2r2</span> configuration. However, <span class="ltx_text ltx_font_typewriter">l1r1</span> performs significantly
+better than <span class="ltx_text ltx_font_typewriter">l3r3</span> at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m6" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>, and <span class="ltx_text ltx_font_typewriter">l2r2</span> performs significantly
+better than <span class="ltx_text ltx_font_typewriter">l3r3</span> at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m7" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>.</p>
+</div>
+<div id="S6.p10" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S6.T3" title="Table 3 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> we present some illustrative examples from
+the English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p10.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>Spanish Europarl data. We show the difference
+between the most-likely-fragment baseline and our system.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> Mientras no haya prueba en contrario , la financiación de partidos políticos </span>European<span class="ltx_text ltx_font_medium"> sólo se justifica , incluso después del tratado de Niza , desde el momento en que concurra a la expresión del sufragio universal , que es la única definición aceptable de un partido político .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">MLF baseline:<span class="ltx_text ltx_font_medium"> Mientras no haya prueba en contrario , la financiación de partidos políticos </span>Europea<span class="ltx_text ltx_font_medium"> sólo se justifica , incluso después del tratado de Niza , desde el momento en que concurra a la expresión del sufragio universal , que es la única definición aceptable de un partido político .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> Mientras no haya prueba en contrario , la financiación de partidos políticos </span>europeos<span class="ltx_text ltx_font_medium"> sólo se justifica , incluso después del tratado de Niza , desde el momento en que concurra a la expresión del sufragio universal , que es la única definición aceptable de un partido político .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> Esta Directiva es nuestra oportunidad </span>to<span class="ltx_text ltx_font_medium"> marcar una verdadera
+diferencia , reduciendo la trágica pérdida de vidas en nuestras carreteras .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">MLF baseline:<span class="ltx_text ltx_font_medium"> Esta Directiva es nuestra oportunidad </span>a<span class="ltx_text ltx_font_medium"> marcar una
+verdadera diferencia , reduciendo la trágica pérdida de vidas en nuestras
+carreteras .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> Esta Directiva es nuestra oportunidad </span>para<span class="ltx_text ltx_font_medium"> marcar una
+verdadera diferencia , reduciendo la trágica pérdida de vidas en nuestras
+carreteras .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> Es la </span>last<span class="ltx_text ltx_font_medium"> vez que me dirijo a esta Cámara .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">MLF baseline:<span class="ltx_text ltx_font_medium"> Es la </span>pasado<span class="ltx_text ltx_font_medium"> vez que me dirijo a esta Cámara .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> Es la </span>última<span class="ltx_text ltx_font_medium"> vez que me dirijo a esta Cámara .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> Pero el enfoque actual de la Comisión no puede conducir a una buena
+política ya que es tributario del funcionamiento del mercado y de las normas
+establecidas por la OMC , el FMI y el Banco Mundial , normas que siguen siendo
+desfavorables para los </span>developing countries<span class="ltx_text ltx_font_medium"> .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">MLF baseline:<span class="ltx_text ltx_font_medium"> Pero el enfoque actual de la Comisión no puede conducir a
+una buena política ya que es tributario del funcionamiento del mercado y de las
+normas establecidas por la OMC , el FMI y el Banco Mundial , normas que siguen
+siendo desfavorables para los </span>los países en desarrollo<span class="ltx_text ltx_font_medium"> .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> Pero el enfoque actual de la Comisión no puede conducir a
+una buena política ya que es tributario del funcionamiento del mercado y de las
+normas establecidas por la OMC , el FMI y el Banco Mundial , normas que siguen
+siendo desfavorables para los </span>países en desarrollo<span class="ltx_text ltx_font_medium"> .</span></span></p>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Some illustrative examples of MLF-baseline output versus system output, in
+which system output matches the correct human reference output. The actual fragments
+concerned are highlighted in bold. The first example shows our system
+correcting for number agreement, the second a correction in selecting the right preposition, and the
+third shows that the English word <em class="ltx_emph">last</em> can be translated in different ways, only one of which
+is correct in this context. The last example shows a phrasal translation, in
+which the determiner was duplicated in the baseline</div>
+</div>
+<div id="S6.T4" class="ltx_table">
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> Sin ese tipo de protección la gente no aprovechará la oportunidad </span>to<span class="ltx_text ltx_font_medium"> vivir , viajar y trabajar donde les parezca en la Unión Europea .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> Sin ese tipo de protección la gente no aprovechará la oportunidad </span>para<span class="ltx_text ltx_font_medium"> vivir , viajar y trabajar donde les parezca en la Unión Europea .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m1" class="ltx_Math" alttext="+" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">+</mo></math>LM:<span class="ltx_text ltx_font_medium"> Sin ese tipo de protección la gente no aprovechará la oportunidad </span>de<span class="ltx_text ltx_font_medium"> vivir , viajar y trabajar donde les parezca en la Unión Europea .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">Input:<span class="ltx_text ltx_font_medium"> La Comisión también está acometiendo medidas en el ámbito social y </span>educational<span class="ltx_text ltx_font_medium"> con vistas a mejorar la situación de los niños .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1:<span class="ltx_text ltx_font_medium"> La Comisión también está acometiendo medidas en el ámbito social y </span>educativas<span class="ltx_text ltx_font_medium"> con vistas a mejorar la situación de los niños .</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_footnote">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m2" class="ltx_Math" alttext="+" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">+</mo></math>LM:<span class="ltx_text ltx_font_medium"> La Comisión también está acometiendo medidas en el ámbito social y </span>educativo<span class="ltx_text ltx_font_medium"> con vistas a mejorar la situación de los niños .</span></span></p>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Some examples of l1r1 versus the same configuration enriched
+with a language model.</div>
+</div>
+<div id="S6.p11" class="ltx_para">
+<p class="ltx_p">Likewise, Table <a href="#S6.T4" title="Table 4 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> exemplifies small fragments from the
+<span class="ltx_text ltx_font_typewriter">l1r1</span> configuration compared to the same configuration enriched with a
+language model. We observe in this data that the language model often has the
+added power to choose a correct translation that is not the first prediction of
+the classifier, but one of the weaker alternatives that nevertheless fits
+better. Though the classifier generally works best in the <span class="ltx_text ltx_font_typewriter">l1r1</span>
+configuration, i.e. with context size one, the trigram-based language model
+allows further left-context information to be incorporated that influences the
+weights of the classifier output, successfully forcing the system to select
+alternatives. This combination of a classifier with context size one and
+trigram-based language model proves to be most effective and reaches the best
+results so far. We have not conducted experiments with language
+models of other orders.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Context optimisation</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">It has been argued that classifier experts in a word sense
+disambiguation ensemble should be individually optimised
+<cite class="ltx_cite">[]</cite>. The latter study on cross-lingual WSD finds a
+positive impact when conducting feature selection per classifier. This
+intuitively makes sense; a context of one may seem to be better than
+any other when uniformly applied to all classifier experts, but it may
+well be that certain classifiers benefit from different feature
+selections. We therefore proceed with this line of investigation as
+well.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Automatic configuration selection was done by performing leave-one-out
+testing (for small number of instances) or 10-fold-cross validation
+(for larger number of instances, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m1" class="ltx_Math" alttext="n\geq 20" display="inline"><mrow><mi>n</mi><mo>≥</mo><mn>20</mn></mrow></math>) on the training data per
+classifier expert. Various configurations were tested. Per classifier
+expert, the best scoring configuration was selected, referred to as
+the <span class="ltx_text ltx_font_typewriter">auto</span> configuration in Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. The
+<span class="ltx_text ltx_font_typewriter">auto</span> configuration improves results over the uniformly
+applied feature selection. However, if we enable the language model
+as we do in the <span class="ltx_text ltx_font_typewriter">auto<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m2" class="ltx_Math" alttext="+" display="inline"><mo mathvariant="normal">+</mo></math>LM</span> configuration we do not notice an
+improvement over <span class="ltx_text ltx_font_typewriter">l1r1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m3" class="ltx_Math" alttext="+" display="inline"><mo mathvariant="normal">+</mo></math>LM</span>, surprisingly. We suspect the lack
+of impact here can be explained by the trigram-based Language Model
+having less added value when the (left) context size of the classifier
+is two or three; they are now less complementary.</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6.1 Context optimisation ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> lists what context sizes have been chosen in the
+automatic feature selection. A context size of one prevails in the vast majority of
+cases, which is not surprising considering the good results we have already
+seen with this configuration.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m1" class="ltx_Math" alttext="66.5\%" display="inline"><mrow><mn>66.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></th>
+<td class="ltx_td ltx_align_left ltx_border_t">l1r1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m2" class="ltx_Math" alttext="19.9\%" display="inline"><mrow><mn>19.9</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></th>
+<td class="ltx_td ltx_align_left">l2r2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m3" class="ltx_Math" alttext="7.7\%" display="inline"><mrow><mn>7.7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></th>
+<td class="ltx_td ltx_align_left">l3r3</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m4" class="ltx_Math" alttext="3.5\%" display="inline"><mrow><mn>3.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></th>
+<td class="ltx_td ltx_align_left">l4r4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m5" class="ltx_Math" alttext="2.4\%" display="inline"><mrow><mn>2.4</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></th>
+<td class="ltx_td ltx_align_left ltx_border_b">l5r5</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Frequency of automatically selected configurations on English to
+Spanish Europarl dataset</div>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p">In this study we did not yet conduct optimisation of the classifier
+parameters. We used the IB1 algorithm with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p4.m1" class="ltx_Math" alttext="k=1" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow></math> and the default
+values of the TiMBL implementation. In earlier work
+<cite class="ltx_cite"/>, we reported a decrease in performance due to overfitting
+when this is done, so we do not expect it to make a positive
+impact. The second reason for omitting this is more practical in
+nature; to do this in combination with feature selection would add
+substantial search complexity, making experiments far more time
+consuming, even prohibitively so.</p>
+</div>
+<div id="S6.SS1.p5" class="ltx_para">
+<p class="ltx_p">The bottom lines in Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> represent results when
+all right-context is omitted, emulating a real-time prediction when no
+right context is available yet. This has a substantial negative impact on
+results.
+We experimented with several asymmetric configurations and found that
+taking two words to the left and one to the right yields even better results than
+symmetric configurations for this data set. This result is in line
+with the positive effect of adding the LM to the <span class="ltx_text ltx_font_typewriter">l1r1</span>.</p>
+</div>
+<div id="S6.SS1.p6" class="ltx_para">
+<p class="ltx_p">In order to draw accurate conclusions, experiments on a single data
+set and language pair are not sufficient. We therefore conducted a
+number of experiments with other language pairs, and present the
+abridged results in Table <a href="#S6.T6" title="Table 6 ‣ 6.1 Context optimisation ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.</p>
+</div>
+<div id="S6.SS1.p7" class="ltx_para">
+<p class="ltx_p">There are some noticeable discrepancies for some experiments in
+Table <a href="#S6.T6" title="Table 6 ‣ 6.1 Context optimisation ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> when compared to our earlier results in
+Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments &amp; Results ‣ Translation Assistance by Translation of L1 Fragments in an L2 Context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. We see that the language model baseline for
+English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p7.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>French shows the same substantial improvement over the
+baseline as our English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p7.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>Spanish results. The same holds for the
+Chinese<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p7.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>English experiment. However, for English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p7.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>Dutch
+and English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p7.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>Chinese we find that the LM baseline actually performs
+slightly worse than baseline. Nevertheless, in all these cases, the positive
+effect of including a Language Model to our classifier-based system again
+shows. Also, we note that in all cases our system performs better than the two
+baselines.</p>
+</div>
+<div id="S6.SS1.p8" class="ltx_para">
+<p class="ltx_p">Another discrepancy is found in the BLEU scores of the
+English<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p8.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>Chinese experiments, where we measure an
+unexpected drop in BLEU score under baseline. However, all other
+scores do show the expected improvement. The error rate metrics show
+improvement as well. We therefore attach low importance to this
+deviation in BLEU here.</p>
+</div>
+<div id="S6.SS1.p9" class="ltx_para">
+<p class="ltx_p">In all of the aforementioned experiments, the system produced a single solution
+for each of the fragments, the one it deemed best, or no solution at all if it
+could not find any. Alternative evaluation metrics could allow the system to output
+multiple alternatives. Omission of a solution by definition causes a decrease in
+recall. In all of our experiments recall is high (well above <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p9.m1" class="ltx_Math" alttext="90\%" display="inline"><mrow><mn>90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>), mostly
+because train and test data lie in the same domain and have been generated in
+the same fashion, lower recall is expected with more real-world data.</p>
+</div>
+<div id="S6.T6" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Dataset</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">L1</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">L2</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Configuration</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Accuracy</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Word Accuracy</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">BLEU</span></th>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.7026</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.7283</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.9771</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">LM baseline</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6958</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7195</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9773</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7790</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7941</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9814</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m1" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7838</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7973</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.9818</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7796</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7947</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9815</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">nl</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m2" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7812</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7954</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9816</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.5874</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.6403</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.9709</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">LM baseline</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7054</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7319</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9787</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7416</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7698</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9797</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m3" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7680</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7885</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.9815</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7484</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7737</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9801</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">europarl200k</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">fr</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m4" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7654</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7860</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9813</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.6622</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.7122</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.6421</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">LM baseline</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6550</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6982</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6416</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7150</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7531</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.5736</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m5" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7296</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7619</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.5826</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7150</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7519</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.5746</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m6" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7280</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7605</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.5833</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.5784</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.6167</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">0.9634</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">LM baseline</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6148</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.6463</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9656</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7104</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7338</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9709</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">l1r1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7270</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.7460</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.9721</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">auto</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7078</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.7319</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">0.9709</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">iwslt12ted</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">zh</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">en</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">auto</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_footnote">LM</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">0.7230</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">0.7428</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">0.9719</span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>Results on different datasets and language pairs. The
+<span class="ltx_text ltx_font_typewriter">iwslt12ted</span> set is the dataset used in the IWSLT 2012 Evaluation
+Campaign <cite class="ltx_cite">[]</cite>, and is formed by a collection of transcriptions of TED talks. Here we used
+of just over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m14" class="ltx_Math" alttext="70,000" display="inline"><mrow><mn>70</mn><mo>,</mo><mn>000</mn></mrow></math> sentences for training. Recall for each of the four
+datasets is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m15" class="ltx_Math" alttext="0.9498" display="inline"><mn>0.9498</mn></math> (en-nl), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m16" class="ltx_Math" alttext="0.9494" display="inline"><mn>0.9494</mn></math> (en-fr), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m17" class="ltx_Math" alttext="0.9386" display="inline"><mn>0.9386</mn></math> (en-zh), and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m18" class="ltx_Math" alttext="0.9366" display="inline"><mn>0.9366</mn></math>
+(zh-en)</div>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Discussion and conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this study we have shown the feasibility of a classifier-based translation
+assistance system in which L1 fragments are translated in an L2 context, in
+which the classifier experts are built individually per word or phrase. We
+have shown that such a translation assistance system scores both above a
+context-insensitive baseline, as well as an L2 language model baseline.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Furthermore, we found that combining this cross-language
+context-sensitive technique with an L2 language model
+boosts results further.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">The presence of a one-word right-hand side context proves crucial for
+good results, which has implications for practical translation
+assistance application that translate as soon as the user finishes an
+L1 fragment. Revisiting the translation when right context becomes
+available would be advisable.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">We tested various configurations and conclude that small context sizes work
+better than larger ones. Automated configuration selection had positive
+results, yet the system with context size one and an L2 language model
+component often produces the best results. In static configurations, the
+failure of a wider context window to be more succesful may be attributed to the
+increased sparsity that comes from such an expansion.</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p">The idea of a comprehensive translation assistance system may extend
+beyond the translation of L1 fragments in an L2 context. There are
+more NLP components that might play a role if such a system were to
+find practical application. Word completion or predictive editing (in
+combination with error correction) would for instance seem an
+indispensable part of such a system, and can be implemented alongside
+the technique proposed in this study. A point of more
+practically-oriented future research is to see how feasible such
+combinations are and what techniques can be used.</p>
+</div>
+<div id="S7.p6" class="ltx_para">
+<p class="ltx_p">An application of our idea outside the area of translation assistance
+is post-correction of the output of some MT systems that, as a
+last-resort heuristic, copy source words or phrases into their output,
+producing precisely the kind of input our system is trained on. Our
+classification-based approach may be able to resolve some of these
+cases operating as an add-on to a regular MT system – or as a
+independent post-correction system.</p>
+</div>
+<div id="S7.p7" class="ltx_para">
+<p class="ltx_p">Our system allows L1 fragments to be of arbitrary length. If a
+fragment was not seen during training stage, and is therefore not
+covered by a classifier expert, then the system will be unable to
+translate it. Nevertheless, if a longer L1 fragment can be decomposed
+into subfragments that are known, then some recombination of the
+translations of said sub-fragments may be a good translation for the
+whole. We are currently exploring this line of investigation, in which
+the gap with MT narrows further.</p>
+</div>
+<div id="S7.p8" class="ltx_para">
+<p class="ltx_p">Finally, an important line of future research is the creation of a
+more representative test set. Lacking an interactive system that
+actually does what we emulate, we hypothesise that good approximations
+would be to use gap exercises, or cloze tests, that test specific
+aspects difficulties in language learning. Similarly, we may use L2
+learner corpora with annotations of code-switching points or
+errors. Here we then assume that places where L2 errors occur may be
+indicative of places where L2 learners are in some trouble, and might
+want to fall back to generating L1. By then manually translating gaps
+or such problematic fragments into L1 we hope to establish a more
+realistic test set.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:10:44 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

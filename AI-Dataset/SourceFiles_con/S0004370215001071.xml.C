@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Characteristics of multiple viewpoints in abstract argumentation.
+   </title>
+   <abstract>
+    The study of extension-based semantics within the seminal abstract argumentation model of Dung has largely focused on definitional, algorithmic and complexity issues. In contrast, matters relating to comparisons of representational limits, in particular, the extent to which given collections of extensions are expressible within the formalism, have been under-developed. As such, little is known concerning conditions under which a candidate set of subsets of arguments are “realistic” in the sense that they correspond to the extensions of some argumentation framework af for a semantics of interest. In this paper we present a formal basis for examining extension-based semantics in terms of the sets of extensions that these may express within a single af. We provide a number of characterization theorems which guarantee the existence of afs whose set of extensions satisfy specific conditions and derive complexity results for decision problems that require such characterizations.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The last 15 years have seen an enormous effort to design, compare, and implement different semantics for Dung's abstract argumentation frameworks [18], afs for short. As a result of this extensive study argumentation is now a significant topic within AI research [10], [28]. Surprisingly, systematic comparison of af capabilities respecting multiple extensions, and thus their power in modeling multiple viewpoints within a single framework has, so far, been neglected. Nevertheless, an understanding of which extensions can, in principle, coexist when a framework is evaluated with respect to a semantics of interest not only clarifies the “strength” of that semantics but also is a crucial issue in several applications.
+     </paragraph>
+     <paragraph>
+      In this work, we address this issue by studying the signatures of argumentation semantics. A semantics σ maps each argumentation framework F to a set of extensions (i.e. a set of sets of arguments). The signature of σ is defined by {a mathematical formula}Σσ={σ(F)|Fis an af}, and gives the collection of all possible sets of extensions an af can possess under semantics σ. We shall focus on several important semantics namely naive, preferred, semi-stable, stage, stable, and complete semantics [18], [29], [14] and aim at finding simple criteria to decide whether a set of extensions {a mathematical formula}S is contained in {a mathematical formula}Σσ. In other words, we are interested in the following problem: Given an argumentation semantics σ together with a set of subsets of arguments, {a mathematical formula}S, what characteristics of {a mathematical formula}S determine if there is any argumentation framework whose σ-extensions are exactly the sets forming {a mathematical formula}S? These characteristics are reflected in our results on signatures {a mathematical formula}Σσ; thus the above question can be answered yes, if and only if, {a mathematical formula}S∈Σσ. Note that our results on signatures thus can be used in the following two ways, for given {a mathematical formula}S:
+     </paragraph>
+     <list>
+      <list-item label="a.">
+       if {a mathematical formula}S∈Σσ then there is at least oneaf whose σ-extensions are precisely {a mathematical formula}S.
+      </list-item>
+      <list-item label="b.">
+       if {a mathematical formula}S∉Σσ then there is no framework whose σ-extensions are exactly {a mathematical formula}S. Thus for every afF either there is some {a mathematical formula}S∈S for which {a mathematical formula}S∉σ(F) or there is some {a mathematical formula}S∈σ(F) for which {a mathematical formula}S∉S.
+      </list-item>
+     </list>
+     <paragraph>
+      As an example, our results for preferred semantics show that {a mathematical formula}S∈Σpref satisfies the condition that for each pair of distinct sets A and B from {a mathematical formula}S there is at least one {a mathematical formula}a∈A and one {a mathematical formula}b∈B such that a and b do not occur together in any set in {a mathematical formula}S. Thus, for instance, {a mathematical formula}S={{a,b},{c,d},{a,c},{b,d}} is part of the signature {a mathematical formula}Σpref (the argumentation framework consisting of arguments a, b, c, and d and symmetric attacks between a and d, and b and c, respectively, has {a mathematical formula}S as its preferred extensions) while neither {a mathematical formula}S∪{{a,d}} nor {a mathematical formula}S∪{{b,c}} are. Hence, our results prove that there is noafF with {a mathematical formula}pref(F)=S∪{{a,d}}={{a,b},{c,d},{a,c},{b,d},{a,d}} (and likewise there is no af with preferred extensions {a mathematical formula}S∪{{b,c}}). This fact can be exploited in a search procedure for enumerating preferred extensions: assume for a given afF, the extensions from {a mathematical formula}S have already been calculated as preferred extensions of F. The procedure can now restrict the search space to find further extensions of F (if they exist) to sets with at least one argument different from {a mathematical formula}a,b,c, and d.
+     </paragraph>
+     <paragraph>
+      It is important to notice that the criteria for a set {a mathematical formula}S being contained in a signature {a mathematical formula}Σσ will be defined solely in terms of the relationship between the constituent members of {a mathematical formula}S. In this sense such criteria are, in the first instance, independent of the particular extension-based semantics to which they may be applied. This aspect may help to make clear what, at first sight, may appear to be a rather counter-intuitive feature of some of our results. Specifically, as will be shown in Proposition 2, the criteria characterizing preferred extensions and those governing semi-stable extensions are equivalent. It is well-known, however, that there are afs F for which {a mathematical formula}sem(F)⊂pref(F). The fact that {a mathematical formula}Σpref and {a mathematical formula}Σsem are equivalent does not contradict the possible non-coincidence of the two semantics is explained as follows. Consider any afF for which {a mathematical formula}sem(F)⊂pref(F). Then, by definition of signatures, {a mathematical formula}sem(F)∈Σsem and {a mathematical formula}pref(F)∈Σpref. The equivalence of {a mathematical formula}Σpref and {a mathematical formula}Σsem tells us that there is an af{a mathematical formula}F′ for which {a mathematical formula}pref(F′)=sem(F), and an af{a mathematical formula}(F″) for which {a mathematical formula}sem(F″)=pref(F) (this is also in line with the related work on translations between semantics which we discuss below). In other words, the conditions on sets of subsets, have no implications concerning the interaction between distinct semantics even when the characterizing conditions are equivalent.
+     </paragraph>
+     <paragraph>
+      Our results are also essential in many aspects.
+     </paragraph>
+     <paragraph>
+      First, our results are important for constructing afs. Indeed, knowing whether a set {a mathematical formula}S is contained in {a mathematical formula}Σσ is a necessary condition which should be checked before actually looking for an afF which realizes{a mathematical formula}S under σ, i.e. {a mathematical formula}σ(F)=S. This is of high importance when dynamic aspects of argumentation are considered [27]. As an example, suppose a framework F possesses as its σ-extensions a set {a mathematical formula}S and one asks for an adaptation of the framework F such that its σ-extensions are given by {a mathematical formula}S∪{E}, i.e. one extension is to be added. The addition of E to {a mathematical formula}S may, for instance, be desired by some agent on the grounds that E contains some subset of arguments which it wishes to be collectively accepted by other agents: no extension in {a mathematical formula}S, however, provides support for the subset of interest to be considered justifiable. Furthermore the agent wishing to add E is reluctant to jeopardize the chance of this happening if the modified af is such that some existing element of {a mathematical formula}S ceases to be an extension: such an outcome being likely to prejudice other agents against agreeing to changes which admit E. Before considering the adapted framework's structure, it is obviously crucial to know whether an appropriate framework exists at all, i.e. whether {a mathematical formula}S∪{E}∈Σσ. In a recent paper on revision of afs [16], the authors circumvent this issue by allowing revision to result not only in a single AF, but in a set of afs such that the union of their extensions yields the desired outcome. Our results provide exact conditions under which their approach admits a single af as an outcome of a given revision.
+     </paragraph>
+     <paragraph>
+      Second, our work adds to the comparison of semantics (see, e.g., [1]) by means of different properties. So far such properties have largely focused on aspects of single extensions {a mathematical formula}S∈S rather than on sets of such. An obvious exception being incomparability (the sets in {a mathematical formula}S are not proper subsets of each other; this property is also known as I-maximality); as we will see, however, all of the standard semantics impose additional (yet distinct) requirements on {a mathematical formula}S in order for containment in the signature to hold. Furthermore, our results add to the growing body of work considering generic treatments of argumentation semantics, that is with respect to shared properties rather than from the perspective of distinguishing features. For instance, we show that most semantics σ are closed under intersection of extensions (more formally, for all afs {a mathematical formula}F1, {a mathematical formula}F2, there exists an afF such that {a mathematical formula}σ(F)=σ(F1)∩σ(F2), whenever {a mathematical formula}σ(F1)∩σ(F2)≠∅).
+     </paragraph>
+     <paragraph>
+      Previous examinations of abstract argumentation semantics have focused on “principle-based evaluation” methods as proposed by Baroni and Giacomin [1] and the characterization of semantics by means of equations by Besnard and Doutre [11]. The former paper introduces several properties for argumentation semantics and gives a systematic investigation which of the properties are satisfied by a given semantics, no matter which AF is given. The latter paper focuses on alternative and uniform characterizations for the extensions of a given AF, whereas in our work we shall characterize the set of all possible sets of extensions a semantics is capable to express, thus abstracting away from concrete AFs. Related work also includes studies on enforcing [6], [7] certain outcomes, where the task is to modify afs in such a way that desired arguments become acceptable. However, the issue of multiple extensions is not covered. In fact, the work which is closest to our investigations are studies of intertranslatability issues [22], [24], where signatures of semantics are put in relation to each other. More precisely, if there is an exact translation such that θ-extensions of the transformed af coincide with the σ-extensions of the original af, then θ is at least as expressive as σ, that is {a mathematical formula}Σσ⊆Σθ in our terms. These results, however, tell us little about the contents of {a mathematical formula}Σσ and {a mathematical formula}Σθ, but only relate {a mathematical formula}Σσ to {a mathematical formula}Σθ.
+     </paragraph>
+     <paragraph>
+      To summarize, the main contributions of our work are:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We first identify necessary conditions any set of extensions under a given semantics σ satisfies, i.e. we identify sets of extensions {a mathematical formula}Σσ+ with {a mathematical formula}Σσ⊆Σσ+. This not only informs the exact characteristics for the signature of σ, but also determines those sets of extensions that are impossible to be jointly expressed with one af.
+      </list-item>
+      <list-item label="•">
+       Then, we provide sufficient conditions for a set of extensions to be realizable under a given semantics σ. For any such set {a mathematical formula}S, we present constructions of canonical frameworks having {a mathematical formula}S as their σ-extensions. In other words we identify sets of extensions {a mathematical formula}Σσ− with {a mathematical formula}Σσ−⊆Σσ. For all semantics σ under consideration (with the exception of complete extensions) our results hold with {a mathematical formula}Σσ+=Σσ−. We, thus, obtain exact characterizations of the signatures {a mathematical formula}Σσ.
+      </list-item>
+      <list-item label="•">
+       We apply our results to study the aforementioned property of closure under intersection (of extension-sets). Moreover, we identify limits of disagreement the different semantics face. While the capabilities of semantics differ in cases involving more than two extensions, it turns out that the maximal number of extensions (over n arguments) that can be captured is equal for many semantics.
+      </list-item>
+      <list-item label="•">
+       One particular application of our results is the problem of recasting, i.e. to decide if the σ-extensions of a given af can be expressed via another semantics θ. The relevance of this problem is, for instance, given if θ is semantics for which we have faster systems available. It is important to note that such gains, if achieved, are likely to be with respect to average-case performance. As confirmed by our preliminary complexity results of the recasting problem there can be significant complexity barriers – extending up to {a mathematical formula}Π2P-completeness – in exploiting the approach. In contrast, we show that the problem of checking if {a mathematical formula}S∈Σσ for a given {a mathematical formula}S is decidable in polynomial time for all exactly characterized semantics. Finally, we also give results for the case where {a mathematical formula}S is not given explicitly but by the models of a propositional formula.
+      </list-item>
+     </list>
+     <paragraph>
+      A preliminary version of this article has been published as [21].
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In what follows, we briefly recall the necessary background on abstract argumentation. For an excellent recent overview, we refer to [3].
+     </paragraph>
+     <paragraph>
+      Throughout the paper, we assume a countably infinite domain {a mathematical formula}A of arguments.
+     </paragraph>
+     <paragraph label="Definition 1">
+      An argumentation framework (af) is a pair {a mathematical formula}F=(A,R) where {a mathematical formula}A⊆A is finite, and {a mathematical formula}R⊆A×A is the attack relation. The collection of all afs over {a mathematical formula}A is given as {a mathematical formula}AFA.
+     </paragraph>
+     <paragraph>
+      We write {a mathematical formula}a↦Rb for {a mathematical formula}(a,b)∈R and {a mathematical formula}S↦Ra (resp. {a mathematical formula}a↦RS) if {a mathematical formula}∃s∈S such that {a mathematical formula}s↦Ra (resp. {a mathematical formula}a↦Rs). We drop subscript R in {a mathematical formula}↦R if there is no ambiguity. For {a mathematical formula}S⊆A, the range of S (w.r.t. R), denoted {a mathematical formula}SR+, is the set {a mathematical formula}S∪{b|S↦Rb}.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Given {a mathematical formula}F=(A,R), an argument {a mathematical formula}a∈A is defended (in F) by a set {a mathematical formula}S⊆A if for each {a mathematical formula}b∈A, such that {a mathematical formula}b↦Ra, also {a mathematical formula}S↦Rb. A set T of arguments is defended (in F) by S if each {a mathematical formula}a∈T is defended by S (in F).
+     </paragraph>
+     <paragraph>
+      The following result is in the spirit of Dung's fundamental lemma and is used later.
+     </paragraph>
+     <paragraph label="Proof">
+      Given anaf{a mathematical formula}F=(A,R)and two sets of arguments{a mathematical formula}S,T⊆A. If S defends itself in F and T defends itself in F, then{a mathematical formula}S∪Tdefends itself in F.To the contrary assume that {a mathematical formula}S∪T does not defend itself in F. Then there exists a {a mathematical formula}b∈A with {a mathematical formula}b↦(S∪T) such that {a mathematical formula}(S∪T)↦b does not hold. Consider {a mathematical formula}b↦S. Since {a mathematical formula}(S∪T)↦b does not hold also {a mathematical formula}S↦b does not hold. Therefore S does not defend itself in F which is a contradiction to the assumption. The case where {a mathematical formula}b↦T behaves symmetrically.  □
+     </paragraph>
+     <paragraph>
+      Next, we introduce the semantics we study in this work. These are the naive, stable, preferred, complete, grounded, stage, and semi-stable semantics, which we will abbreviate by naive, stb, pref, com, grd, stage, and sem, respectively. For a given semantics σ we denote {a mathematical formula}σ(F) as the set of extensions of F under σ.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Given an af{a mathematical formula}F=(A,R), a set {a mathematical formula}S⊆A is conflict-free (in F), if there are no arguments {a mathematical formula}a,b∈S, such that {a mathematical formula}(a,b)∈R. We denote the set of all conflict-free sets in F as {a mathematical formula}cf(F). {a mathematical formula}S∈cf(F) is called admissible (in F) if S defends itself. We denote the set of admissible sets in F as {a mathematical formula}adm(F).For a conflict-free set {a mathematical formula}S∈cf(F), we say that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}S∈naive(F), if there is no {a mathematical formula}T∈cf(F) with {a mathematical formula}T⊃S,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈stb(F), if {a mathematical formula}S↦a for all {a mathematical formula}a∈A∖S,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈pref(F), if {a mathematical formula}S∈adm(F) and {a mathematical formula}∄T∈adm(F) s.t. {a mathematical formula}T⊃S,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈com(F), if {a mathematical formula}S∈adm(F) and {a mathematical formula}a∈S for all {a mathematical formula}a∈A defended by S,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈grd(F), if {a mathematical formula}S=⋂T∈com(F)T,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈stage(F), if {a mathematical formula}∄T∈cf(F) with {a mathematical formula}TR+⊃SR+, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈sem(F), if {a mathematical formula}S∈adm(F) and {a mathematical formula}∄T∈adm(F) s.t. {a mathematical formula}TR+⊃SR+.
+      </list-item>
+     </list>
+     <paragraph>
+      The objects of our interest are the signatures of semantics.
+     </paragraph>
+     <paragraph label="Definition 4">
+      The signature {a mathematical formula}Σσ of a semantics σ is defined as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      For characterizing the signatures of the semantics of our interest we will make frequent use of the following concepts.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Given {a mathematical formula}S⊆2A, we use
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}ArgsS to denote {a mathematical formula}⋃S∈SS, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}PairsS to denote {a mathematical formula}{(a,b)|∃S∈S:{a,b}⊆S}.
+      </list-item>
+     </list>
+     <paragraph>
+      Observe that for any {a mathematical formula}a∈ArgsS, {a mathematical formula}(a,a)∈PairsS holds for all extension-sets {a mathematical formula}S; also note that for all considered semantics σ each element {a mathematical formula}S∈Σσ is an extension-set (since we are dealing with finite afs).
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Properties of argumentation semantics
+     </section-title>
+     <paragraph>
+      Our ultimate goal is to characterize the signatures of the semantics under consideration. In this section, we provide necessary conditions for an extension-set {a mathematical formula}S to be in the signature {a mathematical formula}Σσ. To this end, we have to find common properties for {a mathematical formula}σ(F) which hold for any afF. We do so by abstracting away from the syntactical structure of a given framework and focus on the sets of extensions.
+     </paragraph>
+     <paragraph>
+      Some properties are rather easy to see: {a mathematical formula}cf(F) satisfies the property that for any {a mathematical formula}S∈cf(F), also {a mathematical formula}S′∈cf(F) for any {a mathematical formula}S′⊆S. Likewise, for all {a mathematical formula}σ∈{naive,stb,stage,pref,sem} it obviously holds that {a mathematical formula}σ(F) is incomparable for any af. We define these two properties formally.
+     </paragraph>
+     <paragraph label="Definition 6">
+      Let {a mathematical formula}S⊆2A. The downward-closure, {a mathematical formula}dcl(S), of {a mathematical formula}S is given by {a mathematical formula}{S′⊆S|S∈S}. We call {a mathematical formula}S
+     </paragraph>
+     <list>
+      <list-item label="•">
+       downward-closed if {a mathematical formula}S=dcl(S) and
+      </list-item>
+      <list-item label="•">
+       incomparable if all elements {a mathematical formula}S∈S are pairwise incomparable, i.e. for each {a mathematical formula}S,S′∈S, {a mathematical formula}S⊆S′ implies {a mathematical formula}S=S′.
+      </list-item>
+     </list>
+     <paragraph>
+      However, extension-sets of all considered semantics σ enjoy additional properties. The following example indicates this fact.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider the incomparable extension-set {a mathematical formula}S={{a,b},{a,c},{b,c}} and a semantics σ that preserves conflict-freeness, i.e. {a mathematical formula}σ(F)⊆cf(F) for any afF. Now suppose there exists an afF with {a mathematical formula}σ(F)=S. Then F must not contain attacks between a and b, a and c, and respectively b and c. But then {a mathematical formula}σ(F) typically contains {a mathematical formula}{a,b,c}.
+     </paragraph>
+     <paragraph>
+      There are several ways to define the required property which excludes sets like {a mathematical formula}S from above. To characterize stable, stage and naive extensions, we start with a rather strong restriction making use of the concept of {a mathematical formula}PairsS (in Section 6, we will discuss an alternative yet equivalent definition in terms of a ternary operator on {a mathematical formula}S). For the other semantics, we will use a strictly weaker criterion.
+     </paragraph>
+     <paragraph label="Definition 7">
+      An extension-set {a mathematical formula}S⊆2A is tight if for all {a mathematical formula}S∈S and {a mathematical formula}a∈ArgsS it holds that if {a mathematical formula}S∪{a}∉S then there exists an {a mathematical formula}s∈S such that {a mathematical formula}(a,s)∉PairsS.
+     </paragraph>
+     <paragraph>
+      For incomparable {a mathematical formula}S, the premiss of the condition, {a mathematical formula}S∪{a}∉S, is always fulfilled. Therefore the definition of {a mathematical formula}S being tight reduces in that case to check whether for all {a mathematical formula}S∈S and {a mathematical formula}a∈ArgsS∖S there is an {a mathematical formula}s∈S such that {a mathematical formula}(a,s)∉PairsS. The idea behind the notion of being tight is that if an argument a does not occur in some extension S there must be a reason for that. The most simple reason one can think of is that there is a conflict between a and some {a mathematical formula}s∈S, i.e. a and s do not occur jointly in any extension-set of {a mathematical formula}S or, in other words, {a mathematical formula}(a,s)∉PairsS. In a way, this limits the multitude of incomparable elements of an extension-set.
+     </paragraph>
+     <paragraph label="Example 2">
+      The extension-set {a mathematical formula}S={{a,b},{a,c},{b,c}} from Example 1 is not tight, since there is no reason to, for instance, exclude c from extension {a mathematical formula}{a,b} ({a mathematical formula}(a,c) and {a mathematical formula}(b,c) are both contained in {a mathematical formula}PairsS). On the other hand, the set {a mathematical formula}{{a,b},{a,c},{b,d},{c,d}} is easily checked to be tight.
+     </paragraph>
+     <paragraph>
+      Before stating our first results, we examine certain properties of tight sets which we exploit later.
+     </paragraph>
+     <paragraph label="Lemma 2">
+      For a tight extension-set{a mathematical formula}S⊆2Ait holds that
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       the ⊆-maximal elements in{a mathematical formula}Sform a tight set, and
+      </list-item>
+      <list-item label="2.">
+       if{a mathematical formula}Sis incomparable then each{a mathematical formula}S′⊆Sis tight.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Consider some tight extension-set {a mathematical formula}S. (1) Let {a mathematical formula}S′ be the set of ⊆-maximal elements in {a mathematical formula}S. Note that {a mathematical formula}PairsS=PairsS′, {a mathematical formula}ArgsS=ArgsS′ and {a mathematical formula}S′⊆S. For each {a mathematical formula}S∈S′ and {a mathematical formula}a∈ArgsS it holds that if {a mathematical formula}S∪{a}∉S′ then also {a mathematical formula}S∪{a}∉S. Therefore we know, from {a mathematical formula}S being tight, that {a mathematical formula}∃s∈S:(a,s)∉PairsS, hence {a mathematical formula}S′ is tight too. (2) Let {a mathematical formula}S be incomparable, and consider some {a mathematical formula}S′⊆S. Then {a mathematical formula}PairsS′⊆PairsS and, as {a mathematical formula}S is incomparable, {a mathematical formula}S∪{a}∉S iff {a mathematical formula}S∪{a}∉S′ for all {a mathematical formula}S∈S, {a mathematical formula}a∈ArgsS. Thus, since {a mathematical formula}S is tight by the hypothesis, {a mathematical formula}S′ is tight.  □
+     </paragraph>
+     <paragraph label="Proposition 1">
+      For eachaf{a mathematical formula}F=(A,R),
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}cf(F)is non-empty, downward-closed and tight;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}naive(F)is non-empty, incomparable and its downward-closure is tight;
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}stage(F)is non-empty, incomparable and tight;
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}stb(F)is incomparable and tight.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The properties of being non-empty and incomparable are clear. Likewise, it is easy to see that {a mathematical formula}cf(F)=dcl(cf(F)), i.e. {a mathematical formula}cf(F) is downward-closed, since each subset of a conflict-free set is conflict-free too. To show that {a mathematical formula}cf(F) is tight, let {a mathematical formula}S∈cf(F) and {a mathematical formula}a∈Argscf(F), such that {a mathematical formula}S∪{a}∉cf(F). It follows that {a mathematical formula}S≠∅ (otherwise, {a mathematical formula}{a}∉cf(F) and since we know {a mathematical formula}cf(F)=dcl(cf(F)), this would yield {a mathematical formula}a∉Argscf(F)). Moreover there exists an argument {a mathematical formula}s∈S such that {a mathematical formula}s↦a or {a mathematical formula}a↦s. Then {a mathematical formula}{a,s}∉cf(F) and since {a mathematical formula}cf(F)=dcl(cf(F)), {a mathematical formula}{a,s}⊈T for any {a mathematical formula}T∈cf(F). It follows that {a mathematical formula}(a,s)∉Pairscf(F). Since this applies to all {a mathematical formula}S,a with {a mathematical formula}S∈cf(F) and {a mathematical formula}a∉S, tightness of {a mathematical formula}cf(F) follows. Next, observe that {a mathematical formula}dcl(naive(F))=cf(F), by definition of the semantics. Thus {a mathematical formula}dcl(naive(F)) is tight, and by Lemma 2, {a mathematical formula}naive(F) is tight. With the same lemma, we get that every {a mathematical formula}S⊆naive(F) is tight. By the well-known fact that {a mathematical formula}stb(F)⊆stage(F)⊆naive(F), it follows that {a mathematical formula}stb(F) as well as {a mathematical formula}stage(F) is tight.  □
+     </paragraph>
+     <paragraph>
+      Lemma 2 implies that if the downward-closure of an incomparable extension-set {a mathematical formula}S is tight, then {a mathematical formula}S itself is tight too. Therefore Proposition 1 assigns stricter conditions to naive extension-sets than to stable and stage extension-sets, respectively.
+     </paragraph>
+     <paragraph label="Example 3">
+      For the afF in Fig. 1, we have {a mathematical formula}S=stb(F)=stage(F)={{a1,b2,b3},{a2,b1,b3},{a3,b1,b2}} and {a mathematical formula}naive(F)=S∪{{b1,b2,b3}}. One can check that {a mathematical formula}S is indeed tight. Take, for instance, {a mathematical formula}E={a1,b2,b3}; then for each argument t not in E (i.e. {a mathematical formula}b1, {a mathematical formula}a2, {a mathematical formula}a3) there is an argument {a mathematical formula}s∈E such {a mathematical formula}(s,t)∉PairsS. In this particular case {a mathematical formula}a1 plays this role for each t, since neither {a mathematical formula}(a1,b1), {a mathematical formula}(a1,a2), nor {a mathematical formula}(a1,a3) is contained in {a mathematical formula}PairsS. The other two extensions behave in a symmetric way. However, {a mathematical formula}dcl(S) is not tight. In fact, {a mathematical formula}{b2,b3}∈dcl(S) and now for {a mathematical formula}b1, {a mathematical formula}{b1,b2,b3}∉dcl(S) but {a mathematical formula}(b1,b2) and {a mathematical formula}(b1,b3) are contained in {a mathematical formula}Pairsdcl(S)=PairsS. Proposition 1 now gives evidence that an afG with {a mathematical formula}naive(G)=S cannot exist.
+     </paragraph>
+     <paragraph>
+      Turning to the semantics based on admissibility, we introduce another, weaker, property of extension-sets. It will turn out to be a very general property, which is fulfilled by extension-sets of every “reasonable” semantics for abstract argumentation.
+     </paragraph>
+     <paragraph label="Definition 8">
+      A set {a mathematical formula}S⊆2A is called conflict-sensitive{sup:1} if for each {a mathematical formula}A,B∈S such that {a mathematical formula}A∪B∉S it holds that {a mathematical formula}∃a,b∈A∪B:(a,b)∉PairsS.
+     </paragraph>
+     <paragraph>
+      As the name suggests, the property checks whether the absence of the union of any pair of extensions in an extension-set {a mathematical formula}S is justified by a conflict indicated by {a mathematical formula}S. Note that for {a mathematical formula}a,b∈A (likewise {a mathematical formula}a,b∈B), {a mathematical formula}(a,b)∈PairsS holds by definition. Thus the property of conflict-sensitivity is determined by arguments {a mathematical formula}a∈A∖B, {a mathematical formula}b∈B∖A, for {a mathematical formula}A,B∈S.
+     </paragraph>
+     <paragraph>
+      We next show that tight sets are also conflict-sensitive.
+     </paragraph>
+     <paragraph label="Proof">
+      Every tight extension-set is also conflict-sensitive.Consider some tight extension-set {a mathematical formula}S and let {a mathematical formula}A,B∈S. We need to show that in case {a mathematical formula}(a,b)∈PairsS for each {a mathematical formula}a,b∈A∪B, then also {a mathematical formula}A∪B∈S. Let {a mathematical formula}B={b1,…,bn}. As {a mathematical formula}S is tight and {a mathematical formula}(a,b1)∈PairsS for all {a mathematical formula}a∈A, {a mathematical formula}A∪{b1}=A1∈S must hold. We can do this for each {a mathematical formula}bi∈B and get {a mathematical formula}An−1∪{bn}=(A∪B)∈S.  □
+     </paragraph>
+     <paragraph>
+      Observe that for incomparable {a mathematical formula}S the property of being conflict-sensitive reduces to check for each {a mathematical formula}A,B∈S ({a mathematical formula}A≠B), whether there exist {a mathematical formula}a,b∈A∪B such that {a mathematical formula}(a,b)∉PairsS.
+     </paragraph>
+     <paragraph>
+      We can give results analogous to those of Lemma 2.
+     </paragraph>
+     <paragraph label="Lemma 4">
+      For a conflict-sensitive extension-set{a mathematical formula}S⊆2A,
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       the ⊆-maximal elements in{a mathematical formula}Sform a conflict-sensitive set,
+      </list-item>
+      <list-item label="2.">
+       if{a mathematical formula}Sis incomparable then each{a mathematical formula}S′⊆Sis conflict-sensitive, and
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}S∪{∅}is conflict-sensitive.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      (1) basically follows from the fact that {a mathematical formula}PairsS=PairsS′ where {a mathematical formula}S′ is the set of ⊆-maximal elements in {a mathematical formula}S. For (2) recall that for incomparable {a mathematical formula}S, checking conflict-sensitivity reduces to check for each {a mathematical formula}A,B∈S with {a mathematical formula}A≠B, whether there exist {a mathematical formula}a,b∈A∪B such that {a mathematical formula}(a,b)∉PairsS. It is easy to see that this property still holds for {a mathematical formula}S′⊆S (since then, {a mathematical formula}PairsS′⊆PairsS). (3) holds, since {a mathematical formula}S∪∅∈S for each {a mathematical formula}S∈S ensures that {a mathematical formula}S∪{∅} is conflict-sensitive by definition.  □
+     </paragraph>
+     <paragraph>
+      The following proposition finally shows the role the property of being conflict-sensitive plays in terms of admissible, preferred and semi-stable semantics.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      For eachaf{a mathematical formula}F=(A,R),
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}adm(F)is conflict-sensitive and contains ∅;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}pref(F)is non-empty, incomparable and conflict-sensitive;
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}sem(F)is non-empty, incomparable and conflict-sensitive.
+      </list-item>
+     </list>
+     <paragraph label="Example 4">
+      (1) By definition, ∅ is always admissible. We show that {a mathematical formula}adm(F) is conflict-sensitive. Towards a contradiction, assume {a mathematical formula}B,C∈adm(F) such that {a mathematical formula}B∪C∉adm(F), but for all {a mathematical formula}b,c∈B∪C, {a mathematical formula}(b,c)∈Pairsadm(F). From Lemma 1 we know that {a mathematical formula}B∪C defends itself in F. So for {a mathematical formula}B∪C∉adm(F) there must be a conflict in {a mathematical formula}B∪C, i.e. there is an attack {a mathematical formula}(b,c)∈R such that {a mathematical formula}{b,c}⊆B∪C. But then, for all {a mathematical formula}D∈adm(F), {a mathematical formula}{b,c}⊈D. Hence, {a mathematical formula}(b,c)∉Pairsadm(F), a contradiction.(2) By definition, the preferred semantics yields at least one extension and for any {a mathematical formula}S,S′∈σ(F), {a mathematical formula}S⊆S′ implies {a mathematical formula}S=S′. By Lemma 4.1 and definition of preferred extensions, the fact that {a mathematical formula}pref(F) is conflict-sensitive for every afF follows from the already shown property of {a mathematical formula}adm(F) being conflict-sensitive.(3) Again, semi-stable extensions are non-empty and incomparable by definition. Since {a mathematical formula}sem(F)⊆pref(F) holds for all afs F, Lemma 4.2 shows that {a mathematical formula}sem(F) is conflict-sensitive, as well.  □Consider the framework F in Fig. 2 and let {a mathematical formula}A={a,b}, {a mathematical formula}B={a,d,e}, {a mathematical formula}C={b,c,e}, and {a mathematical formula}S={A,B,C}. We have {a mathematical formula}pref(F)=sem(F)=S. {a mathematical formula}S is conflict-sensitive, since for each pair of extensions, there exists a pair of arguments not contained in {a mathematical formula}PairsS: {a mathematical formula}b,d∈A∪B and {a mathematical formula}(b,d)∉PairsS; {a mathematical formula}a,c∈A∪C and {a mathematical formula}(a,c)∉PairsS; {a mathematical formula}c,d∈B∪C and {a mathematical formula}(c,d)∉PairsS. However, we also observe that {a mathematical formula}S is not tight, since {a mathematical formula}A∪{e}∉S but both {a mathematical formula}(a,e) and {a mathematical formula}(b,e) are contained in {a mathematical formula}PairsS. This shows that the reverse of Lemma 3 does not hold, i.e. that conflict-sensitivity is a strictly weaker condition than tightness.
+     </paragraph>
+     <paragraph>
+      All semantics considered so far, i.e. the naive, stable, stage, preferred and semi-stable semantics, share a common property, which is implicit in their definitions. That is, given an arbitrary afF, between any two extensions of F there must be at least one conflict. If there was not, their union would be an extension instead. This property can be seen as a principle in the spirit of [1] which should be fulfilled by every reasonable semantics for abstract argumentation. The following proposition shows that extension-sets under such semantics are always conflict-sensitive.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider an arbitrary semantics{a mathematical formula}σ:AFA→22Asuch that for any{a mathematical formula}F=(A,R)∈AFAit holds that{a mathematical formula}σ(F)⊆cf(F)and for all{a mathematical formula}S1,S2∈σ(F)({a mathematical formula}S1≠S2) there exist{a mathematical formula}a,b∈S1∪S2with{a mathematical formula}(a,b)∈R. Then for eachafF,{a mathematical formula}σ(F)is conflict-sensitive.Let {a mathematical formula}F=(A,R)∈AFA and {a mathematical formula}S1,S2∈σ(F). By assumption there exist w.l.o.g. {a mathematical formula}a∈S1 and {a mathematical formula}b∈S2 with {a mathematical formula}(a,b)∈R. Now since {a mathematical formula}σ(F)⊆cf(F), there is no {a mathematical formula}T∈σ(F) with {a mathematical formula}T⊇{a,b}, hence {a mathematical formula}(a,b)∉Pairsσ(F). Therefore {a mathematical formula}σ(F) is conflict-sensitive.  □
+     </paragraph>
+     <paragraph>
+      Finally, we turn to the complete semantics. Compared to being conflict-sensitive, we need a further relaxation.
+     </paragraph>
+     <paragraph label="Definition 9">
+      Given an extension-set {a mathematical formula}S⊆2A and {a mathematical formula}E⊆A. We define the completion-sets {a mathematical formula}CS(E) of E in {a mathematical formula}S as the set of ⊆-minimal sets {a mathematical formula}S∈S with {a mathematical formula}E⊆S.
+     </paragraph>
+     <paragraph>
+      In words, completion-sets just give the “next” (in terms of supersets) elements contained in {a mathematical formula}S.
+     </paragraph>
+     <paragraph label="Definition 10">
+      A set {a mathematical formula}S⊆2A is called com-closed if for each {a mathematical formula}T⊆S the following holds: if {a mathematical formula}(a,b)∈PairsS for each {a mathematical formula}a,b∈ArgsT, then {a mathematical formula}ArgsT has a unique completion-set in {a mathematical formula}S, i.e. {a mathematical formula}|CS(ArgsT)|=1. For a com-closed extension-set {a mathematical formula}S⊆2A and {a mathematical formula}E⊆ArgsS, we denote the unique element of {a mathematical formula}CS(E) by {a mathematical formula}CS(E).
+     </paragraph>
+     <paragraph>
+      The intuitive meaning of com-closed is the following. Consider an extension-set {a mathematical formula}S and elements {a mathematical formula}T thereof. Now assume {a mathematical formula}S gives no evidence of a conflict between arguments in {a mathematical formula}ArgsT. Then, in contrast to the case when {a mathematical formula}S is conflict-sensitive, not {a mathematical formula}ArgsT has to be in {a mathematical formula}S, but {a mathematical formula}S has to contain a unique superset of {a mathematical formula}ArgsT, the completion-set.
+     </paragraph>
+     <paragraph label="Proof">
+      Each conflict-sensitive extension-set is com-closed.Consider a conflict-sensitive extension-set {a mathematical formula}S and {a mathematical formula}T⊆S. Then {a mathematical formula}(a,b)∈PairsS for each {a mathematical formula}a,b∈ArgsT implies {a mathematical formula}ArgsT∈S, i.e. {a mathematical formula}CS(ArgsT)={ArgsT}.  □
+     </paragraph>
+     <paragraph>
+      In case of incomparable sets, the notions conflict-sensitive and com-closed coincide. In anticipation of the following result, this coincidence reflects the fact that all preferred extensions are complete.
+     </paragraph>
+     <paragraph label="Proof">
+      For eachafF,{a mathematical formula}com(F)is a non-empty, com-closed extension-set with{a mathematical formula}(⋂S∈com(F)S)∈com(F).First note that there is always at least one complete extension, namely the grounded extension. Moreover the grounded extension is the unique ⊆-minimal complete extension and hence {a mathematical formula}(⋂S∈com(F)S)∈com(F). Finally consider a set of complete extensions {a mathematical formula}E⊆com(F) such that {a mathematical formula}(a,b)∈Pairscom(F) for each {a mathematical formula}a,b∈ArgsE. By Lemma 1, {a mathematical formula}ArgsE is an admissible set and thus can be extended to a unique complete extension {a mathematical formula}E′⊇ArgsE by iteratively adding all defended arguments. Therefore {a mathematical formula}com(F) is com-closed.  □
+     </paragraph>
+     <paragraph label="Example 5">
+      Consider the afF in Fig. 3. We have {a mathematical formula}com(F)={∅, {a mathematical formula}{a}, {a mathematical formula}{b}, {a mathematical formula}{a,b,c}}, which is com-closed, in particular, as {a mathematical formula}Ccom(F)({a}∪{b})={{a,b,c}}. Observe that since {a mathematical formula}{a,b}∉com(F), but {a mathematical formula}(a,b)∈Pairscom(F), {a mathematical formula}com(F) is not conflict-sensitive. This also shows that the reverse direction of Lemma 5 does not hold.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Realizability
+     </section-title>
+     <paragraph>
+      In the previous section we have given necessary characteristics for the extension-sets {a mathematical formula}S∈Σσ, where {a mathematical formula}σ∈{cf,adm,naive,stb,stage,pref,sem,com}. Except for the complete semantics, we will now show that these characteristics are also sufficient.
+     </paragraph>
+     <paragraph>
+      To this end, we need the concept of realizability: an extension-set {a mathematical formula}S⊆2A is realizable under σ (or just σ-realizable) if there is an af{a mathematical formula}F∈AFA, such that {a mathematical formula}σ(F)=S. We start with the following concept of a canonical argumentation framework, which will underlie all subsequent results on realizability.
+     </paragraph>
+     <paragraph label="Definition 11">
+      Given an extension-set {a mathematical formula}S, we define the canonical argumentation framework for {a mathematical formula}S as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The idea behind the framework is simple: we draw a relation between two arguments iff they do not occur jointly in any set {a mathematical formula}S∈S. Thus, for any {a mathematical formula}S, {a mathematical formula}FScf is symmetric and has no self-attacking arguments (recall that for each {a mathematical formula}a∈ArgsS, {a mathematical formula}(a,a)∈PairsS). As an example, consider {a mathematical formula}T={{a1,b2,b3}, {a mathematical formula}{a2,b1,b3}, {a mathematical formula}{a3,b1,b2}, {a mathematical formula}{b1,b2,b3}}. {a mathematical formula}FTcf has the same structure as the af from Fig. 1, but with all attacks being symmetric. We obtain {a mathematical formula}stb(FTcf)=naive(FTcf)=T. When we consider {a mathematical formula}S={{a1,b2,b3},{a2,b1,b3},{a3,b1,b2}}, i.e. {a mathematical formula}S=T∖{{b1,b2,b3}}, we obtain the same framework {a mathematical formula}FScf=FTcf, since {a mathematical formula}ArgsS=ArgsT and {a mathematical formula}PairsS=PairsT. In terms of naive semantics, this is not problematic, since {a mathematical formula}S (as discussed in Example 3) cannot be realized under naive semantics at all. However, this observation readily suggests that realizing {a mathematical formula}S with, say, stable semantics, requires additional concepts.
+     </paragraph>
+     <paragraph label="Proof">
+      For each extension-set{a mathematical formula}S≠∅, which is downward-closed and tight,{a mathematical formula}cf(FScf)=S.Let {a mathematical formula}S be a downward-closed and tight extension-set and consider {a mathematical formula}FScf=(ArgsS,RS). {a mathematical formula}cf(FScf)⊆S: Observe that for each {a mathematical formula}E∈cf(FScf), {a mathematical formula}(a,b)∈PairsS for all {a mathematical formula}a,b∈E by construction of {a mathematical formula}RS. Now suppose there exists {a mathematical formula}E′∈cf(FScf) such that {a mathematical formula}E′∉S. W.l.o.g. let {a mathematical formula}E′ be ⊆-minimal with this property. Then {a mathematical formula}E′=S∪{c} for some {a mathematical formula}S∈S. As {a mathematical formula}S is tight there is an {a mathematical formula}s∈S such that {a mathematical formula}(s,c)∉PairsS, a contradiction to the above observation. {a mathematical formula}cf(FScf)⊇S: Follows immediately by the fact that {a mathematical formula}∀(a,b)∈PairsS:(a,b)∉RS.  □
+     </paragraph>
+     <paragraph label="Proof">
+      For each incomparable extension-set{a mathematical formula}S≠∅, where{a mathematical formula}dcl(S)is tight,{a mathematical formula}naive(FScf)=S.First, note that {a mathematical formula}Fdcl(S)cf=FScf, since {a mathematical formula}Argsdcl(S)=ArgsS and {a mathematical formula}Pairsdcl(S)=PairsS. Since {a mathematical formula}dcl(S) is downward-closed, and by assumption, tight and non-empty, {a mathematical formula}cf(FScf)=dcl(S) by Proposition 5. By construction of {a mathematical formula}dcl(S), the ⊆-maximal sets in {a mathematical formula}dcl(S) are given by {a mathematical formula}S and as naive sets are just ⊆-maximal conflict-free, {a mathematical formula}naive(FScf)=S follows.  □
+     </paragraph>
+     <paragraph>
+      We proceed with stable and stage semantics. Stable semantics are the only semantics that can realize {a mathematical formula}S=∅. Note that {a mathematical formula}S=∅ is easily stb-realizable, for instance with the framework {a mathematical formula}({a},{(a,a)}). In Proposition 1 the only difference between stable and stage semantics was the case {a mathematical formula}S=∅. The next result will show that this indeed is the only difference between the signatures for stable and stage semantics.
+     </paragraph>
+     <paragraph>
+      The idea of the construction below is to suitably extend the canonical framework from Definition 11 such that undesired sets are excluded. Coming back to our example with {a mathematical formula}S={{a1,b2,b3}, {a mathematical formula}{a2,b1,b3}, {a mathematical formula}{a3,b1,b2}}, recall that {a mathematical formula}FScf had one such undesired naive (and stable) extension, {a mathematical formula}E={b1,b2,b3}. To get rid of it we add a new argument which is attacked by all other sets from {a mathematical formula}S but not by E, see Fig. 4 for illustration. The next definition generalizes this idea which is inspired by a translation in [22].
+     </paragraph>
+     <paragraph label="Definition 12">
+      Given an extension-set {a mathematical formula}S and its canonical framework {a mathematical formula}FScf=(AScf,RScf), let {a mathematical formula}X=stb(FScf)∖S. We define{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      For each non-empty, incomparable and tight extension-set{a mathematical formula}S,{a mathematical formula}stb(FSst)=stage(FSst)=S.Since {a mathematical formula}S is non-empty, it is sufficient to show {a mathematical formula}stb(FSst)=S (for each F with {a mathematical formula}stb(F)≠∅, {a mathematical formula}stb(F)=stage(F) holds).Moreover, for each incomparable and tight extension-set {a mathematical formula}S, it holds that {a mathematical formula}S⊆stb(FScf): Towards a contradiction, assume {a mathematical formula}S∈S such that {a mathematical formula}S∉stb(FScf). By construction of {a mathematical formula}FScf, {a mathematical formula}S∈cf(FScf). Thus {a mathematical formula}∃a∈ArgsS:S↦̸a. But then by construction, {a mathematical formula}(a,s)∈PairsS, for all {a mathematical formula}s∈S; this contradicts {a mathematical formula}S being tight.Now let {a mathematical formula}X=stb(FScf)∖S and consider {a mathematical formula}FSst. We show that {a mathematical formula}stb(FSst)=S. {a mathematical formula}stb(FSst)⊆S: Let {a mathematical formula}E∈stb(FSst). Then also {a mathematical formula}E∈stb(FScf)=X∪S. But if {a mathematical formula}E∈X, by Definition 12, {a mathematical formula}E↦̸E¯ and also {a mathematical formula}E¯∉E, thus {a mathematical formula}E∉stb(FSst). Hence, {a mathematical formula}E∈S. {a mathematical formula}stb(FSst)⊇S: Let {a mathematical formula}E∈S. We already know that {a mathematical formula}E∈stb(FScf). Now consider {a mathematical formula}FSst. E still attacks all arguments in {a mathematical formula}ArgsS∖E. Now consider an arbitrary argument {a mathematical formula}E¯′ for {a mathematical formula}E′∈X. {a mathematical formula}E¯′ is attacked by all arguments {a mathematical formula}a∈ArgsS∖E′ and as E and {a mathematical formula}E′ are both stable in {a mathematical formula}FScf (and thus incomparable) at least one of these arguments must be contained in E. Hence {a mathematical formula}E∈stb(FSst).  □
+     </paragraph>
+     <paragraph>
+      Towards a suitable canonical af for admissibility-based semantics we introduce the following technical concept.
+     </paragraph>
+     <paragraph label="Definition 13">
+      Given an extension-set {a mathematical formula}S, the defense-formula{a mathematical formula}DaS of an argument {a mathematical formula}a∈ArgsS in {a mathematical formula}S is defined as{a mathematical formula}{a mathematical formula}DaS given as (a logically equivalent) CNF is called CNF-defense-formula{a mathematical formula}CDaS of a in {a mathematical formula}S.
+     </paragraph>
+     <paragraph>
+      Intuitively, {a mathematical formula}DaS describes the conditions for the argument a being in an extension. The variables coincide with the arguments. Each disjunct represents a set of arguments which jointly allows a to “join” an extension, i.e. represents a collection of arguments defending a. Further note that {a mathematical formula}DaS≡⊤ (i.e. {a mathematical formula}DaS is a tautology) if and only if {a mathematical formula}{a}∈S.
+     </paragraph>
+     <paragraph label="Example 6">
+      Consider the extension-set {a mathematical formula}T={∅,{a},{b,c},{a,c,d}}. Then {a mathematical formula}DaT=⊤∨(c∧d)≡⊤, {a mathematical formula}DbT=c, {a mathematical formula}DcT=b∨(a∧d) and {a mathematical formula}DdT=a∧c. The corresponding CNF-defense-formulas{sup:2} are {a mathematical formula}CDaT={}, {a mathematical formula}CDbT={{c}}, {a mathematical formula}CDcT={{a,b},{b,d}}, and {a mathematical formula}CDdT={{a},{c}}.
+     </paragraph>
+     <paragraph>
+      The following lemma shows that the (CNF-)defense-formula for any argument a captures the intuition of describing which arguments it takes for a in order to join an element of the given extension-set.
+     </paragraph>
+     <paragraph label="Proof">
+      Given an extension-set{a mathematical formula}Sand an argument{a mathematical formula}a∈ArgsS, then for each{a mathematical formula}S⊆ArgsSwith{a mathematical formula}a∈S:{a mathematical formula}(S∖{a})is a model of{a mathematical formula}DaS(resp.{a mathematical formula}CDaS) iff there exists an{a mathematical formula}S′⊆Swith{a mathematical formula}a∈S′such that{a mathematical formula}S′∈S.The if-direction follows straight forwardly by definition of {a mathematical formula}DaS, since the conjunction of the elements of {a mathematical formula}S′∖{a} forms a term of {a mathematical formula}DaS for each {a mathematical formula}S′∈S with {a mathematical formula}a∈S′.To show the only-if-direction consider some {a mathematical formula}S⊆ArgsS with {a mathematical formula}a∈S where {a mathematical formula}S∖{a} is a model of {a mathematical formula}DaS. If {a mathematical formula}DaS≡⊤ then it holds that {a mathematical formula}{a}∈S. For {a mathematical formula}S∖{a} to be a model of {a mathematical formula}DaS≠⊤, there must be some term {a mathematical formula}τ∈DaS, whose elements form a subset of {a mathematical formula}S∖{a}. Consider such a term {a mathematical formula}τ∈DaS. Then by construction of {a mathematical formula}DaS there is some {a mathematical formula}S′∈S with {a mathematical formula}a∈S′, where {a mathematical formula}S′∖{a} coincides with the elements of τ. So {a mathematical formula}S′⊆S.  □
+     </paragraph>
+     <paragraph>
+      Having at hand a formula for each argument, such that the models coincide with the sets of arguments that should defend that argument, we can give the following construction.
+     </paragraph>
+     <paragraph label="Definition 14">
+      Given an extension-set {a mathematical formula}S, the canonical defense-argumentation-framework{a mathematical formula}FSdef=(ASdef,RSdef) extends the canonical af{a mathematical formula}FScf=(ArgsS,RScf) as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}FSdef consists of all arguments given in the extension-set plus a certain amount of additional arguments. First of all each of these new arguments attacks itself in order not to be taken into account when it comes to figuring out the admissible sets of the framework. Further each {a mathematical formula}αaγ attacks argument a and is attacked by all arguments occurring as literals in clause γ of the CNF-defense-formula of a. So in {a mathematical formula}FSdef for a to be defended from {a mathematical formula}αaγ it takes at least one argument of these occurring as atoms in clause γ of {a mathematical formula}CDaS.
+     </paragraph>
+     <paragraph label="Proof">
+      Again consider extension-set {a mathematical formula}T={∅,{a},{b,c},{a,c,d}}. We have given the CNF-defense-formulas in Example 6. {a mathematical formula}FTdef is given by the af in Fig. 5. Considering, for instance, argument c, where {a mathematical formula}CDcT={{a,b},{b,d}}, one can see that in {a mathematical formula}FTdef it takes a or b in order to defend c from {a mathematical formula}αc{a,b}, and b or d in order to defend c from {a mathematical formula}αc{b,d}.For each conflict-sensitive extension-set{a mathematical formula}Swhere{a mathematical formula}∅∈S, it holds that{a mathematical formula}adm(FSdef)=S.{a mathematical formula}S⊆adm(FSdef): Let {a mathematical formula}S∈S. If {a mathematical formula}S=∅, the assertion trivially holds. If {a mathematical formula}S={a}, then {a mathematical formula}CDaS is the empty set of clauses. By definition of {a mathematical formula}RSdef, a is then defended in {a mathematical formula}FSdef and thus {a mathematical formula}S∈adm(FSdef). Thus let {a mathematical formula}S∈S contain at least two arguments. By construction, S is conflict-free in {a mathematical formula}FSdef. It remains to show that each {a mathematical formula}s∈S is defended by S in {a mathematical formula}FSdef. Let {a mathematical formula}s∈S. First, we know that s defends itself from all {a mathematical formula}t∈ArgsS, since {a mathematical formula}FSdef extends {a mathematical formula}FScf, which is symmetric. Moreover, we know from Lemma 6 that {a mathematical formula}S∖{s} is a model of {a mathematical formula}CDsS. Hence, each clause {a mathematical formula}γ∈CDsS contains at least one variable {a mathematical formula}tγ∈S∖{s}. Thus, by construction of {a mathematical formula}RSdef, {a mathematical formula}(S∖{s})↦αsγ for each {a mathematical formula}γ∈CDsS, i.e. S defends s in {a mathematical formula}FSdef.{a mathematical formula}adm(FSdef)⊆S: Let {a mathematical formula}S∈adm(FSdef). For {a mathematical formula}S=∅, {a mathematical formula}S∈S by definition. If {a mathematical formula}S={a}, then {a mathematical formula}a↦b whenever some argument b attacks a. Hence, {a mathematical formula}CDaS={}, i.e. {a mathematical formula}DaS≡⊤ must hold, therefore {a mathematical formula}S∈S. Now assume S contains at least two arguments. As S is conflict-free in {a mathematical formula}FSdef, the construction of {a mathematical formula}RSdef guarantees that for all {a mathematical formula}a,b∈S, {a mathematical formula}(a,b)∈PairsS. Let {a mathematical formula}s∈S with {a mathematical formula}{s}∉adm(FSdef). Then we have {a mathematical formula}αsγ↦s for each {a mathematical formula}γ∈CDsS. Since s is defended by S, for each {a mathematical formula}γ∈CDsS, {a mathematical formula}∃tγ∈(S∖{s}):tγ↦αsγ. By definition of {a mathematical formula}FSdef, thus {a mathematical formula}tγ occurs in the clause γ. It follows that {a mathematical formula}T={tγ|γ∈CDsS} is a model of {a mathematical formula}CDsS and {a mathematical formula}DsS. Then by Lemma 6 there is some {a mathematical formula}Ss′⊆T∪{s} (note that also {a mathematical formula}Ss′⊆S as {a mathematical formula}s∈S and for each {a mathematical formula}tγ∈T also {a mathematical formula}tγ∈S) with {a mathematical formula}s∈Ss′ such that {a mathematical formula}Ss′∈S. Recall also that in case {a mathematical formula}{s}∈adm(FSdef), we know that {a mathematical formula}{s}∈S (say {a mathematical formula}Ss′={s}). Now since {a mathematical formula}(a,b)∈PairsS for all {a mathematical formula}a,b∈S and since {a mathematical formula}S is conflict-sensitive, it must hold that {a mathematical formula}Ss1′∪Ss2′∈S for any {a mathematical formula}s1,s2∈S. Hence {a mathematical formula}S=(⋃si∈SSsi′)∈S.  □
+     </paragraph>
+     <paragraph>
+      The construction also works for the preferred semantics. In order to realize a non-empty, incomparable and conflict-sensitive extension-set {a mathematical formula}S under the semi-stable semantics we can also make use of {a mathematical formula}FSdef, but with an additional self-attacking argument {a mathematical formula}a′ for each argument a in {a mathematical formula}ArgsS together with an attack from a to {a mathematical formula}a′. For details we refer to the translation from preferred to semi-stable semantics in [24].
+     </paragraph>
+     <paragraph label="Proof">
+      For each non-empty, incomparable and conflict-sensitive extension-set{a mathematical formula}Sthere exist{a mathematical formula}F,F′with{a mathematical formula}pref(F)=Sand{a mathematical formula}sem(F′)=S.By Proposition 8 and Lemma 4.3, {a mathematical formula}adm(FSdef)=S∪{∅}. Since {a mathematical formula}S is incomparable, {a mathematical formula}pref(FSdef)=S. Moreover, as shown by Dvořák and Woltran [24], for each afF there is an af{a mathematical formula}F′ such that {a mathematical formula}pref(F)=sem(F′).  □
+     </paragraph>
+     <paragraph>
+      Each extension-set {a mathematical formula}S realizable under the admissible semantics, can also be realized under the complete semantics: extend {a mathematical formula}FSdef for each {a mathematical formula}a∈ArgsS by a self-attacking argument with an attack from and to a. As Example 5 already suggests, the complete semantics is however capable of realizing more diverse extension-sets. However, the property of being com-closed (cf. Definition 10) so far only gives an approximation of the sets which can realized.
+     </paragraph>
+     <paragraph label="Example 8">
+      Let {a mathematical formula}S={∅,{a},{b},{c},{a,b,c},{a,d,e}, {a mathematical formula}{b,d,f},{x,c},{x,d}}. {a mathematical formula}S is com-closed and satisfies {a mathematical formula}(⋂S∈SS)=∅∈S. We argue that {a mathematical formula}S is not com-realizable. Towards a contradiction consider an afF such that {a mathematical formula}com(F)=S. First as {a mathematical formula}{x,c},{x,d}∈S and no superset of {a mathematical formula}{x,c,d} is in {a mathematical formula}S, there must be a conflict between c and d. In case {a mathematical formula}(c,d)∈R and {a mathematical formula}(d,c)∉R, {a mathematical formula}(x,d) is not admissible (as {a mathematical formula}(x,c)∈PairsS). Similar for {a mathematical formula}(d,c)∈R and {a mathematical formula}(c,d)∉R. Thus {a mathematical formula}(c,d),(d,c)∈R. Now consider {a mathematical formula}{a,b} which must be admissible as {a mathematical formula}{a},{b} are admissible and {a mathematical formula}(a,b)∈PairsS. But as {a mathematical formula}{a,b}∉S it has to defend argument c ({a mathematical formula}CS({a,b})={a,b,c}). But we have {a mathematical formula}(d,c)∈R and {a mathematical formula}(a,d),(b,d)∈PairsS. Hence {a mathematical formula}{a,b} cannot defend c.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Signatures &amp; limits of disagreement
+     </section-title>
+     <paragraph>
+      We now state our main result, i.e. exact characterizations of the signatures for the semantics dealt with in this paper.
+     </paragraph>
+     <paragraph label="Theorem 1">
+      The signatures for the considered semantics are given by the following collections of extension-sets.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The characterizations of the theorem are immediate from results in the previous section and the corresponding characteristics from Proposition 1, Proposition 2. The result for the grounded semantics follows directly from the facts that every AF F has {a mathematical formula}|grd(F)|=1 and every extension-set {a mathematical formula}S with {a mathematical formula}|S|=1 is realized by the AF {a mathematical formula}(ArgsS,∅) under the grounded semantics. Moreover, {a mathematical formula}Σcom⊂{S≠∅|S is com-closed and (⋂S∈SS)∈S}, cf. Proposition 4 and Example 8.
+     </paragraph>
+     <paragraph>
+      By inspecting the respective properties, we can now immediately put the signatures of different semantics in relation to each other. For illustration see Fig. 6, where {a mathematical formula}ΣA just denotes the set of all extension-sets over {a mathematical formula}A, and the singleton {a mathematical formula}{∅}, i.e. the extension-set containing no extension, belongs to {a mathematical formula}Σstb. The right side of Fig. 6 shows signatures of these semantics providing only incomparable extension-sets. The only extension-set they have in common with the signatures of conflict-free and admissible sets is the one only containing the empty extension. On the other hand, the intersection with {a mathematical formula}Σcom, which exactly coincides with {a mathematical formula}Σgrd, contains all extension-sets {a mathematical formula}S with {a mathematical formula}|S|=1 in addition.
+     </paragraph>
+     <paragraph label="Proof">
+      The following relations hold{a mathematical formula}{a mathematical formula}In what follows, we make implicit use of the results from Theorem 1. First, by Lemma 2.1, {a mathematical formula}Σnaive⊆Σstage; {a mathematical formula}Σnaive≠Σstage is witnessed by Example 3, where an extension-set {a mathematical formula}S∉Σnaive is realized under the stage semantics. Relations {a mathematical formula}Σstage⊆Σsem and {a mathematical formula}Σcf⊆Σadm follow from Lemma 3. {a mathematical formula}Σstage≠Σsem is by Example 4. {a mathematical formula}Σcf≠Σadm is seen by extension-set {a mathematical formula}{∅,{a,b}} which is conflict-sensitive but not downward-closed. The fact that adm-realizability implies com-realizability and Example 5 show {a mathematical formula}Σadm⊂Σcom. The relations in the last line follow from the definition of {a mathematical formula}dcl(⋅) and Lemma 4.3 respectively.  □
+     </paragraph>
+     <paragraph>
+      Let us next compare this landscape of expressiveness illustrated in Fig. 6, with those given by the research on intertranslatability. In [24], only translations that are efficiently computable are considered and thus the results are hardly comparable to ours (since we have not put any restrictions on the size of AFs when realizing a set of extensions). Another work [22] studies translations without computational bounds by considering so-called (weakly) exact translations. More precisely, a translation is called exact for {a mathematical formula}σ⇒θ if the θ-extensions of the transformed af coincide with the σ-extensions of the original af. We have that there is an exact translation for {a mathematical formula}σ⇒θ iff {a mathematical formula}Σσ⊆Σθ. Thus, the landscape drawn in [22] is almost identical to ours with the exception of stable semantics.{sup:3} However, we recall that the results in [22] do not tell us how the signatures exactly look like.
+     </paragraph>
+     <paragraph>
+      The characterization of the signatures of preferred and semi-stable semantics also shows that they enjoy maximal expressiveness within reasonable semantics as defined in Proposition 3. That is, no semantics which always guarantees a conflict between two different extensions can express more than preferred and semi-stable semantics, respectively.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider an arbitrary semantics{a mathematical formula}σ:AFA→22Asuch that for any{a mathematical formula}F=(A,R)∈AFAit holds that{a mathematical formula}σ(F)⊆cf(F)and for all{a mathematical formula}S1,S2∈σ(F)({a mathematical formula}S1≠S2) there exist{a mathematical formula}a,b∈S1∪S2with{a mathematical formula}(a,b)∈R. It holds that{a mathematical formula}Σσ⊆Σprefand{a mathematical formula}Σσ⊆Σsem.Follows directly by Proposition 3 and Theorem 1.  □
+     </paragraph>
+     <paragraph>
+      With our results on signatures at hand, we now provide some interesting implications. The first result examines the question whether the intersection of two extension-sets under a given semantics σ, can always be realized. With the exact characterizations of signatures in Theorem 1 at hand we can answer this question positively for all semantics except complete.
+     </paragraph>
+     <paragraph label="Proof">
+      For each{a mathematical formula}σ∈{cf,adm,naive,stb,stage,pref,sem}it holds that for anyafs{a mathematical formula}F1,F2there exists anafF such that{a mathematical formula}σ(F)=σ(F1)∩σ(F2)if{a mathematical formula}σ(F1)∩σ(F2)≠∅.{sup:4}We have to show that {a mathematical formula}σ(F1)∩σ(F2) satisfies the properties according to the signature of the particular semantics. Existence of an afF with the desired extensions is then a consequence of Theorem 1.cf: Let {a mathematical formula}S=cf(F1)∩cf(F2). It is easy to see that {a mathematical formula}S is downward-closed since {a mathematical formula}cf(F1) and {a mathematical formula}cf(F2) are downward-closed. So assume {a mathematical formula}S is not tight, i.e. there is some {a mathematical formula}S∈S and {a mathematical formula}a∈ArgsS with {a mathematical formula}S∪{a}∉S but {a mathematical formula}∀s∈S:(a,s)∈PairsS. This means that {a mathematical formula}S∈cf(F1) and {a mathematical formula}S∈cf(F2), but there is an {a mathematical formula}i∈{1,2} such that {a mathematical formula}S∪{a}∉cf(Fi). Since {a mathematical formula}Pairscf(Fi)⊇PairsS, {a mathematical formula}cf(Fi) is not tight, a contradiction to Proposition 1.adm: Towards a contradiction, assume {a mathematical formula}S=adm(F1)∩adm(F2) is not conflict-sensitive, i.e. there are {a mathematical formula}A,B∈S such that {a mathematical formula}(A∪B)∉S, but for all {a mathematical formula}a,b∈(A∪B), {a mathematical formula}(a,b)∈PairsS. Then there is some {a mathematical formula}i∈{1,2}, such that {a mathematical formula}A,B∈adm(Fi) but {a mathematical formula}(A∪B)∉adm(Fi). On the other hand, {a mathematical formula}Pairsadm(Fi)⊇PairsS, hence {a mathematical formula}∀a,b∈(A∪B):(a,b)∈Pairsadm(Fi). Therefore {a mathematical formula}adm(Fi) is not conflict-sensitive, a contradiction to Proposition 2.naive: Let {a mathematical formula}S=naive(F1)∩naive(F2) and assume that {a mathematical formula}dcl(S) is not tight, i.e. there is some {a mathematical formula}S∈dcl(S) and {a mathematical formula}a∈ArgsS with {a mathematical formula}S∪{a}∉dcl(S) but {a mathematical formula}∀s∈S:(a,s)∈PairsS. This means that there exists an {a mathematical formula}S′⊇S with {a mathematical formula}S′∈naive(F1) and {a mathematical formula}S′∈naive(F2) and therefore {a mathematical formula}S∈dcl(naive(F1)) and {a mathematical formula}S∈dcl(naive(F2)). Moreover, for some {a mathematical formula}i∈{1,2} it holds that {a mathematical formula}∀T⊇(S∪{a}):T∉naive(Fi) and therefore {a mathematical formula}(S∪{a})∉dcl(naive(Fi)). Finally, since {a mathematical formula}Pairsnaive(Fi)⊇PairsS, {a mathematical formula}∀s∈S:(a,s)∈Pairsnaive(Fi). These observations sum up to {a mathematical formula}dcl(naive(Fi)) not being tight, a contradiction to Proposition 1.The result for stb and stage follows from Lemma 2.2, just as the result for pref and sem is immediate by Lemma 4.2.  □
+     </paragraph>
+     <paragraph>
+      Interestingly, the complete semantics turns out to be the only semantics not closed under this form of intersection. Consider the extension-sets {a mathematical formula}S={∅,{a}, {a mathematical formula}{b}, {a mathematical formula}{a,b,c,d1}, {a mathematical formula}{a,b,c,d2}}, {a mathematical formula}S1=S∪{{a,b}}, and {a mathematical formula}S2=S∪{{a,b,c}}. {a mathematical formula}S1 and {a mathematical formula}S2 are realizable under the complete semantics. Corresponding afs are depicted in Fig. 7: {a mathematical formula}S1 are the complete extensions of the entire af, and {a mathematical formula}S2 the ones of the af without the dotted part. However, {a mathematical formula}S=S1∩S2 is not com-closed (since {a mathematical formula}CS({a,b})={{a,b,c,d1}, {a mathematical formula}{a,b,c,d2}} does not provide a unique completion-set) and therefore, by Proposition 4, no afF exists such that {a mathematical formula}com(F)=S.
+     </paragraph>
+     <paragraph>
+      Our next results concern limits in expressing multiple extensions. Our first result is positive in a sense that as long as two (maximal) sets of arguments are involved, all semantics satisfying incomparability of extensions are capable to deliver such extensions. Recall that three sets (e.g. {a mathematical formula}S={{a,b},{a,c},{b,c}}) are already problematic. Under admissible and complete semantics, any extension-set containing two arbitrary sets of arguments together with ∅ is realizable.
+     </paragraph>
+     <paragraph label="Proposition 10">
+      For any extension-set{a mathematical formula}Swith{a mathematical formula}|S|≤2,
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}S∈Σσfor{a mathematical formula}σ∈{naive,stb,stage,pref,sem}if{a mathematical formula}Sis incomparable and{a mathematical formula}S≠∅,
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}S∪{∅}∈Σθfor{a mathematical formula}θ∈{adm,com}.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="1.">
+        By Theorem 2, it suffices to show the claim for naive semantics. By Theorem 1, we need to show that {a mathematical formula}dcl(S) is tight, which trivially holds for {a mathematical formula}|S|=1. For {a mathematical formula}S={S1,S2}, let {a mathematical formula}S∈dcl(S) and {a mathematical formula}a∈ArgsS such that {a mathematical formula}S∪{a}∉dcl(S). W.l.o.g. assume {a mathematical formula}S⊆S1. Then, {a mathematical formula}a∈S2∖S1 and {a mathematical formula}S⊈S2, i.e. there is some {a mathematical formula}s∈S∖S2. Since {a mathematical formula}|S|=2, {a mathematical formula}(a,s)∉PairsS.
+       </list-item>
+       <list-item label="2.">
+        We show that {a mathematical formula}T=S∪{∅} is conflict-sensitive as long as {a mathematical formula}|S|≤2. This trivially holds for {a mathematical formula}|S|≤1, since then for all {a mathematical formula}A,B∈T, {a mathematical formula}A∪B∈T. So let {a mathematical formula}S={S1,S2} with {a mathematical formula}S1≠S2 and w.l.o.g. {a mathematical formula}S1,S2≠∅. If {a mathematical formula}S1⊂S2 or {a mathematical formula}S2⊂S1 then {a mathematical formula}S1∪S2∈T, hence {a mathematical formula}T is conflict-sensitive. On the other hand, if {a mathematical formula}S1 and {a mathematical formula}S2 are incomparable there is an {a mathematical formula}a∈S1 and a {a mathematical formula}b∈S2 such that {a mathematical formula}(a,b)∉PairsT, again showing conflict-sensitivity. Therefore {a mathematical formula}T∈Σadm. The result for com follows from the fact that {a mathematical formula}Σadm⊂Σcom (cf. Theorem 2).
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      As a final result in this section, we address the question how many extensions can maximally be achieved by an af under a semantics σ? Such insights ease checking {a mathematical formula}S∈Σσ whenever the cardinality of {a mathematical formula}S exceeds a certain number. Research in this direction has recently been initiated by Baumann and Strass [8]. They proposed a function giving the maximal number of stable extensions an af with n arguments can have. In accordance to realizability, we are interested in the number of extensions as a function of a fixed amount of arguments occurring in any extension. While our results on signatures give insights about the extent of structural diversity a semantics can express, the maximal number of extensions gives, to some degree, an answer to how much quantitative disagreement a semantics can express.
+     </paragraph>
+     <paragraph>
+      Recall that for some extension-set {a mathematical formula}S, we denote the number of extensions in {a mathematical formula}S as {a mathematical formula}|S|, and the number of arguments occurring in some extension of {a mathematical formula}S as {a mathematical formula}‖S‖.
+     </paragraph>
+     <paragraph label="Definition 15">
+      Given a semantics σ, we define the diversity-function{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      It is easy to see that {a mathematical formula}Δσ(n)=2n for {a mathematical formula}σ∈{cf,adm,com}. Given an extension-set {a mathematical formula}S with {a mathematical formula}‖S‖=n, the af{a mathematical formula}(ArgsS,∅) has {a mathematical formula}2n conflict-free and admissible sets and the af{a mathematical formula}({a,a′|a∈ArgsS},{(a,a′),(a′,a),(a′,a′)|a∈ArgsS}) has {a mathematical formula}2n complete extensions. For the other semantics, we first give a technical lemma.
+     </paragraph>
+     <paragraph label="Proof">
+      For anyafF, there is a symmetricaf{a mathematical formula}Fsymwith{a mathematical formula}‖pref(F)‖=‖pref(Fsym)‖and{a mathematical formula}|pref(F)|≤|pref(Fsym)|.In order to get the symmetric af{a mathematical formula}Fsym we transform {a mathematical formula}F=(A,R) by (1) removing all arguments {a mathematical formula}a∉Argspref(F) together with adjacent attacks, and (2) adding {a mathematical formula}(b,a) to R if {a mathematical formula}(a,b)∈R. Obviously conflict-freeness and defense is preserved, i.e. any set admissible in F is admissible in {a mathematical formula}Fsym. Moreover, as only attacks to and from arguments not occurring in any preferred extension of F are removed, any conflict between two preferred extensions {a mathematical formula}E1,E2∈pref(F) survives the translation, therefore there must be two {a mathematical formula}E1′,E2′∈pref(Fsym) with {a mathematical formula}E1⊆E1′ and {a mathematical formula}E2⊆E2′. Hence {a mathematical formula}|pref(F)|≤|pref(Fsym)|. As {a mathematical formula}Argspref(Fsym) coincides with the arguments of {a mathematical formula}Fsym (by symmetry of {a mathematical formula}Fsym), it follows that {a mathematical formula}‖pref(F)‖=‖pref(Fsym)‖.  □
+     </paragraph>
+     <paragraph>
+      Recent results by Baumann and Strass [8] provide a function mapping numbers of arguments n to the maximal number of stable extensions an af with n arguments can have. Their main result is as follows.
+     </paragraph>
+     <paragraph label="Proposition 11">
+      For any natural number n, it holds that{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In contrast to {a mathematical formula}Δσ, Baumann and Strass are interested in the maximal number of stable extensions which can be achieved by an af with n arguments, no matter how many of these arguments occur in some extension. The AF giving the maximum number of extension is basically composed of connected components of size 3 (or 2) with each component being a clique (see [8] for details). The following result shows that the values of the function Λ carry over to the function {a mathematical formula}Δσ for all incomparable semantics σ we consider in this paper. Informally, this means that additional arguments do not allow for a greater maximal number of extensions.
+     </paragraph>
+     <paragraph label="Proof">
+      For{a mathematical formula}σ∈{naive, stb, stage, pref, sem} and any natural number n, it holds that{a mathematical formula}Consider a semantics {a mathematical formula}σ∈{naive, stb, stage, pref, sem}, a natural number n and an afF with {a mathematical formula}‖σ(F)‖=n. Moreover assume that F has maximal diversity, i.e. {a mathematical formula}|σ(F)|=Δσ(n). Since {a mathematical formula}Σσ⊆Σpref, we can find an af{a mathematical formula}F′ with {a mathematical formula}pref(F′)=σ(F), therefore {a mathematical formula}|σ(F)|=|pref(F′)| and {a mathematical formula}‖σ(F)‖=‖pref(F′)‖. Moreover, by Lemma 7, we can find a symmetric af{a mathematical formula}Fsym=(Asym,Rsym) such that {a mathematical formula}‖pref(Fsym)‖=‖pref(F′)‖ and {a mathematical formula}|pref(Fsym)|≥|pref(F′)|. In this symmetric af it holds that {a mathematical formula}pref(Fsym)=σ(Fsym)=stb(Fsym). Moreover, each argument occurs in at least one σ-extension, i.e. {a mathematical formula}‖σ(Fsym)‖=|Asym|. Therefore it follows by Proposition 11 that {a mathematical formula}|σ(Fsym)|≤Λ(n). Since we assumed F having maximal diversity, it follows that {a mathematical formula}Δσ(n)≤Λ(n).Finally consider the fact that for all AFs {a mathematical formula}F=(A,R) with {a mathematical formula}|A|=n having {a mathematical formula}|stb(F)|=Λ(n) according to [8], it holds that each argument occurs in at least one stable extension, i.e. {a mathematical formula}‖stb(F)‖=|A|. Moreover, F is symmetric, hence {a mathematical formula}σ(F)=stb(F). Therefore F is an af with {a mathematical formula}‖σ(F)‖=n and {a mathematical formula}|σ(F)|=Λ(n), hence {a mathematical formula}Δσ(n)=Λ(n).  □
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Complexity
+     </section-title>
+     <paragraph>
+      In this section we consider the computational complexity of several decision problems concerning realizability for semantics {a mathematical formula}σ,σ′. (i) Given an extension-set, deciding whether it can be realized with σ. (ii) Given a propositional formula φ, deciding whether the set of models of φ can be realized with σ. (iii) Given an AF F, deciding whether {a mathematical formula}σ′(F) can be realized with a semantics σ.
+     </paragraph>
+     <paragraph>
+      We assume the reader is familiar with standard complexity concepts, as P, NP and completeness. Nevertheless we briefly recapitulate the concept of {a mathematical formula}NP-oracle machines and the related complexity class {a mathematical formula}Σ2P. By an {a mathematical formula}NP-oracle machine we mean a Turing machine which can access an oracle that decides a given sub-problem from {a mathematical formula}NP (or {a mathematical formula}coNP) within one step. The class {a mathematical formula}Σ2P (sometimes also denoted by {a mathematical formula}NPNP), contains the problems which can be decided in polynomial time by a nondeterministic {a mathematical formula}NP-oracle machine. The complementary class of {a mathematical formula}Σ2P is the class {a mathematical formula}Π2P (sometimes also denoted by {a mathematical formula}coNPNP). Finally, a problem is in the class {a mathematical formula}DP iff it can be characterized as the intersection of a problem in {a mathematical formula}NP and a problem in {a mathematical formula}coNP.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Realizability of an extension-set
+      </section-title>
+      <paragraph>
+       In this section, we first consider the problem of checking realizability, i.e. given an extension-set {a mathematical formula}S and a semantics σ, is there an afF with {a mathematical formula}σ(F)=S. This is equivalent with checking membership in a signature for semantics σ, so whether {a mathematical formula}S∈Σσ holds. For most of the semantics, it is not hard to see that this can be done in polynomial time in the size of {a mathematical formula}S. For instance, to check that {a mathematical formula}S∈Σstb, it is sufficient to check for incomparability via a double loop over {a mathematical formula}S and for being tight one loops over all {a mathematical formula}S∈S and in each such loop, another loop is required for each {a mathematical formula}a∈ArgsS∖S. The only exception is the naive semantics, since the characterization in Theorem 1 makes use of {a mathematical formula}dcl(S) which is not polynomially bounded in the size of {a mathematical formula}S.
+      </paragraph>
+      <paragraph>
+       We provide an alternative characterization based on the ternary majority operator {a mathematical formula}maj3: given three sets {a mathematical formula}S1,S2,S3⊆A, the majority of these sets is defined as {a mathematical formula}maj3(S1,S2,S3)=(S1∩S2)∪(S2∩S3)∪(S1∩S3). That is {a mathematical formula}s∈maj3(S1,S2,S3) iff s appears in at least two of the sets.
+      </paragraph>
+      <paragraph label="Proof">
+       For an incomparable extension-set{a mathematical formula}Sit holds that{a mathematical formula}dcl(S)is tight iff for all{a mathematical formula}S1,S2,S3∈Sthere is an{a mathematical formula}S∈S, such that{a mathematical formula}maj3(S1,S2,S3)⊆S.First suppose that for all {a mathematical formula}S1,S2,S3∈S there is some {a mathematical formula}S∈S such that {a mathematical formula}maj3(S1,S2,S3)⊆S. Towards a contradiction assume that the downward-closure of {a mathematical formula}S is not tight, i.e. there exist {a mathematical formula}S′∈dcl(S) and {a mathematical formula}a∈ArgsS=Argsdcl(S), such that {a mathematical formula}(S′∪{a})∉dcl(S) and for all {a mathematical formula}s∈S′, {a mathematical formula}(a,s)∈PairsS=Pairsdcl(S). Assume {a mathematical formula}|S′|=1, i.e. {a mathematical formula}S′={s}. As {a mathematical formula}(a,s)∈PairsS by assumption, there is a {a mathematical formula}T∈S with {a mathematical formula}{a,s}⊆T, a contradiction to {a mathematical formula}S′∪{a}∉dcl(S). Hence {a mathematical formula}|S′|&gt;1, i.e. {a mathematical formula}S′={s1,…,sn} with {a mathematical formula}n&gt;1. By assumption, {a mathematical formula}{s1,…,sn,a}∉S, but {a mathematical formula}(a,si)∈PairsS for each {a mathematical formula}si∈S′. Hence, for each {a mathematical formula}si∈S′ there is some {a mathematical formula}Si∈S with {a mathematical formula}{a,si}⊆Si for {a mathematical formula}i=1…n. Moreover {a mathematical formula}maj3(Si,Sj,S′)⊇{si,sj,a} for each {a mathematical formula}i,j∈{1,…,n} since {a mathematical formula}si∈S′∩Si, {a mathematical formula}sj∈S′∩Sj, and {a mathematical formula}a∈Si∩Sj. Therefore there is some {a mathematical formula}Sij∈S with {a mathematical formula}Sij⊇{si,sj,a}. Now for some {a mathematical formula}k∈{1,…,n}, we get {a mathematical formula}Sijk=maj3(Sij,Sk,S′)⊇{si,sj,sk,a} and {a mathematical formula}Sijk∈S. Following this procedure for all {a mathematical formula}1…n yields a {a mathematical formula}T∈S with {a mathematical formula}T⊇{s1,…,sn,a}, a contradiction to {a mathematical formula}S′∪{a}∉dcl(S).To show the only-if-direction consider some extension-set {a mathematical formula}S where {a mathematical formula}dcl(S) is tight and assume, towards a contradiction, sets {a mathematical formula}S1,S2,S3∈S such that {a mathematical formula}maj3(S1,S2,S3)⊈S, for all {a mathematical formula}S∈S. Now, consider the ⊆-maximal {a mathematical formula}S′∈dcl(S) with {a mathematical formula}S′⊂maj3(S1,S2,S3). It holds that {a mathematical formula}∃a∈maj3(S1,S2,S3)∖S′ such that {a mathematical formula}S′∪{a}∉dcl(S). As {a mathematical formula}S′∪{a}⊆maj3(S1,S2,S3), all {a mathematical formula}s∈(S′∪{a}) are also contained in {a mathematical formula}((S1∩S2)∪(S2∩S3)∪(S1∩S3)). Thus for each {a mathematical formula}s∈S′ there is some {a mathematical formula}Si∈{S1,S2,S3} with {a mathematical formula}{s,a}⊆Si. Hence, {a mathematical formula}(s,a)∈PairsS for each {a mathematical formula}s∈S′, which is, together with the facts that {a mathematical formula}S′∈dcl(S) and {a mathematical formula}S′∪{a}∉dcl(S), a witness that {a mathematical formula}dcl(S) is not tight, and therefore a contradiction to the assumption.  □
+      </paragraph>
+      <paragraph label="Theorem 6">
+       Testing the majority criterion is done in polynomial time by looping over all triples {a mathematical formula}(S1,S2,S3) stemming from {a mathematical formula}S. Together with the above observations we obtain the following theorem. For semantics{a mathematical formula}σ∈{cf, naive, stb, stage, adm, pref, sem}, given{a mathematical formula}S, testing{a mathematical formula}S∈Σσis in polynomial time.
+      </paragraph>
+      <paragraph>
+       Of course one difficulty with Theorem 6 is that one may be concerned with deciding realizability of collections of sets, {a mathematical formula}S, with such collections having size superpolynomial in {a mathematical formula}|ArgsS|. In such cases it would be more realistic to encode {a mathematical formula}S in a more compact form. We observe that there are a number of ways in which such “compact encodings” may be treated:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        As the models of a given propositional formula.
+       </list-item>
+       <list-item label="2.">
+        As the extensions of an af under another argumentation semantics.
+       </list-item>
+      </list>
+      <paragraph>
+       To begin with, we consider the former case.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Realizing models of propositional formulas
+      </section-title>
+      <paragraph>
+       Here we study the problem of realizing the set of models of a propositional formula as extension-set for an argumentation semantics.
+      </paragraph>
+      <paragraph label="Definition 16">
+       A propositional formula φ over atoms X, denoted {a mathematical formula}φ(X), encodes the extension-set {a mathematical formula}S if {a mathematical formula}ArgsS⊆X and S is a model of φ iff {a mathematical formula}S∈S.{sup:5} We denote the extension-set encoded by {a mathematical formula}φ(X) as {a mathematical formula}Sφ and the propositional function described by {a mathematical formula}φ(X) as {a mathematical formula}fφ.
+      </paragraph>
+      <paragraph>
+       The next proposition gives complexity results for checking the characteristic properties of signatures, given an extension-set as models of a propositional formula.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       Given a propositional formula{a mathematical formula}φ(X), it holds that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        deciding if{a mathematical formula}Sφis non-empty is{a mathematical formula}NP-complete,
+       </list-item>
+       <list-item label="2.">
+        deciding if{a mathematical formula}Sφis downward-closed is{a mathematical formula}coNP-complete,
+       </list-item>
+       <list-item label="3.">
+        deciding if{a mathematical formula}Sφis incomparable is{a mathematical formula}coNP-complete,
+       </list-item>
+       <list-item label="4.">
+        deciding if{a mathematical formula}Sφis tight is{a mathematical formula}coNP-complete, and
+       </list-item>
+       <list-item label="5.">
+        deciding if{a mathematical formula}Sφis conflict-sensitive is{a mathematical formula}coNP-complete.
+       </list-item>
+      </list>
+      <paragraph label="Proof sketch">
+       The proof is based on the following ideas: (1) Deciding whether {a mathematical formula}Sφ is non-empty is equivalent to deciding whether φ is satisfiable; (2) Concerning {a mathematical formula}Sφ is downward-closed we have to test whether the boolean function {a mathematical formula}fφ is anti-monotone. This can be falsified by finding a model M and a variable x such that {a mathematical formula}M∖{x} is not a model of φ; (3) To falsify incomparability of {a mathematical formula}Sφ we can guess two models that are in ⊂-relation; (4) To falsify that {a mathematical formula}Sφ is tight we need a model S of φ, an argument x such that {a mathematical formula}S∪{x}∉Sφ, and a linear number of {a mathematical formula}Ti∈Sφ such that for each pair {a mathematical formula}(s,x),s∈S there is one {a mathematical formula}Ti with {a mathematical formula}{s,x}⊆Ti; (5) To falsify that {a mathematical formula}Sφ is conflict-sensitive we need two models {a mathematical formula}S,T of φ, such that {a mathematical formula}S∪T∉Sφ, and a linear number of {a mathematical formula}Ti∈Sφ such that for each pair {a mathematical formula}(s,t),s∈S,t∈T there is one {a mathematical formula}Ti with {a mathematical formula}{s,t}⊆Ti. The full proofs are provided in Appendix A.1.  □
+      </paragraph>
+      <paragraph label="Proof">
+       With these results at hand, we are able to present upper and lower bounds on the complexity of deciding whether the models of a given propositional formula φ can be realized under the conflict-free, admissible, stable, stage, preferred and semi-stable semantics. We summarize the results in Table 1. An entry for column σ gives the complexity of deciding whether {a mathematical formula}φ(X)∈Σσ and {a mathematical formula}C-c abbreviates completeness for class {a mathematical formula}C. The cf-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}coNP-complete.Recall that an {a mathematical formula}S is cf-realizable, if {a mathematical formula}S≠∅, {a mathematical formula}S is downward-closed, i.e. {a mathematical formula}dcl(S)=S, and {a mathematical formula}S is tight (cf. Theorem 1). The {a mathematical formula}coNP membership is thus immediate from Proposition 13. Notice that we do not have to check {a mathematical formula}S≠∅ explicitly. This follows from downward-closure, since for a downward-closed set {a mathematical formula}S, {a mathematical formula}S≠∅ iff {a mathematical formula}∅∈S. Testing {a mathematical formula}∅∈Sφ just additionally requires checking whether {a mathematical formula}φ(〈⊥,…,⊥〉) evaluates to true, which is easy.To establish {a mathematical formula}coNP-hardness, we use a straightforward reduction from sat to the complementary problem. Given an instance {a mathematical formula}ψ(X) of sat let {a mathematical formula}φ(X,y) be the propositional formula{a mathematical formula} where y is a new variable. Without loss of generality we assume that the empty set is not a model of {a mathematical formula}ψ(X). We claim {a mathematical formula}ψ(X) is satisfiable if and only if {a mathematical formula}Sφ is not cf-realizable. Suppose that {a mathematical formula}ψ(X) is satisfied by a model M. Then {a mathematical formula}M∪{y} is a model of {a mathematical formula}φ(X,y) while M is not. Hence, {a mathematical formula}Sφ is not downward closed and thus not cf-realizable. Conversely suppose {a mathematical formula}ψ(X) is unsatisfiable. Then the empty set is the only model of {a mathematical formula}φ(X,y), i.e. {a mathematical formula}Sφ={∅}. Thus, {a mathematical formula}Sφ is downward-closed and tight and thus cf-realizable.We deduce that {a mathematical formula}ψ(X) is accepted as an instance of sat if and only if {a mathematical formula}φ(X,y) is not accepted as an instance of cf-realizability and, hence, the cf-realizability problem is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       The adm-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}coNP-complete.First observe that deciding, given {a mathematical formula}φ(X) whether {a mathematical formula}Sφ is adm-realizable just involves checking, that {a mathematical formula}φ(〈⊥,…,⊥〉) evaluates to true and that {a mathematical formula}Sφ is conflict-sensitive (cf. Theorem 1). The first condition is trivially checked in polynomial time, the second we have shown to be in {a mathematical formula}coNP in Proposition 13.To prove that adm-realizability is {a mathematical formula}coNP-hard we reduce from deciding conflict-sensitivity, which we showed to be {a mathematical formula}coNP-hard (cf. Proposition 13). Let {a mathematical formula}ψ(X) be an instance of deciding whether {a mathematical formula}Sψ is conflict-sensitive, and consider the instance, {a mathematical formula}φ(X) of the adm-realizability problem given by,{a mathematical formula}Then {a mathematical formula}Sφ=Sψ∪{∅}. As the empty set has no effect on conflict-sensitivity of an extension-set we have that {a mathematical formula}Sφ is conflict-sensitive iff {a mathematical formula}Sψ conflict-sensitive. Further, as always {a mathematical formula}∅∈Sφ, we finally have that {a mathematical formula}Sφ is conflict-sensitive iff {a mathematical formula}Sψ is adm-realizable and, hence, the adm-realizability problem is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       The stb-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}coNP-complete.The {a mathematical formula}coNP membership is immediate from Proposition 13.To show that deciding whether {a mathematical formula}φ(X) is stb-realizable is {a mathematical formula}coNP-hard, we use a reduction from unsat. Given an instance {a mathematical formula}ψ(X) of sat, form {a mathematical formula}φ(X,y,z) as an instance of comparability with{a mathematical formula} Here y and z are new variables. We claim {a mathematical formula}ψ(X) is satisfiable if and only if {a mathematical formula}Sφ is not stb-realizable.Suppose that {a mathematical formula}ψ(X) is satisfiable using α and let {a mathematical formula}Sα⊆X be the corresponding subset of X indicated by α. Then,{a mathematical formula} and{a mathematical formula} Clearly {a mathematical formula}T⊂U so that {a mathematical formula}φ(X,y,z) is comparable, and thus {a mathematical formula}Sφ is not stb-realizable.Conversely suppose {a mathematical formula}ψ(X) is unsatisfiable. Then also {a mathematical formula}φ(X,y,z) is unsatisfiable, i.e. {a mathematical formula}Sφ={}. Hence, {a mathematical formula}Sφ is stb-realizable.We deduce that deciding if {a mathematical formula}Sφ is stb-realizable is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       The σ-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is in{a mathematical formula}DPfor{a mathematical formula}σ∈{pref,stage,sem}.For {a mathematical formula}σ∈{pref,stage,sem} we have, with the exception of {a mathematical formula}Sσ≠∅, shown that the relevant characterizing conditions can be decided in {a mathematical formula}coNP. Letting {a mathematical formula}χ(σ) denote these, e.g. {a mathematical formula}χ(pref)={conflict-sensitive, incomparable}, we see that, {a mathematical formula}Sφ∈Σσ if and only if{a mathematical formula} So that σ-realizability is in {a mathematical formula}DP for these three cases.  □
+      </paragraph>
+      <paragraph label="Proof sketch">
+       There are also matching lower bounds for preferred, stage, and semi-stable semantics, given in the next theorem. The σ-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}DP-hard{a mathematical formula}σ∈{pref,stage,sem}.The proof roughly proceeds as follows (a full proof is given in Appendix A.2). First we show that σ-realizability is {a mathematical formula}coNP-hard. Second we show that σ-realizability is {a mathematical formula}NP-hard. Finally we show that σ-realizability has the property {a mathematical formula}AND2, i.e. the problem of deciding whether two instances of the σ-realizability problem are both true can be reduced to a single instance, and then apply a result from Chang and Kadin [15] to deduce {a mathematical formula}DP-hardness.  □
+      </paragraph>
+      <paragraph>
+       Notice that for naive semantics, for which {a mathematical formula}dcl(S) being tight is a condition for naive realizability we have the following easy result.
+      </paragraph>
+      <paragraph label="Proof">
+       Let dcl-member be the following decision problem. Given{a mathematical formula}〈S,φ(X)〉with{a mathematical formula}S⊆X, decide whether{a mathematical formula}S∈dcl(Sφ)holds. dcl-member is{a mathematical formula}NP-complete.To see that dcl-member is in {a mathematical formula}NP, given an instance {a mathematical formula}〈S,φ(X)〉 it suffices to guess {a mathematical formula}T⊆X and verify {a mathematical formula}(S⊆T)∧(φ(αT)=⊤), where {a mathematical formula}αT is the interpretation corresponding to T.For {a mathematical formula}NP-hardness, we use a reduction from sat. Given an instance {a mathematical formula}ψ(X) of sat simply form the instance {a mathematical formula}〈∅,ψ〉 of dcl-member. If {a mathematical formula}ψ(X) is satisfied by α, then {a mathematical formula}Sα (the corresponding subset of X) is in {a mathematical formula}Sψ and, trivially, {a mathematical formula}∅∈dcl(Sψ) so {a mathematical formula}〈∅,ψ〉 is accepted as an instance of dcl-member. Conversely, if {a mathematical formula}∅∈dcl(Sψ), then there is some {a mathematical formula}T⊆X for which {a mathematical formula}T∈Sψ, so that {a mathematical formula}ψ(αT)=⊤, i.e. ψ is satisfiable.  □
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Recasting argumentation semantics
+      </section-title>
+      <paragraph label="Theorem 13">
+       Turning to the second compact encoding of a collection of subsets mentioned earlier, i.e. {a mathematical formula}S is presented as the σ-extensions of a given af, we introduce the problem of recasting: given an af{a mathematical formula}F1∈AFA and two semantics {a mathematical formula}σ1, {a mathematical formula}σ2, decide whether there exists an {a mathematical formula}F2∈AFA, such that {a mathematical formula}σ1(F1)=σ2(F2). By the very nature of signatures, this is equivalent to test {a mathematical formula}σ1(F1)∈Σσ2. If there is an exact translation in the sense of [22], i.e. a function Tr such that {a mathematical formula}σ1(F1)=σ2(Tr(F)) for each afF, (or equivalently {a mathematical formula}Σσ1⊆Σσ2) the answer is trivially yes. Here we are interested in combinations of semantics {a mathematical formula}σ1, {a mathematical formula}σ2 where no such universal translation exists and we ask whether there is a “translation” for a concrete af. Table 2 and Table 3 summarize our results. Note that recasting only makes sense between semantics which are (resp. are not) I-maximal (i.e. the extensions are (resp. are not) incomparable); thus we separated the semantics under consideration. An entry for row {a mathematical formula}σ1 and column {a mathematical formula}σ2 gives the complexity of deciding whether {a mathematical formula}σ1(F)∈Σσ2. {a mathematical formula}C-h abbreviates hardness for class {a mathematical formula}C; {a mathematical formula}C-c abbreviates completeness for class {a mathematical formula}C; “trivial” means that each instance is a “Yes”-instance. For both tables, these “trivial” entries are immediate from the relations between the signatures given in Theorem 2. The complexity results depicted inTable 2hold.The “trivial” results are immediate by the fact that {a mathematical formula}Σcf⊂Σadm⊂Σcom (cf. Theorem 2). For {a mathematical formula}coNP-membership (of the non-trivial problems) we provide non-deterministic algorithms disproving, given an AFF, {a mathematical formula}σ(F)∈Σσ′.(a) Recasting from {a mathematical formula}σ1∈{adm,com} to cf semantics. If {a mathematical formula}σ1(F) is not cf-realizable then either (i) {a mathematical formula}σ1(F) is not downward-closed or (ii) {a mathematical formula}σ1(F) is not tight (cf. Theorem 1). To check (i) we just have to guess two sets {a mathematical formula}B,C such that {a mathematical formula}B⊂C, {a mathematical formula}C∈σ1(F) and {a mathematical formula}B∉σ1(F). To check (ii) we have to guess a set E, an argument a and sets {a mathematical formula}Ss for each {a mathematical formula}s∈E such that {a mathematical formula}E∈σ1(F), {a mathematical formula}E∪{a}∉σ1(F) and {a mathematical formula}{a,s}⊆Ss for each s. As verifying that a set is in {a mathematical formula}σ1(F) is in polynomial time this gives {a mathematical formula}coNP-procedures for testing whether {a mathematical formula}σ1(F) is cf-realizable.(b) Recasting from com to adm semantics. Here, we check (i) {a mathematical formula}∅∉com(F) or (ii) {a mathematical formula}com(F) is not conflict-sensitive. Clearly (i) can be done in polynomial time. For (ii) notice that if {a mathematical formula}com(F) is not conflict-sensitive then there exist sets {a mathematical formula}A,B∈com(F) such that {a mathematical formula}A∪B∈cf(F) but {a mathematical formula}A∪B∉com(F). But then there exists a set C with {a mathematical formula}A∪B⊂C∈com(F). So to disprove {a mathematical formula}com(F) being conflict-sensitive we guess sets {a mathematical formula}A,B,C and test whether {a mathematical formula}A,B,C∈com(F), {a mathematical formula}A∪B⊂C but {a mathematical formula}A∪B∉com(F), which is a {a mathematical formula}coNP-procedure for testing whether {a mathematical formula}com(F) is adm-realizable.For {a mathematical formula}coNP-hardness, we first give the result for {a mathematical formula}σ1∈{adm,com} and {a mathematical formula}σ2=cf. We use a standard reduction from CNF formulas {a mathematical formula}φ(X)=⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from X to the af{a mathematical formula}Fφ=(Aφ,Rφ) given as{a mathematical formula}{a mathematical formula} We illustrate the framework {a mathematical formula}Fφ (ignore the dashed part for the moment) for the CNF-formula {a mathematical formula}φ=(x1∨x2∨x3)∧(x2∨¬x3∨¬x4)∧(x2∨x3∨x4) in Fig. 8.It holds that φ is satisfiable iff there is an {a mathematical formula}S≠∅ in {a mathematical formula}σ1(Fφ) iff there is an {a mathematical formula}S∈σ1(Fφ) with {a mathematical formula}φ∈S (see [17]). Now if {a mathematical formula}adm(Fφ)=com(Fφ)={∅} then {a mathematical formula}σ1(Fφ) is clearly cf-realizable. On the other hand {a mathematical formula}{φ}∉adm(F) (and thus {a mathematical formula}{φ}∉com(F)). So if there is an {a mathematical formula}S∈σ1(Fφ) with {a mathematical formula}φ∈S then {a mathematical formula}σ1(Fφ) is not downward-closed and thus not cf-realizable (cf. Theorem 1). Thus we obtain that φ is satisfiable iff {a mathematical formula}σ1(Fφ) is not cf-realizable.The result for {a mathematical formula}σ1=com and {a mathematical formula}σ2=adm can be shown via an extension of above reduction to {a mathematical formula}Fφ′=(Aφ′,Rφ′) with{a mathematical formula}{a mathematical formula} The af{a mathematical formula}Fφ′ for the example CNF is illustrated in Fig. 8 including the dashed part. Clearly if φ is not accepted then none of the new arguments is accepted. So if φ is unsatisfiable we again have {a mathematical formula}com(Fφ′)={∅} and thus the extension-set is adm-realizable. Otherwise, for each model M of φ we have three complete extensions {a mathematical formula}M∪X∖M‾∪{φ,a}, {a mathematical formula}M∪X∖M‾∪{φ,b} and {a mathematical formula}M∪X∖M‾∪{φ,a,b,c}. Thus, every pair of arguments of the union of the first two extensions {a mathematical formula}M∪X∖M‾∪{φ,a,b} is contained in {a mathematical formula}Pairscom(Fφ′), but {a mathematical formula}M∪X∖M‾∪{φ,a,b}∉com(Fφ′). This violates conflict-sensitivity of {a mathematical formula}com(Fφ′). We get that φ is satisfiable iff {a mathematical formula}com(Fφ′) is not adm-realizable (cf. Theorem 1).  □The complexity results depicted inTable 3hold. The “trivial” results are immediate by the relations between the signatures given in Theorem 2 and the remaining entries are by the following lemmas.
+      </paragraph>
+      <paragraph label="Proof">
+       Recasting from stb to{a mathematical formula}σ∈{stage,pref,sem}is{a mathematical formula}NP-complete.For the complexity of recasting stable to {a mathematical formula}σ∈{stage,pref,sem} we use {a mathematical formula}Σstb=Σstage∪{∅}, {a mathematical formula}Σstage⊂Σsem=Σpref from Theorem 2. Thus, {a mathematical formula}stb(F)∈Σσ iff {a mathematical formula}stb(F)≠∅. Deciding whether an af has a stable extension is well-known to be {a mathematical formula}NP-complete [17].  □
+      </paragraph>
+      <paragraph label="Proof">
+       Recasting from{a mathematical formula}σ∈{stb,stage,pref,sem}to naive is{a mathematical formula}coNP-hard.We show {a mathematical formula}coNP-hardness of recasting to naive semantics by a reduction from unsatisfiability of CNF formulas. Starting from a formula {a mathematical formula}φ(X)=⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from X, we extend {a mathematical formula}Fφ from the proof of Theorem 12 and define {a mathematical formula}Fφ⁎=(Aφ⁎,Rφ⁎) using an additional gadget (borrowed from Fig. 1) via{a mathematical formula}{a mathematical formula} In Fig. 9 we illustrate the framework {a mathematical formula}Fφ⁎ for the CNF-formula {a mathematical formula}φ=(x1∨x2∨x3)∧(x2∨¬x3∨¬x4)∧(x2∨x3∨x4).It is known that φ is satisfiable iff {a mathematical formula}{φ¯}∪C is not the unique preferred extension of {a mathematical formula}Fφ⁎[19] (the additional part in the af does not affect the claim due to directionality of preferred semantics [1]). As first {a mathematical formula}{φ¯}∪C is also a stable extension and second the preferred extensions corresponding to the models of φ are also stable extensions this result extends to stb, sem and stage semantics. Let {a mathematical formula}σ∈{stb,pref,sem,stage}. If φ is unsatisfiable then {a mathematical formula}{φ¯}∪C is the only {a mathematical formula}S∈σ(Fφ⁎), hence {a mathematical formula}σ(Fφ⁎)∈Σnaive. Otherwise, for each model M of φ, there exist {a mathematical formula}S1,S2,S3∈σ(Fφ⁎), such that {a mathematical formula}maj3(S1,S2,S3)=M∪X∖M‾∪{φ,b1,b2,b3}. That are:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}S1=M∪X∖M‾∪{φ,a1,b2,b3}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}S2=M∪X∖M‾∪{φ,a2,b1,b3}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}S3=M∪X∖M‾∪{φ,a3,b1,b2}
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Recasting from{a mathematical formula}σ1∈{pref,sem}to{a mathematical formula}σ2∈{stb,stage}is{a mathematical formula}Π2P-complete.Since {a mathematical formula}σ1(F)≠∅ for any afF, and {a mathematical formula}Σstb=Σstage∪{∅}, we can stick to {a mathematical formula}σ2=stb. Membership is by an algorithm that, given an {a mathematical formula}F=(A,R), disproves {a mathematical formula}σ1(F)∈Σstb, that is it looks for counter examples (violating tightness) from {a mathematical formula}σ1(F) as follows: guess sets {a mathematical formula}S⊆A, {a mathematical formula}{As⊆A|s∈S} and {a mathematical formula}a∈A∖S; check {a mathematical formula}S∈σ1(F) and {a mathematical formula}S∪{a}∉σ1(F), and for all {a mathematical formula}s∈S check {a mathematical formula}As∈σ1(F) and {a mathematical formula}{a,s}⊆As (for all checks, an {a mathematical formula}NP-oracle is sufficient [20], [23]). For sets passing all the checks we have that S and a contradict tightness as {a mathematical formula}S∪{a}∉σ1(F) but for each {a mathematical formula}s∈S, {a mathematical formula}(a,s)∈Pairsσ1(F). By Theorem 1, {a mathematical formula}σ1(F)∉Σstb.We show {a mathematical formula}Π2P-hardness for {a mathematical formula}σ1=pref (pref semantics can be efficiently reduced to sem semantics [24], the result for {a mathematical formula}σ1=sem thus follows): Given QBF {a mathematical formula}Φ=∀Y∃Zφ(Y,Z), where φ is a CNF {a mathematical formula}⋀c∈Cc with each c a disjunction of literals from {a mathematical formula}X=Y∪Z, let {a mathematical formula}FΦ=(AΦ,RΦ) with{a mathematical formula}{a mathematical formula} We illustrate {a mathematical formula}FΦ for the QBF {a mathematical formula}Φ=∀y1,y2∃z3,z4((y1∨y2∨z3)∧(y2∨¬z3∨¬z4)∧(y2∨z3∨z4)) in Fig. 10. In fact, {a mathematical formula}FΦ links the reduction from [20] with an af similar to Fig. 2.We show that Φ is valid iff {a mathematical formula}pref(FΦ)∈Σstb. To this end let {a mathematical formula}FΦ′ be {a mathematical formula}FΦ without arguments {a mathematical formula}{a,b,c,d,e,f} and without attacks involving these arguments (the continuous part in Fig. 10). By [20] we know that φ is contained in each {a mathematical formula}E∈pref(FΦ′) iff Φ is valid. Therefore it remains to show that {a mathematical formula}pref(FΦ)∈Σstb iff φ is contained in all {a mathematical formula}E∈pref(FΦ′). First recall that since arguments {a mathematical formula}{a,b,c,d,e,f} do not attack the {a mathematical formula}FΦ′-part we know from the splitting theorem in [5] that each preferred extension of {a mathematical formula}FΦ contains a preferred extension of {a mathematical formula}FΦ′ and each preferred extension of {a mathematical formula}FΦ′ is contained in some preferred extension of {a mathematical formula}FΦ. Now suppose φ is contained in each {a mathematical formula}E∈pref(FΦ′). Then E defends e in {a mathematical formula}FΦ and therefore {a mathematical formula}pref(FΦ)={{a,b,e}∪E,{a,c,e}∪E,{b,d,e}∪E|E∈pref(FΦ′)}. Note that for each {a mathematical formula}E∈FΦ, all arguments of {a mathematical formula}FΦ not contained in E are attacked by E. In other words, {a mathematical formula}pref(FΦ)=stb(FΦ), and thus {a mathematical formula}pref(FΦ)∈Σstb. Now let us assume there is a preferred extension E of {a mathematical formula}FΦ′ such that {a mathematical formula}φ∉E. Then, the preferred extensions of {a mathematical formula}FΦ containing E are exactly {a mathematical formula}{a,b}∪E (e is neither defended by E nor by {a mathematical formula}{a,b}), {a mathematical formula}{a,c,e}∪E, and {a mathematical formula}{b,d,e}∪E. Generalizing the argument from Example 4, we observe that {a mathematical formula}pref(FΦ) is not tight. In fact, we have {a mathematical formula}E∪{a,b,e}∉pref(FΦ) but for all {a mathematical formula}s∈E∪{a,b}, we have {a mathematical formula}(s,e)∈Pairspref(FΦ) (as witnessed by the extensions {a mathematical formula}{a,c,e}∪E and {a mathematical formula}{b,d,e}∪E). By Theorem 1, {a mathematical formula}pref(FΦ)∉Σstb.  □
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proofs from Section 6
+     <section label="A.1">
+      Proof of Proposition 13
+      <paragraph>
+       The proof of Proposition 13 is by the following lemmas.
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propositional formula φ, it holds that deciding if{a mathematical formula}Sφis non-empty is{a mathematical formula}NP-complete.Trivial reduction from sat. Given an instance, φ of sat, if {a mathematical formula}Sφ=∅ then {a mathematical formula}fφ≡⊥, i.e. {a mathematical formula}φ(X) is unsatisfiable. Hence {a mathematical formula}φ(X) encodes a non-empty set if and only if {a mathematical formula}φ(X) is satisfiable.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propositional formula φ, it holds that deciding if{a mathematical formula}Sφis downward-closed is{a mathematical formula}coNP-complete.Let {a mathematical formula}φ(X) be any propositional formula with {a mathematical formula}Sφ the system of subsets of {a mathematical formula}ArgsS it encodes. For membership in {a mathematical formula}coNP, note that in order for {a mathematical formula}Sφ to be downward-closed, {a mathematical formula}fφ must be anti-monotone, i.e.{a mathematical formula}{a mathematical formula}fφ(α,xi:=⊤)≤fφ(α,xi:=⊥) (where the ordering {a mathematical formula}⊥&lt;⊤ is assumed).{sup:6} Thus {a mathematical formula}Sφ is not downward-closed system if and only if{a mathematical formula} Here {a mathematical formula}(α//xi:=a) denotes the assignment obtained from α by substituting a for the value of {a mathematical formula}xi and leaving other values unchanged. The test that {a mathematical formula}Sφ is not downward-closed is easily seen to be achievable by an {a mathematical formula}NP algorithm, thus verifying that {a mathematical formula}Sφis downward-closed can be decided in {a mathematical formula}coNP.To establish {a mathematical formula}coNP-hardness, we use a straightforward reduction from sat to the complementary problem. Given an instance {a mathematical formula}ψ(X) of sat let {a mathematical formula}φ(X,y) be the propositional formula {a mathematical formula}y∧ψ(X) where y is a new variable. We claim {a mathematical formula}ψ(X) is satisfiable if and only if {a mathematical formula}φ(X,y) does not define an anti-monotone function. Suppose that {a mathematical formula}ψ(X) is satisfied by α. Then {a mathematical formula}φ(α,y)≡y which fails to be anti-monotone. Conversely suppose {a mathematical formula}φ(X,y) is not anti-monotone this being witnessed by some pair {a mathematical formula}〈β,i〉. We must have {a mathematical formula}βy=⊤ in such an assignment (otherwise {a mathematical formula}φ(β)=⊥). But then since {a mathematical formula}φ(β//xi:=⊤)=⊤ and {a mathematical formula}βy=⊤ it follows that the projection of β on X yields an assignment, α, satisfying {a mathematical formula}ψ(X).  □
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propositional formula φ, it holds that deciding if{a mathematical formula}Sφis incomparable is{a mathematical formula}coNP-complete.Let {a mathematical formula}φ(X) be any propositional formula with {a mathematical formula}Sφ the system of subsets of {a mathematical formula}ArgsS it encodes. Again we proceed by showing the complementary problem is decidable by an {a mathematical formula}NP algorithm. Given an assignment, α to X, let {a mathematical formula}Sα⊆ArgsS be the set {a mathematical formula}{xi:αi=⊤}. Similarly, {a mathematical formula}αS denotes the assignment in which {a mathematical formula}〈αi=⊤:xi∈S〉∪〈αi=⊥:xi∉S〉. In order for {a mathematical formula}fφ(X) to describe a system containing comparable sets there must be assignments, α and β, for which{a mathematical formula} Checking any given pair {a mathematical formula}(α,β) is polynomial time decidable, hence comparability is in {a mathematical formula}NP as claimed.To show that deciding comparability of {a mathematical formula}φ(X) is {a mathematical formula}NP-hard, we use a reduction from sat. Given an instance {a mathematical formula}ψ(X) of sat, form {a mathematical formula}φ(X,y,z) as an instance of comparability with{a mathematical formula} Here y and z are new variables.Suppose that {a mathematical formula}ψ(X) is satisfiable using α and let {a mathematical formula}Sα⊆X be the corresponding subset of X indicated by α. Then,{a mathematical formula} and{a mathematical formula} Clearly {a mathematical formula}T⊂U so that {a mathematical formula}φ(X,y,z) is comparable.Conversely suppose {a mathematical formula}φ(X,y,z) is comparable and this property is witnessed by sets {a mathematical formula}Sα, {a mathematical formula}Sβ⊆X∪{y,z} arising from assignments, α and β. Let {a mathematical formula}αX be the projection of α onto X, then from {a mathematical formula}Sα∈Sφ{a mathematical formula} so that {a mathematical formula}ψ(αX)=⊤, i.e. {a mathematical formula}ψ(X) is satisfiable as witnessed by the assignment {a mathematical formula}αX. We deduce that deciding if {a mathematical formula}φ(X) describes an incomparable function is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propositional formula φ, it holds that deciding if{a mathematical formula}Sφis tight is{a mathematical formula}coNP-complete.Let {a mathematical formula}φ(X) be any propositional formula with {a mathematical formula}Sφ the system of subsets of {a mathematical formula}ArgsS it encodes. Again we consider the complementary problem, calling {a mathematical formula}S a loose set whenever{a mathematical formula} We may rewrite this as,{a mathematical formula} Corresponding to the polynomial time test on{a mathematical formula} Hence whether {a mathematical formula}φ(X) describes a tight function can be accomplished with {a mathematical formula}coNP.To show it is also {a mathematical formula}coNP-hard we present a reduction from the following variant of unsat{a mathematical formula} By treating an instance, {a mathematical formula}ψ(X) of unsat as the instance {a mathematical formula}(¬y)∧ψ(X) of {a mathematical formula}unsat+ it is easy to see that {a mathematical formula}unsat+ is {a mathematical formula}coNP-complete.We now give a reduction from {a mathematical formula}unsat+ to deciding tightness, showing {a mathematical formula}coNP-completeness of the latter. Let {a mathematical formula}ψ(X) be an instance of {a mathematical formula}unsat+. Without loss of generality we assume that {a mathematical formula}ψ(X) is such that {a mathematical formula}|X|≥2. Consider the instance, {a mathematical formula}φ(X,y) of deciding whether {a mathematical formula}Sφ is tight (in which y is a new variable not occurring in X) given by,{a mathematical formula} Here ⊕ is the Boolean exclusive-or operator for which {a mathematical formula}x⊕y=⊤ if and only if the values of x and y differ.{sup:7}Suppose that {a mathematical formula}ψ(X) is a positive instance of {a mathematical formula}unsat+. In this case,{a mathematical formula} That {a mathematical formula}Sφ is tight is immediate from the fact {a mathematical formula}{y}∈Sφ (the case {a mathematical formula}T=∅) and{a mathematical formula} Notice that in the event of {a mathematical formula}ψ(〈⊤,…,⊤〉)=⊤, {a mathematical formula}φ(〈⊤,…⊤〉,y)≡y. Thus {a mathematical formula}ψ(X)∈unsat+ implies that {a mathematical formula}φ(X,y) describes a tight set {a mathematical formula}Sφ.For the converse direction suppose that {a mathematical formula}ψ(X) is a negative instance of {a mathematical formula}unsat+ and {a mathematical formula}M⊂X is a model of {a mathematical formula}ψ(X). Then M is also a model of {a mathematical formula}φ(X,y), i.e. {a mathematical formula}M∈Sφ, and thus {a mathematical formula}M∪{y}∉Sφ. But as still {a mathematical formula}X∪{y}∈Sφ we have that {a mathematical formula}(y,s)∈PairsSφ for each {a mathematical formula}s∈M. Hence, M is a loose set for {a mathematical formula}Sφ.We deduce that {a mathematical formula}ψ(X) is accepted as an instance of {a mathematical formula}unsat+ if and only if {a mathematical formula}Sφ is tight and, hence, deciding tightness of {a mathematical formula}Sφ is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propositional formula φ, it holds that deciding if{a mathematical formula}Sφis conflict-sensitive is{a mathematical formula}coNP-complete.Let {a mathematical formula}φ(X) be any propositional formula with {a mathematical formula}Sφ the system of subsets of {a mathematical formula}ArgsS it encodes. Again dealing with the complementary problem, we call {a mathematical formula}Sconflict-insensitive when there are distinct sets, S and T in {a mathematical formula}S for which {a mathematical formula}S∪T∉S but every {a mathematical formula}{x,y}⊆S∪T satisfies {a mathematical formula}(x,y)∈PairsS. Given {a mathematical formula}φ(X), the corresponding function, {a mathematical formula}fφ is conflict-insensitive if there exist {a mathematical formula}(S,T,U1,2,U1,3,…,Un−1,n) for which{a mathematical formula} The test described being polynomial time computable we deduce that {a mathematical formula}φ(X) defining a conflict-insensitive system is decidable in {a mathematical formula}coNP.To show it is also {a mathematical formula}coNP-hard we present a reduction from {a mathematical formula}unsat+ (cf. proof of Lemma 15). Let {a mathematical formula}ψ(X) be an instance of {a mathematical formula}unsat+. Without loss of generality we assume that {a mathematical formula}ψ(X) is such that {a mathematical formula}|X|≥2.Consider the instance, {a mathematical formula}φ(X,y,z) of the problem of deciding whether {a mathematical formula}Sφ is conflict-sensitive (in which {a mathematical formula}y,z are new variables not occurring in X) given by,{a mathematical formula}Suppose that {a mathematical formula}ψ(X) is a positive instance of {a mathematical formula}unsat+. In this case either, (i) {a mathematical formula}Sφ={X∪{z},X∪{y,z},{y}} if X is model of {a mathematical formula}ψ(X) or (ii) {a mathematical formula}Sφ={X∪{y,z},{y}} otherwise. In both cases {a mathematical formula}Sφ is conflict-sensitive.For the converse direction suppose that {a mathematical formula}ψ(X) is a negative instance of {a mathematical formula}unsat+ and {a mathematical formula}M⊂X is a model of {a mathematical formula}ψ(X). In this case we have {a mathematical formula}M∪{z}∈Sφ, {a mathematical formula}{y}∈Sφ and that {a mathematical formula}(M∪{z})∪{y}∉Sφ. Now as {a mathematical formula}X∪{y,z}∈Sφ we also have that {a mathematical formula}(y,s)∈PairsSφ for each {a mathematical formula}s∈M∪{z}, and thus {a mathematical formula}Sφ is not conflict-sensitive.We deduce that {a mathematical formula}ψ(X) is accepted as an instance of {a mathematical formula}unsat+ if and only if {a mathematical formula}Sψ is conflict-sensitive. Hence, deciding whether the models of a propositional formula are conflict-sensitive is {a mathematical formula}coNP-complete.  □
+      </paragraph>
+     </section>
+     <section label="A.2">
+      Proof of Theorem 11
+      <paragraph>
+       First we rephrase a theorem from Chang and Kadin [15] that will be the basis for the proof.
+      </paragraph>
+      <paragraph label="Theorem 14">
+       (See[15].) A problem A is{a mathematical formula}DP-hard iff all of the following hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        A is{a mathematical formula}NP-hard.
+       </list-item>
+       <list-item label="2.">
+        A is{a mathematical formula}coNP-hard.
+       </list-item>
+       <list-item label="3.">
+        A has{a mathematical formula}AND2.
+       </list-item>
+      </list>
+      <paragraph>
+       This gives the structure for the following proof of Theorem 11 (with {a mathematical formula}σ∈{pref,stage,sem}). In Lemma 17 we show that σ-realizability is {a mathematical formula}coNP-hard (here, we also show the result for {a mathematical formula}σ=naive) In Lemma 18 we show that σ-realizability is {a mathematical formula}NP-hard. Finally, in Lemma 19 we show that σ-realizability has the property {a mathematical formula}AND2.
+      </paragraph>
+      <paragraph label="Proof">
+       The σ-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}coNP-hard for{a mathematical formula}σ∈{pref,stage,sem,naive}.To show that deciding σ-realizability of {a mathematical formula}φ(X) is {a mathematical formula}coNP-hard, we use a reduction from unsat. Given an instance {a mathematical formula}ψ(X) of sat, form {a mathematical formula}φ(X,y,z) as an instance of σ-realizability with{a mathematical formula} Here y and z are new variables. We claim {a mathematical formula}ψ(X) is satisfiable if and only if {a mathematical formula}Sφ is not σ-realizable.Suppose that {a mathematical formula}ψ(X) is satisfiable using α and let {a mathematical formula}Sα⊆X be the corresponding subset of X indicated by α. Then,{a mathematical formula} and{a mathematical formula} Clearly {a mathematical formula}T⊂U so that {a mathematical formula}φ(X,y,z) is comparable and thus {a mathematical formula}Sφ is not σ-realizable.Conversely suppose {a mathematical formula}ψ(X) is unsatisfiable. Then {a mathematical formula}{y,z} is the only model of {a mathematical formula}φ(X,y,z), i.e. {a mathematical formula}Sφ={{y,z}}. Thus, {a mathematical formula}Sφ is incomparable, tight, conflict-sensitive and also {a mathematical formula}dcl(Sφ) is tight. Hence, {a mathematical formula}Sφ is σ-realizable for each {a mathematical formula}σ∈{pref,stage,sem,naive} (cf. Theorem 1).We deduce that deciding if {a mathematical formula}Sφ is σ-realizable is {a mathematical formula}coNP-hard.  □
+      </paragraph>
+      <paragraph label="Proof">
+       The σ-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), is{a mathematical formula}NP-hard for{a mathematical formula}σ∈{pref,stage,sem}.To show that deciding σ-realizability of {a mathematical formula}φ(X) is {a mathematical formula}NP-hard, we use a reduction from sat. Given an instance {a mathematical formula}ψ(X) of sat, form {a mathematical formula}φ(X,y,z) as an instance of the σ-realizability problem with{a mathematical formula} Here {a mathematical formula}X¯ is a set of new variables {a mathematical formula}x¯, one for each {a mathematical formula}x∈X. We claim {a mathematical formula}ψ(X) is satisfiable if and only if {a mathematical formula}Sφ is σ-realizable.Suppose that {a mathematical formula}ψ(X) is satisfiable. We have to show that {a mathematical formula}Sφ is (i) incomparable, (ii) tight, and (iii) conflict-sensitive (cf. Theorem 1).The set {a mathematical formula}Sφ can be characterized by {a mathematical formula}Sφ={M∪X∖M‾|M is model of ψ(X)}, that is each model contains either x or {a mathematical formula}x¯ for each {a mathematical formula}x∈X. This implies (i) that all the sets in {a mathematical formula}Sφ are pairwise incomparable.For (ii) notice that {a mathematical formula}x,x¯ never appear together in a model of φ and thus {a mathematical formula}(x,x¯)∉PairsSφ. Hence whenever we have an {a mathematical formula}S∈Sφ and an {a mathematical formula}x∈X ({a mathematical formula}x¯∈X¯) such that {a mathematical formula}S∪{x}∉Sφ ({a mathematical formula}S∪{x¯}∉Sφ) we have that {a mathematical formula}x¯∈S ({a mathematical formula}x∈S) and {a mathematical formula}(x,x¯)∉PairsSφ. Hence, {a mathematical formula}Sφ is tight. (iii) Consider {a mathematical formula}M,M′∈Sφ,M≠M′. Then w.l.o.g. there is an {a mathematical formula}x∈M such that {a mathematical formula}x∉M′ but {a mathematical formula}x¯∈M′. By the above observation {a mathematical formula}(x,x¯)∉PairsSφ and thus {a mathematical formula}Sφ is conflict-sensitive. We obtain that {a mathematical formula}Sφ is σ-realizable for {a mathematical formula}σ∈{pref,stage,sem}.Conversely suppose {a mathematical formula}ψ(X) is unsatisfiable. Then {a mathematical formula}φ(X,X¯) is also unsatisfiable, i.e. {a mathematical formula}Sφ=∅, and thus {a mathematical formula}Sφ is not σ-realizable for {a mathematical formula}σ∈{pref,stage,sem}.We deduce that deciding if {a mathematical formula}Sφ is σ-realizable is {a mathematical formula}NP-hard.  □The σ-realizability problem in which instances are propositional formulas,{a mathematical formula}φ(X), has{a mathematical formula}AND2for{a mathematical formula}σ∈{pref,stage,sem}.Consider two instances {a mathematical formula}ψ(X),ψ′(Y) of the σ-realizability and w.l.o.g. assume that {a mathematical formula}X∩Y=∅ (otherwise rename variables). Now consider the formula {a mathematical formula}φ(X,Y) defined as follows.{a mathematical formula}Then we have that {a mathematical formula}Sφ=Sψ∪Sψ′, where each set {a mathematical formula}S∈Sφ either is as subset of X or a subset of Y. We have to show that {a mathematical formula}Sφ is incomparable (tight, conflict-sensitive) iff both {a mathematical formula}Sψ and {a mathematical formula}Sψ′ are incomparable (tight, conflict-sensitive).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Incomparable: Assume {a mathematical formula}Sφ is comparable, i.e. there are {a mathematical formula}A,B∈Sφ with {a mathematical formula}A⊂B. Either both {a mathematical formula}A,B are subsets of X and thus contained in {a mathematical formula}Sψ or both are subsets of Y and thus contained in {a mathematical formula}Sψ′. In the former case {a mathematical formula}Sψ is comparable in the latter {a mathematical formula}Sψ′ is comparable. For the converse consider that one of {a mathematical formula}Sψ, {a mathematical formula}Sψ′ is comparable. W.l.o.g. assume there are {a mathematical formula}A,B∈Sψ such that {a mathematical formula}A⊂B. Then also {a mathematical formula}A,B∈Sφ and thus {a mathematical formula}Sφ is comparable.
+       </list-item>
+       <list-item label="•">
+        Tight: Assume {a mathematical formula}Sφ is not tight. That is there an {a mathematical formula}S∈Sφ and an {a mathematical formula}x∈X∪Y such that {a mathematical formula}S∪{x}∉Sφ and {a mathematical formula}(x,s)∈PairsSφ for each {a mathematical formula}s∈S. W.l.o.g. let us assume that {a mathematical formula}S⊂X, then also {a mathematical formula}x∈X as by construction {a mathematical formula}(x,y)∉PairsSφ for {a mathematical formula}x∈X,y∈Y. But then also {a mathematical formula}S∪{x}∉Sψ and {a mathematical formula}(x,s)∈PairsSψ for each {a mathematical formula}s∈S and thus {a mathematical formula}Sψ is not tight. For the converse consider that one of {a mathematical formula}Sψ, {a mathematical formula}Sψ′ is not tight. W.l.o.g. assume there are {a mathematical formula}S∈Sψ and {a mathematical formula}x∈X such that {a mathematical formula}S∪{x}∉Sψ and {a mathematical formula}(x,s)∈PairsSψ. But then also {a mathematical formula}S∪{x}∉Sφ and {a mathematical formula}(x,s)∈PairsSφ for each {a mathematical formula}s∈S and thus {a mathematical formula}Sφ is not tight.
+       </list-item>
+       <list-item label="•">
+        Conflict-sensitive: Assume {a mathematical formula}Sφ is not conflict-sensitive. That is there are {a mathematical formula}A,B∈Sφ such that {a mathematical formula}A∪B∉Sφ and {a mathematical formula}(a,b)∈PairsSφ for all {a mathematical formula}a∈A, {a mathematical formula}b∈B. As by construction {a mathematical formula}(x,y)∉PairsSφ for {a mathematical formula}x∈X,y∈Y we have that either {a mathematical formula}A,B⊆X or {a mathematical formula}A,B⊆Y. W.l.o.g. we assume the former to hold. Then we have that {a mathematical formula}A,B∈Sψ, {a mathematical formula}A∪B∉Sψ, and {a mathematical formula}(a,b)∈PairsSψ for all {a mathematical formula}a∈A, {a mathematical formula}b∈B. Hence, {a mathematical formula}Sψ is not conflict-sensitive. For the converse consider that one of {a mathematical formula}Sψ, {a mathematical formula}Sψ′ is not conflict-sensitive. W.l.o.g. assume there are {a mathematical formula}A,B∈Sψ such that {a mathematical formula}A∪B∉Sψ and {a mathematical formula}(a,b)∈PairsSψ for all {a mathematical formula}a∈A, {a mathematical formula}b∈B. Then also {a mathematical formula}A,B∈Sφ, {a mathematical formula}A∪B∉Sφ and {a mathematical formula}(a,b)∈PairsSφ for all {a mathematical formula}a∈A, {a mathematical formula}b∈B and thus {a mathematical formula}Sφ is not conflict-sensitive.
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, by the above lemmas and Theorem 14, we have that the σ-realizability problem in which instances are propositional formulas is {a mathematical formula}DP-hard for {a mathematical formula}σ∈{pref,stage,sem}.
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

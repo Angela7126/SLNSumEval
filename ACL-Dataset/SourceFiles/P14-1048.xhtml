@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Linear-Time Bottom-Up Discourse Parser with Constraints and Post-Editing</title>
+<!--Generated on Tue Jun 10 17:47:11 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Linear-Time Bottom-Up Discourse Parser 
+<br class="ltx_break"/>with Constraints and Post-Editing</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Vanessa Wei Feng 
+<br class="ltx_break"/>Department of Computer Science 
+<br class="ltx_break"/>University of Toronto 
+<br class="ltx_break"/>Toronto, ON, Canada 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">weifeng@cs.toronto.edu</span> 
+<br class="ltx_break"/>&amp;Graeme Hirst 
+<br class="ltx_break"/>Department of Computer Science 
+<br class="ltx_break"/>University of Toronto 
+<br class="ltx_break"/>Toronto, ON, Canada 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">gh@cs.toronto.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Text-level discourse parsing remains a challenge. The current state-of-the-art overall accuracy in relation assignment is 55.73%, achieved by <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>. However, their model has a high order of time complexity, and thus cannot be applied in practice. In this work, we develop a much faster model whose time complexity is linear in the number of sentences. Our model adopts a greedy bottom-up approach, with two linear-chain CRFs applied in cascade as local classifiers. To enhance the accuracy of the pipeline, we add additional constraints in the Viterbi decoding of the first CRF. In addition to efficiency, our parser also significantly outperforms the state of the art. Moreover, our novel approach of post-editing, which modifies a fully-built tree by considering information from constituents on upper levels, can further improve the accuracy.</p>
+</div><span class="ltx_ERROR undefined">\algtext</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">*EndWhile<span class="ltx_ERROR undefined">\algtext</span>*EndIf<span class="ltx_ERROR undefined">\algtext</span>*EndFor</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Discourse parsing is the task of identifying the presence and the type of the discourse relations between discourse units. While research in discourse parsing can be partitioned into several directions according to different theories and frameworks, Rhetorical Structure Theory (RST) <cite class="ltx_cite">[<a href="#bib.bib55" title="Rhetorical structure theory: toward a functional theory of text organization" class="ltx_ref">12</a>]</cite> is probably the most ambitious one, because it aims to identify not only the discourse relations in a small local context, but also the hierarchical tree structure for the <span class="ltx_text ltx_font_bold">full text</span>: from the relations relating the smallest discourse units (called elementary discourse units, EDUs), to the ones connecting paragraphs.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">For example, Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows a text fragment consisting of two sentences with four EDUs in total (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="e_{4}" display="inline"><msub><mi>e</mi><mn>4</mn></msub></math>). Its discourse tree representation is shown below the text, following the notation convention of RST: the two EDUs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> are related by a mononuclear relation <span class="ltx_text ltx_font_smallcaps">Consequence</span>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m5" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> is the more salient span (called <span class="ltx_text ltx_font_italic">nucleus</span>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m6" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math> is called <span class="ltx_text ltx_font_italic">satellite</span>); <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m7" class="ltx_Math" alttext="e_{3}" display="inline"><msub><mi>e</mi><mn>3</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m8" class="ltx_Math" alttext="e_{4}" display="inline"><msub><mi>e</mi><mn>4</mn></msub></math> are related by another mononuclear relation <span class="ltx_text ltx_font_smallcaps">Circumstance</span>, with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m9" class="ltx_Math" alttext="e_{4}" display="inline"><msub><mi>e</mi><mn>4</mn></msub></math> as the nucleus; the two spans <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m10" class="ltx_Math" alttext="e_{1:2}" display="inline"><msub><mi>e</mi><mrow><mn>1</mn><mo>:</mo><mn>2</mn></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m11" class="ltx_Math" alttext="e_{3:4}" display="inline"><msub><mi>e</mi><mrow><mn>3</mn><mo>:</mo><mn>4</mn></mrow></msub></math> are further related by a multi-nuclear relation <span class="ltx_text ltx_font_smallcaps">Sequence</span>, with both spans as the nucleus.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Conventionally, there are two major sub-tasks related to text-level discourse parsing: (1) <span class="ltx_text ltx_font_bold">EDU segmentation</span>: to segment the raw text into EDUs, and (2) <span class="ltx_text ltx_font_bold">tree-building</span>: to build a discourse tree from EDUs, representing the discourse relations in the text. Since the first sub-task is considered relatively easy, with the state-of-art accuracy at above 90% <cite class="ltx_cite">[<a href="#bib.bib3" title="A novel discriminative framework for sentence-level discourse analysis" class="ltx_ref">7</a>]</cite>, the recent research focus is on the second sub-task, and often uses manual EDU segmentation.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The current state-of-the-art overall accuracy of the tree-building sub-task, evaluated on the RST Discourse Treebank (RST-DT, to be introduced in Section <a href="#S8" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>), is 55.73% by <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>. However, as an optimal discourse parser, Joty et al.’s model is highly inefficient in practice, with respect to both their DCRF-based local classifiers, and their CKY-like bottom-up parsing algorithm. DCRF (Dynamic Conditional Random Fields) is a generalization of linear-chain CRFs, in which each time slice contains a set of state variables and edges <cite class="ltx_cite">[<a href="#bib.bib99" title="Dynamic conditional random fields: factorized probabilistic models for labeling and segmenting sequence data" class="ltx_ref">17</a>]</cite>. CKY parsing is a bottom-up parsing algorithm which searches all possible parsing paths by dynamic programming. Therefore, despite its superior performance, their model is infeasible in most realistic situations.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The main objective of this work is to develop a more efficient discourse parser, with similar or even better performance with respect to Joty et al.’s optimal parser, but able to produce parsing results in real time.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Our contribution is three-fold. First, with a greedy bottom-up strategy, we develop a discourse parser with a time complexity linear in the total number of sentences in the document. As a result of successfully avoiding the expensive non-greedy parsing algorithms, our discourse parser is very efficient in practice. Second, by using two linear-chain CRFs to label a sequence of discourse constituents, we can incorporate contextual information in a more natural way, compared to using traditional discriminative classifiers, such as SVMs. Specifically, in the Viterbi decoding of the first CRF, we include additional constraints elicited from common sense, to make more effective local decisions. Third, after a discourse (sub)tree is fully built from bottom up, we perform a novel post-editing process by considering information from the constituents on upper levels. We show that this post-editing can further improve the overall parsing performance.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<p class="ltx_p ltx_align_center">[<span class="ltx_text ltx_font_bold">On Aug. 1, the state tore up its controls</span>,]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m1" class="ltx_Math" alttext="{e}_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math> [<span class="ltx_text ltx_font_bold">and food prices leaped</span>ã]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="{e}_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> [<span class="ltx_text ltx_font_bold">Without buffer stocks</span>,]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="{e}_{3}" display="inline"><msub><mi>e</mi><mn>3</mn></msub></math> [<span class="ltx_text ltx_font_bold">inflation exploded</span>.]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="{e}_{4}" display="inline"><msub><mi>e</mi><mn>4</mn></msub></math></p>
+<p class="ltx_p ltx_align_center">wsj_1146</p><img src="P14-1048/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="270" height="144" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>An example text fragment composed of two sentences and four EDUs, with its RST discourse tree representation shown below.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>HILDA discourse parser</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The HILDA discourse parser by <cite class="ltx_cite">Hernault<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib66" title="HILDA: a discourse parser using support vector machine classification" class="ltx_ref">2010</a>)</cite> is the first attempt at RST-style text-level discourse parsing. It adopts a pipeline framework, and greedily builds the discourse tree from the bottom up. In particular, starting from EDUs, at each step of the tree-building, a binary SVM classifier is first applied to determine which pair of adjacent discourse constituents should be merged to form a larger span, and another multi-class SVM classifier is then applied to assign the type of discourse relation that holds between the chosen pair.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The strength of HILDA’s greedy tree-building strategy is its efficiency in practice. Also, the employment of SVM classifiers allows the incorporation of rich features for better data representation <cite class="ltx_cite">[<a href="#bib.bib86" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">4</a>]</cite>. However, HILDA’s approach also has obvious weakness: the greedy algorithm may lead to poor performance due to local optima, and more importantly, the SVM classifiers are not well-suited for solving structural problems due to the difficulty of taking context into account.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Joty et al.’s joint model</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite> approach the problem of text-level discourse parsing using a model trained by Conditional Random Fields (CRF). Their model has two distinct features.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">First, they decomposed the problem of text-level discourse parsing into two stages: intra-sentential parsing to produce a discourse tree for each sentence, followed by multi-sentential parsing to combine the sentence-level discourse trees and produce the text-level discourse tree. Specifically, they employed two separate models for intra- and multi-sentential parsing. Their choice of two-stage parsing is well motivated for two reasons: (1) it has been shown that sentence boundaries correlate very well with discourse boundaries, and (2) the scalability issue of their CRF-based models can be overcome by this decomposition.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Second, they jointly modeled the structure and the relation for a given pair of discourse units. For example, Figure <a href="#S2.F2" title="Figure 2 ‣ 2.2 Joty et al.’s joint model ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows their intra-sentential model, in which they use the bottom layer to represent discourse units; the middle layer of binary nodes to predict the connection of adjacent discourse units; and the top layer of multi-class nodes to predict the type of the relation between two units. Their model assigns a probability to each possible constituent, and a CKY-like parsing algorithm finds the globally optimal discourse tree, given the computed probabilities.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">The strength of Joty et al.’s model is their joint modeling of the structure and the relation, such that information from each aspect can interact with the other. However, their model has a major defect in its inefficiency, or even infeasibility, for application in practice. The inefficiency lies in both their DCRF-based joint model, on which inference is usually slow, and their CKY-like parsing algorithm, whose issue is more prominent. Due to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m1" class="ltx_Math" alttext="O(n^{3})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> time complexity, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the number of input discourse units, for large documents, the parsing simply takes too long<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The largest document in the RST-DT contains over 180 sentences, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m3" class="ltx_Math" alttext="n&gt;180" display="inline"><mrow><mi>n</mi><mo>&gt;</mo><mn>180</mn></mrow></math> for their multi-sentential CKY parsing. Intuitively, suppose the average time to compute the probability of each constituent is 0.01 second, then in total, the CKY-like parsing takes over 16 hours. It is possible to optimize Joty et al.’s CKY-like parsing by replacing their CRF-based computation for upper-level constituents with some local computation based on the probabilities of lower-level constituents. However, such optimization is beyond the scope of this paper.</span></span></span>.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><img src="P14-1048/image002.png" id="S2.F2.g1" class="ltx_graphics ltx_centering" width="676" height="233" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>’s intra-sentential Condition Random Fields.</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Overall work flow</h2>
+
+<div id="S3.F3" class="ltx_figure"><img src="P14-1048/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="608" height="215" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>The work flow of our proposed discourse parser. In the figure, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m5" class="ltx_Math" alttext="M_{intra}" display="inline"><msub><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m6" class="ltx_Math" alttext="M_{multi}" display="inline"><msub><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> stand for the intra- and multi-sentential bottom-up tree-building models, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m7" class="ltx_Math" alttext="P_{intra}" display="inline"><msub><mi>P</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m8" class="ltx_Math" alttext="P_{multi}" display="inline"><msub><mi>P</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> stand for the intra- and multi-sentential post-editing models.</div>
+</div>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Overall work flow ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> demonstrates the overall work flow of our discourse parser. The general idea is that, similar to <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>, we perform a sentence-level parsing for each sentence first, followed by a text-level parsing to generate a full discourse tree for the whole document. However, in addition to efficiency (to be shown in Section <a href="#S6" title="6 Linear time complexity ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>), our discourse parser has a distinct feature, which is the post-editing component (to be introduced in Section <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), as outlined in dashes.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Our discourse parser works as follows. A document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> is first segmented into a list of sentences. Each sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="S_{i}" display="inline"><msub><mi>S</mi><mi>i</mi></msub></math>, after being segmented into EDUs (not shown in the figure), goes through an intra-sentential bottom-up tree-building model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="M_{intra}" display="inline"><msub><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></math>, to form a sentence-level discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="T_{S_{i}}" display="inline"><msub><mi>T</mi><msub><mi>S</mi><mi>i</mi></msub></msub></math>, with the EDUs as leaf nodes. After that, we apply the intra-sentential post-editing model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="P_{intra}" display="inline"><msub><mi>P</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></math> to modify the generated tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="T_{S_{i}}" display="inline"><msub><mi>T</mi><msub><mi>S</mi><mi>i</mi></msub></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="T^{p}_{S_{i}}" display="inline"><msubsup><mi>T</mi><msub><mi>S</mi><mi>i</mi></msub><mi>p</mi></msubsup></math>, by considering upper-level information.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We then combine all sentence-level discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="T^{p}_{S_{i}}" display="inline"><msubsup><mi>T</mi><msub><mi>S</mi><mi>i</mi></msub><mi>p</mi></msubsup></math>’s using our multi-sentential bottom-up tree-building model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="M_{multi}" display="inline"><msub><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> to generate the text-level discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="T_{D}" display="inline"><msub><mi>T</mi><mi>D</mi></msub></math>. Similar to sentence-level parsing, we also post-edit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="T_{D}" display="inline"><msub><mi>T</mi><mi>D</mi></msub></math> using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="P_{multi}" display="inline"><msub><mi>P</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> to produce the final discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="T^{p}_{D}" display="inline"><msubsup><mi>T</mi><mi>D</mi><mi>p</mi></msubsup></math>.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Bottom-up tree-building</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">For both intra- and multi-sentential parsing, our bottom-up tree-building process adopts a similar greedy pipeline framework like the HILDA discourse parser (discussed in Section <a href="#S2.SS1" title="2.1 HILDA discourse parser ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>), to guarantee efficiency for large documents. In particular, starting from the constituents on the bottom level (EDUs for intra-sentential parsing and sentence-level discourse trees for multi-sentential parsing), at each step of the tree-building, we greedily merge a pair of adjacent discourse constituents such that the merged constituent has the highest probability as predicted by our <span class="ltx_text ltx_font_italic">structure</span> model. The <span class="ltx_text ltx_font_italic">relation</span> model is then applied to assign the relation to the new constituent.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Linear-chain CRFs as Local models</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Now we describe the local models we use to make decisions for a given pair of adjacent discourse constituents in the bottom-up tree-building. There are two dimensions for our local models: (1) scope of the model: intra- or multi-sentential, and (2) purpose of the model: for determining structures or relations. So we have four local models, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="M^{rel}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="M^{rel}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">While our bottom-up tree-building shares the greedy framework with HILDA, unlike HILDA, our local models are implemented using CRFs. In this way, we are able to take into account the sequential information from contextual discourse constituents, which cannot be naturally represented in HILDA with SVMs as local classifiers. Therefore, our model incorporates the strengths of both HILDA and Joty et al.’s model, i.e., the efficiency of a greedy parsing algorithm, and the ability to incorporate sequential information with CRFs.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">As shown by <cite class="ltx_cite">Feng and Hirst (<a href="#bib.bib86" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">2012</a>)</cite>, for a pair of discourse constituents of interest, the sequential information from contextual constituents is crucial for determining structures. Therefore, it is well motivated to use Conditional Random Fields (CRFs) <cite class="ltx_cite">[<a href="#bib.bib107" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">10</a>]</cite>, which is a discriminative probabilistic graphical model, to make predictions for a sequence of constituents surrounding the pair of interest.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">In this sense, our local models appear similar to Joty et al.’s non-greedy parsing models. However, the major distinction between our models and theirs is that we do not jointly model the structure and the relation; rather, we use two linear-chain CRFs to model the structure and the relation separately. Although joint modeling has shown to be effective in various NLP and computer vision applications <cite class="ltx_cite">[<a href="#bib.bib99" title="Dynamic conditional random fields: factorized probabilistic models for labeling and segmenting sequence data" class="ltx_ref">17</a>, <a href="#bib.bib108" title="Combining a two-step conditional random field model and a joint source channel model for machine transliteration" class="ltx_ref">19</a>, <a href="#bib.bib109" title="A dynamic conditional random field model for joint labeling of object and scene classes" class="ltx_ref">18</a>]</cite>, our choice of using two separate models is for the following reasons:</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">First, it is not entirely appropriate to model the structure and the relation at the same time. For example, with respect to Figure <a href="#S2.F2" title="Figure 2 ‣ 2.2 Joty et al.’s joint model ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, it is unclear how the relation node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math> is represented for a training instance whose structure node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="S_{j}=0" display="inline"><mrow><msub><mi>S</mi><mi>j</mi></msub><mo>=</mo><mn>0</mn></mrow></math>, i.e., the units <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="U_{j-1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m4" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> are disjoint. Assume a special relation NO-REL is assigned for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m5" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math>. Then, in the tree-building process, we will have to deal with the situations where the joint model yields conflicting predictions: it is possible that the model predicts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m6" class="ltx_Math" alttext="S_{j}=1" display="inline"><mrow><msub><mi>S</mi><mi>j</mi></msub><mo>=</mo><mn>1</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m7" class="ltx_Math" alttext="R_{j}=\textsc{NO-REL}" display="inline"><mrow><msub><mi>R</mi><mi>j</mi></msub><mo>=</mo><mtext mathvariant="normal">NO-REL</mtext></mrow></math>, or vice versa, and we will have to decide which node to trust (and thus in some sense, the structure and the relation is no longer jointly modeled).</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">Secondly, as a joint model, it is mandatory to use a dynamic CRF, for which exact inference is usually intractable or slow. In contrast, for linear-chain CRFs, efficient algorithms and implementations for exact inference exist.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Structure models</h3>
+
+<div id="S4.F6" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t]
+<img src="P14-1048/image004.png" id="S4.F6.g1" class="ltx_graphics ltx_centering" width="676" height="185" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Intra-sentential structure model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m2" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>.</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t]
+<img src="P14-1048/image005.png" id="S4.F6.g2" class="ltx_graphics ltx_centering ltx_centering" width="677" height="263" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Multi-sentential structure model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m9" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m10" class="ltx_Math" alttext="C^{1}" display="inline"><msup><mi>C</mi><mn>1</mn></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m11" class="ltx_Math" alttext="C^{2}" display="inline"><msup><mi>C</mi><mn>2</mn></msup></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m12" class="ltx_Math" alttext="C^{3}" display="inline"><msup><mi>C</mi><mn>3</mn></msup></math> denote the three chains for predicting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m13" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m14" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>.</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Local structure models.</div>
+</div>
+<div id="S4.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.1 </span>Intra-sentential structure model</h4>
+
+<div id="S4.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F6" title="Figure 6 ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows our intra-sentential structure model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m1" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math> in the form of a linear-chain CRF. Similar to Joty et al.’s intra-sentential model, the first layer of the chain is composed of discourse constituents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m2" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>’s, and the second layer is composed of binary nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m3" class="ltx_Math" alttext="S_{j}" display="inline"><msub><mi>S</mi><mi>j</mi></msub></math>’s to indicate the probability of merging adjacent discourse constituents.</p>
+</div>
+<div id="S4.SS2.SSS1.p2" class="ltx_para">
+<p class="ltx_p">At each step in the bottom-up tree-building process, we generate a single sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m1" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>, consisting of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m2" class="ltx_Math" alttext="U_{1},U_{2},\ldots,U_{j},\ldots,U_{t}" display="inline"><mrow><msub><mi>U</mi><mn>1</mn></msub><mo>,</mo><msub><mi>U</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>U</mi><mi>j</mi></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>U</mi><mi>t</mi></msub></mrow></math>, which are all the current discourse constituents in the sentence that need to be processed. For instance, initially, we have the sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m3" class="ltx_Math" alttext="E_{1}=\{e_{1},e_{2},\ldots,e_{m}\}" display="inline"><mrow><msub><mi>E</mi><mn>1</mn></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>m</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, which are the EDUs of the sentence; after merging <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m4" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m5" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> on the second level, we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m6" class="ltx_Math" alttext="E_{2}=\{e_{1:2},e_{3},\ldots,e_{m}\}" display="inline"><mrow><msub><mi>E</mi><mn>2</mn></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>e</mi><mrow><mn>1</mn><mo>:</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>e</mi><mn>3</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>m</mi></msub></mrow><mo>}</mo></mrow></mrow></math>; after merging <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m7" class="ltx_Math" alttext="e_{4}" display="inline"><msub><mi>e</mi><mn>4</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m8" class="ltx_Math" alttext="e_{5}" display="inline"><msub><mi>e</mi><mn>5</mn></msub></math> on the third level, we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m9" class="ltx_Math" alttext="E_{3}=\{e_{1:2},e_{3},e_{4:5},\ldots,e_{m}\}" display="inline"><mrow><msub><mi>E</mi><mn>3</mn></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>e</mi><mrow><mn>1</mn><mo>:</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>e</mi><mn>3</mn></msub><mo>,</mo><msub><mi>e</mi><mrow><mn>4</mn><mo>:</mo><mn>5</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>e</mi><mi>m</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, and so on.</p>
+</div>
+<div id="S4.SS2.SSS1.p3" class="ltx_para">
+<p class="ltx_p">Because the structure model is the first component in our pipeline of local models, its accuracy is crucial. Therefore, to improve its accuracy, we enforce additional commonsense constraints in its Viterbi decoding. In particular, we disallow 1-1 transitions between adjacent labels (a discourse unit can be merged with at most one adjacent unit), and we disallow all-zero sequences (at least one pair must be merged).</p>
+</div>
+<div id="S4.SS2.SSS1.p4" class="ltx_para">
+<p class="ltx_p">Since the computation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m1" class="ltx_Math" alttext="E_{i}" display="inline"><msub><mi>E</mi><mi>i</mi></msub></math> <span class="ltx_text ltx_font_bold">does not</span> depend on a particular pair of constituents, we can use the same sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m2" class="ltx_Math" alttext="E_{i}" display="inline"><msub><mi>E</mi><mi>i</mi></msub></math> to compute structural probabilities for <span class="ltx_text ltx_font_bold">all</span> adjacent constituents. In contrast, Joty et al.’s computation of intra-sentential sequences depends on the particular pair of constituents: the sequence is composed of the pair in question, with other EDUs in the sentence, even if those EDUs have already been merged. Thus, different CRF chains have to be formed for different pairs of constituents. In addition to efficiency, our use of a single CRF chain for all constituents can better capture the sequential dependencies among context, by taking into account the information from partially built discourse constituents, rather than bottom-level EDUs only.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.2 </span>Multi-sentential structure model</h4>
+
+<div id="S4.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">For multi-sentential parsing, where the smallest discourse units are single sentences, as argued by <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>, it is not feasible to use a long chain to represent all constituents, due to the fact that it takes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m1" class="ltx_Math" alttext="O(TM^{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>T</mi><mo>⁢</mo><msup><mi>M</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></math> time to perform the forward-backward exact inference on a chain with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m2" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> units and an output vocabulary size of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m3" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, thus the overall complexity for all possible sequences in their model is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m4" class="ltx_Math" alttext="O(M^{2}n^{3})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>M</mi><mn>2</mn></msup><mo>⁢</mo><msup><mi>n</mi><mn>3</mn></msup></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The time complexity will be reduced to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m5" class="ltx_Math" alttext="O(M^{2}n^{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>M</mi><mn>2</mn></msup><mo>⁢</mo><msup><mi>n</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></math>, if we use the same chain for all constituents as in our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m6" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>.</span></span></span>.</p>
+</div>
+<div id="S4.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Instead, we choose to take a sliding-window approach to form CRF chains for a particular pair of constituents, as shown in Figure <a href="#S4.F6" title="Figure 6 ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. For example, suppose we wish to compute the structural probability for the pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m1" class="ltx_Math" alttext="U_{j-1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m2" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>, we form three chains, each of which contains two contextual constituents: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m3" class="ltx_Math" alttext="C^{1}=\{U_{j-3},U_{j-2},U_{j-1},U_{j}\}" display="inline"><mrow><msup><mi>C</mi><mn>1</mn></msup><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>3</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mi>j</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m4" class="ltx_Math" alttext="C^{2}=\{U_{j-2},U_{j-1},U_{j},U_{j+1}\}" display="inline"><mrow><msup><mi>C</mi><mn>2</mn></msup><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mi>j</mi></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>}</mo></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m5" class="ltx_Math" alttext="C^{3}=\{U_{j-1},U_{j},U_{j+1},U_{j+2}\}" display="inline"><mrow><msup><mi>C</mi><mn>3</mn></msup><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>U</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mi>j</mi></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>}</mo></mrow></mrow></math>. We then find the chain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m6" class="ltx_Math" alttext="C^{t},1\leq t\leq 3" display="inline"><mrow><mrow><msup><mi>C</mi><mi>t</mi></msup><mo>,</mo><mn>1</mn></mrow><mo>≤</mo><mi>t</mi><mo>≤</mo><mn>3</mn></mrow></math>, with the highest joint probability over the entire sequence, and assign its marginal probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m7" class="ltx_Math" alttext="P(S^{t}_{j}=1)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi>S</mi><mi>j</mi><mi>t</mi></msubsup><mo>=</mo><mn>1</mn><mo>)</mo></mrow></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p2.m8" class="ltx_Math" alttext="P(S_{j}=1)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>S</mi><mi>j</mi></msub><mo>=</mo><mn>1</mn><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS2.SSS2.p3" class="ltx_para">
+<p class="ltx_p">Similar to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p3.m1" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p3.m2" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>, we also include additional constraints in the Viterbi decoding, by disallowing transitions between two ones, and disallowing the sequence to be all zeros if it contains all the remaining constituents in the document.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Relation models</h3>
+
+<div id="S4.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.1 </span>Intra-sentential relation model</h4>
+
+<div id="S4.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">The intra-sentential relation model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m1" class="ltx_Math" alttext="M^{rel}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>, shown in Figure <a href="#S4.F9" title="Figure 9 ‣ 4.3.1 Intra-sentential relation model ‣ 4.3 Relation models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>, works in a similar way to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m2" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math>, as described in Section <a href="#S4.SS2.SSS1" title="4.2.1 Intra-sentential structure model ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>. The linear-chain CRF contains a first layer of all discourse constituents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m3" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>’s in the sentence on level <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, and a second layer of relation nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m5" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math>’s to represent the relation between a pair of discourse constituents.</p>
+</div>
+<div id="S4.SS3.SSS1.p2" class="ltx_para">
+<p class="ltx_p">However, unlike the structure model, adjacent relation nodes do not share discourse constituents on the first layer. Rather, each relation node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m1" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math> attempts to model the relation of one single constituent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m2" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>, by taking <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m3" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>’s left and right subtrees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m4" class="ltx_Math" alttext="U_{j,L}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>,</mo><mi>L</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m5" class="ltx_Math" alttext="U_{j,R}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>,</mo><mi>R</mi></mrow></msub></math> as its first-layer nodes; if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m6" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> is a single EDU, then the first-layer node of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m7" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math> is simply <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m8" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p2.m9" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math> is a special relation symbol <span class="ltx_text ltx_font_smallcaps">LEAF<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><span class="ltx_text ltx_font_upright">These leaf constituents are represented using a special feature vector </span><span class="ltx_text ltx_font_typewriter ltx_font_upright">is_leaf = True</span><span class="ltx_text ltx_font_upright">; thus the CRF never labels them with relations other than </span>LEAF<span class="ltx_text ltx_font_upright">.</span></span></span></span></span>. Since we know, a priori, that the constituents in the chains are either leaf nodes or the ones that have been merged by our structure model, we never need to worry about the <span class="ltx_text ltx_font_smallcaps">NO-REL</span> issue as outlined in Section <a href="#S4.SS1" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.</p>
+</div>
+<div id="S4.SS3.SSS1.p3" class="ltx_para">
+<p class="ltx_p">In the bottom-up tree-building process, after merging a pair of adjacent constituents using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m1" class="ltx_Math" alttext="M^{struct}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math> into a new constituent, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m2" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>, we form a chain consisting of all current constituents in the sentence to decide the relation label for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m3" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math>, i.e., the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m4" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math> node in the chain. In fact, by performing inference on this chain, we produce predictions not only for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m5" class="ltx_Math" alttext="R_{j}" display="inline"><msub><mi>R</mi><mi>j</mi></msub></math>, but also for all other <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m6" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> nodes in the chain, which correspond to all other constituents in the sentence. Since those non-leaf constituents are already labeled in previous steps in the tree-building, we can now <span class="ltx_text ltx_font_bold">re-assign</span> their relations if the model predicts differently in this step. Therefore, this re-labeling procedure can compensate for the loss of accuracy caused by our greedy bottom-up strategy to some extent.</p>
+</div>
+<div id="S4.F9" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t]
+<img src="P14-1048/image006.png" id="S4.F9.g1" class="ltx_graphics ltx_centering" width="676" height="155" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Intra-sentential relation model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m2" class="ltx_Math" alttext="M^{rel}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>.</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t]
+<img src="P14-1048/image007.png" id="S4.F9.g2" class="ltx_graphics" width="675" height="234" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>Multi-sentential relation model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m9" class="ltx_Math" alttext="M^{rel}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m10" class="ltx_Math" alttext="C^{1}" display="inline"><msup><mi>C</mi><mn>1</mn></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m11" class="ltx_Math" alttext="C^{2}" display="inline"><msup><mi>C</mi><mn>2</mn></msup></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m12" class="ltx_Math" alttext="C^{3}" display="inline"><msup><mi>C</mi><mn>3</mn></msup></math> denote the three sliding windows for predicting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m13" class="ltx_Math" alttext="U_{j,L}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>,</mo><mi>L</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F9.m14" class="ltx_Math" alttext="U_{j,R}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>,</mo><mi>R</mi></mrow></msub></math>.</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 9: </span>Local relation models.</div>
+</div>
+</div>
+<div id="S4.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.2 </span>Multi-sentential relation model</h4>
+
+<div id="S4.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F9" title="Figure 9 ‣ 4.3.1 Intra-sentential relation model ‣ 4.3 Relation models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> shows our multi-sentential relation model. Like <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p1.m1" class="ltx_Math" alttext="M^{rel}_{intra}" display="inline"><msubsup><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>, the first layer consists of adjacent discourse units, and the relation nodes on the second layer model the relation of each constituent separately.</p>
+</div>
+<div id="S4.SS3.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Similar to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p2.m1" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math> introduced in Section <a href="#S4.SS2.SSS2" title="4.2.2 Multi-sentential structure model ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p2.m2" class="ltx_Math" alttext="M^{rel}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math> also takes a sliding-window approach to predict labels for constituents in a local context. For a constituent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p2.m3" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> to be predicted, we form three chains, and use the chain with the highest joint probability to assign or re-assign relations to constituents in that chain.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Post-editing</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">After an intra- or multi-sentential discourse tree is fully built, we perform a post-editing to consider possible modifications to the current tree, by considering useful information from the discourse constituents on upper levels, which is unavailable in the bottom-up tree-building process.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The motivation for post-editing is that, some particular discourse relations, such as <span class="ltx_text ltx_font_smallcaps">Textual-Organization</span>, tend to occur on the top levels of the discourse tree; thus, information such as the depth of the discourse constituent can be quite indicative. However, the exact depth of a discourse constituent is usually unknown in the bottom-up tree-building process; therefore, it might be beneficial to modify the tree by including top-down information after the tree is fully built.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">The process of post-editing is shown in Algorithm <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. For each input discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, which is already fully built by bottom-up tree-building models, we do the following:</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Lines <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> – <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>:</span> Identify the lowest level of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> on which the constituents can be modified according to the post-editing structure component, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m2" class="ltx_Math" alttext="P^{struct}" display="inline"><msup><mi>P</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math>. To do so, we maintain a list <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> to store the discourse constituents that need to be examined. Initially, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> consists of all the bottom-level constituents in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m5" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>. At each step of the loop, we consider merging the pair of adjacent units in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m6" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> with the highest probability predicted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m7" class="ltx_Math" alttext="P^{struct}" display="inline"><msup><mi>P</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math>. If the predicted pair is not merged in the original tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m8" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, then a possible modification is located; otherwise, we merge the pair, and proceed to the next iteration.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Lines <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> – <a href="#S5" title="5 Post-editing ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>:</span> If modifications have been proposed in the previous step, we build a new tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m1" class="ltx_Math" alttext="T^{p}" display="inline"><msup><mi>T</mi><mi>p</mi></msup></math> using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m2" class="ltx_Math" alttext="P^{struct}" display="inline"><msup><mi>P</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math> as the structure model, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m3" class="ltx_Math" alttext="P^{rel}" display="inline"><msup><mi>P</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msup></math> as the relation model, from the constituents on which modifications are proposed. Otherwise, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m4" class="ltx_Math" alttext="T^{p}" display="inline"><msup><mi>T</mi><mi>p</mi></msup></math> is built from the bottom-level constituents of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m5" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>. The upper-level information, such as the depth of a discourse constituent, is derived from the initial tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m6" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\Require</span>A fully built discourse tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>.
+<span class="ltx_ERROR undefined">\If</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m2" class="ltx_Math" alttext="|T|=1" display="inline"><mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow><mo>=</mo><mn>1</mn></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_ERROR undefined">\Return</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> <span class="ltx_ERROR undefined">\Comment</span>Do nothing if it is a single EDU.
+<span class="ltx_ERROR undefined">\EndIf</span></p>
+</div><span class="ltx_ERROR undefined">\State</span>
+<div id="S5.p7" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m1" class="ltx_Math" alttext="L\leftarrow[U_{1},U_{2},\ldots,U_{t}]" display="inline"><mrow><mi>L</mi><mo>←</mo><mrow><mo>[</mo><mrow><msub><mi>U</mi><mn>1</mn></msub><mo>,</mo><msub><mi>U</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>U</mi><mi>t</mi></msub></mrow><mo>]</mo></mrow></mrow></math><span class="ltx_ERROR undefined">\Comment</span>The bottom-level constituents in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m2" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>.
+<span class="ltx_ERROR undefined">\While</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m3" class="ltx_Math" alttext="|L|&gt;2" display="inline"><mrow><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow><mo>&gt;</mo><mn>2</mn></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m4" class="ltx_Math" alttext="i\leftarrow\textsc{PredictMerging}(L,P^{struct})" display="inline"><mrow><mi>i</mi><mo>←</mo><mrow><mtext mathvariant="normal">PredictMerging</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>L</mi><mo>,</mo><msup><mi>P</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m5" class="ltx_Math" alttext="p\leftarrow\textsc{Parent}(L[i],L[i+1],T)" display="inline"><mrow><mi>p</mi><mo>←</mo><mrow><mtext mathvariant="normal">Parent</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow><mo>]</mo></mrow></mrow><mo>,</mo><mi>T</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\If</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p7.m6" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> = NULL
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">break</span> <span class="ltx_ERROR undefined">\EndIf</span></p>
+</div><span class="ltx_ERROR undefined">\State</span>
+<div id="S5.p8" class="ltx_para">
+<p class="ltx_p">Replace <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p8.m1" class="ltx_Math" alttext="L[i]" display="inline"><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p8.m2" class="ltx_Math" alttext="L[i+1]" display="inline"><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow><mo>]</mo></mrow></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p8.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>
+
+<span class="ltx_ERROR undefined">\EndWhile</span></p>
+</div><span class="ltx_ERROR undefined">\If</span>
+<div id="S5.p9" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p9.m1" class="ltx_Math" alttext="|L|=2" display="inline"><mrow><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow><mo>=</mo><mn>2</mn></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p9.m2" class="ltx_Math" alttext="L\leftarrow[U_{1},U_{2},\ldots,U_{t}]" display="inline"><mrow><mi>L</mi><mo>←</mo><mrow><mo>[</mo><mrow><msub><mi>U</mi><mn>1</mn></msub><mo>,</mo><msub><mi>U</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>U</mi><mi>t</mi></msub></mrow><mo>]</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\EndIf</span><span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p9.m3" class="ltx_Math" alttext="T^{p}\leftarrow\textsc{BuildTree}(L,P^{struct},P^{rel},T)" display="inline"><mrow><msup><mi>T</mi><mi>p</mi></msup><mo>←</mo><mrow><mtext mathvariant="normal">BuildTree</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>L</mi><mo>,</mo><msup><mi>P</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msup><mo>,</mo><msup><mi>P</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msup><mo>,</mo><mi>T</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\Ensure</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p9.m4" class="ltx_Math" alttext="T^{p}" display="inline"><msup><mi>T</mi><mi>p</mi></msup></math>
+
+<span class="ltx_text ltx_caption">Post-editing algorithm.</span></p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Local models</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The local models, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="P^{\{struct|rel\}}_{\{intra|multi\}}" display="inline"><msubsup><mi>P</mi><mrow><mo>{</mo><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow><mo separator="true">|</mo><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow></mrow><mo>}</mo></mrow><mrow><mo>{</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow><mo separator="true">|</mo><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></mrow><mo>}</mo></mrow></msubsup></math>, for post-editing is almost identical to their counterparts of the bottom-up tree-building, except that the linear-chain CRFs in post-editing includes additional features to represent information from constituents on higher levels (to be introduced in Section <a href="#S7" title="7 Features ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>).</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Linear time complexity</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Here we analyze the time complexity of each component in our discourse parser, to quantitatively demonstrate the time efficiency of our model. The following analysis is focused on the bottom-up tree-building process, but a similar analysis can be carried out for the post-editing process. Since the number of operations in the post-editing process is roughly the same (1.5 times in the worst case) as in the bottom-up tree-building, post-editing shares the same complexity as the tree-building.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Intra-sentential parsing</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Suppose the input document is segmented into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> sentences, and each sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m2" class="ltx_Math" alttext="S_{k}" display="inline"><msub><mi>S</mi><mi>k</mi></msub></math> contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m3" class="ltx_Math" alttext="m_{k}" display="inline"><msub><mi>m</mi><mi>k</mi></msub></math> EDUs. For each sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m4" class="ltx_Math" alttext="S_{k}" display="inline"><msub><mi>S</mi><mi>k</mi></msub></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m5" class="ltx_Math" alttext="m_{k}" display="inline"><msub><mi>m</mi><mi>k</mi></msub></math> EDUs, the overall time complexity to perform intra-sentential parsing is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m6" class="ltx_Math" alttext="O(m^{2}_{k})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>m</mi><mi>k</mi><mn>2</mn></msubsup><mo>)</mo></mrow></mrow></math>. The reason is the following. On level <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> of the bottom-up tree-building, we generate a single chain to represent the structure or relation for all the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m8" class="ltx_Math" alttext="m_{k}-i" display="inline"><mrow><msub><mi>m</mi><mi>k</mi></msub><mo>-</mo><mi>i</mi></mrow></math> constituents that are currently in the sentence. The time complexity for performing forward-backward inference on the single chain is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m9" class="ltx_Math" alttext="O((m_{k}-i)\times M^{2})=O(m_{k}-i)" display="inline"><mrow><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mi>k</mi></msub><mo>-</mo><mi>i</mi></mrow><mo>)</mo></mrow><mo>×</mo><msup><mi>M</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>m</mi><mi>k</mi></msub><mo>-</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>, where the constant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m10" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> is the size of the output vocabulary. Starting from the EDUs on the bottom level, we need to perform inference for one chain on each level during the bottom-up tree-building, and thus the total time complexity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m11" class="ltx_Math" alttext="\Sigma_{i=1}^{m_{k}}O(m_{k}-i)=O(m_{k}^{2})" display="inline"><mrow><mrow><msubsup><mi mathvariant="normal">Σ</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>m</mi><mi>k</mi></msub></msubsup><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>m</mi><mi>k</mi></msub><mo>-</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>m</mi><mi>k</mi><mn>2</mn></msubsup><mo>)</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">The total time to generate sentence-level discourse trees for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> sentences is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m2" class="ltx_Math" alttext="\Sigma_{k=1}^{n}O(m_{k}^{2})" display="inline"><mrow><msubsup><mi mathvariant="normal">Σ</mi><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>m</mi><mi>k</mi><mn>2</mn></msubsup><mo>)</mo></mrow></mrow></math>. It is fairly safe to assume that each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m3" class="ltx_Math" alttext="m_{k}" display="inline"><msub><mi>m</mi><mi>k</mi></msub></math> is a constant, in the sense that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m4" class="ltx_Math" alttext="m_{k}" display="inline"><msub><mi>m</mi><mi>k</mi></msub></math> is independent of the total number of sentences in the document. Therefore, the total time complexity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m5" class="ltx_Math" alttext="\Sigma_{k=1}^{n}O(m_{k}^{2})\leq n\times O(\max_{1\leq j\leq n}(m_{j}^{2}))=n%&#10;\times O(1)=O(n)" display="inline"><mrow><mrow><msubsup><mi mathvariant="normal">Σ</mi><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>m</mi><mi>k</mi><mn>2</mn></msubsup><mo>)</mo></mrow></mrow><mo>≤</mo><mrow><mrow><mi>n</mi><mo>×</mo><mi>O</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mo>max</mo><mrow><mn>1</mn><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>n</mi></mrow></msub><mo>⁡</mo><mrow><mo>(</mo><msubsup><mi>m</mi><mi>j</mi><mn>2</mn></msubsup><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>n</mi><mo>×</mo><mi>O</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></mrow></math>, i.e., linear in the total number of sentences.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Multi-sentential parsing</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">For multi-sentential models, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m1" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m2" class="ltx_Math" alttext="M^{rel}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>, as shown in Figures <a href="#S4.F6" title="Figure 6 ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and <a href="#S4.F9" title="Figure 9 ‣ 4.3.1 Intra-sentential relation model ‣ 4.3 Relation models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>, for a pair of constituents of interest, we generate multiple chains to predict the structure or the relation.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">By including a constant number <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> of discourse units in each chain, and considering a constant number <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m2" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> of such chains for computing each adjacent pair of discourse constituents (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m3" class="ltx_Math" alttext="k=4" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>4</mn></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m4" class="ltx_Math" alttext="M^{struct}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m5" class="ltx_Math" alttext="k=3" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>3</mn></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m6" class="ltx_Math" alttext="M^{rel}_{multi}" display="inline"><msubsup><mi>M</mi><mrow><mi>m</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi></mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math>; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m7" class="ltx_Math" alttext="l=3" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>3</mn></mrow></math>), we have an overall time complexity of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m8" class="ltx_Math" alttext="O(n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math>. The reason is that it takes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m9" class="ltx_Math" alttext="l\times O(kM^{2})=O(1)" display="inline"><mrow><mrow><mrow><mi>l</mi><mo>×</mo><mi>O</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>⁢</mo><msup><mi>M</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow></mrow></math> time, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m10" class="ltx_Math" alttext="l,k,M" display="inline"><mrow><mi>l</mi><mo>,</mo><mi>k</mi><mo>,</mo><mi>M</mi></mrow></math> are all constants, to perform exact inference for a given pair of adjacent constituents, and we need to perform such computation for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m11" class="ltx_Math" alttext="n-1" display="inline"><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></math> pairs of adjacent sentences on the first level of the tree-building. Adopting a greedy approach, on an arbitrary level during the tree-building, once we decide to merge a certain pair of constituents, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m12" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m13" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>, we only need to recompute a small number of chains, i.e., the chains which originally include <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m14" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m15" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>, and inference on each chain takes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m16" class="ltx_Math" alttext="O(1)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow></math>. Therefore, the total time complexity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m17" class="ltx_Math" alttext="(n-1)\times O(1)+(n-1)\times O(1)=O(n)" display="inline"><mrow><mrow><mrow><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>×</mo><mi>O</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>×</mo><mi>O</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow></mrow><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></mrow></math>, where the first term in the summation is the complexity of computing all chains on the bottom level, and the second term is the complexity of computing the constant number of chains on higher levels.</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">We have thus showed that the time complexity is <span class="ltx_text ltx_font_italic">linear</span> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, which is the number of sentences in the document. In fact, under the assumption that the number of EDUs in each sentence is independent of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, it can be shown that the time complexity is also linear in the total number of EDUs<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We implicitly made an assumption that the parsing time is dominated by the time to perform inference on CRF chains. However, for complex features, the time required for feature computation might be dominant. Nevertheless, a careful caching strategy can accelerate feature computation, since a large number of multi-sentential chains overlap with each other.</span></span></span>.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Features</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In our local models, to encode two adjacent units, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p1.m1" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p1.m2" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>, within a CRF chain, we use the following 10 sets of features, some of which are modified from Joty et al.’s model.</p>
+</div>
+<div id="S7.SS2.SSS2.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Organization features:</h5>
+
+<div id="S7.SS2.SSS2.P1.p1" class="ltx_para">
+<p class="ltx_p">Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P1.p1.m1" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P1.p1.m2" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>) is the first (or last) constituent in the sentence (for intra-sentential models) or in the document (for multi-sentential models); whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P1.p1.m3" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P1.p1.m4" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>) is a bottom-level constituent.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Textual structure features:</h5>
+
+<div id="S7.SS2.SSS2.P2.p1" class="ltx_para">
+<p class="ltx_p">Whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P2.p1.m1" class="ltx_Math" alttext="U_{j}" display="inline"><msub><mi>U</mi><mi>j</mi></msub></math> contains more sentences (or paragraphs) than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P2.p1.m2" class="ltx_Math" alttext="U_{j+1}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">N-gram features:</h5>
+
+<div id="S7.SS2.SSS2.P3.p1" class="ltx_para">
+<p class="ltx_p">The beginning (or end) lexical <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams in each unit; the beginning (or end) POS <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P3.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams in each unit, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.SS2.SSS2.P3.p1.m3" class="ltx_Math" alttext="n\in\{1,2,3\}" display="inline"><mrow><mi>n</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow><mo>}</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P4" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Dominance features:</h5>
+
+<div id="S7.SS2.SSS2.P4.p1" class="ltx_para">
+<p class="ltx_p">The PoS tags of the head node and the attachment node; the lexical heads of the head node and the attachment node; the dominance relationship between the two units.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P5" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Contextual features:</h5>
+
+<div id="S7.SS2.SSS2.P5.p1" class="ltx_para">
+<p class="ltx_p">The feature vector of the previous and the next constituent in the chain.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P6" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Substructure features:</h5>
+
+<div id="S7.SS2.SSS2.P6.p1" class="ltx_para">
+<p class="ltx_p">The root node of the left and right discourse subtrees of each unit.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P7" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Syntactic features:</h5>
+
+<div id="S7.SS2.SSS2.P7.p1" class="ltx_para">
+<p class="ltx_p">whether each unit corresponds to a single syntactic subtree, and if so, the top PoS tag of the subtree; the distance of each unit to their lowest common ancestor in the syntax tree (intra-sentential only).</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P8" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Entity transition features:</h5>
+
+<div id="S7.SS2.SSS2.P8.p1" class="ltx_para">
+<p class="ltx_p">The type and the number of entity transitions across the two units. We adopt <cite class="ltx_cite">Barzilay and Lapata (<a href="#bib.bib21" title="Modeling local coherence: an entity-based approach" class="ltx_ref">2008</a>)</cite>’s entity-based local coherence model to represent a document by an entity grid, and extract local transitions among entities in continuous discourse constituents. We use bigram and trigram transitions with syntactic roles attached to each entity.</p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P9" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Cue phrase features:</h5>
+
+<div id="S7.SS2.SSS2.P9.p1" class="ltx_para">
+<p class="ltx_p">Whether a cue phrase occurs in the first or last EDU of each unit. The cue phrase list is based on the connectives collected by <cite class="ltx_cite">Knott and Dale (<a href="#bib.bib71" title="Using linguistic phenomena to motivate a set of coherence relations" class="ltx_ref">1994</a>)</cite></p>
+</div>
+</div>
+<div id="S7.SS2.SSS2.P10" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Post-editing features:</h5>
+
+<div id="S7.SS2.SSS2.P10.p1" class="ltx_para">
+<p class="ltx_p">The depth of each unit in the initial tree.</p>
+</div>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Experiments</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">For pre-processing, we use the Stanford CoreNLP <cite class="ltx_cite">[<a href="#bib.bib114" title="Accurate unlexicalized parsing" class="ltx_ref">8</a>, <a href="#bib.bib115" title="Generating typed dependency parses from phrase structure parses" class="ltx_ref">3</a>, <a href="#bib.bib116" title="The life and death of discourse entities: identifying singleton mentions" class="ltx_ref">16</a>]</cite> to syntactically parse the texts and extract coreference relations, and we use Penn2Malt<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="http://stp.lingfil.uu.se/~nivre/research/Penn2Malt.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://stp.lingfil.uu.se/~nivre/research/Penn2Malt.html</span></a>.</span></span></span> to lexicalize syntactic trees to extract dominance features.</p>
+</div>
+<div id="S8.p2" class="ltx_para">
+<p class="ltx_p">For local models, our structure models are trained using MALLET <cite class="ltx_cite">[<a href="#bib.bib112" title="MALLET: a machine learning for language toolkit" class="ltx_ref">14</a>]</cite> to include constraints over transitions between adjacent labels, and our relation models are trained using CRFSuite <cite class="ltx_cite">[<a href="#bib.bib110" title="CRFsuite: a fast implementation of conditional random fields (CRFs)" class="ltx_ref">15</a>]</cite>, which is a fast implementation of linear-chain CRFs.</p>
+</div>
+<div id="S8.p3" class="ltx_para">
+<p class="ltx_p">The data that we use to develop and evaluate our discourse parser is the RST Discourse Treebank (RST-DT) <cite class="ltx_cite">[<a href="#bib.bib57" title="Building a discourse-tagged corpus in the framework of Rhetorical Structure Theory" class="ltx_ref">2</a>]</cite>, which is a large corpus annotated in the framework of RST. The RST-DT consists of 385 documents (347 for training and 38 for testing) from the <span class="ltx_text ltx_font_italic">Wall Street Journal</span>. Following previous work on the RST-DT <cite class="ltx_cite">[<a href="#bib.bib66" title="HILDA: a discourse parser using support vector machine classification" class="ltx_ref">5</a>, <a href="#bib.bib86" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">4</a>, <a href="#bib.bib3" title="A novel discriminative framework for sentence-level discourse analysis" class="ltx_ref">7</a>, <a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">6</a>]</cite>, we use 18 coarse-grained relation classes, and with nuclearity attached, we have a total set of 41 distinct relations. Non-binary relations are converted into a cascade of right-branching binary relations.</p>
+</div>
+</div>
+<div id="S9" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">9 </span>Results and Discussion</h2>
+
+<div id="S9.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">9.1 </span>Parsing accuracy</h3>
+
+<div id="S9.SS1.p1" class="ltx_para">
+<p class="ltx_p">We compare four different models using manual EDU segmentation. In Table <a href="#S9.T1" title="Table 1 ‣ 9.1 Parsing accuracy ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m1" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>CRF model in the first row is the optimal CRF model proposed by <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m2" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m3" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math> in the second row is our implementation of HILDA’s greedy parsing algorithm using <cite class="ltx_cite">Feng and Hirst (<a href="#bib.bib86" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">2012</a>)</cite>’s enhanced feature set. The third model, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m4" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF, represents our greedy CRF-based discourse parser, and the last row, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p1.m6" class="ltx_Math" alttext="{}^{PE}" display="inline"><msup><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>E</mi></mrow></msup></math>, represents our parser with the post-editing component included.</p>
+</div>
+<div id="S9.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:34.1pt;" width="34.1pt"><span class="ltx_text ltx_font_bold">Model</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">Span</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_bold">Nuc</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold">Relation</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:34.1pt;" width="34.1pt">i4-5</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:28.5pt;" width="28.5pt"/>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_tt">Acc</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">MAFS</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:34.1pt;" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m1" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>CRF</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">82.5</td>
+<td class="ltx_td ltx_align_left ltx_border_t">68.4</td>
+<td class="ltx_td ltx_align_left ltx_border_t">55.7</td>
+<td class="ltx_td ltx_align_center ltx_border_t">N/A</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:34.1pt;" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m2" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m3" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">82.8</td>
+<td class="ltx_td ltx_align_left">67.1</td>
+<td class="ltx_td ltx_align_left">52.0</td>
+<td class="ltx_td ltx_align_center">27.4/23.3</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:34.1pt;" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m4" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">84.9<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m6" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_left">69.9<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m7" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_left">57.2<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m8" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">35.3/31.3</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:34.1pt;" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m9" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m10" class="ltx_Math" alttext="{}^{PE}" display="inline"><msup><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>E</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">85.7<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m11" class="ltx_Math" alttext="{}^{\ast\dagger}" display="inline"><msup><mi/><mrow><mo mathvariant="normal">∗</mo><mo mathvariant="bold">⁣</mo><mo mathvariant="normal">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">71.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m12" class="ltx_Math" alttext="{}^{\ast\dagger}" display="inline"><msup><mi/><mrow><mo mathvariant="normal">∗</mo><mo mathvariant="bold">⁣</mo><mo mathvariant="normal">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">58.2<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m13" class="ltx_Math" alttext="{}^{\ast\dagger}" display="inline"><msup><mi/><mrow><mo mathvariant="normal">∗</mo><mo mathvariant="bold">⁣</mo><mo mathvariant="normal">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">36.2</span>/<span class="ltx_text ltx_font_bold">32.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:34.1pt;" width="34.1pt">Human</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">88.7</td>
+<td class="ltx_td ltx_align_left ltx_border_t">77.7</td>
+<td class="ltx_td ltx_align_left ltx_border_t">65.8</td>
+<td class="ltx_td ltx_align_center ltx_border_t">N/A</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:34.1pt;" colspan="5" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m14" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>: significantly better than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m15" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m16" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m17" class="ltx_Math" alttext="p&lt;.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.01</mn></mrow></math>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:34.1pt;" colspan="5" width="34.1pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m18" class="ltx_Math" alttext="\dagger" display="inline"><mo>†</mo></math>: significantly better than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m19" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T1.m20" class="ltx_Math" alttext="p&lt;.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.01</mn></mrow></math>)</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Performance of different models using gold-standard EDU segmentation, evaluated using the constituent accuracy (%) for span, nuclearity, and relation. For relation, we also report the macro-averaged F1-score (MAFS) for correctly retrieved constituents (before the slash) and for all constituents (after the slash). Statistical significance is verified using Wilcoxon’s signed-rank test.</div>
+</div>
+<div id="S9.SS1.p2" class="ltx_para">
+<p class="ltx_p">In order to conduct a direct comparison with Joty et al.’s model, we use the same set of evaluation metrics, i.e., the unlabeled and labeled precision, recall, and F-score<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>For manual segmentation, precision, recall, and F-score are the same.</span></span></span> as defined by <cite class="ltx_cite">Marcu (<a href="#bib.bib104" title="The theory and practice of discourse parsing and summarization" class="ltx_ref">2000</a>)</cite>. For evaluating relations, since there is a skewed distribution of different relation types in the corpus, we also include the macro-averaged F1-score (MAFS)<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>MAFS is the F1-score averaged among all relation classes by equally weighting each class. Therefore, we cannot conduct significance test between different MAFS.</span></span></span> as another metric, to emphasize the performance of infrequent relation types. We report the MAFS separately for the correctly retrieved constituents (i.e., the span boundary is correct) and all constituents in the reference tree.</p>
+</div>
+<div id="S9.SS1.p3" class="ltx_para">
+<p class="ltx_p">As demonstrated by Table <a href="#S9.T1" title="Table 1 ‣ 9.1 Parsing accuracy ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, our greedy CRF models perform significantly better than the other two models. Since we do not have the actual output of Joty et al.’s model, we are unable to conduct significance testing between our models and theirs. But in terms of overall accuracy, our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p3.m1" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF model outperforms their model by 1.5%. Moreover, with post-editing enabled, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p3.m2" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p3.m3" class="ltx_Math" alttext="{}^{PE}" display="inline"><msup><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>E</mi></mrow></msup></math> significantly (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p3.m4" class="ltx_Math" alttext="p&lt;.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.01</mn></mrow></math>) outperforms our initial model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p3.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF by another 1% in relation assignment, and this overall accuracy of 58.2% is close to 90% of human performance. With respect to the macro-averaged F1-scores, adding the post-editing component also obtains about 1% improvement.</p>
+</div>
+<div id="S9.SS1.p4" class="ltx_para">
+<p class="ltx_p">However, the overall MAFS is still at the lower end of 30% for all constituents. Our error analysis shows that, for two relation classes, <span class="ltx_text ltx_font_smallcaps">Topic-Change</span> and <span class="ltx_text ltx_font_smallcaps">Textual-Organization</span>, our model fails to retrieve any instance, and for <span class="ltx_text ltx_font_smallcaps">Topic-Comment</span> and <span class="ltx_text ltx_font_smallcaps">Evaluation</span>, our model scores a class-wise <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS1.p4.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> score lower than 5%. These four relation classes, apart from their infrequency in the corpus, are more abstractly defined, and thus are particularly challenging.</p>
+</div>
+</div>
+<div id="S9.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">9.2 </span>Parsing efficiency</h3>
+
+<div id="S9.SS2.p1" class="ltx_para">
+<p class="ltx_p">We further illustrate the efficiency of our parser by demonstrating the time consumption of different models.</p>
+</div>
+<div id="S9.SS2.p2" class="ltx_para">
+<p class="ltx_p">First, as shown in Table <a href="#S9.T2" title="Table 2 ‣ 9.2 Parsing efficiency ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, the average number of sentences in a document is 26.11, which is already too large for optimal parsing models, e.g., the CKY-like parsing algorithm in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p2.m1" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>CRF, let alone the fact that the largest document contains several hundred of EDUs and sentences. Therefore, it should be seen that non-optimal models are required in most cases.</p>
+</div>
+<div id="S9.SS2.p3" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S9.T3" title="Table 3 ‣ 9.2 Parsing efficiency ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we report the parsing time<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>Tested on a Linux system with four duo-core 3.0GHz processors and 16G memory.</span></span></span> for the last three models, since we do not know the time of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m1" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>CRF. Note that the parsing time excludes the time cost for any necessary pre-processing. As can be seen, our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m2" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF model is considerably faster than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m3" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m4" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math>, because, on one hand, feature computation is expensive in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m6" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math>, since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m7" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m8" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math> utilizes a rich set of features; on the other hand, in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m9" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF, we are able to accelerate decoding by multi-threading MALLET (we use four threads). Even for the largest document with 187 sentences, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m10" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF is able to produce the final tree after about 40 seconds, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.SS2.p3.m11" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>CRF would take over 16 hours assuming each DCRF decoding takes only 0.01 second. Although enabling post-editing doubles the time consumption, the overall time is still acceptable in practice, and the loss of efficiency can be compensated by the improvement in accuracy.</p>
+</div>
+<div id="S9.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_right ltx_border_tt">Avg</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">Min</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">Max</th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"># of EDUs</td>
+<td class="ltx_td ltx_align_right ltx_border_t">61.74</td>
+<td class="ltx_td ltx_align_right ltx_border_t">4</td>
+<td class="ltx_td ltx_align_right ltx_border_t">304</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"># of Sentences</td>
+<td class="ltx_td ltx_align_right">26.11</td>
+<td class="ltx_td ltx_align_right">2</td>
+<td class="ltx_td ltx_align_right">187</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb"># of EDUs per sentence</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">2.36</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">1</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">10</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Characteristics of the 38 documents in the test data.</div>
+</div>
+<div id="S9.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_bold">Parsing Time (seconds)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">i2-4</th>
+<td class="ltx_td ltx_align_right ltx_border_tt">Avg</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">Min</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">Max</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T3.m1" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T3.m2" class="ltx_Math" alttext="{}^{FH}" display="inline"><msup><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>H</mi></mrow></msup></math></th>
+<td class="ltx_td ltx_align_right ltx_border_t">11.19</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.42</td>
+<td class="ltx_td ltx_align_right ltx_border_t">124.86</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T3.m3" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF</th>
+<td class="ltx_td ltx_align_right">5.52</td>
+<td class="ltx_td ltx_align_right">0.05</td>
+<td class="ltx_td ltx_align_right">40.57</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T3.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>CRF<math xmlns="http://www.w3.org/1998/Math/MathML" id="S9.T3.m6" class="ltx_Math" alttext="{}^{PE}" display="inline"><msup><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>E</mi></mrow></msup></math></th>
+<td class="ltx_td ltx_align_right ltx_border_bb">10.71</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">0.12</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">84.72</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>The parsing time (in seconds) for the 38 documents in the test set of RST-DT. Time cost of any pre-processing is excluded from the analysis.</div>
+</div>
+</div>
+</div>
+<div id="S10" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">10 </span>Conclusions</h2>
+
+<div id="S10.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we presented an efficient text-level discourse parser with time complexity linear in the total number of sentences in the document. Our approach was to adopt a greedy bottom-up tree-building, with two linear-chain CRFs as local probabilistic models, and enforce reasonable constraints in the first CRF’s Viterbi decoding. While significantly outperforming the state-of-the-art model by <cite class="ltx_cite">Joty<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib98" title="Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis" class="ltx_ref">2013</a>)</cite>, our parser is much faster in practice. In addition, we propose a novel idea of post-editing, which modifies a fully-built discourse tree by considering information from upper-level constituents. We show that, although doubling the time consumption, post-editing can further boost the parsing performance to close to 90% of human performance.</p>
+</div>
+<div id="S10.p2" class="ltx_para">
+<p class="ltx_p">In future work, we wish to further explore the idea of post-editing, since currently we use only the depth of the subtrees as upper-level information. Moreover, we wish to study whether we can incorporate constraints into the relation models, as we do to the structure models. For example, it might be helpful to train the relation models using additional criteria, such as Generalized Expectation <cite class="ltx_cite">[<a href="#bib.bib113" title="Generalized Expectation Criteria for semi-supervised learning of Conditional Random Fields" class="ltx_ref">11</a>]</cite>, to better take into account some prior knowledge about the relations. Last but not least, as reflected by the low MAFS in our experiments, some particularly difficult relation types might need specifically designed features for better recognition.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Professor Gerald Penn and the reviewers for their valuable advice and comments. This work was financially supported by the Natural Sciences and Engineering Research Council of Canada and by the University of Toronto.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Barzilay and M. Lapata</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling local coherence: an entity-based approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–34</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.SS2.SSS2.P8.p1" title="Entity transition features: ‣ 7 Features ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Carlson, D. Marcu and M. E. Okurowski</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building a discourse-tagged corpus in the framework of Rhetorical Structure Theory</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p3" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib115" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe, B. MacCartney and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating typed dependency parses from phrase structure parses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 449–454</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p1" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. W. Feng and G. Hirst</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Text-level discourse parsing with rich linguistic features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 60–68</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 HILDA discourse parser ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S8.p3" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>,
+<a href="#S9.SS1.p1" title="9.1 Parsing accuracy ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9.1</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Hernault, H. Prendinger, D. A. duVerle and M. Ishizuka</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">HILDA: a discourse parser using support vector machine classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Dialogue and Discourse</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–33</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 HILDA discourse parser ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S8.p3" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib98" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Joty, G. Carenini, R. Ng and Y. Mehdad</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining intra- and multi-sentential rhetorical parsing for document-level discourse analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 486–496</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">A Linear-Time Bottom-Up Discourse Parser <span class="ltx_text"> </span>with Constraints and Post-Editing</span></span>,
+<a href="#S1.p4" title="1 Introduction ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S10.p1" title="10 Conclusions ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>,
+<a href="#S2.F2" title="Figure 2 ‣ 2.2 Joty et al.’s joint model ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Joty et al.’s joint model ‣ 2 Related work ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.p1" title="3 Overall work flow ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS2.SSS2.p1" title="4.2.2 Multi-sentential structure model ‣ 4.2 Structure models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>,
+<a href="#S8.p3" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>,
+<a href="#S9.SS1.p1" title="9.1 Parsing accuracy ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9.1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Joty, G. Carenini and R. T. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A novel discriminative framework for sentence-level discourse analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP-CoNLL 2012</span>, <span class="ltx_text ltx_bib_pages"> pp. 904–915</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S8.p3" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib114" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL 2003</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1075096.1075150" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1075096.1075150" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p1" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Knott and R. Dale</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using linguistic phenomena to motivate a set of coherence relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Discourse Processes</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 35–64</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.SS2.SSS2.P9.p1" title="Cue phrase features: ‣ 7 Features ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib107" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Lafferty, A. McCallum and F. C. N. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML 2001</span>, <span class="ltx_text ltx_bib_place">San Francisco, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 282–289</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-55860-778-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=645530.655813" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib113" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. S. Mann and A. McCallum</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generalized Expectation Criteria for semi-supervised learning of Conditional Random Fields</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 870–878</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1099" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S10.p2" title="10 Conclusions ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Mann and S. Thompson</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rhetorical structure theory: toward a functional theory of text organization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Text</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 243–281</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib104" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Marcu</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The theory and practice of discourse parsing and summarization</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">The MIT Press</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-13372-5</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S9.SS1.p2" title="9.1 Parsing accuracy ‣ 9 Results and Discussion ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9.1</span></a>.
+</span></li>
+<li id="bib.bib112" class="ltx_bibitem ltx_bib_unpublished"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. K. McCallum</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MALLET: a machine learning for language toolkit</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://mallet.cs.umass.edu</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p2" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Okazaki</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CRFsuite: a fast implementation of conditional random fields (CRFs)</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://www.chokkan.org/software/crfsuite/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p2" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib116" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Recasens, M. de Marneffe and C. Potts</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The life and death of discourse entities: identifying singleton mentions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 627–633</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1071" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S8.p1" title="8 Experiments ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib99" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Sutton, A. McCallum and K. Rohanimanesh</span><span class="ltx_text ltx_bib_year">(2007-05)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic conditional random fields: factorized probabilistic models for labeling and segmenting sequence data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">8</span>, <span class="ltx_text ltx_bib_pages"> pp. 693–723</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p4" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib109" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Wojek and B. Schiele</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A dynamic conditional random field model for joint labeling of object and scene classes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Marseille, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 733–747</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p4" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib108" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Yang, P. Dixon, Y. Pan, T. Oonishi, M. Nakamura and S. Furui</span><span class="ltx_text ltx_bib_year">(2009-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining a two-step conditional random field model and a joint source channel model for machine transliteration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Suntec, Singapore</span>, <span class="ltx_text ltx_bib_pages"> pp. 72–75</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W09/W09-3515" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p4" title="4.1 Linear-chain CRFs as Local models ‣ 4 Bottom-up tree-building ‣ A Linear-Time Bottom-Up Discourse Parser  with Constraints and Post-Editing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:47:11 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

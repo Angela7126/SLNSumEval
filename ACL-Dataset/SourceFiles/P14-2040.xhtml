@@ -1,0 +1,864 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization</title>
+<!--Generated on Wed Jun 11 17:43:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yoshimi Suzuki 
+<br class="ltx_break"/>Interdisciplinary Graduate School of 
+<br class="ltx_break"/>Medicine and Engineering 
+<br class="ltx_break"/>University of Yamanashi 
+<br class="ltx_break"/>Kofu, 400-8511, JAPAN 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">ysuzuki@yamanashi.ac.jp</span> 
+<br class="ltx_break"/>&amp;Fumiyo Fukumoto 
+<br class="ltx_break"/>Interdisciplinary Graduate School of 
+<br class="ltx_break"/>Medicine and Engineering 
+<br class="ltx_break"/>University of Yamanashi 
+<br class="ltx_break"/>Kofu, 400-8511, JAPAN 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">fukumoto@yamanashi.ac.jp</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper presents a method for detecting words related to a topic (we
+call them topic words) over time in the stream
+of documents. Topic words are
+widely distributed in the stream of documents, and sometimes they
+frequently appear in the documents, and sometimes not. We propose a
+method to reinforce topic words with low frequencies by collecting
+documents from the corpus, and applied Latent Dirichlet Allocation
+<cite class="ltx_cite">[<a href="#bib.bib4" title="Latent Dirichlet Allocation" class="ltx_ref">4</a>]</cite> to these documents. For the results of LDA, we
+identified topic words by using Moving Average Convergence
+Divergence. In order to evaluate the method, we applied the results of
+topic detection to extractive multi-document summarization. The results
+showed that the method was effective for sentence selection in
+summarization.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">As the volume of online documents has drastically increased, the
+analysis of topic bursts, topic drift or detection of topic is a
+practical problem attracting more and more attention
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Topic Detection and Tracking Pilot Study Final Report" class="ltx_ref">1</a>, <a href="#bib.bib37" title="Automatic Generation of Overview Timelines" class="ltx_ref">23</a>, <a href="#bib.bib2" title="Topic detection and tracking" class="ltx_ref">2</a>, <a href="#bib.bib34" title="Learning Drifting Concepts: Example Selection vs. Example Weighting" class="ltx_ref">13</a>, <a href="#bib.bib23" title="Using Multiple Windows to Track Concept Drift" class="ltx_ref">15</a>, <a href="#bib.bib16" title="An Adaptive Distributed Ensemble Approach to Mine Concept-Drifting Data Streams" class="ltx_ref">9</a>]</cite>. The
+earliest known approach is the work of Klinkenberg and Joachims
+<cite class="ltx_cite">[<a href="#bib.bib33" title="Detecting Concept Drift with Support Vector Machines" class="ltx_ref">12</a>]</cite>. They have attempted to handle concept changes by
+focusing a window with documents sufficiently close to the target
+concept. Mane <span class="ltx_text ltx_font_italic">et. al.</span> proposed a method to generate maps that
+support the identification of major research topics and trends
+<cite class="ltx_cite">[<a href="#bib.bib28" title="Mapping Topics and Topic Bursts in PNAS" class="ltx_ref">17</a>]</cite>. The method used Kleinberg’s burst detection algorithm,
+co-occurrences of words, and graph layout technique. Scholz <span class="ltx_text ltx_font_italic">et. al.</span> have attempted to use different ensembles obtained by training
+several data streams to detect concept drift <cite class="ltx_cite">[<a href="#bib.bib39" title="Boosting Classifiers for Drifting Concepts" class="ltx_ref">22</a>]</cite>. However
+the ensemble method itself remains a problem that how to manage several
+classifiers effectively. He and Parket attempted to find bursts, periods
+of elevated occurrence of events as a dynamic phenomenon instead of
+focusing on arrival rates <cite class="ltx_cite">[<a href="#bib.bib20" title="Topic Dynamics: an Alternative Model of Bursts in Streams of Topics" class="ltx_ref">11</a>]</cite>. However, the fact that
+topics are widely distributed in the stream of documents, and sometimes
+they frequently appear in the documents, and sometimes not often hamper
+such attempts.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">This paper proposes a method for detecting topic over time in series of
+documents. We reinforced words related to a topic with low frequencies
+by collecting documents from the corpus, and applied Latent Dirichlet
+Allocation (LDA) <cite class="ltx_cite">[<a href="#bib.bib4" title="Latent Dirichlet Allocation" class="ltx_ref">4</a>]</cite> to these documents in order to extract
+topic candidates. For the results of LDA, we applied Moving Average
+Convergence Divergence (MACD) to find topic words while He <span class="ltx_text ltx_font_italic">et. al.</span>, applied it to find bursts. The MACD is a technique to analyze
+stock market trends <cite class="ltx_cite">[<a href="#bib.bib32" title="Technical Analysis of the Financial Markets" class="ltx_ref">19</a>]</cite>. It shows the relationship between
+two moving averages of prices modeling bursts as intervals of topic
+dynamics, <span class="ltx_text ltx_font_italic">i.e.</span>, positive acceleration. Fukumoto <span class="ltx_text ltx_font_italic">et. al</span> also
+applied MACD to find topics. However, they applied it only to the words
+with high frequencies in the documents <cite class="ltx_cite">[<a href="#bib.bib17" title="Multi-document summarization based on event and topic detection" class="ltx_ref">10</a>]</cite>. In contrast,
+we applied it to the topic candidates obtained by LDA.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We examined our method by extrinsic evaluation, <span class="ltx_text ltx_font_italic">i.e.</span>, we applied
+the results of topic detection to extractive multi-document
+summarization. We assume that a salient sentence includes words related
+to the target topic, and an event of each documents. Here, an event is
+something that occurs at a specific place and time associated with some
+specific actions<cite class="ltx_cite">[<a href="#bib.bib1" title="Topic Detection and Tracking Pilot Study Final Report" class="ltx_ref">1</a>]</cite>. We identified event words by using
+the traditional tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf method applied to the results of named
+entities. Each sentence in documents is represented using a vector of
+frequency weighted words that can be event or topic words. We used
+Markov Random Walk (MRW) to compute the rank scores for the
+sentences <cite class="ltx_cite">[<a href="#bib.bib35" title="The Pagerank Citation Ranking: Bringing Order to the Web" class="ltx_ref">20</a>]</cite>. Finally, we selected
+a certain number of sentences according to the rank score into a
+summary.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Topic Detection</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Extraction of Topic Candidates</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">LDA presented by <cite class="ltx_cite">[<a href="#bib.bib4" title="Latent Dirichlet Allocation" class="ltx_ref">4</a>]</cite> models each document as a mixture of
+topics (we call it lda_topic to discriminate our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="topic" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></math> candidates),
+and generates a discrete probability distribution over words for each
+lda_topic. The generative process for LDA can be described as follows:</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">For each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> = 1, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m3" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math>, generate <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m4" class="ltx_Math" alttext="\phi_{k}" display="inline"><msub><mi>ϕ</mi><mi>k</mi></msub></math>,
+multinomial distribution of words specific to the topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> from a
+Dirichlet distribution with parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m6" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">For each document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> = 1, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m3" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>, generate <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m4" class="ltx_Math" alttext="\theta_{d}" display="inline"><msub><mi>θ</mi><mi>d</mi></msub></math>,
+multinomial distribution of topics specific to the document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m5" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>
+from a Dirichlet distribution with parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>;</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> = 1, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m2" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m3" class="ltx_Math" alttext="N_{d}" display="inline"><msub><mi>N</mi><mi>d</mi></msub></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>;</p>
+</div>
+<div id="I1.i3.p2" class="ltx_para">
+<ol id="I1.I1" class="ltx_enumerate">
+<li id="I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(a)</span> 
+<div id="I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Generate a topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m1" class="ltx_Math" alttext="z_{dn}" display="inline"><msub><mi>z</mi><mrow><mi>d</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m2" class="ltx_Math" alttext="n^{th}" display="inline"><msup><mi>n</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> word in the document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m3" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> from the
+multinomial distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m4" class="ltx_Math" alttext="\theta_{d}" display="inline"><msub><mi>θ</mi><mi>d</mi></msub></math></p>
+</div></li>
+<li id="I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(b)</span> 
+<div id="I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Generate a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m1" class="ltx_Math" alttext="w_{dn}" display="inline"><msub><mi>w</mi><mrow><mi>d</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>, the word associated with the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m2" class="ltx_Math" alttext="n^{th}" display="inline"><msup><mi>n</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> word in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m3" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> from multinomial <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m4" class="ltx_Math" alttext="\phi_{z{dn}}" display="inline"><msub><mi>ϕ</mi><mrow><mi>z</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math></p>
+</div></li>
+</ol>
+</div></li>
+</ol>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">Like much previous work on LDA, we used Gibbs sampling to
+estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. The sampling probability for topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math>
+in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is given by:</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<table id="S5.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\displaystyle P(z_{i}\mid z_{\backslash i},W)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>∣</mo><msub><mi>z</mi><mrow><mi/><mo>\</mo><mi>i</mi></mrow></msub><mo>,</mo><mi>W</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m3" class="ltx_Math" alttext="\displaystyle\frac{(n_{\backslash i,j}^{v}+\beta)(n_{\backslash i,j}^{d}+%&#10;\alpha)}{(n_{\backslash i,j}^{\cdot}+W\beta)(n_{\backslash i,\cdot}^{d}+T%&#10;\alpha)}." display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><mrow><mo>(</mo><mrow><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mi>j</mi></mrow><mi>v</mi></msubsup><mo>+</mo><mi>β</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mi>j</mi></mrow><mi>d</mi></msubsup><mo>+</mo><mi>α</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mo>(</mo><mrow><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mi>j</mi></mrow><mo>⋅</mo></msubsup><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mi>β</mi></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mo>⋅</mo></mrow><mi>d</mi></msubsup><mo>+</mo><mrow><mi>T</mi><mo>⁢</mo><mi>α</mi></mrow></mrow><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p5" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m1" class="ltx_Math" alttext="z_{\backslash i}" display="inline"><msub><mi>z</mi><mrow><mi/><mo>\</mo><mi>i</mi></mrow></msub></math> refers to a topic set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m2" class="ltx_Math" alttext="Z" display="inline"><mi>Z</mi></math>, not including
+the current assignment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m3" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m4" class="ltx_Math" alttext="n_{\backslash i,j}^{v}" display="inline"><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mi>j</mi></mrow><mi>v</mi></msubsup></math> is the count of
+word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m5" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> in topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> that does not include the current assignment
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m7" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m8" class="ltx_Math" alttext="n_{\backslash i,j}^{\cdot}" display="inline"><msubsup><mi>n</mi><mrow><mrow><mi/><mo>\</mo><mi>i</mi></mrow><mo>,</mo><mi>j</mi></mrow><mo>⋅</mo></msubsup></math> indicates a summation over
+that dimension. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m9" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> refers to a set of documents, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m10" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> denotes the
+total number of unique topics. After a sufficient number of sampling
+iterations, the approximated posterior can be used to estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m11" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m12" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> by examining the counts of word assignments to topics and
+topic occurrences in documents. The approximated probability of topic
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m13" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> in the document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m14" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m15" class="ltx_Math" alttext="\hat{\theta_{d}^{k}}" display="inline"><mover accent="true"><msubsup><mi>θ</mi><mi>d</mi><mi>k</mi></msubsup><mo stretchy="false">^</mo></mover></math>, and the assignments
+word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m16" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> to topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m17" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m18" class="ltx_Math" alttext="\hat{\phi_{k}^{w}}" display="inline"><mover accent="true"><msubsup><mi>ϕ</mi><mi>k</mi><mi>w</mi></msubsup><mo stretchy="false">^</mo></mover></math> are given by:</p>
+</div>
+<div id="S2.SS1.p6" class="ltx_para">
+<table id="S5.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\displaystyle\hat{\theta_{d}^{k}}" display="inline"><mover accent="true"><msubsup><mi>θ</mi><mi>d</mi><mi>k</mi></msubsup><mo stretchy="false">^</mo></mover></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m3" class="ltx_Math" alttext="\displaystyle\frac{N_{dk}+\alpha}{N_{d}+\alpha K}." display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><msub><mi>N</mi><mrow><mi>d</mi><mo>⁢</mo><mi>k</mi></mrow></msub><mo>+</mo><mi>α</mi></mrow><mrow><msub><mi>N</mi><mi>d</mi></msub><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mi>K</mi></mrow></mrow></mfrac></mstyle><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S2.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\displaystyle\hat{\phi_{k}^{w}}" display="inline"><mover accent="true"><msubsup><mi>ϕ</mi><mi>k</mi><mi>w</mi></msubsup><mo stretchy="false">^</mo></mover></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m3" class="ltx_Math" alttext="\displaystyle\frac{N_{kw}+\beta}{N_{k}+\beta V}." display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><msub><mi>N</mi><mrow><mi>k</mi><mo>⁢</mo><mi>w</mi></mrow></msub><mo>+</mo><mi>β</mi></mrow><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>+</mo><mrow><mi>β</mi><mo>⁢</mo><mi>V</mi></mrow></mrow></mfrac></mstyle><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p7" class="ltx_para">
+<p class="ltx_p">We used documents prepared by summarization tasks, NTCIR and
+DUC data as each task consists of series of documents with the same
+topic. We applied LDA to the set consisting
+of all documents in the summarization tasks and documents from the
+corpus. We need to estimate the appropriate number of lda_topic.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\epsfile</span>
+<p class="ltx_p ltx_align_center">file=cluster.eps,height=5cm,width=7.5cm</p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Lda_topic cluster and task cluster</div>
+</div>
+<div id="S2.SS1.p8" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m1" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> be the number of lda_topics and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m2" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> be the number of topmost
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m3" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> documents assigned to each lda_topic. We note that the result
+obtained by LDA can be regarded as the two types of clustering result
+shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Extraction of Topic Candidates ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>: (i) each cluster corresponds to each
+lda_topic (topic id0, topic id1 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m4" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math> in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Extraction of Topic Candidates ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), and
+each element of the clusters is the document in the summarization tasks
+(task1, task2, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m5" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math> in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Extraction of Topic Candidates ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) or from the corpus (doc
+in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Extraction of Topic Candidates ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), and (ii) each cluster corresponds to the
+summarization task and each element of the clusters is the document in
+the summarization tasks or the document from the corpus assigned topic
+id. For example, DUC2005 consists of 50 tasks. Therefore the number of
+different clusters is 50. We call the former lda_topic cluster and the
+latter task cluster. We estimated <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m6" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m7" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> by using Entropy measure
+given by:</p>
+</div>
+<div id="S2.SS1.p9" class="ltx_para">
+<table id="S5.EGx3" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\displaystyle E" display="inline"><mi>E</mi></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m3" class="ltx_Math" alttext="\displaystyle-\frac{1}{\log l}\sum_{j}\frac{N_{j}}{N}\sum_{i}P(A_{i},C_{j})%&#10;\log P(A_{i},C_{j})." display="inline"><mrow><mrow><mo>-</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mi>log</mi><mo>⁡</mo><mi>l</mi></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder></mstyle><mrow><mstyle displaystyle="true"><mfrac><msub><mi>N</mi><mi>j</mi></msub><mi>N</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>,</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>P</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>,</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p10" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m1" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> refers to the number of clusters. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m2" class="ltx_Math" alttext="P(A_{i},C_{j})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>,</mo><msub><mi>C</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> is a
+probability that the elements of the cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m3" class="ltx_Math" alttext="C_{j}" display="inline"><msub><mi>C</mi><mi>j</mi></msub></math> assigned to the correct
+class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m4" class="ltx_Math" alttext="A_{i}" display="inline"><msub><mi>A</mi><mi>i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m5" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> denotes the total number of elements and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m6" class="ltx_Math" alttext="N_{j}" display="inline"><msub><mi>N</mi><mi>j</mi></msub></math> shows
+the total number of elements assigned to the cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m7" class="ltx_Math" alttext="C_{j}" display="inline"><msub><mi>C</mi><mi>j</mi></msub></math>. The value of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m8" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> ranges from 0 to 1, and the smaller value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m9" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> indicates better
+result. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m10" class="ltx_Math" alttext="E_{topic}" display="inline"><msub><mi>E</mi><mrow><mi>t</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m11" class="ltx_Math" alttext="E_{task}" display="inline"><msub><mi>E</mi><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>k</mi></mrow></msub></math> are entropy value of lda_topic
+cluster and task cluster, respectively. We chose the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m12" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m13" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> whose value of the summation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m14" class="ltx_Math" alttext="E_{topic}" display="inline"><msub><mi>E</mi><mrow><mi>t</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p10.m15" class="ltx_Math" alttext="E_{task}" display="inline"><msub><mi>E</mi><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>k</mi></mrow></msub></math> is
+smallest. For each lda_topic, we extracted words whose probabilities
+are larger than zero, and regarded these as topic candidates.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Topic Detection by MACD</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">The proposed method does not simply use MACD to find bursts, but instead
+determines topic words in series of documents. Unlike Dynamic Topic
+Models <cite class="ltx_cite">[<a href="#bib.bib5" title="Dynamic Topic Models" class="ltx_ref">3</a>]</cite>, it does not assume Gaussian distribution so that
+it is a natural way to analyze bursts which depend on the data. We
+applied it to extract topic words in series of documents. MACD histogram
+defined by Eq. (<a href="#S2.E6" title="(6) ‣ 2.2 Topic Detection by MACD ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>) shows a difference between the MACD and
+its moving average. MACD of a variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math> is defined by the
+difference of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="n_{1}" display="inline"><msub><mi>n</mi><mn>1</mn></msub></math>-day and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="n_{2}" display="inline"><msub><mi>n</mi><mn>2</mn></msub></math>-day moving averages,
+MACD(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="n_{1}" display="inline"><msub><mi>n</mi><mn>1</mn></msub></math>,<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="n_{2}" display="inline"><msub><mi>n</mi><mn>2</mn></msub></math>) = EMA(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="n_{1}" display="inline"><msub><mi>n</mi><mn>1</mn></msub></math>) - EMA(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m7" class="ltx_Math" alttext="n_{2}" display="inline"><msub><mi>n</mi><mn>2</mn></msub></math>). Here, EMA(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m8" class="ltx_Math" alttext="n_{i}" display="inline"><msub><mi>n</mi><mi>i</mi></msub></math>) refers
+to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m9" class="ltx_Math" alttext="n_{i}" display="inline"><msub><mi>n</mi><mi>i</mi></msub></math>-day Exponential Moving Average (EMA). For a variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m10" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> =
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m11" class="ltx_Math" alttext="x(t)" display="inline"><mrow><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> which has a corresponding discrete time series <span class="ltx_text ltx_font_sansserif">x</span> =
+{<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m12" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m13" class="ltx_Math" alttext="\mid" display="inline"><mo>∣</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m14" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> = 0,1,<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m15" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math>}, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m16" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-day EMA is defined by
+Eq. (<a href="#S2.E5" title="(5) ‣ 2.2 Topic Detection by MACD ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<table id="S5.EGx4" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle\mbox{EMA}(n)[x]_{t}" display="inline"><mrow><mtext mathsize="small" stretchy="false">EMA</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow><mo>⁢</mo><msub><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow><mi>t</mi></msub></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m3" class="ltx_Math" alttext="\displaystyle\alpha x_{t}+(1-\alpha)\mbox{EMA}(n-1)[x]_{t-1}" display="inline"><mrow><mrow><mi>α</mi><mo>⁢</mo><msub><mi>x</mi><mi>t</mi></msub></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mtext mathsize="small" stretchy="false">EMA</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m3" class="ltx_Math" alttext="\displaystyle\sum_{k=0}^{n}\alpha(1-\alpha)^{k}x_{t-k}." display="inline"><mrow><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mi>n</mi></munderover></mstyle><mrow><mi>α</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mi>k</mi></msup><mo>⁢</mo><msub><mi>x</mi><mrow><mi>t</mi><mo>-</mo><mi>k</mi></mrow></msub></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> refers to a smoothing factor and it is often taken to
+be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="\frac{2}{(n+1)}" display="inline"><mfrac><mn>2</mn><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mfrac></math>. MACD histogram shows a difference between the MACD
+and its moving average<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In the experiment, we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="n_{1}" display="inline"><msub><mi>n</mi><mn>1</mn></msub></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="n_{2}" display="inline"><msub><mi>n</mi><mn>2</mn></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m5" class="ltx_Math" alttext="n_{3}" display="inline"><msub><mi>n</mi><mn>3</mn></msub></math> to 4, 8 and 5, respectively <cite class="ltx_cite">[<a href="#bib.bib20" title="Topic Dynamics: an Alternative Model of Bursts in Streams of Topics" class="ltx_ref">11</a>]</cite>.</span></span></span>.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<table id="S5.EGx5" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle\mbox{hist}(n_{1},n_{2},n_{3})" display="inline"><mrow><mtext mathsize="small" stretchy="false">hist</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mn>1</mn></msub><mo>,</mo><msub><mi>n</mi><mn>2</mn></msub><mo>,</mo><msub><mi>n</mi><mn>3</mn></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m3" class="ltx_Math" alttext="\displaystyle\mbox{MACD}(n_{1},n_{2})-" display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">MACD</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mn>1</mn></msub><mo>,</mo><msub><mi>n</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E6.m3" class="ltx_Math" alttext="\displaystyle\mbox{EMA}(n_{3})[\mbox{MACD}(n_{1},n_{2})]." display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">EMA</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>n</mi><mn>3</mn></msub><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><mrow><mtext mathsize="small" stretchy="false">MACD</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mn>1</mn></msub><mo>,</mo><msub><mi>n</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">The procedure for topic detection with MACD is illustrated in Figure
+<a href="#S2.F2" title="Figure 2 ‣ 2.2 Topic Detection by MACD ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> be a series of documents and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> be one of the
+topic candidates obtained by LDA. Each document in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m3" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is sorted in
+chronological order. We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m4" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> to the documents from
+the summarization task. Whether or not a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is a topic word is judged as follows:</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\epsfile</span>
+<p class="ltx_p ltx_align_center">file=topic_detect.eps,height=5cm,width=7.5cm</p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Topic detection with MACD</div>
+</div>
+<div id="S2.SS2.p6" class="ltx_para">
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Create document-based MACD histogram where X-axis refers to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>,
+<span class="ltx_text ltx_font_italic">i.e.</span>, a
+period of time (numbered from day 1 to 365). Y-axis is the
+document count in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> per day. Hereafter, referred to as correct histogram.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Create term-based MACD histogram where X-axis refers to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, and
+Y-axis denotes bursts of word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>. Hereafter, referred to
+as bursts histogram.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">We assume that if a term <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is informative for summarizing a
+particular documents in a collection, its burstiness approximates
+the burstiness of documents in the collection. Because <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is a representative word of each
+document in the task. Based on this assumption, we computed similarity between correct and
+word histograms by using KL-distance<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We tested
+KL-distance, histogram intersection and Bhattacharyya distance to
+obtain similarities. We reported only the result obtained by
+KL-distance as it was the best results among them.</span></span></span>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m3" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m4" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> be a normalized distance of correct histogram, and bursts
+histogram, respectively. KL-distance is
+defined by <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m5" class="ltx_Math" alttext="D(P\mid\mid Q)" display="inline"><mrow><mi>D</mi><mrow><mo>(</mo><mi>P</mi><mo>∣</mo><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math> = <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m6" class="ltx_Math" alttext="\sum_{i=1}P(x_{i})\log\frac{P(x_{i})}{Q(x_{i})}" display="inline"><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></msub><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m7" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> refers bursts in time
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m8" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>. If the value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m9" class="ltx_Math" alttext="D(P\mid\mid Q)" display="inline"><mrow><mi>D</mi><mrow><mo>(</mo><mi>P</mi><mo>∣</mo><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math> is smaller than a certain
+threshold value, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m10" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is regarded as a topic word.</p>
+</div></li>
+</ol>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Extrinsic Evaluation to Summarization</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Event detection</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">An event word is something that occurs at a specific place and time
+associated with some specific actions <cite class="ltx_cite">[<a href="#bib.bib2" title="Topic detection and tracking" class="ltx_ref">2</a>, <a href="#bib.bib1" title="Topic Detection and Tracking Pilot Study Final Report" class="ltx_ref">1</a>]</cite>. It
+refers to notions of who(person), where(place), when(time) including
+what, why and how in a document. Therefore, we can assume that named
+entities(NE) are linguistic features for event detection. An event word
+refers to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="theme" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>e</mi></mrow></math> of the document itself, and frequently appears in
+the document but not frequently appear in other documents. Therefore, we
+first applied NE recognition to the target documents to be summarized,
+and then calculated tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf to the results of NE recognition. We
+extracted words whose tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf values are larger than a certain
+threshold value, and regarded these as event words.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Sentence extraction</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We recall that our hypothesis about key sentences in multiple documents
+is that they include topic and event words. Each sentence in the documents
+is represented using a vector of frequency weighted words that can be
+event or topic words.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Like much previous work on extractive summarization
+<cite class="ltx_cite">[<a href="#bib.bib13" title="LexPageRank: Prestige in Multi-Document Text Summarization" class="ltx_ref">7</a>, <a href="#bib.bib30" title="Language Independent Extractive Summarization" class="ltx_ref">18</a>, <a href="#bib.bib44" title="Multi-Document Summarization using Cluster-based Link Analysis" class="ltx_ref">25</a>]</cite>, we used Markov Random Walk (MRW)
+model to compute the rank scores for the sentences. Given a set of
+documents to be summarized, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> = (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>) is a graph reflecting the
+relationships between two sentences. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> is a set of vertices, and each
+vertex <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> is a sentence. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> is a set of edges, and each
+edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="e_{ij}" display="inline"><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> is associated with an affinity weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="f(i\rightarrow j)" display="inline"><mrow><mi>f</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>j</mi><mo>)</mo></mrow></mrow></math> between sentences <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m11" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m12" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m13" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m14" class="ltx_Math" alttext="\neq" display="inline"><mo>≠</mo></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m15" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>). The affinity weight is computed using cosine measure between the
+two sentences, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m16" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m17" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math>. Two vertices are connected if their
+affinity weight is larger than 0 and we let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m18" class="ltx_Math" alttext="f(i\rightarrow i)" display="inline"><mrow><mi>f</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>i</mi><mo>)</mo></mrow></mrow></math>= 0 to
+avoid self transition. The transition probability from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m19" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> to
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m20" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math> is then defined as follows:</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<table id="S5.EGx6" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\displaystyle p(i\rightarrow j)\ =" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>j</mi><mo rspace="7.5pt">)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m2" class="ltx_Math" alttext="\displaystyle\begin{cases}\frac{\displaystyle f(i{\rightarrow}j)}{%&#10;\displaystyle\sum^{|S|}_{k=1}f(i{\rightarrow}k)},\ \ \mbox{if}\ \ \Sigma f\ %&#10;\not=\ \ 0\\&#10;\ \ 0\ ,\ \mbox{otherwise}.\end{cases}" display="inline"><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mstyle displaystyle="true"><mfrac><mrow><mi>f</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>j</mi><mo>)</mo></mrow></mrow><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>S</mi><mo fence="true">|</mo></mrow></munderover></mstyle><mi>f</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>k</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo separator="true">, </mo><mtext mathsize="small" stretchy="false">if</mtext><mo separator="true"> </mo><mrow><mi mathvariant="normal">Σ</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>f</mi></mpadded></mrow></mrow><mo>≠</mo><mn>  0</mn></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mrow><mpadded width="+5.0pt"><mn>  0</mn></mpadded><mo separator="true">,  </mo><mtext mathsize="small" stretchy="false">otherwise</mtext></mrow><mo>.</mo></mrow></mtd><mtd/></mtr></mtable></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">We used the row-normalized matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="U_{ij}" display="inline"><msub><mi>U</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> = <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="(U_{ij})_{\mid S\mid\times\mid S\mid}" display="inline"><msub><mrow><mo>(</mo><msub><mi>U</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow><mrow><mrow><mo fence="true">∣</mo><mi>S</mi><mo fence="true">∣</mo></mrow><mo>×</mo><mrow><mo fence="true">∣</mo><mi>S</mi><mo fence="true">∣</mo></mrow></mrow></msub></math> to describe <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> with each entry corresponding to
+the transition probability, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m4" class="ltx_Math" alttext="U_{ij}" display="inline"><msub><mi>U</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> = <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m5" class="ltx_Math" alttext="p(i\rightarrow j)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>i</mi><mo>→</mo><mi>j</mi><mo>)</mo></mrow></mrow></math>. To
+make <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m6" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> a stochastic matrix, the rows with all zero elements are
+replaced by a smoothing vector with all elements set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m7" class="ltx_Math" alttext="\frac{1}{\mid S\mid}" display="inline"><mfrac><mn>1</mn><mrow><mo fence="true">∣</mo><mi>S</mi><mo fence="true">∣</mo></mrow></mfrac></math>. The final transition matrix is given by formula
+(<a href="#S3.E8" title="(8) ‣ 3.2 Sentence extraction ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>), and each score of the sentence is obtained by the
+principal eigenvector of the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m8" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<table id="S5.EGx7" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="\displaystyle M" display="inline"><mi>M</mi></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m3" class="ltx_Math" alttext="\displaystyle\mu U^{T}+\frac{(1-\mu)}{\mid S\mid}\vec{e}\vec{e}^{T}." display="inline"><mrow><mrow><mrow><mi>μ</mi><mo>⁢</mo><msup><mi>U</mi><mi>T</mi></msup></mrow><mo>+</mo><mrow><mstyle displaystyle="true"><mfrac><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>μ</mi></mrow><mo>)</mo></mrow><mrow><mo fence="true">∣</mo><mi>S</mi><mo fence="true">∣</mo></mrow></mfrac></mstyle><mo>⁢</mo><mover accent="true"><mi>e</mi><mo stretchy="false">→</mo></mover><mo>⁢</mo><msup><mover accent="true"><mi>e</mi><mo stretchy="false">→</mo></mover><mi>T</mi></msup></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">We selected a
+certain number of sentences according to rank score into the summary.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experimental settings</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We applied the results of topic detection to extractive multi-document
+summarization task, and examined how the results of topic detection
+affect the overall performance of the salient sentence selection. We
+used two tasks, Japanese and English summarization tasks,
+NTCIR-3<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://research.nii.ac.jp/ntcir/</span></span></span> SUMM Japanese and
+DUC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://duc.nist.gov/pubs.html</span></span></span> English data. The baselines
+are (i) MRW model (<span class="ltx_text ltx_font_bold">MRW</span>): The method applies the MRW model only to
+the sentences consisted of noun words, (ii) Event detection (<span class="ltx_text ltx_font_bold">Event</span>): The method applies the MRW model to the result of event
+detection, (iii) Topic Detection by LDA (<span class="ltx_text ltx_font_bold">LDA</span>): MRW is applied to
+the result of topic candidates detection by LDA and (iv) Topic Detection
+by LDA and MACD (<span class="ltx_text ltx_font_bold">LDA &amp; MACD</span>): MRW is applied to the result of
+topic detection by LDA and MACD only, <span class="ltx_text ltx_font_italic">i.e.</span>, the method does not
+include event detection.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>NTCIR data</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The data used in the NTCIR-3 multi-document summarization task is
+selected from 1998 to 1999 of Mainichi Japanese Newspaper documents. The
+gold standard data provided to human judges consists of FBFREE DryRun
+and FormalRun. Each data consists of 30 tasks. There are two types of
+correct summary according to the character length, “long” and
+“short”, All series of documents were tagged by CaboCha
+<cite class="ltx_cite">[<a href="#bib.bib22" title="Fast methods for kernel-based text analysis" class="ltx_ref">14</a>]</cite>. We used person name, organization, place and proper
+name extracted from NE recognition <cite class="ltx_cite">[<a href="#bib.bib22" title="Fast methods for kernel-based text analysis" class="ltx_ref">14</a>]</cite> for event detection,
+and noun words including named entities for topic detection. FBFREE
+DryRun data is used to tuning
+parameters, <span class="ltx_text ltx_font_italic">i.e.</span>, the number of extracted words according to the
+tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf value, and the threshold value of KL-distance. The size that
+optimized the average Rouge-1(R-1) score across 30 tasks was chosen. As a
+result, we set tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf and KL-distance to 100 and 0.104, respectively.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We used FormalRun as a test data, and another set consisted of 218,724
+documents from 1998 to 1999 of Mainichi newspaper as a corpus used in
+LDA and MACD. We estimated the number of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> in LDA, <span class="ltx_text ltx_font_italic">i.e.</span>, we searched <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> in steps of 100 from 200 to 900. Figure
+<a href="#S4.F3" title="Figure 3 ‣ 4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> illustrates entropy value against the number of topics
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> and documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="d^{\prime}" display="inline"><msup><mi>d</mi><mo>′</mo></msup></math> using 30 tasks of FormalRun data. Each plot
+shows that at least one of the documents for each summarization task is
+included in the cluster. We can see from Figure <a href="#S4.F3" title="Figure 3 ‣ 4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> that the
+value of entropy depends on the number of documents rather than the
+number of topics. From the result shown in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the
+minimum entropy value was 0.025 and the number of topics and documents
+were 400 and 300, respectively. We used them in the experiment. The
+summarization results are shown in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.F3" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\epsfile</span>
+<p class="ltx_p ltx_align_center">file=entropy.eps,height=4.5cm,width=7.5cm</p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Entropy against the # of topics and documents</div>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="position:relative; bottom:-4.3pt;">Method</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Short</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Long</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr"/>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">R-1</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">R-1</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">MRW</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">.369</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">.454</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Event</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.625</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.724</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LDA</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.525</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.712</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LDA &amp; MACD</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.630</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.742</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Event &amp; Topic</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.678</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">.744</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Sentence Extraction (NTCIR-3 test data)</div>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T1" title="Table 1 ‣ 4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows that our
+approach, “Event &amp; Topic” outperforms other baselines, regardless of
+the summary type (long/short). Topic candidates include surplus words
+that are not related to the topic because the results obtained by “LDA” were worse
+than those obtained by “LDA &amp; MACD”, and even worse than “Event” in both
+short and long summary. This shows that integration of LDA and MACD is effective for topic detection.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>DUC data</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We used DUC2005 consisted of 50 tasks for training, and 50 tasks of
+DUC2006 data for testing in order to estimate parameters. We set
+tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>idf and KL-distance to 80 and 0.9. The minimum entropy value was
+0.050 and the number of topics and documents were 500 and 600,
+respectively. 45 tasks from DUC2007 were used to evaluate the
+performance of the method. All documents were tagged by Tree Tagger
+<cite class="ltx_cite">[<a href="#bib.bib38" title="Improvements in Part-of-Speech Tagging with an Application to German" class="ltx_ref">21</a>]</cite> and Stanford Named Entity Tagger
+<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>http://nlp.stanford.edu/software/CRF-NER.shtml</span></span></span>
+<cite class="ltx_cite">[<a href="#bib.bib15" title="Incorporating Non-local Information into Information Extraction Systems by Gibbs Sampling" class="ltx_ref">8</a>]</cite>. We used person name, organization and location for
+event detection, and noun words including named entities for topic
+detection. AQUAINT
+corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>http://catalog.ldc.upenn.edu/LDC2002T31</span></span></span> which consists
+of 1,033,461 documents are used as a corpus in LDA and MACD. Table
+<a href="#S4.T2" title="Table 2 ‣ 4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows Rouge-1 against unigrams.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">R-1</span></th>
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">R-1</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">MRW</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">.381</span></td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">Event</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">.407</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LDA</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.402</span></td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LDA &amp; MACD</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.428</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Event &amp; Topic</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.438</span></th>
+<th class="ltx_td ltx_border_l ltx_border_t" colspan="2"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">PYTHY</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">.426</span></td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">HybHSum</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">.456</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">hPAM</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">.412</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">TTM</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.447</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Comparative results (DUC2007 test data)</div>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">We can see from Table <a href="#S4.T2" title="Table 2 ‣ 4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> that Rouge-1 obtained by our
+approach was also the best compared to the baselines. Table
+<a href="#S4.T2" title="Table 2 ‣ 4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> also shows the performance of other research sites
+reported by <cite class="ltx_cite">[<a href="#bib.bib9" title="A Hybird Hierarchical Model for Multi-Document Summarization" class="ltx_ref">5</a>]</cite>. The top site was “HybHSum” by
+<cite class="ltx_cite">[<a href="#bib.bib9" title="A Hybird Hierarchical Model for Multi-Document Summarization" class="ltx_ref">5</a>]</cite>. However, the method is a semi-supervised
+technique that needs a tagged training data. Our approach achieves
+performance approaching the top-performing unsupervised method, “TTM”
+<cite class="ltx_cite">[<a href="#bib.bib10" title="Discovery of Topically Coherent Sentences for Extractive Summarization" class="ltx_ref">6</a>]</cite>, and is competitive to “PYTHY”
+<cite class="ltx_cite">[<a href="#bib.bib42" title="The Phthy Summarization System: Microsoft Research at DUC" class="ltx_ref">24</a>]</cite> and “hPAM” <cite class="ltx_cite">[<a href="#bib.bib24" title="Pachinko Allocation: Dag-Structure Mixture Model of Topic Correlations" class="ltx_ref">16</a>]</cite>. Prior work including
+“TTM” has demonstrated the usefulness of semantic concepts for
+extracting salient sentences. For future work, we should be able to
+obtain further advantages in efficacy in our topic detection and
+summarization approach by disambiguating topic senses.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The research described in this paper explores a method for detecting
+topic words over time in series of documents. The results of extrinsic
+evaluation showed that integration of LDA and MACD is effective for
+topic detection.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Allan, J. Carbonell, G. Doddington, J. Yamron and Y. Yang</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic Detection and Tracking Pilot Study Final Report</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Event detection ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">J. Allan (Ed.)</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic detection and tracking</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Kluwer Academic Publishers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Event detection ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei and J. D. Lafferty</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic Topic Models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 113–120</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Topic Detection by MACD ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet Allocation</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization</span></span>,
+<a href="#S1.p2" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Extraction of Topic Candidates ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Celikylmaz and D. Hakkani-Tur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Hybird Hierarchical Model for Multi-Document Summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 815–824</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Celikylmaz and D. Hakkani-Tur</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discovery of Topically Coherent Sentences for Extractive Summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 491–499</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Erkan and D. Radev</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LexPageRank: Prestige in Multi-Document Text Summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 365–371</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Sentence extraction ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel, T. Grenager and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incorporating Non-local Information into Information Extraction Systems by Gibbs Sampling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 363–370</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Folino, C. Pizzuti and G. Spezzano</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An Adaptive Distributed Ensemble Approach to Mine Concept-Drifting Data Streams</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 183–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Fukumoto, Y. Suzuki, A. Takasu and S. Matsuyoshi</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-document summarization based on event and topic detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 117–121</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. He and D. S. Parker</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic Dynamics: an Alternative Model of Bursts in Streams of Topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 443–452</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Topic Detection by MACD ‣ 2 Topic Detection ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Klinkenberg and T. Joachims</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detecting Concept Drift with Support Vector Machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 487–494</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Klinkenberg</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning Drifting Concepts: Example Selection vs. Example Weighting</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Intelleginet Data Analysis</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 281–300</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kudo and Y. Matsumoto</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast methods for kernel-based text analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 24–31</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 NTCIR data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. M. Lazarescu, S. Venkatesh and H. H. Bui</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Multiple Windows to Track Concept Drift</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Intelligent Data Analysis</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 29–59</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Li and A. McCallum</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Pachinko Allocation: Dag-Structure Mixture Model of Topic Correlations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 577–584</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Mane and K. Borner</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mapping Topics and Topic Bursts in PNAS</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proc. of the National Academy of Sciences of the United States of America</span> <span class="ltx_text ltx_bib_volume">101</span>, <span class="ltx_text ltx_bib_pages"> pp. 5287–5290</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea and P. Tarau</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language Independent Extractive Summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 49–52</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Sentence extraction ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Murphy</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Technical Analysis of the Financial Markets</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Prentice Hall</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Page, S. Brin, R. Motwani and T. Winograd</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Pagerank Citation Ranking: Bringing Order to the Web</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schmid</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improvements in Part-of-Speech Tagging with an Application to German</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Scholz</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Boosting Classifiers for Drifting Concepts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Intelligent Data Analysis</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 3–28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Swan and J. Allan</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Generation of Overview Timelines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 38–45</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanoval, C. Brockett, M. Gammon, J. Jagarlamudi, H. Suzuki and L. Vanderwende</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Phthy Summarization System: Microsoft Research at DUC</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 DUC data ‣ 4 Experiments ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Wan and J. Yang</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-Document Summarization using Cluster-based Link Analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 299–306</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Sentence extraction ‣ 3 Extrinsic Evaluation to Summarization ‣ Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:43:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,1022 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Decision-Theoretic Approach to Natural Language Generation</title>
+<!--Generated on Tue Jun 10 17:55:20 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Decision-Theoretic Approach to Natural Language Generation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Nathan McKinley 
+<br class="ltx_break"/>Department of EECS 
+<br class="ltx_break"/>Case Western Reserve University 
+<br class="ltx_break"/>Cleveland, OH, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">nath@nmckinley.com</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Soumya Ray 
+<br class="ltx_break"/>Department of EECS 
+<br class="ltx_break"/>Case Western Reserve University 
+<br class="ltx_break"/>Cleveland, OH, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sray@case.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We study the problem of generating an English sentence given an
+underlying probabilistic grammar, a world and a communicative
+goal. We model the generation problem as a Markov decision process
+with a suitably defined reward function that reflects the
+communicative goal. We then use probabilistic planning to solve the
+MDP and generate a sentence that, with high probability,
+accomplishes the communicative goal. We show empirically that our
+approach can generate complex sentences with a speed that generally
+matches or surpasses the state of the art. Further, we show that our
+approach is anytime and can handle complex communicative goals,
+including negated goals.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Suppose someone wants to tell their friend that they saw a dog chasing a cat. Given such a <span class="ltx_text ltx_font_italic">communicative goal</span>, most people can formulate a sentence that satisfies the goal very
+quickly. Further, they can easily provide multiple similar sentences,
+differing in details but all satisfying the general communicative goal, with
+no or very little error. Natural language generation (NLG) develops
+techniques to extend similar capabilities to automated systems. In
+this paper, we study the restricted NLG problem: given a
+grammar, lexicon, world and a communicative goal, output a valid English
+sentence that satisfies this goal. The problem is restricted because
+in our work, we do not consider the issue of how to fragment a complex goal into
+multiple sentences (discourse planning).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Though restricted, this NLG problem is still difficult. A key source of difficulty is
+the nature of the grammar, which is generally large, probabilistic and
+ambiguous. Some NLG techniques use sampling
+strategies <cite class="ltx_cite">[<a href="#bib.bib16" title="Two-level, many-paths generation" class="ltx_ref">8</a>]</cite> where a set of sentences is
+sampled from a data structure created from an underlying grammar and
+ranked according to how well they meet the communicative
+goal.
+Such approaches naturally handle statistical grammars, but do not solve the
+generation problem in a goal-directed manner. Other approaches
+view NLG as a <span class="ltx_text ltx_font_italic">planning</span>
+problem <cite class="ltx_cite">[<a href="#bib.bib7" title="Sentence generation as a planning problem" class="ltx_ref">10</a>]</cite>. Here, the communicative goal is
+treated as a predicate to be satisfied, and the grammar and vocabulary
+are suitably encoded as logical operators. Then automated classical planning
+techniques are used to derive a plan which is converted into a
+sentence. This is an elegant formalization of NLG, however,
+restrictions on what current planning techniques can do limit its
+applicability. A key limitation is the logical nature of automated
+planning systems, which do not handle probabilistic grammars, or force
+ad-hoc approaches for doing so <cite class="ltx_cite">[<a href="#bib.bib8" title="Sentence generation as planning with probabilistic LTAG" class="ltx_ref">1</a>]</cite>. A second
+limitation comes from restrictions on the goal: it may be difficult to
+ensure that some specific piece of information should <span class="ltx_text ltx_font_italic">not</span> be
+communicated, or to specify preferences over communicative goals, or
+specify general conditions, like that the sentence should be readable
+by a sixth grader. A third limitation comes from the search process:
+without strong heuristics, most planners get bogged down when given
+communicative goals that require chaining together long sequences of
+operators <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In our work, we also view NLG as a planning problem. However, we
+differ in that our underlying formalism for NLG is a suitably defined <span class="ltx_text ltx_font_italic">Markov
+decision process</span> (MDP). This setting allows us to address the
+limitations outlined above: it is naturally probabilistic, and handles
+probabilistic grammars; we are able to specify complex communicative
+goals and general criteria through a suitably-defined reward function;
+and, as we show in our experiments, recent developments in fast
+planning in large MDPs result in a generation system that can rapidly
+deal with very specific communicative goals. Further, our system has
+several other desirable properties: it is an anytime approach; with a
+probabilistic grammar, it can naturally be used to sample and generate
+multiple sentences satisfying the communicative goal; and it is
+robust to large grammar sizes. Finally, the decision-theoretic setting allows for a
+precise tradeoff between exploration of the grammar and vocabulary to
+find a better solution and exploitation of the current most promising
+(partial) solution, instead of a heuristic search through the solution
+space as performed by standard planning approaches.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Below, we first describe related work, followed by a detailed
+description of our approach. We then empirically
+evaluate our approach and a state-of-the-art
+baseline in several different experimental settings and demonstrate
+its effectiveness at solving a variety of NLG tasks. Finally, we
+discuss future extensions and conclude.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Two broad lines of
+approaches have been used to attack the general NLG problem. One
+direction can be thought of as “overgeneration and ranking.” Here
+some (possibly probabilistic) structure is used to generate multiple
+candidate sentences, which are then ranked according to how well they
+satisfy the generation criteria. This includes work based on chart
+generation and
+parsing <cite class="ltx_cite">[<a href="#bib.bib12" title="A uniform architecture for parsing and generation" class="ltx_ref">17</a>, <a href="#bib.bib13" title="Chart generation" class="ltx_ref">6</a>]</cite>. These generators
+assign semantic meaning to each individual token, then use a set of
+rules to decide if two words can be combined. Any combination which
+contains a semantic representation equivalent to the input at the
+conclusion of the algorithm is a valid output from a chart generation
+system. Other examples of this idea are the HALogen/Nitrogen
+systems <cite class="ltx_cite">[<a href="#bib.bib17" title="An empirical verification of coverage and correctness for a general-purpose sentence generator" class="ltx_ref">12</a>]</cite>. HALogen uses a two-phase
+architecture where first, a “forest” data structure that compactly
+summarizes possible expressions is constructed. The structure allows
+for a more efficient and compact representation compared to lattice
+structures that were previously used in statistical sentence
+generation approaches. Using dynamic programming, the highest ranked
+sentence from this structure is then output. Many other systems using
+similar ideas exist, e.g. <cite class="ltx_cite">[<a href="#bib.bib18" title="Adapting chart realization to CCG" class="ltx_ref">19</a>, <a href="#bib.bib19" title="Natural language generation with tree conditional random fields" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">A second line of attack formalizes NLG as an AI planning problem.
+SPUD <cite class="ltx_cite">[<a href="#bib.bib5" title="Microplanning with communicative intentions: the SPUD system" class="ltx_ref">18</a>]</cite>, a system for NLG through microplanning,
+considers NLG as a problem which requires realizing a deliberative
+process of goal-directed activity. Many such NLG-as-planning systems
+use a pipeline architecture, working from their communicative goal
+through
+discourse planning and sentence generation. In
+discourse planning, information to be conveyed is selected and split
+into sentence-sized chunks. These sentence-sized chunks are then sent
+to a <span class="ltx_text ltx_font_italic">sentence generator</span>, which itself is usually split into two
+tasks, <span class="ltx_text ltx_font_italic">sentence planning</span> and <span class="ltx_text ltx_font_italic">surface realization</span>
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>. The sentence planner takes in a
+sentence-sized chunk of information to be conveyed and enriches it in
+some way. This is then used by a <span class="ltx_text ltx_font_italic">surface realization</span>
+module which encodes the enriched semantic representation into
+natural language. This chain is sometimes referred to as the
+“NLG Pipeline” <cite class="ltx_cite">[<a href="#bib.bib6" title="Building natural language generation systems" class="ltx_ref">16</a>]</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Another approach, called <span class="ltx_text ltx_font_italic">integrated generation</span>, considers both
+sentence generation portions of the pipeline
+together <cite class="ltx_cite">[<a href="#bib.bib7" title="Sentence generation as a planning problem" class="ltx_ref">10</a>]</cite>. This is the approach taken in
+some modern generators like CRISP <cite class="ltx_cite">[<a href="#bib.bib7" title="Sentence generation as a planning problem" class="ltx_ref">10</a>]</cite> and
+PCRISP <cite class="ltx_cite">[<a href="#bib.bib8" title="Sentence generation as planning with probabilistic LTAG" class="ltx_ref">1</a>]</cite>. In these generators, the input
+semantic requirements and grammar are encoded in
+PDDL <cite class="ltx_cite">[<a href="#bib.bib20" title="PDDL2.1: an extension to PDDL for expressing temporal planning domains" class="ltx_ref">4</a>]</cite>, which an off-the-shelf planner such as
+Graphplan <cite class="ltx_cite">[<a href="#bib.bib21" title="Fast planning through planning graph analysis" class="ltx_ref">2</a>]</cite> uses to produce a list of
+applications of rules in the grammar. These generators generate parses
+for the sentence at the same time as the sentence, which keeps them
+from generating realizations that are grammatically incorrect, and
+keeps them from generating grammatical structures that cannot be
+realized properly.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In the NLG-as-planning framework, the choice of grammar representation
+is crucial in treating NLG as a planning problem; the grammar provides
+the actions that the planner will use to generate a sentence. Tree
+Adjoining Grammars (TAGs) are a common choice
+<cite class="ltx_cite">[<a href="#bib.bib7" title="Sentence generation as a planning problem" class="ltx_ref">10</a>, <a href="#bib.bib8" title="Sentence generation as planning with probabilistic LTAG" class="ltx_ref">1</a>]</cite>. TAGs are
+tree-based grammars consisting of two sets of trees, called initial
+trees and auxiliary or adjoining trees. An entire initial tree can
+replace a leaf node in the sentence tree whose label matches the label
+of the root of the initial tree in a process called “substitution.”
+Auxiliary trees, on the other hand, encode recursive structures of
+language. Auxiliary trees have, at a minimum, a root node and a foot
+node whose labels match. The foot node must be a leaf of the
+auxiliary tree. These trees are used in a three-step process called
+“adjoining”. The first step finds an adjoining location by
+searching through our sentence to find any subtree with a root whose
+label matches the root node of the auxiliary tree. In the second
+step, the target subtree is removed from the sentence tree, and placed
+in the auxiliary tree as a direct replacement for the foot node.
+Finally, the modified auxiliary tree is placed back in the sentence
+tree in the original target location. We use a variation of TAGs in
+our work, called a lexicalized TAG (LTAG), where each tree is
+associated with a lexical item called an anchor.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Though the NLG-as-planning approaches are elegant and appealing, a key
+drawback is the difficulty of handling probabilistic grammars, which
+are readily handled by the overgeneration and ranking
+strategies. Recent approaches such as
+PCRISP <cite class="ltx_cite">[<a href="#bib.bib8" title="Sentence generation as planning with probabilistic LTAG" class="ltx_ref">1</a>]</cite> attempt to remedy this, but do so in
+a somewhat ad-hoc way, by transforming the probabilities into costs,
+because they rely on deterministic planning to actually realize the
+output. In this work, we directly address this by using a more
+expressive underlying formalism, a Markov decision process (MDP). We
+show empirically that this modification has other benefits as
+well, such as being anytime and an ability to handle complex
+communicative goals beyond those that deterministic planners can
+handle.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">We note that prior work exists that uses MDPs for
+NLG <cite class="ltx_cite">[<a href="#bib.bib26" title="Learning what to say and how to say it: joint optimization of spoken dialogue management and natural language generation" class="ltx_ref">13</a>]</cite>. That work differs from ours in several key
+respects: (i) it considers NLG at a coarse level, for example
+choosing the type of utterance (in a dialog context) and how to fill in specific slots in a
+template, (ii) the source of uncertainty is not language-related but
+comes from things like uncertainty in speech recognition, and (iii)
+the MDPs are solved using reinforcement learning and not planning,
+which is impractical in our setting. However, that work does consider NLG
+in the context of the broader task of dialog management, which we
+leave for future work.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Sentence Tree Realization with UCT</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe our approach, called Sentence Tree
+Realization with UCT (STRUCT). We describe the inputs to STRUCT,
+followed by the underlying MDP formalism and the probabilistic
+planning algorithm we use to generate sentences in this MDP.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Inputs to STRUCT</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">STRUCT takes three inputs in order to generate a single sentence.
+These inputs are a grammar (including a lexicon),
+a communicative goal, and a world specification.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">STRUCT uses a first-order logic-based semantic model in its
+communicative goal and world specification. This model describes
+named “entities,” representing general things in the world. Entities
+with the same name are considered to be the same entity. These
+entities are described using first-order logic predicates, where
+the name of the predicate represents a statement of truth about the
+given entities. In this semantic model, the communicative goal is a
+list of these predicates with variables used for the entity names.
+For instance, a communicative goal of ‘red(d), dog(d)’ (in English,
+“say anything about a dog which is red.”) would match a sentence with
+the semantic representation ‘red(subj), dog(subj), cat(obj),
+chased(subj, obj)’, like “The red dog chased the cat”, for instance.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">A grammar contains a set of PTAG trees, divided into two sets (initial
+and adjoining). These trees are annotated with the entities in them.
+Entities are defined as any element anchored by precisely one node in
+the tree which can appear in a statement representing the semantic
+content of the tree. In addition to this set of trees, the grammar
+contains a list of words which can be inserted into those trees,
+turning the PTAG into an PLTAG. We refer to this list as a lexicon.
+Each word in the lexicon is annotated with its first-order logic
+semantics with any number of entities present in its subtree as the
+arguments.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">A world specification is simply a list of all statements which are
+true in the world surrounding our generation. Matching entity names
+refer to the same entity. We use the closed world assumption, that
+is, any statement not present in our world is false. Before execution
+begins, our grammar is pruned to remove entries which cannot possibly
+be used in generation for the given problem, by transitively
+discovering all predicates that hold about the entities mentioned in
+the goal in the world, and eliminating all trees not about any of
+these. This often allows STRUCT to be resilient to large grammar
+sizes, as our experiments will show.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Specification of the MDP</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We formulate NLG as a planning problem on a Markov decision process
+(MDP) <cite class="ltx_cite">[<a href="#bib.bib22" title="Markov decision processes: discrete stochastic dynamic programming" class="ltx_ref">15</a>]</cite>. An MDP is a tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="(S,A,T,R,\gamma)" display="inline"><mrow><mo>(</mo><mrow><mi>S</mi><mo>,</mo><mi>A</mi><mo>,</mo><mi>T</mi><mo>,</mo><mi>R</mi><mo>,</mo><mi>γ</mi></mrow><mo>)</mo></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> is a
+set of states, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is a set of actions available to an agent,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="T:S\times A\times S\rightarrow[0,1]" display="inline"><mrow><mi>T</mi><mo>:</mo><mrow><mrow><mi>S</mi><mo>×</mo><mi>A</mi><mo>×</mo><mi>S</mi></mrow><mo>→</mo><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></mrow></mrow></math> is a possibly stochastic
+function defining the probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="T(s,a,s^{\prime})" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi><mo>,</mo><msup><mi>s</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></math> with which the
+environment transitions to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="s^{\prime}" display="inline"><msup><mi>s</mi><mo>′</mo></msup></math> when the agent does <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in state <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="R:S\times A\times S\rightarrow\mathbb{R}" display="inline"><mrow><mi>R</mi><mo>:</mo><mrow><mrow><mi>S</mi><mo>×</mo><mi>A</mi><mo>×</mo><mi>S</mi></mrow><mo>→</mo><mi>ℝ</mi></mrow></mrow></math> is a real-valued reward function that
+specifies the utility of performing action <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in state <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> to reach
+another state. Finally,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m12" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is a discount factor that allows planning over infinite
+horizons to converge. In such an MDP, the agent selects actions at
+each state to optimize the expected infinite-horizon discounted reward.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In the MDP we use for NLG, we must define each element of the tuple in
+such a way that a plan in the MDP becomes a sentence in a natural
+language. Our set of states, therefore, will be partial sentences
+which are in the language defined by our PLTAG input. There are an
+infinite number of these states, since TAG adjoins can be repeated
+indefinitely. Nonetheless, given a specific world and communicative
+goal, only a fraction of this MDP needs to be explored, and, as we
+show below, a good solution can often be found quickly using a variation of
+the UCT algorithm <cite class="ltx_cite">[<a href="#bib.bib9" title="Bandit based Monte-Carlo planning" class="ltx_ref">9</a>]</cite>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1052/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="663" height="258" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>An example tree substitution operation in STRUCT.</div>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Our set of actions consist of all single substitutions or adjoins at a
+particular valid location in the tree (example shown in
+Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Specification of the MDP ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). Since we are using PLTAGs in this work,
+this means every action adds a word to the partial sentence. In
+situations where the sentence is complete (no nonterminals without
+children exist), we add a dummy action that the algorithm may choose
+to stop generation and emit the sentence. Based on these state and
+action definitions, the transition function takes a mapping between a
+partial sentence / action pair and the partial sentences which can
+result from one particular PLTAG adjoin / substitution, and returns
+the probability of that rule in the grammar.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">In order to control the search space, we restrict the structure of the
+MDP so that while substitutions are available, only those operations
+are considered when determining the distribution over the next state,
+without any adjoins. We do this is in order to generate a
+complete and valid sentence quickly. This allows STRUCT to operate as
+an anytime algorithm, described further below.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">The immediate value of a state, intuitively, describes closeness of an
+arbitrary partial sentence to our communicative goal. Each partial
+sentence is annotated with its semantic information, built up using
+the semantic annotations associated with the PLTAG trees. Thus we use
+as a reward a measure of the match between the semantic annotation of
+the partial tree and the communicative goal. That is, the
+larger the overlap between the predicates, the higher the reward. For
+an exact reward signal, when checking this overlap, we need to
+substitute each combination of entities in the goal into predicates in
+the sentence so we can return a high value if there are any mappings
+which are both possible (contain no statements which are not present
+in the grounded world) and mostly fulfill the goal (contain most of
+the goal predicates). However, this is combinatorial; also, most
+entities within sentences do not interact (e.g. if we say “the white
+rabbit jumped on the orange carrot,” the whiteness of the rabbit has
+nothing to do with the carrot), and finally, an approximate reward
+signal generally works well enough unless we need to emit nested
+subclauses. Thus as an approximation, we use a reward signal where we
+simply count how many individual predicates overlap with the goal with
+<span class="ltx_text ltx_font_italic">some</span> entity substitution. In the experiments, we illustrate the
+difference between the exact and approximate reward signals.</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">The final component of the MDP is the discount factor. We generally use a
+discount factor of 1; this is because we are willing to generate
+lengthy sentences in order to ensure we match our goal. A discount
+factor of 1 can be problematic in general since it can cause rewards
+to diverge, but since there are a finite number of terms in our reward
+function (determined by the communicative goal and the fact that
+because of lexicalization we do not loop), this is not a problem
+for us.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>The Probabilistic Planner</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We now describe our approach to solving the MDP above to generate a sentence.
+Determining the optimal policy at <span class="ltx_text ltx_font_italic">every</span> state in an MDP is
+polynomial in the size of the state-action
+space <cite class="ltx_cite">[<a href="#bib.bib3" title="R-MAX-a general polynomial time algorithm for near-optimal reinforcement learning" class="ltx_ref">3</a>]</cite>, which is intractable in our case. But
+for our application, we do not need to find the optimal policy. Rather
+we just need to <span class="ltx_text ltx_font_italic">plan</span> in an MDP to achieve a <span class="ltx_text ltx_font_italic">given</span>
+communicative goal. Is it possible to do this without exploring the
+entire state-action space? Recent work answers this question
+affirmatively. New techniques such as sparse
+sampling <cite class="ltx_cite">[<a href="#bib.bib25" title="A sparse sampling algorithm for near-optimal planning in large Markov decision processes" class="ltx_ref">7</a>]</cite> and UCT <cite class="ltx_cite">[<a href="#bib.bib9" title="Bandit based Monte-Carlo planning" class="ltx_ref">9</a>]</cite>
+show how to generate near-optimal plans in large MDPs with a time
+complexity that is independent of the state space size. Using the UCT
+approach with a suitably defined MDP (explained above) allows us to
+naturally handle probabilistic grammars as well as formulate NLG as a
+planning problem, unifying the distinct lines of attack described
+in Section <a href="#S2" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Further, the theoretical guarantees of UCT translate
+into fast generation in many cases, as we demonstrate in our
+experiments.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">[t!]
+<span class="ltx_text ltx_caption">STRUCT algorithm.</span>
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span>Number of simulations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="numTrials" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow></math>, Depth of lookahead
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="maxDepth" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math>, time limit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>
+<span class="ltx_ERROR undefined">\ENSURE</span>Generated sentence tree
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="bestSentence\leftarrow" display="inline"><mrow><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo>←</mo><mi/></mrow></math> nil
+<span class="ltx_ERROR undefined">\WHILE</span>time limit not reached
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="state\leftarrow" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow><mo>←</mo><mi/></mrow></math> empty sentence tree
+<span class="ltx_ERROR undefined">\WHILE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m6" class="ltx_Math" alttext="state" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math> not terminal
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m7" class="ltx_Math" alttext="numTrials" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m8" class="ltx_Math" alttext="testState\leftarrow state" display="inline"><mrow><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow><mo>←</mo><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m9" class="ltx_Math" alttext="currentDepth\leftarrow 0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow><mo>←</mo><mn>0</mn></mrow></math>
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m10" class="ltx_Math" alttext="testState" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math> has unexplored actions
+<span class="ltx_ERROR undefined">\STATE</span>Apply one unexplored PLTAG production
+sampled from the PLTAG distribution
+to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m11" class="ltx_Math" alttext="testState" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m12" class="ltx_Math" alttext="currentDepth" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math>++
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\WHILE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m13" class="ltx_Math" alttext="currentDepth&lt;maxDepth" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow><mo>&lt;</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Apply PLTAG production selected by tree
+policy (Equation <a href="#S3.E1" title="(1) ‣ 3.3 The Probabilistic Planner ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) or default
+policy as required
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m14" class="ltx_Math" alttext="currentDepth" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math>++
+<span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\STATE</span>calculate reward for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m15" class="ltx_Math" alttext="testState" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>associate reward with first action taken
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m16" class="ltx_Math" alttext="state\leftarrow" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow><mo>←</mo><mi/></mrow></math> maximum reward <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m17" class="ltx_Math" alttext="testState" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math>
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m18" class="ltx_Math" alttext="state" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math> score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m19" class="ltx_Math" alttext="&gt;bestSentence" display="inline"><mrow><mi/><mo>&gt;</mo><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math> score  and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m20" class="ltx_Math" alttext="state" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></math> has no nonterminal leaf nodes
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m21" class="ltx_Math" alttext="bestSentence\leftarrow state" display="inline"><mrow><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo>←</mo><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m22" class="ltx_Math" alttext="bestSentence" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow></math></p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">Online planning in MDPs as done by UCT follows two steps. From each state
+encountered, we construct a lookahead tree and use it to estimate the
+utility of each action in this state. Then, we take the best action,
+the system transitions to the next state and the procedure is
+repeated. In order to build a lookahead tree, we use a “rollout
+policy.” This policy has two components: if it encounters a state
+already in the tree, it follows a “tree policy,” discussed further
+below. If it encounters a new state, the policy reverts to a
+“default” policy that randomly samples an action. In all cases, any
+rewards received during the rollout search are backed up. Because this
+is a Monte Carlo estimate, typically, we run several simultaneous trials,
+and we keep track of the rewards received by each choice and use
+this to select the best action at the root.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">The tree policy needed by UCT for a state <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> is the action <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in that state which maximizes:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="P(s,a)=Q(s,a)+c\sqrt{\frac{lnN(s)}{N(s,a)}}" display="block"><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>c</mi><mo>⁢</mo><msqrt><mfrac><mrow><mi>l</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></mfrac></msqrt></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m3" class="ltx_Math" alttext="Q(s,a)" display="inline"><mrow><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></math> is the estimated value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> as observed in the tree
+search, computed as a sum over future rewards observed after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m5" class="ltx_Math" alttext="(s,a)" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m6" class="ltx_Math" alttext="N(s)" display="inline"><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m7" class="ltx_Math" alttext="N(s,a)" display="inline"><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></math> are visit counts for the state and
+state-action pair. Thus the second term is an exploration term that
+biases the algorithm towards visiting actions that have not been
+explored enough. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m8" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> is a constant that trades off exploration and
+exploitation. This essentially treats each action decision
+as a bandit problem; previous work shows that this approach can
+efficiently select near-optimal actions at each state.</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p">We use a modified version of UCT in order to increase its usability in
+the MDP we have defined. First, because we receive frequent,
+reasonably accurate feedback, we favor breadth over depth in the tree
+search. That is, it is more important in our case to try a variety of
+actions than to pursue a single action very deep. Second, UCT was
+originally used in an adversarial environment, and so is biased to
+select actions leading to the best average reward rather than the
+action leading to the best overall reward. This is not true for us,
+however, so we choose the latter action instead.</p>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<p class="ltx_p">With the MDP definition above, we use our modified UCT to find a
+solution sentence (Algorithm <a href="#S3.SS3" title="3.3 The Probabilistic Planner ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>). After every action is
+selected and applied, we check to see if we are in a state in which
+the algorithm could terminate (i.e. the sentence has no nonterminals
+yet to be expanded). If so, we determine if this is the best
+possibly-terminal state we have seen so far. If so, we store it, and
+continue the generation process. Whenever we reach a terminal state,
+we begin again from the start state of
+the MDP. Because of the structure restriction above (substitution
+before adjoin), STRUCT generates a valid sentence quickly. This
+enables STRUCT to perform as an anytime algorithm, which
+if interrupted will return the highest-value complete and valid
+sentence it has found. This also allows partial completion of communicative goals if
+not all goals can be achieved simultaneously in the time given.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Empirical Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we compare STRUCT to a state-of-the-art NLG system,
+CRISP,  <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We were unfortunately unable to get the PCRISP
+system to compile, and so we could not evaluate it.</span></span></span>
+and evaluate three hypotheses: (i) STRUCT is
+comparable in speed and generation quality to CRISP as it generates
+increasingly large referring expressions, (ii) STRUCT is
+comparable in speed and generation quality to CRISP as the size of the
+grammar which they use increases, and (iii) STRUCT is capable of
+communicating complex propositions, including multiple concurrent
+goals, negated goals, and nested subclauses.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">For these experiments, STRUCT was implemented in Python 2.7. We used a
+2010 version of CRISP which uses a Java-based GraphPlan
+implementation. All of our experiments were run on a 4-core AMD
+Phenom II X4 995 processor clocked at 3.2 GHz. Both systems were
+given access to 8 GB of RAM. The times reported are from the start of
+the generation process, eliminating variations due to interpreter
+startup, input parsing, etc.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Comparison to CRISP</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We begin by describing experiments comparing STRUCT to CRISP. For these experiments, we use the approximate reward function for STRUCT.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="" id="S4.F2.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Experimental comparison between STRUCT and CRISP:
+Generation time vs. length of referring expression </div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Referring Expressions</span> We first evaluate CRISP and STRUCT on
+their ability to generate referring expressions. Following prior
+work <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>, we consider a series of sentence
+generation problems which require the planner to generate a sentence
+like “The Adj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> Adj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math> … Adj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="{}_{k}" display="inline"><msub><mi/><mi>k</mi></msub></math> dog chased the cat.”, where
+the string of adjectives is a string that distinguishes one dog (whose
+identity is specified in the problem description) from all other
+entities in the world. In this experiment, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="maxDepth" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math> was set equal to
+1, since each action taken improved the sentence in a way measurable
+by our reward function. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="numTrials" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow></math> was set equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="k(k+1)" display="inline"><mrow><mi>k</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></math>,
+since this is the number of adjoining sites available in the final
+step of generation, times the number of potential words to adjoin.
+This allows us to ensure successful generation in a single loop of the
+STRUCT algorithm.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">The experiment has two parameters: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>, the number of adjectives in
+the grammar, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, the number of adjectives necessary to
+distinguish the entity in question from all other entities. We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="j=k" display="inline"><mrow><mi>j</mi><mo>=</mo><mi>k</mi></mrow></math> and show the results in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We observe that CRISP was able to achieve
+sub-second or similar times for all expressions of less than length 5, but its
+generation times increase exponentially past that point, exceeding 100
+seconds for some plans at length 10. At length 15, CRISP failed to
+generate a referring expression; after 90 minutes the Java garbage
+collector terminated the process. STRUCT (the “STRUCT_final” line) performs much better and
+is able to generate much longer referring expressions without failing.
+Later experiments had successful referring expression generation of lengths
+as high as 25. The “STRUCT_initial” curve shows the time taken by
+STRUCT to come up with the first complete sentence, which partially
+solves the goal and which (at least) could be output if generation was
+interrupted and no better alternative was found. As can be seen, this
+always happens very quickly.</p>
+</div>
+<div id="S4.F6" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.32
+<img src="" id="S4.F6.g1" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Effect of grammar size</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.32
+<img src="" id="S4.F6.g2" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Effect of multiple/ negated goals</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.32
+<img src="" id="S4.F6.g3" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Effect of nested subclauses</div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>STRUCT experiments (see text for details).</div>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Grammar Size</span>.
+We next evaluate STRUCT and CRISP’s ability to
+handle larger grammars. This experiment is set up in the same way as
+the one above, with the exception of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> “distracting” words, words
+which are not useful in the sentence to be generated. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> is defined
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="j-k" display="inline"><mrow><mi>j</mi><mo>-</mo><mi>k</mi></mrow></math>. In these experiments, we vary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> between 0 and 50.
+Figure <a href="#S4.F6" title="Figure 6 ‣ 4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows the results of these
+experiments. We observe that CRISP using GraphPlan, as previously
+reported in <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>, handles an increase in
+number of unused actions very well. Prior work reported a difference
+on the order of single milliseconds moving from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m5" class="ltx_Math" alttext="j=1" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m6" class="ltx_Math" alttext="j=10" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>10</mn></mrow></math>.
+We report similar variations in CRISP runtime as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m7" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> increases from 10
+to 60: runtime increases by approximately 10% over that range.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">No Pruning</span>. If we do not prune the grammar (as described in
+Section <a href="#S3.SS1" title="3.1 Inputs to STRUCT ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>), STRUCT’s performance is similar to CRISP
+using the FF planner <cite class="ltx_cite">[<a href="#bib.bib11" title="The FF planning system: fast plan generation through heuristic search" class="ltx_ref">5</a>]</cite>, also profiled in
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>, which increased from 27 ms to 4.4
+seconds over the interval from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="j=1" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="j=10" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>10</mn></mrow></math>. STRUCT’s
+performance is less sensitive to larger grammars than this, but over
+the same interval where CRISP increases from 22 seconds of runtime to
+27 seconds of runtime, STRUCT increases from 4 seconds to 32 seconds.
+This is due almost entirely to the required increase in the value of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="numTrials" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow></math> as the grammar size increases. At the low end,
+we can use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m4" class="ltx_Math" alttext="numTrials=20" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow><mo>=</mo><mn>20</mn></mrow></math>, but at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m5" class="ltx_Math" alttext="l=50" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>50</mn></mrow></math>, we must use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m6" class="ltx_Math" alttext="numTrials=160" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi></mrow><mo>=</mo><mn>160</mn></mrow></math> in order to
+ensure perfect generation as soon as possible. Note that, as STRUCT
+is an anytime algorithm, valid sentences are available very early in
+the generation process, despite the size of the set of adjoining
+trees. This time does not change substantially with increases in
+grammar size. However, the time to perfect this solution does.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">With Pruning</span>. STRUCT’s performance improves significantly if
+we allow for pruning. This experiment involving distracting words
+is an example of a case where pruning will perform well.
+When we apply pruning, we find that STRUCT is able to ignore the effect of
+additional distracting words. Experiments showed roughly constant times for generation
+for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m1" class="ltx_Math" alttext="j=1" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow></math> through <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m2" class="ltx_Math" alttext="j=5000" display="inline"><mrow><mi>j</mi><mo>=</mo><mn>5000</mn></mrow></math>. Our experiments
+do not show any significant impact on runtime due to the pruning
+procedure itself, even on large grammars.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Complex Communicative Goals</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the next set of experiments, we illustrate that STRUCT can solve a
+variety of complex communicative goals such as negated goals,
+conjuctions and goals requiring nested subclauses to be output.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Multiple Goals</span>.
+We first evaluate STRUCT’s ability to accomplish
+multiple communicative goals when generating a single sentence. In this
+experiment, we modify the problem from the
+previous section. In that section, the referred-to dog was unique,
+and it was therefore possible to produce a referring expression which
+identified it unambiguously. In this experiment, we remove this
+condition by creating a situation in which the generator will be
+forced to ambiguously refer to several dogs. We then add to the
+world a number of adjectives which are common to each of these
+possible referents. Since these adjectives do not further
+disambiguate their subject, our generator should not use
+them in its output. We then encode these adjectives into
+communicative goals, so that they will be included in the output of
+the generator despite not assisting in the accomplishment of
+disambiguation. For example, assume we had two black cats, and
+we wanted to say that one of them was sleeping, but we wanted
+to emphasize that it was a black cat. We would have as our goal
+both “sleeps(c)” and “black(c)”. We want the generator to
+say “the black cat sleeps”, instead of simply “the cat sleeps.”</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We find that, in all cases, these otherwise useless
+adjectives are included in the output of our generator, indicating
+that STRUCT is successfully balancing multiple communicative goals.
+As we show in figure <a href="#S4.F6" title="Figure 6 ‣ 4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> (the “Positive
+Goals” curve) , the presence of additional satisfiable semantic goals does
+not substantially affect the time required for generation. We are able to
+accomplish this task with the same very high frequency as the CRISP
+comparisons, as we use the same parameters.</p>
+</div>
+<div id="S4.F10" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.32
+<img src="" id="S4.F10.g1" class="ltx_graphics ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>One entity (“The man sat and the girl sat and …”).</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.32
+<img src="" id="S4.F10.g2" class="ltx_graphics ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>Two entities (“The dog chased the cat and …”).</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.32
+<img src="" id="S4.F10.g3" class="ltx_graphics ltx_centering ltx_centering" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 9: </span>Three entities (“The man gave the girl the book and …”).</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 10: </span>Time taken by STRUCT to generate sentences with conjunctions with varying
+numbers of entities.</div>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Negated Goals</span>.
+We now evaluate STRUCT’s ability to generate
+sentences given negated communicative goals. We again modify
+the problem used earlier by
+adding to our lexicon several new adjectives, each applicable only to
+the target of our referring expression. Since our target can now be
+referred to unambiguously using only one adjective, our generator
+should just select one of these new adjectives (we experimentally
+confirmed this).
+We then encode these
+adjectives into negated communicative goals, so that they will not be
+included in the output of the generator, despite allowing a much
+shorter referring expression. For example, assume we have a
+tall spotted black cat, a tall solid-colored white cat, and a short spotted
+brown cat, but we wanted to refer to the first one without
+using the word “black”.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">We find that these adjectives which
+should have been selected immediately are omitted from the output, and
+that the sentence generated is the best possible under the
+constraints. This demonstrates that STRUCT is balancing these negated
+communicative goals with its positive goals. Figure
+<a href="#S4.F6" title="Figure 6 ‣ 4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> (the “Negative Goals” curve) shows the
+impact of negated goals on the time to generation. Since this
+experiment alters the grammar size, we see the time to final
+generation growing linearly with grammar size. The increased time to
+generate can be traced directly to this increase in grammar size.
+This is a case where pruning does not help us in reducing the grammar size;
+we cannot optimistically prune out words that we do not plan to use. Doing
+so might reduce the ability of STRUCT to produce a sentence which partially
+fulfills its goals.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Nested subclauses</span>. Next, we evaluate STRUCT’s ability to generate
+sentences with nested subclauses. An example of such a sentence is
+“The dog which ate the treat chased the cat.” This is a difficult
+sentence to generate for several reasons. The first, and clearest, is
+that there are words in the sentence which do not help to increase the
+score assigned to the partial sentence. Notably, we must adjoin the
+word “which” to “the dog” during the portion of generation where the
+sentence reads “the dog chased the cat”. This decision requires us to
+do planning deeper than one level in the MDP, which increases the
+number of simulations STRUCT requires in order to get the correct result.
+In this case, we require lookahead further into the tree than depth 1.
+We need to know that using “which” will allow us to further specify
+which dog is chasing the cat; in order to do this we must use at least
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="d=3" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>3</mn></mrow></math>. Our reward function must determine this with, at a minimum,
+the actions corresponding to “which”, “ate”, and “treat”. For these experiments, we use the
+exact reward function for STRUCT.</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">Despite this issue, STRUCT is capable of generating these sentences.
+Figure <a href="#S4.F6" title="Figure 6 ‣ 4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows the score of STRUCT’s generated output over
+time for two nested clauses. Notice that, because the exact reward function is being used,
+the time to generate is longer in this experiment. To the best of our
+knowledge, CRISP is not able to generate sentences of this form due to
+an insufficiency in the way it handles TAGs, and consequently we
+present our results without this baseline.</p>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Conjunctions</span>.
+Finally, we evaluate STRUCT’s ability to generate sentences including
+conjunctions. We introduce the conjunction “and”, which allows for the
+root nonterminal of a new sentence (‘S’) to be adjoined to any other sentence.
+We then provide STRUCT with multiple goals. Given sufficient depth for the
+search (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m1" class="ltx_Math" alttext="d=3" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>3</mn></mrow></math> was sufficient for our experiments, as our reward signal is fine-grained),
+STRUCT will produce two sentences joined by the conjunction “and”.
+Again, we follow prior work in our experiment design <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p">As we can see in Figures <a href="#S4.F10" title="Figure 10 ‣ 4.2 Complex Communicative Goals ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>, <a href="#S4.F10" title="Figure 10 ‣ 4.2 Complex Communicative Goals ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>, and
+<a href="#S4.F10" title="Figure 10 ‣ 4.2 Complex Communicative Goals ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>, STRUCT successfully generates results
+for conjunctions of up to five sentences. This is not a hard upper bound, but
+generation times begin to be impractically large at that point.
+Fortunately, human language tends toward
+shorter sentences than these unwieldy (but technically grammatical) sentences.</p>
+</div>
+<div id="S4.SS2.p10" class="ltx_para">
+<p class="ltx_p">STRUCT increases in generation time both as the number of sentences increases and as
+the number of objects per sentences increases.
+We compare our results to those presented in <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite> for
+CRISP with the FF Planner. They attempted to generate sentences with
+three entities and failed to find a result within their 4 GB memory limit. As we
+can see, CRISP generates a result slightly faster than STRUCT when we are
+working with a single entity, but works much much slower for two entities
+and cannot generate results for a third entity. According to Koller’s findings,
+this is because the search space grows by a factor of the universe size with
+the addition of another entity <cite class="ltx_cite">[<a href="#bib.bib1" title="Experiences with planning for natural language generation" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have proposed STRUCT, a general-purpose natural language generation
+system which is comparable to current state-of-the-art generators.
+STRUCT formalizes the generation problem as an MDP and applies a version of the UCT
+algorithm, a fast online MDP planner, to solve it. Thus, STRUCT
+naturally handles probabilistic grammars. We demonstrate empirically
+that STRUCT is anytime, comparable to existing generation-as-planning
+systems in certain NLG tasks, and is also capable of handling other,
+more complex tasks such as negated communicative goals.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Though STRUCT has many interesting properties, many directions for
+exploration remain. Among other things, it would be desirable to
+integrate STRUCT with discourse planning and dialog systems.
+Fortunately, reinforcement learning has already been investigated in
+such contexts <cite class="ltx_cite">[<a href="#bib.bib26" title="Learning what to say and how to say it: joint optimization of spoken dialogue management and natural language generation" class="ltx_ref">13</a>]</cite>, indicating that an MDP-based generation procedure could
+be a natural fit in more complex generation systems. This is a primary
+direction for future work. A second direction is that, due to the
+nature of the approach, STRUCT is highly amenable to parallelization.
+None of the experiments reported here use parallelization, however, to
+be fair to CRISP. We plan to parallelize STRUCT in future work, to
+take advantage of current multicore architectures. This should obviously
+further reduce generation time.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">STRUCT is open source and available from github.com upon
+request.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported in part by NSF CNS-1035602. SR was supported
+in part by CWRU award OSA110264. The authors are grateful to Umang
+Banugaria for help with the STRUCT implementation.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Bauer and A. Koller</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence generation as planning with probabilistic LTAG</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of the 10th International Workshop on
+Tree Adjoining Grammar and Related Formalisms, New
+Haven, CT</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A.L. Blum and M.L. Furst</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast planning through planning graph analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial intelligence</span> <span class="ltx_text ltx_bib_volume">90</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 281–300</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. I. Brafman and M. Tennenholtz</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">R-MAX-a general polynomial time algorithm for near-optimal reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 213–231</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 The Probabilistic Planner ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Fox and D. Long</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PDDL2.1: an extension to PDDL for expressing temporal planning domains</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">20</span>, <span class="ltx_text ltx_bib_pages"> pp. 61–124</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hoffmann and B. Nebel</span><span class="ltx_text ltx_bib_year">(2001-05)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The FF planning system: fast plan generation through heuristic search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 253–302</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1076-9757</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1622394.1622404" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p5" title="4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kay</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chart generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’96</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 200–204</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/981863.981890" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/981863.981890" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kearns, Y. Mansour and A.Y. Ng</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A sparse sampling algorithm for near-optimal planning in large Markov decision processes</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">16</span>, <span class="ltx_text ltx_bib_pages"> pp. 1324–1331</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 The Probabilistic Planner ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Knight and V. Hatzivassiloglou</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two-level, many-paths generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 252–260</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Kocsis and C. Szepesvari</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bandit based Monte-Carlo planning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 282–293</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Specification of the MDP ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.p1" title="3.3 The Probabilistic Planner ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Koller and M. Stone</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence generation as a planning problem</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 336</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Koller and R. P. A. Petrick</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experiences with planning for natural language generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Intelligence</span> <span class="ltx_text ltx_bib_volume">27</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 23–40</span> (<span class="ltx_text ltx_bib_language">en</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1467-8640</span>,
+<a href="http://onlinelibrary.wiley.com/doi/10.1111/j.1467-8640.2010.00370.x/abstract" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1111/j.1467-8640.2010.00370.x" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p4" title="4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p5" title="4.1 Comparison to CRISP ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p10" title="4.2 Complex Communicative Goals ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS2.p8" title="4.2 Complex Communicative Goals ‣ 4 Empirical Evaluation ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Langkilde-Geary</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An empirical verification of coverage and correctness for a general-purpose sentence generator</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 17–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Lemon</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning what to say and how to say it: joint optimization of spoken dialogue management and natural language generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech and Language</span> <span class="ltx_text ltx_bib_volume">25</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 210–221</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.p2" title="5 Conclusion ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Lu, H.T. Ng and W.S. Lee</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language generation with tree conditional random fields</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 400–409</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M.L. Puterman</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Markov decision processes: discrete stochastic dynamic programming</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">John Wiley &amp; Sons, Inc.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Specification of the MDP ‣ 3 Sentence Tree Realization with UCT ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Reiter and R. Dale</span><span class="ltx_text ltx_bib_year">(2000-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building natural language generation systems</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span> (<span class="ltx_text ltx_bib_language">en</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 9780521620369</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. M. Shieber</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A uniform architecture for parsing and generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’88</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 614–619</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 963 8431 56 3</span>,
+<a href="http://dx.doi.org/10.3115/991719.991764" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/991719.991764" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Stone, C. Doran, B. Webber, T. Bleam and M. Palmer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Microplanning with communicative intentions: the SPUD system</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Intelligence</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 311–381</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1467-8640</span>,
+<a href="http://dx.doi.org/10.1046/j.0824-7935.2003.00221.x" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1046/j.0824-7935.2003.00221.x" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. White and J. Baldridge</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adapting chart realization to CCG</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 119–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Decision-Theoretic Approach to Natural Language Generation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:55:20 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Explorative anytime local search for distributed constraint optimization.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The Distributed Constraint Optimization Problem (DCOP) is a general model for distributed problem solving that has a wide range of applications in Multi-Agent Systems and has generated significant interest from researchers [2], [3], [4], [5], [6], [7], [8], [9]. DCOPs are composed of agents, each holding one or more variables. Each variable has a domain of possible value assignments. Constraints among variables (possibly held by different agents) assign costs to combinations of value assignments. Agents assign values to their variables and communicate with each other, attempting to generate a solution that is globally optimal with respect to the costs of the constraints [4], [10].
+     </paragraph>
+     <paragraph>
+      There is a wide scope in the motivation for research on DCOPs, since they can be used to model many everyday combinatorial problems that are distributed by nature. Some examples are the Nurse Shift Assignment problem[11], [12], the Sensor Network Tracking problem[7], and the Log-Based Reconciliation problem[13].
+     </paragraph>
+     <paragraph>
+      DCOPs represent real life problems that cannot or should not be solved centrally for any of several reasons, among them lack of autonomy, single point of failure, and privacy of agents.
+     </paragraph>
+     <paragraph>
+      A number of studies on DCOPs presented complete algorithms [4], [5], [14]. However, since DCOPs are NP-hard, there has been growing interest in the last few years in local (incomplete) DCOP algorithms [15], [7], [1], [16], [17]. Although local search does not guarantee that the obtained solution is optimal, it can be applied to large problems and is compatible with real-time applications.
+     </paragraph>
+     <paragraph>
+      The general design of most state-of-the-art local search algorithms for DCOPs is synchronous [18], [7], [19], [20] (a notable exception was presented in [21]). In each step (or iteration) of the algorithm an agent sends its assignment to all its neighbors in the constraint graph and receives the assignments of all its neighbors. They differ in the method agents use to decide whether to replace their current value assignments to their variables, e.g., in the max gain messages (MGM) algorithm [15], the agent that can improve its state the most in its neighborhood replaces its assignment. A stochastic decision whether to replace an assignment is made by agents in the distributed stochastic algorithm (DSA) [7].
+     </paragraph>
+     <paragraph>
+      In the case of centralized optimization problems, local search techniques are used when the problems are too large to perform a complete search. Traditionally, local search algorithms maintain a complete assignment for the problem and use a goal function in order to evaluate this assignment. Different methods that balance between exploration and exploitation are used to improve the current assignment of the algorithm [22], [23], [24]. An important feature of most centralized local search algorithms is that they hold the best assignment that was found throughout the search. This makes them anytime algorithms, i.e., the quality of the solution can only remain the same or increase if more steps of the algorithm are performed [25]. This property cannot be guaranteed as easily in a distributed environment where agents are only aware of the cost of their own assignment (and maybe that of their neighbors too), but no one actually knows when a good global solution is obtained.
+     </paragraph>
+     <paragraph>
+      In [7], DSA and DBA are evaluated solving sensor network DCOPs. Apparently these algorithms perform well on this application even without a pure anytime property. The algorithms were compared by evaluating the state held by agents at the end of the run. However, Zhang et al. [7] do not offer a way to report the best state explored by the algorithms as proposed in this study. This limits the chances of local search algorithms implementing an exploring heuristic to be successful.
+     </paragraph>
+     <paragraph>
+      In order to implement anytime local search algorithms that follow the same synchronous structure of DSA and DBA for distributed optimization problems, the global result of every synchronous step must be calculated and the best solution must be stored. A trivial approach would be to centralize in every step the costs calculated by all agents to a single agent. This agent would then inform the other agents each time a solution that improves the results on all previous solutions is obtained. However, this method has drawbacks both in the increase in the number of messages and in the violation of privacy caused from the need to inform a single agent (not necessarily a neighbor of all agents) of the quality of all other agents' states in each step of the algorithm.
+     </paragraph>
+     <paragraph>
+      The present paper proposes a general framework for enhancing local search algorithms for DCOPs that follow the general synchronous structure with the anytime property. In the proposed framework the quality of each state is accumulated via a spanning tree of the constraint graph. Agents receive information about the quality of the recent states of the algorithm from their children in the spanning tree, calculate the resulting quality including their own contribution according to the goal function, and pass it to their parents. The root agent makes the final calculation of the cost of the system's state in each step and propagates down the tree the index of the step in which the system was in the most successful state. When the search is terminated, all agents hold the assignment of the best state according to the global goal function.
+     </paragraph>
+     <paragraph>
+      The proposed framework can be combined with any synchronous incomplete algorithm such as MGM, DSA, DBA, or Max-Sum. The combination allows any such algorithm to report the best solution it traversed during its run, i.e. it makes it an anytime algorithm.
+     </paragraph>
+     <paragraph>
+      In order to produce the best state out of m steps, the algorithm must run {a mathematical formula}m+2h synchronous steps where h is the height of the tree used. Since the only requirement of the tree is that it is a spanning tree on the constraint graph, i.e., that it maintains a parent route from every agent to the root agent, the tree can be a BFS-tree and its height h is expected to be small (in the worst case h equals the number of agents n). Our experimental study reveals that starting from very low density parameters, the height of the BFS-tree is indeed very small (logarithmic in the number of agents). Previous studies on distributed systems have used BFS trees, e.g., for maintaining shortest paths in a communication network [26]. However, to the best of our knowledge we are the first to use it for aggregating local state information in order to make a decision on the global best solution.
+     </paragraph>
+     <paragraph>
+      The proposed framework does not require agents to send any messages in addition to the messages sent by the original algorithm. The additional space requirement for each agent is {a mathematical formula}O(h).
+     </paragraph>
+     <paragraph>
+      We study the potential of the proposed framework by proposing a set of exploration methods (heuristics) that exploit the anytime property by introducing extreme exploration to exploitive algorithms. We present an extensive empirical evaluation of the proposed methods on three different benchmarks for DCOPs. The proposed methods find solutions of higher quality than state-of-the-art algorithms when implemented within the anytime local search framework.
+     </paragraph>
+     <paragraph>
+      The rest of the paper is organized as follows: Related work is presented in Section 2. Section 3 describes the distributed constraint optimization problem (DCOP). State-of-the-art local search algorithms for solving DCOPs are presented in Section 4. Section 5 presents ALS_DCOP, the proposed anytime local search framework for DCOPs. In Section 6 we present the theoretical properties of the proposed framework. Section 7 proposes innovative exploration methods for distributed local search. Section 8 presents an experimental study that evaluates the proposed explorative algorithms when combined with the proposed anytime framework in comparison with existing local search algorithms. Section 9 presents a discussion of the experimental results and Section 10 presents our conclusions.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      A number of complete algorithms were proposed in the last decade for solving DCOPs. The simplest algorithm among these was the Synchronous Branch and Bound (SynchB&amp;B) algorithm [27], which is a distributed version of the well-known centralized Branch and Bound algorithm. Another algorithm that uses a Branch and Bound scheme is Asynchronous Forward Bounding (AFB) [14], in which agents perform sequential value assignments that are propagated for bound checking and early detection of a need to backtrack. A number of complete algorithms use a pseudo-tree, which is derived from the structure of the constraints network, in order to improve the process of acquiring a solution. ADOPT and BnB-ADOPT[4], [28] are two such asynchronous search algorithms in which assignments are passed down the pseudo-tree. Agents compute upper and lower bounds for possible assignments and send costs, which are eventually accumulated by the root agent, up to their parents in the pseudo-tree. Another algorithm that exploits a pseudo-tree is DPOP[5]. In DPOP, each agent receives from the agents that are its children in the pseudo-tree all the combinations of partial solutions in their sub-tree and their corresponding costs. The agent calculates and generates all the possible partial solutions, which include the partial solutions it received from its children and its own assignments, and sends the resulting combinations up the pseudo-tree. Once the root agent receives all the information from its children, it identifies the value assignment that is a part of the optimal solution and propagates it down the pseudo-tree to the rest of the agents, allowing them to find their own value assignment and thus, produce the optimal solution. The DPOP algorithm is a GDL algorithm [29], i.e., it stems from the general distributive law that allows accumulation of costs and utility calculation operations performed by different agents in a distributed system for a mutual decision on the optimal solution. A number of recent studies investigate this paradigm and propose improvements to the DPOP algorithm [30], [31]. A very different approach was implemented in the OptAPO algorithm [3], [32] in which agents that are in conflict choose a mediator to whom they transfer their data and which solves the problem. This algorithm benefits when the underlying constraint graph includes independent sections that can be solved concurrently.
+     </paragraph>
+     <paragraph>
+      All of the algorithms mentioned above are complete. While this is an advantage in the sense that they guarantee to report the optimal solution, this is also a drawback since DCOPs are NP-hard; thus, in order to validate that an acquired solution is optimal they must traverse the entire search space in the worst case. This drawback limits the use of these algorithms to relatively small problems.
+     </paragraph>
+     <paragraph>
+      Some of the complete algorithms mentioned above use a tree structure and, like in the framework we propose in this paper, aggregate information to the root agent in order to allow it to make a global decision on the optimal solution. However, our work is the first to suggest such an aggregation that can apply to any synchronous incomplete algorithm, even if the algorithm itself does not use a tree structure. Moreover, the tree structure used in complete algorithms must be a pseudo-tree while the proposed framework can use any spanning tree. This allows us to make use of a BFS tree which evidently has a much smaller (logarithmic) height.
+     </paragraph>
+     <paragraph>
+      One common approach towards incomplete methods for solving DCOPs is distributed local search. The general design of most local search algorithms for DCOPs is synchronous [18], [7], [20]. In each step of the algorithm an agent sends its assignment to all its neighbors in the constraint network and receives the assignments of all its neighbors. In Section 4 we present in detail two leading algorithms from this class of algorithms – the Distributed Stochastic Algorithm (DSA) [7] and the Distributed Breakout Algorithm (DBA) [18]. These algorithms were selected because many other algorithms such as MGM and DisPeL [33] are very similar to them and can be considered their descendants. In addition, the most successful exploration heuristics we propose in this paper are variations of these algorithms.
+     </paragraph>
+     <paragraph>
+      In [15], [34], a different approach towards local search was proposed. In these studies, completely exploitive algorithms are used to converge to local optima solutions, which are guaranteed to be within a predefined distance from the global optimal solution. The approximation level is dependent on a parameter k, which defines the size of coalitions that agents can form. These k-size coalitions transfer the problem data to a single agent, which performs a complete search procedure in order to find the best assignment for all agents within the k-size coalition. As a result, the algorithm converges to a state that is k-optimal[34], i.e., no better state exists if k agents or fewer change their assignments. While this approach guarantees that the outcome of the algorithm is k-optimal, the algorithms proposed to date that guarantee convergence to k-optimal solutions, such as MGM [15], include very limited exploration if at all (in contrast to algorithms that include intensive exploration that are within scope and aim of this paper). Recently, this approach of using monotonic local search algorithms in small local environments in order to produce quality guarantees on the solution was extended to environments dependent on the distance of nodes in the constraint network [21] and environments that are bounded both by distance and size [35].
+     </paragraph>
+     <paragraph>
+      A different approach towards incomplete distributed problem solving is implemented by the Max-Sum algorithm. Max-Sum [8] is a GDL algorithm that operates on a factor graph, which is a bipartite graph in which the nodes represent variables and constraints. Although Max-Sum is completely exploitive, it is not guaranteed to converge in problems with factor graphs that include cycles [8]. On such problems it performs implicit exploration. We present the details of the Max-Sum algorithm in Section 4 following the descriptions of DSA and DBA. In addition, we demonstrate in this paper the advantages of using Max-Sum within the proposed anytime framework.
+     </paragraph>
+     <paragraph>
+      A recent study has investigated the usefulness of increasing the level of exploration in DSA and DBA [36]. It proposed versions of DSA in which the probability for changing an assignment is higher than in standard DSA. These experiments compared with Distributed Simulated Annealing (DSAN), in which the probability to take an explorative step was dependent on a decreasing temperature. Beside standard DBA and MGM, this study also compared with the DisPeL algorithm, which is a penalty-driven algorithm that increments unary constraints instead of binary constraints, as DBA does. We demonstrate that the explorative methods we propose in this paper outperform these alternative approaches when combined with the anytime framework.
+     </paragraph>
+     <paragraph>
+      Another recent study proposed intelligent functions for selecting the probability to replace assignments in DSA [37]. The proposed methods considered the potential for reduction in cost (the slope of improvement) and as a result gave agents with a higher probability to improve the global cost a higher probability to perform assignment replacements. The resulting versions of the algorithms were reported to converge faster and in implementations where only assignment replacements are exchanged, reduce significantly the number of messages exchanged. However, the quality of the obtained solutions was not improved when using the proposed functions. Nevertheless, the most successful method we propose in this paper combines this approach with the approach taken in DSAN that allows explorative assignment selection under some conditions and with monitored random restarts. This combination, when implemented within the proposed anytime framework, was found to dominate on all benchmarks we experimented with.
+     </paragraph>
+     <paragraph>
+      Both studies, [37] and [36], reported results on the number of messages sent between agents (triggered by assignment changes) because they considered an asynchronous version of DSA. In our work, we consider synchronous local search algorithms that perform in an asynchronous environment; thus, agents must exchange messages with all neighbors in every step of the algorithm.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Distributed constraint optimization
+     </section-title>
+     <paragraph>
+      A distributed constraint optimization problem (DCOP) is a tuple {a mathematical formula}〈A,X,D,R〉. {a mathematical formula}A is a finite set of agents {a mathematical formula}A1,A2,…,An. {a mathematical formula}X is a finite set of variables {a mathematical formula}X1,X2,…,Xs. Each variable is held by a single agent (an agent may hold more than one variable). {a mathematical formula}D is a set of domains {a mathematical formula}D1,D2,…,Ds. Each domain {a mathematical formula}Di contains the finite set of values that can be assigned to variable {a mathematical formula}Xi. {a mathematical formula}R is a set of relations (constraints). Each constraint {a mathematical formula}Ci∈R defines a non-negative cost for every possible value combination of a set of variables, and is of the form {a mathematical formula}Ci:Di1×Di2×⋯×Dik→Z+∪{0}. Each agent {a mathematical formula}Aj involved in constraint {a mathematical formula}Ci holds a part {a mathematical formula}Cij of the constraint so that {a mathematical formula}∑jCij=Ci. In this paper we will assume that for each pair of agents {a mathematical formula}Aj and {a mathematical formula}Aj′ involved in constraint {a mathematical formula}Cij, the parts {a mathematical formula}Cij′ are equal, i.e., problems are symmetric. However, our proposed framework applies to the asymmetric DCOP framework as well [38]. A binary constraint involves exactly two variables and is of the form {a mathematical formula}Ci:Di1×Di2→Z+∪{0}. A binary DCOP is a DCOP in which all constraints are binary. An assignment (or a label) is a pair of a variable and a value from that variable's domain. A partial assignment (PA) is a set of assignments, in which each variable appears at most once. {a mathematical formula}vars(PA) is the set of all variables that appear in PA, {a mathematical formula}vars(PA)={Xi|∃a∈Di∧(Xi,a)∈PA}. A constraint {a mathematical formula}Ci∈R of the form {a mathematical formula}Ci:Di1×Di2×⋯×Dik→Z+∪{0} is applicable to PA if {a mathematical formula}Xi1,Xi2,…,Xik∈vars(PA). The cost of a partial assignment PA is the sum of all applicable constraints to PA over the assignments in PA. A full assignment is a partial assignment that includes all the variables ({a mathematical formula}vars(PA)=X). A solution is a full assignment returned by a DCOP algorithm.
+     </paragraph>
+     <paragraph>
+      In this paper, we assume each agent holds a single variable and use the term “agent” and “variable” interchangeably. We also assume that constraints are at most binary and that the delay in delivering a message is finite [4], [39]. Agents are aware only of their own local topology (i.e., only of their own neighbors in the constraint network and the constraints that they individually and privately hold).
+     </paragraph>
+     <paragraph>
+      We use the term step for a synchronous iteration of a local search algorithm. The state of an agent in each step includes its value assignment and the local cost, which is the sum of costs incurred according to constraints with the value assignments of its neighbors. The global state in each step includes the full assignment and the costs of all constraints violated by the full assignment.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Local search for distributed constraint problems
+     </section-title>
+     <paragraph>
+      The general design of most state-of-the-art local search algorithms for Distributed Constraint Satisfaction Problems (DisCSPs) and Distributed Constraint Optimization Problems (DCOPs) is synchronous. In each step of the algorithm an agent sends its value assignment to all its neighbors in the constraint network and receives the value assignment of all its neighbors. Two of the most known algorithms that apply to this general framework are the Distributed Stochastic Algorithm (DSA) [7] and the Distributed Breakout Algorithm (DBA) [40], [7]. In our presentation of the algorithms we follow the recent versions of [7]. Notice that these algorithms were first designed for distributed constraint satisfaction problems in which a solution must not violate any constraint, but they can be applied without any adjustment to Distributed Max-CSPs (DisMaxCSPs) (where the optimal solution is the complete assignment with the smallest number of violated constraints), which is a specific type of DCOP. Thus, in our description we consider an improvement to be a decrease in the number of violated constraints (as in DisMaxCSPs).
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Distributed Stochastic Search Algorithm (DSA)
+      </section-title>
+      <paragraph>
+       The basic idea of DSA is simple. After an initial step in which agents select a starting value for their variable (randomly according to [7]), agents perform a sequence of steps until some termination condition is met. In each step, an agent sends its value assignment to its neighbors in the constraint graph and receives the value assignments of its neighbors.{sup:1} After collecting the value assignments of all its neighbors, an agent decides whether to keep its value assignment or to change it. This decision, which is made stochastically, has a large effect on the performance of the algorithm. According to [7], if an agent in DSA cannot improve its current state by replacing its current value, it does not replace it. If it can improve (or keep the same cost, depending on the version used), it decides whether to replace the value using a stochastic strategy (see [7] for details on the possible strategies and the differences in the resulting performance). A sketch of DSA is presented in Fig. 1. After a random value is assigned to the agent's variable (line 1), the agent performs a loop (each iteration of the loop is a step of the algorithm) until the termination condition is met. In each step the agent sends its value assignment to all its neighbors and collects the assignments of all its neighbors (lines 3, 4). According to the information it receives, it decides whether to replace its value assignment; when the decision is positive it assigns a new value to its variable (lines 5, 6). The version of the algorithm we used in our experiments was DSA-C in which the replacement decision is to replace its current value assignment with probability p if the alternative assignment does not deteriorate the local state (i.e., it either improves it or keeps the cost the same).
+      </paragraph>
+      <paragraph>
+       An example of a DCOP in which each constraint has the same cost (DisMaxCSP) is presented in Fig. 2. Each of the agents has a single variable with the values a and b in its domain. Dashed lines connect constrained agents and all constraints are equality constraints. Although DSA is a uniform algorithm, i.e., the algorithm does not assume the existence of agents' identifiers; we added identifiers to the figure to make it easier to describe.
+      </paragraph>
+      <paragraph>
+       Before the first step of the algorithm each agent selects a random value. Assume agents 1, 3, and 5 selected a and agents 2 and 4 selected b. In the first step all agents can change their assignment without increasing local cost. Following a stochastic decision only agents 2 and 5 replace their assignment. Now agents 1, 2, and 3 hold a and agents 4 and 5 hold b. At this step only agent 4 can replace its assignment and if it does so, in the next step only agent 5 can replace its assignment. In the resulting state, all agents assign a to their variable and the algorithm converges.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Distributed Breakout Algorithm (DBA)
+      </section-title>
+      <paragraph>
+       DBA manipulates the weights of the DCOP constraints. As in DSA, in every step each agent sends its current value assignment to its neighbors and collects their current value assignments. After receiving the value assignments of all its neighbors, the agent computes the maximal weighted cost reduction it can achieve by changing its value assignment and sends this proposed reduction to its neighbors. After collecting the proposed reductions from its neighbors, an agent changes its value assignment only if its proposed reduction is greater than that of its neighbors. If ties occur they are broken using the agents' identifiers. When an agent detects a quasi-local optimum, i.e., neither it nor any of its neighbors offer a reduction of weighted cost, it increases the weights of its current constraint violations. The sketch of the DBA algorithm is depicted in Fig. 3. After initializing the constraint weights to one and assigning a random value to its variable (lines 1, 2), the agent enters the loop where, as in the DSA algorithm, each loop iteration is a step of the algorithm. After sending its value assignment to its neighbors and collecting their value assignments (lines 4, 5), the agent calculates its best weight reduction and sends it to its neighbors (lines 6, 7). After receiving the possible weight reduction of all of its neighbors the agent decides whether to replace its assignment and on a positive decision assigns its variable (lines 8–11). If it detects a quasi-local optimum it increases the weights of all its violated constraints (lines 13, 14).
+      </paragraph>
+      <paragraph>
+       The Maximum Gain Messages (MGM) algorithm is a simplified version of DBA. It includes the same step structure as DBA, i.e. sending the maximal reduction in cost to neighbors and then sending the value assignment, but it does not include the manipulation of constraint weights to break out of quasi-local optima. In other words, MGM is completely monotonic. The code of MGM is similar to the code presented in Fig. 3 excluding lines 12–14.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Max-Sum
+      </section-title>
+      <paragraph>
+       A different incomplete approach for solving DCOPs is implemented by the Max-Sum algorithm. The Max-Sum algorithm [8] is a GDL algorithm [29] that operates on a factor graph[41], a bipartite graph in which both variables and constraints are represented by nodes.{sup:2} Each node representing a variable of the original DCOP is connected to all function-nodes that represent constraints that the variable is involved in. Similarly, a function-node is connected to all variable-nodes that represent variables in the original DCOP that are included in the constraint it represents. Agents in Max-Sum perform the roles of different nodes in the factor graph. Variable-nodes and function-nodes are considered “agents” in Max-Sum, i.e., they can send messages, read messages and perform computation.
+      </paragraph>
+      <paragraph>
+       Fig. 4 presents a sketch of the Max-Sum algorithm. The pseudocode for variable-nodes and function-nodes is similar apart from the computation of the content of messages to be sent. For variable-nodes only data received from neighbors is considered. In messages sent by function-nodes the content is produced considering data received from neighbors and the original constraint represented by the function-node.
+      </paragraph>
+      <paragraph>
+       It remains to describe the content of messages sent by the factor graph nodes. A message sent from a variable-node x to a function-node f at iteration i, includes for each of the values {a mathematical formula}d∈Dx the sum of costs for this value it received from all function-node neighbors apart from f in iteration {a mathematical formula}i−1. Formally, for value {a mathematical formula}d∈Dx the message will include:{a mathematical formula} where {a mathematical formula}Fx is the set of function-node neighbors of variable x and {a mathematical formula}cost(f′.d) is the cost for value d included in the message received from {a mathematical formula}f′ in iteration {a mathematical formula}i−1. α is a constant that is reduced from all costs included in the message (i.e., for each {a mathematical formula}d∈Dx) in order to prevent the costs carried by messages throughout the algorithm from growing arbitrarily. Selecting α to be the average on all costs included in the message is a reasonable choice for this purpose [8], [42]. Notice that as long as the amount reduced from all costs is identical, the algorithm is not affected by this reduction since only the differences between the costs for the different values matter.
+      </paragraph>
+      <paragraph>
+       A message sent from a function-node f to a variable-node x in iteration i includes for each possible value {a mathematical formula}d∈Dx the minimal cost of any combination of assignments to the variables involved in f apart from x and the assignment of value d to variable x. Formally, the message from f to x includes for each value {a mathematical formula}d∈Dx:{a mathematical formula} where {a mathematical formula}ass−x is a possible combination of assignments to variables involved in f not including x. The cost of an assignment {a mathematical formula}a=(〈x,d〉,ass−x) is:{a mathematical formula} where {a mathematical formula}f(a) is the original cost in the constraint represented by f for the assignment a, {a mathematical formula}Xf is the set of variable-node neighbors of function-node f, and {a mathematical formula}cost(x′.d′) is the cost that was received in the message sent from variable-node {a mathematical formula}x′ in iteration {a mathematical formula}i−1, for the value {a mathematical formula}d′ that is assigned to {a mathematical formula}x′ in a.
+      </paragraph>
+      <paragraph>
+       In contrast to DSA, DBA and MGM, Max-Sum is not a search algorithm, i.e., the selection of value assignments to variables is not an inherent part of the algorithm and is not used to generate the messages in the algorithm. However, in every iteration an agent can select its value assignment. Each variable-node selects the value assignment that received the lowest sum of costs included in the messages that were received most recently from its neighboring function-nodes. Formally, for variable x we select the value {a mathematical formula}dˆ∈Dx as follows:{a mathematical formula} Notice that the same information used by the variable-node to select the content of the messages it sends is used for selecting its value assignment.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Anytime local search framework for DCOPs
+     </section-title>
+     <paragraph>
+      Local search algorithms as presented in Section 4 combine exploration and exploitation properties in order to converge to local optima, and escape from them in order to explore other parts of the search space. When a centralized constraint optimization local search algorithm is performed, the quality of the states (i.e., full assignments) of the algorithm are completely known and therefore there is no difficulty in holding the best state that was explored. In a distributed constraint optimization problem, agents are only aware of their own private state (the violated constraints they are involved in and their costs) and, thus, a state that can seem to have high quality to a single agent might have low global quality and vice versa. In the case of Distributed Constraint Satisfaction Problems (DisCSPs), the problem is easier, since in the global optimal state all agents are in a private optimal state as well with no violated constraints. This is not the case in Distributed Constraint Optimization Problems (DCOPs) where the global optimal state can include a number of violated constraints. In this case the evaluation of the states according to the private preferences of an agent can be different from the evaluation of the states according to the global quality of states.
+     </paragraph>
+     <paragraph>
+      We note that the algorithms presented in Section 4 were originally designed for DisCSPs and have subsequently been adapted for solving DCOPs [7]. The problem is that even if the optimal state is reached, none of the agents will be aware of it. Since none of the agents are aware of the quality of the global state, the termination condition must be independent of the states' quality, for example, stopping after the algorithm performs a limited number of steps [7]. Moreover, the algorithm can only report the final state reached, not the state with the highest quality that it has explored.
+     </paragraph>
+     <paragraph>
+      We propose a framework, ALS_DCOP, that enhances DCOP local search algorithms with the anytime property. In the proposed framework, a spanning tree on the constraint graph is used, similar to ADOPT [4] and DPOP [5]. However, while ADOPT and DPOP require the use of a pseudo-tree in which every pair of constrained agents must be on the same branch in the tree, the only requirement in ALS_DCOP is that the tree is indeed a spanning tree on the constraint graph, i.e., every agent has a parent route to the root agent and all parents in the tree are neighbors of their children in the constraint graph. Thus, a Breadth First Search (BFS) tree on the constraint graph can be used.
+     </paragraph>
+     <paragraph>
+      A BFS-tree is a spanning tree (in this case it spans the constraints graph) that includes the shortest path from the root to each of the graph's nodes [43]. A BFS-tree can be generated efficiently using the following distributed procedure proposed in [26] for maintaining shortest routes in networks:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Each agent {a mathematical formula}Ai holds a private variable {a mathematical formula}δi which is initially set to ∞.
+      </list-item>
+      <list-item label="2.">
+       The root agent (e.g., agent with smallest index) sets {a mathematical formula}δroot to zero and sends to all its neighbors a message that includes this number (zero).
+      </list-item>
+      <list-item label="3.">
+       Each agent {a mathematical formula}Ai that receives a message with a number j, smaller than {a mathematical formula}δi, sets {a mathematical formula}δi←j+1, sets the agent it received the message from to be its parent in the tree, and sends messages with the new value of {a mathematical formula}δi to each of its other neighbors.
+      </list-item>
+      <list-item label="4.">
+       After h steps, every agent knows its parent in the BFS-tree with height h.
+      </list-item>
+      <list-item label="5.">
+       Another h steps are needed so that every agent knows its height in the tree (similarly, leaves send height zero to parents, etc.).
+      </list-item>
+      <list-item label="6.">
+       After 2h steps the BFS-tree is ready to be used by the algorithm.
+      </list-item>
+     </list>
+     <paragraph>
+      The BFS-tree structure is used in order to accumulate the costs of agents' assignments during the execution of the algorithm. Each agent calculates the cost of the sub-tree it is a root of in the BFS-tree and passes it to its parent. The root agent calculates the complete cost of each state and if some state is found to be the best state so far, propagates its step index to the rest of the agents. Each agent {a mathematical formula}Ai is required to hold its assignments in the last {a mathematical formula}h+di steps where {a mathematical formula}di is the length of the route of parents in the BFS-tree from {a mathematical formula}Ai to the root agent and is bounded by the height h of the BFS-tree.
+     </paragraph>
+     <paragraph>
+      Next, we describe in detail the actions agents perform in the ALS_DCOP framework regardless of the algorithm in use. These actions are also described by the pseudocode in Fig. 5. In the initialization phase, besides choosing a random value for the variable, agents initialize the parameters that are used by the framework (lines 1–10 in Fig. 5). The root initializes an extra integer variable to hold the cost of the best step (line 10). In order to find the best state out of m steps of the algorithm, {a mathematical formula}m+h steps are performed (notice that for each agent the sum of {a mathematical formula}hi and {a mathematical formula}di is equal to h, which is the height of the entire BFS-tree). This is required so that all the information needed for the root agent to calculate the cost of the m steps will reach it (line 11). In each step of the algorithm an agent collects from its children in the BFS-tree the calculation of the cost of the sub-tree of which they are the root (line 15). When it receives the costs for a step j from all its children, it adds its own cost for the state in step j and sends the result to its parent (line 17). When the root agent receives from all its children the costs of step j of the subtrees they are the roots of, it calculates the global state cost (lines 18–22). If it is better than the best state found so far, in the next step it will inform all its children that the state in step j is the best state found so far. Agents that are informed of the new best step store their value assignment from that step as the best assignment and propagate the step number that was found to be best to their children in the next step (lines 23–25). After every synchronous step the agents can delete the information stored about any of the steps that were not found to be the best and are not of the last {a mathematical formula}h+di steps (lines 28–29 in Fig. 5). When the local search algorithm is terminated, the agents must perform another h steps in which they do not replace their assignment to make sure that all the agents are aware of the same index of the best step (lines 31–36).
+     </paragraph>
+     <paragraph>
+      An example of the performance of the ALS_DCOP framework is presented in Figs. 6 to 8. To keep the example simple, we only demonstrate the accumulation of the cost of a complete assignment in a single step and the propagation of its index once it is found to be the best so far. The figures do not show that while the costs of the agents' states in step i are being accumulated, costs and indices of adjacent steps are also being passed by agents in the BFS-tree.
+     </paragraph>
+     <paragraph>
+      A DCOP in which the dashed lines connect neighbors in the constraint network and the arrows represent the BFS-tree arcs (each arrow is from parent to child) is presented on the left side of Fig. 6. The costs in the figure are the local (private) costs calculated for each agent in its state at step i. In the next step, all the leaf agents in the BFS-tree (agents 3, 4, and 5) send their local costs to their parents in the tree and the parents add their private costs to the costs they receive from their children. The resulting state is depicted on the right side of Fig. 6, in which agent 2 added the costs for step i it received from its children, agents 4 and 5, to its own local cost of step i and got a cost of 8 for step i. Agent 1 received the cost of agent 3 and added it to its own local cost but it still did not receive the cost for step i from agent 2. At the next step, agent 1 receives the cost of step i from agent 2 and can calculate the total cost of step i for the complete assignment (see the left side of Fig. 7). Since it is smaller than the best cost achieved so far, agent 1 updates the new best cost to be 15 and in the next step sends a notification about a new best step in its messages to its children in the BFS-tree (see the right side of Fig. 7). In the next step (Fig. 8), the rest of the agents receive the notification that they should preserve the assignment they held in step i. Since the height of the BFS-tree is 2, the process of accumulating the cost of step i by the root agent and the propagation of the information that was found to be the best step took 4 steps.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Properties of the ALS_DCOP framework
+     </section-title>
+     <paragraph>
+      ALS_DCOP is a framework for implementing local search algorithms for DCOPs. Regardless of the algorithm being used, the ALS_DCOP framework offers properties that ensure preservation of the algorithm's behavior.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Anytime property
+      </section-title>
+      <paragraph>
+       The main goal of the ALS_DCOP framework is to enhance a distributed local search algorithm with the anytime property (i.e., that the cost of the solution held by the algorithm at the end of the run would monotonically decrease if the algorithm is allowed to run for additional steps [25]). In order to prove that ALS_DCOP is an anytime framework for distributed local search algorithms, we first prove the following lemma:
+      </paragraph>
+      <paragraph label="Lemma 1">
+       At the{a mathematical formula}i+hstep, the root agent holds all the needed information for calculating the quality of the assignment held by the agents in step i.
+      </paragraph>
+      <paragraph label="Proof">
+       We prove by induction on the height of the tree h. If {a mathematical formula}h=0, the root is the only agent in the system and thus it holds all the relevant information. For {a mathematical formula}h&gt;0, assume the lemma holds for every tree of height less than h. After {a mathematical formula}i+h−1 steps, according to the assumption, all the children of h hold all the information needed to compute the costs of the sub-tree that they are the roots of. In step {a mathematical formula}i+h, the root agent will receive these costs and it will be able to add its own private cost for step i to the sum of the costs of all the other agents in the DCOP in step i. □
+      </paragraph>
+      <paragraph>
+       Next, we prove that at the end of the run (after {a mathematical formula}m+2h steps) the best assignments held by all agents are value assignments that they held in the same step during the algorithm run.
+      </paragraph>
+      <paragraph label="Lemma 2">
+       When the algorithm terminates after{a mathematical formula}m+2hsteps, all the assignments of the best state held by all the agents in the system were the values they assigned to their variables in the same step (in other words the best_step for all agents is equal).
+      </paragraph>
+      <paragraph label="Proof">
+       According to Lemma 1, after {a mathematical formula}m+h steps of the algorithm, the root agent holds the index of the best step in the first m steps of the algorithm. In the final h steps only messages including the best_step are passed. Since no new best_step is found by the root in these steps and h steps are enough for all the agents in the BFS-tree to receive a new best_step, then even if a best_step was found in the mth step of the algorithm, its propagation is completed.  □
+      </paragraph>
+      <paragraph>
+       Now we are ready to state the main theorem:
+      </paragraph>
+      <paragraph label="Theorem 1">
+       The ALS_DCOP framework is anytime, i.e., when it runs for{a mathematical formula}m+2hsteps it reports the best state among the first m steps.
+      </paragraph>
+      <paragraph label="Proof">
+       This follows directly from Lemma 1, Lemma 2. h steps after each step is performed, the root agent holds the information needed to evaluate its global quality (the aggregated cost) and can propagate its index to all other agents in case it is the best. Since we require that agents hold the value assignments of the last {a mathematical formula}h+di steps (where {a mathematical formula}di is the length in a route of parents of an agent from the root and is at most h, see Section 5), they can get the update on the index of the best step before they delete the relevant assignment and hold it until they receive another update. Thus, after {a mathematical formula}m+h steps, the root agent holds the index of the step with the best state among the first m steps and, according to Lemma 2, at the end of the algorithm run, all agents hold the value assignment of the step that was found by the root to be the best. If the algorithm is run for an additional k steps (i.e., the termination condition is met after {a mathematical formula}m+k+2h steps), in the k steps performed after the first m steps either a better solution is found or the same solution that was found best in the first m steps is reported.  □
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Performance analysis
+      </section-title>
+      <paragraph>
+       Distributed algorithms are commonly measured in terms of time for completion and network load. Time in a synchronous system is counted by the number of synchronous steps, and network load by the total number of messages sent by agents during the algorithm run [44]. When considering a local search algorithm for DCOPs, since it is not complete and the agents cannot determine that they are in an optimal state, the time for termination is predefined, i.e., we select in advance the number of steps that we intend to run the algorithm for. However, we note that in the proposed framework, in order to get the best state among m steps the algorithm needs to run for {a mathematical formula}m+2h steps. However, the tree that is used by ALS_DCOP has different requirements than the pseudo-trees that are used by complete algorithms (such as ADOPT and DPOP). In a pseudo-tree that is used in complete algorithms, constrained agents must be on the same parent route (in every binary constraint, one of the constrained agents is an ancestor of the other). This requirement makes the pseudo-tree less effective when the constraint graph is dense. In contrast, the only requirement in ALS_DCOP is that every agent has a parent route to the root agent, allowing us to use a BFS-tree. Since a BFS-tree includes a shortest route from each node to the root, the height of the resulting tree (especially when the constraint graph is dense) is expected to be small. In our experimental study we demonstrate that starting from very low density parameters the height of the BFS-tree for randomly-generated problems is logarithmic in the number of agents.
+      </paragraph>
+      <paragraph>
+       In terms of network load, the ALS_DCOP framework does not require any additional messages. In standard local search algorithms (such as DSA and DBA), agents at each step send at least one message to each of their neighbors. The ALS_DCOP framework does not require more. The additional information that agents add to messages is constant (costs or best step indices).
+      </paragraph>
+      <paragraph>
+       In terms of space, an agent i is required to hold the value assignments of the last {a mathematical formula}h+di steps (again, {a mathematical formula}di is the distance in tree edges of an agent from the root) and to hold the cost of its own state and probably of its neighbors in the last {a mathematical formula}hi steps (where {a mathematical formula}hi is the height of the agent in the BFS-tree). This results in a {a mathematical formula}O(h) additional space (linear in the number of agents the worst case, logarithmic in practice) requirement for each agent.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Privacy of ALS_DCOP
+      </section-title>
+      <paragraph>
+       Local search algorithms require different amounts of information to be passed between the agents. In DSA, only the assignments are passed by agents to neighboring agents, while in DBA, agents also pass their proposed reduction to the cost of the current state. ALS_DCOP requires, in addition, that each agent will pass the cost of a state in the sub-tree of which it is the root. As in other algorithms that use a tree (such as ADOPT and DPOP), the main problem with privacy in ALS_DCOP concerns the information passed by leaves in the tree to their parents [45].
+      </paragraph>
+      <paragraph>
+       When a non-leaf agent {a mathematical formula}Aj passes the cost of its sub-tree to its parent, the parent does not know how many children {a mathematical formula}Aj has and the contribution of each of these agents to the reported cost. On the other hand, when a leaf agent reports a cost, its parent knows that it is the cost of a single agent (the leaf itself). However, agents are not aware of the system's topology except for their own neighbors. So in fact, even though the parent of a leaf receives its cost in every step of the algorithm, the parent does not know how many neighbors its leaf child has in the constraint network and which constraints were violated; therefore the privacy violation is minor.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Exploration heuristics
+     </section-title>
+     <paragraph>
+      The standard use of local search algorithms for DisCSPs and DCOPs prior to the proposal of the ALS_DCOP framework includes running an algorithm for some number of steps (m) and reporting the complete assignment (solution) held by the agents after the mth step. This use of the algorithm favored exploitive algorithms such as MGM and DSA over explorative algorithms like DBA [7].
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Exploration in existing incomplete algorithms
+      </section-title>
+      <paragraph>
+       MGM is quintessentially exploitive: it is a monotonic algorithm that implements distributed hill climbing and converges to a local minimum without exploration. Its successors MGM-2, DALO and K-opt [15], [21] are similarly monotonic.
+      </paragraph>
+      <paragraph>
+       DSA also implements distributed hill climbing and so is exploitive by design, but it is not monotonic because simultaneous updates by constrained agents may result in an increase in cost. With an appropriately selected probability for replacing an assignment by the agents (parameter p), the algorithm performs mostly exploitive (very limited exploration) and converges quickly [7]. However, as long as {a mathematical formula}p&lt;1, DSA will converge to a local minimum in finite time, although it may take impractically long if p is set to be too great.
+      </paragraph>
+      <paragraph>
+       Agents in DSAN perform biased random walks by randomly choosing new value assignments and always adopting cost-decreasing changes while adopting cost-increasing changes with a probability that decreases over time. After a period of initial exploration, DSAN eventually converges to a local minimum.
+      </paragraph>
+      <paragraph>
+       Penalty-driven approaches like DBA and DisPeL modify the cost structure that the agents reason over by adding penalties when they can no longer reduce their local costs. DBA adds these penalties to constraints, while DisPeL adds them to values (i.e., unary constraints); the penalties eventually cause the agents to shift to different value assignments, thereby escaping the local minima. However, the subsequent local minima according to the modified cost structure that the algorithms converge to may not be local minima in the problem. This is a more radical form of exploration which may not converge.
+      </paragraph>
+      <paragraph>
+       In contrast to the existing local search algorithms whose levels of exploitation and exploration depend on their search strategies, Max-Sum performs a completely exploitive search strategy, always propagating the best costs and selecting the best assignment, but it is still not guaranteed to converge [8], [46]. When it fails to converge it acts exploitively but actually explores low quality states.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Innovative exploration methods
+      </section-title>
+      <paragraph>
+       The ALS_DCOP framework allows the selection of the best solution traversed by the algorithm and thus can encourage the use of explorative methods. We propose both algorithm-specific and algorithm-independent heuristics implementing different approaches towards exploration.
+      </paragraph>
+      <section label="7.2.1">
+       <section-title>
+        Algorithm-specific exploration heuristics
+       </section-title>
+       <paragraph>
+        The algorithm-specific heuristics that we propose extend DSA and DBA.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The first heuristic type we propose combines two exploration strategies that were found to be successful in previous studies. The first is a periodic increase in the level of exploration for a small number of steps. This approach was found to be successful for the DCOP model proposed for mobile sensing agent teams DCOP_MST [19]. The second is periodically restarting, which in the case of local search methods results in a periodic selection of a random assignment. The random-restart strategy is commonly used in constraint programming methods, e.g., [47]. We incorporated this strategy with the DSA-C version of DSA. In DSA-C, an agent replaces its assignment with probability p (in our experiments we used {a mathematical formula}p=0.4) if its best alternative value assignment does not increase the cost of its current assignment. In the proposed heuristic, every k steps the probability of replacing an assignment is increased from p to {a mathematical formula}p⁎ for {a mathematical formula}k⁎ steps. In order to combine the restart strategy, every r steps agents select a random assignment. In our experiments we used two combinations of the parameters k, {a mathematical formula}k⁎, p, {a mathematical formula}p⁎, and r, which were found to be most successful. We refer to it as DSA-PPIRA. PPIRA stands for Periodic Probability Increase and Random Assignments.
+        </list-item>
+        <list-item label="•">
+         Our experimental study includes a justification for the use of the slope-dependent formula, which allows reasoning between the selection of multiple options of replacement probability, as opposed to a constant probability.
+        </list-item>
+        <list-item label="•">
+         The third approach stems from the DBA algorithm. We extend the possibilities for agents to break out of a quasi-local optima. However, we avoid the weaknesses of the DBA algorithm that made it inferior to DSA. While DBA is more explorative than other existing algorithms, its breakout mechanism changes the problem permanently. Thus, in many cases, after a few quasi-local optima are detected from which agents break out by increasing the weights of violated constraints they are involved in, the search space has changed so much that the states traversed by DBA are of low quality. We propose two alternative breakout methods. In the first, an agent detecting a quasi-local optima selects a random value assignment for its variable. We call this method Distributed Random Breakout (DRB). This method attempts to replicate the success of random-restart methods that was reported in the case of centralized algorithms for solving constraint problems [47]. In the second proposed method we use the best value assignment found during the search from the agent's point of view. When the agent detects a quasi-local optimum it replaces its value assignment with this best value. Here we implement an approach of balancing exploration with exploitation of knowledge that was accumulated during search [9]. While the best assignment previously found may not be compatible with the current state of the other agents, it has evident potential to be part of a successful solution. We call this method Distributed Breakout_Best Assignment Retrieval (DB_BAR).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.2.2">
+       <section-title>
+        Algorithm-independent exploration heuristics
+       </section-title>
+       <paragraph>
+        We propose a Random Restart algorithm-independent heuristic to demonstrate the general ability of the ALS_DCOP framework to facilitate exploration in incomplete DCOP algorithms. In Random Restart exploration, the agents occasionally alter execution of their algorithm as if starting anew; this involves clearing any accumulated state and choosing a new, random assignment. Random Restart is well-suited for problems where the quality of local minima are heavily dependent on the starting assignment and where there are relatively many starting locations that can lead to low-cost solutions.
+       </paragraph>
+       <paragraph>
+        We consider two techniques to determine when to initiate exploration. The first triggers exploration after a fixed period of time, similar to the approach that we used in DSA-PPIRA and DSA-SDP. The second is to trigger exploration only when the search has converged to a local minimum, similar to the approach used with DRB. Detecting convergence can be achieved very naturally in ALS_DCOP because the root computes the total, global cost of solutions. We adopt a simple threshold-based convergence detector that decides that a local minimum has been reached when the computed global cost does not change for a number of steps T. When convergence has been detected, the root sends a Restart message to all of its children, who in turn propagate it to their children and so on. The Restart message instructs agents to randomly restart at the time when all agents receive the message; this is h steps after convergence is detected, where h is the height of the ALS tree. This guarantees that the exploration occurs simultaneously for all agents.
+       </paragraph>
+       <paragraph>
+        Random restart (and other algorithm-independent exploration heuristics) can be also incorporated into DCOP algorithms in an ad hoc fashion; for example, DSA_PPIRA and DRB both make use of random restarts. The goal here, however, is to consider how such heuristics can leverage the ALS_DCOP framework to add exploration in a way that is independent of the specific DCOP algorithm being used.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      In order to demonstrate the impact of the ALS_DCOP framework on distributed local search, we present a set of experiments that shows the effect of the proposed framework when combined with intensive exploration methods. We evaluate these methods on three different types of problems: unstructured random problems, structured graph-coloring problems, and realistic meeting-scheduling problems. Except where otherwise noted, each data point represents the average over 50 independently generated problems.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Unstructured random problems
+      </section-title>
+      <paragraph>
+       The unstructured, uniformly random problems in our experiments were minimization random binary DCOPs in which each agent holds a single variable. The network of constraints in a problem was generated randomly by adding a constraint for each pair of agents/variables independently with probability {a mathematical formula}p1. The cost of any pair of assignments of values to a constrained pair of variables was selected uniformly at random from a finite, discrete range. Such uniformly random DCOPs with n variables, k values in each domain, a constraint density of {a mathematical formula}p1, and a bounded range of costs/utilities, are commonly used in experimental evaluations of centralized and distributed algorithms for solving constraint optimization problems (e.g., [14]). In our experiments we considered problems with {a mathematical formula}n=120 agents, {a mathematical formula}k=10 values in each domain, and costs chosen from the range {a mathematical formula}{1,2,…,10}.
+      </paragraph>
+      <section label="8.1.1">
+       <section-title>
+        BFS vs. DFS spanning trees
+       </section-title>
+       <paragraph>
+        Our first set of experiments demonstrates the benefit of using a BFS-tree within the proposed framework. We generated 10 000 uniformly random problem instances for each value of {a mathematical formula}p1 from 0.005 to 0.1 in increments of 0.005. For each problem instance we computed both breadth-first search and depth-first search spanning trees to find the connected components of the constraint network. Because the overhead of the ALS_DCOP framework is determined by the height of the tallest tree, for each problem instance we recorded the maximum tree height and averaged this maximum height across all 10 000 problem instances with the same {a mathematical formula}p1 value. The results are shown in Fig. 9. The average number of connected components for each density is also shown using columns plotted on the secondary y-axis.
+       </paragraph>
+       <paragraph>
+        DFS and BFS find trees of similar maximum heights when {a mathematical formula}p1=0.005 because the constraint graph is very sparse and most of the components have only a single agent; on average the tallest trees for both approaches have height of 4.4. As {a mathematical formula}p1 increases the number of components drops rapidly. The average height of the tallest BFS-tree increases as the components become larger, peaking just under 12 for {a mathematical formula}p1=0.015. The average height of the tallest BFS-trees then decreases as {a mathematical formula}p1 increases further, averaging under 6 for {a mathematical formula}p1=0.035 (when there are fewer than 3 components on average), below 4 for {a mathematical formula}p1=0.065 (when there are only a 1.0398 components on average), and continuing to decline to an average maximum height of 3.0347 for {a mathematical formula}p1=0.1. This shows that when the constraint density is sufficiently high enough for there to be a single connected component, BFS tends to find trees that have only logarithmic height.
+       </paragraph>
+       <paragraph>
+        In contrast, the average height of the tallest DFS-trees continues to increase with the constraint density. Indeed, when {a mathematical formula}p1=0.04, the tallest DFS-tree averages a height of more than 83, and out of the 10 000 randomly generated instances the tallest DFS-tree was never shorter than 63. The reason is that as the constraint graphs become denser, DFS is less likely to have to backtrack, resulting in taller trees. This is consistent with known results from random graph theory. For example Pósa [49] found that for a sufficiently large, finite constant c, the probability that random graphs with {a mathematical formula}p1=clog(n)/n are Hamiltonian tends to 1 as n goes to infinity, and hence DFS may find a tree of height {a mathematical formula}n−1. It is true that other, shorter DFS-trees may also exist and that ordering heuristics (which we did not consider here) may help in finding shorter DFS trees. However, a DFS-tree starting from a given root will never be shorter than a BFS-tree starting from the same root, and no ordering heuristic is needed for the BFS. The simplicity of BFS and the superiority of its generally logarithmic-height trees make it clearly preferable for use in the ALS_DCOP framework.
+       </paragraph>
+      </section>
+      <section label="8.1.2">
+       <section-title>
+        Sparse unstructured problems
+       </section-title>
+       <paragraph>
+        Our next set of experiments compared the performance of local search algorithms on sparse, unstructured random DCOPs with constraint density {a mathematical formula}p1=0.1. Fig. 10 presents the average cost in each step of the states found by the existing incomplete DCOP algorithms Max-Sum, DBA, MGM, and DSA. The curve of the average costs for each algorithm is labeled on the right by the name of the algorithm. We also present the average anytime costs of the best state found prior to each step for Max-Sum and DBA, as maintained by the ALS_DCOP mechanism; these are the curves labeled “Max-Sum Anytime” and “DBA Anytime,” respectively.
+       </paragraph>
+       <paragraph>
+        Both DSA and MGM, being exploitive algorithms, produce smooth curves that decrease before converging. Their exploitive natures are verified by their anytime costs (not shown), which are very similar to the standard results depicted. MGM's standard cost curve and anytime cost curve match exactly, because in a monotonic algorithm the best solution found is also the most recent solution found. The two curves do not match exactly for DSA but the differences are not statistically significant. Neither algorithm performs significant exploration.
+       </paragraph>
+       <paragraph>
+        In contrast, both Max-Sum and DBA perform considerable exploration after an initial period of exploitation, as can be seen by their step-by-step costs first decreasing smoothly (exploitation), then increasing and decreasing (exploration). By comparing the current-state costs with the anytime costs, it is clear that ALS_DCOP allows them to find significantly better solutions, but these solutions are still of lower quality than those produced by MGM and DSA. One interesting observation is that while exploring, the average anytime cost at a step is better than the best average cost of the preceding steps. This is because different runs of the algorithms find higher-quality solutions in different steps. These lower- and higher-quality solutions offset each other in the average cost, but the average anytime cost aggregates the best solutions found in all previous steps preventing this offsetting; each time a run of an algorithm finds a better solution, the average anytime cost improves.
+       </paragraph>
+       <paragraph>
+        Fig. 11 presents the results of DSA combined with the exploration methods proposed in this paper, PPIRA and SDP. We used two versions of the PPIRA method in our experiments that were found to be successful in parameter sensitivity checks. In DSA-PPIRA-1, every 15 steps ({a mathematical formula}k=15) the probability of replacing an assignment was increased from {a mathematical formula}p=0.4 to {a mathematical formula}p⁎=0.8 for {a mathematical formula}k⁎=5 steps. Random assignment selections were performed by the agents every {a mathematical formula}r=35 steps. In DSA-PPIRA-2, the parameters were {a mathematical formula}k=8, {a mathematical formula}k⁎=5, {a mathematical formula}p=0.4, {a mathematical formula}p⁎=0.9, and {a mathematical formula}r=50. PPIRA-1 is more frequent in its random selections while PPIRA-2 is more frequent in its probability increases. DSA-SDP is described in detail in Section 7. The parameters of the algorithm in all our experiments were set to {a mathematical formula}pA=0.6, {a mathematical formula}pB=0.15, {a mathematical formula}pC=0.4, {a mathematical formula}pD=0.8. Later in this section we present experiments that justify the use of the slope-dependent formulas.
+       </paragraph>
+       <paragraph>
+        It is quite clear that the trends in the graphs in Fig. 10 and Fig. 11 are very different. The successful existing algorithms are exploitive. On the other hand, it is apparent that the versions of the DSA algorithm we proposed (and presented in Fig. 11) perform intensive exploration.
+       </paragraph>
+       <paragraph>
+        Fig. 12 presents the anytime results for DSA, DSAN, DSA-PPIRA-1, DSA-PPIRA-2, and DSA-SDP on the random setup presented in Fig. 11. Although DSA converges more quickly than DSAN, it finds solutions of lower quality. This is expected because DSAN initially explores (so it does not converge as quickly to a local minimum) but that exploration allows it to possibly find better local minima. The three exploration heuristics that we combine with DSA outperform both DSA and DSAN while retaining the fast convergence of DSA. Among the PPIRA methods, it is apparent that PPIRA-2, which is the version that performs more frequent probability increases, is the version that performs better. Both of them are outperformed by the SDP method.
+       </paragraph>
+       <paragraph>
+        Fig. 13 presents the anytime results for penalty-based algorithms solving the same problems as in Fig. 11, Fig. 12. MGM, MGM-2, DisPeL, and DBA are the existing algorithms while DRB and DB_BAR are the versions of the algorithm we propose in Section 7. The two variants of the algorithm we propose outperform the existing DBA-family of algorithms. DisPeL ultimately finds solutions of lower cost than DB_BAR, and of statistically similar costs as DRB. However, it is interesting to note that these three algorithms have very different convergence profiles: DB_BAR finds lower-cost solutions very quickly while DRB finds them somewhat more slowly but ultimately finds better solutions. This is an example of the classic tradeoff between exploitive selection during the breakout procedure (DB_BAR) and the explorative, random selection of DRB. DisPeL takes the longest, partly due to the costly overhead of forming its tree, which has considerably greater height than the anytime tree.
+       </paragraph>
+       <paragraph>
+        Fig. 14 presents the anytime results for the best performing existing algorithms (DisPeL and DSAN) and proposed algorithms (DRB and DSA-SDP) of the penalty-driven and DSA families of algorithms. DSAN converges much more quickly than DisPeL and DRB but finds a solution of ultimately lower quality. However, it is clear that the most successful algorithm is DSA-SDP.
+       </paragraph>
+      </section>
+      <section label="8.1.3">
+       <section-title>
+        Dense unstructured problems
+       </section-title>
+       <paragraph>
+        Similar results are presented in Fig. 15, Fig. 16, Fig. 17 for the same algorithms solving dense problems ({a mathematical formula}p1=0.6). The relative performance of the DSA variants were similar to that in the sparse problems, with DSA-SDP finding the lowest cost solutions, but on denser problems DSAN did no better than DSA, despite taking longer to converge. Among the penalty-driven approaches, DRB and DB_BAR produced similar results to each other and outperformed the other algorithms. On these denser problems convergence was especially problematic for DisPeL, which took hundreds of steps to build its tree, and MGM-2, which was not even able to find a solution of equal quality to that found by MGM before termination. It is interesting that in this case the DSA approaches were superior, as seen in Fig. 17: the best penalty-driven approach, DRB, only matched the solution quality found by DSAN (and hence DSA), and DSA-SDP found solutions of significantly lower cost than all other algorithms.
+       </paragraph>
+      </section>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Graph coloring problems
+      </section-title>
+      <paragraph>
+       In the next set of experiments the algorithms solved graph coloring problems, also with 120 agents. The number of colors in the problem (i.e., the domain size) was 3 and the density parameter {a mathematical formula}p1=0.05. As in standard graph coloring problems, we set the cost of each broken constraint (two adjacent variables with the same color) to one. These problems are known to be hard Max-CSP problems, i.e., beyond the phase transition between solvable and non-solvable problems [50].
+      </paragraph>
+      <paragraph>
+       For this set of experiments we maintain the three graph presentation of DSA variants, penalty-driven variants, and the best of our proposed approaches in comparison with the best existing algorithms. Fig. 18, Fig. 19, Fig. 20, respectively, depict these three graphs. For the DSA versions the performance of our proposed algorithms preserved the same trend observed for random DCOPs, DSAN found solutions that were not statistically significantly worse than DSA-SDP. This strong performance by DSAN is due to the anytime property, as we show in Section 8.5.1. The DSA-SDP version still dominated the other DSA variants, with a more apparent advantage over the other versions than with the dense, unstructured problems. We expand on this advantage of DSA-SDP later in this section.
+      </paragraph>
+      <paragraph>
+       In contrast to the results on random problems, the results of the penalty-driven variants when solving graph coloring problems reveal a clear advantage for DBA. Surprisingly, our two proposed variants perform the worst, finding worse solutions than even MGM. This suggests that there is considerable room for exploitation in graph coloring. However, there is also a need for exploration to find low cost solutions, as evidenced by DisPeL and DBA outperforming the strictly exploitative MGM and MGM-2. The best algorithm found for graph coloring problems as for random problems was DSA-SDP (see Fig. 20), converging faster than DBA and also finding solutions of better quality (although the trend suggests that DBA may be able to possibly find better solutions if given enough time).
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Meeting Scheduling Problems
+      </section-title>
+      <paragraph>
+       The next set of experiments was performed on realistic Meeting Scheduling Problems (MSPs) [51], [52], [53]. The meeting scheduling problem includes n agents that are trying to schedule m meetings. Each meeting {a mathematical formula}mi has {a mathematical formula}ki⩽n specific agents that are intended to attend it. In addition, for every two meetings we randomly selected a travel time that is required to get from the location of one meeting to the other. When the difference between the time-slots of two meetings with overlapping participants was less than the travel time, a scheduling conflict occurred for the overbooked agents who are scheduled to participate in both meetings. Constraints define the cost of scheduling conflicts and the agent's preferences for meetings being scheduled at each time. We designed the problem as a minimization problem. Thus, a scheduling conflict incurs a cost equal to the number of overbooked agents in the two meetings, and preferences for meeting times are represented by giving higher costs to meetings at less preferred times. The setup in this experiment included 90 agents and 20 meetings. There were 20 available time-slots for each meeting. The travel times between meetings were selected randomly between 6 and 10.
+      </paragraph>
+      <paragraph>
+       The results in Fig. 21 show that our proposed heuristics outperform DSA and DSAN, and the differences between our algorithms are negligible. Fig. 22 shows that in contrast to the graph coloring problems, DRB does very well in solving meeting scheduling problems. It is interesting to note that, like with graph coloring, exploration and exploitation both work well on meeting scheduling, as shown by the second-best penalty-driven approaches being DisPeL and MGM-2. However, DBA is not able to strike the right balance for these problem types and finds much worse solutions. Fig. 23 shows that DSA-SDP ultimately finds very similar solutions to DRB, but converges to low-cost solutions much more quickly.
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Algorithm-independent heuristic
+      </section-title>
+      <paragraph>
+       Our next set of experiments tested the Random Restart algorithm-independent heuristic. To measure its effectiveness, we considered the improvement in the cost of the solution ultimately found relative to the cost of the standard solution found without the ALS_DCOP framework. We compared this improvement to that achieved with only the anytime framework and without the algorithm-independent heuristic. We used a threshold of {a mathematical formula}T=40 steps to detect convergence for convergent exploration, and a period of 80 steps for periodic exploration.
+      </paragraph>
+      <paragraph>
+       Fig. 24 shows the improvement in cost for the random restart heuristic on sparse, unstructured random problems ({a mathematical formula}p1=0.1). Convergent random restart can be seen to provide the same or better improvement than the anytime framework without additional exploration. It yields the same improvement in cost as the anytime framework for our proposed DSA variants, all variants of DBA, and Max-Sum. This is because these algorithms perform a considerable amount of exploration already, and hence convergence is not detected and the random restart exploration is never triggered. In contrast, the algorithms that are monotonic or nearly-monotonic on these problems (DSA, DSAN, MGM, and MGM-2) show no improvement in cost from the ALS_DCOP framework because they are already anytime. When the algorithm converges quickly (DSA, DSAN, and MGM), convergent random restart improves performance by allowing it to sample multiple local minima over the course of execution and choose the one with lowest cost. When it converges slowly (MGM-2) convergent random restart has little or no effect because there are correspondingly fewer opportunities for it to trigger exploration.
+      </paragraph>
+      <paragraph>
+       In contrast to the “safe” amounts of exploration provided by convergent random restart, periodic random restart can have negative effects on the quality of the solution found, indicated by smaller improvement than with the anytime framework. In extreme examples (MGM-2 and DisPeL), periodic random restart even worsens performance relative to the original algorithm without ALS_DCOP at all. This is because it forces exploration without considering the local state of the algorithm. For the slowly-converging algorithms like MGM-2 and DisPeL, this means that they are interrupted before being able to converge, thus worsening performance. It is also harmful to algorithms like DSA-SDP or DRB that already perform algorithm-specific exploration. It is helpful for rapidly-converging monotonic algorithms like DSA and MGM, but not significantly more so than convergent random restart.
+      </paragraph>
+      <paragraph>
+       Fig. 25 shows the improvement in costs on dense unstructured problems ({a mathematical formula}p1=0.6). The results are broadly similar to those for the sparse problems, except that periodic random restarts lead to worse solution quality for a wider range of algorithms, including DBA, DBA_BAR, and MGM in addition to MGM-2 and DisPeL. In addition, it worsens the performance of DRB and DisPeL more than it did in the sparse problems. This occurs because convergence in dense problems is slower than in sparse problems, as suggested from a comparison of Fig. 13, Fig. 16. By interrupting the local search algorithms before they can converge to a local minimum, the random restart heuristic increases solution cost.
+      </paragraph>
+      <paragraph>
+       Fig. 26 shows the improvement in costs on graph coloring problems. The results are broadly similar to those for the unstructured problems, although MGM-2 and DisPeL both converge quickly enough that both convergent random restart and periodic random restart provide improvement. A notable difference from the results with unstructured problems is that periodic random restart greatly improves the solution found by DBA_BAR. This is likely because DBA_BAR gets trapped in cycles on graph coloring problems, with agents reaching quasi-local minima and reverting to their best previously value assignment. Because it is a cycle, costs do not converge and hence convergent random restart shows no effect, but periodic random restart is able to allow the algorithm to explore other regions of the search space, leading to improved performance.
+      </paragraph>
+      <paragraph>
+       The results on the meeting scheduling problems are shown in Fig. 27. These are qualitatively similar to those for the graph coloring problems.
+      </paragraph>
+     </section>
+     <section label="8.5">
+      <section-title>
+       Analysis
+      </section-title>
+      <section label="8.5.1">
+       <section-title>
+        Statistical significance
+       </section-title>
+       <paragraph>
+        In order to validate the statistical significance of the presented results we ran a paired difference test (t-test) comparing the standard results of the algorithms with their anytime results obtained via the framework proposed in this paper. The results are presented in Table 1, Table 2. For each problem type and algorithm there is a ‘+’ sign if the difference between the anytime results and the standard results were found to be significant (p-value ⩽0.01) and a ‘−’ sign if not. The results of the statistical significance checks were conclusive. The anytime solution cost was found to be significantly better than the standard result for every explorative algorithm on every type of problem. On the other hand, the differences for the monotonic algorithms (MGM, MGM-2 and DSA) were not found to be significant.
+       </paragraph>
+       <paragraph>
+        DSAN and DisPeL occupied a middle ground. For DSAN, the average anytime costs were only significantly better for the graph coloring problems, but as seen in Fig. 18, this is exactly the case where DSAN found very good solutions comparable to DSA-SDP. It seems that in graph coloring, the exploration performed by DSAN is helpful for finding good states that have lower cost than those to which DSAN eventually converges. On other problem types, DSAN did not use the anytime framework to improve solution quality. In contrast, DisPeL utilized the anytime mechanism to achieve significantly better results through exploration on the sparse unstructured, graph coloring, and meeting scheduling problems, while on dense unstructured problems its exploration was able to generally guide its search toward improving solutions to the extent that the anytime framework did not significantly improve the solution quality. These results emphasize the strong relation between the anytime property and explorative search methods.
+       </paragraph>
+      </section>
+      <section label="8.5.2">
+       <section-title>
+        Comparison with optimal
+       </section-title>
+       <paragraph>
+        In order to evaluate the relation between the quality of the solutions produced by our proposed methods and the optimal solution, we performed an experiment on a much smaller problem scenario in which we were able to find the optimal solutions using an exhaustive search algorithm. Fig. 28, Fig. 29 include experiments on random problems with 10 agents. To avoid multiple components, we chose higher constraint densities than in the experiments performed on larger random problems. The explorative heuristics proposed in this paper outperformed the existing monotonic algorithms and in fact found solutions very close to global optima most of the time. This was particularly true of DRB which converged faster and ultimately found better solutions even than DSA-SDP.
+       </paragraph>
+       <paragraph>
+        It is interesting to note that DRB was able to converge to near-optimal solutions faster on the denser problems than it was on the sparser problems. In these cases the quasi-local optima are likely to involve most if not all of the agents. However, it is clear that the quality of the quasi-local optima that are reached depends heavily on the initial conditions, because the exploration of DRB upon reaching quasi-local optima leads to far better solutions than the purely monotonic MGM. DRB also outperformed MGM-2, which converges to provably better solutions than MGM, and due to MGM-2's extremely slow rate of improvement, it is not even clear if it would have eventually converged to the globally optimal solution.
+       </paragraph>
+      </section>
+      <section label="8.5.3">
+       <section-title>
+        Examination of DSA-SDP
+       </section-title>
+       <paragraph>
+        Our experiments demonstrate that DSA-SDP consistently does as well as or better than the other existing and proposed algorithms across all large problem scenarios. Thus, we present a set of experiments that investigate this success. The DSA-SDP algorithm implements two key innovations. First, the probability of an agent updating its value is dependent on the magnitude of the local-cost change. Second, when an agent cannot improve its local cost, it periodically chooses the next-best value stochastically, so that in most cases only a subset of the agents make such changes at once. This is in contrast to DSA-PPIRA, in which all agents periodically choose a random value (and hence may increase their local costs), or DSAN, in which agents always (not periodically) make a stochastic choice to increase their local cost if that is their best alternative. The following set of experiments investigated the importance of the combination of these two ideas in DSA-SDP.
+       </paragraph>
+       <paragraph>
+        Fig. 30 presents the results of DSA-SDP solving random problems with density {a mathematical formula}p1=0.1 with a small change. The decision whether to change to a non-improving value assignment every 40 steps of the algorithm was performed with a constant probability q. This experiment reveals that the algorithm is most successful when {a mathematical formula}q=0.6. Fig. 31 presents a comparison of DSA-SDP with versions of the algorithm in which {a mathematical formula}q=0.6 and the parameter p, for deciding whether to replace a value assignment with a value that is at least as good, was fixed as in standard DSA. The results demonstrate that on random uniform problems, fixed probabilities for both decisions are enough to produce similar results to the results we obtain when using DSA-SDP.
+       </paragraph>
+       <paragraph>
+        On the other hand, Fig. 32, Fig. 33 present the results of DSA and DSA-SDP in comparison with the DSA version with constant probability for periodically selecting a non-improving value assignment, which was found most successful in the experiments presented in Fig. 31 (termed DSA-constant in these figures). The results demonstrate that the DSA-constant version (that was found most successful for uniform problems) performs poorly on structured and realistic problems. On the other hand, the DSA-SDP algorithm performs well on all the problem scenarios used in our experiments. Thus, the slope-dependent approach for stochastic decisions, which we introduced in DSA-SDP, is apparently sensitive to the problem structure.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      While most of the graphs we present in Section 8 compare the different exploration heuristics we propose in Section 7, the most important contribution in this study is the significant improvement when combining explorative algorithms with the proposed anytime framework. All graphs presenting the anytime results show monotonic improvement in contrast to the standard results (as depicted in Fig. 11, for example). This improvement over the standard results can be seen in Fig. 24, Fig. 25, Fig. 26, Fig. 27, and the significance of this improvement was validated in the results presented in Table 1, Table 2.
+     </paragraph>
+     <paragraph>
+      The explorative heuristics we proposed in this study share a common property. They all behave in an exploitive manner with bursts of explorative actions. In the methods combined with DSA, these explorative bursts are periodic. In the methods combined with DBA, the bursts are triggered by a local identification of idleness. The algorithm-independent exploration heuristics allow either type of triggering. The results show dominance of methods combined with DSA over methods combined with DBA, and dominance of algorithm-specific exploration over algorithm-independent exploration. These advantages are more apparent when solving random, unstructured problems. It seems that the local idleness detection (of quasi-local minima) performed by DBA algorithms is more effective in problems with structure.
+     </paragraph>
+     <paragraph>
+      Among the DSA versions, the DSA-SDP algorithm dominated in most problem scenarios and was consistently a strong performer. Our investigation of this algorithm revealed that for specific problems it is possible to use constant probabilities for making the same decisions made by agents in DSA-SDP, i.e., the decisions on whether to replace a value assignment for the best alternative or to periodically change to a non-improving value assignment. However, fixed probabilities tuned for a specific problem type can result in arbitrarily bad performance when solving problems of different types. On the other hand, the decisions made by DSA-SDP that are dependent on the potential for improvement by replacing value assignments are robust over all the problem scenarios we have experimented with. It is important to note that like the DSA-PPIRA versions, DSA-SDP includes a number of parameters that were set following a sensitivity analysis; however, in contrast to other exploration methods, DSA-SDP is much less sensitive to small variations in these parameters because these parameters define ranges over which DSA-SDP bases its behavior on the specific local improvements that are possible during execution. This makes it much easier to choose parameters for DSA-SDP that are broadly acceptable over a wide range of problem types.
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      Distributed Constraint Optimization Problems (DCOPs) can be used to model many realistic combinatorial problems that are distributed by nature. The growing interest in this field has motivated intensive study in recent years on search algorithms for solving DCOPs. Since DCOPs are NP-hard optimization problems, complete algorithms are useful only for small problems. Larger problems like the ones studied in our experiments require incomplete methods.
+     </paragraph>
+     <paragraph>
+      Distributed local search algorithms were originally proposed for Distributed Constraint Satisfaction Problems and subsequently applied for DCOPs [7]. However, these algorithms failed to report the best state traversed by the algorithm, due to the challenge in evaluating global cost from the private, local costs of individual agents.
+     </paragraph>
+     <paragraph>
+      To meet this challenge, we proposed ALS_DCOP, a general framework for performing distributed local search in DCOPs that provides them with the anytime property. In the proposed framework, agents use a spanning tree structure in order to accumulate the costs of a state of the system to the root agent, which compares the cost of each state with the cost of the best state found so far and propagates the step index of a new best state, once it is found, to all other agents. At the end of the run the agents hold the best state that was traversed by the algorithm.
+     </paragraph>
+     <paragraph>
+      Apart from a small number of idle steps at the end of the run of the algorithm (twice the height of the spanning tree), the framework does not require any additional slowdown in the performance of the algorithm. In contrast to complete algorithms that use a pseudo-tree, the tree used in ALS_DCOP can be a Breadth First Search (BFS) tree. Thus, the height of the tree is expected to be small. In terms of network load, the only messages used in the ALS_DCOP framework are the algorithm's messages (i.e., no additional messages are required by the framework). Agents are required to use small (linear in the worst case) additional space.
+     </paragraph>
+     <paragraph>
+      Most existing local search algorithms for DCOPs are either monotonic (completely exploitive) or perform limited exploration. Thus, there is a limited benefit when combining the ALS_DCOP framework with these algorithms. However, we demonstrate that the framework enhances existing explorative algorithms such as DBA and Max-Sum. In order to demonstrate the full potential of the framework we proposed extreme explorative methods, which are combined with existing local search algorithms (DSA and DBA), and two algorithm-independent exploration methods that can be combined with any existing incomplete DCOP algorithms. Our results demonstrate the advantage of the combination of exploration and the anytime property over standard local search.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Transforming trees into hedges and parsing with “hedgebank” grammars</title>
+<!--Generated on Wed Jun 11 18:32:23 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Transforming trees into hedges and parsing with “hedgebank” grammars</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mahsa Yarmohammadi<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Aaron Dunlop<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math> and Brian Roark<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\circ}" display="inline"><msup><mi/><mo>∘</mo></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Oregon Health &amp;
+Science University, Portland, Oregon  <math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\circ}" display="inline"><msup><mi/><mo>∘</mo></msup></math>Google, Inc.,
+New York
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">yarmoham@ohsu.edu, </span>{<span class="ltx_text ltx_font_typewriter">aaron.dunlop,roarkbr</span>}<span class="ltx_text ltx_font_typewriter">@gmail.com</span>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Finite-state chunking and tagging methods are very fast for annotating non-hierarchical syntactic information, and are often applied in applications that do not require full syntactic analyses. Scenarios such as incremental machine translation may benefit from some degree of hierarchical syntactic analysis without requiring fully connected parses. We introduce <em class="ltx_emph">hedge parsing</em> as an approach to recovering constituents of length up to some maximum span <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. This approach improves efficiency by bounding constituent size, and allows for efficient segmentation strategies prior to parsing. Unlike shallow parsing methods, hedge parsing yields internal hierarchical structure of phrases within its span bound. We present the approach and some initial experiments on different inference strategies.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Parsing full hierarchical syntactic structures is costly, and some NLP applications that could benefit from parses instead substitute shallow proxies such as NP chunks. Models to derive such non-hierarchical annotations are finite-state, so inference is very fast. Still, these partial annotations omit all but the most basic syntactic segmentation, ignoring the abundant local structure that could be of utility even in the absence of fully connected structures. For example, in incremental (simultaneous) machine translation <cite class="ltx_cite">[<a href="#bib.bib9" title="Incremental segmentation and decoding strategies for simultaneous translation" class="ltx_ref">13</a>]</cite>, sub-sentential segments are translated independently and sequentially, hence the fully-connected syntactic structure is not generally available. Even so, locally-connected source language parse structures can inform both segmentation and translation of each segment in such a translation scenario.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">One way to provide local hierarchical syntactic structures without fully connected trees is to focus on providing full hierarchical annotations for structures within a local window, ignoring global constituents outside that window. We follow the XML community in naming structures of this type <em class="ltx_emph">hedges</em> (not to be confused with the rhetorical device of the same name), due to the fact that they are like smaller versions of trees which occur in sequences. Such structures may be of utility to various structured inference tasks, as well as within a full parsing pipeline, to quickly constrain subsequent inference, much as finite-state models such as supertagging <cite class="ltx_cite">[<a href="#bib.bib7" title="Supertagging: An approach to almost parsing" class="ltx_ref">1</a>]</cite> or chart cell constraints <cite class="ltx_cite">[<a href="#bib.bib5" title="Classifying chart cells for quadratic complexity context-free inference" class="ltx_ref">10</a>, <a href="#bib.bib6" title="Finite-state chart constraints for reduced complexity context-free parsing pipelines." class="ltx_ref">9</a>]</cite> are used.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we consider the problem of <em class="ltx_emph">hedge parsing</em>, i.e., discovering every constituent of length up to some span <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. Similar constraints have been used in dependency parsing <cite class="ltx_cite">[<a href="#bib.bib10" title="Parsing with soft and hard constraints on dependency length" class="ltx_ref">6</a>, <a href="#bib.bib11" title="Vine parsing and minimum risk reranking for speed and precision" class="ltx_ref">5</a>]</cite>, where the use of hard constraints on the distance between heads and dependents is known as vine parsing. It is also reminiscent of so-called Semi-Markov models <cite class="ltx_cite">[<a href="#bib.bib12" title="Semi-Markov conditional random fields for information extraction" class="ltx_ref">12</a>]</cite>, which allow finite-state models to reason about segments rather than just tags by imposing segment length limits. In the XML community, trees and hedges are used for models of XML document instances and for the contents of elements <cite class="ltx_cite">[<a href="#bib.bib3" title="Balanced context-free grammars, hedge grammars and pushdown caterpillar automata." class="ltx_ref">3</a>]</cite>. As far as we know, this paper is the first to consider this sort of partial parsing approach for natural language.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We pursue this topic via tree transformation, whereby non-root non-terminals labeling constituents of span <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="&gt;L" display="inline"><mrow><mi/><mo>&gt;</mo><mi>L</mi></mrow></math> in the tree are recursively elided and their children promoted to attach to their parent. In such a way, hedges are sequentially connected to the top-most non-terminal in the tree, as demonstrated in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. After applying such a transform to a treebank, we can induce grammars and modify parsing to search as needed to recover just these constituents.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">a)</th>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><img src="P14-2129/image001.png" id="S1.F1.g1" class="ltx_graphics" width="518" height="388" alt=""/></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">b)</th>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><img src="P14-2129/image002.png" id="S1.F1.g2" class="ltx_graphics" width="518" height="388" alt=""/></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_footnote">a) Full parse tree, b) Hedge parse tree with maximum constituent span of 7 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi mathsize="normal" stretchy="false">L</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">7</mn></mrow></math>).</span></div>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In this paper, we propose several methods to parse hedge constituents and examine their accuracy/efficiency tradeoffs. This is compared with a baseline of parsing with a typically induced context-free grammar and transforming the result via the hedge transform, which provides a ceiling on accuracy and a floor on efficiency. We investigate pre-segmenting the sentences with a finite-state model prior to hedge parsing, and achieve large speedups relative to hedge parsing the whole string, though at a loss in accuracy due to cascading segmentation errors. In all cases, we find it crucial that our “hedgebank” grammars be retrained to match the conditions during inference.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methods</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present the details of our approach. First, we present the simple tree transform from a full treebank parse tree to a (root attached) sequence of hedges. Next, we discuss modifications to inference and the resulting computational complexity gains. Finally, we discuss segmenting to further reduce computational complexity.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Hedge Tree Transform</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The hedge tree transform converts the original parse tree into a hedge parse tree. In the resulting hedge parse tree, every child of the top-most node spans at most <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> words. To transform an original tree to a hedge tree, we remove every non-terminal with span larger than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> and attach its children to its parent. We label span length on each node by recursively summing the span lengths of each node’s children, with terminal items by definition having span 1. A second top-down pass evaluates each node before evaluating its children, and removes nodes spanning <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="&gt;L" display="inline"><mrow><mi/><mo>&gt;</mo><mi>L</mi></mrow></math> words. For example, the span of the non-root <em class="ltx_emph">S</em>, <em class="ltx_emph">SBAR</em>, <em class="ltx_emph">ADJP</em>, and <em class="ltx_emph">VP</em> nodes in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a) have spans between 10 and 13, hence are removed in the tree in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b).</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">If we apply this transform to an entire treebank, we can use the transformed trees to induce a PCFG for parsing. Figure <a href="#S2.F2" title="Figure 2 ‣ 2.1 Hedge Tree Transform ‣ 2 Methods ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> plots the percentage of constituents from the original WSJ Penn treebank (sections 2-21) retained in the transformed version, as we vary the maximum span length parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. Over half of constituents have span 3 or less (which includes frequent base noun phrases); <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi>L</mi><mo>=</mo><mn>7</mn></mrow></math> covers approximately three quarters of the original constituents, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="L=15" display="inline"><mrow><mi>L</mi><mo>=</mo><mn>15</mn></mrow></math> over 90%. Most experiments in this paper will focus on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi>L</mi><mo>=</mo><mn>7</mn></mrow></math>, which is short enough to provide a large speedup yet still cover a large fraction of constituents.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><img src="P14-2129/image003.png" id="S2.F2.g1" class="ltx_graphics ltx_centering" width="360" height="279" alt=""/>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_script">Maximum span size (L)</span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_small">Percentage of constituents retained at various span length parameters</span></div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Hedge Parsing</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">As stated earlier, our brute-force baseline approach is to parse the sentence using a full context-free grammar (CFG) and then hedge-transform the result. This method should yield a ceiling on hedge-parsing accuracy, as it has access to rich contextual information (as compared to grammars trained on transformed trees). Naturally, inference will be slow; we aim to improve efficiency upon this baseline while minimizing accuracy loss.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">Since we limit the span of non-terminal labels, we can constrain the search performed by the parser, greatly reduce the CYK processing time. In essence, we perform no work in chart cells spanning more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> words, except for the cells along the periphery of the chart, which are just used to connect the hedges to the root. Consider the flat tree in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b). For use by a CYK parsing algorithm, trees are binarized prior to grammar induction, resulting in special non-terminals created by binarization. Other than the symbol at the root of the tree, the only constituents with span length greater than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> in the binarized tree will be labeled with these special binarization non-terminals. Further, if the binarization systematically groups the leftmost or the rightmost children under these new non-terminals (the most common strategy), then constituents with span greater than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> will either begin at the first word (leftmost grouping) or end at the last word (rightmost), further constraining the number of cells in the chart requiring work.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Complexity of parsing with a full CYK parser is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="O(n^{3}|G|)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>n</mi><mn>3</mn></msup><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>G</mi><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the length of input and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="|G|" display="inline"><mrow><mo fence="true">|</mo><mi>G</mi><mo fence="true">|</mo></mrow></math> is the grammar size constant. In contrast, complexity of parsing with a hedge constrained CYK is reduced to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="O((nL^{2}+n^{2})|G|)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mrow><mi>n</mi><mo>⁢</mo><msup><mi>L</mi><mn>2</mn></msup></mrow><mo>+</mo><msup><mi>n</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>G</mi><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. To see that this is the case, consider that there are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m5" class="ltx_Math" alttext="O(nL)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mi>L</mi></mrow><mo>)</mo></mrow></mrow></math> cells of span <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m6" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> or less, and each has a maximum of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m7" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> midpoints, which accounts for the first term. Beyond these, there are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m8" class="ltx_Math" alttext="O(n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> remaining active cells with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m9" class="ltx_Math" alttext="O(n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> possible midpoints, which accounts for the second term. Note also that these latter cells (spanning <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m10" class="ltx_Math" alttext="&gt;L" display="inline"><mrow><mi/><mo>&gt;</mo><mi>L</mi></mrow></math> words) may be less expensive, as the set of possible non-terminals is reduced to only those introduced by binarization.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">It is possible to parse with a standardly induced PCFG using this sort of hedge constrained parsing that only considers a subset of the chart cells, and speedups are achieved, however this is clearly non-optimal, since the model is ill-suited to combining hedges into flat structures at the root of the tree. Space constraints preclude inclusion of trials with this method, but the net result is a severe degradation in accuracy (tens of points of F-measure) versus standard parsing. Thus, we train a grammar in a matched condition, which we call it a <em class="ltx_emph">hedgebank grammar</em>. A hedgebank grammar is a fully functional PCFG which is learned from a hedge transformed treebank.
+A hedgebank grammar can be used with any standard parsing algorithm, i.e., these are not generally finite-state equivalent models. However, using the Berkeley grammar learner (see §<a href="#S3" title="3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), we find that hedgebank grammars are typically smaller than treebank grammars, reducing the grammar constant and contributing to faster inference.</p>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">A unique property of hedge constituents compared to constituents in the original parse trees is that they are sequentially connected to the top-most node. This property enables us to chunk the sentence into segments that correspond to complete hedges, and parse the segments independently (and simultaneously) instead of parsing the entire sentence. In section <a href="#S2.SS3" title="2.3 Hedge Segmentation ‣ 2 Methods ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>, we present our approach to hedge segmentation.</p>
+</div>
+<div id="S2.SS2.p6" class="ltx_para">
+<p class="ltx_p">In all scenarios where the chart is constrained to search for hedges, we learn a hedgebank grammar, which is matched to the maximum length allowed by the parser. In the pre-segmentation scenario, we first decompose the hedge transformed treebank into its hedge segments and then learn a hedgebank grammar from the new corpus.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Hedge Segmentation</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this section we present our segmentation model which takes the input sentence and chunks it into appropriate segments for hedge parsing. We treat this as a binary classification task which decides if a word can begin a new hedge. We use hedge segmentation as a finite-state pre-processing step for hedge context-free parsing.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">Our task is to learn which words can begin (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m1" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>) a hedge constituent. Given a set of labeled pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m2" class="ltx_Math" alttext="(S,H)" display="inline"><mrow><mo>(</mo><mrow><mi>S</mi><mo>,</mo><mi>H</mi></mrow><mo>)</mo></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> is a sentence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m5" class="ltx_Math" alttext="w_{1}\ldots w_{n}" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>w</mi><mi>n</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m6" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math> is its hedge parse tree, word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m7" class="ltx_Math" alttext="w_{b}" display="inline"><msub><mi>w</mi><mi>b</mi></msub></math> belongs to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m8" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> if there is a hedge constituent spanning <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m9" class="ltx_Math" alttext="w_{b}\ldots w_{e}" display="inline"><mrow><msub><mi>w</mi><mi>b</mi></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>w</mi><mi>e</mi></msub></mrow></math> for some <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m10" class="ltx_Math" alttext="e\geq b" display="inline"><mrow><mi>e</mi><mo>≥</mo><mi>b</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m11" class="ltx_Math" alttext="w_{b}" display="inline"><msub><mi>w</mi><mi>b</mi></msub></math> belongs to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m12" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math> otherwise. To predict the hedge boundaries more accurately, we grouped consecutive unary or POS-tag hedges together under a new non-terminal labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m13" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math>. Unlabeled segmentation tags for the words in the example sentence in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b) are:</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:180.7pt;" width="180.7pt"><span class="ltx_text ltx_font_small">“Analysts/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m1" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math><span class="ltx_text ltx_font_small"> are/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m2" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> concerned/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m3" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> that/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m4" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> much/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m5" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math><span class="ltx_text ltx_font_small"> of/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m6" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> the/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m7" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> high-yield/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m8" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> market/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m9" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> will/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m10" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math><span class="ltx_text ltx_font_small"> remain/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m11" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> treacherous/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m12" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> for/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m13" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> investors/</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m14" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math><span class="ltx_text ltx_font_small"> ./</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m15" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math><span class="ltx_text ltx_font_small">”</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">In addition to the simple unlabeled segmentation with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m1" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m2" class="ltx_Math" alttext="\bar{B}" display="inline"><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover></math> tags, we try a labeled segmentation with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m3" class="ltx_Math" alttext="B_{C}" display="inline"><msub><mi>B</mi><mi>C</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m4" class="ltx_Math" alttext="\bar{B}_{C}" display="inline"><msub><mover accent="true"><mi>B</mi><mo stretchy="false">¯</mo></mover><mi>C</mi></msub></math> tags where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m5" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> is hedge constituent type. We restrict the types to the most important types – following the 11 chunk types annotated in the CoNLL-2000 chunking task <cite class="ltx_cite">[<a href="#bib.bib14" title="Introduction to the CoNLL-2000 shared task: chunking" class="ltx_ref">11</a>]</cite> – by replacing all other types with a new type <em class="ltx_emph">OUT</em>. Thus, “Analysts” is labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m6" class="ltx_Math" alttext="B_{G}" display="inline"><msub><mi>B</mi><mi>G</mi></msub></math>; “much”, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m7" class="ltx_Math" alttext="B_{\mbox{\small\it NP}}" display="inline"><msub><mi>B</mi><mtext mathsize="small" stretchy="false">𝑁𝑃</mtext></msub></math>; “will”, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m8" class="ltx_Math" alttext="B_{\mbox{\small\it VP}}" display="inline"><msub><mi>B</mi><mtext mathsize="small" stretchy="false">𝑉𝑃</mtext></msub></math> and so on.</p>
+</div>
+<div id="S2.SS3.p5" class="ltx_para">
+<p class="ltx_p">To automatically predict the class of each word position, we train a multi-class classifier from labeled training data using a discriminative linear model, learning the model parameters with the averaged perceptron algorithm <cite class="ltx_cite">[<a href="#bib.bib4" title="Discriminative training methods for hidden Markov models: theory and experiments with perceptron algorithms" class="ltx_ref">4</a>]</cite>. We follow <cite class="ltx_cite">Roark<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Finite-state chart constraints for reduced complexity context-free parsing pipelines." class="ltx_ref">2012</a>)</cite> in the features they used to label words as beginning or ending constituents.
+The segmenter extracts features from word and POS-tag input sequences and hedge-boundary tag output sequences. The feature set includes trigrams of surrounding words, trigrams of surrounding POS tags, and hedge-boundary tags of the previous words. An additional orthographical feature set is used to tag rare<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Rare words occur less than 5 times in the training data.</span></span></span> and unknown words. This feature set includes prefixes and suffixes of the words (up to 4 characters), and presence of a hyphen, digit, or an upper-case character. Reported results are for a Markov order-2 segmenter, which includes features with the output classes of the previous two words.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Results</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We ran all experiments on the WSJ Penn Treebank corpus <cite class="ltx_cite">[<a href="#bib.bib1" title="Treebank-3" class="ltx_ref">7</a>]</cite> using section 2-21 for training, section 24 for development, and section 23 for testing. We performed exhaustive CYK parsing using the BUBS parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="https://code.google.com/p/bubs-parser" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/bubs-parser</span></a></span></span></span> <cite class="ltx_cite">[<a href="#bib.bib8" title="Beam-width prediction for efficient context-free parsing" class="ltx_ref">2</a>]</cite> with Berkeley SM6 latent-variable grammars <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning and inference for hierarchically split PCFGs" class="ltx_ref">8</a>]</cite> learned by the Berkeley grammar trainer with default settings. We compute accuracy from the 1-best Viterbi tree extracted from the chart using the standard EVALB script. Accuracy results are reported as precision, recall and F1-score, the harmonic mean between the two. In all trials, we evaluate accuracy with respect to the hedge transformed reference treebank, i.e., we are not penalizing the parser for not discovering constituents longer than the maximum length. Segmentation accuracy is reported as an F1-score of unlabeled segment bracketing.
+We ran timing tests on an Intel 2.66GHz processor with 3MB of cache and 2GB of memory.
+Note that segmentation time is negligible compared to the parsing time, hence is omitted in reported time.
+Efficiency results are reported as number of words parsed per second (w/s).</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="4">Hedge Parsing Acc/Eff</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Parser</th>
+<td class="ltx_td ltx_align_center">P</td>
+<td class="ltx_td ltx_align_center">R</td>
+<td class="ltx_td ltx_align_center ltx_border_r">F1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">w/s</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Full w/full CYK</th>
+<td class="ltx_td ltx_align_center ltx_border_t">88.8</td>
+<td class="ltx_td ltx_align_center ltx_border_t">89.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">89.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Hedgebank</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">87.6</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">84.4</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">86.0</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">25.7</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_small">Hedge parsing results on section 24 for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi mathsize="normal" stretchy="false">L</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">7</mn></mrow></math>.</span></div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span><span class="ltx_text ltx_font_small">Hedge segmentation and parsing results on section 24 for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi mathsize="normal" stretchy="false">L</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">7</mn></mrow></math>.</span></div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Segmen-</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Seg</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="4">Hedge Parsing Acc/Eff</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">  tation</th>
+<th class="ltx_td ltx_align_center ltx_border_r">F1</th>
+<td class="ltx_td ltx_align_center">P</td>
+<td class="ltx_td ltx_align_center">R</td>
+<td class="ltx_td ltx_align_center ltx_border_r">F1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">w/s</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">None</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">n/a</th>
+<td class="ltx_td ltx_align_center ltx_border_t">87.6</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">86.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">25.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Oracle</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">91.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">88.9</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">188.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Unlabeled</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.6</th>
+<td class="ltx_td ltx_align_center ltx_border_t">77.2</td>
+<td class="ltx_td ltx_align_center ltx_border_t">75.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">76.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">159.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Labeled</th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">83.8</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">83.1</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">79.5</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">81.3</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">195.8</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Segmentation</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Grammar</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3">Segmentation Acc</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="4">Hedge Parsing Acc/Eff</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">P</td>
+<td class="ltx_td ltx_align_center ltx_border_t">R</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">F1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">P</td>
+<td class="ltx_td ltx_align_center ltx_border_t">R</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">F1</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">w/s</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">None</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Full w/full CYK</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">n/a</td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">90.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">90.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.3</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">2.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">None</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Hedgebank</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">n/a</td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">88.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">85.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">86.8</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">26.2</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Labeled</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">Hedgebank</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">84.0</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">86.6</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">85.3</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">85.1</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">81.1</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">83.0</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">203.0</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_small">Hedge segmentation and parsing results on test data, section 23, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="L=7" display="inline"><mrow><mi mathsize="normal" stretchy="false">L</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">7</mn></mrow></math>.</span></div>
+</div>
+<div id="S3.F3" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><img src="P14-2129/image004.png" id="S3.F3.g1" class="ltx_graphics" width="407" height="313" alt=""/></td>
+<td class="ltx_td ltx_align_center"><img src="P14-2129/image005.png" id="S3.F3.g2" class="ltx_graphics" width="372" height="481" alt=""/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">Maximum span size (L)</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">Maximum span size (L)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">a)</td>
+<td class="ltx_td ltx_align_center">b)</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span class="ltx_text ltx_font_small">Hedge parsing a) efficiency, and b) accuracy on test data, section 23, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m2" class="ltx_Math" alttext="L=3\text{--}20" display="inline"><mrow><mi mathsize="normal" stretchy="false">L</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mn mathsize="normal" stretchy="false">3</mn><mo mathsize="small" stretchy="false">⁢</mo><mtext mathsize="small" stretchy="false">–</mtext><mo mathsize="small" stretchy="false">⁢</mo><mn mathsize="normal" stretchy="false">20</mn></mrow></mrow></math>.</span></div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents hedge parsing accuracy on the development set for the full parsing baseline, where the output of regular PCFG parsing is transformed to hedges and evaluated, versus parsing with a hedgebank grammar, with no segmentation of the strings. We find an order of magnitude speedup of parsing, but at the cost of 3 percent F-measure absolute. Note that most of that loss is in recall, indicating that hedges predicted in that condition are nearly as reliable as in full parsing.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T2" title="Table 2 ‣ 3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the results on the development set when segmenting prior to
+hedge parsing. The first row shows the result with no segmentation, the same as the last row in Table <a href="#S3.T1" title="Table 1 ‣ 3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> for ease of reference. The next row shows behavior with perfect segmentation. The final two rows show performance with automatic segmentation, using a model that includes either unlabeled or labeled segmentation tags, as described in the last section. Segmentation accuracy is better for the model with labels, although overall that accuracy is rather low. We achieve nearly another order of magnitude speedup over hedge parsing without segmentation, but again at the cost of nearly 5 percent F1.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T3" title="Table 3 ‣ 3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents results of our best configurations on the eval set, section 23. The results show the same patterns as on the development set. Finally,
+Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the speed of inference, labeled precision and labeled recall of annotating hedge constituents on the test set as a function of the maximum span parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>, versus the baseline parser. Keep in mind that the number of reference constituents increases as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> increases, hence both precision and recall can decrease as the parameter grows.
+Segmentation achieves large speedups for smaller <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> values, but the accuracy degradation is consistent, pointing to the need for improved segmentation.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Conclusion and Future Work</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We proposed a novel partial parsing approach for applications that require a fast syntactic analysis of the input beyond shallow bracketing. The span-limit parameter allows tuning the annotation of internal structure as appropriate for the application domain, trading off annotation complexity against inference time. These properties make hedge parsing potentially very useful for incremental text or speech processing, such as streaming text analysis or simultaneous translation.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">One interesting characteristic of these annotations is that they allow for string segmentation prior to inference, provided that the segment boundaries do not cross any hedge boundaries. We found that baseline segmentation models did provide a significant speedup in parsing, but that cascading errors remain a problem.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">There are many directions of future work to pursue here. First, the current results are all for exhaustive CYK parsing, and we plan to perform a detailed investigation of the performance of hedgebank parsing with prioritization and pruning methods of the sort available in BUBS <cite class="ltx_cite">[<a href="#bib.bib8" title="Beam-width prediction for efficient context-free parsing" class="ltx_ref">2</a>]</cite>. Further, this sort of annotation seems well suited to incremental parsing with beam search, which has been shown to achieve high accuracies even for fully connected parsing <cite class="ltx_cite">[<a href="#bib.bib13" title="Syntactic processing using the generalized perceptron and beam search" class="ltx_ref">14</a>]</cite>. Improvements to the transform (e.g., grouping items not in hedges under non-terminals) and to the segmentation model (e.g., increasing precision at the expense of recall) could improve accuracy without greatly reducing efficiency. Finally, we intend to perform an extrinsic evaluation of this parsing in an on-line task such as simultaneous translation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported in part by NSF grant #IIS-0964102.
+Any opinions, findings, conclusions or recommendations expressed in
+this publication are those of the authors and do not necessarily
+reflect the views of the NSF.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bangalore and A. K. Joshi</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supertagging: An approach to almost parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">25</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 237–265</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Bodenstab, A. Dunlop, K. Hall and B. Roark</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Beam-width prediction for efficient context-free parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 440–449</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.p3" title="4 Conclusion and Future Work ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Brüggemann-Klein and D. Wood</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Balanced context-free grammars, hedge grammars and pushdown caterpillar automata.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden Markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p5" title="2.3 Hedge Segmentation ‣ 2 Methods ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Dreyer, D. A. Smith and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vine parsing and minimum risk reranking for speed and precision</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 201–205</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Eisner and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with soft and hard constraints on dependency length</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 30–41</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. P. Marcus, B. Santorini, M. A. Marcinkiewicz and A. Taylor</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Treebank-3</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Linguistic Data Consortium, Philadelphia</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.ldc.upenn.edu/Catalog/CatalogEntry.jsp?catalogId=LDC99T42" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning and inference for hierarchically split PCFGs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1663–1666</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-57735-323-2</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1619797.1619916" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experimental Results ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Roark, K. Hollingshead and N. Bodenstab</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finite-state chart constraints for reduced complexity context-free parsing pipelines.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 719–753</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dblp.uni-trier.de/db/journals/coling/coling38.html#RoarkHB12" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p5" title="2.3 Hedge Segmentation ‣ 2 Methods ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Roark and K. Hollingshead</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Classifying chart cells for quadratic complexity context-free inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 745–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. F. T. K. Sang and S. Buchholz</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to the CoNLL-2000 shared task: chunking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 127–132</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p4" title="2.3 Hedge Segmentation ‣ 2 Methods ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Sarawagi and W. W. Cohen</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-Markov conditional random fields for information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1185–1192</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Yarmohammadi, V. K. R. Sridhar, S. Bangalore and B. Sankaran</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incremental segmentation and decoding strategies for simultaneous translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1032–1036</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and S. Clark</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Syntactic processing using the generalized perceptron and beam search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 105–151</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Conclusion and Future Work ‣ Transforming trees into hedges and parsing with “hedgebank” grammars" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:32:23 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

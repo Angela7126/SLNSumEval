@@ -1,0 +1,719 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Context-aware Learning for Sentence-level Sentiment Analysiswith Posterior Regularization.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       This paper proposes a novel context-aware method for analyzing sentiment at the level of individual sentences. Most existing machine learning approaches suffer from limitations in the modeling of complex linguistic structures across sentences and often fail to capture non-local contextual cues that are important for sentiment interpretation. In contrast, our approach allows structured modeling of sentiment while taking into account both local and global contextual information. Specifically, we encode intuitive lexical and discourse knowledge as expressive constraints and integrate them into the learning of conditional random field models via posterior regularization. The context-aware constraints provide additional power to the CRF model and can guide semi-supervised learning when labeled data is limited. Experiments on standard product review datasets show that our method outperforms the state-of-the-art methods in both the supervised and semi-supervised settings.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The ability to extract sentiment from text is crucial for many opinion-mining applications such as opinion summarization, opinion question answering and opinion retrieval. Accordingly, extracting sentiment at the fine-grained level (e.g. at the sentence- or phrase-level) has received increasing attention recently due to its challenging nature and its importance in supporting these opinion analysis tasks
+        [18]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In this paper, we focus on the task of sentence-level sentiment classification in online reviews. Typical approaches to the task employ supervised machine learning algorithms with rich features and take into account the interactions between words to handle compositional effects such as polarity reversal (e.g.
+        [16, 23]
+        ). Still, their methods can encounter difficulty when the sentence on its own does not contain strong enough sentiment signals (due to the lack of statistical evidence or the requirement for background knowledge). Consider the following review for example,
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <blockquote class="ltx_quote">
+        <p class="ltx_p">
+         1. Hearing the music in real stereo is a true revelation. 2. You can feel that the music is no longer constrained by the mono recording. 3. In fact, it is more like the players are performing on a stage in front of you …
+        </p>
+       </blockquote>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Existing feature-based classifiers may be effective in identifying the positive sentiment of the first sentence due to the use of the word
+        revelation
+        , but they could be less effective in the last two sentences due to the lack of explicit sentiment signals. However, if we examine these sentences within the discourse context, we can see that: the second sentence expresses sentiment towards the same aspect –
+        the music
+        – as the first sentence; the third sentence expands the second sentence with the discourse connective
+        In fact
+        . These discourse-level relations help indicate that sentence 2 and 3 are likely to have positive sentiment as well.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The importance of discourse for sentiment analysis has become increasingly recognized. Most existing work considers discourse relations between adjacent sentences or clauses and incorporates them as constraints
+        [11, 31]
+        or features in classifiers
+        Trivedi and Eisenstein (2013), Lazaridou et al. (2013)
+        . Very little work has explored long-distance discourse relations for sentiment analysis.
+        Somasundaran et al. (2008)
+        defines coreference relations on opinion targets and applies them to constrain the polarity of sentences. However, the discourse relations were obtained from fine-grained annotations and implemented as hard constraints on polarity.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Obtaining sentiment labels at the fine-grained level is costly. Semi-supervised techniques have been proposed for sentence-level sentiment classification
+        [27, 21]
+        . However, they rely on a large amount of document-level sentiment labels that may not be naturally available in many domains.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        In this paper, we propose a sentence-level sentiment classification method that can (1) incorporate rich discourse information at both local and global levels; (2) encode discourse knowledge as soft constraints during learning; (3) make use of unlabeled data to enhance learning. Specifically, we use the Conditional Random Field (CRF) model as the learner for sentence-level sentiment classification, and incorporate rich discourse and lexical knowledge as soft constraints into the learning of CRF parameters via Posterior Regularization (PR)
+        [7]
+        . As a framework for structured learning with constraints, PR has been successfully applied to many structural NLP tasks
+        [6, 7, 5]
+        . Our work is the first to explore PR for sentiment analysis. Unlike most previous work, we explore a rich set of structural constraints that cannot be naturally encoded in the feature-label form, and show that such constraints can improve the performance of the CRF model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        We evaluate our approach on the sentence-level sentiment classification task using two standard product review datasets. Experimental results show that our model outperforms state-of-the-art methods in both the supervised and semi-supervised settings. We also show that discourse knowledge is highly useful for improving sentence-level sentiment classification.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        There has been a large amount of work on sentiment analysis at various levels of granularity
+        [18]
+        . In this paper, we focus on the study of sentence-level sentiment classification. Existing machine learning approaches for the task can be classified based on the use of two ideas. The first idea is to exploit sentiment signals at the sentence level by learning the relevance of sentiment and words while taking into account the context in which they occur:
+        Nakagawa et al. (2010)
+        uses tree-CRF to model word interactions based on dependency tree structures;
+        Choi and Cardie (2008)
+        applies compositional inference rules to handle polarity reversal;
+        Socher et al. (2011)
+        and
+        Socher et al. (2013)
+        compute compositional vector representations for words and phrases and use them as features in a classifier.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The second idea is to exploit sentiment signals at the inter-sentential level.
+        Polanyi and Zaenen (2006)
+        argue that discourse structure is important in polarity classification. Various attempts have been made to incorporate discourse relations into sentiment analysis:
+        Pang and Lee (2004)
+        explored the consistency of subjectivity between neighboring sentences;
+        Mao and Lebanon (2007)
+        ,
+        McDonald et al. (2007)
+        , and
+        Täckström and McDonald (2011a)
+        developed structured learning models to capture sentiment dependencies between adjacent sentences;
+        Kanayama and Nasukawa (2006)
+        and
+        Zhou et al. (2011)
+        use discourse relations to constrain two text segments to have either the same polarity or opposite polarities;
+        Trivedi and Eisenstein (2013)
+        and
+        Lazaridou et al. (2013)
+        encode the discourse connectors as model features in supervised classifiers. Very little work has explored long-distance discourse relations.
+        Somasundaran et al. (2008)
+        define opinion target relations and apply them to constrain the polarity of text segments annotated with target relations. Recently,
+        Zhang et al. (2013)
+        explored the use of explanatory discourse relations as soft constraints in a Markov Logic Network framework for extracting subjective text segments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Leveraging both ideas, our approach exploits sentiment signals from both intra-sentential and inter-sentential context. It has the advantages of utilizing rich discourse knowledge at different levels of context and encoding it as soft constraints during learning.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Our approach is also semi-supervised. Compared to the existing work on semi-supervised learning for sentence-level sentiment classification
+        [27, 28, 21]
+        , our work does not rely on a large amount of coarse-grained (document-level) labeled data, instead, distant supervision mainly comes from linguistically-motivated constraints.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Our work also relates to the study of posterior regularization (PR)
+        [7]
+        . PR has been successfully applied to many structured NLP tasks such as dependency parsing, information extraction and cross-lingual learning tasks
+        [6, 1, 7, 5]
+        . Most previous work using PR mainly experiments with feature-label constraints. In contrast, we explore a rich set of linguistically-motivated constraints which cannot be naturally formulated in the feature-label form. We also show that constraints derived from the discourse context can be highly useful for disambiguating sentence-level sentiment.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Approach
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we present the details of our proposed approach. We formulate the sentence-level sentiment classification task as a sequence labeling problem. The inputs to the model are sentence-segmented documents annotated with sentence-level sentiment labels (positive, negative or neutral) along with a set of unlabeled documents. During prediction, the model outputs sentiment labels for a sequence of sentences in the test document. We utilize conditional random fields and use Posterior Regularization (PR) to learn their parameters with a rich set of context-aware constraints.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        In what follows, we first briefly describe the framework of Posterior Regularization. Then we introduce the context-aware constraints derived based on intuitive discourse and lexical knowledge. Finally we describe how to perform learning and inference with these constraints.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Posterior Regularization
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         PR is a framework for structured learning with constraints
+         [7]
+         . In this work, we apply PR in the context of CRFs for sentence-level sentiment classification.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Denote
+         𝐱
+         as a sequence of sentences within a document and
+         𝐲
+         as a vector of sentiment labels associated with
+         𝐱
+         . The CRF model the following conditional probabilities:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        pθ(𝐲|𝐱)=exp⁡(θ⋅f⁢(𝐱,𝐲))Zθ⁢(𝐱)
+        <p class="ltx_p">
+         where
+         f⁢(𝐱,𝐲)
+         are the model features,
+         θ
+         are the model parameters, and
+         Zθ⁢(𝐱)=∑𝐲exp⁡(θ⋅f⁢(𝐱,𝐲))
+         is a normalization constant. The objective function for a standard CRF is to maximize the log-likelihood over a collection of labeled documents plus a regularization term:
+        </p>
+        maxθℒ(θ)=maxθ∑(𝐱,𝐲)logpθ(𝐲|𝐱)-||θ||222⁢δ2
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         PR makes the assumption that the labeled data we have is not enough for learning good model parameters, but we have a set of constraints on the posterior distribution of the labels. We can define the set of desirable posterior distrbutions as
+        </p>
+        𝒬={q⁢(𝐘):Eq⁢[ϕ⁢(𝐗,𝐘)]=𝐛}
+
+(1)
+        <p class="ltx_p">
+         where
+         ϕ
+         is a constraint function,
+         𝐛
+         is a vector of desired values of the expectations of the constraint functions under the distribution
+         q
+         . Note that the distribution
+         q
+         is defined over a collection of unlabeled documents where the constraint functions apply, and we assume independence between documents.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         The PR objective can be written as the original model objective penalized with a regularization term, which minimizes the KL-divergence between the desired model posteriors and the learned model posteriors with an L2 penalty
+         for the constraint violations.
+        </p>
+        maxθℒ(θ)-minq∈𝒬{KL(q(𝐘)||pθ(𝐘|𝐗))+β||Eq[ϕ(𝐗,𝐘)]-𝐛||22}
+
+(2)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p6">
+        <p class="ltx_p">
+         The objective can be optimized by an EM-like scheme that iteratively solves the minimization problem and the maximization problem. Solving the minimization problem is equivalent to solving its dual since the objective is convex. The dual problem is
+        </p>
+        arg⁢maxλ⁡λ⋅𝐛-log⁡Zλ⁢(X)-14⁢β⁢||λ||22
+
+(3)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p7">
+        <p class="ltx_p">
+         We optimize the objective function
+         2
+         using stochastic projected gradient, and compute the learning rate using AdaGrad
+         [4]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Context-aware Posterior Constraints
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We develop a rich set of context-aware posterior constraints for sentence-level sentiment analysis by exploiting lexical and discourse knowledge. Specifically, we construct the lexical constraints by extracting sentiment-bearing patterns within sentences and construct the discourse-level constraints by extracting discourse relations that indicate sentiment coherence or sentiment changes both within and across sentences. Each constraint can be formulated as equality between the expectation of a constraint function value and a desired value set by prior knowledge. The equality is not strictly enforced (due to the regularization in the PR objective
+         2
+         ). Therefore all the constraints are applied as soft constraints. Table
+         1
+         provides intuitive description and examples for all the constraints used in our model.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Lexical Patterns
+         The existence of a polarity-carrying word alone may not correctly indicate the polarity of the sentence, as the polarity can be reversed by other polarity-reversing words. We extract lexical patterns that consist of polar words and negators
+         , and apply the heuristics based on compositional semantics
+         [2]
+         to assign a sentiment value to each pattern.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         We encode the extracted lexical patterns along with their sentiment values as feature-label constraints. The constraint function can be written as
+        </p>
+        ϕw⁢(x,y)=∑ifw⁢(xi,yi)
+        <p class="ltx_p">
+         where
+         fw⁢(xi,yi)
+         is a feature function which has value
+         1
+         when sentence
+         xi
+         contains the lexical pattern
+         w
+         and its sentiment label
+         yi
+         equals to the expected sentiment value and has value
+         0
+         otherwise. The constraint expectation value is set to be the prior probability of associating
+         w
+         with its sentiment value. Note that sentences with neutral sentiment can also contain such lexical patterns. Therefore we allow the lexical patterns to be assigned a neutral sentiment with a prior probability
+         r0
+         (we compute this value as the empirical probability of neutral sentiment in the training documents). Using the polarity indicated by lexical patterns to constrain the sentiment of sentences is quite aggressive. Therefore we only consider lexical patterns that are strongly discriminative (many opinion words in the lexicon only indicate sentiment with weak strength). The selected lexical patterns include a handful of seed patterns (such as “pros” and “cons”) and the lexical patterns that have high precision (larger then 0.9) of predicting sentiment in the training data.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         Discourse Connectives.
+         Lexical patterns can be limited in capturing contextual information since they only look at interactions between words within an expression. To capture context at the clause or sentence level, we consider discourse connectives, which are cue phrases or words that indicate discourse relations between adjacent sentences or clauses. To identify discourse connectives, we apply a discourse tagger trained on the Penn Discourse Treebank
+         [20]
+         to our data. Discourse connectives are tagged with four senses:
+         Expansion, Contingency, Comparison, Temporal
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         Discourse connectives can operate at both intra-sentential and inter-sentential level. For example, the word “although” is often used to connect two polar clauses within a sentence, while the word “however” is often used to at the beginning of the sentence to connect two polar sentences. It is important to distinguish these two types of discourse connectives. We consider a discourse connective to be intra-sentential if it has the
+         Comparison
+         sense and connects two polar clauses with opposite polarities (determined by the lexical patterns). We construct a feature-label constraint for each intra-sentential discourse connective and set its expected sentiment value to be neutral.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p6">
+        <p class="ltx_p">
+         Unlike the intra-sentential discourse connectives, the inter-sentential discourse connectives can indicate sentiment transitions between sentences. Intuitively, discourse connectives with the senses of
+         Expansion
+         (e.g. also, for example, furthermore) and
+         Contingency
+         (e.g. as a result, hence, because) are likely to indicate sentiment coherence; discourse connectives with the sense of
+         Comparison
+         (e.g. but, however, nevertheless) are likely to indicate sentiment changes. This intuition is reasonable but it assumes the two sentences connected by the discourse connective are both polar sentences. In general, discourse connectives can also be used to connect non-polar (neutral) sentences. Thus it is hard to directly constrain the posterior expectation for each type of sentiment transitions using inter-sentential discourse connectives.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p7">
+        <p class="ltx_p">
+         Instead, we impose constraints on the model posteriors by reducing constraint violations. We define the following constraint function:
+        </p>
+        ϕc,s⁢(x,y)=∑ifc,s⁢(xi,yi,yi-1)
+        <p class="ltx_p">
+         where
+         c
+         denotes a discourse connective,
+         s
+         indicates its sense, and
+         fc,s
+         is a penalty function that takes value
+         1.0
+         when
+         yi
+         and
+         yi-1
+         form a contradictory sentiment transition, that is,
+         yi≠p⁢o⁢l⁢a⁢ryi-1
+         if
+         s∈{𝐸𝑥𝑝𝑎𝑛𝑠𝑖𝑜𝑛,𝐶𝑜𝑛𝑡𝑖𝑛𝑔𝑒𝑛𝑐𝑦}
+         , or
+         yi=p⁢o⁢l⁢a⁢ryi-1
+         if
+         s=𝐶𝑜𝑚𝑝𝑎𝑟𝑖𝑠𝑜𝑛
+         . The desired value for the constraint expectation is set to
+         0
+         so that the model is encouraged to have less constraint violations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p8">
+        <p class="ltx_p">
+         Opinion Coreference
+         Sentences in a discourse can be linked by many types of coherence relations
+         [10]
+         . Coreference is one of the commonly used relations in written text. In this work, we explore coreference in the context of sentence-level sentiment analysis. We consider a set of polar sentences to be linked by the
+         opinion coreference
+         relation if they contain coreferring opinion-related entities. For example, the following sentences express opinions towards “the speaker phone”, “The speaker phone” and “it” respectively. As these opinion targets are coreferential (referring to the same entity “the speaker phone”), they are linked by the
+         opinion coreference
+         relation
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p9">
+        <blockquote class="ltx_quote">
+         <p class="ltx_p">
+          My favorite features are
+          the speaker phone
+          and the radio.
+          The speaker phone
+          is very functional. I use
+          it
+          in the car, very audible even with freeway noise.
+         </p>
+        </blockquote>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p10">
+        <p class="ltx_p">
+         Our coreference relations indicated by opinion targets overlap with the
+         same target
+         relation introduced in
+         [24]
+         . The differences are: (1) we encode the coreference relations as soft constraints during learning instead of applying them as hard constraints during inference time; (2) our constraints can apply to both polar and non-polar sentences; (3) our identification of coreference relations is automatic without any fine-grained annotations for opinion targets.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p11">
+        <p class="ltx_p">
+         To extract coreferential opinion targets, we apply Stanford’s coreference system
+         [13]
+         to extract coreferential mentions in the document, and then apply a set of syntactic rules to identify opinion targets from the extracted mentions. The syntactic rules correspond to the shortest dependency paths between an opinion word and an extracted mention. We consider the 10 most frequent dependency paths in the training data. Example dependency paths include
+         nsubj
+         (opinion, mention),
+         nobj
+         (opinion, mention), and
+         amod
+         (mention, opinion).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p12">
+        <p class="ltx_p">
+         For sentences connected by the opinion coreference relation, we expect their sentiment to be consistent. To encode this intuition, we define the following constraint function:
+        </p>
+        ϕc⁢o⁢r⁢e⁢f⁢(x,y)=∑i,a⁢n⁢t⁢(i)=j,j≥0fc⁢o⁢r⁢e⁢f⁢(xi,xj,yi,yj)
+        <p class="ltx_p">
+         where
+         a⁢n⁢t⁢(i)
+         denotes the index of the sentence which contains an antecedent target of the target mentioned in sentence
+         i
+         (the antecedent relations over pairs of opinion targets can be constructed using the coreference resolver), and
+         fc⁢o⁢r⁢e⁢f
+         is a penalty function which takes value
+         1.0
+         when the expected sentiment coherency is violated, that is,
+         yi≠p⁢o⁢l⁢a⁢ryj
+         . Similar to the inter-sentential discourse connectives, modeling opinion coreference via constraint violations allows the model to handle neutral sentiment. The expected value of the constraint functions is set to
+         0
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p13">
+        <p class="ltx_p">
+         Listing Patterns
+         Another type of coherence relations we observe in online reviews is listing, where a reviewer expresses his/her opinions by listing a series of statements followed by a sequence of numbers. For example, “1. It’s smaller than the ipod mini …. 2. It has a removable battery ….”. We expect sentences connected by a listing to have consistent sentiment. We implement this constraint in the same form as the coreference constraint (the antecedent assignments are constructed from the numberings).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p14">
+        <p class="ltx_p">
+         Global Sentiment
+         Previous studies have demonstrated the value of document-level sentiment in guiding the semi-supervised learning of sentence-level sentiment
+         [28, 21]
+         . In this work, we also take into account this information and encode it as posterior constraints. Note that these constraints are not necessary for our model and can be applied when the document-level sentiment labels are naturally available.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p15">
+        <p class="ltx_p">
+         Based on an analysis of the Amazon review data, we observe that sentence-level sentiment usually doesn’t conflict with the document-level sentiment in terms of polarity. For example, the proportion of negative sentences in the positive documents is very small compared to the proportion of positive sentences. To encode this intuition, we define the following constraint function:
+        </p>
+        ϕg(x,y)=∑inδ(yi≠p⁢o⁢l⁢a⁢rg)/n
+        <p class="ltx_p">
+         where
+         g∈{p⁢o⁢s⁢i⁢t⁢i⁢v⁢e,n⁢e⁢g⁢a⁢t⁢i⁢v⁢e}
+         denotes the sentiment value of a polar document,
+         n
+         is the total number of sentences in
+         x
+         , and
+         δ
+         is an indicator function. We hope the expectation of the constraint function takes a small value. In our experiments, we set the expected value to be the empirical estimate of the probability of “conflicting” sentiment in polar documents using the training data.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Training and Inference
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         During training, we need to compute the constraint expectations and the feature expectations under the auxiliary distribution
+         q
+         at each gradient step. We can derive
+         q
+         by solving the dual problem in
+         3
+         :
+        </p>
+        q(𝐲|𝐱)=e⁢x⁢p⁢(θ⋅f⁢(𝐱,𝐲)+λ⋅ϕ⁢(𝐱,𝐲))Zλ,θ⁢(X)
+
+(4)
+        <p class="ltx_p">
+         where
+         Zλ,θ⁢(X)
+         is a normalization constant. Most of our constraints can be factorized in the same way as factorizing the model features in the first-order CRF model, and we can compute the expectations under
+         q
+         very efficiently using the forward-backward algorithm. However, some of our discourse constraints (opinion coreference and listing) can break the tractable structure of the model. For constraints with higher-order structures, we use Gibbs Sampling
+         [8]
+         to approximate the expectations. Given a sequence
+         𝐱
+         , we sample a label
+         𝐲i
+         at each position
+         i
+         by computing the unnormalized conditional probabilities
+         p(𝐲i=l|𝐲-i)∝exp(θ⋅f(𝐱,𝐲i=l,𝐲-i)+λ⋅ϕ(𝐱,𝐲i=l,𝐲-i))
+         and renormalizing them. Since the possible label assignments only differ at position
+         i
+         , we can make the computation efficient by maintaining the structure of the coreference clusters and precomputing the constraint function for different types of violations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         During inference, we find the best label assignment by computing
+         argmax𝐲q(𝐲|𝐱)
+         . For documents where the higher-order constraints apply, we use the same Gibbs sampler as described above to infer the most likely label assignment, otherwise, we use the Viterbi algorithm.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We experimented with two product review datasets for sentence-level sentiment classification: the Customer Review (CR) data
+        [9]
+        which contains 638 reviews of 14 products such as cameras and cell phones, and the Multi-domain Amazon (MD) data from the test set of
+        Täckström and McDonald (2011a)
+        which contains 294 reivews from 5 different domains. As in
+        Qu et al. (2012)
+        , we chose the books, electronics and music domains for evaluation. Each domain also comes with 33,000 extra reviews with only document-level sentiment labels.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We evaluated our method in two settings: supervised and semi-supervised. In the supervised setting, we treated the test data as unlabeled data and performed transductive learning. In the semi-supervised setting, our unlabeled data consists of both the available unlabeled data and the test data. For each domain in the MD dataset, we made use of no more than 100 unlabeled documents in which our posterior constraints apply. We adopted the evaluation schemes used in previous work: 10-fold cross validation for the CR dataset and 3-fold cross validation for the MD dataset. We also report both two-way classification (positive vs. negative) and three-way classification results (positive, negative or neutral). We use accuracy as the performance measure. In our tables, boldface numbers are statistically significant by paired t-test for
+        p&lt;0.05
+        against the best baseline developed in this paper
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        We trained our model using a CRF incorporated with the proposed posterior constraints. For the CRF features, we include the tokens, the part-of-speech tags, the prior polarities of lexical patterns indicated by the opinion lexicon and the negator lexicon, the number of positive and negative tokens and the output of the vote-flip algorithm
+        [3]
+        . In addition, we include the discourse connectives as local or transition features and the document-level sentiment labels as features (only available in the MD dataset).
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        We set the CRF regularization parameter
+        σ=1
+        and set the posterior regularization parameter
+        β
+        and
+        γ
+        (a trade-off parameter we introduce to balance the supervised objective and the posterior regularizer in
+        2
+        ) by using grid search
+        . For approximation inference with higher-order constraints, we perform 2000 Gibbs sampling iterations where the first 1000 iterations are burn-in iterations. To make the results more stable, we construct three Markov chains that run in parallel, and select the sample with the largest objective value.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        All posterior constraints were developed using the training data on each training fold. For the MD dataset, we also used the dvd domain as additional labeled data for developing the constraints.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        Baselines.
+        We compared our method to a number of baselines: (1)
+        CRF
+        : CRF with the same set of model features as in our method. (2)
+        CRF-inf
+        : CRF augmented with inference constraints. We can incorporate the proposed constraints (constraints derived from lexical patterns and discourse connectives) as hard constraints into CRF during inference by manually setting
+        λ
+        in equation
+        4
+        to a large value,
+        . When
+        λ
+        is large enough, it is equivalent to adding hard constraints to the viterbi inference. To better understand the different effects of lexical and discourse constraints, we report results for applying only the lexical constraints (
+        CRF-infl⁢e⁢x
+        ) as well as results for applying only the discourse constraints (
+        CRF-infd⁢i⁢s⁢c
+        ). (3)
+        PRl⁢e⁢x
+        : a variant of our PR model which only applies the lexical constraints. For the three-way classification task on the MD dataset, we also implemented the following baselines: (4)
+        VoteFlip
+        : a rule-based algorithm that leverages the positive, negative and neutral cues along with the effect of negation to determine the sentence sentiment
+        [3]
+        . (5)
+        DocOracle
+        : assigns each sentence the label of its corresponding document.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We first report results on a binary (positive or negative) sentence-level sentiment classification task. For this task, we used the supervised setting and performed transductive learning for our model. Table
+         2
+         shows the accuracy results. We can see that
+         PR
+         significantly outperforms all other baselines in both the CR dataset and the MD dataset (average accuracy across domains is reported). The poor performance of
+         CRF-infl⁢e⁢x
+         indicates that directly applying lexical constraints as hard constraints during inference could only hurt the performance.
+         CRF-infd⁢i⁢s⁢c
+         slightly outperforms
+         CRF
+         but the improvement is not significant. In contrast, both
+         PRl⁢e⁢x
+         and
+         PR
+         significantly outperform
+         CRF
+         , which implies that incorporating lexical and discourse constraints as posterior constraints is much more effective. The superior performance of
+         PR
+         over
+         PRl⁢e⁢x
+         further suggests that the proper use of discourse information can significantly improve accuracy for sentence-level sentiment classification.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We also analyzed the model’s performance on a three-way sentiment classification task. By introducing the “neutral” category, the sentiment classification problem becomes harder. Table
+         3
+         shows the results in terms of accuracy for each domain in the MD dataset. We can see that both
+         PR
+         and
+         PRl⁢e⁢x
+         significantly outperform all other baselines in all domains. The rule-based baseline
+         VoteFlip
+         gave the weakest performance because it has no prediction power on sentences with no opinion words.
+         DocOracle
+         performs much better than
+         VoteFlip
+         and performs especially well on the
+         Music
+         domain. This indicates that the document-level sentiment is a very strong indicator of the sentence-level sentiment label. For the
+         CRF
+         baseline and its invariants, we observe a similar performance trend as in the two-way classification task: there is nearly no performance improvement from applying the lexical and discourse-connective-based constraints during CRF inference. In contrast, both
+         PRl⁢e⁢x
+         and
+         PR
+         provide substantial improvements over
+         CRF
+         . This confirms that encoding lexical and discourse knowledge as posterior constraints allows the feature-based model to gain additional learning power for sentence-level sentiment prediction. In particular, incorporating discourse constraints leads to consistent improvements to our model. This demonstrates that our modeling of discourse information is effective and that taking into account the discourse context is important for improving sentence-level sentiment analysis. We also compare our results to the previously published results on the same dataset. HCRF
+         [27]
+         and MEM
+         [21]
+         are two state-of-the-art semi-supervised methods for sentence-level sentiment classification. We can see that our best model
+         PR
+         gives the best results in most categories.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Table
+         4
+         shows the results in terms of F1 scores for each sentiment category (positive, negative and neutral). We can see that the PR models are able to provide improvements over all the sentiment categories compared to all the baselines in general. We observe that the
+         DocOracle
+         baseline provides very strong F1 scores on the positive and negative categories especially in the Books and Music domains, but very poor F1 on the neutral category. This is because it over-predicts the polar sentences in the polar documents, and predicts no polar sentences in the neutral documents. In contrast, our PR models provide more balanced F1 scores among all the sentiment categories. Compared to the CRF baseline and its variants, we found that the PR models can greatly improve the precision of predicting positive and negative sentences, resulting in a significant improvement on the positive/negative F1 scores. However, the improvement on the neutral category is modest. A plausible explanation is that most of our constraints focus on discriminating polar sentences. They can help reduce the errors of misclassifying polar sentences, but the model needs more constraints in order to distinguish neutral sentences from polar sentences. We plan to address this issue in future work.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Discussion
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We analyze the errors to better understand the merits and limitations of the PR model. We found that the PR model is able to correct many CRF errors caused by the lack of labeled data. The first row in Table
+         5
+         shows an example of such errors. The lexical features
+         return
+         and
+         exchange
+         may be good indicators of negative sentiment for the sentence. However, with limited labeled data, the CRF learner can only associate very weak sentiment signals to these features. In contrast, the PR model is able to associate stronger sentiment signals to these features by leveraging unlabeled data for indirect supervision. A simple lexicon-based constraint during inference time may also correct this case. However, hard-constraint baselines can hardly improve the performance in general because the contributions of different constraints are not learned and their combination may not lead to better predictions. This is also demonstrated by the limited performance of
+         CRF-inf
+         in our experiments.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         We also found that the discourse constraints play an important role in improving the sentiment prediction. The lexical constraints alone are often not sufficient since their coverage is limited by the sentiment lexicon and they can only constrain sentiment locally. On the contrary, discourse constraints are not dependent on sentiment lexicons, and more importantly, they can provide sentiment preferences on multiple sentences at the same time. When combining discourse constraints with features from different sentences, the PR model becomes more powerful in disambiguating sentiment. The second example in Table
+         5
+         shows that the PR model learned with discourse constraints correctly predicts the sentiment of two sentences where no lexical constraints apply.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         However, discourse constraints are not always helpful. One reason is that they do not constrain the neutral sentiment. As a result they could not help disambiguate neutral sentiment from polar sentiment, such as the third example in Table
+         5
+         . This is also a problem for most of our lexical constraints. In general, it is hard to learn reliable indicators for the neutral sentiment. In the MD dataset, a neutral label may be given because the sentence contains mixed sentiment or no sentiment or it is off-topic. We plan to explore more refined constraints that can deal with the neutral sentiment in future work. Another limitation of the discourse constraints is that they could be affected by the errors of the discourse parser and the coreference resolver. A potential way to address this issue is to learn discourse constraints jointly with sentiment. We plan to study this in future research.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

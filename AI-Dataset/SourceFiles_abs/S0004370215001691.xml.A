@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Mining Top-k motifs with a SAT-based framework.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The problem of mining frequent itemsets is well-known and essential in data mining, knowledge discovery and data analysis. It has applications in various fields and becomes fundamental for data analysis as datasets and datastores are becoming very large. Since the first article of Agrawal [1] on association rules and itemset mining, the huge number of works, challenges, datasets and projects show the actual interest in this problem (see [2] for a recent survey of works addressing this problem).
+     </paragraph>
+     <paragraph>
+      We are also interested in frequent sequence data mining which is the problem of discovering frequent patterns shared across time among an input data-sequence. Sequence mining is a central task in computational biology, temporal sequence analysis and text mining. In this work, we consider the pattern discovery problem for a specific class of patterns with wildcards in a sequence. The data-sequence can be seen as a sequence of items, while the pattern can be seen as a subsequence that might contains wildcards or jokers in the sense that they match any item [3], [4], [5]. At the first sight, allowing wildcards to occur in a pattern can be seen as an even more restrictive type of patterns in general. However as argued in [3] “studying patterns with wildcards has the merit of capturing one important aspect of biological features that often concerns isolated positions inside a motif that are not part of the biological feature being captured”.
+     </paragraph>
+     <paragraph>
+      Important progress has been achieved for data mining and knowledge discovery in terms of implementations, platforms, libraries, etc. As pointed out in [2], several works deal with designing highly scalable data mining algorithms for large scale datasets. An important problem of data mining problems, in general, concerns the huge size of the output, from which it is difficult for the user to retrieve relevant information. Consequently, for practical data mining, it is important to reduce the size of the output by exploiting the structure of the patterns. Computing for example, closed, maximal, condensed, discriminative patterns are some of the well-known and useful techniques. Most of the works on itemset and sequential mining require the specification of a minimum support threshold λ. This constraint allows the user to control at least to some extent the size of the output by mining only patterns covering at least λ transactions (locations). However, in practice, it is difficult for users to provide an appropriate threshold. As pointed out in [6], a too small threshold may lead to the generation of a huge number of patterns, whereas a too high value of the threshold may result in no answer. In [6], based on a complete ranking between itemsets, the authors propose to mine the n most interesting itemsets of arbitrary length. In [7], the proposed task consists in mining Top-k frequent closed itemsets of length greater than a given lower bound min, where k is the desired number of frequent closed itemsets to be mined, and min is the minimal length of each itemset. The authors show that setting the minimal length of the itemsets to be mined is much easier than setting the usual frequency threshold. Since the introduction of Top-k mining, several research works investigated its use in graph mining (e.g. [8], [9]) and other datamining tasks (e.g. [10], [11]). This new framework can be seen as a nice way to mine the k preferred patterns according to some specific constraints or measures. Starting from this observation, our goal in this paper is to define a general logic based framework for enumerating the Top-k preferred patterns according to a predefined preference relation.
+     </paragraph>
+     <paragraph>
+      The notion of preference has a central role in several disciplines such as economics, operations research and decision theory in general. Preferences are relevant for the design of intelligent systems that support decisions. Modeling and reasoning with preferences play an increasing role in Artificial Intelligence (AI) and its related fields such as nonmonotonic reasoning, planning, diagnosis, configuration, constraint programming (CP) and other areas in knowledge representation and reasoning (KR). For example, in nonmonotonic reasoning the introduction of preferential semantics by Shoham [12] gives a unifying framework where nonmonotonic logic is reduced to a standard logic with a preference relation (order) on the models of that standard logic. Several models for representing and reasoning about preferences have been proposed. For example, soft constraints [13] are one of the most general way to deal with quantitative preferences, while CP-net (Conditional Preferences networks) [14] is most convenient for qualitative preferences. There is a huge literature on preferences (see [15], [16], [17] for a survey at least from the AI perspective). In data mining, preferences have also been investigated by several authors (e.g. [18], [19], [20]). For example, in [18], the authors introduced a new paradigm of pattern discovery based on Soft Constraints, where constraints are no longer rigid boolean functions. More recently, Ugarte et al. [20] introduced a generic and efficient method based on constraint programming for mining (soft-)skypatterns that enable to express user preference according to dominance relations. From the observation that dominance relations can be found in many pattern mining settings, in [21], the authors propose an algebra that combines constraints and dominance relations that can be used to describe a broad range of pattern mining settings.
+     </paragraph>
+     <paragraph>
+      In this paper we focus on qualitative preferences defined by a preference relation on the models of a propositional formula. Preferences in propositional satisfiability (SAT) have not received a lot of attention. In [22], a new approach for solving satisfiability problems in the presence of qualitative preferences on literals (defined as partial ordered set) is proposed. The authors particularly show how DPLL procedure can be easily adapted for computing optimal models induced by the partial order. The issue of computing optimal models using DPLL has also been investigated in SAT [23].
+     </paragraph>
+     <paragraph>
+      Recently, a constraint programming (CP) based data mining (DM) framework was proposed by Luc De Raedt et al. in [24] for itemset mining (CP4IM). This new framework offers a declarative and flexible representation model. New constraints often require new implementations in specialized approaches, while they can be easily integrated in such a CP framework. It allows data mining problems to benefit from several generic and efficient CP solving techniques. The authors show how some typical constraints (e.g. frequency, maximality, monotonicity) used in itemset mining can be formulated for use in CP [25]. This study leads to the first CP approach for itemset mining displaying nice declarative opportunities. Encouraged by these promising results, several contributions addressed other data mining problems using the two well-known CP and SAT AI formalisms. For example, in [26], the authors proposed a SAT-based encoding for the problem of discovering frequent, closed and maximal patterns in a sequence of items and a sequence of itemsets. In [27], the authors solve the frequent itemset mining problem by compiling the set of all itemset into a binary decision diagram (BDD) (augmented with counts). Frequent itemset are then extracted by querying the BDD. By considering the relationship between local constraint-based mining and constraint satisfaction problems, Khiari et al. [28] proposed a model for mining patterns combining several local constraints, i.e., patterns defined by n-ary constraints. Also, several constraint-based language for modeling and solving data mining problems have been designed. Let us mention the constraint-based language defined in [29], which enables the user to define queries in a declarative way addressing pattern sets and global patterns. All primitive constraints of the language are modeled and solved using the SAT framework. More recently, Guns at al. [30], introduced a general-purpose declarative mining framework, called MiningZinc. Compared to CP4IM framework [31], MiningZinc supports a wide variety of different solvers (including DM algorithms and general purpose solvers) and uses a significantly more high-level modeling language.
+     </paragraph>
+     <paragraph>
+      This new research trend offers nice opportunities for cross-fertilization between AI and data mining. The work presented in this paper fit into this framework. Our goal is to provide a step forward towards the integration of AI and Data mining. Our approach is based on SAT as the underlined data mining constraints involve Boolean variables.
+     </paragraph>
+     <paragraph>
+      The contributions of this paper are the following:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Firstly, we propose a generic framework for dealing with qualitative preferences in propositional satisfiability. Our qualitative preferences are defined using a reflexive and transitive relation (preorder) over the models of a propositional formula. Such preference relation on models is first used to introduce a new problem, called Top-k SAT, defined as the problem of enumerating the Top-k models of a propositional formula. Here a Top-k model is defined as a model with no more than k-1 models preferred to it with respect to the considered preference relation. Then, we show that Top-k SAT generalizes the two well-known problems, the Partial MAX-SAT problem and the problem of generating minimal models. We also define a particular type of preference relations that allows us to introduce a general algorithm for solving the Top-k SAT problem.
+      </list-item>
+      <list-item label="2.">
+       Secondly, we introduce our first application of our declarative framework to data mining. More precisely, we consider the problem of mining Top-k frequent closed itemsets of minimum length min[32]. In this problem, the minimum support threshold usually used in frequent itemset mining is not known, while the minimum length can be set to 0 if one is interested in itemsets of arbitrary length. In itemset mining, the notion of Top-k itemset was introduced in [7] as an alternative to finding the appropriate value for the minimum support threshold. It is also an elegant way to control the size of the output. Consequently, itemset mining is clearly a nice application of our new defined Top-k SAT problem. In this context, we provide a SAT encoding and we show that computing the Top-k closed itemsets of length at least min corresponds to computing the Top-k models of the obtained propositional formula.
+      </list-item>
+      <list-item label="3.">
+       Thirdly, we provide an application of our declarative framework to sequence mining. Indeed, we propose an encoding of the problem of enumerating the Top-k patterns with wildcards in a sequence of items in our framework. The notion of Top-k pattern in this context is defined in the same way as in itemset mining. The SAT encoding that we use comes from our encoding proposed in [26].
+      </list-item>
+      <list-item label="4.">
+       In the fourth contribution, we consider a variant of the problem of discovering patterns with wildcards in a sequence, proposed in our work in [26], by considering a sequence of itemsets instead of a sequence of items. In this extension the emptyset will simply play the same role as the wildcard symbol. Indeed, one can use the emptyset to match any itemset. This new problem admits some similarities and differences with the classical sequential pattern mining problem introduced in [33]. Indeed, given an alphabet or a set of items Σ, in both problems we consider a sequence s as an ordered list of itemsets {a mathematical formula}s0,…,sn where {a mathematical formula}si⊆Σ for {a mathematical formula}i=0,…,n. However, the first difference resides in the definition of a subsequence. Indeed, in the sequential patterns, we say that {a mathematical formula}s′ is a subsequence of s if there exists a one-to-one order-preserving function f that maps (inclusion relation) itemsets in {a mathematical formula}s′ with itemsets in s. In our new setting, the notion of subsequence is defined w.r.t. to a given location and by using empty itemsets as wildcards. The other difference is that in the sequential pattern mining we consider a database of sequences of itemsets, while in our setting, we consider only a single sequence of itemsets. In this case, an encoding of the problem of enumerating the Top-k patterns in our framework is derived from the one used for the sequences of items with a very slight modification demonstrating its flexibility.
+      </list-item>
+     </list>
+     <paragraph>
+      In this paper, we extend our work published in [34]. The extension includes the application of our declarative framework to sequence mining (contributions 3 and 4) using our SAT encodings introduced in [26]. We also provide an extensive experimental results showing the feasibility of our proposed approach.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminary definitions and notations
+     </section-title>
+     <paragraph>
+      In this section, we describe the Boolean satisfiability problem (SAT), the itemset mining problem and introduce some necessary notations.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}P be a propositional language of formulas {a mathematical formula}FP built in the standard way, using usual logical connectives (∨, ∧, ¬, →, ↔) and a set of propositional variables. A CNF formula (Conjunctive Normal Form) Φ is a conjunction of clauses, where a clause is a disjunction of literals. A literal is a positive (p) or negated (¬p) propositional variable. The two literals p and ¬p are called complementary. A CNF formula can also be seen as a set of clauses, and a clause as a set of literals. Let us recall that any propositional formula can be translated to CNF using linear Tseitin's encoding [35]. We denote by {a mathematical formula}Var(Φ) the set of propositional variables occuring in Φ.
+     </paragraph>
+     <paragraph>
+      An interpretation{a mathematical formula}M of a propositional formula Φ is a function which associates a value {a mathematical formula}M(p)∈{0,1} (0 for false and 1 for true) to each propositional variable p in {a mathematical formula}Var(Φ)⊆V. A model of a formula Φ is an interpretation {a mathematical formula}M that satisfies the formula. The SAT problem consists in deciding whether a given CNF formula admits a model.
+     </paragraph>
+     <paragraph>
+      We denote by {a mathematical formula}l¯ the complementary literal of l. More precisely, if {a mathematical formula}l=p then {a mathematical formula}l¯ is ¬p and if {a mathematical formula}l=¬p then {a mathematical formula}l¯ is p. For a set of literals L, {a mathematical formula}L¯ is defined as {a mathematical formula}{l¯|l∈L}. Moreover, we denote by {a mathematical formula}M‾ ({a mathematical formula}M is an interpretation over {a mathematical formula}Var(Φ)) the clause {a mathematical formula}⋁p∈Var(Φ)s(p), where {a mathematical formula}s(p)=p if {a mathematical formula}M(p)=0, ¬p otherwise. Let Φ be a CNF formula and {a mathematical formula}M an interpretation over {a mathematical formula}Var(Φ). We denote by {a mathematical formula}M(Φ) the set of clauses satisfied by {a mathematical formula}M. Let us now consider a set X of propositional variables such that {a mathematical formula}X⊆Var(Φ). We denote by {a mathematical formula}M∩X the set of variables {a mathematical formula}{p∈X|M(p)=1}. Moreover, we denote by {a mathematical formula}M|X the restriction of the model {a mathematical formula}M to X.
+     </paragraph>
+     <paragraph>
+      Let us now introduce the itemset mining problem.
+     </paragraph>
+     <paragraph>
+      Transaction database. Let {a mathematical formula}I be a set of items. A transaction is a couple {a mathematical formula}(tid,I) where tid is the transaction identifier and I is an itemset, i.e., {a mathematical formula}I⊆I. A transaction database is a finite set of transactions over {a mathematical formula}I where each transaction identifier refers to only one itemset.
+     </paragraph>
+     <paragraph>
+      Cover, support and frequency of an itemset. We say that a transaction {a mathematical formula}(tid,I)supports an itemset J if {a mathematical formula}J⊆I. The cover of an itemset I in a transaction database {a mathematical formula}D is the set of transaction identifiers in {a mathematical formula}D supporting I: {a mathematical formula}C(I,D)={tid|(tid,J)∈D,I⊆J}. The support of an itemset I in {a mathematical formula}D is defined by: {a mathematical formula}S(I,D)=|C(I,D)|. Moreover, the frequency of I in {a mathematical formula}D is defined by: {a mathematical formula}F(I,D)=S(I,D)|D|.
+     </paragraph>
+     <paragraph>
+      For instance, consider the following transaction database:{a mathematical formula} In this database, we have {a mathematical formula}S({a,b,c},D)=|{1,3}|=2 and {a mathematical formula}F({a,b},D)=37.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}D be a transaction database over {a mathematical formula}I and λ a minimum support threshold. The frequent itemset mining problem consists in computing the following set:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Definition 1">
+      Let us now define one of the well known condensed representation of frequent itemsets. Closed itemsetLet {a mathematical formula}D be a transaction database (over {a mathematical formula}I) and I an itemset ({a mathematical formula}I⊆I) such that {a mathematical formula}S(I,D)≥1. I is closed if, for all itemset J with {a mathematical formula}I⊂J, {a mathematical formula}S(J,D)&lt;S(I,D).
+     </paragraph>
+     <paragraph>
+      One can easily see that all frequent itemsets can be obtained from the closed frequent itemsets by computing their subsets. Since the number of closed frequent itemsets is smaller than or equal to the number of frequent itemsets, enumerating all closed itemsets allows us to reduce the size of output without losing information.
+     </paragraph>
+    </section>
+    <section label="3">
+     Preferences and Top-k models
+     <paragraph>
+      Let Φ be a propositional formula and {a mathematical formula}ΛΦ the set of all its models. A preference relation ⪰ over {a mathematical formula}ΛΦ is a reflexive and transitive binary relation (a preorder). The statement {a mathematical formula}M⪰M′ means that {a mathematical formula}M is at least as preferred as {a mathematical formula}M′. We denote by {a mathematical formula}P(Φ,M,⪰) the subset of {a mathematical formula}ΛΦ defined as follows:{a mathematical formula} where {a mathematical formula}M′≻M means that {a mathematical formula}M′⪰M holds but {a mathematical formula}M⪰M′ does not. It corresponds to all models that are strictly preferred to {a mathematical formula}M.
+     </paragraph>
+     <paragraph>
+      We now introduce an equivalence relation {a mathematical formula}≈X over {a mathematical formula}P(Φ,M,⪰), where X is a set of propositional variables. It is defined as follows:{a mathematical formula} Thus, the set {a mathematical formula}P(Φ,M,⪰) can be partitioned into a set of equivalence classes by {a mathematical formula}≈X, denoted by {a mathematical formula}[P(Φ,M,⪰)]X. Each equivalence class is a set of equivalent models with respect to X that are strictly preferred to {a mathematical formula}M. Then, {a mathematical formula}|[P(Φ,M,⪰)]X| represents the number of equivalent classes in the set of strictly preferred models to {a mathematical formula}M with respect to X. In our context, this equivalence relation is used to take into consideration only a subset of propositional variables. For instance, we introduce new variables in Tseitin's translation [35] of propositional formula to CNF, and such variables are not important in the case of some preference relations.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Top-k modelLet Φ be a propositional formula, {a mathematical formula}M a model of Φ, ⪰ a preference relation over the models of Φ and X a set of propositional variables. {a mathematical formula}M is a Top-k model w.r.t. ⪰ and X iff {a mathematical formula}|[P(Φ,M,⪰)]X|≤k−1.
+     </paragraph>
+     <paragraph>
+      Let us note that the number of the Top-k models of a formula is not necessarily equal to k. Indeed, it can be strictly greater or smaller than k. For instance, if a formula is unsatisfiable, then it does not have a Top-k model for any {a mathematical formula}k≥1. Nevertheless, if the considered preference relation is a complete order, then the number of Top-k models is always smaller than or equal to k.
+     </paragraph>
+     <paragraph>
+      It is easy to see that we have the following monotonicity property: if {a mathematical formula}M is a Top-k model and {a mathematical formula}M′⪰M, then {a mathematical formula}M′ is also a Top-k model.
+     </paragraph>
+     <paragraph>
+      Top-k SAT problem. Let Φ be propositional formula, ⪰ a preference relation over the models of Φ, X a set of propositional variables and k a strictly positive integer. We call the tuple {a mathematical formula}(Φ,⪰,X,k) a Top-k instance. The Top-k SAT problem consists in computing a set {a mathematical formula}L of Top-k models of Φ with respect to ⪰ and X satisfying the two following properties:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       for all Top-k model {a mathematical formula}M, there exists {a mathematical formula}M′∈L such that {a mathematical formula}M≈XM′; and
+      </list-item>
+      <list-item label="2.">
+       for all {a mathematical formula}M and {a mathematical formula}M′ in {a mathematical formula}L, if {a mathematical formula}M≠M′ then {a mathematical formula}M≉XM′.
+      </list-item>
+     </list>
+     <paragraph>
+      The two previous properties come from the fact that we are only interested in the truth values of the variables in X. Indeed, the first property means that, for all Top-k model, there is a model in {a mathematical formula}L equivalent to it with respect to {a mathematical formula}≈X. Moreover, the second property means that {a mathematical formula}L does not contain two equivalent Top-k models.
+     </paragraph>
+     <paragraph label="Definition 3">
+      In the following definition, we introduce a particular type of preference relations, called δ-preference relations, that allows us to introduce a general algorithm for computing Top-k models. Let Φ be a CNF formula and ⪰ a preference relation on the models of Φ. Then ⪰ is a δ-preference relation, if there exists a function {a mathematical formula}δ⪰ϕ from {a mathematical formula}ΛΦ to the set of CNF formulae, called bound function, such that (i) it is polynomially computable in the size of Φ and (ii) for all {a mathematical formula}M∈ΛΦ, {a mathematical formula}M′ is a model of {a mathematical formula}Φ∧δ⪰ϕ(M) iff {a mathematical formula}M′ is a model of Φ and {a mathematical formula}M⊁M′, for every Boolean interpretation {a mathematical formula}M′.
+     </paragraph>
+     <paragraph>
+      Let us note that, given a model {a mathematical formula}M of a CNF formula Φ, {a mathematical formula}δ⪰Φ(M) is a CNF formula so that when added (with conjunction) to Φ together with {a mathematical formula}M‾, the models of the resulting formula are different from {a mathematical formula}M and they correspond to all the models of Φ which are not less preferred than {a mathematical formula}M. Intuitively, this can be seen as a way to introduce a lower bound during the enumeration process. In other words, at each step of the enumeration process, a δ-preference relation allows us to generate a formula from the current found model to force the algorithm to enumerate the models that are not less preferred.
+     </paragraph>
+     <paragraph>
+      Clearly, if we ignore the condition (i), each preference relation is a δ-preference relation. Indeed, for every preference relation ⪰ on {a mathematical formula}ΛΦ, we only have to define the bound function {a mathematical formula}δ⪰ϕ as follows:{a mathematical formula} This definition means that we exclude all the models of Φ that are less preferred than {a mathematical formula}M. One can easily see that in this case {a mathematical formula}δ⪰ϕ(M) is not polynomially computable in the worst case.
+     </paragraph>
+     <paragraph>
+      From now, we only consider the δ-preference relations. We also consider that their bound functions are provided.
+     </paragraph>
+     <section label="3.1">
+      Top-k SAT and Partial MAX-SAT
+      <paragraph>
+       In this section, we show that the Top-k SAT problem generalizes the Partial MAX-SAT problem (e.g. [36]). In Partial MAX-SAT each clause is either relaxable (soft) or non-relaxable (hard). The objective is to find an interpretation that satisfies all the hard clauses together with the maximum number of soft clauses. The MAX-SAT problem is a particular case of Partial MAX-SAT where all the clauses are relaxable.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Φ=Φh∧Φs be a Partial MAX-SAT instance such that {a mathematical formula}Φh is the hard part and {a mathematical formula}Φs the soft part. The relation denoted by {a mathematical formula}⪰Φs corresponds to a preference relation defined as follows: for all {a mathematical formula}M and {a mathematical formula}M′ models of {a mathematical formula}Φh defined over {a mathematical formula}Var(Φh∧Φs), {a mathematical formula}M⪰ΦsM′ if and only if the number of soft clauses satisfied by {a mathematical formula}M is greater than or equal to the number of soft clauses satisfied by {a mathematical formula}M′, i.e., {a mathematical formula}|M(Φs)|≥|M′(Φs)|. Clearly, the set of models of {a mathematical formula}Φh over {a mathematical formula}Var(Φh∧Φs) is isomorphic to that of {a mathematical formula}Φ′=Φh∧⋀C∈ΦspC↔C, where {a mathematical formula}pC for {a mathematical formula}C∈Φs are fresh propositional variables. Indeed, for every model {a mathematical formula}M of {a mathematical formula}Φ′, {a mathematical formula}M|Var(Φ) is a model of {a mathematical formula}Φh. Further, for every model {a mathematical formula}M of {a mathematical formula}Φh, the following Boolean interpretation {a mathematical formula}M′ is a model of {a mathematical formula}Φ′:{a mathematical formula} We define the preference relation ⪰ over the models of {a mathematical formula}Φ′ as follows: {a mathematical formula}M⪰M′ if and only if {a mathematical formula}M|Var(Φ)⪰ΦsM′|Var(Φ). It is a δ-preference relation since its bound function {a mathematical formula}δ⪰Φ′ can be defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If S is the set of all the Top-1 models of {a mathematical formula}Φ′ with respect to ⪰ and {a mathematical formula}Var(Φ), then the {a mathematical formula}S′={M|Var(Φ)|M∈S} correspond to the set of all solutions of Φ in Partial MAX-SAT. Naturally, the models in {a mathematical formula}S′ are the most preferred models with respect to {a mathematical formula}⪰Φs, and that means they satisfy {a mathematical formula}Φh and satisfy the maximum number of clauses in {a mathematical formula}Φs. Thus, in a sense, the Top-k SAT problem can be seen as a generalization of Partial MAX-SAT.
+      </paragraph>
+      <paragraph>
+       The formula {a mathematical formula}δ⪰Φ′(M) involves the well-known cardinality constraint (0/1 linear inequality). Several polynomial encodings of this kind of constraints into CNF formulas have been proposed in the literature. The first linear encoding of general linear inequalities to CNF has been proposed by Warners [37]. Recently, efficient encodings of the cardinality constraint to CNF have been proposed, most of them try to improve the efficiency of constraint propagation (e.g. [38], [39], [40], [41]).
+      </paragraph>
+     </section>
+     <section label="3.2">
+      Top-k SAT and X-minimal model generation problem
+      <paragraph>
+       Let Φ be a formula, {a mathematical formula}M and {a mathematical formula}M′ two models of Φ and X a set of propositional variables. Then, {a mathematical formula}M is said to be smaller than {a mathematical formula}M′ with respect to X, written {a mathematical formula}M≤XM′, if {a mathematical formula}M∩X⊆M′∩X. We now define a preference relation {a mathematical formula}⪰X as follows: {a mathematical formula}M⪰XM′ if and only if {a mathematical formula}M≤XM′ i.e. {a mathematical formula}M is at least as preferred as {a mathematical formula}M′.
+      </paragraph>
+      <paragraph>
+       We now show that {a mathematical formula}⪰X is a δ-preference relation. We can define {a mathematical formula}δ⪰XΦ as follows:{a mathematical formula} Indeed, {a mathematical formula}M′ is a model of a formula {a mathematical formula}Φ∧M‾∧δ⪰XΦ(M) if and only if {a mathematical formula}M′ is a model of Φ, {a mathematical formula}M′≠M, and either {a mathematical formula}(M∩X)\(M′∩X)≠∅ or {a mathematical formula}M′∩X⊆M∩X. The two previous statements mean that {a mathematical formula}M⊁XM′. In fact, if {a mathematical formula}M′ satisfies {a mathematical formula}(⋀p∈M∩Xp) then {a mathematical formula}M′ must satisfy {a mathematical formula}⋀p′∈X\M∩Xp′‾. As a consequence, we deduce that {a mathematical formula}M′∩X⊆M∩X. Otherwise, {a mathematical formula}M′ falsify {a mathematical formula}(⋀p∈M∩Xp) and that means that {a mathematical formula}(M∩X)\(M′∩X)≠∅. This latter statement expresses that either {a mathematical formula}M′∩X⊂M∩X or {a mathematical formula}M and {a mathematical formula}M′ are incomparable with respect to {a mathematical formula}⪰X.
+      </paragraph>
+      <paragraph>
+       Let Φ be a propositional formula, X a set of propositional variables and {a mathematical formula}M a model of Φ. Then {a mathematical formula}M is said to be an X-minimal model of Φ if there is no model strictly smaller than {a mathematical formula}M with respect to {a mathematical formula}⪰X. In [42], it was shown that finding an X-minimal model is {a mathematical formula}PNP[O(log(n))]-hard, where n is the number of propositional variables.
+      </paragraph>
+      <paragraph>
+       The set of all X-minimal models corresponds to the set of all Top-1 models with respect to {a mathematical formula}⪰X and {a mathematical formula}Var(Φ). Indeed, if {a mathematical formula}M is a Top-1 model, then there is no model {a mathematical formula}M′ such that {a mathematical formula}M′≻XM, and that means that {a mathematical formula}M is an X-minimal model. In this context, let us note that computing the set of Top-k models for {a mathematical formula}k≥1 can be seen as a generalization of X-minimal model generation problem.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      An algorithm for Top-k SAT
+      <paragraph>
+       In this section, we describe our algorithm for computing Top-k models in the case of the δ-preference relations (Algorithm 1). The basic idea is simply to use the formula {a mathematical formula}δ⪰Φ(M) associated to a model {a mathematical formula}M to obtain models that are not less preferred than {a mathematical formula}M. This algorithm takes as input a CNF formula Φ, a preference relation ⪰, a strictly positive integer k, and a set X of propositional variables allowing to define the equivalence relation {a mathematical formula}≈X. It has as output a set {a mathematical formula}L of Top-k models of Φ satisfying the two properties given in the definition of the Top-k SAT problem.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Algorithm description
+       </section-title>
+       <paragraph>
+        In the while-loop, we use lower bounds for finding optimal models. These lower bounds are obtained by using the fact that the preorder relation considered is a δ-preference relation. In each step, the lower bound is integrated by using the formula:{a mathematical formula}
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Lines 3. Let us first mention that the function {a mathematical formula}solve(ϕ′) refer to any SAT solver or DPLL procedure that enumerates all the models of a given CNF formula.
+        </list-item>
+        <list-item label="•">
+         Lines 4–5. The procedure replace({a mathematical formula}M,M′,L) replaces {a mathematical formula}M′ with {a mathematical formula}M in {a mathematical formula}L. We apply this replacement because there exists a model {a mathematical formula}M′ in {a mathematical formula}L which is equivalent to {a mathematical formula}M′ and {a mathematical formula}M allows to have a better bound.
+        </list-item>
+        <list-item label="•">
+         Lines 6–11. In the case where {a mathematical formula}M is not equivalent to any model in {a mathematical formula}L and the number of models in {a mathematical formula}L preferred to it is strictly less than k{a mathematical formula}(|preferred(M,L)|&lt;k), we add {a mathematical formula}M to {a mathematical formula}L (line 8). Note that {a mathematical formula}S contains first the models of {a mathematical formula}L before adding {a mathematical formula}M that have exactly {a mathematical formula}k−1 models preferred to them in this set. After adding {a mathematical formula}M to {a mathematical formula}L, we remove from {a mathematical formula}L the models that are not Top-k, i.e., they have more than {a mathematical formula}k−1 models in {a mathematical formula}L that are strictly preferred to them (removeNotTop-k({a mathematical formula}k,L)). Next, we modify the content of S. Note that the elements of S before adding {a mathematical formula}M are used as bounds in the previous step. Hence, in order to avoid adding the same bound several times, the new content of S corresponds to the models in {a mathematical formula}L that have exactly {a mathematical formula}k−1 models preferred to them in {a mathematical formula}L(min_top(k,L)) deprived of the elements of the previous content of S. In line 11, we integrate lower bounds in {a mathematical formula}Φ′ by using the elements of S. Indeed, for all model {a mathematical formula}M of a formula {a mathematical formula}Φ′∧⋀M′∈Sδ⪰Φ(M′), {a mathematical formula}M′⊁M holds, for any {a mathematical formula}M′∈S.
+        </list-item>
+        <list-item label="•">
+         Lines 12–13. In the case where {a mathematical formula}M is not a Top-k model, we integrate its associated lower bound.
+        </list-item>
+        <list-item label="•">
+         Line 14. This instruction enables us to avoid finding the same model in two different steps of the while-loop.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Algorithm 1(Top-k) is correct.The proof of the partial correctness is based on the definition of the δ-preference relation. Indeed, the function {a mathematical formula}δ⪰Φ allows us to exploit bounds to systematically improve the preference level of the models. Indeed, using the condition (ii) of the δ-preference relation, adding {a mathematical formula}⋀M′∈Sδ⪰Φ(M′) at Line 11 and {a mathematical formula}δ⪰Φ(M) at Line 13 ensure that we consider in the next iterations only the models that are not less preferred than {a mathematical formula}k−1 found models. Further, as the number of models is bounded, adding the negation of the found model at each iteration leads to an unsatisfiable formula. Consequently the algorithm terminates.  □
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Complete preference relations
+      </section-title>
+      <paragraph>
+       Our aim in this section is to show how Top-k SAT problem can benefit from algorithms of standard optimization problems in the case of complete preference relations. We provide in particular a simple algorithm that allows to find a Top-1 solution from a single Top-1 model, which may be found using an algorithm of an optimization problem.
+      </paragraph>
+      <paragraph>
+       Let us recall that a preference relation ⪰ is complete if, for all models {a mathematical formula}M and {a mathematical formula}M′, we have {a mathematical formula}M⪰M′ or {a mathematical formula}M′⪰M. It is worth noting that the size of a solution of a Top-k SAT instance may also be greater than k in the case of complete preference relations, since solutions might be equivalent w.r.t. the equivalence relation induced by the preference relation. However, we get the following interesting property:
+      </paragraph>
+      <paragraph label="Proof">
+       Let Φ be a propositional formula, ⪰ a complete preference relation, X a set of propositional variables and{a mathematical formula}Ma Top-1 model of Φ w.r.t. ⪰ and X. Then, for all{a mathematical formula}M′∈ΛΦ,{a mathematical formula}M′is a Top-1 model of Φ w.r.t. ⪰ and X iff{a mathematical formula}M′≈M, where ≈ is the equivalence relation induced by ⪰.The “if part” is a consequence of the fact that {a mathematical formula}M′⪰M and {a mathematical formula}M is a Top-1 model. We now consider the “only if part”. Let {a mathematical formula}M′ be a Top-1 model. Knowing that {a mathematical formula}M is a Top-1 model and ⪰ is a complete preference relation, we get {a mathematical formula}M⪰M′. We also get {a mathematical formula}M′⪰M since {a mathematical formula}M is a Top-1 model. As a consequence, {a mathematical formula}M≈M′ holds.  □
+      </paragraph>
+      <paragraph>
+       Note that the property highlighted in Proposition 2 is not true for any preference relation. Indeed, there exist preference relations in Top-k instances for which two distinct Top-1 models are incomparable.
+      </paragraph>
+      <paragraph>
+       In a sense, Proposition 2 describes a simple way to compute a solution of a Top-1 instance from a single Top-1 model in the case of complete preference relations. Indeed, such computation process is described in Algorithm 2, where we use an approach widely used for solving model enumeration problems. Usually, the algorithms designed to solve this problem are based on the use of additional clauses, called blocking clauses, to avoid producing repeated models [43]. Similarly, in Algorithm 2, we add to the Top-1 instance a blocking clause {a mathematical formula}M|X‾ (line 1) to avoid models equivalent to {a mathematical formula}M w.r.t. the equivalence relation {a mathematical formula}≈X, and a formula {a mathematical formula}δ⪰Φ(M) (line 1) to only consider the models that are at least as preferred as the input Top-1 model {a mathematical formula}M, i.e. the models that are equivalent to {a mathematical formula}M w.r.t. the equivalence relation induced by the preference relation. In this way, at each iteration of the while loop, the next found model {a mathematical formula}M′ (line 3) is a Top-1 model. At each iteration, we also make use of a blocking clause {a mathematical formula}M|X′‾ (line 5) to avoid equivalent models w.r.t. the equivalence relation {a mathematical formula}≈X.
+      </paragraph>
+      <paragraph>
+       As a consequence, for some complete preference relations, methods for computing a solution for a Top-1 instance can be obtained by combining Algorithm 2 with algorithms for standard optimization problems, such as Partial MAX-SAT (see Section 3.1). In this approach, the optimization algorithm is used to compute a single Top-1 model, and then Algorithm 2 provides a Top-1 solution using this first Top-1 model. Moreover, a generalization of this approach to Top-k instances can be obtained by using a recursive algorithm. Indeed, consider a Top-k instance {a mathematical formula}(Φ,⪰,X,k) with a complete preference relation. We first compute a solution S of the Top-1 instance {a mathematical formula}(Φ,⪰,X,1) using the approach that combines an optimization algorithm with Algorithm 2. Then, if {a mathematical formula}k−|S|≥1 and {a mathematical formula}S≠∅, a recursive call is made on the instance {a mathematical formula}(Φ∧⋀M∈SM|X‾,⪰,X,k−|S|) to compute a solution {a mathematical formula}S′ ({a mathematical formula}S∪S′ is a Top-k solution of {a mathematical formula}(Φ,⪰,X,k)), otherwise S is returned.
+      </paragraph>
+      <paragraph>
+       The correctness of the recursive algorithm sketched above is a consequence of the following proposition:
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}I1=(Φ,⪰,X,k)be a Top-k SAT instance and S a Top-1 solution of{a mathematical formula}(Φ,⪰,X,1). If{a mathematical formula}k−|S|≥1and{a mathematical formula}S≠∅then{a mathematical formula}S⊎S′is a Top-k solution of{a mathematical formula}I1, where{a mathematical formula}S′is a Top-{a mathematical formula}(k−|S|)solution of the instance{a mathematical formula}I2=(Φ∧⋀M∈SM|X‾,⪰,X,k−|S|)and ⊎ is the disjoint union operator; otherwise, S is a Top-k solution of{a mathematical formula}I1.It is worth noting that if {a mathematical formula}S=∅, then we know that Φ is unsatisfiable and there is no Top-k model. Moreover, if {a mathematical formula}k−|S|&lt;1, then the Top-1 solution S contains at least k Top-1 models and it means that each Top-k model is a Top-1 model. Assume that {a mathematical formula}k−|S|≥1 and {a mathematical formula}S≠∅. Using the sub-formula {a mathematical formula}⋀M∈SM|X‾, we know that (i) there is no model of {a mathematical formula}Ψ≡Φ∧⋀M∈SM|X‾ which is a Top-1 model of Φ w.r.t. ⪰ and X. We also know that (ii) each Top-k model which is not a Top-1 model of Φ w.r.t. ⪰ and X is a model of Ψ, since we only exclude in Ψ the Top-1 models of Φ. Let {a mathematical formula}M be a Top-{a mathematical formula}(k−|S|) model of Ψ w.r.t. ⪰ and X. Then, {a mathematical formula}|[P(Φ∧⋀M∈SM|X‾,M,⪰)]X|≤k−|S|−1 holds. Using Property (ii), we get {a mathematical formula}|[P(Φ,M,⪰)]X|≤k−1 and, as a consequence, {a mathematical formula}M is a Top-k model of Φ w.r.t. ⪰ and X. To complete our proof, we have to show that each Top-k model of Φ w.r.t. ⪰ and X, which is not a Top-1 model, is a Top-{a mathematical formula}(k−|S|) model of Ψ w.r.t. ⪰ and X. Assume that there exists a Top-k model {a mathematical formula}M of Φ which is not a Top-1 model of Φ and not a Top-{a mathematical formula}(k−|S|) model of Ψ w.r.t. ⪰ and X. Using Property (i) and the fact that {a mathematical formula}M is not a Top-{a mathematical formula}(k−|S|) model of Ψ, we get {a mathematical formula}|[P(Φ∧⋀M∈SM|X‾,M,⪰)]X|&gt;k−|S|−1 and, as a consequence, {a mathematical formula}|[P(Φ,M,⪰)]X|&gt;k−1 holds. We thus get a contradiction.  □
+      </paragraph>
+      <paragraph>
+       Let us consider, for instance, a generalization of Partial MAX-SAT problem, called Top-k Partial MAX-SAT. It consists in computing a Top-k solution for an instance {a mathematical formula}T=(Φh,⪰Φs,Var(Φh∧Φs),k) where {a mathematical formula}Φh∧Φs is a Partial MAX-SAT instance ({a mathematical formula}Φh and {a mathematical formula}Φs are the hard part and the soft part respectively) and {a mathematical formula}⪰Φs is the preference relation defined in Section 3.1. An algorithm for computing a Top-1 solution can be defined as a combination of an algorithm for Partial MAX-SAT and Algorithm 2 as described above. Indeed, an algorithm for Partial MAX-SAT is first used to find a Top-1 model, and then, Algorithm 2 is used to find a Top-1 solution. Using this approach, we can also derive an algorithm for Top-k Partial MAX-SAT using our recursive approach.
+      </paragraph>
+      <paragraph>
+       In the sequel, we provide our SAT based encodings of itemset and sequence mining problems. We use standard propositional formula instead of CNF formula. Let us recall that every propositional formula can be translated in linear time to a CNF form using the well known extension principle (with fresh propositional variables) [35].
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     An application of Top-k SAT in itemset mining
+     <paragraph>
+      The problem of mining frequent itemsets is well-known and essential in data mining [1], knowledge discovery and data analysis. Note that several data mining tasks are closely related to the itemset mining problem such as the ones of association rule mining, frequent pattern mining in sequence data, data clustering, etc. Recently, De Raedt et al. in [24], [31] proposed the first constraint programming (CP) based data mining framework for itemset mining. This new framework offers a declarative and flexible representation model. It allows data mining problems to benefit from several generic and efficient CP solving techniques. This study leads to the first CP approach for itemset mining displaying nice declarative opportunities.
+     </paragraph>
+     <paragraph>
+      In itemset mining problem, the notion of Top-k frequent itemsets is introduced as an alternative to finding the appropriate value for the minimum support threshold. In this section, we propose a SAT-based encoding for enumerating all closed itemsets. Then we use this encoding in the Top-k SAT problem for computing all Top-k frequent closed itemsets.
+     </paragraph>
+     <paragraph label="Definition 4">
+      In this work, we mainly consider the problem of mining Top-k frequent closed itemsets of minimum length min. In this problem, we consider that the minimum support threshold λ is not known. {a mathematical formula}FCIminkLet k and min be strictly positive integers. The problem of mining Top-k frequent closed itemsets {a mathematical formula}FCImink consists in computing all closed itemsets of length at least min such that, for each one, there exist no more than {a mathematical formula}k−1 closed itemsets of length at least min with supports greater than its support.
+     </paragraph>
+     <section label="4.1">
+      SAT-based encoding for {a mathematical formula}FCImink
+      <paragraph>
+       We here propose an encoding of {a mathematical formula}FCImink in Top-k SAT problem. Let {a mathematical formula}I be a set of items, {a mathematical formula}D={(0,ti),…,(n−1,tn−1)} a transaction database over {a mathematical formula}I, and k and min strictly positive integers. In order to define our encoding, we associate to each item a in {a mathematical formula}I a propositional variable {a mathematical formula}pa. These propositional variables encode the candidate itemset {a mathematical formula}I⊆I, i.e., {a mathematical formula}pa is true iff {a mathematical formula}a∈I. Moreover, for all {a mathematical formula}i∈{0,…,n−1}, we associate to the i-th transaction in {a mathematical formula}D a propositional variable {a mathematical formula}bi. These propositional variables allow us to reason about the cover of the candidate itemset.
+      </paragraph>
+      <paragraph>
+       We first propose a constraint allowing to consider only the itemsets of length at least min. It corresponds to a cardinality constraint:{a mathematical formula} We now introduce a constraint allowing to capture all the transactions where the candidate itemset does not appear:{a mathematical formula} This constraint means that {a mathematical formula}bi is true if and only if the candidate itemset is not in {a mathematical formula}ti.
+      </paragraph>
+      <paragraph>
+       By the following constraint, we force the candidate itemset to be closed:{a mathematical formula} This formula means that if {a mathematical formula}C(I)=C(I∪{a}) where I is the candidate itemset, then {a mathematical formula}a∈I holds. In other words, when the transactions containing the candidate itemset ({a mathematical formula}bi is false) also contain the item a ({a mathematical formula}a∈ti), the candidate itemset can be extended by adding the item a ({a mathematical formula}pa is true).
+      </paragraph>
+      <paragraph label="Proof">
+       The set of models of{a mathematical formula}(1)∧(2)∧(3)corresponds to the set of closed itemsets of size at least min.Part ⇒. Let {a mathematical formula}M be a model of {a mathematical formula}(1)∧(2)∧(3) and I its corresponding itemset, i.e., {a mathematical formula}I={a∈I|pais true}. Then, using (1), we know that the size of I is greater than or equal to min. Moreover, using {a mathematical formula}(2)∧(3), we know that, for all {a mathematical formula}a∈I, if {a mathematical formula}C(I)=C(I∪{a}) then {a mathematical formula}a∈I holds. Thus, we obtain that I is a closed itemset.Part ⇐. Let I be a closed itemset of size greater than or equal to min. Then, we define its associated Boolean interpretation {a mathematical formula}M as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for all {a mathematical formula}a∈I, {a mathematical formula}M(pa)=1 if and only if {a mathematical formula}a∈I; and
+       </list-item>
+       <list-item label="•">
+        for all {a mathematical formula}i∈{0,…,n−1}, {a mathematical formula}M(bi)=0 if and only if {a mathematical formula}ti supports I.
+       </list-item>
+      </list>
+      <paragraph>
+       In this context, computing the Top-k closed itemsets of length at least min corresponds to computing the Top-k models of {a mathematical formula}Φ≡(1)∧(2)∧(3) with respect to {a mathematical formula}⪰B and {a mathematical formula}X={pa|a∈I}, where {a mathematical formula}B={b0,…,bn−1} and {a mathematical formula}⪰B is defined as follows: {a mathematical formula}M⪰BM′ if and only if {a mathematical formula}|M(B)|≤|M′(B)|. This preference relation means that a model {a mathematical formula}M is more preferred than a model {a mathematical formula}M′ if the itemset {a mathematical formula}{a∈I|M(pa)=1} is more frequent than {a mathematical formula}{a∈I|M′(pa)=1}. It is a δ-preference relation since one can define the bound function {a mathematical formula}δ⪰BΦ as follows:{a mathematical formula} Indeed, this formula allows us to have models corresponding to closed itemsets with supports greater than or equal to the support of the closed itemset obtained from {a mathematical formula}M.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      Some variants of {a mathematical formula}FCImink
+      <paragraph>
+       In this section, our aim is to illustrate the nice declarative aspects of our proposed framework. To this end, we simply consider variations of {a mathematical formula}FCImink, and show that their encodings can be obtained by slight modifications of that of {a mathematical formula}FCImink.
+      </paragraph>
+      <section label="4.2.1">
+       Variant 1 ({a mathematical formula}FCI(min,max)k)
+       <paragraph>
+        In this variant, we consider the problem of mining Top-k closed itemsets of size between min and max. This variant can be used to reduce the size of the output by focusing the attention on a size interval {a mathematical formula}(min,max).
+       </paragraph>
+       <paragraph>
+        Our encoding in this case is obtained by adding to (1), (2) and (3) the following constraint:{a mathematical formula} In this case, we use the δ-preference relation {a mathematical formula}⪰B defined previously.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       Variant 2 ({a mathematical formula}FCIλk)
+       <paragraph>
+        Let us now propose an encoding of the problem of mining Top-k closed itemsets of supports at least λ (minimal support threshold). In this context, a Top-k closed itemset is a closed itemset such that, for each one, there exist no more than {a mathematical formula}k−1 closed itemsets of size greater than its size. In the same way as maximal frequent itemsets mining, the mining task {a mathematical formula}FCIλk allows us to focus on the largest frequent itemsets. Let us recall that a frequent itemset is maximal if all its supersets are infrequent. Formally, given a transaction database {a mathematical formula}D, a minimal support threshold λ and a frequent itemset I ({a mathematical formula}S(I,D)≥λ), I is said to be maximal w.r.t. λ if, for all J with {a mathematical formula}I⊂J, {a mathematical formula}S(J,D)&lt;λ. {a mathematical formula}FCIλk can be used in cases where the size is related to the amount of information.
+       </paragraph>
+       <paragraph>
+        Our encoding in this case is obtained by adding to (2) and (3) the following constraint:{a mathematical formula} The preference relation used in this case is {a mathematical formula}⪰I defined as follows: {a mathematical formula}M⪰IM′ if and only if {a mathematical formula}|M(I)|≥|M′(I)|. It means that a model {a mathematical formula}M is more preferred than a model {a mathematical formula}M′ if the size of the itemset {a mathematical formula}{a∈I|M(pa)=1} is greater than the size of {a mathematical formula}{a∈I|M′(pa)=1}. It is a δ-preference relation because the bound function {a mathematical formula}δ⪰IΦ ({a mathematical formula}Φ≡(2)∧(3)∧(5)) can be defined as follows:{a mathematical formula}
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     An application of Top-k SAT in sequence mining
+     <section label="5.1">
+      Frequent pattern mining in a sequence of items ({a mathematical formula}FPS)
+      <paragraph>
+       In this section, we present the datamining problem of enumerating frequent and closed patterns with wildcards in a sequence of items [3], [4], [5].
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Sequences of items
+        </section-title>
+        <paragraph>
+         Let Σ be a finite set of items, called alphabet. A sequence of items s over Σ is a simple sequence of symbols {a mathematical formula}s0⋯sn−1 belonging to Σ. We denote by {a mathematical formula}|s| its length and by {a mathematical formula}Ps the set {a mathematical formula}{0,…|s|−1} of all the locations of its symbols. A wildcard is a new symbol ∘ which is not in Σ. This symbol matches any symbol of the alphabet.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Pattern
+        </section-title>
+        <paragraph>
+         A pattern over Σ is a sequence {a mathematical formula}p=p0…pm−1, where {a mathematical formula}p0∈Σ, {a mathematical formula}pm−1∈Σ and {a mathematical formula}pi∈Σ∪{∘} for {a mathematical formula}i=1,…,m−2. We say that p is included in {a mathematical formula}s=s0…sn−1 at the location {a mathematical formula}l∈Ps, denoted {a mathematical formula}p⊑ls, if {a mathematical formula}∀i∈{0…m−1}, {a mathematical formula}pi=sl+i or {a mathematical formula}pi=∘. We also say that p is included in s, denoted {a mathematical formula}p⊑s, if {a mathematical formula}∃l∈Ps such that {a mathematical formula}p⊑ls. The cover of p in s is defined as the set {a mathematical formula}Ls(p)={l∈Ps|p⊑ls}. Moreover, the support of p in s is defined as the value {a mathematical formula}|Ls(p)|.
+        </paragraph>
+       </section>
+       <section>
+        {a mathematical formula}FPS problem
+        <paragraph>
+         Let s be a sequence, p a pattern and {a mathematical formula}λ≥1 a minimal support threshold, called also a quorum. We say that p is a frequent pattern in s w.r.t. λ if {a mathematical formula}|Ls(p)|≥λ. The frequent pattern mining problem in a sequence of items ({a mathematical formula}FPS) consists in computing the set {a mathematical formula}FPS(s,λ) of all the frequent patterns w.r.t. λ.
+        </paragraph>
+        <paragraph>
+         For instance, consider the sequence {a mathematical formula}s=aaccbcabcba and the pattern {a mathematical formula}p=a∘c. We have {a mathematical formula}Ls(p)={0,1,6}, since {a mathematical formula}p⊑0s, {a mathematical formula}p⊑1s and {a mathematical formula}p⊑6s. In this case, if we consider that the minimal support threshold is equal to the value 3, then the pattern p is a frequent pattern of s.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Closed patterns
+        </section-title>
+        <paragraph>
+         A frequent pattern p of a sequence s is said to be closed if for any frequent pattern q satisfying {a mathematical formula}p⊏q, there is no integer d such that {a mathematical formula}Ls(q)=Ls(p)+d, where {a mathematical formula}Ls(p)+d={l+d|l∈Ls(p)}. Clearly, the set of closed frequent patterns is a condensed representation of the set of frequent patterns. Indeed, the frequent patterns can be obtained from the closed ones by replacing items with wildcards.
+        </paragraph>
+        <paragraph label="Definition 5">
+         Note that if {a mathematical formula}p1 and {a mathematical formula}p2 are two patterns such that {a mathematical formula}p1⊑p2, then if {a mathematical formula}|Ls(p2)|≥λ then {a mathematical formula}|Ls(p1)|≥λ. This property is called anti-monotonicity. {a mathematical formula}FCPSminkLet k and min be strictly positive integers. The problem of mining Top-k frequent closed patterns in a sequence {a mathematical formula}FCPSmink consists in computing all closed patterns with at least min items such that, for each one, there exist no more than {a mathematical formula}k−1 closed patterns with at least min items and with supports greater than its support.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="5.2">
+      SAT-based encoding for {a mathematical formula}FCPSmink
+      <paragraph>
+       Let {a mathematical formula}Σ={a1,…,am} be an alphabet, s a sequence over Σ of length n and λ a minimal support threshold. We associate to each character a appearing in s a set of {a mathematical formula}ka propositional variables {a mathematical formula}pa,0,…,pa,(ka−1) where {a mathematical formula}ka=max(Ls(a))+1. The variable {a mathematical formula}pa,i means that a is in the candidate pattern at the location i. In fact, that explains why we associate only {a mathematical formula}max(Ls(a))+1 variables to each character a, because {a mathematical formula}{0,…,max(Ls(a))} corresponds to the set of all possible locations of a in the candidate patterns.
+      </paragraph>
+      <paragraph>
+       We first need to encode that the first symbol must be a solid character (different from the wildcard symbol). This property is expressed by the following simple clause:{a mathematical formula} The following constraints allow us to capture all the locations where the candidate pattern appears:{a mathematical formula}{a mathematical formula} Indeed, the previous constraints allow us to obtain that, if the Boolean interpretation {a mathematical formula}M is a model of the constraints (6), (7) and (8), then the candidate pattern that corresponds to {a mathematical formula}M appears only in the locations {a mathematical formula}{0≤l≤n−1|M(bl)=0}.
+      </paragraph>
+      <paragraph>
+       In order to consider the patterns with at least min items (solid characters), we just have to add the following constraint:{a mathematical formula} Now, we introduce a necessary, but not sufficient, constraint, w.r.t. the previous constraints, for obtaining a closed frequent pattern:{a mathematical formula} Intuitively, the previous constraint maximizes the number of symbols different from wildcard on the right side of the symbol represented by the propositional variable having 0 as index.
+      </paragraph>
+      <paragraph label="Proof">
+       Then, we introduce a constraint allowing to maximize the number of symbols different from wildcard on the left side of the symbol represented by the propositional variable having 0 as index:{a mathematical formula} where {a mathematical formula}ka′=n−min(Ls(a))−1 for {a mathematical formula}a∈Σ, for all {a mathematical formula}a∈Σ, the integers from 1 to {a mathematical formula}ka′ allows us to capture all the possible locations of a on the left side of the candidate pattern. The set of models of{a mathematical formula}(6)∧(7)∧(8)∧(9)∧(10)∧(11)correspond to the set of closed patterns with at least min items.Part ⇒. Let {a mathematical formula}M be a model of {a mathematical formula}(6)∧(7)∧(8)∧(9)∧(10)∧(11) and p its corresponding patterns. Then, using the constraints (6), (7), (8) and (9), we know that p contains more than or equal to min items and appears only in the locations {a mathematical formula}{0≤l≤n−1|M(bl)=0}. Moreover, using (10) and (11), we have, for all {a mathematical formula}p1, {a mathematical formula}p2 and a with {a mathematical formula}p=p1∘p2, {a mathematical formula}Ls(p)≠Ls(p1ap2) holds. Thus, we obtain that p is a closed pattern.Part ⇐. Let p be a closed pattern with at least min items. Then, we define its associated Boolean interpretation {a mathematical formula}M as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for all {a mathematical formula}a∈Σ and {a mathematical formula}0≤i&lt;ka, {a mathematical formula}M(pa,i)=1 if and only if a is in p at the location i; and
+       </list-item>
+       <list-item label="•">
+        for all {a mathematical formula}i∈{0,…,n−1}, {a mathematical formula}M(bi)=0 if and only if p appears at the location i.
+       </list-item>
+      </list>
+      <paragraph>
+       The problem {a mathematical formula}FCPSmink is encoded as the problem of computing the Top-k models of {a mathematical formula}(6)∧(7)∧(8)∧(9)∧(10)∧(11) with respect to {a mathematical formula}⪰B and {a mathematical formula}X={pa|a∈Σ}, where {a mathematical formula}B={b0,…,bn−1} and {a mathematical formula}⪰B is the δ-preference relation defined in the same way as that in the case of {a mathematical formula}FCImink, i.e., {a mathematical formula}M⪰BM′ if and only if {a mathematical formula}|M(B)|≤|M′(B)|.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      Frequent pattern mining in a sequence of itemsets ({a mathematical formula}FPSI)
+      <paragraph>
+       We here define a variant of the problem of discovering patterns with wildcards in a sequence, by considering a sequence of itemsets instead of a sequence of items. The role of wildcard symbol is nicely played by the empty itemset as it match any itemset. This problem admits some similarities and differences with the classical sequential pattern mining problem introduced in [33]. The main difference resides in the definition of the notion of subsequence (inclusion), where empty itemsets are used as wildcards, and in the use or not of a single or several sequences.
+      </paragraph>
+      <paragraph>
+       Our goal in this section is to illustrate the flexibility of our framework and its nice declarative aspects. As we can see below, a change in the problem specification induces a small change in the model. Considering sequences of itemsets is also interesting from the practical side. In the literature, several data mining papers consider sequences of itemsets (e.g. [44]). Such data can be found in several applications including web logs, trading where one is interested in analyzing the consumer purchases over time. Mining frequent patterns with periodic wildcard gaps can flexibly reflect the sequential behaviors and is often exhibited in many real-world applications. For example, in business, retail companies may want to know what products customers will usually purchase at regular time intervals rather than in continuous time according to time gaps [45]. As mentioned in the introduction, in biology, patterns with wildcards are redeemed as having significant biological and medical values. Minimum and maximum time gaps are also introduced to constrain two items/itemsets to occur neither too close nor too far apart in time.
+      </paragraph>
+      <paragraph>
+       Sequence of itemset. A sequence of itemsets s over an alphabet Σ is defined as a sequence {a mathematical formula}s0,…,sn−1, where {a mathematical formula}si⊆Σ for {a mathematical formula}i=0,…,n−1. Similarly to the sequences of items, we denote by {a mathematical formula}|s| its length ({a mathematical formula}|s|=n) and by {a mathematical formula}Ps the set {a mathematical formula}{0,…|s|−1} of the locations.
+      </paragraph>
+      <paragraph>
+       Pattern. A pattern{a mathematical formula}p=p0,…,pm−1 over Σ is also defined as a sequence of itemsets where the first and the last elements are different from the empty itemset. In this context, let us mention that we do not need the wildcard symbol. Indeed, one can use the empty itemset to match any itemset. Furthermore, we say that p is included in {a mathematical formula}s=s0…sn−1, denoted {a mathematical formula}p⊑ls, at the location {a mathematical formula}l∈Ps if {a mathematical formula}∀i∈{0…m−1}, {a mathematical formula}pi⊆sl+i. The relation ⊑ and the set {a mathematical formula}Ls(p) are defined in the same way as in the case of the sequences of items. The cover (resp. support) of p in s is defined as the set {a mathematical formula}Ls(p) (resp. as the value {a mathematical formula}|Ls(p)|).
+      </paragraph>
+      <paragraph>
+       The frequent and closed patterns are also defined in the same way as in the sequences of items. For instance, a frequent pattern p of a sequence s is said to be closed if for any frequent pattern q satisfying {a mathematical formula}p⊏q, there is no integer d such that {a mathematical formula}Ls(q)=Ls(p)+d, where {a mathematical formula}Ls(p)+d={l+d|l∈Ls(p)}. The frequent patterns can be obtained from the closed ones by replacing itemsets with their subsets.
+      </paragraph>
+      <paragraph>
+       For example, consider the sequence of itemsets {a mathematical formula}s={a,b},{a,b},{c,d}, {a mathematical formula}{c,e},{f},{g},{d},{a,b,d},{f},{c} and the pattern {a mathematical formula}p={a,b},{},{c}. If we set the minimal support threshold to 3, then p is a frequent pattern in s, since {a mathematical formula}Ls(p)={0,1,7}. The pattern p is also a closed frequent pattern, but {a mathematical formula}p′={a},{},{c} is not closed, since {a mathematical formula}p′⊏p.
+      </paragraph>
+      <paragraph>
+       The pattern mining task that we consider in the sequences of itemsets allows to exhibit a high degree of self similarity for better understandings of large volumes of data. For instance, a sequence of itemsets can be seen as a record of the articles bought by a customer over a period of time. In such a case, a frequent pattern could be “the customer bought acetylsalicylic acid two days after buying beer and wine in 20% of the days from 2008 to 2012”.
+      </paragraph>
+      <paragraph>
+       The problem of mining Top-k frequent closed patterns in a sequence of itemsets {a mathematical formula}FCPSImink is defined in the same way as {a mathematical formula}FCPSmink.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      SAT-based encoding of {a mathematical formula}FCPSImink
+      <paragraph>
+       Our encoding of the problem {a mathematical formula}FCPSImink can be easily obtained from the one of {a mathematical formula}FCPSmink. We only have to replace the equalities (resp. inequalities) of the form {a mathematical formula}sl±i≠a (resp. {a mathematical formula}sl±i=a) with {a mathematical formula}a∉sl±i (resp. {a mathematical formula}a∈sl±i):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Similarly to {a mathematical formula}FCPSmink, the problem {a mathematical formula}FCPSImink is encoded as the problem of computing the Top-k models of {a mathematical formula}(12)∧(13)∧(14)∧(15)∧(16)∧(17) with respect to {a mathematical formula}⪰B and {a mathematical formula}X={pa|a∈Σ}, where {a mathematical formula}B={b0,…,bn−1}.
+      </paragraph>
+      <paragraph>
+       The slight modification of our encoding in the case of the sequences of items in order to obtain encoding for the sequences of itemsets clearly shows the high flexibility of our proposed framework.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Implementation and experiments
+     </section-title>
+     <paragraph>
+      In this section, we carried out an experimental evaluation of the performance of our Algorithm for Top-k SAT empirically. The primary goal is to assess the declarativity and the effectiveness of our proposed framework. For this purpose, we consider the problems {a mathematical formula}FCIMmink and {a mathematical formula}FCPSmink.
+     </paragraph>
+     <paragraph>
+      For our experiments, we implemented the Algorithm 1 (Top-k) on the top of the state-of-the-art SAT solver MiniSAT 2.2{sup:1} adapted to efficiently enumerate models of a propositional formula. Compared to our previous version, the new model enumeration algorithm is based on a DPLL based procedure, without adding blocking and learned clauses [46]. We also set the decision literal polarity to false by default as it is clearly the best option in practice. This version is significantly better than our previous model enumerator implemented using a CDCL based solver with blocking clauses [26].
+     </paragraph>
+     <paragraph>
+      The cardinality constraints involved in our SAT encodings, are managed dynamically during search. In other words, similarly to constraint programming, a propagator is associated to a cardinality constraint, obtained by maintaining the sum of its assigned variables. Managing cardinality constraints on the fly outperforms our previous implementation [34] where we used the sorting networks, one of the state-of-the-art encoding of the cardinality constraint to CNF proposed in [39].
+     </paragraph>
+     <paragraph>
+      For the problem {a mathematical formula}FCIMmink, we considered a variety of datasets (18 data instances) taken from the FIMI repository{sup:2} and CP4IM.{sup:3} Regarding the problem {a mathematical formula}FCPSmink, we used two different datasets:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Bioinformatics: proteinic data encoded as a sequence of items, where an item is an amino-acid{sup:4};
+      </list-item>
+      <list-item label="2.">
+       Computer security: user data drawn from the command histories of UNIX computer users{sup:5}[47].
+      </list-item>
+     </list>
+     <paragraph>
+      All the experiments were done on Intel core i7 machine with 8 GB of RAM running at 1.7 GHz.
+     </paragraph>
+     <paragraph>
+      Concerning the problem {a mathematical formula}FCIMmink, Table 1 details the characteristics of the different transaction databases ({a mathematical formula}D). The first column mentions the name of the considered data instance. In the second and third column, we give the size of {a mathematical formula}D in terms of number of transactions (#trans) and number of items (#items) respectively. The fourth column shows the density (dens) of the transaction database, defined as the percentage of 1's in {a mathematical formula}D. The panel of datasets ranges from sparse (e.g. mushroom) to dense ones (e.g. Hepatitis). Finally, in the two last columns, we give the size of the CNF encoding (#vars, #clauses) of {a mathematical formula}FCIMmink. As we can see, our proposed encoding leads to CNF formula of reasonable size. The maximum size is obtained for the instance Connect (67 815 variables and 5 877 720 clauses).
+     </paragraph>
+     <paragraph>
+      In order to analyze the behavior of our Top-k algorithm on {a mathematical formula}FCIMmink, we set the minimum length min of the itemsets to 1, while the value of k is varied from 100 to 100 000.
+     </paragraph>
+     <paragraph>
+      In Table 2, we provide the number of Top-k frequent closed itemsets for each data instance according to different values of k. We also provide in parenthesis the total number of models including Top-k and intermediary non Top-k models, found by the model enumerator.
+     </paragraph>
+     <paragraph>
+      In general, the number of Top-k frequent closed itemsets is slightly around the value of k. We can also observe that there is only one data instance (Audiology), where the number of Top-k frequent closed itemsets is significantly greater than k. Let us note that for a given data instance involving a total of m frequent closed itemsets, if k is greater than m (e.g., Zoo-1, Soybean, Tic-tac-toe) then the number of Top-k models remains equal to m. Let us also note that computing the Top-k models can leads to the same number for different values of k (e.g., Audiology). To illustrate such a particular case, given a data instance with a number of Top-1 models equal to 100. In this case, the number of Top-k models for each value of k less than 100 remains equal to 100. However, the total number of models necessary to the generation of the Top-k models can vary with k. Indeed, the constraints allowing us to cut the non Top-k models is activated when the first k models are generated. Consequently, the search tree might depend on the value of k. As a summary, enumerating Top-k is clearly a method of choice for keeping the size of the output under control.
+     </paragraph>
+     <paragraph>
+      We compared, our method with a LCM algorithm proposed by Takeaki Uno et al. in [48], one of the best specialized algorithm, using the Top-k option. In Table 3, we provide the CPU time in seconds needed by LCM(Top-k option) and {a mathematical formula}FCIM1k respectively (separated by the slash symbol) for different values of k varying from 100 to 100 000.
+     </paragraph>
+     <paragraph>
+      First, the CPU time needed for computing the Top-k models increases, in general, with k. The Splice-1 dataset with low density, is the most challenging instance for our approach. Our algorithm computes the Top-100000 in 557.2 seconds. This is not the case for Mushroom which is even more sparse (density of 18%). Our experimental evaluation clearly shows that finding the Top-k models (the most interesting ones) can be computed efficiently for small values of k. For example, on most datasets the Top-1000 models are computed in less than 1 second of CPU time, except for Mushroom, Connect and Splice-1 dataset, where the Top-1000 are computed in less than 6 seconds. As expected, on all the datasets and all tested values of k, LCM is able to enumerate the Top-k frequent closed itemsets in less than 10 seconds. It is important to note, that our new implementation is able to compute the Top-k on most of the tested instances in less than 100 seconds except for Splice-1. Let us give some elements of explanation. It is first important to note that in our SAT based itemset mining encoding, the propositional variables associated to items form a strong backdoor set [49]. Any assignment of the variables from these set leads to a tractable sub-formula that can be decided by unit-propagation. Indeed, the propositional variables associated to transactions are dependent on the variables associated to items. As a consequence, the size of the search tree depends on the number of items. The excessive CPU time obtained on the Splice-1 data instance can be explained by its high number of items. Indeed, Splice-1 involves 287 items, the highest number of items among all the data instances. For the Mushroom and Connect data instances, the number of items is lower, but the higher number of transactions increase the cost of unit propagation.
+     </paragraph>
+     <paragraph>
+      As a summary, comparatively, to our previously published results the gap with specialized approaches is significantly reduced. The results depicted in Table 3, demonstrate the competitiveness of our declarative approach with state-of-the-art LCM specialized algorithm.
+     </paragraph>
+     <paragraph>
+      Concerning sequence mining, we are not aware of any available tool that enumerates the Top-k frequent closed patterns with wildcards in a sequence ({a mathematical formula}FCPSmink) as described in this paper. Consequently, our last experimental evaluation (see Table 4) aims to simply show the flexibility of our proposed declarative approach and its feasibility. However, to provide an idea on the performance gap between our Top-k sequence mining approach and specialized algorithms, we compare with MaxMotif the state-of-the-art sequence mining tool [5].{sup:6} As MaxMotif does not provide a Top-k option, we proceed in two steps. In the first step, we generate all the frequent closed patterns and in a second step we generate the Top-k by sorting the patterns according to their frequencies.
+     </paragraph>
+     <paragraph>
+      Similarly to {a mathematical formula}FCIMmink, we set the minimum length min of the patterns to 1, while the value of k is varied from 100 to 10 000.
+     </paragraph>
+     <paragraph>
+      Let us first mention that on the considered data sets, the encoding of {a mathematical formula}FCPSmink leads to large CNF formula comparatively to those considered in {a mathematical formula}FCIMmink encoding. Indeed, for the sequence User-400 containing 400 solid characters, the set of clauses required for its encoding exceeds 4 millions of clauses. The same observation can be made on the number of variables.
+     </paragraph>
+     <paragraph>
+      Similarly to {a mathematical formula}FCIMmink, the CPU time needed for computing the Top-k models increases, in general, with k. Although the model enumeration process using DPLL leads to an important improvement with respect to our first version of CDCL-based model enumerator [26]. In Table 4, for each k and for each instance, the CPU time in seconds needed to compute Top-k frequent closed patterns in a sequence is given. We also provide a couple {a mathematical formula}(x,y) where x represents the number of Top-k models and y the total number of models including the intermediary models necessary to the generation of the Top-k models. We also mention for each data instance the number of variables (#vars) and clauses (#clauses) of its associated CNF encoding.
+     </paragraph>
+     <paragraph>
+      As expected, the numbers of Top-k patterns is close to k. We can also remark that we have to mine about a factor of 4 of non Top-k models to find the final Top-k models. Overall, less than 120 seconds is needed to enumerate all Top-k patterns for different values of k.
+     </paragraph>
+     <paragraph>
+      Table 5 illustrates the performances of MaxMotif using two steps as explained above. We tested the five sequence data instances with {a mathematical formula}k=10000. For each data instance, we provide the cumulated CPU time of the two steps in seconds and the total number of frequent closed patterns found in the first step (in parenthesis). As expected, to compute the Top-k, on all considered data instances, MaxMotif (in two steps) requires less than 13 seconds to enumerate the set of Top-10000 frequent closed patterns in a sequence.
+     </paragraph>
+     <paragraph>
+      Let us also note that mining Top-k frequent closed patterns in a sequence using Top-k SAT approach suffers from the size of the encoding. However, the advantage of our declarative approach is its ability to not enumerate all the Top-k frequent closed patterns through a dynamic use of constraints to cut the search tree.
+     </paragraph>
+     <paragraph>
+      As a summary, the experiments show clearly the feasibility of our proposed framework. It is clearly competitive on Top-k itemsets mining problem. However, on Top-k sequence mining, MaxMotif (in two steps) is several orders of magnitude better.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusion and perspectives
+     </section-title>
+     <paragraph>
+      In this paper, we introduce a new problem, called Top-k SAT, defined as the problem of enumerating the Top-k models of a propositional formula. A Top-k model is a model having no more than {a mathematical formula}k−1 models preferred to it with respect to the considered preference relation. We also show that Top-k SAT generalizes the two well-known problems: the Partial MAX-SAT problem and the problem of computing minimal models. A general algorithm for this problem is proposed and evaluated on the problem of enumerating Top-k patterns in data mining, namely, the problem of mining Top-k motifs in the transaction databases and in the sequences. In the case of mining sequence data, we introduce a natural extension of the problem to deal with the sequences of itemsets. Interestingly, its encoding to SAT is obtained with a slight modification of the SAT encoding of the problem dealing with the sequences of items.
+     </paragraph>
+     <paragraph>
+      While our new problem of computing the Top-k preferred models in Boolean satisfiability is flexible and declarative, there are a number of questions that deserve further research efforts. One direction is the study of (preferred/Top-k) model enumeration algorithm so as to achieve a further speedup of the runtime. This fundamental problem has not received a lot of attention in the SAT community, except some interesting works on enumerating minimal/preferred models. We also plan to investigate other variants of the considered data mining problems such as sequences of sequences of items or itemsets. It would be interesting to extend our encodings with constraints on the form of the enumerated patterns (restriction on the number of consecutive wildcards, regular expressions, etc.). Finally, on the Boolean satisfiability side, the design of efficient model generation procedures is an important issue for SAT-based datamining framework in general and to other important application domains. Finding a better approximation of the initial set of Top-k patterns to reduce the intermediary non Top-k patterns deserves to be investigated.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,805 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A chance-corrected measure of inter-annotator agreement for syntax</title>
+<!--Generated on Tue Jun 10 18:12:45 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A chance-corrected measure of inter-annotator agreement for syntax</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Arne Skjærholt 
+<br class="ltx_break"/>Language technology group, dept. of informatics 
+<br class="ltx_break"/>University of Oslo 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">arnskj@ifi.uio.no</span>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Following the works of <span class="ltx_ERROR undefined">\citeN</span>Carletta96 and <span class="ltx_ERROR undefined">\citeN</span>Art:Poe08, there is
+an increasing consensus within the field that in order to properly gauge
+the reliability of an annotation effort, chance-corrected measures of
+inter-annotator agreement should be used. With this in mind, it is
+striking that virtually all evaluations of syntactic annotation efforts
+use uncorrected parser evaluation metrics such as bracket <math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> (for
+phrase structure) and accuracy scores (for dependencies).</p>
+<p class="ltx_p">In this work we present a chance-corrected metric based on Krippendorff’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, adapted to the structure of syntactic annotations and applicable
+both to phrase structure and dependency annotation without any
+modifications. To evaluate our metric we first present a number of
+synthetic experiments to better control the sources of noise and gauge the
+metric’s responses, before finally contrasting the behaviour of our
+chance-corrected metric with that of uncorrected parser evaluation metrics
+on real corpora.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The code used to produce the data in this paper,
+and some of the datasets used, are available to download at
+<span class="ltx_text ltx_font_typewriter">https://github.com/arnsholt/syn-agreement/</span></span></span></span></p>
+</div><span class="ltx_ERROR undefined">\tikzset</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">edgefromparent/.style=-¿,draw,font=</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">It is a truth universally acknowledged that an annotation task in good
+standing be in possession of a measure of inter-annotator agreement (IAA).
+However, no such measure is in widespread use for the task of syntactic
+annotation. This is due to a mismatch between the formulation of the agreement
+measures, which assumes that the annotations have no or
+relatively little internal structure, and syntactic annotation where structure
+is the entire point of the annotation. For this reason efforts to gauge the
+quality of syntactic annotation are hampered by the need to fall back to
+simple accuracy measures. As shown in <span class="ltx_ERROR undefined">\citeN</span>Art:Poe08, such measures are
+biased in favour of annotation schemes with fewer categories and do not
+account for skewed distributions between classes, which can give high
+observed agreement, even if the annotations are inconsistent.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this article we propose a family of chance-corrected measures of agreement,
+applicable to both dependency- and constituency-based syntactic annotation,
+based on Krippendorff’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and tree edit distance. First we give an
+overview of traditional agreement measures and why they are insufficient for
+syntax, before presenting our proposed metrics. Next, we present a number of
+synthetic experiments performed in order to find the best distance function
+for this kind of annotation; finally we contrast our new metric and simple
+accuracy scores as applied to real-world corpora before concluding and
+presenting some potential avenues for future work.</p>
+</div>
+<div id="S1.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">1.1 </span>Previous work</h3>
+
+<div id="S1.SS1.p1" class="ltx_para">
+<p class="ltx_p">The definitive reference for agreement measures in computational linguistics
+is <span class="ltx_ERROR undefined">\citeN</span>Art:Poe08, who argue forcefully in favour of the use of
+chance-corrected measures of agreement over simple accuracy measures. However,
+most evaluations of syntactic treebanks use simple accuracy measures such as
+bracket <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS1.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> scores for constituent trees (NEGRA, <cite class="ltx_cite">[]</cite>; TIGER,
+<cite class="ltx_cite">[]</cite>; Cat3LB, <cite class="ltx_cite">[]</cite>; The Arabic Treebank,
+<cite class="ltx_cite">[]</cite>) or labelled or unlabelled attachment scores for
+dependency syntax (PDT, <cite class="ltx_cite">[]</cite>; PCEDT <cite class="ltx_cite">[]</cite>; Norwegian
+Dependency Treebank, <cite class="ltx_cite">[]</cite>). The only work we know of using
+chance-corrected metrics is <span class="ltx_ERROR undefined">\citeN</span>Rag:Dic13, who use MASI <cite class="ltx_cite">[]</cite>
+to measure agreement on dependency relations and head selection in
+multi-headed dependency syntax, and <span class="ltx_ERROR undefined">\citeN</span>Bha:Sha12, who compute Cohen’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS1.p1.m2" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> <cite class="ltx_cite">[]</cite> on dependency relations in single-headed dependency
+syntax. A limitation of the first approach is that token ID becomes the
+relevant category for the purposes of agreement, while the second approach
+only computes agreements on relations, not on structure.</p>
+</div>
+<div id="S1.SS1.p2" class="ltx_para">
+<p class="ltx_p">In grammar-driven treebanking (or parsebanking), the problems encountered are
+slightly different. In HPSG and LFG treebanking annotators do not annotate
+structure directly. Instead, the grammar parses the input sentences, and the
+annotator selects the correct parse (or rejects all the candidates) based on
+discriminants<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>A discriminant is an attribute of the analyses produced
+by the grammar where some of the analyses differ, e.g. is the word <em class="ltx_emph">jump</em> a
+noun or a verb, or does a PP attach to a VP or the VP’s object NP.</span></span></span> of the
+parse forest. In this context, <span class="ltx_ERROR undefined">\citeN</span>deCastro11 developed a variant of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS1.p2.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> that measures agreement over discriminant selection. This is
+different from our approach in that agreement is computed on annotator
+decisions rather than on the treebanked analyses, and is only applicable to
+grammar-based approaches such as HPSG and LFG treebanking.</p>
+</div>
+<div id="S1.SS1.p3" class="ltx_para">
+<p class="ltx_p">The idea of using edit distance as the basis for an inter-annotator agreement
+metric has previously been explored by <span class="ltx_ERROR undefined">\citeN</span>Fournier13. However that work
+used a boundary edit distance as the basis of a metric for the task of text
+segmentation.</p>
+</div>
+</div>
+<div id="S1.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">1.2 </span>Notation</h3>
+
+<div id="S1.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we mostly follow the notation and terminology of
+<span class="ltx_ERROR undefined">\citeN</span>Art:Poe08, with some additions. The key components in an agreement
+study are the <em class="ltx_emph">items</em> annotated, the <em class="ltx_emph">coders</em> who make judgements on
+individual items, and the <em class="ltx_emph">annotations</em> created for the items. We denote
+these as follows:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">The set of items <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="I=\{i_{1},i_{2},\dots\}" display="inline"><mrow><mi>I</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>i</mi><mn>1</mn></msub><mo>,</mo><msub><mi>i</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi></mrow><mo>}</mo></mrow></mrow></math></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">The set of coders <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="C=\{c_{1},c_{2},\dots\}" display="inline"><mrow><mi>C</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><msub><mi>c</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi></mrow><mo>}</mo></mrow></mrow></math></p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">The set of annotations <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is a set of sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m2" class="ltx_Math" alttext="X=\{X_{i}|i\in I\}" display="inline"><mrow><mi>X</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>X</mi><mi>i</mi></msub><mo separator="true">|</mo><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></mrow><mo>}</mo></mrow></mrow></math>
+where each set <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m3" class="ltx_Math" alttext="X_{i}=\{x_{ic}|c\in C\}" display="inline"><mrow><msub><mi>X</mi><mi>i</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo separator="true">|</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></mrow><mo>}</mo></mrow></mrow></math> contains the annotations
+for each item. If not all coders annotate all items, the different
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m4" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi>X</mi><mi>i</mi></msub></math> will be of different sizes.</p>
+</div></li>
+</ul>
+<p class="ltx_p">In the case of nominal categorisation we will also use the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> of
+possible categories.</p>
+</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>The metric</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The most common metrics used in computational linguistics are the metrics
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> <cite class="ltx_cite">[, introduced to computational linguistics by
+<cite class="ltx_cite">[]</cite>]</cite> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math> <cite class="ltx_cite">[]</cite>. These metrics express
+agreement on a nominal coding task as the ratio <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="\kappa,\pi=\nicefrac{{A_{o}-A_{e}}}{{1-A_{e}}}" display="inline"><mrow><mrow><mi>κ</mi><mo>,</mo><mi>π</mi></mrow><mo>=</mo><mrow><mrow><msub><mi>A</mi><mi>o</mi></msub><mo>-</mo><msub><mi>A</mi><mi>e</mi></msub></mrow><mo>/</mo><mrow><mn>1</mn><mo>-</mo><msub><mi>A</mi><mi>e</mi></msub></mrow></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="A_{o}" display="inline"><msub><mi>A</mi><mi>o</mi></msub></math> is the observed agreement and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="A_{e}" display="inline"><msub><mi>A</mi><mi>e</mi></msub></math> the expected
+agreement according to some model of “random” annotation. Both metrics have
+essentially the same model of expected agreement:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="A_{e}=\sum_{k\in K}P(k|c_{1})P(k|c_{2})" display="block"><mrow><msub><mi>A</mi><mi>e</mi></msub><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>∈</mo><mi>K</mi></mrow></munder><mi>P</mi><mrow><mo>(</mo><mi>k</mi><mo>|</mo><msub><mi>c</mi><mn>1</mn></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><mi>k</mi><mo>|</mo><msub><mi>c</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">differing only in how they estimate the probabilities: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> assigns
+separate probability distributions to each coder based on their observed
+behaviour, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m7" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math> uses the same distribution for both coders based on
+their aggregate behaviour.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Now, if we want to perform this same kind of evaluation on syntactic
+annotation it is not possible to use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math> directly. In the case
+of dependency-based syntax we could conceivably use a variant of these metrics
+by considering the ID of a token’s head as a categorical variable (the
+approach taken in <cite class="ltx_cite">[]</cite>), but we argue that this is not
+satisfactory. This use of the metrics would consider agreement on categories
+such as “tokens whose head is token number 24”, which is obviously not a
+linguistically informative category. Thus we have to reject this way of
+assessing the reliability of dependency syntax annotation. Also, this approach
+is not directly generalisable to constituency-based syntax.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">For dependency syntax we could generalise these metrics similarly to how
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> is generalised to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="\kappa_{w}" display="inline"><msub><mi>κ</mi><mi>w</mi></msub></math> to handle partial credit for overlapping
+annotations. Let the function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="\textrm{LAS}(t_{1},t_{2})" display="inline"><mrow><mtext>LAS</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> be the number of tokens
+with the same head and label in the two trees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m6" class="ltx_Math" alttext="T(i)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> the set
+of trees possible for an item <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m7" class="ltx_Math" alttext="i\in I" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></math>, and <span class="ltx_text ltx_markedasmath">tokens</span> the number of
+tokens in the corpus. Then we can compute an expected agreement as follows:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_gather">
+
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\displaystyle A_{e}=\frac{1}{\textrm{tokens}}\sum_{i\in I}\sum_{t_{1},t_{2}\in&#10;T%&#10;(i)^{2}}\textrm{LAS}_{e}(t_{1},t_{2})" display="inline"><mrow><msub><mi>A</mi><mi>e</mi></msub><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mtext>tokens</mtext></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>∈</mo><mrow><mi>T</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mn>2</mn></msup></mrow></mrow></munder></mstyle><mrow><msub><mtext>LAS</mtext><mi>e</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle\textrm{LAS}_{e}(t_{1},t_{2})=P(t_{1}|c_{1})P(t_{2}|c_{2})\textrm%&#10;{LAS}(t_{1},t_{2})" display="inline"><mrow><msub><mtext>LAS</mtext><mi>e</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mn>1</mn></msub><mo>|</mo><msub><mi>c</mi><mn>1</mn></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mn>2</mn></msub><mo>|</mo><msub><mi>c</mi><mn>2</mn></msub><mo>)</mo></mrow><mtext>LAS</mtext><mrow><mo>(</mo><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We see three problems with this approach. First of all the number of possible
+trees for a sentence grows exponentially with sentence length, which means
+that explicitly iterating over all possible such pairs is computationally
+intractable, nor have we been able to easily derive an algorithm for this
+particular problem from standard algorithms.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Second, the question of which model to use for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="P(t|c)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> is not
+straightforward. It is possible to use generative parsing models such as PCFGs
+or the generative dependency models of <span class="ltx_ERROR undefined">\citeN</span>Eisner96, but agreement metrics
+require a model of <em class="ltx_emph">random</em> annotation, and as such using models designed
+for parsing runs the risk of over-estimating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="A_{e}" display="inline"><msub><mi>A</mi><mi>e</mi></msub></math>, resulting in artificially
+low agreement scores.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">Finally, it may be hard to establish a consensus in the field of which
+particular metric to use. As shown by the existence of three different metrics
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m2" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <cite class="ltx_cite">[]</cite>) for the relatively simple task
+of nominal coding, the choice of model for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m4" class="ltx_Math" alttext="P(t|c)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> will not be obvious, and
+thus differing choices of generative model as well as different choices for
+parameters such as smoothing will result in subtly different agreement
+metrics. The results of these different metrics will not be directly
+comparable, which will make the results of groups using different metrics
+unnecessarily hard to compare.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><span class="ltx_ERROR undefined">\subfloat</span>
+<p class="ltx_p">[The original dependency tree] 
+<span class="ltx_ERROR undefined">\Tree</span>[.ROOT <span class="ltx_ERROR undefined">\edge</span>node[auto=left] Pred; [.saw
+<span class="ltx_ERROR undefined">\edge</span>node[auto=right] Subj; I
+<span class="ltx_ERROR undefined">\edge</span>node[auto=left] Obj; [.man <span class="ltx_ERROR undefined">\edge</span>node[auto=right] Det; the ] ] ]
+ 
+  
+<span class="ltx_ERROR undefined">\subfloat</span>[The tree used in comparisons]
+ 
+<span class="ltx_ERROR undefined">\tikzset</span>every node/.append style=font=<span class="ltx_ERROR undefined">\Tree</span>[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math> [.Pred Subj [.Obj Det ] ] ]</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Transformation of dependency trees before comparison</div>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">Instead, we propose to use an agreement measure based on Krippendorff’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> <cite class="ltx_cite">[]</cite> and tree edit distance. In this
+approach we compare tree structures directly, which is extremely parsimonious
+in terms of assumptions, and furthermore sidesteps the problem of
+probabilistically modelling annotators’ behaviour entirely. Krippendorff’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is not as commonly used as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m3" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m4" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math>, but it has the
+advantage of being expressed in terms of an arbitrary <em class="ltx_emph">distance function</em>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p7.m5" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math>.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">A full derivation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is beyond the scope of this article, and we will
+simply state the formula used to compute the agreement. Krippendorff’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is normally expressed in terms of the ratio of observed and expected
+disagreements: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m3" class="ltx_Math" alttext="\alpha=1-\nicefrac{{D_{o}}}{{D_{e}}}" display="inline"><mrow><mi>α</mi><mo>=</mo><mrow><mn>1</mn><mo>-</mo><mrow><msub><mi>D</mi><mi>o</mi></msub><mo>/</mo><msub><mi>D</mi><mi>e</mi></msub></mrow></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m4" class="ltx_Math" alttext="D_{o}" display="inline"><msub><mi>D</mi><mi>o</mi></msub></math> is the mean squared
+distance between annotations of the same item and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m5" class="ltx_Math" alttext="D_{e}" display="inline"><msub><mi>D</mi><mi>e</mi></msub></math> the mean squared
+distance between all pairs of annotations:</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle D_{o}" display="inline"><msub><mi>D</mi><mi>o</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle=\sum_{i\in I}\frac{1}{|X_{i}|-1}\sum_{c\in C}\sum_{c^{\prime}\in&#10;C%&#10;}\delta(x_{ic},x_{ic^{\prime}})^{2}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>c</mi><mo>′</mo></msup><mo>∈</mo><mi>C</mi></mrow></munder></mstyle><mrow><mi>δ</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><msup><mi>c</mi><mo>′</mo></msup></mrow></msub></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\displaystyle D_{e}" display="inline"><msub><mi>D</mi><mi>e</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{\sum_{i\in I}|X_{i}|-1}\sum_{i\in I}\sum_{c\in C}\sum_{%&#10;i^{\prime}\in I}\sum_{c^{\prime}\in C}\delta(x_{ic},x_{i^{\prime}c^{\prime}})^%&#10;{2}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></msub><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>-</mo><mn>1</mn></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>∈</mo><mi>I</mi></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>c</mi><mo>′</mo></msup><mo>∈</mo><mi>C</mi></mrow></munder></mstyle><mrow><mi>δ</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>⁢</mo><msup><mi>c</mi><mo>′</mo></msup></mrow></msub></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.p10" class="ltx_para">
+<p class="ltx_p">Note that in the expression for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p10.m1" class="ltx_Math" alttext="D_{e}" display="inline"><msub><mi>D</mi><mi>e</mi></msub></math>, we are computing the difference between
+annotations for <em class="ltx_emph">different</em> items; thus, our distance function for
+syntactic trees needs to be able to compute the difference between arbitrary
+trees for completely unrelated sentences. The function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p10.m2" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> can be any
+function as long as it is a metric; that is, it must be (1) non-negative, (2)
+symmetric, (3) zero only for identical inputs, and (4) it must obey the
+triangle inequality:</p>
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="\forall x,y:\delta(x,y)\geq 0" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>:</mo><mrow><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>≥</mo><mn>0</mn></mrow></mrow></math></p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="\forall x,y:\delta(x,y)=\delta(x,y)" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>:</mo><mrow><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="\forall x,y:\delta(x,y)=0\Leftrightarrow x=y" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>:</mo><mrow><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo>⇔</mo><mrow><mi>x</mi><mo>=</mo><mi>y</mi></mrow></mrow></math></p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m1" class="ltx_Math" alttext="\forall x,y,z:\delta(x,y)+\delta(y,z)\geq\delta(x,z)" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi></mrow><mo>:</mo><mrow><mrow><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>≥</mo><mrow><mi>δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></p>
+</div></li>
+</ol>
+</div>
+<div id="S2.p11" class="ltx_para">
+<p class="ltx_p">This immediately excludes metrics like ParsEval <cite class="ltx_cite">[]</cite> and
+Leaf-Ancestor <cite class="ltx_cite">[]</cite>, since they assume that the trees being
+compared are parses of the same sentence. Instead, we base our work on tree
+edit distance. The tree edit distance (TED) problem is defined analogously to
+the more familiar problem of string edit distance: what is the minimum number
+of edit operations required to transform one tree into the other? See
+<span class="ltx_ERROR undefined">\citeN</span>Bille05 for a thorough introduction to the tree edit distance problem
+and other related problems. For this work, we used the algorithm of
+<span class="ltx_ERROR undefined">\citeN</span>Zha:Sha89. Tree edit distance has previously been used in the
+<span class="ltx_text ltx_font_smallcaps">TedEval</span> software <cite class="ltx_cite">[]</cite> for parser
+evaluation agnostic to both annotation scheme and theoretical framework, but
+this by itself is still an uncorrected accuracy measure and thus unsuitable
+for our purposes.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>While it is quite different from other parser
+evaluation schemes, <span class="ltx_text ltx_font_smallcaps">TedEval</span> does not correct for chance agreement and is
+thus an uncorrected metric. It could of course form the basis for a corrected
+metric, given a suitable measure of expected agreement.</span></span></span></p>
+</div>
+<div id="S2.p12" class="ltx_para">
+<p class="ltx_p">When comparing syntactic trees, we only want to compare dependency relations
+or non-terminal categories. Therefore we remove the leaf nodes in the case of
+phrase structure trees, and in the case of dependency trees we compare trees
+whose edges are unlabelled and nodes are labelled with the dependency relation
+between that word and its head; the root node receives the label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p12.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>.
+An example of this latter transformation is shown in Figure
+<a href="#S2.F1" title="Figure 1 ‣ 2 The metric ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><span class="ltx_ERROR undefined">\tikzset</span>
+<p class="ltx_p">every node/.append style=font=<span class="ltx_ERROR undefined">\Tree</span>[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math> [.Pred Subj [.Obj Det ] ] ]
+ 
+<span class="ltx_ERROR undefined">\tikzset</span>every node/.append style=font=<span class="ltx_ERROR undefined">\Tree</span>[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m2" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>
+[.Pred
+Subj
+[. Obj Det [.Atr [. Pred [.Obj Det ] ] ] ] ] ]
+ 
+<span class="ltx_ERROR undefined">\tikzset</span>every node/.append style=font=<span class="ltx_ERROR undefined">\Tree</span>[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m3" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math> [.Pred Subj ] ]</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Three trees with distance zero using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m5" class="ltx_Math" alttext="\delta_{diff}" display="inline"><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math></div>
+</div>
+<div id="S2.p13" class="ltx_para">
+<p class="ltx_p">We propose three different distance functions for the agreement computation:
+the unmodified tree edit distance function, denoted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p13.m1" class="ltx_Math" alttext="\delta_{plain}" display="inline"><msub><mi>δ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>, a second
+function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p13.m2" class="ltx_Math" alttext="\delta_{diff}(x,y)=\mathrm{TED}(x,y)-\mathrm{abs}(|x|-|y|)" display="inline"><mrow><mrow><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>TED</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>abs</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo fence="true">|</mo><mi>x</mi><mo fence="true">|</mo></mrow><mo>-</mo><mrow><mo fence="true">|</mo><mi>y</mi><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>, the edit distance
+minus the difference in length between the two sentences, and finally
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p13.m3" class="ltx_Math" alttext="\delta_{norm}(x,y)=\nicefrac{{\mathrm{TED}(x,y)}}{{|x|+|y|}}" display="inline"><mrow><mrow><msub><mi>δ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>TED</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>/</mo><mrow><mrow><mo fence="true">|</mo><mi>x</mi><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mi>y</mi><mo fence="true">|</mo></mrow></mrow></mrow></mrow></math>, the edit distance normalised
+to the range <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p13.m4" class="ltx_Math" alttext="[0,1]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We can easily show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p13.m5" class="ltx_Math" alttext="|x|+|y|" display="inline"><mrow><mrow><mo fence="true">|</mo><mi>x</mi><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mi>y</mi><mo fence="true">|</mo></mrow></mrow></math> is an upper
+bound on the TED, corresponding to deleting all nodes in the source tree and
+inserting all the nodes in the target.</span></span></span></p>
+</div>
+<div id="S2.p14" class="ltx_para">
+<p class="ltx_p">The plain TED is the simplest in terms of parsimony assumptions, however it
+may overestimate the difference between sentences, we intuitively find to be
+syntactically similar. For example the only difference between the two
+leftmost trees in Figure <a href="#S2.F2" title="Figure 2 ‣ 2 The metric ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> is a modifier, but
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p14.m1" class="ltx_Math" alttext="\delta_{plain}" display="inline"><msub><mi>δ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> gives them distance 4 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p14.m2" class="ltx_Math" alttext="\delta_{diff}" display="inline"><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> 0. On the other
+hand, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p14.m3" class="ltx_Math" alttext="\delta_{diff}" display="inline"><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> might underestimate some distances as well; for example
+the leftmost and rightmost trees also have distance zero using
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p14.m4" class="ltx_Math" alttext="\delta_{diff}" display="inline"><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math>, despite our syntactic intuition that the difference between a
+transitive and an intransitive should be taken account of.</p>
+</div>
+<div id="S2.p15" class="ltx_para">
+<p class="ltx_p">The third distance function, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p15.m1" class="ltx_Math" alttext="\delta_{norm}" display="inline"><msub><mi>δ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math>, takes into account a slightly
+different concern; namely that when comparing a long sentence and a short
+sentence, the distance has to be quite large simply to account for the
+difference in number of nodes, unlike comparing two short or two long
+sentences. Normalising to the range <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p15.m2" class="ltx_Math" alttext="[0,1]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></math> puts all pairs on an equal
+footing.</p>
+</div>
+<div id="S2.p16" class="ltx_para">
+<p class="ltx_p">However, we cannot <em class="ltx_emph">a priori</em> say which of the three functions is the
+optimal choice of distance functions. The different functions have different
+properties, and different advantages and drawbacks, and the nature of their
+strengths and weaknesses differ. We will therefore perform a number of
+synthetic experiments to investigate their properties in a controlled
+environment, before applying them to real-world data.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Synthetic experiments</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In the previous section, we proposed three different agreement metrics
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math>, each involving
+different trade-offs. Deciding which of these metrics is the best one for our
+purposes of judging the consistency of syntactic annotation poses a bit of a
+conundrum. We could at this point apply our metrics to various real corpora
+and compare the results, but since the consistency of the corpora is unknown,
+it’s impossible to say whether the best metric is the one resulting in the
+highest scores, the lowest scores or somewhere in the middle. To properly
+settle this question, we first performed a number of synthetic experiments to
+gauge how the different metrics respond to disagreement.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The general approach we take is based on that used by <span class="ltx_ERROR undefined">\citeN</span>Mathet:etal12,
+adapted to dependency trees. An already annotated corpus, in our case 100
+randomly selected sentences from the Norwegian Dependency Treebank
+<cite class="ltx_cite">[]</cite>, are taken as correct and then permuted to produce
+“annotations” of different quality. For dependency trees, the input corpus
+is permuted as follows:</p>
+<ol id="I3" class="ltx_enumerate">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Each token has a probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="p_{relabel}" display="inline"><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> of being assigned a
+different label uniformly at random from the set of labels used in the
+corpus.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Each token has a probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="p_{reattach}" display="inline"><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi></mrow></msub></math> of being assigned a new
+head uniformly at random from the set of tokens not dominated by the
+token.</p>
+</div></li>
+</ol>
+<p class="ltx_p">The second permutation process is dependent on the order the tokens are
+processed, and we consider the tokens in the post-order<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>That is, the
+child nodes of a node are all processed before the node itself. Nodes on the
+same level are traversed from left to right.</span></span></span> as dictated by the original
+tree. This way tokens close to the root have a fair chance of having candidate
+heads if they are selected. A pre-order traversal would result in tokens close
+to the root having few options, and in particular if the root has a single
+child, that node has no possible new heads unless one of its children has been
+assigned the root as its new head first. For example in the trees in figure
+<a href="#S2.F2" title="Figure 2 ‣ 2 The metric ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, assigning any other head than the root to the
+<span class="ltx_text ltx_font_smallcaps">Pred</span> nodes directly dominated by the root will result in invalid
+(cyclic and unconnected) dependency trees. Traversing the tokens in the linear
+order dictated by the sentence has similar issues for tokens close to the root
+and close to the start of the sentence.</p>
+</div>
+<div id="S3.F3" class="ltx_figure">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Mean agreement over ten runs</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">For our first set of experiments, we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="p_{relabel}=p_{reattach}" display="inline"><mrow><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>=</mo><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi></mrow></msub></mrow></math> and
+evaluated the different agreement metrics for 10 evenly spaced <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>-values
+between 0.1 and 1.0. Initial exploration of the data showed that the mean
+follows the median very closely regardless of metric and perturbation level,
+and therefore we only report the mean scores across runs in this paper. The
+results of these experiments are shown in Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+with the labelled attachment score<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>The <em class="ltx_emph">de facto</em> standard
+parser evaluation metric in dependency parsing: the percentage of tokens that
+receive the correct head <em class="ltx_emph">and</em> dependency relation.</span></span></span> (LAS) for
+comparison.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> metric is clearly extremely sensitive to noise, with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="p=0.1" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>0.1</mn></mrow></math> yielding mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="\alpha_{diff}=15.8\%" display="inline"><mrow><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>=</mo><mrow><mn>15.8</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m4" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> is more
+lenient than both LAS and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m5" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>, with mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m6" class="ltx_Math" alttext="\alpha_{norm}=14.5\%" display="inline"><mrow><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>=</mo><mrow><mn>14.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>
+at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m7" class="ltx_Math" alttext="p=1" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>1</mn></mrow></math>, quite high compared to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m8" class="ltx_Math" alttext="\textrm{LAS}=0.9\%" display="inline"><mrow><mtext>LAS</mtext><mo>=</mo><mrow><mn>0.9</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m9" class="ltx_Math" alttext="\alpha_{plain}=-6.8\%" display="inline"><mrow><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>=</mo><mrow><mo>-</mo><mrow><mn>6.8</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m10" class="ltx_Math" alttext="\alpha_{diff}=-246\%" display="inline"><mrow><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>=</mo><mrow><mo>-</mo><mrow><mn>246</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></mrow></math>. To further study the sensitivity of the metrics to
+the two kinds of noise, we performed an additional set of experiments, setting
+one <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m11" class="ltx_Math" alttext="p=0" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>0</mn></mrow></math> while varying the other over the same range as in the previous
+experiment, the results of which are shown in Figures
+<a href="#S3.F4" title="Figure 4 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and <a href="#S3.F5" title="Figure 5 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">The LAS curves are mostly unremarkable, with one exception: Mean LAS at
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="p_{reattach}=1" display="inline"><mrow><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow></math> of Figure <a href="#S3.F5" title="Figure 5 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> is 23.9%, clearly much
+higher than we would expect if the trees were completely random. In
+comparison, mean LAS when only labels are perturbed is 4.1%, and since the
+sample space of trees of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is clearly much larger than that of
+relabellings, a uniform random selection of tree would yield a LAS much closer
+to 0. This shows that our tree shuffling algorithm has a non-uniform
+distribution over the sample space.</p>
+</div>
+<div id="S3.F4" class="ltx_figure">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Mean agreement over ten runs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m2" class="ltx_Math" alttext="p_{reattach}=0" display="inline"><mrow><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow></math></div>
+</div>
+<div id="S3.F5" class="ltx_figure">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Mean agreement over ten runs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m2" class="ltx_Math" alttext="p_{relabel}=0" display="inline"><mrow><msub><mi>p</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow></math></div>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">While the behaviour of our alphas and LAS are relatively similar in Figure
+<a href="#S3.F3" title="Figure 3 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, Figures <a href="#S3.F4" title="Figure 4 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and
+<a href="#S3.F5" title="Figure 5 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> show that they do in fact have important
+differences. Whereas LAS responds linearly to perturbation of both labels and
+structure, with its parabolic behaviour in Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>
+being simply the product of these two linear responses, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics
+respond differently to structural noise and label noise, with label
+disagreements being penalised less harshly than structural disagreements.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">The reason for the strictness of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> metric and the laxity of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> is the effects the modified distance functions have on the
+distribution of distances. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m3" class="ltx_Math" alttext="\delta_{diff}" display="inline"><msub><mi>δ</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> function causes an extreme
+shift of the distances towards 0; more than 30% of the sentence pairs have
+distance 0, 1, or 2, which causes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m4" class="ltx_Math" alttext="D_{e}^{diff}" display="inline"><msubsup><mi>D</mi><mi>e</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msubsup></math> to be extremely low and thus
+gives disproportionally large weight to non-zero distances in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m5" class="ltx_Math" alttext="D_{o}^{diff}" display="inline"><msubsup><mi>D</mi><mi>o</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msubsup></math>. On
+the other hand <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m6" class="ltx_Math" alttext="\delta_{norm}" display="inline"><msub><mi>δ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> causes a rightward shift of the distances,
+which results in a high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m7" class="ltx_Math" alttext="D_{e}^{norm}" display="inline"><msubsup><mi>D</mi><mi>e</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msubsup></math> and thus individual disagreements having
+less weight.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Real-world corpora</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Synthetic experiments do not always fully reflect real-world behaviour,
+however. Therefore we will also evaluate our metrics on real-world
+inter-annotator agreement data sets. In our evaluation, we will contrast
+labelled accuracy, the standard parser evaluation metric, and our three
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics. In particular, we are interested in the correlation (or lack
+thereof) between LAS and the alphas, and whether the results of our synthetic
+experiments correspond well with the results on real-world IAA sets. Finally,
+we also evaluate the metric on both dependency and phrase structure data.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>The corpora</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We obtained<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We contacted a number of treebank projects, among them
+the Penn Treebank and the Prague Dependency Treebank, but not all of them had
+data available.</span></span></span> data from four different corpora. Three of the data sets are
+dependency treebanks (NDT, CDT, PCEDT) and one phrase structure treebank
+(SSD), and of the dependency treebanks the PCEDT contains semantic
+dependencies, while the other two have traditional syntactic dependencies. The
+number of annotators and sizes of the different data sets are summarised in
+Table <span class="ltx_ref ltx_ref_self">LABEL:tbl:corpora</span>.</p>
+</div>
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">NDT</h4>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The Norwegian Dependency Treebank <cite class="ltx_cite">[]</cite> is a
+dependency treebank constructed at the National Library of Norway. The data
+studied in this work has previously been used by <span class="ltx_ERROR undefined">\citeN</span>Skjaerholt13 to study
+agreement, but using simple accuracy measures (UAS, LAS) rather than
+chance-corrected measures. The IAA data set is divided into three parts,
+corresponding to different parsers used to preprocess the data before
+annotation; what we term NDT 1 through 3 correspond to what
+<span class="ltx_ERROR undefined">\citeN</span>Skjaerholt13 labels Danish, Swedish and Norwegian, respectively.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">CDT</h4>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The Copenhagen Dependency Treebanks
+<cite class="ltx_cite">[]</cite> is a collection of parallel dependency
+treebanks, containing data from the Danish PAROLE corpus
+<cite class="ltx_cite">[]</cite> in the original Danish and translated into English,
+Italian and Spanish.</p>
+</div><span class="ltx_ERROR undefined">\ctable</span>
+<div id="S4.SS1.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">[botcap,
+caption=Sizes of the different IAA corpora,
+label=tbl:corpora,
+mincapwidth=]lcc
+<span class="ltx_ERROR undefined">\tnote</span>[a]2 annotators
+<span class="ltx_ERROR undefined">\tnote</span>[b]4 annotators, avg. 2.8 annotators/text (min. 2, max. 4)
+<span class="ltx_ERROR undefined">\tnote</span>[c]3 annotators, avg. 2.7 annotators/text
+<span class="ltx_ERROR undefined">\tnote</span>[d]11 annotators, avg. 2.5 annotators/text (min. 2, max. 6)
+<span class="ltx_ERROR undefined">\tnote</span>[e]3 annotators, avg. 2.9 annotators/sent.
+
+<span class="ltx_ERROR undefined">\FL</span>Corpus <span class="ltx_ERROR undefined">Align</span> Sentences <span class="ltx_ERROR undefined">Align</span> Tokens <span class="ltx_ERROR undefined">\ML</span>NDT 1<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">Align</span> 130 <span class="ltx_ERROR undefined">Align</span> 1674 <span class="ltx_ERROR undefined">\NN</span>NDT 2<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">Align</span> 110 <span class="ltx_ERROR undefined">Align</span> 1594 <span class="ltx_ERROR undefined">\NN</span>NDT 3<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">Align</span> 150 <span class="ltx_ERROR undefined">Align</span> 1997 <span class="ltx_ERROR undefined">\ML</span>CDT (da)<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">Align</span> 162 <span class="ltx_ERROR undefined">Align</span> 2394 <span class="ltx_ERROR undefined">\NN</span>CDT (en)<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">Align</span> 264 <span class="ltx_ERROR undefined">Align</span> 5528 <span class="ltx_ERROR undefined">\NN</span>CDT (es)<span class="ltx_ERROR undefined">\tmark</span>[b] <span class="ltx_ERROR undefined">Align</span> 55 <span class="ltx_ERROR undefined">Align</span> 924 <span class="ltx_ERROR undefined">\NN</span>CDT (it)<span class="ltx_ERROR undefined">\tmark</span>[c] <span class="ltx_ERROR undefined">Align</span> 136 <span class="ltx_ERROR undefined">Align</span> 3057 <span class="ltx_ERROR undefined">\ML</span>PCEDT<span class="ltx_ERROR undefined">\tmark</span>[d] <span class="ltx_ERROR undefined">Align</span>3531 <span class="ltx_ERROR undefined">Align</span>61737 <span class="ltx_ERROR undefined">\ML</span>SSD<span class="ltx_ERROR undefined">\tmark</span>[e] <span class="ltx_ERROR undefined">Align</span> 96 <span class="ltx_ERROR undefined">Align</span> 1581
+<span class="ltx_ERROR undefined">\LL</span></p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">PCEDT</h4>
+
+<div id="S4.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The Prague Czech-English Dependency Treebank 2.0
+<span class="ltx_ERROR undefined">\citeN</span>PCEDT2 is a parallel corpus of English and Czech, consisting of
+English data from the Wall Street Journal Section of the Penn Treebank
+<cite class="ltx_cite">[]</cite> and Czech translations of the English data. The syntactic
+annotations are layered and consist of an analytical layer similar to the
+annotations in most other dependency treebanks, and a more semantic
+tectogrammatical layer.</p>
+</div>
+<div id="S4.SS1.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Our data set consists of a common set of analytical annotations shared by all
+the annotators, and the tectogrammatical analyses built on top of this common
+foundation. A distinguishing feature of the tectogrammatical analyses, vis a
+vis the other treebanks we are using, is that semantically empty words only
+take part in the analytical annotation layer and nodes are inserted at the
+tectogrammatical layer to represent covert elements of the sentence not
+present in the surface syntax of the analytical layer. Thus, inserting and
+deleting nodes is a central part of the task of tectogrammatical annotation,
+unlike the more surface-oriented annotation of our other treebanks, where the
+tokenisation is fixed before the text is annotated.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">SSD</h4>
+
+<div id="S4.SS1.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">The Star-Sem Data is a portion of the dataset released for the
+*SEM 2012 shared task <cite class="ltx_cite">[]</cite>, parsed using the LinGO English
+Resource Grammar (ERG, <cite class="ltx_cite">[]</cite>) and the resulting parse forest
+disambiguated based on discriminants. The ERG is an HPSG-based grammar, and as
+such its analyses are attribute-value matrices (AVMs); an AVM is not a tree
+but a directed acyclic graph however, and for this reason we compute agreement
+not on the AVM but the so-called <em class="ltx_emph">derivation tree</em>. This tree describes
+the types of the lexical items in the sentence and the bottom-up ordering of
+rule applications used to produce the final analysis and can be handled by our
+procedure like any phrase-structure tree.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Agreement results</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">To evaluate our corpora, we compute the three <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> variants described in
+the previous two sections, and compare these with labelled accuracy scores.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">When there are more than two annotators, we generalise the metric to be the
+average pairwise LAS for each sentence, weighted by the length of the
+sentence. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\textrm{LAS}(t_{1},t_{2})" display="inline"><mrow><mtext>LAS</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> be the fraction of tokens with
+identical head and label in the trees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math>; the pairwise labelled
+accuracy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="\textrm{LAS}_{p}(X)" display="inline"><mrow><msub><mtext>LAS</mtext><mi>p</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow></math> of a set of annotations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> as described in
+section <a href="#S1.SS2" title="1.2 Notation ‣ 1 Introduction ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.2</span></a> is:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_gather">
+
+<tr id="S4.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m1" class="ltx_Math" alttext="\displaystyle\textrm{LAS}_{p}(X)=\frac{1}{\sum_{i}|x_{i1}|}\sum\frac{|x_{i1}|%&#10;\Lambda(X_{i})}{\nicefrac{{|X_{i}|(|X_{i}|-1)}}{{2}}}" display="inline"><mrow><mrow><msub><mtext>LAS</mtext><mi>p</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mrow><mo fence="true">|</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mn>1</mn></mrow></msub><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle><mo>⁢</mo><mstyle displaystyle="true"><mrow><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mfrac><mrow><mrow><mo fence="true">|</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mn>1</mn></mrow></msub><mo fence="true">|</mo></mrow><mo>⁢</mo><mi mathvariant="normal">Λ</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow><mo>/</mo><mn>2</mn></mrow></mfrac></mrow></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr id="S4.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m1" class="ltx_Math" alttext="\displaystyle\Lambda(X_{i})=\sum_{c=1}^{|C|}\sum_{c^{\prime}=c+1}^{|C|}\textrm%&#10;{LAS}(x_{ic},x_{ic^{\prime}})" display="inline"><mrow><mrow><mi mathvariant="normal">Λ</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>C</mi><mo fence="true">|</mo></mrow></munderover></mstyle><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>c</mi><mo>′</mo></msup><mo>=</mo><mrow><mi>c</mi><mo>+</mo><mn>1</mn></mrow></mrow><mrow><mo fence="true">|</mo><mi>C</mi><mo fence="true">|</mo></mrow></munderover></mstyle><mrow><mtext>LAS</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><msup><mi>c</mi><mo>′</mo></msup></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This is equivalent to the traditional metric in the case where there are only
+two annotators.</p>
+</div><span class="ltx_ERROR undefined">\ctable</span>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">[botcap,
+caption=Agreement scores on real-world corpora,
+label=tbl:alpha-real,
+mincapwidth=]lcccc
+<span class="ltx_ERROR undefined">\tnote</span>[a]2 sentences ignored
+<span class="ltx_ERROR undefined">\tnote</span>[b]15 sentences ignored
+<span class="ltx_ERROR undefined">\tnote</span>[c]1178 sentences ignored
+<span class="ltx_ERROR undefined">\tnote</span>[d]Mean pairwise Jaccard similarity
+
+<span class="ltx_ERROR undefined">\FL</span>Corpus <span class="ltx_ERROR undefined">Align</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> <span class="ltx_ERROR undefined">Align</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> <span class="ltx_ERROR undefined">Align</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> <span class="ltx_ERROR undefined">Align</span> LAS <span class="ltx_ERROR undefined">\ML</span>NDT 1 <span class="ltx_ERROR undefined">Align</span> 98.4 <span class="ltx_ERROR undefined">Align</span> 93.0 <span class="ltx_ERROR undefined">Align</span> 98.8 <span class="ltx_ERROR undefined">Align</span> 94.0 <span class="ltx_ERROR undefined">\NN</span>NDT 2 <span class="ltx_ERROR undefined">Align</span> 98.9 <span class="ltx_ERROR undefined">Align</span> 95.0 <span class="ltx_ERROR undefined">Align</span> 99.1 <span class="ltx_ERROR undefined">Align</span> 94.4 <span class="ltx_ERROR undefined">\NN</span>NDT 3 <span class="ltx_ERROR undefined">Align</span> 97.9 <span class="ltx_ERROR undefined">Align</span> 91.2 <span class="ltx_ERROR undefined">Align</span> 98.7 <span class="ltx_ERROR undefined">Align</span> 95.3 <span class="ltx_ERROR undefined">\ML</span>CDT (da) <span class="ltx_ERROR undefined">Align</span> 95.7 <span class="ltx_ERROR undefined">Align</span> 84.7 <span class="ltx_ERROR undefined">Align</span> 96.2 <span class="ltx_ERROR undefined">Align</span> 90.4 <span class="ltx_ERROR undefined">\NN</span>CDT (en) <span class="ltx_ERROR undefined">Align</span> 92.4 <span class="ltx_ERROR undefined">Align</span> 70.7 <span class="ltx_ERROR undefined">Align</span> 95.0 <span class="ltx_ERROR undefined">Align</span> 88.4 <span class="ltx_ERROR undefined">\NN</span>CDT (es) <span class="ltx_ERROR undefined">Align</span> 86.6 <span class="ltx_ERROR undefined">Align</span> 48.8 <span class="ltx_ERROR undefined">Align</span> 85.8 <span class="ltx_ERROR undefined">Align</span> 78.9<span class="ltx_ERROR undefined">\tmark</span>[a] <span class="ltx_ERROR undefined">\NN</span>CDT (it) <span class="ltx_ERROR undefined">Align</span> 84.5 <span class="ltx_ERROR undefined">Align</span> 55.7 <span class="ltx_ERROR undefined">Align</span> 89.2 <span class="ltx_ERROR undefined">Align</span> 81.3<span class="ltx_ERROR undefined">\tmark</span>[b] <span class="ltx_ERROR undefined">\ML</span>PCEDT <span class="ltx_ERROR undefined">Align</span> 95.9 <span class="ltx_ERROR undefined">Align</span> 89.9 <span class="ltx_ERROR undefined">Align</span> 96.5 <span class="ltx_ERROR undefined">Align</span> 68.0<span class="ltx_ERROR undefined">\tmark</span>[c] <span class="ltx_ERROR undefined">\ML</span>SSD <span class="ltx_ERROR undefined">Align</span> 99.1 <span class="ltx_ERROR undefined">Align</span> 98.6 <span class="ltx_ERROR undefined">Align</span> 99.3 <span class="ltx_ERROR undefined">Align</span> 87.9<span class="ltx_ERROR undefined">\tmark</span>[d]
+<span class="ltx_ERROR undefined">\LL</span></p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">As our uncorrected metric for comparing two phrase structure trees we do not
+use the traditional bracket <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> as it does not generalise well to more than
+two annotators, but rather Jaccard similarity. The Jaccard similarity of two
+sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> is the ratio of the size of their intersection to the size of
+their union: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m4" class="ltx_Math" alttext="J(A,B)=\nicefrac{{|A\cap B|}}{{|A\cup B|}}" display="inline"><mrow><mrow><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>A</mi><mo>,</mo><mi>B</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo fence="true">|</mo><mrow><mi>A</mi><mo>∩</mo><mi>B</mi></mrow><mo fence="true">|</mo></mrow><mo>/</mo><mrow><mo fence="true">|</mo><mrow><mi>A</mi><mo>∪</mo><mi>B</mi></mrow><mo fence="true">|</mo></mrow></mrow></mrow></math>, and we use the Jaccard
+similarity of the sets of labelled bracketings of two trees as our uncorrected
+measure. To compute the similarity for a complete set of annotations we use
+the mean pairwise Jaccard similarity weighted by sentence length; that is, the
+same procedure as in <a href="#S4.E3" title="(3) ‣ 4.2 Agreement results ‣ 4 Real-world corpora ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, but using Jaccard similarity rather
+than LAS.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">Since LAS assumes that both of the sentences compared have identical sets of
+tokens, we had to exclude a number of sentences from the LAS computation in
+the cases of the English and Italian CDT corpora, and especially the PCEDT.
+The large number of sentences excluded in the PCEDT is due to the fact that in
+the tectogrammatical analysis of the PCEDT, inserting and deleting nodes is an
+important part of the annotation task.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">Looking at the results in Table <span class="ltx_ref ltx_ref_self">LABEL:tbl:alpha-real</span>, we observe two things.
+Most obvious, is the extremely large gap between the LAS and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics
+for the PCEDT data. However, there is a more subtle point; the orderings of
+the corpora by the different metrics are not the same. LAS order the corpora
+NDT 3, 2, 1, CDT da, en, it, es, PCEDT, whereas <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m3" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> gives the order NDT 2, 1, 3, PCEDT, CDT da, en, it, es, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m4" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> gives the same order as the other alphas but with CDT es and
+it changing places. Furthermore, as the scatterplot in Figure
+<a href="#S4.F6" title="Figure 6 ‣ 4.2 Agreement results ‣ 4 Real-world corpora ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows, there is a clear correlation between the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics and LAS, if we disregard the PCEDT results.</p>
+</div>
+<div id="S4.F6" class="ltx_figure">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Correlation of LAS with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></div>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">The reason the PCEDT gets such low LAS is essentially the same as the reason
+many sentences had to be excluded from the computation in the first place;
+since inserting and deleting nodes is an integral part of the tectogrammatical
+annotation task, the assumption implicit in the LAS computation that sentences
+with the same number of nodes have the same nodes in the same order is
+obviously false, resulting in a very low LAS.</p>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p">The corpus that scores the highest for all three metrics is the SSD corpus;
+the reason for this is uncertain, as our corpora differ along many dimensions,
+but the fact that the annotation was done by professional linguists who are
+very familiar with the grammar used to parse the data is likely a contributing
+factor. The difference between the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics and the Jaccard similarity
+is larger than the difference between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and LAS for our dependency
+corpora, however the two similarity metrics are not comparable, and it is well
+known that for phrase structures single disagreements such as a PP-attachment
+disagreement can result in multiple disagreeing bracketings.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The most important conclusion we draw from this work is the most appropriate
+agreement metric for syntactic annotation. First of all, we disqualify the LAS
+metric, primarily due to the methodological inadequacies of using an
+uncorrected measure. While our experiments did not reveal any serious
+shortcomings (unlike those of <cite class="ltx_cite">[]</cite> who in the case of
+categorisation showed that for large <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> the uncorrected measure can be
+<em class="ltx_emph">increasing</em>), the methodological problems of uncorrected metrics makes
+us wary of LAS as an agreement metric. Next, of the three <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> is clearly the best; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="\alpha_{diff}" display="inline"><msub><mi>α</mi><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> is extremely sensitive
+to even moderate amounts of disagreement, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m5" class="ltx_Math" alttext="\alpha_{norm}" display="inline"><msub><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> is overly
+lenient.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Looking solely at Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, one might be led to
+believe that LAS and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> are interchangeable, but this is not the
+case. As shown by Figures <a href="#S3.F4" title="Figure 4 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and
+<a href="#S3.F5" title="Figure 5 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, the paraboloid shape of the LAS curve in Figure
+<a href="#S3.F3" title="Figure 3 ‣ 3 Synthetic experiments ‣ A chance-corrected measure of inter-annotator agreement for syntax" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> is simply the combination of the metric’s linear
+responses to both label and structural perturbations. The behaviour of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> on the other hand is more complex, with structural noise being
+penalised harder than perturbations of the labels. Thus, the similarity of LAS
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="\alpha_{plain}" display="inline"><msub><mi>α</mi><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> is not at all assured when the amounts of structural and
+labelling disagreements differ. Additionally, we consider this imbalanced
+weighting of structural and labelling disagreements a benefit, as structure is
+the larger part of syntactic annotation compared to the labelling of the
+dependencies/bracketings. Finally our experiments show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is a
+single metric that is applicable to both dependencies and phrase structure
+trees.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Furthermore, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> metrics are far more flexible than simple accuracy
+metrics. The use of a distance function to define the metric means that more
+fine-grained distinctions can be made; for example, if the set of labels on
+the structures is highly structured, partial credit can be given for differing
+annotations that overlap. For example, if different types of adverbials
+(temporal, negation, etc.) receive different relations, as is the case in the
+Swedish Talbanken05 <cite class="ltx_cite">[]</cite> corpus, confusion of different
+adverbial types can be given less weight than confusion between subject and
+object. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-based metrics are also far easier to apply to a more
+complex annotation task such as the tectogrammatical annotation of the PCEDT.
+In this task inserting and deleting nodes is an integral part of the
+annotation, and if two annotators insert or delete different nodes the
+all-or-nothing requirement of identical yield of the LAS metric makes it
+impossible as an evaluation metric in this setting.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Future work</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In future work, we would like to investigate the use of other distance
+functions, in particular the use of approximate tree edit distance functions
+such as the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="pq" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>q</mi></mrow></math>-gram algorithm <cite class="ltx_cite">[]</cite>. For large data sets such
+as the PCEDT set used in this work, computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> with tree edit distance
+as the distance measure can take a very long time.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>The Python
+implementation used in this work, using NumPy and the PyPy compiler, took
+seven and a half hours compute a single <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> for the PCEDT data set on an
+Intel Core i7 2.9 GHz computer. The program is single-threaded.</span></span></span> This is due
+to the fact that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> requires <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m5" class="ltx_Math" alttext="O(n^{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math> comparisons to be made, each of
+which is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m6" class="ltx_Math" alttext="O(n^{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math> using our current approach. The problem of directed graph
+edit distance is NP-hard, which means that to apply our method to HPSG
+analyses directly approximate algorithms are a requirement.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Another avenue for future work is improved synthetic experiments. As we saw,
+our implementation of tree perturbations was biased towards trees similar in
+shape to the source tree, and an improved permutation algorithm may reveal
+interesting edge-case behaviour in the metrics. A method for perturbing phrase
+structure trees would also be interesting, as this would allow us to repeat the
+synthetic experiments performed here using phrase structure corpora to compare
+the behaviour of the metrics on the two types of corpus.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Finally, annotator modelling techniques like that presented in
+<span class="ltx_ERROR undefined">\citeN</span>Pas:Car13 has obvious advantages over agreement coefficients such as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>. These techniques are interpreted more easily than agreement
+coefficients, and they allow us to assess the quality of individual
+annotators, a crucial property in crowd-sourcing settings and something that’s
+impossible using agreement coefficients.</p>
+</div>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">I would like to thank Jan Štěpánek at Charles University for data
+from the PCEDT and help with the conversion process, the CDT project for
+publishing their agreement data, Per Erik Solberg at the Norwegian National
+Library for data from the NDT, and Emily Bender at the University of
+Washington for the SSD data.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:12:45 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

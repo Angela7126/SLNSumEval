@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    (Non-)Succinctness of uniform interpolants of general terminologies in the description logic EL.
+   </title>
+   <abstract>
+    EL is a popular description logic, used as a core formalism in large existing knowledge bases. Uniform interpolants of knowledge bases are of high interest, e.g. in scenarios where a knowledge base is supposed to be partially reused. However, to the best of our knowledge no procedure has yet been proposed that computes uniform EL interpolants of general EL terminologies. Up to now, also the bound on the size of uniform EL interpolants has remained unknown. In this article, we propose an approach to computing a finite uniform interpolant for a general EL terminology if it exists. To this end, we develop a quadratic representation of EL TBoxes as regular tree grammars. Further, we show that, if a finite uniform EL interpolant exists, then there exists one that is at most triple exponential in the size of the original TBox, and that, in the worst case, no smaller interpolants exist, thereby establishing tight worst-case bounds on their size. Beyond showing these bounds, the notions and results established in this paper also provide useful insights for designing efficient ontology reformulation algorithms, for instance, within the context of module extraction.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      With the wide-spread adoption of ontological modelling by means of the W3C-specified OWL Web Ontology Language [2], description logics (DLs, [3], [4]) have developed into one of the most popular family of formalisms employed for knowledge representation and reasoning [5], [6], [7], [8]. For application scenarios where scalability of reasoning is of utmost importance, specific tractable sublanguages (the so-called profiles[9]) of OWL have been put into place, among them OWL 2 EL which in turn is based on DLs of the {a mathematical formula}EL family [10], [11].
+     </paragraph>
+     <paragraph>
+      In view of the practical deployment of OWL and its profiles [12], [13], [14], non-standard reasoning services for supporting modelling activities gain in importance. An example of such reasoning services supporting knowledge engineers in different tasks is that of uniform interpolation: given a theory using a certain vocabulary, and a subset of “relevant terms” of that vocabulary, find a theory (referred to as a uniform interpolant, short: UI) that uses only the relevant terms and gives rise to the same consequences (expressible via relevant terms) as the original theory. Intuitively, this provides a view on the ontology where all irrelevant (asserted as well as implied) statements have been filtered out.
+     </paragraph>
+     <paragraph>
+      Uniform interpolation has many applications within ontology engineering. For instance, it can help ontology engineers understand existing ontological specifications by visualizing implicit dependencies between relevant concepts and roles, as used, for instance, for interactive ontology revision [15]. In particular for understanding and developing complex knowledge bases, e.g., those consisting of general concept inclusions (GCIs), appropriate tool support of this kind would be beneficial. Another application of uniform interpolation is ontology reuse: given an ontology that is to be reused in a different scenario, most likely not all aspects of this ontology are relevant to the new usage requirements. In combination with module extraction, uniform interpolation can be used to reduce the amount of irrelevant information within an ontology employed in a new context.
+     </paragraph>
+     <paragraph>
+      For DL-Lite, the problem of uniform interpolation has been investigated [16], [17] and a tight exponential bound on the size of uniform interpolants has been shown. Lutz and Wolter [18] propose an approach to uniform interpolation in expressive description logics such as {a mathematical formula}ALC featuring general terminologies showing a tight triple-exponential bound on the size of uniform interpolants. Koopmann and Schmidt [19] and Ludwig and Konev [20] propose practical approaches to computing uniform interpolants in expressive description logics. For the lightweight description logic {a mathematical formula}EL, the problem of uniform interpolation has, however, not been solved. To the best of our knowledge, the only existing approach [21] to uniform interpolation in {a mathematical formula}EL is restricted to terminologies containing each concept symbol at most once on the left-hand side of concept inclusions and additionally satisfying particular acyclicity conditions which are sufficient, but not necessary for the existence of a uniform interpolant. Recently, Lutz, Seylan and Wolter [22] proposed an ExpTime procedure for deciding, whether a finite uniform {a mathematical formula}EL interpolant exists for a particular general terminology and a particular set of relevant terms. However, the authors do not address the actual computation of such a uniform interpolant. Up to now, also the bounds on the size of uniform {a mathematical formula}EL interpolants have remained unknown.
+     </paragraph>
+     <paragraph>
+      In this paper, we propose a worst-case-optimal approach to computing a finite uniform {a mathematical formula}EL interpolant for a general terminology. Our approach is based on proof theory and regular tree languages. We develop a grammar representation of {a mathematical formula}EL TBoxes. These grammars are quadratic in the size of the initial TBox and capture all of its logical consequences except for a certain kind of weak consequences – consequences that can be trivially derived from other logical consequences but are not equivalent to those. We show via a proof-theoretic analysis that the tree languages generated by the proposed grammars indeed capture all non-weak consequences of the initial terminology expressed using the set of relevant terms.
+     </paragraph>
+     <paragraph>
+      Further, we show that certain finite subsets of the languages generated by these grammars can be transformed into a uniform {a mathematical formula}EL interpolant of at most triple exponential size, if such a finite uniform {a mathematical formula}EL interpolant exists for the given terminology and a set of terms. We also show that, in the worst-case, no shorter interpolants exist, thereby establishing tight bounds on the size of uniform interpolants in {a mathematical formula}EL.
+     </paragraph>
+     <paragraph>
+      It should be noted that the notions and results presented in this article go beyond the mere purpose of showing the triple exponential blowup and have practical applications. In fact, the proposed grammars have served as a basis for a module extraction tool in follow-up work by Nikitina and Glimm [23]. Within this tool, the insights gained in the present article are taken into account to derive a blowup-avoiding algorithm for a kind of partial uniform interpolation that conditionally eliminates concept symbols one by one after a careful analysis.
+     </paragraph>
+     <paragraph>
+      The article is structured as follows: In Section 2, we recall the necessary preliminaries on {a mathematical formula}EL. In Section 3, we introduce a calculus for deriving general subsumptions in {a mathematical formula}EL terminologies, which is used as a major tool in the proofs of this work. Section 4 formally introduces the notion of inseparability and defines the task of uniform interpolation. Section 5 demonstrates that the smallest uniform interpolants in {a mathematical formula}EL can be triple exponential in the size of the original knowledge base. In Section 6.1, we describe a normalisation of terminologies that enables a representation of non-weak logical consequences as languages of regular tree grammars. In Section 6.2, we recall the necessary preliminaries on regular tree languages/grammars and introduce regular tree grammars representing subsumees and subsumers of concept symbols, which are the basis for computing uniform {a mathematical formula}EL interpolants as shown in Section 6.3. In the same section, we also show the upper bound on the size of uniform interpolants. After giving an overview of related work in Section 7, we summarize the contributions in Section 8 and discuss some ideas for future work. This is a revised and extended version of our previous paper [1] and contains technical enhancements, a more detailed argumentation, examples and the full proofs.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we formally introduce the description logic {a mathematical formula}EL, and recall some of its well-known properties. Let {a mathematical formula}NC and {a mathematical formula}NR be countably infinite and mutually disjoint sets called concept symbols and role symbols, respectively. {a mathematical formula}ELconcepts C are defined by{a mathematical formula} where A and r range over {a mathematical formula}NC∪{⊤} and {a mathematical formula}NR, respectively. In the following, {a mathematical formula}C,D,E,F and G can denote arbitrary concepts, while {a mathematical formula}A,B can only denote concept symbols (i.e., concepts from {a mathematical formula}NC) or ⊤. We use the term simple concept to refer to a simpler form of {a mathematical formula}EL concepts defined by {a mathematical formula}Cs::=A|∃r.A, where A and r range over {a mathematical formula}NC∪{⊤} and {a mathematical formula}NR, respectively.
+     </paragraph>
+     <paragraph>
+      A terminology or TBox consists of concept inclusion axioms {a mathematical formula}C⊑D and concept equivalence axioms {a mathematical formula}C≡D, the latter used as a shorthand for the mutual inclusion {a mathematical formula}C⊑D and {a mathematical formula}D⊑C.{sup:2} The signature of an {a mathematical formula}EL concept C, an axiom α or a TBox {a mathematical formula}T, denoted by {a mathematical formula}sig(C), {a mathematical formula}sig(α) or {a mathematical formula}sig(T), respectively, is the set of concept and role symbols occurring in it. To distinguish between the set of concept symbols and the set of role symbols, we use {a mathematical formula}sigC(⋅) and {a mathematical formula}sigR(⋅), respectively. Further, we use {a mathematical formula}sub(T) to denote the set of all subconcepts in {a mathematical formula}T.
+     </paragraph>
+     <paragraph>
+      For a concept C, let the role depth of C (denoted by {a mathematical formula}d(C)) be the maximal nesting depth of existential restrictions within C. For instance, {a mathematical formula}d(∃r.(∃s.A⊓B)⊓∃s.B)=2. For a TBox {a mathematical formula}T, the role depth is given by the maximal role depth of its subconcepts.
+     </paragraph>
+     <paragraph>
+      Next, we recall the semantics of the DL constructs introduced above, which is defined by the means of interpretations. An interpretation{a mathematical formula}I is given by a set {a mathematical formula}ΔI, called the domain, and an interpretation function{a mathematical formula}⋅I assigning to each concept {a mathematical formula}A∈NC a subset {a mathematical formula}AI of {a mathematical formula}ΔI and to each role {a mathematical formula}r∈NR a subset {a mathematical formula}rI of {a mathematical formula}ΔI×ΔI. The interpretation of ⊤ is fixed to {a mathematical formula}ΔI. The interpretation of arbitrary {a mathematical formula}EL concepts is defined inductively via {a mathematical formula}(C⊓D)I=CI∩DI and {a mathematical formula}(∃r.C)I={x|(x,y)∈rI and y∈CI for some y}. An interpretation {a mathematical formula}Isatisfies an axiom {a mathematical formula}C⊑D if {a mathematical formula}CI⊆DI. {a mathematical formula}I is a model of a TBox {a mathematical formula}T, if it satisfies all axioms in {a mathematical formula}T. We say that {a mathematical formula}T entails an axiom α (in symbols, {a mathematical formula}T⊨α), if α is satisfied by all models of {a mathematical formula}T. The deductive closure of a TBox {a mathematical formula}T is the set of all axioms entailed by {a mathematical formula}T. For {a mathematical formula}EL concepts {a mathematical formula}C,D such that {a mathematical formula}T⊨C⊑D, we call C a subsumee of D and D a subsumer of C.
+     </paragraph>
+     <section label="2.1">
+      Model-theoretic properties of {a mathematical formula}EL concepts
+      <paragraph>
+       In the following, we provide some results concerning model-theoretic properties of {a mathematical formula}EL concepts, which are essentially common knowledge. Nevertheless, to make the paper self-contained, we include the proofs in Appendix A. We first define pointed interpretations as well as homomorphisms between them. Moreover we define the notion of a characteristic interpretation of an {a mathematical formula}EL concept. Intuitively, a concept's characteristic interpretation describes a partial model with one distinguished element which represents necessary and sufficient conditions for a domain element to be an instance of this concept.
+      </paragraph>
+      <paragraph label="Definition 1">
+       A pointed interpretation is a pair {a mathematical formula}(I,x) with {a mathematical formula}x∈ΔI. Given two pointed interpretations {a mathematical formula}(I1,x1) and {a mathematical formula}(I2,x2), a homomorphism from {a mathematical formula}(I1,x1) to {a mathematical formula}(I2,x2) is a mapping {a mathematical formula}φ:ΔI1→ΔI2 such that
+       <list>
+        {a mathematical formula}φ(x1)=x2,{a mathematical formula}x∈AI1 implies {a mathematical formula}φ(x)∈AI2 for all {a mathematical formula}A∈NC,{a mathematical formula}(x,y)∈rI1 implies {a mathematical formula}(φ(x),φ(y))∈rI2 for all {a mathematical formula}r∈NR.Given an
+       </list>
+       <paragraph>
+        {a mathematical formula}EL concept C, we define its characteristic pointed interpretation{a mathematical formula}(IC,xC) inductively over the structure of C as follows:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         For ⊤ we let {a mathematical formula}ΔI⊤={x⊤} with
+        </list-item>
+        <list-item label="•">
+         For {a mathematical formula}A∈NC we let {a mathematical formula}ΔIA={xA} with
+        </list-item>
+        <list-item label="•">
+         For {a mathematical formula}C=C1⊓C2, we define {a mathematical formula}ΔIC={xC}∪⋃ι∈{1,2}(ΔICι∖{xCι})×{ι} with
+        </list-item>
+        <list-item label="•">
+         For {a mathematical formula}C=∃r.C′, we define {a mathematical formula}ΔIC={xC}∪ΔIC′ with
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       The subsequent lemma shows that characteristic interpretations indeed characterize {a mathematical formula}EL concept membership via the existence of appropriate homomorphisms.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Structurality of validity of {a mathematical formula}EL conceptsFor any{a mathematical formula}ELconcept C and any interpretation{a mathematical formula}I=(ΔI,⋅I)and{a mathematical formula}x∈ΔIit holds that{a mathematical formula}x∈CIif and only if there is a homomorphism from{a mathematical formula}(IC,xC)to{a mathematical formula}(I,x).
+      </paragraph>
+      <paragraph>
+       The next lemma shows that {a mathematical formula}EL concept subsumption in the absence of terminological background knowledge can as well be characterized via homomorphisms between characteristic interpretations.
+      </paragraph>
+      <paragraph label="Lemma 2">
+       Structurality of {a mathematical formula}EL concept subsumptionLet C and{a mathematical formula}C′be two{a mathematical formula}ELconcepts. Then{a mathematical formula}∅⊨C⊑C′if and only if there is a homomorphism from{a mathematical formula}(IC′,xC′)to{a mathematical formula}(IC,xC).
+      </paragraph>
+      <paragraph>
+       The proofs of both lemmas can be found in Appendix A.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     A Gentzen-style proof system for {a mathematical formula}EL
+     <paragraph>
+      The aim of this section is to provide a proof-theoretic calculus that is sound and complete for general subsumption in {a mathematical formula}EL. We will use this calculus in the subsequent sections to prove particular properties of TBoxes of a certain form in the context of consequence-preserving rewriting. The Gentzen-style calculus for {a mathematical formula}EL is shown in Fig. 1 and is a variation of the calculus given by Hofmann [24].
+     </paragraph>
+     <paragraph>
+      The calculus operates on sequents. A sequent is of the form {a mathematical formula}C⊑D, where {a mathematical formula}C,D are {a mathematical formula}EL concepts. The rules depicted in Fig. 1 can be used to derive new sequents from sequents that have already been derived. For instance, if we have derived the sequent {a mathematical formula}C⊑D, we can derive the sequent {a mathematical formula}∃r.C⊑∃r.D using rule (Ex). A derivation (or proof) of a sequent {a mathematical formula}C⊑D is a finite tree with whose nodes are labelled with sequents. The tree root is labelled with the sequent {a mathematical formula}C⊑D. Within the tree, a parent node is always labelled by the conclusion of a proof rule from Fig. 1 whose antecedent(s) are the labels of the child nodes. The leaves of a derivation are either labelled by axioms from {a mathematical formula}T or conclusions of (Ax) or (AxTop). We use the notation {a mathematical formula}T⊢C⊑D to indicate that there is a derivation of {a mathematical formula}C⊑D. In our calculus, we assume commutativity of conjunction for convenience.{sup:3}Fig. 2 shows an example derivation of the sequent {a mathematical formula}∃r.C1⊑C2 in our calculus w.r.t. the {a mathematical formula}ELTBoxTe={∃r.C1⊑C1⊓C2}.
+     </paragraph>
+     <paragraph>
+      We show that the above calculus is sound and complete for subsumptions between arbitrary {a mathematical formula}EL concepts.
+     </paragraph>
+     <paragraph label="Lemma 3">
+      Soundness and completenessLet{a mathematical formula}Tbe an arbitrary{a mathematical formula}ELTBox,{a mathematical formula}C,D{a mathematical formula}ELconcepts. Then{a mathematical formula}T⊨C⊑Diff{a mathematical formula}T⊢C⊑D.
+     </paragraph>
+     <paragraph label="Proof">
+      While the soundness of the proof system (if-direction) can be easily verified for each rule separately, the proof of completeness is more sophisticated. Analogously to other proof-theoretic approaches [11], [25], we show the only-if-direction of the lemma by constructing a model {a mathematical formula}I for {a mathematical formula}T wherein only the GCIs derivable from {a mathematical formula}T are valid. The construction of the model is rather standard (a similar construction is, e.g., given by Lutz and Wolter [26]). The model is defined as follows:
+      <list>
+       {a mathematical formula}ΔI is the set of elements {a mathematical formula}δC where C is an {a mathematical formula}EL concept;{a mathematical formula}AI:={δC∈ΔI|T⊢C⊑A}, where {a mathematical formula}A∈NC;{a mathematical formula}rI:={(δC,δD)∈ΔI×ΔI|T⊢C⊑∃r.D} where {a mathematical formula}r∈NR.We will show that the following claim holds for
+      </list>
+      <paragraph>
+       {a mathematical formula}I:{a mathematical formula} This claim can be exploited in two ways: First, we use it to show that {a mathematical formula}I is indeed a model of {a mathematical formula}T. Let {a mathematical formula}C⊑D∈T and consider an arbitrary concept G with {a mathematical formula}δG∈CI. Via (⁎) we obtain {a mathematical formula}T⊢G⊑C. Further, {a mathematical formula}T⊢C⊑D is due to {a mathematical formula}C⊑D∈T. Thus we can derive {a mathematical formula}T⊢G⊑D via (Cut) and consequently, applying (⁎) again, we obtain {a mathematical formula}δG∈DI. Thereby, we have proved that {a mathematical formula}I⊨T.Second, we use (⁎) to show that {a mathematical formula}I is a counter-model for all GCIs not derivable from {a mathematical formula}T as follows: Assume {a mathematical formula}T⊬C⊑D. From {a mathematical formula}T⊢C⊑C and (⁎) we derive {a mathematical formula}δC∈CI. From {a mathematical formula}T⊬C⊑D and (⁎) we obtain {a mathematical formula}δC∉DI. Hence we get {a mathematical formula}CI⊈DI and therefore {a mathematical formula}I⊭C⊑D.It remains to prove (⁎). This is done by induction over the structure of the concept F. There are two base cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for {a mathematical formula}F=⊤, the claim trivially follows from (AxTop),
+       </list-item>
+       <list-item label="•">
+        for a concept symbol F, it is a direct consequence of the definition of our model {a mathematical formula}I.
+       </list-item>
+      </list>
+      <paragraph>
+       We now consider the cases where F is a complex concept
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for {a mathematical formula}F=C1⊓…⊓Cn, we note that {a mathematical formula}δE∈FI exactly if {a mathematical formula}δE∈CiI for all {a mathematical formula}i∈{1…n}. By induction hypothesis, this means {a mathematical formula}T⊢E⊑Ci for all {a mathematical formula}i∈{1…n}. Finally, observe that {a mathematical formula}{E⊑Ci|1≤i≤n} and {a mathematical formula}E⊑C1⊓…⊓Cn can be mutually derived from each other:
+       </list-item>
+       <list-item label="•">
+        for {a mathematical formula}F=∃r.G, we prove the two directions separately. First assuming {a mathematical formula}δE∈FI we must find {a mathematical formula}(δE,δH)∈rI for some H with {a mathematical formula}δH∈GI. This implies both {a mathematical formula}T⊢E⊑∃r.H (by the definition of the model) and {a mathematical formula}T⊢H⊑G (via the induction hypothesis). From the latter, we can deduce {a mathematical formula}T⊢∃r.H⊑∃r.G by (Ex) and consequently {a mathematical formula}T⊢E⊑∃r.G. For the other direction, note that by definition, {a mathematical formula}T⊢E⊑∃r.G implies {a mathematical formula}(δE,δG)∈rI. On the other hand, we get {a mathematical formula}T⊢G⊑G by (Ax) and therefore {a mathematical formula}δG∈GI by the induction hypothesis which yields us {a mathematical formula}δE∈FI.
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      Alternatively, the completeness of the calculus could be shown by a reduction to the calculus of Hofmann [24].
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Uniform interpolation
+     </section-title>
+     <paragraph>
+      Uniform interpolation has many potential applications in ontology engineering due to its ability to reduce the amount of irrelevant information within a terminology while preserving all relevant consequences given the set of relevant signature elements. The task of computing terminologies with such properties is not trivial. For instance, it is not sufficient to simply eliminate axioms containing only irrelevant entities, since it can change the meaning of the relevant entities and cause a loss of relevant information. Example 1 demonstrates the effect of such an elimination.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider the terminology {a mathematical formula}T given by{a mathematical formula}{a mathematical formula} If we are only interested in entities {a mathematical formula}A1,A4,r, then we might consider to eliminate all axioms except for those that contain at least one relevant entity, obtaining {a mathematical formula}T′=T∖{A3⊑A2}. However, in this way we would lose the information about the connection between the relevant entities, for instance {a mathematical formula}A4⊑A1,A4⊑∃r.A1,A4⊑∃r.∃r.A1,…. Indeed, {a mathematical formula}T′ does not entail any of these statements.
+     </paragraph>
+     <paragraph>
+      In typical ontology reuse scenarios, it is required to preserve the meaning of the relevant entities while computing a terminology that contains as little irrelevant information as possible. We say that the meaning of relevant entities is preserved, if every logical statement that follows from the original terminology and contains only relevant entities also follows from the resulting terminology. The logical foundation for such a preservation of relevant consequences can be defined using the notion of inseparability. Two terminologies, {a mathematical formula}T1 and {a mathematical formula}T2, are inseparable w.r.t. a signature Σ if they have the same Σ-consequences, i.e., consequences whose signatures are subsets of Σ. Depending on the particular application requirements, the expressivity of those Σ-consequences can vary from subsumption axioms and concept assertions to conjunctive queries. In the following, we consider concept-inseparability of general {a mathematical formula}EL terminologies as given, for instance, in [17], [21], [18]:
+     </paragraph>
+     <paragraph label="Definition 2">
+      Let {a mathematical formula}T1 and {a mathematical formula}T2 be two general {a mathematical formula}EL terminologies and Σ a signature. {a mathematical formula}T1 and {a mathematical formula}T2 are concept-inseparable w.r.t. Σ, in symbols {a mathematical formula}T1≡ΣELT2, if for all {a mathematical formula}EL concepts {a mathematical formula}C,D with {a mathematical formula}sig(C)∪sig(D)⊆Σ it holds that {a mathematical formula}T1⊨C⊑D iff {a mathematical formula}T2⊨C⊑D.
+     </paragraph>
+     <paragraph>
+      Due to its usefulness for different ontology engineering tasks, concept-inseparability has been investigated by different authors in the last decade. For instance, in the context of ontology reuse, the notion of inseparability can be used to derive a terminology that is inseparable from the initial terminology and is using only terms from Σ. This is an established non-standard reasoning task called forgetting or uniform interpolation.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Given a signature Σ and a terminology {a mathematical formula}T, the task of uniform interpolation is to determine a terminology {a mathematical formula}T′ with {a mathematical formula}sig(T′)⊆Σ such that {a mathematical formula}T≡ΣELT′. {a mathematical formula}T′ is also called a uniform Σ-interpolant of {a mathematical formula}T.
+     </paragraph>
+     <paragraph>
+      For the TBox {a mathematical formula}T in Example 1, one possible uniform Σ-interpolant for {a mathematical formula}Σ={A1,A4,r} would be {a mathematical formula}TΣ={A4⊑A1,A4⊑∃r.A4}. We see that, by introducing a shortcut axiom {a mathematical formula}A4⊑A1, we preserve all relevant logical consequences (those expressed using Σ) while eliminating all other logical consequences, e.g., {a mathematical formula}Ai+1⊑Ai for {a mathematical formula}0≤i≤3.
+     </paragraph>
+     <paragraph>
+      In practice, uniform interpolants are required to be finite, i.e., expressible by a finite set of finite axioms using only the language constructs of a particular DL. It is well-known (e.g., see [21]) that, in the presence of cyclic concept inclusions, a finite uniform {a mathematical formula}ELΣ-interpolant might not exist for a particular terminology {a mathematical formula}T and a particular Σ.
+     </paragraph>
+     <paragraph label="Example 2">
+      Consider the terminology {a mathematical formula}T={A′⊑A,A⊑A″,A⊑∃r.A,∃s.A⊑A} and let {a mathematical formula}Σ={s,r,A′,A″}. As consequences, we obtain infinite sequences {a mathematical formula}A′⊑∃r.∃r.∃r....A″ and {a mathematical formula}∃s.∃s.∃s....A′⊑A″ which contain nested existential quantifiers of unbounded depth. Those sequences cannot be finitely axiomatized, using only signature elements from Σ.
+     </paragraph>
+     <paragraph>
+      Lutz, Seylan and Wolter [22] give an ExpTime procedure for deciding if a finite uniform {a mathematical formula}EL interpolant exists. In the following, we extend the results and show that, if a finite uniform {a mathematical formula}EL interpolant exists for the given terminology and signature, then there exists a uniform {a mathematical formula}EL interpolant of at most triple exponential size. Further, we show that, in the worst case, no shorter interpolants exist, thereby establishing tight bounds on the size of uniform interpolants in {a mathematical formula}EL.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Lower bound
+     </section-title>
+     <paragraph>
+      In this section we will establish the lower bound for the size of uniform interpolants of {a mathematical formula}EL terminologies, in case they exist. It is interesting that, while deciding the existence of uniform interpolants in {a mathematical formula}EL[22] is one exponential less complex than the same decision problem for the more complex logic {a mathematical formula}ALC[18], the size of uniform interpolants remains triple-exponential. An intuitive reason for this rather unexpected result can be seen in the unavailability of disjunction, which would allow for a more succinct representation of the interpolants. In fact, the exponential blowup due to the non-availability of disjunction has been noted before [21]. We show the triple-exponential lower bound by means of a sequence of terminologies (obtained by a slight modification of the corresponding example given in [27] originally demonstrating a double exponential lower bound in the context of conservative extensions).
+     </paragraph>
+     <paragraph>
+      We start with an intuitive explanation of what the terminology is supposed to express. Assume, given some {a mathematical formula}n∈N we want to label domain elements with natural numbers {a mathematical formula}0…2n−1 according to the following scheme: domain elements belonging to the concepts {a mathematical formula}A1 or {a mathematical formula}A2 are labelled with 0. Further, whenever we find a domain element δ that is linked via an r-role to an ℓ-labelled domain element {a mathematical formula}δ1 and linked via an s-role to an ℓ-labelled domain element {a mathematical formula}δ2, then δ will be labelled with {a mathematical formula}ℓ+1 (provided {a mathematical formula}ℓ&lt;2n−1). Finally, we stipulate that every domain element labelled with {a mathematical formula}2n−1 will belong to the concept B. In order to encode this labelling scheme in a knowledge base whose size is polynomial in n, we encode the number-labels in a binary way as a conjunction of n concepts. Thereby, the concept symbols {a mathematical formula}Xi,Xi¯ represent the ith bit of ℓ's binary representation being clear or set.
+     </paragraph>
+     <paragraph label="Definition 4">
+      The {a mathematical formula}EL TBox {a mathematical formula}Tn for a natural number n is given by{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In the above TBox, Axiom (3) ensures that a clear bit will be set in the successor number, if all lower bits are already set. The subsequent Axiom (4) ensures that a set bit will be clear in the successor number, if all lower bits are also set. Axioms (5) and (6) ensure that in all other cases, bits are not toggled. For instance, Axiom (5) states that, if any of the bits lower than i is clear, then bit i will remain clear also in the successor number.
+     </paragraph>
+     <paragraph>
+      If we now consider sets {a mathematical formula}Ci of concept descriptions inductively defined by {a mathematical formula}C0={A1,A2}, {a mathematical formula}Ci+1={∃r.C1⊓∃s.C2|C1,C2∈Ci}, then we find that {a mathematical formula}|Ci+1|=|Ci|2 and consequently {a mathematical formula}|Ci|=2(2i). Thus, the set {a mathematical formula}C2n−1 contains triply exponentially many different concepts, each of which is doubly exponential in the size of {a mathematical formula}Tn (intuitively, we obtain concepts having the shape of binary trees of exponential depth, thus having doubly exponentially many leaves, each of which can be {a mathematical formula}A1 or {a mathematical formula}A2, which gives rise to a triply exponential number of such trees). Then we will show that for each concept {a mathematical formula}C∈C2n−1 it holds that {a mathematical formula}Tn⊨C⊑B and that there cannot be a smaller uniform interpolant with respect to the signature {a mathematical formula}Σ={A1,A2,B,r,s} than the one containing all these GCIs.
+     </paragraph>
+     <paragraph>
+      Based on the above definition, we now prove the following result.
+     </paragraph>
+     <paragraph label="Theorem 1">
+      There exists a sequence of{a mathematical formula}ELTBoxes and a fixed signature Σ such that for each TBox{a mathematical formula}(Tn)within this sequence the following hold:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the size of{a mathematical formula}Tnis polynomial in n and
+      </list-item>
+      <list-item label="•">
+       the size of the smallest uniform interpolant of{a mathematical formula}Tnwith respect to Σ is at least{a mathematical formula}2(2(2n−1)).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Obviously, the size of {a mathematical formula}Tn is polynomial in n. As discussed above, the set {a mathematical formula}C2n−1 contains triply exponentially many different concepts, each of which is doubly exponential in the size of {a mathematical formula}Tn. By definition, for any k, every concept from {a mathematical formula}Ck contains only signature elements from {a mathematical formula}A1,A2,r,s.It is rather straightforward to check that {a mathematical formula}Tn⊨C⊑B holds for each concept {a mathematical formula}C∈C2n−1: by induction on k, we can show that for any {a mathematical formula}C∈Ck with {a mathematical formula}k&lt;2n it holds that {a mathematical formula}Tn⊨C⊑Y0k⊓…⊓Yn−1k with{a mathematical formula} i.e., {a mathematical formula}Yik indicates the ith bit of the number k in binary encoding. Then, {a mathematical formula}C⊑B follows via the last axiom of {a mathematical formula}Tn.Toward the claimed triple-exponential lower bound, we now show that every uniform interpolant of {a mathematical formula}Tn for {a mathematical formula}Σ={A1,A2,B,r,s} must contain for each {a mathematical formula}C∈C2n−1 a GCI of the form {a mathematical formula}C⊑B′ with {a mathematical formula}B′=B or {a mathematical formula}B′=B⊓F for some F (where we consider structural variants – i.e., concepts whose characteristic interpretations are isomorphic – as syntactically equal). Toward a contradiction, we assume that this is not the case, i.e., there is a uniform interpolant {a mathematical formula}T′ and a {a mathematical formula}C∈C2n−1 where {a mathematical formula}C⊑B′∉T′ for any {a mathematical formula}B′ containing B as a (top-level) conjunct.Yet, {a mathematical formula}C⊑B must be a consequence of {a mathematical formula}T′, since it is a consequence of {a mathematical formula}Tn containing only signature elements from Σ and {a mathematical formula}T′ is a uniform interpolant of {a mathematical formula}Tn w.r.t. Σ by assumption. Therefore, there must be a derivation of it. Looking at the derivation calculus from the last section, the last derivation step must be (AndL) or (Cut). We can exclude (AndL) since neither {a mathematical formula}∃r.C′⊑B nor {a mathematical formula}∃s.C′⊑B is the consequence of {a mathematical formula}T′ for any {a mathematical formula}C′∈C2n−2 (which can be easily shown by providing appropriate witness models of {a mathematical formula}T′). Consequently, the last derivation step must be an application of (Cut), i.e., there must be a concept {a mathematical formula}E≠C such that {a mathematical formula}T′⊨C⊑E and {a mathematical formula}T′⊨E⊑B. Without loss of generality, we assume that we consider a derivation tree where the subtree deriving {a mathematical formula}C⊑E has minimal depth.We now distinguish two cases: either E contains B as a conjunct or not.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       First we assume {a mathematical formula}E=E′⊓B, i.e. the (Cut) rule was used to derive {a mathematical formula}C⊑B from {a mathematical formula}C⊑E′⊓B and {a mathematical formula}E′⊓B⊑B. The former cannot be contained in {a mathematical formula}T′ by assumption, hence it must have been derived itself. We can exclude (AndR) due to the minimality of the proof. Again, it cannot have been derived via (AndL) for the same reasons as given above, which again leaves (Cut) as the only possible derivation rule for obtaining {a mathematical formula}C⊑E′⊓B. Thus, there must be some concept G with {a mathematical formula}T′⊨C⊑G and {a mathematical formula}T′⊨G⊑E′⊓B. Once more, we distinguish two cases: either G contains B as a conjunct or not.
+      </list-item>
+      <list-item label="•">
+       Now assume E does not contain B as a conjunct.We construct a specific interpretation {a mathematical formula}(ΔI,⋅I) as follows (ϵ denotes the empty word):
+       <list>
+        {a mathematical formula}ΔI={w|w∈{r,s}⁎,length(w)&lt;2n}.We define an auxiliary function χ associating a concept to each domain element: we let {a mathematical formula}χ(ϵ)=C (with ϵ being the empty word) and, for every {a mathematical formula}wr,ws∈ΔI with {a mathematical formula}χ(w)=∃r.C1⊓∃s.C2, we let {a mathematical formula}χ(wr)=C1 and {a mathematical formula}χ(ws)=C2.The concepts and roles are interpreted as follows:It is straightforward to check that
+       </list>
+       <paragraph>
+        {a mathematical formula}I is a model of {a mathematical formula}Tn. Furthermore using descending induction on the length of w, we can show that {a mathematical formula}w∈(χ(w))I for every {a mathematical formula}w∈ΔI; in particular, {a mathematical formula}ϵ∈CI. Consequently, due to our assumption, {a mathematical formula}ϵ∈EI must hold. Now we observe that the restriction of {a mathematical formula}I to the signature elements {a mathematical formula}A1,A2,r,s is isomorphic to {a mathematical formula}IC (with {a mathematical formula}xC corresponding to ϵ). On the other hand, as {a mathematical formula}ϵ∈EI we find by Lemma 1 a homomorphism from {a mathematical formula}(IE,xE) to {a mathematical formula}(I,ϵ) and hence to {a mathematical formula}(IC,xC), thus, by Lemma 2, E is a proper “structural superconcept” of C, i.e., {a mathematical formula}∅⊨C⊑E and {a mathematical formula}∅⊭E⊑C must hold.We now obtain {a mathematical formula}E˜ by enriching E as follows: starting from {a mathematical formula}k=0 and iteratively incrementing k up to {a mathematical formula}2n−1, every subconcept G of E satisfying {a mathematical formula}∅⊨G⊑C′ for some {a mathematical formula}C′∈Ck is substituted by {a mathematical formula}G⊓Y0k⊓…⊓Yn−1k where, as before,{a mathematical formula} i.e., {a mathematical formula}Yik indicates the ith bit of the number k in binary encoding.Then, {a mathematical formula}E˜'s characteristic pointed interpretation {a mathematical formula}(IE˜,xE˜) satisfies the following conditions: {a mathematical formula}IE˜ is a model of {a mathematical formula}Tn (following from structural induction on subconcepts of {a mathematical formula}E˜) and its root individual {a mathematical formula}xE˜ is in the extension of {a mathematical formula}E˜. Still, we find {a mathematical formula}xE˜∉CIE˜ for the following reason: C does only contain signature elements from {a mathematical formula}{A1,A2,B,r,s}, and the restriction of {a mathematical formula}(IE˜,xE˜) to these signature elements is isomorphic to {a mathematical formula}(IE,xE), therefore {a mathematical formula}xE˜∈CIE˜ iff {a mathematical formula}xE∈CIE. The latter is however not the case as this would imply by Lemma 1 that there is a homomorphism from {a mathematical formula}(IC,xC) to {a mathematical formula}(IE,xE) and consequently, via Lemma 2{a mathematical formula}∅⊨E⊑C, contradicting our finding above.Yet, the root individual {a mathematical formula}xE˜ cannot satisfy any other concept {a mathematical formula}C″ from {a mathematical formula}C2n−1∖{C} either, since this, via {a mathematical formula}∅⊨E⊑C″, would imply {a mathematical formula}∅⊨C⊑C″ which is not the case (by induction on k one can show that there cannot be a homomorphism between the characteristic pointed interpretations of any two distinct concepts from any {a mathematical formula}Ck). In particular, we note that {a mathematical formula}xE˜∉BIE˜. Thus, we have found a model of {a mathematical formula}Tn witnessing {a mathematical formula}Tn⊭E⊑B, contradicting our assumption that {a mathematical formula}T′⊨E⊑B.
+       </paragraph>
+      </list-item>
+     </list>
+     <paragraph>
+      Hence we have found a class {a mathematical formula}Tn of TBoxes giving rise to uniform {a mathematical formula}EL interpolants of triple-exponential size in terms of the original TBox.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Upper bound
+     </section-title>
+     <paragraph>
+      Now we discuss the upper bound on the size of uniform {a mathematical formula}EL interpolants as well as their computation. Since, for a TBox {a mathematical formula}T and a signature Σ, there are in general infinitely many Σ-consequences, in the following, we aim at identifying a subset of such consequences, the deductive closure of which contains the whole set. Interestingly, there exists a bound on the role depth of Σ-consequences such that, for the set {a mathematical formula}TΣ,N of all Σ-consequences of {a mathematical formula}T with the maximal role depth N the following holds: either {a mathematical formula}TΣ,N is a uniform {a mathematical formula}EL interpolant of {a mathematical formula}T with respect to Σ or such a finite uniform {a mathematical formula}EL interpolant of {a mathematical formula}T does not exist. This is an easy consequence of results obtained by Lutz, Seylan and Wolter [22] while investigating the problem of existence of uniform {a mathematical formula}EL interpolants (a proof can be found in Appendix B).
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Reformulation of Lemma 55 from [22]Let{a mathematical formula}Tbe an{a mathematical formula}ELTBox, Σ a signature. The following statements are equivalent:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       There exists a uniform{a mathematical formula}ELΣ-interpolant of{a mathematical formula}T.
+      </list-item>
+      <list-item label="2.">
+       There exists a uniform{a mathematical formula}ELΣ-interpolant{a mathematical formula}T′of{a mathematical formula}Tsuch that{a mathematical formula}d(T′)≤24⋅|sub(T)|+1.
+      </list-item>
+     </list>
+     <paragraph>
+      However, an upper bound on the role depth is only sufficient for showing a non-elementary upper bound on the size of uniform interpolants for the following reasons. There are {a mathematical formula}2n many different conjunctions of n different conjuncts, and, accordingly, for each role, {a mathematical formula}2m many different existential restrictions of depth {a mathematical formula}i+1 if m is the number of existential restrictions of depth i. Moreover, for any role depth i, we can find a TBox such that i is the corresponding maximal role depth. Subsequently, the upper bound on the role depth does not suffice to obtain an upper bound for the number i of exponents bounding the size of the uniform interpolant.
+     </paragraph>
+     <paragraph>
+      In order to obtain a tight upper bound, we need to further narrow down the subset of Σ-consequences required to obtain a uniform interpolant. To this end, we show the following:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If we “flatten” terminologies, i.e., we reduce the maximal role depth of {a mathematical formula}T to 1 by recursively introducing fresh concept symbols for all subconcepts occurring in {a mathematical formula}T, it is sufficient to consider the Σ-consequences stating subsumees and subsumers of all concept symbols referenced by the flattened terminology {a mathematical formula}T′ in order to preserve all Σ-consequences.
+      </list-item>
+      <list-item label="•">
+       Lemma 4 can be transferred to flattened TBoxes such that it is sufficient to consider subsumees and subsumers of role depth {a mathematical formula}24⋅|sub(T′)|+1 in order to preserve all Σ-consequences of {a mathematical formula}T.
+      </list-item>
+      <list-item label="•">
+       There is a particular type of subsumees and subsumers that do not add any consequences to the deductive closure, which we call weak subsumees and subsumers. These are subsumees obtained by adding arbitrary conjuncts to arbitrary subconcepts of other subsumees and, accordingly, subsumers obtained from other subsumers by omitting conjuncts from arbitrary subconcepts. When included into the uniform interpolant, weak subsumees and subsumers have a negative impact on its size. Given the exponential bound on the role depth, each concept has non-elementary many weak subsumees. Since weak subsumers and subsumees do not add any new Σ-consequences, we can safely exclude them.
+      </list-item>
+     </list>
+     <paragraph>
+      We show that, in case a finite uniform {a mathematical formula}EL interpolant of {a mathematical formula}T with respect to Σ exists, there are at most triple-exponentially many such non-weak subsumers and subsumees of role depth up to {a mathematical formula}24⋅|sub(T)|+1. Moreover, we show that each of them is of at most double-exponential size.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Flattening
+      </section-title>
+      <paragraph>
+       Recall that we want to compute the uniform interpolant of a TBox {a mathematical formula}T by rewriting the latter, ensuring that the part of the deductive closure of {a mathematical formula}T consisting of Σ-consequences is preserved throughout the rewriting process. Since rewriting operates on the syntactic structure of {a mathematical formula}T, it is desirable that the syntactic structure has a close relation to the deductive closure of {a mathematical formula}T such that we can easily manipulate the deductive closure via changes of the syntactic structure. As in other syntax-based approaches [11], [25], [21], we decompose complex axioms into syntactically simple ones. We refer to this process as flattening: assigning a temporary concept symbol to each complex subconcept occurring in {a mathematical formula}T, so that the terminology can be represented without nested expressions, namely using only axioms of the form {a mathematical formula}A⊑B, {a mathematical formula}A≡B1⊓…⊓Bn, and {a mathematical formula}A≡∃r.B, where A and {a mathematical formula}B(i) are concept symbols or ⊤ and r is a role. For this purpose, we introduce a minimal required set of fresh concept symbols {a mathematical formula}ND with exactly one equivalence axiom {a mathematical formula}A′≡C′ for each {a mathematical formula}A′∈ND, where {a mathematical formula}C′ is the subconcept of {a mathematical formula}T replaced by {a mathematical formula}A′.
+      </paragraph>
+      <paragraph>
+       In what follows, we assume terminologies to be flattened and all concepts symbols from {a mathematical formula}ND to be in {a mathematical formula}sigC(T)∖Σ. W.l.o.g., we also assume that {a mathematical formula}EL concepts do not contain any equivalent concepts in conjunctions and that whenever several concept symbols are equivalent in {a mathematical formula}T, all their occurrences have been replaced by a single representative of the corresponding equivalence class. Concept symbols from Σ are preferred to be selected as representatives. Note that this is a preprocessing step that can be performed in polynomial time as {a mathematical formula}EL allows for polytime reasoning. The following lemma postulates the close semantic relation between a TBox and its flattening.
+      </paragraph>
+      <paragraph label="Lemma 5">
+       Model-conservativityAny{a mathematical formula}ELTBox{a mathematical formula}Tcan be rewritten into a flattened TBox{a mathematical formula}T′so that each model of{a mathematical formula}T′is a model of{a mathematical formula}Tand each model of{a mathematical formula}Tcan be extended into a model of{a mathematical formula}T′.
+      </paragraph>
+      <paragraph>
+       In the next subsection, we represent the corresponding subsumees and subsumers explicitly stated within a classified, flattened TBox {a mathematical formula}T as a pair of regular tree grammars on ranked trees (with concept symbols interpreted as non-terminals and {a mathematical formula}∃r,⊓ as functions). We show that all non-weak subsumees and subsumers entailed by {a mathematical formula}T can be generated by these grammars. To this end, we now analyse the derivation of subsumptions in flattened TBoxes by means of the deduction calculus introduced in Section 3.
+      </paragraph>
+      <paragraph>
+       First, we consider the derivation of subsumees. We use the auxiliary function {a mathematical formula}Pre:sigC(T)→22sigC(T) which allows us for any concept symbol A to refer to its subsumees of the form {a mathematical formula}B1⊓...⊓Bn, where {a mathematical formula}B(i) are concept symbols. For each such conjunction, the set of its conjuncts is an element of Pre.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Let {a mathematical formula}T be an {a mathematical formula}EL TBox and {a mathematical formula}A∈sigC(T). {a mathematical formula}Pre(A) is the smallest set with the following properties:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}{A}∈Pre(A).
+       </list-item>
+       <list-item label="•">
+        For each {a mathematical formula}K∈Pre(A) and each {a mathematical formula}B∈K, if there is {a mathematical formula}T⊨B′⊑B, then also {a mathematical formula}(K∖{B})∪{B′}∈Pre(A).
+       </list-item>
+       <list-item label="•">
+        For each {a mathematical formula}K∈Pre(A) and each {a mathematical formula}B∈K, if there is {a mathematical formula}B≡B1⊓...⊓Bn∈T, then also {a mathematical formula}(K∖{B})∪{B1,...,Bn}∈Pre(A).
+       </list-item>
+      </list>
+      <paragraph>
+       We can show the following closure property of Pre.
+      </paragraph>
+      <paragraph label="Lemma 6">
+       Let{a mathematical formula}Tbe an{a mathematical formula}ELTBox and{a mathematical formula}A∈sigC(T). For each{a mathematical formula}K∈Pre(A), each{a mathematical formula}B∈Kand each{a mathematical formula}M∈Pre(B), we have{a mathematical formula}(K∖{B})∪M∈Pre(A).
+      </paragraph>
+      <paragraph>
+       The above lemma can be shown by an easy induction over the derivation of M from B.
+      </paragraph>
+      <paragraph>
+       In essence, the lemma below implies that, in case of flattened terminologies explicitly containing all elements of Pre, we can derive all subsumees of a concept by (1) applying the rule {a mathematical formula}(Ex) to construct existential restrictions from two concepts in a subsumption relation and/or (2) replacing concepts occurring within subsumees by their subsumees.
+      </paragraph>
+      <paragraph label="Lemma 7">
+       Let{a mathematical formula}Tbe a flattened{a mathematical formula}ELTBox and{a mathematical formula}C,Dtwo{a mathematical formula}ELconcepts with{a mathematical formula}sig(C)∪sig(D)⊆sig(T)such that{a mathematical formula}T⊨C⊑D. Let{a mathematical formula}where{a mathematical formula}Ajare concept symbols,{a mathematical formula}rkare role symbols and{a mathematical formula}Ekare arbitrary{a mathematical formula}ELconcepts. Then, for all conjuncts{a mathematical formula}Diof D, the following is true: If{a mathematical formula}Diis a concept symbol, then there is a set{a mathematical formula}M∈Pre(Di)of concept symbols from{a mathematical formula}sigC(T)such that, for each{a mathematical formula}B∈M, either:
+      </paragraph>
+      <list>
+       <list-item label="(a1)">
+        There is an{a mathematical formula}Ajin C such that{a mathematical formula}Aj=B.
+       </list-item>
+       <list-item label="(a2)">
+        There are{a mathematical formula}rk,Ekand{a mathematical formula}B′∈sigC(T)such that{a mathematical formula}T⊨Ek⊑B′and{a mathematical formula}B≡∃rk.B′∈T.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We apply induction on the length of the proof. We start with the last applied rule and show for each possibility that the lemma holds. Rules {a mathematical formula}AxTop,Ax and the case {a mathematical formula}C⋈D∈T are the basis of induction, since each proof begins with one of them. {a mathematical formula}(C⋈D∈T)In the case that {a mathematical formula}C⊑D∈T or {a mathematical formula}C≡D∈T, the lemma holds due to the flattening. Axioms within {a mathematical formula}T can have the following form:
+       <list>
+        {a mathematical formula}C∈sigC(T),D=D1⊓...⊓Dm with {a mathematical formula}m≥1 and {a mathematical formula}D1,...,Dm∈sigC(T). In this case, we have {a mathematical formula}{C}∈Pre(Di) for each {a mathematical formula}Di with {a mathematical formula}1≤i≤m. Therefore, condition (a1) holds for each {a mathematical formula}Di.{a mathematical formula}C∈sigC(T),D=∃r′.D′ with {a mathematical formula}D′∈sigC(T). This case corresponds to the condition (a4).{a mathematical formula}(AxTop)Since the conjunction is empty in case
+       </list>
+       <paragraph>
+        {a mathematical formula}D=⊤, the lemma holds.{a mathematical formula}(Ax)Since {a mathematical formula}C=D, for each {a mathematical formula}Di there is a conjunct {a mathematical formula}Ci of C with {a mathematical formula}Ci=Di. If {a mathematical formula}Di is a concept symbol, condition (a1) holds. Otherwise, (a3).{a mathematical formula}(Ex)If Ex was the last applied rule, then {a mathematical formula}Di=∃rk.D′ and {a mathematical formula}T⊢Dk⊑D′. Therefore, (a3) holds.{a mathematical formula}(AndL)Assume that {a mathematical formula}C′⊓C″=C such that {a mathematical formula}C′⊑D is the antecedent. By induction hypothesis, the lemma holds for {a mathematical formula}C′⊑D. Since all conjuncts of {a mathematical formula}C′ are also conjuncts of C, the lemma holds also for {a mathematical formula}C⊑D.{a mathematical formula}(AndR)Assume that {a mathematical formula}D=D1⊓D2, therefore, {a mathematical formula}C⊑D1 and {a mathematical formula}C⊑D2 is the antecedent. By induction hypothesis, the lemma holds for both {a mathematical formula}C⊑D1 and {a mathematical formula}C⊑D2. Since all conjuncts of D are from either {a mathematical formula}D1 or {a mathematical formula}D2, the lemma also holds for {a mathematical formula}C⊑D.{a mathematical formula}(Cut)By induction hypothesis, the lemma holds for both elements of the antecedent, {a mathematical formula}C⊑C1 and {a mathematical formula}C1⊑D. Let {a mathematical formula}C1=⨅1≤p≤rAp⊓⨅1≤s≤t∃rs′.Es′.
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Assume that {a mathematical formula}Di is a concept symbol. Then, there is {a mathematical formula}M1∈Pre(Di) such that (a1) or (a2) holds for each {a mathematical formula}Bu∈M1. We now consider each {a mathematical formula}C⊑Bu and distinguish three cases, in one of which (a2) holds. In the remaining two cases, we can obtain {a mathematical formula}Mnew by replacing {a mathematical formula}Bu within {a mathematical formula}M1 by the elements of some {a mathematical formula}Mu′∈Pre(Bu) such that (a1) or (a2) holds for each {a mathematical formula}B′∈Mnew and {a mathematical formula}C⊑B′:
+        </list-item>
+        <list-item label="2.">
+         Assume that {a mathematical formula}Di=∃r′.D′. Then, (a3) or (a4) holds.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       The above lemma is focused on the derivation of subsumees. For the computation of uniform interpolants, we additionally need to show that, in flattened terminologies, every subsumption relation with a concept symbol and its subsumer being an existential restriction is derived from an equivalence axiom of the form {a mathematical formula}B1≡∃r.B2 in {a mathematical formula}T.
+      </paragraph>
+      <paragraph label="Lemma 8">
+       Let{a mathematical formula}Tbe a flattened{a mathematical formula}ELTBox,{a mathematical formula}A∈sigC(T)and{a mathematical formula}r∈sigR(T). Let C be an{a mathematical formula}ELconcept such that{a mathematical formula}T⊨A⊑∃r.C. Then, there are{a mathematical formula}B1,B2with{a mathematical formula}B1≡∃r.B2∈Tsuch that{a mathematical formula}T⊨A⊑B1,{a mathematical formula}T⊨B2⊑C.
+      </paragraph>
+      <paragraph label="Proof">
+       Lemma 16 in [27] states that for a general {a mathematical formula}EL TBox {a mathematical formula}T with {a mathematical formula}T⊨C1⊑∃r.C2, where {a mathematical formula}C1,C2 are {a mathematical formula}EL-concepts one of the following holds:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        there is a conjunct {a mathematical formula}∃r.C′ of {a mathematical formula}C1 such that {a mathematical formula}T⊨C′⊑C2;
+       </list-item>
+       <list-item label="•">
+        there is a subconcept {a mathematical formula}∃r.C′ of {a mathematical formula}T such that {a mathematical formula}T⊨C1⊑∃r.C′ and {a mathematical formula}T⊨C′⊑C2.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Grammar representation of subsumees and subsumers
+      </section-title>
+      <paragraph>
+       In this section, we show how the sets of Σ-subsumees and Σ-subsumers of each concept symbol in a flattened {a mathematical formula}EL TBox {a mathematical formula}T can be described as languages generated by regular tree grammars on ranked ordered trees for a particular signature Σ. First, we briefly recall the basics of tree languages and regular tree grammars.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Regular tree grammars
+       </section-title>
+       <paragraph>
+        A ranked alphabet is a pair ({a mathematical formula}F, Arity) where {a mathematical formula}F is a finite set and Arity is a mapping from {a mathematical formula}F into {a mathematical formula}N. We use superscripts to denote the arity of alphabet symbols (if it is not 0), e.g., {a mathematical formula}f2(g1(a),a). The set of ground terms over the alphabet {a mathematical formula}F (which are also simply referred to as trees) is denoted by {a mathematical formula}T(F). Let {a mathematical formula}X be a set of variables. Then, {a mathematical formula}T(F,X) denotes the set of terms over the alphabet {a mathematical formula}F and the set of variables {a mathematical formula}X. A term {a mathematical formula}C∈T(F,X) containing each variable from {a mathematical formula}X at most once is called a context.
+       </paragraph>
+       <paragraph label="Example 3">
+        Let {a mathematical formula}F={f2,g1,a} and {a mathematical formula}X,Y two variables. Terms {a mathematical formula}f2(g1(a),X), {a mathematical formula}f2(g1(Y),X) and {a mathematical formula}f2(Y,X) are contexts obtained by replacing terminal symbols within the term {a mathematical formula}f2(g1(a),a) with a variable. The term {a mathematical formula}f2(g1(X),X) is not a context, since it contains the variable X more than once.
+       </paragraph>
+       <paragraph>
+        A regular tree grammar{a mathematical formula}G=(S,N,F,R) is composed of a start symbol S, a set {a mathematical formula}N of non-terminal symbols (of arity 0) with {a mathematical formula}S∈N, a ranked alphabet {a mathematical formula}F of terminal symbols with a fixed arity such that {a mathematical formula}F∩N=∅, and a set R of derivation rules, each of which is of the form {a mathematical formula}N→β where N is a non-terminal from {a mathematical formula}N and β is a term from {a mathematical formula}T(F∪N). Let {a mathematical formula}X be a set of variables disjoint from the ranked alphabet {a mathematical formula}F∪N. Given a regular tree grammar {a mathematical formula}G=(S,N,F,R), the derivation relation {a mathematical formula}→G associated to G is a relation on terms from {a mathematical formula}T(F∪N) such that {a mathematical formula}s→Gt if and only if there is a rule {a mathematical formula}N→α∈R and there is a context C such that {a mathematical formula}s=C[N/X] and {a mathematical formula}t=C[α/X], where X is a variable from {a mathematical formula}X. The subset of {a mathematical formula}T(F∪N) which can be generated by successive derivations starting with the start symbol is denoted by {a mathematical formula}Lu(G)={s∈T(F∪N)|S→G+s} where {a mathematical formula}→G+ is the transitive closure of {a mathematical formula}→G. We omit the subscript G when the grammar G is clear from the context. The language generated by G denoted by {a mathematical formula}L(G)=T(F)∩Lu(G).
+       </paragraph>
+       <paragraph>
+        By definition of the derivation relation, it does not necessarily hold that {a mathematical formula}f2(B,A)∈L(G)⇒f2(A,B)∈L(G) or {a mathematical formula}f2(A,f2(B,C))∈L(G)⇒f2(f2(A,B),C)∈L(G). In contrast, for DL constructs with conjunction, the order of conjuncts is not significant. For instance, for concepts C and D, it always holds that {a mathematical formula}C⊓D≡D⊓C. It also holds that {a mathematical formula}D⊓(E⊓C)≡((D⊓E)⊓C). Since we are interested in languages consisting of DL concepts, it will be convenient to consider the commutative associative closure{a mathematical formula}Lu⁎(G) and {a mathematical formula}L⁎(G) of languages {a mathematical formula}Lu(G) and {a mathematical formula}L(G), respectively. This closure can be defined as follows.
+       </paragraph>
+       <paragraph label="Definition 6">
+        Let {a mathematical formula}G=(S,N,F,R) be a regular tree grammar and let {a mathematical formula}F′ be a subset of {a mathematical formula}F. Then the commutative associative closure {a mathematical formula}L⁎(G) of {a mathematical formula}L(G) w.r.t. {a mathematical formula}F′ is the smallest set for which the following hold:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}L(G)⊆L⁎(G).
+        </list-item>
+        <list-item label="•">
+         Let {a mathematical formula}X={X1,…,Xn} be a set of variables and let C and D be contexts from {a mathematical formula}T(F′,X), in which every variable from {a mathematical formula}X occurs exactly once. Moreover let E be a context over {a mathematical formula}F containing a variable X and let λ be a function mapping variables from {a mathematical formula}X to ground terms over {a mathematical formula}F. Let {a mathematical formula}C′=C[λ(X1)/X1,…,λ(Xn)/Xn] and let {a mathematical formula}D′=D[λ(X1)/X1,…,λ(Xn)/Xn] (where, for a variable X and two terms {a mathematical formula}t1 and {a mathematical formula}t2, we use {a mathematical formula}t1[t2/X] to denote the simultaneous replacement of all occurrences of X in {a mathematical formula}t1 by {a mathematical formula}t2). Then {a mathematical formula}L⁎(G) contains {a mathematical formula}E[C′/X] iff it contains {a mathematical formula}E[D′/X].
+        </list-item>
+       </list>
+       <paragraph label="Example 4">
+        The following example demonstrates the application of derivation rules. Let {a mathematical formula}G=(A,{A,B},{f2,g1,a,b},R) with R given by the following derivation rules:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}A→f2(B,A)
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}A→a
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}B→g1(A)
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}B→b
+        </list-item>
+       </list>
+       <paragraph>
+        For further details on regular tree grammars, we refer the reader, for instance, to [28].
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Subsumees and subsumers as grammars
+       </section-title>
+       <paragraph>
+        Now, we define regular tree grammars that capture, for a signature Σ and a flattened {a mathematical formula}EL TBox {a mathematical formula}T, the sets of Σ-subsumees and Σ-subsumers of each concept symbol. In our definition of grammars, we uniquely represent each concept symbol {a mathematical formula}A∈sigC(T) by a non-terminal {a mathematical formula}nA (and denote the set of all non-terminals by {a mathematical formula}NT={nB|B∈sigC(T)∪{⊤}}). In what follows, we use the ranked alphabet {a mathematical formula}F=(sigC(T)∩Σ)∪{⊤}∪{∃r1|r∈sigR(T)∩Σ}∪{⊓i|2≤i}, where ⊤ and concept symbols in {a mathematical formula}sigC(T)∩Σ are constants, {a mathematical formula}∃r1 for {a mathematical formula}r∈sigR(T)∩Σ are unary functions and {a mathematical formula}⊓i are functions of the arity greater than 2. Due to flattening, {a mathematical formula}|sigC(T)| is the highest arity of conjunctions that can occur in our TBox and, as we will see, also within the languages generated by our grammars. However, higher arities are required for terms within the commutative associate closure of these languages w.r.t. {a mathematical formula}{⊓i|2≤i}. In the following, it will be convenient to simply write ⊓ and ∃r if the arity of the corresponding function is clear from the context. Clearly, every {a mathematical formula}EL concept C with {a mathematical formula}sig(C)⊆Σ and at most {a mathematical formula}|sigC(T)| conjuncts in each subconcept has a unique representation by means of the above functions. We denote such a term representation of C using {a mathematical formula}F by {a mathematical formula}tC. For a term t, we denote its concept representation by {a mathematical formula}Ct. Additionally, we use a substitution function {a mathematical formula}σT,F:{C|sig(C)⊆sig(T)}→T(F,NT) with {a mathematical formula}σT,F(C)=tC{n⊤/⊤,nB1/B1,...,nBn/Bn}, where {a mathematical formula}B1,...,Bn are all concept symbols occurring in C. If the TBox and the set of non-terminals are clear from the context, we will denote such a representation of a concept C simply by {a mathematical formula}σ(C).
+       </paragraph>
+       <paragraph>
+        As mentioned above, weak subsumees and subsumers are not required in order to obtain a uniform {a mathematical formula}EL interpolant. Including weak subsumees into our definition of the grammars would lead to a significant redundancy within the generated language, which would become infinite even for most simple TBoxes containing roles. Weak subsumers would lead to an exponential blow-up in the size of the corresponding grammar. Thus, we avoid generating weak subsumees and subsumers by the corresponding grammars.
+       </paragraph>
+       <paragraph label="Definition 7">
+        Let {a mathematical formula}T be a flattened {a mathematical formula}EL TBox, Σ a signature. Further, for each {a mathematical formula}B∈sigC(T)∪{⊤}, let {a mathematical formula}R⊒ be given by {a mathematical formula}(GL1){a mathematical formula}nB→B if {a mathematical formula}B∈Σ∪{⊤},{a mathematical formula}(GL2){a mathematical formula}nB→nB′ for all {a mathematical formula}B′∈sigC(T)∪{⊤} with {a mathematical formula}T⊨B′⊑B, {a mathematical formula}B≠B′,{a mathematical formula}(GL3){a mathematical formula}nB→⊓(nB1,...,nBn) for all {a mathematical formula}B≡B1⊓…⊓Bn∈T,{a mathematical formula}(GL4){a mathematical formula}nB→∃r(nB′) for all {a mathematical formula}B≡∃r.B′∈T with {a mathematical formula}r∈sigR(T)∩Σ. Let {a mathematical formula}R⊑ be given for all {a mathematical formula}B∈sigC(T)∪{⊤} by {a mathematical formula}(GR1){a mathematical formula}nB→B if {a mathematical formula}B∈Σ∪{⊤},{a mathematical formula}(GR2){a mathematical formula}nB→nB′ if {a mathematical formula}B≠B′ and either {a mathematical formula}B′=⊤ or {a mathematical formula}B′ is the only concept symbol such that {a mathematical formula}T⊨B⊑B′,{a mathematical formula}(GR3){a mathematical formula}nB→⊓(nB1,...,nBn) if {a mathematical formula}{B1,…,Bn}={B′∈sigC(T)|T⊨B⊑B′} and {a mathematical formula}n≥2,{a mathematical formula}(GR4){a mathematical formula}nB→∃r(nB′) for all {a mathematical formula}B≡∃r.B′∈T with {a mathematical formula}r∈sigR(T)∩Σ.For every {a mathematical formula}A∈sigC(T), the regular tree grammar {a mathematical formula}G⊒(T,Σ,A) is given by {a mathematical formula}(nA,NT,F,R⊒). Likewise, the regular tree grammar {a mathematical formula}G⊑(T,Σ,A) is given by {a mathematical formula}(nA,NT,F,R⊑).
+       </paragraph>
+       <paragraph>
+        We denote the set of tree grammars {a mathematical formula}{G⊒(T,Σ,A)|A∈sigC(T)} by {a mathematical formula}G⊒(T,Σ) and the set {a mathematical formula}{G⊑(T,Σ,A)|A∈sigC(T)} by {a mathematical formula}G⊑(T,Σ). In what follows, {a mathematical formula}L⁎(G⊒(T,Σ,A)) and {a mathematical formula}L⁎(G⊑(T,Σ,A)) refer to the commutative associate closure of {a mathematical formula}L(G⊒(T,Σ,A)) and {a mathematical formula}L(G⊑(T,Σ,A)) w.r.t. {a mathematical formula}{⊓i|2≤i}. For the construction of grammars the following result holds.
+       </paragraph>
+       <paragraph label="Theorem 2">
+        Let{a mathematical formula}Tbe a flattened{a mathematical formula}ELTBox and let Σ be a signature.{a mathematical formula}G⊒(T,Σ)and{a mathematical formula}G⊑(T,Σ)can be computed from{a mathematical formula}Tin polynomial time and are at most quadratic in the size of{a mathematical formula}T.
+       </paragraph>
+       <paragraph label="Proof">
+        Flattening and classification can be done all together in polynomial time [11] and yield an at most quad ratic result. From this result, the grammars are constructed in linear time.  □
+       </paragraph>
+       <paragraph>
+        The following example demonstrates the grammar construction.
+       </paragraph>
+       <paragraph label="Example 5">
+        Let {a mathematical formula}T={A1⊑∃r.A2,∃r.B1⊓B3⊑B2,A2⊑B1}. In order to flatten the given TBox, we introduce fresh concept names for {a mathematical formula}∃r.A2,∃r.B1 and {a mathematical formula}B1′⊓B3 to obtain {a mathematical formula}T′:{a mathematical formula} Let {a mathematical formula}Σ=sig(T)∖{B1}. Then, we introduce terminals for each concept symbol from Σ and the ⊤ concept according to (GL1) and (GR1):{a mathematical formula}If we only use subsumees explicitly given in {a mathematical formula}T′, we obtain the following set of transitions {a mathematical formula}R⊒ for generating subsumees of concept symbols:{a mathematical formula}{a mathematical formula}{a mathematical formula} We see that the subsumee {a mathematical formula}∃r.A2⊓B3 of {a mathematical formula}B2 is not generated by the above set of transitions. If we take inferred inclusions into consideration, we obtain additionally{a mathematical formula} Accordingly, {a mathematical formula}R⊑ is given by Rules (8),(11) and, additionally{a mathematical formula}{a mathematical formula}{a mathematical formula} In the above example, we can generate all non-weak subsumees using the complete grammar construction, i.e., after including the results of classification in addition to transitions representing explicitly given subsumptions. For instance, the subsumee {a mathematical formula}∃r.A2⊓B3 of {a mathematical formula}B2 can be generated using the first additional rule in (12) as follows: {a mathematical formula}nB2→nB2′→⊓(nB1′,nB3)→⊓(nA2′,nB3)→⊓(∃r(nA1),nB3)→⊓(∃r(A1),B3).
+       </paragraph>
+       <paragraph>
+        We now consider various properties of the above grammars that are of interest for the computation of uniform interpolants. The following theorem states that the grammars derive only terms representing Σ-subsumees and Σ-subsumers of the corresponding concept symbol.
+       </paragraph>
+       <paragraph label="Theorem 3">
+        Let{a mathematical formula}Tbe a flattened{a mathematical formula}ELTBox, Σ a signature and{a mathematical formula}A∈sigC(T).
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         For each{a mathematical formula}t∈L(G⊒(T,Σ,A))it holds that{a mathematical formula}sig(Ct)⊆Σand{a mathematical formula}T⊨Ct⊑A.
+        </list-item>
+        <list-item label="2.">
+         For each{a mathematical formula}t∈L(G⊑(T,Σ,A))it holds that{a mathematical formula}sig(Ct)⊆Σand{a mathematical formula}T⊨A⊑Ct.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        It is easy to check that {a mathematical formula}sig(Ct)⊆Σ in 1 and 2 by examining Definition 7: the grammars derive only terms containing concept symbols and roles from Σ, since {a mathematical formula}nB→B only if {a mathematical formula}B∈Σ∪{⊤} and {a mathematical formula}nB→∃r(t′) only if {a mathematical formula}r∈Σ. Therefore, for any {a mathematical formula}A∈sigC(T) and any {a mathematical formula}t∈L(G⊑(T,Σ,A))∪L(G⊒(T,Σ,A)) it holds that {a mathematical formula}sig(Ct)⊆Σ. To show that grammars only generate subsumees and subsumers, we investigate the above two cases separately:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         We use an easy induction on the maximal nesting depth of functions in t using the rules given in Definition 7:
+        </list-item>
+        <list-item label="2.">
+         The proof of soundness of {a mathematical formula}G⊑(T,Σ) can be done in the same manner, i.e., by induction on the maximal nesting depth of functions in t:
+        </list-item>
+       </list>
+       <paragraph>
+        To be able to show completeness of the grammars, we first show that the commutative associative closure of the generated {a mathematical formula}G⊒ language contains all elements of Pre.
+       </paragraph>
+       <paragraph label="Lemma 9">
+        Let{a mathematical formula}Tbe flattened{a mathematical formula}ELTBox, Σ a signature, A a concept symbol and{a mathematical formula}K∈Pre(A). Then,{a mathematical formula}σ(⨅B∈KB)∈Lu⁎(G⊒(T,Σ,A)).
+       </paragraph>
+       <paragraph label="Proof">
+        The lemma can be shown by an easy induction on the depth of derivation of K from A. We distinguish three cases for the last derivation step.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If {a mathematical formula}K={A}, then the lemma is a direct consequence of (GL1).
+        </list-item>
+        <list-item label="•">
+         Assume that K has been obtained from {a mathematical formula}K′∈Pre(A) by replacing some B by some {a mathematical formula}B′ such that {a mathematical formula}T⊨B′⊑B. By induction hypothesis, {a mathematical formula}σ(⨅B″∈K′B″)∈Lu⁎(G⊒(T,Σ,A)). By (GL2), we have {a mathematical formula}nB→nB′∈R⊒. Thus, also {a mathematical formula}σ(⨅A′∈KA′)∈Lu⁎(G⊒(T,Σ,A)).
+        </list-item>
+        <list-item label="•">
+         Assume that K has been obtained from {a mathematical formula}K′∈Pre(A) by replacing some B by some {a mathematical formula}B1,…,Bn such that {a mathematical formula}B≡B1⊓...⊓Bn∈T. By induction hypothesis, {a mathematical formula}σ(⨅B″∈K′B″)∈Lu⁎(G⊒(T,Σ,A)). By (GL3), we have {a mathematical formula}nB→⊓(nB1,...,nBn)∈R⊒. Thus, also {a mathematical formula}σ(⨅A′∈KA′)∈Lu⁎(G⊒(T,Σ,A)).
+        </list-item>
+       </list>
+       <paragraph>
+        As discussed above, grammars do not guarantee to capture weak subsumees and subsumers. Therefore, we obtain the following result for the completeness of the grammars.
+       </paragraph>
+       <paragraph label="Theorem 4">
+        Let{a mathematical formula}Tbe a flattened{a mathematical formula}ELTBox, Σ a signature and A a concept symbol.
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         For each C with{a mathematical formula}sig(C)⊆Σsuch that{a mathematical formula}T⊨C⊑Athere is a concept{a mathematical formula}C′with{a mathematical formula}tC′∈L⁎(G⊒(T,Σ,A))such that C can be obtained from{a mathematical formula}C′by adding arbitrary conjuncts to arbitrary subconcepts.
+        </list-item>
+        <list-item label="2.">
+         For each C with{a mathematical formula}sig(C)⊆Σsuch that{a mathematical formula}T⊨A⊑Cthere is a concept{a mathematical formula}C′with{a mathematical formula}tC′∈L⁎(G⊑(T,Σ,A))such that C can be obtained from{a mathematical formula}C′by removing ⊤ conjuncts from arbitrary subconcepts.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        The theorem is proved by induction on the role depth of C using the properties of the flattening, for instance, stated in Lemma 7, in addition to Definition 7 and Lemma 9. Let{a mathematical formula} where {a mathematical formula}Aj are concept symbols, {a mathematical formula}rk are role symbols and {a mathematical formula}Ek are arbitrary {a mathematical formula}EL concepts. W.l.o.g., we can assume that all {a mathematical formula}Aj are pairwise different. We prove the first claim as follows:
+        <list>
+         Assume role depth is 0. Then, C is a conjunction of concept symbols, i.e., {a mathematical formula}C=⨅1≤j≤nAj. By Lemma 7, there is a set {a mathematical formula}M′∈Pre(A) of concept symbols such that, for each {a mathematical formula}B∈M′, there is an {a mathematical formula}Aj with {a mathematical formula}Aj=B. By Lemma 9, {a mathematical formula}σ(⨅B∈M′B)∈Lu⁎(G⊒(T,Σ,A)). Since each {a mathematical formula}B∈M′ is in Σ, by (GL1), {a mathematical formula}nB→B∈R⊒. It follows that {a mathematical formula}tC∈L⁎(G⊒(T,Σ,A)).Assume that the role depth is greater than 0. As in the case above, there is a set {a mathematical formula}M′∈Pre(A) of concept symbols such that, for each {a mathematical formula}B∈M′, [A1] or [A2] holds. Let {a mathematical formula}M1′ be the subset of {a mathematical formula}M′ where [A1] holds, i.e., {a mathematical formula}M1′=M′∩{A1,...An}, and let {a mathematical formula}M2′=M′∖M1′. In accordance with this separation of {a mathematical formula}M′ into {a mathematical formula}M1′ and {a mathematical formula}M2′, we can also identify the two corresponding sub-conjunctions of C: Let {a mathematical formula}C1′=⨅B∈M1′B, and {a mathematical formula}C2′=⨅1≤f≤p∃rf′.Ef′ such that for each f there is a corresponding {a mathematical formula}Bf∈M2′.For each f, there exists a concept symbol {a mathematical formula}Bf′ with {a mathematical formula}T⊨Ef′⊑Bf′ and {a mathematical formula}Bf≡∃r.Bf′∈T. By induction hypothesis, for each f there exists a concept {a mathematical formula}Ef″ such that {a mathematical formula}tEf″∈L⁎(G⊒(T,Σ,Bf′)) and {a mathematical formula}Ef′ can be obtained from {a mathematical formula}Ef″ by adding arbitrary conjuncts to arbitrary subconcepts. By (GL4), {a mathematical formula}nBf→∃rf′(nBf′)∈R⊒. Therefore, {a mathematical formula}∃rf′(tEf″)∈L⁎(G⊒(T,Σ,Bf)) and {a mathematical formula}∃rf′.Ef′ can be obtained from {a mathematical formula}∃rf′.Ef″ by adding arbitrary conjuncts to arbitrary subconcepts.Since each {a mathematical formula}B∈M1′ is in Σ, we have {a mathematical formula}nB→B∈R⊒ by (GL1). By Lemma 9, {a mathematical formula}σ(⨅B∈M′B)∈Lu⁎(G⊒(T,Σ,A)). Thus, we obtain a concept {a mathematical formula}C″=⨅B∈M1′B⊓⨅Bf∈M2′∃rf′.Ef″ with {a mathematical formula}tC″∈L⁎(G⊒(T,Σ,A)) such that C can be obtained from it by adding arbitrary conjuncts to arbitrary subconcepts.We proceed with showing that for each such general
+        </list>
+        <paragraph>
+         C with {a mathematical formula}sig(C)⊆Σ such that {a mathematical formula}T⊨A⊑C there is a concept {a mathematical formula}C′ such that {a mathematical formula}tC′∈L⁎(G⊑(T,Σ,A)) and C can be obtained from {a mathematical formula}C′ by removing ⊤ conjuncts from arbitrary subconcepts. For each {a mathematical formula}Aj, we know that {a mathematical formula}T⊨A⊑Aj and {a mathematical formula}Aj∈Σ∪{⊤}. By (GR1) {a mathematical formula}nAj→Aj∈R⊑ for all {a mathematical formula}Aj. Assume a role depth 0.
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Assume that {a mathematical formula}n=1, i.e., {a mathematical formula}C=A1, and assume that {a mathematical formula}A1 is the only concept symbol such that {a mathematical formula}T⊨A⊑A1. By (GR2) {a mathematical formula}nA→nA1∈R⊑. Thus, {a mathematical formula}tC∈L⁎(G⊑(T,Σ,A)).
+         </list-item>
+         <list-item label="•">
+          Assume that there are more than one concept symbol {a mathematical formula}Ai such that {a mathematical formula}T⊨A⊑Ai. By (GR3), {a mathematical formula}nA→⊓(nA1,...,nAl)∈R⊑ for some {a mathematical formula}l≥n. By (GR2), there is {a mathematical formula}nAi→n⊤∈R⊑ for all {a mathematical formula}Ai. By applying (GR1) for all {a mathematical formula}Aj and {a mathematical formula}nAi→n⊤, {a mathematical formula}n⊤→⊤ for all {a mathematical formula}i&gt;n, we obtain a term {a mathematical formula}tC⊓C′, where {a mathematical formula}C′ is a conjunction of {a mathematical formula}x−n concepts ⊤. Thus, the theorem holds for role depth 0.
+         </list-item>
+        </list>
+        <paragraph>
+         Assume that the role depth is greater than 0. For each {a mathematical formula}∃rk.Ek, it follows from Lemma 8 that there are {a mathematical formula}Bk,Bk″∈sigC(T) with {a mathematical formula}Bk≡∃rk.Bk″∈T such that {a mathematical formula}T⊨A⊑Bk, {a mathematical formula}T⊨Bk″⊑Ek. By (GR4), {a mathematical formula}nBk→∃rk(nBk″)∈R⊑. By induction hypothesis, there is a concept {a mathematical formula}Ek′ such that {a mathematical formula}tEk′∈L⁎(G⊑(T,Σ,Bk″)) and {a mathematical formula}Ek can be obtained from {a mathematical formula}Ek′ by removing ⊤ conjuncts from arbitrary subconcepts.
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Assume that there is the only one concept symbol {a mathematical formula}B′ such that {a mathematical formula}T⊨A⊑B′. Then, {a mathematical formula}C=∃r1.E1 and {a mathematical formula}B1=B′. By (GR2) {a mathematical formula}nA→nB′∈R⊑. Thus, {a mathematical formula}t∃r1.E1′∈L(G⊑(T,Σ,A)) and {a mathematical formula}∃r1.E1 can be obtained from {a mathematical formula}∃r1.E1′ by removing ⊤ conjuncts from arbitrary subconcepts.
+         </list-item>
+         <list-item label="•">
+          Assume that there are more than one concept symbol {a mathematical formula}B′ such that {a mathematical formula}T⊨A⊑B′. By (GR3), {a mathematical formula}nA→⊓(nB1′,...,nBl′)∈R⊑ for some {a mathematical formula}l≥n+m such that {a mathematical formula}Bj′=Aj for {a mathematical formula}1≤j≤n and {a mathematical formula}Bn+k′=Bk for {a mathematical formula}1≤k≤m. By (GR2), there is {a mathematical formula}nBi′→n⊤∈R⊑ for all {a mathematical formula}Bi′. Now, we derive the term {a mathematical formula}tC″⊓C′ from {a mathematical formula}nA by first applying {a mathematical formula}nA→⊓(nB1′,...,nBl′) and then proceeding as follows:
+         </list-item>
+        </list>
+        <paragraph>
+         □
+        </paragraph>
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       From grammars to uniform interpolants
+      </section-title>
+      <paragraph>
+       Now we show that, as a consequence of Lemma 4 and Theorem 4, in case a finite uniform interpolant exists, we can construct it from the subsumees and subsumers of maximal depth {a mathematical formula}N=24⋅|sub(T)|+1 generated by the grammars {a mathematical formula}G⊒(T,Σ) and {a mathematical formula}G⊑(T,Σ). To this end, we represented subsumees and subsumers of maximal depth N as a TBox that uses only concept and role symbols from Σ as follows.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Let {a mathematical formula}T be an {a mathematical formula}EL TBox and Σ a signature. Let N be a natural number. For {a mathematical formula}⋈∈{⊒,⊑} and {a mathematical formula}A∈sigC(T), let {a mathematical formula}L⋈(A)={C|tC∈L(G⋈(T,Σ,A)),d(C)≤N}. Then the grammar-generated TBox{a mathematical formula}TG for {a mathematical formula}T, Σ and N is defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We now show that {a mathematical formula}TG(T,Σ,N) is a uniform {a mathematical formula}ELΣ-interpolant of {a mathematical formula}T in case there exists one and obtain an upper bound on its size.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Let{a mathematical formula}Tbe a flattened version of an{a mathematical formula}ELTBox{a mathematical formula}Tnfand let Σ be a signature with{a mathematical formula}Σ∩sig(T)⊆sig(Tnf). Let{a mathematical formula}N=24⋅|sub(Tnf)|+1. The following statements are equivalent:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        There exists a uniform{a mathematical formula}ELΣ-interpolant of{a mathematical formula}Tnf.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}TG(T,Σ,N)≡ΣELTnf.
+       </list-item>
+       <list-item label="3.">
+        There exists a uniform{a mathematical formula}ELΣ-interpolant{a mathematical formula}T′of{a mathematical formula}Tnfwith{a mathematical formula}|T′|∈O(222|Tnf|).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We prove the implications {a mathematical formula}1⇒2 and {a mathematical formula}2⇒3. All other implications are either trivial or follow from the others. For convenience, let {a mathematical formula}TΣ denote the TBox {a mathematical formula}TG(T,Σ,N).We start by showing the implication {a mathematical formula}1⇒2. First, note that the statement {a mathematical formula}TΣ≡ΣELTnf follows from Lemma 5 and the fact that {a mathematical formula}Σ∩sig(T)⊆sig(Tnf). Thus, it is sufficient to prove {a mathematical formula}TΣ≡ΣELT. By Definition 2, the statement {a mathematical formula}TΣ≡ΣELT consists of two directions: (1) for all {a mathematical formula}EL concepts {a mathematical formula}C,D with {a mathematical formula}sig(C)∪sig(D)⊆Σ it holds that {a mathematical formula}TΣ⊨C⊑D⇒T⊨C⊑D and (2) for all {a mathematical formula}EL concepts {a mathematical formula}C,D with {a mathematical formula}sig(C)∪sig(D)⊆Σ it holds that {a mathematical formula}TΣ⊨C⊑D⇐T⊨C⊑D.
+       <list>
+        The first direction follows from Theorem 3 and Definition 8. Theorem 3 ensures that the subsumees and subsumers used within Definition 8 are all entailed by {a mathematical formula}T. Theorem 3 and Definition 8 imply that {a mathematical formula}TΣ does not contain any concept and role symbols not from Σ.For the second direction, assume that there exists a uniform {a mathematical formula}ELΣ-interpolant of {a mathematical formula}Tnf and, subsequently, {a mathematical formula}T. Then, by Lemma 4, there exists a uniform {a mathematical formula}ELΣ-interpolant {a mathematical formula}T′ of {a mathematical formula}Tnf and {a mathematical formula}T with {a mathematical formula}d(T′)≤N. It is sufficient to show that for each {a mathematical formula}C⊑D∈T′ it holds that {a mathematical formula}TΣ⊨C⊑D. Assume that {a mathematical formula}C⊑D∈T′. We prove by induction on maximal role depth of {a mathematical formula}C,D that also {a mathematical formula}TΣ⊨C⊑D. Let {a mathematical formula}D=⨅1≤i≤lDi and{a mathematical formula} where {a mathematical formula}Aj are concept symbols, {a mathematical formula}rk are role symbols and {a mathematical formula}Ek are arbitrary {a mathematical formula}EL concepts. Clearly, {a mathematical formula}T⊨C⊑D iff {a mathematical formula}T⊨C⊑Di for all i with {a mathematical formula}1≤i≤l.These complexity results correspond to the size and number of axioms in
+       </list>
+       <paragraph>
+        Example 4 used to demonstrate the triple-exponential lower bound.  □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In addition to the already discussed results on uniform interpolation in description logics [21], [18], [22], [29], [30], [16], [17], in this section we discuss the work on inseparability and conservative extensions. The latter two notions form the foundation for module extraction, e.g., [31], [17], [32], and decomposition of ontologies into modules, e.g., [33], [34], [35]. The notion of a conservative extension is defined using inseparability: A TBox {a mathematical formula}T1 is called a Σ-conservative extension of a TBox {a mathematical formula}T2 if {a mathematical formula}T1 is Σ-inseparable from {a mathematical formula}T2 and {a mathematical formula}T1⊆T2.
+     </paragraph>
+     <paragraph>
+      Ghilardi, Lutz and Wolter [36] investigate modularity of ontologies based on inseparability for the logic {a mathematical formula}ALC, which is defined in the same way as inseparability for {a mathematical formula}EL in Section 4. They show that deciding if a subontology is a module in the description logic {a mathematical formula}ALC is 2ExpTime-complete. In a subsequent work, Lutz, Walther and Wolter [37] show that the same problem is 2ExpTime-complete for {a mathematical formula}ALCQI, but undecidable for {a mathematical formula}ALCQIO. The authors also investigate a stronger notion of inseparability and conservative extensions defined directly on models instead of entailed consequences: given two TBoxes {a mathematical formula}T1 and {a mathematical formula}T2, {a mathematical formula}T1 is a model-conservative extension of {a mathematical formula}T2 iff for every model {a mathematical formula}I of {a mathematical formula}T2, there exists a model of {a mathematical formula}T1 which can be obtained from {a mathematical formula}I by modifying the interpretation of symbols in {a mathematical formula}sig(T1)∖sig(T2) while leaving the interpretation of symbols in {a mathematical formula}sig(T2) fixed. The authors show that the corresponding problem based on the latter notion is undecidable for {a mathematical formula}ALC.
+     </paragraph>
+     <paragraph>
+      In a more recent work, Konev, Lutz, Walther and Wolter [32] consider the decidability of the above problem based on model-conservative extensions for {a mathematical formula}ALC under different additional restrictions, e.g., restriction of the relevant signature to concept names, and obtain complexity results ranging from {a mathematical formula}Π2p to undecidable. Further, the authors consider the problem for acyclic {a mathematical formula}EL terminologies. It is interesting that, in contrast to acyclic {a mathematical formula}ALC terminologies, for which the problem remains undecidable, for acyclic {a mathematical formula}EL terminologies the complexity goes down to PTime. In a later work [38], the above authors present a full complexity picture for {a mathematical formula}ALC and its common extensions. They investigate a broad range of query languages (languages in which the relevant consequences are expressed), starting with the language allowing for expressing inconsistency only and ending with Second Order Logic. More recently, Lutz and Wolter [27] show that the above notion of model-conservative extensions is undecidable also for such a lightweight logic as {a mathematical formula}EL.
+     </paragraph>
+     <paragraph>
+      Kontchakov, Wolter and Zakharyaschev [39] investigate the above decision problem for two representatives of the DL-Lite family of description logics as ontology languages and existential Σ-queries as a query language. They show that, for {a mathematical formula}DL-Litehorn, the problem is coNP-complete, and for {a mathematical formula}DL-Litebool{a mathematical formula}Π2p-complete.
+     </paragraph>
+     <paragraph>
+      The high complexity results for already rather simple logics have lead to a development of alternative ways to extract modules not requiring checking inseparability. For instance, Cuenca Grau, Horrocks, Kazakov and Sattler [31], propose a tractable algorithm for computing modules from OWL DL ontologies based on the notion of syntactic locality[40] that defines the locality of an axiom on the syntactic level, i.e., states syntactic conditions for the potential logical relevance of axioms. It is guaranteed that the extracted module preserves all relevant consequences, but the obtained modules are not necessarily minimal.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Model-theoretic properties of {a mathematical formula}EL concepts
+     <paragraph>
+      In Section 2, we characterize {a mathematical formula}EL concept membership and {a mathematical formula}EL concept subsumption in the absence of terminological background knowledge. In this section, we include the according proofs.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      For any{a mathematical formula}ELconcept C and any interpretation{a mathematical formula}I=(ΔI,⋅I)and{a mathematical formula}x∈ΔIit holds that{a mathematical formula}x∈CIif and only if there is a homomorphism from{a mathematical formula}(IC,xC)to{a mathematical formula}(I,x).
+     </paragraph>
+     <paragraph label="Proof">
+      We prove both directions by structural induction over C.We start with the if-direction, letting φ be a homomorphism from {a mathematical formula}(IC,xC) to {a mathematical formula}(I,x):
+      <list>
+       For {a mathematical formula}C=⊤, the case is trivial.For {a mathematical formula}C=A∈NC, we find {a mathematical formula}xA∈AIA, therefore the existence of the homomorphism ensures that {a mathematical formula}x=φ(xA)∈AI.For {a mathematical formula}C=C1⊓C2, we find that {a mathematical formula}φι:ΔICι→ΔI defined by{a mathematical formula} for {a mathematical formula}ι∈{1,2} are homomorphisms from {a mathematical formula}(IC1,xC1) to {a mathematical formula}(I,x) and {a mathematical formula}(IC2,xC2) to {a mathematical formula}(I,x), respectively. Invoking the induction hypothesis, we conclude that {a mathematical formula}x∈C1I as well as {a mathematical formula}x∈C2I and thus {a mathematical formula}x∈C1I∩C2I=(C1⊓C2)I.Considering {a mathematical formula}C=∃r.C1, we find that {a mathematical formula}φ′=φ|ΔIC1 is a homomorphism from {a mathematical formula}(IC1,xC1) to {a mathematical formula}(I,φ(xC1)). Invoking the induction hypothesis, we conclude {a mathematical formula}φ′(xC1)=φ(xC1)∈C1I. On the other hand, by construction of {a mathematical formula}IC we find {a mathematical formula}(xC,xC1)∈rIC and thus, since φ is a homomorphism {a mathematical formula}(x,φ(xC1))=(φ(xC),φ(xC1))∈rI. Together, this allows to conclude {a mathematical formula}x∈(∃r.C1)I.We proceed with the only-if direction.
+      </list>
+      <list>
+       <list-item label="•">
+        For {a mathematical formula}C=⊤, the case is trivial.
+       </list-item>
+       <list-item label="•">
+        For {a mathematical formula}C=A∈NC, the mapping {a mathematical formula}φ={xA↦x} is the required homomorphism since by assumption it holds that {a mathematical formula}x∈AI.
+       </list-item>
+       <list-item label="•">
+        For {a mathematical formula}C=C1⊓C2, we have by assumption {a mathematical formula}x∈CI=C1I∩C2I therefore {a mathematical formula}x∈C1I and {a mathematical formula}x∈C2I. Invoking the induction hypothesis we find homomorphisms {a mathematical formula}φ1 from {a mathematical formula}(IC1,xC1) to {a mathematical formula}(I,x) and {a mathematical formula}φ2 from {a mathematical formula}(IC2,xC2) to {a mathematical formula}(I,x). Consequently, by construction of {a mathematical formula}IC, the mapping {a mathematical formula}φ:ΔIC→ΔI defined by{a mathematical formula} is a homomorphism from {a mathematical formula}(IC,xC) to {a mathematical formula}(I,x).
+       </list-item>
+       <list-item label="•">
+        For {a mathematical formula}C=∃r.C1, we find by assumption {a mathematical formula}x∈(∃r.C1)I thus there exists an {a mathematical formula}x′∈ΔI with {a mathematical formula}(x,x′)∈rI and {a mathematical formula}x′∈C1I. Invoking the induction hypothesis, we find a homomorphism {a mathematical formula}φ′ from {a mathematical formula}(IC1,xC1) to {a mathematical formula}(I,x′). Consequently the mapping {a mathematical formula}φ:ΔIC→ΔI with {a mathematical formula}φ=φ′∪{xC↦x} is a homomorphism from {a mathematical formula}(IC,xC) to {a mathematical formula}(I,x).
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Let C and{a mathematical formula}C′be two{a mathematical formula}ELconcepts. Then{a mathematical formula}∅⊨C⊑C′if and only if there is a homomorphism from{a mathematical formula}(IC′,xC′)to{a mathematical formula}(IC,xC).
+     </paragraph>
+     <paragraph label="Proof">
+      For the if-direction, let φ be a homomorphism from {a mathematical formula}(IC′,xC′) to {a mathematical formula}(IC,xC). Now let {a mathematical formula}I be an interpretation and pick an arbitrary {a mathematical formula}x∈ΔI with {a mathematical formula}x∈CI. By Lemma 1, there exists a homomorphism {a mathematical formula}φ′ from {a mathematical formula}(IC,xC) to {a mathematical formula}(I,x). Then {a mathematical formula}φ′∘φ is a homomorphism from {a mathematical formula}(IC′,xC′) to {a mathematical formula}(I,x) and by the other direction of Lemma 1, we can conclude {a mathematical formula}x∈C′. Thus {a mathematical formula}CI⊆C′I for all interpretations {a mathematical formula}I and therefore {a mathematical formula}∅⊨C⊑C′.For the only-if-direction, assume {a mathematical formula}∅⊨C⊑C′. Now consider the pointed interpretation {a mathematical formula}(IC,xC). As the identity on {a mathematical formula}ΔIC is a homomorphism from {a mathematical formula}(IC,xC) to itself, we use Lemma 1 to conclude {a mathematical formula}xC∈CIC. By {a mathematical formula}∅⊨C⊑C′ we can infer that {a mathematical formula}xC∈C′IC. Invoking the if-direction of Lemma 1, we find that there must be a homomorphism from {a mathematical formula}(IC′,xC′) to {a mathematical formula}(IC,xC).  □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     {a mathematical formula}EL automata
+     <paragraph>
+      In this appendix section, we recall core notions on {a mathematical formula}EL automata [22] before giving the proof of Lemma 4.
+     </paragraph>
+     <paragraph label="Definition 11">
+      See [22]An {a mathematical formula}ELautomaton (EA) is a tuple {a mathematical formula}A=(Q,P,ΣN,ΣE,δ), where Q is a finite set of bottom up states, P is a finite set of top down states, {a mathematical formula}ΣN⊆NC is the finite node alphabet, {a mathematical formula}ΣE⊆NR is the finite edge alphabet, and δ is a set of transitions of the following form:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} where {a mathematical formula}q,q1,...,qn range over Q, p, {a mathematical formula}p1 range over P, A ranges over {a mathematical formula}ΣN, and r ranges over {a mathematical formula}ΣE.
+     </paragraph>
+     <paragraph label="Definition 12">
+      See [22]Let {a mathematical formula}I be an interpretation and {a mathematical formula}A=(Q,P,ΣN,ΣE,δ) an EA. A run of {a mathematical formula}A on {a mathematical formula}I is a map {a mathematical formula}ρ:δ→2Q∪P such that for all {a mathematical formula}d∈ΔI, we have:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       if {a mathematical formula}true→q∈δ, then {a mathematical formula}q∈ρ(d);
+      </list-item>
+      <list-item label="2.">
+       if {a mathematical formula}A→q∈δ, and {a mathematical formula}d∈AI, then {a mathematical formula}q∈ρ(d);
+      </list-item>
+      <list-item label="3.">
+       if {a mathematical formula}q1,...,qn∈ρ(d) and {a mathematical formula}q1∧…∧qn→q∈δ, then {a mathematical formula}q∈ρ(d);
+      </list-item>
+      <list-item label="4.">
+       if {a mathematical formula}(d,e)∈rI, {a mathematical formula}q1∈ρ(e) and {a mathematical formula}〈r〉q1→q∈δ, then {a mathematical formula}q∈ρ(d);
+      </list-item>
+      <list-item label="5.">
+       if {a mathematical formula}q∈ρ(d) and {a mathematical formula}q→p∈δ, then {a mathematical formula}p∈ρ(d);
+      </list-item>
+      <list-item label="6.">
+       if {a mathematical formula}p∈ρ(d) and {a mathematical formula}p→p1∈δ, then {a mathematical formula}p1∈ρ(d);
+      </list-item>
+      <list-item label="7.">
+       if {a mathematical formula}p∈ρ(d) and {a mathematical formula}p→〈r〉p1∈δ, then there is a {a mathematical formula}(d,e)∈rI with {a mathematical formula}p1∈ρ(e);
+      </list-item>
+      <list-item label="8.">
+       if {a mathematical formula}p∈ρ(d) and {a mathematical formula}p→A∈δ, then {a mathematical formula}d∈AI;
+      </list-item>
+      <list-item label="9.">
+       if {a mathematical formula}p→false∈δ, then {a mathematical formula}p∉ρ(d).
+      </list-item>
+     </list>
+     <paragraph>
+      The following proposition specifies how the corresponding EA {a mathematical formula}A for any TBox {a mathematical formula}T can be constructed such that {a mathematical formula}TΣ(A)≡ΣELT for any Σ.
+     </paragraph>
+     <paragraph label="Construction from Proposition 13">
+      (See[22].) Let{a mathematical formula}Tbe a TBox,{a mathematical formula}s(T)subconcepts of{a mathematical formula}Tand{a mathematical formula}A=(Q,P,sigC(T),sigR(T),δ)with{a mathematical formula}Q={qC|C∈s(T)},P={pC|C∈s(T)}and δ given by
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}true→q⊤if{a mathematical formula}⊤∈s(T);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}A→qAand{a mathematical formula}qA→pAfor all{a mathematical formula}A∈sigC(T);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}qC∧qD→qC⊓D;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}〈r〉qC→q∃r.Cand{a mathematical formula}q∃r.C→〈r〉pCfor all{a mathematical formula}∃r.C∈s(T);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}qC→qDfor all{a mathematical formula}C,D∈s(T)with{a mathematical formula}T⊨C⊑D;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}pA→Afor all{a mathematical formula}A∈sigC(T);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}p∃r.C→〈r〉pCfor all{a mathematical formula}∃r.C∈s(T);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}pC→pDfor all{a mathematical formula}C,D∈s(T)with{a mathematical formula}T⊨C⊑D;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}p⊥→falseif{a mathematical formula}⊥∈s(T).
+      </list-item>
+     </list>
+     <paragraph>
+      An EA {a mathematical formula}A is said to entail a subsumption {a mathematical formula}C⊑D if every model accepted by {a mathematical formula}A satisfies {a mathematical formula}C⊑D. Subsequently, an EA {a mathematical formula}A and a TBox {a mathematical formula}T are {a mathematical formula}ELΣ-inseparable, in symbols {a mathematical formula}A≡ΣELT, if {a mathematical formula}A⊨C⊑D iff {a mathematical formula}T⊨C⊑D for all {a mathematical formula}ELΣ-inclusions {a mathematical formula}C⊑D. Further, for a signature Σ, {a mathematical formula}TΣ(A)={C⊑D|A⊨C⊑D,sig(C)∪sig(D)⊆Σ}. For a natural number m, {a mathematical formula}TΣm(A)={C⊑D|C⊑D∈TΣ(A),d(C)≤mandd(D)≤m}.
+     </paragraph>
+     <paragraph label="Excerpt from Lemma 55">
+      (See[22].) Let{a mathematical formula}Abe an EA and{a mathematical formula}MA=2|P∪Q|. The following conditions are equivalent:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       There exists{a mathematical formula}k&gt;MA2+1such that{a mathematical formula}TΣMA2+1⊭TΣk.
+      </list-item>
+      <list-item label="4.">
+       There does not exists an{a mathematical formula}ELTBox{a mathematical formula}Twith{a mathematical formula}A≡ΣELT.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 4">
+      Let{a mathematical formula}Tbe an{a mathematical formula}ELTBox, Σ a signature. The following statements are equivalent:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       There exists a uniform{a mathematical formula}ELΣ-interpolant of{a mathematical formula}T.
+      </list-item>
+      <list-item label="2.">
+       There exists a uniform{a mathematical formula}ELΣ-interpolant{a mathematical formula}T′of{a mathematical formula}Tfor which it holds that{a mathematical formula}d(T′)≤24⋅(|sub(T)|)+1.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Assume that a uniform {a mathematical formula}ELΣ-interpolant of {a mathematical formula}T exists and let {a mathematical formula}M=2(2⋅|sub(T)|). Then, by Lemma 55 [22], there is no {a mathematical formula}k&gt;M2+1 such that {a mathematical formula}TΣM2+1(A)⊭TΣk(A), where {a mathematical formula}A is the corresponding {a mathematical formula}EL automaton for {a mathematical formula}T. Then {a mathematical formula}TΣM2+1(A)⊨TΣ(A). Therefore, {a mathematical formula}TΣM2+1(A)≡ΣELT, i.e., {a mathematical formula}TΣM2+1(A) is a uniform {a mathematical formula}ELΣ-interpolant {a mathematical formula}T′ of {a mathematical formula}T with {a mathematical formula}d(T′)≤M2+1. We can replace {a mathematical formula}M2+1 by {a mathematical formula}24⋅(|sub(T)|)+1 and obtain {a mathematical formula}d(T′)≤24⋅(|sub(T)|)+1.  □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,817 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Abstractive Summarization of Spoken and Written ConversationsBased on Phrasal Queries.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We propose a novel abstractive query-based summarization system for conversations, where queries are defined as phrases reflecting a user information needs.
+We rank and extract the utterances in a conversation based on the overall content and the phrasal query information.
+We cluster the selected sentences based on their lexical similarity and aggregate the sentences in each cluster by means of a word graph model. We propose a ranking strategy to select the best path in the constructed graph as a query-based abstract sentence for each cluster. A resulting summary consists of abstractive sentences representing the phrasal query information and the overall content of the conversation. Automatic and manual evaluation results over meeting, chat and email conversations show that our approach significantly outperforms baselines and previous extractive models.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Our lives are increasingly reliant on multimodal conversations with others. We email for business and personal purposes, attend meetings in person, chat online, and participate in blog or forum discussions.
+While this growing amount of personal and public conversations represent a valuable source of information, going through such overwhelming amount of data, to satisfy a particular information need, often leads to an information overload problem
+        [14]
+        .
+Automatic summarization has been proposed in the past as a way to address this problem (e.g.,
+        [25]
+        ). However, often a good summary cannot be generic and should be a brief and well-organized paragraph that answer a user’s information need.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The Document Understanding Conference (DUC)
+        has launched query-focused multidocument summarization as its main task since 2004, by focusing on complex queries with very specific answers. For example, “
+        How were the bombings of the US embassies in Kenya and Tanzania conducted? How and where were the attacks planned?
+        ”.
+Such complex queries are appropriate for a user who has specific information needs and can formulate the questions precisely.
+However, especially when dealing with conversational data that tend to be less structured and less topically focused, a user is often initially only exploring the source documents, with less specific information needs.
+Moreover, following the common practice in search engines, users are trained to form simpler and shorter queries
+        [21]
+        . For example, when a user is interested in certain characteristics of an entity in online reviews (e.g., “
+        location
+        ” or “
+        screen
+        ”) or a specific entity in a blog discussion (e.g., “
+        new model of iphone
+        ”), she would not initially compose a complex query.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        To address these issues, in this work, we tackle the task of conversation summarization based on
+        phrasal
+        queries. We define a phrasal query as
+a concatenation of two or more keywords, which is a more realistic representation of a user’s information needs. For conversational data, this definition is more similar to the concept of search queries in information retrieval systems as well as to the concept of topic labels in the task of topic modeling. Example 1 shows two queries and their associated human written summaries based on a single chat log. We can observe that the two summaries, although generated from the same chat log, are totally distinct. This further demonstrates the importance of phrasal query-based summarization systems for long conversations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        To date, most systems in the area of summarization focus on news or other well-written documents, while research on summarizing multiparty written conversations (e.g., chats, emails) has been limited. This is because traditional NLP approaches developed for formal texts often are not satisfactory when dealing with multiparty written conversations, which are typically in a casual style and do not display a clear syntactic structure with proper grammar and spelling. Even though some works try to address the problem of summarizing multiparty written conversions (e.g.,
+        [20, 29, 23, 32, 9]
+        ), they do so in a generic way (not query-based) and focus on only one conversational domain (e.g., meetings). Moreover, most of the proposed systems for conversation summarization are extractive.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        To address such limitations, we propose a fully automatic
+        unsupervised
+        abstract generation framework based on phrasal queries for multimodal conversation summarization.
+Our key contributions in this work are as follows:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        1)
+To the best of our knowledge, our framework is the first abstractive system that generates summaries based on usersâ phrasal queries, instead of well-formed questions. As a by-product of our approach, we also propose an extractive summarization model based on phrasal queries to select the summary-worthy sentences in the conversation based on query terms and signature terms
+        [17]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        2) We propose a novel ranking strategy to select the best path in the constructed word graph by taking the query content, overall information content and grammaticality (i.e., fluency) of the sentence into consideration.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        3) Although most of the current summarization approaches use supervised algorithms as a part of their system (e.g.,
+        [30]
+        ), our method can be totally unsupervised and does not depend on human annotation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p9">
+       <p class="ltx_p">
+        4) Although different conversational modalities (e.g., email vs. chat vs. meeting) underline domain-specific characteristics, in this work, we take advantage of their underlying similarities to generalize away from specific modalities and determine effective method for query-based summarization of multimodal conversations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p10">
+       <p class="ltx_p">
+        We evaluate our system over GNUe Traffic archive
+        Internet Relay Chat (IRC) logs, AMI meetings corpus
+        [4]
+        and BC3 emails dataset
+        [26]
+        .
+Automatic evaluation on the chat dataset and manual evaluation over the meetings and emails show that our system uniformly and statistically significantly outperforms baseline systems, as well as a state-of-the-art query-based extractive summarization system.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Phrasal Query Abstraction Framework
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Our phrasal query abstraction framework generates a grammatical abstract from a conversation following three steps, as shown in Figure 1.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Utterance Extraction
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Abstractive summary sentences can be created by aggregating and merging multiple sentences into an abstract sentence. In order to generate such a sentence, we
+need to identify which sentences from the original
+document should be extracted and combined to generate abstract sentences. In other words, we want to identify the summary-worthy sentences in the text that can be combined into an abstract sentence. This task can be considered as content selection.
+Moreover, this step, stand alone, corresponds to an extractive summarization system.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         In order to select and extract the informative summary-worthy utterances, based on the phrasal query and the original text, we consider two criteria:
+         i)
+         utterances should carry the essence of the original text; and
+         ii)
+         utterances should be relevant to the query. To fulfill such requirements we define the concepts of signature terms and query terms.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS1.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.1.1
+         </span>
+         Signature Terms
+        </h4>
+        <div class="ltx_para" id="S2.SS1.SSS1.p1">
+         <p class="ltx_p">
+          Signature terms are generally indicative of the content of a document or collection of documents. To identify such terms, we can use frequency, word probability, standard statistic tests, information-theoretic measures or log-likelihood ratio. In this work, we use log-likelihood ratio to extract the signature terms from chat logs, since log-likelihood ratio leads to better results
+          [12]
+          . We use a method described in
+          [17]
+          in order to identify such terms and their associated weight. Example 2 demonstrates a chat log and associated signature terms.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS1.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.1.2
+         </span>
+         Query Terms
+        </h4>
+        <div class="ltx_para" id="S2.SS1.SSS2.p1">
+         <p class="ltx_p">
+          Query terms are indicative of the content in a phrasal query. In order to identify such terms, we first extract all content terms from the query. Then, following previous studies (e.g.,
+          [10]
+          ), we use the synsets relations in WordNet for query expansion. We extract all concepts that are synonyms to the query terms and add them to the original set of query terms. Note that we limit our synsets to the nouns since verb synonyms do not prove to be effective in query expansion
+          [13]
+          . While signature terms are weighted, we assume that all query terms are equally important and they all have wight equal to 1.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS1.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.1.3
+         </span>
+         Utterance Scoring
+        </h4>
+        <div class="ltx_para" id="S2.SS1.SSS3.p1">
+         <p class="ltx_p">
+          To estimate the utterance score, we view both the query terms and the signature terms as the terms that should appear in a human query-based summary. To achieve this, the most relevant (summary-worthy)
+utterances that we select are the ones that maximize the coverage of such terms.
+Given the query terms and signature terms, we can estimate the utterance score as follows:
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS1.SSS3.p2">
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+          <tr class="ltx_equation ltx_align_baseline" id="S2.E1">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            S⁢c⁢o⁢r⁢eQ
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =1n⁢∑i=1nt⁢(q)i
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (1)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S2.E2">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            S⁢c⁢o⁢r⁢eS
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =1n⁢∑i=1nt⁢(s)i×w⁢(s)i
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (2)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S2.E3">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            S⁢c⁢o⁢r⁢e
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =α⋅S⁢c⁢o⁢r⁢eQ+β⋅S⁢c⁢o⁢r⁢eS
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (3)
+            </span>
+           </td>
+          </tr>
+         </table>
+        </div>
+        <div class="ltx_para" id="S2.SS1.SSS3.p3">
+         <p class="ltx_p">
+          where
+          n
+          is number of content words in the utterance,
+          t⁢(q)i=1
+          if the term
+          ti
+          is a query term and
+          0
+          otherwise, and
+          t⁢(s)i=1
+          if
+          ti
+          is a signature term and
+          0
+          otherwise, and
+          w⁢(s)i
+          is the normalized associated weight for signature terms. The parameters
+          α
+          and
+          β
+          are tuned on a development set and sum up to
+          1
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS1.SSS3.p4">
+         <p class="ltx_p">
+          After all the utterances are scored, the
+top scored utterances are selected to be sent to the next step. We estimate the percentage of the retrieved utterances based on the development set.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Redundancy Removal
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Utterances selected in previous step often include redundant information, which is semantically equivalent but may vary in lexical choices. By identifying the semantic relations between the sentences, we can discover what information in one sentence is semantically equivalent, novel, or
+more/less informative with respect to the content of the other sentences.
+Similar to earlier work
+         [3, 1]
+         , we set this problem as a variant of the Textual Entailment (TE) recognition task
+         [5]
+         . Using entailment in this phase is motivated by taking advantage of semantic relations instead of pure statistical methods (e.g., Maximal Marginal Relevance) and shown to be more effective
+         [19]
+         .
+We follow the same practice as
+         [19]
+         to build an entailment graph for all selected sentences to identify relevant sentences and eliminate the redundant (in terms of meaning) and less informative ones.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Abstract Generation
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         In this phase, our goal is to generate understandable informative abstract sentences that capture the content of the source sentences and represents the information needs defined by queries. There are several ways of generating abstract sentences (e.g.
+         [2, 18, 8, 23]
+         ); however, most of them rely heavily on the sentence structure. We believe that such approaches are suboptimal, especially in dealing with conversational data, because multiparty written conversations are often poorly structured. Instead, we apply an approach that does not rely on syntax, nor on a standard NLG architecture. Moreover, since dealing with user queries efficiency is an important aspect, we aim for an approach that is also motivated by the speed with which the abstracts are obtained. We perform the task of abstract generation in three steps, as follows:
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS3.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.3.1
+         </span>
+         Clustering
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS1.p1">
+         <p class="ltx_p">
+          In order to generate an abstract summary, we need to identify which sentences from the previous step (i.e., redundancy removal) can be clustered and combined in generated abstract sentences. This task can be viewed as sentence clustering, where
+each sentence cluster can provide the content for an abstract sentence.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS1.p2">
+         <p class="ltx_p">
+          We use the K-mean clustering algorithm by
+cosine similarity as a distance function between sentence vectors composed of
+          tf.idf
+          scores.
+Also notice that the lexical similarity between sentences in one cluster facilitates both the construction of the word graph and finding the best path in the word graph, as described next.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS3.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.3.2
+         </span>
+         Word Graph
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS2.p1">
+         <p class="ltx_p">
+          In order to construct a word graph, we adopt the method recently proposed by
+          [19, 7]
+          with some optimizations. Below, we show how the word graph is applied to generate the abstract sentences.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p2">
+         <p class="ltx_p">
+          Let
+          G=(W,L)
+          be a directed graph with the set of nodes
+          W
+          representing words and a set of directed edges
+          L
+          representing the links between words. Given a cluster of related sentences
+          S={s1,s2,…,sn}
+          , a word graph is constructed by iteratively adding sentences to it.
+In the first step, the graph represents one sentence plus the start and end symbols. A node is added to the graph for each word in the sentence, and words adjacent are linked with directed edges. When adding a new sentence, a word from the sentence is merged in an existing node in the graph providing that they have the same POS tag and they satisfy one of the following conditions:
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p3">
+         <p class="ltx_p">
+          i)
+          They have the same word form;
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p4">
+         <p class="ltx_p">
+          ii)
+          They are connected in WordNet by the synonymy relation. In this case the lexical choice for the node is selected based on the
+          tf.idf
+          score of each node;
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p5">
+         <p class="ltx_p">
+          iii)
+          They are from a hypernym/hyponym pair or share a common direct hypernym. In this case, both words are replaced by the hypernym;
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p6">
+         <p class="ltx_p">
+          iv)
+          They are in an entailment relation. In this case, the entailing word is replaced by the entailed one.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p7">
+         <p class="ltx_p">
+          The motivation behind merging non-identical words is to enrich the common terms between the phrases to increase the chance that they could merge into a single phrase. This also helps to move beyond the limitation of original lexical choices.
+In case the merging is not possible a new node is created in the graph. When a node can be merged with multiple nodes (i.e., merging is ambiguous), either the preceding and following words in the sentence and the neighboring nodes in
+the graph or the frequency is used to select the candidate node.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS2.p8">
+         <p class="ltx_p">
+          We connect adjacent words with directed edges. For the new nodes or unconnected nodes, we draw an edge with a weight of
+          1
+          . In contrast, when two already connected nodes are added (merged), the weight of their connection is increased by
+          1
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS3.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.3.3
+         </span>
+         Path Ranking
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS3.p1">
+         <p class="ltx_p">
+          A word graph, as described above, may contain many sequences connecting start
+and end. However, it is likely that most of the paths are not readable. We are aiming at generating an informative abstractive sentence for each cluster based on a user query.
+Moreover, the abstract sentence should be grammatically correct.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p2">
+         <p class="ltx_p">
+          In order to satisfy both requirements, we have devised the following ranking strategy. First, we prune the paths in which a verb does not exist, to filter ungrammatical sentences. Then we rank other paths as follows:
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p3">
+         <p class="ltx_p">
+          Query focus:
+          to identify the summary sentence with the highest coverage of query content, we propose a score that counts the number of query terms that appear in the path. In order to reward the ranking score to cover more salient terms in the query content, we also consider the
+          tf.idf
+          score of query terms in the coverage formulation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p4">
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+          <tr class="ltx_equation ltx_align_baseline" id="S2.Ex1">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            Q⁢(P)=∑qi∈P𝑡𝑓𝑖𝑑𝑓⁢(qi)∑qi∈G𝑡𝑓𝑖𝑑𝑓⁢(qi)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+         </table>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p5">
+         <p class="ltx_p">
+          where the
+          qi
+          are the query terms.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p6">
+         <p class="ltx_p">
+          Fluency:
+          in order to improve the grammaticality of the generated sentence, we coach our ranking model to select more fluent (i.e., grammatically correct) paths in the graph.
+We estimate the grammaticality of generated paths (
+          P⁢r⁢(P)
+          ) using a language model.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p7">
+         <p class="ltx_p">
+          Path weight:
+          The purpose of this function is two-fold: i) to generate a grammatical sentence by favoring the links between nodes (words) which appear often; and ii) to generate an informative sentence by increasing the weight of edges connecting salient nodes. For a path
+          P
+          with m nodes, we define the edge weight
+          w⁢(ni,nj)
+          and the path weight
+          W⁢(P)
+          as below:
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+          <tr class="ltx_equation ltx_align_baseline" id="S2.Ex2">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            w⁢(ni,nj)=𝑓𝑟𝑒𝑞⁢(ni)+𝑓𝑟𝑒𝑞⁢(nj)∑P′∈Gni,nj∈P′𝑑𝑖𝑓𝑓⁢(P′,ni,nj)-1
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S2.Ex3">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            W⁢(P)=∑i=1m-1w⁢(ni,ni+1)m-1
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where the function
+          𝑑𝑖𝑓𝑓⁢(P′,ni,nj)
+          refers to the distance between the offset positions
+          p⁢o⁢s⁢(P′,ni)
+          of
+nodes
+          ni
+          and
+          nj
+          in path
+          P′
+          (any path in
+          G
+          containing
+          ni
+          and
+          nj
+          ) and is defined as
+          |p⁢o⁢s⁢(P′,nj)-p⁢o⁢s⁢(P′,ni)|
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p8">
+         <p class="ltx_p">
+          Overal ranking score:
+          In order to generate a query-based abstract sentence that combines the scores above, we employ a ranking model. The purpose of such a model is three-fold: i) to cover the content of query information optimally; ii) to generate a more readable and grammatical sentence; and iii) to favor strong connections between the concepts. Therefore, the final ranking score of path
+          P
+          is calculated over the normalized scores as:
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx4">
+          <tr class="ltx_equation ltx_align_baseline" id="S2.Ex4">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            S⁢c⁢o⁢r⁢e⁢(P)=α⋅Q⁢(P)+β⋅P⁢r⁢(P)-γ⋅W⁢(P)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+         </table>
+        </div>
+        <div class="ltx_para" id="S2.SS3.SSS3.p9">
+         <p class="ltx_p">
+          Where
+          α
+          ,
+          β
+          and
+          γ
+          are the coefficient factors to tune the ranking score and they sum up to
+          1
+          . In order to rank the graph paths, we select all the paths that contain at least one verb and rerank them using our proposed ranking function to find the best path as the summary of the original sentences in each cluster.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section,
+we show the evaluation results of our proposed framework and its comparison to the baselines and a state-of-the-art query-focused extractive summarization system.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Datasets
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         One of the challenges of this work is to find suitable conversational datasets that can be used for evaluating our query-based summarization system. Most available conversational corpora do not contain any human written summaries, or the gold standard human written summaries are generic
+         [4, 16]
+         . In this work, we use available corpora for emails and chats for written conversations, while for spoken conversation, we employ an available corpus in multiparty meeting conversations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Chat
+         : to the best of our knowledge, the only publicly available chat logs with human written summaries can be downloaded from the GNUe Traffic archive
+         [32, 27, 28]
+         .
+Each chat log has a human created summary in the form of a digest. Each digest summarizes IRC logs for a period and consists of few summaries over each chat log with a unique title for the associated human written summary.
+In this way, the title of each summary can be counted as a phrasal query and the corresponding summary is considered as the query-based abstract of the associated chat log including only the information most relevant to the title. Therefore, we can use the human-written query-based abstract as gold standards and evaluate our system automatically.
+Our chat dataset consists of 66 query-based (title-based) human written summaries with their associated queries (titles) and chat logs, created from 40 original chat logs. The average number of tokens are 1840, 325 and 6 for chat logs, query-based summaries and queries, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         Meeting
+         : we use the AMI meeting corpus
+         [4]
+         that consists of 140 multiparty meetings with a wide range of annotations, including generic abstractive summaries for each meeting. In order to create queries, we extract three key-phrases from generic abstractive summaries using TextRank algorithm
+         [22]
+         . We use the extracted key-phrases as queries to generate query-based abstracts. Since there is no human-written query-based summary for AMI corpus, we randomly select 10 meetings and evaluate our system manually.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         Email
+         : we use BC3
+         [26]
+         , which contains 40 threads from the W3C corpus. BC3 corpus is annotated with generic human-written abstractive summaries, and it has been used in several previous works (e.g.,
+         [15]
+         ). In order to adapt this corpus to our framework, we followed the same query generation process as for the meeting dataset. Finally, we randomly select 10 emails threads and evaluate the results manually.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Baselines
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We compare our approach with the following baselines:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         1) Cosine-1st: we rank the utterances in the chat log based on the cosine similarity between the utterance and query. Then, we select the first uttrance as the summary;
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         2) Cosine-all: we rank the utterances in the chat log based on the cosine similarity between the utterance and query and then select the utterances with a cosine similarity greater than
+         0
+         ;
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         3) TextRank: a widely used graph-based ranking model for single-document sentence extraction that works by building a graph of all sentences in a document and use similarity as edges to compute the salience of sentences in the graph
+         [22]
+         ;
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         4) LexRank: another popular graph-based content selection algorithm for multi-document summarization
+         [6]
+         ;
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p6">
+        <p class="ltx_p">
+         5) Biased LexRank: is a state-of-the-art query-focused summarization that uses LexRank algorithm in order to recursively retrieve additional passages that are similar to the query, as well as to the other nodes in the graph
+         [24]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p7">
+        <p class="ltx_p">
+         Moreover, we compare our abstractive system with the first part of our framework (utterance extraction in Figure 1), which can be presented as an extractive query-based summarization system (our extractive system). We also show the results of the version we use in our pipeline (our pipeline extractive system). The only difference between the two versions is the length of the generated summaries. In our pipeline we aim at higher recall, since we later filter sentences and aggregate them to generate new abstract sentences. In contrast, in the stand alone version (extractive system) we limit the number of retrieved sentences to the desired length of the summary. We also compare the results of our full system (i.e., with tuning) with a non-optimized version when the ranking coefficients are distributed equally (
+         α=β=γ=0.33
+         ). For parameters estimation, we tune all parameters (utterance selection and path ranking) exhaustively with 0.1 intervals using our development set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p8">
+        <p class="ltx_p">
+         For manual evaluation of query-based abstracts (meeting and email datasets), we perform a simple user study assessing the following aspects:
+         i) Overall quality
+         given a query (5-point scale)?; and
+         ii) Responsiveness
+         : how responsive is the generated summary to the query (5-point scale)? Each query-based abstract was rated by two annotators (native English speaker). Evaluators are presented with the original conversation, query and generated summary. For the manual evaluation, we only compare our full system with LexRank (LR) and Biased LexRank (Biased LR). We also ask the evaluators to select the best summary for each query and conversation, given our system generated summary and the two baselines.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p9">
+        <p class="ltx_p">
+         To evaluate the grammaticality of our generated summaries, following common practice
+         [2]
+         , we randomly selected 50 sentences from original conversations and system generated abstracts, for each dataset. Then, we asked annotators to give one of three possible ratings for each sentence based on grammaticality: perfect (2 pts), only one mistake (1 pt) and not acceptable (0 pts), ignoring capitalization or punctuation. Each sentence was rated by two annotators. Note that each sentence was evaluated individually, so the human judges were not affected by intra-sentential problems posed by coreference and topic shifts.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Experimental Settings
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         For preprocessing our dataset we use OpenNLP
+         for tokenization, stemming and part-of-speech tagging. We use six randomly selected query-logs from our chat dataset (about 10% of the dataset) for tuning the coefficient parameters.
+We set the
+         k
+         parameter in our clustering phase to
+         10
+         based on the average number of sentences in the human written summaries. For our language model, we use a tri-gram smoothed language model trained using the newswire text provided in the English Gigaword corpus
+         [11]
+         . For the automatic evaluation we use the official ROUGE software with standard options and report ROUGE-1 and ROUGE-2 precision, recall and F-1 scores.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Results
+       </h3>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.1
+         </span>
+         Automatic Evaluation (Chat dataset)
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS1.p1">
+         <p class="ltx_p">
+          Abstractive vs. Extractive
+          : our full query-based abstractive summariztion system show statistically significant improvements over baselines and other pure extractive summarization systems for ROUGE-1
+          .
+This means our systems can effectively aggregate the extracted sentences and generate abstract sentences based on the query content. We can also observe that our full system produces the highest ROUGE-1 precision score among all models, which further confirms the success of this model in meeting the user information needs imposed by queries. The absolute improvement of 10% in precision for ROUGE-1 in our abstractive model over our extractive model (our pipeline) further confirms the effectiveness of our ranking method in generating the abstract sentences considering the query related information.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS1.p2">
+         <p class="ltx_p">
+          Our extractive query-based method beats all other extractive systems with a higher ROUGE-1 and ROUGE-2 which shows the effectiveness of our utterance extraction model in comparison with other extractive models. In other words, using our extractive model described in section 2.1, as a stand alone system, is an effective query-based extractive summarization model.
+We also observe that our extractive model outperforms our abstractive model for ROUGE-2 score. This can be due to word merging
+and word replacement choices in the word graph
+construction, which sometimes change or remove a word in a bigram and consequently may decrease the bigram overlap score.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS1.p3">
+         <p class="ltx_p">
+          Query Relevance
+          : another interesting observation is that relying only on the cosine similarity (i.e.,
+          cosine-all
+          ) to measure the query relevance presents a quite strong baseline. This proves the importance of query content in our dataset and further supports the main claim of our work that a good summary should express a brief and well-organized abstract that answers the user’s query. Moreover, a precision of 71% for ROUGE-1 from the simple
+          cosine-1st
+          baseline confirms that some utterances contain more query relevant information in conversational discussions.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS1.p4">
+         <p class="ltx_p">
+          Query-based vs. Generic
+          : the high recall and low precision in
+          TextRank
+          baseline, both for the ROUGE-1 and ROUGE-2 scores, shows the strength of the model in extracting the generic information from chat conversations while missing the query-relevant content. The
+          LexRank
+          baseline improves the results of the
+          TextRank
+          system by increasing the precision and balancing the precision and recall scores for ROUGE-1 score. We believe that this is due to the robustness of the
+          LexRank
+          method in dealing with noisy texts (chat conversations)
+          [6]
+          . In addition, the
+          Biased LexRank
+          model slightly improves the generic
+          LexRank
+          system. Considering this marginal improvement and relatively high results of pure extractive systems, we can infer that the
+          Biased LexRank
+          extracted summaries do not carry much query relevant content. In contrast, the significant improvement of our model over the extractive methods demonstrates the success of our approach in presenting the query related content in generated abstracts.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS1.p5">
+         <p class="ltx_p">
+          An example of a short chat log, its related query and corresponding manual and automatic summaries are shown in Example 3.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.2
+         </span>
+         Manual Evaluation
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS2.p1">
+         <p class="ltx_p">
+          Content and User Preference
+          : Table 2 demonstrates overall quality, responsiveness (query relatedness) and user preference scores for the abstracts generated by our system and two baselines.
+Results indicate that our system significantly outperforms baselines in overall quality and responsiveness, for both meeting and email datasets. This confirms the validity of the results we obtained by conducting automatic evaluation over the chat dataset. We also can observe that the absolute improvements in overall quality and responsiveness for emails (0.9 and 0.7) is greater than for meetings (0.4 and 0.6). This is expected since dealing with spoken conversations is more challenging than written ones. Note that the responsiveness scores are greater than overall scores. This further proves the effectiveness of our approach in dealing with phrasal queries.
+We also evaluate the users’ summary preferences. For both datasets (meeting and email), in majority of cases (70% and 60% respectively), the users prefer the query-based abstractive summary generated by our system.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS2.p2">
+         <p class="ltx_p">
+          Grammaticality
+          : Table 3 shows grammaticality scores and distributions over the three possible scores for all datasets. The chat dataset results demonstrate the highest scores: 73% of the sentences generated by our phrasal query abstraction model are grammatically correct and 24% of the generated sentences are almost correct with only one grammatical error, while only 3% of the abstract sentences are grammatically incorrect. However, the results varies moving to other datasets. For meeting dataset, the percentage of completely grammatical sentences drops dramatically. This is due to the nature of spoken conversations which is more error prone and ungrammatical.
+The grammaticality score of the original sentences also proves that the sentences from meeting transcripts, although generated by humans, are not fully grammatical.
+In comparison with the original sentences, for all datasets, our model reports slightly lower results for the grammaticality score. Considering the fact that the abstract sentences are automatically generated and the original sentences are human-written, the grammaticality score and the percentage of fully grammatical sentences generated by our system, with higher ROUGE or quality scores in comparison with other methods, demonstrates that our system is an effective phrasal query abstraction framework for both spoken and written conversations.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

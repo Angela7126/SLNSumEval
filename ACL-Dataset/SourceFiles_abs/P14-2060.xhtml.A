@@ -1,0 +1,771 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Hippocratic Abbreviation Expansion.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Text normalization
+        []
+        is an important initial phase for many
+natural language and speech applications. The basic task of text normalization
+is to convert
+        non-standard words
+        (NSWs) — numbers, abbreviations,
+dates, etc. — into standard words, though depending on the task and the domain
+a greater or lesser number of these NSWs may need to be normalized. Perhaps the
+most demanding such application is text-to-speech synthesis (TTS) since, while
+for parsing, machine translation and information retrieval it may be acceptable
+to leave such things as numbers and abbreviations unexpanded, for TTS all tokens
+need to be
+        read
+        , and for that it is necessary to know how to pronounce
+them. Which normalizations are required depends very much on the application.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        What is also very application-dependent is the cost of errors in normalization.
+For some applications, where the normalized string is an intermediate stage in a
+larger application such as translation or information retrieval, overgeneration
+of normalized alternatives is often a beneficial strategy, to the extent that it
+may improve the accuracy of what is eventually being presented to the user. In
+other applications, such as TTS or typing auto-correction, the resulting
+normalized string itself is directly presented to the user; hence errors in
+normalization can have a very high cost relative to leaving tokens unnormalized.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper we concentrate on abbreviations, which we define as alphabetic
+NSWs that it would be normal to pronounce as their expansion. This class of
+NSWs is particularly common in personal ads, product reviews, and so forth. For
+example:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <table class="ltx_tabular ltx_align_middle">
+        <tbody class="ltx_tbody">
+         <tr class="ltx_tr">
+          <td class="ltx_td ltx_align_right">
+           home health care
+          </td>
+          <td class="ltx_td ltx_align_center">
+           svcs
+          </td>
+          <td class="ltx_td ltx_align_left">
+           stat home health llc
+          </td>
+         </tr>
+         <tr class="ltx_tr">
+          <td class="ltx_td ltx_align_right">
+           osceola aquatic
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ctr
+          </td>
+          <td class="ltx_td ltx_align_left">
+           stars rating write
+          </td>
+         </tr>
+         <tr class="ltx_tr">
+          <td class="ltx_td ltx_align_right">
+           audi vw repair
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ser
+          </td>
+          <td class="ltx_td ltx_align_left">
+           quality and customer
+          </td>
+         </tr>
+        </tbody>
+       </table>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Each of the examples above contains an abbreviation that, unlike,
+e.g., conventionalized state abbreviations such as
+        ca
+        for
+        California
+        , is either only slightly standard (
+        ctr
+        for
+        center
+        ) or not standard at all (
+        ser
+        for
+        service
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        An important principle in text normalization for TTS is
+        do no harm
+        . If a
+system is unable to reliably predict the correct reading for a string, it is
+better to leave the string alone and have it default to, say, a
+character-by-character reading, than to expand it to something wrong. This is
+particularly true in
+        accessibility
+        applications for users who rely on TTS
+for most or all of their information needs. Ideally a
+navigation system should read
+        turn on 30N
+        correctly as
+        turn on
+thirty north
+        ; but if it cannot resolve the ambiguity in
+        30N
+        , it
+is far better to read it as
+        thirty N
+        than as
+        thirty Newtons
+        ,
+since listeners can more easily recover from the first kind of error than
+the second.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        We present methods for learning abbreviation expansion models that favor high
+precision (incorrect expansions
+        &lt;2⁢%
+        ). Unannotated data is used to collect
+evidence for contextual disambiguation and to train an abbreviation model. Then
+a small amount of annotated data is used to build models to determine whether to
+accept a candidate expansion of an abbreviation based on these features. The
+data we report on are taken from Google Maps
+        TM
+        and web pages associated with
+its map entries, but the methods can be applied to any data source that is
+relatively abbreviation rich.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        We note in passing that similar issues arise
+in automatic spelling correction work
+        []
+        , where it is better to
+leave a word alone than to “correct” it wrongly.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        There has been a lot of interest in recent years on “normalization” of social
+media such as Twitter, but that work defines normalization much more broadly
+than we do here
+        []
+        . There
+is a good reason for us to focus more narrowly. For Twitter, much of the
+normalization task involves non-standard language such as
+        ur website suxx
+brah
+        (from
+        ). Expanding the latter to
+        your website sucks, brother
+        certainly normalizes it to standard English,
+but one could argue that in so doing one is losing information that the
+writer is trying to convey using an informal style. On the other hand, someone
+who writes
+        svc ctr
+        for
+        service center
+        in a product review is
+probably merely trying to save time and so expanding the abbreviations in that
+case is neutral with respect to preserving the intent of the original text.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        One other difference between the work we report from much of the recent work
+cited above is that that work focuses on getting high F scores, whereas we are
+most concerned with getting high precision. While this may seem like a trivial
+trade off between precision and recall, our goal motivates developing measures
+that minimize the “risk” of expanding a term, something that is important in
+an application such as TTS, where one cannot correct a misexpansion after it is
+spoken.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Methods
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Since our target application is text-to-speech, we define the task in terms of
+an existing TTS lexicon. If a word is already in the lexicon, it is left
+unprocessed, since there is an existing pronunciation for it; if a word is
+out-of-vocabulary (OOV), we consider expanding it to a word in the lexicon. We
+consider a possible expansion for an abbreviation to be any word in the lexicon
+from which the abbreviation can be derived by only deletion of
+letters.
+        For
+present purposes we use the Google English text-to-speech lexicon,
+consisting of over 430 thousand words. Given an OOV item (possible abbreviation) in
+context, we make use of features of the context and of the OOV item itself to
+enumerate and score candidate expansions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Our data consists of 15.1 billion words of text data from Google Maps
+        TM
+        ,
+lower-cased and tokenized to remove punctuation symbols. We used this data in
+several ways. First, we used it to bootstrap a model for assigning a probability
+of an abbreviation/expansion pair. Second, we used it to extract contextual
+n-gram features for predicting possible expansions. Finally, we sampled just
+over 14 thousand OOV items in context and had them manually labeled with a number of
+categories, including ‘abbreviation’. OOVs labeled as abbreviations were also
+labeled with the correct expansion. We present each of these uses in turn.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Abbreviation modeling
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We collect potential abbreviation/full-word pairs by looking for terms that
+could be abbreviations of full words that occur in the same context. Thus:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <table class="ltx_tabular ltx_centering ltx_align_middle">
+         <tbody class="ltx_tbody">
+          <tr class="ltx_tr">
+           <td class="ltx_td ltx_align_right">
+            the
+           </td>
+           <td class="ltx_td ltx_align_center">
+            svc/service
+           </td>
+           <td class="ltx_td ltx_align_left">
+            center
+           </td>
+          </tr>
+          <tr class="ltx_tr">
+           <td class="ltx_td ltx_align_right">
+            heating
+           </td>
+           <td class="ltx_td ltx_align_center">
+            clng/cooling
+           </td>
+           <td class="ltx_td ltx_align_left">
+            system
+           </td>
+          </tr>
+          <tr class="ltx_tr">
+           <td class="ltx_td ltx_align_right">
+            dry
+           </td>
+           <td class="ltx_td ltx_align_center">
+            clng/cleaning
+           </td>
+           <td class="ltx_td ltx_align_left">
+            system
+           </td>
+          </tr>
+         </tbody>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         contributes evidence that
+         svc
+         is an abbreviation of
+         service
+         . Similarly instances of
+         clng
+         in contexts that can contain
+         cooling
+         or
+         cleaning
+         are evidence that
+         clng
+         could be an
+abbreviation of either of these words. (The same contextual information of
+course is used later on to disambiguate which of the expansions is appropriate
+for the context.) To compute the initial guess as to what can be a possible
+abbreviation, a Thrax grammar
+         []
+         is used that, among other
+things, specifies that: the abbreviation must start with the same letter as the
+full word; if a vowel is deleted, all adjacent vowels should also be deleted;
+consonants may be deleted in a cluster, but not the last one; and a (string)
+suffix may be deleted.
+         We count a
+pair of words as ‘co-occurring’ if they are observed in the same context. For a
+given context
+         C
+         , e.g.,
+         thecenter
+         , let
+         WC
+         be the set
+of words found in that context. Then, for any pair of words
+         u,v
+         , we can
+assign a pair count based on the count of contexts where both occur:
+        </p>
+        <p class="ltx_p ltx_align_center">
+         c⁢(u,v)=|{C:u∈WC⁢ and ⁢v∈WC}|
+        </p>
+        <p class="ltx_p">
+         Let
+         c⁢(u)
+         be defined as
+         ∑vc⁢(u,v)
+         . From these counts, we can define a
+2
+         ×
+         2 table and calculate statistics such as the log likelihood statistic
+         []
+         , which we use to rank possible abbreviation/expansion pairs.
+Scores derived from these
+         type
+         (rather than
+         token
+         )
+counts highly rank pairs of
+in-vocabulary words and OOV possible abbreviations that are substitutable in
+many contexts.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         We further filter the potential abbreviations by removing ones that have a lot
+of potential expansions, where we set the cutoff at 10. This removes mostly
+short abbreviations that are highly ambiguous. The resulting ranked list of
+abbreviation expansion pairs is then thresholded before building the
+abbreviation model (see below) to provide a smaller but more confident training
+set. For this paper, we used 5-gram contexts (two words on either side) to
+extract abbreviations and their expansions. See Table
+         1
+         for some
+examples.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         Our abbreviation model is a
+         pair character language model
+         (LM), also
+known as a joint multi-gram model
+         []
+         , whereby aligned
+symbols are treated as a single token and a smoothed n-gram model is
+estimated. This defines a joint distribution over input and output sequences,
+and can be efficiently encoded as a weighted finite-state transducer. The
+extracted abbreviation/expansion pairs are character-aligned and a 7-gram pair
+character LM is built over the alignments using the OpenGrm n-gram library
+         []
+         . For example:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p6">
+        <p class="ltx_p">
+         c:c ϵ:e ϵ:n t:t ϵ:e r:r
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p7">
+        <p class="ltx_p">
+         Note that, as we’ve defined it, the alignments from abbreviation to
+expansion allow only identity and insertion, no deletions or substitutions. The
+cost from this LM, normalized by the length of the expansion, serves as a score
+for the quality of a putative expansion for an abbreviation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p8">
+        <p class="ltx_p">
+         For a small set of frequent, conventionalized abbreviations (e.g.,
+         ca
+         for
+         California
+         — 63 pairs in total — mainly state abbreviations and
+similar items), we assign an fixed pair LM score, since these examples are in
+effect
+         irregular
+         cases, where the regularities of the productive
+abbreviation process do not capture their true cost.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Contextual features
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         To predict the expansion given the context, we extract n-gram
+observations for full words in the TTS lexicon. We do this in two
+ways. First, we simply train a smoothed n-gram LM from the
+data. Because of the size of the data set, this is heavily pruned
+using relative entropy pruning
+         []
+         . Second, we use log
+likelihood and log odds ratios (this time using standardly defined
+n-gram counts) to extract reliable bigram and trigram contexts
+for words. Space precludes a detailed treatment of these two
+statistics, but, briefly, both can be derived from contingency table
+values calculated from the frequencies of (1) the
+word in the particular context; (2) the word in any context; (3) the
+context with any word; and (4) all words in the corpus. See
+         ,
+         and
+         for useful overviews of
+how to calculate these and other statistics to derive reliable associations. In our
+case, we use them to derive associations between contexts and words occuring in
+those contexts. The contexts include trigrams with the target word
+in any of the three positions, and bigrams with the target word in either
+position. We filter the set of n-grams based on both their log likelihood and
+log odds ratios, and provide those scores as features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Manual annotations
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We randomly selected 14,434 OOVs in their full context, and had them manually
+annotated as falling within one of 8 categories, along with the expansion if the
+category was ‘abbreviation’. Note that these are relatively
+lightweight annotations that do not require extensive linguistics expertise.
+The abbreviation class is defined as cases where
+pronouncing as the expansion would be normal. Other categories included letter
+sequence (expansion would not be normal, e.g.,
+         TV
+         ); partial letter
+sequence (e.g.,
+         PurePictureTV
+         ); misspelling; leave as is (part of a URL
+or pronounced as a word, e.g.,
+         NATO
+         ); foreign; don’t know; and junk.
+Abbreviations accounted for nearly 23% of the cases, and about 3/5 of these
+abbreviations were instances from the set of 63 conventional
+abbreviation/expansion pairs mentioned in Section
+         3.1
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Abbreviation expansion systems
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         We have three base systems that we compare here. The first is the hand-built
+TTS normalization system. This system includes some manually built
+patterns and an address parser to find common abbreviations that occur in a
+recognizable context. For example, the grammar covers several hundred city-state
+combinations, such as
+         Fairbanks AK
+         ,
+yielding good performance on such cases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         The other two systems were built using data extracted as described above. Both
+systems make use of the pair LM outlined in Section
+         3.1
+         , but differ
+in how they model context. The first system, which we call “N-gram”, uses a
+pruned
+         smoothed trigram model. The second system, which we
+call “SVM”, uses a Support Vector Machine
+         []
+         to classify
+candidate expansions as being correct or not. For both systems, for any given
+input OOV, the possible expansion with the highest score is output, along with
+the decision of whether to expand.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p3">
+        <p class="ltx_p">
+         For the “N-gram” system, n-gram negative log probabilities are extracted as
+follows. Let
+         wi
+         be the position of the target expansion. We extract the
+part of the n-gram probability of the string that is not constant across all
+competing expansions, and normalize by the number of words in that window.
+Thus the score of the word is:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p4">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S⁢(wi)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           -1k+1∑j=ii+klogP(wj∣wj-1wj-2)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p5">
+        <p class="ltx_p">
+         In our experiments,
+         k=2
+         since we have a trigram model, though in
+cases where the target word is the last word in the string,
+         k=1
+         ,
+because there only the end-of-string symbol must be
+predicted in addition to the expansion. We then take the Bayesian
+fusion of this model with the pair LM, by adding them in
+the log space, to get prediction from both the context and abbreviation model.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p6">
+        <p class="ltx_p">
+         For the “SVM” model, we extract features from the log likelihood and
+log odds scores associated with contextual n-grams, as well as from
+the pair LM probability and characteristics of the
+abbreviation itself. We train a linear model on a subset of the
+annotated data (see section
+         4
+         ). Multiple contextual n-grams
+may be observed, and we take the maximum log likelihood and log odds
+scores for each candidate expansion in the observed context. We then quantize
+these scores down into 16 bins, using the histogram in the training
+data to define bin thresholds so as to partition the training
+instances evenly. We also create 16 bins for the pair LM
+score. A binary feature is defined for each bin that is set to 1 if the
+current candidate’s score is less than the threshold of that bin,
+otherwise 0. Thus
+multiple bin features can be active for a given candidate expansion of the abbreviation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p7">
+        <p class="ltx_p">
+         We also have features that fire for each type of contextual feature (e.g.,
+trigram with expansion as middle word, etc.), including ‘no context’, where none
+of the trigrams or bigrams from the current example that include the candidate
+expansion are present in our list. Further, we have features for the length of the
+abbreviation (shorter abbreviations have more ambiguity, hence are more
+risky to expand); membership in the list of frequent, conventionalized abbreviations
+mentioned earlier; and some combinations of these, along with bias features. We
+train the model using standard options with Google internal SVM training tools.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p8">
+        <p class="ltx_p">
+         Note that the number of n-grams in the two models differs. The N-gram
+system has around 200M n-grams after pruning; while the SVM model uses
+around a quarter of that. We also tried a more heavily pruned n-gram
+model, and the results are only very slightly worse, certainly acceptable
+for a low-resource scenario.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experimental Results
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We split the 3,209 labeled abbreviations into a training set of 2,209 examples
+and a held aside development set of 1,000 examples. We first evaluate on the
+development set, then perform a final 10-fold cross validation over the entire set of
+labeled examples. We evaluate in terms of the percentage of abbreviations that
+were correctly expanded (true positives, TP) and that were incorrectly expanded
+(false positives, FP).
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Results are shown in Table
+        2
+        . The first two rows show the
+baseline TTS system and SVM model. On the
+development set, both systems have a false positive rate near 3%, i.e., three
+abbreviations are expanded incorrectly for every 100 examples; and over 50%
+true positive rate, i.e., more than half of the abbreviations are expanded
+correctly. To report true and false positive rates for the N-gram system we
+would need to select an arbitrary decision threshold operating point, unlike the
+deterministic TTS baseline and the SVM model with its decision threshold of 0.
+Rather than tune such a meta-parameter to the development set, we instead
+present an ROC curve comparison of the N-gram and SVM models, and then propose a
+method for “intersecting” their output without requiring a tuned decision
+threshold.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Figure
+        1
+        presents an ROC curve for the N-gram and SVM
+systems, and for the simple Bayesian fusion (sum in log space) of
+their scores. We can see that the SVM model has very high precision
+for its highest ranked examples, yielding nearly 20% of the correct
+expansions without any incorrect expansions. However the N-gram
+system achieves higher true positive rates when the false positive
+rate falls between 1 and 3 percent, though both systems reach roughly the same
+performance at the SVM’s decision threshold corresponding to around 3.3% false
+positive rate. The simple combination of their scores achieves
+strong improvements over either model, with an operating point
+associated with the SVM decision boundary that yields a couple of
+points improvement in true positives and a full 1% reduction in false
+positive rate.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        One simple way to combine these two system outputs in a way that does not
+require tuning a decision threshold is to expand the abbreviation if and only if
+(1) both the SVM model and the N-gram model agree on the best expansion; and (2)
+the SVM model score is greater than zero. In a slight abuse of the term
+‘intersection’, we call this combination ‘SVM intersect N-gram’ (or ‘SVM
+        ∩
+        N-gram’ in Table
+        2
+        ). Using this approach, our true positive rate
+on the development set declines a bit to just over 50%, but our false positive rate
+declines over two full percentage points to 1.1%, yielding a very high
+precision system.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        Taking this very high precision system combination of the N-gram and
+SVM models, we then combine with the baseline TTS system as follows.
+First we apply our system, and expand the item if it scores above
+threshold; for those items left unexpanded, we let the TTS system
+process it in its own way. In this way, we actually reduce the false
+positive rate on the development set over the baseline TTS system by over
+1% absolute to less than 2%, while also increasing the true positive
+rate to 73.5%, an increase of 18.5% absolute.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        Of course, at test time, we will not know whether an OOV is an
+abbreviation or not, so we also looked at the performance on the rest
+of the collected data, to see how often it erroneously suggests an
+expansion from that set. Of the 11,157 examples that were hand-labeled
+as non-abbreviations, our SVM
+        ∩
+        N-gram system expanded
+45 items, which is a false positive rate of 0.4% under the assumption
+that none of them should be expanded. In fact, manual inspection found
+that 20% of these were correct expansions of abbreviations that
+had been mis-labeled.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        We also experimented with a number of alternative high precision approaches that
+space precludes our presenting in detail here, including: pruning the number of
+expansion candidates based on the pair LM score; only allowing abbreviation
+expansion when at least one extracted n-gram context is present for that
+expansion in that context; and CART tree
+        []
+        training with
+real valued scores. Some of these yielded very high precision systems, though
+at the cost of leaving many more abbreviations unexpanded. We found that, for
+use in combination with the baseline TTS system, large overall reductions in FP
+rate were achieved by using an initial system with substantially higher TP and
+somewhat higher FP rates, since far fewer abbreviations were then passed along
+unexpanded to the baseline system, with its relatively high 3% FP rate.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p8">
+       <p class="ltx_p">
+        To ensure that we did not overtune our systems to the
+development set through experimentation, we performed 10-fold cross validation over the full
+set of abbreviations. These results are presented in
+Table
+        2
+        . Most notably, the TTS baseline system has a
+much lower true positive rate; yet we find our systems achieve
+performance very close to that for the development set, so that our
+final combination with the TTS baseline was actually slighly better
+than the numbers on the development set.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this paper we have presented methods for high precision abbreviation
+expansion for a TTS application. The methods are largely self-organizing, using
+in-domain unannotated data, and depend on only a small amount of annotated
+data. Since the SVM features relate to general properties of
+abbreviations, expansions and contexts, the classifier parameters will likely
+carry over to new (English) domains. We demonstrate that in combination with a
+hand-built TTS baseline, the methods afford dramatic improvement in the TP rate
+(to about 74% from a starting point of about 40%) and a
+reduction of FP to below our goal of 2%.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

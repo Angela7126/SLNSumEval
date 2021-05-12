@@ -1,0 +1,1537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Measuring inconsistency with constraints for propositional knowledge bases.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Inconsistency is one of the important issues in knowledge and information systems. Techniques for inconsistency handling have been given much attention in the community of artificial intelligence and its application domains. Recently, measuring inconsistency has been considered as a useful way of better understanding the nature of inconsistency, and then provides a promising starting point to promote the process of inconsistency handling in knowledge and information systems in many applications such as requirements engineering [22], [23], network security and intrusion detection [18], [19], and medical experts systems [29]. A growing number of inconsistency measures have been proposed so far. Hunter et al. classified these inconsistency measures into two categories, i.e., base-level measures and formula-level ones [8]. Roughly speaking, the base-level measures focus on describing how inconsistent a knowledge base is, while the formula-level ones aim to grasp the responsibility (or contribution) of each formula of a knowledge base for the inconsistency in that base.
+     </paragraph>
+     <paragraph>
+      In particular, minimal inconsistent subsets of a knowledge base are attractive to measuring inconsistency in applications of syntax-based inconsistency handling [7]. Here a minimal inconsistent subset (MIS for short) refers to an inconsistent subset without an inconsistent proper subset. Please note that minimal inconsistent subsets of a knowledge base may be considered as a natural characterization of inconsistency in that base, since we only need to remove one formula from each minimal inconsistent subset in order to restore the consistency of that base [30]. In this sense, inconsistency measures built upon minimal inconsistent subsets may help us link measuring inconsistency with resolving inconsistency in a natural way. Along this line, minimal inconsistent subsets have been used to develop base-level inconsistency measures [7], [8], [24], [26], [9] as well as formula-level measures [7], [8], [21], [9].
+     </paragraph>
+     <paragraph>
+      Theoretically, removing any formula of a minimal inconsistent subset can break the minimal inconsistent subset. Then removing a minimal part that contains at least one formula for each minimal inconsistent subset may be considered as a potential proposal for resolving the inconsistency. However, not all of such proposals for resolving inconsistency are interesting to a given practical application. For example, in requirements engineering, changing different sets of software requirements may involve different stakeholders with their own demands and benefit expectations, then a final proposal is often a trade-off between different stakeholders [22]. Generally, domain experts and users often have a good sense of which proposals are more appropriate for resolving inconsistency in that application. They may also have a sense of “conditions” for acceptable proposals for the application domain, which would rule out the proposals that they know would not be of interest. Thus, a good heuristic is to specify such intuition or expectations on resolving inconsistency as constraints to facilitate inconsistency handling in practical applications. For example, the integrity constraints in merging an inconsistent multiset of information from different sources are used to characterize the behavior that any expected merging operator has to obey [15]. In requirements engineering, essential requirements are not allowed to be involved in any feasible proposal for resolving contradictions between requirements in general case [27].
+     </paragraph>
+     <paragraph>
+      Besides that such constraints can help us to select proposals we want, they may be pushed deep into the process of inconsistency handling to improve the effectiveness of related activities involved in resolving inconsistency. In particular, incorporating such constraints in measuring inconsistency can help us establish more practical relations between measuring inconsistency and resolving inconsistency.
+     </paragraph>
+     <paragraph>
+      In this paper, we focus on two typical kinds of constraints on modifying formulas of a knowledge base. A constraint of the first type is a pair of sets of formulas such that all the formulas in the first set should be protected from being modified, on the condition that all the formulas in the second must be changed in resolving inconsistency. We call such a constraint a hard constraint. Generally, a hard constraint represents some partial compromise on resolving inconsistency in practical applications. In contrast, a constraint of the second type is given as a set of pairs of formulas that are not allowed to be modified together in resolving inconsistency. We call such a constraint a soft constraint.
+     </paragraph>
+     <paragraph>
+      As mentioned above, minimal inconsistent subsets can be considered as a promising starting point to connect inconsistency measures and syntax-based inconsistency handling. However, selecting formulas that have to be modified to break minimal inconsistent subsets from their own respective perspectives does not necessarily lead to an effective proposal for resolving inconsistency. Intuitively, overlaps between minimal inconsistent subsets are often of interest to breaking all the minimal inconsistent subsets by removing as few formulas as possible. Then such two overlapping minimal inconsistent subsets should be associated with each other when we want to break them. Along this line, given a minimal inconsistent subset, any two minimal inconsistent subsets that have their own respective overlaps with the minimal inconsistent subset will be also associated with each other even if the two subsets have no overlap. More generally, two minimal inconsistent subsets M and {a mathematical formula}M′ are associated with each other if there is a chain of minimal inconsistent subsets {a mathematical formula}M1,M2,⋯,Mn with {a mathematical formula}M1=M and {a mathematical formula}Mn=M′ such that {a mathematical formula}Mi+1 and {a mathematical formula}Mi overlap each other for all {a mathematical formula}i=1,2,⋯,n−1. Evidently, these associations bring a partition of the set of minimal inconsistent subsets such that only minimal inconsistent subsets in the same part (called a cluster in this paper) are associated with one another (but not necessarily overlap), moreover, they should be broken as a whole instead of from their own respective perspectives. Then we need to know how the minimal inconsistent subsets in a cluster are associated with each other in order to break them together. That is, we need to capture both the interconnection relation between minimal inconsistent subsets and formulas that play important roles in the interconnection so as to help us understand the role of each formula in causing the inconsistency from a perspective of causality. To address this, we construct a bipartite graph for a knowledge base, which represents both the inner structure of each minimal inconsistent subset and the interconnection between minimal inconsistent subsets due to their overlaps. Then we show that such a graph-based representation allows us to incorporate the two types of constraints in characterizing inconsistency in a concise way. Based on this incorporation, we propose approaches to measuring inconsistency with one or both of the two types of constraints, respectively. In particular, both our base-level and formula-level measures can be reduced to their respective corresponding measures presented in [21] when there is no constraint. Some intuitive logical properties and complexity issues for these inconsistency measures are also discussed, respectively.
+     </paragraph>
+     <paragraph>
+      On the other hand, it is often expected that an inconsistency measure under development will be interpretable. That is, inconsistency measures may need to be tied in with some specific interpretations that can help us gain an intuitive insight into the inconsistency. Generally, causality plays an important role in analyzing and resolving inconsistency in practical applications. Formulas identified as causes of the inconsistency of a knowledge base are of interest when we take some actions for restoring the consistency of that base. Thus causality-based explanations for inconsistency measures can help us establish a significant linkage between inconsistency measuring and inconsistency resolving. However, causality is a subtle topic in itself. The counterfactual dependence is considered as a common ground of many attempts presented to define causality from Hume to the present [2]. Informally speaking, A counterfactually depends on B if it is the case that if B had not happened, then A would not have happened. Recently, Halpern and Pearl's structural causal model [5], one of the influential causal models in the computer science community, uses the notion of counterfactual dependence under some contingency instead of just counterfactual dependence, i.e., this model considers that A is a cause of B if B counterfactually depends on A under some contingency. Furthermore, Chockler and Halpern defined the degree of responsibility of A for B based on the counterfactual dependence of B on A under some contingency [2]. Essentially, the introduction of contingency makes these models more powerful to capture the subtlety of causality. Interestingly, we show that these measures for inconsistency with constraints can be well explained in the framework of Halpern and Pearl's causal model and Chockler and Halpern's notion of responsibility.
+     </paragraph>
+     <paragraph>
+      The rest of this paper is organized as follows. In Section 2, we introduce some necessary notions about the inconsistency in knowledge bases, the notion of bipartite graph, Halpern and Pearl's causal model and Chockler and Halpern's notion of responsibility, respectively. In Section 3, we construct a bipartite graph, termed the MIS-graph, for a knowledge base to represent the relation between formulas and minimal inconsistent subsets, and show that this graph fully grasps the nature of inconsistency of a knowledge base. In Section 4, we incorporate the hard and soft constraints in the MIS-graph for a knowledge base, respectively. Then we propose a family of inconsistency measures with constraints based on the incorporation in Section 5. In Section 6, we provide causality-based explanations for these inconsistency measures. In Section 7, we discuss logical properties and complexity issues for these inconsistency measures. We compare our approach with some closely related work in Section 8. In Section 9, we present an example to illustrate the application of the measures in the domain of requirements engineering. Finally, we conclude this paper in Section 10.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We provide some basic notions about the inconsistency in knowledge bases firstly. Then we introduce some necessary notions about the bipartite graph. Finally, we give introductions to Halpern and Pearl's causal model [5] and Chockler and Halpern's notion of responsibility [2], respectively.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Knowledge bases and inconsistency
+      </section-title>
+      <paragraph>
+       We use a finite propositional language in this paper. Let {a mathematical formula}P be a finite set of propositional symbols (atoms or variables) and {a mathematical formula}L a propositional language built from {a mathematical formula}P under connectives {a mathematical formula}{¬,∧,∨,→}. We use a, b, c, ⋯ to denote the propositional atoms, and α, β, γ, ⋯ to denote the propositional formulas.
+      </paragraph>
+      <paragraph>
+       A knowledge baseK is a finite set of propositional formulas. Just for simplicity, we assume that each knowledge base is non-empty. For example, both {a mathematical formula}{a} and {a mathematical formula}{a,¬a∨b,c} are knowledge bases.
+      </paragraph>
+      <paragraph>
+       K is inconsistent if there is a formula α such that {a mathematical formula}K⊢α and {a mathematical formula}K⊢¬α, where ⊢ is the classical consequence relation. We abbreviate {a mathematical formula}α∧¬α as ⊥ when there is no confusion. Then we use {a mathematical formula}K⊢⊥ (resp. {a mathematical formula}K⊬⊥) to denote that a knowledge base K is inconsistent (resp. consistent).
+      </paragraph>
+      <paragraph>
+       An inconsistent subset {a mathematical formula}K′ of K is called a minimal inconsistent subset (or minimal unsatisfiable subset) of K if no proper subset of {a mathematical formula}K′ is inconsistent. We use {a mathematical formula}MI(K) to denote the set of all the minimal inconsistent subsets of K, i.e.,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In syntax-based application domains, {a mathematical formula}MI(K) could be considered as a characterization of the inconsistency in K in the sense that one needs to remove only one formula from each minimal inconsistent subset to resolve the inconsistency [30].
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Sub(K) be a set of some subsets of K, we abbreviate {a mathematical formula}⋃K′∈Sub(K)K′ as {a mathematical formula}⋃Sub(K). For example, {a mathematical formula}⋃MI(K) is the abbreviation of {a mathematical formula}⋃M∈MI(K)M. It denotes the set of formulas involved in minimal inconsistent subsets.
+      </paragraph>
+      <paragraph>
+       A formula in K is called a free formula if this formula does not belong to any minimal inconsistent subset of K[6]. That is, free formulas have nothing to do with any minimal inconsistent subset of K. We use {a mathematical formula}FREE(K) to denote the set of free formulas of K, i.e.,{a mathematical formula} Evidently, {a mathematical formula}K=(⋃MI(K))∪FREE(K).
+      </paragraph>
+      <paragraph>
+       Given a knowledge base, each of its minimal inconsistent subsets describes a minimal set of formulas needed to cause the inconsistency in that base. On the other hand, we are also interested in identifying a minimal set of formulas that need to be changed to restore the consistency of that base. Such a minimal set is referred to as a minimal correction subset.
+      </paragraph>
+      <paragraph>
+       Given an inconsistent knowledge base K, a subset R of K is called a correction subset of K if {a mathematical formula}K∖R⊬⊥. A correction subset R of K is called a minimal correction subset of K if for any {a mathematical formula}R′⊂R, {a mathematical formula}K∖R′⊢⊥. Please note that R is a minimal correction subset of K if and only if {a mathematical formula}K∖R is a maximal consistent subset (a consistent subset without a consistent proper superset) of K. We use {a mathematical formula}MC(K) to denote the set of all the minimal correction subsets of K i.e.,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The following relation between minimal inconsistent subsets and minimal correction subsets has been addressed in computing minimal inconsistent subsets [17]:{a mathematical formula} It implies that formulas involved in the minimal inconsistent subsets are exactly ones involved in the minimal correction subsets.
+      </paragraph>
+      <paragraph>
+       Now we use the following example to illustrate these notions.
+      </paragraph>
+      <paragraph label="Example 2.1">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d}. Then{a mathematical formula} where{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="2.2">
+      The bipartite graph and Its Y-dominating sets
+      <paragraph>
+       Here we introduce some necessary notions about the bipartite graph. A graph is an ordered pair {a mathematical formula}G=(V,E) comprising a nonempty finite set V together with a set E of 2-element subsets of V.{sup:1} The elements of V are called vertices and the elements of E are called edges. If {a mathematical formula}e={u,v}∈E, we say that the edge ejoinsu and v and that u and v are adjacent. Also we say that e is incident with u. Just for simplicity of discussion, we abuse the notation and use {a mathematical formula}(u,v) instead of {a mathematical formula}{u,v} to denote an edge joining u and v from now on. The number of edges incident with a vertex u is called the degree of u and is denoted as {a mathematical formula}degG(u). In particular, u is called an isolated vertex if {a mathematical formula}degG(u)=0.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}G=(V,E) be a graph and {a mathematical formula}u,v∈V two (not necessarily distinct) vertices. A path from u to v is an alternating sequence{a mathematical formula} of vertices and edges, where {a mathematical formula}v1=u, {a mathematical formula}vn+1=v, and {a mathematical formula}ei=(vi,vi+1) for {a mathematical formula}i=1,2,⋯,n. Moreover, the number of edges listed in this sequence is called the length of this path. Further, if the path has no repeated vertices, then it is called a simple path. The smallest length of simple paths from u to v is called the distance from u to v and is denoted as {a mathematical formula}DistG(u,v).
+      </paragraph>
+      <paragraph>
+       A graph is called connected if there is a path between every pair of vertices. Given a graph {a mathematical formula}G=(V,E), a graph {a mathematical formula}G′=(V′,E′) is called a subgraph of G if {a mathematical formula}V′⊆V and {a mathematical formula}E′⊆E. A connected component (or just component) of G is a maximal connected subgraph of G.
+      </paragraph>
+      <paragraph>
+       A graph {a mathematical formula}G=(V,E) is isomorphic to a graph {a mathematical formula}G′=(V′,E′) if there is a one-to-one mapping f from V to {a mathematical formula}V′ such that the vertices u and v are adjacent in G if and only if the vertices {a mathematical formula}f(u) and {a mathematical formula}f(v) are adjacent in {a mathematical formula}G′.
+      </paragraph>
+      <paragraph>
+       Let G be a graph and {a mathematical formula}V(G) and {a mathematical formula}E(G) the set of vertices and the set of edges of G, respectively. A subset {a mathematical formula}V′ of {a mathematical formula}V(G) is called an independent set of G if {a mathematical formula}∀u,v∈V′, {a mathematical formula}(u,v)∉E(G) holds. Furthermore, we call {a mathematical formula}V′a maximal independent set of G if no proper superset of {a mathematical formula}V′ is an independent set.
+      </paragraph>
+      <paragraph>
+       Let G be a graph and {a mathematical formula}V′⊆V(G), then {a mathematical formula}G−V′ is defined as the graph {a mathematical formula}G′ such that {a mathematical formula}V(G′)=V(G)∖V′ and {a mathematical formula}E(G′)=E(G)∖E′, where {a mathematical formula}E′={(u,v)∈E(G)|u∈V′orv∈V′}.
+      </paragraph>
+      <paragraph>
+       A bipartite graph is a graph whose vertices can be divided into two disjoint nonempty sets X and Y such that every edge in E joins a vertex in X to one in Y. In this paper, we use {a mathematical formula}G=(X,Y,E) to denote a bipartite graph. Given a bipartite graph G, we use {a mathematical formula}X(G), {a mathematical formula}Y(G), and {a mathematical formula}E(G) to denote the first set of vertices, the second set of vertices, and the set of edges of G, respectively.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}G1=(X1,Y1,E1) and {a mathematical formula}G2=(X2,Y2,E2) be two components of {a mathematical formula}G=(X,Y,E) such that {a mathematical formula}Xi⊆X and {a mathematical formula}Yi⊆Y for {a mathematical formula}i=1,2, then we use {a mathematical formula}G1∪G2 to denote the bipartite graph {a mathematical formula}(X1∪X2,Y1∪Y2,E1∪E2). Obviously, {a mathematical formula}G1∪G2 is also a subgraph of G.
+      </paragraph>
+      <paragraph>
+       Given a bipartite graph {a mathematical formula}G=(X,Y,E) and two vertices {a mathematical formula}v1,v2∈Y, we say that {a mathematical formula}v1 and {a mathematical formula}v2 are Y-adjacent if {a mathematical formula}∃u∈X such that {a mathematical formula}(v1,u)∈E and {a mathematical formula}(v2,u)∈E, otherwise {a mathematical formula}v1 and {a mathematical formula}v2 are Y-independent[16].
+      </paragraph>
+      <paragraph>
+       For a bipartite graph {a mathematical formula}G=(X,Y,E) without isolated vertices in Y, a subset D of X is a Y-dominating set for G if {a mathematical formula}∀v∈Y, {a mathematical formula}∃u∈D such that {a mathematical formula}(u,v)∈E[16]. Further, a Y-dominating set D is called a minimal Y-dominating set for G if no proper subsets of D is a Y-dominating set. The Y-domination number of G, denoted {a mathematical formula}γY(G), is defined as the cardinality of the smallest minimal Y-dominating sets of G[16]. In addition, we use {a mathematical formula}LY(G) to denote the largest cardinality of minimal Y-dominating sets of G. In particular, ∅ is considered as the minimal Y-dominating set of an empty set, and then both {a mathematical formula}γY(G) and {a mathematical formula}LY(G) are defined as 0 if G is an empty graph.
+      </paragraph>
+      <paragraph>
+       We use the following example to illustrate the notion of minimal Y-dominating set.
+      </paragraph>
+      <paragraph label="Example 2.2">
+       Consider a bipartite graph {a mathematical formula}G1=(X,Y,E) illustrated by Fig. 1, where{a mathematical formula} and{a mathematical formula} From now on, we use circles and solid circles to denote vertices in Y and in X, respectively. In addition, we use a solid circle nested in a circle to denote a vertex in X involved in a minimal Y-dominating set.Evidently, both {a mathematical formula}D1={u3,u1} and {a mathematical formula}D2={u2} are minimal Y-dominating sets. So,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We propose a variant of the minimal Y-dominating set of G as follows:
+      </paragraph>
+      <paragraph label="Definition 2.1">
+       Let {a mathematical formula}G=(X,Y,E) be a bipartite graph and U be a subset of X. Let D be a minimal Y-dominating set of G. We call D a minimal {a mathematical formula}Y|U-dominating set of G if {a mathematical formula}U⊆D.
+      </paragraph>
+      <paragraph>
+       We call a subset U of Xa quasi-Y-dominating set if there exists at least one minimal {a mathematical formula}Y|U-dominating set of G. Essentially, quasi-Y-dominating sets are exactly subsets that can be extended to minimal Y-dominating sets.
+      </paragraph>
+      <paragraph label="Definition 2.2">
+       Let {a mathematical formula}G=(X,Y,E) be a bipartite graph and U a quasi-Y-dominating set. Then the {a mathematical formula}Y|U-domination number of G, denoted {a mathematical formula}γY|U(G), is defined as the cardinality of a smallest minimal {a mathematical formula}Y|U-dominating set of G.
+      </paragraph>
+      <paragraph>
+       Obviously, {a mathematical formula}γY|∅(G)=γY(G). Just for simplicity of discussion, the {a mathematical formula}Y|U-domination number {a mathematical formula}γY|U(G) of G is defined as 0 if U is not a quasi-Y-dominating set.
+      </paragraph>
+      <paragraph label="Example 2.3">
+       Consider {a mathematical formula}G1 again. Then{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Causality and responsibility
+      </section-title>
+      <paragraph>
+       Here we give introductions to Halpern and Pearl's causal model [5] and Chockler and Halpern's notion of responsibility [2], respectively. This subsection is essentially identical to the corresponding introduction in [21]. Both are largely based on notions, definitions and explanations taken from Section 2 and Section 3 in [2].
+      </paragraph>
+      <paragraph>
+       The variables involved in a causal model introduced by Halpern and Pearl can be classified into two kinds, the exogenous variables, whose values are determined by factors outside the model, and the endogenous variables, whose values are ultimately determined by the exogenous variables [5].
+      </paragraph>
+      <paragraph>
+       A signature is a tuple {a mathematical formula}S=〈U,V,R〉, where {a mathematical formula}U is a finite set of exogenous variables, {a mathematical formula}V is a finite set of endogenous variables, and {a mathematical formula}R associates with every variable {a mathematical formula}Y∈U∪V a finite nonempty set {a mathematical formula}R(Y) of possible values for Y[2], [5].
+      </paragraph>
+      <paragraph>
+       A causal model over signature {a mathematical formula}S is a tuple {a mathematical formula}M=〈S,F〉, where {a mathematical formula}F associates with every endogenous variable {a mathematical formula}X∈V a function {a mathematical formula}FX such that {a mathematical formula}FX:((×U∈UR(U))×(×Y∈V∖{X}R(Y)))→R(X)[2], [5]. In particular, M is called a binary causal model if {a mathematical formula}R(Y) contains only two values for each {a mathematical formula}Y∈U∪V[2], [5].
+      </paragraph>
+      <paragraph>
+       As explained in [2], [5], {a mathematical formula}FX describes how the value of the endogenous variable X is determined by the values of all other variables in {a mathematical formula}U∪V. Then the equations determined by all functions of endogenous variables describe mechanisms for assigning values to variables in M. These equations also provide counterfactual information given a setting for exogenous variables. Here we use the following example taken from [2], [5] to illustrate these explanations. Suppose that {a mathematical formula}FX(Y,Z,U)=U+Y ({a mathematical formula}X=U+Y for short) and U is the exogenous variable, then if {a mathematical formula}U=2 and {a mathematical formula}Y=3, then {a mathematical formula}X=5. On the other hand, if the value of Y were forced to be 4 given {a mathematical formula}U=2, then the value of X would be 6, regardless of what values X, Y and Z actually take in the real world.
+      </paragraph>
+      <paragraph>
+       Given a causal model M, its causal network is a directed graph with vertices corresponding to the endogenous variables and an edge from a vertex labeled X to one labeled Y if {a mathematical formula}FY depends on the value of X[2], [5]. If the associated causal network of M is a directed acyclic graph, then we call Ma recursive model[2], [5]. It has been stated in [2] that if M is a recursive causal model, then there is always a unique solution to the equations in M, given a setting for the variables in {a mathematical formula}U. We are more interested in binary recursive causal models in this paper.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}X→ and {a mathematical formula}x→ be (possibly empty) vectors of variables in {a mathematical formula}V and values for the variables in {a mathematical formula}X→, respectively. We use {a mathematical formula}X→←x→ to denote the case of setting the values of the variables in {a mathematical formula}X→ to {a mathematical formula}x→. In particular, a setting for the variables in {a mathematical formula}U, denoted {a mathematical formula}u→, is called a context [2], [5]. Roughly speaking, a context gives some background information [5].
+      </paragraph>
+      <paragraph>
+       Given {a mathematical formula}X→←x→, a new causal model denoted {a mathematical formula}MX→←x→ over the signature {a mathematical formula}SX→=〈U,V−X→,R|V−X→〉, is defined as {a mathematical formula}MX→←x→=〈SX→,FX→←x→〉, where {a mathematical formula}FYX→←x→ is obtained from {a mathematical formula}FY by setting the values of the variables in {a mathematical formula}X→ to {a mathematical formula}x→[2], [5]. For example, suppose that {a mathematical formula}FY(X,Z,U)=X+Z+U, then {a mathematical formula}FYX←3=3+Z+U.
+      </paragraph>
+      <paragraph>
+       Given a signature {a mathematical formula}S=〈U,V,R〉, a primitive event is a formula of the form {a mathematical formula}X=x, where {a mathematical formula}X∈V and {a mathematical formula}x∈R(X)[2], [5]. In general, for {a mathematical formula}X→=(X1,X2,⋯,Xn) and {a mathematical formula}x→=(x1,x2,⋯,xn), we abbreviate {a mathematical formula}(X1=x1)∧(X2=x2)∧⋯∧(Xn=xn) as {a mathematical formula}X→=x→.
+      </paragraph>
+      <paragraph>
+       A basic causal formula defined in [2], [5] is in the form of{a mathematical formula} where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        φ is a Boolean combination of primitive events;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Y1,⋯,Yk are distinct variables in {a mathematical formula}V; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}yi∈R(Yi).
+       </list-item>
+      </list>
+      <paragraph>
+       As explained in [2], [5], {a mathematical formula}[Y1←y1,⋯,Yk←yk]φ (abbreviated as {a mathematical formula}[Y→←y→]φ) means that φ holds in the counterfactual world that would arise if {a mathematical formula}Yi is set to {a mathematical formula}yi, {a mathematical formula}i=1,2,⋯,k[2], [5].
+      </paragraph>
+      <paragraph>
+       A causal formula is a Boolean combination of basic causal formulas [2], [5]. We use {a mathematical formula}(M,u→)⊨φ to denote that a causal formula φ is true in causal model M given a context {a mathematical formula}u→. Given a recursive model M, {a mathematical formula}(M,u→)⊨[Y→←y→](X=x) if the value of X is x in the unique vector of values for the endogenous variables that simultaneously satisfies all equations {a mathematical formula}FZY→←y→,Z∈V−Y under the setting {a mathematical formula}u→ of {a mathematical formula}U[2], [5]. As pointed out in [2], [5], this definition can be extended to arbitrary causal formulas in the usual way.
+      </paragraph>
+      <paragraph label="Definition 2.3">
+       Cause [5]We say that {a mathematical formula}X→=x→ is a cause of φ in {a mathematical formula}(M,u→) if the following three conditions hold:
+      </paragraph>
+      <list>
+       <list-item label="AC1.">
+        {a mathematical formula}(M,u→)⊨(X→=x→)∧φ.
+       </list-item>
+       <list-item label="AC2.">
+        There exists a partition {a mathematical formula}(Z→,W→) of {a mathematical formula}V with {a mathematical formula}X→⊆Z→ and some setting {a mathematical formula}(x→′,w→′) of the variables in {a mathematical formula}(X→,W→) such that if {a mathematical formula}(M,u→)⊨Z=z⁎ for {a mathematical formula}Z∈Z→, then
+       </list-item>
+       <list-item label="AC3.">
+        {a mathematical formula}(X→=x→) is minimal, that is, no subset of {a mathematical formula}X→ satisfies AC2.
+       </list-item>
+      </list>
+      <paragraph>
+       As explained in [2], [5], AC1 is used to capture the intuition that A cannot be a cause of B unless both A and B are true. As the core of the definition of cause, AC2 emphasizes the important role of the contingency, which makes a distinction between the definition and the traditional counterfactual ones. As pointed out in [5], AC3 is a minimality condition ensuring that only the elements of the conjunction {a mathematical formula}X→=x→ that are essential for changing φ in AC2(a) are considered part of a cause; inessential elements are pruned [5]. In particular, if there is no variable in {a mathematical formula}W→, then we call {a mathematical formula}X→=x→ a counterfactual cause of φ in {a mathematical formula}(M,u→)[20].
+      </paragraph>
+      <paragraph label="Definition 2.4">
+       Degree of responsibility [2]The degree of responsibility of {a mathematical formula}X=x for φ in {a mathematical formula}(M,u→), denoted {a mathematical formula}dr((M,u→),(X=x),φ), is 0 if {a mathematical formula}X=x is not a cause of φ in {a mathematical formula}(M,u→); it is {a mathematical formula}1k+1 if {a mathematical formula}X=x is a cause of φ in {a mathematical formula}(M,u→) and there exists a partition {a mathematical formula}(Z→,W→) and setting {a mathematical formula}x′,w→′ for which AC2 holds such that (a) k variables in {a mathematical formula}W→ have different values in {a mathematical formula}w→′ than they do in the context {a mathematical formula}u→ and (b) there is no partition {a mathematical formula}(Z→′,W→′) and setting {a mathematical formula}x″,w→″ satisfying AC2 such that only {a mathematical formula}k′&lt;k variables have different values in {a mathematical formula}w→″ than they do in the context {a mathematical formula}u→.
+      </paragraph>
+      <paragraph>
+       As stated in [2], the degree of responsibility of {a mathematical formula}X=x for φ in {a mathematical formula}(M,u→) captures the minimal number of changes that have to be made in {a mathematical formula}u→ in order to make φ counterfactually depend on X.
+      </paragraph>
+      <paragraph>
+       We use the following example taken from [2] to illustrate the notion of degree of responsibility.
+      </paragraph>
+      <paragraph label="Example 2.4">
+       Example 3.3 in [2]Consider a causal model on Mr. B winning an election with 11 voters against Mr. G. Voter i is represented by a binary variable {a mathematical formula}Xi, {a mathematical formula}i=1,2,⋯,11, which is 1 if voter i votes for Mr. B and 0 if voter i votes for Mr. G; the outcome is represented by the variable O, which is 1 if Mr. B wins and 0 if Mr. G wins. If the vote is 11-0, then each voter is a cause of Mr. B winning (that is, {a mathematical formula}Xi=1 is a cause of {a mathematical formula}O=1 for each i). The degree of responsibility of {a mathematical formula}Xi=1 for {a mathematical formula}O=1 is {a mathematical formula}16, because at least five other voters must change their votes before changing {a mathematical formula}Xi to 0 results in {a mathematical formula}O=0. But if the vote is 6-5, then each voter who votes for Mr. B is a counterfactual cause of Mr. B winning. The degree of responsibility of each of these voters for {a mathematical formula}O=1 is 1. This means that each voter who votes for Mr. B is crucial.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      The MIS-graph
+     </section-title>
+     <paragraph>
+      The process of resolving the inconsistency of a knowledge base is exactly a process of breaking all the minimal inconsistent subsets of that base from a perspective of syntax-based inconsistency handling. As mentioned earlier, the set of minimal inconsistent subsets can be grouped into several separate clusters such that each cluster should be considered as a whole to be broken. Moreover, we need to look inside each cluster to understand the role of each formula in causing the inconsistency so as to identify formulas that have to be changed, especially in the presence of constraints. Here we use a bipartite graph to represent the relation between formulas and minimal inconsistent subsets of a knowledge base, in which each non-isolated component corresponds to such a cluster.
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      Let K be a knowledge base and {a mathematical formula}MI(K) the set of minimal inconsistent subsets of K. The general MIS-graph of K, denoted {a mathematical formula}GK0, is defined as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}X(GK0)=K, and {a mathematical formula}Y(GK0)=MI(K);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}(α,M)∈E(GK0) if and only if {a mathematical formula}α∈M.
+      </list-item>
+     </list>
+     <paragraph>
+      The two sets of vertices of the general MIS-graph of a knowledge base are exactly the knowledge base itself and the set of minimal inconsistent subset of the knowledge base, respectively. The general MIS-graph of a knowledge base provides a hierarchical representation for the inconsistency of that base:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Formula-level: all the connections between a formula and minimal inconsistent subsets grasp which minimal inconsistent subsets the formula is involved in.
+      </list-item>
+      <list-item label="•">
+       MIS-level: a minimal inconsistent subset only joins each of its formulas in the graph. Then all the connections between a minimal inconsistent subset and formulas grasp the inner structure of that minimal inconsistent subset. That is, this graph allows us to look inside minimal inconsistent subsets from their own perspectives.
+      </list-item>
+      <list-item label="•">
+       Inter-MIS-level: any two minimal inconsistent subsets overlap each other if and only if they are Y-adjacent in {a mathematical formula}GK0. Furthermore, any two minimal inconsistent subsets are associated with each other if and only if there is a path between them in the graph, i.e., they are in the same component, moreover, the chain of formulas involved in such a path provides an intuitive explanation of the association. That is, this graph also allows us to look inside these separate clusters of minimal inconsistent subsets.
+      </list-item>
+     </list>
+     <paragraph>
+      The inter-MIS-level representation shows that the interconnected structure of the set of minimal inconsistent subsets can be captured by this graph.
+     </paragraph>
+     <paragraph>
+      We use the following example to illustrate the notion of general MIS-graph.
+     </paragraph>
+     <paragraph label="Example 3.1">
+      Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Then the general MIS-graph of K is illustrated by Fig. 2. Obviously, {a mathematical formula}GK0 has three components including {a mathematical formula}C1, {a mathematical formula}C2 and {a mathematical formula}C3. In particular, {a mathematical formula}C3 consists of only one isolated vertex corresponding to the free formula c. In addition, we can find that {a mathematical formula}M3 is Y-independent of both {a mathematical formula}M1 and {a mathematical formula}M2, while {a mathematical formula}M1 and {a mathematical formula}M2 and Y-adjacent.
+     </paragraph>
+     <paragraph>
+      Evidently, we have the following observations about {a mathematical formula}GK0 for a knowledge base K:
+     </paragraph>
+     <list>
+      <list-item label="(O1)">
+       {a mathematical formula}|Y(GK0)|=|MI(K)|;
+      </list-item>
+      <list-item label="(O2)">
+       {a mathematical formula}degGK0(M)=|M| for each {a mathematical formula}M∈MI(K);
+      </list-item>
+      <list-item label="(O3)">
+       {a mathematical formula}degGK0(α)=|{M|M∈MI(K)s.t.α∈M}| for each {a mathematical formula}α∈K;
+      </list-item>
+      <list-item label="(O4)">
+       {a mathematical formula}degGK0(α)=0 if and only if {a mathematical formula}α∈FREE(K).
+      </list-item>
+     </list>
+     <paragraph>
+      The first three observations show that the number of minimal inconsistent subsets, the size of each minimal inconsistent subset, and the number of minimal inconsistent subset containing a given formula are all represented by the general MIS-graph. The last one states that isolated vertices in {a mathematical formula}GK0 exactly correspond to the free formulas of K. Allowing for this, we define a simplified graph as follows:
+     </paragraph>
+     <paragraph label="Definition 3.2">
+      Let K be a knowledge base and {a mathematical formula}MI(K) the set of minimal inconsistent subsets of K. The MIS-graph of K, denoted {a mathematical formula}GK, is defined as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}X(GK)=K∖FREE(K), and {a mathematical formula}Y(GK)=MI(K);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}(α,M)∈E(GK) if and only if {a mathematical formula}α∈M.
+      </list-item>
+     </list>
+     <paragraph>
+      Essentially, the MIS-graph is the maximum subgraph of the general MIS-graph that has no isolated vertex. Please note that {a mathematical formula}X(GK)=⋃MI(K), thus it only describes the relation between minimal inconsistent subsets and formulas involved in minimal inconsistent subsets. Moreover, each component of the MIS-graph corresponds to a cluster of minimal inconsistent subsets associated with one another.
+     </paragraph>
+     <paragraph>
+      The following proposition shows that the MIS-graph of a consistent knowledge base is an empty graph.
+     </paragraph>
+     <paragraph label="Proposition 3.1">
+      Let K be a knowledge base and{a mathematical formula}GKthe MIS-graph of K. Then{a mathematical formula}GK=∅if and only if K is consistent.
+     </paragraph>
+     <paragraph>
+      This proposition implies that the MIS-graph cannot make a distinction between consistent knowledge bases. From now on, we consider MIS-graphs for inconsistent knowledge bases. The following proposition shows that minimal correction subsets can also be represented by the MIS-graph.
+     </paragraph>
+     <paragraph label="Proposition 3.2">
+      Let K be an inconsistent knowledge base and{a mathematical formula}GKthe MIS-graph of K. Then a subset R of K is a minimal correction subset of K if and only if R is a minimal Y-dominating set of{a mathematical formula}GK.
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be an inconsistent knowledge base and {a mathematical formula}GK the MIS-graph of K.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Necessity. Let R be a minimal correction subset of K, then {a mathematical formula}R⊆⋃MI(K)=X(GK) and {a mathematical formula}K∖R⊬⊥. Moreover, we show that
+      </list-item>
+      <list-item label="•">
+       Sufficiency. Let R be a minimal Y-dominating set, then {a mathematical formula}∀M∈MI(K), {a mathematical formula}∃α∈R s.t. {a mathematical formula}(α,M)∈E(GK) (i.e., {a mathematical formula}α∈M). So, {a mathematical formula}K∖R⊬⊥. Therefore, R is a correction subset of K.Furthermore, {a mathematical formula}∀R′⊂R, {a mathematical formula}R′ is not a correction subset of K. On the contrary, suppose that {a mathematical formula}R′ is a correction subset of K, then {a mathematical formula}∀M∈Y(GK), {a mathematical formula}∃β∈R′ s.t. {a mathematical formula}β∈M, i.e., {a mathematical formula}(β,M)∈E(GK). Then {a mathematical formula}R′ is also a Y-dominating set of {a mathematical formula}GK. This contradicts that R is a minimal Y-dominating set.Hence, R is a minimal correction subset of K.  □
+      </list-item>
+     </list>
+     <paragraph>
+      In particular, the following corollary shows that each minimal {a mathematical formula}Y|C-dominating set of {a mathematical formula}GK is exactly a minimal correction subset of K that subsumes C.
+     </paragraph>
+     <paragraph label="Corollary 3.1">
+      Let K be an inconsistent knowledge base and{a mathematical formula}GKthe MIS-graph of K. Let C be a subset of K, then a subset R of K is a minimal correction subset of K such that{a mathematical formula}C⊆Rif and only if R is a minimal{a mathematical formula}Y|C-dominating set of{a mathematical formula}GK.
+     </paragraph>
+     <paragraph label="Proof">
+      This is a direct consequence of Proposition 3.2. □
+     </paragraph>
+     <paragraph>
+      The following lemma shows that any connected component of {a mathematical formula}GK is also a MIS-graph.
+     </paragraph>
+     <paragraph label="Lemma 3.1">
+      Let K be an inconsistent knowledge base and{a mathematical formula}GKthe MIS-graph of K. Let G be a connected component of{a mathematical formula}GK, then G is the MIS-graph of{a mathematical formula}X(G).
+     </paragraph>
+     <paragraph label="Proof">
+      It is a direct consequence of the definition of MIS-graph.  □
+     </paragraph>
+     <paragraph>
+      Essentially, this lemma shows that a component of the MIS-graph fully represents a separate cluster of minimal inconsistent subsets. That is, both the inner structure of each minimal inconsistent subset of the cluster and all the associations with these minimal inconsistent subsets are represented by the component. From now on we call the set of formulas involved in a component of {a mathematical formula}GKa MIS-component of K if there is no confusion. The following lemma shows that the union of minimal correction subsets of two distinct MIS-components is exactly a minimal correction subset of the combination of the two MIS-components.
+     </paragraph>
+     <paragraph label="Lemma 3.2">
+      Let{a mathematical formula}G1and{a mathematical formula}G2be two distinct components of{a mathematical formula}GK. Suppose that{a mathematical formula}R1and{a mathematical formula}R2are minimal Y-dominating sets of{a mathematical formula}G1and{a mathematical formula}G2, respectively, then{a mathematical formula}R1∪R2is a minimal Y-dominating set of{a mathematical formula}G1∪G2.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}G1 and {a mathematical formula}G2 be two distinct components of {a mathematical formula}GK, then {a mathematical formula}X(G1)∩X(G2)=∅ and {a mathematical formula}Y(G1)∩Y(G2)=∅. Suppose that {a mathematical formula}R1 and {a mathematical formula}R2 are minimal Y-dominating sets of {a mathematical formula}G1 and {a mathematical formula}G2, respectively. Then {a mathematical formula}∀M∈Y(G1)∪Y(G2),
+      <list>
+       if {a mathematical formula}M∈Y(G1),∃α∈R1s.t.(α,M)∈E(G1);else {a mathematical formula}∃β∈R2s.t.(β,M)∈E(G2).Recall that
+      </list>
+      <paragraph>
+       {a mathematical formula}X(G1)∩X(G2)=∅ and {a mathematical formula}Y(G1)∩Y(G2)=∅, then {a mathematical formula}R1∪R2 must be minimal. Otherwise, {a mathematical formula}∀α∈(R1∪R2), consider {a mathematical formula}(R1∪R2)∖{α}, then
+      </paragraph>
+      <list>
+       <list-item label="•">
+        if {a mathematical formula}α∈R1,∃M∈Y(G1)s.t.∀β∈(R1∪R2)∖{α},(β,M)∉E(G1);
+       </list-item>
+       <list-item label="•">
+        else {a mathematical formula}∃M∈Y(G2)s.t.∀β∈(R1∪R2)∖{α},(β,M)∉E(G2).
+       </list-item>
+      </list>
+      <paragraph>
+       So, {a mathematical formula}(R1∪R2)∖{α} is not a Y-dominating set of {a mathematical formula}G1∪G2. □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proposition 3.3">
+      Let K be an inconsistent knowledge base and{a mathematical formula}GKthe MIS-graph of K. Let{a mathematical formula}{G1,G2,⋯,Gm}be the set of components of{a mathematical formula}GKand{a mathematical formula}R⊆K. Then
+     </paragraph>
+     <list>
+      <list-item label="•">
+       R is a minimal Y-dominating set of{a mathematical formula}GKif and only if{a mathematical formula}R∩X(Gi)is a minimal Y-dominating set of{a mathematical formula}Gifor each{a mathematical formula}i=1,2,⋯,m.
+      </list-item>
+      <list-item label="•">
+       R is a minimal correction subset of K if and only if{a mathematical formula}R∩X(Gi)is a minimal correction subset of{a mathematical formula}X(Gi)for each{a mathematical formula}i=1,2,⋯,m.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      It is a direct consequence of Proposition 3.2, Lemma 3.1 and Lemma 3.2. □
+     </paragraph>
+     <paragraph>
+      The first item of this proposition shows that a minimal Y-dominating set of {a mathematical formula}GK is exactly a combination of minimal Y-dominating sets of all its components. The second item shows that a minimal correction subset of K is exactly a combination of minimal corrections subsets of all MIS-components of K.
+     </paragraph>
+     <paragraph label="Example 3.2">
+      Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. As illustrated by Fig. 3, there are two connected components {a mathematical formula}C1 and {a mathematical formula}C2 of the MIS-graph of K. For {a mathematical formula}C1, the corresponding cluster and MIS-components are {a mathematical formula}{M3} and {a mathematical formula}{d,¬d}, respectively. For {a mathematical formula}C2, the corresponding cluster and MIS-component are {a mathematical formula}{M1,M2} and {a mathematical formula}{¬a,a,¬a∨b,¬b}, respectively.Note that both {a mathematical formula}{d} and {a mathematical formula}{¬d} are the smallest minimal Y-dominating sets of {a mathematical formula}C1, and {a mathematical formula}{a} is an unique smallest minimal Y-dominating set of {a mathematical formula}C2. Then both {a mathematical formula}R1={d,a} and {a mathematical formula}R2={¬d,a} are the smallest minimal Y-dominating sets of {a mathematical formula}GK.
+     </paragraph>
+     <paragraph>
+      Next we define the MIS-equivalence relation between knowledge bases as follows:
+     </paragraph>
+     <paragraph label="Definition 3.3">
+      MIS-equivalenceLet {a mathematical formula}K1 and {a mathematical formula}K2 be two knowledge bases. Let {a mathematical formula}GK1 and {a mathematical formula}GK2 be the MIS-graphs of {a mathematical formula}K1 and {a mathematical formula}K2, respectively. If there is a one-to-one mapping f from {a mathematical formula}X(GK1)∪Y(GK1) to {a mathematical formula}X(GK2)∪Y(GK2) such that
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       {a mathematical formula}∀α∈X(GK1), {a mathematical formula}f(α)∈X(GK2);
+      </list-item>
+      <list-item label="(2)">
+       {a mathematical formula}∀M∈Y(GK1), {a mathematical formula}f(M)∈Y(GK2);
+      </list-item>
+      <list-item label="(3)">
+       {a mathematical formula}∀α∈X(GK1), {a mathematical formula}∀M∈Y(GK1), {a mathematical formula}(α,M)∈E(GK1) iff {a mathematical formula}(f(α),f(M))∈E(GK2),
+      </list-item>
+     </list>
+     <paragraph>
+      Roughly speaking, the MIS-equivalence relation describes the case that two knowledge bases have the same (inner and interconnected) structure of minimal inconsistent subsets. Obviously, if {a mathematical formula}K1 is MIS-equivalent to {a mathematical formula}K2, then
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}|MI(K1)|=|MI(K2)|, and {a mathematical formula}|⋃MI(K1)|=|⋃MI(K2)|,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}GK1 is isomorphic to {a mathematical formula}GK2,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}γY(GK1)=γY(GK2).
+      </list-item>
+     </list>
+     <paragraph>
+      In summary, given an inconsistent knowledge base, the MIS-graph provides a representation of the inconsistency in that base from multiple perspectives, including the inner structure of each minimal inconsistent subset, the separate clusters of minimal inconsistent subsets, the inner structure of each cluster, the MIS-components of the base, and the minimal correction subsets of that base.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Representing inconsistency with constraints
+     </section-title>
+     <paragraph>
+      In this section, we incorporate hard constraints and soft constraints on modifying formulas in the MIS-graph, respectively. Generally, {a mathematical formula}⋃MI(K) is considered as the set of candidates of formulas that have to be modified to restore the consistency of K. Then both the hard and the soft constraints are given based on {a mathematical formula}⋃MI(K) in this paper.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Hard constraints
+      </section-title>
+      <paragraph>
+       Given a knowledge base K, a hard constraint on modifying formulas is a pair {a mathematical formula}H=(P,Q) of {a mathematical formula}P,Q⊆⋃MI(K) such that all the formulas in P must be protected from being modified on the condition that each of formulas in Q must be excluded from any consistent revision of that knowledge base obtained by removing as few formulas as possible. Especially, we say that a minimal correction subset R of Kis compatible with{a mathematical formula}H=(P,Q) if {a mathematical formula}R∩P=∅ and {a mathematical formula}R⊇Q. Essentially, a compatible minimal correction subset R protects P from being modified by removing formulas in Q together with other formulas in R. Furthermore, if there exists at least one minimal correction subset compatible with {a mathematical formula}(P,Q), we say that {a mathematical formula}(P,Q) is a valid hard constraint. Evidently, if {a mathematical formula}H=(P,Q) is valid, then {a mathematical formula}P∩Q=∅ and {a mathematical formula}P∪FREE(K)⊬⊥. Moreover, the validness of {a mathematical formula}H=(P,Q) also implies that there exists at least one consistent subset {a mathematical formula}K′ of K such that {a mathematical formula}P⊆K′ and {a mathematical formula}K′∩Q=∅ if {a mathematical formula}P≠∅. Note that for any minimal correction subset R of an inconsistent knowledge base K, {a mathematical formula}(P,Q) is a valid hard constraint for all {a mathematical formula}P⊆(K∖R)∩(⋃MI(K)) and {a mathematical formula}Q⊆R. This implies that valid hard constraints always exist for an inconsistent knowledge base. In this paper, we focus on valid hard constraints.
+      </paragraph>
+      <paragraph>
+       At first, we consider a special kind of hard constraint {a mathematical formula}H=(P,∅), where P is a consistent proper subset of {a mathematical formula}⋃MI(K). We call such a hard constraint a protected-formulas constraint, and abbreviate {a mathematical formula}(P,∅) as {a mathematical formula}PN. We adapt the MIS-graph to the case with a protected-formulas constraint.
+      </paragraph>
+      <paragraph label="Definition 4.1">
+       Let K be a knowledge base with a protected-formulas constraint {a mathematical formula}PN. The MIS-graph with constraint {a mathematical formula}PN of K, denoted {a mathematical formula}GK|PN, is defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       From the definition of the operation {a mathematical formula}GK−P introduced in Section 2.2, {a mathematical formula}V(GK|PN)=V(GK)∖P and {a mathematical formula}E(GK|PN)=E(GK)∖{(α,M)∈E(G)|α∈P}. Please note that {a mathematical formula}P⊬⊥, then {a mathematical formula}∀M∈MI(K), {a mathematical formula}∃β∈M such that {a mathematical formula}β∉P. Therefore, every minimal inconsistent subset connects to at least one formula in {a mathematical formula}GK|PN. Evidently, we have the following observations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}X(GK|PN)=X(GK)∖P, and {a mathematical formula}Y(GK|PN)=Y(GK);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}degGK|PN(α)=degGK(α) for all {a mathematical formula}α∈X(GK|PN);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}degGK|PN(M)=degGK(M)−|M∩P| for all {a mathematical formula}M∈Y(GK).
+       </list-item>
+      </list>
+      <paragraph>
+       Compared to {a mathematical formula}GK, {a mathematical formula}GK|PN focuses on characterizing both the inner structure of each minimal inconsistent subset and the interconnected structure of these minimal inconsistent subsets in the presence of constraint {a mathematical formula}PN. To be more precise, the inner structure of each minimal inconsistent subset only describes which formulas not in P belong to the minimal inconsistent subset, and only the Y-adjacency relation between minimal inconsistent subsets not depending on P are represented by {a mathematical formula}GK|PN.
+      </paragraph>
+      <paragraph label="Example 4.1">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}P={a}. Then the MIS-graph with constraint {a mathematical formula}{a}N of K is illustrated by Fig. 4. There are three connected components {a mathematical formula}C1, {a mathematical formula}C2, and {a mathematical formula}C3 of {a mathematical formula}GK|{a}N.Please note that the Y-adjacency between {a mathematical formula}M1 and {a mathematical formula}M2 in {a mathematical formula}GK is fully based on the shared formula a. However, this Y-adjacency is destroyed by the constraint {a mathematical formula}{a}N. So, {a mathematical formula}M1 and {a mathematical formula}M2 are Y-independent of each other in {a mathematical formula}GK|{a}N.
+      </paragraph>
+      <paragraph>
+       The following proposition shows that the MIS-graph with constraint {a mathematical formula}PN grasps the impact of {a mathematical formula}PN on inconsistency resolving.
+      </paragraph>
+      <paragraph label="Proposition 4.1">
+       Let K be a knowledge base with a protected-formulas constraint{a mathematical formula}PN. Then a subset R of K is a minimal Y-dominating set of{a mathematical formula}GKsuch that{a mathematical formula}R∩P=∅if and only if R is a minimal Y-dominating set of{a mathematical formula}GK|PN.
+      </paragraph>
+      <paragraph label="Proof">
+       This is a direct consequence of the definition of {a mathematical formula}GK|PN. □
+      </paragraph>
+      <paragraph>
+       Next we consider how to incorporate the condition Q of a hard constraint {a mathematical formula}H=(P,Q) in the MIS-graph.
+      </paragraph>
+      <paragraph label="Proposition 4.2">
+       Let K be a knowledge base and{a mathematical formula}H=(P,Q)a hard constraint. Then R is a minimal correction subset of K such that{a mathematical formula}Q⊆Rif and only if R is a minimal{a mathematical formula}Y|Q-dominating set of{a mathematical formula}GK.
+      </paragraph>
+      <paragraph label="Proof">
+       This is a direct consequence of Proposition 3.2. □
+      </paragraph>
+      <paragraph>
+       Now we are ready to adapt the MIS-graph to the case with a hard constraint {a mathematical formula}H as follows:
+      </paragraph>
+      <paragraph label="Definition 4.2">
+       Let K be a knowledge base and {a mathematical formula}H=(P,Q) a hard constraint. The MIS-graph with constraint {a mathematical formula}H of K, denoted {a mathematical formula}GK|H, is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now we are more interested in minimal {a mathematical formula}Y|Q-dominating sets rather than just minimal Y-dominating sets of {a mathematical formula}GK|H when we consider the role of Q in the hard constraint {a mathematical formula}H. The following proposition shows that the MIS-graph with constraint {a mathematical formula}H captures the nature of inconsistency in the presence of {a mathematical formula}H.
+      </paragraph>
+      <paragraph label="Proposition 4.3">
+       Let K be an inconsistent knowledge base and{a mathematical formula}H=(P,Q)a hard constraint. Then a subset R of K is a minimal correction subset of K such that{a mathematical formula}P∩R=∅and{a mathematical formula}Q⊆Rif and only if R is a minimal{a mathematical formula}Y|Q-dominating set of{a mathematical formula}GK|H.
+      </paragraph>
+      <paragraph label="Proof">
+       This is a direct consequence of Proposition 4.1, Proposition 4.2. □
+      </paragraph>
+      <paragraph label="Example 4.2">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({d},{a}). Then the MIS-graph with constraint {a mathematical formula}H of K is illustrated by Fig. 5. There are two connected components {a mathematical formula}C1 and {a mathematical formula}C2 of the MIS-graph with constraint {a mathematical formula}H of K. Evidently, {a mathematical formula}{¬d,a} is a unique minimal {a mathematical formula}Y|{a}-dominating set of {a mathematical formula}GK|H.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Soft constraints
+      </section-title>
+      <paragraph>
+       In this subsection, we consider the soft constraint on modifying formulas of a knowledge base, which describes a special relation of exclusiveness on modifying formulas of that knowledge base. To be more precise, let {a mathematical formula}C be a set of 2-element subsets of a subset Γ of {a mathematical formula}⋃MI(K) such that α and β are not allowed to be modified together if {a mathematical formula}{α,β}∈C, then we call {a mathematical formula}C a soft constraint on modifying formulas. Here we abuse the notation and write {a mathematical formula}{α,β} as {a mathematical formula}(α,β) in a soft constraint. If we use the graph {a mathematical formula}GC=(Γ,C) to represent the soft constraint {a mathematical formula}C, then a maximal independent set of {a mathematical formula}GC is exactly a maximal set of formulas in Γ that are allowed to be removed together from K in the presence of {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Definition 4.3">
+       Let K be a knowledge base with a soft constraint {a mathematical formula}C. A minimal Y-dominating set R of {a mathematical formula}GK is compatible with {a mathematical formula}C if for all {a mathematical formula}α,β∈R, {a mathematical formula}(α,β)∉C. Further, we call a minimal Y-dominating set R a minimal {a mathematical formula}Y[C]-dominating set if R is compatible with {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Proposition 4.4">
+       Let K be a knowledge base and{a mathematical formula}Ca soft constraint. Then R is a minimal{a mathematical formula}Y[C]-dominating set of{a mathematical formula}GKif and only if R is a minimal correction subset of K such that{a mathematical formula}(α,β)∉Cfor all{a mathematical formula}α,β∈R.
+      </paragraph>
+      <paragraph label="Proof">
+       It is a direct consequence of Proposition 3.2. □
+      </paragraph>
+      <paragraph>
+       We say that a minimal correction subset R of K is compatible with a soft constraint {a mathematical formula}C if for all {a mathematical formula}α,β∈R, {a mathematical formula}(α,β)∉C. We say that {a mathematical formula}C is satisfiable if there exists at least one minimal correction subset of K compatible with {a mathematical formula}C. In this paper, we only focus on satisfiable soft constraints.
+      </paragraph>
+      <paragraph label="Example 4.3">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}Γ={a,¬a,d,¬d,¬a∨b} and {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}. Then {a mathematical formula}GC and {a mathematical formula}GK are illustrated by (1) and (2) of Fig. 6, respectively. Here we use a solid circle nested in double circles to denote a vertex involved in a maximal independent set. Please note that all of {a mathematical formula}D1={¬a,¬d}, {a mathematical formula}D2={a,¬a}, {a mathematical formula}D3={a,¬a∨b}, {a mathematical formula}D4={d,¬d}, and {a mathematical formula}D5={¬d,¬a∨b} are the maximal independent sets of {a mathematical formula}GC. However, only {a mathematical formula}D1 can be extended to a minimal Y-dominating set {a mathematical formula}R=D1∪{¬b}={¬a,¬b,¬d}. Actually, R is a unique minimal {a mathematical formula}Y[C]-dominating set of {a mathematical formula}GK.
+      </paragraph>
+      <paragraph>
+       Furthermore, we call a minimal {a mathematical formula}Y|U-dominating set R of {a mathematical formula}GK a minimal {a mathematical formula}Y|U[C]-dominating set if R is compatible with {a mathematical formula}C for a given quasi-Y-dominating set U. Moreover, we use {a mathematical formula}γY|U[C](GK) to denote the cardinality of a smallest minimal {a mathematical formula}Y|U[C]-dominating set of {a mathematical formula}GK. Just for simplicity of discussion, we define {a mathematical formula}γY|U[C](GK) as 0 if there is no minimal {a mathematical formula}Y|U[C]-dominating set.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Measuring inconsistency with constraints
+     </section-title>
+     <paragraph>
+      In this section, we propose both base-level and formula-level inconsistency measures for knowledge bases in the presence of constraints.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       The base-level measure for inconsistency with constraints
+      </section-title>
+      <paragraph>
+       The size of a minimal correction subset of a knowledge base may be considered as an evaluation of effort to resolve the inconsistency by removing the minimal correction subset from that base from a syntax-based perspective. However, Konieczny et al. have argued that the cost of some actions (tests) needed to render a knowledge base classically consistent can be used to quantify the degree of inconsistency [13]. Inspired by this, given a knowledge base with a (hard or soft) constraint, the smallest size of its minimal correction subsets compatible with the constraint can be considered as an inconsistency measure for the base in the presence of the constraint. On the other hand, as shown previously, given a knowledge base with a constraint on modifying formulas, each minimal correction subset compatible with the constraint is exactly a minimal Y-dominating set for the MIS-graph with constraint. Allowing for this, we define the following base-level measure for inconsistency in the presence of a hard constraint firstly.
+      </paragraph>
+      <paragraph label="Definition 5.1">
+       Let K be a knowledge base with a hard constraint {a mathematical formula}H=(P,Q). Then the degree of inconsistency of K with constraint {a mathematical formula}H, denoted {a mathematical formula}Idr(K|H), is defined as{a mathematical formula} where {a mathematical formula}GK|H is the MIS-graph with constraint {a mathematical formula}H of K.
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}γY|Q(GK|H)−|Q| is exactly the minimal number of formulas that have to be removed together with Q from K to break all the minimal inconsistent subsets of K when all the formulas of P must be protected from being modified. Then {a mathematical formula}Idr(K|H) grasps the minimal number of formulas that have to be removed from K to break all the minimal inconsistent subsets of K in the presence of {a mathematical formula}H.
+      </paragraph>
+      <paragraph>
+       In particular, if there is no constraint, then{a mathematical formula} Generally, we abbreviate {a mathematical formula}Idr(K|(∅,∅)) as {a mathematical formula}Idr(K), which can be considered as a measure for the inconsistency of K[21].
+      </paragraph>
+      <paragraph label="Example 5.1">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H1=({d},{a}) and {a mathematical formula}H2=({a},{d}), then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If there is only a protected-formulas constraint P, then the degree of inconsistency of K in the presence of this constraint, denoted {a mathematical formula}Idr(K|(P,∅)), is exactly the Y-domination number of {a mathematical formula}GK|PN, i.e.,{a mathematical formula} By Proposition 4.1, {a mathematical formula}γY(GK|PN) is the minimal number of formulas not in P that have to be removed from K to break all the minimal inconsistent subsets of K. From now on we abbreviate {a mathematical formula}Idr(K|(P,∅)) as {a mathematical formula}Idr(K|PN).
+      </paragraph>
+      <paragraph label="Example 5.2">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}P1={a} and {a mathematical formula}P2={¬a}. Then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now we consider the case with a soft constraint.
+      </paragraph>
+      <paragraph label="Definition 5.2">
+       Let K be a knowledge base with a soft constraint {a mathematical formula}C. Then the degree of inconsistency of K in the presence of {a mathematical formula}C, denoted {a mathematical formula}Idr(K|C), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Essentially, {a mathematical formula}Idr(K|C) is the minimal number of formulas that have to be removed from K to break all the minimal inconsistent subsets of K in the presence of constraint {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Example 5.3">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}. Then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Lastly, we consider the case with a mixture of hard and soft constraints. We call a pair {a mathematical formula}(H,C) of a hard constraint {a mathematical formula}H=(P,Q) and a soft constraint {a mathematical formula}C of K a mixed constraint. We say that {a mathematical formula}(H,C) is satisfiable if there exists at least one minimal correction subset of K compatible with both {a mathematical formula}H and {a mathematical formula}C. Here we only consider satisfiable mixed constraints.
+      </paragraph>
+      <paragraph label="Definition 5.3">
+       Let K be a knowledge base with a mixed constraint {a mathematical formula}(H,C), where {a mathematical formula}H=(P,Q). Then the degree of inconsistency of K in the presence of {a mathematical formula}(H,C), denoted {a mathematical formula}Idr(K|H,C), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Essentially, {a mathematical formula}Idr(K|H,C) is the minimal number of formulas that have to be removed from K to break all the minimal inconsistent subsets of K in the presence of the mixed constraint {a mathematical formula}(H,C). Evidently, {a mathematical formula}Idr(K|H,C) is reduced to {a mathematical formula}Idr(K|H) (resp. {a mathematical formula}Idr(K|C)) when the soft (resp. hard) constraint is empty in the mixed constraint {a mathematical formula}(H,C), i.e.,{a mathematical formula} and{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 5.4">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({a},{¬d}) and {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}. Then {a mathematical formula}{¬a,¬b,¬d} is a unique minimal {a mathematical formula}Y{¬d}[C]-dominating set of {a mathematical formula}GK|H. So,{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Responsibility for inconsistency with constraints
+      </section-title>
+      <paragraph>
+       From a perspective of syntax-based inconsistency handling, we are more interested in identifying the degree of responsibility of each formula of a knowledge base for the inconsistency of that base. In our previous paper [21], we have presented the following measure for the degree of responsibility of each formula for the inconsistency, which is given in terms of minimal correction subsets of a knowledge base.
+      </paragraph>
+      <paragraph label="Definition 5.4">
+       Let K be a knowledge base and {a mathematical formula}α∈K. Then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Moreover, as shown in [21], this measure can be well explained in the context of causality and responsibility presented by Chockler and Halpern [2].
+      </paragraph>
+      <paragraph>
+       As shown by Corollary 3.2, every minimal correction subset R that α belongs to is exactly a minimal {a mathematical formula}Y|{α}-dominating set for {a mathematical formula}GK. Then this measure can be given in terms of {a mathematical formula}Y|{α}-domination number of {a mathematical formula}GK alternatively. That is,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now we are ready to adapt this measure for the degree of responsibility for inconsistency to the cases with constraints. At first, we consider the case that there is only one protected-formulas constraint.
+      </paragraph>
+      <paragraph label="Definition 5.5">
+       Let K be a knowledge base with a constraint {a mathematical formula}PN and α a formula of K. Then the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}PN, denoted {a mathematical formula}dr(K,α|PN), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       According to this definition, the degree of responsibility of any free formula for the inconsistency is 0. It coincides with the intuition that free formulas are not involved in any minimal inconsistent subset of K. In addition, the degree of responsibility of any formula of P for the inconsistency is 0, i.e., all the formulas of P needn't bear any responsibility for the inconsistency of K. This grasps the nature of P being a protected-formulas constraint. If a formula not in {a mathematical formula}P∪FREE(K) is assigned to 0, then that formula is not involved in any minimal Y-dominating set for {a mathematical formula}GK|PN. This is the case that there is no need to remove that formula from K to break all the minimal inconsistent subsets in the presence of {a mathematical formula}PN. Essentially, such formulas are indirectly protected by the constraint from being modified.
+      </paragraph>
+      <paragraph>
+       On the other hand, any smallest minimal {a mathematical formula}Y|{α}-dominating set for {a mathematical formula}GK|PN is exactly a smallest minimal correction subset of K that contains α in the presence of the protected-formulas constraint P. Let R be such a smallest minimal {a mathematical formula}Y|{α}-dominating set for {a mathematical formula}GK|PN, then {a mathematical formula}R∖{α} is exactly a minimal set of formulas that have to be removed together with α from K to break all the minimal inconsistent subsets of K in the presence of {a mathematical formula}PN. As shown later, {a mathematical formula}R∖{α} characterizes a minimal set of formulas that have to be changed to obtain a contingency where the inconsistency of K counterfactually depends on α in the presence of the constraint {a mathematical formula}PN. In this sense, this measure also captures the intuition of the responsibility presented by [2].
+      </paragraph>
+      <paragraph label="Example 5.5">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}P1={a} and {a mathematical formula}P2={¬a}. Then{a mathematical formula} Obviously, only the unique free formula c bears no responsibility for the inconsistency of K in the case that there is no constraint. In contrast, in the presence of {a mathematical formula}P1N, both c and a bear no responsibility for the inconsistency of K. Moreover, the degree of responsibility of d decreases from {a mathematical formula}12 to {a mathematical formula}13, because we have to remove at least two formulas together with d from K to break all the minimal inconsistent subsets in the case that a is not allowed to be removed from K.On the other hand, in the case with constraint {a mathematical formula}P2N, removing a is a unique choice to break {a mathematical formula}M1. This makes both removing {a mathematical formula}¬a∨b and removing ¬b unnecessary because a is shared by {a mathematical formula}M1 and {a mathematical formula}M2. Hence, neither {a mathematical formula}¬a∨b nor ¬b need to bear any responsibility for the inconsistency for K in the presence of {a mathematical formula}P2N.
+      </paragraph>
+      <paragraph>
+       Now we consider the general case that there is a hard constraint.
+      </paragraph>
+      <paragraph label="Definition 5.6">
+       Let K be a knowledge base with a hard constraint {a mathematical formula}H=(P,Q) and α a formula of K. Then the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}H, denoted {a mathematical formula}dr(K,α|H), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Evidently, only formulas involved in minimal {a mathematical formula}Y|Q-dominating sets for {a mathematical formula}GK|H are assigned to nonzero values. In addition to free formulas and ones involved in protected-formulas constraint of {a mathematical formula}H, if a formula is assigned to 0, then the presence of {a mathematical formula}H must make removing this formula unnecessary to break all the minimal inconsistent subsets.
+      </paragraph>
+      <paragraph label="Example 5.6">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({d},{a}), then {a mathematical formula}{¬d,a} is a unique minimal {a mathematical formula}Y|{a}-dominating set for {a mathematical formula}GK|H. So,{a mathematical formula} Please note that besides the free formula c and the protected-formulas formula d, all of formulas in {a mathematical formula}{¬a∨b,¬b,¬a} have no responsibility for the inconsistency in the presence of {a mathematical formula}H.
+      </paragraph>
+      <paragraph>
+       Now we consider the case that there is a soft constraint.
+      </paragraph>
+      <paragraph label="Definition 5.7">
+       Let K be a knowledge base with a soft constraint {a mathematical formula}C and α a formula of K. Then the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}C, denoted {a mathematical formula}dr(K,α|C), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Evidently, except formulas involved in minimal {a mathematical formula}Y[C]-dominating sets for {a mathematical formula}GK, all other formulas don't need to bear any responsibility for the inconsistency in the presence of {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Example 5.7">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}. Then {a mathematical formula}{¬a,¬b,¬d} is a unique minimal {a mathematical formula}Y[C]-dominating set of {a mathematical formula}GK. So,{a mathematical formula} Please note that besides the free formula c, all the formulas in {a mathematical formula}{¬a∨b,a,d} have no responsibility for the inconsistency in the presence of {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       Lastly, we extend the two measures to the case with a mixed constraint.
+      </paragraph>
+      <paragraph label="Definition 5.8">
+       Let K be a knowledge base with a mixed constraint {a mathematical formula}(H,C) and α a formula of K, where {a mathematical formula}H=(P,Q). Then the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}(H,C), denoted {a mathematical formula}dr(K,α|H,C), is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Evidently, only formulas involved in minimal {a mathematical formula}Y|[C]Q-dominating sets for {a mathematical formula}GK|H are assigned to nonzero values.
+      </paragraph>
+      <paragraph label="Example 5.8">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({a},{¬d}) and {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}. Then {a mathematical formula}{¬a,¬b,¬d} is a unique minimal {a mathematical formula}Y{¬d}[C]-dominating set of {a mathematical formula}GK|H. So,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Please note that the soft constraint focuses on the pairs of formulas that are not allowed to be modified together. However, we can generalize the soft constraint to describe the pairs of sets of formulas that are not allowed to be modified together. Moreover, the notions about the soft constraint defined above, including the compatibility of minimal correction subsets with the soft constraint, the minimal {a mathematical formula}Y[C]-dominating set, and the related measures can be generalized to this case in a natural way.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Causality-based explanations
+     </section-title>
+     <paragraph>
+      Please note that the inconsistency of a knowledge base counterfactually depends on each minimal correction subset of that base. Then the base-level measures with constraints proposed above can be interpreted as the minimum size of subsets of a knowledge base that the inconsistency counterfactually depends on in the presence of their own respective constraints from a causality-based perspective.
+     </paragraph>
+     <paragraph>
+      Next we explain the measures {a mathematical formula}dr(K,α|H), {a mathematical formula}dr(K,α|C), and {a mathematical formula}dr(K,α|H,C) from a perspective of causality by using Halpern and Pearl's causal model and Chockler and Halpern's notion of responsibility, respectively.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       A causal model for inconsistency with a hard constraint
+      </section-title>
+      <paragraph>
+       Given an inconsistent knowledge base K with a hard constraint {a mathematical formula}H=(P,Q), to construct a causal model {a mathematical formula}MK|H for the inconsistency of K in the presence of {a mathematical formula}H,
+      </paragraph>
+      <list>
+       <list-item label="•">
+        we associate every formula {a mathematical formula}α∈K with a binary variable {a mathematical formula}Tα, whose value is 1 if α keeps unchanged and 0 if α is deleted from K. We use {a mathematical formula}T→ to denote the vector of all the variables corresponding to formulas.
+       </list-item>
+       <list-item label="•">
+        we associate with every minimal inconsistent subset {a mathematical formula}M∈MI(K) a binary variable {a mathematical formula}SM, whose value is 1 if M keeps unchanged and 0 if M is broken. We use {a mathematical formula}S→ to denote the vector of all the variables corresponding to minimal inconsistent subsets.
+       </list-item>
+       <list-item label="•">
+        the problem of inconsistency in K in the presence of constraint is represented by the binary variable I, whose value is 1 if K is inconsistent and 0 otherwise.
+       </list-item>
+       <list-item label="•">
+        the satisfaction of the constraint P is represented by the binary variable {a mathematical formula}HP, whose value is 0 if all the formulas in P keep unchanged and 1 otherwise.
+       </list-item>
+       <list-item label="•">
+        the satisfaction of the constraint Q is represented by the binary variable {a mathematical formula}HQ, whose value is 0 if all the formulas in Q are deleted from K and 1 otherwise.
+       </list-item>
+      </list>
+      <paragraph>
+       Let {a mathematical formula}VK|H={Tα|α∈K}∪{SM|M∈MI(K)}∪{I,HP,HQ}. Then {a mathematical formula}RK|H(V)={0,1} for each {a mathematical formula}V∈VK|H.
+      </paragraph>
+      <paragraph>
+       Without loss of generality, we associate every variable {a mathematical formula}Tα with a binary exogenous variable {a mathematical formula}Uα. Moreover, we assume that the value of {a mathematical formula}Tα depends on only the value of {a mathematical formula}Uα. Let {a mathematical formula}UK={Uα|α∈K}. We use {a mathematical formula}U→ to denote the vector of all the exogenous variables corresponding to formulas.
+      </paragraph>
+      <paragraph>
+       In addition, we use {a mathematical formula}T→−Tα (resp. {a mathematical formula}S→−SM ) to denote a vector that results from deleting {a mathematical formula}Tα from {a mathematical formula}T→ (resp. deleting {a mathematical formula}SM from {a mathematical formula}S→).
+      </paragraph>
+      <paragraph>
+       We define the following functions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}FTα(T→−Tα,S→,I,HP,HQ,U→)=Uα ({a mathematical formula}Tα=Uα for short) for every formula {a mathematical formula}α∈K.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FSM(T→,S→−SM,I,HP,HQ,U→)=∏α∈MTα ({a mathematical formula}SM=∏α∈MTα for short) for every minimal inconsistent subset {a mathematical formula}M∈MI(K).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FHP(S→,T→,I,HQ,U→)=⨁β∈P(1−Tβ) ({a mathematical formula}HP=⨁β∈P(1−Tβ) for short), where ⨁ is the Boolean addition.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FHQ(S→,T→,I,HP,U→)=⨁γ∈Q(Tγ⊕∏M∈MI(K),γ∈M(1−∏α∈M,α≠γTα)) ( {a mathematical formula}HQ=⨁γ∈Q(Tγ⊕∏M∈MI(K),γ∈M(1−∏α∈M,α≠γTα)) for short).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FI(S→,T→,HP,HQ,U→)=(⨁M∈MI(K)SM)⊕HP⊕HQ ({a mathematical formula}I=(⨁M∈MI(K)SM)⊕HP⊕HQ for short).
+       </list-item>
+      </list>
+      <paragraph>
+       Roughly speaking, the function {a mathematical formula}FTα describes our assumption that the value of {a mathematical formula}Tα depends on only the value of the exogenous variable {a mathematical formula}Uα. In particular, {a mathematical formula}FTα(T→−Tα,S→,I,HP,HQ,U→)=1 if and only if {a mathematical formula}Uα=1. Then the context {a mathematical formula}u→=(1,1,⋯,1) ({a mathematical formula}u→=1→ for short) describes the case that none of the formulas is deleted from K.
+      </paragraph>
+      <paragraph>
+       The function {a mathematical formula}FSM aims to capture the fact that we need to remove at least one formula from the minimal inconsistent subset M to break M.
+      </paragraph>
+      <paragraph>
+       The function {a mathematical formula}FHP aims to capture the constraint that all the formulas in P are not allowed to be removed from K. Here {a mathematical formula}HP=0 if and only if {a mathematical formula}Tβ=1 for all {a mathematical formula}β∈P.
+      </paragraph>
+      <paragraph>
+       The function {a mathematical formula}FHQ aims to capture the condition that all the formulas in Q must be removed from K in order to break all the minimal inconsistent subsets. Here {a mathematical formula}HQ=0 if and only if for each {a mathematical formula}γ∈Q, {a mathematical formula}Tγ=0 and there exists at least one minimal inconsistent subset M such that {a mathematical formula}γ∈M and {a mathematical formula}∏α∈M,α≠γTα=1.
+      </paragraph>
+      <paragraph>
+       The function {a mathematical formula}FI accords with the fact that we need to break all the minimal inconsistent subsets of K to restore consistency in K under the constraint {a mathematical formula}H. In summary, these functions capture the inherent features of inconsistency characterization in terms of minimal inconsistent subsets in the presence of a hard constraint.
+      </paragraph>
+      <paragraph>
+       Now we are ready to construct a causal model for inconsistency in the presence of a hard constraint. Let K be a knowledge base, then a causal model for the problem of inconsistency of K in the presence of constraint {a mathematical formula}H, denoted {a mathematical formula}MK|H, is defined as {a mathematical formula}MK|H=〈SK|H,FK|H〉, where{a mathematical formula} and{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The number of endogenous variables in {a mathematical formula}MK|H is {a mathematical formula}|K|+|MI(K)|+3, which is considered as the size of {a mathematical formula}MK|H in computational complexity analysis.
+      </paragraph>
+      <paragraph>
+       We use the following example to illustrate the notion of causal model for the inconsistency in the presence of a hard constraint.
+      </paragraph>
+      <paragraph label="Example 6.1">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({d},{a}), then we construct the causal model {a mathematical formula}MK|H as follows:
+       <list>
+        Let {a mathematical formula}Uα and {a mathematical formula}Tα be the exogenous and endogenous binary variables corresponding to α for {a mathematical formula}α∈K, respectively. Then{a mathematical formula}Let {a mathematical formula}SMi be the binary variable corresponding to {a mathematical formula}Mi for {a mathematical formula}i=1,2,3. Then{a mathematical formula}Let {a mathematical formula}HP and {a mathematical formula}HQ be the binary variable corresponding to constraints {a mathematical formula}P={d} and {a mathematical formula}Q={a}, respectively. Then{a mathematical formula}Let I be the binary variable corresponding to the inconsistency of K, then{a mathematical formula}Furthermore, consider the counterfactual world arising from
+       </list>
+       <paragraph>
+        {a mathematical formula}(T¬b,T¬a,T¬d)←0→, then{a mathematical formula}{a mathematical formula}{a mathematical formula} The first one states that all the three minimal inconsistent subsets will be broken if we delete the formulas ¬b, ¬a, and ¬d from K. The second states that the constraint P is satisfied by {a mathematical formula}(T¬b,T¬a,T¬d)←0→, while the third states that the constraint Q cannot be satisfied by {a mathematical formula}(T¬b,T¬a,T¬d)←0→.Consider another counterfactual world arising from {a mathematical formula}(Ta,T¬d)←0→, then{a mathematical formula}{a mathematical formula} These coincide with the intuition that all the minimal inconsistent subsets will be broken if we delete the formulas a and ¬d from K under the constraint {a mathematical formula}H.This causal model for the inconsistency of K can be also represented by the causal network illustrated in Fig. 7.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       The following proposition provides an explanation for the measure {a mathematical formula}dr(K,α|H) from the point of view of causality.
+      </paragraph>
+      <paragraph label="Proposition 6.1">
+       Let K be an inconsistent knowledge base with a hard constraint{a mathematical formula}H=(P,Q)and α a formula of K. Then
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Tα=1is a cause of{a mathematical formula}I=1in{a mathematical formula}(MK|H,1→)if and only if there is at least one minimal{a mathematical formula}Y|{α}∪Q-dominating set of{a mathematical formula}GK|H.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}dr((MK|H,1→),(Tα=1),(I=1))=dr(K,α|H).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let K be an inconsistent knowledge base with a hard constraint {a mathematical formula}H=(P,Q) and {a mathematical formula}MK|H=〈SK|H,FK|H〉 the causal model for the inconsistency of K in the presence of {a mathematical formula}H. Given {a mathematical formula}u→=1→, then {a mathematical formula}T→=1→. So, {a mathematical formula}(MK|H,1→)⊨(HP=0).
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Sufficiency. If there is at least one minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H, we only need to check AC2.Consider a smallest minimal {a mathematical formula}Y|{α}∪Q-dominating set R of {a mathematical formula}GK|H. Then {a mathematical formula}{α}∪Q⊆R and {a mathematical formula}P∩R=∅. Let {a mathematical formula}W→=T→R∖{α}, where {a mathematical formula}T→R∖{α} is the vector of variables corresponding to the formulas in {a mathematical formula}R∖{α}.
+        <list>
+         AC2 (a). If {a mathematical formula}Tα=0, then {a mathematical formula}SM=0 for every M s.t. {a mathematical formula}α∈M. Moreover, if {a mathematical formula}W→=0→, then {a mathematical formula}SM′=0 for every {a mathematical formula}M′∈MI(K) such that {a mathematical formula}α∉M′. Note that {a mathematical formula}Q⊆R, then {a mathematical formula}R→=(Tα,W→)=0→ guarantees that {a mathematical formula}HQ=0 holds. So,{a mathematical formula} for all {a mathematical formula}M∈MI(K), and{a mathematical formula} On the other hand, {a mathematical formula}P∩R=∅ implies that{a mathematical formula} Then{a mathematical formula} i.e.,{a mathematical formula}AC2 (b). Consider {a mathematical formula}Z→=T→−W→. If {a mathematical formula}Tα=1 and {a mathematical formula}Z→′=1→ for all subsets {a mathematical formula}Z→′ of {a mathematical formula}Z→−Tα→, then from the minimality of R as a {a mathematical formula}Y|{α}∪Q-dominating set, there is at least one minimal inconsistent subset {a mathematical formula}M′ s.t. {a mathematical formula}α∈M′ and {a mathematical formula}SM′=1 when {a mathematical formula}W→=0→. That is,{a mathematical formula}Necessity
+        </list>
+        <paragraph>
+         . If {a mathematical formula}Tα=1 is a cause of {a mathematical formula}I=1, then there exists a partition {a mathematical formula}(Z→,W→) satisfying AC2. Let {a mathematical formula}RW be the set of formulas corresponding to {a mathematical formula}{Tα}∪W→. Then {a mathematical formula}RW∩P=∅ and {a mathematical formula}Q⊆RW, moreover, {a mathematical formula}∀M∈MI(K), {a mathematical formula}∃β∈RW s.t. {a mathematical formula}β∈M. Therefore, {a mathematical formula}RW is a Y-dominating set of {a mathematical formula}GK|H, moreover, there exists a minimal {a mathematical formula}Y|Q-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}R⊆RW. Suppose that any minimal {a mathematical formula}Y|Q-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}R⊆RW does not contain α, then {a mathematical formula}α∉Q and there exists a minimal {a mathematical formula}Y|Q-dominating set {a mathematical formula}R′ of {a mathematical formula}GK|H such that {a mathematical formula}R′⊆RW∖{α}. This implies that{a mathematical formula} This contradicts A2(b). So, there exists at least one minimal {a mathematical formula}Y|Q-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}α∈R. Hence, there exists at least one minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H.
+        </paragraph>
+       </list-item>
+       <list-item label="2.">
+        From the proof for sufficiency above, we know that no subset of {a mathematical formula}W→ satisfies AC2. Then{a mathematical formula} if {a mathematical formula}(Tα=1) is a cause of {a mathematical formula}I=1. Otherwise{a mathematical formula} So,{a mathematical formula} □
+       </list-item>
+      </list>
+      <paragraph>
+       The first item of this proposition shows that only formulas involved in a minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H may be considered as causes of the inconsistency in a knowledge base in the presence of a hard constraint {a mathematical formula}H. This accords with that only formulas involved in minimal {a mathematical formula}Y|Q-dominating sets of {a mathematical formula}GK|H have to bear nonzero responsibilities for the inconsistency of a knowledge base with the constraint in the context of the measure {a mathematical formula}dr(K,α|H). The second item shows that the measure {a mathematical formula}dr(K,α|H) exactly grasps the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}H from the point of view of causality.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       A causal model for inconsistency with a soft constraint
+      </section-title>
+      <paragraph>
+       Compared to the hard constraint, the soft constraint is given in the form of pairs of formulas that are not allowed to be removed together. Given an inconsistent knowledge base K with a soft constraint {a mathematical formula}C, besides the variables corresponding to formulas and minimal inconsistent subsets as above, we associate with each pair {a mathematical formula}(α,β)∈C a binary variable {a mathematical formula}L(α,β), whose value is 1 if and only if both α and β are removed from K. We use {a mathematical formula}L→ to denote the vector of all variables corresponding to pairs of {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}VK|C={Tα|α∈K}∪{SM|M∈MI(K)}∪{I}∪{L(α,β)|(α,β)∈C}. Then {a mathematical formula}RK|C(V)={0,1} for each {a mathematical formula}V∈VK|C.
+      </paragraph>
+      <paragraph>
+       Further, we define the following functions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}FTα(T→−Tα,S→,I,L→,U→)=Uα ({a mathematical formula}Tα=Uα for short) for every formula {a mathematical formula}α∈K.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FSM(T→,S→−SM,I,L→,U→)=∏α∈MTα ({a mathematical formula}SM=∏α∈MTα for short) for every minimal inconsistent subset {a mathematical formula}M∈MI(K).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FL(α,β)(S→,T→,I,L→−L(α,β),U→)=(1−Tα)×(1−Tβ) ({a mathematical formula}L(α,β)=(1−Tα)×(1−Tβ) for short) for every pair {a mathematical formula}(α,β)∈C.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FI(S→,T→,L→,U→)=(⨁M∈MI(K)SM)⊕(⨁(α,β)∈CL(α,β)) ({a mathematical formula}I=(⨁M∈MI(K)SM)⊕(⨁(α,β)∈CL(α,β)) for short).
+       </list-item>
+      </list>
+      <paragraph>
+       The function {a mathematical formula}FL(α,β) aims to capture the constraint that α and β are not allowed to be removed together from K, while the function {a mathematical formula}FI accords with the fact that we need to break all the minimal inconsistent subsets of K to restore consistency in K under the constraint {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       Now we are ready to construct a causal model for inconsistency in the presence of a soft constraint. Let K be a knowledge base, then a causal model for the problem of inconsistency of K in the presence of constraint {a mathematical formula}C, denoted {a mathematical formula}MK|C, is defined as {a mathematical formula}MK|C=〈SK|C,FK|C〉, where{a mathematical formula} and{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The number of endogenous variables in {a mathematical formula}MK|C is {a mathematical formula}|K|+|MI(K)|+|C|+1, which is considered as the size of {a mathematical formula}MK|C in computational complexity analysis.
+      </paragraph>
+      <paragraph>
+       We use the following example to illustrate the notion of causal model for the inconsistency in the presence of a soft constraint.
+      </paragraph>
+      <paragraph label="Example 6.2">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}, then we construct the causal model {a mathematical formula}MK|C as follows:
+       <list>
+        {a mathematical formula}Tα=Uα for all {a mathematical formula}α∈K.{a mathematical formula}SM1=Ta×T¬a,SM2=Ta×T¬a∨b×T¬b,SM3=T¬d×Td.{a mathematical formula}L(a,d)=(1−Ta)×(1−Td),L(a,¬d)=(1−Ta)×(1−T¬d),L(¬a,d)=(1−T¬a)×(1−Td),L(¬a,¬a∨b)=(1−T¬a)×(1−T¬a∨b),L(¬a∨b,d)=(1−T¬a∨b)×(1−Td).{a mathematical formula}I=SM1⊕SM2⊕SM3⊕L(a,d)⊕L(a,¬d)⊕L(¬a,d)⊕L(¬a,¬a∨b)⊕L(¬a∨b,d).This causal model for the inconsistency of
+       </list>
+       <paragraph>
+        K can be also represented by the causal network illustrated in Fig. 8.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       The following proposition provides an explanation for the measure {a mathematical formula}dr(K,α|C) from the point of view of causality.
+      </paragraph>
+      <paragraph label="Proposition 6.2">
+       Let K be an inconsistent knowledge base with a soft constraint{a mathematical formula}Cand α a formula of K. Then
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Tα=1is a cause of{a mathematical formula}I=1in{a mathematical formula}(MK|C,1→)if and only if there is at least one minimal{a mathematical formula}Y|{α}[C]-dominating set of{a mathematical formula}GK.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}dr((MK|C,1→),(Tα=1),(I=1))=dr(K,α|C).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let K be an inconsistent knowledge base with a soft constraint {a mathematical formula}C and {a mathematical formula}MK|C the causal model for the inconsistency of K in the presence of {a mathematical formula}C.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Sufficiency. If there is at least one minimal {a mathematical formula}Y|{α}[C]-dominating set of {a mathematical formula}GK, we only need to check AC2.Consider a smallest minimal {a mathematical formula}Y|{α}[C]-dominating set R of {a mathematical formula}GK. Let {a mathematical formula}W→=T→R∖{α}, where {a mathematical formula}T→R∖{α} is the vector of variables corresponding to the formulas in {a mathematical formula}R∖{α}.
+        <list>
+         AC2 (a). {a mathematical formula}R→=(Tα,W→)=0→ guarantees that {a mathematical formula}SM=0 for all {a mathematical formula}M∈MI(K). Moreover, the compatibility of R with constraint {a mathematical formula}C guarantees that {a mathematical formula}L(β,γ)=0 holds for every pair {a mathematical formula}(β,γ)∈C. So, if {a mathematical formula}Tα=0 and {a mathematical formula}W→=0→, then {a mathematical formula}I=0. That is,{a mathematical formula}AC2 (b). Consider {a mathematical formula}Z→=T→−W→. If {a mathematical formula}Tα=1 and {a mathematical formula}Z→′=1→ for all subsets {a mathematical formula}Z→′ of {a mathematical formula}Z→−Tα→, then from the minimality of R as a {a mathematical formula}Y|{α}[C]-dominating set, there is at least one minimal inconsistent subset M s.t. {a mathematical formula}α∈M and {a mathematical formula}SM=1 when {a mathematical formula}W→=0→. That is,{a mathematical formula}Necessity
+        </list>
+        <paragraph>
+         . Suppose that {a mathematical formula}Tα=1 is a cause of {a mathematical formula}I=1, then there exists a partition {a mathematical formula}(Z→,W→) satisfying AC2. Moreover, the set of formulas corresponding to {a mathematical formula}{Tα}∪W→ is a {a mathematical formula}Y|{α}[C]-dominating set of {a mathematical formula}GK. Then there exists at least one minimal {a mathematical formula}Y[C]-dominating set {a mathematical formula}R′ such that {a mathematical formula}R′⊆R and {a mathematical formula}α∈R′. On the contrary, it is that {a mathematical formula}α∉R′ holds for all {a mathematical formula}Y[C]-dominating set {a mathematical formula}R′ such that {a mathematical formula}R′⊆R. This implies that{a mathematical formula} where {a mathematical formula}WR′→ is the vector of variables corresponding to formulas in {a mathematical formula}R′. This contradicts A2(b).
+        </paragraph>
+       </list-item>
+       <list-item label="2.">
+        From the proof for sufficiency above, we know that no subset of {a mathematical formula}W→ satisfies AC2. Then{a mathematical formula} if {a mathematical formula}(Tα=1) is a cause of {a mathematical formula}I=1. Otherwise{a mathematical formula} So,{a mathematical formula} □
+       </list-item>
+      </list>
+      <paragraph>
+       The first item of this proposition shows that only formulas involved in a minimal {a mathematical formula}Y[C]-dominating set of {a mathematical formula}GK may be considered as causes of the inconsistency in a knowledge base in the presence of a soft constraint {a mathematical formula}C. This accords with that only formulas involved in minimal {a mathematical formula}Y[C]-dominating sets of {a mathematical formula}GK have to bear nonzero responsibilities for the inconsistency of a knowledge base with the constraint in the context of the measure {a mathematical formula}dr(K,α|C). The second item shows that the measure {a mathematical formula}dr(K,α|C) exactly grasps the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}C from the point of view of causality.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       A causal model for inconsistency with a mixed constraint
+      </section-title>
+      <paragraph>
+       Given an inconsistent knowledge base K with a mixed constraint {a mathematical formula}(H,C), the causal model for the inconsistency of K in the presence of {a mathematical formula}(H,C), denoted {a mathematical formula}MK|(H,C), can be constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the set {a mathematical formula}VK|(H,C) of endogenous variables consists of all the variables involved in {a mathematical formula}MK|H and {a mathematical formula}MK|C, i.e.,{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}RK|(H,C)(V)={0,1} for each {a mathematical formula}V∈VK|(H,C).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}SK|(H,C)=〈UK,VK|(H,C),RK|(H,C)〉.
+       </list-item>
+       <list-item label="•">
+        The functions are given as follows:
+       </list-item>
+      </list>
+      <paragraph>
+       Then the causal model can be given as {a mathematical formula}MK|(H,C)=〈SK|(H,C),FK|(H,C)〉, where{a mathematical formula} and{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The number of endogenous variables in {a mathematical formula}MK|C is {a mathematical formula}|K|+|MI(K)|+|C|+3, which is considered as the size of {a mathematical formula}MK|(H,C) in computational complexity analysis.
+      </paragraph>
+      <paragraph>
+       We use the following example to illustrate the notion of causal model for the inconsistency in the presence of a mixed constraint.
+      </paragraph>
+      <paragraph label="Example 6.3">
+       Consider {a mathematical formula}K={a,¬a,¬a∨b,¬b,c,d,¬d} again. Suppose that {a mathematical formula}H=({a},{¬d}) and {a mathematical formula}C={(a,d),(a,¬d),(¬a,d),(¬a,¬a∨b),(¬a∨b,d)}, then we construct the causal model {a mathematical formula}MK|(H,C) as follows:
+       <list>
+        {a mathematical formula}Tα=Uα for all {a mathematical formula}α∈K.{a mathematical formula}SM1=Ta×T¬a,SM2=Ta×T¬a∨b×T¬b,SM3=T¬d×Td.{a mathematical formula}HP=1−Ta,HQ=T¬d⊕(1−Td).{a mathematical formula}L(a,d)=(1−Ta)×(1−Td),L(a,¬d)=(1−Ta)×(1−T¬d),L(¬a,d)=(1−T¬a)×(1−Td),L(¬a,¬a∨b)=(1−T¬a)×(1−T¬a∨b),L(¬a∨b,d)=(1−T¬a∨b)×(1−Td).{a mathematical formula}I=SM1⊕SM2⊕SM3⊕L(a,d)⊕L(a,¬d)⊕L(¬a,d)⊕L(¬a,¬a∨b)⊕L(¬a∨b,d)⊕HP⊕HQ.This causal model for the inconsistency of
+       </list>
+       <paragraph>
+        K can be also represented by the causal network illustrated in Fig. 9.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       The following proposition provides an explanation for the measure {a mathematical formula}dr(K,α|H,C) from the point of view of causality.
+      </paragraph>
+      <paragraph label="Proposition 6.3">
+       Let K be an inconsistent knowledge base with a mixed constraint{a mathematical formula}(H,C)and α a formula of K, where{a mathematical formula}H=(P,Q). Then
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Tα=1is a cause of{a mathematical formula}I=1in{a mathematical formula}(MK|(H,C),1→)if and only if there is at least one minimal{a mathematical formula}Y|Q∪{α}[C]-dominating set of{a mathematical formula}GK|H.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}dr((MK|(H,C),1→),(Tα=1),(I=1))=dr(K,α|H,C).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let K be an inconsistent knowledge base with a mixed constraint {a mathematical formula}(H=(P,Q),C) and {a mathematical formula}MK|(H,C) the causal model for the inconsistency of K in the presence of the mixed constraint.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Sufficiency. If there is at least one minimal {a mathematical formula}Y|Q∪{α}[C]-dominating set of {a mathematical formula}GK|H, we only need to check AC2. Consider a smallest minimal {a mathematical formula}Y|Q∪{α}[C]-dominating set R of {a mathematical formula}GK|H. Let {a mathematical formula}W→=T→R∖{α}.
+        <list>
+         AC2 (a). From the proof of Proposition 6.1,{a mathematical formula} for all {a mathematical formula}M∈MI(K), and{a mathematical formula}{a mathematical formula} From the proof of Proposition 6.2,{a mathematical formula} for every pair {a mathematical formula}(β,γ)∈C. Then{a mathematical formula} i.e.,{a mathematical formula}AC2 (b). Consider {a mathematical formula}Z→=T→−W→. If {a mathematical formula}Tα=1 and {a mathematical formula}Z→′=1→ for all subsets {a mathematical formula}Z→′ of {a mathematical formula}Z→−Tα→, then from the minimality of R as a {a mathematical formula}Y|Q∪{α}[C]-dominating set, there is at least one minimal inconsistent subset {a mathematical formula}M′ s.t. {a mathematical formula}α∈M′ and {a mathematical formula}SM′=1 when {a mathematical formula}W→=0→. That is,{a mathematical formula}Necessity
+        </list>
+        <paragraph>
+         . If {a mathematical formula}Tα=1 is a cause of {a mathematical formula}I=1, then there exists a partition {a mathematical formula}(Z→,W→) satisfying AC2. Let {a mathematical formula}RW be the set of formulas corresponding to {a mathematical formula}{Tα}∪W→. Then {a mathematical formula}RW is a {a mathematical formula}Y|Q∪{α}[C]-dominating set of {a mathematical formula}GK|H, moreover, there exists a minimal {a mathematical formula}Y|Q[C]-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}R⊆RW. Suppose that any minimal {a mathematical formula}Y|[C]Q-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}R⊆RW does not contain α, then {a mathematical formula}α∉Q and there exists a minimal {a mathematical formula}Y|Q[C]-dominating set {a mathematical formula}R′ of {a mathematical formula}GK|H such that {a mathematical formula}R′⊆RW∖{α}. This implies that{a mathematical formula} This contradicts A2(b). So, there exists at least one minimal {a mathematical formula}Y|Q[C]-dominating set R of {a mathematical formula}GK|H such that {a mathematical formula}α∈R. Hence, there exists at least one minimal {a mathematical formula}Y|{α}∪Q[C]-dominating set of {a mathematical formula}GK|H.
+        </paragraph>
+       </list-item>
+       <list-item label="2.">
+        From the proof for sufficiency above, we know that no subset of {a mathematical formula}W→ satisfies AC2. Then{a mathematical formula} if {a mathematical formula}(Tα=1) is a cause of {a mathematical formula}I=1. Otherwise{a mathematical formula} So,{a mathematical formula} □
+       </list-item>
+      </list>
+      <paragraph>
+       The first item of this proposition shows that only formulas involved in a minimal {a mathematical formula}Y|Q[C]-dominating set of {a mathematical formula}GK|H may be considered as causes of the inconsistency in a knowledge base in the presence of a mixed constraint {a mathematical formula}(H,C). This accords with that only formulas involved in minimal {a mathematical formula}Y|Q[C]-dominating sets of {a mathematical formula}GK|H have to bear nonzero responsibilities for the inconsistency of a knowledge base with the constraint in the context of the measure {a mathematical formula}dr(K,α|H,C). The second item shows that the measure {a mathematical formula}dr(K,α|H,C) exactly grasps the degree of responsibility of α for the inconsistency of K in the presence of {a mathematical formula}(H,C) from the point of view of causality.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Logical properties and computational complexity
+     </section-title>
+     <paragraph>
+      In this section, we discuss some interesting logical properties for the base-level measure and the formula-level measure, respectively.
+     </paragraph>
+     <paragraph>
+      The following proposition shows that the base-level measure {a mathematical formula}Idr(K|H) is a bounded function w.r.t. the constraint {a mathematical formula}H.
+     </paragraph>
+     <paragraph label="Proposition 7.1">
+      Let K be a knowledge base with a hard constraint{a mathematical formula}H. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base with a hard constraint {a mathematical formula}H=(P,Q). Then any minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H must be a minimal Y-dominating set of {a mathematical formula}GK. So,{a mathematical formula} □
+     </paragraph>
+     <paragraph label="Proposition 7.2">
+      Let {a mathematical formula}H=(P,Q) and {a mathematical formula}H′=(P′,Q′) two hard constraints for K, we say that {a mathematical formula}H⊆H′ if {a mathematical formula}P⊆P′ and {a mathematical formula}Q⊆Q′. Then the following proposition shows that the base-level measure {a mathematical formula}Idr(K|H) is a monotonic function w.r.t. the constraint {a mathematical formula}H. Let K be a knowledge base and{a mathematical formula}Hand{a mathematical formula}H′two hard constraints for K such that{a mathematical formula}H⊆H′. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}H=(P,Q) and {a mathematical formula}H′=(P′,Q′) two hard constraints for K such that {a mathematical formula}H⊆H′. Then any minimal {a mathematical formula}Y|Q′-dominating set of {a mathematical formula}GK|H′ must be a minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H. Therefore the inequality (7.1) holds. □
+     </paragraph>
+     <paragraph label="Corollary 7.1">
+      In particular, we have the following result about the protected-formulas constraint. Let K be a knowledge base. Then{a mathematical formula}Idr(K|PN)≤Idr(K|PN′)for any two protected-formulas constraints P and{a mathematical formula}P′such that{a mathematical formula}P⊆P′.
+     </paragraph>
+     <paragraph label="Proof">
+      This is a direct consequence of Proposition 7.2. □
+     </paragraph>
+     <paragraph>
+      The following proposition shows that there is a special relation between {a mathematical formula}Idr(K|H) and the {a mathematical formula}Y|Q∩X(Gi)-domination number for each component {a mathematical formula}Gi of {a mathematical formula}GK|H.
+     </paragraph>
+     <paragraph label="Proposition 7.3">
+      Let K be a knowledge base with a hard constraint{a mathematical formula}H. Let{a mathematical formula}{G1,G2,⋯,Gm}be the set of components of the MIS-graph{a mathematical formula}GK|H. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let R be a minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H, then {a mathematical formula}R∩X(Gi) must be a minimal {a mathematical formula}Y|Q∩X(Gi)-dominating set of {a mathematical formula}Gi for all {a mathematical formula}1≤i≤m. Therefore,{a mathematical formula} □
+     </paragraph>
+     <paragraph>
+      In particular, we have the following result about {a mathematical formula}Idr.
+     </paragraph>
+     <paragraph label="Corollary 7.2">
+      Let K be a knowledge base and{a mathematical formula}{G1,G2,⋯,Gm}the set of components of the MIS-graph{a mathematical formula}GK. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      This is a direct consequence of Proposition 7.3. □
+     </paragraph>
+     <paragraph>
+      This corollary states that the measure {a mathematical formula}Idr(K) is exactly the sum of the measures of MIS-components of K.
+     </paragraph>
+     <paragraph>
+      Next we consider some properties of the formula-level measure. The following proposition shows that {a mathematical formula}dr(K,α|H) is anti-monotonic with regard to {a mathematical formula}H.
+     </paragraph>
+     <paragraph label="Proposition 7.4">
+      Let K be a knowledge base and α a formula of K. Then{a mathematical formula}holds for any two hard constraints{a mathematical formula}Hand{a mathematical formula}H′such that{a mathematical formula}H⊆H′.
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}H and {a mathematical formula}H′ two hard constraints for K such that {a mathematical formula}H⊆H′. Note that any minimal {a mathematical formula}Y|{α}∪Q′-dominating set of {a mathematical formula}GK|H′ must be a minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If there exists at least one minimal {a mathematical formula}Y|{α}∪Q′-dominating set of {a mathematical formula}GK|H′, then{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       Otherwise,{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph label="Corollary 7.3">
+      Let K be a knowledge base and α a formula of K. Then
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}dr(K,α|H)≤dr(K,α)for any hard constraint{a mathematical formula}H.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}dr(K,α|PN′)≤dr(K,α|PN)for any two protected-formulas constraints P and{a mathematical formula}P′such that{a mathematical formula}P⊆P′.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      This is a direct consequence of Proposition 7.4. □
+     </paragraph>
+     <paragraph>
+      The following proposition allows us to look inside the role of each component of the MIS-graph with a hard constraint in identifying the degree of responsibility of a given formula for the inconsistency.
+     </paragraph>
+     <paragraph label="Proposition 7.5">
+      Let K be a knowledge base with a hard constraint{a mathematical formula}H=(P,Q)and α a formula of K. Suppose that{a mathematical formula}{G1,G2,⋯,Gm}is the set of components of the MIS-graph{a mathematical formula}GK|Hand{a mathematical formula}α∈X(G1). Then{a mathematical formula}where{a mathematical formula}Xi=Q∩X(Gi)for{a mathematical formula}i=1,2,⋯,m.
+     </paragraph>
+     <paragraph label="Proof">
+      If there is no minimal {a mathematical formula}Y|{α}∪X1-dominating set of {a mathematical formula}G1, then there is no minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H. On the other hand, if R is a smallest minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H, then {a mathematical formula}R∩X(G1) is a smallest minimal {a mathematical formula}Y|{α}∪X1-dominating set of {a mathematical formula}G1, and {a mathematical formula}R∩X(Gi) must be a smallest minimal {a mathematical formula}Y|Q∩X(Gi)-dominating set of {a mathematical formula}Gi for all {a mathematical formula}2≤i≤m. Therefore the equation (7.3) holds. □
+     </paragraph>
+     <paragraph>
+      Next we consider the cases that hard constraints have no impact on the two measures, respectively.
+     </paragraph>
+     <paragraph label="Proposition 7.6">
+      Let K be a knowledge base with a hard constraint{a mathematical formula}H. Then{a mathematical formula}if and only if there exists at least one smallest minimal Y-dominating set R of{a mathematical formula}GKsuch that{a mathematical formula}R∩P=∅and{a mathematical formula}Q⊆R.
+     </paragraph>
+     <paragraph label="Proof">
+      If R is a smallest minimal Y-dominating set of {a mathematical formula}GK such that {a mathematical formula}R∩P=∅ and {a mathematical formula}Q⊆R, then R is also a smallest minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H. So,{a mathematical formula} On the other hand, if R is a smallest minimal {a mathematical formula}Y|Q-dominating set of {a mathematical formula}GK|H, then R must be a minimal Y-dominating set of {a mathematical formula}GK such that {a mathematical formula}R∩P=∅ and {a mathematical formula}Q⊆R i.e.,{a mathematical formula} Further, if{a mathematical formula} then R must be a smallest minimal Y-dominating set of {a mathematical formula}GK. □
+     </paragraph>
+     <paragraph>
+      This proposition shows that a hard constraint {a mathematical formula}(P,Q) cannot affect the degree of inconsistency of K if there exists at least one smallest minimal Y-dominating set of {a mathematical formula}GK compatible with the hard constraint. Similarly, given a formula α involved in the inconsistency, a hard constraint {a mathematical formula}(P,Q) cannot affect the degree of responsibility of α for the inconsistency if there exists at least one smallest minimal {a mathematical formula}Y|{α}-dominating set of {a mathematical formula}GK compatible with the hard constraint.
+     </paragraph>
+     <paragraph label="Proposition 7.7">
+      Let K be an inconsistent knowledge base with a hard constraint{a mathematical formula}H=(P,Q)and α a formula of{a mathematical formula}⋃MI(K). Then{a mathematical formula}if and only if there exists at least one smallest minimal{a mathematical formula}Y|{α}-dominating set R of{a mathematical formula}GKsuch that{a mathematical formula}R∩P=∅and{a mathematical formula}Q⊆R.
+     </paragraph>
+     <paragraph label="Proof">
+      If R is a smallest minimal {a mathematical formula}Y|{α}-dominating set of {a mathematical formula}GK such that {a mathematical formula}R∩P=∅ and {a mathematical formula}Q⊆R, then R is also a smallest minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H. So,{a mathematical formula} On the other hand, {a mathematical formula}dr(K,α)=dr(K,α|H) implies that {a mathematical formula}0&lt;dr(K,α|H)=1|R|, where R is a smallest minimal {a mathematical formula}Y|{α}∪Q-dominating set of {a mathematical formula}GK|H. Then R must be a minimal {a mathematical formula}Y|{α}-dominating set of {a mathematical formula}GK such that {a mathematical formula}R∩P=∅ and {a mathematical formula}Q⊆R. So,{a mathematical formula} Further, if{a mathematical formula} then R must be a smallest minimal {a mathematical formula}Y|{α}-dominating set of {a mathematical formula}GK. □
+     </paragraph>
+     <paragraph>
+      The following proposition gives us the minimum nonzero responsibility that a formula involved in the inconsistency has to bear in the presence of a hard constraint.
+     </paragraph>
+     <paragraph label="Proposition 7.8">
+      Let K be an inconsistent knowledge base with a hard constraint{a mathematical formula}H=(P,Q)and α a formula of{a mathematical formula}⋃MI(K). Then{a mathematical formula}if{a mathematical formula}dr(K,α|H)&gt;0, where{a mathematical formula}R0is the largest minimal{a mathematical formula}Y|Q∪{α}-dominating set of{a mathematical formula}GK.
+     </paragraph>
+     <paragraph label="Proof">
+      If R is a minimal {a mathematical formula}Y|Q∪{α}-dominating set of {a mathematical formula}GK|H, then R must be a minimal {a mathematical formula}Y|Q∪{α}-dominating set of {a mathematical formula}GK. So, {a mathematical formula}|R|≤|R0|. Therefore,{a mathematical formula} □
+     </paragraph>
+     <paragraph>
+      Lastly, we consider the formulas that needn't bear any responsibility for the inconsistency in the presence of a hard constraint.
+     </paragraph>
+     <paragraph label="Proposition 7.9">
+      Let K be an inconsistent knowledge base with a hard constraint{a mathematical formula}H=(P,Q)and α a formula of K. Then
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       {a mathematical formula}dr(K,α|H)=dr(K,α)=0if and only if α is a free formula.
+      </list-item>
+      <list-item label="(2)">
+       {a mathematical formula}0=dr(K,α|H)&lt;dr(K,α)if and only if{a mathematical formula}α∈P∪N(K|H), where{a mathematical formula}N(K|H)={β∈X(GK|H)|∀R∈MC(K)s.t.R∩P=∅andQ⊆R,β∉R}.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      It is a direct consequence of definition of {a mathematical formula}dr(K,α|H). □
+     </paragraph>
+     <paragraph>
+      The following proposition shows that the base-level measure {a mathematical formula}Idr(K|C) is a bounded function w.r.t. the constraint {a mathematical formula}C.
+     </paragraph>
+     <paragraph label="Proposition 7.10">
+      Let K be a knowledge base with a soft constraint{a mathematical formula}C. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base with a soft constraint {a mathematical formula}C. Then any minimal {a mathematical formula}Y[C]-dominating set of {a mathematical formula}GK must be a minimal Y-dominating set of {a mathematical formula}GK. So,{a mathematical formula} □
+     </paragraph>
+     <paragraph>
+      The following proposition shows that the base-level measure {a mathematical formula}Idr(K|C) is a monotonic function w.r.t. the constraint {a mathematical formula}C.
+     </paragraph>
+     <paragraph label="Proposition 7.11">
+      Let K be a knowledge base and{a mathematical formula}Cand{a mathematical formula}C′two soft constraints for K such that{a mathematical formula}C⊆C′. Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}C and {a mathematical formula}C′ two soft constraints for K such that {a mathematical formula}C⊆C′. Then any minimal {a mathematical formula}Y[C′]-dominating set of {a mathematical formula}GK must be a minimal {a mathematical formula}Y[C]-dominating set of {a mathematical formula}GK. So, the inequality (7.4) holds. □
+     </paragraph>
+     <paragraph>
+      The following proposition shows that {a mathematical formula}dr(K,α|C) is anti-monotonic with regard to {a mathematical formula}C.
+     </paragraph>
+     <paragraph label="Proposition 7.12">
+      Let K be a knowledge base and α a formula of K. Then{a mathematical formula}holds for any two soft constraints{a mathematical formula}Cand{a mathematical formula}C′such that{a mathematical formula}C⊆C′.
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}C and {a mathematical formula}C′ two soft constraints for K such that {a mathematical formula}C⊆C′. Note that any minimal {a mathematical formula}Y|{α}[C′]-dominating set of {a mathematical formula}GK must be a minimal {a mathematical formula}Y|{α}[C]-dominating set of {a mathematical formula}GK. Then{a mathematical formula} if there exists at least one minimal {a mathematical formula}Y|{α}[C′]-dominating set of {a mathematical formula}GK. If there exists at least one minimal {a mathematical formula}Y|{α}[C]-dominating set of {a mathematical formula}GK but {a mathematical formula}γY|{α}[C′](GK)=0, then{a mathematical formula} If {a mathematical formula}γY|{α}[C′](GK)=γY|{α}[C](GK)=0, then{a mathematical formula} So, the inequality (7.5) holds for any two soft constraints {a mathematical formula}C and {a mathematical formula}C′ such that {a mathematical formula}C⊆C′. □
+     </paragraph>
+     <paragraph>
+      As a natural generalization of measures for the hard and soft constraints, the measures for the mixed constraint has the following properties.
+     </paragraph>
+     <paragraph label="Proposition 7.13">
+      Let K be a knowledge base. Then
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       {a mathematical formula}max⁡{Idr(K|H),Idr(K|C)}≤Idr(K|H,C).
+      </list-item>
+      <list-item label="(2)">
+       {a mathematical formula}Idr(K|H,C)≤Idr(K|H′,C′)for any two mixed constraints{a mathematical formula}(H,C)and{a mathematical formula}(H′,C′)such that{a mathematical formula}H⊆H′and{a mathematical formula}C⊆C′.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}(H,C) and {a mathematical formula}(H′,C′) two mixed constraints for K such that {a mathematical formula}H⊆H′ and {a mathematical formula}C⊆C′. Suppose that {a mathematical formula}H=(P,Q) and {a mathematical formula}H′=(P′,Q′).
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       Let R be a minimal {a mathematical formula}Y|Q[C]-dominating set for {a mathematical formula}GK|H, then R must be a minimal {a mathematical formula}Y[C]-dominating set. So, {a mathematical formula}Idr(K|C)≤Idr(K|H,C). Also, R must be a minimal {a mathematical formula}Y|Q-dominating set. Then {a mathematical formula}Idr(K|H)≤Idr(K|H,C). Therefore,{a mathematical formula}
+      </list-item>
+      <list-item label="(2)">
+       Let R be a minimal {a mathematical formula}Y|Q′[C′]-dominating set for {a mathematical formula}GK|H′, then R must be a minimal {a mathematical formula}Y|Q[C]-dominating set for {a mathematical formula}GK|H. So,{a mathematical formula} □
+      </list-item>
+     </list>
+     <paragraph label="Proposition 7.14">
+      Let K be a knowledge base and α a formula of K. Then
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       {a mathematical formula}dr(K,α|H,C)≤min⁡{dr(K,α|H),dr(K,α|C)}.
+      </list-item>
+      <list-item label="(2)">
+       {a mathematical formula}dr(K,α|H,C)≥dr(K,α|H′,C′)for any two mixed constraints{a mathematical formula}(H,C)and{a mathematical formula}(H′,C′)such that{a mathematical formula}H⊆H′and{a mathematical formula}C⊆C′.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Let K be a knowledge base and {a mathematical formula}(H,C) and {a mathematical formula}(H′,C′) two mixed constraints for K such that {a mathematical formula}H⊆H′ and {a mathematical formula}C⊆C′. Suppose that {a mathematical formula}H=(P,Q) and {a mathematical formula}H′=(P′,Q′).
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       If either {a mathematical formula}dr(K,α|H)=0 or {a mathematical formula}dr(K,α|C)}=0, then {a mathematical formula}dr(K,α|H,C)=0. If {a mathematical formula}dr(K,α|H,C)&gt;0, suppose that R be a minimal {a mathematical formula}Y|[C]Q∪{α}-dominating set for {a mathematical formula}GK|H, then R must be a minimal {a mathematical formula}Y|{α}[C]-dominating set of {a mathematical formula}GK. So, {a mathematical formula}dr(K,α|C)≥dr(K,α|H,C). Also, R must be a minimal {a mathematical formula}Y|Q∪{α}-dominating set of {a mathematical formula}GK|H. Then {a mathematical formula}dr(K,α|H)≥dr(K,α|H,C). Therefore,{a mathematical formula}
+      </list-item>
+      <list-item label="(2)">
+       Let α be a formula of K.
+      </list-item>
+     </list>
+     <paragraph>
+      Lastly, we consider the relation between the base-level and the formula-level inconsistency measures.
+     </paragraph>
+     <paragraph label="Proposition 7.15">
+      Let K be an inconsistent knowledge base.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Let{a mathematical formula}Hbe a hard constraint. Then{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       Let{a mathematical formula}Cbe a soft constraint. Then{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       Let{a mathematical formula}(H,C)be a mixed constraint. Then{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      This is a direct consequence of definitions of {a mathematical formula}Idr and dr. □
+     </paragraph>
+     <paragraph>
+      This proposition shows that the base-level measure can be derived from the corresponding formula-level measure. This is why we use the subscript dr in the base-level measure.
+     </paragraph>
+     <paragraph>
+      Now we turn to the complexity issue. We assume that the reader is familiar with the basics of complexity, in particular the polynomial hierarchy.
+     </paragraph>
+     <paragraph>
+      It has been shown that computing the degree of responsibility in binary models is {a mathematical formula}FPNP[log⁡n]-complete [3]. In general case, it has been shown that computing the degree of responsibility is {a mathematical formula}FPΣ2P[log⁡n]-complete in general recursive models [2].
+     </paragraph>
+     <paragraph>
+      At first, we give the following proposition presented in [3].
+     </paragraph>
+     <paragraph label="Proposition 7.16">
+      Computing the degree of responsibility is{a mathematical formula}FPNP[log⁡n]-complete in binary causal models.
+     </paragraph>
+     <paragraph>
+      Note that all the formula-level measures are based on the MIS-graph, which stems from the set of minimal inconsistent subsets of that base. Once the set of minimal inconsistent subsets of a knowledge base K is given, we can construct a binary causal model {a mathematical formula}MK|H (resp. {a mathematical formula}MK|C, and {a mathematical formula}MK|(H,C)) for K with the constraint {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)) in polynomial time (with regard to {a mathematical formula}|K|+|MI(K)|), by following the procedure mentioned in Section 6. Then we can get the following corollaries.
+     </paragraph>
+     <paragraph label="Corollary 7.4">
+      Computing the degree of responsibility of a formula in a knowledge base with a hard constraint for the inconsistency is{a mathematical formula}FPNP[log⁡n]-complete when the set of minimal inconsistent subsets of the knowledge base is given.
+     </paragraph>
+     <paragraph label="Proof">
+      It is a direct consequence of Proposition 7.16. □
+     </paragraph>
+     <paragraph label="Corollary 7.5">
+      Computing the degree of responsibility of a formula in a knowledge base with a soft constraint for the inconsistency is{a mathematical formula}FPNP[log⁡n]-complete when the set of minimal inconsistent subsets of the knowledge base is given.
+     </paragraph>
+     <paragraph label="Proof">
+      It is a direct consequence of Proposition 7.16. □
+     </paragraph>
+     <paragraph label="Corollary 7.6">
+      Computing the degree of responsibility of a formula in a knowledge base with a mixed constraint for the inconsistency is{a mathematical formula}FPNP[log⁡n]-complete when the set of minimal inconsistent subsets of the knowledge base is given.
+     </paragraph>
+     <paragraph label="Proof">
+      It is a direct consequence of Proposition 7.16. □
+     </paragraph>
+     <paragraph>
+      Compared to the complexity for computing responsibility of a formula in the case without constraint in [21], the three corollaries imply that introducing the constraints does not make the complexity of computing the formula-level measure harder in the case that the set of minimal inconsistent subsets in given.
+     </paragraph>
+     <paragraph>
+      According to Proposition 7.15, {a mathematical formula}Idr(K|H) (resp. {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C)) can be computed by computing {a mathematical formula}dr(K,α|H) (resp. {a mathematical formula}dr(K,α|C), and {a mathematical formula}dr(K,α|H,C)) for each formula {a mathematical formula}α∈K. Recall that there are {a mathematical formula}|K|+|MI(K)|+3 (resp. {a mathematical formula}|K|+|MI(K)|+|C|+1, and {a mathematical formula}|K|+|MI(K)|+|C|+3) endogenous variables in {a mathematical formula}MK|H (resp. {a mathematical formula}MK|C, and {a mathematical formula}MK|(H,C)) for K with the constraint {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)). Then {a mathematical formula}Idr(K|H), {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C) can be computed with {a mathematical formula}|K|⌈log⁡(|K|+|MI(K)|+3)⌉, {a mathematical formula}|K|⌈log⁡(|K|+|MI(K)|+|C|+1)⌉, and {a mathematical formula}|K|⌈log⁡(|K|+|MI(K)|+|C|+3)⌉ queries to their own NP oracles, respectively, according to the three corollaries above. Then computing {a mathematical formula}Idr(K|H), {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C) are also in {a mathematical formula}FPNP once the set of minimal inconsistent subsets is given.
+     </paragraph>
+     <paragraph>
+      On the other hand, the correspondence between minimal correction subsets and minimal Y-dominating sets provides an alternative way to compute the measures when the set of minimal inconsistent subsets is not given. For the three base-level measures, we need to identify the smallest size of minimal correction subsets compatible with their own respective constraints. For the three formula-level measures, we need to identify the smallest size of compatible minimal correction subsets that contain the given formula. However, to the best of our knowledge, the complexity of identifying the smallest size of minimal correction subsets compatible with the given constraint is still open.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In this section, we compare our measures for inconsistency with constraints with some closely related work.
+     </paragraph>
+     <paragraph>
+      Measuring inconsistency has been increasingly recognized as one of the most important subprocesses for understanding and handling inconsistency for knowledge bases. Most of the inconsistency measures presented so far do not take into account constraints for resolving inconsistency explicitly. To the best of our knowledge, our approach presented in this paper is the first attempt to measure the inconsistency for knowledge bases in the presence of constraints.
+     </paragraph>
+     <paragraph>
+      The MIS-graph plays a central role in our approaches to measuring inconsistency in the presence of constraints. The MUS-graph presented in [9] is very closely related to the MIS-graph. Roughly speaking, the MUS-graph of a knowledge base is a graph with vertices corresponding to minimal inconsistent subsets of that base such that two vertices are adjacent if and only if the corresponding minimal inconsistent subsets have common formulas. Given a knowledge base K, we use {a mathematical formula}GMUS(K) to denote the MUS-graph of K, then
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}V(GMUS(K))=MI(K)=Y(GK), and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}(M,M′)∈E(GMUS(K)) if {a mathematical formula}M∩M′≠∅.
+      </list-item>
+     </list>
+     <paragraph>
+      Obviously, M and {a mathematical formula}M′ are adjacent in {a mathematical formula}GMUS(K) if and only if M and {a mathematical formula}M′ are Y-adjacent in the MIS-graph {a mathematical formula}GK. This means that the MUS-graph {a mathematical formula}GMUS(K) can be derived from the MIS-graph {a mathematical formula}GK. Moreover, the distance {a mathematical formula}dMUS(M,M′) between two connected minimal inconsistent subsets M and {a mathematical formula}M′ in the MUS-graph defined in [9] can be represented by the distance between M and {a mathematical formula}M′ in the MIS-graph, i.e.,{a mathematical formula} if M and {a mathematical formula}M′ are involved in the same component of {a mathematical formula}GK.
+     </paragraph>
+     <paragraph>
+      In addition, the distance {a mathematical formula}dMUS(α,M) between a formula α and a minimal inconsistent subset M is defined as the shortest distance in the MUS-graph between M and a minimal inconsistent subset {a mathematical formula}M′ containing α, i.e., {a mathematical formula}dMUS(α,M)=min⁡{dMUS(M,M′)|α∈M′}[9]. However, the MIS-graph {a mathematical formula}GK allows us to define the distance between α and M directly (i.e., the length of the shortest path from α to M), moreover,{a mathematical formula} if α and M are involved in the same component of {a mathematical formula}GK. This implies that the family of distance-based DIM measures presented in [9] can be also derived from the MIS-graph.
+     </paragraph>
+     <paragraph>
+      The equivalence of the adjacency of M and {a mathematical formula}M′ in the MUS-graph and the Y-adjacency of M and {a mathematical formula}M′ in the MIS-graph also implies that the MUS-graph and the MIS-graph have the same number of components. Then a special instance of the inconsistency measure of {a mathematical formula}ICC, denoted {a mathematical formula}ICC0(K) here, defined as the number of connected components of the MUS-graph [9], can also be given by the MIS-graph {a mathematical formula}GK.
+     </paragraph>
+     <paragraph>
+      Compared the MUS-graph, the MIS-graph provides more information on associations between minimal inconsistent subsets. In each component of the MIS-graph of a knowledge base, the sequence of vertices in a path between two minimal inconsistent subsets is an alternating sequence of minimal inconsistent subsets and formulas instead of a sequence of minimal inconsistent subsets. This makes such a path allow us to look inside the association between the two minimal inconsistent subsets to explain how the two minimal inconsistent subsets are associated with each other. This is important to identify the role of each formula in causing the inconsistency in that base, especially in the case with constraints.
+     </paragraph>
+     <paragraph>
+      This also implies that the MUS-graph is not a suitable framework for incorporating constraints on modifying inconsistency in representation of inconsistency. Then it is not easy to extend the DIM measures built upon the MUS-graph in [9] to the case with constraints directly.
+     </paragraph>
+     <paragraph>
+      However, given an inconsistent knowledge base K, the MIS-graph {a mathematical formula}GK provides a picture for the set of minimal inconsistent subsets of that base from multiple perspectives. Besides the number of minimal inconsistent subsets ({a mathematical formula}|Y(GK)|) and the set of formulas involved in the minimal inconsistent subsets ({a mathematical formula}|X(GK)|), each subgraph of the MIS-graph induced by a minimal inconsistent subset and its neighboring formulas describes the inner structure of that minimal inconsistent subset, while each subgraph induced by a formula and its neighboring minimal inconsistent subsets describes all the membership of that formula in minimal inconsistent subsets. Then the inconsistency measures based on minimal inconsistent subsets (MIS-based inconsistency measures for short) can be expressed alternatively in terms of the MIS-graph. For example, consider the following representative MIS-based inconsistency measures proposed in [7], [8]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       MI inconsistency measure (Base-level): {a mathematical formula}IMI(K)=|MI(K)|.
+      </list-item>
+      <list-item label="•">
+       MinInc inconsistency values (Formula-level):
+      </list-item>
+     </list>
+     <paragraph>
+      Evidently, these inconsistency measures can be given alternatively as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}IMI(K)=|Y(GK)|.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}∀α∈K, {a mathematical formula}MIVD(K,α)={1,ifα∈X(GK),0,otherwise.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}∀α∈K, {a mathematical formula}MIV♯(K,α)={degGK(α),ifα∈X(GK),0,otherwise.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}∀α∈K, {a mathematical formula}MIVC(K,α){a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      More importantly, each minimal Y-dominating set of the MIS-graph {a mathematical formula}GK is exactly a minimal correction subset of K. This correspondence between minimal correction subsets and minimal Y-dominating sets provides a good starting point to incorporate constraints on modifying formulas in measuring inconsistency. Intuitively, the inconsistency in a knowledge base counterfactually depends on each minimal correction subset from the point of view of causality. Then the minimal correction subsets compatible to a given hard (or soft) constraint are of interest in explaining and measuring the inconsistency for a knowledge base with constraints from the context of causality. On the other hand, this correspondence allows us to understand intuitively and concisely the role of each formula in a minimal correction subset in breaking minimal inconsistent subsets by via of minimal Y-dominating set in the MIS-graph in the presence of constraints. This can help us better understand the formula-level inconsistency measure from the context of causality as well as from the perspective of syntax-based inconsistency handling.
+     </paragraph>
+     <paragraph>
+      Our base-level inconsistency measure {a mathematical formula}Idr(K|H) (resp. {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C)) is exactly the minimum size of minimal correction subsets of K that are compatible with the hard constraint {a mathematical formula}H (resp. soft constraint {a mathematical formula}C, and mixed constraint {a mathematical formula}(H,C)). From the point of view of causality, each kind of the base-level measures grasps the smallest sets of formulas which the inconsistency counterfactually depends on in the presence of the corresponding constraint, because the inconsistency in K would not have happened if each of formulas in such a set had not belonged to K. On the other hand, if we consider the size of each minimal correction subset compatible with the corresponding constraint as an evaluation of effort to restoring the consistency by removing the subset, then the base-level measure grasps the minimum cost of restoring the consistency by removing the formulas in the presence of the constraint. This means that the base-level inconsistency measure can also be explained from the point of view that an evaluation of inconsistency in a base should take into account the cost of actions needed to render the base consistent [13].
+     </paragraph>
+     <paragraph>
+      Along this line, the minimum cost of restoring consistency by removing the formulas is not greater than the number of minimal inconsistent subsets, but not less than the number of clusters of minimal inconsistent subsets (according to Proposition 7.3), then it is not surprising that{a mathematical formula} holds for any knowledge base K and any constraints {a mathematical formula}H and {a mathematical formula}C compatible with K.
+     </paragraph>
+     <paragraph>
+      To the best of our knowledge, there is no property designed for inconsistency measures in the presence of constraint. However, in last section we proposed several properties to characterize how the measures change as the constraints change. For example, we have shown that all the base-level inconsistency measures {a mathematical formula}Idr(K|H), {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C) are monotonic w.r.t. constraint and bounded, especially, {a mathematical formula}Idr(K) is the common lower bound of the measures under constraints. These properties signify that the base-level measures grasp the intuition that the cost of restoring consistency cannot decrease when constraints on modifying formulas are considered. We also characterized the invariant property of measures under some special constraints.
+     </paragraph>
+     <paragraph>
+      If there is no constraint, all of the measures under constraints {a mathematical formula}Idr(K|H), {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C) are reduced to {a mathematical formula}Idr(K). In contrast to the case with constraints, several properties have been presented to characterize inconsistency measures for knowledge bases without constraints. For example, Hunter and Konieczny have presented the properties of Consistency, MinInc, Free Formula Independence, Monotony and Dominance in [6], [8]. Let I be a nonnegative base-level inconsistency measure and K a knowledge base, then
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Consistency: {a mathematical formula}I(K)=0 if and only if K is consistent.
+      </list-item>
+      <list-item label="•">
+       MinInc: {a mathematical formula}I(K)=1 if K is a minimal inconsistent knowledge base.
+      </list-item>
+      <list-item label="•">
+       Free Formula Independence: {a mathematical formula}I(K)=I(K∖{α}) if α is a free formula of K.
+      </list-item>
+      <list-item label="•">
+       Monotony: {a mathematical formula}I(K)≤I(K′) if {a mathematical formula}K⊆K′.
+      </list-item>
+      <list-item label="•">
+       Dominance: if {a mathematical formula}α⊬⊥ and {a mathematical formula}α⊢β, then {a mathematical formula}I(K∪{α})≥I(K′∪{β}).
+      </list-item>
+     </list>
+     <paragraph label="Proposition 8.1">
+      The following proposition shows that {a mathematical formula}Idr satisfies Hunter and Konieczny's properties. {a mathematical formula}Idrsatisfies the properties of Consistency, MinInc, Free Formula Independence, Monotony and Dominance.
+     </paragraph>
+     <paragraph label="Proof">
+      The satisfaction of Consistency, MinInc and Free Formula Independence is obvious since {a mathematical formula}Idr is built upon the MIS-graph. We only need to provide proofs for Monotony and Dominance, respectively.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Monotony. Let K and {a mathematical formula}K′ be two knowledge bases such that {a mathematical formula}K⊆K′ and {a mathematical formula}R′ a minimal correction subset of {a mathematical formula}K′.
+      </list-item>
+      <list-item label="•">
+       Dominance. Let K be a knowledge base and α and β two formulas. Suppose that {a mathematical formula}α⊬⊥ and {a mathematical formula}α⊢β, then {a mathematical formula}∀M∈MI(K∪{β}), if {a mathematical formula}β∈M, then {a mathematical formula}∃M′⊆(M∖{β}) s.t. {a mathematical formula}M′∪{α}∈MI(K∪{α}). So, for a minimal correction subset R of {a mathematical formula}K∪{α},
+      </list-item>
+     </list>
+     <paragraph>
+      P. Besnard argued against the last three properties, and then presented a more general system of postulates that consists of Consistency (also termed Consistency Null) and Subsumption Orientation[1]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Subsumption Orientation: If {a mathematical formula}C(σK)⊆C(K′) for some substitution σ then {a mathematical formula}I(K)≤I(K′), where {a mathematical formula}C(σK) is the set of primitive conflicts of σK.
+      </list-item>
+     </list>
+     <paragraph>
+      Allowing for that our inconsistency measurements are built upon the minimal inconsistent subsets, here we consider a simplified case that the primitive conflicts {a mathematical formula}C(K) is exactly the set of minimal inconsistent subsets, i.e., {a mathematical formula}C(K)=MI(K). However, if the substitutivity is ignored, then it has been shown that Subsumption Orientation is equivalent with Free Formula Independence and Monotony when primitive conflicts are essentially minimal inconsistent subsets [1]. Then in this sense, {a mathematical formula}Idr also satisfies the postulate of Subsumption Orientation without substitutivity.
+     </paragraph>
+     <paragraph label="Proposition 8.2">
+      More generally, we have the following result: {a mathematical formula}Idrsatisfies Subsumption Orientation.
+     </paragraph>
+     <paragraph label="Proof">
+      Let K and {a mathematical formula}K′ be two knowledge bases and σ a substitution such that {a mathematical formula}MI(σK)⊆MI(K′). We use σα to denote the formula of σK arising from {a mathematical formula}α∈K under substitution σ.Note that {a mathematical formula}MI(σK)⊆MI(K′) implies that for any minimal correction subset R of {a mathematical formula}K′, {a mathematical formula}R∩σK must be a correction subset of σK, so, {a mathematical formula}Idr(σK)≤Idr(K′).On the other hand, suppose that {a mathematical formula}σR={σα1,σα2,…,σαn} is a minimal correction subset of σK, then {a mathematical formula}∀M∈MI(K), {a mathematical formula}σM⊢⊥ and {a mathematical formula}σM∩σR≠∅. So, {a mathematical formula}R′=⋃M∈MI(K){αi|σαi∈σM∩σR} is a correction subset of K. Then {a mathematical formula}Idr(K)≤Idr(σK). Therefore, {a mathematical formula}Idr(K)≤Idr(K′).  □
+     </paragraph>
+     <paragraph>
+      This proposition implies that {a mathematical formula}Idr also satisfies all the postulates entailed by Subsumption Orientation introduced in [1].
+     </paragraph>
+     <paragraph>
+      Recall that Corollary 7.2 states that the measure {a mathematical formula}Idr(K) is exactly the sum of the measures of MIS-components of K. Following this corollary, for two inconsistent knowledge bases K and {a mathematical formula}K′, if {a mathematical formula}(⋃MI(K))∩(⋃MI(K′))=∅, then if {a mathematical formula}MI(K∪K′)=MI(K)∪MI(K′), then {a mathematical formula}Idr(K∪K′)=Idr(K)+Idr(K′). This implies that {a mathematical formula}Idr also satisfies the following property of Ind-decomposability for describing the additivity of inconsistency measures presented in [11], [9]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Ind-decomposability{sup:2}: {a mathematical formula}I(K1∪⋯∪Kn)=∑i=1nI(Ki) if {a mathematical formula}MI(K1∪⋯∪Kn)=MI(K1)⨄⋯⨄MI(Kn), where ⨄ is the multi-set union over sets, and {a mathematical formula}(⋃MI(Ki))∩(⋃MI(Kj))=∅ for {a mathematical formula}1≤i≠j≤n.
+      </list-item>
+     </list>
+     <paragraph>
+      On the other hand, it is interesting to extend such properties to characterize inconsistency measures with constraints. However, the constraint introduced in this paper is specific to minimal inconsistent subsets of a given knowledge base. This implies that a given constraint may be less meaningful when the set of minimal inconsistent subsets is changed. In this sense, none of the properties of Monotony, Dominance, and Subsumption Orientation is considered as appropriate one to be extended. Here we adapt the properties of Consistency, MinInc, Free Formula Independence, and Ind-decomposability to characterize inconsistency measures with constraints, respectively:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Consistency*: {a mathematical formula}I(K|H,C)=0 if and only if K is consistent.
+      </list-item>
+      <list-item label="•">
+       MinInc*: {a mathematical formula}I(K|H,C)=1 if K is a minimal inconsistent knowledge base.
+      </list-item>
+      <list-item label="•">
+       Free Formula Independence*: {a mathematical formula}I(K|H,C)=I(K∖{α}|H,C) if α is a free formula of K.
+      </list-item>
+      <list-item label="•">
+       Constraint Decomposability: {a mathematical formula}I(K1∪K2|H1∪H2,C1∪C2)=I(K1|H1,C1)+I(K2|H2,C2) if {a mathematical formula}MI(K1∪K2)=MI(K1)∪MI(K2), and {a mathematical formula}(⋃MI(K1))∩(⋃MI(K2))=∅, where {a mathematical formula}H1∪H2=(P1∪P2,Q1∪Q2) for {a mathematical formula}H1=(P1,Q1) and {a mathematical formula}H2=(P2,Q2).
+      </list-item>
+     </list>
+     <paragraph>
+      The following proposition shows that the inconsistency measure {a mathematical formula}Idr with constraints satisfies these adaptations.
+     </paragraph>
+     <paragraph label="Proposition 8.3">
+      {a mathematical formula}Idrsatisfies the properties of Consistency*, MinInc*, Free Formula Independence*, and Constraint Decomposability.
+     </paragraph>
+     <paragraph label="Proof">
+      Let K be a knowledge base with a mixed constraint {a mathematical formula}(H,C).
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Consistency*. Sufficiency. If K is consistent, then {a mathematical formula}H=(∅,∅) and {a mathematical formula}C=∅. So, {a mathematical formula}Idr(K|H,C)=Idr(K)=0.Necessity. If {a mathematical formula}Idr(K|H,C)=0, then K is consistent. Otherwise,{a mathematical formula} This contradicts {a mathematical formula}Idr(K|H,C)=0.
+      </list-item>
+      <list-item label="•">
+       MinInc*: If K is a minimal inconsistent knowledge base, then any compatible minimal correction subset of K is a singleton set. So, {a mathematical formula}Idr(K|H,C)=1.
+      </list-item>
+      <list-item label="•">
+       Free Formula Independence*. If α is a free formula of K, then {a mathematical formula}MI(K)=MI(K∖{α}). Then K and {a mathematical formula}K∖{α} have the same MIS-graph. So, {a mathematical formula}Idr(K|H,C)=Idr(K∖{α}|H,C).
+      </list-item>
+     </list>
+     <paragraph>
+      In addition, the expressivity of inconsistency measures has been proposed as an auxiliary criterion to evaluate an inconsistency measure [32]. Roughly speaking, the expressivity of a given measure depends on the number of values the measure assigns to some knowledge bases. However, {a mathematical formula}Idr is not less expressive than any inconsistency measure at least when we consider both the set of all the knowledge bases that are built upon at most n propositional atoms and the set of all knowledge bases that contain only formulas that are built upon at most n different propositional atoms each. To illustrate this, consider {a mathematical formula}Ki={a∧¬a,⋯,∧j=1ia∧¬a}, then {a mathematical formula}Idr(Ki)=i and {a mathematical formula}limi→∞⁡Idr(Ki)=∞. This implies that the number of values {a mathematical formula}Idr assigns to such knowledge bases is infinite.
+     </paragraph>
+     <paragraph>
+      We must point that the minimal inconsistent subsets are syntax sensitive. Then replacing a subset of a knowledge base with a logically equivalent set of formulas may bring significant changes in the set of minimal inconsistent subsets of that base. To illustrate this, consider {a mathematical formula}K={¬a,¬b}, then {a mathematical formula}MI(K∪{a,b})={M1,M2} and {a mathematical formula}MI(K∪{a∧b})={M3,M4}, where{a mathematical formula} Moreover, as illustrated by Fig. 10, the MIS-graph of {a mathematical formula}K∪{a,b} has two components, while the MIS-graph of {a mathematical formula}K∪{a∧b} has only one component. So, their MIS-graphs have different structures, and they cannot be MIS-equivalent to each other. Actually, it is intuitive that {a mathematical formula}1=Idr(K∪{a∧b})&lt;Idr(K∪{a,b})=2 holds, because we only need to remove {a mathematical formula}a∧b to break {a mathematical formula}M3 and {a mathematical formula}M4 together, but we cannot break {a mathematical formula}M1 and {a mathematical formula}M2 together if only one formula is allowed to be removed.
+     </paragraph>
+     <paragraph>
+      With respect to the base-level measures for knowledge bases without a constraint, {a mathematical formula}IMI is one of the typical MIS-based inconsistency measures. It does not consider the interconnected structure of the set of minimal inconsistent subsets explicitly. In contrast, the measures {a mathematical formula}ICC[9], [10], {a mathematical formula}IW[11] and {a mathematical formula}Icf[11] presented by Jabbour et al. argued that taking into account the interconnection between minimal inconsistent subsets instead of just the number of minimal inconsistent subsets is more interesting to characterize the inconsistency in a knowledge base.
+     </paragraph>
+     <paragraph>
+      All the three measures characterize the interconnection or correlation of minimal inconsistent subsets based on splitting minimal inconsistent subsets into clusters by removing some formulas such that each cluster has only one minimal inconsistent subset. Also, we use p to denote the union of all the clusters (i.e., the set of remaining minimal inconsistent subsets) obtained by such a split. Just for simplicity of discussion, we call p a split of minimal inconsistent subsets. For example, consider {a mathematical formula}K0={a,¬a,a→¬b,b,¬b}, then there is only one cluster of minimal inconsistent subsets {a mathematical formula}{M1={a,¬a},M2={a,a→¬b,b},M3={b,¬b}}. But if we remove the formula {a mathematical formula}a→¬b, then the remaining minimal inconsistent subsets can be split into two clusters {a mathematical formula}{M1} and {a mathematical formula}{M3}. Then {a mathematical formula}{M1,M3} is a split of minimal inconsistent subsets.
+     </paragraph>
+     <paragraph>
+      Given a knowledge base K, the measure {a mathematical formula}ICC(K) is the maximum number of clusters that remaining minimal inconsistent subsets can be splitted into by removing some formulas from K, i.e., the maximum cardinality of all splits of minimal inconsistent subsets. Both the measures {a mathematical formula}IW and {a mathematical formula}Icf considers the combination of some splits that can cover all the minimal inconsistent subsets. They call a set {a mathematical formula}{p1,p2,⋯,pn} with {a mathematical formula}|p1|≥|p2|⋯≥|pn| of splits a c-partition of K if {a mathematical formula}MI(K)=⨄1≤i≤npi. Moreover, they associate a c-partition {a mathematical formula}{p1,p2,⋯,pn} with a numerical vector {a mathematical formula}(|p1|,|p2|,⋯,|pn|). Then {a mathematical formula}IW(K) is defined as the maximum value of {a mathematical formula}W({p1,p2,⋯,pn})=∑i=1nwi|pi| under a decreasing positive weight sequence with {a mathematical formula}w1=1 for all c-partitions of K, while {a mathematical formula}Icf(K) is defined as {a mathematical formula}|p1⁎|+11+1|p2⁎|+11+1⋱+1|pn⁎|, where {a mathematical formula}{p1⁎,p2⁎,⋯,pn⁎} is a maximal c-partition of K w.r.t. the lexicographic ordering relation over associated vectors for all c-partitions of K[11]. It has been shown that all the three measures are standard measures (i.e., the measures satisfying the properties of Consistency, Monotony, Free Formula Independence, MinInc, and Ind-decomposability) [9], [11].
+     </paragraph>
+     <paragraph>
+      However, our measure {a mathematical formula}Idr is different from the three measures in their explanations as well as their characterizations for interconnections between minimal inconsistent subsets. We represent each cluster of minimal inconsistent subsets by a component of the MIS-graph, which allows us to look inside how these minimal inconsistent subsets are interconnected one another. Then we use the minimal Y-dominating set of each component of the MIS-graph to characterize the interconnected structure of the corresponding cluster. Actually, the correspondence between minimal Y-dominating sets and minimal correction subsets makes such a characterization can be well explained from both the perspectives of syntax-based inconsistency resolving and causality. Moreover, as shown earlier, {a mathematical formula}Idr satisfies the properties of Consistency, Monotony, Free Formula Independence, MinInc, and Ind-decomposability. Then it is also a standard measure. In addition, {a mathematical formula}Idr also satisfies the property of Dominance. But the three measures do not satisfy the property of Dominance. To illustrate this, consider {a mathematical formula}K0′=(K0∖{a})∪{a∧(a→¬b)}. Then the minimal inconsistent subsets of {a mathematical formula}K0′ cannot be split into two clusters. So, {a mathematical formula}ICC(K0′)&lt;ICC(K0), {a mathematical formula}Icf(K0′)&lt;Icf(K0), and {a mathematical formula}IW(K0′)&lt;IW(K0) with {a mathematical formula}w1&gt;w3.
+     </paragraph>
+     <paragraph>
+      Our formula-level measure {a mathematical formula}dr(K,α|H) (resp. {a mathematical formula}dr(K,α|C), and {a mathematical formula}dr(K,α|H,C)) is defined as 0 if none of minimal correction subsets compatible with the constraint {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)) contain α. Otherwise, {a mathematical formula}dr(K,α|H) (resp. {a mathematical formula}dr(K,α|C), and {a mathematical formula}dr(K,α|H,C)) is defined as the reciprocal of the minimum size of minimal correction subsets compatible with {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)) that contain α.
+     </paragraph>
+     <paragraph>
+      From the point of view of Halpern and Pearl's causal model [5], the other formulas of a compatible minimal correction subset containing α with the constraint {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)) compose a contingency where the inconsistency in K counterfactually depends on α in the presence of the constraint {a mathematical formula}H (resp. {a mathematical formula}C, and {a mathematical formula}(H,C)). This means that all the three measures grasp the nature of α being a cause under contingency of the inconsistency presented in [5], moreover, each of them takes into account the impact of the corresponding constraint on the counterfactual dependence of the inconsistency in K on α by using the compatibility of minimal correction subsets with the constraint. Hence, all the three measures can be clearly explained in the context of Chockler and Halpern's responsibility presented in [2]. Moreover, the property of anti-monotony w.r.t. constraints of dr captures the intuition that the degree of responsibility of a formula for the inconsistency cannot increase since more formulas may be involved in such a contingency when we extend the constraint.
+     </paragraph>
+     <paragraph>
+      All the three measures under constraints are reduced to {a mathematical formula}dr(K,α) presented in [21] when their own respective constraints are empty. All the four measures stem from the counterfactual dependence of the inconsistency on an individual formula under some contingency regardless if there are constraints. Then they all assign zero responsibility to free formulas of K. Moreover, adding a free formula to a knowledge base cannot affect the degree of responsibility of each formula for the inconsistency regardless if there are constraints. So, they all satisfy the property of Free Formula Independence for formula-level measure presented in [8]. On the other hand, recall that it holds that {a mathematical formula}dr(K,α|H)≤dr(K,α) and {a mathematical formula}dr(K,α|C)≤dr(K,α) for all formulas {a mathematical formula}α∈⋃MI(K) in the presence of {a mathematical formula}H and {a mathematical formula}C, respectively. This signifies that {a mathematical formula}dr(K,α|H) (resp. {a mathematical formula}dr(K,α|C)) captures the intuition that we may need to remove more formulas together with α to break all the minimal inconsistent subsets in the presence of {a mathematical formula}H (resp. {a mathematical formula}C). However, considering the impact of constraints on evaluating the responsibility of each formulas also brings the following differences between the case with constraints and that without constraints:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       At first, it has been shown in [21] that {a mathematical formula}dr(K,α) satisfies the property of Minimality presented in [8], i.e., {a mathematical formula}dr(K,α)=0 if and only if α is a free formula. But neither {a mathematical formula}dr(K,α|H)=0 nor {a mathematical formula}dr(K,α|C)=0 implies that α must be a free formula when their own respective constraints are not empty. This signifies that neither {a mathematical formula}dr(K,α|H) nor {a mathematical formula}dr(K,α|C) satisfies the property of Minimality.
+      </list-item>
+      <list-item label="•">
+       Second, when K is a minimal inconsistent knowledge base, it has been shown in [21] that {a mathematical formula}dr(K,α) satisfies the property of Fairness presented in [25], i.e., {a mathematical formula}∀α,β∈K, {a mathematical formula}dr(K,α)=dr(K,β)=1 if K is a minimal inconsistent knowledge base. But {a mathematical formula}dr(K,α|H) does not satisfy Fairness if {a mathematical formula}H is not empty, since it holds that {a mathematical formula}dr(K,α|H)=0 for all {a mathematical formula}α∈P.
+      </list-item>
+     </list>
+     <paragraph>
+      As far as the formula-level inconsistency measures are concerned, the Shapley inconsistency value presented by Hunter and Konieczny [6], [7], [8] is the first attempt to capture the contribution/responsibility of an individual formula for the inconsistency in a knowledge base, to the best of our knowledge. Given a base-level inconsistency measure, the Shapley inconsistency value of an individual formula of a knowledge base is the part of the base-level measure of that base distributed to the formula by the Shapley value model [31], a well known cooperation game model. To be more precise, given a knowledge base K and a formula {a mathematical formula}α∈K, the Shapley inconsistency value of α under the base-level inconsistency measure I, denoted {a mathematical formula}SαI(K), is given as{a mathematical formula} in [6], [7], [8]. In particular, when {a mathematical formula}I(K)=IMI(K), the corresponding Shapley inconsistency value can be defined alternatively as follows [7], [8]:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Essentially, the Shapley inconsistency value {a mathematical formula}SαI(K) is a weighted accumulation of {a mathematical formula}I(C)−I(C∖{α}) for all {a mathematical formula}C⊆K s.t. {a mathematical formula}α∈C. It can be explained as the marginal utility of α in a coalitional game consisting of all the formulas of K when the collective payoff of each coalition {a mathematical formula}C⊆K is given by {a mathematical formula}I(C). The behavior of the Shapley inconsistency value {a mathematical formula}SαI(K) depends on the characteristics of the base-level I. In particular, if the base-level inconsistency measure I used in the Shapley value model satisfies the property of Free Formula Independence, then the corresponding Shapley inconsistency value coincides with the formula-level measure dr in that all the free formulas are assigned to zero regardless if there are constraints. For example, both {a mathematical formula}SαIMI(K) and {a mathematical formula}SαIdr(K) are such Shapley inconsistency values. However, we have compared the Shapley inconsistency value and our formula-level inconsistency measure dr in the case without constraints from the following aspects in [21]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Their starting points are different from each other. The Shapley inconsistency value stems from the Shapley value model, and then the inconsistency value of each formula can be explained as the Shapley value in a cooperation game consisting of all the formulas in a knowledge base. In contrast, the inconsistency measure dr is essentially based on the notion of counterfactual dependence under some contingency, and then the inconsistency value of each formula can be interpreted as the degree of responsibility for the inconsistency in causality.
+      </list-item>
+      <list-item label="•">
+       The definition of Shapley inconsistency value depends on a given base-level inconsistency measure, moreover, the sum of the Shapley inconsistency values of all the formulas of a knowledge base is exactly the base-level inconsistency measure for the base. But the identification of dr is independent of any base-level inconsistency measure.
+      </list-item>
+      <list-item label="•">
+       When the inconsistency of a knowledge base is characterized by minimal inconsistent subsets of the base, only the minimal inconsistent subsets that contain α are involved in identifying {a mathematical formula}SαI(K), while all the minimal inconsistent subsets are involved in identifying {a mathematical formula}dr(K,α).
+      </list-item>
+     </list>
+     <paragraph>
+      Here we are more interested in the case with constraints. Given a knowledge base K with a satisfiable soft constraint {a mathematical formula}C, let R be a minimal correction subset compatible with {a mathematical formula}C, then {a mathematical formula}R∩K′ is a (not necessarily minimal) correction subset of {a mathematical formula}K′ compatible with the restriction of {a mathematical formula}C to {a mathematical formula}K′ for all {a mathematical formula}K′⊆K. This implies that {a mathematical formula}Idr(K′|C) is well defined for any {a mathematical formula}K′⊆K. Then we may incorporate our base-level measure {a mathematical formula}Idr in the Shapley inconsistency value to define a formula-level inconsistency measure in the presence of the soft constraint {a mathematical formula}C. That is, we can define a Shapley inconsistency value with constraint {a mathematical formula}C, denoted {a mathematical formula}SαIdr(K|C), as follows:{a mathematical formula} This formula-level measure can be explained as the marginal utility of α in a coalitional game consisting of all the formulas of K when the collective payoff of each coalition {a mathematical formula}C⊆K in the presence of the constraint {a mathematical formula}C is given by the measure {a mathematical formula}Idr(C|C). As a special Shapley inconsistency value, {a mathematical formula}SαIdr(K|C) is exactly the part of {a mathematical formula}Idr(K|C) distributed to α by using the Shapley value model. So,{a mathematical formula} Recall that {a mathematical formula}Idr(K|C)=1maxα∈K⁡dr(K,α|C) for an inconsistent knowledge base K with the constraint {a mathematical formula}C. Then {a mathematical formula}SαIdr(K|C) is different from {a mathematical formula}dr(K,α|C) in the starting point as well as the relationship to the base-level {a mathematical formula}Idr(K|C).
+     </paragraph>
+     <paragraph>
+      On the other hand, given a knowledge base K with a valid hard constraint {a mathematical formula}H, the restriction of {a mathematical formula}H to a subset C of K is not necessarily valid r.w.t. C. To illustrate this, consider {a mathematical formula}K={a,¬a,a∧b,¬b} and {a mathematical formula}H=(P,Q), where {a mathematical formula}P={¬b} and {a mathematical formula}Q={¬a,a∧b}). Evidently, {a mathematical formula}H is valid w.r.t. K, but {a mathematical formula}(P∩C,Q∩C) is not valid w.r.t. {a mathematical formula}C={a,¬a,a∧b}. Then {a mathematical formula}Idr(C|H) seems meaningless for some {a mathematical formula}C⊆K. This implies that we cannot incorporate the base-level measure {a mathematical formula}Idr in the Shapley inconsistency value for K directly in the presence of a hard constraint {a mathematical formula}H.
+     </paragraph>
+     <paragraph>
+      When there is no constraint, the drastic measure {a mathematical formula}MIVD is too simple as compared with either {a mathematical formula}MIVC or {a mathematical formula}MIV♯ to distinguish any two formulas involved in the inconsistency. However, the common ground of {a mathematical formula}MIVC(K,α) and {a mathematical formula}MIV♯(K,α) is that the formula-level inconsistency measure for α depends on the minimal inconsistent subsets containing α instead of all the minimal inconsistent subsets. This means that the counterfactual dependence of an individual minimal inconsistent subset on α underlies the two measures. It makes a distinction between the two measures and our measure {a mathematical formula}dr(K,α|∅) from the perspective of causality, because {a mathematical formula}dr(K,α|∅) stems from the counterfactual dependence of the set of minimal inconsistent subsets on αunder some contingency. Moreover, we may extend the two measures {a mathematical formula}MIVC or {a mathematical formula}MIV♯ along this line to the case with a hard or soft constraint by using the minimal inconsistent subsets that counterfactually depend on α in the presence of the constraint in their own respective definitions.
+     </paragraph>
+     <paragraph>
+      In addition, the measure {a mathematical formula}IPm presented in [12] aims to capture the contribution made by the formula to the inconsistency in that base based on minimal proofs. Roughly speaking, given a knowledge base K and a formula {a mathematical formula}α∈K, {a mathematical formula}IPm(α) sums up the times of the formula α involved in both minimal proofs of x and that of ¬x for any variable x occurring in formulas of K. However, as argued in [21], for some inconsistent knowledge base, none of formulas of that base K bears responsibility for the inconsistency under the formula-level measure. Such a result is undesired in analyzing inconsistency in a knowledge base.
+     </paragraph>
+     <paragraph>
+      The satisfaction of constraints is one of the obligatory postulates for characterizing scenarios under constraints such as belief merging under integrity constraints [14], [15]. Then we focus on measuring the inconsistency in the presence of a valid hard or satisfiable soft constraint in this paper. However, given an inconsistent knowledge base, if the hard constraint {a mathematical formula}H (resp. the soft constraint {a mathematical formula}C, and the mixed constraint {a mathematical formula}(H,C)) is not valid (resp. satisfiable), then we cannot find a minimal correction subset compatible with the constraint. So, we may consider +∞ as the designated value for the base-level measure {a mathematical formula}Idr(K|H) (resp. {a mathematical formula}Idr(K|C), and {a mathematical formula}Idr(K|H,C)) for invalid hard constraint (resp. unsatisfiable soft constraint, and unsatisfiable mixed constraint). Correspondingly, we may use −1 as the designed value of the formula-level measure for all formulas involved in the minimal inconsistent subsets.
+     </paragraph>
+     <paragraph>
+      With regard to the inconsistency handling, incorporating constraints on resolving inconsistency in measuring inconsistency can facilitate the application of techniques for measuring inconsistency in practical inconsistency resolving. For example, our measures can be used to extend the measure-driven logical framework for managing non-canonical requirements presented in [22] so as to allow some useful clues for resolving inconsistency to be considered in decision making.
+     </paragraph>
+     <paragraph>
+      On the other hand, besides removing formulas, there are some other actions such as weakening formulas and splitting formulas [4] in order to restore the consistency in a knowledge base. It will be interesting to generalize our approach to constraints on such actions for restoring consistency.
+     </paragraph>
+     <paragraph>
+      Lastly, our measures are given in terms of minimal correction subsets and minimal inconsistent subsets of a knowledge base. This implies that these measures can be generalized from the propositional logic to some more complex logics in which the notions of minimal correction subset and minimal inconsistent subset are exactly the same as those in propositional logic.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      An application in requirements engineering
+     </section-title>
+     <paragraph>
+      In this section we use a small but explanatory example in requirements engineering to illustrate the application of our approach. We consider a scenario for eliciting requirements for updating an existing software, which is slightly adapted from the example used in [26], [28], [21].
+     </paragraph>
+     <paragraph label="Example 9.1">
+      Consider the following scenario for eliciting requirements for updating an existing software. There are three stakeholders involved in this scenario, including the seller of the new system, the user of the existing system (the user for short), and the domain expert in requirements engineering. Each of the three stakeholders may provide demands from her/his own perspective. When inconsistencies in their demands are identified, developers and the three stakeholders start to negotiate on resolving inconsistencies. Our measures may help developers and the stakeholders make a decision on revising the requirements.
+      <list>
+       The seller of the new system provides two demands:The user of the existing system provides three demands:The domain expert in requirements engineering provides two demands about security:The following predicates are used in
+      </list>
+      <paragraph>
+       [26] to formulate the requirements:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the predicate Fash(int_f) is used to denote that the interface is fashionable;
+       </list-item>
+       <list-item label="•">
+        the predicate Open(sys) is used to denote that the system is open;
+       </list-item>
+       <list-item label="•">
+        the predicate New(sys) is used to denote that the system will be developed based on the newest techniques;
+       </list-item>
+       <list-item label="•">
+        the predicate Secu(sys) is used to denote that the system is secure.
+       </list-item>
+      </list>
+      <paragraph>
+       Then the requirements above can be represented by a knowledge base{a mathematical formula} For simplicity of discussion, we abbreviate the knowledge base as{a mathematical formula} Evidently, {a mathematical formula}KR is inconsistent. Moreover,{a mathematical formula} This implies that we need to change at least two requirements in order to get a consistent requirements set.The degree of responsibility of each requirement for the inconsistency is given as follows:{a mathematical formula}Note that {a mathematical formula}KR has 10 minimal correction subsets. Allowing for the practical costs for abandoning requirements, developers are more interested in suggesting the stakeholders to change the requirements with the highest degree of responsibility. That is, developers are interested in either {a mathematical formula}{a1,b3} or {a mathematical formula}{b2,b3} at the beginning of negotiation with stakeholders.Suppose that after the first round of negotiation, they reach an agreement to resolve the inconsistency as follows:
+      </paragraph>
+      <list>
+       <list-item label="(A1)">
+        {a mathematical formula}b3 should be protected from being changed on the condition that {a mathematical formula}b2 must be abandoned.
+       </list-item>
+       <list-item label="(A2)">
+        {a mathematical formula}c1 and {a mathematical formula}c2 are not allowed to be changed together.
+       </list-item>
+      </list>
+      <paragraph>
+       Here we use {a mathematical formula}H=({b3},{b2}) and {a mathematical formula}C={(c1,c2)} to represent the two constraints (A1) and (A2) on further inconsistency resolving, respectively. Then{a mathematical formula} This implies that we need to change at least three requirements in order to get a consistent requirements set under the agreement.Now the degree of responsibility of each requirement for the inconsistency with the constraints is given as follows:{a mathematical formula}Besides b3, a1 is protected from being changed by the constraint. Note that {a mathematical formula}dr(KR,b2|H,C)=13. This implies that stakeholders just have to abandon two other requirements with non-zero responsibility together with b2 in order to restore the consistency of the set of requirements. Then in this case, developers are interested in recommending {a mathematical formula}{b1,b2,a2}, {a mathematical formula}{b1,b2,c2}, and {a mathematical formula}{b2,c1,a2} to stakeholders.Suppose that the user of the existing system agrees to abandon requirement b1 after the second round of negotiation, while the seller agrees to withdraw requirement a2. Then requirements {a mathematical formula}{b1,b2,a2} are chosen as the ones to be abandoned. The revised set of requirements is represented by the following knowledge base{a mathematical formula} Now the set of requirements is consistent.
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      A growing number of inconsistency measures have been proposed so far. Most measures satisfy some properties that are considered intuitive and rational within their own contexts. In this sense, such measures have provided some characterizations of the inconsistency for a knowledge base from their own perspectives. However, we are more interested in incorporating inconsistency measures in the whole process of inconsistency resolving in many practical applications. To this purpose, establishing a meaningful linkage between inconsistency measures and actions needed to render a knowledge base consistent is more necessary.
+     </paragraph>
+     <paragraph>
+      Causality can be considered as a promising starting point to establish such a linkage. Generally, from the point of view of inconsistency resolving, only formulas causing the inconsistency of a knowledge base should be involved in actions for restoring the consistency of that base. That is, only causes of the inconsistency are of interest when we choose formulas that need to be changed in order to resolve the inconsistency. From the perspective of inconsistency measuring, inconsistency measures based on counterfactual dependence (under some contingency) allow us to better understand the nature of inconsistency at both base-level and formula-level from the perspective of causality. Then causality-based explanations of inconsistency measures make them more applicable in the practical application domains. Our previous measures presented in [21] have made the first attempt to introduce the causality in measuring inconsistency.
+     </paragraph>
+     <paragraph>
+      On the other hand, constraints specify some conditions for acceptable actions for restoring the consistency of a knowledge base in practical applications. Then a useful linkage between inconsistency measures and inconsistency resolving should take into account the role of constraints in practical inconsistency resolving. We made an attempt to extend causality-based measures to the case with constraints so as to establish more practical linkage between inconsistency measures and inconsistency resolving in this paper. The graph-based approach to measuring the inconsistency for a knowledge base with one or both of the two typical kinds of constraints has been proposed. Given an inconsistent knowledge base with a constraint, the MIS-graph is constructed to represent the set of minimal inconsistent subsets of that base from multiple perspectives. In particular, the one-to-one correspondence between minimal correction subsets and minimal Y-dominating sets of the MIS-graph allows us to incorporate constraints on modifying formulas in such a graph-based characterization of inconsistency in a concise way.
+     </paragraph>
+     <paragraph>
+      Based on this incorporation, then the degree of inconsistency of a knowledge base with the constraint is defined as the minimum cardinality of minimal Y-dominating sets compatible with the constraint, moreover, it is interpreted as the minimum size of sets of formulas which the inconsistency counterfactually depends on in the presence of the constraint from a perspective of causality.
+     </paragraph>
+     <paragraph>
+      At the level of formulas, if a formula is subsumed in a minimal Y-dominating set of the MIS-graph that is compatible with the constraint, then the degree of responsibility of that formula for the inconsistency in the presence of the constraint is defined as the reciprocal of the minimum cardinality of compatible minimal Y-dominating sets with the constraint that contain the formula, otherwise, it is defined as 0. All these measures for inconsistency with constraints can be well explained in the framework of Halpern–Pearl's causal model and Chockler and Halpern's notion of responsibility. This causality-based interpretation makes the inconsistency measure more comprehensible and applicable to the practical application domains. Lastly, some interesting logical properties of these inconsistency measures, especially about monotony or antimonotony with regard to constraints, have been also studied.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

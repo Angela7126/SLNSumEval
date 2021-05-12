@@ -1,0 +1,731 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Learning Polylingual Topic Models fromCode-Switched Social Media Documents.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \floatsetup
+     </span>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       heightadjust=object,valign=t
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Topic models
+        []
+        have become standard tools for analyzing document collections, and
+topic analyses are quite common for social media
+        []
+        .
+Their popularity owes in part to their data driven nature, allowing them to adapt to new
+corpora and languages.
+In social media especially, there is a large diversity in terms of both the topic
+and language,
+necessitating the modeling of multiple languages simultaneously.
+A good candidate for multi-lingual topic analyses are polylingual topic models
+        []
+        ,
+which learn topics for multiple languages, creating tuples of language specific distributions over monolingual vocabularies for each topic.
+Polylingual topic models enable cross language analysis by grouping documents by topic
+regardless of language.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Training of polylingual topic models requires parallel or comparable corpora:
+document tuples from multiple languages that discuss the same topic. While
+additional non-aligned documents can be folded in during training, the “glue” documents
+are required to aid in the alignment across languages.
+However, the ever changing vocabulary and topics of social media
+        []
+        make finding suitable comparable corpora difficult. Standard techniques – such
+as relying on machine translation parallel corpora or comparable documents extracted
+from Wikipedia in different languages – fail to capture the specific terminology of social media.
+Alternate methods that rely on bilingual
+lexicons
+        []
+        similarly fail to adapt to shifting vocabularies. The result:
+an inability to train polylingual models on social media.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper, we offer a solution: utilize code-switched social media to discover correlations across languages.
+Social media is filled with examples of code-switching, where users switch between two or more languages, both
+in a conversation and even a single message
+        []
+        .
+This mixture of languages in the same context suggests alignments between words across languages through
+the common topics discussed in the context.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        We learn from code-switched social media by extending the polylingual topic model framework
+to infer the language of each token and then automatically processing the learned topics to identify
+aligned topics.
+Our model improves both in terms of perplexity and a human evaluation, and we provide some example
+analyses of social media that rely on our learned topics.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Code-Switching
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Code-switched documents has received considerable attention in the NLP community.
+Several tasks have focused on identification and analysis, including mining translations in code-switched documents
+        []
+        , predicting code-switched points
+        []
+        ,
+identifying code-switched tokens
+        []
+        ,
+adding code-switched support to language models
+        []
+        ,
+linguistic processing of code switched data
+        []
+        , corpus creation
+        []
+        ,
+and computational linguistic analyses and theories of code-switching
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Code-switching specifically in social media has also received some recent attention.
+        trained a supervised token level language identification system for
+Spanish and English code-switched social media to study code-switching behaviors.
+        mined translation spans for Chinese and English
+in code-switched documents to improve a translation system,
+relying on an existing translation model to aid in the identification and extraction task.
+In contrast to this work, we take an unsupervised approach, relying only on readily available document level
+language ID systems to utilize code-switched data. Additionally, our focus is not on individual messages, rather
+we aim to train a model that can be used to analyze entire corpora.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        In this work we consider two types of code-switched documents: single messages and conversations, and two
+language pairs: Chinese-English and Spanish-English.
+Figure
+        1
+        shows an example of a code-switched Spanish-English
+        conversation
+        , in which three users discuss
+Mexico’s football team advancing to the Gold medal game in the 2012 Summer Olympics.
+In this conversation, some tweets are code-switched and some are in a single language. By collecting the entire
+conversation into a single document we provide the topic model with additional content.
+An example of a Chinese-English code-switched messages is given by
+        :
+       </p>
+       <blockquote class="ltx_quote">
+        <p class="ltx_p">
+         UTF8gbsn
+         watup Kenny Mayne!! - Kenny Mayne 最近这么样啊!!
+        </p>
+       </blockquote>
+       <p class="ltx_p">
+        Here a user switches between languages in a single
+        message
+        . We empirically evaluate our
+model on both conversations and messages. In the model presentation we will refer
+to both as “documents.”
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       csLDA
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        To train a polylingual topic model on social media, we
+make two modifications to the model of
+        : add a token specific language variable, and a process for identifying aligned
+topics.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        First, polylingual topic models require parallel or comparable corpora in which each document has an assigned
+language. In the case of code-switched social media data, we require a
+        per-token
+        language variable.
+However, while document level language identification (LID) systems are common place, very few languages have
+per-token LID systems
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        To address the lack of available LID systems, we add a per-token latent language variable to the polylingual topic model.
+For documents that are not code-switched, we observe these variables
+to be the output of a document level LID system. In the case of code-switched documents,
+these variables are inferred during model inference.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        Second, polylingual topic models assume the aligned topics are from parallel or comparable corpora, which implicitly
+assumes that a topics popularity is balanced across languages. Topics that show up in one language necessarily
+show up in another.
+However, in the case of social media, we can make no such assumption. The topics discussed are influenced
+by users, time, and location, all factors intertwined with choice of language.
+For example, English speakers will more likely discuss Olympic basketball while Spanish speakers football.
+There may be little or no documents on a given topic in one language, while they are plentiful
+in another. In this case, a polylingual topic model, which necessarily infers a topic-specific word distribution for each topic
+in each language, would learn two unrelated word distributions in two languages for a single topic.
+Therefore, naively using the produced topics as “aligned” across languages is ill-advised.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        Our solution is to automatically identify aligned polylingual topics after learning by examining a topic’s distribution across
+code-switched documents. Our metric relies on distributional properties of an inferred topic across the entire collection.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p6">
+       <p class="ltx_p">
+        To summarize, based on the model of
+        we will learn:
+       </p>
+       <ul class="ltx_itemize">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           For each topic, a language specific word distribution.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           For each (code-switched) token, a language.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           For each topic, an identification as to whether the topic captures an alignment across languages.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S3.p7">
+       <p class="ltx_p">
+        The first two goals are achieved by incorporating new hidden variables in the traditional polylingual topic model. The third goal requires an automated post-processing step.
+We call the resulting model Code-Switched LDA (csLDA). The generative process is as follows:
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p8">
+       <ul class="ltx_itemize">
+        <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i1.p1">
+          <p class="ltx_p">
+           For each topic
+           z∈𝒯
+          </p>
+          <ul class="ltx_itemize">
+           <li class="ltx_item" id="I2.I1.i1" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_itemize">
+             –
+            </span>
+            <div class="ltx_para" id="I2.I1.i1.p1">
+             <p class="ltx_p">
+              For each language
+              l∈ℒ
+             </p>
+             <ul class="ltx_itemize">
+              <li class="ltx_item" id="I2.I1.I1.i1" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_itemize">
+                *
+               </span>
+               <div class="ltx_para" id="I2.I1.I1.i1.p1">
+                <p class="ltx_p">
+                 Draw word distribution
+                 ϕzl
+                 ∼
+                 D⁢i⁢r⁢(βl)
+                </p>
+               </div>
+              </li>
+             </ul>
+            </div>
+           </li>
+          </ul>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i2.p1">
+          <p class="ltx_p">
+           For each document
+           d∈𝒟
+           :
+          </p>
+          <ul class="ltx_itemize">
+           <li class="ltx_item" id="I2.I2.i1" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_itemize">
+             –
+            </span>
+            <div class="ltx_para" id="I2.I2.i1.p1">
+             <p class="ltx_p">
+              Draw a topic distribution
+              θd∼D⁢i⁢r⁢(α)
+             </p>
+            </div>
+           </li>
+           <li class="ltx_item" id="I2.I2.i2" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_itemize">
+             –
+            </span>
+            <div class="ltx_para" id="I2.I2.i2.p1">
+             <p class="ltx_p">
+              Draw a language distribution
+              ψd
+              ∼
+              D⁢i⁢r⁢(γ)
+             </p>
+            </div>
+           </li>
+           <li class="ltx_item" id="I2.I2.i3" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_itemize">
+             –
+            </span>
+            <div class="ltx_para" id="I2.I2.i3.p1">
+             <p class="ltx_p">
+              For each token
+              i∈d
+              :
+             </p>
+             <ul class="ltx_itemize">
+              <li class="ltx_item" id="I2.I2.I1.i1" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_itemize">
+                *
+               </span>
+               <div class="ltx_para" id="I2.I2.I1.i1.p1">
+                <p class="ltx_p">
+                 Draw a topic
+                 zi∼θd
+                </p>
+               </div>
+              </li>
+              <li class="ltx_item" id="I2.I2.I1.i2" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_itemize">
+                *
+               </span>
+               <div class="ltx_para" id="I2.I2.I1.i2.p1">
+                <p class="ltx_p">
+                 Draw a language
+                 li∼ψd
+                </p>
+               </div>
+              </li>
+              <li class="ltx_item" id="I2.I2.I1.i3" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_itemize">
+                *
+               </span>
+               <div class="ltx_para" id="I2.I2.I1.i3.p1">
+                <p class="ltx_p">
+                 Draw a word
+                 wi∼ϕzl
+                </p>
+               </div>
+              </li>
+             </ul>
+            </div>
+           </li>
+          </ul>
+         </div>
+        </li>
+       </ul>
+       <p class="ltx_p">
+        For monolingual documents, we fix
+        li
+        to the LID tag for all tokens. Additionally, we use a single background
+distribution for each language to capture stopwords; a control variable
+        π
+        , which follows a Dirichlet distribution with prior
+parameterized by
+        δ
+        , is introduced to decide the choice between background words and topic words following
+        []
+        .
+We use asymmetric Dirichlet priors
+        []
+        , and let the optimization process learn the
+hyperparameters. The graphical model is shown in Figure
+        2
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Inference
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Inference for csLDA follows directly from LDA. A Gibbs sampler learns the
+word distributions
+         ϕzl
+         for each language and topic. We use a block Gibbs sampler
+to jointly sample topic and language variables for each token.
+As is customary, we collapse out
+         ϕ
+         ,
+         θ
+         and
+         ψ
+         .
+The sampling posterior is:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P(zi,li|𝐰,𝐳-i,𝐥-i,α,β,γ)∝
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           (nwil,z)-i+βn-il,z+𝒲⁢β×m-iz,d+αm-id+𝒯⁢α×o-il,d+γo-id+ℒ⁢γ
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         (nwil,z)-i
+         is the number of times the type for word
+         wi
+         assigned to topic
+         z
+         and language
+         l
+         (excluding current word
+         wi
+         ),
+         m-iz,d
+         is the number of tokens assigned to topic
+         z
+         in document
+         d
+         (excluding current word
+         wi
+         ),
+         o-il,d
+         is the number of tokens assigned to language
+         l
+         in document
+         d
+         (excluding current word
+         wi
+         ),
+and these variables with superscripts or subscripts omitted are totals across all values for the variable.
+         𝒲
+         is the number of words in the corpus.
+All counts omit words assigned to the background.
+During sampling, words are first assigned to the background/topic distribution and then topic and language are sampled for non-background words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         We optimize the hyperparameters
+         α
+         ,
+         β
+         ,
+         γ
+         and
+         δ
+         by interleaving sampling iterations with a Newton-Raphson update to obtain
+the MLE estimate for the hyperparameters. Taking
+         α
+         as an example, one step of the Newton-Raphson update is:
+        </p>
+        αn⁢e⁢w=αo⁢l⁢d-𝐇-1⁢∂⁡ℒ∂⁡α
+
+(2)
+        <p class="ltx_p">
+         where
+         𝐇
+         is the Hessian matrix and
+         ∂⁡ℒ∂⁡α
+         is the gradient of the likelihood function with respect to the optimizing hyperparameter.
+We interleave 200 sampling iterations with one Newton-Raphson update.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Selecting Aligned Topics
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We next identify learned topics (a set of related word-distributions) that truly represent an aligned topic across
+languages, as opposed to an unrelated set of distributions for which there is no supporting alignment
+evidence in the corpus.
+We begin by measuring how often each topic occurs in code-switched documents. If a topic never
+occurs in a code-switched document, then there can be no evidence to support alignment across languages.
+For the topics that appear at least once in a code-switched document,
+we estimate their probability in the code-switched documents by a MAP estimate of
+         θ
+         .
+Topics appearing in at least one code-switched document with probability greater than a threshold
+         p
+         are selected as
+candidates for true cross-language topics.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Data
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We used two datasets: a Sina Weibo Chinese-English corpus
+        []
+        and a Spanish-English Twitter corpus.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Weibo
+       </h4>
+       <div class="ltx_para" id="S4.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         extracted over 1m Chinese-English parallel segments from Sina
+Weibo, which are code-switched messages. We randomly sampled 29,705 code-switched messages along with
+42,116 Chinese and 42,116 English messages from the the same time frame. We used these data for training. We
+then sampled
+an additional 2475 code-switched messages, 4221 English and 4211 Chinese messages as test data.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Olympics
+       </h4>
+       <div class="ltx_para" id="S4.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         We collected tweets from July 27, 2012 to August 12, 2012, and identified 302,775 tweets
+about the Olympics based on related hashtags and keywords (e.g. olympics, #london2012, etc.)
+We identified code-switched tweets using the Chromium Language Detector
+         . This system provides the top three possible
+languages for a given document with confidence scores; we identify a tweet as code-switched if two predicted languages
+each have confidence greater than 33%.
+We then used the tagger of
+         to obtain token level LID tags, and only tweets with tokens in both Spanish
+and English are used as code-switched tweets. In total we identified 822 Spanish-English code-switched tweets.
+We further expanded the mined tweets to full conversations, yielding 1055 Spanish-English code-switched documents (including both tweets and conversations), along with 4007 English and 4421 Spanish tweets composes our data set. We reserve 10% of the data for testing.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We evaluated csLDA on the two datasets and evaluated each model using perplexity on held out data and human judgements.
+While our goal is to learn polylingual topics, we cannot compare to previous polylingual models since they require comparable data,
+which we lack. Instead, we constructed a baseline from
+LDA run on the entire dataset (no language information.)
+For each model, we measured the document completion perplexity
+        []
+        on the held out data.
+We experimented with different numbers of topics (
+        𝒯
+        ). Since csLDA duplicates topic
+distributions (
+        𝒯×ℒ
+        )
+we used twice as many topics for LDA.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Figure
+        3
+        shows test perplexity for varying
+        𝒯
+        and perplexity for the best setting of csLDA (
+        𝒯
+        =
+        60
+        ) and LDA (
+        𝒯
+        =
+        120
+        ). The table lists both monolingual and code-switched test data;
+csLDA improves over LDA in almost every case, and across all values of
+        𝒯
+        .
+The background distribution (-bg) has mixed results for LDA, whereas for
+csLDA it shows consistent improvement.
+Table
+        1
+        shows some csLDA topics. While there are some mistakes, overall the topics are coherent and aligned.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        We use the available per-token LID system
+        []
+        for Spanish/English
+to justify csLDA’s ability to infer the hidden language variables.
+We ran csLDA-bg with
+        li
+        set
+to the value provided by the LID system for code-switched documents (csLDA-bg with LID),
+which gives csLDA high quality LID labels.
+While we see gains for the code-switched data,
+overall the results for csLDA-bg and csLDA-bg with LID are similar, suggesting that the model can
+operate effectively even without a supervised per-token LID system.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Human Evaluation
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We evaluate topic alignment quality through a human judgements
+         []
+         .
+For each aligned topic, we show an annotator the 20 most frequent words from the foreign language topic (Chinese or Spanish)
+with the 20 most frequent words from the aligned English topic and two random English topics.
+The annotators are asked to select the most related English topic among the three; the one with the most votes is
+considered the aligned topic. We count how often the model’s alignments agree.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         LDA may learn comparable topics in different languages
+but gives no explicit alignments.
+We create alignments
+by classifying each LDA topic by language using the KL-divergence between the topic’s words distribution and a word distribution
+for the English/foreign language inferred from the monolingual documents.
+Language is assigned to a topic by taking the minimum KL. For Weibo data, this was not effective since the vocabularies
+of each language are highly unbalanced. Instead, we manually labeled the topics by language.
+We then pair topics across languages using the cosine similarity of their co-occurrence statistics in code-switched documents.
+Topic pairs with similarity above
+         t
+         are considered aligned topics. We also used a threshold
+         p
+         (§
+         3.2
+         )
+to select aligned topics in csLDA.
+To ensure a fair comparison, we select the same number of aligned topics for LDA and csLDA.
+         .
+We used the best performing setting: csLDA
+         𝒯
+         =
+         60
+         , LDA
+         𝒯
+         =
+         120
+         , which produced
+12 alignments from Olympics and 28 from Weibo.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         Using Mechanical Turk we collected multiple judgements per alignment.
+For Spanish, we removed workers who disagreed with the majority more than 50% of the time (83 deletions),
+leaving 6.5 annotations for each alignment (85.47% inter-annotator agreement.)
+For Chinese, since quality of general Chinese turkers is low
+         []
+         we invited specific workers and obtained 9.3 annotations per alignment (78.72% inter-annotator agreement.)
+For Olympics, LDA alignments matched the judgements 25% of the time, while csLDA matched 50% of the time.
+While csLDA found 12 alignments and LDA 29, the 12 topics evaluated from both models show that csLDA’s alignments
+are higher quality.
+For the Weibo data, LDA matched judgements 71.4%, while csLDA matched 75%. Both obtained high quality alignments –
+likely due both to the fact that the code-switched data is curated to find translations and we hand labeled topic language –
+but csLDA found many more alignments: 60 as compared to 28. These results confirm our automated results: csLDA finds higher
+quality topics that span both languages.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

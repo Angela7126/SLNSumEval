@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Bi-goal evolution for many-objective optimization problems.
+   </title>
+   <abstract>
+    This paper presents a meta-objective optimization approach, called Bi-Goal Evolution (BiGE), to deal with multi-objective optimization problems with many objectives. In multi-objective optimization, it is generally observed that 1) the conflict between the proximity and diversity requirements is aggravated with the increase of the number of objectives and 2) the Pareto dominance loses its effectiveness for a high-dimensional space but works well on a low-dimensional space. Inspired by these two observations, BiGE converts a given multi-objective optimization problem into a bi-goal (objective) optimization problem regarding proximity and diversity, and then handles it using the Pareto dominance relation in this bi-goal domain. Implemented with estimation methods of individuals' performance and the classic Pareto nondominated sorting procedure, BiGE divides individuals into different nondominated layers and attempts to put well-converged and well-distributed individuals into the first few layers. From a series of extensive experiments on four groups of well-defined continuous and combinatorial optimization problems with 5, 10 and 15 objectives, BiGE has been found to be very competitive against five state-of-the-art algorithms in balancing proximity and diversity. The proposed approach is the first step towards a new way of addressing many-objective problems as well as indicating several important issues for future development of this type of algorithms.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Real-world problems commonly involve multiple objectives/criteria which are required to be optimized simultaneously. For example, an individual would like to maximize the chance of being healthy and wealthy while still having fun and time for family and friends. A software engineer would be interested in finding the cheapest test suite while achieving full coverage (e.g., statement coverage, branch coverage and decision coverage). When prescribing radiotherapy to a cancer patient, a doctor would have to balance the attack on tumor, potential impact on healthy organs, and the overall condition of the patient. These multi-objective optimization problems (MOPs) can be seen in many fields, including engineering, science, medicine and logistics. They share the same issue of pursuing several objectives at the same time, and have long been regarded as a substantial challenge in artificial intelligence (AI) [73], [25].
+     </paragraph>
+     <paragraph>
+      There have been a variety of approaches for MOPs, including traditional mathematical programming methods, local search techniques, and evolutionary algorithms (EAs). Inspired by biological evolution mechanisms, EAs have been demonstrated to be successful in diverse AI applications [73], [10]. For example, an EA-based AI planner, Divide and Evolutionary (DaE) [8], won the Deterministic Temporal Satisficing track during the International Planning Competition (IPC7) at the 21st International Conference on Automated Planning and Scheduling (ICAPS 2011).{sup:1} Recently, DaE has been successfully applied to multi-objective AI planning (called MO-DaE) [58]. MO-DaE, working with a well-known multi-objective EA, i.e., the indicator-based EA (IBEA) [99], has shown clear advantage over the metric-based approach using LPG metric sensitive planner [58].
+     </paragraph>
+     <paragraph>
+      A key strength of EAs for MOPs is their population-based feature which allows individuals to simultaneously approximate different parts of the Pareto front within a single execution [19], [97]. Intuitively, the search process of an EA has two basic goals:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       minimizing the distance of the population to the Pareto front (i.e., proximity) and
+      </list-item>
+      <list-item label="•">
+       maximizing the distribution of the population along the Pareto front (i.e., diversity).
+      </list-item>
+     </list>
+     <paragraph>
+      Since the optimal outcome of an MOP is a set of Pareto optimal solutions, the Pareto dominance relation naturally becomes a criterion to distinguish between solutions. Given two solutions p and q for an MOP, p is said to Pareto dominate q, if and only if p is better than q for at least one objective and is not worse for any of the others. The Pareto dominance reflects the weakest assumption about the preferred structure of the decision-maker.
+     </paragraph>
+     <paragraph>
+      As the primary selection criterion in the evolutionary multi-objective optimization (EMO) area, Pareto dominance is commonly used to evaluate the proximity of solutions. When Pareto dominance fails (e.g., the interested solutions are nondominated to each other), EMO algorithms often introduce a density-based criterion to maintain diversity of the population. For example, the nondominated sorting genetic algorithm II (NSGA-II) [23] separates individuals in a population into different layers (ranks) by their Pareto dominance relation, and prefers 1) individuals in lower layers and 2) individuals with lower crowding degrees (measured by the crowding distance[23]) when they are located in the same layer.
+     </paragraph>
+     <paragraph>
+      An MOP with more than three objectives is called a many-objective optimization problem. Many-objective optimization is an important but very challenging topic and there has been increasing interest in the use of EAs to tackle many-objective optimization problems [14], [16], [26], [35]. Although Pareto-based algorithms are the most popular approaches, they scale up poorly with the number of objectives [18], [48], [75]. When dealing with an MOP with many objectives, Pareto dominance often loses its effectiveness to differentiate individuals [57], which makes most individuals in a population become incomparable in terms of proximity (e.g., in NSGA-II most individuals fall into the first layer). Consequently, the density-based selection criterion will play a decisive role in determining the survival of individuals during the evolutionary process, leading to the individuals in the final population distributed widely over the objective space but far from the desired Pareto front [85].
+     </paragraph>
+     <paragraph>
+      A straightforward way to handle this problem (i.e., the ineffectiveness of Pareto-based algorithms in many-objective optimization) is to modify the Pareto dominance relation. Some interesting attempts include loosening the dominance condition or controlling the dominance angle, such as ϵ-dominance [22], [36], [61], [84], α-dominance [43], ϵ-box dominance [60], and dominance area control [78]. By relaxing the area of an individual dominating, these dominance relations are able to provide sufficient selection pressure towards the Pareto front. However, how to set a proper value of the parameter(s) to determine the relaxation degree is a crucial issue in these methods, needing further studies [62], [69], [79].
+     </paragraph>
+     <paragraph>
+      On the other hand, the way of comparing individuals according to their quantitative difference in objectives has been found to be effective in converging towards the Pareto front. Many recent EMO algorithms originate from this motivation, introducing a variety of new criteria to distinguish between individuals, e.g., average ranking [52], [70], fuzzy Pareto optimality [37], [39], subspace partition [2], [51], preference-inspired rank [88], [87], grid-based rank [70], [92], distance-based rank [32], [71], [91], and density adjustment strategies [1], [66]. These methods provide ample alternatives to deal with many-objective optimization problems, despite some having the risk of leading the population to concentrate in one or several sub-areas of the whole Pareto front [50], [67], [81], [65].
+     </paragraph>
+     <paragraph>
+      Recently, there has been significant interest in the use of selection criteria that involve both proximity and diversity to solve MOPs. Some such criteria, like the decomposition-based [94] and indicator-based [99] criteria, have been shown to be very promising in many-objective optimization [15], [20], [41], [44], [85]. The former uses the idea of single-objective aggregated optimization, decomposing an MOP into a number of scalar subproblems and optimizing them simultaneously. The latter defines an optimization criterion with regard to a specified performance indicator and uses this criterion to guide the search of the population. The indicator hypervolume is one of the most popular indicator-based criteria due to its good theoretical and empirical properties [7], [13], [29], [42], [101]. Whereas super-polynomial time complexity is required in the calculation of the hypervolume indicator (unless {a mathematical formula}P=NP) [11], lots of effort is being made to reduce its computational cost, in terms of both the exact computation [6], [12], [90] and the approximate estimation [4], [14], [49]. Nevertheless, balancing proximity and diversity using one single criterion is not an easy task [76], [38], [69], [68], especially for a many-objective optimization problem in which the conflict between the objectives is generally more serious than that in an MOP with two or three objectives [75], [1].
+     </paragraph>
+     <paragraph>
+      In fact, evolving a population towards the optimum as well as diversifying its individuals over the whole Pareto front in many-objective optimization is, by itself, a multi-objective problem. The advance at one aspect usually comes along with the degradation at the other [33], [75].
+     </paragraph>
+     <paragraph>
+      This paper presents a meta-objective optimization approach, called Bi-Goal Evolution (BiGE), to deal with many-objective optimization problems. Inspired by two observations: 1) the conflict between proximity and diversity requirements is aggravated with the increase of the number of objectives and 2) the Pareto dominance loses its effectiveness for a high-dimensional space but works well on a low-dimensional space, BiGE converts a given many-objective optimization problem into a bi-goal (objective) optimization problem regarding individuals' proximity and crowding degree, and then handles it using Pareto dominance in this bi-goal domain.
+     </paragraph>
+     <paragraph>
+      The bi-goal evolution is implemented with two specific methods of estimating individuals' performance (i.e., proximity and crowding degree), and also with simple individual comparison strategies in the mating and environmental selection. In the implementation of the crowding degree estimation, a pragmatic approach is developed to prevent adjacent individuals from being assigned similar fitness in the bi-goal domain. In the environmental selection, BiGE, using Pareto nondominated sorting of proximity and crowding degree, attempts to put well-converged and well-distributed individuals into the first few layers such that they could then be chosen first.
+     </paragraph>
+     <paragraph>
+      It is worth mentioning that meta-objective optimization is not an uncommon approach in the (multi-objective) optimization field. For example, Jones and Jimenez introduced two meta-objectives, the number of unmet goals and closeness to the pairwise comparisons, into the extended goal programming framework [56]. Wang and Cai considered the constraint violation as a meta-objective to solve single-objective constrained optimization problems [89]. Toffolo and Benini viewed diversity as an additional objective and turned an m-objective MOP into an ({a mathematical formula}m+1)-objective MOP [82]. Ishibuchi et al. considered the hypervolume maximization of a solution set with m reference points as m meta-objectives to optimize a number of solution sets [46]. An interesting difference between BiGE and these meta-objective approaches lies in that these meta-objective approaches typically introduce more objectives into the original optimization problem, while BiGE deals with less objectives via converting a many-objective problem into a bi-objective problem with two meta-objectives.
+     </paragraph>
+     <paragraph>
+      The rest of this paper is organized as follows. In Section 2, the motivation of BiGE is described. Section 3 is devoted to the presentation of BiGE's framework and its implementation. Section 4 introduces the experimental design. Empirical results of BiGE in comparison with five peer algorithms are shown in Section 5. Further investigation of the proposed algorithm and some discussions are given in Sections 6 and 7, respectively. Section 8 provides some concluding remarks along with pertinent observations.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Motivation
+     </section-title>
+     <paragraph>
+      An EMO algorithm pursues two basic but often conflicting goals, proximity and diversity. Such conflict has a detrimental impact on the algorithm's optimization process and can be aggravated in many-objective optimization. Fig. 1 gives the comparison trajectories of the proximity results between the original NSGA-II (involving both proximity and diversity maintenance mechanisms) and its modified version in which the diversity maintenance mechanism is removed, on the 2-, 5- and 10-objective DTLZ2 [24]. These results are evaluated by a convergence metric (CM) [21], which calculates the average normalized Euclidean distance from the solution set to the Pareto front.
+     </paragraph>
+     <paragraph>
+      As can be seen in Fig. 1, the interval between the CM trajectories of the two algorithms becomes more visible with the increase of the number of objectives. This divergence behavior has been first reported in [75]. For the 2-objective problem, both algorithms perform well, with their CM trajectories being virtually overlapping. For the 5-objective problem, the NSGA-II without the diversity maintenance mechanism achieves better CM results than the original NSGA-II during the evolutionary process, which means that diversity maintenance has an unfavorable impact on the proximity of the algorithm. For the 10-objective problem, the diversity maintenance mechanism in NSGA-II even makes the evolving population gradually move away from the Pareto front; the great interval between the two trajectories in Fig. 1 indicates a serious conflict between proximity and diversity obtained.
+     </paragraph>
+     <paragraph>
+      On the other hand, Pareto dominance, which is popular and effective to distinguish between individuals in 2- or 3-objective MOPs, fails in many-objective optimization. In fact, the portion of any two individuals being comparable in an m-dimensional objective space is {a mathematical formula}η=1/2m−1. For a 2- or 3-dimensional space, η is equal to 0.5 or 0.25, respectively, but when m reaches 6, η is already as low as 0.03125. Such exponential decrease of the portion leads to the dramatic decline of Pareto dominance's effectiveness with the number of objectives.
+     </paragraph>
+     <paragraph>
+      Given the above, it could then be viable to use Pareto dominance to only optimize the two goals (objectives) of proximity and diversity rather than to cope with all the objectives of an MOP. This way, sufficient selection pressure can be provided even in a very high-dimensional space. Bearing this in mind, we propose a bi-goal evolution approach, BiGE, to tackle many-objective optimization problems.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Bi-goal evolution (BiGE)
+     </section-title>
+     <paragraph>
+      BiGE treats an MOP with many objectives as a bi-goal optimization problem regarding minimizing the proximity of individuals towards the optimal direction and minimizing the crowding degree of individuals in the population. Fig. 2 gives a bi-objective scenario to illustrate the conversion from the actual objective space to the bi-goal space.
+     </paragraph>
+     <paragraph>
+      As can be seen from Fig. 2, by conversion, some of the nondominated individuals A–G in the objective space become comparable. In the bi-goal space, only three individuals (C, A, and E) are Pareto nondominated (i.e., the best individuals in the population), given that C and A perform best in terms of proximity and crowding degree, respectively, and the performance of E can be regarded as the tradeoff between that of C and A. In contrast, individual F, which performs poorly in both proximity and crowding degree, is dominated by most of the individuals in the population.
+     </paragraph>
+     <paragraph>
+      Below, we introduce the main procedure of BiGE and its specific implementations.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Basic procedure of bi-goal evolution
+      </section-title>
+      <paragraph>
+       The aim of BiGE is to deal with the ineffectiveness of the Pareto dominance relation in the high-dimensional objective space. BiGE only considers the individuals when they are incomparable on the basis of Pareto dominance in the selection process. Algorithm 1 gives the basic procedure of BiGE. Firstly, N individuals are randomly generated to form an initial population P. Then, the proximity and crowding degree of individuals in the current population are estimated. Next, mating selection is performed to select promising solutions in the bi-goal space for variation. Finally, the environmental selection procedure is implemented to keep a record of the N best solutions with respect to the two goals for survival.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Proximity estimation
+      </section-title>
+      <paragraph>
+       Conversion from an MOP with a number of objectives to a bi-goal problem involves an integration of the objectives. In order to make the integration feasible (i.e., to be able to deal with an MOP with non-commensurable objective functions), in BiGE each objective of individuals is normalized (with respect to its minimum and maximum values in the current population) before estimating their proximity and crowding degree. For convenience, in the description of the proposed algorithm, the objective value of individuals refers to their normalized objective value in the range {a mathematical formula}[0,1].
+      </paragraph>
+      <paragraph>
+       BiGE estimates the proximity (denoted as {a mathematical formula}fpr) of an individual p in the population by summing its value in each objective:{a mathematical formula} where {a mathematical formula}fk(p) denotes the objective value of individual p in the kth objective, and m is the number of objectives. This estimation function is determined by two factors: the number of objectives and the performance in each objective. An individual with good performance in the majority of objectives is likely to obtain a lower (better) {a mathematical formula}fpr value.
+      </paragraph>
+      <paragraph>
+       It is worth pointing out that the proximity information of an individual with m objectives (i.e., an m-dimensional vector) cannot be completely reflected and represented by the scalar value {a mathematical formula}fpr. The accuracy of the estimation can be influenced by the shape of an MOP's Pareto front. For example, individuals around the knee of the Pareto front often have better estimation result than those far away from the knee even if they are non-dominated to each other. To solve this issue, we introduce the goal of minimizing the crowding degree of individuals in the population. We consider the Pareto dominance relation of the two goals, preferring individuals with a good tradeoff between them.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Crowding degree estimation
+      </section-title>
+      <paragraph>
+       Niching techniques are a kind of popular density estimation methods in the EA field. Bearing the idea of sharing resource in mind, niching techniques can effectively measure the crowding degree of an individual in the population. Here, we consider the following sharing function between two individuals p and q:{a mathematical formula} where {a mathematical formula}d(p,q) denotes the Euclidean distance between individuals p and q in the objective space, and r is the radius of a niche, determined by the population size N and the number of objectives m of a given MOP:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Note that the considered individuals are already normalized according to the range of the current population. Thus, the niche radius here is actually adaptive, varying with the evolutionary population. Using the sharing function in Eq. (2), the crowding degree (denoted as {a mathematical formula}fcd) of an individual p in a population P is defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Up to now, the performance of an individual in the population has been reflected by {a mathematical formula}fpr and {a mathematical formula}fcd. However, a problem may arise when applying these two estimation functions in the conversion from the actual objective space into the bi-goal space. Since the performance estimation of an individual depends on its position in comparison with other individuals in the population, the individuals located closely in the objective space may have similar behaviors regarding both proximity and crowding degree, thus also being situated closely in the bi-goal space. For example, similar nondominated individuals A and B in Fig. 3(a), after conversion, are still located closely and nondominated to each other (shown in Fig. 3(b)). In this case, it is likely that such individuals are preserved or eliminated simultaneously, which may result in congestion in some regions yet vacancy in some other regions.
+      </paragraph>
+      <paragraph>
+       To overcome this problem, we make a modification to the sharing function in Eq. (2) in order to distinguish between similar individuals. Two individuals will be assigned different sharing function values according to their performance comparison in terms of proximity. Specifically, we introduce a weight parameter (called the sharing discriminator) in the sharing function:{a mathematical formula} where the function {a mathematical formula}rand() means to assign either{a mathematical formula}sh(p,q)=(0.5(1−d(p,q)r))2 and {a mathematical formula}sh(q,p)=(1.5(1−d(p,q)r))2or{a mathematical formula}sh(p,q)=(1.5(1−d(p,q)r))2 and {a mathematical formula}sh(q,p)=(0.5(1−d(p,q)r))2 randomly.
+      </paragraph>
+      <paragraph>
+       The sharing function now contributes differently to the crowding degree of individuals in the niche. An individual with better proximity than its neighbors will obtain a lower crowding degree. For two individuals which are the sole neighbor to each other in a population, they had the same crowding degree before, but now the better individual (in terms of proximity) will only have half of the original crowding degree and the worse one will have one and a half of the original crowding degree.
+      </paragraph>
+      <paragraph>
+       In general, this modification enables adjacent individuals to be located distantly. More importantly, it could lead to similar individuals comparable on the basis of the Pareto dominance criterion of the proximity and diversity goals, which is well suited to BiGE. Fig. 3(c) gives an illustration to explain the effect of this modification. As shown, individual A will become dominated by B when evaluated by the modified crowding degree. Table 1 shows the values of individuals in the three spaces for the example of Fig. 3.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Mating selection
+      </section-title>
+      <paragraph>
+       Mating selection, which aims to make a good preparation for exchanging the information of individuals, picks out promising solutions from the current population to form a mating pool. BiGE uses a type of binary tournament selection strategy based on Pareto dominance in the bi-goal domain, as given in Algorithm 2. For two candidates, if they are Pareto-comparable in the two goal functions (e.g., {a mathematical formula}fpr(p)&lt;fpr(q)∧fcd(p)&lt;fcd(q)), then the better one will be selected; otherwise, the tie will be split randomly. Note that the variation operations (e.g., crossover and mutation) are not fixed in BiGE and can be freely chosen by users. Here, we use the simulated binary crossover (SBX) and polynomial mutation for continuous MOPs and the uniform crossover and bit-flip mutation for combinatorial MOPs.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Environmental selection
+      </section-title>
+      <paragraph>
+       Environmental selection, which aims to obtain a well-approximated and well-distributed new population, chooses the “best” solutions from the previous population and newly created individuals. BiGE implements environmental selection according to individuals' Pareto dominance relation in the bi-goal domain. Here, we adopt a popular Pareto-based rank strategy in the area: nondominated sorting [34]. Nondominated sorting is an effective method to rank individuals in a low-dimensional space. First, the nondominated individuals in the population are identified as the first layer. Then, the remaining individuals are regarded as the current population, from which nondominated individuals are selected to form the second layer. This process is continued until the entire population is classified into different layers.
+      </paragraph>
+      <paragraph>
+       Algorithm 3 gives the environmental selection procedure of BiGE. First, individuals' performance regarding proximity and crowding degree is estimated (Steps 2 and 3). Then, the candidate set Q is divided into different layers by the nondominated sorting procedure with respect to the two goals, and the first ({a mathematical formula}i−1) layers are moved into the population P, where {a mathematical formula}|L1∪L2∪…∪Li−1|≤N and {a mathematical formula}|L1∪L2∪…∪Li−1∪Li|&gt;N (Steps 4 and 5). Finally, the slots in P are filled randomly by individuals in {a mathematical formula}Li (Steps 6–8). Note that BiGE employs a randomly-selected mode on the layer {a mathematical formula}Li, rather than a density-based selection mode. This is because the density of individuals in this bi-goal space does not reflect their own performance. An individual with high density in the bi-goal space does not mean that it is worse than individuals with low density but rather that there are some other individuals having similar proximity and crowding degree with it in the population (cf. individual C in the example of Fig. 3). Therefore, we randomly select individuals which are located in the same layer.
+      </paragraph>
+      <paragraph>
+       In order to investigate the effectiveness of the bi-goal nondominated sorting in providing the selection pressure, Fig. 4 demonstrates the average number of solutions in all the nondominated layers on the 2-, 3-, 5-, 10- and 15-objective DTLZ2, where, for contrast, the average number of solutions in all the nondominated layers obtained by nondominated sorting of the actual objectives is shown as well. As can be seen from Fig. 4(b), the number of individuals placed in the first layer ({a mathematical formula}L1) increases rapidly with the number of objectives, approximating {a mathematical formula}80% of the population size when the number of objectives reaches 5. In contrast, the individuals in Fig. 4(a) are located in many different layers and distributed in a similar pattern. For example, {a mathematical formula}L1 is always small and has around 6 individuals. In all the instances, the number of individuals in {a mathematical formula}Li increases until the total number of individuals in {a mathematical formula}L1 to {a mathematical formula}Li reaches around half of the population size. This means that the bi-goal nondominated sorting can effectively distinguish between individuals, which is largely independent of the number of objectives.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Experimental design
+     </section-title>
+     <paragraph>
+      BiGE focuses on the comparison among the individuals which are nondominated to each other in the objective space. For the individuals that can be differentiated by Pareto dominance, any existing comparison strategy in the EMO area, such as the nondominated sorting [34], nondominated ranking [28], and strength [100], can be used. Here, the nondominated sorting strategy is chosen to cooperate with BiGE due to its simplicity and popularity [23]. In this section, we introduce test problems, performance indicators, peer algorithms, and general parameter setting for the experimental studies.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Test problems
+      </section-title>
+      <paragraph>
+       Three well-known continuous and combinatorial benchmark suites, the walking fish group (WFG) toolkit [40], the multi-objective 0–1 knapsack problem [100], and the multi-objective traveling salesman problem (TSP) [18], are included, with the objective number {a mathematical formula}m=5, 10, and 15. Also, a real-world constraint problem, the water problem [72], is considered. Their characteristics are summarized in Table 2.
+      </paragraph>
+      <paragraph>
+       WFG is a continuous problem suite that can be scaled to any number of objectives and decision variables. Comprised of problems with various characteristics (such as having linear, convex, concave, multimodal, disconnected, biased, and degenerated Pareto fronts), the WFG suite is used to challenge varying capabilities of an EMO algorithm. According to the suggestion in [40], the parameters k and l in WFG are set to {a mathematical formula}2×(m−1) and 20, respectively, where m denotes the number of objectives.
+      </paragraph>
+      <paragraph>
+       The multi-objective 0–1 knapsack problem is one of the standard combinatorial problems in multi-objective optimization. Given a set of n items and a set of m knapsacks, the multi-objective knapsack problem can be defined as follows:{a mathematical formula} where {a mathematical formula}pij≥0 is the profit of item j in knapsack i, {a mathematical formula}wij≥0 is the weight of item j in knapsack i, {a mathematical formula}ci is the capacity of knapsack i, and {a mathematical formula}xj=1 means that item j is selected in the knapsacks. Following the study in [100], {a mathematical formula}pij and {a mathematical formula}wij are random integers in the interval {a mathematical formula}[10,100], and the knapsack capacity is set to half of the total weight regarding the corresponding knapsack. Also, the greedy repair method for infeasible solutions presented in [100] (i.e., the order in which the items are removed from the knapsacks is determined by their maximum profit/weight ratio) is adopted in our experimental studies.
+      </paragraph>
+      <paragraph>
+       The multi-objective TSP is a typical combinatorial optimization problem and can be stated as follows [18]: given a network {a mathematical formula}L=(V,C), where {a mathematical formula}V={v1,v2,…,vn} is a set of n nodes and {a mathematical formula}C={ck:k∈{1,2,…,m}} is a set of m cost matrices between nodes {a mathematical formula}(ck:V×V), we need to determine the Pareto optimal set of Hamiltonian cycles that minimize each of the m cost objectives. In our study, the m matrices are uncorrelated to each other, generated by assigning each distinct pair of nodes with a random number in the range {a mathematical formula}[0,1]. According to [18], the number of nodes is set to 30.
+      </paragraph>
+      <paragraph>
+       The water problem [72], [77] is a three-variable, five-objective, seven-constraint optimization problem which relates to optimal planning for a storm drainage system in an urban area. It is frequently used in the area to challenge EMO algorithms in dealing with a problem with many objectives and constraints [19], [81], [80], [53]. A detailed description of the problem can be found in [72].
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Hypervolume indicator
+      </section-title>
+      <paragraph>
+       Hypervolume (HV) [100] is a very popular quality indicator due to its good theoretical properties [13], [29], [101]. Calculating the volume of the objective space between the obtained solution set and a reference point, HV can give the set a comprehensive assessment in terms of proximity and diversity. For clarity, we provide a normalized HV value of each algorithm with respect to the proportion of the optimal HV result achieved. This normalization makes all of the obtained results reside in the range {a mathematical formula}[0,1], with 1 representing the optimal value. For some of the test problems (i.e., WFG4–WFG9), the optimal HV value can be obtained by calculation; for the others, the optimal value is, as suggested in [36], approximately estimated by the HV result of the nondominated set with respect to the mixed population consisting of all the obtained solutions on a given problem.
+      </paragraph>
+      <paragraph>
+       In the calculation of HV, two crucial issues are the scaling of the search space [30] and the choice of the reference point [3], [31]. Since the objectives in the WFG and water problems take different ranges of values, we standardize the objective value of the obtained solutions according to the range of the problem's Pareto front. Following the recommendation in [45], the reference point is set to 1.1 times the upper bound of the Pareto front (i.e., {a mathematical formula}r=1.1m) to emphasize the balance between proximity and diversity of the obtained solution set. For the two combinatorial optimization problems, since the range of their Pareto front is unknown, we set the reference point slightly worse than the boundary values of the nondominated set with respect to the mixed population consisting of all the obtained solutions; that is, the points with 13,000 and 22 for each objective (i.e., {a mathematical formula}r=13,000m and {a mathematical formula}r=22m) are fixed for the knapsack and TSP problems, respectively.
+      </paragraph>
+      <paragraph>
+       In addition, since the exact calculation of the HV indicator is generally infeasible for a solution set with 10 or more objectives, we approximately estimate the HV result of a solution set by the Monte Carlo sampling method used in [4]. Here, 10,000,000 sampling points are used to ensure accuracy [4].
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       State-of-the-art algorithms in comparison
+      </section-title>
+      <paragraph>
+       We compare the proposed BiGE with the following algorithms.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Multi-Objective Evolutionary Algorithm based on Decomposition (MOEA/D){sup:2}[94]. Decomposing an MOP into a set of scalar optimization subproblems and optimizing them in a collaborative manner, MOEA/D is one of the most popular EMO algorithms developed recently. The high search ability of MOEA/D on both multi- and many-objective problems has already been demonstrated in the literature [47], [63], [69]. Here, the Tchebycheff scalarizing function{sup:3} is used in MOEA/D in the experiments.
+       </list-item>
+       <list-item label="•">
+        Nondominated Sorting Genetic Algorithm III (NSGA-III){sup:4}[20]. NSGA-III is a very recent many-objective algorithm whose framework is based on NSGA-II but with significant changes in the selection mechanism. Instead of the crowding distance, NSGA-III uses a decomposition-based niching technique to maintain diversity. NSGA-III has been shown to outperform some popular decomposition-based algorithms as well as the classical generative method in many-objective optimization [20], [53].
+       </list-item>
+       <list-item label="•">
+        Hypervolume Estimation Algorithm (HypE){sup:5}[4]. HypE is an indicator-based algorithm for many-objective optimization. HypE adopts Monte Carlo simulation to approximate the hypervolume value, significantly reducing the algorithm's time cost and enabling hypervolume-based search to be easily applied to many-objective optimization, even when the number of objectives reaches 50 [4]. HypE has been demonstrated to be competitive in the WFG problem suite with many objectives [69], [88].
+       </list-item>
+       <list-item label="•">
+        Fuzzy Dominance-based NSGA-II (FD-NSGA-II){sup:6}[39]. To deal with the failure of Pareto dominance in many-objective optimization, a fuzzy dominance-based fitness evaluation mechanism has been developed in [39] to continuously differentiate individuals into different degrees of optimality. The concept of fuzzy logic is adopted to define a fuzzy Pareto dominance relation. Specifically, a fuzzy set based on a Gaussian function is applied to quantify the degrees of dominance, from dominating to being dominated as well as in various degrees of dominance in each objective. Incorporated into NSGA-II, the proposed fuzzy concept has been found to be promising in many-objective optimization [38], [39].
+       </list-item>
+       <list-item label="•">
+        Approximation-Guided Evolutionary Algorithm II (AGE-II){sup:7}[84]. Recently, an approximation-guided EA (AGE) has been proposed [15], which allows to incorporate a formal notion of approximation into an EA. Using the best knowledge obtained so far during the evolutionary process, AGE improves the approximation quality of the current population. AGE has been shown to outperform state-of-the-art EMO algorithms particularly in dealing with many-objective problems [15], [83]. Despite its good performance, AGE could suffer from heavy computational cost as new incomparable solutions can unconditionally insert into AGE's archive. To tackle this issue, a fast, effective AGE (called AGE-II) has been developed [84]. AGE-II introduces an adaptive ϵ-dominance approach to balance the convergence speed and runtime. Also, the mating selection strategy is elaborately designed to emphasize the diversity of its solution set.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.4">
+      <section-title>
+       General experimental setting
+      </section-title>
+      <paragraph>
+       All the results presented in this paper were obtained by executing 30 independent runs of each algorithm on each problem. Following the practice in [33], [85], the population size was set to 100 and the termination criterion of a run was 30,000 evaluations (i.e., 300 generations) for the WFG, TSP and water problems. For the knapsack problem, more evaluations are required for one generation of an algorithm due to the repair method that deals with infeasible solutions, where we set 100,000 evaluations as the termination criterion. Note that the size of the population in MOEA/D and NSGA-III is often the same as the number of weight vectors and it is impossible for the algorithms to generate uniformly distributed weight vectors at an arbitrary number. Here, we uniformly generate a set of around 5000 weight vectors and then select 100 well-distributed weight vectors from the set using the method in [95].
+      </paragraph>
+      <paragraph>
+       Parameters need to be set in some peer algorithms. According to the study in MOEA/D [94], the neighborhood size was specified as {a mathematical formula}10% of the population size. For HypE, the number of sampling points in HypE was set to 10,000. Following the practice in [88], the reference point for calculating the hypervolume contribution in HypE was set to {a mathematical formula}2i+1 for all WFG problems, where i is the number of objectives; for other problems, the reference point was set to be the same as in the HV indicator. In FD-NSGA-II, parameter σ, which determines the spread of the Gaussian function, was set to 0.5, as suggested in [39]. In AGE-II, parameter {a mathematical formula}ϵgrid, which determines the size of the archive, was set to 0.1 since it can provide a good tradeoff between performance and runtime in many-objective problems [84].
+      </paragraph>
+      <paragraph>
+       A crossover probability {a mathematical formula}pc=1.0 and a mutation probability {a mathematical formula}pm=1/n (where n denotes the number of decision variables) were used. For continuous problems, operators for crossover and mutation are SBX crossover and polynomial mutation with both distribution indexes set to 20 [4], [94]. As to the combinatorial problems, following the studies in [18], [44], the uniform crossover and bit-flip mutation were used for the knapsack instance, and the order crossover and inversion mutation were used for the TSP instance.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      In this section, we verify the performance of BiGE according to the experimental design described in the previous section. The HV results in the tables are the mean and standard deviation (SD) over 30 independent runs, and the best and second best mean values among the algorithms for each problem instance are shown with dark and light gray background, respectively. Moreover, in order to have statistically sound conclusions, we adopt the Wilcoxon's rank sum test [98] at a 0.05 significance level to examine the significance of the difference between the results obtained by BiGE and its competitors. The Wilcoxon test is a nonparametric alternative to the two-sample t-test with two advantages: 1) valid for data with a non-normal distribution and 2) much less sensitive to the outliers.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       WFG problems
+      </section-title>
+      <paragraph>
+       Table 3 gives the comparative results of the six algorithms on the WFG problems with 5, 10, and 15 objectives. As shown, BiGE and HypE perform the best, having a clear advantage over the other 4 algorithms on most of the test instances. Specifically, BiGE obtains the best and second best HV results on 14 and 10 out of the 27 instances respectively, and HypE on 10 and 15 respectively. NSGA-III performs the best on the 5-objective WFG3 and WFG9, and also generally outperforms the other three algorithms. AGE-II and MOEA/D typically work fairly well on the 5-objective WFG, but struggle on the 10- and 15-objective instances. FD-NSGA-II, which fails to maintain the diversity of individuals in the population, has the worst HV results on the WFG problem suite.
+      </paragraph>
+      <paragraph>
+       Concerning the statistical results, it can be observed that the difference between BiGE and the peer algorithms is significant on most of the test instances. Specifically, the proportion of the test instances where BiGE outperforms MOEA/D, NSGA-III, HypE, FD-NSGA-II and AGE-II with statistical significance is 26/27, 21/27, 11/27, 27/27, and 25/27, respectively. Conversely, the proportion of the instances where BiGE performs worse than MOEA/D, NSGA-III, HypE, FD-NSGA-II and AGE-II with statistical significance is 1/27, 2/27, 9/27, 0/27, and 0/27, respectively.
+      </paragraph>
+      <paragraph>
+       For a visual understanding of the solutions' distribution, Fig. 5 plots the final solutions of one run with respect to the 10-objective WFG9 by parallel coordinates. This particular run is associated with the result that is the closest to the mean HV value. Although all considered solution sets appear to converge into the optimal front (the upper and lower bounds of objective i in WFG's Pareto front are 0 and {a mathematical formula}2×i, respectively), the six algorithms perform differently in terms of diversity maintenance. The solutions obtained by FD-NSGA-II converge into one point of the Pareto front, while the solutions of MOEA/D concentrate in the boundaries of the optimal front. The solutions of AGE-II and NSGA-III seem to have a good uniformity, but fail to reach some regions of the Pareto front. HypE and BiGE perform similarly. The only difference between them is that the solutions of HypE struggle to cover the problem's boundary on some objectives, while the solutions of BiGE appear to have a good coverage over the whole Pareto front.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       The knapsack problem
+      </section-title>
+      <paragraph>
+       Table 4 gives the results of the six algorithms on the 0–1 knapsack problem. As can be seen from the table, BiGE generally outperforms the five peer algorithms. Specifically, for the 5- and 10-objective instances, BiGE has the best HV value, and also the difference between BiGE and its competitors is statistically significant. For the 15-objective instance, BiGE ranks the second, only outperformed by FD-NSGA-II. In addition, it is interesting to note that FD-NSGA-II, which performs the worst in the WFG problems, works quite well in the knapsack problem (also in the TSP problem, as shown in Table 5 later). This indicates the different characteristics between continuous and combinatorial optimization problems. Some EMO algorithms may show better behavior on combinatorial optimization problems if their fitness assignment strategy is particularly suitable for the structure of the integral code in the problems.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       The TSP problem
+      </section-title>
+      <paragraph>
+       The normalized HV results of the six algorithms on the three TSP test instances are shown in Table 5. It is observed that BiGE performs better on the problem with a larger number of objectives. For the 5-objective TSP, AGE-II has the highest HV value, and BiGE outperforms the other four algorithms with statistical significance. For the 10- and 15-objective instances, BiGE and FD-NSGA-II, like on the knapsack problem, perform better than the other four algorithms. A difference from the results on the knapsack problem is that here BiGE always obtains a higher HV value than FD-NSGA-II on the instances. It is worth mentioning that HypE and NSGA-III, which are competitive in the WFG problems, perform constantly worse than BiGE on all the 6 knapsack and TSP instances.
+      </paragraph>
+      <paragraph>
+       To facilitate visual comparison, Fig. 6 plots the final solutions of a single run of the six algorithms regarding the two-dimensional objective space {a mathematical formula}f1 and {a mathematical formula}f2 of the 15-objective TSP. Similar plots can be obtained for other objectives of the problem. As shown, the solutions of BiGE have a good balance between proximity and diversity. In contrast, the five peer algorithms struggle in terms of proximity, with their solutions being generally distributed in the top-right region of the figures.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       The water problem
+      </section-title>
+      <paragraph>
+       The water problem is a three-variable, five-objective, seven-constraint real-world problem [72], [77], which was designed to optimize the planning for a storm drainage system in an urban area. Table 6 gives the HV results of the six algorithms on this problem. As shown, BiGE outperforms the five peer algorithms with statistical significance. This indicates the effectiveness of the proposed bi-goal evolution in dealing with a problem with many objectives and constraints.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Result summary
+      </section-title>
+      <paragraph>
+       To sum up, BiGE generally outperforms the five state-of-the-art algorithms, with the best and second best HV results in 19 and 12 out of all the 34 test instances, respectively. The five peer algorithms perform differently on problems with distinct properties. HypE and NSGA-III perform well on continuous MOPs, while FD-NSGA-II is competitive for combinatorial ones. AGE-II and MOEA/D work fairly well on 5-objective instances, but perform poorly in a higher-dimensional objective space. Similar observations have been reported in some recent studies [88], [69], [96], [86].
+      </paragraph>
+      <paragraph>
+       In addition, the behavior difference between BiGE and the peer algorithms can also be seen from the simple artificial example in Table 1. In this example, BiGE can effectively distinguish between seven Pareto nondominated solutions, with B, G, C and E clearly outperforming the remaining ones (cf. Fig. 3(c)). In contrast, the five peer algorithms may fail to pick out the same solutions. The individual selection in MOEA/D, NSGA-III, HypE and AGE-II largely depends on some references associated with the algorithm, i.e., MOEA/D and NSGA-III on the predefined reference directions (on the basis of distribution of the weight vectors), HypE on the reference point in the hypervolume calculation, and AGE-II on the distribution of solutions in the archive. For FD-NSGA-II, since the fuzzy-based dominance relation prefers well-converged individuals, B, A, G and C would be assigned better fitness values; this may lead to the loss of population diversity.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Further investigations of BiGE
+     </section-title>
+     <paragraph>
+      The experimental results in the previous section have shown the effectiveness of BiGE on diverse problems. Next, we will further examine BiGE by investigating the effect of parameter setting on the algorithm performance and comparing it with some algorithms that have similar components to the proposed algorithm.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Effect of the population size and objective dimensionality
+      </section-title>
+      <paragraph>
+       In BiGE, two parameters, i.e., the population size and the number of objectives, play an important role. They determine the niche radius in the crowding degree estimation of the algorithm. In this section, we investigate the effect of these two parameters on the algorithm's performance. Here, we show experimental results on WFG9, one of the most challenging test problems (this can be inferred from the HV values in Table 3). Similar results can also be observed on other problems.
+      </paragraph>
+      <paragraph>
+       First, we consider the effect of the population size on the performance of the six algorithms. The population size in the previous studies was fixed to 100. In this study, we give a wide range of the population size (from 50 to 1000) to test how the performance of the algorithm varies with it. Other parameters are kept unchanged in this study, except the function evaluations which are changed accordingly in order to keep the number of generations (300) fixed. Fig. 7 shows the HV results on the 10-objective WFG9. Clearly, except FD-NSGA-II, the HV result of all the algorithms increases with the population size, which means that a larger population size generally leads to a better performance. This is shown more evidently in AGE-II, NSGA-III, and MOEA/D. On the other hand, HypE and BiGE always outperform other four algorithms under all the seven settings of the population size. More specifically, HypE has the best HV when the population size is 50, while BiGE performs the best for the remaining cases. Overall, the above results indicate the insensitiveness of the proposed algorithm to the population size – BiGE can work well under various sizes of the evolutionary population.
+      </paragraph>
+      <paragraph>
+       Next, we consider the effect of the objective dimensionality on the performance of the six algorithms. In the previous studies, the algorithms have already been tested under 5, 10, and 15 objectives. Here, we extend the range of the number of objectives and investigate how the algorithms work in a lower- or higher-dimensional space. Fig. 8 shows the HV results of the six algorithms on the 3-, 4-, 5-, 7-, 10-, 15-, and 20-objective WFG9. As shown, NSGA-III, HypE, and BiGE outperform the other algorithms under all the seven settings of the number of objectives. Taking a closer comparison among these three algorithms, NSGA-III and HypE perform the best for the problem with from 3 to 5 objectives, while BiGE shows its advantage when the number of objectives reaches 10. In addition, an interesting difference of BiGE from the other algorithms is that its HV value remains quite steady (rather than degrades) with the increase of the number of objectives. This occurrence could be attributed to the fact that the bi-goal evolution can provide a good balance between proximity and diversity, which is largely independent of a problem's objective dimensionality.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Effect of the sharing discriminator in the sharing function
+      </section-title>
+      <paragraph>
+       A feature in BiGE is that a sharing discriminator is introduced to differentiate individuals in a niche. When calculating the sharing function of two neighboring individuals, one with better proximity is encouraged by multiplying 0.5, while the other is discouraged by multiplying 1.5 (here we denote this sharing discriminator as {a mathematical formula}(sde,sdd)). This adjustment can lead the individual with better proximity to have a lower crowding degree and the individual with worse proximity to have a higher one. Now a straightforward question is how much {a mathematical formula}(sde,sdd) affects the performance of the algorithm. In addition, one may also ask if we can only discourage the individual with worse proximity while remaining the other unchanged, such as {a mathematical formula}(sde,sdd) being set to {a mathematical formula}(1.0,1.5). In this case, two neighboring individuals can also be well differentiated.
+      </paragraph>
+      <paragraph>
+       In this section, we investigate the effect of the sharing discriminator and attempt to answer the above two questions. Due to space limitation, we only show the results on the 10-objective WFG9. Similar results can be obtained for other problems. Here, we consider four representative settings of the discriminator: {a mathematical formula}(0.0,2.0), {a mathematical formula}(0.25,1.75), {a mathematical formula}(0.75,1.25), and {a mathematical formula}(1.0,1.0). The setting {a mathematical formula}(0.0,2.0) is an extreme where the individual with better proximity is assigned zero sharing function value, while {a mathematical formula}(1.0,1.0) is the other extreme where neither of the individuals' sharing function value is changed. The settings {a mathematical formula}(0.25,1.75) and {a mathematical formula}(0.75,1.25) are two middle values between the extremes and the setting {a mathematical formula}(0.5,1.5) used in the paper. Table 7 gives the HV results of BiGE with the above four settings, along with {a mathematical formula}(0.5,1.5), on the 10-objective WFG9. As shown, the algorithm with the three settings {a mathematical formula}(0.25,1.75), {a mathematical formula}(0.5,1.5), and {a mathematical formula}(0.75,1.25) performs very similarly, and all significantly outperform the algorithm with the two extreme settings {a mathematical formula}(0.0,2.0) and {a mathematical formula}(1.0,1.0). This indicates the insensitiveness of the algorithm to the discriminator parameter within a certain range – BiGE can work well with different discriminator values, provided that they are away from the two extremes.
+      </paragraph>
+      <paragraph>
+       Next, we consider the case that only the individual with worse proximity is discouraged in the sharing function. That is, {a mathematical formula}sde is set to 1.0 and {a mathematical formula}sdd to larger than 1.0. Here, we consider four settings of the discriminator: {a mathematical formula}(1.0,1.25), {a mathematical formula}(1.0,1.5), {a mathematical formula}(1.0,1.75), and {a mathematical formula}(1.0,2.0). The HV results of BiGE with them are given in Table 8, where the result of the algorithm with {a mathematical formula}(0.5,1.5) is repeated for comparison. As can be seen from the table, the algorithm where the individual with better proximity is not encouraged performs slightly worse than the original algorithm. This occurrence might be attributed to the following reason. In general, for a group of individuals in a niche, it is ideal to select a representative individual (i.e., with the best proximity) from them into the next population. However, with the discriminator setting that only discourages individuals with worse proximity, all the individuals in the niche could have a high crowding degree (in comparison with those having no neighbor in their own niche). This may lead to none of the individuals in this niche surviving in the next population. Thus, an encouragement for the individual with better proximity in the niche is beneficial to the diversity of the population – it further differentiates similar individuals and enables a representative one to be preserved in the evolutionary process.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Comparison with the average ranking (AR) methods
+      </section-title>
+      <paragraph>
+       In BiGE, the proximity of an individual is estimated by the sum of its normalized values across the objectives. This estimation could be viewed as a slightly more fine-grained version of the well-known AR method [5]. AR estimates the proximity of an individual by summing its ranks (in the population) across the objectives. The difference between these two estimations is that AR considers individuals' rank in the population on each objective, while the proposed proximity estimation considers quantitative difference of individuals on each objective.
+      </paragraph>
+      <paragraph>
+       As an individual comparison criterion, AR is popular in many-objective optimization. Corne and Knowles have demonstrated that AR can provide sufficient selection pressure towards the optimal front in a high-dimensional objective space [18]. However, due to the lack of a diversity maintenance scheme, AR may lead the evolutionary population to converge into a sub-area of the Pareto front [52]. Recently, some methods have been proposed to enhance diversity for AR. For example, Purshouse et al. made a modification of the AR-based fitness by combining it with a sharing scheme based on the Epanechnikov kernel [76]. Li et al. imposed a punishment on individuals who are neighbors of the best-AR individual to prohibit or postpone their entry in the next population [70]. Kong et al. repeatedly initialized the population by a chaotic method after some generations, in order to enhance diversity of individuals in the decision space [59]. Instead of considering the objectives in the original AR, Yuan et al. summed up the aggregation function values based on uniformly-distributed weight vectors [93].
+      </paragraph>
+      <paragraph>
+       A clear difference of BiGE from these AR-based algorithms is that BiGE uses the idea of Pareto dominance to deal with proximity and diversity. This could be well suited to many-objective optimization where the conflict between proximity and diversity goals is more serious than that in bi- or tri-objective optimization. Considering the dominance relation of these two goals can provide a good balance between them and lead the algorithm to be less affected by the increase of the objective dimensionality.
+      </paragraph>
+      <paragraph>
+       Next, we empirically investigate the difference between BiGE and some AR-based algorithms. Specifically, we consider three peer algorithms: (1) the original AR [5], (2) AR combined with a fitness sharing scheme (called AR+sharing here) [76], and (3) a new version of BiGE where AR is used as the proximity estimation method, denoted as BiGE(AR). In [76], AR has been found to be competitive when combined with a sharing scheme based on the Epanechnikov kernel [27]. From some initial experiments, we found that replacing the Epanechnikov kernel with the proposed niching method, the algorithm can obtain very similar results. Therefore, here the proposed niching method is used in AR+sharing in order to investigate the difference of the algorithm framework. That is, AR+sharing and BiGE(AR) have the same proximity and crowding degree estimation methods and the only difference between them is the algorithm framework. In addition, it is worth noting that BiGE(AR) and BiGE have the same algorithm framework and the only difference between them is their proximity estimation.
+      </paragraph>
+      <paragraph>
+       Table 9 gives the HV results of the three algorithms on all the 34 test instances; for comparison, the results of BiGE are also included in the table. As shown, the diversity mechanism dramatically improves the HV results, with AR+sharing, BiGE(AR) and BiGE outperforming the original AR on all the 34 test instances. This suggests the importance of diversity maintenance in many-objective optimization.
+      </paragraph>
+      <paragraph>
+       Regarding the two algorithms having the same proximity and crowding degree estimators, BiGE(AR) performs better than AR+sharing in 31 out of the 34 instances. This clearly indicates the advantage of the bi-goal evolution framework for many-objective problems. In AR+sharing, the proximity and diversity information of an individual in the population is integrated into a scalar value. One may think that AR+sharing can work with a second negatively correlated “helper” objective (which is not explicitly related to diversity promotion). This type of structure has been presented in some “multiobjectivization” literature to solve single-objective problems [55]. However, AR+sharing under this structure may still struggle to balance proximity and diversity for many-objective problems, since there is no explicit diversity maintenance mechanism in the algorithm to guide the search towards different promising areas.
+      </paragraph>
+      <paragraph>
+       In addition, note that AR+sharing has the best HV result for the three WFG2 instances, which have a disconnected Pareto front. This is because AR+sharing can always find all the optimal regions of the Pareto front in all the 30 runs, while BiGE(AR) and BiGE can only do so in around half of the 30 runs.
+      </paragraph>
+      <paragraph>
+       Finally, considering the comparison between two versions of the bi-goal evolution algorithm. BiGE(AR) outperforms BiGE on 10 test instances (including seven 5-objective instances), while BiGE has a better HV result on the remaining 24 instances. An interesting observation is that the less fine-grained algorithm BiGE(AR) generally performs better on 5-objective instances. One possible explanation for this is that BiGE(AR) could prefer some boundary individuals in a population. These boundary solutions, which perform rather poorly on one objective but the best (or nearly the best) on other objectives, play an important role in extending the search range. Due to having no consideration of quantitative difference of individuals, BiGE(AR) would be in favor of these solutions. Nevertheless, it is worth pointing out that a fine-grained estimation of individual proximity can be more important in a high-dimensional space, where it is more needed to clearly differentiate between individuals.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Discussions
+     </section-title>
+     <paragraph>
+      In BiGE, the diversity goal is estimated by a niche-based crowding degree. In this estimation, the radius of the niche depends on two factors: the population size and the number of objectives. A large population size (or low objective dimensionality) will lead to a small radius. The previous experiments (Section 6.1) have shown the effectiveness of BiGE under various settings of the population size and the number of objectives. This indicates that BiGE works well under this setting of the niche radius.
+     </paragraph>
+     <paragraph>
+      It is worth pointing out that the niche radius in the paper is a rough setting (estimate). A finely tuned setting based on the characteristics of a given MOP, such as varying with the Pareto front's shape, could lead to a better performance of the algorithm. Nevertheless, the algorithm under this radius setting has already shown high competitiveness against five state-of-the-art algorithms on diverse MOPs considered here. Also, this setting can benefit the applicability of the algorithm to real-world problems as it is hard (or even impossible) to know the problems' characteristics beforehand.
+     </paragraph>
+     <paragraph>
+      The major purpose of an EMO algorithm is to assist the decision-maker to select a single solution (or a few solutions) that fits his/her preferences [17], [9], [54], [74]. However, since an EMO algorithm usually supply the decision-maker with an approximation of the whole Pareto front, it can be difficult for the decision-maker to choose his/her preferred one(s), especially in many-objective optimization. In spite of this, obtaining a Pareto front approximation with a set of well-distributed and well-converged solutions can be greatly useful to learn about the characteristics of the optimization problem. For example, the decision-maker can learn about the nature of the trade-offs among the objectives (e.g., discontinuousness, convexity, degeneration and knees) or discover inconsistencies of the model with regard to the real optimization problem [51]. This can help the decision-maker specify preferences that efficiently lead the search and eventually find a satisfied solution.
+     </paragraph>
+     <paragraph>
+      On the other hand, since the difficulties of representing the whole Pareto front as well as choosing a satisfied solution in a high-dimensional space, it could be appealing if an EMO algorithm can work collaboratively with the decision-maker preferences. This will lead to the search around the region of interest of the decision-maker.
+     </paragraph>
+     <paragraph>
+      Intuitively, there are three ways of implementing the incorporation of the decision-maker preferences into the proposed bi-goal evolution framework: 1) incorporating the preference information into the proximity goal, 2) incorporating the preference information into the diversity goal, and 3) incorporating the preference information into both the proximity and diversity goals. However, the first two ways may lead to the evolutionary population hard to get rid of some individuals that are far away from the region of interest of the decision-maker, since these individuals can perform very well on the other goal (i.e., the goal not including the preference information) and thus are nondominated in the population on the basis of the two goals. Therefore, it might be a better alternative to make both the proximity and diversity goals implicate the preference information (e.g., considering individuals' distance or relative position to the reference point supplied by the decision-maker). This could help the population evolve gradually towards the region of interest of the decision-maker while keep a relative balance between proximity and diversity in a high-dimensional objective space.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

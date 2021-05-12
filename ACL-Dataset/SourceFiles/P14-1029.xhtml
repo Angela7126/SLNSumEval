@@ -1,0 +1,922 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>An Empirical Study on the Effect of Negation Words on Sentiment</title>
+<!--Generated on Tue Jun 10 17:26:18 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">An Empirical Study on the Effect of Negation Words on Sentiment</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xiaodan Zhu, Hongyu Guo, Saif Mohammad and Svetlana Kiritchenko
+<br class="ltx_break"/>National Research Council Canada 
+<br class="ltx_break"/>1200 Montreal Road
+<br class="ltx_break"/>Ottawa, K1A 0R6, ON, Canada 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">Xiaodan.Zhu,Hongyu.Guo,Saif.Mohammad,Svetlana.Kiritchenko</span>}
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">@nrc-cnrc.gc.ca</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Negation words, such as <span class="ltx_text ltx_font_italic">no</span> and <span class="ltx_text ltx_font_italic">not</span>, play a fundamental
+role in modifying sentiment of textual expressions. We will refer to a
+negation word as the <span class="ltx_text ltx_font_italic">negator</span> and the text span within the scope
+of the negator as the <span class="ltx_text ltx_font_italic">argument</span>. Commonly used heuristics to
+estimate the sentiment of negated expressions rely simply on the
+sentiment of argument (and not on the negator or the argument itself).
+We use a sentiment treebank to show that these existing heuristics are
+poor estimators of sentiment. We then modify these heuristics to be
+dependent on the negators and show that this improves prediction.
+Next, we evaluate a recently proposed composition model
+<cite class="ltx_cite">[]</cite> that relies on both the negator and the
+argument. This model learns the syntax and semantics of the negator’s
+argument with a recursive neural network. We show that this approach
+performs better than those mentioned above. In addition, we explicitly
+incorporate the prior sentiment of the argument and observe that this
+information can help reduce fitting errors.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/> define negation to be “a grammatical
+category that allows the changing of the truth value of a
+proposition”. Negation is often expressed through the use of negative
+signals or negators–words like <span class="ltx_text ltx_font_italic">isn’t</span> and <span class="ltx_text ltx_font_italic">never</span>, and
+it can significantly affect the sentiment of its scope. Understanding
+the impact of negation on sentiment is essential in automatic analysis
+of sentiment. The literature contains interesting research attempting
+to model and understand the behavior (reviewed in Section
+<a href="#S2" title="2 Related work ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). For example, a simple yet influential hypothesis
+posits that a negator reverses the sign of the sentiment value of the
+modified text <cite class="ltx_cite">[]</cite>. The <span class="ltx_text ltx_font_italic">shifting</span>
+hypothesis <cite class="ltx_cite">[]</cite>, however, assumes that negators change
+sentiment values by a constant amount. In this paper, we refer to a
+negation word as the <span class="ltx_text ltx_font_italic">negator</span> (e.g., <span class="ltx_text ltx_font_italic">isn’t</span>), a text
+span being modified by and composed with a negator as the
+<span class="ltx_text ltx_font_italic">argument</span> (e.g., <span class="ltx_text ltx_font_italic">very good</span>), and entire phrase (e.g.,
+<span class="ltx_text ltx_font_italic">isn’t very good</span>) as the <span class="ltx_text ltx_font_italic">negated phrase</span>.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1029/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="267" height="223" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Effect of a list of common negators in modifying
+sentiment values in Stanford Sentiment Treebank. The x-axis is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>, and y-axis is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="s(w_{n},\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math>. Each dot in the
+figure corresponds to a text span being modified by (composed
+with) a negator in the treebank. The red diagonal line
+corresponds to the sentiment-reversing hypothesis that simply
+reverses the sign of sentiment values.</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The recently available Stanford Sentiment Treebank <cite class="ltx_cite">[]</cite>
+renders manually annotated, real-valued sentiment scores for all
+phrases in parse trees. This corpus provides us with the data to
+further understand the quantitative behavior of negators, as the
+effect of negators can now be studied with <span class="ltx_text ltx_font_italic">arguments</span> of rich
+syntactic and semantic variety. Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+illustrates the effect of a common list of negators on sentiment as
+observed on the Stanford Sentiment Treebank.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The sentiment
+values have been linearly rescaled from the original range [0, 1] to
+[-0.5, 0.5]; in the figure a negative or positive value corresponds
+to a negative or a positive sentiment respectively; zero means
+neutral. The negator list will be discussed later in the paper.</span></span></span>
+Each dot in the figure corresponds to a <span class="ltx_text ltx_font_italic">negated phrase</span> in the
+treebank. The x-axis is the sentiment score of its <span class="ltx_text ltx_font_italic">argument</span>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> and y-axis the sentiment score of the entire negated
+phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="s(w_{n},\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We can see that the <span class="ltx_text ltx_font_italic">reversing</span> assumption (the red diagonal
+line) does capture some regularity of human perception, but rather
+roughly. Moreover, the figure shows that same or similar <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>
+scores (x-axis) can correspond to very different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m2" class="ltx_Math" alttext="s(w_{n},\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math>
+scores (y-axis), which, to some degree, suggests the potentially
+complicated behavior of negators.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Similar distribution is
+observed in other data such as Tweets <cite class="ltx_cite">[]</cite>.</span></span></span></p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">This paper describes a quantitative study of the effect of a list of
+frequent negators on sentiment. We regard the negators’ behavior as an
+underlying function embedded in annotated data; we aim to model this
+function from different aspects. By examining sentiment compositions
+of negators and arguments, we model the quantitative behavior of
+negators in changing sentiment. That is, given a negated phrase
+(e.g., <span class="ltx_text ltx_font_italic">isn’t very good</span>) and the sentiment score of its
+argument (e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="s(``very\&gt;good^{\prime\prime})=0.5" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi mathvariant="normal">`</mi><mo>⁢</mo><mi mathvariant="normal">`</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mpadded width="+2.2pt"><mi>y</mi></mpadded><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msup><mi>d</mi><mi>′′</mi></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mn>0.5</mn></mrow></math>), we focus on understanding
+the negator’s quantitative behavior in yielding the sentiment score of
+the negated phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext="s(``isn^{\prime}t\&gt;very\&gt;good^{\prime\prime})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi mathvariant="normal">`</mi><mo>⁢</mo><mi mathvariant="normal">`</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msup><mi>n</mi><mo>′</mo></msup><mo>⁢</mo><mpadded width="+2.2pt"><mi>t</mi></mpadded><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mpadded width="+2.2pt"><mi>y</mi></mpadded><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msup><mi>d</mi><mi>′′</mi></msup></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We first evaluate the modeling capabilities of two influential
+heuristics and show that they capture only very limited regularity of
+negators’ effect. We then extend the models to be dependent on the
+negators and demonstrate that such a simple extension can
+significantly improve the performance of fitting to the human
+annotated data. Next, we evaluate a recently proposed composition
+model (Socher, 2013) that relies on both the negator and the
+argument. This model learns the syntax and semantics of the negator’s
+argument with a recursive neural network. This approach performs
+significantly better than those mentioned above. In addition, we
+explicitly incorporate the prior sentiment of the argument and observe
+that this information helps reduce fitting errors.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Automatic sentiment analysis</span> The expression of
+sentiment is an integral component of human language. In written text,
+sentiment is conveyed with word senses and their composition, and in
+speech also via prosody such as pitch <cite class="ltx_cite">[]</cite>. Early work on
+automatic sentiment analysis includes the widely cited work of
+<cite class="ltx_cite">[]</cite>, among others. Since then,
+there has been an explosion of research addressing various aspects of
+the problem, including detecting subjectivity, rating and classifying
+sentiment, labeling sentiment-related semantic roles (e.g., target of
+sentiment), and visualizing sentiment (see surveys by
+<cite class="ltx_cite"/> and <cite class="ltx_cite"/>).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Negation modeling</span> Negation is a general
+grammatical category pertaining to the changing of the truth values of
+propositions; negation modeling is not limited to sentiment. For
+example, paraphrase and contradiction detection systems rely on
+detecting negated expressions and opposites <cite class="ltx_cite">[]</cite>. In
+general, a negated expression and the opposite of the expression may
+or may not convey the same meaning. For example, <span class="ltx_text ltx_font_italic">not alive</span> has
+the same meaning as <span class="ltx_text ltx_font_italic">dead</span>, however, <span class="ltx_text ltx_font_italic">not tall</span> does not
+always mean <span class="ltx_text ltx_font_italic">short</span>. Some automatic methods to detect opposites
+were proposed by <cite class="ltx_cite"/> and
+<cite class="ltx_cite"/>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Negation modeling for sentiment</span> An early yet
+influential <span class="ltx_text ltx_font_italic">reversing</span> assumption conjectures that a negator
+reverses the sign of the sentiment value of the modified text
+<cite class="ltx_cite">[]</cite>, e.g., from +0.5 to -0.5, or vice versa. A
+different hypothesis, called the <span class="ltx_text ltx_font_italic">shifting</span> hypothesis in this
+paper, assumes that negators change the sentiment values by a constant
+amount <cite class="ltx_cite">[]</cite>. Other approaches to negation modeling
+have been discussed in <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In the process of semantic composition, the effect of negators could
+depend on the syntax and semantics of the text spans they modify. The
+approaches of modeling this include bag-of-word-based models. For
+example, in the work of <cite class="ltx_cite">[]</cite>, a feature <span class="ltx_text ltx_font_italic">not_good</span>
+will be created if the word <span class="ltx_text ltx_font_italic">good</span> is encountered within a
+predefined range after a negator.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">There exist different ways of incorporating more complicated syntactic
+and semantic information. Much recent work considers sentiment
+analysis from a semantic-composition
+perspective <cite class="ltx_cite">[]</cite>, which
+achieved the state-of-the-art performance. <cite class="ltx_cite"/> used a
+collection of hand-written compositional rules to assign sentiment
+values to different granularities of text spans. <cite class="ltx_cite"/>
+proposed a learning-based framework. The more recent work of
+<cite class="ltx_cite">[]</cite> proposed models based on recursive neural
+networks that do not rely on any heuristic rules. Such models work in
+a bottom-up fashion over the parse tree of a sentence to infer the
+sentiment label of the sentence as a composition of the sentiment
+expressed by its constituting parts. The approach leverages a
+principled method, the forward and backward propagation, to learn a
+vector representation to optimize the system performance. In principle
+neural network is able to fit very complicated functions
+<cite class="ltx_cite">[]</cite>, and in this paper, we adapt the
+state-of-the-art approach described in <cite class="ltx_cite">[]</cite> to help
+understand the behavior of negators specifically.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Negation models based on heuristics</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We begin with previously proposed methods that leverage heuristics to
+model the behavior of negators. We then propose to extend them to
+consider lexical information of the negators themselves.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Non-lexicalized assumptions and modeling</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In previous research, some influential, widely adopted assumptions
+posit the effect of negators to be independent of both the
+specific negators and the semantics and syntax of the arguments. In
+this paper, we call a model based on such assumptions a
+non-lexicalized model. In general, we can simply define this category
+of models in Equation <a href="#S3.E1" title="(1) ‣ 3.1 Non-lexicalized assumptions and modeling ‣ 3 Negation models based on heuristics ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. That is, the model parameters
+are only based on the sentiment value of the arguments.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="s(w_{n},\vec{w})\stackrel{\mathrm{def}}{=}f(s(\vec{w}))" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi>def</mi></mover><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.1 </span>Reversing hypothesis</h4>
+
+<div id="S3.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">A typical model falling into this
+category is the <span class="ltx_text ltx_font_italic">reversing</span> hypothesis discussed in Section
+<a href="#S2" title="2 Related work ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, where a negator simply reverses the sentiment
+score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> to be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m2" class="ltx_Math" alttext="-s(\vec{w})" display="inline"><mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></mrow></math>; i.e.,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m3" class="ltx_Math" alttext="f(s(\vec{w}))=-s(\vec{w})" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S3.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.2 </span>Shifting hypothesis</h4>
+
+<div id="S3.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic" style="text-decoration:underline;">Basic shifting</span> Similarly, a
+<span class="ltx_text ltx_font_italic">shifting</span> based model depends on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> only, which can
+be written as:</p>
+</div>
+<div id="S3.SS1.SSS2.p2" class="ltx_para">
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="f(s(\vec{w}))=s(\vec{w})-sign(s(\vec{w}))*C" display="block"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>*</mo><mi>C</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.SSS2.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p3.m1" class="ltx_Math" alttext="sign(.)" display="inline"><mrow><mi>s</mi><mi>i</mi><mi>g</mi><mi>n</mi><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> is the standard <span class="ltx_text ltx_font_italic">sign</span> function which
+determines if the constant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p3.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> should be added to or deducted from
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p3.m3" class="ltx_Math" alttext="s(w_{n})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow></math>: the constant is added to a negative <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p3.m4" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> but
+deducted from a positive one.</p>
+</div>
+<div id="S3.SS1.SSS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic" style="text-decoration:underline;">Polarity-based shifting</span> As will be shown
+in our experiments, negators can have different shifting power when
+modifying a positive or a negative phrase. Thus, we explore the use of
+two different constants for these two situations, i.e.,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p4.m1" class="ltx_Math" alttext="f(s(\vec{w}))=s(\vec{w})-sign(s(\vec{w}))*C(sign(s(\vec{w})))" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>*</mo><mi>C</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>. The
+constant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p4.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> now can take one of two possible values. We will show
+that this simple modification improves the fitting performance
+statistically significantly. Note also that instead of determining
+these constants by human intuition, we use the training data to find
+the constants in all shifting-based models as well as for the
+parameters in other models.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Simple lexicalized assumptions</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The above negation hypotheses rely on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>. As intuitively
+shown in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the capability of the
+non-lexicalized heuristics might be limited. Further semantic or
+syntactic information from either the negators or the phrases they
+modify could be helpful. The most straightforward way of expanding the
+non-lexicalized heuristics is probably to make the models to be
+dependent on the negators.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="s(w_{n},\vec{w})\stackrel{\mathrm{def}}{=}f(w_{n},s(\vec{w}))" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi>def</mi></mover><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic" style="text-decoration:underline;">Negator-based shifting</span> We can simply
+extend the basic shifting model above to consider the lexical
+information of negators:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="f(s(\vec{w}))=s(\vec{w})-sign(s(\vec{w}))*C(w_{n})" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>*</mo><mi>C</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></math>. That is, each
+negator has its own <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>. We call this model <span class="ltx_text ltx_font_italic">negator-based
+shifting</span>. We will show that this model also statistically
+significantly outperforms the basic shifting without overfitting,
+although the number of parameters have increased.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic" style="text-decoration:underline;">Combined shifting</span> We further combine the
+<span class="ltx_text ltx_font_italic">negator-based shifting</span> and <span class="ltx_text ltx_font_italic">polarity-based shifting</span>
+above: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="f(s(\vec{w}))=s(\vec{w})-sign(s(\vec{w}))*C(w_{n},sign(s(\vec{w})))" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>*</mo><mi>C</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>. This shifting model is based on negators and the
+polarity of the text they modify: constants can be different for each
+negator-polarity pair. The number of parameters in this model is the
+multiplication of number of negators by two (the number of sentiment
+polarities). This model further improves the fitting performance on
+the test data.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Semantics-enriched modeling</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Negators can interact with arguments in complex ways. Figure
+<a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the distribution of the effect of
+negators on sentiment without considering further semantics of the
+arguments. The question then is that whether and how much
+incorporating further syntax and semantic information can help better
+fit or predict the negation effect. Above, we have considered the
+semantics of the negators. Below, we further make the models to be
+dependent on the arguments. This can be written as:</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<table id="S4.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="s(w_{n},\vec{w})\stackrel{\mathrm{def}}{=}f(w_{n},s(\vec{w}),r(\vec{w}))" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi>def</mi></mover><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">In the formula, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="r(\vec{w})" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> is a certain type of representation for
+the argument <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="\vec{w}" display="inline"><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></math> and it models the semantics or/and syntax of
+the argument. There exist different ways of implementing
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="r(\vec{w})" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>. We consider two models in this study: one drops
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> in Equation <a href="#S4.E4" title="(4) ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and directly models
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m5" class="ltx_Math" alttext="f(w_{n},r(\vec{w}))" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></math>. That is, the non-uniform information shown in
+Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is not directly modeled. The
+other takes into account <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m6" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> too.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">For the former, we adopt the recursive neural tensor network (RNTN)
+proposed recently by <cite class="ltx_cite"/>, which has showed to achieve
+the state-of-the-art performance in sentiment analysis. For the
+latter, we propose a prior sentiment-enriched tensor network (PSTN) to
+take into account the prior sentiment of the argument <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>RNTN: Recursive neural tensor network</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">A recursive neural tensor network (RNTN) is a specific form of
+feed-forward neural network based on syntactic (phrasal-structure)
+parse tree to conduct compositional sentiment analysis. For
+completeness, we briefly review it here. More details can be found in
+<cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">As shown in the <span class="ltx_text ltx_font_italic">black</span> portion of Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, each instance
+of RNTN corresponds to a binary parse tree of a given sentence. Each
+node of the parse tree is a fixed-length vector that encodes
+compositional semantics and syntax, which can be used to predict the
+sentiment of this node. The vector of a node, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> in
+Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, is computed from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>-dimensional vectors of its
+two children, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="(a,p_{1}\in\mathbb{R}^{d\times 1})" display="inline"><mrow><mo>(</mo><mrow><mrow><mi>a</mi><mo>,</mo><msub><mi>p</mi><mn>1</mn></msub></mrow><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow><mo>)</mo></mrow></math>, with a non-linear function:</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="\displaystyle p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m2" class="ltx_Math" alttext="\displaystyle=tanh(\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right]^{T}V^{[1:d]}\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right]+W\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right])" display="inline"><mrow><mi/><mo>=</mo><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow><mi>T</mi></msup><mo>⁢</mo><msup><mi>V</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></msup><mo>⁢</mo><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow></mrow><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">where, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="W\in\mathbb{R}^{d\times(d+d)}" display="inline"><mrow><mi>W</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="V\in\mathbb{R}^{(d+d)\times(d+d)\times d}" display="inline"><mrow><mi>V</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>×</mo><mi>d</mi></mrow></msup></mrow></math> are the matrix and tensor for the
+composition function. A major difference of RNTN from the
+conventional recursive neural network (RRN) <cite class="ltx_cite">[]</cite> is the use of the tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> in
+order to directly capture the multiplicative interaction of two input
+vectors, although the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> <span class="ltx_text ltx_font_italic">implicitly</span> captures the
+nonlinear interaction between the input vectors. The training of
+RNTN uses conventional forward-backward propagation.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>PSTN: Prior sentiment-enriched tensor network</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The non-uniform distribution in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+has showed certain correlations between the sentiment values of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="s(w_{n},\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>, and such information has been
+leveraged in the models discussed in Section <a href="#S3" title="3 Negation models based on heuristics ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. We
+intend to devise a model that implements Equation
+<a href="#S4.E4" title="(4) ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. It bridges between the models we have
+discussed above that use either <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="s(\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="r(\vec{w})" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-1029/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="333" height="174" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Prior
+sentiment-enriched tensor network (PSTN) model for sentiment analysis.</div>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We extend RNTN to directly consider the sentiment information of
+arguments. Consider the node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. When
+calculating its vector, we aim to directly engage the sentiment
+information of its right child, i.e., the argument. To this end, we
+make use of the sentiment class information of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math>, noted as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="p_{1}^{sen}" display="inline"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></math>. As a result, the vector of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> is calculated as
+follows:</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<table id="S7.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\displaystyle p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m2" class="ltx_Math" alttext="\displaystyle=tanh(\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right]^{T}V^{[1:d]}\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right]+W\left[\begin{matrix}a\\&#10;p_{1}\\&#10;\end{matrix}\right]" display="inline"><mrow><mo>=</mo><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mrow><mo>(</mo><msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow><mi>T</mi></msup><msup><mi>V</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow><mo>+</mo><mi>W</mi><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>p</mi><mn>1</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr id="S4.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m2" class="ltx_Math" alttext="\displaystyle+\left[\begin{matrix}a\\&#10;p_{1}^{{sen}}\\&#10;\end{matrix}\right]^{T}V^{sen^{[1:d]}}\left[\begin{matrix}a\\&#10;p_{1}^{{sen}}\\&#10;\end{matrix}\right]+W^{sen}\left[\begin{matrix}a\\&#10;p_{1}^{{sen}}\\&#10;\end{matrix}\right])" display="inline"><mrow><mo>+</mo><msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mi>T</mi></msup><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msup><mi>n</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></msup></mrow></msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mo>+</mo><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">As shown in Equation <a href="#S4.E6" title="(6) ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, for the node vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="p_{1}\in\mathbb{R}^{d\times 1}" display="inline"><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>, we employ a matrix, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="W^{sen}\in\mathbb{R}^{d\times(d+m)}" display="inline"><mrow><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></math> and a tensor, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="V^{sen}\in\mathbb{R}^{(d+m)\times(d+m)\times d}" display="inline"><mrow><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mi>d</mi></mrow></msup></mrow></math>, aiming at explicitly capturing the
+interplays between the sentiment class of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m4" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math>, denoted as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m5" class="ltx_Math" alttext="p_{1}^{{sen}}" display="inline"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></math>(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m6" class="ltx_Math" alttext="\in\mathbb{R}^{m\times 1}" display="inline"><mrow><mi/><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>), and the negator
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m7" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>. Here, we assume the sentiment task has <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m8" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> classes. Following the
+idea of <cite class="ltx_cite"/>, we regard the sentiment of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m9" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math> as a
+<span class="ltx_text ltx_font_italic">prior</span> sentiment as it has not been affected by the specific context
+(negators), so we denote our method as prior sentiment-enriched tensor
+network (PSTN). In Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, the <span class="ltx_text ltx_font_italic">red</span> portion shows the
+added components of PSTN.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">Note that depending on different purposes, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m1" class="ltx_Math" alttext="p_{1}^{{sen}}" display="inline"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></math> can take
+the value of the automatically predicted sentiment distribution
+obtained in forward propagation, the gold sentiment annotation of node
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m2" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math>, or even other normalized prior sentiment value or confidence
+score from external sources (e.g., sentiment lexicons or external
+training data). This is actually an interesting place to extend the
+current recursive neural network to consider extrinsic
+knowledge. However, in our current study, we focus on exploring the
+behavior of negators. As we have discussed above, we will use the
+human annotated sentiment for the arguments, same as in the models
+discussed in Section <a href="#S3" title="3 Negation models based on heuristics ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">With the new matrix and tensor, we then have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="\theta=(V,V^{sen},W,W^{sen},W^{label},L)" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup><mo>,</mo><mi>W</mi><mo>,</mo><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup><mo>,</mo><msup><mi>W</mi><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msup><mo>,</mo><mi>L</mi></mrow><mo>)</mo></mrow></mrow></math> as the PSTN model’s
+parameters. Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> denotes the vector representations of the word
+dictionary.</p>
+</div>
+<div id="S4.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.1 </span>Inference and Learning</h4>
+
+<div id="S4.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Inference and learning in PSTN follow a forward-backward propagation
+process similar to that in <cite class="ltx_cite">[]</cite>, and for completeness, we
+depict the details as follows. To train the model, one first needs to
+calculate the predicted sentiment distribution for each
+node:</p>
+<table id="S4.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex2.m1" class="ltx_Math" alttext="p_{i}^{{sen}}=W^{label}p_{i},\hskip{14.226378pt}p_{i}^{{sen}}\in\mathbb{R}^{m%&#10;\times 1}" display="block"><mrow><mrow><msubsup><mi>p</mi><mi>i</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>=</mo><mrow><msup><mi>W</mi><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msup><mo>⁢</mo><msub><mi>p</mi><mi>i</mi></msub></mrow></mrow><mo separator="true">,  </mo><mrow><msubsup><mi>p</mi><mi>i</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">and then compute the posterior probability
+over the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> labels:</p>
+<table id="S4.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m1" class="ltx_Math" alttext="y^{i}=\text{softmax}(p_{i}^{{sen}})" display="block"><mrow><msup><mi>y</mi><mi>i</mi></msup><mo>=</mo><mrow><mtext>softmax</mtext><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>p</mi><mi>i</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.SSS1.p2" class="ltx_para">
+<p class="ltx_p">During learning, following the method used by the RNTN model in
+ <cite class="ltx_cite">[]</cite>, PSTN also aims to minimize the cross-entropy error
+between the predicted distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m1" class="ltx_Math" alttext="y^{{i}}\in\mathbb{R}^{m\times 1}" display="inline"><mrow><msup><mi>y</mi><mi>i</mi></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math> at node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and the target distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p2.m3" class="ltx_Math" alttext="t^{i}\in\mathbb{R}^{m\times 1}" display="inline"><mrow><msup><mi>t</mi><mi>i</mi></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math> at that node. That is, the error for a
+sentence is calculated as:</p>
+</div>
+<div id="S4.SS2.SSS1.p3" class="ltx_para">
+<table id="S7.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\displaystyle E(\theta)=\sum_{i}\sum_{j}t_{j}^{i}\text{log}{y_{j}^{{i}}}+%&#10;\lambda\left\|\theta\right\|^{2}" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder></mstyle><mrow><msubsup><mi>t</mi><mi>j</mi><mi>i</mi></msubsup><mo>⁢</mo><mtext>log</mtext><mo>⁢</mo><msubsup><mi>y</mi><mi>j</mi><mi>i</mi></msubsup></mrow></mrow></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mi>θ</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">where, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p3.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> represents the regularization hyperparameters, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p3.m2" class="ltx_Math" alttext="j\in m" display="inline"><mrow><mi>j</mi><mo>∈</mo><mi>m</mi></mrow></math> denotes the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p3.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th element of the multinomial target distribution.</p>
+</div>
+<div id="S4.SS2.SSS1.p4" class="ltx_para">
+<p class="ltx_p">To minimize <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m1" class="ltx_Math" alttext="E(\theta)" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math>, the gradient of the objective function with
+respect to each of the parameters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> is calculated
+efficiently via backpropagation through structure, as proposed by
+<cite class="ltx_cite"/>. Specifically, we first
+compute the prediction errors in all tree nodes bottom-up. After this
+forward process, we then calculate the derivatives of the softmax
+classifiers at each node in the tree in a top-down fashion. We will
+discuss the gradient computation for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m3" class="ltx_Math" alttext="V^{sen}" display="inline"><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m4" class="ltx_Math" alttext="W^{sen}" display="inline"><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></math> in
+detail next. Note that the gradient calculations for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p4.m5" class="ltx_Math" alttext="V,W,W^{label},L" display="inline"><mrow><mi>V</mi><mo>,</mo><mi>W</mi><mo>,</mo><msup><mi>W</mi><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></msup><mo>,</mo><mi>L</mi></mrow></math> are the same as that of presented in <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S4.SS2.SSS1.p5" class="ltx_para">
+<p class="ltx_p">In the backpropogation process of the training, each node (except the
+root node) in the tree carries two kinds of errors: the local softmax
+error and the error passing down from its parent node. During the
+derivative computation, the two errors will be summed up as the
+complement incoming error for the node. We denote the complete
+incoming error and the softmax error vector for node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m2" class="ltx_Math" alttext="\delta^{i,com}\in\mathbb{R}^{d\times 1}" display="inline"><mrow><msup><mi>δ</mi><mrow><mi>i</mi><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m3" class="ltx_Math" alttext="\delta^{i,s}\in\mathbb{R}^{d\times 1}" display="inline"><mrow><msup><mi>δ</mi><mrow><mi>i</mi><mo>,</mo><mi>s</mi></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>, respectively. With this notation, the error
+for the root node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m4" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> can be formulated as follows.</p>
+<table id="S7.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m1" class="ltx_Math" alttext="\displaystyle\delta^{p_{2},com}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m2" class="ltx_Math" alttext="\displaystyle=\delta^{p_{2},s}" display="inline"><mrow><mi/><mo>=</mo><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mi>s</mi></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m2" class="ltx_Math" alttext="\displaystyle=(W^{T}(y^{p_{2}}-t^{p_{2}}))\otimes f^{{}^{\prime}}([a;p_{1}])" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mo>(</mo><mrow><msup><mi>W</mi><mi>T</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>y</mi><msub><mi>p</mi><mn>2</mn></msub></msup><mo>-</mo><msup><mi>t</mi><msub><mi>p</mi><mn>2</mn></msub></msup></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><mi>a</mi><mo>;</mo><msub><mi>p</mi><mn>1</mn></msub></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m5" class="ltx_Math" alttext="\otimes" display="inline"><mo>⊗</mo></math> is the Hadamard product between the two vectors and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m6" class="ltx_Math" alttext="f^{{}^{\prime}}" display="inline"><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup></math> is the element-wise derivative of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m7" class="ltx_Math" alttext="f=tanh" display="inline"><mrow><mi>f</mi><mo>=</mo><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi></mrow></mrow></math>. With the results
+from Equation <a href="#S4.Ex4" title="4.2.1 Inference and Learning ‣ 4.2 PSTN: Prior sentiment-enriched tensor network ‣ 4 Semantics-enriched modeling ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>, we then can calculate the derivatives for the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m8" class="ltx_Math" alttext="W^{sen}" display="inline"><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></math> at node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m9" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> using the following equation:</p>
+<table id="S4.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex5.m1" class="ltx_Math" alttext="\frac{\partial E^{p_{2}}}{W^{sen}}=\delta^{p_{2},com}([a;p_{1}^{{sen}}])^{T}" display="block"><mrow><mfrac><mrow><mo>∂</mo><mo>⁡</mo><msup><mi>E</mi><msub><mi>p</mi><mn>2</mn></msub></msup></mrow><msup><mi>W</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></mfrac><mo>=</mo><mrow><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msup><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mo>[</mo><mrow><mi>a</mi><mo>;</mo><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mrow><mo>]</mo></mrow><mo>)</mo></mrow><mi>T</mi></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Similarly, for the derivative of each slice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m10" class="ltx_Math" alttext="k(k=1,\dots,d)" display="inline"><mrow><mi>k</mi><mrow><mo>(</mo><mi>k</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>d</mi><mo>)</mo></mrow></mrow></math> of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p5.m11" class="ltx_Math" alttext="V^{sen}" display="inline"><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></math> tensor, we have the following:</p>
+<table id="S7.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex6.m1" class="ltx_Math" alttext="\displaystyle\frac{\partial E^{p_{2}}}{V_{[k]}^{sen}}=\delta^{p_{2},com}_{k}%&#10;\left[\begin{matrix}a\\&#10;p_{1}^{{sen}}\\&#10;\end{matrix}\right]\left[\begin{matrix}a\\&#10;p_{1}^{{sen}}\\&#10;\end{matrix}\right]^{T}" display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><mo>∂</mo><mo>⁡</mo><msup><mi>E</mi><msub><mi>p</mi><mn>2</mn></msub></msup></mrow><msubsup><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mfrac></mstyle><mo>=</mo><mrow><msubsup><mi>δ</mi><mi>k</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msubsup><mo>⁢</mo><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mo>⁢</mo><msup><mrow><mo>[</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center"><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mi>T</mi></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.SSS1.p6" class="ltx_para">
+<p class="ltx_p">Now, let’s form the equations for computing the error for the two
+children of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m1" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> node. The difference for the error at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m2" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math>
+and its two children is that the error for the latter will need to
+compute the error message passing down from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m3" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math>. We denote the
+error passing down as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m4" class="ltx_Math" alttext="\delta^{p_{2},down}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup></math>, where the left child and
+the right child of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m5" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> take the 1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m6" class="ltx_Math" alttext="{}^{st}" display="inline"><msup><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math> and 2<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m7" class="ltx_Math" alttext="{}^{nd}" display="inline"><msup><mi/><mrow><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msup></math> half of the
+error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m8" class="ltx_Math" alttext="\delta^{p_{2},down}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup></math>, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m9" class="ltx_Math" alttext="\delta^{p_{2},down}[1:d]" display="inline"><mrow><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m10" class="ltx_Math" alttext="\delta^{p_{2},down}[d+1:2d]" display="inline"><mrow><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup><mrow><mo>[</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>:</mo><mn>2</mn><mi>d</mi><mo>]</mo></mrow></mrow></math>, respectively. Following this notation,
+we have the error message for the two children of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m11" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math>, provided
+that we have the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p6.m12" class="ltx_Math" alttext="\delta^{p_{2},down}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup></math>:</p>
+</div>
+<div id="S4.SS2.SSS1.p7" class="ltx_para">
+<table id="S7.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m1" class="ltx_Math" alttext="\displaystyle\delta^{p_{1},com}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m2" class="ltx_Math" alttext="\displaystyle=\delta^{p_{1},s}+\delta^{p_{2},down}[d+1:2d]" display="inline"><mrow><mo>=</mo><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><mi>s</mi></mrow></msup><mo>+</mo><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup><mrow><mo>[</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>:</mo><mn>2</mn><mi>d</mi><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex8.m2" class="ltx_Math" alttext="\displaystyle=(W^{T}(y^{p_{1}}-t^{p_{1}}))\otimes f^{{}^{\prime}}([b;c])" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mo>(</mo><mrow><msup><mi>W</mi><mi>T</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>y</mi><msub><mi>p</mi><mn>1</mn></msub></msup><mo>-</mo><msup><mi>t</mi><msub><mi>p</mi><mn>1</mn></msub></msup></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><mi>b</mi><mo>;</mo><mi>c</mi></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m2" class="ltx_Math" alttext="\displaystyle+\delta^{p_{2},down}[d+1:2d]" display="inline"><mrow><mo>+</mo><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup><mrow><mo>[</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>:</mo><mn>2</mn><mi>d</mi><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.SSS1.p8" class="ltx_para">
+<p class="ltx_p">The incoming error message of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p8.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> can be calculated
+similarly. Finally, we can finish the above equations with the
+following formula for computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p8.m2" class="ltx_Math" alttext="\delta^{p_{2},down}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup></math>:</p>
+<table id="S7.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m1" class="ltx_Math" alttext="\displaystyle\delta^{p_{2},down}" display="inline"><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m2" class="ltx_Math" alttext="\displaystyle=(W^{T}\delta^{p_{2},com})\otimes f^{{}^{\prime}}([a;p_{1}])+%&#10;\delta^{tensor}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mrow><mo>(</mo><mrow><msup><mi>W</mi><mi>T</mi></msup><mo>⁢</mo><msup><mi>δ</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msup></mrow><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><mi>a</mi><mo>;</mo><msub><mi>p</mi><mn>1</mn></msub></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msup><mi>δ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where</p>
+<table id="S7.EGx8" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex11.m2" class="ltx_Math" alttext="\displaystyle\delta^{tensor}=[\delta^{V}[1:d]+\delta^{V^{sen}}[1:d],\delta^{V}%&#10;[d+1:2d]]" display="inline"><mrow><msup><mi>δ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msup><mo>=</mo><mrow><mo>[</mo><msup><mi>δ</mi><mi>V</mi></msup><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow><mo>+</mo><msup><mi>δ</mi><msup><mi>V</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msup></msup><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow><mo>,</mo><msup><mi>δ</mi><mi>V</mi></msup><mrow><mo>[</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>:</mo><mn>2</mn><mi>d</mi><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex12.m2" class="ltx_Math" alttext="\displaystyle=\sum^{d}_{k=1}\delta_{k}^{p_{2},com}(V_{[k]}+(V_{[k]})^{T})%&#10;\otimes f^{{}^{\prime}}([a;p_{1}])[1:d]" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>d</mi></munderover></mstyle><msubsup><mi>δ</mi><mi>k</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msubsup><mrow><mo>(</mo><msub><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></msub><mo>+</mo><msup><mrow><mo>(</mo><msub><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></msub><mo>)</mo></mrow><mi>T</mi></msup><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup><mrow><mo>(</mo><mrow><mo>[</mo><mi>a</mi><mo>;</mo><msub><mi>p</mi><mn>1</mn></msub><mo>]</mo></mrow><mo>)</mo></mrow><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex13.m2" class="ltx_Math" alttext="\displaystyle+\sum^{d}_{k=1}\delta_{k}^{p_{2},com}(V_{[k]}^{sen}+(V_{[k]}^{sen%&#10;})^{T})\otimes f^{{}^{\prime}}([a;p_{1}^{{sen}}])[1:d]" display="inline"><mrow><mo>+</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>d</mi></munderover></mstyle><msubsup><mi>δ</mi><mi>k</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msubsup><mrow><mo>(</mo><msubsup><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>+</mo><msup><mrow><mo>(</mo><msubsup><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>)</mo></mrow><mi>T</mi></msup><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup><mrow><mo>(</mo><mrow><mo>[</mo><mi>a</mi><mo>;</mo><msubsup><mi>p</mi><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></msubsup><mo>]</mo></mrow><mo>)</mo></mrow><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>d</mi><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m2" class="ltx_Math" alttext="\displaystyle+\sum^{d}_{k=1}\delta_{k}^{p_{2},com}(V_{[k]}+(V_{[k]})^{T})%&#10;\otimes f^{{}^{\prime}}([a;p_{1}])[d+1:2d]" display="inline"><mrow><mo>+</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>d</mi></munderover></mstyle><msubsup><mi>δ</mi><mi>k</mi><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi></mrow></mrow></msubsup><mrow><mo>(</mo><msub><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></msub><mo>+</mo><msup><mrow><mo>(</mo><msub><mi>V</mi><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></msub><mo>)</mo></mrow><mi>T</mi></msup><mo>)</mo></mrow><mo>⊗</mo><msup><mi>f</mi><msup><mi/><mo>′</mo></msup></msup><mrow><mo>(</mo><mrow><mo>[</mo><mi>a</mi><mo>;</mo><msub><mi>p</mi><mn>1</mn></msub><mo>]</mo></mrow><mo>)</mo></mrow><mrow><mo>[</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>:</mo><mn>2</mn><mi>d</mi><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.SSS1.p9" class="ltx_para">
+<p class="ltx_p">After the models are trained, they are applied to predict the
+sentiment of the test data. The original RNTN and the PSTN predict
+5-class sentiment for each negated phrase; we map the output to
+real-valued scores based on the scale that <cite class="ltx_cite"/> used
+to map real-valued sentiment scores to sentiment
+categories. Specifically, we conduct the mapping with the formula:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p9.m1" class="ltx_Math" alttext="p_{i}^{real}=y^{i}\cdot[0.1\;0.3\;0.5\;0.7\;0.9]" display="inline"><mrow><msubsup><mi>p</mi><mi>i</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup><mo>=</mo><mrow><msup><mi>y</mi><mi>i</mi></msup><mo>⋅</mo><mrow><mo>[</mo><mn>0.1 0.3 0.5 0.7 0.9</mn><mo>]</mo></mrow></mrow></mrow></math>; i.e., we calculate
+the dot product of the posterior probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p9.m2" class="ltx_Math" alttext="y^{i}" display="inline"><msup><mi>y</mi><mi>i</mi></msup></math> and the scaling
+vector. For example, if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p9.m3" class="ltx_Math" alttext="y^{i}=[0.5\;0.5\;0\;0\;0]" display="inline"><mrow><msup><mi>y</mi><mi>i</mi></msup><mo>=</mo><mrow><mo>[</mo><mn>0.5 0.5 0 0 0</mn><mo>]</mo></mrow></mrow></math>, meaning this
+phrase has a 0.5 probability to be in the first category (strong
+negative) and 0.5 for the second category (weak negative), the
+resulting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p9.m4" class="ltx_Math" alttext="p_{i}^{real}" display="inline"><msubsup><mi>p</mi><mi>i</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi></mrow></msubsup></math> will be 0.2 (0.5*0.1+0.5*0.3).</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiment set-up</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Data</span> As described earlier, the Stanford Sentiment
+Treebank <cite class="ltx_cite">[]</cite> has manually annotated, real-valued
+sentiment values for all phrases in parse trees. This provides us with
+the training and evaluation data to study the effect of negators with
+syntax and semantics of different complexity in a natural setting. The
+data contain around 11,800 sentences from movie reviews that were
+originally collected by <cite class="ltx_cite"/>. The sentences were parsed
+with the Stanford parser <cite class="ltx_cite">[]</cite>. The phrases at all tree
+nodes were manually annotated with one of 25 sentiment values that
+uniformly span between the positive and negative poles. The values are
+normalized to the range of [0, 1].</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we use a list of most frequent negators that include the
+words <span class="ltx_text ltx_font_italic">not</span>, <span class="ltx_text ltx_font_italic">no</span>, <span class="ltx_text ltx_font_italic">never</span>, and their
+combinations with auxiliaries (e.g., <span class="ltx_text ltx_font_italic">didn’t</span>). We search these
+negators in the Stanford Sentiment Treebank and normalize the same
+negators to a single form; e.g., <span class="ltx_text ltx_font_italic">“is n’t”</span>,
+<span class="ltx_text ltx_font_italic">“isn’t”</span>, and <span class="ltx_text ltx_font_italic">“is not”</span> are all normalized to
+“is_not”. Each occurrence of a negator and the phrase it is directly
+composed with in the treebank, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\langle w_{n},\vec{w}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>⟩</mo></mrow></math>, is
+considered a data point in our study. In total, we collected 2,261
+pairs, including 1,845 training and 416 test cases. The split of
+training and test data is same as specified in <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Evaluation metrics</span> We use the mean absolute error
+(MAE) to evaluate the models, which measures the averaged absolute
+offsets between the predicted sentiment values and the gold
+standard. More specifically, MAE is calculated as:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="MAE=\frac{1}{N}\sum_{\langle w_{n},\vec{w}\rangle}{|({\hat{s}(w_{n},\vec{w})}-%&#10;s(w_{n},\vec{w}))|}" display="inline"><mrow><mrow><mi>M</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>E</mi></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mo>⟨</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>⟩</mo></mrow></msub><mrow><mo fence="true">|</mo><mrow><mo>(</mo><mrow><mrow><mover accent="true"><mi>s</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow><mo fence="true">|</mo></mrow></mrow></mrow></mrow></math>, where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m2" class="ltx_Math" alttext="\hat{s}(w_{n},\vec{w})" display="inline"><mrow><mover accent="true"><mi>s</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math> denotes the gold sentiment value and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m3" class="ltx_Math" alttext="s(w_{n},\vec{w})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>)</mo></mrow></mrow></math> the predicted one for the pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m4" class="ltx_Math" alttext="\langle w_{n},\vec{w}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>⟩</mo></mrow></math>, and N is the total number of test instances. Note
+that mean square error (MSE) is another widely used measure for
+regression, but it is less intuitive for out task here.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experimental results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Overall regression performance</span> Table
+<a href="#S6.T1" title="Table 1 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the overall fitting performance of all
+models. The first row of the table is a random baseline, which simply
+guesses the sentiment value for each test case randomly in the range
+[0,1]. The table shows that the basic <span class="ltx_text ltx_font_italic">reversing</span> and
+<span class="ltx_text ltx_font_italic">shifting</span> heuristics do capture negators’ behavior to some
+degree, as their MAE scores are higher than that of the
+baseline. Making the basic shifting model to be dependent on the
+negators (model 4) reduces the prediction error significantly as
+compared with the error of the basic shifting (model 3). The same is
+true for the polarity-based shifting (model 5), reflecting that the
+roles of negators are different when modifying positive and negative
+phrases. Merging these two models yields additional improvement (model
+6).</p>
+</div>
+<div id="S6.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Assumptions</th>
+<th class="ltx_td ltx_align_left ltx_border_t">MAE</th>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">Baseline</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (1) Random</td>
+<td class="ltx_td ltx_align_left">0.2796</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Non-lexicalized</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (2) Reversing</td>
+<td class="ltx_td ltx_align_left">0.1480*</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (3) Basic shifting</td>
+<td class="ltx_td ltx_align_left">0.1452*</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Simple-lexicalized</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (4) Negator-based shifting</td>
+<td class="ltx_td ltx_align_left">0.1415†</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (5) Polarity-based shifting</td>
+<td class="ltx_td ltx_align_left">0.1417†</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (6) Combined shifting</td>
+<td class="ltx_td ltx_align_left">0.1387†</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Semantics-enriched</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  (7) RNTN</td>
+<td class="ltx_td ltx_align_left">0.1097**</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b">  (8) PSTN</td>
+<td class="ltx_td ltx_align_left ltx_border_b">0.1062††</td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Mean absolute errors (MAE) of fitting different models to
+Stanford Sentiment Treebank. Models marked with an asterisk (*) are
+statistically significantly better than the random baseline. Models
+with a dagger sign (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T1.m2" class="ltx_Math" alttext="{{\dagger}}" display="inline"><mo>†</mo></math>) significantly outperform model
+(3). Double asterisks ** indicates a statistically significantly
+different from model (6), and the model with the double dagger
+††is significantly better than model (7). One-tailed paired
+t-test with a 95% significance level is used here.</div>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Furthermore, modeling the syntax and semantics with the
+state-of-the-art recursive neural network (model 7 and 8) can
+dramatically improve the performance over model 6. The PSTN model,
+which takes into account the human-annotated <span class="ltx_text ltx_font_italic">prior</span> sentiment
+of arguments, performs the best. This could suggest that additional
+external knowledge, e.g., that from human-built resources or
+automatically learned from other data (e.g., as in
+<cite class="ltx_cite">[]</cite>), including sentiment that cannot be inferred
+from its constituent expressions, might be incorporated to benefit the
+current neural-network-based models as <span class="ltx_text ltx_font_italic">prior</span> knowledge.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Note that the two neural network based models incorporate the syntax
+and semantics by representing each node with a vector. One may
+consider that a straightforward way of considering the semantics of
+the modified phrases is simply memorizing them. For example, if a
+phrase <span class="ltx_text ltx_font_italic">very good</span> modified by a negator <span class="ltx_text ltx_font_italic">not</span> appears
+in the training and test data, the system can simply memorize the
+sentiment score of <span class="ltx_text ltx_font_italic">not very good</span> in training and use this
+score at testing. When incorporating this memorizing strategy into
+model (6), we observed a MAE score of 0.1222. It’s not surprising that
+memorizing the phrases has some benefit, but such matching relies on
+the exact reoccurrences of phrases. Note that this is a special case
+of what the neural network based models can model.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Discriminating negators</span> The results in Table
+<a href="#S6.T1" title="Table 1 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> has demonstrated the benefit of discriminating
+negators. To understand this further, we plot in Figure
+<a href="#S6.F3" title="Figure 3 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> the behavior of different negators: the x-axis is a
+subset of our negators and the y-axis denotes absolute shifting in
+sentiment values. For example, we can see that the negator “is_never”
+on average shifts the sentiment of the arguments by 0.26, which
+is a significant change considering the range of sentiment value is
+[0, 1]. For each negator, a 95% confidence interval is shown by the
+boxes in the figure, which is calculated with the bootstrapping
+resampling method. We can observe statistically significant
+differences of shifting abilities between many negator pairs such as
+that between “<span class="ltx_text ltx_font_italic">is_never</span>” and “<span class="ltx_text ltx_font_italic">do_not</span>” as well
+as between “<span class="ltx_text ltx_font_italic">does_not</span>” and “<span class="ltx_text ltx_font_italic">can_not</span>”.</p>
+</div>
+<div id="S6.F3" class="ltx_figure"><img src="P14-1029/image003.png" id="S6.F3.g1" class="ltx_graphics ltx_centering" width="355" height="267" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Effect of different negators in shifting
+sentiment values.</div>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S6.F3" title="Figure 3 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> also includes three diminishers (the white
+bars), i.e., <span class="ltx_text ltx_font_italic">barely</span>, <span class="ltx_text ltx_font_italic">unlikely</span>, and
+<span class="ltx_text ltx_font_italic">superficial</span>. By following <cite class="ltx_cite">[]</cite>, we extracted 319
+diminishers (also called <span class="ltx_text ltx_font_italic">understatement</span> or
+<span class="ltx_text ltx_font_italic">downtoners</span>) from <span class="ltx_text ltx_font_italic">General
+Inquirer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><span class="ltx_text ltx_font_upright">http://www.wjh.harvard.edu/ inquirer/</span></span></span></span></span>. We
+calculated their shifting power in the same manner as for the negators
+and found three diminishers having shifting capability in the shifting
+range of these negators. This shows that the boundary between negators
+and diminishers can by fuzzy. In general, we argue that one should
+always consider modeling negators individually in a sentiment analysis
+system. Alternatively, if the modeling has to be done in groups, one
+should consider clustering valence shifters by their shifting
+abilities in training or external data.</p>
+</div>
+<div id="S6.F4" class="ltx_figure"><img src="P14-1029/image004.png" id="S6.F4.g1" class="ltx_graphics ltx_centering" width="355" height="267" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>The behavior of individual negators in negated
+negative (nn) and negated positive (np) context.</div>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S6.F4" title="Figure 4 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the shifting capacity of negators when
+they modify positive (blue boxes) or negative phrases (red boxes). The
+figure includes five most frequently used negators found in the
+sentiment treebank. Four of them have significantly different shifting
+power when composed with positive or negative phrases, which can
+explain why the polarity-based shifting model achieves improvement
+over the basic shifting model.</p>
+</div>
+<div id="S6.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Modeling syntax and semantics</span>
+We have seen above that modeling syntax and semantics through
+the-state-of-the-art neural networks help improve the fitting
+performance. Below, we take a closer look at the fitting errors made
+at different depths of the sentiment treebank. The <span class="ltx_text ltx_font_italic">depth</span> here
+is defined as the longest distance between the root of a
+negator-phrase pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p7.m1" class="ltx_Math" alttext="\langle w_{n},\vec{w}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>w</mi><mi>n</mi></msub><mo>,</mo><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover></mrow><mo>⟩</mo></mrow></math> and their
+descendant leafs. Negators appearing at deeper levels of the tree
+tend to have more complicated syntax and semantics. In Figure
+<a href="#S6.F5" title="Figure 5 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, the x-axis corresponds to different depths and
+y-axis is the mean absolute errors (MAE).</p>
+</div>
+<div id="S6.F5" class="ltx_figure"><img src="P14-1029/image005.png" id="S6.F5.g1" class="ltx_graphics ltx_centering" width="355" height="267" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Errors made at different depths in the sentiment tree
+bank.</div>
+</div>
+<div id="S6.p8" class="ltx_para">
+<p class="ltx_p">The figure shows that both RNTN and PSTN perform much better at all
+depths than the model 6 in Table <a href="#S6.T1" title="Table 1 ‣ 6 Experimental results ‣ An Empirical Study on the Effect of Negation Words on Sentiment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. When the depths
+are within 4, the RNTN performs very well and the (human annotated)
+<span class="ltx_text ltx_font_italic">prior</span> sentiment of arguments used in PSTN does not bring
+additional improvement over RNTN. PSTN outperforms RNTN at greater
+depths, where the syntax and semantics are more complicated and harder
+to model. The errors made by model 6 is bumpy, as the model considers
+no semantics and hence its errors are not dependent on the depths. On
+the other hand, the errors of RNTN and PSTN monotonically increase
+with depths, indicating the increase in the task difficulty.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Negation plays a fundamental role in modifying sentiment. In the
+process of semantic composition, the impact of negators is complicated
+by the syntax and semantics of the text spans they modify. This paper
+provides a comprehensive and quantitative study of the behavior of
+negators through a unified view of fitting human annotation. We first
+measure the modeling capabilities of two influential heuristics on a
+sentiment treebank and find that they capture some effect of negation;
+however, extending these non-lexicalized models to be dependent on the
+negators improves the performance statistically significantly. The
+detailed analysis reveals the differences in the behavior among
+negators, and we argue that they should always be modeled
+separately. We further make the models to be dependent on the text
+being modified by negators, through adaptation of a state-of-the-art
+recursive neural network to incorporate the syntax and semantics of
+the arguments; we discover this further reduces fitting errors.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:26:18 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

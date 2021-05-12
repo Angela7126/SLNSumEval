@@ -1,0 +1,753 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Tractability-preserving transformations of global cost functions.
+   </title>
+   <abstract>
+    Graphical model processing is a central problem in artificial intelligence. The optimization of the combined cost of a network of local cost functions federates a variety of famous problems including CSP, SAT and Max-SAT but also optimization in stochastic variants such as Markov Random Fields and Bayesian networks. Exact solving methods for these problems typically include branch and bound and local inference-based bounds. In this paper we are interested in understanding when and how dynamic programming based optimization can be used to efficiently enforce soft local consistencies on Global Cost Functions, defined as parameterized families of cost functions of unbounded arity. Enforcing local consistencies in cost function networks is performed by applying so-called Equivalence Preserving Transformations (EPTs) to the cost functions. These EPTs may transform global cost functions and make them intractable to optimize. We identify as tractable projection-safe those global cost functions whose optimization is and remains tractable after applying the EPTs used for enforcing arc consistency. We also provide new classes of cost functions that are tractable projection-safe thanks to dynamic programming. We show that dynamic programming can either be directly used inside filtering algorithms, defining polynomially DAG-filterable cost functions, or emulated by arc consistency filtering on a Berge-acyclic network of bounded-arity cost functions, defining Berge-acyclic network-decomposable cost functions. We give examples of such cost functions and we provide a systematic way to define decompositions from existing decomposable global constraints. These two approaches to enforcing consistency in global cost functions are then embedded in a solver for extensive experiments that confirm the feasibility and efficiency of our proposal.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Cost Function Networks (CFNs) offer a simple and general framework for modeling and solving over-constrained and optimization problems. They capture a variety of problems that range from CSP, SAT and Max-SAT to maximization of likelihood in stochastic variants such as Markov Random Fields or Bayesian networks. They have been applied to a variety of real problems, in resource allocation, bioinformatics or machine learning among others [2], [18], [28], [29], [35], [60], [63].
+     </paragraph>
+     <paragraph>
+      Besides being equipped with an efficient branch and bound procedure augmented with powerful local consistency techniques, a practical CFN solver should have a good library of global cost functions to model the often complex scenarios in real-life applications.
+     </paragraph>
+     <paragraph>
+      Enforcing local consistencies requires to apply Equivalence Preserving Transformations (EPTs) such as cost projection and extension [20]. Most local consistencies require to compute minima of the cost function to determine the amount of cost to project/extend. By applying these operations, local consistencies may reduce domains and, more importantly, tighten a global lower bound on the criteria to optimize. This is crucial for branch and bound efficiency. Global cost functions have unbounded arity, but may have a specific semantics that makes available dedicated polynomial-time algorithms for minimization. However, when local consistencies apply EPTs, they modify the cost function and may break the properties that makes it polynomial-time minimizable. We say that a cost function is tractable if it can be minimized in polynomial time. The notion of tractable projection-safety captures precisely those functions that remain tractable even after EPTs.
+     </paragraph>
+     <paragraph>
+      In this paper, we prove that any tractable global cost function remains tractable after EPTs to/from the zero-arity cost function ({a mathematical formula}W∅), and cannot remain tractable if arbitrary EPTs to/from r-ary cost functions for {a mathematical formula}r≥2 are allowed. When {a mathematical formula}r=1, we show that the answer is indefinite. We describe a simple tractable global cost function and show how it becomes intractable after projections/extensions to/from unary cost functions. We also show that flow-based projection-safe cost functions [46] are positive examples of tractable projection-safe cost functions.
+     </paragraph>
+     <paragraph>
+      For {a mathematical formula}r=1, we introduce polynomially DAG-filterable global cost functions, which can be transformed into a filtering Directed Acyclic Graph with a polynomial number of simpler cost functions for (minimum) cost calculation. Computing minima of such cost functions, using a polynomial time dynamic programming algorithm, is tractable and remains tractable after projections/extensions. Thus, polynomially DAG-filterable cost functions are tractable projection-safe. Adding to the existing repertoire of global cost functions, cost function variants of existing global constraints such as Among, Regular, Grammar, and Max/Min, are proved to be polynomially DAG-filterable.
+     </paragraph>
+     <paragraph>
+      To avoid the need to implement dedicated dynamic programming algorithms, we also consider the possibility of directly using decompositions of global cost functions into polynomial size networks of cost functions with bounded arities, usually ternary cost functions. We show how such network-decompositions can be derived from known global constraint decompositions and how Berge-acyclicity allows soft local consistencies to emulate dynamic programming in this case. We prove that Berge-acyclic network-decompositions can also be used to directly build polynomial filtering DAGs.
+     </paragraph>
+     <paragraph>
+      To demonstrate the feasibility of these approaches, we implement and embed various global cost functions using filtering DAG and network-decompositions in toulbar2, an open source cost function networks solver. We conduct experiments using different benchmarks to evaluate and to compare the performance of the DAG-based and network-based decomposition approaches.
+     </paragraph>
+     <paragraph>
+      The rest of the paper is organized as follows. Section 2 contains the necessary background to understand our contributions. Section 3 analyses the tractability of enforcing local consistencies on global cost functions and characterizes the conditions for preserving tractability after applying EPTs. In Section 4 we define DAG-filtering and in Section 5 we give an example of a polynomial DAG-filterable global cost function. Sections 6 and 7 present network-decomposability and the conditions for preserving the level of local consistency. Section 8 shows the relation between network-decompositions and DAG-filtering. Section 9 provides an experimental analysis of the two approaches on several classes of problems. Section 10 concludes the paper.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      We give preliminaries on cost function networks and global cost functions.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Cost function networks
+      </section-title>
+      <paragraph>
+       A cost function network (CFN) is a special case of the valued constraint satisfaction problem [62] with a specific cost structure {a mathematical formula}([0,…,⊤],⊕,≤). We give the formal definitions of the cost structure and CFN as follows.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Cost Structure [62]The cost structure{a mathematical formula}([0,…,⊤],⊕,≤) is a tuple defined as:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}[0,…,⊤] is the interval of integers from 0 to ⊤ ordered by the standard ordering ≤, where ⊤ is either a positive integer or +∞.
+       </list-item>
+       <list-item label="•">
+        ⊕ is the addition operation defined as {a mathematical formula}a⊕b=min(⊤,a+b). We also define the subtraction ⊖ operator for any a and b, where {a mathematical formula}a≥b, as:{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       Note that more general additive cost structures have also been used. Specifically, VAC and OSAC [19] local consistencies are defined using a structure using non-negative rational instead of non-negative integer numbers. For ease of understanding, our discussion assumes integral costs. However, it can easily be generalized to rational costs.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Cost Function Network [61]A Cost Function Network (CFN) is a tuple {a mathematical formula}(X,W,⊤), where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}X is an ordered set of discrete domain variables {a mathematical formula}{x1,x2,…,xn}. The domain of {a mathematical formula}xi∈X being denoted as {a mathematical formula}D(xi);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}W is a set of cost functions {a mathematical formula}WS each with a scope {a mathematical formula}S={xs1,…,xsr}⊆X that maps tuples {a mathematical formula}ℓ∈DS, where {a mathematical formula}DS=D(xs1)×⋯×D(xsr), to {a mathematical formula}[0,…,⊤].
+       </list-item>
+      </list>
+      <paragraph>
+       When the context is clear, we abuse notation by denoting an assignment of a set of variables {a mathematical formula}S⊆X as a tuple {a mathematical formula}ℓ=(vs1,…,vsr)∈DS. The notation {a mathematical formula}ℓ[xsi] denotes the value {a mathematical formula}vsi assigned to {a mathematical formula}xsi in ℓ, and {a mathematical formula}ℓ[S′] denotes the tuple formed by projecting ℓ onto {a mathematical formula}S′⊆S. Without loss of generality, we assume {a mathematical formula}W={W∅}∪{Wi|xi∈X}∪W+. {a mathematical formula}W∅ is a constant zero-arity cost function. {a mathematical formula}Wi is a unary cost function associated with each {a mathematical formula}xi∈X. {a mathematical formula}W+ is a set of cost functions {a mathematical formula}WS with scope S and {a mathematical formula}|S|≥2. If {a mathematical formula}W∅ and {a mathematical formula}{Wi} are not defined, we assume {a mathematical formula}Wi(v)=0 for all {a mathematical formula}v∈D(xi) and {a mathematical formula}W∅=0. To simplify notation, we also denote by {a mathematical formula}Ws1,s2,…,sr the cost function on variables {a mathematical formula}{xs1,xs2,…,xsr} when the context is clear.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Given a CFN {a mathematical formula}(X,W,⊤), the cost of a tuple {a mathematical formula}ℓ∈DX is defined as {a mathematical formula}cost(ℓ)=⨁WS∈WWS(ℓ[S]). A tuple {a mathematical formula}ℓ∈DX is feasible if {a mathematical formula}cost(ℓ)&lt;⊤, and it is an optimal solution of the CFN if {a mathematical formula}cost(ℓ) is minimum among all tuples in {a mathematical formula}DX.
+      </paragraph>
+      <paragraph>
+       We observe that a classical Constraint Network is merely a CFN where all cost functions {a mathematical formula}WS∈W are such that {a mathematical formula}∀ℓ∈DS,WS(ℓ)∈{0,⊤}. The problem of the existence of a solution in a constraint network, called Constraint Satisfaction Problem (CSP), is NP-complete. Finding an optimal solution to a CFN is thus above NP. Restrictions to Boolean variables and binary constraints are known to be APX-hard [53]. In the terminology of stochastic graphical models, this problem is also equivalent to the Maximum A Posteriori (MAP/MRF) problem or the Maximum Probability Explanation (MPE) in Bayesian networks [35]. CFNs can be solved exactly with depth-first branch-and-bound search using {a mathematical formula}W∅ as a lower bound. Search efficiency is enhanced by maintaining local consistencies that increase the lower bound by redistributing costs among {a mathematical formula}WS, pushing costs into {a mathematical formula}W∅ and {a mathematical formula}Wi, and pruning values while preserving the equivalence of the problem (i.e., the cost of each tuple {a mathematical formula}ℓ∈DX is unchanged).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Soft local consistencies and EPTs
+      </section-title>
+      <paragraph>
+       Different consistency notions have been defined. Examples include NC* [42], (G)AC* [20], [42], [46], [48], [61], FD(G)AC* [41], [42], [46], [48], (weak) ED(G)AC* [32], [47], [48], VAC and OSAC [19]. Enforcing such local consistencies requires applying equivalence preserving transformations (EPTs) that shift costs between different scopes. The main EPT is defined below and described as Algorithm 1. This is a compact version of the projection and extension defined in [22].
+      </paragraph>
+      <paragraph label="Definition 4">
+       EPTs [22]Given two cost functions {a mathematical formula}WS1 and {a mathematical formula}WS2, {a mathematical formula}S2⊂S1, the EPT {an inline-figure}{a mathematical formula}(S1,S2,ℓ,α) shifts an amount of cost α between a tuple {a mathematical formula}ℓ∈DS2 of {a mathematical formula}WS2 and the cost function {a mathematical formula}WS1. The direction of the shift is given by the sign of α. The precondition guarantees that costs remain non-negative after the EPT has been applied.Denoting by {a mathematical formula}r=|S2|, the EPT is called an r-EPT. It is an r-projection when {a mathematical formula}α≥0 and an r-extension when {a mathematical formula}α&lt;0.
+      </paragraph>
+      <paragraph>
+       It is now possible to introduce local consistency enforcing algorithms.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Node Consistency [42]A variable {a mathematical formula}xi is star node consistent (NC*) if each value {a mathematical formula}v∈D(xi) satisfies {a mathematical formula}Wi(v)⊕W∅&lt;⊤ and there exists a value {a mathematical formula}v′∈D(xi) such that {a mathematical formula}Wi(v′)=0. A CFN is NC* iff all variables are NC*.
+      </paragraph>
+      <paragraph>
+       Procedure enforceNC*() in Algorithm 2 enforces NC*, where unaryProject() applies EPTs that move unary costs towards {a mathematical formula}W∅ while keeping the solution unchanged, and pruneVar({a mathematical formula}xi) removes infeasible values.
+      </paragraph>
+      <paragraph label="Definition 6">
+       (Generalized) Arc Consistency [20], [46], [48]Given a CFN {a mathematical formula}P=(X,W,⊤), a cost function {a mathematical formula}WS∈W+ and a variable {a mathematical formula}xi∈S.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A tuple {a mathematical formula}ℓ∈DS is a simple support for {a mathematical formula}v∈D(xi) with respect to {a mathematical formula}WS with {a mathematical formula}xi∈S iff {a mathematical formula}ℓ[xi]=v and {a mathematical formula}WS(ℓ)=0.
+       </list-item>
+       <list-item label="•">
+        A variable {a mathematical formula}xi∈S is star generalized arc consistent (GAC*) with respect to {a mathematical formula}WS iff
+       </list-item>
+       <list-item label="•">
+        A CFN is GAC* iff all variables are GAC* with respect to all related non-unary cost functions.
+       </list-item>
+      </list>
+      <paragraph>
+       To avoid exponential space complexity, the GAC* definition and the algorithm is slightly different from the one given by Cooper and Schiex [20], which also requires for every tuple {a mathematical formula}ℓ∈DS, {a mathematical formula}WS(ℓ)=⊤ if {a mathematical formula}W∅⊕⨁xi∈SWi(ℓ[xi])⊕WS(ℓ)=⊤.
+      </paragraph>
+      <paragraph>
+       The procedure enforceGAC*() in Algorithm 3, enforces GAC* on a single variable {a mathematical formula}xi∈X with respect to a cost function {a mathematical formula}WS∈W+, where {a mathematical formula}xi∈S in a CFN {a mathematical formula}(X,W,⊤). The procedure first computes the minimum when {a mathematical formula}xi=v for each {a mathematical formula}v∈D(xi) at line 2, then performs a 1-projection from {a mathematical formula}WS to {a mathematical formula}Wi at line 3. Lines 4 and 5 enforce NC* on {a mathematical formula}xi.
+      </paragraph>
+      <paragraph>
+       Local consistency enforcement involves two types of operations: (1) finding the minimum cost returned by the cost functions among all (or part of the) tuples; (2) applying EPTs that shift costs to and from smaller-arity cost functions.
+      </paragraph>
+      <paragraph>
+       Minimum cost computation corresponds to line 3 in Algorithm 2, and line 2 in Algorithm 3. For simplicity, we write {a mathematical formula}min{WS(ℓ)|ℓ∈DS} as {a mathematical formula}min{WS}.
+      </paragraph>
+      <paragraph>
+       In practice, projections and extensions can be performed in constant time using the Δ data-structure introduced in Cooper and Schiex [20]. For example, when we perform 1-projections or 1-extensions, instead of modifying the costs of all tuples, we store the projected and extended costs in {a mathematical formula}Δxi,v− and {a mathematical formula}Δxi,v+ respectively. Whenever we compute the value of the cost function {a mathematical formula}WS for a tuple ℓ with {a mathematical formula}ℓ[xi]=v, we return {a mathematical formula}WS(ℓ)⊖Δxi,v−⊕Δxi,v+. The time complexity of enforcing one of the previous consistencies is thus entirely defined by the time complexity of computing the minimum of a cost function during the enforcing.
+      </paragraph>
+      <paragraph label="Proof">
+       The procedure enforceGAC*() inAlgorithm 3requires{a mathematical formula}O(d⋅fmin)time, where d is the maximum domain size and{a mathematical formula}fminis the time complexity of minimizing{a mathematical formula}WS.Line 2 requires {a mathematical formula}O(fmin) time. We can replace the domain of {a mathematical formula}xi by {a mathematical formula}{v}, and run the minimum computation to get the minimum cost. Projection at line 3 can be performed in constant time. Thus, each iteration requires {a mathematical formula}O(fmin). Since the procedure iterates d times, and the procedures unaryProject and pruneVar requires {a mathematical formula}O(d), the overall complexity is {a mathematical formula}O(d⋅fmin+d)=O(d⋅fmin).  □
+      </paragraph>
+      <paragraph>
+       In the general case, {a mathematical formula}fmin is in {a mathematical formula}O(dr) where r is the size of the scope and d the maximum domain size. However, a global cost function may have specialized algorithms which make the operation of finding minimum, and thus consistency enforcement, tractable.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Global constraints, soft global constraints and global cost functions
+      </section-title>
+      <paragraph label="Definition 7">
+       Global Constraint [9], [59]A global constraint, denoted by {a mathematical formula}GC(S,A1,…,At), is a family of hard constraints parameterized by a scope S, and possibly extra parameters {a mathematical formula}A1,…,At.
+      </paragraph>
+      <paragraph>
+       Examples of global constraints are AllDifferent[43], GCC[58], Same[11], Among[10], Regular[55], Grammar[37], and Maximum/Minimum constraints [7]. Because of their unbounded scope, global constraints cannot be efficiently propagated by generic local consistency algorithms, which are exponential in the arity of the constraint. Specific propagation algorithms are designed to achieve polynomial time complexity in the size of the input, i.e. the scope, the domains and extra parameters.
+      </paragraph>
+      <paragraph>
+       To capture the idea of costs assigned to constraint violations, the notion of soft global constraint has been introduced. This is a traditional global constraint with one extra variable representing the cost of the assignment w.r.t. to an existing global constraint. The cost is given by a violation measure function.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Soft Global Constraint [56]A soft global constraint, denoted by {a mathematical formula}Soft_GCμ(S∪{z},A1,…,At), is a family of hard constraints parameterized by a violation measure μ, a scope S, a cost variable z, and possibly extra parameters {a mathematical formula}A1,…,At. The constraint is satisfied if and only if {a mathematical formula}z=μ(S,A1,…,At).
+      </paragraph>
+      <paragraph>
+       Soft global constraints are used to introduce costs in the CSP framework, and therefore inside constraint programming solvers [57]. It requires the introduction of extra cost variables and does not exploit the stronger propagation offered by some of the soft local consistencies. A possible alternative, when a sum of costs needs to be optimized, lies in the use of global cost functions.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Global Cost Function [48], [65]A global cost function, denoted as {a mathematical formula}W_GCF(S,A1,…,At), is a family of cost functions parameterized by a scope S and possibly extra parameters {a mathematical formula}A1,…,At.
+      </paragraph>
+      <paragraph>
+       For example, if S is a set of variables with non-negative integer domains, it is easy to define the Global Cost Function {a mathematical formula}W_Sum(S)≡⨁xi∈Smin⁡(⊤,xi).
+      </paragraph>
+      <paragraph>
+       It is possible to derive a global cost function from an existing soft global constraint {a mathematical formula}Soft_GCμ(S∪{z},A1,…,At). In this case, we denote the corresponding global cost function as {a mathematical formula}W_GCFμ. Its value for a tuple {a mathematical formula}ℓ∈DS is equal to {a mathematical formula}min⁡(⊤,μ(ℓ)).
+      </paragraph>
+      <paragraph>
+       For example, global cost functions {a mathematical formula}W_AllDifferentvar/W_AllDifferentdec[46], [48] can be derived from two different violation measures of AllDifferent, namely variable-based and decomposition-based [34], [56], respectively. Other examples include {a mathematical formula}W_GCCvar and {a mathematical formula}W_GCCval[46], [48], {a mathematical formula}W_Samevar[46], [48], {a mathematical formula}W_SlidingSumvar[51], {a mathematical formula}W_Regularvar and {a mathematical formula}W_Regularedit[4], [46], [48], {a mathematical formula}W_EGCCvar[51], {a mathematical formula}W_Disjunctiveval and {a mathematical formula}W_Cumulativeval[49], [51].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Tractable projection-safety
+     </section-title>
+     <paragraph>
+      All soft local consistencies are based on the use of EPTs, shifting costs between two scopes. The size of the smallest scope used in a EPT is called the order (r) of the EPT. Such a EPT is called an r-EPT. It is directly related to the level of local consistency enforced: node consistency uses EPTs onto the empty scope ({a mathematical formula}r=0), arc consistencies use unary scopes ({a mathematical formula}r=1) whereas higher-order consistencies use larger scopes ({a mathematical formula}r≥2) [22]. In this section, we show that the order of the EPTs directly impacts the tractability of global cost function minimization.
+     </paragraph>
+     <paragraph>
+      To be able to analyze complexities in global cost functions, we first define the decision problem associated with the optimization problem {a mathematical formula}min⁡{W_GCF(S,A1,…,At)}.
+     </paragraph>
+     <list>
+      <list-item>
+       IsBetterThan({a mathematical formula}W_GCF(S,A1,…,At),m)
+      </list-item>
+      <list-item>
+       {a mathematical formula}Instance. A global cost function W_GCF, a scope S with domains for the variables in S, values for the parameters {a mathematical formula}A1,…,At, and a fixed integer m.
+      </list-item>
+      <list-item>
+       {a mathematical formula}Question. Does there exist a tuple {a mathematical formula}ℓ∈DS such that {a mathematical formula}W_GCF(S,A1,…,At)(ℓ)&lt;m?
+      </list-item>
+     </list>
+     <paragraph>
+      We can then define the tractability of a global cost function.
+     </paragraph>
+     <paragraph label="Definition 10">
+      A global cost function {a mathematical formula}W_GCF(S,A1,…,At) is said to be tractable iff the problem IsBetterThan({a mathematical formula}W_GCF(S,A1,…,At),m) is in P.
+     </paragraph>
+     <paragraph>
+      For a tractable global cost function {a mathematical formula}WS=W_GCF(S,A1,…,At), the time complexity of computing {a mathematical formula}min⁡{WS} is bounded above by a polynomial function in the size of the input, including the scope, the corresponding domains, the other parameters of the global cost function, and {a mathematical formula}log⁡(m).
+     </paragraph>
+     <paragraph>
+      We introduce tractable r-projection-safety global cost functions, which remain tractable after applying r-EPTs.
+     </paragraph>
+     <paragraph label="Definition 11">
+      We say that a global cost function {a mathematical formula}W_GCF(S,A1,…,At) is tractable r-projection-safe iff:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       it is tractable and;
+      </list-item>
+      <list-item label="•">
+       any global cost functions that can be derived from {a mathematical formula}W_GCF(S,A1,…,At) by a series of r-EPTs is also tractable.
+      </list-item>
+     </list>
+     <paragraph>
+      The tractability after r-EPTs depends on r. We divide the discussion of tractable r-projection-safety into three cases: {a mathematical formula}r=0, {a mathematical formula}r≥2 and {a mathematical formula}r=1. In the following, given a tractable global cost function {a mathematical formula}WS, we denote by {a mathematical formula}∇r(WS) the global cost function resulting from the application of an arbitrary finite sequence of r-EPTs on {a mathematical formula}WS.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Tractability and 0-EPTs
+      </section-title>
+      <paragraph>
+       When {a mathematical formula}r=0, EPTs are performed to/from {a mathematical formula}W∅. This kind of EPTs is used when enforcing Node Consistency (NC*) [42] but also in ∅-inverse consistency [65], and strong ∅-inverse consistency [46], [48].
+      </paragraph>
+      <paragraph label="Proof">
+       We show that if a global cost function is tractable, it remains tractable after applying such EPTs. Every tractable global cost function is tractable 0-projection-safe.Consider a tractable global cost function {a mathematical formula}WS=W_GCF(S,A1,…,At). Clearly, {a mathematical formula}WS and {a mathematical formula}∇0(WS) only differ by a constant, i.e. there exists {a mathematical formula}α− and {a mathematical formula}α+, where {a mathematical formula}α−,α+∈{0,…,⊤}, such that:{a mathematical formula} If {a mathematical formula}WS(ℓ)=min⁡{WS} for some {a mathematical formula}ℓ∈DS, then {a mathematical formula}∇0(WS)(ℓ)=min⁡{∇0(WS)}. If {a mathematical formula}WS is tractable, so is {a mathematical formula}∇0(WS).  □
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Tractability and EPTs of order greater than 2
+      </section-title>
+      <paragraph>
+       When {a mathematical formula}r≥2, EPTs are performed to/from r-arity cost functions. This is required for enforcing higher order consistencies and is used in practice in ternary cost functions processing [60] and complete k-consistency [22].
+      </paragraph>
+      <paragraph>
+       If arbitrary sequences of r-EPTs are allowed, we show that tractable global cost functions always become intractable after some sequence of r-EPT applications, where {a mathematical formula}r≥2.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Any tractable global cost function{a mathematical formula}W_GCF(S,A1,…,At)returning finite costs is not tractable r-projection-safe for{a mathematical formula}r≥2, unless{a mathematical formula}P=NP.
+      </paragraph>
+      <paragraph label="Proof">
+       Let us first define the binary constraint satisfaction problem ArityTwoCSP as follows.
+       <list>
+        {a mathematical formula}ArityTwoCSP(X,Wh){a mathematical formula}Instance. A CSP instance {a mathematical formula}(X,Wh), where every constraint {a mathematical formula}CSh∈Wh involves two variables, i.e. {a mathematical formula}|S|=2.{a mathematical formula}Question. Is the CSP {a mathematical formula}(X,Wh) satisfiable?The cost functions
+       </list>
+       <paragraph>
+        {a mathematical formula}WS∈W∖{WX} are defined as follows:{a mathematical formula} From the CFN, {a mathematical formula}∇2 can be defined as follows: for each forbidden tuple {a mathematical formula}ℓ[S] in each {a mathematical formula}CSh∈Wh, we add an extension of ⊤ from {a mathematical formula}WS to {a mathematical formula}WX with respect to {a mathematical formula}ℓ[S] into {a mathematical formula}∇2. Under this construction, {a mathematical formula}∇2(WX)(ℓ) can be represented as:{a mathematical formula} For a tuple {a mathematical formula}ℓ∈DX, {a mathematical formula}∇2(WX)(ℓ)=⊤ iff ℓ is forbidden by some {a mathematical formula}CSh in {a mathematical formula}Wh. As a result {a mathematical formula}IsBetterThan(∇2(WX),⊤) is satisfiable iff {a mathematical formula}ArityTwoCSP(X,Wh) is satisfiable. As ArityTwoCSP is NP-hard, {a mathematical formula}IsBetterThan(∇2(W_GC),⊤) is not polynomial, unless {a mathematical formula}P=NP. Hence, {a mathematical formula}∇2(W_GC) is not tractable, and then, W_GC is not tractable 2-projection-safe, unless {a mathematical formula}P=NP.  □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Tractability and 1-EPTs
+      </section-title>
+      <paragraph>
+       When {a mathematical formula}r=1, 1-EPTs cover 1-projections and 1-extensions, which are the backbone of the consistency algorithms of (G)AC* [42], [46], [48], FD(G)AC* [41], [46], [48], (weak) ED(G)AC* [32], [47], [48], VAC, and OSAC [19]. In these cases, tractable cost functions are tractable 1-projection-safe only under special conditions. For example, Lee and Leung define flow-based projection-safety based on a flow-based global cost function.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Flow-based [46], [48]A global cost function {a mathematical formula}W_GCF(S,A1,…,At) is flow-based iff it can be represented as a flow network G such that the minimum cost among all maximum flows between a fixed source and a fixed destination is equal to {a mathematical formula}min⁡{W_GCF(S,A1,…,At)}.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Flow-based projection safe [46], [48]A global cost function {a mathematical formula}W_GCF(S,A1,…,At) is flow-based projection-safe iff it is flow-based, and is still flow-based following any sequence of 1-projections and 1-extensions.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows directly from the tractability of the minimum cost flow algorithm.  □
+      </paragraph>
+      <paragraph>
+       However, tractable cost functions are not necessarily tractable 1-projection-safe. One example is W_2SAT, which is a global cost function derived from an instance of the polynomial 2SAT problem.
+      </paragraph>
+      <paragraph label="Definition 14">
+       Given a set of Boolean variables S, a set of binary clauses F, and a positive integer c, the global cost function {a mathematical formula}W_2SAT(S,F,c) is defined as:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       W_2SAT is tractable, because the 2SAT problem is tractable [39]. However, it is not tractable 1-projection-safe. W_2SAT is not tractable 1-projection-safe, unless{a mathematical formula}P=NP.Let us first define the WSAT-2-CNF problem.
+       <list>
+        WSAT-2-CNF{a mathematical formula}Instance. A 2-CNF formula F (a set of binary clauses) and a fixed integer k.{a mathematical formula}Question. Is there an assignment that satisfies all clauses in F with at most k variables set to {a mathematical formula}true?We construct a particular sequence of 1-projections and/or 1-extensions
+       </list>
+       <paragraph>
+        {a mathematical formula}∇1 such that the WSAT-2-CNF instance can be solved using {a mathematical formula}WX=W_2SAT(X,F,k+1) from the Boolean CFN {a mathematical formula}N=(X,W∪{WX},k+1). {a mathematical formula}W only contains unary cost functions {a mathematical formula}Wi, which are defined as follows:{a mathematical formula} Based on N, we construct {a mathematical formula}∇1 as follows: for each variable {a mathematical formula}xi∈X, we add an extension of 1 from {a mathematical formula}Wi to {a mathematical formula}WX with respect to the value {a mathematical formula}true into {a mathematical formula}∇1. As a result, a tuple ℓ with {a mathematical formula}∇1(WX)(ℓ)=k′≤k contains exactly {a mathematical formula}k′ variables set to {a mathematical formula}true (because every {a mathematical formula}xi=true incurs a cost of 1) and also satisfies F (or it would have cost {a mathematical formula}k+1=⊤). Thus, the WSAT-2-CNF instance with threshold k is satisfiable iff {a mathematical formula}IsBetterThan(∇1(WX),k+1) is satisfiable. As WSAT-2-CNF is NP-hard, {a mathematical formula}IsBetterThan(∇1(W_2SAT),k+1) is not polynomial, unless {a mathematical formula}P=NP. Hence, {a mathematical formula}∇1(W_2SAT) is not tractable, and then, W_2SAT is not tractable 1-projection-safe, unless {a mathematical formula}P=NP.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       When the context is clear, we use tractable projection-safety, projection and extension to refer to tractable 1-projection-safety, 1-projection and 1-extension respectively hereafter.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Polynomial DAG-filtering
+     </section-title>
+     <paragraph label="Definition 15">
+      Beyond flow-based global cost functions [46], [48], we introduce now an additional class of tractable projection-safe cost functions based on dynamic programming algorithms. As mentioned by Dasgupta et al. [25], every dynamic programming algorithm has an underlying DAG structure. DAGA directed acylic graph (DAG){a mathematical formula}T=(V,E), where V is a set of vertices (or nodes) and {a mathematical formula}E⊆V×V is a set of directed edges, is a directed graph with no directed cycles, and:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       An edge {a mathematical formula}(u,v)∈E points from u to v, where u is the parent of v, and v is the child of u;
+      </list-item>
+      <list-item label="•">
+       A root of a DAG is a vertex with zero in-degree;
+      </list-item>
+      <list-item label="•">
+       A leaf of a DAG is a vertex with zero out-degree;
+      </list-item>
+      <list-item label="•">
+       An internal vertex of a DAG is any vertex which is not a leaf;
+      </list-item>
+     </list>
+     <paragraph>
+      We now introduce the DAG filterability of a global cost function.
+     </paragraph>
+     <paragraph label="Definition 16">
+      DAG-filterA DAG-filter for a cost function {a mathematical formula}WS is a DAG {a mathematical formula}T=(V,E) such that:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       T is connected;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}V={ωSi}i is a set of cost function vertices each with a scope {a mathematical formula}Si, among which vertex {a mathematical formula}WS is the root of T;
+      </list-item>
+      <list-item label="•">
+       Each internal vertex {a mathematical formula}ωSi in V is associated with an aggregation function {a mathematical formula}fi that maps a multiset of costs {a mathematical formula}{αj|αj∈[0…⊤]} to {a mathematical formula}[0…⊤] and is based on an associative and commutative binary operator;
+      </list-item>
+      <list-item label="•">
+       For every internal {a mathematical formula}ωSi∈V,
+      </list-item>
+     </list>
+     <paragraph>
+      When a cost function {a mathematical formula}WS has a DAG-filter T, we say that {a mathematical formula}WS is DAG-filterable by T. Note that any cost function {a mathematical formula}WS has a trivial DAG filter which is composed of a single vertex that defines {a mathematical formula}WS as a cost table (with size exponential in the arity {a mathematical formula}|S|).
+     </paragraph>
+     <paragraph>
+      In the general case, a DAG-filter (recursively) transforms a cost function into cost functions with smaller scopes until it reaches the ones at the leaves of a DAG, which may be trivial to solve. The (minimum) costs can then be aggregated using the {a mathematical formula}fi functions at each internal vertex to get the resultant (minimum) cost, through dynamic programming. However, further properties on DAG-filters are required to allow for projections and extensions to operate on the DAG structure.
+     </paragraph>
+     <paragraph label="Definition 17">
+      Safe DAG-filterA DAG-filter {a mathematical formula}T=(V,E) for a cost function {a mathematical formula}WS is safe iff:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       projection and extension are distributive over {a mathematical formula}fi, i.e. for a variable {a mathematical formula}x∈S, a cost α and a tuple {a mathematical formula}ℓ∈DS,
+      </list-item>
+     </list>
+     <paragraph>
+      The requirement of a distributive {a mathematical formula}fi with respect to projection and extension at each vertex in T implies that the structure of the DAG is unchanged after projections and extensions. Both operations can be distributed down to the leaves. We formally state this as the following theorem. Given a variable x, with a value {a mathematical formula}a∈D(x), and a cost function {a mathematical formula}WS, we denote as {a mathematical formula}WS′ the cost function obtained by the application of {an inline-figure}{a mathematical formula}S,{x},(v),α on {a mathematical formula}WS if {a mathematical formula}x∈S or {a mathematical formula}WS otherwise.
+     </paragraph>
+     <paragraph label="Proof">
+      For a cost function{a mathematical formula}WSwith a safe DAG-filter{a mathematical formula}T=(V,E),{a mathematical formula}WS′has a safe DAG-filter{a mathematical formula}T′=(V′,E′), where each{a mathematical formula}ωSi∈V′is defined as:{a mathematical formula}and{a mathematical formula}(ωSi′,ωSk′)∈E′iff{a mathematical formula}(ωSi,ωSk)∈E, i.e.{a mathematical formula}T′is isomorphic to T. Moreover, both{a mathematical formula}ωSi′∈V′and{a mathematical formula}ωSi∈Vare associated with the same aggregation function{a mathematical formula}fi.Follows directly from Definition 17.  □
+     </paragraph>
+     <paragraph>
+      Two common choices for {a mathematical formula}fi are ⊕ and min, with which distributivity depends on how scopes intersect. In the following, we show that the global cost function is safely DAG-filterable if the internal vertices that are associated with ⊕ have children with non-overlapping scopes, and those associated with min have children with identical scopes.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      Any DAG-filter{a mathematical formula}T=(V,E)for a cost function{a mathematical formula}WSsuch that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       each{a mathematical formula}ωSi∈Vis associated with the aggregation function{a mathematical formula}fi=⨁;
+      </list-item>
+      <list-item label="•">
+       for any distinct{a mathematical formula}ωSj,ωSk∈V, which are children of{a mathematical formula}ωSi,{a mathematical formula}Sj∩Sk=∅
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      We need to show that min, projection and extension are distributive over ⊕. Since the scopes of the cost functions do not overlap, min is distributive over ⊕. We further show the distributivity with respect to projection (⊖), while extension (⊕) is similar. We consider an internal vertex {a mathematical formula}ωSi∈V. Given a variable {a mathematical formula}x∈Si, a cost α, and a tuple {a mathematical formula}ℓ∈DS, since the scopes of the cost functions {a mathematical formula}{ωSk|(ωSi,ωSk)∈E} are disjoint, there must exist exactly one cost function {a mathematical formula}ωSj such that {a mathematical formula}x∈Sj, i.e.:{a mathematical formula} The result follows.  □
+     </paragraph>
+     <paragraph label="Proposition 3">
+      Any DAG-filter{a mathematical formula}T=(V,E)for a cost function{a mathematical formula}WSsuch that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       each{a mathematical formula}ωSi∈Vis associated with the aggregation function{a mathematical formula}fi=min;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}∀ωSj∈V, which are children of{a mathematical formula}ωSi,{a mathematical formula}Sj=Si
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Since the scopes are completely overlapping,{a mathematical formula} It is trivial to see that projection and extension are distributive over {a mathematical formula}fi. The result follows.  □
+     </paragraph>
+     <paragraph>
+      We are now ready to define polynomial DAG-filterability of global cost functions. As safe DAG-filters can be exponential in size, we need to restrict to safe DAG-filters of polynomial size by restricting the size of the DAG to be polynomial and by bounding the arity of the cost functions at the leaves of the DAG.
+     </paragraph>
+     <paragraph label="Definition 18">
+      Polynomial DAG-filterabilityA global cost function {a mathematical formula}W_GCF(S,A1,…,At) is polynomially DAG-filterable iff
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       any instance {a mathematical formula}WS of {a mathematical formula}W_GCF(S,A1,…,At) has a safe DAG-filter {a mathematical formula}T=(V,E)
+      </list-item>
+      <list-item label="2.">
+       where {a mathematical formula}|V| is polynomial in the size of the input parameters of {a mathematical formula}W_GCF(S,A1,…,At);
+      </list-item>
+      <list-item label="3.">
+       each leaf in V is a unary cost function, and
+      </list-item>
+      <list-item label="4.">
+       each aggregation function {a mathematical formula}fi associated with each internal vertex is polynomial-time computable.
+      </list-item>
+     </list>
+     <paragraph>
+      Dynamic programming can compute the minimum of a polynomially DAG-filterable cost function in a tractable way. Projections and extensions to/from such cost functions can also be distributed to the leaves in T. Thus, polynomially DAG-filterable global cost functions are tractable and also tractable projection-safe, as stated below.
+     </paragraph>
+     <paragraph label="Proof">
+      A polynomially DAG-filterable global cost function{a mathematical formula}W_GCF(S,A1,…,At)is tractable.Let {a mathematical formula}WS be any instance of {a mathematical formula}W_GCF(S,A1,…,At), and {a mathematical formula}T=(V,E) be a safe DAG-filter for {a mathematical formula}WS. Algorithm 4 can be applied to compute {a mathematical formula}min⁡{WS}. The algorithm uses a bottom-up memoization approach. Algorithm 4 first sorts V topologically at line 2. After sorting, all the leaves will be grouped at the end of the sorted sequence, which is then processed in the reversed order at line 3. If the vertex is a leaf, the minimum is computed and stored in the table Min at line 5. Otherwise, its minimum is computed by aggregating {a mathematical formula}{Min[ωSk]|(ωSi,ωSk)∈E}, which have been already computed, by the function {a mathematical formula}fi at line 6. Line 7 returns the minimum of the root node.The computation is tractable. Leaves being unary cost functions, line 5 is in {a mathematical formula}O(d), where d is the maximum domain size. For other vertices, line 6 calls {a mathematical formula}fi, which is assumed to be polynomial time. The result follows.  □
+     </paragraph>
+     <paragraph>
+      Note that Algorithm 4 computes the minimum from scratch each time it is called. In practice, querying the minimum of cost function {a mathematical formula}WS when {a mathematical formula}xi is assigned to v for different values v can be done more efficiently with some pre-processing. We define {a mathematical formula}Min+[ωSj,xi,v] that stores {a mathematical formula}min⁡{ωSj(ℓ)|xi∈Sj∧ℓ[xi]=v}. {a mathematical formula}Min+[ωSj,xi,v] can be computed similarly to Algorithm 4 by using the equation:{a mathematical formula} Whenever we have to compute the minimum for {a mathematical formula}xi=v, we simply return {a mathematical formula}Min+[WS,xi,v]. Computing {a mathematical formula}Min+[WS,xi,v] is equivalent to running Algorithm 4nd times, where n is the number of variables and d the maximum domain size. However, this can be reduced by incremental computations exploiting the global constraint semantics, as illustrated on the {a mathematical formula}W_Grammarvar global cost function in Section 5.
+     </paragraph>
+     <paragraph>
+      We now show that a polynomially DAG-filterable cost function is tractable projection-safe. The following lemma will be useful. For a variable {a mathematical formula}x∈S and a value {a mathematical formula}v∈D(x), we denote as {a mathematical formula}W′_GCF(S,A1,…,At) the cost function obtained by applying {an inline-figure}{a mathematical formula}S,{x},(v),α to a global cost function {a mathematical formula}W_GCF(S,A1,…,At).
+     </paragraph>
+     <paragraph label="Lemma 1">
+      If a global cost function{a mathematical formula}W_GCF(S,A1,…,At)is polynomially DAG-filterable,{a mathematical formula}W′_GCF(S,A1,…,At)is polynomially DAG-filterable.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose {a mathematical formula}W_GCF(S,A1,…,At) is polynomially DAG-filterable. Then any instance {a mathematical formula}WS of it has a safe filtering DAG {a mathematical formula}T=(V,E). By Theorem 5, we know that {a mathematical formula}WS′, the corresponding instance of {a mathematical formula}W′_GCF(S,A1,…,At), has a safe DAG filter {a mathematical formula}T′, which is isomorphic to T, has polynomial size, and polynomial-time computable {a mathematical formula}fi associated with each internal vertex. The leaves of {a mathematical formula}T′ only differ from those of T by a constant. The result follows.  □
+     </paragraph>
+     <paragraph label="Proof">
+      A polynomially DAG-filterable global cost function{a mathematical formula}W_GCF(S,A1,…,At)is tractable projection-safe.Follows directly from Theorem 6 and Lemma 1.  □
+     </paragraph>
+     <paragraph>
+      As shown by Theorem 7, a polynomially DAG-filterable cost function {a mathematical formula}WS remains polynomially DAG-filterable after projection or extension. Algorithm 5 shows how the projection is performed from {a mathematical formula}WS and {a mathematical formula}Wi, where {a mathematical formula}xi∈S. Lines 2 to 4 modify the leaves of the filtering DAG, as suggested by Theorem 5.
+     </paragraph>
+     <paragraph>
+      Lines 4 to 8 in Algorithm 5 show how incrementality can be achieved. If {a mathematical formula}Wi or {a mathematical formula}D(xi), {a mathematical formula}xi∈S, are changed we update the entry {a mathematical formula}Min[ωSi] at line 4, which corresponds to the leaf {a mathematical formula}ωSi, where {a mathematical formula}xi∈Si. The change propagates upwards in lines 7 and 8, updating all entries related to the leaf {a mathematical formula}ωSi. The table FW can be updated similarly.
+     </paragraph>
+     <paragraph>
+      The time complexity of enforcing GAC* on a polynomially DAG-filterable global cost function heavily depends on preprocessing, as stated in the following corollary.
+     </paragraph>
+     <paragraph label="Proof">
+      If the time complexity for pre-computing the table{a mathematical formula}Min+for a polynomially DAG-filterable cost function{a mathematical formula}WSis{a mathematical formula}O(K(n,d)), where K is a function of{a mathematical formula}n=|S|and maximum domain size d, then enforcing GAC* on a variable{a mathematical formula}xi∈Swith respect to{a mathematical formula}WSrequires{a mathematical formula}O(K(n,d)+d)time.Computing the minimum of {a mathematical formula}WS when {a mathematical formula}xi=v, where {a mathematical formula}xi∈S and {a mathematical formula}v∈D(xi), requires only constant time by looking up from {a mathematical formula}Min+. By Proposition 1, the time complexity is {a mathematical formula}O(K(n,d)+d) time.  □
+     </paragraph>
+     <paragraph>
+      We have presented a new class of tractable projection-safe global cost functions. Algorithm 4 gives an efficient algorithm to compute the minimum cost. In the next section, we give an example of such a global cost function. More examples can be found in the associated technical report [3].
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      A polynomially DAG-filterable global cost function
+     </section-title>
+     <paragraph>
+      In the following, we show that {a mathematical formula}W_Grammarvar is polynomially DAG-filterable using the results from the previous section. Other examples of polynomially DAG-filterable global cost functions can be found in the extended version [3].
+     </paragraph>
+     <paragraph label="Definition 19">
+      {a mathematical formula}W_Grammarvar is the cost function variant of the softened version of the hard global constraint Grammar[37] defined based on a context-free language. A context-free language {a mathematical formula}L(G) is represented by a context-free grammar{a mathematical formula}G=(Σ,N,P,A0), where:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Σ is a set of terminals;
+      </list-item>
+      <list-item label="•">
+       N is a set of non-terminals;
+      </list-item>
+      <list-item label="•">
+       P is a set of production rules from N to {a mathematical formula}(Σ∪N)⁎, where ⁎ is the Kleene star, and;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}A0∈N is a starting symbol.
+      </list-item>
+     </list>
+     <paragraph>
+      Without loss of generality, we assume that (1) the context-free language {a mathematical formula}L(G) does not contain cycles, and (2) the strings are always of fixed length, representing values in tuples.
+     </paragraph>
+     <paragraph>
+      Assume {a mathematical formula}S={x1,…,xn}. We define {a mathematical formula}τℓ to be a string formed by a tuple {a mathematical formula}ℓ∈DS, where the ith character of {a mathematical formula}τℓ is {a mathematical formula}ℓ[xi]. The hard constraint {a mathematical formula}grammar(S,G) authorizes a tuple {a mathematical formula}ℓ∈DS if {a mathematical formula}τℓ∈L(G)[37]. Using the violation measure var by Katsirelos et al. [38], the {a mathematical formula}W_Grammarvar cost function is defined as follows.
+     </paragraph>
+     <paragraph label="Definition 20">
+      {a mathematical formula}W_Grammarvar[38]Given a context-free grammar {a mathematical formula}G=(Σ,N,P,A0). {a mathematical formula}W_Grammarvar(S,G) returns {a mathematical formula}min⁡{H(τℓ,τi)|τi∈L(G)} for each tuple {a mathematical formula}ℓ∈DS, where {a mathematical formula}H(τ1,τ2) returns the Hamming distance between {a mathematical formula}τ1 and {a mathematical formula}τ2.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider {a mathematical formula}S={x1,x2,x3,x4}, where {a mathematical formula}D(xi)={a,b,c} for {a mathematical formula}i=1…4. Given the grammar {a mathematical formula}G=({a,b,c},{A0,A,B,C},P,S) with the following production rules.{a mathematical formula} The cost returned by {a mathematical formula}W_Grammarvar(S,G)(ℓ) is 1 if {a mathematical formula}ℓ=(c,a,b,c). The assignment of {a mathematical formula}x1 needs to be changed so that {a mathematical formula}L(M) accepts the corresponding string {a mathematical formula}aabc.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}W_Grammarvar(S,G)is a polynomially DAG-filterable and thus tractable projection-safe global cost function.We adopt the dynamic programming approach similar to the modified CYK parser [38]. Without loss of generality, we assume G is in Chomsky normal form, i.e. each production rule always has the form {a mathematical formula}A→α or {a mathematical formula}A→BC, where {a mathematical formula}A∈N, {a mathematical formula}B,C∈N∖{A0} and {a mathematical formula}α∈Σ.Define {a mathematical formula}ωSi,jA=W_Grammarvar(Si,j,GA), where {a mathematical formula}i≤j, {a mathematical formula}Si,j={xi…xj}⊆S, and {a mathematical formula}GA=(Σ,N,P,A) for {a mathematical formula}A∈N. By definition,{a mathematical formula} The base cases {a mathematical formula}ωSi,iA is defined as follows. Define {a mathematical formula}ΣA={α|A→α} to be the set of terminals that can be yielded from A.{a mathematical formula}The unary cost function {a mathematical formula}Uiα(ℓ[xi]) is defined as follows.{a mathematical formula} Other cost functions {a mathematical formula}ωSi,jA, where {a mathematical formula}i&lt;j, are defined as follows. Let {a mathematical formula}NA={(B,C)|A→BC} be the set of pairs of non-terminals that are yielded from A.{a mathematical formula} □
+     </paragraph>
+     <paragraph>
+      The associated filtering DAG {a mathematical formula}(V,E) is illustrated in Fig. 1 using Example 1. In Fig. 1, leaves are indicated by double circles, corresponding to the unary cost function in equation (2). Vertices with min or ⊕ aggregators are indicated by rectangles and circles respectively, corresponding to cost functions {a mathematical formula}ωSi,jA in equation (3) if {a mathematical formula}i≠j, or equation (1) otherwise. As shown in Fig. 1, the root node W_Grammar is first split by the production rule {a mathematical formula}A0→AA. One of its children {a mathematical formula}ωS1,1A leads to the leaf {a mathematical formula}U1a according to the production rule {a mathematical formula}A→a. The DAG uses only ⊕ or min as aggregations and they satisfy the preconditions that allow to apply Proposition 2, Proposition 3. The cost function is therefore safely DAG-filterable. Moreover, the corresponding DAG {a mathematical formula}(V,E) has size {a mathematical formula}|V|=O(|P|⋅|S|3) polynomial in the size of the input. The leaves are unary functions {a mathematical formula}{Uiα} and by Theorem 7, the result follows.
+     </paragraph>
+     <paragraph>
+      Note that Theorem 8 also gives a proof that {a mathematical formula}W_Regularvar is tractable projection-safe. Indeed, a finite state automaton, defining a regular language, can be transformed into a grammar with the number of non-terminals and production rules polynomial in the number of states in the automaton. Then, {a mathematical formula}W_Amongvar is also tractable projection-safe since the tuples satisfying an Among global constraint can be represented using a compact finite state counting automaton [8].
+     </paragraph>
+     <paragraph>
+      Function GrammarMin in Algorithm 6 computes the minimum of {a mathematical formula}W_Grammarvar(S,G). We first compute the minimum of the unary cost functions in the table {a mathematical formula}u[i,c] at lines 1 to 3. The table f of size {a mathematical formula}n×n×|N| is filled up in two separate for-loops: one at line 4 according to the equation (1), and another one at line 14 for the equation (3). The result is returned at line 8.
+     </paragraph>
+     <paragraph label="Proof">
+      The function GrammarMin inAlgorithm 6computes the minimum of the global cost function{a mathematical formula}W_Grammarvar(S,G=(Σ,N,P,A0))in time{a mathematical formula}O(nd⋅|Σ|+n3⋅|P|), where{a mathematical formula}n=|S|and d is the maximum domain size.Lines 1 to 3 take {a mathematical formula}O(nd⋅|Σ|). The first for-loop at lines 4 to 7 requires {a mathematical formula}O(n⋅|P|), while the second one at lines 9 to 14 requires {a mathematical formula}O(n3⋅|P|). The overall time complexity is {a mathematical formula}O(nd⋅|Σ|+n⋅|P|+n3⋅|P|)=O(nd⋅|Σ|+n3⋅|P|).  □
+     </paragraph>
+     <paragraph>
+      As for incrementality, Algorithm 7 gives the pre-processing performed on top of Algorithm 6, based on the weighted CYK propagator used in Katsirelos et al. [38]. We compute the table f at line 1 using Algorithm 6. Then we compute the table F at lines 8 to 16 using the top-down approach. For each production {a mathematical formula}A↦A1A2, lines 14 and 16 compute the maximum possible costs from their neighbors. An additional table {a mathematical formula}marked[i,j,A] is used to record whether the symbol A is accessible when deriving sub-strings at positions i to j in G. Each time we need to compute the minimum for {a mathematical formula}xi=v, we just return {a mathematical formula}min⁡{Uiα(v)⊖F[i,i,A]⊕f[0,n−1,A0]|(A↦v)∈P∧marked[i,i,A]}, or ⊤ if such production does not exist.
+     </paragraph>
+     <paragraph label="Proof">
+      Given{a mathematical formula}WS=W_Grammarvar(S,G=(Σ,N,P,A0)). Enforcing GAC* on a variable{a mathematical formula}xi∈Swith respect toW_Grammarrequires{a mathematical formula}O(nd⋅|Σ|+n3⋅|P|)time, where{a mathematical formula}n=|S|and d is the maximum domain size.Using a similar argument to that in the proof of Theorem 9, Algorithm 7 requires {a mathematical formula}O(nd⋅|Σ|+n3⋅|P|) time. The result follows directly from Corollary 1 and Theorem 9.  □
+     </paragraph>
+     <paragraph>
+      Algorithm 8 shows how projection is performed between {a mathematical formula}W_Grammarvar and {a mathematical formula}Wp, and how incrementally can be achieved. Line 3 modifies the leaves {a mathematical formula}Upc for each {a mathematical formula}c∈Σ, while lines 4 and 5 update the corresponding entries in the tables u and f respectively. The change is propagated up in f at line 6, corresponding to derivation of sub-strings with positions from p to the end in G.
+     </paragraph>
+     <paragraph>
+      In this section, we have seen how the minimum of a polynomially DAG-filterable global cost function can be computed efficiently, leading to efficient soft local consistency enforcement. However, each newly implemented cost function requires to build a corresponding DAG structure with a dedicated dynamic programming algorithm.
+     </paragraph>
+     <paragraph>
+      In the next section, we show that, in some cases, it is also possible to avoid this by directly decomposing a global cost functions into a CFN in such a way that local consistency enforcement will emulate dynamic programming, avoiding the need for dedicated enforcement algorithms.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Decomposing global cost functions into CFNs
+     </section-title>
+     <paragraph>
+      In CSPs, some global constraints can be efficiently represented by a logically equivalent subnetwork of constraints of bounded arities [13], [16], and are said to be decomposable. Similarly, we will show that some global cost functions can be encoded as a sum of bounded arity cost functions. The definition below applies to any cost function, including constraints, extending the definition in [16] and [13].
+     </paragraph>
+     <paragraph label="Definition 21">
+      For a given integer p, a p-network-decomposition of a global cost function {a mathematical formula}W_GCF(S,A1,…,Ak) is a polynomial transformation {a mathematical formula}δp that returns a CFN {a mathematical formula}δp(S,A1,…,Ak)=(S∪E,F,⊤), where {a mathematical formula}S∩E=∅, such that {a mathematical formula}∀WT∈F,|T|≤p and {a mathematical formula}∀ℓ∈DS,W_GCF(S,A1,…,Ak)(ℓ)=minℓ′∈DS∪E,ℓ′[S]=ℓ⁡⨁WSi∈FWSi(ℓ′[Si]).
+     </paragraph>
+     <paragraph>
+      Definition 21 above allows for the use of extra variables E, which do not appear in the original cost function scope and are eliminated by minimization. We assume, without loss of generality, that every extra variable {a mathematical formula}x∈E is involved in at least two cost functions in the decomposition.{sup:1} Clearly, if {a mathematical formula}W_GCF(S,A1,…,Ak) appears in a CFN {a mathematical formula}P=(X,W,⊤) and decomposes into {a mathematical formula}(S∪E,F,⊤), the optimal solutions of P can directly be obtained by projecting the optimal solutions of the CFN {a mathematical formula}P′=(X∪E,W∖{W_GCF(S,A1,…,Ak)}∪F,⊤) on {a mathematical formula}X.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Building network-decomposable global cost functions
+      </section-title>
+      <paragraph>
+       A global cost function can be shown to be network-decomposable by exhibiting a bounded arity network decomposition of the global cost function. There is a simple way of deriving network-decomposable cost functions from known decomposable global constraints. The process goes directly from a known decomposable global constraint to a network-decomposable global cost function and does not require to use an intermediate soft global constraint with an associated violation measure μ. Instead, the global cost function will use any relaxation of the decomposed global constraint.
+      </paragraph>
+      <paragraph>
+       We say that the cost function {a mathematical formula}WS is a relaxation of {a mathematical formula}WS′ if for all {a mathematical formula}ℓ∈DS,WS(ℓ)≤WS′(ℓ). We then write {a mathematical formula}WS≤WS′. From a network-decomposable global constraint, it is possible to define an associated network-decomposable global cost function by relaxing every constraint in the decomposition.
+      </paragraph>
+      <paragraph label="Theorem 10">
+       Let{a mathematical formula}GC(S,A1,…,Ak)be a global constraint that p-network decomposes into a classical constraint network{a mathematical formula}(S∪E,F,⊤)and{a mathematical formula}fθbe a function parameterized by θ that maps every{a mathematical formula}CT∈Fto a cost function{a mathematical formula}fθ(CT)such that{a mathematical formula}fθ(CT)≤CT. The global cost function{a mathematical formula}is a relaxation of{a mathematical formula}GC(S,A1,…,An), and is p-network-decomposable by construction.
+      </paragraph>
+      <paragraph label="Proof">
+       Since {a mathematical formula}(S∪E,F) is a network-decomposition of {a mathematical formula}GC(S,A1,...,Ak), for any tuple {a mathematical formula}ℓ∈DS, {a mathematical formula}GC(S,A1,...,Ak)(ℓ)=0 if and only if {a mathematical formula}minℓ′∈DS∪E,ℓ′[S]=ℓ⁡⨁CT∈FCT(ℓ′[T])=0. Let {a mathematical formula}ℓ′∈DS∪E be a tuple where this minimum is reached. This implies that {a mathematical formula}∀CT∈F, {a mathematical formula}CT(ℓ′[T])=0. Since {a mathematical formula}fθ(CT)≤CT, {a mathematical formula}fθ(CT)(ℓ′[T])=0. Therefore {a mathematical formula}⨁CT∈Ffθ(CT)(ℓ′[T])=0 and {a mathematical formula}W_GCF(S,A1,…,Ak,fθ)(ℓ)=0. Moreover, the global cost function is p-network-decomposable by construction.  □
+      </paragraph>
+      <paragraph>
+       Theorem 10 allows to immediately derive a long list of network decomposable global cost functions from existing network decompositions of global constraints such as AllDifferent, Regular[55], Among and Stretch[14]. The parameterization through {a mathematical formula}fθ also allows a lot of flexibility.
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider the softened variant {a mathematical formula}W_AllDifferentdec(S) of the global constraint {a mathematical formula}AllDifferent(S) constraint using the decomposition violation measure where the cost of an assignment is the number of pairs of variables taking the same value [56]. It is well known that AllDifferent decomposes into a set of {a mathematical formula}n.(n−1)2 binary difference constraints. Similarly, the {a mathematical formula}W_AllDifferentdec(S) cost function can be decomposed into a set of {a mathematical formula}n.(n−1)2 soft difference cost functions. A soft difference cost function takes cost 1 iff the two involved variables have the same value and 0 otherwise. In these cases, no extra variable is required.AllDifferent can be softened in a different way. Take an arbitrary graph {a mathematical formula}G=(V,E) over V, and consider the violation measure where the cost of an assignment is the number of pairs of variables in E taking the same value. This gives rise to a global cost function {a mathematical formula}W_AllDifferentfG(V) that allows a zero cost assignment if and only if G is colorable, which is an NP-hard problem. Enforcing any soft arc consistency on that single global cost function will be intractable as well since it requires to compute the minimum of the cost function. Instead, enforcing soft arc consistencies on the network-decomposition into binary cost functions will obviously be polynomial but will achieve a lower level of filtering.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Local consistency and network-decompositions
+     </section-title>
+     <paragraph>
+      As we have seen with the {a mathematical formula}W_AllDifferent(V,fG) global cost function, the use of network-decompositions instead of a monolithic variant has both advantages and drawbacks. Thanks to local reasoning, a decomposition may be filtered more efficiently, but this may hinder the level of filtering achieved. In CSP, it was observed that the structure of the decomposition has an impact on the level of consistency achieved when filtering the decomposition.
+     </paragraph>
+     <paragraph>
+      Before going further, we give some extra definitions that are useful to characterize structure of decompositions. The hypergraph {a mathematical formula}(X,E) of a CFN {a mathematical formula}(X,W,⊤) has one vertex per variable {a mathematical formula}xi∈X and one hyperedge for every scope S such that {a mathematical formula}∃WS∈W. The incidence graph of a hypergraph {a mathematical formula}(X,E) is a bipartite graph {a mathematical formula}G=(X∪E,EH) where {a mathematical formula}{xi,ej}∈EH iff {a mathematical formula}xi∈X,ej∈E and {a mathematical formula}xi belongs to the hyperedge {a mathematical formula}ej. A hypergraph {a mathematical formula}(X,E) is Berge-acyclic iff its incidence graph is acyclic.
+     </paragraph>
+     <paragraph>
+      In CSP, it is known that if the decomposition is Berge-acyclic, then enforcing GAC on the decomposition enforces GAC on the global constraint itself [6]. We now show that a similar result can be obtained for cost functions using either a variant of Directional Arc Consistency or Virtual Arc Consistency (VAC), whose definitions are given in the two subsections below.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Berge-acyclicity and directional arc consistency
+      </section-title>
+      <paragraph>
+       In this section, we will show that enforcing directional arc consistency on a Berge-acyclic network-decomposition of a cost function or on the original global cost function yields the same cost distribution on the last variable and therefore the same lower bound (obtained by node consistency) provided a correct variable ordering is used.
+      </paragraph>
+      <paragraph>
+       Directional Arc Consistency has been originally defined on binary networks. We define Terminal DAC (or T-DAC) which generalizes Directional Arc Consistency [21] by removing the requirement of having binary scopes.
+      </paragraph>
+      <paragraph label="Definition 22">
+       T-DACGiven a CFN {a mathematical formula}N=(X,W,⊤) a total order ≺ over variables:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For a cost function {a mathematical formula}WS∈W+, a tuple {a mathematical formula}ℓ∈DS is a full support for a value {a mathematical formula}a∈D(xi) of {a mathematical formula}xi∈S iff {a mathematical formula}WS(ℓ)⨁xj∈S,j≠iWj(ℓ[xj])=0.
+       </list-item>
+       <list-item label="•">
+        A variable {a mathematical formula}xi∈S is star directional arc consistent (DAC*) for {a mathematical formula}WS iff
+       </list-item>
+       <list-item label="•">
+        N is Terminal Directional Arc Consistent (T-DAC) w.r.t. the order ≺ iff for all cost functions {a mathematical formula}WS∈W+, the minimum variable in S is DAC* for {a mathematical formula}Ws.
+       </list-item>
+      </list>
+      <paragraph>
+       To enforce T-DAC on a cost function {a mathematical formula}WS, it suffices to first shift the cost of every unary cost function {a mathematical formula}Wi,i∈S inside {a mathematical formula}WS by applying {an inline-figure}{a mathematical formula}S,{xi},(a),−Wi(a) for every value {a mathematical formula}a∈Di. Let {a mathematical formula}xj be the minimum variable in S according to ≺, one can then apply {an inline-figure}{a mathematical formula}S,{xj},(b),α for every value {a mathematical formula}b∈D(xj) with {a mathematical formula}α=minℓ∈DS,ℓ[xj]=b⁡WS(ℓ). Let ℓ be a tuple where this minimum is reached. Then either {a mathematical formula}α=⊤ and the value will be deleted, or ℓ is a full support for {a mathematical formula}b∈D(xj): {a mathematical formula}WS(ℓ)⨁xi∈S,i≠jWi(ℓ[xi])=0. This support can only be broken if for some unary cost function {a mathematical formula}Wi,i∈S,i≠j, {a mathematical formula}Wi(a) increases for some value {a mathematical formula}a∈D(xi). Since j is minimum, {a mathematical formula}i≻j.
+      </paragraph>
+      <paragraph>
+       To enforce T-DAC on a CFN {a mathematical formula}(X,W,⊤), one can simply sort {a mathematical formula}W in a decreasing order of the minimum variable in the scope of each cost function, and apply the previous process on each cost function, successively. When a cost function {a mathematical formula}WS is processed, all the cost functions whose minimum variable is larger than the minimum variable of S have already been processed, which guarantees that none of the established full supports will be broken in the future. Enforcing T-DAC is therefore in {a mathematical formula}O(edr) in time, where {a mathematical formula}e=|W| and {a mathematical formula}r=maxWS∈W⁡|S|.
+      </paragraph>
+      <paragraph label="Theorem 11">
+       If a global cost function{a mathematical formula}W_GCF(S,A1,…,Ak)decomposes into a Berge-acyclic CFN{a mathematical formula}N=(S∪E,F), there exists an ordering on{a mathematical formula}S∪Esuch that the unary cost function{a mathematical formula}Wxinon the last variable{a mathematical formula}xinof S produced by enforcing T-DAC on the sub-network{a mathematical formula}(S,{W_GCF(S,A1,…,Ak)}∪{Wxi}xi∈S)is identical to the unary cost function{a mathematical formula}Wxin′produced by enforcing T-DAC on the decomposition{a mathematical formula}N=(S∪E,F∪{Wxi}xi∈S).
+      </paragraph>
+      <paragraph label="Proof">
+       Consider the decomposed network N and {a mathematical formula}IN=(S∪E∪F,EI) its incidence graph. As N is Berge-acyclic we know that {a mathematical formula}IN is a tree whose vertices are the variables and the cost functions of N. We root {a mathematical formula}IN in a variable of S. The neighbors (parent and children, if any) of cost functions {a mathematical formula}WT are the variables in T. The neighbors of a variable {a mathematical formula}xi are the cost functions involving {a mathematical formula}xi. Consider any topological ordering of the vertices of {a mathematical formula}IN. This ordering induces a variable ordering {a mathematical formula}(xi1,…,xin),xin∈S which is used to enforce T-DAC on N. Notice that for any cost function {a mathematical formula}WT∈F, the parent variable of {a mathematical formula}WT in {a mathematical formula}IN appears after all the other variables of T.Consider a value {a mathematical formula}a∈D(xin) of the root. Since NC* is enforced, {a mathematical formula}Wxin(a)&lt;⊤. Let {a mathematical formula}WT be any child of {a mathematical formula}xin and ℓ a full support of value a on {a mathematical formula}WT. We have {a mathematical formula}Wxin(a)=WT(ℓ)⨁xi∈TWxi(ℓ[xi]), which proves that {a mathematical formula}WT(ℓ)=0 and {a mathematical formula}∀xi∈T,i≠in,Wxi(ℓ[xi])=0. {a mathematical formula}IN being a tree, we can inductively apply the same argument on all the descendants of {a mathematical formula}xin until leaves are reached, proving that the assignment {a mathematical formula}(xin=a) can be extended to a complete assignment with cost {a mathematical formula}Wxin(a) in N. In both cases, {a mathematical formula}Wxin(a) is the cost of an optimal extension of {a mathematical formula}(xin=a) in N.Suppose now that we enforce T-DAC using the previous variable ordering on the undecomposed sub-network {a mathematical formula}(S,{W_GCF(S,A1,…,Ak)}∪{Wxi}xi∈S). Let ℓ be a full support of value {a mathematical formula}a∈D(xin) on {a mathematical formula}W_GCF(S,A1,…,Ak). By definition, {a mathematical formula}Wxin(a)=W_GCF(S,A1,…,Ak)(ℓ)⨁xi∈SWxi(ℓ[xi]) which proves that {a mathematical formula}Wxin(a) is the cost of an optimal extension of {a mathematical formula}(xin=a) on {a mathematical formula}(S,{W_GCF(S,A1,…,Ak)}∪{Wxi}xi∈S). By definition of decomposition, and since {a mathematical formula}xin∉E, this is equal to the cost of an optimal extension of {a mathematical formula}(xin=a) in N.  □
+      </paragraph>
+      <paragraph>
+       T-DAC has therefore enough power to handle Berge-acyclic network-decompositions without losing any filtering strength, provided a correct order is used for applying EPTs. In this case, T-DAC emulates a simple form of dynamic programming on the network-decomposition.
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider the Regular{a mathematical formula}({x1,…,xn},M) global constraint, defined by a (not necessarily deterministic) finite automaton {a mathematical formula}M=(Q,Σ,δ,q0,F), where Q is a set of states, Σ the emission alphabet, δ a transition function from {a mathematical formula}Σ×Q→2Q, {a mathematical formula}q0 the initial state and F the set of final states. As shown in [15], this constraint decomposes into a constraint network {a mathematical formula}({x1,…,xn}∪{Q0,…,Qn},C) where the extra variables {a mathematical formula}Qi have Q as their domain. The set of constraints C in the network decomposition contains two unary constraints restricting {a mathematical formula}Q0 to {a mathematical formula}{q0} and {a mathematical formula}Qn to F and a sequence of identical ternary constraints {a mathematical formula}c{Qi,xi+1,Qi+1} each of which authorizes a triple {a mathematical formula}(q,s,q′) iff {a mathematical formula}q′∈δ(q,s), thus capturing δ. A relaxation of this decomposition may relax each of these constraints. The unary constraints on {a mathematical formula}Q0 and {a mathematical formula}Qn would be replaced by unary cost functions {a mathematical formula}λQ0 and {a mathematical formula}ρQn stating the cost for using every state as either an initial or final state while the ternary constraints would be relaxed to ternary cost functions {a mathematical formula}σ{Qi,xi+1,Qi+1} stating the cost for using any {a mathematical formula}(q,s,q′) transition.This relaxation precisely corresponds to the use of a weighted automaton {a mathematical formula}MW=(Q,Σ,λ,σ,ρ) where every transition, starting and finishing state has an associated, possibly intolerable, cost defined by the cost functions {a mathematical formula}λ,σ and ρ[24]. The cost of an assignment in the decomposition is equal, by definition, to the cost of an optimal parse of the assignment by the weighted automaton. This defines a {a mathematical formula}W_Regular(S,MW) global cost function which is parameterized by a weighted automaton. As shown in [38], a weighted automaton can encode the Hamming and Edit distances to the language of a classical automaton. We observe that the hypergraph of the decomposition of W_Regular is Berge-acyclic. Thus, contrary to the AllDifferent example, where decomposition was hindering filtering, T-DAC on the W_Regular network-decomposition achieves T-DAC on the original cost function.
+      </paragraph>
+      <paragraph>
+       It should be pointed out that T-DAC is closely related to mini-buckets [26] and Theorem 11 can easily be adapted to this scheme. Mini-buckets perform a weakened form of variable elimination: when a variable x is eliminated, the cost functions linking x to the remaining variables are partitioned into sets containing at most i variables in their scopes and at most m functions (with arity &gt;1). If we compute mini-buckets using the same variable ordering, with {a mathematical formula}m=1 and unbounded i, we will obtain the same unary costs as T-DAC on the root variable r, with the same time and space complexity. Mini-buckets can be used along two main recipes: precomputed (static) mini-buckets do not require update during search but restrict search to one static variable ordering; dynamic mini-buckets allow for dynamic variable ordering (DVO) but suffer from a lack of incrementality. Soft local consistencies, being based on EPTs, always yield equivalent problems, providing incrementality during search and are compatible with DVO.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Berge-acyclicity and virtual arc consistency
+      </section-title>
+      <paragraph>
+       Virtual Arc Consistency offers a simple and direct link between CSPs and CFNs which allows to directly lift CSP properties to CFNs, under simple conditions.
+      </paragraph>
+      <paragraph label="Definition 23">
+       VAC [19]Given a CFN {a mathematical formula}N=(X,W,⊤), we define the constraint network {a mathematical formula}Bool(N) as the CSP with the same set {a mathematical formula}X of variables with the same domains, and which contains, for each cost function {a mathematical formula}WS∈W,|S|&gt;0, a constraint {a mathematical formula}cS with the same scope, which exactly forbids all tuples {a mathematical formula}ℓ∈DS such that {a mathematical formula}WS(ℓ)≠0. A CFN N is said to be Virtual Arc Consistent (VAC) iff the arc consistent closure of the constraint network {a mathematical formula}Bool(N) is non-empty.
+      </paragraph>
+      <paragraph label="Theorem 12">
+       If a global cost function{a mathematical formula}W_GCF(S,A1,…,Ak)decomposes into a Berge-acyclic CFN{a mathematical formula}N=(S∪E,F,⊤)then enforcing VAC on either{a mathematical formula}(S∪E,F∪{Wxi}xi∈S,⊤)or on{a mathematical formula}(S,{W_GCF(S,A1,…,Ak)}∪{Wxi}i∈S,⊤)yields the same lower bound{a mathematical formula}W∅.
+      </paragraph>
+      <paragraph label="Proof">
+       Enforcing VAC on the CFN {a mathematical formula}N=(S∪E,F∪{Wxi}xi∈S,⊤) does not modify the set of scopes as it only performs 1-EPTs (see Definition 4). Hence it yields an equivalent problem {a mathematical formula}N′ such that {a mathematical formula}Bool(N′) has the same hypergraph as {a mathematical formula}Bool(N). Since N has a Berge acyclic structure, this is also the case for {a mathematical formula}Bool(N) and {a mathematical formula}Bool(N′). Now, Berge-acyclicity is a situation where arc consistency is a decision procedure. We can directly make use of Proposition 10.5 of [19], which states that if a CFN N is VAC and {a mathematical formula}Bool(N) is in a class of CSPs for which arc consistency is a decision procedure, N has an optimal solution of cost {a mathematical formula}w∅.Similarly, the network {a mathematical formula}Q=(S,{W_GCF(S,A1,…,Ak)}∪{Wxi}xi∈T,⊤) contains just one cost function with arity strictly above 1 and {a mathematical formula}Bool(Q) will be decided by arc consistency. Enforcing VAC will therefore provide a CFN which also has an optimal solution of cost {a mathematical formula}W∅. Finally, the networks N and Q have the same optimal cost by definition of a decomposition.  □
+      </paragraph>
+      <paragraph>
+       Given that VAC is both stronger and more expensive to enforce than DAC*, the added value of this theorem, compared to Theorem 11, is that it does not rely on a variable ordering. Such order always exists but it is specific to each global cost function. Theorem 12 becomes interesting when a problem contains several global cost functions with intersecting scopes, for which Theorem 11 may produce inconsistent orders.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Relation between DAG-filterability and network-decompositions
+     </section-title>
+     <paragraph>
+      In this section, we show that Berge-acyclic network-decomposable global cost functions are also polynomially DAG-filterable.
+     </paragraph>
+     <paragraph label="Theorem 13">
+      Let{a mathematical formula}W_GCF(S,A1,…,Ak)be a network-decomposable global cost function that decomposes into a CFN{a mathematical formula}(S∪E,F,⊤)with a Berge-acyclic hypergraph. Then{a mathematical formula}W_GCF(S,A1,…,Ak)is polynomially DAG-filterable.
+     </paragraph>
+     <paragraph label="Proof">
+      We consider the incidence graph of the Berge-acyclic hypergraph of the CFN {a mathematical formula}(S∪E,F,⊤) and choose a root for it in the original variables S, defining a rooted tree denoted as I. This root orients the tree I with leaves being variables in S and E. In the rest of the proof, we denote by {a mathematical formula}I(xi) the subtree of I rooted in {a mathematical formula}xi∈S∪E. Abusively, when the context is clear, {a mathematical formula}I(xi) will also be used to denote the set of all variables in the subtree.The proof is constructive. We will transform I into a filtering DAG (actually a tree) of nodes that computes the correct cost {a mathematical formula}minℓ′∈DS∪E,ℓ′[S]=ℓ⁡⨁WT∈FWT(ℓ′[T]) and satisfies all the required properties of polynomial DAG-filters. To achieve this, we need to guarantee that the aggregation function {a mathematical formula}fi=⊕ is always used on cost functions of disjoint scopes, that {a mathematical formula}fi=min is always applied on identically scoped functions and that sizes remain polynomial.We will be using three types of DAG nodes. A first type of node will be associated with every cost function {a mathematical formula}WT∈F in the network-decomposition. Each cost function appears in I with a parent variable {a mathematical formula}xi and a set of children variables among which some may be leaf variables. By the assumption that extra variables belong to at least two cost functions (see paragraph below Definition 21), leaf variables necessarily belong to S. We denote by {a mathematical formula}leaf(T) the set of leaf variables in the scope T. The first type of node aims at computing the value of the cost function {a mathematical formula}WT combined with the unary cost functions on each leaf variable. This computation will be performed by a family of nodes {a mathematical formula}UTℓ, where {a mathematical formula}ℓ∈DT−leaf(T) is an assignment of non-leaf variables. Therefore, for a given cost function {a mathematical formula}WT and a given assignment ℓ of non-leaf variables, we define a DAG node with scope {a mathematical formula}leaf(T):{a mathematical formula}These nodes will be leaf nodes of the filtering DAG. Given that all cost functions in I have bounded arity, these nodes have an overall polynomial size and can be computed in polynomial time in the size of the input global cost function.Nodes of the second and third types are associated to every non-leaf variable {a mathematical formula}xi in I. For every value {a mathematical formula}a∈D(xi), we will have a node {a mathematical formula}ωia with scope {a mathematical formula}I(xi)∩S. {a mathematical formula}xi may have different children cost functions in I and we denote by {a mathematical formula}Wi the set of all the children cost functions of {a mathematical formula}xi in I. For each {a mathematical formula}WT∈Wi, we will also have a DAG node {a mathematical formula}ωTi,a with scope {a mathematical formula}Si′=(I(WT)∪{xi})∩S. Notice that even if these scopes may be large (ultimately equal to S for {a mathematical formula}ωia if {a mathematical formula}xi is the root of I), these nodes are not leaf nodes of the filtering DAG and do not rely on an extensional definition, avoiding exponential space.The aim of all these nodes is to compute the cost of an optimal extension of the assignment ℓ to the subtree {a mathematical formula}I(WT) (for {a mathematical formula}ωTi,a) or {a mathematical formula}I(xi) (for {a mathematical formula}ωia). We therefore define:{a mathematical formula}Indeed, if {a mathematical formula}ωTi,a computes the cost of an optimal extension to the subtree rooted in {a mathematical formula}WT, an optimal extension to {a mathematical formula}I(xi) is just the ⊕ of each optimal extension on each child, since the scopes {a mathematical formula}Si′ do not intersect (I is a tree). The DAG node uses the ⊕ aggregation operator on non-intersecting scopes.The definition of the DAG nodes {a mathematical formula}ωTi,a is more involved. It essentially requires:
+      <list>
+       to combine the cost of {a mathematical formula}WT with the unary cost functions on leaf variables in T (this is achieved by {a mathematical formula}UT nodes) and costs of optimal extensions subtrees rooted in other non-leaf variables (this is achieved by {a mathematical formula}ωjb nodes).to eliminate in this function all extra variables in the scope T except {a mathematical formula}xi if {a mathematical formula}xi∈E. In this case, {a mathematical formula}xi's value will be set in ℓ and eliminated on higher levels.If
+      </list>
+      <paragraph>
+       {a mathematical formula}xi∈E or else if {a mathematical formula}ℓ[xi]=a, this leads to the following definition of {a mathematical formula}ωTi,a(ℓ):{a mathematical formula}Otherwise ({a mathematical formula}xi∈S and {a mathematical formula}ℓ[xi]≠a), {a mathematical formula}ωTi,a(ℓ)=⊤. This captures the fact that there is no optimal extension of ℓ that extends {a mathematical formula}(xi,a) since ℓ is inconsistent with {a mathematical formula}xi=a.If we consider the root variable {a mathematical formula}xi∈S of I, the {a mathematical formula}ωia nodes provide the cost of a best extension of any assignment ℓ (if {a mathematical formula}ℓ[xi]=a) or ⊤ otherwise. An ultimate root DAG node using the aggregation operator min over all these {a mathematical formula}ωia will therefore return the optimal extension of {a mathematical formula}ℓ∈DS to all variables in {a mathematical formula}I(xi), including extra variables.From equation (4), one can see that nodes {a mathematical formula}ωTi,a use the aggregation operator min on intermediary nodes. These intermediary nodes combine the node {a mathematical formula}UT and {a mathematical formula}ωj with ⊕ which have non-intersecting scopes.Overall all those nodes form a DAG (actually a tree). In this tree, every node with the aggregation operation ⊕ is applied to operands with non-intersecting scopes, as required in Property 2. Similarly, every node with the min aggregation operation is applied to functions whose scope is always identical, as required by Property 3. Note that the definitions of the {a mathematical formula}ωia and {a mathematical formula}ωTi,a are linear respectively in the number of children of {a mathematical formula}WT or {a mathematical formula}xi respectively. So, we have a filtering DAG satisfying Definition 18.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      For a global cost function which is Berge-acyclic network-decomposable, and therefore also polynomially DAG-filterable (as Theorem 13 shows), a natural question is which approach should be preferred. The main desired effect of enforcing local consistencies is that it may increase the lower bound {a mathematical formula}W∅. From this point of view, Theorem 11, Theorem 12 give a clear answer for a single global cost function.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Since OSAC [19] is the strongest form of arc consistency (implying also VAC), the strongest possible lower bound will be obtained by enforcing OSAC on the network-decomposed global cost function. The size of the OSAC linear program being exponential in the arity of the cost functions, the bounded arities of the network decomposed version will define a polynomial-size linear program. This however requires an LP solver.
+      </list-item>
+      <list-item label="•">
+       If a network containing network-decomposed global cost functions is VAC, the underlying global cost functions are also VAC. As a result, good quality lower bounds can be obtained by enforcing VAC. These lower bounds are not as good as those obtained by OSAC, but VAC is usually much faster than OSAC.
+      </list-item>
+      <list-item label="•">
+       T-DAC is otherwise extremely efficient, easy to implement, offering good lower bounds and incrementality for little effort. However, when several global cost functions co-exist in a problem, a variable order that is a topological sort of all these global cost functions may not exist. In this case, using a topological order for each scope independently would lead to the creation of cycles leading to possibly infinite propagation. It may then be more attractive to use filtering DAGs to process these cost functions.
+      </list-item>
+     </list>
+     <paragraph>
+      Finally, it should be noted that Theorem 11 only guarantees that T-DAC on a global cost function or its topologically sorted Berge-acyclic network-decomposition provide the same bound contribution. If a consistency stronger than DAC* is enforced (such as FDAC* or EDAC*), it may be more powerful when enforcedt on the global cost function itself than on its network-decomposition, thus giving an advantage to filtering DAGs.
+     </paragraph>
+     <paragraph>
+      In the end, the only truly informative answer will be provided by experimental results, as proposed in Section 9.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      In this section, we put theory into practice and demonstrate the practicality of the transformations described in the previous sections in solving over-constrained and optimization problems. We implemented cost functions with our transformations in toulbar2 v0.9.8.{sup:2} For each cost function used in our benchmark problems, we implemented weak Existential Directional Generalized Arc Consistency (EDGAC*) [32], [47], [48], a local consistency combining AC, DAC and EAC, using DAG-filtering (called DAG-based approach in the sequel) with pre-computed tables (as described in Section 4). When possible, we also implemented a Berge-acyclic network-decomposition to be propagated using EDGAC* (called network-based approach). We ignore weaker forms of local consistency such as Arc Consistency or 0-inverse consistency [65] as previous experiments with global cost functions have shown that these weak local consistencies lead to much less efficient solving [48].
+     </paragraph>
+     <paragraph>
+      In the experiments, we used default options for toulbar2, including a new hybrid best-first search strategy introduced in [5], which finds good solutions more rapidly compared to classical depth-first search. The default variable ordering strategy is dom/wdeg [17] with Last Conflict [45], while the default value ordering consists, for each variable, in choosing first its fully supported value as defined by EDGAC*. At each node during search, including the root node, we eliminate dominated values using Dead End Elimination pruning [27], [33], [44] and we eliminate all variables having degree less than two using variable elimination [12], [40]. At the root node only, this is improved by pairwise decomposition [30] and we also eliminate all variables having a functional or bijective binary relation (e.g., an equality constraint) with another variable. The tests are conducted on a single core of an Intel Xeon E5-2680 (2.9 GHz) machine with 256 GB RAM.
+     </paragraph>
+     <paragraph>
+      We performed our experiments on four different benchmark problems. For the two first benchmarks (car sequencing and nonogram), we have a model with Berge-acyclic network-decompositions, whereas for the two others (well-formed parentheses and market split), we do not. Each benchmark has a 5-minute timeout. We randomly generate 30 instances for each parameter setting of each benchmark. We first compare the number of solved instances, i.e. finding the optimum and proving its optimality (no initial upper bound). We report the average run-time in seconds and consider that an unsolved problem requires the maximum available time (timeout). When all instances are solved, we also report the average number of backtracks (or ‘–’ otherwise). The best results are marked in bold (taking first into account the number of solved instances in less than 5 minutes and secondly CPU time).
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       The car sequencing problem
+      </section-title>
+      <paragraph>
+       The car sequencing problem (prob001 in CSPLib, [54]) requires sequencing n cars of different types specified by a set of options. For any subsequence of {a mathematical formula}ci consecutive cars on the assembly line, the option {a mathematical formula}oi can be installed on at most {a mathematical formula}mi of them. This is called the capacity constraint. The problem is to find a production sequence on the assembly line such that each car can be installed with all the required options without violating the capacity constraint. We use n variables with domain 1 to n to model this problem. The variable {a mathematical formula}xi denotes the type of the ith car in the sequence. One GCC (global cardinality [52]) constraint ensures all cars are scheduled on the assembly line. We post {a mathematical formula}n−ci+1Among constraints [10] for each option {a mathematical formula}oi to ensure the capacity constraint is not violated. We randomly generate 30 over-constrained instances, each of which has 5 possible options, and for each option {a mathematical formula}oi, {a mathematical formula}mi and {a mathematical formula}ci are randomly generated in such a way that {a mathematical formula}1≤mi&lt;ci≤7. Each car in each instance is randomly assigned to one type, and each type is randomly assigned to a set of options in such a way that each option has 1/2 chance to be included in each type. To introduce costs, we randomly assign unary costs (between 0 to 9) to each variable.
+      </paragraph>
+      <paragraph>
+       The problem is then modeled in three different ways. The first model is obtained by replacing each Among constraint by the {a mathematical formula}W_Amongvar cost function and the GCC constraint by the {a mathematical formula}W_GCCvar cost function. {a mathematical formula}W_Amongvar returns a cost equal to the number of variables that need to be re-assigned to satisfy the Among constraint. {a mathematical formula}W_GCCvar is used as a global constraint and returns ⊤ on violation [48]. This model is called “flow&amp;DAG-based” approach in Table 1.
+      </paragraph>
+      <paragraph>
+       The second model, identified as “DAG-based” in Table 1, uses a set of {a mathematical formula}W_Amongvar cost functions to encode GCC, i.e. replacing the single global cost function exploiting a flow network by a set of DAG-based global cost functions [3].
+      </paragraph>
+      <paragraph>
+       In the third model, identified as “network-based” in Table 1, each of the {a mathematical formula}W_Amongvar in the previous DAG-based model is decomposed into a set of ternary cost functions with extra variables as described in Section 6.
+      </paragraph>
+      <paragraph>
+       Table 1 gives the experimental results. Column {a mathematical formula}n′ indicates the sum of the number of original variables (n) and the number of extra variables added in the network-based approach. Column {a mathematical formula}n″ gives the total number of unassigned variables after pre-processing. We observe that the network-based approach performed the worst among the three approaches. The DAG-based approach is up to six times faster than the flow&amp;DAG-based approach on completely solved instances ({a mathematical formula}n≤13) and solves more instances within the 5-minute time limit. Surprisingly, it also develops the least number of backtracks on completely solved instances. We found that the initial lower bound produced by weak EDGAC on the flow&amp;DAG-based approach can be lower than the one produced by the DAG-based approach. This is due to different orders of EPTs done by the two approaches resulting in different lower bounds. Finding an optimal order of integer arc-EPTs is NP-hard [20]. Recall that EDGAC has a chaotic behavior compared to OSAC or VAC and encoding GCC into a set of {a mathematical formula}W_Amongvar will produce more EPTs (each {a mathematical formula}W_Amongvar moving unary costs differently) creating new opportunities for the overlapping {a mathematical formula}W_Amongsvar to deduce a better lower bound.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       The nonogram problem
+      </section-title>
+      <paragraph>
+       The nonogram problem (prob012 in CSPLIB [36]) is a typical board puzzle on a board of size {a mathematical formula}p×p. Each row and column has a specified sequence of shaded cells. For example, a row specified {a mathematical formula}(2,3) contains two segments of shaded cells, one with length 2 and another with length 3. The problem is to find out which cells need to be shaded such that every row and every column contain the specific sequence of shaded cells. We model the problem by {a mathematical formula}n=p2 variables, in which {a mathematical formula}xij denotes whether the cell at the ith row and jth column needs to be shaded. In the experiments, we generate random instances from perturbed white noise images. A random solution grid, with each cell colored with probability 0.5, is generated. A feasible nonogram problem instance is created from the lengths of the segments observed in this random grid. To make it infeasible, for each row and each column, the list of segment lengths is randomly permuted, i.e., its elements are shuffled randomly. If a list is empty, then a segment of random length l is added ({a mathematical formula}0&lt;l&lt;p). We model and soften the restrictions on each row and column by {a mathematical formula}W_Regularvar, resulting in three models: flow-based, DAG-based, and network-based. The flow-based model uses the {a mathematical formula}W_Regularvar implementation based on minimum cost flows described in [48], the DAG-based version uses the filtering DAG (see [3] for implementation details), and the network-based version uses the decomposition presented in Example 3.
+      </paragraph>
+      <paragraph>
+       Table 2 shows the results of the experiments. For medium-size problems ({a mathematical formula}p≤9, {a mathematical formula}n≤81), the network-based approach develops the least number of backtracks on average compared to the two other approaches. Value and variable elimination at pre-processing reduces the number of variables by a factor greater than two. The flow-based and DAG-based approaches develop the same number of backtracks, producing the same EPTs, but the dynamic programming algorithm implemented in the DAG-based approach is about one order-of-magnitude faster than the minimum cost flow algorithm used in the flow-based approach. Moreover, the network-based approach is at least one order-of-magnitude faster than the DAG-based approach. On the largest instances, because of an exponential increase of the number of backtracks, the network-based approach becomes unable to solve all the instances in less than five minutes, but still outperforms the other two approaches.
+      </paragraph>
+     </section>
+     <section label="9.3">
+      <section-title>
+       The well-formed parentheses problem
+      </section-title>
+      <paragraph>
+       In this experiment, we use a network-decomposition of the W_Grammar constraint whose structure is depicted in Fig. 2. It is obviously not Berge-acyclic. This experiment will allow us to see the behavior of network-decompositions when they are not Berge-acyclic.
+      </paragraph>
+      <paragraph>
+       Given a set of 2p even length intervals within {a mathematical formula}[1,…,2p], the well-formed parentheses problem is to find a string of parentheses with length 2p such that substrings in each of the intervals are well-formed parentheses. We model this problem by a set of {a mathematical formula}n=2p variables. Domains of size 6 are composed of three different parenthesis types: {a mathematical formula}()[]{}. We post a {a mathematical formula}W_Grammarvar cost function on each interval to represent the requirement of well-formed parentheses. We generate {a mathematical formula}2p−1 even length intervals by randomly picking their end points in {a mathematical formula}[1,…,2p], and add an interval covering the whole range to ensure that all variables are constrained. We also randomly assign unary costs (between 0 and 10) to each variable.
+      </paragraph>
+      <paragraph>
+       We compare two models. The first model, the DAG-based approach, is obtained by modeling each {a mathematical formula}W_Grammarvar cost function using a filtering DAG approach.
+      </paragraph>
+      <paragraph>
+       In the second network-based model, we decompose each {a mathematical formula}W_Grammarvar cost function involving m variables using {a mathematical formula}m(m+1)/2 extra variables {a mathematical formula}Pi,j ({a mathematical formula}1≤j≤m,1≤i≤m−j+1) whose value corresponds to either a symbol value (for {a mathematical formula}j=1) or a pair of a symbol value S and a string length k ({a mathematical formula}1≤k&lt;j, for {a mathematical formula}j≥2) associated to the substring {a mathematical formula}(i,i+j−1), starting from i of length j. Ternary cost functions link every triplet {a mathematical formula}Pi,j, {a mathematical formula}Pi,k, {a mathematical formula}Pi+k,j−k so that there exists a compatible rule S-&gt;AB in order to get the substring {a mathematical formula}(i,i+j−1) from the two substrings {a mathematical formula}(i,i+k−1) and {a mathematical formula}(i+k,i+j−1) when {a mathematical formula}Pi,j=(S,k), {a mathematical formula}Pi,k=(A,u), {a mathematical formula}Pi+k,j−k=(B,v) with {a mathematical formula}u&lt;k, {a mathematical formula}v&lt;j−k. Binary cost functions are used to encode the terminal rules between {a mathematical formula}Pi,1 ({a mathematical formula}i∈[1,m]) and the original variables.
+      </paragraph>
+      <paragraph>
+       Results are shown in Table 3. The network-based approach is clearly inefficient. It has {a mathematical formula}n′=1,146 variables on average for {a mathematical formula}p=9 ({a mathematical formula}n=18). The number of backtracks increases very rapidly due to the poor propagation on a non Berge-acyclic network. The DAG-based approach clearly dominates here. Notice that the DAG-based propagation of {a mathematical formula}W_Grammarvar can be very slow with around 1 backtrack per second for {a mathematical formula}p=9.
+      </paragraph>
+      <paragraph>
+       As a second experiment on well-formed parentheses, we generate new instances using only one hard global grammar constraint and a set of {a mathematical formula}p(2p−1) binary cost functions corresponding to a complete graph. For each possible pair of positions, if a parentheses pair ((), [], or {}) is placed at these specific positions, then it incurs a randomly-generated cost (between 0 to 10). A single {a mathematical formula}W_Grammarvar cost function is placed on all the {a mathematical formula}n=2p variables, which returns ⊤ on violation (a Grammar constraint), ensuring that the whole string has well-formed parentheses. As in the experiments of Table 3, the two models are characterized by how the consistency is enforced on the {a mathematical formula}W_Grammarvar cost function: a filtering DAG for the DAG-based approach, a network-decomposition for the network-based approach.
+      </paragraph>
+      <paragraph>
+       Results are shown in Table 4. The network-based approach still develops more backtracks on average for {a mathematical formula}p≥6 ({a mathematical formula}n≥12) than the DAG-based approach but the difference is less important than in the previous experiment because there is a single grammar constraint. Surprisingly, for {a mathematical formula}p≤5, the network-based approach develops less backtracks than the DAG-based approach. The network-based approach benefits from variable elimination that exploits bijective binary relations occurring in the decomposed hard grammar cost function. Moreover, having only one global constraint implies less extra variables for the network-based approach than in the previous experiment ({a mathematical formula}n′=189 for {a mathematical formula}p=9 instead of {a mathematical formula}n′=1,146). The propagation speed of the network-based approach is much better than the DAG-based approach, with {a mathematical formula}∼4,100bt./sec instead of {a mathematical formula}∼23bt./sec for {a mathematical formula}p=9, resulting in better overall time efficiency compared to the DAG-based approach, being up to 8 times faster for {a mathematical formula}p=7 to solve all the thirty instances.
+      </paragraph>
+     </section>
+     <section label="9.4">
+      <section-title>
+       The market split problem
+      </section-title>
+      <paragraph>
+       In some cases, problems may contain global cost functions which are not network-decomposable because the bounded arity cost function decomposition is not polynomial in size. However, if the network is Berge-acyclic, Theorem 11 still applies. With exponential size networks, filtering will take exponential time, but may yield strong lower bounds. The global constraint {a mathematical formula}∑i=1naixi=b (a and b being integer coefficients) can be easily decomposed by introducing {a mathematical formula}n−3 intermediate sum variables {a mathematical formula}qi and ternary sum constraints of the form {a mathematical formula}qi−1+aixi=qi with {a mathematical formula}i∈[3,n−2] and {a mathematical formula}a1x1+a2x2=q2, {a mathematical formula}qn−2+an−1xn−1+anxn=b. More generally, ternary decompositions can be built for the more general case where the right hand side of the constraint uses any relational operator, including any Knapsack constraint. In this representation, the extra variables {a mathematical formula}qi have b values in their domain, which is exponential in the size of the representation of b (in {a mathematical formula}log⁡(b)). As for the pseudo-polynomial Knapsack problem, if b is polynomially bounded by the size of the global constraint, propagation will be efficient. It may otherwise be exponential in it.
+      </paragraph>
+      <paragraph>
+       As an example, we consider a generalized version of the Knapsack problem, the Market Split problem defined in [23], [64]. The goal is to minimize {a mathematical formula}∑i=1noixi such that {a mathematical formula}∑i=1nai,jxi=bj for each {a mathematical formula}j∈[1,m] and {a mathematical formula}xi are Boolean variables in {a mathematical formula}{0,1} (o, a and b being positive integer coefficients). We compared the Berge-acyclic decomposition in toulbar2 (version 0.9.8) with a direct application of the Integer Linear Programming solver cplex (version 12.6.3.0). We used a depth-first search with a static variable ordering (in decreasing {a mathematical formula}oi∑j=1mai,j order) and no pre-processing (options -hbfs: -svo -o -nopre) for toulbar2. We generated random instances with random integer coefficients in {a mathematical formula}[0,99] for o and a, and {a mathematical formula}bj=⌊12∑i=1nai,j⌋. We used a sample of 30 problems with {a mathematical formula}m=4,n=30 leading to {a mathematical formula}max⁡bj=918. The mean number of nodes developed in toulbar2 was 29% higher than in cplex, which was on average 4.5 times faster than toulbar2 on these problems. The 0/1 knapsack problem probably represents a worst case situation for toulbar2, given that cplex embeds much of what is known about 0/1 knapsacks (and only part of these extend to more complicated domains). Possible avenues to improve toulbar2 results in this unfavorable situation would be to use a combination of the m knapsack constraints into one as suggested in [64].
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

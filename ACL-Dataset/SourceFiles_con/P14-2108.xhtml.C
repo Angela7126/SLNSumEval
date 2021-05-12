@@ -1,0 +1,574 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   The Penn Parsed Corpus of Modern British English: First Parsing Results and Analysis.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       This paper presents the first results on parsing the
+Penn Parsed Corpus of
+Modern British English (PPCMBE), a million-word
+historical treebank with an annotation style similar to that
+of the Penn Treebank (PTB). We describe key features of the
+PPCMBE annotation style that differ from the PTB, and present some experiments
+with tree transformations to better compare the results to the PTB.
+First steps in parser analysis focus on problematic structures
+created by the parser.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        We present the
+first parsing results for the Penn Parsed
+Corpus of Modern British English (PPCMBE)
+        []
+        , showing that it can be parsed at a
+few points lower in F-score than the Penn Treebank (PTB)
+        []
+        . We discuss some of the
+differences in annotation style and source material
+that make a direct comparison problematic. Some first steps at analysis of the
+parsing results indicate aspects of the annotation style that are difficult for the
+parser, and also show that the parser is creating structures that are not present in the
+training material.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The PPCMBE is a million-word treebank created for researching
+changes in English syntax.
+It covers the years 1700-1914 and is
+the most modern in the series of treebanks created for historical
+research.
+        Due to the historical nature of the PPCMBE,
+it shares some of the characteristics of treebanks based on modern unedited text
+        []
+        , such as spelling variation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The size of the PPCMBE is
+roughly the same as the WSJ section of the PTB, and its annotation style
+is similar to that
+of the PTB, but with differences, particularly
+with regard to coordination and NP structure.
+However, except for
+        ,
+we have found no discussion of this corpus in the literature.
+        There is also much additional material annotated in this style,
+increasing the importance of analyzing parser performance
+on this annotation style.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Corpus description
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The PPCMBE
+        consists of 101 files, but we leave aside
+7 files that consist of legal material
+with very different properties than the rest of the corpus. The remaining 94 files
+contain 1,018,736 tokens (words).
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Part-of-speech tags
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The PPCMBE uses a part-of-speech (POS) tag set containing
+248 POS tags, in contrast to the 45 tags used by the PTB. The more complex tag set
+is mainly due to the desire to tag orthographic variants consistently
+throughout the series of historical corpora.
+For example “gentlemen” and its orthographic variant
+“gen’l’men” are tagged with the complex tag
+         <code class="ltx_verbatim ltx_font_typewriter">
+          ADJ+NS
+         </code>
+         (adjective
+and plural noun) on the grounds that in earlier time
+periods, the lexical item is spelled and tagged as two orthographic
+words (“gentle”/ADJ and “men”/NS).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         While only 81 of the 248 tags are “simple” (i.e., not associated with
+lexical merging or splitting), they cover the vast majority of the words in the corpus, as
+summarized in Table
+         1
+         . Of these 81 tags, some are more specialized than
+in the PTB, accounting for the increased number of tags
+compared to the PTB. For instance, for historical consistency, words like “one” and “else”
+each have their own tag.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Syntactic annotation
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         As mentioned above, the syntactic annotation guidelines do not differ radically from
+those of the PTB. There are some important differences, however, which we highlight
+in the following three subsections.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.2.1
+         </span>
+         Coordination
+        </h4>
+        <div class="ltx_para" id="S2.SS2.SSS1.p1">
+         <p class="ltx_p">
+          A coordinating conjunction and conjunct form a CONJP, as
+shown in (
+          1
+          a) in Figure
+          1
+          . (
+          1
+          b) shows
+the corresponding annotation in the PTB.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS2.SSS1.p2">
+         <p class="ltx_p">
+          In a conjoined NP, if part of a first conjunct
+potentially scopes over two or more conjuncts (shared pre-modifiers), the first conjunct has no phrasal
+node in the PPCMBE, and the label of the subsequent conjuncts becomes
+NX instead of NP, as shown in (
+          2
+          a) in Figure
+          2
+          . The corresponding PTB annotation is flat, as in
+(
+          2
+          b).
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.2.2
+         </span>
+         Noun Phrase structure
+        </h4>
+        <div class="ltx_para" id="S2.SS2.SSS2.p1">
+         <p class="ltx_p">
+          Neither the PPCMBE nor the PTB distinguish between PP complements and modifiers of nouns. However, the PPCMBE annotates
+both types of dependents as sisters of the noun, while the PTB adjoins both types. For instance in (
+          3
+          a) in
+Figure
+          3
+          , the modifier PP is a sister to the noun in the PPCMBE, while in (
+          3
+          b), the complement PP is adjoined in the PTB.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS2.SSS2.p2">
+         <p class="ltx_p">
+          Clausal complements and modifiers are also
+both treated as sisters to the noun in the PPCMBE. In this case, though, the complement/modifier
+distinction is encoded by a function tag. For example, in (
+          3
+          a) and
+(
+          3
+          b), the status of the CPs as modifier and complement is indicated
+by their function tags:
+          REL
+          for relative
+clause and
+          THT
+          “that” complement. In the PTB, the distinction would be
+encoded structurally; the relative clause would be adjoined, whereas the “that” complement would not.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S2.SS2.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          2.2.3
+         </span>
+         Clausal structure
+        </h4>
+        <div class="ltx_para" id="S2.SS2.SSS3.p1">
+         <p class="ltx_p">
+          The major difference in the clausal structure as compared to the PTB is the absence
+of a VP level
+          , yielding flatter trees than in the PTB.
+An example clause is shown in (
+          4
+          ) in Figure
+          4
+          .
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Corpus transformations
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We refer to the pre-release
+version of the corpus described in Section
+        2
+        as the “Release” version, and experiment
+with three other corpus versions.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Reduced
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         As mentioned earlier, the PPCMBE’s relatively large POS tag set aims to maximize
+annotation consistency across the entire time period covered by the historical corpora,
+beginning with Middle English. Since we are concerned here with parsing just the PPCMBE, we
+simplified the tag set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The complex tags are simplified in a fully deterministic way, based on the trees and the tags. For example, the POS tag for
+“gentleman”, originally
+         <code class="ltx_verbatim ltx_font_typewriter">
+          ADJ+N
+         </code>
+         is changed to
+         <code class="ltx_verbatim ltx_font_typewriter">
+          N
+         </code>
+         . The
+         <code class="ltx_verbatim ltx_font_typewriter">
+          P
+         </code>
+         tag is split, so that
+it is either left as P, if a preposition, or changed to CONJS, if a subordinating conjunction.
+The reduced tag set contains 76 tags. We call the version of the corpus with the reduced tag set the
+“Reduced” version.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Reduced
+        +
+        NPs
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         As discussed in Section
+         2.2.2
+         , noun modifiers are sisters to the noun, instead of being adjoined,
+as in the PTB. As a result, there are fewer NP brackets in the PPCMBE
+than there would be if the PTB-style were followed. To evaluate
+the effect of the difference in annotation guidelines on
+the parsing score, we added PTB-style NP brackets to the reduced corpus described
+in Section
+         3.1
+         . For example,
+(
+         3
+         a) in Figure
+         3
+         is transformed into (
+         5
+         a) in Figure
+         5
+         , and likewise (
+         3
+         a) is transformed into (
+         5
+         b). However,
+(
+         3
+         b) remains as it is, because the following CP in that case is a complement,
+as indicated by the
+         THT
+         function tag.
+This is a significant transformation of the corpus, adding 43,884 NPs to the already-existing 291,422.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Reduced
+        +
+        NPs
+        +
+        VPs
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We carry out a similar transformation to add VP nodes to the IPs in the Reduced
+         +
+         NPs version,
+making them more like the
+clausal structures in the PTB. This added 169,877 VP nodes to the corpus (there are 131,671 IP nodes,
+some of which contain more than one auxiliary verb).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         It is worth emphasizing that the brackets added in Sections
+         3.2
+         and
+         3.3
+         add no
+information, since they are added automatically. They are added only to roughly compensate for the difference in
+annotation styles between the PPCMBE and the PTB.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Data split
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We split the
+data into four sections, as shown in Table
+        2
+        . The validation
+section consists of the four files beginning with “a” or “v” (spanning the
+years 1711-1860),
+the development section consists of the four files beginning with “l” (1753-1866), the test
+section consists of the five files beginning with “f” (1749-1900),
+and the training section consists of the remaining 81 files
+(1712-1913).
+The data split sizes used here for the PPCMBE closely approximate that used for
+the PTB, as described in
+        .
+        For this first work,
+we used a split that was roughly the same as far as time-spans across the
+four sections. In future work, we will do a more proper cross-validation evaluation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Table
+        3
+        shows the average sentence length and percentage of sentences of length
+        &lt;=40
+        in the PPCMBE and PTB. The PPCMBE sentences are a bit longer on average, and
+fewer are of length
+        &lt;=40
+        . However, the match is close enough that we will report the parsing results for
+sentences of length
+        &lt;=40
+        and all sentences, as with the PTB.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Parsing Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        The PPCMBE is a phrase-structure corpus, and so we parse with the Berkeley parser
+        []
+        and score
+using the standard evalb program
+        []
+        .
+We used the Train and Val sections for training, with the parser
+using the Val section for fine-tuning parameters
+        []
+        . Since the Berkeley parser is capable of doing
+its own POS tagging, we ran it using the gold tags or supplying its own tags.
+Table
+        4
+        shows the results for both modes.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Consider first the results for the Dev section with the parser using the gold tags. The score for all sentences
+increases from 83.7 for the Release corpus (row 1) to 84.7 for the Reduced
+corpus (row 2), reflecting the POS tag simplifications in the
+Reduced corpus. The score goes up by a further 2.0 to 86.7 (row 2 to 4) for the Reduced
+        +
+        NPs corpus and up again
+by 0.4 to 87.1 (row 5) for the Reduced
+        +
+        NPs
+        +
+        VPs corpus, showing the effects of the extra NP and VP brackets.
+We evaluated the Test section on the
+Reduced corpus (row 3), with a result 0.8 higher than the Dev (85.5 in row 3 compared to
+84.7 in row 2). The score for sentences of length
+        &lt;=40
+        (a larger percentage of the PPCMBE than the PTB) is 2.4 higher than the score for all sentences, with both the gold and parser tags (row 5).
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        The results with the parser choosing its own POS
+tags naturally go down, with the Test section
+suffering more. In general, the PPCMBE is affected by the lack of gold tags more than the
+PTB.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        In sum, the parser results show that the PPCMBE can be parsed at a level approaching that of the PTB.
+We are not proposing that the current version be replaced by the Reduced
+        +
+        NPs
+        +
+        VPs version,
+on the grounds that the latter gets the highest score.
+Our goal was to determine
+whether the parsing results fell in the same general range as for the PTB by
+roughly compensating for the difference in annotation style.
+The results in Table
+        4
+        show that this is the case.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p5">
+       <p class="ltx_p">
+        As a final note, the PPCMBE consists
+of unedited data spanning more than 200 years, while the PTB is edited newswire, and
+so to
+some extent there would almost certainly be some difference in score.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Parser Analysis
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We are currently developing techniques to better understand the types of errors is making, which have already led to interesting results.
+The parser is creating some odd structures that violate basic well-formedness conditions of
+clauses.
+Tree (
+        6
+        a) in Figure
+        6
+        is a tree from from the “Reduced” corpus, in which the verb “formed”
+projects to IP, with two auxiliary verbs (“had” and “been”).
+In the corresponding parser output (
+        6
+        b), the parser misses the reduced relative RRC,
+turning “acting” into the rightmost verb in the IP.
+The parser is creating an IP with two main verbs - an
+ungrammatical structure that is not attested in the gold.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        It might be thought that the parser is having trouble with the flat-IP annotation style, but the parser posits incorrect structures that are not attested in the gold even in the Reduced
+        +
+        NPs
+        +
+        VPs version of the corpus.
+Tree (
+        6
+        a) shows a fragment of a gold tree from the corpus, with the VPs appropriately
+inserted. The parser output (
+        6
+        b) has an extra IP above “teaching”. The POS tags for
+“be” (BE) and “teaching“ (VAG) do not appear in this configuration at all in the training material.
+In general, the parser seems to be getting confused as to when such an IP should appear. We
+hypothesized that this is due to confusion with infinitival clauses, which can have an unary-branching IP over
+a VP, as in the gold tree (
+        6
+        ). We retrained the parser, directing it to retain the INF
+function tag that appears in infinitival clauses as in (
+        6
+        ). Overall, the evalb score went down slightly,
+but it did fix cases such as (
+        6
+        b).
+We do not yet know why the overall score went down, but
+what’s surprising is one would have thought that IP-INF is recoverable from the absence of a tensed verb.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        Preliminary analysis shows that the CONJP structures are also difficult for the parser. Since these are structures that
+are different than the PTB
+        , we were particularly interested in them. Cases where the CONJP is missing
+an overt coordinating
+cord (such as “and”), are particularly difficult, not surprisingly. These can appear as intermediate conjuncts in
+a string of conjuncts, with the structure
+        (CONJP word)
+        . The shared pre-modifier structure described in (
+        2
+        a)
+is also difficult for the parser.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

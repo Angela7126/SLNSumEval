@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Bilingually-constrained Phrase Embeddings for Machine Translation</title>
+<!--Generated on Tue Jun 10 17:16:22 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Bilingually-constrained Phrase Embeddings for Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jiajun Zhang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>, Shujie Liu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>, Mu Li<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>, Ming Zhou<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math> and Chengqing Zong<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>National Laboratory of Pattern Recognition, CASIA, Beijing, P.R. China 
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">{<span class="ltx_text ltx_font_typewriter">jjzhang,cqzong</span>}<span class="ltx_text ltx_font_typewriter">@nlpr.ia.ac.cn</span></span> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>Microsoft Research Asia, Beijing, P.R. China 
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">{<span class="ltx_text ltx_font_typewriter">shujliu,muli,mingzhou</span>}<span class="ltx_text ltx_font_typewriter">@microsoft.com</span></span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We propose Bilingually-constrained Recursive Auto-encoders (BRAE) to learn semantic phrase embeddings (compact vector representations for phrases), which can distinguish the phrases with different semantic meanings.
+The BRAE is trained in a way that minimizes the semantic distance of translation equivalents and maximizes the semantic distance of non-translation pairs simultaneously.
+After training, the model learns how to embed each phrase semantically in two languages and also learns how to transform semantic embedding space in one language to the other.
+We evaluate our proposed method on two end-to-end SMT tasks (phrase table pruning and decoding with phrasal semantic similarities) which need to measure semantic similarity between a source phrase and its translation candidates.
+Extensive experiments show that the BRAE is remarkably effective in these two tasks.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Due to the powerful capacity of feature learning and representation, Deep (multi-layer) Neural Networks (DNN) have achieved a great success in speech and image processing <cite class="ltx_cite">[<a href="#bib.bib26" title="Learning convolutional feature hierarchies for visual recognition" class="ltx_ref">13</a>, <a href="#bib.bib27" title="Imagenet classification with deep convolutional neural networks" class="ltx_ref">15</a>, <a href="#bib.bib25" title="Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Recently, statistical machine translation (SMT) community has seen a strong interest in adapting and applying DNN to many tasks, such as word alignment <cite class="ltx_cite">[<a href="#bib.bib30" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">29</a>]</cite>, translation confidence estimation <cite class="ltx_cite">[<a href="#bib.bib29" title="Recurrent neural network based language model." class="ltx_ref">19</a>, <a href="#bib.bib28" title="Additive neural networks for statistical machine translation" class="ltx_ref">18</a>, <a href="#bib.bib31" title="Bilingual word embeddings for phrase-based machine translation" class="ltx_ref">31</a>]</cite>, phrase reordering prediction <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>, translation modelling <cite class="ltx_cite">[<a href="#bib.bib23" title="Joint language and translation modeling with recurrent neural networks" class="ltx_ref">1</a>, <a href="#bib.bib32" title="Recurrent continuous translation models" class="ltx_ref">12</a>]</cite> and language modelling <cite class="ltx_cite">[<a href="#bib.bib33" title="Adaptation data selection using neural language models: experiments in machine translation" class="ltx_ref">7</a>, <a href="#bib.bib34" title="Decoding with large-scale neural language models improves translation" class="ltx_ref">26</a>]</cite>.
+Most of these works attempt to improve some components in SMT based on <span class="ltx_text ltx_font_italic">word embedding</span>, which converts a word into a dense, low dimensional, real-valued vector representation <cite class="ltx_cite">[<a href="#bib.bib5" title="A neural probabilistic language model" class="ltx_ref">2</a>, <a href="#bib.bib6" title="Neural probabilistic language models" class="ltx_ref">3</a>, <a href="#bib.bib7" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">5</a>, <a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">However, in the conventional (phrase-based) SMT, phrases are the basic translation units. The models using word embeddings as the direct inputs to DNN cannot make full use of the whole syntactic and semantic information of the phrasal translation rules. Therefore, in order to successfully apply DNN to model the whole translation process, such as modelling the decoding process, learning compact vector representations for the basic phrasal translation units is the essential and fundamental work.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we explore the phrase embedding, which represents a phrase (sequence of words) with a real-valued vector. In some previous works, phrase embedding has been discussed from different views. <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">2011</a>)</cite> make the phrase embeddings capture the sentiment information. <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Parsing with compositional vector grammars" class="ltx_ref">2013</a>)</cite> enable the phrase embeddings to mainly capture the syntactic knowledge. <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">2013</a>)</cite> attempt to encode the reordering pattern in the phrase embeddings. <cite class="ltx_cite">Kalchbrenner and Blunsom (<a href="#bib.bib32" title="Recurrent continuous translation models" class="ltx_ref">2013</a>)</cite> utilize a simple convolution model to generate phrase embeddings from word embeddings. <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013</a>)</cite> consider a phrase as an indivisible <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram. Obviously, these methods of learning phrase embeddings either focus on some aspects of the phrase (e.g. reordering pattern), or impose strong assumptions (e.g. bag-of-words or indivisible <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram). Therefore, these phrase embeddings are not suitable to fully represent the phrasal translation units in SMT due to the lack of semantic meanings of the phrase.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Instead, we focus on learning phrase embeddings from the view of semantic meaning, so that our phrase embedding can fully represent the phrase and best fit the phrase-based SMT. Assuming the phrase is a meaningful composition of its internal words, we propose Bilingually-constrained Recursive Auto-encoders (BRAE) to learn semantic phrase embeddings. The core idea behind is that a phrase and its correct translation should share the same semantic meaning. Thus, they can supervise each other to learn their semantic phrase embeddings. Similarly, non-translation pairs should have different semantic meanings, and this information can also be used to guide learning semantic phrase embeddings.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">In our method, the standard recursive auto-encoder (RAE) pre-trains the phrase embedding with an unsupervised algorithm by minimizing the reconstruction error <cite class="ltx_cite">[<a href="#bib.bib9" title="Learning continuous phrase representations and syntactic parsing with recursive neural networks" class="ltx_ref">22</a>]</cite>, while the bilingually-constrained model learns to fine-tune the phrase embedding by minimizing the semantic distance between translation equivalents and maximizing the semantic distance between non-translation pairs.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">We use an example to explain our model. As illustrated in Fig. 1, the Chinese phrase on the left and the English phrase on the right are translations with each other. If we learn the embedding of the Chinese phrase correctly, we can regard it as the gold representation for the English phrase and use it to guide the process of learning English phrase embedding. In the other direction, the Chinese phrase embedding can be learned in the same way. This procedure can be performed with an co-training style algorithm so as to minimize the semantic distance between the translation equivalents <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>For simplicity, we do not show non-translation pairs here.</span></span></span>. In this way, the result Chinese and English phrase embeddings will capture the semantics as much as possible. Furthermore, a transformation function between the Chinese and English semantic spaces can be learned as well.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">With the learned model, we can accurately measure the semantic similarity between a source phrase and a translation candidate. Accordingly, we evaluate the BRAE model on two end-to-end SMT tasks (phrase table pruning and decoding with phrasal semantic similarities) which need to check whether a translation candidate and the source phrase are in the same meaning. In phrase table pruning, we discard the phrasal translation rules with low semantic similarity. In decoding with phrasal semantic similarities, we apply the semantic similarities of the phrase pairs as new features during decoding to guide translation candidate selection. The experiments show that up to 72% of the phrase table can be discarded without significant decrease on the translation quality, and in decoding with phrasal semantic similarities up to 1.7 BLEU score improvement over the state-of-the-art baseline can be achieved.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">In addition, our semantic phrase embeddings have many other potential applications. For instance, the semantic phrase embeddings can be directly fed to DNN to model the decoding process. Besides SMT, the semantic phrase embeddings can be used in other cross-lingual tasks (e.g. cross-lingual question answering) and monolingual applications such as textual entailment, question answering and paraphrase detection.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1011/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="360" height="270" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>A motivation example for the BRAE model.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Recently, phrase embedding has drawn more and more attention. There are three main perspectives handling this task in monolingual languages.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">One method considers the phrases as bag-of-words and employs a convolution model to transform the word embeddings to phrase embeddings <cite class="ltx_cite">[<a href="#bib.bib24" title="Natural language processing (almost) from scratch" class="ltx_ref">4</a>, <a href="#bib.bib32" title="Recurrent continuous translation models" class="ltx_ref">12</a>]</cite>. <cite class="ltx_cite">Gao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib35" title="Learning semantic representations for the phrase translation model" class="ltx_ref">2013</a>)</cite> also use bag-of-words but learn BLEU sensitive phrase embeddings. This kind of approaches does not take the word order into account and loses much information. Instead, our bilingually-constrained recursive auto-encoders not only learn the composition mechanism of generating phrases from words, but also fine tune the word embeddings during the model training stage, so that we can induce the full information of the phrases and internal words.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Another method <cite class="ltx_cite">[<a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">20</a>]</cite> deals with the phrases having a meaning that is not a simple composition of the meanings of its individual words, such as <span class="ltx_text ltx_font_italic">New York Times</span>. They first find the phrases of this kind. Then, they regard these phrases as indivisible units, and learn their embeddings with the context information. However, this kind of phrase embedding is hard to capture full semantics since the context of a phrase is limited. Furthermore, this method can only account for a very small part of phrases, since most of the phrases are compositional. In contrast, our method attempts to learn the semantic vector representation for any phrase.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">The third method views any phrase as the meaningful composition of its internal words. The recursive auto-encoder is typically adopted to learn the way of composition <cite class="ltx_cite">[<a href="#bib.bib9" title="Learning continuous phrase representations and syntactic parsing with recursive neural networks" class="ltx_ref">22</a>, <a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>, <a href="#bib.bib11" title="Parsing with compositional vector grammars" class="ltx_ref">21</a>, <a href="#bib.bib12" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">24</a>, <a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>. They pre-train the RAE with an unsupervised algorithm. And then, they fine-tune the RAE according to the label of the phrase, such as the syntactic category in parsing (Socher et al., 2013a), the polarity in sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>, <a href="#bib.bib12" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">24</a>]</cite>, and the reordering pattern in SMT <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>. This kind of semi-supervised phrase embedding is in fact performing phrase clustering with respect to the phrase label. For example, in the RAE-based phrase reordering model for SMT <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>, the phrases with the similar reordering tendency (e.g. monotone or swap) are close to each other in the embedding space, such as the prepositional phrases. Obviously, this kind methods of semi-supervised phrase embedding do not fully address the semantic meaning of the phrases. Although we also follow the composition-based phrase embedding, we are the first to focus on the semantic meanings of the phrases and propose a bilingually-constrained model to induce the semantic information and learn transformation of the semantic space in one language to the other.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Bilingually-constrained Recursive Auto-encoders</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">This section introduces the Bilingually-constrained Recursive Auto-encoders (BRAE), that is inspired by two observations. First, the recursive auto-encoder provides a reasonable composition mechanism to embed each phrase. And the semi-supervised phrase embedding <cite class="ltx_cite">[<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>, <a href="#bib.bib11" title="Parsing with compositional vector grammars" class="ltx_ref">21</a>, <a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite> further indicates that phrase embedding can be tuned with respect to the label. Second, even though we have no correct semantic phrase representation as the gold label, the phrases sharing the same meaning provide an indirect but feasible way.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We will first briefly present the unsupervised phrase embedding, and then describe the semi-supervised framework. After that, we introduce the BRAE on the network structure, objective function and parameter inference.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Unsupervised Phrase Embedding</h3>
+
+<div id="S3.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.1 </span>Word Vector Representations</h4>
+
+<div id="S3.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">In phrase embedding using composition, the word vector representation is the basis and serves as the input to the neural network. After learning word embeddings with DNN <cite class="ltx_cite">[<a href="#bib.bib5" title="A neural probabilistic language model" class="ltx_ref">2</a>, <a href="#bib.bib7" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">5</a>, <a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">20</a>]</cite>, each word in the vocabulary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m1" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> corresponds to a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m2" class="ltx_Math" alttext="x\in{\mathbb{R}}^{n}" display="inline"><mrow><mi>x</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math>, and all the vectors are stacked into an embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m3" class="ltx_Math" alttext="L\in{\mathbb{R}}^{n\times|V|}" display="inline"><mrow><mi>L</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></mrow></msup></mrow></math>.</p>
+</div>
+<div id="S3.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Given a phrase which is an ordered list of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> words, each word has an index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> into the columns of the embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. The index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is used to retrieve the word’s vector representation using a simple multiplication with a binary vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m5" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> which is zero in all positions except for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m6" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th index:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="x_{i}=Le_{i}\in{\mathbb{R}}^{n}" display="block"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mrow><mi>L</mi><mo>⁢</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is usually set empirically, such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m8" class="ltx_Math" alttext="n=50,100,200" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn></mrow></mrow></math>. Throughout this paper, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p2.m9" class="ltx_Math" alttext="n=3" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>3</mn></mrow></math> is used for better illustration as shown in Fig. 1.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1011/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="405" height="304" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>A recursive auto-encoder for a four-word phrase. The empty nodes are the reconstructions of the input.</div>
+</div>
+</div>
+<div id="S3.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.2 </span>RAE-based Phrase Embedding</h4>
+
+<div id="S3.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Assuming we are given a phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m1" class="ltx_Math" alttext="w_{1}w_{2}\cdots w_{m}" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mi mathvariant="normal">⋯</mi><mo>⁢</mo><msub><mi>w</mi><mi>m</mi></msub></mrow></math>, it is first projected into a list of vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m2" class="ltx_Math" alttext="(x_{1},x_{2},\cdots,x_{m})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><msub><mi>x</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>x</mi><mi>m</mi></msub></mrow><mo>)</mo></mrow></math> using Eq. 1. The RAE learns the vector representation of the phrase by recursively combining two children vectors in a bottom-up manner <cite class="ltx_cite">[<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>]</cite>. Fig. 2 illustrates an instance of a RAE applied to a binary tree, in which a standard auto-encoder (in box) is re-used at each node. The standard auto-encoder aims at learning an abstract representation of its input. For two children <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m3" class="ltx_Math" alttext="c_{1}=x_{1}" display="inline"><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>=</mo><msub><mi>x</mi><mn>1</mn></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m4" class="ltx_Math" alttext="c_{2}=x_{2}" display="inline"><mrow><msub><mi>c</mi><mn>2</mn></msub><mo>=</mo><msub><mi>x</mi><mn>2</mn></msub></mrow></math>, the auto-encoder computes the parent vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m5" class="ltx_Math" alttext="y_{1}" display="inline"><msub><mi>y</mi><mn>1</mn></msub></math> as follows:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="p=f(W^{(1)}[c_{1};c_{2}]+b^{(1)})" display="block"><mrow><mi>p</mi><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>W</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow></mrow><mo>+</mo><msup><mi>b</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">Where we multiply the parameter matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m6" class="ltx_Math" alttext="W^{(1)}\in{\mathbb{R}}^{n\times 2n}" display="inline"><mrow><msup><mi>W</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mi>n</mi><mo>×</mo><mn>2</mn></mrow><mo>⁢</mo><mi>n</mi></mrow></msup></mrow></math> by the concatenation of two children <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m7" class="ltx_Math" alttext="[c_{1};c_{2}]\in{\mathbb{R}}^{2n\times 1}" display="inline"><mrow><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>n</mi></mrow><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>. After adding a bias term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m8" class="ltx_Math" alttext="b^{(1)}" display="inline"><msup><mi>b</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math>, we apply an element-wise activation function such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m9" class="ltx_Math" alttext="f=tanh(\cdot)" display="inline"><mrow><mi>f</mi><mo>=</mo><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mrow></math>, which is used in our experiments. In order to apply this auto-encoder to each pair of children, the representation of the parent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m10" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> should have the same dimensionality as the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p1.m11" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math>’s.</p>
+</div>
+<div id="S3.SS1.SSS2.p2" class="ltx_para">
+<p class="ltx_p">To assess how well the parent’s vector represents its children, the standard auto-encoder reconstructs the children in a reconstruction layer:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="[c^{\prime}_{1};c^{\prime}_{2}]=f^{(2)}(W^{(2)}p+b^{(2)})" display="block"><mrow><mrow><mo>[</mo><mrow><msubsup><mi>c</mi><mn>1</mn><mo>′</mo></msubsup><mo>;</mo><msubsup><mi>c</mi><mn>2</mn><mo>′</mo></msubsup></mrow><mo>]</mo></mrow><mo>=</mo><mrow><msup><mi>f</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>W</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mi>p</mi></mrow><mo>+</mo><msup><mi>b</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">Where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p2.m1" class="ltx_Math" alttext="c^{\prime}_{1}" display="inline"><msubsup><mi>c</mi><mn>1</mn><mo>′</mo></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p2.m2" class="ltx_Math" alttext="c^{\prime}_{2}" display="inline"><msubsup><mi>c</mi><mn>2</mn><mo>′</mo></msubsup></math> are reconstructed children, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p2.m3" class="ltx_Math" alttext="W^{(2)}" display="inline"><msup><mi>W</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p2.m4" class="ltx_Math" alttext="b^{(2)}" display="inline"><msup><mi>b</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math> are parameter matrix and bias term for reconstruction respectively, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p2.m5" class="ltx_Math" alttext="f^{(2)}=tanh(\cdot)" display="inline"><mrow><msup><mi>f</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup><mo>=</mo><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS1.SSS2.p3" class="ltx_para">
+<p class="ltx_p">To obtain the optimal abstract representation of the inputs, the standard auto-encoder tries to minimize the reconstruction errors between the inputs and the reconstructed ones during training:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="E_{rec}([c_{1};c_{2}])=\frac{1}{2}{||[c_{1};c_{2}]-[c^{\prime}_{1};c^{\prime}_%&#10;{2}]||}^{2}" display="block"><mrow><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><mrow><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow><mo>-</mo><mrow><mo>[</mo><mrow><msubsup><mi>c</mi><mn>1</mn><mo>′</mo></msubsup><mo>;</mo><msubsup><mi>c</mi><mn>2</mn><mo>′</mo></msubsup></mrow><mo>]</mo></mrow></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.SSS2.p4" class="ltx_para">
+<p class="ltx_p">Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p4.m1" class="ltx_Math" alttext="y_{1}=p" display="inline"><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>=</mo><mi>p</mi></mrow></math>, we can use Eq. 2 again to compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p4.m2" class="ltx_Math" alttext="y_{2}" display="inline"><msub><mi>y</mi><mn>2</mn></msub></math> by setting the children to be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p4.m3" class="ltx_Math" alttext="[c_{1};c_{2}]=[y_{1};x_{3}]" display="inline"><mrow><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>;</mo><msub><mi>x</mi><mn>3</mn></msub></mrow><mo>]</mo></mrow></mrow></math>. The same auto-encoder is re-used until the vector of the whole phrase is generated.</p>
+</div>
+<div id="S3.SS1.SSS2.p5" class="ltx_para">
+<p class="ltx_p">For unsupervised phrase embedding, the only objective is to minimize the sum of reconstruction errors at each node in the optimal binary tree:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="RAE_{\theta}(x)=\mathop{\operatorname*{argmin}}_{y\in A(x)}\sum\limits_{s\in y%&#10;}E_{rec}([c_{1};c_{2}]_{s})" display="block"><mrow><mrow><mi>R</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msub><mi>E</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msub><mo movablelimits="false">argmin</mo><mrow><mi>y</mi><mo>∈</mo><mrow><mi>A</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></msub><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>s</mi><mo>∈</mo><mi>y</mi></mrow></munder><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mrow><mo>[</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>;</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>]</mo></mrow><mi>s</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">Where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p5.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is the list of vectors of a phrase, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p5.m2" class="ltx_Math" alttext="A(x)" display="inline"><mrow><mi>A</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> denotes all the possible binary trees that can be built from inputs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p5.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. A greedy algorithm (Socher et al., 2011) is used to generate the optimal binary tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p5.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>. The parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS2.p5.m5" class="ltx_Math" alttext="\theta=(W,b)" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>,</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow></math> are optimized over all the phrases in the training data.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Semi-supervised Phrase Embedding</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The above RAE is completely unsupervised and can only induce general representations of the multi-word phrases. Several researchers extend the original RAEs to a semi-supervised setting so that the induced phrase embedding can predict a target label, such as polarity in sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>]</cite>, syntactic category in parsing <cite class="ltx_cite">[<a href="#bib.bib11" title="Parsing with compositional vector grammars" class="ltx_ref">21</a>]</cite> and phrase reordering pattern in SMT <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>.</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1011/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="360" height="270" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>An illustration of a semi-supervised RAE unit. Red nodes show the label distribution.</div>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In the semi-supervised RAE for phrase embedding, the objective function over a (phrase, label) pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="(x,t)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math> includes the reconstruction error and the prediction error, as illustrated in Fig. 3.</p>
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="E(x,t;\theta)=\alpha E_{rec}(x,t;\theta)+(1-\alpha)E_{pred}(x,t;\theta)" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>α</mi><mo>⁢</mo><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>E</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">Where the hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is used to balance the reconstruction and prediction error. For label prediction, the cross-entropy error is usually used to calculate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="E_{pred}" display="inline"><msub><mi>E</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>. By optimizing the above objective, the phrases in the vector embedding space will be grouped according to the labels.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>The BRAE Model</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We know from the semi-supervised phrase embedding that the learned vector representation can be well adapted to the given label. Therefore, we can imagine that learning semantic phrase embedding is reasonable if we are given gold vector representations of the phrases.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">However, no gold semantic phrase embedding exists. Fortunately, we know the fact that the two phrases should share the same semantic representation if they express the same meaning. We can make inference from this fact that if a model can learn the same embedding for any phrase pair sharing the same meaning, the learned embedding must encode the semantics of the phrases and the corresponding model is our desire.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">As translation equivalents share the same semantic meaning, we employ high-quality phrase translation pairs as training corpus in this work. Accordingly, we propose the Bilingually-constrained Recursive Auto-encoders (BRAE), whose basic goal is to minimize the semantic distance between the phrases and their translations.</p>
+</div>
+<div id="S3.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.1 </span>The Objective Function</h4>
+
+<div id="S3.F4" class="ltx_figure"><img src="P14-1011/image004.png" id="S3.F4.g1" class="ltx_graphics ltx_centering" width="360" height="270" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>An illustration of the bilingual-constrained recursive auto-encoders. The two phrases are translations with each other.</div>
+</div>
+<div id="S3.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Unlike previous methods, the BRAE model jointly learns two RAEs (Fig. 4 shows the network structure): one for source language and the other for target language. For a phrase pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m1" class="ltx_Math" alttext="(s,t)" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math>, two kinds of errors are involved:</p>
+</div>
+<div id="S3.SS3.SSS1.p2" class="ltx_para">
+<p class="ltx_p">1. <span class="ltx_text ltx_font_bold">reconstruction error</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p2.m1" class="ltx_Math" alttext="E_{rec}(s,t;\theta)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></math>: how well the learned vector representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p2.m2" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p2.m3" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> represent the phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p2.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p2.m5" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> respectively?</p>
+<table id="S3.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="E_{rec}(s,t;\theta)=E_{rec}(s;\theta)+E_{rec}(t;\theta)" display="block"><mrow><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS3.SSS1.p3" class="ltx_para">
+<p class="ltx_p">2. <span class="ltx_text ltx_font_bold">semantic error</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p3.m1" class="ltx_Math" alttext="E_{sem}(s,t;\theta)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></math>: what is the semantic distance between the learned vector representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p3.m2" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p3.m3" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math>?</p>
+</div>
+<div id="S3.SS3.SSS1.p4" class="ltx_para">
+<p class="ltx_p">Since word embeddings for two languages are learned separately and locate in different vector space, we do not enforce the phrase embeddings in two languages to be in the same semantic vector space. We suppose there is a transformation between the two semantic embedding spaces. Thus, the semantic distance is bidirectional: the distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m1" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> and the transformation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m2" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math>, and that between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m3" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> and the transformation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m4" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math>. As a result, the overall semantic error becomes:</p>
+<table id="S3.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="E_{sem}(s,t;\theta)=E_{sem}(s|t,\theta)+E_{sem}(t|s,\theta)" display="block"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>s</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">Where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m5" class="ltx_Math" alttext="E_{sem}(s|t,\theta)=E_{sem}(p_{t},f(W_{s}^{l}p_{s}+b_{s}^{l}))" display="inline"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><msub><mi>p</mi><mi>t</mi></msub><mo>,</mo><mi>f</mi><mrow><mo>(</mo><msubsup><mi>W</mi><mi>s</mi><mi>l</mi></msubsup><msub><mi>p</mi><mi>s</mi></msub><mo>+</mo><msubsup><mi>b</mi><mi>s</mi><mi>l</mi></msubsup><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math> means the transformation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m6" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> is performed as follows: we first multiply a parameter matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m7" class="ltx_Math" alttext="W_{s}^{l}" display="inline"><msubsup><mi>W</mi><mi>s</mi><mi>l</mi></msubsup></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m8" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math>, and after adding a bias term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m9" class="ltx_Math" alttext="b_{s}^{l}" display="inline"><msubsup><mi>b</mi><mi>s</mi><mi>l</mi></msubsup></math> we apply an element-wise activation function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m10" class="ltx_Math" alttext="f=tanh(\cdot)" display="inline"><mrow><mi>f</mi><mo>=</mo><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></mrow></math>. Finally, we calculate their Euclidean distance:</p>
+<table id="S3.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m1" class="ltx_Math" alttext="E_{sem}(s|t,\theta)=\frac{1}{2}{||p_{t}-f(W_{s}^{l}p_{s}+b_{s}^{l})||}^{2}" display="block"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>|</mo><mo>|</mo><msub><mi>p</mi><mi>t</mi></msub><mo>-</mo><mi>f</mi><mrow><mo>(</mo><msubsup><mi>W</mi><mi>s</mi><mi>l</mi></msubsup><msub><mi>p</mi><mi>s</mi></msub><mo>+</mo><msubsup><mi>b</mi><mi>s</mi><mi>l</mi></msubsup><mo>)</mo></mrow><mo>|</mo><msup><mo>|</mo><mn>2</mn></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m11" class="ltx_Math" alttext="E_{sem}(t|s,\theta)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>s</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math> can be calculated in exactly the same way. For the phrase pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m12" class="ltx_Math" alttext="(s,t)" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math>, the joint error is:</p>
+<table id="S3.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E10.m1" class="ltx_Math" alttext="E(s,t;\theta)=\alpha E_{rec}(s,t;\theta)+(1-\alpha)E_{sem}(s,t;\theta)" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>α</mi><mo>⁢</mo><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">The hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m13" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> weights the reconstruction and semantic error. The final BRAE objective over the phrase pairs training set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p4.m14" class="ltx_Math" alttext="(S,T)" display="inline"><mrow><mo>(</mo><mrow><mi>S</mi><mo>,</mo><mi>T</mi></mrow><mo>)</mo></mrow></math> becomes:</p>
+<table id="S3.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E11.m1" class="ltx_Math" alttext="J_{BRAE}=\frac{1}{N}\sum\limits_{(s,t)\in(S,T)}E(s,t;\theta)+\frac{\lambda}{2}%&#10;{||\theta||}^{2}" display="block"><mrow><msub><mi>J</mi><mrow><mi>B</mi><mo>⁢</mo><mi>R</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>E</mi></mrow></msub><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mrow><mo>(</mo><mrow><mi>S</mi><mo>,</mo><mi>T</mi></mrow><mo>)</mo></mrow></mrow></munder><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>+</mo><mrow><mfrac><mi>λ</mi><mn>2</mn></mfrac><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><mi>θ</mi><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.2 </span>Max-Semantic-Margin Error</h4>
+
+<div id="S3.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Ideally, we want the learned BRAE model can make sure that the semantic error for the positive example (a source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p1.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> and its correct translation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>) is much smaller than that for the negative example (the source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p1.m3" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> and a bad translation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p1.m4" class="ltx_Math" alttext="t^{\prime}" display="inline"><msup><mi>t</mi><mo>′</mo></msup></math>). However, the current model cannot guarantee this since the above semantic error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p1.m5" class="ltx_Math" alttext="E_{sem}(s|t,\theta)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math> only accounts for positive ones.</p>
+</div>
+<div id="S3.SS3.SSS2.p2" class="ltx_para">
+<p class="ltx_p">We thus enhance the semantic error with both positive and negative examples, and the corresponding max-semantic-margin error becomes:</p>
+<table id="S3.E12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E12.m1" class="ltx_Math" alttext="\begin{split}E_{sem}^{*}(s|t,\theta)=max&amp;\{0,E_{sem}(s|t,\theta)\\&#10;&amp;-E_{sem}(s|t^{\prime},\theta)+1\}\end{split}" display="block"><mrow><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><mi>m</mi><mi>a</mi><mi>x</mi><mrow><mo>{</mo><mn>0</mn><mo>,</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>-</mo><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><msup><mi>t</mi><mo>′</mo></msup><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><mn>1</mn><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+<p class="ltx_p">It tries to minimize the semantic distance between translation equivalents and maximize the semantic distance between non-translation pairs simultaneously.
+Using the above error function, we need to construct a negative example for each positive example. Suppose we are given a positive example <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m1" class="ltx_Math" alttext="(s,t)" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math>, the correct translation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> can be converted into a bad translation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m3" class="ltx_Math" alttext="t^{\prime}" display="inline"><msup><mi>t</mi><mo>′</mo></msup></math> by replacing the words in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m4" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> with randomly chosen target language words. Then, a negative example <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m5" class="ltx_Math" alttext="(s,t^{\prime})" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>t</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></math> is available.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.3 </span>Parameter Inference</h4>
+
+<div id="S3.SS3.SSS3.p1" class="ltx_para">
+<p class="ltx_p">Like semi-supervised RAE <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive autoencoders for itg-based translation" class="ltx_ref">16</a>]</cite>, the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> in our BRAE model can also be divided into three sets:</p>
+</div>
+<div id="S3.SS3.SSS3.p2" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p2.m1" class="ltx_Math" alttext="{\theta}_{L}" display="inline"><msub><mi>θ</mi><mi>L</mi></msub></math>: word embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p2.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> for two languages (Section 3.1.1);</p>
+</div>
+<div id="S3.SS3.SSS3.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m1" class="ltx_Math" alttext="{\theta}_{rec}" display="inline"><msub><mi>θ</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math>: recursive auto-encoder parameter matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m2" class="ltx_Math" alttext="W^{(1)}" display="inline"><msup><mi>W</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m3" class="ltx_Math" alttext="W^{(2)}" display="inline"><msup><mi>W</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math>, and bias terms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m4" class="ltx_Math" alttext="b^{(1)}" display="inline"><msup><mi>b</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m5" class="ltx_Math" alttext="b^{(2)}" display="inline"><msup><mi>b</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math> for two languages (Section 3.1.2);</p>
+</div>
+<div id="S3.SS3.SSS3.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m1" class="ltx_Math" alttext="{\theta}_{sem}" display="inline"><msub><mi>θ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math>: transformation matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m2" class="ltx_Math" alttext="W^{l}" display="inline"><msup><mi>W</mi><mi>l</mi></msup></math> and bias term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m3" class="ltx_Math" alttext="b^{l}" display="inline"><msup><mi>b</mi><mi>l</mi></msup></math> for two directions in semantic distance computation (Section 3.3.1).</p>
+</div>
+<div id="S3.SS3.SSS3.p5" class="ltx_para">
+<p class="ltx_p">To have a deep understanding of the parameters, we rewrite Eq. 10:</p>
+<table id="S3.E13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E13.m1" class="ltx_Math" alttext="\begin{split}&amp;E(s,t;\theta)=\alpha(E_{rec}(s;\theta)+E_{rec}(t;\theta))\\&#10;&amp;+(1-\alpha)(E_{sem}^{*}(s|t,\theta)+E_{sem}^{*}(t|s,\theta))\\&#10;&amp;=(\alpha E_{rec}(s;{\theta}_{s})+(1-\alpha)E_{sem}^{*}(s|t,{\theta}_{s}))\\&#10;&amp;+(\alpha E_{rec}(t;{\theta}_{t})+(1-\alpha)E_{sem}^{*}(t|s,{\theta}_{t}))\end{split}" display="block"><mrow><mi>E</mi><mrow><mo>(</mo><mi>s</mi><mo>,</mo><mi>t</mi><mo>;</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><mi>α</mi><mrow><mo>(</mo><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>;</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mrow><mo>(</mo><mi>t</mi><mo>;</mo><mi>θ</mi><mo>)</mo></mrow><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>α</mi><mo>)</mo></mrow><mrow><mo>(</mo><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>s</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>)</mo></mrow><mo>=</mo><mrow><mo>(</mo><mi>α</mi><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>;</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>α</mi><mo>)</mo></mrow><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mi>α</mi><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mrow><mo>(</mo><mi>t</mi><mo>;</mo><msub><mi>θ</mi><mi>t</mi></msub><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>α</mi><mo>)</mo></mrow><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>t</mi><mo>|</mo><mi>s</mi><mo>,</mo><msub><mi>θ</mi><mi>t</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+</table>
+<p class="ltx_p">We can see that the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> can be divided into two classes: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m2" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math> for the source language and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m3" class="ltx_Math" alttext="{\theta}_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math> for the target language. The above equation also indicates that the source-side parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m4" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math> can be optimized independently as long as the semantic representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m5" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> of the target phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is given to compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m7" class="ltx_Math" alttext="E_{sem}(s|t,\theta)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math> with Eq. 9. It is similar for the target-side parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p5.m8" class="ltx_Math" alttext="{\theta}_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math>.</p>
+</div>
+<div id="S3.SS3.SSS3.p6" class="ltx_para">
+<p class="ltx_p">Assuming the target phrase representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p6.m1" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> is available, the optimization of the source-side parameters is similar to that of semi-supervised RAE. We apply the Stochastic Gradient Descent (SGD) algorithm to optimize each parameter:</p>
+<table id="S3.E14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E14.m1" class="ltx_Math" alttext="{\theta}_{s}={\theta}_{s}-\eta\frac{\partial J_{s}}{\partial{\theta}_{s}}" display="block"><mrow><msub><mi>θ</mi><mi>s</mi></msub><mo>=</mo><mrow><msub><mi>θ</mi><mi>s</mi></msub><mo>-</mo><mrow><mi>η</mi><mo>⁢</mo><mfrac><mrow><mo>∂</mo><mo>⁡</mo><msub><mi>J</mi><mi>s</mi></msub></mrow><mrow><mo>∂</mo><mo>⁡</mo><msub><mi>θ</mi><mi>s</mi></msub></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+<p class="ltx_p">In order to run SGD algorithm, we need to solve two problems: one for parameter initialization and the other for partial gradient calculation.</p>
+</div>
+<div id="S3.SS3.SSS3.p7" class="ltx_para">
+<p class="ltx_p">In parameter initialization, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p7.m1" class="ltx_Math" alttext="{\theta}_{rec}" display="inline"><msub><mi>θ</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p7.m2" class="ltx_Math" alttext="{\theta}_{sem}" display="inline"><msub><mi>θ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> for the source language is randomly set according to a normal distribution. For the word embedding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p7.m3" class="ltx_Math" alttext="L_{s}" display="inline"><msub><mi>L</mi><mi>s</mi></msub></math>, there are two choices. First, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p7.m4" class="ltx_Math" alttext="L_{s}" display="inline"><msub><mi>L</mi><mi>s</mi></msub></math> is initialized randomly like other parameters. Second, the word embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p7.m5" class="ltx_Math" alttext="L_{s}" display="inline"><msub><mi>L</mi><mi>s</mi></msub></math> is pre-trained with DNN <cite class="ltx_cite">[<a href="#bib.bib5" title="A neural probabilistic language model" class="ltx_ref">2</a>, <a href="#bib.bib7" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">5</a>, <a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">20</a>]</cite> using large-scale unlabeled monolingual data. We prefer to the second one since this kind of word embedding has already encoded some semantics of the words. In this work, we employ the toolkit Word2Vec <cite class="ltx_cite">[<a href="#bib.bib8" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">20</a>]</cite> to pre-train the word embedding for the source and target languages. The word embeddings will be fine-tuned in our BRAE model to capture much more semantics.</p>
+</div>
+<div id="S3.SS3.SSS3.p8" class="ltx_para">
+<p class="ltx_p">The partial gradient for one instance is computed as follows:</p>
+<table id="S3.E15" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E15.m1" class="ltx_Math" alttext="\frac{\partial J_{s}}{\partial{\theta}_{s}}=\frac{\partial E(s|t,{\theta}_{s})%&#10;}{\partial{\theta}_{s}}+\lambda{\theta}_{s}" display="block"><mrow><mfrac><mrow><mo>∂</mo><mo>⁡</mo><msub><mi>J</mi><mi>s</mi></msub></mrow><mrow><mo>∂</mo><mo>⁡</mo><msub><mi>θ</mi><mi>s</mi></msub></mrow></mfrac><mo>=</mo><mrow><mfrac><mrow><mo>∂</mo><mi>E</mi><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow></mrow><mrow><mo>∂</mo><mo>⁡</mo><msub><mi>θ</mi><mi>s</mi></msub></mrow></mfrac><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><msub><mi>θ</mi><mi>s</mi></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(15)</span></td></tr>
+</table>
+<p class="ltx_p">Where the source-side error given the target phrase representation includes reconstruction error and updated semantic error:</p>
+<table id="S3.E16" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E16.m1" class="ltx_Math" alttext="E(s|t,{\theta}_{s})=\alpha E_{rec}(s;{\theta}_{s})+(1-\alpha)E_{sem}^{*}(s|t,{%&#10;\theta}_{s})" display="block"><mrow><mi>E</mi><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>α</mi><msub><mi>E</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>;</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>α</mi><mo>)</mo></mrow><msubsup><mi>E</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow><mo>*</mo></msubsup><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>,</mo><msub><mi>θ</mi><mi>s</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(16)</span></td></tr>
+</table>
+<p class="ltx_p">Given the current <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p8.m1" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math>, we first construct the binary tree (as illustrated in Fig. 2) for any source-side phrase using the greedy algorithm <cite class="ltx_cite">[<a href="#bib.bib10" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">23</a>]</cite>. Then, the derivatives for the parameters in the fixed binary tree will be calculated via backpropagation through structures <cite class="ltx_cite">[<a href="#bib.bib14" title="Learning task-dependent distributed representations by backpropagation through structure" class="ltx_ref">10</a>]</cite>. Finally, the parameters will be updated using Eq. 14 and a new <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p8.m2" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math> is obtained.</p>
+</div>
+<div id="S3.SS3.SSS3.p9" class="ltx_para">
+<p class="ltx_p">The target-side parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m1" class="ltx_Math" alttext="{\theta}_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math> can be optimized in the same way as long as the source-side phrase representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m2" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> is available. It seems a paradox that updating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m3" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math> needs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m4" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> while updating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m5" class="ltx_Math" alttext="{\theta}_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math> needs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p9.m6" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math>. To solve this problem, we propose an co-training style algorithm which includes three steps:</p>
+</div>
+<div id="S3.SS3.SSS3.p10" class="ltx_para">
+<p class="ltx_p">1. <span class="ltx_text ltx_font_bold">Pre-training:</span> applying unsupervised phrase embedding with standard RAE to pre-train the source- and target-side phrase representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p10.m1" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p10.m2" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> respectively (Section 2.1.2);</p>
+</div>
+<div id="S3.SS3.SSS3.p11" class="ltx_para">
+<p class="ltx_p">2. <span class="ltx_text ltx_font_bold">Fine-tuning:</span> with the BRAE model, using target-side phrase representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m1" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> to update the source-side parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m2" class="ltx_Math" alttext="{\theta}_{s}" display="inline"><msub><mi>θ</mi><mi>s</mi></msub></math> and obtain the fine-tuned source-side phrase representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m3" class="ltx_Math" alttext="p_{s}^{\prime}" display="inline"><msubsup><mi>p</mi><mi>s</mi><mo>′</mo></msubsup></math>, and meanwhile using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m4" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> to update <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m5" class="ltx_Math" alttext="{\theta}_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math> and get the fine-tuned <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p11.m6" class="ltx_Math" alttext="p_{t}^{\prime}" display="inline"><msubsup><mi>p</mi><mi>t</mi><mo>′</mo></msubsup></math>, and then calculate the joint error over the training corpus;</p>
+</div>
+<div id="S3.SS3.SSS3.p12" class="ltx_para">
+<p class="ltx_p">3. <span class="ltx_text ltx_font_bold">Termination Check:</span> if the joint error reaches a local minima or the iterations reach the pre-defined number (25 is used in our experiments), we terminate the training procedure, otherwise we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p12.m1" class="ltx_Math" alttext="p_{s}=p_{s}^{\prime}" display="inline"><mrow><msub><mi>p</mi><mi>s</mi></msub><mo>=</mo><msubsup><mi>p</mi><mi>s</mi><mo>′</mo></msubsup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p12.m2" class="ltx_Math" alttext="p_{t}=p_{t}^{\prime}" display="inline"><mrow><msub><mi>p</mi><mi>t</mi></msub><mo>=</mo><msubsup><mi>p</mi><mi>t</mi><mo>′</mo></msubsup></mrow></math>, and go to step 2.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">With the semantic phrase embeddings and the vector space transformation function, we apply the BRAE to measure the semantic similarity between a source phrase and its translation candidates in the phrase-based SMT. Two tasks are involved in the experiments: phrase table pruning that discards entries whose semantic similarity is very low and decoding with the phrasal semantic similarities as additional new features.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Hyper-Parameter Settings</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The hyper-parameters in the BRAE model include the dimensionality of the word embedding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> in Eq. 1, the balance weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> in Eq. 10, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="\lambda s" display="inline"><mrow><mi>λ</mi><mo>⁢</mo><mi>s</mi></mrow></math> in Eq. 11, and the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="\eta" display="inline"><mi>η</mi></math> in Eq. 14.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For the dimensionality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, we have tried three settings <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="n=50,100,200" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn></mrow></mrow></math> in our experiments. We empirically set the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="\eta=0.01" display="inline"><mrow><mi>η</mi><mo>=</mo><mn>0.01</mn></mrow></math>. We draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> from 0.05 to 0.5 with step 0.05, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="\lambda s" display="inline"><mrow><mi>λ</mi><mo>⁢</mo><mi>s</mi></mrow></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="\{10^{-6},10^{-5},10^{-4},10^{-3},10^{-2}\}" display="inline"><mrow><mo>{</mo><mrow><msup><mn>10</mn><mrow><mo>-</mo><mn>6</mn></mrow></msup><mo>,</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>5</mn></mrow></msup><mo>,</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>4</mn></mrow></msup><mo>,</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup><mo>,</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></mrow><mo>}</mo></mrow></math>. The overall error of the BRAE model is employed to guide the search procedure. Finally, we choose <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="\alpha=0.15" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.15</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="{\lambda}_{L}=10^{-2}" display="inline"><mrow><msub><mi>λ</mi><mi>L</mi></msub><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m9" class="ltx_Math" alttext="{\lambda}_{rec}=10^{-3}" display="inline"><mrow><msub><mi>λ</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m10" class="ltx_Math" alttext="{\lambda}_{sem}=10^{-3}" display="inline"><mrow><msub><mi>λ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></mrow></math>.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>SMT Setup</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We have implemented a phrase-based translation system with a maximum entropy based reordering model using the bracketing transduction grammar <cite class="ltx_cite">[<a href="#bib.bib15" title="Stochastic inversion transduction grammars and bilingual parsing of parallel corpora" class="ltx_ref">27</a>, <a href="#bib.bib16" title="Maximum entropy based phrase reordering model for statistical machine translation" class="ltx_ref">28</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The SMT evaluation is conducted on Chinese-to-English translation. Accordingly, our BRAE model is trained on Chinese and English. The bilingual training data from LDC <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>LDC category numbers: LDC2000T50, LDC2002L27, LDC2003E07, LDC2003E14, LDC2004T07, LDC2005T06, LDC2005T10 and LDC2005T34.</span></span></span> contains 0.96M sentence pairs and 1.1M entity pairs with 27.7M Chinese words and 31.9M English words. A 5-gram language model is trained on the Xinhua portion of the English Gigaword corpus and the English part of bilingual training data. The NIST MT03 is used as the development data. NIST MT04-06 and MT08 (news data) are used as the test data. Case-insensitive BLEU is employed as the evaluation metric. The statistical significance test is performed by the re-sampling approach <cite class="ltx_cite">[<a href="#bib.bib17" title="Statistical significance tests for machine translation evaluation." class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">In addition, we pre-train the word embedding with toolkit Word2Vec on large-scale monolingual data including the aforementioned data for SMT. The monolingual data contains 1.06B words for Chinese and 1.12B words for English. To obtain high-quality bilingual phrase pairs to train our BRAE model, we perform forced decoding for the bilingual training sentences and collect the phrase pairs used. After removing the duplicates, the remaining 1.12M bilingual phrase pairs (length ranging from 1 to 7) are obtained.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Phrase Table Pruning</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Pruning most of the phrase table without much impact on translation quality is very important for translation especially in environments where memory and time constraints are imposed. Many algorithms have been proposed to deal with this problem, such as significance pruning <cite class="ltx_cite">[<a href="#bib.bib18" title="Improving translation quality by discarding most of the phrasetable" class="ltx_ref">11</a>, <a href="#bib.bib19" title="Complexity-based phrase-table filtering for statistical machine translation" class="ltx_ref">25</a>]</cite>, relevance pruning <cite class="ltx_cite">[<a href="#bib.bib20" title="Estimating phrase pair relevance for translation model pruning" class="ltx_ref">8</a>]</cite> and entropy-based pruning <cite class="ltx_cite">[<a href="#bib.bib21" title="Entropy-based pruning for phrase-based machine translation" class="ltx_ref">17</a>, <a href="#bib.bib22" title="A systematic comparison of phrase table pruning techniques" class="ltx_ref">30</a>]</cite>. These algorithms are based on corpus statistics including co-occurrence statistics, phrase pair usage and composition information. For example, the significance pruning, which is proven to be a very effective algorithm, computes the probability named p-value, that tests whether a source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> and a target phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> co-occur more frequently in a bilingual corpus than they happen just by chance. The higher the p-value, the more likely of the phrase pair to be spurious.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">Our work has the same objective, but instead of using corpus statistics, we attempt to measure the quality of the phrase pair from the view of semantic meaning. Given a phrase pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="(s,t)" display="inline"><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math>, the BRAE model first obtains their semantic phrase representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="(p_{s},p_{t})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>p</mi><mi>s</mi></msub><mo>,</mo><msub><mi>p</mi><mi>t</mi></msub></mrow><mo>)</mo></mrow></math>, and then transforms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="p_{s}" display="inline"><msub><mi>p</mi><mi>s</mi></msub></math> into target semantic space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m4" class="ltx_Math" alttext="{p_{s}}^{*}" display="inline"><mmultiscripts><mi>p</mi><mi>s</mi><none/><none/><mo>*</mo></mmultiscripts></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m5" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> into source semantic space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m6" class="ltx_Math" alttext="{p_{t}}^{*}" display="inline"><mmultiscripts><mi>p</mi><mi>t</mi><none/><none/><mo>*</mo></mmultiscripts></math>. We finally get two similarities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m7" class="ltx_Math" alttext="Sim({p_{s}}^{*},p_{t})" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>p</mi><mi>s</mi><none/><none/><mo>*</mo></mmultiscripts><mo>,</mo><msub><mi>p</mi><mi>t</mi></msub></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m8" class="ltx_Math" alttext="Sim({p_{t}}^{*},p_{s})" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>p</mi><mi>t</mi><none/><none/><mo>*</mo></mmultiscripts><mo>,</mo><msub><mi>p</mi><mi>s</mi></msub></mrow><mo>)</mo></mrow></mrow></math>. Phrase pairs that have a low similarity are more likely to be noise and more prone to be pruned. In experiments, we discard the phrase pair whose similarity in two directions are smaller than a threshold <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>To avoid the situation that all the translation candidates for a source phrase are pruned, we always keep the first 10 best according to the semantic similarity.</span></span></span>.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table 1 shows the comparison results between our BRAE-based pruning method and the significance pruning algorithm. We can see a common phenomenon in both of the algorithms: for the first few thresholds, the phrase table becomes smaller and smaller while the translation quality is not much decreased, but the performance jumps a lot at a certain threshold (16 for Significance pruning, 0.8 for BRAE-based one).</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">Specifically, the Significance algorithm can safely discard 64% of the phrase table at its threshold 12 with only 0.1 BLEU loss in the overall test. In contrast, our BRAE-based algorithm can remove 72% of the phrase table at its threshold 0.7 with only 0.06 BLEU loss in the overall evaluation. When the two algorithms using a similar portion of the phrase table <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>In the future, we will compare the performance by enforcing the two algorithms to use the same portion of phrase table</span></span></span> (35% in BRAE and 36% in Significance), the BRAE-based algorithm outperforms the Significance algorithm on all the test sets except for MT04. It indicates that our BRAE model is a good alternative for phrase table pruning. Furthermore, our model is much more intuitive because it is directly based on the semantic similarity.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Threshold</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">PhraseTable</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">ALL</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">100%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">34.69</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">33.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">34.82</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" rowspan="5"><span class="ltx_text ltx_font_small">BRAE</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">52%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">35.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">36.96</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">35.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">34.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">27.77</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">35.16</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">33.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">27.25</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">34.89</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">27.34</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">35.05</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">28%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">33.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">27.10</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">34.76</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">20%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">33.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">26.66</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.04</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_tt" rowspan="4"><span class="ltx_text ltx_font_small">Significance</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">48%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">35.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">36.99</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">34.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">34.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">27.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">35.13</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">12</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.65</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">27.16</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">34.72</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">16</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">25%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">34.26</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">33.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">26.55</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.09</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">18%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">35.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">36.09</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">34.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">32.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">26.37</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">33.97</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span> Comparison between BRAE-based pruning and Significance pruning of phrase table. Threshold means similarity in BRAE and negative-log-p-value in Significance. ”ALL” combines the development and test sets. <span class="ltx_text ltx_font_bold">Bold numbers</span> denote that the result is better than or comparable to that of baseline. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="n=50" display="inline"><mrow><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">50</mn></mrow></math> is used for embedding dimensionality.</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">n</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT03</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT04</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT05</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT06</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MT08</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">ALL</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.81</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.91</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">34.69</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">33.83</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27.17</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">34.82</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_tt" rowspan="3"><span class="ltx_text ltx_font_small">BRAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">36.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">37.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">35.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">35.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">28.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="{\bf 35.84}^{+}" display="inline"><msup><mn mathvariant="bold">35.84</mn><mo>+</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">100</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">37.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">28.57</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="{\bf 36.03}^{+}" display="inline"><msup><mn mathvariant="bold">36.03</mn><mo>+</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">200</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">36.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">37.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">35.78</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">34.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">27.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="{\bf 35.62}^{+}" display="inline"><msup><mn mathvariant="bold">35.62</mn><mo>+</mo></msup></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span> Experimental results of decoding with phrasal semantic similarities. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="n" display="inline"><mi mathsize="normal" stretchy="false">n</mi></math> is the embedding dimensionality. ”+” means that the model significantly outperforms the baseline with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.01</mn></mrow></math>.</div>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Decoding with Phrasal Semantic Similarities</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Besides using the semantic similarities to prune the phrase table, we also employ them as two informative features like the phrase translation probability to guide translation hypotheses selection during decoding. Typically, four translation probabilities are adopted in the phrase-based SMT, including phrase translation probability and lexical weights in both directions. The phrase translation probability is based on co-occurrence statistics and the lexical weights consider the phrase as bag-of-words. In contrast, our BRAE model focuses on compositional semantics from words to phrases. Therefore, the semantic similarities computed using our BRAE model are complementary to the existing four translation probabilities.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">The semantic similarities in two directions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m1" class="ltx_Math" alttext="Sim({p_{s}}^{*},p_{t})" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>p</mi><mi>s</mi><none/><none/><mo>*</mo></mmultiscripts><mo>,</mo><msub><mi>p</mi><mi>t</mi></msub></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m2" class="ltx_Math" alttext="Sim({p_{t}}^{*},p_{s})" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>p</mi><mi>t</mi><none/><none/><mo>*</mo></mmultiscripts><mo>,</mo><msub><mi>p</mi><mi>s</mi></msub></mrow><mo>)</mo></mrow></mrow></math> are integrated into our baseline phrase-based model. In order to investigate the influence of the dimensionality of the embedding space, we have tried three different settings <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m3" class="ltx_Math" alttext="n=50,100,200" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<p class="ltx_p">As shown in Table 2, no matter what <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is, the BRAE model can significantly improve the translation quality in the overall test data. The largest improvement can be up to 1.7 BLEU score (MT06 for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p3.m2" class="ltx_Math" alttext="n=50" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>50</mn></mrow></math>). It is interesting that with dimensionality growing, the translation performance is not consistently improved. We speculate that using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p3.m3" class="ltx_Math" alttext="n=50" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>50</mn></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p3.m4" class="ltx_Math" alttext="n=100" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>100</mn></mrow></math> can already distinguish good translation candidates from bad ones.</p>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Analysis on Semantic Phrase Embedding</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">To have a better intuition about the power of the BRAE model at learning semantic phrase embeddings, we show some examples in Table 3. Given the BRAE model and the phrase training set, we search from the set the most semantically similar English phrases for any new input English phrase.</p>
+</div>
+<div id="S4.SS5.p2" class="ltx_para">
+<p class="ltx_p">The input phrases contain different number of words. The table shows that the unsupervised RAE can at most capture the syntactic property when the phrases are short. For example, the unsupervised RAE finds <span class="ltx_text ltx_font_italic">do not want</span> for the input phrase <span class="ltx_text ltx_font_italic">do not agree</span>. When the phrase becomes longer, the unsupervised RAE cannot even capture the syntactic property. In contrast, our BRAE model learns the semantic meaning for each phrase no matter whether it is short or relatively long. This indicates that the proposed BRAE model is effective at learning semantic phrase embeddings.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">New Phrase</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Unsupervised RAE</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">BRAE</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">military force</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">core force</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">military power</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">main force</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">military strength</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">labor force</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">armed forces</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">at a meeting</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">to a meeting</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">at the meeting</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">at a rate</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">during the meeting</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">a meeting ,</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">at the conference</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">do not agree</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">one can accept</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">do not favor</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">i can understand</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">will not compromise</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">do not want</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">not to approve</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">each people in this nation</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">each country regards</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">every citizen in this country</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">each country has its</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">all the people in the country</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">each other , and</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">people all over the country</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span> Semantically similar phrases in the training set for the new phrases. </div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussions</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Applications of The BRAE model</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">As the semantic phrase embedding can fully represent the phrase, we can go a step further in the phrase-based SMT and feed the semantic phrase embeddings to DNN in order to model the whole translation process (e.g. derivation structure prediction). We will explore this direction in our future work. Besides SMT, the semantic phrase embeddings can be used in other cross-lingual tasks, such as cross-lingual question answering, since the semantic similarity between phrases in different languages can be calculated accurately.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">In addition to the cross-lingual applications, we believe the BRAE model can be applied in many monolingual NLP tasks which depend on good phrase representations or semantic similarity between phrases, such as named entity recognition, parsing, textual entailment, question answering and paraphrase detection.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Model Extensions</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In fact, the phrases having the same meaning are translation equivalents in different languages, but are paraphrases in one language. Therefore, our model can be easily adapted to learn semantic phrase embeddings using paraphrases.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Our BRAE model still has some limitations. For example, as each node in the recursive auto-encoder shares the same weight matrix, the BRAE model would become weak at learning the semantic representations for long sentences with tens of words. Improving the model to semantically embed sentences is left for our future work.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">This paper has explored the bilingually-constrained recursive auto-encoders in learning phrase embeddings, which can distinguish phrases with different semantic meanings. With the objective to minimize the semantic distance between translation equivalents and maximize the semantic distance between non-translation pairs simultaneously, the learned model can semantically embed any phrase in two languages and can transform the semantic space in one language to the other. Two end-to-end SMT tasks are involved to test the power of the proposed model at learning the semantic phrase embeddings. The experimental results show that the BRAE model is remarkably effective in phrase table pruning and decoding with phrasal semantic similarities.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">We have also discussed many other potential applications and extensions of our BRAE model. In the future work, we will explore four directions. 1) we will try to model the decoding process with DNN based on our semantic embeddings of the basic translation units. 2) we are going to learn semantic phrase embeddings with the paraphrase corpus. 3) we will apply the BRAE model in other monolingual and cross-lingual tasks. 4) we plan to learn semantic sentence embeddings by automatically learning different weight matrices for different nodes in the BRAE model.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Nan Yang for sharing the baseline code and anonymous reviewers for their valuable comments. The research work has been partially funded by the Natural Science Foundation of China under Grant No. 61333018 and 61303181, and Hi-Tech Research and Development Program (â863â Program) of China under Grant No. 2012AA011102.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Auli, M. Galley, C. Quirk and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint language and translation modeling with recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1044–1054</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Jauvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.SSS1.p1" title="3.1.1 Word Vector Representations ‣ 3.1 Unsupervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>,
+<a href="#S3.SS3.SSS3.p7" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, H. Schwenk, J. Senécal, F. Morin and J. Gauvain</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Neural probabilistic language models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Innovations in Machine Learning</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 137–186</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.SSS1.p1" title="3.1.1 Word Vector Representations ‣ 3.1 Unsupervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>,
+<a href="#S3.SS3.SSS3.p7" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Dahl, D. Yu, L. Deng and A. Acero</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Audio, Speech, and Language Processing</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 30–42</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Duh, G. Neubig, K. Sudoh and H. Tsukada</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptation data selection using neural language models: experiments in machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 678–683</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Eck, S. Vogal and A. Waibel</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimating phrase pair relevance for translation model pruning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Phrase Table Pruning ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gao, X. He, W. Yih and L. Deng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning semantic representations for the phrase translation model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1312.0482</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Goller and A. Kuchler</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning task-dependent distributed representations by backpropagation through structure</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 347–352</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS3.p8" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Johnson, J. Martin, G. Foster and R. Kuhn</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving translation quality by discarding most of the phrasetable</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Phrase Table Pruning ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Kalchbrenner and P. Blunsom</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent continuous translation models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1700–1709</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Kavukcuoglu, P. Sermanet, Y. Boureau, K. Gregor, M. Mathieu and Y. L. Cun</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning convolutional feature hierarchies for visual recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1090–1098</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical significance tests for machine translation evaluation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 388–395</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 SMT Setup ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky, I. Sutskever and G. Hinton</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Imagenet classification with deep convolutional neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1106–1114</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Li, Y. Liu and M. Sun</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive autoencoders for itg-based translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Semi-supervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.SSS3.p1" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>,
+<a href="#S3.p1" title="3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Ling, J. Graça, I. Trancoso and A. Black</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entropy-based pruning for phrase-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 962–971</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Phrase Table Pruning ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Liu, T. Watanabe, E. Sumita and T. Zhao</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Additive neural networks for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 791–801</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, M. Karafiát, L. Burget, J. Cernockỳ and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network based language model.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1045–1048</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.SSS1.p1" title="3.1.1 Word Vector Representations ‣ 3.1 Unsupervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>,
+<a href="#S3.SS3.SSS3.p7" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013a)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Semi-supervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.p1" title="3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning continuous phrase representations and syntactic parsing with recursive neural networks</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.SSS2.p1" title="3.1.2 RAE-based Phrase Embedding ‣ 3.1 Unsupervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Semi-supervised Phrase Embedding ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.SSS3.p8" title="3.3.3 Parameter Inference ‣ 3.3 The BRAE Model ‣ 3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>,
+<a href="#S3.p1" title="3 Bilingually-constrained Recursive Auto-encoders ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Y. Wu, J. Chuang, C. D. Manning, A. Y. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013b)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive deep models for semantic compositionality over a sentiment treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Tomeh, N. Cancedda and M. Dymetman</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Complexity-based phrase-table filtering for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 144–151</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Phrase Table Pruning ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Vaswani, Y. Zhao, V. Fossum and D. Chiang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Decoding with large-scale neural language models improves translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1387–1392</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Wu</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stochastic inversion transduction grammars and bilingual parsing of parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">23</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 377–403</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 SMT Setup ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Xiong, Q. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum entropy based phrase reordering model for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 505–512</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 SMT Setup ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Yang, S. Liu, M. Li, M. Zhou and N. Yu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word alignment modeling with context dependent deep neural network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Zens, D. Stanton and P. Xu</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A systematic comparison of phrase table pruning techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 972–983</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Phrase Table Pruning ‣ 4 Experiments ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Y. Zou, R. Socher, D. Cer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual word embeddings for phrase-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1393–1398</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Bilingually-constrained Phrase Embeddings for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:16:22 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

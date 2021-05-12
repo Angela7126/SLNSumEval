@@ -1,0 +1,1268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Tagging The Web: Building A Robust Web Tagger with Neural Network</title>
+<!--Generated on Tue Jun 10 17:17:55 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Tagging The Web: Building A Robust Web Tagger with Neural Network</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ji Ma<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Yue Zhang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math> and Jingbo Zhu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Northeastern University, China
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Singapore University of Technology and Design 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">majineu@gmail.com
+<br class="ltx_break"/>yue_zhang@sutd.edu.sg
+<br class="ltx_break"/>zhujingbo@mail.neu.edu.cn</span>
+
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>This work was done while the first author was visiting SUTD.</span></span></span>, we address the problem of web-domain POS tagging using a two-phase approach.
+The first phase learns representations that capture regularities underlying web text.
+The representation is integrated as features into a neural network that serves as a scorer for an easy-first POS tagger.
+Parameters of the neural network are trained using guided learning in the second phase.
+Experiment on the SANCL 2012 shared task show that our approach achieves <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="93.27\%" display="inline"><mrow><mn>93.27</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> average tagging accuracy, which is the best accuracy reported so far on this data set, higher than those given by ensembled syntactic parsers.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Analysing and extracting useful information from the web has become an increasingly important research direction for the NLP community, where many tasks require part-of-speech (POS) tagging as a fundamental preprocessing step.
+However, state-of-the-art POS taggers in the literature <cite class="ltx_cite">[<a href="#bib.bib2" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">5</a>, <a href="#bib.bib3" title="Guided learning for bidirectional sequence classification" class="ltx_ref">23</a>]</cite> are mainly optimized on the the Penn Treebank (PTB), and when shifted to web data, tagging accuracies drop significantly <cite class="ltx_cite">[<a href="#bib.bib4" title="Overview of the 2012 shared task on parsing the web" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The problem we face here can be considered as a special case of <span class="ltx_text ltx_font_italic">domain adaptation</span>, where we have access to labelled data on the source domain (PTB) and unlabelled data on the target domain (web data). Exploiting useful information from the web data can be the key to improving web domain tagging.
+Towards this end, we adopt the idea of learning representations which has been demonstrated useful in capturing hidden regularities underlying the raw input data (web text, in our case).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Our approach consists of two phrases. In the pre-training phase, we learn an encoder that converts the web text into an intermediate representation, which acts as useful features for prediction tasks.
+We integrate the learned encoder with a set of well-established features for POS tagging <cite class="ltx_cite">[<a href="#bib.bib5" title="A maximum entropy model for part-of-speech tagging" class="ltx_ref">21</a>, <a href="#bib.bib2" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">5</a>]</cite> in a single neural network, which is applied as a scorer to an easy-first POS tagger.
+We choose the easy-first tagging approach since it has been demonstrated to give higher accuracies than the standard left-to-right POS tagger <cite class="ltx_cite">[<a href="#bib.bib3" title="Guided learning for bidirectional sequence classification" class="ltx_ref">23</a>, <a href="#bib.bib1" title="Easy-first pos tagging and dependency parsing with beam search" class="ltx_ref">15</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In the fine-tuning phase, the parameters of the network are optimized on a set of labelled training data using guided learning.
+The learned model preserves the property of preferring to tag <span class="ltx_text ltx_font_italic">easy</span> words first.
+To our knowledge, we are the first to investigate guided learning for neural networks.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The idea of learning representations from unlabelled data and then fine-tuning a model with such representations according to some supervised criterion has been studied before <cite class="ltx_cite">[<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">26</a>, <a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>, <a href="#bib.bib8" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">8</a>]</cite>. While most previous work focus on in-domain sequential labelling or cross-domain classification tasks, we are the first to learn representations for web-domain structured prediction.
+Previous work treats the learned representations either as model parameters that are further optimized in supervised fine-tuning <cite class="ltx_cite">[<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>]</cite>
+or as fixed features that are kept unchanged <cite class="ltx_cite">[<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">26</a>, <a href="#bib.bib8" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">8</a>]</cite>.
+In this work, we investigate both strategies and give empirical comparisons in the cross-domain setting.
+Our results suggest that while both strategies improve in-domain tagging accuracies, keeping the learned representation unchanged consistently results in better cross-domain accuracies.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">We conduct experiments on the official data set provided by the SANCL 2012 shared task <cite class="ltx_cite">[<a href="#bib.bib4" title="Overview of the 2012 shared task on parsing the web" class="ltx_ref">18</a>]</cite>.
+Our method achieves a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p6.m1" class="ltx_Math" alttext="93.27\%" display="inline"><mrow><mn>93.27</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> average accuracy across the web-domain, which
+is the best result reported so far on this data set, higher than those given by ensembled syntactic parsers.
+Our code will be publicly available at https://github.com/majineu/TWeb.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Learning from Web Text</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Unsupervised learning is often used for training encoders that convert the input data to abstract representations (i.e. encoding vectors).
+Such representations capture hidden properties of the input, and can be used as features for supervised tasks <cite class="ltx_cite">[<a href="#bib.bib32" title="Learning deep architectures for AI" class="ltx_ref">3</a>, <a href="#bib.bib30" title="Efficient learning of sparse representations with an energy-based model" class="ltx_ref">20</a>]</cite>.
+Among the many proposed encoders, we choose the restricted Boltzmann machine (RBM), which has been successfully used in many tasks <cite class="ltx_cite">[<a href="#bib.bib31" title="Unsupervised feature learning for audio classification using convolutional deep belief networks" class="ltx_ref">14</a>, <a href="#bib.bib12" title="A fast learning algorithm for deep belief nets" class="ltx_ref">10</a>]</cite>.
+In this section, we give some background on RBMs and then show how they can be used to learn representations of the web text.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Restricted Boltzmann Machine</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The RBM is a type of graphical model that contains two layers of binary stochastic units <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{v}\in{\{0,1\}}^{V}" display="inline"><mrow><mi>𝐯</mi><mo>∈</mo><msup><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow><mi>V</mi></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{h}\in{\{0,1\}}^{H}" display="inline"><mrow><mi>𝐡</mi><mo>∈</mo><msup><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow><mi>H</mi></msup></mrow></math>, corresponding to a set of visible and hidden variables, respectively.
+The RBM defines the joint probability distribution over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="\mathbf{v}" display="inline"><mi>𝐯</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="\mathbf{h}" display="inline"><mi>𝐡</mi></math> by an energy function</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="E(\mathbf{v},\mathbf{h})=-\mathbf{c}^{\prime}\mathbf{h}-\mathbf{b}^{\prime}%&#10;\mathbf{v}-\mathbf{h}^{\prime}\mathbf{W}\mathbf{v}," display="block"><mrow><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐯</mi><mo>,</mo><mi>𝐡</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><msup><mi>𝐜</mi><mo>′</mo></msup><mo>⁢</mo><mi>𝐡</mi></mrow><mo>-</mo><mrow><msup><mi>𝐛</mi><mo>′</mo></msup><mo>⁢</mo><mi>𝐯</mi></mrow><mo>-</mo><mrow><msup><mi>𝐡</mi><mo>′</mo></msup><mo>⁢</mo><mi>𝐖𝐯</mi></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">which is factorized by a visible bias <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="\mathbf{b}\in{\mathbb{R}}^{V}" display="inline"><mrow><mi>𝐛</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>V</mi></msup></mrow></math>, a hidden bias <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="\mathbf{c}\in{\mathbb{R}}^{H}" display="inline"><mrow><mi>𝐜</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>H</mi></msup></mrow></math> and a weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="\mathbf{W}\in{\mathbb{R}^{H\times V}}" display="inline"><mrow><mi>𝐖</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>H</mi><mo>×</mo><mi>V</mi></mrow></msup></mrow></math>.
+The joint distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="P(\mathbf{v},\mathbf{h})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐯</mi><mo>,</mo><mi>𝐡</mi></mrow><mo>)</mo></mrow></mrow></math> is given by</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="P(\mathbf{v},\mathbf{h})=\frac{1}{Z}\exp(E(\mathbf{v},\mathbf{h}))," display="block"><mrow><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐯</mi><mo>,</mo><mi>𝐡</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>Z</mi></mfrac><mo>⁢</mo><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐯</mi><mo>,</mo><mi>𝐡</mi></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m5" class="ltx_Math" alttext="Z" display="inline"><mi>Z</mi></math> is the partition function.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">The affine form of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="\mathbf{v}" display="inline"><mi>𝐯</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="\mathbf{h}" display="inline"><mi>𝐡</mi></math> implies that the visible variables are conditionally independent with each other given the hidden layer units, and vice versa.
+This yields the conditional distribution:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle P(\mathbf{v}|\mathbf{h})=\prod_{j=1}^{V}P(v_{j}|\mathbf{h})\;\;%&#10;\;\;P(\mathbf{h}|\mathbf{v})=\prod_{i=1}^{H}P(h_{i}|\mathbf{v})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>𝐯</mi><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>V</mi></munderover></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo mathvariant="italic" separator="true"> </mo><mi>P</mi><mrow><mo>(</mo><mi>𝐡</mi><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>H</mi></munderover></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="P(v_{j}=1|\mathbf{h})=\sigma(\mathbf{b}_{j}+W_{\cdot j}\mathbf{h})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>=</mo><mn>1</mn><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo>=</mo><mi>σ</mi><mrow><mo>(</mo><msub><mi>𝐛</mi><mi>j</mi></msub><mo>+</mo><msub><mi>W</mi><mrow><mi/><mo>⋅</mo><mi>j</mi></mrow></msub><mi>𝐡</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<table id="S2.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="P(h_{i}=1|\mathbf{v})=\sigma(\mathbf{c}_{j}+W_{i\cdot}\mathbf{v})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow><mo>=</mo><mi>σ</mi><mrow><mo>(</mo><msub><mi>𝐜</mi><mi>j</mi></msub><mo>+</mo><msub><mi>W</mi><mrow><mi>i</mi><mo>⁣</mo><mo>⋅</mo></mrow></msub><mi>𝐯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m4" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> denotes the sigmoid function.
+Parameters of RBMs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m5" class="ltx_Math" alttext="\theta=\{\mathbf{b},\mathbf{c},\mathbf{W}\}" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>{</mo><mrow><mi>𝐛</mi><mo>,</mo><mi>𝐜</mi><mo>,</mo><mi>𝐖</mi></mrow><mo>}</mo></mrow></mrow></math> can be trained efficiently using contrastive divergence learning (CD), see <cite class="ltx_cite">[<a href="#bib.bib9" title="Training products of experts by minimizing contrastive divergence" class="ltx_ref">11</a>]</cite> for detailed descriptions of CD.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Encoding Web Text with RBM</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Most of the indicative features for POS disambiguation can be found from the words and word combinations within a local context <cite class="ltx_cite">[<a href="#bib.bib5" title="A maximum entropy model for part-of-speech tagging" class="ltx_ref">21</a>, <a href="#bib.bib2" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">5</a>]</cite>.
+Inspired by this observation, we apply the RBM to learn feature representations from word n-grams.
+More specifically, given the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="i^{th}" display="inline"><msup><mi>i</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> of a sentence, we apply RBMs to model the joint distribution of the n-gram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="(w_{i-l},\cdots,w_{i+r})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mi>l</mi></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mi>r</mi></mrow></msub></mrow><mo>)</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> denote the left and right window, respectively.
+Note that the visible units of RBMs are binary. While in our case, each visible variable corresponds to a word, which may take on tens-of-thousands of different values.
+Therefore, the RBM need to be re-factorized to make inference tractable.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">We utilize the Word Representation RBM (WRRBM) factorization proposed by <cite class="ltx_cite">Dahl<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Training restricted boltzmann machines on word observations" class="ltx_ref">2012</a>)</cite>.
+The basic idea is to share word representations across different positions in the input n-gram while using position-dependent weights to distinguish between different word orders.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math> be the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-th entry of lexicon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="\mathbf{w}_{k}" display="inline"><msub><mi>𝐰</mi><mi>k</mi></msub></math> be its <span class="ltx_text ltx_font_italic">one-hot</span> representation (i.e., only the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-th component of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m6" class="ltx_Math" alttext="\mathbf{w}_{k}" display="inline"><msub><mi>𝐰</mi><mi>k</mi></msub></math> is 1, and all the others are 0).
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m7" class="ltx_Math" alttext="\mathbf{v}^{(j)}" display="inline"><msup><mi>𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup></math> represents the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th visible variable of the WRRBM, which is a vector of length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m9" class="ltx_Math" alttext="|L|" display="inline"><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow></math>.
+Then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m10" class="ltx_Math" alttext="\mathbf{v}^{(j)}=\mathbf{w}_{k}" display="inline"><mrow><msup><mi>𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>=</mo><msub><mi>𝐰</mi><mi>k</mi></msub></mrow></math> means that the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m11" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th word in the n-gram is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m12" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math>.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m13" class="ltx_Math" alttext="\mathbf{D}\in\mathbb{R}^{D\times{|L|}}" display="inline"><mrow><mi>𝐃</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>D</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow></mrow></msup></mrow></math> be a projection matrix, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m14" class="ltx_Math" alttext="\mathbf{D}\mathbf{w}_{k}" display="inline"><msub><mi>𝐃𝐰</mi><mi>k</mi></msub></math> projects <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m15" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math> into a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m16" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>-dimensional real value vector (embedding).
+For each position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m17" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>, there is a weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m18" class="ltx_Math" alttext="\mathbf{W}^{(j)}\in{\mathbb{R}^{H\times{D}}}" display="inline"><mrow><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>H</mi><mo>×</mo><mi>D</mi></mrow></msup></mrow></math>, which is used to model the interaction between the hidden layer and the word projection in position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m19" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>.
+The visible biases are also shared across different positions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m20" class="ltx_Math" alttext="(b^{(j)}=b\;\forall j)" display="inline"><mrow><mo>(</mo><mrow><msup><mi>b</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mpadded width="+2.8pt"><mi>b</mi></mpadded><mo>⁢</mo><mrow><mo>∀</mo><mi>j</mi></mrow></mrow></mrow><mo>)</mo></mrow></math> and the energy function is:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m1" class="ltx_Math" alttext="\displaystyle E(\mathbf{v},\mathbf{h})=-\mathbf{c}^{\prime}\mathbf{h}-\sum_{j=%&#10;1}^{n}{(\mathbf{b}^{\prime}\mathbf{v}^{(j)}+\mathbf{h}^{\prime}\mathbf{W}^{(j)%&#10;}\mathbf{D}\mathbf{v}^{(j)})}," display="inline"><mrow><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐯</mi><mo>,</mo><mi>𝐡</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><msup><mi>𝐜</mi><mo>′</mo></msup><mo>⁢</mo><mi>𝐡</mi></mrow><mo>-</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mrow><mo>(</mo><mrow><mrow><msup><mi>𝐛</mi><mo>′</mo></msup><mo>⁢</mo><msup><mi>𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><msup><mi>𝐡</mi><mo>′</mo></msup><mo>⁢</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mi>𝐃𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">which yields the conditional distributions:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle P(\mathbf{v}|\mathbf{h})=\prod_{j=1}^{n}P(\mathbf{v}^{(j)}|%&#10;\mathbf{h})\quad P(\mathbf{h}|\mathbf{v})=\prod_{i=1}P(h_{i}|\mathbf{v})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>𝐯</mi><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mi>P</mi><mrow><mo>(</mo><msup><mi>𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo mathvariant="italic" separator="true"> </mo><mi>P</mi><mrow><mo>(</mo><mi>𝐡</mi><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S2.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E6.m1" class="ltx_Math" alttext="P(h_{i}=1|\mathbf{v})=\sigma(c_{i}+\sum_{j=1}^{n}\mathbf{W}^{(j)}_{i\cdot}%&#10;\mathbf{D}\mathbf{v}^{(j)})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn><mo>|</mo><mi>𝐯</mi><mo>)</mo></mrow><mo>=</mo><mi>σ</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>+</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>𝐖</mi><mrow><mi>i</mi><mo>⁣</mo><mo>⋅</mo></mrow><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msubsup><msup><mi>𝐃𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<table id="S2.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E7.m1" class="ltx_Math" alttext="P(\mathbf{v}^{(j)}=\mathbf{w}_{k}|\mathbf{h})=\frac{1}{Z}{\exp(\mathbf{b}^{%&#10;\prime}\mathbf{w}_{k}+\mathbf{h}^{\prime}\mathbf{W}^{(j)}\mathbf{D}\mathbf{w}_%&#10;{k})}" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msup><mi>𝐯</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><mo>=</mo><msub><mi>𝐰</mi><mi>k</mi></msub><mo>|</mo><mi>𝐡</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>Z</mi></mfrac><mi>exp</mi><mrow><mo>(</mo><msup><mi>𝐛</mi><mo>′</mo></msup><msub><mi>𝐰</mi><mi>k</mi></msub><mo>+</mo><msup><mi>𝐡</mi><mo>′</mo></msup><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup><msub><mi>𝐃𝐰</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">Again <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m21" class="ltx_Math" alttext="Z" display="inline"><mi>Z</mi></math> is the partition function.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">The parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m1" class="ltx_Math" alttext="\{\mathbf{b},\mathbf{c},\mathbf{D},\mathbf{W}^{(1)},\ldots,\mathbf{W}^{(n)}\}" display="inline"><mrow><mo>{</mo><mrow><mi>𝐛</mi><mo>,</mo><mi>𝐜</mi><mo>,</mo><mi>𝐃</mi><mo>,</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></math> can be trained using a Metropolis-Hastings-based CD variant and the learned word representations also capture certain syntactic information; see <cite class="ltx_cite">Dahl<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Training restricted boltzmann machines on word observations" class="ltx_ref">2012</a>)</cite>
+for more details.</p>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">Note that one can stack standard RBMs on top of a WRRBM to construct a Deep Belief Network (DBN).
+By adopting greedy layer-wise training <cite class="ltx_cite">[<a href="#bib.bib12" title="A fast learning algorithm for deep belief nets" class="ltx_ref">10</a>, <a href="#bib.bib13" title="Greedy layer-wise training of deep networks" class="ltx_ref">2</a>]</cite>, DBNs are capable of modelling higher order non-linear relations between the input, and has been demonstrated to improve performance for many computer vision tasks
+<cite class="ltx_cite">[<a href="#bib.bib12" title="A fast learning algorithm for deep belief nets" class="ltx_ref">10</a>, <a href="#bib.bib13" title="Greedy layer-wise training of deep networks" class="ltx_ref">2</a>, <a href="#bib.bib14" title="Convolutional deep belief networks for scalable unsupervised learning of hierarchical representations" class="ltx_ref">13</a>]</cite>.
+However, in this work we do not observe further improvement by employing DBNs.
+This may partly be due to the fact that unlike computer vision tasks, the input structure of POS tagging or other sequential labelling tasks is relatively simple, and a single non-linear layer is enough to model the interactions within the input <cite class="ltx_cite">[<a href="#bib.bib15" title="Effect of non-linear deep architecture in sequence labeling" class="ltx_ref">27</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Neural Network for POS Disambiguation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We integrate the learned WRRBM into a neural network, which serves as a scorer for POS disambiguation.
+The main challenge to designing the neural network structure is: on the one hand, we hope that the model can take the advantage of information provided by the learned WRRBM, which reflects general properties of web texts, so that the model generalizes well in the web domain;
+on the other hand, we also hope to improve the model’s discriminative power by utilizing well-established POS tagging features, such as those of <cite class="ltx_cite">Ratnaparkhi (<a href="#bib.bib5" title="A maximum entropy model for part-of-speech tagging" class="ltx_ref">1996</a>)</cite>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Our approach is to leverage the two sources of information in one neural network by combining them though a shared output layer, as shown in Figure 1.
+Under the output layer, the network consists of two modules:
+<span class="ltx_text ltx_font_italic">the web-feature module</span>, which incorporates knowledge from the pre-trained WRRBM,
+and
+<span class="ltx_text ltx_font_italic">the sparse-feature module</span>, which makes use of other POS tagging features.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>The Web-Feature Module</h3>
+
+<div id="S3.F1" class="ltx_figure"><img src="P14-1014/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="303" height="212" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>The proposed neural network. The web-feature module (lower left) and sparse-feature module (lower right) are combined by a shared output layer (upper).</div>
+</div>
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The web-feature module, shown in the lower left part of Figure 1, consists of a input layer and two hidden layers.
+The input for the this module is the word n-gram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="(w_{i-l},\dots,w_{i+r})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mi>l</mi></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mi>r</mi></mrow></msub></mrow><mo>)</mo></mrow></math>, the form of which is identical to the training data of the pre-trained WRRBM.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The first layer is a linear projection layer, where each word in the input is projected into a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>-dimensional real value vector using the projection operation described in Section 2.2.
+The output of this layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\mathbf{o}_{w}^{1}" display="inline"><msubsup><mi>𝐨</mi><mi>w</mi><mn>1</mn></msubsup></math> is the concatenation of the projections of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="w_{i-l},\dots,w_{i+r}" display="inline"><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mi>l</mi></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mi>r</mi></mrow></msub></mrow></math>:</p>
+<table id="S3.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="\mathbf{o}_{w}^{1}=\begin{pmatrix}\mathbf{M}_{w}^{1}\mathbf{w}_{i-l}\\&#10;\vdots\\&#10;\mathbf{M}_{w}^{1}\mathbf{w}_{i+r}\end{pmatrix}" display="block"><mrow><msubsup><mi>𝐨</mi><mi>w</mi><mn>1</mn></msubsup><mo>=</mo><mrow><mo>(</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>1</mn></msubsup><mo>⁢</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mi>l</mi></mrow></msub></mrow></mtd></mtr><mtr><mtd columnalign="center"><mi mathvariant="normal">⋮</mi></mtd></mtr><mtr><mtd columnalign="center"><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>1</mn></msubsup><mo>⁢</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>+</mo><mi>r</mi></mrow></msub></mrow></mtd></mtr></mtable><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\mathbf{M}_{w}^{1}" display="inline"><msubsup><mi>𝐌</mi><mi>w</mi><mn>1</mn></msubsup></math> denotes the parameters of the first layer of the web-feature module, which is a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="{D\times{|L|}}" display="inline"><mrow><mi>D</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow></mrow></math> projection matrix.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">The second layer is a sigmoid layer to model non-linear relations between the word projections:</p>
+<table id="S3.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m1" class="ltx_Math" alttext="\mathbf{o}_{w}^{2}=\sigma(\mathbf{M}_{w}^{2}\mathbf{o}_{w}^{1}+\mathbf{b}_{w}^%&#10;{2})" display="block"><mrow><msubsup><mi>𝐨</mi><mi>w</mi><mn>2</mn></msubsup><mo>=</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>2</mn></msubsup><mo>⁢</mo><msubsup><mi>𝐨</mi><mi>w</mi><mn>1</mn></msubsup></mrow><mo>+</mo><msubsup><mi>𝐛</mi><mi>w</mi><mn>2</mn></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p">Parameters of this layer include: a bias vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="\mathbf{b}_{w}^{2}\in{\mathbb{R}^{H}}" display="inline"><mrow><msubsup><mi>𝐛</mi><mi>w</mi><mn>2</mn></msubsup><mo>∈</mo><msup><mi>ℝ</mi><mi>H</mi></msup></mrow></math> and a weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="\mathbf{M}_{w}^{2}\in\mathbb{R}^{H\times{n{D}}}" display="inline"><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>2</mn></msubsup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mi>H</mi><mo>×</mo><mi>n</mi></mrow><mo>⁢</mo><mi>D</mi></mrow></msup></mrow></math>.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">The web-feature module enables us to explore the learned WRRBM in various ways.
+First, it allows us to investigate knowledge from the WRRBM incrementally.
+We can choose to use only the <span class="ltx_text ltx_font_italic">word</span> representations of the learned WRRBM.
+This can be achieved by initializing only the first layer of the web module with the projection matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="\mathbf{D}" display="inline"><mi>𝐃</mi></math> of the learned WRRBM:</p>
+<table id="S3.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E10.m1" class="ltx_Math" alttext="\mathbf{M}_{w}^{1}\leftarrow\mathbf{D}." display="block"><mrow><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>1</mn></msubsup><mo>←</mo><mi>𝐃</mi></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">Alternatively, we can choose to use the hidden states of the WRRBM, which can be treated as the representations of the input <span class="ltx_text ltx_font_italic">n-gram</span>.
+This can be achieved by <span class="ltx_text ltx_font_italic">also</span> initializing the parameters of the second layer of the web-feature module using the position-dependent weight matrix and hidden bias of the learned WRRBM:</p>
+<table id="S3.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E11.m1" class="ltx_Math" alttext="\mathbf{b}_{w}^{2}\leftarrow\mathbf{c}" display="block"><mrow><msubsup><mi>𝐛</mi><mi>w</mi><mn>2</mn></msubsup><mo>←</mo><mi>𝐜</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<table id="S3.E12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E12.m1" class="ltx_Math" alttext="\mathbf{M}_{w}^{2}\leftarrow{(\mathbf{W}^{(1)},\dots,\mathbf{W}^{(n)})}" display="block"><mrow><msubsup><mi>𝐌</mi><mi>w</mi><mn>2</mn></msubsup><mo>←</mo><mrow><mo>(</mo><mrow><msup><mi>𝐖</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">Second, the web-feature module also allows us to make a comparison between whether or not to further adjust the pre-trained representation in the supervised fine-tuning phase, which corresponds to the supervised learning strategies of <cite class="ltx_cite">Turian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">2010</a>)</cite> and <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>, respectively.
+To our knowledge, no investigations have been presented in the literature on this issue.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>The Sparse-Feature Module</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The sparse-feature module, as shown in the lower right part of Figure 1, is designed to incorporate commonly-used tagging features.
+The input for this module is a vector of boolean values <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\Phi(x)=(f_{1}(x),\dots,f_{k}(x))" display="inline"><mrow><mrow><mi mathvariant="normal">Φ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mi>f</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> denotes the partially tagged input sentence and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="f_{i}(x)" display="inline"><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> denotes a feature function, which returns 1 if the corresponding feature fires and 0 otherwise.
+The first layer of this module is a linear transformation layer, which converts the high dimensional sparse vector into a fixed-dimensional real value vector:</p>
+<table id="S3.E13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E13.m1" class="ltx_Math" alttext="\mathbf{o}_{s}=\mathbf{M}_{s}\Phi(x)+\mathbf{b}_{s}" display="block"><mrow><msub><mi>𝐨</mi><mi>s</mi></msub><mo>=</mo><mrow><mrow><msub><mi>𝐌</mi><mi>s</mi></msub><mo>⁢</mo><mi mathvariant="normal">Φ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>+</mo><msub><mi>𝐛</mi><mi>s</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+</table>
+<p class="ltx_p">Depending on the specific task being considered, the output of this layer can be further fed to other non-linear layers, such as a sigmoid or hyperbolic tangent layer, to model more complex relations.
+For POS tagging, we found that a simple linear layer yields satisfactory accuracies.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">The web-feature and sparse-feature modules are combined by a linear output layer, as shown in the upper part of Figure 1.
+The value of each unit in this layer denotes the score of the corresponding POS tag.</p>
+<table id="S3.E14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E14.m1" class="ltx_Math" alttext="\mathbf{o}_{o}=\mathbf{M}_{o}\begin{pmatrix}\mathbf{o}_{w}\\&#10;\mathbf{o}_{s}\\&#10;\end{pmatrix}+\mathbf{b}_{o}" display="block"><mrow><msub><mi>𝐨</mi><mi>o</mi></msub><mo>=</mo><mrow><mrow><msub><mi>𝐌</mi><mi>o</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msub><mi>𝐨</mi><mi>w</mi></msub></mtd></mtr><mtr><mtd columnalign="center"><msub><mi>𝐨</mi><mi>s</mi></msub></mtd></mtr></mtable><mo>)</mo></mrow></mrow><mo>+</mo><msub><mi>𝐛</mi><mi>o</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+<p class="ltx_p">In some circumstances, probability distribution over POS tags might be a more preferable form of output.
+Such distribution can be easily obtained by adding a soft-max layer on top of the output layer to perform a local normalization, as done by <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_caption">Easy-first POS tagging</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> a sentence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="w_{1},\ldots,w_{m}" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>m</mi></msub></mrow></math>
+<span class="ltx_ERROR undefined">\ENSURE</span>tag sequence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="\mathbf{U}\leftarrow[w_{1},\ldots,w_{m}]\quad" display="inline"><mrow><mi>𝐔</mi><mo>←</mo><mrow><mo>[</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>m</mi></msub></mrow><mo>]</mo></mrow></mrow></math> // untagged words
+<span class="ltx_ERROR undefined">\WHILE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="\mathbf{U}\neq[]" display="inline"><mrow><mi>𝐔</mi><mo>≠</mo><mrow><mo>[</mo><mrow/><mo>]</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m7" class="ltx_Math" alttext="(\hat{w},\hat{t})\leftarrow\arg\max_{(w,t)\in\mathbf{U}\times{\mathbf{T}}}S(w,t)" display="inline"><mrow><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow><mo>←</mo><mrow><mi>arg</mi><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mrow><mi>𝐔</mi><mo>×</mo><mi>𝐓</mi></mrow></mrow></msub><mo>⁡</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m8" class="ltx_Math" alttext="\hat{w}.t\leftarrow\hat{t}" display="inline"><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo separator="true">.</mo><mrow><mi>t</mi><mo>←</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow></mrow></math></p>
+</div><span class="ltx_ERROR undefined">\STATE</span>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="\mathbf{U}\leftarrow\mathbf{U}/[\hat{w}]\quad\quad" display="inline"><mrow><mi>𝐔</mi><mo>←</mo><mrow><mi>𝐔</mi><mo>/</mo><mpadded width="+20pt"><mrow><mo>[</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow></mpadded></mrow></mrow></math> // remove <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="\hat{w}" display="inline"><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="\mathbf{U}" display="inline"><mi>𝐔</mi></math></p>
+</div><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\RETURN</span>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="[w_{1}.t,\ldots,w_{m}.t]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo separator="true">.</mo><mrow><mi>t</mi><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>m</mi></msub></mrow><mo separator="true">.</mo><mi>t</mi></mrow><mo>]</mo></mrow></math></p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Easy-first POS tagging with Neural Network</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The neural network proposed in Section 3 is used for POS disambiguation by the easy-first POS tagger.
+Parameters of the network are trained using guided learning, where learning and search interact with each other.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Easy-first POS tagging</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Pseudo-code of easy-first tagging is shown in Algorithm 1.
+Rather than tagging a sentence from left to right, easy-first tagging is based on a deterministic process, repeatedly selecting the <span class="ltx_text ltx_font_italic">easiest</span> word to tag.
+Here “easiness” is evaluated based on a statistical model.
+At each step, the algorithm adopts a scorer, the neural network in our case, to assign a score to each possible word-tag pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="(w,t)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math>, and then selects the highest score one <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="(\hat{w},\hat{t})" display="inline"><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></math> to tag (i.e., tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="\hat{w}" display="inline"><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="\hat{t}" display="inline"><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></math>).
+The algorithm repeats until all words are tagged.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Training</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The training algorithm repeats for several iterations over the training data, which is a set of sentences labelled with gold standard POS tags.
+In each iteration, the procedure shown in Algorithm 2 is applied to each sentence in the training set.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">At each step during the processing of a training example, the algorithm calculates a <span class="ltx_text ltx_font_italic">margin loss</span> based on two word-tag pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="(\overline{w},\overline{t})" display="inline"><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="(\hat{w},\hat{t})" display="inline"><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></math> (line 4 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\thicksim" display="inline"><mo>∼</mo></math> line 6).
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="(\overline{w},\overline{t})" display="inline"><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></math> denotes the word-tag pair that has the highest model score among those that are <span class="ltx_text ltx_font_italic">inconsistent</span> with the gold standard, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="(\hat{w},\hat{t})" display="inline"><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></math> denotes the one that has the highest model score among those that are <span class="ltx_text ltx_font_italic">consistent</span> with the gold standard.
+If the loss is zero, the algorithm continues to process the next untagged word.
+Otherwise, parameters are updated using back-propagation.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">The standard back-propagation algorithm <cite class="ltx_cite">[<a href="#bib.bib16" title="Neurocomputing: foundations of research" class="ltx_ref">22</a>]</cite> cannot be applied directly.
+This is because the standard loss is calculated based on a <span class="ltx_text ltx_font_italic">unique</span> input vector.
+This condition does not hold in our case, because <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\hat{w}" display="inline"><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\overline{w}" display="inline"><mover accent="true"><mi>w</mi><mo>¯</mo></mover></math> may refer to different words, which means that the margin loss in line 6 of Algorithm 2 is calculated based on two different input vectors, denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\langle\hat{w}\rangle" display="inline"><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>⟩</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="\langle\overline{w}\rangle" display="inline"><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>⟩</mo></mrow></math>, respectively.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We solve this problem by decomposing the margin loss in line 6 into two parts:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="1+nn(\overline{w},\overline{t})" display="inline"><mrow><mn>1</mn><mo>+</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math>, which is associated with <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="\langle\overline{w}\rangle" display="inline"><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>⟩</mo></mrow></math>;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="-nn(\hat{w},\hat{t})" display="inline"><mrow><mo>-</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math>, which is associated with <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="\langle\hat{w}\rangle" display="inline"><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>⟩</mo></mrow></math>.</p>
+</div></li>
+</ul>
+<p class="ltx_p">In this way, two separate back-propagation updates can be used to update the model’s parameters (line 8 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="\thicksim" display="inline"><mo>∼</mo></math> line 11).
+For the special case where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="\hat{w}" display="inline"><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="\overline{w}" display="inline"><mover accent="true"><mi>w</mi><mo>¯</mo></mover></math> do refer to the same word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, it can be easily verified that the two separate back-propagation updates equal to the standard back-propagation with a loss <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m5" class="ltx_Math" alttext="1+nn(w,\overline{t})-nn(w,\hat{t})" display="inline"><mrow><mn>1</mn><mo>+</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math> on the input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m6" class="ltx_Math" alttext="\langle w\rangle" display="inline"><mrow><mo>⟨</mo><mi>w</mi><mo>⟩</mo></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">The algorithm proposed here belongs to a general framework named <span class="ltx_text ltx_font_italic">guided learning</span>, where search and learning interact with each other.
+The algorithm learns not only a local classifier, but also the inference order.
+While previous work <cite class="ltx_cite">[<a href="#bib.bib3" title="Guided learning for bidirectional sequence classification" class="ltx_ref">23</a>, <a href="#bib.bib18" title="Syntax-based grammaticality improvement using ccg and guided search" class="ltx_ref">29</a>, <a href="#bib.bib17" title="An efficient algorithm for easy-first non-directional dependency parsing" class="ltx_ref">9</a>]</cite>
+apply guided learning to train a linear classifier by using variants of the perceptron algorithm, we are the first to combine guided learning with a neural network, by using a margin loss and a modified back-propagation algorithm.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_caption">Training over one sentence</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="(x,t)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></math> a tagged sentence, neural net <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="nn" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow></math>
+<span class="ltx_ERROR undefined">\ENSURE</span>updated neural net <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m3" class="ltx_Math" alttext="nn^{\prime}" display="inline"><mrow><mi>n</mi><mo>⁢</mo><msup><mi>n</mi><mo>′</mo></msup></mrow></math></p>
+</div><span class="ltx_ERROR undefined">\STATE</span>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m1" class="ltx_Math" alttext="\mathbf{U}\leftarrow[w_{1},\ldots,w_{m}]" display="inline"><mrow><mi>𝐔</mi><mo>←</mo><mrow><mo>[</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>m</mi></msub></mrow><mo>]</mo></mrow></mrow></math>   // untagged words
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m2" class="ltx_Math" alttext="\mathbf{R}\leftarrow[(w_{1},t_{1}),\ldots,(w_{m},t_{m})]" display="inline"><mrow><mi>𝐑</mi><mo>←</mo><mrow><mo>[</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>m</mi></msub><mo>,</mo><msub><mi>t</mi><mi>m</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></math> // reference</p>
+</div><span class="ltx_ERROR undefined">\WHILE</span>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m1" class="ltx_Math" alttext="\mathbf{U}\neq[]" display="inline"><mrow><mi>𝐔</mi><mo>≠</mo><mrow><mo>[</mo><mrow/><mo>]</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m2" class="ltx_Math" alttext="(\overline{w},\overline{t})\leftarrow\arg\max_{(w,t)\in(\mathbf{U}\times{%&#10;\mathbf{T}}/\mathbf{R})}nn(w,t)" display="inline"><mrow><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow><mo>←</mo><mrow><mi>arg</mi><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mrow><mo>(</mo><mrow><mrow><mi>𝐔</mi><mo>×</mo><mi>𝐓</mi></mrow><mo>/</mo><mi>𝐑</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>⁡</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m3" class="ltx_Math" alttext="(\hat{w},\hat{t})\leftarrow\arg\max_{(w,t)\in\mathbf{R}}nn(w,t)" display="inline"><mrow><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow><mo>←</mo><mrow><mi>arg</mi><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>𝐑</mi></mrow></msub><mo>⁡</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></p>
+</div><span class="ltx_ERROR undefined">\STATE</span>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m1" class="ltx_Math" alttext="loss\leftarrow\max(0,1+nn(\overline{w},\overline{t})-nn(\hat{w},\hat{t}))" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow><mo>←</mo><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>+</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m2" class="ltx_Math" alttext="loss&gt;0" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m3" class="ltx_Math" alttext="\hat{e}\leftarrow nn.\textrm{BackPropErr}(\langle\hat{w}\rangle,-nn(\hat{w},%&#10;\hat{t}))" display="inline"><mrow><mrow><mover accent="true"><mi>e</mi><mo stretchy="false">^</mo></mover><mo>←</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow></mrow><mo separator="true">.</mo><mrow><mtext>BackPropErr</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>-</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m4" class="ltx_Math" alttext="\overline{e}\leftarrow nn.\textrm{BackPropErr}(\langle\overline{w}\rangle,1+nn%&#10;(\overline{w},\overline{t}))" display="inline"><mrow><mrow><mover accent="true"><mi>e</mi><mo>¯</mo></mover><mo>←</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow></mrow><mo separator="true">.</mo><mrow><mtext>BackPropErr</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>⟩</mo></mrow><mo>,</mo><mrow><mn>1</mn><mo>+</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m5" class="ltx_Math" alttext="nn.\textrm{Update}(\langle\hat{w}\rangle,\hat{e})" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow><mo separator="true">.</mo><mrow><mtext>Update</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>⟩</mo></mrow><mo>,</mo><mover accent="true"><mi>e</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m6" class="ltx_Math" alttext="nn.\textrm{Update}(\langle\overline{w}\rangle,\overline{e})" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow><mo separator="true">.</mo><mrow><mtext>Update</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mover accent="true"><mi>w</mi><mo>¯</mo></mover><mo>⟩</mo></mrow><mo>,</mo><mover accent="true"><mi>e</mi><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ELSE</span><span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m7" class="ltx_Math" alttext="\mathbf{U}\leftarrow\mathbf{U}/\{\hat{w}\},\quad\mathbf{R}\leftarrow\mathbf{R}%&#10;/(\hat{w},\hat{t})" display="inline"><mrow><mrow><mi>𝐔</mi><mo>←</mo><mrow><mi>𝐔</mi><mo>/</mo><mrow><mo>{</mo><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>}</mo></mrow></mrow></mrow><mo separator="true">, </mo><mrow><mi>𝐑</mi><mo>←</mo><mrow><mi>𝐑</mi><mo>/</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>w</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m8" class="ltx_Math" alttext="nn" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow></math></p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Training set</span></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Dev set</span></th>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">Test set</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">WSJ-Train</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Emails</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Weblogs</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">WSJ-dev</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Answers</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Newsgroups</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Reviews</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">WSJ-test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">#Sen</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30060</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">2,450</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,016</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1,336</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,744</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,195</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,906</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,640</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">#Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">731,678</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29,131</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">24,025</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">32,092</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">28,823</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">20,651</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">28,086</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35,590</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">#Types</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">35,933</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">5,478</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">4,747</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">5,889</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">4,370</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">4,924</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">4,797</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">6,685</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of the labelled data. #Sen denotes number of sentences. #Words and #Types denote number of words and unique word types, respectively.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Emails</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Weblogs</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Answers</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Newsgroups</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Reviews</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">#Sen</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,194,173</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">524,834</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">27,274</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,000,000</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1,965,350</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">#Words</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">17,047,731</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">10,365,284</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">424,299</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">18,424,657</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29,289,169</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">#Types</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">221,576</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">166,515</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">33,325</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">357,090</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">287,575</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Statistics of the raw unlabelled data.</div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">features</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">templates</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">unigram</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="H(w_{i}),\quad C(w_{i}),\quad L(w_{i}),\quad L(w_{i-1}),\quad L(w_{i+1}),\quad&#10;t%&#10;_{i-2},\quad t_{i-1},\quad t_{i+1},\quad t_{i+2}" display="inline"><mrow><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo separator="true">, </mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo separator="true">, </mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo separator="true">, </mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">bigram</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="L(w_{i})\odot L(w_{i-1}),\quad L(w_{i})\odot L(w_{i+1}),\quad t_{i-2}\odot t_{%&#10;i-1},\quad t_{i-1}\odot t_{i+1},\quad t_{i+1}\odot t_{i+2}," display="inline"><mrow><mrow><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><mi>L</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><mi>L</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow></mrow><mo>,</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="L(w_{i})\odot t_{i-2},\quad L(w_{i})\odot t_{i-1},\quad L(w_{i})\odot t_{i+1},%&#10;\quad L(w_{i})\odot t_{i+2}" display="inline"><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">trigram</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="L(w_{i})\odot t_{i-2}\odot t_{i-1},\quad L(w_{i})\odot t_{i-1}\odot t_{i+1},%&#10;\quad L(w_{i})\odot t_{i+1}\odot t_{i+2}" display="inline"><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo separator="true">, </mo><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>⊙</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Feature templates, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m11" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> denotes the current word. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m12" class="ltx_Math" alttext="H(w)" display="inline"><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m13" class="ltx_Math" alttext="C(w)" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> indicates whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m14" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> contains hyphen and upper case letters, respectively. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m15" class="ltx_Math" alttext="L(w)" display="inline"><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> denotes a lowercased <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m16" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Setup</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our experiments are conducted on the data set provided by the SANCL 2012 shared task, which aims at building a single robust syntactic analysis system across the web-domain.
+The data set consists of labelled data for both the source (Wall Street Journal portion of the Penn Treebank) and target (web) domains.
+The web domain data can be further classified into five sub-domains, including emails, weblogs, business reviews, news groups and Yahoo!Answers.
+While emails and weblogs are used as the development sets, reviews, news groups and Yahoo!Answers are used as the final test sets.
+Participants are not allowed to use web-domain labelled data for training.
+In addition to labelled data, a large amount of unlabelled data on the web domain is also provided.
+Statistics about labelled and unlabelled data are summarized in Table 1 and Table 2, respectively.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">The raw web domain data contains much noise, including spelling error, emotions and inconsistent capitalization.
+Following some participants <cite class="ltx_cite">[<a href="#bib.bib19" title="DCU-Paris13 Systems for the SANCL 2012 Shared Task" class="ltx_ref">12</a>]</cite>, we conduct simple preprocessing steps to the input of the development and the test sets<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The preprocessing steps make use of no POS knowledge, and does not bring any unfair advantages to the participants.</span></span></span></p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Neutral quotes are transformed to opening or closing quotes.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Tokens starting with “www.”, “http.” or ending with “.org”, “.com” are converted to a “#URL” symbol</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Repeated punctuations such as “!!!!” are collapsed into one.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Left brackets such as “<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>”,“{” and “[” are converted to “-LRB-”. Similarly, right brackets are converted to “-RRB-”</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">Upper cased words that contain more than 4 letters are lowercased.</p>
+</div></li>
+<li id="I2.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i6.p1" class="ltx_para">
+<p class="ltx_p">Consecutive occurrences of one or more digits within a word are replaced with “#DIG”</p>
+</div></li>
+</ul>
+<p class="ltx_p">We apply the same preprocessing steps to all the unlabelled data.
+In addition, following <cite class="ltx_cite">Dahl<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Training restricted boltzmann machines on word observations" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Turian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">2010</a>)</cite>, we also lowercased all the unlabelled data and removed those sentences that contain less than 90% a-z letters.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">The tagging performance is evaluated according to the official evaluation metrics of SANCL 2012.
+The tagging accuracy is defined as the percentage of words (punctuations included) that are correctly tagged.
+The averaged accuracies are calculated across the web domain data.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">We trained the WRRBM on web-domain data of different sizes (number of sentences).
+The data sets are generated by first concatenating all the cleaned unlabelled data, then selecting sentences evenly across the concatenated file.</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">For each data set, we investigate an extensive set of combinations of hyper-parameters:
+the n-gram window <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m1" class="ltx_Math" alttext="(l,r)" display="inline"><mrow><mo>(</mo><mrow><mi>l</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m2" class="ltx_Math" alttext="\{(1,1),(2,1),(1,2),(2,2)\}" display="inline"><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mn>2</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mn>2</mn><mo>,</mo><mn>2</mn></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></math>;
+the hidden layer size in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m3" class="ltx_Math" alttext="\{200,300,400\}" display="inline"><mrow><mo>{</mo><mrow><mn>200</mn><mo>,</mo><mn>300</mn><mo>,</mo><mn>400</mn></mrow><mo>}</mo></mrow></math>;
+the learning rate in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m4" class="ltx_Math" alttext="\{0.1,0.01,0.001\}" display="inline"><mrow><mo>{</mo><mrow><mn>0.1</mn><mo>,</mo><mn>0.01</mn><mo>,</mo><mn>0.001</mn></mrow><mo>}</mo></mrow></math>.
+All these parameters are selected according to the averaged accuracy on the development set.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Baseline</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We reimplemented the greedy easy-first POS tagger of Ma et al. (2013), which is used for all the experiments.
+While the tagger of Ma et al. (2013) utilizes a linear scorer, our tagger adopts the neural network as its scorer.
+The neural network of our baseline tagger only contains the sparse-feature module.
+We use this baseline to examine the performance of a tagger trained purely on the source domain.
+Feature templates are shown in Table 3, which are based on those of Ratnaparkhi (1996) and Shen et al. (2007).</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Accuracies of the baseline tagger are shown in the upper part of Table 6.
+Compared with the performance of the official baseline (row 4 of Table 6), which is evaluated based on the output of BerkeleyParser <cite class="ltx_cite">[<a href="#bib.bib34" title="Learning accurate, compact, and interpretable tree annotation" class="ltx_ref">16</a>, <a href="#bib.bib33" title="Improved inference for unlexicalized parsing" class="ltx_ref">17</a>]</cite>, our baseline tagger achieves comparable accuracies on both the source and target domain data.
+With data preprocessing, the average accuracy boosts to about 92.02 on the test set of the target domain.
+This is consistent with previous work (Le Roux et al., 2011), which found that for noisy data such as web domain text, data cleaning is a effective and necessary step.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Exploring the Learned Knowledge</h3>
+
+<div id="S5.F2" class="ltx_figure"><img src="" id="S5.F2.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Tagging accuracies on the source-domain data. “word” and “ngram” denote using word representations and n-gram representations, respectively. “fixed” and “adjust” denote that the learned representation are kept unchanged or further adjusted in supervised learning, respectively.</div>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="" id="S5.F3.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Accuracies on the email domain.</div>
+</div>
+<div id="S5.F4" class="ltx_figure"><img src="" id="S5.F4.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Accuracies on the weblog domain.</div>
+</div>
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">As mentioned in Section 3.1, the knowledge learned from the WRRBM can be investigated incrementally,
+using <span class="ltx_text ltx_font_italic">word representation</span>, which corresponds to initializing only the projection layer of web-feature module with the projection matrix of the learned WRRBM,
+or <span class="ltx_text ltx_font_italic">ngram-level representation</span>, which corresponds to initializing both the projection and sigmoid layers of the web-feature module by the learned WRRBM.
+In each case, there can be two different <span class="ltx_text ltx_font_bold">training strategies</span> depending on whether the learned representations are further adjusted or kept unchanged during the fine-turning phrase.
+Experimental results under the 4 combined settings on the development sets are illustrated in Figure 2, 3 and 4, where the x-axis denotes the size of the training data and y-axis denotes tagging accuracy.</p>
+</div>
+<div id="S5.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.3.1 </span>Effect of the Training Strategy</h4>
+
+<div id="S5.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">From Figure 2 we can see that when knowledge from the pre-trained WRRBM is incorporated, both the <span class="ltx_text ltx_font_bold">training strategies</span> (“word-fixed” vs “word-adjusted”, “ngram-fixed” vs “ngram-adjusted”) improve accuracies on the source domain, which is consistent with previous findings (Turian et al., 2010; Collobert et al., 2011).
+In addition, adjusting the learned representation or keeping them fixed does not result in too much difference in tagging accuracies.</p>
+</div>
+<div id="S5.SS3.SSS1.p2" class="ltx_para">
+<p class="ltx_p">On the web-domain data, shown in Figure 3 and 4, we found that leaving the learned representation unchanged (“word-fixed”, “ngram-fixed”) yields consistently higher performance gains.
+This result is to some degree expected.
+Intuitively, unsupervised pre-training moves the parameters of the WRRBM towards the region where properties of the <span class="ltx_text ltx_font_italic">web domain</span> data are properly modelled.
+However, since fine-tuning is conducted with respect to the <span class="ltx_text ltx_font_italic">source domain</span>, adjusting the parameters of the pre-trained representation towards optimizing source domain tagging accuracies would disrupt its ability in modelling the web domain data.
+Therefore, a better idea is to keep the representation unchanged so that we can learn a function that maps the general web-text properties to its syntactic categories.</p>
+</div>
+</div>
+<div id="S5.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.3.2 </span>Word and N-gram Representation</h4>
+
+<div id="S5.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">From Figures 2, 3 and 4, we can see that adopting the ngram-level representation consistently achieves better performance compared with using word representations only (“word-fixed” vs “ngram-fixed”, “word-adjusted” vs “ngram-adjusted”).
+This result illustrates that the ngram-level knowledge captures more complex interactions of the web text, which cannot be recovered by using only word embeddings.
+Similar result was reported by Dahl et al. (2012), who found that using both the word embeddings and the hidden units of a tri-gram WRRBM as additional features for a CRF chunker yields larger improvements than using word embeddings only.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">method</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">all</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">non-oov</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">oov</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">baseline</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.81</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">92.42</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">65.64</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">word-adjust</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.09</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math><span class="ltx_text ltx_font_small">0.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">1.38</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">word-fix</span></th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.11</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m5" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.13</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m6" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">1.73</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">ngram-adjust</span></th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.53</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.52</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m9" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.53</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">ngram-fix</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m10" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.69</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m11" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m12" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">2.30</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Performance on the email domain.</div>
+</div>
+<div id="S5.SS3.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Finally, more detailed accuracies under the 4 settings on the email domain are shown in Table 4.
+We can see that the improvement of using word representations mainly comes from better accuracy of out-of-vocabulary (oov) words.
+By contrast, using n-gram representations improves the performance on both oov and non-oov.</p>
+</div>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Effect of Unlabelled Domain Data</h3>
+
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">RBM-E</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">RBM-W</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">RBM-M</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m1" class="ltx_Math" alttext="+\textrm{acc}\%" display="inline"><mrow><mo mathsize="normal" stretchy="false">+</mo><mrow><mtext mathsize="small" stretchy="false">acc</mtext><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">%</mi></mrow></mrow></math></span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Emails</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m3" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.37</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m4" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.69</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Weblog</span></th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m5" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.31</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m6" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.52</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math><span class="ltx_text ltx_font_small">0.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m8" class="ltx_Math" alttext="\textrm{cov}\%" display="inline"><mrow><mtext mathsize="small" stretchy="false">cov</mtext><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">%</mi></mrow></math></span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Emails</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">95.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">92.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">93.88</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Weblog</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">90.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">97.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">94.77</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Effect of unlabelled data. “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m10" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>acc” denotes improvement in tagging accuracy and “cov” denotes the lexicon coverages.</div>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">System</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Answer</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Newsgroup</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Review</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">WSJ-t</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Avg</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">baseline-raw</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">91.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.96</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">97.09</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.31</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">baseline-clean</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.35</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.92</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">97.09</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.02</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">best-clean</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">92.50</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">93.83</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">93.64</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">97.44</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">93.27</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">baseline-offical</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">90.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">91.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">89.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">97.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">90.26</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Le Roux et al.(2011)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.81</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.11</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">97.29</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.90</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Tang et al. (2012)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">91.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">92.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">91.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">97.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">92.20</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>Main results. “baseline-raw” and “baseline-clean” denote performance of our baseline tagger on the raw and cleaned data, respectively. “best-clean” is best performance achieved using a 4-gram WRRBM. The lower part shows accuracies of the official baseline and that of the top 2 participants.</div>
+</div>
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">In some circumstances, we may know beforehand that the target domain data belongs to a certain sub-domain, such as the email domain.
+In such cases, it might be desirable to train WRRBM using data only on that domain.
+We conduct experiments to test whether using the target domain data to train the WRRBM yields better performance compared with using mixed data from all sub-domains.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">We trained 3 WRRBMs using the email domain data (RBM-E), weblog domain data (RBM-W) and mixed domain data (RBM-M), respectively, with each data set consisting of 300k sentences.
+Tagging performance and lexicon coverages of each data set on the development sets are shown in Table 5.
+We can see that using the target domain data achieves similar improvements compared with using the mixed data.
+However, for the email domain, RBM-W yields much smaller improvement compared with RBM-E, and vice versa.
+From the lexicon coverages, we can see that the sub-domains varies significantly.
+The results suggest that using mixed data can achieve almost as good performance as using the target sub-domain data, while using mixed data yields a much more robust tagger across all sub-domains.</p>
+</div>
+</div>
+<div id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.5 </span>Final Results</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p class="ltx_p">The best result achieved by using a 4-gram WRRBM, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m1" class="ltx_Math" alttext="(w_{i-2},\ldots,w_{i+1})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>)</mo></mrow></math>, with 300 hidden units learned on 1,000k web domain sentences are shown in row 3 of Table 6.
+Performance of the top 2 systems of the SANCL 2012 task are also shown in Table 6.
+Our greedy tagger achieves <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m2" class="ltx_Math" alttext="93.27\%" display="inline"><mrow><mn>93.27</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> tagging accuracy, which is significantly better than the baseline’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m3" class="ltx_Math" alttext="92.02\%" display="inline"><mrow><mn>92.02</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> accuracy (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m4" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math> by McNemar’s test).
+Moreover, we achieve the highest tagging accuracy reported so far on this data set, surpassing those achieved using parser combinations based on self-training <cite class="ltx_cite">[<a href="#bib.bib20" title="Varderlibt’s systems for sancl2012 shared task" class="ltx_ref">24</a>, <a href="#bib.bib19" title="DCU-Paris13 Systems for the SANCL 2012 Shared Task" class="ltx_ref">12</a>]</cite>.
+In addition, different from <cite class="ltx_cite">Le Roux<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="DCU-Paris13 Systems for the SANCL 2012 Shared Task" class="ltx_ref">2012</a>)</cite>, we do not use any external resources in data cleaning.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Learning representations has been intensively studied in computer vision tasks <cite class="ltx_cite">[<a href="#bib.bib13" title="Greedy layer-wise training of deep networks" class="ltx_ref">2</a>, <a href="#bib.bib14" title="Convolutional deep belief networks for scalable unsupervised learning of hierarchical representations" class="ltx_ref">13</a>]</cite>.
+In NLP, there is also much work along this line.
+In particular, <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Turian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">2010</a>)</cite> learn word embeddings to improve the performance of in-domain POS tagging, named entity recognition, chunking and semantic role labelling.
+<cite class="ltx_cite">Yang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib21" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">2013</a>)</cite> induce bi-lingual word embeddings for word alignment.
+<cite class="ltx_cite">Zheng<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">2013</a>)</cite> investigate Chinese character embeddings for joint word segmentation and POS tagging.
+While those approaches mainly explore token-level representations (word or character embeddings), using WRRBM is able to utilize both word and n-gram representations.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Titov (<a href="#bib.bib22" title="Domain adaptation by constraining inter-domain variability of latent feature representation" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Glorot<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">2011</a>)</cite> propose to learn representations from the mixture of both source and target domain unlabelled data to improve cross-domain sentiment classification.
+<cite class="ltx_cite">Titov (<a href="#bib.bib22" title="Domain adaptation by constraining inter-domain variability of latent feature representation" class="ltx_ref">2011</a>)</cite> also propose a regularizer to constrain the inter-domain variability.
+In particular, their regularizer aims to minimize the Kullback-Leibler (KL) distance between the marginal distributions of the learned representations on the source and target domains.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Their work differs from ours in that their approaches learn representations from the feature vectors for sentiment classification, which might be of thousands of dimensions.
+Such high dimensional input gives rise to high computational cost and it is not clear whether those approaches can be applied to large scale unlabelled data, with hundreds of millions of training examples.
+Our method learns representations from only word n-grams with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> ranging from 3 to 5, which can be easily applied to large scale-data.
+In addition, while <cite class="ltx_cite">Titov (<a href="#bib.bib22" title="Domain adaptation by constraining inter-domain variability of latent feature representation" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Glorot<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">2011</a>)</cite> use the learned representation to improve cross-domain classification tasks, we are the first to apply it to cross-domain structured prediction.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Blitzer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Domain adaptation with structural correspondence learning" class="ltx_ref">2006</a>)</cite> propose to induce shared representations for domain adaptation, which is based on the alternating structure optimization (ASO) method of <cite class="ltx_cite">Ando and Zhang (<a href="#bib.bib25" title="A high-performance semi-supervised learning method for text chunking" class="ltx_ref">2005</a>)</cite>.
+The idea is to project the original feature representations into low dimensional representations, which yields a high-accuracy classifier on the target domain.
+The new representations are induced based on the auxiliary tasks defined on unlabelled data together with a dimensionality reduction technique.
+Such auxiliary tasks can be specific to the supervised task.
+As pointed out by <cite class="ltx_cite">Plank (<a href="#bib.bib26" title="Structural correspondence learning for parse disambiguation." class="ltx_ref">2009</a>)</cite>, for many NLP tasks, defining the auxiliary tasks is a non-trivial engineering problem.
+Compared with <cite class="ltx_cite">Blitzer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Domain adaptation with structural correspondence learning" class="ltx_ref">2006</a>)</cite>, the advantage of using RBMs is that it learns representations in a pure unsupervised manner, which is much simpler.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">Regarding using neural networks for sequential labelling, our approach shares similarity with that of <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>.
+In particular, we both use a non-linear layer to model complex relations underling word embeddings.
+However, our network differs from theirs in the following aspects.
+<cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite> model the dependency between neighbouring tags in a generative manner, by employing a transition score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m1" class="ltx_Math" alttext="A_{ij}" display="inline"><msub><mi>A</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math>.
+Training the score involves a forward process of complexity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m2" class="ltx_Math" alttext="O(nT^{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><msup><mi>T</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> denotes the number of tags.
+Our model captures such a dependency in a discriminative manner, by just adding tag-related features to the sparse-feature module.
+In addition, <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite> train their network by maximizing the training set likelihood, while our approach is to minimize the margin loss using guided learning.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We built a web-domain POS tagger using a two-phase approach.
+We used a WRRBM to learn the representation of the web text and incorporate the representation in a neural network, which is trained using guided learning for easy-first POS tagging.
+Experiment showed that our approach achieved significant improvement in tagging the web domain text.
+In addition, we found that keeping the learned representations unchanged yields better performance compared with further optimizing them on the source domain data.
+We release our tools at https://github.com/majineu/TWeb.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">For future work, we would like to investigate the two-phase approach to more challenging tasks, such as web domain syntactic parsing.
+We believe that high-accuracy web domain taggers and parsers would benefit a wide range of downstream tasks such as machine translation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank Hugo Larochelle for his advices on re-implementing WRRBM. We also thank Nan Yang, Shujie Liu and Tong Xiao for the fruitful discussions, and three anonymous reviewers for their insightful suggestions. This research was supported by the National Science Foundation of China (61272376; 61300097), the research grant T2MOE1301 from Singapore Ministry of Education (MOE) and the start-up grant SRG ISTD2012038 from SUTD.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Ando and T. Zhang</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A high-performance semi-supervised learning method for text chunking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P05-1001" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1219840.1219841" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, P. Lamblin, D. Popovici and H. Larochelle</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Greedy layer-wise training of deep networks</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">B. Schölkopf, J. Platt and T. Hoffman (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 19</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 153–160</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p5" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning deep architectures for AI</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations and Trends in Machine Learning</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–127</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Also published as a book. Now Publishers, 2009.</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1561/2200000006" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer, R. McDonald and F. Pereira</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation with structural correspondence learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 120–128</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W06/W06-1615" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’02</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p6" title="3.1 The Web-Feature Module ‣ 3 Neural Network for POS Disambiguation ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 The Sparse-Feature Module ‣ 3 Neural Network for POS Disambiguation ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p5" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Dahl, R. P. Adams and H. Larochelle</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training restricted boltzmann machines on word observations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’12</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 679–686</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1285-1</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p4" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Setup ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation for large-scale sentiment classification: a deep learning approach</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 513–520</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p2" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and M. Elhadad</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient algorithm for easy-first non-directional dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 742–750</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-932432-65-5</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1857999.1858114" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p5" title="4.2 Training ‣ 4 Easy-first POS tagging with Neural Network ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton, S. Osindero and Y. Teh</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A fast learning algorithm for deep belief nets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Comput.</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">7</span>), <span class="ltx_text ltx_bib_pages"> pp. 1527–1554</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0899-7667</span>,
+<a href="http://dx.doi.org/10.1162/neco.2006.18.7.1527" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/neco.2006.18.7.1527" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p5" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.p1" title="2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2002-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training products of experts by minimizing contrastive divergence</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Comput.</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">8</span>), <span class="ltx_text ltx_bib_pages"> pp. 1771–1800</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0899-7667</span>,
+<a href="http://dx.doi.org/10.1162/089976602760128018" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/089976602760128018" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p3" title="2.1 Restricted Boltzmann Machine ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Le Roux, J. Foster, J. Wagner, R. S. Z. Kaljahi and A. Bryl</span><span class="ltx_text ltx_bib_year">(2012-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DCU-Paris13 Systems for the SANCL 2012 Shared Task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–4</span> (<span class="ltx_text ltx_bib_language">Anglais</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://hal.archives-ouvertes.fr/hal-00728188" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p2" title="5.1 Setup ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS5.p1" title="5.5 Final Results ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lee, R. Grosse, R. Ranganath and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Convolutional deep belief networks for scalable unsupervised learning of hierarchical representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 609–616</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p5" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lee, P. Pham, Y. Largman and A. Ng</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised feature learning for audio classification using convolutional deep belief networks</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">Y. Bengio, D. Schuurmans, J. Lafferty, C. K. I. Williams and A. Culotta (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 22</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1096–1104</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ma, J. Zhu, T. Xiao and N. Yang</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Easy-first pos tagging and dependency parsing with beam search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 110–114</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2020" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov, L. Barrett, R. Thibaux and D. Klein</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning accurate, compact, and interpretable tree annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 433–440</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P06/P06-1055" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Baseline ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2007-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved inference for unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Rochester, New York</span>, <span class="ltx_text ltx_bib_pages"> pp. 404–411</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N07/N07-1051" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Baseline ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and R. McDonald</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the 2012 shared task on parsing the web</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Notes of the First Workshop on Syntactic Analysis of Non-Canonical Language (SANCL)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Plank</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structural correspondence learning for parse disambiguation.</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 37–45</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dblp.uni-trier.de/db/conf/eacl/eacl2009.html#Plank09" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ranzato, C. Poultney, S. Chopra and Y. LeCun</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient learning of sparse representations with an energy-based model</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">B. Schölkopf, J. Platt and T. Hoffman (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 19</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1137–1144</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ratnaparkhi</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A maximum entropy model for part-of-speech tagging</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.p1" title="3 Neural Network for POS Disambiguation ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. E. Rumelhart, G. E. Hinton and R. J. Williams</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Neurocomputing: foundations of research</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. A. Anderson and E. Rosenfeld (Eds.)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 696–699</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-01097-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=65669.104451" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p3" title="4.2 Training ‣ 4 Easy-first POS tagging with Neural Network ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Shen, G. Satta and A. Joshi</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Guided learning for bidirectional sequence classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 760–767</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1096" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p5" title="4.2 Training ‣ 4 Easy-first POS tagging with Neural Network ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Tang, M. Jiang and H. Xu</span><span class="ltx_text ltx_bib_year">(2012-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Varderlibt’s systems for sancl2012 shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span> (<span class="ltx_text ltx_bib_language">Anglais</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS5.p1" title="5.5 Final Results ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Titov</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation by constraining inter-domain variability of latent feature representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 62–71</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-1007" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P10-1040" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p6" title="3.1 The Web-Feature Module ‣ 3 Neural Network for POS Disambiguation ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Setup ‣ 5 Experiments ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Wang and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effect of non-linear deep architecture in sequence labeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p5" title="2.2 Encoding Web Text with RBM ‣ 2 Learning from Web Text ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Yang, S. Liu, M. Li, M. Zhou and N. Yu</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word alignment modeling with context dependent deep neural network</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 166–175</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1017" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and S. Clark</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Syntax-based grammaticality improvement using ccg and guided search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland, UK.</span>, <span class="ltx_text ltx_bib_pages"> pp. 1147–1157</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D11-1106" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p5" title="4.2 Training ‣ 4 Easy-first POS tagging with Neural Network ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zheng, H. Chen and T. Xu</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep learning for Chinese word segmentation and POS tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 647–657</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1061" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Tagging The Web: Building A Robust Web Tagger with Neural Network" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:17:55 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

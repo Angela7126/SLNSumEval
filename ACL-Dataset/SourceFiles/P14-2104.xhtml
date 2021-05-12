@@ -1,0 +1,742 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Training a Korean SRL System with Rich Morphological Features</title>
+<!--Generated on Wed Jun 11 18:17:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Training a Korean SRL System with Rich Morphological Features</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Young-Bum Kim, Heemoon Chae, Benjamin Snyder and Yu-Seop Kim*
+<br class="ltx_break"/>University of Wisconsin-Madison, Hallym University*
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">ybkim, hmchae21, bsnyder</span>}<span class="ltx_text ltx_font_typewriter">@cs.wisc.edu, yskim01@hallym.ac.kr* </span> 
+<br class="ltx_break"/>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper we introduce a semantic role labeler for Korean, an agglutinative language with rich morphology. First, we create a novel training source by semantically annotating a Korean corpus containing fine-grained morphological and syntactic information. We then develop a supervised SRL model by leveraging morphological features of Korean that tend to correspond with semantic roles. Our model also employs a variety of latent morpheme representations induced from a larger body of unannotated Korean text. These elements lead to state-of-the-art performance of 81.07% labeled F1, representing the best SRL performance reported to date for an agglutinative language.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Semantic Role Labeling (SRL) is the task of automatically annotating the predicate-argument structure in a sentence with semantic roles. Ever since Gildea and Jurafsky <cite class="ltx_cite">[<a href="#bib.bib9" title="Automatic labeling of semantic roles" class="ltx_ref">9</a>]</cite>, SRL has become an important technology used in applications requiring semantic interpretation, ranging from information extraction <cite class="ltx_cite">[<a href="#bib.bib29" title="Question answering from structured knowledge sources" class="ltx_ref">8</a>]</cite> and question answering <cite class="ltx_cite">[<a href="#bib.bib26" title="Question answering based on semantic structures" class="ltx_ref">14</a>]</cite>, to practical problems including textual entailment <cite class="ltx_cite">[<a href="#bib.bib37" title="A semantic approach to textual entailment: system evaluation and task analysis" class="ltx_ref">4</a>]</cite> and pictorial communication systems <cite class="ltx_cite">[<a href="#bib.bib36" title="Easy as abc?: facilitating pictorial communication via semantically enhanced layout" class="ltx_ref">10</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">SRL systems in many languages have been developed as the necessary linguistic resources become available <cite class="ltx_cite">[<a href="#bib.bib46" title="AnCora: multilevel annotated corpora for catalan and spanish." class="ltx_ref">18</a>, <a href="#bib.bib47" title="Adding semantic roles to the chinese treebank" class="ltx_ref">20</a>, <a href="#bib.bib48" title="The prague dependency treebank" class="ltx_ref">5</a>, <a href="#bib.bib45" title="Construction of a japanese relevance-tagged corpus." class="ltx_ref">12</a>]</cite>. Seven languages were the subject of the CoNLL-2009 shared task in syntactic and semantic parsing <cite class="ltx_cite">[<a href="#bib.bib11" title="The conll-2009 shared task: syntactic and semantic dependencies in multiple languages" class="ltx_ref">11</a>]</cite>. These languages can be categorized into three broad morphological types: fusional (4), analytic (2), and one agglutinative language.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-2104/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="677" height="170" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>English (SVO) and Korean (SOV) words alignment. The subject, verb, and object are highlighted as red, blue, and green, respectively. Also, prepositions and suffixes are highlighted as purple.</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Björkelund et al. <cite class="ltx_cite">[<a href="#bib.bib16" title="Multilingual semantic role labeling" class="ltx_ref">2</a>]</cite> report an average labeled semantic F1-score of 80.80% across these languages. The highest performance was achieved for the analytic language group (82.12%), while the agglutinative language, Japanese, yielded the lowest performance (76.30%). Agglutinative languages such as Japanese, Korean, and Turkish are computationally difficult due to word-form sparsity, variable word order, and the challenge of using rich morphological features.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we describe a Korean SRL system which achieves 81% labeled semantic F1-score. As far as we know, this is the highest accuracy obtained for Korean, as well as any agglutinative language. Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> displays a English/Korean sentence pair, highlighting the SOV word order of Korean as well as its rich morphological structure. Two factors proved crucial in the performance of our SRL system: <em class="ltx_emph">(i)</em> The analysis of fine-grained morphological tags specific to Korean, and <em class="ltx_emph">(ii)</em> the use of latent stem and morpheme representations to deal with sparsity. We incorporated both of these elements in a CRF <cite class="ltx_cite">[<a href="#bib.bib41" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">13</a>]</cite> role labeling model.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Besides the contribution of this model and SRL system, we also report on the creation and availability of a new semantically annotated Korean corpus, covering over 8,000 sentences. We used this corpus to develop, train, and test our Korean SRL model. In the next section, we describe the process of corpus creation in more detail.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>A Semantically Annotated Korean Corpus</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We annotated predicate-argument structure of verbs in a corpus from the
+Electronics and Telecommunications Research Institute of Korea
+(ETRI).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://voice.etri.re.kr/db/db_pop.asp?code=88</span></span></span> Our corpus
+was developed over two years using a specialized annotation
+tool <cite class="ltx_cite">[<a href="#bib.bib8" title="Construction of korean semantic annotated corpus" class="ltx_ref">16</a>]</cite>, resulting in more than 8,000 semantically
+annotated sentences. As much as possible, annotations followed the PropBank
+guidelines for English <cite class="ltx_cite">[<a href="#bib.bib7" title="PropBank annotation guidelines" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We view our work as building on the efforts of the Penn Korean PropBank
+(PKPB).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://catalog.ldc.upenn.edu/LDC2006T03</span></span></span> Our corpus is
+roughly similar in size to the PKPB, and taken together, the two Korean
+corpora now total about half the size of the Penn English PropBank. One advantage
+of our corpus is that it is built on top of the ETRI Korean corpus, which uses
+a richer Korean morphological tagging scheme than the Penn Korean Treebank.
+Our experiments will show that these finer-grained tags are crucial for
+achieving high SRL accuracy.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">All annotations were performed by two people working in a team. At first, each
+annotator assigns semantic roles independently and then they discuss to reduce
+disagreement of their annotation results. Initially, the disagreement rate
+between two annotators was about 14%. After 4 months of this process, the
+disagreement rate fell to 4% through the process of building annotation rules
+for Korean. The underlying ETRI syntactically-annotated corpus contains the
+dependency tree structure of sentences with morpho-syntactic tags. It includes 101,602
+multiple-clause sentences with 21.66 words on average.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We encountered two major difficulties during annotation. First, the existing Korean frame files from the Penn Korean PropBank include 2,749 verbs, covering only 13.87% of all the verbs in the ETRI corpus. Secondly, no Korean PropBanking guidelines have previously been published, leading to uncertainty in the initial stages of annotation. These uncertainties were gradually resolved through the iterative process of resolving inter-annotator disagreements.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle" style="width:203.8014pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Roles</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Definition</th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t">Rate</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARG0</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Agent</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">10.02%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARG1</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Patient</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">26.73%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARG2</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Start point /</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Benefactive</td></tr>
+</table></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">5.18%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARG3</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Ending point</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1.10%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-ADV</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Adverbial</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1.26%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-CAU</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Cause</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1.17%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-CND</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Condition</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.36%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-DIR</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Direction</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.35%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-DIS</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Discourse</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">28.71%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-EXT</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Extent</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4.50%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-INS</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Instrument</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1.04%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-LOC</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Locative</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">4.51%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-MNR</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Manner</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">8.72%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-NEG</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Negation</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.26%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-PRD</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Predication</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.27%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ARGM-PRP</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t">Purpose</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">0.77%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">ARGM-TMP</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t">Temporal</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">5.05%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Semantic roles in our annotated corpus.</div>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the semantic roles considered in our annotated corpus. Although these are based on the general English PropBank guidelines <cite class="ltx_cite">[<a href="#bib.bib7" title="PropBank annotation guidelines" class="ltx_ref">3</a>]</cite>, they also differ in that we used only 4 numbered arguments from ARG0 to ARG3 instead of 5 numbered arguments. We thus consider 17 semantic roles in total. Four of them are numbered roles, describing the essential arguments of a predicate. The other roles are called modifier roles that play more of an adjunct role.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">We have annotated semantic roles by following the PropBank annotation guideline
+<cite class="ltx_cite">[<a href="#bib.bib7" title="PropBank annotation guidelines" class="ltx_ref">3</a>]</cite> and by using frame files of the Penn Korean PropBank
+built by Palmer et al. <cite class="ltx_cite">[<a href="#bib.bib6" title="Korean propbank" class="ltx_ref">15</a>]</cite>. The PropBank and our corpus are not
+exactly compatible, because the former is built on
+constituency-based parse trees, whereas our corpus uses dependency parses.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">More importantly, the tagsets of these corpora are not fully compatible. The
+PKPB uses much coarser morpho-syntactic tags than the ETRI corpus. For
+example, the PCA tag in PKPB used for a case suffix covers four different
+functioning tags used in our corpus. Using coarser suffix tags can seriously
+degrade SRL performance, as we show in
+Section <a href="#S6" title="6 Experiments and Results ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, where we compare the performance of our
+model on both the new corpus and the older PKPB.
+<br class="ltx_break"/></p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Previous Work</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Korean SRL research has been limited to domestically published Korean research
+on small corpora. Therefore, the most direct precedent to the present work is
+a section in Björkelund et al. <cite class="ltx_cite">[<a href="#bib.bib16" title="Multilingual semantic role labeling" class="ltx_ref">2</a>]</cite> on
+Japanese SRL. They build a classifier consisting of 3 stages: predicate
+disambiguation, argument identification, and argument classification.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">They use an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math>-regularized linear logistic regression model cascaded
+through these three stages, achieving F1-score of 80.80% on average for 7
+languages (Catalan, Chinese, Czech, English, German, Japanese and Spanish).
+The lowest reported performance is for Japanese, the only agglutinative
+language in their data set, achieving F1-score of 76.30%. This result
+showcases the computational difficulty of dealing with morphologically rich
+agglutinative languages. As we discuss in Section <a href="#S5" title="5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, we utilize
+these same features, but also add a set of Korean-specific features to capture
+aspects of Korean morphology.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Besides these morphological features, we also employ latent continuous and
+discrete morpheme representations induced from a larger body of unannotated
+Korean text. As our experiments below show, these features improve
+performance by dealing with sparsity issues. Such features have been
+useful in a variety of English NLP models, including chunking, named entity
+recognition <cite class="ltx_cite">[<a href="#bib.bib43" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">19</a>]</cite>, and spoken language understanding <cite class="ltx_cite">[<a href="#bib.bib1" title="TASK specific continuous word representations for mono and multi-lingual spoken language understanding" class="ltx_ref">1</a>]</cite>.
+Unlike the English models, we use individual morphemes as our unit of analysis.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">For the semantic role task, the input is a sentence consisting of a sequence of words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="x=x_{1},\ldots,x_{n}" display="inline"><mrow><mi>x</mi><mo>=</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub></mrow></mrow></math> and the output is a sequence of corresponding semantic tags <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="y=y_{1},\ldots,y_{n}" display="inline"><mrow><mi>y</mi><mo>=</mo><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>y</mi><mi>n</mi></msub></mrow></mrow></math>. Each word consists of a stem and some number of suffix morphemes, and the semantic tags are drawn from the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="\{\textsc{none},\textsc{arg}{0},\ldots,\textsc{argm-tmp}\}" display="inline"><mrow><mo>{</mo><mrow><mtext mathvariant="normal">none</mtext><mo>,</mo><mrow><mtext mathvariant="normal">arg</mtext><mo>⁢</mo><mn>0</mn></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mtext mathvariant="normal">argm-tmp</mtext></mrow><mo>}</mo></mrow></math>.
+We model the conditional probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="p(y|x)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> using a CRF model:</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Feature</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Description</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">A-Stem, P-Stem</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Stem of an argument and a predicate</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-POS_Lv1, P-POS_Lv1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Coarse-grained POS of A-Stem and P-Stem</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-POS_Lv2, P-POS_Lv2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Fine-grained POS of A-Stem and P-Stem</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-Case, P-Case</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Case of A-Stem and P-Stem</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-LeftmostChildStem</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Stem of the leftmost child of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-LeftSiblingStem</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Stem of the left sibling of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-LeftSiblingPOS_Lv1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Coarse-grained POS of A-LeftSiblingStem</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-LeftSiblingPOS_Lv2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Fine-grained POS of A-LeftSiblingStem</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-RightSiblingPOS_Lv1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Coarse-grained POS of a stem of the right sibling of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-RightSiblingPOS_Lv2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Fine-grained POS of a stem of the right sibling of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">P-ParentStem</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Stem of a parent of a predicate</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">P-ChildStemSet</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Set of stems of children of a predicate</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">P-ChildPOSSet_Lv1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Set of coarse POS of P-ChildStemSet</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">P-ChildCaseSet</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Set of cases of P-childStemSet</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">A-JosaExist</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">If 1, Josa exists in an argument, otherwise 0.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-JosaClass</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Linguistic classification of Josa</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-JosaLength</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Number of morphemes consisting of Josa</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-JosaMorphemes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Each morpheme consisting of Josa</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-JosaIdenity</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Josa of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiExist</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">If 1, Eomi exists in an argument, otherwise 0.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiClass_Lv1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Linguistic classification of Eomi</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiClass_Lv2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Another linguistic classification of Eomi</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiLength</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Number of morphemes consisting of Eomi</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiMorphemes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Each morpheme consisting of Eomi</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiIdentity</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Eomi of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">A-StemRepr</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Stem representation of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-JosaRepr</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Josa representation of an argument</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">A-EomiRepr</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Eomi representation of an argument</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Features used in our SRL experiments. Features are grouped as General, Korean-specific, or Latent Morpheme Representations. For the last group, we employ three different methods to build them: (i) CCA, (ii) deep learning, and (iii) Brown clustering.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<table id="S4.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m1" class="ltx_Math" alttext="Z(x)^{-1}\prod_{i=1}^{x}\exp{\sum_{m}\lambda_{m}f_{m}(y_{i-1},y_{i},x,i)}," display="block"><mrow><mrow><mi>Z</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>x</mi></munderover><mrow><mi>exp</mi><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>m</mi></munder><mrow><msub><mi>λ</mi><mi>m</mi></msub><mo>⁢</mo><msub><mi>f</mi><mi>m</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi>x</mi><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="f_{m}(y_{i-1},y_{i},x,i)" display="inline"><mrow><msub><mi>f</mi><mi>m</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi>x</mi><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></math> are the feature functions. These feature functions include transition features that identify the tag bigram <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="(y_{i-1},y_{i})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>, and emission features that combine the current semantic tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="(y_{i})" display="inline"><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></math> with instantiated feature templates extracted from the sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and its underlying morphological and dependency analysis.
+The function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="Z" display="inline"><mi>Z</mi></math> is the normalizing function, which ensures that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="p(y|x)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is a valid probability distribution. We used 100 iteration of averaged perceptron algorithm to train the CRF.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Features</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We detail the feature templates used for our experiments in Table <a href="#S4.T2" title="Table 2 ‣ 4 Model ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. These features are categorized as either general features, Korean-specific features, or latent morpheme representation features. Korean-specific features are built upon the morphological analysis of the suffix agglutination of the current word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Korean suffixes are traditionally classified into two groups called
+<em class="ltx_emph">Josa</em> and <em class="ltx_emph">Eomi</em>. Josa is used to define nominal cases and modify
+other phrases, while Eomi is an ending of a verb or an adjective to define a
+tense, show an attitude, and connect or terminate a sentence. Thus, the Eomi
+and Josa categorization plays an important role in signaling semantic roles.
+Considering the functions of Josa and Eomi, we expect that numbered roles are
+relevant to Josa while modifier roles are more closely related to Eomi. The
+one exception is adverbial Josa, making the attached phrase an adverb that
+modifies a verb predicate.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">For all feature templates, “A-” or “P-” are used respectively to signify that the
+feature corresponds to the argument in question (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>), or rather is derived from the
+verbal predicate that the argument depends on.</p>
+</div>
+<div id="S5.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">General features:</h3>
+
+<div id="S5.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We use and modify 18 features used for Japanese from the prior work of Björkelund et al. <cite class="ltx_cite">[<a href="#bib.bib16" title="Multilingual semantic role labeling" class="ltx_ref">2</a>]</cite>, excluding SENSE, POSITION, and re-ranker features.</p>
+</div>
+<div id="S5.SS0.SSS0.P1.p2" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Stem: a stem without any attachment. For instance, the first word <em class="ltx_emph">Poleun</em> at the Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> consists of a stem <em class="ltx_emph">Pol</em> plus Josa <em class="ltx_emph">eun</em>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">POS_Lv1: the first level (coarse classification) of a POS tag such as noun, verb, adjective, or adverb.
+<br class="ltx_break"/>
+<br class="ltx_break"/></p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">POS_Lv2: the second level (fine classification) of a POS tag. If POS_Lv1 is <em class="ltx_emph">noun</em>, either a proper noun, common noun, or other kinds of nouns is the POS_Lv2.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">Case: the case type such as SBJ, OBJ, or COMP.</p>
+</div></li>
+</ul>
+<p class="ltx_p">The above features are also applied to some dependency children, parents, and siblings of arguments as shown in Table <a href="#S4.T2" title="Table 2 ‣ 4 Model ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Korean-specific features:</h3>
+
+<div id="S5.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We have 11 different kinds of features for the Josa (5) and Eomi (6). We highlight several below:</p>
+</div>
+<div id="S5.SS0.SSS0.P2.p2" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">A-JosaExist: an indicator feature checking any Josa whether or not exists in an argument. It is set to 1 if any Josa exists, otherwise 0.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">A-JosaClass: the linguistic classification of Josa with a total of 8 classes. These classes are adverbial, auxiliary, complemental, connective, determinative, objective, subjective, and vocative.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">A-JosaLength: the number of morphemes consisting of Josa. At most five morphemes are combined to consist of one Josa in our data set.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">A-JosaMorphemes: Each morpheme composing the Josa.</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">A-JosaIdentity: The Josa itself.</p>
+</div></li>
+<li id="I2.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i6.p1" class="ltx_para">
+<p class="ltx_p">A-EomiClass_Lv1: the linguistic classification of Eomi with a total of 14 classes. These 14 classes are adverbial, determinative, coordinate, exclamatory, future tense, honorific, imperative, interrogative, modesty, nominal, normal, past tense, petitionary, and subordinate.</p>
+</div></li>
+<li id="I2.i7" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i7.p1" class="ltx_para">
+<p class="ltx_p">A-EomiClass_Lv2: Another linguistic classification of Eomi with a total of 4 classes. The four classes are closing, connection, prefinal, and transmutation. The EomiClass_Lv1 and Lv2 are combined to display the characteristic of Eomi such as ‘Nominal Transmutation Eomi’, but not all combinations are possible.</p>
+</div></li>
+</ul>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Corpus</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Gen</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Gen+Kor</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="4">Gen+Kor+LMR</th>
+<th class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">CCA</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Deep</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Brown</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">All</th>
+<th class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt">PKPB</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">64.83%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">75.17%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">75.51%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">75.43%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">75.55%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">75.54%</td>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Our annotated corpus</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">66.88%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.33%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.88%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.84%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.77%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">81.07%</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">PKPB + our annotated corpus</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">64.86%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">78.61%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">79.32%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">79.44%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">78.91%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">79.20%</td>
+<td class="ltx_td ltx_border_b ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Experimental F1-score results on every experiment. Abbreviation on features are Gen: general features, Kor: Korean specific features, LMR: latent morpheme representation features.</div>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Latent morpheme representation features:</h3>
+
+<div id="S5.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">To alleviate the sparsity, a lingering problem in NLP, we employ three kinds of latent morpheme representations induced from a larger body of unsupervised text data. These are (i) linear continuous representation through Canonical Correlation Analysis <cite class="ltx_cite">[<a href="#bib.bib2" title="Two step cca: a new spectral method for estimating vector models of words" class="ltx_ref">7</a>]</cite>, (ii) non-linear continuous representation through Deep learning <cite class="ltx_cite">[<a href="#bib.bib22" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">6</a>]</cite>, and (iii) discrete representation through Brown Clustering <cite class="ltx_cite">[<a href="#bib.bib38" title="A semantic approach to recognizing textual entailment" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+<div id="S5.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">The first two representations are 50 dimensional continuous vectors for each morpheme, and the latter is a set of 256 clusters over morphemes.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments and Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We categorized our experiments by the scenarios below, and all results are summarized in Table <a href="#S5.T3" title="Table 3 ‣ Korean-specific features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The F1-score results were investigated for each scenario. We randomly divided our data into 90% training and 10% test sets for all scenarios.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">For latent morpheme representations, we used the Donga news article corpus.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://www.donga.com</span></span></span> The Donga corpus contains 366,636 sentences with 25.09 words on average. The Domain of this corpus covers typical news articles such as health, entertainment, technology, politics, world and others. We ran Kokoma Korean morpheme analyzer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://kkma.snu.ac.kr/</span></span></span> on each sentence of the Donga corpus to divide words into morphemes to build latent morpheme representations.</p>
+</div>
+<div id="S6.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">1st Scenario:</h3>
+
+<div id="S6.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We first tested on general features in previous work (2nd column in Table <a href="#S5.T3" title="Table 3 ‣ Korean-specific features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). We achieved 64.83% and 66.88% on the PKPB and our corpus. When the both corpora were combined, we had 64.86%.</p>
+</div>
+</div>
+<div id="S6.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">2nd Scenario:</h3>
+
+<div id="S6.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We then added the Korean-specific morphological features to signify its appropriateness in this scenario. These features increased greatly performance improvements (3rd column in Table <a href="#S5.T3" title="Table 3 ‣ Korean-specific features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). Although both the PKPB and our corpus had improvements, the improvements were the most notable on our corpus. This is because PKPB POS tags might be too coarse. We achieved 75.17%, 80.33%, and 78.61% on the PKPB, our corpus, and the combined one, respectively.</p>
+</div>
+</div>
+<div id="S6.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">3rd Scenario:</h3>
+
+<div id="S6.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">This scenario is to reveal the effects of the different latent morpheme representations (4-6th columns in Table <a href="#S5.T3" title="Table 3 ‣ Korean-specific features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). These three representations are from CCA, deep learning, and Brown clustering. The results gave evidences that all representations increased the performance.</p>
+</div>
+</div>
+<div id="S6.SS0.SSS0.P4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">4th Scenario:</h3>
+
+<div id="S6.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">We augmented our model with all kinds of features (the last column in Table <a href="#S5.T3" title="Table 3 ‣ Korean-specific features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). We achieved our best F1-score of 81.07% over all scenarios on our corpus.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">For Korean SRL, we semantically annotated a corpus containing detailed morphological annotation. We then developed a supervised model which leverages Korean-specific features and a variety of latent morpheme representations to help deal with a sparsity problem. Our best model achieved 81.07% in F1-score. In the future, we will continue to build our corpus and look for the way to use unsupervised learning for SRL to apply to another language which does not have available corpus.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Na-Rae Han and Asli Celikyilmaz for helpful discussion and feedback. This research was supported by the Basic Science Research Program of the Korean National Research Foundation (NRF), and funded by the Korean Ministry of Education, Science and Technology (2010-0010612).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Anastasakos, Y. Kim and A. Deoras</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TASK specific continuous word representations for mono and multi-lingual spoken language understanding</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Previous Work ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Björkelund, L. Hafdell and P. Nugues</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 43–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Previous Work ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS0.SSS0.P1.p1" title="General features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Bonial, O. Babko-Malaya, J. D. Choi, J. Hwang and M. Palmer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PropBank annotation guidelines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Center for Computational Language and Education Research, CU-Boulder</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p5" title="2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p6" title="2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Burchardt, N. Reiter, S. Thater and A. Frank</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A semantic approach to textual entailment: system evaluation and task analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">RTE ’07</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 10–15</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1654536.1654540" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Böhmová, J. Hajič, E. Hajičová and B. Hladká</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The prague dependency treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Treebanks</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 103–127</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P3.p1" title="Latent morpheme representation features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Dhillon, J. Rodu, D. Foster and L. Ungar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two step cca: a new spectral method for estimating vector models of words</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1206.6403</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P3.p1" title="Latent morpheme representation features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Frank, H. Krieger, F. Xu, H. Uszkoreit, B. Crysmann, B. Jörg and U. Schäfer</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question answering from structured knowledge sources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Applied Logic</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 20 – 48</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Questions and Answers: Theoretical and Applied Perspectives</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/http://dx.doi.org/10.1016/j.jal.2005.12.006" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 1570-8683</span>,
+<a href="http://www.sciencedirect.com/science/article/pii/S157086830500090X" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gildea and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labeling of semantic roles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 245–288</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. B. Goldberg, X. Zhu, C. R. Dyer, M. Eldawy and L. Heng</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Easy as abc?: facilitating pictorial communication via semantically enhanced layout</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 119–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hajič, M. Ciaramita, R. Johansson, D. Kawahara, M. A. Martí, L. Màrquez, A. Meyers, J. Nivre, S. Padó and J. Štěpánek</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The conll-2009 shared task: syntactic and semantic dependencies in multiple languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–18</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kawahara, S. Kurohashi and K. Hasida</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Construction of a japanese relevance-tagged corpus.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lafferty, A. McCallum and F. C. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Narayanan and S. Harabagiu</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question answering based on semantic structures</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’04</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1220355.1220455" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/1220355.1220455" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Palmer, S. Ryu, J. Choi, S. Yoon and Y. Jeon</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Korean propbank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistic data consortium</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Song, C. Park, J. Lee, M. Lee, Y. Lee, J. Kim and Y. Kim</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Construction of korean semantic annotated corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Computer Applications for Database, Education, and Ubiquitous Computing</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 265–271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 A Semantically Annotated Korean Corpus ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Tatu and D. Moldovan</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A semantic approach to recognizing textual entailment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 371–378</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P3.p1" title="Latent morpheme representation features: ‣ 5 Features ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Taulé, M. A. Martí and M. Recasens</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">AnCora: multilevel annotated corpora for catalan and spanish.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Previous Work ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Xue and M. Palmer</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adding semantic roles to the chinese treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">01</span>), <span class="ltx_text ltx_bib_pages"> pp. 143–172</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Training a Korean SRL System with Rich Morphological Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:17:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

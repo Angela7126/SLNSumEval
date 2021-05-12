@@ -1,0 +1,660 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia</title>
+<!--Generated on Wed Jun 11 17:41:38 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Johannes Daxenberger<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math> and Iryna Gurevych<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\dagger}\ddagger}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>‡</mo></mrow></msup></math> 
+<br class="ltx_break"/>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math> Ubiquitous Knowledge Processing Lab 
+<br class="ltx_break"/>Department of Computer Science, Technische Universität Darmstadt
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="\ddagger" display="inline"><mo>‡</mo></math> Information Center for Education 
+<br class="ltx_break"/>German Institute for Educational Research and Educational Information 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">http://www.ukp.tu-darmstadt.de</span> 
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this study, we analyze links between edits in Wikipedia articles and turns from their discussion page.
+Our motivation is to better understand implicit details about the writing process and knowledge flow in collaboratively created resources.
+Based on properties of the involved edit and turn, we have defined constraints for corresponding edit-turn-pairs.
+We manually annotated a corpus of 636 corresponding and non-corresponding edit-turn-pairs.
+Furthermore, we show how our data can be used to automatically identify corresponding edit-turn-pairs.
+With the help of supervised machine learning, we achieve an accuracy of .87 for this task.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The process of user interaction in collaborative writing has been the topic of many studies in recent years <cite class="ltx_cite ltx_centering ltx_centering">[<a href="#bib.bib9" title="Coordination processes in computer supported collaborative writing" class="ltx_ref">9</a>]</cite>.
+Most of the resources used for collaborative writing do not explicitly allow their users to interact directly, so that the implicit effort of coordination behind the actual writing is not documented.
+Wikipedia, as one of the most prominent collaboratively created resources, offers its users a platform to coordinate their writing, the so called talk or discussion pages <cite class="ltx_cite ltx_centering ltx_centering">[<a href="#bib.bib18" title="Talk Before You Type: Coordination in Wikipedia" class="ltx_ref">18</a>]</cite>.
+In addition to that, Wikipedia stores all edits made to any of its pages in a revision history, which makes the actual writing process explicit.
+We argue that linking these two resources helps to get a better picture of the collaborative writing process.
+To enable such interaction, we extract segments from discussion pages, called turns, and connect them to corresponding edits in the respective article.
+Consider the following snippet from the discussion page of the article “Boron” in the English Wikipedia.
+On February 16th of 2011, user <span class="ltx_text ltx_font_typewriter ltx_align_center">JCM83</span> added the <span class="ltx_text ltx_font_bold ltx_align_center">turn</span>:
+<span class="ltx_ERROR undefined ltx_centering ltx_centering">{mdframed}</span>[backgroundcolor=gray!30, linewidth=0pt, leftmargin=0, rightmargin=0, skipabove=4pt, skipbelow=3pt, innertopmargin=3pt, innerbottommargin=3pt]
+Shouldn’t borax be wikilinked in the “etymology” paragraph?
+
+Roughly five hours after that turn was issued on the discussion page, user <span class="ltx_text ltx_font_typewriter ltx_align_center">Sbharris</span> added a wikilink to the “History and etymology” section of the article by performing the following <span class="ltx_text ltx_font_bold ltx_align_center">edit</span>:
+<span class="ltx_ERROR undefined ltx_centering">{mdframed}</span>[backgroundcolor=gray!30, linewidth=0pt, leftmargin=0, rightmargin=0, skipabove=4pt, skipbelow=3pt, innertopmargin=3pt, innerbottommargin=3pt]
+<span class="ltx_text ltx_font_typewriter ltx_align_center">''</span> borax<span class="ltx_text ltx_font_typewriter ltx_align_center">''</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_centering" alttext="\rightarrow" display="inline"><mo>→</mo></math> [[borax]]
+
+This is what we define as a corresponding <em class="ltx_emph">edit-turn-pair</em>.
+More details follow in Section <a href="#S2" title="2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+To the best of our knowledge, this study is the first attempt to detect corresponding edit-turn-pairs in the English Wikipedia fully automatically.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Our motivation for this task is two-fold.
+First, an automatic detection of corresponding edit-turn-pairs in Wikipedia pages might help users of the encyclopedia to better understand the development of the article they are reading.
+Instead of having to read through all of the discussion page which can be an exhausting task for many of the larger articles in the English Wikipedia, users could focus on those discussions that actually had an impact on the article they are reading.
+Second, assuming that edits often introduce new knowledge to an article, it might be interesting to analyze how much of this knowledge was actually generated within the discourse on the discussion page.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The detection of correspondence between edits and turns is also relevant beyond Wikipedia.
+Many companies use Wikis to store internal information and documentation <cite class="ltx_cite">[<a href="#bib.bib1" title="Wiki deployment in corporate settings" class="ltx_ref">1</a>]</cite>.
+An alignment between edits in the company Wiki and issues discussed in email conversations, on mailing lists, or other forums, can be helpful to track the flow or generation of knowledge within the company.
+This information can be useful to improve communication and knowledge sharing.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In the limited scope of this paper, we will focus on two research questions.
+First, we want to understand the nature of correspondence between Wikipedia article edits and discussion page turns.
+Second, we want to know the distinctive properties of corresponding edit-turn-pairs and how to use these to automatically detect corresponding pairs.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Edit-Turn-Pairs</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we will define the basic units of our task, namely edits and turns.
+Furthermore, we will explain the kind of correspondence between edits and turns we are interested in.</p>
+</div>
+<div id="S2.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Edits</h4>
+
+<div id="S2.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">To capture a fine-grained picture of changes to Wikipedia article pages, we rely on the notion of edits defined in our previous work <cite class="ltx_cite">[<a href="#bib.bib7" title="A Corpus-Based Study of Edit Categories in Featured and Non-Featured Wikipedia Articles" class="ltx_ref">6</a>]</cite>.
+Edits are coherent modifications based on a pair of adjacent revisions from Wikipedia article pages.
+To calculate edits, a line-based diff comparison between the old revision and the new revision is made, followed by several post-processing steps.
+Each pair of adjacent revisions found in the edit history of an article consists of one or more edits, which describe either inserted, deleted, changed or relocated text.
+Edits are associated with metadata from the revision they belong to, this includes the comment (if present), the user name and the time stamp.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Turns</h4>
+
+<div id="S2.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Turns are segments from Wikipedia discussion pages.
+To segment discussion pages into turns, we follow a procedure proposed by <cite class="ltx_cite">Ferschke<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages" class="ltx_ref">2012</a>)</cite>.
+With the help of the Java Wikipedia Library <cite class="ltx_cite">[<a href="#bib.bib19" title="Extracting Lexical Semantic Knowledge from Wikipedia and Wiktionary" class="ltx_ref">19</a>]</cite>, we access discussion pages from a database.
+Discussion pages are then segmented into <em class="ltx_emph">topics</em> based upon the structure of the page.
+Individual turns are retrieved from topics by considering the revision history of the discussion page.
+This procedure successfully segmented 94 % of all turns in a corpus from the Simple English Wikipedia <cite class="ltx_cite">[<a href="#bib.bib11" title="Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages" class="ltx_ref">11</a>]</cite>.
+Along with each turn, we store the name of its user, the time stamp, and the name of the topic to which the turn belongs.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Corresponding Edit-Turn-Pairs</h4>
+
+<div id="S2.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">An edit-turn-pair is defined as a pair of an edit from a Wikipedia article’s revision history and a turn from the discussion page bound to the same article.
+If an article has no discussion page, there are no edit-turn-pairs for this article.
+A definition of correspondence is not straightforward in the context of edit-turn-pairs.
+<cite class="ltx_cite">Ferschke<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages" class="ltx_ref">2012</a>)</cite> suggest four types of explicit performatives in their annotation scheme for dialog acts of Wikipedia turns.
+Due to their performative nature, we assume that these dialog acts make the turn they belong to a good candidate for a corresponding edit-turn-pair.
+We therefore define an edit-turn-pair as corresponding, if:
+i) The turn is an <span class="ltx_text ltx_font_italic">explicit suggestion, recommendation or request</span> and the edit performs this suggestion, recommendation or request,
+ii) the turn is an <span class="ltx_text ltx_font_italic">explicit reference or pointer</span> and the edit adds or modifies this reference or pointer,
+iii) the turn is a <span class="ltx_text ltx_font_italic">commitment to an action in the future</span> and the edit performs this action, and
+iv) the turn is a <span class="ltx_text ltx_font_italic">report of a performed action</span> and the edit performs this action.
+We define all edit-turn-pairs which do not conform to the upper classification as non-corresponding.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Corpus</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">With the help of Amazon Mechanical Turk<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="www.mturk.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.mturk.com</span></a></span></span></span>, we crowdsourced annotations on a corpus of edit-turn-pairs from 26 random English Wikipedia articles in various thematic categories.
+The search space for corresponding edit-turn-pairs is quite big, as any edit to an article may correspond to any turn from the article’s discussion page.
+Assuming that most edit-turn-pairs are non-corresponding, we expect a heavy imbalance in the class distribution.
+It was important to find a reasonable amount of corresponding edit-turn-pairs before the actual annotation could take place, as we needed a certain amount of positive seeds to keep turkers from simply labeling pairs as non-corresponding all the time.
+In the following, we explain the step-by-step approach we chose to create a suitable corpus for the annotation study.</p>
+</div>
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Filtering</h4>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We applied various filters to avoid annotating trivial content.
+Based on an automatic classification using the model presented in our previous work <cite class="ltx_cite">[<a href="#bib.bib6" title="Automatically Classifying Edit Categories in Wikipedia Revisions" class="ltx_ref">7</a>]</cite>, we excluded edits classified as Vandalism, Revert or Other.
+Furthermore, we removed all edits which are part of a revision created by bots, based on the Wikimedia user group<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://meta.wikimedia.org/wiki/User_classes" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://meta.wikimedia.org/wiki/User_classes</span></a></span></span></span> scheme.
+To keep the class imbalance within reasonable margins, we limited the time span between edits and turns to 86,000 seconds (about 24 hours).
+The result is a set of 13,331 edit-turn-pairs, referred to as <em class="ltx_emph">ETP-all</em>.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Preliminary Annotation Study</h4>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">From ETP-all, a set of 262 edit-turn-pairs have been annotated as corresponding as part of a preliminary annotation study with one human annotator.
+This step is intended to make sure that we have a substantial number of corresponding pairs in the data for the final annotation study.
+However, we still expect a certain amount of non-corresponding edit-turn-pairs in this data, as the annotator judged the correspondence based on the entire revision and not the individual edit.
+We refer to this 262 edit-turn-pairs as <em class="ltx_emph">ETP-unconfirmed</em>.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Mechanical Turk Annotation Study</h4>
+
+<div id="S3.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Finally, for the Mechanical Turk annotation study, we selected 500 random edit-turn-pairs from ETP-all excluding ETP-unconfirmed.
+Among these, we expect to find mostly non-corresponding pairs.
+From ETP-unconfirmed, we selected 250 random edit-turn-pairs.
+The resulting 750 pairs have each been annotated by five turkers.
+The turkers were presented the turn text, the turn topic name, the edit in its context, and the edit comment (if present).
+The context of an edit is defined as one preceding and one following paragraph of the edited paragraph.
+Each edit-turn-pair could be labeled as “corresponding”, “non-corresponding” or “can’t tell”.
+To select good turkers and to block spammers, we carried out a pilot study on a small portion of manually confirmed corresponding and non-corresponding pairs, and required turkers to pass a qualification test.</p>
+</div>
+<div id="S3.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">The average pairwise percentage agreement over all pairs is 0.66.
+This was calculated as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m1" class="ltx_Math" alttext="\frac{1}{N}\sum_{i=1}^{N}\frac{\sum_{c=1}^{C}v^{c}_{i}}{C}" display="inline"><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>c</mi><mo>=</mo><mn>1</mn></mrow><mi>C</mi></msubsup><msubsup><mi>v</mi><mi>i</mi><mi>c</mi></msubsup></mrow><mi>C</mi></mfrac></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m2" class="ltx_Math" alttext="N=750" display="inline"><mrow><mi>N</mi><mo>=</mo><mn>750</mn></mrow></math> is the overall number of annotated edit-turn-pairs,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m3" class="ltx_Math" alttext="C=\frac{R^{2}-R}{2}" display="inline"><mrow><mi>C</mi><mo>=</mo><mfrac><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>-</mo><mi>R</mi></mrow><mn>2</mn></mfrac></mrow></math> is the number of pairwise comparisons,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m4" class="ltx_Math" alttext="R=5" display="inline"><mrow><mi>R</mi><mo>=</mo><mn>5</mn></mrow></math> is the number of raters per edit-turn-pair, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m5" class="ltx_Math" alttext="v^{c}_{i}=1" display="inline"><mrow><msubsup><mi>v</mi><mi>i</mi><mi>c</mi></msubsup><mo>=</mo><mn>1</mn></mrow></math> if a pair of raters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> labeled edit-turn-pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> equally, and 0 otherwise.
+The moderate pairwise agreement reflects the complexity of this task for non-experts.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Gold Standard</h4>
+
+<div id="S3.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">To rule out ambiguous cases, we created the Gold Standard corpus with the help of majority voting.
+We counted an edit-turn-pair as corresponding, if it was annotated as “corresponding” by least three out of five annotators, and likewise for non-corresponding pairs.
+Furthermore, we deleted 21 pairs for which the turn segmentation algorithm clearly failed (e.g. when the turn text was empty).
+This resulted in 128 corresponding and 508 non-corresponsing pairs, or 636 pairs in total.
+We refer to this dataset as <em class="ltx_emph">ETP-gold</em>.
+To assess the reliability of these annotations, one of the co-authors manually annotated a random subset of 100 edit-turn-pairs contained in ETP-gold as corresponding or non-corresponding.
+The inter-rater agreement between ETP-gold (majority votes over Mechanical Turk annotations) and our expert annotations on this subset is Cohen’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m1" class="ltx_Math" alttext="\kappa=.72" display="inline"><mrow><mi>κ</mi><mo>=</mo><mn>.72</mn></mrow></math>.
+We consider this agreement high enough to draw conclusions from the annotations <cite class="ltx_cite">[<a href="#bib.bib2" title="Inter-Coder Agreement for Computational Linguistics" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S3.SS0.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">Obviously, this is a fairly small dataset which does not cover a representative sample of articles from the English Wikpedia.
+However, given the high price for a new corresponding edit-turn-pair (due to the high class imbalance in random data), we consider it as a useful starting point for research on edit-turn-pairs in Wikipedia.
+We make ETP-gold freely available.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://www.ukp.tu-darmstadt.de/data/edit-turn-pairs" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.ukp.tu-darmstadt.de/data/edit-turn-pairs</span></a></span></span></span></p>
+</div>
+<div id="S3.SS0.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F1" title="Figure 1 ‣ Gold Standard ‣ 3 Corpus ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, more than 50% of all corresponding edit-turn-pairs in ETP-gold occur within a time span of less than one hour.
+In our 24 hours search space, the probability to find a corresponding edit-turn-pair drops steeply for time spans of more than 6 hours.
+We therefore expect to cover the vast majority of corresponding edit-turn-pairs within a search space of 24 hours.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">\pgfplotsset</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">width=
+<span class="ltx_ERROR undefined">{axis}</span>[
+ylabel=% of pairs,
+xlabel= time span in hours,
+axis x line*=none,
+axis y line*=left,
+tick align=outside,
+ymajorgrids,
+legend style=at=(0.55,0.95),anchor=north,legend columns=6,
+height=30mm,
+bar width=2mm,
+xticklabels=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m1" class="ltx_Math" alttext="\leq" display="inline"><mo mathsize="normal" stretchy="false">≤</mo></math>1, 2-6, 7-11, 12-16, 17-21,
+xtick=1,…,5,
+ymin=0,
+ymax=60,
+ybar
+]
+<span class="ltx_ERROR undefined">\addplot</span>[smooth, ybar, fill=lightgray, mark=none, draw=black]
+coordinates 
+(1, 51)
+(2, 31)
+(3, 9)
+(4, 2)
+(5, 2)
+;
+<span class="ltx_ERROR undefined">\addlegendentry</span>corresponding</span></p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">[bar shift = 2pt, smooth, ybar, fill=black, mark=none, draw=black]
+coordinates 
+(1, 26)
+(2, 28)
+(3, 11)
+(4, 14)
+(5, 14)
+;
+<span class="ltx_ERROR undefined">\addlegendentry</span>non-corresponding</span></p>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>
+Percentage of (non-)corresponding edit-turn-pairs for various time intervals in ETP-gold.
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Machine Learning with Edit-Turn-Pairs</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We used DKPro TC <cite class="ltx_cite">[<a href="#bib.bib5" title="DKPro TC: A Java-based Framework for Supervised Learning Experiments on Textual Data" class="ltx_ref">5</a>]</cite> to carry out the machine learning experiments on edit-turn-pairs.
+For each edit, we stored both the edited paragraph and its context from the old revision as well as the edited paragraph and context from the new revision.
+We used Apache OpenNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://opennlp.apache.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://opennlp.apache.org</span></a></span></span></span> for the segmentation of edit and turn text.
+Training and testing the classifier has been carried out with the help of the Weka Data Mining Software <cite class="ltx_cite">[<a href="#bib.bib12" title="The WEKA Data Mining Software: An Update" class="ltx_ref">12</a>]</cite>.
+We used the Sweble parser <cite class="ltx_cite">[<a href="#bib.bib8" title="Design and implementation of the Sweble Wikitext parser" class="ltx_ref">8</a>]</cite> to remove Wiki markup.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Features</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the following, we list the features extracted from preprocessed edits and turns.
+The <em class="ltx_emph">edit text</em> is composed of any inserted, deleted or relocated text from both the old and the new revision.
+The <em class="ltx_emph">edit context</em> includes the edited paragraph and one preceding and one following paragraph.
+The <em class="ltx_emph">turn text</em> includes the entire text from the turn.</p>
+</div>
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Similarity between turn and edit text</h4>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We propose a number of features which are purely based on the textual similarity between the text of the turn, and the edited text and context.
+We used the cosine similarity, longest common subsequence, and word n-gram similarity measures.
+Cosine similarity was applied on binary weighted term vectors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="L^{2}" display="inline"><msup><mi>L</mi><mn>2</mn></msup></math> norm).
+The word n-gram measure <cite class="ltx_cite">[<a href="#bib.bib15" title="A theoretical basis to the automated detection of copying between texts, and its practical implementation in the Ferret plagiarism and collusion detector" class="ltx_ref">15</a>]</cite> calculates a Jaccard similarity coefficient on trigrams.
+Similarity has been calculated between
+i) the plain edit text and the turn text,
+ii) the edit and turn text after any wiki markup has been removed,
+iii) the plain edit context and turn text, and
+iv) the edit context and turn text after any wiki markup has been removed.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Based on metadata of edit and turn</h4>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Several of our features are based on metadata from both the edit and the turn.
+We recorded whether the name of the edit user and the turn user are equal,
+the absolute time difference between the turn and the edit, and
+whether the edit occurred before the turn.
+Cosine similarity, longest common subsequence, and word n-gram similarity were also applied to measure the similarity between the edit comment and the turn text as well as the similarity between the edit comment and the turn topic name.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Based on either edit or turn</h4>
+
+<div id="S4.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Some features are based on the edit or the turn alone and do not take into account the pair itself.
+We recorded whether the edit is an insertion, deletion, modification or relocation.
+Furthermore, we measured the length of the edit text and the length of the turn text.
+The 1,000 most frequent uni-, bi- and trigrams from the turn text are represented as binary features.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Classification Experiments</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We treat the automatic classification of edit-turn-pairs as a binary classification problem.
+Given the small size of ETP-gold, we did not assign a fixed train/test split to the data.
+For the same reason, we did not further divide the data into train/test and development data.
+Rather, hyperparameters were optimized using grid-search over multiple cross-validation experiments, aiming to maximize accuracy.
+To deal with the class imbalance problem, we applied cost-sensitive classification.
+In correspondence with the distribution of class sizes in the training data, the cost for false negatives was set to 4, and for false positives to 1.
+A reduction of the feature set as judged by a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\chi^{2}" display="inline"><msup><mi>χ</mi><mn>2</mn></msup></math> ranker improved the results for both Random Forest as well as the SVM, so we limited our feature set to the 100 best features.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">In a 10-fold cross-validation experiment, we tested a Random Forest classifier <cite class="ltx_cite">[<a href="#bib.bib3" title="Random Forests" class="ltx_ref">3</a>]</cite> and an SVM <cite class="ltx_cite">[<a href="#bib.bib16" title="Fast training of support vector machines using sequential minimal optimization" class="ltx_ref">16</a>]</cite> with polynomial kernel.
+Previous work <cite class="ltx_cite">[<a href="#bib.bib11" title="Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages" class="ltx_ref">11</a>, <a href="#bib.bib4" title="User Edits Classification Using Document Revision Histories" class="ltx_ref">4</a>]</cite> has shown that these algorithms work well for edit and turn classification.
+As baseline, we defined a majority class classifier, which labels all edit-turn-pairs as non-corresponding.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:37.0pt;" width="37.0pt"/>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_bold ltx_font_small">Baseline</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">R. Forest</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">SVM</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">Accuracy</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">.799 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.031</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.866</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.026†</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.858 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m3" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.027†</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">F1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="{}_{\text{mac.}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">mac.</mtext></msub></math></td>
+<td class="ltx_td ltx_align_justify" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">NaN</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.789</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m5" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.032</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.763 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.033</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">Precision</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="{}_{\text{mac.}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">mac.</mtext></msub></math></td>
+<td class="ltx_td ltx_align_justify" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">NaN</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.794</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m8" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.031</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.791 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m9" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.032</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">Recall</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m10" class="ltx_Math" alttext="{}_{\text{mac.}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">mac.</mtext></msub></math></td>
+<td class="ltx_td ltx_align_justify" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">.500 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m11" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.039</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.785</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m12" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.032†</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.736 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m13" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.034†</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">F1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m14" class="ltx_Math" alttext="{}_{\text{non-corr.}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">non-corr.</mtext></msub></math></td>
+<td class="ltx_td ltx_align_justify" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">.888 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m15" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.025</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.917</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m16" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.021</span></td>
+<td class="ltx_td ltx_align_justify" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.914 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m17" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.022</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:37.0pt;" width="37.0pt"><span class="ltx_text ltx_font_small">F1</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m18" class="ltx_Math" alttext="{}_{\text{corr.}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">corr.</mtext></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:42.7pt;" width="42.7pt"><span class="ltx_text ltx_font_small">NaN</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_bold ltx_font_small">.661</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m19" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.037</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:45.5pt;" width="45.5pt"><span class="ltx_text ltx_font_small">.602 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m20" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small">.038</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span> Classification results from a 10-fold cross-validation experiment on ETP-gold with 95% confidence intervals.
+Non-overlapping intervals w.r.t. the majority baseline are marked by †.</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Discussion and Error Analysis</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">The classification results for the above configuration are displayed in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+Due to the high class imbalance in the data, the majority class baseline sets a challenging accuracy score of .80.
+Both classifiers performed significantly better than the baseline (non-overlapping confidence intervals, see Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+With an overall macro-averaged F1 of .79, Random Forest yielded the best results, both with respect to precision as well as recall.
+The low F1 on corresponding pairs is likely due to the small number of training examples.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">To understand the mistakes of the classifier, we manually assessed error patterns within the model of the Random Forest classifier.
+Some of the false positives (i.e. non-corresponding pairs classified as corresponding)
+were caused by pairs where the revision (as judged by its comment or the edit context) is related to the turn text, however the specific edit in this pair is not.
+This might happen, when somebody corrects a spelling error in a paragraph that is heavily disputed on the discussion page.
+Among the false negatives, we found errors caused by a missing direct textual overlap between edit and turn text.
+In these cases, the correspondence was indicated only (if at all) by some relationship between turn text and edit comment.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Besides the work by <cite class="ltx_cite">Ferschke<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages" class="ltx_ref">2012</a>)</cite> which is the basis for our turn segmentation, there are several studies dedicated to discourse structure in Wikipedia.
+<cite class="ltx_cite">Viégas<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib18" title="Talk Before You Type: Coordination in Wikipedia" class="ltx_ref">2007</a>)</cite> propose 11 dimensions to classify discussion page turns.
+The most frequent dimensions in their sample are requests for coordination and requests for information.
+Both of these may be part of a corresponding edit-turn-pair, according to our definition in Section <a href="#S2" title="2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+A subsequent study <cite class="ltx_cite">[<a href="#bib.bib17" title="A Content Analysis: How Wikipedia Talk Pages Are Used" class="ltx_ref">17</a>]</cite> adds more dimensions, among these an explicit category for references to article edits.
+This dimension accounts for roughly 5 to 10% of all turns.
+<cite class="ltx_cite">Kittur and Kraut (<a href="#bib.bib14" title="Harnessing the wisdom of crowds in wikipedia: quality through coordination" class="ltx_ref">2008</a>)</cite> analyze correspondence between article quality and activity on the discussion page.
+Their study shows that both implicit coordination (on the article itself) and explicit coordination (on the discussion page of the article) play important roles for the improvement of article quality.
+In the present study, we have analyzed cases where explicit coordination lead to implicit coordination and vice versa.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Kaltenbrunner and Laniado (<a href="#bib.bib13" title="There is No Deadline - Time Evolution of Wikipedia Discussions" class="ltx_ref">2012</a>)</cite> analyze the development of discussion pages in Wikipedia with respect to time and compare dependences between edit peaks in the revision history of the article itself and the respective discussion page.
+They find that the development of a discussion page is often bound to the topic of the article, i.e. articles on time-specific topics such as events grow much faster than discussions about timeless, encyclopedic content.
+Furthermore, they observed that the edit peaks in articles and their discussion pages are mostly independent.
+This partially explains the high number of non-corresponding edit-turn-pairs and the consequent class imbalance.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">While there are several studies which analyze the high-level relationship between discussion and edit activity in Wikipedia articles, very few have investigated the correspondence between edits and turns on the textual level.
+Among the latter, <cite class="ltx_cite">Ferron and Massa (<a href="#bib.bib10" title="Beyond the encyclopedia: Collective memories in Wikipedia" class="ltx_ref">2014</a>)</cite> analyze 88 articles and their discussion pages related to traumatic events.
+In particular, they find a correlation between the article edits and their discussions around the anniversaries of the events.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">The novelty of this paper is a computational analysis of the relationship between the edit history and the discussion of a Wikipedia article.
+As far as we are aware, this is the first study to automatically analyze this relationship involving the textual content of edits and turns.
+Based on the types of turn and edit in an edit-turn-pair, we have operationalized the notion of corresponding and non-corresponding edit-turn-pairs.
+The basic assumption is that in a corresponding pair, the turn contains an explicit performative and the edit corresponds to this performative.
+We have presented a machine learning system to automatically detect corresponding edit-turn-pairs.
+To test this system, we manually annotated a corpus of corresponding and non-corresponding edit-turn-pairs.
+Trained and tested on this data, our system shows a significant improvement over the baseline.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">With regard to future work, an extension of the manually annotated corpus is the most important issue.
+Our classifier can be used to bootstrap the annotation of additional edit-turn-pairs.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The authors would like to give special thanks to Viswanathan Arunachalam and Dat Quoc Nguyen, who carried out initial experiments and the preliminary annotation study, and to Emily Jamison, who set up the Mechanical Turk task.
+This work has been supported by the Volkswagen Foundation as part of the Lichtenberg-Professorship Program under grant No. I/82806, and by the Hessian research excellence program “Landes-Offensive zur Entwicklung Wissenschaftlich-ökonomischer Exzellenz” (LOEWE) as part of the research center “Digital Humanities”.
+We thank the anonymous reviewers for their helpful suggestions.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Arazy, I. Gellatly, S. Jang and R. Patterson</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Wiki deployment in corporate settings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Technology and Society Magazine</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 57–64</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1109/MTS.2009.932804" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 0278-0097</span>,
+<a href="http://ieeexplore.ieee.org/lpdocs/epic03/wrapper.htm?arnumber=5072383" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Artstein and M. Poesio</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inter-Coder Agreement for Computational Linguistics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 555–596</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1162/coli.07-034-R2" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 08912017</span>,
+<a href="http://www.mitpressjournals.org/doi/abs/10.1162/coli.07-034-R2" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P4.p1" title="Gold Standard ‣ 3 Corpus ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Breiman</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random Forests</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–32</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1023/A:1010933404324" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 0885-6125</span>,
+<a href="http://dl.acm.org/citation.cfm?id=570181.570182" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Bronner and C. Monz</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">User Edits Classification Using Document Revision Histories</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Avignon, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 356–366</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Daxenberger, O. Ferschke, I. Gurevych and T. Zesch</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DKPro TC: A Java-based Framework for Supervised Learning Experiments on Textual Data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Baltimore, MD, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. (to appear)</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Daxenberger and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Corpus-Based Study of Edit Categories in Featured and Non-Featured Wikipedia Articles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mumbai, India</span>, <span class="ltx_text ltx_bib_pages"> pp. 711–726</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Edits ‣ 2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Daxenberger and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically Classifying Edit Categories in Wikipedia Revisions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, WA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 578–589</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P1.p1" title="Filtering ‣ 3 Corpus ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Dohrn and D. Riehle</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Design and implementation of the Sweble Wikitext parser</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mountain View, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 72–81</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Erkens, J. Jaspers, M. Prangsma and G. Kanselaar</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coordination processes in computer supported collaborative writing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computers in Human Behavior</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 463–486</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1016/j.chb.2004.10.038" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 07475632</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1672732.1672739" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ferron and P. Massa</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Beyond the encyclopedia: Collective memories in Wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Memory Studies</span> <span class="ltx_text ltx_bib_volume">7</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 22–45</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1177/1750698013490590" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text isbn ltx_bib_external">ISBN 1750698013</span>,
+<span class="ltx_text issn ltx_bib_external">ISSN 1750-6980</span>,
+<a href="http://mss.sagepub.com/cgi/doi/10.1177/1750698013490590" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Ferschke, I. Gurevych and Y. Chebotar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Behind the Article: Recognizing Dialog Acts in Wikipedia Talk Pages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Avignon, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 777–786</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Turns ‣ 2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS0.SSS0.P3.p1" title="Corresponding Edit-Turn-Pairs ‣ 2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hall, E. Frank, G. Holmes, B. Pfahringer, P. Reutemann and I. Witten</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The WEKA Data Mining Software: An Update</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">SIGKDD Explorations</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 10–18</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/http://doi.acm.org/10.1145/1656274.1656278" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 1931-0145</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Kaltenbrunner and D. Laniado</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">There is No Deadline - Time Evolution of Wikipedia Discussions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Linz, Austria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Kittur and R. E. Kraut</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Harnessing the wisdom of crowds in wikipedia: quality through coordination</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Diego, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 37–46</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/http://doi.acm.org/10.1145/1460563.1460572" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-007-4</span>,
+<a href="http://doi.acm.org/10.1145/1460563.1460572" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lyon, R. Barrett and J. Malcolm</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A theoretical basis to the automated detection of copying between texts, and its practical implementation in the Ferret plagiarism and collusion detector</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Newcastle, UK</span> (<span class="ltx_text ltx_bib_language">eng</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://uhra.herts.ac.uk/handle/2299/2114" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS0.P1.p1" title="Similarity between turn and edit text ‣ 4.1 Features ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. C. Platt</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast training of support vector machines using sequential minimal optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 185–208</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-19416-3</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Classification Experiments ‣ 4 Machine Learning with Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Schneider, A. Passant and J. G. Breslin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Content Analysis: How Wikipedia Talk Pages Are Used</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Raleigh, NC, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–7</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. B. Viégas, M. Wattenberg, J. Kriss and F. Ham</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Talk Before You Type: Coordination in Wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Big Island, HI, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 78–78</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-7695-2755-8</span>,
+<span class="ltx_text issn ltx_bib_external">ISSN 1530-1605</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Zesch, C. Müller and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting Lexical Semantic Knowledge from Wikipedia and Wiktionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Marrakech, Morocco</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Turns ‣ 2 Edit-Turn-Pairs ‣ Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:41:38 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

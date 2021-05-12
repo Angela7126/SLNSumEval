@@ -1,0 +1,777 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improving Lexical Embeddings with Semantic Knowledge</title>
+<!--Generated on Wed Jun 11 18:02:19 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improving Lexical Embeddings with Semantic Knowledge</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mo Yu  
+<br class="ltx_break"/>Machine Translation Lab 
+<br class="ltx_break"/>Harbin Institute of Technology 
+<br class="ltx_break"/>Harbin, China 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">gflfof@gmail.com</span> 
+<br class="ltx_break"/>&amp;Mark Dredze 
+<br class="ltx_break"/>Human Language Technology Center of Excellence 
+<br class="ltx_break"/>Center for Language and Speech Processing 
+<br class="ltx_break"/>Johns Hopkins University 
+<br class="ltx_break"/>Baltimore, MD 21218 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">mdredze@cs.jhu.edu</span> 
+<br class="ltx_break"/>
+</span><span class="ltx_author_notes"><span>This work was done while the author was visiting JHU.</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Word embeddings learned on unlabeled data are a popular tool in semantics, but may not
+capture the desired semantics.
+We propose a new learning objective that incorporates both a neural language model objective <cite class="ltx_cite">[]</cite>
+and prior knowledge from semantic resources to learn improved lexical semantic embeddings.
+We demonstrate that our embeddings improve over those learned solely on raw text in three settings:
+language modeling, measuring semantic similarity, and predicting human judgements.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Word embeddings are popular representations for syntax <cite class="ltx_cite">[]</cite>, semantics
+<cite class="ltx_cite">[]</cite>, morphology <cite class="ltx_cite">[]</cite> and other areas.
+A long line of embeddings work, such as LSA and randomized embeddings <cite class="ltx_cite">[]</cite>,
+has recently turned to neural language models <cite class="ltx_cite">[]</cite>.
+Unsupervised learning can
+take advantage of large corpora, which can produce impressive results.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">However, the main drawback of unsupervised learning is that the learned embeddings
+may not be suited for the task of interest.
+Consider semantic embeddings, which may capture a notion of semantics that
+improves one semantic task but harms another.
+Controlling this behavior is challenging with an unsupervised objective.
+However, rich prior knowledge exists for many tasks, and there are
+numerous such semantic resources.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We propose a new training objective for learning word embeddings that incorporates prior knowledge.
+Our model builds on word2vec <cite class="ltx_cite">[]</cite>,
+a neural network based language model that learns word
+embeddings by maximizing the probability of raw text.
+We extend the objective to include prior knowledge about synonyms from semantic resources;
+we consider both the Paraphrase Database <cite class="ltx_cite">[]</cite> and WordNet <cite class="ltx_cite">[]</cite>,
+which annotate semantic relatedness between words.
+The latter was also used in <cite class="ltx_cite">[]</cite> for training a network for predicting synset relation.
+The combined objective maximizes both the probability of the raw corpus
+and encourages embeddings to capture semantic relations from the resources.
+We demonstrate improvements in our embeddings
+on three tasks: language modeling, measuring word similarity, and predicting human judgements
+on word pairs.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Learning Embeddings</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We present a general model for learning word embeddings that incorporates prior
+knowledge available for a domain. While in this work we consider semantics, our model
+could incorporate prior knowledge from many types of resources.
+We begin by reviewing the word2vec objective and then present
+augmentations of the objective for prior knowledge, including different training strategies.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Word2vec</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Word2vec <cite class="ltx_cite">[]</cite> is an algorithm for learning embeddings using a neural language model.
+Embeddings are represented by a set of latent (hidden) variables, and each word is represented by a specific instantiation of these
+variables. Training learns these representations for each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="w_{t}" display="inline"><msub><mi>w</mi><mi>t</mi></msub></math> (the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>th word in a corpus of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>)
+so as to maximize the log likelihood of each token given its context: words within a window sized <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\max\frac{1}{T}\sum_{t=1}^{T}\log p\left(w_{t}|w_{t-c}^{t+c}\right)," display="block"><mrow><mo movablelimits="false">max</mo><mfrac><mn>1</mn><mi>T</mi></mfrac><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></munderover><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>t</mi></msub><mo>|</mo><msubsup><mi>w</mi><mrow><mi>t</mi><mo>-</mo><mi>c</mi></mrow><mrow><mi>t</mi><mo>+</mo><mi>c</mi></mrow></msubsup><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="w_{t-c}^{t+c}" display="inline"><msubsup><mi>w</mi><mrow><mi>t</mi><mo>-</mo><mi>c</mi></mrow><mrow><mi>t</mi><mo>+</mo><mi>c</mi></mrow></msubsup></math> is the set of words in the window of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> centered at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m7" class="ltx_Math" alttext="w_{t}" display="inline"><msub><mi>w</mi><mi>t</mi></msub></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m8" class="ltx_Math" alttext="w_{t}" display="inline"><msub><mi>w</mi><mi>t</mi></msub></math> excluded).</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Word2vec offers two choices for modeling of Eq. (<a href="#S2.E1" title="(1) ‣ 2.1 Word2vec ‣ 2 Learning Embeddings ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>): a skip-gram model and
+a continuous bag-of-words model (cbow). The latter worked better in our experiments so we focus on it in our presentation.
+cbow defines <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="p(w_{t}|w_{t-c}^{t+c})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>t</mi></msub><mo>|</mo><msubsup><mi>w</mi><mrow><mi>t</mi><mo>-</mo><mi>c</mi></mrow><mrow><mi>t</mi><mo>+</mo><mi>c</mi></mrow></msubsup><mo>)</mo></mrow></mrow></math> as:</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\vspace{-.1cm}\frac{\exp\left({e^{{}^{\prime}}_{w_{t}}}^{\top}\cdot\sum_{-c%&#10;\leq j\leq c,j\neq 0}e_{w_{t+j}}\right)}{\sum_{w}\exp\left({e^{{}^{\prime}}_{w%&#10;}}^{\top}\cdot\sum_{-c\leq j\leq c,j\neq 0}e_{w_{t+j}}\right)}," display="block"><mrow><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>e</mi><msub><mi>w</mi><mi>t</mi></msub><msup><mi/><mo>′</mo></msup><none/><mo>⊤</mo></mmultiscripts><mo>⋅</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mrow><mo>-</mo><mi>c</mi></mrow><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>c</mi></mrow><mo>,</mo><mrow><mi>j</mi><mo>≠</mo><mn>0</mn></mrow></mrow></msub><msub><mi>e</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>+</mo><mi>j</mi></mrow></msub></msub></mrow></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>w</mi></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mmultiscripts><mi>e</mi><mi>w</mi><msup><mi/><mo>′</mo></msup><none/><mo>⊤</mo></mmultiscripts><mo>⋅</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mrow><mo>-</mo><mi>c</mi></mrow><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>c</mi></mrow><mo>,</mo><mrow><mi>j</mi><mo>≠</mo><mn>0</mn></mrow></mrow></msub><msub><mi>e</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>+</mo><mi>j</mi></mrow></msub></msub></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mfrac><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="e_{w}" display="inline"><msub><mi>e</mi><mi>w</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="e^{{}^{\prime}}_{w}" display="inline"><msubsup><mi>e</mi><mi>w</mi><msup><mi/><mo>′</mo></msup></msubsup></math> represent the input and output embeddings respectively, i.e., the assignments to the latent variables
+for word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. While some learn a single representation for each word (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m5" class="ltx_Math" alttext="e^{\prime}_{w}\triangleq e_{w}" display="inline"><mrow><msubsup><mi>e</mi><mi>w</mi><mo>′</mo></msubsup><mo>≜</mo><msub><mi>e</mi><mi>w</mi></msub></mrow></math>), our results improved when
+we used a separate embedding for input and output in cbow.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Relation Constrained Model</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Suppose we have a resource that indicates relations between words.
+In the case of semantics, we could have a resource that encodes semantic similarity between words.
+Based on this resource, we learn embeddings that predict one word from another related word.
+We define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{R}" display="inline"><mi>𝐑</mi></math> as a set of relations between
+two words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="w^{\prime}" display="inline"><msup><mi>w</mi><mo>′</mo></msup></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="\mathbf{R}" display="inline"><mi>𝐑</mi></math> can contain typed relations (e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is related to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="w^{\prime}" display="inline"><msup><mi>w</mi><mo>′</mo></msup></math>
+through a specific type of semantic relation), and relations can have associated scores indicating
+their strength. We assume a single relation type of uniform strength,
+though it is straightforward to include additional characteristics into the objective.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">Define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="\mathbf{R}_{w}" display="inline"><msub><mi>𝐑</mi><mi>w</mi></msub></math> to be the subset of relations in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="\mathbf{R}" display="inline"><mi>𝐑</mi></math> which involve word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. Our objective
+maximizes the (log) probability of all relations by summing over all words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> in the vocabulary:</p>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\vspace{-.1cm}\frac{1}{N}\sum_{i=1}^{N}\sum_{w\in\mathbf{R}_{w_{i}}}\log p%&#10;\left(w|w_{i}\right)," display="block"><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>w</mi><mo>∈</mo><msub><mi>𝐑</mi><msub><mi>w</mi><mi>i</mi></msub></msub></mrow></munder><mi>log</mi><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="p(w|w_{i})={\exp\left({e^{\prime}_{w}}^{T}e_{w_{i}}\right)}/{\sum_{\bar{w}}%&#10;\exp\left({e^{\prime}_{\bar{w}}}^{T}e_{w_{i}}\right)}" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>exp</mi><mrow><mo>(</mo><mmultiscripts><mi>e</mi><mi>w</mi><mo>′</mo><none/><mi>T</mi></mmultiscripts><msub><mi>e</mi><msub><mi>w</mi><mi>i</mi></msub></msub><mo>)</mo></mrow><mo>/</mo><msub><mo largeop="true" symmetric="true">∑</mo><mover accent="true"><mi>w</mi><mo stretchy="false">¯</mo></mover></msub><mi>exp</mi><mrow><mo>(</mo><mmultiscripts><mi>e</mi><mover accent="true"><mi>w</mi><mo stretchy="false">¯</mo></mover><mo>′</mo><none/><mi>T</mi></mmultiscripts><msub><mi>e</mi><msub><mi>w</mi><mi>i</mi></msub></msub><mo>)</mo></mrow></mrow></math> takes a form similar to Eq. (<a href="#S2.E2" title="(2) ‣ 2.1 Word2vec ‣ 2 Learning Embeddings ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) but without the context:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m7" class="ltx_Math" alttext="e^{\prime}" display="inline"><msup><mi>e</mi><mo>′</mo></msup></math> are again the input and output embeddings. For our semantic relations
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m8" class="ltx_Math" alttext="e^{\prime}_{w}" display="inline"><msubsup><mi>e</mi><mi>w</mi><mo>′</mo></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m9" class="ltx_Math" alttext="e_{w}" display="inline"><msub><mi>e</mi><mi>w</mi></msub></math> are symmetrical, so we use a single embedding.
+Embeddings are learned such that they are predictive of related words in the resource.
+We call this the Relation Constrained Model (RCM).</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Joint Model</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">The cbow and RCM objectives use separate data for learning. While RCM learns
+embeddings suited to specific tasks based on knowledge resources, cbow learns embeddings for words
+not included in the resource but appear in a corpus. We form a joint model through a linear combination of the two (weighted
+by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>):</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\small\frac{1}{T}\sum_{t=1}^{T}\log p\left(w_{t}|w_{t-c}^{t+c}\right)+\frac{C}%&#10;{N}\sum_{i=1}^{N}\sum_{w\in\mathbf{R}_{w_{i}}}\log p\left(w|w_{i}\right)" display="block"><mrow><mfrac><mn mathsize="small" stretchy="false">1</mn><mi mathsize="small" stretchy="false">T</mi></mfrac><munderover><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="small" stretchy="false">t</mi><mo mathsize="small" stretchy="false">=</mo><mn mathsize="small" stretchy="false">1</mn></mrow><mi mathsize="small" stretchy="false">T</mi></munderover><mi mathsize="small" stretchy="false">log</mi><mi mathsize="small" stretchy="false">p</mi><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">t</mi></msub><mo mathsize="small" stretchy="false">|</mo><msubsup><mi mathsize="small" stretchy="false">w</mi><mrow><mi mathsize="small" stretchy="false">t</mi><mo mathsize="small" stretchy="false">-</mo><mi mathsize="small" stretchy="false">c</mi></mrow><mrow><mi mathsize="small" stretchy="false">t</mi><mo mathsize="small" stretchy="false">+</mo><mi mathsize="small" stretchy="false">c</mi></mrow></msubsup><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">+</mo><mfrac><mi mathsize="small" stretchy="false">C</mi><mi mathsize="small" stretchy="false">N</mi></mfrac><munderover><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="small" stretchy="false">i</mi><mo mathsize="small" stretchy="false">=</mo><mn mathsize="small" stretchy="false">1</mn></mrow><mi mathsize="small" stretchy="false">N</mi></munderover><munder><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">∈</mo><msub><mi mathsize="small" stretchy="false">𝐑</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub></msub></mrow></munder><mi mathsize="small" stretchy="false">log</mi><mi mathsize="small" stretchy="false">p</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">|</mo><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Based on our initial experiments, RCM uses the output embeddings of cbow.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">We learn embeddings using stochastic gradient ascent. Updates for the first term for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m1" class="ltx_Math" alttext="e^{\prime}" display="inline"><msup><mi>e</mi><mo>′</mo></msup></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> are:</p>
+<table id="S2.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\small e^{\prime}_{w}-\alpha_{\textrm{cbow}}\left(\sigma(f(w))-I_{[w=w_{t}]}%&#10;\right)\cdot\sum_{j=t-c}^{t+c}e_{w_{j}}" display="block"><mrow><msubsup><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">′</mo></msubsup><mo mathsize="small" stretchy="false">-</mo><mrow><mrow><msub><mi mathsize="small" stretchy="false">α</mi><mtext>cbow</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi mathsize="small" stretchy="false">σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi mathsize="small" stretchy="false">f</mi><mo>⁢</mo><mrow><mo>(</mo><mi mathsize="small" stretchy="false">w</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">-</mo><msub><mi mathsize="small" stretchy="false">I</mi><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">=</mo><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">t</mi></msub><mo mathsize="small" stretchy="false">]</mo></mrow></msub></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">⋅</mo><mrow><munderover><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="small" stretchy="false">j</mi><mo mathsize="small" stretchy="false">=</mo><mrow><mi mathsize="small" stretchy="false">t</mi><mo mathsize="small" stretchy="false">-</mo><mi mathsize="small" stretchy="false">c</mi></mrow></mrow><mrow><mi mathsize="small" stretchy="false">t</mi><mo mathsize="small" stretchy="false">+</mo><mi mathsize="small" stretchy="false">c</mi></mrow></munderover><msub><mi mathsize="small" stretchy="false">e</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">j</mi></msub></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S2.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\small e_{w_{j}}-\alpha_{\textrm{cbow}}\sum_{w}\left(\sigma(f(w))-I_{[w=w_{t}]%&#10;}\right)\cdot e^{\prime}_{w}," display="block"><mrow><mrow><msub><mi mathsize="small" stretchy="false">e</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">j</mi></msub></msub><mo mathsize="small" stretchy="false">-</mo><mrow><msub><mi mathsize="small" stretchy="false">α</mi><mtext>cbow</mtext></msub><mo>⁢</mo><mrow><munder><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mi mathsize="small" stretchy="false">w</mi></munder><mrow><mrow><mo>(</mo><mrow><mrow><mi mathsize="small" stretchy="false">σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi mathsize="small" stretchy="false">f</mi><mo>⁢</mo><mrow><mo>(</mo><mi mathsize="small" stretchy="false">w</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">-</mo><msub><mi mathsize="small" stretchy="false">I</mi><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">=</mo><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">t</mi></msub><mo mathsize="small" stretchy="false">]</mo></mrow></msub></mrow><mo>)</mo></mrow><mo mathsize="small" stretchy="false">⋅</mo><msubsup><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">′</mo></msubsup></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m3" class="ltx_Math" alttext="\sigma(x)={\exp\{x\}}/{\left(1+\exp\{x\}\right)}" display="inline"><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>{</mo><mi>x</mi><mo>}</mo></mrow></mrow><mo>/</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>{</mo><mi>x</mi><mo>}</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m4" class="ltx_Math" alttext="I_{[x]}" display="inline"><msub><mi>I</mi><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow></msub></math> is 1 when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is true, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m6" class="ltx_Math" alttext="f(w)={e^{\prime}_{w}}^{\top}\sum_{j=t-c}^{t+c}e_{w_{j}}" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mmultiscripts><mi>e</mi><mi>w</mi><mo>′</mo><none/><mo>⊤</mo></mmultiscripts><mo>⁢</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mrow><mi>t</mi><mo>-</mo><mi>c</mi></mrow></mrow><mrow><mi>t</mi><mo>+</mo><mi>c</mi></mrow></msubsup><msub><mi>e</mi><msub><mi>w</mi><mi>j</mi></msub></msub></mrow></mrow></mrow></math>.
+Second term updates are:</p>
+<table id="S2.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\small e^{\prime}_{w}-\alpha_{\textrm{RCM}}\left(\sigma(f^{\prime}(w))-I_{[w%&#10;\in R_{w_{i}}]}\right)\cdot e^{\prime}_{w_{i}}" display="block"><mrow><msubsup><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">′</mo></msubsup><mo mathsize="small" stretchy="false">-</mo><mrow><mrow><msub><mi mathsize="small" stretchy="false">α</mi><mtext>RCM</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi mathsize="small" stretchy="false">σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi mathsize="small" stretchy="false">f</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mi mathsize="small" stretchy="false">w</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">-</mo><msub><mi mathsize="small" stretchy="false">I</mi><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">∈</mo><msub><mi mathsize="small" stretchy="false">R</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub></msub><mo mathsize="small" stretchy="false">]</mo></mrow></msub></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">⋅</mo><msubsup><mi mathsize="small" stretchy="false">e</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">′</mo></msubsup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S2.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m1" class="ltx_Math" alttext="\small\vspace{-.1cm}e^{\prime}_{w_{i}}-\alpha_{\textrm{RCM}}\sum_{w}\left(%&#10;\sigma(f^{\prime}(w))-I_{[w\in R_{w_{i}}]}\right)\cdot e^{\prime}_{w}," display="block"><mrow><mrow><msubsup><mi mathsize="small" stretchy="false">e</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">′</mo></msubsup><mo mathsize="small" stretchy="false">-</mo><mrow><msub><mi mathsize="small" stretchy="false">α</mi><mtext>RCM</mtext></msub><mo>⁢</mo><mrow><munder><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mi mathsize="small" stretchy="false">w</mi></munder><mrow><mrow><mo>(</mo><mrow><mrow><mi mathsize="small" stretchy="false">σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi mathsize="small" stretchy="false">f</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mi mathsize="small" stretchy="false">w</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">-</mo><msub><mi mathsize="small" stretchy="false">I</mi><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">∈</mo><msub><mi mathsize="small" stretchy="false">R</mi><msub><mi mathsize="small" stretchy="false">w</mi><mi mathsize="small" stretchy="false">i</mi></msub></msub><mo mathsize="small" stretchy="false">]</mo></mrow></msub></mrow><mo>)</mo></mrow><mo mathsize="small" stretchy="false">⋅</mo><msubsup><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">w</mi><mo mathsize="small" stretchy="false">′</mo></msubsup></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m7" class="ltx_Math" alttext="f^{\prime}(w)={e^{\prime}_{w}}^{\top}e^{\prime}_{w_{i}}" display="inline"><mrow><mrow><msup><mi>f</mi><mo>′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mmultiscripts><mi>e</mi><mi>w</mi><mo>′</mo><none/><mo>⊤</mo></mmultiscripts><mo>⁢</mo><msubsup><mi>e</mi><msub><mi>w</mi><mi>i</mi></msub><mo>′</mo></msubsup></mrow></mrow></math>. We use two learning rates: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m8" class="ltx_Math" alttext="\alpha_{\textrm{cbow}}" display="inline"><msub><mi>α</mi><mtext>cbow</mtext></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m9" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi>α</mi><mtext>RCM</mtext></msub></math>.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Parameter Estimation</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">All three models (cbow, RCM and joint) use the same training scheme based on <cite class="ltx_cite"/>.
+There are several choices to make in parameter estimation; we present the best performing choices used in our results.</p>
+</div>
+<div id="S2.SS4.p2" class="ltx_para">
+<p class="ltx_p">We use noise contrastive estimation (NCE) <cite class="ltx_cite">[]</cite>, which approximately maximizes the log probability of the softmax objective
+(Eq. <a href="#S2.E2" title="(2) ‣ 2.1 Word2vec ‣ 2 Learning Embeddings ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+For each objective (cbow or RCM), we sample 15 words as negative samples for each training instance according
+to their frequencies in raw texts (i.e. training data of cbow).
+Suppose <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> has frequency <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m2" class="ltx_Math" alttext="u(w)" display="inline"><mrow><mi>u</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math>, then the probability of sampling <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m4" class="ltx_Math" alttext="p(w)\propto u(w)^{3/4}" display="inline"><mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>∝</mo><mrow><mi>u</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow><mrow><mn>3</mn><mo>/</mo><mn>4</mn></mrow></msup></mrow></mrow></math>.</p>
+</div>
+<div id="S2.SS4.p3" class="ltx_para">
+<p class="ltx_p">We use distributed training, where shared embeddings are updated by each thread based on training data within
+the thread, i.e., asynchronous stochastic gradient ascent. For the joint model,
+we assign threads to the cbow or RCM objective with a balance
+of 12:1(i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> is approximately <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m2" class="ltx_Math" alttext="\frac{1}{12}" display="inline"><mfrac><mn>1</mn><mn>12</mn></mfrac></math>). We allow the cbow threads to control convergence; training stops when these threads finish processing the data.
+We found this an effective method for balancing the two objectives.
+We trained each cbow objective using a single pass over the data set (except for those in Section <a href="#S4.SS1" title="4.1 Language Modeling ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>), which we
+empirically verified was sufficient to ensure stable performances on semantic tasks.</p>
+</div>
+<div id="S2.SS4.p4" class="ltx_para">
+<p class="ltx_p">Model pre-training is critical in deep learning <cite class="ltx_cite">[]</cite>. We evaluate two
+strategies: random initialization, and pre-training the embeddings. For pre-training, we first learn using cbow
+with a random initialization. The resulting trained model is then used to initialize the RCM model. This enables
+the RCM model to benefit from the unlabeled data, but refine the embeddings constrained by the given relations.</p>
+</div>
+<div id="S2.SS4.p5" class="ltx_para">
+<p class="ltx_p">Finally, we consider a final model for training embeddings that uses a specific training regime.
+While the joint model balances between fitting the text and learning relations, modeling
+the text at the expense of the relations may negatively impact the final embeddings for tasks that use
+the embeddings outside of the context of word2vec.
+Therefore, we use the embeddings from a trained joint model to pre-train an RCM model.
+We call this setting Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p5.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Evaluation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">For training cbow we use the New York Times (NYT) 1994-97 subset from Gigaword v5.0 <cite class="ltx_cite">[]</cite>.
+We select 1,000 paragraphs each for dev and test data from
+the December 2010 portion of the NYT.
+Sentences are tokenized using OpenNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="https://opennlp.apache.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://opennlp.apache.org/</span></a></span></span></span>, yielding
+518,103,942 tokens for training, 42,953 tokens for dev and 41,344 for test.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We consider two resources for training the RCM term:
+the Paraphrase Database (PPDB) <cite class="ltx_cite">[]</cite> and
+WordNet <cite class="ltx_cite">[]</cite>. For each semantic pair extracted from these
+resources, we add a relation to the RCM objective. Since we use both resources
+for evaluation, we divide each into train, dev and test.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">PPDB is an automatically extracted dataset containing tens of millions of paraphrase pairs, including words and phrases.
+We used the “lexical” version of PPDB (no phrases) and filtered to include pairs that
+contained words found in the 200,000 most frequent
+words in the NYT corpus, which ensures each word in the relations had support in the text corpus.
+Next, we removed duplicate pairs: if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>A,B<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> occurred in PPDB, we removed relations of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>B,A<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math>.
+PPDB is organized into 6 parts, ranging from S (small) to XXXL. Division into these sets is based on an automatically
+derived accuracy metric. Since S contains the most accurate paraphrases, we used these for evaluation.
+We divided S into a dev set (1582 pairs) and test set (1583 pairs). Training was based on one of the other sets minus relations
+from S.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">We created similar splits using WordNet, extracting synonyms using the 100,000 most frequent NYT words.
+We divide the vocabulary into three sets: the most frequent 10,000 words, words with ranks between 10,001-30,000 and 30,001-100,000.
+We sample 500 words from each set to construct a dev and test set. For each word we sample one synonym
+to form a pair. The remaining words and their synonyms are used for training.
+However we did not use the training data because it is too small to affect the results.
+Table <a href="#S3.T1" title="Table 1 ‣ 3 Evaluation ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> summarizes the datasets.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">PPDB</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Relations</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">WordNet</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Relations</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">XL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">115,041</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">68,372</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">XXL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">587,439</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">(not used in</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">XXXL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2,647,105</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">this work)</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Dev</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1,582</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dev</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1,500</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1,583</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1,500</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Sizes of semantic resources datasets.</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The goal of our experiments is to demonstrate the value of learning semantic embeddings with information from
+semantic resources. In each setting, we will compare the word2vec baseline
+embedding trained with cbow against RCM alone, the joint model and Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM.
+We consider three evaluation tasks:
+language modeling, measuring semantic similarity, and predicting human judgements on semantic relatedness.
+In all of our experiments, we conducted model development and tuned model parameters (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="\alpha_{\textrm{cbow}}" display="inline"><msub><mi>α</mi><mtext>cbow</mtext></msub></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi>α</mi><mtext>RCM</mtext></msub></math>, PPDB dataset, etc.)
+on development data, and evaluate the best performing model on test data.
+The models are notated as follows: word2vec for the baseline objective (cbow or skip-gram), RCM-r/p and Joint-r/p for random and pre-trained
+initializations of the RCM and Joint objectives, and Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM for pre-training RCM with Joint embeddings.
+Unless otherwise notes, we train using PPDB XXL.
+We initially created WordNet training data, but found it too small to affect results.
+Therefore, we include only RCM results <span class="ltx_text ltx_font_italic">trained</span> on PPDB, but show evaluations on both PPDB and WordNet.
+We trained 200-dimensional embeddings and used output embeddings for measuring similarity.
+During the training of cbow objectives we remove all words with frequencies less than 5, which is the default setting of word2vec.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Language Modeling</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Word2vec is fundamentally a language model, which allows us to compute standard
+evaluation metrics on a held out dataset. After obtaining trained embeddings from any of our objectives,
+we use the embeddings in the word2vec model to measure perplexity of the test set.
+Measuring perplexity means computing the exact probability of each word, which requires summation over
+all words in the vocabulary in the denominator of the softmax.
+Therefore, we also trained the language models with hierarchical classification <cite class="ltx_cite">[]</cite> strategy (HS).
+The averaged perplexities are reported on the NYT test set.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">While word2vec and joint are trained as language models, RCM is not. In fact, RCM does not even observe all the words that appear
+in the training set, so it makes little sense to use the RCM embeddings directly for language modeling.
+Therefore, in order to make fair comparison, for every set of trained embeddings, we fix them as input embedding for word2vec, then
+learn the remaining input embeddings (words not in the relations) and all the output embeddings using cbow.
+Since this involves running cbow on NYT data for 2 iterations (one iteration for word2vec-training/pre-training/joint-modeling and the other for tuning the language
+model),
+we use Joint-r (random initialization)
+for a fair comparison.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NCE</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">HS</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">word2vec (cbow)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.75</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">6.90</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">7.07</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-r (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}=1\times 10^{-2}" display="inline"><mrow><msub><mi>α</mi><mtext mathsize="small" stretchy="false">RCM</mtext></msub><mo>=</mo><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></mrow></mrow></math><span class="ltx_text ltx_font_small">)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">8.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">6.87</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-r (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}=1\times 10^{-3}" display="inline"><mrow><msub><mi>α</mi><mtext mathsize="small" stretchy="false">RCM</mtext></msub><mo>=</mo><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></mrow></mrow></math><span class="ltx_text ltx_font_small">)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">8.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">6.75</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">RCM</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">8.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">6.92</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>LM evaluation on held out NYT data.</div>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Language Modeling ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the results for language modeling on test data.
+All of our proposed models improve over the baseline in terms of perplexity when NCE is used for training LMs.
+When HS is used, the perplexities are greatly improved. However in this situation only the joint models improve the results;
+and Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM performs similar to the baseline, although it is not designed for language modeling.
+We include the optimal <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi>α</mi><mtext>RCM</mtext></msub></math> in the table; while set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="\alpha_{\textrm{cbow}}=0.025" display="inline"><mrow><msub><mi>α</mi><mtext>cbow</mtext></msub><mo>=</mo><mn>0.025</mn></mrow></math> (the default setting of word2vec).
+Even when our goal is to strictly model the raw text corpus, we obtain improvements
+by injecting semantic information into the objective. RCM can effectively shift learning
+to obtain more informative embeddings.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">PPDB</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">WordNet</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Dev</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Dev</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Test</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">word2vec (cbow)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.68</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">39.26</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">29.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">42.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">7.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">4.97</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">word2vec (skip-gram)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">48.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">37.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">26.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">8.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">8.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">4.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">RCM-r</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">55.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">42.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">26.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">9.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5.29</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">40.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">65.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">15.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">12.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">7.46</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">14.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">11.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">7.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-r</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">15.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">11.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">7.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">13.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">10.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">7.44</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">37.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">64.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">15.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">11.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">6.96</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">RCM</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">64.22</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">54.99</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">41.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">68.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">57.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">42.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">16.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">11.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">7.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">16.16</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">11.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">7.56</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>MRR for semantic similarity on PPDB and WordNet dev and test data. Higher is better. All RCM objectives are trained with PPDB XXL.
+To preserve test data integrity, only the best performing setting of each model is evaluated on the test data.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Measuring Semantic Similarity</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our next task is to find semantically related words using the embeddings, evaluating on relations from
+PPDB and WordNet. For each of the word pairs
+in the evaluation set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>A,B<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math>, we use the cosine distance between the embeddings
+to score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> with a candidate word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="B^{\prime}" display="inline"><msup><mi>B</mi><mo>′</mo></msup></math>.
+We use a large sample of candidate words (10k, 30k or 100k)
+and rank all candidate words for pairs where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> appears in the candidates.
+We then measure the rank of the correct <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>
+to compute mean reciprocal rank (MRR). Our goal is to use word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> to select word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m8" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>
+as the closest matching word from the large set of candidates.
+Using this strategy, we evaluate the embeddings from all of our objectives
+and measure which embedding most accurately selected the true correct word.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.1 Language Modeling ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows MRR results for both PPDB and WordNet dev and test datasets
+for all models. All of our methods improve over the baselines in nearly every test set result.
+In nearly every case, Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM obtained the largest improvements. Clearly,
+our embeddings are much more effective at capturing semantic similarity.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Human Judgements</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Our final evaluation is to predict human judgements of semantic relatedness.
+We have pairs of words from PPDB scored by annotators
+on a scale of 1 to 5 for quality of similarity. Our data are the judgements used by
+<cite class="ltx_cite"/>, which we filtered to include only those
+pairs for which we learned embeddings, yielding 868 pairs.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">We assign a score using the dot product between the output embeddings of each word in the pair,
+then order all 868 pairs according to this score. Using the human judgements, we compute
+the swapped pairs rate:
+the ratio between the number of swapped pairs and the number of all pairs.
+For pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> scored <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="y_{p}" display="inline"><msub><mi>y</mi><mi>p</mi></msub></math> by the embeddings and judged <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="\hat{y}_{p}" display="inline"><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>p</mi></msub></math> by an annotator, the swapped pair rate is:</p>
+<table id="S4.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="\frac{\sum_{p_{1},p_{2}\in D}\textrm{I}[\left(y_{p_{1}}-y_{p_{2}}\right)\left(%&#10;\hat{y}_{p_{2}}-\hat{y}_{p_{1}}\right)&lt;0]}{\sum_{p_{1},p_{2}\in D}\textrm{I}[y%&#10;_{p_{1}}\neq y_{p_{2}}]}" display="block"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><msub><mi>p</mi><mn>2</mn></msub></mrow><mo>∈</mo><mi>D</mi></mrow></msub><mtext>I</mtext><mrow><mo>[</mo><mrow><mo>(</mo><msub><mi>y</mi><msub><mi>p</mi><mn>1</mn></msub></msub><mo>-</mo><msub><mi>y</mi><msub><mi>p</mi><mn>2</mn></msub></msub><mo>)</mo></mrow><mrow><mo>(</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><msub><mi>p</mi><mn>2</mn></msub></msub><mo>-</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><msub><mi>p</mi><mn>1</mn></msub></msub><mo>)</mo></mrow><mo>&lt;</mo><mn>0</mn><mo>]</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><msub><mi>p</mi><mn>2</mn></msub></mrow><mo>∈</mo><mi>D</mi></mrow></msub><mtext>I</mtext><mrow><mo>[</mo><msub><mi>y</mi><msub><mi>p</mi><mn>1</mn></msub></msub><mo>≠</mo><msub><mi>y</mi><msub><mi>p</mi><mn>2</mn></msub></msub><mo>]</mo></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m4" class="ltx_Math" alttext="\textrm{I}[x]" display="inline"><mrow><mtext>I</mtext><mo>⁢</mo><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow></mrow></math> is 1 when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is true.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T4" title="Table 4 ‣ 4.3 Human Judgements ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows that all of our
+models obtain reductions in error as compared to the baseline (cbow),
+with Joint<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>RCM obtaining the largest reduction.
+This suggests that our embeddings are better suited for semantic tasks, in this case
+judged by human annotations.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Swapped Pairs Rate</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">word2vec (cbow)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.81</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.66</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-r</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">16.85</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">16.96</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Joint</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">RCM</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">16.62</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span>Results for ranking the quality of PPDB pairs as compared to human judgements.</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_t"/>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">PPDB Dev</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">Relations</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">RCM-r</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">XL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.26</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">9.55</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">XL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">45.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">32.95</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">RCM-r</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">XXL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">26.05</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">XXL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">61.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">53.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">40.95</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">RCM-r</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">XXXL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">28.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_small">RCM-p</span></th>
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">XXXL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">53.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">46.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">34.19</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>MRR on PPDB dev data for training on an increasing number of relations.</div>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">PPDB Dev</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m1" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi>α</mi><mtext mathsize="small" stretchy="false">RCM</mtext></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">30k</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">100k</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Joint-p</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m2" class="ltx_Math" alttext="1\times 10^{-1}" display="inline"><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">47.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m3" class="ltx_Math" alttext="5\times 10^{-2}" display="inline"><mrow><mn>5</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">33.07</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m4" class="ltx_Math" alttext="1\times 10^{-2}" display="inline"><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">59.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">50.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">37.73</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m5" class="ltx_Math" alttext="1\times 10^{-3}" display="inline"><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">57.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">46.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">34.45</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span>Effect of learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m7" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi mathsize="normal" stretchy="false">α</mi><mtext mathsize="small" stretchy="false">RCM</mtext></msub></math> on MRR for the RCM objective in Joint models.</div>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Analysis</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">We conclude our experiments with an analysis of modeling choices. First, pre-training RCM models gives
+significant improvements in both measuring semantic similarity and capturing human judgements (compare “p” vs. “r” results.)
+Second, the number of relations used for RCM training is an important factor. Table <a href="#S4.T5" title="Table 5 ‣ 4.3 Human Judgements ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows the effect
+on dev data of using various numbers of relations. While we see improvements from XL to XXL (5 times as many relations), we
+get worse results on XXXL, likely because this set contains the lowest quality relations in PPDB.
+Finally, Table <a href="#S4.T6" title="Table 6 ‣ 4.3 Human Judgements ‣ 4 Experiments ‣ Improving Lexical Embeddings with Semantic Knowledge" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows different learning rates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m1" class="ltx_Math" alttext="\alpha_{\textrm{RCM}}" display="inline"><msub><mi>α</mi><mtext>RCM</mtext></msub></math>
+for the RCM objective.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">The baseline word2vec and the joint model have nearly the same averaged running times (2,577s and 2,644s respectively), since they have same number of threads for the CBOW objective and the joint model uses additional threads for the RCM objective. The RCM models are trained with single thread for 100 epochs. When trained on the PPDB-XXL data, it spends 2,931s on average.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have presented a new learning objective for neural language models that incorporates
+prior knowledge contained in resources to improve learned word embeddings.
+We demonstrated that the Relation Constrained Model can lead to better semantic embeddings
+by incorporating resources like PPDB, leading to better language modeling, semantic similarity metrics,
+and predicting human semantic judgements. Our implementation is based on the word2vec package
+and we made it available for general use
+<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>https://github.com/Gorov/JointRCM</span></span></span>.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">We believe that our techniques have implications beyond those considered in this work. We plan
+to explore the embeddings suitability for other semantics tasks, including the use of resources
+with both typed and scored relations. Additionally, we see opportunities for jointly learning embeddings across
+many tasks with many resources, and plan to extend our model accordingly.</p>
+</div>
+<div id="S5.SS4.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Acknowledgements</h4>
+
+<div id="S5.SS4.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Yu is supported by China Scholarship Council and by
+NSFC 61173073.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:02:19 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

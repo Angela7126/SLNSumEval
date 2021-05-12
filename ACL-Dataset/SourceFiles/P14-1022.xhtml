@@ -1,0 +1,945 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Less Grammar, More Features</title>
+<!--Generated on Tue Jun 10 17:21:13 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Less Grammar, More Features</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">David Hall  <span class="ltx_text ltx_phantom"><span style="visibility:hidden">and</span></span>  Greg Durrett
+ <span class="ltx_text ltx_phantom"><span style="visibility:hidden">and</span></span>  Dan Klein 
+<br class="ltx_break"/>Computer Science Division 
+<br class="ltx_break"/>University of California, Berkeley
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">dlwh,gdurrett,klein</span>}<span class="ltx_text ltx_font_typewriter">@cs.berkeley.edu</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a parser that relies primarily on extracting information directly from surface spans rather than on propagating information through enriched grammar structure. For example, instead of creating separate grammar symbols to mark the definiteness of an NP, our parser might instead capture the same information from the first word of the NP. Moving context out of the grammar and onto surface features can greatly simplify the structural component of the parser: because so many deep syntactic cues have surface reflexes, our system can still parse accurately with context-free backbones as minimal as X-bar grammars. Keeping the structural backbone simple and moving features to the surface also allows easy adaptation to new languages and even to new tasks. On the SPMRL 2013 multilingual constituency parsing shared task <cite class="ltx_cite">[<a href="#bib.bib18" title="Overview of the SPMRL 2013 Shared Task: A Cross-Framework Evaluation of Parsing Morphologically Rich Languages" class="ltx_ref">25</a>]</cite>, our system outperforms the top single parser system of <cite class="ltx_cite">Björkelund<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task" class="ltx_ref">2013</a>)</cite> on a range of languages. In addition, despite being designed for syntactic analysis, our system also achieves state-of-the-art numbers on the structural sentiment task of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite>. Finally, we show that, in both syntactic parsing and sentiment analysis, many broad linguistic trends can be captured via surface features.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Naïve context-free grammars, such as those embodied by standard treebank annotations, do not parse well because their symbols have too little context to constrain their
+syntactic behavior. For example, <em class="ltx_emph">to</em> PPs usually attach to verbs and <em class="ltx_emph">of</em> PPs usually attach to nouns, but a context-free PP symbol can equally well attach to either. Much of the last few decades of parsing research has
+therefore focused on propagating contextual information from the leaves of the tree to internal nodes. For example, head lexicalization <cite class="ltx_cite">[<a href="#bib.bib8" title="Three New Probabilistic Models for Dependency Parsing: An Exploration" class="ltx_ref">9</a>, <a href="#bib.bib192" title="Three generative, lexicalised models for statistical parsing" class="ltx_ref">7</a>, <a href="#bib.bib6" title="Statistical Techniques for Natural Language Parsing" class="ltx_ref">5</a>]</cite>, structural annotation <cite class="ltx_cite">[<a href="#bib.bib12" title="PCFG Models of Linguistic Tree Representations" class="ltx_ref">15</a>, <a href="#bib.bib91" title="Accurate unlexicalized parsing." class="ltx_ref">16</a>]</cite>, and
+state-splitting <cite class="ltx_cite">[<a href="#bib.bib81" title="Probabilistic CFG with latent annotations" class="ltx_ref">18</a>, <a href="#bib.bib84" title="Learning accurate, compact, and interpretable tree annotation" class="ltx_ref">21</a>]</cite> are all
+designed to take coarse symbols like PP and decorate them with additional context. The underlying reason that such propagation is even needed is that PCFG parsers score trees based on local
+configurations only, and any information that is
+not threaded through the tree becomes inaccessible
+to the scoring function. There have been non-local
+approaches as well, such as tree-substitution
+parsers <cite class="ltx_cite">[<a href="#bib.bib3" title="Using an Annotated Corpus As a Stochastic Grammar" class="ltx_ref">2</a>, <a href="#bib.bib14" title="Tree-gram Parsing Lexical Dependencies and Structural Relations" class="ltx_ref">26</a>]</cite>, neural net
+parsers <cite class="ltx_cite">[<a href="#bib.bib11" title="Inducing History Representations for Broad Coverage Statistical Parsing" class="ltx_ref">13</a>]</cite>, and rerankers
+<cite class="ltx_cite">[<a href="#bib.bib7" title="Discriminative Reranking for Natural Language Parsing" class="ltx_ref">6</a>, <a href="#bib.bib5" title="Coarse-to-fine N-best Parsing and MaxEnt Discriminative Reranking" class="ltx_ref">4</a>, <a href="#bib.bib218" title="Forest reranking: discriminative parsing with non-local features" class="ltx_ref">14</a>]</cite>. These non-local approaches can actually go even further in enriching the grammar’s structural complexity by coupling larger domains in various ways, though their non-locality generally complicates inference.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this work, we instead try to <em class="ltx_emph">minimize</em> the structural complexity of the grammar by moving as much context as possible
+onto local surface features. We examine the position that grammars should not propagate any information that is available from
+surface strings, since a discriminative parser can access that information directly. We therefore begin with a minimal grammar
+and iteratively augment it with rich input features that do not enrich the context-free backbone. Previous work has also used
+surface features in their parsers, but the focus has been on machine learning methods <cite class="ltx_cite">[<a href="#bib.bib19" title="Max-Margin Parsing" class="ltx_ref">28</a>]</cite>, latent
+annotations <cite class="ltx_cite">[<a href="#bib.bib82" title="Discriminative log-linear grammars with latent variables" class="ltx_ref">24</a>, <a href="#bib.bib1" title="Sparse multi-scale grammars for discriminative latent variable parsing" class="ltx_ref">23</a>]</cite>, or implementation <cite class="ltx_cite">[<a href="#bib.bib92" title="Efficient, feature-based, conditional random field parsing" class="ltx_ref">10</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">By contrast, we investigate the extent to which we need a grammar at all. As a thought experiment, consider a parser with no grammar, which functions by independently classifying each span <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="(i,j)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></math> of a sentence as an NP, VP, and so on, or <em class="ltx_emph">null</em> if that span is a non-constituent. For example, spans that begin with <em class="ltx_emph">the</em> might tend to be
+NPs, while spans that end with <em class="ltx_emph">of</em> might tend to be non-constituents. An independent classification approach
+is actually very viable for part-of-speech tagging <cite class="ltx_cite">[<a href="#bib.bib20" title="Feature-rich Part-of-speech Tagging with a Cyclic Dependency Network" class="ltx_ref">29</a>]</cite>, but is problematic for parsing – if
+nothing else, parsing comes with a structural requirement that the output be a well-formed, nested tree. Our parser uses a minimal PCFG backbone grammar to ensure a basic level of structural well-formedness, but relies mostly on features of surface spans to drive accuracy. Formally, our model is a CRF where the features factor over anchored rules of a small backbone grammar, as shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Some aspects of the parsing problem, such as the tree constraint, are clearly best captured by a PCFG. Others, such as heaviness effects, are naturally captured using surface information. The open question is whether surface features are adequate for key effects like subcategorization, which have deep definitions but regular surface reflexes (e.g. the preposition selected by a verb will often linearly follow it). Empirically, the answer seems to be yes, and our system produces strong results, e.g. up to 90.5 F1 on English parsing. Our parser is also able to generalize well across languages with little tuning: it achieves state-of-the-art results on multilingual parsing, scoring higher than the best single-parser system from the SPMRL 2013 Shared Task on a range of languages, as well as on the competition’s average F1 metric.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">One advantage of a system that relies on surface features and a simple grammar is that it is portable not only
+across languages but also across tasks to an extent. For example, <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> demonstrates that
+sentiment analysis, which is usually approached as a flat classification task, can be viewed as tree-structured. In their work, they propagate real-valued vectors up a tree using neural tensor nets and see gains from their recursive approach. Our parser can be easily adapted to this task by replacing the X-bar grammar over treebank symbols with a grammar over the sentiment values to encode the output variables and then adding n-gram indicators to our feature set to capture the bulk of the lexical effects. When applied to this task, our system generally matches their accuracy overall and is able to outperform it on the overall sentence-level subtask.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Parsing Model</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In order to exploit non-independent surface features of the input, we use a discriminative formulation. Our model is a
+conditional random field <cite class="ltx_cite">[<a href="#bib.bib13" title="Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data" class="ltx_ref">17</a>]</cite> over trees, in the same vein as <cite class="ltx_cite">Finkel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib92" title="Efficient, feature-based, conditional random field parsing" class="ltx_ref">2008</a>)</cite> and
+<cite class="ltx_cite">Petrov and Klein (<a href="#bib.bib82" title="Discriminative log-linear grammars with latent variables" class="ltx_ref">2008</a>)</cite>. Formally, we define the
+probability of a tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> conditioned on a sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math> as</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\begin{split}p(T|\mathbf{w})&amp;\propto\exp\left(\theta^{\intercal}\sum_{r\in T}f%&#10;(r,\mathbf{w})\right)\end{split}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>T</mi><mo>|</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>∝</mo><mi>exp</mi><mrow><mo>(</mo><msup><mi>θ</mi><mo>⊺</mo></msup><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>r</mi><mo>∈</mo><mi>T</mi></mrow></munder><mi>f</mi><mrow><mo>(</mo><mi>r</mi><mo>,</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where the feature domains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> range over the (anchored) rules used in the tree. An anchored rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is the conjunction of an unanchored grammar rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="\mathrm{rule}(r)" display="inline"><mrow><mi>rule</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and the start, stop, and split indexes where that rule is anchored, which we refer to as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\mathrm{span}(r)" display="inline"><mrow><mi>span</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>. It is important to note that the richness of the backbone grammar is reflected in the structure of the trees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m7" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, while the features that condition directly on the input enter the equation through the anchoring <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m8" class="ltx_Math" alttext="\mathrm{span}(r)" display="inline"><mrow><mi>span</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>.
+To optimize model parameters, we use the Adagrad algorithm of
+<cite class="ltx_cite">Duchi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib90" title="Adaptive Subgradient Methods for Online Learning and Stochastic Optimization" class="ltx_ref">2010</a>)</cite> with L2 regularization.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We start with a simple X-bar grammar whose only symbols are NP, NP-bar, VP, and so on. Our base model has no surface features: formally, on each anchored rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> we have only an indicator of the (unanchored) rule identity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\mathrm{rule}(r)" display="inline"><mrow><mi>rule</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>. Because the X-bar grammar is so minimal, this grammar does not parse very accurately, scoring just 73 F1 on
+the standard English Penn Treebank task.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">In past work that has used tree-structured CRFs in this way, increased accuracy partially came from decorating trees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> with additional
+annotations, giving a tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="T^{\prime}" display="inline"><msup><mi>T</mi><mo>′</mo></msup></math> over a more complex symbol set. These annotations
+introduce additional context into the model, usually capturing
+linguistic intuition about the factors that influence grammaticality.
+For instance, we might annotate every constituent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> in the tree
+with its parent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>, giving a tree with symbols <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="X[\hat{\phantom{q}}Y]" display="inline"><mrow><mi>X</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mover accent="true"><mi/><mo stretchy="false">^</mo></mover><mo>⁢</mo><mi>Y</mi></mrow><mo>]</mo></mrow></mrow></math>. <cite class="ltx_cite">Finkel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib92" title="Efficient, feature-based, conditional random field parsing" class="ltx_ref">2008</a>)</cite> used parent annotation, head tag
+annotation, and horizontal sibling annotation together in a single
+large grammar. In <cite class="ltx_cite">Petrov and Klein (<a href="#bib.bib82" title="Discriminative log-linear grammars with latent variables" class="ltx_ref">2008</a>)</cite>
+and <cite class="ltx_cite">Petrov and Klein (<a href="#bib.bib1" title="Sparse multi-scale grammars for discriminative latent variable parsing" class="ltx_ref">2008</a>)</cite>, these annotations were latent; they
+were inferred automatically during training. <cite class="ltx_cite">Hall and Klein (<a href="#bib.bib217" title="Training factored PCFGs with expectation propagation" class="ltx_ref">2012</a>)</cite> employed
+both kinds of annotations, along with lexicalized head word annotation. All of these past CRF parsers do also exploit span features, as did the structured margin parser of <cite class="ltx_cite">Taskar<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Max-Margin Parsing" class="ltx_ref">2004</a>)</cite>; the current work primarily differs in shifting the work from the grammar to the surface features.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">The problem with rich annotations is that they increase the state space
+of the grammar substantially. For example, adding parent annotation can square
+the number of symbols, and each subsequent annotation causes a
+multiplicative increase in the size of the state space.
+<cite class="ltx_cite">Hall and Klein (<a href="#bib.bib217" title="Training factored PCFGs with expectation propagation" class="ltx_ref">2012</a>)</cite> attempted to reduce this state space by
+factoring these annotations into individual components. Their
+approach changed the multiplicative penalty of annotation into an
+additive penalty, but even so their individual grammar projections are much larger than the base X-bar grammar.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">In this work, we want to see how much of the expressive capability
+of annotations can be captured using surface evidence, with little or no annotation of the underlying grammar. To that end,
+we avoid annotating our trees at all, opting instead to see
+how far simple surface features will go in achieving a high-performance
+parser. We will return to the question of annotation in Section <a href="#S5" title="5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Surface Feature Framework</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">To improve the performance of our X-bar grammar, we will add a number of
+surface feature templates derived only from the words in the sentence.
+We say that an indicator is a surface property if it can be extracted without reference to the parse tree. These features can be
+implemented without reference to structured linguistic notions like headedness; however, we will argue that they still capture a
+wide range of linguistic phenomena in a data-driven way.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Throughout this and the following section, we will draw on motivating examples from the English
+Penn Treebank, though similar examples could be equally argued for other languages. For performance on
+other languages, see Section <a href="#S6" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Recall that our CRF factors over anchored rules <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>, where each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> has identity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="\mathrm{rule}(r)" display="inline"><mrow><mi>rule</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and anchoring <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="\mathrm{span}(r)" display="inline"><mrow><mi>span</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>. The X-bar grammar has only indicators of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="\mathrm{rule}(r)" display="inline"><mrow><mi>rule</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>, ignoring the anchoring. Let a <em class="ltx_emph">surface property</em> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> be an indicator function of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="\mathrm{span}(r)" display="inline"><mrow><mi>span</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and the sentence itself. For example, the first word in a constituent is a surface property, as is the word directly preceding the constituent. As illustrated in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the actual features of the model are obtained by conjoining surface properties with various abstractions of the rule identity. For rule abstractions, we use two templates: the parent of the rule and the identity of the rule. The surface features are somewhat more involved, and so we introduce them incrementally.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1022/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="316" height="245" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> Features computed over the application of the rule VP <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> VBD NP over the anchored span <em class="ltx_emph">averted financial disaster</em> with the shown indices. Span properties are generated as described throughout Section <a href="#S4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>; they are then conjoined with the rule and just the parent nonterminal to give the features fired over the anchored production.
+</div>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">One immediate computational and statistical issue arises from the
+sheer number of possible surface features. There are a great number
+of spans in a typical treebank; extracting features for every
+possible combination of span and rule is prohibitive. One simple
+solution is to only extract features for rule/span pairs that are
+actually observed in gold annotated examples during training. Because
+these “positive” features correspond to observed
+constituents, they are far less numerous than the set of
+all possible features extracted from all spans. As far as we can tell,
+all past CRF parsers have used “positive” features only.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t">Features</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Section</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">F1</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Rule</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><a href="#S4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">73.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">+ <span class="ltx_text ltx_font_smallcaps">Span First Word</span> + <span class="ltx_text ltx_font_smallcaps">Span Last Word</span> + <span class="ltx_text ltx_font_smallcaps">Length</span></td>
+<td class="ltx_td ltx_align_center"><a href="#S4.SS1" title="4.1 Basic Span Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a></td>
+<td class="ltx_td ltx_align_center ltx_border_r">85.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">+ <span class="ltx_text ltx_font_smallcaps">Word Before Span + Word After Span</span></td>
+<td class="ltx_td ltx_align_center"><a href="#S4.SS2" title="4.2 Span Context Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a></td>
+<td class="ltx_td ltx_align_center ltx_border_r">89.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">+ <span class="ltx_text ltx_font_smallcaps">Word Before Split + Word After Split</span></td>
+<td class="ltx_td ltx_align_center"><a href="#S4.SS3" title="4.3 Split Point Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a></td>
+<td class="ltx_td ltx_align_center ltx_border_r">89.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l">+ <span class="ltx_text ltx_font_smallcaps">Span Shape</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><a href="#S4.SS4" title="4.4 Span Shape Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">89.9</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span> Results for the Penn Treebank development set, reported in F1 on sentences of length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="\leq 40" display="inline"><mrow><mi/><mo>≤</mo><mn>40</mn></mrow></math> on Section 22, for a number of incrementally growing feature sets. We show that each feature type presented in Section <a href="#S4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> adds benefit over the previous, and in combination they produce a reasonably good yet simple parser.</div>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">However, negative features—features that are not observed in any
+tree—are still powerful indicators of (un)grammaticality: if we
+have never seen a PRN that starts with “has,” or a span that begins
+with a quotation mark and ends with a close bracket, then we would
+like the model to be able to place negative weights on these features.
+Thus, we use a simple feature hashing scheme where positive features
+are indexed individually, while negative features are bucketed
+together. During training there are no collisions between
+positive features, which generally receive positive weight, and negative
+features, which generally receive negative weight; only negative features can collide. Early
+experiments indicated that using a number of negative buckets equal
+to the number of positive features was effective.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Features</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Our goal is to use surface features to replicate the functionality
+of other annotations, without increasing the state space of our
+grammar, meaning that the rules <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\mathrm{rule}(r)" display="inline"><mrow><mi>rule</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> remain simple, as does the state space used during inference.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Before we present our main features, we briefly discuss the issue of feature sparsity. While lexical features
+are a powerful driver of our parser, firing features on rare words would allow it to overfit the training data
+quite heavily. To that end, for the purposes of computing our features, a word is represented by its longest
+suffix that occurs 100 or more times in the training data (which will be the entire word, for common
+words).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Experiments with the Brown clusters <cite class="ltx_cite">[<a href="#bib.bib219" title="Class-based n-gram models of natural language" class="ltx_ref">3</a>]</cite> provided by <cite class="ltx_cite">Turian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib220" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">2010</a>)</cite>
+in lieu of suffixes were not promising. Moreover, lowering this threshold did not improve performance.</span></span></span></p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the results of incrementally building up our feature set on the Penn Treebank development set. <span class="ltx_text ltx_font_smallcaps">Rule</span> specifies that we use only indicators on rule identity for binary production and nonterminal unaries. For this experiment and all others, we include a basic set of lexicon features, i.e. features on preterminal part-of-speech tags. A given preterminal unary at position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> in the sentence includes features on the words (suffixes) at position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="i-1" display="inline"><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="i+1" display="inline"><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></math>. Because the lexicon is especially sensitive to morphological effects, we also fire features on all prefixes and suffixes of the current word up to length 5, regardless of frequency.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">Subsequent lines in Table <a href="#S3.T1" title="Table 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> indicate additional surface feature templates computed over the span, which are then
+conjoined with the rule identity as shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> to give additional features. In the rest of the section,
+we describe the features of this type that we use. Note that many of these features have been used
+before <cite class="ltx_cite">[<a href="#bib.bib19" title="Max-Margin Parsing" class="ltx_ref">28</a>, <a href="#bib.bib92" title="Efficient, feature-based, conditional random field parsing" class="ltx_ref">10</a>, <a href="#bib.bib1" title="Sparse multi-scale grammars for discriminative latent variable parsing" class="ltx_ref">23</a>]</cite>; our goal here is not to amass as many feature templates as possible, but
+rather to examine the extent to which a simple set of features can replace a complicated state space.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Basic Span Features</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We start with some of the most obvious properties available
+to us, namely, the identity of the first and last words of a span.
+Because heads of constituents are often at the beginning or the end
+of a span, these feature templates can (noisily) capture monolexical properties of heads without having to incur the inferential cost of lexicalized
+annotations. For example, in English, the syntactic head of a verb phrase is
+typically at the beginning of the span, while the head of a simple noun phrase
+is the last word. Other languages, like Korean or Japanese, are
+more consistently head final.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-1022/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="347" height="268" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> An example showing the utility of span context. The ambiguity about whether <em class="ltx_emph">read</em> is an adjective or a verb is resolved when we construct a VP and notice that the word proceeding it is unlikely.
+</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Structural contexts like those captured by parent
+annotation <cite class="ltx_cite">[<a href="#bib.bib12" title="PCFG Models of Linguistic Tree Representations" class="ltx_ref">15</a>]</cite> are more subtle. Parent annotation
+can capture, for instance, the difference in distribution in NPs
+that have S as a parent (that is, subjects) and NPs under VPs
+(objects). We try to capture some of this same intuition by
+introducing a feature on the length of a span. For instance, VPs
+embedded in NPs tend to be short, usually as embedded gerund
+phrases. Because constituents in the treebank can be quite long, we
+bin our length features into 8 buckets, of lengths 1, 2, 3, 4, 5, 10, 20, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="\geq" display="inline"><mo>≥</mo></math>21 words.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Adding these simple features (first word, last word, and lengths) as span features
+of the X-bar grammar already gives us a substantial improvement over our baseline system, improving
+the parser’s performance from 73.0 F1 to 85.0 F1 (see Table <a href="#S3.T1" title="Table 1 ‣ 3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Span Context Features</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Of course, there is no reason why we should confine ourselves to
+just the words within the span: words outside the span also provide
+a rich source of context. As an example, consider disambiguating the POS tag of the word <em class="ltx_emph">read</em> in
+Figure <a href="#S4.F2" title="Figure 2 ‣ 4.1 Basic Span Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. A VP is most frequently preceded by a subject NP, whose rightmost word is
+often its head. Therefore, we fire features that (separately) look at the words immediately preceding and immediately following the span.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Split Point Features</h3>
+
+<div id="S4.F3" class="ltx_figure"><img src="P14-1022/image003.png" id="S4.F3.g1" class="ltx_graphics ltx_centering" width="347" height="268" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span> An example showing split point features disambiguating a PP attachment. Because <em class="ltx_emph">impact</em> is likely to take a PP, the monolexical indicator feature that conjoins <em class="ltx_emph">impact</em> with the appropriate rule will help us parse this example correctly.
+</div>
+</div>
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Another important source of features are the words at and around the split point of a binary rule application. Figure <a href="#S4.F3" title="Figure 3 ‣ 4.3 Split Point Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows an example of one instance of this feature template.
+<em class="ltx_emph">impact</em> is a noun that is more likely to take a PP than other nouns, and so we expect this feature to have high weight and encourage the attachment; this feature proves generally useful in resolving such cases of right-attachments to noun phrases, since the last word of the noun phrase is often the head. As another example, coordination can be represented by an indicator of the conjunction, which comes immediately after the split point. Finally, control structures with infinitival complements can be captured with a rule S <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> NP VP with the word “to” at the split point.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Span Shape Features</h3>
+
+<div id="S4.F4" class="ltx_figure"><img src="P14-1022/image004.png" id="S4.F4.g1" class="ltx_graphics ltx_centering" width="347" height="268" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span> Computation of span shape features on two examples. Parentheticals, quotes, and other punctuation-heavy, short constituents benefit from being explicitly modeled by a descriptor like this.
+</div>
+</div>
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">We add one final feature characterizing the span, which we call span shape. Figure <a href="#S4.F4" title="Figure 4 ‣ 4.4 Span Shape Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+shows how this feature is computed. For each word in the span,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>For longer spans, we only use words
+sufficiently close to the span’s beginning and end.</span></span></span> we indicate whether that word begins with a capital
+letter, lowercase letter, digit, or punctuation mark. If it begins with punctuation, we indicate the
+punctuation mark explicitly. Figure <a href="#S4.F4" title="Figure 4 ‣ 4.4 Span Shape Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows that this is especially useful in
+characterizing constructions such as parentheticals and quoted expressions. Because this feature indicates capitalization, it can also capture properties of NP internal structure relevant to named entities, and its sensitivity to capitalization and punctuation makes it useful for recognizing appositive constructions.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Annotations</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have built up a strong set of features by this point, but have not yet answered the question of whether or not
+grammar annotation is useful on top of them. In this section, we examine two of the most commonly used types of
+additional annotation, structural annotation, and lexical annotation. Recall from Section <a href="#S3" title="3 Surface Feature Framework ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> that every span feature is conjoined with indicators over rules and rule parents to produce features over anchored rule productions; when we consider adding an annotation layer to the grammar, what that does is refine the rule indicators that are conjoined with every span feature. While this is a powerful way of refining features, we show that common successful annotation schemes provide at best modest benefit on top of the base parser.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t">Annotation</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Dev, len <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="\leq" display="inline"><mo>≤</mo></math> 40</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="v=0,h=0" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="v=1,h=0" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">90.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="v=0,h=1" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>1</mn></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">90.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="v=1,h=1" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>1</mn></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">90.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_t">Lexicalized</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">90.3</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span> Results for the Penn Treebank development set, sentences of length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="\leq 40" display="inline"><mrow><mi/><mo>≤</mo><mn>40</mn></mrow></math>, for different annotation schemes implemented on top of the X-bar grammar.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Structural Annotation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The most basic, well-understood kind of annotation on top of an X-bar grammar is structural annotation, which annotates each nonterminal with properties of its environment <cite class="ltx_cite">[<a href="#bib.bib12" title="PCFG Models of Linguistic Tree Representations" class="ltx_ref">15</a>, <a href="#bib.bib91" title="Accurate unlexicalized parsing." class="ltx_ref">16</a>]</cite>. This includes vertical annotation (parent, grandparent, etc.) as well as horizontal annotation (only partially Markovizing rules as opposed to using an X-bar grammar).</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the performance of our feature set in grammars with several different levels of structural annotation.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="v=0" display="inline"><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow></math> to indicate no annotation, diverging from the notation in <cite class="ltx_cite">Klein and Manning (<a href="#bib.bib91" title="Accurate unlexicalized parsing." class="ltx_ref">2003</a>)</cite>.</span></span></span> <cite class="ltx_cite">Klein and Manning (<a href="#bib.bib91" title="Accurate unlexicalized parsing." class="ltx_ref">2003</a>)</cite> find large gains (6% absolute improvement, 20% relative improvement) going from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="v=0,h=0" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>0</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m3" class="ltx_Math" alttext="v=1,h=1" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>1</mn></mrow></mrow></math>; however, we do not find the same level of benefit. To the extent that our parser needs to make use of extra information in order to apply a rule correctly, simply inspecting the input to determine this information appears to be almost as effective as relying on information threaded through the parser.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">In Section <a href="#S6" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and Section <a href="#S7" title="7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="v=1" display="inline"><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="h=0" display="inline"><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></math>; we find that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m3" class="ltx_Math" alttext="v=1" display="inline"><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow></math> provides a small, reliable improvement across a range of languages and tasks, whereas other annotations are less clearly beneficial.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Lexical Annotation</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Another commonly-used kind of structural annotation is lexicalization <cite class="ltx_cite">[<a href="#bib.bib8" title="Three New Probabilistic Models for Dependency Parsing: An Exploration" class="ltx_ref">9</a>, <a href="#bib.bib192" title="Three generative, lexicalised models for statistical parsing" class="ltx_ref">7</a>, <a href="#bib.bib6" title="Statistical Techniques for Natural Language Parsing" class="ltx_ref">5</a>]</cite>. By annotating grammar nonterminals with
+their headwords, the idea is to better model phenomena that depend heavily on the semantics of the words involved, such as coordination and PP attachment.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows results from lexicalizing the X-bar grammar; it provides meager
+improvements. One probable reason for this is that our parser already includes monolexical features that
+inspect the first and last words of each span, which captures the syntactic or the semantic head in many
+cases or can otherwise provide information about what the constituent’s type may be and how it is likely to
+combine. Lexicalization allows us to capture bilexical relationships along dependency arcs, but it has been
+previously shown that these add only marginal benefit to Collins’s model anyway <cite class="ltx_cite">[<a href="#bib.bib9" title="Corpus variation and parser performance" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>English Evaluation</h3>
+
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t">Test <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\leq" display="inline"><mo>≤</mo></math> 40</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Test all</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t">Berkeley</td>
+<td class="ltx_td ltx_align_center ltx_border_t">90.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.1</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l">This work</td>
+<td class="ltx_td ltx_align_center ltx_border_b">89.9</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">89.2</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span> Final Parseval results for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="v=1,h=0" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></mrow></math> parser on Section 23 of the Penn Treebank.</div>
+</div>
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Finally, Table <a href="#S5.T3" title="Table 3 ‣ 5.3 English Evaluation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows our final evaluation on Section 23 of the Penn Treebank. We use the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="v=1,h=0" display="inline"><mrow><mrow><mi>v</mi><mo>=</mo><mn>1</mn></mrow><mo>,</mo><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow></mrow></math> grammar. While we do not do as well as the Berkeley parser, we will see in Section <a href="#S6" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> that our parser does a substantially better job of generalizing to other languages.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Arabic</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Basque</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">French</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">German</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Hebrew</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Hungarian</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Korean</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Polish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Swedish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Avg</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="10"><span class="ltx_text ltx_font_small">Dev, all lengths</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Berkeley</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">78.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">69.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">79.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">81.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">87.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">83.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">70.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">84.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">74.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.91</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Berkeley-Rep</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">78.70</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">84.33</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">79.68</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">82.74</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">89.55</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">89.08</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">82.84</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">87.12</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">75.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.28</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Our work</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">78.89</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">83.74</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">79.40</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">83.28</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">88.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">87.44</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">81.85</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">75.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.30</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt" colspan="10"><span class="ltx_text ltx_font_small">Test, all lengths</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Berkeley</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">79.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">70.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">80.38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">78.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">86.96</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">81.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">71.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">79.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.53</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Berkeley-Tags</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">78.66</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">74.74</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">79.76</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">78.28</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">85.42</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">85.22</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">78.56</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">86.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">80.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">80.89</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Our work</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">78.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">83.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">79.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">78.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">87.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">88.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">80.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">90.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">82.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">83.17</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span> Results for the nine treebanks in the SPMRL 2013 Shared Task; all values are F-scores for sentences of all lengths using the version of <span class="ltx_text ltx_font_typewriter">evalb</span> distributed with the shared task.
+Berkeley-Rep is the best single parser from <cite class="ltx_cite">[<a href="#bib.bib4" title="(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task" class="ltx_ref">1</a>]</cite>; we only compare to this parser on the development set because neither the system nor test set values are publicly available. Berkeley-Tags is a version of the Berkeley parser run by the task organizers where tags are provided to the model, and is the best single parser submitted to the official task. In both cases, we match or outperform the baseline parsers in aggregate and on the majority of individual languages.
+</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Other Languages</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Historically, many annotation schemes for parsers have required language-specific engineering: for example, lexicalized parsers require a set of head rules and manually-annotated grammars require detailed analysis of the treebank itself <cite class="ltx_cite">[<a href="#bib.bib91" title="Accurate unlexicalized parsing." class="ltx_ref">16</a>]</cite>. A key strength of a parser that does not rely heavily on an annotated grammar is that it may be more portable to other languages. We show that this is indeed the case: on nine languages, our system is competitive with or better than the Berkeley parser, which is the best single parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>I.e. it does not use a reranking step or post-hoc combination of parser results.</span></span></span> for the majority of cases we consider.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">We evaluate on the constituency treebanks from the Statistical Parsing of Morphologically Rich Languages Shared Task <cite class="ltx_cite">[<a href="#bib.bib18" title="Overview of the SPMRL 2013 Shared Task: A Cross-Framework Evaluation of Parsing Morphologically Rich Languages" class="ltx_ref">25</a>]</cite>.
+We compare to the Berkeley parser <cite class="ltx_cite">[<a href="#bib.bib83" title="Improved inference for unlexicalized parsing" class="ltx_ref">22</a>]</cite> as well as two variants. First, we use the “Replaced” system of <cite class="ltx_cite">Björkelund<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task" class="ltx_ref">2013</a>)</cite> (Berkeley-Rep), which is their best single parser.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Their best parser, and the best overall parser from the shared task, is a reranked product of “Replaced” Berkeley parsers.</span></span></span>
+The “Replaced” system modifies the Berkeley parser by replacing rare words with morphological descriptors of those words computed using language-specific modules, which have been hand-crafted for individual languages or are trained with additional annotation layers in the treebanks that we do not exploit.
+Unfortunately, <cite class="ltx_cite">Björkelund<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task" class="ltx_ref">2013</a>)</cite> only report results on the development set for the Berkeley-Rep model; however, the task organizers also use a version of the Berkeley parser provided with parts of speech from high-quality POS taggers for each language (Berkeley-Tags). These part-of-speech taggers often incorporate substantial knowledge of each language’s morphology. Both Berkeley-Rep and Berkeley-Tags make up for some shortcomings of the Berkeley parser’s unknown word model, which is tuned to English.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S5.T4" title="Table 4 ‣ 5.3 English Evaluation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we see that our performance is overall substantially higher than that of the
+Berkeley parser. On the development set, we outperform the Berkeley parser and match the performance of the
+Berkeley-Rep parser. On the test set, we outperform both the Berkeley parser and the Berkeley-Tags parser
+on seven of nine languages, losing only on Arabic and French.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">These results suggest that the Berkeley parser may be heavily fit to English, particularly in its lexicon.
+However, even when language-specific unknown word handling is added to the parser, our model still
+outperforms the Berkeley parser overall, showing that our model generalizes even better across languages
+than a parser for which this is touted as a strength <cite class="ltx_cite">[<a href="#bib.bib83" title="Improved inference for unlexicalized parsing" class="ltx_ref">22</a>]</cite>. Our span features appear to
+work well on both head-initial and head-final languages (see Basque and Korean in the table), and the fact
+that our parser performs well on such morphologically-rich languages as Hungarian indicates that our suffix
+model is sufficient to capture most of the morphological effects relevant to parsing. Of course, a language
+that was heavily prefixing would likely require this feature to be modified. Likewise, our parser does not
+perform as well on Arabic and Hebrew. These closely related languages use templatic morphology, for
+which suffixing is not appropriate; however, using additional surface features based on the output of a morphological analyzer did not lead to increased performance.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">Finally, our high performance on languages such as Polish and Swedish, whose training treebanks consist of 6578 and 5000 sentences, respectively, show that our feature-rich model performs robustly even on treebanks much smaller than the Penn Treebank.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>The especially strong performance on Polish relative to other systems is partially a result of our model being able to produce unary chains of length two, which occur frequently in the Polish treebank <cite class="ltx_cite">[<a href="#bib.bib4" title="(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task" class="ltx_ref">1</a>]</cite>.</span></span></span></p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Sentiment Analysis</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Finally, because the system is, at its core, a classifier of spans, it can be used equally well for tasks that do not normally use parsing algorithms.
+One example is sentiment analysis.
+While approaches to sentiment analysis often simply classify the sentence monolithically, treating it as a bag of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams <cite class="ltx_cite">[<a href="#bib.bib16" title="Thumbs Up?: Sentiment Classification Using Machine Learning Techniques" class="ltx_ref">19</a>, <a href="#bib.bib17" title="Seeing Stars: Exploiting Class Relationships for Sentiment Categorization with Respect to Rating Scales" class="ltx_ref">20</a>, <a href="#bib.bib21" title="Baselines and Bigrams: Simple, Good Sentiment and Topic Classification" class="ltx_ref">31</a>]</cite>, the recent dataset of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> imposes a layer of structure on the problem that we can exploit. They annotate every constituent in a number of training trees with an integer sentiment value from 1 (very negative) to 5 (very positive), opening the door for models such as ours to learn how syntax can structurally affect sentiment.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Note that the tree structure is assumed to be given; the problem is one of labeling a fixed parse backbone.</span></span></span></p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S7.F5" title="Figure 5 ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows an example that requires some analysis of sentence structure to correctly
+understand. The first constituent conveys positive sentiment with <em class="ltx_emph">never lethargic</em> and the second conveys negative sentiment with <em class="ltx_emph">hindered</em>, but to determine the overall sentiment of the sentence, we need to exploit the fact that <em class="ltx_emph">while</em> signals a discounting of the information that follows it. The grammar rule 2 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p2.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> 4 1 already encodes the notion of the sentiment of the right child being dominant, so when this is conjoined with our span feature on the first word (<em class="ltx_emph">While</em>), we end up with a feature that captures this effect.
+Our features can also lexicalize on other discourse connectives such as <em class="ltx_emph">but</em> or <em class="ltx_emph">however</em>, which often occur at the split point between two spans.</p>
+</div>
+<div id="S7.F5" class="ltx_figure"><img src="P14-1022/image005.png" id="S7.F5.g1" class="ltx_graphics ltx_centering" width="347" height="268" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span> An example of a sentence from the Stanford Sentiment Treebank which shows the utility of our span features for this task. The presence of “While” under this kind of rule tells us that the sentiment of the constituent to the right dominates the sentiment to the left.
+</div>
+</div>
+<div id="S7.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">7.1 </span>Adapting to Sentiment</h3>
+
+<div id="S7.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our parser is almost entirely unchanged from the parser that we used for syntactic analysis. Though the treebank grammar is substantially different, with the nonterminals consisting of five integers with very different semantics from syntactic nonterminals, we still find that parent annotation is effective and otherwise additional annotation layers are not useful.</p>
+</div>
+<div id="S7.SS1.p2" class="ltx_para">
+<p class="ltx_p">One structural difference between sentiment analysis and syntactic parsing lies in where the relevant information is present in a span.
+Syntax is often driven by heads of constituents, which tend to be located at the beginning or the end,
+whereas sentiment is more likely to depend on modifiers such as adjectives, which are typically present in the middle of spans.
+Therefore, we augment our existing model with standard sentiment analysis features that look at unigrams and bigrams in the span <cite class="ltx_cite">[<a href="#bib.bib21" title="Baselines and Bigrams: Simple, Good Sentiment and Topic Classification" class="ltx_ref">31</a>]</cite>.
+Moreover, the Stanford Sentiment Treebank is unique in that each constituent was annotated in isolation, meaning that context never affects sentiment and that every word always has the same tag. We exploit this by adding an additional feature template similar to our span shape feature from Section <a href="#S4.SS4" title="4.4 Span Shape Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a> which uses the (deterministic) tag for each word as its descriptor.</p>
+</div>
+</div>
+<div id="S7.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">7.2 </span>Results</h3>
+
+<div id="S7.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">Root</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">All Spans</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3">Non-neutral Dev (872 trees)</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Stanford CoreNLP current</th>
+<td class="ltx_td ltx_align_center ltx_border_t">50.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">This work</th>
+<td class="ltx_td ltx_align_center">53.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">80.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3">Non-neutral Test (1821 trees)</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Stanford CoreNLP current</th>
+<td class="ltx_td ltx_align_center ltx_border_t">49.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">Stanford EMNLP 2013</th>
+<td class="ltx_td ltx_align_center">45.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r">80.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">This work</th>
+<td class="ltx_td ltx_align_center ltx_border_b">49.6</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">80.4</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span> Fine-grained sentiment analysis results on the Stanford Sentiment Treebank of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite>. We compare against the printed numbers in <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> as well as the performance of the corresponding release, namely the sentiment component in the latest version of the Stanford CoreNLP at the time of this writing. Our model handily outperforms the results from <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> at root classification and edges out the performance of the latest version of the Stanford system. On all spans of the tree, our model has comparable accuracy to the others.
+</div>
+</div>
+<div id="S7.SS2.p1" class="ltx_para">
+<p class="ltx_p">We evaluated our model on the fine-grained sentiment analysis task presented in <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> and compare to their released system.
+The task is to predict the root sentiment label of each parse tree; however, because the data is annotated with sentiment at each span of each parse tree, we can also evaluate how well our model does at these intermediate computations.
+Following their experimental conditions, we filter the test set so that it only contains trees with non-neutral sentiment labels at the root.</p>
+</div>
+<div id="S7.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S7.T5" title="Table 5 ‣ 7.2 Results ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows that our model outperforms the model of
+<cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite>—both the published numbers and latest released version—on the task of root classification, even though the system was not explicitly designed for this task. Their model has high capacity to model complex interactions of words through a combinatory tensor, but it appears that our simpler, feature-driven model is just as effective at capturing the key effects of compositionality for sentiment analysis.</p>
+</div>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Conclusion</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">To date, the most successful constituency parsers have largely been generative, and operate by refining the grammar either manually or automatically so that relevant information is available locally to each parsing decision. Our main contribution is to show that there is an alternative to such annotation schemes: namely, conditioning on the input and firing features based on anchored spans. We build up a small set of feature templates as part of a discriminative constituency parser and outperform the Berkeley parser on a wide range of languages. Moreover, we show that our parser is adaptable to other tree-structured tasks such as sentiment analysis; we outperform the recent system of <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank" class="ltx_ref">2013</a>)</cite> and obtain state of the art performance on their dataset.</p>
+</div>
+<div id="S8.p2" class="ltx_para">
+<p class="ltx_p">Our system is available as open-source at <a href="https://www.github.com/dlwh/epic" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://www.github.com/dlwh/epic</span></a>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was partially supported by BBN under DARPA contract
+HR0011-12-C-0014, by a Google PhD fellowship to the first author,
+and an NSF fellowship to the second. We further gratefully
+acknowledge a hardware donation by NVIDIA Corporation.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Björkelund, O. Cetinoglu, R. Farkas, T. Mueller and W. Seeker</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">(Re)ranking Meets Morphosyntax: State-of-the-art Results from the SPMRL 2013 Shared Task</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Less Grammar, More Features</span></span>,
+<a href="#S5.T4" title="Table 4 ‣ 5.3 English Evaluation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S6.p2" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p5" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Bod</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using an Annotated Corpus As a Stochastic Grammar</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib219" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. F. Brown, P. V. Desouza, R. L. Mercer, V. J. D. Pietra and J. C. Lai</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Class-based n-gram models of natural language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 467–479</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charniak and M. Johnson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coarse-to-fine N-best Parsing and MaxEnt Discriminative Reranking</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charniak</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical Techniques for Natural Language Parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">AI Magazine</span> <span class="ltx_text ltx_bib_volume">18</span>, <span class="ltx_text ltx_bib_pages"> pp. 33–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Lexical Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins and T. Koo</span><span class="ltx_text ltx_bib_year">(2005-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative Reranking for Natural Language Parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 25–70</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/0891201053630273" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/0891201053630273" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib192" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Three generative, lexicalised models for statistical parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 16–23</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Lexical Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive Subgradient Methods for Online Learning and Stochastic Optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">COLT</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.colt2010.org/papers/023Duchi.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Eisner</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Three New Probabilistic Models for Dependency Parsing: An Exploration</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Lexical Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel, A. Kleeman and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient, feature-based, conditional random field parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 959–967</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gildea</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Corpus variation and parser performance</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Lexical Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib217" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Hall and D. Klein</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training factored PCFGs with expectation propagation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Henderson</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing History Representations for Broad Coverage Statistical Parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib218" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Forest reranking: discriminative parsing with non-local features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 586–594</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1067" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Johnson</span><span class="ltx_text ltx_bib_year">(1998-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PCFG Models of Linguistic Tree Representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 613–632</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dl.acm.org/citation.cfm?id=972764.972768" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Basic Span Features ‣ 4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Structural Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib91" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate unlexicalized parsing.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Structural Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Structural Annotation ‣ 5 Annotations ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.p1" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Lafferty, A. McCallum and F. C. N. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Matsuzaki, Y. Miyao and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic CFG with latent annotations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Morristown, NJ, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 75–82</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1219840.1219850" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/http://dx.doi.org/10.3115/1219840.1219850" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang, L. Lee and S. Vaithyanathan</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Thumbs Up?: Sentiment Classification Using Machine Learning Techniques</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Seeing Stars: Exploiting Class Relationships for Sentiment Categorization with Respect to Rating Scales</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov, L. Barrett, R. Thibaux and D. Klein</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning accurate, compact, and interpretable tree annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 433–440</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P06/P06-1055" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved inference for unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N07/N07-1051" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p4" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2008-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sparse multi-scale grammars for discriminative latent variable parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Honolulu, Hawaii</span>, <span class="ltx_text ltx_bib_pages"> pp. 867–876</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D08-1091" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative log-linear grammars with latent variables</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1153–1160</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://books.nips.cc/papers/files/nips20/NIPS2007_0630.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Seddah, R. Tsarfaty, S. Kübler, M. Candito, J. D. Choi, R. Farkas, J. Foster, I. Goenaga, K. Gojenola Galletebeitia, Y. Goldberg, S. Green, N. Habash, M. Kuhlmann, W. Maier, J. Nivre, A. Przepiórkowski, R. Roth, W. Seeker, Y. Versley, V. Vincze, M. Woliński and A. Wróblewska</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the SPMRL 2013 Shared Task: A Cross-Framework Evaluation of Parsing Morphologically Rich Languages</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Less Grammar, More Features</span></span>,
+<a href="#S6.p2" title="6 Other Languages ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Sima’an</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tree-gram Parsing Lexical Dependencies and Structural Relations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Wu, J. Chuang, C. D. Manning, A. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Less Grammar, More Features</span></span>,
+<a href="#S1.p5" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S7.SS2.p1" title="7.2 Results ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7.2</span></a>,
+<a href="#S7.SS2.p2" title="7.2 Results ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7.2</span></a>,
+<a href="#S7.T5" title="Table 5 ‣ 7.2 Results ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S7.p1" title="7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>,
+<a href="#S8.p1" title="8 Conclusion ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Taskar, D. Klein, M. Collins, D. Koller and C. Manning</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Max-Margin Parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Parsing Model ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p4" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. D. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich Part-of-speech Tagging with a Cyclic Dependency Network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib220" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Features ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Wang and C. Manning</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Baselines and Bigrams: Simple, Good Sentiment and Topic Classification</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.SS1.p2" title="7.1 Adapting to Sentiment ‣ 7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7.1</span></a>,
+<a href="#S7.p1" title="7 Sentiment Analysis ‣ Less Grammar, More Features" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:21:13 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

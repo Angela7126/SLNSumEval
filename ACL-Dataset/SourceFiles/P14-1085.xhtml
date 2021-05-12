@@ -1,0 +1,1476 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Hierarchical Summarization: Scaling Up
+Multi-Document Summarization</title>
+<!--Generated on Wed Jun 11 18:59:49 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Hierarchical Summarization: 
+<br class="ltx_break"/>Scaling Up
+Multi-Document Summarization</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Janara Christensen   Stephen Soderland 
+<br class="ltx_break"/>Computer Science &amp; Engineering 
+<br class="ltx_break"/>University of Washington 
+<br class="ltx_break"/>Seattle, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">janara@cs.washington.edu<span class="ltx_text ltx_font_serif"> 
+<br class="ltx_break"/></span>soderlan@cs.washington.edu<span class="ltx_text ltx_font_serif"> 
+<br class="ltx_break"/>&amp;Gagan Bansal    Mausam 
+<br class="ltx_break"/>Computer Science &amp; Engineering 
+<br class="ltx_break"/>Indian Institute of Technology 
+<br class="ltx_break"/>Delhi, India 
+<br class="ltx_break"/></span>gaganbansal1993@gmail.com<span class="ltx_text ltx_font_serif"> 
+<br class="ltx_break"/></span>mausam@cse.iitd.ac.in<span class="ltx_text ltx_font_serif"> 
+<br class="ltx_break"/></span></span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Multi-document summarization (MDS) systems have been designed for
+short, unstructured summaries of 10-15
+documents, and are inadequate for larger document collections.
+We propose a new approach to scaling up summarization called
+<em class="ltx_emph">hierarchical summarization</em>,
+and present the first implemented system, <span class="ltx_text ltx_font_smallcaps">Summa</span>.</p>
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Summa</span> produces a hierarchy of relatively short summaries,
+in which the top level provides a general overview and users can
+navigate the hierarchy to drill down for more details on topics
+of interest. <span class="ltx_text ltx_font_smallcaps">Summa</span> optimizes for coherence as well as coverage
+of salient information. In an Amazon Mechanical Turk evaluation,
+users prefered <span class="ltx_text ltx_font_smallcaps">Summa</span> ten times as often as flat MDS and three
+times as often as timelines.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The explosion in the number of documents on the Web necessitates
+automated approaches that organize and summarize large document
+collections on a complex topic.
+Existing methods for multi-document summarization (MDS) are
+designed to produce short summaries of 10-15 documents.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In
+the DUC evaluations,
+summaries have a budget of 665 bytes and cover 10 documents.</span></span></span>
+MDS systems do not scale to data sets ten times larger and proportionately
+longer summaries: they either cannot run on large input
+or produce a disorganized summary that is difficult to understand.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1085/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="325" height="456" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>
+<span class="ltx_text ltx_font_small">A hierarchical summary of the 1998 embassy bombings.
+Each rectangle represents a summary and each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="x_{i,j}" display="inline"><msub><mi mathsize="normal" stretchy="false">x</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">j</mi></mrow></msub></math> is a sentence
+within a summary.
+The root summary provides an overview of the events of August 1998.
+When the third sentence is selected, a more detailed summary of the missile
+strikes is displayed. Selecting the second sentence of that summary produces
+a more detailed summary of the US’ options.
+
+
+</span></div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">We present a novel MDS paradigm, <span class="ltx_text ltx_font_italic">hierarchical
+summarization</span>, which operates on large document collections,
+creating summaries that organize the information coherently.
+It mimics how someone with a general interest in a
+complex topic would learn about it from an expert – first, the expert
+would provide an overview, and then more specific information about various
+aspects. Hierarchical summarization has the following novel characteristics:</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">The summary is hierarchically organized
+along one or more organizational principles such as time, location,
+entities, or events.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Each non-leaf summary is associated with a
+set of child summaries where each gives details of an
+element (e.g. sentence) in the parent summary.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">A user can navigate within the hierarchical summary
+by clicking on an element of a parent summary to view the
+associated child summary.</p>
+</div></li>
+</ul>
+<p class="ltx_p">For example, given the topic, “1998 embassy bombings,” the first summary
+(Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) might mention that the US retaliated by
+striking Afghanistan and Sudan. The user can click on this information to
+learn more about these attacks. In this way, the system can present large
+amounts of information without overwhelming the user, and the user can
+tailor the output to their interests.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we describe <span class="ltx_text ltx_font_smallcaps">Summa</span>, the first hierarchical summarization
+system for multi-document summarization.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://knowitall.cs.washington.edu/summa/</span></span></span> It operates on a corpus
+of related news articles. <span class="ltx_text ltx_font_smallcaps">Summa</span> hierarchically clusters the sentences by time, and then summarizes
+the clusters using an objective function that optimizes salience and coherence.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We conducted an Amazon Mechanical Turk (AMT) evaluation where
+AMT workers compared the output of <span class="ltx_text ltx_font_smallcaps">Summa</span> to that of timelines
+and flat summaries. <span class="ltx_text ltx_font_smallcaps">Summa</span> output was judged superior more
+than three times as often as timelines,
+and users learned more in twice as many cases. Users overwhelmingly
+preferred hierarchical summaries to flat summaries (92%) and learned
+just as much.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Our main contributions are as follows:</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">We introduce and formalize the novel task of
+hierarchical summarization.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">We present <span class="ltx_text ltx_font_smallcaps">Summa</span>, the first hierarchical summarization
+system, which operates on news corpora and summarizes over an order
+of magnitude more documents than traditional MDS systems, producing summaries
+an order of magnitude larger.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">We present a user study which demonstrates
+the value of hierarchical summarization over timelines
+and flat multi-document summaries in learning about a
+complex topic.</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">In the next section, we formalize hierarchical summarization.
+We then describe our methodology to implement the <span class="ltx_text ltx_font_smallcaps">Summa</span> hierarchical summarization system: hierarchical clustering in
+Section <a href="#S3" title="3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and creating summaries based on that
+clustering in Section <a href="#S4" title="4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+We discuss our experiments in Section <a href="#S5" title="5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+related work in Section <a href="#S6" title="6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, and conclusions
+in Section <a href="#S7" title="7 Conclusions ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Hierarchical Summarization</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We propose a new task for large-scale summarization
+called <em class="ltx_emph">hierarchical summarization</em>.
+Input to a hierarchical summarization system is a set of related documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>
+and a budget <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> for each summary within the hierarchy (in bytes,
+words, or sentences). The output is the
+hierarchical summary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>, which we define formally as follows.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">
+A <em class="ltx_emph">hierarchical summary</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math> of a document collection
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> is a set of summaries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> organized into a hierarchy.
+The top of the hierarchy is a summary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math> representing
+all of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>, and each summary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m6" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi>X</mi><mi>i</mi></msub></math> consists of summary
+units <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="x_{i,j}" display="inline"><msub><mi>x</mi><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub></math> (<span class="ltx_text ltx_font_italic">e.g.</span> the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>th sentence of summary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>) that
+point to a child summary, except at the leaf nodes of the hierarchy.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">A child summary adds more detail to the information in its
+parent summary unit. The child summary may include sub-events or
+background and reactions to the event or topic in the parent.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We define several metrics in Section <a href="#S4" title="4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+for a well-constructed hierarchical summary. Each summary should
+maximize coverage of <span class="ltx_text ltx_font_italic">salient</span> information; it should minimize
+<span class="ltx_text ltx_font_italic">redundancy</span>; and it should have <span class="ltx_text ltx_font_italic">intra-cluster coherence</span>
+as well as <span class="ltx_text ltx_font_italic">parent-to-child coherence</span>.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Hierarchical summarization has two important strengths in the context of
+large-scale summarization.
+First, the information presented at the start is small and grows only
+as the user directs it, so as not to overwhelm the user.
+Second, each user directs his or her own experience, so a user interested
+in one aspect need only explore that section of the data without having to
+view or understand the entire summary. The parent-to-child
+links provide a means for
+a user to navigate, drilling down for more details on topics
+of interest.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">There are several possible organizing principles for the hierarchy –
+by date, by entities, by locations, or by events.
+Some organizing principles will fit the data in a document collection better
+than others. A system may select different organization for different
+portions of the hierarchy, for example, organizing first by location or
+prominent entity and then by date for the next level.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Hierarchical Clustering</h2>
+
+<div id="S3.F2" class="ltx_figure"><img src="P14-1085/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="269" height="383" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> Examples of input and output to hierarchical summarization.
+The input sentences are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m4" class="ltx_Math" alttext="s\in S" display="inline"><mrow><mi>s</mi><mo>∈</mo><mi>S</mi></mrow></math>, the number of input sentences is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m5" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>,
+and the summary sentences are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m6" class="ltx_Math" alttext="x\in X" display="inline"><mrow><mi>x</mi><mo>∈</mo><mi>X</mi></mrow></math>.</div>
+</div>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Having defined the task, we now describe the methodology behind our
+implementation, <span class="ltx_text ltx_font_smallcaps">Summa</span>.
+In future work we intend to design a system that dynamically selects
+the best organizing principle for each level of the hierarchy. In this
+first implementation, we have opted for temporal organization, since this
+is generally the most appropriate for news events.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The problem of hierarchical summarization as described in Section
+<a href="#S2" title="2 Hierarchical Summarization ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> has all of the requirements of MDS, and additional
+complexities of inducing a hierarchical structure, processing an order of
+magnitude bigger input, generating a much larger output, and enforcing
+coherence between parent and child summaries.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We simplify the problem by decomposing it into two steps:
+hierarchical clustering and summarizing over the clustering
+(see Figure <a href="#S3.F2" title="Figure 2 ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for an example).
+A hierarchical clustering is a tree in which if a cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="g_{p}" display="inline"><msub><mi>g</mi><mi>p</mi></msub></math>
+is the parent of cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="g_{c}" display="inline"><msub><mi>g</mi><mi>c</mi></msub></math>, then each sentence in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="g_{c}" display="inline"><msub><mi>g</mi><mi>c</mi></msub></math> is also in
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="g_{p}" display="inline"><msub><mi>g</mi><mi>p</mi></msub></math>. This organizes the information into manageable,
+semantically-related sections and induces a hierarchical structure over
+the input.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The hierarchical clustering serves as input to the second step
+– summarizing given the hierarchy. The hierarchical summary follows the
+hierarchical structure of the clustering. Each node in the hierarchy has an
+associated flat summary, which summarizes the sentences in that cluster.
+Moreover, the number of sentences in a flat summary is exactly equal to
+the number of child clusters of the node, since the user will click a
+sentence to get to the child summary. See Figure <a href="#S3.F2" title="Figure 2 ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for
+an illustration of this correspondence.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Because we are interested in <em class="ltx_emph">temporal</em> hierarchical summarization,
+we hierarchically cluster all the sentences in the input documents by
+time. Unfortunately, neither agglomerative nor divisive clustering is
+suitable, since both assume a binary split at each node <cite class="ltx_cite">[<a href="#bib.bib157" title="A survey of clustering data mining techniques" class="ltx_ref">2</a>]</cite>. The
+number of clusters at each split should be what is most natural for the
+input data. We design a recursive clustering algorithm
+that automatically chooses the appropriate number of clusters at each
+split.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">Before clustering, we timestamp all sentences. We
+use SUTime <cite class="ltx_cite">[<a href="#bib.bib80" title="SUTime: a library for recognizing and normalizing time expressions" class="ltx_ref">6</a>]</cite> to normalize temporal references, and
+we parse the sentences with the Stanford parser <cite class="ltx_cite">[<a href="#bib.bib155" title="Accurate unlexicalized parsing" class="ltx_ref">13</a>]</cite> and use a set of
+simple heuristics to determine if the timestamps in the sentence refer to
+the root verb.
+
+If no timestamp is given, we use the article date.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Temporal Clustering</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">After acquiring the timestamps, we must hierarchically cluster the
+sentences into sets that make sense to summarize together.
+
+Since we wish to partition along the temporal dimension, our problem
+reduces to identifying the best dates at which to split a cluster into
+subclusters. We identify these dates by looking for bursts of activity.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">News tends to be <em class="ltx_emph">bursty</em> – many articles on a topic appear at
+once and then taper out <cite class="ltx_cite">[<a href="#bib.bib156" title="Bursty and hierarchical structure in streams" class="ltx_ref">14</a>]</cite>.
+For example, Figure <a href="#S3.F3" title="Figure 3 ‣ 3.1 Temporal Clustering ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the number of articles
+per day related to the 1998 embassy bombings published in the New York Times
+(identified using a key word search). There
+were two main events – on the 7th, the embassies were bombed and on the
+20th, the US retaliated through missile strikes. The figure shows a
+correspondence between these events and news spikes.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Ideal splits for this example would occur just before each spike in
+coverage. However, when there is little differentiation in news coverage,
+we prefer clusters evenly spaced across time. We thus choose
+clusters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="C=\{c_{1},\dots,c_{k}\}" display="inline"><mrow><mi>C</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>c</mi><mi>k</mi></msub></mrow><mo>}</mo></mrow></mrow></math> as follows:</p>
+<table id="S3.E1" class="ltx_equationgroup">
+
+<tr id="S3.E1X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1X.m2" class="ltx_Math" alttext="\displaystyle\underset{C}{\text{maximize}}" display="inline"><munder accentunder="true"><mtext>maximize</mtext><mo>𝐶</mo></munder></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1X.m4" class="ltx_Math" alttext="\displaystyle B(C)+\alpha E(C)" display="inline"><mrow><mrow><mi>B</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> is a clustering, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="B(C)" display="inline"><mrow><mi>B</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow></math> is the burstiness of the
+set of clusters, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="E(C)" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow></math> is the evenness
+of the clusters, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is the tradeoff parameter.</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="B(C)=\sum_{c\in C}burst(c)" display="block"><mrow><mrow><mi>B</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder><mrow><mi>b</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="burst(c)" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> is the difference in the number of sentences
+published the day before the first date in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and the average number
+of sentences published on the first and second date of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>:</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="burst(c)=\frac{pub(d_{i})+pub(d_{i+1})}{2}-pub(d_{i-1})" display="block"><mrow><mrow><mi>b</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>d</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></mrow><mn>2</mn></mfrac><mo>-</mo><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>d</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m1" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is a date indexed over time,
+such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m2" class="ltx_Math" alttext="d_{j}" display="inline"><msub><mi>d</mi><mi>j</mi></msub></math> is a day before <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m3" class="ltx_Math" alttext="d_{j+1}" display="inline"><msub><mi>d</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m4" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math> is the first date in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m5" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m6" class="ltx_Math" alttext="pub(d_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is the number of sentences published on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m7" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math>.
+The evenness of the split is measured by:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="E(C)=\min_{c\in C}size(c)" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mi>C</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo movablelimits="false">min</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder><mo>⁡</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>z</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p7" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p7.m1" class="ltx_Math" alttext="size(c)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>z</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> is the number of dates in cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p7.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>.</p>
+</div>
+<div id="S3.SS1.p8" class="ltx_para">
+<p class="ltx_p">We perform hierarchical clustering top-down, at
+each point solving for Equation <a href="#S3.E1" title="(1) ‣ 3.1 Temporal Clustering ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p8.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> was set
+using a grid-search over a development set.</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1085/image003.png" id="S3.F3.g1" class="ltx_graphics" width="323" height="418" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span> News coverage by date for the embassy bombings in
+Tanzania and Kenya. There are spikes in the number of articles published at the two
+major events. </div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Choosing the number of clusters</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We cannot know <em class="ltx_emph">a priori</em> the number of clusters for a
+given topic. However, when the number of clusters is too large for the
+given summary budget, the sentences will have to be too short, and when the
+number of clusters is too small, we will not use enough of the budget.
+We set the maximum number of clusters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="k_{max}" display="inline"><msub><mi>k</mi><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math> and minimum number of
+clusters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="k_{min}" display="inline"><msub><mi>k</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> to be a function of the budget <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> and the average
+sentence length in the cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="s_{avg}" display="inline"><msub><mi>s</mi><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi></mrow></msub></math>, such that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="k_{max}\cdot s_{avg}\leq b" display="inline"><mrow><mrow><msub><mi>k</mi><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub><mo>⋅</mo><msub><mi>s</mi><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi></mrow></msub></mrow><mo>≤</mo><mi>b</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="k_{min}\cdot s_{avg}\geq b/2" display="inline"><mrow><mrow><msub><mi>k</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>⋅</mo><msub><mi>s</mi><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi></mrow></msub></mrow><mo>≥</mo><mrow><mi>b</mi><mo>/</mo><mn>2</mn></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Given a maximum and minimum number of clusters, we must determine the
+appropriate number of clusters. At each level, we cluster the
+sentences by the method described above and choose the number of clusters
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> according to the gap statistic <cite class="ltx_cite">[<a href="#bib.bib87" title="Estimating the number of clusters in a dataset via the gap statistic" class="ltx_ref">30</a>]</cite>.
+Specifically, for each level, the algorithm will cluster repeatedly with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> varying from the minimum to the maximum. The algorithm will
+return the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> that maximizes the gap statistic:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="Gap_{n}(k)=E^{\ast}_{n}\{\log(W_{k})\}-log(W_{k})" display="block"><mrow><mrow><mi>G</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msub><mi>p</mi><mi>n</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><msubsup><mi>E</mi><mi>n</mi><mo>∗</mo></msubsup><mo>⁢</mo><mrow><mo>{</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><msub><mi>W</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow><mo>-</mo><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>W</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="W_{k}" display="inline"><msub><mi>W</mi><mi>k</mi></msub></math> is the score for the clusters computed with Equation <a href="#S3.E1" title="(1) ‣ 3.1 Temporal Clustering ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="E^{\ast}_{n}" display="inline"><msubsup><mi>E</mi><mi>n</mi><mo>∗</mo></msubsup></math> is the expectation under a sample of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> from a reference distribution.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Ideally, the maximum depth of the clustering would be a function of the number of
+sentences in each cluster, but in our implementation, we set the maximum
+depth to three, which
+works well for the size of the datasets we use (300 articles).</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Summarizing within the Hierarchy</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">After the sentences are clustered, we have a structure for the
+hierarchical summary that dictates the number of summaries and the
+number of sentences in each summary. We also have the set of sentences from
+which each summary is drawn.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Intuitively, each cluster summary in the hierarchical summary
+should convey the most <span class="ltx_text ltx_font_bold">salient</span>
+information in that cluster. Furthermore, the hierarchical summary should
+not include <span class="ltx_text ltx_font_bold">redundant</span> sentences.
+A hierarchical summary that is only salient and nonredundant may still not
+be suitable if the sentences within a cluster
+summary are disconnected or if the parent sentence for a
+summary does not relate to the child summary. Thus, a hierarchical summary
+must also have <span class="ltx_text ltx_font_bold">intra-cluster coherence</span> and <span class="ltx_text ltx_font_bold">parent-to-child
+coherence</span>.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Salience</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Salience is the value of each sentence to the topic from which the
+documents are drawn. We measure salience of a summary (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="Sal(X)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow></math>) as the
+sum of the saliences of individual sentences (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="\sum_{i}Sal(x_{i})" display="inline"><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mrow><mi>S</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math>).
+Following previous research in MDS, we computed individual saliences
+using a linear regression classifier trained on ROUGE scores over the DUC’03
+dataset <cite class="ltx_cite">[<a href="#bib.bib55" title="ROUGE: a package for automatic evaluation of summaries" class="ltx_ref">18</a>, <a href="#bib.bib138" title="Towards coherent multi-document summarization" class="ltx_ref">8</a>]</cite>. This method finds those sentences
+more salient that mention nouns or verbs that occur frequently in the cluster.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">In preliminary experiments, we noticed that many sentences that were
+<em class="ltx_emph">reaction</em> sentences were given a higher salience than <em class="ltx_emph">action</em>
+sentences. For example, the reaction sentence, “President Clinton vowed
+to track down the perpetrators behind the bombs that exploded outside the
+embassies in Tanzania and Kenya on Friday,” would have a higher score
+than the <em class="ltx_emph">action</em> sentence, “Bombs exploded outside the embassies in
+Tanzania and Kenya on Friday.” This problem occurs because the first
+sentence has a higher ROUGE score (it covers more important words than the
+second sentence). To adjust for this problem, we use only words identified
+in the main clause (heuristically identified via the parse tree) to compute our salience scores.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Redundancy</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We identify redundant sentences using a linear regression classifier
+trained on a manually labeled subset of the DUC’03 sentences. The features
+include shared noun counts, sentence length, TF*IDF cosine similarity,
+timestamp difference, and features drawn from information extraction such
+as number of shared tuples in Open IE <cite class="ltx_cite">[<a href="#bib.bib79" title="Open language learning for information extraction" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Summary Coherence</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We require two types of coherence:
+coherence between the parent and child summaries and coherence
+within each summary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi>X</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">We rely on the approximate discourse graph (ADG) that was
+proposed in <cite class="ltx_cite">[<a href="#bib.bib138" title="Towards coherent multi-document summarization" class="ltx_ref">8</a>]</cite> as the basis for measuring
+coherence. Each node in the ADG is a sentence from the dataset. An edge
+from sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math> with positive weight indicates that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math> may
+follow <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m4" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> in a coherent summary, <span class="ltx_text ltx_font_italic">e.g.</span> continued mention of an event
+or entity, or coreference link between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m5" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m6" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math>.
+A negative edge indicates an unfulfilled discourse cue or co-reference
+mention.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Parent-to-Child Coherence:</span>
+Users navigate the hierarchical summary from parent sentence to child
+summary, so if the parent sentence bears no relation to the child summary,
+the user will be understandably confused.
+The parent sentence must have positive evidence of coherence with the
+sentences in its child summary.</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">We estimate parent to child coherence as the coherence between a parent
+sentence and each sentence in its child summary as:</p>
+<table id="S4.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="PCoh(X)=\sum_{c\in C}\sum_{i=1..|X_{c}|}w_{G+}(x_{c}^{p},x_{c,i}))" display="block"><mrow><mi>P</mi><mi>C</mi><mi>o</mi><mi>h</mi><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mrow><mn>1..</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>c</mi></msub><mo fence="true">|</mo></mrow></mrow></mrow></munder><msub><mi>w</mi><mrow><mi>G</mi><mo>+</mo></mrow></msub><mrow><mo>(</mo><msubsup><mi>x</mi><mi>c</mi><mi>p</mi></msubsup><mo>,</mo><msub><mi>x</mi><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m1" class="ltx_Math" alttext="x_{c}^{p}" display="inline"><msubsup><mi>x</mi><mi>c</mi><mi>p</mi></msubsup></math> is the parent sentence for cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m3" class="ltx_Math" alttext="w_{G+}(x_{c}^{p},x_{c,i})" display="inline"><mrow><msub><mi>w</mi><mrow><mi>G</mi><mo>+</mo></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi>x</mi><mi>c</mi><mi>p</mi></msubsup><mo>,</mo><msub><mi>x</mi><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math> is the sum of the positive
+edge weights from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m4" class="ltx_Math" alttext="x_{c}^{p}" display="inline"><msubsup><mi>x</mi><mi>c</mi><mi>p</mi></msubsup></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m5" class="ltx_Math" alttext="x_{c,i}" display="inline"><msub><mi>x</mi><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub></math> in the ADG <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m6" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math>.</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Intra-cluster Coherence:</span>
+In traditional MDS, the documents are usually
+quite focused, allowing for highly focused summaries. In hierarchical
+summarization, however, a cluster summary may span hundreds of documents
+and a wide range of information.
+For this reason, we may consider a summary acceptable
+even if it has limited positive evidence of coherence in the
+ADG, as long as there is no negative evidence in the form of negative
+edges.
+For example, the following is a reasonable summary for events spanning
+two weeks: 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m1" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math> <em class="ltx_emph">Bombs exploded at two US embassies.</em> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m2" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math> <em class="ltx_emph">US missiles struck in Afghanistan and Sudan.</em></p>
+</div>
+<div id="S4.SS3.p6" class="ltx_para">
+<p class="ltx_p">Our measure of intra-cluster coherence minimizes the number of
+<span class="ltx_text ltx_font_italic">missing references</span>. These are coreference mentions or discourse
+cues where none of the sentences read before (either in an ancestor
+summary or in the current summary) contain an antecedent:</p>
+</div>
+<div id="S4.SS3.p7" class="ltx_para">
+<table id="S4.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\vspace{-3ex}CCoh(X)=-\sum_{c\in C}\sum_{i=1..|X_{c}|}\#missingRef(x_{c,i})%&#10;\vspace{-1ex}" display="block"><mrow><mrow><mi>C</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></munder><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mrow><mn>1..</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>c</mi></msub><mo fence="true">|</mo></mrow></mrow></mrow></munder><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Objective Function</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Having estimated salience, redundancy, and two forms of coherence,
+we can now put this information together into a single objective function
+that measures the quality of a candidate hierarchical summary.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">Intuitively, the objective function should
+balance salience and coherence. Furthermore, the summary should not
+contain redundant
+information and each cluster summary should honor the given budget, i.e.,
+maximum summary length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m1" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>. We treat redundancy and budget as hard
+constraints and coherence and salience as soft constraints. Lastly, we
+require that sentences are drawn from the cluster that they represent and
+
+that the number of sentences in the summary
+corresponding to each non-leaf cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>
+is equivalent to the number of child clusters of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>. We optimize:</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_markedasmath ltx_font_bold ltx_font_footnote">maximize:</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m2" class="ltx_Math" alttext="\displaystyle F(x)\triangleq Sal(X)+\beta PCoh(X)+\gamma CCoh(X)" display="inline"><mrow><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>≜</mo><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>β</mi><mo>⁢</mo><mi>P</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>γ</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex2.m1" class="ltx_Math" alttext="\displaystyle s.t." display="inline"><mrow><mrow><mi>s</mi><mo separator="true">.</mo><mi>t</mi></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex2.m2" class="ltx_Math" alttext="\displaystyle\forall{c\in C}:\sum_{i=1..|X_{c}|}len(x_{c,i})&lt;b" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>c</mi></mrow><mo>∈</mo><mi>C</mi></mrow><mo>:</mo><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mrow><mn>1..</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>c</mi></msub><mo fence="true">|</mo></mrow></mrow></mrow></munder></mstyle><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow></mrow></mrow><mo>&lt;</mo><mi>b</mi></mrow></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m2" class="ltx_Math" alttext="\displaystyle\forall{x_{i},x_{j}\in X}:\textrm{redundant}(x_{i},x_{j})=0" display="inline"><mrow><mrow><mrow><mrow><mo>∀</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mo>,</mo><msub><mi>x</mi><mi>j</mi></msub></mrow><mo>∈</mo><mi>X</mi></mrow><mo>:</mo><mrow><mrow><mtext mathsize="small" stretchy="false">redundant</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>x</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m2" class="ltx_Math" alttext="\displaystyle\forall{c\in C},\forall{x_{c}\in X_{c}}:x_{c}\in c" display="inline"><mrow><mrow><mrow><mrow><mo>∀</mo><mi>c</mi></mrow><mo>∈</mo><mi>C</mi></mrow><mo>,</mo><mrow><mrow><mo>∀</mo><msub><mi>x</mi><mi>c</mi></msub></mrow><mo>∈</mo><msub><mi>X</mi><mi>c</mi></msub></mrow></mrow><mo>:</mo><mrow><msub><mi>x</mi><mi>c</mi></msub><mo>∈</mo><mi>c</mi></mrow></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex5.m2" class="ltx_Math" alttext="\displaystyle\forall{c\in C}:|X_{c}|=\#children(c)" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>c</mi></mrow><mo>∈</mo><mi>C</mi></mrow><mo>:</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>X</mi><mi>c</mi></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS4.p4" class="ltx_para">
+<p class="ltx_p">The tradeoff parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p4.m1" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p4.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> were set based on a development set.</p>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Algorithm</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">Optimizing this objective function is NP-hard, so we approximate a
+solution by using beam search over the space of partial hierarchical
+summaries. Notice the contribution from a sentence depends on
+individual salience, coherence (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m1" class="ltx_Math" alttext="CCoh" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi></mrow></math>) based on sentences visible on the user
+path down the hierarchy to this sentence, and coherence (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m2" class="ltx_Math" alttext="PCoh" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi></mrow></math>) based on its
+parent sentence and its child summary. Since most of the
+sentence contributions depend on the path from the root to the sentence, we build our
+partial summary by incrementally adding a sentence top-down in the
+hierarchy and from first sentence to last within a cluster summary.</p>
+</div>
+<div id="S4.SS5.p2" class="ltx_para">
+<p class="ltx_p">To account for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p2.m1" class="ltx_Math" alttext="PCoh" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi></mrow></math>,
+we estimate the contribution of the sentence
+by jointly identifying its best child summary. However, we do not fix the
+child summary at this time – we simply use it to estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p2.m2" class="ltx_Math" alttext="PCoh" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>h</mi></mrow></math> when
+using that sentence. Since computing the best child summary is
+also intractable we approximate a solution by a local search algorithm over the
+child cluster.</p>
+</div>
+<div id="S4.SS5.p3" class="ltx_para">
+<p class="ltx_p">Overall, our algorithm is a two level nested search algorithm – beam
+search in the outer loop to search through the space of partial summaries
+and local search (hill climbing with random restarts) in the inner loop to
+pick the best sentence to add to the existing partial summary. We use a
+beam of size ten in our implementation.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our experiments are designed to evaluate how effective hierarchical
+summarization is in summarizing a large, complex topic and how well this
+helps users learn about the topic.
+Our evaluation addresses the following questions:</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Do users prefer hierarchical summaries
+for topic exploration? (Section <a href="#S5.SS1" title="5.1 User Preference ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>)</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Are hierarchical summaries more effective than other
+methods for learning about complex events? (Section <a href="#S5.SS2" title="5.2 Knowledge Acquisition ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>)</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">How informative are the hierarchical summaries compared to the other
+methods? (Section <a href="#S5.SS3" title="5.3 Informativeness ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>)</p>
+</div></li>
+<li id="I3.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i4.p1" class="ltx_para">
+<p class="ltx_p">How coherent is the hierarchical structure in the summaries? (Section <a href="#S5.SS4" title="5.4 Parent-to-Child Coherence ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>)</p>
+</div></li>
+</ul>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">We compared <span class="ltx_text ltx_font_smallcaps">Summa</span> against two baseline systems which represent the main
+NLP methods for large-scale summarization: an algorithm for creating
+timelines over sentences <cite class="ltx_cite">[<a href="#bib.bib92" title="Query based event extraction along a timeline" class="ltx_ref">7</a>]</cite>,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Unfortunately, we were
+unable to obtain more recent timeline systems from authors of the systems.</span></span></span>
+and a state-of-the-art flat MDS system <cite class="ltx_cite">[<a href="#bib.bib22" title="A class of submodular functions for document summarization" class="ltx_ref">19</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><cite class="ltx_cite">[<a href="#bib.bib138" title="Towards coherent multi-document summarization" class="ltx_ref">8</a>]</cite>
+is a state-of-the-art coherent MDS system, but does not scale to 300 documents.</span></span></span>
+Each system was given the same budget (over 10 times the traditional MDS budget,
+which is 665 bytes).</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">We evaluated the questions on ten news topics, representing a range of tasks: (1) Pope
+John Paul II’s death and the 2005 Papal Conclave, (2) Bush v. Gore,
+(3) the Tulip Revolution, (4) Daniel Pearl’s kidnapping, (5) the Lockerbie bombing handover
+of suspects,
+(6) the Kargil War, (7) NATO’s bombing of Yugoslavia in 1999, (8) Pinochet’s arrest in
+London, (9) the 2005 London bombings, and (10) the crash and investigation of SwissAir
+Flight 111. We chose topics
+containing a set of related events that unfolded
+over several months and were prominent enough to
+be reported in at least 300 articles.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">We drew our articles from the
+Gigaword corpus, which contains articles from the New York Times and other
+major newspapers. For each topic, we used the 300 documents that best
+matched a key word search. We selected topics which were between five and
+fifteen years old so that evaluators would have relatively less
+pre-existing knowledge about the topic.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>User Preference</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In our first experiment, we simply wished to evaluate which system users most prefer.
+We hired Amazon Mechanical Turk (AMT) workers and assigned two topics to
+each worker. We paired up workers such that one worker would see output
+from <span class="ltx_text ltx_font_smallcaps">Summa</span> for the first topic and a competing system for the second and
+the other worker would see the reverse. For quality control, we asked workers to
+complete a qualification task first, in which they were required to write
+a short summary of a news article. We also manually removed spam from our
+results.
+Previous work has used AMT workers for summary evaluations and has shown high
+correlations with expert ratings <cite class="ltx_cite">[<a href="#bib.bib138" title="Towards coherent multi-document summarization" class="ltx_ref">8</a>]</cite>.
+Five workers were hired to view each topic-system pair.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">We asked the workers to choose which format they preferred and to explain why.
+The results are as follows:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Summa</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">76%</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Timeline</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t">24%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Summa</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">92%</span></td>
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Flat-MDS</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">8%</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Users preferred the hierarchical summaries three times more often than
+timelines and over ten times more often than flat summaries. When we
+examined the reasons given by the users, we found that the people who
+preferred the hierarchical summaries liked that they gave a big picture
+overview and were then allowed to drill down deeper. Some also explained
+that it was easier to remember information when presented with the
+overview first. Typical responses included, “Could
+gather and absorb the information at my own pace,” and, “Easier to follow
+and understand.” When users preferred the timelines,
+they usually remarked that it was more familiar, i.e. “I liked the familiarity of the format. I am used to these timelines
+and they feel comfortable.”
+Users complained that the
+flat summaries were disjointed, confusing, and very frustrating to read.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Knowledge Acquisition</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Evaluating how much a user learned is inherently
+difficult, more so when the goal is to allow the user the freedom to
+explore information based on individual interest. For this reason,
+instead of asking a set of predefined questions, we assess the knowledge
+gain by following the methodology of <cite class="ltx_cite">[<a href="#bib.bib125" title="Trains of thought: generating information maps" class="ltx_ref">26</a>]</cite> – asking users
+to write a paragraph summarizing the information learned.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Using the same setup as in the previous experiment, for each topic,
+five AMT workers spent three minutes reading through a timeline or summary
+and were then asked to write a description of what they had learned.
+Workers were not allowed to see the timeline or summary while writing.
+We collected five descriptions for each topic-system combination. We then
+asked other AMT workers to read and compare the descriptions written by the first set
+of workers. Each evaluator was presented with a corresponding Wikipedia
+article and descriptions from a pair of users (timeline vs. <span class="ltx_text ltx_font_smallcaps">Summa</span> or flat MDS vs.
+<span class="ltx_text ltx_font_smallcaps">Summa</span>). The descriptions were randomly ordered to remove bias. The workers were
+asked which user appeared to have learned more and why. For each pair of
+descriptions, four workers evaluated the pair.
+Standard checks such as approval
+rating, location filtering, etc. were used for
+removing spam.
+The results of this experiment are as follows:</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Prefer</th>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Indiff.</th>
+<th class="ltx_td ltx_align_left ltx_border_t">Prefer</th>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_smallcaps">Summa</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">58%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">17%</td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_smallcaps">Timeline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt">25%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Summa</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">40%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">22%</td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Flat-MDS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">38%</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">Descriptions written by workers using <span class="ltx_text ltx_font_smallcaps">Summa</span> were preferred over twice as
+often as those from timelines. We looked more closely at those
+cases where the participants either preferred the timelines or were
+indifferent and found that this preference was most common when the topic
+was not dominated by a few major events, but was instead a series of
+similarly important events. For example, in the kidnapping and beheading
+of Daniel Pearl there were two or three obviously major events, whereas in
+the Kargil War there were many smaller important events. In latter cases,
+the hierarchical summaries provided little advantage over the timelines
+because it was more difficult to arrange the sentences hierarchically.</p>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">Since <span class="ltx_text ltx_font_smallcaps">Summa</span> was judged to be so much superior to flat MDS systems in
+Section <a href="#S5.SS1" title="5.1 User Preference ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>, it is surprising that users descriptions
+from flat MDS were preferred nearly as often as those from <span class="ltx_text ltx_font_smallcaps">Summa</span>.
+While the flat summaries were disjointed, they were good at including
+salient information, with the most salient tending to be near the start
+of the summary. Thus, descriptions from both <span class="ltx_text ltx_font_smallcaps">Summa</span> and flat MDS generally
+covered the most salient information.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Informativeness</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this experiment, we assess the salience of the information captured by the
+different systems, and the ability of <span class="ltx_text ltx_font_smallcaps">Summa</span> to organize the information so
+that more important information is placed at higher levels.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">ROUGE Evaluation:</span>
+We first automatically assessed informativeness by calculating the ROUGE-1
+scores of the output of each of the systems. For the gold standard comparison summary,
+we use the Wikipedia articles for the topics.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>We excluded one topic (the handover of the Lockerbie
+bombing suspects) because the corresponding Wikipedia article had insufficient information.</span></span></span>
+Note that there is no good translation of ROUGE for hierarchical summarization. Thus, we
+simply use the traditional ROUGE metric, which will not capture any of the hierarchical
+format. This score will essentially serve as a rough measure of coverage of the entire
+summary to the Wikipedia article. The scores for each of the systems are as follows:</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">P</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">R</th>
+<th class="ltx_td ltx_align_center ltx_border_t">F1</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_smallcaps">Summa</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.25</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">0.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.31</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Timeline</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.28</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.65</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.33</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Flat-MDS</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">0.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">0.64</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_bold">0.34</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">None of the differences are significant. From this evaluation, one can gather that the
+systems have similar coverage of the Wikipedia articles.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Manual Evaluation:</span>
+While ROUGE serves as a rough measure of coverage, we were interested in gathering
+more fine-grained information on the informativeness of each system.
+We performed an additional manual evaluation that assesses the recall
+of important events for each system.</p>
+</div>
+<div id="S5.SS3.p6" class="ltx_para">
+<p class="ltx_p">We first identified which events were most important in a news story.
+Because reading 300 articles per topic is impractical, we asked AMT workers
+to read a Wikipedia article on the same topic and then identify the three
+most important events and the five most important secondary events. We
+aggregated responses from ten workers per topic and chose the three most
+common primary and five most common secondary events.</p>
+</div>
+<div id="S5.SS3.p7" class="ltx_para">
+<p class="ltx_p">One of the authors then manually identified the presence of these events in the
+hierarchical summaries, the timelines and the flat MDS summaries. Below we show event
+recall (the percentage of the events that were mentioned).</p>
+</div>
+<div id="S5.SS3.p8" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">Events</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Summa</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Timeline</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Flat-MDS</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt">Prim.</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">96%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">74%</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">93%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_rr ltx_border_t">Sec.</th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">76%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">53%</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">64%</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS3.p9" class="ltx_para">
+<p class="ltx_p">The difference in recall between <span class="ltx_text ltx_font_smallcaps">Summa</span> and <span class="ltx_text ltx_font_smallcaps">Timeline</span> was significant in both cases,
+and the difference between <span class="ltx_text ltx_font_smallcaps">Summa</span> and <span class="ltx_text ltx_font_smallcaps">Flat-MDS</span> was not.
+In general, the flat summaries were quite redundant, which contributed to the slightly
+lower event recall. The timelines, on the other hand, were both incoherent and at the
+same time reported less important facts.</p>
+</div>
+<div id="S5.SS3.p10" class="ltx_para">
+<p class="ltx_p">We also evaluated at what level in the hierarchy the events were identified for the
+hierarchical summaries. The event recall shows the percentage of events
+mentioned at that level or above in the hierarchical summary:</p>
+</div>
+<div id="S5.SS3.p11" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">Events</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Level 1</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Level 2</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Level 3</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt">Prim.</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">63%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">81%</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">96%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_rr ltx_border_t">Sec.</th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">27%</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">51%</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">76%</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS3.p12" class="ltx_para">
+<p class="ltx_p">81% of the primary events are
+present in the first or second level, and 76% of the secondary events are
+mentioned by the third level.
+While recognizing primary events is relatively simple because they are repeated frequently,
+identification of important secondary events often requires external knowledge.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Parent-to-Child Coherence</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">We next tested the hierarchical coherence. One of the authors graded how much each
+non-leaf sentence in a summary was coherent with its child summary on a
+scale of one to five, with one being incoherent and five being perfectly
+coherent. We used the coherence scale from DUC’04.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>http://duc.nist.gov/duc2004/quality.questions.txt</span></span></span></p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Level 1</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Level 2</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_rr ltx_border_tt">Coherence</th>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_tt">3.8</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_tt">3.4</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">We found that for the top level of the summary, the parent sentence generally
+represented the most important event in the cluster and the child summary usually expressed
+details or reactions of the event. The lower coherence scores were often the
+result of too few lexical connections or lack of a theme or story.
+While the facts of the sentences made sense together, the summaries sometimes
+did not read as if they were written by a human, but as a series of disparate sentences.</p>
+</div>
+<div id="S5.SS4.p4" class="ltx_para">
+<p class="ltx_p">For the second level, the problems were more basic. The parent sentence
+occasionally expressed a less important fact that the child summary did not then expand on
+or, more commonly, the child summary was not focused enough. This result stems from two
+problems in our algorithm. First, summarizing sentences are rare,
+making good choices for parent sentences difficult to find.
+The second problem relates to the difficulty in identifying
+whether two sentences are on the same topic. For example, suppose the parent sentence is,
+“A Swissair plane Wednesday night crashed off Nova Scotia, Canada.”
+A very good child sentence is, “The airline confirmed that all passengers died.”
+However, based on their surface features, the sentence, “A plane
+made an unscheduled landing after a Swissair plane crashed off the coast of
+Canada,” appears to be a better choice.</p>
+</div>
+<div id="S5.SS4.p5" class="ltx_para">
+<p class="ltx_p">Even though there is scope for improvement, we find these coherence scores encouraging
+for a first algorithm for the task.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Traditional approaches to large-scale summarization have included flat summaries and
+timelines. There are two primary shortcomings to these approaches: first, they require
+the user to sort through large amounts of potentially overwhelming information, and
+second, the output is static –
+users with different interests will see
+the same information. Below we describe related work on traditional MDS,
+structured summaries,
+timelines,
+
+discovering threads of documents and the uses of
+hierarchies in generating summaries.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Traditional MDS</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Traditionally, MDS systems have focused on three to six sentence summaries
+covering 10-15 documents. Most extractive summarization research aims to maximize
+coverage while reducing redundancy (e.g.
+<cite class="ltx_cite">[<a href="#bib.bib2" title="The use of MMR, diversity-based reranking for reordering documents and producing summaries" class="ltx_ref">4</a>, <a href="#bib.bib85" title="Multi-document summarization by cluster/profile relevance and redundancy removal" class="ltx_ref">24</a>, <a href="#bib.bib86" title="Centroid-based summarization of multiple documents" class="ltx_ref">23</a>]</cite>). Lin and Bilmes <cite class="ltx_cite">[<a href="#bib.bib22" title="A class of submodular functions for document summarization" class="ltx_ref">19</a>]</cite> proposed a
+state-of-the-art system that uses submodularity in sentence selection to accomplish
+these goals. Christensen et al. <cite class="ltx_cite">[<a href="#bib.bib138" title="Towards coherent multi-document summarization" class="ltx_ref">8</a>]</cite> presented
+an algorithm for coherent MDS, but it does not scale to larger output.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Structured Summaries:</span>
+Some research has explored generating structured summaries.
+These approaches attempt to identify major aspects of a topic, but do not
+compile content to describe those aspects. Rather, they rely on
+pre-existing, labeled paragraphs (for example, a paragraph titled, “Symptoms of Meningitis”).
+Aspects are identified either by a training corpus of articles in the same domain
+<cite class="ltx_cite">[<a href="#bib.bib130" title="Automatically generating Wikipedia articles: A structure-aware approach" class="ltx_ref">25</a>]</cite>, by an entity-aspect LDA model <cite class="ltx_cite">[<a href="#bib.bib131" title="Generating templates of entity summaries with an entity-aspect model and pattern mining" class="ltx_ref">17</a>]</cite>, or by Wikipedia
+templates of related topics <cite class="ltx_cite">[<a href="#bib.bib135" title="Autopedia: Automatic domain-independent wikipedia article generation" class="ltx_ref">35</a>]</cite>.
+These methods assume a common structure for all topics in a category, and do
+not allow for more than two levels in the structure.</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Timeline Generation:</span>
+
+Recent papers in timeline generation have emphasized the relationship with
+summarization. Yan et al. <cite class="ltx_cite">[<a href="#bib.bib90" title="Evolutionary timeline summarization: A balanced optimization framework via iterative substitution" class="ltx_ref">33</a>]</cite> balanced coherence and diversity to create
+timelines, Yan et al. <cite class="ltx_cite">[<a href="#bib.bib89" title="Timeline generation through evolutionary trans-temporal summarization." class="ltx_ref">32</a>]</cite> used inter-date and intra-date sentence
+dependencies, and Chieu and Lee <cite class="ltx_cite">[<a href="#bib.bib92" title="Query based event extraction along a timeline" class="ltx_ref">7</a>]</cite> used sentence similarity.
+Others have emphasized identifying important dates, primarily by
+bursts of news
+<cite class="ltx_cite">[<a href="#bib.bib93" title="Automatic generation of overview timelines" class="ltx_ref">28</a>, <a href="#bib.bib95" title="Identifying breakpoints in public opinion" class="ltx_ref">1</a>, <a href="#bib.bib94" title="Generating breakpoint-based timeline overview for news topic retrospection" class="ltx_ref">11</a>, <a href="#bib.bib124" title="Finding salient dates for building thematic timelines" class="ltx_ref">12</a>]</cite>.
+While timelines can be useful for understanding events,
+they do not generalize to other domains. Additionally,
+long timelines can be overwhelming, short timelines have low
+information content, and there is no method for personalized exploration.</p>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Document Threads:</span>
+A related track of research investigates discovering threads of documents.
+While we aim to summarize collections of information, this track
+seeks to identify relationships between documents.
+This research operates on the document level, while
+ours operates on the sentence level.
+
+Shahaf and Guestrin <cite class="ltx_cite">[<a href="#bib.bib126" title="Connecting the dots between news articles" class="ltx_ref">27</a>]</cite> formalized the characteristics of a
+good chain of articles and proposed an algorithm to connect two specified articles.
+Gillenwater et al. <cite class="ltx_cite">[<a href="#bib.bib119" title="Discovering diverse and salient threads in document collections" class="ltx_ref">9</a>]</cite> proposed a probabilistic
+technique for extracting a diverse set of threads from a given collection.
+Shahaf et al. <cite class="ltx_cite">[<a href="#bib.bib125" title="Trains of thought: generating information maps" class="ltx_ref">26</a>]</cite> extended work on coherent threads to finding coherent
+maps of documents, where a map is set of intersecting threads representing how
+the threads interact and relate.</p>
+</div>
+<div id="S6.SS1.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Summarization and Hierarchies:</span>
+A few papers have examined the relationship between summarization and hierarchies.
+Some focused on creating a hierarchical summary of a single document
+<cite class="ltx_cite">[<a href="#bib.bib142" title="Seeing the whole in parts: Text summarization for web browsing on handheld devices" class="ltx_ref">3</a>, <a href="#bib.bib141" title="News to go: Hierarchical text summarization for mobile devices" class="ltx_ref">21</a>]</cite>,
+relying on the structure inherent in single documents.
+Others investigated creating hierarchies of words or phrases to
+organize documents <cite class="ltx_cite">[<a href="#bib.bib149" title="Finding topic words for hierarchical summarization" class="ltx_ref">15</a>, <a href="#bib.bib148" title="Language models for hierarchical summarization" class="ltx_ref">16</a>, <a href="#bib.bib147" title="Hierarchical summarizing and evaluating for web pages" class="ltx_ref">29</a>, <a href="#bib.bib13" title="Exploring content models for multi-document summarization" class="ltx_ref">10</a>]</cite>.</p>
+</div>
+<div id="S6.SS1.p6" class="ltx_para">
+<p class="ltx_p">Other research identifies the hierarchical structure
+of the documents and generates a summary that prioritizes more general
+information according to the structure
+<cite class="ltx_cite">[<a href="#bib.bib140" title="An integrated multi-document summarization approach based on word hierarchical representation" class="ltx_ref">22</a>, <a href="#bib.bib20" title="A hybrid hierarchical model for multi-document summarization" class="ltx_ref">5</a>]</cite>, or gains coverage by drawing
+sentences from different parts of the hierarchy <cite class="ltx_cite">[<a href="#bib.bib146" title="Fractal summarization: summarization based on fractal theory" class="ltx_ref">34</a>, <a href="#bib.bib143" title="Multi-document summarization for terrorism information extraction" class="ltx_ref">31</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We have introduced a new paradigm for large-scale
+summarization called hierarchical summarization,
+which allows a user to navigate a hierarchy of relatively
+short summaries.
+We present <span class="ltx_text ltx_font_smallcaps">Summa</span>, an implemented hierarchical news summarization
+system,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>http://knowitall.cs.washington.edu/summa/</span></span></span>
+and demonstrate its effectiveness in a user study that
+compares <span class="ltx_text ltx_font_smallcaps">Summa</span> with a timeline system and a flat MDS system.
+When compared to timelines, users learned more with <span class="ltx_text ltx_font_smallcaps">Summa</span> in
+twice as many cases, and <span class="ltx_text ltx_font_smallcaps">Summa</span> was preferred
+more than three times as often. When compared to flat
+summaries, users overwhelming preferred <span class="ltx_text ltx_font_smallcaps">Summa</span> and learned just as much.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">This first implementation performs temporal clustering –
+in future work, we will investigate dynamically selecting
+an organizing principle that is best suited to the data at each
+level of the hierarchy: by entity, by location, by event, or by date.
+We also intend to scale the system to even larger document
+collections, and explore joint clustering and summarization.
+Lastly, we plan to research hierarchical summarization in other
+domains.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Amitabha Bagchi, Niranjan Balasubramanian, Danish Contractor, Oren Etzioni,
+Tony Fader, Carlos Guestrin, Prachi Jain, Lucy Vanderwende, Luke Zettlemoyer,
+and the anonymous reviewers for their helpful suggestions and feedback.
+We thank Hui Lin and Jeff Bilmes for providing us with their code.
+This research was supported in part by ARO contract W911NF-13-1-0246,
+DARPA Air Force Research Laboratory (AFRL) contract FA8750-13-2-0019,
+UW-IITD subcontract RP02815, and the Yahoo! Faculty Research and Engagement Award.
+This paper is also supported in part by the Intelligence Advanced Research
+Projects Activity (IARPA) via AFRL contract number FA8650-10-C-7058.
+The U.S. Government is authorized to
+reproduce and distribute reprints for Governmental purposes
+notwithstanding any copyright annotation thereon. The views and
+conclusions contained herein are those of the authors and should not be
+interpreted as necessarily representing the official policies or
+endorsements, either expressed or implied, of IARPA, AFRL, or the U.S.
+Government.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. G. Akcora, M. A. Bayir, M. Demirbas and H. Ferhatosmanoglu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying breakpoints in public opinion</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib157" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Berkhin</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A survey of clustering data mining techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Grouping Multidimensional Data</span>, <span class="ltx_text ltx_bib_pages"> pp. 25–71</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib142" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Buyukkokten, H. Garcia-Molina and A. Paepcke</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Seeing the whole in parts: Text summarization for web browsing on handheld devices</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 652–662</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Carbonell and J. Goldstein</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The use of MMR, diversity-based reranking for reordering documents and producing summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 335–336</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p1" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Celikyilmaz and D. Hakkani-Tur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hybrid hierarchical model for multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 815–824</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p6" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib80" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Chang and C. Manning</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SUTime: a library for recognizing and normalizing time expressions</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p6" title="3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. L. Chieu and Y. K. Lee</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Query based event extraction along a timeline</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 425–432</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib138" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Christensen, Mausam, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards coherent multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Salience ‣ 4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS3.p2" title="4.3 Summary Coherence ‣ 4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S5.SS1.p1" title="5.1 User Preference ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.p3" title="5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib119" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gillenwater, A. Kulesza and B. Taskar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discovering diverse and salient threads in document collections</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 710–720</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p4" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi and L. Vanderwende</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring content models for multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of NAACL 2009</span>, <span class="ltx_text ltx_bib_pages"> pp. 362–370</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib94" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Hu, M. Huang, P. Xu, W. Li, A. K. Usadi and X. Zhu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating breakpoint-based timeline overview for news topic retrospection</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib124" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Kessler, X. Tannier, C. Hagège, V. Moriceau and A. Bittar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding salient dates for building thematic timelines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 730–739</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib155" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p6" title="3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib156" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kleinberg</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bursty and hierarchical structure in streams</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">KDD ’02</span>, <span class="ltx_text ltx_bib_pages"> pp. 91–101</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Temporal Clustering ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib149" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lawrie, W. B. Croft and A. Rosenberg</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding topic words for hierarchical summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 349–357</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib148" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. J. Lawrie</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language models for hierarchical summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Massachusetts Amherst</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib131" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Li, J. Jiang and Y. Wang</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating templates of entity summaries with an entity-aspect model and pattern mining</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 640–649</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ROUGE: a package for automatic evaluation of summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 74–81</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Salience ‣ 4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lin and J. Bilmes</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A class of submodular functions for document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 510–520</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib79" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Mausam, M. Schmitz, R. Bart, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Open language learning for information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 523–534</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Redundancy ‣ 4 Summarizing within the Hierarchy ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib141" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Otterbacher, D. Radev and O. Kareem</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">News to go: Hierarchical text summarization for mobile devices</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 589–596</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib140" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Ouyang, W. Li and Q. Lu</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An integrated multi-document summarization approach based on word hierarchical representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 113–116</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p6" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. R. Radev, H. Jing, M. Stys and D. Tam</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Centroid-based summarization of multiple documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Information Processing and Management</span> <span class="ltx_text ltx_bib_volume">40</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 919–938</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p1" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Saggion and R. Gaizauskas</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-document summarization by cluster/profile relevance and redundancy removal</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p1" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib130" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Sauper and R. Barzilay</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically generating Wikipedia articles: A structure-aware approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 208–216</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib125" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Shahaf, C. Guestrin and E. Horvitz</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Trains of thought: generating information maps</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Knowledge Acquisition ‣ 5 Experiments ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.SS1.p4" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib126" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Shahaf and C. Guestrin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Connecting the dots between news articles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 623–632</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p4" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib93" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Swan and J. Allen</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic generation of overview timelines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 49–56</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib147" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Takahashi, T. Miura and I. Shioya</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical summarizing and evaluating for web pages</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p5" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib87" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Tibshirani, G. Walther and T. Hastie</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimating the number of clusters in a dataset via the gap statistic</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the Royal Statistical Society, Series B</span> <span class="ltx_text ltx_bib_volume">32</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 411–423</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Choosing the number of clusters ‣ 3 Hierarchical Clustering ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib143" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. L. Wang, C. C. Yang and X. Shi</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-document summarization for terrorism information extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p6" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, L. Kong, C. Huang, X. Wan, X. Li and Y. Zhang</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Timeline generation through evolutionary trans-temporal summarization.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 433–443</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, X. Wan, J. Otterbacher, L. Kong, X. Li and Y. Zhang</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evolutionary timeline summarization: A balanced optimization framework via iterative substitution</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 745–754</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib146" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. C. Yang and F. L. Wang</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fractal summarization: summarization based on fractal theory</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 391–392</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p6" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib135" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Yao, X. Jia, S. Shou, S. Feng, F. Zhou and H. Liu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Autopedia: Automatic domain-independent wikipedia article generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 161–162</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Traditional MDS ‣ 6 Related Work ‣ Hierarchical Summarization:  Scaling Up&#10;Multi-Document Summarization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:59:49 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

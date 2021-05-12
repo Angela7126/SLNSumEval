@@ -1,0 +1,885 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improving Citation Polarity Classification with Product Reviews</title>
+<!--Generated on Wed Jun 11 17:32:17 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improving Citation Polarity Classification with Product Reviews</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Charles Jochim 
+<br class="ltx_break"/>IBM Research – Ireland 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">charlesj@ie.ibm.com</span> 
+<br class="ltx_break"/>
+</span><span class="ltx_author_notes"><span>  This work was primarily conducted at the IMS – University of Stuttgart.</span></span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Hinrich Schütze 
+<br class="ltx_break"/>Center for Information &amp; Language Processing 
+<br class="ltx_break"/>University of Munich 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Recent work classifying citations in scientific literature has shown
+that it is possible to improve classification results with extensive
+feature engineering. While this result confirms that citation
+classification is feasible, there are two drawbacks to this
+approach: (i) it requires a large annotated corpus for supervised
+classification, which in the case of scientific literature is quite
+expensive; and (ii) feature engineering that is too specific to one
+area of scientific literature may not be portable to other domains,
+even within scientific literature. In this paper we address these
+two drawbacks. First, we frame citation classification as a domain
+adaptation task and leverage the abundant labeled data available in
+other domains. Then, to avoid over-engineering specific citation
+features for a particular scientific domain, we explore a deep
+learning neural network approach that has shown to generalize well
+across domains using unigram and bigram features. We achieve better
+citation classification results with this cross-domain approach than
+using in-domain classification.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Citations have been categorized and studied for a half-century
+<cite class="ltx_cite">[<a href="#bib.bib66" title="Citation indexes to science: A new dimension in documentation through association of ideas" class="ltx_ref">15</a>]</cite> to better understand when and how citations are
+used, and to record and measure how information is exchanged (e.g.,
+networks of co-cited papers or authors <cite class="ltx_cite">[<a href="#bib.bib185" title="The structure of scientific literatures I: identifying and graphing specialties" class="ltx_ref">26</a>]</cite>).
+Recently, the value of this information has been shown in practical
+applications such as information retrieval (IR)
+<cite class="ltx_cite">[<a href="#bib.bib173" title="Comparing citation contexts for information retrieval" class="ltx_ref">25</a>]</cite>, summarization <cite class="ltx_cite">[<a href="#bib.bib168" title="Scientific paper summarization using citation summary networks" class="ltx_ref">24</a>]</cite>, and
+even identifying scientific breakthroughs <cite class="ltx_cite">[<a href="#bib.bib186" title="Identifying scientific breakthroughs by combining co-citation analysis and citation context" class="ltx_ref">27</a>]</cite>.
+We expect that by identifying and labeling the <em class="ltx_emph">function</em> of
+citations we can improve the effectiveness of these applications.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">There has been no consensus on what aspects or functions of a
+citation should be annotated and how. Early citation classification
+focused more on <em class="ltx_emph">citation motivation</em> <cite class="ltx_cite">[<a href="#bib.bib67" title="Can citation indexing be automated?" class="ltx_ref">16</a>]</cite>, while
+later classification considered more the <em class="ltx_emph">citation function</em>
+<cite class="ltx_cite">[<a href="#bib.bib35" title="Content analysis of references: adjunct or alternative to citation counting?" class="ltx_ref">9</a>]</cite>. Recent studies using automatic classification have continued this tradition of
+introducing a new classification scheme with each new investigation
+into the use of citations
+<cite class="ltx_cite">[<a href="#bib.bib142" title="Towards multi-paper summarization using reference information" class="ltx_ref">22</a>, <a href="#bib.bib196" title="An annotation scheme for citation function" class="ltx_ref">29</a>, <a href="#bib.bib50" title="Ensemble-style self-training on citation classification" class="ltx_ref">13</a>, <a href="#bib.bib1" title="Purpose and polarity of citation: towards NLP-based bibliometrics" class="ltx_ref">1</a>]</cite>.
+One distinction that has been more consistently annotated across
+recent citation classification studies is between <em class="ltx_emph">positive</em> and
+<em class="ltx_emph">negative</em> citations
+<cite class="ltx_cite">[<a href="#bib.bib9" title="Sentiment analysis of citations using sentence structure-based features" class="ltx_ref">3</a>, <a href="#bib.bib10" title="Context-enhanced citation sentiment detection" class="ltx_ref">2</a>, <a href="#bib.bib1" title="Purpose and polarity of citation: towards NLP-based bibliometrics" class="ltx_ref">1</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><cite class="ltx_cite">Dong and Schäfer (<a href="#bib.bib50" title="Ensemble-style self-training on citation classification" class="ltx_ref">2011</a>)</cite>
+also annotate polarity, which can be found in their dataset (described later),
+but this is not discussed in their paper.</span></span></span> The popularity of this
+distinction likely owes to the prominence of sentiment analysis in NLP
+<cite class="ltx_cite">[<a href="#bib.bib116" title="Sentiment analysis and subjectivity" class="ltx_ref">20</a>]</cite>. We follow much of the recent work on citation
+classification and concentrate on citation polarity.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Domain Adaptation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">By concentrating on citation polarity we are able to compare our
+classification to previous citation polarity work. This choice
+also allows us to access the wealth of existing data containing
+polarity annotation and then frame the task as a domain adaptation
+problem. Of course the risk in approaching the problem as domain
+adaptation is that the domains are so different that the
+representation of a positive instance of a movie or product review,
+for example, will not coincide with that of a positive scientific
+citation. On the other hand, because there is a limited amount of
+annotated citation data available, by leveraging large amounts of
+annotated polarity data we could potentially even improve citation
+classification.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We treat citation polarity classification as a sentiment analysis
+domain adaptation task and therefore must be careful not to define
+features that are too domain specific. Previous work in citation
+polarity classification focuses on finding new citation features to
+improve classification, borrowing a few from text classification in
+general (e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams), and perhaps others from sentiment analysis
+problems (e.g., the polarity lexicon from <cite class="ltx_cite">Wilson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib205" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">2005</a>)</cite>). We would
+like to do as little feature engineering as possible to ensure that
+the features we use are meaningful across domains. However, we do
+still want features that somehow capture the inherent positivity or
+negativity of our labeled instances, i.e., citations or Amazon product
+reviews. Currently a popular approach for accomplishing this is to
+use deep learning neural networks <cite class="ltx_cite">[<a href="#bib.bib18" title="Learning deep architectures for AI" class="ltx_ref">4</a>]</cite>, which have been
+shown to perform well on a variety of NLP tasks using only bag-of-word
+features <cite class="ltx_cite">[<a href="#bib.bib38" title="Natural language processing (almost) from scratch" class="ltx_ref">10</a>]</cite>. More specifically related to our
+work, deep learning neural networks have been successfully employed
+for sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib188" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">28</a>]</cite> and for sentiment domain
+adaptation <cite class="ltx_cite">[<a href="#bib.bib73" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">17</a>]</cite>. In this paper we examine one of
+these approaches, marginalized stacked denoising autoencoders (mSDA)
+from <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite>, which has been successful in classifying
+the polarity of Amazon product reviews across product domains. Since
+mSDA achieved state-of-the-art performance in Amazon product domain
+adaptation, we are hopeful it will also be effective when switching to a
+more distant domain like scientific citations.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Setup</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Corpora</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We are interested in domain adaptation for citation classification and therefore need a
+target dataset of citations and a non-citation source dataset. There
+are two corpora available that contain citation function annotation,
+the DFKI Citation Corpus <cite class="ltx_cite">[<a href="#bib.bib50" title="Ensemble-style self-training on citation classification" class="ltx_ref">13</a>]</cite> and the IMS Citation
+Corpus <cite class="ltx_cite">[<a href="#bib.bib92" title="Towards a generic and flexible citation classifier based on a faceted classification scheme" class="ltx_ref">19</a>]</cite>. Both corpora have only about 2000
+instances; unfortunately, there are no larger corpora available with
+citation annotation and this task would benefit from more annotated
+data. Due to the infrequent use of negative
+citations, a substantial annotation effort (annotating over 5 times more data)
+would be necessary to reach 1000 negative citation instances, which is
+the number of negative instances in a single domain in
+the multi-domain corpus described below.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The DFKI Citation
+Corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="https://aclbib.opendfki.de/repos/trunk/citation_classification_dataset/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://aclbib.opendfki.de/repos/trunk/citation_classification_dataset/</span></a></span></span></span>
+has been used for classifying citation function <cite class="ltx_cite">[<a href="#bib.bib50" title="Ensemble-style self-training on citation classification" class="ltx_ref">13</a>]</cite>, but the dataset also
+includes polarity annotation. The dataset has 1768 citation sentences
+with polarity annotation: 190 are labeled as <em class="ltx_emph">positive</em>, 57 as
+<em class="ltx_emph">negative</em>, and the vast majority, 1521, are left <em class="ltx_emph">neutral</em>.
+The second citation corpus, the IMS Citation
+Corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://www.ims.uni-stuttgart.de/~jochimcs/citation-classification/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.ims.uni-stuttgart.de/~jochimcs/citation-classification/</span></a></span></span></span>
+contains 2008 annotated citations: 1836 are labeled <em class="ltx_emph">positive</em>
+and 172 are labeled <em class="ltx_emph">negative</em>. <cite class="ltx_cite">Jochim and Schütze (<a href="#bib.bib92" title="Towards a generic and flexible citation classifier based on a faceted classification scheme" class="ltx_ref">2012</a>)</cite> use
+annotation labels from <cite class="ltx_cite">Moravcsik and Murugesan (<a href="#bib.bib140" title="Some results on the function and quality of citations" class="ltx_ref">1975</a>)</cite> where positive
+instances are labeled <em class="ltx_emph">confirmative</em>, negative instances are
+labeled <em class="ltx_emph">negational</em>, and there is no neutral class. Because each
+of the citation corpora is of modest size we combine them to form one
+citation dataset, which we will refer to as CITD. The two citation
+corpora comprising CITD both come from the ACL Anthology
+<cite class="ltx_cite">[<a href="#bib.bib19" title="The ACL anthology reference corpus: a reference dataset for bibliographic research in computational linguistics" class="ltx_ref">5</a>]</cite>: the IMS corpus uses the ACL proceedings from 2004
+and the DFKI corpus uses parts of the proceedings from 2007 and 2008.
+Since mSDA also makes use of large amounts of unlabeled data, we
+extend our CITD corpus with citations from the proceedings of the
+remaining years of the ACL, 1979–2003, 2005–2006, and 2009.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">There are a number of non-citation corpora available that contain
+polarity annotation. For these experiments we use the Multi-Domain
+Sentiment
+Dataset<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://www.cs.jhu.edu/~mdredze/datasets/sentiment/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.jhu.edu/~mdredze/datasets/sentiment/</span></a></span></span></span>
+(henceforth MDSD), introduced by <cite class="ltx_cite">Blitzer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Biographies, Bollywood, boom-boxes and blenders: domain adaptation for sentiment classification" class="ltx_ref">2007</a>)</cite>.
+We use the version of the MDSD that includes <em class="ltx_emph">positive</em> and
+<em class="ltx_emph">negative</em> labels for product
+reviews taken from Amazon.com in the following domains: books, dvd,
+electronics, and kitchen. For each domain there are 1000 positive
+reviews and 1000 negative reviews that comprise the “labeled” data,
+and then roughly 4000 more reviews in the “unlabeled”<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>It is usually treated as unlabeled data even though it actually contains positive and negative labels, which have been used, e.g., in <cite class="ltx_cite">[<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">8</a>]</cite>.</span></span></span> data. Reviews
+were preprocessed so that for each review you find a list of unigrams
+and bigrams with their frequency within the review. Unigrams from a
+stop list of 55 stop words are removed, but stop words in bigrams
+remain.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the distribution of polarity labels in the
+corpora we use for our experiments. We combine the DFKI and IMS
+corpora into the CITD corpus. We omit the citations labeled
+<em class="ltx_emph">neutral</em> from the DFKI corpus because the IMS corpus does not
+contain neutral annotation nor does the MDSD. It is the case in many
+sentiment analysis corpora that only positive and negative instances
+are included, e.g., <cite class="ltx_cite">[<a href="#bib.bib161" title="Thumbs up? sentiment classification using machine learning techniques" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Corpus</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Instances</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Pos.</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Neg.</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Neut.</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">DFKI</td>
+<td class="ltx_td ltx_align_right ltx_border_t">1768</td>
+<td class="ltx_td ltx_align_right ltx_border_t">190</td>
+<td class="ltx_td ltx_align_right ltx_border_t">57</td>
+<td class="ltx_td ltx_align_right ltx_border_t">1521</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">IMS</td>
+<td class="ltx_td ltx_align_right">2008</td>
+<td class="ltx_td ltx_align_right">1836</td>
+<td class="ltx_td ltx_align_right">172</td>
+<td class="ltx_td ltx_align_center">–</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb">MDSD</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">27,677</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">13,882</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">13,795</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Polarity corpora.</div>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">The citation corpora presented above are both unbalanced and both have
+a highly skewed distribution. The MDSD on the other hand is
+evenly balanced and an effort was even made to keep the data treated
+as “unlabeled” rather balanced. For this reason, in line with
+previous work using MDSD, we balance the labeled portion of the CITD
+corpus. This is done by taking 179 unique negative sentences in the
+DFKI and IMS corpora and randomly selecting an equal number of
+positive sentences.
+The IMS corpus can have multiple labeled citations per sentence: there are 122
+sentences containing the 172 negative citations from Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+The final CITD corpus
+comprises this balanced corpus of 358 labeled citation sentences plus another
+22,093 unlabeled citation sentences.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Features</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In our experiments, we restrict our features to unigrams and bigrams
+from the product review or citation context (i.e., the sentence containing the citation). This follows previous
+studies in domain adaptation
+<cite class="ltx_cite">[<a href="#bib.bib20" title="Biographies, Bollywood, boom-boxes and blenders: domain adaptation for sentiment classification" class="ltx_ref">6</a>, <a href="#bib.bib73" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">17</a>]</cite>. <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> achieve
+state-of-the-art results on MDSD by testing the 5000 and 30,000 most
+frequent unigram and bigram features.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Previous work in citation classification has largely focused on
+identifying new features for improving classification accuracy. A
+significant amount of effort goes into engineering new features, in
+particular for identifying cue phrases,
+e.g., <cite class="ltx_cite">[<a href="#bib.bib197" title="Automatic classification of citation function" class="ltx_ref">30</a>, <a href="#bib.bib50" title="Ensemble-style self-training on citation classification" class="ltx_ref">13</a>]</cite>. However, there seems to
+be little consensus on which features help most for this task. For
+example, <cite class="ltx_cite">Abu-Jbara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib1" title="Purpose and polarity of citation: towards NLP-based bibliometrics" class="ltx_ref">2013</a>)</cite> and
+<cite class="ltx_cite">Jochim and Schütze (<a href="#bib.bib92" title="Towards a generic and flexible citation classifier based on a faceted classification scheme" class="ltx_ref">2012</a>)</cite> find the list of polar words from
+<cite class="ltx_cite">Wilson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib205" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">2005</a>)</cite> to be useful,
+and neither study lists dependency relations as significant features.
+<cite class="ltx_cite">Athar (<a href="#bib.bib9" title="Sentiment analysis of citations using sentence structure-based features" class="ltx_ref">2011</a>)</cite> on the other hand reported significant improvement
+using dependency relation features and found that the same list of
+polar words slightly hurt classification accuracy. The classifiers
+and implementation of features varies between these studies, but the
+problem remains that there seems to be no clear set of features for
+citation polarity classification.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">The lack of consensus on the most useful citation polarity features
+coupled with the recent success of deep learning neural networks
+<cite class="ltx_cite">[<a href="#bib.bib38" title="Natural language processing (almost) from scratch" class="ltx_ref">10</a>]</cite> further motivate our choice to limit our
+features to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams available in the product review or citation
+context and not rely on external resources or tools for additional
+features.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Classification with mSDA</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">For classification we use marginalized stacked denoising autoencoders
+(mSDA) from <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We use their MATLAB
+implementation available at
+<a href="http://www.cse.wustl.edu/~mchen/code/mSDA.tar" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cse.wustl.edu/~mchen/code/mSDA.tar</span></a>.</span></span></span> plus a linear
+SVM. mSDA takes the concept of <em class="ltx_emph">denoising</em> – introducing noise
+to make the autoencoder more robust – from <cite class="ltx_cite">Vincent<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib200" title="Extracting and composing robust features with denoising autoencoders" class="ltx_ref">2008</a>)</cite>,
+but does the optimization in closed form, thereby avoiding iterating
+over the input vector to stochastically introduce noise. The result
+of this is faster run times and currently state-of-the-art performance
+on MDSD, which makes it a good choice for our domain adaptation task.
+The mSDA implementation comes with LIBSVM, which we replace with
+LIBLINEAR <cite class="ltx_cite">[<a href="#bib.bib55" title="LIBLINEAR: a library for large linear classification" class="ltx_ref">14</a>]</cite> for faster run times with no decrease in
+accuracy. LIBLINEAR, with default settings, also serves as our
+baseline.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Outline of Experiments</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">Our initial experiments simply extend those of <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite>
+(and others who have used MDSD) by adding another domain, citations.
+We train on each of the domains from the MDSD – books, dvd,
+electronics, and kitchen – and test on the citation data. We split
+the labeled data 80/20 following <cite class="ltx_cite">Blitzer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Biographies, Bollywood, boom-boxes and blenders: domain adaptation for sentiment classification" class="ltx_ref">2007</a>)</cite>
+(cf. <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> train on all “labeled” data and test on
+the “unlabeled” data). These experiments should help answer two
+questions: does a larger amount of training data, even if out of
+domain, improve citation classification; and how well do the different
+product domains generalize to citations (i.e., which domains are most
+similar to citations)?</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">In contrast to previous work using MDSD,
+
+a lot of the work in domain
+adaptation also leverages a small amount of labeled target data. In
+our second set of experiments, we follow the domain adaptation
+approaches described in <cite class="ltx_cite">[<a href="#bib.bib45" title="Frustratingly easy domain adaptation" class="ltx_ref">12</a>]</cite> and train on product review
+and citation data before testing on citations.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results and Discussion</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Citation mSDA</h3>
+
+<div id="S4.F1" class="ltx_figure"><img src="" id="S4.F1.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Cross domain macro-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F1.m3" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> results training on Multi-Domain Sentiment Dataset and testing on citation dataset (CITD). The horizontal line indicates macro-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F1.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> for in-domain citation classification.</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Domain</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Baseline</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">All</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Weight</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Pred</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">LinInt</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Augment</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">mSDA</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">books</th>
+<td class="ltx_td ltx_align_center ltx_border_t">54.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t">54.8</td>
+<td class="ltx_td ltx_align_center ltx_border_t">52.0</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.9</td>
+<td class="ltx_td ltx_align_center ltx_border_t">53.4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">53.4</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">57.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">dvd</th>
+<td class="ltx_td ltx_align_center">53.2</td>
+<td class="ltx_td ltx_align_center">50.9</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">56.0</span></td>
+<td class="ltx_td ltx_align_center">53.4</td>
+<td class="ltx_td ltx_align_center">51.9</td>
+<td class="ltx_td ltx_align_center">47.5</td>
+<td class="ltx_td ltx_align_center">51.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">electronics</th>
+<td class="ltx_td ltx_align_center">53.4</td>
+<td class="ltx_td ltx_align_center">49.0</td>
+<td class="ltx_td ltx_align_center">50.5</td>
+<td class="ltx_td ltx_align_center">53.4</td>
+<td class="ltx_td ltx_align_center">54.8</td>
+<td class="ltx_td ltx_align_center">51.9</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">59.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">kitchen</th>
+<td class="ltx_td ltx_align_center">47.9</td>
+<td class="ltx_td ltx_align_center">48.8</td>
+<td class="ltx_td ltx_align_center">50.7</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">53.4</span></td>
+<td class="ltx_td ltx_align_center">52.6</td>
+<td class="ltx_td ltx_align_center">49.2</td>
+<td class="ltx_td ltx_align_center">50.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">citations</th>
+<td class="ltx_td ltx_align_center ltx_border_bb">51.9</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">–</td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">54.9</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Macro-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> results on CITD using different domain adaptation approaches.</div>
+</div>
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our initial results show that using mSDA for domain adaptation to citations actually outperforms in-domain classification. In Figure <a href="#S4.F1" title="Figure 1 ‣ 4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> we compare citation classification with mSDA to the SVM
+baseline.
+Each pair of vertical bars represents
+training on a domain from MDSD (e.g., books) and testing on CITD. The
+dark gray bar indicates the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> scores for the SVM baseline using
+the 30,000 features and the lighter gray bar shows the mSDA results.
+The black horizontal line indicates the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> score for in-domain
+citation classification, which sometimes represents the goal for
+domain adaptation. We can see that using a larger dataset, even if
+out of domain, does improve citation classification. For books, dvd,
+and electronics, even the SVM baseline improves on in-domain
+classification. mSDA does better than the
+baseline for all domains except dvd. Using a larger training set,
+along with mSDA, which makes use of the unlabeled data, leads to the best
+results for citation classification.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">In domain adaptation we would expect the domains most similar to the
+target to lead to the highest results. Like
+<cite class="ltx_cite">Dai<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib41" title="Transferring naive bayes classifiers for text classification" class="ltx_ref">2007</a>)</cite>, we measure the Kullback-Leibler divergence between the source and target domains’
+distributions.
+According to this measure, citations are most similar to the
+books domain. Therefore, it is not surprising that training on books
+performs well on citations, and intuitively, among the domains in the
+Amazon dataset, a book review is most similar to a scientific
+citation. This makes the good mSDA results for electronics a bit more
+surprising.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Easy Domain Adaptation</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The results in Section <a href="#S4.SS1" title="4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a> are for <em class="ltx_emph">semi-supervised</em> domain
+adaptation: the case where we have some large annotated corpus
+(Amazon product reviews) and a large unannotated corpus (citations).
+There have been a number of other successful attempts at <em class="ltx_emph">fully
+supervised</em> domain adaptation, where it is assumed that some small amount of
+data is annotated in the target domain
+<cite class="ltx_cite">[<a href="#bib.bib30" title="Adaptation of maximum entropy capitalizer: little data can help a lot" class="ltx_ref">7</a>, <a href="#bib.bib45" title="Frustratingly easy domain adaptation" class="ltx_ref">12</a>, <a href="#bib.bib88" title="Instance weighting for domain adaptation in NLP" class="ltx_ref">18</a>]</cite>. To see how mSDA
+compares to supervised domain adaptation we take the various approaches
+presented by <cite class="ltx_cite">Daumé III (<a href="#bib.bib45" title="Frustratingly easy domain adaptation" class="ltx_ref">2007</a>)</cite>. The results of this comparison can
+be seen in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Briefly, “All” trains on source
+and target data; “Weight” is the same as “All” except that
+instances may be weighted differently based on their domain (weights
+are chosen on a development set); “Pred” trains on the source data,
+makes predictions on the target data, and then trains on the target
+data with the predictions; “LinInt” linearly interpolates
+predictions using the source-only and target-only models (the
+interpolation parameter is chosen on a development set); “Augment”
+
+uses a larger feature set with source-specific and target-specific copies
+of features; see <cite class="ltx_cite">[<a href="#bib.bib45" title="Frustratingly easy domain adaptation" class="ltx_ref">12</a>]</cite> for further details.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We are only
+interested in citations as the target domain. Daumé’s source-only baseline
+corresponds to the “Baseline” column for domains: books, dvd,
+electronics, and kitchen; while his target-only baseline can be seen for citations
+in the last row of the “Baseline” column in
+Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">The semi-supervised mSDA performs quite well with
+respect to the fully supervised approaches, obtaining the best
+results for books and electronics, which are also the highest scores
+overall. Weight and Pred have the highest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> scores for dvd and
+kitchen respectively. <cite class="ltx_cite">Daumé III (<a href="#bib.bib45" title="Frustratingly easy domain adaptation" class="ltx_ref">2007</a>)</cite> noted that the “Augment”
+algorithm performed best when the target-only results were better than
+the source-only results. When this was not the case in his experiments, i.e., for the
+treebank chunking task, both Weight and Pred were among the best
+approaches. In our experiments, training on source-only outperforms
+target-only, with the exception of the kitchen domain.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We have included the line for citations to see the results training
+only on the target data (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="F_{1}=51.9" display="inline"><mrow><msub><mi>F</mi><mn>1</mn></msub><mo>=</mo><mn>51.9</mn></mrow></math>) and to see the improvement when
+using all of the unlabeled data with mSDA (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="F_{1}=54.9" display="inline"><mrow><msub><mi>F</mi><mn>1</mn></msub><mo>=</mo><mn>54.9</mn></mrow></math>).</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Discussion</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">These results are very promising. Although they are not quite as high as
+other published results for citation polarity
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Purpose and polarity of citation: towards NLP-based bibliometrics" class="ltx_ref">1</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Their work included a CRF model to
+identify the citation context that gave them an increase of 9.2
+percent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> over a single sentence citation context.
+Our approach achieves similar macro-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on only the citation sentence, but using a different corpus.
+</span></span></span>, we have shown that you can improve citation polarity
+classification by leveraging large amounts of annotated data from
+other domains and using a simple set of features.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">mSDA and fully supervised approaches can also be straightforwardly
+combined. We do not present those results here due to space
+constraints. The combination led to mixed results: adding mSDA to
+the supervised approaches tended to improve <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> over those
+approaches but results never exceeded the top mSDA numbers in
+Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Teufel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib197" title="Automatic classification of citation function" class="ltx_ref">2006b</a>)</cite> introduced automatic citation function classification,
+with classes that could be grouped as positive, negative,
+and neutral. They relied in part on a manually compiled list of cue phrases
+that
+cannot easily be transferred to other classification schemes or
+other scientific domains. <cite class="ltx_cite">Athar (<a href="#bib.bib9" title="Sentiment analysis of citations using sentence structure-based features" class="ltx_ref">2011</a>)</cite> followed this and was the first to
+specifically target polarity classification on scientific
+citations. He found that dependency tuples contributed
+the most significant improvement in results.
+<cite class="ltx_cite">Abu-Jbara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib1" title="Purpose and polarity of citation: towards NLP-based bibliometrics" class="ltx_ref">2013</a>)</cite> also looks at both citation
+function and citation polarity. A big contribution of this work is
+that they also train a CRF sequence tagger to find the citation
+context, which significantly improves results over using only the
+citing sentence. Their feature analysis indicates that lexicons for
+negation, speculation, and polarity were most important for improving
+polarity classification.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Robust citation classification has been hindered by the relative lack
+of annotated data. In this paper we successfully use a large,
+out-of-domain, annotated corpus to improve the citation polarity
+classification. Our approach uses a deep learning neural network for
+domain adaptation with labeled out-of-domain data and unlabeled
+in-domain data. This semi-supervised domain adaptation approach
+outperforms the in-domain citation polarity classification and other
+fully supervised domain adaptation approaches.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Acknowledgments.</span>
+We thank the DFG for funding this work (SPP 1335 <em class="ltx_emph">Scalable Visual
+Analytics</em>).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Abu-Jbara, J. Ezra and D. Radev</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Purpose and polarity of citation: towards NLP-based bibliometrics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 596–606</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1067" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Discussion ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Athar and S. Teufel</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-enhanced citation sentiment detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 597–601</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Athar</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis of citations using sentence structure-based features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 81–87</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-3015" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning deep architectures for AI</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations and Trends in Machine Learning</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–127</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bird, R. Dale, B. Dorr, B. Gibson, M. Joseph, M. Kan, D. Lee, B. Powley, D. Radev and Y. F. Tan</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The ACL anthology reference corpus: a reference dataset for bibliographic research in computational linguistics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1755–1759</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer, M. Dredze and F. Pereira</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biographies, Bollywood, boom-boxes and blenders: domain adaptation for sentiment classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 440–447</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS4.p1" title="3.4 Outline of Experiments ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chelba and A. Acero</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptation of maximum entropy capitalizer: little data can help a lot</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 285–292</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Easy Domain Adaptation ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Chen, Z. E. Xu, K. Q. Weinberger and F. Sha</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Marginalized denoising autoencoders for domain adaptation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 767–774</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p3" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.p1" title="3.3 Classification with mSDA ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.SS4.p1" title="3.4 Outline of Experiments ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. E. Chubin and S. D. Moitra</span><span class="ltx_text ltx_bib_year">(1975)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Content analysis of references: adjunct or alternative to citation counting?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Social Studies of Science</span> <span class="ltx_text ltx_bib_volume">5</span>, <span class="ltx_text ltx_bib_pages"> pp. 423–441</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p3" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Dai, G. Xue, Q. Yang and Y. Yu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transferring naive bayes classifiers for text classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 540–545</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Citation mSDA ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Daumé III</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frustratingly easy domain adaptation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 256–263</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.p2" title="3.4 Outline of Experiments ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Easy Domain Adaptation ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS2.p3" title="4.2 Easy Domain Adaptation ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Dong and U. Schäfer</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ensemble-style self-training on citation classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 623–631</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Fan, K. Chang, C. Hsieh, X. Wang and C. Lin</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBLINEAR: a library for large linear classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">9</span>, <span class="ltx_text ltx_bib_pages"> pp. 1871–1874</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Classification with mSDA ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Garfield</span><span class="ltx_text ltx_bib_year">(1955)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Citation indexes to science: A new dimension in documentation through association of ideas</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Science</span> <span class="ltx_text ltx_bib_volume">122</span>, <span class="ltx_text ltx_bib_pages"> pp. 108–111</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib67" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Garfield</span><span class="ltx_text ltx_bib_year">(1964)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Can citation indexing be automated?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 189–192</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib73" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation for large-scale sentiment classification: a deep learning approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 513–520</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib88" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Jiang and C. Zhai</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Instance weighting for domain adaptation in NLP</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 264–271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Easy Domain Adaptation ‣ 4 Results and Discussion ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Jochim and H. Schütze</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards a generic and flexible citation classifier based on a faceted classification scheme</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1343–1358</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib116" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Liu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis and subjectivity</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">N. Indurkhya and F. J. Damerau (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Handbook of Natural Language Processing, Second Edition</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib140" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. J. Moravcsik and P. Murugesan</span><span class="ltx_text ltx_bib_year">(1975)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Some results on the function and quality of citations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Social Studies of Science</span> <span class="ltx_text ltx_bib_volume">5</span>, <span class="ltx_text ltx_bib_pages"> pp. 86–92</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib142" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Nanba and M. Okumura</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards multi-paper summarization using reference information</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 926–931</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib161" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang, L. Lee and S. Vaithyanathan</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Thumbs up? sentiment classification using machine learning techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 79–86</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W02-1011" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1118693.1118704" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p4" title="3.1 Corpora ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib168" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Qazvinian and D. R. Radev</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scientific paper summarization using citation summary networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 689–696</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib173" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ritchie, S. Robertson and S. Teufel</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing citation contexts for information retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 213–222</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib185" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. G. Small and B. C. Griffith</span><span class="ltx_text ltx_bib_year">(1974)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The structure of scientific literatures I: identifying and graphing specialties</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Science Studies</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 17–40</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib186" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Small and R. Klavans</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying scientific breakthroughs by combining co-citation analysis and citation context</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib188" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D11-1014" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib196" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Teufel, A. Siddharthan and D. Tidhar</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An annotation scheme for citation function</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 80–87</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib197" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Teufel, A. Siddharthan and D. Tidhar</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic classification of citation function</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 103–110</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib200" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Vincent, H. Larochelle, Y. Bengio and P. Manzagol</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting and composing robust features with denoising autoencoders</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1096–1103</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-205-4</span>,
+<a href="http://doi.acm.org/10.1145/1390156.1390294" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1390156.1390294" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Classification with mSDA ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib205" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 347–354</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Domain Adaptation ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Features ‣ 3 Experimental Setup ‣ Improving Citation Polarity Classification with Product Reviews" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:32:17 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

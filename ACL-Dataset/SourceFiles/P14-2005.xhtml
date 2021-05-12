@@ -1,0 +1,1015 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>An Extension of BLANC to System Mentions</title>
+<!--Generated on Wed Jun 11 17:31:29 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">An Extension of BLANC to System Mentions</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xiaoqiang Luo 
+<br class="ltx_break"/>Google Inc. 
+<br class="ltx_break"/>111 8th Ave, New York, NY 10011 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">xql@google.com</span> 
+<br class="ltx_break"/>&amp;Sameer Pradhan 
+<br class="ltx_break"/>Harvard Medical School 
+<br class="ltx_break"/>300 Longwood Ave., Boston, MA 02115 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sameer.pradhan@childrens.harvard.edu</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Marta Recasens 
+<br class="ltx_break"/>Google Inc. 
+<br class="ltx_break"/>1600 Amphitheatre Pkwy, 
+<br class="ltx_break"/>Mountain View, CA 94043 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">recasens@google.com</span> 
+<br class="ltx_break"/>&amp;Eduard Hovy 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>5000 Forbes Ave. 
+<br class="ltx_break"/>Pittsburgh, PA 15213 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">hovy@cmu.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">BLANC is a link-based coreference evaluation metric
+for measuring the quality of coreference systems
+on gold mentions. This paper extends the original BLANC (“BLANC-gold” henceforth) to system mentions,
+removing the gold mention assumption. The proposed BLANC
+falls back seamlessly to the original one
+if system mentions are identical to gold mentions, and
+it is shown to strongly correlate with
+existing metrics on the 2011 and 2012 CoNLL data.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Coreference resolution aims at identifying natural language expressions
+(or mentions) that refer to the same entity. It entails partitioning
+(often imperfect) mentions into equivalence classes. A critically important
+problem is how to measure the quality of a coreference resolution system.
+Many evaluation metrics have been proposed in the past two decades, including
+the MUC measure <cite class="ltx_cite">[<a href="#bib.bib9" title="A model-theoretic coreference scoring scheme" class="ltx_ref">9</a>]</cite>, B-cubed <cite class="ltx_cite">[<a href="#bib.bib33" title="Algorithms for scoring coreference chains" class="ltx_ref">1</a>]</cite>, CEAF <cite class="ltx_cite">[<a href="#bib.bib41" title="On coreference resolution performance metrics" class="ltx_ref">3</a>]</cite> and,
+more recently, BLANC-gold <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite>.
+B-cubed and CEAF treat entities as sets of mentions and measure the
+agreement between key (or gold standard) entities and response
+(or system-generated) entities, while MUC and BLANC-gold are link-based.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In particular, MUC measures the degree of agreement
+between key coreference links (i.e., links among mentions within entities)
+and response coreference links, while
+non-coreference links (i.e., links formed by mentions from different entities)
+are not explicitly taken into account.
+This leads to a phenomenon where coreference systems outputting large
+entities are scored more favorably than those outputting small entities <cite class="ltx_cite">[<a href="#bib.bib41" title="On coreference resolution performance metrics" class="ltx_ref">3</a>]</cite>.
+BLANC <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite>, on the other hand, considers both
+coreference links and non-coreference
+links. It
+calculates recall, precision and F-measure separately on
+coreference and non-coreference links in the usual way,
+and defines the overall recall,
+precision and F-measure as the mean of the respective measures for coreference
+and non-coreference links.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The BLANC-gold metric was developed with the assumption
+that response mentions and key mentions are identical.
+In reality, however, mentions need to be detected from natural language text
+and the result is, more often than not, imperfect: some key mentions may be missing
+in the response, and some response mentions may be spurious—so-called “twinless” mentions by <cite class="ltx_cite">Stoyanov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib69" title="Conundrums in noun phrase coreference resolution: making sense of the state-of-the-art" class="ltx_ref">2009</a>)</cite>.
+Therefore, the identical-mention-set assumption limits BLANC-gold’s applicability
+when gold mentions are not available, or when one wants to have a single score
+measuring both the quality of mention detection and coreference resolution.
+The goal of this paper is to extend the BLANC-gold metric to imperfect response mentions.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We first briefly review the original definition of BLANC, and rewrite its
+definition using set notation. We then argue that the gold-mention assumption
+in <cite class="ltx_cite">Recasens and Hovy (<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">2011</a>)</cite> can be lifted without changing the original definition.
+In fact, the proposed BLANC metric subsumes
+the original one in that its value is identical to the original one
+when response mentions are identical to key mentions.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The rest of the paper is organized as follows. We introduce
+the notions used in this paper in Section <a href="#S2" title="2 Notations ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We then present the original BLANC-gold in Section <a href="#S3" title="3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>
+using the set notation defined in Section <a href="#S2" title="2 Notations ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+This paves the way to generalize it to imperfect system mentions,
+which is presented in Section <a href="#S4" title="4 BLANC for Imperfect Response Mentions ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+The proposed BLANC is applied to the CoNLL 2011 and 2012 shared task participants,
+and the scores and its correlations with existing metrics are shown in Section <a href="#S5" title="5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Notations</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">To facilitate the presentation, we define the notations used in the paper.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We use <em class="ltx_emph">key</em> to refer to gold standard mentions or entities, and <em class="ltx_emph">response</em> to refer to system mentions or entities.
+The collection of <em class="ltx_emph">key</em> entities is denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="K=\{k_{i}\}_{i=1}^{|K|}" display="inline"><mrow><mi>K</mi><mo>=</mo><msubsup><mrow><mo>{</mo><msub><mi>k</mi><mi>i</mi></msub><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>K</mi><mo fence="true">|</mo></mrow></msubsup></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="k_{i}" display="inline"><msub><mi>k</mi><mi>i</mi></msub></math> is the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="i^{th}" display="inline"><msup><mi>i</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> key entity; accordingly, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="R=\{r_{j}\}_{j=1}^{|R|}" display="inline"><mrow><mi>R</mi><mo>=</mo><msubsup><mrow><mo>{</mo><msub><mi>r</mi><mi>j</mi></msub><mo>}</mo></mrow><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>R</mi><mo fence="true">|</mo></mrow></msubsup></mrow></math> is the set of <em class="ltx_emph">response</em> entities,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="r_{j}" display="inline"><msub><mi>r</mi><mi>j</mi></msub></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m6" class="ltx_Math" alttext="j^{th}" display="inline"><msup><mi>j</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> response entity.
+We assume that mentions in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="\{k_{i}\}" display="inline"><mrow><mo>{</mo><msub><mi>k</mi><mi>i</mi></msub><mo>}</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m8" class="ltx_Math" alttext="\{r_{j}\}" display="inline"><mrow><mo>{</mo><msub><mi>r</mi><mi>j</mi></msub><mo>}</mo></mrow></math> are unique; in other words, there is no duplicate
+mention.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="C_{k}(i)" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="C_{r}(j)" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></math> be the set of <em class="ltx_emph">coreference</em> links formed by mentions in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="k_{i}" display="inline"><msub><mi>k</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="r_{j}" display="inline"><msub><mi>r</mi><mi>j</mi></msub></math>:</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle C_{k}(i)" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle=\{(m_{1},m_{2}):m_{1}\in k_{i},m_{2}\in k_{i},m_{1}\neq m_{2}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><msub><mi>m</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo separator="true">:</mo><mrow><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>k</mi><mi>i</mi></msub></mrow><mo>,</mo><mrow><mrow><msub><mi>m</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>k</mi><mi>i</mi></msub></mrow><mo>,</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>m</mi><mn>2</mn></msub></mrow></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle C_{r}(j)" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle=\{(m_{1},m_{2}):m_{1}\in r_{j},m_{2}\in r_{j},m_{1}\neq m_{2}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><msub><mi>m</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo separator="true">:</mo><mrow><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>r</mi><mi>j</mi></msub></mrow><mo>,</mo><mrow><mrow><msub><mi>m</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>r</mi><mi>j</mi></msub></mrow><mo>,</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>≠</mo><msub><mi>m</mi><mn>2</mn></msub></mrow></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">As can be seen, a link is an undirected edge between two mentions, and it can be equivalently
+represented by a pair of mentions.
+Note that when an entity consists of a single mention, its coreference link set is empty.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="N_{k}(i,j)" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="(i\neq j)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow><mo>)</mo></mrow></math> be key <em class="ltx_emph">non-coreference</em> links formed between mentions in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="k_{i}" display="inline"><msub><mi>k</mi><mi>i</mi></msub></math> and those in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="k_{j}" display="inline"><msub><mi>k</mi><mi>j</mi></msub></math>,
+and let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m5" class="ltx_Math" alttext="N_{r}(i,j)" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m6" class="ltx_Math" alttext="(i\neq j)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow><mo>)</mo></mrow></math> be response <em class="ltx_emph">non-coreference</em> links formed between mentions in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m7" class="ltx_Math" alttext="r_{i}" display="inline"><msub><mi>r</mi><mi>i</mi></msub></math> and those in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m8" class="ltx_Math" alttext="r_{j}" display="inline"><msub><mi>r</mi><mi>j</mi></msub></math>, respectively:</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\displaystyle N_{k}(i,j)" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m2" class="ltx_Math" alttext="\displaystyle=\{(m_{1},m_{2}):m_{1}\in k_{i},m_{2}\in k_{j}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><msub><mi>m</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo separator="true">:</mo><mrow><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>k</mi><mi>i</mi></msub></mrow><mo>,</mo><mrow><msub><mi>m</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>k</mi><mi>j</mi></msub></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\displaystyle N_{r}(i,j)" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m2" class="ltx_Math" alttext="\displaystyle=\{(m_{1},m_{2}):m_{1}\in r_{i},m_{2}\in r_{j}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><msub><mi>m</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo separator="true">:</mo><mrow><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>r</mi><mi>i</mi></msub></mrow><mo>,</mo><mrow><msub><mi>m</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>r</mi><mi>j</mi></msub></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Note that the non-coreference link set is empty when all mentions are in the same entity.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">We use the same letter and subscription without the index in parentheses to denote
+the union of sets, e.g.,</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m1" class="ltx_Math" alttext="\displaystyle C_{k}=\cup_{i}C_{k}(i)," display="inline"><mrow><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mrow><msub><mo>∪</mo><mi>i</mi></msub><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m2" class="ltx_Math" alttext="\displaystyle\;N_{k}=\cup_{i\neq j}N_{k}(i,j)" display="inline"><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo>=</mo><mrow><msub><mo>∪</mo><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow></msub><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m1" class="ltx_Math" alttext="\displaystyle C_{r}=\cup_{j}C_{r}(j)," display="inline"><mrow><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mrow><msub><mo>∪</mo><mi>j</mi></msub><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m2" class="ltx_Math" alttext="\displaystyle\;N_{r}=\cup_{i\neq j}N_{r}(i,j)" display="inline"><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo>=</mo><mrow><msub><mo>∪</mo><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow></msub><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m1" class="ltx_Math" alttext="T_{k}=C_{k}\cup N_{k}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>k</mi></msub></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m2" class="ltx_Math" alttext="T_{r}=C_{r}\cup N_{r}" display="inline"><mrow><msub><mi>T</mi><mi>r</mi></msub><mo>=</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>r</mi></msub></mrow></mrow></math> to denote the total set of key links
+and total set of response links, respectively. Clearly, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m3" class="ltx_Math" alttext="C_{k}" display="inline"><msub><mi>C</mi><mi>k</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m4" class="ltx_Math" alttext="N_{k}" display="inline"><msub><mi>N</mi><mi>k</mi></msub></math> form a partition
+of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m5" class="ltx_Math" alttext="T_{k}" display="inline"><msub><mi>T</mi><mi>k</mi></msub></math> since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m6" class="ltx_Math" alttext="C_{k}\cap N_{k}=\emptyset" display="inline"><mrow><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m7" class="ltx_Math" alttext="T_{k}=C_{k}\cup N_{k}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>k</mi></msub></mrow></mrow></math>. Likewise, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m8" class="ltx_Math" alttext="C_{r}" display="inline"><msub><mi>C</mi><mi>r</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m9" class="ltx_Math" alttext="N_{r}" display="inline"><msub><mi>N</mi><mi>r</mi></msub></math>
+form a partition of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p8.m10" class="ltx_Math" alttext="T_{r}" display="inline"><msub><mi>T</mi><mi>r</mi></msub></math>.</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p">We say that a key link <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m1" class="ltx_Math" alttext="l_{1}\in T_{k}" display="inline"><mrow><msub><mi>l</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>T</mi><mi>k</mi></msub></mrow></math> equals a response link <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m2" class="ltx_Math" alttext="l_{2}\in T_{r}" display="inline"><mrow><msub><mi>l</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math> if and only if
+the pair of mentions from which the links are formed are identical. We write <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m3" class="ltx_Math" alttext="l_{1}=l_{2}" display="inline"><mrow><msub><mi>l</mi><mn>1</mn></msub><mo>=</mo><msub><mi>l</mi><mn>2</mn></msub></mrow></math> if two links
+are equal. It is easy to see that the gold mention assumption—same set of response mentions as the
+set of key mentions—can be equivalently stated as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m4" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math> (this does not necessarily
+mean that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m5" class="ltx_Math" alttext="C_{k}=C_{r}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><msub><mi>C</mi><mi>r</mi></msub></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m6" class="ltx_Math" alttext="N_{k}=N_{r}" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><msub><mi>N</mi><mi>r</mi></msub></mrow></math>).</p>
+</div>
+<div id="S2.p10" class="ltx_para">
+<p class="ltx_p">We also use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p10.m1" class="ltx_Math" alttext="|\cdot|" display="inline"><mrow><mo>|</mo><mo>⋅</mo><mo>|</mo></mrow></math> to denote the size of a set.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Original BLANC</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">BLANC-gold is adapted from Rand Index <cite class="ltx_cite">[<a href="#bib.bib70" title="Objective criteria for the evaluation of clustering methods" class="ltx_ref">6</a>]</cite>, a metric for clustering
+objects. Rand Index is defined
+as the ratio between the number of correct within-cluster links plus the number of correct
+cross-cluster links, and the total number of links.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math>, Rand Index can be applied directly since coreference resolution
+reduces to a clustering problem where mentions are partitioned into clusters (entities):</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_markedasmath ltx_font_small">Rand Index</span></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m2" class="ltx_Math" alttext="\displaystyle=\frac{|C_{k}\cap C_{r}|+|N_{k}\cap N_{r}|}{\frac{1}{2}\big(|T_{k%&#10;}|(|T_{k}|-1)\big)}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>T</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>T</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">In practice, though, the simple-minded adoption of Rand Index is not
+satisfactory since the number of non-coreference links
+often overwhelms that of coreference links <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite>,
+or, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="|N_{k}|\gg|C_{k}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>≫</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="|N_{r}|\gg|C_{r}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow><mo>≫</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow></math>.
+Rand Index, if used without modification,
+would not be sensitive to changes of coreference links.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">BLANC-gold solves this problem by averaging the F-measure computed over coreference links
+and the F-measure over non-coreference links. Using the notations in Section <a href="#S2" title="2 Notations ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+the recall, precision, and F-measure on coreference links are:</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\displaystyle R_{c}^{(g)}" display="inline"><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m2" class="ltx_Math" alttext="\displaystyle=\frac{|C_{k}\cap C_{r}|}{|C_{k}\cap C_{r}|+|C_{k}\cap N_{r}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\displaystyle P_{c}^{(g)}" display="inline"><msubsup><mi>P</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m2" class="ltx_Math" alttext="\displaystyle=\frac{|C_{k}\cap C_{r}|}{|C_{r}\cap C_{k}|+|C_{r}\cap N_{k}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle F_{c}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m2" class="ltx_Math" alttext="\displaystyle=\frac{2R_{c}^{(g)}P_{c}^{(g)}}{R_{c}^{(g)}+P_{c}^{(g)}};" display="inline"><mrow><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><msubsup><mi>P</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow><mrow><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>P</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></mfrac></mstyle></mrow><mo>;</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">Similarly, the recall, precision, and F-measure on non-coreference links are computed as:</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<table id="Sx1.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\displaystyle R_{n}^{(g)}" display="inline"><msubsup><mi>R</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m2" class="ltx_Math" alttext="\displaystyle=\frac{|N_{k}\cap N_{r}|}{|N_{k}\cap C_{r}|+|N_{k}\cap N_{r}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+<tr id="S3.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\displaystyle P_{n}^{(g)}" display="inline"><msubsup><mi>P</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m2" class="ltx_Math" alttext="\displaystyle=\frac{|N_{k}\cap N_{r}|}{|N_{r}\cap C_{k}|+|N_{r}\cap N_{k}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr id="S3.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\displaystyle F_{n}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m2" class="ltx_Math" alttext="\displaystyle=\frac{2R_{n}^{(g)}P_{n}^{(g)}}{R_{n}^{(g)}+P_{n}^{(g)}}." display="inline"><mrow><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><msubsup><mi>R</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><msubsup><mi>P</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow><mrow><msubsup><mi>R</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>P</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></mfrac></mstyle></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">Finally, the BLANC-gold metric is the arithmetic average of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m1" class="ltx_Math" alttext="F_{c}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m2" class="ltx_Math" alttext="F_{n}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math>:</p>
+<table id="Sx1.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="\displaystyle\text{BLANC}^{(g)}" display="inline"><msup><mtext mathsize="small" stretchy="false">BLANC</mtext><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m2" class="ltx_Math" alttext="\displaystyle=\frac{F_{c}^{(g)}+F_{n}^{(g)}}{2}." display="inline"><mrow><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>F</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>F</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow><mn>2</mn></mfrac></mstyle></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">Superscript <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m3" class="ltx_Math" alttext="{}^{g}" display="inline"><msup><mi/><mi>g</mi></msup></math> in these equations highlights the fact that they are meant for
+coreference systems with gold mentions.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">Eqn. (<a href="#S3.E8" title="(8) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>) indicates that BLANC-gold assigns equal weight
+to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="F_{c}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math>, the F-measure from coreference links,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="F_{n}^{(g)}" display="inline"><msubsup><mi>F</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math>, the F-measure from non-coreference links. This avoids
+the problem that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m3" class="ltx_Math" alttext="|N_{k}|\gg|C_{k}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>≫</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m4" class="ltx_Math" alttext="|N_{r}|\gg|C_{r}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow><mo>≫</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow></math>, should the original
+Rand Index be used.</p>
+</div>
+<div id="S3.p8" class="ltx_para">
+<p class="ltx_p">In Eqn. (<a href="#S3.E2" title="(2) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) - (<a href="#S3.E3" title="(3) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) and
+Eqn. (<a href="#S3.E5" title="(5) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) - (<a href="#S3.E6" title="(6) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>), denominators
+are written as a sum of disjoint subsets so they can be
+related to the contingency table in <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite>. Under the assumption that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m1" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math>, it is clear that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m2" class="ltx_Math" alttext="C_{k}=(C_{k}\cap C_{r})\cup(C_{k}\cap N_{r})" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow><mo>∪</mo><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m3" class="ltx_Math" alttext="C_{r}=(C_{k}\cap C_{r})\cup(N_{k}\cap C_{r})" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow><mo>∪</mo><mrow><mo>(</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>, and so on.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>BLANC for Imperfect Response Mentions</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Under the assumption that the key and response mention sets are identical (which implies that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math>), Equations (<a href="#S3.E2" title="(2) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) to (<a href="#S3.E7" title="(7) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>) make sense.
+For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="R_{c}" display="inline"><msub><mi>R</mi><mi>c</mi></msub></math> is the ratio of the number of correct coreference links
+over the number of key coreference links; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="P_{c}" display="inline"><msub><mi>P</mi><mi>c</mi></msub></math> is the ratio of the number
+of correct coreference links over the number of response coreference links, and so on.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">However, when response mentions are not identical to key mentions, a key
+coreference link may not appear in either <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="C_{r}" display="inline"><msub><mi>C</mi><mi>r</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="N_{r}" display="inline"><msub><mi>N</mi><mi>r</mi></msub></math>, so
+Equations (<a href="#S3.E2" title="(2) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) to (<a href="#S3.E7" title="(7) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>) cannot be applied
+directly to systems with imperfect mentions. For instance,
+if the key entities are {<span class="ltx_text ltx_font_typewriter">a,b,c</span>}<span class="ltx_text ltx_font_typewriter"> </span>{<span class="ltx_text ltx_font_typewriter">d,e</span>}; and the response entities are
+{<span class="ltx_text ltx_font_typewriter">b,c</span>}<span class="ltx_text ltx_font_typewriter"> </span>{<span class="ltx_text ltx_font_typewriter">e,f,g</span>},
+then the key coreference link <span class="ltx_text ltx_font_typewriter">(a,b)</span> is not seen on the response side; similarly,
+it is possible that a response link does not appear on the key side either:
+<span class="ltx_text ltx_font_typewriter">(c,f)</span> and <span class="ltx_text ltx_font_typewriter">(f,g)</span> are not in the key in the above example.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">To account for missing or spurious links, we observe that 
+<br class="ltx_break"/><span class="ltx_text ltx_phantom"><span style="visibility:hidden">x</span></span>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="C_{k}\setminus T_{r}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math> are key coreference links missing in the response; 
+<br class="ltx_break"/><span class="ltx_text ltx_phantom"><span style="visibility:hidden">x</span></span>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="N_{k}\setminus T_{r}" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math> are key non-coreference links missing in the response; 
+<br class="ltx_break"/><span class="ltx_text ltx_phantom"><span style="visibility:hidden">x</span></span>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m5" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m6" class="ltx_Math" alttext="C_{r}\setminus T_{k}" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>k</mi></msub></mrow></math> are response coreference links missing in the key; 
+<br class="ltx_break"/><span class="ltx_text ltx_phantom"><span style="visibility:hidden">x</span></span>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m7" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m8" class="ltx_Math" alttext="N_{r}\setminus T_{k}" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>k</mi></msub></mrow></math> are response non-coreference links missing in the key, 
+<br class="ltx_break"/>and we propose to extend the coreference F-measure and non-coreference F-measure
+as follows. Coreference recall, precision and F-measure are changed to:</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<table id="Sx1.EGx8" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9.m1" class="ltx_Math" alttext="\displaystyle R_{c}" display="inline"><msub><mi>R</mi><mi>c</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9.m2" class="ltx_Math" alttext="\displaystyle=\frac{|C_{k}\cap C_{r}|}{|C_{k}\cap C_{r}|+|C_{k}\cap N_{r}|+|C_%&#10;{k}\setminus T_{r}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+<tr id="S4.E10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10.m1" class="ltx_Math" alttext="\displaystyle P_{c}" display="inline"><msub><mi>P</mi><mi>c</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10.m2" class="ltx_Math" alttext="\displaystyle=\frac{|C_{k}\cap C_{r}|}{|C_{r}\cap C_{k}|+|C_{r}\cap N_{k}|+|C_%&#10;{r}\setminus T_{k}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+<tr id="S4.E11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E11.m1" class="ltx_Math" alttext="\displaystyle F_{c}" display="inline"><msub><mi>F</mi><mi>c</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E11.m2" class="ltx_Math" alttext="\displaystyle=\frac{2R_{c}P_{c}}{R_{c}+P_{c}}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><msub><mi>R</mi><mi>c</mi></msub><mo>⁢</mo><msub><mi>P</mi><mi>c</mi></msub></mrow><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>+</mo><msub><mi>P</mi><mi>c</mi></msub></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">Non-coreference recall, precision and F-measure are changed to:</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<table id="Sx1.EGx9" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E12.m1" class="ltx_Math" alttext="\displaystyle R_{n}" display="inline"><msub><mi>R</mi><mi>n</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E12.m2" class="ltx_Math" alttext="\displaystyle=\frac{|N_{k}\cap N_{r}|}{|N_{k}\cap C_{r}|+|N_{k}\cap N_{r}|+|N_%&#10;{k}\setminus T_{r}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+<tr id="S4.E13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E13.m1" class="ltx_Math" alttext="\displaystyle P_{n}" display="inline"><msub><mi>P</mi><mi>n</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E13.m2" class="ltx_Math" alttext="\displaystyle=\frac{|N_{k}\cap N_{r}|}{|N_{r}\cap C_{k}|+|N_{r}\cap N_{k}|+|N_%&#10;{r}\setminus T_{k}|}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>k</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+<tr id="S4.E14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E14.m1" class="ltx_Math" alttext="\displaystyle F_{n}" display="inline"><msub><mi>F</mi><mi>n</mi></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E14.m2" class="ltx_Math" alttext="\displaystyle=\frac{2R_{n}P_{n}}{R_{n}+P_{n}}." display="inline"><mrow><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><msub><mi>R</mi><mi>n</mi></msub><mo>⁢</mo><msub><mi>P</mi><mi>n</mi></msub></mrow><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>+</mo><msub><mi>P</mi><mi>n</mi></msub></mrow></mfrac></mstyle></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+<p class="ltx_p">The proposed BLANC continues to be the arithmetic average of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m1" class="ltx_Math" alttext="F_{c}" display="inline"><msub><mi>F</mi><mi>c</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m2" class="ltx_Math" alttext="F_{n}" display="inline"><msub><mi>F</mi><mi>n</mi></msub></math>:</p>
+<table id="Sx1.EGx10" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E15" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E15.m1" class="ltx_Math" alttext="\displaystyle\text{BLANC}=\frac{F_{c}+F_{n}}{2}." display="inline"><mrow><mrow><mtext>BLANC</mtext><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>F</mi><mi>c</mi></msub><mo>+</mo><msub><mi>F</mi><mi>n</mi></msub></mrow><mn>2</mn></mfrac></mstyle></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(15)</span></td></tr>
+</table>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">We observe that the definition of the proposed BLANC, Equ. (<a href="#S4.E9" title="(9) ‣ 4 BLANC for Imperfect Response Mentions ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>)-(<a href="#S4.E14" title="(14) ‣ 4 BLANC for Imperfect Response Mentions ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">14</span></a>)
+subsume the BLANC-gold (<a href="#S3.E2" title="(2) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>)
+to (<a href="#S3.E7" title="(7) ‣ 3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>) due to the following proposition: 
+<br class="ltx_break"/>If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="BLANC=BLANC^{(g)}" display="inline"><mrow><mrow><mi>B</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi></mrow><mo>=</mo><mrow><mi>B</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><msup><mi>C</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msup></mrow></mrow></math>.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Proof</span>. We only need to show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m1" class="ltx_Math" alttext="R_{c}=R_{c}^{(g)}" display="inline"><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>=</mo><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m2" class="ltx_Math" alttext="P_{c}=P_{c}^{(g)}" display="inline"><mrow><msub><mi>P</mi><mi>c</mi></msub><mo>=</mo><msubsup><mi>P</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m3" class="ltx_Math" alttext="R_{n}=R_{n}^{(g)}" display="inline"><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>=</mo><msubsup><mi>R</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m4" class="ltx_Math" alttext="P_{n}=P_{n}^{(g)}" display="inline"><mrow><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><msubsup><mi>P</mi><mi>n</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></math>. We prove the first one
+(the other proofs are similar and elided due to space limitations).
+Since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m5" class="ltx_Math" alttext="T_{k}=T_{r}" display="inline"><mrow><msub><mi>T</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m6" class="ltx_Math" alttext="C_{k}\subset T_{k}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>⊂</mo><msub><mi>T</mi><mi>k</mi></msub></mrow></math>,
+we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m7" class="ltx_Math" alttext="C_{k}\subset T_{r}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>⊂</mo><msub><mi>T</mi><mi>r</mi></msub></mrow></math>; thus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m8" class="ltx_Math" alttext="C_{k}\setminus T_{r}=\emptyset" display="inline"><mrow><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m9" class="ltx_Math" alttext="|C_{k}\cap T_{r}|=0" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>T</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>=</mo><mn>0</mn></mrow></math>. This establishes that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m10" class="ltx_Math" alttext="R_{c}=R_{c}^{(g)}" display="inline"><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>=</mo><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></mrow></math>.</p>
+</div>
+<div id="S4.p8" class="ltx_para">
+<p class="ltx_p">Indeed, since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m1" class="ltx_Math" alttext="C_{k}" display="inline"><msub><mi>C</mi><mi>k</mi></msub></math> is a union of three disjoint subsets:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m2" class="ltx_Math" alttext="C_{k}=(C_{k}\cap C_{r})\cup(C_{k}\cap N_{r})\cup(C_{k}\setminus T_{r})" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow><mo>∪</mo><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow><mo>∪</mo><mrow><mo>(</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∖</mo><msub><mi>T</mi><mi>r</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m3" class="ltx_Math" alttext="R_{c}^{(g)}" display="inline"><msubsup><mi>R</mi><mi>c</mi><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m4" class="ltx_Math" alttext="R_{c}" display="inline"><msub><mi>R</mi><mi>c</mi></msub></math> can be unified as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m5" class="ltx_Math" alttext="\frac{|C_{k}\cap C_{r}|}{|C_{K}|}" display="inline"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>K</mi></msub><mo fence="true">|</mo></mrow></mfrac></math>.
+Unification for other component recalls and precisions can be done similarly.
+So the final definition of BLANC can be succinctly stated as:</p>
+</div>
+<div id="S4.p9" class="ltx_para">
+<table id="Sx1.EGx11" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E16" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E16.m2" class="ltx_Math" alttext="\displaystyle R_{c}=\frac{|C_{k}\cap C_{r}|}{|C_{k}|},\;\;P_{c}=\frac{|C_{k}%&#10;\cap C_{r}|}{|C_{r}|}" display="inline"><mrow><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow></mfrac></mstyle></mrow><mo separator="true">, </mo><mrow><msub><mi>P</mi><mi>c</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(16)</span></td></tr>
+<tr id="S4.E17" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E17.m2" class="ltx_Math" alttext="\displaystyle R_{n}=\frac{|N_{k}\cap N_{r}|}{|N_{k}|},\;\;P_{n}=\frac{|N_{k}%&#10;\cap N_{r}|}{|N_{r}|}" display="inline"><mrow><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow></mfrac></mstyle></mrow><mo separator="true">, </mo><mrow><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(17)</span></td></tr>
+<tr id="S4.E18" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E18.m2" class="ltx_Math" alttext="\displaystyle F_{c}=\frac{2|C_{k}\cap C_{r}|}{|C_{k}|+|C_{r}|},\;\;F_{n}=\frac%&#10;{2|N_{k}\cap N_{r}|}{|N_{k}|+|N_{r}|}" display="inline"><mrow><mrow><msub><mi>F</mi><mi>c</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow><mo separator="true">, </mo><mrow><msub><mi>F</mi><mi>n</mi></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mn>2</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(18)</span></td></tr>
+<tr id="S4.E19" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E19.m2" class="ltx_Math" alttext="\displaystyle\text{BLANC}=\frac{F_{c}+F_{n}}{2}" display="inline"><mrow><mtext mathsize="small" stretchy="false">BLANC</mtext><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>F</mi><mi>c</mi></msub><mo>+</mo><msub><mi>F</mi><mi>n</mi></msub></mrow><mn>2</mn></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(19)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Boundary Cases</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Care has to be taken when counts of the BLANC definition are 0.
+This can happen when all key (or response) mentions are in one cluster or
+are all singletons: the former case will lead to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="N_{k}=\emptyset" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="N_{r}=\emptyset" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>);
+the latter will lead to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="C_{k}=\emptyset" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="C_{r}=\emptyset" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>).
+Observe that as long as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m5" class="ltx_Math" alttext="|C_{k}|+|C_{r}|&gt;0" display="inline"><mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m6" class="ltx_Math" alttext="F_{c}" display="inline"><msub><mi>F</mi><mi>c</mi></msub></math> in (<a href="#S4.E18" title="(18) ‣ 4 BLANC for Imperfect Response Mentions ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">18</span></a>) is well-defined;
+as long as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m7" class="ltx_Math" alttext="|N_{k}|+|N_{r}|&gt;0" display="inline"><mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m8" class="ltx_Math" alttext="F_{n}" display="inline"><msub><mi>F</mi><mi>n</mi></msub></math> in (<a href="#S4.E18" title="(18) ‣ 4 BLANC for Imperfect Response Mentions ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">18</span></a>) is well-defined.
+So we only need to augment the BLANC definition for the following cases:</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">(1) If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="C_{k}=C_{r}=\emptyset" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="N_{k}=N_{r}=\emptyset" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><msub><mi>N</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="\text{BLANC}=I(M_{k}=M_{r})" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><mi>I</mi><mrow><mo>(</mo><msub><mi>M</mi><mi>k</mi></msub><mo>=</mo><msub><mi>M</mi><mi>r</mi></msub><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="I(\cdot)" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is an indicator function
+whose value is 1 if its argument is true, and 0 otherwise. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="M_{k}" display="inline"><msub><mi>M</mi><mi>k</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="M_{r}" display="inline"><msub><mi>M</mi><mi>r</mi></msub></math> are the key and response mention set. This can happen when a document has no more than one mention and there is no link.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">(2) If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="C_{k}=C_{r}=\emptyset" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="|N_{k}|+|N_{r}|&gt;0" display="inline"><mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>N</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="\text{BLANC}=F_{n}" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><msub><mi>F</mi><mi>n</mi></msub></mrow></math>. This is the case where the key and response
+side has only entities consisting of singleton mentions. Since there is no coreference link, BLANC
+reduces to the non-coreference F-measure <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m4" class="ltx_Math" alttext="F_{n}" display="inline"><msub><mi>F</mi><mi>n</mi></msub></math>.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">(3) If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="N_{k}=N_{r}=\emptyset" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><msub><mi>N</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="|C_{k}|+|C_{r}|&gt;0" display="inline"><mrow><mrow><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>k</mi></msub><mo fence="true">|</mo></mrow><mo>+</mo><mrow><mo fence="true">|</mo><msub><mi>C</mi><mi>r</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="\text{BLANC}=F_{c}" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><msub><mi>F</mi><mi>c</mi></msub></mrow></math>. This is the case where all mentions
+in the key and response are in one entity. Since there is no non-coreference link,
+BLANC reduces to the coreference F-measure <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="F_{c}" display="inline"><msub><mi>F</mi><mi>c</mi></msub></math>.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Toy Examples</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We walk through a few examples and show how BLANC is calculated in detail.
+In all the examples below, each lower-case letter represents a mention; mentions
+in an entity are closed in {}; two letters in () represent a link.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example 1.</span> Key entities are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\{abc\}" display="inline"><mrow><mo>{</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>}</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="\{d\}" display="inline"><mrow><mo>{</mo><mi>d</mi><mo>}</mo></mrow></math>; response entities are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\{bc\}" display="inline"><mrow><mo>{</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>}</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="\{de\}" display="inline"><mrow><mo>{</mo><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi></mrow><mo>}</mo></mrow></math>. Obviously,
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="C_{k}=\{(ab),(bc),(ac)\}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>; 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="N_{k}=\{(ad),(bd),(cd)\}" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>; 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="C_{r}=\{(bc),(de)\}" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>; 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="N_{r}=\{(bd),(be),(cd),(ce)\}" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>. 
+<br class="ltx_break"/>Therefore, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m9" class="ltx_Math" alttext="C_{k}\cap C_{r}=\{(bc)\}" display="inline"><mrow><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>=</mo><mrow><mo>{</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m10" class="ltx_Math" alttext="N_{k}\cap N_{r}=\{(bd),(cd)\}" display="inline"><mrow><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m11" class="ltx_Math" alttext="R_{c}=\frac{1}{3}" display="inline"><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m12" class="ltx_Math" alttext="P_{c}=\frac{1}{2}" display="inline"><mrow><msub><mi>P</mi><mi>c</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m13" class="ltx_Math" alttext="F_{c}=\frac{2}{5}" display="inline"><mrow><msub><mi>F</mi><mi>c</mi></msub><mo>=</mo><mfrac><mn>2</mn><mn>5</mn></mfrac></mrow></math>;
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m14" class="ltx_Math" alttext="R_{n}=\frac{2}{3}" display="inline"><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>2</mn><mn>3</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m15" class="ltx_Math" alttext="P_{n}=\frac{2}{4}" display="inline"><mrow><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>2</mn><mn>4</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m16" class="ltx_Math" alttext="F_{n}=\frac{4}{7}" display="inline"><mrow><msub><mi>F</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>4</mn><mn>7</mn></mfrac></mrow></math>. Finally,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m17" class="ltx_Math" alttext="\text{BLANC}=\frac{17}{35}" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><mfrac><mn>17</mn><mn>35</mn></mfrac></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example 2.</span> Key entity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\{a\}" display="inline"><mrow><mo>{</mo><mi>a</mi><mo>}</mo></mrow></math>; response entity is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\{b\}" display="inline"><mrow><mo>{</mo><mi>b</mi><mo>}</mo></mrow></math>. This is boundary case (1): <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\text{BLANC}=0" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><mn>0</mn></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example 3.</span> Key entities are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="\{a\}\{b\}\{c\}" display="inline"><mrow><mrow><mo>{</mo><mi>a</mi><mo>}</mo></mrow><mo>⁢</mo><mrow><mo>{</mo><mi>b</mi><mo>}</mo></mrow><mo>⁢</mo><mrow><mo>{</mo><mi>c</mi><mo>}</mo></mrow></mrow></math>; response entities are
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="\{a\}\{b\}\{d\}" display="inline"><mrow><mrow><mo>{</mo><mi>a</mi><mo>}</mo></mrow><mo>⁢</mo><mrow><mo>{</mo><mi>b</mi><mo>}</mo></mrow><mo>⁢</mo><mrow><mo>{</mo><mi>d</mi><mo>}</mo></mrow></mrow></math>. This is boundary case (2): there are no coreference links.
+Since 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="N_{k}=\{(ab),(bc),(ca)\}" display="inline"><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>, 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m4" class="ltx_Math" alttext="N_{r}=\{(ab),(bd),(ad)\}" display="inline"><mrow><msub><mi>N</mi><mi>r</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>,
+<br class="ltx_break"/>we have 
+<br class="ltx_break"/>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m5" class="ltx_Math" alttext="N_{k}\cap N_{r}=\{(ab)\}" display="inline"><mrow><mrow><msub><mi>N</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>N</mi><mi>r</mi></msub></mrow><mo>=</mo><mrow><mo>{</mo><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m6" class="ltx_Math" alttext="R_{n}=\frac{1}{3}" display="inline"><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m7" class="ltx_Math" alttext="P_{n}=\frac{1}{3}" display="inline"><mrow><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac></mrow></math>. 
+<br class="ltx_break"/>So <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m8" class="ltx_Math" alttext="\text{BLANC}=F_{n}=\frac{1}{3}" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><msub><mi>F</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example 4.</span> Key entity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m1" class="ltx_Math" alttext="\{abc\}" display="inline"><mrow><mo>{</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>}</mo></mrow></math>; response entity is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m2" class="ltx_Math" alttext="\{bc\}" display="inline"><mrow><mo>{</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>}</mo></mrow></math>. This is boundary case (3): there are no non-coreference links.
+Since 
+<br class="ltx_break"/>   <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m3" class="ltx_Math" alttext="C_{k}=\{(ab),(bc),(ca)\}" display="inline"><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m4" class="ltx_Math" alttext="C_{r}=\{(bc)\}" display="inline"><mrow><msub><mi>C</mi><mi>r</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math>, 
+<br class="ltx_break"/>we have 
+<br class="ltx_break"/>    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m5" class="ltx_Math" alttext="C_{k}\cap C_{r}=\{(bc)\}" display="inline"><mrow><mrow><msub><mi>C</mi><mi>k</mi></msub><mo>∩</mo><msub><mi>C</mi><mi>r</mi></msub></mrow><mo>=</mo><mrow><mo>{</mo><mrow><mo>(</mo><mrow><mi>b</mi><mo>⁢</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m6" class="ltx_Math" alttext="R_{c}=\frac{1}{3}" display="inline"><mrow><msub><mi>R</mi><mi>c</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m7" class="ltx_Math" alttext="P_{c}=1" display="inline"><mrow><msub><mi>P</mi><mi>c</mi></msub><mo>=</mo><mn>1</mn></mrow></math>, 
+<br class="ltx_break"/>So <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m8" class="ltx_Math" alttext="\text{BLANC}=F_{c}=\frac{2}{4}=\frac{1}{2}" display="inline"><mrow><mtext>BLANC</mtext><mo>=</mo><msub><mi>F</mi><mi>c</mi></msub><mo>=</mo><mfrac><mn>2</mn><mn>4</mn></mfrac><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow></math>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Participant</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">BLANC</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">lee</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">50.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">49.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">48.84</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">sapena</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">40.68</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">49.05</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.47</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">nugues</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">47.83</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.22</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.95</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.71</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">47.48</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.49</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">stoyanov</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">49.37</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29.80</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.58</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">santos</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">46.74</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.33</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">41.33</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">song</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.88</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">39.69</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">30.92</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">sobha</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35.42</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">39.56</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.31</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">yang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">47.95</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29.12</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.09</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">charton</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">42.32</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.54</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35.65</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">hao</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.41</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.75</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.98</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhou</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29.93</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.58</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.95</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">kobdani</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.29</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">33.01</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.57</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">xinxin</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.83</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.39</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35.02</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">kummerfeld</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.84</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">29.53</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">30.98</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">30.10</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">43.96</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35.71</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhekova</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">26.40</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">15.32</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">15.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">irwin</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_phantom ltx_font_small"><span style="visibility:hidden">0</span></span><span class="ltx_text ltx_font_small">3.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_small">28.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_phantom ltx_font_small"><span style="visibility:hidden">0</span></span><span class="ltx_text ltx_font_small">6.28</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span> The proposed BLANC scores of the CoNLL-2011 shared task participants.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>CoNLL-2011/12</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We have updated the publicly available CoNLL coreference scorer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://code.google.com/p/reference-coreference-scorers</span></span></span> with the proposed BLANC, and used it to compute the proposed BLANC scores for all the CoNLL 2011 <cite class="ltx_cite">[<a href="#bib.bib72" title="CoNLL-2011 shared task: modeling unrestricted coreference in OntoNotes" class="ltx_ref">5</a>]</cite> and 2012 <cite class="ltx_cite">[<a href="#bib.bib73" title="CoNLL-2012 shared task: modeling multilingual unrestricted coreference in OntoNotes" class="ltx_ref">4</a>]</cite> participants in the official track, where participants had to automatically predict the mentions. Tables <a href="#S5.T1" title="Table 1 ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S5.T2" title="Table 2 ‣ 5.1 CoNLL-2011/12 ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> report the updated results.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The order is kept the same as in <cite class="ltx_cite">Pradhan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib72" title="CoNLL-2011 shared task: modeling unrestricted coreference in OntoNotes" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Pradhan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib73" title="CoNLL-2012 shared task: modeling multilingual unrestricted coreference in OntoNotes" class="ltx_ref">2012</a>)</cite> for easy comparison.</span></span></span></p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Participant</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">BLANC</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">Language: Arabic</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">fernandes</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">33.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">44.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">37.99</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">bjorkelund</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.65</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.47</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.93</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">uryupina</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.62</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">35.26</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">33.02</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">stamborg</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.59</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.92</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chen</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.81</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.52</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">30.82</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhekova</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">11.04</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">62.58</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">18.51</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">li</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom ltx_font_small"><span style="visibility:hidden">0</span></span><span class="ltx_text ltx_font_small">4.60</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">56.63</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom ltx_font_small"><span style="visibility:hidden">0</span></span><span class="ltx_text ltx_font_small">8.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">  Language: English</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">fernandes</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">54.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">63.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">58.75</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">martschat</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.00</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">58.84</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">55.04</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">bjorkelund</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.01</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">59.55</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">55.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.85</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">55.03</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">53.86</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chen</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">50.52</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">56.82</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.87</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chunyang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">51.19</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">55.47</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.65</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">stamborg</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.39</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.88</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">yuan</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">50.58</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.29</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.11</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">xu</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.99</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">54.59</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">46.47</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">shou</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">49.55</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.46</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">50.44</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">uryupina</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.15</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">48.89</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">46.04</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">songyang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">40.60</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">50.85</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhekova</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">41.46</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">33.13</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">34.80</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">xinxin</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.39</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">32.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">li</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">25.17</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">52.96</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.85</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">  Language: Chinese</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">chen</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">48.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">62.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">54.10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">yuan</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">53.15</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">40.75</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">43.20</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">bjorkelund</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">47.58</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.93</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.22</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">xu</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">44.11</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.45</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">38.45</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">fernandes</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">42.36</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">61.72</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">49.63</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">stamborg</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">39.60</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">55.12</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">45.89</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">uryupina</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">33.44</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">56.01</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">41.88</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">martschat</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">27.24</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">62.33</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.89</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chunyang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.43</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.18</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.77</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">xinxin</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">36.46</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">39.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.85</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">li</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">21.61</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">62.94</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">30.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">chang</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">18.74</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">40.76</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">25.68</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">zhekova</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">21.50</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">37.18</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">22.89</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small"></span></th>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span> The proposed BLANC scores of the CoNLL-2012 shared task participants.</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Correlation with Other Measures</h3>
+
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_tt"><span class="ltx_text ltx_font_small"></span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">F1</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">MUC</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.975</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.844</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.935</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">B-cubed</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.981</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.942</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.966</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">CEAF-m</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.941</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.923</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.966</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">CEAF-e</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_small">0.797</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_small">0.781</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_small">0.919</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span> Pearson’s r correlation coefficients between the proposed BLANC and the other coreference measures based on the CoNLL 2011/2012 results. All <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="p" display="inline"><mi mathsize="normal" stretchy="false">p</mi></math>-values are significant at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="&lt;" display="inline"><mo mathsize="normal" stretchy="false">&lt;</mo></math> 0.001.</div>
+</div>
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F1" title="Figure 1 ‣ 5.2 Correlation with Other Measures ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows how the proposed BLANC measure works when compared with
+existing metrics such as MUC, B-cubed and CEAF, using the BLANC and F1 scores. The proposed BLANC is highly positively correlated with the other measures along R, P and F1 (Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Correlation with Other Measures ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), showing that BLANC is able to capture most entity-based similarities measured by B-cubed and CEAF. However, the CoNLL data sets come from OntoNotes <cite class="ltx_cite">[<a href="#bib.bib74" title="OntoNotes: the 90% solution" class="ltx_ref">2</a>]</cite>, where singleton entities are not annotated, and BLANC has a wider dynamic range on data sets with singletons <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite>. So the correlations will likely be lower on data sets with singleton entities.</p>
+</div>
+<div id="S5.F1" class="ltx_figure"><img src="P14-2005/image001.png" id="S5.F1.g1" class="ltx_graphics ltx_centering" width="333" height="333" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Correlation plot between the proposed BLANC and the other measures based on the CoNLL 2011/2012 results. All values are F1 scores.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">The original BLANC-gold <cite class="ltx_cite">[<a href="#bib.bib68" title="BLANC: implementing the Rand index for coreference evaluation" class="ltx_ref">7</a>]</cite> requires that
+system mentions be identical to gold mentions, which
+limits the metric’s utility since detected system mentions
+often have missing key mentions or spurious mentions.
+The proposed BLANC is free from this assumption,
+and we have shown that it subsumes the original BLANC-gold.
+Since BLANC works on imperfect system mentions, we have
+used it to score the CoNLL 2011 and 2012 coreference systems.
+The BLANC scores show strong correlation with existing
+metrics, especially B-cubed and CEAF-m.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank the three anonymous reviewers for their invaluable suggestions
+for improving the paper. This work was partially supported by grants R01LM10090 from
+the National Library of Medicine.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Bagga and B. Baldwin</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Algorithms for scoring coreference chains</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 563–566</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib74" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Hovy, M. Marcus, M. Palmer, L. Ramshaw and R. Weischedel</span><span class="ltx_text ltx_bib_year">(2006-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">OntoNotes: the 90% solution</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York City, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 57–60</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N06/N06-2015" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Correlation with Other Measures ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Luo</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On coreference resolution performance metrics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib73" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Pradhan, A. Moschitti, N. Xue, O. Uryupina and Y. Zhang</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CoNLL-2012 shared task: modeling multilingual unrestricted coreference in OntoNotes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–40</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W12-4501" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 CoNLL-2011/12 ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Pradhan, L. Ramshaw, M. Marcus, M. Palmer, R. Weischedel and N. Xue</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CoNLL-2011 shared task: modeling unrestricted coreference in OntoNotes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–27</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W11-1901" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 CoNLL-2011/12 ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. M. Rand</span><span class="ltx_text ltx_bib_year">(1971)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Objective criteria for the evaluation of clustering methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Statistical Association</span> <span class="ltx_text ltx_bib_volume">66</span> (<span class="ltx_text ltx_bib_number">336</span>), <span class="ltx_text ltx_bib_pages"> pp. 846–850</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Recasens and E. Hovy</span><span class="ltx_text ltx_bib_year">(2011-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLANC: implementing the Rand index for coreference evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">17</span>, <span class="ltx_text ltx_bib_pages"> pp. 485–510</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1469-8110</span>,
+<a href="http://dx.doi.org/10.1017/S135132491000029X" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://journals.cambridge.org/article_S135132491000029X" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p3" title="3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p8" title="3 Original BLANC ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Correlation with Other Measures ‣ 5 Results ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.p1" title="6 Conclusion ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Stoyanov, N. Gilbert, C. Cardie and E. Riloff</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conundrums in noun phrase coreference resolution: making sense of the state-of-the-art</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’09</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 656–664</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-46-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1690219.1690238" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Vilain, J. Burger, J. Aberdeen, D. Connolly and L. Hirschman</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A model-theoretic coreference scoring scheme</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 45–52</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ An Extension of BLANC to System Mentions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:31:29 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

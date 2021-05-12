@@ -1,0 +1,1470 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Analyzing the computational complexity of abstract dialectical frameworks via approximation fixpoint theory.
+   </title>
+   <abstract>
+    Abstract dialectical frameworks (ADFs) have recently been proposed as a versatile generalization of Dung's abstract argumentation frameworks (AFs). In this paper, we present a comprehensive analysis of the computational complexity of ADFs. Our results show that while ADFs are one level up in the polynomial hierarchy compared to AFs, there is a useful subclass of ADFs which is as complex as AFs while arguably offering more modeling capacities. As a technical vehicle, we employ the approximation fixpoint theory of Denecker, Marek and Truszczyński, thus showing that it is also a useful tool for complexity analysis of operator-based semantics.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Formal models of argumentation are increasingly being recognized as viable tools in knowledge representation and reasoning [5]. A particularly popular formalism are Dung's abstract argumentation frameworks (AFs) [24]. AFs treat arguments as abstract entities and natively represent only attacks between them using a binary relation. Typically, abstract argumentation frameworks are used as a target language for translations from more concrete languages. For example, the Carneades formalism for structured argumentation [35] has been translated to AFs [45]; Caminada and Amgoud [13] and Wyner et al. [47] translate rule-based defeasible theories into AFs. Despite their popularity, abstract argumentation frameworks have limitations. Most significantly, their limited modeling capacities are a notable obstacle for applications: arguments can only attack one another. Furthermore, Caminada and Amgoud [13] observed how AFs that arise as translations of defeasible theories sometimes lead to unintuitive conclusions.
+     </paragraph>
+     <paragraph>
+      To address the limitations of abstract argumentation frameworks, researchers have proposed quite a number of generalizations of AFs [12]. Among the most general of those are Brewka and Woltran's abstract dialectical frameworks (ADFs)[9]. ADFs are even more abstract than AFs: while in AFs arguments are abstract and the relation between arguments is fixed to attack, in ADFs also the relations are abstract (and called links). The relationship between different arguments (called statements in ADFs) is specified by acceptance conditions. These are Boolean functions indicating the conditions under which a statement s can be accepted when given the acceptance status of all statements with a direct link to s (its parents). ADFs have been successfully employed to address the shortcomings of AFs: Brewka and Gordon [8] translated Carneades to ADFs and for the first time allowed cyclic dependencies amongst arguments; for rule-based defeasible theories we [41], [43] showed how ADFs can be used to deal with the problems observed by Caminada and Amgoud [13].
+     </paragraph>
+     <paragraph>
+      There is a great number of semantics for AFs already, and many of them have been generalized to ADFs. Thus it might not be clear to potential ADF users which semantics are adequate for a particular application domain. In this regard, knowing the computational complexity of semantics can be a valuable guide. However, existing complexity results for ADFs are scattered over different papers, miss several semantics and some of them present upper bounds only. In this paper, we provide a comprehensive complexity analysis for ADFs. In line with the literature, we represent acceptance conditions by propositional formulas as they provide a compact and elegant way to represent Boolean functions.
+     </paragraph>
+     <paragraph>
+      Technically, we base our complexity analysis on the approximation fixpoint theory (AFT) by Denecker, Marek and Truszczyński [18], [19], [20]. This powerful framework provides an algebraic account of how monotone and nonmonotone two-valued operators can be approximated by monotone three- or four-valued operators. (As an example of an operator to be approximated, think of the two-valued van Emden–Kowalski consequence operator from logic programming.) AFT embodies the intuitions of decades of KR research; we believe that this is very valuable also for relatively recent languages (such as ADFs), because we get the enormously influential formalizations of intuitions of Reiter and others for free. (As a liberal variation on Newton, we could say that approximation fixpoint theory allows us to take the elevator up to the shoulders of giants instead of walking up the stairs.) In fact, approximation fixpoint theory can be and partially has already been used to define some of the semantics of ADFs [11], [40]. There, we generalized various AF and logic programming semantics to ADFs using AFT, which has provided us with two families of semantics, that we call – for reasons that will become clear later – approximate and ultimate, respectively. Intuitively speaking, both families approximate the original two-valued model semantics of ADFs, where the ultimate family is more precise in a formally defined sense. The present paper employs approximating operators for complexity analysis and thus shows that AFT is also well-suited for studying the computational complexity of formalisms.
+     </paragraph>
+     <paragraph>
+      Along with providing a comparison of the approximate and ultimate families of semantics, our main results can be summarized as follows. We show that: (1) the computational complexity of ADF decision problems is one level up in the polynomial hierarchy from their AF counterparts [28]; (2) the ultimate semantics are almost always as complex as the approximate semantics, with the notable exceptions of two-valued stable models, and conflict-free and naive semantics; (3) there is a certain subclass of ADFs, called bipolar ADFs (BADFs), which is of the same complexity as AFs, with the single exception of skeptical reasoning for naive semantics. Intuitively, in bipolar ADFs all links between statements are supporting or attacking. To formalize these notions, Brewka and Woltran [9] gave a precise semantical definition of support and attack. In our work, we assume that the link types are specified by the user along with the ADF. We consider this a harmless assumption since the existing applications of ADFs produce bipolar ADFs where the link types are known [8], [41]. This attractiveness of bipolar ADFs from a KR point of view is the most significant result of the paper: it shows that BADFs offer – in addition to AF-like and more general notions of attack – also syntactical notions of support without any increase in computational cost.
+     </paragraph>
+     <paragraph>
+      In BADFs, support for a statement s can be anything among “set support” (all statements in a certain set must be accepted for the support to become active) or “individual support” (at least one statement supporting s must be accepted for the support to become active). In the same vein, BADFs offer “set attack” (all statements in a certain set must be accepted for the attack to become active) and the traditional “individual attack” known from AFs (at least one statement attacking s must be accepted for the attack to become active). Naturally, in BADFs all these different notions of support and attack can be freely combined.
+     </paragraph>
+     <paragraph>
+      Previously, Brewka et al. [10] translated BADFs into AFs for two-valued semantics and suggested indirectly that the complexities align.{sup:1} Here we go a direct route, which has more practical relevance since it immediately affects algorithm design. Our work was also inspired by the complexity analysis of assumption-based argumentation by Dimopoulos et al. [23] – they derived generic results in a way similar to ours.
+     </paragraph>
+     <paragraph>
+      Our complexity results aligning AFs and BADFs are especially remarkable with regard to expressiveness in the model-theoretic sense. While it remains elusive what kinds of sets of two-valued interpretations the class of AFs can express exactly [4], we know that even bipolar ADFs can express strictly more than that (at least all ⊆-antichains), and general (non-bipolar) ADFs can express any set of two-valued interpretations with the two-valued model semantics [42]. This shows that AFs (under stable extension/labeling semantics) – while being of equal computational complexity – are strictly less expressive than ADFs (under model semantics, one of the ADF counterparts of AF stable semantics).
+     </paragraph>
+     <paragraph>
+      We also provide results on the existence of certain types of interpretations in a general setting. For example, it follows from our results that any approximating operator in a complete partial order always possesses preferred and naive interpretations. This generalizes a corresponding result by Dung [24] about the existence of AF preferred extensions to finite and infinite ADFs, logic programs, default theories, and beyond [19]. The conflict-free (and naive) semantics that we consider here is – strictly speaking – also a novel contribution of this paper, as previous definitions of conflict-freeness were either two-valued [9] or direct generalizations of the corresponding three-valued AF notion [40]. The definition we use here is simpler, more intuitive and still a generalization of AFs' conflict-free sets.
+     </paragraph>
+     <paragraph>
+      One important proof technique of this paper is to employ ADFs' acceptance conditions' representation via propositional formulas and to partially evaluate them. For a propositional formula φ over vocabulary P and {a mathematical formula}X⊆Y⊆P we define the partial valuation of φ by{a mathematical formula}(X,Y) as{a mathematical formula} Intuitively, the pair {a mathematical formula}(X,Y) represents a partial interpretation of P where all elements of X are true and all elements of {a mathematical formula}P∖Y are false.{sup:2} The partial evaluation of φ with {a mathematical formula}(X,Y) takes the two-valued part of {a mathematical formula}(X,Y) and replaces the evaluated variables by their truth values. Naturally, {a mathematical formula}φ(X,Y) is a formula over the vocabulary {a mathematical formula}Y∖X, that is, only contains variables that have no classical truth value (true or false) in the pair {a mathematical formula}(X,Y). In particular, for any total interpretation {a mathematical formula}(X,X), the partial evaluation {a mathematical formula}φ(X,X) is a Boolean expression consisting only of truth constants and connectives and thus has a fixed truth value (either true or false).
+     </paragraph>
+     <paragraph>
+      We will show that approximate and ultimate ADF operators (and thus all of the operator-based ADF semantics) can be defined in terms of partial evaluations of acceptance formulas. For example, in the new three-valued conflict-free semantics that we introduce, a statement s can only be set to true in an interpretation {a mathematical formula}(X,Y) if the partial evaluation of its acceptance formula with the interpretation – the formula {a mathematical formula}φs(X,Y) – is satisfiable. Symmetrically, s can only be set to false in {a mathematical formula}(X,Y) if {a mathematical formula}φs(X,Y) is refutable. For the three-valued admissible semantics, the justification standards are higher. There, setting s to true is only justified if {a mathematical formula}φs(X,Y) is irrefutable (a tautology), setting s to false is only justified if {a mathematical formula}φs(X,Y) is unsatisfiable. This logical view of (argumentation) semantics thus provides a novel perspective on different, graded notions of acceptability.
+     </paragraph>
+     <paragraph>
+      The paper proceeds as follows. We first provide the background on approximation fixpoint theory, abstract dialectical frameworks and the necessary elements of complexity theory. In the section afterwards, we define the relevant decision problems, survey existing complexity results, use examples to illustrate how operators revise ADF interpretations and show generic upper complexity bounds along with some other useful preparatory technical results. In the main section on complexity results for general ADFs, we back up the upper bounds with matching lower bounds; the section afterwards does the same for bipolar ADFs. We end with a brief discussion of related and future work. This paper is a revised and extended version of [44].
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      A complete lattice is a partially ordered set (poset) {a mathematical formula}(L,⊑) where every subset S of L has a least upper bound {a mathematical formula}⨆S∈L and a greatest lower bound {a mathematical formula}⨅S∈L. In particular, a complete lattice has a least (⊥) and a greatest (⊤) element.{sup:3} An operator {a mathematical formula}O:L→L is monotone if for all {a mathematical formula}x⊑y we find {a mathematical formula}O(x)⊑O(y). An {a mathematical formula}x∈L is a fixpoint of O if {a mathematical formula}O(x)=x; an {a mathematical formula}x∈L is a prefixpoint of O if {a mathematical formula}O(x)⊑x and a postfixpoint of O if {a mathematical formula}x⊑O(x). Due to a fundamental result by Tarski and Knaster, for any monotone operator O on a complete lattice, the set of its fixpoints forms a complete lattice itself [17, Theorem 2.35]. In particular, its least fixpoint {a mathematical formula}lfp(O) exists.
+     </paragraph>
+     <paragraph label="Theorem 2.1">
+      In this paper, we will be concerned with more general algebraic structures: complete partially ordered sets (CPOs). A CPO is a partially ordered set {a mathematical formula}(C,≤) with a ≤-least element where each directed subset {a mathematical formula}D⊆C has a least upper bound {a mathematical formula}⨆D∈C. A set is directed iff it is nonempty and each pair of elements has an upper bound in the set. Clearly every complete lattice is a complete partially ordered set, but not necessarily vice versa. Fortunately, complete partially ordered sets still guarantee the existence of (least) fixpoints for monotone operators. (See[17, Theorem 8.22].) In a complete partially ordered set{a mathematical formula}(C,≤), any ≤-monotone operator{a mathematical formula}O:C→Chas a least fixpoint.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Approximation fixpoint theory
+      </section-title>
+      <paragraph>
+       Denecker et al. [18] introduce the important concept of an approximation of an operator. In the study of semantics of knowledge representation formalisms, elements of lattices represent objects of interest. Operators on lattices transform such objects into others according to the contents of some knowledge base. Consequently, fixpoints of such operators are then objects that are fully updated – informally, the knowledge base can neither increase nor decrease the amount of information in a fixpoint.
+      </paragraph>
+      <paragraph>
+       To study fixpoints of operators O, Denecker et al. study their approximation operators{a mathematical formula}O.{sup:4} When O operates on a set L, its approximation {a mathematical formula}O operates on pairs {a mathematical formula}(x,y)∈L×L. Such a pair {a mathematical formula}(x,y) can be seen as representing a set of lattice elements by providing a lower bound x and an upper bound y. Consequently, {a mathematical formula}(x,y) approximates all {a mathematical formula}z∈L such that {a mathematical formula}x⊑z⊑y. We will restrict our attention to consistent pairs – those where {a mathematical formula}x⊑y, that is, the set of approximated elements is nonempty; we denote the set of all consistent pairs over L by {a mathematical formula}Lc. A pair {a mathematical formula}(x,y) with {a mathematical formula}x=y is called exact – it “approximates” a single element of the original lattice.
+      </paragraph>
+      <paragraph>
+       It is natural to order approximating pairs according to their information content. Formally, for {a mathematical formula}x1,x2,y1,y2∈L define the information ordering{a mathematical formula} This ordering and the restriction to consistent pairs leads to a complete partially ordered set {a mathematical formula}(Lc,≤i), the consistent CPO. For example, the trivial pair{a mathematical formula}(⊥,⊤) consisting of ⊑-least ⊥ and ⊑-greatest lattice element ⊤ approximates all lattice elements and thus contains no information – it is the least element of the CPO {a mathematical formula}(Lc,≤i); exact pairs {a mathematical formula}(x,x) are the maximal elements of {a mathematical formula}(Lc,≤i).
+      </paragraph>
+      <paragraph>
+       To define an approximation operator {a mathematical formula}O:Lc→Lc, one essentially has to define two functions: a function {a mathematical formula}O′:Lc→L that yields a revised lower bound (first component) for a given pair; and a function {a mathematical formula}O″:Lc→L that yields a revised upper bound (second component) for a given pair. Accordingly, the overall approximation is then given by {a mathematical formula}O(x,y)=(O′(x,y),O″(x,y)) for {a mathematical formula}(x,y)∈Lc. The operator {a mathematical formula}O:Lc→Lc is approximating iff it is {a mathematical formula}≤i-monotone and it satisfies {a mathematical formula}O′(x,x)=O″(x,x) for all {a mathematical formula}x∈L, that is, {a mathematical formula}O assigns exact pairs to exact pairs. Such an {a mathematical formula}O then approximates an operator {a mathematical formula}O:L→L on the original lattice iff {a mathematical formula}O′(x,x)=O(x) for all {a mathematical formula}x∈L.
+      </paragraph>
+      <paragraph>
+       The main contribution of Denecker et al. [18] was the association of the stable operator to an approximating operator. Their original definition was four-valued; in this paper we are only interested in two-valued stable models and simplified the definitions. For an approximating operator {a mathematical formula}O on a consistent CPO, a (two-valued) fixpoint {a mathematical formula}(x,x)∈Lc of {a mathematical formula}O is a (two-valued) stable model of{a mathematical formula}O iff x is the least fixpoint of the operator {a mathematical formula}O′(⋅,x) defined by {a mathematical formula}w↦O′(w,x) for {a mathematical formula}w⊑x. This general, lattice-theoretic approach yields a uniform treatment of the standard semantics of the major nonmonotonic knowledge representation formalisms – logic programming, default logic and autoepistemic logic [19].
+      </paragraph>
+      <paragraph>
+       In subsequent work, Denecker et al. [20] presented a general, abstract way to define the most precise – called the ultimate – approximation of a given operator O. Most precise here refers to a generalization of {a mathematical formula}≤i to operators, where for {a mathematical formula}O1,O2, they define {a mathematical formula}O1≤iO2 iff for all {a mathematical formula}(x,y)∈Lc it holds that {a mathematical formula}O1(x,y)≤iO2(x,y). Denecker et al. [20] showed that the most precise approximation of O is {a mathematical formula}UO:Lc→Lc with{a mathematical formula} where ⨅ denotes the greatest lower bound and ⨆ the least upper bound in the complete lattice {a mathematical formula}(L,⊑).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Abstract dialectical frameworks
+      </section-title>
+      <paragraph>
+       An abstract dialectical framework (ADF) is a directed graph whose nodes represent statements or positions which can be accepted or not. The links represent dependencies: the status of a node s only depends on the status of its parents (denoted {a mathematical formula}par(s)), that is, the nodes with a direct link to s. In addition, each node s has an associated acceptance condition {a mathematical formula}Cs specifying the exact conditions under which s is accepted. {a mathematical formula}Cs is a function assigning to each subset of {a mathematical formula}par(s) one of the truth values t, f. Intuitively, if for some {a mathematical formula}R⊆par(s) we have {a mathematical formula}Cs(R)=t, then s will be accepted provided the nodes in R are accepted and those in {a mathematical formula}par(s)∖R are not accepted.
+      </paragraph>
+      <paragraph label="Definition 2.1">
+       An abstract dialectical framework is a tuple {a mathematical formula}Ξ=(S,L,C) where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a set of statements (positions, nodes),
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}L⊆S×S is a set of links,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C={Cs}s∈S is a collection of total functions {a mathematical formula}Cs:2par(s)→{t,f}, one for each statement s. The function {a mathematical formula}Cs is called acceptance condition of s.
+       </list-item>
+      </list>
+      <paragraph>
+       It is often convenient to represent acceptance conditions by propositional formulas. In particular, we will do so for the complexity results of this paper. There, each {a mathematical formula}Cs is represented by a propositional formula {a mathematical formula}φs over {a mathematical formula}par(s). Then, clearly, {a mathematical formula}Cs(R∩par(s))=t iff {a mathematical formula}R⊨φs. Furthermore, throughout the paper we will denote ADFs by Ξ and tacitly assume that {a mathematical formula}Ξ=(S,L,C) unless stated otherwise.
+      </paragraph>
+      <paragraph>
+       Brewka and Woltran [9] introduced a useful subclass of ADFs called bipolar: Intuitively, in bipolar ADFs (BADFs) each link is supporting or attacking (or both). Formally, a link {a mathematical formula}(r,s)∈L is supporting in Ξ iff for all {a mathematical formula}R⊆par(s), we have {a mathematical formula}Cs(R)=t implies {a mathematical formula}Cs(R∪{r})=t; symmetrically, a link {a mathematical formula}(r,s)∈L is attacking in Ξ iff for all {a mathematical formula}R⊆par(s), we have {a mathematical formula}Cs(R∪{r})=t implies {a mathematical formula}Cs(R)=t. An ADF {a mathematical formula}Ξ=(S,L,C) is bipolar iff all links in L are supporting or attacking; we use {a mathematical formula}L+ to denote all supporting and {a mathematical formula}L− to denote all attacking links of L in Ξ. For an {a mathematical formula}s∈S we define {a mathematical formula}attΞ(s)={x|(x,s)∈L−} and {a mathematical formula}suppΞ(s)={x|(x,s)∈L+}. In this paper we assume that {a mathematical formula}L+ and {a mathematical formula}L− are given with a BADF, that is, the link types are known.
+      </paragraph>
+      <paragraph label="Example 2.1">
+       (Adapted from [9, Example 6].) Consider a scenario where we want to decide whether we go for a swim. We do so if there is no rain, or it is hot. It is warm, but not hot, and there are clouds indicating that it might rain. However the reliable weather forecast predicts wind that will blow away the clouds. Using the vocabulary {a mathematical formula}S={clouds,wind,rain,hot,swim}, we devise the bipolar ADF {a mathematical formula}Dswim=(S,L+∪L−,C) shown below to model this deliberation process. Here, statements are depicted as nodes, edges represent links and acceptance conditions are written as propositional formulas next to the statements.{a mathematical formula} Supporting and attacking links are designated using the labels + and −; this is however only for illustration as the polarity of the links can be read off the acceptance formulas. The statement rain, for example, is supported by the statement clouds and attacked by the statement wind. According to {a mathematical formula}φrain, the attack from wind is stronger than the support from clouds. That is, as soon as we accept wind, we must reject rain. On the other hand, swim is attacked by rain and supported by hot. Here, by {a mathematical formula}φswim, the support from hot is stronger than the attack from rain; or put another way, the missing attack from rain is stronger than the missing support from hot. This effectively means that rejecting rain leads to accepting swim.
+      </paragraph>
+      <paragraph label="Definition 2.2">
+       The semantics of ADFs can be defined using approximating operators. For two-valued semantics of ADFs we are interested in sets of statements, that is, we work in the complete lattice {a mathematical formula}(A,⊑)=(2S,⊆). To approximate elements of this lattice, we use consistent pairs of sets of statements and the associated consistent CPO {a mathematical formula}(Ac,≤i) – the consistent CPO over S-subset pairs. Such a pair {a mathematical formula}(X,Y)∈Ac can be regarded as a three-valued interpretation where all elements in X are true, those in {a mathematical formula}Y∖X are unknown and those in {a mathematical formula}S∖Y are false. (This allows us to use “pair” and “interpretation” synonymously from now on.) The following definition specifies one particular way to revise a given three-valued interpretation. (See [40, Definition 3.1].) Let Ξ be an ADF. Define the operator {a mathematical formula}GΞ:2S×2S→2S×2S by{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In a nutshell, statement s is included in the revised lower bound iff the input pair provides sufficient reason to do so, given acceptance condition {a mathematical formula}Cs. To obtain some more intuition, it is instructive to look at the operator's behavior on consistent and inconsistent input pairs separately. Let Ξ be an ADF over statements S and let {a mathematical formula}X⊆Y⊆S. Then {a mathematical formula}(X,Y) is a consistent pair, and by definition, for {a mathematical formula}s∈S, we have {a mathematical formula}s∈GΞ′(X,Y) if and only if there is some {a mathematical formula}B⊆par(s) with {a mathematical formula}Cs(B)=t (that is, {a mathematical formula}B⊨φs), {a mathematical formula}B⊆X and {a mathematical formula}(par(s)∖B)∩Y=∅. We can think of this B as a two-valued interpretation of the parents of s. The last condition entails that s has no parents in {a mathematical formula}Y∖B. Since {a mathematical formula}B⊆X this furthermore entails that s has no parents in {a mathematical formula}Y∖X, that is, no parents that are undecided according to the pair {a mathematical formula}(X,Y). But this means that the formula {a mathematical formula}φs(X,Y) is a Boolean expression consisting only of truth constants and connectives. By {a mathematical formula}B⊨φs, the expression {a mathematical formula}φs(X,Y) evaluates to true. For the converse pair {a mathematical formula}(Y,X), which is not necessarily consistent, but still needed to compute a new upper bound, the reasoning is slightly more involved. Now we have {a mathematical formula}s∈GΞ′(Y,X) if and only if there is some {a mathematical formula}B⊆par(s) with {a mathematical formula}B⊨φs, {a mathematical formula}B⊆Y and {a mathematical formula}(par(s)∖B)∩X=∅. Again thinking of B as a two-valued interpretation of {a mathematical formula}par(s), the last condition entails that B must contain the true parents of s, that is, {a mathematical formula}par(s)∩X⊆B. Condition {a mathematical formula}B⊆Y means that any statement that is false in {a mathematical formula}(X,Y) must be false in B. Altogether {a mathematical formula}s∈GΞ′(Y,X) if and only if there is a two-valued interpretation B of {a mathematical formula}par(s) that evaluates {a mathematical formula}φs to true and coincides with {a mathematical formula}(X,Y) whenever {a mathematical formula}(X,Y) assigns t or f.
+      </paragraph>
+      <paragraph>
+       Although the operator is defined for all pairs (including inconsistent ones), its restriction to consistent pairs is well-defined since it maps consistent pairs to consistent pairs. This operator defines the approximate family of ADF semantics according to Table 1. Several of the abstract, operator-based semantics defined in Table 1 are quite recent, and inspired by semantics from logic programming and abstract argumentation [40].{sup:5}
+      </paragraph>
+      <paragraph>
+       Based on the three-valued operator {a mathematical formula}GΞ, a two-valued one-step consequence operator for ADFs can be defined by {a mathematical formula}GΞ(X)=GΞ′(X,X). Alternatively, for {a mathematical formula}Ξ=(S,L,C) we could specify{a mathematical formula} The general result of Denecker et al. [20] (Theorem 5.6) then immediately defines the ultimate approximation of {a mathematical formula}GΞ as the operator {a mathematical formula}UΞ given by {a mathematical formula}UΞ(X,Y)=(UΞ′(X,Y),UΞ″(X,Y)) with{a mathematical formula}{a mathematical formula} Incidentally, Brewka and Woltran [9] already defined this operator, which was later used to define the ultimate family of ADF semantics according to Table 1[11].{sup:6} In this paper, we will refer to the two families of three-valued semantics as “approximate σ” and “ultimate σ” for σ among conflict-free, naive, admissible, grounded, complete, preferred and stable. For two-valued supported models (or simply models), approximate and ultimate semantics coincide (since the two approximating operators {a mathematical formula}GΞ and {a mathematical formula}UΞ approximate the same two-valued operator {a mathematical formula}GΞ).
+      </paragraph>
+      <paragraph label="Proposition 2.2">
+       Our definition of conflict-free pairs differs from the one given in [40], but is still a valid generalization of the notion of conflict-free sets for AFs [24].{sup:7} We chose this definition because it is symmetric and easier to work with. An AF {a mathematical formula}F=(A,R) is a pair with A a set and {a mathematical formula}R⊆A×A a binary relation on A. A set {a mathematical formula}S⊆A is conflict-free in F if for all {a mathematical formula}a,b∈S it holds that {a mathematical formula}(a,b)∉R. The associated ADF of F is given by {a mathematical formula}Ξ=(A,R,C) with {a mathematical formula}φa=⋀(b,a)∈R¬b for {a mathematical formula}a∈A. Let{a mathematical formula}F=(A,R)be an AF, Ξ be its associated ADF and{a mathematical formula}O∈{GΞ,UΞ}.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each conflict-free set{a mathematical formula}X⊆A, there exists{a mathematical formula}Y⊆Asuch that{a mathematical formula}(X,Y)is a conflict-free pair of{a mathematical formula}O.
+       </list-item>
+       <list-item label="2.">
+        For each conflict-free pair{a mathematical formula}(X,Y), its lower bound X is a conflict-free set.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We make use of the fact that for any {a mathematical formula}P,Q⊆A, we have {a mathematical formula}O(P,Q)=(UF(Q),UF(P)), which follows from [40, Proposition 4.1], where {a mathematical formula}UF(S)={a∈A|S does not attack a} for {a mathematical formula}S⊆A.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Let {a mathematical formula}X⊆A be conflict-free. Define {a mathematical formula}Y=UF(X). Since X is conflict-free,{a mathematical formula} Furthermore {a mathematical formula}UF is ⊆-antimonotone, whence {a mathematical formula}X⊆UF(X) implies{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        Let {a mathematical formula}(X,Y) be a conflict-free pair. Then {a mathematical formula}X⊆O″(X,Y)=UF(X), whence X is a conflict-free set.  □
+       </list-item>
+      </list>
+      <paragraph label="Lemma 2.3">
+       Although Table 1 defines two-valued stable models also for the ultimate operator, Brewka et al. [11] have their own tailor-made definition of two-valued stable models. There, a two-valued model {a mathematical formula}(M,M) is a stable model of an ADF {a mathematical formula}Ξ=(S,L,C) iff M is the lower bound of the ultimate grounded semantics of the reduced ADF {a mathematical formula}ΞM=(M,L∩(M×M),CM) where the reduced acceptance formula for an {a mathematical formula}s∈M is given by the partial evaluation {a mathematical formula}φs(∅,M).{sup:8} It is not hard to prove that the definition of two-valued stable models given by Brewka et al. [11] coincides with Denecker et al.'s ultimate two-valued stable models. We start with an easy observation. Let φ be a propositional formula over vocabulary S, and let A, B, C, D be sets with{a mathematical formula}A⊆B⊆Sand{a mathematical formula}C⊆D⊆S.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For the actual result (in particular for its proof), it is helpful to recall that the stable models of Brewka et al. [11] are models by definition.
+      </paragraph>
+      <paragraph label="Proposition 2.4">
+       The stable model semantics as defined by Brewka et al.[11]coincides with the ultimate two-valued stable model semantics of Denecker et al.[20].
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}Ξ=(S,L,C) be an ADF and {a mathematical formula}M⊆S be a model of Ξ. We show that {a mathematical formula}(M,M) is a Brewka et al.-stable-model of Ξ if and only if {a mathematical formula}(M,M) is an ultimate two-valued stable model of Ξ. First, it is easy to see that M is the lower bound of the ultimate grounded semantics of the reduced ADF {a mathematical formula}ΞM=(M,L∩(M×M),CM) if and only if {a mathematical formula}(M,M) is the ultimate grounded semantics of {a mathematical formula}ΞM. Furthermore, M is a model of Ξ, whence it is a model of {a mathematical formula}ΞM. Thus all acceptance formulas in {a mathematical formula}ΞM are satisfiable and for any {a mathematical formula}X⊆M we get {a mathematical formula}UΞM″(X,M)=M. That is, during computation of the least fixpoint of {a mathematical formula}UΞM, the upper bound remains constant at M. Now for any {a mathematical formula}X⊆M and {a mathematical formula}s∈S, we have{a mathematical formula}{a mathematical formula}{a mathematical formula} So in the complete lattice {a mathematical formula}(2M,⊆), the operators {a mathematical formula}UΞ′(⋅,M) and {a mathematical formula}UΞM′(⋅,M) coincide. Therefore, their least fixpoints coincide.  □
+      </paragraph>
+      <paragraph>
+       We close this section by illustrating some of the ultimate semantics using the example seen earlier. In the introduction, we already hinted at the fact that deciding whether a given statement s is contained in the lower or upper bound of the ultimate revision of a given pair {a mathematical formula}(X,Y) can be regarded as checking whether the partially evaluated acceptance formula {a mathematical formula}φs(X,Y) is irrefutable (lower bound) or satisfiable (upper bound), respectively. For illustration purposes, we now make use of this fact here.
+      </paragraph>
+      <paragraph label="Example 2.1">
+       ContinuedThe deliberation in {a mathematical formula}Dswim quite clearly yields that we should go for a swim, since the ultimate grounded pair is given by{a mathematical formula} corresponding to the two-valued interpretation [11]{a mathematical formula} In words, there are clouds and it is not hot, there will be wind and no rain, and we should go for a swim. Since the ultimate grounded interpretation is already two-valued (an exact pair), this interpretation is also the unique two-valued model of the ADF {a mathematical formula}Dswim as well as its single ultimate complete and ultimate preferred interpretation. There are 16 ultimate admissible and 50 ultimate conflict-free interpretations, but it is more interesting to look at the ultimate naive interpretations:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The first pair is the single two-valued model. In the second pair, intuitively, it rains, but we go for a swim nonetheless (it is undecided whether it is hot and so there is a slight chance that our swim is justified by it being hot). In the third pair there is rain, there might be wind, it is not hot, and we do not swim; in the fourth pair, it is hot and unclear whether there is rain, but we do not go for a swim. In order to illustrate more technically why the pair {a mathematical formula}n¯3 (for example) is naive, that is, {a mathematical formula}≤i-maximal conflict-free, we can have a look at the partially evaluated acceptance conditions:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Setting clouds and rain to true is justified since their respective partially evaluated acceptance formulas are satisfiable. Symmetrically, setting hot and swim to false is justified since their partially evaluated acceptance formulas are refutable. Setting wind to undecided need not be justified at all. This shows that {a mathematical formula}n¯3 is conflict-free. To show that it is also naive, we have to show that all pairs {a mathematical formula}n¯′ with {a mathematical formula}n¯3&lt;in¯′ are not conflict-free. The only two candidates are{a mathematical formula}{a mathematical formula} For {a mathematical formula}n¯′, we get {a mathematical formula}φrainn¯′=t∧¬t≡f, thus in {a mathematical formula}n¯′ setting rain to true is not justified, since its partially evaluated acceptance formula is unsatisfiable. For {a mathematical formula}n¯″, setting wind to false is unjustified in general since its acceptance formula is a tautology.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Complexity theory
+      </section-title>
+      <paragraph>
+       We assume familiarity with the complexity classes {a mathematical formula}P, {a mathematical formula}NP and {a mathematical formula}coNP, as well as with polynomial reductions and hardness and completeness for these classes (see [37] for a comprehensive introduction to complexity theory). We also make use of the polynomial hierarchy, that can be defined (using oracle Turing machines) as follows: {a mathematical formula}Σ0P=Π0P=Δ0P=P, {a mathematical formula}Σi+1P=NPΣiP, {a mathematical formula}Πi+1P=coNPΣiP, {a mathematical formula}Δi+1P=PΣiP for {a mathematical formula}i≥0. For complete problems of the polynomial hierarchy we use here mainly satisfiability of quantified Boolean formulas (QBFs). The problem {a mathematical formula}QBFi,Q-TRUTH denotes the problem of deciding satisfiability of a given closed QBF in prenex form, starting with quantifier {a mathematical formula}Q∈{∃,∀} and i quantifier alternations. For {a mathematical formula}i≥0 it holds that {a mathematical formula}QBFi,∃-TRUTH is {a mathematical formula}ΣiP-complete and {a mathematical formula}QBFi,∀-TRUTH is {a mathematical formula}ΠiP-complete.
+      </paragraph>
+      <paragraph>
+       As a somewhat non-standard polynomial hierarchy complexity class, we use {a mathematical formula}DiP, a generalization of the complexity class {a mathematical formula}DP to the polynomial hierarchy. A language is in {a mathematical formula}DP iff it is the intersection of a language in {a mathematical formula}NP and a language in {a mathematical formula}coNP. Generally, a language is in {a mathematical formula}DiP iff it is the intersection of a language in {a mathematical formula}ΣiP and a language in {a mathematical formula}ΠiP. The canonical problem of {a mathematical formula}DP=D1P is SAT-UNSAT, the problem to decide for a given pair {a mathematical formula}(ψ1,ψ2) of propositional formulas whether {a mathematical formula}ψ1 is satisfiable and {a mathematical formula}ψ2 is unsatisfiable. Obviously, by definition {a mathematical formula}ΣiP,ΠiP⊆DiP⊆Δi+1P for all {a mathematical formula}i≥0.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Preparatory considerations
+     </section-title>
+     <paragraph>
+      This section sets the stage and provides several technical preparations that will simplify our complexity analysis that follows afterwards. We first introduce some notation to make formally precise what decision problems we will analyze (Section 3.1). We then briefly recapitulate the currently known complexity results for ADFs in Section 3.2. Next, in Section 3.3 we study the relationship between the approximate and ultimate operator, where it will turn out that the operators are quite similar, yet subtly different. Section 3.4 provides two quite general existence results. They guarantee that approximating operators on CPOs always possess preferred and naive pairs, which will have an impact on the problem of deciding the existence of non-trivial pairs for these semantics. Since several of our hardness results use similar reduction techniques, we introduce some of them in Section 3.5 and prove properties that we will later use in hardness proofs. In Section 3.6 we analyze the complexity of computing the two operators we consider in this paper. Since the semantics that we study are defined within the framework of approximation fixpoint theory, knowing the complexity of operator computation is a valuable guide for investigating the operator-based semantics. Finally, in Section 3.7 we give generic results on upper bounds for operator-based semantics that only make use of upper bounds for the respective operators.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Notation and decision problems
+      </section-title>
+      <paragraph>
+       For a set S, let
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(Ac,≤i) be the consistent CPO of S-subset pairs,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}O an approximating operator on {a mathematical formula}(Ac,≤i).
+       </list-item>
+      </list>
+      <paragraph>
+       In the following we tacitly assume that from a given approximation operator {a mathematical formula}O one can infer the context CPO and the underlying set S, unless noted otherwise.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}A be the set of all approximation operators, such that each is defined on some consistent CPO of S-subset pairs for some set S. We define decision problems with two parameters. The first is a set of approximation operators {a mathematical formula}I⊆A. In addition to {a mathematical formula}A we are interested in this paper in the following sets of operators.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}G={GΞ|Ξ is an ADF},
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}U={UΞ|Ξ is an ADF}
+       </list-item>
+      </list>
+      <paragraph>
+       That is, the sets contain approximate, respectively ultimate operators for each possible ADF. When restricted to bipolar ADFs we denote the corresponding sets with {a mathematical formula}BG={GΞ|Ξ is a BADF} and {a mathematical formula}BU={UΞ|Ξ is a BADF}. Clearly we have {a mathematical formula}G,U⊆A and thus also {a mathematical formula}BG,BU⊆A. The semantics is the second parameter of our decision problems. Let {a mathematical formula}σ∈{cfi, nai, adm, com, grd, pre, 2su, 2st} be a semantics among conflict-free, naive, admissible, complete, grounded, preferred, two-valued supported and two-valued stable semantics, respectively. We first consider the verification problem, which asks if for a given operator a given pair is a σ-pair, respectively a σ-model.
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}VerσI
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I and a pair {a mathematical formula}(X,Y)∈Ac.
+       </list-item>
+       <list-item>
+        Is {a mathematical formula}(X,Y) a σ-model/pair of {a mathematical formula}O?
+       </list-item>
+      </list>
+      <paragraph>
+       For instance {a mathematical formula}VeradmG asks whether for a given approximate operator {a mathematical formula}GΞ and {a mathematical formula}(X,Y)∈Ac, does it hold that {a mathematical formula}(X,Y)≤iGΞ(X,Y)? The next decision problem asks whether there exists a non-trivial σ-pair/model, that is, one that is different from {a mathematical formula}(∅,S).
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}ExistsσI
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I.
+       </list-item>
+       <list-item>
+        Does there exist a σ-model/pair {a mathematical formula}(X,Y) of {a mathematical formula}O such that {a mathematical formula}(X,Y)≠(∅,S)?
+       </list-item>
+      </list>
+      <paragraph>
+       The remaining two decision problems define query-based reasoning. The credulous acceptance problem asks whether an element {a mathematical formula}s∈S is in X of at least one σ-pair/model {a mathematical formula}(X,Y) of a given operator, while skeptical acceptance asks if this is the case for all σ-pairs/models.
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}CredσI
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I and {a mathematical formula}s∈S.
+       </list-item>
+       <list-item>
+        Does there exist a σ-model/pair {a mathematical formula}(X,Y) of {a mathematical formula}O such that {a mathematical formula}s∈X?
+       </list-item>
+      </list>
+      <list>
+       <list-item>
+        {a mathematical formula}SkeptσI
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I and {a mathematical formula}s∈S.
+       </list-item>
+       <list-item>
+        Does it hold that for all σ-models/pairs {a mathematical formula}(X,Y) of {a mathematical formula}O we have {a mathematical formula}s∈X?
+       </list-item>
+      </list>
+      <paragraph>
+       We now introduce auxiliary decision problems, which aid us in showing the computational complexity of revising the lower and upper bounds for a given approximation operator and pair. The first asks whether an element is in the revised lower bound (respectively upper bound) for a given pair.
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}ElemI′ (resp. {a mathematical formula}ElemI″)
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I, a pair {a mathematical formula}(X,Y)∈Ac and {a mathematical formula}s∈S.
+       </list-item>
+       <list-item>
+        Does it hold that {a mathematical formula}s∈O′(X,Y)? (resp. {a mathematical formula}s∈O″(X,Y))
+       </list-item>
+      </list>
+      <paragraph>
+       Let {a mathematical formula}∘∈{⊆,⊇}. The next decision problem considers all combinations of asking whether for a given pair and approximation operator the given set is a subset/superset of the revised lower/upper bound.
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}RevBound∘I′
+       </list-item>
+       <list-item>
+        An approximation operator {a mathematical formula}O∈I, a pair {a mathematical formula}(X,Y)∈Ac and a set {a mathematical formula}B⊆S.
+       </list-item>
+       <list-item>
+        if {a mathematical formula}∘=⊆: Is {a mathematical formula}B⊆O′(X,Y)?
+       </list-item>
+      </list>
+      <list>
+       <list-item>
+        if {a mathematical formula}∘=⊇: Is {a mathematical formula}O′(X,Y)⊆B?
+       </list-item>
+      </list>
+      <paragraph>
+       Similarly, {a mathematical formula}RevBound∘I″ denotes the variant for the revision of the upper bound ({a mathematical formula}O″). For instance {a mathematical formula}RevBound⊇I″ denotes the problem of checking whether for an approximation operator {a mathematical formula}O∈I, {a mathematical formula}B⊆S and a given pair {a mathematical formula}(X,Y)∈Ac we have {a mathematical formula}O″(X,Y)⊆B, that is, if the set is a superset of the revised upper bound (indicated by {a mathematical formula}.″).
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Existing results
+      </section-title>
+      <paragraph>
+       We briefly survey – to the best of our knowledge – all existing complexity results for abstract dialectical frameworks. For general ADFs and the ultimate family of semantics, Brewka et al. [11] have shown the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Ver2suU is in {a mathematical formula}P, {a mathematical formula}Exists2suU is {a mathematical formula}NP-complete,   (Proposition 5)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}VeradmU is {a mathematical formula}coNP-complete,   (Proposition 10)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}VergrdU and {a mathematical formula}VercomU are {a mathematical formula}DP-complete,   (Theorem 6, Cor. 7)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Ver2stU is in {a mathematical formula}DP,   (Proposition 8)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Exists2stU is {a mathematical formula}Σ2P-complete.   (Theorem 9)
+       </list-item>
+      </list>
+      <paragraph>
+       For bipolar ADFs, Brewka and Woltran [9] showed that {a mathematical formula}VergrdBU is in {a mathematical formula}P (Proposition 15). So particularly for BADFs, this paper will greatly illuminate the complexity landscape.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Relationship between the operators
+      </section-title>
+      <paragraph label="Lemma 3.1">
+       Since {a mathematical formula}UΞ is the ultimate approximation of {a mathematical formula}GΞ for an ADF Ξ it is clear that for any {a mathematical formula}X⊆Y⊆S we have {a mathematical formula}GΞ(X,Y)≤iUΞ(X,Y). In other words, the ultimate revision operator produces new bounds that are at least as tight as those of the approximate operator. More explicitly, the ultimate new lower bound always contains the approximate new lower bound: {a mathematical formula}GΞ′(X,Y)⊆UΞ′(X,Y); conversely, the ultimate new upper bound is contained in the approximate new upper bound: {a mathematical formula}UΞ″(X,Y)⊆GΞ″(X,Y). Somewhat surprisingly, it turns out that the revision operators for the upper bound coincide. Let{a mathematical formula}Ξ=(S,L,C)be an ADF and{a mathematical formula}X⊆Y⊆S.{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}s∈S. We will use that for all {a mathematical formula}B,X,P⊆S, we find {a mathematical formula}(P∖B)∩X=∅ iff {a mathematical formula}P∩X⊆B. Now{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}  □
+      </paragraph>
+      <paragraph>
+       The operators for computing a new lower bound are demonstrably different, since we can find Ξ and {a mathematical formula}(X,Y) with {a mathematical formula}UΞ′(X,Y)⊈GΞ′(X,Y), as the following ADF shows.
+      </paragraph>
+      <paragraph label="Example 3.1">
+       Consider the ADF {a mathematical formula}D=({a},{(a,a)},{φa}) with one self-dependent statement a that has acceptance formula {a mathematical formula}φa=a∨¬a. In Fig. 1, we show the relevant CPO and the behavior of approximate and ultimate operators: we see that {a mathematical formula}GD(∅,{a})&lt;iUD(∅,{a}), which shows that in some cases the ultimate operator is strictly more precise.
+      </paragraph>
+      <paragraph>
+       So in a sense the approximate operator cannot see beyond the case distinction {a mathematical formula}a∨¬a. As we will see shortly, this difference really amounts to the capability of tautology checking.
+      </paragraph>
+      <paragraph label="Example 3.2">
+       ADF {a mathematical formula}E=({a,b},{(b,a),(b,b)},{φa,φb}) has acceptance formulas {a mathematical formula}φa=b∨¬b and {a mathematical formula}φb=¬b. So b is self-attacking and the link from b to a is redundant. In Fig. 1, we show the relevant CPO and the behavior of the operators {a mathematical formula}UE and {a mathematical formula}GE on this CPO.
+      </paragraph>
+      <paragraph>
+       The examples show that the approximate and ultimate families of semantics really are different, save for one straightforward inclusion relation in case of admissible.
+      </paragraph>
+      <paragraph label="Corollary 3.2">
+       For any ADF Ξ it holds that an admissible pair of{a mathematical formula}GΞis an admissible pair of{a mathematical formula}UΞ. Let{a mathematical formula}σ∈{com, grd, pre}. There exist ADFs{a mathematical formula}Ξ1,Ξ2,Ξ3such that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        there is an admissible pair of{a mathematical formula}UΞ1that is not an admissible pair of{a mathematical formula}GΞ1;
+       </list-item>
+       <list-item label="2.">
+        there is a σ-pair of{a mathematical formula}UΞ2that is not a σ-pair of{a mathematical formula}GΞ2; and
+       </list-item>
+       <list-item label="3.">
+        there is a σ-pair of{a mathematical formula}GΞ3that is not a σ-pair of{a mathematical formula}UΞ3
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       To show that an approximate admissible pair is always an ultimate admissible pair it suffices to consider the fact that {a mathematical formula}GΞ≤iUΞ. For the remaining claims, we use {a mathematical formula}Ξ1=Ξ2=Ξ3=E from Example 3.2 as a witness:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        In Example 3.2, {a mathematical formula}({a},{a,b}) is ultimate admissible but not approximate admissible.
+       </list-item>
+       <list-item label="2 &amp; 3.">
+        In Example 3.2, we have: (1) approximate grounded, preferred and complete semantics coincide; (2) ultimate grounded, preferred and complete semantics coincide; (3) approximate grounded and ultimate grounded semantics are different with no subset relation either way.  □
+       </list-item>
+      </list>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Existence results
+      </section-title>
+      <paragraph>
+       We next present two general theorems that guarantee the existence of certain pairs for approximating operators on CPOs. By CPOs here we do not only refer to S-subset CPOs {a mathematical formula}(Ac,≤i), but in fact to arbitrary CPOs {a mathematical formula}(Lc,≤i) containing consistent pairs of elements of a complete lattice {a mathematical formula}(L,⊑). Both results make use of the axiom of choice – the second one directly, and the first one in the form of Zorn's lemma. The first result says that for each admissible pair there is a preferred pair containing at least as much information. This significantly generalizes a result by Dung ([24, Theorem 11]) to general operators.
+      </paragraph>
+      <paragraph label="Theorem 3.3">
+       Let{a mathematical formula}(L,⊑)be a complete lattice and{a mathematical formula}Oan approximating operator on the CPO{a mathematical formula}(Lc,≤i). For each admissible pair{a mathematical formula}a¯∈Lc, there exists a preferred pair{a mathematical formula}p¯∈Lcwith{a mathematical formula}a¯≤ip¯.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}a¯∈Lc with {a mathematical formula}a¯≤iO(a¯). Define the set of all {a mathematical formula}O-admissible pairs that contain at least as much information as {a mathematical formula}a¯,{a mathematical formula} We show that {a mathematical formula}(C,≤i) is a CPO. Clearly {a mathematical formula}a¯∈C is the least element of the poset {a mathematical formula}(C,≤i). Now let {a mathematical formula}D⊆C be directed and {a mathematical formula}e¯=⨆LcD be its least upper bound in {a mathematical formula}Lc. We show {a mathematical formula}e¯∈C, that is, {a mathematical formula}a¯≤ie¯ and {a mathematical formula}e¯≤iO(e¯). Since D is directed, it is non-empty, so there is some {a mathematical formula}z¯∈D, whence {a mathematical formula}a¯≤iz¯≤ie¯. Now for each {a mathematical formula}z¯∈D, we have {a mathematical formula}z¯≤ie¯ since {a mathematical formula}e¯ is an upper bound of D. Since {a mathematical formula}O is {a mathematical formula}≤i-monotone, we have {a mathematical formula}O(z¯)≤iO(e¯). Since {a mathematical formula}z¯∈D⊆C, by definition {a mathematical formula}z¯≤iO(z¯). In combination, {a mathematical formula}z¯≤iO(z¯)≤iO(e¯). Thus {a mathematical formula}O(e¯) is an upper bound of D. Since {a mathematical formula}e¯ is the least upper bound of D, we have {a mathematical formula}e¯≤iO(e¯).Thus {a mathematical formula}(C,≤i) is a CPO and therefore each ascending chain has an upper bound in C. By Zorn's lemma, C has a {a mathematical formula}≤i-maximal element {a mathematical formula}p¯∈C, which by {a mathematical formula}a¯≤ip¯ is the desired preferred pair.  □
+      </paragraph>
+      <paragraph>
+       Theorem 3.3 directly leads to the next result, which considerably simplifies the complexity analysis of deciding the existence of non-trivial pairs for admissibility-based semantics.
+      </paragraph>
+      <paragraph label="Lemma 3.4">
+       Let{a mathematical formula}(L,⊑)be a complete lattice and{a mathematical formula}Oan approximating operator on the CPO{a mathematical formula}(Lc,≤i). The following are equivalent:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Ohas a non-trivial admissible pair.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Ohas a non-trivial preferred pair.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Ohas a non-trivial complete pair.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let {a mathematical formula}(⊥L,⊤L)&lt;i(x,y)≤iO(x,y). By Theorem 3.3, there is a preferred pair {a mathematical formula}(p,q)∈Lc for which {a mathematical formula}(⊥L,⊤L)&lt;i(x,y)≤i(p,q).
+        </list-item>
+        <list-item>
+         By [40, Theorem 3.10], every preferred pair is complete.
+        </list-item>
+        <list-item>
+         Any complete pair is admissible (Table 1).  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       This directly shows the equivalence of the respective decision problems, that is, it holds that {a mathematical formula}ExistsadmA=ExistspreA=ExistscomA. Recall that {a mathematical formula}A contains all approximation operators defined on some consistent CPO of S-subset pairs for some set S. Regarding decision problems for querying, skeptical reasoning with respect to admissibility is trivial, that is, {a mathematical formula}(∅,S) is always an admissible pair in any ADF. Furthermore, credulous reasoning with respect to admissible, complete and preferred semantics coincides.
+      </paragraph>
+      <paragraph label="Lemma 3.5">
+       Let{a mathematical formula}I∈{G,U}. It holds that{a mathematical formula}CredadmI=CredcomI=CredpreI.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Ξ be an ADF, {a mathematical formula}O∈{GΞ,UΞ} and {a mathematical formula}s∈S. Assume {a mathematical formula}(X,Y) with {a mathematical formula}s∈X is admissible w.r.t. {a mathematical formula}O, then there exists a {a mathematical formula}(X′,Y′) with {a mathematical formula}(X,Y)≤i(X′,Y′) which is preferred with respect to {a mathematical formula}O and where {a mathematical formula}s∈X′ by Theorem 3.3. Since any preferred pair is also complete and any complete pair is also admissible the claim follows.  □
+      </paragraph>
+      <paragraph>
+       For semantics based on conflict-freeness, an existence result similar to Theorem 3.3 holds. The proof is inspired by the proof of [7, Theorem 1] (see also [17, Theorem 8.23], in particular for the concept of “roofs”), and sufficiently complicated. The major part of the proof is concerned with showing that there is a chain of conflict-free elements that starts with the given conflict-free element, and that this chain is itself a CPO. Again, the result is not restricted to subset-CPOs.
+      </paragraph>
+      <paragraph label="Theorem 3.6">
+       Let{a mathematical formula}(L,⊑)be a complete lattice and{a mathematical formula}Oan approximating operator on the CPO{a mathematical formula}(Lc,≤i). For each conflict-free pair{a mathematical formula}c¯∈Lc, there exists a naive pair{a mathematical formula}n¯∈Lcwith{a mathematical formula}c¯≤in¯.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}c¯∈Lc be conflict-free. Define the set{a mathematical formula} Clearly {a mathematical formula}(D,≤i) is a CPO with least element {a mathematical formula}c¯. (Its least upper bound is given by {a mathematical formula}⊔D=⊔Lc.) For any conflict-free pair {a mathematical formula}a¯∈D that is not naive, by definition there exists a conflict-free pair {a mathematical formula}a¯′∈D such that {a mathematical formula}a¯&lt;ia¯′. Thus by the axiom of choice, there exists a function {a mathematical formula}f:D→D with{a mathematical formula} Clearly f is increasing, that is, for all {a mathematical formula}a¯∈D we have {a mathematical formula}a¯≤if(a¯). Furthermore, {a mathematical formula}f(a¯) is conflict-free iff {a mathematical formula}a¯ is conflict-free. Thus a conflict-free pair {a mathematical formula}a¯ is a fixpoint of f iff {a mathematical formula}a¯ is naive. We proceed to show that such a fixpoint exists.We look at the smallest f-closed sub-CPO of {a mathematical formula}(D,≤i), that is, the smallest set {a mathematical formula}F⊆D such that {a mathematical formula}f(F)⊆F and {a mathematical formula}(F,≤i) is a CPO. Clearly its least element is {a mathematical formula}⊥F=c¯, the least element of D.We call an element {a mathematical formula}u¯∈F a roof iff for all {a mathematical formula}v¯∈F with {a mathematical formula}v¯&lt;iu¯ we have {a mathematical formula}f(v¯)≤iu¯. For each pair {a mathematical formula}u¯∈F, we show that if {a mathematical formula}u¯ is a roof, then the set{a mathematical formula} is an f-closed sub-CPO of {a mathematical formula}(F,≤i). So let {a mathematical formula}u¯∈F be a roof and consider {a mathematical formula}Zu¯. We have to show that {a mathematical formula}f(Zu¯)⊆Zu¯ and {a mathematical formula}(Zu¯,≤i) is a CPO.
+       <list>
+        Let {a mathematical formula}v¯∈Zu¯. Then {a mathematical formula}v¯≤iu¯ or {a mathematical formula}f(u¯)≤iv¯. We have to show {a mathematical formula}f(v¯)∈Zu¯, that is, {a mathematical formula}f(v¯)≤iu¯ or {a mathematical formula}f(u¯)≤if(v¯). If {a mathematical formula}f(u¯)≤iv¯, then since f is increasing we get {a mathematical formula}f(u¯)≤iv¯≤if(v¯). If {a mathematical formula}v¯&lt;iu¯, then since {a mathematical formula}u¯ is a roof we get {a mathematical formula}f(v¯)≤iu¯. If {a mathematical formula}v¯=u¯ then {a mathematical formula}f(u¯)≤if(v¯) is clear.{a mathematical formula}⊥F∈Zu¯ is the least element of the poset {a mathematical formula}(Zu¯,≤i). Let {a mathematical formula}E⊆Zu¯ be directed and {a mathematical formula}e¯=⨆FE be its least upper bound in {a mathematical formula}(F,≤i). We have to show {a mathematical formula}e¯∈Zu¯, that is, {a mathematical formula}e¯≤iu¯ or {a mathematical formula}f(u¯)≤ie¯. By assumption,{a mathematical formula} Define {a mathematical formula}El=E∩Zu¯l and {a mathematical formula}Er=E∩Zu¯r. Clearly {a mathematical formula}u¯ is an upper bound of {a mathematical formula}El and {a mathematical formula}f(u¯) is a lower bound of {a mathematical formula}Er; moreover {a mathematical formula}e¯ is an upper bound of {a mathematical formula}Er. Thus if {a mathematical formula}Er≠∅ then {a mathematical formula}f(u¯)≤ie¯ and we are done. Otherwise {a mathematical formula}Er=∅, then {a mathematical formula}E=El and {a mathematical formula}u¯ is an upper bound of E. Since {a mathematical formula}e¯ is the least upper bound of E, we get {a mathematical formula}e¯≤iu¯.Now we show that
+       </list>
+       <paragraph>
+        F is a chain, that is, for all {a mathematical formula}u¯,v¯∈F we find {a mathematical formula}u¯≤iv¯ or {a mathematical formula}v¯≤iu¯: since {a mathematical formula}u¯ is a roof, {a mathematical formula}v¯∈F=Zu¯ whence {a mathematical formula}v¯≤iu¯ or {a mathematical formula}u¯≤if(u¯)≤iv¯. Now F is a CPO and a chain, it therefore has a least upper bound in F, that is, a greatest element {a mathematical formula}⊤F=⨆FF. Since f is increasing, we have {a mathematical formula}⊤F≤if(⊤F); since F is f-closed, {a mathematical formula}f(⊤F)∈F; since {a mathematical formula}⊤F is the greatest element of F, we find {a mathematical formula}f(⊤F)≤i⊤F. Thus {a mathematical formula}⊤F is a fixpoint of f. It remains to show that {a mathematical formula}⊤F is conflict-free. In fact, all elements of F are conflict-free: assume there were a {a mathematical formula}v¯∈F that was not conflict-free, then {a mathematical formula}f−1(v¯)={v¯} by definition and {a mathematical formula}(F∖{v¯},≤i) would be an f-closed proper sub-CPO of F, contradiction. Consequently, {a mathematical formula}n¯=⊤F with {a mathematical formula}c¯=⊥F≤i⊤F=n¯ is our desired naive pair.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       From the last part of the proof it might seem that the desired naive pair is uniquely determined. This is however not the case – the application of the axiom of choice in the beginning gives us an arbitrary chain of conflict-free pairs, there might be many more in {a mathematical formula}(Lc,≤i).
+      </paragraph>
+      <paragraph>
+       As in the case of admissible-based semantics, the existence of non-trivial naive pairs is then equivalent to the existence of non-trivial conflict-free pairs.
+      </paragraph>
+      <paragraph label="Lemma 3.7">
+       Let{a mathematical formula}(L,⊑)be a complete lattice and{a mathematical formula}Oan approximating operator on{a mathematical formula}(Lc,≤i). The following are equivalent:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Ohas a non-trivial conflict-free pair.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Ohas a non-trivial naive pair.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let {a mathematical formula}(x,y) be non-trivial and conflict-free, that is, in particular let {a mathematical formula}(⊥L,⊤L)&lt;i(x,y). By Theorem 3.6, there exists a naive pair {a mathematical formula}(p,q)∈Lc with {a mathematical formula}(⊥L,⊤L)&lt;i(x,y)≤i(p,q).
+        </list-item>
+        <list-item>
+         Any naive pair is conflict-free (Table 1).  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Again, this directly shows the equivalence of the respective decision problems, that is, it holds that {a mathematical formula}ExistscfiA=ExistsnaiA.
+      </paragraph>
+      <paragraph>
+       We finally prove a useful technical result that gives some insight into the structure of sets of conflict-free interpretations, namely, that such sets are downward-closed with respect to the CPO ordering. Notably, again, this result holds for arbitrary approximating operators.
+      </paragraph>
+      <paragraph label="Lemma 3.8">
+       Let{a mathematical formula}(L,⊑)be a complete lattice and{a mathematical formula}Oan approximating operator on the CPO{a mathematical formula}(Lc,≤i). If{a mathematical formula}(x,y)∈Lcis conflict-free for{a mathematical formula}O, then so is any{a mathematical formula}(u,v)≤i(x,y).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}(x,y)∈Lc be conflict-free for {a mathematical formula}O and {a mathematical formula}(u,v)≤i(x,y). First observe that this means {a mathematical formula}x⊑O″(x,y), {a mathematical formula}O′(x,y)⊑y and {a mathematical formula}u⊑x⊑y⊑v. Now since {a mathematical formula}O is approximating, it is in particular {a mathematical formula}≤i-monotone and thus {a mathematical formula}O(u,v)≤iO(x,y), that is,{a mathematical formula} Combining all of the above, it follows that{a mathematical formula}{a mathematical formula} whence {a mathematical formula}(u,v) is conflict-free for {a mathematical formula}O.  □
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Reductions and encoding techniques
+      </section-title>
+      <paragraph>
+       In the sequel we apply several reductions for showing complexity-analytic results. In this section we present recurring reductions as well as certain “encoding schemes” that will prove useful. First we show that statements with self-conflicting acceptance conditions are always undecided in all conflict-free pairs.
+      </paragraph>
+      <paragraph label="Lemma 3.9">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF,{a mathematical formula}O∈{GΞ,UΞ},{a mathematical formula}s∈Sand{a mathematical formula}φs=¬s. For every conflict-free pair{a mathematical formula}(X,Y)of{a mathematical formula}Oit holds that{a mathematical formula}s∈(Y∖X).
+      </paragraph>
+      <paragraph label="Proof">
+       Assume {a mathematical formula}(X,Y) is conflict-free for {a mathematical formula}O. By definition of conflict-free pairs we have {a mathematical formula}X⊆O″(X,Y) and {a mathematical formula}O′(X,Y)⊆Y. We prove that s cannot be true or false in this pair. Suppose {a mathematical formula}s∈X. We now show that this implies {a mathematical formula}s∉O″(X,Y). We have {a mathematical formula}X⊭φs=¬s. It follows that for any Z with {a mathematical formula}X⊆Z⊆Y we have {a mathematical formula}Z⊭φs and thus {a mathematical formula}s∉O″(X,Y) (approximate and ultimate operators coincide on the revised upper bound; see also Lemma 3.1). This implies that {a mathematical formula}X⊈O″(X,Y) which is a contradiction to the definition of conflict-freeness.Suppose now that {a mathematical formula}s∈(S∖Y). We show that this implies {a mathematical formula}s∈GΞ′(X,Y) and thus also {a mathematical formula}s∈UΞ′(X,Y) (the ultimate operator is at least as precise). Using the definition of the approximate operator, we have {a mathematical formula}∅⊆X, {a mathematical formula}par(s)={s}, {a mathematical formula}({s}∖∅)∩Y=∅, and {a mathematical formula}∅⊨φs, and thus it follows that {a mathematical formula}s∈GΞ′(X,Y). This implies that {a mathematical formula}O′(X,Y)⊈Y which is again a contradiction to conflict-freeness.  □
+      </paragraph>
+      <paragraph>
+       Self-attacking conditions can also be used to express integrity constraints in the following sense. If {a mathematical formula}φs=¬s∧ϕ for some formula ϕ then s is never assigned the value true in a conflict-free pair. Depending on the formula ϕ there might be cases under which s is assigned false or undecided, but we can exclude one truth value. We formalize this notion in the following Lemma. Note that the first item in the Lemma refers to both operators, while the second item refers only to the ultimate operator.
+      </paragraph>
+      <paragraph label="Lemma 3.10">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF,{a mathematical formula}O∈{GΞ,UΞ},{a mathematical formula}s∈Sand ϕ a formula over S.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If{a mathematical formula}φs=¬s∧ϕthen there is no conflict-free pair{a mathematical formula}(X,Y)of{a mathematical formula}Osuch that{a mathematical formula}s∈X.
+       </list-item>
+       <list-item label="•">
+        If{a mathematical formula}φs=¬s∨ϕthen there is no conflict-free pair{a mathematical formula}(X,Y)of{a mathematical formula}UΞsuch that{a mathematical formula}s∈(S∖Y).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Suppose the contrary of the first item, i.e. that there is a conflict-free pair {a mathematical formula}(X,Y) of {a mathematical formula}O such that {a mathematical formula}s∈X. By definition it holds that {a mathematical formula}X⊆O″(X,Y). Since for all Z with {a mathematical formula}X⊆Z⊆Y it holds that {a mathematical formula}s∈Z, it follows that {a mathematical formula}Z⊭φs and thus {a mathematical formula}s∉UΞ″(X,Y) and, due to Lemma 3.1, also {a mathematical formula}s∉GΞ″(X,Y), which is a contradiction.Suppose the contrary of the second item, i.e. that there is a conflict-free pair {a mathematical formula}(X,Y) of {a mathematical formula}UΞ such that {a mathematical formula}s∈(S∖Y). Then for all Z with {a mathematical formula}X⊆Z⊆Y it holds that {a mathematical formula}Z⊨φs. This implies that {a mathematical formula}s∈UΞ′(X,Y) and therefore {a mathematical formula}UΞ′(X,Y)⊈Y, which is a contradiction.  □
+      </paragraph>
+      <paragraph>
+       The next technique is similar to the previous one and makes sure that if a certain statement s is undecided in an admissible pair we can infer that a particular set {a mathematical formula}{p,-p} of statements must also be undecided. In this way undecidedness is “propagated” if we cannot assign a different value than undecided to the statement.
+      </paragraph>
+      <paragraph label="Lemma 3.11">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF,{a mathematical formula}O∈{GΞ,UΞ},{a mathematical formula}s,p,-p∈Swith
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}φp=¬s∧¬-pand
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φ-p=¬s∧¬p.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Assume {a mathematical formula}(X,Y) with {a mathematical formula}s∈(Y∖X) is admissible for {a mathematical formula}O. We begin with the case for {a mathematical formula}O=UΞ. It holds that {a mathematical formula}X⊆X∪{s}⊆Y, {a mathematical formula}X∪{s}⊭φp, and {a mathematical formula}X∪{s}⊭φ-p. Thus {a mathematical formula}p,-p∉UΞ′(X,Y). Since {a mathematical formula}X⊆UΞ′(X,Y) we can infer that {a mathematical formula}p,-p∉X.Suppose {a mathematical formula}p∈(S∖Y). By definition of admissibility we have {a mathematical formula}p∉UΞ″(X,Y). Then for all Z with {a mathematical formula}X⊆Z⊆Y we have {a mathematical formula}Z⊭φp. It holds that {a mathematical formula}Z⊭φp iff {a mathematical formula}s∈Z or {a mathematical formula}-p∈Z. Consider the case {a mathematical formula}Z=X. Since {a mathematical formula}s∉X (by assumption), for {a mathematical formula}X⊭φp to hold it must be the case that {a mathematical formula}-p∈X. This is a contradiction, as shown above ({a mathematical formula}-p∉X). Therefore {a mathematical formula}p∉(S∖Y) and it follows that {a mathematical formula}p∈(Y∖X). The proof that also {a mathematical formula}-p∈(Y∖X) holds is analogous.For the approximate operator just observe that if {a mathematical formula}p,-p∉UΞ′(X,Y), then this implies that {a mathematical formula}p,-p∉GΞ′(X,Y), since {a mathematical formula}GΞ≤iUΞ (the ultimate operator is more precise). The remaining proof is analogous to the one for the ultimate operator, since the revisions of the upper bound coincide for both operators (Lemma 3.1).  □
+      </paragraph>
+      <paragraph>
+       Self-supporting statements can be used to enforce the existence of preferred pairs, which assign true or false to this statement. This is in particular useful to “generate” preferred pairs for each two-valued valuation on a set of variables.
+      </paragraph>
+      <paragraph label="Lemma 3.12">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF,{a mathematical formula}O∈{GΞ,UΞ},{a mathematical formula}s∈Sand{a mathematical formula}φs=s. It holds that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        there exist two preferred pairs{a mathematical formula}(X,Y)and{a mathematical formula}(X′,Y′)of{a mathematical formula}Osuch that{a mathematical formula}s∈Xand{a mathematical formula}s∈(S∖Y′),
+       </list-item>
+       <list-item label="•">
+        for all preferred pairs{a mathematical formula}(X,Y)of{a mathematical formula}Oit is the case that{a mathematical formula}s∉(Y∖X).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Consider an arbitrary admissible pair {a mathematical formula}(X,Y) for {a mathematical formula}O with {a mathematical formula}s∈(Y∖X). Such a pair exists, since {a mathematical formula}(∅,S) is a trivial admissible pair for {a mathematical formula}O. We have {a mathematical formula}(X,Y)≤iO(X,Y) by admissibility. Since both pairs {a mathematical formula}(X∪{s},Y) and {a mathematical formula}(X,Y∖{s}) are strictly more informative than {a mathematical formula}(X,Y) it holds that {a mathematical formula}O(X,Y)≤iO(X∪{s},Y) and {a mathematical formula}O(X,Y)≤iO(X,Y∖{s}) ({a mathematical formula}O is {a mathematical formula}≤i-monotone). We now show that both such pairs are admissible for {a mathematical formula}O. Consider the first pair {a mathematical formula}(X∪{s},Y). We know that {a mathematical formula}(X,Y)≤iO(X∪{s},Y) ({a mathematical formula}≤i is transitive) and thus can infer both {a mathematical formula}X⊆O′(X∪{s},Y) and {a mathematical formula}O″(X∪{s},Y)⊆Y. For showing that {a mathematical formula}(X∪{s},Y) is admissible, we only need to show that {a mathematical formula}X∪{s}⊆O′(X∪{s},Y) holds. To see that {a mathematical formula}s∈O′(X∪{s},Y) consider the two operators. For {a mathematical formula}O=UΞ just consider that for any Z with {a mathematical formula}X∪{s}⊆Z⊆Y it holds that {a mathematical formula}Z⊨φs=s. The case for {a mathematical formula}O=GΞ is similar. The set {a mathematical formula}{s} is a subset of X, no parent of s is assigned undecided in the pair {a mathematical formula}(X∪{s},Y) and the set {a mathematical formula}{s} satisfies {a mathematical formula}φs.The proof that {a mathematical formula}(X,Y∖{s}) is admissible for {a mathematical formula}O proceeds analogous, just consider that for any Z with {a mathematical formula}X⊆Z⊆Y∖{s} it holds that {a mathematical formula}Z⊭φs.This means that for any admissible pair which assigns undecided to s, there exists a strictly more informative admissible pair such that s is assigned true or false. Therefore s cannot be assigned undecided in a preferred pair, since this pair would not be {a mathematical formula}≤i-maximal.  □
+      </paragraph>
+      <paragraph>
+       We now define reductions used in multiple proofs as well as showing some properties of interest. The reductions are defined as functions taking sets of (propositional) variables and a formula and mapping them to an ADF. We generally use the sets {a mathematical formula}P,Q,R for propositional variables and use {a mathematical formula}x,y,z as “gadget” statements in the constructed ADF. Without loss of generality we assume that {a mathematical formula}{x,y,z}∩(P∪Q∪R)=∅. As usual, links of the ADFs are defined implicitly.
+      </paragraph>
+      <paragraph label="Reduction 3.1">
+       Let ψ be a propositional formula over the vocabulary P. Define {a mathematical formula}RED1(P,ψ)=(P∪{z},L,C) with
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}φp=¬p for {a mathematical formula}p∈P; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φz=ψ.
+       </list-item>
+      </list>
+      <paragraph>
+       This simple ADF can be used to decide satisfiability of ψ or determining if ψ is a tautology using one of the relevant operators.
+      </paragraph>
+      <paragraph label="Lemma 3.13">
+       Let ψ be a propositional formula over the vocabulary P and{a mathematical formula}Ξ=RED1(P,ψ). Further let{a mathematical formula}O∈{GΞ,UΞ}. We find that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        for every conflict-free pair{a mathematical formula}(X,Y)of{a mathematical formula}Oit holds that{a mathematical formula}P⊆(Y∖X),
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}z∈UΞ′(∅,P∪{z})iff ψ is a tautology,
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}z∈O″(∅,P∪{z})iff ψ is satisfiable,
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}z∉O″(∅,P)iff ψ is unsatisfiable,
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}({z},P∪{z})is conflict-free for{a mathematical formula}Oiff ψ is satisfiable,
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}O(∅,P∪{z})=O(∅,P).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Note that {a mathematical formula}UΞ″=GΞ″ by Lemma 3.1.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The first item follows immediately from Lemma 3.9.
+       </list-item>
+       <list-item label="2.">
+        The formula ψ is defined over the vocabulary P. By definition we have {a mathematical formula}z∈UΞ′(∅,P∪{z}) iff for all Z with {a mathematical formula}∅⊆Z⊆P∪{z} we have {a mathematical formula}Z⊨φz=ψ. Clearly if {a mathematical formula}z∈UΞ′(∅,P∪{z}), then all two-valued interpretations over P are then satisfying assignments of ψ, thus ψ is a tautology in this case. For the converse direction assume that ψ is a tautology. Then for all Z with {a mathematical formula}∅⊆Z⊆P we have {a mathematical formula}Z⊨ψ. Since z does not occur in {a mathematical formula}φz=ψ we know that for all Z with {a mathematical formula}∅⊆Z⊆P∪{z} it holds that {a mathematical formula}Z⊨ψ and thus {a mathematical formula}z∈UΞ′(∅,P∪{z}).
+       </list-item>
+       <list-item label="3.">
+        If {a mathematical formula}z∈O″(∅,P∪{z}), then by definition we can infer that there exists a Z such that {a mathematical formula}∅⊆Z⊆P∪{z} and {a mathematical formula}Z⊨ψ. Then {a mathematical formula}Z∖{z} is a satisfying assignment of ψ, therefore ψ is satisfiable. For the other direction assume that ψ is satisfiable. Then there exists a Z with {a mathematical formula}∅⫅Z⊆P and {a mathematical formula}Z⊨ψ. Clearly we have {a mathematical formula}Z⊆P∪{z} and thus it holds that {a mathematical formula}z∈O″(∅,P∪{z}).
+       </list-item>
+       <list-item label="4.">
+        Follows analogously as the previous item. Note that z is not in the vocabulary of ψ, and if {a mathematical formula}z∉O″(∅,P), then by definition we know that for all Z with {a mathematical formula}∅⊆Z⊆P it holds that {a mathematical formula}Z⊭φz=ψ. For the other direction, if ψ is unsatisfiable, then for all Z with {a mathematical formula}∅⊆Z⊆P it holds that {a mathematical formula}Z⊭ψ, and thus {a mathematical formula}z∉O″(∅,P).
+       </list-item>
+       <list-item label="5.">
+        The pair {a mathematical formula}({z},P∪{z}) is conflict-free for {a mathematical formula}O iff {a mathematical formula}{z}⊆O″({z},P∪{z}) and {a mathematical formula}O′({z},P∪{z})⊆P∪{z}. The latter is trivially true. The former holds iff ψ is satisfiable as shown in the third item proven above.
+       </list-item>
+       <list-item label="6.">
+        Lastly, {a mathematical formula}O(∅,P∪{z})=O(∅,P) holds since z does not occur in any acceptance condition.  □
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the lemma even implies that {a mathematical formula}({z},P∪{z}) is naive for {a mathematical formula}O iff ψ is satisfiable, since the elements of P are undecided in any conflict-free pair. The following more involved construction incorporates several techniques we introduced above.
+      </paragraph>
+      <paragraph label="Reduction 3.2">
+       Let ψ be a propositional formula over the vocabulary {a mathematical formula}P∪Q. Define {a mathematical formula}RED2(P,Q,ψ)=(P∪-P∪Q∪{z},L,C) with {a mathematical formula}-P={-p|p∈P} and
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}φp=¬z∧¬-p for {a mathematical formula}p∈P;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φ-p=¬z∧¬p for {a mathematical formula}-p∈-P;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φq=¬q for {a mathematical formula}q∈Q; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φz=¬z∧¬ψ.
+       </list-item>
+      </list>
+      <paragraph>
+       An ADF constructed by {a mathematical formula}RED2 has a non-trivial admissible pair with respect to both operators iff the quantified Boolean formula (QBF) {a mathematical formula}∃P∀Qψ is true.
+      </paragraph>
+      <paragraph label="Lemma 3.14">
+       Let ψ be a propositional formula over the vocabulary{a mathematical formula}P∪Q,{a mathematical formula}Ξ=RED2(P,Q,ψ)and{a mathematical formula}O∈{GΞ,UΞ}. It holds that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(∅,P∪-P∪Q∪{z})is the only admissible pair of{a mathematical formula}Oiff{a mathematical formula}∃P∀Qψis false,
+       </list-item>
+       <list-item label="•">
+        there exists an admissible pair{a mathematical formula}(X,Y)of{a mathematical formula}Owith{a mathematical formula}z∈(S∖Y)iff{a mathematical formula}∃P∀Qψis true.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Consider an arbitrary admissible pair {a mathematical formula}(X,Y) of {a mathematical formula}O. By Lemma 3.9 we know that for all {a mathematical formula}q∈Q it holds that {a mathematical formula}q∈(Y∖X). Due to Lemma 3.11 we know that if {a mathematical formula}z∈(Y∖X) then {a mathematical formula}p,-p∈(Y∖X) for all {a mathematical formula}p∈P and {a mathematical formula}-p∈-P. Due to Lemma 3.10 we know that z is never assigned true in an admissible pair. Therefore if there exists a non-trivial admissible pair for {a mathematical formula}O, then z must be assigned to false in such a pair. Also, due to Lemma 3.1 we have {a mathematical formula}UΞ″=GΞ″.Assume the QBF {a mathematical formula}∃P∀Qψ is true. Then there exists a {a mathematical formula}P′⊆P such that for all {a mathematical formula}Q′⊆Q we have {a mathematical formula}P′∪Q′⊨ψ. Let {a mathematical formula}M=P′∪{-p|p∈P∖P′}. We now show that the pair {a mathematical formula}(M,M∪Q) is admissible for {a mathematical formula}O. It is easy to see that for {a mathematical formula}p∈P and {a mathematical formula}-p′ with {a mathematical formula}p′∈P∖P′ we have {a mathematical formula}p,-p′∈O′(M,M∪Q). The corresponding acceptance conditions are satisfied by M since {a mathematical formula}z∉M and the complementary statements (p and {a mathematical formula}-p) are assigned a complementary truth value. Also, {a mathematical formula}(M,M∪Q) assigns all variables in the respective acceptance conditions a truth value different from undecided. Further {a mathematical formula}(P∖P′)∩O″(M,M∪Q)=∅ and {a mathematical formula}{-p|p∈P′}∩O″(M,M∪Q)=∅, since the corresponding acceptance conditions evaluate to false under all interpretations between the lower bound M and upper bound {a mathematical formula}M∪Q. It remains to show that {a mathematical formula}z∉O″(M,M∪Q). By assumption we know that for any Z with {a mathematical formula}M⊆Z⊆M∪Q we have {a mathematical formula}Z⊨ψ (since {a mathematical formula}P′=M∩P and {a mathematical formula}M∩Q=∅). Therefore {a mathematical formula}Z⊭φz. Thus {a mathematical formula}z∉O″(M,M∪Q).Now we show the other direction. Assume that there exists a non-trivial admissible pair {a mathematical formula}(X,Y) for {a mathematical formula}O. By the observations in the beginning of the proof, we can directly infer two important facts: (i) {a mathematical formula}z∈(S∖Y), and (ii) {a mathematical formula}q∈(Y∖X) for all {a mathematical formula}q∈Q. By admissibility and (i), it follows that {a mathematical formula}z∉O″(X,Y) and thus for all Z with {a mathematical formula}X⊆Z⊆Y we have {a mathematical formula}Z⊭φz. Since {a mathematical formula}z∉Y this means that {a mathematical formula}Z⊭¬ψ and thus {a mathematical formula}Z⊨ψ. Let {a mathematical formula}P′=X∩P. We now consider the two-valued valuations assigning {a mathematical formula}P′ to true, {a mathematical formula}P∖P′ to false and any two-valued assignment on Q. Consider Z with {a mathematical formula}P′⊆Z⊆(P′∪Q). For all such Z it holds that there is a {a mathematical formula}Z′ with {a mathematical formula}X⊆Z′⊆Y and {a mathematical formula}Z∪X=Z′. Since {a mathematical formula}Z′⊨ψ, then also {a mathematical formula}Z∪X⊨ψ and {a mathematical formula}Z⊨ψ ({a mathematical formula}X∖Z contains no variables of ψ, see also (ii)). Therefore for all {a mathematical formula}Q′⊆Q we have {a mathematical formula}P′∪Q′⊨ψ and thus {a mathematical formula}∃P∀Qψ is true.The second item in the Lemma follows directly, since if the QBF is true then z is false in an admissible pair of {a mathematical formula}O and vice versa.  □
+      </paragraph>
+      <paragraph>
+       While the previously introduced reductions are mostly used to show hardness results, we also use reductions for membership results. One general core construction is below.
+      </paragraph>
+      <paragraph label="Reduction 3.3">
+       Let Ξ be an ADF. Assume that {a mathematical formula}S={s1,…,sn} and set {a mathematical formula}P={ti,ui,bi,j|1≤i,j≤n}. For each statement {a mathematical formula}si, the propositional variable {a mathematical formula}ti indicates that {a mathematical formula}si is true, while {a mathematical formula}ui indicates that {a mathematical formula}si is not false. Thus the truth values of the {a mathematical formula}ti and {a mathematical formula}ui determine a four-valued interpretation {a mathematical formula}(T,U). The {a mathematical formula}bi,j are used to guess parents that are needed to derive the acceptance of statement {a mathematical formula}si in one operator application step; more precisely, {a mathematical formula}bi,j indicates that {a mathematical formula}sj is a parent of {a mathematical formula}si that is “needed” to infer {a mathematical formula}ui. By {a mathematical formula}φi we denote the acceptance formula of {a mathematical formula}si; by {a mathematical formula}φit we denote {a mathematical formula}φi where each {a mathematical formula}sj has been replaced by {a mathematical formula}tj; by {a mathematical formula}φib we denote {a mathematical formula}φi where each {a mathematical formula}sj has been replaced by {a mathematical formula}bi,j. Now define the formulas (with underlying intuitions on the right){a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Finally, set {a mathematical formula}RED3(Ξ)=ϕcfp.
+      </paragraph>
+      <paragraph>
+       The main property of this encoding is that it correctly captures consistent fixpoints of the approximate operator.
+      </paragraph>
+      <paragraph label="Lemma 3.15">
+       Let Ξ be an ADF over statements S and{a mathematical formula}ϕcfp=RED3(Ξ).
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        From each model of{a mathematical formula}ϕcfp, we can read off a consistent fixpoint of{a mathematical formula}GΞ;
+       </list-item>
+       <list-item label="2.">
+        conversely, for each consistent fixpoint of{a mathematical formula}GΞ, there is a model of{a mathematical formula}ϕcfp.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       <list>
+        <list-item label="1.">
+         Let {a mathematical formula}I⊆P be such that {a mathematical formula}I⊨ϕcfp. Define a three-valued pair {a mathematical formula}(T,U) (the associated pair of I) and a sequence {a mathematical formula}B1,…,Bn by setting
+         <list>
+          {a mathematical formula}si∈T iff {a mathematical formula}ti∈I and {a mathematical formula}si∈U iff {a mathematical formula}ui∈I, and{a mathematical formula}sj∈Bi iff {a mathematical formula}bi,j∈I.For the first part, let
+         </list>
+         <paragraph>
+          {a mathematical formula}si∈T. Then {a mathematical formula}ti∈I by definition. Since {a mathematical formula}I⊨ϕcfp, in particular {a mathematical formula}I⊨ϕT⊆U, that is, {a mathematical formula}I⊨⋀si∈S(ti→ui). Thus {a mathematical formula}I⊨ui and by definition {a mathematical formula}si∈U.For the second part, we have{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Hence {a mathematical formula}GΞ′(T,U)=T. Similarly, for the upper bound we have{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Hence {a mathematical formula}U=GΞ′(U,T) and in combination {a mathematical formula}GΞ(T,U)=(T,U).
+         </paragraph>
+        </list-item>
+        <list-item label="2.">
+         Let {a mathematical formula}GΞ(T,U)=(T,U) with {a mathematical formula}T⊆U. Define an interpretation {a mathematical formula}I⊆P as follows:
+        </list-item>
+       </list>
+      </paragraph>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Operator complexities
+      </section-title>
+      <paragraph>
+       We next analyze the computational complexity of deciding whether a single statement is contained in the lower or upper bound of the revision of a given pair. This then leads to the complexity of checking whether current lower/upper bounds are pre- or postfixpoints of the revision operators for computing new lower/upper bounds, that is, whether the revisions represent improvements in terms of the information ordering. Intuitively, these results describe how hard it is to “use” the operators and lay the foundation for the rest of the complexity results. Formally we express these notions via the decision problems {a mathematical formula}ElemI′ and {a mathematical formula}RevBound∘I′ with {a mathematical formula}∘∈{⊆,⊇}, respectively with {a mathematical formula}I″ in the superscript. Recall that {a mathematical formula}ElemI′ ({a mathematical formula}ElemI″) denotes the decision problem of verifying if a given element (statement) is contained in the revision of the lower (upper) bound of a given operator and pair. With {a mathematical formula}I′ we denote the operators for revising the lower bound and with {a mathematical formula}I″ the operators for revising the upper bound. The problem {a mathematical formula}RevBound∘I′ asks whether for a given pair {a mathematical formula}(X,Y) we can compare a given set B via ∘ with the revised lower bound of this pair. For instance {a mathematical formula}RevBound⊇G′ denotes the problem of verifying that for a given {a mathematical formula}(X,Y), {a mathematical formula}B⊆S and {a mathematical formula}GΞ∈G we have {a mathematical formula}GΞ′(X,Y)⊆B.
+      </paragraph>
+      <paragraph label="Proposition 3.16">
+       Let{a mathematical formula}I∈{G,U}. It holds that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ElemG′is in{a mathematical formula}P,
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ElemU′is{a mathematical formula}coNP-complete,
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}ElemI″is{a mathematical formula}NP-complete.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let Ξ be an ADF, {a mathematical formula}s∈S and {a mathematical formula}X⊆Y⊆S.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ElemG′ is in {a mathematical formula}P: Since {a mathematical formula}X⊆Y, we have that whenever there exists a {a mathematical formula}B⊆X∩par(s) with {a mathematical formula}Cs(B)=t and {a mathematical formula}par(s)∖B⊆S∖Y, we know that {a mathematical formula}B=X∩par(s): Assume there is an {a mathematical formula}r∈(X∩par(s))∖B. Then {a mathematical formula}r∈par(s) and {a mathematical formula}r∉B, whence {a mathematical formula}r∈par(s)∖B⊆S∖Y. By {a mathematical formula}r∈X⊆Y we get {a mathematical formula}r∉S∖Y, contradiction. Thus {a mathematical formula}B=X∩par(s). Now{a mathematical formula}{a mathematical formula}{a mathematical formula} For acceptance functions represented by propositional formulas, {a mathematical formula}Cs(X∩par(s))=t can be decided in polynomial time, since we only have to check whether {a mathematical formula}X⊨φs. It can be decided in quadratic time whether there is an undecided parent {a mathematical formula}r∈par(s) with {a mathematical formula}r∈Y∖X.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ElemU′ is {a mathematical formula}coNP-complete:
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}ElemI″ is {a mathematical formula}NP-complete: Due to Lemma 3.1 we know that {a mathematical formula}GΞ″(X,Y)=UΞ″(X,Y).
+       </list-item>
+      </list>
+      <paragraph>
+       These results can also be formulated in terms of partial evaluations of acceptance formulas: We have {a mathematical formula}s∈GΞ′(X,Y) iff the partial evaluation {a mathematical formula}φs(X,Y) is a formula without variables that evaluates to t. Similarly, we have {a mathematical formula}s∈GΞ″(X,Y)=UΞ″(X,Y) iff the partial evaluation {a mathematical formula}φs(X,Y) is satisfiable. Under standard complexity assumptions, computing a new lower bound with the ultimate operator is harder than with the approximate operator. This is because, intuitively, {a mathematical formula}s∈UΞ′(X,Y) iff the partial evaluation {a mathematical formula}φs(X,Y) is a tautology. The results for {a mathematical formula}Elem straightforwardly lead to the complexity of revising lower/upper bounds for both operators. Note that the results depend crucially on restricting revision to consistent pairs {a mathematical formula}(X,Y) (those with {a mathematical formula}X⊆Y) – for otherwise we could apply {a mathematical formula}GΞ″(X,Y)=GΞ′(Y,X) and use the polynomial-time computable approximate lower bound operator {a mathematical formula}GΞ′ on an inconsistent pair {a mathematical formula}(Y,X) to compute {a mathematical formula}GΞ′(Y,X)=GΞ″(X,Y).
+      </paragraph>
+      <paragraph label="Lemma 3.17">
+       Let{a mathematical formula}I∈{G,U}and{a mathematical formula}B∈{L,U}. It holds that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}RevBound⊇G′and{a mathematical formula}RevBound⊆G′are in{a mathematical formula}P,
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}RevBound⊇U′is in{a mathematical formula}NP,
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}RevBound⊆U′is in{a mathematical formula}coNP,
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}RevBound⊆I″is in{a mathematical formula}NP,
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}RevBound⊇I″is in{a mathematical formula}coNP.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       All results build upon Proposition 3.16. Since the revised lower bound w.r.t. {a mathematical formula}GΞ can be computed in polynomial time for any ADF Ξ we can immediately infer the complexity of the corresponding problems {a mathematical formula}RevBound⊇G′ and {a mathematical formula}RevBound⊆G′.Let {a mathematical formula}Ξ=(S,L,C) be an ADF, {a mathematical formula}O∈{GΞ,UΞ}, {a mathematical formula}B⊆S and {a mathematical formula}X⊆Y⊆S. Deciding whether {a mathematical formula}B⊆UΞ′(X,Y) can be decided via {a mathematical formula}|B| independent checks for each {a mathematical formula}b∈B whether {a mathematical formula}b∈UΞ′(X,Y). Each of these are checks in {a mathematical formula}coNP and combining them yields again a check in {a mathematical formula}coNP. Therefore {a mathematical formula}RevBound⊆U′ is in {a mathematical formula}coNP. Likewise deciding whether {a mathematical formula}B⊆O″(X,Y) can be decided via {a mathematical formula}|B| independent checks {a mathematical formula}b∈B, each of them in {a mathematical formula}NP, yielding again a combined problem in {a mathematical formula}NP. Thus {a mathematical formula}RevBound⊆I″ is in {a mathematical formula}NP.For {a mathematical formula}UΞ′(X,Y)⊆B we can decide for each {a mathematical formula}s∈(S∖B) whether {a mathematical formula}s∉UΞ′(X,Y). If this is the case for all s, then it holds that {a mathematical formula}UΞ′(X,Y)⊆B. Deciding whether {a mathematical formula}s∉UΞ′(X,Y) holds is a complementary problem to one in {a mathematical formula}coNP, thus combining several of them yields a problem in {a mathematical formula}NP. This directly shows that {a mathematical formula}RevBound⊇U′ is in {a mathematical formula}NP. The proof that {a mathematical formula}RevBound⊇I″ is in {a mathematical formula}coNP proceeds analogously.  □
+      </paragraph>
+     </section>
+     <section label="3.7">
+      <section-title>
+       Generic upper bounds
+      </section-title>
+      <paragraph label="Theorem 3.18">
+       We now show generic upper bounds for the computational complexity of the considered problems. This kind of analysis is in the spirit of the results by Dimopoulos et al. [23, Section 4]. The first item is furthermore a straightforward generalization of [20, Theorem 6.13]. Let{a mathematical formula}I⊆Abe a set of approximation operators, each defined on a CPO on S-subset pairs for some finite set S. Further let{a mathematical formula}ElemI′be in{a mathematical formula}ΠiPand{a mathematical formula}ElemI″be in{a mathematical formula}ΣiP.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The least fixpoint of an{a mathematical formula}O∈Ican be computed in polynomial time with a polynomial number of calls to a{a mathematical formula}ΣiP-oracle.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}VercfiIis in{a mathematical formula}ΣiP;{a mathematical formula}CredcfiIis in{a mathematical formula}ΣiP;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}VernaiIis in{a mathematical formula}DiP;{a mathematical formula}CrednaiIis in{a mathematical formula}ΣiP;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}VeradmIis in{a mathematical formula}ΠiP;{a mathematical formula}CredadmIis in{a mathematical formula}Σi+1P;
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}VercomIis in{a mathematical formula}DiP;{a mathematical formula}CredcomIis in{a mathematical formula}Σi+1P;
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}VerpreIis in{a mathematical formula}Πi+1P;{a mathematical formula}CredpreIis in{a mathematical formula}Σi+1P;{a mathematical formula}SkeptpreIis in{a mathematical formula}Πi+2P.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let {a mathematical formula}A=2S and {a mathematical formula}O be an approximating operator on {a mathematical formula}(Ac,≤i), the consistent CPO of S-subset pairs. Further let {a mathematical formula}(X,Y)∈Ac and {a mathematical formula}s∈S.Using the same line of reasoning as in the proof of Lemma 3.17 we can immediately infer that under the assumptions of the current theorem that {a mathematical formula}RevBound⊇I′ is in {a mathematical formula}ΣiP, {a mathematical formula}RevBound⊆I′ is in {a mathematical formula}ΠiP, {a mathematical formula}RevBound⊆I″ is in {a mathematical formula}ΣiP, {a mathematical formula}RevBound⊇I″ is in {a mathematical formula}ΠiP.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For any {a mathematical formula}(V,W)∈Ac we can use the oracle to compute an application of {a mathematical formula}O′ by simply asking whether {a mathematical formula}z∈O′(V,W) for each {a mathematical formula}z∈S. This means we can compute with a linear number of oracle calls the sets {a mathematical formula}O′(V,W) and {a mathematical formula}O″(V,W), thus the pair {a mathematical formula}O(V,W). Hence we can compute the sequence {a mathematical formula}(∅,S)≤iO(∅,S)≤iO(O(∅,S))≤i… which converges to the least fixpoint of {a mathematical formula}O after a linear number of operator applications (and thus a polynomial number of oracle calls).
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}VercfiI is in {a mathematical formula}ΣiP, since we can verify if a given pair is conflict-free for a given operator if the lower bound is a positive instance of {a mathematical formula}RevBound⊆I″ and the upper bound a positive instance {a mathematical formula}RevBound⊇I′ together with the pair and operator as input. These are two independent checks in {a mathematical formula}ΣiP. For {a mathematical formula}CredcfiI it suffices to verify that the pair {a mathematical formula}({s},S) is conflict-free. (If {a mathematical formula}({s},S) is not conflict-free, by Lemma 3.8 there is no conflict-free pair {a mathematical formula}(X,Y) with {a mathematical formula}({s},S)≤i(X,Y).)
+       </list-item>
+       <list-item label="3.">
+        For {a mathematical formula}VernaiI we first have to decide {a mathematical formula}VercfiI, which can be done in {a mathematical formula}ΣiP. To verify that {a mathematical formula}(X,Y) is naive, that is, {a mathematical formula}≤i-maximal, we do the following: Assume that {a mathematical formula}Y∖X={s1,…,sm} and construct the pairs {a mathematical formula}p¯i=(X∪{si},Y) and {a mathematical formula}q¯i=(X,Y∖{si}) for {a mathematical formula}1≤i≤m. It follows from Lemma 3.8 that the pair {a mathematical formula}(X,Y) is naive iff none of the 2m pairs {a mathematical formula}p¯1,…,p¯m,q¯1,…,q¯m is conflict-free. Since {a mathematical formula}VercfiI is in {a mathematical formula}ΣiP and the pairs can be verified independently of each other, we need to solve at most {a mathematical formula}2m≤2⋅|S| independent {a mathematical formula}ΣiP problems to show that {a mathematical formula}(X,Y) is not naive. Thus showing that {a mathematical formula}(X,Y) is {a mathematical formula}≤i-maximal is in {a mathematical formula}ΠiP, and together with showing conflict-freeness of {a mathematical formula}(X,Y) in {a mathematical formula}ΣiP the containment in {a mathematical formula}DiP follows. {a mathematical formula}CrednaiI coincides with {a mathematical formula}CredcfiI by Lemma 3.7.
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}VeradmI is in {a mathematical formula}ΠiP, since we can verify if a given pair is admissible for a given operator if the lower bound is a positive instance of {a mathematical formula}RevBound⊆I′ and the upper bound a positive instance {a mathematical formula}RevBound⊇I″ together with the pair and operator as input. These are two independent checks in {a mathematical formula}ΠiP. For {a mathematical formula}CredadmI, we guess a pair {a mathematical formula}(X1,Y1) with {a mathematical formula}s∈X1 and check if it is admissible.
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}VercomI is in {a mathematical formula}DiP, since we can verify if a given pair is admissible for a given operator in {a mathematical formula}ΠiP. By determining if the lower bound is a positive instance of {a mathematical formula}RevBound⊇I′ and the upper bound a positive instance of {a mathematical formula}RevBound⊆I″ together with the pair and operator as input we can infer that the given pair is a fix point of the operator. These are two independent checks in {a mathematical formula}ΣiP, thus combined yields a check in {a mathematical formula}DiP. {a mathematical formula}CredcomI=CredadmI by Lemma 3.5.
+       </list-item>
+       <list-item label="6.">
+        For {a mathematical formula}VerpreI, we show that the co-problem is in {a mathematical formula}Σi+1P. To show that {a mathematical formula}(X,Y) is not a preferred pair, we can show that (1) {a mathematical formula}(X,Y) is not a complete pair, which can be decided in {a mathematical formula}DiP; or (2) that there is a complete pair {a mathematical formula}(X1,Y1) with {a mathematical formula}(X,Y)&lt;i(X1,Y1), which can be done by guessing {a mathematical formula}(X1,Y1) and showing in {a mathematical formula}DiP that {a mathematical formula}(X1,Y1) is complete.{a mathematical formula}CredpreI: coincides with credulous reasoning w.r.t. admissibility, see Lemma 3.5.{a mathematical formula}SkeptpreI: Consider the co-problem, i.e. deciding whether there exists a preferred pair {a mathematical formula}(X1,Y1) with {a mathematical formula}X1∩{a}=∅. We guess such a pair {a mathematical formula}(X1,Y1) and check if it is preferred.  □
+       </list-item>
+      </list>
+      <paragraph>
+       Naturally, the capability of solving the functional problem of computing the grounded semantics allows us to solve the associated decision problems.
+      </paragraph>
+      <paragraph label="Corollary 3.19">
+       Under the assumptions ofTheorem 3.18, the problems{a mathematical formula}VergrdIand{a mathematical formula}ExistsgrdIare in{a mathematical formula}Δi+1P.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Complexity of general ADFs
+     </section-title>
+     <paragraph>
+      Due to the coincidence of {a mathematical formula}GΞ″ and {a mathematical formula}UΞ″ (Lemma 3.1), the computational complexities of decision problems that concern only the upper bound operator also coincide. This will save both work and space in the subsequent developments. Additionally, for all containment results (except for the grounded semantics and existence of non-trivial approximate conflict-free pairs), we can use Theorem 3.18 and need only show hardness.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Conflict-free semantics
+      </section-title>
+      <paragraph>
+       For an ADF Ξ and an operator {a mathematical formula}O∈{GΞ,UΞ}, a pair {a mathematical formula}(X,Y) is conflict-free by definition if and only if {a mathematical formula}X⊆O″(X,Y) and {a mathematical formula}O′(X,Y)⊆Y. For the ultimate operator {a mathematical formula}UΞ, this intuitively means the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For every statement {a mathematical formula}s∈X that is set to true, its partially evaluated acceptance formula {a mathematical formula}φs(X,Y) must be satisfiable.
+       </list-item>
+       <list-item label="•">
+        For every statement {a mathematical formula}s∈S∖Y that is set to false, its partially evaluated acceptance formula {a mathematical formula}φs(X,Y) must be refutable.
+       </list-item>
+      </list>
+      <paragraph>
+       So roughly, conflict-freeness dictates that the pair must not make truth value assignments that are completely absurd in that a statement is set to true in the pair although its acceptance formula is unsatisfiable with respect to the pair (or symmetrically set to false while the formula is a tautology).
+      </paragraph>
+      <paragraph>
+       For the approximate operator {a mathematical formula}GΞ, the requirement for setting statements to false is weaker than for the ultimate operator. (The requirement for setting statements to true is the same since {a mathematical formula}GΞ″=UΞ″.) For the approximate operator, a statement {a mathematical formula}s∈S can be set to false in a pair {a mathematical formula}(X,Y) as long as it is not the case that the formula {a mathematical formula}φs(X,Y) is a Boolean expression consisting of truth values and connectives that evaluates to true. Conversely, the statement can be set to false if either (1) the formula {a mathematical formula}φs(X,Y) is a Boolean expression consisting of truth values and connectives that evaluates to false, or (2) the formula {a mathematical formula}φs(X,Y) contains variables.
+      </paragraph>
+      <paragraph label="Example 4.1">
+       Consider the ADF {a mathematical formula}D=(S,L,C) with {a mathematical formula}S={a,b} and L and C given by {a mathematical formula}φa=¬a and {a mathematical formula}φb=a∨¬a. For any pair {a mathematical formula}(X,Y) with {a mathematical formula}a∈X, that is, any pair that sets a to true, we have that {a mathematical formula}φa(X,Y)=¬t≡f is unsatisfiable. Thus such a pair is not ultimate conflict-free. Symmetrically, for any pair {a mathematical formula}(X,Y) with {a mathematical formula}a∉Y, we find that {a mathematical formula}φa(X,Y)=¬f≡t is irrefutable, and the pair is also not ultimate conflict-free. So our only chance is to set a to undecided, that is, {a mathematical formula}a∈Y and {a mathematical formula}a∉X. For statement b, we see that {a mathematical formula}φb({b},{a,b})=a∨¬a is satisfiable, whence {a mathematical formula}({b},{a,b}) is ultimate conflict-free. For the pair {a mathematical formula}(∅,{a}) where b is false, we see that {a mathematical formula}φb(∅,{a})=a∨¬a is a tautology, whence the pair is not an ultimate conflict-free pair. However, {a mathematical formula}φb(∅,{a})=a∨¬a is an expression containing variables, whence {a mathematical formula}(∅,{a}) is an approximate conflict-free pair.
+      </paragraph>
+      <paragraph>
+       This intuition based on satisfiability and refutability will help us in obtaining complexity results for semantics based on the property of being conflict-free. To begin with, to verify that a pair is conflict-free, we obviously have to solve a combined satisfiability/refutability problem.
+      </paragraph>
+      <paragraph label="Proposition 4.1">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}VercfiIis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership follows from Theorem 3.18. For hardness, we provide a reduction from SAT by Reduction 3.1. Let ψ be a formula over vocabulary P. Let {a mathematical formula}Ξ=RED1(P,ψ) and {a mathematical formula}O∈{GΞ,UΞ}. Due to Lemma 3.13 we have that the pair {a mathematical formula}({z},P∪{z}) is conflict-free for {a mathematical formula}O iff ψ is satisfiable.  □
+      </paragraph>
+      <paragraph>
+       For deciding whether there exists a non-trivial ultimate conflict-free pair, we can reduce the propositional satisfiability problem back and forth.
+      </paragraph>
+      <paragraph label="Proposition 4.2">
+       {a mathematical formula}ExistscfiUis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         We can guess a non-trivial pair {a mathematical formula}(X,Y) and the witnesses that verify conflict-freeness of {a mathematical formula}(X,Y) in one sequence of independent guesses. More formally, we reduce {a mathematical formula}ExistscfiU to SAT. Let {a mathematical formula}Ξ=(S,L,C) be an ADF. We define a formula {a mathematical formula}φΞ such that {a mathematical formula}UΞ has a non-trivial conflict-free pair iff {a mathematical formula}φΞ is satisfiable.Assume {a mathematical formula}S={s1,…,sn} and define the vocabulary of {a mathematical formula}φΞ as{a mathematical formula} For {a mathematical formula}1≤i,j≤n, denote by {a mathematical formula}φi the acceptance formula {a mathematical formula}φsi where each occurrence of {a mathematical formula}sj has been replaced by {a mathematical formula}pj,i. Intuitively, atom {a mathematical formula}pj,i is used to guess a truth value for {a mathematical formula}sj in the acceptance formula of {a mathematical formula}si. Now define{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} We have to show that {a mathematical formula}UΞ has a non-trivial conflict-free pair iff {a mathematical formula}φΞ is satisfiable.
+        </list-item>
+        <list-item>
+         We provide a reduction from SAT. Let ψ be a propositional formula over vocabulary {a mathematical formula}P≠∅. Define an ADF {a mathematical formula}Ξψ=(S,L,C) with {a mathematical formula}S=P∪{z} (where {a mathematical formula}z∉P), {a mathematical formula}φp=¬p for {a mathematical formula}p∈P and {a mathematical formula}φz=¬z∧¬ψ. We have to show that {a mathematical formula}UΞψ has a non-trivial conflict-free pair iff ψ is satisfiable.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Since there exists a non-trivial conflict-free pair if and only if there exists a non-trivial naive pair (Lemma 3.7), we have this easy consequence.
+      </paragraph>
+      <paragraph label="Corollary 4.3">
+       {a mathematical formula}ExistsnaiUis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph>
+       Fortunately, credulous reasoning over conflict-free pairs is not harder than just guessing a pair where the desired statement is true.
+      </paragraph>
+      <paragraph label="Proposition 4.4">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}CredcfiIis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let {a mathematical formula}Ξ=(S,L,C) be an ADF with {a mathematical formula}S={s1,…,sn} and {a mathematical formula}1≤k≤n. Intuitively, we can guess a pair {a mathematical formula}(X,Y) with {a mathematical formula}sk∈X along with the witnesses showing that {a mathematical formula}(X,Y) is conflict-free. More formally, we reduce the problem to SAT. For the ultimate operator, we can adapt the construction of Proposition 4.2. We use the formula {a mathematical formula}φcfi as above and define {a mathematical formula}φΞ=φcfi∧skt. As above, we can show that there is a conflict-free pair {a mathematical formula}(X,Y) with {a mathematical formula}sk∈X if and only if {a mathematical formula}φΞ is satisfiable.
+        </list-item>
+        <list-item>
+         We provide a reduction from SAT. Let ψ be a propositional formula over vocabulary P. Define an ADF {a mathematical formula}Ξ=RED1(P,ψ) as in Reduction 3.1. Due to Lemma 3.13 we know that there is a conflict-free pair {a mathematical formula}(X,Y) with {a mathematical formula}z∈X if and only if ψ is satisfiable.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Again, Lemma 3.7 yields the same complexity for the naive semantics.
+      </paragraph>
+      <paragraph label="Corollary 4.5">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}CrednaiIis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph>
+       To verify that a given pair is naive, we have some more work to do. Recalling that a pair is naive iff it is conflict-free and {a mathematical formula}≤i-maximal with respect to being conflict-free, we can see that to verify naivety we have to verify conflict-freeness (in {a mathematical formula}NP) and verify that there is no properly {a mathematical formula}≤i-greater conflict-free pair (in {a mathematical formula}coNP).
+      </paragraph>
+      <paragraph label="Proposition 4.6">
+       Let{a mathematical formula}O∈{G,U}.{a mathematical formula}VernaiOis{a mathematical formula}DP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Containment follows from Theorem 3.18, so it suffices to show {a mathematical formula}DP-hardness. We use a reduction from SAT-UNSAT. Let {a mathematical formula}(ϕ,ψ) be a tuple of propositional formulas over vocabularies {a mathematical formula}P1 and {a mathematical formula}P2, respectively, with {a mathematical formula}P1∩P2=∅. Construct an ADF D as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Furthermore, define the pair {a mathematical formula}n¯=({x,y},S). We now show that {a mathematical formula}n¯ is naive for {a mathematical formula}O iff ϕ is satisfiable and ψ is unsatisfiable. (Notice that the proof only uses {a mathematical formula}O″ and thus works for {a mathematical formula}O=G and {a mathematical formula}O=U.)
+      </paragraph>
+      <list>
+       <list-item label="if:">
+        Let ϕ be satisfiable and ψ be unsatisfiable. We show that {a mathematical formula}n¯ is naive for {a mathematical formula}O. We first show that {a mathematical formula}n¯ is conflict-free for {a mathematical formula}O:
+       </list-item>
+       <list-item label="only if:">
+        Let {a mathematical formula}n¯ be naive for {a mathematical formula}O. Assume to the contrary that ϕ is unsatisfiable or ψ is satisfiable.
+       </list-item>
+      </list>
+      <paragraph>
+       For skeptical reasoning, we can do no better than verifying the absence of a naive pair where the statement in question is not true. The hardness proof proceeds by “laying a trap” for the conflict-free semantics: setting a statement s to true (for example) in a pair {a mathematical formula}(X,Y) can be justified locally by the partially evaluated acceptance formula {a mathematical formula}φs(X,Y) being satisfiable. However, the satisfying assignment for statements from {a mathematical formula}Y∖X need not pay respect to what might be dictated by other parts of the framework. The proof makes use of this and employs two new statements y and z with acceptance formulas {a mathematical formula}φy=z→ψ for a given QBF matrix ψ and {a mathematical formula}φz=t. Now setting y to true can be locally justified since {a mathematical formula}φy is satisfiable by setting z to false. However, in the case where ψ is unsatisfiable, we cannot set both y and z to true, since the respective partial evaluation of {a mathematical formula}φy would be unsatisfiable, thereby violating conflict-freeness. Consequentially, this case leads to different kinds of naive pairs (those with {a mathematical formula}y↦t and {a mathematical formula}z↦u, and those with {a mathematical formula}y↦u and {a mathematical formula}z↦t). This reasoning is used in the proof below.
+      </paragraph>
+      <paragraph label="Proposition 4.7">
+       Let{a mathematical formula}O∈{G,U}.{a mathematical formula}SkeptnaiOis{a mathematical formula}Π2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let {a mathematical formula}Ξ=(S,L,C) be an ADF and {a mathematical formula}s∈S. We can guess a pair {a mathematical formula}(X,Y) with {a mathematical formula}s∉X and verify in {a mathematical formula}DP that it is naive.
+        </list-item>
+        <list-item>
+         We provide a reduction from the {a mathematical formula}Π2P-complete problem of deciding whether a {a mathematical formula}QBF2,∀-formula is valid. Let {a mathematical formula}∀P∃Qψ be an instance of {a mathematical formula}QBF2,∀-TRUTH where {a mathematical formula}P,Q≠∅ and (w.l.o.g.) ψ mentions at least one {a mathematical formula}p∈P and at least one {a mathematical formula}q∈Q. We construct an ADF {a mathematical formula}Dψ with a special statement z that is true in each naive pair of {a mathematical formula}Dψ if and only if {a mathematical formula}∀P∃Qψ is true. Define {a mathematical formula}Dψ=(S,L,C) with{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Recalling that deciding existence of non-trivial ultimate conflict-free pairs is {a mathematical formula}NP-hard, we can show that deciding existence of non-trivial approximate conflict-free pairs is (potentially) easier. The reason lies in the smaller precision of the approximate operator, as witnessed in Example 4.1.
+      </paragraph>
+      <paragraph label="Proposition 4.8">
+       {a mathematical formula}ExistscfiGis in{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}Ξ=(S,L,C) be an ADF. If {a mathematical formula}S=∅ then there is no non-trivial pair at all, so assume {a mathematical formula}S≠∅.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        There is an {a mathematical formula}s∈S such that the formula {a mathematical formula}φs(∅,S∖{s}) contains variables. Then by definition of {a mathematical formula}GΞ, we have {a mathematical formula}s∉GΞ′(∅,S∖{s}) and thus {a mathematical formula}(∅,S∖{s}) is conflict-free and non-trivial.
+       </list-item>
+       <list-item label="2.">
+        For all {a mathematical formula}s∈S, the formula {a mathematical formula}φs(∅,S∖{s}) is an expression consisting only of connectives and truth values. Then for each {a mathematical formula}s∈S the expression {a mathematical formula}φs(∅,S∖{s}) has a fixed truth value, which can be computed in polynomial time.
+       </list-item>
+      </list>
+      <paragraph>
+       As usual, Lemma 3.7 yields the same bounds for the existence of non-trivial approximate naive pairs.
+      </paragraph>
+      <paragraph label="Corollary 4.9">
+       {a mathematical formula}ExistsnaiGis in{a mathematical formula}P.
+      </paragraph>
+      <paragraph>
+       However, these two results are the only ones where the complexities of the approximate and ultimate operators differ for semantics based on conflict-freeness.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Admissibility-based semantics
+      </section-title>
+      <paragraph>
+       We begin our complexity analysis of admissibility-based semantics by introducing and recalling some basic concepts of these semantics and the corresponding operators. By definition, a pair {a mathematical formula}(X,Y) with {a mathematical formula}X⊆Y is admissible for operator {a mathematical formula}O iff {a mathematical formula}(X,Y)≤iO(X,Y). Since the operators under consideration are {a mathematical formula}≤i-monotone, we can directly infer that if {a mathematical formula}(X,Y) is admissible then it holds that {a mathematical formula}O(X,Y)≤iO(O(X,Y)). This means that (i) applying operator {a mathematical formula}O to an admissible pair yields again an admissible pair, and (ii) iterative applications of {a mathematical formula}O to an admissible pair {a mathematical formula}(X,Y) always yield pairs {a mathematical formula}(X′,Y′) such that {a mathematical formula}(X,Y)≤i(X′,Y′). In more detail, (ii) implies that a statement assigned to true or false in {a mathematical formula}(X,Y) will keep this assignment if the operator is applied, while undecided statements may change their assignment. If {a mathematical formula}(X,Y) is a fixpoint of {a mathematical formula}O (i.e. a complete pair of {a mathematical formula}O), then the application of {a mathematical formula}O also does not change the undecided statements.
+      </paragraph>
+      <paragraph>
+       Most complexity results in the following mainly rely on the operator for the upper bound {a mathematical formula}U″=G″, which is the same for both approximate and ultimate operators (Lemma 3.1). We also make use of the reductions from Section 3.5.
+      </paragraph>
+      <paragraph>
+       The first problem we analyze is the verification problem for admissible semantics. As before for most problems we need only show hardness since Theorem 3.18 shows membership.
+      </paragraph>
+      <paragraph label="Proposition 4.10">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}VeradmIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       We provide a reduction from the problem of deciding whether a given formula ψ over vocabulary P is unsatisfiable. Let ADF {a mathematical formula}Ξ=RED1(P,ψ) as defined in Reduction 3.1 and {a mathematical formula}O∈{GΞ,UΞ}. The pair {a mathematical formula}(∅,P) is admissible for {a mathematical formula}O iff {a mathematical formula}z∉UΞ″(∅,P) iff ψ is unsatisfiable due to Lemma 3.13.  □
+      </paragraph>
+      <paragraph>
+       For verifying if a given pair is complete the complexity increases to {a mathematical formula}DP compared to just checking admissibility. Briefly put, the {a mathematical formula}coNP part decides whether the given pair is a postfixpoint and the additional {a mathematical formula}NP check is used to decide whether the pair is prefixpoint. Together they decide whether the pair is a fixpoint.
+      </paragraph>
+      <paragraph label="Proposition 4.11">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}VercomIis{a mathematical formula}DP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       For {a mathematical formula}I=U this was proven in [11, Corollary 7]. However, the following reduction works for both operators.We provide a reduction from the {a mathematical formula}DP-complete problem of determining whether a given formula ϕ is satisfiable and a given formula ψ is unsatisfiable. Let ϕ and ψ be arbitrary formulas over the disjoint vocabularies {a mathematical formula}P1 and {a mathematical formula}P2 respectively. Let {a mathematical formula}P=P1∪P2. Construct the following ADF {a mathematical formula}Ξ=(P∪{y,z},L,C).
+       <list>
+        {a mathematical formula}φp=p for {a mathematical formula}p∈P,{a mathematical formula}φy=¬y∧ϕ,{a mathematical formula}φz=ψ.Independent of
+       </list>
+       <paragraph>
+        ϕ and ψ we know due to Lemma 3.10 that for any conflict-free pair of {a mathematical formula}O that y is not assigned to true. Further for all {a mathematical formula}p∈P we have {a mathematical formula}p∈UΞ″(∅,P∪{y}), since {a mathematical formula}φp(∅,P∪{y})=p is satisfiable. Further {a mathematical formula}p∉UΞ′(∅,P∪{y}), since {a mathematical formula}φp(∅,P∪{y})=p is refutable. Thus {a mathematical formula}p∉GΞ′(∅,P∪{y}), since the ultimate operator is at least as precise than the approximate operator.Consider the following two cases:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Let ϕ be satisfiable. Clearly {a mathematical formula}φy(∅,P∪{y}) is satisfiable and thus {a mathematical formula}y∈UΞ″(∅,P∪{y}).
+        </list-item>
+        <list-item label="2.">
+         Let ψ be unsatisfiable. It follows immediately that {a mathematical formula}z∉UΞ″(∅,P∪{y}).
+        </list-item>
+       </list>
+       <paragraph>
+        Therefore {a mathematical formula}(∅,P∪{y}) is complete for {a mathematical formula}O if ϕ is satisfiable and ψ is unsatisfiable.For the other direction assume that ϕ is unsatisfiable or ψ is satisfiable. For the first case suppose ϕ is unsatisfiable. Then {a mathematical formula}y∉UΞ″(∅,P∪{y}) and {a mathematical formula}(∅,P∪{y}) is not complete. For the second case suppose ψ is satisfiable. Then {a mathematical formula}z∈UΞ″(∅,P∪{y}) and likewise {a mathematical formula}(∅,P∪{y}) is not complete.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Next, we analyze the complexity of verifying that a given pair is the approximate (ultimate) Kripke–Kleene semantics or grounded pair of an ADF Ξ, that is, the least fixpoint of {a mathematical formula}GΞ ({a mathematical formula}UΞ). It turns out that verifying if a given pair is grounded has the same complexity as verifying if the pair is complete. For both operators showing membership is the tricky part. For {a mathematical formula}G we reduce the steps of the operator computation into propositional logic. In particular we construct two formulas, one we check for satisfiability and the other for unsatisfiability. This gives us an interesting, yet technical proof of membership. For {a mathematical formula}U this result was shown already in [11, Theorem 6], but the proof was omitted due to space limitations. For sake of completeness we will present here an alternative proof which will be re-used later for query-based reasoning. The membership proof is based on a somewhat more involved guess and check algorithm. This algorithm non-deterministically tries to construct a pair {a mathematical formula}(X,Y), which is equal or more informative than the ultimate grounded pair of a given ADF. If the algorithm successfully constructs such a pair with e.g. {a mathematical formula}s∉X, then we can conclude that s is also not true in the ultimate grounded pair. Since the algorithm is based on guess and check this provides us with a procedure showing that deciding whether a statement is not true in the ultimate grounded pair is a problem in {a mathematical formula}NP. Formally we first prove a technical lemma underlying this algorithm. The following definition specifies a set of pairs called {a mathematical formula}grd≤i(Ξ) for an ADF Ξ.
+      </paragraph>
+      <paragraph label="Definition 4.1">
+       Let Ξ be an ADF and {a mathematical formula}X⊆Y⊆S. If it holds that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        for each {a mathematical formula}x∈X there exists a {a mathematical formula}Zx s.t. {a mathematical formula}X⊆Zx⊆Y and {a mathematical formula}Zx⊨φx,
+       </list-item>
+       <list-item label="2.">
+        for each {a mathematical formula}s∈S∖Y there exists a {a mathematical formula}Zs s.t. {a mathematical formula}X⊆Zs⊆Y and {a mathematical formula}Zs⊭φs, and
+       </list-item>
+       <list-item label="3.">
+        for each {a mathematical formula}y∈Y∖X there exist two {a mathematical formula}Zy,Zy′ s.t. {a mathematical formula}X⊆Zy⊆Y, {a mathematical formula}X⊆Zy′⊆Y, {a mathematical formula}Zy⊨φx and {a mathematical formula}Zy′⊭φy,
+       </list-item>
+      </list>
+      <paragraph>
+       The set {a mathematical formula}grd≤i(Ξ) has the appealing property that the grounded pair of {a mathematical formula}UΞ is in this set and all other pairs in the set are more informative than the ultimate grounded pair.
+      </paragraph>
+      <paragraph label="Lemma 4.12">
+       Let Ξ be an ADF,{a mathematical formula}(X,Y)∈grd≤i(Ξ)and{a mathematical formula}(L,U)=lfp(UΞ). It holds that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}(L,U)∈grd≤i(Ξ), and
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}(L,U)≤i(X,Y).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let {a mathematical formula}(L,U) be the grounded pair of {a mathematical formula}UΞ, then it is straightforward to show that {a mathematical formula}(L,U)∈grd≤i(Ξ), i.e. that this pair satisfies all three properties of Definition 4.1. For each {a mathematical formula}l∈L it holds that {a mathematical formula}φl(L,U) is tautological, for {a mathematical formula}s∈S∖U it holds that {a mathematical formula}φs(L,U) is unsatisfiable, and for {a mathematical formula}u∈U∖L it holds that {a mathematical formula}φu(L,U) is satisfiable and refutable. By supposing the contrary one immediately arrives at a contradiction that {a mathematical formula}(L,U) is the grounded pair (recall that the grounded pair is also a fixpoint). If {a mathematical formula}φl(L,U) is not tautological, then {a mathematical formula}l∉UΞ′(L,U), if {a mathematical formula}φs(L,U) is not unsatisfiable, then {a mathematical formula}s∈UΞ″(L,U) and if {a mathematical formula}φu(L,U) is a tautology or unsatisfiable, then we have in the former case that {a mathematical formula}u∈UΞ′(L,U) and the latter that {a mathematical formula}u∉UΞ″(L,U).Assume {a mathematical formula}(X,Y)∈grd≤i(Ξ), i.e. the pair satisfies all three properties of Definition 4.1, then we show by induction on {a mathematical formula}n≥1 that {a mathematical formula}UΞn(∅,S)≤i(X,Y), with the usual meaning of iterative applications of operators, i.e. {a mathematical formula}UΞn(X,Y)=UΞn−1(UΞ(X,Y)). Note that there exists an {a mathematical formula}i≥0 such that {a mathematical formula}UΞi(∅,S)=lfp(UΞ). For {a mathematical formula}n=1 and {a mathematical formula}UΞ1(∅,S)=(L1,U1) it holds that if {a mathematical formula}s∈L1 then {a mathematical formula}φs is a tautology, implying that {a mathematical formula}s∈X, since otherwise there would exist a two-valued interpretation which does not satisfy {a mathematical formula}φs. This is due to the fact that if {a mathematical formula}s∉X, then by assumption and by Definition 4.1 there would exist a Z with {a mathematical formula}X⊆Z⊆Y, such that {a mathematical formula}Z⊭φs. The case for {a mathematical formula}s∈S∖U1 is symmetric. Now assume the induction hypothesis {a mathematical formula}(Ln,Un)=UΞn(∅,S)≤i(X,Y) and to show that {a mathematical formula}UΞn+1(∅,S)≤i(X,Y) holds consider {a mathematical formula}UΞn+1(∅,S)=(Ln+1,Un+1). If {a mathematical formula}s∈Ln+1∖Ln then {a mathematical formula}φs(Ln,Un) is tautological, which means that s must be in X. Similarly for the statements set to false. This proves the lemma.  □
+      </paragraph>
+      <paragraph>
+       This leads us to Algorithm 1 for deciding whether a certain statement s is not true in the ultimate grounded pair of an ADF Ξ. This is a non-deterministic algorithm, which guesses a pair {a mathematical formula}(X,Y) with {a mathematical formula}s∉X along with witnesses with which we can verify that {a mathematical formula}(X,Y)∈grd≤i(Ξ). If this is the case then {a mathematical formula}s∉L with {a mathematical formula}(L,U) the grounded pair of {a mathematical formula}UΞ (everything assigned to true in the grounded pair is also true in {a mathematical formula}(X,Y) due to the preceding lemma).
+      </paragraph>
+      <paragraph>
+       Clearly, Algorithm 1 requires at most {a mathematical formula}2⋅|S|+2 guesses of sets. If {a mathematical formula}X=∅ and {a mathematical formula}Y=S we guess two sets per {a mathematical formula}x∈S. Each such guess can be constructed and checked in polynomial time with respect to the size of the input ADF. This algorithm returns no if there exists a successful computation path and otherwise terminates without returning no. More formally we show that the algorithm is correct in the following lemma.
+      </paragraph>
+      <paragraph label="Lemma 4.13">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF,{a mathematical formula}s∈Sand{a mathematical formula}(L,U)=lfp(UΞ). It holds that{a mathematical formula}s∉Liff non-deterministicAlgorithm 1returns no for input ADF Ξ and statement s.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume Algorithm 1 returned no for Ξ and statement s. Then clearly for the guessed {a mathematical formula}(X,Y) (Line 1) we have {a mathematical formula}s∉X and {a mathematical formula}(X,Y)∈grd≤i(Ξ), since witnesses for all three properties of Definition 4.1 were guessed and successfully verified. By Lemma 4.12 we know that {a mathematical formula}(L,U)≤i(X,Y). Thus {a mathematical formula}s∉L.For the other direction assume that {a mathematical formula}s∉L. Due to Lemma 4.12 we know that {a mathematical formula}(L,U)∈grd≤i(Ξ). Therefore the non-deterministic Algorithm 1 can guess {a mathematical formula}(L,U) along with witnesses that {a mathematical formula}(L,U)∈grd≤i(Ξ) and successfully verify these witnesses. Thus there exists a guess (a computation path) such that Algorithm 1 returns no.  □
+      </paragraph>
+      <paragraph>
+       By Lemma 4.12, we can straightforwardly adapt Algorithm 1 to decide (i.e. return “no”)
+      </paragraph>
+      <list>
+       <list-item label="•">
+        whether a statement is not false in the ultimate grounded pair, by replacing the guessed pair in Line 1 with {a mathematical formula}(X,Y) such that {a mathematical formula}s∈Y; and
+       </list-item>
+       <list-item label="•">
+        whether a statement is undecided in the ultimate grounded pair, by replacing the guessed pair in Line 1 with {a mathematical formula}(X,Y) such that {a mathematical formula}s∈(Y∖X).
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the guess and check algorithm can be adapted to either decide whether a statement is not true or false in the ultimate grounded pair, or to decide whether a statement is undecided in the ultimate grounded pair. This gives complementary membership results w.r.t. complexity regarding the decision problem whether a statement is true or false, or on the other hand, if it is undecided in the ultimate grounded pair.
+      </paragraph>
+      <paragraph>
+       We now come to the theorem showing the computational complexity of the verification problem of grounded semantics for both operators. The proof uses a reduction introduced earlier – it encodes steps of the approximate operator computation into propositional logic. For the ultimate operator we make use of Algorithm 1 and Lemma 4.13.
+      </paragraph>
+      <paragraph label="Theorem 4.14">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}VergrdIis{a mathematical formula}DP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Ξ be an ADF and {a mathematical formula}X⊆Y⊆S. We begin the proof for {a mathematical formula}I=G.
+       <list>
+        We provide a reduction to SAT-UNSAT by extending the construction of Reduction 3.3. We additionally define the formulas{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Intuitively, {a mathematical formula}ϕ= will be used to force {a mathematical formula}(X,Y) to be a fixpoint of {a mathematical formula}GΞ, and {a mathematical formula}ϕ&lt;i will be used to stipulate the existence of a fixpoint with strictly less information than {a mathematical formula}(X,Y).We claim that (1) {a mathematical formula}ψ1 is satisfiable iff {a mathematical formula}(X,Y) is a consistent fixpoint of {a mathematical formula}GΞ, and (2) {a mathematical formula}ψ2 is satisfiable iff there is a fixpoint {a mathematical formula}(T,U)&lt;i(X,Y) of {a mathematical formula}GΞ. From this it follows that {a mathematical formula}(ψ1,ψ2) is a positive instance of SAT-UNSAT iff {a mathematical formula}(X,Y) is the Kripke–Kleene semantics of Ξ.This follows from the proof in Proposition 4.11: The complete pair to verify there coincides with the Kripke–Kleene semantics of the constructed ADF.  □We now proceed to the proof for
+       </list>
+       <paragraph>
+        {a mathematical formula}I=U.
+       </paragraph>
+       <list>
+        <list-item>
+         To decide whether a statement s is not true in the ultimate grounded pair we can directly use Algorithm 1. The correctness of the algorithm is shown in Lemma 4.13. This is a non-deterministic algorithm, witnessing that this decision problem is in {a mathematical formula}NP. Therefore deciding whether s is true in the ultimate grounded pair is in {a mathematical formula}coNP. For deciding whether s is not false in the ultimate grounded pair a slight adaption of Algorithm 1 (guess {a mathematical formula}(X,Y) with {a mathematical formula}s∈Y) is sufficient to show that this is also a problem in {a mathematical formula}NP, thus the complementary problem is again in {a mathematical formula}coNP. For deciding whether s is undefined in the ultimate grounded pair we again slightly adapt the algorithm, such that in the guessed pair we have {a mathematical formula}s∈Y∖X and directly have due to the proof of Lemma 4.13 that the algorithm returns no iff s is undefined in the ultimate grounded pair. Therefore deciding whether a statement is undefined in the grounded pair is a problem in {a mathematical formula}NP. Thus combining these checks for all statements in S for the pair to verify we arrive at an algorithm witnessing that this is a problem in {a mathematical formula}DP.
+        </list-item>
+        <list-item>
+         For {a mathematical formula}DP-hardness, as for the approximate operator, consider the proof of Proposition 4.11. The pair given for verification in that proof is complete iff it is the ultimate grounded pair.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       We next ask whether there exists a non-trivial admissible pair, that is, if at least one statement has a truth value other than unknown. Clearly, we can guess a pair and perform the {a mathematical formula}coNP-check to show that it is admissible. The next result shows that this is also the best we can do.
+      </paragraph>
+      <paragraph label="Theorem 4.15">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}ExistsadmIis{a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let {a mathematical formula}O∈I. We guess a pair {a mathematical formula}(X,Y) and verify that {a mathematical formula}X⊆Y and {a mathematical formula}(∅,S)&lt;i(X,Y) in polynomial time, and {a mathematical formula}(X,Y)≤iO(X,Y) using the {a mathematical formula}NP oracle (Lemma 3.17, Items 1, 3, and 5).
+        </list-item>
+        <list-item>
+         We provide a reduction from the {a mathematical formula}Σ2P-hard problem {a mathematical formula}QBF2,∃-TRUTH. Let {a mathematical formula}∃P∀Qψ be a QBF. Construct {a mathematical formula}Ξ=RED2(P,Q,ψ) as defined in Reduction 3.2. Further let {a mathematical formula}O∈{GΞ,UΞ}. Due to Lemma 3.14 there exists a non-trivial admissible pair of {a mathematical formula}O iff {a mathematical formula}∃P∀Qψ is true.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Lemma 3.4 implies the same complexity for the existence of non-trivial complete and preferred pairs.
+      </paragraph>
+      <paragraph label="Corollary 4.16">
+       Consider any{a mathematical formula}I∈{G,U}and{a mathematical formula}σ∈{com,pre}.{a mathematical formula}ExistsσOis{a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph>
+       By corollary to Theorem 4.14, the existence of a non-trivial grounded pair can be decided in {a mathematical formula}DP by testing whether the trivial pair {a mathematical formula}(∅,S) is (not) a fixpoint of the relevant operator. The following result shows that this bound can be improved.
+      </paragraph>
+      <paragraph label="Proposition 4.17">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}ExistsgrdIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Ξ be an ADF. Obviously, Ξ has a non-trivial approximate grounded semantics iff the trivial pair {a mathematical formula}(∅,S) is not a fixpoint of {a mathematical formula}GΞ, so we show that the co-problem (deciding whether {a mathematical formula}GΞ(∅,S)=(∅,S)) is {a mathematical formula}NP-complete. in {a mathematical formula}NP:We have that {a mathematical formula}GΞ(∅,S)=(∅,S) iff {a mathematical formula}∅⊆GΞ′(∅,S)⊆∅ and {a mathematical formula}S⊆GΞ″(∅,S)⊆S. So mainly we have to verify {a mathematical formula}GΞ′(∅,S)⊆∅ and {a mathematical formula}S⊆GΞ″(∅,S). By Lemma 3.17, the first part can be decided in {a mathematical formula}P (item 1) and the second part in {a mathematical formula}NP (item 4).{a mathematical formula}NP-hard:We give a reduction from SAT. Let ψ be a propositional formula over vocabulary P. Define an ADF {a mathematical formula}D=(S,L,C) with {a mathematical formula}S=P∪{z} for {a mathematical formula}z∉P and {a mathematical formula}φp=p for {a mathematical formula}p∈P and {a mathematical formula}φz=z∧ψ. It is readily verified that by definition every statement has a parent that is undecided in {a mathematical formula}(∅,S) and thus {a mathematical formula}GΞ′(∅,S)=∅. Furthermore, {a mathematical formula}P⊆GΞ′(S,∅) is easy to show. Thus {a mathematical formula}S⊆GΞ′(S,∅) iff {a mathematical formula}z∈GΞ′(S,∅) iff there is an {a mathematical formula}M⊆S with {a mathematical formula}par(z)∖M⊆S∖∅ and {a mathematical formula}M⊨φz iff there is an {a mathematical formula}M⊆S with {a mathematical formula}M⊨φz iff {a mathematical formula}φz=z∧ψ is satisfiable iff ψ is satisfiable. For {a mathematical formula}I=U, the proof is analogous to the one above – we show {a mathematical formula}NP-completeness of the complementary problem. in {a mathematical formula}NP:We have to verify {a mathematical formula}UΞ′(∅,S)⊆∅ and {a mathematical formula}S⊆UΞ″(∅,S). By Lemma 3.17(2) and Lemma 3.17(4), this can be done in {a mathematical formula}NP.{a mathematical formula}NP-hard:The construction is the same as for {a mathematical formula}I=G.  □
+      </paragraph>
+      <paragraph>
+       Using the result for existence of non-trivial admissible pairs, the verification complexity for the preferred semantics is straightforward to obtain, similarly as in the case of AFs [22].
+      </paragraph>
+      <paragraph label="Proposition 4.18">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}VerpreI(X,Y)is{a mathematical formula}Π2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let Ξ be an ADF and {a mathematical formula}X⊆Y⊆S. To show that {a mathematical formula}(X,Y) is not preferred, we guess a pair {a mathematical formula}(M,N) with {a mathematical formula}(X,Y)&lt;i(M,N) and use the {a mathematical formula}NP oracle to show that {a mathematical formula}(M,N) is a complete pair (which can be done in {a mathematical formula}DP).
+        </list-item>
+        <list-item>
+         Consider the complementary problem, that is, deciding whether a given pair is not a preferred pair. Even for the special case of the pair {a mathematical formula}(∅,S), Theorem 4.15 shows that this problem is {a mathematical formula}Σ2P-hard.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       We now move on to query-based reasoning. Similarly as before, we mainly utilize the operator for the upper bound to show hardness. Due to this reason, and for the sake of uniformity of proving results for both operators, we slightly deviate from our definition of credulous and skeptical reasoning and show hardness for the question whether a σ-pair exists such that the given statement is false, respectively ask whether the statement is false in all σ-pairs. For the admissibility-based semantics it is straightforward to see that these problems can be reduced to each other. For querying statement s in an ADF Ξ consider the modified ADF {a mathematical formula}Ξˆ with a fresh statement {a mathematical formula}sˆ and acceptance condition {a mathematical formula}φsˆ=¬s. Let {a mathematical formula}O∈{GΞ,UΞ} and {a mathematical formula}Oˆ∈{GΞˆ,UΞˆ}. It holds that {a mathematical formula}(X,Y) is admissible for {a mathematical formula}O with {a mathematical formula}s∈(S∖Y) iff {a mathematical formula}(X∪{sˆ},Y) is admissible for {a mathematical formula}Oˆ. Likewise, it holds that for all preferred pairs {a mathematical formula}(X,Y) of {a mathematical formula}O we have {a mathematical formula}s∈(S∖Y) iff in all preferred pairs ({a mathematical formula}Xˆ,Yˆ) of {a mathematical formula}Oˆ we have {a mathematical formula}sˆ∈Xˆ. Further, s is false in the grounded pair of {a mathematical formula}O iff {a mathematical formula}sˆ is true in the grounded pair of {a mathematical formula}Oˆ.
+      </paragraph>
+      <paragraph>
+       We now show that on general ADFs credulous reasoning with respect to admissibility is harder than on AFs. By Lemma 3.5, the same lower bound holds for complete and preferred semantics.
+      </paragraph>
+      <paragraph label="Proposition 4.19">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}CredadmIis{a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership is given by Theorem 3.18. Hardness is shown by a reduction from the {a mathematical formula}Σ2P-hard problem {a mathematical formula}QBF2,∃-TRUTH. Let {a mathematical formula}∃P∀Qψ be a QBF. Construct {a mathematical formula}Ξ=RED2(P,Q,ψ) as defined in Reduction 3.2. Further let {a mathematical formula}O∈{GΞ,UΞ}. Due to Lemma 3.14 there exists an admissible pair {a mathematical formula}(X,Y) of {a mathematical formula}O with {a mathematical formula}z∈(S∖Y) iff {a mathematical formula}∃P∀Qψ is true.  □
+      </paragraph>
+      <paragraph>
+       For credulous and skeptical reasoning with respect to the grounded semantics, we first observe that the two coincide since there is always a unique grounded pair. Furthermore, a statement s is true in the approximate grounded pair iff s is true in the least fixpoint (of {a mathematical formula}GΞ) iff s is true in all fixpoints iff there is no fixpoint where s is undecided or false. This condition can be encoded in propositional logic and leads to the next result. For the ultimate operator we apply Algorithm 1. For {a mathematical formula}coNP-hardness the proof of [9, Proposition 13] can be easily adapted.
+      </paragraph>
+      <paragraph label="Proposition 4.20">
+       Consider any{a mathematical formula}I∈{G,U}. Both{a mathematical formula}CredgrdIand{a mathematical formula}SkeptgrdIare{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       For showing the membership result for {a mathematical formula}I=U, consider verifying that a statement s is not true in the ultimate grounded pair. Algorithm 1 decides this via a guess and check approach. Thus deciding whether a statement is not true can be done in {a mathematical formula}NP. The complementary problem decides if a given statement is true in the ultimate grounded pair. This yields {a mathematical formula}coNP membership for {a mathematical formula}CredgrdU. For hardness the proof for both operators is the same. For showing the results for {a mathematical formula}I=G consider the following proof.
+      </paragraph>
+      <list>
+       <list-item>
+        We reduce to unsatisfiability checking in propositional logic. Let {a mathematical formula}Ξ=(S,L,C) be an ADF with {a mathematical formula}S={s1,…,sn} and assume we want to verify that {a mathematical formula}sk is true in the grounded pair of Ξ for some {a mathematical formula}1≤k≤n. We again extend Reduction 3.3; additionally define the formulas{a mathematical formula}{a mathematical formula} We claim that ψ is unsatisfiable iff there is no consistent fixpoint where {a mathematical formula}sk is unknown or false.
+       </list-item>
+       <list-item>
+        Let ψ be a propositional formula over vocabulary P. Define the ADF {a mathematical formula}D=(S,L,C) with {a mathematical formula}S=P∪{z}, {a mathematical formula}φp=¬ψ for {a mathematical formula}p∈P, and {a mathematical formula}φz=⋀p∈P¬p. We show that z is true in the grounded semantics of {a mathematical formula}GD iff ψ is a tautology.
+       </list-item>
+      </list>
+      <paragraph>
+       Regarding skeptical reasoning for the remaining semantics we need only show the results for complete and preferred semantics, in all other cases the complexity coincides with credulous reasoning or is trivial. For complete semantics it is easy to see that skeptical reasoning coincides with skeptical reasoning under grounded semantics, since the grounded pair is the {a mathematical formula}≤i-least complete pair.
+      </paragraph>
+      <paragraph label="Corollary 4.21">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}SkeptcomIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph>
+       Similar to reasoning on AFs, we step up one level of the polynomial hierarchy by changing from credulous to skeptical reasoning with respect to preferred semantics, which makes skeptical reasoning under preferred semantics particularly hard. We apply proof ideas by [27] to prove {a mathematical formula}Π3P-hardness.
+      </paragraph>
+      <paragraph label="Theorem 4.22">
+       Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}SkeptpreIis{a mathematical formula}Π3P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership is given by Theorem 3.18. Hardness is shown by a reduction from the {a mathematical formula}Π3P-hard problem {a mathematical formula}QBF3,∀-TRUTH. Let {a mathematical formula}∀P∃Q∀Rψ be a QBF. We define an ADF Ξ as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}S=P∪Q∪-Q∪R∪{f}, with {a mathematical formula}-Q={-q|q∈Q},
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φp=p for {a mathematical formula}p∈P,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φq=¬f∧¬-q for {a mathematical formula}q∈Q,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φ-q=¬f∧¬q for {a mathematical formula}-q∈-Q,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φr=¬r for {a mathematical formula}r∈R,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}φf=¬f∧¬ψ.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Two-valued semantics
+      </section-title>
+      <paragraph>
+       The complexity results we have obtained so far might lead the reader to ask why we bother with the approximate operator {a mathematical formula}GΞ at all: the ultimate operator {a mathematical formula}UΞ is at least as precise and for all admissibility-based and most conflict-free-based semantics considered up to now, it has the same computational costs. We now show that for the verification of two-valued stable models, the operator for the upper bound plays no role and therefore the complexity difference between the lower bound operators for approximate (in {a mathematical formula}P) and ultimate ({a mathematical formula}coNP-hard) semantics comes to bear.
+      </paragraph>
+      <paragraph label="Proposition 4.23">
+       For the ultimate two-valued stable semantics, Brewka et al. [11] already have some complexity results: model verification is in {a mathematical formula}DP (Proposition 8), and model existence is {a mathematical formula}Σ2P-complete (Theorem 9). We will show next that we can do better for the approximate version. Let Ξ be an ADF and{a mathematical formula}X⊆Y⊆S. Checking that X is the least fixpoint of{a mathematical formula}GΞ′(⋅,Y)can be done in polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       We provide the following polynomial-time decision procedure with input {a mathematical formula}Ξ,X,Y.
+       <list>
+        Set {a mathematical formula}i=0 and {a mathematical formula}X0=∅.For each statement {a mathematical formula}s∈S, do the following:If {a mathematical formula}Xi+1=Xi=X then return “Yes”.If {a mathematical formula}Xi+1=Xi⊊X then return “No”.If {a mathematical formula}Xi+1⊈X then return “No”.Increment i and go to step 2.It remains to show that
+       </list>
+       <paragraph>
+        X is the least fixpoint of {a mathematical formula}GΞ′(⋅,Y) iff the procedure returns “Yes”.
+       </paragraph>
+       <list>
+        <list-item label="“if”:">
+         Assume the procedure returned “Yes” on input {a mathematical formula}Ξ,X,Y.
+        </list-item>
+        <list-item label="“only if”:">
+         Let X be the least fixpoint of {a mathematical formula}GΞ′(⋅,Y) and assume to the contrary that the procedure answered “No”.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       In particular, the procedure can decide whether Y is the least fixpoint of {a mathematical formula}GΞ′(⋅,Y), that is, whether {a mathematical formula}(Y,Y) is a two-valued stable model of {a mathematical formula}GΞ. This yields the next result.
+      </paragraph>
+      <paragraph label="Theorem 4.24">
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}Ver2stGis in{a mathematical formula}P, and
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}Exists2stGis{a mathematical formula}NP-complete.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph label="Proof">
+       Let Ξ be an ADF and {a mathematical formula}X⊆S.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        We have to verify that X is the least fixpoint of the operator {a mathematical formula}GΞ′(⋅,X), which can be done in polynomial time by Proposition 4.23.
+       </list-item>
+       <list-item label="2.">
+        Deciding whether Ξ has a two-valued stable model is {a mathematical formula}NP-complete:
+       </list-item>
+      </list>
+      <paragraph>
+       The hardness direction of the second part is clear since the respective result from stable semantics of abstract argumentation frameworks carries over.
+      </paragraph>
+      <paragraph label="Proposition 4.25">
+       Brewka et al. [11] showed that {a mathematical formula}Ver2stU is in {a mathematical formula}DP (Proposition 8). We can improve that upper bound to {a mathematical formula}coNP: basically the operator for the upper bound (contributing the {a mathematical formula}NP part) is not really needed. We furthermore also provide a hardness proof for {a mathematical formula}coNP. {a mathematical formula}Ver2stUis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Given an ADF {a mathematical formula}Ξ=(S,L,C) and a set {a mathematical formula}M⊆S we first construct the reduct {a mathematical formula}ΞM in polynomial time. Now M is an ultimate two-valued stable model of Ξ iff all statements in M are true in the grounded semantics of {a mathematical formula}ΞM and {a mathematical formula}(M,M) is a model of Ξ. Verifying if a statement is true in the ultimate grounded pair of an ADF is {a mathematical formula}coNP-complete due to Proposition 4.20. Thus verifying that all statements in M are true in the ultimate grounded pair is likewise a problem in {a mathematical formula}coNP. Verifying if {a mathematical formula}(M,M) is a model of Ξ can be achieved in polynomial time. This means that {a mathematical formula}Ver2stU is in {a mathematical formula}coNP.
+        </list-item>
+        <list-item>
+         Let ψ be a propositional formula over a vocabulary P. We define an ADF D over statements P with {a mathematical formula}φp=ψ for all {a mathematical formula}p∈P. When we apply {a mathematical formula}UD′ to the pair {a mathematical formula}(∅,P), there are only two possible outcomes: either {a mathematical formula}ψ=ψ(∅,P)=φp(∅,P) is a tautology, then {a mathematical formula}p∈UD′(∅,P) for all {a mathematical formula}p∈P, that is {a mathematical formula}UD′(∅,P)=P; otherwise ψ is refutable and accordingly {a mathematical formula}UD′(∅,P)=∅. Furthermore, in the former case it follows from {a mathematical formula}≤i-monotonicity of {a mathematical formula}UD that {a mathematical formula}P=UD′(∅,P)⊆UD′(P,P). Thus ψ is a tautology if and only if P is a fixpoint of {a mathematical formula}UD′(⋅,P) and ∅ is not. Now{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+        </list-item>
+       </list>
+       <paragraph>
+        □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 4.26">
+       We now turn to the credulous and skeptical reasoning problems for the two-valued semantics. We first recall that a two-valued pair {a mathematical formula}(X,X) is a supported model (or model for short) of an ADF Ξ iff {a mathematical formula}GΞ(X,X)=(X,X). Thus it could equally well be characterized by the two-valued operator by saying that X is a model iff {a mathematical formula}GΞ(X)=X. Now since {a mathematical formula}UΞ is the ultimate approximation of {a mathematical formula}GΞ, also {a mathematical formula}UΞ(X,X)=(X,X) in this case. Rounding up, this recalls that approximate and ultimate two-valued supported models coincide. Hence we get the following results for reasoning with this semantics. Consider any{a mathematical formula}I∈{G,U}.{a mathematical formula}Cred2suIis{a mathematical formula}NP-complete and{a mathematical formula}Skept2suIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       The membership parts are clear since {a mathematical formula}Ver2suI is in {a mathematical formula}P. Hardness carries over from AFs [22].  □
+      </paragraph>
+      <paragraph>
+       For the approximate two-valued stable semantics, the fact that model verification can be decided in polynomial time leads to the next result.
+      </paragraph>
+      <paragraph label="Corollary 4.27">
+       {a mathematical formula}Cred2stGis{a mathematical formula}NP-complete and{a mathematical formula}Skept2stGis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       The membership parts are clear since {a mathematical formula}Ver2stG is in {a mathematical formula}P. Hardness carries over from AFs [22].  □
+      </paragraph>
+      <paragraph label="Theorem 4.28">
+       For the ultimate two-valued stable semantics, things are bit more complex. The following result was already presented by Brewka et al. [11], however they had to leave out the proof due to space restrictions. We present the proof (inspired by the proof of [20, Theorem 6.12]) here for completeness and since we will need it later on. (See[11, Theorem 9].) Deciding whether a given ADF has an ultimate two-valued stable model is{a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}Ξ=(S,L,C) be an ADF. For membership, we first guess a set {a mathematical formula}M⊆S. We can verify in polynomial time that M is a two-valued supported model of Ξ, and compute the reduct {a mathematical formula}ΞM. Using the {a mathematical formula}NP oracle, we can compute the grounded semantics {a mathematical formula}(K′,K″) of the reduct in polynomial time. It then only remains to check {a mathematical formula}K′=M.For hardness, we provide a reduction from the {a mathematical formula}Σ2P-complete problem of deciding whether a {a mathematical formula}QBF2,∃-formula is valid. Let {a mathematical formula}∃P∀Qψ be an instance of {a mathematical formula}QBF2,∃-TRUTH where ψ is in DNF and {a mathematical formula}P,Q≠∅. We have to construct an ADF D such that D has a stable model iff {a mathematical formula}∃P∀Qψ is true.First of all, define {a mathematical formula}-P={-p|p∈P} for abbreviating the negations of {a mathematical formula}p∈P. For guessing an interpretation for P, define the acceptance formulas {a mathematical formula}φp=¬-p and {a mathematical formula}φ-p=¬p for {a mathematical formula}p∈P. Define {a mathematical formula}ψ′ as the formula {a mathematical formula}ψ[¬p/-p] where all occurrences of ¬p have been replaced by {a mathematical formula}-p. Further add a statement z with {a mathematical formula}φz=¬z∧¬ψ′, an integrity constraint that ensures truth of {a mathematical formula}ψ′ in any model. For {a mathematical formula}q∈Q we set {a mathematical formula}φq=ψ′. Thus we get the statements {a mathematical formula}S=P∪-P∪Q∪{z}. We have to show that D has a stable model iff {a mathematical formula}∃P∀Qψ is true.
+      </paragraph>
+      <list>
+       <list-item label="“if”:">
+        Let {a mathematical formula}MP⊆P be such that the following formula over vocabulary Q is a tautology:{a mathematical formula} We now construct a stable model {a mathematical formula}M=MP∪Q∪{-p∈-P|p∉MP}. We first show that M is a model of D: For each {a mathematical formula}p∈MP, we have {a mathematical formula}-p∉M by definition and hence {a mathematical formula}M⊨φp=¬-p. Conversely, if {a mathematical formula}p∉MP then {a mathematical formula}-p∈M and {a mathematical formula}M⊨φ-p=¬p. For {a mathematical formula}q∈Q, we have that {a mathematical formula}φq=ψ′ and so we have to show {a mathematical formula}M⊨ψ′. This is however immediate since ϕ (the partial evaluation of ψ with M as interpretation for P) is a tautology. Finally, by definition {a mathematical formula}z∉M, and since {a mathematical formula}M⊨ψ′ we get {a mathematical formula}M⊭φz=¬z∧¬ψ′ as required.To show that M is a stable model, we have to show that all statements in M are true in the ultimate Kripke–Kleene semantics of the reduct {a mathematical formula}DM. The reduct is given by
+       </list-item>
+       <list-item label="“only if”:">
+        Let {a mathematical formula}M⊆S be an ultimate two-valued stable model of D. We have to show that {a mathematical formula}∃P∀Qψ is true. Define {a mathematical formula}MP=M∩P and {a mathematical formula}ϕ=ψ(MP,MP∪Q). We show that ϕ is a tautology.First of all, since M is a model of {a mathematical formula}DM we have {a mathematical formula}z∉M: assume to the contrary that {a mathematical formula}z∈M, then M is a model for {a mathematical formula}φz=¬z∧¬ψ′≡f∧¬ψ′, contradiction. Hence {a mathematical formula}M⊭¬z∧¬ψ′, that is, {a mathematical formula}M⊭¬ψ′. This shows that {a mathematical formula}M⊨ψ′, that is, {a mathematical formula}M⊨φq for all {a mathematical formula}q∈Q, whence {a mathematical formula}Q⊆M. Thus the evaluation of {a mathematical formula}p∈P and {a mathematical formula}-p∈-P defined by M shows the truth of the formula{a mathematical formula} Now since M is a stable model of D, the pair {a mathematical formula}(M,M) is the ultimate grounded semantics of the reduct {a mathematical formula}DM again given by
+       </list-item>
+      </list>
+      <paragraph label="Proposition 4.29">
+       The hardness reduction in this proof makes use of a statement z that is false in any ultimate two-valued stable model. This can be used to show the same hardness for the credulous reasoning problem for this semantics: we introduce a new statement x that behaves just like ¬z, then x is true in some model if and only if there exists a model. The problem{a mathematical formula}Cred2stUis{a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let Ξ be an ADF and {a mathematical formula}s∈S. We can guess a set {a mathematical formula}X⊆S with {a mathematical formula}s∈X and verify in {a mathematical formula}coNP that it is an ultimate two-valued stable model.
+        </list-item>
+        <list-item>
+         Let {a mathematical formula}∃P∀Qψ be a QBF. We use the same ADF construction as in the hardness proof of {a mathematical formula}Exists2stU and augment D by an additional statement x with {a mathematical formula}φx=¬z. It is clear that in any model of D, z must be false and so x must be true. So x is true in some two-valued stable model of D iff D has a two-valued stable model iff {a mathematical formula}∃P∀Qψ is true.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       A similar argument works for the skeptical reasoning problem: Given a QBF {a mathematical formula}∀P∃Qψ, we construct its negation {a mathematical formula}∃P∀Q¬ψ, whose associated ADF D has an ultimate two-valued stable model (where z is false) iff {a mathematical formula}∃P∀Q¬ψ is true iff the original QBF {a mathematical formula}∀P∃Qψ is false. Hence {a mathematical formula}∀P∃Qψ is true iff z is true in all ultimate two-valued stable models of D.
+      </paragraph>
+      <paragraph label="Proposition 4.30">
+       The problem{a mathematical formula}Skept2stUis{a mathematical formula}Π2P-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         Let Ξ be an ADF and {a mathematical formula}s∈S. To decide the co-problem, we guess a set {a mathematical formula}X⊆S with {a mathematical formula}s∉X and verify in {a mathematical formula}coNP that it is an ultimate two-valued stable model.
+        </list-item>
+        <list-item>
+         Let {a mathematical formula}∀P∃Qψ be a QBF with ψ in CNF. Define the QBF {a mathematical formula}∃P∀Q¬ψ and observe that ¬ψ can be transformed into DNF in linear time. We use this new QBF to construct an ADF D as we did in the hardness proof of {a mathematical formula}Exists2stU. As observed in the proof of Proposition 4.29, the special statement z is false in all ultimate two-valued stable models of D. To show that {a mathematical formula}∀P∃Qψ is true iff z is true in all ultimate two-valued stable models of D, we show that {a mathematical formula}∀P∃Qψ is false iff D has an ultimate two-valued stable model where z is false: {a mathematical formula}∀P∃Qψ is false iff {a mathematical formula}¬∀P∃Qψ is true iff {a mathematical formula}∃P∀Q¬ψ is true iff D has an ultimate two-valued stable model iff D has an ultimate two-valued stable model where z is false.  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       An overview over all complexity results for general ADFs can be found in Table 2.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Complexity of bipolar ADFs
+     </section-title>
+     <paragraph>
+      In this section, we take a closer look at the special class of ADFs where all links are supporting or attacking, and more importantly the specific link type is known for each link. We first note that since BADFs are a subclass of ADFs, all membership results from the previous sections immediately carry over. However, we can show that many problems will in fact become easier. Intuitively, computing the revision operators is now {a mathematical formula}P-easy because the associated satisfiability/tautology problems only have to treat restricted acceptance formulas. In bipolar ADFs, by definition, if in some three-valued pair {a mathematical formula}(X,Y) a statement s is accepted by a revision operator ({a mathematical formula}s∈O′(X,Y)), it will stay so if we set its undecided supporters to false and its undecided attackers to true. Symmetrically, if a statement is rejected by an operator ({a mathematical formula}s∉O″(X,Y)), it will stay so if we set its undecided supporters to true and its undecided attackers to false. Hence to decide whether {a mathematical formula}s∈O′(X,Y) or {a mathematical formula}s∉O″(X,Y) for given operator {a mathematical formula}O, pair {a mathematical formula}(X,Y) and statement s, we need only look at one single interpretation that can be constructed from the known link types. This is the key idea underlying the next result. Recall that {a mathematical formula}BG and {a mathematical formula}BU are the restrictions of the sets of operators {a mathematical formula}G and {a mathematical formula}U respectively to BADFs where the type of each link is known.
+     </paragraph>
+     <paragraph label="Proposition 5.1">
+      Let{a mathematical formula}I∈{BG,BU}.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}ElemI′is in{a mathematical formula}P.
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}ElemI″is in{a mathematical formula}P.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Let Ξ be a BADF with {a mathematical formula}L=L+∪L−, {a mathematical formula}O∈{GΞ,UΞ}, {a mathematical formula}s∈S and {a mathematical formula}X⊆Y⊆S. It suffices to show the claims for {a mathematical formula}I=BU, since the result that {a mathematical formula}s∈UΞ″(X,Y) is computable in polynomial time implies that deciding {a mathematical formula}s∈GΞ″(X,Y) can likewise be achieved in polynomial time, due to coincidence of the two operators. Further due to Proposition 3.16 we know that deciding {a mathematical formula}s∈GΞ′(X,Y) is a problem in {a mathematical formula}P.Recall that for {a mathematical formula}M⊆S, if a link {a mathematical formula}(z,s) is attacking, then it cannot be the case that {a mathematical formula}M⊭φs and {a mathematical formula}M∪{z}⊨φs. Similarly if {a mathematical formula}(z,s) is supporting, then it cannot be the case that {a mathematical formula}M⊨φs and {a mathematical formula}M∪{z}⊭φs. If {a mathematical formula}(x,s) is attacking and supporting then for any {a mathematical formula}M⊆S we have {a mathematical formula}M⊨φs iff {a mathematical formula}M∪{z}⊨φs, i.e. a change of the truth value of z does not change the evaluation of {a mathematical formula}φs.Given a consistent pair {a mathematical formula}(X,Y) and {a mathematical formula}s∈S we can use a “canonical” interpretation representing all {a mathematical formula}X⊆Z⊆Y as follows. Note that the aforementioned “redundant” links, i.e. links in the intersection {a mathematical formula}L+∩L− can be disregarded completely and for ease of notation we will assume in the proof that no such link is present (formally if {a mathematical formula}(x,s) is a redundant link, then we can replace each x in {a mathematical formula}φs uniformly with t or f). Let {a mathematical formula}Z⊆S, {a mathematical formula}Z′⊆attΞ(s) and {a mathematical formula}Z″⊆suppΞ(s). Then{a mathematical formula}{a mathematical formula}{a mathematical formula}The “if” direction is both times trivially satisfied. This can be seen by the easy fact that if {a mathematical formula}φs(L,U) is tautological, then so is {a mathematical formula}φs(L′,U′) with {a mathematical formula}(L,U)≤i(L′,U′). Suppose the first “only if” does not hold, i.e. the first line holds, but the second is not true. Then there exists a set H with {a mathematical formula}(Z∖Z′)⊆H⊆Z such that {a mathematical formula}H⊭φs. By assumption {a mathematical formula}Z⊨φs and since {a mathematical formula}H∪(Z′∩Z)=Z also {a mathematical formula}H∪(Z′∩Z)⊨φs, which is a contradiction, since {a mathematical formula}Z′⊆attΞ(s) and thus {a mathematical formula}(Z′∩Z)⊆attΞ(s), which implies that there exists a statement in {a mathematical formula}attΞ(s) which is not attacking.Suppose the second only if does not hold, then there exists an H with {a mathematical formula}(Z∖Z′)⊆H⊆(Z∪Z″) such that {a mathematical formula}H⊭φs. Since we have that {a mathematical formula}(Z∖Z′)⊆(H∖(Z″∖Z))⊆Z it follows that {a mathematical formula}H∖(Z″∖Z)⊨φs, which is a contradiction since {a mathematical formula}Z″ consists only of supporters of s.Now we set the canonical interpretation as {a mathematical formula}Z=X∪(Y∖suppΞ(s)). Observe that there exists {a mathematical formula}Z′⊆attΞ(s) and {a mathematical formula}Z″⊆suppΞ(s) such that {a mathematical formula}X=Z∖Z′ and {a mathematical formula}Y=Z∪Z″, thus {a mathematical formula}s∈UΞ′(Z,Z) iff {a mathematical formula}s∈UΞ′(X,Y). Since we can construct Z in polynomial time if {a mathematical formula}L+ and {a mathematical formula}L− are known and deciding {a mathematical formula}s∈UΞ′(Z,Z) simply amounts to evaluating a formula under a valuation, the first claim follows.Showing the second claim is similar. Let {a mathematical formula}Z⊆S, {a mathematical formula}Z′⊆suppΞ(s) and {a mathematical formula}Z″⊆attΞ(s). Then{a mathematical formula}{a mathematical formula}{a mathematical formula}  □
+     </paragraph>
+     <paragraph>
+      Using the generic upper bounds of Theorem 3.18, it is now straightforward to show membership results for BADFs with known link types.
+     </paragraph>
+     <paragraph label="Corollary 5.2">
+      Let{a mathematical formula}I∈{BG,BU}, semantics{a mathematical formula}σ∈{adm,com}and{a mathematical formula}τ∈{cfi,nai}. We find that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}VerσI,{a mathematical formula}VerτIand{a mathematical formula}VergrdIare in{a mathematical formula}P;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}VerpreIis in{a mathematical formula}coNP;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ExistsσI,{a mathematical formula}ExistspreIare in{a mathematical formula}NP;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}CredτIis in{a mathematical formula}P;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}CredσIand{a mathematical formula}CredpreIare in{a mathematical formula}NP;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ExistsgrdI,{a mathematical formula}CredgrdI,{a mathematical formula}SkeptgrdI,{a mathematical formula}SkeptcomIare in{a mathematical formula}P;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}SkeptpreIis in{a mathematical formula}Π2P.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Membership is due to Theorem 3.18 and the complexity bounds of the operators in BADFs in Proposition 5.1, just note that {a mathematical formula}Σ0P=Π0P=D0P=P. {a mathematical formula}VergrdI is in {a mathematical formula}PP=P by Corollary 3.19. For the existence of non-trivial pairs we can simply guess and check in polynomial time for admissible pairs and thus also for complete and preferred semantics.  □
+     </paragraph>
+     <paragraph>
+      Hardness results straightforwardly carry over from AFs.
+     </paragraph>
+     <paragraph label="Proposition 5.3">
+      Let{a mathematical formula}I∈{BG,BU}and semantics{a mathematical formula}σ∈{adm,com,pre}.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}VerpreIis{a mathematical formula}coNP-hard;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ExistsσIand{a mathematical formula}CredσIare{a mathematical formula}NP-hard;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}SkeptpreIis{a mathematical formula}Π2P-hard.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Hardness results from AFs for these problems carry over to BADFs as for all semantics AFs are a special case of BADFs [11], [40]. The complexities of the problems on AFs for admissible and preferred semantics are shown by Dimopoulos and Torres [22], except for the {a mathematical formula}Π2P-completeness result of skeptical preferred semantics, which is shown by Dunne and Bench-Capon [27]. The complete semantics is studied by Coste-Marquis et al. [15].  □
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Conflict-free semantics
+      </section-title>
+      <paragraph>
+       For the semantics based on conflict-freeness, it also becomes {a mathematical formula}P-easy to decide whether non-trivial interpretations exist. Recall that by Lemma 3.8, any set of conflict-free interpretations is {a mathematical formula}≤i-downward-closed. (That is, whenever {a mathematical formula}(X,Y) is conflict-free then any {a mathematical formula}(X′,Y′)≤i(X,Y) is also conflict-free.) This also gives a more intuitive explanation of why {a mathematical formula}VernaiI is in {a mathematical formula}P for {a mathematical formula}I∈{BG,BU}: To verify that a conflict-free pair {a mathematical formula}(X,Y) is also naive, we have to verify that the set of pairs{a mathematical formula} contains no conflict-free pair. This check can be done in polynomial time since there are at most {a mathematical formula}2⋅|S| elements in this set and {a mathematical formula}VercfiI is in {a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proposition 5.4">
+       Let{a mathematical formula}I∈{BG,BU}.{a mathematical formula}ExistscfiIand{a mathematical formula}ExistsnaiIare in{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       We first note that the two decision problems coincide by Lemma 3.7. To decide {a mathematical formula}ExistscfiI for a given ADF {a mathematical formula}Ξ=(S,L,C), we have to check for each {a mathematical formula}s∈S whether any of the pairs {a mathematical formula}({s},S) or {a mathematical formula}(∅,S∖{s}) is conflict-free, which can be done in polynomial time by Corollary 5.2. If one of these pairs is conflict-free, the answer is yes; if all pairs where exactly one statement is not undecided are not conflict-free, then there is no non-trivial conflict-free pair. (If there was one, then by Lemma 3.8 there would be a non-trivial conflict-free pair where exactly one statement is true or false.)  □
+      </paragraph>
+      <paragraph>
+       For skeptical reasoning amongst naive semantics, we can show that the problem remains hard even for bipolar ADFs. This is because we can introduce new statements, which allows us to encode tautology checking of propositional formulas in disjunctive normal form into a bipolar ADF.
+      </paragraph>
+      <paragraph label="Proposition 5.5">
+       Let{a mathematical formula}I∈{BG,BU}.{a mathematical formula}SkeptnaiIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         To verify that a statement {a mathematical formula}s∈S does not follow skeptically, we can guess a pair {a mathematical formula}(X,Y) with {a mathematical formula}s∉X and verify in {a mathematical formula}P that it is naive.
+        </list-item>
+        <list-item>
+         We reduce from tautology checking. Let {a mathematical formula}ψ=ψ1∨…∨ψn be a propositional formula in DNF over vocabulary P. Assume additionally (and without loss of generality) that there is no disjunct {a mathematical formula}ψi that contains both p and ¬p for some {a mathematical formula}p∈P. (If there is such a disjunct, we can remove it without changing the models of ψ.) We construct a bipolar ADF {a mathematical formula}D=(S,L,C) as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} We show that z is contained in all naive pairs of D iff ψ is a tautology.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Notably, this result is the only case in which bipolar ADFs are (potentially) more complex than AFs, as in the latter skeptical reasoning over naive pairs can be done in polynomial time [15].{sup:9}
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Two-valued semantics
+      </section-title>
+      <paragraph>
+       Regarding BADFs and two-valued semantics we first show that there is no hope that the existence problems for approximate and ultimate two-valued stable models coincide as there are cases when the semantics differ.
+      </paragraph>
+      <paragraph label="Example 5.1">
+       Consider the BADF {a mathematical formula}F=(S,L,C) with statements {a mathematical formula}S={a,b,c} and acceptance formulas {a mathematical formula}φa=t, {a mathematical formula}φb=a∨c and {a mathematical formula}φc=a∨b. The only two-valued supported model is {a mathematical formula}(S,S) where all statements are true. This pair is also an ultimate two-valued stable model, since {a mathematical formula}UF′(∅,S)={a}, and both {a mathematical formula}φb({a},S)=t∨c and {a mathematical formula}φc({a},S)=t∨b are tautologies, whence we have {a mathematical formula}UF′({a},S)=S. However, {a mathematical formula}(S,S) is not an approximate two-valued stable model: although {a mathematical formula}GF′(∅,S)={a}, then {a mathematical formula}GF′({a},S)={a} since the partially evaluated formulas {a mathematical formula}φb({a},S) and {a mathematical formula}φc({a},S) contain free variables. We thus cannot reconstruct the upper bound S and F has no approximate two-valued stable models.
+      </paragraph>
+      <paragraph>
+       So approximate and ultimate two-valued stable model semantics are indeed different. However, we can show that the respective existence problems have the same complexity.
+      </paragraph>
+      <paragraph label="Proposition 5.6">
+       Let{a mathematical formula}I∈{BG,BU}and semantics{a mathematical formula}σ∈{2su,2st}.{a mathematical formula}VerσIis in{a mathematical formula}P;{a mathematical formula}ExistsσIis{a mathematical formula}NP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership carries over – for supported models from [11, Proposition 5], for approximate stable models from Theorem 4.24. For membership for ultimate stable models, we can use Proposition 5.1 to adapt the decision procedure of Proposition 4.23. In any case, hardness carries over from AFs [22].  □
+      </paragraph>
+      <paragraph>
+       For credulous and skeptical reasoning over the two-valued semantics, membership is straightforward and hardness again carries over from argumentation frameworks.
+      </paragraph>
+      <paragraph label="Corollary 5.7">
+       Let{a mathematical formula}I∈{BG,BU}and semantics{a mathematical formula}σ∈{2su,2st}.{a mathematical formula}CredσIis{a mathematical formula}NP-complete;{a mathematical formula}SkeptσIis{a mathematical formula}coNP-complete.
+      </paragraph>
+      <paragraph>
+       An overview over all complexity results for bipolar ADFs can be found in Table 3.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

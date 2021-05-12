@@ -1,0 +1,519 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Unsupervised Feature Learning for Visual Sign Language Identification.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Prior research on language identification focused primarily on text and speech. In this paper, we focus on the visual modality and present a method for identifying sign languages solely from short video samples. The method is trained on unlabelled video data (unsupervised feature learning) and using these features, it is trained to discriminate between six sign languages (supervised learning). We ran experiments on short video samples involving 30 signers (about 6 hours in total). Using leave-one-signer-out cross-validation, our evaluation shows an average best accuracy of
+       84
+       %. Given that sign languages are under-resourced, unsupervised feature learning techniques are the right tools and our results indicate that this is realistic for sign language identification.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The task of automatic language identification is to quickly identify the identity of the language given utterances. Performing this task is key in applications involving multiple languages such as machine translation and information retrieval (e.g. metadata creation for large audiovisual archives).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Prior research on language identification is heavily biased towards written and spoken languages
+        [8, 27, 14, 18]
+        . While language identification in signed languages is yet to be studied, significant progress has been recorded for written and spoken languages.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Written languages can be identified to about 99% accuracy using Markov models
+        [8]
+        . This accuracy is so high that current research has shifted to related more challenging problems: language variety identification
+        [26]
+        , native language identification
+        [24]
+        and identification at the extremes of scales; many more languages, smaller training data, shorter document lengths
+        [1]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Spoken languages can be identified to accuracies that range from 79-98% using different models
+        [27, 19]
+        . The methods used in spoken language identification have also been extended to a related class of problems: native accent identification
+        [2, 3, 25]
+        and foreign accent identification
+        [23]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        While some work exists on sign language recognition
+        [20, 21, 9, 6]
+        , very little research exists on sign language identification except for the work by
+        [10]
+        , where it is shown that sign language identification can be done using linguistically motivated features.
+Accuracies of 78% and 95% are reported on signer independent and signer dependent identification of two sign languages.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        This paper has two goals. First, to present a method to identify sign languages using features learned by unsupervised techniques
+        [12, 4]
+        . Second, to evaluate the method on six sign languages under different conditions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        Our contributions:
+        <span class="ltx_inline-enumerate" id="I1">
+         <span class="ltx_inline-item" id="I1.i1">
+          <span class="ltx_tag ltx_tag_inline-enumerate">
+           a
+           )
+          </span>
+          show that unsupervised feature learning techniques, currently popular in many pattern recognition problems, also work for visual sign languages. More specifically, we show how K-means and sparse autoencoder can be used to learn features for sign language identification.
+         </span>
+         <span class="ltx_inline-item" id="I1.i2">
+          <span class="ltx_tag ltx_tag_inline-enumerate">
+           b
+           )
+          </span>
+          demonstrate the impact on performance of varying the number of features (aka, feature maps or filter sizes), the patch dimensions (from 2D to 3D) and the number of frames (video length).
+         </span>
+        </span>
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       The challenges in sign language identification
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The challenges in sign language identification arise from three sources as described below.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Iconicity in sign languages
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The relationship between forms and meanings are not totally arbitrary
+         [17]
+         . Both signed and spoken languages manifest iconicity, that is forms of words or signs are somehow motivated by the meaning of the word or sign. While sign languages show a lot of iconicity in the lexicon
+         [22]
+         , this has not led to a universal sign language. The same concept can be iconically realised by the manual articulators in a way that conforms to the phonological regularities of the languages, but still lead to different sign forms.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Iconicity is also used in the morphosyntax and discourse structure of all sign languages, however, and there we see many similarities between sign languages. Both real-world and imaginary objects and locations are visualised in the space in front of the signer, and can have an impact on the articulation of signs in various ways. Also, the use of constructed action appears to be used in many sign languages in similar ways. The same holds for the rich use of non-manual articulators in sentences and the limited role of facial expressions in the lexicon: these too make sign languages across the world very similar in appearance, even though the meaning of specific articulations may differ
+         [7]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Differences between signers
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Just as speakers have different voices unique to each individual, signers have also different signing styles that are likely unique to each individual. Signers’ uniqueness results from how they articulate the shapes and movements that are specified by the linguistic structure of the language. The variability between signers either in terms of physical properties (hand sizes, colors, etc) or in terms of articulation (movements) is such that it does not affect the understanding of the sign language by humans, but that it may be difficult for machines to generalize over multiple individuals. At present we do not know whether the differences between signers using the same language are of a similar or different nature than the differences between different languages. At the level of phonology, there are few differences between sign languages, but the differences in the phonetic realization of words (their articulation) may be much larger.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Diverse environments
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         The visual ’activity’ of signing comes in a context of a specific environment. This environment can include the visual background and camera noises. The background objects of the video may also include dynamic objects – increasing the ambiguity of signing activity. The properties and configurations of the camera induce variations of scale, translation, rotation, view, occlusion, etc. These variations coupled with lighting conditions may introduce noise. These challenges are by no means specific to sign interaction, and are found in many other computer vision tasks.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Method
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Our method performs two important tasks. First, it learns a feature representation from patches of unlabelled raw video data
+        [12, 4]
+        . Second, it looks for activations of the learned representation (by convolution) and uses these activations to learn a classifier to discriminate between sign languages.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Unsupervised feature learning
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Given samples of sign language videos (unknown sign language with one signer per video), our system performs the following steps to learn a feature representation (note that these video samples are separate from the video samples that are later used for classifier learning or testing):
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <ol class="ltx_enumerate" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Extract patches
+            . Extract small videos (hereafter called patches) randomly from anywhere in the video samples. We fix the size of the patches such that they all have
+            r
+            rows,
+            c
+            columns and
+            f
+            frames and we extract patches
+            m
+            times. This gives us
+            𝑿={x(1),x(1),…,x(m)}
+            , where
+            x(i)∈RN
+            and
+            N=r*c*f
+            (the size of a patch). For our experiments, we extract 100,000 patches of size
+            15*15*1
+            (2D) and
+            15*15*2
+            (3D).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Normalize the patches
+            . There is evidence that normalization and whitening
+            [13]
+            improve performance in unsupervised feature learning
+            [4]
+            . We therefore normalize every patch
+            x(i)
+            by subtracting the mean and dividing by the standard deviation of its elements. For visual data, normalization corresponds to local brightness and contrast normalization.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Learn a feature-mapping
+            . Our unsupervised algorithm takes in the normalized and whitened dataset
+            𝑿={x(1),x(1),…,x(m)}
+            and maps each input vector
+            x(i)
+            to a new feature vector of
+            K
+            features (
+            f:RN→RK
+            ). We use two unsupervised learning algorithms a) K-means b) sparse autoencoders.
+           </p>
+          </div>
+          <div class="ltx_para" id="I2.i3.p2">
+           <ol class="ltx_enumerate" id="I2.I1">
+            <li class="ltx_item" id="I2.I1.i1" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (a)
+             </span>
+             <div class="ltx_para" id="I2.I1.i1.p1">
+              <p class="ltx_p">
+               K-means clustering
+               : we train K-means to learns
+               K
+               c(k)
+               centroids that minimize the distance between data points and their nearest centroids
+               [5]
+               . Given the learned centroids
+               c(k)
+               , we measure the distance of each data point (patch) to the centroids. Naturally, the data points are at different distances to each centroid, we keep the distances that are below the average of the distances and we set the other to zero:
+              </p>
+              fk⁢(x)=max⁡{0,μ⁢(z)-zk}
+
+(1)
+              <p class="ltx_p">
+               where
+               zk=||x-c(k)||2
+               and
+               μ⁢(z)
+               is the mean of the elements of
+               z
+               .
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I2.I1.i2" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (b)
+             </span>
+             <div class="ltx_para" id="I2.I1.i2.p1">
+              <p class="ltx_p">
+               Sparse autoencoder
+               : we train a single layer autoencoder with
+               K
+               hidden nodes using backpropagation to minimize squared reconstruction error. At the hidden layer, the features are mapped using a rectified linear (ReL) function
+               [15]
+               as follows:
+              </p>
+              f⁢(x)=g⁢(W⁢x+b)
+
+(2)
+              <p class="ltx_p">
+               where
+               g⁢(z)=max⁡(z,0)
+               . Note that ReL nodes have advantages over sigmoid or tanh functions; they create sparse representations and are suitable for naturally sparse data
+               [11]
+               .
+              </p>
+             </div>
+            </li>
+           </ol>
+          </div>
+         </li>
+        </ol>
+        <p class="ltx_p">
+         From K-means, we get
+         K
+         RN
+         centroids and from the sparse autoencoder, we get
+         W∈RK⁢x⁢N
+         and
+         b∈RK
+         filters. We call both the centroids and filters as the learned features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Classifier learning
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Given the learned features, the feature mapping functions and a set of labeled training videos, we extract features as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <ol class="ltx_enumerate" id="I3">
+         <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I3.i1.p1">
+           <p class="ltx_p">
+            Convolutional extraction
+            : Extract features from equally spaced sub-patches covering the video sample.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I3.i2.p1">
+           <p class="ltx_p">
+            Pooling
+            : Pool features together over four non-overlapping regions of the input video to reduce the number of features. We perform max pooling for K-means and mean pooling for the sparse autoencoder over 2D regions (per frame) and over 3D regions (per all sequence of frames).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I3.i3.p1">
+           <p class="ltx_p">
+            Learning
+            : Learn a linear classifier to predict the labels given the feature vectors. We use logistic regression classifier and support vector machines
+            [16]
+            .
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         The extraction of classifier features through convolution and pooling is illustrated in figure
+         1
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Datasets
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Our experimental data consist of videos of 30 signers equally divided between six sign languages: British sign language (BSL), Danish (DSL), French Belgian (FBSL), Flemish (FSL), Greek (GSL), and Dutch (NGT). The data for the unsupervised feature learning comes from half of the BSL and GSL videos in the Dicta-Sign corpus
+         . Part of the other half, involving 5 signers, is used along with the other sign language videos for learning and testing classifiers.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         For the unsupervised feature learning, two types of patches are created: 2D dimensions (
+         15*15
+         ) and 3D (
+         15*15*2
+         ). Each type consists of randomly selected 100,000 patches and involves 16 different signers. For the supervised learning, 200 videos (consisting of 1 through 4 frames taken at a step of 2) are randomly sampled per sign language per signer (for a total of 6,000 samples).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Data preprocessing
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The data preprocessing stage has two goals.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         First, to remove any non-signing signals that remain constant within videos of a single sign language but that are different across sign languages. For example, if the background of the videos is different across sign languages, then classifying the sign languages could be done with perfection by using signals from the background. To avoid this problem, we removed the background by using background subtraction techniques and manually selected thresholds.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         The second reason for data preprocessing is to make the input size smaller and uniform. The videos are colored and their resolutions vary from
+         320*180
+         to
+         720*576
+         .
+We converted the videos to grayscale and resized their heights to
+         144
+         and cropped out the central
+         144*144
+         patches.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Evaluation
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We evaluate our system in terms of average accuracies. We train and test our system in leave-one-signer-out cross-validation, where videos from four signers are used for training and videos of the remaining signer are used for testing. Classification algorithms are used with their default settings and the classification strategy is
+         one-vs.-rest
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Results and Discussion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Our best average accuracy (84.03%) is obtained using 500 K-means features which are extracted over four frames (taken at a step of 2). This accuracy obtained for six languages is much higher than the 78% accuracy obtained for two sign languages
+        [10]
+        . The latter uses linguistically motivated features that are extracted over video lengths of at least 10 seconds. Our system uses learned features that are extracted over much smaller video lengths (about half a second).
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        All classification accuracies are presented in table
+        1
+        for 2D and table
+        2
+        for 3D. Classification confusions are shown in table
+        3
+        . Figure
+        2
+        shows features learned by K-means and sparse autoencoder.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        Tables
+        1
+        and
+        2
+        indicate that K-means performs better with 2D filters and that sparse autoencoder performs better with 3D filters.
+Note that features from 2D filters are pooled over each frame and concatenated whereas, features from 3D filters are pooled over all frames.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        Which filters are active for which language? Figure
+        3
+        shows visualization of the strength of filter activation for each sign language. The figure shows what Lasso looks for when it identifies any of the six sign languages.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

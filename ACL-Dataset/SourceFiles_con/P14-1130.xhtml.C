@@ -1,0 +1,1413 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Low-Rank Tensors for Scoring Dependency Structures.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Accurate scoring of syntactic structures such as head-modifier arcs in dependency parsing typically requires rich, high-dimensional feature representations. A small subset of such features is often selected manually. This is problematic when features lack clear linguistic meaning as in embeddings or when the information is blended across features. In this paper, we use tensors to map high-dimensional feature vectors into low dimensional representations. We explicitly
+maintain the parameters as a low-rank tensor to obtain low dimensional representations of words in their syntactic roles, and to leverage modularity in the tensor for easy training with online algorithms.
+Our parser consistently outperforms the Turbo and MST
+parsers across 14 different languages. We also obtain the best published UAS results on 5
+languages.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Finding an expressive representation of input sentences is crucial for accurate parsing. Syntactic relations manifest themselves in a broad range of surface indicators, ranging from morphological to lexical, including positional and part-of-speech (POS) tagging features. Traditionally, parsing research has focused on modeling the direct connection between the features and the predicted syntactic relations such as head-modifier (arc) relations in dependency parsing. Even in the
+case of first-order parsers, this results in a high-dimensional vector representation of each arc. Discrete features, and their cross products, can be further complemented with auxiliary information about words participating in an arc, such as continuous vector representations of words. The exploding dimensionality of rich feature vectors must then be balanced with the difficulty of effectively learning the associated parameters from limited training data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        A predominant way to counter the high dimensionality of features
+is to manually design or select a meaningful set of feature
+templates, which are used to generate different types of
+features
+        [27, 16, 22]
+        .
+Direct manual selection may be problematic for two reasons. First,
+features may lack clear linguistic interpretation as in distributional
+features or continuous vector embeddings of words. Second,
+designing a small subset of templates (and features) is
+challenging when the relevant linguistic information is distributed
+across the features. For instance, morphological properties are
+closely tied to part-of-speech tags, which in turn relate to
+positional features. These features are not redundant. Therefore, we
+may suffer a performance loss if we select only a small subset of the
+features. On the other hand, by including all the rich features, we
+face over-fitting problems.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We depart from this view and leverage high-dimensional feature vectors
+by mapping them into low dimensional representations. We begin by
+representing high-dimensional feature vectors as multi-way
+cross-products of smaller feature vectors that represent words and
+their syntactic relations (arcs). The associated parameters are viewed
+as a tensor (multi-way array) of low rank, and optimized for parsing
+performance. By explicitly representing the tensor in a low-rank form,
+we have direct control over the effective dimensionality of the set of
+parameters. We obtain role-dependent low-dimensional representations
+for words (head, modifier) that are specifically tailored for parsing
+accuracy, and use standard online algorithms for optimizing
+the low-rank tensor components.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The overall approach has clear linguistic and computational advantages:
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           Our low dimensional embeddings are tailored to the syntactic
+context of words (head, modifier). This low dimensional syntactic abstraction
+can be thought of as a proxy to manually constructed POS tags.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           By automatically selecting a small number of dimensions useful
+for parsing, we can leverage a wide array of (correlated)
+features. Unlike parsers such as MST, we can easily benefit from
+auxiliary information (e.g., word vectors) appended as features.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        We implement the low-rank factorization model in the context of
+first- and third-order dependency parsing. The model was
+evaluated on 14 languages, using dependency data from CoNLL 2008 and
+CoNLL 2006. We compare our results against the
+MST
+        [27]
+        and
+Turbo
+        [22]
+        parsers. The low-rank parser achieves
+average performance of 89.08% across 14 languages, compared to
+88.73% for the Turbo parser, and 87.19% for MST. The power of
+the low-rank model becomes evident in the absence of any
+part-of-speech tags. For instance, on the English dataset, the
+low-rank model trained without POS tags achieves 90.49% on
+first-order parsing, while the baseline gets 86.70% if trained under
+the same conditions, and 90.58% if trained with 12 core POS tags.
+Finally, we demonstrate that the model can successfully leverage word
+vector representations, in contrast to the baselines.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Selecting Features for Dependency Parsing
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         A great deal of parsing research has been dedicated to feature engineering
+         [18, 25, 26]
+         . While in most state-of-the-art parsers, features are selected manually
+         [27, 29, 16, 22, 44, 35]
+         , automatic feature selection methods are gaining
+popularity
+         [23, 1, 31, 2]
+         . Following standard machine learning practices, these algorithms iteratively select a subset of features by optimizing parsing performance on a development set. These feature selection methods are particularly promising in parsing scenarios where the optimal feature set is likely to be a small subset of the original set of candidate features. Our technique, in contrast, is suitable for cases where the relevant information is distributed across a larger set of related features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Embedding for Dependency Parsing
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         A lot of recent work has been done on mapping words into vector spaces
+         [8, 41, 11, 30]
+         . Traditionally, these vector representations have been derived primarily from co-occurrences of words within sentences, ignoring syntactic roles of the co-occurring words. Nevertheless, any such word-level representation can be used to offset inherent sparsity problems associated with full
+lexicalization
+         [5]
+         . In this sense they perform a role similar to POS tags.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p2">
+        <p class="ltx_p">
+         Word-level vector space embeddings have so far had limited impact on parsing performance. From a computational perspective, adding non-sparse vectors directly as features, including their combinations, can significantly increase the number of active features for scoring syntactic structures (e.g., dependency arc). Because of this issue,
+         Cirik and Şensoy (2013)
+         used word vectors only as unigram features (without combinations) as part of a shift reduce
+parser
+         [32]
+         . The improvement on the overall parsing performance was marginal. Another application of word vectors is
+compositional vector grammar
+         [36]
+         . While this method learns to map word combinations into vectors, it builds on existing word-level vector representations. In contrast, we represent words as vectors in a manner that is directly optimized for parsing. This framework enables us to learn new syntactically guided embeddings while also leveraging separately estimated word vectors as starting features, leading to improved parsing performance.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Dimensionality Reduction
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         Many machine learning problems can be cast as matrix problems where the matrix represents a set of co-varying parameters. Such problems include, for example, multi-task learning and collaborative filtering. Rather than assuming that each parameter can be set independently of others, it is helpful to assume that the parameters vary in a low dimensional subspace that has to be estimated together with the parameters. In terms of the parameter
+matrix, this corresponds to a low-rank assumption. Low-rank constraints are commonly used for improving generalization
+         [19, 37, 38, 12]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p2">
+        <p class="ltx_p">
+         A strict low-rank assumption can be restrictive. Indeed, recent approaches to matrix problems decompose the parameter matrix as a sum of low-rank and sparse matrices
+         [40, 47]
+         . The sparse matrix is used to highlight a small number of parameters that should vary independently even if most of them lie on a low-dimensional subspace
+         [42, 4]
+         . We follow this decomposition while extending the parameter matrix into a tensor.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p3">
+        <p class="ltx_p">
+         Tensors are multi-way generalizations of matrices and possess an analogous notion of rank. Tensors are increasingly used as tools in spectral estimation
+         [15]
+         , including in parsing
+         [6]
+         and other NLP problems
+         [10]
+         , where the goal is to avoid local optima in maximum likelihood estimation. In contrast, we expand features for parsing into a multi-way tensor, and operate with an explicit low-rank representation of the associated parameter tensor. The explicit
+representation sidesteps inherent complexity problems associated with the tensor rank
+         [14]
+         . Our parameters are divided into a sparse set corresponding to manually chosen MST or Turbo parser features and a larger set governed by a low-rank tensor.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Problem Formulation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We will commence here by casting first-order dependency parsing as a tensor estimation problem. We will start by introducing the notation used in the paper, followed by a more formal description of our dependency parsing task.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Basic Notations
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Let
+         A∈ℝn×n×d
+         be a 3-dimensional tensor (a 3-way array). We denote each element of the tensor as
+         Ai,j,k
+         where
+         i∈[n],j∈[n],k∈[d]
+         and
+         [n]
+         is a shorthand for the set of integers
+         {1,2,⋯,n}
+         . Similarly, we use
+         Mi,j
+         and
+         ui
+         to represent the elements of matrix
+         M
+         and vector
+         u
+         , respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         We define the
+         inner product
+         of two tensors (or matrices) as
+         ⟨A,B⟩=vec⁢(A)T⁢vec⁢(B)
+         , where
+         vec⁢(⋅)
+         concatenates the tensor (or
+matrix) elements into a column vector. The
+         squared norm
+         of a tensor/matrix is denoted by
+         ∥A∥2=⟨A,A⟩
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         The
+         Kronecker product
+         of three vectors is denoted by
+         u⊗v⊗w
+         and forms a rank-1 tensor such that
+        </p>
+        (u⊗v⊗w)i,j,k=ui⁢vj⁢wk.
+        <p class="ltx_p">
+         Note that the vectors
+         u
+         ,
+         v
+         , and
+         w
+         may be column or row vectors. Their orientation is defined based on usage. For example,
+         u⊗v
+         is a rank-1 matrix
+         u⁢vT
+         when
+         u
+         and
+         v
+         are column vectors (
+         uT⁢v
+         if they are row vectors).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         We say that tensor
+         A
+         is in Kruskal form if
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           A
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =∑i=1rU⁢(i, :)⊗V⁢(i, :)⊗W⁢(i, :)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         U,V∈ℝr×n
+         ,
+         W∈ℝr×d
+         and
+         U⁢(i, :)
+         is the
+         it⁢h
+         row of matrix
+         U
+         . We will directly learn a low-rank tensor
+         A
+         (because
+         r
+         is small) in this form as one of our model parameters.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Dependency Parsing
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Let
+         x
+         be a sentence and
+         𝒴⁢(x)
+         the set of possible dependency trees over the words in
+         x
+         . We assume that the score
+         S⁢(x,y)
+         of each candidate dependency tree
+         y∈𝒴⁢(x)
+         decomposes into a sum of “local” scores for arcs. Specifically:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(x,y)=∑h→m∈ys(h→m)∀y∈𝒴(x)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         h→m
+         is the head-modifier dependency arc in the
+tree
+         y
+         . Each
+         y
+         is understood as a collection of arcs
+         h→m
+         where
+         h
+         and
+         m
+         index words in
+         x
+         .
+         For example,
+         x⁢(h)
+         is the word corresponding to
+         h
+         . We suppress the dependence on
+         x
+         whenever it is clear from context. For example,
+         s(h→m)
+         can depend on
+         x
+         in complicated ways as discussed below. The predicted parse is obtained as
+         y^=arg⁢maxy∈𝒴⁢(x)⁡S⁢(x,y)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         A key problem is how we parameterize the arc scores
+         s(h→m)
+         . Following the MST parser
+         [27]
+         we
+can define rich features characterizing each head-modifier arc, compiled into a sparse binary vector
+         ϕh→m∈ℝL
+         that depends on the sentence
+         x
+         as well as the chosen arc
+         h→m
+         (again, we suppress the dependence on
+         x
+         ). Based on this feature representation, we define the score of each arc as
+         sθ(h→m)=⟨θ,ϕh→m⟩
+         where
+         θ∈ℝL
+         represent adjustable parameters to be learned,
+and
+         L
+         is the number of parameters (and possible features in
+         ϕh→m
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         We can alternatively specify arc features in terms of rank-1 tensors by taking the Kronecker product of simpler feature vectors associated with the head (vector
+         ϕh∈ℝn
+         ), and modifier (vector
+         ϕm∈ℝn
+         ), as well as the arc itself (vector
+         ϕh,m∈ℝd
+         ). Here
+         ϕh,m
+         is much lower dimensional than the MST arc feature vector
+         ϕh→m
+         discussed earlier. For example,
+         ϕh,m
+         may be composed of only
+indicators for binned arc lengths
+         .
+         ϕh
+         and
+         ϕm
+         , on the other hand, are built from features shown in Table
+         1
+         . By taking the cross-product of all these component feature vectors, we obtain the full feature representation for arc
+         h→m
+         as a rank-1 tensor
+        </p>
+        ϕh⊗ϕm⊗ϕh,m∈ℝn×n×d
+        <p class="ltx_p">
+         Note that elements of this rank-1 tensor include feature combinations that are not part of the feature crossings in
+         ϕh→m
+         . In this sense, the rank-1 tensor represents a substantial feature expansion. The arc score
+         st⁢e⁢n⁢s⁢o⁢r(h→m)
+         associated with the tensor representation is defined analogously as
+        </p>
+        st⁢e⁢n⁢s⁢o⁢r(h→m)=⟨A,ϕh⊗ϕm⊗ϕh,m⟩
+        <p class="ltx_p">
+         where the adjustable parameters
+         A
+         also form a tensor. Given the typical dimensions of the component feature vectors,
+         ϕh
+         ,
+         ϕm
+         ,
+         ϕh,m
+         , it is not even possible to store all the parameters in
+         A
+         . Indeed, in the full English training set of CoNLL-2008, the tensor involves around
+         8×1011
+         entries while the MST feature vector has approximately
+         1.5×107
+         features. To counter this feature explosion, we restrict the parameters
+         A
+         to have low rank.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S3.SS2.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Low-Rank Dependency Scoring
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p1">
+         <p class="ltx_p">
+          We can represent a rank-r tensor
+          A
+          explicitly in terms of parameter matrices
+          U
+          ,
+          V
+          , and
+          W
+          as shown in Eq.
+          1
+          . As a result, the arc score for the tensor reduces to evaluating
+          U⁢ϕh
+          ,
+          V⁢ϕm
+          , and
+          W⁢ϕh,m
+          which are all
+          r
+          dimensional vectors and can be computed efficiently based on any sparse vectors
+          ϕh
+          ,
+          ϕm
+          , and
+          ϕh,m
+          . The resulting arc score
+          st⁢e⁢n⁢s⁢o⁢r(h→m)
+          is then
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx3">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E2">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            ∑i=1r[U⁢ϕh]i⁢[V⁢ϕm]i⁢[W⁢ϕh,m]i
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (2)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          By learning parameters
+          U
+          ,
+          V
+          , and
+          W
+          that function well in dependency parsing, we also learn context-dependent embeddings for words and arcs. Specifically,
+          U⁢ϕh
+          (for a given sentence, suppressed) is an
+          r
+          dimensional vector representation of the word corresponding to
+          h
+          as a head word. Similarly,
+          V⁢ϕm
+          provides an analogous representation for a modifier
+          m
+          . Finally,
+          W⁢ϕh,m
+          is a vector embedding of the supplemental arc-dependent information. The
+resulting embedding is therefore tied to the syntactic roles of the words (and arcs), and learned in order to perform well in parsing.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p2">
+         <p class="ltx_p">
+          We expect a dependency parsing model to benefit from several aspects of the low-rank tensor scoring. For example, we can easily incorporate additional useful features in the feature vectors
+          ϕh
+          ,
+          ϕm
+          and
+          ϕh,m
+          , since the low-rank assumption (for small enough
+          r
+          ) effectively counters the otherwise uncontrolled feature expansion. Moreover, by controlling the amount of information we can extract from each of the component feature vectors (via rank
+          r
+          ), the statistical
+estimation problem does not scale dramatically with the dimensions of
+          ϕh
+          ,
+          ϕm
+          and
+          ϕh,m
+          . In particular, the low-rank constraint can help generalize to unseen arcs. Consider a feature
+          δ(x(h)=a)⋅δ(x(m)=b)⋅δ(dis(x,h,m)=c)
+          which is non-zero only for an arc
+          a→b
+          with distance
+          c
+          in sentence
+          x
+          . If the arc has not been seen in the available training data, it does not contribute to the traditional arc score
+          sθ⁢(⋅)
+          . In contrast, with the low-rank constraint, the arc score in Eq.
+          2
+          would typically be non-zero.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S3.SS2.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Combined Scoring
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS0.P2.p1">
+         <p class="ltx_p">
+          Our parsing model aims to combine the strengths of both traditional features from the MST/Turbo parser as well as the new low-rank tensor features. In this way, our model is able to capture a wide range of information including the auxiliary features without having uncontrolled feature explosion, while still having the full accessibility to the manually engineered features that are proven useful. Specifically, we define the arc score
+          sγ(h→m)
+          as the combination
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx4">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.Ex5">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            (1-γ)st⁢e⁢n⁢s⁢o⁢r(h→m)+γsθ(h→m)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.Ex6">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =(1-γ)⁢∑i=1r[U⁢ϕh]i⁢[V⁢ϕm]i⁢[W⁢ϕh,m]i
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E3">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            +γ⁢⟨θ,ϕh→m⟩
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (3)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where
+          θ∈ℝL
+          ,
+          U∈ℝr×n
+          ,
+          V∈ℝr×n
+          , and
+          W∈ℝr×d
+          are the model parameters to be learned. The rank
+          r
+          and
+          γ∈[0,1]
+          (balancing the two scores) represent hyper-parameters in our model.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Learning
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The training set
+        D={(x^i,y^i)}i=1N
+        consists of
+        N
+        pairs, where each pair consists of a sentence
+        xi
+        and the corresponding gold (target) parse
+        yi
+        . The goal is to learn values for the parameters
+        θ
+        ,
+        U
+        ,
+        V
+        and
+        W
+        that optimize the combined scoring function
+        Sγ(x,y)=∑h→m∈ysγ(h→m)
+        , defined in Eq.
+        3
+        , for parsing performance. We adopt a maximum soft-margin framework for this learning problem. Specifically, we find parameters
+        θ
+        ,
+        U
+        ,
+        V
+        ,
+        W
+        , and
+        {ξi}
+        that
+minimize
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx5">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          C⁢∑iξi+∥θ∥2+∥U∥2+∥V∥2+∥W∥2
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex8">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ⁢s.t.⁢Sγ⁢(x^i,y^i)≥Sγ⁢(x^i,yi)+∥y^i-yi∥1-ξi
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E4">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∀yi∈𝒴⁢(x^i), ∀i.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (4)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        ∥y^i-yi∥1
+        is the number of mismatched arcs between the two trees, and
+        ξi
+        is a non-negative slack variable. The constraints serve to separate the gold tree from other alternatives in
+        𝒴⁢(x^i)
+        with a margin that increases with distance.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        The objective as stated is not jointly convex with respect to
+        U
+        ,
+        V
+        and
+        W
+        due to our explicit representation of the low-rank tensor. However, if we fix any two sets of parameters, for example, if we fix
+        V
+        and
+        W
+        , then the combined score
+        Sγ⁢(x,y)
+        will be a linear function of both
+        θ
+        and
+        U
+        . As a result, the objective will be jointly convex with respect to
+        θ
+        and
+        U
+        and could be optimized using standard tools. However, to accelerate learning, we adopt an
+online learning setup. Specifically, we use the passive-aggressive learning algorithm
+        [9]
+        tailored to our setting, updating pairs of parameter sets,
+        (θ,U)
+        ,
+        (θ,V)
+        and
+        (θ,W)
+        in an alternating manner. This method is described below.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Online Learning
+       </h4>
+       <div class="ltx_para" id="S4.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         In an online learning setup, we update parameters successively based on each sentence. In order to apply the passive-aggressive algorithm, we fix two of
+         U
+         ,
+         V
+         and
+         W
+         (say, for example,
+         V
+         and
+         W
+         ) in an alternating manner, and apply a closed-form update to the remaining parameters (here
+         U
+         and
+         θ
+         ). This is possible since the objective function with respect to
+         (θ,U)
+         has a similar form as in the original passive-aggressive algorithm. To illustrate this, consider a training sentence
+         xi
+         . The update involves finding first the best competing tree,
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx6">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           y~i=arg⁢maxyi∈𝒴⁢(x^i)⁡Sγ⁢(x^i,yi)+∥y^i-yi∥1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         which is the tree that violates the constraint in Eq.
+         4
+         most (i.e. maximizes the loss
+         ξi
+         ). We then obtain parameter increments
+         Δ⁢θ
+         and
+         Δ⁢U
+         by solving
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx7">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex9">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           minΔ⁢θ,  Δ⁢U,  ξ≥012⁢∥Δ⁢θ∥2+12⁢∥Δ⁢U∥2+C⁢ξ
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex10">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           s.t.Sγ⁢(x^i,y^i)≥Sγ⁢(x^i,y~i)+∥y^i-y~i∥1-ξ
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         In this way, the optimization problem attempts to keep the parameter change as small as possible, while forcing it to achieve mostly zero loss on this single instance. This problem has a closed form solution
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.SSS0.P1.p2">
+        <table class="ltx_equationgroup ltx_eqn_align" id="S8.EGx8">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex11">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Δ⁢θ=min⁡{C,lossγ2⁢∥d⁢θ∥2+(1-γ)2⁢∥d⁢u∥2}⁢γ⁢d⁢θ
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex12">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Δ⁢U=min⁡{C,lossγ2⁢∥d⁢θ∥2+(1-γ)2⁢∥d⁢u∥2}⁢(1-γ)⁢d⁢u
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S8.EGx9">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex13">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           loss
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Sγ⁢(x^i,y~i)+∥y^i-y~i∥1-Sγ⁢(x^i,y^i)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex14">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           d⁢θ
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑h→m∈y^iϕh→m-∑h→m∈y~iϕh→m
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex16">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           d⁢u
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑h→m∈y^i[(V⁢ϕm)⊙(W⁢ϕh,m)]⊗ϕh
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           -
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑h→m∈y~i[(V⁢ϕm)⊙(W⁢ϕh,m)]⊗ϕh
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         (u⊙v)i=ui⁢vi
+         is the Hadamard (element-wise) product. The magnitude of change of
+         θ
+         and
+         U
+         is controlled by the parameter
+         C
+         .
+By varying
+         C
+         , we can determine an appropriate step size for the online updates. The updates also illustrate how
+         γ
+         balances the effect of the MST component of the score relative to the low-rank tensor score. When
+         γ=0
+         , the arc scores are entirely based on the low-rank tensor and
+         Δ⁢θ=0
+         . Note that
+         ϕh
+         ,
+         ϕm
+         ,
+         ϕh,m
+         , and
+         ϕh→m
+         are typically very sparse for each word or arc. Therefore
+         d⁢u
+         and
+         d⁢θ
+         are also sparse and can be computed efficiently.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Initialization
+       </h4>
+       <div class="ltx_para" id="S4.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         The alternating online algorithm relies on how we initialize
+         U
+         ,
+         V
+         , and
+         W
+         since each update is carried out in the context of the other two. A random initialization of these parameters is unlikely to work well, both due to the dimensions involved, and the nature of the alternating updates. We consider here instead a reasonable deterministic “guess” as the initialization method.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.SSS0.P2.p2">
+        <p class="ltx_p">
+         We begin by training our model without any low-rank parameters, and obtain parameters
+         θ
+         . The majority of features in this MST component can be expressed as elements of the feature tensor, i.e., as
+         [ϕh⊗ϕm⊗ϕh,m]i,j,k
+         . We can therefore create a tensor representation of
+         θ
+         such that
+         Bi,j,k
+         equals the corresponding parameter value in
+         θ
+         . We use a low-rank version of
+         B
+         as the initialization. Specifically, we unfold
+the tensor B into a matrix
+         B(h)
+         of dimensions
+         n
+         and
+         n⁢d
+         , where
+         n=d⁢i⁢m⁢(ϕh)=d⁢i⁢m⁢(ϕm)
+         and
+         d=d⁢i⁢m⁢(ϕh,m)
+         . For instance, a rank-1 tensor can be unfolded as
+         u⊗v⊗w=u⊗vec⁢(v⊗w)
+         . We compute the top-r SVD of the resulting unfolded matrix such that
+         B(h)=PT⁢S⁢Q
+         .
+         U
+         is initialized as
+         P
+         . Each right singular vector
+         Si⁢Q⁢(i, :)
+         is also a matrix in
+         ℝn×d
+         . The leading left and right singular vectors of
+this matrix are assigned to
+         V⁢(i, :)
+         and
+         W⁢(i, :)
+         respectively. In our implementation, we run one epoch of our model without low-rank parameters and initialize the tensor
+         A
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS2.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Parameter Averaging
+       </h4>
+       <div class="ltx_para" id="S4.SS2.SSS0.P3.p1">
+        <p class="ltx_p">
+         The passive-aggressive algorithm regularizes the increments (e.g.
+         Δ⁢θ
+         and
+         Δ⁢U
+         ) during each update but does not include any overall regularization. In other words, keeping updating the model may lead to large parameter values and over-fitting. To counter this effect, we use parameter averaging as used in the MST and Turbo parsers. The final parameters are those averaged across all the iterations (cf.
+         [7]
+         ). For simplicity, in
+our algorithm we average
+         U
+         ,
+         V
+         ,
+         W
+         and
+         θ
+         separately, which works well empirically.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Datasets
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         We test our dependency model on 14 languages,
+including the English dataset from CoNLL 2008 shared tasks and all 13
+datasets from CoNLL 2006 shared
+tasks
+         [3, 39]
+         . These datasets include
+manually annotated dependency trees, POS tags and
+morphological information. Following standard practices, we encode
+this information as features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Methods
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         We compare our model to MST
+and Turbo parsers on non-projective dependency parsing. For our
+parser, we train both a first-order parsing model (as described in
+Section 3 and 4) as well as a third-order model. The third
+order parser simply adds high-order features, those
+typically used in MST and Turbo
+parsers, into our
+         sθ⁢(x,y)=⟨θ,ϕ⁢(x,y)⟩
+         scoring component. The decoding
+algorithm for the third-order parsing is based on
+         [46]
+         . For
+the Turbo parser, we directly compare with the recent published
+results in
+         [22]
+         . For the MST parser, we train and
+test using the most recent version of the
+code.
+         In addition, we implemented two additional baselines, NT-1st (first order) and NT-3rd (third order), corresponding to our model without the tensor component.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Features
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P3.p1">
+        <p class="ltx_p">
+         For the arc feature vector
+         ϕh→m
+         ,
+we use the same set of feature templates as MST v0.5.1. For
+head/modifier vector
+         ϕh
+         and
+         ϕm
+         , we show the complete set
+of feature templates used by our model in Table
+         1
+         .
+Finally, we use a similar set of feature templates as Turbo v2.1 for
+3rd order parsing.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.SSS0.P3.p2">
+        <p class="ltx_p">
+         To add auxiliary word vector representations, we use the publicly
+available word vectors
+         [5]
+         , learned from
+raw data
+         [13, 20]
+         . Three languages in our
+dataset – English, German and Swedish – have corresponding word
+vectors in this
+collection.
+         The dimensionality of this representation varies by language: English
+has 50 dimensional word vectors, while German and Swedish have 25
+dimensional word vectors. Each entry of the word vector is added as a
+feature value into feature vectors
+         ϕh
+         and
+         ϕm
+         . For each
+word in the sentence, we add its own word vector as well as the
+vectors of its left and right words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.SSS0.P3.p3">
+        <p class="ltx_p">
+         We should note that since our model parameter
+         A
+         is represented and
+learned in the low-rank form, we only have to store and maintain the
+low-rank projections
+         U⁢ϕh
+         ,
+         V⁢ϕm
+         and
+         W⁢ϕh,m
+         rather
+than explicitly calculate the feature tensor
+         ϕh⊗ϕm⊗ϕh,m
+         . Therefore updating parameters and decoding a
+sentence is still efficient, i.e., linear in the number of values of
+the feature vector. In contrast, assume we take the cross-product of
+the auxiliary word vector values, POS tags and lexical items of a word
+and its context, and add the crossed values into a normal model (in
+         ϕh→m
+         ). The number of features for
+each arc would be at least quadratic, growing into thousands, and
+would be a significant impediment to parsing efficiency.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P4">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Evaluation
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P4.p1">
+        <p class="ltx_p">
+         Following standard practices, we train our full
+model and the baselines for 10 epochs. As the evaluation measure, we
+use unlabeled attachment scores (UAS) excluding punctuation. In all
+the reported experiments, the hyper-parameters are set as follows:
+         r=50
+         (rank of the tensor),
+         C=1
+         for first-order model and
+         C=0.01
+         for third-order model.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Results
+      </h2>
+      <div class="ltx_paragraph" id="S6.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Overall Performance
+       </h4>
+       <div class="ltx_para" id="S6.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         Table
+         2
+         shows the performance of our model and the
+baselines on 14 CoNLL datasets. Our model outperforms Turbo parser,
+MST parser, as well as its own variants without the tensor component.
+The improvements of our low-rank model are consistent across
+languages: results for the first
+order parser are better on 11 out of 14 languages. By comparing NT-1st and NT-3rd (models without low-rank) with our full model (with low-rank), we obtain 0.7% absolute improvement on first-order parsing, and 0.3%
+improvement on third-order parsing. Our model also achieves the best
+UAS on 5 languages.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.SSS0.P1.p2">
+        <p class="ltx_p">
+         We next focus on the first-order model and gauge the impact
+of the tensor component.  First, we test our model by varying the
+hyper-parameter
+         γ
+         which balances the tensor score and the
+traditional MST/Turbo score components.
+Figure
+         1
+         shows the average UAS on CoNLL test
+datasets after each training epoch. We can see that the improvement of
+adding the low-rank tensor is consistent across various choices of
+hyper parameter
+         γ
+         . When training with the tensor component
+alone (
+         γ=0
+         ), the model converges more slowly. Learning
+of the tensor is harder because the scoring function is not
+linear (nor convex) with respect to parameters
+         U
+         ,
+         V
+         and
+         W
+         . However, the tensor scoring component achieves better
+generalization on the test data, resulting in better UAS
+than NT-1st after 8 training epochs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.SSS0.P1.p3">
+        <p class="ltx_p">
+         To assess the ability of our model to incorporate a range of features,
+we add unsupervised word vectors to our model. As described in
+previous section, we do so by appending the values of different
+coordinates in the word vector into
+         ϕh
+         and
+         ϕm
+         . As
+Table
+         3
+         shows, adding this information increases the
+parsing performance for all the three languages. For instance, we
+obtain more than 0.5% absolute improvement on Swedish.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Syntactic Abstraction without POS
+       </h4>
+       <div class="ltx_para" id="S6.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         Since our model learns a
+compressed representation of feature vectors, we are interested to
+measure its performance when part-of-speech tags are not provided (See
+Table
+         4
+         ). The rationale is that given all other
+features, the model would induce representations that play a similar
+role to POS tags. Note that the performance of traditional parsers drops
+when tags are not provided. For example, the performance
+gap is 10% on German. Our experiments show that low-rank parser operates
+effectively in the absence of tags. In fact, it nearly reaches the
+performance of the original parser that used the tags on English.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS2.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Examples of Derived Projections
+       </h4>
+       <div class="ltx_para" id="S6.SS2.SSS0.P3.p1">
+        <p class="ltx_p">
+         We manually analyze
+low-dimensional projections to assess whether they capture syntactic
+abstraction. For this purpose, we train a model with only a tensor
+component (such that it has to learn an accurate tensor) on the
+English dataset and obtain low dimensional embeddings
+         U⁢ϕw
+         and
+         V⁢ϕw
+         for each word. The two r-dimension vectors are concatenated
+as an “averaged” vector. We use this vector to calculate the cosine
+similarity between words. Table
+         5
+         shows examples
+of five closest neighbors of queried words. While these lists include
+some noise, we can clearly see that the neighbors exhibit similar
+syntactic behavior. For example, “on” is close to other
+prepositions. More interestingly, we can consider the impact of
+syntactic context on the derived projections. The bottom part of
+Table
+         5
+         shows that the neighbors change
+substantially depending on the syntactic role of the word. For
+example, the closest words to the word “increase” are verbs in the
+context phrase “will increase again”, while the closest words become
+nouns given a different phrase “an increase of”.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS2.SSS0.P4">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Running Time
+       </h4>
+       <div class="ltx_para" id="S6.SS2.SSS0.P4.p1">
+        <p class="ltx_p">
+         Table
+         6
+         illustrates the impact of estimating low-rank
+tensor parameters on the running time of the algorithm. For
+comparison, we also show the NT-1st times across three typical
+languages. The Arabic dataset has the longest average sentence
+length, while the Chinese dataset has the shortest sentence length in
+CoNLL 2006. Based on these results, estimating a rank-50 tensor
+together with MST parameters only increases the running time by a
+factor of 1.7.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S8">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        8
+       </span>
+       Acknowledgements
+      </h2>
+      <div class="ltx_para" id="S8.p1">
+       <p class="ltx_p">
+        The authors acknowledge the support of the MURI program
+(W911NF-10-1-0533) and the DARPA BOLT program. This research is
+developed in collaboration with the Arabic Language Technoligies (ALT)
+group at Qatar Computing Research Institute (QCRI) within the
+        lyas
+        project. We thank Volkan Cirik for sharing the unsupervised word
+vector data. Thanks to Amir Globerson, Andreea Gane, the members of
+the MIT NLP group and the ACL reviewers for their suggestions and
+comments. Any opinions, findings, conclusions, or recommendations
+expressed in this paper are those of the authors, and do not
+necessarily reflect the views of the funding organizations.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

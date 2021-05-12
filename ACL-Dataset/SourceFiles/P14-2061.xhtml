@@ -1,0 +1,834 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Unsupervised Feature Learning for Visual Sign Language Identification</title>
+<!--Generated on Wed Jun 11 17:50:06 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Unsupervised Feature Learning for Visual Sign Language Identification</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Binyam Gebrekidan Gebre<sup class="ltx_sup">1</sup>, Onno Crasborn<sup class="ltx_sup">2</sup>, Peter Wittenburg<sup class="ltx_sup">1</sup>,
+<br class="ltx_break"/><span class="ltx_text ltx_font_bold">Sebastian Drude<sup class="ltx_sup"><span class="ltx_text ltx_font_medium">1</span></sup></span>, <span class="ltx_text ltx_font_bold">Tom Heskes<sup class="ltx_sup"><span class="ltx_text ltx_font_medium">2</span></sup></span> 
+<br class="ltx_break"/><sup class="ltx_sup">1</sup>Max Planck Institute for Psycholinguistics,
+<sup class="ltx_sup">2</sup>Radboud University Nijmegen
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">bingeb@mpi.nl,o.crasborn@let.ru.nl,peter.wittenburg@mpi.nl,</span> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sebastian.drude@mpi.nl,t.heskes@science.ru.nl</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Prior research on language identification focused primarily on text and speech. In this paper, we focus on the visual modality and present a method for identifying sign languages solely from short video samples. The method is trained on unlabelled video data (unsupervised feature learning) and using these features, it is trained to discriminate between six sign languages (supervised learning). We ran experiments on short video samples involving 30 signers (about 6 hours in total). Using leave-one-signer-out cross-validation, our evaluation shows an average best accuracy of <math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="84" display="inline"><mn>84</mn></math>%. Given that sign languages are under-resourced, unsupervised feature learning techniques are the right tools and our results indicate that this is realistic for sign language identification.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The task of automatic language identification is to quickly identify the identity of the language given utterances. Performing this task is key in applications involving multiple languages such as machine translation and information retrieval (e.g. metadata creation for large audiovisual archives).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Prior research on language identification is heavily biased towards written and spoken languages <cite class="ltx_cite">[<a href="#bib.bib32" title="Statistical identification of language" class="ltx_ref">8</a>, <a href="#bib.bib31" title="Comparison of four approaches to automatic language identification of telephone speech" class="ltx_ref">27</a>, <a href="#bib.bib24" title="A vector space modeling approach to spoken language identification" class="ltx_ref">14</a>, <a href="#bib.bib19a" title="The mitll nist lre 2011 language recognition system" class="ltx_ref">18</a>]</cite>. While language identification in signed languages is yet to be studied, significant progress has been recorded for written and spoken languages.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Written languages can be identified to about 99% accuracy using Markov models <cite class="ltx_cite">[<a href="#bib.bib32" title="Statistical identification of language" class="ltx_ref">8</a>]</cite>. This accuracy is so high that current research has shifted to related more challenging problems: language variety identification <cite class="ltx_cite">[<a href="#bib.bib22" title="Automatic identification of language varieties: the case of portuguese" class="ltx_ref">26</a>]</cite>, native language identification <cite class="ltx_cite">[<a href="#bib.bib23a" title="A report on the first native language identification shared task" class="ltx_ref">24</a>]</cite> and identification at the extremes of scales; many more languages, smaller training data, shorter document lengths  <cite class="ltx_cite">[<a href="#bib.bib21" title="Language identification: the long and the short of the matter" class="ltx_ref">1</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Spoken languages can be identified to accuracies that range from 79-98% using different models <cite class="ltx_cite">[<a href="#bib.bib31" title="Comparison of four approaches to automatic language identification of telephone speech" class="ltx_ref">27</a>, <a href="#bib.bib29" title="Acoustic, phonetic, and discriminative approaches to automatic language identification" class="ltx_ref">19</a>]</cite>. The methods used in spoken language identification have also been extended to a related class of problems: native accent identification <cite class="ltx_cite">[<a href="#bib.bib19" title="Automatic accent identification using gaussian mixture models" class="ltx_ref">2</a>, <a href="#bib.bib17" title="An empirical study of automatic accent classification" class="ltx_ref">3</a>, <a href="#bib.bib20" title="Feature subset selection for improved native accent identification" class="ltx_ref">25</a>]</cite> and foreign accent identification <cite class="ltx_cite">[<a href="#bib.bib18" title="Accent identification" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">While some work exists on sign language recognition<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>There is a difference between sign language recognition and identification. Sign language recognition is the recognition of the meaning of the signs in a given known sign language, whereas sign language identification is the recognition of the sign language itself from given signs.</span></span></span>
+<cite class="ltx_cite">[<a href="#bib.bib3a" title="Real-time american sign language recognition from video using hidden markov models" class="ltx_ref">20</a>, <a href="#bib.bib2a" title="Real-time american sign language recognition using desk and wearable computer based video" class="ltx_ref">21</a>, <a href="#bib.bib1" title="The visual analysis of human movement: a survey" class="ltx_ref">9</a>, <a href="#bib.bib23" title="Sign language recognition using sub-units" class="ltx_ref">6</a>]</cite>, very little research exists on sign language identification except for the work by <cite class="ltx_cite">[<a href="#bib.bib16" title="Automatic sign language identification" class="ltx_ref">10</a>]</cite>, where it is shown that sign language identification can be done using linguistically motivated features.
+Accuracies of 78% and 95% are reported on signer independent and signer dependent identification of two sign languages.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This paper has two goals. First, to present a method to identify sign languages using features learned by unsupervised techniques <cite class="ltx_cite">[<a href="#bib.bib11" title="Reducing the dimensionality of data with neural networks" class="ltx_ref">12</a>, <a href="#bib.bib12" title="An analysis of single-layer networks in unsupervised feature learning" class="ltx_ref">4</a>]</cite>. Second, to evaluate the method on six sign languages under different conditions.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">Our contributions:
+
+<span id="I1" class="ltx_inline-enumerate">
+<span id="I1.i1" class="ltx_inline-item"><span class="ltx_tag ltx_tag_inline-enumerate"><span class="ltx_text ltx_font_italic">a</span>)</span> <span class="ltx_text">show that unsupervised feature learning techniques, currently popular in many pattern recognition problems, also work for visual sign languages. More specifically, we show how K-means and sparse autoencoder can be used to learn features for sign language identification.
+</span></span>
+<span id="I1.i2" class="ltx_inline-item"><span class="ltx_tag ltx_tag_inline-enumerate"><span class="ltx_text ltx_font_italic">b</span>)</span> <span class="ltx_text">demonstrate the impact on performance of varying the number of features (aka, feature maps or filter sizes), the patch dimensions (from 2D to 3D) and the number of frames (video length).
+</span></span>
+</span></p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>The challenges in sign language identification</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The challenges in sign language identification arise from three sources as described below.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Iconicity in sign languages</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The relationship between forms and meanings are not totally arbitrary <cite class="ltx_cite">[<a href="#bib.bib13" title="Iconicity as a general property of language: evidence from spoken and signed languages" class="ltx_ref">17</a>]</cite>. Both signed and spoken languages manifest iconicity, that is forms of words or signs are somehow motivated by the meaning of the word or sign. While sign languages show a lot of iconicity in the lexicon <cite class="ltx_cite">[<a href="#bib.bib8" title="Language from the body: iconicity and metaphor in american sign language" class="ltx_ref">22</a>]</cite>, this has not led to a universal sign language. The same concept can be iconically realised by the manual articulators in a way that conforms to the phonological regularities of the languages, but still lead to different sign forms.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Iconicity is also used in the morphosyntax and discourse structure of all sign languages, however, and there we see many similarities between sign languages. Both real-world and imaginary objects and locations are visualised in the space in front of the signer, and can have an impact on the articulation of signs in various ways. Also, the use of constructed action appears to be used in many sign languages in similar ways. The same holds for the rich use of non-manual articulators in sentences and the limited role of facial expressions in the lexicon: these too make sign languages across the world very similar in appearance, even though the meaning of specific articulations may differ <cite class="ltx_cite">[<a href="#bib.bib7" title="Nonmanual structures in sign languages" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Differences between signers</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Just as speakers have different voices unique to each individual, signers have also different signing styles that are likely unique to each individual. Signers’ uniqueness results from how they articulate the shapes and movements that are specified by the linguistic structure of the language. The variability between signers either in terms of physical properties (hand sizes, colors, etc) or in terms of articulation (movements) is such that it does not affect the understanding of the sign language by humans, but that it may be difficult for machines to generalize over multiple individuals. At present we do not know whether the differences between signers using the same language are of a similar or different nature than the differences between different languages. At the level of phonology, there are few differences between sign languages, but the differences in the phonetic realization of words (their articulation) may be much larger.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Diverse environments</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">The visual ’activity’ of signing comes in a context of a specific environment. This environment can include the visual background and camera noises. The background objects of the video may also include dynamic objects – increasing the ambiguity of signing activity. The properties and configurations of the camera induce variations of scale, translation, rotation, view, occlusion, etc. These variations coupled with lighting conditions may introduce noise. These challenges are by no means specific to sign interaction, and are found in many other computer vision tasks.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-2061/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="540" height="270" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Illustration of feature extraction: convolution and pooling.</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Method</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our method performs two important tasks. First, it learns a feature representation from patches of unlabelled raw video data <cite class="ltx_cite">[<a href="#bib.bib11" title="Reducing the dimensionality of data with neural networks" class="ltx_ref">12</a>, <a href="#bib.bib12" title="An analysis of single-layer networks in unsupervised feature learning" class="ltx_ref">4</a>]</cite>. Second, it looks for activations of the learned representation (by convolution) and uses these activations to learn a classifier to discriminate between sign languages.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Unsupervised feature learning</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Given samples of sign language videos (unknown sign language with one signer per video), our system performs the following steps to learn a feature representation (note that these video samples are separate from the video samples that are later used for classifier learning or testing):</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Extract patches</span>. Extract small videos (hereafter called patches) randomly from anywhere in the video samples. We fix the size of the patches such that they all have <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> rows, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> columns and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> frames and we extract patches <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m4" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> times. This gives us <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m5" class="ltx_Math" alttext="\bm{X}=\{x^{(1)},x^{(1)},\dots,x^{(m)}\}" display="inline"><mrow><mi>𝑿</mi><mo>=</mo><mrow><mo>{</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>x</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>x</mi><mrow><mo>(</mo><mi>m</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m6" class="ltx_Math" alttext="x^{(i)}\in R^{N}" display="inline"><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>R</mi><mi>N</mi></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m7" class="ltx_Math" alttext="N=r*c*f" display="inline"><mrow><mi>N</mi><mo>=</mo><mrow><mi>r</mi><mo>*</mo><mi>c</mi><mo>*</mo><mi>f</mi></mrow></mrow></math> (the size of a patch). For our experiments, we extract 100,000 patches of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m8" class="ltx_Math" alttext="15*15*1" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn><mo>*</mo><mn>1</mn></mrow></math> (2D) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m9" class="ltx_Math" alttext="15*15*2" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn><mo>*</mo><mn>2</mn></mrow></math> (3D).</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Normalize the patches</span>. There is evidence that normalization and whitening <cite class="ltx_cite">[<a href="#bib.bib10" title="Independent component analysis: algorithms and applications" class="ltx_ref">13</a>]</cite> improve performance in unsupervised feature learning <cite class="ltx_cite">[<a href="#bib.bib12" title="An analysis of single-layer networks in unsupervised feature learning" class="ltx_ref">4</a>]</cite>. We therefore normalize every patch <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="x^{(i)}" display="inline"><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> by subtracting the mean and dividing by the standard deviation of its elements. For visual data, normalization corresponds to local brightness and contrast normalization.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Learn a feature-mapping</span>. Our unsupervised algorithm takes in the normalized and whitened dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="\bm{X}=\{x^{(1)},x^{(1)},\dots,x^{(m)}\}" display="inline"><mrow><mi>𝑿</mi><mo>=</mo><mrow><mo>{</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>x</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>x</mi><mrow><mo>(</mo><mi>m</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></math> and maps each input vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m2" class="ltx_Math" alttext="x^{(i)}" display="inline"><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> to a new feature vector of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m3" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m4" class="ltx_Math" alttext="f:~{}R^{N}\to R^{K}" display="inline"><mrow><mi>f</mi><mo rspace="5.8pt">:</mo><mrow><msup><mi>R</mi><mi>N</mi></msup><mo>→</mo><msup><mi>R</mi><mi>K</mi></msup></mrow></mrow></math>). We use two unsupervised learning algorithms a) K-means b) sparse autoencoders.</p>
+</div>
+<div id="I2.i3.p2" class="ltx_para">
+<ol id="I2.I1" class="ltx_enumerate">
+<li id="I2.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(a)</span> 
+<div id="I2.I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">K-means clustering</span>: we train K-means to learns <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m2" class="ltx_Math" alttext="c^{(k)}" display="inline"><msup><mi>c</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math> centroids that minimize the distance between data points and their nearest centroids <cite class="ltx_cite">[<a href="#bib.bib5" title="Learning feature representations with k-means" class="ltx_ref">5</a>]</cite>. Given the learned centroids <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m3" class="ltx_Math" alttext="c^{(k)}" display="inline"><msup><mi>c</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math>, we measure the distance of each data point (patch) to the centroids. Naturally, the data points are at different distances to each centroid, we keep the distances that are below the average of the distances and we set the other to zero:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="f_{k}(x)=\max\{0,\mu(z)-z_{k}\}" display="block"><mrow><mrow><msub><mi>f</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mrow><mrow><mi>μ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></mrow><mo>-</mo><msub><mi>z</mi><mi>k</mi></msub></mrow></mrow><mo>}</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m4" class="ltx_Math" alttext="z_{k}=||x-c^{(k)}||^{2}" display="inline"><mrow><msub><mi>z</mi><mi>k</mi></msub><mo>=</mo><msup><mrow><mo fence="true">||</mo><mrow><mi>x</mi><mo>-</mo><msup><mi>c</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m5" class="ltx_Math" alttext="\mu(z)" display="inline"><mrow><mi>μ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></mrow></math> is the mean of the elements of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m6" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>.</p>
+</div></li>
+<li id="I2.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(b)</span> 
+<div id="I2.I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sparse autoencoder</span>: we train a single layer autoencoder with <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i2.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> hidden nodes using backpropagation to minimize squared reconstruction error. At the hidden layer, the features are mapped using a rectified linear (ReL) function <cite class="ltx_cite">[<a href="#bib.bib3" title="Rectifier nonlinearities improve neural network acoustic models" class="ltx_ref">15</a>]</cite> as follows:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="f(x)=g(Wx+b)" display="block"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i2.p1.m2" class="ltx_Math" alttext="g(z)=\max(z,0)" display="inline"><mrow><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>z</mi><mo>,</mo><mn>0</mn></mrow><mo>)</mo></mrow></mrow></mrow></math>. Note that ReL nodes have advantages over sigmoid or tanh functions; they create sparse representations and are suitable for naturally sparse data <cite class="ltx_cite">[<a href="#bib.bib1a" title="Deep sparse rectifier networks" class="ltx_ref">11</a>]</cite>.</p>
+</div></li>
+</ol>
+</div></li>
+</ol>
+<p class="ltx_p">From K-means, we get <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="R^{N}" display="inline"><msup><mi>R</mi><mi>N</mi></msup></math> centroids and from the sparse autoencoder, we get <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="W\in R^{KxN}" display="inline"><mrow><mi>W</mi><mo>∈</mo><msup><mi>R</mi><mrow><mi>K</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>N</mi></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="b\in R^{K}" display="inline"><mrow><mi>b</mi><mo>∈</mo><msup><mi>R</mi><mi>K</mi></msup></mrow></math> filters. We call both the centroids and filters as the learned features.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Classifier learning</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Given the learned features, the feature mapping functions and a set of labeled training videos, we extract features as follows:</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<ol id="I3" class="ltx_enumerate">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Convolutional extraction</span>: Extract features from equally spaced sub-patches covering the video sample.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Pooling</span>: Pool features together over four non-overlapping regions of the input video to reduce the number of features. We perform max pooling for K-means and mean pooling for the sparse autoencoder over 2D regions (per frame) and over 3D regions (per all sequence of frames).</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Learning</span>: Learn a linear classifier to predict the labels given the feature vectors. We use logistic regression classifier and support vector machines <cite class="ltx_cite">[<a href="#bib.bib2" title="Scikit-learn: machine learning in python" class="ltx_ref">16</a>]</cite>.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">The extraction of classifier features through convolution and pooling is illustrated in figure <a href="#S2.F1" title="Figure 1 ‣ 2.3 Diverse environments ‣ 2 The challenges in sign language identification ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Datasets</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our experimental data consist of videos of 30 signers equally divided between six sign languages: British sign language (BSL), Danish (DSL), French Belgian (FBSL), Flemish (FSL), Greek (GSL), and Dutch (NGT). The data for the unsupervised feature learning comes from half of the BSL and GSL videos in the Dicta-Sign corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://www.dictasign.eu/</span></span></span>. Part of the other half, involving 5 signers, is used along with the other sign language videos for learning and testing classifiers.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For the unsupervised feature learning, two types of patches are created: 2D dimensions (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="15*15" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn></mrow></math>) and 3D (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="15*15*2" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn><mo>*</mo><mn>2</mn></mrow></math>). Each type consists of randomly selected 100,000 patches and involves 16 different signers. For the supervised learning, 200 videos (consisting of 1 through 4 frames taken at a step of 2) are randomly sampled per sign language per signer (for a total of 6,000 samples).</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Data preprocessing</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The data preprocessing stage has two goals.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">First, to remove any non-signing signals that remain constant within videos of a single sign language but that are different across sign languages. For example, if the background of the videos is different across sign languages, then classifying the sign languages could be done with perfection by using signals from the background. To avoid this problem, we removed the background by using background subtraction techniques and manually selected thresholds.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">The second reason for data preprocessing is to make the input size smaller and uniform. The videos are colored and their resolutions vary from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="320*180" display="inline"><mrow><mn>320</mn><mo>*</mo><mn>180</mn></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="720*576" display="inline"><mrow><mn>720</mn><mo>*</mo><mn>576</mn></mrow></math>.
+We converted the videos to grayscale and resized their heights to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="144" display="inline"><mn>144</mn></math> and cropped out the central <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="144*144" display="inline"><mrow><mn>144</mn><mo>*</mo><mn>144</mn></mrow></math> patches.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Evaluation</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our system in terms of average accuracies. We train and test our system in leave-one-signer-out cross-validation, where videos from four signers are used for training and videos of the remaining signer are used for testing. Classification algorithms are used with their default settings and the classification strategy is <span class="ltx_text ltx_font_bold">one-vs.-rest</span>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results and Discussion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our best average accuracy (84.03%) is obtained using 500 K-means features which are extracted over four frames (taken at a step of 2). This accuracy obtained for six languages is much higher than the 78% accuracy obtained for two sign languages <cite class="ltx_cite">[<a href="#bib.bib16" title="Automatic sign language identification" class="ltx_ref">10</a>]</cite>. The latter uses linguistically motivated features that are extracted over video lengths of at least 10 seconds. Our system uses learned features that are extracted over much smaller video lengths (about half a second).</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">All classification accuracies are presented in table <a href="#S5.T1" title="Table 1 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> for 2D and table <a href="#S5.T2" title="Table 2 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for 3D. Classification confusions are shown in table <a href="#S5.T3" title="Table 3 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Figure <a href="#S5.F2" title="Figure 2 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows features learned by K-means and sparse autoencoder.</p>
+</div>
+<div id="S5.F2" class="ltx_figure">
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:208.1pt;">
+<p class="ltx_p ltx_align_center ltx_align_center"><img src="P14-2061/image002.png" id="S5.F2.g1" class="ltx_graphics" width="196" height="150" alt=""/></p>
+<p class="ltx_p ltx_align_center ltx_align_center">(a) K-means features</p>
+</span>
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:208.1pt;">
+<p class="ltx_p ltx_align_center ltx_align_center"><img src="P14-2061/image003.png" id="S5.F2.g2" class="ltx_graphics" width="200" height="147" alt=""/></p>
+<p class="ltx_p ltx_align_center ltx_align_center">(b) SAE features</p>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>All 100 features learned from 100,000 patches of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m2" class="ltx_Math" alttext="15*15" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn></mrow></math>.
+K-means learned relatively more curving edges than the sparse auto encoder.</div>
+</div>
+<div id="S5.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:183.7pt;height:351.944444444444px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-39.4pt,-54.3pt) scale(0.7,0.7) ;-webkit-transform:translate(-39.4pt,-54.3pt) scale(0.7,0.7) ;-ms-transform:translate(-39.4pt,-54.3pt) scale(0.7,0.7) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_bold">K-means</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_bold">Sparse Autoencoder</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">K</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">SVM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">SVM</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 1</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">69.23</td>
+<td class="ltx_td ltx_align_center ltx_border_t">70.60</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.42</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.85</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">74.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">71.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">76.08</td>
+<td class="ltx_td ltx_align_center">77.37</td>
+<td class="ltx_td ltx_align_center ltx_border_r">74.80</td>
+<td class="ltx_td ltx_align_center">72.27</td>
+<td class="ltx_td ltx_align_center">70.67</td>
+<td class="ltx_td ltx_align_center">68.90</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">83.03</span></td>
+<td class="ltx_td ltx_align_center">79.88</td>
+<td class="ltx_td ltx_align_center ltx_border_r">77.92</td>
+<td class="ltx_td ltx_align_center">67.50</td>
+<td class="ltx_td ltx_align_center">69.38</td>
+<td class="ltx_td ltx_align_center">66.20</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 2</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">71.15</td>
+<td class="ltx_td ltx_align_center ltx_border_t">72.07</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.42</td>
+<td class="ltx_td ltx_align_center ltx_border_t">72.78</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">74.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">72.08</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">77.33</td>
+<td class="ltx_td ltx_align_center">78.27</td>
+<td class="ltx_td ltx_align_center ltx_border_r">76.60</td>
+<td class="ltx_td ltx_align_center">71.85</td>
+<td class="ltx_td ltx_align_center">71.07</td>
+<td class="ltx_td ltx_align_center">68.27</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">83.58</span></td>
+<td class="ltx_td ltx_align_center">79.50</td>
+<td class="ltx_td ltx_align_center ltx_border_r">79.90</td>
+<td class="ltx_td ltx_align_center">67.73</td>
+<td class="ltx_td ltx_align_center">70.15</td>
+<td class="ltx_td ltx_align_center">66.45</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 3</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">71.42</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.10</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.82</td>
+<td class="ltx_td ltx_align_center ltx_border_t">65.70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.52</td>
+<td class="ltx_td ltx_align_center ltx_border_t">63.68</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">78.40</td>
+<td class="ltx_td ltx_align_center">78.57</td>
+<td class="ltx_td ltx_align_center ltx_border_r">76.50</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">72.53</span></td>
+<td class="ltx_td ltx_align_center">71.68</td>
+<td class="ltx_td ltx_align_center">68.18</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">83.48</span></td>
+<td class="ltx_td ltx_align_center">80.05</td>
+<td class="ltx_td ltx_align_center ltx_border_r">80.57</td>
+<td class="ltx_td ltx_align_center">67.85</td>
+<td class="ltx_td ltx_align_center">70.85</td>
+<td class="ltx_td ltx_align_center">66.77</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 4</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">71.88</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.05</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">68.70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">64.93</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.48</td>
+<td class="ltx_td ltx_align_center ltx_border_t">63.80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">79.32</td>
+<td class="ltx_td ltx_align_center">78.65</td>
+<td class="ltx_td ltx_align_center ltx_border_r">76.42</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">72.27</span></td>
+<td class="ltx_td ltx_align_center">72.18</td>
+<td class="ltx_td ltx_align_center">68.35</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">84.03</span></td>
+<td class="ltx_td ltx_align_center">80.38</td>
+<td class="ltx_td ltx_align_center ltx_border_r">80.50</td>
+<td class="ltx_td ltx_align_center">68.25</td>
+<td class="ltx_td ltx_align_center">71.57</td>
+<td class="ltx_td ltx_align_center">67.27</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold">K</span> = # of features, <span class="ltx_text ltx_font_bold">SVM</span> = SVM with linear kernel</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb" colspan="7"><span class="ltx_text ltx_font_bold">LR-L?</span> = Logistic Regression with L1 and L2 penalty</th></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>2D filters (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="15*15" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn></mrow></math>): Leave-one-signer-out cross-validation average accuracies.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:183.7pt;height:246.944444444444px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-39.4pt,-38.1pt) scale(0.7,0.7) ;-webkit-transform:translate(-39.4pt,-38.1pt) scale(0.7,0.7) ;-ms-transform:translate(-39.4pt,-38.1pt) scale(0.7,0.7) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_bold">K-means</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_bold">Sparse Autoencoder</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">K</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">SVM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">LR-L2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">SVM</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 2</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">70.63</td>
+<td class="ltx_td ltx_align_center ltx_border_t">69.62</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">68.87</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.40</td>
+<td class="ltx_td ltx_align_center ltx_border_t">66.53</td>
+<td class="ltx_td ltx_align_center ltx_border_t">65.73</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">73.73</td>
+<td class="ltx_td ltx_align_center">74.05</td>
+<td class="ltx_td ltx_align_center ltx_border_r">73.03</td>
+<td class="ltx_td ltx_align_center">72.83</td>
+<td class="ltx_td ltx_align_center">73.48</td>
+<td class="ltx_td ltx_align_center">70.52</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center">75.30</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">76.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">75.40</td>
+<td class="ltx_td ltx_align_center">72.28</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">74.65</span></td>
+<td class="ltx_td ltx_align_center">68.72</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 3</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">72.48</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.30</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">70.33</td>
+<td class="ltx_td ltx_align_center ltx_border_t">68.68</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.40</td>
+<td class="ltx_td ltx_align_center ltx_border_t">68.33</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">74.78</td>
+<td class="ltx_td ltx_align_center">74.95</td>
+<td class="ltx_td ltx_align_center ltx_border_r">74.77</td>
+<td class="ltx_td ltx_align_center">74.20</td>
+<td class="ltx_td ltx_align_center">74.72</td>
+<td class="ltx_td ltx_align_center">70.85</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center">77.27</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">77.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">76.17</td>
+<td class="ltx_td ltx_align_center">72.40</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">75.45</span></td>
+<td class="ltx_td ltx_align_center">69.42</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="7"><span class="ltx_text ltx_font_bold"># of frames = 4</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_center ltx_border_t">74.85</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.97</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">69.23</td>
+<td class="ltx_td ltx_align_center ltx_border_t">68.68</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.80</td>
+<td class="ltx_td ltx_align_center ltx_border_t">68.80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">300</th>
+<td class="ltx_td ltx_align_center">76.23</td>
+<td class="ltx_td ltx_align_center">76.58</td>
+<td class="ltx_td ltx_align_center ltx_border_r">74.08</td>
+<td class="ltx_td ltx_align_center">74.43</td>
+<td class="ltx_td ltx_align_center">75.20</td>
+<td class="ltx_td ltx_align_center">70.65</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_r">500</th>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">79.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb">78.63</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r">76.63</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">73.50</td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">76.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb">70.53</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>3D filters (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="15*15*2" display="inline"><mrow><mn>15</mn><mo>*</mo><mn>15</mn><mo>*</mo><mn>2</mn></mrow></math>): Leave-one-signer-out cross-validation average accuracies.</div>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="P14-2061/image004.png" id="S5.F3.g1" class="ltx_graphics ltx_centering" width="599" height="311" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Visualization of coefficients of Lasso (logistic regression with L1 penalty) for each sign language with respect to each of the 100 filters of the sparse autoencoder. The 100 filters are shown in figure <a href="#S5.F2" title="Figure 2 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>(b). Each grid cell represents a frame and each filter is activated in 4 non-overlapping pooling regions. </div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:189.0pt;height:124.444444444444px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-40.5pt,-19.2pt) scale(0.7,0.7) ;-webkit-transform:translate(-40.5pt,-19.2pt) scale(0.7,0.7) ;-ms-transform:translate(-40.5pt,-19.2pt) scale(0.7,0.7) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_tt"/>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">BSL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">DSL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">FBSL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">FSL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">GSL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">NGT</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">BSL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">56.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">2.98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.79</td>
+<td class="ltx_td ltx_align_center ltx_border_t">3.38</td>
+<td class="ltx_td ltx_align_center ltx_border_t">24.11</td>
+<td class="ltx_td ltx_align_center ltx_border_t">11.63</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">DSL</span></th>
+<td class="ltx_td ltx_align_center">2.87</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">92.37</span></td>
+<td class="ltx_td ltx_align_center">0.95</td>
+<td class="ltx_td ltx_align_center">0.46</td>
+<td class="ltx_td ltx_align_center">3.16</td>
+<td class="ltx_td ltx_align_center">0.18</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">FBSL</span></th>
+<td class="ltx_td ltx_align_center">1.48</td>
+<td class="ltx_td ltx_align_center">1.96</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">79.04</span></td>
+<td class="ltx_td ltx_align_center">4.69</td>
+<td class="ltx_td ltx_align_center">6.62</td>
+<td class="ltx_td ltx_align_center">6.21</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">FSL</span></th>
+<td class="ltx_td ltx_align_center">6.96</td>
+<td class="ltx_td ltx_align_center">2.96</td>
+<td class="ltx_td ltx_align_center">2.06</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">60.81</span></td>
+<td class="ltx_td ltx_align_center">18.15</td>
+<td class="ltx_td ltx_align_center">9.07</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">GSL</span></th>
+<td class="ltx_td ltx_align_center">5.50</td>
+<td class="ltx_td ltx_align_center">2.55</td>
+<td class="ltx_td ltx_align_center">1.67</td>
+<td class="ltx_td ltx_align_center">2.57</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">86.05</span></td>
+<td class="ltx_td ltx_align_center">1.65</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_bb ltx_border_r"><span class="ltx_text ltx_font_bold">NGT</span></th>
+<td class="ltx_td ltx_align_center ltx_border_bb">9.08</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">1.33</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">3.98</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">18.76</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">4.41</td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">62.44</span></td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Confusion matrix – confusions averaged over all settings for K-means and sparse autoencoder with 2D and 3D filters (i.e. for all # of frames, all filter sizes and all classifiers).</div>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Tables <a href="#S5.T1" title="Table 1 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S5.T2" title="Table 2 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> indicate that K-means performs better with 2D filters and that sparse autoencoder performs better with 3D filters.
+Note that features from 2D filters are pooled over each frame and concatenated whereas, features from 3D filters are pooled over all frames.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Which filters are active for which language? Figure <a href="#S5.F3" title="Figure 3 ‣ 5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows visualization of the strength of filter activation for each sign language. The figure shows what Lasso looks for when it identifies any of the six sign languages.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Given that sign languages are under-resourced, unsupervised feature learning techniques are the right tools and our results show that this is realistic for sign language identification.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Future work can extend this work in two directions: 1) by increasing the number of sign languages and signers to check the stability of the learned feature activations and to relate these to iconicity and signer differences 2) by comparing our method with deep learning techniques. In our experiments, we used a single hidden layer of features, but it is worth researching into deeper layers to improve performance and gain more insight into the hierarchical composition of features.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Other questions for future work. How good are human beings at identifying sign languages?
+Can a machine be used to evaluate the quality of sign language interpreters by comparing them to a native language model? The latter question is particularly important given what happened at the Nelson Mandela’s memorial service<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://www.youtube.com/watch?v=X-DxGoIVUWo</span></span></span>.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Baldwin and M. Lui</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language identification: the long and the short of the matter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 229–237</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Chen, C. Huang, E. Chang and J. Wang</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic accent identification using gaussian mixture models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 343–346</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1109/ASRU.2001.1034657" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Choueiter, G. Zweig and P. Nguyen</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An empirical study of automatic accent classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 4265–4268</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Coates, A. Y. Ng and H. Lee</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An analysis of single-layer networks in unsupervised feature learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 215–223</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p1" title="2. ‣ 3.1 Unsupervised feature learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Coates and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning feature representations with k-means</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Neural Networks: Tricks of the Trade</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 561–580</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.I1.i1.p1" title="(a) ‣ 3. ‣ 3.1 Unsupervised feature learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">(a)</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Cooper, E.J. Ong, N. Pugeault and R. Bowden</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sign language recognition using sub-units</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">13</span>, <span class="ltx_text ltx_bib_pages"> pp. 2205–2231</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inbook"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Crasborn</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Nonmanual structures in sign languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Book Section</span> in <span class="ltx_text ltx_bib_editor">K. Brown (Ed.)</span>, <span class="ltx_text ltx_bib_inbook">Encyclopedia of Language and Linguistics, 2nd ed.</span>,
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">8</span>, <span class="ltx_text ltx_bib_pages"> pp. 668–672</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-08-044299-4</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Iconicity in sign languages ‣ 2 The challenges in sign language identification ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Dunning</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical identification of language</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Computing Research Laboratory, New Mexico State University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Gavrila</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The visual analysis of human movement: a survey</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer vision and image understanding</span> <span class="ltx_text ltx_bib_volume">73</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 82–98</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. G. Gebre, P. Wittenburg and T. Heskes</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic sign language identification</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Results and Discussion ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib1a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep sparse rectifier networks</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 315–323</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.I1.i2.p1" title="(b) ‣ 3. ‣ 3.1 Unsupervised feature learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">(b)</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton and R. R. Salakhutdinov</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reducing the dimensionality of data with neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Science</span> <span class="ltx_text ltx_bib_volume">313</span> (<span class="ltx_text ltx_bib_number">5786</span>), <span class="ltx_text ltx_bib_pages"> pp. 504–507</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Hyvärinen and E. Oja</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Independent component analysis: algorithms and applications</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural networks</span> <span class="ltx_text ltx_bib_volume">13</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 411–430</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p1" title="2. ‣ 3.1 Unsupervised feature learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Li, B. Ma and C. Lee</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A vector space modeling approach to spoken language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Audio, Speech, and Language Processing, IEEE Transactions on</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 271–284</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1109/TASL.2006.876860" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 1558-7916</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. L. Maas, A. Y. Hannun and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rectifier nonlinearities improve neural network acoustic models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.I1.i2.p1" title="(b) ‣ 3. ‣ 3.1 Unsupervised feature learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">(b)</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, O. Grisel, M. Blondel, P. Prettenhofer, R. Weiss and V. Dubourg</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scikit-learn: machine learning in python</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2825–2830</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i3.p1" title="3. ‣ 3.2 Classifier learning ‣ 3 Method ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Perniss, R. L. Thompson and G. Vigliocco</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Iconicity as a general property of language: evidence from spoken and signed languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Frontiers in psychology</span> <span class="ltx_text ltx_bib_volume">1</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Iconicity in sign languages ‣ 2 The challenges in sign language identification ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib19a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Singer, P. Torres-Carrasquillo, D. Reynolds, A. McCree, F. Richardson, N. Dehak and D. Sturim</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The mitll nist lre 2011 language recognition system</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Singer, P. Torres-Carrasquillo, T. Gleason, W. Campbell and D.A. Reynolds</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Acoustic, phonetic, and discriminative approaches to automatic language identification</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3a" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Starner and A. Pentland</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Real-time american sign language recognition from video using hidden markov models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Motion-Based Recognition</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 227–243</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Starner, J. Weaver and A. Pentland</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Real-time american sign language recognition using desk and wearable computer based video</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Pattern Analysis and Machine Intelligence</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">12</span>), <span class="ltx_text ltx_bib_pages"> pp. 1371–1375</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Taub</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language from the body: iconicity and metaphor in american sign language</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>, <span class="ltx_text ltx_bib_place">Cambridge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Iconicity in sign languages ‣ 2 The challenges in sign language identification ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Teixeira, I. Trancoso and A. Serralheiro</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accent identification</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1784–1787 vol.3</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1109/ICSLP.1996.607975" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Tetreault, D. Blanchard and A. Cahill</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A report on the first native language identification shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">NAACL/HLT 2013</span>, <span class="ltx_text ltx_bib_pages"> pp. 48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wu, J. Duchateau, J. Martens and D. Van Compernolle</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature subset selection for improved native accent identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Speech Communication</span> <span class="ltx_text ltx_bib_volume">52</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 83–98</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Zampieri and B. G. Gebre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic identification of language varieties: the case of portuguese</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 233–237</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M.A. Zissman</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparison of four approaches to automatic language identification of telephone speech</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Speech and Audio Processing</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 31–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Unsupervised Feature Learning for Visual Sign Language Identification" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:50:06 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

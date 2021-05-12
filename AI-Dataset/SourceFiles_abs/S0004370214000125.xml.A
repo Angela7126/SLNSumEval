@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    A branch and prune algorithm for the computation of generalized aspects of parallel robots.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Mechanical manipulators, commonly called robots, are widely used in the industry to automatize various tasks. They are mechanical assemblies of rigid links connected by mobile joints. Some joints are actuated and they allow commanding the robot operating link, called its end-effector (or platform). One key characteristic of a robot is its reachable workspace, informally defined as the set of poses its end-effector can reach. Indeed, its size defines the scope of operational trajectories the robot can perform. The workspace can be computed from the set of possible command inputs using the kinematic model of the robot, a system of equations relating the commands and the pose coordinates. The size of this system is often referred to as the degrees of freedom (DOF) of the robot.
+     </paragraph>
+     <paragraph>
+      Robots comply with either a serial or a parallel (or possibly a hybrid) assembly, whether its links are connected in series or in parallel. Parallel robots [1], [2] present several advantages with respect to serial ones: They are naturally stiffer, leading to better accuracy with larger loads, and allow high speed motions. These advantages are contrasted by a more complicated design that yields difficulties for the computation and the analysis of their workspace. First, one pose of the robot's end-effector may be reached by several actuated joint commands (which correspond to different working modes), and conversely one input command may lead to several poses of its end-effector (which correspond to different assembly modes). Second, parallel robots generally have parallel singularities [3], i.e., specific configurations where they become uncontrollable and can even be damaged.
+     </paragraph>
+     <paragraph>
+      One central issue in designing parallel robots is to compute its nonsingular workspace, together with the corresponding commands, so that the robot can be safely operated. This amounts to computing the connected components of the set of nonsingular configurations, called generalized aspect in [4]. This computation must be certified in terms of non-singularity and connectivity in order to guarantee safe operations. Few frameworks provide such certifications, among which algebraic computations and interval analysis. Algebraic methods are in general too expensive and apply only for polynomial systems. Still, the cylindrical algebraic decomposition was used in [5] with a connectivity analysis limited to robots with 2 DOFs. Though generalized aspects are mathematical objects that cannot, in general, be computed exactly using numerical methods, interval analysis allows the rigorous computation of some approximation. It was used in [6] for robots having a single solution to their inverse kinematic problem; Though limited, this method can still tackle important classes of robots like the Stewart platform. A quad-tree with certification of nonsingularity was built in [7] for some planar robots with 2 DOFs; This method can be extended to higher dimensional robots, but it requires the a priori separation of working modes by ad hoc inequalities, and is not certified with respect to connectivity. Finally, the two works [8], [9] propose algorithms based on interval analysis to analyze the connectivity of set defined by inequalities constraints, but cannot be extended to equality constraints. In particular, the developments presented in the present paper somehow extend the interval-based path planning method proposed in [8] for sets defined by inequality constraints only, to manifolds defined by equality, disequality and inequality constraints.
+     </paragraph>
+     <paragraph>
+      In this paper we propose a branch and prune algorithm incorporating the certification of the solutions and of their connectivity. This allows a fully automated and certified computation of what we call connected sets of nonsingular configurations (CSNCs), i.e., certified approximations of generalized aspects, from the model of arbitrary parallel robots, including robots with multiple solutions to their direct and inverse kinematic problems, without requiring any a priori study to separate their working modes. Though the proposed method does not allow counting the number of CSNCs rigorously, it constructs inner approximations of the nonsingular workspace that allow commanding parallel robots safely. Although less important in practice, a more accurate and costly connectivity analysis is also proposed, which enables separating non-connected CSNCs, hence providing a lower-bound on the exact number of generalized aspects. The algorithm is applicable to robots with an arbitrary number of DOF, although the complexity of the computations currently restricts its application to robots with three DOFs. It is also very flexible as it can naturally take into account additional constraints such as, e.g., arm collisions, obstacle avoidance or joint limits. It is thus the first method able to handle such a large class of robots for the problem of computing connected sets of nonsingular configurations. Its main limitation is its performances, due to the combinatorial explosion of the number of computed boxes with the dimension of the problem and the prescribed computational precision. As a consequence, we have applied it to planar robots only at the moment.
+     </paragraph>
+     <paragraph>
+      A motivating example is presented in Section 2 followed by some preliminaries about numerical constraint programming and robotics in Section 3. The proposed algorithm for certified singularity free connected components computation is presented in Section 4. Finally, experiments on planar robots with 2 and 3 degrees of freedom are presented in Section 5.
+     </paragraph>
+     <paragraph label="Notations">
+      Boldface letters denote vectors. Thus {a mathematical formula}f(x)=0 denotes a system of equations f on a vector of variables x: {a mathematical formula}f1(x1,…,xn)=0,…,fk(x1,…,xn)=0. The Jacobian matrix of {a mathematical formula}f(x) with respect to the subset {a mathematical formula}x′ of the variables x is denoted {a mathematical formula}Fx′(x). Interval variables are denoted using bracketed symbols, e.g., {a mathematical formula}[x]=[x̲,x¯]:={x∈R|x̲⩽x⩽x¯}. Hence, {a mathematical formula}[x] is an interval vector (box) and {a mathematical formula}[A]=([aij]) is an interval matrix. {a mathematical formula}IR denotes the set of intervals and {a mathematical formula}IRn the set of n-dimensional boxes. For an interval {a mathematical formula}[x], we denote {a mathematical formula}wid[x]:=x¯−x̲ its width, {a mathematical formula}int[x]:={x∈R|x̲&lt;x&lt;x¯} its interior, and {a mathematical formula}mid[x]:=(x̲+x¯)/2 its midpoint. These notations are extended to interval vectors.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Motivating example
+     </section-title>
+     <paragraph label="Description">
+      Consider the simple PRRP{sup:1} planar robot depicted in Fig. 1 (left), which involves two prismatic joints (gray rectangles) sliding along two perpendicular directions. These prismatic joints are connected through three rigid bars (black lines) linked by two revolute joints (circles) that allow free rotations between the rigid bars. The lengths of the prismatic joints are respectively denoted by x and q, the end-effector pose x being along the horizontal direction and the command q corresponding to the height along the vertical direction. Fig. 1 (left) shows one generic configuration of the robot. Note that there is another symmetric (negative) pose x associated to the same command q, which is typical of parallel robots. From this configuration, every (vertical) change in q induces a unique corresponding (horizontal) change in x, hence this configuration is nonsingular. Fig. 1 (right) shows two singular configurations. In the plain green pose (where the robot's main rigid bar is horizontal), increasing or decreasing the command q both entails a decrease of x. In the dashed red pose (where the robot's main rigid bar is vertical), increasing or decreasing the command q entails a vertical motion of the end-effector which is impossible due to the robot architecture, hence a potential damage to the robot. The green configuration amounts to a serial singularity, which restricts the robot mobility without damaging it; the red configuration is a parallel singularity, which may damage the robot.
+     </paragraph>
+     <paragraph label="Kinematic model">
+      The coordinates of the revolute joints are respectively {a mathematical formula}(a,q) and {a mathematical formula}(x,b), where a and b are architecture parameters corresponding to the lengths of the two horizontal and vertical small rigid bars. Then the main oblique rigid bar enforces the distance between these two points to be equal to its length l, a third architecture parameter. Hence, the kinematic model of this robot is defined as follows:{a mathematical formula} The solution set of this model, the circle of center {a mathematical formula}(a,b) and radius l, is depicted in Fig. 2 (left). The direct kinematic problem consists in computing x knowing q, leading to two solutions {a mathematical formula}a±l2−(q−b)2 if {a mathematical formula}q∈[b−l,b+l], no solution otherwise. Similarly, the inverse kinematic problem consists in computing q knowing x, leading to two solutions {a mathematical formula}b±l2−(x−a)2 provided that {a mathematical formula}x∈[a−l,a+l], no solution otherwise. It is noteworthy that this simple robot is representative of the general case since parallel robots can have several solutions to both their direct and inverse kinematic problems. It is also typical regarding its singularities: It has two serial singularities where the solution set has a vertical tangent (leftmost and rightmost green points in left hand side graphic of Fig. 2), and two parallel singularities where the solution set has a horizontal tangent (topmost and bottommost red points in the left hand side graphic of Fig. 2). These four singularities split the solution set into four singularity free connected components (quarters of circle), i.e., this robot has four generalized aspects. We can determine the nonsingular workspace of the robot by projecting each aspect onto the x component (the thick lines above and under the paving in Fig. 2 (right)).
+     </paragraph>
+     <paragraph label="Certified approximation of generalized aspects">
+      This paper uses numerical constraint programming in order to compute, with full certification, subsets of the different aspects, called connected sets of nonsingular configurations (CSNC) in the following. The standard branch and prune algorithm is adapted in such a way that solving the robot kinematic model together with non-singularity constraints leads to the enclosure depicted in the right hand side graphic of Fig. 2. Each solution box is certifiably crossed by a single aspect which covers the whole box projection on the x subspace, and each pair of neighbor solution boxes are certified to share a common solution. Therefore, the connected components {a mathematical formula}A1,A2,A3,A4 of the computed boxes shown in the right hand side graphic of Fig. 2 allow separating the four aspects, and provide, by projection, inner approximations of the nonsingular workspace of this robot.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <section label="3.1">
+      <section-title>
+       Numerical constraint programming
+      </section-title>
+      <paragraph>
+       Numerical constraint solving inherits principles and methods from discrete constraint solving [10] and interval analysis [11]. Indeed, as their variable domains are continuous subsets of {a mathematical formula}R, it is impossible to enumerate the possible assignments and numeric constraint solvers thus resorts to interval computations. As a result, we use a so-called interval extension{a mathematical formula}[f]:IRn→IR of each function {a mathematical formula}f:Rn→R involved in a constraint, such that {a mathematical formula}∀[a]∈IRn,∀a∈[a],f(a)∈[f]([a]).
+      </paragraph>
+      <section label="3.1.1">
+       <section-title>
+        Numerical constraint satisfaction problems
+       </section-title>
+       <paragraph>
+        A numerical constraint satisfaction problem (NCSP) is defined as a triple {a mathematical formula}〈v,[v],c〉 that consists of
+       </paragraph>
+       <list>
+        <list-item label="•">
+         a vector of variables{a mathematical formula}v=(v1,…,vn),
+        </list-item>
+        <list-item label="•">
+         an initial domain, in the form of a box {a mathematical formula}[v]=([v1],…,[vn])∈IRn, and
+        </list-item>
+        <list-item label="•">
+         a constraint{a mathematical formula}c(v):=(f(v)=0∧g(v)⩾0), {a mathematical formula}f:Rn→Re and {a mathematical formula}g:Rn→Ri, i.e., a conjunction of e equations and i inequalities.
+        </list-item>
+       </list>
+       <paragraph>
+        A solution of an NCSP is an assignment of its variables {a mathematical formula}v∈[v] that satisfies its constraints. The solution set Σ of an NCSP is the region within its initial domain that satisfies its constraints, i.e., {a mathematical formula}Σ([v]):={v∈[v]|c(v)}.
+       </paragraph>
+      </section>
+      <section label="3.1.2">
+       <section-title>
+        The branch and prune algorithm
+       </section-title>
+       <paragraph>
+        The branch and prune algorithm[12] is the standard complete solving method for NCSPs. It takes a problem as an input and outputs two sets of boxes, called respectively the undecided boxes (stored inside {a mathematical formula}U) and solution boxes (stored inside {a mathematical formula}S). It interleaves a refutation phase, called prune, that eliminates inconsistent assignments within a box, and an exploration phase, called branch, that divides a box into several sub-boxes to be searched recursively, until a prescribed precision ϵ is reached. Algorithm 1 shows a generic description of this scheme. It involves four subroutines: Extract (extraction of the next box to be processed), {a mathematical formula}Prunec (reduction of the domains based on refutation of assignments that cannot satisfy a subset of constraint c), {a mathematical formula}Provec (certification that a box contains some solutions of the constraint c, the specific semantic being problem dependent), and Branch (division of the processed box into sub-boxes to be further processed). Each of them has to be instantiated depending on the problem to be solved. The procedure {a mathematical formula}Prunec obviously depends on the type of constraint in the problem, as well as on other characteristics of the problem. The procedures Extract and Branch allow defining the search strategy (e.g., breadth-first, depth-first, etc.), which may be tuned differently with respect to the problem. The procedure {a mathematical formula}Provec actually defines the aim of the branch and prune. A box for which {a mathematical formula}Provec succeeds is called a solution box: Being a solution box can take different meaning depending on the considered problem and the question asked. For instance, if the question is to find the real solutions of a well-constrained system of equations, then it will generally implement a solution existence (and often uniqueness) theorem, e.g., Miranda, Brouwer or interval Newton [13], that guarantees that the solution box contains a (unique) real solution; on the other hand, if the question is to compute the solution set of a conjunction of inequality constraints, then it will usually implement a universal solution test, which guarantees that every real assignment in the solution box is a solution of the NCSP.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Parallel robots, singularities and generalized aspects
+      </section-title>
+      <paragraph>
+       As illustrated in Section 2, the kinematic model of a parallel robot can be expressed as a system of equations relating its end-effector pose x and its commands q:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A solution {a mathematical formula}(x,q) is called a configuration, and the solution set Σ is called the configuration manifold and lies within the configuration space (also called the pose-command product space). The subspace restricted to the pose parameters x (resp. command parameters q) is known as the workspace (resp. joint-space). The projection {a mathematical formula}Σx (resp. {a mathematical formula}Σq) of the solution set Σ is called the robot reachable workspace (resp. reachable joint-space). In this paper, we restrict to the most typical architectures which satisfy {a mathematical formula}dimx=dimq=dimf=n, i.e., neither over- nor under-actuated manipulators. Then, by the implicit function theorem, this system of equations defines a local bijection between x and q provided the Jacobian matrices {a mathematical formula}Fx(x,q) and {a mathematical formula}Fq(x,q) are non-singular. The configurations {a mathematical formula}(x,q) that do not satisfy these regularity conditions are called singularities, respectively parallel or serial whether {a mathematical formula}Fx(x,q) or {a mathematical formula}Fq(x,q) is singular. These algebraic singularity characterizations correspond to the horizontal and vertical tangents of the kinematic manifold described in Section 2.
+      </paragraph>
+      <paragraph>
+       A key issue in robotics is to control a robot while avoiding singularities, in particular because reaching a parallel singularity can dramatically damage a robot. This leads to the definition of generalized aspects[4] as maximal sets of nonsingular configurations {a mathematical formula}(x,q) that can all be connected within Σ without crossing any singularity. More formally, the set of nonsingular configurations of the robot is{a mathematical formula} This corresponds, e.g., to the four quarters of circle in the left hand side graphic of Fig. 2, where the four singularities (green and red points) are removed. As illustrated by this diagram, {a mathematical formula}Σ⁎ is generally made of several connected components.{sup:2} Formally, the generalized aspects of the robots are defined to be the connected components of (3).
+      </paragraph>
+      <paragraph>
+       For a given generalized aspect {a mathematical formula}A, its projection {a mathematical formula}Ax is a maximal singularity-free region in the robot reachable workspace. Knowing these regions allows roboticists to safely plan robot motions: Any two poses in {a mathematical formula}Ax are connected by at least one singularity-free path. In addition, the study of aspects provides important information about robot characteristics, e.g., if {a mathematical formula}(x,q) and {a mathematical formula}(x,q′) exist in an aspect {a mathematical formula}A and {a mathematical formula}q≠q′, i.e., two different commands yield the same pose, then the robot is said to be cuspidal[16]. Cuspidal robots can change assembly mode without crossing singularities, yielding an extra flexibility in their usage. Finally, the computation of aspects allows roboticists to make informed choices when designing a robot for a given task.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Description of the method
+     </section-title>
+     <paragraph>
+      The proposed method for the generalized aspect computation relies on solving the following NCSP whose solutions are the nonsingular configurations of the robot:{a mathematical formula} Let {a mathematical formula}Σ([x],[q]) be the solution set of this NCSP. Our method computes a set of boxes partly covering this solution set. This set of boxes is partitioned into subsets that represent fully certified approximations of the aspects of the considered robot, in terms of both solution existence and connectedness within the solution set. The computed boxes have to satisfy the specific properties stated in Section 4.1. The corresponding branch and prune instantiation is described in Section 4.2. Finally, the connections between the output boxes have to be certified as described in Section 4.3, and the connected component analysis is described in Section 4.4.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       From the NCSP model to the generalized aspects computation
+      </section-title>
+      <paragraph>
+       We aim at computing a (finite) set of boxes {a mathematical formula}S⊆IRn×IRn together with (undirected) links {a mathematical formula}N, i.e. 2-subsets of {a mathematical formula}S, satisfying the following three properties:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}∀([x],[q])∈S,∀x∈[x],∃ a unique q∈[q],f(x,q)=0;
+       </list-item>
+       <list-item>
+        {a mathematical formula}∀([x],[q])∈S,∀x∈[x],∀q∈[q],detFx(x,q)≠0∧detFq(x,q)≠0;
+       </list-item>
+       <list-item>
+        {a mathematical formula}∀{([x],[q]),([x′],[q′])}∈N,∃(x,q)∈([x],[q])∩([x′],[q′]),f(x,q)=0.
+       </list-item>
+      </list>
+      <paragraph>
+       Property {a mathematical formula}(P1) allows defining in each {a mathematical formula}([x],[q])∈S a function {a mathematical formula}κ([x],[q]):[x]→[q] that associates the unique command {a mathematical formula}q=κ([x],[q])(x) with a given position x (i.e., the solution of the inverse kinematic problem locally defined inside {a mathematical formula}([x],[q])).
+      </paragraph>
+      <paragraph>
+       Property {a mathematical formula}(P2) proves there is no singularity in the box. Furthermore, it allows applying the Implicit Function Theorem to prove that {a mathematical formula}κ([x],[q]) is differentiable (and hence continuous) inside {a mathematical formula}[x]. Therefore, for a given box {a mathematical formula}([x],[q])∈S, the solution set restricted to this box{a mathematical formula} is proved to be connected and singularity free, and is thus a subset of one generalized aspect.
+      </paragraph>
+      <paragraph>
+       These two properties entail in particular that {a mathematical formula}Σ⁎∩([x],[q]) is a connected manifold, hence a subset of a single aspect, and that {a mathematical formula}[x] is included inside the reachable workspace. They are satisfied by the motivating example output shown in Fig. 2 (right). Remark that given a box {a mathematical formula}([x],[q])∈S and a position {a mathematical formula}x∈[x], the corresponding command {a mathematical formula}κ([x],[q])(x) is easily computed using Newton iterations applied to the system {a mathematical formula}f(x,⋅)=0 with initial iterate {a mathematical formula}q˜∈[q] (e.g., {a mathematical formula}q˜=mid[q]).
+      </paragraph>
+      <paragraph>
+       Property {a mathematical formula}(P3) basically entails that {a mathematical formula}Σ([x],[q]) and {a mathematical formula}Σ([x′],[q′]) are connected, and are thus subsets of the same aspect. Finally, assuming {a mathematical formula}Sk⊆S to be a connected component of the undirected graph {a mathematical formula}(S,N), the solution set{a mathematical formula} is fully certified to belong to one single generalized aspect. Hence the final output of the process will be several sets of boxes {a mathematical formula}Sk, each of them being certified to enclose one connected set of nonsingular configurations (CSNC). As mentioned previously, certified approximations of CSNCs are of central importance for practical robot design and usage purposes.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Instantiaton of the branch and prune algorithm
+      </section-title>
+      <paragraph>
+       The main specificity of the proposed branch and prune algorithm lies within the solution test used in the {a mathematical formula}Provec function, which must ensure the desired properties. The pruning and branching steps use standard operators and can be tuned appropriately depending on the considered robot. Details are provided below.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Solution test
+       </section-title>
+       <paragraph>
+        The {a mathematical formula}Provec function of Algorithm 1 has to return true only when properties {a mathematical formula}(P1) and {a mathematical formula}(P2) are verified. The former is related to proving the existence of solution and is performed using a parametric Newton operator as described in the following paragraph. The latter requires checking the regularity of some interval matrices as described in the next paragraph.
+       </paragraph>
+       <section>
+        <section-title>
+         Existence proof
+        </section-title>
+        <paragraph>
+         The standard way to prove that a box {a mathematical formula}([x],[q]) satisfies Property {a mathematical formula}(P1) is to use a parametric interval Newton existence test [17], [18], [19]. Using the Hansen–Sengupta [13] version of the interval Newton, the following sequence is computed{a mathematical formula} where {a mathematical formula}[H] is the Hansen–Sengupta operator applied to the system {a mathematical formula}f([x],q)=0, which depends only on the variables q and hence is a square system of equations with interval parameters. As soon as {a mathematical formula}∅≠[qk+1]⊆int[qk] is verified, the interval Newton operators properties entail{a mathematical formula} hence the box {a mathematical formula}([x],[qk+1]) is proved to satisfy Property {a mathematical formula}(P1). However, because Algorithm 1 has to bisect the domain {a mathematical formula}[q] for insuring convergence by separating the different commands associated to the same pose,{sup:3} this test fails in practice in most situations. This issue was overcome in [19], in the restricted context of constraints of the form {a mathematical formula}x=f(q), by computing {a mathematical formula}[qk+1]:=[H]([qk]) in (7), i.e., removing the intersection with {a mathematical formula}[qk], in order to allow inflating and shifting {a mathematical formula}[qk−1] if necessary.{sup:4} As a result, the Hansen–Sengupta operator acts as a rigorous local search routine allowing the sequence to converge towards the aimed solution set. An inflation factor τ has also to be applied before the Hansen–Sengupta operator so as to ease the strict inclusion test after each iteration. Hence, the computation of {a mathematical formula}[qk+1] is as follows:{a mathematical formula} Then the condition {a mathematical formula}∅≠[qk+1]⊆int[q˜k] also implies Property {a mathematical formula}(P1) and is likely to succeed as soon as {a mathematical formula}([x],[q]) is small enough and close enough to some nonsingular solution, which eventually happens thanks to the bisection process. A typical value for the inflation factor is {a mathematical formula}τ=1.01, which would have to be more accurately tuned for badly conditioned problems, but it is not the case of usual robots.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Regularity test
+        </section-title>
+        <paragraph>
+         In order to satisfy the regularity constraints in Property {a mathematical formula}(P2), the interval evaluation of each Jacobian {a mathematical formula}Fx and {a mathematical formula}Fq over the box {a mathematical formula}([x],[q]) has to be regular. Testing the regularity of interval matrices is NP-hard, so sufficient conditions are usually used instead. Here, we use the strong regularity of a square interval matrix {a mathematical formula}[A], which consists in checking that {a mathematical formula}C[A] is strongly diagonally dominant, where C is usually chosen as an approximate inverse of the midpoint of {a mathematical formula}[A] (see [13]).
+        </paragraph>
+       </section>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Pruning
+       </section-title>
+       <paragraph>
+        The considered constraints are of two types: A system of n equalities, and two disequalities. Since the latter generally does not allow any pruning in the context of numerical CSPs, only the former is considered for pruning. In our context, the {a mathematical formula}Prunec function is implemented as a standard AC3-like fixed-point propagation of contracting operators that enforces local consistencies, like the Hull [22], [23] or the Box consistencies [22], [24], which allows an inexpensive refutation non-solution. Moreover, a stronger consistency can be achieved using some interval-Newton based operator. Those operators readily apply to square systems of equations, but have to be adapted to under constrained systems of equations. This is detailed in Section 4.2.1, since those operators also allow proving the existence of solutions.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Search strategy
+       </section-title>
+       <paragraph>
+        The standard search strategy for NCSPs applies appropriately in our context: We use a deep first search strategy within the Extract function, which is adequate and avoids the risk of filling up the memory (unlike a breadth-first search or largest-first search approach). The Branch function typically selects a variable in a round-robin manner (i.e., all domains are selected cyclically) and splits the corresponding interval at its midpoint (i.e., a domain is split into two halves).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Computing and certifying links
+      </section-title>
+      <paragraph>
+       The computation of {a mathematical formula}N, i.e., the links that satisfy Property {a mathematical formula}(P3), is done in two steps:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Maintain the neighborhood graph{a mathematical formula}(R,M), where {a mathematical formula}R=L∪S∪U is the set of all boxes produced by the algorithm, defined as the graph between the boxes in {a mathematical formula}R which share at least a common point;
+       </list-item>
+       <list-item label="2.">
+        Compute the certified neighborhood graph{a mathematical formula}(S,N), where {a mathematical formula}N⊆M∩2S is the set of links between certified boxes that satisfy Property {a mathematical formula}(P3).
+       </list-item>
+      </list>
+      <paragraph>
+       {a mathematical formula}N is generally a strict subset of {a mathematical formula}M∩2S: Indeed, two certified boxes with nonempty intersection may still contain different components of {a mathematical formula}Σ⁎. Note that, {a mathematical formula}(R,M) and {a mathematical formula}(S,N) somehow play similar roles as {a mathematical formula}G± in [8].
+      </paragraph>
+      <section label="4.3.1">
+       <section-title>
+        Maintaining the neighborhood graph
+       </section-title>
+       <paragraph>
+        Two boxes {a mathematical formula}([x],[q]) and {a mathematical formula}([x′],[q′]) are neighbors if and only if they share at least one common point, i.e., {a mathematical formula}([x],[q])∩([x′],[q′])≠∅. The neighborhood links {a mathematical formula}M are maintained during the branch and prune computation: After the current box has been pruned (line 4 of Algorithm 1), its neighbors are updated accordingly (it may have lost some neighbors); also, the boxes produced when splitting the current box (line 9 of Algorithm 1) inherit from (some of) the neighbors of the current box, and are neighbors to one another. One delicate point in managing neighborhood comes from the fact that some pose or command parameters are often angles whose domains are restricted to a single period, e.g., {a mathematical formula}[−π,π]; the periodicity of these parameters has to be taken into account: Boxes are neighbors when they share a common point modulo 2π on their periodic dimensions.
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        Certifying connectivity between neighbors
+       </section-title>
+       <paragraph>
+        The links {a mathematical formula}M∩2S between certified boxes have to be checked to satisfy {a mathematical formula}(P3): It may happen that two neighbor boxes share no common point satisfying the kinematic relation {a mathematical formula}f=0, e.g., if they each cover a portion of two disjoint, but close, aspects. Asserting neighborhood Property {a mathematical formula}(P3) requires again a certification procedure: For any pair of neighbor certified boxes {a mathematical formula}{([x],[q]),([x′],[q′])}∈M∩2S, we verify{a mathematical formula} which implies {a mathematical formula}Σ([x],[q])∩Σ([x′],[q′])≠∅. Since the union of two connected sets that have a nonempty intersection is also connected, this proves that {a mathematical formula}Σ([x],[q]) and {a mathematical formula}Σ([x′],[q′]) belong to the same aspect.
+       </paragraph>
+       <paragraph>
+        Using the certification procedure described in Section 4.2 allows proving Eq. (10). Finally, {a mathematical formula}N is defined as the subset of {a mathematical formula}M∩2S of pairs that satisfy (10), and obviously satisfy Property {a mathematical formula}(P1), Property {a mathematical formula}(P2) and Property {a mathematical formula}(P3).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Connected components computation
+      </section-title>
+      <paragraph>
+       We present two ways to compute connected sets of nonsingular configurations (CSNCs) from the graphs {a mathematical formula}(R,M) and {a mathematical formula}(S,N).
+      </paragraph>
+      <section label="4.4.1">
+       <section-title>
+        Simple CSNCs construction
+       </section-title>
+       <paragraph>
+        The first simply consists in computing the connected components {a mathematical formula}(Si,Ni) of the graph {a mathematical formula}(S,N), using a standard algorithm for the graph connected component computation (e.g., [25]). This leads to a partition of {a mathematical formula}S into {a mathematical formula}Si, each {a mathematical formula}Si covering a single aspect of the considered robot. However, there is no certified information about the disconnectedness of the different components: The major portion of a large aspect should be covered with a single CSNC, but the instability of the proving process close to singular regions implies that many small “spurious” CSNCs should appear at the boundaries. Together with the fact very small aspects may not be covered by certified boxes, this is the reason why the number of computed CSNCs is not related to the exact number of aspects of a robot.
+       </paragraph>
+       <paragraph>
+        For practical considerations, the spurious CSNCs can be eliminated using a measure of their size: All computed CSNCs are ordered by decreasing number of constituting boxes; The largest ratio, in number of constituting boxes, between two consecutive CSNCs in this order is computed, and used as a separation between relevant and spurious components. Though heuristic, we show in Section 5 that this filtering process allows retrieving the most significant CSNCs which in fact correspond to the exact aspects of the robots for which they are known.
+       </paragraph>
+      </section>
+      <section label="4.4.2">
+       <section-title>
+        CSNCs construction and separation
+       </section-title>
+       <paragraph label="Example">
+        The second approach is more complex, but provides more information in term of connectedness: The main computed CSNCs can be proved to be actually separated either because they have different determinant signs, or because they are disconnected within {a mathematical formula}(R,M). However, it can happen that some generalized aspects may not be separable numerically using these conditions, as illustrated by the following example. Consider the manifold {a mathematical formula}Σ⁎:={x∈R3|x12+x22+x32=1,x1x2≠0}. It is made of 4 connected components, as illustrated on the left hand side graphic of Fig. 3. However, these four components, although connected, are infinitely close to each other, making their separation impossible using some box classification with respect to the sign of {a mathematical formula}x1x2. Note that this situation is not generic: By slightly perturbing the separating equation to, e.g., {a mathematical formula}Σ⁎:={x∈R3|x12+x22+x32=1,x1x2≠0.01}, which is depicted on the right hand side of Fig. 3, we obtain three connected components which can be separated using the sign of {a mathematical formula}x1x2−0.01.
+       </paragraph>
+       <paragraph>
+        The undecidable status illustrated by the previous example is actually generic for some robots: As soon as one of the determinants {a mathematical formula}detFx(x,q) or {a mathematical formula}detFq(x,q) can be formally factored (e.g., when one of these Jacobians are diagonal, in which case the its determinant is the product of its diagonal entries), some aspects may turn out to be non separable using only the signs of these determinants. In order to overcome this difficulty, exploiting the structure of the determinants is mandatory: When possible, we factor the product {a mathematical formula}detFx(x,q)detFq(x,q) to {a mathematical formula}d1(x,q)⋯dp(x,q) and, instead of recording the sign of both {a mathematical formula}detFx([x],[q]) and {a mathematical formula}detFq([x],[q]) for each box, we record the sign of each {a mathematical formula}di([x],[q]).
+       </paragraph>
+       <paragraph>
+        For each possible {a mathematical formula}s=(s1,…,sp)∈{−1,1}p, we define {a mathematical formula}(Rs,Ms)⊆(R,M) as the subgraphs of {a mathematical formula}(R,M) whose boxes satisfy {a mathematical formula}supsidi([x],[q])⩾0, i.e., {a mathematical formula}Rs contains boxes whose interval evaluations {a mathematical formula}di([x],[q]) have signs compatible with s. Then, we compute the connected components {a mathematical formula}(Ris,Mis), {a mathematical formula}i∈{1,…,Is}, of each {a mathematical formula}(Rs,Ms). Finally, we compute the connected components of {a mathematical formula}(Ris∩S,Mis∩N), the subgraph of {a mathematical formula}(Ris,Mis) containing only certified boxes and links, and denote them {a mathematical formula}(Sijs,Nijs), {a mathematical formula}j∈{1,…,Js,i} with {a mathematical formula}Js,i⩾0 ({a mathematical formula}Js,i could be equal to zero if {a mathematical formula}(Ris,Mis) contains no certified box or link).
+       </paragraph>
+       <paragraph>
+        Obviously, boxes in two different {a mathematical formula}(Ris,Mis) and {a mathematical formula}(Ri′s′,Mi′s′) cannot contain solutions that belong to the same aspect. Therefore,{a mathematical formula} is a lower bound of the number of aspect. On the other hand, as mentioned in the previous subsection, we expect {a mathematical formula}(Sijs,Nijs) to contain numerous spurious CSNCs due to the instability of the proving process close to singular regions. The same heuristic filtering can thus be used to isolate the largest CSNCs of practical interest.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We present experiments on four planar robots with respectively 2 and 3 degrees of freedom, yielding respectively a configuration manifold of dimension 2 or 3 embedded in a configuration space of dimension 4 or 6. Although these dimensions seem somehow low, some of them represent real challenges for methods that certify admissibility and connectivity.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Implementation
+      </section-title>
+      <paragraph>
+       We have implemented the proposed method described in Section 4 using the Realpaver library [26] in C++, specializing the classes for the different routines in the branch and prune algorithm. Given an NCSP that models a robot and a prescribed precision ϵ, the implementation outputs certified boxes grouped by certified connected components as explained in Section 4. Hence we can count not only the number of output boxes but also the number of certified connected set of nonsingular configurations (CSNCs) that can be extracted from them. The experiments were run using a 3.4 GHz Intel Xeon processor with 16 GB of RAM.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Robot models
+      </section-title>
+      <paragraph>
+       Robot RPRPR (resp. RRRRR) is represented in Fig. 4(a) (resp. Fig. 4(b)). It has two arms, each connecting an anchor point ({a mathematical formula}A,B) to its end-effector (P), each composed of a revolute joint, a prismatic (resp. revolute) joint and again a revolute joint in sequence. The end-effector P lies at the shared extremal revolute joint and is described as a 2D point {a mathematical formula}(x1,x2)∈[−20,20]2. The prismatic (resp. initial revolute) joint in each arm is actuated, allowing to vary the arms lengths (resp. angles). The arm lengths (resp. angles) are considered to be the command {a mathematical formula}(q1,q2)∈[2,6]×[4,9] (resp. {a mathematical formula}[−π,π]2) of the robot. Using the architecture parameters defined in [27] (resp. [4]), their kinematic equations are respectively{a mathematical formula}{a mathematical formula} and{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Robot 3-RPR (resp. 3-RRR) is represented in Fig. 4(c) (resp. Fig. 4(d)). It has three arms, each connecting an anchor point ({a mathematical formula}A1,A2,A3) to its end-effector (P), each composed of a revolute joint, a prismatic (resp. revolute) joint and again a revolute joint in sequence. The end-effector is a triangular platform whose vertices are attached to the extremal revolute joints of the arms. The pose parameters {a mathematical formula}(x1,x2,x3) represent the coordinates {a mathematical formula}(x1,x2)∈[−50,50]2 of one vertex of the platform, and the angle {a mathematical formula}x3∈[−π,π] between its basis and the horizontal axis. The prismatic (resp. initial revolute) joint in each arm is actuated, allowing to vary the arm lengths (resp. angles). The arm lengths (resp. angles) are considered to be the command {a mathematical formula}(q1,q2,q3)∈[10,32]3 (resp {a mathematical formula}[−π,π]3) of the robot. Using the architecture parameters defined in [28] (resp. [27]), their kinematic equations are:{a mathematical formula}{a mathematical formula}{a mathematical formula} and, respectively{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Due to the computational complexity of our method, we have added the extra constraint {a mathematical formula}x3=0 to the latter model of robot 3-RRR, i.e., fixing the orientation of its platform. This constraint virtually reduces the dimension of the problem to 5 instead of 6, making it tractable in reasonable time with our method. Results below integrate this additional constraint and we denote this modified robot 3-RRR* in the following.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        History and applications of the four planar parallel robots under study
+       </section-title>
+       <paragraph>
+        We can find many studies on the four planar parallel robots under study and some practical applications in the literature. The RPRPR robot, also called bipod robot, is used in the so-called hexapod machine tools, which are the most widespread [29], and in the famous Gough-Stewart platforms, commonly met in flight-simulators [30]. The bipod robot is also used in the design of the Micromat Hexa industrial machine developed at the IWU in Chemnitz and in the design of the CMW300 industrial robot developed by the Compagnie Mécanique des Vosges in France [31].
+       </paragraph>
+       <paragraph>
+        The RRRRR robot, usually called five-bar mechanism, has often been used in research papers as an illustrative example due to its simplicity and interesting kinematic properties similar to those of spatial robots, namely: (i) several working and assembly modes [4]; (ii) error analysis and assembly conditions [32], [33]; (iii) generalized aspects [34]; (iv) trajectory planning [35]. There exist some prototypes of the RRRRR robot such as the Dexterous Twin-Arm Robot (DexTAR) developed by Prof. Bonev and his team [36].
+       </paragraph>
+       <paragraph>
+        A reference book on kinematics, static analysis and stiffness of 3-DOF planar parallel robots composed of revolute and/or prismatic joints was published by Duffy [37]. There have been various studies of these robots. 3-RPR planar parallel robots have been extensively studied [2]: synthesis, kinematic and singularity analysis, workspace analysis. 3-RRR planar parallel robots have also been studied in [38], [39], [40]. Some prototypes based on the architecture of the 3-RRR planar parallel robot have been developed such as the NaVARo that has eight actuation modes thanks to three transmissions with two clutches and additional parallelogram linkages [41].
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Computation of CSNCs
+      </section-title>
+      <paragraph>
+       Table 1 provides some figures on our computations. Its columns represent the different robots we consider. Line “# aspects” provides the theoretically established number of aspects of each robot provided in [27], [4], [28] (this value is unknown for the 3-RRR* robot). Line “precision” gives the prescribed precision ϵ used in the computation. Lines “# boxes” and “# CSNCs” give respectively the number of boxes and the number of connected sets of nonsingular configurations returned by our method. Line “time” gives the overall computational time in seconds of the method, including the connected components computation with connectivity certification. Note that, this timing does not contain the time taken for filtering out the spurious CSNCs.
+      </paragraph>
+      <paragraph>
+       Despite the quite coarse precisions we have used, the number of output boxes can be very large, due to the dimension of the search space we are paving. The number of CSNCs is much smaller, but still does not match the theoretically known number of aspects (except for the PRRP which is very simple), implying numerous disjoint CSNCs do in fact belong to the same aspect. As explained in Section 4.4, this is due to the numerical instability of the kinematic equations of the robots in the vicinity of the aspect boundaries, which are singularities of the robot. Indeed, in these regions, the numerical certification process cannot operate homogeneously, resulting in disconnected subsets of certified boxes, separated either by non-certified boxes or by non-certified links.
+      </paragraph>
+      <paragraph>
+       These spurious CSNCs have no practical use in robotics because they represent only very small, hence negligible, regions of the reachable workspace, moreover too close to singularities to safely operate within. For practical considerations, we can thus filter them out as explained in Section 4.4.1. Applying this heuristic, practical, post-process, the number of obtained CSNCs, reported at Line “{a mathematical formula}# CSNCsfiltered” in Table 1, reaches the theoretically known number of aspects in the cases of the robots we considered. Line “{a mathematical formula}# boxesfiltered” in Table 1 shows the total number of boxes after the filtering heuristic. Fig. 5 illustrates the number of boxes of the CSNCs retained after filtering (the dashed lines represent the computed heuristic thresholds), as well as the number of boxes of the largest spurious (and filtered) CSNC right after the dashed line. Line “{a mathematical formula}# CSNCsseparated” gives the lower bounds of the number of aspects, which are computed by the method described in Section 4.4.2. These results seem to indicate that our assumption is correct for the considered robots, i.e., that the major part of each aspect is indeed covered with a single large CSNC.
+      </paragraph>
+      <paragraph>
+       The retained CSNCs projected onto the x subspace are depicted in Fig. 6, Fig. 7.{sup:5} They graphically correspond to the aspects of the robots for which they are theoretically known (e.g., see [27], [7], [4], [28]). Note that the red boxes, that enclose the singularity curves, seem to cross the aspects due to the projection onto the workspace, while they of course do not cross in the configuration space where the boxes have been computed and proved to certify Property {a mathematical formula}(P2).
+      </paragraph>
+      <paragraph>
+       The computation requires quickly growing time and space with respect to the prescribed precision ϵ, since this parameter controls the explosion of the number of spurious components, hence boxes, at the boundaries of the aspects. We thus need to tweak it for an efficient and reliable aspect determination. For the first three robots, the precision {a mathematical formula}ϵ=0.1 gave precise enough results to compute precisely CSNCs corresponding to the known aspects after filtering out the spurious components. For 3-RPR, we had to use the coarser precision {a mathematical formula}ϵ=0.3 to avoid getting out of memory. Still, it was sufficient to compute precise CSNCs approximating the two known aspects of this robot. In the computation of 3-RRR*, the threshold between the regular and the spurious components is not as clear as for the other robots, even though we improved the precision up to {a mathematical formula}ϵ=0.008. Nevertheless, only the largest CSNCs have a practical usage in the context of robotics, hence deciding whether these very small CSNCs are really spurious is not critical. According to our filtering criterion, we selected the 25 largest ones that are depicted in Fig. 7.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Handling additional constraints
+      </section-title>
+      <paragraph>
+       In the process of robot design, various properties should be verified in addition to the aspect identification. In our framework, such properties can be handled by simply adding constraints to the robots models, which is an intrinsic strength of NCSPs based method with respect to other methods, e.g., based on formal computations. In the following, we investigate the impact of three recurrent issues in robotics: Self-collisions between different robot links, joint limits, and collision with obstacles inside the workspace. We use the RRRRR robot as an illustrative example.
+      </paragraph>
+      <paragraph>
+       The considered additional constraints are inequality constraints: More precisely, they can be formulated as conjunctions and/or disjunctions of inequalities. Therefore, they are involved in both pruning and proving, and solution boxes will be proved to fully satisfy these additional constraints in addition to properties {a mathematical formula}(P1), {a mathematical formula}(P2) and {a mathematical formula}(P3) defined in page 5. Note that due to the additional constraints expressions, a trivial contractor is used, which simply uses interval evaluations to check if a box contains no solution.
+      </paragraph>
+      <section label="5.4.1">
+       <section-title>
+        Arm collisions
+       </section-title>
+       <paragraph>
+        First we show how to avoid collisions between arms of the RRRRR robot. The required additional constraint consists of enforcing no collision of any pair of links. For an arbitrary pair of links {a mathematical formula}(T,U) and {a mathematical formula}(V,W), where T, U, V and W are their respective endpoints, their non-intersection is mathematically expressed as:{a mathematical formula} One such constraint must be imposed for each pair of links in the robot. Inner and outer tests for such a constraint are easily derived.
+       </paragraph>
+       <paragraph>
+        Link collisions happen in full-dimensional regions of the workspace. Indeed, when two links intersect at a given pose, they also intersect at neighbor poses (except when intersecting at their extremities). Hence, link collisions constraints define colliding regions, which must be removed from the computed CSNCs. Fig. 8 illustrates these facts. Fig. 8(a) presents one of the CSNCs we have previously obtained for the RRRRR robot (see Fig. 7(b)). Fig. 8(b) then shows how this component is reduced when considering link collisions, and presents two poses to explain this reduction. Pose {a mathematical formula}P1 induces no link collision and thus remains within the collision-free CSNC. Pose {a mathematical formula}P2 previously belonged to the CSNC but does not belong to the collision-free CSNC as it induces a link collision. The two full-dimensional regions corresponding to collision and collision-free configurations have to be separated by a boundary, which corresponds to tangential collisions. They are depicted in blue in contrast with the red boundaries that represent singularities of the robot. Note that like singularities, some of the collision boundaries overlap with the collision-free components due to the projection in the 2D workspace of the paving computed in the 4D configuration space.
+       </paragraph>
+       <paragraph>
+        Results are depicted in Fig. 9. We set the precision to 0.01 for a better visualization of the collision boundaries, although a cruder precision is sufficient to obtain the collision-free CSNCs. As in the previous experiment, we obtain ten CSNCs that are collision free. They correspond to collision-free subregions of the ten CSNCs obtained previously. Note that some of the previously obtained components remain unaffected by the additional constraint, i.e., they were already collision-free. As in Fig. 8, blue boxes in each figure represent collision boundaries where the end point of a link comes to touch another link.
+       </paragraph>
+      </section>
+      <section label="5.4.2">
+       <section-title>
+        Joint limits
+       </section-title>
+       <paragraph>
+        In the second experiment, we compute the CSNCs while considering the joint limits, which are inherent in real mechanisms. Limits of the range of actuated joints are easily enforced by setting their corresponding domains. Instead, we consider joint limits of non-actuated joints. In the RRRRR robot, it consists in limiting the angle between the links {a mathematical formula}(A′P) and {a mathematical formula}(PB′), inside the interval {a mathematical formula}[θ̲,θ¯]. This is equivalent to the conjunction of the two following two-sided inequality constraints:{a mathematical formula}{a mathematical formula} where {a mathematical formula}u=P−A′, {a mathematical formula}v=P−B′ and {a mathematical formula}u⊥=(−u2,u1), and {a mathematical formula}〈⋅|⋅〉 is the scalar product.
+       </paragraph>
+       <paragraph>
+        As in the link collisions, this constraint will remove some regions from the computed CSNCs. Fig. 8(c) presents the joint-limited CSNCs of the RRRRR robot resulting from the original CSNC depicted in Fig. 8(a) when the angle at the end-effector P is limited to {a mathematical formula}[−π/2,π/2]. It also presents two poses: Pose {a mathematical formula}P1 is consistent with the joint limit and thus remains within the original joint-limited CSNC. Pose {a mathematical formula}P2 did belong to the original CSNC but it does not belong to the computed joint-limited CSNC since, at this pose, the joint limit is not respected. Blue boxes represent joint limit boundaries where the limited joint angle becomes {a mathematical formula}π/2 or {a mathematical formula}−π/2.
+       </paragraph>
+       <paragraph>
+        The other joint-limited CSNCs are depicted in Fig. 10. We have twelve joint-limited CSNCs where the first and sixth original CSNCs in Fig. 7(b) have been split in two by the joint limit constraint.
+       </paragraph>
+      </section>
+      <section label="5.4.3">
+       <section-title>
+        Collision with obstacles
+       </section-title>
+       <paragraph>
+        The third experiment takes into account the collision of robot links with an obstacle in the workspace. We assume a circular obstacle centered at point C with radius R. For each link {a mathematical formula}(T,U) of the robot, collision-freeness is described by the constraint {a mathematical formula}dist2(C,(T,U))⩾R2 where{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Again, the obstacle avoidance constraint yields collision regions and collision-free regions within the aspects. Fig. 8(d) presents the three collision-free CSNCs of the RRRRR robot resulting from the CSNC depicted in Fig. 8(a) when a circular obstacle (in black) located at {a mathematical formula}C=(4.5,0) with radius {a mathematical formula}R=1 is to be avoided. It also presents two poses: Pose {a mathematical formula}P1 induces no collision with the obstacle and thus remains within the collision-free CSNC. Pose {a mathematical formula}P2 did belong to the original CSNC but it does not belong to the collision-free CSNCs since, at this pose, a link overlaps with the obstacle. Again, blue boxes represent the boundaries between collision-free and collision regions.
+       </paragraph>
+       <paragraph>
+        The other collision-free CSNCs are depicted in Fig. 11. We have twenty six collision-free CSNCs where the first, second, third, sixth, seventh and eighth original CSNCs in Fig. 7(b) are split into three, four, four, three, four and four parts respectively.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      The computation of aspects, i.e., connected components of nonsingular configurations, is a critical task in the design and analysis of parallel robots. The proposed algorithm uses numerical constraint programming to fully certify this computation. It is worth noting that this is the first algorithm that automatically handles such a large class of kinematic models with fully certifying the configurations existence, non-singularity and connectivity: The only restriction of the algorithm is its computational complexity, which is exponential with respect to the number of degrees of freedom of the robot.
+     </paragraph>
+     <paragraph>
+      The presented experiments have reported the sharp approximations of aspects for some realistic models: Large connected sets of nonsingular configurations, particularly suitable for path planning, have been computed for well-known planar robots with two and three degrees of freedom, the number of which matches the exact number of aspects. The more challenging 3-RRR planar parallel robot, whose number of aspects is still an open question, remains out of reach because of the complexity of the computation, though we have obtained some promising results for a given orientation of its moving-platform. Tackling this robot, as well as more complex and spatial ones, will certainly require the definition of stronger, dedicated, operators, and probably a change of computing paradigm, e.g., using parallelepipeds [42] instead of boxes. Finally, although experiments have shown that the proposed method computes approximations of all aspects of well-known robots, it cannot be used for rigorously counting the aspects, a challenge we will address in the future on the basis of this method.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

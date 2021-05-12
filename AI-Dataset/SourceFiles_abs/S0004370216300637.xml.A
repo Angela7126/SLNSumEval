@@ -1,0 +1,832 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Making the right exceptions.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Discussions often end before the issues that started them have been resolved. In the 1980s and 1990s default reasoning was a hot topic in the field of logic and AI. The result of this discussion was not one single theory that met with general agreement, but a collection of alternative theories, each with its merits, but none entirely satisfactory. This paper aims to give a new impetus to this discussion.
+     </paragraph>
+     <paragraph>
+      The issue is the logical behavior of sentences of the form{a mathematical formula} Such sentences function as default rules. What they mean is roughly this: when you are confronted with an object with property S, and you have no evidence to the contrary, you are legitimized to assume that this object has property P.
+     </paragraph>
+     <paragraph>
+      The ‘evidence to the contrary’ can vary. Sometimes it simply consists in the empirical observation that the object concerned is in fact an exception to the rule. On other occasions the evidence may be more indirect. Consider:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      This is a case of conflicting defaults.{sup:1} At first sight one might be tempted to draw both the conclusion that c is E (from premises 1 and 4) and that c is not E (from premises 2 and 4), and maybe on second thought to draw neither. But the third premise states that objects with the property S normally have the property A as well. So, apparently, normal S's are exceptional A's, as the rule that A's are normally E does not hold for them. In other words, only the S-defaults apply to c. So, presumably, c is not E.
+     </paragraph>
+     <paragraph>
+      Default reasoning has been formalized in various ways, and within each of the existing theoretical frameworks a number of strategies have been proposed to deal with conflicting defaults. In the following we will focus on two of these frameworks, Circumscription (McCarthy [1], [2]), and Inheritance Networks (Horty et al. [3]), and implement a new strategy to deal with conflicting rules in each of these.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Naive circumscription
+     </section-title>
+     <paragraph>
+      Within the circumscriptive approach a sentence of the form S's are normally P is represented by a formula of the form{a mathematical formula} Here {a mathematical formula}AbSxPxx is a one place predicate. The subscript ‘{a mathematical formula}SxPx’ serves as an index, indicating the rule concerned. If an object a satisfies the formula {a mathematical formula}AbSxPxx, this means that a is an abnormal object with respect to this rule.
+     </paragraph>
+     <paragraph>
+      More generally, let {a mathematical formula}L0 be a language of monadic first order logic. With each pair {a mathematical formula}〈φ(x),ψ(x)〉,{sup:2} we associate a new one-place predicate {a mathematical formula}Abφ(x)ψ(x), thus obtaining the first order language {a mathematical formula}L.
+     </paragraph>
+     <paragraph>
+      A default rule is a formula of {a mathematical formula}L of the form{a mathematical formula} Here, {a mathematical formula}φ(x) and {a mathematical formula}ψ(x) must be formulas of {a mathematical formula}L0 that are quantifier-free and in which no individual constant occurs. The formula {a mathematical formula}φ(x) is called the antecedent of the rule, {a mathematical formula}Abφ(x)ψ(x)x is its abnormality clause, and {a mathematical formula}ψ(x) its consequent. Again, the index {a mathematical formula}φ(x)ψ(x) is there just to indicate that it concerns the abnormality predicate of the rule with antecedent {a mathematical formula}φ(x) and consequent {a mathematical formula}ψ(x). When it is clear which variable is at stake we will write {a mathematical formula}Abφψ rather than {a mathematical formula}Abφ(x)ψ(x). And often we will shorten ‘{a mathematical formula}∀x((φ(x)∧¬Abφψx)→ψ(x))’ further to{a mathematical formula} Since it is clear from the antecedent and the consequent of a default rule what the abnormality clause is, this should not cause confusion.{sup:3}
+     </paragraph>
+     <paragraph>
+      In ordinary logic, for an argument to be valid, the conclusion must be true in all models in which the premises are true. The basic idea underlying circumscription is that not all models of the premises matter but only the most normal ones – only the ones in which the extension of the abnormality predicates is inclusion-wise minimal given the information at hand. Formally:
+     </paragraph>
+     <paragraph label="Definition 2.1">
+      <list>
+       <list-item label="(i)">
+        Let {a mathematical formula}L be a language as described above, and let {a mathematical formula}A=〈A,I〉 and {a mathematical formula}A′=〈A′,I′〉 be two models for {a mathematical formula}L with the following properties:
+       </list-item>
+       <list-item label="(ii)">
+        Let {a mathematical formula}C be a class of models. Then {a mathematical formula}A=〈A,I〉 is an optimal model in {a mathematical formula}C iff {a mathematical formula}A∈C and there is no model in {a mathematical formula}C that is more normal than {a mathematical formula}A.
+       </list-item>
+       <list-item label="(iii)">
+        Let Δ be a set of sentences. Then {a mathematical formula}Δ⊨cφ iff φ is true in all optimal models of Δ.
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph>
+      Notice that in (i) of this definition nothing is said about the interpretation of ordinary predicates. {a mathematical formula}A can be at least as normal as {a mathematical formula}A′, while for all {a mathematical formula}P∈L0, the interpretations {a mathematical formula}I(P) and {a mathematical formula}I′(P) are totally different. However, in practice we are always looking for the most normal models within a given class {a mathematical formula}C, and it may very well happen that within {a mathematical formula}C the interpretation of the ordinary predicates is heavily constrained or even fixed.
+     </paragraph>
+     <paragraph>
+      If {a mathematical formula}Δ⊨cφ, we say that φ follows by circumscription from Δ. Here is an example.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      This can be formalized as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      It is easy to check that the conclusion Bj follows by circumscription from the premises.
+     </paragraph>
+     <paragraph>
+      This example illustrates why the abnormality predicates have a double index referring to both the antecedent and the consequent of the rule, rather than a single one referring to just the antecedent. It is not sufficient to distinguish between normal and abnormal A's, and formalize a sentence like Adults normally have a bank account as {a mathematical formula}∀x((Ax∧¬AbAx)→Bx). The distinction has to be more fine grained. An object with the property A can be a normal A in some respects and an abnormal A in other. Even though John is an abnormal adult in not having a driver's license, he is a normal adult in having a bank account, or at least we want to be able to conclude by default that he is. If we had formalized the argument in the following way, we would not have gotten very far.{sup:4}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Let us now look at the case of conflicting defaults introduced at the end of section 1. The formalized version looks like this:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Unfortunately, in this simple set up the conclusion {a mathematical formula}¬Ec does not follow from the premises. We find two kinds of optimal models: in some the sentences {a mathematical formula}¬AbSAc, {a mathematical formula}¬AbS¬Ec, and {a mathematical formula}AbAEc hold, which is fine, but in the other the sentences {a mathematical formula}¬AbSAc, {a mathematical formula}AbS¬Ec, and {a mathematical formula}¬AbAEc are true.
+     </paragraph>
+     <paragraph>
+      Recall that in the informal discussion of this example it was suggested that the three default rules involved together imply that objects with property S are exceptional A's; normal A's have the property E, but normal S's don't, even though normal S's do have property A.
+     </paragraph>
+     <paragraph>
+      In the next section we will see how one can enforce that in all models in which these three defaults hold, also the formula {a mathematical formula}∀x(Sx→AbAEx) will be true. Once we have this, the only optimal models will be models in which {a mathematical formula}¬AbSAc, {a mathematical formula}¬AbS¬Ec, and {a mathematical formula}¬AbAEc are true, which means that the conclusion follows.
+     </paragraph>
+     <paragraph>
+      The circumscriptive theory developed below differs from other circumscriptive theories in various ways. We will illustrate these differences by comparing our set up with the set up of the theory developed in [4] and [5] by Bonatti et al. for description logic.{sup:5}
+     </paragraph>
+     <paragraph>
+      Bonatti et al. introduce abnormality predicates with only one index, and write for example Whale ⊑ {a mathematical formula}Abmammal to indicate that whales are abnormal mammals. As we pointed out above, this way it gets difficult, if not impossible, to deal properly with different – independent – default properties of the same kind of objects. Unfortunately, the paper does not discuss this problem.{sup:6}
+     </paragraph>
+     <paragraph>
+      Secondly, the strategy Bonatti et al. use to deal with cases of conflicting defaults differs from the strategy we will use. They introduce a priority order ≺ on the set of abnormality predicates, the idea being that if {a mathematical formula}AbA≺AbB, minimizing {a mathematical formula}AbA has preference over minimizing {a mathematical formula}AbB. It is not really clear how this priority ordering comes about. “The user can specify priorities between minimized predicates” is one thing Bonatti et al. say about this, but they add that these priorities normally reflect the Specificity Principle: if A is a more specific concept than B, then {a mathematical formula}AbA≺AbB.
+     </paragraph>
+     <paragraph>
+      The ‘if’ in the last sentence cannot be an ‘if and only if’. Specificity is not all that matters in deciding which defaults are applicable in a given situation. Consider for example{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Read ‘Sx as ‘x is a student’ and ‘Ax as ‘x is an adult’. It is impossible that both {a mathematical formula}¬AbSAc and {a mathematical formula}¬AbA¬Sc hold. Intuitively, minimizing {a mathematical formula}AbSA should have priority in this case, enabling the conclusion that Ac is presumably true. But S is not more specific than A – not at least in the sense that Bonatti et al. give to this phrase. On their account, concept S is more specific than P if the extension of S is a subset of the extension of P in all relevant models (i.e. all models the knowledge base allows). But in the example Sx does not strictly imply Ax.
+     </paragraph>
+     <paragraph>
+      Unlike Bonatti et al., we think that priority questions cannot be left to the user. It is not a pragmatic matter to decide which defaults apply in which circumstances. It's not something to decide ad hoc. It is a matter of semantics. That some of the arguments discussed in this paper are valid and other arguments are not, is because ‘normally’ means what it means. We think of ‘normally’ as a logical constant next to ‘not’, ‘necessarily’, ‘sometimes’ etc., but differing from these in that its properties can only be described in a non-monotonic system.
+     </paragraph>
+     <paragraph>
+      Our strategy in the following fits in better with the second suggestion of Bonatti et al. We will specify an alternative to the specificity principle, and investigate the logic it generates.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Exemption and inheritance
+     </section-title>
+     <paragraph>
+      There are two kinds of rules, rules that allow for exceptions and rules that do not allow for exceptions. So far we talked only about the first kind, but we also want to discuss the second kind. In order to do so, sentences of the form {a mathematical formula}∀x(φ(x)→ψ(x)) can get a special status as strict rules. These strict rules are to be distinguished from universal sentences that are only accidentally true, and they will be treated differently.{sup:7}
+     </paragraph>
+     <paragraph>
+      The general set up will be this: Let Σ be a finite set of default rules and strict rules and Π be a set of sentences. Think of {a mathematical formula}I=〈Σ,Π〉 as the information of some agent at some time, where Σ is the set of rules the agent is acquainted with, and Π the agent's factual information. We correlate with I a pair {a mathematical formula}〈UI,FI〉, and call this the (information) state generated by I. {a mathematical formula}UI is called the universe of the state. The elements of {a mathematical formula}UI are models of Σ, but not all models of Σ are allowed. The universe {a mathematical formula}UI must satisfy some additional constraint that will be discussed below. {a mathematical formula}FI consists of all models in {a mathematical formula}UI that are models of Π.
+     </paragraph>
+     <paragraph>
+      In this set up validity is defined as follows:{a mathematical formula} Read ‘{a mathematical formula}Σ,Π⊨dφ’ as ‘φ follows by default from Σ and Π’.
+     </paragraph>
+     <paragraph>
+      To explain the constraint, it is necessary to introduce some technical notions.
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      <section-title>
+       Complying
+      </section-title>
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       Suppose {a mathematical formula}A⊨∀x(φ(x)↝ψ(x)), and let d be an element of the domain{sup:8} of {a mathematical formula}A. Then d complies with{a mathematical formula}∀x(φ(x)↝ψ(x)) (in {a mathematical formula}A) iff d does not satisfy {a mathematical formula}Abφψx.
+      </list-item>
+      <list-item label="(ii)">
+       Let Σ be a set of rules, and let d be some element of the domain of some model {a mathematical formula}A of Σ. Then d complies with Σ (in {a mathematical formula}A) iff d complies with all the default rules in Σ.
+      </list-item>
+     </list>
+     <paragraph>
+      So, if an object satisfying {a mathematical formula}φ(x) complies with {a mathematical formula}∀x(φ(x)↝ψ(x)), it will also satisfy {a mathematical formula}ψ(x). But notice that the definition allows for the following situations:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The object d complies with {a mathematical formula}∀x(φ(x)↝ψ(x)), but d does not satisfy {a mathematical formula}φ(x).
+      </list-item>
+      <list-item label="•">
+       The object d satisfies {a mathematical formula}φ(x) and {a mathematical formula}ψ(x), but d does not comply with {a mathematical formula}∀x(φ(x)↝ψ(x)).
+      </list-item>
+     </list>
+     <paragraph>
+      We will present examples later on. For now, just take ‘comply’ as a technical term.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       The exemption principle
+      </section-title>
+      <paragraph>
+       The constraint we will impose on {a mathematical formula}UI is motivated by the following minimal requirement. If the only information about some object is that it has property P, it must be valid to infer by default that this object complies with all the default rules for objects with property P.{sup:9} What would be the use of these rules if they would not at least allow this inference?
+      </paragraph>
+      <paragraph>
+       It may seem easy to satisfy this requirement, but it is not.
+      </paragraph>
+      <paragraph label="Definition 3.2">
+       <list>
+        <list-item label="(i)">
+         An exemption clause is a formula of the form {a mathematical formula}∀x(φ(x)→⋁δ∈ΔAbδx).Here we write ‘{a mathematical formula}Abδ’ to refer to the abnormality predicate of the default rule δ. Δ can be any finite set of default rules. So, {a mathematical formula}⋁δ∈ΔAbδx is a disjunction of a finite number of abnormality predicates.{sup:10}
+        </list-item>
+        <list-item label="(ii)">
+         Let Σ be a set of rules. {a mathematical formula}Σφ(x) is the set of rules in Σ with antecedent {a mathematical formula}φ(x).
+        </list-item>
+        <list-item label="(iii)">
+         The exemption clause {a mathematical formula}∀x(φ(x)→⋁δ∈ΔAbδx) is an exemption clause for Σ iff {a mathematical formula}Σ⊨∀x(φ(x)→⋁δ∈Δ∪Σφ(x)Abδx).{sup:11}
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       To see how these definitions work, consider again{a mathematical formula} Here {a mathematical formula}ΣSx={∀x(Sx↝Ax),∀x(Sx↝¬Ex)}. Let {a mathematical formula}Δ={∀x(Ax↝Ex)}. Clearly, there is no model such that some object in its domain satisfies Sx and complies with {a mathematical formula}Δ∪ΣSx. So,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       By (iii) above this means that {a mathematical formula}∀x(Sx→⋁δ∈ΔAbδx), i.e. {a mathematical formula}∀x(Sx→AbAEx), is an exemption clause for Σ, the idea being that objects with property S are, so to speak, exempted from the rule that A's are normally E.
+      </paragraph>
+      <paragraph>
+       The word ‘exempted’ suggests that default rules are some kind of normative rules. Indeed, often it is helpful to think of them that way. The use of the word ‘normally’, already suggests that we are dealing with a kind of norms here. To count as a normal S, S's must be A, and to count as a normal A, A's must be E, but here an exception is made for the {a mathematical formula}S's. {a mathematical formula}S's must be A, but they do not have to be E, they are not subjected to this rule. Actually, for them the opposite holds, to count as a normal S they must be not E.
+      </paragraph>
+      <paragraph>
+       ‘Being exempted from a rule’ does not mean ‘being an exception to the rule’: The {a mathematical formula}S's don't have to be E, but this does not mean they are, in fact, not E.
+      </paragraph>
+      <paragraph>
+       In the following definition it is made explicit for any set of rules Σ which kinds of objects are exempted from which rules in Σ.
+      </paragraph>
+      <paragraph label="Definition 3.3">
+       Let Σ be a set of rules, and let Π be an arbitrary set of formulas.
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        The exemption extension{a mathematical formula}Σ∈ of Σ is given by{a mathematical formula} where {a mathematical formula}Σ0∈=Σ and {a mathematical formula}Σn+1∈=Σn∈∪{φ|φ is an exemption clause for Σn∈}.
+       </list-item>
+       <list-item label="(ii)">
+        The state generated by {a mathematical formula}I=〈Σ,Π〉 is the state {a mathematical formula}〈UI,FI〉 given by
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that {a mathematical formula}Σ∈ has the following property, which we will call the Exemption Principle.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}Σ∈ is defined inductively. By adding exemption clauses to a set of rules a new set of rules is created which may generate new exemption clauses, etc.{sup:12} Given that Σ is finite, there are only finitely many possible exemption clauses. So, after finitely many steps a fixed point is reached. {a mathematical formula}Σ∈ is the weakest extension of Σ for which the exemption principle holds.
+      </paragraph>
+      <paragraph>
+       On the face of it, the exemption principle is not very strong. It just says that if the rules for objects with the property expressed by {a mathematical formula}φ(x) are incompatible with the rules in some set Δ, then every object with the property expressed by {a mathematical formula}φ(x) is exempted from at least one of the rules in Δ.
+      </paragraph>
+      <paragraph>
+       Without the exemption principle the minimal requirement cannot be met. If the principle does not hold, then there exists an optimal model {a mathematical formula}A, a property {a mathematical formula}φ(x), and an entity d in the domain of {a mathematical formula}A such that d satisfies {a mathematical formula}φ(x), but d does not comply with at least one of the rules in {a mathematical formula}Σφ(x), because instead d complies with a rule that is not compatible with the rules in {a mathematical formula}Σφ(x).
+      </paragraph>
+      <paragraph>
+       With the exemption principle this cannot happen.
+      </paragraph>
+      <paragraph label="Proof">
+       Minimal requirementSuppose{a mathematical formula}∀x(φ(x)↝ψ(x))∈Σ. Then{a mathematical formula}Σ,{φ(c)}⊨dψ(c).To determine whether {a mathematical formula}Σ,{φ(c)}⊨dψ(c), we have to look at the state {a mathematical formula}〈UI,FI〉 generated by {a mathematical formula}I=〈Σ,{φ(c)}〉 and check that every optimal model in {a mathematical formula}FI has the property that the object named c complies with {a mathematical formula}Σφ(x).Recall that {a mathematical formula}UI contains the models of {a mathematical formula}Σ∈, and that {a mathematical formula}FI contains all models in {a mathematical formula}UI in which {a mathematical formula}φ(c) is true.Now, consider any model {a mathematical formula}A=〈A,I〉 in {a mathematical formula}FI in which the object {a mathematical formula}I(c) does not comply with {a mathematical formula}Σφ(x). We will show that {a mathematical formula}A is not optimal.Let Δ be the set of defaults in {a mathematical formula}Σ∈ with which {a mathematical formula}I(c) complies. Apparently, {a mathematical formula}Σ∈⊭∀x(φ(x)→⋁δ∈ΔAbδx). By the exemption principle this means that {a mathematical formula}Σ∈⊭∀x(φ(x)→⋁δ∈Δ∪Σφ(x)Abδx). Hence, there exists a model {a mathematical formula}A′=〈A′,I′〉 in {a mathematical formula}UI such that some element {a mathematical formula}d0 in {a mathematical formula}A′ satisfies {a mathematical formula}(φ(x)∧¬⋁δ∈Δ∪Σφ(x)Abδx).Now, let {a mathematical formula}A″=〈A″,I″〉 be defined as follows:
+       <list>
+        {a mathematical formula}A″=A;For individual constants a, {a mathematical formula}I″(a)=I(a);For P an ordinary predicate or an abnormality predicate,Consider any quantifier-free formula
+       </list>
+       <paragraph>
+        {a mathematical formula}θ(x) in which no individual constant occurs. Clearly, if {a mathematical formula}d≠I″(c), then d satisfies {a mathematical formula}θ(x) in {a mathematical formula}A″ iff d satisfies {a mathematical formula}θ(x) in {a mathematical formula}A, while {a mathematical formula}I″(c) satisfies {a mathematical formula}θ(x) in {a mathematical formula}A″ iff {a mathematical formula}I′(c) satisfies {a mathematical formula}θ(x) in {a mathematical formula}A′.Given that all sentences of {a mathematical formula}Σ∈ are of the form {a mathematical formula}∀xθ(x) with θ as described, {a mathematical formula}A″ will be a model of {a mathematical formula}Σ∈. And clearly, {a mathematical formula}A″ is more normal than {a mathematical formula}A. Therefore, {a mathematical formula}A is not optimal. □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Example">
+       Applying Proposition 3.4 we find that{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       The inheritance principle
+      </section-title>
+      <paragraph>
+       The exemption principle has some surprising consequences, one of which is the inheritance principle, which in its simplest form runs as follows:
+      </paragraph>
+      <list>
+       <list-item>
+        Let Σ be a set of rules. Suppose that {a mathematical formula}Σ∈⊨∀x(φ(x)↝ψ(x))
+       </list-item>
+       <list-item>
+        and {a mathematical formula}Σ∈⊨∀x(ψ(x)→Abχθx). Then {a mathematical formula}Σ∈⊨∀x(φ(x)→Abχθx).
+       </list-item>
+      </list>
+      <paragraph>
+       To see how this works, consider the theory Σ consisting of the following five rules{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Consider the first three rules, and notice that the exemption principle enforces that {a mathematical formula}∀x(Px→AbQRx)∈Σ∈. Now, it follows in one step from the inheritance principle that {a mathematical formula}∀x(Sx→AbQRx)∈Σ∈.
+      </paragraph>
+      <paragraph>
+       Without an appeal to the inheritance principle the proof is a bit longer. We give it here because it illustrates why Definition 3.3 (i) is inductive. Note first that {a mathematical formula}∀x(Px→AbQRx)∈Σ1∈. Given that {a mathematical formula}⊨∀x(Sx→(Px∨¬Px)), it follows that {a mathematical formula}Σ1∈⊨∀x(Sx→(AbQRx∨AbSPx)). But then {a mathematical formula}∀x(Sx→AbQRx)∈Σ2∈.
+      </paragraph>
+      <paragraph>
+       By applying the exemption principle to the last three rules we find that {a mathematical formula}∀x(Sx→AbP¬Rx)∈Σ∈. So, the S's, which in optimal circumstances are both P and Q, are exempted both from the rule that P's are normally not R and from the rule that Q's are normally R. They are normally R for independent reasons. As such, the example illustrates the fact that it is possible for an object not to comply with a rule whereas both the antecedent and the consequent of the rule hold for it. Objects with the property S do not comply with the rule {a mathematical formula}∀x(Qx↝Rx), but in optimal circumstances they will have both the properties Q and R.
+      </paragraph>
+      <paragraph>
+       In its general form the inheritance principle runs as follows.
+      </paragraph>
+      <paragraph label="Proposition 3.5">
+       Inheritance principleLet{a mathematical formula}〈UI,FI〉be the state generated by the information{a mathematical formula}I=〈Σ,Π〉. Let{a mathematical formula}Δ⊆Σbe a set of default rules.Suppose{a mathematical formula}Then{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       By first-order logic alone, it is trivially true that{a mathematical formula} Given (a), objects that satisfy {a mathematical formula}φ(x) and {a mathematical formula}¬ψ(x) will also satisfy {a mathematical formula}Abφψx. Thus, the above statement remains true when {a mathematical formula}¬ψ(x) is replaced by {a mathematical formula}Abφψx. Similarly, given (b) the formula above remains true when {a mathematical formula}ψ(x) is replaced by {a mathematical formula}⋁δ∈ΔAbδx. Hence,{a mathematical formula} Given the exemption principle this means{a mathematical formula} □
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Some more examples
+      </section-title>
+      <section label="3.3.1">
+       <section-title>
+        The kite
+       </section-title>
+       <paragraph>
+        Given the inheritance principle it is easy to see why the following argument is valid.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Looking at the first four rules, we see that the exemption principle enforces that {a mathematical formula}∀x(Qx→(AbR¬Ux∨AbTUx))∈Σ∈. By applying the inheritance principle twice we see that {a mathematical formula}∀x(Sx→(AbR¬Ux∨AbTUx))∈Σ∈. So in all relevant models either {a mathematical formula}AbR¬Uc or {a mathematical formula}AbTUc is true. From this it follows that in all optimal models {a mathematical formula}¬AbS¬P, {a mathematical formula}¬AbPQ, {a mathematical formula}¬AbQR, and {a mathematical formula}¬AbQT are true, which enables the default conclusion that {a mathematical formula}Pc,Qc,Rc and Tc.
+       </paragraph>
+       <paragraph>
+        Notice that on the naive account from section 2 none of these can be concluded. It would not even be possible to make the first step upwards from Sc to Pc. Here we can not only make this first step but also a second to Qc and further up to Rc and Tc. Only when we hit a direct conflict do we need to stop. By having the upper abnormalities propagate downward, we do not have to take into account potential abnormalities at the lower levels.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Defeasible modus tollens
+       </section-title>
+       <paragraph>
+        Both Defeasible Modus Ponens and Defeasible Modus Tollens are valid.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The latter shows that an object need not have property S to count as an object that complies with the rule {a mathematical formula}∀x(Sx↝Px). Intuitively, if the object c had property S, it would be an abnormal S. So, assuming that the object c is normal and complies with the rule, it will not have property S.
+       </paragraph>
+      </section>
+      <section label="3.3.3">
+       <section-title>
+        Defeasible modus ponens beats defeasible modus tollens
+       </section-title>
+       <paragraph>
+        Now, consider the following premises{a mathematical formula} At first sight one might be tempted to conclude Pc by Defeasible Modus Ponens and {a mathematical formula}¬Pc by Defeasible Modus Tollens, but in fact the exemption principle enforces that {a mathematical formula}∀x(Sx→AbP¬Sx)∈Σ∈. This means that the only default conclusion to be drawn is Pc.
+       </paragraph>
+       <paragraph>
+        The reason we bring this up is that several authors have questioned the validity of Defeasible Modus Tollens with putative counterexamples like the following:{a mathematical formula} However, the only thing this example shows is that one has to be very careful in providing ‘intuitive’ counterexamples when dealing with default arguments. One must be sure that the premises faithfully represent all one knows about the matter at issue.
+       </paragraph>
+       <paragraph>
+        In this case we know in fact more than the premises state. We know, for instance, that people with a beard normally are men. That's is why the conclusion sounds weird in the first place.
+       </paragraph>
+       <paragraph>
+        Now, if we state this explicitly as a third premise we get:{a mathematical formula} And as we saw, Defeasible Modus Ponens beats Defeasible Modus Tollens, so the only conclusion to be drawn is that John is a man.
+       </paragraph>
+       <paragraph>
+        Modus Tollens is closely related to Contraposition, but it is not the same. Modus Tollens, in the defeasible form discussed here, says: If all you know is the rule {a mathematical formula}∀x(Sx↝Px) and the fact {a mathematical formula}¬Pa, then it follows by default that {a mathematical formula}¬Sa. This is much weaker than saying that the rule {a mathematical formula}∀x(Sx↝Px) implies the rule {a mathematical formula}∀x(¬Px↝¬Sx). What we have at best is this: if all you know is the rule {a mathematical formula}∀x(Sx↝Px), it follows by default that {a mathematical formula}∀x(¬Px↝¬Sx). But it is important to realize that this conclusion expresses just an accidental truth, not a rule.{sup:13} And notice that {a mathematical formula}∀x(Sx↝Px),Sa,¬Pa⊭d∀x(¬Px↝¬Sx), so this accidental conclusion is easily defeasible, whereas in the same context we can still apply defeasible Modus Tollens: {a mathematical formula}∀x(Sx↝Px),Sa,¬Pa,¬Pb⊨d¬Sb.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Coherence
+      </section-title>
+      <paragraph>
+       Every set Σ of default rules is consistent in the strict logical sense of the word.{sup:14} This does not mean that every such set is okay. Here are some examples.
+      </paragraph>
+      <paragraph>
+       Consider{a mathematical formula} Within our framework a theory of this form is of no use. Note that {a mathematical formula}Σ⊨∀x(Sx→(AbSP∨AbS¬P)). We can apply the exemption principle (take {a mathematical formula}Δ=∅ and {a mathematical formula}φ(x)=Sx) to find that {a mathematical formula}∀x(Sx→⊥) is an exemption clause for Σ. So, {a mathematical formula}Σ∈⊨¬∃xSx.
+      </paragraph>
+      <paragraph>
+       A more complicated example is this one:{a mathematical formula} ‘Rainy days normally are cold’, ‘Cold days normally are rainy’, ‘On rainy days the wind is normally west’, ‘On cold days the wind is normally not west’. Something is wrong with this theory. By the exemption principle no such days exist: {a mathematical formula}Σ∈⊨¬∃xRx. Proof: note first that {a mathematical formula}∀x(Cx→AbRWx)∈Σ∈. By the inheritance principle it follows that {a mathematical formula}∀x(Rx→AbRW)∈Σ∈. Applying the exemption principle once more yields {a mathematical formula}∀x(Rx→⊥)∈Σ∈.
+      </paragraph>
+      <paragraph>
+       A third example is given by{a mathematical formula} Again, this does not sound like an acceptable theory. Too many exceptions are being made. Note that {a mathematical formula}Σ⊨∀x((Sx∧Qx)→(Ab(Sx∧Qx)¬Pxx)∨AbSxPxx). Hence, by the exemption principle {a mathematical formula}∀x((Sx∧Qx)→AbSxPxx)∈Σ∈; similarly, {a mathematical formula}∀x((Sx∧¬Qx)→AbSPx)∈Σ∈. Hence, {a mathematical formula}Σ∈⊨∀x(Sx→AbSPx). But then {a mathematical formula}∀x(Sx→⊥)∈Σ∈.
+      </paragraph>
+      <paragraph>
+       The above leads to the following definition.
+      </paragraph>
+      <paragraph label="Definition 3.6">
+       A set of rules Σ is coherent iff for every {a mathematical formula}φ(x) which is the antecedent of some rule in Σ, {a mathematical formula}Σ∈∪{∃xφ(x)} is consistent.
+      </paragraph>
+      <paragraph>
+       A set of rules is incoherent if it is logically impossible to satisfy the minimal requirement. In such a case there is some property such that no object with this property can comply with all the rules for objects with this property. Given the exemption principle, no such objects are allowed.
+      </paragraph>
+      <paragraph>
+       As will become clear in due course, for inheritance networks we can give an exact syntactic characterization of the sets of rules that are incoherent.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Is the exemption principle all there is to it?
+      </section-title>
+      <paragraph>
+       We have presented the exemption principle as a minimal constraint – a constraint that must be imposed on a circumscriptive theory to meet the minimal requirement. We have seen that this principle has many, sometimes surprising consequences, and deals successfully with a lot of examples. So, naturally the question arises if this constraint is all one needs to settle questions of priority between conflicting defaults.
+      </paragraph>
+      <paragraph>
+       One might think that the next example shows that the answer is ‘no’.{sup:15} Consider the following set of premises.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Here, one might want to conclude first that Tc and Qc – after all these are immediate default consequences of Sc and Pc – and then make a second step further up to Uc and Rc – why stop before we hit a direct conflict? This is how we reasoned when we discussed the kite example in section 3.3.1. Why wouldn't this kind of forward chaining go through here?
+      </paragraph>
+      <paragraph>
+       There is, in fact, a huge difference between this example and the example in section 3.3.1, which is best brought out by comparing the pictures. In example 3.3.1 we have one path – one line of argument – leading up from Sc to the conclusions Rc and Tc. Here we have for each of the properties {a mathematical formula}P,Q,R,S,T,U,V two different paths – two completely independent lines of argument – one leading to the conclusion that c has the property concerned, the other leading to the conclusion that c does not have the property concerned.{sup:16} There is no reason to think, given the information at hand, that the one line of argument leads to a more normal situation than the other. This means that no conclusion can be drawn here. Indeed, on our account it is not valid to conclude that Uc or Rc; it is not even valid to conclude that Tc or Qc.
+      </paragraph>
+      <paragraph>
+       So, we don't think this example shows that the exemption principle is too weak. But of course, the possibility is not excluded that somebody will come up with a more convincing example. Besides, also in the absence of such an example, it might be enlightening – perhaps only from a mathematical point of view – to investigate possible strengthenings of the exemption principle.
+      </paragraph>
+      <paragraph>
+       We have to leave this to another occasion. For now, we just content ourselves setting a new minimum – the old one being the specificity principle – to principles regulating the priority ordering between conflicting defaults.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Networks
+     </section-title>
+     <paragraph>
+      Inheritance networks are, simply put, the kind of structures we have been picturing to illustrate the examples. Thus, an inheritance network is a directed graph in which the nodes represent properties and the arcs represent rules. More precisely:
+     </paragraph>
+     <paragraph label="Definition 4.1">
+      An inheritance network is a pair {a mathematical formula}〈V,Σ〉, where each element of Σ is a combination of an ordered pair of elements of V and a polarity which may be positive, negative, strict positive or strict negative.Elements of V are called nodes and elements of Σ are called arcs. We will refer to an arc from u to v as ‘ uv’ if this arc is positive, as ‘ {a mathematical formula}uv−’ if it is negative, as ‘ {a mathematical formula}uv⁎’ if it is strict positive and as ‘ {a mathematical formula}uv⁎−’ if it is strict negative.
+     </paragraph>
+     <paragraph>
+      All nodes except one represent properties. This one node stands for an object. There are no arcs to this node and only strict arcs from this node to other nodes. The object is supposed to have the properties represented by these nodes.
+     </paragraph>
+     <paragraph>
+      The definition above does not distinguish between nodes representing properties and the node representing an object. The difference is purely a matter of interpretation.
+     </paragraph>
+     <paragraph>
+      To describe inferences in these networks, the notion of a path is crucial.
+     </paragraph>
+     <paragraph label="Definition 4.2">
+      Let {a mathematical formula}〈V,Σ〉 be an inheritance network, with {a mathematical formula}a,b∈V.
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       A positive path from a to b is a subset {a mathematical formula}{α1,…,αn}⊆Σ such that there exist {a mathematical formula}v1,…,vn−1∈V such that:
+       <list>
+        {a mathematical formula}α1 is a positive (or strict positive) arc from a to {a mathematical formula}v1;{a mathematical formula}αi is a positive (or strict positive) arc from {a mathematical formula}vi−1 to {a mathematical formula}vi, where {a mathematical formula}1&lt;i&lt;n;{a mathematical formula}αn is a positive (or strict positive) arc from {a mathematical formula}vn−1 to b.Moreover, the empty set is considered a positive path from any
+       </list>
+       <paragraph>
+        {a mathematical formula}v∈V to itself.
+       </paragraph>
+      </list-item>
+      <list-item label="(ii)">
+       {a mathematical formula}X⊆Σ is a negative path from a to b if there are {a mathematical formula}X1, {a mathematical formula}X2, {a mathematical formula}a′, {a mathematical formula}b′, α such that
+      </list-item>
+     </list>
+     <paragraph>
+      If there exists a positive (negative) path from a to b, this serves as prima facie evidence that objects with property a have (do not have) property b. Of course, in interesting examples we have prima facie evidence for both b and not b, which brings us to the next key notion: the conflicting set.
+     </paragraph>
+     <paragraph label="Definition 4.3">
+      Where {a mathematical formula}〈V,Σ〉 is an inheritance network and {a mathematical formula}a∈V, a subset {a mathematical formula}X⊆Σ is a conflicting set relative to a iff there is some {a mathematical formula}b∈V such that X contains both a positive and a negative path from a to b.A conflicting set X is a minimal if no proper subset of X is a conflicting set relative to a.
+     </paragraph>
+     <paragraph>
+      Here ‘minimal’ does not mean having the least possible number of elements. It means that if more arcs were taken out, the set would no longer be conflicting.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Making inferences in inheritance networks
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}〈V,Σ〉 be an inheritance network, and {a mathematical formula}u,v∈V. We will write ‘{a mathematical formula}u⇌v’ to indicate that there is both a positive path from u to v and a positive path from v to u.
+      </paragraph>
+      <paragraph label="Definition 4.4">
+       Where {a mathematical formula}〈V,Σ〉 is an inheritance network and {a mathematical formula}a∈V, let {a mathematical formula}EssΣ(a) be set of arcs defined by
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}α∈EssΣ(a) iff α∈Σ and (i) α is strict,
+       </list-item>
+       <list-item>
+        or (ii) {a mathematical formula}α=uv for some u⇌a,
+       </list-item>
+       <list-item>
+        or (iii) {a mathematical formula}α=uv− for some u⇌a.
+       </list-item>
+      </list>
+      <paragraph>
+       For a given property a, the set {a mathematical formula}EssΣ(a) contains the rules that are essential for a, the rules from which the objects with property a cannot be exempted. No object can be exempted from any strict rule; the objects with property a cannot be exempted from any rule for objects with property a, and more generally, the objects with property a cannot be exempted from any rule for objects with a property u that is “default equivalent” to a.
+      </paragraph>
+      <paragraph label="Definition 4.5">
+       Where {a mathematical formula}〈V,Σ〉 is an inheritance network and {a mathematical formula}a∈V, let {a mathematical formula}d(a) be defined by
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}Y∈d(a) iff Y=X−EssΣ(a) for some minimal conflicting set X relative to a.
+       </list-item>
+      </list>
+      <paragraph>
+       The intuition is that the objects with property a are exempted from at least one rule in every set {a mathematical formula}Y∈d(a).
+      </paragraph>
+      <paragraph>
+       The inheritance principle comes in by letting the d function propagate backwards along positive paths, collecting d-sets in the D function defined below.
+      </paragraph>
+      <paragraph label="Definition 4.6">
+       Where {a mathematical formula}〈V,Σ〉 is an inheritance network and {a mathematical formula}a∈V, let {a mathematical formula}D(a) be defined by
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}Y∈D(a) iff {a mathematical formula}Y∈d(b) for some b for which there is a positive path from a to b.
+       </list-item>
+      </list>
+      <paragraph>
+       We are now ready to define the consequence relation. This will be done in terms of exception sets, sets of arcs representing rules to which an exception must be made.
+      </paragraph>
+      <paragraph label="Definition 4.7">
+       Let {a mathematical formula}〈V,Σ〉 an inheritance network and {a mathematical formula}a∈V.{a mathematical formula}X⊆Σ is an acceptable exception set for a iff {a mathematical formula}X∩Y≠∅ for all {a mathematical formula}Y∈D(a).Such an X is minimal if every proper subset of X is not an acceptable exception set for a.
+      </paragraph>
+      <paragraph label="Definition 4.8">
+       Each minimal exception set represents a way to make as few exceptions as possible. A given conclusion b follows from a in a network if b can be reached from a under each of these ways. Let {a mathematical formula}〈V,Σ〉 be an inheritance network. Let {a mathematical formula}a,b∈V.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}a⊢Σb iff for every minimal exception set X for a there is a positive path Y from a to b such that {a mathematical formula}X∩Y=∅.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}a⊢Σ¬b iff at least one of the following is true:
+       </list-item>
+      </list>
+      <paragraph>
+       We did not prepare the reader for the second clause of negative entailment. It is there for the special case in which there is no path from a to b. In such a case it may happen that objects with property b are so abnormal that one can safely assume that objects with property a{sup:18} do not have property b.
+      </paragraph>
+      <paragraph>
+       To see how this works, notice first that if there is a path from a to b, {a mathematical formula}D(b)⊆D(a). So in that case every minimal exception set for a is an acceptable exception set for b.{sup:19} Now, if there is no path from a to b, and some minimal exception set for a is an acceptable exception set for b, this means that one has to reckon with the possibility that objects with property b are in all respects at least as normal as objects with property a. However, if no minimal exception set is an acceptable exception set for b, this means that the a's are normal in some respect in which the b's are exceptional. Assuming that the a's are as normal as possible, one may in such a case by default infer that the a's don't have the property b.{sup:20}
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Examples
+      </section-title>
+      <section label="4.2.1">
+       <paragraph>
+        As a first example, we consider the following desirable inference.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Rendered as an inheritance network, the premises look like this.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Our first step is to determine the d function. Since there are no conflicting sets relative to A, B, and E, we have {a mathematical formula}d(A)=d(B)=d(E)=∅. The conflicting sets relative to master student are {a mathematical formula}{MA,ME−,AE} and {a mathematical formula}{AB,MA,ME−,AE}. Only the first of these is minimal. Since {a mathematical formula}EssΣ(M)={MA,ME−,JM}, we obtain {a mathematical formula}d(M)={{AE}}.
+       </paragraph>
+       <paragraph>
+        Similarly, there is a single minimal conflicting set relative to J: the set {a mathematical formula}{MA,ME−,AE,JM}. We have {a mathematical formula}EssΣ(J)={JM}, so {a mathematical formula}d(J)={{MA,ME−,AE}}.{a mathematical formula} We can now determine {a mathematical formula}D(J). Since there is a positive path from J to every other node, {a mathematical formula}D(J) is the union of all the d's. Only two are non-trivial, so {a mathematical formula}D(J)={{MA,ME−,AE},{AE}}.
+       </paragraph>
+       <paragraph>
+        Since {a mathematical formula}{AE}∈D(J), every acceptable exception set for John will contain arc AE. Since {a mathematical formula}{AE} is itself an acceptable exception set, this makes it the only minimal exception set. Thus, a conclusion is acceptable iff there is a path from J to it that does not use arc AE. That is, if there is a path in the following network.
+       </paragraph>
+       <paragraph>
+        {a mathematical formula} Therefore as desired we obtain {a mathematical formula}J⊢Σ¬E, {a mathematical formula}J⊢ΣA, {a mathematical formula}J⊢ΣB.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        The Double Diamond
+       </section-title>
+       <paragraph>
+        The following network is a well-known extension of the Nixon Diamond, generally referred to as the Double Diamond.{a mathematical formula} The question is whether Nixon is Anti-military.
+       </paragraph>
+       <paragraph>
+        In preemption based approaches (notably Horty et al. [3]), the positive path from N to A is disabled by the negative path from N to P, so that ¬A may be concluded. This outcome is considered counterintuitive since the negative path to A is itself disabled by its positive counterpart, which is why such paths are referred to as zombie paths. (See Makinson &amp; Schlechta [11].)
+       </paragraph>
+       <paragraph>
+        Since our own approach is not based on this kind of preemption, we can do a bit better here.
+       </paragraph>
+       <paragraph>
+        The first thing to notice is that there are no pairs of conflicting paths starting at P, F, A, R, or Q. Therefore, all of them have empty d, and {a mathematical formula}D(N)=d(N). We subsequently find that {a mathematical formula}D(N)={{QP,RP−},{QP,RF,PA,FA−}}. It is important to keep in mind that ‘minimal exception set’ does not mean ‘exception set with the smallest amount of elements’ – {a mathematical formula}{QP} is not the only minimal exception set (of N) here. The others are {a mathematical formula}{RP−,RF},{RP−,PA} and {a mathematical formula}{RP−,FA−}.
+       </paragraph>
+       <paragraph>
+        We trivially obtain {a mathematical formula}N⊢ΣR, {a mathematical formula}N⊢ΣQ. But as to the other properties, nothing can be concluded, not even {a mathematical formula}N⊢ΣF.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        A floating conclusion
+       </section-title>
+       <paragraph>
+        Also the next example is much discussed in the literature on inheritance networks.{sup:21}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Does it follow that Nixon is politically motivated? According to the theory presented here, the answer to this question is ‘yes’.{sup:22} It is easy to see that {a mathematical formula}D(N)=d(N) and that {a mathematical formula}d(N)={{RH,QD}}. This means there are two minimal exception sets of N, namely {a mathematical formula}{RH} and {a mathematical formula}{QD}. The exception set {a mathematical formula}{RH} does not contain any element of the rightmost path from N to P, and the exception set {a mathematical formula}{QD} does not contain any element of the leftmost path from N to P. Thus, for each minimal exception set there is a positive path from N to P which does not contain any element of that set. Therefore, {a mathematical formula}N⊢ΣP.
+       </paragraph>
+      </section>
+      <section label="4.2.4">
+       <section-title>
+        Closed loops
+       </section-title>
+       <paragraph>
+        The theory covers inheritance networks with cyclic paths. Here is an example.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        At first glance, one might expect {a mathematical formula}d(A)={{DE−,BE}}. However, this is not the case.
+       </paragraph>
+       <paragraph>
+        Since all points of the loop must be taken into account, we have {a mathematical formula}EssΣ(A)={AD,AB,BE,BC,CA}. Therefore the conflicting set {a mathematical formula}X={AB,AD,DE−, {a mathematical formula}BE} leads to the inclusion of {a mathematical formula}X−EssΣ(A)={DE−} in {a mathematical formula}d(A), rather than the inclusion of {a mathematical formula}{DE−,BE}. Thus, E may be validly concluded when starting at A, B or C.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Completeness
+      </section-title>
+      <paragraph>
+       We have been using pictures of networks to illustrate the examples in the sections on circumscription. So it will come as no surprise that the inheritance networks can be translated into the monadic first order language we discussed there. More surprising, and a lot less trivial to show, is the fact that this translation preserves logical validity: the consequence relation ⊢ specified for the network-based approach, covers exactly (for what it can express) the validity notion {a mathematical formula}⊨d of the circumscriptive framework.{sup:23}
+      </paragraph>
+      <paragraph>
+       We provide the translation and the formal statement here. For the proof, see Appendix A.
+      </paragraph>
+      <paragraph label="Definition 4.9">
+       Let {a mathematical formula}N=〈V,Σ〉 be an inheritance network, and suppose {a mathematical formula}V={v1,…, {a mathematical formula}vn}. We associate with every {a mathematical formula}vi∈V a predicate {a mathematical formula}Pi, and with every arc {a mathematical formula}α∈Σ a rule given by{a mathematical formula}We will call {a mathematical formula}Σ↑={α|α∈Σ} the lift of N.{sup:24}
+      </paragraph>
+      <paragraph label="Theorem 4.10">
+       Soundness–completeness theoremLet{a mathematical formula}N=〈V,Σ〉and{a mathematical formula}Σ↑be as in the definition. Suppose{a mathematical formula}Σ↑is coherent. Then{a mathematical formula}vi⊢Σvjif and only if{a mathematical formula}Σ↑,{Pic}⊨dPjc, and{a mathematical formula}vi⊢Σ¬vjif and only if{a mathematical formula}Σ↑,{Pic}⊨d¬Pjc.
+      </paragraph>
+      <paragraph>
+       The theorem only holds for coherent theories. Therefore it is desirable know what the notion of coherence amounts to in terms of inheritance networks. This is where the following theorems come in. Again, the proofs can be found in Appendix A.
+      </paragraph>
+      <paragraph label="Theorem 4.11">
+       Let{a mathematical formula}Σ↑be the lift of the inheritance network{a mathematical formula}〈V,Σ〉. Then{a mathematical formula}Σ↑is coherent if and only if there is no{a mathematical formula}v∈Vwith{a mathematical formula}∅∈d(v).
+      </paragraph>
+      <paragraph label="Definition 4.12">
+       The following definition and proposition describe what a network looks like when {a mathematical formula}∅∈d(v) for some {a mathematical formula}v∈V. The node x semi-strictly implies (semi-strictly refutes) y if there is a positive (negative) path from x to y where every arc after the first is strict.
+      </paragraph>
+      <paragraph label="Proposition 4.13">
+       Let{a mathematical formula}〈V,Σ〉be an inheritance network. Then{a mathematical formula}∅∈d(v)iff there is some z and some{a mathematical formula}y⇌v,x⇌vsuch that y semi-strictly implies z and x semi-strictly refutes z.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      In the above we have studied the logical properties of defaults, or more particularly of sentences of the form S's are normally P. We have shown that most, if not all of their capricious logical behavior can be explained on the basis of one simple underlying principle that determines in cases of conflicting defaults which objects are exempted from which rules. We have built two theories based on this principle, one within a circumscriptive framework, and the other in terms of inheritance networks. In the appendix we will prove a completeness theorem showing that arguments that can be expressed in both systems are valid on the one account iff they are valid on the other.
+     </paragraph>
+     <paragraph>
+      Despite the length of this paper, we have only taken the first steps developing these systems. Undoubtedly, a more systematic model theoretic study of the circumscriptive part will result in a shorter and more elegant proof of the completeness theorem. We also think that on the algorithmic side further investigations may yield simplifications. For example, it will become clear in the appendix that things get a lot less complicated if the networks do not have cycles. Finally, a study like this should be complemented by a study answering the question under which conditions a set of default rules can be safely adopted as a guiding line for taking decisions. Maybe this is a question for methodologists rather than for logicians, but the answer is important to everybody interested in common sense reasoning.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Completeness of the network algorithm
+     </section-title>
+     <paragraph>
+      When defining the d and D functions we suggested that d models the effect of a weakened version of the exemption principle and D the effect of the inheritance principle. Before starting with the completeness proof proper, we will prove this explicitly.
+     </paragraph>
+     <paragraph>
+      Things are more complicated for networks with cycles than for networks without cycles. Therefore, we first concentrate on the latter.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       Reformulating the principles
+      </section-title>
+      <paragraph label="Definition A.1">
+       The weak exemption extension {a mathematical formula}Σw of Σ is given by{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}Σw=Σ1∈. The weak exemption extension uses only one step of the definition of the regular exemption extension.
+      </paragraph>
+      <paragraph label="Definition A.2">
+       <list>
+        <list-item label="(i)">
+         The clause {a mathematical formula}∀x(φ(x)→⋁δ∈ΔAbδx) is an inherited clause for Σ iff there is some ψ such that {a mathematical formula}∀x(φ(x)↝ψ(x))∈Σ and {a mathematical formula}Σ⊨∀x(ψ(x)→⋁δ∈ΔAbδx).
+        </list-item>
+        <list-item label="(ii)">
+         The inheritance extension {a mathematical formula}ΣI of Σ is given by{a mathematical formula} where {a mathematical formula}Σ0I=Σ and {a mathematical formula}Σn+1I=ΣnI∪{φ|φ is an inherited clause for ΣnIa}.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Since the exemption principle implies the inheritance principle, the following holds.
+      </paragraph>
+      <paragraph label="Proposition A.3">
+       {a mathematical formula}Σ∈⊨ΣwI.
+      </paragraph>
+      <paragraph>
+       How about {a mathematical formula}ΣwI⊨Σ∈? We doubt this holds for every Σ, but it does hold for the special case that Σ is the lift of a cycle-free inheritance network. Before we turn to the proof of this statement some more observations are needed.
+      </paragraph>
+      <paragraph>
+       The rules and exemption clauses figuring in the sets {a mathematical formula}(Σ↑)wI have a very specific syntactic form, which gives us a lot of freedom constructing models of such sets. For example, all the sentences concerned are universal, so every {a mathematical formula}(Σ↑)wI is preserved under submodels. Moreover, if the only difference between two models {a mathematical formula}A and {a mathematical formula}A′ is that {a mathematical formula}A′ has more abnormalities than {a mathematical formula}A, then {a mathematical formula}A′ will be a model of {a mathematical formula}(Σ↑)wI if {a mathematical formula}A is. This also holds if for some predicates {a mathematical formula}Pi that do not occur in the consequent of any rule in {a mathematical formula}(Σ↑)wI, the extension of {a mathematical formula}Pi in {a mathematical formula}A′ is a subset of the extension of {a mathematical formula}Pi in {a mathematical formula}A. More precisely:
+      </paragraph>
+      <paragraph label="Lemma A.4">
+       Let{a mathematical formula}Σ↑be the lift of an inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vm}. Let Γ consist of sentences of the form{a mathematical formula}∀x(Pix→⋁δ∈ΔAbδx).Let{a mathematical formula}A=〈A,I〉and{a mathematical formula}A′=〈A′,I′〉be two models with the following properties:
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}A⊨Σ↑∪Γ.
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}A=A′.
+       </list-item>
+       <list-item label="(c)">
+        For all individual constants c,{a mathematical formula}I(c)=I′(c).
+       </list-item>
+       <list-item label="(d)">
+        For all predicates{a mathematical formula}Pi, the following holds:
+       </list-item>
+       <list-item label="(e)">
+        For all{a mathematical formula}Piand{a mathematical formula}Pj,{a mathematical formula}I(AbPiPj)⊆I′(AbPiPj)and{a mathematical formula}I(AbPi¬Pj)⊆I′(AbPi¬Pj).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Left to the reader.On the way to the completeness theorem, we will often be looking for correspondences between notions that play a role in inheritance networks and notions in the circumscription framework. One such notion is the notion of a path.Clearly, if there is a positive path X from {a mathematical formula}vi to {a mathematical formula}vj in the network {a mathematical formula}〈V,Σ〉, then {a mathematical formula}Σ↑⊨∀x((Pix∧⋀α∈X¬Abαx)→Pjx).{sup:25} For coherent theories the converse is also true. This follows immediately from the following more general proposition.
+      </paragraph>
+      <paragraph label="Lemma A.5">
+       Let{a mathematical formula}Σ↑be the lift of an inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vm}. Let Γ consist of sentences of the form{a mathematical formula}∀x(Pix→⋁δ∈ΔAbδx). Let{a mathematical formula}φ(x)be a quantifier-free formula in which all predicates are abnormality predicates, and such that for some{a mathematical formula}Pi,{a mathematical formula}Σ↑∪Γ∪{∃x(Pix∧φ(x))}is consistent. If{a mathematical formula}Σ↑∪Γ⊨∀x((Pix∧φ(x))→Pjx), then there is a positive path from{a mathematical formula}vito{a mathematical formula}vj.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}A be a model of {a mathematical formula}Σ↑∪Γ in which {a mathematical formula}Pi(c)∧φ(c) is true for some c and {a mathematical formula}Abδc is true for every δ except those where {a mathematical formula}φ(c)⊨¬Abδc. Given Lemma A.4 such a model must exist.Create {a mathematical formula}A′ by adjusting {a mathematical formula}A so as to make {a mathematical formula}Pkc false whenever there is no positive path from {a mathematical formula}vi to {a mathematical formula}vk. This does not affect the truth of {a mathematical formula}Pi(c)∧φ(c).Claim: {a mathematical formula}A′ is still a model of {a mathematical formula}Σ↑∪Γ. This means that {a mathematical formula}Pjc is true in {a mathematical formula}A′. Hence, there is a path from {a mathematical formula}vi to {a mathematical formula}vj.The claim is proved by induction on the number of distinct consequents of rules in {a mathematical formula}Σ↑. Case n = 0:If there are no rules in {a mathematical formula}Σ↑, then none of the predicates we make false is the consequent of such a rule. Therefore, {a mathematical formula}A′ is a model of {a mathematical formula}Σ↑∪Γ by Lemma A.4.Induction hypothesis:If the number of distinct consequents occurring in the rules of {a mathematical formula}Σ↑ is at most n, then {a mathematical formula}A′ is a model of {a mathematical formula}Σ↑∪Γ.Case n + 1:Assume that {a mathematical formula}Σ↑ have {a mathematical formula}n+1 distinct consequents. Suppose towards contradiction that {a mathematical formula}A′ is not a model of {a mathematical formula}Σ↑∪Γ, and consider some {a mathematical formula}vl such that {a mathematical formula}A⊨Plc, {a mathematical formula}A′⊭Plc.Let {a mathematical formula}Σ−l↑ be {a mathematical formula}Σ↑ with all rules where {a mathematical formula}Pl is a consequent removed. By the Induction Hypothesis, {a mathematical formula}A′ is a model of {a mathematical formula}Σ−l↑∪Γ. Therefore, {a mathematical formula}A′ contradicts some rule in {a mathematical formula}(Σ↑∪Γ)−(Σ−l↑∪Γ). More specifically, there must be some k such that {a mathematical formula}A′⊨Pkc,¬Plc and {a mathematical formula}∀x(Pkx↝Plx)∈Σ↑.Since {a mathematical formula}A′⊨Pkc, by construction there is a positive path from {a mathematical formula}vi to {a mathematical formula}vk. The rule {a mathematical formula}∀x(Pkx↝Plx) is the lift of an arc from {a mathematical formula}vk to {a mathematical formula}vl. Hence, there is a path from {a mathematical formula}vi to {a mathematical formula}vl.But then {a mathematical formula}Plc should not have been made false in constructing {a mathematical formula}A′. This contradiction shows that {a mathematical formula}A′ is a model of {a mathematical formula}Σ↑∪Γ. □
+      </paragraph>
+      <paragraph>
+       The next lemma shows that when Σ is the lift of a network, {a mathematical formula}ΣwI is ‘closed’ with regards to exemption clauses. That is: if {a mathematical formula}ΣwI entails some exemption clause, then this exemption clause or a stronger one is an element of {a mathematical formula}ΣwI.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Σ↑be the lift of an inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vm}. Consider{a mathematical formula}(Σ↑)wI=Σ↑∪Γ, and assume{a mathematical formula}(Σ↑)wI∪{∃xPix}is consistent. If{a mathematical formula}(Σ↑)wI⊨∀x(Pix→⋁δ∈ΔAbδx), then there is some{a mathematical formula}Δ′⊆Δsuch that{a mathematical formula}∀x(Pix→⋁δ∈Δ′Abδx)∈Γ.By contraposition. Suppose there is no such {a mathematical formula}Δ′. Then{a mathematical formula}Take{a mathematical formula} and let {a mathematical formula}A be a model with a single element c, where {a mathematical formula}Pic and {a mathematical formula}φ(c) are true and {a mathematical formula}Pjc is true for only those {a mathematical formula}Pj where {a mathematical formula}Σ↑⊨∀x((Pix∧φ(x))→Pjx).By construction {a mathematical formula}A⊭∀x(Pix→⋁δ∈ΔAbδx), so it suffices to show that {a mathematical formula}A is a model of {a mathematical formula}(Σ↑)wI.We will first show that {a mathematical formula}A is a model of {a mathematical formula}Σ↑. Consider any rule {a mathematical formula}∀x(Pkx↝Plx). Two possibilities occur. (i) {a mathematical formula}Σ↑⊭∀x((Pix∧φ(x))→Pkx). In this case {a mathematical formula}A⊭Pkc, and since the object named c is the only element of the domain, trivially {a mathematical formula}A⊨∀x(Pkx↝Plc). (ii) {a mathematical formula}Σ↑⊨∀x((Pix∧φ(x))→Pkx). Now, either {a mathematical formula}φ(x)⊨AbPkPlc, in which case trivially {a mathematical formula}A⊨∀x(Pkx↝Plx). Or else {a mathematical formula}φ(x)⊨AbPkPlc, in which case we find that {a mathematical formula}Σ↑⊨∀x((Pix∧φ(x))→Plx). So, by construction {a mathematical formula}A⊨Plx, and this together with the facts that {a mathematical formula}A⊨Pkc and {a mathematical formula}A⊨AbPkPlc yields that {a mathematical formula}A⊨∀x(Pkx↝Plc).Now suppose {a mathematical formula}A is not a model of {a mathematical formula}(Σ↑)wI. Then Γ contains a formula of the form {a mathematical formula}∀x(Pjx→⋁δ∈Δ′Abδx) such that {a mathematical formula}A⊨Pjc and {a mathematical formula}Δ′⊆Δ. Since {a mathematical formula}A⊨Pjc, by construction {a mathematical formula}Σ↑⊨∀x((Pix∧φ(x))→Pjx). Therefore by Lemma A.5 there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj. But then by definition Γ should include the exemption clause {a mathematical formula}∀x(Pix→⋁δ∈Δ′Abδx). This contradicts our assumption of there being no such {a mathematical formula}Δ′, so {a mathematical formula}A must be a model of {a mathematical formula}(Σ↑)wI. □
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Σ↑be the lift of a cycle-free inheritance network{a mathematical formula}〈V,Σ〉with{a mathematical formula}V={v1,…,vm}. If{a mathematical formula}Σ↑is coherent,{a mathematical formula}(Σ↑)wI⊨(Σ↑)∈.It suffices to show that {a mathematical formula}(Σ↑)wI satisfies the exemption principle. So, let θ, {a mathematical formula}θ′ be any clauses of the form below:{a mathematical formula}{a mathematical formula}We have to prove that whenever such a {a mathematical formula}θ′ is implied by {a mathematical formula}(Σ↑)wI, so is θ. Suppose {a mathematical formula}(Σ↑)wI⊨θ′. By Lemma A.6, {a mathematical formula}θ′∈(Σ↑)wI.{sup:26} There are two cases, depending on where {a mathematical formula}θ′ was added.Case (i):{a mathematical formula}θ′∈(Σ↑)w. In this case{a mathematical formula}This means that {a mathematical formula}Σ↑⊨θ′, and therefore, {a mathematical formula}θ∈(Σ↑)w.Case (ii):{a mathematical formula}θ′∈(Σ↑)wI−(Σ↑)w. In this case there is a positive path from {a mathematical formula}vi to some {a mathematical formula}vj such that{a mathematical formula}By Lemma A.6 we may assume that {a mathematical formula}(Σ↑)w contains this exemption clause, and therefore{a mathematical formula}Claim: the above can be strengthened to{a mathematical formula}To prove the claim, let χ be the strengthened formula and {a mathematical formula}χ′ the ‘un-strengthened’ one. Assume {a mathematical formula}Σ↑⊭χ.Define {a mathematical formula}μ(x) as follows:{a mathematical formula}{a mathematical formula}Σ↑∪{∃x(Pjx∧μ(x))} is consistent. (Since {a mathematical formula}Σ↑ is coherent, {a mathematical formula}Σ↑∪{∃xPjx} is consistent. Therefore this follows directly from {a mathematical formula}Σ↑⊨χ′, {a mathematical formula}Σ↑⊭χ.) Since there is no path from {a mathematical formula}vj to {a mathematical formula}vi (otherwise there would be a cycle), contraposition of Lemma A.5 tells us it cannot be the case that {a mathematical formula}Σ↑⊨∀x((Pjx∧μ(x))→Pix). Therefore there is a model of {a mathematical formula}Σ↑ with some element d satisfying {a mathematical formula}Pjx∧¬Pix∧μ(x).Adjust this model such that for no δ in {a mathematical formula}(Σ↑)Pid satisfies {a mathematical formula}Abδx. Since d does not satisfy {a mathematical formula}Pix, this adjusted model is still a model of {a mathematical formula}Σ↑ (given that there is no path as above). However, this model does not make {a mathematical formula}χ′ true. Contradiction.Given that {a mathematical formula}Σ↑⊨χ, it follows that {a mathematical formula}∀x(Pjx→⋁δ∈ΔAbδx)∈(Σ↑)w. Since there is a path from {a mathematical formula}vi to {a mathematical formula}vj, this in turn leads to {a mathematical formula}θ∈(Σ↑)wI. □
+      </paragraph>
+      <section label="A.1.1">
+       <section-title>
+        Adding cycles
+       </section-title>
+       <paragraph>
+        In order to properly deal with lifts of networks that include cycles, we first introduce a notion of equivalence that (for lifts) corresponds to being in the same cycle.
+       </paragraph>
+       <paragraph label="Definition A.8">
+        Let Σ be a set of rules. The formulas φ and ψ are equivalent in Σ iff there are {a mathematical formula}φ1,…,φm, {a mathematical formula}ψ1,…,ψn such that {a mathematical formula}φm=ψ=ψ1, {a mathematical formula}ψn=φ=φ1 and for all {a mathematical formula}1≤i&lt;m, {a mathematical formula}1≤j&lt;n{a mathematical formula}Σ⊨∀x(φi(x)↝φi+1(x)), and {a mathematical formula}Σ⊨∀x(ψj(x)↝ψj+1(x)).If φ and ψ are equivalent in Σ, we write {a mathematical formula}φ≈Σψ, or simply {a mathematical formula}φ≈ψ if no confusion is possible.
+       </paragraph>
+       <paragraph>
+        Instead of the weak exemption extension {a mathematical formula}Σw we will utilize the expanded weak exemption extension {a mathematical formula}ΣW.
+       </paragraph>
+       <paragraph label="Definition A.9">
+        <list>
+         <list-item label="(i)">
+          The clause {a mathematical formula}∀x(φ(x)→⋁δ∈ΔAbδx) is an expanded exemption clause for Σ iff there are {a mathematical formula}ψ1≈ψ2≈…≈ψn≈φ such that{a mathematical formula}
+         </list-item>
+         <list-item label="(ii)">
+          The expanded weak exemption extension {a mathematical formula}ΣW of Σ is given by{a mathematical formula}
+         </list-item>
+        </list>
+       </paragraph>
+       <paragraph>
+        Of course, showing that {a mathematical formula}Σ∈ and {a mathematical formula}ΣWI are equally strong, will require some elaborations. Note that Lemma A.4, Lemma A.5 are already stated and proven in terms of general networks which may include cycles.
+       </paragraph>
+       <paragraph label="Proof">
+        {a mathematical formula}Σ∈⊨ΣWI.We first prove that {a mathematical formula}Σ∈⊨ΣW. Let {a mathematical formula}θ∈ΣW. We may assume that {a mathematical formula}Σ⊭θ (otherwise {a mathematical formula}Σ∈⊨θ follows immediately). Therefore, θ is of the form{a mathematical formula} with{a mathematical formula} for some {a mathematical formula}ψ1≈ψ2≈…≈ψn≈φ.Since {a mathematical formula}ψ1≈φ, (repeated) use of the inheritance principle lets us conclude{a mathematical formula} By taking {a mathematical formula}Δ′=Δ∪Σφ(x), we may use the exemption principle to conclude{a mathematical formula} Now, by (repeatedly) using the inheritance principle again we arrive at{a mathematical formula} The same process can be repeated for all {a mathematical formula}ψi, leaving us with{a mathematical formula} from which it follows through the exemption principle that{a mathematical formula}This proves that {a mathematical formula}Σ∈⊨ΣW. Therefore, {a mathematical formula}Σ∈I⊨ΣWI. Since the exemption principle implies the inheritance principle, {a mathematical formula}Σ∈⊨Σ∈I, which means that {a mathematical formula}Σ∈⊨ΣWI. □
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}Σ↑be the lift of an inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vm}. Let{a mathematical formula}Γ=Σ↑wI−Σ↑, and assume{a mathematical formula}Σ↑∪Γ∪{∃xPix}is consistent. If{a mathematical formula}Σ↑WI⊨∀x(Pix→⋁δ∈ΔAbδx), then there is some{a mathematical formula}Δ′⊆Δsuch that{a mathematical formula}∀x(Pix→⋁δ∈Δ′Abδx)∈Γ.Analogous to the proof of Lemma A.6.
+       </paragraph>
+       <paragraph label="Proof">
+        If{a mathematical formula}Σ↑is the lift of an inheritance network{a mathematical formula}〈V,Σ〉and is coherent, then{a mathematical formula}(Σ↑)WI⊨(Σ↑)WI∈.Mostly analogous to the proof of Theorem A.7, but we need to look more closely at Case (ii). Analogous to what we concluded in the simple case, we have{a mathematical formula} with {a mathematical formula}Pi≈Q1≈…≈Qn. Now if there is a positive path from {a mathematical formula}vj to {a mathematical formula}vi then {a mathematical formula}Pj≈Pi. Then by construction {a mathematical formula}∀x(Pjx→⋁δ∈ΔAbδx)∈(Σ↑)W. Since there is a path from {a mathematical formula}vi to {a mathematical formula}vj, this in turn leads to {a mathematical formula}θ∈(Σ↑)WI.(If there is no positive path from {a mathematical formula}vj to {a mathematical formula}vi then this part is also analogous to the proof of Theorem A.7.) □
+       </paragraph>
+      </section>
+      <section label="A.1.2">
+       {a mathematical formula}(Σ↑)WI and the construction of the D function
+       <paragraph>
+        The preceding subsection establishes that {a mathematical formula}Σ∈ and {a mathematical formula}ΣWI have the same models. What is easier to see – but still important to prove – is that the alternative constraints leading to {a mathematical formula}ΣWI correctly model what happens in constructing the D function. The following lemma and proposition cover this part of the completeness proof.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}Σ↑be the lift of some network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Then{a mathematical formula}X⊆Σis a conflicting set relative to{a mathematical formula}viif and only if{sup:27}{a mathematical formula}Suppose {a mathematical formula}X⊆Σ is a conflicting set relative to {a mathematical formula}vi. Suppose towards contradiction that there is a model {a mathematical formula}A of {a mathematical formula}Σ↑ such that{a mathematical formula} Since X is a conflicting set relative to {a mathematical formula}vi, there is some {a mathematical formula}vj such that X contains both a positive and a negative path to {a mathematical formula}vj. Therefore by repeated modus ponens (as well as modus tollens, possibly) it follows that both {a mathematical formula}Pjx and {a mathematical formula}¬Pjx. Contradiction.For the other direction, suppose X is not a conflicting set relative to {a mathematical formula}vi. Let {a mathematical formula}A be a model in which {a mathematical formula}∀xPix is true, and {a mathematical formula}∀x¬Abαx is true for all {a mathematical formula}α∈X, while the extension of the remaining predicates is determined by applying the rules in {a mathematical formula}Σ↑. Since there are no logical relations between the predicates other than those provided by {a mathematical formula}Σ↑, this can be done. The resulting model {a mathematical formula}A is a model of {a mathematical formula}Σ↑, but {a mathematical formula}∀x(Pix→⋁α∈XAbαx) is false on {a mathematical formula}A. □
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}Σ↑be the lift of an inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Let{a mathematical formula}If{a mathematical formula}(Σ↑)WI⊨ϕ, then{a mathematical formula}Y∈D(vi)for some{a mathematical formula}Y⊆X. Conversely, if{a mathematical formula}X∈D(vi)then{a mathematical formula}(Σ↑)WI⊨ϕ.Suppose {a mathematical formula}(Σ↑)WI⊨ϕ. By the construction of {a mathematical formula}(Σ↑)WI, there must be some k such that there is a positive path from {a mathematical formula}vi to {a mathematical formula}vk and{a mathematical formula} By the construction of {a mathematical formula}(Σ↑)W, it follows that{a mathematical formula} By Lemma A.13, this means that {a mathematical formula}X∪EssΣ(vk) is a conflicting set relative to {a mathematical formula}vk. Therefore, {a mathematical formula}Y∈d(vk) and hence, {a mathematical formula}Y∈D(vi), where {a mathematical formula}Y=X−EssΣ(vk)⊆X.For the converse, suppose {a mathematical formula}X∈D(vi). Then there is some {a mathematical formula}vj such that there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj and {a mathematical formula}X∈d(vj). Therefore, {a mathematical formula}X∪EssΣ(vj) is a conflicting set relative to {a mathematical formula}vj. By Lemma A.13,{a mathematical formula} By construction of {a mathematical formula}(Σ↑)W,{a mathematical formula} and therefore {a mathematical formula}(Σ↑)WI⊨ϕ. □
+       </paragraph>
+      </section>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Completeness
+      </section-title>
+      <paragraph>
+       Knowing (via {a mathematical formula}ΣWI) how the D function and {a mathematical formula}Σ∈ are related is an important step on our way to completeness, but we are far from done. One thing we do not yet know is what on the inheritance network side corresponds to the models in the sets {a mathematical formula}F of the states {a mathematical formula}〈U,F〉. The bulk of the completeness proof lies in showing that these models correspond to acceptable exception sets, with optimal models corresponding to minimal exception sets.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Σ↑be the lift of the inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Let{a mathematical formula}I=〈Σ↑,{Pic}〉. Let{a mathematical formula}〈U,F〉be the information state generated by I. Then for all{a mathematical formula}A∈F, the set{a mathematical formula}X={α∈Σ|A⊨Abαc}is an acceptable exception set for{a mathematical formula}vi.Consider {a mathematical formula}Y∈D(vi). We must show that there is some {a mathematical formula}δ∈Y such that {a mathematical formula}δ∈X.By Proposition A.14,{a mathematical formula} Therefore, {a mathematical formula}A⊨⋁α∈YAbαc. Hence, there is some {a mathematical formula}α∈Y such that {a mathematical formula}A⊨Abαc, which means that {a mathematical formula}α∈X. □
+      </paragraph>
+      <paragraph>
+       Below, when {a mathematical formula}X={α∈Σ|A⊨Abαc}, we will often say that X is the exception set represented by {a mathematical formula}A.
+      </paragraph>
+      <paragraph>
+       Next proposition says that every minimal exception set is represented by at least one model in {a mathematical formula}F.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Σ↑be the lift of the inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Let{a mathematical formula}I=〈Σ↑,{Pic}〉. Let{a mathematical formula}〈U,F〉be the information state generated by I.For every minimal exception set X for{a mathematical formula}vithere is a model{a mathematical formula}A∈Fsuch that{a mathematical formula}A⊨Abαciff{a mathematical formula}α∈X.Let X be a minimal exception set for {a mathematical formula}vi. Construct {a mathematical formula}A as follows:
+       <list>
+        For the domain {a mathematical formula}A, take the same domain as that of some other model in {a mathematical formula}F, and choose {a mathematical formula}I(c) arbitrarily.Stipulate that {a mathematical formula}I(c)∈I(Pi) and that {a mathematical formula}I(c)∈I(Abα) iff {a mathematical formula}α∈X.For all {a mathematical formula}Pj, stipulate that {a mathematical formula}I(c)∈I(Pj) if and only if there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj that does not contain an element of X.For all {a mathematical formula}d≠I(c) and for all {a mathematical formula}Pj, stipulate that {a mathematical formula}d∉I(P).For elements other than
+       </list>
+       <paragraph>
+        c, the predicate assignments are trivially consistent with all rules and exemption clauses in {a mathematical formula}(Σ↑)WI. For c, we first look at the rules in {a mathematical formula}Σ↑.Rules in{a mathematical formula}Σ↑: Consider {a mathematical formula}ϕ∈Σ↑, where{a mathematical formula} We may assume that {a mathematical formula}A⊨Pjc∧¬AbPjPkc. (Otherwise, c is trivially consistent with the rule.) Thus, there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj that does not contain an element of X, and the arc from {a mathematical formula}vj to {a mathematical formula}vk is not in X. Therefore, there is also such a path from {a mathematical formula}vi to {a mathematical formula}vk, and thus {a mathematical formula}Pkc.For negative rules, again take {a mathematical formula}ϕ∈Σ↑ but now with{a mathematical formula} Again we may assume that {a mathematical formula}A⊨Pjc∧¬AbPj¬Pkc. Thus there is a negative path from {a mathematical formula}vi to {a mathematical formula}vk containing no element of X. To prove that {a mathematical formula}A⊨¬Pkc we have to show that there is no positive path from {a mathematical formula}vi to {a mathematical formula}vk. Suppose there is such a positive path, and let Y be the union of these two paths. Then Y is a conflicting set relative to {a mathematical formula}vi. Since X is a minimal exception set for {a mathematical formula}vi, some {a mathematical formula}α∈Y must be in X. Since the negative path had no such overlap, this α must be part of the positive path.As we've shown that every such positive path contains an element of X, it follows by construction that {a mathematical formula}A⊨¬Pkc. Therefore the valuation for c is consistent with this rule.Exemption clauses in{a mathematical formula}(Σ↑)WI: Suppose {a mathematical formula}θ∈(Σ↑)WI, where{a mathematical formula} By Proposition A.14, {a mathematical formula}Y∈D(vj) for some {a mathematical formula}Y⊆Δ. We may assume that {a mathematical formula}Pjc. Therefore there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj, and thus {a mathematical formula}Y∈D(vi). Since X is a minimal exception set for {a mathematical formula}vi, it follows that there is some {a mathematical formula}α′∈Y for which {a mathematical formula}α′∈X. By construction, {a mathematical formula}A⊨Abα′c, and therefore, θ holds for c. □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Proposition A.17">
+       Finally, we show that minimal exception sets correspond to optimal models. Let{a mathematical formula}Σ↑be the lift of the inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Let{a mathematical formula}I=〈Σ↑,{Pic}〉. Let{a mathematical formula}〈U,F〉be the information state generated by I. Then{a mathematical formula}Ais optimal in{a mathematical formula}Fiff there is a minimal exception set X for{a mathematical formula}vithat is represented by{a mathematical formula}A.
+      </paragraph>
+      <paragraph label="Proof">
+       For the proof from left to right let {a mathematical formula}A be optimal in {a mathematical formula}F. By Proposition A.15, the set {a mathematical formula}X={α∈Σ|A⊨Abαc} is an acceptable exception set for {a mathematical formula}vi. Assume towards contradiction that X is not a minimal exception set for {a mathematical formula}vi, and that {a mathematical formula}X′⊂X is. By Proposition A.16, there is a {a mathematical formula}A′∈F which represents {a mathematical formula}X′.Now construct model {a mathematical formula}A″ to be exactly like {a mathematical formula}A except that when evaluating predicates (including abnormality predicates) applied to c, it uses the same evaluation as {a mathematical formula}A′. Showing that {a mathematical formula}A″∈F is fairly trivial and left to the reader. The abnormality predicates made true by {a mathematical formula}A″ are a strict subset of those made true by {a mathematical formula}A. So {a mathematical formula}A″ is strictly more normal than {a mathematical formula}A, which is therefore not optimal.For the other direction, let X be a minimal exception set for {a mathematical formula}vi. By Proposition A.16, there are models {a mathematical formula}A∈F such that {a mathematical formula}A⊨Abαc iff {a mathematical formula}α∈X.Now, suppose {a mathematical formula}B∈F is at least as normal as {a mathematical formula}A. By Proposition A.15, {a mathematical formula}B models some acceptable exception set Y for {a mathematical formula}vi. Since {a mathematical formula}B is at least as normal as {a mathematical formula}A, we have {a mathematical formula}Y⊆X. Since X is minimal, this means {a mathematical formula}Y=X. So, {a mathematical formula}A is at least as normal as {a mathematical formula}B, which means that {a mathematical formula}A is an optimal model. □
+      </paragraph>
+      <paragraph>
+       Having established the correspondence between optimal models and minimal exception sets, the last step in the completeness proof is to go from these models to the allowable inferences as defined in Definition 4.8.
+      </paragraph>
+      <paragraph label="Theorem A.18">
+       Let{a mathematical formula}Σ↑be the lift of the inheritance network{a mathematical formula}〈V,Σ〉, with{a mathematical formula}V={v1,…,vn}. Let{a mathematical formula}I=〈Σ↑,{Pic}〉. Let{a mathematical formula}〈U,F〉be the information state generated by I.
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        If X is a minimal exception set for{a mathematical formula}vi, and there is a positive path from{a mathematical formula}vito{a mathematical formula}vjthat does not contain any element of X, then{a mathematical formula}A⊨Pjcfor every{a mathematical formula}A∈Frepresenting X in c.
+       </list-item>
+       <list-item label="(ii)">
+        If f X is a minimal exception set for{a mathematical formula}vi, and there is a negative path from{a mathematical formula}vito{a mathematical formula}vjwhich does not contain any element of X, then{a mathematical formula}A⊨¬Pjcfor every{a mathematical formula}A∈Frepresenting X in c.
+       </list-item>
+       <list-item label="(iii)">
+        If X is not an acceptable exception set for{a mathematical formula}vj, then{a mathematical formula}A⊨¬Pjcfor every{a mathematical formula}A∈Frepresenting X in c.
+       </list-item>
+       <list-item label="(iv)">
+        If{a mathematical formula}A⊨Pjcfor every{a mathematical formula}A∈Frepresenting X in c, then there is a positive path from{a mathematical formula}vito{a mathematical formula}vjwhich does not contain any element of X.
+       </list-item>
+       <list-item label="(v)">
+        If{a mathematical formula}A⊨¬Pjcfor every{a mathematical formula}A∈Frepresenting X in c, then either there is a negative path from{a mathematical formula}vito{a mathematical formula}vjwhich does not contain any element of X or X is not an acceptable exception set for{a mathematical formula}vj.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The proofs of (i) and (ii) are left to the reader.The proof of (iii) is also straightforward: If X is not an acceptable exception set for {a mathematical formula}vj, then there is some {a mathematical formula}Y∈D(vj) such that {a mathematical formula}X∩Y=∅. Since {a mathematical formula}Y∈D(vj), {a mathematical formula}(Σ↑)WI⊨∀x(Pjx→⋁α∈YAbαx) (Proposition A.14).Suppose {a mathematical formula}A∈F represents X in c. Since {a mathematical formula}X∩Y=∅, {a mathematical formula}A does not make {a mathematical formula}⋁α∈YAbαc true. Therefore, {a mathematical formula}A⊨¬Pjc.To prove (iv), suppose every {a mathematical formula}A∈F representing X in c makes {a mathematical formula}Pjc true. Construct {a mathematical formula}B=〈B,I〉 as follows:
+       <list>
+        For the domain {a mathematical formula}B, take the same domain as that of some other model in {a mathematical formula}F, and choose {a mathematical formula}I(c) arbitrarily.Stipulate that {a mathematical formula}I(c)∈I(Pi) and that {a mathematical formula}I(c)∈I(Abα) iff {a mathematical formula}α∈X.For all {a mathematical formula}Pj, stipulate that {a mathematical formula}I(c)∈I(Pj) if and only if there is a positive path from {a mathematical formula}vi to {a mathematical formula}vj that does not contain an element of X.For all {a mathematical formula}d≠I(c) and for all {a mathematical formula}Pj, stipulate that {a mathematical formula}d∉I(Pj).To prove (v), suppose every
+       </list>
+       <paragraph>
+        {a mathematical formula}A∈F representing X in c makes {a mathematical formula}¬Pjc true. Construct {a mathematical formula}B′ like {a mathematical formula}B in (iv), but stipulate that {a mathematical formula}I(c)∈I(Pj). Then {a mathematical formula}B′∉F, and more specifically {a mathematical formula}B′⊭(Σ↑)WI. Pick {a mathematical formula}ϕ∈(Σ↑)WI such that {a mathematical formula}B′⊨¬ϕ. A number of cases arise, depending on ϕ.
+       </paragraph>
+       <list>
+        <list-item label="(a)">
+         {a mathematical formula}ϕ=∀x(Pkx∧¬Abϕx→¬Pjx) for some k, with {a mathematical formula}B′⊨Pkc∧¬Abϕc. In this case, there is a negative path from {a mathematical formula}vi to {a mathematical formula}vj (via {a mathematical formula}vk) that does not contain an element of X.
+        </list-item>
+        <list-item label="(b)">
+         {a mathematical formula}ϕ=∀x(Pjx∧¬Abϕx→¬Pkx) for some k, with {a mathematical formula}B′⊨Pkc∧¬Abϕc. In this case too, there is a negative path from {a mathematical formula}vi to {a mathematical formula}vj (via {a mathematical formula}vk using modus tollens at the end) that does not contain an element of X.
+        </list-item>
+        <list-item label="(c)">
+         {a mathematical formula}ϕ=∀x(Pjx→⋁δ∈ΔAbδx) for some Δ, with {a mathematical formula}B′⊨¬⋁δ∈ΔAbδc. Then it follows that {a mathematical formula}X∩Δ=∅. By Proposition A.14, {a mathematical formula}Y∈D(vj) for some {a mathematical formula}Y⊆Δ. Since X contains no element of Δ, it contains no element of this Y. Therefore, X is not an acceptable exception set for {a mathematical formula}vj.
+        </list-item>
+        <list-item label="(d)">
+         {a mathematical formula}ϕ=∀x(Pjx∧¬Abϕ→Pkx) for some k, with {a mathematical formula}B′⊨¬Pkc∧¬Abϕc. In this case, change the model one step further, making {a mathematical formula}Pkc true. Since the new model {a mathematical formula}B″∉F, find a new {a mathematical formula}ϕ∈(Σ↑)WI such that {a mathematical formula}B″⊨¬ϕ. If this {a mathematical formula}ϕ′ is like in case (a) or (b), there is still a negative path from {a mathematical formula}vi to {a mathematical formula}vj, which is just one arc longer than the path we found in case (a) and (b). (Recall that a negative path can go through any amount of positive arcs ‘in the wrong direction’ at the end.) If {a mathematical formula}ϕ′ is like case (c), then the Y which is found is also part of {a mathematical formula}vj. If {a mathematical formula}ϕ′ is itself like case (d), then we continue to proceed in the same way. Since no amount of making predicates true will make the model part of {a mathematical formula}F, going on long enough will lead to a {a mathematical formula}ϕ′ of one of the first three forms. The only potential complication in this induction is the possibility that we are led to a formula like type a or b where {a mathematical formula}Pk is true merely because of a change we made to the model. In this case there is a negative path from {a mathematical formula}vj to itself of which no element is in X. Since this path is a contradicting set relative to {a mathematical formula}vj, it follows that X is not an acceptable exception set for {a mathematical formula}vj. □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph label="Corollary A.19">
+       Soundness–completenessLet{a mathematical formula}〈V,Σ〉be an inheritance network, and suppose{a mathematical formula}Σ↑is coherent. Then{a mathematical formula}vi⊢Σvjif and only if{a mathematical formula}Σ↑,{Pic}⊨dPjc, and{a mathematical formula}vi⊢Σ¬vjif and only if{a mathematical formula}Σ↑,{Pic}⊨d¬Pjc.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof of the second equivalence is left to the reader. As for the first: let {a mathematical formula}〈U,F〉 correspond to {a mathematical formula}〈Σ↑,{Pic}〉.By definition, {a mathematical formula}vi⊢Σvj if and only if (a) for every minimal exception set X for {a mathematical formula}vi, there is a positive path Y from {a mathematical formula}vi to {a mathematical formula}vj with {a mathematical formula}X∩Y=∅.By Theorem A.18, (a) holds iff (b) {a mathematical formula}A⊨Pjc for every {a mathematical formula}A∈F representing some minimal exception set for {a mathematical formula}vi in c.By Proposition A.17, (b) holds iff (c) {a mathematical formula}A⊨Pjc for every optimal model {a mathematical formula}A in {a mathematical formula}F.By definition, (c) is true iff {a mathematical formula}Σ↑,{Pic}⊨dPjc ({a mathematical formula}¬Pjc). □
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Coherence
+      </section-title>
+      <paragraph label="Theorem A.20">
+       Let{a mathematical formula}〈V,Σ〉be an inheritance network with{a mathematical formula}V={v1,…,vn}. Then{a mathematical formula}Σ↑is incoherent if and only if{a mathematical formula}∅∈d(vi)for some i.
+      </paragraph>
+      <paragraph label="Proof">
+       {a mathematical formula}Σ↑ is incoherent if and only if there is some {a mathematical formula}Pi such that {a mathematical formula}Σ↑WI∪{∃xPjx} is inconsistent. This is so if and only if {a mathematical formula}(Σ↑)WI⊨∀x¬Pjx for some {a mathematical formula}Pj. By the convention on empty disjunctions, {a mathematical formula}∀x¬Pjx is equivalent to {a mathematical formula}∀x(Pjx→⋁α∈∅Abαx). By Proposition A.14 this means that {a mathematical formula}∅∈D(vj). The latter implies that {a mathematical formula}∅∈d(vi) for some i. □
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}〈V,Σ〉be an inheritance network without strict arcs. If{a mathematical formula}∅∈d(x), then there are some z and some{a mathematical formula}y⇌x,y′⇌xsuch that Σ contains a positive arc from y to z and a negative arc from{a mathematical formula}y′to z.Suppose {a mathematical formula}∅∈d(x). Then there is some minimal conflicting set {a mathematical formula}X⊆EssΣ(x). We may assume without loss of generality that X is the union of a positive path {a mathematical formula}{xy1,y1y2,…,ymz} and a negative path {a mathematical formula}{xy1′,y1′y2′,…,yn′z−}.Since {a mathematical formula}ymz∈X, it follows that {a mathematical formula}ymz∈EssΣ(x). Therefore, {a mathematical formula}x⇌ym. Analogously, {a mathematical formula}x⇌yn′. □
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}〈V,Σ〉be an inheritance network. If{a mathematical formula}∅∈d(x), then there are some z and some{a mathematical formula}y⇌x,y′⇌xsuch that y semi-strictly implies z and{a mathematical formula}y′semi-strictly refutes z.Suppose {a mathematical formula}∅∈d(x). Then there is some minimal conflicting set {a mathematical formula}X⊆EssΣ(x). We may assume without loss of generality that X is the union of a positive path {a mathematical formula}{xy1,y1y2,…,ynz} and a negative path {a mathematical formula}{xy1′,y1′y2′,…,yn′z−} (where some of these may actually be strict).Pick the smallest i for which {a mathematical formula}yi strictly implies z.{sup:28} Since {a mathematical formula}yi−1yi∈X, it follows that {a mathematical formula}yi−1yi∈EssΣ(x). But by construction {a mathematical formula}yi−1yi is not strict. Therefore, {a mathematical formula}yi−1⇌x.Analogously, {a mathematical formula}yj−1′⇌x when we pick the smallest j for which {a mathematical formula}yj′ strictly refutes z. (If no {a mathematical formula}yj′ does so, pick {a mathematical formula}j=n+1 instead.) Now let {a mathematical formula}y=yi−1, {a mathematical formula}y′=yj−1′. By construction, y semi-strictly implies z and {a mathematical formula}y′ semi-strictly refutes it. □
+      </paragraph>
+      <paragraph label="Corollary A.23">
+       Let{a mathematical formula}〈V,Σ〉be an inheritance network.{a mathematical formula}Σ↑is incoherent if and only if there are{a mathematical formula}x,y,z∈Vsuch that{a mathematical formula}x⇌y, x semi-strictly implies z, and y semi-strictly refutes z.
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

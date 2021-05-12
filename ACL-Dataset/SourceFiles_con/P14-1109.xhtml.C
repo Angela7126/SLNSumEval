@@ -1,0 +1,1382 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Semiparametric Gaussian Copula Regression Modelfor Predicting Financial Risks from Earnings Calls.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Earnings call summarizes the financial performance of a company,
+and it is an important indicator of the future financial risks of the company.
+We quantitatively study how earnings calls are correlated with the financial risks,
+with a special focus on the financial crisis of 2009.
+In particular, we perform a text regression task: given the transcript of an earnings call,
+we predict the volatility of stock prices from the week after the call is made.
+We propose the use of
+       copula
+       : a powerful statistical framework that
+separately models the uniform marginals and their complex multivariate stochastic dependencies, while
+not requiring any prior assumptions on the distributions of the covariate and the dependent variable.
+By performing
+       probability integral transform
+       ,
+our approach moves beyond the standard count-based bag-of-words models in NLP,
+and improves previous work on text regression by incorporating the correlation among local features in the form of semiparametric Gaussian copula.
+In experiments, we show that our model significantly outperforms strong linear and non-linear discriminative baselines on three datasets under various settings.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Predicting the risks of publicly listed companies is of great interests not only to the
+traders and analysts on the Wall Street, but also virtually
+anyone who has investments in the market
+        [24]
+        .
+Traditionally, analysts focus on quantitative modeling
+of historical trading data.
+Today, even though earnings calls transcripts
+are abundantly available, their distinctive communicative practices
+        [4]
+        ,
+and correlations with the financial risks,
+in particular, future stock performances
+        [35]
+        ,
+are not well studied in the past.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Earnings calls are conference calls where a listed company
+discusses the financial performance. Typically, a earnings call contains two parts:
+the senior executives first
+report the operational outcomes, as well as the current financial performance,
+and then discuss their perspectives on the future of the company.
+The second part of the teleconference
+includes a question answering session where the floor will be open to investors, analysts,
+and other parties for inquiries. The question we ask is that, even though each earnings call
+has distinct styles, as well as different speakers and mixed formats, can we use earnings calls
+to predict the financial risks of the company in the limited future?
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Given a piece of earnings call transcript,
+we investigate a semiparametric approach for automatic prediction of future financial
+risk
+        .
+To do this, we formulate the problem as a text regression task, and
+use a Gaussian copula with probability integral transform
+to model the uniform marginals and their dependencies.
+Copula models
+        [37, 31]
+        are often used by statisticians
+        [16, 27, 30]
+        and economists
+        [7]
+        to study the bivariate and multivariate stochastic dependency
+among random variables,
+but they are very new to the machine learning
+        [17, 18, 44, 28]
+        and related communities
+        [12]
+        .
+To the best of our knowledge, even though the term “copula”
+is named for the resemblance to grammatical copulas in linguistics,
+copula models have not been explored in the NLP community.
+To evaluate the performance of our approach,
+we compare with a standard squared loss linear regression baseline,
+as well as strong baselines such as linear and non-linear support vector machines (SVMs)
+that are widely used in text regression tasks.
+By varying different experimental settings on three datasets concerning different periods of the Great Recession from 2006-2013,
+we empirically show that our approach significantly outperforms the baselines by a wide margin.
+Our main contributions are:
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We are among the first to formally study transcripts of earnings calls to predict financial risks.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We propose a novel semiparametric Gaussian copula model for text regression.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           Our results significantly outperform standard linear regression and strong SVM baselines.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i4.p1">
+          <p class="ltx_p">
+           By varying the number of dimensions of the covariates and the size of the training data, we show that the improvements over the baselines are robust across different parameter settings on three datasets.
+          </p>
+         </div>
+        </li>
+       </ul>
+       <p class="ltx_p">
+        In the next section, we outline related work in modeling financial reports and text regression.
+In Section
+        3
+        , the details of the semiparametric copula model are introduced.
+We then describe the dataset and dependent variable in this study, and the
+experiments are shown in Section
+        6
+        . We discuss the results and findings in Section
+        7
+        and then conclude in Section
+        8
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Fung et al.
+        [14]
+        are among the first to study
+SVM and text mining methods in the market prediction domain,
+where they align financial news articles with multiple time series
+to simulate the 33 stocks in the Hong Kong Hang Seng Index.
+However, text regression in the financial domain have not been explored
+until recently.
+Kogan et al.
+        [24]
+        model the SEC-mandated annual reports, and performs linear SVM regression
+with
+        ϵ
+        -insensitive loss function to predict the measured volatility.
+Another recent study
+        [42]
+        uses exactly the same
+max-margin regression technique, but with a different focus on the financial sentiment.
+Using the same dataset, Tsai and Wang
+        [41]
+        reformulate the regression problem
+as a text ranking problem.
+Note that all these regression studies above investigate the SEC-mandated annual reports,
+which are very different from the earnings calls in many aspects such as length, format, vocabulary, and genre.
+Most recently, Xie et al.
+        [45]
+        have proposed the use of
+frame-level semantic features to understand financial news, but they treat the stock movement
+prediction problem as a binary classification task.
+Broadly speaking, our work is also aligned to recent studies
+that make use of social media data to predict the stock market
+        [3, 47]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Despite our financial domain, our approach is more relevant
+to text regression. Traditional discriminative models, such as
+linear regression and linear SVM, have been very popular
+in various text regression tasks, such as predicting movie revenues from reviews
+        [22]
+        ,
+understanding the geographic lexical variation
+        [13]
+        ,
+and predicting food prices from menus
+        [5]
+        .
+The advantage of these models is that the estimation of the parameters is often simple,
+the results are easy to interpret, and the approach often yields strong performances.
+While these approaches have merits, they suffer from the problem
+of not explicitly modeling the correlations and interactions among random variables,
+which in some sense, corresponding to the impractical assumption of
+independent and identically distributed (i.i.d) of the data.
+For example, when bag-of-word-unigrams are present in the feature space,
+it is easier if one does not explicitly model the stochastic dependencies among the words,
+even though doing so might hurt the predictive power,
+while the variance from the correlations among the random variables is not explained.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Copula Models for Text Regression
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In NLP, many statistical machine learning methods that capture the dependencies among random variables,
+including topic models
+        [2, 25, 43]
+        , always have to make assumptions with the underlying
+distributions of the random variables, and make use of informative priors.
+This might be rather restricting the expressiveness of the model in some sense
+        [36]
+        .
+On the other hand, once such assumptions are removed,
+another problem arises — they might be prone to errors, and suffer from the overfitting issue.
+Therefore, coping with the tradeoff between expressiveness and overfitting, seems to be rather important in statistical
+approaches that capture stochastic dependency.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Our proposed semiparametric copula regression model
+takes a different perspective.
+On one hand, copula models
+        [31]
+        seek to explicitly model the dependency of random variables
+by separating the marginals and their correlations.
+On the other hand, it does not make use of any assumptions
+on the distributions of the random variables, yet,
+the copula model is still expressive.
+This nice property essentially allows us to fuse
+distinctive lexical, syntactic, and semantic feature sets naturally into a single compact model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        From an information-theoretic point of view
+        [38]
+        ,
+various problems in text analytics can be formulated as
+estimating the probability mass/density functions of tokens in text.
+In NLP, many of the probabilistic text models
+work in the discrete space
+        [9, 2]
+        ,
+but our model is different:
+since the text features are sparse, we first perform
+kernel density estimates to smooth out the zeroing items,
+and then calculate the empirical cumulative distribution function (CDF) of the random variables.
+By doing this, we are essentially performing
+        probability integral transform
+        —
+an important statistical technique that moves beyond the count-based bag-of-words feature space
+to marginal cumulative density functions space.
+Last but not least,
+by using a parametric copula, in our case, the Gaussian copula,
+we reduce the computational cost from fully nonparametric methods,
+and explicitly model the correlations among the covariate and the dependent
+variable.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        In this section, we first briefly look at the theoretical foundations of copulas,
+including the Sklar’s theorem.
+Then we describe the proposed semiparametric Gaussian copula text regression model.
+The algorithmic implementation of our approach is introduced
+at the end of this section.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        The Theory of Copula
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         In the statistics literature, copula is widely known as a family of distribution function.
+The idea behind copula theory is that the cumulative distribution function (CDF)
+of a random vector can be represented in the form of uniform marginal
+cumulative distribution functions, and a copula that connects these marginal CDFs,
+which describes the correlations among the input random variables.
+However, in order to have a valid multivariate distribution function regardless of
+         n
+         -dimensional
+covariates, not every function can be used as a copula function.
+The central idea behind copula, therefore, can be summarize by the Sklar’s theorem
+and the corollary.
+        </p>
+       </div>
+       <div class="ltx_theorem ltx_theorem_theorem" id="Thmtheorem1">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Theorem 1
+         </span>
+         (Sklar’s Theorem
+         [39]
+         )
+        </h6>
+        <div class="ltx_para" id="Thmtheorem1.p1">
+         <p class="ltx_p">
+          Let F be the joint cumulative distribution function of n random variables X1,X2,…,Xn.
+Let the corresponding marginal cumulative distribution functions of the random variable be F1⁢(x1),F2⁢(x2),…,Fn⁢(xn).
+Then, if the marginal functions are continuous, there exists a unique copula C, such that
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            F⁢(x1,…,xn)=C⁢[F1⁢(x1),…,Fn⁢(xn)].
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (1)
+            </span>
+           </td>
+          </tr>
+         </table>
+        </div>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Furthermore, if the distributions are continuous,
+the multivariate dependency structure and the marginals
+might be separated, and the copula can be considered
+independent of the marginals
+         [21, 32]
+         .
+Therefore, the copula does not have requirements on the marginal distributions,
+and any arbitrary marginals can be combined and their dependency structure
+can be modeled using the copula. The inverse of Sklar’s Theorem is also true in the following:
+        </p>
+       </div>
+       <div class="ltx_theorem ltx_theorem_corollary" id="Thmcorollary1">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Corollary 1
+         </span>
+        </h6>
+        <div class="ltx_para" id="Thmcorollary1.p1">
+         <p class="ltx_p">
+          If there exists a copula C:(0,1)n and marginal cumulative distribution functions F1⁢(x1),F2⁢(x2),…,Fn⁢(xn),
+then C⁢[F1⁢(x1),…,Fn⁢(xn)] defines a multivariate cumulative distribution function.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Semiparametric Gaussian Copula Models
+       </h3>
+       <div class="ltx_subsubsection" id="S3.SS2.SSSx1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         The Non-Parametric Estimation
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSSx1.p1">
+         <p class="ltx_p">
+          We formulate the copula regression model as follows. Assume we have
+          n
+          random variables
+of text features
+          X1,X2,…,Xn
+          . The problem is that text features are sparse,
+so we need to perform nonparametric kernel density estimation to smooth out the distribution of each variable.
+Let
+          f1,f2,…,fn
+          be the unknown density, we are interested in deriving the shape
+of these functions.
+Assume we have
+          m
+          samples,
+the kernel density estimator can be defined as:
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E2">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            f^h⁢(x)
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =1m⁢∑i=1mKh⁢(x-xi)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (2)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E3">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =1m⁢h⁢∑i=1mK⁢(x-xih)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (3)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          Here,
+          K⁢(⋅)
+          is the kernel function, where in our case, we use the Box kernel
+          K⁢(z)
+          :
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E4">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            K⁢(z)
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =12,|z|≤1,
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (4)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E5">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =0,|z|&gt;1.
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (5)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          Comparing to the Gaussian kernel and other kernels,
+the Box kernel is simple, and computationally inexpensive.
+The parameter
+          h
+          is the bandwidth for smoothing
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx1.p2">
+         <p class="ltx_p">
+          Now, we can derive the empirical cumulative distribution functions
+          F^X1⁢(f^1⁢(X1)),F^X2⁢(f^2⁢(X2)),…,F^Xn⁢(f^n⁢(Xn))
+          of the smoothed covariates,
+as well as the dependent variable
+          y
+          and its CDF
+          F^y⁢(f^⁢(y))
+          . The
+empirical cumulative distribution functions are defined as:
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx4">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            F^(ν)=1m∑i=1m𝐈{xi≤ν}
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (6)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where
+          𝐈⁢{⋅}
+          is the indicator function, and
+          ν
+          indicates the current value that we are evaluating.
+Note that the above step is also known as
+          probability integral transform
+          [11]
+          ,
+which allows us to convert any given continuous distribution to random variables having a uniform distribution. This is of crucial importance to modeling text data:
+instead of using the classic bag-of-words representation that uses raw counts,
+we are now working with uniform marginal CDFs,
+which helps coping with the overfitting issue due to noise and data sparsity.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSSx2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         The Parametric Copula Estimation
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSSx2.p1">
+         <p class="ltx_p">
+          Now that we have obtained the marginals, and
+then the joint distribution can be constructed by applying the copula function that
+models the stochastic dependencies among marginal CDFs:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx2.p2">
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx5">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            F^⁢(f^1⁢(X1),…,f^1⁢(Xn),f^⁢(y))
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (7)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E8">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =C⁢[F^X1⁢(f^1⁢(X1)),…,F^Xn⁢(f^n⁢(Xn)),F^y⁢(f^y⁢(y))]
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (8)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          In this work, we apply the parametric Gaussian copula to model the correlations among the text features and the label.
+Assume
+          xi
+          is the smoothed version of random variable
+          Xi
+          ,
+and
+          y
+          is the smoothed label, we have:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx2.p3">
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx6">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E9">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            F⁢(x1,…,xn,y)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (9)
+            </span>
+           </td>
+          </tr>
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E10">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+           </td>
+           <td class="ltx_td ltx_align_left">
+            =ΦΣ(Φ-1[Fx1(x1)],…,,Φ-1[Fxn(xn)],Φ-1[Fy(y)])
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (10)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where
+          ΦΣ
+          is the joint cumulative distribution function of a multivariate Gaussian
+with zero mean and
+          Σ
+          variance.
+          Φ-1
+          is the inverse CDF of a standard Gaussian.
+In this parametric part of the model, the parameter estimation boils down
+to the problem of learning the covariance matrix
+          Σ
+          of this Gaussian copula.
+In this work, we perform standard maximum likelihood estimation
+for the
+          Σ
+          matrix.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx2.p4">
+         <p class="ltx_p">
+          To calibrate the
+          Σ
+          matrix, we make use of the power of randomness:
+using the initial
+          Σ
+          from MLE, we generate random samples
+from the Gaussian copula, and then concatenate previously generated
+joint of Gaussian inverse marginal CDFs with the newly generated random copula numbers,
+and re-estimate using MLE to derive the final adjusted
+          Σ
+          .
+Note that the final
+          Σ
+          matrix has to be symmetric and positive definite.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSSx3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Computational Complexity
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSSx3.p1">
+         <p class="ltx_p">
+          One important question regarding the proposed semiparametric Gaussian copula
+model is the corresponding computational complexity.
+This boils down to the estimation of the
+          Σ^
+          matrix
+          [27]
+          :
+one only needs to calculate the correlation coefficients of
+          n⁢(n-1)/2
+          pairs of random variables. Christensen
+          [8]
+          shows that sorting and balanced binary trees can be used to
+calculate the correlation coefficients with complexity of
+          O⁢(n⁢log⁡n)
+          .
+Therefore, the computational complexity of MLE for the proposed model
+is
+          O⁢(n⁢log⁡n)
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSSx4">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Efficient Approximate Inference
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSSx4.p1">
+         <p class="ltx_p">
+          In this regression task, in order to perform exact inference of the conditional probability distribution
+          p(Fy(y)|Fx1(x1),…,Fxn(xn))
+          , one needs to solve the mean response
+          𝐄^(Fy(y)|Fx1(x1),…,Fx1(x1))
+          from a joint distribution of high-dimensional Gaussian copula.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx4.p2">
+         <p class="ltx_p">
+          Assume in the simple bivariate case of Gaussian copula regression,
+the covariance matrix
+          Σ
+          is:
+         </p>
+         Σ=[Σ11Σ12Σ22]
+         <p class="ltx_p">
+          We can easily derive the conditional density that can be used to calculate
+the expected value of the CDF of the label:
+         </p>
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx7">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E11">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            C(Fy(y)|Fx1(x1);Σ)=1|Σ22-Σ12T⁢Σ11-1⁢Σ12|12exp(-12δT([Σ22-Σ12TΣ11-1Σ12]-1-𝐈)δ)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (11)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where
+          δ=Φ-1⁢[Fy⁢(y)]-Σ12T⁢Σ11-1⁢Φ-1⁢[Fx1⁢(x1)]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx4.p3">
+         <p class="ltx_p">
+          Unfortunately, the exact inference can be intractable in the multivariate case, and
+approximate inference, such as Markov Chain Monte Carlo sampling
+          [15, 34]
+          is often used for posterior inference.
+In this work, we propose an efficient sampling method to derive
+          y
+          given the text features —
+we sample
+          Fy⁢(y)
+          s.t. it maximizes the joint high-dimensional Gaussian copula density:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx4.p4">
+         <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx8">
+          <tr class="ltx_equation ltx_align_baseline" id="S3.E12">
+           <td class="ltx_eqn_center_padleft">
+           </td>
+           <td class="ltx_td ltx_align_right">
+            Fy⁢(y)^≈arg⁢maxFy⁢(y)∈(0,1)⁡1det⁡Σ⁢exp⁡(-12⁢ΔT⋅(Σ-1-𝐈)⋅Δ)
+           </td>
+           <td class="ltx_eqn_center_padright">
+           </td>
+           <td class="ltx_align_middle ltx_align_right" rowspan="1">
+            <span class="ltx_tag ltx_tag_equation">
+             (12)
+            </span>
+           </td>
+          </tr>
+         </table>
+         <p class="ltx_p">
+          where
+         </p>
+         Δ=(Φ-1⁢(Fx1⁢(x1))⋮Φ-1⁢(Fxn⁢(xn))Φ-1⁢(Fy⁢(y)))
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSSx4.p5">
+         <p class="ltx_p">
+          Again, the reason why we perform approximated inference
+is that: exact inference in the high-dimensional Gaussian copula density is non-trivial,
+and might not have analytical solutions,
+but approximate inference using maximum density sampling from the Gaussian copula
+significantly relaxes the complexity of inference.
+Finally, to derive
+          y^
+          , the last step is to compute the inverse CDF of
+          Fy⁢(y)^
+          .
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Algorithmic Implementation
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The algorithmic implementation of our semiparametric
+Gaussian copula text regression model is shown in Algorithm
+         3.3
+         .
+Basically, the algorithm can be decomposed into four parts:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Perform nonparametric Box kernel density estimates of the covariates and the dependent variable for smoothing.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Calculate the empirical cumulative distribution functions of the smoothed random variables.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Estimate the parameters (covariance
+            Σ
+            ) of the Gaussian copula.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            Infer the predicted value of the dependent variable by sampling the Gaussian copula probability density function.
+           </p>
+          </div>
+         </li>
+        </ul>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         [t]
+         A Semi-parametric Gaussian Copula Model Based Text Regression Algorithm
+
+Given:
+(1) training data (X(t⁢r), y→(t⁢r));
+(2) testing data (X(t⁢e), y→(t⁢e));
+\STATELearning:
+i=1→n dimensions
+Xi(t⁢r)′←BoxKDE(Xi(t⁢r),Xi(t⁢r));
+Ui(t⁢r)←E⁢m⁢p⁢i⁢r⁢i⁢c⁢a⁢l⁢C⁢D⁢F⁢(Xi(t⁢r)′);
+Xi(t⁢e)′←BoxKDE(Xi(t⁢r),Xi(t⁢e));
+Ui(t⁢e)←E⁢m⁢p⁢i⁢r⁢i⁢c⁢a⁢l⁢C⁢D⁢F⁢(Xi(t⁢e)′);
+\STATEy(t⁢r)′←BoxKDE(y(t⁢r),y(t⁢r));
+v(t⁢r)←E⁢m⁢p⁢i⁢r⁢i⁢c⁢a⁢l⁢C⁢D⁢F⁢(y(t⁢r)′);
+Z(t⁢r)←G⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢I⁢n⁢v⁢e⁢r⁢s⁢e⁢C⁢D⁢F⁢([U(t⁢r)⁢v(t⁢r)]);
+Σ^←C⁢o⁢r⁢r⁢e⁢l⁢a⁢t⁢i⁢o⁢n⁢C⁢o⁢e⁢f⁢f⁢i⁢c⁢i⁢e⁢n⁢t⁢s⁢(Z(t⁢r));
+r←M⁢u⁢l⁢t⁢i⁢V⁢a⁢r⁢i⁢a⁢t⁢e⁢G⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢R⁢a⁢n⁢d⁢N⁢u⁢m⁢(0,Σ^,n);
+Z(t⁢r)′=G⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢C⁢D⁢F⁢(r);
+Σ^←C⁢o⁢r⁢r⁢e⁢l⁢a⁢t⁢i⁢o⁢n⁢C⁢o⁢e⁢f⁢f⁢i⁢c⁢i⁢e⁢n⁢t⁢s⁢([Z(t⁢r)⁢Z(t⁢r)′]);
+\STATEInference:
+j=1→m instances
+maxj←0;
+Y^′=0;
+k=0.01→1
+Z(t⁢e)←G⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢I⁢n⁢v⁢e⁢r⁢s⁢e⁢C⁢D⁢F⁢([U(t⁢e)⁢k]);
+pj=M⁢u⁢l⁢t⁢i⁢V⁢a⁢r⁢i⁢a⁢t⁢e⁢G⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢P⁢D⁢F⁢(Z(t⁢e),Σ^)∏nG⁢a⁢u⁢s⁢s⁢i⁢a⁢n⁢P⁢D⁢F⁢(Z(t⁢e));
+pj≥maxj
+maxj=pj;
+Y^′=k;
+\ENDFOR\STATEy^←I⁢n⁢v⁢e⁢r⁢s⁢e⁢C⁢D⁢F⁢(y→(t⁢r),Y^′);
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Datasets
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We use three datasets
+        of transcribed quarterly earnings calls from the U.S. stock market,
+focusing on the period of the Great Recession.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        The
+        pre-2009
+        dataset consists of earnings calls from the period of 2006-2008,
+which includes calls from the beginning of economic downturn, the outbreak of the subprime mortgage crisis,
+and the epidemic of collapses of large financial institutions.
+The
+        2009
+        dataset contains earnings calls from the year of 2009,
+which is a period where the credit crisis spreads globally,
+and the Dow Jones Industrial Average hit the lowest since the beginning
+of the millennium. The
+        post-2009
+        dataset includes earnings calls from the period of
+2010 to 2013, which concerns the recovery of global economy.
+The detailed statistics is shown in Table
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Note that unlike the standard news corpora in NLP
+or the SEC-mandated financial report,
+Transcripts of earnings call is a very special genre of text.
+For example, the length of WSJ documents
+is typically one to three hundreds
+        [19]
+        ,
+but the averaged document length of our three earnings calls datasets is 7677.
+Depending on the amount of interactions in the question answering session,
+the complexities of the calls vary.
+This mixed form of formal statement and informal speech brought difficulties to machine learning
+algorithms.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Measuring Financial Risks
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Volatility is an important measure of the financial risk,
+and in this work, we focus on predicting the future volatility following the
+earnings teleconference call.
+For each earning call, we have a week of stock prices of the company
+after the day on which the earnings call is made.
+The
+        Return
+        of Day
+        t
+        is:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx9">
+        <tr class="ltx_equation ltx_align_baseline" id="S5.E13">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          rt=xtxt-1-1
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (13)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        xt
+        represents the share price of Day
+        t
+        , and the
+        Measured Stock Volatility
+        from Day
+        t
+        to
+        t+τ
+        :
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx10">
+        <tr class="ltx_equation ltx_align_baseline" id="S5.E14">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          y(t,t+τ)=∑i=0τ(rt+i-r¯)2τ
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (14)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Using the stock prices, we can use the equations above to calculate the measured stock volatility after the earnings call,
+which is the standard measure of risks in finance, and the dependent variable
+        y
+        of our predictive task.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Experimental Setup
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         In all experiments throughout this section, we use 80-20 train/test splits on all three datasets.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S6.SS1.SSSx1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Feature sets:
+        </h4>
+        <div class="ltx_para" id="S6.SS1.SSSx1.p1">
+         <p class="ltx_p">
+          We have extracted lexical, named entity, syntactic, and frame-semantics
+features, most of which have been shown to perform well in previous work
+          [45]
+          .
+We use the unigrams and bigrams to represent lexical features,
+and the Stanford part-of-speech tagger
+          [40]
+          to
+extract the lexicalized named entity and part-of-speech features.
+A probabilistic frame-semantics parser, SEMAFOR
+          [10]
+          ,
+is used to provide the FrameNet-style frame-level semantic annotations.
+For each of the five sets, we collect the top-100 most frequent features,
+and end up with a total of 500 features.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S6.SS1.SSSx2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Baselines:
+        </h4>
+        <div class="ltx_para" id="S6.SS1.SSSx2.p1">
+         <p class="ltx_p">
+          The baselines are standard squared-loss linear regression,
+linear kernel SVM, and non-linear (Gaussian) kernel SVM.
+They are all standard algorithms in regression problems,
+and have been shown to have outstanding performances
+in many recent text regression
+          [24, 5, 45, 42, 41]
+          .
+We use the Statistical Toolbox’s linear regression implementation in Matlab,
+and LibSVM
+          [6]
+          for training and testing the SVM models.
+The hyperparameter
+          C
+          in linear SVM, and the
+          γ
+          and
+          C
+          hyperparameters
+in Gaussian SVM are tuned on the training set using 10-fold cross-validation.
+Note that since the kernel density estimation in the proposed copula model is nonparametric,
+and we only need to learn the
+          Σ
+          in the Gaussian copula,
+there is no hyperparameters that need to be tuned.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S6.SS1.SSSx3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Evaluation Metrics:
+        </h4>
+        <div class="ltx_para" id="S6.SS1.SSSx3.p1">
+         <p class="ltx_p">
+          Spearman’s correlation
+          [20]
+          and Kendall’s tau
+          [23]
+          have been widely used in many regression problems in NLP
+          [1, 46, 42, 41]
+          ,
+and here we use them to measure the quality of predicted values
+          𝐲^
+          by comparing to the vector of ground truth
+          𝐲
+          . In contrast to Pearson’s correlation, Spearman’s correlation has no assumptions on the relationship
+of the two measured variables. Kendall’s tau is a nonparametric statistical metric that have shown
+to be inexpensive, robust, and representation independent
+          [26]
+          .
+We also use paired two-tailed t-test to measure the statistical significance between the best
+and the second best approaches.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Comparing to Various Baselines
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         In the first experiment, we compare the proposed semiparametric Gaussian copula regression model
+to three baselines on three datasets with all features. The detailed results are shown in Table
+         2
+         .
+On the
+         pre-2009
+         dataset, we see that the linear regression and linear SVM perform reasonably well,
+but the Gaussian kernel SVM performs less well, probably due to overfitting.
+The copula model outperformed all three baselines by a wide margin on this dataset with both metrics.
+Similar performances are also obtained in the
+         2009
+         dataset, where the result of linear SVM baseline falls behind.
+On the
+         post-2009
+         dataset, none of results from the linear and non-linear SVM models can match up with
+the linear regression model, but our proposed copula model still improves over all baselines by a large margin.
+Comparing to second-best approaches, all improvements obtained by the copula model are statistically significant.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.3
+        </span>
+        Varying the Amount of Training Data
+       </h3>
+       <div class="ltx_para" id="S6.SS3.p1">
+        <p class="ltx_p">
+         To understand the learning curve of our proposed copula regression model,
+we use the 25%, 50%, 75% subsets from the training data, and evaluate all four models.
+Figure
+         1
+         shows the evaluation results.
+From the experiments on the
+         pre-2009
+         dataset, we see that
+when the amount of training data is small (25%), both SVM models have obtained
+very impressive results.
+This is not surprising at all, because as max-margin models, soft-margin SVM
+only needs a handful of examples that come with nonvanishing coefficients (support vectors)
+to find a reasonable margin. When increasing the amount of training data to 50%,
+we do see the proposed copula model catches up quickly,
+and lead all baseline methods undoubtably at 75% training data.
+On the
+         2009
+         dataset, we observe very similar patterns.
+Interestingly, the proposed copula regression
+model has dominated all methods for both metrics throughout all proportions of the “post-2009” earnings calls dataset,
+where instead of financial crisis, the economic recovery is the main theme.
+In contrast to the previous two datasets, both linear and non-linear SVMs fail
+to reach reasonable performances on this dataset.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.4
+        </span>
+        Varying the Amount of Features
+       </h3>
+       <div class="ltx_para" id="S6.SS4.p1">
+        <p class="ltx_p">
+         Finally, we investigate the robustness of the proposed semiparametric Gaussian copula regression model by varying the amount of features in the covariate space. To do this, we sample equal amount of features from each feature set, and concatenate them into a feature vector. When increasing the amount of total features from 100 to 400, the results are shown in Figure
+         2
+         .
+On the
+         pre-2009
+         dataset, we see that the gaps between the best-perform copula model and the second-best linear regression model are consistent throughout all feature sizes.
+On the
+         2009
+         dataset, we see that the performance of Gaussian copula is aligned with the linear regression model
+in terms of Spearman’s correlation, where the former seems to perform better in terms of Kendall’s tau.
+Both linear and non-linear SVM models do not have any advantages over the proposed approach.
+On the
+         post-2009
+         dataset that concerns economic growth and recovery,
+the boundaries among all methods are very clear. The Spearman’s correlation for both SVM baselines
+is less than 0.15 throughout all settings, but copula model is able to achieve 0.4 when using 400 features.
+The improvements of copula model over squared loss linear regression model are increasing,
+when working with larger feature spaces.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.5
+        </span>
+        Qualitative Analysis
+       </h3>
+       <div class="ltx_para" id="S6.SS5.p1">
+        <p class="ltx_p">
+         Like linear classifiers, by “opening the hood” to the Gaussian copula
+regression model, one can examine features that exhibit high correlations
+with the dependent variable.
+Table
+         3
+         shows the top features that are positively correlated
+with the future stock volatility in the three datasets.
+On the top features from the “pre-2009” dataset, which primarily (82%) includes calls from 2008,
+we can clearly observe that the word “2008” has strong correlation with the financial risks.
+Interestingly, the phrase “third quarter” and its variations, not only play an important role in the model,
+but also highly correlated to the timeline of the financial crisis:
+the Q3 of 2008 is a critical period in the recession, where
+Lehman Brothers falls on the Sept. 15 of 2008, filing
+$613 billion of debt — the biggest bankruptcy in U.S. history
+         [29]
+         .
+This huge panic soon broke out in various financial institutions in the Wall Street.
+On the top features from “2009” dataset, again,
+we see the word “2008” is still prominent in predicting financial risks,
+indicating the hardship and extended impacts from the center of the economic crisis.
+After examining the transcripts, we found sentences like:
+“
+         …our specialty lighting business that we discontinued in the fourth quarter of 2008…
+         ”,
+“
+         …the exception of fourth quarter revenue which was $100,000 below our guidance target…
+         ”,
+and “
+         …to address changing economic conditions and their impact on our operations, in the fourth quarter we took the painful but prudent step of decreasing our headcount by about 5%…
+         ”,
+showing the crucial role that Q4 of 2008 plays in 2009 earnings calls.
+Interestingly, after the 2008-2009 crisis, in the recovery period,
+we have observed new words like “revenue”, indicating the “back-to-normal” trend of financial environment,
+and new features that predict financial volatility.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Discussions
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        In the experimental section, we notice that the proposed semiparametric Gaussian copula model
+has obtained promising results in various setups on three datasets in this text regression task.
+The main questions we ask are: how is the proposed model different from standard text regression/classification models?
+What are the advantages of copula-based models, and what makes it perform so well?
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        One advantage we see from the copula model is
+that it does not require any assumptions on the marginal distributions.
+For example, in latent Dirichlet allocation
+        [2]
+        ,
+the topic proportion of a document is always drawn from a
+        D⁢i⁢r⁢i⁢c⁢h⁢l⁢e⁢t⁢(α)
+        distribution. This is rather restricted, because the possible
+shapes from a
+        K-1
+        simplex of Dirichlet is always limited in some sense.
+In our copula model, instead of using some priors,
+we just calculate the empirical cumulative distribution function
+of the random variables, and model the correlation among them.
+This is extremely practical, because in many natural language processing tasks,
+we often have to deal with features that are extracted from many different domains and signals.
+By applying the
+        Probability Integral Transform
+        to raw features in the copula model,
+we essentially avoid comparing apples and oranges in the feature space,
+which is a common problem in bag-of-features models in NLP.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p3">
+       <p class="ltx_p">
+        The second hypothesis is about the semiparametirc parameterization,
+which contains the nonparametric kernel density estimation and the
+parametric Gaussian copula regression components. The benefit of
+a semiparametric model is that here we are not interested in
+performing completely nonparametric estimations, where the
+infinite dimensional parameters might bring intractability.
+In contrast, by considering the semiparametric case, we not only
+obtain some expressiveness from the nonparametric models,
+but also reduce the complexity of the task: we are
+only interested in the finite-dimensional components
+        Σ
+        in the Gaussian copula with
+        O⁢(n⁢log⁡n)
+        complexity,
+which is not as computationally difficult as the completely nonparametric cases.
+Also, by modeling the marginals and their correlations seperately,
+our approach is cleaner, easy-to-understand, and
+allows us to have more flexibility to model the uncertainty of data.
+Our pilot experiment also aligns with our hypothesis:
+when not performing the kernel density estimation part
+for smoothing out the marginal distributions,
+the performances dropped significantly when sparser
+features are included.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p4">
+       <p class="ltx_p">
+        The third advantage we observe is the power of modeling the covariance
+of the random variables. Traditionally, in statistics,
+independent and identically distributed (i.i.d) assumptions among the instances
+and the random variables are often used in various models,
+such that the correlations among the instances or the variables are often ignored.
+However, this might not be practical at all:
+in image processing, the “cloud” pixel of a pixel showing the blue sky of a picture
+are more likelihood to co-occur in the same picture;
+in natural language processing, the word “mythical”
+is more likely to co-occur with the word “unicorn”, rather than the word “popcorn”.
+Therefore, by modeling the correlations among marginal CDFs,
+the copula model has gained the insights on the dependency structures of the random variables,
+and thus, the performance of the regression task is boosted.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p5">
+       <p class="ltx_p">
+        In the future, we plan to apply the proposed approach to large datasets
+where millions of features and millions of instances are involved.
+Currently we have not experienced the difficulty when estimating
+the Gaussian copula model, but parallel methods might be needed to speedup learning
+when significantly more marginal CDFs are involved.
+The second issue is about overfitting.
+We see that when features are rather noisy,
+we might need to investigate regularized copula models to avoid this.
+Finally, we plan to extend the proposed approach to text classification
+and structured prediction problems in NLP.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

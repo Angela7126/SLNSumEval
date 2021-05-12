@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Flexibility and decoupling in Simple Temporal Networks.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction and background
+     </section-title>
+     <paragraph>
+      A scheduling problem arises whenever there is a set of temporal events whose starting times are subject to a number of temporal (and maybe other) constraints. Then we have to find suitable time points for these starting times such that all constraints are satisfied. Scheduling problems occur in many diverse application domains such as transportation, process industry, health, and education [1], [2], [3]. A solution to a scheduling problem is called a schedule and is usually given in the form of an assignment σ of starting times {a mathematical formula}σ(e)=te to events e.
+     </paragraph>
+     <paragraph>
+      Although this problem has attracted quite some research and many interesting scheduling problems have been investigated, we are not primarily interested in proposing a single fixed-time schedule as a solution to a scheduling problem. The first reason for this is the limited preservability of fixed-time schedules as assignments determined off-line prior to execution. During execution of the schedule, unforeseen disturbances may occur that prevent certain events from starting at their predetermined times. Simply delaying such events is typically not an option, as this may in turn affect other events, and could ultimately violate a given deadline. Hence, even a single disturbance occurring during execution of a schedule could be a reason to modify it, or to compute another schedule from scratch. The problem with such on-line modifications is that we often do not have enough time to compute a new schedule when a disturbance occurs. Hence, it is better to be prepared for possible changes by using flexible schedules. There already exist quite a number of proposals for scheduling techniques that incorporate some form of flexibility in the final schedule [4], [5]. Most of them, however, ensure flexibility in the off-line schedule-construction phase, but one still needs to apply a real-time transformation of these schedules in order to ensure their efficient execution [6]. In order to avoid such a time-critical transformation process we propose to compute an interval schedule, that is, an assignment of time intervals to events, such that for every event e one can freely choose a specific time point t in its interval, without risking any violation of scheduling constraints. Intuitively, such an interval for event e indicates the flexibility we have with respect to scheduling e.
+     </paragraph>
+     <paragraph>
+      Another reason to look for alternatives to fixed-time schedules is the presence of temporal events that are not under direct control of the scheduling agent (see e.g. [7], [8], [9]). It may be known only that starting times and/or ending times of these events take place in a given interval; the exact times are unknown or hard to predict. Even if we would come up with an exact schedule, it would only be a partial assignment of time points to events: We have to make sure that the schedule will not violate constraints, for any realization of the events not under our control. Here, too, it is quite natural to assign time intervals to events not under our control.
+     </paragraph>
+     <paragraph>
+      Fortunately, we are not the first ones to propose intervals instead of fixed times for scheduling events. For example, some authors (see e.g. [10], [11], [4], [9]) already pointed out that if a scheduling formalism enjoys decomposability, we can use this property to achieve some form of flexibility by assigning an interval of time points to a certain event. Here, decomposability refers to the property of a scheduling system that for every partial schedule that satisfies the scheduling constraints, there is always a total schedule extending it that will satisfy the constraints. In particular, it implies that if for a certain event e there is an interval {a mathematical formula}Ie of time points {a mathematical formula}ve that can be chosen as possible starting times for e, we are sure to be able to extend the partial schedule {a mathematical formula}σ(e)=ve to a total schedule. Since this idea can be used starting from any event e, some authors have suggested to use these intervals {a mathematical formula}Ie of time points to achieve a flexible schedule for such a system. We will discuss this idea in more detail below. Here, it suffices to remark that this intuitively appealing notion of decomposability is not sufficient to construct acceptable flexible schedules, for the reason that decomposability does not imply that given intervals are independent: Although decomposability allows one to determine the flexibility of two individual events taken separately, it does not allow us to infer the flexibility of these two events simultaneously.
+     </paragraph>
+     <paragraph>
+      We concentrate on the Simple Temporal Network (STN) [10], [11], as the main representation mechanism for (temporal) scheduling problems, and we propose a new method for determining the flexibility inherent in an STN. Our approach enables us to find scheduling intervals {a mathematical formula}Ie for the events e in an STN, in such a way that these intervals are independent: for every event e, {a mathematical formula}Ie indicates the choice for a time point to be selected without any consequence for the choice of time points for other events. This notion of independence allows us to define a flexibility metric for STNs by taking the sum of the sizes of the individual intervals determined. As we will show, a metric based on this notion of flexibility can be computed efficiently and avoids some of the disadvantages of existing metrics, which are mainly based on the above mentioned notion of decomposability.
+     </paragraph>
+     <paragraph>
+      Our approach to flexibility of scheduling systems has a bearing on problems in scheduling with uncertainty and distributed scheduling, too. For scheduling with uncertainty, we concentrate on Simple Temporal Networks with Uncertainty (STNU) [12], [8], [13] and show that our approach to flexibility can be used in a very simple and straightforward way to solve the so-called strong controllability problem in STNU's.
+     </paragraph>
+     <paragraph>
+      In distributed scheduling we have a collection of constrained events, where these events are distributed over multiple actors. Typically, each such actor would like to schedule its events independently of the others. The problem of course is that each of these schedules, although locally consistent, can easily violate constraints pertaining to events that belong to different actors. In such cases we have to decompose the scheduling problem into subproblems for the individual agents in such a way that whatever local schedule is constructed by each of the individual actors, the merging of all these individual schedules results in a feasible solution of the total scheduling problem. One method that has been applied to fairly general scheduling formalisms is known as temporal decoupling[14], [15]. Here, the original scheduling problem is decomposed into a number of subproblems, such that any solution (i.e., schedule) to a subproblem can be merged with any solution of the other subproblems, to constitute a feasible schedule for the total problem. As has been pointed out by various authors [14], [15], [16], [17], [18], when using existing flexibility metrics, applying temporal decoupling may seriously affect the total flexibility of the system. The question then arises, how we could minimize this flexibility loss due to temporal decoupling. As we will prove, using our flexibility metric, we can provide an optimal solution to this decoupling problem and – contrary to popular belief – even show that temporal decoupling does not imply any loss of flexibility of the original system.
+     </paragraph>
+     <paragraph>
+      Our approach to address these problems is the following. After a discussion of existing metrics for characterizing the flexibility of STNs, we show that these metrics are not able to capture dependencies between events, and generally overestimate the flexibility of scheduling systems. After a discussion of some rationality postulates for flexibility of an STN, we introduce a new flexibility metric using a transformation from a given STN S into a new STN {a mathematical formula}S′ such that dependencies between time points are resolved in {a mathematical formula}S′. By using an LP-approach to find independent intervals for schedules in {a mathematical formula}S′, we obtain the flexibility of the original system S. We show that in case of STNs this flexibility metric can be computed in polynomial time and offers the possibility to adapt existing schedules in {a mathematical formula}O(1) time. Next, we discuss the strong controllability problem in STNUs and we show how to solve some generalized versions of this problem in a straightforward way. Finally, we deal with the problem of finding an optimal temporal decoupling for a given STN. We show that the method we use to specify the flexibility of an STN allows us to compute a decoupling for an STN. This decoupling is optimal: it does not induce any loss of flexibility due to decoupling and can be obtained in {a mathematical formula}O(k)-time (if the flexibility of the system has already been computed), where k is the number of agents involved in the decoupling. This result shows that temporal decoupling can be computed both efficiently and without loss of flexibility.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      Simple Temporal Networks (STNs) [10], [11], offer a convenient framework for analyzing temporal aspects of scheduling problems, distinguishing between a set of temporal variables and linear difference constraints between them.
+     </paragraph>
+     <paragraph>
+      An STN is a pair {a mathematical formula}S=(T,C), where
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}T={t0,t1,…,tn} is a set of temporal variables (events) and
+      </list-item>
+      <list-item label="•">
+       C is a finite set of binary constraints on T, each constraint having the form {a mathematical formula}tj−ti≤cij, for some real number {a mathematical formula}cij.
+      </list-item>
+     </list>
+     <paragraph>
+      If both {a mathematical formula}tj−ti≤cij and {a mathematical formula}ti−tj≤cji are specified, we will sometimes use the more compact notations {a mathematical formula}−cji≤tj−ti≤cij or {a mathematical formula}tj−ti∈[−cji,cij].
+     </paragraph>
+     <paragraph>
+      A solution to S is a schedule for S, that is, a function {a mathematical formula}σ:T→R, assigning a real value (time-point) to each event in T, such that all constraints in C are satisfied. If such a schedule exists, we say that the STN is consistent. Without loss of generality, in the remainder of the paper, we simply assume that an STN is consistent.{sup:1}
+     </paragraph>
+     <paragraph>
+      In order to be able to express absolute time constraints, the time-point {a mathematical formula}t0∈T, also denoted by z, is used. It represents a fixed reference point on the timeline, and is assigned the value 0, as usual.
+     </paragraph>
+     <paragraph label="Example 1">
+      Often we represent an STN {a mathematical formula}S=(T,C) as a directed labeled graph {a mathematical formula}GS=(TS,ES,lS) where the vertices {a mathematical formula}TS represent events in T and for every constraint {a mathematical formula}tj−ti≤cij in C there is a directed edge {a mathematical formula}(ti,tj)∈ES labeled by {a mathematical formula}lS(ti,tj)=cij. In this paper, we will use both representations interchangeably and will not make a distinction between the nodes in {a mathematical formula}TS and the events in T, nor between the constraints in C and the labeled edges in {a mathematical formula}ES. In Fig. 1 two STNs {a mathematical formula}S1 and {a mathematical formula}S2 are presented, both specifying three events (plus the reference point {a mathematical formula}z=t0). From these graphs we can derive the specification of the associated STNs {a mathematical formula}S1=(T1,C1) and {a mathematical formula}S2=(T2,C2) as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} Every assignment {a mathematical formula}σ1(ti)=vi∈[0,5], is a schedule for {a mathematical formula}S1. On the other hand, a schedule {a mathematical formula}σ2 for {a mathematical formula}S2 has to satisfy {a mathematical formula}0≤σ2(t1)≤σ2(t2)≤σ2(t3)≤5.
+     </paragraph>
+     <paragraph>
+      The graph representation is very helpful in finding tighter constraints implied by the set C of constraints, interpreting the weights {a mathematical formula}cij on the arcs as lengths of the path from {a mathematical formula}ti to {a mathematical formula}tj. For example, if C contains the constraints {a mathematical formula}tj−ti≤10 and {a mathematical formula}tk−tj≤15, then there exists a path from {a mathematical formula}ti via {a mathematical formula}tj to {a mathematical formula}tk having a length {a mathematical formula}10+15=25. This makes{a mathematical formula} an implied constraint, even though C might not contain a constraint limiting {a mathematical formula}tk−ti.
+     </paragraph>
+     <paragraph>
+      Using a shortest path interpretation of the STN {a mathematical formula}S=(T,C), there is an efficient method to find all tightest constraints implied by C, by searching for all shortest paths between the time points in T using e.g. Floyd and Warshall's all-pairs shortest paths algorithm [19]. These tightest constraints are represented as the elements of the {a mathematical formula}n×ndistance matrix{a mathematical formula}DS, containing for every pair of time-point variables {a mathematical formula}ti and {a mathematical formula}tj the length {a mathematical formula}DS[i,j] of the shortest path from {a mathematical formula}ti to {a mathematical formula}tj in the distance graph. If {a mathematical formula}DS contains the entries {a mathematical formula}DS[i,j] and {a mathematical formula}DS[j,i], then{a mathematical formula}{a mathematical formula} are the strongest constraints implied by C with respect to the temporal difference between {a mathematical formula}tj and {a mathematical formula}ti.
+     </paragraph>
+     <paragraph>
+      In particular, the first row and the first column of the distance matrix {a mathematical formula}DS contain useful information about the possible schedules for S. Note that the first row of {a mathematical formula}DS contains all entries {a mathematical formula}DS[0,i] such that {a mathematical formula}ti−z=ti≤DS[0,i]. This means that any schedule for S should satisfy {a mathematical formula}ti≤DS[0,i]. Hence, {a mathematical formula}DS[0,i] is {a mathematical formula}ti's latest starting time, denoted by {a mathematical formula}lst(ti) and the assignment {a mathematical formula}σmax(t)=lst(t), {a mathematical formula}∀t∈T, is the maximum schedule for S.
+     </paragraph>
+     <paragraph>
+      Analogously, the first column of the distance matrix contains entries {a mathematical formula}DS[j,0] such that {a mathematical formula}z−tj≤DS[j,0], i.e., {a mathematical formula}tj−z=tj≥−DS[j,0]. So {a mathematical formula}−DS[j,0] is {a mathematical formula}tj's earliest starting time, denoted by {a mathematical formula}est(tj). The assignment {a mathematical formula}σmin(t)=est(t), {a mathematical formula}∀t∈T, is the minimum schedule for S.
+     </paragraph>
+     <paragraph>
+      It is well-known that the distance matrix {a mathematical formula}DS for a given STN S can be computed in low-order polynomial ({a mathematical formula}O(n3)) time [11].{sup:2} Hence, using the STN-machinery we can find earliest and latest starting times for events efficiently.
+     </paragraph>
+     <paragraph>
+      The following proposition is a restatement of Theorem 3.3 in [10] and essentially states that every STN is decomposable via its distance graph {a mathematical formula}DS:
+     </paragraph>
+     <paragraph label="Proposition 1">
+      Let{a mathematical formula}S=(T,C)be an STN and{a mathematical formula}DSits distance matrix. For{a mathematical formula}i=1,…,n, let{a mathematical formula}est(ti)=−DS[i,0]and{a mathematical formula}lst(ti)=DS[0,i]. Then, for every schedule σ for S, and every{a mathematical formula}t∈T, it holds that{a mathematical formula}σ(t)∈[est(t),lst(t)]. Moreover, given any{a mathematical formula}t∈Tand{a mathematical formula}v∈[est(t),lst(t)], there exists a schedule σ for S such that{a mathematical formula}σ(t)=v.{sup:3}
+     </paragraph>
+     <paragraph>
+      Since we want to solve scheduling problems using STNs, we assume that for each {a mathematical formula}t∈T there is a finite interval for scheduling it. In particular this means that for each STN {a mathematical formula}S=(T,C) we assume that for all {a mathematical formula}t∈T, {a mathematical formula}t≥z holds and there exists a finite constant (horizon) {a mathematical formula}hS such that for all {a mathematical formula}t∈T it holds that {a mathematical formula}t≤hS. This avoids the use of unbounded time intervals such as {a mathematical formula}−∞≤ti−tj≤∞.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Flexibility of an STN
+     </section-title>
+     <paragraph>
+      Intuitively, the flexibility of an STN refers to the amount of freedom we have in assigning times to events in T that satisfy the constraints. We defined a fixed schedule σ for an STN {a mathematical formula}S=(T,C) as an assignment {a mathematical formula}σ:T→R satisfying all the constraints in C. Such a schedule, however, is just some fixed assignment from a set of possible assignments satisfying the constraints. Therefore, a single fixed schedule does not give any indication of the flexibility we have in assigning values to the variables in the STN it was computed for. We are interested in other solution types that do give us such an indication.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Using earliest and latest starting times: the naive choice
+      </section-title>
+      <paragraph>
+       If we want flexibility to indicate our freedom of choice, then one option for defining the flexibility for scheduling event t is to use the difference {a mathematical formula}flexN(t)=lst(t)−est(t).{sup:4} The flexibility of an STN S could then be defined as{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 2">
+       Obviously, {a mathematical formula}flexN(S) can be computed in {a mathematical formula}O(n3) time. Moreover, for each individual t, {a mathematical formula}flexN(t) gives an exact measure of the flexibility in scheduling event t, since by decomposability (Proposition 1), for every choice of a value {a mathematical formula}v∈[est(t),lst(t)] there exists a schedule σ for S such that {a mathematical formula}σ(t)=v. Using the sum {a mathematical formula}flexN(S) of these flexibilities, however, has a serious disadvantage, due to dependencies that might exist between starting times of events. To see this, consider the following example: Consider again the STNs {a mathematical formula}S1 and {a mathematical formula}S2 in Fig. 1, where {a mathematical formula}S1 specifies the concurrent execution of {a mathematical formula}k=3 events within 5 time units, while {a mathematical formula}S2 specifies the sequential execution of {a mathematical formula}k=3 consecutive events, i.e., {a mathematical formula}t3 should not occur before {a mathematical formula}t2, {a mathematical formula}t2 should not occur before {a mathematical formula}t1, and all events should occur within 5 time units.Note that both in {a mathematical formula}S1 and in {a mathematical formula}S2, for each {a mathematical formula}i∈{1,2,3}, {a mathematical formula}est(ti)=0 and {a mathematical formula}lst(ti)=5. Hence,{a mathematical formula} So, according to the measure {a mathematical formula}flexN, {a mathematical formula}S1 and {a mathematical formula}S2 have the same flexibility, which, of course, is counterintuitive: For each event {a mathematical formula}ti in {a mathematical formula}S1 we can determine its starting time between 0 and 5 independently from the other events. So, the total flexibility, expressed as the amount of choice we have in selecting a starting time for an event, equals {a mathematical formula}5×3=15, which corresponds to the value as specified by {a mathematical formula}flexN(S1).The choice for the starting time of an event {a mathematical formula}ti in {a mathematical formula}S2, however, may influence the choice of the starting time of the next event {a mathematical formula}ti+1. More precisely, if {a mathematical formula}v1,v2,v3 are the latest starting times for the events {a mathematical formula}t1,t2 and {a mathematical formula}t3, respectively, in {a mathematical formula}S2, it is clear that{a mathematical formula} Hence, the flexibility of {a mathematical formula}t1 is {a mathematical formula}v1−0, the flexibility of {a mathematical formula}t2 is {a mathematical formula}v2−v1, and the flexibility of {a mathematical formula}t3 is {a mathematical formula}5−v2. So, the total intuitive flexibility of {a mathematical formula}S2 equals{a mathematical formula}Therefore, the flexibility of {a mathematical formula}S2 should come out as only {a mathematical formula}13 of the flexibility of {a mathematical formula}S1. Generalizing {a mathematical formula}S1 and {a mathematical formula}S2 to systems containing k concurrent and k sequential events, respectively, we see that the freedom to schedule in {a mathematical formula}S1 equals {a mathematical formula}flex(S1)=5×k, while the flexibility of {a mathematical formula}S2 is independent of k and remains {a mathematical formula}flex(S2)=5. Hence, if k goes to infinity, the ratio of the more intuitive flexibilities of {a mathematical formula}S1 and {a mathematical formula}S2 goes to infinity as well:{a mathematical formula} while their ratio according to {a mathematical formula}flexN is exactly 1:{a mathematical formula} We conclude that in this case, due to dependencies between events, the {a mathematical formula}flexN metric seriously overestimates the flexibility of STNs such as {a mathematical formula}S2.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Improving the naive metric: using upper and lower bounds for every pair of events
+      </section-title>
+      <paragraph>
+       One reason {a mathematical formula}flexN fails is that it is not able to deal with dependencies between timed events. Therefore, to overcome this disadvantage, we might incorporate information about the dependencies between two events. This was proposed in definitions of flexibility by Hunsberger [15] and others [5], [21]. Hunsberger defined his flexibility metric, which we will denote by {a mathematical formula}flexH(S), by taking into account not only the apparent flexibility {a mathematical formula}lst(t)−est(t) of every event t, but also the flexibility between pairs of events {a mathematical formula}ti and {a mathematical formula}tj. Since the distance matrix {a mathematical formula}DS contains the entries {a mathematical formula}DS[i,j] and {a mathematical formula}DS[j,i] such that{a mathematical formula} are the strongest constraints implied by C w.r.t. the temporal difference {a mathematical formula}tj−ti, we can define the flexibility associated with this difference {a mathematical formula}tj−ti as the length {a mathematical formula}DS[i,j]+DS[j,i] of the corresponding interval{sup:5}:{a mathematical formula} Hence, the flexibility of an STN S can be defined by taking {a mathematical formula}flexN(S) and adding to it the sum of all these flexibilities {a mathematical formula}flexH(ti,tj) for every distinct pair {a mathematical formula}(ti,tj) of time-points,{sup:6} i.e.,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Note that if there is a dependency between two events {a mathematical formula}ti and {a mathematical formula}tj, this will result in a lower value of {a mathematical formula}DS[i,j]+DS[j,i]. Hence, dependencies among events will have an influence on {a mathematical formula}flexH and in this way we might be able to discriminate between dependent and independent events.
+      </paragraph>
+      <paragraph>
+       As it turns out, indeed, this metric is an improvement w.r.t. the naive metric {a mathematical formula}flexN. But, as the next example shows, {a mathematical formula}flexH also has serious shortcomings:
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider again the STNs {a mathematical formula}S1 and {a mathematical formula}S2 in Fig. 1. According to {a mathematical formula}flexH, the flexibility of {a mathematical formula}S1 equals{a mathematical formula} while the flexibility of {a mathematical formula}S2 equals{a mathematical formula} So, according to the Hunsberger metric {a mathematical formula}flexH, {a mathematical formula}S2 has a flexibility equal to {a mathematical formula}23 of the flexibility of {a mathematical formula}S1. This seems to be an improvement with respect to the previous flexibility metric {a mathematical formula}flexN, which assigned the same flexibility to {a mathematical formula}S1 and {a mathematical formula}S2. However, generalizing {a mathematical formula}S1 and {a mathematical formula}S2 to systems containing k concurrent and k sequential events, respectively, we observe that{a mathematical formula} while{a mathematical formula} This means that for larger values of k, the ratio between {a mathematical formula}flexH(S1) and {a mathematical formula}flexH(S2) will converge to 2:{a mathematical formula} The ratio of the real flexibilities of {a mathematical formula}S1 and {a mathematical formula}S2 (see Eqs. (1) and (2) in Example 2), however, should go to infinity if k goes to infinity. We conclude that this metric is also not able to capture the dependencies between the flexibilities of events in a satisfactory way.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Rationality postulates: towards a suitable flexibility metric
+      </section-title>
+      <paragraph>
+       In this section we first analyze the shortcomings of the metrics {a mathematical formula}flexN(S) and {a mathematical formula}flexH(S) and we characterize the properties a real flexibility metric of an STN should have. Based upon this analysis, we derive a suitable flexibility metric flex and show that this metric can be computed in an efficient way.
+      </paragraph>
+      <paragraph>
+       To analyze the shortcomings of {a mathematical formula}flexN we follow a rather conventional approach by stating some simple rationality postulates[22] characterizing {a mathematical formula}flexN. This characterization enables us to remedy these shortcomings by introducing an additional “independence” postulate capturing the idea that the flexibility of an event should be independent of the flexibility of other events.
+      </paragraph>
+      <section label="3.3.1">
+       Rationality postulates for {a mathematical formula}flexN
+       <paragraph>
+        Taking {a mathematical formula}flexN as the main representative of the two metrics we have discussed before, let us try to capture the main ideas behind this metric.
+       </paragraph>
+       <paragraph>
+        First of all, we observe that this metric is defined as the sum of intervals, each interval {a mathematical formula}[at,bt] indicating the flexibility of a single event t. Here, flexibility means freedom to choose a real starting time for the event. That is, for every choice {a mathematical formula}v∈[at,bt] as a possible starting point of t there is a schedule σ for S such that {a mathematical formula}σ(t)=v.
+       </paragraph>
+       <paragraph>
+        Obviously, for each {a mathematical formula}t∈T there are many choices for an interval {a mathematical formula}[at,bt] satisfying this requirement. Since we would like to determine the maximum flexibility in an STN S, the sum of such interval sizes is required to be maximal.
+       </paragraph>
+       <paragraph>
+        Based upon these considerations, we propose the following rationality postulates underlying a naive flexibility metric such as {a mathematical formula}flexN for an STN {a mathematical formula}S=(T,C). To show that indeed {a mathematical formula}flexN is completely characterized by these postulates, we call a metric captured by these rationality postulates {a mathematical formula}flexn. We will show that for all metrics {a mathematical formula}flexn satisfying these postulates, it holds that {a mathematical formula}flexn=flexN.
+       </paragraph>
+       <paragraph>
+        So let {a mathematical formula}S=(T,C) be an STN. A naive flexibility metric {a mathematical formula}flexn is characterized by the following postulates: F1The flexibility {a mathematical formula}flexn(z) of the temporal reference event {a mathematical formula}z∈T is equal to 0.Comment. The temporal reference point should be fixed.F2The flexibility {a mathematical formula}flexn(t) of an event {a mathematical formula}t∈T−{z} is a nonempty interval {a mathematical formula}[a,b] such that any {a mathematical formula}v∈[a,b] can be chosen as a starting time {a mathematical formula}σ(t)=v in some schedule σ for S.Comment. This postulate ensures that flexibility intervals are not too large and do not contain useless values.F3Let {a mathematical formula}|[a,b]| denote the size {a mathematical formula}b−a of the interval {a mathematical formula}[a,b]. Then {a mathematical formula}flexn(S)=∑t∈T|flex(t)| is the maximal value that can be obtained for all functions {a mathematical formula}flex′:T→{[m,n]:−∞&lt;m≤n&lt;∞} satisfying postulate F1–F2.Comment. This postulate avoids taking trivial solutions like ordinary schedules σ that always satisfy the first two postulates in case there are better choices.
+       </paragraph>
+       <paragraph>
+        It is very easy to show that these rationality postulates characterize the metric {a mathematical formula}flexN in a unique way, that is, for all metrics {a mathematical formula}flexn satisfying F1–F3, we have {a mathematical formula}flexn=flexN:
+       </paragraph>
+       <paragraph label="Proposition 2">
+        Let{a mathematical formula}S=(T,C)be an STN and let{a mathematical formula}flexnbe a flexibility metric satisfyingF1–F3. Then{a mathematical formula}flexn=flexN.
+       </paragraph>
+       <paragraph label="Proof">
+        Clearly, {a mathematical formula}flexN satisfies F1–F3. Let {a mathematical formula}flexn be any metric satisfying F1–F3. First, observe that for any {a mathematical formula}t∈T, such that {a mathematical formula}flexn(t)=[a,b], in order to satisfy F2, by Proposition 1 we must have{a mathematical formula} But that implies, by F1 and F3,{a mathematical formula}  □
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       Rationality postulates for flex
+       <paragraph>
+        As we already discussed using Example 2 and Example 3, {a mathematical formula}flexN gives counter-intuitive results if events are dependent upon each other, resulting in an over-estimation of the available flexibility. The reason for this overestimation is that, although for any single flexibility interval {a mathematical formula}[ai,bi] for {a mathematical formula}ti∈T we are guaranteed to have a schedule σ for S for any choice {a mathematical formula}vi∈[ai,bi], this does not necessarily hold for {a mathematical formula}k&gt;1simultaneous choices {a mathematical formula}v1,…,vk in intervals {a mathematical formula}[a1,b1],…,[ak,bk]. To remedy this deficiency, we add a simple postulate {a mathematical formula}F2′ to the set of postulates F1–F3 and we will prove that any flexibility metric satisfying this postulate and the previous postulates will satisfy the (missing) requirement that for any series {a mathematical formula}(v0,…,vn) of choices {a mathematical formula}vi∈[ai,bi]=flex(ti) it always holds that there is a schedule σ for S such that {a mathematical formula}σ(ti)=vi.
+       </paragraph>
+       <paragraph>
+        We therefore propose the following rationality postulates for a suitable flexibility metric for an STN {a mathematical formula}S=(T,C): F1The flexibility {a mathematical formula}flex(z) of the temporal reference event z is equal to 0.F2The flexibility {a mathematical formula}flex(t) of an event {a mathematical formula}t∈T−{z} is a nonempty interval {a mathematical formula}[a,b] such that any {a mathematical formula}v∈[a,b] might be chosen as a starting time {a mathematical formula}σ(t)=v in some schedule σ for S.{a mathematical formula}F2′If {a mathematical formula}flex(t)=[a1,b1] and {a mathematical formula}flex(t′)=[a2,b2] for some {a mathematical formula}t,t′∈T then for every {a mathematical formula}v1∈[a1,b1] and every {a mathematical formula}v2∈[a2,b2] there exists a schedule σ for S such that {a mathematical formula}σ(t)=v1 and {a mathematical formula}σ(t′)=v2.Comment. This postulate implies that the flexibility of event t is not dependent upon the flexibility of another event {a mathematical formula}t′ and vice-versa. Hence, it excludes dependencies between flexibility intervals.F3Let {a mathematical formula}|[a,b]| denote the size {a mathematical formula}b−a of the interval {a mathematical formula}[a,b]. Then {a mathematical formula}flex(S)=∑t∈T|flex(t)| is the maximal value that can be obtained for all functions {a mathematical formula}flex′:T→{[m,n]:0≤m≤n&lt;∞} satisfying postulate {a mathematical formula}F1–F2′.
+       </paragraph>
+       <paragraph label="Proposition 3">
+        Note that postulate {a mathematical formula}F2′ ensures independency of any two flexibility intervals. We would like to make sure that this postulate is sufficient to guarantee independence of all flexibility intervals in case there are more than two: Let{a mathematical formula}S=(T,C)be an STN. For any metric{a mathematical formula}flex′satisfying{a mathematical formula}F1–F2′it holds that for every series{a mathematical formula}(v0,v1,…,vn)of choices{a mathematical formula}vi∈flex′(ti), there exists a schedule σ for S such that{a mathematical formula}σ(ti)=vi.
+       </paragraph>
+       <paragraph label="Proof">
+        Let {a mathematical formula}flex′ be a metric satisfying F1, F2 and {a mathematical formula}F2′, and let {a mathematical formula}(v0,v1,…,vn) be a series of arbitrary choices {a mathematical formula}vi∈flex′(ti). Define a function {a mathematical formula}σ:T→R by {a mathematical formula}σ(ti)=vi, {a mathematical formula}∀ti∈T. Suppose, on the contrary, that σ is not a schedule for S. Then there exists some constraint {a mathematical formula}ti−tj≤cji∈C such that{a mathematical formula} By Postulate {a mathematical formula}F2′, however, there exists a schedule {a mathematical formula}σ′ for S such that {a mathematical formula}σ′(ti)=vi and {a mathematical formula}σ′(tj)=vj. Therefore,{a mathematical formula} and we have derived a contradiction. Therefore, σ must be a schedule for S.  □
+       </paragraph>
+       <paragraph>
+        Proposition 3 shows that the flexibility property we were missing in {a mathematical formula}flexN (and {a mathematical formula}flexH) can be easily repaired by an additional postulate ensuring complete independence of the flexibility intervals. Using this characterization of our new flexibility metric flex, we will now show how to compute the flexibility {a mathematical formula}flex(S) of an STN S.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.4">
+      Computing {a mathematical formula}flex(S)
+      <paragraph>
+       In the introduction we already observed that instead of computing a fixed schedule σ for an STN S, we would like to compute an interval schedule for S, such that in every interval for an event {a mathematical formula}ti we could freely choose a value {a mathematical formula}vi to compose a schedule {a mathematical formula}σ′ for S. First, let us make this notion of an interval schedule more precise:
+      </paragraph>
+      <paragraph label="Definition 1">
+       Given an STN {a mathematical formula}S=(T,C), a set {a mathematical formula}IS={It=[lt,ut]|t∈T} of (non-empty) intervals for the time point variables {a mathematical formula}t∈T is an interval schedule for S iff for every {a mathematical formula}t∈T and every {a mathematical formula}vt∈[lt,ut], the assignment σ defined by {a mathematical formula}σ(t)=vt is a schedule for S.
+      </paragraph>
+      <paragraph>
+       It is not difficult to show that any flexibility metric flex satisfying the postulates F1, F2 and {a mathematical formula}F2′ defines an interval schedule {a mathematical formula}IS={It|t∈T} for an STN S if we define the correspondence {a mathematical formula}IS={flex(t)|t∈T}:
+      </paragraph>
+      <paragraph label="Proposition 4">
+       Let{a mathematical formula}S=(T,C)be an STN.The function{a mathematical formula}flex:T→{[m,n]:−∞&lt;m≤n&lt;∞}satisfies the postulatesF1,F2and{a mathematical formula}F2′iff the set of intervals{a mathematical formula}IS={flex(t)|t∈T}is an interval schedule for S.
+      </paragraph>
+      <paragraph label="Proof">
+       (if): Suppose {a mathematical formula}IS={flex(t)|t∈T} is an interval schedule for S. Then any series {a mathematical formula}(v0,v1,…,vn) of choices from the given intervals {a mathematical formula}It in an interval schedule implies that the assignment {a mathematical formula}σ(ti)=vi is a schedule. In particular, this means that {a mathematical formula}σ(t0)=0. Hence, the interval {a mathematical formula}Iz for {a mathematical formula}z=t0 is equal to {a mathematical formula}[0,0], so F1 is satisfied. For all {a mathematical formula}i≥1, this property also immediately implies that F2 and {a mathematical formula}F2′ are satisfied.(only-if): Suppose {a mathematical formula}flex:T→{[m,n]:−∞&lt;m≤n&lt;∞} satisfies the postulates F1, F2 and {a mathematical formula}F2′. By Proposition 3 and Definition 1 it immediately follows that {a mathematical formula}IS={flex(t)|t∈T} is an interval schedule for S.  □
+      </paragraph>
+      <paragraph>
+       From this proposition it follows that to compute a flexibility metric for an STN {a mathematical formula}S=(T,C) satisfying F1, F2, {a mathematical formula}F2′ and F3, we have to determine
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        an interval schedule {a mathematical formula}IS={[lt,ut]|t∈T} for S, such that
+       </list-item>
+       <list-item label="2.">
+        the sum of the interval lengths {a mathematical formula}∑t∈T(ut−lt) is maximal.
+       </list-item>
+      </list>
+      <paragraph>
+       To solve the first problem (computing an interval schedule) we use a transformation from a given STN to another STN {a mathematical formula}S′ and we show that any schedule obtained for the latter can be used to obtain an interval schedule for the former.
+      </paragraph>
+      <paragraph>
+       To solve the second problem, we use a Linear Programming approach, realizing that an STN such as {a mathematical formula}S′ can be represented as a set of linear equations and the objective function is a linear function maximizing the size of the intervals of an interval schedule for the original STN S.
+      </paragraph>
+      <section label="3.4.1">
+       <section-title>
+        Computing interval schedules for an STN
+       </section-title>
+       <paragraph label="Proposition 5">
+        In order to compute an interval schedule for an STN {a mathematical formula}S=(T,C), let us first state a useful relationship between the interval bounds in an interval schedule {a mathematical formula}IS for S and the constraints occurring in C. Intuitively, if there exists a constraint {a mathematical formula}tj−ti≤cij in C, then the intervals {a mathematical formula}Iti and {a mathematical formula}Itj should be such that whatever values {a mathematical formula}ti and {a mathematical formula}tj take in these intervals, this constraint will never be violated. The following proposition states that this property is preserved if this constraint is satisfied whenever {a mathematical formula}tj takes its maximum value in {a mathematical formula}Itj while {a mathematical formula}ti takes its minimum value in {a mathematical formula}Iti: Let{a mathematical formula}S=(T,C)be an STN. A set{a mathematical formula}IS={[lti,uti]|ti∈T}of intervals for the variables in T is an interval schedule for S iff, for all{a mathematical formula}(ti,tj)∈T2,{a mathematical formula}tj−ti≤cij∈Cimplies{a mathematical formula}utj−lti≤cij.
+       </paragraph>
+       <paragraph label="Proof">
+        (if) Suppose the implication holds for all {a mathematical formula}(ti,tj)∈T2. We have to show that {a mathematical formula}IS is an interval schedule for S. So, for every {a mathematical formula}t∈T, choose an arbitrary value {a mathematical formula}vt∈[lt,ut] and let σ be defined by {a mathematical formula}σ(t)=vt, for all {a mathematical formula}t∈T.We show that σ is a schedule for S. For, suppose on the contrary that σ is not a schedule for S. Then σ violates some constraint in C. So there exists a constraint {a mathematical formula}tj−ti≤cij∈C such that {a mathematical formula}σ(tj)−σ(ti)&gt;cij. But this implies{a mathematical formula} as {a mathematical formula}vtj≤utj and {a mathematical formula}vti≥ltj.On the other hand, since {a mathematical formula}tj−ti≤cij∈C, by the assumed implication, we have{a mathematical formula} Combining (3) and (4) we derive a contradiction. So σ cannot violate any constraint in C. Hence, σ is a schedule for S.(only if) Suppose {a mathematical formula}IS is an interval schedule for S. Take some {a mathematical formula}tj−ti≤cji. By the definition of {a mathematical formula}IS there is a schedule σ for S such that {a mathematical formula}σ(tj)=utj and {a mathematical formula}σ(ti)=lti. But then {a mathematical formula}utj−lti≤cji.  □
+       </paragraph>
+       <paragraph>
+        The significance of this result is that now we know which constraints we have to put on the endpoints of the intervals in an interval schedule {a mathematical formula}IS. While this proposition assumes these endpoints to be given, we could as well assume them to be variables that have to satisfy these constraints. So instead of using endpoints {a mathematical formula}lt and {a mathematical formula}ut for variables t we specify two variables {a mathematical formula}t− and {a mathematical formula}t+, representing the lower bound {a mathematical formula}lt and the upper bound {a mathematical formula}ut of the interval {a mathematical formula}It respectively.
+       </paragraph>
+       <paragraph>
+        Now for each constraint {a mathematical formula}t−t′≤c in C, we add a constraint {a mathematical formula}t+−t′−≤c and for every {a mathematical formula}t∈T we add the constraint {a mathematical formula}t−−t+≤0. Moreover, to ensure that {a mathematical formula}t0+ and {a mathematical formula}t0− play the role of a time reference point in the new STN, we add a new time reference point {a mathematical formula}z′ and we add the constraints {a mathematical formula}z′−t0−≤0 and {a mathematical formula}t0+−z′≤0, ensuring that {a mathematical formula}z′=t0−=t0+.
+       </paragraph>
+       <paragraph>
+        Note that the resulting set of variables and constraints is just another STN {a mathematical formula}S′, we call a double STN. Using Proposition 5, we show that the schedules of this double STN {a mathematical formula}S′ can be used to construct an interval schedule for the original STN S:
+       </paragraph>
+       <paragraph label="Proposition 6">
+        Let{a mathematical formula}S=(T,C)be an STN. Consider the double STN{a mathematical formula}S′=(T′,C′)derived from S as follows:{a mathematical formula}{a mathematical formula}Then, for every solution{a mathematical formula}σ′of{a mathematical formula}S′, the set{a mathematical formula}IS={[σ′(t−),σ′(t+)]|t∈T}is an interval schedule for S.
+       </paragraph>
+       <paragraph label="Proof">
+        First, remember that we always assume a given S to be consistent. We will show that {a mathematical formula}S′ is consistent, too. Take an arbitrary schedule σ for S and construct an assignment {a mathematical formula}σ′ for {a mathematical formula}S′ as follows: for every {a mathematical formula}t∈T, let {a mathematical formula}σ′(t+)=σ(t−)=σ(t). It is obvious that {a mathematical formula}σ′ will satisfy all constraints in {a mathematical formula}C′, hence {a mathematical formula}S′ is consistent.Therefore, we can assume some arbitrary schedule {a mathematical formula}σ′ for {a mathematical formula}S′. We show that {a mathematical formula}{[σ′(t−),σ′(t+)]|t∈T} is an interval schedule for S. Take some arbitrary constraint {a mathematical formula}tj−ti≤cij in C. By Proposition 5, it is sufficient to show that {a mathematical formula}σ′(tj+)−σ′(ti−)≤cij. But this is immediate as by construction of {a mathematical formula}C′, {a mathematical formula}tj+−ti−≤cij is a constraints in C and {a mathematical formula}σ′ is a schedule for {a mathematical formula}S′.  □
+       </paragraph>
+       <paragraph>
+        Fig. 2 presents a commutative diagram depicting the suggested computation of an interval schedule for S via the double STN construction:
+       </paragraph>
+       <paragraph label="Example 4">
+        Consider the STN {a mathematical formula}S2 presented in Example 1. Let STN {a mathematical formula}S2′=(T′,C′) be the double STN derived from S where{a mathematical formula}{a mathematical formula} One possible schedule for {a mathematical formula}S2 is{a mathematical formula} This schedule can be used to construct the following interval schedule for S:{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="3.4.2">
+       Computing a maximal interval schedule for an STN S
+       <paragraph>
+        The transformation of an STN S into a double STN {a mathematical formula}S′ can be used to obtain an interval schedule for S. An arbitrary interval schedule, however, does not suffice to determine the flexibility of an STN, since the sum of the sizes of the intervals obtained does not need to be maximal and therefore does not satisfy F3. Hence, to obtain the flexibility of an STN, we have to select those solutions σ for the double STN {a mathematical formula}S′ that maximize the sum of the sizes of the intervals.
+       </paragraph>
+       <paragraph label="Proof">
+        It is easy to see that the following LP-formulation will solve this maximization problem and computes {a mathematical formula}flex(S): Let{a mathematical formula}S=(T,C)be an STN. Then{a mathematical formula}flex(S)can be computed by solving the following Linear Program:{a mathematical formula}Let {a mathematical formula}S=(T,C) be an STN. The constraints of the LP correspond to the constraints of the double STN {a mathematical formula}S′. Hence, any solution σ of this set of constraints can be used to create an interval set for S. So, according to Proposition 4, the function flex defined as{a mathematical formula} satisfies F1–F2′. Maximizing the sum of the sizes of the intervals {a mathematical formula}∑t∈T(t+−t−) thus obtained guarantees this function also to satisfy postulate F3.  □
+       </paragraph>
+       <paragraph label="Example 5">
+        Applying the flexibility metric flex to the STNs {a mathematical formula}S1 and {a mathematical formula}S2 results in the following flex functions:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         For {a mathematical formula}S1, {a mathematical formula}flex(ti)=[0,5] for {a mathematical formula}i=1,2,3. Hence, {a mathematical formula}flex(S1)=3×5=15.
+        </list-item>
+        <list-item label="2.">
+         For {a mathematical formula}S2, we have {a mathematical formula}flex(S2)=5; one possible flex function is {a mathematical formula}flex(t1)=[0,5], {a mathematical formula}flex(t2)=flex(t3)=[5,5].
+        </list-item>
+       </list>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Applications
+     </section-title>
+     <paragraph>
+      In this section we discuss two applications of the flexibility metric we have proposed before. The first application is Simple Temporal Networks with Uncertainty (STNU). Here, we show how the double STN construction can be applied to give a very simple and elegant solution to the so-called strong controllability problem and its generalizations in STNUs.
+     </paragraph>
+     <paragraph>
+      The second application is temporal decoupling in distributed scheduling. Here, we show that our flexibility metric can be applied, not only to obtain a decoupling of an STN that is globally optimal, but also such that the flexibility of the resulting subsystems is not affected. This result refutes a widespread belief in this research area.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       The strong controllability problem in Simple Temporal problems with uncertainty
+      </section-title>
+      <paragraph>
+       An STNU (Simple Temporal Network with Uncertainty) [7], [8], [12], [13], [23] is an extension of an STN where an explicit distinction between controllable and uncontrollable events is made. Controllable events constitute the set {a mathematical formula}Tc and are controlled by an agent, while uncontrollable events constitute the set {a mathematical formula}Tu and are controlled by nature who might decide in an independent and uncontrollable way about the scheduling of events {a mathematical formula}t∈Tu. The difference between uncontrollable and controllable events is also reflected in the constraints between events. In an STNU, we distinguish between free constraints{a mathematical formula}Cf and contingent constraints{a mathematical formula}Cc. A free constraint is a (normal STN) constraint {a mathematical formula}tj−tj∈[ai,j,bi,j] between events in {a mathematical formula}Tc∪Tu. A contingent constraint is a constraint {a mathematical formula}tj−ti∈[lj,uj] where {a mathematical formula}tj∈Tu and {a mathematical formula}ti∈Tc. Here, the idea is that each uncontrollable event {a mathematical formula}tj is linked via a unique contingent constraint to a controllable event {a mathematical formula}ti that acts as its trigger or activation point.{sup:7} Once {a mathematical formula}ti has been activated, i.e., assigned to a time point, nature decides about when we will observe {a mathematical formula}tj. We don't know in advance at which specific time point {a mathematical formula}tj will be observed, but the contingency link specifies that {a mathematical formula}tj will be observed at least {a mathematical formula}lj and at most {a mathematical formula}uj time points after {a mathematical formula}ti has been activated. So, whenever {a mathematical formula}tj−ti∈[lj,uj] is a contingent constraint and its activation point {a mathematical formula}ti is assigned a value {a mathematical formula}vi, {a mathematical formula}tj can take a value (can be observed) anywhere in the interval {a mathematical formula}[lj+vi,uj+vi]. To simplify the discussion, in the following we will simply assume that each uncontrollable event {a mathematical formula}tj∈Tu is associated with a unique interval {a mathematical formula}[lj,uj] determining the time interval in which {a mathematical formula}tj will be observed after its activation point is executed.
+      </paragraph>
+      <paragraph>
+       Given the distinction between {a mathematical formula}Tu and {a mathematical formula}Tc, the following problem, known as the strong controllability problem, asks for the existence of a schedule for the controllable events such that for all possible observations of the uncontrollable events, all free constraints are satisfied. More formally, this problem can be stated as follows:
+      </paragraph>
+      <list>
+       <list-item>
+        Given: An STNU {a mathematical formula}S=(Tc∪Tu,Cf∪Cc), where {a mathematical formula}|Tc|=m and {a mathematical formula}|Tu|=n.
+       </list-item>
+       <list-item>
+        Question: Is there a schedule {a mathematical formula}σf:Tc→R for the controllable events {a mathematical formula}ti∈Tc such that for every choice of values {a mathematical formula}ω1,…,ωn such that {a mathematical formula}ωj∈[lj,uj] for {a mathematical formula}j=1,…,n, the function σ defined by{a mathematical formula} is a schedule for the STN {a mathematical formula}Sc=(Tc∪Tu,Cf)?
+       </list-item>
+      </list>
+      <paragraph>
+       In other words, can we construct a schedule for the controllable events that will end up in an STN schedule for all events and free constraints if nature is free to choose the time points to execute the uncontrollable events?
+      </paragraph>
+      <paragraph>
+       It has been shown (see [7]) that this problem is tractable. Here, we would like to show how our approach to flexibility is able to handle this strong controllability problem in a quite natural and even more general way. In fact, we do not ask for the existence of one fixed schedule for the controllable events, but for a maximal interval schedule for the controllable events in S:
+      </paragraph>
+      <list>
+       <list-item>
+        Given: An STNU {a mathematical formula}S=(Tc∪Tu,Cf∪Cc), where {a mathematical formula}|Tc|=m and {a mathematical formula}|Tu|=n.
+       </list-item>
+       <list-item>
+        Question: Is there a set {a mathematical formula}Ic={Itic:ti∈Tc} of intervals for the controllable events such that for every choice of time points {a mathematical formula}ω1,…,ωn such that {a mathematical formula}ωj∈[lj,uj] for {a mathematical formula}j=1,…,n, and every choice {a mathematical formula}v0,…,vm−1 of values such that {a mathematical formula}vi∈Itic, the function σ defined by{a mathematical formula} is a schedule for the STN {a mathematical formula}Sc=(Tc∪Tu,Cf)?
+       </list-item>
+      </list>
+      <paragraph>
+       Note that if {a mathematical formula}Tu=∅ this problem is exactly the problem of finding a maximum interval schedule for an STN to obtain {a mathematical formula}flex(S), as we discussed in the previous section. A simple solution to this problem can be given by slightly modifying our method to obtain a maximal interval schedule for S using the double STN method and solving an LP with flexibility maximization as an objective function.
+      </paragraph>
+      <paragraph>
+       The only thing we have to take care for is the relationship between the flexibility intervals of activation points {a mathematical formula}ti∈Tc and uncontrollable events {a mathematical formula}tj∈Tu they are related to via the contingency constraint {a mathematical formula}tj−ti∈[lj,uj]. If the flexibility interval of {a mathematical formula}ti is set to {a mathematical formula}[ti−,ti+] then according to the interpretation of this constraint, the (required) flexibility of {a mathematical formula}tj should be equal to {a mathematical formula}[ti−+lj,ti++uj]. Hence, in order to compute the maximal flexibility {a mathematical formula}flex(S) of an STNU S:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        First of all, we should restrict the objective function to the sum of the differences {a mathematical formula}(t+−t−) for the controllable events {a mathematical formula}t∈Tc only and
+       </list-item>
+       <list-item label="2.">
+        in the construction of the double STN we should add equality constraints {a mathematical formula}t−=t′−+lt and {a mathematical formula}t+=t′++ut for every contingent constraint {a mathematical formula}t−t′∈[lt,ut].
+       </list-item>
+       <list-item label="3.">
+        For every free constraint {a mathematical formula}t−t′≤c we should add the constraint {a mathematical formula}t+−t′−≤c.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 7">
+       Now it is easy to see that the following LP-formulation will solve the problem stated above: Let{a mathematical formula}S=(Tc∪Tu,Cf∪Cc)be an STNU. Then there exists a solution to the strong controllability problem for S if the following LP has a solution:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 6">
+       Consider the STNU presented in Fig. 3. Here, {a mathematical formula}t2 (arriving home) and {a mathematical formula}t4 (dinner ready) are uncontrollable events activated by two controllable events: {a mathematical formula}t1 (partner calls) and {a mathematical formula}t3 (start cooking). The problem is to decide in which intervals the events {a mathematical formula}t1 and {a mathematical formula}t3 have to be scheduled in order to satisfy all the constraints. The solution is provided by solving the LP as stated in Proposition 7. The maximum interval{sup:8} for {a mathematical formula}t1 is {a mathematical formula}[0,0] and for {a mathematical formula}t3 is {a mathematical formula}[10,15]. Whenever, {a mathematical formula}t1 and {a mathematical formula}t3 are scheduled within these intervals, the time points for the uncontrollable events satisfy the free constraint {a mathematical formula}t4−t2∈[−10,10].
+      </paragraph>
+      <paragraph>
+       We can even generalize this strong controllability problem somewhat further. Suppose we have an instance of the strong controllability problem such that there exists no schedule σ solving it. Instead of stopping here, we might ask for a set of maximal subintervals{a mathematical formula}It′u⊑Itu for the uncontrollable events {a mathematical formula}t∈Tu such that such a schedule does exist. The reason for such a generalization is obvious: if the subintervals cover a large part of the original intervals, the probability might be high that a chosen schedule for the controllable events does not violate the constraints.
+      </paragraph>
+      <paragraph>
+       This problem can be simply solved by minimizing the total sum of differences between the lower and upper bounds obtained and the lower and upper bounds required for the uncontrollable events as can be seen in the following linear program:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Here, we chose to look for the maximum intervals contained in the original intervals {a mathematical formula}[lt,ut] minimizing the distance of the endpoints of the sub interval to the original endpoints in a symmetrical way.
+      </paragraph>
+      <paragraph label="Example 7">
+       Considering again the STNU presented in Fig. 3, let us change the contingency constraint {a mathematical formula}t4−t3∈[15,20] to {a mathematical formula}t4−t3∈[10,30]. The resulting system now is not strongly controllable. If we apply the LP above to search for minimal adaptations of these uncertainty intervals to regain controllability, it turns out that {a mathematical formula}ϵ4=5 is sufficient: if {a mathematical formula}t1 starts at 0 and {a mathematical formula}t3 at 10, the uncertainty interval {a mathematical formula}[15,25] is sufficient to guarantee that the free constraint between {a mathematical formula}t2 and {a mathematical formula}t4 is satisfied.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Decoupling without loss of flexibility
+      </section-title>
+      <paragraph>
+       STNs are also used in a distributive scheduling context [14], [15], [17], [25], [26], [18]. An STN {a mathematical formula}S=(T,C) is called distributed if the events in T are distributed over k agents {a mathematical formula}A1,A2,…,Ak such that each agent {a mathematical formula}Ai is responsible for scheduling a non-empty and disjoint subset {a mathematical formula}Ti⊆T−{z} of events.{sup:9} Together, we assume that the set {a mathematical formula}A={A1,A2,…,Ak} of agents induces a partition {a mathematical formula}{Ti}i=1k of {a mathematical formula}T−{z}.
+      </paragraph>
+      <paragraph>
+       Often in such a setting, it is assumed that the agents {a mathematical formula}Ai act as autonomous schedulers. So each agent {a mathematical formula}Ai wants to determine its own schedule {a mathematical formula}σi:Ti→R for the set {a mathematical formula}Ti of tasks assigned to it independently from the others. In allowing agents to schedule autonomously, however, we have to ensure that, no matter what choices the individual agents make in composing their individual schedule {a mathematical formula}σi, all constraints C in the STN {a mathematical formula}S=(T,C) are satisfied. This means that for every agent {a mathematical formula}Ai we have to find an STN {a mathematical formula}Si=(Ti∪{z},Ci′) such that the merge {a mathematical formula}σ=⋃i=1kσi of these individual schedules always constitutes a valid total schedule σ for S.
+      </paragraph>
+      <paragraph>
+       The problem to ensure that the merge σ of individual schedules {a mathematical formula}σi for {a mathematical formula}Si is always a schedule of the original STN S is known as the so-called Temporal Decoupling Problem[15]:
+      </paragraph>
+      <paragraph label="Definition 2">
+       Let {a mathematical formula}S=(T,C) be a consistent STN. Suppose that {a mathematical formula}T\{z}={Ti}i=1k is partitioned in k subsets {a mathematical formula}Ti. Then the temporal decoupling problem is to find k STNs {a mathematical formula}Si=(Ti∪{z},Ci′) such that, whenever {a mathematical formula}σ1,…,σk are independently constructed schedules for the individual STNs {a mathematical formula}S1,…,Sk, respectively, their merge {a mathematical formula}σ=⋃i=1kσi is a schedule for the original STN S.
+      </paragraph>
+      <paragraph>
+       The real problem here is that we have to pay attention to constraints involving events {a mathematical formula}ti and {a mathematical formula}tj that belong to different agents {a mathematical formula}Af and {a mathematical formula}Ah. For, agents {a mathematical formula}Af and {a mathematical formula}Ah may choose schedules {a mathematical formula}σf and {a mathematical formula}σh, respectively, that satisfy their own private constraints {a mathematical formula}Cf and {a mathematical formula}Ch, respectively, but violate an inter-agent constraint{a mathematical formula}tj−ti≤cij, by setting {a mathematical formula}σf(tj)−σh(ti)&gt;cij.
+      </paragraph>
+      <paragraph label="Example 8">
+       Suppose that in the STNs {a mathematical formula}S1 and {a mathematical formula}S2 from our earlier examples, we have three agents {a mathematical formula}A1, {a mathematical formula}A2 and {a mathematical formula}A3, where {a mathematical formula}Ai is responsible for scheduling {a mathematical formula}ti, {a mathematical formula}i=1,2,3. Suppose that in {a mathematical formula}S2=(T,C2) we simply assign the constraints relating to {a mathematical formula}ti to {a mathematical formula}Ai. This means that each agent {a mathematical formula}Ai has only to take care for the subset {a mathematical formula}Ci={0≤ti−z≤5,0≤tj−z≤5}. Hence agent {a mathematical formula}A1 might choose {a mathematical formula}σ1(t1)=4, {a mathematical formula}A2 might choose {a mathematical formula}σ2(t2)=2, and {a mathematical formula}A3 might choose {a mathematical formula}σ3(t3)=1. Although each of these schedules satisfies the local constraints, they violate the inter agent constraints. For example, while {a mathematical formula}t1−t2≤0, we have {a mathematical formula}σ1(t1)−σ2(t2)&gt;0.
+      </paragraph>
+      <paragraph>
+       Hunsberger [15] presented an elegant solution to this problem. Assuming that the STN to be decomposed is a minimal STN, he proposed an iterative procedure that basically makes each inter-agent constraint {a mathematical formula}ti−tj≤DS[j,i] obsolete by tightening the associated intra-agent constraints {a mathematical formula}ti−z≤DS[0,i] and {a mathematical formula}z−tj≤DS[j,0].
+      </paragraph>
+      <paragraph>
+       These tightenings consist in selecting suitable values {a mathematical formula}δi,1 and {a mathematical formula}δi,2 such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ti−z≤δi,1≤DS[0,i],
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}z−tj≤δi,2≤DS[j,0], and
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}δi,1+δi,2≤DS[i,j].
+       </list-item>
+      </list>
+      <paragraph>
+       Now, if we add the new constraints{a mathematical formula} and{a mathematical formula} to S, while making sure that the resulting system remains consistent, the effect is that an inter-agent constraint {a mathematical formula}ti−tj≤DS[i,j] is implied by the newly added tighter, intra-agent constraints, since we have{a mathematical formula} Hence, such an inter-agent constraint can be removed from the updated STN. Applying this procedure for every non-implied inter-agent constraint ensures that all inter-agent constraints are implied by intra-agent constraints. Hence, all these inter-agent constraints can be safely removed from the STN and the resulting system is a temporal decoupling of S.
+      </paragraph>
+      <paragraph label="Example 9">
+       Continuing Example 8, note that in {a mathematical formula}S1, every inter-agent constraint {a mathematical formula}−5≤ti−tj≤5, {a mathematical formula}1≤i≠j≤3, is already implied by the intra-agent constraints {a mathematical formula}0≤ti−z≤5 and {a mathematical formula}0≤tj−z≤5, since{a mathematical formula} Therefore, {a mathematical formula}S1 in fact is a decoupled STN.In {a mathematical formula}S2, however, we can achieve a decoupling by tightening the intra-agent constraints to (for example){a mathematical formula} The reader might verify that by these tightenings indeed every inter-agent constraint is implied.
+      </paragraph>
+      <paragraph label="Example 10">
+       An arbitrary decoupling, however, is not always what we want, since the added constraints may limit the resulting flexibilities of the subsystems {a mathematical formula}Si. As a result, the sum {a mathematical formula}∑i=1kflex(Si) of the flexibilities of the subsystems {a mathematical formula}Si could be considerably less than the flexibility {a mathematical formula}flex(S) of the original system. To illustrate such a loss of flexibility in decoupling, consider the decoupling of the STN {a mathematical formula}S2 discussed in Example 9. We know that for the original STN {a mathematical formula}S2 we have {a mathematical formula}flexN(S2)=15 and {a mathematical formula}flexH(S2)=30. According to our intuition, its flexibility should be equal to {a mathematical formula}flex(S2)=5. Now computing the sum of the flexibilities of all the subsystems {a mathematical formula}S2,i it is not difficult to see that the decoupling given in Example 9 affects the flexibility of the system whatever metric is considered:{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       It is a popular belief in the research community that an optimal decoupling i.e., a decoupling that would maximize the flexibilities of the subsystems, would still suffer from some flexibility loss. In the literature we are aware of (see e.g. [15], [17], [25]) several experiments have been performed to measure this loss of flexibility. However, the metrics used all have been based on the {a mathematical formula}flexN and {a mathematical formula}flexH metric discussed above.
+      </paragraph>
+      <paragraph>
+       Instead of using these metrics we try to find a decoupling that maximizes the sum {a mathematical formula}∑i=1kflex(Si) of the flexibilities of the induced subsystems {a mathematical formula}Si, and we consider it an optimal decoupling if the ratio {a mathematical formula}(∑i=1kflex(Si))/flex(S) is maximal.
+      </paragraph>
+      <paragraph>
+       Contrary to the popular beliefs in the research community we will show now that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        an optimal decoupling can be obtained in {a mathematical formula}O(k)-time using the flexibility metric we discussed before, and
+       </list-item>
+       <list-item label="2.">
+        this optimal decoupling need not affect the flexibility of the system, i.e., we have {a mathematical formula}∑i=1kflex(Si)=flex(S).
+       </list-item>
+      </list>
+      <paragraph label="Proposition 8">
+       Let{a mathematical formula}{Si}i=1kbe an optimal decoupling of an STN S. Then{a mathematical formula}∑i=1kflex(Si)=flex(S).
+      </paragraph>
+      <paragraph label="Proof of Claim 2">
+       Obviously, these claims together imply the proposition.Suppose, on the contrary, that the merge σ of individual schedules {a mathematical formula}σi violates a constraint in C. Obviously, this constraint must be an inter-agent constraint {a mathematical formula}t−t′≤c where t occurs in {a mathematical formula}Si and {a mathematical formula}t′ occurs in {a mathematical formula}Sj ({a mathematical formula}i≠j). So we must have{a mathematical formula} Since, however, {a mathematical formula}σi satisfies all constraints in {a mathematical formula}Ci, it follows by construction that {a mathematical formula}σi(t)≤ut, and similarly, {a mathematical formula}σj(t′)≥lt′. Therefore,{a mathematical formula} Observe that, since {a mathematical formula}t−t′≤c, the constraint {a mathematical formula}t+−t′−≤c occurs in the LP. Since {a mathematical formula}t+=ut and {a mathematical formula}t′−=lt′ occur in the solution of this LP, we also know that {a mathematical formula}ut−lt′≤c. Hence, by Eq. (6),{a mathematical formula} contradicting (5). Therefore, σ cannot violate any constraint in C and the set {a mathematical formula}{Si}i=1k is a decoupling of S.Let {a mathematical formula}S′=(T′,C′) where {a mathematical formula}T′=⋃i=1kTi and {a mathematical formula}C′=⋃i=1kCi∪C. Note that {a mathematical formula}flex(S′)=∑i=1kflex(Si). Since {a mathematical formula}T′=T and {a mathematical formula}C⊆C′, it is easy to see that{a mathematical formula} Let {a mathematical formula}IS={[lt,ut]|t∈T} be an interval schedule for {a mathematical formula}S=(T,C) realizing maximum flexibility. For every subsystem {a mathematical formula}Si=(Ti,Ci), consider the set{a mathematical formula} being the restriction of {a mathematical formula}IS to {a mathematical formula}Ti. We show that for each {a mathematical formula}i=1,…,k, {a mathematical formula}ISi is an interval schedule for {a mathematical formula}Si. First, let {a mathematical formula}σi be such that {a mathematical formula}lt≤σi(t)≤ut for every {a mathematical formula}t∈Ti. We show that {a mathematical formula}σi is a valid schedule for {a mathematical formula}Si. So consider an arbitrary constraint {a mathematical formula}t−t′≤c∈Ci. We consider the following cases:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}t=z. Then {a mathematical formula}z−t′≤c∈Ci. If this constraint occurs in C, then since {a mathematical formula}z−t′−≤c occurs in the LP, we know that {a mathematical formula}0−lt′≤c. Since {a mathematical formula}σi(t′)≥lt′, it follows that {a mathematical formula}0−σi(t′)≤c and {a mathematical formula}σi satisfies the constraint. If this constraint does not occur in C, then it is added in the decomposition. Therefore, {a mathematical formula}c=−lt′. Since {a mathematical formula}σi(t′)≥lt′, it follows that {a mathematical formula}0−σi(t′)≤−lt′=c and {a mathematical formula}σi satisfies the constraint.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}t′=z. Then {a mathematical formula}t−z≤c. Again, we have two subcases. First, suppose {a mathematical formula}t−z≤c occurs in C. Then, since {a mathematical formula}t+−z≤c occurs in the LP, we know that {a mathematical formula}ut−0≤c. Therefore, since {a mathematical formula}σi(t)≤ut, we have {a mathematical formula}σi(t)≤c and the constraint is satisfied. Secondly, suppose the constraint is added to achieve the decomposition, then {a mathematical formula}c=ut and since {a mathematical formula}σi(t)≤ut, we have {a mathematical formula}σi(t)≤c, and the constraint is satisfied.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}t≠z, {a mathematical formula}t′≠z. In this case {a mathematical formula}t−t′≤c must occur in C. Hence {a mathematical formula}t+−t′−≤c occurs as one of the conditions in the LP and {a mathematical formula}ut−lt′≤c. Hence, since {a mathematical formula}σi(t)≤ut and {a mathematical formula}σi(t′)≥lt′, we have {a mathematical formula}σi(t)−σi(t′)≤c. Therefore, {a mathematical formula}σi satisfies the constraint.
+       </list-item>
+      </list>
+      <paragraph label="Example 11">
+       Consider Example 9 again. A decoupling for {a mathematical formula}S2 realizing maximum flexibility can be created by adding the following decoupling constraints:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The sum of flexibilities of the subsystems (5) equals the flexibility of the original system.
+      </paragraph>
+      <paragraph label="Example 12">
+       To illustrate the difference between our approach and known approaches to flexibility and decoupling, we apply our method to the following STN (see Fig. 4, adapted from Boerkoel and Durfee [26]): This STN models the activities and their constraints for three agents Chris, Ann and Bill. Each of these agents has planned two activities. These activities are represented in the STN by their starting and ending time points (e.g. {a mathematical formula}tc1 refers to the starting time of the first activity of Chris and {a mathematical formula}tc2 to its ending time). Note that these time points are constrained within the agents as well as between the agents. For example, since {a mathematical formula}ta3−tc2≤60, Ann has to start her second activity within 1 hour after Chris finishes his first activity. Since {a mathematical formula}tc2−ta3≤0, she has to wait for starting this activity until after Chris has finished his first activity.From this figure depicting a minimal STN, we immediately derive the earliest and latest starting times of the activities. In the table below (see Table 1) we have collected these earliest and latest starting times per time point t together with the lower bounds {a mathematical formula}t− and upper bounds {a mathematical formula}t+ upon the flexibility intervals in our flexibility method: As can be verified, the flexibility of the STN S according to the {a mathematical formula}flexN-metric is{a mathematical formula} while the flexibility of S according to our metric flex is equal to{a mathematical formula} Clearly, the flexibility according to the {a mathematical formula}flexN metric is an overestimation. For example, if Ann would be free to choose the starting time {a mathematical formula}ta3 of her first activity in the interval {a mathematical formula}[90,150], while Chris is free to choose {a mathematical formula}tc2 within his interval {a mathematical formula}[90,120], the joint flexibility is not equal to their sum {a mathematical formula}60+30=90 min, because there is a constraint between these time points. In fact, it is easy to see that the total flexibility of these two events cannot be more than 60 minutes.As we have seen, in the literature, decoupling of an STN has been associated with a loss of total flexibility. This loss of flexibility according to the naive metric after decoupling can be observed in this example, too. In Fig. 5, the result of decoupling the STN according to Boerkoel and Durfee has been depicted.In Table 2 we have collected the earliest and latest starting times found according to the decoupling as applied by Boerkoel and Durfee to compute the value of {a mathematical formula}flexN for the decoupled systems. In the last two columns the values for the upper bound {a mathematical formula}t+ and the lower bound {a mathematical formula}t− of the variables are presented. These values are needed to compute the flexibility {a mathematical formula}flex(S) of the resulting decoupled system. We observe that according to the {a mathematical formula}flexN metric, the sum of the flexibilities of the three sub STNs equals {a mathematical formula}60+60+150=270, implying a flexibility loss of 510 min, that is, a loss of more than 65% of the original flexibility due to temporal decoupling.If we compute the sum {a mathematical formula}∑t∈T(t+−t−)=∑i=13flex(Si) of the flexibilities of the three subsystems, it turns out that {a mathematical formula}∑i=13flex(Si)=30+30+75=135.Clearly, if this decoupling would have been optimal, we would expect its total flexibility (according to our method) to be equal to 180. Hence, we conclude that the decoupling applied by Boerkoel and Durfee is not optimal and can be improved by using our flexibility approach. The result of applying decoupling according to our flexibility approach is given in Fig. 6.
+      </paragraph>
+      <paragraph>
+       This decoupling is optimal and results in a total flexibility, as expected, equal to {a mathematical formula}∑i=13flex(Si)=180.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusion and discussion
+     </section-title>
+     <paragraph>
+      We have discussed a new efficient method for determining the flexibility of a schedule for the Simple Temporal Problem. The main advantage of this flexibility metric is that, unlike previous methods that have been proposed in the literature, it takes into account dependencies between events. As a consequence, this metric does not suffer from overestimations of the flexibility in an STN.
+     </paragraph>
+     <paragraph>
+      We have shown that the method used in obtaining this flexibility metric might be used in other contexts, too. First of all, we could state a very simple and elegant solution to the strong controllability problem in STNUs. Moreover, our approach allows for a simple solution to generalizations of the strong controllability problem in STNUs as well. Finally, we could show that the use of the flexibility metric allows us to disprove a rather widespread belief in the research community, i.e., that temporal decoupling of an STN necessarily results in a reduction of its flexibility: We showed that once the flexibility of an STN has been determined, it can be used to construct a temporal decoupling that does not affect the (total) flexibility of the system.
+     </paragraph>
+     <paragraph>
+      Note that we computed the flexibility metric {a mathematical formula}flex(S) as the result of solving an LP to determine a maximum flexible interval schedule for an STN S. Such an interval schedule enables an executor to provide a flexible schedule by choosing the dispatching times of an event within its interval. In this sense it offers an alternative to approaches that transform an STN into a dispatchable network [9] where at every time an actual starting time of an event has been chosen, the consequences of such a choice are propagated through the network. Both approaches to dispatching have their advantages and disadvantages. In a dispatchable network we might compute an interval for the starting time of the first event to be dispatched and based on the actual dispatching time recompute the interval(s) for the dispatching of the next events by local propagation. Here, in principle, in selecting an interval for the next event to be dispatched, the flexibility for choosing the starting time in a dispatchable network might be larger than the corresponding length of the precomputed interval as computed by our method. On the other hand, taking – in a dispatchable network – the time window for each new event to be dispatched should be considered as a specification of the potential flexibility of that event. The realized flexibility of an event can be defined as the difference between the minimum allowable time point for dispatching the event and its actual dispatching time. It is not difficult to see that in any dispatching of an STN S, the sum of all realized flexibilities is upper bounded by {a mathematical formula}flex(S). So in this sense we can't do better. Also, in a dispatchable network, we have to recompute time windows after an event has been dispatched. In this sense, we may be forced to a strictly sequential dispatching strategy, while in our interval schedule framework, we allow for complete concurrency in computing the dispatching of events.
+     </paragraph>
+     <paragraph>
+      The careful reader might have noticed that our flexibility metric is not restricted to Simple Temporal Networks where only binary difference constraints occur. In fact, the method can be easily generalized as we have already done (see [27]) to compute the flexibility of general linear systems {a mathematical formula}Ax≤b. This offers the possibility of computing sets of solutions for such systems that guarantee that whatever value for a variable is selected in each of the intervals, the maximum value of the objective function for this combination of values is preserved. Moreover, this method can be used to give an efficient solution for decoupling problems for general linear systems such as analyzed by [28].
+     </paragraph>
+     <paragraph>
+      With respect to future research, we would like to mention the following issues. First of all, sometimes our flexibility metric gives counter-intuitive results, especially in cases where concurrency in choosing the execution of events should be avoided. For example, suppose an STN S consists of two events {a mathematical formula}t1 and {a mathematical formula}t2 that have to be executed simultaneously in the interval {a mathematical formula}[0,10]. Intuitively, the flexibility of S is 10. Using our flexibility metric, however, it turns out that {a mathematical formula}flex(S)=0. The reason is that {a mathematical formula}flex(S) measures the total flexibility in making independent choices. In this system S, however, we should choose for the flexibility of one of the events first. The remaining flexibility after this choice is 0. A possible solution would be to search for suitable network contractions of an STN. For example, in this system S, we could easily contract the set of time points to one time point. The flexibility of the resulting system then corresponds to our intuition.
+     </paragraph>
+     <paragraph>
+      Secondly, as the reader might have observed, the total flexibility of a system can be obtained in many, sometimes even quite unfair, ways. For example, preserving the total flexibility of the system could mean that a decoupling heavily favors some specific agents by giving them a lot of flexibility, while harming other agents by taking away their flexibility. To prevent this, we need to come up with fair flexibility distribution schemes as an objective to grant every agent an almost equal portion of flexibility. We could propose more fair distributions of flexibility and evaluate their performance by comparing it to the maximally obtainable flexibility as we have proposed in our paper to establish the price of fairness. An initial investigation into the effects of different methods of distributing the available flexibility in a schedule has already been performed by the authors (see [29]), but more work is needed in this area.
+     </paragraph>
+     <paragraph>
+      Finally, another question we did not deal with in this paper is how we should distribute flexibility over the events in order to ensure that a given interval schedule as proposed could enhance the robustness of a schedule. For example, if some events are considered as critical or more susceptible to delays, we could try to provide them with a larger scheduling interval. Research in this direction also should pay attention to the dependencies of events upon other events (as expressed by the STN) to minimize scheduling violations. Together with extensions of the STN framework with stochastic interpretations of the upper bounds {a mathematical formula}cij on the constraints, this would enable stochastic interpretations of the total flexibility of an STN and encourage empirical research into optimal distributions of flexibility over the events in order to ensure maximal (expected) robustness of the resulting schedule.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

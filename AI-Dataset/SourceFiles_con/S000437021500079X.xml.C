@@ -1,0 +1,702 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Automatic construction of optimal static sequential portfolios for AI planning and beyond.
+   </title>
+   <abstract>
+    In recent years the notion of portfolio has been revived with the aim of improving the performance of modern solvers. For example, Fast Downward Stone Soup and SATzilla have shown an excellent performance at the International Planning and SAT Competitions respectively. However, a deeper understanding of the limits and possibilities of portfolios is still missing. Most approaches to the study of portfolios are purely empirical. Thus, we propose a theoretically-grounded method based on Mixed-Integer Programming named gop. It addresses, among others, three main issues: how to derive an upper bound on the solvers performance for a given set of problem solving tasks; how to analyze the utility of training instances when designing portfolios; and how to configure a high performance portfolio for a given training set which generalizes very well on unseen instances. Experimental results both with data from the International Planning Competitions 2008 and 2011 and the SAT Competition 2013 show that this approach significantly outperforms others under the same conditions. Indeed, MIPSat, the sequential SAT portfolio automatically configured with gop, won the silver medal in the Open track of the SAT Competition 2013. In addition, MIPlan, the planning system which is able to automatically generate a portfolio configuration for a specific planning domain using gop, won the learning track of the International Planning Competition 2014.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Combinatorial problems arise in many areas of computer science and application domains like finding models of propositional formulae (SAT), planning, scheduling, protein structure prediction, etc. The challenge of these tasks is to find an optimal or satisficing solution in the potentially large space of possibilities.
+     </paragraph>
+     <paragraph>
+      The AI community has been actively seeking new ways to improve the heuristics and search algorithms used for solving combinatorial problems. However, the inherent difficulty of solving these problems using domain-independent solvers implies that no single solver dominates all others in every domain; i.e., different solvers perform best on different problems. Also, it has been shown empirically in some areas of Artificial Intelligence like Automated Planning that if a solver does not solve a problem quickly, it is very unlikely that it will solve it at all [1].
+     </paragraph>
+     <paragraph>
+      These facts led to revive the notion of portfolio from the Modern Portfolio Theory literature [2]. This notion of portfolio applied to problem solving is based on the following idea: several solvers are executed (in sequence or concurrently) with specific timeouts, expecting that at least one of them will find a solution in its allotted time. In case of solving problems optimally, the portfolio halts as soon as one solver finds a solution; otherwise, all solvers are invoked and the best solution is returned.
+     </paragraph>
+     <paragraph>
+      The portfolio approach has been empirically shown to be quite successful solving combinatorial problems. One of the best solvers of the last International SAT Competitions{sup:1} was SATzilla [3], a portfolio-based algorithm selector. Also, the results of the International Planning Competition 2011 (IPC 2011){sup:2} show that five out of seven awarded planners in the sequential optimal, sequential satisficing and learning tracks were portfolios or planners that consisted of a collection of solvers.
+     </paragraph>
+     <paragraph>
+      In this work attention is restricted to static sequential portfolios. A portfolio is termed static if its behavior cannot change once it has been configured—i.e., neither the allotted time to each solver nor the order of the execution sequence can be changed. Also, if the portfolio invokes solvers in sequence, then it is termed as sequential, as opposed to parallel portfolios, which run multiple solvers concurrently. The base solvers executed by sequential and parallel portfolios can be, in principle, sequential or parallel. It does not affect to the classification of the portfolio. Thus, a static sequential portfolio is a sorted configuration C of pairs {a mathematical formula}ci=〈pi,ti〉, where {a mathematical formula}pi is a solver and {a mathematical formula}ti is its allotted time. Additionally, preemptive mode (i.e., the ability to stop execution and resume it later on if necessary) is not allowed.
+     </paragraph>
+     <paragraph>
+      Using these definitions, the automated process of configuring static sequential portfolios can be defined as follows: Given a set of candidate solvers P and a set of training instances I automatically find the portfolio configuration C of solvers {a mathematical formula}p∈P such that it maximizes the performance of the resulting portfolio over the given benchmark I.
+     </paragraph>
+     <paragraph>
+      There have been several approaches proposed in the literature for generating portfolios. For instance, algorithm selection [3] is very useful to solve SAT problems. This approach typically runs all the candidate solvers over the whole collection of instances used in previous SAT competitions. Also, for each training instance, it extracts a set of features that describe its structure. Then, the expected time required to solve every training instance by each candidate solver is learnt using the collection of features (training phase). Finally, it generates a portfolio of solvers that maximizes the probability that a specific instance is solved (test phase). Alternatively, in the case of Automated Planning, instead of relying on a collection of features that describes the structure of each instance, some approaches focus on the performance of each candidate solver in a specific set of planning tasks (those that belong to the same planning domain) [4]. This approach runs all candidate solvers to be part in the portfolio with every training instance in the same planning domain. The performance of each candidate solver is analyzed and then a specific amount of time is assigned to each candidate solver according to its performance. Therefore, the resulting portfolio of this domain-independent portfolio configuration approach is domain-dependent.
+     </paragraph>
+     <paragraph>
+      We propose an alternative approach to the previous ones which consists of deriving the best achievable performance for a given training set with a linear combination of candidate domain-independent solvers using Mixed-Integer Programming (MIP) techniques. To do so, we define an objective function which consists of a weighted combination of quality and runtime to assess the performance of solvers. This metric is then used to compute the best portfolio with respect to the selected combination of parameters and performance criteria. Additionally, we have studied the utility of training instances since most approaches configure portfolios using all available training instances. We revisit in this work the well known problem in the machine learning literature of the impact of training instances in the result. We study the convenience of using all training instances, and show that using a smaller training set our approach generates portfolios whose performance is equivalent to the one obtained by using all instances. These results could lead in the future to more efficient ways of selecting training instances and generating portfolios.
+     </paragraph>
+     <paragraph>
+      The proposed approach derives the optimal static sequential portfolio (to be denoted as OSS portfolio) for a specific metric and a given training set; i.e., the optimal combination of solvers for a particular performance criteria with regard to the set of candidate solvers and the training benchmark considered. Actually, the resulting portfolio defines an upper bound on the solvers performance for the given training data set. Using this upper bound, the performance of any solver can be analyzed since it shows how far a solver is from the best performance achievable with a linear combination of solvers for the particular instances set. Also, this approach helps better understanding the performance of new solvers with respect to existing systems. It is important to remark that optimality is only guaranteed for the given training set; empirically, we show that the resulting portfolios also perform well on unseen test instances.
+     </paragraph>
+     <paragraph>
+      The current practice in the portfolio literature is to use the single best solver (sbs) and the virtual best solver (vbs) to define an upper bound on the solvers performance for a particular international competition. sbs is the winner of the respective category of an international competition while vbs is the best competition entry on a per-instance basis [5]. The vbs typically achieves much better performance than the sbs. The OSS portfolio generated with all the instances and participant solvers of an international competition always performs at least as good as the sbs of that competition. However, the vbs should perform better than the OSS portfolio. vbs is not a real portfolio since it cannot be run on new instances [5].
+     </paragraph>
+     <paragraph>
+      The proposed approach is applicable to several problem solving tasks. We have focused on Automated Planning and SAT, because they are two of the most prominent AI fields. Our original work only focused on optimal planning [6]. Compared to our original contribution, the present paper includes the following novel content:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A generalized definition of the MIP model, since the original model is not applicable to the more complex framework of sequential satisficing. The MIP problem for optimal planning can be seen as a variation of the Knapsack problem, while the MIP task for satisficing planning can be understood as the same problem where utilities depend upon time.
+      </list-item>
+      <list-item label="•">
+       New experiments where we have removed the domains that overlap between training and test sets in sequential optimal planning.
+      </list-item>
+      <list-item label="•">
+       Further experiments and analysis to generalize the ideas discussed in the previous work to the learning track of the IPC, sequential satisficing planning and SAT.
+      </list-item>
+     </list>
+     <paragraph>
+      In this work, we propose a technique (termed gop—Generation of Optimal Portfolios) that automatically builds OSS portfolios for a particular training data set and a collection of candidate solvers. Our contributions can be summarized as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       We propose a theoretically-grounded method that models the automated generation of portfolios using MIP tasks. We show these MIP tasks can be solved in a reasonable time and the resulting portfolios generalize very well.
+      </list-item>
+      <list-item label="2.">
+       We compute the best linear combination of participant solvers for the International Planning Competition 2011 and SAT Competition 2013.
+      </list-item>
+      <list-item label="3.">
+       We study the utility of training instances to generate sequential portfolios.
+      </list-item>
+      <list-item label="4.">
+       We assess the performance of the portfolios computed with our proposed approach in Automated Planning and SAT.
+      </list-item>
+      <list-item label="5.">
+       We evaluate our technique against previous optimal approaches from the portfolio literature.
+      </list-item>
+     </list>
+     <paragraph>
+      The paper is organized as follows: first, Section 2 discusses the related work. Next, Section 3 introduces Automated Planning, SAT and their respective competitions. Section 4 describes gop. Next, Section 5 presents the analysis of the utility of training instances. Section 6 shows the experimental results in Automated Planning. Next, Section 7 shows the experiments performed in SAT. Section 8 describes the experiments in which gop has been assessed against the state-of-the-art optimal portfolio approaches. Next, Section 9 analyzes the quality of the solutions achieved by gop over time. Finally, Section 10 presents the conclusions of this work and introduces future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In this section we describe the state-of-the-art techniques in the automated design of portfolios. We first discuss the related work on Automated Planning. Then, we present the related work on SAT. Finally, we discuss existing optimal approaches for constructing sequential portfolios.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Automated planning
+      </section-title>
+      <paragraph>
+       Fast Downward Stone Soup (fdss) [7] was one of the awarded planners in the IPC 2011. In particular, two portfolios (denoted as fdss as well, fdss-1 and fdss-2) were generated using the fdss technique to the sequential (optimal and satisficing) tracks of IPC 2011. fdss explores the space of static portfolios that can be configured with a set of candidate planners using a hill-climbing search algorithm. It takes a set of domain-independent planners as the initial portfolio, and allocates zero seconds to every planner. In each step, the algorithm generates the set of possible successors. Each successor increases the allotted time of one planner by a slice of the total time. To evaluate the successors, the algorithm uses a set of training problems: the whole collection of planning tasks used in all the past IPCs (a total of 1116 training instances ranging from 1998 to 2008). The best successor is selected as the current portfolio for the next iteration and it continues until the total time has been reached.
+      </paragraph>
+      <paragraph>
+       The work by Seipp et al. [8] automatically builds sequential portfolios learning them from domain-independently tuned planners. First, a planner is automatically configured (by using the parameter tuning framework ParamILS [9]) to excel in each of the 21 planning domains used in past IPCs. Second, the authors used seven different methods to learn portfolios of those tuned planners. All resulting portfolios were assessed on the IPC 2011 sequential satisficing track. Interestingly, the results showed that configuring planners for a set of known domains can be very helpful to build portfolios that perform well on unknown domains. It was also found that the portfolio learned with the uniform method, which assigns the same amount of time to each planner, did not achieve a remarkable training performance. However, it was the best portfolio on the test set.
+      </paragraph>
+      <paragraph>
+       The PbP planner is a portfolio-based planner with macro-actions [4], which automatically configures a sequential portfolio of domain-independent planners. The configuration relies on some knowledge about the performance of the planners in the portfolio for a specific domain and the observed utility of automatically generated sets of macro-actions. Nevertheless, PbP can be used without this additional knowledge. Thus, the portfolio runs all planners using a round-robin strategy and it assigns the same time slot to the planners after being randomly sorted. When PbP uses domain-specific knowledge, it only selects a cluster of planners (which are sorted by performance) for configuring the portfolio. On the other hand, macro-actions are not always considered. Instead, they are taken into account only if they improve the performance of the planner for the domain at hand.
+      </paragraph>
+      <paragraph>
+       Howe et al. [10] described bus, one of the first portfolio approaches for planning. bus runs 6 planners in a round-robin scheme until a solution is found. For each input instance, it extracts some features from the given planning task. bus sorts its component solvers by decreasing order of the expected probability of success of each solver divided by the expected run time of that solver. Both estimations are provided by linear regression models based on instance features. Thus, bus computes a portfolio (which contains its six candidate solvers) and sorts its component solvers for each input instance. This approach aims to minimize the expected cost (time) to solve every problem instance.
+      </paragraph>
+      <paragraph>
+       Another approach to automatically design portfolios learning predictive models using machine learning techniques is described by Cenamor et al. [11]. These models predict whether a particular planner is able to solve a specific planning task and, if the planner solves the task, the time required to solve it. The prediction capability relies on the set of features extracted from the SAS+ formulation of each problem. The sequential portfolio automatically selects a set of planners and the time allotted to each one according to predictive models and the set of features extracted from the problem to be solved. Therefore, it is able to change the portfolio configuration for every new planning task.
+      </paragraph>
+      <paragraph>
+       As a summary, fdss searches a good portfolio configuration on the space of portfolios. The work by Seipp et al. analyzes some techniques to generate sequential portfolios using tuned planners, and PbP computes domain-dependent portfolios. Instead, gop generates OSS domain-independent portfolios of candidate solvers for a given training set, which have been empirically observed to generalize very well on unseen instances.
+      </paragraph>
+      <paragraph>
+       Also, bus and the work by Cenamor et al. compute a portfolio configuration of candidate solvers (which can be just a single solver) for each input problem. This portfolio configuration is computed using a set of features extracted from the problem to be solved. gop, unlike these approaches, uses the same portfolio for all problems to be solved, which is generated for a given training data.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       SAT
+      </section-title>
+      <paragraph>
+       The work by Hutter et al. [12] also applies machine learning techniques for runtime prediction. However, unlike the previous approach (which was only applied to Automated Planning), this work focuses on SAT, MIP and the traveling salesperson problem (TSP). It proposes improvements and new techniques for learning predictive models. These techniques also try to improve the prediction accuracy for parameterized algorithms. Moreover, the authors introduce new relevant features for SAT, MIP and TSP problems.
+      </paragraph>
+      <paragraph>
+       SATzilla is a portfolio-based algorithm selection for SAT, which has been improved over the years [3], [13], [14]. The most recent version, SATzilla 2012, works in two phases. The first one is an offline learning phase, which generates two classification models. The first model is a classification model (decision forest, DF) that predicts whether the feature computation time is too costly or not. The second model is a cost-sensitive classification model (DF) for every pair of solvers in the portfolio. It predicts the solver that performs better on a given instance based on instance features. The second phase is the online execution phase in which SATzilla chooses the best candidate solver for every input instance using a set of features extracted from the input instance and the classification models generated in the previous phase.
+      </paragraph>
+      <paragraph>
+       While the previous approaches focus on configuring new sequential portfolios, Hydra tries to improve an existing portfolio [15]. Hydra automatically builds a set of solvers to complement a sequential portfolio by instantiating a parameterized algorithm using an algorithm configuration procedure. It is primarily intended for use in domains for which an adequate set of candidate solvers does not already exist. Hydra has been applied to SAT, producing high-performance portfolios using SATzilla[3]. The set of solvers used to complement SATzilla has been generated applying an algorithm configuration procedure to the highly parameterized solver framework termed SATenstein[16], which can be configured to instantiate a broad range of high-performance stochastic local search based SAT solvers.
+      </paragraph>
+      <paragraph>
+       Satisfiability Solver Selector (3S) [17], [18], [19] schedules a set of candidate solvers using algorithm selection with a fixed-split solver schedule approach. 3S consists of two phases, an offline learning phase, and an online execution phase. The learning phase is composed of three tasks. The first one computes a collection of features for each training instance and runs every candidate solver with all training instances. The second one aims to compute a desirable size k of the local neighborhood for a given instance using cross validation. And the last one solves a MIP task to compute the optimal sequential schedule of candidate solvers that maximizes the number of solved training instances using 10% of the available time. 3S uses the column generation approach to solve that MIP task. Therefore, the solutions founds are not optimal though they are near-optimal in practice. In the execution phase, 3S computes a collection of features for the input instance. Next, it selects the subset of k most “similar” training instances to the input one. Then, 3S selects the best candidate solver for these k instances. Finally, 3S runs the fixed schedule of candidate solvers for 10% of the available time and the selected solver for the remaining time.
+      </paragraph>
+      <paragraph>
+       As discussed in the introduction, we propose to analyze the performance of any solver on a given benchmark using the upper bound defined by the OSS portfolio for that particular set of instances. There are works in the literature that also propose to use techniques to automatically generate portfolios for analyzing individual solvers. For instance, the work described in [5] analyzes the contributions of individual SAT solvers measuring their contribution to SATzilla. The authors drew interesting conclusions such as that the solvers that contribute most to SATzilla are the solvers that exploit novel strategies instead of solvers with best performance.
+      </paragraph>
+      <paragraph>
+       In a nutshell, SATzilla and 3S compute a sequential portfolio for each given instance using a collection of features extracted from the input problem. Instead, gop uses the same portfolio for solving all the input instances. The MIP task proposed by 3S will be discussed in detail in Section 8. On the other hand, Hydra uses a highly parameterized algorithm framework instead of a fixed set of candidate solvers.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Optimal approaches for the design of algorithm schedules
+      </section-title>
+      <paragraph>
+       We are not the first to propose an optimal approach for constructing optimal static portfolios. This problem was earlier considered by the work of Gomes et al. [20] which discuss various theoretical results concerning optimal portfolios. The authors also provide results of the computational advantage of the portfolio approach on hard combinatorial search and reasoning problems. An example of an optimal portfolio approach is CPhydra[21], which uses case-based reasoning in a portfolio for solving constraint satisfaction problems. It requires a collection of features that describe each input problem instance. This collection of features is used by the case base reasoner to obtain a set of similar cases. CPhydra defines a constraint model based on the knapsack problem to compute the solver schedule. The resulting constraint problem is solved by a simple complete search procedure.
+      </paragraph>
+      <paragraph>
+       The work by Streeter et al. [22] introduces an optimal approach for configuring sequential portfolios. Portfolios, as defined here, consist of interleaving the execution of solvers using the preemptive mode (i.e., the ability to stop execution and resume it later on if necessary). Also, the authors did not constrain the total available time in the portfolio. Therefore, the total available time is equal to the maximum time the authors are willing to spend on any single solver when solving any particular instance multiplied by the number of component solvers. This work proposes an optimal and greedy algorithms for computing the optimal portfolio and proved that the problem is NP-complete. The optimal algorithm only works (in polynomial time) with a small number of candidate solvers k since the optimal portfolio is learnt by computing a shortest path in a graph, whose vertices are arranged in a k-dimensional grid.
+      </paragraph>
+      <paragraph>
+       Another optimal approach for configuring portfolios is called aspeed[23]. It formulates the problem of computing the optimal portfolio according to a set of training data as a multi-criteria optimization problem using Answer-Set Programming (ASP). Unlike the previous approach, aspeed constrains the total available time in the portfolio. The approach is split into two steps. The first step computes the optimal portfolio minimizing the {a mathematical formula}L2-norm on the vector defined by the time allotted to each solver. First, this norm leads to a significant reduction of candidate portfolios and second, it results in portfolios with a more homogeneous distribution of time slices. The second step aims to sort the component solvers in the portfolio with the purpose of minimizing the total execution time for the training data. Therefore, the resulting portfolio achieves the best performance in the training set and minimizes the execution time in that instance set. Moreover, aspeed is able to compute parallel portfolios for multi-core machines, like the parallel version of 3S [24].
+      </paragraph>
+      <paragraph>
+       A deep comparison among gop and the optimal approaches discussed in this section will be described in Section 8. To conclude, there are available various overviews on algorithm selection.{sup:3}
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Comparison of state-of-the-art approaches in the automated design of portfolios
+      </section-title>
+      <paragraph>
+       The main differences between gop and all these approaches are that we compute efficiently OSS portfolios with regard to a given collection of tasks and candidate solvers, which generalize well on unseen instances as evidenced by the results obtained in two different AI fields, Automated Planning and SAT. Also, gop is able to generate OSS portfolios for the satisficing framework, where a solver can generate more than one solution (for each instance), each with a different quality.
+      </paragraph>
+      <paragraph>
+       Table 1 shows the main differences among the approaches described in this section. The work by Streeter et al. focuses on a different problem than the task addressed in our work, as we discuss in Section 8. Therefore, we have not considered that approach in the comparisons. Also, the work by Hutter et al. focuses on predictive models and instance features and no portfolio is generated. As a reminder, 3S does not generate optimal portfolios since it uses the column generation approach to solve the MIP task.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Automated planning and SAT
+     </section-title>
+     <paragraph>
+      In this section we briefly describe Automated Planning, SAT and their respective competitions. We have focused on the International Planning and SAT competitions held in 2011 and 2013 respectively.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Propositional planning
+      </section-title>
+      <paragraph>
+       Automated Planning is an area of Artificial Intelligence that studies the process of generating sequence of actions to achieve a set of goals from an initial state. Formally, a planning task is defined as a tuple {a mathematical formula}P=(F,A,I,G) where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        F is a set of atomic propositions (also known as facts).
+       </list-item>
+       <list-item label="•">
+        A is the set of grounded actions. Each action {a mathematical formula}a∈A is defined as a triple ({a mathematical formula}pre(a),add(a),del(a)) (preconditions, add effects and delete effects) where {a mathematical formula}pre(a),add(a),del(a)⊆F.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I⊆F is the initial state.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}G⊆F is the set of goals.
+       </list-item>
+      </list>
+      <paragraph>
+       A plan π is a sequence of applicable actions {a mathematical formula}π=(a1,…,an), {a mathematical formula}∀ai∈A that allows for the transition from the initial state I to a final state g where all goals are satisfied {a mathematical formula}G⊆g. Actions can have non-unitary costs. A distinction must be made between satisficing planning, that tries to find a plan preferring those of better quality with respect to a given metric, and optimal planning, where the best plan must be found. In this work we have focused on both satisficing and optimal planning.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       International Planning Competition 2011
+      </section-title>
+      <paragraph>
+       The International Planning Competition is a competitive event organized in the context of the International Conference on Planning and Scheduling (ICAPS). This competition provides an empirical environment for assessing planning systems under the same conditions.
+      </paragraph>
+      <paragraph>
+       The IPC 2011 [25] was composed of three parts:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Deterministic Part: It only considers deterministic actions where the transition between two states after any sequence of actions is fully predictable.
+       </list-item>
+       <list-item label="•">
+        Planning and Learning Part: Planners automatically extract domain-dependent knowledge during an offline training phase and exploit this learnt knowledge in the test phase.
+       </list-item>
+       <list-item label="•">
+        Uncertainty Part: It considers non-deterministic and probabilistic actions in fully observable, partially observable or unobservable domains.
+       </list-item>
+      </list>
+      <paragraph>
+       The Deterministic part was split into two categories: sequential and temporal. In this work we have focused on the satisficing and optimal tracks of the sequential Deterministic Part and on the learning track (Planning and Learning Part) of the Planning competition. The main differences between satisficing planning and optimal planning can be summarized as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Satisficing planners can generate more than one solution, each with a different quality, whereas optimal planners generate at most one solution. Thus, while the performance of optimal planners is qualified with a binary variable (whether a particular planning task is solved or not), satisficing planners are qualified with a list of timestamps (when each particular solution was generated) along with their quality.
+       </list-item>
+       <list-item label="•">
+        Commonly, satisficing planners maximize the sum of the solution quality of each problem over a set of planning tasks while the optimal planners maximize coverage; i.e., the number of solved problems.
+       </list-item>
+      </list>
+      <paragraph>
+       The set of planning tasks defined for both tracks was divided in 14 planning domains, each one composed of 20 planning tasks. Each participant planning system was allotted 30 minutes for every planning task on a single core processor and a memory limit of 6 GB. The quality of the resulting plans was computed in the range {a mathematical formula}[0,1] using equation (1) for every task. If a participant planner p did not solve an instance t, the plan quality of this task was set to zero. Otherwise, the plan quality of a solved instance was computed as the lowest (i.e., better) solution cost found by any planning system in the competition, divided by the cost of the solution s found by the participant planner p. In case of solving planning tasks optimally the quality of the resulting plans is a binary value, since plans have to be optimal. The planner with the highest sum of quality ratios over all planning tasks is declared the winner in each track:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Propositional satisfiability
+      </section-title>
+      <paragraph>
+       Propositional Satisfiability (SAT) is the problem of deciding whether the variables of a propositional formula in Conjunctive Normal Form (CNF) can be assigned a boolean value in such a way that the formula evaluates to true. This is a classic NP-complete problem [26].
+      </paragraph>
+      <paragraph>
+       An assignment for a propositional formula such that all clauses evaluate to true is said to be a satisfiable (SAT) solution. But if there is no assignment satisficing all clauses, the propositional formula is said to be unsatisfiable (UNSAT).
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       SAT Competition 2013
+      </section-title>
+      <paragraph>
+       The International SAT Competition is a biennial event for Boolean Satisfiability solvers. It is organized in the context of the International Conference on Theory and Applications of Satisfiability Testing (SAT). The aim of this competitive event is to assess the progress in state-of-the-art procedures for solving Boolean Satisfiability problems.
+      </paragraph>
+      <paragraph>
+       The SAT Competition 2013{sup:4} was split into the Main track and the Minisat Hack track. The goal of the first one is to determine whether a propositional formula in CNF is satisfiable or not. The second one aims to see how far the performance of Minisat [27] can be improved by making minor changes in that solver.
+      </paragraph>
+      <paragraph>
+       The Main track was composed of several tracks, where each one was defined as a combination of:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Type of solver. The organizers defined two type of solvers: Core solvers and Alternative approaches. The first one only allows participants to use solvers that employ at most two different SAT solving engines for all runs and at any time in one track. The second one represents any solver not covered by the definition of a core solver.
+       </list-item>
+       <list-item label="•">
+        Computational resources. Resources classified the participant solvers into sequential solvers or parallel solvers. The first ones only use one core for 5000 seconds CPU time and 7.5 GB of main memory to solve each SAT instance. The second ones have 8 cores, 15 GB of main memory and 5000 seconds wall-clock time available to solve each SAT problem.
+       </list-item>
+       <list-item label="•">
+        Also, each category defines three tracks according to the solution of its instances: SAT, SAT+UNSAT and certified UNSAT. In the case of satisfiable formulas, solvers are required to output a model of the formula. Solvers are only required to emit an unsatisfiability proof in certified UNSAT tracks.
+       </list-item>
+      </list>
+      <paragraph>
+       An instance is solved by a solver if the solver generates the complete answer within the allocated resources. The solver with the highest number of instances solved is declared the winner in each track. Ties are broken in favor of lower CPU running time in the sequential tracks and lower wall-clock time in parallel tracks.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     gop: automatically generating optimal portfolios
+     <paragraph>
+      gop automatically derives an optimal combination of solvers with regard to the set of candidate solvers and the set of training problems. By optimal we mean that it is guaranteed to provide the best quality (in terms of the selection of weights discussed below) when being run over the same set of training instances and in sequence without any exchange of information among them—so that the followed order is not relevant.
+     </paragraph>
+     <paragraph>
+      gop consists of three steps. First, every candidate solver is executed with every training problem from the input set to generate the raw data. Second, this raw data is processed to compute the parameters of the MIP model. Third, the MIP task generates the optimal configuration of a static sequential portfolio for the collection of training problems and candidate solvers. This optimal configuration is the best linear combination of the candidate solvers with regard to the objective function (maximize coverage or overall quality or minimize time) of the MIP model. Each task is described in detail next.
+     </paragraph>
+     <section label="4.1">
+      Inputs to gop
+      <paragraph>
+       The inputs to gop consist of a set of candidate solvers, P, a set of training instances, I, and the available time to solve each instance. The set of training instances I can be split into subsets called domains. Each candidate solver {a mathematical formula}p∈P is executed with every training instance {a mathematical formula}t∈I to obtain the sets {a mathematical formula}Spt of solutions. In case of solving problems optimally or SAT problems, a candidate solver {a mathematical formula}p∈P generates at most one solution {a mathematical formula}s∈Spt for each training instance {a mathematical formula}t∈I, since s should be optimal (as in the case of Automated Planning) or because it is required only to find a single solution—as in the case of SAT. Otherwise, the candidate solver can generate an arbitrary number of solutions.
+      </paragraph>
+      <paragraph>
+       Each execution generates raw data such as the runtime of each solution, or the memory consumption at each time tick. However, we only need a subset of that raw data, which shall be computed to generate the input data for the MIP model.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       MIP model input data
+      </section-title>
+      <paragraph>
+       gop processes the runtime spent (in seconds) and the quality of each solution {a mathematical formula}s∈Spt for each training instance {a mathematical formula}t∈I and candidate solver {a mathematical formula}p∈P. The quality of each solution, denoted as {a mathematical formula}q(p,t,s), is computed according to the official metric used in the IPC 2011 (see equation (1) in Section 3.2). This equation computes the solution quality in the interval {a mathematical formula}[0,1]. In case of solving problems optimally in planning or in SAT tasks, the value 1 means that the training problem {a mathematical formula}t∈I has been solved by the solver {a mathematical formula}p∈P. Otherwise, the value 1 means that the solver {a mathematical formula}p∈P has found the best solution for the training instance {a mathematical formula}t∈I (with regard to the solutions found by the set of candidate solvers P).
+      </paragraph>
+      <paragraph>
+       Runtime is computed using equation (2). This equation already takes into account whether every training problem has been solved or not. The runtime value of each solution, denoted as {a mathematical formula}r(p,t,s), is normalized in the interval {a mathematical formula}[0,1] if the solver p solves the training problem t:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Mixed-integer programming model
+      </section-title>
+      <paragraph>
+       MIP is a generalization of integer programming where some variables are constrained to be integers. It is used to solve optimization problems where a linear objective function is maximized (or minimized). This objective function is subject to some linear constraints, which represent the limitations of the optimization problem. The value resulting from evaluating the objective function assesses the quality of the solution.
+      </paragraph>
+      <paragraph>
+       The MIP aims to assign a candidate solver {a mathematical formula}p∈P and a solution {a mathematical formula}s∈Spt from that candidate solver p (in case of multiple solutions) to each training instance {a mathematical formula}t∈I such that this assignment maximizes its objective function. The outcome of the MIP is the runtime allocated to each candidate solver {a mathematical formula}p∈P. This runtime is the time required for the solver p to solve each training instance {a mathematical formula}t∈I with the solution {a mathematical formula}s∈Spt selected by the MIP.
+      </paragraph>
+      <paragraph>
+       The MIP model should define the following elements: parameters, decision variables, objective function and constraints. The model input data is stored as two parameters: {a mathematical formula}q(p,t,s)Normalized plan quality (see equation (1)) for the solution {a mathematical formula}s∈Spt found by the candidate solver {a mathematical formula}p∈P for the training problem {a mathematical formula}t∈I.{a mathematical formula}r(p,t,s)Normalized runtime (see equation (2)) spent by the candidate solver {a mathematical formula}p∈P to solve the training problem {a mathematical formula}t∈I with the solution {a mathematical formula}s∈Spt.
+      </paragraph>
+      <paragraph>
+       Decision variables store the outcome of the MIP solver which serve to fully characterize the resulting portfolio: {a mathematical formula}solved_byptsIt is an auxiliary variable that stores each decision made for the model to solve each training instance {a mathematical formula}t∈I. If the solution {a mathematical formula}s∈Spt of the candidate solver {a mathematical formula}p∈P is selected to solve the instance {a mathematical formula}t∈I, the variable takes the value 1. Otherwise, it takes the value 0.{a mathematical formula}qualitytIt is an auxiliary variable that stores the quality of the solution selected to solve the training instance {a mathematical formula}t∈I.{a mathematical formula}timepIt is the output variable. It stores the allotted time to each candidate solver {a mathematical formula}p∈P in the interval {a mathematical formula}[0,1], according to equation (2).
+      </paragraph>
+      <paragraph>
+       Constraints are used to model the availability of computational resources, mainly time. First, the sequential execution of all solvers should not exceed the current available time. Since time is normalized in the interval {a mathematical formula}[0,1], this constraint is defined as shown in equation (3):{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       On the other hand, each candidate solver {a mathematical formula}p∈P can be assigned by the MIP to solve a subset of training instances {a mathematical formula}t∈I, each one with a particular solution {a mathematical formula}s∈Spt. The time required for the solver p to solve every assigned instance {a mathematical formula}t∈I is the largest execution time that the solver p takes to solve those problems. However, this value cannot be computed with a linear expression. Therefore, the next constraint is added to guarantee that the allotted time to each solver is equal or higher than the required time:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The final quality achieved by the resulting portfolio is computed with another constraint as shown in equation (5). Although it does not constrain the model in any particular way, it is defined here to be used in the objective function later:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As mentioned above, the MIP only selects one solution {a mathematical formula}s∈Spt found by a solver {a mathematical formula}p∈P to solve each particular training problem {a mathematical formula}t∈I even if other solvers solve it as well. This is useful for computing the overall time used and the overall quality achieved by the resulting portfolio as shown in equations (4) and (5), where {a mathematical formula}solved_bypts is used. Constraint (6) is used to enforce the selection of a single solution per training problem:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Although the usual goal for configuring portfolios is to maximize the overall solution quality or the number of solved instances, we considered an objective function that maximizes a weighted sum of overall running time (the sum of {a mathematical formula}timep for all solvers p) and quality of the solutions (quality).{sup:5} Since runtime should be minimized, the values computed in the MIP model are substracted from 1 as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If the objective of the MIP task only consists of optimizing a single value (such as quality), it just suffices to set the corresponding weight to 1 while setting the rest of weights to zero—e.g., when optimizing only quality, the following weights should be used directly: {a mathematical formula}w1=1, {a mathematical formula}w2=0. If, on the other hand, the objective is to maximize a non-null linear combination of the two aforementioned values, the problem becomes harder. Instead of facing this task as a multi-objective optimization problem, we just solve the MIP task in two steps while preserving the value of the objective function from the previous MIP solution. For example, if the objective is to maximize quality while minimizing the overall running time, then {a mathematical formula}w1=1 and {a mathematical formula}w2=0 so that only quality is taken into account. If one solution exists at least, then a second execution of the MIP model is issued to find the combination of candidate solvers that achieves the same quality (denoted as Q) while minimizing the overall running time, just by setting {a mathematical formula}w2=1 and {a mathematical formula}w1=0. To enforce a solution with the same quality, an additional constraint is added: {a mathematical formula}∑t∈Iqualityt≥Q−ϵ, where ϵ is just any small real value used to avoid floating-point errors. Clearly, a solution is guaranteed to exist, since a first solution was already found in the previous step.
+      </paragraph>
+      <paragraph>
+       Algorithm 1 shows the steps followed in our empirical evaluation where quality was maximized first, and then running time was minimized among the combinations that achieved the optimal quality. Note that this is different than solving the multi-objective optimization problem posed by finding the optimal configuration that simultaneously optimizes resources. We have used this algorithm since it was empirically found that the MIP solver tends to distribute all the available time among the candidate solvers selected to be part of the portfolio. Running the procedure depicted in Algorithm 1, it is possible to have some slack time which is then distributed uniformly among the selected solvers.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      gop output
+      <paragraph>
+       The output of the MIP task is just the allocated runtime to each candidate solver, which can be either zero (i.e., the candidate solver should be excluded from the portfolio) or a positive number. The MIP task does not specify any particular order to execute the solvers. The execution sequence of the obtained portfolios is arbitrary and it is based on the order in which the candidate solvers were initially specified.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Analysis of the utility of training instances
+     </section-title>
+     <paragraph>
+      One of the main factors that influences the time required to solve the MIP task defined in the previous section is the size of the training instance set. Thus, in this section we analyze the question of whether there is a subset of the training problems that results in a portfolio with a similar or even equal performance (measured in overall quality or coverage) with regard to the same set of candidate solvers. We refer to this particular problem as the analysis of the utility of the training instances. For example, when optimizing quality, if all training problems are solved by all solvers with the same quality, they do not provide any utility to configure the OSS portfolio since any combination of the candidate solvers will provide the same result. Similarly, the training problems that are not solved by any solver are equally irrelevant since the MIP task will not be able to distinguish between an empty portfolio or a particular combination of the candidate solvers.
+     </paragraph>
+     <paragraph>
+      We propose to split the training problems in subsets that contain those training instances that are solved by a maximum number of solvers. The first set is composed of all instances that are solved by at most one solver. The second set (which is a superset of the previous one) consists of all instances that are solved by at most two solvers, and so on. In general, the i-th set consists of all training instances that are solved by i solvers or less. This analysis aims to study whether the performance of the portfolios obtained with every subset is closer to the performance achieved by the portfolio computed with the full set of training instances. Thus, each resulting portfolio is assessed on a benchmark which contains (among others) the training instances used to compute it. In this analysis, we evaluate the resulting portfolios over the training set because: first, we are assessing neither the proposed portfolio generation technique nor the performance of the resulting portfolio; secondly, if we would evaluate the resulting portfolios over a different (test) set, results will be biased by other factors, such as generalization capability. Thus, by fixing the training set we expect to highlight the differences due solely to the training instance set considered. We report in the experiments section the results of this analysis, which could lead in the future to efficient algorithms to select a priori better training instances to generate high performance portfolios.
+     </paragraph>
+     <paragraph>
+      This is a posteriori analysis since it involves the execution time of each solver with every training instance. Also, this analysis does not evaluate gop. We only use gop with the aim of empirically analyzing a specific issue in the automated design of portfolios. Moreover, it is important to remark that we only evaluate portfolios over the training set in this empirical analysis.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Automated planning
+     </section-title>
+     <paragraph>
+      In this section we describe the experiments performed in Automated Planning. The MIP solver selected to solve the MIP task in all experiments has been SCIP,{sup:6} one of the fastest non-commercial MIP solvers, which supports the modeling language ZIMPL.{sup:7} The same model described in Section 4 has been used to solve the MIP task for optimal and satisficing planning. This model has also been used by MIPlan[28], the winner of the learning track of the IPC 2014.
+     </paragraph>
+     <paragraph>
+      As in the IPC 2011, we have used a time limit of 1800 seconds and a memory limit of 6 GB to generate the input data for the MIP model in all experiments. The hardware used to run each experiment is an Intel Xeon 2.93 GHz quad core processor (64 bits) with 8 GB of RAM memory.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Optimal planning
+      </section-title>
+      <paragraph>
+       Optimal planners generate at most one solution. The quality of that solution is computed as a binary value, which shows whether the planning task has been solved or not. In other words, the MIP problem for optimal planning can be seen as a variation of the Knapsack problem. The reward for including an object in the bag is the number of problems solved by a planner within its allotted time. This allotted time represents the cost (weight) of including the object in the knapsack. The goal is to maximize the reward without exceeding the maximum cost (weight) that we can carry in the bag (the total time available for solving each planning task).
+      </paragraph>
+      <paragraph>
+       In this section we have performed experiments to compute the OSS portfolio for the IPC 2011. Also, we have made the analysis of the utility of training instances. Finally, the performance of gop has been assessed against fdss, the state-of-the-art portfolio in optimal planning.
+      </paragraph>
+      <section label="6.1.1">
+       <section-title>
+        OSS portfolio for the IPC 2011
+       </section-title>
+       <paragraph>
+        The first experiment aims to compute the OSS portfolio for the sequential optimization track of the IPC 2011, which allows us to analyze the performance of any solver on that particular benchmark. Since in this experiment we test the performance with the same training instances, the resulting portfolio provides us only with the best achievable performance given the participant planners and instances of the IPC. Therefore, this experiment does not assess the performance of the OSS portfolio on a different set of instances. It analyzes the performance of the awarded planners regarding the upper bound defined by the OSS portfolio.
+       </paragraph>
+       <paragraph>
+        We have considered the benchmark defined as all ipc domains 2011 in Table A.6 (see Annex A). The set of candidate planners is composed of all participant planners, where the portfolios have been removed from the selection and their solvers have been added instead as shown in Table A.7 (see Annex A). In particular, the Merge-and-Shrink portfolio and the two variants of fdss were discarded and the following solvers added: two versions of Merge-and-Shrink[29] and the {a mathematical formula}A⁎ search algorithm [30] with the blind heuristic.
+       </paragraph>
+       <paragraph>
+        The OSS portfolio for the IPC 2011 has been configured by running Algorithm 1. It took gop 10.75 seconds to compute it. Fig. 1 shows the resulting portfolio, which solves 200 training problems. The benchmark used in the IPC 2011 was composed of 280 planning tasks. However, there were 77 problems that were not solved by any planner. Therefore, there are only three solvable instances that the OSS portfolio is not able to solve.
+       </paragraph>
+       <paragraph>
+        The metric used in the competition ranks the participant planners according to their performance (coverage). But it does not provide any information about how good the performance of each participant planner is. However, the OSS portfolio computed in this section shows how far each planner is from the best linear combination of the participant planners.
+       </paragraph>
+       <paragraph>
+        For instance, the winner of the IPC 2011 was fdss-1 (which solved 185 problems) and the runner-ups were Selective Max and Merge-and-Shrink (both solved 169 planning tasks). The OSS portfolio automatically built by gop solves 200 planning problems. This value defines an upper bound for the number of solved problems on this competition taking into account its competing planners and problem instances. Therefore, it shows that the performance of fdss-1 is {a mathematical formula}185200⋅100=92.5% of the best performance achievable while the performance of the runner-ups is {a mathematical formula}169200⋅100=84.5% with regard to the same upper bound.
+       </paragraph>
+       <paragraph>
+        Moreover, this OSS portfolio is a reasonable estimator of the expected performance of state-of-the-art planners. It can be used in the next competition as a reference performance to analyze whether the participant planners result in a significant advance in the state-of-the-art or not.
+       </paragraph>
+      </section>
+      <section label="6.1.2">
+       <section-title>
+        Analysis of the utility of planning tasks
+       </section-title>
+       <paragraph>
+        In this analysis, we have considered the same training data set used in the previous experiment. We have defined 12 sets of training problems as described in Section 5, since there are 12 input planners. Next, we run Algorithm 1 to configure a sequential portfolio for each subset. Finally, each resulting portfolio has been evaluated over the whole collection of planning tasks defined in the IPC 2011 (training set).
+       </paragraph>
+       <paragraph>
+        The results of this analysis are shown in Table 2. From the table, it results that the same performance (measured in coverage and time) is achieved for all the sequential portfolios derived using all sets of training problems but the first one (which consists just of those problems that were solved by at most one planner). As it can be seen in Table 2, the minimum set of training problems necessary to configure the OSS portfolio for the IPC 2011 is the second one, which contains only 27 problems. This fact empirically confirms our initial intuition: not all training problems provide the same utility.
+       </paragraph>
+      </section>
+      <section label="6.1.3">
+       Assessment of gop to configure sequential portfolios
+       <paragraph>
+        In this section, we evaluate the performance of the sequential portfolios generated by gop for optimal planning. Specifically, we have assessed gop against fdss.
+       </paragraph>
+       <section>
+        <section-title>
+         Training
+        </section-title>
+        <paragraph>
+         The set of candidate planners is composed of all the planners considered in the design of fdss,{sup:8} which are listed in Table A.8 (see Annex A). On the other hand, instead of using all the 1163 instances from the IPCs in the range covering the period from 1998 to 2008 (as it was done to configure fdss) we have considered a subset composed of only the 240 planning tasks contained in the benchmark denoted as training optimal 2008 in Table A.6 (see Annex A).
+        </paragraph>
+        <paragraph>
+         The portfolio generated by running Algorithm 1 is shown in Fig. 2. The time taken to compute this portfolio was 3.09 seconds. This portfolio, denoted as gop-1, solves 165 problems in the benchmark defined for the IPC 2008 (training set). However, there are only 167 planning tasks that are solved by some planner considered in the set of candidate planners. Therefore, gop-1 solves all solvable training tasks but two of them.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Test
+        </section-title>
+        <paragraph>
+         All domains selected in the IPC 2008 are included in the IPC 2011. Hence, in order to test the generalization power of both gop and fdss, we have used only the new domains defined in the IPC 2011 (benchmark denoted as new ipc domains 2011 in Table A.6, see Annex A).
+        </paragraph>
+        <paragraph>
+         gop-1 solves the same number of problems than fdss-1 and fdss-2, 65. Therefore, the sequential portfolio automatically derived by gop under the same conditions as fdss, provides the same performance as the winner of the IPC 2011. Also, this result endorses the idea that it is not necessary to use a large number of problems to train a portfolio. Instead, a smaller number of more informative problems can be used. We expect that the time necessary to solve the MIP task is significantly smaller than the time necessary to traverse the state-space of portfolio configurations with a hill-climbing search algorithm as in the case of fdss. We cannot guarantee this statement because the published experiments of fdss do not show the time required to compute its portfolios. Remarkably, the planners selected for gop-1 are the same ones as those picked in the configuration of fdss-1 except for bjolp.
+        </paragraph>
+        <paragraph>
+         As discussed above, the metric used in the IPC 2011 does not provide any information about the quality of the achieved performance. Hence, we do not know how good the previous results are. We only know the number of solved problems (65) and the size of the test problems set (120). Therefore, we have computed the OSS portfolio (OSS gop-1) for the new domains defined in the IPC 2011 using the same set of candidate planners considered by fdss and gop-1. Also, we have generated the vbs, the sbs and the OSS portfolio (OSS IPC) for these domains using all the participant solvers in the IPC 2011. The performance of the resulting portfolios is shown in Fig. 3. As it can be seen, the performance shown by gop-1 and fdss is very high since they are equal to {a mathematical formula}6569⋅100=94.2% with regard to the performance of the OSS gop-1 portfolio.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Satisficing planning
+      </section-title>
+      <paragraph>
+       The sequential satisficing track of the last two IPCs aims to solve planning tasks improving the quality of the solutions found over time. Satisficing planners can generate more than one solution, each with a different quality. This quality is typically computed as a real value in the range {a mathematical formula}[0,1]. Also, each computed solution contains a timestamp, which shows when the particular solution was generated. Therefore, the MIP problem for the sequential satisficing track is more complex than for the optimal track, since optimal planners generate at most one solution.
+      </paragraph>
+      <paragraph>
+       As discussed above, the modeling language ZIMPL has been used to model the MIP problem. The MIP task for satisficing planning can be seen as the Knapsack problem where utilities change over time. The number of solutions generated by each planner is different. Therefore, the utility should be modeled as a vector instead of a scalar. However, while ZIMPL allows the definition of multi-dimensional parameters, it is not possible to use multi-dimensional dynamic parameters—i.e., each with a different size. As a consequence, all parameters were enforced to have the same length equal to the maximum number of solutions found by any planner to any planning task. For those planners that found less solutions, we just used equations (1) and (2) for introducing additional entries as if they were unsolved.
+      </paragraph>
+      <paragraph>
+       Similarly to the experiments in optimal planning, Algorithm 1 was used to derive each gop portfolio. This algorithm is a two steps optimization process. The first step maximizes the overall quality and the second one aims to minimize the total allotted time while preserving the optimal quality. We have empirically observed that (in satisficing planning) the first step is much faster than the second one. In the following, we report both times between parenthesis.
+      </paragraph>
+      <paragraph>
+       In this section we have computed the OSS portfolio for the IPC 2011. Next, we have performed the analysis of the utility of training instances. Finally, we have assessed the performance of the portfolios automatically derived with gop against the state-of-the-art approaches in satisficing planning.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        OSS portfolio for the IPC 2011
+       </section-title>
+       <paragraph>
+        In this experiment, we have used the benchmark defined as all ipc domains 2011 in Table A.6 (see Annex A), which is composed of all the planning tasks of the IPC 2011. Also, we have considered all the entrants of the IPC 2011, which are listed in Table A.9 (see Annex A). We have used the participant portfolios instead of their component planners since these portfolios implement their own anytime behavior.
+       </paragraph>
+       <paragraph>
+        Fig. 4 shows the computed portfolio, which has been configured by running Algorithm 1. It took gop 382,462.14 seconds, less than 4.5 days (circa 5.5 hours for the first step and about 4.3 days for the second step) to compute it. This portfolio solves 265 training problems with a total quality of 252.75. Remarkably, 13 problems were not solved by any planner so that the largest number of solvable instances is 267. Therefore, the planner automatically built by gop falls below only by two instances.
+       </paragraph>
+       <paragraph>
+        Once we have computed the OSS portfolio for the competition, we are able to analyze the performance of the awarded planners against the upper bound defined by the performance of the OSS portfolio. The winner of the sequential satisficing track of IPC 2011 was lama-2011[31], which solved 250 problems with an overall quality of 216.33. The runner-up was fdss-1 and it solved 232 problems with a total quality of 202.08. These results show that lama-2011 is very effective solving planning tasks and finding high quality solutions. The performance of lama-2011 measured in coverage is therefore {a mathematical formula}250265⋅100=94.3% while the performance of fdss-1 is {a mathematical formula}232265⋅100=87.5% with regard to the upper bound defined by the OSS portfolio. Interestingly, lama-2011 has more room for improving the overall quality since its performance (quality) is equal to {a mathematical formula}216.33252.75⋅100=85.6% according to the overall quality achieved by the OSS portfolio. Nevertheless, the overall quality achieved by lama-2011 is quite high.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Analysis of the utility of planning tasks
+       </section-title>
+       <paragraph>
+        In this experiment, we considered the utility of every planning task as discussed in Section 5. Again, we considered all the entrants of the IPC 2011 and all the planning tasks selected in that benchmark. We split the set of training instances as discussed in Section 5. Next, Algorithm 1 was used to derive a sequential portfolio for each subset. Finally, each portfolio is evaluated on the benchmarks of the IPC 2011 sequential satisficing track.
+       </paragraph>
+       <paragraph>
+        The results of this analysis are shown in Table 3. As it can be seen, our results indicate that a restricted number of planning instances suffices to derive the OSS portfolio. In fact, the eighth subset achieves the same number of solved problems, though with lower quality, and the nineteenth set with 226 instances serves to derive the same OSS portfolio that is computed with all planning tasks—280 in total. Remarkably, gop finds alternative configurations for the fourteenth, fifteenth, and sixteenth sets that solve 266 problems (one less that the maximum feasible) but with lower quality and that is why that configuration is discarded when considering more planning tasks. Quality does not grow monotonically as shown in Table 3, so that we conjecture that the utility of planning tasks is not fully captured by our definition of subsets, though it seems to be very accurate.
+       </paragraph>
+      </section>
+      <section label="6.2.3">
+       Assessment of gop to configure sequential portfolios
+       <paragraph>
+        Obviously, the experiments performed in the previous section do not serve to compare gop with other techniques fairly in the satisficing track. The reason is that gop was trained with data from the same IPC used to assess its performance. In this section we provide additional evidence of the gains obtained using our technique. We have assessed the portfolios derived with gop against fdss and the work by Seipp et al. under the same conditions.
+       </paragraph>
+       <section>
+        <section-title>
+         Comparison against Fast Downward Stone Soup
+        </section-title>
+        <paragraph>
+         fdss was designed using a number of heuristics and search algorithms implemented in the Fast Downward planning system [32]. Specifically, it only considered weighted-{a mathematical formula}A⁎ (with a weight of 3) and greedy best-first search, with “eager” (standard) and “lazy” (deferred evaluation) variants of both search algorithms. On the other hand, only four heuristics were considered: additive heuristic add[33], ff/additive heuristic ff[34], [35], causal graph heuristic cg[36], and context-enhanced additive heuristic cea[37]. Note that fdss did not consider the landmark heuristic used in lama.
+        </paragraph>
+        <section label="6.2.3.0.1">
+         <section-title>
+          Training
+         </section-title>
+         <paragraph>
+          Two variants of fdss were considered by its authors. fdss-1 was configured considering all possible combinations of greedy best-first search and the single-heuristic algorithm for weighted-{a mathematical formula}A⁎ resulting in a total number of 38 configurations, which are described in Table A.10 (see Annex A). However, fdss-2 was designed using the different combinations of greedy best-first search with a single heuristic, yielding eight different combinations, as it can be seen in Table A.11 (see Annex A).
+         </paragraph>
+         <paragraph>
+          All configurations, however, considered all actions to be of unit cost when computing the heuristics and, for weighted-{a mathematical formula}A⁎, the g-values. Both variants communicate the cost of the best solution found among the component planners in the sequential portfolio. Thus, the component planners can prune states using that cost as an upper bound for the g-value. In contraposition, there is no communication among the component planners of the portfolio configured by gop. Also, both variants of fdss sort the execution sequence (fdss-1 sorted algorithms by decreasing order of coverage) and modify the behavior of the sequential portfolio once the first solution is found. Initially, all search algorithms ignore action costs in both variants. Once the first solution is found, fdss-1 re-runs the successful planner and the remaining planners in the portfolio using all actions with their real cost. Instead, when the first solution is found, fdss-2 discards all planners in the portfolio and it runs an anytime search algorithm with the same heuristic and search algorithm that successfully found the first solution using {a mathematical formula}RWA⁎[38]. However, the portfolio automatically configured with gop runs the planners in an arbitrary sequence.
+         </paragraph>
+         <paragraph>
+          Finally, both variants of fdss were configured using a very large number of planning tasks: 1116 training instances from all the past IPCs. Instead, we have generated two sequential portfolios applying gop only over a subset composed of the 270 planning tasks from the sequential satisficing track of the IPC 2008. This training benchmark, denoted as training satisficing 2008, is detailed in Table A.6 (see Annex A). For the sake of fairness, gop-1 and gop-2 have been derived from the same set of candidate planners considered in the design of fdss-1 and fdss-2 respectively, with gop-1 and gop-2 using a different set of candidate planners. The time required to execute each candidate planner with each training instance was 213 computation days, since the time limit to solve each training instance is 30 minutes. We have run the candidate planners with the iterated search of Fast Downward because gop, unlike fdss, does not modify the behavior of the portfolio once the first solution is found.
+         </paragraph>
+         <paragraph>
+          The time required to derive gop-1 by running Algorithm 1 was 92,914.36 seconds—circa 26 hours (less than 45 minutes for the first step and about 25 hours for the second step). The configuration of the generated portfolio is shown in Table 4. This portfolio solved 269 problems with an overall quality of 266.631 in its training data set. The time taken to compute gop-2 was 151.23 seconds. Table 4 shows the resulting portfolio, which solved 269 planning tasks with a total quality equal to 267.289. Since we have configured both variants of gop with different sets of candidate planners, the best solution found for each training problem can be different and thus, the overall performance shown here by both variants of gop differs.
+         </paragraph>
+         <paragraph>
+          lama-2011 uses a combination of landmarks count and ff heuristics that performs very well. However, fdss considered neither the landmarks count heuristic nor the lama planner. Thus, we have configured an additional portfolio adding lama-2008[39] (instead of lama-2011) to the set of candidate planners (considered for the design of fdss-1), and then running gop over all training instances to configure the new portfolio (denoted as gop-1l08), which is shown in Table 4. The time taken to compute this portfolio was 21,225.75 seconds, less than 6 hours (31 minutes for the first step and 5.4 hours for the second step).
+         </paragraph>
+        </section>
+        <section label="6.2.3.0.2">
+         <section-title>
+          Test, new domains
+         </section-title>
+         <paragraph>
+          We have compared gop-1 and gop-2 with fdss-1 and fdss-2 on the sequential satisficing track of IPC 2011. All domains considered in the training data set (IPC 2008) are included in the IPC 2011. Therefore, these domains have been discarded resulting in a new test data set denoted as new ipc domains 2011, which is described in Table A.6 (see Annex A). We have discarded gop-1l08 in this evaluation because lama-2008 was not considered in the design of the fdss portfolios.
+         </paragraph>
+         <paragraph>
+          Fig. 5 shows the performance of both variants of fdss and gop over all the new domains. As reference, it also shows the performance of both gop portfolios trained on the test domains (OSS gop-1 and OSS gop-2). The performance shown in Fig. 5 has been computed taking into account only the gop, fdss and OSS gop portfolios. Our results indicate that gop-1 performs better than both variants of fdss.
+         </paragraph>
+         <paragraph>
+          To obtain an overall view of the performance of the resulting portfolios if they would have entered the IPC 2011, we have compared their performance with all the other entrants over all the new domains. It was found that lama-2011, the sbs, performs better than both variants of gop. While gop-1 solves 83 problems with a total quality of 69.272, lama-2011 solves 92 problems with an overall quality equal to 82.051—i.e., almost thirteen points above. Also, gop-1 is far from the vbs (since it solves 108 planning tasks) as well as gop-1 trained on the test set, which solves 89 planning tasks with a total quality of 78.968.
+         </paragraph>
+         <paragraph>
+          Finally, we have executed gop-1l08 over the test set, since we have already compared gop with fdss. gop-1l08 achieves a performance very close to the winner of the IPC 2011, lama-2011, since gop-1l08 solves 90 problems with a quality of 79.301, while lama-2011 solves 92 problems with a quality of 82.291—less than three points more.
+         </paragraph>
+        </section>
+        <section label="6.2.3.0.3">
+         <section-title>
+          Test, all domains
+         </section-title>
+         <paragraph>
+          The performance of the gop portfolios has been assessed over the IPC 2011 discarding all domains included in the IPC-2008. However, all participant planners for the IPC-2011 had available all domains of the IPC-2008. Indeed, fdss considered all domains selected in the IPC-2008 to configure its portfolios. Hence, we re-run the IPC 2011 for the sequential satisficing track with gop-1l08, gop-1 and gop-2 as participant planners. The performance of the best planners (including the vbs and the OSS portfolio for the entire IPC 2011) are shown in Fig. 6. The results clearly indicate that gop-1l08 performs better than the sbs, lama-2011. Moreover, gop-1 and gop-2 perform better than the corresponding variants of fdss.
+         </paragraph>
+         <paragraph>
+          Comparison against Seipp et al. The contribution of Seipp et al. [8] can be split into two parts: first, it was shown that using planners learnt for each domain can lead to good results; second, it was empirically found, among a wide number of learning methods, that distributing the overall allotted time uniformly among all planners produced the best test results despite that it did not achieve a remarkable training score. While we are not dealing with the first part of their contribution (where do planners come from) we tested their second contribution. So, we assume planners are given beforehand and compare our approach with portfolios generated by distributing the allotted time uniformly among a set of candidate planners.
+         </paragraph>
+        </section>
+        <section label="6.2.3.0.4">
+         <section-title>
+          Training
+         </section-title>
+         <paragraph>
+          We have generated two sequential portfolios. The first one (denoted as gop-uniform-1) results from applying the uniform method only to the component planners of gop-1l08, the best portfolio automatically generated by gop in the preceding subsection, which is shown in Table 4. The second one, denoted as gop-uniform-2, was configured applying the uniform method to all candidate planners.
+         </paragraph>
+        </section>
+        <section label="6.2.3.0.5">
+         <section-title>
+          Test
+         </section-title>
+         <paragraph>
+          Fig. 7 shows the performance of both variants of gop with the uniform method and the gop-1l08 portfolio for the new domains and for the entire sequential satisficing track of the IPC 2011. The performance has been computed taking into account all participant planners in the IPC 2011. As reference, Fig. 7 also shows the performance of the sbs and the vbs for this competition. These results show that gop outperforms both variants of the uniform method for the given selection of candidate planners.
+         </paragraph>
+        </section>
+       </section>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Learning track
+      </section-title>
+      <paragraph>
+       In the learning track, planners focus on extracting domain dependent knowledge, which will be exploited in the test phase. gop can be applied to the learning track since that knowledge is automatically extracted by planners in a prior offline training phase. Thus, we have generated and submitted MIPlan to the learning track of the IPC 2014. It is able to automatically generate a portfolio configuration of domain-independent planners for a specific input domain (learning phase) and runs a specific static sequential portfolio for each input instance (test phase). Fig. 8 shows the results of the overall best quality award for the IPC 2014. As it can be seen, MIPlan is the winner. It achieves the best overall quality and also the best coverage.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      SAT
+     </section-title>
+     <paragraph>
+      The MIP problem for SAT is the same problem of optimal planning. For this reason, this problem has been solved using the same MIP solver and MIP model used in optimal Automated Planning.
+     </paragraph>
+     <paragraph>
+      We have focused on the open track of the SAT Competition 2013 since it was specifically defined for portfolio approaches (alternative approaches). In this track, each participant solver had 8 cores, 15 GB of main memory and 5000 seconds wall-clock time available to solve each instance. The benchmark chosen to run the competition was composed of 100 Application instances, 100 Hard-Combinatorial instances and 100 Random instances.
+     </paragraph>
+     <paragraph>
+      This section is organized in three parts. First, we have derived the OSS portfolio configuration for the open track. Next, we have performed an empirical analysis of the training instances to configure sequential portfolios. Finally, we have analyzed the performance of MIPSat[40], the sequential SAT portfolio automatically configured with gop for the open track of the SAT Competition 2013.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       OSS portfolio for the open track of the SAT Competition 2013
+      </section-title>
+      <paragraph>
+       The OSS portfolio for the open track of the SAT Competition 2013 defines the best performance achievable with a linear combination of the participant solvers. Hence, this portfolio has been computed using the results of this competition, removing the disqualified solvers. We have considered all the instances defined for the open track and the participant solvers (instead of its component solvers) shown in Table A.12 (see Annex A).
+      </paragraph>
+      <paragraph>
+       We have run Algorithm 1 to compute the OSS portfolio, which took gop 22.06 seconds. The configuration of the resulting portfolio is shown in Fig. 9. This portfolio solves 234 instances. However, there are 253 instances that were solved by at least one participant solver. Thus, there are 19 solvable instances that the OSS portfolio is not able to solve.
+      </paragraph>
+      <paragraph>
+       The aim of this experiment is to analyze the performance of the awarded solvers using the upper bound defined by the OSS portfolio. Thus, it shows that the performance of the winner of this track (CSHC par8 [41]) is {a mathematical formula}234234⋅100=100.0% of the best performance achievable while the performance of MIPSat (the portfolio automatically configured with gop that won the silver medal in this track) is {a mathematical formula}231234⋅100=98.71% with regard to the defined upper bound.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Analysis of the utility of training instances
+      </section-title>
+      <paragraph>
+       The following experiment aims to empirically analyze the composition of the training instance set under the hypothesis that not all instances provide the same information for configuring portfolios. To perform this analysis, we have used the results of the open track of the SAT Competition 2013 removing the disqualified solvers. Then, we have defined 10 sets of training instances (since there were 10 solvers) as described in Section 5 and Algorithm 1 was run over each subset. Finally, each resulting portfolio has been assessed on the benchmark defined for the open track.
+      </paragraph>
+      <paragraph>
+       The results of the empirical analysis are shown in Table 5. These results show that the performance achieved by the first portfolio is very high. Indeed, the portfolio derived with the second subset (which is only composed of 37 instances) solves only four instances less than the optimal configuration. The portfolio derived with the sixth subset solves the same number of instances than the OSS portfolio computed in the previous section. However, the number of solved instances does not grow monotonically as it can be seen in Table 5. The portfolio configured with the fifth subset solves three instances less than the portfolio derived with the previous subset. Also, our initial hypothesis is empirically validated since our approach does not need a large training data set to configure high performance portfolios.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      Assessment of gop to configure sequential portfolios
+      <paragraph>
+       We generated and submitted one sequential SAT portfolio (termed MIPSat) to the open track of the SAT Competition 2013. Our approach derives sequential portfolios, so the resulting portfolios are not optimized to fully exploit the multiple-core facilities of the competition (as the winner did). Nevertheless, gop does not prevent using solvers from the input set that run subsolvers in parallel, as it happened in fact in the portfolio configured for SAT 2013.
+      </paragraph>
+      <paragraph>
+       The input data for the MIP model was generated using the results of the SAT Competition 2011. We considered 1200 instances (application, crafted and random) and 54 participant solvers (including parallel solvers and portfolios in the set of candidate solvers) from that competition. Given that not all the candidate solvers were executed with all the training instances, we considered those executions as if the candidate solvers did not solve the training instances.
+      </paragraph>
+      <paragraph>
+       The time required to derive MIPSat running Algorithm 1 was 3,104.8 seconds. The execution sequence of portfolios generated by gop is arbitrary. However, ties are broken in the SAT Competition 2013 in ascending order of the average wall-clock time. The resulting configuration is shown in Fig. 10.
+      </paragraph>
+      <paragraph>
+       The results of the awarded solvers show that MIPSat, the second best solver, solved 231 instances, only three instances less than the winner and 45 instances more than the third solver. As reference, the OSS portfolio and the vbs solved 234 and 253 instances respectively. Note that MIPSat is a static sequential portfolio while the winner of this track (CSHC par8) is an 8-core parallel and dynamic portfolio. It always runs three different sequential dynamic portfolios on one core each and a fixed set of solvers on the remaining cores. Moreover, most participants in the open track were manually configured portfolios, which highlights the power of techniques that automatically generate portfolios.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     gop and other optimal approaches
+     <paragraph>
+      In this section, we compare gop against other optimal approaches for configuring sequential portfolios. As mentioned in the Related Work, the work by Streeter et al. does not constrain the total available time in the portfolio and it uses the preemptive mode to interleave the execution of the component solvers. Thus, that work focuses on a different problem to the problem addressed in our work and we have not considered that approach in this set of experiments. Moreover, according to its authors, CPhydra only works with a low number of solvers (5 in their experiments). Therefore, we have only compared gop with aspeed[23] and the MIP formulation introduced by 3S [19].
+     </paragraph>
+     <paragraph>
+      Despite the fact that aspeed, the MIP task proposed by 3S and gop solve the problem of deriving the best achievable performance with a linear combination of candidate solvers, there are some differences among these techniques which make a direct and fair comparison not possible. On the one hand, we have assessed the generation of the OSS portfolio by aspeed (without the step for sorting the component solvers of the resulting portfolio) against our MIP task using {a mathematical formula}w1=1 and {a mathematical formula}w2=0. On the other hand, we have compared the MIP task defined by 3S with Algorithm 1, since they compute the OSS portfolio that also minimizes the overall running time.
+     </paragraph>
+     <paragraph>
+      We have repeated the experiment of MIPSat (see Section 7.3) using the aforementioned approaches with the aim of assessing the runtime. We have run aspeed over the training data set considered in the design of MIPSat. The first step of aspeed was still running after 259,200 seconds (3 computation days) while gop derives the OSS portfolio in 1,036.15 seconds.
+     </paragraph>
+     <paragraph>
+      The MIP model defined by 3S is not available online.{sup:9} Thus, we decided to develop the generation of the OSS portfolio proposed by 3S (without the column generation approach) using the modeling language zimpl, the same language used in gop.
+     </paragraph>
+     <paragraph>
+      The formulation of the problem proposed by 3S requires generating a different MIP model for each given input data (candidate solvers and training instances), which allows us to minimize the number of binary variables in the resulting model. 3S only considers the discrete time values t where each candidate solver just solves an instance in the training data set [24]. The solutions found using this technique are not optimal, as opposed to the solutions generated by gop, which are optimal. Thus, we have solved their MIP task (without using the column generation approach) with the aim of generating optimal solutions.
+     </paragraph>
+     <paragraph>
+      We have generated a MIP model using the formulation of 3S and the training data set considered in the design of MIPSat. scip, the MIP solver used to solve that MIP task took 205.71 seconds while the configuration of MIPSat computed with gop took 3,104.8 seconds. The 3S model is more efficient to compute than gop. However, the performance of the formulation proposed by 3S strongly dependents on the input data. It defines one binary variable {a mathematical formula}xst for each pair of candidate solver s and candidate time value t for the time allotted to the execution of the candidate solver s. 3S only considers time values t where solvers solve an instance. Therefore, there can be up to 5,000 binary variables for each candidate solver, since the time limit in SAT is equal to 5,000 seconds and 3S considers discrete-time.
+     </paragraph>
+     <paragraph>
+      The 3S model generated to compute the configuration of MIPSat defines (in average) 138.04 binary variables {a mathematical formula}xst for each candidate solver. In total, there were 8,378 binary variables in that model while the MIP model proposed by gop defined 62,400 binary variables and 1,252 continuous variables. The performance difference between both models is mainly due to the number of binary variables.
+     </paragraph>
+     <paragraph>
+      The 3S MIP task defined for 1,200 training instances and 52 candidate solvers was solved in 205.71 seconds. However, the authors of 3S claim that “the main problem with the formulation is the sheer number of variables. For our most up-to-date benchmark with 37 solvers and more than 5,000 training instances, solving the problem is impractical”[19]. Hence, since the number of variables depends on the number of solvers and the 3S MIP task which considers 52 candidate solvers was solved quickly, we hypothesize that the number of candidate time values t (where solvers solve an instance) in our training data set is too small and in general, this value is much higher. Therefore, we have performed an additional experiment with the aim of analyzing the correlation between the number of candidate time values t for each candidate solver and the time required to solve the MIP task.
+     </paragraph>
+     <paragraph>
+      This additional experiment consists of generating models using the formulation proposed by 3S and the input data defined in the design of MIPSat but considering more candidate time values t (in the discrete range {a mathematical formula}[1,5000]) for each candidate solver. Thus, we can analyze the impact of the diversity of the candidate time values for each solver on the time required to solve the MIP task.
+     </paragraph>
+     <paragraph>
+      Fig. 11 shows the time required to solve all the generated models and the original 3S model. As it can be seen, the diversity of the candidate time values for each candidate solver has a strong impact on the efficiency of the model. The 3S task defined with at least only 400 variables {a mathematical formula}xst for each solver (in total, 22,103 binary variables) was solved in 4,264.77 seconds while the task proposed by gop (whose model defines 63,652 variables) took 3,104.8 seconds. The number of variables defined by gop does not depend on the diversity of the candidate time values, since it models the time allotted to each candidate solver with continuous variables.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Analysis of the quality of the solutions achieved over time
+     </section-title>
+     <paragraph>
+      This section aims to analyze the quality of the solutions found by gop over time. It always found the optimal solution for a given training data. However, the MIP solver finds some solutions until it ensures that the best solution found is the optimal one. Also, in some cases, the MIP solver can take several computation days to solve the MIP task. Therefore, we have analyzed the quality of the solutions found and the instant in which the optimal solution is achieved.
+     </paragraph>
+     <paragraph>
+      We have used the experiment performed to compute the OSS portfolio for the sequential satisficing track of the IPC 2011 (see Section 6.2.1) because it is one of the hardest problems solved in this work. Specifically, we have analyzed the first MIP task (first step) of Algorithm 1 for this experiment since the MIP solver only found the optimal solution for the second task. Indeed, the MIP solver usually only finds the optimal solution for the second task of Algorithm 1.
+     </paragraph>
+     <paragraph>
+      The time required to solve the aforementioned task was around 5.5 hours. However, as it can be seen in Fig. 12, the optimal solution was found after 2,042 seconds (less than 35 minutes). Also, the quality of the third solution (which took 3.7 seconds) is equal to 245.3861, while the quality of the optimal solution is 252.75. Therefore, the MIP solver finds high quality solutions very quickly and it takes most of the time to ensure that the best solution found is the optimal one.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Annex A">
+     <section-title>
+      Benchmarks and candidate solvers
+     </section-title>
+     <paragraph>
+      In this annex, we show the benchmarks and the sets of candidate solvers used in all experiments. Table A.6 describes the benchmarks composed of instances from the optimal and satisficing track of previous IPCs.
+     </paragraph>
+     <paragraph>
+      Table A.7 shows the candidate planners considered to compute the OSS portfolio for the sequential optimization track of the IPC 2011 in Section 6.1.1. The set of candidate planners used in Section 6.1.3 to assess the performance of the portfolios computed with gop in optimal planning is shown in Table A.8.
+     </paragraph>
+     <paragraph>
+      The OSS portfolio for the sequential satisficing track of the IPC 2011 has been configured in Section 6.2.1 with the set of candidate planners shown in Table A.9. The assessment of gop to configure sequential portfolios in satisficing planning has been described in Section 6.2.3. We have compared the performance of the portfolios automatically derived with gop against fdss using the sets of candidate planners shown in Table A.10, Table A.11.
+     </paragraph>
+     <paragraph>
+      Finally, Table A.12 shows the set of candidate solvers used to compute the OSS portfolio for the open track of the SAT Competition 2013 in Section 7.1.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

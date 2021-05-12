@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data</title>
+<!--Generated on Tue Jun 10 18:50:26 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Dimitra Gkatzia, Helen Hastie, and Oliver Lemon 
+<br class="ltx_break"/>School of Mathematical and Computer Sciences, Heriot-Watt University, Edinburgh 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">dg106, h.hastie, o.lemon</span>}<span class="ltx_text ltx_font_typewriter">@hw.ac.uk</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a novel approach for automatic
+report generation from time-series data, in the context of student feedback generation.
+Our proposed methodology treats content selection as a multi-label (ML) classification problem,
+which takes as input time-series data and outputs a set of templates, while capturing the
+dependencies between selected templates.
+We show that this method generates output closer
+to the feedback that lecturers actually generated, achieving 3.5% higher accuracy and
+15% higher F-score than
+multiple simple classifiers that keep a history of selected templates.
+Furthermore, we compare a ML classifier with a
+Reinforcement Learning (RL) approach in simulation and using ratings from real student users.
+We show that the different methods have different benefits, with ML being more
+accurate for predicting what was seen in the
+training data, whereas RL is more exploratory and slightly preferred by the students.</p>
+</div>
+
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+<div id="S1.T4" class="ltx_table">
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Raw Data</div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">factors</td>
+<td class="ltx_td ltx_align_left ltx_border_t">week 2</td>
+<td class="ltx_td ltx_align_left ltx_border_t">week 3</td>
+<td class="ltx_td ltx_align_left ltx_border_t">…</td>
+<td class="ltx_td ltx_align_left ltx_border_t">week 10</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">marks</td>
+<td class="ltx_td ltx_align_left ltx_border_t">5</td>
+<td class="ltx_td ltx_align_left ltx_border_t">4</td>
+<td class="ltx_td ltx_align_left ltx_border_t">…</td>
+<td class="ltx_td ltx_align_left ltx_border_t">5</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">hours_studied</td>
+<td class="ltx_td ltx_align_left">1</td>
+<td class="ltx_td ltx_align_left">2</td>
+<td class="ltx_td ltx_align_left">…</td>
+<td class="ltx_td ltx_align_left">3</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">…</td>
+<td class="ltx_td ltx_align_left">…</td>
+<td class="ltx_td ltx_align_left">…</td>
+<td class="ltx_td ltx_align_left">…</td>
+<td class="ltx_td ltx_align_left">…</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Trends from Data</div>
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">factors</th>
+<th class="ltx_td ltx_align_left ltx_border_t">trend</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt">(1) marks (M)</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">trend_other</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(2) hours_studied (HS)</td>
+<td class="ltx_td ltx_align_left">trend_increasing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(3) understandability (Und)</td>
+<td class="ltx_td ltx_align_left">trend_decreasing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(4) difficulty (Diff)</td>
+<td class="ltx_td ltx_align_left">trend_decreasing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(5) deadlines (DL)</td>
+<td class="ltx_td ltx_align_left">trend_increasing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(6) health_issues (HI)</td>
+<td class="ltx_td ltx_align_left">trend_other</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(7) personal_issues (PI)</td>
+<td class="ltx_td ltx_align_left">trend_decreasing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">(8) lectures_attended (LA)</td>
+<td class="ltx_td ltx_align_left">trend_other</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b">(9) revision (R)</td>
+<td class="ltx_td ltx_align_left ltx_border_b">trend_decreasing</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Summary</div>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr" >
+<td class="ltx_td ltx_align_left">Your overall performance <span class="ltx_text ltx_font_bold">was excellent</span> during the semester. Keep up the good work and
+maybe try some more challenging exercises. Your attendance was <span class="ltx_text ltx_font_bold">varying</span> over the semester.
+Have a think about how to use time in lectures to improve your understanding of the material.
+You spent <span class="ltx_text ltx_font_bold">2 hours studying the lecture material on average</span>. You should dedicate more time
+to study. You seem to find the material <span class="ltx_text ltx_font_bold">easier to understand compared to the beginning of the
+semester</span>. Keep up the good work! You revised <span class="ltx_text ltx_font_bold">part of</span> the learning material. Have a think
+whether revising has improved your performance.
+</td>
+</tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 4: </span>The table on the top left shows an example of the time-series raw data for feedback generation.
+The table on the bottom left shows an example of described trends. The box on the right presents a target summary (target summaries have been constructed by teaching staff).</div>
+</div>
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Summarisation of time-series data refers to the task of automatically generating
+text from variables whose values change over time. We consider the task of automatically generating feedback summaries for students describing
+their performance during the lab of a Computer Science module over the semester.
+Students’ learning can be influenced by many variables, such as difficulty of the material <cite class="ltx_cite">[]</cite>,
+other deadlines <cite class="ltx_cite">[]</cite>, attendance in lectures <cite class="ltx_cite">[]</cite>, etc.
+These variables have two important qualities. Firstly, they change over time,
+and secondly they can be dependent on or independent
+of each other. Therefore, when generating feedback, we need to take into account all variables
+simultaneously in order to capture potential dependencies and
+provide more effective and useful feedback that is relevant to the
+students.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this work, we concentrate on content selection which is the task of choosing what to say, i.e. what information is to be included in a report <cite class="ltx_cite">[]</cite>.
+Content selection decisions based on trends in time-series data determine the selection of the
+useful and important variables, which we refer to here as <span class="ltx_text ltx_font_italic">factors</span>, that should be conveyed in a summary. The decisions of factor selection
+can be influenced by other factors that their values are correlated
+with; can be based on the
+appearance or absence of other factors in the summary; and can be based on the factors’
+behaviour over time. Moreover, some factors may have to be discussed together
+in order to achieve some communicative goal, for instance, a teacher might want to refer to student’s
+marks as a motivation for increasing the number of hours studied.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We frame content selection as a simple classification task: given a set of time-series data,
+decide for each template whether it should be included in a summary or
+not. In this paper, with the term ‘template’ we refer to a
+quadruple consisting of an <span class="ltx_text ltx_font_italic">id</span>, a <span class="ltx_text ltx_font_italic">factor</span> (bottom left of Table <a href="#S1.T4" title="Table 4 ‣ 1 Introduction ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>),
+a <span class="ltx_text ltx_font_italic">reference type</span> (trend, weeks, average, other) and <span class="ltx_text ltx_font_italic">surface text</span>. However, simple classification
+assumes that the templates are independent of each other, thus
+the decision for each template is taken in isolation from the others, which is
+not appropriate for our domain. In order to capture the dependencies in the context, multiple simple classifiers can
+make the decisions for each template iteratively. After each iteration, the feature space grows by 1 feature,
+in order to include the history of the previous template decisions.
+Here, we propose an alternative method that tackles the challenge of interdependent data
+by using multi-label (ML) classification,
+which is efficient in taking data dependencies into account and generating a set of labels (in our case templates)
+simultaneously <cite class="ltx_cite">[]</cite>.
+ML classification requires no history, i.e. does not keep track of
+previous decisions, and thus has a smaller feature space.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Our contributions to the field are as follows:
+we present a novel and efficient method for tackling the challenge of content selection using a
+ML classification approach; we applied
+this method to the domain of feedback summarisation; we present a comparison with
+an optimisation technique (Reinforcement Learning), and we
+discuss the similarities and differences between the two methods.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In the next section, we refer to the related work on Natural Language Generation
+from time-series data and on Content Selection.
+In Section <a href="#S4.SS2" title="4.2 The Multi-label Classification Approach ‣ 4 Methodology ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>, we describe our approach and we carry out a comparison
+with simple classification methods. In Section <a href="#S5" title="5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, we present the evaluation
+setup and in Section <a href="#S6" title="6 Results ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we discuss the results, obtained in simulation and
+with real students.
+Finally, in Section <a href="#S8" title="8 Future Work ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>, directions for future work are discussed.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Natural Language Generation from time-series data has been investigated
+for various tasks such as weather forecast generation <cite class="ltx_cite">[]</cite>,
+report generation from clinical data  <cite class="ltx_cite">[]</cite>,
+narrative to assist children with
+communication needs <cite class="ltx_cite">[]</cite> and audiovisual debrief generation
+from sensor data from Autonomous Underwater Vehicles missions <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The important tasks of time-series data summarisation systems are <span class="ltx_text ltx_font_italic">content selection</span> (what to say),
+<span class="ltx_text ltx_font_italic"> surface realisation</span> (how to say it) and <span class="ltx_text ltx_font_italic">information presentation</span> (Document Planning, Ordering, etc.).
+In this work, we concentrate on content selection. Previous
+methods for content selection include Reinforcement Learning <cite class="ltx_cite">[]</cite>; multi-objective optimisation <cite class="ltx_cite">[]</cite>;
+Gricean Maxims <cite class="ltx_cite">[]</cite>; Integer Linear Programming <cite class="ltx_cite">[]</cite>; collective content
+selection <cite class="ltx_cite">[]</cite>; interest scores assigned to content <cite class="ltx_cite">[]</cite>; a combination of statistical and template-based approaches to
+NLG <cite class="ltx_cite">[]</cite>; statistical acquisition of rules <cite class="ltx_cite">[]</cite> and the
+Hidden Markov model approach for Content Selection
+and ordering <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Collective content selection <cite class="ltx_cite">[]</cite> is similar to our proposed method in that
+it is a classification task that predicts
+the templates from the same instance simultaneously. The
+difference between the two methods lies in that
+the collective content selection requires the consideration
+of an individual preference score (which is
+defined as the preference of the entity to be selected
+or omitted, and it is based on the values of
+entity attributes and is computed using a boosting
+algorithm) and the identification of links between
+the entities with similar labels. In contrast, ML
+classification does not need the computation
+of links between the data and the templates.
+ML classification can also apply to other problems whose features are correlated, such as
+text classification <cite class="ltx_cite">[]</cite>, when an aligned dataset is provided.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">ML classification algorithms have been divided into three categories: algorithm
+adaptation methods, problem transformation and ensemble methods <cite class="ltx_cite">[]</cite>.
+Algorithm adaptation approaches <cite class="ltx_cite">[]</cite>
+extend simple classification methods to handle ML data. For example, the k-nearest
+neighbour algorithm is extended to ML-kNN by Zhang and Zhou <span class="ltx_ERROR undefined">\shortcite</span>Zhang:2007.
+ML-kNN identifies for each new instance its k nearest neighbours in the training set and
+then it predicts the label set by utilising the maximum a posteriori principle according to
+statistical information derived from the label sets of the k neighbours.
+Problem transformation approaches <cite class="ltx_cite">[]</cite> transform the ML classification task into one
+or more simple classification tasks. Ensemble methods <cite class="ltx_cite">[]</cite> are algorithms that use ensembles to perform ML learning
+and they are based on problem transformation or algorithm adaptation methods. In this paper,
+we applied RAkEL (Random k-labelsets) <cite class="ltx_cite">[]</cite>: an ensemble problem transformation
+method, which constructs an ensemble of simple-label classifiers, where each one
+deals with a random subset of the labels.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Finally, our domain for feedback generation is motivated by previous studies
+<cite class="ltx_cite">[]</cite> who show that text
+summaries are more effective in decision making than graphs therefore
+it is advantageous to provide a summary over showing users the raw
+data graphically. In addition, feedback summarisation from
+time-series data can be applied to the field of Intelligent
+Tutoring Systems <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Data</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The dataset consists of 37 instances referring to the activities of 26
+students. For a few students there is more than 1 instance. An example of one such instance is presented
+in Table <a href="#S1.T4" title="Table 4 ‣ 1 Introduction ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Each instance includes time-series information about the student’s learning habits and
+the selected templates that lecturers used to provide feedback to this student. The
+time-series information includes for each week of the semester: (1) the marks achieved at the lab;
+(2) the hours that the student spent studying; (3) the understandability
+of the material; (4) the difficulty of the lab exercises as assessed by the student;
+(5) the number of other deadlines that the student had that week;
+(6) health issues; (7) personal issues; (8) the number of lectures attended; and
+(9) the amount of revision that the student had performed. The templates describe these factors
+in four different ways:</p>
+<ol id="I1" class="ltx_enumerate">[noitemsep,nolistsep]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">&lt;trend&gt;:</span> referring to the trend of a factor over the semester
+(e.g. “Your performance <span class="ltx_text ltx_font_italic">was increasing</span>…”),</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">&lt;weeks&gt;:</span> explicitly
+describing the factor value at specific weeks (e.g. “In <span class="ltx_text ltx_font_italic">weeks 2, 3 and 9</span>…”),</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">&lt;average&gt;:</span>
+considering the average of a factor
+value (e.g. “You dedicated <span class="ltx_text ltx_font_italic">1.5 hours studying on average</span>…”), and</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">&lt;other&gt;:</span> mentioning
+other relevant information (e.g. “<span class="ltx_text ltx_font_italic">Revising material will improve your performance</span>”).</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">For the corpus creation, 11 lecturers selected the content to be
+conveyed in a summary, given the set of raw data <cite class="ltx_cite">[]</cite>.
+As a result, for the same student there are various summaries provided
+by the different experts. This characteristic of the dataset, that each instance is associated with more than one solution, additionally motivates
+the use of multi-label classification, which is concerned with
+learning from examples, where each example is associated with multiple labels.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Our analysis of the dataset showed that there are significant correlations
+between the factors, for example, the number of lectures
+attended (LA) correlates with the student’s understanding of the
+material (Und), see Table <a href="#S3.T5" title="Table 5 ‣ 3 Data ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+As we will discuss further in Section <a href="#S5.SS1" title="5.1 Comparison with Simple Classification ‣ 5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>, content decisions are influenced
+by the previously generated content, for example, if the lecturer
+has previously mentioned health_issues, mentioning hours_studied has a high probability of also being mentioned.</p>
+</div>
+<div id="S3.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Factor</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(1) M</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(2) HS</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(3) Und</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(4) Diff</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(5) DL</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(6) HI</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(7) PI</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(8) LA</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">(9) R</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">(1) M</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">0.52*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">-0.53*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">-0.31</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">-0.30</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">-0.36*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">0.16</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(2) HS</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.52*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.23</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.09</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.29</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.32</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.47*</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(3) Und</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.23</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.54*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.03</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.26</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.12</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.60*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.32</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(4) Diff</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.53*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.09</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.54*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.16</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.06</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.03</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.19</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.14</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(5) DL</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.31</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.03</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.16</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.26</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.24</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.14</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(6) HI</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.30</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.26</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.06</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.26</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.27</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.50*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(7) PI</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.36*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.29</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.12</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.03</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.24</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.27</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.46*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.34*</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(8) LA</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.32</td>
+<td class="ltx_td ltx_align_left ltx_border_r">0.60*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.19</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.44*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.50*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.46*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">1*</td>
+<td class="ltx_td ltx_align_left ltx_border_r">-0.12</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">(9) R</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.16</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.47*</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.03</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.14</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.14</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.15</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">0.34*</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">-0.12</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">1*</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 5: </span>The table presents the Pearson’s correlation coefficients of
+the factors (* means <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T5.m2" class="ltx_Math" alttext="p\textless 0.05" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.05</mn></mrow></math>).</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Methodology</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, the content selection task and the suggested multi-label classification approach
+are presented. The development and evaluation of the time-series generation system
+follows the following pipeline <cite class="ltx_cite">[]</cite>:</p>
+<ol id="I2" class="ltx_enumerate">[noitemsep,nolistsep]
+
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Time-Series data collection from students</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Template construction by Learning and Teaching (L&amp;T) expert</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Feedback summaries constructed by lecturers; random summaries rated by lecturers</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Development of time-series generation systems (Section  <a href="#S4.SS2" title="4.2 The Multi-label Classification Approach ‣ 4 Methodology ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>, Section <a href="#S5.SS3" title="5.3 The Baseline Systems ‣ 5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>):
+ML system, RL system, Rule-based and Random system</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">5.</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">Evaluation: (Section <a href="#S5" title="5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) 
+<br class="ltx_break"/>- Offline evaluation (Accuracy and Reward)
+<br class="ltx_break"/>- Online evaluation (Subjective Ratings)</p>
+</div></li>
+</ol>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>The Content Selection Task</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our learning task is formed as follows: given a set of 9 time-series factors, select the content that is
+most appropriate to be included in a summary. Content is regarded as labels (each template represents a label)
+and thus the task can be thought of as a classification problem.
+As mentioned, there are 4 ways to refer to a factor:
+(1) describing the trend, (2) describing what
+happened in every time stamp, (3) mentioning the average and (4) making
+another general statement. Overall, for all factors there are 29 different templates<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>There are fewer than 36 templates,
+because for some factors there are less than 4 possible ways of referring to them.</span></span></span>. An example of
+the input data is shown in Table <a href="#S1.T4" title="Table 4 ‣ 1 Introduction ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. There are two decisions that need to be made: (1)
+whether to talk about a factor and (2) in which way to refer to it.
+Instead of dealing with this task in a hierarchical way, where the algorithm will first learn whether to talk
+about a factor and then to decide how to refer to it, we transformed the task in order to reduce
+the learning steps. Therefore, classification
+can reduce the decision workload by deciding either in which way to talk
+about it, or not to talk about a factor at all.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>The Multi-label Classification Approach</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Traditional single-label classification is the task of identifying which label one new observation is
+associated with, by choosing from a set of labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> <cite class="ltx_cite">[]</cite>. Multi-label classification is the task of associating
+an observation with a set of labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="Y\subseteq L" display="inline"><mrow><mi>Y</mi><mo>⊆</mo><mi>L</mi></mrow></math> <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">One set of factor values can result in various sets of templates as
+interpreted by the different experts.
+A ML classifier is able to make decisions for all templates simultaneously
+and capture these differences.
+The RAndom k-labELsets (RAkEL) <cite class="ltx_cite">[]</cite> was applied in order to perform ML
+classification. RAkEL is based on Label Powerset (LP), a problem transformation method <cite class="ltx_cite">[]</cite>.
+LP benefits from taking into consideration label correlations, but does not
+perform well when trained with few examples as in our case <cite class="ltx_cite">[]</cite>.
+RAkEL overcomes this limitation by constructing a set of LP classifiers, which are trained with different
+random subsets of the set of labels <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Classifier</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Accuracy</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Precision</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Recall</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">F score</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r">(10-fold)</th>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">Decision Tree (no history)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">*75.95%</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">67.56</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">75.96</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">67.87</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Decision Tree (with predicted history)</td>
+<td class="ltx_td ltx_align_left ltx_border_r">**73.43%</td>
+<td class="ltx_td ltx_align_left ltx_border_r">65.49</td>
+<td class="ltx_td ltx_align_left ltx_border_r">72.05</td>
+<td class="ltx_td ltx_align_left ltx_border_r">70.95</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Decision Tree (with real history)</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">**78.09</span>%</td>
+<td class="ltx_td ltx_align_left ltx_border_r">74.51</td>
+<td class="ltx_td ltx_align_left ltx_border_r">78.11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">75.54</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Majority-class (single label)</td>
+<td class="ltx_td ltx_align_left ltx_border_r">**72.02%</td>
+<td class="ltx_td ltx_align_left ltx_border_r">61.73</td>
+<td class="ltx_td ltx_align_left ltx_border_r">77.37</td>
+<td class="ltx_td ltx_align_left ltx_border_r">68.21</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">RAkEL (multi-label) (no history)</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">76.95%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">85.08</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">85.94</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">85.50</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Average, precision, recall and F-score of the different classification methods
+(T-test, * denotes significance with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m3" class="ltx_Math" alttext="p\textless 0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>
+and ** significance with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m4" class="ltx_Math" alttext="p\textless 0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>, when comparing each
+result to RAkEL).</div>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">The LP method transforms the ML task, into
+one single-label multi-class classification task, where the possible set of predicted variables for the transformed class
+is the powerset of labels present in the original dataset. For instance, the set of
+labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> = {<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="temp_{0},temp_{1},...temp_{28}" display="inline"><mrow><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mn>0</mn></msub></mrow><mo>,</mo><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mn>1</mn></msub></mrow><mo>,</mo><mrow><mi mathvariant="normal">…</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mn>28</mn></msub></mrow></mrow></math>} could be
+transformed to
+{<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="temp_{0,1,2},temp_{28,3,17,}..." display="inline"><mrow><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn></mrow></msub></mrow><mo>,</mo><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mrow><mn>28</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>17</mn><mo>,</mo></mrow></msub><mo>⁢</mo><mi mathvariant="normal">…</mi></mrow></mrow></math>}. This algorithm does not perform well when
+considering a large number of labels, due to the fact that the label space
+grows exponentially <cite class="ltx_cite">[]</cite>. RAkEL tackles this problem by constructing an ensemble of
+LP classifiers and training each one on a different random subset of the set of labels <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S4.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.1 </span>The Production Phase of RAkEL</h4>
+
+<div id="S4.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">The algorithm was implemented using the MULAN Open Source Java library <cite class="ltx_cite">[]</cite>, which is
+based on WEKA <cite class="ltx_cite">[]</cite>. The algorithm works in two phases:</p>
+<ol id="I3" class="ltx_enumerate">[noitemsep,nolistsep]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">the production of an ensemble of LP algorithms, and</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">the combination of the LP algorithms.</p>
+</div></li>
+</ol>
+<p class="ltx_p">RAkEL takes as input the following parameters: (1) the numbers of
+iterations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> (which is developer specified and denotes the number of models
+that the algorithm will produce), (2) the size of labelset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>
+(which is also developer specified), (3) the set of labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>,
+and (4) the training set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.p1.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>. During the initial phase it outputs an ensemble of LP classifiers and the
+corresponding k-labelsets.
+A pseudocode for the production phase is shown below:</p>
+</div>
+<div id="S4.SS2.SSS1.p2" class="ltx_para">
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:195.1pt;"><span class="ltx_ERROR undefined">{algorithm}</span>
+<p class="ltx_p">[H]
+<span class="ltx_text ltx_caption">RAkEL production phase</span></p>
+<div id="LSTx1" class="ltx_listingblock ltx_lstlisting ltx_listing">
+<table class="ltx_tabular">
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small"><span class="ltx_text ltx_lst_space">          </span>labels<span class="ltx_text ltx_lst_space"> </span>L,<span class="ltx_text ltx_lst_space"> </span>training<span class="ltx_text ltx_lst_space"> </span>data<span class="ltx_text ltx_lst_space"> </span>D</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line"/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">2:<span class="ltx_text ltx_lst_space"> </span>for<span class="ltx_text ltx_lst_space"> </span>i=0<span class="ltx_text ltx_lst_space"> </span>to<span class="ltx_text ltx_lst_space"> </span>m</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">3:<span class="ltx_text ltx_lst_space">      </span>Select<span class="ltx_text ltx_lst_space"> </span>random<span class="ltx_text ltx_lst_space"> </span>k-labelset<span class="ltx_text ltx_lst_space"> </span>from<span class="ltx_text ltx_lst_space"> </span>L</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">4:<span class="ltx_text ltx_lst_space">      </span>Train<span class="ltx_text ltx_lst_space"> </span>an<span class="ltx_text ltx_lst_space"> </span>LP<span class="ltx_text ltx_lst_space"> </span>on<span class="ltx_text ltx_lst_space"> </span>D</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">5:<span class="ltx_text ltx_lst_space">      </span>Add<span class="ltx_text ltx_lst_space"> </span>LP<span class="ltx_text ltx_lst_space"> </span>to<span class="ltx_text ltx_lst_space"> </span>ensemble</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">6:<span class="ltx_text ltx_lst_space"> </span>end<span class="ltx_text ltx_lst_space"> </span>for</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line"/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small">7:<span class="ltx_text ltx_lst_space"> </span>Output:<span class="ltx_text ltx_lst_space"> </span>the<span class="ltx_text ltx_lst_space"> </span>ensemble<span class="ltx_text ltx_lst_space"> </span>of<span class="ltx_text ltx_lst_space"> </span>LPs</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_lst_line ltx_font_small"><span class="ltx_text ltx_lst_space">       </span>with<span class="ltx_text ltx_lst_space"> </span>corresponding<span class="ltx_text ltx_lst_space"> </span>k-labelsets</span></td></tr>
+</table>
+</div>
+</span>
+</div>
+</div>
+<div id="S4.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.2 </span>The Combination Phase</h4>
+
+<div id="S4.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">During the combination phase, the algorithm takes as input the results of the production phase, i.e. the ensemble of LPs with the corresponding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-labelsets, the set of labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>, and the new instance
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and it outputs the result vector of predicted labels for instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. During run time, RAkEL
+estimates the average decision for each label in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m5" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> and if the average is greater than a threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>
+(determined by the developer) it includes the label in the predicted labelset.
+We used the standard parameter values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m7" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m8" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m9" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m10" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> = 0.5, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m11" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> = 3 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p1.m12" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>
+equals to 58 (2*29 templates)). In future, we
+could perform parameter optimisation by using a
+technique similar to <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Evaluation</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Firstly, we performed a preliminary evaluation on classification methods,
+comparing our proposed ML classification with multiple iterated
+classification approaches. The summaries generated by the ML classification system are then
+compared with the output of a RL system and two baseline systems
+in simulation and with real students.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Comparison with Simple Classification</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We compared the RAkEL algorithm with single-label (SL) classification.
+Different SL classifiers were trained using WEKA: JRip, Decision Trees, Naive Bayes, k-nearest neighbour,
+logistic regression, multi-layer perceptron and support vector machines. It was found out that Decision Trees
+achieved on average 3% higher accuracy. We, therefore, went on to use Decision Trees
+that use generation history in three ways.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Firstly, for <span class="ltx_text ltx_font_bold">Decision Tree (no history)</span>, 29 decision-tree classifiers
+were trained, one for each template. The input of these classifiers were the 9 factors and each
+classifier was trained in order to decide whether to include a specific template or not. This method
+did not take into account other selected templates – it was only based on the time-series data.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Secondly, for
+<span class="ltx_text ltx_font_bold">Decision Tree (with predicted history)</span>, 29 classifiers were also trained,
+but this time the input included the previous decisions made by the previous
+classifiers (i.e. the history) as well as the set of time-series
+data in order to emulate the dependencies in the dataset. For instance, classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> was trained using the data from the 9 factors and the template
+decisions for templates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m3" class="ltx_Math" alttext="n-1" display="inline"><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></math>.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">Thirdly, for <span class="ltx_text ltx_font_bold">Decision Tree (with real history)</span>, the real,
+expert values were used rather than the predicted ones in the history.
+The above-mentioned classifiers are compared with, the <span class="ltx_text ltx_font_bold">Majority-class
+(single label)</span> baseline, which labels each instance with the most frequent template.</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">The accuracy, the weighted precision, the weighted recall, and the weighted
+F-score of the classifiers are shown in Table <a href="#S4.T6" title="Table 6 ‣ 4.2 The Multi-label Classification Approach ‣ 4 Methodology ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. It was found that in 10-fold cross
+validation RAkEL performs significantly better in all these automatic
+measures (accuracy = 76.95%, F-score = 85.50%).
+Remarkably, ML achieves more than 10% higher F-score than the other methods (Table <a href="#S4.T6" title="Table 6 ‣ 4.2 The Multi-label Classification Approach ‣ 4 Methodology ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).
+The average accuracy of the single-label classifiers is 75.95% (10-fold validation), compared to 73.43% of classification with history.
+The reduced accuracy of the classification with predicted history is due to the error in the predicted values.
+In this method, at every step, the predicted outcome was used including the incorrect decisions that the
+classifier made. The upper-bound accuracy is 78.09% calculated by
+using the expert previous decisions and not the potentially erroneous
+predicted decisions. This result is indicative of the significance of the relations between
+the factors showing that the predicted decisions are dependent due to existing correlations as
+discussed in Section <a href="#S1" title="1 Introduction ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, therefore the system should not take these
+decisions independently. ML classification performs better
+because it does take into account these correlations and dependencies in the data.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>The Reinforcement Learning System</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Reinforcement Learning (RL) is a machine learning technique that
+defines how an agent learns
+to take optimal actions so as to maximise a cumulative reward
+<cite class="ltx_cite">[]</cite>.
+Content selection is seen as a Markov Decision problem and the goal of the agent is to learn to take
+the sequence of actions that leads to optimal content selection. The Temporal Difference learning method
+was used to train an agent for content selection.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Actions and States:</span> The state consists of the time-series data and the selected templates. In order to explore
+the state space the agent selects a factor (e.g. marks, deadlines etc.) and then decides whether to talk about it or not.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Reward Function:</span> The reward function reflects the lecturers’
+preferences on summaries and is derived through linear regression analysis
+of a dataset containing lecturer constructed summaries and ratings of randomly generated summaries.
+Specifically, it is the following cumulative multivariate function:</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m1" class="ltx_Math" alttext="Reward=a+\displaystyle\sum_{i=1}^{n}b_{i}*x_{i}+c*length" display="inline"><mrow><mrow><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>d</mi></mrow><mo>=</mo><mrow><mi>a</mi><mo>+</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mrow><msub><mi>b</mi><mi>i</mi></msub><mo>*</mo><msub><mi>x</mi><mi>i</mi></msub></mrow></mrow><mo>+</mo><mrow><mrow><mi>c</mi><mo>*</mo><mi>l</mi></mrow><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></mrow></mrow></math> 
+<br class="ltx_break"/>where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m2" class="ltx_Math" alttext="X=\{x_{1},x_{2},...,x_{n}\}" display="inline"><mrow><mi>X</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><msub><mi>x</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math> describes the combinations of the data trends observed in the time-series data
+and a particular template. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m4" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m5" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> are the regression coefficients, and their
+values vary from -99 to 221. The value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m6" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is given by the function:</p>
+<table id="S5.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m1" class="ltx_Math" alttext="x_{i}=\begin{cases}1,&amp;\text{the combination of a factor trend}\\&#10;&amp;\text{and a template type is included}\\&#10;&amp;\text{in a summary}\\&#10;0,&amp;\text{if not.}\end{cases}" display="block"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mn>1</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mtext>the combination of a factor trend</mtext></mtd></mtr><mtr><mtd/><mtd columnalign="left"><mtext>and a template type is included</mtext></mtd></mtr><mtr><mtd/><mtd columnalign="left"><mtext>in a summary</mtext></mtd></mtr><mtr><mtd columnalign="left"><mrow><mn>0</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mtext>if not.</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">The RL system differs from the classification system in the way it performs content selection.
+In the training phase, the agent selects a factor and then decides whether
+to talk
+about it or not. If the agent decides to refer to a factor, the template is selected
+in a deterministic way, i.e. from the available templates
+it selects the template that results in higher expected cumulative future reward.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>The Baseline Systems</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We compared the ML system and the RL system with two baselines
+described below by measuring the accuracy of their outputs,
+the reward achieved by the reward function used for the RL system, and
+finally we also performed evaluation with
+student users. In order to reduce the confounding variables, we kept the ordering of content in all systems the same,
+by adopting the ordering of the rule-based system. The baselines are
+as follows:</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">1. Rule-based System:</span> generates summaries
+based on Content Selection rules derived by
+working with a L&amp;T expert and a student <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">2. Random System:</span> initially, selects a factor randomly and
+then selects a template randomly, until it makes decisions for all factors.</p>
+</div>
+<div id="S5.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Time-Series</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Accuracy</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Reward</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Rating Mode (mean)</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Data Source</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Summarisation Systems</th>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_border_r"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">Multi-label Classification</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">85%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">65.4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">7 (6.24)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">Lecturers’ constructed summaries</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Reinforcement Learning</td>
+<td class="ltx_td ltx_align_left ltx_border_r">**66%</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">243.82</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">8 (6.54)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">Lecturers’ ratings &amp; summaries</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Rule-based</td>
+<td class="ltx_td ltx_align_left ltx_border_r">**65%</td>
+<td class="ltx_td ltx_align_left ltx_border_r">107.77</td>
+<td class="ltx_td ltx_align_left ltx_border_r">7, 8 (5.86)</td>
+<td class="ltx_td ltx_align_left ltx_border_r">L&amp;T expert</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Random</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">**45.2%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">43.29</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">*2 (*4.37)</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">Random</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7: </span>Accuracy, average rewards (based on lecturers’ preferences) and averages of the means of the student ratings.
+Accuracy significance (Z-test) with RAkEL at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m4" class="ltx_Math" alttext="p\textless 0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math> is indicated as *
+and at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m5" class="ltx_Math" alttext="p\textless 0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math> as **. Student ratings significance (Mann Whitney U test) with RAkEL at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m6" class="ltx_Math" alttext="p\textless 0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math> is indicated as *.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Each of the four systems described above generated 26 feedback
+summaries corresponding to the
+26 student profiles. These summaries were evaluated in simulation and
+with real student users.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Results in Simulation</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T7" title="Table 7 ‣ 5.3 The Baseline Systems ‣ 5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> presents the accuracy, reward, and mode of
+student rating of each algorithm when used
+to generate the 26 summaries.
+Accuracy was estimated as the proportion of the correctly
+classified templates to the population of templates. In order to have a more objective view on the results, the score achieved by each algorithm using the reward
+function was also calculated.
+ML classification achieved significantly higher accuracy, which was expected as it is a supervised learning method.
+The rule-based system and the RL system have lower accuracy compared to the ML
+system. There is evidently a mismatch between the rules and the
+test-set; the content selection rules are based on heuristics provided by a L&amp;T Expert rather than by the same pool of lecturers that
+created the test-set. On the contrary, the RL is trained to optimise the
+selected content and not to replicate
+the existing lecturer summaries, hence there is a difference in accuracy.</p>
+</div>
+<div id="S6.F1" class="ltx_figure"><img src="" id="S6.F1.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>The Figure show the evaluation setup. Students were presenting with the data in
+a graphical way and then they were asked to evaluate each summary in a 10-point Rating scale.
+Summaries displayed from left to right: ML system, RL, rule-based and random.</div>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Accuracy measures how similar the generated output is to the gold standard,
+whereas the reward function calculates a score regarding how good the output is,
+given an objective function. RL is trained to optimise for this function, and
+therefore it achieves higher reward, whereas ML is trained to learn by examples,
+therefore it produces output closer to the gold standard (lecturer’s produced summaries). RL uses exploration and
+exploitation to discover combinations of content that result in higher reward. The reward represents
+predicted ratings that lecturers would give to the summary. The reward
+for the lecturers’ produced summaries is 124.62 and for the ML method is 107.77.
+The ML classification system performed worse than this gold
+standard in terms of reward, which is expected given
+the error in predictions (supervised methods learn to reproduce the gold standard). Moreover, each decision is rewarded
+with a different value as some combinations of factors and templates
+have greater or negative regression coefficients. For instance, the combination of the factors “deadlines”
+and the template that corresponds to &lt;weeks&gt; is rewarded with 57. On the other hand,
+when mentioning the &lt;average&gt; difficulty the summary is “punished” with -81 (see description
+of the reward function in Section <a href="#S5.SS2" title="5.2 The Reinforcement Learning System ‣ 5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>).
+Consequently, a single poor decision in the ML classification can result in much less reward.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Subjective Results with Students</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">37 first year computer science students participated in the study.
+Each participant was shown a graphical representation of the time-series data of one student and
+four different summaries generated by the four systems (see Figure <a href="#S6.F1" title="Figure 1 ‣ 6.1 Results in Simulation ‣ 6 Results ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). The
+order of the presented summaries was randomised. They were asked to rate each feedback
+summary on a 10-point rating scale in response to the following statement:
+“Imagine you are the following student. How would you evaluate the following feedback
+summaries from 1 to 10?”, where 10 corresponds to the most preferred summary and 1 to the
+least preferred.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">The difference in ratings between the ML classification system,
+the RL system and the Rule-based system is not significant (see Mode
+(mean) in Table <a href="#S5.T7" title="Table 7 ‣ 5.3 The Baseline Systems ‣ 5 Evaluation ‣ Comparing Multi-label Classification with Reinforcement Learning for Summarisation of Time-series Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="p\textgreater 0.05" display="inline"><mrow><mi>p</mi><mo>&gt;</mo><mn>0.05</mn></mrow></math>).
+However, there is a trend towards the RL system.
+The classification method reduces the
+generation steps, by making the decision of the factor selection and the template selection jointly. Moreover,
+the training time for the classification method is faster (a couple of
+seconds compared to over an hour). Finally, the student significantly prefer all the systems over the random.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Summary</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We have shown that ML classification for
+summarisation of our time-series data has an accuracy of 76.95% and that this approach significantly outperforms other classification methods as it is able
+to capture dependencies in the data when making content selection decisions.
+ML classification was also directly compared to a RL method. It was found that although ML classification
+is almost 20% more accurate than RL, both methods perform comparably when rated
+by humans. This may be due to the fact that the RL optimisation
+method is able to provide more varied responses over time rather than
+just emulating the training data as with standard supervised learning approaches.
+Foster <span class="ltx_ERROR undefined">\shortcite</span>Foster2008 found similar results when performing a study on generation of
+emphatic facial displays.
+A previous study by Belz and Reiter <span class="ltx_ERROR undefined">\shortcite</span>Belz2006 has demonstrated that automatic metrics can correlate highly
+with human ratings if the training dataset is of high quality. In our study, the human ratings correlate well to the average scores achieved by the reward function. However, the human ratings do not correlate well to the accuracy scores. It is interesting that the two methods that score differently on various automatic metrics, such as accuracy, reward, precision,
+recall and F-score, are evaluated similarly by users.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">The comparison shows that each method can serve different goals. Multi-label classification generates output closer to
+gold standard whereas RL can optimise the output according to a reward function.
+ML classification could be used when the goal of the generation is
+to replicate phenomena seen in the dataset, because it achieves high accuracy, precision and recall.
+However, optimisation methods can be more flexible, provide more
+varied output and can be trained for different goals,
+e.g. for capturing preferences of different users.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Future Work</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">For this initial experiment, we evaluated with students and not with lecturers, since
+the students are the recipients of feedback. In future, we plan to evaluate with students’ own
+data under real circumstances as well as with ratings from lecturers.
+Moreover, we plan to utilise the results from this student evaluation in order to train
+an optimisation algorithm to perform summarisation according to
+students’ preferences. In this case, optimisation would be the
+preferred method as it would not be appropriate to collect gold
+standard data from students. In fact, it would be of interest to investigate
+multi-objective optimisation techniques that can balance the needs of
+the lecturers to convey important content to the satisfaction of students.</p>
+</div>
+</div>
+<div id="S9" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">9 </span>Acknowledgements</h2>
+
+<div id="S9.p1" class="ltx_para">
+<p class="ltx_p">The research leading to this work has received funding from the
+EC’s FP7 programme: (FP7/2011-14) under
+grant agreement no. 248765 (Help4Mood).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:50:26 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

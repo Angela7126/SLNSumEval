@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Incorporating weights into real-time heuristic search.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Weighted A* [1] is a well-known search algorithm for solving single-agent, deterministic search problems. It is based on A* [2] and uses an evaluation function {a mathematical formula}f(s)=g(s)+wh(s) to rank a state s in the search frontier, where {a mathematical formula}g(s) represents the cost incurred to reach s, {a mathematical formula}h(s) is a (heuristic) estimate of the true cost to reach a solution from s, and the weight w is a real value greater than or equal to one. It can find a solution substantially faster than A* as the weight is increased over one. However, the cost of returned solutions may increase as w is increased. If the heuristic h is admissible then the cost of found solutions can be at most a factor w away from optimal.
+     </paragraph>
+     <paragraph>
+      Weighting the heuristic is a simple but powerful technique that is widely used in state-of-the-art heuristic search algorithms. For example, it is key to the performance of both ARA* [3], an algorithm used in outdoor rover applications, and RWA* [4], the search engine underlying LAMA 2011 [5]—among the best-performing satisficing automated planners.
+     </paragraph>
+     <paragraph>
+      Real-time heuristic search [6] is an approach to solving search problems under tight computational time constraints, with applications ranging from video games to highly dynamic robotics. It builds on heuristic search; in fact, a heuristic function h is used to guide search. In brief, a real-time heuristic search algorithm alternates a lookahead search guided by h, that allows deciding which move to perform next, followed by an update phase, which makes the h-values of a bounded number of states more informed. The update phase—also called learning phase—allows the algorithm to terminate and is key to the algorithm's performance [7], [8].
+     </paragraph>
+     <paragraph>
+      Existing approaches to using weights within real-time heuristic search have shown improved convergence performance{sup:1}[9], [10] but have not shown significant improvements at finding one (first) solution. For example, Shimbo and Ishida [9] propose a two-step approach which first multiplies the user-given heuristic h by w at the outset of search, and then runs a standard real-time search algorithm with the resulting heuristic. Their approach can be viewed as a straightforward adaptation of Weighted A*'s technique. Their empirical results on grid problems—which we confirm in this paper—show that by using a weight greater than one, the algorithm slows down and returns worse first solutions. Bulitko's γ-Trap algorithm [11]—later generalized within the LRTS framework in [10]—uses lower-than-one weights applied to the costs of the graph. In this way, γ-Trap indirectly gives more importance to the heuristic h in its evaluation function. The only evaluation of γ-Trap for the first solution that we are aware of (Figure 5 in [11]) on Korf's 15-puzzels shows mixed results. While modest improvements are indeed observed for some weight configurations, in the remaining configurations, weights seem to be detrimental.
+     </paragraph>
+     <paragraph>
+      The main motivation underlying the work presented in this paper was to develop a technique inspired upon Weighted A*'s technique to obtain improved performance at finding one solution given a search problem. Our first attempt was yet another straightforward adaptation of the Weighted A* approach. This approach, which we call weighted lookahead, is directly applicable to any real-time search algorithm that uses A* as a lookahead search module, and consists of replacing the A* search by a Weighted A* search. As we explain in detail later, weighted lookahead is closely related to Shimbo and Ishida's approach but is not equivalent and, in fact, outperforms Shimbo and Ishida's. Unfortunately, we show that it does not yield improved performance over real-time heuristic search algorithms that do not use weights.
+     </paragraph>
+     <paragraph>
+      We explain the failure of straightforward approaches to incorporating weights successfully, like weighted lookahead, by the following fact: total runtime of a real-time search algorithm is generally proportional to solution quality. This is due to the fact that real-time search algorithms, when spending a comparable amount of time in each lookahead search, will run faster if and only if they perform fewer searches, and this will usually happen if and only if the solution returned is shorter. Incorporating weights in real-time search algorithms à la Weighted A* leads to increased solution cost and consequently to increased runtime.
+     </paragraph>
+     <paragraph>
+      This phenomenon leads us to the development of a technique that uses weights but in a very different way. The technique, which we call weighted update, modifies the learning phase of the algorithm rather than the lookahead phase. In a nutshell, weighted update is like a regular update but the costs of the arcs in the search graph are multiplied by a weight w greater than or equal to one.
+     </paragraph>
+     <paragraph>
+      A consequence of our approach used with {a mathematical formula}w&gt;1 is that the algorithm will not be inclined to revisit states because each time a state is visited its h-value is increased by a larger amount than it would were w equal to one. By avoiding revisiting states the algorithm indeed is not bound to a performance glitch observed a number of years ago by Ishida [12], and recently analyzed formally by Sturtevant and Bulitko [13]: standard real-time search algorithms tend to become “trapped” in areas in which heuristic depressions exist, leading to poor performance. “Trapped” here simply means that the algorithm will revisit a number of states, several times. While recent research (e.g., [14]) has shown that explicitly avoiding depressions actually leads to improved performance, the approach we present here is different since it does not provide or necessitate any mechanism for identifying or avoiding such depressions. Rather, avoidance of depressions is a natural consequence of the mechanism used to update the heuristic.
+     </paragraph>
+     <paragraph>
+      As mentioned above, the idea of multiplying arc costs by a weight has been described before by [11] and Bulitko and Lee [10]. Our approach, like theirs, changes the way h is learned by multiplying the arc costs rather than the heuristic by the weight, but, unlike theirs, our weight is greater than or equal to one and it is used only while learning, not for lookahead search. Furthermore, unlike them, we show below that our approach yields significant and consistent improved performance for the first solution.
+     </paragraph>
+     <paragraph>
+      Both weighted update and weighted lookahead are techniques that are extremely simple to implement in standard real-time heuristic search algorithms. In this paper we implement them on top of the state-of-the-art algorithm LSS-LRTA* [7], producing two new algorithms. By applying weighted update to LSS-LRTA* we obtain wLSS-LRTA*, whereas by applying weighted lookahead we obtain LSS-LRTwA*. We evaluate the algorithms over standard videogame path-finding tasks. As mentioned above, we show that the weighted lookahead yields both worse solutions and worse running times as w increases. On the other hand, we show that weighted update does lead to improved performance, both in solution quality and runtime. Improvements are up to one order of magnitude when the lookahead parameter (a measure of the search effort per iteration) is small. Since weighted update is the only technique that seems of practical relevance, we study its properties thoroughly. Our main theoretical results are the following. We (1) show that algorithms that use it, under certain conditions, will always find a solution if one exists, along with other relevant properties, and (2) show that wLSS-LRTA* converges to a w-optimal solution, and (3) provide bounds tighter than w-optimality for certain kinds of graphs.
+     </paragraph>
+     <paragraph>
+      To illustrate the wider applicability of weighted update we also incorporated the technique into LRTA*-LS [15] and daLSS-LRTA* [14]. In path-finding tasks we show that weights produce performance gains in these algorithms too. We leave, however, out of the scope of this article a detailed theoretical analysis of these algorithms.
+     </paragraph>
+     <paragraph>
+      This article significantly extends a previous conference publication [16]. The following material is new to this paper.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       An analysis of properties of wLSS-LRTA* at convergence. Specifically, we prove w-optimality, and bounds that can possibly be tighter (Theorem 6, Theorem 7). One of these results proves a bound that is independent of the value of the weight used. This bound is tighter than w-optimality in practice.
+      </list-item>
+      <list-item label="•">
+       An empirical evaluation of wLSS-LRTA* at convergence in a game map.
+      </list-item>
+      <list-item label="•">
+       An extension of the existing empirical evaluation by incorporating results over mazes, and by including a new algorithm: wdaLSS-LRTA*.
+      </list-item>
+     </list>
+     <paragraph>
+      The remainder of the article is organized as follows. The next section introduces background on Real-Time Heuristic Search, LSS-LRTA*, and notation that will be used in the remainder of the article. Then we describe the two proposed approaches to incorporating weights and how they can be implemented within LSS-LRTA*. We continue with a thorough theoretical evaluation of the weighted update approach both for the first solution and for convergence. Then we evaluate wLSS-LRTA* empirically and show how weighted update can be incorporated into LRTA*-LS and daLSS-LRTA* and show the impact on their performance. We then discuss relevant aspects on the performance of the algorithms we analyze. The paper finishes with a summary and conclusions.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      A search problem P is a tuple {a mathematical formula}(S,A,c,s0,G), where {a mathematical formula}(S,A) is a digraph that represents the search space. The set S represents the states and the arcs in A represent all available actions. We assume that S is finite, that A does not contain elements of the form {a mathematical formula}(s,s). In addition, {a mathematical formula}c:A↦R+ is a cost function which associates a positive cost with each of the available actions. For all {a mathematical formula}s∈S we define {a mathematical formula}Succ(s)={t∈S:(s,t)∈A}. The set {a mathematical formula}G⊆S contains the goal states. We define a path π as a sequence of vertices {a mathematical formula}t1t2…tn such that {a mathematical formula}(ti,ti+1)∈A for all {a mathematical formula}i∈{1,..,n−1}. A simple path is a path with no repeated vertices. In the rest of the paper, whenever we use the word path, we mean simple path. We use {a mathematical formula}V(π) to refer to the vertices of a path π and we define the length of a path π as {a mathematical formula}|V(π)|. We say state t is reachable from state s if there is a path that starts with s and finishes with t. We assume that the problem can be solved no matter what actions can be performed; formally, for every state t that is reachable from {a mathematical formula}s0, we assume there is a path from t to a state in G.
+     </paragraph>
+     <paragraph>
+      The cost of a path {a mathematical formula}π=t1t2…tn is {a mathematical formula}∑i=1n−1c(ti,ti+1). We denote by {a mathematical formula}d(s,t) the cost of the shortest path between s and t. Given a subset T of S we define the frontier of T as {a mathematical formula}∂T={s∈S∖T:∃t∈T such that (t,s)∈A}. Intuitively, ∂T corresponds to the states that surround the region of states T, i.e., it contains the neighbors of states in T that are not in T. Furthermore, when {a mathematical formula}s∈T and {a mathematical formula}t∈T∪∂T, we define {a mathematical formula}dT(s,t) as the cost of the shortest path of the form {a mathematical formula}t0…tn, where {a mathematical formula}t0,…,tn−1∈T, {a mathematical formula}tn=t, and {a mathematical formula}t0=s. Intuitively {a mathematical formula}dT(s,t) is the cost of a shortest path that is restricted to visit only states in T, except for the last state which may be either in T or in ∂T.
+     </paragraph>
+     <paragraph>
+      A heuristic function {a mathematical formula}h:S↦[0,∞) associates to each state s an approximation {a mathematical formula}h(s) of the cost of a path from s to a goal state. We denote by {a mathematical formula}h⁎(s) the minimum distance from s to a goal state. A heuristic h is consistent if and only if {a mathematical formula}h(sg)=0 for every {a mathematical formula}sg∈G and for any {a mathematical formula}s∈S it holds that {a mathematical formula}h(s)≤c(s,t)+h(t) for every {a mathematical formula}t∈Succ(s). If h is consistent then {a mathematical formula}h(s)≤d(s,t)+h(t) for all {a mathematical formula}s,t∈S. Furthermore, if h is consistent it is easy to prove that it is also admissible; i.e., {a mathematical formula}h(s) does not overestimate {a mathematical formula}h⁎(s). We say that a state t justifies the h-value of state s if {a mathematical formula}h(s)=c(s,t)+h(t).
+     </paragraph>
+     <paragraph>
+      We define {a mathematical formula}cmin and {a mathematical formula}cmax, respectively, as the cost of the lowest- and highest-cost arc in the search graph {a mathematical formula}(S,A). We assume familiarity with the A* algorithm [2]: {a mathematical formula}g(s) denotes the cost of the path from the start state to s, and {a mathematical formula}f(s) is defined as {a mathematical formula}g(s)+h(s). The f-value, g-value and h-value of s refer to {a mathematical formula}f(s), {a mathematical formula}g(s), and {a mathematical formula}h(s) respectively. Furthermore, the variable Closed contains a set of nodes that have been expanded, and Open contains the set of nodes generated by the algorithm that are not in Closed. We also use the fact that {a mathematical formula}Open=∂Closed holds true at the end of A*'s main loop. This is simple to prove by induction on the number of A* iterations.
+     </paragraph>
+     <paragraph>
+      Finally, given a function {a mathematical formula}f:S→R, and a subset {a mathematical formula}S′ of S, we denote by {a mathematical formula}argmins∈S′⁡[f(s)] the elements that minimize f over {a mathematical formula}S′. Sometimes, abusing notation, we write {a mathematical formula}t=argmins∈S′⁡[f(s)] instead of {a mathematical formula}t∈argmins∈S′⁡[f(s)].
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Path-finding as a search problem
+      </section-title>
+      <paragraph>
+       We use the path-finding problem in grid-like terrain as a motivation throughout the paper. Now we define it formally. Given a grid of {a mathematical formula}n×m cells, in which some cells of the grid are marked as obstacles, and two non-obstacle cells—the initial cell and the goal cell—, the objective is to find a sequence actions that would lead an agent from the initial cell to the goal cell. The possible actions correspond to moving to a neighbor cell. In 4-connected grids, the neighbors of a cell s correspond to the cells immediately to the left of, to the right of, up from, or down from s. In 8-connected grids, 4 diagonal moves are also allowed, and thus each cell has 8 neighbors.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         The search graph
+        </section-title>
+        <paragraph>
+         Formally, the search problem {a mathematical formula}P=(S,A,c,s0,G) is such that S has exactly one element for each cell of the grid. As such when we say state s we may actually refer to the cell of the grid it denotes. An element of the form {a mathematical formula}(s,t) is in A if and only if s and t are neighbors and are not obstacle cells. The state {a mathematical formula}s0∈S is the initial cell, and G is a singleton set containing the state denoting the goal cell. The cost function c assigns a cost of 1 to non-diagonal moves and a cost of {a mathematical formula}2 to diagonal moves.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Heuristics
+        </section-title>
+        <paragraph>
+         In 4-connected grids we can use the Manhattan distance as the heuristic. Given two cells, the Manhattan distance corresponds to the cost of a shortest path between them assuming no obstacles are present in the grid. Specifically, given cells {a mathematical formula}(x1,y1) and {a mathematical formula}(x2,y2), the Manhattan distance is given by {a mathematical formula}|x1−x2|+|y1−y2|. The Manhattan distance heuristic for a state s is simply the Manhattan distance between the cell associated with s and the goal cell.
+        </paragraph>
+        <paragraph>
+         Analogously, for 8-connected grids, one can use the octile distance[10] as a heuristic, which given two cells corresponds to the cost of a shortest path between assuming no obstacles are present in the grid. Given cells {a mathematical formula}(x1,y2) and {a mathematical formula}(x2,y2) it is defined as {a mathematical formula}max⁡(|x1−x2|,|y1−y2|)+(2−1)min⁡(|x1−x2|,|y1−y2|). The octile distance heuristic for a state s is the octile distance between s and the goal state g. Fig. 1 illustrates a path-finding problem. It is easy to see that the octile distance heuristic for the initial state is 2 but that the actual distance to the goal is {a mathematical formula}2+22, which is the cost of path {a mathematical formula}π=(4,2)(3,2)(2,3)(3,4)(4,4).
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Real-time search
+      </section-title>
+      <paragraph>
+       In real-time heuristic search, the objective is to move an agent from an initial state to a goal state. Between each movement, the computation carried out by the algorithm should be bounded by a constant. An example situation is path-finding in a priori unknown grid-like environments. In this situation, we assume the agent knows the dimensions of the grid but not the location of the obstacles before the search is started.
+      </paragraph>
+      <paragraph>
+       Most real-time heuristic search algorithms iterate three steps until they find the solution. In the lookahead step, the agent runs a heuristic search algorithm to search for a next move. In the movement step, the agent executes a number of moves. If the environment is initially unknown, in the movement step the agent also updates its knowledge about the search graph. Finally, in the update step, the agent will update the h-value of some of the states in the search space. The update step is usually necessary to guarantee that the algorithm will find a solution. The performance of real-time heuristic search algorithms is sensitive to the way in which the heuristic is updated (see e.g., [8]). Finally, we remark the order in which the three steps are carried out depends on the particular algorithm.
+      </paragraph>
+      <paragraph>
+       Our experimental evaluation focuses on path-finding in grid-like, a priori unknown terrain. To enable search in unknown terrain, we undertake the free-space assumption[17], [18], a standard assumption about the initial knowledge of the agent, whereby the terrain is initially assumed obstacle-free. To implement this assumption, given the dimensions of the grid, the agent assumes standard connections between cells. While moving through the environment, we model the discovery of new obstacles by increasing the cost of some arcs in the graph. In particular the agent may believe that two cells s and t are connected when one of the two—say, s—is actually an obstacle, and thus {a mathematical formula}c(t,s)=∞. The agent, as it moves along the grid, observes obstacles in the immediate neighborhood of the current cell. When obstacles are detected, the agent updates its cost function accordingly, by setting the cost of reaching a previously unknown obstacle cell to infinity.
+      </paragraph>
+      <paragraph>
+       Even though our experimental evaluation focuses on path finding, our techniques are implemented over general real-time search algorithms. To use these algorithms in partially known environments, one can make a generalized free-space assumption for arbitrary graphs [19].
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        Real-time search algorithms
+       </section-title>
+       <paragraph>
+        Learning Real-Time A* (LRTA*) [6] is a well-known real-time heuristic search algorithm. In its simplest version, while the goal state has not been reached, it repeats the following steps until the goal is reached.
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         [Lookahead] It computes {a mathematical formula}c(s,t)+h(t), for each neighbor t of the current state s, and determines the state y that minimizes such a sum.
+        </list-item>
+        <list-item label="2.">
+         [Update] It updates {a mathematical formula}h(s) to the maximum among {a mathematical formula}h(s) and {a mathematical formula}c(s,y)+h(y).
+        </list-item>
+        <list-item label="3.">
+         [Movement] Moves the agent to y, observes the environment, and updates the cost function c if new obstacles are discovered.
+        </list-item>
+       </list>
+       <paragraph>
+        LSS-LRTA* (Algorithm 1) is a generalization of LRTA*. Its lookahead procedure invokes a bounded A* algorithm which expands at most k nodes. At the end of A* the states in Closed are usually referred to as the local search space. After lookahead, the h-values of the states in the interior of the local search space are updated. The update formula (Eq. (1); Algorithm 1) is such that the resulting h-value of s is the maximum possible value that still preserves consistency [7]. Finally, in the movement step, the algorithm moves the agent as far as possible towards the best state in Open, observing the environment, and updating the cost function.{sup:2}
+       </paragraph>
+       <paragraph>
+        A modified version of Dijkstra's algorithm (Algorithm 2) is invoked by LSS-LRTA* in the update step (Line 3). It receives a region of nodes I as input and recomputes the h-values of states in I by interpreting the h function as the cost of a shortest path between the frontier ∂I and I. As a result, the algorithm sets h-values of states in I according to Eq. (1) in Algorithm 1. It can be formally shown that this algorithm actually sets the h values according to the update equation (Eq. (1), Algorithm 1) (see e.g. [7], [14]).
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Incorporating the weight in the lookahead
+     </section-title>
+     <paragraph>
+      In this section we propose a direct approach to incorporating weights in real-time heuristic search algorithms. It incorporates the weight into the underlying search algorithm that is used in the lookahead phase. This approach—that we call weighted lookahead—does not yield good results in practice. We chose to describe it here because it has not been reported in the literature, and is the obvious way to incorporate weights into real-time search.
+     </paragraph>
+     <paragraph>
+      Weighted lookahead consists of using Weighted A* in the lookahead phase of the real-time heuristic search algorithm. In a nutshell this means that during lookahead search, we use wh as the main search heuristic, where w is a weight and h is the user-supplied heuristic. This technique is therefore applicable to any Real-Time Heuristic Search algorithm that uses A* in its lookahead phase, but may also be applied to algorithms that use other lookahead procedures that utilize a heuristic function.
+     </paragraph>
+     <paragraph>
+      Weighted lookahead is closely related but not equivalent to Shimbo and Ishida's approach [9], which henceforth we refer to as Sh&amp;I. In Sh&amp;I the user-supplied heuristic is multiplied by w at the outset of search, and then the original real-time search algorithm is run using the new heuristic. Although there are similarities in how lookahead search behaves because both in practice start using {a mathematical formula}f=g+wh as the ranking function, as soon as one learning episode is carried out, the h-values of states will not necessarily be the same across both approaches. This is because learning in weighted lookahead, as compared to Sh&amp;I, is carried out using the same learning rule, but with a different heuristic.
+     </paragraph>
+     <paragraph>
+      We incorporated weighted lookahead into LSS-LRTA* and we call the resulting algorithms LSS-LRTwA*. LSS-LRTwA* differs from LSS-LRTA* only in that Weighted A* (i.e., A* run with {a mathematical formula}f=g+wh) instead of A* is called in Line 2 of Algorithm 1, with the stop condition left intact. As with LSS-LRTA* we assume the user provides an initial heuristic h, but, in addition, LSS-LRTwA* also requires an input weight w.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Empirical evaluation of weighted lookahead
+      </section-title>
+      <paragraph>
+       We evaluated the performance of LSS-LRTwA* relative to Sh&amp;I in goal-directed navigation in a priori unknown grids, which is a well-known, relevant application of real-time heuristic search. To that end, we refer to the results presented by us in an earlier publication [16]. We do not extend that evaluation since results therein (1) show wLSS-LRTA* does not improve over LSS-LRTA*, and (2) show wLSS-LRTA*, the algorithm we describe below, significantly outperforms both LSS-LRTwA* and Shimbo and Ishida's approach. LSS-LRTwA* and Sh&amp;I were evaluated for three weight values {a mathematical formula}{1,2,4} and six values for the lookahead parameter {a mathematical formula}{1,2,4,8,16,32,64}. Both algorithms were implemented in a similar way, using the same, standard binary heap for the Open list, and breaking ties among states with the same f-value in favor of larger g-values. Fig. 2 shows a plot of solution cost versus lookahead parameter. We conclude that as w increases, the solution cost obtained by LSS-LRTwA* also increases. Larger differences are observed when the lookahead parameter increases. On the other hand, for Sh&amp;I the solution cost increases more significantly when w is increased (e.g., more than twice as expensive when {a mathematical formula}w=2). In summary, the performance of both algorithms degrade as w increases but Sh&amp;I exhibits a greater performance degradation.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Justification for poor performance
+      </section-title>
+      <paragraph>
+       We do not have a formal result proving that weighted lookahead yields poor performance. However, below we identify two factors that we think may explain poor performance.
+      </paragraph>
+      <paragraph>
+       The first factor comes from a known property of Weighted A*: the solution cost typically increases as w increases. As such, it should not be surprising that worse intermediate solutions are returned by each of the calls in the lookahead step, which could explain why more costly solutions are found. Furthermore, since the number of expanded nodes in each search episode is constant (it is equal to the lookahead parameter k), using Weighted A* does not yield any time benefits per lookahead step. Since the solution found is longer, more iterations of the algorithm are needed, which explains the increase in total time.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       The poor performance of LSS-LRTwA* may also be explained by the quality of learning, which, at least in some parts of the learning space, is, as we prove below, worse than when using LSS-LRTA*. In fact, assume the agent is in state s and that we want to construct a learning space of size k around s. The next theorem states that the region built by expanding k nodes using A* is the one that maximizes the increase of the h-value of s. In other words, such a region maximizes learning in s. Let k be a natural number, h be a consistent heuristic, and{a mathematical formula}s∈Sbe such that{a mathematical formula}sgis at least at k edges away from s. Furthermore, let{a mathematical formula}Δh(s,L)denote the amount by which the h-value of s increases after learning (i.e.{a mathematical formula}Δh(s,L)=mint∈∂L⁡[h(t)+dL(s,t)]−h(s)). Consider the following optimization problem:{a mathematical formula}Then the maximum is attained when L is the Closed list of an A* search just after Closed reaches size k.
+      </paragraph>
+      <paragraph label="Proof">
+       Let L be the set of states in the Closed list of an A* search started at state s when Closed reaches size k. Notice that Closed actually reaches size k because {a mathematical formula}sg is more than k steps away and thus {a mathematical formula}sg cannot be in Closed. Recall that A* with consistent heuristics does not reopen states. Thus after k iterations of A*'s main loop the Closed list indeed has size k.We now prove that if we chose a region of states different from L then the amount of learning given by such a region is not greater than the amount obtained given by L. Indeed, let I be such that {a mathematical formula}I≠L, such that {a mathematical formula}s∈I, and such that {a mathematical formula}|I|=k. Let {a mathematical formula}t1=s,t2,…,tk be the order in which the elements were inserted in L by A*. Let t be the element of {a mathematical formula}{t1,..,tk} with lowest index such that {a mathematical formula}t∉I. By definition, {a mathematical formula}t∈∂I. Let {a mathematical formula}f⁎ be the f-value of state that would have been expanded in the {a mathematical formula}(k+1)-th iteration of the A* run. Note that since h is consistent,{a mathematical formula} Also due to the fact that h is consistent, we have that{a mathematical formula} because the f-values of expanded states cannot decrease through execution using consistent heuristics.On the other hand, since {a mathematical formula}t∈∂I,{a mathematical formula} In addition, {a mathematical formula}dL(s,t)=dI(s,t) because t was expanded via an optimal path (because h is consistent) and I contains such a path. Then we have {a mathematical formula}f(t)=h(t)+dI(s,t), which allows us to write, using Inequality (3), that:{a mathematical formula} Adding Inequations (2) and (4), substituting {a mathematical formula}f⁎ and {a mathematical formula}f(t) and subtracting {a mathematical formula}h(s) we obtain:{a mathematical formula} which is what we wanted to establish.  □
+      </paragraph>
+      <paragraph>
+       Since Weighted A*, given a bound of k expansions, generates a region different from A*, we can infer that in some cases the learning performed in the current state is of inferior quality. This suggests that part of the poor performance of LSS-LRTwA* may be explained by its poor learning, since it is known that stronger learning yields better performance in real-time heuristic search (see e.g., [8]).
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Incorporating the weight in the update
+     </section-title>
+     <paragraph>
+      Now we describe weighted update, which, as we show later seems to be the only approach that uses weights and leads to significant performance improvements at finding a solution given a search problem under tight time constraints. The main idea underlying weighted update is to make h increase by a factor of w ({a mathematical formula}w≥1) using the update procedure of the Real-Time Heuristic Search algorithm. Specifically, given a region I of states, for each {a mathematical formula}s∈I, the heuristic is updated using the following expression.{a mathematical formula} Intuitively, this corresponds to assuming the costs of the search graph arcs are higher than usual. As such h can be interpreted as a cost estimator of the graph that results from multiplying all arcs in the original search graph by w.
+     </paragraph>
+     <paragraph>
+      In this paper we consider implementing this technique within LSS-LRTA*, which results in wLSS-LRTA*. In addition to the parameters received by LSS-LRTA*, wLSS-LRTA* receives an additional parameter w. Moreover, like LSS-LRTA*, it uses standard A* (using function {a mathematical formula}f=g+h to rank nodes in the Open list) as its lookahead search procedure. Unlike LSS-LRTA*, it runs the modified Dijkstra's algorithm to update h using wc as the graph's cost function instead of c.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Weighted update and heuristic depressions
+      </section-title>
+      <paragraph>
+       Back in 1992, Ishida showed [12] that the existence of heuristic depressions, negatively impacts performance of real-time heuristic search algorithms. A heuristic depression can be intuitively understood as a region of the search space in which the h-values of states are a very poor (low) estimation of the actual cost to reach a solution. Real-time search algorithms will usually get “trapped” in these regions, since to escape them they will have to increase the h-values of states in the region until they get sufficiently accurate. This is illustrated by a run of LRTA* over a gridworld shown in Fig. 3. In the example the initial state and its immediate neighbors are in a heuristic depression. During execution, the agent needs to re-visit the initial state four times before being capable of exiting the depression and then heading towards the goal.
+      </paragraph>
+      <paragraph>
+       Identifying and avoiding heuristic depressions explicitly (e.g., [14]) is a technique that has been shown to yield good empirical results. Weighted lookahead is not a technique that attempts to identify depressions; nevertheless, its use results in practice in depression avoidance. Indeed, by incorporating the weight in the costs of the arcs, weighed update increases quickly the h-values of states that have been visited by the agent. Precisely by increasing these values more quickly is that wLSS-LRTA* is able to exit depressions faster. Fig. 4 illustrates this in the same situation described above. wLSS-LRTA* will only need to re-visit the initial state once before it exits the depression and heads to the goal.
+      </paragraph>
+      <paragraph>
+       A formal relationship between algorithms that identify and avoid depressions explicitly and wLSS-LRTA* may exist. We leave a formal analysis of this, however, out of the scope of this paper, as we will focus on the properties of our new algorithm, wLSS-LRTA*.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Theoretical analysis of weighted update
+     </section-title>
+     <paragraph>
+      In the previous section we proposed weighted update, a technique that incorporates weights into real-time heuristic search. Now we focus on the properties of the algorithms that employ it. There are a number of properties that real-time search algorithms usually satisfy. Among the most important are termination and convergence after multiple trials. The proofs for these theorems usually rely on the fact that the heuristics are either consistent or admissible. In weighted update, however, the heuristic function does not remain consistent and thus one cannot use the same proofs for these results.
+     </paragraph>
+     <paragraph>
+      The remainder of the section is divided in two parts. In the first, we analyze the behavior of algorithms using weighted update when the problem is to find a solution after a single run of the algorithm. In the second, we analyze convergence properties, which are interesting when the objective is to find improved solutions by running the algorithm multiple times. Our analysis in this section is focused on the weighted update technique because this is the one that we observed provides good results.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Properties for a single run
+      </section-title>
+      <paragraph>
+       Here we analyze to what extent some important properties, like finding a solution when one exists, are preserved by our approaches even when the effective heuristic used during search may become inconsistent and hence inadmissible.
+      </paragraph>
+      <paragraph label="Definition 1">
+       As mentioned above, we cannot ensure that the heuristic remains consistent, but we can prove that it remains w-consistent. Furthermore, we can guarantee that the heuristic will remain w-admissible if it is initially consistent. The definitions for w-consistency and w-admissibility follow. Given {a mathematical formula}w≥1, we say h is w-consistent iff for each pair {a mathematical formula}(s,t)∈A it holds that {a mathematical formula}h(s)≤h(t)+wc(s,t), and, for every goal state {a mathematical formula}sg, {a mathematical formula}h(sg)=0.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Given {a mathematical formula}w≥1, we say h is w-admissible iff for each {a mathematical formula}s∈S we have {a mathematical formula}h(s)≤wh⁎(s).
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Analogous to the case of regular consistency, given that h is w-consistent we can prove h is w-admissible. Henceforth, we assume without loss of generality that there is a single goal {a mathematical formula}sg. If h is w-consistent then h is w-admissible.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}s∈S, and let {a mathematical formula}π=t1t2…tn, with {a mathematical formula}t1=s and {a mathematical formula}tn=sg, be the shortest path from s to {a mathematical formula}sg. Since {a mathematical formula}tn is the goal state {a mathematical formula}h(tn)=0. Because h is w-consistent, it holds that{a mathematical formula} Summing up all inequalities defined above we obtain:{a mathematical formula}  □
+      </paragraph>
+      <paragraph>
+       We now turn our attention to prove that any algorithm that can (correctly) incorporate our weighted update will terminate. First we prove the following intermediate result.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let h be a w-consistent heuristic. If we apply Modified Dijkstra's Algorithm using wc as the graph's cost function in a set of states L, then the value of h will not decrease for any state in L.
+      </paragraph>
+      <paragraph label="Proof">
+       Let us denote by {a mathematical formula}h′ the new heuristic function after running the weighted update Djikstra Algorithm on region L. Note that {a mathematical formula}h=h′ in {a mathematical formula}S∖L. Let {a mathematical formula}L¯ be the set of all states in L whose h-value has decreased. We prove that {a mathematical formula}L¯=∅ by contradiction. Assume {a mathematical formula}L¯≠∅ and let {a mathematical formula}l∈L¯ be a state with minimum {a mathematical formula}h′ value in {a mathematical formula}L¯. After running Dijkstra's Algorithm any vertex {a mathematical formula}s∈L satisfies Bellman's equation [20]: {a mathematical formula}h′(s)=mint∈Succ(s)⁡[h′(t)+wc(s,t)]. Now let {a mathematical formula}u=argmint∈Succ(l)⁡[h′(t)+wc(l,t)] then:{a mathematical formula} and because {a mathematical formula}c&gt;0, from Eq. (6) we obtain:{a mathematical formula} Now because l has the lowest {a mathematical formula}h′-value of all states in {a mathematical formula}L¯, we conclude that {a mathematical formula}u∉L¯. By definition of {a mathematical formula}L¯ it must be the case that {a mathematical formula}h′(u)≥h(u). Using that {a mathematical formula}h′(u)≥h(u) we write:{a mathematical formula} but because h is w-consistent, {a mathematical formula}h(u)+wc(l,u)≥h(l), so using Inequality (7) we conclude {a mathematical formula}h′(l)≥h(l), which contradicts the fact that {a mathematical formula}h′(l)&lt;h(l). We conclude that {a mathematical formula}L¯ is empty and that no state in L decreases its h-value.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Now we establish that the property of w-consistency is preserved by the algorithm. The proof follows from the two following lemmas. If h is a w-consistent heuristic then h remains w-consistent after running a w-weighted update.As in the proof above, let {a mathematical formula}h′ denote the updated heuristic. We want to establish {a mathematical formula}h′(s)≤h′(t)+wc(s,t), for all {a mathematical formula}(s,t)∈A. Let {a mathematical formula}(s,t) be an arbitrary pair in A. We divide the proof in 3 cases:Case 1: Assume {a mathematical formula}s∈I. Then{a mathematical formula} then we have that {a mathematical formula}h′(s)≤h′(t)+wc(s,t).Case 2: Assume {a mathematical formula}s∉I and {a mathematical formula}s≠sg. Since h is not updated outside of I, {a mathematical formula}h′(s)=h(s). Because h is consistent and {a mathematical formula}h(t)≤h′(t) (by Theorem 2), the following inequality holds:{a mathematical formula}Case 3: Assume {a mathematical formula}s∉I and {a mathematical formula}s=sg. Then {a mathematical formula}h′(s)=h(s)=0. Then, since {a mathematical formula}c≥0, it trivially holds that {a mathematical formula}h′(s)≤h′(t)+wc(s,t).  □
+      </paragraph>
+      <paragraph label="Proof">
+       When the domain is partially known, an LSS-LRTA* agent may discover that the search graph is different from what it initially thought as it moves through the environment. In particular, the costs of arcs may increase as a result of discovering additional obstacles. The next lemma proves that w-consistency is preserved when arc costs increase. If the movement phase of a real-time heuristic search algorithm may only increase costs in the search graph, then w-consistency is preserved by the movement phase.Let {a mathematical formula}c′ denote the cost function after the movement phase. Since costs may only increase, {a mathematical formula}c≤c′. If {a mathematical formula}(s,t)∈A and h is w-consistent then {a mathematical formula}h(s)≤wc(s,t)+h(t), which implies {a mathematical formula}h(s)≤wc′(s,t)+h(t).  □
+      </paragraph>
+      <paragraph label="Theorem 3">
+       If h is initially w-consistent, then it remains w-consistent along the execution of a real-time heuristic search algorithm that uses a w-weighted update and whose movement phase may only increase the costs of arcs in the search graph, and whose lookahead phase does not change h or c.
+      </paragraph>
+      <paragraph label="Proof">
+       Straightforward from Lemma 2, Lemma 3, and the fact that the lookahead phase does not change h or c.  □
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Now we focus on our termination result, and assume we are dealing with a real-time heuristic search algorithm that satisfies the conditions of Theorem 3. For notational convenience, let {a mathematical formula}hn denote the heuristic function at the beginning of the n-th iteration of the algorithm's main loop. Note that {a mathematical formula}h0 is the initial heuristic. An important intermediate result is that eventually h converges. If h is initially w-consistent, then after a finite number N of learning steps, h converges; that is, there exists an{a mathematical formula}N∈Nsuch that{a mathematical formula}hn+1=hnfor all{a mathematical formula}n≥N.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}s∈S be a state. Because of Theorem 2 and Lemma 1, {a mathematical formula}hn(s) is a bounded non-decreasing sequence and thus by elementary calculus the succession {a mathematical formula}hn(s) converges as n goes to infinity and we call {a mathematical formula}h¯(s) such limit. Observe that {a mathematical formula}hn(s)≤h¯(s).By successive applications of Eq. (5) at each time step n, we have that{a mathematical formula} for some {a mathematical formula}s′∈S and some path π from s to {a mathematical formula}s′. Since the number of states is finite as well as the set of actions, the number of pairs {a mathematical formula}(π,s′) where π is a path from s to {a mathematical formula}s′ such that {a mathematical formula}h¯(s)≥wc(π)+h0(s′) is finite. Moreover, since every time we change the heuristic value of s it can only increase we conclude that in a finite number of steps the heuristic in s reaches its maximum possible value, that is {a mathematical formula}h¯(s). Call {a mathematical formula}Ns the minimum number such that {a mathematical formula}hn(s)=hn+1(s) for all {a mathematical formula}n≥Ns. We have proved that {a mathematical formula}Ns is finite, hence {a mathematical formula}N=maxs∈S⁡{Ns} is finite because S have a finite number of elements and finally, for any {a mathematical formula}n≥N we have that {a mathematical formula}hn(s)=hn+1(s) for every {a mathematical formula}s∈S, finishing the proof.  □
+      </paragraph>
+      <paragraph>
+       Note that convergence may not be reached in a first run of the algorithm that reaches the goal. Below this result is used to prove termination. We assume there the algorithm enters an infinite loop, and under that assumption the previous lemma implies that h converges after a finite number of steps.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Now, we stablish the main result of this subsection: wLSS-LRTA* reaches{a mathematical formula}sgif the heuristic is initially w-consistent.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose the assertion is false. Since by Lemma 4{a mathematical formula}{hn} converges, at some iteration {a mathematical formula}h=hn does not change anymore and the agent enters a loop. Assume {a mathematical formula}π=t1t2…tnt1 is such a loop, and let {a mathematical formula}π′=t1′t2′…tm′t1′ be the states at which the agent runs a lookahead step. Without loss of generality, assume {a mathematical formula}t1′ is one of the states of {a mathematical formula}π′ with smallest heuristic value. At that iteration, let L be the local search space of the algorithms. Since h does not change, there exists a state {a mathematical formula}t∈∂L such that {a mathematical formula}h(t1′)=h(t)+wdL(t1′,t), otherwise h would be updated.Since wLSS-LRTA* decides to move to the best state in ∂L, and that such a state is {a mathematical formula}t2′, we know that{a mathematical formula}But we have that {a mathematical formula}h(t1′)=h(t)+wdL(t1′,t). Substituting in {a mathematical formula}h(t) in Inequality (8), we obtain:{a mathematical formula} Finally, because {a mathematical formula}t1′ has a lowest h-value in {a mathematical formula}π′, we have that {a mathematical formula}h(t1′)≤h(t2′) and thus:{a mathematical formula} Then,{a mathematical formula} and, rearranging, we obtain:{a mathematical formula} which is a contradiction with the fact that {a mathematical formula}w≥1. Thus, the agent cannot enter an infinite loop.  □
+      </paragraph>
+      <paragraph label="Remark 1">
+       The proof of Theorem 4 applies to any algorithm using weighted update whose movement phase moves the agent to the state with lowest f-value of the frontier of the local search space.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Properties for multiple-trial runs
+      </section-title>
+      <paragraph>
+       In this section we analyze properties of wLSS-LRTA* when it is running multiple search trials. In this mode, each time the agent reaches the goal, it is moved back to the initial state and the search algorithm is invoked again, without resetting the heuristic function h. Each run of the algorithm that moves the agent from the initial state to a goal state is called a trial. A multiple-trial run is said to converge iff the heuristic h converges, i.e., h does not change during the execution of a trial. A multiple-trial run is usually stopped when h converges.
+      </paragraph>
+      <paragraph>
+       Multiple-trial runs of LSS-LRTA* are known to converge if the initial heuristic is consistent. Furthermore, they converge to an optimal solution since the agent traverses an optimal path in the last trial [6], [7]. In our case it is easy to see that wLSS-LRTA* converges to a solution by repeating the proof of Lemma 4, moreover, we provide an elementary estimate of the cost of the found solution, which is stated in the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Let C be the cost of a solution found by a run of wLSS-LRTA* at convergence, then C is w-optimal, i.e.:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The bound in Theorem 5 is generic since it does not use the structure of the graph. Our next bound for the cost of the solution at convergence uses information that can be obtained by the agent during execution in a converged trial, and thus is highly related to the structure of the graph. In practice this bound is much tighter than standard w-optimality. We observe that we can estimate how far away from optimal is the solution returned at convergence with a very simple algorithm that returns a value {a mathematical formula}D≥0, which we will formally define later.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       D-boundLet C be the cost of a solution found by a run of wLSS-LRTA* at convergence. Then,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Finally, when the cost of the search graph satisfies the triangle inequality (Definition 4 below), we prove an estimate on the solution cost at convergence that depends on the ratio between the highest-cost and the lowest-cost arc in the graph but not on w.
+      </paragraph>
+      <paragraph label="Theorem 7">
+       Let P be a search problem whose search graph satisfies the triangle inequality. Let C be the cost of a solution found by wLSS-LRTA* at convergence. Then{a mathematical formula}C≤cmaxcminh⁎(s0).
+      </paragraph>
+      <paragraph>
+       To the knowledge of the authors, no other result of this nature has been proved before and we believe that the technique used in this proof could be used in other contexts to obtain similar bounds. Finally, as a straightforward application of Theorem 7 we obtain that in graphs with uniform costs on the edges, an optimal solution is returned at convergence, independent of the value of w.
+      </paragraph>
+      <paragraph>
+       In order to prove the above theorems we introduce some notation. We assume {a mathematical formula}s0,…,sN are the states at which the agent performs a lookahead step once convergence has been reached. State {a mathematical formula}s0 is the initial state and {a mathematical formula}sN=sg. In addition, for every {a mathematical formula}i∈{0,…,N−1}, we denote by {a mathematical formula}Ci the set of states in A*'s Closed list that A* generates when run from {a mathematical formula}si. To simplify notation, we write {a mathematical formula}di instead of the distance function {a mathematical formula}dCi. Finally, we assume that the initial heuristic is w-consistent, which implies that the converged heuristic is w-consistent as well. From now on, we assume that h is the converged heuristic.
+      </paragraph>
+      <paragraph label="Lemma 5">
+       We start by proving Theorem 5. We need the following intermediate and simple result. In a run of wLSS-LRTA* at convergence, for each{a mathematical formula}i∈{0,…,N−1}, it holds that:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Note that for each i there is some {a mathematical formula}yi∈∂Ci such that{a mathematical formula} but since A* chooses to move to {a mathematical formula}si+1 instead of {a mathematical formula}yi, we have:{a mathematical formula} which finishes the proof.  □
+      </paragraph>
+      <paragraph label="Proof of Theorem 5">
+       Note that the cost of the path found by wLSS-LRTA* is:{a mathematical formula} and by Lemma 5:{a mathematical formula} However h is w-consistent and thus w-admissible, hence:{a mathematical formula} which means the solution found is w-optimal.  □
+      </paragraph>
+      <paragraph>
+       We proceed with the proof of Theorem 6. We use {a mathematical formula}Ci with the meaning defined above and from now on we denote by {a mathematical formula}yi one of the states of {a mathematical formula}∂Ci such that:{a mathematical formula} i.e., {a mathematical formula}yi is the one of the states whose h-value determines the h-value of {a mathematical formula}si after the weighted update; therefore, {a mathematical formula}yi always exists. We remark that {a mathematical formula}yi may or may not be equal to {a mathematical formula}si+1. Finally, we observe the following two inequalities hold true.{a mathematical formula}{a mathematical formula} Inequality (10) holds because in each A* run, {a mathematical formula}si+1 is preferred over {a mathematical formula}yi for expansion. Moreover, Inequality (11) holds because the update algorithm prefers to update using {a mathematical formula}yi rather than {a mathematical formula}si+1.
+      </paragraph>
+      <paragraph label="Lemma 6">
+       The proof of Theorem 6 needs two intermediate results that are proven below. For all{a mathematical formula}i∈{0,…,N−1}it holds that{a mathematical formula}di(si,si+1)≥di(si,yi)and{a mathematical formula}h(yi)≥h(si+1). Moreover{a mathematical formula}di(si,si+1)=di(si,yi)if and only if{a mathematical formula}h(si+1)=h(yi).
+      </paragraph>
+      <paragraph label="Proof">
+       Inequality (11) can be rewritten as:{a mathematical formula} but using Inequality (10) in the right-hand side of Inequality (12) we obtain:{a mathematical formula} Subtracting {a mathematical formula}h(yi)+di(si,yi) we obtain:{a mathematical formula} and using {a mathematical formula}w&gt;1 we obtain:{a mathematical formula} Now we add Inequalities (13) and (10), and we obtain {a mathematical formula}h(yi)≥h(si+1). To prove {a mathematical formula}di(si,si+1)=di(si,yi) if and only if {a mathematical formula}h(si+1)=h(yi), we substitute each of those equations in Inequalities (10) and (11) to obtain the desired result.  □
+      </paragraph>
+      <paragraph>
+       In the remainder of the section we define {a mathematical formula}Di=h(yi)−h(si+1), and {a mathematical formula}D=∑i=0N−1Di. The value {a mathematical formula}Di represents the difference between the h-value of the state that updates the value of {a mathematical formula}si and the h-value of the state at which the agent actually moves to. D, on the other hand, is simply the sum of those differences throughout the path from the initial state to the goal. Note that, by Lemma 6, {a mathematical formula}Di≥0, and thus {a mathematical formula}D≥0.
+      </paragraph>
+      <paragraph>
+       The next lemma gives us an estimate of {a mathematical formula}∑i=0N−1di(si,yi), which will be used to estimate the cost of the solution found by wLSS-LRTA*, i.e. {a mathematical formula}∑i=0N−1di(si,si+1).
+      </paragraph>
+      <paragraph label="Proof">
+       In a run of wLSS-LRTA* at convergence, it holds that:{a mathematical formula}Using the definition for D, we rewrite Eq. (9) as:{a mathematical formula} and given that {a mathematical formula}sN=sg and that {a mathematical formula}h(sg)=0, we obtain:{a mathematical formula} Finally, because h is w-admissible, {a mathematical formula}h(s0)≤wh⁎(s0), we conclude that:{a mathematical formula} from where it is straightforward to obtain the desired inequality.  □
+      </paragraph>
+      <paragraph label="Proof of Theorem 6">
+       Using Eq. (10) and the definition of {a mathematical formula}Di we obtain:{a mathematical formula} and then:{a mathematical formula} given that {a mathematical formula}∑i=0N−1Di=D, we write:{a mathematical formula} By adding up Inequality (14) with the inequality of Lemma 7, we obtain the desired inequality.  □
+      </paragraph>
+      <paragraph>
+       Note that the last bound is not uniquely defined, because each {a mathematical formula}Di depends on the election of {a mathematical formula}yi and, algorithmically, we can optimize this bound by letting the update algorithm choose a {a mathematical formula}yi that minimizes {a mathematical formula}h(yi). In addition, note that {a mathematical formula}D=0 implies that the solution found by the algorithm is optimal.
+      </paragraph>
+      <paragraph>
+       The proof of Theorem 7 is a bit involved. Let us introduce two new definitions. The first one is a particular structure that we call straight paths and the second one is the standard triangle inequality on the cost of the edges.
+      </paragraph>
+      <paragraph label="Definition 3">
+       We say that a path {a mathematical formula}π=t1t2…tn in a graph {a mathematical formula}(V,A) is a straight path between {a mathematical formula}t1 and {a mathematical formula}tn iff {a mathematical formula}(ti,tk)∉A for all {a mathematical formula}i,k such that {a mathematical formula}2≤i+1&lt;k≤n.
+      </paragraph>
+      <paragraph>
+       Intuitively, a straight path π between s and t is a locally shortest path in terms of number of edges. That means that there is no path {a mathematical formula}π′, shorter than π, such that the vertices of {a mathematical formula}π′ are a subset of π and thus if we want to find a better path, we need to look other vertices outside π. Note that every shortest path between s and t is a locally shortest path, but the reverse statement is not necessarily true. Note that, if the graph is strongly connected, there is always a shortest path between any two vertices and then there is a straight path between the same two points.
+      </paragraph>
+      <paragraph>
+       As an example, consider Fig. 5. The path ACEF is a straight path while ACDEF is not because the edge {a mathematical formula}(C,E). Note that ABF is the shortest path between A and F as well as a straight path.
+      </paragraph>
+      <paragraph label="Definition 4">
+       We say a graph {a mathematical formula}G=(V,A,c) satisfies the triangle inequality iff for all {a mathematical formula}(s,t)∈A, it holds that {a mathematical formula}d(s,t)=c(s,t).
+      </paragraph>
+      <paragraph>
+       Thus, the triangle inequality is satisfied if and only if the shortest path (sum of the cost of edges) between two adjacent nodes is always given by the arc that connects them. As a way of an example, 4-connected (with unitary cost) and 8-connected grids with unitary cost for non-diagonal moves and {a mathematical formula}2 for diagonal cost are graphs that satisfy the triangle inequality.
+      </paragraph>
+      <paragraph>
+       We remark that the two definitions deal with shortest path in different settings, straight paths are related to shortest paths in a combinatorial setting, in which the number of edges of the path matters while on the other hand triangle inequality deals with shortest path when we are interested in the cost of crossing the edges of the path. Although the definitions have different nature, they are related in the context on an A* run when the heuristic h has converged. The following lemma proves that if the sequence of nodes expanded by A* is a straight path in a graph that satisfies the triangle inequality then the f-value of a node in the Open list cannot decrease. This is a standard result when h is a consistent heuristic but, in our framework, h is w-consistent but not necessarily consistent.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}π=t0t1…tnbe a straight path of a graph, and assume that when A* is run with{a mathematical formula}t0as a start node it eventually has exactly the nodes in π in its Closed list. Let O denote the set of states in the Open list just before{a mathematical formula}tnis expanded. After expanding{a mathematical formula}tnthe f-values of the states in O do not decrease.Assume the contrary, and let u be a node in O whose f-value has decreased after expanding {a mathematical formula}tn. Note that since the h-value does not change through execution, this means the g-value has decreased after expanding {a mathematical formula}tn. Because the nodes that have been expanded form a straight path, just before expanding {a mathematical formula}tn, the g-value of u—which we denote by {a mathematical formula}g+(u)—is the cost of a path from {a mathematical formula}t0 to u which has to be of the form {a mathematical formula}t0t1…tku, for some {a mathematical formula}k&lt;n. Thus,{a mathematical formula} After expanding {a mathematical formula}tn, the new g-value of u—which we denote by {a mathematical formula}g−(u)—must correspond to the cost of a path reaching u through {a mathematical formula}tn. Thus,{a mathematical formula} However the g-value has decreased, therefore {a mathematical formula}g−(u)&lt;g+(u), which implies that{a mathematical formula} which violates the triangle inequality. See Fig. 6 for a depiction.  □
+      </paragraph>
+      <paragraph label="Lemma 9">
+       The following lemma implies that when the heuristic has converged, each A* run indeed expands nodes along a straight path in the search graph. Let{a mathematical formula}t0be one of the states from where A* is run after convergence of h in wLSS-LRTA*. Furthermore let{a mathematical formula}L=(t0,t1,…,tn+1)be such that{a mathematical formula}tiis the i-th state expanded by such an A* run. If the search graph{a mathematical formula}(S,A,c)satisfies the triangle inequality then:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}t0t1…tn+1is a straight path in{a mathematical formula}(S,A,c),
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ti+1=argmint∈Succ(ti)⁡[h(t)+c(ti,t)]for all{a mathematical formula}i∈{0,…,n}, and
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}tiis set to be the parent of{a mathematical formula}ti+1by A*, for all{a mathematical formula}i∈{0,…,n}.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The rest of the proof is divided in three steps.Step 1 Our first step is to prove that {a mathematical formula}f(u)&lt;f(tn). Because {a mathematical formula}w&gt;1 and {a mathematical formula}h(tn)=wc(tn,u)+h(u), it holds that:{a mathematical formula} And, moreover, since costs are positive we have that:{a mathematical formula} Since after expanding {a mathematical formula}tn, state u is in A*'s Open list we know that its f-value is at most the one that would result by considering that the cheapest path towards u goes through {a mathematical formula}tn. This allows us to write:{a mathematical formula} Because of Inequality (22), we can substitute {a mathematical formula}c(tn,u)+h(u) by {a mathematical formula}h(tn) in Inequality (23), obtaining:{a mathematical formula} This finishes the proof for Step 1. Before continuing with the next step, let {a mathematical formula}On denote the contents of A*'s Open list just before expanding {a mathematical formula}tn.Step 2 In the second step, we prove that {a mathematical formula}tn+1∉{t1,…,tn}. Recall that {a mathematical formula}t0t1…tn are the only states that have been expanded and that furthermore, by induction hypothesis, they conform a straight path. If {a mathematical formula}tk=tn+1, for some {a mathematical formula}k&lt;n, it means that {a mathematical formula}tk has been re-expanded. This is only possible if the g-value of {a mathematical formula}tk has decreased, which means the path that A* has found via some {a mathematical formula}tm to {a mathematical formula}tn+1=tk, for some {a mathematical formula}m&gt;k−1, is shorter than the path found to {a mathematical formula}tn+1=tk via {a mathematical formula}tk−1. This cannot happen since costs are positive. We conclude therefore that {a mathematical formula}tn+1 has not been expanded before, which finishes the proof for Step 2.Step 3 Now we prove that any state z that is in {a mathematical formula}On is such that {a mathematical formula}f(z)&gt;f(u). Indeed, let {a mathematical formula}z∈On. Then because {a mathematical formula}tn is preferred for expansion over z:{a mathematical formula} Now we use the fact that {a mathematical formula}f(tn)=f′(tn) (Eq. (17)), and the fact that Lemma 8 implies {a mathematical formula}f′(z)≤f(z), to conclude that:{a mathematical formula} but in Step 1 we proved {a mathematical formula}f(u)&lt;f(tn), which, in conjunction with Inequality (26) yields {a mathematical formula}f(u)&lt;f(z). This finishes the proof for Step 3.Observe that Step 3 implies that states that are in {a mathematical formula}On will never be selected for expansion right after expanding {a mathematical formula}tn, because u is a successor of {a mathematical formula}tn that has a lower f-value than any state that was in {a mathematical formula}On.Steps 2 and 3 conclude the proof for Condition 1 and Condition 3 since they imply that {a mathematical formula}tn+1∉On, and that {a mathematical formula}tn+1 had not been expanded before. Those facts together imply that {a mathematical formula}tn+1 is a state that is a successor of {a mathematical formula}tn which is not a successor of any other {a mathematical formula}ti, for every {a mathematical formula}i&lt;n. This ensures that {a mathematical formula}t0t1…tntn+1 is a straight path. Moreover, this also ensures that the parent of {a mathematical formula}tn+1 is set to {a mathematical formula}tn, since {a mathematical formula}tn+1 is expanded from {a mathematical formula}tn.To prove Condition 2 of the lemma, observe that a state in {a mathematical formula}On is not selected for expansion and therefore {a mathematical formula}tn must be the state with minimum f-value among the states resulting from the expansion of {a mathematical formula}tn, and thus it must be the case that:{a mathematical formula} which concludes the proof for the lemma.  □
+      </paragraph>
+      <paragraph label="Lemma 10">
+       Simulation lemmaLet{a mathematical formula}π=s0s1…sNwith{a mathematical formula}sN=sgbe the path traversed by wLSS-LRTA* run with lookahead parameter equal to{a mathematical formula}k&gt;1, and with a version of A* that breaks ties towards states with greater g-values. Let{a mathematical formula}π′be the path traversed by wLSS-LRTA* run with lookahead parameter equal to 1, breaking ties towards states in π. If the search graph{a mathematical formula}(S,A,c)satisfies the triangle inequality then{a mathematical formula}π=π′.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is by induction on N. Let {a mathematical formula}π′=t0t1…tM. The base case ({a mathematical formula}M=0) is trivial since {a mathematical formula}s0=t0. Suppose that {a mathematical formula}s0…sn=t0…tn. We prove that {a mathematical formula}sn+1=tn+1. State {a mathematical formula}sn was expanded by some iteration of A* in a wLSS-LRTA* run using with lookahead parameter k. Then, by Condition 2 of Lemma 9, the next state {a mathematical formula}sn+1 is {a mathematical formula}argmins∈Succ(tn)⁡[h(s)+c(tn,s)]. Moreover, wLSS-LRTA* with lookahead parameter equal to 1 will indeed prefer some of {a mathematical formula}argmins∈Succ(tn)⁡[h(s)+c(tn,s)] and because the tie-breaking of wLSS-LRTA* with lookahead parameter equal to 1 is the path π we prefer to move to {a mathematical formula}sn+1, therefore {a mathematical formula}tn+1=sn+1.  □
+      </paragraph>
+      <paragraph label="Proof of Theorem 7">
+       If the lookahead parameter k is greater than 1, by Lemma 10, we consider a simulation of wLSS-LRTA* by a run of wLSS-LRTA* with lookahead 1 and we apply our analysis to the simulation. Notice that for all i, {a mathematical formula}(si,ti)∈A and {a mathematical formula}(si,si+1)∈A because {a mathematical formula}k=1. Moreover {a mathematical formula}d(si,si+1)=c(si,si+1) and the same holds for {a mathematical formula}(si,ti). Finally, since {a mathematical formula}cmin≤d(si,ti) and {a mathematical formula}d(si,si+1)≤cmax, it holds that:{a mathematical formula} which allows us to write{a mathematical formula} Substituting the Inequality of Lemma 7, we obtain{a mathematical formula} which implies the desired inequality because {a mathematical formula}D/w≥0 (cf.  Lemma 6). Finally using that the returned solution is the same for wLSS-LRTA* with lookahead k and for the simulation we conclude the proof.  □
+      </paragraph>
+      <paragraph label="Corollary 1">
+       Let P be a search problem whose search graph has unit costs. Then the solution found by wLSS-LRTA* is optimal, independent of w.
+      </paragraph>
+      <paragraph label="Proof">
+       Straightforward from Theorem 7.  □
+      </paragraph>
+      <paragraph>
+       The previous theorems provide tighter convergence bounds for wLSS-LRTA* than w-optimality. Note that when it is possible to compute D, one should use Inequality 28 in order to compute a bound instead of that given by Theorem 7.
+      </paragraph>
+      <paragraph>
+       An interesting thing to note is that our proofs depend on the fact that h does not change in a converged run but do not explicitly need that the initial state in each trial be the same one. Thus if trials cycle over every possible initial state Lemma 4 still holds and we obtain that h converges in a stronger sense, that is: h does not change anymore, independent of the chosen initial state.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     Empirical evaluation of wLSS-LRTA*
+     <paragraph>
+      We evaluate LSS-LRTA* in the context of goal-directed navigation in a priori unknown grids [17], [18]. The agent always senses the blockage status of its eight neighboring cells and can then move to any one of the unblocked neighboring cells. We use eight-neighbor grids in the experiments since they are often preferred in practice, for example in video games [21]. The cost for horizontal or vertical moves is one, and cost for diagonal moves is {a mathematical formula}2. The user-given h-values are the octile distances [22], which intuitively corresponds to the cost of a path to the goal that ignores the obstacles and has the longest possible diagonal.
+     </paragraph>
+     <paragraph>
+      We used twelve maps from deployed video games and 3 acyclic mazes with corridors of varying width to carry out the experiments. The first six game maps are taken from the game Dragon Age, and the remaining six are taken from the game StarCraft. The game maps and mazes maps were retrieved from Nathan Sturtevant's pathfinding repository [23].{sup:3} We average our experimental results over 200 test cases with a reachable goal cell for each map. For each test case, the start and goal cells are chosen randomly. All the experiments were run on a 2.00 GHz QuadCore Intel Xeon machine running Linux. Time is measured in milliseconds.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Weighted update
+      </section-title>
+      <paragraph>
+       We evaluated wLSS-LRTA* with six weight values {a mathematical formula}{1,2,4,8,16,32} and nine lookahead values {a mathematical formula}{1,2,4,8,16,32,64,128,256}. We report the solution cost and the total time per test case obtained by the algorithm for different weight and lookahead values. Regarding the time per search episode, it is known that the time per search episode increases when the lookahead increases [15], [7]. On the other hand, when different weights are used for a fixed lookahead value, the time per search episode does not increase.
+      </paragraph>
+      <paragraph>
+       Fig. 7, Fig. 8 show the results for wLSS-LRTA*. The following can be observed in the plots.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        In Game maps we observe that when the weight value increases the solution cost decreases, for all tested lookahead values, except for {a mathematical formula}w=32 and lookahead equal to 256. In Maze maps we observe a similar behavior for smaller lookahead values, but for larger lookahead values the solution cost increases as the value of w is increased. This behavior can be explained by the fact that wLSS-LRTA* may increase the h-values of an entire region of states that is limited by the walls of a corridor. This in practice produces a blockage in the corridor, which we refer to as an h-blockage. Once the h-blockage has been established, regions outside the blockage become more attractive (due to their lower h-values). In addition, since these maze maps are acyclic, an h-blockage in a corridor may indeed “cut” all paths to the goal. h-blockages are created more easily when the corridors are narrower. This is shown in Fig. 9, in which the phenomenon is clearly observed in mazes with 2-pixel-wide corridors while in mazes with 8-pixel-wide corridors the curves resemble more those of game maps. Hernández and Baier [14] show a similar effect on the performance of depression-avoiding Real-Time Search algorithms, and analyze in more detail how narrow corridors may become blocked during search.
+       </list-item>
+       <list-item label="•">
+        When the lookahead value increases, the solution cost decreases for all weight values tested.
+       </list-item>
+       <list-item label="•">
+        For all weight values tested the total search time behaves similar to the original LSS-LRTA* algorithm [8], [7]: first total search time decreases when the lookahead value increases and until a minimum is reached. From then on total search time increases as the lookahead value increases. On the other hand, in Game maps when the weight value increases, total search time decreases. In Maze maps such a behavior is similar to that observed in maps but for larger lookahead values total search time is higher for higher weights. This can be also explained by the h-blockage phenomenon described above.
+       </list-item>
+      </list>
+      <paragraph>
+       Results show that the use of weights in wLSS-LRTA* have very positive consequences. Solution cost and total search time are improved sometimes by orders of magnitude without requiring additional time per search per episodes.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Convergence evaluation
+      </section-title>
+      <paragraph>
+       We evaluated wLSS-LRTA* run to convergence on 200 random problems on one Game map (brc202d). We report the number of trials and the total time to convergence per test case obtained by the algorithm for different weight and lookahead values. Fig. 10 shows the results. The following can be observed in the plots.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        When the weight value increases the number of trials and the total time increases for all lookahead values tested.
+       </list-item>
+       <list-item label="•">
+        When the lookahead value increases the number of trials decreases for all weight values tested.
+       </list-item>
+       <list-item label="•">
+        When the lookahead value increases the total time decreases for all weight values tested.
+       </list-item>
+      </list>
+      <paragraph>
+       In practice most solutions returned are optimal. In only two problems the total cost differs from optimal by at most one unit.
+      </paragraph>
+      <paragraph>
+       The results show that the use of weights in wLSS-LRTA* may have negative consequences on the performance. The number of trials and the total search time obtained by the original algorithm ({a mathematical formula}w=1) are better than the results obtained by the algorithm with w greater than one. Due to this, in the following sections we focus the experimental evaluation in the first trial only.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Incorporating weighted update into other real-time heuristic search algorithms
+     </section-title>
+     <paragraph>
+      Weighted update, the technique that was just shown in the previous section as yielding best results when incorporated into LSS-LRTA*, is applicable to any algorithm that updates the h-values using the equation:{a mathematical formula} where L is a set of states. Now we briefly describe two algorithms proposed in the literature that use this equation for their learning phase, and describe the empirical results obtained on the same experimental setting we described in the previous section.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       LRTA*-LS
+      </section-title>
+      <paragraph>
+       LRTA*-LS [15]—shown in Algorithm 3—is a real-time heuristic search algorithm that differs from LSS-LRTA* mainly in how it builds the region of states for the update. In each iteration, LRTA*-LS builds a learning space, denoted by I in Algorithm 3. It does so by running a breadth-first search from the current state, which will add a state s to I if {a mathematical formula}h(s) is not justified by any of its successor states outside of I. Just like LSS-LRTA*, LRTA*-LS updates the h-values of states in I to the maximum possible value that preserves consistency (Eq. (1); Algorithm 1). Finally, in the movement step, like LRTA*, it moves the agent to the best neighbor.
+      </paragraph>
+      <paragraph>
+       Note that both LSS-LRTA* and LRTA*-LS update equations are exactly the same and as such the same algorithm (Modified Dijkstra's Algorithm) is used to update the region. To implement lookahead update in LRTA*-LS we simply modify the Dijkstra's algorithm to multiply arc costs by w. In addition, we modify the way states are added to the learning space accordingly, by considering wc instead of c in the inequality used as a condition in the update step. We call the resulting algorithm wLRTA*-LS. Notice that Theorem 4 applies directly to wLRTA*-LS.
+      </paragraph>
+      <section label="7.1.1">
+       Empirical evaluation of wLRTA*-LS
+       <paragraph>
+        We use the same experimental setting used in the wLSS-LRTA* evaluation. Fig. 11 shows the results for wLRTA*-LS. The following can be observed in the plots:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         In game maps when the weight value increases from 1 to 4 average solution cost decreases (except for lookahead equal to 4 where solution cost improves only until lookahead is equal to 2). When the weight increases over 4 the solution cost increases. This is due to the fact that wLRTA*-LS does not move always to the best state in the learning space. Section 8 discusses this in more detail.
+        </list-item>
+        <list-item label="•">
+         When the lookahead value increases the solution cost tends to decrease for almost all weight values tested. There are a few exceptions; for example, when the lookahead parameter is equal to 4. This behavior will be discussed in detail in Section 8.
+        </list-item>
+        <list-item label="•">
+         We do not include plots for total time since the total search time behaves similar to LRTA*-LS [15]: the total search time first decreases when the lookahead value increases (except for some small lookahead values where total search time increases, for instance lookahead value equal to 4) and from certain lookahead value, the total search time smoothly increases when the lookahead value increases. When the weight value increases the total search time decreases for small weight values, and from greater weight values, the total search time increases.
+        </list-item>
+       </list>
+       <paragraph>
+        The results show that the use of weights in wLRTA*-LS could have positive consequences. The solution cost and the total search time are improved for some weight values.
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.2">
+      <section-title>
+       daLSS-LRTA*
+      </section-title>
+      <paragraph>
+       Depression-Avoiding LSS-LRTA* [14], daLSS-LRTA*, is a variant of LSS-LRTA* which, in each movement step, instead of moving the agent to the state of lowest f value in Open, it moves it to the state of lowest f-value among those whose h value has changed the least. More specifically, after the A* lookahead returns, the state chosen to move to, next, is given by:{a mathematical formula} where {a mathematical formula}Γ={s∈Open|Δ(s)≤Δ(s′),for all t′∈Open}, and {a mathematical formula}Δ(s) denotes {a mathematical formula}h(s)−h0(s), where {a mathematical formula}h0(s) is the initial h-value of s. daLSS-LRTA* has been shown to have good performance compared to LSS-LRTA* in path-finding tasks [14], outperforming it by one order of magnitude when time constraints are tight. As such, we were interested to see whether incorporating weights could improve this algorithm.
+      </paragraph>
+      <paragraph>
+       As is the case with all other algorithms, wdaLSS-LRTA* is obtained from daLSS-LRTA* by simply multiplying the costs of the graph by w while running the Modified Dijkstra's algorithm. Notice that Theorem 4 does not apply directly to wdaLSS-LRTA*. We left a formal analysis out of the scope of this paper. In our experiments the agent always found the solution and thus we conjecture that wdaLSS-LRTA* always terminates.
+      </paragraph>
+      <section label="7.2.1">
+       Empirical evaluation of wdaLSS-LRTA*
+       <paragraph>
+        We use the same experimental setting used in the evaluation of wLSS-LRTA*. Fig. 12 shows the results for wdaLSS-LRTA*. The following can be observed in the plots:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         In game maps the use of weights improves performance by up to about 50% depending on the lookahead value used except when the lookahead value is greater than 64. Unlike in the previous algorithms, we do not observe significant benefit or disadvantage of using a weight value greater than 2 over using {a mathematical formula}w=2.
+        </list-item>
+        <list-item label="•">
+         In maze maps we only observe a minor improvement for lookahead value equal to 1, for most weight values. For higher lookahead values we observe a decrease in performance. This may be explained, again, by the weighted update's tendency to create blockages.
+        </list-item>
+        <list-item label="•">
+         We do not include total time plots because for all weight values tested the total search time behaves similar to the original algorithm (daLSS-LRTA* weight = 1) [14]: the total search time first decreases when the lookahead value increases and from a certain lookahead values the total search time increases when the lookahead value increases.
+        </list-item>
+       </list>
+       <paragraph>
+        In summary, the results show that the use of weights in wdaLSS-LRTA* have positive consequences in game maps only. The solution cost and the total search time are improved for most of the weight and lookahead values tested. Fig. 13 shows best-performing and baseline versions wLSS-LRTA*, wLRTA*-LS and wdaLSS-LRTA* in both game maps and mazes.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In the previous section we observed that the performance of wLRTA*-LS can become worse when increasing k, which is not the usual behavior of real-time search algorithms, whose performance usually increases smoothly when k is increased (see e.g., [7]).
+     </paragraph>
+     <paragraph>
+      Interestingly, the decrease in the performance of wLRTA*-LS for {a mathematical formula}k=2 and {a mathematical formula}k=4 in Game maps can be explained in very simple terms. Such poor behavior should be expected whenever k is lower than the branching factor of the search problem. Indeed when that is the case, wLRTA*-LS will update the heuristic value of only some of the neighbors of the current state. Since in the movement phase wLRTA*-LS chooses the position to move to from its immediate neighbors it could be the case that the h-values of those neighbors are quite incomparable, because only some of them have been updated using w. In these situations it could be that the algorithm chooses to move away from the goal. Fig. 13 illustrates how this phenomenon may affect performance in 8-connected grid navigation.
+     </paragraph>
+     <paragraph>
+      wLSS-LRTA* does not have this problem, because it always chooses to move to the best state in Open. Since the h-values of those states are not updated, they are comparable. This observation suggests that wLRTA*-LS movement step could me modified in order to move to the state from ∂I that justifies the h-value of the current state. We decided to leave the implementation of such an algorithm out of the scope of this paper. We conjecture that it will not exhibit performance degradation for low values of k.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      We proposed two approaches that allow exploiting weights in real-time heuristic search algorithms: weighted lookahead and weighted update. We incorporated weighted lookahead in LSS-LRTA*, a standard real-time heuristic search algorithm, and showed it does not yield performance improvements. On the other hand, we incorporated weighted update in LSS-LRTA* and showed it may yield superior performance of up to one order of magnitude in some path-finding benchmarks. Performance gains were also observed when incorporating the technique to other algorithms like LRTA*-LS and daLSS-LRTA*, although improvements on the latter algorithm are less impressive.
+     </paragraph>
+     <paragraph>
+      In addition we thoroughly analyzed some desirable properties of wLSS-LRTA*. In particular, we prove that it terminates when a solution exists. Furthermore we proved wLSS-LRTA* finds w-optimal solutions on convergence, but we also found bounds that can be much tighter, and, indeed, under certain conditions, we found a bound on solution quality that does not depend on w but only on features of the search graph.
+     </paragraph>
+     <paragraph>
+      Future work includes the incorporation of these techniques to other real-time heuristic search algorithms that do not use the Modified Dijkstra algorithm, such as, for example, RTAA* [8]. Another line of research has to do with how to determine good values of w and whether or not good policies for adjusting the weight dynamically can be devised. Regarding convergence behavior, it seems necessary to study whether or not using dynamic weights will produce faster convergence results at the expense of sacrificing solution quality.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

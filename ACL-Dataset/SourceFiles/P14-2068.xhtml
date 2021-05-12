@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Modeling Factuality Judgments in Social Media Text</title>
+<!--Generated on Wed Jun 11 17:51:58 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Modeling Factuality Judgments in Social Media Text</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Sandeep Soni   Tanushree Mitra   Eric Gilbert   Jacob Eisenstein
+<br class="ltx_break"/>School of Interactive Computing
+<br class="ltx_break"/>Georgia Institute of Technology
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">soni.sandeepb@gmail.com, </span>{<span class="ltx_text ltx_font_typewriter">tmitra3,gilbert,jeisenst</span>}<span class="ltx_text ltx_font_typewriter">@cc.gatech.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">How do journalists mark quoted content as certain or uncertain, and how do readers interpret these signals? Predicates such as <em class="ltx_emph">thinks</em>, <em class="ltx_emph">claims</em>, and <em class="ltx_emph">admits</em> offer a range of options for framing quoted content according to the author’s own perceptions of its credibility. We gather a new dataset of direct and indirect quotes from Twitter, and obtain annotations of the perceived certainty of the quoted statements. We then compare the ability of linguistic and extra-linguistic features to predict readers’ assessment of the certainty of quoted content. We see that readers are indeed influenced by such framing devices — and we find no evidence that they consider other factors, such as the source, journalist, or the content itself. In addition, we examine the impact of specific framing devices on perceptions of credibility.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Contemporary journalism is increasingly conducted through social media services like Twitter <cite class="ltx_cite">[<a href="#bib.bib101" title="The arab spring— the revolutions were tweeted: information flows during the 2011 tunisian and egyptian revolutions" class="ltx_ref">9</a>, <a href="#bib.bib102" title="Sourcing the arab spring: a case study of andy carvinâs sources during the tunisian and egyptian revolutions" class="ltx_ref">6</a>]</cite>. As events unfold, journalists and political commentators use quotes — often indirect — to convey potentially uncertain information and claims from their sources and informants, e.g.,</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subgraphics"><img src="P14-2068/image009.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="281" height="44" alt=""/></td>
+<td class="ltx_subgraphics"><img src="P14-2068/image008.png" id="S1.F1.g2" class="ltx_graphics ltx_centering" width="281" height="41" alt=""/></td></tr>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Indirect quotations in Twitter</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">A key pragmatic goal of such messages is to convey the provenance and uncertainty of the quoted content. In some cases, the author may also introduce their own perspective <cite class="ltx_cite">[<a href="#bib.bib103" title="Which side are you on?: identifying perspectives at the document and sentence levels" class="ltx_ref">8</a>]</cite> through the use of framing <cite class="ltx_cite">[<a href="#bib.bib105" title="More than words: syntactic packaging and implicit sentiment" class="ltx_ref">5</a>]</cite>. For instance, consider the use of the word <em class="ltx_emph">claims</em> in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, which conveys the author’s doubt about the indirectly quoted content.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Detecting and reasoning about the certainty of propositional content has been identified as a key task for information extraction, and is now supported by the FactBank corpus of annotations for newstext <cite class="ltx_cite">[<a href="#bib.bib502" title="FactBank: a corpus annotated with event factuality" class="ltx_ref">14</a>]</cite>. However, less is known about this phenomenon in social media — a domain whose endemic uncertainty makes proper treatment of factuality even more crucial <cite class="ltx_cite">[<a href="#bib.bib4" title="Tweeting is believing?: understanding microblog credibility perceptions" class="ltx_ref">10</a>]</cite>. Successful automation of factuality judgments could help to detect online rumors <cite class="ltx_cite">[<a href="#bib.bib104" title="Rumor has it: identifying misinformation in microblogs" class="ltx_ref">15</a>]</cite>, and might enable new applications, such as the computation of reliability ratings for ongoing stories.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">This paper investigates how linguistic resources and extra-linguistic factors affect perceptions of the certainty of quoted information in Twitter. We present a new dataset of Twitter messages that use FactBank predicates (e.g., <em class="ltx_emph">claim</em>, <em class="ltx_emph">say</em>, <em class="ltx_emph">insist</em>) to scope the claims of named entity sources. This dataset was annotated by Mechanical Turk workers who gave ratings for the factuality of the scoped claims in each Twitter message. This enables us to build a predictive model of the factuality annotations, with the goal of determining the full set of relevant factors, including the predicate, the source, the journalist, and the content of the claim itself. However, we find that these extra-linguistic factors do not predict readers’ factuality judgments, suggesting that the journalist’s own framing plays a decisive role in the credibility of the information being conveyed. We explore the specific linguistic feature that affect factuality judgments, and compare our findings with previously-proposed groupings of factuality-related predicates.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Text data</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We gathered a dataset of Twitter messages from 103 professional journalists and bloggers who work in the field of American Politics.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We used the website <a href="http://muckrack.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://muckrack.com</span></a>.</span></span></span> Tweets were gathered using Twitter’s streaming API, extracting the complete permissible timeline up to February 23, 2014. A total of 959,754 tweets were gathered, and most were written in early 2014.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><img src="P14-2068/image001.png" id="S2.F2.g1" class="ltx_graphics ltx_centering" width="284" height="175" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Count of cue words in our dataset. Each word is patterned according to its group, as shown in Figure <a href="#S2.F3" title="Figure 3 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</div>
+</div>
+<div id="S2.F3" class="ltx_figure"><img src="P14-2068/image002.png" id="S2.F3.g1" class="ltx_graphics ltx_centering" width="284" height="185" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Count of cue groups in our dataset</div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Our interest in this text is specifically in quoted content — including “indirect” quotes, which may include paraphrased quotations, as in the examples in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+While labeled datasets for such quotes have been created <cite class="ltx_cite">[<a href="#bib.bib469" title="A sequence labelling approach to quote attribution" class="ltx_ref">12</a>, <a href="#bib.bib470" title="A database of attribution relations." class="ltx_ref">13</a>]</cite>, these are not freely available at present. In any case, the relevance of these datasets to Twitter text is currently unproven. Therefore, rather than train a supervised model to detect quotations, we apply a simple dependency-based heuristic.</p>
+</div>
+<div id="S2.F4" class="ltx_figure"><img src="P14-2068/image003.png" id="S2.F4.g1" class="ltx_graphics ltx_centering" width="407" height="79" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Dependency parse of an example message, with claim, source, and cue.</div>
+</div>
+<div id="S2.p3" class="ltx_para">
+<ul id="I1" class="ltx_itemize">[leftmargin=*,itemsep=0pt,parsep=0pt]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We focus on tweets that contain any member of a list of source-introducing predicates (we borrow the terminology of <cite class="ltx_cite">Pareti (<a href="#bib.bib470" title="A database of attribution relations." class="ltx_ref">2012</a>)</cite> and call this the <span class="ltx_text ltx_font_smallcaps">cue</span>). Our complete list — shown in Table <a href="#S2.T1" title="Table 1 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> — was selected mainly from the examples presented by <cite class="ltx_cite">Saurí and Pustejovsky (<a href="#bib.bib506" title="Are you sure that this happened? assessing the factuality degree of events in text" class="ltx_ref">2012</a>)</cite>, but with reference also to Saurí’s (2008) dissertation for cues that are common in Twitter. The Porter Stemmer is applied to match inflections, e.g. <em class="ltx_emph">denies</em>/<em class="ltx_emph">denied</em>;
+for irregular cases not handled by the Porter Stemmer (e.g., <em class="ltx_emph">forget/forgot</em>), we include both forms. We use the CMU Twitter Part-of-Speech Tagger <cite class="ltx_cite">[<a href="#bib.bib334" title="Improved part-of-speech tagging for online conversational text with word clusters" class="ltx_ref">11</a>]</cite> to select only instances in the verb sense. Figure <a href="#S2.F2" title="Figure 2 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the distribution of the cues and Figure <a href="#S2.F3" title="Figure 3 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the distribution of the cue groups. For cues that appear in multiple groups, we chose the most common group.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We run the Stanford Dependency parser to obtain labeled dependencies <cite class="ltx_cite">[<a href="#bib.bib471" title="Generating typed dependency parses from phrase structure parses" class="ltx_ref">4</a>]</cite>, requiring that the cue has outgoing edges of the type <span class="ltx_text ltx_font_smallcaps">NSUBJ</span> (noun subject)
+and <span class="ltx_text ltx_font_smallcaps">CCOMP</span> (clausal complement). The subtree headed by the modifier of the <span class="ltx_text ltx_font_smallcaps">CCOMP</span> relation is considered the <span class="ltx_text ltx_font_bold">claim</span>; the subtree headed by the modifier of the <span class="ltx_text ltx_font_smallcaps">NSUBJ</span> relation is considered the <span class="ltx_text ltx_font_bold">source</span>. See Figure <a href="#S2.F4" title="Figure 4 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> for an example.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">We use a combination of regular expressions and dependency rules to capture expressions of the type “<em class="ltx_emph"><span class="ltx_text ltx_font_smallcaps">claim</span>, according to <span class="ltx_text ltx_font_smallcaps">source</span></em>.” Specifically, the <span class="ltx_text ltx_font_smallcaps">PCOMP</span> path from <span class="ltx_text ltx_font_italic">according</span> is searched for the pattern <span class="ltx_text ltx_font_typewriter">according to *</span>. The text that matches the * is the source and the remaining text other than the source is taken as the claim.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">Finally, we restrict consideration to tweets in which the source contains a named entity or twitter username.
+This eliminates expressions of personal belief such as <em class="ltx_emph">I doubt Obama will win</em>, as well as anonymous sources such as <em class="ltx_emph">Team sources report that Lebron has demanded a trade to New York.</em> Investigating the factuality judgments formed in response to such tweets is clearly an important problem for future research, but is outside the scope of this paper.</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Report</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:130.1pt;" width="130.1pt"><em class="ltx_emph ltx_font_small">say</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">report</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">tell</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">told</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">observe</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">state</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">accord</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">insist</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">assert</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">claim</em><span class="ltx_text ltx_font_small">,
+</span><em class="ltx_emph ltx_font_small">maintain</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">explain</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">deny</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Knowledge</span></th>
+<td class="ltx_td ltx_align_justify" style="width:130.1pt;" width="130.1pt"><em class="ltx_emph ltx_font_small">learn</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">admit</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">discover</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">forget</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">forgot</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Belief</span></th>
+<td class="ltx_td ltx_align_justify" style="width:130.1pt;" width="130.1pt"><em class="ltx_emph ltx_font_small">think</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">thought</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">predict</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">suggest</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">guess</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">believe</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Doubt</span></th>
+<td class="ltx_td ltx_align_justify" style="width:130.1pt;" width="130.1pt"><em class="ltx_emph ltx_font_small">doubt</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">wonder</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">ask</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">hope</em></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">Perception</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:130.1pt;" width="130.1pt"><em class="ltx_emph ltx_font_small">sense</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">hear</em><span class="ltx_text ltx_font_small">, </span><em class="ltx_emph ltx_font_small">feel</em></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Lemmas of source-introducing predicates (cues) and groups <cite class="ltx_cite">[<a href="#bib.bib472" title="A factuality profiler for eventualities in text" class="ltx_ref">17</a>]</cite>.</div>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">This heuristic pipeline may miss many relevant tweets, but since the overall volume is high, we prioritize precision. The resulting dataset is summarized in Table <a href="#S2.T2" title="Table 2 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Total journalists</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">443</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Total U.S. political journalists</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">103</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Total tweets</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">959754</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Tweets with cues</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">172706</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Tweets with source and claims</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">40615</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Total tweets annotated</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1265</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Unique sources in annotated dataset</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">766</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:144.5pt;" width="144.5pt"><span class="ltx_text ltx_font_small">Unigrams in annotated dataset</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">1345</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Count Statistics of the entire data collected and the annotated dataset</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Annotation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We used Amazon Mechanical Turk (AMT) to collect ratings of claims. AMT has been widely used by the NLP community to collect data <cite class="ltx_cite">[<a href="#bib.bib336" title="Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks" class="ltx_ref">18</a>]</cite>, with “best practices” defined to help requesters best design Turk jobs <cite class="ltx_cite">[<a href="#bib.bib2" title="Creating speech and language data with amazon’s mechanical turk" class="ltx_ref">1</a>]</cite>. We followed these guidelines to perform pilot experiments to test the instruction set and the quality of responses.
+Based on the pilot study we designed Human Intelligence Tasks (HITs) to annotate 1265 claims.</p>
+</div>
+<div id="S3.F5" class="ltx_figure"><img src="P14-2068/image004.png" id="S3.F5.g1" class="ltx_graphics ltx_centering" width="284" height="251" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Turk annotation interface</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Each HIT contained a batch of ten tweets and rewarded $0.10 per hit. To ensure quality control we required the Turkers to have at least 85% hit approval rating and to reside in the United States, because the Twitter messages in our dataset were related to American politics. For each tweet, we obtained five independent ratings from Turkers satisfying the above qualifications. The ratings were based on a 5-point Likert scale ranging from “[-2] Certainly False” to “[2] Certainly True” and allowing for “[0] Uncertain”. We also allowed for “Not Applicable” option to capture ratings where the Turkers did not have sufficient knowledge about the statement or if the statement was not really a claim. Figure <a href="#S3.F6" title="Figure 6 ‣ 3 Annotation ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows the set of instructions provided to the Turkers, and Figure <a href="#S3.F5" title="Figure 5 ‣ 3 Annotation ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> illustrates the annotation interface.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The data is available at <a href="https://www.github.com/jacobeisenstein/twitter-certainty" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://www.github.com/jacobeisenstein/twitter-certainty</span></a>.</span></span></span></p>
+</div>
+<div id="S3.F6" class="ltx_figure"><img src="P14-2068/image005.png" id="S3.F6.g1" class="ltx_graphics ltx_centering" width="506" height="121" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>User instructions for the annotation task</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We excluded tweets for which three or more Turkers gave a rating of “Not Applicable,” leaving us with a dataset of 1170 tweets. Within this set, the average variance per tweet (excluding “Not Applicable” ratings) was 0.585.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Modeling factuality judgments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Having obtained a corpus of factuality ratings, we now model the factors that drive these ratings.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Predictive accuracy</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">First, we attempt to determine the impact of various predictive features on rater judgments of factuality. We consider the following features:</p>
+<ul id="I2" class="ltx_itemize">[itemsep=-5pt,topsep=0pt]
+
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Cue word</span>: after stemming</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Cue word group</span>: as given in Table <a href="#S2.T1" title="Table 1 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a></p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Source</span>: represented by the named entity or username in the source field (see Figure <a href="#S2.F4" title="Figure 4 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>)</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Journalist</span>: represented by their Twitter ID</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Claim</span>: represented by a bag-of-words vector from the claim field (Figure <a href="#S2.F4" title="Figure 4 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>)</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">These features are used as predictors in a series of linear ridge regressions, where the dependent variable is the mean certainty rating. We throw out tweets that were rated as “not applicable” by a majority of raters, but otherwise ignore “not applicable” ratings of the remaining tweets. The goal of these regressions is to determine which features are predictive of raters’ factuality judgments. The ridge regression regularization parameter was tuned via cross-validation in the training set. We used the bootstrap to obtain multiple training/test splits (70% training), which were used for significance testing.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Features</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Error</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">.442</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">Cue word</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.404*</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Cue word group</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.42</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Source</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.447</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Journalist</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.444</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Claim</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.476</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">Cue word + cue word group</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">.404*</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">All features</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">.420</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Linear regression error rates for each feature group. * indicates improvement over the baseline at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="p&lt;.05" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">.05</mn></mrow></math>.</div>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.1 Predictive accuracy ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> reports mean average error for each feature group, as well as a baseline that simply reports the mean rating across the training set. Each accuracy was compared with the baseline using a paired z-test. Only the cue word features pass this test at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="p&lt;.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.05</mn></mrow></math>. The other features do not help, even in combination with the cue word.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">While these findings must be interpreted with caution, they suggest that readers — at least, Mechanical Turk workers — use relatively little independent judgment to assess the validity of quoted text that they encounter on Twitter. Of course, richer linguistic models, more advanced machine learning, or experiments with more carefully-selected readers might offer a different view. But the results at hand are most compatible with the conclusion that readers base their assessments of factuality only on the framing provided by the journalist who reports the quote.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Cue words and cue groups</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Given the importance of cue words as a signal for factuality, we want to assess the factuality judgments induced by each cue. A second question is whether proposed groupings of cue words into groups cohere with such perceptions. <cite class="ltx_cite">Saurí (<a href="#bib.bib472" title="A factuality profiler for eventualities in text" class="ltx_ref">2008</a>)</cite> describes several classes of source-introducing predicates, which indicate how the source relates to the quoted claim. These classes are summarized in Table <a href="#S2.T1" title="Table 1 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, along with frequently-occuring cues from our corpus. We rely on FactBank to assign the cue words to classes; the only word not covered by FactBank was <em class="ltx_emph">sense</em>, which we placed in predicates of perception.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We performed another set of linear regressions, again using the mean certainty rating as the dependent variable. In this case, there was no training/test split, so confidence intervals on the resulting parameters are computed using the analytic closed form. We performed two such regressions: first using only the individual cues as predictors, and then using only the cue groups. Results are shown in Figures <a href="#S4.F7" title="Figure 7 ‣ 4.2 Cue words and cue groups ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> and <a href="#S4.F8" title="Figure 8 ‣ 4.2 Cue words and cue groups ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>; Figure <a href="#S4.F7" title="Figure 7 ‣ 4.2 Cue words and cue groups ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> includes only cues which appear at least ten times, although all cues were included in the regression.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">The cues that give the highest factuality coefficients are <em class="ltx_emph">learn</em> and <em class="ltx_emph">admit</em>, which are labeled as predicates of knowledge. These cues carry a substantial amount of framing, as they purport to describe the private mental state of the source. The word <em class="ltx_emph">admit</em> often applies to statements that are perceived as damaging to the source, such as <em class="ltx_emph">Bill Gates admits Control-Alt-Delete was a mistake</em>; since there can be no self-interest behind such statements, they may be perceived as more likely to be true.</p>
+</div>
+<div id="S4.F7" class="ltx_figure"><img src="P14-2068/image006.png" id="S4.F7.g1" class="ltx_graphics ltx_centering" width="277" height="198" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Linear regression coefficients for frequently-occurring cue words. Each word is patterned according to its group, shown in Figure <a href="#S4.F8" title="Figure 8 ‣ 4.2 Cue words and cue groups ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.</div>
+</div>
+<div id="S4.F8" class="ltx_figure"><img src="P14-2068/image007.png" id="S4.F8.g1" class="ltx_graphics ltx_centering" width="277" height="214" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>Linear regression coefficients for cue word group.</div>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">Several of the cues with the lowest factuality coefficients are predicates of belief: <em class="ltx_emph">suggest</em>, <em class="ltx_emph">predict</em> and <em class="ltx_emph">think</em>. The words <em class="ltx_emph">suggest</em>, <em class="ltx_emph">think</em>, and <em class="ltx_emph">believe</em> also purport to describe the private mental state of the source, but their framing function is the opposite of the predicates of knowledge: they imply that it is important to mark the claim as the source’s belief, and not a widely-accepted fact. For example, <em class="ltx_emph">Mubarak clearly believes he has the military leadership’s support</em>.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">A third group of interest are the predicates of report, which have widely-varying certainty coefficients. The cues <em class="ltx_emph">according</em>, <em class="ltx_emph">report</em>, <em class="ltx_emph">say</em>, and <em class="ltx_emph">tell</em> are strongly predictive of certainty, but the cues <em class="ltx_emph">claim</em> and <em class="ltx_emph">deny</em> convey uncertainty. Both <em class="ltx_emph">according</em> and <em class="ltx_emph">report</em> are often used in conjunction with impersonal and institutional sources, e.g., <em class="ltx_emph">Cuccinelli trails McAuliffe by 24 points , according to a new poll</em>. In contrast, <em class="ltx_emph">insist</em>, <em class="ltx_emph">claim</em>, and <em class="ltx_emph">deny</em> imply that there is uncertainty about the quoted statement, e.g., <em class="ltx_emph">Christie insists that Fort Lee Mayor was never on my radar</em>. In this case, the fact that the predicate indicates a report is not enough to determine the framing: different sorts of reports carry radically different perceptions of factuality.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related work</h2>
+
+<div id="S5.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Factuality and Veridicality</h4>
+
+<div id="S5.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The creation of FactBank <cite class="ltx_cite">[<a href="#bib.bib502" title="FactBank: a corpus annotated with event factuality" class="ltx_ref">14</a>]</cite> has enabled recent work on the factuality (or “veridicality”) of event mentions in text. <cite class="ltx_cite">Saurí and Pustejovsky (<a href="#bib.bib506" title="Are you sure that this happened? assessing the factuality degree of events in text" class="ltx_ref">2012</a>)</cite> propose a two-dimensional factuality annotation scheme, including polarity and certainty; they then build a classifier to predict annotations of factuality from statements in FactBank. Their work on source-introducing predicates provides part of the foundation for this research, which focuses on quoted statements in social media text. <cite class="ltx_cite">de Marneffe<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib500" title="Did it happen? the pragmatic complexity of veridicality assessment" class="ltx_ref">2012</a>)</cite> conduct an empirical evaluation of FactBank ratings from Mechanical Turk workers, finding a high degree of disagreement between raters. They also construct a statistical model to predict these ratings. We are unaware of prior work comparing the contribution of linguistic and extra-linguistic predictors (e.g., source and journalist features) for factuality ratings. This prior work also does not measure the impact of individual cues and cue classes on assessment of factuality.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Credibility in social media</h4>
+
+<div id="S5.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Recent work in the area of computational social science focuses on understanding credibility cues on Twitter. Such studies have found that users express concern over the credibility of tweets belonging to certain topics (politics, news, emergency). By manipulating several features of a tweet, <cite class="ltx_cite">Morris<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Tweeting is believing?: understanding microblog credibility perceptions" class="ltx_ref">2012</a>)</cite> found that in addition to content, users often use additional markers while assessing the tweet credibility, such as the user name of the source.
+The search for reliable signals of information credibility in social media has led to the construction of automatic classifiers to identify credible tweets <cite class="ltx_cite">[<a href="#bib.bib3" title="Information credibility on twitter" class="ltx_ref">2</a>]</cite>. However, this prior work has not explored the <em class="ltx_emph">linguistic</em> basis of factuality judgments, which we show to depend on framing devices such as cue words.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Perceptions of the factuality of quoted content are influenced by the cue words used to introduce them, while extra-linguistic factors, such as the source and the author, did not appear to be relevant in our experiments. This result is obtained from real tweets written by journalists; a natural counterpart study would be to experimentally manipulate this framing to see if the same perceptions apply. Another future direction would be to test whether the deployment of cue words as framing devices reflects the ideology of the journalist. We are also interested to group multiple instances of the same quote <cite class="ltx_cite">[<a href="#bib.bib335" title="Meme-tracking and the dynamics of the news cycle" class="ltx_ref">7</a>]</cite>, and examine how its framing varies across different news outlets and over time.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Acknowledgments</span>: This research was supported by DARPA-W911NF-12-1-0043 and by a Computational Journalism research award from Google. We thank the reviewers for their helpful feedback.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch and M. Dredze</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Creating speech and language data with amazon’s mechanical turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Annotation ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Castillo, M. Mendoza and B. Poblete</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Information credibility on twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 675–684</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P2.p1" title="Credibility in social media ‣ 5 Related work ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib500" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. C. de Marneffe, C. D. Manning and C. Potts</span><span class="ltx_text ltx_bib_year">(2012-06-13)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Did it happen? the pragmatic complexity of veridicality assessment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Comput. Linguist.</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 301–333</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1162/COLI_a_00097" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/COLI_a_00097" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Factuality and Veridicality ‣ 5 Related work ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib471" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. De Marneffe, B. MacCartney and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating typed dependency parses from phrase structure parses</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 449–454</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib105" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Greene and P. Resnik</span><span class="ltx_text ltx_bib_year">(2009-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">More than words: syntactic packaging and implicit sentiment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boulder, Colorado</span>, <span class="ltx_text ltx_bib_pages"> pp. 503–511</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N09/N09-1057" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib102" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Hermida, S. C. Lewis and R. Zamith</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sourcing the arab spring: a case study of andy carvinâs sources during the tunisian and egyptian revolutions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 20–21</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib335" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Leskovec, L. Backstrom and J. Kleinberg</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Meme-tracking and the dynamics of the news cycle</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 497–506</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Conclusion ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib103" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Lin, T. Wilson, J. Wiebe and A. Hauptmann</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Which side are you on?: identifying perspectives at the document and sentence levels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CoNLL-X ’06</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 109–116</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1596276.1596297" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Lotan, E. Graeff, M. Ananny, D. Gaffney and I. Pearce</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The arab spring— the revolutions were tweeted: information flows during the 2011 tunisian and egyptian revolutions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Communication</span> <span class="ltx_text ltx_bib_volume">5</span>, <span class="ltx_text ltx_bib_pages"> pp. 31</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. R. Morris, S. Counts, A. Roseway, A. Hoff and J. Schwarz</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tweeting is believing?: understanding microblog credibility perceptions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 441–450</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.SSS0.P2.p1" title="Credibility in social media ‣ 5 Related work ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib334" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Owoputi, B. OâConnor, C. Dyer, K. Gimpel, N. Schneider and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved part-of-speech tagging for online conversational text with word clusters</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 380–390</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib469" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. O’Keefe, S. Pareti, J. R. Curran, I. Koprinska and M. Honnibal</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A sequence labelling approach to quote attribution</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 790–799</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib470" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Pareti</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A database of attribution relations.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 3213–3217</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib502" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Pustejovsky</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">FactBank: a corpus annotated with event factuality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language Resources and Evaluation</span> <span class="ltx_text ltx_bib_volume">43</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 227–268</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.SSS0.P1.p1" title="Factuality and Veridicality ‣ 5 Related work ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib104" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Qazvinian, E. Rosengren, D. R. Radev and Q. Mei</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rumor has it: identifying misinformation in microblogs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1589–1599</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib506" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Saurí and J. Pustejovsky</span><span class="ltx_text ltx_bib_year">(2012-06-13)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Are you sure that this happened? assessing the factuality degree of events in text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Comput. Linguist.</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 261–299</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1162/COLI_a_00096" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/COLI_a_00096" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS0.P1.p1" title="Factuality and Veridicality ‣ 5 Related work ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib472" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Saurí</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A factuality profiler for eventualities in text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Brandeis University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.T1" title="Table 1 ‣ 2 Text data ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Cue words and cue groups ‣ 4 Modeling factuality judgments ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib336" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, B. O’Connor, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 254–263</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1613715.1613751" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Annotation ‣ Modeling Factuality Judgments in Social Media Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:51:58 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

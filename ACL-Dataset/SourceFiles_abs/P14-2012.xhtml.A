@@ -1,0 +1,390 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Employing Word Representations and Regularization for Domain Adaptation of Relation Extraction.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The goal of Relation Extraction (RE) is to detect and classify relation mentions between entity pairs into predefined relation types such as
+        Employment
+        or
+        Citizenship
+        relationships. Recent research in this area, whether feature-based
+        [Kambhatla2004, Boschee et al.2005, Zhou et al.2005, Grishman et al.2005, Jiang and Zhai2007a, Chan and Roth2010, Sun et al.2011]
+        or kernel-based
+        [Zelenko et al.2003, Bunescu and Mooney2005a, Bunescu and Mooney2005b, Zhang et al.2006, Qian et al.2008, Nguyen et al.2009]
+        , attempts to improve the RE performance by enriching the feature sets from multiple sentence analyses and knowledge resources. The fundamental assumption of these supervised systems is that the training data and the data to which the systems are applied are sampled independently and identically from the same distribution. When there is a mismatch between data distributions, the RE performance of these systems tends to degrade dramatically
+        [Plank and Moschitti2013]
+        . This is where we need to resort to domain adaptation techniques (DA) to adapt a model trained on one domain (the source domain) into a new model which can perform well on new domains (the target domains).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The consequences of linguistic variation between training and testing data on NLP tools have been studied extensively in the last couple of years for various NLP tasks such as Part-of-Speech tagging
+        [Blitzer et al.2006, Huang and Yates2010, Schnabel and Schütze2014]
+        , named entity recognition
+        [Daumé III2007]
+        and sentiment analysis
+        [Blitzer et al.2007, Daumé III2007, Daumé III et al.2010, Blitzer et al.2011]
+        , etc. Unfortunately, there is very little work on domain adaptation for RE. The only study explicitly targeting this problem so far is by Plank and Moschitti
+        [Plank and Moschitti2013]
+        who find that the out-of-domain performance of kernel-based relation extractors can be improved by embedding semantic similarity information generated from word clustering and latent semantic analysis (LSA) into syntactic tree kernels. Although this idea is interesting, it suffers from two major limitations:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        + It does not incorporate word cluster information at different levels of granularity. In fact, Plank and Moschitti
+        [Plank and Moschitti2013]
+        only use the 10-bit cluster prefix in their study. We will demonstrate later that the adaptability of relation extractors can benefit significantly from the addition of word cluster features at various granularities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        + It is unclear if this approach can encode real-valued features of words (such as word embeddings
+        [Mnih and Hinton2007, Collobert and Weston2008]
+        ) effectively. As the real-valued features are able to capture latent yet useful properties of words, the augmentation of lexical terms with these features is desirable to provide a more general representation, potentially helping relation extractors perform more robustly across domains.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        In this work, we propose to avoid these limitations by applying a feature-based approach for RE which allows us to integrate various word features of generalization into a single system more naturally and effectively.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        The application of word representations such as word clusters in domain adaptation of RE
+        [Plank and Moschitti2013]
+        is motivated by its successes in semi-supervised methods
+        [Chan and Roth2010, Sun et al.2011]
+        where word representations help to reduce data-sparseness of lexical information in the training data. In DA terms, since the vocabularies of the source and target domains are usually different, word representations would mitigate the lexical sparsity by providing general features of words that are shared across domains, hence bridge the gap between domains. The underlying hypothesis here is that the absence of lexical target-domain features in the source domain can be compensated by these general features to improve RE performance on the target domains.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        We extend this motivation by further evaluating word embeddings
+        [Bengio et al.2001, Bengio et al.2003, Mnih and Hinton2007, Collobert and Weston2008, Turian et al.2010]
+        on feature-based methods to adapt RE systems to new domains. We explore the embedding-based features in a principled way and demonstrate that word embedding itself is also an effective representation for domain adaptation of RE. More importantly, we show empirically that word embeddings and word clusters capture different information and their combination would further improve the adaptability of relation extractors.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Regularization
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Given the more general representations provided by word representations above, how can we learn a relation extractor from the labeled source domain data that generalizes well to new domains? In traditional machine learning where the challenge is to utilize the training data to make predictions on unseen data points (generated from the same distribution as the training data), the classifier with a good generalization performance is the one that not only fits the training data, but also avoids ovefitting over it. This is often obtained via regularization methods to penalize complexity of classifiers. Exploiting the shared interest in generalization performance with traditional machine learning, in domain adaptation for RE, we would prefer the relation extractor that fits the source domain data, but also circumvents the overfitting problem over this source domain
+        so that it could generalize well on new domains. Eventually, regularization methods can be considered naturally as a simple yet general technique to cope with DA problems.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Following Plank and Moschitti
+        [Plank and Moschitti2013]
+        , we assume that we only have labeled data in a single source domain but no labeled as well as unlabeled target data. Moreover, we consider the single-system DA setting where we construct a single system able to work robustly with different but related domains (multiple target domains). This setting differs from most previous studies
+        [Blitzer et al.2006]
+        on DA which have attempted to design a specialized system for every specific target domain. In our view, although this setting is more challenging, it is more practical for RE. In fact, this setting can benefit considerably from our general approach of applying word representations and regularization. Finally, due to this setting, the best way to set up the regularization parameter is to impose the same regularization parameter on every feature rather than a skewed regularization
+        [Jiang and Zhai2007b]
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Although word embeddings have been successfully employed in many NLP tasks
+        [Collobert and Weston2008, Turian et al.2010, Maas and Ng2010]
+        , the application of word embeddings in RE is very recent. Kuksa et al.
+        [Kuksa et al.2010]
+        propose an abstraction-augmented string kernel for bio-relation extraction via word embeddings. In the surge of deep learning, Socher et al.
+        [Socher et al.2012]
+        and Khashabi
+        [Khashabi2013]
+        use pre-trained word embeddings as input for Matrix-Vector Recursive Neural Networks (MV-RNN) to learn compositional structures for RE. However, none of these works evaluate word embeddings for domain adaptation of RE which is our main focus in this paper.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Regarding domain adaptation, in representation learning, Blitzer et al.
+        [Blitzer et al.2006]
+        propose structural correspondence learning (SCL) while Huang and Yates
+        [Huang and Yates2010]
+        attempt to learn a multi-dimensional feature representation. Unfortunately, these methods require unlabeled target domain data which are unavailable in our single-system setting of DA. Daumé III
+        [Daumé III2007]
+        proposes an easy adaptation framework (EA) which is later extended to a semi-supervised version (EA++) to incorporate unlabeled data
+        [Daumé III et al.2010]
+        . In terms of word embeddings for DA, recently, Xiao and Guo
+        [Xiao and Guo2013]
+        present a log-bilinear language adaptation framework for sequential labeling tasks. However, these methods assume some labeled data in target domains and are thus not applicable in our setting of unsupervised DA. Above all, we move one step further by evaluating the effectiveness of word embeddings on domain adaptation for RE which is very different from the principal topic of sequence labeling in the previous research.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Word Representations
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We consider two types of word representations and use them as additional features in our DA system, namely Brown word clustering
+        [Brown et al.1992]
+        and word embeddings
+        [Bengio et al.2001]
+        . While word clusters can be recognized as an one-hot vector representation over a small vocabulary, word embeddings are dense, low-dimensional, and real-valued vectors (distributed representations). Each dimension of the word embeddings expresses a latent feature of the words, hopefully reflecting useful semantic and syntactic regularities
+        [Turian et al.2010]
+        . We investigate word embeddings induced by two typical language models: Collobert and Weston (2008) embeddings (C&amp;W)
+        [Collobert and Weston2008, Turian et al.2010]
+        and Hierarchical log-bilinear embeddings (HLBL)
+        [Mnih and Hinton2007, Mnih and Hinton2009, Turian et al.2010]
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Feature Set
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Baseline Feature Set
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         Sun et al.
+         [Sun et al.2011]
+         utilize the full feature set from
+         [Zhou et al.2005]
+         plus some additional features and achieve the state-of-the-art feature-based RE system. Unfortunately, this feature set includes the
+         human-annotated
+         (gold-standard) information on entity and mention types which is often missing or noisy in reality
+         [Plank and Moschitti2013]
+         . This issue becomes more serious in our setting of single-system DA where we have a single source domain with multiple dissimilar target domains and an automatic system able to recognize entity and mention types very well in different domains may not be available. Therefore, following the settings of Plank and Moschitti
+         [Plank and Moschitti2013]
+         , we will only assume entity boundaries and not rely on the gold standard information in the experiments. We apply the same feature set as Sun et al.
+         [Sun et al.2011]
+         but remove the entity and mention type information
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Lexical Feature Augmentation
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         While Sun et al.
+         [Sun et al.2011]
+         show that adding word clusters to the heads of the two mentions is the most effective way to improve the generalization accuracy, the right lexical features into which word embeddings should be introduced to obtain the best adaptability improvement are unexplored. Also, which dimensionality of which word embedding should we use with which lexical features? In order to answer these questions, following Sun et al.
+         [Sun et al.2011]
+         , we first group lexical features into 4 groups and rank their importance based on linguistic intuition and illustrations of the contributions of different lexical features from various feature-based RE systems. After that, we evaluate the effectiveness of these lexical feature groups for word embedding augmentation individually and incrementally according to the rank of importance. For each of these group combinations, we assess the system performance with different numbers of dimensions for both C&amp;W and HLBL word embeddings. Let M1 and M2 be the first and second mentions in the relation. Table 1 describes the lexical feature groups.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Tools and Data
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         Our relation extraction system is hierarchical
+         [Bunescu and Mooney2005b, Sun et al.2011]
+         and apply maximum entropy (MaxEnt) in the MALLET
+         toolkit as the machine learning tool. For Brown word clusters, we directly apply the clustering trained by Plank and Moschitti
+         [Plank and Moschitti2013]
+         to facilitate system comparison later. We evaluate C&amp;W word embeddings with 25, 50 and 100 dimensions as well as HLBL word embeddings with 50 and 100 dimensions that are introduced in Turian et al.
+         [Turian et al.2010]
+         and can be downloaded here
+         . The fact that we utilize the large, general and unbiased resources generated from the previous works for evaluation not only helps to verify the effectiveness of the resources across different tasks and settings but also supports our setting of single-system DA.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         We use the ACE 2005 corpus for DA experiments (as in Plank and Moschitti
+         [Plank and Moschitti2013]
+         ). It involves 6 relation types and 6 domains: broadcast news (bn), newswire (nw), broadcast conversation (bc), telephone conversation (cts), weblogs (wl) and usenet (un). We follow the standard practices on ACE
+         [Plank and Moschitti2013]
+         and use
+         news (the union of bn and nw)
+         as the source domain and
+         bc
+         ,
+         cts
+         and
+         wl
+         as our target domains. We take half of bc as the only target development set, and use the remaining data and domains for testing purposes (as they are small already). As noted in Plank and Moschitti
+         [Plank and Moschitti2013]
+         , the distributions of relations as well as the vocabularies of the domains are quite different.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Evaluation of Word Embedding Features
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         We investigate the effectiveness of word embeddings on lexical features by following the procedure described in Section
+         5.2
+         . We test our system on two scenarios: In-domain: the system is trained and evaluated on the source domain (bn+nw, 5-fold cross validation); Out-of-domain: the system is trained on the source domain and evaluated on the target development set of bc (bc dev). Table
+         2
+         presents the F measures of this experiment
+         (the suffix
+         ED
+         in lexical group names is to indicate the embedding features).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p2">
+        <p class="ltx_p">
+         From the tables, we find that for C&amp;W and HLBL embeddings of 50 and 100 dimensions, the most effective way to introduce word embeddings is to add embeddings to the heads of the two mentions (row 2; both in-domain and out-of-domain) although it is less pronounced for HLBL embedding with 50 dimensions. Interestingly, for C&amp;W embedding with 25 dimensions, adding the embedding to both heads and words of the two mentions (row 6) performs the best for both in-domain and out-of-domain scenarios. This is new compared to the word cluster features where the heads of the two mentions are always the best places for augmentation
+         [Sun et al.2011]
+         . It suggests that a suitable amount of embeddings for words in the mentions might be useful for the augmentation of the heads and inspires further exploration. Introducing embeddings to words of mentions alone has mild impact while it is generally a bad idea to augment chunk heads and words in the contexts.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p3">
+        <p class="ltx_p">
+         Comparing C&amp;W and HLBL embeddings is somehow more complicated. For both in-domain and out-of-domain settings with different numbers of dimensions, C&amp;W embedding outperforms HLBL embedding when only the heads of the mentions are augmented while the degree of negative impact of HLBL embedding on chunk heads as well as context words seems less serious than C&amp;W’s. Regarding the incremental addition of features (rows 6, 7, 8), C&amp;W is better for the out-of-domain performance when 50 dimensions are used, whereas HLBL (with both 50 and 100 dimensions) is more effective for the in-domain setting. For the next experiments, we will apply the C&amp;W embedding of 50 dimensions to the heads of the mentions for its best out-of-domain performance.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.3
+        </span>
+        Domain Adaptation with Word Embeddings
+       </h3>
+       <div class="ltx_para" id="S6.SS3.p1">
+        <p class="ltx_p">
+         This section examines the effectiveness of word representations for RE across domains. We evaluate word cluster and embedding (denoted by ED) features by adding them individually as well as simultaneously into the baseline feature set. For word clusters, we experiment with two possibilities: (i) only using a single prefix length of 10 (as Plank and Moschitti
+         [Plank and Moschitti2013]
+         did) (denoted by WC10) and (ii) applying multiple prefix lengths of 4, 6, 8, 10 together with the full string (denoted by WC). Table
+         3
+         presents the system performance (F measures) for both in-domain and out-of-domain settings.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p2">
+        <p class="ltx_p">
+         The key observations from the table are:
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p3">
+        <p class="ltx_p">
+         (i): The baseline system achieves a performance of 51.4% within its own domain while the performance on target domains bc, cts, wl drops to 49.7%, 41.5% and 36.6% respectively. Our baseline performance is worse than that of Plank and Moschitti
+         [Plank and Moschitti2013]
+         only on the target domain cts and better in the other cases. This might be explained by the difference between our baseline feature set and the feature set underlying their kernel-based system. However, the performance order across domains of the two baselines are the same. Besides, the baseline performance is improved over all target domains when the system is enriched with word cluster features of the 10 prefix length only (row 2).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p4">
+        <p class="ltx_p">
+         (ii): Over all the target domains, the performance of the system augmented with word cluster features of various granularities (row 3) is superior to that when only cluster features for the prefix length 10 are added (row 2). This is significant (at confidence level
+         ≥
+         95%) for domains bc and wl and verifies our assumption that various granularities for word cluster features are more effective than a single granularity for domain adaptation of RE.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p5">
+        <p class="ltx_p">
+         (iii): Row 4 shows that word embedding itself is also very useful for domain adaptation in RE since it improves the baseline system for all the target domains.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p6">
+        <p class="ltx_p">
+         (iv): In row 5, we see that the addition of both word cluster and word embedding features improves the system further and results in the best performance over all target domains (this is significant with confidence level
+         ≥
+         95% in domains bc and wl). The result suggests that word embeddings seem to capture different information from word clusters and their combination would be effective to generalize relation extractors across domains. However, in domain cts, the improvement that word embeddings provide for word clusters is modest. This is because the RCV1 corpus used to induce the word embeddings
+         [Turian et al.2010]
+         does not cover spoken language words in cts very well.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p7">
+        <p class="ltx_p">
+         (v): Finally, the in-domain performance is also improved consistently demonstrating the robustness of word representations
+         [Plank and Moschitti2013]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.4
+        </span>
+        Domain Adaptation with Regularization
+       </h3>
+       <div class="ltx_para" id="S6.SS4.p1">
+        <p class="ltx_p">
+         All the experiments we have conducted so far do not apply regularization for training. In this section, in order to evaluate the effect of regularization on the generalization capacity of relation extractors across domains, we replicate all the experiments in Section
+         6.3
+         but apply regularization when relation extractors are trained
+         . Table
+         4
+         presents the results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS4.p2">
+        <p class="ltx_p">
+         For this experiment, every statement in (ii), (iii), (iv) and (v) of Section
+         6.3
+         also holds. More importantly, the performance in every cell of Table
+         4
+         is significantly better than the corresponding cell in Table
+         3
+         (5% or better gain in F measure, a significant improvement at confidence level
+         ≥
+         95%). This demonstrates the effectiveness of regularization for RE in general and for domain adaptation of RE specifically.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

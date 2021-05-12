@@ -1,0 +1,805 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On the tractability of minimal model computation for some CNF theories.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Minimal models play a vital role in many systems that are dedicated to knowledge representation and reasoning. The concept of minimal model is at the heart of several tasks in Artificial Intelligence including circumscription [29], [30], [26], default logic [32], minimal diagnosis [10], planning [21], and in answering queries posed on logic programs under the stable model semantics [17], [6] and deductive databases under the generalized closed-world assumption [31].
+     </paragraph>
+     <paragraph>
+      On the more formal side, the task of reasoning with minimal models has been the subject of several studies [8], [7], [24], [12], [9], [3], [4], [22]. Given a propositional CNF theory Π, among others, the tasks of Minimal Model Finding and Minimal Model Checking have been considered. The former task consists of computing a minimal model of Π, the latter one is the problem of checking whether a given set of propositional letters is indeed a minimal model for Π.
+     </paragraph>
+     <paragraph>
+      Findings regarding the complexity of reasoning with minimal models show that these problems are intractable in the general case. Indeed, it turns out that even when the theory is positive (that is, it does not contain constraints), finding a minimal model is {a mathematical formula}PNP[O(logn)]-hard [8] (note that positive theories always have a minimal model),{sup:1} and checking whether a model is minimal for a given theory is co-NP-complete [7].
+     </paragraph>
+     <paragraph>
+      The above formidable complexities characterizing the two above mentioned problems have motivated several researchers to look for heuristics [28], [3], [4], [1] as, due to the complexity results listed above and to the still unresolved P vs. NP conundrum, all exact algorithms for solving these problems remain exponential in the worst case.
+     </paragraph>
+     <paragraph>
+      One orthogonal direction of research concerns singling out significant fragments of CNF theories for which dealing with minimal models is tractable. The latter approach has also the merit of providing insights that can help improve the efficiency of heuristics for the general case. For instance, algorithms designed for a specific subset of general CNF theories can be incorporated into algorithms for computing minimal models of general CNF theories [3], [33], [18], [20].
+     </paragraph>
+     <paragraph>
+      Within this scenario, in [5] efficient algorithms are presented for computing and checking minimal models of a restricted subset of positive CNF theories, called Head Cycle Free (HCF) theories [2]. To illustrate, HCF theories are positive CNF theories satisfying the constraint that there is no cyclic dependency involving two positive literals occurring in the same clause. Head-cycle-freeness can also be checked efficiently [2]. These results have been then exploited by other authors to improve model finding algorithms for general theories. For example, the system dlv looks for HCF fragments in general disjunctive logic programs to be processed in order to improve efficiency [25], [23].
+     </paragraph>
+     <paragraph>
+      The research presented here falls into the groove traced in [5]. The central contribution of this work is a polynomial time algorithm for computing a minimal model for (a superset of) the class of positive HEF (Head Elementary-Set Free) CNF theories, the definition of which we adapt from the homonym one given in [14] for disjunctive logic programs and which form, in their turn, a strict superset of the class of HCF theories studied in [5].
+     </paragraph>
+     <paragraph>
+      To the best of our knowledge positive HCF theories form the largest class of CNFs for which a polynomial time algorithm solving the Minimal Model Finding problem is known so far. Since HCF theories are a strict subset of HEF ones, our main contribution is the enlargement of the tractability frontier for the minimal model finding problem.
+     </paragraph>
+     <paragraph>
+      It is worth noting that a relevant difference holds here that while HCF theories are recognizable in polynomial time, for HEF ones the same task is co-NP-complete [13]. Although this undesirable property seems to reduce the applicability of the above result, we will show that our approach leads to techniques to compute a model of any positive CNF theory in polynomial time, while the computed model is guaranteed to be minimal at least for all positive HEF theories. Notice that this latter property holds without the need to recognize whether the input theory is HEF or not.
+     </paragraph>
+     <paragraph>
+      The rest of the paper is organized as follows. In Section 2, we provide preliminary definitions about CNF theories, present the problems and the sub-classes of CNF theories of interest here, depict contributions of the work, and discuss application examples. In Section 4, we introduce the Generalized Elimination Algorithm (GEA), that is the basic algorithm presented in this paper, and the concept of eliminating operator that it makes use of. Then, in Section 5, we formally define HEF CNF theories and then construct an eliminating operator that enables GEA to compute a minimal model for a positive HEF CNF theory in polynomial time. In Section 6, we study the behavior the GEA when applied to a general CNF theory and introduce the Incomplete GEA which is able to compute a minimal model for a positive HEF CNF theory in polynomial time without the need to know in advance whether the input theory is HEF or not. Concluding remarks are provided in Section 7. For the sake of presentation, some of the intermediate result proofs are reported in Appendix A.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Problems and contributions
+     </section-title>
+     <paragraph>
+      In this section, first we define the problems we are dealing with in this paper and then point out the main contributions.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Preliminary definitions
+      </section-title>
+      <paragraph>
+       In this section we recall or adapt the definitions of propositional CNF theories and their subclasses (head-cycle-free, head-elementary-set-free) which are of interest here.
+      </paragraph>
+      <paragraph>
+       An atom is a propositional letter (aka, positive literal). A clause (aka, rule – in the following we shall make use of the two terms interchangeably) is an expression of the form {a mathematical formula}H←B, where H and B are sets of atoms.{sup:2}H and B are referred to as, respectively, the head and body of the clause; the atoms in H are also called head atoms while the atoms in B are also called body atoms. With a little abuse of terminology, if {a mathematical formula}|H|&gt;1, we shall say the clause is disjunctive, otherwise it is Horn, or non-disjunctive.{sup:3} Moreover, if {a mathematical formula}|H|=1 the clause is called single-head. A fact is a single-head rule with empty body. A theory Π is a finite set of clauses. If there is some disjunctive rule in Π then Π is called disjunctive, otherwise it is called non-disjunctive. {a mathematical formula}atom(Π) denotes the set of all the atoms occurring in Π. A set S of atoms is called a disjunctive set for Π if there exists at least one rule {a mathematical formula}H←B in Π such that {a mathematical formula}|H∩S|&gt;1. A constraint is an empty-head clause. A theory Π is said to be positive if no constraint occurs in Π.
+      </paragraph>
+      <paragraph>
+       The semantics of CNF theories relies on the concepts of interpretation and model, which are recalled next. An interpretation I for the theory Π is a set of atoms from Π. An atom is true (resp., false) in the interpretation I if {a mathematical formula}a∈I (resp., {a mathematical formula}a∉I). A rule {a mathematical formula}H←B is true in I if either at least one atom occurring in H is true in I or at least one atom occurring in B is false in I. An interpretation I is a model for a theory Π if all clauses occurring in Π are true in I. A model M for Π is minimal if no proper subset of M is a model for Π.
+      </paragraph>
+      <paragraph>
+       A directed graph {a mathematical formula}G(Π), called positive dependency graph, can be associated with a theory Π. Specifically, nodes in {a mathematical formula}G(Π) are associated with atoms occurring in Π and, moreover, there is a directed edge {a mathematical formula}(m,n) from a node m to a node n in {a mathematical formula}G(Π) if and only if there is a clause {a mathematical formula}H←B of Π such that the atom associated with m is in B and the atom associated with n is in H.
+      </paragraph>
+      <paragraph>
+       Given a clause {a mathematical formula}c≡H←B and a set of atoms X, {a mathematical formula}cX← denotes the clause {a mathematical formula}H∩X←B, whereas {a mathematical formula}cX denotes the clause {a mathematical formula}H∩X←B∩X. Given a theory Π and a set of atoms X, the theory {a mathematical formula}ΠX← includes all non-empty head clauses {a mathematical formula}cX←, with c a clause in Π. Analogously, the theory {a mathematical formula}ΠX includes all non-empty head clauses {a mathematical formula}cX, with c a clause in Π. Given a theory Π, the theory {a mathematical formula}Πnd⊆Π includes all Horn clauses of Π. In the following, we assume that the operators {a mathematical formula}⋅X and {a mathematical formula}⋅X← have precedence over the operator {a mathematical formula}⋅nd, thus the expression {a mathematical formula}ΠXnd ({a mathematical formula}ΠX←nd, resp.) is to be intended equivalent to {a mathematical formula}(ΠX)nd ({a mathematical formula}(ΠX←)nd, resp.).
+      </paragraph>
+      <paragraph>
+       The following example reports a positive CNF theory which will be employed in order to describe the various concepts introduced throughout the paper and illustrates some of the definitions above provided.
+      </paragraph>
+      <paragraph label="Example 1">
+       Positive CNF theoryFig. 1 reports a positive CNF theory Π (on the left) together with the associated dependency graph {a mathematical formula}G(Π) (on the right). The set {a mathematical formula}atom(Π) is {a mathematical formula}{a,b,c,d,e,f,g,h,i,j} and it is the largest model of Π. This theory has several models, but only one minimal model, which is {a mathematical formula}{j,h}. □
+      </paragraph>
+      <paragraph>
+       Table 1 summarizes some of the symbols used throughout the paper (some of them are defined in subsequent sections).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Problems
+      </section-title>
+      <paragraph>
+       Table 2 summarizes the problems and the classes of CNF theories of interest here and reports the associated complexities.
+      </paragraph>
+      <paragraph>
+       As for the classes of CNF theories, other than the general one here we consider HEF and HCF theories:
+      </paragraph>
+      <list>
+       <list-item>
+        – Head Cycle Free theories [2] are CNF theories such that in the associated dependency graph there is no cycle including two atoms occurring in the head of the same clause;
+       </list-item>
+       <list-item>
+        – Head Elementary-Set Free CNF theories, the definition of which we adapt from the homonym one given in [14] for disjunctive logic programs (see Section 5 for the formal definition of HEF theories), form a strict superset of the class of HCF theories.
+       </list-item>
+      </list>
+      <paragraph>
+       The problems (listed in the table) are:
+      </paragraph>
+      <list>
+       <list-item>
+        – Recognition Problem: Given a CNF theory Π and a class {a mathematical formula}C of CNF theories, decide if Π belongs to the class {a mathematical formula}C;
+       </list-item>
+       <list-item>
+        – Model Finding Problem: Given a CNF theory Π, compute a model {a mathematical formula}M for Π;
+       </list-item>
+       <list-item>
+        – Model Minimization Problem: Given a CNF theory Π and a model {a mathematical formula}M for Π, compute a minimal model {a mathematical formula}MM for Π contained in {a mathematical formula}M;
+       </list-item>
+       <list-item>
+        – Minimal Model Checking Problem: Given a CNF theory Π and a model {a mathematical formula}M for Π, check if {a mathematical formula}M is indeed a minimal model for Π;
+       </list-item>
+       <list-item>
+        – Minimal Model Finding Problem: Given a CNF theory Π, compute a minimal model {a mathematical formula}M for Π.
+       </list-item>
+      </list>
+      <paragraph>
+       The MFP problem is NP-hard unless the theory is positive. Indeed, in the latter case, the set consisting of all the literals occurring in the theory is always a model.
+      </paragraph>
+      <paragraph>
+       In this work we will focus on the MMP, MMCP, and MMFP problems.
+      </paragraph>
+      <paragraph>
+       As for MMFP, it turns out that, over positive CNF theories, this is hard to solve. In particular, it is known that on positive theories MMFP is {a mathematical formula}PNP[O(logn)]-hard [8] (even though positive CNF theories always have a minimal model!).
+      </paragraph>
+      <paragraph>
+       Given a CNF theory Π and a model {a mathematical formula}M for Π, it is worth noticing that the theory {a mathematical formula}ΠM is always a positive CNF and that the models of {a mathematical formula}ΠM are a subset of those of Π. This explains the fact that the complexity of the MMP and MMCP problems, which have in input a model {a mathematical formula}M other than the theory Π, does not depend on positiveness of the theory.
+      </paragraph>
+      <paragraph>
+       Moreover, we notice that MMFP is not easier than MMP and MMCP since the latter problems can be reduced to the former one as follows:
+      </paragraph>
+      <list>
+       <list-item label="–">
+        As for MMP, return {a mathematical formula}MMFP(ΠM);
+       </list-item>
+       <list-item label="–">
+        As for MMCP, return true if {a mathematical formula}MMFP(ΠM)=M and false otherwise.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus, if for a certain class of theories the MMFP were tractable, then both MMP and MMCP would become tractable as well.
+      </paragraph>
+      <paragraph>
+       Moreover, if attention is restricted to positive theories, the MMP and MMFP problems coincide (since this time MMFP can be reduced to MMP by setting {a mathematical formula}M to the set of all the literals occurring in Π) and, consequently, MMP on general theories is equivalent to MMFP on positive theories.
+      </paragraph>
+      <paragraph>
+       We notice that, on the other hand, for head-cycle-free CNF theories things are easier than for the general case: indeed it was proven in [5] that the MMFP is solvable in polynomial time if the input theory is HCF.
+      </paragraph>
+      <paragraph>
+       All that given, the following section details the contributions of the paper.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Contributions and algorithms road map
+      </section-title>
+      <paragraph>
+       In this work we investigate the MMP and MMCP problems on CNF theories and the MMFP on positive CNF theories.
+      </paragraph>
+      <paragraph>
+       Among the main contributions offered here, we will show that MMP and MMCP are tractable on generic HEF theories, while MMFP is tractable on positive HEF theories.
+      </paragraph>
+      <paragraph>
+       In order to provide a uniform treatment of these problems, we will concentrate on algorithms for the MMP, which can be considered the most general of them since its input consists of both a CNF theory and a (not necessarily) non-minimal model of the theory. Specifically, we provide a polynomial time algorithm solving the MMP on general HEF CNF theories which, because of the observations made above, can be directly used to solve in polynomial time the following five problems (see also cells of Table 2 reported in bold): (i) MMP on non-positive HEF CNF theories, (ii) MMCP on non-positive HEF CNF theories, (iii) MMP on positive HEF CNF theories, (iv) MMCP on positive HEF CNF theories, and (v) MMFP on positive HEF CNF theories.
+      </paragraph>
+      <paragraph>
+       Also already noticed, differently from HCF theories, which turn out to be recognizable in polynomial time [2], recognizing HEF theories is an intractable problem [13]. This undesirable property may seem to limit the applicability of the above complexity results. However, as better explained next, we show that our MMP algorithm can be fed with any CNF theory Π and any model {a mathematical formula}M of Π and it is guaranteed to correctly minimize {a mathematical formula}M at least in the case that the theory Π is HEF. Notice that this property holds without the need to recognize whether the input theory is HEF or not.
+      </paragraph>
+      <paragraph>
+       To illustrate, we start by presenting an algorithmic schema, called the Generalized Elimination Algorithm (GEA) for model minimization over CNF theories. The GEA invokes a suitable eliminating operator in order to converge towards a minimal model of the input theory. Intuitively, an eliminating operator is any function that, given a model as the input, returns a model strictly included therein, if one exists. Therefore, the actual complexity of the GEA depends on the complexity of the specific eliminating operator one decides to employ. Clearly, the trivial eliminating operator may enumerate (in exponential time) all the interpretations contained in the given model and check for satisfiability of the theory, while we shall consider actually interesting only those eliminating operators that accomplish their task in polynomial time.
+      </paragraph>
+      <paragraph>
+       A specific eliminating operator, denoted by {a mathematical formula}ξHEF, is henceforth defined, by which the GEA computes a minimal model of any HEF theory in polynomial time. However, the intractability of the recognition problem for HEF CNF theories may seem to narrow the applicability of the results sketched above and to reduce their significance to a mere theoretical result. This seemingly relevant limitation can fortunately be overcome by suitably readapting the structure of our algorithm: to this end, we introduce the Incomplete Generalized Elimination Algorithm (IGEA) that, once instantiated with a suitable operator, outputs a model of the input theory, which is guaranteed to be minimal at least over HEF theories.
+      </paragraph>
+      <paragraph>
+       The design of IGEA leverages on the notion of fallible eliminating operator, which is defined later in this paper. Then, by coupling IGEA with the {a mathematical formula}ξHEF operator, we call this instance of the algorithm {a mathematical formula}IGEAξHEF, we obtain a polynomial-time algorithm that always minimizes the input model of a HEF CNF theory without the need of knowing in advance whether the input CNF theory is HEF or not. As for non-HEF theories, we show that {a mathematical formula}IGEAξHEF always returns a model of the input theory which may be minimal or not, depending on the structure of the input theory. Moreover, if it fails to minimize a non-HEF, it also detects it own failure; in other words, it does not claim to have found a minimal model that isn't. This kind of behavior on non-HEF theories is clearly the expected one since, as already noticed, recognizing HEF theories is co-NP-complete. Interestingly, this latter characteristics of {a mathematical formula}IGEAξHEF further enhances its relevance, since its application is not restricted to the class of HEF CNF theories, but to an even broader class thereof.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Application scenarios
+     </section-title>
+     <paragraph>
+      In this section we depict some application scenarios in which our techniques can be naturally employed.
+     </paragraph>
+     <paragraph>
+      Here, we consider generic CNF theories without concentrating on the particular class (that is, general, HEF or HCF) they belong to. Later, in Section 5.2, we specialize some of the examples provided next in the context of HEF theories, which is a main focus in our investigation.
+     </paragraph>
+     <paragraph>
+      The next two sections mention some widely Knowledge Representation &amp; Reasoning scenarios in which exploiting our techniques can be beneficial for inference engines. Indeed, these sections will show that these important reasoning tasks naturally fit the problem of finding a minimal model of a positive CNF theory. As already noticed, the minimal model finding problem is a formidable one and remains intractable even in the case attention is restricted to positive CNFs.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Stable models for logic programs
+      </section-title>
+      <paragraph>
+       Logic Programming is a central tool in Knowledge Representation and Reasoning. In the field of Logic Programming, the notion of negation by default poses the problem of defining a proper notion of model of the program. Among the several proposed semantics for logic programs with negation, the Stable Models and Answer Sets semantics are nowadays the reference one for closed world scenarios [16].
+      </paragraph>
+      <paragraph>
+       An interesting application of our techniques concerns stable model (or answer set) checking. This is a setting in which positive CNFs naturally arise.
+      </paragraph>
+      <paragraph>
+       To illustrate, stable models exploit the concept of the reduct of the program, as clarified in the following definition.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Stable model(See [16].) Given a logic program P and a model {a mathematical formula}M of P, the reduct of P w.r.t. {a mathematical formula}M, also denoted by {a mathematical formula}PM, is the program built from P by (i) removing all rules that contain a negative literal {a mathematical formula}nota in the body with {a mathematical formula}a∈M, and (ii) removing all negative literals from the remaining rules. A model {a mathematical formula}M of P is stable if {a mathematical formula}M is a minimal model of {a mathematical formula}PM.
+      </paragraph>
+      <paragraph label="Example 2">
+       Stable models of logic programsFig. 2 shows, on the left, a logic program P and, on the right, the reduct {a mathematical formula}PM of P w.r.t. the model {a mathematical formula}M={a,d}. In this case, {a mathematical formula}M is a minimal model of {a mathematical formula}PM and, hence, it is a stable model of P. □
+      </paragraph>
+      <paragraph>
+       It is worth noticing that {a mathematical formula}PM is a CNF since, by definition of the reduct, negation by default does not occur in any clause of {a mathematical formula}PM. Moreover, {a mathematical formula}M is always a (possibly non-minimal) model of {a mathematical formula}PM and is given in input.
+      </paragraph>
+      <paragraph>
+       Therefore, by setting {a mathematical formula}Π=PM the problem of verifying if a given model {a mathematical formula}M for the logic program P is stable fits the minimal model checking problem for positive CNFs and, as such, can be suitably dealt with using the techniques this paper proposes.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       SAT solvers
+      </section-title>
+      <paragraph>
+       SAT solvers [19] are powerful tools for Knowledge Representation &amp; Reasoning, since interesting real word problems can be encoded my means of CNFs. Let us assume a generic CNF is given. Next we show that the given theory can be indeed reduced to a positive theory whose models have some clear relationship with the models of the original theory.
+      </paragraph>
+      <paragraph>
+       Let us first consider the definition of positive form of a CNF.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Positive form of a CNF theoryThe theory {a mathematical formula}Π+, also said the positive form of Π, is defined as follows: (1) {a mathematical formula}atom(Π+)=atom(Π)∪{ϕ}, where ϕ is a dummy literal not occurring in Π; (2) for each clause {a mathematical formula}H←B of Π, if H is not empty then the clause {a mathematical formula}H←B is in {a mathematical formula}Π+; (3) for each clause ←B of Π, the clause {a mathematical formula}ϕ←B is in {a mathematical formula}Π+; (4) for each atom a occurring in Π, the clause {a mathematical formula}a←ϕ is in {a mathematical formula}Π+.
+      </paragraph>
+      <paragraph>
+       Intuitively, the positive form {a mathematical formula}Π+ of a CNF theory Π is the new theory obtained from Π by transforming constraints in positive clauses by putting in their heads a dummy literal which, by the virtue of an additional set of positive clauses, implies all the literals in the original theory Π.
+      </paragraph>
+      <paragraph>
+       The following result relates models of Π with minimal models of {a mathematical formula}Π+.
+      </paragraph>
+      <paragraph label="Proposition 3.1">
+       Given a CNF theory Π, if ϕ belongs to the (unique) minimal model of{a mathematical formula}Π+then Π is inconsistent, otherwise the set of minimal models of Π and{a mathematical formula}Π+coincide.
+      </paragraph>
+      <paragraph label="Observation 1">
+       Let us start with the following observation.Let{a mathematical formula}Mbe a model for Π and consider the theory{a mathematical formula}Π+. All the clauses (2) in{a mathematical formula}Π+are also in Π and then are true. Since{a mathematical formula}Mis a model for Π all the empty-head clauses of Π don't have the body fully contained in{a mathematical formula}Mand, therefore,{a mathematical formula}Msatisfies all the clauses (3) of{a mathematical formula}Π+. Finally, since ϕ is not in{a mathematical formula}Mall the clauses (4) are true.Now, let {a mathematical formula}M+ be a minimal model of {a mathematical formula}Π+ and {a mathematical formula}atom(Π+) be the set of all atoms occurring in {a mathematical formula}Π+.Note that, because of the presence of the set of clauses (4), two cases are possible, that are: either {a mathematical formula}M+ contains ϕ and then all the atoms occurring in {a mathematical formula}Π+; or {a mathematical formula}M+⊂atom(Π+) and, in particular, {a mathematical formula}ϕ∉M+.
+       <list>
+        As for the first case, if Π had a model {a mathematical formula}M then, due to Observation 1, {a mathematical formula}M would be a model of {a mathematical formula}Π+ as well and then {a mathematical formula}M+ would not be minimal. Thus, Π is inconsistent.As for the second case, {a mathematical formula}M+ does not contain ϕ. Consider now the theory Π. All the non-empty-head clauses in Π are also in {a mathematical formula}Π+ and, then, are satisfied by {a mathematical formula}M+. Consider, now, the empty-head clauses in Π. Because of the presence of clauses (2) in {a mathematical formula}Π+, and since {a mathematical formula}M+ does not contain ϕ, it is the case that the body of such clauses is not fully contained in {a mathematical formula}M+. Thus, the correspondent clauses in Π are satisfied by {a mathematical formula}M+.This implies that
+       </list>
+       <paragraph>
+        {a mathematical formula}M+ is a model of Π as well. By contradiction, assume that there exists a model {a mathematical formula}M of Π such that {a mathematical formula}M⊂M+. By Observation 1 each model of Π is also a model of {a mathematical formula}Π+, then {a mathematical formula}M is also a model of {a mathematical formula}Π+ and this would contradict the hypothesis that {a mathematical formula}M+ is a minimal model of {a mathematical formula}Π+. Hence, {a mathematical formula}M+ is also minimal for Π.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       To illustrate, consider the following example.
+      </paragraph>
+      <paragraph label="Example 3">
+       General CNF theoriesConsider the CNF reported in Fig. 3 on the left. In the same figure, one the right, it is reported the positive form {a mathematical formula}Π+ of Π. Π has only one minimal model, namely {a mathematical formula}{c,d}, which is precisely the unique minimal model of {a mathematical formula}Π+. □
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Generalized Elimination Algorithm
+     </section-title>
+     <paragraph>
+      In this section, a generalization of the elimination algorithm proposed in [5], called Generalized Elimination Algorithm, is introduced. We begin by providing some preliminary concepts, notably, those of steady set and eliminating operator.
+     </paragraph>
+     <paragraph>
+      Intuitively, given a model {a mathematical formula}M for a theory Π, the steady set is the subset of {a mathematical formula}M containing atoms which “cannot” be erased from {a mathematical formula}M, for otherwise {a mathematical formula}M would no longer be a model for Π. As proven next, the steady set can be obtained by computing the model of a certain non-disjunctive theory.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Steady setGiven a CNF theory Π and a model {a mathematical formula}M for Π, the minimal model {a mathematical formula}St⊆M of the theory {a mathematical formula}ΠM←nd is called the steady set of {a mathematical formula}M for Π.
+     </paragraph>
+     <paragraph>
+      Note that the steady set {a mathematical formula}St of {a mathematical formula}M for Π always exists and is unique. Indeed, {a mathematical formula}ΠM←nd is a Horn positive CNF and it is known that these kinds of theories have one and only one minimal model (which can be computed in polynomial time) [11], [27].
+     </paragraph>
+     <paragraph label="Property 4.1">
+      {a mathematical formula}MM-containmentGiven a positive CNF theory Π, a model{a mathematical formula}Mfor Π and the steady set{a mathematical formula}Stof{a mathematical formula}Mfor Π, it holds that each model of Π contained in{a mathematical formula}Mcontains{a mathematical formula}St.
+     </paragraph>
+     <paragraph label="Proof">
+      First, notice that the models of the positive CNF theory Π which are contained in the model {a mathematical formula}M of Π coincide with the models of the positive CNF theory {a mathematical formula}ΠM←.Since {a mathematical formula}ΠM←nd is contained in {a mathematical formula}ΠM←, by monotonicity of propositional logic, it follows that all logical consequences of {a mathematical formula}ΠM←nd are also logical consequences of {a mathematical formula}ΠM← and, hence, each model of {a mathematical formula}ΠM← contains the unique minimal model of {a mathematical formula}ΠM←nd, which is the steady set of {a mathematical formula}M for Π.  □
+     </paragraph>
+     <paragraph label="Definition 4">
+      Erasable setLet {a mathematical formula}M be a model of a positive CNF theory Π. A non-empty subset {a mathematical formula}E of {a mathematical formula}M is said to be erasable in {a mathematical formula}M for Π if {a mathematical formula}M∖E is a model of Π.
+     </paragraph>
+     <paragraph>
+      The following result holds.
+     </paragraph>
+     <paragraph label="Proposition 4.1">
+      Let{a mathematical formula}Mbe a model of a positive CNF theory Π, let{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π, and let{a mathematical formula}Ebe a set erasable in{a mathematical formula}Mfor Π. Then,{a mathematical formula}E⊆M∖St.
+     </paragraph>
+     <paragraph label="Proof">
+      For the sake of contradiction, assume that {a mathematical formula}E∩St≠∅. Then, {a mathematical formula}M∖E is a model of Π that does not contain {a mathematical formula}St, which contradicts the fact that {a mathematical formula}St has the {a mathematical formula}MM-containment property in {a mathematical formula}M for Π (see Property 4.1).  □
+     </paragraph>
+     <paragraph label="Definition 5">
+      Eliminating operatorLet {a mathematical formula}M be a model of a positive CNF theory Π. An eliminating operator ξ is a mapping that, given {a mathematical formula}M and Π in input, returns an erasable set in {a mathematical formula}M for Π, if one exists, and an the empty set, otherwise.
+     </paragraph>
+     <paragraph>
+      It immediately follows that if {a mathematical formula}ξ(Π,M)=∅ then {a mathematical formula}M is a minimal model of Π. This is easily shown by observing that {a mathematical formula}ξ(Π,M)=∅ implies that there is no erasable set in {a mathematical formula}M, namely no subset of {a mathematical formula}M is a model for Π.
+     </paragraph>
+     <paragraph>
+      We are now ready to present our algorithmic schema, referred to as the Generalized Elimination Algorithm (GEA) throughout the paper, which is summarized in Fig. 4. Note that GEA has an operator ξ as its parameter.{sup:4}
+     </paragraph>
+     <paragraph>
+      Our first result states that GEA is correct under the condition that the operator parameter ξ is an eliminating operator.
+     </paragraph>
+     <paragraph label="Theorem 4.1">
+      GEA correctnessLet Π be a CNF theory and{a mathematical formula}Mbe a model of Π. If ξ is an eliminating operator, then the set returned by{a mathematical formula}GEAξon input Π and{a mathematical formula}Mis a minimal model for Π contained in{a mathematical formula}M.
+     </paragraph>
+     <paragraph label="Proof">
+      First of all, since {a mathematical formula}M is a model of Π, by definition of model all the constraints (aka empty-head clauses) of Π are true in {a mathematical formula}M and are also true in any subset of {a mathematical formula}M. Hence, they can be disregarded during the subsequent steps (see line 1).Moreover, note that, by definition of steady set, it follows that the set {a mathematical formula}St computed at the beginning of each iteration of the algorithm (line 4) is a (not necessarily proper) subset of every minimal model contained in {a mathematical formula}M. Let n be the number of atoms in the model {a mathematical formula}M computed at line 1 of the GEA.Three cases are possible, which are discussed next:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}Stis a model of Π. Since {a mathematical formula}St is the steady set of {a mathematical formula}M for Π, if {a mathematical formula}St is a model for Π, then it is also minimal; so the algorithm stops and returns a correct solution.{sup:5}
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}E=∅. By definition of eliminating operator, if {a mathematical formula}E is empty, then {a mathematical formula}M is a minimal model; so the algorithm stops and returns a correct solution.
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}E≠∅. In this case, a non-empty set of atoms is deleted from {a mathematical formula}M, letting (by definitions of eliminating operator and erasable set) {a mathematical formula}M still be a model for Π. Thus, at the next iteration, the algorithms will work with a smaller (possibly not minimal) model {a mathematical formula}M. Hence, after at most n iterations, either case 1 or case 2 applies. □
+      </list-item>
+     </list>
+     <paragraph>
+      The next result states the time complexity of the GEA that, clearly, will depend on the complexity {a mathematical formula}Cξ associated with the evaluation of the eliminating operator ξ.
+     </paragraph>
+     <paragraph label="Proposition 4.2">
+      Let n and m denote the number of atoms occurring in the heads of Π and, overall, in Π, respectively. Then, for any model{a mathematical formula}Mof Π,{a mathematical formula}GEAξ(Π,M)runs in time{a mathematical formula}O(nm+nCξ).
+     </paragraph>
+     <paragraph label="Proof">
+      Since at each iteration (if the stopping condition is not matched) at least one atom is removed, the total number of iterations is {a mathematical formula}O(n). As for the cost spent at each iteration, the dominant operations are: (i) computing the (unique) minimal model of a non-disjunctive theory (line 4) which can be accomplished in linear time w.r.t. m by the well-known unit propagation procedure [11]; (ii) checking if a set of atoms is a model (line 5) which can be accomplished in linear time in m as well; (iii) applying the eliminating operator (line 8), whose cost is {a mathematical formula}Cξ. This closes the proof.  □
+     </paragraph>
+     <paragraph>
+      In particular, consider the naive operator {a mathematical formula}ξexp that enumerates all the {a mathematical formula}2n non-empty subsets of {a mathematical formula}M and either returns one of these, call it {a mathematical formula}E, such that {a mathematical formula}M∖E is a model for Π, or an empty set if such a set {a mathematical formula}E does not exist. The resulting algorithm {a mathematical formula}GEAξexp returns a minimal model of Π but requires exponential running time.
+     </paragraph>
+     <paragraph>
+      Conversely, as an example of instance of the GEA algorithm having polynomial time complexity on a specific class of CNF theories, consider the Elimination Algorithm presented in [5]. This algorithm can be obtained from the GEA by having the operator {a mathematical formula}ξHCF (described next) as the eliminating operator ξ and the set {a mathematical formula}atom(Π) as the input model {a mathematical formula}M. Indeed, as shown in [5], the Elimination Algorithm computes a minimal model of a positive HCF theory in polynomial time. The definition of {a mathematical formula}ξHCF operator follows [5]. Let Π be a positive HCF CNF theory and let {a mathematical formula}M′ be the set of the heads of the disjunctive rules in {a mathematical formula}ΠM← which are false in {a mathematical formula}M. Then, {a mathematical formula}ξHCF(Π,M) is defined to return a source of {a mathematical formula}M′, where a source of the set of atoms {a mathematical formula}M′ is a strongly connected component in the subgraph of {a mathematical formula}G(Π) induced by {a mathematical formula}M′ which does not have incoming arcs.
+     </paragraph>
+     <paragraph>
+      Before leaving this section, we provide two further results which will be useful when discussing the MMCP and the MMFP.
+     </paragraph>
+     <paragraph label="Lemma 4.1">
+      Given a CNF theory Π, an eliminating operator ξ and a model{a mathematical formula}Mof Π,{a mathematical formula}Mis minimal for Π if and only if{a mathematical formula}GEAξ(Π,M)outputs{a mathematical formula}M.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof follows by noticing that GEA always outputs a (possibly non-proper) minimal sub-model of the initial model {a mathematical formula}M as its output.  □
+     </paragraph>
+     <paragraph label="Lemma 4.2">
+      Given a positive CNF theory Π and an eliminating operator ξ, then{a mathematical formula}GEAξ(Π,atom(Π))outputs a minimal model of Π.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof follows by noticing that {a mathematical formula}atom(M) is a model of {a mathematical formula}M, being Π a positive theory, and by Lemma 4.1.  □
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Model minimization on HEF CNF theories
+     </section-title>
+     <paragraph>
+      We have noticed above that the complexity of GEA depends on the complexity characterizing, in its turn, the specific elimination operator it invokes. On the other hand, the MMP being {a mathematical formula}PNP[O(logn)]-hard [8] implies that, unless the polynomial hierarchy collapses, the GEA will generally require exponential time to terminate when called on a generic input CNF theory. Therefore, it is sensible to single out significant subclasses of CNF theories for which it is possible to devise a specific eliminating operator guaranteeing a polynomial running time for the GEA.
+     </paragraph>
+     <paragraph>
+      In this respect, it is a simple consequence of the results presented in [5] that a model of any head-cycle-free theory can be indeed minimized in polynomial time using the Elimination Algorithm. So, the interesting question remains open of whether we can do better than this. Our answer to this question is affirmative and this section serves the purpose of illustrating this result. In particular, we shall show that by carefully defining the eliminating operator, we can have that the GEA minimizes in polynomial time a model of any HEF CNF theory. In Section 6, we shall moreover show that there also exist CNF theories which are not HEF but for which the algorithm, equipped with a proper eliminating operator, efficiently minimizes a model.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Head-elementary-set-free theories and super-elementary sets
+      </section-title>
+      <paragraph>
+       Next, we recall the definition of head-cycle-free theories [2], adapt that of head-elementary-cycle-free theories [14] to our propositional context and provide a couple of preliminary results which will be useful in the following.
+      </paragraph>
+      <paragraph>
+       We proceed by introducing the concepts of outbound and elementary set.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Outbound set(Adapted from [14].) Let Π be a CNF theory. For any set Y of atoms occurring in Π, a subset Z of Y is outbound in Y for Π if there is a clause {a mathematical formula}H←B in Π such that: (i){a mathematical formula}H∩Z≠∅; (ii){a mathematical formula}B∩(Y\Z)≠∅; (iii){a mathematical formula}B∩Z=∅ and (iv){a mathematical formula}H∩(Y\Z)=∅.
+      </paragraph>
+      <paragraph>
+       Intuitively, {a mathematical formula}Z⊆Y is outbound in Y for Π if there exists a rule c in Π such that the partition of Y induced by Z (namely, {a mathematical formula}〈Z;Y∖Z〉) “separates” head and body atoms of c.
+      </paragraph>
+      <paragraph label="Example 4">
+       Outbound setConsider the theory{a mathematical formula} and the set {a mathematical formula}E={a,b,c}. Consider, now, the subset {a mathematical formula}O={a,b} of E. O is outbound in E for Π because of the clause {a mathematical formula}b←c, since {a mathematical formula}c∈E∖O, {a mathematical formula}c∉O, {a mathematical formula}b∈O and {a mathematical formula}b∉E∖O. □
+      </paragraph>
+      <paragraph>
+       Let O be a non-outbound set in X for Π. O is minimal non-outbound if any proper subset {a mathematical formula}O′⊂O is outbound in X for Π.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Elementary set(Adapted from [14].) Let Π be a CNF theory. For any non-empty set {a mathematical formula}Y⊆atom(Π), Y is elementary for Π if all non-empty proper subsets of Y are outbound in Y for Π.
+      </paragraph>
+      <paragraph>
+       For example, the set {a mathematical formula}Eex of Example 4 is elementary for the theory {a mathematical formula}Πex, since each non-empty proper subset of {a mathematical formula}Eex is outbound in {a mathematical formula}Eex for {a mathematical formula}Πex.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Head-elementary-set-free CNF theory(Adapted from [15].) Let Π be a CNF theory. Π is head-elementary-set-free (HEF) if for each clause {a mathematical formula}H←B in Π, there is no elementary set E for Π such that {a mathematical formula}|E∩H|&gt;1.
+      </paragraph>
+      <paragraph>
+       So, a CNF theory Π is HEF if there is no elementary set containing two or more atoms appearing in the same head of a rule of Π. An immediate consequence of Definition 8 is the following property.
+      </paragraph>
+      <paragraph label="Property 5.1">
+       A theory Π is not HEF if and only if there exists a set X of atoms of Π such that X is both a disjunctive and an elementary set for Π.
+      </paragraph>
+      <paragraph>
+       For instance, the theory Π of Example 4 is not HEF, since for the rule {a mathematical formula}b,c←a and the elementary set E, we have {a mathematical formula}|E∩{b,c}|&gt;1.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Examples of HEF theories
+      </section-title>
+      <paragraph>
+       Now the examples already introduced in Section 3 are discussed in the context of HEF CNF theories.
+      </paragraph>
+      <paragraph label="Example 1">
+       Minimal models of positive CNF theories – continuedConsider the theory reported in Fig. 1. This is a HEF CNF theory since no superset of {a mathematical formula}{g,j} and no superset of {a mathematical formula}{f,h} is an elementary set for Π. □
+      </paragraph>
+      <paragraph label="Example 2">
+       Stable models of logic programs – continuedA logic program P is HEF if the CNF {a mathematical formula}Pˆ obtained by removing all the literals of the form not a from the body of its rules is HEF [15].Importantly, it holds that if the logic program P is HEF and {a mathematical formula}M is a model of P, then also {a mathematical formula}PM is HEF. This follows since, by definition, a logic program P is HEF if and only if the CNF {a mathematical formula}Pˆ is HEF, and by Lemma 5.3 (reported in Section 5.4) any subset of clauses of a HEF CNF is HEF as well, and {a mathematical formula}PM is precisely a subset of {a mathematical formula}Pˆ.Notably, even if P is not HEF, it could be anyway the case that {a mathematical formula}PM is HEF, and this broadens the range of applicability of the techniques proposed here.As an example, consider again Fig. 2. The program P there reported is not HEF, since the set {a mathematical formula}S={a,b,c} is both disjunctive and elementary.Conversely, {a mathematical formula}PM is HEF since the set S is no longer elementary because the subsets {a mathematical formula}{a,c} and {a mathematical formula}{b,c} of S are not outbound in S.Moreover, we notice that the subgraph of {a mathematical formula}G(PM) induced by S is a strongly connected component and then both P and {a mathematical formula}PM are not HCF. □
+      </paragraph>
+      <paragraph label="Example 3">
+       General CNF theories – continuedGiven a non-positive CNF Π, it holds that if Π is not HEF, then also {a mathematical formula}Π+ is not HEF.Let {a mathematical formula}Π′ be the subset of Π obtained by removing the constraints in Π. Notice that {a mathematical formula}Π′ can be obtained from {a mathematical formula}Π+ by first removing the clauses of the form {a mathematical formula}a←ϕ for each {a mathematical formula}a∈atom(Π) (see point (3) of Definition 2) and then projecting it on {a mathematical formula}atom(Π). Since the HEF property does not depend on the constraints, it follows from Lemma 5.3 (reported in Section 5.4) that if Π is not HEF, then {a mathematical formula}Π+ is not HEF as well.Conversely, if Π is HEF, then {a mathematical formula}Π+ can happen to be either HEF or not.As an example, consider the theories displayed in Fig. 3 of Section 3. In this case Π and {a mathematical formula}Π+ are both HEF. Conversely, consider the theories reported in Fig. 5. In this case, Π is HEF, whereas {a mathematical formula}Π+ is not. □
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Super-elementary sets
+      </section-title>
+      <paragraph>
+       We introduce next the definition of simplified theory and of super-elementary set that will play a relevant role in the definition of the eliminating operator for HEF theories.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Simplified theoryLet Π be a CNF theory and {a mathematical formula}M be a model of Π. Then the simplified theory of Π w.r.t. {a mathematical formula}M, denoted as {a mathematical formula}ΣM(Π), is the CNF theory {a mathematical formula}(σM(Π))M∖St, where{a mathematical formula} and {a mathematical formula}St is the steady set of {a mathematical formula}M in Π.
+      </paragraph>
+      <paragraph>
+       The clauses in {a mathematical formula}σM(Π) are those clauses of Π having the body fully contained in {a mathematical formula}M and some atoms of the head contained in {a mathematical formula}M but not in {a mathematical formula}St. Note that it cannot be the case for the head of any clause in {a mathematical formula}σM(Π) to have empty intersection with {a mathematical formula}M (or, analogously, the head is empty) since, in such a case, {a mathematical formula}M would not be a model for Π. Then, intuitively, {a mathematical formula}σM(Π) contains the subset of the clauses of Π which could be falsified if atoms would be eliminated from the model {a mathematical formula}M, so that we would have a model for Π no longer. Note that, we do not consider the case that atoms of {a mathematical formula}St are eliminated from {a mathematical formula}M since, by definition of steady set, if any atom of {a mathematical formula}St were eliminated we would have no longer models for Π in {a mathematical formula}M. Simplified theories enjoy two useful properties.
+      </paragraph>
+      <paragraph>
+       As for the first, we observe that, for any CNF theory Π and model {a mathematical formula}M of Π, {a mathematical formula}σM(Π) is positive.
+      </paragraph>
+      <paragraph>
+       The second one, summarized in the following lemma, tells that {a mathematical formula}σM(Π) contains no facts.
+      </paragraph>
+      <paragraph label="Lemma 5.1">
+       Let Π be a CNF theory and let{a mathematical formula}Mbe a model of Π. Then no clause of the form h←, with h a single letter, occurs in the theory{a mathematical formula}ΣM(Π).
+      </paragraph>
+      <paragraph>
+       Next, we introduce the notion of super-elementary set which will be used for defining the eliminating operator for HEF theories.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Super-elementary setGiven a CNF theory Π and a set {a mathematical formula}X⊆atom(Π), X is super-elementary for Π if X is both an elementary set for Π and a non-outbound set in {a mathematical formula}atom(Π) for Π.
+      </paragraph>
+      <paragraph>
+       Intuitively, a super-elementary set X for Π is a set of atoms such that for no disjunctive clause c in Π, the body of c is satisfied by atoms not occurring in X and its head is contained in X (as will be clear in the proof of Theorem 5.1). Notice that, as a consequence, no clause may become unsatisfied by removing a super-elementary set X from a model.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       On the erasability properties of super-elementary sets
+      </section-title>
+      <paragraph>
+       Next, we are going to show that, given any theory Π and model {a mathematical formula}M of Π, any super-elementary set is erasable in {a mathematical formula}M for Π. In order to do that, we shall:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        demonstrate a one-to-one correspondence between the erasable sets in {a mathematical formula}M for Π and the erasable sets in {a mathematical formula}M∖St for {a mathematical formula}ΣM(Π), where {a mathematical formula}St is the steady set of {a mathematical formula}M for Π (Lemma 5.2),
+       </list-item>
+       <list-item label="2.">
+        show that the property of a theory Π being HEF is retained by the subsets of Π (Lemma 5.3): this implies that if a theory Π is HEF then, for each model {a mathematical formula}M of Π, also {a mathematical formula}ΣM(Π) is HEF,
+       </list-item>
+       <list-item label="3.">
+        prove that, for any HEF theory Π and any model {a mathematical formula}M of Π, any super-elementary set is erasable in {a mathematical formula}ΣM(Π) (Theorem 5.1), whereby the sought result is obtained.
+       </list-item>
+      </list>
+      <paragraph>
+       The following results are conducive to the achievement of the aforementioned objectives. To ease readability, some of the proofs are reported in Appendix A.
+      </paragraph>
+      <paragraph label="Lemma 5.2">
+       Let Π be a CNF theory, let{a mathematical formula}Mbe a model of Π and let{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π. A set of atoms{a mathematical formula}Eis erasable in{a mathematical formula}Mfor Π if and only if{a mathematical formula}Eis erasable in{a mathematical formula}(M∖St)⊇atom(ΣM(Π))for{a mathematical formula}ΣM(Π).
+      </paragraph>
+      <paragraph>
+       Intuitively, as a consequence of this lemma in order to find an erasable set for a given theory it is sufficient to focus on its simplified form.
+      </paragraph>
+      <paragraph label="Lemma 5.3">
+       Let Π be a HEF CNF theory. For each set of clauses{a mathematical formula}Π′⊆Πand for each set of atoms X, the theory{a mathematical formula}ΠX′is HEF.
+      </paragraph>
+      <paragraph label="Theorem 5.1">
+       Let Π be a HEF CNF theory, let{a mathematical formula}Mbe a model for Π and let{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π, If{a mathematical formula}E⊆atom(ΣM(Π))is super-elementary for{a mathematical formula}ΣM(Π)then{a mathematical formula}Eis erasable in{a mathematical formula}Mfor Π.
+      </paragraph>
+      <paragraph label="Proof">
+       By Lemma 5.2 it suffices to prove that {a mathematical formula}E is erasable in {a mathematical formula}atom(ΣM(Π)) for {a mathematical formula}ΣM(Π), which is accounted for next.First of all, recall that {a mathematical formula}ΣM(Π) is a positive theory. Moreover, by Lemma 5.3, {a mathematical formula}ΣM(Π) is HEF, since Π is HEF.Clearly, {a mathematical formula}atom(ΣM(Π)) is a model of {a mathematical formula}ΣM(Π). It must be proven that each clause of {a mathematical formula}ΣM(Π) is true in {a mathematical formula}atom(ΣM(Π))∖E. Let {a mathematical formula}H←B be a generic clause of {a mathematical formula}ΣM(Π) such that {a mathematical formula}E contains H: this is the only kind of clause that might become false in {a mathematical formula}atom(ΣM(Π))∖E. Next, it is proven that {a mathematical formula}H←B is true in {a mathematical formula}atom(ΣM(Π))∖E. First notice that, by definition of {a mathematical formula}ΣM(Π), it cannot be the case that H is empty and {a mathematical formula}|B|⩾1. Thus, the following three cases have to be considered:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        B is empty and{a mathematical formula}|H|=1. By Lemma 5.1, such a clause cannot exist.
+       </list-item>
+       <list-item label="2.">
+        B is empty and{a mathematical formula}|H|&gt;1. Notice that, since {a mathematical formula}E is an elementary set for {a mathematical formula}ΣM(Π), it cannot be the case that {a mathematical formula}|H∩E|&gt;1 or, in other words, that {a mathematical formula}E⊇H, since the theory {a mathematical formula}ΣM(Π) is HEF. Hence, the clause {a mathematical formula}H←B is true also in {a mathematical formula}atom(ΣM(Π))∖E.
+       </list-item>
+       <list-item label="3.">
+        B is not empty. By contradiction, assume that {a mathematical formula}H←B is false in {a mathematical formula}atom(ΣM(Π))∖E. Then, {a mathematical formula}H←B is such that {a mathematical formula}H⊆E and {a mathematical formula}B⊆atom(ΣM(Π))∖E, namely, none of the atoms in B occurs in {a mathematical formula}E. But this rule cannot exist, since {a mathematical formula}E is non-outbound in {a mathematical formula}atom(ΣM(Π)) for {a mathematical formula}ΣM(Π). □
+       </list-item>
+      </list>
+     </section>
+     <section label="5.5">
+      <section-title>
+       On the existence of a super-elementary set in a HEF theory
+      </section-title>
+      <paragraph>
+       Next, we are going to show that, under the condition that {a mathematical formula}atom(Π)=atom(Πnd), any HEF theory Π has a super-elementary set. This result, stated as Theorem 5.2 below, shall be attained by preliminarily proving that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        a super-elementary set for the non-disjunctive subset of a positive CNF theory is also super-elementary for the whole theory (Lemma 5.4),
+       </list-item>
+       <list-item label="2.">
+        each HEF CNF theory Π has a super-elementary set (Lemma 5.5).
+       </list-item>
+      </list>
+      <paragraph label="Lemma 5.4">
+       Let Π be a HEF CNF theory. If{a mathematical formula}O⊆atom(Πnd)is super-elementary for{a mathematical formula}Πndthen O is super-elementary for Π.
+      </paragraph>
+      <paragraph label="Lemma 5.5">
+       Let Π be a non-disjunctive CNF theory. Each minimal non-outbound set in{a mathematical formula}atom(Π)for Π is super-elementary for Π.
+      </paragraph>
+      <paragraph>
+       The following result eventually states another key property of super-elementary sets in HEF CNF theories.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Π be a disjunctive HEF CNF theory such that{a mathematical formula}atom(Π)=atom(Πnd). Then, there exists a non-empty set of atoms{a mathematical formula}O⊆atom(Π)such that O is super-elementary for Π.Since Π is a disjunctive HEF CNF theory, it cannot be the case that {a mathematical formula}atom(Π)=atom(Πnd) is elementary for {a mathematical formula}Πnd, for otherwise {a mathematical formula}atom(Π) would be elementary also for Π, implying that Π is not HEF. Since {a mathematical formula}atom(Πnd) is not elementary in {a mathematical formula}Πnd, by definition, there exists a set of atoms which is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd and, in particular, there exists a minimal non-outbound set {a mathematical formula}O⊂atom(Πnd) for {a mathematical formula}atom(Πnd) in {a mathematical formula}Πnd. To conclude, O is super-elementary for {a mathematical formula}Πnd by Lemma 5.5 and, since {a mathematical formula}O⊂atom(Πnd)=atom(Π), O is super-elementary for Π by Lemma 5.4.  □
+      </paragraph>
+     </section>
+     <section label="5.6">
+      <section-title>
+       Computing a super-elementary set
+      </section-title>
+      <paragraph>
+       This section is devoted to proving that a super-elementary set of a HEF CNF theory can be, in fact, computed in polynomial time.
+      </paragraph>
+      <paragraph>
+       The task of computing a super-elementary set is accomplished by the function find_super-elementary_set shown in Fig. 8.
+      </paragraph>
+      <paragraph>
+       At each iteration, the function find_super-elementary_set makes use of the function compute_elementary_subgraph, which is detailed in Fig. 6. The latter function receives as input a theory Π and a set of atoms X, and returns a graph, also denoted by {a mathematical formula}Gˆ(Π,X), called the elementary subgraph of X for Π[14]. The function reported in Fig. 6 is substantially the same as that described on page 4 of [14]. Specifically, in the pseudo-code, by {a mathematical formula}〈X,E〉 it is denoted a graph where X is the set of nodes and E is the set of arcs.
+      </paragraph>
+      <paragraph label="Example 5">
+       Elementary subgraphFig. 7 reports an example of computation of an elementary subgraph.Since {a mathematical formula}E0=∅, {a mathematical formula}Gˆ0 is a graph including nodes but no arcs (see Fig. 7(c)). The clauses in Π whose body is fully contained in one strongly connected component of {a mathematical formula}Gˆ0 are all the clauses with just one atom in the body, namely {a mathematical formula}C={c1,c2,c3,c5}. Thus, {a mathematical formula}E1 consists in set of arcs {a mathematical formula}{(a,b),(c,a),(a,c),(d,a)} and the clauses {a mathematical formula}c1, {a mathematical formula}c2, {a mathematical formula}c3 and {a mathematical formula}c5 are removed from Π.The graph {a mathematical formula}Gˆ1 is shown in Fig. 7(d). The unique clause left in Π whose body is fully contained in a strongly connected is {a mathematical formula}c4, then {a mathematical formula}C={c4}, {a mathematical formula}E2={(a,d),(c,d)}, and {a mathematical formula}c4 is removed from Π.Fig. 7(e) reports the graph {a mathematical formula}Gˆ2. Since the body of {a mathematical formula}c6 does not belong to a strongly connected component of {a mathematical formula}Gˆ2, the procedure stops returning {a mathematical formula}Gˆ2 as the elementary subgraph {a mathematical formula}Gˆ(Π,X) of X for Π. □
+      </paragraph>
+      <paragraph>
+       Next, we recall the main result stated in [14], concerning elementary subgraphs.
+      </paragraph>
+      <paragraph label="Proposition 5.1">
+       (See Theorem 2 of[14].) For any non-disjunctive theory Π and any set X of atoms occurring in Π, X is an elementary set for Π if and only if the elementary subgraph of X for Π is strongly connected.
+      </paragraph>
+      <paragraph>
+       Moreover, as also proven in [14], the following proposition holds.
+      </paragraph>
+      <paragraph label="Proposition 5.2">
+       (See[14].) The procedure compute_elementary_subgraph terminates in polynomial time.
+      </paragraph>
+      <paragraph>
+       Indeed, at each iteration, a non-empty set of clauses (for otherwise the algorithm would stop) is taken into account and each clause of the theory is considered at most once. Thus, the number of iterations is at most linear w.r.t. the number of clauses of the theory. As for the cost of a single iteration, we have first to find a clause c such that the subgraph of {a mathematical formula}Gˆi induced by the body of c is strongly connected. This task can be clearly accomplished in polynomial time. Second, we have to build the new graph {a mathematical formula}Gˆi+1 by adding new arcs to {a mathematical formula}Gˆi, a task that can be accomplished also in polynomial time.
+      </paragraph>
+      <paragraph>
+       Let us now resort to the function find_super-elementary_set (see Fig. 8).
+      </paragraph>
+      <paragraph>
+       Assume that the set {a mathematical formula}atom(Πnd) is not elementary for {a mathematical formula}Πnd. Then the elementary graph {a mathematical formula}Gˆ(atom(Πnd),Πnd) is not strongly connected (by Proposition 5.1). Therefore, the graph {a mathematical formula}Gˆ(atom(Πnd),Πnd) can be partitioned into the sets {a mathematical formula}C1,…,Ck of its maximal strongly connected components and organized into {a mathematical formula}m⩾1 levels, such that if there is an arc from a node in a strongly connected component {a mathematical formula}Ci to a node in a strongly connected component {a mathematical formula}Cj, then the level of {a mathematical formula}Ci precedes the level of {a mathematical formula}Cj. Isolated strongly connected components possibly occurring in the graph are assumed to be part of the last level m, namely the level made by the strongly connected components with no outgoing edges.
+      </paragraph>
+      <paragraph>
+       The following theorem states the correctness of the function find_super-elementary_set.
+      </paragraph>
+      <paragraph label="Theorem 5.3">
+       Let Π be a disjunctive HEF CNF theory such that{a mathematical formula}atom(Π)=atom(Πnd). Then, the function find_super-elementary_ set(Π) computes a super-elementary set for Π.
+      </paragraph>
+      <paragraph>
+       In order to prove the theorem the following result is useful.
+      </paragraph>
+      <paragraph label="Claim 1">
+       For each{a mathematical formula}i⩾0,{a mathematical formula}Xiis a non-empty non-outbound set in{a mathematical formula}atom(Πnd)for{a mathematical formula}Πnd.
+      </paragraph>
+      <paragraph label="Proof of Claim 1">
+       The proof is by induction.We start by noticing that the non-empty set {a mathematical formula}X0=atom(Π)=atom(Πnd) is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd, by definition of outbound set. Moreover, consider the graph {a mathematical formula}G0, namely, the elementary graph associated with the set of atoms {a mathematical formula}X0=atom(Πnd) and the theory {a mathematical formula}Πnd. Note that this graph is not strongly connected since Π is, by hypothesis, a disjunctive HEF theory such that {a mathematical formula}atom(Π)=atom(Πnd) and then {a mathematical formula}atom(Π) is not elementary for {a mathematical formula}Πnd.Now, for {a mathematical formula}i&gt;1, assume by induction hypothesis that {a mathematical formula}Xi is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd and that the graph {a mathematical formula}Gi is not strongly connected (for otherwise the algorithm would have stopped). Consider a strongly connected component {a mathematical formula}C of the last level of {a mathematical formula}Gi and the set {a mathematical formula}Xi+1=Xi∖C. Note that {a mathematical formula}Xi+1 is non-empty since, by induction hypothesis, {a mathematical formula}Gi is not strongly connected and note, moreover, that also {a mathematical formula}C is not empty.Next, it is shown that {a mathematical formula}Xi+1 is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd or, in other words, that there does not exist any clause {a mathematical formula}c≡h←B such that {a mathematical formula}B⊆X0∖Xi+1 and {a mathematical formula}h∈Xi+1, (note that this means that, without loss of generality, we can limit ourselves to focus only on such single-head clauses where the atom in the head belongs to {a mathematical formula}Xi+1 and the body is in {a mathematical formula}X0∖Xi+1).So, assume by contradiction that one such a clause c indeed exists. Two cases are possible. {a mathematical formula}B∩C=∅.In this case, {a mathematical formula}B⊆X0∖Xi. Therefore, c cannot exist in {a mathematical formula}Πnd since {a mathematical formula}Xi is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd.{a mathematical formula}B∩C≠∅.Also in this case, the clause c cannot exist in {a mathematical formula}Πnd. Indeed, the clause {a mathematical formula}cXi obtained by projecting c on {a mathematical formula}Xi, has its body contained in {a mathematical formula}C and its head in {a mathematical formula}Xi+1. Since this clause would belong to {a mathematical formula}ΠXind, then it would be the case that {a mathematical formula}C would not belong to the last level of {a mathematical formula}Gi.This concludes the proof of Claim 1.  □
+      </paragraph>
+      <paragraph>
+       Using Claim 1, the statement of Theorem 5.3 easily follows, as shown next.
+      </paragraph>
+      <paragraph label="Proof of Theorem 5.3">
+       When the algorithm find_super-elementary_set stops, the last set {a mathematical formula}Xi is elementary for {a mathematical formula}Πnd, since the graph {a mathematical formula}Gi is strongly connected. By Claim 1, the set {a mathematical formula}Xi is also non-empty and non-outbound in {a mathematical formula}atom(Π) for {a mathematical formula}Πnd. To conclude, by Lemma 5.4, the set {a mathematical formula}Xi is super-elementary for Π. □
+      </paragraph>
+      <paragraph label="Example 1">
+       Minimal models of positive CNF theories – continuedConsider again the theory Π reported in Fig. 1 and the function find_super-elementary_set(Π). The strongly connected components of the elementary subgraph {a mathematical formula}G0 are shown in Fig. 9 on the left. Thus, there is a unique strongly connected component in the last level of {a mathematical formula}G0, which is {a mathematical formula}C={j,h}, and {a mathematical formula}X1 is set to {a mathematical formula}{a,b,c,d,e,f,g,i}. Notice that the strongly connected components of the elementary subgraph {a mathematical formula}G1, which are reported in Fig. 9 on the right, are not a subset of those of {a mathematical formula}G0. The set {a mathematical formula}X2 is then {a mathematical formula}{a,b,c,d} and it is the super-elementary set returned by the function. □
+      </paragraph>
+      <paragraph>
+       The next theorem accounts for the complexity of the function find_super-elementary_set.
+      </paragraph>
+      <paragraph label="Theorem 5.4">
+       For any CNF theory Π, the function find_super-elementary_set(Π) terminates in polynomial time in the size of the theory.
+      </paragraph>
+      <paragraph label="Proof">
+       Initially {a mathematical formula}X0 contains all the atoms occurring in the input theory. Then, at each iteration, either the graph {a mathematical formula}Gi is strongly connected and then the function stops and returns {a mathematical formula}Xi, or {a mathematical formula}Gi is not strongly connected and in such case some node is removed from {a mathematical formula}Xi. In the latter case, there exist at least two strongly connected components in graph {a mathematical formula}Gi. {a mathematical formula}C is one of them and is such that {a mathematical formula}Xi⊃C⊃∅. Thus, {a mathematical formula}Xi+1 is always non-empty. As for the convergence, it is ensured by the fact that the singleton set is strongly connected by definition.The number of iterations executed by the find_super-elementary_set function is at most equal to the number of atoms occurring in the input theory, since in the worst case {a mathematical formula}C consists in just one single atom at each iteration. The statement follows by the fact that each iteration can be accomplished in polynomial time.  □
+      </paragraph>
+     </section>
+     <section label="5.7">
+      <section-title>
+       Defining an eliminating operator for HEF CNF theories
+      </section-title>
+      <paragraph>
+       In previous sections, we showed that:
+      </paragraph>
+      <list>
+       <list-item label="–">
+        given a HEF CNF theory Π and a model {a mathematical formula}M for Π, a super-elementary set for {a mathematical formula}ΣM(Π) is erasable in {a mathematical formula}M for Π (Theorem 5.1 in Section 5.4),
+       </list-item>
+       <list-item label="–">
+        given a HEF CNF theory Π, if the set of atoms of Π coincides with that of its non-disjunctive fragment, a super-elementary set always exists (see Theorem 5.2 in Section 5.5) and can be indeed computed in polynomial time (see Theorem 5.3, Theorem 5.4 in Section 5.6).
+       </list-item>
+      </list>
+      <paragraph>
+       Putting things together, given a HEF CNF, it can be concluded that if {a mathematical formula}atom(ΣM(Π)) coincides with {a mathematical formula}atom(ΣMnd(Π)), an erasable set {a mathematical formula}E in {a mathematical formula}M for Π can be obtained by computing a super-elementary set for {a mathematical formula}ΣM(Π) (as detailed in Section 5.6).
+      </paragraph>
+      <paragraph>
+       In order to build a suitable eliminating operator for HEF theories, it remains to prove that if {a mathematical formula}atom(ΣM(Π)) is a strict superset of {a mathematical formula}atom(ΣMnd(Π)) then it is always possible to find in polynomial time a model {a mathematical formula}M′⊆M such that {a mathematical formula}atom(ΣM′(Π)) coincides with {a mathematical formula}atom(ΣM′nd(Π)).
+      </paragraph>
+      <paragraph label="Proposition 5.3">
+       Given a CNF theory Π and a model{a mathematical formula}Mfor Π, a model{a mathematical formula}M′⊆Msuch that{a mathematical formula}atom(ΣM′(Π))coincides with{a mathematical formula}atom(ΣM′nd(Π))can be computed in polynomial time.
+      </paragraph>
+      <paragraph>
+       The above result, which is valid not only for HEF CNF theories but, rather, for any CNF theory, will make the strategy above depicted generally applicable to any HEF CNF theory.
+      </paragraph>
+      <paragraph>
+       In order to prove Proposition 5.3, the intermediate results stated in technical Lemma 5.6, Lemma 5.7 are preliminarily needed.
+      </paragraph>
+      <paragraph label="Lemma 5.6">
+       Let Π be a CNF theory, let{a mathematical formula}Mbe a model of Π and let{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π. Then,{a mathematical formula}E=(M∖St)∖atom(ΣM(Π))is erasable in{a mathematical formula}Mfor Π.
+      </paragraph>
+      <paragraph label="Lemma 5.7">
+       Let Π be a CNF theory and let{a mathematical formula}Mbe a model of Π. If there exists an atom a such that{a mathematical formula}a∈M∖atom(ΠM←nd)then{a mathematical formula}{a}is erasable in{a mathematical formula}Mfor Π.
+      </paragraph>
+      <paragraph>
+       We are now in the position of proving Proposition 5.3.
+      </paragraph>
+      <paragraph label="Proof of Proposition 5.3">
+       Let {a mathematical formula}St denote the steady set of {a mathematical formula}M in Π. The two following transformations (see points 1–2) can be recursively applied, till the condition {a mathematical formula}atom(ΣM(Π))=atom(ΣMnd(Π)) is met:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}IfM∖Stis a strict superset ofatom(ΣM(Π))then̲ by Lemma 5.6 the atoms in the non-empty set {a mathematical formula}E=(M∖St)∖atom(ΣM(Π)) are erasable in {a mathematical formula}M for Π and {a mathematical formula}M′ can be set to {a mathematical formula}M∖E;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Else ifM∖Stis a strict superset ofatom(ΣMnd(Π))then̲ any atom {a mathematical formula}a∈(M∖St)∖atom(ΣMnd(Π)) is such that {a mathematical formula}{a} is erasable in {a mathematical formula}M∖St for {a mathematical formula}ΣM(Π) (by Lemma 5.7, since {a mathematical formula}M∖St is a model for {a mathematical formula}ΣMnd(Π)) and also erasable in {a mathematical formula}M for Π (by Lemma 5.2); hence, let {a mathematical formula}E={a} an arbitrarily chosen atom in {a mathematical formula}(M∖St)∖atom(ΣMnd(Π)), then {a mathematical formula}M′ can be set to {a mathematical formula}M∖E;
+       </list-item>
+       <list-item label="3.">
+        Else it is the case that {a mathematical formula}atom(ΣM(Π))=atom(ΣMnd(Π)).
+       </list-item>
+      </list>
+      <paragraph>
+       Before describing the {a mathematical formula}ξHEF eliminating operator, the following technical result is needed.
+      </paragraph>
+      <paragraph label="Lemma 5.8">
+       Let Π be a CNF theory, let{a mathematical formula}Mbe a model of Π, and let{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π. If the theory{a mathematical formula}ΣM(Π)is non-disjunctive, then ∅ is its minimal model.
+      </paragraph>
+      <paragraph>
+       Fig. 10 shows a realization of the {a mathematical formula}ξHEF eliminating operator. The following theorem asserts the most relevant result of this section, that is, that a minimal model for a HEF CNF theory can be indeed computed in polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Π be a HEF CNF theory and{a mathematical formula}Mbe a model of Π. Then,{a mathematical formula}GEAξHEF(Π,M)computes, in polynomial time, a minimal model of Π contained in{a mathematical formula}M.Because of Theorem 4.1 and Proposition 4.2, in order to prove the statement, it is sufficient to show that (i) {a mathematical formula}ξHEF returns an erasable set, if such a set exists, and an empty one otherwise (namely that {a mathematical formula}ξHEF is, in fact, an eliminating operator) and that (ii) {a mathematical formula}ξHEF runs in polynomial time.Let us consider first point (i). Lines 2–12 in Fig. 10 serve the purpose of finding a subset {a mathematical formula}M′⊆M such that {a mathematical formula}atom(ΣM′(Π)) coincides with {a mathematical formula}atom(ΣM′nd(Π)) according to the strategy depicted in the proof of Proposition 5.3 Notice that, the set {a mathematical formula}E′=M∖M′ is an erasable set.We can now assume that {a mathematical formula}atom(ΣM(Π)) coincides with {a mathematical formula}atom(ΣMnd(Π)). If the theory {a mathematical formula}ΣM(Π) is non-disjunctive, then by Lemma 5.8, Lemma 5.2, the set {a mathematical formula}E″=M∖St is an erasable set in {a mathematical formula}M for Π and the operator returns {a mathematical formula}E′∪E″ (see lines 13–14).Otherwise, {a mathematical formula}ΣM(Π) is disjunctive. Then, by Theorem 5.2 there exists a non-empty set of atoms {a mathematical formula}E″⊆(M∖St) such that {a mathematical formula}E″ is super-elementary for {a mathematical formula}ΣM(Π) and, by Theorem 5.1, the set {a mathematical formula}E″ is erasable in {a mathematical formula}M∖St for {a mathematical formula}ΣM(Π). In this case, the operator returns the erasable set {a mathematical formula}E′∪E″.As far as point {a mathematical formula}(ii) is concerned, this is a direct consequence of Theorem 5.4 and this concludes the proof.  □
+      </paragraph>
+      <paragraph>
+       As for minimal model checking, we have the following result.
+      </paragraph>
+      <paragraph label="Proof">
+       Given a positive HEF CNF theory Π and a set of atoms{a mathematical formula}N⊆atom(Π), checking if{a mathematical formula}Nis a minimal model of Π can be accomplished in polynomial time.The proof follows immediately from Theorem 4.1 and Theorem 5.5.  □
+      </paragraph>
+      <paragraph label="Example 1">
+       Minimal models of positive CNF theories – continuedLet us consider the execution of {a mathematical formula}GEAξHEF(Π,M), where Π is the HEF theory Π reported in Fig. 1 and {a mathematical formula}M=atom(Π). During the first main iteration, the eliminating operator {a mathematical formula}ξHEF returns the super-elementary set {a mathematical formula}{a,b,c,d}, as shown in the example of Section 5.6 and {a mathematical formula}M is set to {a mathematical formula}{e,f,g,h,i,j}. As for the next iteration, the output of {a mathematical formula}ξHEF is {a mathematical formula}{e,f,g,i} and {a mathematical formula}M becomes {a mathematical formula}{j,h}. Since now {a mathematical formula}M coincides with the steady set of {a mathematical formula}ΠM={j←;h←;h←j;j←h}, the algorithm stops returning {a mathematical formula}{j,h} as a minimal model of Π.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Beyond HEF
+     </section-title>
+     <paragraph>
+      In the previous section, we have shown that {a mathematical formula}GEA(ξHEF) computes a minimal model of a positive HEF CNF theory in polynomial time. Unfortunately, however, deciding if a given theory is head-elementary-free is a coNP-complete problem [13].{sup:6} In other words, while a minimal model for an input HEF CNF theory Π can be indeed computed in polynomial time, checking whether Π is actually HEF is intractable.
+     </paragraph>
+     <paragraph>
+      Thus, it is sensible to study the behavior of {a mathematical formula}GEA(ξHEF) as applied to a general CNF theory, which is the subject of this section. Recall that, by Theorem 5.4, the find_super-elementary_set function runs in polynomial time independently of the kind of theory it is applied to.
+     </paragraph>
+     <paragraph>
+      Next, we will show that there are non-HEF theories for which {a mathematical formula}GEA(ξHEF) successfully returns a minimal model and others for which {a mathematical formula}GEA(ξHEF) ends failing to construct a correct output{sup:7} (recall that, on the basis of the results of the previous section, GEA always returns a correct solution on HEF theories). The following example should help in clarifying this latter issue.
+     </paragraph>
+     <paragraph label="Example 6">
+      Behavior on non-HEF theoriesConsider the following two theories:{a mathematical formula}Both theories are not HEF. Indeed, the set {a mathematical formula}{b,c} is a disjunctive elementary set, both for {a mathematical formula}P and for {a mathematical formula}Q. However, while {a mathematical formula}GEA(ξHEF) does not return a minimal model of {a mathematical formula}P, it does correctly compute a minimal model of {a mathematical formula}Q.To show that, consider first running {a mathematical formula}GEA(ξHEF) on {a mathematical formula}P. Let {a mathematical formula}M be {a mathematical formula}{a,b,c} (this is the model obtained by taking the union of all the heads). At line 3 of GEA, {a mathematical formula}St is set to {a mathematical formula}{a}, which is not a model of {a mathematical formula}P and, then, {a mathematical formula}ξHEF is invoked. In particular, the find_super-elementary_set function is executed on the theory {a mathematical formula}P′={b,c←;c←b;b←c}. In the execution of the function, {a mathematical formula}X0 is {a mathematical formula}{b,c}. Since the elementary graph associated with {a mathematical formula}P′X0nd is strongly connected, the function stops and returns {a mathematical formula}{b,c}. As a consequence, the set {a mathematical formula}E is {a mathematical formula}{b,c} and the new set {a mathematical formula}M is {a mathematical formula}{a}. It turns out that, since the set {a mathematical formula}M is not a model for {a mathematical formula}P any longer, {a mathematical formula}GEA(ξHEF) is not able to return a minimal model of {a mathematical formula}P. Specifically, at the second iteration of {a mathematical formula}GEA(ξHEF), {a mathematical formula}ξHEF is invoked on the theory {a mathematical formula}P and on the set {a mathematical formula}M={a}. The steady set {a mathematical formula}St computed at line 1 in Fig. 10 is equal to {a mathematical formula}{a} (since {a mathematical formula}ΠM←nd is the theory {a mathematical formula}{a←}) and the theory {a mathematical formula}Π¯ is empty. The set of atoms {a mathematical formula}R=M∖St computed at line 3 and {a mathematical formula}Π¯R are empty too. Then the condition at line 9 is true and {a mathematical formula}R=∅ is returned. Thus, at the second iteration of {a mathematical formula}GEA(ξHEF), {a mathematical formula}E is empty and, then, {a mathematical formula}St is set to {a mathematical formula}M={a} and returned. Concluding, {a mathematical formula}GEA(ξHEF) on {a mathematical formula}P ends returning {a mathematical formula}{a} which is not a minimal model of Π.Consider, now, the theory {a mathematical formula}Q. Let {a mathematical formula}M be {a mathematical formula}{a,b,c,d}, which is the model obtained by taking the union of all the heads. The set {a mathematical formula}St is set to {a mathematical formula}{a} which is not a model of {a mathematical formula}Q and, then, {a mathematical formula}ξHEF is invoked. In particular, the find_super-elementary_set function is executed on the theory {a mathematical formula}Q′={b,c,d←;c←b;b←c;d←c}. In the execution of the function, {a mathematical formula}X0 is {a mathematical formula}{b,c,d}. The elementary graph associated with {a mathematical formula}Q′X0nd is not strongly connected; actually, it includes the strongly connected component {a mathematical formula}C1 containing b and c and the strongly connected component {a mathematical formula}C2 containing d. Moreover, there is an edge from {a mathematical formula}C1 to {a mathematical formula}C2 but not vice versa. Then, {a mathematical formula}C2 belongs to the last level of the graph, and {a mathematical formula}X1 is set to {a mathematical formula}X0∖{d}={b,c}. The elementary subgraph associated with {a mathematical formula}Q′X1nd is strongly connected; therefore the function stops and returns the set {a mathematical formula}X1={b,c}. As a consequence the set {a mathematical formula}E is {a mathematical formula}{b,c} and, now, the set {a mathematical formula}M is {a mathematical formula}{a,d} and the theory {a mathematical formula}Q′M←nd is {a mathematical formula}{a←;d←a} whose minimal model is {a mathematical formula}St={a,d}. Since {a mathematical formula}St is a model of {a mathematical formula}Q, {a mathematical formula}GEA(ξHEF) stops by returning {a mathematical formula}St as the result, which is indeed a minimal model of {a mathematical formula}Q. □
+     </paragraph>
+     <paragraph>
+      Summarizing, the algorithm {a mathematical formula}GEA(ξHEF) always runs in polynomial time and correctly returns a minimal model of HEF CNF theories, but its correctness on non-HEF theories is seemingly unpredictable: the rest of this section is devoted to devise a suitable variant of GEA able to tell about the correctness of the result it returns. In order to proceed, some further definitions and results are needed.
+     </paragraph>
+     <paragraph label="Definition 11">
+      Fallible eliminating operatorLet {a mathematical formula}M be a model of a positive CNF theory Π. A fallible eliminating operator{a mathematical formula}ξf is a polynomial time computable function that returns a subset of {a mathematical formula}M∖St, with {a mathematical formula}St the steady set of Π, with the constraint that if {a mathematical formula}ξf returns the empty set, then {a mathematical formula}M is a minimal model of Π.
+     </paragraph>
+     <paragraph label="Proposition 6.1">
+      Let Π be a positive CNF theory and{a mathematical formula}ξfbe a fallible eliminating operator. Checking if the set returned by running{a mathematical formula}GEA(ξf)over Π is a minimal model for Π is attainable in polynomial time.
+     </paragraph>
+     <paragraph label="Proof">
+      By Theorem 4.1, we know that if the set returned by the operator employed in GEA is an erasable set then the algorithm returns a minimal model. Thus, it is sufficient to check if, at each iteration, {a mathematical formula}E is an erasable set, namely it must be checked if {a mathematical formula}M∖E is a model for Π. Since this latter operation can be done in polynomial time, the statement follows.  □
+     </paragraph>
+     <paragraph>
+      As a consequence of our previous results, we are now able to present the modified GEA, called the Incomplete Generalized Elimination Algorithm (IGEA, for short), which is reported in Fig. 11.
+     </paragraph>
+     <paragraph>
+      The following theorem describes the correctness of IGEA as well as its computational complexity.
+     </paragraph>
+     <paragraph label="Theorem 6.1">
+      For any fallible eliminating operator{a mathematical formula}ξf,{a mathematical formula}IGEA(ξf)always terminates (with either success or failure) in polynomial time, returning a model of the input theory. If it succeeds, then the returned model is a minimal one.
+     </paragraph>
+     <paragraph label="Proof">
+      If the if branch at line 12 is never taken, then {a mathematical formula}M is, at each iteration, a model for Π and {a mathematical formula}E is an erasable set. In this case, the fallible eliminating operator {a mathematical formula}ξf is indeed an eliminating operator, whereby {a mathematical formula}IGEA(ξf) behaves as {a mathematical formula}GEA(ξf) does. This immediately implies that if {a mathematical formula}IGEA(ξf) does not report a “failure” then it returns a minimal model for Π.As far as the time complexity of the algorithm is concerned, following the same line of reasoning as before, if the if branch at line 12 is never taken, then {a mathematical formula}IGEA(ξf) requires exactly the same number of iterations as {a mathematical formula}GEA(ξf). Conversely, if the if branch at line 12 is taken, the algorithm ends. Thus, {a mathematical formula}IGEA(ξf) does not require more iterations than {a mathematical formula}GEA(ξf). As for the cost of a single iteration, {a mathematical formula}IGEA(ξf) has only one operation more than {a mathematical formula}GEA(ξf), consisting in checking if {a mathematical formula}M∖E is a model for Π (line 12). Since this operation is the same as that accomplished at line 4, the asymptotic temporal cost of the algorithm is not affected. Thus, the cost of {a mathematical formula}IGEA(ξf) is exactly that reported in Proposition 4.2 for the GEA, where {a mathematical formula}Cξf is polynomial, by definition of fallible eliminating operator.  □
+     </paragraph>
+     <paragraph label="Proof">
+      To conclude this section, we show that {a mathematical formula}ξHEF can, in fact, be safely adopted as fallible eliminating operator in IGEA. The following preliminary proposition is useful. Let Π be CNF theory,{a mathematical formula}Mbe a model for Π and{a mathematical formula}Stbe the steady set of{a mathematical formula}Mfor Π. If{a mathematical formula}Stis not a model for Π then, on input Π and{a mathematical formula}M, the operator{a mathematical formula}ξHEFreturns a non-empty set.Consider the theory {a mathematical formula}(σM(Π))M∖St. Since {a mathematical formula}St is not a model for Π, there are rules in Π which are not true in {a mathematical formula}St but are true in {a mathematical formula}M, thus that {a mathematical formula}(σM(Π))M∖St is not empty. Therefore, it is enough to prove that, whenever the function find_super-elementary_set is run over a non-empty theory, it returns a non-empty set.Consider the function find_super-elementary_set reported in Fig. 8. First of all, note that if Π is a non-empty theory and X is a non-empty set of atoms occurring in Π, then the elementary graph {a mathematical formula}Gˆ(ΠXnd) is non-empty as well. Thus, in the function, if {a mathematical formula}Xi is non-empty then {a mathematical formula}Gi is non-empty.The set {a mathematical formula}X0 at line 1 is non-empty since the function is invoked over a non-empty theory. By induction, assuming that {a mathematical formula}Xi is non-empty, we prove that {a mathematical formula}Xi+1 is non-empty as well.Consider the {a mathematical formula}(i+1)-th iteration. Two cases are possible:
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       {a mathematical formula}Gi is strongly connected and the function ends returning the set {a mathematical formula}Xi, which is non-empty by the induction hypothesis.
+      </list-item>
+      <list-item label="(ii)">
+       {a mathematical formula}Gi is not strongly connected and includes at least two strongly connected components. In such a case, only the atoms of one of the strongly connected components are removed from {a mathematical formula}Xi, call it {a mathematical formula}C. Then {a mathematical formula}Xi+1=Xi∖C is not empty. □
+      </list-item>
+     </list>
+     <paragraph label="Proposition 6.3">
+      The operator{a mathematical formula}ξHEFis a fallible eliminating operator.
+     </paragraph>
+     <paragraph label="Proof">
+      Let Π be a general positive CNF theory, {a mathematical formula}M be a model for Π and {a mathematical formula}St be the steady set of {a mathematical formula}M for Π. The proposition is an immediate consequence of the following facts: (i){a mathematical formula}ξHEF(Π,M) runs in polynomial time (by Theorem 5.4); (ii) the set returned by the operator {a mathematical formula}ξHEF(Π,M) is a subset of {a mathematical formula}M∖St; (iii) the set returned by {a mathematical formula}ξHEF(Π,M) is not empty (by Proposition 6.2).  □
+     </paragraph>
+     <paragraph>
+      Concluding, since {a mathematical formula}ξHEF is a fallible eliminating operator, for any CNF theory Π, {a mathematical formula}IGEA(ξHEF) runs in polynomial time returning a model and, on HEF theories, we are guaranteed that the returned model is minimal. Thus, the successful termination of {a mathematical formula}IGEA(ξHEF) can be also seen as a necessary condition for a theory to be HEF (but it is not a sufficient condition, unless coNP collapses onto P).
+     </paragraph>
+     <paragraph>
+      The next theorem, finally, summarizes the results of this section.
+     </paragraph>
+     <paragraph label="Theorem 6.2">
+      The algorithm{a mathematical formula}IGEA(ξHEF)terminates in polynomial time for any input positive CNF theory. Moreover, if the input theory Π is HEF, then{a mathematical formula}IGEA(ξHEF)succeeds returning a minimal model for Π; otherwise either the algorithm declares success returning a minimal model for Π or the algorithm declares failure returning a model for Π.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof immediately follows from Theorem 6.1 and Proposition 6.3.  □
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      Tasks related to computing with minimal models are relevant to several AI applications.
+     </paragraph>
+     <paragraph>
+      The focus of this paper has been devising efficient algorithms to deal with minimal models of CNF theories. In particular, mainly three problems have been considered, that are, minimal model checking, minimal model finding and model minimization. All these problems prove themselves to be intractable for general CNF theories, while it was known that they become tractable for the class of head-cycle-free theories [5] and, in fact, to the best of our knowledge, positive HCF theories form the largest class of CNFs for which polynomial time algorithms solving minimal model finding and minimal model checking are known so far. The research presented here follows the same research target as that of [5] and the main contribution of this work is that of designing a polynomial time algorithm for computing a minimal model for (a superset of) the class of positive HEF (Head Elementary-Set Free) CNF theories, a strict superset of the class of HCF theories, whose definition naturally stems for the analogous one given in the context of logic programming in [14]. This contribution thus broadens the tractability frontier associated with minimal model computation problems.
+     </paragraph>
+     <paragraph>
+      In more detail, we have introduced the Generalized Elimination Algorithm (GEA), that computes a minimal model of any positive CNF, whose complexity depends on the complexity of the specific eliminating operator it invokes. Therefore, in order to attain tractability, a specific eliminating operator has been defined which allows for the algorithm to compute in polynomial time a minimal model for a class of CNF that strictly includes HEF theories.
+     </paragraph>
+     <paragraph>
+      However, it is unfortunately already known that recognizing HEF theories is “per sé” an intractable problem, which may apparently limit the applicability range of our algorithmic schema. In order to overcome such a problem, an “incomplete” variant of the GEA (called IGEA) is proposed: the resulting schema, once instantiated with an appropriate elimination operator, always constructs a model of the input CNF, which is guaranteed to be minimal at least if the input theory is HEF. We note that this latter algorithm is able to “declare” if the returned model is indeed minimal or not.
+     </paragraph>
+     <paragraph>
+      The research work presented here can be continued along some interesting direction. As a major research direction, since the IGEA is capable to deal also with theories that are not HEF, it would be relevant to define, via a syntactic specification, as those pinpointing HCF and HEF theories, a superset HEF theories coinciding with those on which the IGEA stops returning a success. While it is not at all clear if this can be reasonably attained, we might consider it enough to get close (from below) to this class of theories. Very related to the above line of research, there is the assessment of the practical occurrence of theories having the HEF property or the property of guaranteeing success to the IGEA and also the assessment of the success rate of the IGEA on generic CNF theories. Moreover, enhancing stable models and answer set engines for logic programs with the IGEA appears a potentially fruitful line of investigation.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <paragraph label="Proof of Lemma 5.2">
+      The proof is organized in two parts, both proven by contradiction.(⟹) First of all note that, for each clause {a mathematical formula}c≡H←B in {a mathematical formula}ΣM(Π) there is, by definition, a clause {a mathematical formula}c′≡H′←B′ in {a mathematical formula}σM(Π) such that {a mathematical formula}HM∖St′=H≠∅ and {a mathematical formula}BM∖St′=B. Moreover, note that (by construction of {a mathematical formula}σM(Π)) {a mathematical formula}c′ is also in Π and that {a mathematical formula}B′⊆M.For the sake of contradiction, assume that c is true in {a mathematical formula}M∖St and false in {a mathematical formula}(M∖St)∖E. We aim at proving that if such a rule exists then there exists at least one rule (actually {a mathematical formula}c′) which is false in {a mathematical formula}M∖E.If c is false in {a mathematical formula}(M∖St)∖E, then B is contained in {a mathematical formula}(M∖St)∖E and {a mathematical formula}E contains H. Note that since {a mathematical formula}B∩E=∅ and since {a mathematical formula}B=B′∩(M∖St), it follows that also {a mathematical formula}B′∩E=∅ (and, then, {a mathematical formula}B′⊆M∖E).But, since {a mathematical formula}H′∩St=∅ (by construction of {a mathematical formula}σM(Π)) and since {a mathematical formula}H=H′∩(M∖St), if {a mathematical formula}H⊆E then also {a mathematical formula}H′⊆E.So, we have proven that {a mathematical formula}B′⊆(M∖E) and {a mathematical formula}H′⊆E; it follows that {a mathematical formula}c′ is false in {a mathematical formula}M∖E, which concludes the first part of the proof.(⟸) For the sake of contradiction, assume that there exists a clause {a mathematical formula}c′≡H←B in Π which is true in {a mathematical formula}M and false in {a mathematical formula}M∖E. Thus, {a mathematical formula}B⊆(M∖E) and {a mathematical formula}∅⊂H⊆E implying that {a mathematical formula}H∩St=∅ since, by definition of steady set and erasable set, any erasable set has empty intersection with the steady set, namely {a mathematical formula}E∩St=∅.Consider, now, the clause {a mathematical formula}c≡HM∖St←BM∖St. Since H is contained in {a mathematical formula}E and {a mathematical formula}E∩St=∅, it follows that {a mathematical formula}HM∖St is equal to H and is not empty, then c is by definition in {a mathematical formula}ΣM(Π). Conversely, since {a mathematical formula}B⊆(M∖E) then {a mathematical formula}BM∖St∩E=∅.Thus, c is a clause of {a mathematical formula}ΣM(Π) whose head is included in {a mathematical formula}E meaning that c is false in {a mathematical formula}(M∖St)∖E. But, since {a mathematical formula}M∖St is a model of {a mathematical formula}ΣM(Π), c is true in {a mathematical formula}M∖St. This concludes the proof since it contradicts that {a mathematical formula}E is an erasable set in {a mathematical formula}M∖St for {a mathematical formula}ΣM(Π). □
+     </paragraph>
+     <paragraph label="Proof of Lemma 5.1">
+      Let {a mathematical formula}St be the steady set of {a mathematical formula}M for Π. For the sake of contradiction, assume that such a clause {a mathematical formula}c≡h← belongs to {a mathematical formula}ΣM(Π). Clearly, in this case there exists at least one clause {a mathematical formula}c′ in {a mathematical formula}σM(Π)⊆Π such that {a mathematical formula}c=cM∖St′. By definition of {a mathematical formula}ΣM(Π), it is the case that h is the only atom in {a mathematical formula}M (and also in {a mathematical formula}M∖St) occurring in the head of the clause {a mathematical formula}c′ and, hence, it can be concluded that {a mathematical formula}cM←′ belongs also to the theory {a mathematical formula}ΠM←nd. The body of {a mathematical formula}c′ is contained in {a mathematical formula}M by definition of {a mathematical formula}σM(Π). Since the body of c is empty, there are two possibilities:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       The body of {a mathematical formula}c′ is also empty: but in this case h should belong to {a mathematical formula}St and the clause h← cannot be in {a mathematical formula}ΣM(Π), a contradiction;
+      </list-item>
+      <list-item label="2.">
+       The body of {a mathematical formula}c′ is contained in {a mathematical formula}St: but this means that {a mathematical formula}cM←′ is a clause of {a mathematical formula}ΠM←nd which is false in {a mathematical formula}St, which contradicts the fact that {a mathematical formula}St is the minimal model of {a mathematical formula}ΠM←nd. □
+      </list-item>
+     </list>
+     <paragraph label="Proof of Lemma 5.3">
+      The proof is given by contraposition: assuming that {a mathematical formula}ΠX′ is not HEF it is derived that Π is not HEF. If {a mathematical formula}ΠX′ is not HEF then, by Proposition 5.1, there is a set of atoms {a mathematical formula}E⊆X such that E is both a disjunctive and an elementary set for {a mathematical formula}ΠX′. Clear enough, if E is a disjunctive set for {a mathematical formula}ΠX′ then it is a disjunctive set for Π as well. Moreover, if E is elementary for {a mathematical formula}ΠX′ then, for each proper subset {a mathematical formula}O⊂E, there is a clause {a mathematical formula}cX≡HX←BX in {a mathematical formula}ΠX′ such that {a mathematical formula}HX∩O≠∅, {a mathematical formula}HX∩(E∖O)=∅, {a mathematical formula}BX∩O=∅ and {a mathematical formula}BX∩(E∖O)≠∅. By definition of {a mathematical formula}ΠX′, {a mathematical formula}cX∈ΠX′ implies that there is a clause {a mathematical formula}c≡H←B in Π such that {a mathematical formula}HX=H∩X and {a mathematical formula}BX=B∩X. Thus, since {a mathematical formula}O⊂E⊆X, it follows that {a mathematical formula}H∩O=HX∩O≠∅, {a mathematical formula}H∩(E∖O)=HX∩(E∖O)=∅, {a mathematical formula}B∩O=BX∩O=∅ and {a mathematical formula}B∩(E∖O)=BX∩(E∖O)≠∅. Therefore, O is outbound in E also for Π. As a consequence, E is elementary for Π and, since E is also a disjunctive set for Π, it is the case that Π is not HEF. □
+     </paragraph>
+     <paragraph label="Claim 2">
+      Before stating the lemma, it is needed to recall a result given in [13] asserting that if {a mathematical formula}O⊆atom(Πnd) is elementary for {a mathematical formula}Πnd then it is elementary also for Π.(Rephrased from[13].) Let Π be a CNF theory and{a mathematical formula}Π′⊆Πany CNF consisting of a subset of the clauses of Π. If{a mathematical formula}O⊆atom(Π′)is an elementary set for{a mathematical formula}Π′, then O is an elementary set for Π as well.By hypothesis, O is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd. In order to complete the proof, it is enough to prove that, since Π is HEF, O is non-outbound in {a mathematical formula}atom(Π) for Π, which is shown next.By contradiction, assume that O is outbound in {a mathematical formula}atom(Π) for Π. Since {a mathematical formula}atom(Π) is the set of all the atoms appearing in Π, then there exists a clause {a mathematical formula}H←B in Π such that {a mathematical formula}B⊆atom(Π)∖O and {a mathematical formula}H⊆O. Since O is non-outbound in {a mathematical formula}atom(Πnd) for {a mathematical formula}Πnd, then the clause {a mathematical formula}H←B is not in {a mathematical formula}Πnd and it holds that {a mathematical formula}|H|⩾2. As a consequence, O is an elementary set for Π and there is a clause {a mathematical formula}H←B such that {a mathematical formula}|H∩O|⩾2. That is to say, Π is not HEF, a contradiction. □
+     </paragraph>
+     <paragraph label="Proof of Lemma 5.5">
+      Let O be a minimal non-outbound set in {a mathematical formula}atom(Π) for Π. Hence, there is no single head clause {a mathematical formula}h←B in Π such that {a mathematical formula}B⊆atom(Π)∖O and {a mathematical formula}h∈O.Consider, now, any non-empty proper subset {a mathematical formula}O′ of O. By hypothesis of minimality of O, the set {a mathematical formula}O′ is outbound in {a mathematical formula}atom(Π) for Π and, hence, there exists a (single head) clause {a mathematical formula}h←B in Π such that {a mathematical formula}B⊆atom(Π)∖O′ and {a mathematical formula}h∈O′. Moreover, notice that it is the case that the body of such a clause has non-empty intersection with the set O, for otherwise the set O would be outbound.Thus, it holds that {a mathematical formula}B∩O≠∅ and, since {a mathematical formula}B∩O′=∅, it also holds that {a mathematical formula}B∩(O∖O′)≠∅.It can be therefore concluded that {a mathematical formula}h←B is a clause such that {a mathematical formula}B∩O′=∅, {a mathematical formula}B∩(O∖O′)≠∅ and {a mathematical formula}h∈O′ holds. The existence of such a clause implies that {a mathematical formula}O′ is outbound in O for Π.Since any proper subset of O is outbound in O for Π, O is also elementary for Π and, hence, super-elementary for Π. □
+     </paragraph>
+     <paragraph label="Proof of Lemma 5.6">
+      The proof is an immediate consequence of Lemma 5.2. □
+     </paragraph>
+     <paragraph label="Proof of Lemma 5.7">
+      Let a be an atom occurring in {a mathematical formula}M but not in {a mathematical formula}atom(ΠM←nd). Since a does not occur in {a mathematical formula}atom(ΠM←nd), two cases have to be taken into account, that are: (i) a occurs only in the body of some disjunctive rule in {a mathematical formula}ΠM←, and (ii) a occurs in the head of some disjunctive rule in {a mathematical formula}ΠM←.In the first case, the set {a mathematical formula}M∖{a} is a model of Π, since the only effect of removing a from {a mathematical formula}M is to falsify the body of some rule of Π.In the second case, the head of no rule {a mathematical formula}H←B in Π can be falsified since if {a mathematical formula}{a}⊂H holds, then {a mathematical formula}|M∩H|⩾2 holds. Thus, {a mathematical formula}M∖{a} is a model for Π. □
+     </paragraph>
+     <paragraph label="Proof of Lemma 5.8">
+      The proof follows immediately from Lemma 5.1. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

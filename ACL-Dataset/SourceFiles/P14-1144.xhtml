@@ -1,0 +1,1675 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Modeling Prompt Adherence in Student Essays</title>
+<!--Generated on Tue Jun 10 19:37:10 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Modeling Prompt Adherence in Student Essays</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Isaac Persing 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Vincent Ng
+<br class="ltx_break"/>Human Language Technology Research Institute
+<br class="ltx_break"/>University of Texas at Dallas
+<br class="ltx_break"/>Richardson, TX 75083-0688
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">persingq,vince</span>}<span class="ltx_text ltx_font_typewriter">@hlt.utdallas.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Recently, researchers have begun exploring methods of scoring student essays with
+respect to particular dimensions of quality such as coherence, technical errors,
+and prompt adherence. The work
+on modeling prompt adherence,
+however, has been focused mainly
+on whether individual
+sentences adhere to the prompt. We
+present a new annotated corpus of essay-level
+prompt adherence scores and propose a feature-rich
+approach to scoring essays along the prompt
+adherence dimension. Our approach
+significantly
+outperforms a knowledge-lean baseline prompt adherence
+scoring system yielding
+improvements of up to 16.6%.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Automated essay scoring, the task of employing computer technology
+to evaluate and score written text, is one of the most important educational
+applications of natural language processing (NLP)
+(see <cite class="ltx_cite">Shermis and Burstein (<a href="#bib.bib20a" title="Automated essay scoring: A cross-disciplinary perspective" class="ltx_ref">2003</a>)</cite> and
+<cite class="ltx_cite">Shermis<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Automated essay scoring: writing assessment and instruction" class="ltx_ref">2010</a>)</cite>
+for an overview of the state of the art in this task).
+A major weakness of many existing scoring engines such as
+the Intelligent Essay Assessor™<cite class="ltx_cite">[<a href="#bib.bib10" title="Automated scoring and annotation of essays with the Intelligent Essay Assessor™}, booktitle = Automated Essay Scoring: A Cross-Disciplinary Perspective, editors = Mark D. Shermis and Jill C. Burstein, pages = 87–112, publisher = Lawrence Erlbaum Associates, Inc., address = Mahwah, NJ" class="ltx_ref">13</a>]</cite>
+is that they adopt a holistic scoring scheme, which
+summarizes the quality of an essay with a single score and thus provides
+very limited feedback to the writer.
+In particular, it is not clear which dimension of an essay (e.g., style,
+coherence, relevance) a score should be attributed to.
+Recent work addresses this problem by scoring a particular
+dimension of essay quality such as coherence <cite class="ltx_cite">[<a href="#bib.bib9" title="Evaluation of text coherence for electronic essay scoring systems" class="ltx_ref">16</a>]</cite>,
+technical errors,
+organization <cite class="ltx_cite">[<a href="#bib.bib2" title="Modeling organization in student essays" class="ltx_ref">18</a>]</cite>, and thesis clarity <cite class="ltx_cite">[<a href="#bib.bib3" title="Modeling thesis clarity in student essays" class="ltx_ref">19</a>]</cite>.
+Essay grading software that provides feedback along multiple dimensions
+of essay quality such as E-<span class="ltx_text ltx_font_italic">rater</span>/Criterion <cite class="ltx_cite">[<a href="#bib.bib12" title="Automated essay scoring with E-rater v.2.0" class="ltx_ref">1</a>]</cite>
+has also begun to emerge.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Our goal in this paper is to develop a computational model for scoring an essay along an under-investigated dimension — <span class="ltx_text ltx_font_italic">prompt adherence</span>. Prompt adherence refers to how related an essay’s content is to the prompt for which it was written.
+An essay with a high prompt adherence score consistently remains on the topic introduced by the prompt and is free of irrelevant digressions.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">To our knowledge, little work has been done on scoring the prompt adherence of student essays since <cite class="ltx_cite">Higgins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib75" title="Evaluating multiple aspects of coherence in student essays" class="ltx_ref">2004</a>)</cite>.
+Nevertheless, there are major differences between Higgins et al.’s work and our work with respect to both the way the task is formulated and the approach.
+Regarding task formulation, while Higgins et al. focus on classifying each <span class="ltx_text ltx_font_italic">sentence</span> as having either <span class="ltx_text ltx_font_italic">good</span> or <span class="ltx_text ltx_font_italic">bad</span> adherence to the prompt, we focus on assigning a prompt adherence score to the entire <span class="ltx_text ltx_font_italic">essay</span>, allowing the score to range from one to four points at half-point increments.
+As far as the approach is concerned, Higgins et al. adopt a <span class="ltx_text ltx_font_italic">knowledge-lean</span> approach to the task, where almost all of the features they employ are computed based on a word-based semantic similarity measure known as <span class="ltx_text ltx_font_italic">Random Indexing</span> <cite class="ltx_cite">[<a href="#bib.bib56" title="Random indexing of text samples for latent semantic analysis" class="ltx_ref">10</a>]</cite>.
+On the other hand, we employ a large variety of features, including lexical and knowledge-based features that encode how well the concepts in an essay match those in the prompt, LDA-based features that provide semantic generalizations of lexical features, and “error type” features that encode different types of errors the writer made that are related to prompt adherence.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In sum, our contributions in this paper are two-fold. First, we develop a scoring model for the prompt adherence dimension on student essays using a feature-rich approach.
+Second, in order to stimulate further research on this task, we make our data set consisting of prompt adherence annotations of 830 essays publicly available.
+Since progress in prompt adherence modeling is hindered in part by the lack of a publicly annotated corpus, we believe that our data set will be a valuable resource to the NLP community.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Corpus Information</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We use as our corpus the 4.5 million word
+International Corpus of Learner English (ICLE) <cite class="ltx_cite">[<a href="#bib.bib74" title="International corpus of learner English (version 2)" class="ltx_ref">5</a>]</cite>,
+which consists of more than 6000 essays
+written by university undergraduates from 16 countries
+and 16 native languages
+who are learners of English as a Foreign Language.
+91% of the ICLE texts are argumentative.
+We select a subset consisting of 830 argumentative essays from the ICLE to annotate
+for training and testing of our essay prompt adherence scoring system.
+Table <a href="#S2.T1" title="Table 1 ‣ 2 Corpus Information ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows three of the 13
+topics selected for annotation.
+Fifteen native languages are represented in the set of
+annotated essays.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:119.5pt;" width="119.5pt"><span class="ltx_text ltx_font_small">Topic</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Languages</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Essays</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:119.5pt;" width="119.5pt"><span class="ltx_text ltx_font_small">Most university degrees are theoretical
+and do not prepare students for the real world.
+They are therefore of very little value.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">131</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:119.5pt;" width="119.5pt"><span class="ltx_text ltx_font_small">The prison system is outdated.
+No civilized society should punish its criminals:
+it should rehabilitate them.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">80</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:119.5pt;" width="119.5pt"><span class="ltx_text ltx_font_small">In his novel </span><span class="ltx_text ltx_font_italic ltx_font_small">Animal Farm</span><span class="ltx_text ltx_font_small">, George Orwell wrote
+“All men are equal but some are more equal than others.”
+How true is this today?</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">64</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Some examples of writing topics.</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Corpus Annotation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We ask human annotators to score each of the 830
+argumentative essays along the prompt adherence dimension.
+Our
+annotators were selected from over 30 applicants
+who were familiarized with the scoring rubric
+and given sample essays to score.
+The six who were most consistent with the expected scores
+were given
+additional essays to annotate.
+Annotators evaluated how well each essay adheres to
+its prompt
+using a numerical score from one to four at half-point increments
+(see Table <a href="#S3.T2" title="Table 2 ‣ 3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for a description of each score).
+This contrasts with previous work on prompt adherence essay scoring,
+where the corpus is annotated with a binary decision
+(i.e., <span class="ltx_text ltx_font_italic">good</span> or <span class="ltx_text ltx_font_italic">bad</span>)
+(e.g., Higgins et al. <cite class="ltx_cite">[<a href="#bib.bib75" title="Evaluating multiple aspects of coherence in student essays" class="ltx_ref">7</a>, <a href="#bib.bib24" title="Identifying off-topic student essays without topic-specific training data" class="ltx_ref">6</a>]</cite>, <cite class="ltx_cite">Louis and Higgins (<a href="#bib.bib25" title="Off-topic essay detection using short prompt texts" class="ltx_ref">2010</a>)</cite>).
+Hence, our annotation scheme not only provides a finer-grained
+distinction of prompt adherence (which can be important in practice),
+but also makes the prediction task more challenging.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Score</span></th>
+<th class="ltx_td ltx_align_justify" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_small">Description of Prompt Adherence</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">4</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_small">essay fully addresses the prompt and </span><span class="ltx_text ltx_font_bold ltx_font_small">consistently stays on topic</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_small">essay mostly addresses the prompt or </span><span class="ltx_text ltx_font_bold ltx_font_small">occasionally wanders off topic</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_small">essay does not fully address the prompt or </span><span class="ltx_text ltx_font_bold ltx_font_small">consistently wanders off topic</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_small">essay does not address the prompt at all or is </span><span class="ltx_text ltx_font_bold ltx_font_small">completely off topic</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Descriptions of the meaning of scores.</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">To ensure consistency in annotation, we randomly select
+707 essays to have graded by multiple annotators.
+Analysis
+reveals that the Pearson’s correlation coefficient computed over these
+doubly annotated essays is 0.243.
+Though annotators exactly agree on the prompt adherence score
+of an essay only 38% of the time, the scores they apply fall within
+0.5 points in 66% of essays and within 1.0 point in 89% of
+essays.
+For the sake of our experiments, whenever annotators
+disagree on an essay’s prompt adherence score,
+we assign the essay the average of all annotations
+rounded to the nearest half point.
+Table <a href="#S3.T3" title="Table 3 ‣ 3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the number of essays
+that receive each of the seven scores for prompt adherence.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">score</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.0</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.5</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2.0</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2.5</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">3.0</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">3.5</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">4.0</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">essays</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">105</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">230</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">443</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Distribution of prompt adherence scores.</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Score Prediction</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe in detail our system for
+predicting essays’ prompt adherence scores.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Model Training and Application</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We cast the problem of predicting an essay’s prompt adherence score
+as 13 regression problems, one for each prompt.
+Each essay is represented as an instance whose label
+is the essay’s true score (one of the values shown in Table <a href="#S3.T3" title="Table 3 ‣ 3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)
+with up to seven types of features including baseline
+(Section 4.2) and
+six other feature types proposed by us (Section 4.3).
+Our regressors may assign an essay any score in the range
+of 1.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>4.0.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Using regression captures the fact that some
+pairs of scores are more similar than others (e.g.,
+an essay with a prompt adherence score of 3.5 is more similar to an
+essay with a score of 4.0 than it is to one with a
+score of 1.0). A classification
+system, by contrast, may sometimes believe that the
+scores 1.0 and 4.0 are most likely for a particular essay,
+even though these scores are at opposite ends of the score range.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Using a different regressor for
+each prompt captures the fact that it may be easier for
+an essay to adhere to some prompts than to others, and common
+problems students have writing essays for one prompt may not apply
+to essays written in response to another prompt. For
+example, in essays written in response to the prompt
+“Marx once said that religion was the opium of the masses.
+If he was alive at the end of the 20th century, he would
+replace religion with television,”
+students sometimes write essays about all the evils of television,
+forgetting that their essay is only supposed to be about whether
+it is “the opium of the masses”. Students are less
+likely to make an analogous mistake when writing for the
+prompt “Crime does not pay.”</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">After creating training instances for prompt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="p_{i}" display="inline"><msub><mi>p</mi><mi>i</mi></msub></math>, we train a linear regressor, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="r_{i}" display="inline"><msub><mi>r</mi><mi>i</mi></msub></math>, with
+regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> for
+scoring test essays written in response to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="p_{i}" display="inline"><msub><mi>p</mi><mi>i</mi></msub></math> using
+the linear SVM regressor implemented in the LIBSVM software
+package <cite class="ltx_cite">[<a href="#bib.bib20" title="LIBSVM: A library for support vector machines" class="ltx_ref">3</a>]</cite>.
+All SVM-specific
+learning parameters are set to their default values except <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m5" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math>, which
+we tune to maximize performance on held-out validation data.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">After training the classifiers, we use them to classify the test
+set essays. The test instances are created in the same way
+as the training instances.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Baseline Features</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our baseline system for score prediction employs various
+features based on Random Indexing.</p>
+</div>
+<div id="S4.SS2.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">1. Random Indexing</h5>
+
+<div id="S4.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Random Indexing (RI) is
+“an efficient, scalable and incremental alternative”
+<cite class="ltx_cite">[<a href="#bib.bib55" title="An introduction to random indexing" class="ltx_ref">20</a>]</cite> to Latent Semantic Indexing
+<cite class="ltx_cite">[<a href="#bib.bib57" title="Indexing by latent smeantic analysis" class="ltx_ref">4</a>, <a href="#bib.bib58" title="A solution to plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">12</a>]</cite> which allows us to
+automatically generate a semantic similarity measure between any two words.
+We train our RI model on over 30 million words of the English Gigaword corpus <cite class="ltx_cite">[<a href="#bib.bib4" title="English gigaword fourth edition" class="ltx_ref">17</a>]</cite>
+using the S-Space package <cite class="ltx_cite">[<a href="#bib.bib60" title="The S-Space package: An open source package for word space models" class="ltx_ref">9</a>]</cite>.
+We expect that features based on RI will be useful
+for prompt adherence scoring because they may help us find
+text related to the prompt even if some of its concepts have
+have been rephrased
+(e.g., an essay
+may talk about “jail” rather than “prison”, which is mentioned in one
+of the prompts), and because they have already proven useful for the related
+task of determining which sentences in an essay are related to the prompt <cite class="ltx_cite">[<a href="#bib.bib75" title="Evaluating multiple aspects of coherence in student essays" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">For each essay, we therefore attempt to adapt the RI features used by <cite class="ltx_cite">Higgins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib75" title="Evaluating multiple aspects of coherence in student essays" class="ltx_ref">2004</a>)</cite>
+to our problem of prompt adherence scoring. We do this by generating
+one feature encoding the entire essay’s similarity to the prompt, another
+encoding the essay’s highest individual sentence’s similarity to the
+prompt, a third encoding the highest entire essay similarity to one of the prompt
+sentences, another encoding the highest individual sentence similarity
+to an individual prompt sentence, and finally one encoding the entire essay’s similarity
+to a manually rewritten version of the prompt that excludes extraneous
+material (such as “In his novel Animal Farm,
+George Orwell wrote,” which is introductory material
+from the third prompt in Table <a href="#S2.T1" title="Table 1 ‣ 2 Corpus Information ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+Our RI feature set necessarily excludes those features from Higgins et al. that are not easily translatable to our problem
+since we are concerned with an entire essay’s adherence to its prompt
+rather than with each of its sentences’ relatedness to the prompt.
+Since RI does not provide
+a straightforward way to measure similarity between groups of words such
+as sentences or essays, we use Higgins and Burstein’s <cite class="ltx_cite">[<a href="#bib.bib59" title="Sentence similarity measures for essay coherence" class="ltx_ref">8</a>]</cite> method
+to generate these features.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Novel Features</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Next, we introduce six types of novel features.</p>
+</div>
+<div id="S4.SS3.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">2. N-grams</h5>
+
+<div id="S4.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">As our first novel feature, we use the 10,000 most important lemmatized
+unigram, bigram, and trigram features that occur in the essay.
+N-grams can be useful for prompt adherence scoring because
+they can capture useful words and phrases related to a prompt.
+For example, words and phrases like
+“university degree”, “student”, and “real world”
+are relevant to the first prompt in Table <a href="#S2.T1" title="Table 1 ‣ 2 Corpus Information ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+so it is more likely that an essay adheres to the prompt
+if they appear in the essay.</p>
+</div>
+<div id="S4.SS3.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">We determine the “most important” n-gram features using
+information gain computed over the
+training data <cite class="ltx_cite">[<a href="#bib.bib23" title="A comparative study on feature selection in text categorization" class="ltx_ref">23</a>]</cite>.
+Since the essays vary greatly in length, we
+normalize each essay’s set of n-gram features to unit length.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">3. Thesis Clarity Keywords</h5>
+
+<div id="S4.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our next set of features consists of the keyword features we
+introduced in our previous work on essay thesis clarity scoring
+<cite class="ltx_cite">[<a href="#bib.bib3" title="Modeling thesis clarity in student essays" class="ltx_ref">19</a>]</cite>. Below we give an overview of
+these keyword features
+and motivate why they are potentially
+useful for prompt adherence scoring.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">The keyword features were formed by first examining
+the 13 essay prompts, splitting each into its component pieces.
+As an example of what is meant by a “component piece”, consider the
+first prompt in Table 1.
+The components
+of this prompt would be “Most university degrees are theoretical”,
+“Most university degrees do not prepare students for the real world”,
+and “Most university degrees are of very little value.”</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">Then the most important (primary) and second most
+important (secondary) words were selected from each prompt component,
+where a word was considered “important” if it would be a good word
+for a student to use when stating her thesis about the prompt.
+So since the lemmatized version of the third component of the second
+prompt in Table <a href="#S2.T1" title="Table 1 ‣ 2 Corpus Information ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is “it should rehabilitate they”,
+“rehabilitate” was selected as a primary keyword and “society”
+as a secondary keyword.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">Features are then computed based on these keywords.
+For instance, one thesis clarity keyword feature is computed as follows.
+The RI similarity measure is first taken between the
+essay and each group of the prompt’s primary keywords.
+The feature then
+gets assigned the lowest of these values.
+If this feature has a low value, that suggests that the student
+ignored the prompt component from which the value came
+when writing the essay.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">To compute another of the thesis clarity keyword features, the
+numbers of combined primary and secondary keywords the essay contains from each component
+of its prompt are counted.
+These numbers are then divided by the total count of primary and secondary features
+in their respective components. The greatest of the fractions generated in this way
+is encoded as a feature because if it
+has a low value, that indicates
+the essay’s thesis may not be very relevant to the prompt.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Space limitations preclude a
+complete listing of the thesis clarity keyword features.
+See our website at <a href="http://www.hlt.utdallas.edu/~persingq/ICLE/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.hlt.utdallas.edu/~persingq/ICLE/</span></a> for the complete list.</span></span></span></p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">4. Prompt Adherence Keywords</h5>
+
+<div id="S4.SS3.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The thesis clarity keyword features described above were intended for
+the task of determining how clear an essay’s thesis is,
+but since our goal is instead to determine how well
+an essay adheres to its prompt, it makes sense
+to adapt keyword features to our
+task rather than to adopt keyword features exactly as they
+have been used before. For this reason, we construct
+a new list of keywords for each prompt component, though
+since prompt adherence is more concerned with what the
+student says about the topics than it is with whether
+or not what she says about them is stated clearly, our
+keyword lists look a little different
+than the ones discussed above. For an example,
+we earlier alluded to the problem of students
+merely discussing all the evils of television for the
+prompt “Marx once said that religion was the opium
+of the masses. If he was alive at the end of the 20th
+century, he would replace religion with television.”
+Since the question suggests that students discuss
+whether television is analogous to religion in
+this way, our set of prompt adherence keywords for
+this prompt contains
+the word “religion” while the previously discussed
+keyword sets do not.
+This is because a thesis like “Television is bad”
+can be stated very clearly without making any
+reference to religion at all, and so an essay with
+a thesis like this can potentially have a very
+high thesis clarity score. It should not, however,
+have a very high prompt adherence score, as the prompt
+asked the student to discuss whether television is
+like religion in a particular way, so religion
+should be at least briefly addressed for an essay
+to be awarded a high prompt adherence score.</p>
+</div>
+<div id="S4.SS3.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Additionally, our prompt adherence
+keyword sets do not adopt the notions of primary and
+secondary groups of keywords for each prompt component,
+instead collecting all the keywords for a component into
+one set because “secondary” keywords tend to be things
+that are important when we are concerned with what a
+student is saying about the topic rather than just
+how clearly she said it.</p>
+</div>
+<div id="S4.SS3.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">We form two types of features from prompt adherence keywords.
+While both types of features measure how much each prompt component was
+discussed in an essay, they differ in how they
+encode the information.
+To obtain feature values of the first type,
+we take the RI similarities between the
+whole essay and each set of prompt adherence keywords
+from the prompt’s components.
+This results
+in one to three features,
+as some prompts have
+one component while others have up to three.</p>
+</div>
+<div id="S4.SS3.SSS0.P3.p4" class="ltx_para">
+<p class="ltx_p">We obtain feature values of the second type as follows.
+For each component, we count the number of prompt adherence keywords
+the essay contains. We divide this number by the number of prompt adherence keywords
+we identified from the component. This
+results in one
+to three features since a prompt has one to three components.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P4" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">5. LDA Topics</h5>
+
+<div id="S4.SS3.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">A problem with the features we have introduced up to this point
+is that they have trouble identifying topics
+that are not mentioned in the prompt, but are nevertheless
+related to the prompt.
+These topics should not
+diminish the essay’s prompt adherence score
+because they are at least related to prompt concepts.
+For example, consider the prompt
+“All armies should consist entirely of professional soldiers:
+there is no value in a system of military service.”
+An essay containing words like “peace”, “patriotism”,
+or “training”
+are probably not
+digressions from the prompt, and therefore
+should not be penalized for discussing these topics. But
+the various measures of keyword similarities described
+above will at best not notice that anything related to
+the prompt is being discussed, and at worst, this
+might have effects like lowering some of the RI
+similarity scores, thereby probably lowering the prompt
+adherence score the regressor assigns to the essay.
+While n-gram features do not have exactly
+the same problem,
+they would still only notice that these example words
+are related to the prompt if multiple essays use
+the same words to discuss these concepts. For this reason,
+we introduce Latent Dirichlet Allocation (LDA)
+<cite class="ltx_cite">[<a href="#bib.bib77" title="Latent Dirichlet Allocation" class="ltx_ref">2</a>]</cite> features.</p>
+</div>
+<div id="S4.SS3.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">In order to construct our LDA features,
+we first collect all essays written in response
+to each prompt into its own set. Note that this feature type exploits
+unlabeled data: it includes all essays
+in the ICLE responding to our prompts, not just those
+in our smaller annotated 830 essay dataset. We then
+use the MALLET <cite class="ltx_cite">[<a href="#bib.bib78" title="MALLET: A Machine Learning for Language Toolkit" class="ltx_ref">15</a>]</cite> implementation
+of LDA to build a topic model of 1,000 topics around
+each of these sets of essays. This results in what
+we can think of as a soft clustering of words into
+1,000 sets for each prompt, where each set of words
+represents one of the topics LDA identified being
+discussed in the essays for that prompt. So for
+example, the five most important words in the most
+frequently discussed topic for the military prompt
+we mentioned above are “man”, “military”,
+“service”, “pay”, and “war”.</p>
+</div>
+<div id="S4.SS3.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p">We also use the MALLET-generated topic model to tell us
+how much of each essay is spent discussing each
+of the 1,000 topics. The model might tell us,
+for example, that a particular essay written on the
+military prompt spends 35% of the time discussing
+the “man”, “military”, “service”, “pay”, and “war” topic
+and 65% of the time discussing a topic whose
+most important words are “fully”, “count”,
+“ordinary”, “czech”, and “day”. Since the
+latter topic is discussed so much in the essay
+and does not appear to have much to do
+with the military prompt, this essay should probably
+get a bad prompt adherence score. We construct
+1,000 features from this topic model, one for each topic.
+Each feature’s value is obtained by using the topic model
+to tell us how much of the essay was spent discussing
+the feature’s corresponding topic. From these features,
+our regressor should be able to learn which topics are
+important to a good prompt adherent essay.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P5" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">6. Manually Annotated LDA Topics</h5>
+
+<div id="S4.SS3.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">A weakness of the LDA topics feature type is that
+it may result in a regressor that has trouble
+distinguishing between an infrequent topic that is adherent to
+the prompt and one that just represents an irrelevant
+digression. This is because an infrequent topic
+may not appear in the training set often enough
+for the regressor to make this judgment. We
+introduce the manually annotated LDA topics feature
+type to address this problem.</p>
+</div>
+<div id="S4.SS3.SSS0.P5.p2" class="ltx_para">
+<p class="ltx_p">In order to construct manually annotated LDA topic
+features, we first build 13 topic models, one for
+each prompt, just as described in the section on
+LDA topic features.
+Rather than requesting
+models of 1,000 topics,
+however,
+we request models
+of only 100 topics<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We use 100 topics for each prompt in the manually annotated version of LDA features rather than the 1,000 topics we use in the regular version of LDA features because 1,300 topics are not too costly to annotate, but manually annotating 13,000 topics would take too much time.</span></span></span>. We then go through
+all 13 lists of 100 topics as represented by
+their top ten words, manually annotating
+each topic with a number from 0 to 5 representing
+how likely it is that the topic is adherent to
+the prompt. A topic labeled 5 is very likely
+to be related to the prompt, where a topic labeled 0
+appears totally unrelated.</p>
+</div>
+<div id="S4.SS3.SSS0.P5.p3" class="ltx_para">
+<p class="ltx_p">Using these annotations alongside
+the topic distribution for each essay that the
+topic models provide us, we construct ten features.
+The first five features encode the sum
+of the contributions to an essay of topics annotated
+with a number <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P5.p3.m1" class="ltx_Math" alttext="\geq 1" display="inline"><mrow><mi/><mo>≥</mo><mn>1</mn></mrow></math>, the sum of the
+contributions to an essay of topics annotated with a
+number <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P5.p3.m2" class="ltx_Math" alttext="\geq 2" display="inline"><mrow><mi/><mo>≥</mo><mn>2</mn></mrow></math>, and so on up to 5.</p>
+</div>
+<div id="S4.SS3.SSS0.P5.p4" class="ltx_para">
+<p class="ltx_p">The next five features are similar to the last,
+with one feature taking on the sum of the
+contributions to an essay of topics annotated with
+the number 0, another feature taking on the sum
+of the contributions to an essay of topics annotated
+with the number 1, and so on up to 4. We do not
+include a feature for topics annotated with
+the number 5 because it would always have the same
+value as the feature for topics <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P5.p4.m1" class="ltx_Math" alttext="\geq 5" display="inline"><mrow><mi/><mo>≥</mo><mn>5</mn></mrow></math>.</p>
+</div>
+<div id="S4.SS3.SSS0.P5.p5" class="ltx_para">
+<p class="ltx_p">Features like these should give the regressor a better
+idea how much of an essay is composed of prompt-related
+arguments and discussion and how much of it is
+irrelevant to the prompt, even if some of the topics
+occurring in it are too infrequent to judge just from
+training data.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P6" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">7. Predicted Thesis Clarity Errors</h5>
+
+<div id="S4.SS3.SSS0.P6.p1" class="ltx_para">
+<p class="ltx_p">In our previous work on essay thesis clarity scoring <cite class="ltx_cite">[<a href="#bib.bib3" title="Modeling thesis clarity in student essays" class="ltx_ref">19</a>]</cite>,
+we identified five classes of
+errors that detract from the clarity of an essay’s thesis:</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Confusing Phrasing.</span> The thesis is phrased oddly, making it hard to understand the writer’s point.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Incomplete Prompt Response.</span> The thesis leaves some part of a multi-part prompt unaddressed.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Relevance to Prompt.</span> The apparent thesis’s weak relation to the prompt causes confusion.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Missing Details.</span> The thesis leaves out an important detail needed to understand the writer’s point.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Writer Position.</span> The thesis describes a position on the topic without making it clear that this is the position the writer supports.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p7" class="ltx_para">
+<p class="ltx_p">We hypothesize that these errors, though originally intended for thesis
+clarity scoring, could be useful for prompt adherence scoring as well.
+For instance, an essay that has a Relevance to Prompt error or an
+Incomplete Prompt Response error should intuitively receive
+a low prompt adherence score.
+For this reason, we introduce features based on these errors to our
+feature set for prompt adherence scoring<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>See our website at <a href="http://www.hlt.utdallas.edu/~persingq/ICLE/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.hlt.utdallas.edu/~persingq/ICLE/</span></a> for the complete list of error annotations.</span></span></span>.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p8" class="ltx_para">
+<p class="ltx_p">While each of the essays in our data set was previously
+annotated with these thesis clarity errors,
+in a realistic setting a prompt
+adherence scoring system will not have access to
+these manual error labels.
+As a result,
+we first need to predict
+which of these errors is present in each essay.
+To do this,
+we train five
+maximum entropy classifiers for each prompt,
+one for each of the five thesis clarity errors, using
+MALLET’s <cite class="ltx_cite">[<a href="#bib.bib78" title="MALLET: A Machine Learning for Language Toolkit" class="ltx_ref">15</a>]</cite> implementation of
+maximum entropy classification. Instances are
+presented to classifier for prompt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> for
+error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> in the following way. If a training essay
+is written in response to
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, it will be
+used to generate a training instance
+whose label is 1 if
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m4" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> was annotated for it
+or 0 otherwise.
+Since error prediction and prompt
+adherence scoring are related problems, the features
+we associate with this instance are features 1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m5" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>6 which
+we have described earlier in this section.
+The classifier is then used to generate probabilities
+telling us how likely it is that each test essay has error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P6.p8.m6" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>.</p>
+</div>
+<div id="S4.SS3.SSS0.P6.p9" class="ltx_para">
+<p class="ltx_p">Then, when training our
+regressor for prompt adherence scoring, we add the
+following features to our instances. We add a binary feature
+indicating the presence or absence of each error. Or
+in the case of test essays, the feature takes on a
+real value from 0 to 1 indicating how likely the
+classifier thought it was that the essay had
+each of the errors. This results in five additional
+features, one for each error.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Evaluation</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we evaluate our system for prompt adherence scoring.
+All the results we report are obtained via five-fold cross-validation
+experiments. In each experiment, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="\frac{3}{5}" display="inline"><mfrac><mn>3</mn><mn>5</mn></mfrac></math> of our labeled essays
+for model training, another <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="\frac{1}{5}" display="inline"><mfrac><mn>1</mn><mn>5</mn></mfrac></math> for
+parameter tuning, and the final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="\frac{1}{5}" display="inline"><mfrac><mn>1</mn><mn>5</mn></mfrac></math> for testing.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Experimental Setup</h3>
+
+<div id="S5.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.1.1 </span>Scoring Metrics</h4>
+
+<div id="S5.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">We employ four
+evaluation metrics.
+As we will see below,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p1.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p1.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p1.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> are <span class="ltx_text ltx_font_italic">error</span> metrics, so lower scores
+imply better performance. In contrast, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p1.m4" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> is a
+<span class="ltx_text ltx_font_italic">correlation</span> metric, so higher correlation implies better performance.</p>
+</div>
+<div id="S5.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">The simplest metric, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p2.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>,
+measures the frequency at which a system predicts the wrong score
+out of the seven possible scores.
+Hence, a system that predicts the right score only 25% of the time
+would receive an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p2.m2" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score of 0.75.</p>
+</div>
+<div id="S5.SS1.SSS1.p3" class="ltx_para">
+<p class="ltx_p">The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p3.m1" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math> metric measures the average distance between a system’s score and the actual score.
+This metric reflects the idea that a system that predicts
+scores close to the annotator-assigned scores should be preferred over a system
+whose predictions are further off, even if both systems estimate the correct score
+at the same frequency.</p>
+</div>
+<div id="S5.SS1.SSS1.p4" class="ltx_para">
+<p class="ltx_p">The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p4.m1" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> metric
+measures the average square of the distance
+between a system’s score predictions and the annotator-assigned
+scores. The intuition behind this system is that not only should we prefer
+a system whose predictions are close to the annotator scores, but we should
+also prefer one whose predictions are not too frequently very far away
+from the annotator scores. These three scores are given by:</p>
+</div>
+<div id="S5.SS1.SSS1.p5" class="ltx_para">
+<table id="S5.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m1" class="ltx_Math" alttext="\frac{1}{N}\hskip{-5.690551pt}\sum_{A_{j}\neq E_{j}^{\prime}}\hskip{-5.690551%&#10;pt}{1},\;\;\frac{1}{N}\hskip{-2.845276pt}\sum_{i=1}^{N}{|A_{j}-E_{j}|},\;\;%&#10;\frac{1}{N}\hskip{-2.845276pt}\sum_{i=1}^{N}{(A_{j}-E_{j})^{2}}" display="block"><mrow><mrow><mpadded width="-5.7pt"><mfrac><mn>1</mn><mi>N</mi></mfrac></mpadded><mo>⁢</mo><mrow><mpadded width="-5.7pt"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>A</mi><mi>j</mi></msub><mo>≠</mo><msubsup><mi>E</mi><mi>j</mi><mo>′</mo></msubsup></mrow></munder></mpadded><mn>1</mn></mrow></mrow><mo separator="true">, </mo><mrow><mpadded width="-2.8pt"><mfrac><mn>1</mn><mi>N</mi></mfrac></mpadded><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mrow><mo fence="true">|</mo><mrow><msub><mi>A</mi><mi>j</mi></msub><mo>-</mo><msub><mi>E</mi><mi>j</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></mrow><mo separator="true">, </mo><mrow><mpadded width="-2.8pt"><mfrac><mn>1</mn><mi>N</mi></mfrac></mpadded><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msup><mrow><mo>(</mo><mrow><msub><mi>A</mi><mi>j</mi></msub><mo>-</mo><msub><mi>E</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS1.SSS1.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m1" class="ltx_Math" alttext="A_{j}" display="inline"><msub><mi>A</mi><mi>j</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m2" class="ltx_Math" alttext="E_{j}" display="inline"><msub><mi>E</mi><mi>j</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m3" class="ltx_Math" alttext="E_{j}^{\prime}" display="inline"><msubsup><mi>E</mi><mi>j</mi><mo>′</mo></msubsup></math> are the annotator assigned,
+system predicted, and rounded system predicted scores<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Since our regressor assigns each essay a real value rather
+than an actual valid score, it would be difficult
+to obtain a reasonable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m4" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score without rounding the system
+estimated score to one of the possible values. For that reason,
+we round the estimated score
+to the nearest of the seven scores the human annotators were permitted to assign (1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
+only when calculating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m5" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>. For other scoring metrics, we
+only round the predictions to 1.0 or 4.0 if they fall outside the 1.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m6" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>4.0 range.</span></span></span>
+respectively for essay <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m7" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p6.m8" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of essays.</p>
+</div>
+<div id="S5.SS1.SSS1.p7" class="ltx_para">
+<p class="ltx_p">The last metric, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p7.m1" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math>, computes Pearson’s correlation coefficient between
+a system’s predicted scores and the annotator-assigned scores.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p7.m2" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> ranges from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p7.m3" class="ltx_Math" alttext="-1" display="inline"><mrow><mo>-</mo><mn>1</mn></mrow></math> to 1. A positive (negative) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS1.p7.m4" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> implies that the
+two sets of predictions are positively (negatively) correlated.</p>
+</div>
+</div>
+<div id="S5.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.1.2 </span>Parameter Tuning</h4>
+
+<div id="S5.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p">As mentioned earlier, for each prompt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m1" class="ltx_Math" alttext="p_{i}" display="inline"><msub><mi>p</mi><mi>i</mi></msub></math>, we train a linear regressor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m2" class="ltx_Math" alttext="r_{i}" display="inline"><msub><mi>r</mi><mi>i</mi></msub></math>
+using LIBSVM with regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m3" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math>.
+To optimize
+our system’s performance on the three error measures described previously,
+we use held-out validation data to independently
+tune each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m4" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> values<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>
+For parameter tuning, we employ the following values.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m5" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> may be assigned any of the values <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m6" class="ltx_Math" alttext="10^{0}" display="inline"><msup><mn>10</mn><mn>0</mn></msup></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m7" class="ltx_Math" alttext="10^{1}" display="inline"><msup><mn>10</mn><mn>1</mn></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m8" class="ltx_Math" alttext="10^{2}" display="inline"><msup><mn>10</mn><mn>2</mn></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m9" class="ltx_Math" alttext="10^{3}" display="inline"><msup><mn>10</mn><mn>3</mn></msup></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m10" class="ltx_Math" alttext="10^{4}" display="inline"><msup><mn>10</mn><mn>4</mn></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m11" class="ltx_Math" alttext="10^{5}" display="inline"><msup><mn>10</mn><mn>5</mn></msup></math>, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m12" class="ltx_Math" alttext="10^{6}" display="inline"><msup><mn>10</mn><mn>6</mn></msup></math>.
+</span></span></span>.
+Note that each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m13" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> values can be tuned independently because
+a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m14" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> value that is optimal for predicting scores for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m15" class="ltx_Math" alttext="p_{i}" display="inline"><msub><mi>p</mi><mi>i</mi></msub></math> essays
+with respect
+to any of the error performance measures is necessarily also the optimal
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m16" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> when measuring that error on essays from all prompts.
+However,
+this is not case with Pearson’s correlation coefficient, as the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m17" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> value for essays
+from all 13 prompts cannot be simplified as a weighted sum of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m18" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> values obtained
+on each individual prompt.
+In order to obtain an
+optimal result as measured by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m19" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math>,
+we jointly tune the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m20" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> parameters to optimize the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m21" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> value
+achieved by our system on the same held-out validation data.
+However, an exact solution to this optimization problem is computationally
+expensive, as there are too many (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m22" class="ltx_Math" alttext="7^{13}" display="inline"><msup><mn>7</mn><mn>13</mn></msup></math>) possible combinations of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m23" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> values to exhaustively search.
+Consequently, we find a local maximum by employing the simulated annealing
+algorithm <cite class="ltx_cite">[<a href="#bib.bib18" title="Optimization by simulated annealing" class="ltx_ref">11</a>]</cite>,
+altering one <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m24" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> value at a time to optimize <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.SSS2.p1.m25" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> while holding the
+remaining parameters fixed.</p>
+</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Results and Discussion</h3>
+
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t">System</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">.517</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">.368</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">.234</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">.233</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_rr ltx_border_t">Our System</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">.488</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">.348</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">.197</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">.360</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Five-fold cross-validation results for prompt adherence scoring.</div>
+</div>
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Five-fold cross-validation results on prompt adherence score prediction are shown in Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Results and Discussion ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+On the first line, this table shows that our baseline
+system, which recall uses only various RI features,
+predicts the wrong score 51.7% of the time. Its predictions are off by an
+average of .368 points, and the average squared distance between its predicted
+score and the actual score is .234.
+In addition, its predicted scores and the actual scores have a
+Pearson correlation coefficient of 0.233.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">The results from our system, which uses all seven feature types
+described in Section 4, are shown in row 2 of the table.
+Our system obtains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> scores of
+.488, .348, .197, and .360 respectively, yielding
+a significant improvement over the baseline
+with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m6" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m7" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m8" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m9" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 0.05, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m10" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m11" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 0.01, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m12" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m13" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 0.06
+respectively<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>All significance tests are paired <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m14" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>-tests.</span></span></span>.
+While our system yields improvements by all four measures,
+its improvement over the baseline <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m15" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score is not significant.
+These results mean that the greatest improvements our system makes
+are that it ensures that our score predictions are not too
+often very far away from an essay’s actual score, as making
+such predictions would tend to drive up <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m16" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>, yielding a
+relative error reduction in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m17" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> of 15.8%, and it also ensures a better correlation
+between predicted and actual scores, thus yielding the 16.6% improvement in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m18" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>
+These numbers are calculated <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m19" class="ltx_Math" alttext="\frac{B-O}{B-P}" display="inline"><mfrac><mrow><mi>B</mi><mo>-</mo><mi>O</mi></mrow><mrow><mi>B</mi><mo>-</mo><mi>P</mi></mrow></mfrac></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m20" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> is the baseline system’s
+score, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m21" class="ltx_Math" alttext="O" display="inline"><mi>O</mi></math> is our system’s score, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m22" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> is a perfect score. Perfect scores
+for error measures and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m23" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math> are 0 and 1 respectively.</span></span></span>
+It also gives
+more modest improvements in how frequently exactly the
+right score is predicted (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m24" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>) and is better at predicting scores
+closer to the actual scores (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m25" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math>).</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Feature Ablation</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">To gain insight into how much impact each of the feature types
+has on our system,
+we perform feature ablation
+experiments in which we remove the feature types
+from our system
+one-by-one.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">Results of the ablation experiments
+when performed using the four
+scoring metrics are shown in Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>.
+The top line
+of each subtable shows what our system’s score
+would be if we removed just one of the
+feature types from our system. So to see how
+our system performs by the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> metric if
+we remove only predicted thesis clarity error features,
+we would look at the first row of results of
+Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>(a)
+under the column
+headed by the number 7 since predicted thesis clarity errors are the seventh feature type
+introduced in Section 4. The number here
+tells us that our system’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m2" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score
+without this feature type is .502. Since
+Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Results and Discussion ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows that when our system
+includes this feature type (along with all the other feature types),
+it obtains an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m3" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score of
+.488, this feature type’s removal costs our system
+.014 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m4" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> points, and thus its inclusion
+has a beneficial effect on the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m5" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">From row 1 of
+Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>(a),
+we can see that removing feature 4
+yields a system with the best <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p3.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math> score
+in the presence of the other feature types in this row. For this reason,
+we permanently remove feature 4 from the system
+before we generate the results on line 2. Thus,
+we can see what happens when we remove both feature 4
+and feature 5 by looking at the second entry in
+row 2. And since removing feature 6 harms
+performance least in the presence of row 2’s other feature types, we permanently
+remove both 4 and 6 from our feature set when we
+generate the third row of results. We iteratively
+remove the feature type that yields a system with the best performance
+in this way until we get to
+the last line, where only one feature type is used to generate each result.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S5.F0.sf1" class="ltx_figure ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">5</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">7</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">2</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">6</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">4</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.527</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.502</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.512</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.502</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.511</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.500</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.488</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.527</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.502</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.512</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.501</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.513</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.500</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.525</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.508</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.505</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.505</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.504</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.513</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.527</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.520</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.513</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.523</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.520</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.506</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.541</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.527</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">(a) </span>Results using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F0.sf1.m2" class="ltx_Math" alttext="S1" display="inline"><mrow><mi mathsize="normal" stretchy="false">S</mi><mo mathsize="small" stretchy="false">⁢</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></math> metric</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F0.sf2" class="ltx_figure ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">2</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">6</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">4</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">5</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">7</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.356</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.350</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.350</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.351</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.347</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.351</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.347</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.350</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.358</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.351</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.362</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.352</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">(b) </span>Results using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F0.sf2.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi mathsize="normal" stretchy="false">S</mi><mo mathsize="small" stretchy="false">⁢</mo><mn mathsize="normal" stretchy="false">2</mn></mrow></math> metric</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F0.sf3" class="ltx_figure ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">2</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">6</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">5</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">4</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">7</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.221</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.201</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.196</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.215</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.201</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.196</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.196</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.196</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.212</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.203</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.199</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.196</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.212</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.203</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.199</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.197</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.212</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.203</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.199</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.223</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.204</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">(c) </span>Results using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F0.sf3.m2" class="ltx_Math" alttext="S3" display="inline"><mrow><mi mathsize="normal" stretchy="false">S</mi><mo mathsize="small" stretchy="false">⁢</mo><mn mathsize="normal" stretchy="false">3</mn></mrow></math> metric</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F0.sf4" class="ltx_figure ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">6</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">2</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">7</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">5</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">4</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.326</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.332</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.303</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.344</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.361</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.326</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.332</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.304</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.343</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.324</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.337</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.292</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.345</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.352</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.322</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.337</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.297</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.346</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.316</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.321</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.323</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.218</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.325</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:14.2pt;" width="14.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">(d) </span>Results using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F0.sf4.m2" class="ltx_Math" alttext="PC" display="inline"><mrow><mi mathsize="normal" stretchy="false">P</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi></mrow></math> metric</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> Feature ablation results. <span class="ltx_text ltx_font_small">In each subtable, the first row shows how our system would perform if
+each feature type was removed. We remove the least important
+feature type, and show in the next row how the adjusted system
+would perform without each remaining type. For brevity,
+a feature type is referred to by its feature number:
+(1) RI;
+(2) n-grams; (3) thesis clarity keywords; (4) prompt adherence keywords;
+(5) LDA topics; (6) manually annotated LDA topics;
+and (7) predicted thesis clarity errors.
+</span></div>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"/>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m4" class="ltx_Math" alttext="PC" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>C</mi></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_bold ltx_font_small">Gold</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.25</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.50</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.75</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.25</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.50</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.75</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.25</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.50</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.75</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.25</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.50</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">.75</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">2.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.35</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.56</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.79</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.40</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.52</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.73</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.06</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.37</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.64</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.06</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.37</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.64</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">2.5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.43</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.63</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.80</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.25</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.52</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.79</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.24</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.45</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.67</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.24</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.46</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.73</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">3.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.64</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.78</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.85</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.56</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.70</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.90</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.52</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.65</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.74</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.52</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.66</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.79</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">3.5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.73</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.81</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.88</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.63</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.78</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.90</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.59</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.70</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.81</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.60</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.74</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.85</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_rr ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_small">4.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.76</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.84</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.88</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.70</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.83</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.90</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.63</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.75</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_rr ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.84</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.66</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.78</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">3.88</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span> Regressor scores for our system.</div>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Since the feature type
+whose removal
+yields the best system
+is always the rightmost entry in a line, the
+order of column headings indicates the relative
+importance of the feature types, with the leftmost
+feature types being most important to performance
+and the rightmost feature types being least important in the presence of the other feature types.
+This being the case, it is interesting to
+note that while the relative importance of different
+feature types does not remain exactly the same if
+we measure performance in different ways, we can see
+that some feature types tend to be more important than others
+in a majority of the four scoring metrics. Features 2 (n-grams), 3 (thesis clarity keywords),
+and 6 (manually annotated LDA topics) tend to be the most important feature types,
+as they tend to be the last feature types removed in the ablation subtables.
+Features 1 (RI) and 5 (LDA topics)
+are of middling importance, with neither ever being removed first or last, and
+each tending to have a moderate effect on performance.
+Finally, while features 4 (prompt adherence keywords)
+and 7 (predicted thesis clarity errors) may by themselves
+provide useful information to our system, in the
+presence of the other feature types they tend to be the
+least important to performance
+as they are often the first feature types removed.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">While there is a tendency for some feature types to always be important (or unimportant) regardless of
+which scoring metric is used to measure performance,
+the relative importance of different
+feature types does not always remain consistent if
+we measure performance in different ways.
+For example, while we identified feature 3 (thesis clarity keywords)
+as one of the most important feature types generally
+due to its tendency to have a large beneficial impact on performance,
+when we are measuring
+performance using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m1" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>, it is the least useful feature type.
+Furthermore, its removal increases the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m2" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> score by a small amount,
+meaning that its
+inclusion actually makes our system perform worse with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>.
+Though feature 3 is an extreme example, all feature types fluctuate in
+importance, as we see when we compare their orders of removal among
+the four ablation subtables.
+Hence, it is important to know how performance is measured when
+building a system for scoring prompt adherence.</p>
+</div>
+<div id="S5.SS3.p6" class="ltx_para">
+<p class="ltx_p">Feature 3 is not the only feature type whose removal
+sometimes has a beneficial impact on performance.
+As we can see in Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>(b), the removal of
+features 4, 5, and 7 improves our system’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p6.m1" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math> score
+by .001 points. The same effect occurs in Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>(c)
+when we remove features 4, 7, and 3. These examples illustrate that
+under some scoring metrics, the inclusion of some feature types
+is actively harmful to performance. Fortunately,
+this effect does not occur in any other cases than the
+two listed above, as most feature types usually have
+a beneficial or at least neutral impact on our system’s
+performance.</p>
+</div>
+<div id="S5.SS3.p7" class="ltx_para">
+<p class="ltx_p">For those feature types whose effect
+on performance is neutral in the first lines of ablation results (feature 4 in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m1" class="ltx_Math" alttext="S1" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></math>,
+features 3, 5, and 7 in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m2" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math>, and features 1, 4, 5, and 7 in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>),
+it is important to note that their neutrality does not mean
+that they are unimportant. It merely means that they
+do not improve performance in the presence of other feature types.
+We can see this is the case by noting that they are not
+all the least important feature types in their respective subtables
+as indicated by column order. For example, by the time
+feature 1 gets permanently removed in Table <a href="#S5.F0.sf4" title="(d) ‣ Table 5 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">d</span></a>(c),
+its removal harms performance by .002 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m4" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> points.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Analysis of Predicted Scores</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">To more closely examine the behavior of our system, in
+Table <a href="#S5.T6" title="Table 6 ‣ 5.3 Feature Ablation ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we chart the distributions of scores it predicts
+for essays having each gold standard score. As an example of how to read this table,
+consider the number 3.06 appearing in row 2.0 in the .25 column of the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m1" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> region. This means that 25% of the time, when our system with
+parameters tuned for optimizing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m2" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math>
+is presented with a test essay having
+a gold standard score of 2.0, it predicts that the essay has a score
+less than or equal to 3.06.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">From this table, we see that our system has a strong bias
+toward predicting more frequent scores as there are no numbers less
+than 3.0 in the table, and about 93.7% of all essays have gold standard
+scores of 3.0 or above.
+Nevertheless, our system does not rely entirely on
+bias, as evidenced by the fact that each column in the table has a
+tendency for its scores to ascend as the gold standard score increases,
+implying that our system has some success at predicting lower scores
+for essays with lower gold standard prompt adherence scores.</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">Another interesting point to note about this table is that the difference in error weighting between the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m1" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m2" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> scoring metrics appears to be having its desired effect,
+as every entry in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m3" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> subtable is
+less than its corresponding entry in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m4" class="ltx_Math" alttext="S2" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></math> subtable due to the
+greater penalty the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m5" class="ltx_Math" alttext="S3" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mn>3</mn></mrow></math> metric imposes for predictions that are very
+far away from the gold standard scores.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We
+proposed a feature-rich approach to
+the under-investigated problem of predicting essay-level prompt adherence scores on student essays.
+In an evaluation on 830 argumentative essays selected from the ICLE
+corpus, our system significantly
+outperformed a Random Indexing based baseline by several
+evaluation metrics.
+To stimulate further research on this task, we make all our annotations, including our prompt adherence scores, the LDA topic annotations, and the error annotations publicly available.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Attali and J. Burstein</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated essay scoring with E-rater v.2.0</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Technology, Learning, and Assessment</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">3</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet Allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=944919.944937" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.SSS0.P4.p1" title="5. LDA Topics ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_manual"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chang and C. Lin</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBSVM: A library for support vector machines</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Software available at <span class="ltx_ERROR undefined">\url</span>http://www.csie.ntu.edu.tw/ cjlin/libsvm</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p4" title="4.1 Model Training and Application ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Deerwester, S. T. Dumais, G. W. Furnas, T. K. Landauer and R. Harshman</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Indexing by latent smeantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of American Society of Information
+Science</span> <span class="ltx_text ltx_bib_volume">41</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 391–407</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib74" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Granger, E. Dagneaux, F. Meunier and M. Paquot</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">International corpus of learner English (version 2)</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Presses universitaires de Louvain</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Corpus Information ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Higgins, J. Burstein and Y. Attali</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying off-topic student essays without topic-specific training data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 145–159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib75" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Higgins, J. Burstein, D. Marcu and C. Gentile</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating multiple aspects of coherence in student essays</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 185–192</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS2.SSS0.P1.p2" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib59" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Higgins and J. Burstein</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence similarity measures for essay coherence</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p2" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Jurgens and K. Stevens</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The S-Space package: An open source package for word space models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 30–35</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1858933.1858939" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Kanerva, J. Kristoferson and A. Holst</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random indexing of text samples for latent semantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 103–106</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Kirkpatrick, C. D. Gelatt and M. P. Vecchi</span><span class="ltx_text ltx_bib_year">(1983)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimization by simulated annealing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Science</span> <span class="ltx_text ltx_bib_volume">220</span> (<span class="ltx_text ltx_bib_number">4598</span>), <span class="ltx_text ltx_bib_pages"> pp. 671–680</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.SSS2.p1" title="5.1.2 Parameter Tuning ‣ 5.1 Experimental Setup ‣ 5 Evaluation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1.2</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. K. Landauer and S. T. Dutnais</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A solution to plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological review</span>, <span class="ltx_text ltx_bib_pages"> pp. 211–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. K. Landauer, D. Laham and P. W. Foltz</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated scoring and annotation of essays with the Intelligent Essay Assessor™}, booktitle = Automated Essay Scoring: A Cross-Disciplinary Perspective, editors = Mark D. Shermis and Jill C. Burstein, pages = 87–112, publisher = Lawrence Erlbaum Associates, Inc., address = Mahwah, NJ</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Louis and D. Higgins</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Off-topic essay detection using short prompt texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 92–95</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-1013" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Corpus Annotation ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib78" class="ltx_bibitem ltx_bib_unpublished"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. K. McCallum</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MALLET: A Machine Learning for Language Toolkit</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://mallet.cs.umass.edu</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://mallet.cs.umass.edu" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.SSS0.P4.p2" title="5. LDA Topics ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS3.SSS0.P6.p8" title="7. Predicted Thesis Clarity Errors ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Miltsakaki and K. Kukich</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluation of text coherence for electronic essay scoring systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">10</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 25–55</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Parker, D. Graf, J. Kong, K. Chen and K. Maeda</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">English gigaword fourth edition</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Linguistic Data Consortium, Philadelphia</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Persing, A. Davis and V. Ng</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling organization in student essays</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 229–239</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Persing and V. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling thesis clarity in student essays</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 260–269</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS3.SSS0.P2.p1" title="3. Thesis Clarity Keywords ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS3.SSS0.P6.p1" title="7. Predicted Thesis Clarity Errors ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Sahlgren</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An introduction to random indexing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="1. Random Indexing ‣ 4.2 Baseline Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib20a" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Shermis and J. C. Burstein</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated essay scoring: A cross-disciplinary perspective</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Lawrence Erlbaum Associates, Inc.</span>, <span class="ltx_text ltx_bib_place">Mahwah, NJ</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Shermis, J. Burstein, D. Higgins and K. Zechner</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated essay scoring: writing assessment and instruction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">International encyclopedia of education (3rd edition)</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Yang and J. O. Pedersen</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comparative study on feature selection in text categorization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 412–420</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.SSS0.P1.p2" title="2. N-grams ‣ 4.3 Novel Features ‣ 4 Score Prediction ‣ Modeling Prompt Adherence in Student Essays" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:37:10 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,1336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Argument graphs and assumption-based argumentation.
+   </title>
+   <abstract>
+    Arguments in structured argumentation are usually defined as trees, and extensions as sets of such tree-based arguments with various properties depending on the particular argumentation semantics. However, these arguments and extensions may have redundancies as well as circularities, which are conceptually and computationally undesirable. Focusing on the specific case of Assumption-Based Argumentation (ABA), we propose novel notions of arguments and admissible/grounded extensions, both defined in terms of graphs. We show that this avoids the redundancies and circularities of standard accounts, and set out the relationship to standard tree-based arguments and admissible/grounded extensions (as sets of arguments). We also define new notions of graph-based admissible/grounded dispute derivations for ABA, for determining whether specific sentences hold under the admissible/grounded semantics. We show that these new derivations are superior with respect to standard dispute derivations in that they are complete in general, rather than solely for restricted classes of ABA frameworks. Finally, we present several experiments comparing the implementation of graph-based admissible/grounded dispute derivations with implementations of standard dispute derivations, suggesting that the graph-based approach is computationally advantageous.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Argumentation theory is a powerful reasoning abstraction in which conflicting arguments are represented and evaluated against one another in order to resolve conflicts and find those sets of arguments which are together dialectically superior. It has been extensively studied in AI over the past two decades—see [2], [4], [24] for an overview—and used as the formal basis of a number of applications. Several forms of argumentation have been proposed. The simplest form is the seminal abstract argumentation defined by Dung [11], where the basic structure is a graph whose vertices represent arguments and whose edges, called attacks, represent a relation of conflict between arguments. By contrast, in structured argumentation—see [3] for an overview—arguments and attacks are not primitive but are derived from more basic structures. It is common in structured argumentation to define arguments as trees, whose edges represent a relation of dependency holding between sentences labelling the nodes.
+     </paragraph>
+     <paragraph>
+      Assumption-Based Argumentation (ABA) [6], [12], [14], [13], [27], [28] is a well-known form of structured argumentation. In ABA, arguments are obtained from the rules of a given deductive system and assumptions (special sentences in the language underlying the deductive system). More specifically, arguments are finite trees whose leaves must either be labelled by assumptions or must represent the empty body of a rule in the deductive system. Such an argument is attacked by another argument when an assumption on which the first argument is built has as contrary a sentence labelling the root of the second argument. In ABA, the internal structure of arguments is explicit, as is also the reason why there is an attack between two arguments.
+     </paragraph>
+     <paragraph>
+      The semantics of argumentation frameworks typically determine different dialectically superior or winning sets of arguments, known as acceptable extensions. Both abstract argumentation and ABA define various alternative semantics and corresponding kinds of acceptable extensions. In the case of ABA, extensions can be equivalently understood in terms of sets of assumptions (in the support of arguments in acceptable extensions)—see [6], [14], [28].
+     </paragraph>
+     <paragraph>
+      ABA has been applied in several settings, e.g., to support medical decision-making [8], [19] and e-procurement [22]. ABA's applicability relies on the existence of computational mechanisms, based on various kinds of dispute derivation[12], [14], [27] that are formally proven to be correct procedures under various semantics. Whereas the semantics are non-constructive specifications of what can be deemed acceptable extensions, dispute derivations are fully constructive algorithms. One kind of dispute derivation for computation under the semantics of admissible extensions was presented by Dung et al. [12]; this was extended to the semantics of grounded and ideal extensions by Dung et al. [14], and, in a parametric version with a richer output (encompassing both views of extensions as sets of arguments and as sets of assumptions) by Toni [27].
+     </paragraph>
+     <paragraph>
+      ABA is not alone among forms of structured argumentation in representing arguments as tree structures; [23] and others do the same. This has several consequences. Positively, it means that the relation of support is depicted explicitly in the formalism, with an edge of such a tree-based argument representing the relation of dependence of one sentence on others. Yet, negatively, it can lead to several problems, both conceptual and computational. First, defining arguments as trees whose nodes are labelled by sentences means that there can be circular dependencies amongst those sentences, even if these trees are required to be finite. The potential for circular dependency also causes problems computationally: it means that, in the course of a dispute derivation, loops may be encountered which prevent standard procedures from terminating, leading to incompleteness. Secondly, even if there is no circular dependency, the use of trees to represent arguments allows a sentence to be proved in several different ways (which we call flabbiness). Flabbiness is conceptually undesirable and involves redundancy, with the same sentence being reproved needlessly; it is also therefore inefficient.
+     </paragraph>
+     <paragraph>
+      Thirdly, some of these issues arise not only with the definition and computation of individual arguments, but also with the definition and computation of extension-based semantics, i.e., with sets of arguments. These sets are intended to represent a coherent dialectical position, but, as we discuss in the paper, if the same sentence is proved in multiple different ways in different arguments belonging to the set (which we call bloatedness), it can rightly be questioned whether an appropriate notion of coherence applies. Indeed, one may have already computed that there is an argument for some sentence, but not use this where it could serve as a subargument elsewhere. Again, as with the case of the flabbiness of individual arguments, there is also a question of efficiency in the computation of extensions.
+     </paragraph>
+     <paragraph>
+      In the current paper we provide a solution, which answers the conceptual problems, as well as the computational issues of incompleteness and inefficiency. The solution relies upon altering the underlying conception of an argument to an approach which is graph-based rather than tree-based, and which also reconceives the nature of the set of arguments sanctioned by the semantics and computed in a dispute derivation, removing redundancy across arguments. Using graphs rather than sets of trees, circularity, flabbiness and bloatedness are removed at a stroke. Our work focuses on the case of ABA in particular, but we think that the approach of using graphs would also generalize to other forms of structured argumentation which are currently based on trees, such as [23].
+     </paragraph>
+     <paragraph>
+      We provide a link between our argument-graph approach and rule-minimal arguments, which makes the connection to standard, tree-based accounts of arguments in ABA explicit. We define novel admissible and grounded graph-based semantics for our argument graphs, and show the correspondence with the standard semantics using trees. We then define dispute derivations for the new structures, which we prove are sound and complete with respect to the novel semantics. Completeness in the dispute derivations for grounded semantics is an important further advantage of our approach, for previous dispute derivations for ABA—those of Dung et al. [12], Dung et al. [14] and Toni [27]—are complete solely for a special form of (p-acyclic) ABA frameworks. Indeed, our dispute derivations are complete for any form of ABA framework.
+     </paragraph>
+     <paragraph>
+      In addition to the gains in conceptual justification and completeness, there are improvements in the speed with which computation is performed in the new approach. We implemented our algorithms in Prolog,{sup:1} and conducted a preliminary experimental evaluation of the new algorithms in comparison with an implementation of the previous dispute derivations of Toni [27]. The results, as can be seen in §6, favour the graph-based approach.{sup:2}
+     </paragraph>
+     <paragraph>
+      The work here substantially extends the preliminary research in [9]. First, the previous work was restricted to the grounded semantics, still defined in terms of sets of tree-based arguments rather than graphs. Secondly, the main results of that paper were given as proof sketches; full proofs are now provided. Thirdly, the previous paper focused on soundness; full completeness results are now also provided. Fourthly, we conduct a more thorough experimental comparison with standard dispute derivations. Fifthly, many more examples are provided. Sixthly, in previous work argument graphs were conceived more as a data structure to aid computation; in the present paper they are justified on more conceptual grounds, as an appropriate representation of the justification structure in arguments. Seventhly, and related to the previous point, we provide a new semantics for argument graphs.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. In §2 we give background on ABA. In §3 we describe conceptual and associated computational problems with the existing formulation. In §4 we describe our formalism and relate it to existing definitions and semantics for ABA. In §5 we give dispute derivations for argument graphs, proving soundness and completeness with respect to admissible and grounded semantics. In §6 we discuss experiments comparing standard dispute derivations with the graph-based derivations introduced in the previous section. In §7 we compare our contribution in this paper to related work. In §8 we conclude and discuss future research. Proofs not included in the main text are in the Appendix.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      An ABA framework[6], [13], [28] is a tuple {a mathematical formula}(L,R,A,ss‾):
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}(L,R) is a deductive system, with {a mathematical formula}L a set of sentences and {a mathematical formula}R a set of (inference) rules of the form {a mathematical formula}s0←s1,…,sm, for {a mathematical formula}m⩾0 and {a mathematical formula}s0,s1,…,sm∈L;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}A⊆L is a non-empty set, the assumptions;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ss‾ is a total mapping from {a mathematical formula}A to {a mathematical formula}L, with {a mathematical formula}a¯ known as the contrary of a.
+      </list-item>
+     </list>
+     <paragraph>
+      A flat ABA framework is an ABA framework such that for no rule {a mathematical formula}s0←s1,…,sm∈R does it hold that {a mathematical formula}s0∈A. In the remainder of the paper, unless otherwise specified, we assume as given a flat ABA framework {a mathematical formula}(L,R,A,ss‾).
+     </paragraph>
+     <paragraph>
+      In ABA, arguments are proofs using rules in {a mathematical formula}R, with each argument ultimately depending on assumptions [13], [28]. Proofs and arguments are standardly defined as trees:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A proof for{a mathematical formula}s∈Lsupported by{a mathematical formula}S⊆L is a (finite) tree with nodes labelled by sentences in {a mathematical formula}L or {a mathematical formula}⊤∉L, where the root is labelled by s and:
+      </list-item>
+      <list-item label="•">
+       An argument for{a mathematical formula}s∈L is a proof for s supported by some {a mathematical formula}A⊆A.{sup:4} (We sometimes call such arguments tree-based arguments, in order to distinguish them from the argument graphs we later introduce.)
+      </list-item>
+     </list>
+     <paragraph>
+      We will use the following notation regarding the structure of arguments. Where {a mathematical formula}a is an argument for s supported by A, {a mathematical formula}claim(a)=s (s is the claim of {a mathematical formula}a) and {a mathematical formula}support(a)=A (A is the support of {a mathematical formula}a). Where {a mathematical formula}A⊆A, then {a mathematical formula}args(A) is the set {a mathematical formula}{a|support(a)⊆A}, i.e., the set of arguments whose support is a subset of A. Where {a mathematical formula}A is a set of arguments (an extension), {a mathematical formula}claims(A) is {a mathematical formula}{claim(a)|a∈A}. Where {a mathematical formula}a is an argument, we let {a mathematical formula}nodes(a) be the set of nodes of {a mathematical formula}a. Where {a mathematical formula}n∈nodes(a), {a mathematical formula}label(n) is the sentence, or ⊤, which labels n and {a mathematical formula}children(n,a) is the (possibly empty) set of children of n in {a mathematical formula}a; where {a mathematical formula}a is clear from the context, we write {a mathematical formula}children(n,a) simply as {a mathematical formula}children(n); where N is a set of nodes of a proof, {a mathematical formula}labels(N) is {a mathematical formula}{label(n)|n∈N}.
+     </paragraph>
+     <paragraph>
+      In ABA the attack relation between arguments is defined in terms of assumptions and their contraries:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       an argument {a mathematical formula}aattacks an argument {a mathematical formula}b (written here as {a mathematical formula}a⇝b) iff there is some {a mathematical formula}b∈support(b) such that {a mathematical formula}b¯=claim(a).
+      </list-item>
+     </list>
+     <paragraph>
+      This notion is lifted to sets as follows: a set of arguments {a mathematical formula}A attacks a set of arguments {a mathematical formula}B (written here as {a mathematical formula}A⇝B) iff some {a mathematical formula}a∈A attacks some {a mathematical formula}b∈B; an argument {a mathematical formula}a attacks a set of arguments {a mathematical formula}B (written here {a mathematical formula}a⇝B) iff {a mathematical formula}a⇝b for some {a mathematical formula}b∈B; and a set of arguments {a mathematical formula}A attacks an argument {a mathematical formula}b (written here {a mathematical formula}A⇝b) iff some {a mathematical formula}a∈A attacks {a mathematical formula}b.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider the ABA framework {a mathematical formula}(L,R,A,ss‾) where:{a mathematical formula} The arguments and attack relation depicted in Fig. 1 are obtained. Here (as throughout the paper), arguments are in shaded boxes, The root of an argument is always at the top of a box and where a sentence within an argument depends on others—say, p on q and r, in the diagram, through the rule {a mathematical formula}p←q,r—then this is represented by the others' being below the sentence in question and connected to it by a directed edge (the dotted end of the edge is the sentence in the body). Attacks between arguments are shown as arrows. If {a mathematical formula}a⇝b, we show the arrow as stemming from the vicinity of {a mathematical formula}claim(a) and finishing in the vicinity of some {a mathematical formula}b∈support(b) such that {a mathematical formula}b¯=claim(a).  ⌟
+     </paragraph>
+     <paragraph>
+      Attacks represent conflicts, and argumentation semantics constitute recipes to determine how to resolve these conflicts and determine acceptable (or winning) sets of arguments [11], [6], [14]. Several alternative notions of acceptable sets of arguments (referred to as extensions) have been proposed for ABA [6], [14]. Here, we focus on admissible and grounded extensions. An extension is defined to be:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       conflict-free iff it does not attack itself;
+      </list-item>
+      <list-item label="•">
+       admissible iff it is conflict-free and attacks every argument attacking it;
+      </list-item>
+      <list-item label="•">
+       complete iff it is admissible and contains all arguments it can defend (by attacking all arguments attacking them);
+      </list-item>
+      <list-item label="•">
+       grounded iff it is minimally (w.r.t. ⊆) complete.
+      </list-item>
+     </list>
+     <paragraph>
+      A sentence{a mathematical formula}s∈L is admissible/grounded (optionally, w.r.t.{a mathematical formula}A⊆A) iff
+     </paragraph>
+     <list>
+      <list-item label="•">
+       there is an argument {a mathematical formula}a with {a mathematical formula}claim(a)=s such that {a mathematical formula}a∈A for some admissible/grounded extension {a mathematical formula}A (optionally, with {a mathematical formula}A=⋃a∈Asupport(a)).
+      </list-item>
+     </list>
+     <paragraph label="Example 1">
+      ContinuedLet {a mathematical formula}p⁎ be the argument for p in Fig. 1, {a mathematical formula}a⁎ the argument for a in Fig. 1, and so on. (In the present example, these are unambiguously defined.) Then, the admissible extensions are:{a mathematical formula} The complete extensions are just {a mathematical formula}{p⁎,q⁎,r⁎,a⁎}, {a mathematical formula}{s⁎,b⁎,q⁎} and {a mathematical formula}{q⁎}. The grounded extension—unique, as always—is {a mathematical formula}{q⁎}. ⌟
+     </paragraph>
+     <paragraph>
+      Several algorithms for determining acceptability of sentences in ABA have been proposed [12], [14], [27], starting from the dispute derivations presented by Dung et al. [12], to the generic form, taking parameters which give specific instances for the two mentioned semantics (as well as a third semantics not considered here), presented by Toni [27]. We leave the details as references for the interested reader, but note that the dispute derivations we present in §5 are based on this existing work.
+     </paragraph>
+     <paragraph>
+      Given a set Args of arguments, and an attack relationship {a mathematical formula}⇝⊆(Args×Args), Dung [11] also defines the characteristic function of the abstract argumentation framework{a mathematical formula}(Args,⇝) as the function {a mathematical formula}f:2Args→2Args such that, for all {a mathematical formula}A⊆Args:{a mathematical formula} Thus {a mathematical formula}f(A) is the set of all arguments defended by {a mathematical formula}A. The characteristic function provides an alternative means of specifying the various semantics defined above, as well as alternative semantics treated in the literature. Given a conflict-free extension {a mathematical formula}A⊆Args, it was shown by Dung [11] that:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}A is admissible iff {a mathematical formula}A⊆f(A);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}A is complete iff {a mathematical formula}A=f(A);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}A is grounded iff {a mathematical formula}A is the least fixed point of f.
+      </list-item>
+     </list>
+     <paragraph>
+      This alternative characterization of the semantics will be important when we give a semantics for our argument graphs, in §4.3.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Motivation
+     </section-title>
+     <paragraph>
+      In at least those forms of structured argumentation which use trees, or analogues of them, to represent arguments—e.g., ABA and [23]—the conception of an argument enforces a form of relevance of the support to the claim. However, the practice of defining arguments as trees allows undesirable patterns of circularity and redundancy in arguments, even if these trees are required to be finite, as is the case for ABA—see §2. In the current section we investigate and define these forms of redundancy. We focus on ABA specifically, but much of what is said here, and the particular definitions, could easily be adapted to other forms of tree-based structured argumentation.
+     </paragraph>
+     <paragraph label="Example 2">
+      As a basis for discussion, consider the following example in ABA. Consider the ABA framework {a mathematical formula}(L,R,A,ss‾) where:{a mathematical formula}Fig. 2 shows four trees: {a mathematical formula}a2–{a mathematical formula}a4 are arguments for p, and {a mathematical formula}a1 is an infinite tree which does not qualify as an argument. Fig. 3 shows two extensions. Both extensions are admissible. However, {a mathematical formula}A contains one argument in which r is supported by a and another in which r is supported by b.  ⌟
+     </paragraph>
+     <paragraph>
+      In Example 2, each sentence in the infinite tree {a mathematical formula}a1 depends on other sentences, as determined by the rules in {a mathematical formula}R; in that sense, the tree satisfies one criterion of what an argument for a claim must be, since every sentence in {a mathematical formula}a1 has an immediate justification. {a mathematical formula}a1 would satisfy the account of an argument in ABA if that account were relaxed to allow the trees to be infinite. Yet we take the view that the sort of structure {a mathematical formula}a1 typifies, in which there is an infinite path of support, should not represent a possible pattern of dependency in an argument. This is because a chain of justifications must end somewhere: one cannot pass the buck forever. Thus, the definition of an argument in ABA, and in other standard approaches to structured argumentation, rightly excludes such infinite structures from being arguments.
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}a2–{a mathematical formula}a4 all do conform to the definition of argument in ABA. However, as we now describe, {a mathematical formula}a2 has a kind of circularity which should be excluded; we then show that {a mathematical formula}a3 has a further kind of redundancy which also ought to be disallowed. Finally, we turn to the extensions in Fig. 3 and note that {a mathematical formula}A has a generalized form of the problem with {a mathematical formula}a3.
+     </paragraph>
+     <paragraph>
+      In {a mathematical formula}a2 there is a circular dependency of a sentence, p, on itself (indirectly, through q): arguably, this ought not to be allowed as a representation of the way in which sentences are supported. It represents a situation in which the justification for a given belief comes partly from itself, a notion which we regard as incoherent; the situation in which an agent attempts to justify a sentence on the grounds of that sentence itself is also rhetorically flawed. We therefore think that the definition of an argument should exclude the kind of dependency shown by {a mathematical formula}a2; in this way we will in §4 follow others such as [29], who have defined arguments so as to eliminate such dependency. (Note that in the case of ABA, where {a mathematical formula}R is finite, then a tree in which there is an infinite path must also involve this type of circular dependency.)
+     </paragraph>
+     <paragraph>
+      Consider now {a mathematical formula}a3. Here, a sentence, r, is proved in two different ways. Even if neither proof involves a circularity (as in {a mathematical formula}a2), the argument can be deemed to be redundant and also to lead to inefficiency, since it supports the same sentence in two different ways at different points of the argument, using a and b as different reasons for the same conclusion. (It is important to note that this is different from the phenomenon of ‘aggregation’, in which a sentence is everywhere justified jointly by several reasons; aggregation is an important topic not addressed in ABA or other forms of structured argumentation, which we do not address in the current work either.) We therefore exclude the possibility of such redundant arguments.
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      The following definition formally captures the types of problem discussed for {a mathematical formula}a2 and {a mathematical formula}a3 from Example 2. An argument {a mathematical formula}a is circular if it contains a directed path from a node n labelled by some {a mathematical formula}s∈L to another node {a mathematical formula}n′ labelled by s. An argument {a mathematical formula}a is flabby if it is non-circular and there are different nodes n, {a mathematical formula}n′ labelled by {a mathematical formula}s∈L such that the children of n are labelled by different members of {a mathematical formula}L∪{⊤} from the children of {a mathematical formula}n′.  ⌟
+     </paragraph>
+     <paragraph>
+      According to this definition, in Example 2{a mathematical formula}a2 is circular (and not flabby), {a mathematical formula}a3 is flabby (and not circular), and {a mathematical formula}a4 is neither circular nor flabby.
+     </paragraph>
+     <paragraph>
+      The sort of redundancy shown by {a mathematical formula}a3 can be found also in sets of arguments, as in {a mathematical formula}A in Fig. 3. The same considerations in favour of ruling out flabby arguments also suggest ruling out extensions such as {a mathematical formula}A, in which a sentence is supported in different ways in two different arguments. Indeed, extensions should represent dialectically coherent positions; if we rule out a reading whereby r is supported by an aggregation of the reasons a and b, then it should be supported either by a exclusively or b exclusively, as in {a mathematical formula}B in Fig. 3 (for the case of support by a). Further, just as there can be a form of circularity internal to arguments, there might also be extensions in which, though no individual argument is circular, there are arguments {a mathematical formula}a and {a mathematical formula}b such that s depends on t in {a mathematical formula}a, but t depends on s in {a mathematical formula}b. The following definition captures these undesirable forms of extension.
+     </paragraph>
+     <paragraph label="Definition 3.2">
+      An extension {a mathematical formula}A is bloated if there are arguments {a mathematical formula}a,b∈A (possibly {a mathematical formula}a=b) containing nodes {a mathematical formula}na and {a mathematical formula}nb, where {a mathematical formula}label(na)=label(nb) but {a mathematical formula}labels(children(na))≠labels(children(nb)).  ⌟
+     </paragraph>
+     <paragraph>
+      According to this definition, {a mathematical formula}A in Example 2 is bloated, but {a mathematical formula}B is not.
+     </paragraph>
+     <paragraph>
+      The relations between the three concepts defined in this section are set out in the following.
+     </paragraph>
+     <paragraph label="Theorem 3.3">
+      Let{a mathematical formula}Abe a set of arguments. If{a mathematical formula}Acontains a circular or flabby argument, then{a mathematical formula}Ais bloated.
+     </paragraph>
+     <paragraph label="Proof">
+      If {a mathematical formula}a∈A is flabby, then it is trivial to show that {a mathematical formula}A bloated.Assume {a mathematical formula}a∈A is circular. Then there is a path in {a mathematical formula}a from some node {a mathematical formula}n0 to some node {a mathematical formula}nl, both labelled by s. Let {a mathematical formula}(n0,…,nm), for {a mathematical formula}0&lt;m⩽l be the smallest initial sequence of {a mathematical formula}(n0,…,nl) ending in a node labelled by s, and let {a mathematical formula}(s0,…,sm) be the corresponding sequence of labels of those nodes (so {a mathematical formula}s0 and {a mathematical formula}sm are both s). Then we consider in {a mathematical formula}a the longest path{a mathematical formula} such that the label of node {a mathematical formula}nkm+i ({a mathematical formula}i&lt;m and {a mathematical formula}0⩽km+i⩽Km+I) is identical to that of {a mathematical formula}ni. This path cannot be infinite, since arguments are finite. But then node {a mathematical formula}nKm+I must have differently-labelled children from node {a mathematical formula}nm+I, and thus {a mathematical formula}A is bloated.  □
+     </paragraph>
+     <paragraph>
+      The set {a mathematical formula}A from Example 2 shows that the ‘only if’ direction of Theorem 3.3 fails to hold, namely a set of arguments may be bloated but contain no circular or flabby arguments.
+     </paragraph>
+     <paragraph>
+      Is the sort of circular dependency shown in {a mathematical formula}a2 exhibited in argumentation frameworks which represent real-world domains? In previous work, the current authors have worked on several practical applications of structured argumentation [8], [18], [19], [30] to domains including medicine and law. We conducted an analysis of the argumentation frameworks for these applications,{sup:5} which showed that none of them contained rules which allow the construction of cyclical arguments like {a mathematical formula}a2. (The largest of the frameworks we analyzed contained 11,147 rules.) This is minor evidence that the theoretical arguments for the exclusion of such structures from being arguments is also supported by the absence of such arguments from practical applications. However, it must also be noted that all of the argumentation frameworks in question were constructed by a single researcher or small group of researchers, trained in argumentation theory. Where applications involve disparately constructed knowledge bases, and where any cycles which may exist cannot be eliminated by a detailed revision and repair of the combined base, then the need for definitions of argument which themselves constrain the arguments constructed to be acyclic will become pressing.
+     </paragraph>
+     <paragraph>
+      Flabbiness and bloatedness, by contrast, do exist in real-world argumentation frameworks. All of the frameworks mentioned above contain many possibilities for the construction of flabby arguments, and this means that bloated extensions are also possible. Thus, there is a pragmatic justification for excluding the redundancy shown by many tree-based approaches to structured argumentation; this justification is seen even in argumentation frameworks in which the knowledge has been carefully represented.
+     </paragraph>
+     <paragraph>
+      We will show that circularity, flabbiness and bloatedness can be removed at a stroke by switching from a conception of arguments as trees to graphs, and by moving from a conception of an acceptable dialectical position as a set of arguments again to graphs.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Argument graphs
+     </section-title>
+     <paragraph>
+      Argument graphs, which we introduce in the present section, serve two fundamental, related roles. First, they correspond to standard arguments: structures supporting a single, specific claim. Secondly, they correspond to the extensions used in defining the semantics of argumentation frameworks, and which are an overall representation of an acceptable dialectical position of an agent. Accordingly, in §4.1 below we initially treat argument graphs in their first role, and then in §4.3 in their second (where the emphasis will be on new forms of semantics defined in terms of argument graphs). An interlude, in §4.2, on the relations between argument graphs and forms of minimality fits between these two treatments. Recall, as stated in §2, that except where noted we are presuming a fixed ABA framework {a mathematical formula}(L,R,A,ss‾).
+     </paragraph>
+     <paragraph>
+      In defining argument graphs below and in the rest of the paper we adopt the following notation. Where G is a graph, we sometimes use {a mathematical formula}v(G) to denote its vertices, and {a mathematical formula}e(G) to denote its edges (thus {a mathematical formula}e(G)⊆v(G)×v(G)). A sink vertex has no outgoing edges; we write the sink vertices of the directed graph G as {a mathematical formula}sinks(G). A source vertex is a vertex with no incoming edges.
+     </paragraph>
+     <paragraph label="Definition 4.1">
+      An argument graph G is a directed, acyclic graph where {a mathematical formula}v(G)⊆L and for all {a mathematical formula}s∈v(G):
+      <list>
+       if {a mathematical formula}s∈A, then {a mathematical formula}s∈sinks(G);if {a mathematical formula}s∉A, then there is a rule {a mathematical formula}(s←s1,…,sm)∈R such that there is an edge {a mathematical formula}(s,s′) in {a mathematical formula}e(G) iff {a mathematical formula}s′∈{s1,…,sm}.An argument graph
+      </list>
+      <paragraph>
+       G is said to be focused iff it has a unique source, called the claim of G and represented as {a mathematical formula}claim(G). ⌟
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      Note that vertices of argument graphs are sentences, whereas nodes of standard arguments in ABA, as given in §2, are labelled by sentences (or ⊤). Note also that we overload the terms ‘support’ and ‘claim’, defined with similar intentions for both tree-based arguments and argument graphs. Fig. 4 shows all argument graphs that can be obtained from the ABA framework in Example 2, if the rules in that framework are restricted to:{a mathematical formula} Here, for example, the top, left-most argument with support a is focused, with claim a, whereas the top, right-most argument with support {a mathematical formula}{a,b} is not focused, as it has two sources, r and b. The bottom-right argument graph, {a mathematical formula}Gp,r, can be written as {a mathematical formula}({p,r,a,b},{(p,b),(r,a)}). This makes the nature of {a mathematical formula}v(Gp,r) and {a mathematical formula}e(Gp,r) as a sets of sentences and pairs, respectively, explicit.
+     </paragraph>
+     <paragraph>
+      Note that, in Fig. 4 and throughout the paper, in visualizing argument graphs, we follow the same conventions, given in Example 1, as for tree-based arguments (e.g., the direction of an edge is represented by the relative vertical position of its nodes as well as disambiguated by a dot).
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Argument graphs and tree-based arguments
+      </section-title>
+      <paragraph>
+       In this section, we show how the notion of an argument graph addresses some of the issues raised in §3 and how it relates to the original notion of ABA arguments as trees.
+      </paragraph>
+      <paragraph label="Definition 4.2">
+       Argument graphs can be seen as representing only those tree-based arguments without the undesirable properties of the kinds identified in §3. The required notion of representation is given in the following. Let G be an argument graph, and {a mathematical formula}a a tree-based argument. We say that {a mathematical formula}a is represented in G if there is a function {a mathematical formula}f:(nodes(a)∖{n|n∈nodes(a)∧label(n)=⊤})→v(G) mapping nodes of {a mathematical formula}a not labelled by ⊤ to nodes of G such that, where {a mathematical formula}n∈(nodes(a)∖{n|n∈nodes(a)∧label(n)=⊤}):
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}f(n)=label(n);
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}f(n)=s, then {a mathematical formula}labels({n′|n′∈children(n)})∖{⊤}={s′|(s,s′)∈e(G)}.  ⌟
+       </list-item>
+      </list>
+      <paragraph label="Example 3">
+       This notion is illustrated below. Consider the ABA framework:{a mathematical formula}Fig. 5 shows an argument graph and the arguments it represents.  ⌟
+      </paragraph>
+      <paragraph label="Theorem 4.3">
+       Fig. 5 demonstrates the concision in representation afforded by argument graphs, compared with tree-based arguments. Indeed, the following result shows that argument graphs are a combined representation of several tree-based arguments—one argument for each node in the argument graphs, with the claim the node in question. Let G be an argument graph. For each{a mathematical formula}s∈v(G), there is an argument{a mathematical formula}asuch that{a mathematical formula}claim(a)=s,{a mathematical formula}support(a)⊆support(G)and{a mathematical formula}ais represented in G.
+      </paragraph>
+      <paragraph label="Proof">
+       We generate an argument from s and G in the following way. First, create a new node {a mathematical formula}nr labelled by s ({a mathematical formula}nr has depth 0 in the argument). Then, starting at {a mathematical formula}i=0, for each node {a mathematical formula}n′ at depth i, where {a mathematical formula}n′ is labelled by {a mathematical formula}s′, for each {a mathematical formula}s″ such that {a mathematical formula}(s′,s″)∈e(G) create a new child {a mathematical formula}n″ of {a mathematical formula}n′ in {a mathematical formula}a labelled by {a mathematical formula}s″. Then increment i until there are no nodes of depth i. Since there are no cycles in G, this process terminates.Let {a mathematical formula}a be the resulting argument; to show that {a mathematical formula}a is represented in G, let {a mathematical formula}f:nodes(a)→v(G) be such that {a mathematical formula}f(n)=label(n). According to Definition 4.2 we just need to show that if {a mathematical formula}f(n)=s for any {a mathematical formula}n∈nodes(a), then {a mathematical formula}labels({n′|n′∈children(n)})∖{⊤}={s′|(s,s′)∈e(G)}. This is true by construction.Since {a mathematical formula}a is represented in G, it is immediate that {a mathematical formula}support(a)⊆support(G).  □
+      </paragraph>
+      <paragraph label="Proof">
+       We have seen in §3 that tree-based arguments may be circular or flabby in general. The following theorem shows that the desirable properties of non-circularity and non-flabbiness hold for tree-based arguments represented in argument graphs. Let G be an argument graph, and{a mathematical formula}aan argument represented in G. Then{a mathematical formula}ais neither circular nor flabby.Let {a mathematical formula}a be represented in G. Non-circularity is easy to show, given the non-circularity of G. Assume {a mathematical formula}a is flabby. Then there are {a mathematical formula}n1,n2∈nodes(a) such that {a mathematical formula}n1≠n2, {a mathematical formula}label(n1)=label(n2), and {a mathematical formula}labels(children(n1))≠labels(children(n2)). But from {a mathematical formula}label(n1)=label(n2) (from the second bullet in Definition 4.2) we know that {a mathematical formula}labels(children(n1))=labels(children(n2)). Contradiction.  □
+      </paragraph>
+      <paragraph>
+       To investigate the converse direction to Theorem 4.4, i.e., whether each non-circular, non-flabby argument is represented in some argument graph, we first define a mapping from tree-based arguments to argument graphs, as follows:
+      </paragraph>
+      <paragraph label="Definition 4.5">
+       Let {a mathematical formula}a be a tree-based argument. A focused argument graph G is a graphical conversion of{a mathematical formula}a if:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}claim(a)=claim(G);
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}(s,s′)∈e(G), then there are {a mathematical formula}n,n′∈nodes(a) such that {a mathematical formula}n′∈children(n), {a mathematical formula}label(n)=s and {a mathematical formula}label(n′)=s′.
+       </list-item>
+      </list>
+      <paragraph label="Example 4">
+       This notion of graphical conversion is illustrated in the following example. Consider the ABA framework:{a mathematical formula}Fig. 6 shows a set of arguments {a mathematical formula}A with two graphical conversions {a mathematical formula}G1 and {a mathematical formula}G2 of that set. Note that {a mathematical formula}claims(A) is {a mathematical formula}{p,r}, and {a mathematical formula}{p,r}⊆v(G1), {a mathematical formula}{p,r}⊆v(G2), as Definition 4.5 requires. Further, for any edge in either {a mathematical formula}G1 or {a mathematical formula}G2, there is a similarly-labelled edge in one of the arguments in {a mathematical formula}A.  ⌟
+      </paragraph>
+      <paragraph>
+       A graphical conversion of an argument {a mathematical formula}a is a focused argument graph G with the same claim, which can be thought of as pruning the argument in such a way as to remove circularity and flabbiness. Similarly, a graphical conversion of a set of arguments {a mathematical formula}A is an argument graph that retains the claims of arguments in {a mathematical formula}A as nodes, but prunes those arguments in such a way as to remove bloatedness (and thus also, given Theorem 3.3, circularity and flabbiness). As a consequence, the graphical conversion of a non-circular, non-flabby argument and the graphical conversion of a non-bloated set of arguments are guaranteed to be unique and to have the same claims and the same supports as the original (sets of) arguments, as we now prove.
+      </paragraph>
+      <paragraph label="Theorem 4.6">
+       (i) Let{a mathematical formula}abe a non-circular, non-flabby argument. Then there is a unique graphical conversion G of{a mathematical formula}awhich is a focused argument graph with{a mathematical formula}claim(a)=claim(G)and{a mathematical formula}support(a)=support(G), such that{a mathematical formula}ais represented in G. (ii) Let{a mathematical formula}Abe a non-bloated set of arguments. Then there is a unique graphical conversion G of{a mathematical formula}Awith{a mathematical formula}claims(A)⊆v(G)and{a mathematical formula}⋃a∈Asupport(a)=support(G)and each argument in{a mathematical formula}Ais represented in G.  ⌟
+      </paragraph>
+      <paragraph>
+       Note that for any non-circular, non-flabby argument {a mathematical formula}a there may, in fact, be many different argument graphs (not necessarily focused) in which {a mathematical formula}a is represented; this occurs when there are argument graphs {a mathematical formula}G′ where a graphical conversion G of {a mathematical formula}a is such that G is a sub-graph of {a mathematical formula}G′, as illustrated next.
+      </paragraph>
+      <paragraph label="Example 4">
+       ContinuedFig. 7 shows (left) an argument (from Fig. 5) with its (focused) graphical conversion (right). The left argument is also represented in the (non-focused) argument graph in Fig. 5 (left).  ⌟
+      </paragraph>
+      <paragraph label="Theorem 4.7">
+       Theorem 4.4, Theorem 4.6 together mean that all and only those tree-based arguments that are both non-circular and non-flabby are represented in argument graphs. Directly from these results, it is easy to see that there is an analogous relationship of equivalence between non-circular, non-flabby arguments and tree-based arguments in general. Let{a mathematical formula}s∈Land{a mathematical formula}A⊆A. (i) For every non-circular, non-flabby tree-based argument for s supported by A there exists a tree-based argument for s supported by A. (ii) For every tree-based argument for s supported by A there exists a non-circular, non-flabby tree-based argument for s supported by{a mathematical formula}A′⊆A.  ⌟
+      </paragraph>
+      <paragraph label="Proof">
+       Theorem 4.4, Theorem 4.6, Theorem 4.7 easily let us show the following, which establishes the desired result: argument graphs are, in at least one important sense, equivalent to the tree-based arguments in standard ABA. Let{a mathematical formula}s∈Land{a mathematical formula}A⊆A. (i) For every focused argument graph G with claim s supported by A, there exists an argument{a mathematical formula}awith claim s supported by A. (ii) For every argument{a mathematical formula}awith claim s supported by A, there exists a focused argument graph G with claim s supported by{a mathematical formula}A′⊆A.(i) Let G be a focused argument graph, with {a mathematical formula}claim(G)=s and support A. Then by Theorem 4.3 there is an argument {a mathematical formula}a represented in G, such that {a mathematical formula}claim(a)=s and {a mathematical formula}support(a)⊆support(G). It is easy to see that at least one such {a mathematical formula}a must be such that {a mathematical formula}support(a)=support(G).(ii) Let {a mathematical formula}a be an argument with {a mathematical formula}claim(a)=s and {a mathematical formula}support(a)=A. Then by Theorem 4.7(ii) there is a non-circular, non-flabby argument {a mathematical formula}a′ with the same claim, and support {a mathematical formula}A′, where {a mathematical formula}A′⊆A. Then by Theorem 4.6 there is an argument graph G with {a mathematical formula}claim(G)=s and {a mathematical formula}support(G)⊆A.  □
+      </paragraph>
+      <paragraph>
+       Corollary 4.8 indicates that it is possible, when determining whether a sentence is acceptable according to the various standard extension-based semantics of ABA, to restrict attention to argument graphs. Indeed, in §4.3 we redefine ABA semantics of admissible and grounded extensions in terms of argument graphs. Yet although the corollary shows that there is a correspondence in terms of the existence of arguments for a given claim, one of the main strengths of using structured argumentation is that the detailed justification for such claims is presented. As we argued in §3, using trees as representations for arguments typically admits circularity, flabbiness and bloatedness, and all of these should be excluded, something which is achieved by the use of argument graphs. We therefore think that there are strong conceptual reasons for preferring them to tree-based arguments. Other gains, in terms of the dispute derivations and efficiency, are discussed in later sections.
+      </paragraph>
+      <paragraph>
+       First though, we consider the relationships between argument graphs and two restricted types of tree-based arguments.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Argument graphs and two forms of minimality
+      </section-title>
+      <paragraph>
+       To avoid redundancies in arguments, of the form illustrated in Example 2, several existing approaches to structured argumentation, e.g., logic-based argumentation [5] and DeLP [20], impose forms of minimality on the support of arguments. In this section we consider two forms of minimality, in relation to argument graphs.
+      </paragraph>
+      <paragraph label="Definition 4.9">
+       An argument {a mathematical formula}a is rule-minimal iff for any two nodes {a mathematical formula}n,n′ in {a mathematical formula}a labelled by the same {a mathematical formula}s∈L the children of n and {a mathematical formula}n′ are labelled by the same elements of {a mathematical formula}L∪{⊤}.  ⌟
+      </paragraph>
+      <paragraph>
+       All arguments shown to the right in Fig. 5 are rule-minimal; arguments {a mathematical formula}a2 and {a mathematical formula}a3 from Fig. 2 are not.
+      </paragraph>
+      <paragraph label="Theorem 4.10">
+       An alternative way to impose absence of circularity and flabbiness in an argument is to require that it be rule-minimal. An argument is rule-minimal iff it is neither circular nor flabby.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}a be an argument. First assume {a mathematical formula}a is rule-minimal. By Definition 3.2, Definition 4.9, {a mathematical formula}{a} is not bloated. Thus by the contrapositive of Theorem 3.3, {a mathematical formula}a is neither circular nor flabby.For the other direction, suppose that {a mathematical formula}a is neither flabby nor circular. Assume for contradiction that it is not rule-minimal. Then there are nodes n and {a mathematical formula}n′ labelled by some s such that the children of n and {a mathematical formula}n′ are differently labelled. n and {a mathematical formula}n′ cannot be on the same path in {a mathematical formula}a, for then {a mathematical formula}a would be circular. So they are not; but then {a mathematical formula}a must be flabby. Contradiction.  □
+      </paragraph>
+      <paragraph>
+       Thus, results from §4.1 which make reference to non-circular, non-flabby arguments, are equivalent to analogous theorems for rule-minimal arguments: Theorem 4.4, for example, can be rephrased as stating that if {a mathematical formula}a is represented in an argument graph, then {a mathematical formula}a must be rule-minimal.Similar rephrasings of Theorem 4.6, Theorem 4.7 and Corollary 4.8 also hold.
+      </paragraph>
+      <paragraph>
+       Given the relationship between rule-minimal arguments and argument graphs, it should be asked what the advantages or disadvantages are of using one over the other. First, although a focused argument graph can be seen as equivalent to a single rule-minimal, tree-based argument, argument graphs also function for us as representations of a number of different arguments operating dialectically as one: they play the role of extensions, as we will see more clearly in §4.3 when discussing argument-graph semantics. Bloated extensions are not excluded by confining ourselves to rule-minimal arguments—as we saw in Example 2, {a mathematical formula}A is a set of rule-minimal arguments but is bloated. Secondly, argument graphs are inherently more compact representations: the possible presence of different nodes in a rule-minimal, tree-based argument, labelled by the same sentence, is wasteful.
+      </paragraph>
+      <paragraph label="Example 5">
+       While focused argument graphs correspond to rule-minimal arguments and remove several forms of redundancy, they may still contain redundancies in their support, as illustrated by the following example. Consider the ABA framework in Example 2 but with {a mathematical formula}q←r in {a mathematical formula}R replaced by {a mathematical formula}q←b. Shown in Fig. 8 are argument graphs {a mathematical formula}G1 and {a mathematical formula}G2 for p, supported by {a mathematical formula}{a,b} and {a mathematical formula}{b} respectively. Here, the support of {a mathematical formula}G1 is non-minimal, in that {a mathematical formula}support(G2)⊂support(G1).  ⌟
+      </paragraph>
+      <paragraph label="Definition 4.11">
+       Thus, an alternative notion of minimality for arguments is obtained by requiring that their supports are minimal. The same idea can be applied to argument graphs, as follows. A focused argument graph G is support-minimal iff there is no focused argument graph {a mathematical formula}G′ with {a mathematical formula}claim(G)=claim(G′) such that {a mathematical formula}support(G′)⊂support(G).  ⌟
+      </paragraph>
+      <paragraph>
+       Example 5 shows that argument graphs, though representing only rule-minimal arguments, may not be support-minimal. (In relation to this, see the remarks in Section 7 on the work of Besnard and Hunter [4] and García and Simari [20].)
+      </paragraph>
+      <paragraph label="Example 6">
+       An analogous notion of support-minimal tree-based arguments can be easily defined. It is also true that, where some argument {a mathematical formula}a is support-minimal, it does not need to be rule-minimal—and so does not have to correspond directly to an argument graph. To see this, consider the following simple example. Consider the ABA framework with{a mathematical formula} In Fig. 9, arguments {a mathematical formula}a1 and {a mathematical formula}a2 are for p and are support-minimal, being supported by {a mathematical formula}{a}, but only {a mathematical formula}a2 is rule-minimal. ⌟
+      </paragraph>
+      <paragraph>
+       Thus, support-minimality does not guarantee non-circular and non-flabby arguments. Moreover, identifying support-minimal arguments may be computationally demanding. Indeed, whereas the notion of support-minimality is ‘global’, in that to check whether a focused argument graph is support-minimal it may need to be compared with all other focused argument graphs for the same claim, the notion of rule-minimality is ‘local’, in that to check whether an argument is rule-minimal all that is required is a syntactic check of the argument.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Argument graph semantics
+      </section-title>
+      <paragraph label="Theorem 4.12">
+       As noted earlier, argument graphs can be used to replace sets of tree-based arguments (extensions) as the basic unit of semantics. In discussing extensions in §3, we noted that bloatedness was an undesirable property. The following theorem shows that argument graphs as the analogues of extensions avoid it. Let G be an argument graph, and{a mathematical formula}Athe set of arguments represented in G. Then{a mathematical formula}Ais not bloated.
+      </paragraph>
+      <paragraph label="Proof">
+       We must show that there are no two arguments {a mathematical formula}a and {a mathematical formula}b in {a mathematical formula}A such that {a mathematical formula}claim(a)=claim(b). Suppose, for contradiction, that {a mathematical formula}a and {a mathematical formula}b are two such arguments. Then {a mathematical formula}a and {a mathematical formula}b are identical up to some depth {a mathematical formula}i&gt;0, but there is some node {a mathematical formula}na of {a mathematical formula}a, and node {a mathematical formula}nb of {a mathematical formula}b, both of depth i, such that {a mathematical formula}label(na)=label(nb), but{a mathematical formula} But by Definition 4.2, this means that, where {a mathematical formula}a′ is the argument given by the subtree of {a mathematical formula}a rooted at {a mathematical formula}na, and {a mathematical formula}b′ is the argument given by the subtree of {a mathematical formula}b rooted at {a mathematical formula}nb, then{a mathematical formula} But this is impossible, by Definition 4.1, since {a mathematical formula}claim(a′)=claim(b′). Contradiction. Thus there are no such {a mathematical formula}a and {a mathematical formula}b and {a mathematical formula}A is not bloated.  □
+      </paragraph>
+      <paragraph>
+       In moving to argument graphs as a representation of the relations of rational support between sentences according to an agent, we need to define corresponding versions of existing, extension-based, argumentation semantics. To do so, though, we first need to redefine the notion of attack, as follows:
+      </paragraph>
+      <paragraph label="Definition 4.13">
+       Let G, {a mathematical formula}G′ be two argument graphs. Then G attacks{a mathematical formula}G′, written {a mathematical formula}G⇝G′, if there is {a mathematical formula}a∈v(G′) such that {a mathematical formula}a¯=s, for some {a mathematical formula}s∈v(G).  ⌟
+      </paragraph>
+      <paragraph>
+       Note that, since an argument graph G represents the relations of rational support holding amongst sentences, then the agent has an argument for any {a mathematical formula}s∈L if {a mathematical formula}s∈v(G). Thus, it is appropriate to define a relation of attack between argument graphs, {a mathematical formula}G⇝G′, allowing the sentence in G that is contrary of the attacked assumption in {a mathematical formula}G′ to feature anywhere in G. This contrasts with the definition of attack in tree-based ABA, in which only the claim—i.e., the root—of the argument is relevant. The following example illustrates the notion of attack between argument graphs and how it differs from the standard ABA notion of attack between arguments.
+      </paragraph>
+      <paragraph label="Example 7">
+       Consider the ABA framework:{a mathematical formula}Fig. 10 shows the attacks between two argument graphs for this framework. To the left, there is a focused argument graph {a mathematical formula}G1 with claim p, and to the right, a focused argument graph {a mathematical formula}G2 with claim x. Since {a mathematical formula}a∈v(G1) and {a mathematical formula}a¯=y, with {a mathematical formula}y∈v(G2), then {a mathematical formula}G2⇝G1. Similarly, since {a mathematical formula}c∈v(G2) and {a mathematical formula}c¯=y, then {a mathematical formula}G2 attacks itself: {a mathematical formula}G2⇝G2. Note that if the graphs were interpreted as tree-based arguments, then neither of these attacks would be present, since they both stem from an internal node (y is not the claim of {a mathematical formula}G2).  ⌟
+      </paragraph>
+      <paragraph>
+       Using the notion of attack between argument graphs, we can proceed to analogues of the standard extension-based semantics. Some extension-based semantics make use of the relation of subset inclusion, ⊆, in order to impose a maximality or minimality requirement on the extensions. In moving to argument graphs, we must use an analogous relation—that of subgraph: where G and {a mathematical formula}G′ are graphs (including argument graphs), then G is a subgraph of {a mathematical formula}G′ (written {a mathematical formula}G⊆G′) iff:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}v(G)⊆v(G′); and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}e(G) is the restriction of {a mathematical formula}e(G′) to {a mathematical formula}v(G), i.e.,{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       Moreover, G is a proper subgraph of {a mathematical formula}G′ (written {a mathematical formula}G⊂G′) iff {a mathematical formula}G⊆G′ and {a mathematical formula}G≠G′. Finally, we use ◊ to represent the empty graph {a mathematical formula}(∅,∅).
+      </paragraph>
+      <paragraph label="Definition 4.14">
+       Recall the definition of a characteristic function for an abstract argumentation framework (presented in §2). In defining our semantics for argument graphs, we will make use of the idea of an argument graph characteristic function, applied here to sets of argument graphs instead of sets of arguments. We will make use of the following notions. Let G be an argument graph. We define {a mathematical formula}rules(G) to be{a mathematical formula} Let {a mathematical formula}R⊆R. We will say that {a mathematical formula}R is rule-consistent iff there are no {a mathematical formula}s←s1,…,sm, {a mathematical formula}s←s1′,…,sk′ in {a mathematical formula}R such that {a mathematical formula}{s1,…,sm}≠{s1′,…,sk′}. Further, {a mathematical formula}R is maximally rule-consistent iff {a mathematical formula}R is ⊆-maximally rule-consistent.  ⌟
+      </paragraph>
+      <paragraph>
+       Thus, {a mathematical formula}rules(G) is, informally, the set of rules used in the construction of G. In Fig. 10, for Example 7, {a mathematical formula}rules(G1)={p←a} and {a mathematical formula}rules(G2)={x←y,y←c}. In this example, there are two maximally rule-consistent sets, {a mathematical formula}R1={p←a,x←y,y←c} and {a mathematical formula}R2={p←b,x←y,y←c}.
+      </paragraph>
+      <paragraph label="Definition 4.15">
+       We now give the definition of argument graph characteristic function. This is analogous to the definition of the characteristic function of an abstract argumentation framework (see §2), in that it gives a maximal argument graph which is defended; but we parameterize the function on maximally rule-consistent sets {a mathematical formula}R to capture the choice of rules underlying the construction of an argument graph. Formally: Let {a mathematical formula}R⊆R be maximally rule-consistent, and let {a mathematical formula}G be the set of all argument graphs G such that {a mathematical formula}rules(G)⊆R. The argument graph characteristic function w.r.t.{a mathematical formula}R is the function {a mathematical formula}fR:G→G such that for all argument graphs G where {a mathematical formula}rules(G)⊆R, {a mathematical formula}fR(G) is the ⊆-maximal argument graph {a mathematical formula}G′ such that:
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        {a mathematical formula}rules(G′)⊆R;
+       </list-item>
+       <list-item label="ii.">
+        for any argument graph {a mathematical formula}G⁎, if {a mathematical formula}G⁎⇝G′ then {a mathematical formula}G⇝G⁎.  ⌟
+       </list-item>
+      </list>
+      <paragraph>
+       As shown above, for an argument graph G there may in general be several maximally rule-consistent {a mathematical formula}R such that {a mathematical formula}rules(G)⊆R. Thus, different argument graph characteristic functions can be applied to G to yield (possibly) ⊆-larger argument graphs. To illustrate this, consider again Example 7, and let {a mathematical formula}Gb be the argument graph just containing a single node b (so that {a mathematical formula}v(Gb)={b} and {a mathematical formula}e(Gb)=∅). Then, for {a mathematical formula}R1={p←a,x←y,y←c} and {a mathematical formula}R2={p←b,x←y,y←c} given above, it is plain that {a mathematical formula}fR1(Gb)=Gb, and {a mathematical formula}fR2(Gb) is {a mathematical formula}Gp,b, where {a mathematical formula}v(Gp,b)={p,b} and {a mathematical formula}e(Gp,b)={(p,b)}.
+      </paragraph>
+      <paragraph label="Theorem 4.16">
+       The following provides a property of argument graph characteristic functions which we use frequently. Any argument graph characteristic function{a mathematical formula}fRhas a least fixed point equal to{a mathematical formula}fRω(◊).  ⌟
+      </paragraph>
+      <paragraph label="Definition 4.17">
+       Now, properties of the argument graph characteristic function can then be used to define semantics for argument graphs, in a way analogous to the relationship between characteristic functions and semantics in abstract argumentation. Let G be an argument graph.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        G is conflict-free iff it is not the case that {a mathematical formula}G⇝G.
+       </list-item>
+       <list-item label="•">
+        G is admissible iff it is conflict-free and for all argument graph characteristic functions {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, we have {a mathematical formula}G⊆fR(G).
+       </list-item>
+       <list-item label="•">
+        G is complete iff it is conflict-free and for all argument graph characteristic functions {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, we have {a mathematical formula}G=fR(G).
+       </list-item>
+       <list-item label="•">
+        G is grounded iff it is conflict-free and for all argument graph characteristic functions {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, G is the least fixed point of {a mathematical formula}fR.  ⌟
+       </list-item>
+      </list>
+      <paragraph>
+       These are increasingly strong: if G is grounded, it is complete; if G is complete, it is admissible; and if G is admissible, it is conflict-free.
+      </paragraph>
+      <paragraph label="Example 8">
+       Consider the ABA framework:{a mathematical formula} Note that here only one set of rules, {a mathematical formula}R itself, is maximally rule-consistent. The argument graphs for this framework—without ◊—and attacks between them are shown in Fig. 11. Since there are no two argument graphs with the same claim in this example, we let {a mathematical formula}Gx denote the argument graph whose claim is x (for any {a mathematical formula}x∈L).All argument graphs here are conflict-free. {a mathematical formula}Gp is admissible, since we have {a mathematical formula}Gp⊆fR(Gp) (in fact, {a mathematical formula}fR(Gp)=Gq); also admissible are {a mathematical formula}Gq itself, {a mathematical formula}Gr, and the empty argument graph ◊. Since {a mathematical formula}fR(Gp)≠Gp, {a mathematical formula}Gp is not complete. However, since {a mathematical formula}fR(Gq)=Gq, {a mathematical formula}fR(Gr)=Gr and {a mathematical formula}fR(◊)=◊, all of {a mathematical formula}Gq, {a mathematical formula}Gr and ◊ are complete. Finally, ◊ is the only grounded argument graph.  ⌟
+      </paragraph>
+      <paragraph label="Theorem 4.18">
+       It might be asked whether the universal quantification over argument graph characteristic functions in Definition 4.17 is essential, or whether the definition could be weakened to existential quantification and be equivalent. For the admissible semantics, this is the case, as the following theorem shows. Let G be conflict free. G is admissible iff for some argument graph characteristic function{a mathematical formula}fRsuch that{a mathematical formula}rules(G)⊆R, we have{a mathematical formula}G⊆fR(G).
+      </paragraph>
+      <paragraph label="Proof">
+       Evidently if G is an argument graph then there is some {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R; we therefore just need to show that if {a mathematical formula}G⊆fR(G) for some such function, then where {a mathematical formula}rules(G)⊆R′ for some {a mathematical formula}fR′, we have {a mathematical formula}G⊆fR′(G).Suppose for contradiction that there is {a mathematical formula}R′ such that {a mathematical formula}G⊈fR′(G). Then there must be {a mathematical formula}a∈v(G)∩A such that {a mathematical formula}a∉fR′(G), which means that there must be some {a mathematical formula}G⁎ such that {a mathematical formula}G⁎⇝G but not {a mathematical formula}G⇝G⁎, with {a mathematical formula}G⁎ attacking G at a. Yet then {a mathematical formula}a∉fR(G), contradicting the fact that {a mathematical formula}G⊆fR(G). So there is no such maximally rule-consistent {a mathematical formula}R′.  □
+      </paragraph>
+      <paragraph>
+       By contrast, Example 7 affords an example of why the equivalence which Theorem 4.18 states does not hold for the complete or grounded semantics. To see this, consider again the (conflict-free) argument graph {a mathematical formula}Gb such that {a mathematical formula}v(Gb)={b} and {a mathematical formula}e(Gb)=∅, and the two maximally rule-consistent sets {a mathematical formula}R1={p←a,x←y,y←c} and {a mathematical formula}R2={p←b,x←y,y←c}. Evidently it is true that {a mathematical formula}fR1(Gb)=Gb, so that there is some set {a mathematical formula}R1 for which {a mathematical formula}Gb is a fixed point; but {a mathematical formula}R2 is also such that {a mathematical formula}rules(Gb)⊆R2, and yet {a mathematical formula}fR2(Gb)≠Gb.
+      </paragraph>
+      <paragraph label="Theorem 4.19">
+       The various semantics introduced earlier can be equivalently reformulated without making use of the argument graph characteristic function, in a style similar to that of the definition of the corresponding semantics in abstract argumentation, by virtue of the following result. Let G be a conflict-free argument graph.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        G is admissible iff for any argument graph{a mathematical formula}G′such that{a mathematical formula}G′⇝G, then{a mathematical formula}G⇝G′.
+       </list-item>
+       <list-item label="ii.">
+        G is complete iff it is admissible and there is no argument graph{a mathematical formula}G′such that{a mathematical formula}G⊂G′and for all argument graphs{a mathematical formula}G⁎, if{a mathematical formula}G⁎⇝G′, then{a mathematical formula}G⇝G⁎.
+       </list-item>
+       <list-item label="iii.">
+        If G is grounded, then it is ⊆-minimally complete.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let G be conflict-free.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        First suppose G is admissible, and that {a mathematical formula}G′ is such that {a mathematical formula}G′⇝G. Pick any {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R. Then since G is admissible, {a mathematical formula}G⊆fR(G). But then {a mathematical formula}G′⇝fR(G), so that by the definition of {a mathematical formula}fR, {a mathematical formula}G⇝G′.Suppose now that for any argument graph {a mathematical formula}G′ such that {a mathematical formula}G′⇝G, then {a mathematical formula}G⇝G′ (namely G defends itself). We must show that G is admissible. G is conflict-free, so that we need to show that for all argument graph characteristic functions {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, {a mathematical formula}G⊆fR(G). Let {a mathematical formula}fR be any such function. That {a mathematical formula}G⊆fR(G) follows directly from Definition 4.15 and G defending itself.
+       </list-item>
+       <list-item label="ii.">
+        Suppose G is complete; then it is admissible. We must show that there is no {a mathematical formula}G′ such that {a mathematical formula}G⊂G′ and for all {a mathematical formula}G⁎, if {a mathematical formula}G⁎⇝G′ then {a mathematical formula}G⇝G⁎. Suppose there is such a {a mathematical formula}G′, for contradiction, and let {a mathematical formula}fR′ be such that {a mathematical formula}rules(G′)⊆R′. By the definition of complete argument graph, and the fact that {a mathematical formula}rules(G)⊆rules(G′), it must be that {a mathematical formula}G=fR′(G). But that violates the ⊆ -maximality condition in Definition 4.15: contradiction. So there is no such {a mathematical formula}G′.Suppose now that G is admissible and there is no {a mathematical formula}G′ such that {a mathematical formula}G⊂G′ and for all {a mathematical formula}G⁎, if {a mathematical formula}G⁎⇝G′ then {a mathematical formula}G⇝G⁎. Let {a mathematical formula}fR be such that {a mathematical formula}rules(G)⊆R. By admissibility, {a mathematical formula}G⊆fR(G), so we only need to show that {a mathematical formula}fR(G)⊆G. The result easily follows by Definition 4.15.
+       </list-item>
+       <list-item label="iii.">
+        Assume G is grounded. Plainly it is complete; we must show that it is ⊆-minimally so. Suppose for contradiction there is {a mathematical formula}G−⊂G such that {a mathematical formula}G− is complete. Then, by Definition 4.17, for all {a mathematical formula}fR− such that {a mathematical formula}rules(G−)⊆R−, we have {a mathematical formula}G−=fR−(G−). But then, since {a mathematical formula}G−⊂G, we have that {a mathematical formula}rules(G−)⊂rules(G), so that for all {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, {a mathematical formula}G−=fR(G−), i.e., {a mathematical formula}G− is a fixed point for all such {a mathematical formula}fR. This contradicts the groundedness of G. So there is no such {a mathematical formula}G−, and G is ⊆-minimally complete.  □
+       </list-item>
+      </list>
+      <paragraph label="Example 9">
+       It is important to note here that the conditional (iii) of Theorem 4.19 cannot be strengthened to a biconditional, as we show next. Consider the ABA framework:{a mathematical formula} Now consider Fig. 12. First consider the argument graphs in the left-hand box. The large, central argument graph {a mathematical formula}G1 (containing q) defends itself from the argument graph containing y ({a mathematical formula}G2, left) and the argument graph containing z ({a mathematical formula}G3, right). Since these are the possible attacks on {a mathematical formula}G1, {a mathematical formula}G1 is admissible. Then it is also complete. Is it grounded? Yes, since {a mathematical formula}rules(G1)={a mathematical formula}{p←a,q←p,d}; it is not hard to see that for any {a mathematical formula}fR such that {a mathematical formula}rules(G1)⊆R, {a mathematical formula}G1 is the least fixed point of {a mathematical formula}fR; and, as ensured by Theorem 4.19, {a mathematical formula}G1 is ⊆-minimally complete.Now consider the argument graphs in the right-hand box. Let {a mathematical formula}G4 be the central argument graph (containing q), with {a mathematical formula}G5 the argument graph to its left containing y, and {a mathematical formula}G6 the argument graph to its right. Plainly, {a mathematical formula}v(G1)=v(G4); the difference between them is in the rule used to support q. As before, {a mathematical formula}G4 is admissible, and it is also ⊆-minimally complete. However, it is not grounded: for consider {a mathematical formula}R={p←a,q←b,p,y←c,z←e}. This is the only maximally rule-consistent set of rules such that {a mathematical formula}rules(G4)⊆R. Now:{a mathematical formula} Let {a mathematical formula}G′=({p,a,d},{(p,a)}). Then {a mathematical formula}G′≠G4 is the least fixed point of all {a mathematical formula}fR such that {a mathematical formula}rules(G4)⊆R (as we have seen there is only one such {a mathematical formula}R), so that {a mathematical formula}G4 cannot be grounded. Note that {a mathematical formula}G′ itself is not grounded, since it is not the least fixed point of all {a mathematical formula}fR′ such that {a mathematical formula}rules(G′)⊆R′, e.g. for {a mathematical formula}R′=rules(G1) for {a mathematical formula}G1 considered earlier.The fact that {a mathematical formula}G1 is grounded and {a mathematical formula}G4 is not can be intuitively understood with reference to the way the argument graph characteristic function operates with respect to the two sets of rules. q in {a mathematical formula}G4 depends on b, yet for b to be defended, q must already have been established; this pattern does not exist in {a mathematical formula}G1, where q does not depend on b.  ⌟
+      </paragraph>
+      <paragraph>
+       In general, there may be more than one grounded argument graph for a given framework, as the following example shows.
+      </paragraph>
+      <paragraph label="Example 10">
+       Consider the ABA framework:{a mathematical formula}Fig. 13 shows all the complete argument graphs for this framework. These are also admissible (there are additional admissible argument graphs, e.g., the empty argument graph). It is evident that the two left-most graphs are ⊆-minimal as well as grounded.  ⌟
+      </paragraph>
+      <paragraph label="Theorem 4.20">
+       The following two theorems establish the relations between argument graph semantics and extension-based semantics. Let G be an argument graph and{a mathematical formula}AGthe set of arguments represented in G.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        If G is admissible, so is{a mathematical formula}AG.
+       </list-item>
+       <list-item label="ii.">
+        If G is complete, then there is a complete extension{a mathematical formula}A⁎such that{a mathematical formula}AG⊆A⁎and{a mathematical formula}claims(AG)=claims(A⁎).
+       </list-item>
+       <list-item label="iii.">
+        If G is grounded and{a mathematical formula}A⁎is the grounded extension, then{a mathematical formula}AG⊆A⁎and{a mathematical formula}claims(AG)=claims(A⁎).  ⌟
+       </list-item>
+      </list>
+      <paragraph>
+       As an illustration of this result, consider the top-left, grounded argument graph in Fig. 13 for the ABA framework in Example 10. The set of arguments it represents is shown to the left of Fig. 14, the grounded extension is shown to the right. As Theorem 4.20 ensures, the left-hand set is a subset of the right-hand set.
+      </paragraph>
+      <paragraph>
+       The converse direction of Theorem 4.20 holds, making use of the notion of graphical conversion from Definition 4.5, as follows:
+      </paragraph>
+      <paragraph label="Theorem 4.21">
+       Let{a mathematical formula}Abe a set of tree-based arguments.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        If{a mathematical formula}Ais admissible, then for all conversions G of{a mathematical formula}A, G is admissible.
+       </list-item>
+       <list-item label="ii.">
+        If{a mathematical formula}Ais complete, then for all conversions G of{a mathematical formula}A, G is complete.
+       </list-item>
+       <list-item label="iii.">
+        If{a mathematical formula}Ais grounded, then there exists a conversion G of{a mathematical formula}Asuch that G is grounded.  ⌟
+       </list-item>
+      </list>
+      <paragraph>
+       The existential quantifier of part (iii), here, cannot be strengthened to a universal, as Example 9 shows. For let {a mathematical formula}A be the set of arguments that are either represented in {a mathematical formula}G1 or in {a mathematical formula}G4; {a mathematical formula}A is the grounded extension. Both {a mathematical formula}G1 and {a mathematical formula}G4 are conversions of {a mathematical formula}A. Since {a mathematical formula}G1 is grounded, then (iii) is confirmed, but the fact that {a mathematical formula}G4 is not grounded shows that we cannot strengthen the existential quantifier. Note that, as a corollary of this result and existing results on existence of grounded and admissible extensions for all ABA frameworks [6], [11], grounded and admissible argument graphs are also always guaranteed to exist, for any ABA framework.
+      </paragraph>
+      <paragraph label="Proof">
+       Recall now the notion of a sentence s being admissible or grounded with respect to some {a mathematical formula}A⊆A (defined in §2). The following corollary, which follows easily from ones already proven, shows that this notion is matched by a corresponding notion defined in terms of argument graphs. (i) Let{a mathematical formula}Abe an admissible (respectively grounded) extension, with{a mathematical formula}a∈Asuch that{a mathematical formula}claim(a)=s. Then there is an admissible (respectively grounded) argument graph G such that{a mathematical formula}s∈v(G). (ii) Let G be an admissible (respectively grounded) argument graph with{a mathematical formula}s∈v(G). Then there is an admissible (respectively grounded) extension{a mathematical formula}Aand some{a mathematical formula}a∈Asuch that{a mathematical formula}s=claim(a).Part (i) is an easy consequence of Theorem 4.21. Part (ii) is an easy consequence of Theorem 4.20.  □
+      </paragraph>
+      <paragraph>
+       We will use this last result in the following section, in relation to the soundness and completeness of the dispute derivations we therein define.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Graphical dispute derivations
+     </section-title>
+     <paragraph>
+      In this section we define the novel computational machinery of graphical dispute derivations (graph-DDs in short) for determining whether a given sentence is supported by an admissible or grounded argument graph, and computing an admissible argument graph for showing that this is the case. These graph-DDs can be seen as an evolution of the dispute derivations of [12], [14], [27] for ABA and of [26] for abstract argumentation. Like their predecessors, graph-DDs are finite sequences of tuples, each tuple representing a state of play in a game between two fictional players, proponent and opponent. However, whereas their ABA predecessors use sets of assumptions or intermediate steps in the construction of arguments to represent a state of play, graph-DDs use intermediate steps in the construction of argument graphs. Moreover, graph-DDs use a graph to guarantee termination and completeness in the grounded case, inspired by [26], but having sentences rather than arguments as nodes. Like the X-dispute derivations of [27], graph-DDs are defined parametrically, with specific choices of parameters supporting computation under different semantics; however, whereas graph-DDs are defined for admissible and grounded argument graphs, X-dispute derivations are defined for admissible, grounded and ideal sets of assumptions/arguments.
+     </paragraph>
+     <paragraph>
+      Before we formally define graph-DDs in §5.2, we give some preliminary definitions in §5.1. We illustrate graph-DDs in §5.3, also pointing out differences with the dispute derivations of [12], [14], [27]. We prove soundness and completeness of graph-DDs with respect to the semantics of admissible and grounded argument graphs in §5.4, and discuss in §5.5 an implementation of graph-DDs we have used for experimentation in §6.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Preliminaries
+      </section-title>
+      <paragraph>
+       In graph-DDs, argument graphs are built gradually, starting with a single sentence. This process requires some means of marking which sentences s of a growing argument graph have already been processed—where processing typically involves, if {a mathematical formula}s∉A, extending the graph at s by adding edges to other sentences in a rule whose head is s. Potential argument graphs are intermediate steps in the construction of argument graphs where sentences are marked or unmarked, defined as follows.
+      </paragraph>
+      <paragraph label="Definition 5.1">
+       A potential argument graph G is a directed acyclic graph equipped with a set of unmarked sentences {a mathematical formula}u(G)⊆sinks(G), where {a mathematical formula}v(G)⊆L and for all {a mathematical formula}s∈v(G):
+       <list>
+        if {a mathematical formula}s∈A, then {a mathematical formula}s∈sinks(G);if {a mathematical formula}s∉A, then either (a) {a mathematical formula}s∈u(G); or (b) {a mathematical formula}s∉u(G) and there is a rule {a mathematical formula}(s←s1,…,sn)∈R such that there is an edge {a mathematical formula}(s,s′) in {a mathematical formula}e(G) iff {a mathematical formula}s′∈{s1,…,sn}.G
+       </list>
+       <paragraph>
+        is said to be focused if it has a unique source, called the claim of G and represented as {a mathematical formula}claim(G). The support of G, written {a mathematical formula}support(G), is {a mathematical formula}v(G)∩A.If {a mathematical formula}u(G)=∅ then G is also referred to as an actual argument graph.  ⌟
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Note that, if we ignore the (empty set of) unmarked sentences, an actual argument graph G is an argument graph according to Definition 4.1. We call this the corresponding argument graph of G. Note also that we sometimes elide the ‘potential’ qualification where this causes no ambiguity.
+      </paragraph>
+      <paragraph>
+       An actual argument graph corresponds to the situation where all of the beliefs of an agent which stand in need of inferential support have an appropriate support—if one is needed—with respect to the beliefs of that agent, and this is known to the agent. The existence of an appropriate support is secured for non-assumptions by condition (ii)(b) in Definition 5.1; assumptions need no support, and indeed cannot have one—this is ensured by condition (i). The knowledge to the agent is represented by the condition on actuality of the argument, that {a mathematical formula}u(G)=∅. Potential argument graphs, by contrast, correspond to the situation where some of the beliefs of an agent which require support do not yet have it, or to the situation where an agent has beliefs that do not require inferential support, but the agent does not yet know this.
+      </paragraph>
+      <paragraph label="Example 11">
+       Consider the following ABA framework:{a mathematical formula} Consider graphs {a mathematical formula}G1 and {a mathematical formula}G2, shown to the left and right, respectively, in Fig. 15. Now, {a mathematical formula}G1 is necessarily merely a potential argument graph, since it must be that {a mathematical formula}s,r∈u(G1). (That {a mathematical formula}a∈u(G1) and that {a mathematical formula}a∉u(G1) are both consistent with Definition 5.1.) However, {a mathematical formula}G2 may be either potential or actual: for any of a, t, or b—or none of them—might be members of {a mathematical formula}u(G2). If {a mathematical formula}G2 is potential and {a mathematical formula}t∈u(G2) then t is a belief that requires no inferential support but the agent does not yet know this.  ⌟
+      </paragraph>
+      <paragraph>
+       It may be possible to expand a potential argument graph to form a single actual argument graph, several actual argument graphs, or not to expand it further at all, as illustrated by the following example.
+      </paragraph>
+      <paragraph label="Example 12">
+       Consider the ABA framework shown below.{a mathematical formula} Consider the potential argument graphs shown in Fig. 16. The argument graph {a mathematical formula}Gp, shown on the left of the leftmost box, is such that {a mathematical formula}v(Gp)=u(Gp)={p}, and {a mathematical formula}e(Gp)=∅: this is a potential argument graph in which p is unmarked. {a mathematical formula}Gp can be expanded into the actual argument graph {a mathematical formula}Gp,a shown on the right of the leftmost box, where {a mathematical formula}u(Gp,a)={a} or {a mathematical formula}u(Gp,a)=∅; this corresponds to an argument graph as given by Definition 4.1, if we ignore the marking. Given the absence of any rule in {a mathematical formula}R other than {a mathematical formula}p←a, there is no other actual (or indeed, potential) argument graph than {a mathematical formula}Gp,a which is an expansion of {a mathematical formula}Gp.By way of contrast, the leftmost potential argument graph in the middle box, {a mathematical formula}Gq, with {a mathematical formula}v(Gq)=u(Gq)={q}, can be expanded into both {a mathematical formula}Gq,a and {a mathematical formula}Gq,b, as shown in Fig. 16; this is allowed by the presence of both {a mathematical formula}q←a and {a mathematical formula}q←b in the set of rules.Finally, note that {a mathematical formula}Gr with {a mathematical formula}v(Gr)=u(Gr)={r}, in the rightmost box, cannot be expanded into an actual argument graph, since there is no rule in {a mathematical formula}R whose head is r.  ⌟
+      </paragraph>
+      <paragraph>
+       The notion of expansion used informally in Example 12 can be formalized as follows.
+      </paragraph>
+      <paragraph label="Definition 5.2">
+       Let G be a potential argument graph. An expansion of G is a potential argument graph {a mathematical formula}G′ such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}v(G)⊆v(G′);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}e(G)⊆e(G′);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}m(G)∩u(G′)=∅;
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}s∈v(G) and {a mathematical formula}{s′|(s,s′)∈e(G)} is non-empty, then {a mathematical formula}{s′|(s,s′)∈e(G)}={s′|(s,s′)∈e(G′)}.  ⌟
+       </list-item>
+      </list>
+      <paragraph>
+       Thus, an expansion {a mathematical formula}G′ of a potential argument graph G is another potential argument graph which ‘grows’ {a mathematical formula}G′ in a particular way, by choosing rules to justify all members of {a mathematical formula}u(G). We saw this in Example 12, where {a mathematical formula}Gp was expanded into {a mathematical formula}Gp,a by the rule {a mathematical formula}p←a; and {a mathematical formula}Gq may be grown into {a mathematical formula}Gq,a or {a mathematical formula}Gq,b depending on whether the rule {a mathematical formula}q←a or {a mathematical formula}q←b is used. Note that, trivially, the expansion of a focused potential argument graph is a focused argument graph with the same claim.
+      </paragraph>
+      <paragraph>
+       Our graph-DDs manipulate sets of potential argument graphs (generated by the opponent player), which are equipped with machinery for distinguishing their marked (i.e., processed) and unmarked members. We refer to these sets as argument graph sets, defined as follows.
+      </paragraph>
+      <paragraph label="Definition 5.3">
+       An argument graph set O is a set of potential argument graphs, equipped with a set {a mathematical formula}u(O)⊆O of the unmarked members. If {a mathematical formula}G∈u(O) we say that G is unmarked in O; if {a mathematical formula}G∈O∖u(O) we say that G is marked in O.  ⌟
+      </paragraph>
+      <paragraph>
+       Note that this definition implies that, if O is an argument graph set and {a mathematical formula}O=∅, then {a mathematical formula}u(O)=∅.
+      </paragraph>
+      <paragraph label="Definition 5.4">
+       To simplify the presentation of graph-DDs, it will prove convenient to define the following operations in relation to potential argument graphs and argument graph sets. Some are overloaded. In the following, G and {a mathematical formula}G′ are potential argument graphs; {a mathematical formula}s∈L; {a mathematical formula}S⊆L; O and {a mathematical formula}O′ are argument graph sets; and X is a set of potential argument graphs (not an argument graph set).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}newgrph(s) is G, where {a mathematical formula}v(G)=u(G)={s} and {a mathematical formula}e(G)=∅.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}G∪uS is {a mathematical formula}G′, where {a mathematical formula}v(G′)=v(G)∪S, {a mathematical formula}e(G′)=e(G) and {a mathematical formula}u(G′)=u(G)∪S.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}G∪mS is {a mathematical formula}G′, where {a mathematical formula}v(G′)=v(G)∪S, {a mathematical formula}e(G′)=e(G) and {a mathematical formula}u(G′)=u(G)∖S.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}O∪uX is {a mathematical formula}O′, where {a mathematical formula}O′ contains just the argument graphs in O and X, and {a mathematical formula}u(O′)=u(O)∪X.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}O∪mX is {a mathematical formula}O′, where {a mathematical formula}O′ contains just the argument graphs in O and X, and {a mathematical formula}u(O′)=u(O)∖X.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}O∖X is {a mathematical formula}O′, where {a mathematical formula}O′ contains just the argument graphs in O but not in X, and {a mathematical formula}u(O′)=u(O)∖X.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}updtgrph(G,s←s1,…,sn,S), where {a mathematical formula}(s←s1,…,sn)∈R, is {a mathematical formula}G′, where:
+       </list-item>
+      </list>
+      <paragraph>
+       In words, these operations are as follows. newgrph takes a sentence {a mathematical formula}s∈L and forms a new potential argument graph in which s is unmarked. {a mathematical formula}G∪uS is the result of adding the sentences in S unmarked to the argument graph G, and leaving G otherwise unchanged; {a mathematical formula}G∪mS is the result of adding the sentences in S marked to G. {a mathematical formula}O∪uX adds the argument graphs in X unmarked to O, and {a mathematical formula}O∪mX adds the argument graphs in X marked to O. {a mathematical formula}O∖X removes all argument graphs in X from O. Finally, {a mathematical formula}updtgrph(G,s←s1,…,sn,S) extends G at s by adding {a mathematical formula}s1,…,sn to G's vertices (where not already present), and by adding edges from s to each of {a mathematical formula}s1,…,sn; any {a mathematical formula}si which was not already marked in G is, in {a mathematical formula}updtgrph(G,s←s1,…,sn,S), unmarked—unless {a mathematical formula}si is in S.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Graphical dispute sequences and derivations
+      </section-title>
+      <paragraph>
+       In this section we give the full definition of the graph-DDs used to determine whether some sentence {a mathematical formula}s∈L is admissible/grounded. The basic concept is that of an X-graphical dispute sequence (graph-DS in short), where X can be either adm (for ‘admissible’) or grn (for ‘grounded’). Successful graph-DDs are graph-DSs of a particular form.
+      </paragraph>
+      <paragraph>
+       In defining graph-DSs, we make use of a concept of selection, in the same spirit of [12], [14], [27]. Given the ith tuple, this chooses, for some specified component in the tuple, an element of that component. This element is then operated on, to form the {a mathematical formula}(i+1)th tuple. Informally, the ith tuple in a graph-DS consists of
+      </paragraph>
+      <list>
+       <list-item label="•">
+        a proponent potential argument graph {a mathematical formula}Pi;
+       </list-item>
+       <list-item label="•">
+        an opponent argument graph set {a mathematical formula}Oi;
+       </list-item>
+       <list-item label="•">
+        a graph {a mathematical formula}Gi whose nodes are sentences;
+       </list-item>
+       <list-item label="•">
+        a set of assumptions {a mathematical formula}Di (the proponentdefences);
+       </list-item>
+       <list-item label="•">
+        a set of assumptions {a mathematical formula}Ci (the opponentculprits).
+       </list-item>
+      </list>
+      <paragraph>
+       Moreover, the definition of graph-DSs uses the operator {a mathematical formula}∪g defined in Table 1. {a mathematical formula}∪g is defined parametrically according to whether X is adm or grn, for {a mathematical formula}G a graph and E a set of pairs of sentences (edges). Thus, substantially, {a mathematical formula}G∪gE is only playing a role when {a mathematical formula}X=grn (as it ignores E for {a mathematical formula}X=adm). Finally, in the definition of graph-DSs, for any graph {a mathematical formula}G or proponent potential argument graph {a mathematical formula}P, {a mathematical formula}acyclic(G)/acyclic(P) is true iff {a mathematical formula}G/P (respectively) is acyclic.
+      </paragraph>
+      <paragraph>
+       In presenting the definition we follow the convention that where elements of a tuple do not change from the ith to the {a mathematical formula}(i+1)th step, then this is not noted explicitly, and we typically write rules in {a mathematical formula}R in the form {a mathematical formula}s←R where R is the set of sentences in the body of the rule.
+      </paragraph>
+      <paragraph label="Definition 5.5">
+       Let {a mathematical formula}s0∈L. Let n be such that {a mathematical formula}0⩽n⩽ω.{sup:6} An X-graphical dispute sequence (X-graph-DS, for {a mathematical formula}X∈{adm,grn}) for{a mathematical formula}s0of length n is a sequence {a mathematical formula}((Pi,Oi,Gi,Di,Ci))i=0n, where:{a mathematical formula} and for every i such that {a mathematical formula}0⩽i&lt;n, only one {a mathematical formula}s∈u(Pi) or one {a mathematical formula}G∈u(Oi) is selected and
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        if {a mathematical formula}s∈u(Pi) is selected, then
+       </list-item>
+       <list-item label="2.">
+        if {a mathematical formula}G∈u(Oi) and {a mathematical formula}s∈u(G) are selected, then
+       </list-item>
+      </list>
+      <paragraph label="Example 13">
+       Several examples of (finite) graph-DSs are given in §5.3, to illustrate different aspects of the sequences. The following is a simple example. Consider the ABA framework:{a mathematical formula} A sample adm-graph-DS of length 4 for a is represented in Fig. 17. Here and in the remainder, (a representation of the components of the tuple in) each step is enclosed within dashed lines. The proponent argument graphs are shaded, and the opponent argument graphs are in solid lines (opponent graphs are in thick solid lines if unmarked, in thin lines if marked). Within an argument graph, the unmarked sentences are depicted in bold. The same sequence is represented in tabular form in Table 2 (with the same convention on unmarked sentences as in Fig. 17). Here, we also show the case of the definition of an adm-graph-DS which was applied (cf. Definition 5.5), and we only show the unmarked opponent argument graphs. Moreover, we omit (in both presentations of the sequence) the {a mathematical formula}Gi component (as this is always the empty graph for an adm-graph-DS).Note that this sequence is also a grn-graph-DS, if the components {a mathematical formula}Gi are added as in Table 3. The acyclicity check is clearly passed by {a mathematical formula}Gi at each step.Note further that any initial sequence of the graph-DS here is also a graph-DS; this is true in general, both for adm-graph-DSs and grn-graph-DSs.  ⌟
+      </paragraph>
+      <paragraph>
+       Some commentary on Definition 5.5 is appropriate here; we take the cases by turn.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        A sentence s is selected amongst the unmarked sentences in the proponent potential argument graph, for attempted expansion of this graph.
+       </list-item>
+       <list-item label="2.">
+        An opponent potential argument graph (in the current opponent argument graph set {a mathematical formula}Oi) is selected for expansion or for being counter-attacked, and an unmarked s selected from the graph.
+        <list>
+         The selected sentence s is an assumption, which is ignored. The graph-DS would then have to find another means of attacking the selected argument graph, which is therefore returned unmarked to {a mathematical formula}Oi+1, but with s marked.The selected sentence s is an assumption which is already attacked by the proponent (since it belongs to the current set of culprits). In this case the opponent argument graph can be marked (with s also marked).s is an assumption which is not yet known to be attacked, and is not amongst the proponent defences {a mathematical formula}Di. If {a mathematical formula}s¯ is in the proponent potential argument graph, then there is in fact an attack against s already, so that no further changes to the proponent graph are necessary. If {a mathematical formula}s¯ is not currently in the proponent potential argument graph, then it is added, so that at some later stage the proponent must find a way to argue for it. In both cases the opponent argument graph can also be marked (with the selected sentence also marked). Moreover, the selected sentence is remembered as a culprit (in {a mathematical formula}Ci+1) and its contrary, if an assumption, is remembered as a defence (in {a mathematical formula}Di+1).After each of these cases, if
+        </list>
+        <paragraph>
+         {a mathematical formula}X=grn and {a mathematical formula}Gi has been updated (cases 2(i)(b) and 2(i)(c)), then an acyclicity check on it is performed.
+        </paragraph>
+        <list>
+         <list-item label="2(ii).">
+          If s is not an assumption, then the opponent argument graph from which it was selected can be expanded in as many ways as the number of rules with s as their head. For {a mathematical formula}X=adm things work as follows. Some of those rules ({a mathematical formula}RC) will produce expansions which are already attacked (as they have a current culprit in their body); these are added marked to {a mathematical formula}Oi to form {a mathematical formula}Oi+1. The others ({a mathematical formula}R¬C) produce expansions which are not already attacked; these expansions must be added as unmarked to form {a mathematical formula}Oi+1, so that the proponent must find counter-attacks at a later stage.In the case of {a mathematical formula}X=grn, all expansions are considered as not currently attacked, independently of the presence of existing culprits in their bodies.In both cases ({a mathematical formula}X=grn and {a mathematical formula}X=adm), rules introducing cycles into the selected opponent potential argument graph G are ignored, as, intuitively, they are not possibly contributing to generating attacks.In the case of those expanded argument graphs which are added unmarked to form {a mathematical formula}Oi+1, then all new sentences are unmarked; for the expanded argument graphs which are added marked to form {a mathematical formula}Oi+1, those sentences are unmarked which are new and not members of {a mathematical formula}Ci, i.e., not culprits already.
+         </list-item>
+        </list>
+       </list-item>
+      </list>
+      <paragraph label="Theorem 5.6">
+       Note that in general we perform an acyclicity check on potential argument graphs as they are being constructed. This occurs, for the proponent, in case 1(ii) of Definition 5.5, where {a mathematical formula}Pi is expanded; and in case 2(ii) for the opponent, where a member of {a mathematical formula}Oi is expanded (possibly, in many different ways). Since argument graphs must be acyclic by definition, this ensures that the graphs we build conform to that definition, while at the same time guaranteeing termination. Overall, the following theorem establishes the coherence of Definition 5.5. Let{a mathematical formula}((Pi,Oi,Gi,Di,Ci))i=0nbe an X-graph-DS for{a mathematical formula}s0. Then for all i such that{a mathematical formula}0⩽i⩽n(if n is finite), or all i such that{a mathematical formula}0⩽i&lt;n(otherwise—i.e., if{a mathematical formula}n=ω):
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        {a mathematical formula}Piis a potential argument graph, and{a mathematical formula}s0∈v(Pi);
+       </list-item>
+       <list-item label="ii.">
+        {a mathematical formula}Oiis an argument graph set;
+       </list-item>
+       <list-item label="iii.">
+        {a mathematical formula}Giis a directed graph over{a mathematical formula}L;
+       </list-item>
+       <list-item label="iv.">
+        {a mathematical formula}Di⊆Aand{a mathematical formula}Ci⊆A.  ⌟
+       </list-item>
+      </list>
+      <paragraph label="Definition 5.7">
+       A graph-DD is a finite graph-DS with a particular constraint on the last tuple, as follows. Let {a mathematical formula}s0∈L. An X-graphical dispute derivation (X-graph-DD, {a mathematical formula}X∈{adm,grn}) for{a mathematical formula}s0with resulting (potential argument graph){a mathematical formula}Pn is an X-graph-DS for {a mathematical formula}s0 of length {a mathematical formula}n&lt;ω:{a mathematical formula} where {a mathematical formula}u(Pn)=∅ and {a mathematical formula}u(On)=∅.  ⌟
+      </paragraph>
+      <paragraph label="Proof">
+       The graph-DS in Example 13 is a graph-DD. The constraints in Definition 5.7 mean that a graph-DD must terminate with no members of {a mathematical formula}v(Pn) being without a justification ({a mathematical formula}u(Pn)=∅), and all opponent potential argument graphs in {a mathematical formula}On having been processed ({a mathematical formula}u(On)=∅). The first constraint amounts to imposing that the resulting potential argument graph of a graph-DD is in fact an actual argument graph, as sanctioned by the following. Let{a mathematical formula}X∈{adm,grn}and{a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn)be an X-graph-DD for{a mathematical formula}s0. Then{a mathematical formula}Pnis an actual argument graph.By Theorem 5.6, {a mathematical formula}Pn is a potential argument graph. Definition 5.7 requires that {a mathematical formula}u(Pn)=∅, so by Definition 5.1, {a mathematical formula}Pn is actual.  □
+      </paragraph>
+      <paragraph>
+       By virtue of this result, we often use the argument graph {a mathematical formula}P corresponding to {a mathematical formula}Pn as resulting from an X-graph-DD {a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn).
+      </paragraph>
+      <paragraph>
+       Given an X-graph-DS {a mathematical formula}(P0,O0,G0,D0,C0),…,(Pi,Oi,Gi,Di,Ci), there are several indeterminacies in Definition 5.5, which give the X-graph-DS the possibility of being continued in different ways to give an X-graph-DD. The indeterminacies fall into two categories: (A) those that make no difference to the overall outcome, i.e. to whether the X-graph-DS can be extended into an X-graph-DD and which X-graph-DDs are possible; (B) those which do make such a difference. Into the first category fall:
+      </paragraph>
+      <list>
+       <list-item label="A1.">
+        the selection of either {a mathematical formula}s∈u(Pi) or {a mathematical formula}G∈u(Oi) and {a mathematical formula}s∈u(G)—determining whether case (1) or case (2) in Definition 5.5 applies;
+       </list-item>
+       <list-item label="A2.">
+        given a choice between cases (1) and (2) of Definition 5.5, the selection of the particular members of the sets—i.e. for case (1) which{a mathematical formula}s∈u(Pi) is selected; for case (2), which{a mathematical formula}G∈u(Oi) and {a mathematical formula}s∈u(G) are selected.
+       </list-item>
+      </list>
+      <paragraph>
+       That these indeterminacies make no difference to the overall outcome can be seen intuitively. For A1, it is evident that all {a mathematical formula}s∈u(Pi) and {a mathematical formula}G∈u(Oi) must be considered at some point, since for there to be a graph-DD, each of these sets must eventually be empty. For A2, again, it is plain that, in the proponent case (1), all {a mathematical formula}s∈u(Pi) must eventually be selected and treated according to Definition 5.5—intuitively, all {a mathematical formula}s∈u(Pi) are pending proof, and if the potential argument graph is to become an actual argument graph, everything the proponent needs to support or defend must be proved. In the opponent case, the reasoning is similar: each {a mathematical formula}G∈u(Oi) represents a possible challenge on the part of the opponent to some assumption the proponent has made use of; and all such challenges must be met. Also, within a specific opponentG, if s is selected which does not lead to a successful counter-attack by the proponent, then this can be dealt with by the ‘ignore’ case, which is relevant to eventual success of the graph-DD (see B2).
+      </paragraph>
+      <paragraph>
+       Evidently, it is not always the case that a selection can be made: if {a mathematical formula}Pi is empty but {a mathematical formula}Oi is not, then the X-graph-DS can only be continued according to case (2) in Definition 5.5. The selection of type (A1) can actually be equated to the selection of a player amongst proponent and opponent. This selection can be made explicit in the specification of graph-DSs and graph-DDs, similarly [27], by means of a function {a mathematical formula}player:N→{proponent,opponent} that can be constrained to select a player at any step in a graph-DD only if its component if non-empty.
+      </paragraph>
+      <paragraph>
+       The indeterminacies which do make a difference to the overall outcome are:
+      </paragraph>
+      <list>
+       <list-item label="B1.">
+        the choice of a rule {a mathematical formula}s←R in case 1(ii);
+       </list-item>
+       <list-item label="B2.">
+        the choice between cases 2(i)(a) and either 2(i)(b) or 2(i)(c).
+       </list-item>
+      </list>
+      <paragraph>
+       Indeed, several alternative rules may be possible in case 1(ii), and every assumption can be ignored if it does not belong already to the defence set (if it does, then case 2(i)(a) is the only option). We illustrate how B1 and B2 make a difference to the outcome of a graph-DD in §5.3.
+      </paragraph>
+      <paragraph>
+       The distinction between those indeterminacies which do, and those which do not, make a difference to which graph-DD a graph-DS may form part of, is relevant in implementations: for while parameters can be used to give strategies for making choices in each category, those of the latter need to be capable of being backtracked over in a search strategy. For example, if no rule for s exists in case (1)(ii) with no culprits in the body, then the graph-DS cannot be continued and backtracking needs to take place. We discuss this matter again in §5.5.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Examples of graph-DDs
+      </section-title>
+      <paragraph>
+       Recall the indeterminacies of Definition 5.5, discussed at the end of Section 5.2. It is easy to see that B1 makes a difference to the result of a graph-DD, as follows.
+      </paragraph>
+      <paragraph label="Example 14">
+       Consider the ABA framework:{a mathematical formula} The graph G consisting of nodes {a mathematical formula}{p,a} and the single edge {a mathematical formula}(p,a) is clearly both an admissible and a grounded argument graph. Fig. 18 depicts an adm-graph-DD for p (which is also a grn-graph-DD for p). Note that the movement from step 2 to step 3 in Fig. 18 removes the opponent argument graph whose claim is z, since no rule can be used to prove z. The derivation is also shown as a sequence of tuples, in tabular form (and ignoring the {a mathematical formula}Gi component), in Table 4. However, an adm-graph-DS or grn-graph-DS for p that picked the rule {a mathematical formula}p←q to use at step 1(ii), after selecting p, could not be extended to a full adm-graph-DD or grn-graph-DD: indeed, informally, there is no way of proving q in the given ABA framework. Thus, B1 genuinely makes a difference to whether a graph-DS can be extended into a graph-DD.  ⌟
+      </paragraph>
+      <paragraph>
+       That B2 makes a difference to the outcome of a derivation is shown in the following.
+      </paragraph>
+      <paragraph label="Example 15">
+       Consider the ABA framework:{a mathematical formula} A grn-graph-DD for p of length 6 is given in tabular form in Table 5 (its first five steps are also shown graphically in Fig. 19): (The final step, after r has been selected and proven using the rule r←, is not shown in Fig. 19: this adds nothing to the graphical structures, since the rule used to establish r has an empty body.) This derivation illustrates the importance of case 2(i)(a) (the ‘ignore’ case) in Definition 5.5. In the move to step 4, case 2(i)(a) is applied, although b in the opponent argument graph is selected, it is ignored, with no proponent attack directed at b explored.If case 2(i)(c) had been used instead at step 4, the corresponding sequence would have been as shown graphically in Fig. 20. This sequence is shown in tabular form in Table 6. The sequence of steps {a mathematical formula}(0,1,2,3,4⁎,5⁎) here represent a grn-graph-DS which cannot be extended to a grn-graph-DD since {a mathematical formula}acyclicG5⁎ fails. This example is then also notable for the use of the {a mathematical formula}Gi component in preventing infinite loops. An implementation would terminate at step {a mathematical formula}5⁎ and realize that it must backtrack, ignore b and try to attack the opponent argument on c instead (so as to give the graph-DD in Fig. 19).Finally, this example shows an important difference with successful GB-dispute derivations of Dung et al. [14] (cf. Definition A.1 of Toni [27]). Consider the following attempt at a successful GB-dispute derivation for p for the ABA framework in the example shown in Table 7. Here, if the analogue of case 2(i)(c) is given priority over the ‘ignore’ case 2(i)(a), then implementations will loop infinitely, repeating steps 4–7. Our use of an acyclicity check on {a mathematical formula}Gi prevents such infinite loops.  ⌟
+      </paragraph>
+      <paragraph>
+       The next example further illustrates how graph-DDs relate to the dispute derivations of [12], [14], [27] and the advantages of our manipulation of (potential) argument graphs rather than (potential) argument trees in the original dispute derivations.
+      </paragraph>
+      <paragraph label="Example 16">
+       Consider the following ABA framework.{a mathematical formula} Now consider the adm-graph-DD for p in Table 8 (shown in Fig. 21 graphically):It is interesting to compare this adm-graph-DD to the corresponding AB-dispute derivation of [12], [14] (cf. Definition A.2 of Toni [27]). That dispute derivation runs as in Table 9. The two derivations are analogous, up until the transition from steps 4 to 5. At this point, the adm-graph-DD effectively recognizes that p has already been encountered, and therefore does not need to prove p again (by deriving q and then a). The filtering of the AB-dispute derivation, by contrast, only takes place on assumptions (achieved by the removal of those elements of rule bodies which are in {a mathematical formula}Di), and thus p and q are both proved again (at steps 5 and 6 of the AB-dispute derivation). In a short example such as that under consideration, this only makes a difference of two tuples saved, but in a less trivial example the gains in efficiency can be considerable.  ⌟
+      </paragraph>
+      <paragraph>
+       Finally, we give an example of a grn-graph-DD which shows the use of ‘filtering by culprits’. In the case of the previous forms of derivation for tree-based arguments in ABA, this was not possible; our use of a cyclicity check, enabled by the use of the {a mathematical formula}Gi component, allows us to introduce it.
+      </paragraph>
+      <paragraph label="Example 17">
+       Consider the following ABA framework.{a mathematical formula} A grn-graph-DD for a is shown in Fig. 22. As usual, we also show the derivation in tabular form—see Table 10. At step 3, b was selected from the left-most opponent argument graph, and its contrary q added to {a mathematical formula}P3; b is, accordingly, now a member of {a mathematical formula}C3, the set of culprits. In the transition from step 4 to step 5, according to case 2(i)(b), b is selected again; this time, since {a mathematical formula}b∈C4, there is no need to re-prove the contrary of b, q, since this has already been encountered. In the GB-derivations for tree-based arguments, this form of filtering using culprits is not possible: there may have been a loop in the dependencies which would make the derivation unsound. We avoid such loops using the {a mathematical formula}Gi component, which is checked for cycles.  ⌟
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Soundness and completeness of graph-DDs
+      </section-title>
+      <paragraph label="Theorem 5.9">
+       First, we give two soundness results for the derivations with respect to the argument graph semantics defined in §4.3. For any X-graph-DD ({a mathematical formula}X∈{adm,grn}) for{a mathematical formula}s0with resulting argument graph{a mathematical formula}P,{a mathematical formula}Pis admissible and{a mathematical formula}s0∈v(P).  ⌟
+      </paragraph>
+      <paragraph label="Theorem 5.10">
+       For anygrn-graph-DD with resulting argument graph{a mathematical formula}P, there is some grounded argument graph G such that{a mathematical formula}P⊆G. ⌟
+      </paragraph>
+      <paragraph label="Theorem 5.11">
+       Then, we give corresponding completeness results, again with respect to the argument graph semantics. Let{a mathematical formula}Lbe finite. If G is an admissible argument graph such that{a mathematical formula}s0∈v(G), then there is anadm-graph-DD for{a mathematical formula}s0with resulting argument graph some{a mathematical formula}Psuch that{a mathematical formula}P⊆G.  ⌟
+      </paragraph>
+      <paragraph label="Theorem 5.12">
+       Let{a mathematical formula}Lbe finite. If G is a grounded argument graph such that{a mathematical formula}s0∈v(G), then there is agrn-graph-DD for{a mathematical formula}s0with resulting argument graph some{a mathematical formula}Psuch that{a mathematical formula}P⊆G.  ⌟
+      </paragraph>
+      <paragraph label="Proof">
+       In the light of theorems shown in §4.3, we can show the following, concerning the soundness and completeness of graph-DDs with respect to admissible and grounded acceptance of sentences for tree-based arguments. Let there be anadm-graph-DD (respectivelygrn-graph-DD) for{a mathematical formula}s0∈Lresulting in{a mathematical formula}P. Then the set of arguments represented in{a mathematical formula}Pis admissible (respectively an admissible subset of the grounded extension), non-bloated, and contains some{a mathematical formula}asuch that{a mathematical formula}claim(a)=s0.Directly from Theorem 4.20, Theorem 5.9, Theorem 5.10, Theorem 4.12.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Lbe finite. If{a mathematical formula}Ais an admissible (respectively grounded) extension with{a mathematical formula}a∈Asuch that{a mathematical formula}s0=claim(a), then there is anadm-graph-DD (respectivelygrn-graph-DD) for{a mathematical formula}s0resulting in{a mathematical formula}Psuch that{a mathematical formula}support(P)⊆support(A).Directly from Theorem 4.20, Theorem 5.11, Theorem 5.12.  □
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Implementation
+      </section-title>
+      <paragraph>
+       We implemented the X-graph-DDs in Prolog as abagraph.{sup:7} Two principle factors prompted the choice of programming language. First, we wanted to conduct an experimental comparison of our algorithm with the leading implementation of dispute derivations for tree-based ABA, proxdd{sup:8}—and proxdd is itself implemented in Prolog. Using the same language was therefore necessary for the fairness of the experiments. Secondly, Prolog itself has built-in backtracking; this made possible a relatively high-level encoding of the algorithm for X-graph-DDs. Of course, other languages could have been chosen. In previous work, for example, we have implemented the dispute derivations of [27] in parallel C++ [8], and such an approach would certainly have been feasible for argument graphs.
+      </paragraph>
+      <paragraph>
+       Given a representation of an ABA framework and some specific sentence {a mathematical formula}s∈L as input, abagraph searches, in Prolog, to find all possible X-graph-DDs, {a mathematical formula}X∈{adm,grn}, for {a mathematical formula}s∈L. As explained in §5.2, the definition of an X-graph-DS (and hence X-graph-DD) can allow for a given sequence to be continued in multiple different ways, depending on a strategy for the selection of various sets and members in the current tuple {a mathematical formula}(Pi,Oi,Gi,Di,Ci). In abagraph we provide the following built-in strategies for the various selections.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        A priority ordering for the player choice. In general, the move from step i to step {a mathematical formula}i+1 in Definition 5.5 might be made by the proponent or opponent. If the parameter, for instance, is {a mathematical formula}opponent&lt;proponent, this means that: if {a mathematical formula}Pi is non-empty, then it will be selected, else if {a mathematical formula}Pi is empty and {a mathematical formula}Oi is non-empty, then {a mathematical formula}Oi will be selected.
+       </list-item>
+       <list-item label="2.">
+        A selection criterion for the member {a mathematical formula}O∈u(Oi) (if step i is an opponent step). Possible values here are:
+       </list-item>
+       <list-item label="3.">
+        A selection criterion for the sentence from {a mathematical formula}u(Pi), with possible values:
+       </list-item>
+       <list-item label="4.">
+        A selection criterion for the opponent sentence from the selected {a mathematical formula}G∈u(Oi), with values the same as those for (3).
+       </list-item>
+      </list>
+      <paragraph>
+       There are 2 possible values for the first parameter, and 4 each for the remaining parameters, giving 128 possible strategies overall. Evidently, these are a very small portion of those strategies even quickly conceivable.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experiments
+     </section-title>
+     <section label="6.1">
+      <section-title>
+       Experiment design
+      </section-title>
+      <paragraph>
+       We compared our graph-DDs, as implemented in abagraph, with the most competitive existing system (proxdd) for dispute derivations.{sup:9} The implementation of the original algorithm (proxdd) uses the variant presented by Toni [27], which records the arguments as well as the attack relationships between them as they are constructed. This is appropriate for purposes of comparison, as our algorithm and its implementation (abagraph) record the full argument graph structures, including attacks and counter-attacks, as the derivations proceed. The work in the present section provides preliminary evidence that the dispute derivations we defined for argument graphs in §5 may offer computational advantages in speed and the number of queries answered over implementations of the standard dispute derivations for tree-based arguments. This can be seen as a first step towards a more thorough experimental evaluation, complementing the conceptual underpinnings (of argument graphs, their relation to tree-based arguments, the definition of a semantics for argument graphs, and the definition of sound and complete dispute derivations) that are the main focus of this paper.
+      </paragraph>
+      <paragraph>
+       For our experiments, we randomly generated ABA frameworks,{sup:10} and compared the performance of each implementation on sample queries. The random generator takes as input a tuple of parameters, {a mathematical formula}(Ns,Na,Nrh,Nrph,Nspb,Napb), as follows.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Ns is the total number of sentences in the framework, i.e., {a mathematical formula}|L|.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Na is the number of assumptions. This can be given either as: (i) an integer; (ii) a percentage of the number of sentences; (iii) an interval {a mathematical formula}[min,max], where min and max are both integers; (iv) an interval {a mathematical formula}[pmin,pmax], where {a mathematical formula}pmin and {a mathematical formula}pmax both represent percentages of the number of sentences, {a mathematical formula}Ns=|L|. In cases (iii) and (iv), the implementation chooses a random number in the interval.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Nrh is the number of distinct sentences to be used as heads of rules. This parameter takes the same form of values as for parameter 2, above.
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}Nrph is the number of rules per distinct rule head, given as: (i) an integer; or (ii) an interval {a mathematical formula}[min,max], where min and max are integers. In case (ii), for each distinct rule head s, a random value n is chosen with {a mathematical formula}min⩽n⩽max, and n different rules with head s are then added to {a mathematical formula}R.
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}Nspb, the number of sentences per body, given as: (i) an integer; (ii) a percentage of the number of sentences; (iii) an interval {a mathematical formula}[min,max], where min and max are both integers; (iv) an interval {a mathematical formula}[pmin,pmax], where {a mathematical formula}pmin and {a mathematical formula}pmax both represent percentages of the number of sentences, {a mathematical formula}Ns=|L|. In cases (iii) and (iv), the implementation chooses, rule-by-rule, a random number in the interval.
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}Napb, the number of assumptions per body, given as: (i) an integer; (ii) a percentage of the number of sentences of the current body; (iii) an interval {a mathematical formula}[min,max], where min and max are both integers; (iv) an interval {a mathematical formula}[pmin,pmax], where {a mathematical formula}pmin and {a mathematical formula}pmax both represent percentages of the number of sentences in the current rule. In cases (iii) and (iv), the implementation chooses, rule-by-rule, a random number in the interval.
+       </list-item>
+      </list>
+      <paragraph>
+       We presume the existence of the following subsidiary functions.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}pickValue(X,Y), such that:
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}N∈N and S is a set, then {a mathematical formula}pickFrom(N,S) is a random subset of members of S such that {a mathematical formula}|pickFrom(N,S)|=N;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}randomMember(S), where S is a set, chooses a random member of S.
+       </list-item>
+      </list>
+      <paragraph>
+       To produce a random ABA framework, we used Algorithm 6.1.
+      </paragraph>
+      <paragraph>
+       Systematic and thorough comparison of how the performance of our two implementations compares with different combinations of variation in these parameters would have taken a prohibitively long time; so we chose to perform experiments on four basic series of ABA frameworks. In the first three series, a single parameter varies on its own; in the final series, all parameters vary dependently. The form of parameters for all four series are shown in Table 11. In the first series of experiments, we varied the size of {a mathematical formula}L, while keeping all other parameters the same; since {a mathematical formula}|A| was kept fixed at 15, this had the effect of varying the number of non-assumptions in the ABA framework. In the second series, we varied the number of rules per head, with the effect of varying {a mathematical formula}R. In the third series of experiments, we varied the number of sentences per rule; since the number of assumptions per rule body was not varied (it was given a random value in the interval {a mathematical formula}[0,6]) this mostly has the effect of varying the number of non-assumptions per rule. Finally, in the fourth series of experiments, the size of {a mathematical formula}L was varied, and the value of the other parameters tied to this. With the values of {a mathematical formula}Ns given, this yields the sequence of parameters:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Underlying all four series of experiments are the parameters {a mathematical formula}(40,15,20,[2,5],[0,6],[0,6]). Informal experimentation indicated that these values produce ABA frameworks with sentences which, when queried according to each of the semantics we study (admissible and grounded), yield answers with a mix between (i) immediate answers, yes or no; (ii) answers which failed to compute because resources were exceeded by the Prolog implementation, or because a time-limit was exceeded; and (iii) answers which were computed in times &gt; 1 second, and which had nested structures of attack between the acceptable argument graph and those attacking it. We take the view that parameters producing frameworks with this mixture of sentences are desirable, since the effect of varying parameters on the proportion of queries falling into the different classes can then be studied.
+      </paragraph>
+      <paragraph label="Definition 6.1">
+       An ABA framework only admits the possibility of circular arguments if it is not p-acyclic; this notion is defined in [14], and the definition is equivalent to: Let the dependency graph of{a mathematical formula}(L,R,A,ss‾) be the directed graph whose nodes are {a mathematical formula}L∖A and where there is a directed edge {a mathematical formula}(s,s′) iff there is a rule {a mathematical formula}s←B∈R such that {a mathematical formula}s′∈B. {a mathematical formula}(L,R,A,ss‾) is p-acyclic iff the dependency graph of {a mathematical formula}(L,R,A,ss‾) is acyclic.  ⌟
+      </paragraph>
+      <paragraph>
+       Thus, an indication of how our implementations fare in the presence or absence of circular arguments can be found by running experiments on p-cyclic (i.e., non-p-acyclic) and p-acyclic arguments. For each series of experiments, and each instantiation of parameters per series, 10 p-acyclic frameworks and 10 p-cyclic frameworks were randomly generated. This made for a total of 680 ABA frameworks in total. The division into p-cyclic and p-acyclic classes was motivated by a desire to investigate whether there were differences in performance between abagraph and proxdd in the two cases. Indeed, an important innovation in the graph-based approach is its completeness for grounded extensions, and associated means of preventing loops in the case of cyclical dependencies amongst sentences in ABA frameworks.
+      </paragraph>
+      <paragraph>
+       In comparing the results of the two implementations, that of the structured X-derivations of Definition 6.3 of [27] and the graph-DDs of Definition 5.7, it is important to set the same search strategy in each case. Each possible search strategy for abagraph is represented by a choice of the four parameters described in §5.5. The parameters for proxdd are largely similar. Our method was as follows. We first selected 10 random strategies to be used throughout the experiments. Then, for each framework, we paired a random sentence s with each strategy, and queried both proxdd and abagraph to find admissible and (fragments of) grounded extensions containing an argument whose claim is s. In each case, all solutions were attempted to be found. We imposed a time-out of 120 seconds on each computation (each query/implementation/semantics triple). For each computation, we recorded: (i) the time taken; (ii) whether or not the computation timed out, threw an exception because resources were exceeded, or successfully completed; (iii) how many solutions were found. If the computation terminated successfully, then the solutions found are all solutions possible; if there was no successful termination—through time out or an exception—then the number of solutions found may not be the total possible. In sum, this represented a maximum of 1360 hours of computation (a little over 56 days). Experiments were conducted on a series of HP Compaq dc8200 machines, with an Intel Core i7-2600 3.40 GHz processor and 8 GB of RAM, running 64-bit Ubuntu 13.04; the Prolog implementation was SICStus 4.2.3.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Results
+      </section-title>
+      <paragraph>
+       We first give total statistics across the different series of experiments, in tabular form, followed by results showing the queries successfully answered by an individual solver uniquely. We then give series-specific results (which concern quantities for the different steps of each series) as graphs.
+      </paragraph>
+      <paragraph>
+       In the three tables which follow, we record the following information:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Total exceptions, where the exceptions thrown were always due to exceeding the memory resources of the Prolog system used.
+       </list-item>
+       <list-item label="•">
+        Total exceptions and timeouts combined, where the timeout was, as mentioned above, 120 seconds.
+       </list-item>
+       <list-item label="•">
+        Average non-zero solutions. This is calculated by averaging the number of solutions for those queries which completed successfully (i.e., disregarding the solutions found in the case where the result was a timeout), if that number was non-zero. This number, when compared across abagraph and proxdd, therefore gives an indication of the number of ‘redundant’ or otherwise conceptually ‘bad’ solutions—in the senses discussed in §3—which are eliminated by abagraph through the shift to argument graphs.
+       </list-item>
+       <list-item label="•">
+        Average time per query was calculated for those queries in which neither implementation threw an exception. (Note that if exceptions were included, then the results here tend to favour abagraph even more.)
+       </list-item>
+      </list>
+      <paragraph>
+       Table 12 shows the combined results for all queries, no matter what the type of derivation, or whether the frameworks were p-cyclic or p-acyclic. There is a clear advantage to using abagraph because the number of exceptions is dramatically lower. The time taken to return answers to queries is also lower, though here the gains are smaller. Finally, the fact that the use of argument graphs results in much fewer solutions overall, shows that the number of ‘redundant’ solutions (in the sense mentioned previously) is, using standard tree-based arguments, relatively high.
+      </paragraph>
+      <paragraph>
+       Next, we split the results according to whether the derivation was for the admissible or grounded semantics. The results are shown in Table 13. A number of aspects of this are worthy of comment. First, in the case of adm-graph-DDs there were no exceptions. We conjecture that the added overhead of a non-empty {a mathematical formula}G component in the case of grn-graph-DDs can be used to explain the higher number of exceptions. Secondly, the difference between the number of solutions found by proxdd and abagraph is much higher in the case of adm-graph-DDs than with grn-graph-DDs. This is to be expected: there is a single grounded extension in the case of standard, tree-based semantics for {a mathematical formula}(L,R,A,ss‾), of which the set of arguments found by proxdd in a grounded dispute derivation must be an admissible subset; yet there can often be many grounded argument graphs, giving rise to a larger number of solutions for the latter. Other aspects of the comparison are broadly consonant with the merged results for adm-graph-DDs and grn-graph-DDs presented previously.
+      </paragraph>
+      <paragraph>
+       Finally, we present in Table 14 results which consider different types of input frameworks, according to whether these were p-acyclic or not (as verified by a simple graph-theoretic analysis in Prolog on each framework). What is most worthy of comment here is the comparison on the number of non-zero solutions found for p-cyclic frameworks: the number found by abagraph is much higher than that found by proxdd. Why should this be? First note that, in fact, this tendency is much more marked for adm-graph-DDs.{sup:11} This is as we expected: grounded extensions are unique, and this low cardinality tends to carry through to the number of argument graphs, and then to the associated number of solutions for queries. In the p-cyclic case, adm-graph-DDs give an average of 32.569 solutions for abagraph, and 3.682 solutions for proxdd; grn-graph-DDs give an average of 2.432 solutions for abagraph, and 1.408 for proxdd. The explanation is, in fact, simple: there are relatively few instances where abagraph finds a high number of solutions for adm-graph-DDs queries: 29 instances where the number of solutions is higher than 20. Yet of those 29 queries, all save one, when posed to proxdd, resulted in either timeout or an exception; and thus they are not counted in the finding of the average number of solutions.
+      </paragraph>
+      <paragraph>
+       Another measure which can help in comparing the performance of abagraph against proxdd on our particular sample data is that of the ‘unique solver contribution’ made by each system in answering queries.{sup:12} For this, we used the results for all experiments, dividing them into those for p-cyclic and p-acyclic frameworks, and dividing each of those two categories further into results obtained for abagraph, and results obtained for proxdd. This gave four groups. We excluded queries which had failed to be answered within the time-out of 120 seconds, and those queries which raised exceptions in either system, thus keeping only the results for completely answered queries for both systems. Then, for steps of intervals of 6 seconds, and for each of the four groups, we recorded the number of queries answered uniquely by the system in question (abagraph or proxdd) in the amount of seconds or less—first, the number of queries answered in less than 6 seconds, then those answered in under 12 seconds, etc., up to the maximum of 120 seconds. The results are shown in Fig. 23. They provide preliminary evidence that abagraph may find a larger subset of query answers, with a more marked difference in the case of frameworks with cycles. For example, after 30 seconds, abagraph had found 1425 solutions for queries to p-cyclic frameworks which proxdd had not found, and 570 solutions for queries to p-acyclic frameworks which proxdd had not found. Still after 30 seconds, proxdd had found only 1 solution to a query for a p-cyclic framework that abagraph had not found, and 19 solutions to queries for p-acyclic frameworks that abagraph had missed.
+      </paragraph>
+      <paragraph>
+       In presenting the results for sequences of parameters, we will show the time taken on average for answering a query, where this is understood to be the time taken to find all possible answers. Thus, for some {a mathematical formula}s∈L, there may be multiple adm-graph-DDs or grn-graph-DDs for s, giving rise to many different {a mathematical formula}Pn which are admissible argument graphs or (subgraphs of) grounded argument graphs. Further, as explained above, there are several possible outcomes for each query: either (i) all answers were found in under 120 seconds (the chosen timeout); (ii) the query fails to complete before the timeout; or (iii) an exception is raised. Those queries for exceptions were raised for either system, i.e., those of class (iii), were removed from contributing to the results. (However, it is notable that proxdd produced by far the greater number of exceptions for the particular queries and frameworks we used.) In comparing the results of the two systems, we show the results for adm-graph-DDs and grn-graph-DDs separately, side by side; intuitive inspection of the shape of the graphs in each case reveals that the results for each series are similar regardless of whether the derivation is adm or grn. The different ‘steps’ shown on the x-axis of the graphs represent the various increasing parameters for the random frameworks generated, according to Table 11.
+      </paragraph>
+      <paragraph>
+       First, Fig. 24 shows the results for series 1, in which {a mathematical formula}|Ns| (i.e., {a mathematical formula}|L|) is gradually increased as all other parameters remain the same. Aside from the peak at step 2, the tendency here is for the average time for a query gradually to decrease as {a mathematical formula}|L| increases. It might be thought that the explanation for this is the fact that, as {a mathematical formula}|L| gets larger without any other parameters being affected, the likelihood increases that sentences in {a mathematical formula}v(Pi), at any stage of an X-graph-DS, will not be the head of a rule—and so that as {a mathematical formula}|L| increases the number of admissible argument graphs containing s must diminish. It is apparent that this is not the reason, since the number of solutions does not gradually diminish as {a mathematical formula}|L| increases. We leave more detailed analysis for future work.
+      </paragraph>
+      <paragraph>
+       Fig. 25 shows series 2, in which the number of rules per given rule head is gradually increased. This conforms to expectation, in that as the number of rules per head increases, it is likely that the number of possible argument graphs and arguments to be explored, when a given {a mathematical formula}s∈L is chosen, will naturally increase. Though abagraph outperformed proxdd in the particular experiments we ran, this is not by very much; and the tendency in these experiments was for the performances of the two systems to become increasingly closer as the number of rules per head gets larger. We conjecture that the reason for this is the presence of the acyclicity check on the {a mathematical formula}Pi and {a mathematical formula}Gi components, which in general becomes more demanding as the number of rules per head increases; we leave possible confirmation of this for further work.
+      </paragraph>
+      <paragraph>
+       Thirdly, series 3 gradually increases the number of sentences per body, with results shown in Fig. 26. This shows very little effect on the performances of abagraph and proxdd, with abagraph consistently outperforming proxdd on queries for the particular frameworks we generated. We ourselves find it counter-intuitive that the number of sentences per body, when increased, should have little impact on the time taken to find solutions: our expectation had been that more sentences per body would required more to be proved in order to establish a given argument graph or argument. We again leave deeper analysis for future work.
+      </paragraph>
+      <paragraph>
+       Finally, we consider the average time for answering queries where the parameters for creating random frameworks vary together (series 4). These are shown in Fig. 27. Though abagraph outperformed proxdd here, the tendency is for this to be by an increasingly small margin, as the size of the framework increases. As for series 2, we conjecture that the reason for the approach of the two curves to each other is the acyclicity checks on {a mathematical formula}Pi and {a mathematical formula}Gi; we leave further investigation for future work.
+      </paragraph>
+      <paragraph>
+       From this experimentation we draw the tentative conclusion that, in general, there may be computational gains to using abagraph and argument graphs over proxdd and tree-based arguments. These gains are mostly seen in the number of solutions produced and the likelihood of a full set of answers being found at all; but there my also be also minor gains in the time for a computation.
+      </paragraph>
+      <paragraph>
+       As Table 12, Table 13, Table 14 show, the number of non-zero solutions found by abagraph for the experimental data we used was much lower than that found by proxdd; we noted that these figures are a measure of the ‘redundant’ or ‘bad’ solutions excluded by abagraph. In future work, we would like to compare the experimental results achieved for abagraph with a theoretical analysis of the optimum number of distinct solutions found for a given selection of frameworks, thus seeing whether the number of non-zero solutions found by abagraph is, or is near to, an optimum.{sup:13}
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      As mentioned in the introduction, the current paper substantially extends the work we first presented, with a co-author, in [9]. In that paper, we introduced the notion of rule-minimality as it applies to the tree-based arguments which are standard in ABA (it could also easily be extended to other forms of structured argumentation). In the current paper, by contrast, we move to a more economical and, arguably, conceptually preferable use of argument graphs as the fundamental representation of arguments. As §§4.1–4.2 of the current paper show, focused argument graphs are in one-one correspondence with rule-minimal arguments—but an argument graph may also represent a set of rule-minimal arguments, where that set is non-bloated. Since non-bloatedness can be motivated in much the same way as rule-minimality, then this capacity is an advantage. Our previous work in [9] was also restricted to the case of the grounded semantics; here we also cover the admissible semantics, and include full definitions and proofs for every notion and theorem, at the same time adding completeness results for both the admissible and grounded semantics.
+     </paragraph>
+     <paragraph>
+      Our work on the completeness of the grounded semantics has been influenced by that of Thang et al. [26]. In that paper, the authors define a dialectical proof-procedure to compute admissible subsets of the grounded extension of an abstract argumentation framework. Significantly, the use of a dependency graph over arguments, grown gradually during the proof-procedure, ensures that the proof-procedure terminates finitely. In our work, we adapt the use of such a graph to the case of ABA—it forms the {a mathematical formula}Gi component of the tuples given in Definition 5.5. Incorporating this into the definition of a grn-graph-DD allows us to prove the completeness of our procedures in Theorem 5.12; the adaptation is a matter of paying attention to the internal structure of arguments, so that the {a mathematical formula}Gi is defined over sentences instead of arguments. Whereas previous completeness results for dialectical proof-procedures for ABA [12], [14], [27] were restricted to p-acyclic frameworks [14], our use of a graphical dependency graph {a mathematical formula}Gi and associated acyclicity check enables us to prove completeness more generally, without the previous restriction.
+     </paragraph>
+     <paragraph>
+      The overall structure of the X-graph-DSs given by Definition 5.5 follows a common blueprint which was established in [12] and [14]. As in Definition 6.3 of [27] (the definition of a ‘structured dispute derivation’), our graphical derivations retain the structure both of the proponent's justifications (through the argument graphs {a mathematical formula}Pi), and the various opponent argument graphs which may attack the proponent's claims (which are kept in {a mathematical formula}Oi). As we discuss in §5.3, the current paper introduces improved forms of filtering over the previous dispute derivations for ABA. Cases 1(ii) and 2(ii) of Definition 5.5, with their acyclicity conditions, ensure that, in the expansion of an argument graph, no sentence is proved twice. In the case of the proponent, this is also ensured by case 2(i)(c), where a sentence is added as unmarked to {a mathematical formula}Pi+1 only if it has not already been added. In previous work, the proponent could repeat lengthy justifications for sentences. Similarly, suppose that {a mathematical formula}a∈A is part of the proponent's support. In previous dispute derivations for ABA, if opponent arguments for {a mathematical formula}a¯ have been computed already, those same arguments might later be recomputed if {a mathematical formula}a¯=b¯ for some {a mathematical formula}b∈A also in the proponent support (for {a mathematical formula}a≠b). We improve on this in case 1(i) of Definition 5.5, where we add new potential argument graphs to {a mathematical formula}Oi+1 only when they have not already been added. Some of these forms of filtering are extrapolations, to the case of ABA, of the use of the {a mathematical formula}SPi and {a mathematical formula}SOi components to achieve filtering in Definitions 4 and 8 of [26].
+     </paragraph>
+     <paragraph>
+      Modgil and Prakken [23] define a form of structured argumentation, {a mathematical formula}ASPIC+, with both strict and defeasible rules, and with notions both of a contrary and contradictory defined, as well as several forms of semantics. Arguments in {a mathematical formula}ASPIC+ are expressions defined using the rules and an underlying logical language; although no notion of tree is explicitly invoked in the definition of an argument, it is clear that {a mathematical formula}ASPIC+ arguments might easily have been defined as trees, and that notions of rule-minimality, bloatedness, circular and flabby arguments, would apply. The formalism allows arguments to be circular and flabby, and extensions to be bloated, and in this respect is similar to standard presentations of ABA. An interesting direction for future work is the study of argument graphs in the context of {a mathematical formula}ASPIC+.
+     </paragraph>
+     <paragraph>
+      García and Simari [20] take a logic-programming approach to defeasible argumentation, DeLP, also employing sets of strict and defeasible rules in the construction of arguments. DeLP, similarly to other forms of argumentation, also employs a notion of dialectical tree in order to establish whether a given claim is to be accepted (i.e., whether it is ‘undefeated’), or not; nodes of the tree are labelled by argument structures{a mathematical formula}(R,l), where l is a literal and R a set of defeasible rules which can be used, with the strict rules, to derive l. As opposed to our argument graphs, the structures {a mathematical formula}(R,l) do not record the structure of a derivation. However, the sets R are required to be ⊆-minimal, in that no smaller {a mathematical formula}R′⊂R could be used to derive the same literal l. As we note in the current paper, this constraint means that the construction of arguments is potentially computationally expensive, compared to our top-down, graph-based, rule-minimal approach. Another aspect of DeLP is that where an argument structure {a mathematical formula}(R,l) has already appeared in a dialectical tree, no argument structure {a mathematical formula}(R′,l′) such that {a mathematical formula}R′⊂R may appear, further on the same path as {a mathematical formula}(R,l) from the root. We impose an analogous constraint on the proponent argument graphs {a mathematical formula}Pi, in that once some {a mathematical formula}s∈L is in {a mathematical formula}v(Pi)∖u(Pi), it can never be the case, for {a mathematical formula}j&gt;i, that {a mathematical formula}s∈u(Pj). Since our use of argument graphs imposes that, for a given sentence s, only one rule with head s is ever used to prove s, it must be that, for any rule {a mathematical formula}s←s1,…,sn, if {a mathematical formula}s,s1,…,sn∈v(Pi)∖u(Pi), then that rule is never selected again for the (proponent) case 1(ii) of Definition 5.5. This corresponds to the constraint on sub-argument structures in DeLP.
+     </paragraph>
+     <paragraph>
+      Vreeswijk [29] defines arguments recursively so that a given argument depends on its subarguments. An argument can be a sentence; or a structure {a mathematical formula}σ1,…,σn→ϕ (a strict rule) or {a mathematical formula}σ1,…,σn⇒ϕ (a defeasible rule), such that ϕ is a sentence and {a mathematical formula}σ1,…,σn are subarguments. Of particular interest is the fact that Vreeswijk imposes a constraint so that any sentence in an argument cannot depend, through the strict or defeasible rules, on another occurrence of itself elsewhere in the argument (see his Definition 2.5, p. 232); to this degree he shares part of our motivation. However, Vreeswijk's definition of argument still allows them to be flabby, and sets of arguments can accordingly be bloated. In effect, trees are retained to structure arguments. In our work, by contrast, we shift to a different underlying representation, and remove the three forms of undesirability at once.
+     </paragraph>
+     <paragraph>
+      Our concern with the efficient representation and calculation of arguments is shared with others. Besnard and Hunter [4] require arguments to have a minimal support; the analogous notion for us (minimal sets of assumptions as support) is not implied by switching to argument graphs as the fundamental representation. Support-minimality needs to be ascertained ‘globally’, by checking the entire framework for alternative argument graphs. The property of rule-minimality which, as we showed is Section 4.1, characterizes those tree-based arguments which are straightforwardly equivalent to argument graphs, is close to condition 3 in the definition of argument structure (Def. 3.1) in [20]. Efstathiou and Hunter [16] present an approach for generating arguments within the context of logical argumentation, using connection graphs[21] to optimize the search for arguments, where—as with [4]—the support for a given claim consists of a minimal set of propositional formulas which together imply the claim.
+     </paragraph>
+     <paragraph>
+      There are many implementations of different forms of argumentation; we here compare our work with two other representative systems, one for abstract argumentation and one for structured argumentation. For abstract argumentation, ASPARTIX [17] uses an underlying answer-set solver and encodes the argumentation framework and rules defining various semantics, in order to find extensions. Our work in the current paper takes a ‘top-down’ approach, starting with a given sentence s and incrementally constructing arguments and attacks only when relevant; in order to answer the question of whether a given {a mathematical formula}s∈L is contained in a grounded argument graph, we may not need to construct the entire grounded argument graph, but only an admissible subgraph thereof.
+     </paragraph>
+     <paragraph>
+      Snaith and Reed [25] present TOAST—an online, java-based implementation of the ASPIC{sup:+} framework. Rules, preferences over rules, assumptions, and other elements of the ASPIC{sup:+} framework can be entered, and a query is a specific formula. An underlying engine then evaluates, for several different semantics, whether there is an acceptable extension which supports the given formula. The implementation works by constructing the entire abstract argumentation framework from the entered rules and language; this again contrasts with our top-down approach which only considers relevant information. Plainly, the different approaches may, in this respect, be suited to different forms of application.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs
+     </section-title>
+     <paragraph>
+      Note that in the following proofs, we sometimes write an argument graph G in the form of the pair {a mathematical formula}(v(G),e(G)). Moreover, for graphs {a mathematical formula}G,G′, we use {a mathematical formula}G∪G′ to denote the graph {a mathematical formula}(v(G)∪v(G′),e(G)∪e(G′)). For convenience, we recall the statement of the theorem before each proof.
+     </paragraph>
+     <section label="A.1">
+      Theorem 4.6
+      <paragraph>
+       (i) Let {a mathematical formula}a be a non-circular, non-flabby argument. Then there is a unique graphical conversion G of {a mathematical formula}a which is a focused argument graph with {a mathematical formula}claim(a)=claim(G) and {a mathematical formula}support(a)=support(G), such that {a mathematical formula}a is represented in G. (ii) Let {a mathematical formula}A be a non-bloated set of arguments. Then there is a unique graphical conversion G of {a mathematical formula}A with {a mathematical formula}claims(A)⊆v(G) and {a mathematical formula}⋃a∈Asupport(a)=support(G) and each argument in {a mathematical formula}A is represented in G.
+      </paragraph>
+      <paragraph label="Proof">
+       For (i), define G to be such that{a mathematical formula} We first show that G is an argument graph (cf. Definition 4.1). Evidently {a mathematical formula}v(G)⊆L. Now, first, if {a mathematical formula}s∈v(G)∩A, then there can be no nodes {a mathematical formula}n,n′ in {a mathematical formula}a with {a mathematical formula}n′∈children(n) such that {a mathematical formula}label(n)=s; so {a mathematical formula}s∈sinks(G). Secondly, suppose {a mathematical formula}s∈v(G)∖A. Then there is at least one non-leaf node n in {a mathematical formula}a labelled by s, such that there is a rule {a mathematical formula}s←s1,…,sm in {a mathematical formula}R, and the labels of the children of n are {a mathematical formula}s1,…,sm. These must be all the labels of the children of any node labelled by s, apart from ⊤; for otherwise {a mathematical formula}{a} would be bloated, and then by Theorem 3.3, {a mathematical formula}a would not be non-circular and non-flabby. Thus G is an argument graph. Further, since {a mathematical formula}a is a tree it has a unique source, n (where {a mathematical formula}label(n)=claim(a)). It is straightforward to show that {a mathematical formula}label(n) is the only source in G. Thus G is a focused argument graph with {a mathematical formula}claim(a)=claim(G).G clearly represents {a mathematical formula}a. For define f so that, for each node n of {a mathematical formula}a, {a mathematical formula}f(n) is {a mathematical formula}label(n) (this is well-defined and surjective w.r.t. {a mathematical formula}v(G)). We need to check whether, if {a mathematical formula}f(n)=s, then {a mathematical formula}labels({n′|n′∈children(n)})={s′|(s,s′)∈e(G)}. Assume {a mathematical formula}f(n)=s, so that {a mathematical formula}s=label(n). If {a mathematical formula}s′∈labels({n′|n′∈children(n)})∖{⊤} then {a mathematical formula}(s,s′)∈e(G) by definition of {a mathematical formula}e(G); if {a mathematical formula}s′∈{s′|(s,s′)∈e(G)}, then this can only be because there is {a mathematical formula}n′ in {a mathematical formula}a such that {a mathematical formula}n∈children(n′) and {a mathematical formula}label(n′)=s′, so that {a mathematical formula}s′∈labels({n⁎|(n,n⁎)∈edges(a)})∖{⊤}. Thus {a mathematical formula}labels({n⁎|(n,n⁎)∈edges(a)})={s⁎|(s,s⁎)∈e(G)}.Since {a mathematical formula}v(G) is just {a mathematical formula}{label(n)|n∈nodes(a)}, it is immediate that {a mathematical formula}support(a)=support(G).Plainly, G is a graphical conversion of {a mathematical formula}a by construction. We must show that G is the unique graphical conversion of {a mathematical formula}a. Thus suppose for contradiction that {a mathematical formula}G′ is some other graphical conversion of {a mathematical formula}a. Then since {a mathematical formula}claim(G)=claim(G′), it must be that there is {a mathematical formula}s∈v(G)∩v(G′) such that {a mathematical formula}{s′|(s,s′)∈e(G)}≠{s′|(s,s′)∈e(G′)}. But then {a mathematical formula}{a} is bloated, and so {a mathematical formula}a is either circular or flabby. Contradiction.For (ii), let G be{a mathematical formula} Similar reasoning to that in (i) shows that G is an argument graph. Plainly {a mathematical formula}claims(A)⊆v(G), and since G is an argument graph we must have that for {a mathematical formula}a∈A∩v(G), then {a mathematical formula}a∈support(G); thus {a mathematical formula}⋃a∈Asupport(a)=support(G). That G is a graphical conversion of {a mathematical formula}A follows by construction of G, and the uniqueness of G follows by an argument similar to that for (i). So too for G's representing each argument in {a mathematical formula}A. □
+      </paragraph>
+     </section>
+     <section label="A.2">
+      Theorem 4.7
+      <paragraph>
+       Let {a mathematical formula}s∈L and {a mathematical formula}A∈A. (i) For every non-circular, non-flabby tree-based argument for s supported by A there exists a tree-based argument for s supported by A. (ii) For every tree-based argument for s supported by A there exists a non-circular, non-flabby tree-based argument for s supported by {a mathematical formula}A′⊆A.
+      </paragraph>
+      <paragraph label="Proof">
+       For (i), non-circular, non-flabby arguments are, of course, arguments. For (ii), our strategy is to show how to transform any argument into a non-circular, non-flabby one.Thus let {a mathematical formula}a be an argument for s supported by A. Recall Algorithm 1 from [9], reprinted here as Algorithm A.1.{sup:14} This takes an arbitrary tree-based argument {a mathematical formula}a and ‘reduces’ it to an argument {a mathematical formula}a′. At lines 6 and 9 the algorithm performs non-deterministic choices (of a node/sentence and of a subtree, respectively). By making alternative such choices different arguments can be obtained. For example, consider the application of the algorithm to the left-most argument in Fig. 28. Depending on the choice of subtree at line 9, the algorithm may return the middle or the right-most argument above.We will say that, where {a mathematical formula}a′ may be obtained from {a mathematical formula}a using the algorithm with particular choices, then {a mathematical formula}a′is a reduction of{a mathematical formula}a, and write this as {a mathematical formula}reduce(a,a′). Thus, if {a mathematical formula}reduce(a)=a′ for some particular choices, then {a mathematical formula}reduce(a,a′) holds.If{a mathematical formula}reduce(a,a′), then{a mathematical formula}a′is non-circular and non-flabby,{a mathematical formula}claim(a)=claim(a′)and{a mathematical formula}support(a′)⊆support(a).First, Algorithm A.1 terminates, since (i) {a mathematical formula}a is finite and thus {a mathematical formula}rank(a) is finite; (ii) there are finitely many nodes at lines 10, 13; (iii) at every iteration of the external while loop the set nodes is smaller. Secondly, {a mathematical formula}a′ is a subtree of {a mathematical formula}a with the same root, and so the same claim as {a mathematical formula}a, thus {a mathematical formula}support(a′)⊆support(a). Thirdly, trivially {a mathematical formula}a′ is a tree-based argument. Finally, by construction, each sentence in {a mathematical formula}a′ is proven by only one rule; thus {a mathematical formula}{a′} cannot be bloated and so by Theorem 3.3, {a mathematical formula}a′ is non-circular and non-flabby.  □This completes the proof of Theorem 4.7: Algorithm A.1 can be used to find, for any argument {a mathematical formula}a, some argument {a mathematical formula}a′ such that {a mathematical formula}reduce(a,a′), and Lemma A.1 shows that such an {a mathematical formula}a′ will be non-circular and non-flabby. □
+      </paragraph>
+     </section>
+     <section label="A.3">
+      Theorem 4.16
+      <paragraph>
+       Any argument graph characteristic function {a mathematical formula}fR has a least fixed point equal to {a mathematical formula}fRω(◊).
+      </paragraph>
+      <paragraph label="Proof">
+       We use the Kleene fixed-point theorem. We must show that {a mathematical formula}fR is Scott-continuous (sometimes just called ‘continuous’).First, some preliminary definitions. Let {a mathematical formula}G1,…,Gn be argument graphs. They are said to be compatible (which we write as {a mathematical formula}G1∥⋯∥Gn) if there is a maximally rule-consistent {a mathematical formula}R such that {a mathematical formula}(rules(G1)∪⋯∪rules(Gn))⊆R.{a mathematical formula}G1∪⋯∪Gn is defined to be the graph{a mathematical formula} and {a mathematical formula}G1∩⋯∩Gn is{a mathematical formula} (Note that these are not, in general, argument graphs.)  ⌟Let us note that {a mathematical formula}G1∥⋯∥Gn iff {a mathematical formula}G1∪⋯∪Gn is an argument graph. Let{a mathematical formula}Rbe maximally rule-consistent, and{a mathematical formula}GRthe set of argument graphs G such that{a mathematical formula}rules(G)⊆R. Then{a mathematical formula}(GR,⊆)is a complete lattice, such that for{a mathematical formula}X⊆GR, the least upper bound of X ({a mathematical formula}lub(X)) is ⋃X, and the greatest lower bound ({a mathematical formula}glb(X)) is ⋂X.Evidently ⊆ partially orders {a mathematical formula}GR. Thus let {a mathematical formula}X⊆GR; note that X is finite. As {a mathematical formula}rules(G)⊆R for any {a mathematical formula}G∈X, then letting {a mathematical formula}X={G1,…,Gn}, we have {a mathematical formula}G1∥⋯∥Gn. Then ⋃X is evidently an argument graph, and {a mathematical formula}(⋃X)∈GR. It is trivial to show that this is {a mathematical formula}lub(X). The result for {a mathematical formula}glb(X) follows similarly.  □The following lemma shows that {a mathematical formula}fR is Scott-continuous (sometimes called ‘ω-continuous’). Let{a mathematical formula}fRthe argument graph characteristic function w.r.t. the maximally rule-consistent{a mathematical formula}R. Then for any{a mathematical formula}X⊆GRsuch that{a mathematical formula}lub(X)∈X:{a mathematical formula}{a mathematical formula}GR must be finite, so let X be {a mathematical formula}{G1,…,Gn}. We need to show that {a mathematical formula}fR(lub({G1,…,Gn}))=lub({fR(G1,),…,fR(Gn)}). Let {a mathematical formula}G1∪⋯∪Gn be {a mathematical formula}G⁎. So, we need that {a mathematical formula}fR(G⁎)=⋃{fR(G1),…,fR(Gn)}. Since {a mathematical formula}G1⊆G⁎,…,Gn⊆G⁎, then by monotonicity of {a mathematical formula}fR, {a mathematical formula}fR(G1)⊆fR(G⁎),…,fR(Gn)⊆fR(G⁎). Thus {a mathematical formula}⋃{fR(G1),…,fR(Gn)}⊆fR(G⁎). But since {a mathematical formula}lub(X)∈X just means that {a mathematical formula}G⁎∈{G1,…,Gn}, it must be that {a mathematical formula}fR(G⁎)⊆⋃{fR(G1),…,fR(Gn)}.  □Now, the Kleene fixed-point theorem can be applied to yield that {a mathematical formula}fRω(◊) is the least fixed point of {a mathematical formula}fR. □
+      </paragraph>
+     </section>
+     <section label="A.4">
+      Theorem 4.20
+      <paragraph>
+       Let G be an argument graph and {a mathematical formula}AG the set of arguments represented in G.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        If G is admissible, so is {a mathematical formula}AG.
+       </list-item>
+       <list-item label="ii.">
+        If G is complete, then there is a complete extension {a mathematical formula}A⁎ such that {a mathematical formula}AG⊆A⁎ and {a mathematical formula}claims(AG)=claims(A⁎).
+       </list-item>
+       <list-item label="iii.">
+        If G is grounded and {a mathematical formula}A⁎ is the grounded extension, then {a mathematical formula}AG⊆A⁎ and {a mathematical formula}claims(AG)=claims(A⁎).
+       </list-item>
+      </list>
+      <paragraph label="Lemma A.5">
+       We take the parts i–iii in turn. The proof of part i depends on the following lemma, which relates properties of argument graphs and reductions of arguments, as defined in the proof of Theorem 4.7 above. If{a mathematical formula}ais a tree-based argument:
+       <list>
+        there is a focused argument graph G, with{a mathematical formula}claim(a)=claim(G)and{a mathematical formula}support(G)⊆support(a);if G is a graphical conversion of some{a mathematical formula}a′such that{a mathematical formula}reduce(a,a′), then G is a graphical conversion of{a mathematical formula}a(cf.Definition 4.5for the notion of graphical conversion).We now prove the parts i–iii of
+       </list>
+       <paragraph>
+        Theorem 4.20 successively.
+       </paragraph>
+       <list>
+        <list-item label="i.">
+         Assume G is admissible. Then it is conflict-free. If {a mathematical formula}AG is not conflict-free, then there are {a mathematical formula}a,b∈AG such that {a mathematical formula}a⇝b ({a mathematical formula}a and {a mathematical formula}b need not be distinct). Since {a mathematical formula}claim(a)∈v(G) and {a mathematical formula}support(b)⊆v(G), then {a mathematical formula}G⇝G. Contradiction; so {a mathematical formula}AG is conflict-free.Let {a mathematical formula}a′∉AG be such that {a mathematical formula}a′⇝AG. Let {a mathematical formula}s′ be {a mathematical formula}claim(a′). Then by Lemma A.5 there is an argument graph {a mathematical formula}G′ such that {a mathematical formula}s′=claim(G′) and {a mathematical formula}support(G′)⊆support(a′). Since {a mathematical formula}a′⇝AG, there is {a mathematical formula}a∈support(AG) such that {a mathematical formula}a¯=s′. Evidently {a mathematical formula}a∈support(G), so that {a mathematical formula}G′⇝G. Since G is admissible, then by Theorem 4.19.i, {a mathematical formula}G⇝G′. Then there must be {a mathematical formula}s∈v(G) with {a mathematical formula}s=a′¯ for {a mathematical formula}a′∈v(G′), and clearly {a mathematical formula}a′∈support(a′). But since {a mathematical formula}s∈v(G), then by Theorem 4.3 there is {a mathematical formula}a⁎∈AG with {a mathematical formula}claim(a⁎)=s, and {a mathematical formula}a⁎⇝a′. Thus {a mathematical formula}AG defends itself against {a mathematical formula}a′.
+        </list-item>
+        <list-item label="ii.">
+         Assume G is complete. We first show that {a mathematical formula}AG∪args(support(G)) is admissible. Suppose not; then it is either not conflict-free, or it does not defend itself. Plainly it must defend itself from attacks, for {a mathematical formula}AG is admissible and {a mathematical formula}support(AG)=support(AG∪args(support(G))). Then {a mathematical formula}(AG∪args(support(G)))⇝(AG∪args(support(G))). Clearly {a mathematical formula}AG⤳̸(AG∪args(support(G))). If {a mathematical formula}args(support(G))⇝AG then since {a mathematical formula}AG is admissible, {a mathematical formula}AG⇝args(support(G)). But then {a mathematical formula}AG⇝AG—contradiction. If {a mathematical formula}args(support(G))⇝args(support(G)), then {a mathematical formula}args(support(G))⇝AG, which again leads to a contradiction. So {a mathematical formula}AG∪args(support(G)) is admissible.We then show that {a mathematical formula}AG∪args(support(G)) contains all the arguments it can defend. First we prove that (*) if G is complete, then {a mathematical formula}claims(AG)=claims(AG∪args(support(G))). The ⊆ direction is trivial. The other direction follows by noting that if {a mathematical formula}a is such that {a mathematical formula}claims(subargs(a)∖{a})⊆claims(AG) and {a mathematical formula}a∈AG∪args(support(G)), then it follows by G being complete that {a mathematical formula}claim(a)∈v(G), so that {a mathematical formula}claim(a)∈claim(AG).So, now suppose that {a mathematical formula}AG∪args(support(G)) does not contain all the arguments it defends. Let {a mathematical formula}b be such an argument: {a mathematical formula}b∉AG∪args(support(G)), but for all {a mathematical formula}c such that {a mathematical formula}c⇝b, {a mathematical formula}(AG∪args(support(G)))⇝c. Consider {a mathematical formula}G+, where {a mathematical formula}v(G+)=v(G)∪support(b), and {a mathematical formula}e(G+)=e(G). Evidently {a mathematical formula}G+≠G, since as {a mathematical formula}b∉AG∪args(support(G)), {a mathematical formula}support(b)∖v(G) is non-empty. {a mathematical formula}G+ is clearly an argument graph such that {a mathematical formula}G⊆G+; we will show that G defends it from attacks, contradicting (given Theorem 4.19.ii) that G is complete. Thus assume that {a mathematical formula}G′⇝G+ but {a mathematical formula}G′⤳̸G (if {a mathematical formula}G′⇝G then plainly {a mathematical formula}G⇝G′ by admissibility of G). Let {a mathematical formula}c⁎ be some argument represented by {a mathematical formula}G′ such that the {a mathematical formula}claim(c⁎)=b¯ for {a mathematical formula}b∈support(b)∖v(G). Since {a mathematical formula}c⁎⇝b, {a mathematical formula}(AG∪args(support(G)))⇝c⁎. Thus there is some {a mathematical formula}a′∈(AG∪args(support(G))) such that {a mathematical formula}claim(a′)=c¯ for some {a mathematical formula}c∈support(c⁎). But by our result (*) above, {a mathematical formula}claim(a′)∈claims(AG), so that {a mathematical formula}claim(a′)∈v(G). So {a mathematical formula}G⇝G′, and so G defends {a mathematical formula}G+. So, from Theorem 4.19.ii, G cannot be complete: contradiction.Thus {a mathematical formula}AG∪args(support(G)) must contain all the arguments it defends, and so is complete.
+        </list-item>
+        <list-item label="iii.">
+         Suppose G is grounded. Then it is complete, and so, by part ii, {a mathematical formula}AG⊆Ac for some complete extension {a mathematical formula}Ac. To show that {a mathematical formula}AG⊆A⁎ for {a mathematical formula}A⁎ grounded we must show that there is no complete {a mathematical formula}A′ such that {a mathematical formula}A′⊂AG. Assume there is such an {a mathematical formula}A′; then it must be that {a mathematical formula}A⁎⊂AG. Let {a mathematical formula}G⁎ be a conversion of {a mathematical formula}A⁎. By Theorem 4.21.ii, {a mathematical formula}G⁎ is complete. Clearly {a mathematical formula}G⁎⊂G, so that G is not ⊆-minimally complete. Thus, given Theorem 4.19.iii, G cannot be grounded. Contradiction.Since {a mathematical formula}AG⊆A⁎, we have {a mathematical formula}claims(AG)⊆claims(A⁎). We must show {a mathematical formula}claims(A⁎)⊆claims(AG). Assume {a mathematical formula}s∈claims(A⁎). Since G is grounded, it is complete, so, by part ii, there is some complete {a mathematical formula}Ac such that {a mathematical formula}claims(AG)=claims(Ac). But since {a mathematical formula}s∈claims(A⁎), {a mathematical formula}s∈claims(Ac). So {a mathematical formula}s∈claims(AG). □
+        </list-item>
+       </list>
+      </paragraph>
+     </section>
+     <section label="A.5">
+      Theorem 4.21
+      <paragraph>
+       Let {a mathematical formula}A be a set of tree-based arguments.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        If {a mathematical formula}A is admissible, then for all conversions G of {a mathematical formula}A, G is admissible.
+       </list-item>
+       <list-item label="ii.">
+        If {a mathematical formula}A is complete, then for all conversions G of {a mathematical formula}A, G is complete.
+       </list-item>
+       <list-item label="iii.">
+        If {a mathematical formula}A is grounded, then there exists a conversion G of {a mathematical formula}A such that G is grounded.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       <list>
+        <list-item label="i.">
+         Assume {a mathematical formula}A is admissible, but that, for some conversion G of {a mathematical formula}A, G is not admissible, for contradiction. If {a mathematical formula}G⇝G, then there are {a mathematical formula}s,a∈v(G) such that {a mathematical formula}a¯=s. Since G is a conversion of {a mathematical formula}A, it must be that {a mathematical formula}v(G)⊆labels(nodes(A)). Thus there is some {a mathematical formula}a∈A such that {a mathematical formula}a∈support(a). If there is an {a mathematical formula}a′∈A such that {a mathematical formula}s=claim(a′), then {a mathematical formula}A⇝A: contradiction. Suppose there is no such {a mathematical formula}a′. Then there must be {a mathematical formula}a′∈A such that {a mathematical formula}s∈labels(nodes(a′)). Let {a mathematical formula}a″ be a subtree of {a mathematical formula}a′ such that {a mathematical formula}claim(a″)=s. Then {a mathematical formula}a″⇝A, so that {a mathematical formula}A⇝a″. But evidently {a mathematical formula}support(a″)⊆support(a′) so that {a mathematical formula}A⇝A. So {a mathematical formula}A cannot be admissible: contradiction. Thus {a mathematical formula}G⤳̸G. Suppose that there is {a mathematical formula}G′ such that {a mathematical formula}G′⇝G, and let {a mathematical formula}a be an argument represented in {a mathematical formula}G′ such that {a mathematical formula}claim(a)=a¯ for some {a mathematical formula}a∈support(G). Then evidently {a mathematical formula}a⇝A, so that {a mathematical formula}A⇝a. But then it follows that {a mathematical formula}G⇝G′. Thus from Theorem 4.19.i, G must be admissible.
+        </list-item>
+        <list-item label="ii.">
+         Assume {a mathematical formula}A is complete; then it is admissible, and so G is admissible by (i) of the present theorem. In light of Theorem 4.19.ii, we must show that there is no {a mathematical formula}G′ with {a mathematical formula}G⊂G′, such that for all {a mathematical formula}G⁎ where {a mathematical formula}G⁎⇝G′, {a mathematical formula}G⇝G⁎. Thus assume that there is such an argument graph {a mathematical formula}G′. Let {a mathematical formula}a be an argument represented in {a mathematical formula}G′ but not in G (since {a mathematical formula}G⊂G′ there must be such an argument). Suppose {a mathematical formula}b⇝a, and let {a mathematical formula}Gb be a conversion of {a mathematical formula}b; it must then be that {a mathematical formula}Gb⇝G′. So by assumption, {a mathematical formula}G⇝Gb. But this means that {a mathematical formula}A⇝b, so that {a mathematical formula}A defends {a mathematical formula}a. But then {a mathematical formula}A cannot be complete—contradiction. So there is no such {a mathematical formula}G′, and G is complete.
+        </list-item>
+        <list-item label="iii.">
+         Assume {a mathematical formula}A is grounded. Thus {a mathematical formula}A is the least fixed point of the characteristic function f (see § 2), i.e., {a mathematical formula}A={a mathematical formula}fω(∅). For each {a mathematical formula}s∈claims(A), let the least rank of s be the least {a mathematical formula}n∈N such that there is {a mathematical formula}a∈fn(∅) with {a mathematical formula}claim(a)=s; this is evidently well-defined. Let R be a rule of least rank for s if there is {a mathematical formula}a∈fn(∅) with {a mathematical formula}s=claim(a), such that {a mathematical formula}R=last(a){sup:15} and n is the least rank of s. Let {a mathematical formula}R′⊆R be minimally grounding if for each {a mathematical formula}s∈claims(A), {a mathematical formula}R′ contains precisely one rule of least rank for s and no other rules. Let {a mathematical formula}R⊆R be grounding if {a mathematical formula}R is maximally rule-consistent and {a mathematical formula}R′⊆R for some minimally grounded {a mathematical formula}R′. Plainly a grounding {a mathematical formula}R always exists. We claim that {a mathematical formula}fRω(◊) is a conversion of {a mathematical formula}A and is grounded. We first prove the following lemma.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        For all{a mathematical formula}n∈N, (I){a mathematical formula}claims(fn(∅))=v(fRn(◊))and (II) each argument represented in{a mathematical formula}fRn(◊)is a member of{a mathematical formula}fn(∅).By induction on n.Base case. Trivial for {a mathematical formula}n=0 for both (I) and (II).Induction step. Assume (I) and (II) are true in the case of {a mathematical formula}n=i. We will show they both hold for {a mathematical formula}n=i+1.
+       </paragraph>
+       <list>
+        <list-item label="I)">
+         By inductive hypothesis {a mathematical formula}claims(fi(∅))=v(fRi(◊)).Assume {a mathematical formula}s∈claims(fi+1(∅)). If {a mathematical formula}s∈claims(fi(∅)) we are done, so suppose not. Let {a mathematical formula}Gs be the focused argument graph whose claim is s, such that {a mathematical formula}rules(Gs)⊆R (this can easily be shown to exist), and let {a mathematical formula}G+ be {a mathematical formula}Gs∪fRi(◊); {a mathematical formula}G+ is easily shown to be an argument graph. Suppose that {a mathematical formula}G⁎⇝G+. If (*) {a mathematical formula}G⁎⇝fRi(◊), then {a mathematical formula}fRi(◊)⇝G⁎. If (**) {a mathematical formula}G⁎⇝Gs, then the (unique) argument {a mathematical formula}b represented by {a mathematical formula}G⁎ whose claim is {a mathematical formula}claim(G⁎) is such that {a mathematical formula}b⇝a where {a mathematical formula}a is the unique argument represented by {a mathematical formula}Gs whose claim is s. Then {a mathematical formula}b⇝fi+1(∅), so that {a mathematical formula}fi(∅)⇝b, which by the inductive hypothesis means that {a mathematical formula}fRi(◊)⇝G⁎. Therefore in both (*) and (**), {a mathematical formula}fRi(◊)⇝G⁎, So {a mathematical formula}Gs⊆fi+1(◊), and thus {a mathematical formula}s∈v(fRi+1(◊)).Assume now that {a mathematical formula}s∈v(fRi+1(◊)), and let {a mathematical formula}a be the (unique) argument represented in {a mathematical formula}fRi+1(◊) such that {a mathematical formula}claim(a)=s. Since {a mathematical formula}R is grounding, it must be that {a mathematical formula}a∈fi+1(∅), so that {a mathematical formula}s∈claims(fi+1(∅)).
+        </list-item>
+        <list-item label="II)">
+         That this is true is shown by the argumentation for the second half of part I), above.
+        </list-item>
+       </list>
+       <paragraph>
+        Now, where {a mathematical formula}R is grounding, then {a mathematical formula}fRω(◊) must plainly be a conversion of {a mathematical formula}A. We must show that {a mathematical formula}fRω(◊) is grounded. It is plainly conflict-free, given that {a mathematical formula}A is. Take any maximally rule-consistent {a mathematical formula}R′ such that {a mathematical formula}rules(fRω(◊))⊆R′. Each such {a mathematical formula}R′ must be a grounding, and it is plain that {a mathematical formula}fR′n(◊)=fRn(◊) for all {a mathematical formula}n∈N. Since {a mathematical formula}fω(∅) is the least fixed point of f, {a mathematical formula}fRω(◊) is the least fixed point of {a mathematical formula}fR, and so too of {a mathematical formula}fR′n. Thus by Definition 4.17, {a mathematical formula}fRω(◊) is grounded. □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="A.6">
+      Theorem 5.6
+      <paragraph>
+       Let {a mathematical formula}((Pi,Oi,Gi,Di,Ci))i=0n be an X-graph-DS for {a mathematical formula}s0. Then for all i such that {a mathematical formula}0⩽i⩽n (if n is finite), or all i such that {a mathematical formula}0⩽i&lt;n (otherwise—i.e., if {a mathematical formula}n=ω):
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        {a mathematical formula}Pi is a potential argument graph, and {a mathematical formula}s0∈v(Pi);
+       </list-item>
+       <list-item label="ii.">
+        {a mathematical formula}Oi is an argument graph set;
+       </list-item>
+       <list-item label="iii.">
+        {a mathematical formula}Gi is a directed graph over {a mathematical formula}L;
+       </list-item>
+       <list-item label="iv.">
+        {a mathematical formula}Di⊆A and {a mathematical formula}Ci⊆A.  ⌟
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The proof proceeds by induction on the length {a mathematical formula}n⩾0 of the X-graph-DS. The base case is trivially true given the constraints on the tuple {a mathematical formula}(P0,O0,G0,D0,C0) in Definition 5.5.Assume the result holds for {a mathematical formula}n=k. We will show it holds for {a mathematical formula}n=k+1. Thus let{a mathematical formula} be an X-graph-DS for {a mathematical formula}s0∈L.We must show that for all j, {a mathematical formula}0⩽j⩽k+1, the components of the tuples fulfil the properties set in the theorem. Plainly {a mathematical formula}(P0,O0,G0,D0,C0),…,(Pk,Ok,Gk,Dk,Ck) is a k-length X-graph-DS, so all the properties we want to prove hold for all tuples up to and including the k-th, by the induction hypothesis. Moreover, if any component in the {a mathematical formula}(k+1)-th tuple is the same as in the k-th, the result trivially holds again by the induction hypothesis. For the remaining case, we take the parts of the theorem in turn.
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        We need to prove that {a mathematical formula}Pk+1≠Pk is a potential argument graph with {a mathematical formula}s0∈v(Pk+1).Examination of Definition 5.5 shows that {a mathematical formula}Pk is expanded to {a mathematical formula}Pk+1 according to case 1(ii) or case 2(i)(c).In case 1(ii), plainly {a mathematical formula}Pk+1 is acyclic because of the acyclicity check in case 1(ii), and {a mathematical formula}v(Pk+1)⊆L. {a mathematical formula}u(Pk)⊆sinks(Pk) by the induction hypothesis, and given the definition of updtgrph from Definition 5.4, it must be that {a mathematical formula}u(Pk+1)⊆sinks(Pk+1). Recall conditions (i) and (ii) from Definition 5.1. Plainly, no edge from an assumption is added, so that (i) remains satisfied. So assume that some {a mathematical formula}s′∈v(Pk+1) is such that {a mathematical formula}s′∉A. If {a mathematical formula}s′∈u(Pk+1), we are done; so suppose instead that {a mathematical formula}s′∉u(Pk+1). Then either {a mathematical formula}s′ was selected for the step to {a mathematical formula}Pk+1, in which case the result follows by the nature of case 1(ii); or else {a mathematical formula}s′∈(v(Pk)∖u(Pk)) and the result follows by induction hypothesis. Thus Definition 5.1 is satisfied.In case 2(i)(c), {a mathematical formula}Pk≠Pk+1 only if {a mathematical formula}Pk+1 is the same as {a mathematical formula}Pk but with a single new (unmarked) node added, and no new edges. Plainly this means that Definition 5.1 is satisfied.Thus, {a mathematical formula}Pk+1 is a potential argument graph. Evidently, since {a mathematical formula}s0∈v(Pk) by the induction hypothesis and members of {a mathematical formula}v(Pk) are not removed, {a mathematical formula}s0∈v(Pk+1).
+       </list-item>
+       <list-item label="ii.">
+        We must show that {a mathematical formula}Ok+1 is an argument graph set. By Definition 5.5, {a mathematical formula}Ok+1≠Ok only if {a mathematical formula}Ok is extended to {a mathematical formula}Ok+1 according to case 1(i), case 2(i)(a), case 2(i)(b), case 2(i)(c) or case 2(ii). Cases 1(i), 2(i)(a), 2(i)(b) and 2(i)(c) follow easily from Definition 5.4 and Definition 5.5. For case 2(ii), we must show that each member of (for the selected G and s):{a mathematical formula} is a potential argument graph. This follows similarly to part (i) of the current theorem, above.
+       </list-item>
+       <list-item label="iii.">
+        We must show that, for {a mathematical formula}Gk+1≠Gk, {a mathematical formula}Gk+1 is a directed graph. Examination of Definition 5.5 shows that {a mathematical formula}Gk is extended to {a mathematical formula}Gk∪gS, where S is a set of pairs of the form {a mathematical formula}(s1,s2), for {a mathematical formula}s1,s2∈L. With {a mathematical formula}X=adm, {a mathematical formula}Gk∪gS by definition of {a mathematical formula}∪g. Therefore, we only need to consider {a mathematical formula}X=grn. Here, the definition of {a mathematical formula}∪g makes it clear that {a mathematical formula}Gk+1 must be a directed graph over {a mathematical formula}L.
+       </list-item>
+       <list-item label="iv.">
+        Finally, the result for {a mathematical formula}Dk+1 and {a mathematical formula}Ck+1 is trivial given Definition 5.5.
+       </list-item>
+      </list>
+     </section>
+     <section label="A.7">
+      Theorem 5.9
+      <paragraph>
+       For any X-graph-DD ({a mathematical formula}X∈{adm,grn}) for {a mathematical formula}s0 with resulting argument graph {a mathematical formula}P, {a mathematical formula}P is admissible and {a mathematical formula}s0∈v(P).
+      </paragraph>
+      <paragraph label="Proof">
+       That {a mathematical formula}s0∈v(P) follows directly from Theorem 5.6. To prove the rest, let{a mathematical formula} be the given X-graph-DD, with {a mathematical formula}n⩾0, with {a mathematical formula}P corresponding to {a mathematical formula}Pn. We will make use of the two lemmas below. Intuitively, the significance of the first lemma is that any attacker of the proponent is an expansion of some potential argument in {a mathematical formula}On.If{a mathematical formula}a∈Dn, then any focused argument graph G such that{a mathematical formula}a¯=claim(G)is an expansion of some{a mathematical formula}G⁎∈On.Suppose {a mathematical formula}a∈Dn, and let G be a focused argument graph such that {a mathematical formula}a¯=claim(G). Since {a mathematical formula}a∈Dn, then from case 1(i) of Definition 5.5 we know that the focused potential argument graph {a mathematical formula}Ga¯=({a¯},∅) will have been added to some {a mathematical formula}Oi. G is necessarily an expansion of {a mathematical formula}Ga¯. We prove that no step from {a mathematical formula}Oj to {a mathematical formula}Oj+1, for {a mathematical formula}j⩾i, removes any argument graphs for {a mathematical formula}a¯ which are expansions of members of {a mathematical formula}Oj.Thus suppose {a mathematical formula}G+ is an expansion of some {a mathematical formula}G−∈Oj. If the move from {a mathematical formula}Oj to {a mathematical formula}Oj+1 is by case 2(i) of Definition 5.5, plainly {a mathematical formula}G+ would still be an expansion of some member (since {a mathematical formula}G− would be retained, but possibly differently marked). If the move is by case 2(ii), then if {a mathematical formula}s∉A from {a mathematical formula}G−∈Oj was chosen, it must be that there were no edges {a mathematical formula}(s,s′)∈v(G−). But then since {a mathematical formula}G+ is an expansion of {a mathematical formula}G−, there must be edges {a mathematical formula}(s,s1),…,(s,sn) in that expansion, such that {a mathematical formula}s←s1,…,sn is a rule in {a mathematical formula}R. But then since for all rules of the form {a mathematical formula}s←R in {a mathematical formula}R, there is {a mathematical formula}GR∈Oj+1 such that{a mathematical formula} (by case 2(ii) of Definition 5.5), then there must be some member of {a mathematical formula}Oj+1 of which {a mathematical formula}G+ is an expansion. Thus G, in particular, must be an expansion of some {a mathematical formula}G⁎∈On.  □The second lemma concerns the existence of counter-attacks by the proponent on expansions of opponent argument graphs. If G is an expansion of a member of{a mathematical formula}On, then{a mathematical formula}P⇝G.Let G be an expansion of {a mathematical formula}G−∈On. {a mathematical formula}G−∉u(On) (since {a mathematical formula}u(On)=∅) and thus will have been marked in the transition from some {a mathematical formula}Oi to {a mathematical formula}Oi+1, either in the application, in Definition 5.5, of case 2(i)(b), case 2(i)(c), or in case 2(ii) as some {a mathematical formula}updtgrph(G−,s′←R,Ci) such that {a mathematical formula}R∈RC, i.e., {a mathematical formula}R∩Ci≠∅.If the case was 2(i)(b), then there is some {a mathematical formula}s∈v(G−) such that {a mathematical formula}s∈Ci. If the case was 2(i)(c), then there is some {a mathematical formula}s∈v(G−) such that {a mathematical formula}s∈Ci+1. If the case was 2(ii) then there must be some {a mathematical formula}s∈R, and thus {a mathematical formula}s∈v(updtgrph(G−,s′←R,Ci)), such that {a mathematical formula}s∈Ci. So in all cases there is {a mathematical formula}s∈v(G−) such that {a mathematical formula}s∈Cn.But examination of the cases of Definition 5.5 shows that for any s added to some {a mathematical formula}Cj (only case 2(i)(c)), then there must be {a mathematical formula}s¯∈v(Pi+1). It is easy to see that {a mathematical formula}v(Pk)⊆v(Pk+1) for all {a mathematical formula}0⩽k⩽n. Then {a mathematical formula}s¯∈v(P), and thus {a mathematical formula}P⇝G.  □Now we move to the proof of the theorem. Given Theorem 4.19(i), we must show that (I) {a mathematical formula}P⤳̸P, and that (II) for any argument graph G such that {a mathematical formula}G⇝P, then {a mathematical formula}P⇝G.
+      </paragraph>
+      <list>
+       <list-item label="I.">
+        First assume for contradiction that {a mathematical formula}P⇝P. Then there must be {a mathematical formula}s,a∈v(P) such that {a mathematical formula}a¯=s. Let {a mathematical formula}Gs be the focused argument graph such that {a mathematical formula}Gs⊆P and {a mathematical formula}claim(Gs)=s. Since {a mathematical formula}a‾=s, by Definition 5.5 case 1(i) the focused potential argument graph {a mathematical formula}({s},∅) was added to some {a mathematical formula}Oi. In this case {a mathematical formula}support(P)=Dn. Then, by Lemma A.7, any expansion of a member of {a mathematical formula}Oi must also be an expansion of a member of {a mathematical formula}On; {a mathematical formula}Gs is such an expansion, and let {a mathematical formula}Gs− be the member of {a mathematical formula}On of which it is an expansion. Since {a mathematical formula}Gs−∉u(On) (because {a mathematical formula}u(On)=∅), {a mathematical formula}Gs− must have been marked by case 2(i)(b) or 2(i)(c) of Definition 5.5. But then there is some {a mathematical formula}b∈support(Gs−) such that {a mathematical formula}b∈Cn, and clearly {a mathematical formula}b∈support(Gs), too. Evidently also {a mathematical formula}P⇝Gs.Now, {a mathematical formula}Gs⊆P, so clearly {a mathematical formula}support(Gs)⊆v(P). If {a mathematical formula}s′∈L is added to some {a mathematical formula}Pi, it is clear from Definition 5.5 (cases 1(ii), 2(i)(c)) and from Definition 5.7 that if {a mathematical formula}s′∈A, then {a mathematical formula}s′ is simultaneously added to {a mathematical formula}Di. Thus {a mathematical formula}support(Gs)⊆Dn, and so {a mathematical formula}b∈Dn∩Cn.Either (A) b was added to {a mathematical formula}Dn first; (B) b was added to {a mathematical formula}Cn first; or (C) b was added to {a mathematical formula}Dn and {a mathematical formula}Cn at the same time.If (A), then b is in some {a mathematical formula}Di and was added as a culprit into {a mathematical formula}Ci+1 by case 2(i)(c). This is impossible, as the preconditions of that case state that {a mathematical formula}b∉Di. If (B), then b is in some {a mathematical formula}Ci and was added as defence to {a mathematical formula}Di+1, by case 1(ii) or case 2(i)(c). Here, again, the preconditions of both case 1(ii) and case 2(i)(c) mean this is impossible. Finally, if (C), then it must be that the case is 2(i)(c), with some {a mathematical formula}G⁎∈Oi, and {a mathematical formula}b∈G⁎, {a mathematical formula}b¯=b, with {a mathematical formula}b∈A. b has not already been added by case 1(ii) to {a mathematical formula}Di. Then since {a mathematical formula}b¯=b, b cannot be the claim of {a mathematical formula}G⁎. Case 2(i)(c) adds b as unmarked to {a mathematical formula}Pi+1, and since {a mathematical formula}b∈A then for some later {a mathematical formula}j&gt;i, case 1(i) must add {a mathematical formula}({b},∅) to {a mathematical formula}Oj+1. Yet then there will be no sub-case of case (2)(i) which can apply: cases 2(i)(b) and 2(i)(c) fail on the precondition that {a mathematical formula}b∉Di, and if b is ignored, i.e. case 2(i)(a), then {a mathematical formula}({b},∅), with b unmarked, will be replaced by {a mathematical formula}({b},∅), with b marked, which is impossible (as the resulting unmarked potential argument graph cannot be eliminated from {a mathematical formula}Oi+1 and thus {a mathematical formula}u(On) cannot be empty). Thus none of (A), (B) or (C) is possible, and so {a mathematical formula}P⤳̸P.
+       </list-item>
+       <list-item label="II.">
+        Assume {a mathematical formula}G⇝P. Then by Lemma A.7, G is the expansion of some {a mathematical formula}G−∈On. By Lemma A.8, this means that {a mathematical formula}P⇝G. □
+       </list-item>
+      </list>
+     </section>
+     <section label="A.8">
+      Theorem 5.10
+      <paragraph>
+       For any grn-graph-DD with resulting argument graph {a mathematical formula}P, there is some grounded argument graph G such that {a mathematical formula}P⊆G.
+      </paragraph>
+      <paragraph label="Definition A.9">
+       Our strategy will be as follows. First, we define notions of ‘argument graph dispute tree’ (Definition A.9) and ‘corresponding argument graph dispute tree’ (Definition A.10), which we show to be finite (Lemma A.11). Secondly, we prove a series of lemmas concerning relations between argument graphs in general. Thirdly, we present the proof itself, the core of which is by induction.An argument graph dispute tree{a mathematical formula}T for {a mathematical formula}s∈L is defined as follows:
+       <list>
+        Every node of {a mathematical formula}T is a proponent node or an opponent node, but not both. The status of a child node is different from that of its parent. Each node is labelled by a focused argument graph.The root is a proponent node labelled by an argument graph whose claim is s.For every proponent node n labelled by G, and for every focused argument graph {a mathematical formula}G′ such that there is {a mathematical formula}a∈support(G) with {a mathematical formula}a¯=claim(G′), there is an opponent child {a mathematical formula}n′ of n labelled by {a mathematical formula}G′ (thus, {a mathematical formula}G′⇝G).For every opponent node n labelled by G, there exists exactly one (proponent) child {a mathematical formula}n′ of n, labelled by a focused argument graph {a mathematical formula}G′ such that there is some {a mathematical formula}a∈support(G) and {a mathematical formula}a¯=claim(G′) (thus, {a mathematical formula}G′⇝G).For any argument graphs {a mathematical formula}G1 and {a mathematical formula}G2 labelling any two proponent nodes, there is some argument graph G such that {a mathematical formula}G1⊆G and {a mathematical formula}G2⊆G.There are no other nodes except those given by (i)–(v).  ⌟This definition is intended to mirror the definition of dispute tree in
+       </list>
+       <paragraph label="Definition A.10">
+        [12], given later as Definition A.20 in the proof of Theorem A.10. Note that point (v) in the above constrains the argument graphs labelling the proponent nodes to be ‘compatible’, in the sense of Definition A.2. This ensures that the argument graphs of the proponent nodes can be ‘gathered together’ to form a single argument graph.Where G is an argument graph and {a mathematical formula}s∈v(G), we will let {a mathematical formula}prune(s,G) denote the ⊆-largest focused argument graph {a mathematical formula}G′ such that {a mathematical formula}G′⊆G and {a mathematical formula}claim(G′)=s. (This is guaranteed to exist and be unique, as is easy to show.) {a mathematical formula}T is defined to be a corresponding argument graph dispute tree for a grn-graph-DD with resulting {a mathematical formula}P iff:
+       </paragraph>
+       <list>
+        <list-item label="i.">
+         The root of {a mathematical formula}T is a proponent node labelled by {a mathematical formula}prune(s0,P).
+        </list-item>
+        <list-item label="ii.">
+         For every proponent node n labelled by G such that {a mathematical formula}a∈support(G), and for every focused argument graph {a mathematical formula}G′ such that {a mathematical formula}claim(G′)=a¯, there is an opponent child of n labelled by {a mathematical formula}G′.
+        </list-item>
+        <list-item label="iii.">
+         For every opponent node n labelled by G, there exists a single proponent child {a mathematical formula}n′ of n, such that there is {a mathematical formula}a∈support(G) and {a mathematical formula}n′ is labelled by {a mathematical formula}prune(a¯,P).
+        </list-item>
+        <list-item label="iv.">
+         There are no other nodes except those given by (i)–(iii).  ⌟
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        This concludes the second stage of preliminaries.We now, thirdly, prove the theorem. Thus let {a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn) be our grn-graph-DD for {a mathematical formula}s0 with resulting {a mathematical formula}P and let {a mathematical formula}T be a corresponding argument graph dispute tree (according to Definition A.10). By Lemma A.11, {a mathematical formula}T is finite. It is easy to see that the height of a finite argument graph dispute tree {a mathematical formula}T is 2k, for {a mathematical formula}k⩾0. Let {a mathematical formula}G1,…,Gm be the argument graphs labelling the proponent nodes of {a mathematical formula}T ({a mathematical formula}m⩾1). Evidently, {a mathematical formula}G1∪⋯∪Gm=P, and thus by Lemma A.7, {a mathematical formula}G1∪⋯∪Gm is admissible. We can show the theorem by proving, by induction on k, that there is a grounded argument graph {a mathematical formula}G⁎ such that {a mathematical formula}G1∪⋯∪Gm⊆G⁎.We prove the result.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Base case. {a mathematical formula}k=0 corresponds to a dispute tree with a single node labelled by an argument graph G that has no attackers. Let {a mathematical formula}G′ be an arbitrary grounded argument graph. Now, ◊ is an admissible argument graph (since it has no attackers), and evidently {a mathematical formula}◊⊆G′. Clearly, {a mathematical formula}G⊈◊ (since at least {a mathematical formula}s0∈v(G)) and {a mathematical formula}◊∥G (this is just G). Since G is clearly acceptable w.r.t. ◊, Lemma A.13, Lemma A.14 apply, giving that {a mathematical formula}◊∪G=G is admissible and {a mathematical formula}G⊆G⁎ for some grounded {a mathematical formula}G⁎. Thus, since here {a mathematical formula}G=P, we have shown the base case.
+        </list-item>
+        <list-item label="•">
+         Induction step. First assume the result holds for all finite argument graph dispute trees with height less than 2k, and let {a mathematical formula}T be a finite argument graph dispute tree with height 2k, whose root is labelled by some {a mathematical formula}Gr. Let {a mathematical formula}n1,…,nj be the children of children of the root of {a mathematical formula}T. For each such child {a mathematical formula}ni ({a mathematical formula}1⩽i⩽j), let {a mathematical formula}Ti be the finite argument graph dispute tree rooted at {a mathematical formula}ni (each {a mathematical formula}Ti has height less than 2k). For each such {a mathematical formula}Ti, let {a mathematical formula}Gi be the union of the argument graphs labelling the proponent nodes of {a mathematical formula}Ti. Then by the induction hypothesis there is, for each i, some grounded {a mathematical formula}Gi+ such that {a mathematical formula}Gi⊆Gi+. Then by Lemma A.15, there is some grounded {a mathematical formula}G+ such that {a mathematical formula}G1∪⋯∪Gm⊆G+. Then by Lemma A.13, Lemma A.14, since {a mathematical formula}Gr is acceptable w.r.t. {a mathematical formula}G1∪⋯∪Gm, it must be that {a mathematical formula}G1∪⋯∪Gm∪Gr is admissible and {a mathematical formula}G1∪⋯∪Gm∪Gr⊆G⁎ for some grounded {a mathematical formula}G⁎.
+        </list-item>
+       </list>
+       <paragraph>
+        We conclude by induction that the result holds for all k, and this proves the theorem. □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="A.9">
+      Theorem 5.11
+      <paragraph>
+       Let {a mathematical formula}L be finite. If G is an admissible argument graph such that {a mathematical formula}s0∈v(G), then there is an adm-graph-DD for {a mathematical formula}s0 with resulting argument graph some {a mathematical formula}P such that {a mathematical formula}P⊆G.
+      </paragraph>
+      <paragraph label="Lemma A.18">
+       We proceed as follows. We first show (Lemma A.16) that, since {a mathematical formula}L is finite, there is no infinite (ω-length) adm-graph-DS for {a mathematical formula}s0. We next prove that any finite adm-graph-DS for {a mathematical formula}s0, ending with {a mathematical formula}(Pn,On,Gn,Dn,Cn) such that {a mathematical formula}Pn ‘matches’ G (a notion we give in Definition A.17) and which satisfies three additional properties, can always be extended to a longer adm-graph-DS which satisfies the same properties (Lemma A.19). To prove this, we use an intermediate result (Lemma A.18). Together with the result on the impossibility of infinite adm-graph-DSs, this is proved to show the theorem.If{a mathematical formula}Lbe finite, then there is no infinite (ω-length) X-graph-DS ({a mathematical formula}X∈{adm,grn}) for{a mathematical formula}s0∈L.Suppose that there is an infinite X-graph-DS for {a mathematical formula}s0; call this {a mathematical formula}Sω. There must either be an infinite subsequence of members of {a mathematical formula}Sω determined by a proponent step in Definition 5.5, or an infinite subsequence of members of {a mathematical formula}Sω determined by an opponent step in Definition 5.5. Suppose the former. Note that for each proponent step, some {a mathematical formula}s∉m(Pi) is added to {a mathematical formula}m(Pi), and further that {a mathematical formula}m(Pi) is non-decreasing in {a mathematical formula}Sω. Thus if there is some infinite subsequence of proponent steps, {a mathematical formula}|⋃i&lt;ω(m(Pi)|=ℵ0, contradicting the finiteness of {a mathematical formula}L.Suppose now that there is an infinite subsequence of {a mathematical formula}Sω of opponent steps. Since there is no infinite subsequence of proponent steps, then there must be some {a mathematical formula}j&lt;ω such that for all {a mathematical formula}i&gt;j, the only steps are opponent. Thus consider the subsequence {a mathematical formula}So of {a mathematical formula}Sω starting from j. Cases 2(i)(b) and 2(i)(c) mark members of {a mathematical formula}Oi, and case 2(i)(a) marks a member of {a mathematical formula}u(G⁎), for some {a mathematical formula}G⁎∈Oi; thus if there were only a finite number of steps in {a mathematical formula}So of case 2(ii), then eventually no other case would be applicable—either because there would be no member of {a mathematical formula}u(Oi), or because all members {a mathematical formula}G⁎∈u(Oi) would be such that {a mathematical formula}u(G⁎)=∅. Therefore there are an infinite number of steps of case 2(ii) in {a mathematical formula}So. Let us say that some {a mathematical formula}G′∈Oi+1 is a child of {a mathematical formula}G⁎∈Oi, if {a mathematical formula}G⁎∈u(Oi) was selected at step i, and {a mathematical formula}G′ was added to form {a mathematical formula}u(Oi+1) by case 2(ii) (i.e., {a mathematical formula}G′ expands {a mathematical formula}G⁎ at {a mathematical formula}s∈v(Gi) using some rule {a mathematical formula}s←R∈R). There must then be an ω-length sequence of argument graphs {a mathematical formula}G1,…,Gn,… such that {a mathematical formula}G1∈u(Oj), and {a mathematical formula}Gk+1 is a child of {a mathematical formula}Gk for {a mathematical formula}k=1,…,n,…. But it is not hard to see (as for the proponent case, above), that this is impossible because of the finiteness of {a mathematical formula}L, given the acyclicity checks in case 2(ii).. Thus there is no infinite subsequence of opponent steps in {a mathematical formula}Sω.So there is no infinite X-graph-DS.  □Let {a mathematical formula}P be a potential argument graph, and G an argument graph. Then {a mathematical formula}P is said to match G if the graph {a mathematical formula}GP obtained by ignoring the marking apparatus of {a mathematical formula}P is such that {a mathematical formula}GP⊆G.  ⌟Note that {a mathematical formula}GP is only an argument graph when {a mathematical formula}P is actual; and that, recalling Definition 5.1, any actual argument graph matches its corresponding argument graph.Let{a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn)be an X-graph-DS for{a mathematical formula}s0∈L({a mathematical formula}X∈{adm,grn}) which is not an X-graph-DD, and let G be an admissible argument graph such that{a mathematical formula}s0∈v(G). Further suppose that, for all i such that{a mathematical formula}0⩽i&lt;n:
+       <list label="Proof">
+        if the{a mathematical formula}(i+1)-th tuple is obtained using case 1(ii) ofDefinition 5.5with{a mathematical formula}s∈(L∖A)selected such that{a mathematical formula}s∈v(G), then the rule{a mathematical formula}s←{s′∈v(G)|(s,s′)∈e(G)}is chosen;if the{a mathematical formula}(i+1)-th tuple is obtained using case 2(i) ofDefinition 5.5with and{a mathematical formula}G′∈u(Oi)and{a mathematical formula}s∈(G′∩A)selected, then s is ignored (case 2(i)(a) ofDefinition 5.5) iff{a mathematical formula}s¯∉v(G).First note that we are entitled to suppose (a) and (b). In particular, in the case of (a), since G is an admissible argument graph, then, where {a mathematical formula}s∈v(G), there must be a (unique) rule {a mathematical formula}s←R in {a mathematical formula}R such that {a mathematical formula}R={s′∈v(G)|(s,s′)∈e(G)}. (b) makes no existential commitments and is therefore trivially permitted.We take the proof of parts (i)–(v) in turn; that of (i)–(iii) is by induction on n.The base case ({a mathematical formula}n=0) amounts to {a mathematical formula}s=s0, and is immediate. Assume the result holds for {a mathematical formula}n=k. We will show it holds for {a mathematical formula}n=k+1. Thus let {a mathematical formula}s∉A be selected at the transition from step k to {a mathematical formula}k+1. Evidently s is in {a mathematical formula}v(Pk) either by some previous case 1(ii) or 2(i)(c). If the case was 1(ii), then by condition (a) and the induction hypothesis, it must be that {a mathematical formula}s∈v(G). If the case was 2(i)(c), then s is in {a mathematical formula}v(Pk) because {a mathematical formula}s=a¯ for some {a mathematical formula}a∈A which was not ignored in the opponent step; so by condition (b) and the induction hypothesis, {a mathematical formula}s∈support(G), and the result follows. Thus {a mathematical formula}s∈v(G) either way, and so by induction the result holds for all n.Similar to (i).The base case ({a mathematical formula}n=0) is obvious. Suppose the result holds for {a mathematical formula}n=k. For {a mathematical formula}n=k+1, we must show that {a mathematical formula}Dk+1⊆support(G). {a mathematical formula}Dk⊆support(G) through the induction hypothesis. Now, note that assumptions are added to {a mathematical formula}Dk in, possibly, cases 1(ii) and 2(i)(c). If the case is 1(ii), then condition (a) guarantees that {a mathematical formula}Dk+1⊆support(G). If the case is 2(i)(c), then it must be that any {a mathematical formula}s¯ added is in {a mathematical formula}support(G), by condition (b). Thus {a mathematical formula}Dk+1⊆support(G), and by induction we conclude that result holds for all n.Let {a mathematical formula}c∈Ci. Then c must have been added by some previous step of case 2(i)(c). Thus {a mathematical formula}c¯∈v(G) by condition (b).That {a mathematical formula}G′ is a focused potential argument graph is true by construction. There must be some {a mathematical formula}j&lt;i such that {a mathematical formula}newgrph(claim(G′)) was added to {a mathematical formula}u(Oj) using 1(i) of Definition 5.5. But then evidently {a mathematical formula}claim(G′)=a¯ for some {a mathematical formula}a∈v(Pj)∩A. Thus {a mathematical formula}a∈support(G) from part (ii) of the current lemma. □Let{a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn)be anadm-graph-DS for{a mathematical formula}s0∈L, which is not anadm-graph-DD, such that for all i such that{a mathematical formula}0⩽i&lt;n:if the{a mathematical formula}(i+1)-th tuple is obtained using case 1(ii) ofDefinition 5.5with{a mathematical formula}s∈(L∖A)selected such that{a mathematical formula}s∈v(G), then the rule{a mathematical formula}s←{s′∈v(G)|(s,s′)∈e(G)}is chosen;if the{a mathematical formula}(i+1)-th tuple is obtained using case 2(i) ofDefinition 5.5with and{a mathematical formula}G′∈u(Oi)and{a mathematical formula}s∈(G′∩A)selected, then s is ignored (case 2(i)(a) ofDefinition 5.5) iff{a mathematical formula}s¯∉v(G);{a mathematical formula}Pimatches G (and so does{a mathematical formula}Pn).Then{a mathematical formula}(P0,O0,G0,D0,C0),…,(Pn,On,Gn,Dn,Cn)can be extended to anadm-graph-DS for{a mathematical formula}s0{a mathematical formula}which also satisfies conditions (a)–(c).Note that conditions (a) and (b) are the same as in Lemma A.18; thus that lemma applies.We show that one of the cases of Definition 5.5 must apply in such a way to preserve conditions (a)–(c), and thus that the given adm-graph-DS can be extended. Note first that it cannot be that both {a mathematical formula}u(Pn) and {a mathematical formula}u(On) are empty, as otherwise the given adm-graph-DS would be an adm-graph-DD.If {a mathematical formula}u(Pn)≠∅ then either there exists {a mathematical formula}s∈u(Pn)∩A or there exists {a mathematical formula}s∈u(Pn)∖A, one of which is selected, and thus one of case 1(i) or case 1(ii) is applicable.Case 1(i) applies. Conditions (a) and (b) are trivially preserved. If condition (c) is violated, it is because {a mathematical formula}Pn+1 does not match G. Yet this is impossible, since {a mathematical formula}Pn+1 is the same as {a mathematical formula}Pn except for the marked sentences, and {a mathematical formula}Pn matches G.Case 1(ii) applies. Condition (b) is trivially preserved. To prove that conditions (a) or (c) are also preserved, we must show that there is some rule of the form {a mathematical formula}s←{s′∈v(G)|(s,s′)∈e(G)} in {a mathematical formula}R such that {a mathematical formula}{s′∈v(G)|(s,s′)∈e(G)}∩Cn=∅, and {a mathematical formula}Pn+1=updtgrph(Pn,s←{s′∈v(G)|(s,s′)∈e(G)},∅) is acyclic and matches G.Now, by Lemma A.18(i), we know that {a mathematical formula}s∈v(G). Thus there is a rule {a mathematical formula}s←{s′∈v(G)|(s,s′)∈e(G)} in {a mathematical formula}R; let {a mathematical formula}R={s′∈v(G)|(s,s′)∈e(G)}. If there is {a mathematical formula}a∈R∩Cn, then clearly {a mathematical formula}a∈v(G)∩Cn, so that by Lemma A.18(iv), {a mathematical formula}G⇝G (since {a mathematical formula}Pn matches G, by condition (c)). Then G cannot be admissible. Contradiction. Thus {a mathematical formula}R∩Cn=∅. Evidently, since {a mathematical formula}Pn matches G and {a mathematical formula}updtgrph(Pn,s←R) only adds edges and nodes to G, {a mathematical formula}Pn+1 is acyclic by the acyclicity of G, and {a mathematical formula}Pn+1 matches G. Thus in this case too (a)–(c) are preserved.Thus for case 2, (a)–(c) are preserved. □This concludes the preliminaries. Now note that an
+       </list>
+       <paragraph>
+        adm-graph-DS of length 0, containing just a single tuple, trivially satisfies conditions (a)–(c) in Lemma A.19. Lemma A.19 states that a finite, n-length adm-graph-DS satisfying (a)–(c) which is not an adm-graph-DD can always be extended to an {a mathematical formula}(n+1)-length adm-graph-DS satisfying (a)–(c). But Lemma A.16 requires that there are no infinite-length X-graph-DSs. So extending the 0-length adm-graph-DS in accordance with (a)–(c) must eventually result in an adm-graph-DD. □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="A.10">
+      Theorem 5.12
+      <paragraph>
+       Let {a mathematical formula}L be finite. If G is a grounded argument graph such that {a mathematical formula}s0∈v(G), then there is a grn-graph-DD for {a mathematical formula}s0 with resulting argument graph some {a mathematical formula}P such that {a mathematical formula}P⊆G.
+      </paragraph>
+      <paragraph label="Definition A.20">
+       Our general strategy here is close to that in the proof of Theorem 5.11. We already know that there is no ω-length grn-graph-DS for {a mathematical formula}s0; we will prove that any finite grn-graph-DS for {a mathematical formula}s0 matching G which is not a grn-graph-DD can be extended. Elements of the demonstration that the extension is possible are similar to those for adm-graph-DSs; the added complication in the case of a grn-graph-DS is that extension might be prevented by the failure of the acyclicity check on {a mathematical formula}Gi. (This was not an issue for adm-graph-DSs, since the {a mathematical formula}Gi in that case is always the empty argument graph.) We will prove that, where G is grounded, a grn-graph-DS can be defined in such a way that the {a mathematical formula}Gi component is acyclic. This proof borrows the structure of a related result for abstract argumentation from Thang et al. [26].The first stage of the proof shows that a ‘graph induced’ (see [26]) by a ‘dispute tree’ (see [12]) must be acyclic. We give these background definitions next.(See Definition 5.1, [12].) A dispute tree{a mathematical formula}Tfor an argument{a mathematical formula}a0w.r.t.{a mathematical formula}(Args,⇝) is a rooted tree such that:
+       <list>
+        Every node of {a mathematical formula}T is labelled by an argument in Args and is either a proponent or opponent node (but not both). The status of a child node is different from the status of its parent.The root is a proponent node labelled by {a mathematical formula}a0.For every proponent node n labelled by {a mathematical formula}a, and every argument {a mathematical formula}b such that {a mathematical formula}b⇝a, there is a child of n labelled by {a mathematical formula}b.For every opponent node n labelled by {a mathematical formula}b, there exists precisely one child of n labelled by some {a mathematical formula}a such that {a mathematical formula}a⇝b.There are no other nodes except those given by (i)–(iv).For a tree
+       </list>
+       <paragraph label="Proof">
+        {a mathematical formula}T, we let {a mathematical formula}nodes(T) denote the set of nodes of {a mathematical formula}T and {a mathematical formula}edges(T) denote the edges. Where {a mathematical formula}T is a dispute tree and {a mathematical formula}n∈nodes(T){a mathematical formula}label(n) is the argument which labels n. ({a mathematical formula}labels(N) lifts this to sets of nodes N.)It is proved in [12] that if a tree {a mathematical formula}T is admissible, then the set {a mathematical formula}A of all arguments labelling the tree's proponent nodes is an admissible extension of {a mathematical formula}(Args,⇝). (See Definition 7, [26].) Given an admissible dispute tree {a mathematical formula}T, the graph induced by{a mathematical formula}T, {a mathematical formula}IT, has the set of nodes {a mathematical formula}labels(nodes(T)), and the set of edges{a mathematical formula}  ⌟Acyclicity of {a mathematical formula}IT corresponds, for finite {a mathematical formula}(Args,⇝) to presence in the grounded extension—as given by the following lemma.Given a finite{a mathematical formula}(Args,⇝)with grounded extension{a mathematical formula}AG,{a mathematical formula}a0∈AGiff there exists a dispute tree{a mathematical formula}Tfor{a mathematical formula}a0such that{a mathematical formula}ITis acyclic.This is a direct consequence of Lemmas 3 and 4 from [26].  □Now, in general, the abstract argumentation framework {a mathematical formula}(Args,⇝) corresponding to our ABA framework (see [14] for a definition of this correspondence) may be infinite. (This is so even where the ABA framework is restricted to be finite in all its components—for the possibility of non-rule-minimal arguments introduces the possibility of an infinite Args, as in Example 6, for instance.) We accordingly define a ‘restricted’ abstract argumentation framework {a mathematical formula}(ArgsG,⇝G), making use of the given grounded argument graph G. Thus, let {a mathematical formula}(ArgsG,⇝G)⊆(Args,⇝) be such that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}ArgsG is the set of rule-minimal arguments {a mathematical formula}a in Args such that either (i) {a mathematical formula}a is represented in G; or (ii) there is some {a mathematical formula}b∈support(G) with {a mathematical formula}claim(a)=b¯.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}⇝G is the restriction of ⇝ to {a mathematical formula}ArgsG.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Then it is clear that, since {a mathematical formula}L is finite, so is {a mathematical formula}(ArgsG,⇝G). For, (i) the set of rule-minimal arguments represented by G is plainly finite (for G itself is finite if {a mathematical formula}L is); and (ii) for a finite set of rule-minimal arguments, there can only be finitely many rule-minimal arguments with a given claim. Let {a mathematical formula}AG denote the set of arguments represented by G (so that {a mathematical formula}AG⊆ArgsG). We will prove that {a mathematical formula}AG is the grounded extension of {a mathematical formula}(ArgsG,⇝G), and given Lemma A.22 this will let us conclude that there is a finite dispute tree for an argument whose claim is {a mathematical formula}s0.Thus, it is clear that, for each {a mathematical formula}s∈v(G), there is precisely one {a mathematical formula}a∈AG such that {a mathematical formula}claim(a)=s. (Existence of at least one such argument is assured by Theorem 4.3; uniqueness is a consequence of Theorem 4.12.) Each such argument is rule-minimal, by Theorem 4.4, Definition 4.9. Further, {a mathematical formula}AG is not bloated, by Theorem 4.12. Let {a mathematical formula}a0 be the argument represented by G whose claim is {a mathematical formula}s0. Clearly {a mathematical formula}a0∈AG and is unique and rule-minimal. The following lemma shows that the characteristic function for {a mathematical formula}(ArgsG,⇝G) and any characteristic function {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R match in an important sense. Let{a mathematical formula}fRbe any argument graph characteristic function such that{a mathematical formula}rules(G)⊆R, and let f be the characteristic function of{a mathematical formula}(ArgsG,⇝G). Then for all i with{a mathematical formula}0⩽i,{a mathematical formula}fi(∅)is the set of arguments represented in{a mathematical formula}fRi(◊).The proof proceeds by induction on i.Base case. The base case is trivial: the set of arguments represented by ◊ is plainly ∅.Inductive step. Assume the result holds for {a mathematical formula}i=j. Evidently {a mathematical formula}fj(∅)⊆fj+1(∅) and {a mathematical formula}fRj(◊)⊆fRj+1(◊). We must show that (I) if {a mathematical formula}a∈(fj+1(∅)∖fj(∅)) then {a mathematical formula}a is represented in {a mathematical formula}fRj+1(◊); and that (II) if {a mathematical formula}a is represented in {a mathematical formula}fRj+1(◊) but not in {a mathematical formula}fRj(◊), then {a mathematical formula}a∈fj+1(∅).
+       </paragraph>
+       <list>
+        <list-item label="I.">
+         First assume {a mathematical formula}a∈(fj+1(∅)∖fj(∅)). Then whenever {a mathematical formula}b∈ArgsG is such that {a mathematical formula}b⇝a, {a mathematical formula}fj(∅)⇝b. Let {a mathematical formula}G⁎ be a graphical conversion of {a mathematical formula}b (since {a mathematical formula}b is rule minimal, {a mathematical formula}G⁎ is just a focused argument graph where {a mathematical formula}b is the largest argument represented in {a mathematical formula}G⁎). Let {a mathematical formula}Ga be a graphical conversion of {a mathematical formula}a (again, since {a mathematical formula}a is rule-minimal, {a mathematical formula}Ga is an argument graph which precisely matches {a mathematical formula}a).Now, either {a mathematical formula}a∈AG or not. We will show that if {a mathematical formula}a∉AG then a contradiction follows. Thus assume {a mathematical formula}a∉AG; let {a mathematical formula}m⩽j be such that there is some {a mathematical formula}a⁎∉AG with {a mathematical formula}a⁎∈(fm+1(∅)∖fm(∅)), and there is no smaller {a mathematical formula}m′&lt;m such that this is true. Pick some {a mathematical formula}a⁎∈(fm+1(∅)∖fm(∅)). We have that {a mathematical formula}fm(∅) defends {a mathematical formula}a⁎, so that if {a mathematical formula}b⇝a⁎, then {a mathematical formula}fm(∅)⇝b. But since {a mathematical formula}a⁎∉AG, then where {a mathematical formula}Ga⁎ is the argument graph corresponding to {a mathematical formula}a⁎, then {a mathematical formula}Ga⁎⇝G, so that {a mathematical formula}G⇝Ga⁎, and thus there is some argument represented in G, {a mathematical formula}b, such that {a mathematical formula}b⇝a⁎. Since {a mathematical formula}b∈ArgsG, then {a mathematical formula}fm(∅)⇝b, which means there is some {a mathematical formula}c∈fm(∅) such that {a mathematical formula}c⇝b; but by the inductive hypothesis, {a mathematical formula}c is represented in G. Thus {a mathematical formula}G⇝G, contradicting its admissibility. Thus supposing that {a mathematical formula}a∉AG leads to a contradiction.It must therefore be the case that {a mathematical formula}a∈AG. Then let {a mathematical formula}G+ be the smallest argument graph containing {a mathematical formula}fRj(◊) and the focused argument graph corresponding to {a mathematical formula}a as subgraphs. (That there is such a smallest argument graph can easily be shown.) Suppose {a mathematical formula}G⁎⇝G+, where without loss of generality {a mathematical formula}G⁎ is a focused argument graph; then the argument maximally represented by {a mathematical formula}G⁎ being {a mathematical formula}b, we have that {a mathematical formula}b⇝a or {a mathematical formula}b⇝fj(∅). In each case {a mathematical formula}fj(∅) attacks {a mathematical formula}b, so that {a mathematical formula}fRj(◊)⇝G⁎ by the inductive hypothesis. So {a mathematical formula}G+⊆fRj+1(◊), and thus {a mathematical formula}a is represented in {a mathematical formula}fRj+1(◊).
+        </list-item>
+        <list-item label="II.">
+         Assume {a mathematical formula}a is represented in {a mathematical formula}fRj+1(◊) but not in {a mathematical formula}fRj(◊). Then wherever {a mathematical formula}b⇝a, for some rule-minimal {a mathematical formula}b, then if {a mathematical formula}Gb is the focused argument graph corresponding to b, {a mathematical formula}fRj(◊)⇝Gb. Thus by the inductive hypothesis, {a mathematical formula}fj(∅)⇝b, so that {a mathematical formula}a∈fj+1(∅) as desired.
+        </list-item>
+       </list>
+       <paragraph label="Lemma A.26">
+        This lets us prove what we desired, that {a mathematical formula}AG is the grounded extension of {a mathematical formula}(ArgsG,⇝G). {a mathematical formula}AGis the grounded extension of{a mathematical formula}(ArgsG,⇝G).G is grounded, so that by Definition 4.17, for all {a mathematical formula}fR such that {a mathematical formula}rules(G)⊆R, G is the least fixed point of {a mathematical formula}fR. Thus {a mathematical formula}G=fRω(◊). Let f be the characteristic function of {a mathematical formula}(ArgsG,⇝G). Now, by Lemma A.23, for all {a mathematical formula}n∈N we have that {a mathematical formula}fn(∅) is the set of arguments represented in {a mathematical formula}fRn(◊). Thus {a mathematical formula}fω(∅) is the set of arguments represented in {a mathematical formula}fRω(◊), i.e., the set of arguments represented in G, i.e., {a mathematical formula}AG. But {a mathematical formula}fω(∅) is the grounded extension of {a mathematical formula}(ArgsG,⇝G). Thus {a mathematical formula}AG is this grounded extension.  □This leads to the main result of the first part of the proof. Let G be a grounded argument graph, and suppose{a mathematical formula}s0∈v(G). Let{a mathematical formula}a0be the argument represented by G such that{a mathematical formula}claim(a0)=s0. Then there is a dispute tree{a mathematical formula}Tfor{a mathematical formula}a0whose induced graph{a mathematical formula}ITis acyclic, and is such that any argument labelling aproponentnode is represented in G.Let {a mathematical formula}(ArgsG,⇝G) and {a mathematical formula}AG be defined as above. {a mathematical formula}(ArgsG,⇝G) is finite. By Lemma A.24, {a mathematical formula}AG is the grounded extension of {a mathematical formula}(ArgsG,⇝G), and clearly {a mathematical formula}a0∈AG. Thus, by Lemma A.22, there is a dispute tree {a mathematical formula}T for {a mathematical formula}a0 whose induced graph {a mathematical formula}IT is acyclic. That any argument {a mathematical formula}a labelling a proponent node is represented in G follows from the fact that the grounded extension of {a mathematical formula}(ArgsG,⇝G) is {a mathematical formula}AG.  □The acyclicity of {a mathematical formula}IT will be proved to correspond to the acyclicity of {a mathematical formula}Gi in the grn-graph-DD we will construct.In the remainder of the proof, we show that, given a grounded argument graph G, the dispute tree {a mathematical formula}T shown to exist in Lemma A.25 can be used to construct a grn-graph-DD for {a mathematical formula}s0. We proceed in several stages. We first show that the tree {a mathematical formula}T can be searched in such a way as to define a sequence {a mathematical formula}(S0,…,Sm) whose members are either proponent nodes of {a mathematical formula}T, or sets of opponent nodes of {a mathematical formula}T labelled by arguments for the same claim (Algorithm A.2). We then prove properties of the sequence {a mathematical formula}(S0,…,Sm), in Lemma A.26. The sequence {a mathematical formula}(S0,…,Sm) can be used to constrain choices in the definition of a grn-graph-DS, in a way we give in Definition A.27. In Lemma A.29, the main result of the second half of this proof, we then show that these constraints imply that a finite-length grn-graph-DS which is not a grn-graph-DD can always be extended in such a way that the constraints of Definition A.27 are preserved.So, let {a mathematical formula}T be such a tree for G and {a mathematical formula}s0, and {a mathematical formula}n0 be the root of {a mathematical formula}T. We define a modified breadth-first search for {a mathematical formula}T, as Algorithm A.2.{sup:16} If {a mathematical formula}T is a tree as given by Lemma A.25, then we will say that any {a mathematical formula}(S0,…,Sm) such that {a mathematical formula}(S0,…,Sm)=prunesearch(T) is a pruned sequence for {a mathematical formula}T. Where {a mathematical formula}(S0,…,Sm) is a pruned sequence for {a mathematical formula}T, let {a mathematical formula}player:{S0,…,Sm}→{proponent,opponent} be such that {a mathematical formula}player(Si) is proponent if {a mathematical formula}Si∈nodes(T), and {a mathematical formula}player(Si) is opponent otherwise. Thus, {a mathematical formula}player(Si) is proponent iff {a mathematical formula}Si is a proponent node of {a mathematical formula}T; and {a mathematical formula}player(Si) is opponent iff {a mathematical formula}Si is a set of opponent nodes labelled by arguments for the same claim. Let{a mathematical formula}(S0,…,Sm)be a pruned sequence for{a mathematical formula}T. For all i such that{a mathematical formula}0⩽i&lt;m:
+       </paragraph>
+       <list>
+        <list-item label="i.">
+         if{a mathematical formula}player(Si)=proponentand{a mathematical formula}label(Si)=a:
+        </list-item>
+        <list-item label="ii.">
+         if{a mathematical formula}player(Si)=opponent, then for any{a mathematical formula}n∈Si:
+        </list-item>
+       </list>
+       <paragraph label="Definition A.27">
+        Thus the inductive step holds, and we conclude the result by induction.  □It is an obvious corollary of Lemma A.26 that, where {a mathematical formula}T− is the graph such that {a mathematical formula}nodes(T−) are{a mathematical formula} and whose edges {a mathematical formula}edges(T−) are{a mathematical formula} then {a mathematical formula}T− is a subtree of {a mathematical formula}T, and {a mathematical formula}T− is acyclic because {a mathematical formula}T is acyclic.In the following we define a certain sequence of tuples, and associated functions. One of those function names is player; we trust this will not give rise to any ambiguity (since its use is similar to that described above). Let {a mathematical formula}(S0,…,Sm) be a pruned search for {a mathematical formula}T, such that {a mathematical formula}s0 is {a mathematical formula}claim(label(S0)). Any sequence {a mathematical formula}(P0,O0,G0,D0,C0),…,(PK,OK,GK,DK,CK), such that there are functions {a mathematical formula}fS:{0,…,K}→{S0,…,Sm,⊤0,…,⊤m,⊤} and {a mathematical formula}player:{0,…,K}→{proponent,opponent}, and the following holds, is known as a grn-graph-DS for{a mathematical formula}s0constrained by{a mathematical formula}(S0,…,Sm).
+       </paragraph>
+       <list>
+        <list-item label="i.">
+         {a mathematical formula}fS(0)=S0, {a mathematical formula}player0=proponent and:{a mathematical formula}
+        </list-item>
+        <list-item label="ii.">
+         The {a mathematical formula}(i+1)th tuple is defined according to Definition 5.5 (for {a mathematical formula}X=grn) where for all i such that {a mathematical formula}0⩽i&lt;K, then
+        </list-item>
+        <list-item label="iii.">
+         For all i such that {a mathematical formula}0⩽i&lt;K, if {a mathematical formula}playeri=proponent, then {a mathematical formula}fS(i)=Sj for some {a mathematical formula}0⩽j⩽m such that {a mathematical formula}Sj∈nodes(T) and {a mathematical formula}s∈u(Pi)∩labels(nodes(label(Sj)) is selected such that
+        </list-item>
+        <list-item label="iv.">
+         For all i such that {a mathematical formula}0⩽i&lt;K, if {a mathematical formula}playeri=opponent:
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        That Definition A.27 is sound in that it defines a special case of a grn-graph-DS easily follows. Let{a mathematical formula}(S0,…,Sm)be a pruned search for a grounded tree{a mathematical formula}T, and let{a mathematical formula}s0be{a mathematical formula}claim(label(S0)). (i) Anygrn-graph-DS for{a mathematical formula}s0constrained by{a mathematical formula}(S0,…,Sm)is also agrn-graph-DS for{a mathematical formula}s0. (ii) Each{a mathematical formula}Piof thegrn-graph-DS (constrained or otherwise) matches G.
+       </paragraph>
+       <list>
+        <list-item label="i.">
+         Trivially true, given Definition A.27, Definition 5.5. Condition (i) of Definition A.27 specifies the same form of initial tuple, and condition (ii) of that definition insists that the {a mathematical formula}(i+1)th tuple is defined according to Definition 5.5. Conditions (iii) and (iv) simply constrain that strategy for the various choice-points in Definition 5.5.
+        </list-item>
+        <list-item label="ii.">
+         Evidently {a mathematical formula}P0 matches G, since {a mathematical formula}s0∈v(G); and if any {a mathematical formula}Pi matches G, then condition (iii) of Definition A.27 shows that {a mathematical formula}Pi+1 must match G, too. The result follows by induction. □
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Now note that condition (iii) of Definition A.27 evidently implies condition (a) of Lemma A.19. For if {a mathematical formula}s∈(L∖A) is chosen in case 1(ii), then it must be that {a mathematical formula}s∈v(G) by construction of {a mathematical formula}T given Lemma A.25. Further, condition (iv) of Definition A.27 implies condition (b) of Lemma A.19. What is required for this implication is that if the {a mathematical formula}(i+1)th tuple is defined using case 2(i) of Definition 5.5, and {a mathematical formula}G′∈u(Oi) and {a mathematical formula}s∈(G′∩A) are selected, then s is ignored iff {a mathematical formula}s¯∉v(G). Yet if {a mathematical formula}s∈(G′∩A) is selected, then according to condition (iv) of Definition A.27, s is never ignored. We must therefore show that in this case, {a mathematical formula}s¯∈v(G). Let {a mathematical formula}a be the rule-minimal argument represented by the argument graph matching {a mathematical formula}G′ such that {a mathematical formula}claim(a)=claim(G′). Then (iv) above insists that there must be {a mathematical formula}n∈Si and {a mathematical formula}(n,n′)∈edges(T) such that {a mathematical formula}claim(label(n′))=s¯. Yet since {a mathematical formula}player(Si)=proponent, then given the definition of {a mathematical formula}(S0,…,Sm), {a mathematical formula}claim(label(n′))=claim(Si)=s¯, so that {a mathematical formula}s¯ is the claim of an argument labelling a proponent node of {a mathematical formula}T. Thus {a mathematical formula}s¯∈v(G) by Lemma A.25.Therefore conditions (a) and (b) of Lemma A.19 are satisfied, condition (c) is satisfied by Lemma A.28, and so Lemma A.19 applies. Given this background, we now move to show that any finite grn-graph-DS for {a mathematical formula}s0 constrained by {a mathematical formula}(S0,…,Sm), which is not a grn-graph-DS, can always be extended. (This result corresponds to Lemma A.19 in the proof of the completeness for admissible semantics, i.e., the proof of Theorem 5.11.) Given the fact that are no ω-length grn-graph-DSs, that will give us our result.Let{a mathematical formula}(S0,…,Sm)be a pruned search for a grounded tree{a mathematical formula}T, and let{a mathematical formula}s0be{a mathematical formula}claim(label(S0)). Let{a mathematical formula}(P0,O0,G0,D0,C0),…,(PK,OK,GK,DK,CK)be agrn-graph-DS for{a mathematical formula}s0constrained by{a mathematical formula}(S0,…,Sm), which is not agrn-graph-DD. Then this can be extended to agrn-graph-DS for{a mathematical formula}s0constrained by{a mathematical formula}(S0,…,Sm)of the form:{a mathematical formula}There must exist functions {a mathematical formula}player:{0,…,K}→{proponent,opponent} and {a mathematical formula}fS:{0,…,K}→{S0,…,Sm,⊤0,…,⊤m,⊤} with the properties given in Definition A.27. We will show that the tuple {a mathematical formula}(PK+1,OK+1,GK+1,DK+1,CK+1) and functions {a mathematical formula}player+:{0,…,K,K+1}→{proponent,opponent} and {a mathematical formula}fS+:{0,…,K,K+1}→{S0,…,Sm,⊤0,…,⊤m,⊤} can be given which satisfy Definition A.27. Since our new functions will match the originals for {a mathematical formula}{0,…,K}, we simply need to define the values {a mathematical formula}playerK+1+ and {a mathematical formula}fS+(K+1) (as well as the {a mathematical formula}(K+1)th tuple).We proceed by cases.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Suppose {a mathematical formula}playerK=proponent, and let {a mathematical formula}fS(K)=Sj. Here, it must be that {a mathematical formula}u(PK)≠∅. {a mathematical formula}PK matches G.We first consider how to define {a mathematical formula}playerK+1+ and {a mathematical formula}fS+(K+1).
+         <list>
+          If {a mathematical formula}u(PK+1)≠∅, then set {a mathematical formula}playerK+1+=proponent. If {a mathematical formula}u(PK+1)∩labels(nodes(label(fS(K))))=∅ then set {a mathematical formula}fK+1+=Sj+1; or if, alternatively, we have {a mathematical formula}u(PK+1)∩labels(nodes(label(fS(K))))≠∅ then set {a mathematical formula}fK+1+=Sj.If {a mathematical formula}u(PK+1)=∅ and {a mathematical formula}u(OK+1)=∅, then set {a mathematical formula}playerK+1+=proponent and {a mathematical formula}fS+(K+1)=⊤.If {a mathematical formula}u(PK+1)=∅ and {a mathematical formula}u(OK+1)≠∅, then set {a mathematical formula}playerK+1+=opponent, and if there is {a mathematical formula}G′∈u(OK+1) such that there is an actual argument graph {a mathematical formula}G+ with {a mathematical formula}G′⊆G+, then set {a mathematical formula}fS+(K+1)=Sj+1; or if there is no such {a mathematical formula}G′, set {a mathematical formula}fS+(K+1)=⊤j.Thus suppose for contradiction that there is a cycle in
+         </list>
+         <paragraph>
+          {a mathematical formula}Gi+1. Since {a mathematical formula}PK+1 is acyclic (since it matches G, and G must be acyclic), any cycle in {a mathematical formula}GK+1 must pass through some {a mathematical formula}s1∉v(PK+1); thus let {a mathematical formula}s1,…,sr,s1 be a cycle in {a mathematical formula}GK+1, for {a mathematical formula}s1∉v(PK+1). From examination of the construction of {a mathematical formula}GK+1 in Definition 5.5, we can structure the cycle in the form{a mathematical formula} such that for all i with {a mathematical formula}1⩽i⩽l, {a mathematical formula}k(i)⩾1, and{a mathematical formula} and where, for all j such that {a mathematical formula}1⩽j⩽l, and given that the selection function always chooses non-assumptions over assumptions where possible—as Definition A.27 shows—the following hold.
+         </paragraph>
+         <list>
+          <list-item label="a.">
+           Each {a mathematical formula}[pj1,…,pjk(j)] corresponds to the unique argument {a mathematical formula}aj represented by G such that {a mathematical formula}claim(aj)=pj1.The nature of the correspondence is as follows. Evidently {a mathematical formula}pj1∈v(G), so let {a mathematical formula}aj be the argument {a mathematical formula}aj represented by G such that {a mathematical formula}claim(aj)=pj1. This is clearly precisely one such {a mathematical formula}aj, since G is an argument graph—Theorem 4.3 ensures existence of {a mathematical formula}aj and Theorem 4.12 shows uniqueness. The sequence {a mathematical formula}[pj1,…,pjk(j)] is a path from the claim of the argument to a member of the arguments support, such that each {a mathematical formula}pjh for {a mathematical formula}1&lt;h⩽k(j) is in the body of rule whose head is {a mathematical formula}pjh−1.
+          </list-item>
+          <list-item label="b.">
+           Each {a mathematical formula}oj corresponds to an argument {a mathematical formula}bj not represented by G.The use of a patient selection function means that there can only be an edge {a mathematical formula}(oj,pj1)∈GK+1 if, at the point this edge was added, the {a mathematical formula}G′∈O selected was such that {a mathematical formula}G′ had the structure of a focused argument graph (that is: with the marking apparatus removed, {a mathematical formula}G′ is a focused argument graph). {a mathematical formula}bj is the argument uniquely represented by this argument graph. (For the existence and uniqueness, see (a), above.)
+          </list-item>
+          <list-item label="c.">
+           {a mathematical formula}aj⇝bj, and if {a mathematical formula}j&lt;l, {a mathematical formula}bj+1⇝aj, and {a mathematical formula}bl⇝an−1.The structure of attacks is clear from the nature of Definition 5.5.
+          </list-item>
+         </list>
+         <paragraph>
+          Then, it is not hard to see that (c) above means that there is a cycle of attacks of arguments{a mathematical formula} in {a mathematical formula}IT. But given Theorem 4.20(iii), this means G cannot be grounded. Contradiction. Therefore {a mathematical formula}GK+1 is acyclic.It now remains to show that the extended sequence, together with {a mathematical formula}player+ and {a mathematical formula}fS+ defined as above, satisfy Definition A.27. Evidently condition (i) is satisfied by hypothesis. Condition (ii) is satisfied by construction. The first bullet of condition (iii) is satisfied given our way of choosing {a mathematical formula}s←R in a way consistent with the structure of G; the remaining bullets are satisfied by construction. Condition (iv) is trivially satisfied, since {a mathematical formula}playerK+1+=proponent.
+         </paragraph>
+        </list-item>
+        <list-item label="•">
+         Suppose instead that {a mathematical formula}playerK=opponent, so that {a mathematical formula}u(OK)≠∅. As for the proponent case, we are at liberty to define {a mathematical formula}playerK+1+ and {a mathematical formula}fS+(K+1) in such a way that condition (4) of Definition A.27 is satisfied. We omit the details, which can be directly copied from the definition.Now, we must show, as for the proponent case, that the sequence can be extended so as to satisfy:
+         <list>
+          {a mathematical formula}fS(K)=Sj for some {a mathematical formula}0&lt;j&lt;m iff there is {a mathematical formula}G∈u(OK) such that [there is an actual argument graph {a mathematical formula}G′ with {a mathematical formula}G⊆G′ and some {a mathematical formula}n∈fS(K) with {a mathematical formula}claim(n)=claim(G)]if there is {a mathematical formula}G∈u(OK) such that [there is an actual argument graph {a mathematical formula}G′ with {a mathematical formula}G⊆G′ and some {a mathematical formula}n∈fS(K) with {a mathematical formula}claim(n)=claim(G)], then such a G is selected;First consider (i), and suppose initially that
+         </list>
+         <paragraph>
+          {a mathematical formula}fS(K)=Sj for some {a mathematical formula}0&lt;j&lt;m. Since the sequence {a mathematical formula}(P0,O0,G0,D0,C0),…,(PK,OK,GK,DK,CK) is a grn-graph-DS for {a mathematical formula}s0 constrained by the sequence {a mathematical formula}(S0,…,Sm), Definition A.27 applies. If {a mathematical formula}playerK−1=proponent, then case (iii) of that definition requires that, since {a mathematical formula}playerK=opponent and {a mathematical formula}fS(K)=Sj, then there is {a mathematical formula}G∈OK such that there is an actual argument graph {a mathematical formula}G′ with {a mathematical formula}G⊆G′, and some {a mathematical formula}n∈fS(K) such that {a mathematical formula}claim(G′)=claim(label(n)), so that evidently {a mathematical formula}claim(label(n))=claim(G), as required. Alternatively suppose that {a mathematical formula}playerK−1=opponent. Then an examination of case (iv) of Definition A.27 shows that, whether {a mathematical formula}fS(K−1)=fS(K) or not, it must be that there is {a mathematical formula}G∈u(OK) such that there is an actual argument graph {a mathematical formula}G′ with {a mathematical formula}G⊆G′, and some {a mathematical formula}n∈fS(K) such that {a mathematical formula}claim(G′)=claim(label(n)).Suppose instead that there is some {a mathematical formula}G∈u(OK) such that there is an actual argument graph {a mathematical formula}G′ with {a mathematical formula}G⊆G′ and some {a mathematical formula}n∈fS(K) with {a mathematical formula}claim(n)=claim(G). A similar argument to that in the previous paragraph, in the other direction, means that there must be some j with {a mathematical formula}0&lt;j&lt;m such that {a mathematical formula}fS(K)=Sj.Now consider (iii)(b). Suppose that {a mathematical formula}s∈u(G)∩A is selected. Since the selection function for members of {a mathematical formula}u(G) is patient, it must be that G matches a focused argument graph which represents an argument {a mathematical formula}a, such that the claim of that focused argument graph and that of {a mathematical formula}a are identical. If {a mathematical formula}|labels(nodes(a))|&gt;1, then there would be {a mathematical formula}G′∈u(OJ) for some {a mathematical formula}J&lt;K such that {a mathematical formula}G′⊆G, and case (iv) of Definition A.27 requires that there is {a mathematical formula}fS(J)=fS(K), and some {a mathematical formula}n∈fS(K) such that {a mathematical formula}label(n) is {a mathematical formula}a, as required. If {a mathematical formula}a consists of a single assumption, then similar argumentation based on cases (iii) or (iv) (depending on whether {a mathematical formula}playerK−1 is proponent or opponent) shows that there is again some {a mathematical formula}n∈fS(K) such that {a mathematical formula}label(n) is {a mathematical formula}a.Then, since there is such a {a mathematical formula}label(n) in {a mathematical formula}fS(K), Lemma A.26 shows that there must be some {a mathematical formula}Sj with {a mathematical formula}0⩽j⩽m, with {a mathematical formula}label(Sj)⇝label(n). Let {a mathematical formula}a∈label(n) be such that {a mathematical formula}claim(label(Sj))=a¯; then evidently {a mathematical formula}a∉DK, thus we are free not to ignore this case, i.e., we need not choose 2(i)(a).Thus conditions (i) and (iii)(b) may be satisfied; the only barrier to extending the K-length sequence would then be a cycle in {a mathematical formula}GK+1; but the argument we made above for the case where {a mathematical formula}playerK=proponent, to show that {a mathematical formula}GK+1, applies in just the same way if {a mathematical formula}playerK=opponent.
+         </paragraph>
+        </list-item>
+       </list>
+       <paragraph>
+        It is now a short step to our result. Since Lemma A.16 gives us that there is no ω-length grn-graph-DS, it must be, given Lemma A.29, that any grn-graph-DS for {a mathematical formula}s0 constrained by {a mathematical formula}(S0,…,Sm) of length 0 (i.e., containing only a single tuple) can always be extended to a grn-graph-DD. Yet plainly, a grn-graph-DS for {a mathematical formula}s0 of length 0 exists: the single tuple of which it consists was defined as item 1 of Definition A.27. □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

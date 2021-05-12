@@ -1,0 +1,547 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Cross-lingual Model Transfer Using Feature Representation Projection.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \pgfplotsset
+     </span>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       compat=1.8
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Cross-lingual model transfer approaches are concerned with creating statistical models for various tasks for languages poor in annotated resources, utilising resources or models available for these tasks in other languages.
+That includes approaches such as
+        direct model transfer
+        []
+        and
+        annotation projection
+        []
+        .
+Such methods have been successfully applied to a variety of tasks, including POS tagging
+        []
+        , syntactic parsing
+        []
+        , semantic role labeling
+        []
+        and others.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Direct model transfer attempts to find a shared feature representation for samples from the two languages, usually generalizing and abstracting away from language-specific representations.
+Once this is achieved, instances from both languages can be mapped into this space and a model trained on the source-language data directly applied to the target language.
+If parallel data is available, it can be further used to enforce model agreement on this data to adjust for discrepancies between the two languages, for example by means of
+        projected transfer
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The shared feature representation depends on the task in question, but most often each aspect of the original feature representation is handled separately.
+Word types, for example, may be replaced by cross-lingual word clusters
+        []
+        or cross-lingual distributed word representations
+        []
+        .
+Part-of-speech tags, which are often language-specific, can be converted into universal part-of-speech tags
+        []
+        and morpho-syntactic information can also be represented in a unified way
+        []
+        .
+Unfortunately, the design of such representations and corresponding conversion procedures is by no means trivial.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Annotation projection, on the other hand, does not require any changes to the feature representation.
+Instead, it operates on translation pairs, usually on sentence level, applying the available source-side model to the source sentence and transferring the resulting annotations through the word alignment links to the target one.
+The quality of predictions on source sentences depends heavily on the quality of parallel data and the domain it belongs to (or, rather, the similarity between this domain and that of the corpus the source-language model was trained on).
+The transfer itself also introduces errors due to translation shifts
+        []
+        and word alignment errors, which may lead to inaccurate predictions.
+These issues are generally handled using heuristics
+        []
+        and filtering, for example based on alignment coverage
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S1.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         1.1
+        </span>
+        Motivation
+       </h3>
+       <div class="ltx_para" id="S1.SS1.p1">
+        <p class="ltx_p">
+         The approach proposed here, which we will refer to as
+         feature representation projection
+         (
+         FRP
+         ), constitutes an alternative to direct model transfer and annotation projection and can be seen as a compromise between the two.
+        </p>
+       </div>
+       <div class="ltx_para" id="S1.SS1.p2">
+        <p class="ltx_p">
+         It is similar to direct transfer in that we also use a shared feature representation.
+Instead of designing this representation manually, however, we create compact monolingual feature representations for source and target languages separately and automatically estimate the mapping between the two from parallel data.
+This allows us to make use of language-specific annotations and account for the interplay between different types of information.
+For example, a certain preposition attached to a token in the source language might map into a morphological tag in the target language, which would be hard to handle for traditional direct model transfer other than using some kind of refinement procedure involving parallel data.
+Note also that any such refinement procedure applicable to direct transfer would likely work for
+         FRP
+         as well.
+        </p>
+       </div>
+       <div class="ltx_para" id="S1.SS1.p3">
+        <p class="ltx_p">
+         Compared to annotation projection, our approach may be expected to be less sensitive to parallel data quality, since we do not have to commit to a particular prediction on a given instance from parallel data.
+We also believe that
+         FRP
+         may profit from using other sources of information about the correspondence between source and target feature representations, such as dictionary entries, and thus have an edge over annotation projection in those cases where the amount of parallel data available is limited.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We evaluate feature representation projection on the task of dependency-based semantic role labeling (SRL)
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        This task consists in identifying predicates and their arguments in sentences and assigning each argument a semantic role with respect to its predicate (see figure
+        1
+        ).
+Note that only a single word – the syntactic head of the argument phrase – is marked as an argument in this case, as opposed to constituent- or span-based SRL
+        []
+        .
+We focus on the assignment of semantic roles to identified arguments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        For the sake of simplicity we cast it as a multiclass classification problem, ignoring the interaction between different arguments in a predicate.
+It is well known that such interaction plays an important part in SRL
+        []
+        , but it is not well understood which kinds of interactions are preserved across languages and which are not.
+Also, should one like to apply constraints on the set of semantic roles in a given predicate, or, for example, use a reranker
+        []
+        , this can be done using a factorized model obtained by cross-lingual transfer.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        In our setting, each
+        instance
+        includes the word type and part-of-speech and morphological tags (if any) of argument token, its parent and corresponding predicate token, as well as their dependency relations to their respective parents.
+This representation is further denoted
+        ω0
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Approach
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         We consider a pair of languages
+         (Ls,Lt)
+         and assume that an annotated training set
+         DTs={(xs,ys)}
+         is available in the source language as well as a parallel corpus of instance pairs
+         Ds⁢t={(xs,xt)}
+         and a target dataset
+         DEt={xt}
+         that needs to be labeled.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         We design a pair of intermediate compact monolingual feature representations
+         ω1s
+         and
+         ω1t
+         and models
+         Ms
+         and
+         Mt
+         to map source and target samples
+         xs
+         and
+         xt
+         from their original representations,
+         ω0s
+         and
+         ω0t
+         , to the new ones.
+We use the parallel instances in the new feature representation
+        </p>
+        D¯s⁢t={(x1s,x1t)}={(Ms⁢(xs),Mt⁢(xt))}
+        <p class="ltx_p">
+         to determine the mapping
+         Mt⁢s
+         (usually, linear) between the two spaces:
+        </p>
+        Mt⁢s=a⁢r⁢g⁢m⁢a⁢xM⁢∑(x1s,x1t∈D¯s⁢t)∥x1s-M⁢(x1t)∥2
+        <p class="ltx_p">
+         Then a classification model
+         My
+         is trained on the source training data
+        </p>
+        D¯Ts={(x1s,ys)}={(Ms⁢(xs),ys)}
+        <p class="ltx_p">
+         and the labels are assigned to the target samples
+         xt∈DEt
+         using a composition of the models:
+        </p>
+        yt=My⁢(Mt⁢s⁢(Mt⁢(xt)))
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Feature Representation
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Our objective is to make the feature representation sufficiently compact that the mapping between source and target feature spaces could be reliably estimated from a limited amount of parallel data, while preserving, insofar as possible, the information relevant for classification.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         Estimating the mapping directly from raw categorical features (
+         ω0
+         ) is both computationally expensive and likely inaccurate – using one-hot encoding the feature vectors in our experiments would have tens of thousands of components.
+There is a number of ways to make this representation more compact.
+To start with, we replace word types with corresponding neural language model representations estimated using the skip-gram model
+         []
+         .
+This corresponds to
+         Ms
+         and
+         Mt
+         above and reduces the dimension of the feature space, making direct estimation of the mapping practical.
+We will refer to this representation as
+         ω1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         To go further, one can, for example, apply dimensionality reduction techniques to obtain a more compact representation of
+         ω1
+         by eliminating redundancy or define auxiliary tasks and produce a vector representation useful for those tasks.
+In source language, one can even directly tune an intermediate representation for the target problem.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Baselines
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         As mentioned above we compare the performance of this approach to that of direct transfer and annotation projection.
+Both baselines are using the same set of features as the proposed model, as described earlier.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        <p class="ltx_p">
+         The shared feature representation for direct transfer is derived from
+         ω0
+         by replacing language-specific part-of-speech tags with universal ones
+         []
+         and adding cross-lingual word clusters
+         []
+         to word types.
+The word types themselves are left as they are in the source language and replaced with their gloss translations in the target one
+         []
+         .
+In English-Czech and Czech-English we also use the dependency relation information, since the annotations are partly compatible.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p3">
+        <p class="ltx_p">
+         The annotation projection baseline implementation is straightforward.
+The source-side instances from a parallel corpus are labeled using a classifier trained on source-language training data and transferred to the target side. The resulting annotations are then used to train a target-side classifier for evaluation.
+Note that predicate and argument identification in both languages is performed using monolingual classifiers and only aligned pairs are used in projection.
+A more common approach would be to project the whole structure from the source language, but in our case this may give unfair advantage to feature representation projection, which relies on target-side argument identification.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.4
+        </span>
+        Tools
+       </h3>
+       <div class="ltx_para" id="S2.SS4.p1">
+        <p class="ltx_p">
+         We use the same type of log-linear classifiers in the model itself and the two baselines to avoid any discrepancy due to learning procedure.
+These classifiers are implemented using
+         Pylearn2
+         []
+         , based on
+         Theano
+         []
+         .
+We also use this framework to estimate the linear mapping
+         Mt⁢s
+         between source and target feature spaces in
+         FRP
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p2">
+        <p class="ltx_p">
+         The 250-dimensional word representations for
+         ω1
+         are obtained using
+         Word2vec
+         tool.
+Both monolingual data and that from the parallel corpus are included in the training.
+In
+         the authors consider embeddings of up to 800 dimensions, but we would not expect to benefit as much from larger vectors since we are using a much smaller corpus to train them.
+We did not tune the size of the word representation to our task, as this would not be appropriate in a cross-lingual transfer setup, but we observe that the classifier is relatively robust to their dimension when evaluated on source language – in our experiments the performance of the monolingual classifier does not improve significantly if the dimension is increased past 300 and decreases only by a small margin (less than one absolute point) if it is reduced to 100.
+It should be noted, however, that the dimension that is optimal in this sense is not necessarily the best choice for
+         FRP
+         , especially if the amount of available parallel data is limited.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.5
+        </span>
+        Data
+       </h3>
+       <div class="ltx_para" id="S2.SS5.p1">
+        <p class="ltx_p">
+         We use two language pairs for evaluation: English-Czech and English-French.
+In the first case, the data is converted from Prague Czech-English Dependency Treebank 2.0
+         []
+         using the script from
+         .
+In the second, we use CoNLL 2009 shared task
+         []
+         corpus for English and the manually corrected dataset from
+         for French.
+Since the size of the latter dataset is relatively small – one thousand sentences – we reserve the whole dataset for testing and only evaluate transfer from English to French, but not the other way around.
+Datasets for other languages are sufficiently large, so we take 30 thousand samples for testing and use the rest as training data.
+The validation set in each experiment is withheld from the corresponding training corpus and contains 10 thousand samples.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS5.p2">
+        <p class="ltx_p">
+         Parallel data for both language pairs is derived from Europarl
+         []
+         , which we pre-process using
+         mate-tools
+         []
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Results
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        The classification error of
+        FRP
+        and the baselines given varying amount of parallel data is reported in figures
+        2
+        ,
+        3
+        and
+        4
+        .
+The training set for each language is fixed.
+We denote the two baselines AP (annotation projection) and DT (direct transfer).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        The number of parallel instances in these experiments is shown on a logarithmic scale, the values considered are 2, 5, 10, 20 and 50 thousand pairs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Please note that we report only a single value for direct transfer, since this approach does not explicitly rely on parallel data.
+Although some of the features – namely, gloss translations and cross-lingual clusters – used in direct transfer are, in fact, derived from parallel data, we consider the effect of this on the performance of direct transfer to be indirect and outside the scope of this work.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        The rather inferior performance of direct transfer baseline on English-French may be partially attributed to the fact that it cannot rely on dependency relation features, as the corpora we consider make use of different dependency relation inventories.
+Replacing language-specific dependency annotations with the universal ones
+        []
+        may help somewhat, but we would still expect the methods directly relying on parallel data to achieve better results given a sufficiently large parallel corpus.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        Overall, we observe that the proposed method with
+        ω1
+        representation demonstrates performance competitive to direct transfer and annotation projection baselines.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Additional Related Work
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Apart from the work on direct/projected transfer and annotation projection mentioned above, the proposed method can be seen as a more explicit kind of domain adaptation, similar to
+        or
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        It is also somewhat similar in spirit to
+        , where a small number of word translation pairs are used to estimate a mapping between distributed representations of words in two different languages and build a word translation model.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this paper we propose a new method of cross-lingual model transfer, report initial evaluation results and highlight directions for its further development.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        We observe that the performance of this method is competitive with that of established cross-lingual transfer approaches and its application requires very little manual adjustment – no heuristics or filtering and no explicit shared feature representation design.
+It also retains compatibility with any refinement procedures similar to projected transfer
+        []
+        that may have been designed to work in conjunction with direct model transfer.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Future Work
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        This paper reports work in progress and there is a number of directions we would like to pursue further.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS5.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Better Monolingual Representations
+       </h4>
+       <div class="ltx_para" id="S6.SS5.SSS0.P1.p1">
+        <p class="ltx_p">
+         The representation we used in the initial evaluation does not discriminate between aspects that are relevant for the assignment of semantic roles and those that are not.
+Since we are using a relatively small set of features to start with, this does not present much of a problem.
+In general, however, retaining only relevant aspects of intermediate monolingual representations would simplify the estimation of mapping between them and make
+         FRP
+         more robust.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS5.SSS0.P1.p2">
+        <p class="ltx_p">
+         For source language, this is relatively straightforward, as the intermediate representation can be directly tuned for the problem in question using labeled training data.
+For target language, however, we assume that no labeled data is available and auxiliary tasks have to be used to achieve this.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS5.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Alternative Sources of Information
+       </h4>
+       <div class="ltx_para" id="S6.SS5.SSS0.P2.p1">
+        <p class="ltx_p">
+         The amount of parallel data available for many language pairs is growing steadily.
+However, cross-lingual transfer methods are often applied in cases where parallel resources are scarce or of poor quality and must be used with care.
+In such situations an ability to use alternative sources of information may be crucial.
+Potential sources of such information include dictionary entries or information about the mapping between certain elements of syntactic structure, for example a known part-of-speech tag mapping.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS5.SSS0.P2.p2">
+        <p class="ltx_p">
+         The available parallel data itself may also be used more comprehensively – aligned arguments of aligned predicates, for example, constitute only a small part of it, while the mapping of vector representations of individual tokens is likely to be the same for all aligned words.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS5.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Multi-source Transfer
+       </h4>
+       <div class="ltx_para" id="S6.SS5.SSS0.P3.p1">
+        <p class="ltx_p">
+         One of the strong points of direct model transfer is that it naturally fits the multi-source transfer setting.
+There are several possible ways of adapting
+         FRP
+         to such a setting.
+It remains to be seen which one would produce the best results and how multi-source feature representation projection would compare to, for example, multi-source projected transfer
+         []
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

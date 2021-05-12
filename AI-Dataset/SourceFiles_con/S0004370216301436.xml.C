@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Alors: An algorithm recommender system.
+   </title>
+   <abstract>
+    Algorithm selection (AS), selecting the algorithm best suited for a particular problem instance, is acknowledged to be a key issue to make the best out of algorithm portfolios. This paper presents a collaborative filtering approach to AS. Collaborative filtering, popularized by the Netflix challenge, aims to recommend the items that a user will most probably like, based on the previous items she liked, and the items that have been liked by other users. As first noted by Stern et al. [47], algorithm selection can be formalized as a collaborative filtering problem, by considering that a problem instance “likes better“ the algorithms that achieve better performance on this particular instance. Two merits of collaborative filtering (CF) compared to the mainstream algorithm selection (AS) approaches are the following. Firstly, mainstream AS requires extensive and computationally expensive experiments to learn a performance model, with all algorithms launched on all problem instances, whereas CF can exploit a sparse matrix, with a few algorithms launched on each problem instance. Secondly, AS learns a performance model as a function of the initial instance representation, whereas CF builds latent factors to describe algorithms and instances, and uses the associated latent metrics to recommend algorithms for a specific problem instance. A main contribution of the proposed algorithm recommender Alors system is to handle the cold start problem – emitting recommendations for a new problem instance – through the non-linear modeling of the latent factors based on the initial instance representation, extending the linear approach proposed by Stern et al. [47]. The merits and generality of Alors are empirically demonstrated on the ASLib [6] and OpenML [53] benchmarks.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In many fields, such as propositional satisfiability (SAT), constraint satisfaction (CSP), machine learning (ML) or data mining (DM), a variety of algorithms and heuristics have been developed to address the specifics of problem instances. In order to get peak performance on any particular problem instance, one must select the algorithm and hyper-parameter setting best suited to this problem instance. This selection is known under various names depending on the field: algorithm selection and configuration in SAT and CSP [40], [26], [12], [43], [57], [34], [18], [39], [21], [58], [30] (see also [29], [27]); in ML, meta-learning [10], [50], hyper-parameter tuning [5], [3] and combined algorithm selection and calibration [52]; in DM, meta-mining [32].
+     </paragraph>
+     <paragraph>
+      This paper focuses on algorithm selection in the SAT, CSP and ML domains. In the SAT and CSP domains, extensive algorithm portfolios have been proposed following Gomes and Selman [14] and significant advances regarding algorithm selection have been made in the last decade (see [23] for a survey; section 2). Most algorithm selection approaches proceed by estimating the performance model, applying supervised machine learning algorithms onto datasets that record the performance of each algorithm in the portfolio on each problem instance (described by a vector of feature values) in a benchmark suite.
+     </paragraph>
+     <paragraph>
+      Another approach, based on collaborative filtering, is investigated in this paper. Collaborative filtering (see [49], [7]; section 3), popularized by the Netflix challenge [4], exploits the user data (the items she liked/disliked in the past) and the community data (recording which user liked which items), to recommend new items that the user is most likely to like. As first noted by Stern et al. [47], algorithm selection can be viewed as a collaborative filtering problem, by considering that a problem instance “likes better” the algorithms that achieve better performance on this problem instance.
+     </paragraph>
+     <paragraph>
+      Collaborative filtering (CF) offers two main advantages compared to supervised ML-based algorithm selection [9], [58]. Firstly, it does not require all portfolio algorithms to be run on all problem instances, which entails significant computational savings. Secondly, it enables to independently analyze: i) the quality and representativity of the benchmark suite with regard to the algorithm portfolio; ii) the quality of the features used to describe the problem instances in the benchmark suite. CF tackles the first issue by extracting a new description of the problem instances and the portfolio algorithm, referred to as latent representation, and checking whether this representation provides an adequate performance model on the benchmark suite. The second issue is tackled by studying whether the initial features enable to estimate the latent features, thereby providing a performance model for new problem instances. When it is the case, CF successfully handles the so-called cold-start task: emitting recommendations for a brand new user or selecting algorithms for a brand new problem instance [2], [37], [28].
+     </paragraph>
+     <paragraph>
+      The main contributions of the present paper are the following. Firstly, the collaborative Algorithm Recommender systemAlors{sup:1} can exploit sparse experimental data (as opposed to the extensive experiment campaigns required by supervised ML-based algorithm selection). Secondly, the extensive experimental validation of Alors on the ASlib [6] and OpenML [53] benchmarks empirically shows the merits of Alors, with an overall runtime less than one minute on a standard PC. Thirdly, Alors handles the cold start problem through the non-linear modeling of the latent factors based on the initial instance representation, extending the linear approach in Matchbox, proposed by Stern et al. [47]; experiments on artificial data show the robustness of Alors compared to Matchbox with respect to the initial representation of the problem instances. Lastly, the latent representation extracted by Alors supports the analysis of the initial representation; this is particularly useful when the initial representation is insufficient, as will be illustrated on the OpenML benchmark.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. Section 2 discusses the state of the art in algorithm selection. The basics of collaborative filtering are introduced in Section 3. Section 4 gives an overview of the proposed Alors system, detailing how it tackles the cold-start issue. Section 5 presents the goal of experiments and the experimental setting used to conduct the experimental validation of Alors. Section 6 reports on the experimental comparative validation of the approach and the general lessons learned. Section 7 concludes the paper with a discussion and some perspectives for further work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In several fields related to combinatorial optimization, and specifically in constraint satisfaction and machine learning, it was early recognized that there exists no such thing as a universal algorithm dominating all other algorithms on all problem instances [56]. This fact has incited many researchers to design comprehensive algorithm portfolios, such that a problem instance would be properly handled by at least one algorithm in the portfolio. Algorithm portfolios thus give rise to the algorithm selection issue, aimed at selecting the algorithm best suited to a particular problem instance.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Formalization
+      </section-title>
+      <paragraph>
+       First formalized by Rice [40], algorithm selection involves: i) a problem space {a mathematical formula}P; ii) an algorithm space {a mathematical formula}A; iii) a mapping from {a mathematical formula}P×A onto {a mathematical formula}R, referred to as performance model, estimating the performance of any algorithm on any problem instance. The performance model thus naturally supports algorithm selection, by selecting the algorithm with best estimated performance on the current problem instance.{sup:2}
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Learning a performance model
+      </section-title>
+      <paragraph>
+       The advances of algorithm selection in SAT and CP in the last decade rely on two facts [23]. Firstly, extensive sets of problem instances have been gathered to benchmark the algorithms. Secondly, a comprehensive set of features was proposed to describe problem instances and the algorithm state at any point in time [20], [59].
+      </paragraph>
+      <paragraph>
+       The set of problem instances, their descriptive features and the associated algorithm performances together define a supervised machine learning problem, where each benchmark problem instance is represented as a d-dimensional feature vector x{a mathematical formula}∈Rd, labeled with the actual performance {a mathematical formula}F(x,a)∈R of any given algorithm a in the algorithm portfolio {a mathematical formula}A on this problem instance. Note that the algorithm performance is domain- and application-specific (e.g., time-to-solution for satisfiable instances or number of solutions found in a given amount of time). From the training set{a mathematical formula} supervised machine learning algorithms – most often regression algorithms although classification algorithms have also been considered [25] – derive an estimate of the computational cost of any algorithm a on any problem instance described by its feature vector x,{a mathematical formula} Algorithm selection proceeds by selecting the algorithm with optimal estimated performance on the current problem instance x:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Among the many algorithm selection approaches designed for SAT and CSP [12], [43], [57], [34], [18], [22], [30], [29], SATzilla is considered to be the most prominent one after [23], as it has dominated the SAT competition for years, continuously extending its approach and improving its performances [57], [58]. Along a multi-stage process, SATzilla first runs pre-solvers for a short amount of time, aimed at solving easy instances. Hard instances are detected (if the time required to compute the instance description is estimated to be greater than a threshold) and delegated to a backup solver. Otherwise, the instance description is computed and exploited by the performance model to select the best algorithm in the portfolio (Eq. (1)). Note that the problem instances are commonly partitioned into categories (e.g. random, crafted and industrial instances), with a specific performance model learned for each category.
+      </paragraph>
+      <paragraph>
+       Over the last decade, approaches relying on the (semi) metric on the problem instance space defined from the descriptive features have been proposed, e.g. CPHydra[34], ISAC[21] or ArgoSmArT[33]. Various AS approaches use various machine learning algorithms [25], ranging from linear regression to random forest [60] or reinforcement learning [13]. Domain-specific loss functions are used to train the performance model. A natural loss function in SAT is the extra computational cost incurred in case of AS mistake. Cost-sensitive loss functions are involved in the last version of SATzilla and in the Cost-Sensitive Hierarchical Clustering (CSHC), which won the open track of the 2013 SAT competition [30]. Another possibility is to consider rank-based loss functions [31], [35].
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       It is commonplace to say that the quality of a learned model depends on the quality of the descriptive features. Intuitively, good descriptive features should induce a topology on the space of problem instances such that similar problem instances should be recommended the same algorithm. How to build this topology and these similarity functions is at the core of recommender systems and collaborative filtering.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Collaborative filtering
+     </section-title>
+     <paragraph>
+      Recommender systems help the user to face the overwhelming diversity of the items available online (e.g., items for Amazon or movies for Netflix), and retrieve the items she will possibly like. Referring the interested reader to [49], [1] for a comprehensive survey, let us describe recommender systems, focusing on the collaborative filtering (CF) approach popularized by the Netflix challenge [4], before introducing some algorithm selection approaches based on CF.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Formalization
+      </section-title>
+      <paragraph>
+       Let n (respectively m) denote the number of users (resp. items). CF exploits the (n, m) matrix {a mathematical formula}M which stores the feedback of the user community. Matrix {a mathematical formula}M is a high-dimensional sparse matrix – typically the Netflix challenge involved circa 480,000 users and 18,000 movies, and the set E of the user-item pairs for which {a mathematical formula}Mi,j is known is less than 1% of all user-item pairs.
+      </paragraph>
+      <paragraph>
+       Memory-based approaches rely on metrics or similarity functions, ranging from cosine similarity and Pearson correlation to more ad hoc measures [2] on the user and item spaces. These metrics or similarities support the recommendation of items most similar to those items the target user liked in the past, or the recommendation of items that users similar to the target user liked in the past.
+      </paragraph>
+      <paragraph>
+       Model-based approaches learn a low-rank approximation of the CF matrix, taking inspiration from Singular Value Decomposition (SVD) [48]. SVD proceeds by decomposing matrix {a mathematical formula}M as{a mathematical formula} with U an (n, n) matrix, V an (m, m) matrix and {a mathematical formula}Vt its transpose, and Σ a matrix with same dimensions as {a mathematical formula}M, with non-negative decreasing singular values on its first diagonal. A low-rank approximation of {a mathematical formula}M is obtained by canceling out all singular values in Σ except the top-k ones. Finally, incorporating the singular values in U and V, the CF matrix {a mathematical formula}M is expressed as:{a mathematical formula} where {a mathematical formula}Uk and {a mathematical formula}Vk, respectively (n, k) and (m, k) matrices, are solutions of the optimization problem:{a mathematical formula} where i) {a mathematical formula}L is the loss function enforcing the approximation of {a mathematical formula}M (see below); ii) regularization terms {a mathematical formula}tr(U.Ut) and {a mathematical formula}tr(V.Vt) are meant to prevent overfitting given the sparsity of {a mathematical formula}M; and iii) rank k and regularization weight λ are determined by cross-validation. For notational simplicity, the k index is omitted in the following.
+      </paragraph>
+      <paragraph>
+       Matrices U and V are referred to as the latent representation of users and items respectively. Intuitively in the Netflix challenge, each one of the k coordinates can be interpreted as a movie type, e.g., action, romance, comedy, fantasy or gore categories. Along this interpretation, the j-th row in V noted {a mathematical formula}Vj represents the j-th movie as a weighted combination of action, romance or comedy movies, and the i-th row in U noted {a mathematical formula}Ui represents the i-th user as weighted combination of action, romance, or comedy fan.
+      </paragraph>
+      <paragraph>
+       Under the low rank assumption, the model-based approach enables to reconstruct the whole matrix {a mathematical formula}M. The loss function measures how well every known {a mathematical formula}Mi,j is approximated by the scalar product of {a mathematical formula}Ui and {a mathematical formula}Vj. The model-based approach thereby supports recommendation by selecting for each i-th user the j-th item maximizing {a mathematical formula}〈Ui,Vj〉. However, this does not work when considering a new user or a new item, as there is no associated latent representation. We shall return to this issue, referred to as the cold start problem [45], [15] in section 3.3.
+      </paragraph>
+      <paragraph>
+       Model-based CF tackles three interdependent issues: i) setting the CF model space; ii) defining the optimization criterion; iii) solving the optimization problem. Regarding the CF model space, probabilistic models are often preferred as they are more robust w.r.t. preference noise, and because the structure of the probabilistic model enables to take advantage of prior knowledge about the problem domain [42], [36]. As depicted in Fig. 1, the CF matrix is often accompanied with some user context (e.g., age and gender); this context is exploited to build richer CF models, and to provide user-dependent recommendations in the cold-start phase.
+      </paragraph>
+      <paragraph>
+       The loss criterion (Eq. (2)) can be adapted to reflect the fact that ranks might matter more than ratings in a recommendation context, as noted by Weimer et al. [54]. A possibility is to replace the rating {a mathematical formula}Mi,j of the j-th item by its rank among all items rated by the i-th user. Another possibility is to consider an order-dependent loss criterion, the Normalized Discounted Cumulative Gain (NDCG), which puts the stress on correctly ordering the top-ranked items. NDCG is used in Alors and will be detailed in section 4.2.2.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      The Matchbox approach
+      <paragraph>
+       The Matchbox collaborative filtering approach, proposed by Stern et al. [46], is the first attempt to apply collaborative filtering to algorithm selection [47].
+      </paragraph>
+      <paragraph>
+       The probabilistic model learned by Matchbox (Fig. 2) estimates the linear mapping U (resp. V) from the initial representation {a mathematical formula}xi of the i-th user (resp. {a mathematical formula}yj of the j-th item) onto a k-dimensional trait vector {a mathematical formula}si=Uxi (resp. {a mathematical formula}tj=Vyj), where each component in U and V is modeled as a Gaussian variable. The latent rating {a mathematical formula}r=N(〈si,tj〉+bi,j,β), with {a mathematical formula}bi,j the bias associated with the i-th user and the j-th item, and β the noise amplitude, is confronted to the observed ratings, using approximate message passing to iteratively infer the distribution of the U and V components and of the biases.
+      </paragraph>
+      <paragraph>
+       The flexibility of Matchbox partly relies on the learned decoding mechanism, from the latent rating onto the observed (rank-based or binary) {a mathematical formula}Mi,j. In the rank-based case for instance, a cumulative threshold model is built [11], maintaining for each user the {a mathematical formula}L−1 thresholds used to segment the continuous latent ratings into L intervals of varying length, mapped onto ranks 1 …L. Another key aspect in Matchbox is the approximate message passing algorithm, combining expectation propagation and variational message passing to handle massive data and non-stationary preferences.
+      </paragraph>
+      <paragraph>
+       Independently of Stern et al. [47], Malitsky and O'Sullivan [29] also achieve algorithm selection by decomposing the collaborative filtering matrix using standard SVD.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Discussion: the cold-start issue
+      </section-title>
+      <paragraph>
+       While algorithm selection can be viewed as a collaborative filtering problem [47], the two problems differ in several respects. Firstly, AS is a small or medium-size problem, usually involving a few thousand problems and a few hundred algorithms (or less), thus smaller by two orders of magnitude than CF. Secondly, AS deals with stationary data (the performance of an algorithm on a given problem instance does not vary along time). Quite the contrary, recommender systems must deal with the fact that user preferences evolve along time, e.g., in the domain of news or music recommendation. These two remarks suggest that the issue of handling massive and non-stationary data is not a key issue for AS. Thirdly, collaborative filtering mostly considers known users while algorithm selection is mostly concerned with selecting an algorithm for a brand new problem instance – the so-called cold start problem.{sup:3}
+      </paragraph>
+      <paragraph>
+       In the case where no context information about the user is available, AS can only fall back on the best default recommendation. Otherwise, the context information can be used to provide an informed cold start recommendation. Matchbox determines the latent factors through linear combinations of the initial features. Malitsky and O'Sullivan [29] use random forests to predict the latent factors from the initial features. More sophisticated probabilistic approaches have been proposed by Schein et al. [45], Gunawardana and Meek [15] or Weston et al. [55], exploiting the available prior knowledge.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     The Alors system
+     <paragraph>
+      This section presents an overview of the Alors system, detailing its two modes. The matrix completion mode exploits the sparse CF matrix and achieves algorithm selection for known problem instances; the cold-start mode achieves algorithm selection for new problem instances. The differences between Alors and Matchbox are thereafter discussed.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Input
+      </section-title>
+      <paragraph>
+       Alors exploits the {a mathematical formula}(n,m) collaborative filtering matrix {a mathematical formula}M reporting the domain-dependent performance {a mathematical formula}Mi,j of the j-th algorithm for the i-th problem instance for a fraction of the {a mathematical formula}(i,j) pairs. In the following, it is assumed that the best performance corresponds to the lowest value, associated to rank 1. Besides the performance matrix, Alors will also exploit the rank matrix M, where {a mathematical formula}Mi,j reports the rank of the j-th algorithm on the i-th problem instance (Table 1).
+      </paragraph>
+      <paragraph>
+       Alors also exploits – for its cold-start functionality only – the {a mathematical formula}(n,d) matrix X, yielding the initial d-dimensional representation of the problem instances.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       The matrix completion functionality
+      </section-title>
+      <paragraph>
+       The matrix completion functionality fills in the missing values in the collaborative matrix, using memory- or model-based approaches, and recommends for each problem instance the algorithm with best (initial or filled-in) performance.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Memory-based CF
+       </section-title>
+       <paragraph>
+        The memory-based approach computes the similarity of any two problem instances. Letting {a mathematical formula}I(i,ℓ) denote the set of indices j such that both {a mathematical formula}Mi,j and {a mathematical formula}Mℓ,j are available, if {a mathematical formula}I(i,ℓ) is not empty the value-based similarity {a mathematical formula}sim(i,ℓ) of the i-th and ℓ-th instances is the cosine of the i-th and ℓ-th rows in {a mathematical formula}M, restricted to columns j in {a mathematical formula}I(i,ℓ):{a mathematical formula} The rank-based similarity {a mathematical formula}simr(i,ℓ) is likewise defined as:{a mathematical formula} with {a mathematical formula}sim(i,ℓ) and {a mathematical formula}simr(i,ℓ) set to 0 by convention if {a mathematical formula}I(i,ℓ) is empty. The similarities among problem instances are used to estimate the missing performance values using neighbor-based regression. Letting {a mathematical formula}Iℓ denote the set of indices for which {a mathematical formula}Mℓ,j is known, the value-based estimate noted {a mathematical formula}Mi,jˆ is defined as:{a mathematical formula} The rank-based estimate noted {a mathematical formula}Mi,jˆ is likewise defined from the rank-based M:{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Model-based CF
+       </section-title>
+       <paragraph>
+        The model-based approach extracts a k-dimensional latent representation of the instances and the algorithms using the Cofirank approach [54]. Formally, each i-th problem instance (resp. j-th algorithm) is mapped onto the k-dimensional vector {a mathematical formula}Ui (resp. {a mathematical formula}Vj), maximizing the Normalized Discounted Cumulative gain defined by Järvelin and Kekäläinen [19] (NDCG), as follows. Let {a mathematical formula}πi denote the performance order related to the i-th problem instance, with {a mathematical formula}πi(j) being the true rank of the j-th best algorithm after {a mathematical formula}〈Ui,Vj〉. The NDCG criterion enforces the correct ordering of the top-L ranked algorithms for each i-th problem instance, by maximizing:{a mathematical formula} As NDCG is not a convex criterion, a linear upper-bound thereof is used and its optimization is tackled by alternate minimization of U and V [51]. The CF functionality is thereafter achieved by setting {a mathematical formula}Mi,jˆ to the scalar product of {a mathematical formula}Ui and {a mathematical formula}Vj.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       The cold start functionality
+      </section-title>
+      <paragraph>
+       The cold start (CS) functionality achieves algorithm selection for a new problem instance, for which the latent representation cannot be determined from the CF matrix by construction. Alors exploits the known problem instances to learn the latent representation from the initial representation as follows. Each problem instance defines a training example {a mathematical formula}(xi,Ui). From the training set{a mathematical formula} a mapping Φ ({a mathematical formula}Φ:Rd↦Rk) is learned using random forests.{sup:4} For each new problem instance with initial representation x, the associated latent representation {a mathematical formula}Ux is approximated as {a mathematical formula}Φ(x). The cold-start problem is then brought back to the matrix completion one, by estimating the performance of the j-th algorithm (or the rank thereof) on the new problem instance as {a mathematical formula}〈Φ(x),Vj〉, and algorithm selection then follows (Algorithm 1).
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       The main difference between the two collaborative filtering-based approaches, Alors and Matchbox, lies in the extraction of the latent representation. Matchbox determines the latent representation {a mathematical formula}Ux associated to some initial representation x by looking for the matrix U such that {a mathematical formula}Ux=Ux, where all components in U are independent Gaussian scalar variables. Alors builds the latent representation {a mathematical formula}Ux from the collaborative filtering matrix alone. The initial representation is only used in a second phase, to learn the mapping Φ from the initial representation x onto the latent representation {a mathematical formula}Ux.
+      </paragraph>
+      <paragraph>
+       Decoupling the extraction of the latent representation, and its characterization from the initial representation enables to independently assess the representativity of the benchmark problems, and the quality of the initial representation:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The sample representativity of the problem instances is assessed from the latent factors learned from a subset of the collaborative filtering matrix; if these latent factors accurately support algorithm selection for the known problem instances, the latent factors capture the information in the collaborative filtering matrix;
+       </list-item>
+       <list-item label="•">
+        The quality of the initial representation of the problem instances is assessed from the ability to estimate the latent factors. If the latent factors capture the information in the collaborative filtering matrix, and the initial representation efficiently estimates the latent representation (not necessarily through linear combinations), then algorithm selection is enabled via sufficient benchmark data and relevant representation.
+       </list-item>
+      </list>
+      <paragraph>
+       The main difference between Alors and the CF-based approach proposed by Malitsky and O'Sullivan [29] lies in the decomposition of the CF matrix. The latter authors use a standard singular value decomposition aimed at recovering the full matrix, while Alors focuses on preserving the order of the top-ranked algorithms for each problem instance (using the NDCG criterion, Eq. (5)). The rationale for using an order-based criterion is to increase the generality of the approach with respect to the measure of performance: the solution only depends on the algorithm ranking with respect to a given problem instance.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiment goals and setting
+     </section-title>
+     <paragraph>
+      This section presents the experimental setting used for the comparative empirical validation of Alors. The first indicator, noted cf, measures the performance of algorithm selection on known problem instances based on an excerpt of matrix {a mathematical formula}M. After the above discussion, the cf performance reflects the quality of the set of problem instances, called benchmark in the following. The second performance indicator, noted cs, measures the quality of algorithm selection for new problem instances. The sensitivity of both performances with respect to the incompleteness rate p of the {a mathematical formula}M matrix and the number k of latent factors is studied on two real-world benchmarks. An artificial problem is also defined to investigate and compare Alors and Matchbox.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Real world benchmarks
+      </section-title>
+      <paragraph>
+       The first benchmark is the Algorithm Selection Benchmark Library (ASlib V1.1){sup:5} centered on propositional satisfiability and constraint satisfaction and summarized in Table 2, referring the reader to [6] for a detailed presentation. The Alors performance on ASlib is assessed using three indicators, averaged over all problem instances: i) Rank is the true rank of the selected algorithm; ii) Penalized average runtime (Par10) is the runtime it requires to solve a problem instance, where the penalty for each unsolved instance is 10 times the runtime budget per instance; iii) Solved Ratio is the fraction of problem instances solved by the selected algorithm.
+      </paragraph>
+      <paragraph>
+       The second benchmark gathers the results of the OpenML dataset repository [53], reporting the performance of 292 algorithm-configuration pairs on 76 problem instances.{sup:6} Performance {a mathematical formula}Mi,j is the test classification error of the j-th algorithm on the i-th problem instance. The number d of descriptive features is 11. The Alors performance on OpenML is assessed using two indicators averaged over all problem instances. The first one, Rank, is the true rank of the selected algorithm. The second indicator, Regret, is the test error of the selected algorithm minus the test error of the true best algorithm.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Experimental setting
+      </section-title>
+      <paragraph>
+       Alors parameters are summarized in Table 3. The sensitivity analysis with respect to the number k of latent factors is conducted by varying k in {a mathematical formula}2…m, with m the number of algorithms. After this sensitivity study, k is set to 10, or to m if m is less than 10 ({a mathematical formula}k=min(10,m)). The sensitivity analysis of the performance w.r.t. incompleteness rate p is conducted by varying p in {a mathematical formula}{0,10%,…90%}. Matrix completion {a mathematical formula}cf(p) and cold start {a mathematical formula}cs(p) performances are graphically depicted using a boxplot.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        Matrix completion
+       </section-title>
+       <paragraph>
+        For each incompleteness rate p ranging in {a mathematical formula}{10%,…,90%}, the {a mathematical formula}cf(p) performance is computed by:
+       </paragraph>
+       <list>
+        <list-item label="i)">
+         uniformly selecting and removing {a mathematical formula}p% of the entries from matrix {a mathematical formula}M, subject to keeping at least one entry on each line and column, thus forming the sparsified matrix {a mathematical formula}Mp;
+        </list-item>
+        <list-item label="ii)">
+         building k-dimensional latent matrices U and V from {a mathematical formula}Mp;
+        </list-item>
+        <list-item label="iii)">
+         using the latent factors to fill-in matrix {a mathematical formula}Mp and determining the selected algorithm for each i-th problem instance;
+        </list-item>
+        <list-item label="iv)">
+         recording the true rank {a mathematical formula}r(i) of the selected algorithm, its penalized runtime and ratio of solved instances (or its regret for the OpenML benchmark), and taking their average over all n problem instances;
+        </list-item>
+        <list-item label="v)">
+         reporting the average performances over 10 independent drawings of sparsified matrix {a mathematical formula}Mp.
+        </list-item>
+       </list>
+      </section>
+      <section label="5.2.2">
+       <section-title>
+        Cold start
+       </section-title>
+       <paragraph>
+        For each incompleteness rate p ranging in {a mathematical formula}{10%,…,90%}, the {a mathematical formula}cs(p) performance is measured using a ten-fold cross validation, using an equi-partition of the set of problem instances into 10 subsets. Thereafter:
+       </paragraph>
+       <list>
+        <list-item label="i)">
+         let matrix {a mathematical formula}M−ℓ denote the union of all rows in {a mathematical formula}M except those in the ℓ-th subset;
+        </list-item>
+        <list-item label="ii)">
+         a fraction {a mathematical formula}p% of the entries in {a mathematical formula}M−ℓ is removed as above, defining matrix {a mathematical formula}M−ℓ,p; {a mathematical formula}M−ℓ,p is used to build k-dimensional latent matrices U and V;
+        </list-item>
+        <list-item label="iii)">
+         mapping Φ is learned from training set {a mathematical formula}E−ℓ,p, with{a mathematical formula}
+        </list-item>
+        <list-item label="iv)">
+         Φ is used to estimate {a mathematical formula}Mi,j for every i-th problem instance in the ℓ-th subset and select the algorithm with optimal estimated {a mathematical formula}Mi,j;
+        </list-item>
+        <list-item label="v)">
+         the true rank of the selected algorithm, its penalized runtime or regret are averaged over all problem instances in the ℓ-th subset;
+        </list-item>
+        <list-item label="vi)">
+         these performances are averaged over 10 independent drawings of sparsified matrix {a mathematical formula}M−ℓ,p, and over all 10 folds ({a mathematical formula}ℓ=1…10).
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Artificial cold start problem
+      </section-title>
+      <paragraph>
+       An artificial setting is considered to compare Matchbox and Alors. If the initial features provide a good linear model of the CF matrix, Matchbox should dominate Alors as it explores a simpler search space. If on the contrary the latent factors are too complex to be captured by linear combinations of the initial features, Alors should dominate Matchbox. In the general case where the quality of the initial features is unknown, the question is whether one should consider a rich set of features and search for linear latent factors, or build latent factors from the collaborative filtering matrix and model them as (not necessarily linear) functions of the features.
+      </paragraph>
+      <paragraph>
+       This question is empirically investigated by defining an artificial AS problem, involving 200 problem instances and 30 algorithms. For each i-th problem instance (respectively, j-th algorithm), an initial representation noted {a mathematical formula}xi (resp. {a mathematical formula}yj) is uniformly generated in {a mathematical formula}[−10,10]10, and the performance {a mathematical formula}Mi,j is set to the Euclidean distance of {a mathematical formula}xi and {a mathematical formula}yj restricted to their first 3 coordinates, plus a Gaussian noise {a mathematical formula}N(0,ϵ) with ϵ ranging in {a mathematical formula}{.1,.25,.5,1}. By construction, {a mathematical formula}Mi,j cannot be modeled as a linear function of the initial representation. Therefore, the initial representation of the problem instances in {a mathematical formula}R10 is enriched by another 55 features, the squared features and the product of all pairs of initial features. The true performance model now belongs to both Matchbox and Alors search space. Matchbox has to find a linear model depending on 6 out of 65 features, while Alors has to find i) latent features; ii) an approximation of these features using the available 65 features.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Empirical validation
+     </section-title>
+     <paragraph>
+      This section summarizes the Matrix Completion (section 6.1) and Cold Start (section 6.2) performances of Alors. The reader will find the detailed results in Appendix A, and the sensitivity analysis w.r.t. incomplete benchmarks in Appendix B.
+     </paragraph>
+     <paragraph>
+      The Alors performance is compared to three baselines: i) the Oracle, selecting the best algorithm for each problem instance; ii) the SingleBest (best algorithm on average on all problem instances in the dataset); iii) the average performance (legend Random). On the ASlib benchmark, Alors is also compared to the systems participating in the ICON challenge [24].
+     </paragraph>
+     <paragraph>
+      Section 6.3 reports on the experimental comparison of Matchbox and Alors, and section 6.4 discusses the lessons learned from comparing the latent and the initial representations of the domain. All experiments are performed on an Intel Core i5-4690 3.50 GHz PC with Ubuntu 14.04.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       The matrix completion performance
+      </section-title>
+      <paragraph>
+       The Matrix Completion performance measures whether the information contained in part of the collaborative filtering matrix {a mathematical formula}M is sufficient to perform algorithm selection effectively. The varying difficulty of the ASlib datasets is reflected by the rank of the single best algorithm. The average rank of Alors for an incompleteness rate of 50% indicates how far Alors can go with only half of the initial information. Finally, the maximum incompleteness rate such that Alors significantly outperforms the single best baseline (with 95% confidence after Wilcoxon Rank Sum Test) reflects the diversity of the dataset.
+      </paragraph>
+      <paragraph>
+       Alors results are obtained with the parameter-less memory-based approach (section 4.2.1), which outperforms the model-based approach (except for very high p values) and is significantly less computationally demanding (Appendix A, Fig. 6).
+      </paragraph>
+      <paragraph>
+       Table 4 shows that Alors yields good performances, improving on the single best baseline even for rather high incompleteness rate p − except for the CSP-2010 dataset.{sup:7}
+      </paragraph>
+      <paragraph>
+       On the OpenML benchmark, the diversity of the problem instances is very high; the rank of the single best algorithm is circa 60 after the regret (excess prediction loss compared to the oracle algorithm) – with the caveat that the statistical significance of the differences between the algorithm performances is not available. For incompleteness rate {a mathematical formula}p=50%, the rank and the regret of the Alors selected algorithm are lower by an order of magnitude than that of the single best.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       The cold start performance
+      </section-title>
+      <paragraph>
+       The Cold Start performance depends on the representativity of the benchmark (governing the quality of the latent factors) and the quality of the initial representation (governing the estimation of the latent factors). On the ASlib benchmark, Table 5 reports the Rank and Solved Ratio of Alors for {a mathematical formula}p=0% and 50%, together with the maximal incompleteness rate such that Alors Rank significantly outperforms the single best Rank. The Cold Start performance is lower than the Matrix Completion performance, as could have been expected. The comparison with state-of-art competitors participating in the ICON challenge [24] is presented in Table 6.
+      </paragraph>
+      <paragraph>
+       In contrast with the ASlib benchmark, the Cold Start performances on the OpenML benchmark are much degraded compared to the Matrix Completion performances: Alors is outperformed by the single best baseline for all p values. This counter-performance can only be blamed on the initial representation of the OpenML problem instances, which does not allow to estimate the latent factors. We shall return to this point in section 6.4.
+      </paragraph>
+      <paragraph>
+       Table 6 reports Alors performances compared to those of eight state-of-art systems participating in the ICON challenge [24], averaged over all datasets in the ASlib benchmark and using same experimental setting. NPar10 is the average normalized runtime required to solve a problem instance, where the penalty for each unsolved instance is 10 times the runtime budget per instance (the lower the better):{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       NSolved Ratio likewise is the normalized fraction of solved problem instances (the lower the better). MiscPenalty is the excess computational time of the selected algorithm, compared to the oracle time, averaged over solved instances (the lower the better).
+      </paragraph>
+      <paragraph>
+       Competitors mostly optimize the PAR10 indicator. Alors is outperformed by all systems w.r.t NPAR10 (except sunny and sunny-presolv) and NSolved Ratio (except sunny-presolv). It is emphasized that all competitors except sunny involve a pre-scheduler component, launching a fixed algorithm for a fixed computational time on every problem instance; algorithm selection only applies on problem instances which are not solved by the pre-scheduler. The solution space of the competitors is thus more complex than that of Alors. It is interesting to note that Alors dominates all competitors except zilla, zillafolio and llama-regrPairs in terms of MiscPenalty: on the solved problem instances, it selects a faster algorithm.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      Comparative evaluation of Alors and Matchbox
+      <paragraph>
+       The comparison of Matchbox and Alors on the ASlib benchmark did not show statistically significant differences. We cannot fairly compare the two approaches in terms of computational effort as they do not run in the same environment.{sup:8} To give a rough idea, the cold start results averaged for all p values for the OpenML dataset required 0.16 seconds on average for Alors and 19.4 seconds for Matchbox.
+      </paragraph>
+      <paragraph>
+       The comparison between Matchbox and Alors thus considers the artificial dataset introduced in section 5.3 ({a mathematical formula}n=200,m=30). The sensitivity w.r.t. the performance noise ϵ (in {a mathematical formula}{.1,.25,.5,1}) and the incompleteness rate (p in {a mathematical formula}{0,20%,50%,80%}) is studied along the Cold Start experimental setting. As shown on Table 7, Alors outperforms Matchbox (with 95% confidence after Wilcoxon Rank Sum Test) for low noise values, {a mathematical formula}ϵ=.1 or .25. The proposed interpretation is that the number of irrelevant features leads Matchbox to overfit the decomposition of the collaborative filtering matrix as latent {a mathematical formula}Ux is the product of the sought matrix U with the initial representation x. This interpretation is supported by the fact that Matchbox results are improved when the incompleteness rate increases ({a mathematical formula}p=20% or 50%), relaxing the constraints on the U matrix. Quite the contrary, Alors extracts the latent factors from the only collaborative filtering matrix; the (irrelevant) initial features are only considered when learning the latent factors, using random forests with default hyper-parameters.
+      </paragraph>
+      <paragraph>
+       For higher noise values ({a mathematical formula}ϵ=.5 or 1), both approaches yield similar results, with the average rank close to random guessing ({a mathematical formula}m=30).
+      </paragraph>
+      <paragraph>
+       This experiment illustrates the impact of the different regularization strategies in Matchbox and Alors. The regularization involved in Alors mostly is the number of latent factors, while Matchbox additionally requires the latent factors to linearly depend on the initial features. This strong regularization, motivated by the fact that Matchbox primarily aimed to handle noisy large-size collaborative filtering problems, might become misleading on noiseless small-size problems with large number of initial features.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Comparing the latent and the initial representations
+      </section-title>
+      <paragraph>
+       Under the assumption that the Matrix Completion results are good, the latent factors can be viewed as “oracle features” in the sense that they encapsulate all information required for AS. Our claim is that these oracle features can be used to assess the initial features w.r.t. algorithm selection. Let {a mathematical formula}xi (respectively {a mathematical formula}zi) thereafter denote the initial (resp. latent) representation of the i-th problem instance.
+      </paragraph>
+      <section label="6.4.1">
+       <section-title>
+        Latent clusters
+       </section-title>
+       <paragraph>
+        Some AS algorithms use a κ-nearest neighbor (kNN) approach, recommending for a problem instance x the algorithm with best performances on its nearest neighbors [20]. A sufficient condition for a good performance of kNN-based AS is that problem instances close in the initial space are also close in the latent space. This can be visually assessed as follows. Let us build K clusters in the initial space (using standard K-means clustering [16], where the appropriate value of K is determined using the Silhouette score [41]); let us associate a color to each initial cluster. How these initial clusters are scattered in the latent space can be visually inspected, using multi-dimensional scaling (MDS) [8] to map the initial and latent representations onto {a mathematical formula}R2.
+       </paragraph>
+       <paragraph>
+        The comparison of the latent and initial representations is illustrated on Fig. 3, displaying the MDS of the initial (left) and latent (right) representation for three datasets. All three datasets have very good Matrix Completion performances, while their Cold Start performances vary from very good (SAT12-ALL) to average (PREMARSHALLING-ASTAR) to poor (OpenML). For SAT12-ALL (Fig. 3, top), the initial clusters are moderately scattered in the latent space: for each problem instance, some of its neighbors in the initial space are also close in the latent space, implying that these neighbors will efficiently support AS. The initial and latent neighborhood structures are much less consistent for the PREMARSHALLING-ASTAR-2015 dataset, which might be due to the low-dimensional latent space (as {a mathematical formula}k=m=4; Fig. 3, middle); the increased difficulty of the cold start problem is witnessed as clusters are more mixed than for SAT12-ALL. For OpenML, the latent images of the initial clusters are even more mixed up (Fig. 3, bottom).
+       </paragraph>
+      </section>
+      <section label="6.4.2">
+       <section-title>
+        Quantitative assessment of the initial features
+       </section-title>
+       <paragraph>
+        The latent representation can also be used to individually evaluate each initial feature, by taking inspiration from the Locally Linear Embedding approach [44]. Let us assume that the problem instances belong to some manifold in the latent space and for each {a mathematical formula}zi in the latent space let {a mathematical formula}zi1…ziκ denote its nearest κ neighbors, with {a mathematical formula}‖zi−zij‖&lt;τ. Let us further assume that there exists a differentiable mapping ϕ from the latent onto the initial space, mapping the latent representation {a mathematical formula}zi of every i-th problem instance onto its initial representation {a mathematical formula}xi (Fig. 4). If ϕ preserves the latent neighborhood structure, kNN-based AS will deliver good recommendations in both latent and initial spaces. This can be estimated a priori, as follows. Let {a mathematical formula}zi be optimally approximated by a weighted combination of its κ nearest neighbors, subject to the weights summing to 1 (the reason for the sum-to-one constraint will become clear shortly):{a mathematical formula} where weights {a mathematical formula}wi,j are found by solving a least squares problem [44]. Using a limited series expansion of ϕ in the neighborhood of {a mathematical formula}zi yields:{a mathematical formula} It comes, thanks to {a mathematical formula}∑wi,j=1:{a mathematical formula} Eq. (6) thus enables to estimate ϕ gradient at {a mathematical formula}zi, with{a mathematical formula} On the left hand side, the latent approximation error {a mathematical formula}∑i=1jwi,jzij−zi is small by construction; but on the right hand side, {a mathematical formula}∑i=1κwi,jxij−xi can be arbitrarily large. Let {a mathematical formula}ϕℓ denote the ℓ-th coordinate of ϕ, i.e. the mapping from the latent features onto the ℓ-th initial feature. With {a mathematical formula}eℓ the unit vector with a 1 on the ℓ-th coordinate, the average norm of the {a mathematical formula}ϕℓ gradient can be bounded as:{a mathematical formula} The distortion associated to the ℓ-th feature is defined as the lower bound on the {a mathematical formula}ϕℓ gradient norm (the right hand term in Eq. (7)): the lower the distortion, the more consistent the ℓ-th initial feature w.r.t. the latent representation, and the more relevant to algorithm selection. Fig. 5 depicts the distortion of the initial 11 features of the OpenML benchmark (left: {a mathematical formula}κ=5; right: {a mathematical formula}κ=7), suggesting that the 7-th feature (the fraction of missing values in the dataset) is more relevant to algorithm selection than other features. In practice, everything else being equal, a high missing value rate does govern the choice of an ML algorithm.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Detailed Alors results
+     <paragraph>
+      This appendix details the Matrix Completion and Cold Start performances of Alors summarized in section 6, including the computational effort (on an Intel Core i5-4690 3.50 GHz PC with Ubuntu 14.04) and the sensitivity analysis w.r.t. the number k of latent factors.
+     </paragraph>
+     <section>
+      <section-title>
+       Matrix Completion
+      </section-title>
+      <section>
+       <section-title>
+        Matrix Completion computational effort
+       </section-title>
+       <paragraph>
+        Alors results are obtained with the parameter-less memory-based approach (section 4.2.1), which outperforms the model-based approach (except for very high p values) and is significantly less computationally demanding (Fig. 6).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Matrix Completion performances
+       </section-title>
+       <paragraph>
+        After the Alors Matrix Completion results (Table 4), the ASLib benchmark involves four categories of datasets. The first category includes the only CSP-2010 dataset (Fig. 7). It involves 2 algorithms and the single best algorithm with an average rank of 1.22 is hard to beat. For incompleteness rate above 40%, Alors does no better than the single best baseline.
+       </paragraph>
+       <paragraph>
+        The second category includes the PREMARSHALLING-ASTAR-2015 (Fig. 8) and the MAXSAT-12-PMS datasets (Fig. 9), with a low average rank of the single best baseline (respectively 2.07 and 2.5). On these datasets, the information is sufficient for Alors to significantly improve on the single-best baseline for incompleteness rate respectively {a mathematical formula}p=60% and {a mathematical formula}70%.
+       </paragraph>
+       <paragraph>
+        The third category includes 6 datasets (ASP-POTASSCO, QBF-2011, SAT11-HAND, SAT-11-INDU, SAT11-RAND, SAT12-RAND), with a higher rank of the single best algorithm (in {a mathematical formula}[3.73,6.37], except for QBF-2011 where it is 2.39), which suggests that these datasets involve more diverse problem instances. The Alors performances are displayed on the ASP-POTASSCO dataset (Fig. 10), which is representative of the third category; they gracefully degrade as p increases and Alors still significantly outperforms the single best baseline for {a mathematical formula}p=80% (except for QBF-2011 where {a mathematical formula}p=70%).
+       </paragraph>
+       <paragraph>
+        The fourth category includes 4 datasets (PROTEUS-2014, SAT12-ALL, SAT12-HAND and SAT12-INDU), with a very high rank of the single best algorithm (in {a mathematical formula}[8.68,12.11]), which suggests that the problem instances are very heterogeneous. The Alors performances are displayed on the PROTEUS-2014 dataset (Fig. 11), which is representative of the fourth category; they gracefully degrade as p increases, with a lower variance than for the third category. Alors significantly outperforms the single best baseline for {a mathematical formula}p=90%.
+       </paragraph>
+       <paragraph>
+        On the OpenML dataset, the performance indicator (the regret or excess prediction loss compared to the oracle algorithm, section 5.1) shows a high diversity of the problem instances (Fig. 12). The rank of the single best baseline is circa 60 – with the caveat that the statistical significance of the differences between the algorithm performances is not available. The representativity of the problem instances is very good as Alors very significantly outperforms the single best baseline for incompleteness rate {a mathematical formula}p&lt;=90%.
+       </paragraph>
+      </section>
+     </section>
+     <section>
+      <section-title>
+       Cold Start
+      </section-title>
+      <section>
+       <section-title>
+        Cold Start computational effort
+       </section-title>
+       <paragraph>
+        The overall computational runtime (Fig. 13) is less than four seconds on all datasets except for the 4,000 instances 200-features PROTEUS 2014 dataset, where it is 12 seconds.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Cold Start performances
+       </section-title>
+       <paragraph>
+        After the Alors Cold Start results, the ASLib benchmark involves three categories of datasets. The CSP-2010 dataset stands out as being particularly difficult, for the same reasons as in the Matrix Completion case.
+       </paragraph>
+       <paragraph>
+        A second category of problems includes PREMARSHALLING-ASTAR-2015 (Fig. 14), SAT11-INDU and SAT12-RAND (Fig. 15). On these problems, Alors with {a mathematical formula}p=50% reaches similar performances as the single best baseline; surprisingly, Alors with {a mathematical formula}p=0 (expectedly yielding better latent factors) does not much improve on {a mathematical formula}p=50%. This second CS category does not much overlap with the second MC category: the Matrix Completion performances were excellent on the SAT11-INDU and SAT12-RAND datasets (99% of solved problems for {a mathematical formula}p=50%), suggesting that the problem might come from the initial features.
+       </paragraph>
+       <paragraph>
+        The third category includes all other datasets, where the results are good (ASP-POTASSCO, MAXSAT12-PMS, SAT11-HAND, SAT11-INDU, SAT12-INDU, illustrated on the representative case of ASP-POTASSCO on Fig. 16), or very good (PROTEUS-2014, QBF-2011, SAT11-RAND, SAT12-ALL, SAT12-HAND, illustrated on the representative cases of PROTEUS-2014, Fig. 17 and QBF-2011, Fig. 18).
+       </paragraph>
+       <paragraph>
+        As expected, the performances are better for Matrix Completion with {a mathematical formula}p=50% than for Cold Start for {a mathematical formula}p=0%, particularly so for PREMARSHALLING-ASTAR-2015 (Solved Ratio decreases from .94 to .87) and PROTEUS-2014 (Solved Ratio decreases from .95 to .87); the decrease is moderate in the general case.
+       </paragraph>
+       <paragraph>
+        On the OpenML benchmark, quite the contrary, the Cold Start performances are very degraded compared to the Matrix Completion performances (Fig. 19). Alors is outperformed by the single best baseline, for all p values. This counter-performance can only be blamed on the initial representation of the OpenML problem instances (see section 6.4).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Cold Start sensitivity analysis
+       </section-title>
+       <paragraph>
+        The sensitivity of the results with respect to the number k of latent factors is illustrated on the representative case of SAT11-HAND (Fig. 20); it gracefully increases with k and reaches a plateau for {a mathematical formula}k≥10.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Sensitivity w.r.t. benchmark data
+     </section-title>
+     <paragraph>
+      The claim that Alors is able to deal with incomplete benchmarks is experimentally backed up by the performances obtained when uniformly removing algorithm performances with incompleteness rate p. Complementary experiments have been conducted to investigate the sensitivity of the approach w.r.t the distribution of the benchmark data {a mathematical formula}Mp. For option Best (respectively Worst), the 50% of best (resp. worst) performances for each problem instance) are retained in {a mathematical formula}Mp.
+     </paragraph>
+     <paragraph>
+      Table 8 shows the fraction of computational effort required to gather {a mathematical formula}Mp for the Best and Worst options (summing to 1). For some datasets, e.g PREMARSHALLING-ASTAR-2015, the best 50% algorithms only require 20% of the overall computational cost.
+     </paragraph>
+     <paragraph>
+      The associated Matrix Completion and Cold Start results are displayed respectively in Table 9, Table 10, reporting the average rank of the selected algorithm. For Matrix Completion, the results of the Best option match those of the oracle (note that by construction the oracle performances are kept in {a mathematical formula}Mp). The Worst option yields same Matrix Completion performances as a random selection.
+     </paragraph>
+     <paragraph>
+      Interestingly, the best Cold Start results are obtained for the Uniform option. The Worst option yields same performances as a random selection. Surprisingly, the Best option is dominated by the Uniform option. A tentative interpretation for this fact is that the extraction of the latent factors is hindered by the bias in {a mathematical formula}Mp. Intuitively, if the dataset involves two clusters of problem instances for which the best algorithms are different, {a mathematical formula}Mp becomes a block-diagonal matrix, preventing the latent factors from capturing the relationships between the different clusters.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

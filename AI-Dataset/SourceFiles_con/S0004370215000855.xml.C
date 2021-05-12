@@ -1,0 +1,1747 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    A generic approach to planning in the presence of incomplete information: Theory and implementation.
+   </title>
+   <abstract>
+    This paper proposes a generic approach to planning in the presence of incomplete information. The approach builds on an abstract notion of a belief state representation, along with an associated set of basic operations. These operations facilitate the development of a sound and complete transition function, for reasoning about effects of actions in the presence of incomplete information, and a set of abstract algorithms for planning. The paper demonstrates how the abstract definitions and algorithms can be instantiated in three concrete representations—minimal-DNF, minimal-CNF, and prime implicates—resulting in three highly competitive conformant planners: Dnf, Cnf, and PIP. The paper relates the notion of a representation to that of ordered binary decision diagrams, a well-known belief state representation employed by many conformant planners, and several target compilation languages that have been presented in the literature. The paper also includes an experimental evaluation of the planners Dnf, Cnf, and PIP and proposes a new set of conformant planning benchmarks that are challenging for state-of-the-art conformant planners.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Planning in the presence of incomplete information [13], [27] is the problem of generating a sequence of actions that can achieve a given goal regardless of the fact that the knowledge about the initial state of the world is incomplete. As an example, consider a robot that needs to clean two rooms {a mathematical formula}r1 and {a mathematical formula}r2. Initially, the robot knows that it is in room {a mathematical formula}r1 but it does not know whether its trash bag is empty or not. The robot can move between the rooms, vacuum the room if its trash bag is empty, and empty the trash bag. Vacuuming a room results in the trash bag being full. An obvious solution for the robot is to empty the bag, vacuum room {a mathematical formula}r1, empty the bag, move to room {a mathematical formula}r2, and vacuum room {a mathematical formula}r2.
+     </paragraph>
+     <paragraph>
+      In this paper, we are interested in conformant planning—a special type of planning in presence of incomplete information. Specifically, conformant planning deals with planning in presence of incomplete information about the initial state, and with deterministic and non-sensing actions. Conformant planning is known to be one of the most challenging problems in automated planning. The results in [3], [14] prove that conformant planning in domains with conditional action effects is at a higher complexity level than that in domains without conditional action effects. Since its introduction, conformant planning has attracted the attention of several researchers—leading to the development of sophisticated state-of-the-art conformant planners, such as Conformant-FF (CFF) [16], KACMBP[10], POND[8], T0[23], [24], T1[1], CpA{sup:1}[39], [38], CpLS[20], and GC[LAMA][21]. It is important to observe that the majority of the best performing planners are best-first search and progression-based planners, whose development starts with the selection of a representation language and the definition of a progression function that, given a state and an action, computes the next state(s) of the world.
+     </paragraph>
+     <paragraph>
+      To deal with incomplete information about the world, the notion of a belief state—defined as the set of possible states—has been introduced and is widely used in the literature for planning in presence of incomplete information [5], [27]. An advantage of this notion lies in its simplicity in representing and reasoning about the effects of actions in the presence of incomplete information about the initial state. Indeed, any formalism for Reasoning about Action and Change (RAC), that assumes completeness of the state, can be straightforwardly generalized to deal with incomplete states, by dealing with each individual possible state in the belief state separately, and by collecting the set of resulting states (resulting belief state). More precisely, given a transition function Φ that computes the resulting state after the execution of an action a in a state s, denoted by {a mathematical formula}Φ(a,s), the function {a mathematical formula}Φˆ(a,S)={Φ(a,s)|s∈S} characterizes the transition between belief states and can be used for reasoning with incomplete information.
+     </paragraph>
+     <paragraph>
+      A challenging aspect in the representation of belief states in planning with incomplete information is their size—which is exponential in the number of propositions with unknown truth value. Different solutions for this problem have been formulated. For instance:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Conformant-FF (CFF) [16] uses an implicit representation of a belief state as a sequence of actions from the initial state to the belief state; a similar approach is used in T1[1];
+      </list-item>
+      <list-item label="•">
+       KACMBP[10] and POND[8] employ a BDD-based representation [7];
+      </list-item>
+      <list-item label="•">
+       CpA[39], [38] approximates a belief state by a set of sets of states (partial states); and
+      </list-item>
+      <list-item label="•">
+       T0[23], [24] transforms the conformant planning problem to classical planning problem.
+      </list-item>
+     </list>
+     <paragraph>
+      In this paper, we propose a generic approach to planning with incomplete information. The key idea underlying our approach is the observation that belief states are propositional formulae; thus, reasoning about effects of actions on belief states can be expressed using suitable operations on formulae. We start by defining an abstract notion, called a representation, as a collection of formulae satisfying the condition that each belief state has at least an equivalent formula in the collection. We then specify a set of abstract operations on a representation and use these operations in defining an abstract transition function, that maps pairs of actions and belief states to belief states. We devise a set of abstract algorithms for computing the transition function that can be instantiated in each concrete representation and used in the implementation of conformant planners.
+     </paragraph>
+     <paragraph>
+      We illustrate the generic framework by instantiating it in three concrete representations of belief states:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       minimal-DNF, a compact form of disjunctive normal form formulae,
+      </list-item>
+      <list-item label="•">
+       minimal-CNF, a compact form of conjunctive normal form formulae, and
+      </list-item>
+      <list-item label="•">
+       prime implicates, a well-known, special form of minimal-CNF.
+      </list-item>
+     </list>
+     <paragraph>
+      For each representation, we define its set of operations, provide a concrete implementation of these operations, and instantiate the abstract algorithms to create a conformant planner. This results in three conformant planning systems, called Dnf, Cnf, and PIP, that employ the minimal-DNF, minimal-CNF, and prime implicates representation, respectively. We evaluate these systems using benchmarks available in the literature as well as new benchmarks that appear to be particularly challenging for several planners. The experimental evaluation shows that the three systems are very competitive with other planners. In addition, the two systems using conjunctive representations (Cnf and PIP) are shown to be particularly effective on the new problems. As part of our analysis, we relate the notion of a representation to the notion of ordered binary decision diagrams [7] and place the three representations within the context of target compilation languages, as developed in [11].
+     </paragraph>
+     <paragraph>
+      The paper and its main contributions are organized as follows. Section 2 reviews the key notions used in planning and in the development of the approach of this paper. Section 3 presents our generic approach to planning with incomplete information. The content of this section is novel and has never been published elsewhere. Section 4 investigates three concrete representations—minimal-DNF, minimal-CNF, and prime implicates representations—and the use of the methodology developed in Section 3 for a precise definition of the transition function for each representation; this section leads to the introduction of the three conformant planners Dnf, Cnf, and PIP. These three planners were described in our previous publications [33], [34], [35]. Nevertheless, the derivation of these planners as instances of the abstract representation and the discussion of the computational complexity of these planners are novel and not a part of any previously publications. Section 5 relates our different representations with well-known representations of belief states and discusses state-of-the-art approaches for conformant planning. The discussion in this section has never been presented or included in any conference paper. Section 6 discusses the experimental results. Some of these experimental results have been included in the papers describing the three planners Dnf, Cnf, and PIP. Section 7 summarizes the main results of the paper and discusses possible future works. The proofs for propositions and theorems, except for trivial ones, are presented in Appendix A.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background: conformant planning, propositional logic, and belief state representation
+     </section-title>
+     <paragraph>
+      A conformant planning problem P is a tuple of the form {a mathematical formula}P=〈F,A,I,G〉 where{sup:2}:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       F, referred to as the domain of P, is a finite set of propositions; a literal is either an element {a mathematical formula}p∈F or its negation ¬p.
+      </list-item>
+      <list-item label="•">
+       A is a finite set of actions. Each action a in A is associated with
+      </list-item>
+      <list-item label="•">
+       I describes the initial situation and is a finite set of conjunction of literals, oneof-clauses, and or-clauses. Formally, a oneof-clause (resp. or-clause) is a formula of the form {a mathematical formula}oneof(φ1,…,φk) (resp. {a mathematical formula}or(φ1,…,φk)), where {a mathematical formula}φi is a conjunction of literals for {a mathematical formula}i=1,…,k. A oneof-clause represents an exclusive-or between its conjunctions, while an or-clause is a simply disjunction of its components.
+      </list-item>
+      <list-item label="•">
+       G is a propositional formula over F defining the goal.
+      </list-item>
+     </list>
+     <paragraph>
+      The complement of a literal ℓ, denoted by {a mathematical formula}ℓ¯, is the negation of ℓ—i.e., {a mathematical formula}ℓ¯=¬ℓ, where {a mathematical formula}¬p‾=p for every p in F. For a set of literals L, {a mathematical formula}L‾={ℓ¯|ℓ∈L}. In this paper, we often identify the conjunction {a mathematical formula}ℓ1∧…∧ℓk with set of literals {a mathematical formula}{ℓ1,…,ℓk}. A set of literals X is said to be consistent if X does not contain a pair of complementary literals, i.e., for every literal ℓ in X, {a mathematical formula}ℓ‾∉X. A set of literals X is said to be complete if for each proposition p in F, {a mathematical formula}{p,¬p}∩X≠∅.
+     </paragraph>
+     <paragraph>
+      A set of literals X satisfies a literal ℓ, denoted by {a mathematical formula}X⊨ℓ, if {a mathematical formula}ℓ∈X. X satisfies a conjunction of literals {a mathematical formula}Y=ℓ1∧…∧ℓk, denoted by {a mathematical formula}X⊨Y, if {a mathematical formula}X⊨ℓi for all {a mathematical formula}1≤i≤k. X satisfies a oneof-clause {a mathematical formula}oneof(φ1,…,φk) if there exists j, {a mathematical formula}1≤j≤k, such that {a mathematical formula}X⊨φj and {a mathematical formula}X⊭φi for every {a mathematical formula}i≠j. X satisfies an or-clause {a mathematical formula}or(φ1,…,φk) if there exists some j, {a mathematical formula}1≤j≤k, such that {a mathematical formula}X⊨φj. A set of literals X satisfies the initial situation I if it satisfies every literal, oneof-clause, and or-clause in I.
+     </paragraph>
+     <paragraph>
+      The satisfaction of a propositional formula φ w.r.t. a set of literals X, denoted by {a mathematical formula}X⊨φ, is defined in the usual way. When {a mathematical formula}X⊨φ, we say that φ is true in X; when {a mathematical formula}X⊨¬φ, we say that φ is false in X; otherwise, we say that φ is unknown in X.
+     </paragraph>
+     <paragraph>
+      A state s is a consistent and complete set of literals. A belief state is a set of states. A belief state S satisfies a formula φ, denoted by {a mathematical formula}S⊨φ if {a mathematical formula}s⊨φ for every {a mathematical formula}s∈S. By {a mathematical formula}SI we denote the set of all states satisfying I; we will refer to {a mathematical formula}SI as the initial belief state of P.
+     </paragraph>
+     <paragraph>
+      Given a state s, an action a is executable in s if {a mathematical formula}s⊨pre(a). The effect of executing a in s is{a mathematical formula}{a mathematical formula}e(a,s) is the set of literals that will become true in the successor state after executing a in s. The transition function that returns the result of the execution of a in s, denoted by {a mathematical formula}Φ(a,s), is defined by:{a mathematical formula} A conformant planning problem P is said to be consistent if
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       the initial belief state {a mathematical formula}SI is non-empty, and
+      </list-item>
+      <list-item label="2.">
+       for every pair of an action a and a state s such that a is executable in s, {a mathematical formula}Φ(a,s) is defined.
+      </list-item>
+     </list>
+     <paragraph>
+      The first condition means that the initial situation of P is representable by a satisfiable formula. The second condition indicates that there is no representation error in the problem specification. An inconsistent problem is usually the result of an erroneous specification and is therefore uninteresting in the context of planning. As such, it is reasonable to assume that any problem under consideration is consistent.
+     </paragraph>
+     <paragraph>
+      The function Φ is extended to deal with incomplete information as follows. Let S be a belief state and a be an action. We say that a is executable in S if it is executable in every state belonging to S. We define:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      We can extend the function Φ to define {a mathematical formula}Φˆ, an extended transition function which maps each pair composed of a sequence of actions and a belief state to a belief state—necessary for reasoning about effects of plans. Let {a mathematical formula}αn=[a1,…,an] be a sequence of actions:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}n=0 then {a mathematical formula}Φˆ([],S)=S;
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}n&gt;0 then
+      </list-item>
+     </list>
+     <paragraph>
+      A sequence of actions {a mathematical formula}[a1,…,an] is a solution of P if {a mathematical formula}Φˆ([a1,…,an],SI) satisfies the goal G.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider a slightly different version of the planning problem discussed in the introduction. The planning problem {a mathematical formula}P=〈F,A,I,G〉 is represented as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Domain F: F can be described using the following propositions{sup:3}:
+      </list-item>
+      <list-item label="•">
+       Initial belief state I: Suppose that initially no room is clean, the vacuum bag is empty, and the robot is in one of the two rooms but it does not know exactly which one. I is described by the following set:{a mathematical formula} Observe that the uncertainty of the initial state lies in the location of the robot. Thus, the initial belief state can be easily computed as {a mathematical formula}SI={s1,s2}, where{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       Actions A: The robot can vacuum, move from a room to the other, and empty the vacuum bag. So, A can be described by{a mathematical formula} where
+       <list>
+        {a mathematical formula}pre(vacuum)={bag_is_empty}{a mathematical formula}vacuum:{at1}→{clean1,¬bag_is_empty}{a mathematical formula}vacuum:{at2}→{clean2,¬bag_is_empty}{a mathematical formula}pre(move)={True}{a mathematical formula}move:{at1}→{at2,¬at1}{a mathematical formula}move:{at2}→{at1,¬at2}{a mathematical formula}pre(empty_the_bag)={True}{a mathematical formula}empty_the_bag:{True}→{bag_is_empty}Hence,
+       </list>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+      </list-item>
+      <list-item label="•">
+       Goal G: The goal is that both rooms are clean. Thus, {a mathematical formula}G=clean1∧clean2.
+      </list-item>
+     </list>
+     <paragraph>
+      The function Φ has been employed in the implementation of several heuristic conformant planners. Each planner needs to adopt a concrete representation for belief states. Depending on the belief state representation, Φ will be developed and implemented accordingly. In the rest of this paper, we will propose a general methodology for the development of heuristic search based conformant planners by using formulae for belief state representation. We will need the following notations.
+     </paragraph>
+     <paragraph>
+      Let φ be a formula and s be a state. If {a mathematical formula}s⊨φ, we say that s satisfies φ. The belief state of φ, denoted by {a mathematical formula}BS(φ), is defined by {a mathematical formula}BS(φ)={s|s is a state and s⊨φ}. A formula φ is satisfiable iff {a mathematical formula}BS(φ)≠∅. A formula ψ is true (or false) in φ, denoted by {a mathematical formula}φ⊨ψ (resp. {a mathematical formula}φ⊨¬ψ), iff ψ is true (resp. false) in every state s such that {a mathematical formula}s⊨φ. φ and ψ are equivalent, denoted by {a mathematical formula}φ≡ψ, iff {a mathematical formula}φ⊨ψ and {a mathematical formula}ψ⊨φ. ψ is tautology if it is true in every formula. The following proposition relates formulae and belief states and will be used frequently in this paper.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      For a non-empty set of satisfiable formulae{a mathematical formula}{φ1,…,φn}and a formula φ, we have the following results:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}BS(φ1∨…∨φn)=BS(φ1)∪…∪BS(φn)
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}φ1∨…∨φn⊨φiff{a mathematical formula}∀φi∈{φ1,…,φn}.φi⊨φ
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}BS(φ1∧…∧φn)=BS(φ1)∩…∩BS(φn)
+      </list-item>
+     </list>
+     <paragraph>
+      ψ is said to be known in φ if ψ is either true or false in φ. Otherwise, we say that ψ is unknown in φ. Observe that, ψ is unknown in φ iff there exist {a mathematical formula}s,s′∈BS(φ) such that ψ is true in s and ψ is false in {a mathematical formula}s′.
+     </paragraph>
+     <paragraph>
+      Let φ be a propositional formula over F. {a mathematical formula}lit(φ) denotes the set of literals appearing in φ. {a mathematical formula}prop(φ)={p∈F|{p,¬p}∩lit(φ)≠∅}. Two formulae φ and ψ are said to be dependent iff {a mathematical formula}prop(φ)∩prop(ψ)≠∅. Two formulae are said to be independent if they are not dependent. We also have the following propositions.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      Let φ be a satisfiable formula and s be a state such that{a mathematical formula}s⊨φ. Let δ be the subset of s such that{a mathematical formula}prop(δ)=prop(φ). Then,{a mathematical formula}δ⊨φ.
+     </paragraph>
+     <paragraph label="Proposition 3">
+      Let φ be a satisfiable formula and ψ be a satisfiable non-tautology formula. If φ and ψ are independent then{a mathematical formula}φ⊭ψ.
+     </paragraph>
+     <paragraph label="Definition 1">
+      Let α and β be two formulae and ψ be a satisfiable formula. We say that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       α and β agree on ψ if one of the following two conditions hold: (1){a mathematical formula}α⊨ψ and {a mathematical formula}β⊨ψ or (2){a mathematical formula}α⊨¬ψ and {a mathematical formula}β⊨¬ψ.
+      </list-item>
+      <list-item label="•">
+       α and β disagree on ψ if one of the following two conditions hold: (1){a mathematical formula}α⊨ψ and {a mathematical formula}β⊨¬ψ or (2){a mathematical formula}α⊨¬ψ and {a mathematical formula}β⊨ψ.
+      </list-item>
+     </list>
+     <paragraph>
+      Observe that α and β agree or disagree on ψ iff ψ is known in both α and β.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      A generic approach to planning with incomplete information
+     </section-title>
+     <paragraph>
+      In this section, we will present a generic approach to planning with incomplete information. To motivate the development of the approach, we consider the following example.
+     </paragraph>
+     <paragraph label="Example 2">
+      Let us consider a domain {a mathematical formula}F={f,g,h}, an action a with three conditional effects {a mathematical formula}Ca={f→¬g,f∧¬g→¬f,¬f→f},{sup:4}{a mathematical formula}pre(a)={True}, and a belief state S that contains all possible states of the world (i.e., all possible interpretations of propositions in F) except for {a mathematical formula}{¬f,¬g,¬h}.Fig. 1 shows the belief state {a mathematical formula}S={s1,…,s7} and the computation of the successor belief state {a mathematical formula}S′ after executing a in S using the function Φ (Equation (2)). □
+     </paragraph>
+     <paragraph>
+      In the above example, we can observe that S and {a mathematical formula}S′ are the belief states of the CNF-formulae {a mathematical formula}φ=f∨g∨h and {a mathematical formula}φ′=f∨¬g respectively. Clearly, φ and {a mathematical formula}φ′ are more compact than S and {a mathematical formula}S′ respectively. Since each formula encodes a unique belief state, we want to use their compact encoding φ and {a mathematical formula}φ′ instead of the belief states S and {a mathematical formula}S′ of exponential size. This observation leads to the following definition. Let us denote with {a mathematical formula}ζ(⋅) an arbitrary deterministic algorithm to convert an arbitrary formula φ into an equivalent formula {a mathematical formula}ζ(φ) in disjunctive normal form.
+     </paragraph>
+     <paragraph label="Definition 2">
+      A collection {a mathematical formula}R of formulae is a representation of belief states (or representation, for short) if for every belief state S there exists a formula {a mathematical formula}φ∈R such that {a mathematical formula}BS(φ)=S. {a mathematical formula}R is said to be unique if for every pair of α and β in {a mathematical formula}R such that {a mathematical formula}α≡β then {a mathematical formula}ζ(α)=ζ(β).
+     </paragraph>
+     <paragraph>
+      Given a representation {a mathematical formula}R, a formula φ in {a mathematical formula}R is called an {a mathematical formula}R-state. We say that φ represents a belief state S if {a mathematical formula}S=BS(φ). For a set of {a mathematical formula}R-states Γ and a set of belief states Λ, we say that Γ represents Λ if {a mathematical formula}Λ={BS(φ)|φ∈Γ}.
+     </paragraph>
+     <paragraph>
+      Intuitively, a representation specifies the type of formulae that will be used in the encoding of belief states. For example:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The set of all formulae is trivially a representation. This representation is not unique.
+      </list-item>
+      <list-item label="•">
+       The class of binary decision diagrams (BDD) [7] is a representation, since each belief state S can be represented by the formula {a mathematical formula}⋁s∈S(⋀ℓ∈sℓ) and for each formula φ there exists a BDD equivalent to φ. Again, this representation is not unique.
+      </list-item>
+      <list-item label="•">
+       The class of prime implicate formulae is a representation. This representation is unique.
+      </list-item>
+     </list>
+     <paragraph>
+      On the other hand, the set of all conjunctions between literals is not a representation since it is not expressive enough for the encoding of disjunctive information.
+     </paragraph>
+     <paragraph>
+      We will next define a transition function {a mathematical formula}ΦR between {a mathematical formula}R-states that captures the function Φ (Equation (2)) for belief states. In this section, we will denote with {a mathematical formula}R an arbitrary representation, with φ an arbitrary satisfiable {a mathematical formula}R-state, and with a an arbitrary action.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Let {a mathematical formula}R be a representation. A function {a mathematical formula}ΦR that maps pairs composed of an action and an {a mathematical formula}R-state into {a mathematical formula}R-states is said to be a transition function for{a mathematical formula}R if for every {a mathematical formula}R-state φ and for every action a, {a mathematical formula}ΦR(a,φ) represents the belief state {a mathematical formula}Φ(a,BS(φ)), i.e.,{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Definition 3 indicates that if {a mathematical formula}ΦR is a transition function for {a mathematical formula}R and φ represents a belief state S, then {a mathematical formula}ΦR(a,φ) is an {a mathematical formula}R-state {a mathematical formula}φ′ that represents the belief state {a mathematical formula}Φ(a,S). In this case, {a mathematical formula}φ′ is said to be a result of the execution of a in φ, or a successor of φ. Next, we will show how to construct such a function {a mathematical formula}ΦR for efficiently computing a successor {a mathematical formula}R-state {a mathematical formula}φ′ after executing a in φ that could avoid an explicit enumeration of all the states in {a mathematical formula}BS(φ) or {a mathematical formula}BS(φ′) as required by the computation of the function Φ.
+     </paragraph>
+     <paragraph>
+      Observe from Fig. 1 that, to compute the result of execution of action a in state {a mathematical formula}s1, for example, we need to compute {a mathematical formula}e(a,s1). This is the set of literals (in this case, {a mathematical formula}e(a,s1) is the singleton set {a mathematical formula}{¬g}) that must be true in the successor state {a mathematical formula}s1′. The other literals in {a mathematical formula}s1, independent from {a mathematical formula}e(a,s1), will remain the same in {a mathematical formula}s1′. This means that {a mathematical formula}s1′ is obtained by making the minimum change to {a mathematical formula}s1 such that the literals in {a mathematical formula}e(a,s1) become true in the new state {a mathematical formula}s1′. We define the effect of executing an action in a formula as follows.
+     </paragraph>
+     <paragraph label="Definition 4">
+      The effect of executing a in φ, denoted by {a mathematical formula}e(a,φ), is the set of literals defined as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In general, the effect of executing a in φ does not capture the effects of executing a in all states in {a mathematical formula}BS(φ) (e.g., φ in Example 2). This is because the effects of executing an action in different states can be different, as illustrated in the following example.
+     </paragraph>
+     <paragraph label="Example 3">
+      Let us consider again the situation of Fig. 1. The effects of executing a in {a mathematical formula}s1, {a mathematical formula}s3, and {a mathematical formula}s5 are all different. However, one may observe that {a mathematical formula}e(a,s1)=e(a,s2)={¬g}, {a mathematical formula}e(a,s3)=e(a,s4)={¬f,¬g}, and {a mathematical formula}e(a,s5)=e(a,s6)=e(a,s7)={f}. Thus, if we divide {a mathematical formula}BS(φ) into three sets of states {a mathematical formula}S1={s1,s2}, {a mathematical formula}S2={s3,s4}, and {a mathematical formula}S3={s5,s6,s7} (Fig. 2) then for each {a mathematical formula}i∈{1,2,3} and {a mathematical formula}u,v∈Si, we have that {a mathematical formula}e(a,u)=e(a,v).Observe also that {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3 can be represented by the formulae {a mathematical formula}φ1=f∧g, {a mathematical formula}φ2=f∧¬g, and {a mathematical formula}φ3=¬f∧(g∨h) respectively. Moreover, one can check from Fig. 2 that for each {a mathematical formula}s∈BS(φi).e(a,φi)=e(a,s), for {a mathematical formula}i∈{1,2,3}. Let {a mathematical formula}sj′=Φ(a,sj) (for {a mathematical formula}j=1,…,7) and {a mathematical formula}Si′=Φ(a,Si). Let {a mathematical formula}φi′ be the formula obtained by updating {a mathematical formula}φi with the minimum change such that the literals in {a mathematical formula}e(a,φi) become true in the new formula {a mathematical formula}φi′. Intuitively, {a mathematical formula}BS(φi′)=Si′ and hence {a mathematical formula}BS(φ1′)∪BS(φ2′)∪BS(φ3′)=BS(φ′) or {a mathematical formula}φ1′∨φ2′∨φ3′≡φ′. Indeed, it is easy to see that {a mathematical formula}φ1′=f∧¬g, {a mathematical formula}φ2′=¬f∧¬g, {a mathematical formula}φ3=f∧(g∨h) and the disjunction {a mathematical formula}φ1′∨φ2′∨φ3′ can be simplified to the formula {a mathematical formula}φ′. On the other hand, since {a mathematical formula}S=S1∪S2∪S3, we have {a mathematical formula}φ≡φ1∨φ2∨φ3. This result can also be easily verified. Thus, the computation of {a mathematical formula}φ′ includes three major steps as described in Fig. 2. □
+     </paragraph>
+     <paragraph>
+      The transition function {a mathematical formula}ΦR for {a mathematical formula}R will be developed based on three computation steps as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Step 1: Compute the set of {a mathematical formula}R-states {a mathematical formula}{φi|i=1,…,n} such that{a mathematical formula} Compute {a mathematical formula}e(a,φi) for {a mathematical formula}i=1,…,n;
+      </list-item>
+      <list-item label="•">
+       Step 2: For each {a mathematical formula}R-state {a mathematical formula}φi, compute {a mathematical formula}φi′ by updating {a mathematical formula}φi such that every literal in {a mathematical formula}e(a,φi) is true in {a mathematical formula}φi′ and nothing else changes;
+      </list-item>
+      <list-item label="•">
+       Step 3: Convert the disjunction {a mathematical formula}φ1′∨…∨φn′ into an equivalent {a mathematical formula}R-state {a mathematical formula}φ′, i.e., {a mathematical formula}BS(φ′)=BS(φ1′∨…∨φn′).
+      </list-item>
+     </list>
+     <paragraph>
+      To realize the above computation steps, we will need some operations:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}convR: is a function that maps each formula φ of the form {a mathematical formula}φ′∧ψ or {a mathematical formula}φ′∧¬ψ, where {a mathematical formula}φ′ is a {a mathematical formula}R-state and ψ is a consistent set of literals, into an equivalent {a mathematical formula}R-state, i.e.,{a mathematical formula}
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}updateR: {a mathematical formula}R×2F→R is a function that maps each pair of a {a mathematical formula}R-state φ and a consistent set of literals e to an {a mathematical formula}R-state such that{a mathematical formula}
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}mergeR:2R∖{∅}→R is a function that maps each non-empty sets of {a mathematical formula}R-states Γ into an equivalent {a mathematical formula}R-state such that{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, the functions {a mathematical formula}updateR and {a mathematical formula}mergeR are introduced for the computation in the second and third steps, respectively. A precise definition of these two functions will be determined whenever {a mathematical formula}R is given as a concrete representation.
+     </paragraph>
+     <paragraph>
+      We need to show how to compute the set of {a mathematical formula}R-states {a mathematical formula}{φi|i=1,…,n} (Step 1) that satisfies (4). Observe that, for each {a mathematical formula}R-state {a mathematical formula}φi, the effect of executing a in every state in {a mathematical formula}BS(φi) is the same if the truth value of each e-condition ψ of a in every state in {a mathematical formula}BS(φi) is the same, i.e., ψ is known in {a mathematical formula}φi. For example, in Fig. 2, the effects of a in the two states {a mathematical formula}s1={f,g,h} and {a mathematical formula}s2={f,g,¬h} of {a mathematical formula}BS(φ1) are the same ({a mathematical formula}e(a,s1)=e(a,s2)={¬g}) because the first e-condition of a (i.e., f) is true in both {a mathematical formula}s1 and {a mathematical formula}s2, while the other two e-conditions of a (i.e., {a mathematical formula}f∧¬g and ¬f) are false in the both states. Similarly, all the three e-conditions of a are known in {a mathematical formula}φ2 as well as in {a mathematical formula}φ3. On the other hand, {a mathematical formula}e(a,s1)≠e(a,s3) because the second e-condition ({a mathematical formula}f∧¬g) is false in {a mathematical formula}s1 but it is true in {a mathematical formula}s3, making the literal ¬f included in {a mathematical formula}e(a,s3) but not in {a mathematical formula}e(a,s1). We have the following definition.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Let a be an action, φ an {a mathematical formula}R-state, and Γ a set of {a mathematical formula}R-states. We say that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       φ is enabling for a if every e-condition of a is known in φ, i.e., {a mathematical formula}∀ψ∈Ψ(a) either {a mathematical formula}φ⊨ψ or {a mathematical formula}φ⊨¬ψ.
+      </list-item>
+      <list-item label="•">
+       Γ is an enabling form of φ for a if
+      </list-item>
+     </list>
+     <paragraph label="Proposition 4">
+      If φ is enabling for a then{a mathematical formula}∀s∈BS(φ)we have that{a mathematical formula}e(a,s)=e(a,φ).
+     </paragraph>
+     <paragraph>
+      Proposition 4 shows that an enabling form of φ for a satisfies (4). Thus, our goal now is to compute an enabling form of φ for a. The following proposition helps us to achieve this goal.
+     </paragraph>
+     <paragraph label="Proposition 5">
+      Let φ and ψ be two satisfiable formulae such that ψ is unknown in φ. Then,
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}φ∧ψis satisfiable and{a mathematical formula}BS(φ∧ψ)={s|s∈BS(φ),s⊨ψ},
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}φ∧¬ψis satisfiable and{a mathematical formula}BS(φ∧¬ψ)={s|s∈BS(φ),s⊨¬ψ}, and
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}BS(φ∧ψ)∪BS(φ∧¬ψ)=BS(φ).
+      </list-item>
+     </list>
+     <paragraph>
+      Following Proposition 5, if ψ is an e-condition of a unknown in φ, we can replace φ with two formulae {a mathematical formula}φ∧ψ and {a mathematical formula}φ∧¬ψ, in which ψ is known. Since these two formulae may not be in {a mathematical formula}R and we would like to remain in the representation {a mathematical formula}R, we need to convert them into an {a mathematical formula}R-state. We call this process an extension of φ on ψ under {a mathematical formula}R and define it formally as follows.
+     </paragraph>
+     <paragraph label="Definition 6">
+      Let ψ be a consistent set of literals. The extension of φ on ψ under{a mathematical formula}R, denoted by {a mathematical formula}φ⊕Rψ, is defined by{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      It is easy to see that if ψ is the only e-condition of action a, then the extension of φ on ψ is an enabling form of φ for a. Since an action may have multiple e-conditions, we need to extend φ recursively on every e-condition of the action. We generalize Definition 6 for a sequence of consistent sets of literals as follows.
+     </paragraph>
+     <paragraph label="Definition 7">
+      Let {a mathematical formula}Ψ=〈ψ1,…,ψn〉 be an n-tuple of consistent sets of literals. The extension of φ on Ψ under{a mathematical formula}R, denoted by {a mathematical formula}φ⊕RΨ, is defined by{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Intuitively, if Ψ is an enumeration of {a mathematical formula}Ψ(a) then {a mathematical formula}φ⊕RΨ is an enabling form of φ for a. This is proved in the next proposition.
+     </paragraph>
+     <paragraph label="Proposition 6">
+      Let{a mathematical formula}〈ψ1,…,ψn〉be an enumeration of{a mathematical formula}Ψ(a)and let φ be a satisfiable{a mathematical formula}R-state. Then{a mathematical formula}φ⊕R〈ψ1,…,ψn〉is an enabling form of φ for a and every{a mathematical formula}R-state in this set is satisfiable.
+     </paragraph>
+     <paragraph>
+      Proposition 6 allows us to compute an enabling form of an arbitrary {a mathematical formula}R-state φ for an arbitrary action a. Observe that the enabling form of an {a mathematical formula}R-state φ is a set of {a mathematical formula}R-states, each representing a set of states that agree on every e-condition of a, and the union of such sets is equal to the belief state of φ. However, an {a mathematical formula}R-state may have multiple enabling forms of different sizes. For example, let us replace {a mathematical formula}φ3 in Fig. 2 with two CNF-states: (1){a mathematical formula}φ4=¬f∧g, that represents the set of the first two states in {a mathematical formula}S3, and (2){a mathematical formula}φ5=¬f∧¬g∧h, that represents the singleton set of the last state in {a mathematical formula}S3. The set {a mathematical formula}{φ1,φ2,φ4,φ5} is an enabling form of φ for a. As another example, let {a mathematical formula}φ6=¬f∧h, that represents the set of the first state and the last state in {a mathematical formula}S3, then {a mathematical formula}{φ1,φ2,φ4,φ5,φ6} is another enabling form of φ for a.
+     </paragraph>
+     <paragraph>
+      However, it is easy to see that there does not exist an enabling form of φ for a in Example 2 that contains less than three formulae; if an enabling form of φ for a contains three formulae, then each of those formulae will represent a different belief state among {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3. This means that any enabling form of φ for a that contains a minimum number of formulae represents the same set of belief states {a mathematical formula}{S1,S2,S3}. Next, we will show that, among all enabling forms of φ for a, {a mathematical formula}φ⊕RΨ (where Ψ is an arbitrary enumeration of {a mathematical formula}Ψ(a)) contains the minimum number of {a mathematical formula}R-states.
+     </paragraph>
+     <paragraph label="Theorem 1">
+      Let{a mathematical formula}Ψ=〈ψ1,…,ψn〉be an enumeration of{a mathematical formula}Ψ(a). Then,{a mathematical formula}φ⊕RΨcontains the minimum number of{a mathematical formula}R-states among all the enabling forms of φ for a.
+     </paragraph>
+     <paragraph>
+      We use {a mathematical formula}enbR(a,φ) to denote {a mathematical formula}φ⊕R〈ψ1,…,ψn〉 for some enumeration {a mathematical formula}〈ψ1,…,ψn〉 of {a mathematical formula}Ψ(a), where the order {a mathematical formula}ψi in the enumeration is immaterial. We are now ready to define {a mathematical formula}ΦR, a transition function for {a mathematical formula}R representation.
+     </paragraph>
+     <paragraph label="Definition 8">
+      The execution of a in φ results in an {a mathematical formula}R-state, denoted by {a mathematical formula}ΦR(a,φ), defined by:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Theorem 2">
+      {a mathematical formula}ΦRdefined inDefinition 8is a transition function for{a mathematical formula}R.
+     </paragraph>
+     <paragraph>
+      Similarly to the manner in which the function {a mathematical formula}Φˆ is defined by extending the function Φ, we are going to define an extension of {a mathematical formula}ΦR, denoted by {a mathematical formula}ΦRˆ, to reason about the results of plans. {a mathematical formula}ΦRˆ maps each pair composed of an actions sequence and an {a mathematical formula}R-state to an {a mathematical formula}R-state.
+     </paragraph>
+     <paragraph label="Definition 9">
+      For every {a mathematical formula}R-state φ and for every sequence of actions {a mathematical formula}αn=[a1,…,an]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}n=0 then {a mathematical formula}ΦRˆ([],φ)=φ;
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}n&gt;0 then {a mathematical formula}ΦRˆ(αn,φ)=ΦR(an,ΦRˆ(αn−1,φ)) where {a mathematical formula}αn−1=[a1,…,an−1] and {a mathematical formula}ΦR(a,undefined)=undefined for every action a.
+      </list-item>
+     </list>
+     <paragraph>
+      We have the following theorem.
+     </paragraph>
+     <paragraph label="Theorem 3">
+      Let{a mathematical formula}αn=[a1,…,an]be a sequence of actions. Then{a mathematical formula}ΦRˆ(αn,φ)represents the belief state{a mathematical formula}Φˆ(αn,BS(φ)), i.e.,{a mathematical formula}BS(ΦRˆ(αn,φ))=Φˆ(αn,BS(φ)).
+     </paragraph>
+     <paragraph>
+      Theorem 2, Theorem 3 show that {a mathematical formula}ΦR and {a mathematical formula}ΦRˆ capture correctly the functions Φ and {a mathematical formula}Φˆ, respectively. Thus, {a mathematical formula}ΦR and {a mathematical formula}ΦRˆ can be used in the implementation of search based conformant planners employing the representation {a mathematical formula}R. For later discussions, we include a generic algorithm for planning using a representation {a mathematical formula}R (Algorithm 1).
+     </paragraph>
+     <paragraph>
+      We next present a generic way for computing {a mathematical formula}ΦR for an arbitrary representation {a mathematical formula}R. From Definition 8 and Theorem 2, if a is executable in φ then {a mathematical formula}ΦR(a,φ) can be computed using the following steps:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Compute {a mathematical formula}enbR(a,φ) and {a mathematical formula}e(a,γ) for each {a mathematical formula}γ∈enbR(a,φ);
+      </list-item>
+      <list-item label="2.">
+       Compute {a mathematical formula}updateR(γ,e(a,γ)) for each {a mathematical formula}γ∈enbR(a,φ);
+      </list-item>
+      <list-item label="3.">
+       Merge {a mathematical formula}updateR(γ,e(a,γ)), where {a mathematical formula}γ∈enbR(a,φ) to create {a mathematical formula}ΦR(a,φ).
+      </list-item>
+     </list>
+     <paragraph>
+      The functions {a mathematical formula}updateR and {a mathematical formula}mergeR depend on the specific representation. The computation of {a mathematical formula}enbR(a,φ) requires the computation of {a mathematical formula}⊕R which is implemented by the procedure {a mathematical formula}extendingR(φ,effect,ψ→η) (Algorithm 2). Specifically, the procedure takes as input an {a mathematical formula}R-state φ, a set of literals effect, and a conditional effect {a mathematical formula}a:ψ→η. It returns a set of pairs of the form {a mathematical formula}〈γ,e(γ)〉 where {a mathematical formula}γ∈φ⊕Rψ and {a mathematical formula}e(γ)=effect∪η if {a mathematical formula}γ⊨ψ. Intuitively, {a mathematical formula}e(γ) is used to compute {a mathematical formula}e(a,γ) for {a mathematical formula}γ∈enb(a,φ). Observe that this procedure uses {a mathematical formula}convR, that is dependent on the specific representation chosen.
+     </paragraph>
+     <paragraph>
+      For our discussion in the later part of the paper, we observe that the time complexity of Algorithm 2 depends on the following factors:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       The time for checking the entailment {a mathematical formula}φ⊨ψ and {a mathematical formula}φ⊨¬ψ which result in at most two satisfiability tests (Line 3);
+      </list-item>
+      <list-item label="2.">
+       The time complexity of computing {a mathematical formula}convR(φ∧ψ) (Line 9); and
+      </list-item>
+      <list-item label="3.">
+       The time complexity of computing {a mathematical formula}convR(φ∧¬ψ) (Line 11).
+      </list-item>
+     </list>
+     <paragraph>
+      Algorithm 3 describes the computation of the set {a mathematical formula}enbR(a,φ).
+     </paragraph>
+     <paragraph label="Proposition 7">
+      For an{a mathematical formula}R-state φ and an action a,{a mathematical formula}enablingR(a,φ)returns{a mathematical formula}{〈γ,e(a,γ)〉|γ∈enbR(a,φ)}.
+     </paragraph>
+     <paragraph>
+      It is easy to see that the time complexity of {a mathematical formula}enablingR(a,φ) depends on that of {a mathematical formula}extendingR and, thus, on the satisfiability test in a given representation and on the function {a mathematical formula}convR. It also depends on the number of conditional effects of a (Lines 6–12).
+     </paragraph>
+     <paragraph>
+      The transition function {a mathematical formula}ΦR(a,φ) is implemented in the procedure {a mathematical formula}phiR(a,φ).
+     </paragraph>
+     <paragraph>
+      The correctness of the above algorithm is a natural consequence of Proposition 7 and Definition 8.
+     </paragraph>
+     <paragraph label="Observation 1">
+      For an{a mathematical formula}R-state φ and an action a, the procedure{a mathematical formula}phiR(a,φ)returns{a mathematical formula}φsucc=ΦR(a,φ).
+     </paragraph>
+     <paragraph>
+      We can observe in Algorithm 4 that the number of calls to the {a mathematical formula}updateR function, and hence the size of the set Y in the call of {a mathematical formula}mergeR (Line 12), depends on the number of elements in the enabling form of φ for a. After the application of {a mathematical formula}⊕R on an {a mathematical formula}R-state γ and an e-condition ψ of a, we obtain a set with at most two {a mathematical formula}R-states, when ψ is unknown in γ. Hence, {a mathematical formula}enbR(a,φ) contains at most {a mathematical formula}2k{a mathematical formula}R-states, where k is the number of e-conditions of a that are unknown in φ. However, the number of {a mathematical formula}R-states in {a mathematical formula}enbR(a,φ) can be much smaller than {a mathematical formula}2k. The reason is that an e-condition {a mathematical formula}ψi of a unknown in φ could be known in some elements of {a mathematical formula}φ⊕R〈ψ1,…,ψj〉 even though {a mathematical formula}ψi is not in the sequence {a mathematical formula}〈ψ1,…,ψj〉.
+     </paragraph>
+     <paragraph>
+      For example, consider {a mathematical formula}φ=f∨g, {a mathematical formula}ψ1=¬f, and {a mathematical formula}ψ2=g. Clearly, {a mathematical formula}ψ1 and {a mathematical formula}ψ2 are both unknown in φ. We have {a mathematical formula}φ⊕Rψ1={convR((f∨g)∧¬f),convR((f∨g)∧f)}. Observe that {a mathematical formula}(f∨g)∧¬f≡¬f∧g and {a mathematical formula}(f∨g)∧f≡f. Since {a mathematical formula}ψ2=g is known (true) in {a mathematical formula}¬f∧g, it is known in one of the two elements in {a mathematical formula}φ⊕Rψ1. This implies that {a mathematical formula}φ⊕R〈ψ1,ψ2〉 contains only three elements instead of 2{sup:2} elements. As another example, in Fig. 2, there are three e-conditions of a unknown in φ but an enabling form of φ for a contains only three elements instead of 2{sup:3} elements.
+     </paragraph>
+     <paragraph>
+      In the worst case, {a mathematical formula}enbR(a,φ) will contain {a mathematical formula}2k elements. Nevertheless, it still has the smallest number of formulae among all enabling forms of φ for a, as proved in Theorem 1. This means that the cost of computing {a mathematical formula}ΦR(a,φ) can be exponential in the number of unknown e-conditions of a (in the worst case). This is understandable, since the problem of checking whether a proposition holds after the execution of an action in presence of incomplete information is a co-NP complete problem [3].
+     </paragraph>
+     <paragraph>
+      In summary, given a representation {a mathematical formula}R and an implementation of its operations, a conformant planner can be implemented by providing the concrete implementation of {a mathematical formula}convR, {a mathematical formula}updateR, and {a mathematical formula}mergeR and by using Algorithm 1, Algorithm 2, Algorithm 3, Algorithm 4. From the above discussion, the performance of the planner could be affected by the following properties of the representation {a mathematical formula}R:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       How expensive is the satisfiability checking of {a mathematical formula}φ∧ψ where φ is an {a mathematical formula}R-state and ψ is a set of literals?
+      </list-item>
+      <list-item label="•">
+       Is {a mathematical formula}R a unique representation?
+      </list-item>
+      <list-item label="•">
+       How efficient can the operations {a mathematical formula}convR, {a mathematical formula}updateR, and {a mathematical formula}mergeR be implemented?
+      </list-item>
+     </list>
+    </section>
+    <section label="4">
+     <section-title>
+      Three representations of belief states for conformant planning
+     </section-title>
+     <paragraph>
+      In this section, we will present three different representations of belief states, that are collections of DNF and CNF formulae satisfying certain properties, and the application of these representations in conformant planning. We will show how the theory developed in the previous section can be instantiated in the development of a complete transition function for each of the proposed representations. In particular, for each representation {a mathematical formula}R being considered, we will provide a precise definition of the operations {a mathematical formula}convR, {a mathematical formula}updateR, and {a mathematical formula}mergeR and describe a conformant planner that is obtained from the instantiation of the concrete implementation of these operations in Algorithm 1, Algorithm 2, Algorithm 3, Algorithm 4.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Minimal-DNF representation
+      </section-title>
+      <paragraph>
+       We start with the investigation of the minimal-DNF representation, denoted by μDNF, which is a collection of disjunctive normal form (DNF) formulae satisfying some desirable properties.
+      </paragraph>
+      <section label="4.1.1">
+       The μDNF representation and its operations
+       <paragraph>
+        Let us start with some auxiliary notations. A set of literals δ is called a partial state if δ is consistent. A set of sets of literals Δ represents the DNF formula {a mathematical formula}⋁δ∈Δ(⋀ℓ∈δℓ). We often use upper and lower case Greek letters to denote a DNF formula and a set of literals, respectively.
+       </paragraph>
+       <paragraph label="Definition 10">
+        A DNF formula Δ is said to be minimal if, for every {a mathematical formula}δ∈Δ, δ is a partial state (consistent) and there exists no {a mathematical formula}δ′∈Δ such that {a mathematical formula}δ′⊊δ.
+       </paragraph>
+       <paragraph>
+        It is easy to see that every belief state can be viewed as a minimal-DNF formula.
+       </paragraph>
+       <paragraph label="Definition 11">
+        The minimal-DNF representation, denoted by μDNF-representation, is the collection of minimal-DNF formulae. A μDNF-state is a minimal-DNF formula.
+       </paragraph>
+       <paragraph>
+        The next example illustrates the above definitions.
+       </paragraph>
+       <paragraph label="Example 4">
+        Let us consider a domain with three propositions f, g, and h.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}{f,¬g} is a partial state but {a mathematical formula}{f,g,¬g} is not since it is inconsistent.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Δ1={{f,¬g},{f,g,¬g}} is a DNF-formula but it is not a μDNF-state since it contains the element {a mathematical formula}{f,g,¬g} which is not a partial state. Observe that, if we remove the inconsistent set from {a mathematical formula}Δ1, then we obtain the μDNF-state {a mathematical formula}{{f,¬g}} which is equivalent to {a mathematical formula}Δ1.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{{f}} is a μDNF-state but {a mathematical formula}Δ2={{f},{f,¬g}} is not as {a mathematical formula}{f}⊂{f,¬g}. If we remove {a mathematical formula}{f,¬g} from {a mathematical formula}Δ2 then we obtain the μDNF-state {a mathematical formula}{{f}}.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{{f,g,¬h},{f,g,h}} is a μDNF-state. Furthermore, this μDNF-state is equivalent to the μDNF-state {a mathematical formula}{{f,g}}. Both represent the formula {a mathematical formula}f∧g.
+        </list-item>
+       </list>
+       <paragraph>
+        The last item in the above example shows that a formula can be represented by different μDNF-states. As such, the μDNF-representation is not unique. The following function converts a DNF formula into an equivalent μDNF-state.
+       </paragraph>
+       <paragraph label="Definition 12">
+        Let Δ be a DNF formula. We define
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}refine(Δ)={δ|δ∈Δ,δ is consistent};
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}min(Δ)={δ|δ∈Δ∧∄δ′∈Δ.δ′⊊δ}; and
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}μ(Δ)=min(refine(Δ)).
+        </list-item>
+       </list>
+       <paragraph>
+        We prove that μ can be used to convert a DNF formula to a μDNF-state.
+       </paragraph>
+       <paragraph label="Proposition 8">
+        For every DNF formula Δ,{a mathematical formula}μ(Δ)is a μDNF-state equivalent to Δ.
+       </paragraph>
+       <paragraph label="Example 5">
+        For {a mathematical formula}Δ={{f},{f,¬g},{f,g,¬g}}, we have that{a mathematical formula} and{a mathematical formula} We can observe that {a mathematical formula}{{f}} is a μDNF-state equivalent to Δ, with a significantly smaller size.
+       </paragraph>
+       <paragraph>
+        In what follows we will show the relation of a partial state to its belief state.
+       </paragraph>
+       <paragraph label="Proposition 9">
+        Let δ be a partial state. Then,
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}BS(δ)={s|sis a state, andδ⊆s}.
+        </list-item>
+        <list-item label="2.">
+         δ contains the smallest number of literals among those that represent the belief state{a mathematical formula}BS(δ).
+        </list-item>
+       </list>
+       <paragraph>
+        We next define the functions {a mathematical formula}convμDNF, {a mathematical formula}updateμDNF, and {a mathematical formula}mergeμDNF. For a μDNF-state Δ and a set of literals ψ, {a mathematical formula}convμDNF should map {a mathematical formula}Δ∧γ, where γ is either ψ or ¬ψ, to an equivalent μDNF-state (Definition 6). The idea is to transform {a mathematical formula}Δ∧γ into a DNF formula, then use the function μ to convert it into a μDNF-state. Thanks to the distributivity of ∧ over ∨, we have that {a mathematical formula}Δ∧γ≡{δ∧γ|δ∈Δ}. Hence, we need to convert each {a mathematical formula}δ∧γ to some set(s) of literals. When {a mathematical formula}γ=ψ, we have that {a mathematical formula}δ∧ψ is equivalent to {a mathematical formula}δ∪ψ. When {a mathematical formula}γ=¬ψ, we observe that {a mathematical formula}δ∧¬ψ is equivalent to δ if {a mathematical formula}δ⊨¬ψ, i.e., {a mathematical formula}δ∩ψ‾≠∅, and {a mathematical formula}δ∧¬ψ is equivalent to the DNF formula {a mathematical formula}{δ∧ℓ‾|ℓ∈ψ} otherwise. Note that, if {a mathematical formula}δ⊨ψ, then {a mathematical formula}ψ⊆δ and {a mathematical formula}δ∧¬ψ is unsatisfiable but still equivalent to {a mathematical formula}{δ∧ℓ‾|ℓ∈ψ}, since each {a mathematical formula}δ∧ℓ‾ in this DNF formula is inconsistent.
+       </paragraph>
+       <paragraph label="Definition 13">
+        Let Δ be a μDNF-state and ψ be a consistent set of literals. We define{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        It is easy to see that {a mathematical formula}convμDNF(Δ∧ψ) and {a mathematical formula}convμDNF(Δ∧¬ψ) are μDNF-states, because of the consistency of ψ and the fact that Δ is a μDNF-state. The next proposition proves that {a mathematical formula}convμDNF satisfies the condition in Equation (5).
+       </paragraph>
+       <paragraph label="Proposition 10">
+        Let Δ be a μDNF-state and ψ be a consistent set of literals. Then,
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}convμDNF(Δ∧ψ)is a μDNF-state equivalent to{a mathematical formula}Δ∧ψ.
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}convμDNF(Δ∧¬ψ)is a μDNF-state equivalent to{a mathematical formula}Δ∧¬ψ.
+        </list-item>
+       </list>
+       <paragraph>
+        Thus, {a mathematical formula}convμDNF satisfies the conditions required in Equation (5), i.e., it converts the formulae {a mathematical formula}Δ∧ψ and {a mathematical formula}Δ∧¬ψ to μDNF-state. We note that {a mathematical formula}convμDNF is not a total function but it is sufficient for our purpose in this paper.
+       </paragraph>
+       <paragraph>
+        Our next task is to define the update function {a mathematical formula}updateμDNF that maps each pair of an {a mathematical formula}R-state φ and a consistent set of literals e to an {a mathematical formula}R-state and satisfies Equation (6). Intuitively, updating a μDNF-state can be done by updating every partial state in it, as a μDNF-state is a disjunctive set of partial states. This leads to the following definition.
+       </paragraph>
+       <paragraph label="Definition 14">
+        Let Δ be a μDNF-state and ψ be a consistent set of literals. {a mathematical formula}updateμDNF(Δ,ψ) is defined as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        As expected, we have the following proposition which confirms that {a mathematical formula}updateμDNF satisfies Equation (6).
+       </paragraph>
+       <paragraph label="Proposition 11">
+        Let Δ be a μDNF-state and ψ be a consistent set of literals. Then,{a mathematical formula}updateμDNF(Δ,ψ)is a μDNF-state and{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Following Proposition 1, merging a set of μDNF-states into a single μDNF-state can be easily defined as follows.
+       </paragraph>
+       <paragraph label="Definition 15">
+        Let Γ be a set of μDNF-states. The operation {a mathematical formula}mergeμDNF is defined as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The following proposition shows that {a mathematical formula}mergeμDNF satisfies condition (7).
+       </paragraph>
+       <paragraph label="Proposition 12">
+        Let Γ be a set of μDNF-states. Then{a mathematical formula}mergeμDNF(Γ)is a μDNF-state and{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        With the introduction of Definition 13, Definition 14, Definition 15, along with the respective Proposition 10, Proposition 11, Proposition 12, we have a precise definition of {a mathematical formula}ΦμDNF whose correctness is proved in Theorem 2. For a better understanding of how {a mathematical formula}ΦμDNF works, we consider the following example.
+       </paragraph>
+       <paragraph label="Example 6">
+        Let us consider a domain {a mathematical formula}F={f,g,h,k}, a μDNF-state {a mathematical formula}Δ={{f,g},{g,¬h}}, and an action a with {a mathematical formula}pre(a)={True} and {a mathematical formula}Ca={f→¬g,h→f,{f,h}→k}. Let us compute {a mathematical formula}ΦμDNF(a,Δ).First, we need to compute {a mathematical formula}enbμDNF(a,Δ) and {a mathematical formula}e(a,Δ′) for {a mathematical formula}Δ′∈enbμDNF(a,Δ) using Algorithm 3. We have that {a mathematical formula}Ψ(a)={{f},{h},{f,h}}. It is easy to see that none of the e-conditions in {a mathematical formula}Ψ(a) is known in Δ. Let us assume that the conditional effects of a are introduced in the given order in the computation of {a mathematical formula}enbμDNF(a,Δ). We start with the conditional effect {a mathematical formula}a:f→¬g and {a mathematical formula}e(a,Δ) is initialized with the empty set. Since f is unknown in Δ, the first application of {a mathematical formula}⊕μDNF returns two μDNF-states {a mathematical formula}Δ1=convμDNF(Δ∧{f}) and {a mathematical formula}Δ2=convμDNF(Δ∧¬{f}). Using Definition 13, we have{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Now we obtain the set of two μDNF-states {a mathematical formula}Δ1={{f,g}} and {a mathematical formula}Δ2={{¬f,g,¬h}}. We continue with the second conditional effect {a mathematical formula}a:h→f. Since h is unknown in {a mathematical formula}Δ1, {a mathematical formula}Δ1⊕μDNFh results in the following:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Since {a mathematical formula}Δ2⊨¬h, {a mathematical formula}Δ2⊕μDNF¬h={Δ2} and we obtain the set {a mathematical formula}{Δ2,Δ3,Δ4}.We are left with the conditional effect {a mathematical formula}{f,h}→k. Observe that {a mathematical formula}{f,h} is known in all three μDNF-states {a mathematical formula}Δ2, {a mathematical formula}Δ3, and {a mathematical formula}Δ4. As such, the application of {a mathematical formula}⊕μDNF does not change the set of μDNF-states and we have that {a mathematical formula}enbμDNF(a,Δ)={Δ2,Δ3,Δ4}. Observe that among these μDNF-state, only {a mathematical formula}Δ3 satisfies {a mathematical formula}{f,h}. Hence, {a mathematical formula}e(a,Δ3)={f,¬g}∪{k}={f,¬g,k} and {a mathematical formula}e(a,Δ2) and {a mathematical formula}e(a,Δ4) do not change.Updating the obtained set of μDNF-states w.r.t. the corresponding effect of executing a, we have{a mathematical formula}{a mathematical formula}{a mathematical formula} Now, we are ready to compute {a mathematical formula}ΦμDNF(a,Δ):{a mathematical formula}  □
+       </paragraph>
+       <paragraph>
+        In Section 3, we proved that {a mathematical formula}enbμDNF(a,Δ) contains the minimum number of μDNF-states among the enabling forms of Δ for a. Thus, Algorithm 4 only needs to make a minimal number of calls to {a mathematical formula}updateμDNF as well as to pass the minimum number of μDNF-states to the {a mathematical formula}mergeμDNF function. In turn, we observe that {a mathematical formula}updateμDNF and {a mathematical formula}mergeμDNF also consider each partial state in each μDNF-state. Hence, the performance of {a mathematical formula}ΦμDNF also depends on the total number of partial states of all μDNF-states in {a mathematical formula}enbμDNF(a,Δ).
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       Dnf: a conformant planner using the μDNF representation
+       <paragraph>
+        It is easy to see that the operators {a mathematical formula}convμDNF, {a mathematical formula}updateμDNF, and {a mathematical formula}mergeμDNF can be implemented using set operations. They can then be used in Algorithm 2, Algorithm 3, Algorithm 4 for computing {a mathematical formula}ΦμDNF. Algorithm 1 can then be instantiated using these functions. The planner Dnf is an implementation of Algorithm 1 with the μDNF representation and the function {a mathematical formula}phiμDNF which is the concrete implementation of {a mathematical formula}phiR for the μDNF representation.
+       </paragraph>
+       <paragraph>
+        We implemented the Dnf planner by modifying the CpA system [29], [38]. This choice allows Dnf to make use of several preprocessing techniques developed in CpA, including backward-chaining, forward-chaining, and one-of combination for reducing the size of the DNF formula representing the initial belief state.
+       </paragraph>
+       <paragraph>
+        We use two heuristic functions in the implementation of Dnf. Given a μDNF-state Δ, the heuristic functions used in Dnf are built on the following values:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}hgoal(Δ): the number of subgoals satisfied by Δ;
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}hcard(Δ): the number of partial states contained in Δ (i.e., the cardinality of Δ);
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}hlit(Δ): the number of known literals in Δ;
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}hdis(Δ): the square distance from Δ to the goal, defined by{a mathematical formula} where G is the goal of the problem.
+        </list-item>
+       </list>
+       <paragraph>
+        We note that the first two values are inspired by CpA and other planners, the number of known literals helps in reducing the uncertainty and the size of the μDNF-state. The last feature aims at promoting μDNF-states in which the satisfaction of goals among its partial states is uniform.
+       </paragraph>
+       <paragraph>
+        The first heuristic function used in Dnf is defined by the triple:{a mathematical formula} and the second heuristic function has the form{a mathematical formula} These functions are used in lexicographical order.
+       </paragraph>
+       <paragraph>
+        We conclude the section with a brief discussion on the time complexity of the function {a mathematical formula}phiμDNF. To keep the paper within a reasonable size, we omit the full discussion of the complexity results. Readers interested in the detailed proofs of these results are referred to [32].
+       </paragraph>
+       <paragraph>
+        Given a μDNF-state Δ and a consistent set of literals ψ, the time complexity for the implementation of {a mathematical formula}convμDNF, {a mathematical formula}updateμDNF, and {a mathematical formula}mergeμDNF depend on the size of Δ, which in turn depends on the size of the set of propositions and the size of ψ. To simplify the discussion, let us assume that {a mathematical formula}|Δ|≥|ψ|. Let n be the number of propositions in the domain. We can easily check that the computation of {a mathematical formula}convμDNF(Δ∧ψ) can be realized with a worst-case time complexity of {a mathematical formula}O(|Δ|2) and the size of {a mathematical formula}convμDNF(Δ∧ψ) is at most the size of Δ. On the other hand, computing {a mathematical formula}convμDNF(Δ∧¬ψ) has the worst-case time complexity of {a mathematical formula}O(|ψ|2×|Δ|2) and the size of {a mathematical formula}convμDNF(Δ∧¬ψ) is at most {a mathematical formula}|ψ|×|Δ|.
+       </paragraph>
+       <paragraph>
+        Similarly, we can show that {a mathematical formula}updateμDNF(Δ,ψ) and {a mathematical formula}mergeμDNF(Γ) can be implemented by algorithms with worst-case time complexity {a mathematical formula}|Δ|2 and {a mathematical formula}(ΣΔ∈Γ|Δ|)2, respectively.
+       </paragraph>
+       <paragraph>
+        One advantage of the μDNF representation is that the satisfiability test {a mathematical formula}Δ⊨ψ can be done in linear time in the size of {a mathematical formula}|Δ|, where Δ is a μDNF-state and ψ is a set of literals. A disadvantage of this representation lies in that the size of a μDNF-state can be exponential in n. Algorithm 2 (Lines 8–14) indicates that a call to this function is needed only when ψ is unknown in Δ. The result of Algorithm 3 ({a mathematical formula}enbμDNF(a,Δ)) is of size exponential in the number of e-conditions of a that are unknown in Δ. These observations, together with the observations about the time complexity of Algorithm 2, Algorithm 3, Algorithm 4, allow us to prove that the time complexity of {a mathematical formula}ΦμDNF(a,Δ) is {a mathematical formula}O(n|Δ|2(1+r)2k), where k is the number of e-conditions of a that are unknown in Δ and r is the size of the largest e-condition of a.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Minimal-CNF representation
+      </section-title>
+      <paragraph>
+       We will now present another representation, called minimal-CNF (μCNF), which is a set of conjunctive normal (CNF) formulae that satisfy certain compactness criteria. As with the μDNF representation, we will discuss the basic operations of μDNF and instantiate them into a planner.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Background: CNF formulae and preprocessing techniques
+       </section-title>
+       <paragraph>
+        A clause is a disjunction of literals. A CNF formula is a conjunction of clauses. A CNF formula is often described as a set of clauses, while a clause can be described by a set of literals. A clause is said to be trivial if it contains the set {a mathematical formula}{ℓ,ℓ‾} for some literal ℓ. Removing the trivial clause(s) from a CNF formula φ results in a CNF formula equivalent to φ.
+       </paragraph>
+       <paragraph>
+        A unit clause is a singleton set, i.e., it contains only one literal. The literal in a unit clause is called a unit literal. Let α and β be two clauses. We say that α subsumes β if {a mathematical formula}α⊂β. A clause is said to be subsumed by a CNF formula if it is subsumed by some clause in the CNF formula. A CNF formula φ can be simplified into an equivalent CNF formula by removing from φ the clause(s) subsumed by another clause in φ. This technique is called subsumption. Given a CNF formula φ, by {a mathematical formula}r(φ) we denote the equivalent CNF formula obtained by removing from φ every clause that is trivial or subsumed by another clause in φ. If {a mathematical formula}φ=r(φ) then φ is said to be a reduced CNF formula.
+       </paragraph>
+       <paragraph label="Proposition 13">
+        Let φ be a CNF formula, α and β be two clauses. Then
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}r(φ∪{α})=r(r(φ)∪{α})
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}r(r(r(φ)∪{α})∪{β})=r(r(r(φ)∪{β})∪{α})
+        </list-item>
+       </list>
+       <paragraph>
+        Let φ be a CNF formula and let α be a clause such that {a mathematical formula}φ⊨α. α is called an implicate of φ. If there are clause(s) in φ that are subsumed by α then φ can be simplified into an equivalent CNF formula by replacing all of the clauses in the set {a mathematical formula}{β|β∈φ∧α⊂β} in φ with the single clause α.
+       </paragraph>
+       <paragraph>
+        Observe that if {a mathematical formula}{ℓ} is a unit clause of φ, then φ can be simplified by removing from φ every clause α that contains ℓ since α is subsumed by ℓ. On the other hand, if a clause β in φ contains {a mathematical formula}ℓ¯ then β can be shortened to {a mathematical formula}β′=β∖{ℓ¯} because {a mathematical formula}ℓ¯ is false in φ. Thus, φ can be simplified by replacing β with {a mathematical formula}β′. If {a mathematical formula}|β|=2 then {a mathematical formula}β′ is a unit clause. The formula now can be simplified w.r.t. the new unit clause {a mathematical formula}β′. This process is referred to as unit propagation.
+       </paragraph>
+       <paragraph>
+        Let α and β be two clauses. α is said to be resolvable with β if there exists a literal ℓ such that {a mathematical formula}ℓ∈α, {a mathematical formula}ℓ‾∈β, and {a mathematical formula}(α∖{ℓ})∪(β∖{ℓ¯}) is a nontrivial clause. In this case, we say that α is resolvable with β on ℓ and {a mathematical formula}(α∖{ℓ})∪(β∖{ℓ¯}) is called the resolvent of α and β, denoted by {a mathematical formula}α|β. One can prove that {a mathematical formula}α∧β⊨α|β. If α and β belong to a CNF formula φ then {a mathematical formula}α|β is called a resolvent of φ. It is easy to see that {a mathematical formula}α|β is also an implicate of φ. If there exist in φ a clause that is subsumed by {a mathematical formula}α|β then φ can be simplified to an equivalent CNF formula by removing from φ every clause subsumed by {a mathematical formula}α|β and adding {a mathematical formula}α|β to the resulting formula. This technique is referred to as subsumable resolution.
+       </paragraph>
+       <paragraph>
+        Let us consider two CNF formulae {a mathematical formula}φ={α1,…,αn} and {a mathematical formula}ψ={β1,…,βm}. The cross-product of φ and ψ, denoted by {a mathematical formula}φ×ψ, is the CNF formula defined by {a mathematical formula}φ×ψ={α∪β|α∈φ,β∈ψ}. Observe that × is nothing but a standard transformation of disjunction of CNF formulae into an equivalent CNF formula. Since × is commutative and associative, we generalize the definition of × to a set of CNF formulae {a mathematical formula}Ψ={φ1,…,φn}, called cross-product of Ψ and denoted by {a mathematical formula}×[Ψ], as follows:{a mathematical formula} We have that {a mathematical formula}×[Ψ] is a CNF formula and {a mathematical formula}×[Ψ]≡⋁ψi∈Ψψi. The reduced-cross-product of φ and ψ, denoted by {a mathematical formula}φ⊗ψ, is the reduced CNF formula defined by{a mathematical formula} We can prove the following property of ⊗.
+       </paragraph>
+       <paragraph label="Proposition 14">
+        Let φ,{a mathematical formula}ψ1, and{a mathematical formula}ψ2be three CNF formulae. Then,{a mathematical formula}(φ⊗ψ1)⊗ψ2=(φ⊗ψ2)⊗ψ1.
+       </paragraph>
+       <paragraph>
+        Proposition 14 allows us to define the reduced-cross-product of a set of CNF formulae {a mathematical formula}Ψ={φ1,…,φn}, denoted by {a mathematical formula}⊗[Ψ], as {a mathematical formula}⊗[Ψ]=φ1⊗φ2⊗⋯⊗φn. One can easily prove the correctness of the following observation.
+       </paragraph>
+       <paragraph label="Observation 2">
+        Let{a mathematical formula}Ψ={φ1,…,φn}be a set of CNF formulae. Then{a mathematical formula}⊗[Ψ]is a reduced CNF formula and{a mathematical formula}⊗[Ψ]≡φ1∨…∨φn.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       The μCNF representation and its operations
+       <paragraph>
+        Let us start with the notion of minimal-CNF formulae.
+       </paragraph>
+       <paragraph label="Definition 16">
+        A CNF formula φ is said to be minimal if φ is a reduced CNF formula and there is no resolvent of φ that subsumes a clause in φ.
+       </paragraph>
+       <paragraph>
+        A minimal-CNF formula is a reduced CNF formula that cannot be simplified using the subsumable resolution technique. The properties of the function {a mathematical formula}r(⋅) (Proposition 13) allow us to define a recursive function, denoted by {a mathematical formula}μCNF, that maps a CNF formula to a minimal-CNF formula as follows.
+       </paragraph>
+       <paragraph label="Definition 17">
+        Let φ be a CNF formula. {a mathematical formula}μCNF(φ) denotes the CNF formula defined as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph label="Example 7">
+        Given a CNF formula{a mathematical formula} After removing the only trivial clause in φ (the first clause), we obtain{a mathematical formula} After removing the subsumed clauses from {a mathematical formula}φ1, i.e., the first two clauses in {a mathematical formula}φ1, which are subsumed by the third and fourth clauses respectively, we are left with:{a mathematical formula} Observe that the second and the third clauses in {a mathematical formula}φ2 are resolvable on g and their resolvent is {a mathematical formula}{h,k}, which subsumes the last clause in {a mathematical formula}φ2. Hence, {a mathematical formula}φ2 can be simplified to{a mathematical formula} by replacing {a mathematical formula}{f,h,k} with {a mathematical formula}{h,k}.The last two clauses in the updated {a mathematical formula}φ2 are resolvable on h and their resolvent is the unit clause {a mathematical formula}{k} which subsumes the last three clauses. Thus, the formula can be simplified further to{a mathematical formula} In this new CNF formula, {a mathematical formula}{f,¬k} and {a mathematical formula}{k} are resolvable on k and their resolvent is the unit clause {a mathematical formula}{f} which subsumes the first clause. Hence, the first clause is replaced with {a mathematical formula}{f} to obtain{a mathematical formula} This formula does not contain a pair of resolvable clauses, and it is returned as the result of {a mathematical formula}μCNF(φ).
+       </paragraph>
+       <paragraph>
+        One can observe from the above example that unit propagation is a special case of the subsumable resolution technique. It is easy to see that, after applying the aforementioned techniques for preprocessing a CNF formula, we obtain a CNF formula satisfying the following properties.
+       </paragraph>
+       <paragraph label="Observation 3">
+        Let φ be a satisfiable CNF formula:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}μCNF(φ)is a minimal-CNF formula equivalent to φ.
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}μCNFis idempotent, i.e., if φ is minimal then{a mathematical formula}μCNF(φ)=φ.
+        </list-item>
+       </list>
+       <paragraph>
+        Proposition 3 shows that for each satisfiable CNF formula φ there exists a minimal-CNF formula {a mathematical formula}μCNF(φ) equivalent to φ. This allows us to define the minimal-CNF representation as follows.
+       </paragraph>
+       <paragraph label="Definition 18">
+        The minimal-CNF representation, denoted by μCNF, is the set of minimal-CNF formulae. A μCNF-state is a minimal-CNF formula.
+       </paragraph>
+       <paragraph>
+        Before continuing with the definition of the concrete operators for the μCNF representation, let us observe that the μCNF representation is not unique.
+       </paragraph>
+       <paragraph label="Example 8">
+        Consider the CNF formula {a mathematical formula}φ={{a,c},{¬a,d},{c,¬d}}. It is easy to see that φ has two resolvents {a mathematical formula}{c,d} and {a mathematical formula}{¬a,c} and neither of them subsumes a clause in φ. This, together with the fact that none of the clause in φ subsumes another clause in φ, implies that φ is a μCNF-state. We can also observe that φ is equivalent to {a mathematical formula}{{c},{¬a,d}} which is also a μCNF-state.
+       </paragraph>
+       <paragraph>
+        We next define the operations {a mathematical formula}convμCNF, {a mathematical formula}updateμCNF, and {a mathematical formula}mergeμCNF. Recall that {a mathematical formula}convμCNF needs to convert the formulae of the forms {a mathematical formula}φ∧ψ and {a mathematical formula}φ∧¬ψ into equivalent μCNF-states, where φ is a μCNF-state and ψ is a consistent set of literals. Observe that {a mathematical formula}φ∧ψ is a CNF formula, where ψ is the set of unit clauses {a mathematical formula}{{ℓ}|ℓ∈ψ}; {a mathematical formula}φ∧¬ψ is also a CNF formula where ¬ψ is the (nontrivial) clause {a mathematical formula}ψ‾={ℓ‾|ℓ∈ψ}. Thus, we can simply use the {a mathematical formula}μCNF function to transform those CNF formulae into equivalent μCNF-states.
+       </paragraph>
+       <paragraph label="Definition 19">
+        Let φ be a μCNF-state and ψ be a consistent set of literals. Then{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph label="Observation 4">
+        Let φ be a μCNF-state and ψ be a consistent set of literals. Then,
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}convμCNF(φ∧ψ)is a μCNF-state equivalent to{a mathematical formula}φ∧ψ
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}convμCNF(φ∧¬ψ)is a μCNF-state equivalent to{a mathematical formula}φ∧¬ψ
+        </list-item>
+       </list>
+       <paragraph>
+        For the definition of {a mathematical formula}updateμCNF and {a mathematical formula}mergeμCNF, we need the following notions. Let φ be a CNF formula and ℓ be a literal:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}φℓ denotes the set of clauses in φ which contain ℓ.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}φ−ℓ denotes the CNF formula obtained from φ by removing every occurrence of literal ℓ.
+        </list-item>
+       </list>
+       <paragraph label="Example 9">
+        Let {a mathematical formula}φ={{p,¬q},{q,¬r},{p,r}}, then
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}φp={{p,¬q},{p,r}}
+        </list-item>
+        <list-item>
+         {a mathematical formula}φ¬p=φ
+        </list-item>
+        <list-item>
+         {a mathematical formula}φ¬q={{p,¬q}}
+        </list-item>
+        <list-item>
+         {a mathematical formula}φ−p={{¬q},{q,¬r},{r}}
+        </list-item>
+       </list>
+       <paragraph>
+        We now define the update function {a mathematical formula}updateμCNF for μCNF.
+       </paragraph>
+       <paragraph label="Definition 20">
+        Let φ be a μCNF-state and η be a consistent set of literals. The update of φ by η, denoted by {a mathematical formula}updateμCNF(φ,η), is defined as follows:{a mathematical formula} where
+       </paragraph>
+       <list>
+        <list-item label="•">
+         if {a mathematical formula}η=∅ then {a mathematical formula}updater(φ,η)=φ;
+        </list-item>
+        <list-item label="•">
+         if η is a singleton {a mathematical formula}{ℓ} then{a mathematical formula}
+        </list-item>
+        <list-item label="•">
+         if {a mathematical formula}|η|&gt;1 then {a mathematical formula}updater(φ,η)=updater(updater(φ,η∖{ℓ}),{ℓ}) for some {a mathematical formula}ℓ∈η.
+        </list-item>
+       </list>
+       <paragraph>
+        The definition is illustrated in the next few examples:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}updater({{f},{g,¬p}},{p})={{f},{p}}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}updater({{f},{h,p}},{p})={{f},{p}}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}updater({{f},{g,¬p},{h,p}},{p})={{f},{p},{g,h}}
+        </list-item>
+       </list>
+       <paragraph>
+        To prove that {a mathematical formula}updateμCNF satisfies the requirements of an update function, we prove that the result of updating a reduced CNF-formula φ by a consistent set of literals is independent from the order in which the literals are introduced. This is proved in the following proposition.
+       </paragraph>
+       <paragraph label="Proposition 15">
+        Let φ be a μCNF-state and η be a consistent set of literals. Then{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The {a mathematical formula}mergeμCNF function for μCNF-states can be defined easily as follows.
+       </paragraph>
+       <paragraph label="Definition 21">
+        Let Λ be a set of μCNF-states. Then, {a mathematical formula}mergeμCNF(Λ) is defined as{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The next proposition is derived directly from the above definition and Proposition 2.
+       </paragraph>
+       <paragraph label="Observation 5">
+        Let Λ be a set of μCNF-states. Then,{a mathematical formula}mergeμCNF(Λ)is a μCNF-state and{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        With the definition of {a mathematical formula}mergeμCNF, we complete the definition of the operations of μCNF. This means that the function {a mathematical formula}ΦμCNF is completely defined and its correctness proved. We will next discuss a planner that employs the μCNF representation.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       Cnf: a conformant planner using the μCNF representation
+       <paragraph>
+        Similar to the case of the μDNF representation, a concrete implementation of the operations of the μCNF representation can be used to instantiate Algorithm 2, Algorithm 3, Algorithm 4 and employed in the development of a planner following Algorithm 1. The planner Cnf is the result of this implementation. Like Dnf, Cnf is also built from the source code of CpA but it does not use the one-of combination technique, as this technique is suitable only for a disjunctive representation of belief states.
+       </paragraph>
+       <paragraph>
+        The heuristic function used in Cnf is defined by the pair {a mathematical formula}〈hgoal(φ),hlit(φ)〉 in the lexicographical order, where
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}hgoal(φ): the number of subgoals satisfied by the μCNF-state φ;
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}hlit(φ): the number of known literals in φ.
+        </list-item>
+       </list>
+       <paragraph>
+        The second component of this heuristic function prioritizes the expansion of nodes that contain less uncertainty and have a smaller size. We note that the cardinality and square distance heuristics defined for Dnf are not applicable to μCNF-states.
+       </paragraph>
+       <paragraph>
+        Observe that the implementation of the operations {a mathematical formula}convμCNF, {a mathematical formula}updateμCNF, and {a mathematical formula}mergeμCNF requires only set operators and comparisons, and is therefore omitted in our discussion of Cnf. We next detail a concrete instantiation of the operators {a mathematical formula}convμCNF, {a mathematical formula}updateμCNF, and {a mathematical formula}mergeμCNF and briefly discuss the time complexity for computing {a mathematical formula}ΦμCNF.
+       </paragraph>
+      </section>
+      <section label="4.2.4">
+       <section-title>
+        Satisfiability checking
+       </section-title>
+       <paragraph>
+        Let ψ be a satisfiable non-tautology formula and φ be a μCNF-state. The test {a mathematical formula}φ⊨ψ is necessary in the implementation of Algorithm 2, Algorithm 4. In the implementation of Cnf, we avoid calling a SAT-solver if one of the following easy cases is applicable:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If ψ is independent from φ then {a mathematical formula}φ⊭ψ (by Proposition 3).
+        </list-item>
+        <list-item label="•">
+         If ψ is a consistent set of literals and there is a literal ℓ in ψ such that ℓ does not belong to any clause in φ, then {a mathematical formula}φ⊭ψ. This is because {a mathematical formula}φ⊭ℓ (by Proposition 3) and {a mathematical formula}ψ⊨ℓ.
+        </list-item>
+        <list-item label="•">
+         If ψ is a consistent set of literals and there exists ℓ in ψ such that {a mathematical formula}ℓ¯ is a unit literal of φ then {a mathematical formula}φ⊨¬ψ.
+        </list-item>
+        <list-item label="•">
+         If ψ is a non-trivial clause and there exists a clause β in φ such that {a mathematical formula}β⊆ψ then {a mathematical formula}φ⊨ψ.
+        </list-item>
+       </list>
+       <paragraph>
+        If these easy cases are not applicable, then we will need to call a SAT-solver ({a mathematical formula}φ⊨ψ iff {a mathematical formula}φ∧¬ψ is unsatisfiable). To reduce the workload of the SAT-solver, we consider the relation between the literals in φ and ψ (excluding the easy cases or inference involving single literal) as follows. Let φ be a μCNF-state and ψ be a formula. A clause α in φ is said to be relating to ψ if
+       </paragraph>
+       <list>
+        <list-item label="•">
+         α is dependent on ψ, or
+        </list-item>
+        <list-item label="•">
+         α is dependent on a clause β in φ and β is relating to ψ.
+        </list-item>
+       </list>
+       <paragraph>
+        The set of clauses in φ that are relating to ψ is denoted by {a mathematical formula}Rel(φ,ψ).
+       </paragraph>
+       <paragraph label="Proposition 16">
+        Let φ be a μCNF-state and ψ be a satisfiable non-tautology formula dependent on φ.
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}φ⊨ψiff{a mathematical formula}Rel(φ,ψ)⊨ψ.
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}φ∧ψis satisfiable iff{a mathematical formula}Rel(φ,ψ)∧ψis satisfiable.
+        </list-item>
+       </list>
+       <paragraph>
+        Proposition 16 shows that, in order to check whether ψ is (not) true in a μCNF-state φ, we can check whether ψ is (not) true in its subset {a mathematical formula}Rel(φ,ψ). Algorithm 5 computes this set. It first computes the set of clauses in φ that depend on ψ (Lines 3–9). For each clause α in X (where X represents the set of clauses newly added to R, i.e., {a mathematical formula}Rel(φ,ψ)), it computes the set Y of clauses in V ({a mathematical formula}V=φ∖R) that depends on α (Line 14), and updates R, X, and V according to Y (Lines 16–17). Whenever a clause α in X is taken to compute Y—the set of clauses in φ that are not (yet) in R and depend on α—it is immediately removed from X (Line 13), since every possible clause in φ dependent on α is already in R.
+       </paragraph>
+       <paragraph>
+        It is easy to see that, in a domain with n propositions, Algorithm 5 has time complexity {a mathematical formula}O(n×|φ|2). Thus, {a mathematical formula}Rel(φ,ψ) can be computed rather efficiently. For a literal ℓ dependent on a μCNF-state φ, we say that ℓ is possibly unknown in φ if neither {a mathematical formula}{ℓ} nor {a mathematical formula}{ℓ¯} are unit clauses of φ. In this case, a call to a SAT-solver is required to determine whether ℓ is known in φ. In conformant planning, ψ is usually a literal or a small set of literals, among which even fewer (or no) literals are possibly unknown in φ. Hence, after applying the simplification techniques presented earlier, the formula to be passed to the SAT-solver ({a mathematical formula}Rel(φ′,ψ′)∧¬ψ′) is usually small—and, in particular, it can be significantly smaller than {a mathematical formula}φ∧¬ψ, the formula passed to the SAT-solver if the above simplification techniques are not used.
+       </paragraph>
+      </section>
+      <section label="4.2.5">
+       Computing {a mathematical formula}μCNF
+       <paragraph>
+        Let φ be a CNF formula. Conversion of φ to an equivalent μCNF-state is required in Algorithm 2. The μCNF-state {a mathematical formula}μCNF(φ) is computed by the procedure {a mathematical formula}CNFstate(φ) (Algorithm 6). To avoid repeating computation of resolvents and subsumption checking, we use the set treated, initialized with the empty set (Line 4). Whenever a clause α of φ is selected to compute the resolvent with every other clause in φ, α is added to treated. The algorithm terminates and returns the result when every clause in the CNF formula being considered has been processed. One can verify the correctness of Algorithm 6, i.e., the procedure {a mathematical formula}CNFstate(φ) returns {a mathematical formula}μCNF(φ). We can show that this algorithm has time complexity {a mathematical formula}O(n×|φ|2×size(φ)), where {a mathematical formula}size(φ) is defined as {a mathematical formula}Σα∈φ|α| and n is the number of propositions in the domain.
+       </paragraph>
+      </section>
+      <section label="4.2.6">
+       Computing {a mathematical formula}updateμCNF
+       <paragraph>
+        The function {a mathematical formula}updateμCNF is implemented by the procedure {a mathematical formula}updateCNF(φ,η) (Algorithm 7).
+       </paragraph>
+       <paragraph label="Observation 6">
+        For a μCNF-state φ and a consistent set of literals η, the procedure{a mathematical formula}updateCNF(φ,η)returns{a mathematical formula}updateμCNF(φ,η).
+       </paragraph>
+      </section>
+      <section label="4.2.7">
+       Computing {a mathematical formula}mergeμCNF
+       <paragraph>
+        For a set of μCNF-states {a mathematical formula}Λ={φ1,…,φn}, by definition, we have that{a mathematical formula} Since for every CNF formula {a mathematical formula}φ′, {a mathematical formula}μCNF(φ′)≡r(φ′), if we replace {a mathematical formula}r(⋅) with {a mathematical formula}μCNF(⋅) in {a mathematical formula}mergeμCNF(Λ) then we will obtain a μCNF-state equivalent to {a mathematical formula}mergeμCNF(Λ). Specifically:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        This allows us to apply {a mathematical formula}μCNF(⋅) in place of {a mathematical formula}r(⋅) in the implementation of {a mathematical formula}mergeμCNF(Λ), in order to maintain the size of the obtained CNF formulae as small as possible, as shown in Algorithm 8. The result is a μCNF-state equivalent to {a mathematical formula}mergeμCNF(Λ), thus the condition (7) is still satisfied.
+       </paragraph>
+       <paragraph>
+        The next observation shows how the size of cross-product of CNF-formulae and, hence, the time complexity for this computation can be reduced.
+       </paragraph>
+       <paragraph label="Observation 7">
+        Let φ and ψ be two CNF formulae, α be a clause in φ, and β be a clause in ψ. It holds that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If{a mathematical formula}α=βthen{a mathematical formula}r(φ×ψ)=r(((φ∖α)×(ψ∖β))∪α)
+        </list-item>
+        <list-item label="•">
+         If{a mathematical formula}α⊂βthen{a mathematical formula}r(φ×ψ)=r((φ×(ψ∖β))∪β)
+        </list-item>
+       </list>
+      </section>
+      <section label="4.2.8">
+       Time complexity of computing {a mathematical formula}ΦμCNF
+       <paragraph>
+        Section 3 shows that the time complexity of computing {a mathematical formula}ΦμCNF depends on that of computing {a mathematical formula}⊕μCNF, {a mathematical formula}enbμCNF, {a mathematical formula}updateμCNF, and {a mathematical formula}mergeμCNF. The discussion in the previous subsections highlights some features that need to be taken into consideration in a concrete implementation of {a mathematical formula}ΦμCNF. We now briefly discuss the time complexity of {a mathematical formula}ΦμCNF based on Algorithm 4.
+       </paragraph>
+       <paragraph>
+        Let a be an action in a domain with n propositions and φ be a μCNF-state. Let k be the number of e-conditions of a that are unknown in φ and p be the number of conditional effects of a. For a set of literals ψ, let {a mathematical formula}u(ψ,φ)=|prop(Rel(φ,ψ′))| where {a mathematical formula}ψ′ is the set of literals in ψ that are possibly unknown in φ. Let {a mathematical formula}umax(a,φ)=maxψ∈Ψ(a)⁡u(ψ). The following time complexity results of the algorithms used in the implementation of {a mathematical formula}ΦμCNF can be proved.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}φ⊕μCNFψ is {a mathematical formula}O(2u(ψ,φ)×size(φ)+n×|φ|×size(φ)).
+        </list-item>
+        <list-item label="•">
+         Under the assumption that the size and the number of clauses of the intermediate CNF formulas generated during the computation of {a mathematical formula}enbμCNF(a,φ) do not exceed the size and the number of clauses of φ, respectively, the following results hold:
+        </list-item>
+       </list>
+       <paragraph>
+        The above results and the observations about the time complexity of Algorithm 2, Algorithm 3, Algorithm 4 allow us to prove that {a mathematical formula}ΦμCNF(a,φ) has time complexity {a mathematical formula}O(2k+umax(a,φ)×p×size(φ)+2k×n2×|φ|3) under the assumption that the size and number of clauses of intermediate CNF formulas generated during the computation of {a mathematical formula}enbμCNF(a,φ) do not exceed the size and the number of clauses of φ, respectively. This means that computing {a mathematical formula}ΦμCNF(a,φ) is exponential in the number of e-conditions of a that are unknown in φ and {a mathematical formula}umax(a,φ). Observe that, in most benchmarks, the size of the e-conditions of actions is usually small. This means that not only k is small but also {a mathematical formula}umax(a,φ) is a small number in most cases.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Prime implicate representation
+      </section-title>
+      <paragraph>
+       This section investigates another conjunctive representation, which is the set of prime implicate formulae. As we will see next, this representation has several desirable properties: it is a unique representation that eliminates the possibility of multiple nodes in the search tree representing a same belief state (see Example 8), the satisfaction of a clause or a set of literals in a prime implicate formula can be checked easily, and the update and merge functions are simpler than those for the minimal-CNF representation. However, converting to a prime implicate formula is more complex than that of the μCNF formula.
+      </paragraph>
+      <paragraph>
+       Let φ be a satisfiable formula and α be a nontrivial clause. α is said to be a prime implicate of φ if α is an implicate of φ and there does not exist another implicate β of φ that subsumes α. If a unit clause is an implicate of φ then it is a prime implicate of φ. The set of prime implicates of φ is said to be the prime implicate form of φ, also called PI-form of φ and denoted by {a mathematical formula}PI(φ). A prime implicate formula is a prime implicate form of some formula. The following proposition shows that checking whether a set of literals or a clause is satisfied in a prime implicate formula is easy.
+      </paragraph>
+      <paragraph label="Proposition 17">
+       Let φ be a prime implicate formula, m be the number of clauses in φ, and n be the number of propositions in the domain. Then,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Checking whether a literal ℓ is satisfied in φ requires{a mathematical formula}O(m)time.
+       </list-item>
+       <list-item label="2.">
+        Checking whether a nontrivial clause α is satisfied in φ requires{a mathematical formula}O(nm)time.
+       </list-item>
+      </list>
+      <paragraph>
+       Each satisfiable formula has a unique PI-form which is equivalent to the formula. This allows us to use prime implicate formulae as unique representations of belief states.
+      </paragraph>
+      <paragraph label="Definition 22">
+       The prime implicate representation, denoted by PI, is the set of prime implicate formulae. A PI-state is a prime implicate formula.
+      </paragraph>
+      <paragraph>
+       One can observe that a PI-state is also a μCNF-state but the converse is not necessarily true.
+      </paragraph>
+      <paragraph label="Observation 8">
+       Every PI-state is a μCNF-state.
+      </paragraph>
+      <paragraph>
+       The above observation suggests us to define the operators {a mathematical formula}convPI, {a mathematical formula}updatePI, and {a mathematical formula}mergePI for the PI representation based on the definition of the respective operators for the minimal-CNF representation.
+      </paragraph>
+      <paragraph>
+       As we know from the definition of {a mathematical formula}convμCNF, {a mathematical formula}φ∧ψ≡φ∪{{ℓ}|ℓ∈ψ} and {a mathematical formula}φ∧¬ψ≡φ∪{ψ‾}. Hence, {a mathematical formula}convPI is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 23">
+       Let φ be a PI-state and ψ be a consistent set of literals. Then,{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       It is easy to see that {a mathematical formula}convPI satisfies Equation (5). As such, we have the following observation.
+      </paragraph>
+      <paragraph label="Observation 9">
+       Let φ be a PI-state and ψ be a consistent set of literals. Then,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}convPI(φ∧ψ)is a PI-state equivalent to{a mathematical formula}φ∧ψ
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}convPI(φ∧¬ψ)is a PI-state equivalent to{a mathematical formula}φ∧¬ψ
+       </list-item>
+      </list>
+      <paragraph>
+       Similarly to the definition of {a mathematical formula}updateμCNF, in order to define the update {a mathematical formula}updatePI(φ,ψ) of a PI-state φ by a set of literal ψ, first we need to define the update {a mathematical formula}updatePI(φ,ℓ) of φ by a literal, ℓ. Intuitively, {a mathematical formula}updatePI(φ,ℓ) should be equivalent to {a mathematical formula}updater(φ,ℓ). Observe that, from the third case of Definition 20, each clause α in the cross-product {a mathematical formula}(φℓ−ℓ)×(φℓ‾−ℓ‾) is either a trivial clause or a resolvent (and thereby an implicate) of φ. If α is non-trivial then either α is a prime implicate in φ or it is subsumed by a prime implicate of φ. Moreover, {a mathematical formula}α∉φℓ∪φℓ‾ since every clause in {a mathematical formula}(φℓ−ℓ)×(φℓ‾−ℓ‾) (including α) does not contain either ℓ or {a mathematical formula}ℓ‾. This implies that, for every α in {a mathematical formula}(φℓ−ℓ)×(φℓ‾−ℓ‾), α is trivial, α is subsumed by a clause in {a mathematical formula}φ∖(φℓ∪φℓ‾), or α already exists in this set. Thus, adding {a mathematical formula}(φℓ−ℓ)×(φℓ‾−ℓ‾) to the set in the third case when φ is a PI-state becomes redundant. Definition 20 can be reduced to the definition of {a mathematical formula}updatePI as follows.
+      </paragraph>
+      <paragraph label="Definition 24">
+       Let φ be a PI-state and η be a consistent set of literals. The update of φ by η, denoted by {a mathematical formula}updatePI(φ,η), is defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        if {a mathematical formula}η=∅ then {a mathematical formula}updatePI(φ,η)=φ;
+       </list-item>
+       <list-item label="•">
+        if η is the singleton {a mathematical formula}{ℓ} then{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}|η|&gt;1 then {a mathematical formula}updatePI(φ,η)=updatePI(updatePI(φ,η∖{ℓ}),{ℓ}) for some {a mathematical formula}ℓ∈η.
+       </list-item>
+      </list>
+      <paragraph>
+       Again, we can show that {a mathematical formula}updatePI is commutative and satisfies Equation (6).
+      </paragraph>
+      <paragraph label="Proposition 18">
+       Let φ be a PI-state and η be a consistent set of literals. Then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To define {a mathematical formula}mergePI, we use the following observation.
+      </paragraph>
+      <paragraph label="Observation 10">
+       Let φ and{a mathematical formula}φ′be two prime implicate formulae. Then,{a mathematical formula}PI(φ×φ′)=φ⊗φ′.
+      </paragraph>
+      <paragraph>
+       Thus, the prime implicate form of the cross-product of two PI-states can be computed in polynomial time by removing every trivial or subsumed clause from their cross-product. The {a mathematical formula}mergePI operator for PI-states then is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 25">
+       Let Λ be a set of PI-states. Then, {a mathematical formula}mergePI(Λ) is defined as {a mathematical formula}mergePI(Λ)=⊗[Λ].
+      </paragraph>
+      <paragraph>
+       The following proposition, that follows directly the above definition and Proposition 5, shows that {a mathematical formula}mergePI satisfies Equation (7).
+      </paragraph>
+      <paragraph label="Observation 11">
+       Let Λ be a set of PI-states. Then,{a mathematical formula}mergePI(Λ)is a PI-state and{a mathematical formula}BS(mergePI(Λ))=⋃φ∈ΛBS(φ).
+      </paragraph>
+      <paragraph>
+       We now have a complete definition of the operations for the PI representation. As with other representations, we next discuss a conformant planner that uses this representation.
+      </paragraph>
+      <section label="4.3.1">
+       PIP: a conformant planner using the PI representation
+       <paragraph>
+        The PI representation is employed in a conformant planner, called PIP, that is built on top of Cnf and uses the same heuristic scheme of Cnf. Similar to Cnf, a concrete implementation of the operations {a mathematical formula}convPI, {a mathematical formula}updatePI, and {a mathematical formula}mergePI is needed which will be described next. The implementation of these operations takes advantage of the fact that satisfiability testing does not need to call a SAT-solver for this representation. It is, however, more complicated comparing to that of the μDNF representation.
+       </paragraph>
+       <section>
+        <section-title>
+         Computing PI-states
+        </section-title>
+        <paragraph>
+         We start with an algorithm for computing the PI form of {a mathematical formula}ϕ∧α for a PI-state ϕ and a clause α. In principle, it can be computed by repeatedly resolving pairs of clauses in {a mathematical formula}ϕ∧α, adding to {a mathematical formula}ϕ∧α the resulting resolvents that are not subsumed by {a mathematical formula}ϕ∧α, and removing from {a mathematical formula}ϕ∧α clauses subsumed by the newly added clauses—until no new clauses can be added to {a mathematical formula}ϕ∧α. In order to avoid generating the same resolvents in distinct ways, in [31] Tison introduced a technique to resolve clauses over the literals in order: for each literal ℓ, we can generate every possible resolvent of pairs of clauses which are resolvable on ℓ and never consider ℓ again even for the new resulting resolvents until a new clause is added to the theory. In 1990, Kean and Tsiknis [19] proposed an incremental algorithm, called IPIA, for updating a prime implicant/implicate formula when adding new implicants/implicates to the formula. Later, de Kleer [12] improved this method by using a novel data structure, called trie, that represents the set of clauses in an order of literals to facilitate subsumption checking. The IPIA algorithm is detailed in Algorithm 9.
+        </paragraph>
+        <paragraph>
+         It is easy to see that for {a mathematical formula}φ={α1,…,αn}, {a mathematical formula}IPIA(…(IPIA(∅,α1),…),αn) is the PI form of φ, i.e., Algorithm 9 can be used recursively to compute {a mathematical formula}PI(φ) for any set of clauses (or μCNF-state) φ. Similarly, the algorithm can be used for the implementation of the {a mathematical formula}convPI and {a mathematical formula}updatePI operators. Since {a mathematical formula}mergePI(Λ) is simply the cross product between elements of Λ, its implementation is omitted for brevity.
+        </paragraph>
+       </section>
+       <section>
+        Time complexity of computing {a mathematical formula}ΦPI
+        <paragraph>
+         As with other representations, {a mathematical formula}ΦPI is the result of the instantiation of Algorithm 2, Algorithm 3, Algorithm 4 with the concrete implementation of the operators {a mathematical formula}convPI, {a mathematical formula}updatePI, and {a mathematical formula}mergePI. Since satisfiability checking in the PI representation is polynomial in the size of the formula, the time complexity of computing {a mathematical formula}ΦPI (or {a mathematical formula}phiPI(a,φ)) depends heavily on that of algorithm IPIA and the size of its output.
+        </paragraph>
+        <paragraph>
+         Let ϕ be a PI-state and α be a nontrivial clause. Let n be the number of propositions in the domain and {a mathematical formula}u(α,ψ) be the number of literals in α that are unknown in ϕ. We can show that {a mathematical formula}IPIA(ϕ,α) is {a mathematical formula}O(n×|ϕ|2u(α,ψ)) and its result contains {a mathematical formula}O(|ϕ|u(α,ψ)) clauses.
+        </paragraph>
+        <paragraph>
+         Using this result, we can show that, under the condition that intermediate formulae generated during the computation of {a mathematical formula}ΦPI(a,φ) does not exceed the number of clauses of φ, the complexity of {a mathematical formula}ΦPI(a,φ) is {a mathematical formula}O(2k×n×|φ|(r|φ|+|φ|2umax(a,φ)−1+p+e+|φ|2)) where p is the number of conditional effects of a, k is the number of e-conditions of a that are unknown in φ, r is the maximum number of literals in an e-condition of a, {a mathematical formula}umax(a,φ)=max⁡{u(ψ,φ)|ψ∈Ψ(a)} is the maximum number of literals in an e-condition of a that are unknown in φ, and {a mathematical formula}e=max⁡{|e(a,s)‖s∈BS(φ)}.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In this section, we first compare our notion of a representation to ordered binary decision diagrams [7], a well-known belief state representation employed by several conformant planners. We will then place our notion of a representation within the context of several target compilation languages proposed in [11]. We discuss the method of dealing with incomplete information employed by several state-of-the-art conformant planners that are used in the experiments in the next section. Finally, we discuss potential applications of our notion of a representation.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Proposed representations vs. reduced ordered binary decision diagrams
+      </section-title>
+      <paragraph>
+       Reduced Ordered Binary Decision Diagrams (often referred to simply as OBDDs) have been employed in the development of early, efficient conformant planners, such as KACMBP and POND. OBDDs are a canonical form for the representation of Boolean formulae, and were originally developed for an efficient encoding and manipulating of Boolean functions or circuits. In this sense, our representations (μDNF, μCNF, or PI) are similar to OBDDs, since they are developed for an efficient encoding of a propositional formula (or belief state). To simplify the subsequent presentation, let us recall the basic definition of an OBDD.
+      </paragraph>
+      <paragraph>
+       An OBDD is a rooted, directed acyclic graph with two types of nodes, terminal and non-terminal nodes. Terminal nodes are either True or False. Each non-terminal node n is associated with a proposition {a mathematical formula}p(n) and has exactly two successors, the left l and the right r, which represent the truth assignment False and True to {a mathematical formula}p(n), respectively. For each non-terminal node n and its children l and r, it holds that {a mathematical formula}p(l)=p(r). Furthermore, there exists no path from the root to a terminal node that contains two nodes n and {a mathematical formula}n′ such that {a mathematical formula}p(n)=p(n′). An OBDD represents a Boolean function f; given an interpretation I of the set of propositions, the truth value of f is the label of the terminal node of the path from the root determined as follows: at every non-terminal node n in the path, the path includes the left (resp. right) child of n if {a mathematical formula}p(n) is false (resp. true) in I. Canonicity of a BDD representing a given Boolean function is realized by imposing a total order &lt; over the set of propositions and requiring that, for each node n and its non-terminal child c, {a mathematical formula}p(n)&lt;p(c).
+      </paragraph>
+      <paragraph>
+       The key difference between OBDDs and our representations is rooted in the purpose behind the development of these different representations and the operations that can be effectively applied to them. Our representations have been developed with the primary goal of supporting the needs of planning with incomplete knowledge, while OBDDs have been originally designed for circuits verification and, more in general, for Boolean functions manipulation.
+      </paragraph>
+      <paragraph>
+       As our ultimate goal is the development of efficient conformant planners, not only we are interested in a compact encoding of belief states, but we also focused on the computation of the transition function. Specifically, we focus on the updates of a formula by a formula encoding the action effects. Thus, operations like {a mathematical formula}updateR and {a mathematical formula}mergeR are essential to our needs, and they have been developed specifically for each proposed representation.
+      </paragraph>
+      <paragraph>
+       OBDDs have been originally designed to support the needs of Boolean functions manipulations, especially those originating from the problem of circuit verification. Given a circuit, an OBDD encoding of the circuit can be constructed step-by-step, based on the elements and the layout of the circuit. Once the OBDD for a complete circuit is constructed, it can be used for various purposes (e.g., validation of the design, finding paths that lead to false result, etc.) and no modification to the OBDD is required. This leads to the design and implementation of several operations for the construction and manipulation of an OBDD, such as the and (&amp;) and or (|) of two OBDDs, the negation (!) of an OBDD, or the substitution function. These functions are important and sufficient for the original targeted applications of OBDD. In order to use OBDDs for the development of a conformant planner, a function similar to {a mathematical formula}updateR is needed. As shown in [10], and as employed in the development of the planner POND[8], the update function {a mathematical formula}updateOBDD for OBDDs can be defined using the basic operations on OBDD.
+      </paragraph>
+      <paragraph>
+       For a state s, {a mathematical formula}ξ(s) denotes its OBDD representation. A set of states Q, or a belief state, in OBDD representation is then {a mathematical formula}⋁s∈Qξ(s). Using this representation, operations on belief states—represented as sets of states—such as set difference, union, intersection can be easily translated into OBDD operations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}ξ(S∖Q)=.ξ(S)∧¬ξ(Q)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ξ(S∪Q)=.ξ(S)∨ξ(Q)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ξ(S∩Q)=.ξ(S)∧ξ(Q)
+       </list-item>
+      </list>
+      <paragraph>
+       This approach can be used to encode a conformant planning problem as a collection of OBDDs, i.e., the OBDD encoding of the initial belief state, the OBDD encoding of the transition function Φ, and the OBDD encoding of the goal state. In the encoding of Φ, action variables and two vectors of variables x and {a mathematical formula}x′ representing the current and successor state variables are introduced. {a mathematical formula}ξ′(s) denotes the representation of the state s in the successor state variables, i.e., {a mathematical formula}ξ′(s)=.ξ(s)[x/x′]. A transition {a mathematical formula}Φ(a,u)=v is encoded by the OBDD {a mathematical formula}ξ(s)∧a∧ξ′(v) and the full transition function is encoded as a disjunction of all transitions. In the following, we will denote this formula by {a mathematical formula}ΦOBDD. These encodings can then be used in defining various formulas (or OBDDs) for the applicability of an action in a state and the result of the execution of an action in a belief state. For instance, the update function for OBDDs can be written as{sup:5}:{a mathematical formula} where {a mathematical formula}Q(x) denotes the current state.
+      </paragraph>
+      <paragraph>
+       These functions can be used in the implementation of conformant planners, as done in KACMBP and POND. The details can be found in [10]. We observe that the advantages of the approach in [10] lie in its generality and flexibility. It is general in that it does not require any extra BDD manipulation operations. It is flexible since it can be applied in both directions, progression and regression. However, its generality is also a potential reason why planners employing this formulation, like POND or KACMBP, do not scale well. In particular, the presence of the formula {a mathematical formula}ΦOBDD could potentially result in a huge memory requirement by the planner, in terms of memory consumption in the manipulation of the OBDDs. This problem has been confirmed in the experimental evaluations.
+      </paragraph>
+      <paragraph>
+       It is easy to see that our definition of {a mathematical formula}updateR is specific to the representation. It is defined to directly manipulate the belief state representation and this is the key different between our approach to that of using OBDD in [10], [8]. We believe that this is the main reason why our planners do not run out of memory as often as POND. Developing a function that updates OBDDs directly for conformant planning is an interesting challenge on its own, and deserves a separate investigation. We leave this as a future endeavor.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Representations vs. target compilation languages
+      </section-title>
+      <paragraph>
+       As a representation (Definition 2) restricts the formulae involved in a representation, our definition of a representation is closely related to various target compilation languages defined in [11]. We review some of the basic definitions from [11] before making a detailed comparison.
+      </paragraph>
+      <paragraph>
+       Given a set of propositions PS, a sentence in {a mathematical formula}NNFPS is a rooted, directed acyclic graph where each leaf node is labeled with true, false, X or ¬X, with {a mathematical formula}X∈PS; each internal node is labeled with ∧ or ∨ and can have arbitrary many children. The size of a sentence Σ in {a mathematical formula}NNFPS, denoted by {a mathematical formula}|Σ|, is the number of its edges. Its height is the maximum number of edges from the root to some leaf in the graph. An internal node labeled with ∧ (resp. ∨) is an and-node (resp. or-node). The set of variables of a node C, denoted by {a mathematical formula}Vars(C), is the set of all variables that label the descendants of node C. Various subclasses of {a mathematical formula}NNFPS are defined:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        DNF (CNF): the language representing the DNF (CNF) sentences in {a mathematical formula}NNFPS.
+       </list-item>
+       <list-item label="•">
+        Flatness: the height of each sentence is at most 2, the language {a mathematical formula}f-NNF is the subset of NNF satisfying flatness.
+       </list-item>
+       <list-item label="•">
+        Simple-disjunction: the children of each or-node are leaves that share no variables.
+       </list-item>
+       <list-item label="•">
+        Simple-conjunction: the children of each and-node are leaves that share no variables.
+       </list-item>
+       <list-item label="•">
+        Decomposability: if for each conjunction C in the NNF, the conjuncts of C do not share variables. That is, if {a mathematical formula}C1,…,Cn are the children of and-node C, then {a mathematical formula}Vars(Ci)∩Vars(Cj)=∅ for {a mathematical formula}i≠j; the language DNNF is the subset of NNF satisfying decomposability.
+       </list-item>
+       <list-item label="•">
+        Determinism: if for each disjunction C in the NNF, each two disjuncts of C are logically contradictory. That is, if {a mathematical formula}C1,…,Cn are the children of and-node C, then {a mathematical formula}Ci∧Cj⊨false for {a mathematical formula}i≠j; the language {a mathematical formula}d-NNF is the subset of NNF satisfying determinism.
+       </list-item>
+       <list-item label="•">
+        Smoothness: if for each disjunction C in the NNF, each disjunct of C mentions the same variables. That is, if {a mathematical formula}C1,…,Cn are the children of and-node C, then {a mathematical formula}Vars(Ci)=Vars(Cj) for {a mathematical formula}i≠j; the language {a mathematical formula}s-NNF is the subset of NNF satisfying smoothness.
+       </list-item>
+      </list>
+      <paragraph>
+       A language is called target compilation language if satisfiability checking is polynomial in this language.
+      </paragraph>
+      <paragraph>
+       It is easy to see that a μDNF formula φ over the set of propositions F (Definition 10) can be viewed as a sentence {a mathematical formula}nff(φ) in {a mathematical formula}NFFF with the following properties:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the root r of {a mathematical formula}nff(φ) is an or-node;
+       </list-item>
+       <list-item label="•">
+        for each {a mathematical formula}δ∈φ, there exists a child of r which is an and-node whose children are leafs and are labeled with elements in δ.
+       </list-item>
+      </list>
+      <paragraph>
+       This means that {a mathematical formula}nff(φ) has the height two and satisfies simple-conjunction. Furthermore, it is decomposable. Determinism of {a mathematical formula}nff(φ) is not guaranteed since Definition 10 does not require that the partial states in φ are contradictory. For instance, for the μDNF formula {a mathematical formula}φ={{f},{g}} over the set of propositions {a mathematical formula}{f,g}, {a mathematical formula}nff(φ) is not determinism. {a mathematical formula}nff(φ) is not smooth as well. This shows that μDNF is a subclass of the DDNF language. Following the results in [11], DDNF is a subset of DNF which is again a subset of {a mathematical formula}f-NNF with simple-conjunction.
+      </paragraph>
+      <paragraph>
+       Similarly, we can see that the μCNF representation is a subset of the CNF language and satisfies simple-disjunction which is also a subclass of the {a mathematical formula}f-NFF language; furthermore, because each PI-state is a μCNF-state, the PI representation is also a subclass of the {a mathematical formula}f-NFF language.
+      </paragraph>
+      <paragraph>
+       The relationship between our representations and different NFF languages is detailed in Fig. 3. In the figure, an arrow represents a subset relationship between different languages.
+      </paragraph>
+      <paragraph>
+       The above results, together with the results in [11], show that the language μDNF and PI are a target compilation language but not μCNF as satisfiability checking in μDNF and PI is polynomial but not in μCNF. Furthermore, the language μDNF is strictly more succinct than the language OBDD while the succinctness of μCNF or PI is incomparable with that of OBDD. Finally, let us observe that the various complexity results mentioned in this paper are somewhat different from the properties of different NFF languages given in [11]. For instance, the language DDNF satisfies the property called {a mathematical formula}∧C, i.e., there exists a polytime algorithm that maps every finite set of formulas {a mathematical formula}Σ1,…,Σn from DDNF to a formula of DDNF that is equivalent to {a mathematical formula}Σ1∧…∧Σn which appears to be contradictory with the statement on the time complexity of computing {a mathematical formula}ΦμDNF stated at the end of Section 4.1. This is because the function {a mathematical formula}ΦμDNF is not simply a conjunction between the current state φ with another μDNF formula.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Conformant planners
+      </section-title>
+      <paragraph>
+       For a better understanding of the empirical study in the next section, we will now discuss the advantages and disadvantages of the approaches to dealing with incomplete information adopted in several state-of-the-art conformant planners, including KACMBP[10], POND[8], Conformant-FF [16], T0[23], [24], T1[1], CpA[39], [38], and GC[LAMA][21]. The performance of these planners, except KACMBP, will be compared to the performance of our planners in the following section. Note that with the exception of KACMBP, all other planners are heuristic search and progression-based.
+      </paragraph>
+      <paragraph>
+       The approach proposed by Cimatti, Roveri, and Bertoli [9], [10] represents belief states as OBDDs [7] and uses the model checking techniques for expanding the search space. Later, Bryce, Kambhampati, and Smith employed OBDDs to represent literals and actions in the planning graph for the computation of heuristics used to search for solutions in their planner POND[8]. We have discussed the advantages and disadvantages of using OBDD in conformant planning in Subsection 5.1.
+      </paragraph>
+      <paragraph>
+       The opposite extreme to representations that explicitly enumerates all possible states of the world can be materialized in representations the implicitly encode belief states using the sequence of actions that lead to them from a given initial state. This approach has been used as part of a forward search heuristic planner by Hoffmann and Brafman [16]. In this approach, the resulting planner CFF does not store the knowledge about the state of the world in memory, except for the known literals and the corresponding actions sequence. To determine whether a proposition holds in the successor belief state after the execution of an action in a belief state, the planner has to reason about a CNF formula that captures the semantic of the entire action sequence leading to the successor belief state from the initial belief state. The advantage of this representation is that it requires very little memory, scaling up well on a number of problems. The trade-off is that it incurs a great amount of repeated computations. Furthermore, checking whether a proposition holds after the execution of even one single action in the presence of incomplete information is co-NP complete. We believe that this is one of the main reasons why CFF has difficulties in finding a solution for even small instances of harder problems, where the structure of the actions is complex or there are unknown propositions in the conditions of the conditional effects [24], [38], [33].
+      </paragraph>
+      <paragraph>
+       An alternative heuristic search and progression-based approach consists of transforming a conformant planning problem into a classical planning problem, and then using off-the-shelf classical planners, like FF[17] to search in the corresponding state space for solutions. This method has been employed by the planner T0[23], [24] and its predecessor cf2cs(ff)[22]. This approach demonstrates great performance improvements with respect to previously explored methods; for example, the T0 planner can solve many hard problems of large size. However, the complete translation is exponential in the conformant width{sup:6} of the problem, and the number of literals in the resulting problem can be exponential in the number of literals of the original problem, making the state space extremely large and preventing the planners to scale up. To reduce the complexity of the translation, T0 sacrifices the completeness of the translation in certain problems. This is the reason why T0 is unable to return a solution in several problems that have solutions (e.g., large instances of Corners-Square, Push-to, and Look-and-Grab as shown in the experimental results later). The experiments also show that T0 fails during translation for large instances of several domains, e.g., Adder, Rao's key, and Push-to.
+      </paragraph>
+      <paragraph>
+       Albore, Ramirez, and Geffner revised the techniques of T0 and CFF and created the planner T1[1]. Given a conformant planning problem P, T1 translates it into a classical planning problem {a mathematical formula}P′ and uses {a mathematical formula}P′ for heuristic estimation. The implementation of T1 uses a data structure similar to that of CFF. T1 performs very well in a large number of domains. However, it encounters difficulties in other domains, especially those with the conformant width greater than 1. Like CFF, T1 does not handle problems with disjunctions in the goal.
+      </paragraph>
+      <paragraph>
+       The implementation of T0 and T1 starts with a translation of the conformant planning problem into a classical planning problem. This process involves the introducing of additional fluents and rewriting the actions. As we have mentioned earlier, the size of the new problem can become extremely large. This process turns out to be a bottleneck of these systems. In the experiments, we observe that for several instances, the out-of-memory or time-out occurs before the search process starts. A similar experience also holds true for our Dnf planner when the size of the initial belief state becomes unmanageable.
+      </paragraph>
+      <paragraph>
+       One of the most recent conformant planners, that uses a classical planner to find conformant solutions, is GC[LAMA][21]. The approach in GC[LAMA] is based on the fact that, given a conformant problem {a mathematical formula}P=〈F,A,I,G〉, every solution of P is also a solution for the classical planning problems of the form {a mathematical formula}P′=〈F,A,s,G〉, where s is a state in the initial belief state {a mathematical formula}SI of P. To solve P, GC[LAMA] tries to find a solution for the sub-problem {a mathematical formula}P′=〈F,A,s0,G〉, for some initial state {a mathematical formula}s0∈SI, using the competitive classical planner LAMA [15], the winner of the Sequential Satisficing Track of the IPC 2008 and IPC 2011. For each solution α of {a mathematical formula}P′ found by LAMA, if α is verified to be also a solution for P then GC[LAMA] returns α as a solution for P. Otherwise, for each state {a mathematical formula}s∈SI and {a mathematical formula}s≠s0, GC[LAMA] attempts to introduce additional sequences of actions in α to maintain the executability and effects of the actions in α—solving small classical planning problems to determine the necessary action sequences to be inserted. Observe that, after insertion of a sequence of actions β into α, the new sequence may be no longer a solution for {a mathematical formula}P′, as the execution of β can destroy some literals that are useful for the achievement of the goal of {a mathematical formula}P′. GC[LAMA] will backtrack and repeat the process with different solutions of {a mathematical formula}P′ when an intermediate problem has no solution. As reported in [21], GC[LAMA] does not need to backtrack in several benchmarks. A closer investigation of this method reveals that it is efficient on problems where the action effects are monotonic, i.e., useful actions create useful literals without destroying other useful literals, so that the addition of supplementary sequences of useful actions into a solution for a sub-problem results in another solution for the sub-problem and it brings us closer to a solution for the overall problem. The method has also some limitations; for example, it requires a verification with respect to every subproblem and thus can be challenging when the initial belief state is large; it is also potentially incomplete, unless the underlying classical planner can find all the solutions for any classical planning problem. This explains why GC[LAMA] is efficient on the problems in the first experimental test suite in the next section, while it is not as efficient in other test suites.
+      </paragraph>
+      <paragraph>
+       The introduction of CpA[30] brought a different perspective to deal with incomplete information in conformant planning. Instead of using the complete transition function in the search, CpA uses an approximation technique, first proposed in [28], which approximates a belief state by the intersection of the states in it. The advantage of this approach lies in the low-complexity of the approximation: the successor (approximated) belief state can be computed in polynomial time. The approximation is, however, incomplete, and so are planners which employ this approximation. To address this issue, a complete condition for the approximation has been identified along with corresponding techniques developed in CpA to make the planner complete [29], [39]. These techniques require the system to deal with sets of approximated states, which—in the worst case—are the same as the actual belief states being represented. The advantage of this approach is that the computation of successor belief states is very simple—i.e., can be performed in the same manner as that for belief states—since the approximated formulae are in disjunctive normal form and they contain sufficient information needed for the state computation. The drawback of this approach is that the approximated formula explodes in many problems, as observed in the experiments, preventing the planner to effectively scale. To address this issue, the authors of CpA[38] developed preprocessing techniques which help reduce the size of the initial disjunctive formula in a certain classes of problems. These techniques enabled the planner to perform very well in several benchmarks and to win the conformant planning category in the IPC-08.{sup:7}
+      </paragraph>
+      <paragraph>
+       Note that representation forms and techniques from conformant planning have found applications in other planning domains, e.g., as demonstrated in the SDR planner [6].
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Potential applications of the notion of representation
+      </section-title>
+      <paragraph>
+       Section 4 demonstrates that the proposed notion of representation and its associated operators can be effectively employed in the development of conformant planners. As we observed earlier, the key issues in planning with incomplete information are how to represent and reason with belief states. This, together with the similarity between a representation and other target languages (Subsection 5.2), shows that the proposed notion of a representation can be used in applications that deal with formulae. In this section, we discuss two other applications that can potentially take advantage of the formalization proposed in Section 3.
+      </paragraph>
+      <paragraph>
+       A natural extension of conformant planning is contingent planning[25], [26], which—in addition to the incomplete information about the initial state—needs to deal with sensing actions AND/OR non-deterministic (or uncertain) actions. Different from the non-sensing and deterministic actions considered in this paper, the execution of a sensing action does not change the world but the knowledge of the reasoner, while the execution of a non-deterministic action might result in different states. For this reason, contingent planners often produce non-linear plans (or conditional plans) as solutions. Most state-of-the-art contingent planners (e.g., MBP [4], POND[8], and Contingent-FF [16]), employ an AND/OR search algorithm in the belief state space for contingent solutions.
+      </paragraph>
+      <paragraph>
+       As it turns out, the transition function {a mathematical formula}ΦR in Section 3 can be easily extended for reasoning with other types of actions such as sensing actions and non-deterministic actions. More specifically, Equation (2) will need to be adapted for each type of action. In general, {a mathematical formula}ΦR maps pairs of actions and partial states into sets of partial states (see, e.g., [28]). Since the basic operators on a representation {a mathematical formula}R are defined over formulae, only minor modifications are needed for {a mathematical formula}ΦR to take into consideration sensing AND/OR non-deterministic actions (e.g., determining {a mathematical formula}e(a,s)). Indeed, the proposed Dnf-representation has been extended to deal with these types of actions and used in the development of a contingent planner [36]. The planner also employs an AND/OR forward search algorithm and is highly competitive with state-of-the-art contingent planners.
+      </paragraph>
+      <paragraph>
+       Our focus in this paper is planning in the presence of incomplete information. For this reason, the set of operators associated to a representation {a mathematical formula}R is developed to facilitate the computation of the result of the execution of an action in an {a mathematical formula}R-state. The formalization in Section 3, however, is general and can be adapted for any application that requires reasoning with belief states. We next discuss one of the potential applications in this direction. In belief revision and belief update (e.g., [2], [18]), an agent initially knows that a formula φ is true. The agent then revises or updates its knowledge to take into consideration that another formula ψ is also true. This results in a new formula γ which satisfies {a mathematical formula}γ⊨ψ. The key distinction between revision and update lies in the temporal property of φ and ψ. More specifically, φ and ψ are considered as two formulas about the same state of the world in belief revision. On the other hand, they refer to two different states of the world, φ is before ψ, in belief update. In this sense, an update of ψ on φ is analogous to the execution of an action that makes ψ true. Observe that φ can be viewed as an {a mathematical formula}R-state and ψ is a formula; if the operators in Section 3 are defined in accordance to the several operations in revising and updating a belief, such as contraction, expansion, revision, consolidation, merging, etc. then systems for belief revisions and belief updates can be developed in a similar fashion as the conformant planners in Section 4. Although research in this direction is extremely interesting, it is outside the scope of this paper and is therefore left as one of the important items for our future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      In this section, we present an experimental evaluation of our approach by comparing our three conformant planners Dnf, Cnf, and PIP with state-of-the-art systems. We start with a description of the experimental setup. Afterwards, we present the comparison results in four test suites.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Experimental setup
+      </section-title>
+      <paragraph>
+       In this paper, we compare our planners with six state-of-the-art conformant planners: CpA, CFF, GC[LAMA], POND, T0, and T1. We do not use KACMBP[10] and MBP[9], whose performance is comparable to that of some planners discussed in this paper; furthermore, these two planners do not provide a PDDL translator to allow the processing of the standard benchmarks. The comparison with KACMBP and MBP, nonetheless, can be derived indirectly from the experimental results reported in [16], [24], [39].
+      </paragraph>
+      <paragraph>
+       We use the most recent release of CpA[38], a successor of the systems described in [29], [39]. The version of CpA used in this paper outperforms its predecessor [29], [39] on most benchmarks.
+      </paragraph>
+      <paragraph>
+       The version of GC[LAMA] used in this paper is newer than the one discussed in [21]. This newer version performs differently than its predecessor on several problems; this explains the differences reported in this paper with respect to the results originally presented in [21].
+      </paragraph>
+      <paragraph>
+       We use the public release of the CFF system [16].{sup:8} We apply CFF using the default settings on most domains, except cornerscube and its variants, where the second heuristic option (-h 2) is used: this setting offers better results on these domains. The CFF planner does not handle disjunctions in the goal (e.g., as required by the Sortnet and Adder problems) or conjunctions in one-of clauses in the description of the initial belief state (e.g., as needed by the UTS-cycle problem).
+      </paragraph>
+      <paragraph>
+       There are several available versions of POND which, in conjunction with different parameter options, provide very different performance results. Nevertheless, no single version/parameter combination appears to dominate the others; in the experiments reported in this paper, we select POND version 2.0 with the default execution settings, since this version of POND outperforms its latest version 2.2 on most problems. Yet, we also use the results of POND version 2.2 on several domains, where its predecessor offers poor performance (e.g., UTS-cycle and Corners-Cube and its variants).
+      </paragraph>
+      <paragraph>
+       We use the recent version of T0 released on May 11, 2009.{sup:9}T0 was the winner of the Conformant Track of the 2006 International Planning Competition (IPC5).
+      </paragraph>
+      <paragraph>
+       We obtained the T1 system [1] for our experiment directly from the developers (personal communication with Alexander Albore on February 14, 2012). T1 is built on top of CFF and, hence, it does not support problems that contain disjunctive goals or conjunctions inside one-of clauses in the description of the initial belief state.
+      </paragraph>
+      <paragraph>
+       We perform all the experiments using a dedicated Linux Intel Core 2 Dual 9400 2.66 GHz workstation with 4 GB of memory. In our empirical study, we are interested in comparing the planners according to performance—i.e., speed of computation—and scalability—ability to solve increasingly larger problem instances. The execution times we report represent the average of two runs, expressed in seconds and showing minimal variance. We use the Linux function time to measure the overall (elapsed) execution time for each experiment; we observed that the execution time reported by a planner sometimes significantly differs from the actual execution time. This reported time can be significantly greater than the computation time for some planners, e.g., T0, T1, CpA, GC[LAMA], and Dnf, especially when the search time is small—this is often due to the time spent by the planners in writing to/reading from files. For this reason, we believe the results we report (especially for small instances) are more meaningful for evaluation of the scalability of each planner. The execution times are rounded up to the closest decimal if the total execution time is less than 100 seconds and to the closest integer otherwise.
+      </paragraph>
+      <paragraph>
+       The results of the experiments are reported in terms of execution time in seconds (columns time) and the length of the plan (columns len) (Table 1, Table 2, Table 3, Table 4, Table 5). In these tables, we use the following abbreviations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        OM: Out-of-memory (if the execution exceeds 4 GB).
+       </list-item>
+       <list-item label="•">
+        TO: Time-out (if the execution time exceeds two hours).
+       </list-item>
+       <list-item label="•">
+        NA: The benchmark is not applicable to the planner. This happens to CFF and T1, as these planners do not support problems with a conjunction in an one-of clause or problems with a disjunction in the goal.
+       </list-item>
+       <list-item label="•">
+        NOP: The planner does not return a solution for the problem, due to its incompleteness.
+       </list-item>
+       <list-item label="•">
+        E: The planner reports an incorrect solution.
+       </list-item>
+       <list-item label="•">
+        AB: The planner terminates abnormally, e.g., T0 fails to translate the problem into classical planning, CFF generates too many clauses to handle, or the length of the action sequence exceeds the maximum length set by CFF.
+       </list-item>
+       <list-item label="•">
+        “–”: The planner cannot solve the problem instance due to the same reason as indicated for a smaller instance.
+       </list-item>
+      </list>
+      <paragraph>
+       In our experiments, we use a large collection of benchmarks, collected from the distributions of CFF, KACMBP, POND, and T0 and from the Conformant Track of the International Planning Competitions in 2006 and in 2008.{sup:10} Due to the similarity and simplicity of several conformant planning benchmarks in the literature, we further diversify the benchmark pool with a set of new problems, obtained as modifications of several problems from the literature.
+      </paragraph>
+      <paragraph>
+       For a better evaluation of the different approaches, we divide the set of benchmarks used in the experiments in four distinct test suites. The first two test suites contain conformant problems available in the literature based on their conformant width [1], [24]. The conformant width of a problem is related to the maximum number of unknown literals in the initial belief state relevant to the precondition of an action or the goal of the problem. As we will see, this measure is critical to the performance of all systems, especially the two planners T0 and T1. Specifically, the size of the resulting classical problem in T0 are exponential in the width of the original problem. For T1, when the conformant width is greater than 1, the planner has to verify whether a tentative literal holds in a belief state in the same manner as CFF does, i.e., by reasoning on a Cnf theory constructed from the initial belief state, the sequence of actions leading to the current belief state from the initial belief state, and the action theory of the problem. The last two test suites contain new problems created by our modifications of several problems from the literature. These modifications makes the problems more challenging, but are specifically designed to capture more challenging problem features that are likely to occur in real-world problems.
+      </paragraph>
+      <paragraph>
+       Due to the similarity in the performance of Dnf, Cnf, and PIP on most problems in the first three test suites, we omit the results of Cnf and PIP on those test suites. Detailed comparison between Dnf vs. Cnf and PIP can be found in [35]. However, we will report the results of Cnf and PIP in the last test suite, where the description of the initial belief state of each problem contains a large set of or-clauses, making the size of the initial belief state, or the disjunctive formula representing it, very large.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Problems from literature with a constant conformant width
+      </section-title>
+      <paragraph>
+       This test suite consists of conformant planning problems from the literature with a constant conformant width (usually 1). The performance results of the planners on these problems are shown in Table 1, Table 2.
+      </paragraph>
+      <paragraph>
+       The first four domains in Table 1 come from the distribution of CFF: Bomb-b-t is the Bomb-in-the-toilet domain, where b indicates the number of bombs and t denotes the number of toilets. Logistics-u-c-p is a variant of the classical Logistics domain, where u denotes the uncertainty about the initial location of each of p packages, i.e., each package can be initially in one of u different locations. Ring-n is the problem of closing and locking windows in a ring of n rooms, given that the room where the agent is initially in and the state of each window are unknown. Safe-n is the problem of opening a safe with n possible combinations.
+      </paragraph>
+      <paragraph>
+       The next four problems in the table belong to four grid domains included in the T0 distribution. Cube-Center-n refers to the problem of reaching the center of a cube of {a mathematical formula}n3 cells from an unknown cell. Square-Center-n is a similar problem, that involves a square of {a mathematical formula}n2 cells. Corners-Cube and Corners-Square are variants of Cube-Center and Square-Center, respectively. In these variants, the initial location is restricted to the corners of the cube or the square.
+      </paragraph>
+      <paragraph>
+       In Table 2, we report the results from the Coins, Comm, and the UTS domains, drawn from the 2006 International Planning Competition (IPC5), and the Forest and Dispose domains, used in the 2008 International Planning Competition (IPC6). Coins-e-f-p-c is the problem of collecting c coins from different locations on f different floors using e different elevators, where the initial location of each coin is unknown among p locations on a given floor and the initial position (floor) of each elevator is unknown as well. UTS-k-n is the problem of visiting 2n nodes from a completely unknown location, where every pair of nodes is connected by two directed edges. UTS-l-n is a similar problem, where only each pair of two adjacent nodes is connected by two directed edges. In UTS-r-n, from each node there are n directed edges to n other random nodes. Dispose-n-m is a grid problem [22], concerned with moving around and picking up m objects from {a mathematical formula}n2 different locations, where the initial location of each object is unknown, and dropping them in a designated location. Push-to is a variant of the Dispose domain, where objects need to be picked up only at two designated locations to which all objects have to be pushed to. Pushing an object from a cell to an adjacent cell moves it to the adjacent cell if the object is in the current cell.
+      </paragraph>
+      <paragraph>
+       The performance of Dnf on most problems in this test suite is highly competitive with most of the other planners, except for GC[LAMA], that is exceptionally efficient on most problems in this test suite. GC[LAMA] can scale up beyond the numbers reported in these tables on most problems. This is because of the relative monotonicity of the action effects in these problems, as discussed in Section 5. However, GC[LAMA] does not perform well on the Coins and Ring domains, since it needs to consider all of the states in the initial belief state of each problem—and the initial belief state of each instance contains an exponential number of states. Several domains where Dnf does not scale up well include Logistics, Ring, Comm, and Forest. We believe that the reason for the poor performance of Dnf on Logistics and Forest is that the simple heuristic function used in this planner does not perform well in these two domains, because of the large number of nodes generated and expanded by Dnf. For example, on Logistics-4-3-10, Dnf generates {a mathematical formula}9,049,609 nodes and expands {a mathematical formula}445,326 nodes, while T1 generates {a mathematical formula}112,100 nodes and expands 1092 nodes. T0 and CFF generate and expand even less nodes for this problem instance. For the Ring problem, the initial μDNF-state is exponential in the size of the problem—{a mathematical formula}n3n partial states in the initial μDNF-state for the instance Ring-n. With the Comm domain, Dnf (and CpA) spends most of the execution time on translating and simplifying the problem instance; e.g., Dnf spends only 2.625 seconds on the search for the solution of Comm-25, but after spending more than 1267 seconds on the translation phase. In terms of overall performance on this test suite, CpA, T0, and T1 are comparable. These planners scale better than CFF and POND, but they are not as good as Dnf.
+      </paragraph>
+      <paragraph>
+       Observe that the quality of the solutions found by Dnf, in terms of length of the plans, is comparable with the solutions found by other planners on most problems, except for the Logistics and Forest domains; in these two domains, Dnf finds solutions that are much longer than those found by the other planners. There are several domains where the solutions found by GC[LAMA] are much longer than those found by other planners, e.g., Dispose, Push-to, and UTS-l. While the reason for the long solutions found by Dnf is due to its simple heuristics, the reason for GC[LAMA] might lie in the approach of this planner, that inserts action sequences into the solution for a sub-problem, as discussed earlier.
+      </paragraph>
+      <paragraph>
+       To conclude this section, we would like to note that the performance of Cnf and PIP on the problems shown in Table 1, Table 2 is similar to that of Dnf and therefore not reported. PIP and Cnf perform better than Dnf in term of memory in a few instances for which Dnf is out-of-memory (see [35]). We note that the results reported in [34] are for a planner also named Cnf but this planner uses a slight different definition of the CNF-state than the one presented in this paper.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Harder problems from literature with conformant width increasing on the problem's size
+      </section-title>
+      <paragraph>
+       This test suite contains problems where the conformant width increases with the problem's size. The experimental results for these problems are summarized in Table 3. The two Adder domains used in IPC5 and IPC6 encode circuits for a given logical formula—the IPC6 version includes more propositions and more complex goals. The Adder problems are difficult due to the complex action effects and the large number of actions, most of them frequently executable, making the search space extremely large. These problems are difficult for all of the planners. CFF and T1 cannot handle these problems due to disjunctions in the goal of the problems. We will discuss the reason a disjunctive goal makes a problem more difficult for GC[LAMA] later. Only Dnf, CpA, and POND can solve the smallest instances of these two domains.
+      </paragraph>
+      <paragraph>
+       The Blocks domain, used in the both IPC5 and IPC6 competitions, is the problem of stacking blocks in a certain order, where the initial positions are unknown. Rao's key and UTS-cycle were used in IPC6. The problem UTS-cycle-n is to follow two labels for visiting n nodes from an unknown node, where each edge is assigned either (but not both) of the two labels, and each node is connected to other two nodes by two directed edges that are uncertain among four given directed edges. Sortnet-n[5], used in IPC5, is the problem of sorting n bits in a network. The last two domains in this table are variants of a family of grid problems [22]. Look-and-Grab-n-r-m is the problem of picking up objects from sufficiently close locations and, after each pickup, deposit the objects being held into a designated location before performing any other pickup. In this problem, the initial location of each of m objects is unknown among {a mathematical formula}n2 locations, and the second parameter r indicates the radius of the influential extent of the actions. For example, when a pickup action is executed, all the objects in the 8 surrounding locations will be picked up if {a mathematical formula}r=1; the number of such locations increases to 15 if {a mathematical formula}r=2. The 1-Dispose domain is a variant of Dispose where the e-condition for the pickup actions requires the robot's hand to be empty. A solution for 1-Dispose must scan the grid, perform pickups in every cells and deposit into the trash can. These problems are hard not only for T0 and T1, due to their conformant width that increases with the size of the problem instance, but they are also hard for all the other planners, as confirmed by the experimental results in Table 3.
+      </paragraph>
+      <paragraph>
+       It is easy to see that Dnf outperforms all of the other planners on most domains of this test suite, with the exception of Sortnet, where POND is the fastest planner in all the instances, and UTS-cycle, where GC[LAMA] scales up better with the problem's size.
+      </paragraph>
+      <paragraph>
+       For this test suite, GC[LAMA] does not perform as well as in the previously discussed benchmarks. It is unable to solve any instance of the 1-Dispose and the Adder problem. The only domain that GC[LAMA] outperforms Dnf and other planners is UTS-cycle. It is worth nothing that the UTS-cycle problem is harder than its predecessors, due to the uncertainty about the edges connecting the nodes. Yet, like its predecessors and other problems in the first test suite, this problem still satisfies the monotonic property discussed previously for GC[LAMA]. More specifically, following more edges in order to reach a desired node can only increase the number of nodes visited but cannot make any visited node become unvisited. This is, however, not the case for most of other problems in this test suite. Let us consider, for example, the 1-Dispose domain. The hardness of 1-Dispose lies in the pickup action whose number of conditional effects is linear in the number of objects in the problem; in addition, the e-conditions of these conditional effects are all unknown, some e-conditions are contradictory (the hand is empty and an object is being held), and the action can causes opposite effects depending on the satisfaction of the e-conditions. For example, the execution of pickup may result in an object being held and no longer at the location, if the hand is empty and the object is at the location, but may also drop the object at the location to empty the hand if the object is held by the hand. We suspect that the contradictory e-conditions of the pickup action result in contradictory goals for the supplementary classical planning problems generated by GC[LAMA], making it unable to solve even the smallest instance of this domain.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       New hard problems, extensions of traditional problems
+      </section-title>
+      <paragraph>
+       In this test suite, we introduce a new set of problems, including New-Ring, New-UTS-k, New-UTS-cycle, New-Push, and New-Dispose obtained respectively as extensions of the Ring, UTS-k, UTS-cycle, Push, and Dispose problems. The extensions incorporate new features, that describe the real-life applications better but also make the problems harder. Some problems in this set have disjunctive goals. We observe that these new problems worsen the performance of most existing planners, but they do not seem to affect the performance of Dnf as shown in Table 4.
+      </paragraph>
+      <paragraph>
+       In the New-Ring problem, a lock can be damaged; the status of each window is unknown (either “open” or “closed”) and the goal is to have every window closed, and if the lock is not damaged then the window should be locked. The goal contains a set of or-clauses, of the form {a mathematical formula}or(locked(i),lock_damaged(i)), where the predicates {a mathematical formula}locked(i) and {a mathematical formula}lock_damaged(i) indicate that the window i is locked and the lock of the window i is damaged, respectively.
+      </paragraph>
+      <paragraph>
+       In New-UTS-k, each node needs to be visited exactly once, except for the root node that can be encountered several times. We introduce a new action, return, to allow the agent to return to the root node from a node that is connected to it. A plan for this new problem is also a plan for the original problem, where the return action is replaced with the corresponding travel action, but with the added constraint preventing repeated visits of non-root nodes. In the New-UTS-cycle domain, half of the edges that have been followed will be dropped in order to reduce the repetitions caused by following the same edges.
+      </paragraph>
+      <paragraph>
+       In the New-Push domain, for each cell i we add a new predicate {a mathematical formula}cleared(i), to indicate that the cell i is clear as result of executing the action {a mathematical formula}push(i,j); the adjacent cell j of i becomes not clear if there is any object in i. We add to the precondition of each action {a mathematical formula}move(i,j) the literal {a mathematical formula}¬cleared(j), to forbid moving to cell j if it is clear. Any solution for the new problem is also a solution for the corresponding original Push-to problem, without the redundant moves to the cleared cells; a solution of the original problem may not be a solution for the new problem, as it may contain such redundant actions.
+      </paragraph>
+      <paragraph>
+       In the new version of Dispose, the goal is relaxed by accepting {a mathematical formula}n−1 objects disposed instead of all n objects disposed. This is reasonable as in real life we cannot always expect all the goals or criteria to be satisfied and sometimes we need to give up one of them. Thus, the goal of the new problem is described by a set (conjunction) of or-clauses of the form {a mathematical formula}(or(disposed(oi),(disposed(oj)) for every pair of objects {a mathematical formula}(oi,oj).
+      </paragraph>
+      <paragraph>
+       Table 4 highlights the superior performance of Dnf in all these domains, compared to all the other planners; the other planners can solve none or only a few small instances of each domain in this test suite. Observe that the performance of Dnf on New-UTS-k, New-UTS-cycle, and New-Dispose is comparable with that of the original domains, while most of other planners perform significantly worse on these new domains. It is worth noting that Dnf scales up better on New-Ring than it does on Ring, due to the fact that the initial μDNF-state in the new domain contains fewer partial states than the initial μDNF-state of the original domain.
+      </paragraph>
+      <paragraph>
+       The new constraints incorporated in the New-UTS-k, New-UTS-cycle, and New-Push domains are obstacles to GC[LAMA], as they prohibit multiple executions of the same actions, while the approach of GC[LAMA] tends to repeat the execution of the same actions when extending the solution of one sub-problem. In the New-Dispose and New-Ring domains, GC[LAMA] performs significantly worse than in the corresponding original domains, due to the disjunctions in the goal of the new problems. We hypothesize that the presence of disjunctive goals leads to a large number of solutions for each sub-problem explored by GC[LAMA], and many of such solutions are far from a solution to the main planning problem. As a result, GC[LAMA] spends a significant amount of time trying to (unnecessarily) repair such solutions. As mentioned earlier, CFF and T1 do not handle problems with disjunctive goals or conjunctions in one-of clauses. CpA returns no solutions for any instance of New-UTS-k. We suspect that this is because of the incompleteness of the goal-splitting technique employed by this planner.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Problems with high uncertainty in the initial state
+      </section-title>
+      <paragraph>
+       In order to test the effectiveness of different representations in conformant planning, we introduce another set of domains obtained by modifying several domains from the previously described test suites. Unlike the extensions in the previous test suite, this modification is simply obtained by replacing the one-of clauses in the original problems with a set of or-clauses. By doing this, the uncertainty in the initial state, i.e., the number of possible states in the initial belief state, increases dramatically. Interestingly, while this change makes the domains fall beyond the capabilities of Dnf and several other planners, Cnf and PIP perform exceptionally well on this class of problems, thanks to their use of conjunctive representations. The modification is applied to the Coins, Dispose, 1-Dispose, Push, and New-Push domains, resulting in a set of new problems with “or-” prefix in their name, as shown in Table 5.
+      </paragraph>
+      <paragraph>
+       Let us consider Dispose, 1-Dispose, Push, and New-Push first. In these problems, each instance is given by two numbers: n denotes the size of the grid of {a mathematical formula}n×n cells (locations) and m is the number of objects given in the problem. For example, in the instance Dispose-2-3, there are {a mathematical formula}2×2=4 cells in the grid and 3 objects given in this problem instance. In these problems, predicates of the form {a mathematical formula}at(pi,j) indicate that the robot is at the cell {a mathematical formula}(i,j) of the grid (location {a mathematical formula}pi,j) and predicates of the form {a mathematical formula}obj_at(ok,pi,j) indicate that the object {a mathematical formula}ok is at the location {a mathematical formula}pi,j, for {a mathematical formula}i,j≤n and {a mathematical formula}k≤m. Initially, the location of each object is unknown among the {a mathematical formula}n×n locations. Hence, in the description of the initial world, there is a set of m one-of clauses of the form {a mathematical formula}oneof(obj_at(oi,p1,1),…,obj_at(oi,pn,n)), for {a mathematical formula}i=1,…,m.
+      </paragraph>
+      <paragraph>
+       In the new problems, each {a mathematical formula}oi represents an object type, e.g., pens, books, etc. The predicate {a mathematical formula}obj_at(oi,pk,j) now means “there exists an object of type {a mathematical formula}oi at location {a mathematical formula}pk,j.” Likewise, the predicate {a mathematical formula}holding(oi) means “holding some object(s) of type {a mathematical formula}oi.” The action {a mathematical formula}pickup(oi,pk,j) in the Dispose problem allows the robot to pick up all the objects of type {a mathematical formula}oi at location {a mathematical formula}pk,j and hold them. Similarly, in 1-Dispose, Push, and New-Push, the action {a mathematical formula}pickup(pk,j) allows the robot to pick up every object at location {a mathematical formula}pk,j if certain conditions are satisfied.{sup:11} Let us assume, initially, that all we know about the objects is that for each object type {a mathematical formula}oi there exists at least an instance of {a mathematical formula}oi somewhere among the {a mathematical formula}n2 given locations. Thus, the set of one-of clauses {a mathematical formula}oneof(obj_at(oi,p1,1),…,obj_at(oi,pn,n)) in the description of the initial world should now be replaced by the set of or-clauses {a mathematical formula}or(obj_at(oi,p1,1),…,obj_at(oi,pn,n)). Observe that, with regard to each object type {a mathematical formula}oi, there are {a mathematical formula}2n2 different possible situations about the initial world in the new domains (an object of type {a mathematical formula}oi may or may not exist in any of the {a mathematical formula}n2 locations), while this number is {a mathematical formula}n2 in the original problems. Thus, while the number of possible states in the initial belief state in the original problems is {a mathematical formula}Ω((n2)m), the size of the initial belief state in the new problems is {a mathematical formula}Ω((2n2)m), i.e., exponential with an exponential base.
+      </paragraph>
+      <paragraph>
+       The modification in the Coins problem is similar, where a coin now is interpreted as a coin type, e.g., dim, nickel, quarter, etc. The action {a mathematical formula}collect(C,F,P) allows the robot to collect all the coins of type C at location P on floor F. The goal is to have some coin(s) of each type. In an instance with c coins (fourth dimension) and p locations on each floor (third dimension), the size of the initial belief state in the original problem is {a mathematical formula}Ω(pc), while in this new domain such size is {a mathematical formula}Ω((2p)c), i.e., exponential with an exponential base too.
+      </paragraph>
+      <paragraph>
+       The results in Table 5 demonstrate the superior performance of Cnf and PIP for this set of domains. Both planners scale up very well on all dimensions, and no other planner has comparable performance on any of these domains—with the only exception of T1 on or-Coins. Observe that, while Cnf and PIP offer superior performance for these new domains, Dnf performs much worse compared to its performance on the corresponding unmodified domains. The reason is that the size of the initial μDNF-state increases drastically like the size of the initial belief state in the new domains. Moreover, the one-of combination technique used in Dnf does not help in these problems. In contrast, the number of clauses in the initial μCNF-state or in the initial PI-state about the location of objects is only m and even smaller than that in the original problems, which is {a mathematical formula}m×n2(n2+1)/2. PIP is faster than Cnf for the or-Coins, or-Dispose, and or-Push domains. Let us note that, in each problem instance of these domains, the set of generated (resp. explored) PI-states is identical to the corresponding set of μCNF-states, as observed from the experiments. On the other hand, Cnf scales better than PIP in the or-1-Dispose and or-New-Dispose domains. This is because, in these domains, the size of the PI-states is significantly larger than the size of the μCNF-states. For example, for the problem instance or-1-Dispose-2-5, the average numbers of clauses in a μCNF-state and in a PI-state are 19.317 and 373.907, respectively. This explains why Cnf is much faster than PIP on this problem.
+      </paragraph>
+      <paragraph>
+       CpA performs poorly in this test suite for the same reasons as Dnf, since they both rely on a disjunctive representation. However, Dnf is still significantly better. GC[LAMA] is not able to solve any domain instance in this test suite. In the original domains, the one-of combination technique helps in reducing the number of states in the initial belief state to a number that GC[LAMA] can manage. In these new domains, the number of states in the initial belief state is extremely large—beyond the capabilities of GC[LAMA].
+      </paragraph>
+      <paragraph>
+       Let us observe that there is no noticeable difference between the performance of T0, T1, and POND on these new domains and their performance on the original domains. CFF performs better on these new domains in comparison with its performance on the original ones. This is because the approach in CFF relies on reasoning about the CNF formulae partly constructed from the initial information. The size of these formulae in the new domains should be smaller than that in the original ones.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs
+     </section-title>
+     <paragraph label="Proof of Proposition 1">
+      <list>
+       <list-item label="1.">
+        We have the following{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        This is a corollary of the previous result using the following fact: for every formula {a mathematical formula}φ′,{a mathematical formula}
+       </list-item>
+       <list-item label="3.">
+        Observe that{a mathematical formula}  □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof of Proposition 2">
+      For a set of literals X, let {a mathematical formula}θ(X,φ) be the substitution {a mathematical formula}{ℓ/True|ℓ occurs in {a mathematical formula}φ,ℓ∈s}∪{ℓ/False|ℓ occurs in {a mathematical formula}φ,ℓ∉s}. We have that {a mathematical formula}θ(s,φ)=θ(δ,φ). Obviously, {a mathematical formula}φθ(s,φ)=φ(δ,φ)=True. This proves the proposition.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 3">
+      Proof by contradiction. Assume that {a mathematical formula}φ⊨ψ. Then {a mathematical formula}φ∧¬ψ is unsatisfiable.On the other hand, since φ is satisfiable, there exists a consistent set of literals δ such that {a mathematical formula}prop(δ)=prop(φ) and {a mathematical formula}δ⊨φ (by Proposition 2). Since ψ is non-tautology, ¬ψ is satisfiable. By Proposition 2, there exists a consistent set of literals {a mathematical formula}δ′ such that {a mathematical formula}prop(δ′)=prop(¬ψ)=prop(ψ) and {a mathematical formula}δ′⊨¬ψ′. Because φ and ψ are independent, {a mathematical formula}prop(δ′)∩prop(δ)=∅. This implies that {a mathematical formula}δ∪δ′ is a consistent set of literals. Thus, {a mathematical formula}δ∪δ′⊨φ and {a mathematical formula}δ∪δ′⊨¬ψ. This means that {a mathematical formula}δ∪δ′⊨φ∧¬ψ. Let s be a state which is a superset of {a mathematical formula}δ∪δ′, clearly {a mathematical formula}s⊨φ∧¬ψ. This means that {a mathematical formula}φ∧¬ψ is satisfiable, a contradiction. As a consequence, {a mathematical formula}φ⊭ψ.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 4">
+      Let s be an arbitrary state in {a mathematical formula}BS(φ). It suffices to prove that {a mathematical formula}e(a,s)=e(a,φ). Consider the two cases:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Let ℓ be an arbitrary literal in {a mathematical formula}e(a,φ), we will show that {a mathematical formula}ℓ∈e(a,s): by Definition 4, there exists an effect {a mathematical formula}a:ψ→η such that {a mathematical formula}φ⊨ψ and {a mathematical formula}ℓ∈η. This implies {a mathematical formula}s⊨ψ since s is a state in {a mathematical formula}BS(φ). By the definition of {a mathematical formula}e(a,s), we also have {a mathematical formula}ℓ∈e(a,s).
+      </list-item>
+      <list-item label="2.">
+       Now let {a mathematical formula}ℓ′ be an arbitrary literal in {a mathematical formula}e(a,s), we prove that {a mathematical formula}ℓ′∈e(a,φ): Assume that {a mathematical formula}ℓ′∉e(a,φ). Since {a mathematical formula}ℓ′∈e(a,s), there exists an effect {a mathematical formula}a:ψ′→η′ such that {a mathematical formula}s⊨ψ′ and {a mathematical formula}ℓ′∈η′. On the other hand, {a mathematical formula}ℓ′∉e(a,φ) so {a mathematical formula}φ⊭ψ′. This means that {a mathematical formula}φ⊨¬ψ′ (because φ is enabling for action a, either {a mathematical formula}φ⊨ψ′ or {a mathematical formula}φ⊨¬ψ′ holds). Consequently, {a mathematical formula}s⊨¬ψ′ (a contradiction).
+      </list-item>
+     </list>
+     <paragraph label="Proof of Proposition 5">
+      <list>
+       <list-item label="1.">
+        Since {a mathematical formula}φ⊭¬ψ and φ is satisfiable, we have that {a mathematical formula}φ∧ψ is satisfiable. Let s be an arbitrary state in {a mathematical formula}BS(φ) that satisfies ψ, clearly {a mathematical formula}s⊨φ∧ψ or {a mathematical formula}s∈BS(φ∧ψ). On the other hand, every state in {a mathematical formula}BS(φ∧ψ) satisfies both φ and ψ, i.e., it belongs to {a mathematical formula}BS(φ) and satisfies ψ. Thus, {a mathematical formula}BS(φ∧ψ) is the set of states in {a mathematical formula}BS(φ) that satisfy ψ.
+       </list-item>
+       <list-item label="2.">
+        Similarly, we have {a mathematical formula}φ∧¬ψ is satisfiable and {a mathematical formula}BS(φ∧¬ψ) is the set of states in {a mathematical formula}BS(φ) that satisfy ¬ψ. In addition, since a formula is always known in a state, it is easy to see that every state s in {a mathematical formula}BS(φ)∖BS(φ∧ψ) satisfies ¬ψ, i.e., {a mathematical formula}s∈BS(φ∧¬ψ). In the other words, {a mathematical formula}BS(φ∧¬ψ)=BS(φ)∖BS(φ∧ψ).
+       </list-item>
+       <list-item label="3.">
+        Follow form {a mathematical formula}(φ∧ψ)∨(φ∧¬ψ)≡φ and Proposition 1. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof of Proposition 6">
+      Let {a mathematical formula}Ψ=〈ψ1,…,ψn〉 be an enumeration of {a mathematical formula}Ψ(a). By Definition 5, to prove that {a mathematical formula}φ⊕RΨ is an enabling form of φ for a, we prove that {a mathematical formula}φ⊕RΨ is a set of {a mathematical formula}R-states enabling for a, i.e., every {a mathematical formula}ψi in {a mathematical formula}Ψ(a) is known in every {a mathematical formula}R-state in {a mathematical formula}φ⊕RΨ, and {a mathematical formula}⋃γ∈φ⊕RΨBS(γ)=BS(φ). We also need to prove that every {a mathematical formula}R-state in {a mathematical formula}φ⊕RΨ is satisfiable. The proof is by induction on {a mathematical formula}|Ψ(a)| as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case {a mathematical formula}|Ψ(a)|=0: The proof is trivial as {a mathematical formula}φ⊕RΨ={φ}.
+      </list-item>
+      <list-item label="•">
+       Base case {a mathematical formula}|Ψ(a)|=1: Let {a mathematical formula}Ψ(a)={ψ}. Then {a mathematical formula}Ψ=〈ψ〉 and {a mathematical formula}φ⊕RΨ=φ⊕Rψ. By Definition 6 and Proposition 5, clearly this is an enabling form of φ for a and every {a mathematical formula}R-state in {a mathematical formula}φ⊕RΨ is satisfiable.
+      </list-item>
+      <list-item label="•">
+       Inductive step: Suppose that the proposition holds for {a mathematical formula}0≤|Ψ(a)|≤n, for some {a mathematical formula}n≥1. We will prove that it also holds for {a mathematical formula}|Ψ(a)|=n+1. Consider an enumeration {a mathematical formula}Ψ=〈ψ1,…,ψn,ψn+1〉 of {a mathematical formula}Ψ(a). We have{a mathematical formula}By inductive hypothesis, {a mathematical formula}φ⊕R〈ψ1,…,ψn〉 is a set of satisfiable {a mathematical formula}R-states and for every {a mathematical formula}R-state γ in {a mathematical formula}φ⊕R〈ψ1,…,ψn〉 either {a mathematical formula}γ⊨ψi or {a mathematical formula}γ⊨¬ψi holds for {a mathematical formula}i=1,…,n. Let γ be an arbitrary {a mathematical formula}R-state in {a mathematical formula}φ⊕R〈ψ1,…,ψn〉. By Definition 6 and Proposition 5, we have that {a mathematical formula}γ⊕Rψn+1 is a set of satisfiable {a mathematical formula}R-states satisfying γ. This implies that, for every η in {a mathematical formula}γ⊕Rψn+1 either {a mathematical formula}η⊨ψi or {a mathematical formula}η⊨¬ψi holds for {a mathematical formula}i=1,…,n. Furthermore, for every η in {a mathematical formula}γ⊕Rψn+1 either {a mathematical formula}η⊨ψn+1 or {a mathematical formula}η⊨¬ψn+1 holds. This implies that every {a mathematical formula}ψi in {a mathematical formula}Ψ(a) is known in every {a mathematical formula}R-state in {a mathematical formula}γ⊕Rψn+1. In other words, {a mathematical formula}γ⊕Rψn+1 is a set of satisfiable {a mathematical formula}R-states enabling for a. Since γ is an arbitrary {a mathematical formula}R-state in {a mathematical formula}φ⊕R〈ψ1,…,ψn〉, by definition we have that {a mathematical formula}φ⊕RΨ is a set of satisfiable {a mathematical formula}R-states enabling for a.To prove {a mathematical formula}⋃φ′∈φ⊕RΨBS(φ′)=BS(φ), we need to prove that for every {a mathematical formula}R-state γ and every consistent set of literals ψ, {a mathematical formula}⋃γ′∈γ⊕RψBS(γ′)=BS(γ). We consider the following two cases.
+       <list>
+        {a mathematical formula}γ⊨ψ or {a mathematical formula}γ⊨¬ψ. By definition, {a mathematical formula}γ⊕Rψ={γ}. Hence, {a mathematical formula}⋃γ′∈γ⊕RψBS(γ′)=BS(γ)ψ is unknown in γ. Then, by definition we have {a mathematical formula}γ⊕Rψ={convR(γ∧ψ),convR(γ∧¬ψ)}. Hence,{a mathematical formula}In both cases, we have
+       </list>
+       <paragraph>
+        {a mathematical formula}⋃γ′∈γ⊕RψBS(γ′)=BS(γ). Applying this result in the following derivation, we have{a mathematical formula} The inductive step, and hence, the proposition is proved.  □
+       </paragraph>
+      </list-item>
+     </list>
+     <paragraph label="Lemma 1">
+      Let{a mathematical formula}Ψ=〈ψ1,…,ψn〉be a sequence of consistent sets of literals. For every pair of two different{a mathematical formula}R-states α and β in{a mathematical formula}φ⊕RΨ, there exists ψ in Ψ such that α and β disagree on ψ.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is by induction on n as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case {a mathematical formula}n=0: the proof is trivial.
+      </list-item>
+      <list-item label="•">
+       Inductive step: Suppose that the proposition holds for some {a mathematical formula}n≥0, we will prove that the proposition also holds for {a mathematical formula}n+1 by contradiction. Consider a sequence of consistent sets of literals {a mathematical formula}Ψ=〈ψ1,…,ψn,ψn+1〉. Assume that there exist two different formulae α and β in {a mathematical formula}φ⊕RΨ such that α and β agree on very {a mathematical formula}ψi in {a mathematical formula}{ψ1,…,ψn+1}. By definition, we have{a mathematical formula}Thus, there exist {a mathematical formula}αn and {a mathematical formula}βn in {a mathematical formula}φ⊕〈ψ1,…,ψn〉 such that {a mathematical formula}α∈αn⊕Rψn+1 and {a mathematical formula}β∈βn⊕Rψn+1.We will prove that {a mathematical formula}αn=βn by contradiction: Assume that {a mathematical formula}αn≠βn. By induction, there exists {a mathematical formula}ψi in {a mathematical formula}{ψ1,…,ψn} such that {a mathematical formula}αn and {a mathematical formula}βn disagree on {a mathematical formula}ψi. By Definition 9, it is easy to see that {a mathematical formula}α⊨αn and {a mathematical formula}β⊨βn. This implies that α and β disagree on {a mathematical formula}ψi too, a contradiction.Thus {a mathematical formula}αn=βn. Hence, {a mathematical formula}α,β∈αn⊕Rψn+1. Because {a mathematical formula}α≠β, this implies that {a mathematical formula}{α,β}={convR(αn∧ψn+1),convR(αn∧¬ψn+1)}. This means that α and β disagree on {a mathematical formula}ψn+1, a contradiction. The inductive step is proved.  □
+      </list-item>
+     </list>
+     <paragraph label="Proof of Theorem 1">
+      Assume that {a mathematical formula}{φ1,…,φm}=φ⊕RΨ. Let {a mathematical formula}s1,…,sm be a sequence of states such that {a mathematical formula}si⊨φi for {a mathematical formula}i=1,…,m. We have that {a mathematical formula}si∈BS(φi).Consider an arbitrary enabling form Γ of φ for a. Assume that {a mathematical formula}Γ={γ1,…,γk}. Without the loss of generality, we can assume that for every pair of different {a mathematical formula}γ1,γ2∈Γ, {a mathematical formula}BS(γ1)≠BS(γ2).Since Γ is enable of φ for a, {a mathematical formula}⋃γ∈ΓBS(γ)=BS(φ)=BS(φ1)∪…∪BS(φm). This implies that for each {a mathematical formula}i∈{1,…,m}, there exists some {a mathematical formula}γj∈Γ such that {a mathematical formula}si∈BS(γj).Assume that {a mathematical formula}|Γ|&lt;m. This means that there exists some {a mathematical formula}i,j,t such that {a mathematical formula}si,sj∈BS(γt). From Lemma 1, we know that there exists some {a mathematical formula}ψ∈Ψ such that {a mathematical formula}φi and {a mathematical formula}φj disagree on ψ. This implies that {a mathematical formula}γt⊭ψ and {a mathematical formula}γt⊭¬ψ, i.e., {a mathematical formula}γt is not enabling for a. This contradicts with the fact that Γ is an enabling form of φ for a. In other words, we can conclude that {a mathematical formula}k≥m, i.e., {a mathematical formula}|Γ|≥|φ⊕RΨ|.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 2">
+      Let a be an action and φ be an {a mathematical formula}R-state. By Definition 3, to prove that {a mathematical formula}ΦR is a transition function for {a mathematical formula}R, we need to prove that {a mathematical formula}BS(ΦR(a,φ))=Φ(a,BS(φ)). We have two cases as follows.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}φ⊨pre(a): by definition,{a mathematical formula} Hence,{a mathematical formula} Because {a mathematical formula}φ⊨pre(a) iff {a mathematical formula}BS(φ)⊨pre(a), by definition we have {a mathematical formula}Φ(a,BS(φ))={s∖e(a,s)‾∪e(a,s)|s∈BS(φ)}. Thus, {a mathematical formula}BS(ΦR(a,φ))=Φ(a,BS(φ)).
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}φ⊭pre(a): by definition, {a mathematical formula}ΦR(a,φ) is undefined. Hence, {a mathematical formula}BS(ΦR(a,φ)) is undefined. Since {a mathematical formula}φ⊭pre(a) iff {a mathematical formula}BS(φ)⊭pre(a), we have that {a mathematical formula}Φ(a,BS(φ)) is undefined. Thus, {a mathematical formula}BS(ΦR(a,φ))=Φ(a,BS(φ)).
+      </list-item>
+     </list>
+     <paragraph label="Proof of Theorem 3">
+      The proof is by induction on the length n of {a mathematical formula}αn.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case {a mathematical formula}n=0: by definition, {a mathematical formula}BS(ΦRˆ([],φ))=Φˆ([],BS(φ))=BS(φ).
+      </list-item>
+      <list-item label="•">
+       Inductive step: suppose that the proposition holds for every sequence of length less or equal to {a mathematical formula}n−1, for some {a mathematical formula}n&gt;0. We will show that it holds for every sequence of length n. We have{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph label="Proof of Proposition 7">
+      Let {a mathematical formula}{ψi→ηi|i=1,…,n} be the set of conditional effects of a. For simplicity of the presentation, we will assume that for each action a and two conditional effects {a mathematical formula}a:ψ→η and {a mathematical formula}a:ψ′→η′ in {a mathematical formula}Ca, {a mathematical formula}ψ∧ψ′ is unsatisfiable. Clearly, {a mathematical formula}Ψ(a)={ψ1,…,ψn} and {a mathematical formula}Ψ=〈ψ1,…,ψn〉 is an enumeration of {a mathematical formula}Ψ(a). To prove that the proposition holds, we use the following loop invariant for the outer for loop (Lines 6–12 of Algorithm 3):At the beginning of each iteration of the for loop, we have {a mathematical formula}Result={〈γ,ei(γ)〉|γ∈φ⊕R〈ψ1,…,ψi−1〉}, where {a mathematical formula}ei(γ)=⋃j&lt;i,γ⊨ψjηj.We need to show that this invariant is true prior to the first (outer) loop iteration, that each iteration of the loop maintains the invariant, and that the invariant provides useful properties to show correctness when the loop terminates.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Initialization: Prior to the first iteration of the loop, {a mathematical formula}i=1 and {a mathematical formula}Result={〈φ,∅〉} (Lines 3–4). The sequence {a mathematical formula}〈ψ1,…,ψi−1〉 is empty so, by definition, {a mathematical formula}φ⊕R〈ψ1,…,ψi−1〉={φ}. Furthermore, {a mathematical formula}e1(φ)=∅. Thus, the invariant holds.
+      </list-item>
+      <list-item label="•">
+       Maintenance: Assume that the i-th iteration is completed and the loop variant is maintained, i.e., {a mathematical formula}Result={〈γ,ei(γ)〉|γ∈φ⊕R〈ψ1,…,ψi−1〉. Let {a mathematical formula}Result′ denote Result after the {a mathematical formula}i+1-th iteration of the loop. From the algorithm specification, we have that {a mathematical formula}〈γ′,e(γ′)〉∈Result′ iff there exists some {a mathematical formula}〈γ,e(γ)〉∈Result and {a mathematical formula}〈γ′,e(γ′)〉 belongs to {a mathematical formula}extendingR(γ,e(γ),ψi→ηi). The definition of extending and the loop variant allow us to conclude that {a mathematical formula}e(γ′)=ei+1(γ′). This holds for every {a mathematical formula}〈γ′,e(γ′)〉∈Result′, i.e., the loop invariant is maintained.
+      </list-item>
+      <list-item label="•">
+       Termination: At termination of the loop, {a mathematical formula}i=n+1. We have {a mathematical formula}Result={〈γ,en+1(γ)〉|γ∈φ⊕R〈ψ1,…,ψn〉}. Since {a mathematical formula}〈ψ1,…,ψn〉 is an enumeration of {a mathematical formula}Ψ(a), by definition, we have {a mathematical formula}φ⊕R〈ψ1,…,ψn〉=enbR(a,φ). Moreover, {a mathematical formula}en+1(γ)=e(a,γ). Hence, the procedure returns {a mathematical formula}Result={〈γ,e(a,γ)〉|γ∈enbR(a,φ)}. □
+      </list-item>
+     </list>
+     <paragraph label="Proof of Proposition 8">
+      Observe that {a mathematical formula}refine(Δ) is obtained by removing every inconsistent set of literals from Δ, by definition, clearly {a mathematical formula}refine(Δ) is a set of partial states. Moreover, by Proposition 1, {a mathematical formula}BS(Δ)=⋃δ∈ΔBS(δ)=⋃δ∈Δ∧δisconsistentBS(δ)∪⋃δ∈Δ∧δisinconsistentBS(δ)=BS(refine(Δ))∪⋃δ∈Δ∧δisinconsistentBS(δ). Since every inconsistent set of literals δ is unsatisfiable and {a mathematical formula}BS(δ)=∅, we have {a mathematical formula}⋃δ∈Δ∧δisinconsistentBS(δ)=∅. This implies that {a mathematical formula}BS(Δ)=BS(refine(Δ) or {a mathematical formula}Δ≡refine(Δ).On the other hand, by definition, clearly {a mathematical formula}μ(Δ)=min(refine(Δ)) is a μDNF-state. By definition, {a mathematical formula}min(refine(Δ))={δ|δ∈refine(Δ)∧∄δ′∈refine(Δ).δ′⊊δ} and hence {a mathematical formula}min(refine(Δ)) is a subset of {a mathematical formula}refine(Δ). Let {a mathematical formula}Δsup=refine(Δ)∖min(refine(Δ)). Then {a mathematical formula}Δsup is a subset of {a mathematical formula}refine(Δ) and, by Proposition 1, {a mathematical formula}BS(refine(Δ))=BS(min(refine(Δ)))∪BS(Δsup). Consider an arbitrary {a mathematical formula}δ∈Δsup. Then there exists {a mathematical formula}δ′∈min(refine(Δ)) such that {a mathematical formula}δ′⊊δ (otherwise, {a mathematical formula}δ∈min(refine(Δ)) and hence {a mathematical formula}δ∉Δsup). Hence, {a mathematical formula}δ⊨δ′ or {a mathematical formula}BS(δ)⊆BS(δ′). This implies that {a mathematical formula}BS(Δsup)⊆BS(min(refine(Δ))), since δ is an arbitrary element in {a mathematical formula}Δsup. Thus, {a mathematical formula}BS(min(refine(Δ)))∪BS(Δsup)=BS(min(refine(Δ))) and hence {a mathematical formula}BS(refine(Δ))=BS(min(refine(Δ))), i.e., {a mathematical formula}refine(Δ)≡min(refine(Δ))=μ(Δ). Thus, {a mathematical formula}μ(Δ)≡Δ.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 9">
+      <list>
+       <list-item label="1.">
+        By definition, the belief state of δ is the set of states that satisfy δ. Since δ is a consistent set of literals, a state s that satisfies δ iff s satisfies every literal in δ, i.e., {a mathematical formula}δ⊆s. Thus, {a mathematical formula}BS(δ)={s|s is a state, and δ⊆s}.
+       </list-item>
+       <list-item label="2.">
+        Let φ be an arbitrary formula that represents {a mathematical formula}BS(δ). Then, {a mathematical formula}φ≡δ. This implies that φ entails every literal in δ. Thus, φ must also contain every literal in δ. As a consequence, the number of literals in φ is at least the number of literals in δ. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof of Proposition 10">
+      <list>
+       <list-item label="1.">
+        First, we will prove that {a mathematical formula}convμDNF(Δ∧ψ)={δ∪ψ|δ∈Δ∧δ∩ψ‾=∅} is a μDNF-state. Since δ and ψ are consistent set of literals and one does not contain the negation of a literal in the other set ({a mathematical formula}δ∩ψ‾=∅), {a mathematical formula}δ∪ψ is a consistent set of literals. The minimality of Δ implies the minimality of {a mathematical formula}convμDNF(Δ∧ψ) and thus {a mathematical formula}convμDNF(Δ∧ψ) is a μDNF-state. Now we need to prove {a mathematical formula}convμDNF(Δ∧ψ)≡Δ∧ψ. We have{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        Let {a mathematical formula}Δ1={δ|δ∈Δ∧δ∩ψ‾≠∅} and {a mathematical formula}Δ2=⋃δ∈Δ∧δ∩ψ‾=∅{δ∪{ℓ‾}|ℓ∈ψ∖δ}. By Definition 13, we have {a mathematical formula}convμDNF(Δ∧¬ψ)=min(Δ1∪Δ2). Since every δ in Δ is a consistent set of literals, every {a mathematical formula}δ∪{ℓ¯} in {a mathematical formula}Δ2 is a consistent set of literals because {a mathematical formula}ℓ∉δ. Hence, {a mathematical formula}Δ1∪Δ2 is a DNF formula that contains only consistent sets of literals. Again, the minimality of Δ implies that {a mathematical formula}Δ1∪Δ2 is minimal and hence is a μDNF-state. The proof for equivalence between {a mathematical formula}convμDNF(Δ∧¬ψ) and {a mathematical formula}Δ∧¬ψ is as follows.{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof of Proposition 11">
+      First we will prove that, for every partial state δ,{a mathematical formula} For every state s in {a mathematical formula}BS(δ), s is a superset of δ (by Proposition 9). Hence, {a mathematical formula}δ∖e¯∪e⊆s∖e‾∪e, i.e., {a mathematical formula}s∖e‾∪e⊨δ∖e¯∪e or {a mathematical formula}s∖e‾∪e∈BS(δ∖e¯∪e) (it is easy to see that {a mathematical formula}s∖e‾∪e is a state). This means that{a mathematical formula}Now we need to prove that {a mathematical formula}BS(δ∖e¯∪e)⊆{s∖e‾∪e|s∈BS(δ)}.Let {a mathematical formula}s1 be an arbitrary state in {a mathematical formula}BS(δ∖e¯∪e), we will prove that {a mathematical formula}s1 also belongs to {a mathematical formula}{s∖e‾∪e|s∈BS(δ)}. Since {a mathematical formula}s1∈BS(δ∖e¯∪e), {a mathematical formula}s1⊨(δ∖e¯∪e) or {a mathematical formula}(δ∖e¯∪e)⊆s1. Let {a mathematical formula}γ=s1∖(δ∖e¯∪e). Observe that γ is a consistent set of literals that are independent from {a mathematical formula}δ∖e¯∪e. That means {a mathematical formula}prop(γ)=F∖prop(δ∖e¯∪e), where F is the set of propositions in the domain. Let {a mathematical formula}e−=δ∩e¯, {a mathematical formula}e+=e∖e−‾, and {a mathematical formula}δ0=δ∖e−. Observe that, {a mathematical formula}s1=δ∖e¯∪e∪γ=(δ0∪e−)∖(e−∪e+‾)∪(e−‾∪e+)∪γ=δ0∪e−‾∪e+∪γ. Now consider {a mathematical formula}s2=δ0∪e−∪e+∪γ=δ∪e+∪γ. Furthermore, every partition set in {a mathematical formula}s2: {a mathematical formula}δ0, {a mathematical formula}e−, {a mathematical formula}e+, and γ are consistent; {a mathematical formula}e− and γ are independent from all the other sets while {a mathematical formula}δ0∪e+ is consistent. Therefore, {a mathematical formula}s2 is consistent and thereby it is a state (because {a mathematical formula}prop(s2)=prop(s1)=F). Since {a mathematical formula}δ⊆s2 so {a mathematical formula}s2∈BS(δ). Observe that {a mathematical formula}s2∖e¯∪e=δ∪e+∪γ∖e¯∪e=δ∖e¯∪e∪γ=s1 (because γ is independent from {a mathematical formula}e¯ and {a mathematical formula}e+⊆e). This means that {a mathematical formula}s1∈{s∖e‾∪e|s∈BS(δ)}. This implies that{a mathematical formula} Together (10) and (11) we have the proof for (9). Now we have{a mathematical formula}  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 12">
+      Obviously, {a mathematical formula}(⋃Δ∈ΓΔ) is a set of partial states (consistent sets of literals). Hence, {a mathematical formula}mergeμDNF(Γ)=min(⋃Δ∈ΓΔ)=μ(⋃Δ∈ΓΔ). By Proposition 8, this is a μDNF-state equivalent to {a mathematical formula}(⋃Δ∈ΓΔ). Moreover, due to associativity of ∨, we have {a mathematical formula}⋃Δ∈ΓΔ≡⋁Δ∈ΓΔ. Thus, {a mathematical formula}mergeμDNF(Γ) is a μDNF-state equivalent to {a mathematical formula}⋁Δ∈ΓΔ. Hence, {a mathematical formula}BS(mergeμDNF(Γ))=BS(⋁Δ∈ΓΔ). By Proposition 1, we have {a mathematical formula}BS(⋁Δ∈ΓΔ)=⋃Δ∈ΓBS(Δ). Thus, {a mathematical formula}BS(mergeμDNF(Γ))=⋃Δ∈ΓBS(Δ).  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 13">
+      <list>
+       <list-item label="1.">
+        Consider an arbitrary clause γ in {a mathematical formula}r(φ∪{α}). Then γ is nontrivial and there does not exists a clause in {a mathematical formula}φ∪{α} that subsumes γ. Since {a mathematical formula}φ⊆φ∪{α}, φ does not subsume γ. If {a mathematical formula}γ∈φ then {a mathematical formula}γ∈r(φ), otherwise {a mathematical formula}γ=α. This implies that {a mathematical formula}γ∈(r(φ)∪{α}). Observe that {a mathematical formula}(r(φ)∪{α})⊆(φ∪{α}) so {a mathematical formula}(r(φ)∪{α}) does not subsume γ. Hence, {a mathematical formula}γ∈r(r(φ)∪{α}). Now we consider an arbitrary clause ρ in {a mathematical formula}r(r(φ)∪{α}). Then ρ is nontrivial and there does not exists a clause in {a mathematical formula}(r(φ)∪{α}) that subsumes ρ. Assume that {a mathematical formula}ρ∉r(φ∪{α}). Then there exists in {a mathematical formula}φ∪{α} a clause λ that subsumes ρ and {a mathematical formula}λ∉(r(φ)∪{α}). This implies that {a mathematical formula}λ∈(φ∪{α})∖(r(φ)∪{α}) or {a mathematical formula}λ∈φ∖r(φ). This means that λ is subsumed by a clause in {a mathematical formula}r(φ) and hence ρ is subsumed by the same clause in {a mathematical formula}r(φ). Thus, ρ is subsumed by a clause in {a mathematical formula}r(φ)∪{α}, a contradiction. Hence, {a mathematical formula}ρ∈r(φ∪{α}).
+       </list-item>
+       <list-item label="2.">
+        Using the first result of this proposition, one can easily prove that{a mathematical formula} The proof is similar to the proof of the first item. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof of Proposition 14">
+      To prove that {a mathematical formula}(φ⊗ψ1)⊗ψ2=(φ⊗ψ2)⊗ψ1 we first prove that{a mathematical formula}By definition, we have that {a mathematical formula}(φ⊗ψ1)⊗ψ2=r(r(φ×ψ1)×ψ2). Since {a mathematical formula}r(φ×ψ1)⊆φ×ψ1, by definition we have {a mathematical formula}r(φ×ψ1)×ψ2⊆φ×ψ1×ψ2. Hence, {a mathematical formula}r(r(φ×ψ1)×ψ2)⊆r(φ×ψ1×ψ2), i.e., {a mathematical formula}(φ⊗ψ1)⊗ψ2⊆r(φ×ψ1×ψ2).  (*)Now consider an arbitrary clause α in {a mathematical formula}r(φ×ψ1×ψ2). Then α is a nontrivial clause in {a mathematical formula}φ×ψ1×ψ2 and there does not exist a clause in {a mathematical formula}φ×ψ1×ψ2 that subsumes α. We will prove that {a mathematical formula}α∈r(r(φ×ψ1)×ψ2). By definition, we have that {a mathematical formula}∃β∈φ∃γ1∈ψ1∃γ2∈ψ2.α=β∪γ1∪γ2. We prove that {a mathematical formula}β∪γ1 is not subsumed by a clause in {a mathematical formula}φ×ψ1. Assume the contrary that {a mathematical formula}∃β′∈φ∃γ3∈ψ1 such that {a mathematical formula}β′∪γ3 subsumes {a mathematical formula}β∪γ1. This implies that {a mathematical formula}β′∪γ3∪γ2 subsumes {a mathematical formula}β∪γ1∪γ2=α, a contradiction. Hence, {a mathematical formula}β∪γ1 is not subsumed by any clause in {a mathematical formula}φ×ψ1 and thereby {a mathematical formula}β∪γ1∈r(φ×ψ1). By definition, we have {a mathematical formula}β∪γ1∪γ2∈r(φ×ψ1)×ψ2, i.e., {a mathematical formula}α∈r(φ×ψ1)×ψ2. Moreover, since {a mathematical formula}r(φ×ψ1)×ψ2⊆φ×ψ1×ψ2 and {a mathematical formula}φ×ψ1×ψ2 does not subsume α so {a mathematical formula}r(φ×ψ1)×ψ2 does not subsume α either. In addition, α is nontrivial so {a mathematical formula}α∈r(r(φ×ψ1)×ψ2), i.e., {a mathematical formula}α∈(φ⊗ψ1)⊗ψ2. Since α is an arbitrary clause in {a mathematical formula}r(φ×ψ1×ψ2), we have that {a mathematical formula}r(φ×ψ1×ψ2)⊆(φ⊗ψ1)⊗ψ2.  (**)(*) and (**) yield the proof for (12).Similarly, we can prove that{a mathematical formula}(12) and (13) result in {a mathematical formula}(φ⊗ψ1)⊗ψ2=(φ⊗ψ2)⊗ψ1.  □
+     </paragraph>
+     <paragraph>
+      To prove Proposition 15, we first prove the next lemmas.
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Let{a mathematical formula}Dand{a mathematical formula}D′be two domains. Let{a mathematical formula}f:D×D′↦Dbe a function such that{a mathematical formula}For every sequence{a mathematical formula}Y=(y1,…,yn),y1,…,yn∈D′and for every permutation{a mathematical formula}Z=(z1,…,zn)of Y:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}α=(t1,…,tm) be an arbitrary sequence of m elements in {a mathematical formula}D′. By {a mathematical formula}αk, {a mathematical formula}0&lt;k≤m, we denote the sequence{a mathematical formula} which is the prefix of the first k elements of α. By {a mathematical formula}f(x,αk) we denote{a mathematical formula} Thus, we need to prove{a mathematical formula} The proof is by induction on the length n of Y (and Z).
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case {a mathematical formula}n=1: it is trivial
+      </list-item>
+      <list-item label="•">
+       Base case {a mathematical formula}n=2: it is given
+      </list-item>
+      <list-item label="•">
+       Inductive step: Suppose that the lemma is true for every {a mathematical formula}k&lt;n, for some {a mathematical formula}n≥3, we will prove that it is also true for {a mathematical formula}k=n. We consider the following two cases
+      </list-item>
+     </list>
+     <paragraph label="Lemma 3">
+      Let φ be a CNF formula and ℓ be a literal. Then,{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We will prove for the case that {a mathematical formula}φℓ≠∅, {a mathematical formula}φℓ¯≠∅, and neither of ℓ or {a mathematical formula}ℓ¯ is a unit literal of φ. For the other cases, e.g., either {a mathematical formula}φℓ=∅ or {a mathematical formula}φℓ¯=∅, the proof can be obtained similarly but simpler so we omit it here.Let {a mathematical formula}φ0=φ∖(φℓ∪φℓ¯). Then {a mathematical formula}φ=φ0∪φℓ∪φℓ¯. Observe that {a mathematical formula}φℓ≡(φℓ−ℓ)∨ℓ. Let {a mathematical formula}θ=φℓ−ℓ, then {a mathematical formula}φℓ≡θ∨ℓ. Similarly, {a mathematical formula}φℓ¯≡ϑ∨ℓ¯, where {a mathematical formula}ϑ=φℓ¯−ℓ¯. Thus,{a mathematical formula} Hence,{a mathematical formula}This implies the following{a mathematical formula}Observe that, {a mathematical formula}φ0, θ, and ϑ do not contain either ℓ or {a mathematical formula}ℓ¯. Hence, {a mathematical formula}{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ϑ)} is a set of states that entail both {a mathematical formula}φ0∧θ∧ϑ and ℓ, i.e. they entail {a mathematical formula}φ0∧θ∧ϑ∧ℓ. In the other words, {a mathematical formula}{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ϑ)}⊆BS(φ0∧θ∧ϑ∧ℓ). On the other hand, let {a mathematical formula}s′ be an arbitrary state in {a mathematical formula}BS(φ0∧θ∧ϑ∧ℓ). Then {a mathematical formula}s′⊨φ0∧θ∧ϑ and {a mathematical formula}s′⊨ℓ, i.e., {a mathematical formula}s′∈BS(φ0∧θ∧ϑ) and {a mathematical formula}s′∖{ℓ¯}∪{ℓ}=s′. This implies that {a mathematical formula}s′∈{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ϑ)}. Thus, {a mathematical formula}{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ϑ)}=BS(φ0∧θ∧ϑ∧ℓ).Now we consider the second set in the right side of Equation (14). Since {a mathematical formula}φ0∧θ does not contain either ℓ or {a mathematical formula}ℓ¯, it is easy to see that {a mathematical formula}{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ℓ¯)} is a set of states that entail both {a mathematical formula}φ0∧θ and ℓ. Similarly, we have {a mathematical formula}{s∖{ℓ¯}∪{ℓ}|s∈BS(φ0∧θ∧ℓ¯)}=BS(φ0∧θ∧ℓ). Finally, the third set in the right side of Equation (14) is obviously equal to {a mathematical formula}BS(φ0∧ϑ∧ℓ). By Equation (14), we obtain the following{a mathematical formula}Observe that, the first set in the right side of the above equation is a subset of the second set (and also a subset of the third set). Hence,{a mathematical formula}  □
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Given two CNF formulae φ and ψ, then
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}r(r(φ))=r(φ)
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}r(φ∪r(ψ))=r(φ∪ψ)
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}r(φ×φ)=r(φ)
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}r(φ∪(φ×ψ))=r(φ)
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="1.">
+        Trivial.
+       </list-item>
+       <list-item label="2.">
+        Observe that {a mathematical formula}(φ∪r(ψ))⊆r(φ∪ψ) (because {a mathematical formula}r(ψ)⊆ψ). Let α be an arbitrary clause in {a mathematical formula}r(φ∪ψ). Then α is nontrivial and there exists no clause in {a mathematical formula}φ∪ψ that subsumes α. Hence, there exists no clause in {a mathematical formula}φ∪r(ψ) that subsumes α. Thus, {a mathematical formula}α∈φ∪r(ψ) and thereby {a mathematical formula}(φ∪ψ)⊆r(φ∪r(ψ)). As a consequence, {a mathematical formula}r(φ∪r(ψ))=r(φ∪ψ).
+       </list-item>
+       <list-item label="3.">
+        We have{a mathematical formula} Observe that each clause in the later subset of {a mathematical formula}φ×φ is subsumed by a clause in the former subset which is φ. Hence, {a mathematical formula}r(φ×φ)=r(φ).
+       </list-item>
+       <list-item label="4.">
+        This is trivial as every clause in {a mathematical formula}φ×ψ is a superset of a clause in φ. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 5">
+      If φ and ψ are two CNF formulae and ℓ and{a mathematical formula}ℓ′are not a unit literal in φ or ψ, then
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       If{a mathematical formula}ℓ∉lit(φ)then{a mathematical formula}φ×(ψ−ℓ)=φ×ψ−ℓ
+      </list-item>
+      <list-item label="2.">
+       If{a mathematical formula}ℓ∉lit(ψ)and{a mathematical formula}ℓ′∉lit(φ)then{a mathematical formula}(φ−ℓ)×(ψ−ℓ′)=φ×ψ−ℓ−ℓ′
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="1.">
+        We have{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        Using the previous result, we have{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Lemma 6">
+      Let φ be a reduced CNF formula and{a mathematical formula}ℓ1and{a mathematical formula}ℓ2be two literals such that{a mathematical formula}ℓ1≠ℓ2¯, then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We partition φ as follows{a mathematical formula} where {a mathematical formula}φ0={α|α∈φ∧ℓ1,ℓ1,¯ℓ2,ℓ2¯∉α}, {a mathematical formula}φℓ1={α|α∈φ∧ℓ1∈α∧ℓ2,ℓ2¯∉α}, and {a mathematical formula}φℓ1ℓ2={α|α∈φ∧ℓ1∈α∧ℓ2∈α}.The other components are defined similarly. Using Lemma 4, Lemma 5, one can verify that the following holds.{a mathematical formula}  □
+     </paragraph>
+     <paragraph>
+      Lemma 2, Lemma 6 show that for any enumeration {a mathematical formula}ℓ1,…,ℓk of η,{a mathematical formula} We next prove that {a mathematical formula}updateμCNF satisfies the requirement of an update function for the representation μCNF.
+     </paragraph>
+     <paragraph label="Proof of Proposition 15">
+      Observe that {a mathematical formula}updateμCNF(φ,η)≡updater(φ,η). Hence, to prove the proposition, it suffices to prove the following{a mathematical formula} The proof is by induction on {a mathematical formula}|η|.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case {a mathematical formula}|η|=0 iff {a mathematical formula}η=∅: (15) becomes {a mathematical formula}BS(φ)={s|s∈BS(φ)}. This is obviously true.
+      </list-item>
+      <list-item label="•">
+       Inductive step: suppose (15) holds for every consistent set of n literals, {a mathematical formula}n≥0. We will prove that it also holds for every consistent set of {a mathematical formula}n+1 literals. Indeed,{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph label="Proof of Proposition 16">
+      <list>
+       <list-item label="1.">
+        Observe that {a mathematical formula}Rel(φ,ψ) is a subset of the μCNF-state φ. We have {a mathematical formula}φ⊨Rel(φ,ψ), hence if {a mathematical formula}Rel(φ,ψ)⊨ψ then {a mathematical formula}φ⊨ψ.Now we need to prove that if {a mathematical formula}φ⊨ψ then {a mathematical formula}Rel(φ,ψ)⊨ψ. Assume the contrary that {a mathematical formula}φ⊨ψ and {a mathematical formula}Rel(φ,ψ)⊭ψ. This implies that {a mathematical formula}Rel(φ,ψ)∧¬ψ is satisfiable. By Proposition 2, there exists a consistent set of literals δ such that {a mathematical formula}δ⊨Rel(φ,ψ)∧¬ψ and {a mathematical formula}prop(δ)=prop(Rel(φ,ψ)∧¬ψ).On the other hand, because {a mathematical formula}Rel(φ,ψ)⊭ψ and {a mathematical formula}φ⊨ψ, {a mathematical formula}Rel(φ,ψ)≠φ. This means that {a mathematical formula}Rel(φ,ψ)⊂φ, hence {a mathematical formula}φ∖Rel(φ,ψ)≠∅. Therefore, {a mathematical formula}φ∖Rel(φ,ψ) is satisfiable (otherwise φ is unsatisfiable, a contradiction). By Proposition 2, there exists a consistent set of literals {a mathematical formula}δ′ such that {a mathematical formula}δ′⊨φ∖Rel(φ,ψ) and {a mathematical formula}prop(δ′)=prop(φ∖Rel(φ,ψ)). Since {a mathematical formula}φ∖Rel(φ,ψ) is independent from ψ and {a mathematical formula}Rel(φ,ψ), clearly {a mathematical formula}φ∖Rel(φ,ψ) is independent from {a mathematical formula}Rel(φ,ψ)∧¬ψ. Hence, {a mathematical formula}prop(Rel(φ,ψ)∧¬ψ)∩prop(φ∖Rel(φ,ψ))=∅, i.e., {a mathematical formula}prop(δ)∩prop(δ′)=∅. Hence, {a mathematical formula}δ∪δ′ is a consistent set of literals. This implies that {a mathematical formula}δ∪δ′⊨Rel(φ,ψ)∧¬ψ and {a mathematical formula}δ∪δ′⊨φ∖Rel(φ,ψ). This implies that {a mathematical formula}δ∪δ′⊨(Rel(φ,ψ)∧¬ψ)∧(φ∖Rel(φ,ψ)) or {a mathematical formula}δ∪δ′⊨φ∧¬ψ. Let s be a state such that {a mathematical formula}δ∪δ′⊆s then {a mathematical formula}s⊨φ∧¬ψ. This means that {a mathematical formula}φ∧¬ψ is satisfiable or {a mathematical formula}φ⊭ψ, a contradiction.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}φ∧ψ is satisfiable iff {a mathematical formula}φ⊭¬ψ iff {a mathematical formula}Rel(φ,ψ)⊭¬ψ (note that {a mathematical formula}Rel(φ,ψ)=Rel(φ,¬ψ)) iff {a mathematical formula}Rel(φ,ψ)∧ψ is satisfiable. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof of Proposition 17">
+      <list>
+       <list-item label="1.">
+        Since φ is a prime implicate formula, a literal ℓ is satisfied in φ iff {a mathematical formula}{ℓ}∈φ. Checking whether ℓ is satisfied in φ is equivalent to checking whether {a mathematical formula}{ℓ} belongs to φ that is linear in the number of clauses in φ, i.e., linear in m.
+       </list-item>
+       <list-item label="2.">
+        The nontrivial clause α is satisfied in φ iff α is an implicate of φ. If α is a prime implicate of φ then {a mathematical formula}α∈φ. Otherwise, there exists a clause β in φ that subsumes α. Thus, checking whether α is satisfied in φ is equivalent to check whether there exists a clause β in φ such that {a mathematical formula}β⊆α, which is linear in nm (assuming that the literals in each clause are sorted). □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 7">
+      Let φ be a PI-state and ℓ be a literal. Then,{a mathematical formula}updatePI(φ,{ℓ})is a PI-state and{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="•">
+        {a mathematical formula}updatePI(φ,{ℓ}) is a PI-state: If {a mathematical formula}{ℓ}∈φ then, by definition, {a mathematical formula}updatePI(φ,{ℓ})=φ, a PI-state. We now consider the case {a mathematical formula}{ℓ}∉φ, i.e., {a mathematical formula}updatePI(φ,{ℓ})=φ∖(φℓ∪φℓ‾)∪{{ℓ}}. We need to prove that every clause in {a mathematical formula}updatePI(φ,{ℓ}) is a prime implicate of this formula and every prime implicate of {a mathematical formula}updatePI(φ,{ℓ}) already exists in it as follows.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}BS(updatePI(φ,{ℓ}))={s∖{ℓ¯}∪{ℓ}|s∈BS(φ)}: Since {a mathematical formula}BS(updater(φ,ℓ))={s∖{ℓ¯}∪{ℓ}|s∈BS(φ)} (Lemma 3), it suffices to prove {a mathematical formula}updatePI(φ,{ℓ})≡updater(φ,{ℓ}). We consider the following three cases:
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 8">
+      Let φ be a PI-state and{a mathematical formula}ℓ1and{a mathematical formula}ℓ2be two literals such that{a mathematical formula}ℓ1≠ℓ2¯, then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      By Lemma 7, we have{a mathematical formula} Similarly, we have{a mathematical formula} Thus,{a mathematical formula} Two PI-states {a mathematical formula}updatePI(updatePI(φ,{ℓ1}),{ℓ2}) and {a mathematical formula}updatePI(updatePI(φ,{ℓ2}),{ℓ1}) are equivalent so they are identical, i.e., {a mathematical formula}updatePI(updatePI(φ,{ℓ1}),{ℓ2})=updatePI(updatePI(φ,{ℓ2}),{ℓ1}).  □
+     </paragraph>
+     <paragraph>
+      Again, the commutativity of {a mathematical formula}updatePI ensures that the result of updating a formula by a set of literals η is independent on the order of literals in which the update is made.
+     </paragraph>
+     <paragraph label="Proof of Proposition 18">
+      The proof is similar to that for Proposition 15 (by induction on {a mathematical formula}|η|) based on Lemma 7. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

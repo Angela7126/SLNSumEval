@@ -1,0 +1,641 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Automatic Labelling of Topic Models Learned from Twitter by Summarisation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Latent topics derived by topic models such as Latent Dirichlet Allocation (LDA) are the result of hidden thematic structures which provide further insights into the data. The automatic labelling of such topics derived from social media poses however new challenges since topics may characterise novel events happening in the real world.
+Existing automatic topic labelling approaches which depend on external knowledge sources become less applicable here since relevant articles/concepts of the extracted topics may not exist in external sources. In this paper we propose to address the problem of automatic labelling of latent topics learned from Twitter as a summarisation problem. We introduce a framework which apply summarisation algorithms to generate topic labels. These algorithms are independent of external sources and only rely on the identification of dominant terms in documents related to the latent topic.
+We compare the efficiency of existing state of the art summarisation algorithms. Our results suggest that summarisation algorithms generate better topic labels which capture event-related context compared to the top-
+       n
+       terms returned by LDA.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Topic model based algorithms applied to social media data have become a mainstream technique in performing various tasks including sentiment analysis
+        [11]
+        and event detection
+        [34, 6]
+        . However, one of the main challenges is the task of understanding the semantics of a topic. This task has been approached by investigating methodologies for identifying meaningful topics through semantic coherence
+        [1, 24, 27]
+        and for characterising the semantic content of a topic through automatic labelling techniques
+        [12, 14, 22]
+        . In this paper we focus on the latter.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Our research task of automatic labelling a topic consists on selecting a set of words that best describes the semantics of the terms involved in this topic. The most generic approach to automatic labelling has been to use as primitive labels the top-
+        n
+        words in a topic distribution learned by a topic model such as LDA
+        [9, 2]
+        . Such top words are usually ranked using the marginal probabilities
+        P(wi|tj)
+        associated with each word
+        wi
+        for a given topic
+        tj
+        . This task can be illustrated by considering the following topic derived from social media related to Education:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        <span class="ltx_inline-block ltx_parbox ltx_align_bottom" style="width:177.8pt;border:1px solid black;">
+         <p class="ltx_p">
+          school protest student fee choic motherlod tuition teacher anger polic
+         </p>
+        </span>
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        where the top 10 words ranked by
+        P(wi|tj)
+        for this topic are listed. Therefore the task is to find the top-
+        n
+        terms which are more representative of the given topic. In this example, the topic certainly relates to a student protest as revealed by the top 3 terms which can be used as a good label for this topic.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        However previous work has shown that top terms are not enough for interpreting the coherent meaning of a topic
+        [22]
+        . More recent approaches have explored the use of external sources (e.g. Wikipedia, WordNet) for supporting the automatic labelling of topics by deriving candidate labels by means of lexical
+        [14, 21, 22]
+        or graph-based
+        [12]
+        algorithms applied on these sources.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Mei et al.
+        [22]
+        proposed an unsupervised probabilistic methodology to automatically assign a label to a topic model. Their proposed approach was defined as an optimisation problem involving the minimisation of the KL divergence between a given topic and the candidate labels while maximising the mutual information between these two word distributions. Lau et al.
+        [15]
+        proposed to label topics by selecting top-
+        n
+        terms to label the overall topic based on different ranking mechanisms including pointwise mutual information and conditional probabilities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        Methods relying on external sources for automatic labelling of topics include the work by Magatti et al.
+        [21]
+        which derived candidate topic labels for topics induced by LDA using the hierarchy obtained from the Google Directory service and expanded through the use of the OpenOffice English Thesaurus. Lau et al.
+        [14]
+        generated label candidates for a topic based on top-ranking topic terms and titles of Wikipedia articles. They then built a Support Vector Regression (SVR) model for ranking the label candidates. More recently, Hulpus et al.
+        [12]
+        proposed to make use of a structured data source (DBpedia) and employed graph centrality measures to generate semantic concept labels which can characterise the content of a topic.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        Most previous topic labelling approaches focus on topics derived from well formatted and static documents. However in contrast to this type of content, the labelling of topics derived from tweets presents different challenges. In nature micropost content is sparse and present ill-formed words. Moreover, the use of Twitter as the “what’s-happening-right now” tool, introduces new event-dependent relations between words which might not have a counter part in existing knowledge sources (e.g. Wikipedia). Our original interest in labelling topics stems from work in topic model based event extraction from social media, in particular from tweets
+        [32, 6]
+        . As opposed to previous approaches, the research presented in this paper addresses the labelling of topics exposing event-related content that might not have a counter part on existing external sources. Based on the observation that a short summary of a collection of documents can serve as a label characterising the collection, we propose to generate topic label candidates based on the summarisation of a topic’s relevant documents. Our contributions are two-fold:
+        - We propose a novel approach for topics labelling that relies on term relevance of documents relating to a topic; and
+        - We show that summarisation algorithms, which are independent of extenal sources, can be used with success to label topics, presenting a higher perfomance than the top-
+        n
+        terms baseline.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Methodology
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We propose to approach the topic labelling problem as a multi-document summarisation task. The following describes our proposed framework to characterise documents relevant to a topic.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Preliminaries
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Given a set of documents the problem to be solved by topic modelling is the posterior inference of the variables, which determine the hidden thematic structures that best explain an observed set of documents. Focusing on the Latent Dirichlet Allocation (LDA) model
+         [2, 9]
+         , let
+         𝒟
+         be a corpus of documents denoted as
+         𝒟={𝒅1,𝒅2,..,𝒅D}
+         ; where each document consists of a sequence of
+         Nd
+         words denoted by
+         𝒅=(w1,w2,..,wNd)
+         ; and each word in a document is an item from a vocabulary index of
+         V
+         different terms denoted by
+         {1,2,..,V}
+         . Given
+         D
+         documents containing
+         K
+         topics expressed over
+         V
+         unique words, LDA generative process is described as follows:
+         - For each topic
+         k∈{1,…⁢K}
+         draw
+         ϕk∼Dirichlet(β)
+         ,
+         - For each document
+         d∈{1..⁢D}
+         :
+         <math alttext="\star" class="ltx_Math" display="inline" id="S2.SS1.p1.m13" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mo>
+           ⋆
+          </mo>
+         </math>
+         draw
+         θd∼Dirichlet(α)
+         ;
+         <math alttext="\star" class="ltx_Math" display="inline" id="S2.SS1.p1.m15" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mo>
+           ⋆
+          </mo>
+         </math>
+         For each word
+         n∈{1..⁢Nd}
+         in document
+         d
+         :
+         <math alttext="\circ" class="ltx_Math" display="inline" id="S2.SS1.p1.m18" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mo>
+           ∘
+          </mo>
+         </math>
+         draw a topic
+         zd,n∼Multinomial(θd)
+         ;
+         <math alttext="\circ" class="ltx_Math" display="inline" id="S2.SS1.p1.m20" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mo>
+           ∘
+          </mo>
+         </math>
+         draw a word
+         wd,n∼Multinomial(φzd,n)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         where
+         ϕk
+         is the word distribution for topic
+         k
+         , and
+         θd
+         is the distribution of topics in document
+         d
+         .
+Topics are interpreted using the top
+         N
+         terms ranked based on the marginal probability
+         p(wi|tj)
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Automatic Labelling of Topic Models
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Given
+         K
+         topics over the document collection
+         𝒟
+         , the topic labelling task consists on discovering a sequence of words for each topic
+         k∈𝒦
+         . We propose to generate topic label candidates by summarising topic relevant documents. Such documents can be derived using both the observed data from the corpus
+         𝒟
+         and the inferred topic model variables. In particular, the prominent topic of a document
+         d
+         can be found by
+        </p>
+        kd=arg⁢maxk∈𝒦p(k|d)
+
+(1)
+        <p class="ltx_p">
+         Therefore given a topic
+         k
+         , a set of
+         C
+         documents related to this topic can be obtained via equation
+         1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         Given the set of documents
+         𝒞
+         relevant to topic
+         k
+         , we proposed to generate a label of a desired length
+         x
+         from the summarisation of
+         𝒞
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Topic Labelling by Summarisation
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         We compare different summarisation algorithms based on their ability to provide a good label to a given topic. In particular we investigate the use of lexical features by comparing three different well-known multi-document summarisation algorithms against the top-
+         n
+         topic terms baseline. These algorithms include:
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS3.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Sum Basic (
+         SB
+         )
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS0.P1.p1">
+         <p class="ltx_p">
+          This is a frequency based summarisation algorithm
+          [25]
+          , which computes initial word probabilities for words in a text. It then weights each sentence in the text (in our case a micropost) by computing the average probability of the words in the sentence. In each iteration it picks the highest weighted document and from it the highest weighted word. It uses an update function which penalises words which have already been picked.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS3.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Hybrid TFIDF (
+         TFIDF
+         )
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS0.P2.p1">
+         <p class="ltx_p">
+          It is similar to
+          SB
+          , however rather than computing the initial word probabilities based on word frequencies it weights terms based on TFIDF. In this case the document frequency is computed as the number of times a word appears in a micropost from the collection
+          𝒞
+          . Following the same procedure as
+          SB
+          it returns the top
+          x
+          weighted terms.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS3.SSS0.P3">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Maximal Marginal Relevance (
+         MMR
+         )
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS0.P3.p1">
+         <p class="ltx_p">
+          This is a relevance based ranking algorithm
+          [4]
+          , which avoids redundancy in the documents used for generating a summary. It measures the degree of dissimilarity between the documents considered and previously selected ones already in the ranked list.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS3.SSS0.P4">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Text Rank (
+         TR
+         )
+        </h4>
+        <div class="ltx_para" id="S2.SS3.SSS0.P4.p1">
+         <p class="ltx_p">
+          This is a graph-based summariser method
+          [23]
+          where each word is a vertex. The relevance of a vertex (term) to the graph is computed based on global information recursively drawn from the whole graph. It uses the PageRank algorithm
+          [3]
+          to recursively change the weight of the vertices. The final score of a word is therefore not only dependent on the terms immediately connected to it but also on how these terms connect to others. To assign the weight of an edge between two terms, TextRank computes word co-occurrence in windows of
+          N
+          words (in our case
+          N=10
+          ). Once a final score is calculated for each vertex of the graph, TextRank sorts the terms in a reverse order and provided the top
+          T
+          vertices in the ranking. Each of these algorithms produces a label of a desired length
+          x
+          for a given topic
+          k
+          .
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Dataset
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Our Twitter Corpus (
+         TW
+         ) was collected between November 2010 and January 2011.
+         TW
+         comprises over 1 million tweets. We used the OpenCalais’ document categorisation service
+         to generate categorical sets. In particular, we considered four different categories which contain many real-world events, namely: War and Conflict (
+         War
+         ), Disaster and Accident (
+         DisAc
+         ), Education (
+         Edu
+         ) and Law and Crime (
+         LawCri
+         ). The final
+         TW
+         dataset after removing retweets and short microposts (less than 5 words after removing stopwords) contains 7000 tweets in each category.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         We preprocessed
+         TW
+         by first removing: punctuation, numbers, non-alphabet characters, stop words, user mentions, and URL links. We then performed Porter stemming
+         [30]
+         in order to reduce the vocabulary size. Finally to address the issue of data sparseness in the
+         TW
+         dataset, we removed words with a frequency lower than 5.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Generating the Gold Standard
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Evaluation of automatic topic labelling often relied on human assessment which requires heavy manual effort
+         [14, 12]
+         . However performing human evaluations of Social Media test sets comprising thousands of inputs become a difficult task. This is due to both the corpus size, the diversity of event-related topics and the limited availability of domain experts. To alleviate this issue here, we followed the distribution similarity approach, which has been widely applied in the automatic generation of gold standards (
+         GS
+         s) for summary evaluations
+         [7, 16, 19, 20]
+         . This approach compares two corpora, one for which no
+         GS
+         labels exist, against a reference corpus for which a GS exists. In our case these corpora correspond to the
+         TW
+         and a Newswire dataset (
+         NW
+         ). Since previous research has shown that headlines are good indicators of the main focus of a text, both in structure and content, and that they can act as a human produced abstract
+         [26]
+         , we used headlines as the GS labels of
+         NW
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         The News Corpus (
+         NW
+         ) was collected during the same period of time as the
+         TW
+         corpus. NW consists of a collection of news articles crawled from traditional news media (BBC, CNN, and New York Times) comprising over 77,000 articles which include supplemental metadata (e.g. headline, author, publishing date). We also used the OpenCalais’ document categorisation service to automatically label news articles and considered the same four topical categories, (
+         War
+         ,
+         DisAc
+         ,
+         Edu
+         and
+         LawCri
+         ). The same preprocessing steps were performed on
+         NW
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         Therefore, following a similarity alignment approach we performed the steps oulined in Algorithm
+         3.2
+         for generating the
+         GS
+         topic labels of a topic in
+         TW
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         [htbp]
+         GS for Topic Labels
+         [1]
+LDA topics for TW, and the LDA topics for NW for category c.
+Gold standard topic label for each of the LDA topics for TW.
+each topic i∈{1,2,…,100} from TW
+each topic j∈{1,2...,100} from NW
+Compute the Cosine similarity between word distributions of topic ti and topic tj.
+\STATESelect topic j which has the highest similarity to i and whose similarity measure is greater than a threshold (in this case 0.7)
+\FOReach of the extracted topic pairs (ti-tj)
+Collect relevant news articles 𝒞N⁢Wj of topic tj from the NW set.
+Extract the headlines of news articles from 𝒞N⁢Wj and select the top x most frequent words as the gold standard label for topic ti in the TW set
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         These steps can be outlined as follows:
+         <span class="ltx_inline-enumerate" id="I1">
+          <span class="ltx_inline-item" id="I1.i1">
+           <span class="ltx_tag ltx_tag_inline-enumerate">
+            1)
+           </span>
+           We ran LDA on TW and NW separately for each category with the number of topics set to 100;
+          </span>
+          <span class="ltx_inline-item" id="I1.i2">
+           <span class="ltx_tag ltx_tag_inline-enumerate">
+            1)
+           </span>
+           We then aligned the Twitter topics and Newswire topics by the similarity measurement of word distributions of these topics [8, 10, 33, 5];
+          </span>
+          <span class="ltx_inline-item" id="I1.i3">
+           <span class="ltx_tag ltx_tag_inline-enumerate">
+            1)
+           </span>
+           Finally to generate the GS label for each aligned topic pair (ti-tj), we extracted the headlines of the news articles relevant to tj and selected the top x most frequent words (after stop word removal and stemming)
+          </span>
+         </span>
+         . The generated label was used as the gold standard label for the corresponding Twitter topic
+         ti
+         in the topic pair.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experimental Results
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We compared the results of the summarisation techniques with the top terms (
+        TT
+        ) of a topic as our baseline. These
+        TT
+        set corresponds to the top
+        x
+        terms ranked based on the probability of the word given the topic (
+        p(w|k)
+        ) from the topic model. We evaluated these summarisation approaches with the ROUGE-1 method
+        [17]
+        , a widely used summarisation evaluation metric that correlates well with human evaluation
+        [18]
+        . This method measures the overlap of words between the generated summary and a reference, in our case the
+        GS
+        generated from the
+        NW
+        dataset.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        The evaluation was performed at
+        x={1,..,10}
+        . Figure
+        1
+        presents the ROUGE-1 performance of the summarisation approaches as the length
+        x
+        of the generated topic label increases. We can see in all four categories that the
+        SB
+        and
+        TFIDF
+        approaches provide a better summarisation coverage as the length of the topic label increases. In particular, in both the
+        Education
+        and
+        Law &amp; Crime
+        categories, both
+        SB
+        and
+        TFIDF
+        outperforms
+        TT
+        and
+        TR
+        by a large margin. The obtained ROUGE-1 performance is within the same range of performance previously reported on Social Media summarisation
+        [13, 28, 31]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Table
+        1
+        presents average results for ROUGE-1 in the four categories. Particularly the
+        SB
+        and
+        TFIDF
+        summarisation techniques consistently outperform the
+        TT
+        baseline across all four categories.
+        SB
+        gives the best results in three categories except
+        War
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        The generated labels with summarisation at
+        x=5
+        are presented in Table
+        2
+        , where
+        GS
+        represents the label generated from the Newswire headlines.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        Different summarisation techniques reveal words which do not appear in the top terms but which are relevant to the information clustered by the topic. In this way, the labels generated for topics belonging to different categories generally extend the information provided by the top terms. For example in Table
+        2
+        , the
+        DisAc
+        headline is characteristic of the New Zealand’s Pike River’s coal mine blast accident, which is an event occurred in November 2010.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        Although the top 5 terms set from the LDA topic extracted from
+        TW
+        (listed under
+        TT
+        ) does capture relevant information related to the event, it does not provide information regarding the blast. In this sense the topic label generated by
+        SB
+        more accurately describes this event.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        We can also notice that the
+        GS
+        labels generated from Newswire media presented in Table
+        2
+        appear on their own, to be good labels for the
+        TW
+        topics. However as we described in the introduction we want to avoid relaying on external sources for the derivation of topic labels.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p8">
+       <p class="ltx_p">
+        This experiment shows that frequency based summarisation techniques outperform graph-based and relevance based summarisation techniques for generating topic labels that improve upon the top-terms baseline, without relying on external sources. This is an attractive property for automatically generating topic labels for tweets where their event-related content might not have a counter part on existing external sources.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

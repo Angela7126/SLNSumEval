@@ -1,0 +1,1792 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Step-wise Usage-based Method for Inducing Polysemy-aware Verb Classes</title>
+<!--Generated on Tue Jun 10 18:26:39 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Step-wise Usage-based Method for Inducing 
+<br class="ltx_break"/>Polysemy-aware Verb Classes</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Daisuke Kawahara<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>   Daniel W. Peterson<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>   Martha Palmer<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math> 
+<br class="ltx_break"/>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Kyoto University, Kyoto, Japan 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>University of Colorado at Boulder, Boulder, CO, USA 
+<br class="ltx_break"/>
+<span class="ltx_text ltx_font_typewriter ltx_font_small">dk@i.kyoto-u.ac.jp<span class="ltx_text ltx_font_serif">,   {</span>Daniel.W.Peterson<span class="ltx_text ltx_font_serif">,  </span>Martha.Palmer<span class="ltx_text ltx_font_serif">}</span>@colorado.edu<span class="ltx_text ltx_font_serif">
+</span></span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present an unsupervised method for inducing verb classes from verb
+uses in giga-word corpora. Our method consists of two clustering steps:
+verb-specific semantic frames are first induced by clustering
+verb uses in a corpus and then verb classes are
+induced by clustering these frames. By taking this step-wise approach,
+we can not only generate verb classes based on a massive amount of verb
+uses in a scalable manner, but also deal with verb polysemy, which is
+bypassed by most of the previous studies on verb clustering.
+In our experiments, we acquire semantic frames and verb classes from
+two giga-word corpora, the larger comprising 20 billion words. The
+effectiveness of our approach is verified through quantitative
+evaluations based on polysemy-aware gold-standard data.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A verb plays a primary role in conveying the meaning of a
+sentence. Capturing the sense of a verb is essential for natural
+language processing (NLP), and thus lexical resources for verbs play an
+important role in NLP.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Verb classes are one such lexical resource. Manually-crafted verb
+classes have been developed, such as Levin’s classes <cite class="ltx_cite">[<a href="#bib.bib14" title="English verb classes and alternations: a preliminary investigation" class="ltx_ref">16</a>]</cite>
+and their extension, VerbNet <cite class="ltx_cite">[<a href="#bib.bib54" title="VerbNet: a broad-coverage, comprehensive verb lexicon" class="ltx_ref">12</a>]</cite>, in which verbs are
+organized into classes on the basis of their syntactic and semantic
+behavior. Such verb classes have been used in many NLP applications that
+need to consider semantics in particular, such as word sense
+disambiguation <cite class="ltx_cite">[<a href="#bib.bib92" title="Investigations into the role of lexical semantics in word sense disambiguation" class="ltx_ref">4</a>]</cite>, semantic parsing
+<cite class="ltx_cite">[<a href="#bib.bib95" title="Exploiting a verb lexicon in automatic semantic role labelling" class="ltx_ref">41</a>, <a href="#bib.bib96" title="Putting pieces together: combining FrameNet, VerbNet and WordNet for robust semantic parsing" class="ltx_ref">33</a>]</cite> and discourse parsing <cite class="ltx_cite">[<a href="#bib.bib97" title="An effective discourse parser that uses rich linguistic information" class="ltx_ref">37</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">There have also been many attempts to automatically acquire verb classes
+with the goal of either adding frequency information to
+an existing resource or of inducing similar verb classes for other
+languages. Most of these approaches assume that all target
+verbs are monosemous
+<cite class="ltx_cite">[<a href="#bib.bib20" title="Semi-supervised verb class discovery using noisy features" class="ltx_ref">36</a>, <a href="#bib.bib21" title="Experiments on the automatic induction of German semantic verb classes" class="ltx_ref">32</a>, <a href="#bib.bib23" title="A general feature space for automatic verb classification" class="ltx_ref">9</a>, <a href="#bib.bib25" title="Which are the best features for automatic verb classification" class="ltx_ref">18</a>, <a href="#bib.bib71" title="Automatic classification of English verbs using rich syntactic features" class="ltx_ref">38</a>, <a href="#bib.bib72" title="Improving verb clustering with automatically acquired selectional preferences" class="ltx_ref">39</a>, <a href="#bib.bib63" title="Unsupervised and constrained Dirichlet process mixture models for verb clustering" class="ltx_ref">45</a>, <a href="#bib.bib29" title="Learning verb alternations in a usage-based Bayesian model" class="ltx_ref">26</a>, <a href="#bib.bib12" title="Generalizing between form and meaning using learned verb classes" class="ltx_ref">27</a>, <a href="#bib.bib73" title="Classifying French verbs using French and English lexical resources" class="ltx_ref">7</a>, <a href="#bib.bib52" title="Learning syntactic verb frames using graphical models" class="ltx_ref">19</a>, <a href="#bib.bib53" title="Improved lexical acquisition through DPP-based verb clustering" class="ltx_ref">29</a>, <a href="#bib.bib13" title="Diathesis alternation approximation for verb clustering" class="ltx_ref">40</a>]</cite>.
+This monosemous assumption, however, is not realistic because many
+frequent verbs actually have multiple senses.
+Moreover, to the best of our knowledge,
+none of the following approaches attempt to
+quantitatively evaluate soft clusterings of verb classes induced by
+polysemy-aware unsupervised approaches
+<cite class="ltx_cite">[<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">14</a>, <a href="#bib.bib18" title="Verb class disambiguation using informative priors" class="ltx_ref">15</a>, <a href="#bib.bib17" title="Disambiguating Levin verbs using untagged data" class="ltx_ref">17</a>, <a href="#bib.bib22" title="Combining EM training and the MDL principle for an automatic verb classification incorporating selectional preferences" class="ltx_ref">31</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we propose an unsupervised method for inducing verb
+classes that is aware of verb polysemy. Our method consists of two
+clustering steps: verb-specific semantic frames are first induced by
+clustering verb uses in a corpus and then verb classes are induced by
+clustering these frames. By taking this step-wise approach, we can not
+only induce verb classes with frequency information from a massive
+amount of verb uses in a scalable manner, but also deal with verb polysemy.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Our novel contributions are summarized as follows:</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">induce both semantic frames and verb classes from a massive amount of verb uses by a scalable method,</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">explicitly deal with verb polysemy,</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">discover effective features for each of the clustering steps, and</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">quantitatively evaluate a soft clustering of verbs.</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1097/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="543" height="204" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Overview of our two-step approach. Verb-specific semantic
+frames are first induced from verb uses (lower part) and then verb
+classes are induced from the semantic frames (upper part). The labels of verb classes are manually assigned here for better understanding.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">As stated in Section <a href="#S1" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, most of the previous
+studies on verb clustering assume that verbs are monosemous. A typical
+method in these studies is to represent each verb as a single data point and apply
+classification (e.g., <cite class="ltx_cite">Joanis<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="A general feature space for automatic verb classification" class="ltx_ref">2008</a>)</cite>) or clustering (e.g.,
+<cite class="ltx_cite">Sun and Korhonen (<a href="#bib.bib72" title="Improving verb clustering with automatically acquired selectional preferences" class="ltx_ref">2009</a>)</cite>) to these data points. As a representation for a data
+point, distributions of subcategorization frames are often used, and
+other semantic features (e.g., selectional preferences) are sometimes added to
+improve the performance.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Among these studies on monosemous verb clustering (i.e., predominant
+class induction), there have been several Bayesian methods.
+<cite class="ltx_cite">Vlachos<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib63" title="Unsupervised and constrained Dirichlet process mixture models for verb clustering" class="ltx_ref">2009</a>)</cite> proposed a Dirichlet
+process mixture model (DPMM; <cite class="ltx_cite">Neal (<a href="#bib.bib30" title="Markov chain sampling methods for Dirichlet process mixture models" class="ltx_ref">2000</a>)</cite>) to cluster verbs based
+on subcategorization frame distributions. They evaluated their result
+with a gold-standard test set, where a single class is assigned to a
+verb.
+<cite class="ltx_cite">Parisien and Stevenson (<a href="#bib.bib29" title="Learning verb alternations in a usage-based Bayesian model" class="ltx_ref">2010</a>)</cite> proposed a hierarchical Dirichlet process (HDP;
+<cite class="ltx_cite">Teh<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Hierarchical Dirichlet processes" class="ltx_ref">2006</a>)</cite>) model to jointly learn argument structures
+(subcategorization frames) and verb classes by using syntactic
+features. <cite class="ltx_cite">Parisien and Stevenson (<a href="#bib.bib12" title="Generalizing between form and meaning using learned verb classes" class="ltx_ref">2011</a>)</cite> extended their model by adding semantic
+features. They tried to account for verb learning by children and did
+not evaluate the resultant verb classes. <cite class="ltx_cite">Modi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Unsupervised induction of frame-semantic representations" class="ltx_ref">2012</a>)</cite> extended
+the model of <cite class="ltx_cite">Titov and Klementiev (<a href="#bib.bib57" title="A Bayesian approach to unsupervised semantic role induction" class="ltx_ref">2012</a>)</cite>, which is an unsupervised model for
+inducing semantic roles, to jointly induce semantic roles and frames
+across verbs using the Chinese Restaurant Process <cite class="ltx_cite">[<a href="#bib.bib9" title="Exchangeability and related topics" class="ltx_ref">1</a>]</cite>.
+All of the above methods considered verbs to be monosemous and did not
+deal with verb polysemy. Our approach also uses Bayesian methods, but is
+designed to capture verb polysemy.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We summarize a few studies that consider polysemy of verbs in the rest
+of this section.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Miyao and Tsujii (<a href="#bib.bib24" title="Supervised learning of a probabilistic lexicon of verb semantic classes" class="ltx_ref">2009</a>)</cite> proposed a supervised method that can handle verb
+polysemy. Their method represents a verb’s syntactic and semantic
+features, and learns a log-linear model from the SemLink corpus
+<cite class="ltx_cite">[<a href="#bib.bib55" title="Combining lexical resources: mapping between PropBank and VerbNet" class="ltx_ref">20</a>]</cite>. <cite class="ltx_cite">Boleda<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib15" title="Modelling polysemy in adjective classes by multi-label classification." class="ltx_ref">2007</a>)</cite> also proposed a supervised method
+for Catalan adjectives considering the polysemy of adjectives.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">The most closely related work to our polysemy-aware task of unsupervised
+verb class induction is the work of <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>, who used distributions
+of subcategorization frames to cluster verbs. They adopted the Nearest
+Neighbor (NN) and Information Bottleneck (IB) methods for clustering. In
+particular, they tried to consider verb polysemy by using the IB method,
+which is a soft clustering method <cite class="ltx_cite">[<a href="#bib.bib16" title="The information bottleneck method" class="ltx_ref">43</a>]</cite>. However, the verb
+itself is still represented as a single data point.
+After performing soft clustering, they noted that most verbs fell into a
+single class, and they decided to assign a single class to each verb by
+hardening the clustering. They considered multiple classes only in
+the gold-standard data used for their evaluations. We also evaluate
+our induced verb classes on this gold-standard data, which was created
+on the basis of Levin’s classes <cite class="ltx_cite">[<a href="#bib.bib14" title="English verb classes and alternations: a preliminary investigation" class="ltx_ref">16</a>]</cite>.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Lapata and Brew (<a href="#bib.bib18" title="Verb class disambiguation using informative priors" class="ltx_ref">2004</a>)</cite> and <cite class="ltx_cite">Li and Brew (<a href="#bib.bib17" title="Disambiguating Levin verbs using untagged data" class="ltx_ref">2007</a>)</cite> proposed probabilistic models
+for calculating prior probabilities of verb classes for a verb. These
+models are approximated to condition not on verbs but on
+subcategorization frames. As mentioned in <cite class="ltx_cite">Li and Brew (<a href="#bib.bib17" title="Disambiguating Levin verbs using untagged data" class="ltx_ref">2007</a>)</cite>, it is
+desirable to extend the model to depend on verbs to further improve
+accuracy. They conducted several evaluations including predominant class
+induction and token-level verb sense disambiguation, but did not
+evaluate multiple classes output by their models.
+<cite class="ltx_cite">Schulte im Walde<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib22" title="Combining EM training and the MDL principle for an automatic verb classification incorporating selectional preferences" class="ltx_ref">2008</a>)</cite> also applied probabilistic soft clustering
+to verbs by incorporating subcategorization frames and selectional
+preferences based on WordNet. This model is based on the
+Expectation-Maximization algorithm and the Minimum Description Length
+principle. Since they focused on the incorporation of selectional
+preferences, they did not evaluate verb classes but evaluated only
+selectional preferences using a language model-based measure.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">Materna proposed LDA-frames, which are defined across verbs and can be
+considered to be a kind of verb class <cite class="ltx_cite">[<a href="#bib.bib46" title="LDA-frames: an unsupervised approach to generating semantic frames" class="ltx_ref">21</a>, <a href="#bib.bib47" title="Parameter estimation for LDA-frames" class="ltx_ref">22</a>]</cite>.
+LDA-frames are probabilistic semantic frames automatically induced from
+a raw corpus. He used a model based on latent Dirichlet allocation (LDA; <cite class="ltx_cite">Blei<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Latent Dirichlet allocation" class="ltx_ref">2003</a>)</cite>)
+and the Dirichlet process to cluster verb instances of a triple
+(subject, verb, object) to produce semantic frames and roles. Both of
+these are represented as a probabilistic distribution of words across
+verbs. He applied this method to the BNC and acquired 1,200 frames and
+400 roles <cite class="ltx_cite">[<a href="#bib.bib46" title="LDA-frames: an unsupervised approach to generating semantic frames" class="ltx_ref">21</a>]</cite>. He did not evaluate the resulting frames
+as verb classes.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">In sum, there have been no studies that quantitatively evaluate
+polysemous verb classes automatically induced by unsupervised methods.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Our Approach</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Overview</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our objective is to automatically learn semantic frames and verb classes
+from a massive amount of verb uses following usage-based
+approaches. Although Bayesian approaches are a possible solution to
+simultaneously induce frames and verb classes from a corpus as used in
+previous studies, it has prohibitive computational cost. For
+instance, Parisien and Stevenson applied HDP only to a
+small-scale child speech corpus that contains 170K verb uses to jointly
+induce subcategorization frames and verb classes
+<cite class="ltx_cite">[<a href="#bib.bib29" title="Learning verb alternations in a usage-based Bayesian model" class="ltx_ref">26</a>, <a href="#bib.bib12" title="Generalizing between form and meaning using learned verb classes" class="ltx_ref">27</a>]</cite>. Materna applied an LDA-based method to
+the BNC, which contains 1.4M verb uses, to induce semantic frames across
+verbs that can be considered to be verb classes
+<cite class="ltx_cite">[<a href="#bib.bib46" title="LDA-frames: an unsupervised approach to generating semantic frames" class="ltx_ref">21</a>, <a href="#bib.bib47" title="Parameter estimation for LDA-frames" class="ltx_ref">22</a>]</cite>. However, it would take three months for
+this experiment using this 100 million word corpus.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In our replication experiment, it took
+a week to perform 70 iterations using Materna’s
+code and an Intel Xeon E5-2680 (2.7GHz) CPU. To reach 1,000
+iterations, which are reported to be optimum, it would take three
+months.</span></span></span> Although it is best to use the largest possible corpus
+for this kind of knowledge acquisition tasks <cite class="ltx_cite">[<a href="#bib.bib6" title="The effect of corpus size on case frame acquisition for discourse analysis" class="ltx_ref">30</a>]</cite>, it
+is infeasible to scale to giga-word corpora using such joint
+models.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a two-step approach for inducing semantic
+frames and verb classes. First, we make multiple data points for each
+verb to deal with verb polysemy (cf. polysemy-aware previous studies still
+represented a verb as one data point <cite class="ltx_cite">[<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">14</a>, <a href="#bib.bib24" title="Supervised learning of a probabilistic lexicon of verb semantic classes" class="ltx_ref">23</a>]</cite>). To
+do that, we induce verb-specific semantic frames by clustering verb
+uses. Then, we induce verb classes by clustering these verb-specific
+semantic frames across verbs. An interesting point here is that we can use
+exactly the same method for these two clustering steps.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Our procedure to automatically induce verb classes from verb uses
+is summarized as follows:</p>
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">induce verb-specific semantic frames by clustering predicate-argument
+structures for each verb extracted from automatic parses as shown in the lower part of Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, and</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">induce verb classes by clustering the induced semantic frames
+across verbs as shown in the upper part of Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div></li>
+</ol>
+<p class="ltx_p">Each of these two steps is described in the following sections in detail.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Inducing Verb-specific Semantic Frames</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We induce verb-specific semantic frames from verb uses based on the
+method of <cite class="ltx_cite">Kawahara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Inducing example-based semantic frames from a massive amount of verb uses" class="ltx_ref">2014</a>)</cite>. Our semantic frames consist of case
+slots, each of which consists of word instances that can be filled. The
+procedure for inducing these semantic frames is as follows:</p>
+<ol id="I3" class="ltx_enumerate">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">apply dependency parsing to a raw corpus and extract
+predicate-argument structures for each verb from the automatic
+parses,</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">merge the predicate-argument structures that have presumably the same
+meaning based on the assumption of one sense per collocation <cite class="ltx_cite">[<a href="#bib.bib49" title="One sense per collocation" class="ltx_ref">46</a>]</cite>
+to get a set of initial frames, and</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">apply clustering to the initial frames based on the Chinese
+Restaurant Process <cite class="ltx_cite">[<a href="#bib.bib9" title="Exchangeability and related topics" class="ltx_ref">1</a>]</cite> to produce verb-specific semantic frames.</p>
+</div></li>
+</ol>
+<p class="ltx_p">These three steps are briefly described below.</p>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Extracting Predicate-argument Structures from a Raw Corpus</h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">We apply dependency parsing to a large raw corpus. We use the Stanford
+parser with Stanford dependencies
+<cite class="ltx_cite">[<a href="#bib.bib50" title="Generating typed dependency parses from phrase structure parses" class="ltx_ref">5</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://nlp.stanford.edu/software/lex-parser.shtml</span></span></span>
+Collapsed dependencies are adopted to directly extract prepositional
+phrases.</p>
+</div>
+<div id="S3.SS2.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Then, we extract predicate-argument structures from the dependency
+parses. Dependents that have the following dependency relations to a
+verb are extracted as arguments:</p>
+<blockquote class="ltx_quote">
+<p class="ltx_p">nsubj, xsubj, dobj, iobj, ccomp, xcomp, prep_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p2.m1" class="ltx_Math" alttext="*" display="inline"><mo>*</mo></math></p>
+</blockquote>
+<p class="ltx_p">In this process, the verb and arguments are lemmatized, and only the
+head of an argument is preserved for compound nouns.</p>
+</div>
+<div id="S3.SS2.SSS1.p3" class="ltx_para">
+<p class="ltx_p">Predicate-argument structures are collected for each verb and
+the subsequent processes are applied to the predicate-argument
+structures of each verb.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.2 </span>Constructing Initial Frames from Predicate-argument Structures</h4>
+
+<div id="S3.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">To make the computation feasible, we merge the predicate-argument
+structures that have the same or similar meaning to get initial
+frames. These initial frames are the input of the subsequent clustering
+process. For this merge, we assume one sense per collocation
+<cite class="ltx_cite">[<a href="#bib.bib49" title="One sense per collocation" class="ltx_ref">46</a>]</cite> for predicate-argument structures.</p>
+</div>
+<div id="S3.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">For each predicate-argument structure of a verb, we couple the verb and an
+argument to make a unit for sense disambiguation. We select an argument in the following order by considering the degree
+of effect on the verb sense:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>If a predicate-argument structure
+has multiple prepositional phrases, one of them is randomly selected.</span></span></span></p>
+<blockquote class="ltx_quote">
+<p class="ltx_p">dobj, ccomp, nsubj, prep_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m1" class="ltx_Math" alttext="*" display="inline"><mo>*</mo></math>, iobj.</p>
+</blockquote>
+</div>
+<div id="S3.SS2.SSS2.p3" class="ltx_para">
+<p class="ltx_p">Then, the predicate-argument structures that have the same verb and argument
+pair (slot and word, e.g., “dobj:effect”) are merged into an initial
+frame. After this process, we discard minor initial frames that occur
+fewer than 10 times.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.3 </span>Clustering Method</h4>
+
+<div id="S3.SS2.SSS3.p1" class="ltx_para">
+<p class="ltx_p">We cluster initial frames for each verb to produce semantic frames using
+the Chinese Restaurant Process <cite class="ltx_cite">[<a href="#bib.bib9" title="Exchangeability and related topics" class="ltx_ref">1</a>]</cite>, regarding each initial
+frame as an instance.</p>
+</div>
+<div id="S3.SS2.SSS3.p2" class="ltx_para">
+<p class="ltx_p">We calculate the posterior probability of a cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m1" class="ltx_Math" alttext="c_{j}" display="inline"><msub><mi>c</mi><mi>j</mi></msub></math> given an
+initial frame <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m2" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math> as follows:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="P(c_{j}|f_{i})\propto\begin{cases}\frac{n(c_{j})}{N+\alpha}\cdot P(f_{i}|c_{j}%&#10;)&amp;c_{j}\neq new\\&#10;\frac{\alpha}{N+\alpha}\cdot P(f_{i}|c_{j})&amp;c_{j}=new,\end{cases}" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>j</mi></msub><mo>|</mo><msub><mi>f</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>∝</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mfrac><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mrow><mi>N</mi><mo>+</mo><mi>α</mi></mrow></mfrac><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>≠</mo><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mfrac><mi>α</mi><mrow><mi>N</mi><mo>+</mo><mi>α</mi></mrow></mfrac><mo>⋅</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mrow><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>=</mo><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>,</mo></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of initial frames for the target verb and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m4" class="ltx_Math" alttext="n(c_{j})" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is the current number of initial frames assigned to the
+cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m5" class="ltx_Math" alttext="c_{j}" display="inline"><msub><mi>c</mi><mi>j</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is a hyper-parameter that determines how
+likely it is for a new cluster to be created. In this equation,
+the first term is the Dirichlet process prior and the second term is the
+likelihood of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m7" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S3.SS2.SSS3.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m1" class="ltx_Math" alttext="P(f_{i}|c_{j})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is defined based on the Dirichlet-Multinomial distribution
+as follows:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="P(f_{i}|c_{j})=\prod_{w\in V}P(w|c_{j})^{count(f_{i},w)}," display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>w</mi><mo>∈</mo><mi>V</mi></mrow></munder><mi>P</mi><msup><mrow><mo>(</mo><mi>w</mi><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></msup><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the vocabulary in all case slots cooccurring with the verb
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m3" class="ltx_Math" alttext="count(f_{i},w)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> is the number of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the initial frame <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m5" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math>.
+The original method in <cite class="ltx_cite">Kawahara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Inducing example-based semantic frames from a massive amount of verb uses" class="ltx_ref">2014</a>)</cite> defined <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p3.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> as pairs of
+slots and words, e.g., “nsubj:child” and “dobj:bird,” but does not
+consider slot-only features, e.g., “nsubj” and
+“dobj,” which ignore lexical information. Here we experiment with both
+representations and compare the results.</p>
+</div>
+<div id="S3.SS2.SSS3.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m1" class="ltx_Math" alttext="P(w|c_{j})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is defined as follows:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="P(w|c_{j})=\frac{count(c_{j},w)+\beta}{\sum_{t\in V}count(c_{j},t)+|V|\cdot%&#10;\beta}," display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><msub><mi>c</mi><mi>j</mi></msub><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mi>β</mi></mrow><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>t</mi><mo>∈</mo><mi>V</mi></mrow></msub><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow><mo>⋅</mo><mi>β</mi></mrow></mrow></mfrac><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m2" class="ltx_Math" alttext="count(c_{j},w)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>j</mi></msub><mo>,</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></math> is the current number of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m4" class="ltx_Math" alttext="c_{j}" display="inline"><msub><mi>c</mi><mi>j</mi></msub></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m5" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> is a hyper-parameter of Dirichlet distribution. For a new
+cluster, this probability is uniform (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p4.m6" class="ltx_Math" alttext="1/|V|" display="inline"><mrow><mn>1</mn><mo>/</mo><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></mrow></math>).</p>
+</div>
+<div id="S3.SS2.SSS3.p5" class="ltx_para">
+<p class="ltx_p">We regard each output cluster as a semantic frame, by merging the initial
+frames in a cluster into a semantic frame. In this way, semantic frames
+for each verb are acquired.</p>
+</div>
+<div id="S3.SS2.SSS3.p6" class="ltx_para">
+<p class="ltx_p">We use Gibbs sampling to realize this clustering.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Inducing Verb Classes from Semantic Frames</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">To induce verb classes across verbs, we apply clustering to the induced
+verb-specific semantic frames. We can use exactly the same clustering
+method as described in Section <a href="#S3.SS2.SSS3" title="3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a> by using
+semantic frames for multiple verbs as an input instead of initial frames
+for a single verb. This is because an initial frame has the same structure as
+a semantic frame, which is produced by merging initial frames. We
+regard each output cluster as a verb class this time.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">For the features, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, in equation (<a href="#S3.E2" title="(2) ‣ 3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), we
+try the two representations again: slot-only features and slot-word pair
+features. The representation using only slots corresponds to the
+consideration of only syntactic argument patterns. The other
+representation using the slot-word pairs means that semantic similarity
+based on word overlap is naturally considered by looking at lexical
+information. We will compare in our experiments four possible
+combinations: two feature representations for each of the
+two clustering steps.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments and Evaluations</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We first describe our experimental settings and define evaluation
+metrics to evaluate induced soft clusterings of verb classes. Then, we
+conduct type-level multi-class evaluations, type-level single-class
+evaluations and token-level multi-class evaluations. These two levels of
+evaluations are performed by considering the work of
+<cite class="ltx_cite">Reichart<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib1" title="Type level clustering evaluation: new measures and a POS induction case study" class="ltx_ref">2010</a>)</cite> on clustering evaluation. Finally, we discuss the
+results of our full experiments.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experimental Settings</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use two kinds of large-scale corpora: a web corpus and the English
+Gigaword corpus.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">To prepare a web corpus, we extracted sentences from crawled web pages
+that are judged to be written in English based on the encoding
+information. Then, we selected sentences that consist of at most
+40 words, and removed duplicated sentences. From this process, we
+obtained a corpus of one billion sentences, totaling
+approximately 20 billion words. We focused on verbs whose frequency in
+the web corpus was
+more than 1,000. There were 19,649 verbs, including phrasal verbs, and
+separating passive and active constructions. We extracted 2,032,774,982
+predicate-argument structures.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">We also used the English Gigaword corpus (LDC2011T07; English Gigaword
+Fifth Edition). This corpus consists of
+approximately 180 million sentences, which totaling four billion
+words. There were 7,356 verbs after applying the same frequency threshold as
+the web corpus. We extracted 423,778,278 predicate-argument structures
+from this corpus.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We set the hyper-parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> in (<a href="#S3.E1" title="(1) ‣ 3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> in (<a href="#S3.E3" title="(3) ‣ 3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) to 1.0. The cluster
+assignments for all the components were initialized randomly. We took 100
+samples for each input frame and selected the cluster assignment that has
+the highest probability.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Evaluation Metrics</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">To measure the precision and recall of a clustering, modified
+purity and inverse purity (also called collocation or weighted class
+accuracy) are commonly used in previous studies on verb clustering
+(e.g., <cite class="ltx_cite">Sun and Korhonen (<a href="#bib.bib72" title="Improving verb clustering with automatically acquired selectional preferences" class="ltx_ref">2009</a>)</cite>). However, since these measures are only
+applicable to a hard clustering, it is necessary to extend them to be
+applicable to a soft clustering, because in our task a verb can belong to multiple
+clusters or classes.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite> evaluated hard clusterings
+based on a gold standard with multiple classes per verb. They reported only precision
+measures including modified purity, and avoided extending the evaluation
+metrics for soft clusterings.</span></span></span> We propose a normalized version of
+modified purity and inverse purity. This kind of normalization for soft
+clusterings was performed for other evaluation metrics as in
+<cite class="ltx_cite">Springorum<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Detecting polysemy in hard and soft cluster analyses of German preposition vector spaces" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">To measure the precision of a clustering, a normalized version of
+modified purity is defined as follows. Suppose <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> is the set of automatically
+induced clusters and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> is the set of gold classes. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="K_{i}" display="inline"><msub><mi>K</mi><mi>i</mi></msub></math> be the verb vector of
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th cluster and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="G_{j}" display="inline"><msub><mi>G</mi><mi>j</mi></msub></math> be the verb vector of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th gold class. Each component of these vectors is
+a normalized frequency, which equals a cluster/class attribute
+probability given a verb. Where there is no frequency
+information available for class distribution, such as the gold-standard data
+described in Section <a href="#S4.SS3" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>, we use a
+uniform distribution across the verb’s classes.
+The core idea of purity is that each cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="K_{i}" display="inline"><msub><mi>K</mi><mi>i</mi></msub></math> is associated with
+its most prevalent gold class. In addition, to penalize clusters that
+consist of only one verb, such singleton clusters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> are considered
+as errors, as is usual with modified purity. The normalized
+modified purity (nmPU) can then be written as follows:</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="\displaystyle\textrm{nmPU}=\frac{1}{N}\sum_{i\ \textrm{s.t.}\ |K_{i}|&gt;1}\max_{%&#10;j}\delta_{K_{i}}({K_{i}\cap G_{j}})," display="inline"><mrow><mrow><mtext>nmPU</mtext><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>N</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mpadded width="+5.0pt"><mi>i</mi></mpadded><mo>⁢</mo><mpadded width="+5.0pt"><mtext>s.t.</mtext></mpadded><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi>K</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>&gt;</mo><mn>1</mn></mrow></munder></mstyle><mrow><munder><mo movablelimits="false">max</mo><mi>j</mi></munder><mo>⁡</mo><mrow><msub><mi>δ</mi><msub><mi>K</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S4.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="\displaystyle\delta_{K_{i}}({K_{i}\cap G_{j}})=\sum_{v\in K_{i}\cap G_{j}}c_{%&#10;iv}," display="inline"><mrow><mrow><mrow><msub><mi>δ</mi><msub><mi>K</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>v</mi><mo>∈</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow></mrow></munder></mstyle><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>v</mi></mrow></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> denotes the total number of verbs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="|K_{i}|" display="inline"><mrow><mo fence="true">|</mo><msub><mi>K</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow></math> denotes the number of positive components in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="K_{i}" display="inline"><msub><mi>K</mi><mi>i</mi></msub></math>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m4" class="ltx_Math" alttext="c_{iv}" display="inline"><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>v</mi></mrow></msub></math> denotes the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m5" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math>-th component of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m6" class="ltx_Math" alttext="K_{i}" display="inline"><msub><mi>K</mi><mi>i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m7" class="ltx_Math" alttext="\delta_{K_{i}}({K_{i}\cap G_{j}})" display="inline"><mrow><msub><mi>δ</mi><msub><mi>K</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> means the total mass of the set of verbs in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m8" class="ltx_Math" alttext="K_{i}\cap G_{j}" display="inline"><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow></math>, given by
+summing up the values in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m9" class="ltx_Math" alttext="K_{i}" display="inline"><msub><mi>K</mi><mi>i</mi></msub></math>. In case of evaluating a hard clustering,
+this is equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m10" class="ltx_Math" alttext="|K_{i}\cap G_{j}|" display="inline"><mrow><mo fence="true">|</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow><mo fence="true">|</mo></mrow></math> because all the values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m11" class="ltx_Math" alttext="c_{iv}" display="inline"><msub><mi>c</mi><mrow><mi>i</mi><mo>⁢</mo><mi>v</mi></mrow></msub></math> are
+equal to 1.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">As usual, the following normalized inverse purity (niPU) is used to
+measure the recall of a clustering:</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\displaystyle\textrm{niPU}=\frac{1}{N}\sum_{j}\max_{i}\delta_{G_{j}}({K_{i}%&#10;\cap G_{j}})." display="inline"><mrow><mrow><mtext>niPU</mtext><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>N</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder></mstyle><mrow><munder><mo movablelimits="false">max</mo><mi>i</mi></munder><mo>⁡</mo><mrow><msub><mi>δ</mi><msub><mi>G</mi><mi>j</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>K</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>G</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">Finally, we use the harmonic mean (F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math>) of nmPU and niPU as a single
+measure of clustering quality.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">verb</th>
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">classes</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">verb</td>
+<td class="ltx_td ltx_align_left ltx_border_t">classes</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">place</th>
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold">9</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">drop</td>
+<td class="ltx_td ltx_align_left ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold">9</span>, 45, 004, 47, 51, A54, A30</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">dye</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">24</span>, 21, 41</th>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">focus</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">31</span>, 45</th>
+<td class="ltx_td ltx_align_left ltx_border_r">bake</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">26</span>, 45</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">stare</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">30</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r">persuade</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">002</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">lay</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">9</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r">sparkle</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">build</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">26</span>, 45</th>
+<td class="ltx_td ltx_align_left ltx_border_r">pour</td>
+<td class="ltx_td ltx_align_left" rowspan="2"><span class="ltx_text ltx_font_bold">9</span>, 43, 26, 57, 13, 31</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">force</th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_bold">002</span>, 11</th>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r">glow</th>
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_bold">43</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">invent</td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_bold">26</span>, 27</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>An excerpt of the gold-standard verb classes for several
+verbs from <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>. The classes starting with ‘0’ were
+derived from the LCS database, those starting with ‘A’ were defined by
+Korhonen et al., and the other classes were from Levin’s classes. A
+bolded class is the predominant class for each verb.</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> method</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">K</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">nmPU</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">niPU</td>
+<td class="ltx_td ltx_align_center ltx_border_t">F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=35, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.10)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">35.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">53.59</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">51.44</td>
+<td class="ltx_td ltx_align_center ltx_border_t">52.44</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=35, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.05)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">35.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">53.67</td>
+<td class="ltx_td ltx_align_center ltx_border_r">52.62</td>
+<td class="ltx_td ltx_align_center">53.10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=35, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.02)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">35.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">54.42</td>
+<td class="ltx_td ltx_align_center ltx_border_r">54.43</td>
+<td class="ltx_td ltx_align_center">54.40</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m8" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=35, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m9" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.01)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">35.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">54.60</td>
+<td class="ltx_td ltx_align_center ltx_border_r">55.54</td>
+<td class="ltx_td ltx_align_center">55.04</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m10" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=42, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m11" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.10)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">41.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">55.42</td>
+<td class="ltx_td ltx_align_center ltx_border_r">49.46</td>
+<td class="ltx_td ltx_align_center">52.24</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m12" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=42, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m13" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.05)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">41.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">55.55</td>
+<td class="ltx_td ltx_align_center ltx_border_r">49.97</td>
+<td class="ltx_td ltx_align_center">52.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m14" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=42, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m15" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.02)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">42.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">56.19</td>
+<td class="ltx_td ltx_align_center ltx_border_r">51.24</td>
+<td class="ltx_td ltx_align_center">53.58</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> IB <span class="ltx_text ltx_font_small">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m16" class="ltx_Math" alttext="k" display="inline"><mi mathsize="normal" stretchy="false">k</mi></math>=42, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m17" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.01)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">42.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">56.80</td>
+<td class="ltx_td ltx_align_center ltx_border_r">51.92</td>
+<td class="ltx_td ltx_align_center">54.24</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> <span class="ltx_text ltx_font_small">LDA-frames (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m18" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.10)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">100</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">47.52</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">56.83</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.76</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> <span class="ltx_text ltx_font_small">LDA-frames (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m19" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.05)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">165</td>
+<td class="ltx_td ltx_align_center ltx_border_r">50.46</td>
+<td class="ltx_td ltx_align_center ltx_border_r">67.94</td>
+<td class="ltx_td ltx_align_center">57.91</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> <span class="ltx_text ltx_font_small">LDA-frames (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m20" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.02)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">306</td>
+<td class="ltx_td ltx_align_center ltx_border_r">49.98</td>
+<td class="ltx_td ltx_align_center ltx_border_r">75.50</td>
+<td class="ltx_td ltx_align_center">60.14</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> <span class="ltx_text ltx_font_small">LDA-frames (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m21" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math>=0.01)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">458</td>
+<td class="ltx_td ltx_align_center ltx_border_r">49.55</td>
+<td class="ltx_td ltx_align_center ltx_border_r">82.71</td>
+<td class="ltx_td ltx_align_center">61.97</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> Gigaword/S-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">272.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">63.46</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">65.49</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/S-SW</th>
+<td class="ltx_td ltx_align_center ltx_border_r">36.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r">31.49</td>
+<td class="ltx_td ltx_align_center ltx_border_r">95.70</td>
+<td class="ltx_td ltx_align_center">47.38</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/SW-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">186.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r">63.52</td>
+<td class="ltx_td ltx_align_center ltx_border_r">64.18</td>
+<td class="ltx_td ltx_align_center">63.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/SW-SW</th>
+<td class="ltx_td ltx_align_center ltx_border_r">30.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">36.27</td>
+<td class="ltx_td ltx_align_center ltx_border_r">94.66</td>
+<td class="ltx_td ltx_align_center">52.40</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> web/S-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">363.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61.32</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">78.64</td>
+<td class="ltx_td ltx_align_center ltx_border_t">68.90</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> web/S-SW</th>
+<td class="ltx_td ltx_align_center ltx_border_r">52.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r">35.80</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">99.30</span></td>
+<td class="ltx_td ltx_align_center">52.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> web/SW-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">212.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">66.26</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">77.38</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">71.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"> web/SW-SW</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">55.0</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">36.70</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">96.25</td>
+<td class="ltx_td ltx_align_center ltx_border_b">53.13</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Type-level multi-class evaluations. K represents the (average) number of induced classes. “S” denotes the use of slot-only features and “SW” denotes the use of slot-word pair features. For example, “SW-S” means that slot-word pair features are used for semantic frame induction and slot-only features are used for verb class induction.</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Type-level Multi-class Evaluations</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We first evaluate our induced verb classes on the test set created by
+<cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite> (Table 1 of their paper) which was created by
+considering verb polysemy on the basis of Levin’s classes and
+the LCS database <cite class="ltx_cite">[<a href="#bib.bib8" title="Large-scale dictionary construction for foreign language tutoring and interlingual machine translation" class="ltx_ref">6</a>]</cite>. It consists of 62 classes and 110
+verbs, out of which 35 verbs are monosemous and 75 verbs are polysemous.
+The average number of verb classes per verb is 2.24. An excerpt from
+this data is shown in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3">predominant class eval</td>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="3">multiple class eval</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">method</th>
+<td class="ltx_td ltx_align_center ltx_border_r">K</td>
+<td class="ltx_td ltx_align_center ltx_border_r">mPU</td>
+<td class="ltx_td ltx_align_center ltx_border_r">iPU</td>
+<td class="ltx_td ltx_align_center ltx_border_r">F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r">mPU</td>
+<td class="ltx_td ltx_align_center ltx_border_r">niPU</td>
+<td class="ltx_td ltx_align_center">F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">24</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">46.36</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">52.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">49.34</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">52.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">46.85</td>
+<td class="ltx_td ltx_align_center ltx_border_t">49.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">IB (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>=35)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">34.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">42.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r">51.82</td>
+<td class="ltx_td ltx_align_center ltx_border_r">46.82</td>
+<td class="ltx_td ltx_align_center ltx_border_r">51.64</td>
+<td class="ltx_td ltx_align_center ltx_border_r">46.83</td>
+<td class="ltx_td ltx_align_center">49.09</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">IB (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>=42)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">41.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">47.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">50.91</td>
+<td class="ltx_td ltx_align_center ltx_border_r">49.11</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">55.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">45.45</td>
+<td class="ltx_td ltx_align_center">49.87</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">LDA-frames</th>
+<td class="ltx_td ltx_align_center ltx_border_r">53</td>
+<td class="ltx_td ltx_align_center ltx_border_r">30.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r">47.27</td>
+<td class="ltx_td ltx_align_center ltx_border_r">36.71</td>
+<td class="ltx_td ltx_align_center ltx_border_r">41.82</td>
+<td class="ltx_td ltx_align_center ltx_border_r">44.28</td>
+<td class="ltx_td ltx_align_center">43.01</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Gigaword/S</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">9.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">25.64</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">71.27</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">37.70</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">32.91</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">64.71</td>
+<td class="ltx_td ltx_align_center ltx_border_t">43.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Gigaword/SW</th>
+<td class="ltx_td ltx_align_center ltx_border_r">10.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">30.36</td>
+<td class="ltx_td ltx_align_center ltx_border_r">71.09</td>
+<td class="ltx_td ltx_align_center ltx_border_r">42.25</td>
+<td class="ltx_td ltx_align_center ltx_border_r">39.82</td>
+<td class="ltx_td ltx_align_center ltx_border_r">66.92</td>
+<td class="ltx_td ltx_align_center">49.70</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">web/S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">20.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r">42.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r">61.46</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">50.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">54.91</td>
+<td class="ltx_td ltx_align_center ltx_border_r">57.12</td>
+<td class="ltx_td ltx_align_center">55.86</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r">web/SW</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">11.8</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">34.36</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">71.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">46.40</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">49.09</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">67.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">56.50</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Type-level single-class evaluations against predominant/multiple classes. K represents the (average) number of induced classes.</div>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">As our baselines, we adopt two previously proposed methods. We first
+implemented a soft clustering method for verb class induction proposed
+by <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>. They used the information bottleneck (IB)
+method for assigning probabilities of classes to each
+verb. Note that <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite> actually hardened the clusterings
+and left the evaluations of soft clusterings for their future work. For
+input data, we employ VALEX <cite class="ltx_cite">[<a href="#bib.bib51" title="A large subcategorization lexicon for natural language processing applications" class="ltx_ref">13</a>]</cite>, which is a
+publicly-available large-scale subcategorization
+lexicon.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>http://ilexir.co.uk/applications/valex/</span></span></span> By following
+the method of <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>, prepositional phrases (pp) are
+parameterized for two frequent subcategorization frames (NP and NP_PP),
+and the unfiltered raw frequencies of subcategorization frames are used
+as features to represent a verb. It is necessary to specify the number
+of clusters, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, for the IB method beforehand, and we adopt 35 and 42 clusters
+according to their reported high accuracies. To output multiple classes
+for each verb, we set a threshold, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, for class attribute probabilities.
+That is, classes that have a higher class attribute probability than the
+threshold are output for each verb. We report the results of the
+following threshold values: 0.01, 0.02, 0.05 and 0.10.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">The other baseline is LDA-frames <cite class="ltx_cite">[<a href="#bib.bib46" title="LDA-frames: an unsupervised approach to generating semantic frames" class="ltx_ref">21</a>]</cite>. We use the
+induced LDA-frames that are available on the web
+site.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>http://nlp.fi.muni.cz/projekty/lda-frames/</span></span></span> This frame
+data was induced from the BNC and consists of 1,200 frames and 400
+semantic roles. Again, we set a threshold for frame attribute
+probabilities.</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">We report results using our methods with four feature combinations
+(slot-only (S) and slot-word pair (SW) features each used for both
+the frame-generation and verb-class clustering steps) for both the
+Gigaword and web corpora. Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>
+lists evaluation results for the baseline methods and our methods.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Although we do not think that the classes with very small attribute
+probabilities are meaningful, the F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> scores for lower thresholds than
+0.01 converged to about 66 in the case of LDA-frames.</span></span></span> The
+results of the IB baseline and our methods are obtained by averaging
+five runs.</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<p class="ltx_p">We can see that “web/SW-S” achieved the best performance and obtained
+a higher F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> than the baselines by more than nine points. “Web/SW-S” uses the
+combination of slot-word pair features for clustering verb-specific
+frames and slot-only features for clustering across
+verbs. Interestingly, this result indicates that slot distributions are
+more effective than lexical information in slot-word pairs for inducing
+verb classes similar to the gold standard. This result is consistent with
+expectations, given a gold standard based on Levin’s verb classes,
+which are organized according to the syntactic behavior of verbs.
+The use of slot-word pairs for verb class induction generally merged too
+many frames into each class, apparently due to accidental word overlaps across
+verbs.</p>
+</div>
+<div id="S4.SS3.p6" class="ltx_para">
+<p class="ltx_p">The verb classes induced from the web corpus achieved a higher F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p6.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math>
+than those from the Gigaword corpus. This can be attributed to the
+larger size of the web corpus. The employment of this kind of huge
+corpus is enabled by our scalable method.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Type-level Single-class Evaluations against Predominant/Multiple Classes</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Since we focus on the handling of verb polysemy, predominant class
+induction for each verb is not our main objective. However, we wish to compare
+our method with previous work on the induction of a predominant
+(monosemous) class for each verb.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">To output a single class for each verb by using our proposed method, we
+skip the induction of verb-specific semantic frames and instead create a
+single frame for each verb by merging all predicate-argument structures
+of the verb. Then, we apply clustering to these frames across verbs. For
+clustering features, we again compare two representations:
+slot-only features (S) and slot-word pair features (SW).</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<p class="ltx_p">We evaluate the single-class output for
+each verb based on the predominant gold-standard classes, which are
+defined for each verb in the test set of <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>. This
+data contains 110 verbs and 33 classes. We evaluate these single-class
+outputs in the same manner as
+<cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>, using the gold standard with multiple classes, which
+we also use for our multi-class evaluations.</p>
+</div>
+<div id="S4.SS4.p4" class="ltx_para">
+<p class="ltx_p">As we did with the multi-class evaluations, we adopt modified purity
+(mPU), inverse purity (iPU) and their harmonic mean (F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p4.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math>) as the
+metrics for the evaluation with predominant classes. It is not
+necessary to normalize these metrics when we treat verbs as monosemous,
+and evaluate against the predominant sense. When we evaluate
+against the multiple classes in the gold standard, we do normalize
+the inverse purity.</p>
+</div>
+<div id="S4.SS4.p5" class="ltx_para">
+<p class="ltx_p">For baselines, we once more adopt the Nearest Neighbor (NN) and Information
+Bottleneck (IB) methods proposed by <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>, and
+LDA-frames proposed by <cite class="ltx_cite">Materna (<a href="#bib.bib46" title="LDA-frames: an unsupervised approach to generating semantic frames" class="ltx_ref">2012</a>)</cite>. The clusterings with the
+NN and IB methods are obtained by using the VALEX subcategorization
+lexicon. To harden the clusterings of the IB method and the LDA-frames,
+the class with the highest probability is selected for each verb. This
+hardening process is exactly the same as <cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite>. Note
+that our results of the NN and IB methods are different
+from those reported in their paper since the data source is
+different.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup><cite class="ltx_cite">Korhonen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Clustering polysemic subcategorization frame distributions semantically" class="ltx_ref">2003</a>)</cite> reported that the highest
+modified purity was 49% against predominant classes and 60% against
+multiple classes.</span></span></span></p>
+</div>
+<div id="S4.SS4.p6" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> lists accuracies of baseline
+methods and our methods. Our proposed method using the web corpus
+achieved comparable performance with the baseline methods on the
+predominant class evaluation and outperformed them on the multiple class
+evaluation. More sophisticated methods for predominant class induction,
+such as the method of <cite class="ltx_cite">Sun and Korhonen (<a href="#bib.bib72" title="Improving verb clustering with automatically acquired selectional preferences" class="ltx_ref">2009</a>)</cite> using selectional preferences,
+could produce better single-class outputs, but have difficulty in
+producing polysemy-aware verb classes.</p>
+</div>
+<div id="S4.SS4.p7" class="ltx_para">
+<p class="ltx_p">From the result, we can see that the induced verb classes based on
+slot-only features did not achieve a higher F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p7.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> than those
+based on slot-word pair features in many cases. This result is different from that of
+multi-class evaluations in Section
+<a href="#S4.SS3" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>. We speculate that slot
+distributions are not so different among verbs when all uses of a
+verb are merged into one frame, and thus their discrimination power is lower than
+that in the intermediate construction of semantic frames.</p>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Token-level Multi-class Evaluations</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">We conduct token-level multi-class evaluations using 119 verbs, which
+appear 100 or more times in sections 02-21 of the SemLink WSJ
+corpus. These 119 verbs cover 102 VerbNet classes, and 48 of them are
+polysemous in the sense of being in more than one VerbNet class. Each
+instance of these 119 verbs in this corpus belongs to one of 102 VerbNet
+classes. We first add these instances to the instances from a raw corpus
+and apply the two-step clustering to these merged instances. Then, we
+compare the induced verb classes of the SemLink instances with their
+gold-standard VerbNet classes.
+We report the values of modified purity (mPU), inverse purity (iPU) and
+their harmonic mean (F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math>). It is not necessary to normalize these
+metrics because the clustering of these instances is hard.</p>
+</div>
+<div id="S4.SS5.p2" class="ltx_para">
+<p class="ltx_p">For clustering features, we compare two feature combinations: “S-S”
+and “SW-S,” which achieved high performance in the type-level
+multi-class evaluations (Section <a href="#S4.SS3" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>).
+The results of these methods are obtained by averaging five runs. For a
+baseline, we use verb-specific semantic frames without clustering across
+verbs (“S-NIL” and “SW-NIL”), where these frames are considered to
+be verb classes but not shared across verbs. Table
+<a href="#S4.T4" title="Table 4 ‣ 4.5 Token-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> lists accuracies of these methods for the two
+corpora. We can see that “SW-S” achieved a higher F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> than “S-S”
+and the baselines without verb class induction (“S-NIL” and “SW-NIL”).</p>
+</div>
+<div id="S4.SS5.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Modi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Unsupervised induction of frame-semantic representations" class="ltx_ref">2012</a>)</cite> induced semantic frames across verbs using the
+monosemous assumption and reported an F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p3.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> of 44.7% (77.9% PU and
+31.4% iPU) for the assignment of FrameNet frames to
+the FrameNet corpus. We also conducted the above evaluation against
+FrameNet frames for 75 verbs.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Since FrameNet frames are not
+assigned to all verbs of SemLink, the number of verbs is different from
+the evaluations against VerbNet classes.</span></span></span> We achieved an F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p3.m2" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> of 62.79%
+(66.97% mPU and 59.09% iPU) for “web/SW-S,” and an F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p3.m3" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> of
+60.06% (65.58% mPU and 55.39% iPU) for “Gigaword/SW-S.” It is
+difficult to directly compare these results with <cite class="ltx_cite">Modi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Unsupervised induction of frame-semantic representations" class="ltx_ref">2012</a>)</cite>, but
+our induced verb classes seem to have higher F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p3.m4" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> accuracy.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> method</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">K</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">mPU</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">iPU</th>
+<th class="ltx_td ltx_align_center ltx_border_t">F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> Gigaword/S-NIL</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">93.43</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">20.06</td>
+<td class="ltx_td ltx_align_center ltx_border_t">33.03</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/SW-NIL</th>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r">94.45</td>
+<td class="ltx_td ltx_align_center ltx_border_r">41.07</td>
+<td class="ltx_td ltx_align_center">57.25</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/S-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">512.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r">75.06</td>
+<td class="ltx_td ltx_align_center ltx_border_r">45.26</td>
+<td class="ltx_td ltx_align_center">56.47</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> Gigaword/SW-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">260.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">73.98</td>
+<td class="ltx_td ltx_align_center ltx_border_r">56.45</td>
+<td class="ltx_td ltx_align_center">64.04</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"> web/S-NIL</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">93.70</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">32.96</td>
+<td class="ltx_td ltx_align_center ltx_border_t">48.76</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> web/SW-NIL</th>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">94.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">44.95</td>
+<td class="ltx_td ltx_align_center">60.92</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"> web/S-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">500.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">72.25</td>
+<td class="ltx_td ltx_align_center ltx_border_r">52.48</td>
+<td class="ltx_td ltx_align_center">60.79</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"> web/SW-S</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">255.2</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">72.65</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">61.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">66.31</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Token-level evaluations against VerbNet classes. K represents the average number of induced classes.</div>
+</div>
+</div>
+<div id="S4.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.6 </span>Full Experiments and Discussions</h3>
+
+<div id="S4.SS6.p1" class="ltx_para">
+<p class="ltx_p">We finally induce verb classes from the semantic frames of 1,667 verbs,
+which appear at least once in sections 02-21 of the WSJ corpus.
+Based on the best results in the above evaluations, we induced semantic frames
+using slot-word pair features, and then induced verb classes
+using slot-only features. We ended with 38,481 semantic frames and 699
+verb classes from the Gigaword corpus, and 61,903 semantic
+frames and 840 verb classes from the web corpus. It took
+two days to induce verb classes from the Gigaword corpus and three days
+from the web corpus.</p>
+</div>
+<div id="S4.SS6.p2" class="ltx_para">
+<p class="ltx_p">Examples of verb classes and semantic frames induced from the web corpus
+are shown in Table <a href="#S4.T5" title="Table 5 ‣ 4.6 Full Experiments and Discussions ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> and Table
+<a href="#S5.T6" title="Table 6 ‣ 5 Conclusion ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. While there are many classes with
+consistent meanings, such as “Class 4” and “Class 16,” some
+classes have mixed meanings. For instance, “Class 2” consists of the
+semantic frames “need:2” and “say:2.” These frames were merged due
+to the high syntactic similarity of constituting slot distributions, which are
+comprised of a subject and a sentential complement. To improve the
+quality of verb classes, it is necessary to develop a clustering model
+that can consider syntactic and lexical similarity in a balanced way.</p>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">class</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">semantic frames</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Class 1</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">rave:1, talk:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 2</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small" style="text-decoration:underline;">need:2</span><span class="ltx_text ltx_font_small">, </span><span class="ltx_text ltx_font_small" style="text-decoration:underline;">say:2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 3</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">smell:1, sound:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 4</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">concentrate:1, focus:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 5</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">express:2, inquire:62, voice:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 6</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">revolve:1, snake:2, wrap:2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 7</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">hand:1, hand:3, hand:4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 8</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">depend:1, rely:1, rely:3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 9</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">collaborate:1, compete:2, work:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 10</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">coach:3, teach:3, teach:4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 11</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">dance:1, react:1, stick:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 12</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">advise:8, express:4, quiz:10, voice:2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 13</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">give:18, grant:6, offer:11, offer:12</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 14</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">keep:14, keep:18, stay:4, stay:488</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 15</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">cuff:5, fasten:2, tie:1, tie:4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 16</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">arrange:3, book:4, make:27, reserve:5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 17</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">deport:6, differ:1, fluctuate:1, vary:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 18</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">peek:1, peek:3, peer:1, peer:7, …</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Class 19</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">groan:1, growl:1, hiss:1, moan:1, purr:1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Class 20</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small" style="text-decoration:underline;">inform:1</span><span class="ltx_text ltx_font_small">, </span><span class="ltx_text ltx_font_small" style="text-decoration:underline;">notify:2</span><span class="ltx_text ltx_font_small">, remind:1, beware:1, …</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>Examples of induced verb classes. Underlined semantic frames are shown in Table <a href="#S5.T6" title="Table 6 ‣ 5 Conclusion ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We presented a step-wise unsupervised method for inducing verb classes
+from instances in giga-word corpora. This method first clusters
+predicate-argument structures to induce verb-specific semantic frames
+and then clusters these semantic frames across verbs to induce verb
+classes. Both clustering steps are performed with exactly the same
+method, which is based on the Chinese Restaurant Process. The resulting semantic
+frames and verb classes are open to the public and also can be searched
+via our web interface.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>http://nlp.ist.i.kyoto-u.ac.jp/member/kawahara/cf/crp.en/</span></span></span></p>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">slot</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">instance words</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">nsubj</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">you:2150273, i:7678, we:4599, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small" style="position:relative; bottom:4.9pt;">need:2</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">ccomp</span></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_small">s</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_small">:2193321</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">nsubj</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">she:1705781, he:20693, i:9422, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small" style="position:relative; bottom:4.9pt;">say:2</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">ccomp</span></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m3" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_small">s</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m4" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_small">:1829616</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">nsubj</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">i:11100, he:10323, we:6373, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">dobj</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">me:30646, you:27678, us:21642, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small" style="position:relative; bottom:3.7pt;">inform:1</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">prep_of</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">decision:846, this:759, situation:688, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">      </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m5" class="ltx_Math" alttext="\vdots" display="inline"><mi mathvariant="normal">⋮</mi></math><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">nsubj</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">we:7505, you:3439, i:1035, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">dobj</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">you:18604, us:7281, them:3649, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small" style="position:relative; bottom:3.7pt;">notify:2</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">prep_of</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">change:1540, problem:496, status:386, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">      </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m6" class="ltx_Math" alttext="\vdots" display="inline"><mi mathvariant="normal">⋮</mi></math><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span>Examples of induced semantic frames. The number following an
+instance word denotes its frequency and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m9" class="ltx_Math" alttext="\langle" display="inline"><mo mathsize="normal" stretchy="false">⟨</mo></math>s<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m10" class="ltx_Math" alttext="\rangle" display="inline"><mo mathsize="normal" stretchy="false">⟩</mo></math> denotes a
+sentential complement.</div>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">From the results, we can see that the combination of the slot-word pair
+features for clustering verb-specific frames and the slot-only features
+for clustering across verbs is the most effective and outperforms the
+baselines by approximately 10 points. This indicates that slot
+distributions are more effective than lexical information in slot-word
+pairs for the induction of verb classes, when Levin-style classes are
+used for evaluation. This is consistent with Levin’s principle of
+organizing verb classes according to the syntactic behavior of verbs.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">As applications of the resulting semantic frames and verb classes, we
+plan to integrate them into syntactic parsing, semantic role labeling
+and verb sense disambiguation. For instance, <cite class="ltx_cite">Kawahara and Kurohashi (<a href="#bib.bib104" title="A fully-lexicalized probabilistic model for Japanese syntactic and case structure analysis" class="ltx_ref">2006</a>)</cite>
+improved accuracy of dependency parsing based on Japanese semantic
+frames automatically induced from a raw corpus. It is also valuable and
+promising to apply the induced verb classes to NLP applications as used
+in metaphor identification <cite class="ltx_cite">[<a href="#bib.bib19" title="Metaphor identification using verb and noun clustering" class="ltx_ref">34</a>]</cite> and argumentative zoning
+<cite class="ltx_cite">[<a href="#bib.bib5" title="A weakly-supervised approach to argumentative zoning of scientific documents" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported by Kyoto University John Mung Program and JST
+CREST. We also gratefully acknowledge the support of the National
+Science Foundation Grant NSF-IIS-1116782, A Bayesian Approach to Dynamic
+Lexical Resources for Flexible Language Processing. Any opinions,
+findings, and conclusions or recommendations expressed in this material
+are those of the authors and do not necessarily reflect the views of the
+National Science Foundation.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Aldous</span><span class="ltx_text ltx_bib_year">(1985)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exchangeability and related topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">École d’Été de Probabilités de Saint-Flour XIIIâ1983</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–198</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i3.p1" title="3. ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.SSS3.p1" title="3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">the Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Boleda, S. S. im Walde and T. Badia</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modelling polysemy in adjective classes by multi-label classification.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 171–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. T. Dang</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Investigations into the role of lexical semantics in word sense disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Pennsylvania</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe, B. MacCartney and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating typed dependency parses from phrase structure parses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 449–454</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS1.p1" title="3.2.1 Extracting Predicate-argument Structures from a Raw Corpus ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. J. Dorr</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale dictionary construction for foreign language tutoring and interlingual machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Translation</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 271–322</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib73" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Falk, C. Gardent and J. Lamirel</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Classifying French verbs using French and English lexical resources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 854–863</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1090" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Guo, A. Korhonen and T. Poibeau</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A weakly-supervised approach to argumentative zoning of scientific documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 273–283</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D11-1025" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Conclusion ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Joanis, S. Stevenson and D. James</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A general feature space for automatic verb classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 337–367</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib104" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kawahara and S. Kurohashi</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A fully-lexicalized probabilistic model for Japanese syntactic and case structure analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 176–183</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N06/N06-1023" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Conclusion ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kawahara, D. W. Peterson, O. Popescu and M. Palmer</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing example-based semantic frames from a massive amount of verb uses</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS3.p3" title="3.2.3 Clustering Method ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Kipper-Schuler</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">VerbNet: a broad-coverage, comprehensive verb lexicon</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Pennsylvania</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Korhonen, Y. Krymolowski and T. Briscoe</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A large subcategorization lexicon for natural language processing applications</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 345–352</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Korhonen, Y. Krymolowski and Z. Marx</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Clustering polysemic subcategorization frame distributions semantically</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 64–71</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P03-1009" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS3.p2" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.p3" title="4.4 Type-level Single-class Evaluations against Predominant/Multiple Classes ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.SS4.p5" title="4.4 Type-level Single-class Evaluations against Predominant/Multiple Classes ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.T1" title="Table 1 ‣ 4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Lapata and C. Brew</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Verb class disambiguation using informative priors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">30</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 45–73</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p6" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Levin</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">English verb classes and alternations: a preliminary investigation</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">The University of Chicago Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Li and C. Brew</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Disambiguating Levin verbs using untagged data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p6" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Li and C. Brew</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Which are the best features for automatic verb classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 434–442</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1050" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib52" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Lippincott, A. Korhonen and D. Ó Séaghdha</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning syntactic verb frames using graphical models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 420–429</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1044" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Loper, S. Yi and M. Palmer</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining lexical resources: mapping between PropBank and VerbNet</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Materna</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LDA-frames: an unsupervised approach to generating semantic frames</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 376–387</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.SS3.p3" title="4.3 Type-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.p5" title="4.4 Type-level Single-class Evaluations against Predominant/Multiple Classes ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Materna</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parameter estimation for LDA-frames</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 482–486</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1051" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Miyao and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supervised learning of a probabilistic lexicon of verb semantic classes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1328–1337</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D/D09/D09-1138" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Modi, I. Titov and A. Klementiev</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised induction of frame-semantic representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–7</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W12-1901" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS5.p3" title="4.5 Token-level Multi-class Evaluations ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.5</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. M. Neal</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Markov chain sampling methods for Dirichlet process mixture models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of computational and graphical statistics</span> <span class="ltx_text ltx_bib_volume">9</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 249–265</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Parisien and S. Stevenson</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning verb alternations in a usage-based Bayesian model</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Parisien and S. Stevenson</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generalizing between form and meaning using learned verb classes</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Reichart, O. Abend and A. Rappoport</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Type level clustering evaluation: new measures and a POS induction case study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 77–87</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-2911" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Reichart and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved lexical acquisition through DPP-based verb clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 862–872</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1085" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Sasano, D. Kawahara and S. Kurohashi</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The effect of corpus size on case frame acquisition for discourse analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 521–529</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N09/N09-1059" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Overview ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Schulte im Walde, C. Hying, C. Scheible and H. Schmid</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining EM training and the MDL principle for an automatic verb classification incorporating selectional preferences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 496–504</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1057" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p6" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Schulte im Walde</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experiments on the automatic induction of German semantic verb classes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">32</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 159–194</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib96" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Shi and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Putting pieces together: combining FrameNet, VerbNet and WordNet for robust semantic parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Computational Linguistics and Intelligent Text Processing</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 100–111</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova, L. Sun and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphor identification using verb and noun clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1002–1010</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C10-1113" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Conclusion ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Springorum, S. Schulte im Walde and J. Utt</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detecting polysemy in hard and soft cluster analyses of German preposition vector spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 632–640</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/I13-1072" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Stevenson and E. Joanis</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised verb class discovery using noisy features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 71–78</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W03-0410.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib97" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Subba and B. Di Eugenio</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An effective discourse parser that uses rich linguistic information</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 566–574</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N09/N09-1064" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Sun, A. Korhonen and Y. Krymolowski</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic classification of English verbs using rich syntactic features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 769–774</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Sun and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving verb clustering with automatically acquired selectional preferences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 638–647</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D/D09/D09-1067" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Evaluation Metrics ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS4.p6" title="4.4 Type-level Single-class Evaluations against Predominant/Multiple Classes ‣ 4 Experiments and Evaluations ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Sun, D. McCarthy and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Diathesis alternation approximation for verb clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 736–741</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2129" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Swier and S. Stevenson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting a verb lexicon in automatic semantic role labelling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 883–890</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/H/H05/H05-1111" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. W. Teh, M. I. Jordan, M. J. Beal and D. M. Blei</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical Dirichlet processes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Statistical Association</span> <span class="ltx_text ltx_bib_volume">101</span> (<span class="ltx_text ltx_bib_number">476</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Tishby, F. C. Pereira and W. Bialek</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The information bottleneck method</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 368–377</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Titov and A. Klementiev</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Bayesian approach to unsupervised semantic role induction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 12–22</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/E12-1003" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Vlachos, A. Korhonen and Z. Ghahramani</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised and constrained Dirichlet process mixture models for verb clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 74–82</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W09-0210" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Yarowsky</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">One sense per collocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 266–271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i2.p1" title="2. ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>,
+<a href="#S3.SS2.SSS2.p1" title="3.2.2 Constructing Initial Frames from Predicate-argument Structures ‣ 3.2 Inducing Verb-specific Semantic Frames ‣ 3 Our Approach ‣ A Step-wise Usage-based Method for Inducing  Polysemy-aware Verb Classes" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:26:39 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

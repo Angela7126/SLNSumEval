@@ -1,0 +1,1548 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Consequence-based and fixed-parameter tractable reasoning in description logics.
+   </title>
+   <abstract>
+    In this paper we investigate the consequence-based algorithms that are nowadays commonly used for subsumption reasoning with description logic ontologies, presenting the following novel results. First, we present a very general consequence-based reasoning algorithm that can be instantiated so as to capture the essential features of the known algorithms. Second, we use this algorithm to develop a novel framework for a quantitative and parametric analysis of the complexity of subsumption reasoning in description logic ontologies. Our approach is based on the notion of a decomposition—a graph-like structure that, roughly speaking, summarizes the models relevant during ontology reasoning. We identify width and length as decomposition parameters that determine the “level” of combinatorial reasoning. We prove that, when parameterized by a decomposition, our consequence-based algorithm runs in time that is fixed-parameter tractable in width and length. Third, we briefly discuss how length and width characterize the behavior of tableau algorithms. Fourth, we show that the width and length of existing ontologies are reasonably small, which, we believe, explains the good performance of consequence-based algorithms in practice. We thus obtain a sound foundation for a practical implementation of ontology reasoners, as well as a way to analyze the reasoners' performance.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      An ontology describes an application domain in terms of concepts (i.e., the kinds of objects in the domain), roles (i.e., the relationships between objects), and axioms (i.e., statements that formally describe concepts and roles). Axioms are logical statements and can thus be automatically processed via reasoning. For example, an ontology describing the structure of a university might use concepts Employee, Professor, and AssistantProfessor to represent employees, professors, and assistant professors, respectively, and the university's organizational hierarchy might be captured by axioms stating that Professor is a subconcept of Employee, and that AssistantProfessor is a subconcept of Professor. An ontology reasoner can use such statements to conclude that AssistantProfessor is also a subconcept of Employee. This is an example of subsumption reasoning (i.e., reasoning about the hierarchy of ontology concepts), which is a central computational problem in ontology-based applications in areas as diverse as biology [1], medicine [2], geography [3], astronomy [4], agriculture [5], and defense [6].
+     </paragraph>
+     <paragraph>
+      The Web Ontology Language (OWL) [7] and its successor OWL 2 [8], [9] are standard ontology languages developed by the World Wide Web Consortium (W3C). Their logical underpinning is provided by description logics (DLs) [10]—a well-known family of knowledge representation languages. Reasoning with expressive DLs can be quite complex, so for simplicity in this paper we focus on the basic description logic {a mathematical formula}ALCI that provides the fundamental constructs such as inverse roles, full Boolean connectives on concepts, and existential and universal quantification; however, quantification is guarded[11], which ensures that subsumption reasoning is decidable, albeit of high complexity (ExpTime-complete). The reason for this high complexity is the size and number of relevant models [10, Chapter 3]: due to an interaction between existential and universal quantifiers, an ontology may be satisfied only in models containing an exponential number of objects (an effect known as and-branching), and due to disjunctions, an ontology may admit an exponential number of “relevant” models (an effect known as or-branching). State of the art OWL reasoners, including Pellet [12], FaCT++ [13], and HermiT [14], are all based on variants of the tableau algorithm, which try to construct a finite representation of a model of an ontology. The basic algorithm has been heavily optimized so as to curb and- and or-branching in practice [10, Chapter 9], which allows DL reasoners to successfully process many large and nontrivial ontologies. The performance of such reasoners is, however, relatively brittle, and there exist ontologies (for example the GALEN ontology{sup:1}) that none of these reasoners is able to process. Although there has been some work on identifying the qualitative features of an ontology that may degrade the performance of a given reasoner [15], no existing method can provide a quantitative measure of the “difficulty” of reasoning with a particular ontology.
+     </paragraph>
+     <paragraph>
+      In order to provide more robust performance of reasoning, one can reduce language expressivity so as to make reasoning easier. By removing disjunctions one obtains the Horn family of DLs [16]. Horn ontologies can always be translated into Horn clauses, which eliminates all or-branching; however, while this has been empirically shown to make reasoning easier [14], reasoning with Horn-{a mathematical formula}ALCI is still ExpTime-hard due to and-branching [17]. By further removing universal quantification and inverse roles from Horn-{a mathematical formula}ALCI one obtains the {a mathematical formula}EL family of DLs [18], for which subsumption reasoning is tractable; similarly, by removing universal quantification, qualified existential quantification, and conjunction from Horn-{a mathematical formula}ALCI one obtains the DL-Lite family of DLs [19], [20], for which subsumption reasoning is also tractable. Although Horn DLs have been successfully applied in practice, many applications require inverse roles (which precludes the use of {a mathematical formula}EL), qualified existential quantification (which precludes the use of DL-Lite), or concept covering constraints (which requires disjunction and hence precludes the use of Horn DLs altogether). Thus, improving reasoning performance by reducing expressivity is not always feasible.
+     </paragraph>
+     <paragraph>
+      An alternative is to explore new reasoning techniques that may be better adapted to practical ontologies. Consequence-based algorithms [21], [22] have recently proved to be very effective in practice; for example, the CB reasoner is currently the only reasoner that can process the GALEN ontology in its entirety [21], and the ELK reasoner has revolutionized the processing of large {a mathematical formula}EL ontologies such as SNOMED CT{sup:2}[23]. Intuitively, such algorithms can be seen as variants of resolution optimized to reduce the number of clauses produced on typical ontologies. However, although consequence-based reasoners have been very successful, it is still not possible to quantify the difficulty of reasoning with a specific ontology.
+     </paragraph>
+     <paragraph>
+      We believe that methods for the quantitative analysis of the difficulty of reasoning with a specific ontology {a mathematical formula}O would have major benefits in practice. On the one hand, users would be able to predict the effectiveness of reasoners on {a mathematical formula}O, and analyze performance problems if they did arise; and on the other hand, algorithm designers would gain a deeper understanding as to why reasoning with practical ontologies is often easy notwithstanding the high worst case complexity of the problem, and could exploit this understanding in order to design more robustly scalable reasoning algorithms. Crucially, this analysis must go beyond worst-case complexity and consider the salient features of a specific ontology. One can frame this problem in terms of parameterized complexity[24], which measures the difficulty of a computational problem not only w.r.t. the size n of a problem instance, but also a parameter k that quantifies specific aspects of the instance. Of particular interest are fixed-parameter tractable (FPT) problems, which can be solved in time {a mathematical formula}f(k)⋅nc for a fixed constant c and a fixed computable function f; such problems are interesting because one can hope to solve large instances provided that the parameter remains “small.” For example, many hard graph-theoretic problems (including graph homomorphism and 3-colorability) are FPT when the parameter is the graph's treewidth[25]—a measure of the graph's similarity to a tree. Furthermore, the notion of treewidth has also been extended to propositional formulae and has been used to obtain FPT results for propositional satisfiability [26]. A key question in parameterized complexity is to identify natural parameters that accurately characterize the problem's difficulty.
+     </paragraph>
+     <paragraph>
+      In this paper, we present what we believe to be the first framework for a quantitative, parameterized analysis of the complexity of subsumption reasoning with {a mathematical formula}ALCI. Via well-known reductions of role inclusions and role transitivity axioms, our approach can also be applied to {a mathematical formula}SHI ontologies, and so it covers a significant subset of OWL 2 DL (the latter further allows constructs such as nominals and number restrictions). We characterize the difficulty of subsumption reasoning in DLs using a graph-like structure called a decomposition. Furthermore, we present a family of reasoning algorithms based on decompositions that facilitate FPT reasoning. Finally, we show how the good performance of consequence-based reasoners on several widely used ontologies can be explained by an analysis of their decompositions. We next summarize the main contributions of our paper.
+     </paragraph>
+     <paragraph>
+      In Section 3 we introduce a general consequence-based framework for subsumption reasoning in {a mathematical formula}ALCI and {a mathematical formula}SHI, and then we discuss possibilities for instantiating the framework using different initialization and expansion strategies. Our algorithms are not only refutationally complete: they can actively derive queries (i.e., axioms of a specific form) that logically follow from a given ontology. A specific instantiation of our framework captures the algorithm used in CB [21] and is closely related to the algorithm used in ConDOR [22]. As well as capturing existing consequence-based approaches, our framework incorporates redundancy deletion and optimized inference rules that have the potential to further improve the practical performance of consequence-based algorithms. Thus, we see our framework as an important contribution in its own right.
+     </paragraph>
+     <paragraph>
+      In Section 4 we introduce the central notion of a decomposition{a mathematical formula}D of an ontology {a mathematical formula}O and a set of queries {a mathematical formula}Q. Roughly speaking, {a mathematical formula}D is a graph-like structure that “summarizes” the models of {a mathematical formula}O relevant for answering the queries in {a mathematical formula}Q; each vertex of {a mathematical formula}D identifies a propositional subproblem, and each edge of {a mathematical formula}D identifies a pathway for the exchange of information between such subproblems. We then show how to instantiate our consequence-based framework from Section 3 so that it can be applied to {a mathematical formula}D, and we identify the length and width of {a mathematical formula}D as parameters that characterize the and- and or-branching encountered in this process. Finally, we show that the algorithm can be implemented so that it is fixed-parameter tractable w.r.t. decomposition length and width.
+     </paragraph>
+     <paragraph>
+      In Section 4.3 we show that decompositions also explain to an extent the difficulty of tableau reasoning. In particular, decomposition width bounds the size of sets of concepts annotating tableau vertices, so length and width bound the size of the constructed model representations. We also point out, however, that tableau algorithms are not FPT because the way in which they construct model representations may result in redundant computations.
+     </paragraph>
+     <paragraph>
+      In Section 4.4 we present an algorithm for computing a decomposition of {a mathematical formula}O and {a mathematical formula}Q. One would naturally want to compute a decomposition of smallest length and width; however, in Section 7 we show that there is a tension between these two parameters by exhibiting a family of ontologies for which each decomposition of minimum width has exponential length. To address this problem, our decomposition construction algorithm is parameterized by a collection of parameters called a control that imposes an upper bound on decomposition length so that a unique decomposition of {a mathematical formula}O and {a mathematical formula}Q can be computed in polynomial time.
+     </paragraph>
+     <paragraph>
+      In Section 5 we further extend our results using ideas from reasoning with propositional problems of bounded treewidth. More specifically, we present the notion of ϵ-refinement of a decomposition {a mathematical formula}D, which, roughly speaking, is obtained by replacing each vertex of {a mathematical formula}D with a tree decomposition of the propositional problem corresponding to the vertex. This can reduce the width of a decomposition while increasing the length only by a linear factor, so it can reduce the complexity of reasoning. As for tree decompositions, computing an ϵ-refinement of bounded width (if one exists) is FPT.
+     </paragraph>
+     <paragraph>
+      In Section 6 we present several soundness- and admissibility-preserving transformations for decompositions that can be used to eliminate redundant information. In Section 7 we then establish bounds on the sizes of the decompositions of {a mathematical formula}O and {a mathematical formula}Q. For the lower bound, we show that ontologies exist for which all decompositions of minimal width have exponential length; for the upper bound, we use the transformations from Section 6 to show that {a mathematical formula}O and {a mathematical formula}Q always admit a decomposition of minimal width with at most exponential length.
+     </paragraph>
+     <paragraph>
+      In Section 8 we investigate the width and length of several ontologies commonly used in practice. Our results show that almost all ontologies admit a decomposition of length about twice the number of concepts in the ontology, and of width below 30. These results, we believe, explain the good performance of consequence-based reasoning algorithms in practice.
+     </paragraph>
+     <paragraph>
+      To the best of our knowledge, these are the first results on quantitative analysis and fixed-parameter complexity of ontology reasoning. The only related work we are aware of is the analysis of conditions under which query answering for a given ontology (independently of the DL language) becomes tractable w.r.t. data complexity [27]; however, these results are not quantitative and they do not address the problem of subsumption reasoning. Thus, we believe that this paper provides a completely new perspective on the problem of identifying the sources of complexity in ontology reasoning. Moreover, our results are amenable to practical implementation, and we believe they can significantly improve the scalability and robustness of reasoners.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section we recapitulate some well-known definitions and introduce the notation that we use in the rest of our paper.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Description logics
+      </section-title>
+      <paragraph>
+       Description logics {a mathematical formula}ALCI and {a mathematical formula}SHI are defined w.r.t. a fixed signature{a mathematical formula}Σ=〈ΣA,ΣT〉, where {a mathematical formula}ΣA and {a mathematical formula}ΣT are disjoint sets of atomic concepts and atomic roles, respectively.
+      </paragraph>
+      <paragraph>
+       An inverse role is an expression {a mathematical formula}T− for T an atomic role. A role is an atomic role or an inverse role, and {a mathematical formula}ΣR is the set of all roles. For an atomic role T, let {a mathematical formula}inv(T):=T− and {a mathematical formula}inv(T−):=T.
+      </paragraph>
+      <paragraph>
+       The set of concepts is the smallest set that contains ⊤ (the top concept), ⊥ (the bottom concept), each atomic concept A, and ¬D (negation), {a mathematical formula}D1⊓D2 (conjunction), {a mathematical formula}D1⊔D2 (disjunction), {a mathematical formula}∃R.D (existential restriction), and {a mathematical formula}∀R.D (universal restriction) for each role R and all concepts D, {a mathematical formula}D1, and {a mathematical formula}D2. We assume that {a mathematical formula}{⊤,⊥}∩ΣA=∅—that is, ⊤ and ⊥ are not atomic concepts. A literal is a concept of the form A, {a mathematical formula}∃R.A, or {a mathematical formula}∀R.A, for A an atomic concept and R a role, and {a mathematical formula}ΣL is the set of all literals. For L a set of literals, {a mathematical formula}L∃ is the subset of L containing all literals of the form {a mathematical formula}∃R.A.
+      </paragraph>
+      <paragraph>
+       Unless otherwise stated, certain letters of the alphabet (possibly with sub- and/or superscripts) are used consistently throughout this paper as specified below, so we do not qualify these letters whenever no ambiguity can arise:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        letters A, B, and C denote atomic concepts,
+       </list-item>
+       <list-item label="•">
+        letter D denotes a concept,
+       </list-item>
+       <list-item label="•">
+        letter L denotes a literal,
+       </list-item>
+       <list-item label="•">
+        letter T denotes an atomic role,
+       </list-item>
+       <list-item label="•">
+        letters R and S denote roles,
+       </list-item>
+       <list-item label="•">
+        letter K denotes a conjunction of literals, and
+       </list-item>
+       <list-item label="•">
+        letter M denotes a disjunction of literals.
+       </list-item>
+      </list>
+      <paragraph>
+       We identify conjunctions and disjunctions of literals with sets of literals (i.e., conjunctions and disjunctions of literals are unordered and without repeated literals) and we use them in standard set operations; furthermore, we identify the empty conjunction and the empty disjunction with ⊤ and ⊥, respectively. Conversely, for U a set of literals, ⨅U and ⨆U are the conjunction and the disjunction, respectively, of the literals in U; furthermore, to simplify the notation, in some cases we will explicitly note that we abbreviate ⨅U as just U. The cardinality of a set N is written {a mathematical formula}|N|.
+      </paragraph>
+      <paragraph>
+       An axiom is an expression of the form {a mathematical formula}D1⊑D2 (general concept inclusion), {a mathematical formula}R1⊑R2 (role inclusion), or {a mathematical formula}Tra(R) (role transitivity axiom). A {a mathematical formula}SHIontology{a mathematical formula}O is a set of axioms. In this paper we consider only terminological reasoning, so we do not allow for facts (aka ABoxes) in ontologies. The size of {a mathematical formula}O, written {a mathematical formula}‖O‖, is the number of symbols in {a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       Ontologies are interpreted using Tarski-style semantics. An interpretation{a mathematical formula}I=〈ΔI,⋅I〉 is a pair where {a mathematical formula}ΔI is a nonempty set called the domain, and {a mathematical formula}⋅I is a function that assigns a set {a mathematical formula}AI⊆ΔI to each atomic concept {a mathematical formula}A∈ΣA, and a set {a mathematical formula}TI⊆ΔI×ΔI to each atomic role {a mathematical formula}T∈ΣT. Function {a mathematical formula}⋅I is extended to roles and concepts as shown in the upper part of Table 1. The satisfaction of an axiom α in {a mathematical formula}I, written {a mathematical formula}I⊨α, is defined as shown in the lower part of Table 1. Interpretation {a mathematical formula}I is a model of an ontology {a mathematical formula}O, written {a mathematical formula}I⊨O, if {a mathematical formula}I satisfies all axioms in {a mathematical formula}O. An ontology is {a mathematical formula}Osatisfiable if a model of {a mathematical formula}O exists; furthermore, {a mathematical formula}Oentails an axiom α, written {a mathematical formula}O⊨α, if {a mathematical formula}I⊨α for each model {a mathematical formula}I of {a mathematical formula}O. Note that {a mathematical formula}O is unsatisfiable if and only if {a mathematical formula}O⊨⊤⊑⊥.
+      </paragraph>
+      <paragraph>
+       A clause is a general concept inclusion of the form {a mathematical formula}⨅i=1mLi⊑⨆i=m+1nLi where {a mathematical formula}0⩽m⩽n and each {a mathematical formula}Li is a literal; the clause is normal if each {a mathematical formula}Li with {a mathematical formula}1⩽i⩽m is an atomic concept; and the clause is a query if each {a mathematical formula}Li with {a mathematical formula}m+1⩽i⩽n is an atomic concept. Conjunction K in a clause {a mathematical formula}K⊑M is the antecedent, and disjunction M is the consequent. An ontology {a mathematical formula}O is normalized if each general concept inclusion in {a mathematical formula}O is a normal clause. Each {a mathematical formula}SHI ontology {a mathematical formula}O can be transformed in linear time to a normalized {a mathematical formula}SHI ontology {a mathematical formula}O′ such that {a mathematical formula}O′ is a conservative extension of {a mathematical formula}O. Several such transformations are well known (see, e.g., [21], [14]), so we omit the details for brevity. Given a set of literals L, a clause {a mathematical formula}K⊑M is overL if {a mathematical formula}K∪M⊆L. A clause {a mathematical formula}K′⊑M′ is a strengthening of a clause {a mathematical formula}K⊑M if {a mathematical formula}K′⊆K and {a mathematical formula}M′⊆M;{sup:3} furthermore, {a mathematical formula}K⊑M∈ˆN means that a set of clauses {a mathematical formula}N contains at least one strengthening of {a mathematical formula}K⊑M.
+      </paragraph>
+      <paragraph>
+       We consider several fragments of {a mathematical formula}SHI, which, for simplicity, we define only for normalized ontologies. Let {a mathematical formula}O be a normalized {a mathematical formula}SHI ontology. Due to normalization, {a mathematical formula}O cannot contain axioms of the form {a mathematical formula}∃R.A⊓K⊑M, so the following definitions of various fragments are not standard; however, it is straightforward to see that they correspond to the conventional definitions used in the literature. Furthermore, note that {a mathematical formula}∃R.⊤ is not a literal since we do not consider ⊤ to be an atomic concept; however, one can always replace ⊤ with a fresh atomic concept {a mathematical formula}A⊤ and axiomatize the latter using a clause {a mathematical formula}⊤⊑A⊤. Now {a mathematical formula}O is Horn if the consequent of each clause in {a mathematical formula}O contains at most one literal; {a mathematical formula}O is an {a mathematical formula}ALCI ontology if each axiom in {a mathematical formula}O is a general concept inclusion; {a mathematical formula}O is an {a mathematical formula}EL ontology if {a mathematical formula}O is a Horn-{a mathematical formula}ALCI ontology, each role occurring in {a mathematical formula}O in an existential restriction is an atomic role, and each role occurring in {a mathematical formula}O in a universal restriction is an inverse role; and {a mathematical formula}O is a {a mathematical formula}DL-Litehorn ontology if {a mathematical formula}O is a Horn-{a mathematical formula}ALCI ontology and universal restrictions occur in {a mathematical formula}O only in axioms of the form {a mathematical formula}⊤⊑∀R.B.
+      </paragraph>
+      <paragraph>
+       A normalized {a mathematical formula}SHI ontology {a mathematical formula}O can be transformed into a normalized {a mathematical formula}ALCI ontology by eliminating all role inclusions and role transitivity axioms. Towards this goal, let {a mathematical formula}⊑O be the smallest reflexive and transitive binary relation on roles such that {a mathematical formula}R⊑OS and {a mathematical formula}inv(R)⊑Oinv(S) for each role inclusion {a mathematical formula}R⊑S∈O; furthermore, for each role R and each atomic concept C occurring in {a mathematical formula}O, let {a mathematical formula}AR,C and {a mathematical formula}BR,C be fresh atomic concepts unique for R and C. The elimination proceeds in three steps: step 1 ensures that universal restrictions occur only in clauses of the form {a mathematical formula}A⊑∀R.C, step 2 encodes transitivity axioms using the well-known “box pushing” method, and step 3 eliminates role inclusions by expanding the role hierarchy into universal restrictions. We capture these steps by defining three ontologies obtained by transforming {a mathematical formula}O as follows.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each clause {a mathematical formula}K⊑M∈O, ontology {a mathematical formula}O1 contains the clause obtained from {a mathematical formula}K⊑M by replacing each literal {a mathematical formula}∀R.C∈M with {a mathematical formula}AR,C; furthermore, for each literal {a mathematical formula}∀R.C occurring in a clause in {a mathematical formula}O, ontology {a mathematical formula}O1 contains the axiom {a mathematical formula}AR,C⊑∀R.C.
+       </list-item>
+       <list-item label="2.">
+        Ontology {a mathematical formula}O2 contains each clause in {a mathematical formula}O1; furthermore, for each clause {a mathematical formula}A⊑∀R.C∈O1 and each role S such that {a mathematical formula}S⊑OR and either {a mathematical formula}Tra(S)∈O or {a mathematical formula}Tra(inv(S))∈O, ontology {a mathematical formula}O2 contains clauses{a mathematical formula}
+       </list-item>
+       <list-item label="3.">
+        Ontology {a mathematical formula}O3 contains each clause in {a mathematical formula}O2; furthermore, for each clause {a mathematical formula}A⊑∀R.C∈O2 and each role S such that {a mathematical formula}S⊑OR, ontology {a mathematical formula}O3 contains clause {a mathematical formula}A⊑∀S.C.
+       </list-item>
+      </list>
+      <paragraph>
+       For each clause {a mathematical formula}K⊑M where K and M contain only atomic concepts, {a mathematical formula}O⊨K⊑M if and only if {a mathematical formula}O3⊨K⊑M; this can be proved using a straightforward adaptation of the proofs by Demri and de Nivelle [28].
+      </paragraph>
+      <paragraph>
+       The algorithms presented in this paper take a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and a set of queries {a mathematical formula}Q, and they compute the status of {a mathematical formula}O⊨K⊑M for each query {a mathematical formula}K⊑M∈Q; hence, our algorithms compute functions rather than solving decision problems. For our complexity results, however, we consider a related decision problem of determining whether {a mathematical formula}O⊨K⊑M holds for each query {a mathematical formula}K⊑M∈Q—that is, the decision problem checks the conjunction of all such entailments.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       The hypertableau algorithm
+      </section-title>
+      <paragraph>
+       Most OWL 2 DL reasoners are currently based on variants of tableau algorithms. To relate our techniques to the state of the art in ontology reasoning, we next present a variant of the hypertableau algorithm by Motik et al. [14].
+      </paragraph>
+      <paragraph>
+       We assume the existence of a countably infinite set of named individuals. An individual is a finite string of the form {a mathematical formula}a.i1.…in where a is a named individual and {a mathematical formula}i1.…in is a possibly empty sequence of integers. An individual of the form {a mathematical formula}s.i is unnamed, and it is a successor of individual s; predecessor is the inverse of successor; and ancestor and descendant are transitive closures of predecessor and successor, respectively. An ABox{a mathematical formula}A is a finite set of facts of the form ⊥, {a mathematical formula}L(s), or {a mathematical formula}R(s,t), for L a literal, R a role, and s and t individuals; furthermore, {a mathematical formula}ind(A) is the set of individuals occurring in {a mathematical formula}A.
+      </paragraph>
+      <paragraph>
+       Termination of the algorithm is ensured via anywhere blocking; for {a mathematical formula}ALCI, the single anywhere variant suffices. Let ◁ be an arbitrary strict order (i.e., an irreflexive and transitive relation) on the set of all individuals compatible with the ancestor relation (i.e., s◁t holds for all individuals s and t such that s is an ancestor of t). The label of an individual s in an ABox {a mathematical formula}A is defined as {a mathematical formula}LA(s)={L|L(s)∈A}. By induction on ◁, each individual s occurring in {a mathematical formula}A is assigned a status as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        s is directly blocked by an individual {a mathematical formula}s′ in {a mathematical formula}A if both s and {a mathematical formula}s′ are unnamed, no ancestor of {a mathematical formula}s′ is blocked, {a mathematical formula}LA(s)=LA(s′), and {a mathematical formula}s′◁s;
+       </list-item>
+       <list-item label="•">
+        s is indirectly blocked if s is unnamed and some ancestor of s is directly blocked; and
+       </list-item>
+       <list-item label="•">
+        s is blocked if it is directly or indirectly blocked.
+       </list-item>
+      </list>
+      <paragraph>
+       Given a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and an ABox {a mathematical formula}A containing only named individuals, the hypertableau algorithm constructs a derivation{a mathematical formula}D=(V,E,ρ) for {a mathematical formula}O and {a mathematical formula}A, where V and E are the vertices and edges of a finite tree, and ρ labels each vertex with an ABox. A vertex {a mathematical formula}v∈V is closed if {a mathematical formula}⊥∈ρ(v); otherwise, v is open. Labeling ρ must satisfy the following conditions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}ρ(v0)=A for {a mathematical formula}v0 the root of the tree;
+       </list-item>
+       <list-item label="•">
+        vertex {a mathematical formula}v0 is a leaf if {a mathematical formula}v0 is closed or no derivation rule from Table 2 is applicable to {a mathematical formula}A0=ρ(v0);
+       </list-item>
+       <list-item label="•">
+        in all other cases, the children {a mathematical formula}v1,…,vn of vertex {a mathematical formula}v0 are labeled by ABoxes {a mathematical formula}A1,…,An obtained by applying one (arbitrarily chosen) derivation rule from Table 2 to {a mathematical formula}A0=ρ(v0).
+       </list-item>
+      </list>
+      <paragraph>
+       The algorithm is sound and complete: for each derivation D, we have that {a mathematical formula}O∪A is satisfiable if and only if D contains an open leaf. Thus, checking whether {a mathematical formula}O⊨A⊑B holds can be solved using the hypertableau algorithm by constructing a derivation for {a mathematical formula}O∪{C⊑A,B⊓C⊑⊥} and {a mathematical formula}{C(a)} where C is a fresh atomic concept, and then checking whether each derivation leaf is closed.
+      </paragraph>
+      <paragraph>
+       Due to inverse roles, blocking is dynamic: an individual can change its blocking status more than once as the inference rules are applied, which is why individuals can be indirectly blocked. This, in turn, ensures that the algorithm runs in N2ExpTime: the algorithm nondeterministically constructs a tree of individuals that can have exponential depth and a linear branching factor. Hence, although the number of nonblocked and directly blocked individuals is at most exponential, the number of indirectly blocked individuals in the tree can be doubly exponential; Motik et al. [14] discuss these issues in more detail.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Fixed-parameter tractable problems
+      </section-title>
+      <paragraph>
+       We now recapitulate several definitions from parameterized complexity[24]. A parameterized problem is a set {a mathematical formula}P⊆Σ⁎×N, where Σ is a finite alphabet and {a mathematical formula}N is the set of nonnegative integers. Each pair {a mathematical formula}〈x,k〉∈Σ⁎×N is called a problem instance; x is called the input; k is called the parameter; and {a mathematical formula}‖x‖ is the length of x. Problem P is fixed-parameter tractable (FPT) if a computable function {a mathematical formula}f:N→N, a constant c, and an algorithm exist such that, given an arbitrary pair {a mathematical formula}〈x,k〉∈Σ⁎×N, the algorithm decides {a mathematical formula}〈x,k〉∈P in at most {a mathematical formula}f(k)⋅‖x‖c steps. FPT is the class of all fixed-parameter tractable problems.
+      </paragraph>
+      <paragraph>
+       Some authors use an alternative definition of parameterized complexity. Just like a regular problem, a parameterized problem P is defined as a subset of {a mathematical formula}Σ⁎. Furthermore, a parameterization is a function {a mathematical formula}κ:Σ⁎→N. A problem P is fixed-parameter tractable w.r.t. a parameterization κ if a computable function {a mathematical formula}f:N→N, a constant c, and an algorithm exist such that, for an arbitrary {a mathematical formula}x∈Σ⁎, the algorithm decides {a mathematical formula}x∈P in at most {a mathematical formula}f(κ(x))⋅‖x‖c steps. The two definitions are clearly equivalent if, for each {a mathematical formula}x∈Σ⁎, value {a mathematical formula}κ(x) is computable in polynomial time. Furthermore, even if the latter is not the case, the two definitions coincide if a computable function g and a constant d exist such that, for each fixed k, one can check whether {a mathematical formula}κ(x)⩽k holds using at most {a mathematical formula}g(k)⋅‖x‖d steps; in other words, checking {a mathematical formula}κ(x)⩽k must be fixed-parameter tractable as well. The results we present in this paper involve the computation of a tree decomposition of a fixed width, which satisfies the latter condition.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Tree decompositions and treewidth of hypergraphs and propositional problems
+      </section-title>
+      <paragraph>
+       We recapitulate the notions of tree decompositions and treewidth [25], which were extensively used to obtain FPT results for a number of intractable graph-theoretic problems. For convenience, we extend these notions to hypergraphs by treating each hyperedge as the clique of all of its vertices, but this does not alter the definitions in any significant way.
+      </paragraph>
+      <paragraph>
+       Given a finite set N of nodes, an N-hypergraph{a mathematical formula}H is a subset of {a mathematical formula}2N; the elements of {a mathematical formula}H are called hyperedges. A tree decomposition of {a mathematical formula}H is a tuple {a mathematical formula}T=〈V,E,L〉 where {a mathematical formula}V and {a mathematical formula}E are sets of vertices and edges, respectively, of an undirected tree, and {a mathematical formula}L:V→2N is a labeling of vertices with subsets of N such that the following conditions hold:
+      </paragraph>
+      <list>
+       <list-item label="(T1)">
+        for each hyperedge {a mathematical formula}h∈H, a vertex {a mathematical formula}v∈V exists such that {a mathematical formula}h⊆L(v); and
+       </list-item>
+       <list-item label="(T2)">
+        for each element {a mathematical formula}n∈N, the set {a mathematical formula}{v∈V|n∈L(v)} is connected in {a mathematical formula}E.
+       </list-item>
+      </list>
+      <paragraph>
+       The width of {a mathematical formula}T is {a mathematical formula}wd(T):=maxv∈V|L(v)|, and the treewidth of {a mathematical formula}H is the minimum width over all tree decompositions of {a mathematical formula}H. In related literature width is actually defined as {a mathematical formula}wd(T):=maxv∈V|L(v)|−1 in order to ensure that tree-like hypergraphs have width one, but we drop the term −1 from our definition for uniformity with Section 4. For a fixed integer {a mathematical formula}mwd, a tree decomposition of width at most {a mathematical formula}mwd can be computed in linear time [29]. This result was originally formulated for tree decompositions of graphs; however, by treating hyperedges as cliques, this result can also be straightforwardly applied to our definitions.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       (See[29].) Let{a mathematical formula}Hbe an N-hypergraph, and let{a mathematical formula}mwdbe an integer. One can compute a tree decomposition of{a mathematical formula}Hof width at most{a mathematical formula}mwd, or determine that such a tree decomposition does not exist, in time{a mathematical formula}O(f(mwd)⋅|N|)where f is a computable function. The resulting tree decomposition has at most{a mathematical formula}|H|vertices.
+      </paragraph>
+      <paragraph>
+       We next recapitulate how these notions can be used to obtain an FPT procedure for propositional satisfiability [26]. To unify the notation throughout this paper, we write propositional clauses as implications {a mathematical formula}K⊑M where K is a conjunction of atoms, and M is a disjunction of atoms; furthermore, we consider a propositional interpretation J to be a set of atoms; finally, we write {a mathematical formula}J⊨K⊑M if {a mathematical formula}K⊆J implies {a mathematical formula}M∩J≠∅.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}N be a set of propositional clauses. Then, we define {a mathematical formula}H as the hypergraph that contains a hyperedge {a mathematical formula}K∪M∈H for each clause {a mathematical formula}K⊑M∈N. Furthermore, a tree decomposition and the treewidth of {a mathematical formula}N are defined as a tree decomposition and the treewidth, respectively, of {a mathematical formula}H. Now assume that the treewidth of {a mathematical formula}N is bounded by some integer {a mathematical formula}mwd. The following procedure checks the satisfiability of {a mathematical formula}N and is fixed-parameter tractable w.r.t. {a mathematical formula}mwd.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Compute a tree decomposition {a mathematical formula}T=〈V,E,L〉 of {a mathematical formula}H of width at most {a mathematical formula}mwd. By Lemma 1, this step is FPT w.r.t. {a mathematical formula}mwd.
+       </list-item>
+       <list-item label="2.">
+        Associate with each vertex {a mathematical formula}v∈V a set {a mathematical formula}Pv of propositional interpretations as follows: set {a mathematical formula}Pv:=2L(v), and then eliminate each {a mathematical formula}J∈Pv for which a clause {a mathematical formula}K⊑M∈N exists such that {a mathematical formula}K∪M⊆L(v) and {a mathematical formula}J⊭K⊑M. Since {a mathematical formula}|L(v)|⩽mwd, this step requires time polynomial in {a mathematical formula}2mwd and {a mathematical formula}|N|, and is thus FPT w.r.t. {a mathematical formula}mwd.
+       </list-item>
+       <list-item label="3.">
+        Using a bottom-up approach starting from the leaves of {a mathematical formula}T, for each non-root vertex v and its parent {a mathematical formula}v′, eliminate from {a mathematical formula}Pv′ each {a mathematical formula}J′∈Pv′ for which no {a mathematical formula}J∈Pv exists such that {a mathematical formula}J∩L(v)∩L(v′)=J′∩L(v)∩L(v′). We can achieve this by iterating over all pairs of {a mathematical formula}J′∈Pv′ and {a mathematical formula}J∈Pv; since {a mathematical formula}T has at most {a mathematical formula}|N| vertices by Lemma 1, this step is FPT w.r.t. {a mathematical formula}mwd.
+       </list-item>
+       <list-item label="4.">
+        Set {a mathematical formula}N is unsatisfiable if and only if {a mathematical formula}Pr=∅, where r is the root of {a mathematical formula}T.
+       </list-item>
+      </list>
+      <paragraph>
+       To see why this algorithm is correct, assume that {a mathematical formula}Pr≠∅; we can then construct an interpretation J for {a mathematical formula}N as follows. Select an arbitrary propositional interpretation {a mathematical formula}Jr∈Pr; since {a mathematical formula}Jr has not been deleted in step 3, for {a mathematical formula}v1,…,vk the children of r, we can select interpretations {a mathematical formula}Jv1,…,Jvk such that {a mathematical formula}Jr∩L(r)∩L(vi)=Jvi∩L(r)∩L(vi) holds for each {a mathematical formula}1⩽i⩽k. By inductively repeating this argument from the root to the leaves, we associate with each vertex {a mathematical formula}v∈V an interpretation {a mathematical formula}Jv, and then we define {a mathematical formula}J=⋃v∈VJv. Now since {a mathematical formula}T satisfies properties (T1) and (T2), it is straightforward to see that {a mathematical formula}J⊨N. The converse direction can be shown analogously, and we omit it for the sake of brevity. Thus, the treewidth of {a mathematical formula}N can be taken as an indicator of the “hardness” of {a mathematical formula}N, and it shows the size of the sets of atomic concepts that we need to consider to decide the satisfiability of {a mathematical formula}N.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     Consequence-based framework for {a mathematical formula}ALCI
+     <paragraph>
+      In this section we present our consequence-based framework for solving the following reasoning problem: given a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and a finite set of queries {a mathematical formula}Q, determine whether {a mathematical formula}O⊨K⊑M holds for each query {a mathematical formula}K⊑M∈Q. Note that this problem captures ontology classification, which involves only queries of the form {a mathematical formula}A⊑B for A and B atomic concepts from {a mathematical formula}O; furthermore, by using the transformations from Section 2, the framework can also be applied to {a mathematical formula}SHI ontologies. In Section 3.1 we discuss the intuitions behind our framework, in Section 3.2 we introduce the framework formally, in Section 3.3 we discuss certain redundancy elimination techniques that can be used to optimize reasoning, and finally in Section 3.4 we discuss several concrete instantiations of our framework.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Intuitions
+      </section-title>
+      <paragraph>
+       In order to capture the essence of the known similar algorithms, our framework can be instantiated in many different ways by varying several parameters. In this section we describe the framework at a high level, and we discuss possible parameterizations in Sections 3.3 and 3.4. In the rest of this section, we fix the ontology {a mathematical formula}O and the query q as specified in Example 2, and then we show how one can prove that {a mathematical formula}O⊨q holds using our framework.
+      </paragraph>
+      <paragraph label="Example 2">
+       Let{a mathematical formula}Obe the ontology consisting of clauses(1), (2), (3), (4), (5), (6), (7), (8), (9), (10), and let{a mathematical formula}q=A⊑G; one can readily verify that{a mathematical formula}O⊨q.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Resolution decision procedures [30] can decide whether {a mathematical formula}O⊨A⊑G holds by transforming {a mathematical formula}O into a set of clauses, adding clauses {a mathematical formula}A(a) and {a mathematical formula}¬G(a) obtained from the negation of the theorem {a mathematical formula}A⊑G that is to be proved, and then saturating the result using a suitable first-order resolution variant [31]. Such algorithms are typically worst-case optimal, and they can solve many practically-relevant problems; however, on complex ontologies they can easily run into a combinatorial explosion [32]. In our example, from clauses (2), (3), (4), (5) resolution can derive {a mathematical formula}3n clauses of the form {a mathematical formula}L1⊓⋯⊓Ln⊑C with {a mathematical formula}Li∈{Ai,Bi,Ci}, thus covering all possible combinations of atomic concepts that might be relevant. In contrast, when applied to {a mathematical formula}O, the hypertableau algorithm from Section 2.2 does not run into this problem: the algorithm is initialized using the fact {a mathematical formula}A(a), and then it derives {a mathematical formula}Ai(a) and {a mathematical formula}Ci(a) for each {a mathematical formula}1⩽i⩽n and {a mathematical formula}C(a); thus, the algorithm does not consider the “irrelevant” combinations of {a mathematical formula}Ai, {a mathematical formula}Bi, and {a mathematical formula}Ci.
+      </paragraph>
+      <paragraph>
+       The hypertableau algorithm can thus be seen as being more “goal directed” than resolution. However, as we discussed in Section 2.2, the hypertableau algorithm can construct a very large tree of individuals most of which are indirectly blocked, and can thus perform a lot of redundant computation since each indirectly-blocked individual is a “copy” of a nonblocked or a directly blocked individual. Resolution is not susceptible to such problems: clauses introduced by resolution are universally quantified and are (unlike individuals in the tableau algorithm) not localized to a specific part of a model. Resolution can thus describe all relevant combinations of atomic concepts using exponentially many clauses, thereby avoiding redundant computation.
+      </paragraph>
+      <paragraph>
+       Our consequence-based algorithm can be understood as a hybrid between resolution and the hypertableau algorithm. It does not explicitly construct a model; instead, it uses resolution to compute clauses that describe a model {a mathematical formula}I of {a mathematical formula}O refuting the relevant queries in {a mathematical formula}Q. The inferences of the algorithm are not localized to a part of {a mathematical formula}I, which allows our algorithm to avoid redundant computation: although there are many technical differences, our algorithm is somewhat related to the tableau algorithms with caching [33], [34]. To be goal oriented, our algorithm constructs a context structure—a graph-like structure whose vertices are called contexts. Intuitively, each context describes one or more elements in the model {a mathematical formula}I, and the edges between contexts capture the relations between the corresponding elements of {a mathematical formula}I. Each context v is associated with a set {a mathematical formula}core(v) of core atomic concepts. Intuitively, the concepts in {a mathematical formula}core(v) hold for each element of {a mathematical formula}I that corresponds to v; hence, {a mathematical formula}core(v) determines the “type” of v and the corresponding model elements. Furthermore, each context v is associated with a set of clauses {a mathematical formula}S(v) that, as in propositional resolution, describe the domain elements in {a mathematical formula}I that correspond to v. Each clause {a mathematical formula}K⊑M∈S(v) is “relative” to {a mathematical formula}core(v) and should be interpreted as {a mathematical formula}core(v)⊓K⊑M. In other words, the concepts in {a mathematical formula}core(v) hold in all model elements corresponding to v, so we drop {a mathematical formula}core(v) from the clauses in {a mathematical formula}S(v) for the sake of clarity. We next demonstrate how to use the derivation rules in Table 3 on page 41 to prove {a mathematical formula}O⊨A⊑G. We will construct the context structure shown in Fig. 1; each context is shown as a circle, the core of each context is shown above the circle, the clauses belonging to the context are shown below the circle, and the numbers next to the clauses correspond to the order of inference rule applications.
+      </paragraph>
+      <paragraph>
+       To avoid the drawbacks outlined earlier, our algorithm does not perform inferences between the clauses in {a mathematical formula}O; instead, each inference involves either a single set of clauses {a mathematical formula}S(v) and possibly the ontology {a mathematical formula}O, or a pair of sets of clauses {a mathematical formula}S(v) and {a mathematical formula}S(u). To initiate the inference process, we initialize the algorithm according to the target query. Since our goal is to prove {a mathematical formula}O⊨A⊑G, we introduce a single context {a mathematical formula}v1 with {a mathematical formula}core(v1)={A}, and we add clause (11) to {a mathematical formula}S(v1). Intuitively, this says that the model {a mathematical formula}I must contain at least one element in which A holds, which is similar to initializing the hypertableau algorithm by {a mathematical formula}A(a). We then use the {a mathematical formula}Hyper rule to derive clauses (12)–(16). Since only A is assumed to hold in context {a mathematical formula}v1, we derive only a linear number of clauses: no {a mathematical formula}Bi holds in {a mathematical formula}v1, so we do not derive clauses with irrelevant combinations of atomic concepts. These inferences are analogous to the inferences of the {a mathematical formula}Hyp-rule in the hypertableau algorithm, with the difference that the conclusions are not localized: they hold for each element of {a mathematical formula}I that corresponds to {a mathematical formula}v1.
+      </paragraph>
+      <paragraph>
+       Clause (15) says that the elements in {a mathematical formula}I corresponding to {a mathematical formula}v1 must have a successor in which B holds. To satisfy this requirement, we use the {a mathematical formula}Succ rule to introduce context {a mathematical formula}v2 and add the edge (17) from {a mathematical formula}v1 to {a mathematical formula}v2; the edge is labeled with the concept {a mathematical formula}∃R.B that it satisfies. The {a mathematical formula}Succ rule combines the ∃-rule and the {a mathematical formula}∀+-rule from the hypertableau algorithm by means of sets of atomic concepts {a mathematical formula}Bk and {a mathematical formula}Bp. Set {a mathematical formula}Bk contains atomic concepts known to hold in {a mathematical formula}v2 due to universal restrictions—that is, those concepts L for which {a mathematical formula}⊤⊑∀R.L has been derived in {a mathematical formula}v1. In our example, clause (16) ensures that D holds in {a mathematical formula}v2, and so we have {a mathematical formula}Bk={D}. Thus, set {a mathematical formula}{B}∪Bk={B,D} provides us with an “upper bound” on the core of the new context: both B and D necessarily hold in context {a mathematical formula}v2, but we can use an arbitrary subset of {a mathematical formula}{B,D} as the core of {a mathematical formula}v2. Choosing smaller cores might reduce the number of contexts because it allows us to reuse the same context to satisfy different applications of the {a mathematical formula}Succ rule, but it might also increase the number of clauses per context as the latter is then “less precise.” The decision which subset to use is determined by a strategy, which is supplied as parameter to our algorithm. In this example we use the eager strategy that always uses the maximal subset and thus sets {a mathematical formula}core(v2)={B,D}; however, we discuss other reasonable strategies and the tradeoffs involved in the choice of a core in more detail in Section 3.4. The {a mathematical formula}Succ rule also initializes {a mathematical formula}S(v2) with clauses (18) and (19) specifying that B and D hold in each element of {a mathematical formula}I that is represented by context {a mathematical formula}v2. Set {a mathematical formula}Bp contains atomic concepts that can possibly hold in {a mathematical formula}v2 due to universal restrictions—that is, those concepts L for which {a mathematical formula}K⊑M⊔∀R.L has been derived in {a mathematical formula}v1 for some K and M. Thus, set {a mathematical formula}{B}∪Bp provides us with an “upper bound” on the concepts that might need to be considered in {a mathematical formula}v2. Since (16) is the only clause in {a mathematical formula}S(v1) containing a universal restriction, in our example we have {a mathematical formula}Bp=Bk={D}. Sets {a mathematical formula}Bk and {a mathematical formula}Bp need not coincide in general, and the {a mathematical formula}Succ rule adds a clause of the form {a mathematical formula}L⊑L for each concept L from {a mathematical formula}Bp that is not in the core of the new context.
+      </paragraph>
+      <paragraph>
+       We next use the {a mathematical formula}Hyper rule to derive clauses (20)–(26) in {a mathematical formula}S(v2). As in the hypertableau algorithm, since only B holds in context {a mathematical formula}v2, we do not derive a clause involving {a mathematical formula}Ai. Now clause (23) requires an edge labeled with {a mathematical formula}∃R.B; due to clause (24), the core of the target context can be any subset of {a mathematical formula}{B,D}; and due to the eager strategy, the core of the target context will be {a mathematical formula}{B,D}. But then, there is no need to introduce a fresh context: our eager strategy can instruct the {a mathematical formula}Succ rule to reuse the existing context {a mathematical formula}v2 since we already have {a mathematical formula}core(v2)={B,D}. Consequently, we introduce edge (27) using the {a mathematical formula}Succ rule. This “reuse” of {a mathematical formula}v2 is similar to blocking in the hypertableau algorithm, but is actually much more effective in eliminating redundant computations. First, we never need more than exponentially many contexts, whereas the hypertableau algorithm can construct trees of doubly exponential size. Second, the clauses belonging to each context are not localized to a specific place in {a mathematical formula}I, and so our algorithm draws the inferences for a particular core only once. In contrast, to ensure that the labels of s and {a mathematical formula}s′ coincide and thus ensure the blocking condition, the hypertableau algorithm must draw the same conclusions for s and {a mathematical formula}s′; furthermore, an individual can directly block exponentially many other individuals, so the potential for redundant work is even higher.
+      </paragraph>
+      <paragraph>
+       Clause (26) says that each element in {a mathematical formula}I corresponding to a predecessor of an element represented by {a mathematical formula}v2 must satisfy F or G; hence, we apply the {a mathematical formula}Pred rule to edge (17) and clauses (15) and (26) to derive clause (28). Furthermore, we also apply the {a mathematical formula}Pred rule to edge (27) and thus derive clause (29). The {a mathematical formula}Pred rule essentially “pulls” the information from the successor to the predecessor; however, unlike the {a mathematical formula}∀−-rule in the hypertableau algorithm, it simultaneously deals with several universal restrictions.
+      </paragraph>
+      <paragraph>
+       Finally, we use the {a mathematical formula}Hyper rule to derive clause (30), at which point no further inferences are possible. Since all clauses are “relative” to the core of the corresponding context, clause (30) actually corresponds to {a mathematical formula}A⊑G, so we have proved {a mathematical formula}O⊨A⊑G. In fact, due to (30), we know that {a mathematical formula}O⊨K⊑M for each query {a mathematical formula}K⊑M such that {a mathematical formula}A⊑G is a strengthening of {a mathematical formula}K⊑M. Our algorithm is thus not just refutationally complete: for each query {a mathematical formula}K⊑M such that {a mathematical formula}O⊨K⊑M, it derives at least one strengthening of {a mathematical formula}K⊑M in each context that covers (cf. Definition 4) the query.
+      </paragraph>
+      <paragraph>
+       We finish this section with a note that unrestricted application of the {a mathematical formula}Hyper rule can be very prolific, so we use the ordered resolution variant [31]: we parameterize our algorithm with an ordering on literals, and, for each clause {a mathematical formula}K⊑M∈S(v), we apply the inference rules only to literals that are maximal in M w.r.t. the ordering. The {a mathematical formula}Pred rule, however, introduces a complication: clause (26), which is needed for the {a mathematical formula}Pred rule, can be derived from (25) only if {a mathematical formula}∀R−.G is smaller than E in the ordering. Therefore, we use an ordering {a mathematical formula}≺v per context v; furthermore, if v has an incoming edge labeled with {a mathematical formula}∃R.A, then {a mathematical formula}≺v must be R-admissible (cf. Definition 3)—that is, each literal of the form {a mathematical formula}∀inv(R).B must be smallest in {a mathematical formula}≺v. These restrictions ensure that all clauses that can participate in the {a mathematical formula}Pred rule, such as (26), are derived in {a mathematical formula}S(v) and so the rule can be applied. Please note that orderings are optional: the trivial empty ordering (i.e., the ordering under which all literals are incomparable) is R-admissible for each role R, and it can therefore be used in each context. Moreover, orderings are not necessary for the fixed-parameter tractability results we present in Sections 4 and 5: these hold even if each context uses the trivial empty ordering.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Formalizing the consequence-based framework
+      </section-title>
+      <paragraph>
+       In this section we formalize the intuitions that we discussed in Section 3.1. Recall that in Section 2.1 we introduced {a mathematical formula}ΣL as the set of all literals, and {a mathematical formula}ΣL∃ as the set of all existential restrictions over the signature {a mathematical formula}Σ=〈ΣA,ΣT〉. Moreover, recall that we often treat conjunctions and disjunctions of literals as sets of their respective conjuncts and disjuncts. We first introduce the notion of a literal ordering, which we will use later to restrict applicability of our inference rules.
+      </paragraph>
+      <paragraph label="Definition 3">
+       A literal ordering ≺ is a strict partial order (i.e., an irreflexive and transitive relation) on the set{a mathematical formula}ΣLof all literals. A literal{a mathematical formula}L∈ΣLis ≺-minimal if no literal{a mathematical formula}L′∈ΣLexists such that{a mathematical formula}L′≺L; moreover, a set of literals N is ≺-minimal if each literal in N is ≺-minimal. A literal{a mathematical formula}L∈ΣLis ≺-maximal w.r.t. a set of literals N, written{a mathematical formula}L⊀N, if no literal{a mathematical formula}L′∈Nexists such that{a mathematical formula}L≺L′. Given a role R, ordering ≺ is R-admissible if each literal of the form{a mathematical formula}∀inv(R).Ais ≺-minimal.
+      </paragraph>
+      <paragraph>
+       By Definition 3, a literal ordering ≺ is a partial order so two literals can be incomparable w.r.t. ≺. Thus, a literal L being maximal in some set of literals N does not imply that {a mathematical formula}L′≺L holds for each literal {a mathematical formula}L′∈N; instead, this only means that no literal in N is larger than L w.r.t. ≺, which we reflect by using notation {a mathematical formula}L⊀N for the notion of maximality.
+      </paragraph>
+      <paragraph>
+       Throughout the rest of this paper we fix a “global” countably infinite set of contextsX. Sets X, {a mathematical formula}ΣL, and {a mathematical formula}ΣL∃ provide us with building blocks for the following definition of a context structure.
+      </paragraph>
+      <paragraph label="Definition 4">
+       A context structure is a tuple{a mathematical formula}D=〈V,E,core,≺〉, where{a mathematical formula}V⊆Xis a finite set of contexts,{a mathematical formula}E⊆V×V×ΣL∃is a finite set of edges labeled by existential restrictions, function{a mathematical formula}core:V→2ΣLlabels each context with a finite set of literals, and function ≺ assigns to each context{a mathematical formula}v∈Va literal ordering{a mathematical formula}≺v. Such{a mathematical formula}Dis admissible if, for each edge{a mathematical formula}〈v,u,∃R.A〉∈E, the literal ordering{a mathematical formula}≺uis R-admissible. Furthermore,{a mathematical formula}Dis over a set of literalsLif all literals in{a mathematical formula}Dare contained inL. Finally, given a context v, set{a mathematical formula}core(v)is often treated as the conjunction of its atomic concepts, thus allowing{a mathematical formula}core(v)to occur in concepts and axioms.Let{a mathematical formula}v∈Vbe an arbitrary context of{a mathematical formula}D; then, v is trivial if{a mathematical formula}core(v)=∅and{a mathematical formula}≺v=∅. In addition, let{a mathematical formula}K⊑Mbe an arbitrary query; then, v is sound for{a mathematical formula}K⊑Mif{a mathematical formula}core(v)⊆K; v is complete for{a mathematical formula}K⊑Mif M is{a mathematical formula}≺v-minimal; and v covers {a mathematical formula}K⊑Mif v is both sound and complete for{a mathematical formula}K⊑M.
+      </paragraph>
+      <paragraph>
+       A clause system, which we formalize next, assigns a set of clauses {a mathematical formula}S(v) to each context v. As we discussed in Section 3.1, our consequence-based algorithm produces a context structure {a mathematical formula}D and a clause system {a mathematical formula}S. The clauses in each set {a mathematical formula}S(v) will be “relative” to {a mathematical formula}core(v)—that is, for each clause {a mathematical formula}K⊑M∈S(v), we will have {a mathematical formula}O⊨core(v)⊓K⊑M. Moreover, we will be able to use {a mathematical formula}S to decide query entailment: for each query {a mathematical formula}K⊑M and each context v covering {a mathematical formula}K⊑M initialized so that {a mathematical formula}K⊑L∈ˆS(v) holds for each literal {a mathematical formula}L∈K, we will have {a mathematical formula}O⊨K⊑M if and only if {a mathematical formula}K⊑M∈ˆS(v). The notion of context soundness in Definition 4 ensures that query {a mathematical formula}K⊑M is compatible with the intended reading of the clauses in {a mathematical formula}S(v), and the notion of context completeness ensures that ordering {a mathematical formula}≺v does not prevent the derivation of a strengthening of {a mathematical formula}K⊑M in such {a mathematical formula}S(v).
+      </paragraph>
+      <paragraph label="Definition 5">
+       A clause system for a context structure{a mathematical formula}D=〈V,E,core,≺〉is a function{a mathematical formula}Sthat assigns to each context{a mathematical formula}v∈Va finite set of clauses{a mathematical formula}S(v).
+      </paragraph>
+      <paragraph>
+       To simplify the presentation, in the rest of this section we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and a finite set of queries {a mathematical formula}Q—that is, we assume that all subsequent definitions and theorems in this section are implicitly parameterized with {a mathematical formula}O and {a mathematical formula}Q. Furthermore, we fix L to be the set of literals occurring in {a mathematical formula}O∪Q; since {a mathematical formula}O and {a mathematical formula}Q are finite sets, set L is finite as well.
+      </paragraph>
+      <paragraph>
+       As we explained in Section 3.1, our algorithm is based on the inference rules shown in Table 3. The {a mathematical formula}Hyper, {a mathematical formula}Succ, and {a mathematical formula}Pred rules are responsible for completeness, and we discussed the intuitions behind these rules in Section 3.1. The {a mathematical formula}Elim rule supports redundancy elimination and is not needed for completeness or the complexity results in Sections 4 and 5. We discuss the intuitions underlying the {a mathematical formula}Elim rule in more detail in Section 3.3; however, in order to present the soundness, completeness, and termination proofs in one place, we introduce the rule here. The completeness of our algorithm is guaranteed by Theorem 6, the proof of which is given in Appendix A. The theorem essentially says that, given a context structure {a mathematical formula}D and a clause system {a mathematical formula}S saturated under the {a mathematical formula}Hyper, {a mathematical formula}Pred, and {a mathematical formula}Succ rules, we can read off the consequences of the form {a mathematical formula}K⊑M from the sets {a mathematical formula}S(v) provided that {a mathematical formula}K⊑M is a query, the context v is complete (cf. Definition 4) for {a mathematical formula}K⊑M, and set {a mathematical formula}S(v) is appropriately initialized. The initialization is similar to asserting {a mathematical formula}L(a) for each literal {a mathematical formula}L∈K at the beginning of a hypertableau test of {a mathematical formula}O⊨K⊑M. Please note that Theorem 6 depends on the {a mathematical formula}Succ rule being not applicable, and so the exact definition of {a mathematical formula}strategy used in the postcondition of the {a mathematical formula}Succ rule is not relevant for completeness. In the rest of this section we discuss how to initialize the sets {a mathematical formula}S(v) and how to satisfy the precondition of the {a mathematical formula}Succ rule to obtain a sound and complete algorithm.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       CompletenessLet{a mathematical formula}D=〈V,E,core,≺〉be an admissible context structure, and let{a mathematical formula}Sbe a clause system for{a mathematical formula}Dsuch that the{a mathematical formula}Hyper,{a mathematical formula}Pred, and{a mathematical formula}Succrules fromTable 3are not applicable to{a mathematical formula}Dand{a mathematical formula}S. Then,{a mathematical formula}K⊑M∈ˆS(v)holds for each query{a mathematical formula}K⊑Mand each context{a mathematical formula}v∈Vthat satisfy all of the following three conditions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}O⊨K⊑M,
+       </list-item>
+       <list-item label="•">
+        context v is complete for query{a mathematical formula}K⊑M, and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊑L∈ˆS(v)for each literal{a mathematical formula}L∈K.
+       </list-item>
+      </list>
+      <paragraph>
+       As we discussed in Section 3.1, our framework is parameterized by a function {a mathematical formula}strategy, which we formalize in Definition 7. Intuitively, when the {a mathematical formula}Succ rule identifies a context v and an existential restriction {a mathematical formula}∃R.A for which the rule's precondition is not satisfied, {a mathematical formula}strategy(∃R.A,Bk,D) returns a triple {a mathematical formula}〈u,core′,≺′〉 that specifies how to modify {a mathematical formula}D and {a mathematical formula}S so that the precondition becomes satisfied. The strategy has two options. First, the strategy can decide to extend {a mathematical formula}D by returning a fresh context u; in such a case, u is added to {a mathematical formula}D, and {a mathematical formula}core′ and {a mathematical formula}≺′ specify how to initialize {a mathematical formula}core(u) and {a mathematical formula}≺u. Second, the strategy can decide to reuse a context u that is already a part of {a mathematical formula}D; if so, then ordering {a mathematical formula}≺u is intersected with {a mathematical formula}≺′ to ensure R-admissibility, but also preserve admissibility for all other roles. Definition 7 requires each strategy to be bounded: if the signature is finite, then the strategy should return only finitely many different results on all possible inputs. Please note that a finite signature does not necessarily bound the size of {a mathematical formula}D, so the number of different arguments (and return values) for {a mathematical formula}strategy is not bounded. Bounded strategies can thus introduce only finitely many fresh contexts, which ensures termination.
+      </paragraph>
+      <paragraph label="Definition 7">
+       An expansion strategy is a function{a mathematical formula}strategycomputable in polynomial time that takes an existential restriction{a mathematical formula}∃R.A, a set of atomic concepts{a mathematical formula}Bk, and a context structure{a mathematical formula}D=〈V,E,core,≺〉. The result of{a mathematical formula}strategy(∃R.A,Bk,D)is a triple{a mathematical formula}〈u,core′,≺′〉where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}core′is a subset of{a mathematical formula}{A}∪Bk,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}≺′is an R-admissible literal ordering, and
+       </list-item>
+       <list-item label="•">
+        either{a mathematical formula}u∈X∖Vis a fresh context, or{a mathematical formula}u∈Vis a context in{a mathematical formula}Dsuch that{a mathematical formula}core(u)=core′.
+       </list-item>
+      </list>
+      <paragraph>
+       We next define when a context structure {a mathematical formula}D and a clause system {a mathematical formula}S are sound for {a mathematical formula}O. Recall that, for a context v, clause {a mathematical formula}K⊑M in {a mathematical formula}S(v) is “relative” to {a mathematical formula}core(v)—that is, the clause should be interpreted as {a mathematical formula}core(v)⊓K⊑M. Soundness for a clause simply means that {a mathematical formula}O⊨core(v)⊓K⊑M should hold for each clause {a mathematical formula}K⊑M∈S(v). To understand the notion of soundness for a context structure, consider an arbitrary edge {a mathematical formula}〈v,u,∃R.A〉 in {a mathematical formula}D. As we explained in Section 3.1, the {a mathematical formula}Pred rule “pulls” information from {a mathematical formula}S(u) into {a mathematical formula}S(v); however, the clauses in {a mathematical formula}S(v) and {a mathematical formula}S(u) are “relative” to {a mathematical formula}core(v) and {a mathematical formula}core(u), respectively, so {a mathematical formula}core(u) and {a mathematical formula}core(v) must be related as specified in Definition 8 to make the {a mathematical formula}Pred rule sound. Please remember that {a mathematical formula}core(u) and {a mathematical formula}core(v) should be understood as conjunctions of the respective sets of atomic concepts.
+      </paragraph>
+      <paragraph label="Definition 8">
+       A context structure{a mathematical formula}D=〈V,E,core,≺〉is sound for{a mathematical formula}Oif{a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A]holds for each edge{a mathematical formula}〈v,u,∃R.A〉∈E. Furthermore, a clause system{a mathematical formula}Sis sound for{a mathematical formula}Oif{a mathematical formula}O⊨core(v)⊓K⊑Mholds for each context{a mathematical formula}v∈Vand each clause{a mathematical formula}K⊑M∈S(v).
+      </paragraph>
+      <paragraph>
+       Proposition 9 shows that the inference rules in Table 3 preserve admissibility and soundness of a context structure and a clause system. The former follows immediately from Definition 7, and the proof of the latter is analogous to the soundness proof for first-order resolution [31]: we show that each clause introduced by an inference rule is a logical consequence of {a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Proposition 9">
+       SoundnessLet{a mathematical formula}D1=〈V,E,core,≺〉be a context structure, let{a mathematical formula}S1be a clause system for{a mathematical formula}D1, and let{a mathematical formula}D2and{a mathematical formula}S2be the context structure and the clause system, respectively, obtained by applying an inference rule fromTable 3to{a mathematical formula}D1and{a mathematical formula}S1. If{a mathematical formula}D1is admissible, then{a mathematical formula}D2is admissible. Furthermore, if both{a mathematical formula}D1and{a mathematical formula}S1are sound for{a mathematical formula}O, then both{a mathematical formula}D2and{a mathematical formula}S2are sound for{a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that {a mathematical formula}D1 is admissible and that the {a mathematical formula}Succ rule is applied to {a mathematical formula}D1 as shown in Table 3. By Definition 7, literal ordering {a mathematical formula}≺′ is R-admissible; furthermore, for arbitrary literal orderings {a mathematical formula}≺1 and {a mathematical formula}≺2 that are R- and S-admissible, respectively, set {a mathematical formula}≺1∩≺2 is a literal ordering that is both R- and S-admissible. Therefore, regardless of whether context u is fresh or not, {a mathematical formula}D2 is admissible. Now assume that both {a mathematical formula}D1 and {a mathematical formula}S1 are sound; we next show that both {a mathematical formula}D2 and {a mathematical formula}S2 are sound as well. To this end, let {a mathematical formula}I=〈ΔI,⋅I〉 be an arbitrary model of {a mathematical formula}O, and consider all possible inference rules that derive a clause in {a mathematical formula}S2 or modify {a mathematical formula}D2.({a mathematical formula}Hyper rule) Assume that the rule is applied as in Table 3; we will show that {a mathematical formula}O⊨core(v)⊓⨅i=1nKi⊑M⊔⨆i=1nMi. To this end, consider an arbitrary element {a mathematical formula}δ∈ΔI such that {a mathematical formula}δ∈(core(v)⊓⨅i=1nKi)I. Now {a mathematical formula}S1 is sound for {a mathematical formula}O so, for each {a mathematical formula}1⩽i⩽n, we have {a mathematical formula}O⊨core(v)⊓Ki⊑Mi⊔Ai, which implies {a mathematical formula}δ∈(Mi⊔Ai)I. If {a mathematical formula}δ∈MiI for some {a mathematical formula}1⩽i⩽n, then clearly {a mathematical formula}δ∈(⨆i=1nMi)I. Otherwise, we have {a mathematical formula}δ∈(⨅i=1nAi)I, but then {a mathematical formula}⨅i=1nAi⊑M∈O implies {a mathematical formula}δ∈MI. In either case, we have {a mathematical formula}δ∈(M⊔⨆i=1nMi)I. Since δ was chosen arbitrarily, {a mathematical formula}I satisfies the conclusion of the rule, as required.({a mathematical formula}Pred rule) Assume that the rule is applied as in Table 3; we will show that {a mathematical formula}O⊨core(v)⊓⨅i=0nKi⊑⨆i=0nMi⊔⨆j=1mCj. To this end, consider an arbitrary element {a mathematical formula}δ∈ΔI such that {a mathematical formula}δ∈(core(v)⊓⨅i=0nKi)I. As in the previous case, if {a mathematical formula}δ∈MiI for some {a mathematical formula}0⩽i⩽n, then clearly {a mathematical formula}δ∈(⨆i=0nMi)I. Otherwise, as {a mathematical formula}S1 is sound for {a mathematical formula}O, we have {a mathematical formula}δ∈(∃R.A)I and {a mathematical formula}δ∈(∀R.Bi)I for each {a mathematical formula}1⩽i⩽n. Since {a mathematical formula}〈v,u,∃R.A〉∈E and {a mathematical formula}D1 is sound, we have {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A]; therefore, since {a mathematical formula}δ∈[core(v)⊓∃R.A]I, we have {a mathematical formula}δ∈(∃R.[core(u)⊓A])I. Hence, an element {a mathematical formula}γ∈ΔI exists such that {a mathematical formula}〈δ,γ〉∈RI and {a mathematical formula}γ∈[core(u)⊓A⊓⨅i=1nBi]I. But then, due to either of the two alternative premises of the rule, we also have {a mathematical formula}γ∈[⨆j=1m∀inv(R).Cj]I; thus, {a mathematical formula}δ∈(⨆j=1mCj)I holds. Since δ was chosen arbitrarily, {a mathematical formula}I satisfies the conclusion of the rule, as required.({a mathematical formula}Succ rule) Assume that the rule is applied as in Table 3; in the rest of this proof, we consider set {a mathematical formula}Bk to be equivalent to the conjunction of the atomic concepts contained in it. Each clause introduced by the rule is of the form {a mathematical formula}L⊑L, so clearly {a mathematical formula}I⊨core(u)⊓L⊑L. We next show that the new edge {a mathematical formula}〈v,u,∃R.A〉 introduced by the rule satisfies the axiom from Definition 8. For each atomic concept {a mathematical formula}B∈Bk, we have {a mathematical formula}⊤⊑∀R.B∈S(v) by the rule preconditions, so {a mathematical formula}O⊨core(v)⊑∀R.B since {a mathematical formula}S1 is sound for {a mathematical formula}O; but then, we have {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[A⊓Bk]. Furthermore, since {a mathematical formula}core(u)=core′⊆A⊓Bk holds, we also have {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A], as required. □
+      </paragraph>
+      <paragraph>
+       The following notion of a covering mapping maps each query {a mathematical formula}q∈Q to a context in a context structure. Intuitively, our algorithm will use such a mapping to find for each query {a mathematical formula}q∈Q a context that can be used to verify {a mathematical formula}O⊨q.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Let{a mathematical formula}D=〈V,E,core,≺〉be a context structure. A covering mapping from{a mathematical formula}Qto{a mathematical formula}Dis a function{a mathematical formula}ϑ:Q→Vsuch that each query{a mathematical formula}q∈Qis covered in the context{a mathematical formula}ϑ(q).
+      </paragraph>
+      <paragraph>
+       We are finally ready to formally define our consequence-based reasoning algorithm. Apart from {a mathematical formula}O and {a mathematical formula}Q, the algorithm is parameterized by an expansion strategy {a mathematical formula}strategy, a context structure {a mathematical formula}D with no edges, and a covering mapping ϑ. By passing {a mathematical formula}D and ϑ as arguments, the algorithm's users can decide how to initialize the contexts necessary for checking the queries in {a mathematical formula}Q; we discuss reasonable possibilities in Section 3.4.1. Since the algorithm is given a context structure without edges, {a mathematical formula}D is trivially sound for {a mathematical formula}O; by inductively applying Proposition 9, the resulting clause system is sound for {a mathematical formula}O. Furthermore, the algorithm is complete because steps 1 and 2 satisfy the preconditions of Theorem 6.
+      </paragraph>
+      <paragraph label="Algorithm 11">
+       The consequence-based reasoning algorithm for{a mathematical formula}ALCItakes{a mathematical formula}O,{a mathematical formula}Q, a context structure{a mathematical formula}D=〈V,E,core,≺〉overLwith{a mathematical formula}E=∅, an expansion strategy{a mathematical formula}strategy, and a covering mapping ϑ from{a mathematical formula}Qto{a mathematical formula}D. The algorithm (nondeterministically) extends{a mathematical formula}Dand computes a clause system{a mathematical formula}Sfor the extended context structure as follows.
+      </paragraph>
+      <list>
+       <list-item>
+        Set{a mathematical formula}S(v):={⊤⊑L|L∈core(v)}for each context{a mathematical formula}v∈V.
+       </list-item>
+       <list-item>
+        For each query{a mathematical formula}K⊑M∈Q, let{a mathematical formula}v:=ϑ(K⊑M); then, for each literal{a mathematical formula}L∈K∖core(v), add{a mathematical formula}L⊑Lto{a mathematical formula}S(v).
+       </list-item>
+       <list-item>
+        Exhaustively apply the inference rules fromTable 3.
+       </list-item>
+      </list>
+      <paragraph>
+       Please note that Algorithm 11 is nondeterministic: the conclusion of an inference rule is added to {a mathematical formula}S(v) only if {a mathematical formula}S(v) does not contain a strengthening of the conclusion, and the order of inference rule application is not predetermined; therefore, the resulting {a mathematical formula}D and {a mathematical formula}S are not unique. This, however, is don't-care nondeterminism: any order of inference rule applications suffices for soundness and completeness.
+      </paragraph>
+      <paragraph>
+       In Proposition 13 we formalize the soundness and completeness argument outlined earlier. Towards this goal, in Lemma 12 we show that the {a mathematical formula}Elim rule never deletes the “relevant” consequences derived by our algorithm: whenever a clause {a mathematical formula}K⊑M is deleted from some set {a mathematical formula}S(v), after deletion the set still contains a strengthening of the deleted clause.
+      </paragraph>
+      <paragraph label="Lemma 12">
+       If, at some point in the execution ofAlgorithm 11,{a mathematical formula}K⊑M∈ˆS(v)holds for some clause{a mathematical formula}K⊑Mand context v, then{a mathematical formula}K⊑M∈ˆS(v)holds at all future points as well.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is by a straightforward induction on the application of the rules. In particular, rules {a mathematical formula}Hyper, {a mathematical formula}Pred, and {a mathematical formula}Succ just add clauses, so their application clearly preserves this property. Furthermore, the {a mathematical formula}Elim rule removes a clause {a mathematical formula}K2⊑M2 from {a mathematical formula}S(v) only if {a mathematical formula}K1⊑M1∈S(v) where {a mathematical formula}K1⊑M1 is a strengthening of {a mathematical formula}K2⊑M2; since the strengthening relation on clauses is transitive, an application of the {a mathematical formula}Elim rule clearly preserves this property as well. □
+      </paragraph>
+      <paragraph label="Proposition 13">
+       Let{a mathematical formula}Sbe a clause system obtained by applyingAlgorithm 11to{a mathematical formula}O,{a mathematical formula}Q, a context structure{a mathematical formula}D, an expansion strategy{a mathematical formula}strategy, and a covering mapping ϑ. Then, for each query{a mathematical formula}q∈Q, we have{a mathematical formula}O⊨qif and only if{a mathematical formula}q∈ˆS(ϑ(q)).
+      </paragraph>
+      <paragraph label="Proof">
+       Consider an arbitrary query {a mathematical formula}K⊑M∈Q and let {a mathematical formula}v:=ϑ(K⊑M). Context v covers {a mathematical formula}K⊑M, so v is sound for {a mathematical formula}K⊑M and thus {a mathematical formula}core(v)⊆K holds by Definition 4, and v is also complete for {a mathematical formula}K⊑M.Assume that {a mathematical formula}K⊑M∈ˆS(v), so a clause {a mathematical formula}K′⊑M′∈S(v) exists such that {a mathematical formula}K′⊆K and {a mathematical formula}M′⊆M. For each clause {a mathematical formula}⊤⊑L added to some {a mathematical formula}S(u) in step 1, we have {a mathematical formula}O⊨core(u)⊑L since {a mathematical formula}L∈core(u); furthermore, for each clause {a mathematical formula}L⊑L added to {a mathematical formula}S(u) in step 2, we clearly have {a mathematical formula}O⊨core(u)⊓L⊑L; finally, Algorithm 11 is applied to a sound context structure, so {a mathematical formula}D and {a mathematical formula}S are sound for {a mathematical formula}O by Proposition 9, and {a mathematical formula}O⊨core(v)⊓K′⊑M′ holds. Finally, {a mathematical formula}K′∪core(v)⊆K and {a mathematical formula}M′⊆M imply {a mathematical formula}O⊨K⊑M, as required.Conversely, assume that {a mathematical formula}O⊨K⊑M. Consider an arbitrary literal {a mathematical formula}L∈K; if {a mathematical formula}L∈core(v), then {a mathematical formula}⊤⊑L is added to {a mathematical formula}S(v) in step 1, and if {a mathematical formula}L∈K∖core(v), then {a mathematical formula}L⊑L is added to {a mathematical formula}S(v) in step 2; in either case, we have that {a mathematical formula}K⊑L∈ˆS(v) holds after step 2, and Lemma 12 ensures that this property is preserved during the algorithm's execution. But then, since v is complete for {a mathematical formula}K⊑M, we have {a mathematical formula}K⊑M∈ˆS(v) by Theorem 6, as required. □
+      </paragraph>
+      <paragraph>
+       Finally, we determine the complexity of our algorithm.
+      </paragraph>
+      <paragraph label="Proposition 14">
+       TerminationWhen applied to{a mathematical formula}O,{a mathematical formula}Q, a context structure{a mathematical formula}D=〈V,E,core,≺〉, an expansion strategy{a mathematical formula}strategy, and a covering mapping ϑ,Algorithm 11terminates in time polynomial in{a mathematical formula}4|L|2,{a mathematical formula}|strategy|L+|V|, and{a mathematical formula}‖O‖+‖Q‖.
+      </paragraph>
+      <paragraph label="Proof">
+       When applied to arguments over L, the result of the expansion strategy is clearly over L as well; therefore, the context structure and the clause system computed using Algorithm 11 are over L. The number of different clauses over L is bounded by {a mathematical formula}c=2|L|⋅2|L|=4|L| since each literal from L can independently occur in the clause antecedent and/or the clause consequent. Algorithm 11 is applied to a context structure with {a mathematical formula}|V| contexts, and the expansion strategy can introduce at most {a mathematical formula}|strategy|L additional contexts; hence, the total number of contexts introduced in the algorithm is bounded by {a mathematical formula}m=|strategy|L+|V|.We call all objects needed to apply an inference rule from Table 3premises; for the {a mathematical formula}Succ rule, this includes set {a mathematical formula}Bp. We next show that, for the {a mathematical formula}Hyper, {a mathematical formula}Pred, and {a mathematical formula}Succ rules, the number of different premises is polynomial in {a mathematical formula}c|L|, m, and {a mathematical formula}‖O‖+‖Q‖; recall that {a mathematical formula}|L|⩽‖O‖+‖Q‖. For the {a mathematical formula}Hyper rule, context {a mathematical formula}v∈V can be chosen in at most m ways, clause {a mathematical formula}⨅iAi⊑M∈O can be chosen in at most {a mathematical formula}|O| ways, and each of the {a mathematical formula}n⩽|L| clauses {a mathematical formula}Ki⊑Mi⊔Ai∈S(v) can be chosen in at most c ways, so there are at most {a mathematical formula}c|L| ways of choosing such a set of clauses. For the {a mathematical formula}Pred rule, edge {a mathematical formula}〈v,u,∃R.A〉∈E can be chosen in at most {a mathematical formula}m2⋅|L| ways, clause {a mathematical formula}A⊓⨅iBi⊑⨆j∀inv(R).Cj∈S(u) or {a mathematical formula}⨅iBi⊑⨆j∀inv(R).Cj∈S(u) can be chosen in at most c ways, and each of the {a mathematical formula}n+1⩽|L| clauses {a mathematical formula}K0⊑M0⊔∃R.A∈S(v) and {a mathematical formula}Ki⊑Mi⊔∀R.Bi∈S(v) can be chosen in at most c ways, so there are at most {a mathematical formula}c|L| ways of choosing such a set of clauses. For the {a mathematical formula}Succ rule, context {a mathematical formula}v∈V can be chosen in at most m ways, literal {a mathematical formula}∃R.A can be chosen in at most {a mathematical formula}|L| ways, clause {a mathematical formula}K⊑M⊔∃R.A∈S(v) can be chosen in at most c ways, and there are at most {a mathematical formula}2|L| different sets {a mathematical formula}Bp.Each rule in Table 3 adds a clause {a mathematical formula}K⊑M to some {a mathematical formula}S(v) only if {a mathematical formula}K⊑M{an inline-figure}S(v); thus, due to Lemma 12, each such {a mathematical formula}K⊑M can be added to some {a mathematical formula}S(v) at most once; but then, the {a mathematical formula}Elim rule can eliminate such {a mathematical formula}K⊑M from {a mathematical formula}S(v) at most once as well. Thus, no inference rule is applied twice to the same premises, so the number of inference rule applications is bounded by a number that is polynomial in {a mathematical formula}c|L|, m, and {a mathematical formula}‖O‖+‖Q‖. Moreover, {a mathematical formula}strategy is computable in polynomial time, so each inference rule can be applied to fixed premises in polynomial time. Consequently, the algorithm can be implemented so that it runs in time polynomial in {a mathematical formula}c|L|, m, and {a mathematical formula}‖O‖+‖Q‖. □
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Redundancy elimination
+      </section-title>
+      <paragraph>
+       Resolution can often derive redundant clauses—that is, clauses that are not necessary for a proof. Such clauses can give rise to a large number of other redundant clauses, so it is beneficial to detect and eliminate redundant clauses whenever possible. To this end, modern first-order theorem provers employ a number of redundancy elimination rules that eliminate or simplify certain clauses; Weidenbach [35] presents an overview of these techniques. Inspired by redundancy elimination in first-order theorem provers, we equipped our consequence-based framework with analogous possibilities, which we discuss in this section. Please note that redundancy elimination is optional: it may optimize the theorem proving process but is not needed for completeness. Similarly, the complexity of the algorithms that we present in Sections 4 and 5 is independent from any redundancy elimination techniques, but redundancy elimination can still improve the performance of these algorithms in practice.
+      </paragraph>
+      <paragraph>
+       First, the completeness Theorem 6 only requires each set of clauses {a mathematical formula}S(v) to contain a strengthening of each conclusion obtained by applying the inference rules from Table 3; therefore, our inference rules derive a conclusion in {a mathematical formula}S(v) only if {a mathematical formula}S(v) does not already contain a strengthening of the conclusion. This is analogous to forward subsumption in first-order theorem proving: a newly derived clause is kept only if the clause is not redundant given the clauses derived thus far.
+      </paragraph>
+      <paragraph>
+       Second, the {a mathematical formula}Elim rule deletes a clause {a mathematical formula}K2⊑M2 from {a mathematical formula}S(v) if {a mathematical formula}S(v) contains a clause {a mathematical formula}K1⊑M1 such that {a mathematical formula}K1⊑M1 is a strengthening of {a mathematical formula}K2⊑M2 and the two clauses are distinct. Note that {a mathematical formula}K2⊑M2 can be derived before {a mathematical formula}K1⊑M1, in which case the technique described in the previous paragraph will not eliminate {a mathematical formula}K2⊑M2, and so {a mathematical formula}K2⊑M2 can potentially participate in further redundant inferences. The {a mathematical formula}Elim rule is thus analogous to backward subsumption in first-order theorem proving.
+      </paragraph>
+      <paragraph>
+       In the rest of this section we discuss certain aspects of our redundancy elimination techniques. We first consider syntactic tautologies, which are clauses of the form {a mathematical formula}K⊓L⊑M⊔L with either K or M (or both) nonempty; note that this definition excludes clauses of the form {a mathematical formula}L⊑L, which are needed for completeness in Theorem 6 and are thus not redundant. The following proposition straightforwardly implies that our algorithm never derives syntactic tautologies; in practice this means that, whenever a possible consequence of the inference rule is a syntactic tautology, one can eagerly eliminate the clause (without checking whether the target clause set contains a strengthening of the consequence clause).
+      </paragraph>
+      <paragraph label="Proposition 15">
+       If, at some point in the execution ofAlgorithm 11,{a mathematical formula}K⊑M∈ˆS(v)holds for some clause{a mathematical formula}K⊑Mand context v, then{a mathematical formula}L⊑L∈ˆS(v)also holds at this point for each literal{a mathematical formula}L∈K.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is by induction on the application of inference rules. Each clause introduced in steps 1 and 2 of Algorithm 11 or by the {a mathematical formula}Succ rule obviously satisfies this property. Furthermore, an application of the {a mathematical formula}Elim rule preserves this property by Lemma 12. Now consider an application of the {a mathematical formula}Hyper or the {a mathematical formula}Pred rule as shown in Table 3; then, for each literal L occurring in the antecedent of the conclusion, integer i exists such that {a mathematical formula}L∈Ki; but then, the premise corresponding to {a mathematical formula}Ki satisfies this property by the induction assumption, so {a mathematical formula}L⊑L∈ˆS(v) holds. □
+      </paragraph>
+      <paragraph>
+       The {a mathematical formula}Elim rule can also be used to define more powerful redundancy elimination rules. Assume that, for some context v, set {a mathematical formula}S(v) contains clauses {a mathematical formula}K1⊑M1⊔L and {a mathematical formula}K2⊓L⊑M2 with {a mathematical formula}K1⊆K2 and {a mathematical formula}M1⊆M2. Clause {a mathematical formula}K1⊓K2⊑M1⊔M2 is equal to {a mathematical formula}K2⊑M2 and it is a logical consequence of {a mathematical formula}S(v); now even though clause {a mathematical formula}K2⊑M2 is not derived by an inference rule from Table 3 (in particular, note that the {a mathematical formula}Hyper rule does not derive this clause), extending {a mathematical formula}S(v) with this clause is sound. Thus, if we add {a mathematical formula}K2⊑M2 to {a mathematical formula}S(v), we can delete clause {a mathematical formula}K2⊓L⊑M2 from {a mathematical formula}S(v) using the {a mathematical formula}Elim rule; essentially, we thus obtain a simplification rule that eliminates L from clause {a mathematical formula}K2⊓L⊑M2. Analogously, if the clauses satisfy {a mathematical formula}K2⊆K1 and {a mathematical formula}M2⊆M1, then we can eliminate L from clause {a mathematical formula}K1⊑M1⊔L. This is closely related to the contextual literal cutting rule used in the first-order prover E [36].
+      </paragraph>
+      <paragraph>
+       Redundancy elimination may be difficult to implement fully in practice: even with complex index structures, checking whether some {a mathematical formula}S(v) contains a strengthening of some clause may be inefficient. Please note, however, that both forms of redundancy elimination are optional—that is, they are not needed for completeness. Therefore, instead of {a mathematical formula}∈ˆ, one can use ∈ to check rule applicability. Furthermore, one does not need to apply {a mathematical formula}∈ˆ and the {a mathematical formula}Elim rule exhaustively; for example, one can restrict redundancy checking to clauses of the form {a mathematical formula}⊤⊑A and {a mathematical formula}L⊑L and index the latter using a hash table. Finally, an advanced implementation can “switch on” redundancy elimination only if set {a mathematical formula}S(v) grows beyond a certain size. In most cases, however, eliminating syntactic tautologies should not cause any noticeable overhead.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Instantiating the consequence-based framework
+      </section-title>
+      <paragraph>
+       We next discuss ways of instantiating our consequence-based framework presented in Section 3.2. In particular, in Section 3.4.1 we discuss possibilities for initializing the context structure and the covering mapping that are given to Algorithm 11. Then, in Section 3.4.2 we discuss possible expansion strategies.
+      </paragraph>
+      <section label="3.4.1">
+       <section-title>
+        Initializing the context structure and the covering mapping
+       </section-title>
+       <paragraph>
+        Algorithm 11 takes as input a context structure {a mathematical formula}D without any edges and a covering mapping ϑ, and so the initialization of {a mathematical formula}D and ϑ is deferred to the algorithm's users. We next discuss several reasonable approaches to initialization.
+       </paragraph>
+       <paragraph>
+        The first possibility is to introduce just one trivial (cf. Definition 4) context {a mathematical formula}v0. In such a case, step 2 of Algorithm 11 initializes {a mathematical formula}S(v0) with many clauses {a mathematical formula}L⊑L; this may give rise to a large number of inferences at context {a mathematical formula}v0, and may be further exacerbated by the fact that {a mathematical formula}≺v0 is empty. Hence, such an approach is unlikely to be efficient apart from in very simple cases.
+       </paragraph>
+       <paragraph>
+        The second possibility is to introduce a separate context {a mathematical formula}vq=ϑ(q) for each query {a mathematical formula}q=K⊑M∈Q, define {a mathematical formula}core(vq):=K, and define {a mathematical formula}≺vq such that M is {a mathematical formula}≺vq-minimal and the remaining literals are ordered arbitrarily. This has the opposite effect from the first approach: step 2 of Algorithm 11 initializes each set {a mathematical formula}S(vq) with the least possible number of clauses {a mathematical formula}L⊑L, and ordering {a mathematical formula}≺vq is as fine-grained as possible, which maximally reduces the number of inferences at context {a mathematical formula}vq. The main drawback, however, is that the number of contexts needed is linear in the size of {a mathematical formula}Q.
+       </paragraph>
+       <paragraph>
+        The third possibility is to introduce a context {a mathematical formula}vK for each conjunction K occurring in the antecedent of some query in {a mathematical formula}Q, define {a mathematical formula}core(vK):=K, and define {a mathematical formula}≺vK so that each literal occurring in the consequent of some query in {a mathematical formula}Q is {a mathematical formula}≺vK-minimal while all remaining literals are ordered arbitrarily. We thus strike a balance between the number of contexts and the inferences performed.
+       </paragraph>
+       <paragraph>
+        Description logic reasoners are often used to classify an ontology {a mathematical formula}O, in which case {a mathematical formula}Q contains {a mathematical formula}A⊑B for all pairs of atomic concepts A and B. The second possibility then requires a quadratic number of contexts, which can be prohibitively large even on ontologies of moderate size. In contrast, the third possibility requires all atomic concepts in {a mathematical formula}O to be minimal, which essentially “turns off” most ordering constraints. To address the former problem in hypertableau-based reasoners, Glimm et al. [37] developed a classification algorithm that gathers information about known and possible subsumptions from the ABoxes encountered during the algorithm's execution in order to reduce the number of pairs of atomic concepts for which {a mathematical formula}O⊨A⊑B needs to be checked. This algorithm can be adapted to the consequence-based framework as well. In particular, let {a mathematical formula}S be a clause system produced by Algorithm 11 such that {a mathematical formula}⊤⊑⊥{an inline-figure}S(v) holds for each context v—that is, {a mathematical formula}O is satisfiable. Then, if a context v exists such that {a mathematical formula}core(v)⊆{A} and {a mathematical formula}A⊑B∈ˆS(v), by the soundness of our algorithm we have that {a mathematical formula}O⊨A⊑B—in other words, subsumption {a mathematical formula}A⊑B is known. Furthermore, Proposition 16, shown below, tells us how to identify subsumptions that are not possible. By tightly integrating the consequence-based algorithm with the appropriately modified classification algorithm, we can extend {a mathematical formula}Q as needed, thus considerably reducing the size of this set. Furthermore, whenever the classification algorithm adds a query {a mathematical formula}A⊑B to {a mathematical formula}Q, we have two options: we can introduce a fresh context {a mathematical formula}vA⊑B; or we can introduce or reuse context {a mathematical formula}vA, keeping in mind that, whenever we reuse an existing context, we must refine the literal ordering {a mathematical formula}≺vA so that B becomes {a mathematical formula}≺vA-minimal.
+       </paragraph>
+       <paragraph label="Proposition 16">
+        Let{a mathematical formula}Sbe a clause system obtained by applyingAlgorithm 11to a normalized{a mathematical formula}ALCIontology{a mathematical formula}Oand a finite set of queries{a mathematical formula}Q. Then,{a mathematical formula}O⊭A⊑Bholds for all atomic concepts A and B for which there exists a context v such that{a mathematical formula}A⊑A∈ˆS(v),{a mathematical formula}A⊑B{an inline-figure}S(v), and no clause of the form{a mathematical formula}K⊑M⊔B∈S(v)exists that satisfies{a mathematical formula}K⊆{A}and{a mathematical formula}B⊀vM.
+       </paragraph>
+       <paragraph label="Proof">
+        The proof of this proposition relies on the proof of Theorem 6 presented in Appendix A, the notion of pre-models introduced in Appendix A.1, and the symbol ⊢ introduced in Appendix A.4.Let {a mathematical formula}S, A, B, and v be as specified in the proposition. Then, {a mathematical formula}A⊑B{an inline-figure}S(v) clearly implies {a mathematical formula}A⊑⊥{an inline-figure}S(v); moreover, ⊥ is empty and therefore {a mathematical formula}≺v-minimal; together with {a mathematical formula}A⊑A∈ˆS(v), these observations imply {a mathematical formula}v⊬A⊑⊥. Thus, the construction of a pre-model {a mathematical formula}I=〈Δ,E,J〉 in Appendix A.4 introduces an element {a mathematical formula}δA⊑⊥v∈Δ whose literal interpretation {a mathematical formula}J(δA⊑⊥v) is constructed as specified in Appendix A.2. Now consider an arbitrary clause {a mathematical formula}K⊑M⊔B∈S(v): by our assumption, at least one of {a mathematical formula}K⊆{A} or {a mathematical formula}B⊀vM does not hold; thus, the conditions of Lemma 64 are not satisfied, and so clause {a mathematical formula}K⊑M⊔B is not productive. Since this holds for all clauses in {a mathematical formula}S(v) with B in the consequent, we have {a mathematical formula}B∉J(δA⊑⊥v). Furthermore, due to {a mathematical formula}A⊑A∈ˆS(v) and Lemma 65, we have {a mathematical formula}A∈J(δA⊑⊥v). Thus, we have {a mathematical formula}I⊭A⊑B, and so {a mathematical formula}O⊭A⊑B holds by Corollary 61 and Claim 72. □
+       </paragraph>
+      </section>
+      <section label="3.4.2">
+       <section-title>
+        Expansion strategies
+       </section-title>
+       <paragraph>
+        In this section we discuss reasonable expansion strategies. We use the ontology {a mathematical formula}O and query q defined in the following example to demonstrate how the choice of strategy affects the inferences of our algorithm.
+       </paragraph>
+       <paragraph label="Example 17">
+        Let{a mathematical formula}Obe the ontology containing axioms(31), (32), (33), (34), (35), (36), (37), (38), and let{a mathematical formula}q=A⊑E. Clearly, {a mathematical formula}O⊨qholds due to(31), (32), (33).{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The simplest possibility is to always reuse the trivial context {a mathematical formula}v0; thus, we define {a mathematical formula}trivial(∃R.A,Bk,D)=〈v0,∅,∅〉. This strategy makes most sense if the trivial context {a mathematical formula}v0 is also used for initialization. The inferences of our algorithm on {a mathematical formula}O with the trivial strategy are shown in Fig. 2. As one can see, the algorithm is prolific: inferences (47)–(57) are not needed in order to derive (46). Thus, such an algorithm resembles various resolution-based decision procedures for DLs [31].
+       </paragraph>
+       <paragraph>
+        To reduce the number of irrelevant inferences, we can use a cautious approach and introduce a context {a mathematical formula}vA for each atomic concept A; thus, we define {a mathematical formula}cautious(∃R.A,Bk,D)=〈vA,{A},≺〉, where ≺ is an arbitrary R-admissible ordering. The number of contexts is then limited to the number of atomic concepts occurring in {a mathematical formula}O and {a mathematical formula}Q. Please remember that, whenever context {a mathematical formula}vA is reused, its literal ordering must be refined so that it stays admissible for each relevant role. As one can see in Fig. 3, the cautious approach considerably reduces the inferences of our algorithm; for example, it does not derive clauses containing {a mathematical formula}∃T.F1. Nevertheless, since we reuse context {a mathematical formula}vB to satisfy existential restrictions (59) and (66), the algorithm derives clause (70), which then leads to the derivation of (71) and the introduction of context {a mathematical formula}vF2.
+       </paragraph>
+       <paragraph>
+        We can further reduce the number of irrelevant inferences by adopting an eager approach and introducing a context {a mathematical formula}vA for each set of atomic concepts A; thus, we define {a mathematical formula}eager(∃R.A,Bk,D)=〈v{A}∪Bk,{A}∪Bk,≺〉, where ≺ is an arbitrary R-admissible ordering. As one can see in Fig. 4, the algorithm now does not even derive clauses containing {a mathematical formula}∃T.F2 and is considerably more efficient than in the previous two cases. In general, however, the eager strategy can be problematic because the number of introduced contexts can be exponential in the number of atomic concepts occurring in {a mathematical formula}O and {a mathematical formula}Q.
+       </paragraph>
+       <paragraph>
+        One can refine all of the strategies discussed above by using a different context per role R. For example, the cautious strategy can be refined to use a context {a mathematical formula}vAR for each atomic concept A and role R; thus, we define {a mathematical formula}cautiousR(∃R.A,Bk,D)=〈vAR,{A},≺〉, where ≺ is an arbitrary R-admissible ordering. A benefit of the refined cautious strategy is that context {a mathematical formula}vAR is reused only to satisfy existential restrictions of the form {a mathematical formula}∃R.A, so the literal ordering used in the context never needs to be refined.
+       </paragraph>
+       <paragraph>
+        The cautious and the eager strategies appear to be most natural, striking a different balance between the number of contexts and the number of inferences in each context. In Section 8 we investigate the effectiveness of these strategies in practice. Our results suggest that, in most practical cases, the eager strategy may be most appropriate because it does not introduce too many contexts; however, we also identified cases in which the cautious strategy is more appropriate. This suggests that a hybrid approach may be useful: one uses the eager strategy until some predetermined number of contexts is introduced, after which one switches to the cautious strategy.
+       </paragraph>
+       <paragraph>
+        Although the eager strategy can, in general, introduce an exponential number of contexts, as we argue next, on {a mathematical formula}EL and {a mathematical formula}DL-Litehorn ontologies the eager strategy introduces only linearly many contexts. First, if {a mathematical formula}O is an {a mathematical formula}EL ontology, then all existential restrictions in {a mathematical formula}O contain only atomic roles, and all universal restrictions in {a mathematical formula}O contain only inverse roles; hence, the {a mathematical formula}Succ rule is applicable only with {a mathematical formula}Bk=∅, and so the eager strategy coincides with the cautious strategy. Thus, similarly to existing {a mathematical formula}EL reasoning algorithms [23], [18], the eager strategy introduces only one context for each atomic concept. Second, if {a mathematical formula}O is a {a mathematical formula}DL-Litehorn ontology, then all universal restrictions occur in {a mathematical formula}O only in axioms of the form {a mathematical formula}⊤⊑∀R.B; hence, if we apply the {a mathematical formula}Hyper rule before the {a mathematical formula}Succ rule, then all clauses {a mathematical formula}⊤⊑∀R.A will be eagerly derived in each context, and so the {a mathematical formula}Succ rule will be applicable to an existential restriction {a mathematical formula}∃R.A only with {a mathematical formula}Bk={B|⊤⊑∀R.B∈O}; since this set is uniquely identified by {a mathematical formula}∃R.A, the eager strategy will introduce at most one context for each existential restriction. Furthermore, if all existential restrictions occurring in {a mathematical formula}O are of the form {a mathematical formula}∃R.A⊤ as discussed in Section 2.1, then, similarly to existing {a mathematical formula}DL-Litehorn reasoning algorithms [19], [20], the eager strategy will introduce at most one context for each role occurring in an existential restriction.
+       </paragraph>
+       <paragraph>
+        Finally, we relate the above strategies to existing consequence-based algorithms. Kazakov [21] considers only the eager strategy. Simančík et al. [22] present their algorithm with the eager strategy, but their “context partitioning” optimizations can be seen as providing more cautious strategies; moreover, their ConDOR reasoner implements only the refined cautious strategy.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     Analyzing and-branching using ϵ-free decompositions
+     <paragraph>
+      In the rest of this paper we develop our framework for a parametric analysis of the complexity of reasoning. As we mentioned in the introduction, and-branching and or-branching are two main sources of complexity [10]. In this section we focus on quantifying the effects of and-branching, whereas in Section 5 we turn our attention to or-branching.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Intuitions
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}O and q be as specified in Example 17, and let L be the set of all literals occurring in {a mathematical formula}O and q; note that {a mathematical formula}|L|=13. Proposition 14 provides us with an estimate of the complexity of deciding {a mathematical formula}O⊨q: we can introduce at most {a mathematical formula}2|L|=213 contexts using the eager strategy, and each set {a mathematical formula}S(v) can contain at most {a mathematical formula}4|L|=413 clauses, so the algorithm runs in time exponential in {a mathematical formula}|L|=13. This, however, is a crude estimate because both the number of contexts and the sizes of sets {a mathematical formula}S(v) are vastly overestimated.
+      </paragraph>
+      <paragraph>
+       To obtain a better estimate of these values, in this section we extend the notion of a context structure to a decomposition of an ontology and a set of queries; since decompositions are proper extensions of context structures, one can apply our consequence-based algorithm to a decomposition by only slightly adapting the algorithm's initialization phase. The high-level principle behind our decompositions is similar to tree decompositions: both aim to identify sets of literals whose subsets can be relevant during reasoning. For example, given a vertex v in a tree decomposition, set {a mathematical formula}L(v) determines the propositional variables that should be considered in “local” propositional interpretation associated with v, and so the number of such interpretations is bounded by {a mathematical formula}2|L(v)|. Our notion of decomposition aims for a similar goal: each context in a decomposition will describe the clauses that the consequence-based algorithm can derive, which will then determine the worst-case complexity of the algorithm. Towards this goal, please remember that there are two sources of complexity in description logic reasoning [10]: existential and universal quantification cause and-branching, and disjunction causes or-branching. The latter corresponds to or-branching in propositional logic and can be characterized using tree decompositions; however, the former is unique to description logics and requires completely new techniques. Our decompositions therefore consist of two kinds of edges: {a mathematical formula}∃R.A-edges are defined as in context structures and capture information propagation due to and-branching, and ϵ-edges capture information propagation due to or-branching. In the rest of this section we focus on and-branching, so the decompositions we shall consider will be ϵ-free (i.e., they will not contain ϵ-edges). Please note that ϵ-free decompositions are completely different from and do not generalize tree decompositions. In Section 5 we then show how ϵ-edges can be used to capture or-branching.
+      </paragraph>
+      <paragraph>
+       As we discussed in Section 3.1, each context in a context structure describes one or more domain elements in a model of {a mathematical formula}O. A context structure can thus be seen as decomposing a description logic reasoning problem into several of interconnected propositional problems; given such a representation, the {a mathematical formula}Hyper rule then locally solves each propositional subproblem, and the {a mathematical formula}Pred and {a mathematical formula}Succ rules handle the connections between subproblems. An ϵ-free decomposition {a mathematical formula}D for {a mathematical formula}O and q can in similar vein be understood as breaking up the problem of checking {a mathematical formula}O⊨q into several interconnected propositional problems, but with several differences. First, a context structure is constructed during reasoning, and so it cannot provide us with an a priori complexity estimate. In contrast, {a mathematical formula}D is independent from any reasoning and contains “sufficiently many” contexts (i.e., all contexts needed by the {a mathematical formula}Succ rule). Second, each context v in {a mathematical formula}D is associated with three sets of literals {a mathematical formula}core(v), {a mathematical formula}knw(v), and {a mathematical formula}poss(v) that describe the clauses one can derive in {a mathematical formula}S(v). Set {a mathematical formula}core(v) serves the same purpose as in context structures. Furthermore, set {a mathematical formula}knw(v) contains the known literals—that is, for each literal {a mathematical formula}L∈knw(v), our algorithm will derive {a mathematical formula}⊤⊑L in {a mathematical formula}S(v). Finally, set {a mathematical formula}poss(v) contains the possible literals—that is, each clause {a mathematical formula}K⊑M∈S(v) will satisfy {a mathematical formula}K∪M⊆poss(v). Clearly, all core literals are known, and all known literals are possible, so {a mathematical formula}D should satisfy {a mathematical formula}core(v)⊆knw(v)⊆poss(v) for each context v.
+      </paragraph>
+      <paragraph>
+       To ensure that each clause obtained by applying our consequence-based algorithm to {a mathematical formula}D is a logical consequence of {a mathematical formula}O, we require {a mathematical formula}D to be sound: in addition to the condition on {a mathematical formula}∃R.A-edges from Definition 8, the known literals in each context of {a mathematical formula}D must logically follow from the context's core—that is, {a mathematical formula}O⊨core(v)⊑L should hold for each context v in {a mathematical formula}D and each literal {a mathematical formula}L∈knw(v). Furthermore, to ensure completeness of our algorithm, we require {a mathematical formula}D to be admissible: roughly speaking, this notion requires {a mathematical formula}D to contain all contexts that might be needed during our algorithm's execution, and sets {a mathematical formula}core(v), {a mathematical formula}knw(v), and {a mathematical formula}poss(v) to correctly describe the types of clauses that our algorithm can derive in {a mathematical formula}S(v). This will ensure that (i) the {a mathematical formula}Succ rule is never applicable, and (ii) each clause in {a mathematical formula}S(v) is of the form {a mathematical formula}⊤⊑L with {a mathematical formula}L∈knw(v), or of the form {a mathematical formula}K⊑M with {a mathematical formula}K∪M⊆poss(v)∖knw(v). These observations allow us to capture the complexity of our algorithm using the following two parameters: decomposition length{a mathematical formula}ln(D), defined as the number of contexts in {a mathematical formula}D, captures the combinatorial difficulty due to (i); and decomposition width{a mathematical formula}wd(D), defined as the maximum cardinality of {a mathematical formula}poss(v)∖knw(v), captures the combinatorial difficulty due to (ii). We show that, when applied to {a mathematical formula}D, our consequence-based algorithm runs in time polynomial in {a mathematical formula}ln(D) and {a mathematical formula}4wd(D)2; the latter factor is due to the fact that each set {a mathematical formula}S(v) can contain at most {a mathematical formula}|knw(v)|+4|poss(v)∖knw(v)| clauses.
+      </paragraph>
+      <paragraph>
+       An ontology and a set of queries can admit infinitely many sound, admissible, and ϵ-free decompositions, so a decomposition {a mathematical formula}D with least {a mathematical formula}ln(D) and {a mathematical formula}wd(D) would provide us with a “general” difficulty of reasoning with a particular ontology and a set of queries. This would be analogous to propositional satisfiability, where the treewidth of a propositional problem is defined as the smallest width over all tree decompositions of the problem. However, identifying such {a mathematical formula}D is difficult for two reasons. First, checking semantic conditions in the definition of soundness requires reasoning, so verifying decomposition soundness can be as hard as the reasoning problem whose complexity we aim to analyze. Second, ontologies and queries exist for which all decompositions of minimal width have exponential length; we prove this claim for general (i.e., not only ϵ-free) decompositions, so we postpone the formal treatment of this property until Section 7. Hence, minimizing width can increase length and vice versa, which essentially prevents us from obtaining a “general” characterization of reasoning difficulty.
+      </paragraph>
+      <paragraph>
+       As a possible solution to these challenges, in Section 4.4 we present a practical algorithm that can construct in polynomial time an ϵ-free decomposition of {a mathematical formula}O and {a mathematical formula}Q. To address the first issue, our algorithm approximates the entailment relation used in the definition of soundness. Thus, for some context v, set {a mathematical formula}knw(v) approximates the set of literals entailed by {a mathematical formula}core(v), and for each literal in {a mathematical formula}knw(v) the relevant entailment can be established in polynomial time. To address the second issue, the algorithm is given a set of parameters {a mathematical formula}C called a control that consists of an expansion strategy, an integer {a mathematical formula}mln that imposes a bound on decomposition length, and two other parameters that determinize the decomposition construction process. For each {a mathematical formula}C, the ϵ-free decomposition of {a mathematical formula}O and {a mathematical formula}Q that is deterministically constructed by our algorithm is called the {a mathematical formula}C-decomposition of {a mathematical formula}O and {a mathematical formula}Q. Parameter {a mathematical formula}mln bounds the length of the {a mathematical formula}C-decomposition, which determines the decomposition width. Thus, the width and length of a {a mathematical formula}C-decomposition provide us with an account of the reasoning difficulty relative to {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       To illustrate these ideas, Fig. 5 shows two ϵ-free decompositions of {a mathematical formula}O and q from Example 17 on page 43 obtained using the cautious and the eager expansion strategy. We use the same notation as for context structures, but show sets {a mathematical formula}core(v), {a mathematical formula}knw(v)∖core(v), and {a mathematical formula}poss(v)∖knw(v) in a table below each context.
+      </paragraph>
+      <paragraph>
+       The ϵ-free decomposition {a mathematical formula}D1 constructed from {a mathematical formula}O and q using the cautions strategy is shown in Fig. 5a. Since our goal is to check the entailment of {a mathematical formula}q=A⊑E, we introduce context {a mathematical formula}vA and add A to {a mathematical formula}core(vA), thus capturing the fact that the consequence-based algorithm initializes {a mathematical formula}S(vA) with (58). But then, from clauses (31), (32), and (34), the consequence-based algorithm can derive (59), (60), and (66); to reflect this, we add literals {a mathematical formula}∃R.B, {a mathematical formula}∀R.C1, and {a mathematical formula}∃S.B to {a mathematical formula}knw(vA). Furthermore, using clause (35), the consequence-based algorithm will derive (67); however, the consequent of the clause contains a disjunction, so neither of the literals is derived deterministically, and therefore we add D and {a mathematical formula}∀S.C2 to {a mathematical formula}poss(vA). Next, we must satisfy existential restrictions {a mathematical formula}∃R.B and {a mathematical formula}∃S.B; since we use the cautious strategy, we introduce a single context {a mathematical formula}vB, add the two edges from {a mathematical formula}vA to {a mathematical formula}vB, and initialize {a mathematical formula}core(vB) to B; furthermore, due to universal restrictions {a mathematical formula}∀R.C1∈knw(vA)⊆poss(vA) and {a mathematical formula}∀S.C2∈poss(vA), we add {a mathematical formula}C1 and {a mathematical formula}C2 to {a mathematical formula}poss(vB). Note that, due to the reuse of {a mathematical formula}vB, we cannot add {a mathematical formula}C1 to {a mathematical formula}knw(vB): not all domain elements represented by {a mathematical formula}vB necessarily satisfy {a mathematical formula}C1. We now continue our estimation for {a mathematical formula}vB: literal {a mathematical formula}∀R−.E is possible due to (33), concept C is possible due to (37), and literal {a mathematical formula}∃T.F2 is possible due to (38). Moreover, since {a mathematical formula}∀R−.E∈poss(vB), literal E is possible for {a mathematical formula}vA. Note that the consequence-based algorithm derives (65); however, {a mathematical formula}∀R−.E is not in {a mathematical formula}knw(vB) due to context reuse, so we do not have sufficient information to add E to {a mathematical formula}knw(vA); in other words, {a mathematical formula}knw(vA) provides us only with a lower bound on “truly” known literals. Finally, we introduce context {a mathematical formula}vF2 to satisfy {a mathematical formula}∃T.F2∈poss(vB) and thus obtain an admissible ϵ-free decomposition. Clearly, {a mathematical formula}wd(D1)=5 and {a mathematical formula}ln(D1)=3 so, when applied to {a mathematical formula}D1, our inference rules can derive {a mathematical formula}3⋅45 clauses, which is a much more accurate estimate.
+      </paragraph>
+      <paragraph>
+       The ϵ-free decomposition {a mathematical formula}D2 constructed from {a mathematical formula}O and q using the eager strategy is shown in Fig. 5b. The main difference compared to the previous case is that, due to the eager strategy, we now use distinct contexts, {a mathematical formula}v{B,C1} and {a mathematical formula}v{B}, to satisfy existential restrictions {a mathematical formula}∃R.B and {a mathematical formula}∃S.B at context {a mathematical formula}v{A}. Since literal {a mathematical formula}∀R.C1 is known at {a mathematical formula}v{A}, we can now add {a mathematical formula}C1 to the core of {a mathematical formula}v{B,C1}, which in turn allows us to make E known at {a mathematical formula}v{A}. Furthermore, literal {a mathematical formula}∃T.F2 is now not possible at {a mathematical formula}v{B}. In this case, we have {a mathematical formula}wd(D2)=2 and {a mathematical formula}ln(D1)=3 so, when applied to {a mathematical formula}D2, our inference rules can derive at most {a mathematical formula}3⋅42 clauses; thus, we have obtained an even better estimate of the running time of our consequence-based algorithm.
+      </paragraph>
+      <paragraph>
+       Reasoning with Horn-{a mathematical formula}ALCI ontologies is generally easier in practice: such ontologies admit a single canonical model, which eliminates all or-branching; however, due to and-branching, reasoning is still ExpTime-hard [17]. This is reflected in our notions of decompositions. In particular, if control {a mathematical formula}C uses the eager expansion strategy and allows for “sufficiently many” contexts, the {a mathematical formula}C-decomposition {a mathematical formula}D of a Horn ontology {a mathematical formula}O has zero width. Then, all possible literals in {a mathematical formula}D are also known, no or-branching is required, and so {a mathematical formula}D contains a complete solution to the reasoning problem. By reducing the maximum number of contexts in {a mathematical formula}C, however, we can “trade off” and-branching for or-branching. Then, {a mathematical formula}D does not necessarily have zero width, so further reasoning is needed; moreover, when applied to {a mathematical formula}D, our consequence-based algorithm derives only Horn clauses, and the size of the antecedent of each clause is bounded by {a mathematical formula}wd(D). Furthermore, as we discussed in Section 3.4.2, if {a mathematical formula}O is an {a mathematical formula}EL or a {a mathematical formula}DL-Litehorn ontology, the eager strategy introduces only linearly many contexts. Therefore, if {a mathematical formula}C uses the eager strategy, the {a mathematical formula}C-decomposition of {a mathematical formula}O has zero width and linear length, thus explaining the tractability of subsumption reasoning in {a mathematical formula}EL and {a mathematical formula}DL-Litehorn.
+      </paragraph>
+      <paragraph>
+       It is instructive to consider the case when {a mathematical formula}O and {a mathematical formula}Q contain only propositional clauses—that is, if all literals in {a mathematical formula}O and {a mathematical formula}Q are atomic concepts. Then, for each admissible ϵ-decomposition {a mathematical formula}D of {a mathematical formula}O and {a mathematical formula}Q, the {a mathematical formula}∃R.A-edges are not needed and can be removed, but the decomposition may still contain multiple contexts that are used to (dis)prove entailment of different queries in {a mathematical formula}Q. Thus, only the {a mathematical formula}Hyper rule is used when the consequence-based calculus is applied to {a mathematical formula}D, which essentially amounts to solving the propositional problem(s) using hyperresolution. However, since {a mathematical formula}knw(v) contains literals that deterministically follow from {a mathematical formula}O for each context v, hyperresolution is restricted to the unknown literals.
+      </paragraph>
+      <paragraph>
+       Please note that neither redundancy elimination not literal orderings are needed to obtain our complexity results: the results hold even if each context is associated with the empty literal ordering, and if no redundant clauses are eliminated. We leave a study of whether redundancy elimination and literal orderings can provide us with a tighter complexity bound for future work.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Formalization
+      </section-title>
+      <paragraph>
+       Throughout this section we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and a finite set of queries {a mathematical formula}Q; furthermore, we let L be the set of literals that occur in {a mathematical formula}O∪Q, and we let ϵ be a special symbol not occurring in L. We next formalize the notion of decompositions and then generalize the notion of context structure soundness to decompositions. In order to simplify the presentation, Definition 18, Definition 19 both consider ϵ-edges that are used only in Section 5 for the analysis of or-branching; however, in this section we subsequently consider only decompositions without ϵ-edges.
+      </paragraph>
+      <paragraph label="Definition 18">
+       A decomposition of{a mathematical formula}Oand{a mathematical formula}Qis a tuple{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉where{a mathematical formula}V⊆Xis a finite set of contexts, set{a mathematical formula}E⊆V×V×(L∃∪{ϵ})contains edges labeled by existential restrictions ({a mathematical formula}∃R.A-edges) or by ϵ (ϵ-edges), functions{a mathematical formula}core,knw,poss:V→2Llabel contexts with sets of literals, function ≺ assigns to each context{a mathematical formula}v∈Va literal ordering{a mathematical formula}≺v, and function{a mathematical formula}ϑ:Q→Vmaps queries to contexts. For each vertex{a mathematical formula}v∈V, let{a mathematical formula}uknw(v):=poss(v)∖knw(v). The length of{a mathematical formula}Dis{a mathematical formula}ln(D):=|V|, and the width of{a mathematical formula}Dis{a mathematical formula}wd(D):=maxv∈V|uknw(v)|. Decomposition{a mathematical formula}Dis ϵ-free if it contains no ϵ-edges.
+      </paragraph>
+      <paragraph label="Definition 19">
+       A decomposition{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉of{a mathematical formula}Oand{a mathematical formula}Qis sound if it satisfies all of the following conditions.
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A]for each{a mathematical formula}∃R.A-edge{a mathematical formula}〈v,u,∃R.A〉∈E.
+       </list-item>
+       <list-item>
+        {a mathematical formula}core(v)=core(u)for each ϵ-edge{a mathematical formula}〈v,u,ϵ〉∈E.
+       </list-item>
+       <list-item>
+        {a mathematical formula}O⊨core(v)⊑Lfor each context{a mathematical formula}v∈Vand each{a mathematical formula}L∈knw(v).
+       </list-item>
+      </list>
+      <paragraph>
+       Condition (N1) of Definition 19 is the same as in Definition 8; condition (N2) is relevant only for decompositions that are not ϵ-free and will be explained in Section 5; and condition (N3) says that known literals should hold in all domain elements represented by a specific context. Please note that condition (N3) imposes only an upper bound on the known literals; thus, {a mathematical formula}knw(v) can be obtained using a sound, but incomplete technique such as the one we present in Section 4.4.
+      </paragraph>
+      <paragraph>
+       Next, we extend the notion of context structure admissibility to decompositions. The ordering condition is the same as in context structures. Furthermore, to encapsulate all relevant parameters for the consequence-based algorithm, a decomposition contains a covering mapping, and the covering condition restates Definition 10. The ontology condition says that, if {a mathematical formula}O contains a clause {a mathematical formula}K⊑M and all of the literals in K are possible at context v, then the {a mathematical formula}Hyper rule can derive M and so all literals in M should be possible at v too. Finally, the structural condition (S1) captures the intuitive relationship between the core, known, and possible literals; condition (S2) ensures that a decomposition correctly estimates all consequences of the {a mathematical formula}Pred rule; and condition (S3) ensures that a decomposition contains sufficiently many contexts so that the {a mathematical formula}Succ rule is never applicable.
+      </paragraph>
+      <paragraph label="Definition 20">
+       Let{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be an ϵ-free decomposition of{a mathematical formula}Oand{a mathematical formula}Q. Let{a mathematical formula}v∈Vbe an arbitrary context of{a mathematical formula}D, and let{a mathematical formula}K⊑Mbe an arbitrary query; then, v is sound for{a mathematical formula}K⊑Mif{a mathematical formula}core(v)⊆K; v is complete for{a mathematical formula}K⊑Mif{a mathematical formula}K⊆poss(v)and M is{a mathematical formula}≺v-minimal; and v covers {a mathematical formula}K⊑Mif v is both sound and complete for{a mathematical formula}K⊑M. Finally,{a mathematical formula}Dis admissible if all of the following conditions are satisfied.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Structural conditions:
+       </list-item>
+       <list-item label="•">
+        Ordering condition: For each edge{a mathematical formula}〈v,u,∃R.A〉∈E, the literal ordering{a mathematical formula}≺uis R-admissible.
+       </list-item>
+       <list-item label="•">
+        Ontology condition: For each context{a mathematical formula}v∈Vand each clause{a mathematical formula}K⊑M∈Owith{a mathematical formula}K⊆poss(v), we have{a mathematical formula}M⊆poss(v).
+       </list-item>
+       <list-item label="•">
+        Covering condition: Each query{a mathematical formula}q∈Qis covered in the context{a mathematical formula}ϑ(q).
+       </list-item>
+      </list>
+      <paragraph>
+       We can apply the consequence-based algorithm to a sound, admissible, and ϵ-free decomposition {a mathematical formula}D as specified in Algorithm 21. Step 1 initializes each {a mathematical formula}S(v) with a clause {a mathematical formula}⊤⊑L for each known literal {a mathematical formula}L∈knw(v). This allows us to prove in Lemma 22 that the algorithm derives only clauses of the form {a mathematical formula}K⊑M with {a mathematical formula}K∪M⊆uknw(v), which is central to our complexity argument in Proposition 24. Please note that, if step 1 were to consider only the literals in {a mathematical formula}core(v), our algorithm would eventually derive a clause {a mathematical formula}⊤⊑L for each known literal {a mathematical formula}L∈knw(v), but this might involve clauses containing combinations of literals in {a mathematical formula}knw(v); thus, step 1 introduces derivation “shortcuts” for the known literals, which can improve the algorithm's performance in practice. Step 2 is analogous to the way the {a mathematical formula}Succ rule initializes contexts, and it ensures that each atomic concept B that can be propagated to a context u through existential or universal quantification is relevant for u. Step 3 ensures that each query {a mathematical formula}q∈Q is covered in context {a mathematical formula}ϑ(q). Finally, step 4 applies exhaustively the consequence-based inference rules, but without the {a mathematical formula}Succ rule. The latter is possible because {a mathematical formula}D is admissible and thus contains all relevant contexts, which allows us to prove in Lemma 23 that the {a mathematical formula}Succ rule is never applicable during the algorithm's execution. By combining this observation with the fact that {a mathematical formula}D is sound, in Proposition 24 we show that our algorithm is sound and complete.
+      </paragraph>
+      <paragraph label="Algorithm 21">
+       The ϵ-free decomposition-based reasoning algorithm for{a mathematical formula}ALCItakes a sound, admissible, and ϵ-free decomposition{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉of{a mathematical formula}Oand{a mathematical formula}Q. The algorithm (nondeterministically) computes a clause system{a mathematical formula}Sfor{a mathematical formula}Das follows.
+      </paragraph>
+      <list>
+       <list-item>
+        Set{a mathematical formula}S(v):={⊤⊑L|L∈knw(v)}for each context{a mathematical formula}v∈V.
+       </list-item>
+       <list-item>
+        For each edge{a mathematical formula}〈v,u,∃R.A〉∈Eand each concept{a mathematical formula}B∈uknw(u)such that{a mathematical formula}B=Aor{a mathematical formula}∀R.B∈poss(v), add{a mathematical formula}B⊑Bto{a mathematical formula}S(u).
+       </list-item>
+       <list-item>
+        For each query{a mathematical formula}K⊑M∈Q, let{a mathematical formula}v:=ϑ(K⊑M); then, for each literal{a mathematical formula}L∈K∖knw(u), add{a mathematical formula}L⊑Lto{a mathematical formula}S(v).
+       </list-item>
+       <list-item>
+        Exhaustively apply rules{a mathematical formula}Hyper,{a mathematical formula}Pred, and{a mathematical formula}ElimfromTable 3.
+       </list-item>
+      </list>
+      <paragraph label="Lemma 22">
+       Let{a mathematical formula}Sbe an arbitrary clause system encountered during step 4 ofAlgorithm 21, and let{a mathematical formula}v∈Vbe an arbitrary context in{a mathematical formula}D. Then, each clause in{a mathematical formula}S(v)is of the form{a mathematical formula}⊤⊑Lwith{a mathematical formula}L∈knw(v), or{a mathematical formula}K⊑Mwith{a mathematical formula}K∪M⊆uknw(v).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}S be a clause system at the beginning of step 4, and let {a mathematical formula}v∈V be an arbitrary context. By Definition 20, if context v covers some query {a mathematical formula}K⊑M, then {a mathematical formula}K⊆poss(v) holds; thus, each clause added to {a mathematical formula}S(v) in steps 1–3 is clearly of the required form. We next show that this property is preserved in step 4.Assume that the {a mathematical formula}Hyper rule is applicable to some clause {a mathematical formula}⨅i=1nAi⊑M∈O. By the induction assumption, each premise from {a mathematical formula}S(v) is of the form {a mathematical formula}Ki⊑Mi⊔Ai with {a mathematical formula}Ki∪Mi⊆uknw(v) and {a mathematical formula}Ai∈poss(v). Thus, {a mathematical formula}⨅i=1nAi⊆poss(v), so {a mathematical formula}M⊆poss(v) by the ontology condition of Definition 20. The {a mathematical formula}Hyper rule produces the clause {a mathematical formula}⨅i=1nKi⊑M⊔⨆i=1nMi. Now assume that there exists a literal {a mathematical formula}L∈M∩knw(v); then, {a mathematical formula}⊤⊑L∈ˆS(v) due to step 1 of Algorithm 21 and Lemma 12, which contradicts the assumption that the {a mathematical formula}Hyper rule is applicable. Hence, {a mathematical formula}M⊆uknw(v), and the produced clause is of the required form.Assume that the {a mathematical formula}Pred rule is applicable to an edge {a mathematical formula}〈v,u,∃R.A〉,∈E. By the induction assumption, the premises of the rule are of the form {a mathematical formula}K0⊑M0⊔∃R.A and {a mathematical formula}Ki⊑Mi⊔∀R.Bi, where {a mathematical formula}Ki∪Mi⊆uknw(v) for each {a mathematical formula}0⩽i⩽n. The {a mathematical formula}Pred rule produces the clause {a mathematical formula}⨅i=0nKi⊑⨆i=0nMi⊔⨆j=1mCj. Now for each {a mathematical formula}1⩽j⩽m, by the induction assumption we have {a mathematical formula}∀inv(R).Cj∈poss(u), so {a mathematical formula}Cj∈poss(v) by condition (S2) of Definition 20. Furthermore, if {a mathematical formula}Cj∈knw(v), then we have {a mathematical formula}⊤⊑Cj∈ˆS(v) due to step 1 of Algorithm 21 and Lemma 12, which contradicts the assumption that the {a mathematical formula}Pred rule is applicable; consequently, we have {a mathematical formula}Cj∈uknw(v). Hence, the clause produced by the rule is of the required form. □
+      </paragraph>
+      <paragraph label="Lemma 23">
+       The{a mathematical formula}Succrule is never applicable during step 4 ofAlgorithm 21.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}S be a clause system encountered in step 4 of Algorithm 21; let {a mathematical formula}v∈V be a context; let {a mathematical formula}K⊑M⊔∃R.A∈S(v) be a clause; and let {a mathematical formula}Bp be as specified in Table 3. By Lemma 22, we have {a mathematical formula}{B|∀R.B∈poss(v)}⊇Bp and {a mathematical formula}∃R.A∈poss(v). Thus, by condition (S3) of Definition 20, an edge {a mathematical formula}〈v,u,∃R.A〉∈E exists with {a mathematical formula}poss(u)⊇{A}∪{B|∀R.B∈poss(v)}⊇{A}∪Bp; furthermore, due to steps 1 and 2 of Algorithm 21 and Lemma 12, we have that {a mathematical formula}L⊑L∈ˆS(u) holds for each {a mathematical formula}L∈{A}∪Bp. Thus, the {a mathematical formula}Succ rule is not applicable to context v and clause {a mathematical formula}K⊑M⊔∃R.A in {a mathematical formula}S(v). □
+      </paragraph>
+      <paragraph label="Proposition 24">
+       Let{a mathematical formula}Sbe a clause system obtained by applyingAlgorithm 21to{a mathematical formula}O,{a mathematical formula}Q, and{a mathematical formula}D. Then, for each query{a mathematical formula}q∈Q, we have{a mathematical formula}O⊨qif and only if{a mathematical formula}q∈ˆS(ϑ(q)).
+      </paragraph>
+      <paragraph label="Proof">
+       Consider an arbitrary query {a mathematical formula}q=K⊑M∈ˆQ and let {a mathematical formula}v=ϑ(q); context v covers q by the covering condition of Definition 20, Decomposition {a mathematical formula}D is sound, so, by condition (N3) of Definition 19, we have {a mathematical formula}O⊨core(u)⊑L for each clause {a mathematical formula}⊤⊑L added to some {a mathematical formula}S(u) in step 1 of Algorithm 21; furthermore, clauses added in steps 2 and 3 are tautologies; consequently, {a mathematical formula}S is sound for {a mathematical formula}O. But then, since context v is sound for q, we have that {a mathematical formula}K⊑M∈ˆS(v) implies {a mathematical formula}O⊨K⊑M in the same way as in the proof of Proposition 13. Furthermore, for an arbitrary literal {a mathematical formula}L∈K, either {a mathematical formula}⊤⊑L is added to {a mathematical formula}S(v) in step 1, or {a mathematical formula}L⊑L is added to {a mathematical formula}S(v) in step 3; either way, we have {a mathematical formula}K⊑L∈ˆS(v), and this property is preserved during the algorithm's execution by Lemma 12. Finally, Lemma 23 ensures that {a mathematical formula}S is closed under the {a mathematical formula}Hyper, {a mathematical formula}Pred, and {a mathematical formula}Succ rules; but then, since context v is complete for q, we have that {a mathematical formula}O⊨K⊑M implies {a mathematical formula}K⊑M∈ˆS(v) by Theorem 6. □
+      </paragraph>
+      <paragraph>
+       Proposition 25 provides us with our ultimate goal in this section: it shows that decomposition width and length provide us with a more accurate estimate of the complexity of subsumption reasoning.
+      </paragraph>
+      <paragraph label="Proposition 25">
+       TerminationWhen applied to some{a mathematical formula}O,{a mathematical formula}Q, and a sound, admissible, and ϵ-free decomposition{a mathematical formula}Dof{a mathematical formula}Oand{a mathematical formula}Q,Algorithm 21terminates in time polynomial in{a mathematical formula}4wd(D)2,{a mathematical formula}ln(D), and{a mathematical formula}‖O‖+‖Q‖.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}d=wd(D) and {a mathematical formula}m=ln(D), and recall that {a mathematical formula}|L|⩽‖O‖+‖Q‖. We next show that the number of inferences is polynomial in {a mathematical formula}4d2, m, and {a mathematical formula}‖O‖+‖Q‖; this observation implies the claim of this proposition in the same way as in the proof of Proposition 14. By Lemma 22, for each context v, each clause in {a mathematical formula}S(v) is of the form
+       <list>
+        {a mathematical formula}⊤⊑L with {a mathematical formula}L∈knw(v), and set {a mathematical formula}S(v) can contain at most {a mathematical formula}|L| such clauses, or{a mathematical formula}K⊑M with {a mathematical formula}K∪M⊆uknw(v), and set {a mathematical formula}S(v) can contain at most {a mathematical formula}c=4d such clauses.For the
+       </list>
+       <paragraph>
+        {a mathematical formula}Hyper rule, a context {a mathematical formula}v∈V can be selected in at most m ways, and a clause {a mathematical formula}⨅iAi⊑M∈O can be selected in at most {a mathematical formula}|O| ways. For each {a mathematical formula}Ai∈uknw(v) there are at most c ways of choosing a matching clause {a mathematical formula}Ki⊑Mi⊔Ai∈S(v), and for each {a mathematical formula}Ai∈knw(v) there is exactly one way of choosing a matching clause {a mathematical formula}⊤⊑Ai∈S(v). Consequently, there are at most {a mathematical formula}cd ways of choosing the premises {a mathematical formula}Ki⊑Mi⊔Ai∈S(v).For the {a mathematical formula}Pred rule, there are at most {a mathematical formula}m2⋅|L| ways of choosing the edge {a mathematical formula}〈v,u,∃R.A〉∈E, at most {a mathematical formula}|L|+4d ways of choosing the clause {a mathematical formula}A⊓⨅iBi⊑⨆j∀inv(R).Cj∈S(u) or {a mathematical formula}⨅iBi⊑⨆j∀inv(R).Cj∈S(u), and, analogously to the {a mathematical formula}Hyper rule, {a mathematical formula}cd ways of choosing the premises {a mathematical formula}K0⊑M0⊔∃R.A∈S(v) and {a mathematical formula}Ki⊑Mi⊔∀R.A∈S(v). □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We would like to point out that the factor {a mathematical formula}4wd(D)2 in Proposition 25 is due to the fact that the {a mathematical formula}Hyper and the {a mathematical formula}Pred rules are based on hyperresolution: they fix one of the {a mathematical formula}4wd(D) clauses, and then try to find matches for each of the {a mathematical formula}wd(D) literals in the antecedent, which gives rise to {a mathematical formula}4wd(D)2 combinations. It is, however, possible to develop a binary version of these inference rules, in which case the algorithm's complexity would be polynomial in {a mathematical formula}4wd(D). In our experience, hyperresolution tends to be more effective than binary resolution in practice, which is why we opted for this style of presentation.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      ϵ-free decompositions and the hypertableau algorithm
+      <paragraph>
+       In this section we show that ϵ-free decompositions explain to an extent the performance of the hypertableau algorithm and are thus not specific to consequence-based algorithms. Since the hypertableau algorithm cannot answer several queries at once, we consider only the case when set {a mathematical formula}Q contains a single query of the form {a mathematical formula}A⊑⊥ for A an atomic concept—that is, when our goal is to determine the satisfiability of an atomic concept. The following theorem provides us with a key insight.
+      </paragraph>
+      <paragraph label="Theorem 26">
+       Let{a mathematical formula}Obe a normalized{a mathematical formula}ALCIontology, let{a mathematical formula}q=A⊑⊥, let D be a derivation of the hypertableau algorithm for{a mathematical formula}Oand the ABox{a mathematical formula}{A(a)}, and let{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be an admissible and ϵ-free decomposition of{a mathematical formula}Oand{a mathematical formula}{q}. Then, for each ABox{a mathematical formula}A0labeling a vertex of D, there exists a mapping{a mathematical formula}μ:ind(A0)→Vsuch that
+      </paragraph>
+      <list>
+       <list-item>
+        if{a mathematical formula}L(s)∈A0, then{a mathematical formula}L∈poss(μ(s)), and
+       </list-item>
+       <list-item>
+        if{a mathematical formula}R(s,t)∈A0, then an atomic concept A exists such that{a mathematical formula}〈μ(s),μ(t),∃R.A〉∈E.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We prove the claim by induction of the depth of D, but we strengthen property (b) to the following property ({a mathematical formula}b′):
+       <list>
+        if {a mathematical formula}R(s,t)∈A0, then some A exists such that {a mathematical formula}〈μ(s),μ(t),∃R.A〉∈E and {a mathematical formula}poss(μ(t))⊇{A}∪{B|∀R.B∈poss(μ(s))}.Assume that the
+       </list>
+       <paragraph>
+        {a mathematical formula}Hyp-rule derives {a mathematical formula}Lj(s)∈Aj from {a mathematical formula}{A1(s),…,Am(s)}⊆A0 and {a mathematical formula}A1⊓⋯⊓Am⊑L1⊔⋯⊔Ln∈O. By the induction assumption, we have {a mathematical formula}{A1,…,Am}⊆LA0(s)⊆poss(μ(s)); but then, since {a mathematical formula}D satisfies the ontology condition from Definition 20, we have {a mathematical formula}Lj∈poss(μ(s)), as required for property (a).Assume that the ∃-rule derives {a mathematical formula}{R(s,t),A(t)}⊆A1 from {a mathematical formula}∃R.A(s)∈A0. Then {a mathematical formula}∃R.A∈poss(μ(s)) holds by the induction assumption, so a context {a mathematical formula}u∈V exists that satisfies condition (S3) from Definition 20. We extend μ by defining {a mathematical formula}μ(t):=u. ABox {a mathematical formula}A1 and the extended mapping μ then clearly satisfy properties (a) and ({a mathematical formula}b′).Assume that the {a mathematical formula}∀+-rule derives {a mathematical formula}B(t)∈A1 from {a mathematical formula}{∀R.B(s),R(s,t)}⊆A0. By the induction assumption, property (a) then implies {a mathematical formula}∀R.B∈poss(μ(s)), and property ({a mathematical formula}b′) is satisfied for some atomic concept A, which immediately implies {a mathematical formula}B∈poss(μ(t)), as required for property (a).Assume that the {a mathematical formula}∀−-rule derives {a mathematical formula}B(s)∈A1 from {a mathematical formula}{[∀inv(R).B](t),R(s,t)}⊆A0. By the induction assumption, property (a) then implies {a mathematical formula}∀inv(R).B∈poss(μ(t)), and property ({a mathematical formula}b′) is satisfied for some atomic concept A. But then, condition (S2) from Definition 20 implies {a mathematical formula}B∈poss(μ(s)), as required for property (a). □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Intuitively, Theorem 26 says that each ABox {a mathematical formula}A0 labeling a derivation vertex can be “embedded” via some mapping μ into each admissible and ϵ-free decomposition {a mathematical formula}D of {a mathematical formula}O and {a mathematical formula}Q. Thus, for each individual {a mathematical formula}s∈ind(A0), set {a mathematical formula}poss(μ(s)) provides us with an upper bound on {a mathematical formula}LA0(s)—a set used in the definition of blocking. Now let {a mathematical formula}ℓ=maxv∈V|poss(v)|; then, for each context in {a mathematical formula}D we can have at most {a mathematical formula}2ℓ different labels, so the total number of different labels is bounded by {a mathematical formula}℘=ln(D)⋅2ℓ; in other words, ℘ provides us with an upper bound on the number of nonblocked individuals in {a mathematical formula}A0, which is analogous to Proposition 25. As we explained in Section 2.2, however, the number of indirectly blocked individuals can be exponentially larger due to dynamic blocking, but our decompositions do not analyze the computations caused by this effect.
+      </paragraph>
+      <paragraph>
+       Furthermore, assume that we modify the algorithm in two ways: (i) we explicitly maintain the mapping μ from Theorem 26, and (ii) whenever the ∃-rule introduces a new individual t, we immediately derive {a mathematical formula}L(t) for each literal {a mathematical formula}L∈knw(μ(t)). Provided that {a mathematical formula}D is sound, these changes do not affect the soundness of the algorithm, but they ensure that also {a mathematical formula}L(s)∈A0 holds in Theorem 26 for each individual {a mathematical formula}s∈ind(A0) and each literal {a mathematical formula}L∈knw(μ(s)). Then, the number of different labels for each context is bounded by {a mathematical formula}2wd(D), so the total number of labels and the number of nonblocked individuals is bounded by {a mathematical formula}ln(D)⋅2wd(D). Please note that the standard hypertableau algorithm would eventually derive all literals introduced in (ii), but since the order in which derivation rules are applied is don't-care nondeterministic, this may occur only after a substantial amount of work. In contrast, modification (ii) eagerly introduces all known facts, which, through “earlier” blocking, can improve the algorithm's performance.
+      </paragraph>
+      <paragraph>
+       One can analogously use decompositions to obtain an automata-based algorithm running in time polynomial in {a mathematical formula}ln(D) and {a mathematical formula}2wd(D), but we do not discuss the technical details any further for the sake of brevity.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      Constructing ϵ-free decompositions
+      <paragraph>
+       We now present our algorithm for computing ϵ-free decompositions that we outlined in Section 4.1. We first formalize the notion of a control, which encapsulates the parameters that guide our algorithm in the construction process. Please recall that X is the countably infinite set of all contexts that was fixed in Section 3.
+      </paragraph>
+      <paragraph label="Definition 27">
+       A control is a tuple{a mathematical formula}C=〈mln,initialization,strategy,precedence〉with the following components.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}mlnis a positive integer.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}initializationis a polynomial-time computable function that takes a normalized{a mathematical formula}ALCIontology{a mathematical formula}O, a finite set of queries{a mathematical formula}Q, and a positive integer{a mathematical formula}mln. The result of{a mathematical formula}initialization(O,Q,mln)is a pair{a mathematical formula}〈D,ϑ〉where
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}strategyis a polynomial-time computable function that takes an existential restriction{a mathematical formula}∃R.A, a set of atomic concepts{a mathematical formula}Bk, a decomposition{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉that contains a trivial context, and a positive integer{a mathematical formula}mln. The result of{a mathematical formula}strategy(∃R.A,Bk,D,mln)is a triple{a mathematical formula}〈u,core′,≺′〉where
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}precedenceis a strict total order on the set of all pairs of the form{a mathematical formula}〈∃R.A,v〉with{a mathematical formula}∃R.A∈ΣL∃and{a mathematical formula}v∈X.
+       </list-item>
+      </list>
+      <paragraph>
+       Intuitively, a control {a mathematical formula}C specifies which contexts to introduce for a given ontology and a set of queries. In particular, function {a mathematical formula}initialization specifies how to assign the queries to contexts; the function returns a context structure and a covering mapping that our algorithm will use as a starting point for the construction of an ϵ-free decomposition: the algorithm will immediately extend the given context structure into an ϵ-free decomposition by setting {a mathematical formula}poss(v):=knw(v):=core(v) for each context v. Furthermore, function {a mathematical formula}strategy is analogous to an expansion strategy and it specifies which contexts to introduce in order to satisfy existential and universal restrictions. Moreover, as we discussed in Section 4.1, the width and the length of a decomposition are not independent, and an exponential length may be needed to minimize the width. To overcome this problem, {a mathematical formula}mln imposes an upper bound on decomposition length, and {a mathematical formula}initialization and {a mathematical formula}strategy are both required to honor this restriction. In particular, {a mathematical formula}strategy is required to reuse a context whenever this bound has been exceeded; the decomposition being constructed will always contain a trivial context, so context reuse will always be possible. Finally, {a mathematical formula}precedence determines a unique order in which fresh contexts are introduced, so that the resulting ϵ-free decomposition is uniquely determined by {a mathematical formula}C, the ontology, and the set of queries.
+      </paragraph>
+      <paragraph>
+       Throughout the rest of section we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O, a finite set of queries {a mathematical formula}Q, and a control {a mathematical formula}C; furthermore, we let L be the set of literals that occur in {a mathematical formula}O∪Q. We are now ready to present our decomposition construction algorithm.
+      </paragraph>
+      <paragraph label="Algorithm 28">
+       The ϵ-free decomposition construction algorithm takes a control{a mathematical formula}C=〈mln,initialization,strategy,precedence〉,{a mathematical formula}O, and{a mathematical formula}Q, and it constructs an ϵ-free decomposition{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉of{a mathematical formula}Oand{a mathematical formula}Qas follows.
+      </paragraph>
+      <list>
+       <list-item>
+        Let{a mathematical formula}〈D,ϑ〉:=initialization(O,Q,mln)and then extend{a mathematical formula}Dto the decomposition{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉by setting{a mathematical formula}poss(v):=knw(v):=core(v)for each context{a mathematical formula}v∈V.
+       </list-item>
+       <list-item>
+        For each query{a mathematical formula}K⊑M∈Q, let{a mathematical formula}v:=ϑ(K⊑M); then, set{a mathematical formula}poss(v):=poss(v)∪K.
+       </list-item>
+       <list-item>
+        Exhaustively apply all rules fromTable 4apart from ruleS.
+       </list-item>
+       <list-item>
+        Stop and return{a mathematical formula}Dif ruleSis not applicable.
+       </list-item>
+       <list-item>
+        Let{a mathematical formula}〈∃R.A,v〉be the minimal pair w.r.t.{a mathematical formula}precedencesuch that ruleSis applicable to{a mathematical formula}∃R.Aand v; then, apply ruleSto{a mathematical formula}∃R.Aand v, and proceed to step 3.
+       </list-item>
+      </list>
+      <paragraph>
+       Algorithm 28 can be intuitively understood as follows. Step 1 uses function {a mathematical formula}initialization to introduce the contexts needed to cover the queries in {a mathematical formula}Q, and then it initializes the sets of known and possible literals for each context to be equal to the context's core. Next, for each query {a mathematical formula}q=K⊑M∈Q and each literal {a mathematical formula}L∈K, step 2 of Algorithm 28 adds L to {a mathematical formula}poss(ϑ(q)) in order to reflect the fact that step 3 of Algorithm 21 introduces a clause of the form {a mathematical formula}L⊑L for each such L. Finally, in steps 3–5, the algorithm applies the rules shown in Table 4. Rules {a mathematical formula}Hk and {a mathematical formula}Hp correspond to the {a mathematical formula}Hyper rule; rules {a mathematical formula}Pk and {a mathematical formula}Pp correspond to the {a mathematical formula}Pred rule; and rule S corresponds to the {a mathematical formula}Succ rule. Rules {a mathematical formula}Hk and {a mathematical formula}Pk, however, are applied to the sets of known literals, and so they determine a lower bound on the known consequences of rules {a mathematical formula}Hyper and {a mathematical formula}Pred, respectively. In contrast, rules {a mathematical formula}Hp and {a mathematical formula}Pp are applied to the sets of possible literals, and so they determine an upper bound on the possible consequences of rules {a mathematical formula}Hyper and {a mathematical formula}Pred, respectively. Finally, rule S introduces all possible contexts that may be introduced by the {a mathematical formula}Succ rule; the rule is applied with the lowest priority and in accordance with the precedence {a mathematical formula}precedence from {a mathematical formula}C in order to make the algorithm deterministic. In the rest of this section we prove the following theorem, which summarizes the formal properties of Algorithm 28.
+      </paragraph>
+      <paragraph label="Theorem 29">
+       When applied to{a mathematical formula}O,{a mathematical formula}Q, and{a mathematical formula}C,Algorithm 28terminates in time polynomial in{a mathematical formula}mlnand{a mathematical formula}‖O‖+‖Q‖. The result is a unique, sound, admissible, and ϵ-free decomposition{a mathematical formula}Dof{a mathematical formula}Oand{a mathematical formula}Qsatisfying{a mathematical formula}ln(D)⩽mln.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 be a decomposition obtained by the decomposition construction algorithm. Clearly, {a mathematical formula}D refers only to the literals occurring in {a mathematical formula}O∪Q, and it does not contain ϵ-edges; hence, {a mathematical formula}D is an ϵ-free decomposition of {a mathematical formula}O and {a mathematical formula}Q. We next prove the remaining claims of Theorem 29.
+      </paragraph>
+      <paragraph label="Claim 30">
+       The decomposition construction algorithm terminates in time polynomial in{a mathematical formula}mlnand{a mathematical formula}‖O‖+‖Q‖, and the resulting decomposition{a mathematical formula}Dsatisfies{a mathematical formula}ln(D)⩽mln.
+      </paragraph>
+      <paragraph label="Proof">
+       The decomposition construction algorithm is monotonic—that is, it never removes elements from the decomposition being constructed. Also, the precondition of each rule contains a negation of the rule's postcondition; thus, whenever a rule is applicable, its application actually modifies the decomposition.Now let {a mathematical formula}mD=mln2⋅|L|+mln⋅3⋅|L|. The decomposition construction algorithm can modify the decomposition at most {a mathematical formula}mD times: it can add each of the {a mathematical formula}mln2⋅|L| possible edges, and it can add {a mathematical formula}|L| concepts to {a mathematical formula}core(v), {a mathematical formula}knw(v), and {a mathematical formula}poss(v) for each context {a mathematical formula}v∈V. Thus, after at most {a mathematical formula}mD modifications, no rule can further modify the decomposition. Therefore, since each rule application modifies the decomposition, the decomposition construction algorithm terminates after at most {a mathematical formula}mD rule applications. Furthermore, due to the fact that each rule precondition refers to a bounded number of vertices, the preconditions of each rule instance can be checked in polynomial time. Since {a mathematical formula}strategy is computable in polynomial time, each rule can be applied in polynomial time as well.Thus, the algorithm requires a polynomial number of modifications of the decomposition, each of which requires polynomial time. Since {a mathematical formula}|L|&lt;‖O‖+‖Q‖, the algorithm can be implemented so that it runs in time polynomial in {a mathematical formula}mln and {a mathematical formula}‖O‖+‖Q‖. □
+      </paragraph>
+      <paragraph label="Claim 31">
+       Decomposition{a mathematical formula}Dis unique.
+      </paragraph>
+      <paragraph label="Proof">
+       In all rules apart from S, the negative precondition merely checks whether the rule's postcondition is satisfied. Therefore, the rules are monotonic and they have a unique least fixpoint—that is, the order of rule applications is irrelevant. Furthermore, rule S is applied only if no other rule is applicable, and {a mathematical formula}precedence ensures that the rule is applied in a deterministic way. Thus, the result of the decomposition construction algorithm is uniquely determined by {a mathematical formula}O, {a mathematical formula}Q, and {a mathematical formula}C. □
+      </paragraph>
+      <paragraph label="Claim 32">
+       Decomposition{a mathematical formula}Dis sound.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is by induction on rule application. After the initial step 1, we have {a mathematical formula}E=∅ and {a mathematical formula}core(v)=knw(v) for each context v, so {a mathematical formula}D is sound. We next consider all rules from Table 4.({a mathematical formula}Hk) If {a mathematical formula}K⊆knw(v) and {a mathematical formula}K⊑L∈O, then, by the induction hypothesis, we have {a mathematical formula}O⊨core(v)⊑K; but then, we clearly have {a mathematical formula}O⊨core(v)⊑L, so adding L to {a mathematical formula}knw(v) preserves soundness.({a mathematical formula}Pk) If {a mathematical formula}〈v,u,∃R.A〉∈E, {a mathematical formula}∃R.A∈knw(v), and {a mathematical formula}∀inv(R).C∈knw(u), then, by the induction hypothesis, all of the following entailments hold:{a mathematical formula} These entailments imply {a mathematical formula}O⊨core(v)⊑∃R.∀inv(R).C, which then implies {a mathematical formula}O⊨core(v)⊑C. Consequently, adding C to {a mathematical formula}knw(v) preserves soundness.(S) By the induction hypothesis, we have {a mathematical formula}O⊨core(v)⊑∀R.B for each {a mathematical formula}B∈Bk, so {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[A⊓Bk] holds; but then, {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A] holds since we have {a mathematical formula}core(u)=core′⊆{A}∪Bk by the requirement on {a mathematical formula}strategy in Definition 27. Consequently, adding the edge {a mathematical formula}〈v,u,∃R.A〉 to {a mathematical formula}E preserves soundness.Since no other rule affects {a mathematical formula}E or {a mathematical formula}knw, this concludes the proof of this claim. □
+      </paragraph>
+      <paragraph label="Claim 33">
+       Decomposition{a mathematical formula}Dis admissible.
+      </paragraph>
+      <paragraph label="Proof">
+       We check that {a mathematical formula}D satisfies all conditions of Definition 20. The ontology condition and the structural conditions (S2) and (S3) hold trivially since the construction is closed under rules {a mathematical formula}Hp, {a mathematical formula}Pp, and S, respectively.For condition (S1), we show that {a mathematical formula}core(v)⊆knw(v) and {a mathematical formula}knw(v)⊆poss(v) hold for each context {a mathematical formula}v∈V. The first inclusion holds because each set {a mathematical formula}knw(v) is initialized in step 1 and in rule S with {a mathematical formula}knw(v):=core(v), and {a mathematical formula}core(v) remains constant during the construction while {a mathematical formula}knw(v) only increases. The second inclusion holds because each set {a mathematical formula}poss(v) is initialized with {a mathematical formula}poss(v):=knw(v), and the rules {a mathematical formula}Hp and {a mathematical formula}Pp extending {a mathematical formula}poss(v) are applicable whenever the rules {a mathematical formula}Hk and {a mathematical formula}Pk extending {a mathematical formula}knw(v) are applicable.The initial context structure produced by {a mathematical formula}initialization contains no edges, and whenever an edge {a mathematical formula}〈v,u,∃R.A〉 is added to {a mathematical formula}E in rule S, {a mathematical formula}strategy ensures that {a mathematical formula}≺u is R-admissible. Thus, the ordering condition holds throughout the construction.Finally, for the covering condition, consider an arbitrary query {a mathematical formula}K⊑M∈Q. After step 2, context {a mathematical formula}v=ϑ(K⊑M) covers {a mathematical formula}K⊑M in the sense of Definition 7—that is, {a mathematical formula}core(v)⊆K and M is {a mathematical formula}≺v-minimal. Then, step 2 ensures also that {a mathematical formula}K⊆poss(v); thus, v covers {a mathematical formula}K⊑M, as required by Definition 20. □
+      </paragraph>
+      <paragraph>
+       We are now ready to combine all of the results presented thus far and formulate what we believe to be the first result on fixed-parameter tractability of subsumption reasoning in description logics.
+      </paragraph>
+      <paragraph label="Theorem 34">
+       For each control{a mathematical formula}C, the following problem is fixed-parameter tractable:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Inputs: a normalized{a mathematical formula}ALCIontology{a mathematical formula}Oand a set of queries{a mathematical formula}Q
+       </list-item>
+       <list-item label="•">
+        Parameter: an integer{a mathematical formula}mwd
+       </list-item>
+       <list-item label="•">
+        Problem: return “yes” if the{a mathematical formula}C-decomposition of{a mathematical formula}Oand{a mathematical formula}Qhas width at most{a mathematical formula}mwd, and if also{a mathematical formula}O⊨K⊑Mholds for each query{a mathematical formula}K⊑M∈Q
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Immediate by Theorem 29, and Proposition 24, Proposition 25. □
+      </paragraph>
+      <paragraph>
+       Please note that Theorem 34 requires the input ontology to be normalized. As we mentioned in Section 2.1, many different normalizing transformations have been proposed in the literature, and they can produce syntactically very different ontologies. Thus, for an ontology that is not normalized, the width, the length, and our fixed-parameter tractability results implicitly depend on the normalization transformation. Investigating how normalization affects width and length, as well as what kind of transformation can minimize these two parameters is interesting, but we leave it for our future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Analyzing or-branching using general decompositions
+     </section-title>
+     <paragraph>
+      We now generalize our framework to also allow for a quantitative analysis of or-branching. We first discuss the intuitions behind our ideas, and then we proceed with a formal presentation of our results.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Intuitions
+      </section-title>
+      <paragraph label="Example 35">
+       Let{a mathematical formula}Obe the ontology consisting of axioms(87), (88), (89), (90), (91), (92), (93), and let{a mathematical formula}q=A⊑E. One can readily check that{a mathematical formula}O⊨qholds.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The {a mathematical formula}C-decomposition {a mathematical formula}D1 of {a mathematical formula}O and q obtained using the eager strategy is shown in Fig. 6a, and the inferences of Algorithm 21 on {a mathematical formula}D1 are shown in Fig. 6b. Clause (100) stands for clauses with {a mathematical formula}M⊆{C0,…,Cn,D0,…,Dn,∀R−.E}; exactly which clauses of this form are derived depends on the literal ordering {a mathematical formula}≺v2. For example, with{a mathematical formula} we derive a linear number of clauses, and with {a mathematical formula}∀R−.E≺v2C0≺v2D0≺v2⋯≺v2Cn≺v2Dn we derive an exponential number of clauses. In practice, it is difficult to identify a literal ordering that minimizes the number of derived clauses, so the only guarantee on the algorithm's performance is exponential in n; this is in agreement with the fact that {a mathematical formula}wd(D1)=2n+3.
+      </paragraph>
+      <paragraph>
+       Clauses in {a mathematical formula}S(v2) essentially solve a propositional problem consisting of clauses (89), (90), (91), (92), (93) and {a mathematical formula}α=B1⊓B2⊑∀R−.E: the antecedent of α captures the information that can be propagated from {a mathematical formula}v1 to {a mathematical formula}v2, and the consequent of α captures the information that can be propagated from {a mathematical formula}v2 to {a mathematical formula}v1. As we explained in Section 2.4, the treewidth of propositional problems serves as a measure of the difficulty of such problems, and the bottom-up algorithm provides an FPT decision procedure for propositional satisfiability. Thus, to explain the difficulty of or-branching in description logics, we next incorporate tree decompositions into our framework. To this end, we replace context {a mathematical formula}v2 with a tree decomposition of the mentioned propositional problem, where we label the newly introduced edges by a special symbol ϵ; similarly to edges in a tree decomposition, our ϵ-edges will always be symmetric. Decomposition {a mathematical formula}D2 obtained in this way is shown in Fig. 7a. The set of contexts {a mathematical formula}{v20,…,v2n} obtained by replacing {a mathematical formula}v2 is called an ϵ-component of {a mathematical formula}D2. Intuitively, each ϵ-component {a mathematical formula}W of {a mathematical formula}D2 corresponds to one or more domain elements in a model of {a mathematical formula}O, and each context {a mathematical formula}v∈W provides a partial interpretation for the literals in {a mathematical formula}poss(v). Condition (N2) of Definition 19 requires all contexts in an ϵ-component {a mathematical formula}W of a sound decomposition to have the same core; thus, all partial descriptions of the elements represented by {a mathematical formula}W must coincide on the “assumed” literals. However, the contexts in {a mathematical formula}W can differ on known and possible literals, which will allow us to reduce decomposition width.
+      </paragraph>
+      <paragraph>
+       We will extend the notion of decomposition admissibility so that it guarantees completeness of a modified consequence-based algorithm shown in Table 5 on page 57. The {a mathematical formula}Hyper and {a mathematical formula}Pred rules are as in Table 3, but modified so that a clause is added to some {a mathematical formula}S(v) only if all of its literals are possible at context v. In addition, we introduce a new {a mathematical formula}Epsilon rule, which essentially performs hyperresolution across ϵ-edges: given an edge {a mathematical formula}〈v,u,ϵ〉, a clause in {a mathematical formula}⨅i=1nLi⊑M∈S(u) is chosen such that all literals in M are possible at context v, each literal {a mathematical formula}Li is resolved away using a clause in {a mathematical formula}S(v), and the result is added to {a mathematical formula}S(v). The {a mathematical formula}Epsilon rule can be seen as a practical variant of the bottom-up algorithm for propositional satisfiability described in Section 2.4.
+      </paragraph>
+      <paragraph>
+       The inferences of our new algorithm on {a mathematical formula}O, q, and {a mathematical formula}D2 are shown in Fig. 7b. As before, we first initialize each {a mathematical formula}S(v) with {a mathematical formula}⊤⊑L for each literal L known at context v, thus obtaining clauses (103)–(113). Moreover, for each edge {a mathematical formula}〈v,u,ϵ〉 and each literal L that is possible at both u and v, we initialize {a mathematical formula}S(u) and {a mathematical formula}S(v) with {a mathematical formula}L⊑L, thus obtaining clauses (114)–(125). Finally, using rules from Table 5 on page 57, we derive clauses (126)–(138). At each context {a mathematical formula}v2i with {a mathematical formula}0⩽i&lt;n, inferences follow the same pattern: using clauses (90) and (91) from {a mathematical formula}O, we derive a clause of the form {a mathematical formula}⊤⊑Ci+1⊔Di+1, which the {a mathematical formula}Epsilon rule then “transfers” over an ϵ-edge into context {a mathematical formula}v2i+1. Finally, in context {a mathematical formula}v2n we derive clause (137), and then by the {a mathematical formula}Pred rule we derive the goal clause (138). In order to ensure that the {a mathematical formula}Epsilon rule derives all relevant consequences, our notion of decomposition admissibility imposes an additional restriction on the literal orderings of contexts. For example, clause (128) is relevant for the {a mathematical formula}Epsilon rule and is derived using the {a mathematical formula}Hyper rule from clause (127); however, to facilitate the latter derivation, concepts {a mathematical formula}D1 and {a mathematical formula}C1 must not be larger in {a mathematical formula}≺v20 than concept {a mathematical formula}D0. Thus, the new restriction on literal orderings is analogous to R-admissibility for {a mathematical formula}∃R.A-edges, but adapted to ϵ-edges. To estimate the complexity of our algorithm, we note that {a mathematical formula}wd(D2)=4; hence, the number of clauses derived at each context is bounded by {a mathematical formula}4wd(D2)=44, and this bound does not depend on the literal ordering or the number n. In this way, {a mathematical formula}wd(D2) provides us with a better estimate of the or-branching involved in deciding {a mathematical formula}O⊨q.
+      </paragraph>
+      <paragraph>
+       As in Section 4, the definitions of soundness and admissibility for general decompositions do not directly provide us with an algorithm for computing decompositions. As a possible remedy, in Section 5.3 we introduce the notion of an ϵ-refinement, which is obtained from an ϵ-free decomposition by replacing each context v with a tree decomposition of the propositional problem associated with v. In our example, {a mathematical formula}D2 is an ϵ-refinement of {a mathematical formula}D1. We will show that computing an ϵ-refinement involves determining a linear number of tree decompositions and is thus fixed-parameter tractable w.r.t. decomposition width.
+      </paragraph>
+      <paragraph>
+       It is again instructive to consider the case when {a mathematical formula}O and {a mathematical formula}Q contain only propositional clauses. Then, for each admissible decomposition {a mathematical formula}D of {a mathematical formula}O and {a mathematical formula}Q, the {a mathematical formula}∃R.A-edges are not needed and can be removed, but {a mathematical formula}D can contain several ϵ-components, each of which corresponds to a tree decomposition of a subset of {a mathematical formula}O but with the known literals removed. Since the known literals are removed, the width of such {a mathematical formula}D can be lower than the treewidth of {a mathematical formula}O, and so our decompositions generalize tree decompositions of propositional problems. Furthermore, only the {a mathematical formula}Hyper and {a mathematical formula}Epsilon are used when our consequence-based calculus is applied to such {a mathematical formula}D, and the calculus can be seen as a practical variant of the algorithm for propositional logic presented in Section 2.4.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Formalization
+      </section-title>
+      <paragraph>
+       Decompositions and decomposition soundness (with or without ϵ-edges) were already introduced in Section 4.2, so we next focus on admissibility of decompositions with ϵ-edges. In the rest of this section we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O and a finite set of queries {a mathematical formula}Q; furthermore, we let L be the set of literals that occur in {a mathematical formula}O∪Q.
+      </paragraph>
+      <paragraph label="Definition 36">
+       Let{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be a decomposition of{a mathematical formula}Oand{a mathematical formula}Q, and let{a mathematical formula}Wbe an arbitrary set such that{a mathematical formula}W⊆V. Then, let{a mathematical formula}poss(W):=⋃w∈Wposs(w), and let{a mathematical formula}knw(W)and{a mathematical formula}core(W)be defined analogously. The ϵ-projection of{a mathematical formula}Dw.r.t.{a mathematical formula}W, written{a mathematical formula}DW, is the graph whose set of vertices is{a mathematical formula}Wand that contains the undirected edge{a mathematical formula}{u,v}for each{a mathematical formula}〈u,v,ϵ〉∈Ewith{a mathematical formula}u,v∈W. Set{a mathematical formula}Wis ϵ-connected if{a mathematical formula}DWis connected; furthermore,{a mathematical formula}Wis an ϵ-component of{a mathematical formula}Dif{a mathematical formula}Wis ϵ-connected, and no ϵ-connected set of vertices{a mathematical formula}W′exists such that{a mathematical formula}W⊊W′⊆V.Let{a mathematical formula}v∈Vbe an arbitrary context of{a mathematical formula}D, let{a mathematical formula}Wbe the ϵ-component of{a mathematical formula}Dsuch that{a mathematical formula}v∈W, and let{a mathematical formula}K⊑Mbe an arbitrary query; then, v is sound for{a mathematical formula}K⊑Mif{a mathematical formula}core(v)⊆K; v is complete for{a mathematical formula}K⊑Mif{a mathematical formula}K⊆poss(v),{a mathematical formula}M∩poss(W)⊆poss(v), and M is{a mathematical formula}≺v-minimal; and v covers {a mathematical formula}K⊑Mif v is both sound and complete for{a mathematical formula}K⊑M. Finally,{a mathematical formula}Dis admissible if all of the following conditions are satisfied.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Epsilon conditions:
+       </list-item>
+       <list-item label="•">
+        Structural conditions:
+       </list-item>
+       <list-item label="•">
+        Ordering conditions:
+       </list-item>
+       <list-item label="•">
+        Ontology condition: For each ϵ-component{a mathematical formula}Wof{a mathematical formula}Dand each clause{a mathematical formula}K⊑M∈Owith{a mathematical formula}K⊆poss(W), a context{a mathematical formula}w∈Wexists such that{a mathematical formula}K∪M⊆poss(w).
+       </list-item>
+       <list-item label="•">
+        Covering condition: Each query{a mathematical formula}q∈Qis covered in the context{a mathematical formula}ϑ(q).
+       </list-item>
+      </list>
+      <paragraph>
+       Definition 36 can be intuitively understood as follows. The set of contexts in {a mathematical formula}D can be partitioned into ϵ-components—maximal sets of contexts connected by ϵ-edges. Each ϵ-component can be understood as a tree decomposition of a propositional problem, so conditions (E1)–(E3) require the contexts in the ϵ-component to form an undirected tree satisfying the connectedness condition (T2) of tree decompositions. Structural conditions (S1)–(S3) extend the respective conditions from Definition 20. To understand condition (S2), let {a mathematical formula}〈w,u,∃R.A〉 be an arbitrary edge of {a mathematical formula}D, let {a mathematical formula}U be the ϵ-component of {a mathematical formula}D that u belongs to, and assume that {a mathematical formula}∀inv(R).C is possible at some context {a mathematical formula}u′∈U different from u. Since {a mathematical formula}u′ and u describe the same elements in a model of {a mathematical formula}O, the elements represented by context v might need to satisfy C, which is taken care of by the {a mathematical formula}Pred rule. To ensure that the rule can be applied to edge {a mathematical formula}〈w,u,∃R.A〉, condition (S2) requires {a mathematical formula}∀inv(R).C to be possible at u, and C to be possible at v (just like in Definition 20). To understand condition (S3), let {a mathematical formula}W be an arbitrary ϵ-component of {a mathematical formula}D, assume that {a mathematical formula}∃R.A is possible at some context {a mathematical formula}w′∈W, and assume that {a mathematical formula}D contains an edge {a mathematical formula}〈w,u,∃R.A〉 with w different from {a mathematical formula}w′. Contexts w and {a mathematical formula}w′ jointly describe elements of a model of {a mathematical formula}O, so the existential restriction {a mathematical formula}∃R.A also “applies” to w and the mentioned edge as well; thus, all literals {a mathematical formula}∀R.B possible at {a mathematical formula}W must be possible at w, and all corresponding concepts B must be possible at u in order to satisfy the semantics of {a mathematical formula}∃R.A-edges. The ontology condition is modified in similar vein; in particular, assume that {a mathematical formula}D contains an ϵ-component {a mathematical formula}W such that each antecedent literal of a clause {a mathematical formula}K⊑M∈O is possible at some context in {a mathematical formula}W; then, the domain elements represented by {a mathematical formula}W may satisfy K; but then, we must find a context {a mathematical formula}w∈W in which we can apply the {a mathematical formula}Hyper rule to {a mathematical formula}K⊑M. The notion of covering is extended analogously. Finally, the ordering condition restricts the literal ordering as we discussed in Section 5.1. Please note that the notions of admissibility introduced in Definition 20, Definition 36 coincide on ϵ-free decompositions.
+      </paragraph>
+      <paragraph>
+       To generalize our consequence-based algorithm as described in Section 5.1, we modify the {a mathematical formula}Hyper and the {a mathematical formula}Pred rules as shown in Table 5 (the modifications are underlined), and we add a new {a mathematical formula}Epsilon rule. Theorem 37 provides us with the completeness claim for the new algorithm; the proof is technically involved, so we defer it to Appendix B. In addition, Proposition 38 provides us with a matching soundness claim.
+      </paragraph>
+      <paragraph label="Theorem 37">
+       CompletenessLet{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be an admissible decomposition of{a mathematical formula}Oand{a mathematical formula}Q, and let{a mathematical formula}Sbe a clause system for{a mathematical formula}Dsuch that
+      </paragraph>
+      <list>
+       <list-item>
+        no inference rule inTable 5is applicable to{a mathematical formula}S,
+       </list-item>
+       <list-item>
+        {a mathematical formula}⊤⊑L∈ˆS(v)for each context{a mathematical formula}v∈Vand each literal{a mathematical formula}L∈knw(v),
+       </list-item>
+       <list-item>
+        {a mathematical formula}B⊑B∈ˆS(u)for each edge{a mathematical formula}〈v,u,∃R.A〉∈Eand each concept{a mathematical formula}B∈poss(u)such that either{a mathematical formula}B=Aor{a mathematical formula}∀R.B∈poss(v), and
+       </list-item>
+       <list-item>
+        {a mathematical formula}L⊑L∈ˆS(u)for each edge{a mathematical formula}〈v,u,ϵ〉∈Eand each literal{a mathematical formula}L∈poss(v)∩poss(u).
+       </list-item>
+      </list>
+      <paragraph label="Proposition 38">
+       SoundnessLet{a mathematical formula}D=〈V,E,core,≺〉be a sound decomposition of{a mathematical formula}Oand{a mathematical formula}Q, and let{a mathematical formula}S1be a clause system for{a mathematical formula}Dsound for{a mathematical formula}O. Then, each clause system{a mathematical formula}S2obtained by applying an inference rule fromTable 5to{a mathematical formula}Dand{a mathematical formula}S1is sound for{a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Proof">
+       Rules {a mathematical formula}Hyper and {a mathematical formula}Pred in Table 5 are more restrictive than the corresponding rules in Table 3, so the proof of Proposition 9 applies. Assume that the {a mathematical formula}Epsilon rule is applied as shown in Table 5, so we show that{a mathematical formula} To this end, let {a mathematical formula}I=〈ΔI,⋅I〉 be an arbitrary model of {a mathematical formula}O and consider an arbitrary element {a mathematical formula}δ∈ΔI such that {a mathematical formula}δ∈[core(v)⊓⨅i=1nKi]I. Now {a mathematical formula}S1 is sound for {a mathematical formula}O, so, for each {a mathematical formula}1⩽i⩽n, we have {a mathematical formula}I⊨core(v)⊓Ki⊑Mi⊔Li, which together with our assumption implies {a mathematical formula}δ∈(Mi⊔Li)I. If {a mathematical formula}δ∈MiI for some {a mathematical formula}1⩽i⩽n, then {a mathematical formula}δ∈(⨆i=1nMi)I. Otherwise, we have {a mathematical formula}δ∈LiI for each {a mathematical formula}1⩽i⩽n; but then, {a mathematical formula}I⊨core(u)⊓⨅i=1nLi⊑M holds by the induction assumption and the fact that {a mathematical formula}S1 is sound for {a mathematical formula}O, and {a mathematical formula}core(v)=core(u) holds by the soundness condition (N2); together, these observations imply {a mathematical formula}δ∈MI. Either way, {a mathematical formula}δ∈(M⊔⨆i=1nMi)I holds. Since δ was chosen arbitrarily, we have {a mathematical formula}I⊨core(v)⊓⨅i=1nKi⊑M⊔⨆i=1nMi, as required. □
+      </paragraph>
+      <paragraph>
+       We next extend the consequence-based algorithm for ϵ-free decompositions (i.e., Algorithm 21) so that it can be applied to decompositions with ϵ-edges. Apart from applying the modified rules from Table 5, the only other difference is in step 3, which is needed for the {a mathematical formula}Epsilon rule. The {a mathematical formula}Elim rule and redundancy elimination are the same as in Section 3.3.
+      </paragraph>
+      <paragraph label="Algorithm 39">
+       The decomposition-based reasoning algorithm for{a mathematical formula}ALCItakes{a mathematical formula}O,{a mathematical formula}Q, and a sound and admissible decomposition{a mathematical formula}Dof{a mathematical formula}Oand{a mathematical formula}Q. The algorithm (nondeterministically) computes a clause system{a mathematical formula}Sfor{a mathematical formula}Das follows.
+      </paragraph>
+      <list>
+       <list-item>
+        Set{a mathematical formula}S(v):={⊤⊑L|L∈knw(v)}for each context{a mathematical formula}v∈V.
+       </list-item>
+       <list-item>
+        For each edge{a mathematical formula}〈v,u,∃R.A〉∈Eand each concept{a mathematical formula}B∈uknw(u)such that{a mathematical formula}B=Aor{a mathematical formula}∀R.B∈poss(v), add{a mathematical formula}B⊑Bto{a mathematical formula}S(u).
+       </list-item>
+       <list-item>
+        For each ϵ-edge{a mathematical formula}〈v,u,ϵ〉∈Eand each literal{a mathematical formula}L∈poss(v)∩uknw(u), add{a mathematical formula}L⊑Lto{a mathematical formula}S(u).
+       </list-item>
+       <list-item>
+        For each query{a mathematical formula}K⊑M∈Q, let{a mathematical formula}v:=ϑ(K⊑M); then, for each literal{a mathematical formula}L∈K∖knw(v), add{a mathematical formula}L⊑Lto{a mathematical formula}S(v).
+       </list-item>
+       <list-item>
+        Exhaustively apply rules{a mathematical formula}Hyper,{a mathematical formula}Pred, and{a mathematical formula}EpsilonfromTable 5and rule{a mathematical formula}ElimfromTable 3.
+       </list-item>
+      </list>
+      <paragraph>
+       Lemma 12 (showing that if {a mathematical formula}K⊑M∈ˆS(v) holds at some point during algorithm's execution, then this also holds at all future points) clearly applies to Algorithm 39 as well: the {a mathematical formula}Epsilon rule only adds clauses, and the {a mathematical formula}Elim rule is the same as in Section 3.2. Furthermore, the proof of Lemma 22 (showing that each clause in {a mathematical formula}S(v) is of the form {a mathematical formula}⊤⊑L with {a mathematical formula}L∈knw(v) or of the form {a mathematical formula}K⊑M with {a mathematical formula}K∪M⊆uknw(v)) can be straightforwardly extended to Algorithm 39. This allows us to establish in Proposition 40 the soundness and completeness of our algorithm, and then determine in Proposition 41 the algorithm's complexity.
+      </paragraph>
+      <paragraph label="Proposition 40">
+       Let{a mathematical formula}Sbe a clause system obtained by applyingAlgorithm 39to{a mathematical formula}O,{a mathematical formula}Q, and{a mathematical formula}D. Then, for each query{a mathematical formula}q∈Q, we have{a mathematical formula}O⊨qif and only if{a mathematical formula}q∈ˆS(ϑ(q)).
+      </paragraph>
+      <paragraph label="Proof">
+       By Lemma 12, steps 2–4 ensure conditions (I2)–(I4) and step 5 ensures the required condition on the queries in Theorem 37; then, the claim of this proposition follows from Theorem 37 and Proposition 38 as in the proof of Proposition 24. □
+      </paragraph>
+      <paragraph label="Proposition 41">
+       TerminationAlgorithm 39terminates in time polynomial in{a mathematical formula}4wd(D)2,{a mathematical formula}ln(D), and{a mathematical formula}‖O‖+‖Q‖.
+      </paragraph>
+      <paragraph label="Proof">
+       Analogous to the proof of Proposition 25. □
+      </paragraph>
+     </section>
+     <section label="5.3">
+      Constructing decompositions via ϵ-refinement
+      <paragraph>
+       We next formalize the notion of ϵ-refinement of an ϵ-free decomposition {a mathematical formula}D that we described in Section 5.1.
+      </paragraph>
+      <paragraph label="Definition 42">
+       Let{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be an ϵ-free decomposition of{a mathematical formula}Oand{a mathematical formula}Q. For each edge{a mathematical formula}〈v,u,∃R.A〉∈E, sets{a mathematical formula}δv,u∃R.Aand{a mathematical formula}ϱv,u∃R.Aare defined as follows:{a mathematical formula}Function{a mathematical formula}Hfor{a mathematical formula}Dmaps each context{a mathematical formula}v∈Vto anL-hypergraph{a mathematical formula}Hvsuch that each{a mathematical formula}Hvis the smallest set satisfying all of the following conditions:
+       <list>
+        {a mathematical formula}(K∪M)∩uknw(v)∈Hvfor each context{a mathematical formula}v∈Vand each clause{a mathematical formula}K⊑M∈Osuch that{a mathematical formula}K∪M⊆poss(v),{a mathematical formula}δv,u∃R.A∩uknw(v)∈Hvand{a mathematical formula}ϱv,u∃R.A∩uknw(u)∈Hufor each edge{a mathematical formula}〈v,u,∃R.A〉∈E, and{a mathematical formula}(K∪M)∩uknw(v)∈Hvfor each query{a mathematical formula}q=K⊑M∈Qand context{a mathematical formula}v=ϑ(q).A decomposition
+       </list>
+       <paragraph>
+        {a mathematical formula}D′=〈V′,E′,core′,knw′,poss′,≺′,ϑ′〉of{a mathematical formula}Oand{a mathematical formula}Qis an ϵ-refinement of{a mathematical formula}Dif there exists a function{a mathematical formula}Tmapping each context{a mathematical formula}v∈Vto a tree decomposition{a mathematical formula}Tv=〈Vv,Ev,Lv〉of{a mathematical formula}Hvsuch that{a mathematical formula}Vv∩Vw=∅and{a mathematical formula}Vv⊆Xfor all{a mathematical formula}v,w∈Vwith{a mathematical formula}v≠w, and all of the following conditions are satisfied.
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}V′=⋃v∈VVv.
+        </list-item>
+        <list-item>
+         For each context{a mathematical formula}v∈Vand each vertex{a mathematical formula}w∈Vv, we have{a mathematical formula}
+        </list-item>
+        <list-item>
+         For all{a mathematical formula}v,u∈V, each{a mathematical formula}w∈Vv, and each{a mathematical formula}z∈Vu, we have{a mathematical formula}〈w,z,ϵ〉∈E′if and only if{a mathematical formula}v=uand{a mathematical formula}{w,z}∈Ev.
+        </list-item>
+        <list-item>
+         For all{a mathematical formula}v,u∈V, each{a mathematical formula}w∈Vv, each{a mathematical formula}z∈Vu, and each literal{a mathematical formula}∃R.A∈L, we have{a mathematical formula}〈w,z,∃R.A〉∈E′if and only if{a mathematical formula}
+        </list-item>
+        <list-item>
+         For each context{a mathematical formula}v∈V, each vertex{a mathematical formula}w∈Vv, and all literals{a mathematical formula}L1,L2∈L, we have{a mathematical formula}L1≺w′L2if and only if{a mathematical formula}L1≺vL2and no ϵ-edge{a mathematical formula}〈u,w,ϵ〉∈E′exists such that{a mathematical formula}L2∈poss′(u)∩poss′(w).
+        </list-item>
+        <list-item>
+         For each query{a mathematical formula}q=K⊑M∈Q, context{a mathematical formula}v=ϑ(q), and context{a mathematical formula}w=ϑ′(q), we have{a mathematical formula}w∈Vvand{a mathematical formula}
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Definition 42 can be intuitively understood as follows. Each hypergraph {a mathematical formula}Hv captures the structure of a propositional problem that must be solved at context v: condition (R1) ensures that, for each context v of {a mathematical formula}D, hypergraph {a mathematical formula}Hv contains the “unknown part” of each clause {a mathematical formula}K⊑M∈O for which all literals are possible at v; furthermore, condition (R2) ensures that, for each edge {a mathematical formula}〈v,u,∃R.A〉 of {a mathematical formula}D, hypergraphs {a mathematical formula}Hv and {a mathematical formula}Hu contain all unknown literals that might be needed to apply the {a mathematical formula}Pred rule; and finally, condition (R3) ensures that, for each query {a mathematical formula}q∈Q and {a mathematical formula}v=ϑ(q), hypergraph {a mathematical formula}Hv contains the “unknown part” of q. Conditions (R4)–(R9) then essentially capture the intuition that each context v of {a mathematical formula}D is replaced by a tree decomposition {a mathematical formula}Tv of {a mathematical formula}Hv. Please note that, for each edge {a mathematical formula}〈v,u,∃R.A〉 of {a mathematical formula}D, by condition (R2) and property (T1) of tree decompositions, there exists at least one pair of w and z satisfying condition (R7). Furthermore, for each query {a mathematical formula}q∈Q and {a mathematical formula}v=ϑ(q), context {a mathematical formula}ϑ′(q) can be an arbitrary vertex {a mathematical formula}w∈Vv satisfying {a mathematical formula}(K∪M)∩uknw(v)⊆Lv(w); due to condition (R3) and property (T1) of tree decompositions, such w is guaranteed to exist. Finally, please note that decomposition {a mathematical formula}D can admit many ϵ-refinements; however, by the following theorem, if {a mathematical formula}D is sound and admissible, then each ϵ-refinement of {a mathematical formula}D is sound and admissible too.
+      </paragraph>
+      <paragraph label="Theorem 43">
+       For each sound, admissible, and ϵ-free decomposition{a mathematical formula}Dof{a mathematical formula}Oand{a mathematical formula}Q, each ϵ-refinement{a mathematical formula}D′of{a mathematical formula}Dis also a sound and admissible decomposition of{a mathematical formula}Oand{a mathematical formula}Q.
+      </paragraph>
+      <paragraph label="Proof">
+       We first show that {a mathematical formula}D′ is sound. Consider arbitrary contexts {a mathematical formula}w,z∈V, and let {a mathematical formula}v,u∈V be such that {a mathematical formula}w∈Vv and {a mathematical formula}z∈Vu. By condition (R5), we have {a mathematical formula}core′(w)=core(v), {a mathematical formula}knw′(w)=knw(v), {a mathematical formula}core′(z)=core(u), and {a mathematical formula}knw′(z)=knw(u).Consider an arbitrary {a mathematical formula}∃R.A-edge {a mathematical formula}〈w,z,∃R.A〉∈E′. By condition (R7), then {a mathematical formula}D contains the edge {a mathematical formula}〈v,u,∃R.A〉∈E. Since {a mathematical formula}D is sound, {a mathematical formula}O⊨core(v)⊓∃R.A⊑∃R.[core(u)⊓A] holds; but then, {a mathematical formula}O⊨core′(w)⊓∃R.A⊑∃R.[core′(z)⊓A] holds as well.Consider an arbitrary ϵ-edge {a mathematical formula}〈w,z,ϵ〉∈E′. By condition (R6), we have {a mathematical formula}v=u, which clearly implies {a mathematical formula}core′(w)=core′(z), as required.Finally, since {a mathematical formula}D is sound, we have {a mathematical formula}O⊨core(v)⊑A for each {a mathematical formula}A∈knw(v); but then, {a mathematical formula}O⊨core′(w)⊑A for each {a mathematical formula}A∈knw′(w) clearly holds as well.We next show that {a mathematical formula}D′ is admissible. Clearly, {a mathematical formula}D′ refers only to the literals occurring in {a mathematical formula}O∪Q, so {a mathematical formula}D′ is a decomposition of {a mathematical formula}O and {a mathematical formula}Q. Furthermore, for each context {a mathematical formula}v∈V the following conditions are satisfied.{a mathematical formula}{a mathematical formula} Finally, for each ϵ-component {a mathematical formula}W of {a mathematical formula}D′, a context {a mathematical formula}v∈V exists such that {a mathematical formula}W=Vv; conversely, for each context {a mathematical formula}v∈V, set {a mathematical formula}Vv is an ϵ-component of {a mathematical formula}D. We next check that {a mathematical formula}D′ satisfies all the admissibility conditions listed in Definition 36.Epsilon conditions:(Condition E1) This property follows immediately from (R6) and the fact that the edges in {a mathematical formula}Ev are undirected.(Condition E2) By (R6), for each ϵ-component {a mathematical formula}Vv of {a mathematical formula}D′, we have that {a mathematical formula}DVv′ is equal to the graph {a mathematical formula}〈Vv,Ev〉, and the latter, being a tree decomposition, is an undirected tree.(Condition E3) Consider an arbitrary ϵ-component {a mathematical formula}Vv of {a mathematical formula}D′ and literal {a mathematical formula}L∈poss′(Vv), and let{a mathematical formula} We have {a mathematical formula}L∈poss(v) due to (140), so either {a mathematical formula}L∈knw(v) or {a mathematical formula}L∈uknw(v). In the former case, we have {a mathematical formula}L∈poss′(w) for each {a mathematical formula}w∈Vv, so {a mathematical formula}Γ=Vv and Γ is clearly ϵ-connected. In the latter case, we have {a mathematical formula}Γ={w∈Vv|L∈Lv(w)}, so Γ is ϵ-connected by property (T2) of tree decompositions.Structural conditions:(Condition S1) By (R5), for each {a mathematical formula}v∈V and each {a mathematical formula}w∈Vv, we have {a mathematical formula}core′(w)=core(v) and {a mathematical formula}knw′(w)=knw(v)⊆poss′(w). Furthermore, {a mathematical formula}core(v)⊆knw(v) holds since {a mathematical formula}D satisfies (S1), so we have {a mathematical formula}core′(w)⊆knw′(w)⊆poss′(w).(Condition S2) Consider an arbitrary ϵ-component {a mathematical formula}Vu of {a mathematical formula}D′, an arbitrary edge {a mathematical formula}〈w,z,∃R.A〉∈E′ such that {a mathematical formula}z∈Vu, and an arbitrary literal {a mathematical formula}∀inv(R).C∈poss′(Vu); furthermore, let {a mathematical formula}v∈V be the context of {a mathematical formula}D such that {a mathematical formula}w∈Vv. By condition (R7) and {a mathematical formula}〈w,z,∃R.A〉∈E′, we have{a mathematical formula} Now, by property (140) and {a mathematical formula}∀inv(R).C∈poss′(Vu), we have {a mathematical formula}∀inv(R).C∈poss(u); hence, by admissibility condition (S2) for {a mathematical formula}D, we have {a mathematical formula}C∈poss(v). But then, we have {a mathematical formula}C∈δv,u∃R.A and {a mathematical formula}∀inv(R).C∈ϱv,u∃R.A; together with (141), these conditions imply (142), so {a mathematical formula}D′ clearly satisfies admissibility condition (S2).{a mathematical formula}(Condition S3) Consider an arbitrary ϵ-component {a mathematical formula}Vv of {a mathematical formula}D′ and an arbitrary literal {a mathematical formula}∃R.A∈poss′(Vv). By property (140), we have {a mathematical formula}∃R.A∈poss(v), so, by admissibility condition (S3) for {a mathematical formula}D, an {a mathematical formula}∃R.A-edge {a mathematical formula}〈v,u,∃R.A〉∈E exists satisfying (143).{a mathematical formula} Since {a mathematical formula}Tv and {a mathematical formula}Tu are tree decompositions of {a mathematical formula}Hv and {a mathematical formula}Hu, respectively, by property (R2) of Definition 42 and property (T1) of tree decompositions, contexts {a mathematical formula}w∈Vv and {a mathematical formula}z∈Vu exist such that the following two properties hold.{a mathematical formula}{a mathematical formula} But then, by condition (R7), we have {a mathematical formula}〈w,z,∃R.A〉∈E′. We next show that this edge satisfies condition (S3)—that is, that
+       <list>
+        {a mathematical formula}poss′(z)⊇{A}∪{B|∀R.B∈poss′(Vv)}, and{a mathematical formula}poss′(w)⊇{∃R.A}∪{∀R.B|∀R.B∈poss′(Vv)}.Consider an arbitrary
+       </list>
+       <paragraph>
+        ϵ-component {a mathematical formula}Vv of {a mathematical formula}D′ and an arbitrary clause {a mathematical formula}K⊑M∈O with {a mathematical formula}K⊆poss′(Vv). By (140), {a mathematical formula}K⊆poss′(Vv) implies {a mathematical formula}K⊆poss(v), so by the ontology condition for {a mathematical formula}D we have {a mathematical formula}M⊆poss(v). By condition (R1) and property (T1) of tree decompositions, a context {a mathematical formula}w∈Vv exists such that {a mathematical formula}(K∪M)∩uknw(v)⊆Lv(w). But then, {a mathematical formula}K∪M⊆Lv(w)∪knw(v)=poss′(w) holds, so {a mathematical formula}D′ satisfies the ontology condition.Ordering conditions:(Condition P1) Consider an arbitrary {a mathematical formula}∃R.A-edge {a mathematical formula}〈w,z,∃R.A〉∈E′. By condition (R7), then {a mathematical formula}v,u∈V exist such that {a mathematical formula}w∈Vv, {a mathematical formula}z∈Vu, and {a mathematical formula}〈v,u,∃R.A〉∈E. Since {a mathematical formula}D satisfies admissibility condition (P1), each literal {a mathematical formula}∀inv(R).C∈L is {a mathematical formula}≺u-minimal. But then, by condition (R8), each such {a mathematical formula}∀inv(R).C is also {a mathematical formula}≺z′-minimal; hence, {a mathematical formula}≺z′ is R-admissible.(Condition P2) By condition (R8), for each ϵ-edge {a mathematical formula}〈u,w,ϵ〉∈E′, all literals in {a mathematical formula}poss′(u)∩poss′(w) are {a mathematical formula}≺w′-minimal.Covering condition:Consider an arbitrary query {a mathematical formula}q=K⊑M∈Q, and let {a mathematical formula}v=ϑ(q) and {a mathematical formula}w=ϑ′(q). By the covering condition for {a mathematical formula}D, context v covers {a mathematical formula}K⊑M, so {a mathematical formula}core(v)⊆K⊆poss(v) and M is {a mathematical formula}≺v-minimal. By condition (R9), we have {a mathematical formula}w∈Vv and {a mathematical formula}(K∪M)∩uknw(v)⊆Lv(w). This and condition (R5) imply that{a mathematical formula} Furthermore, by (140) and condition (R5), we have{a mathematical formula} Finally, by condition (R8), disjunction M is {a mathematical formula}≺w′-minimal because M is {a mathematical formula}≺v-minimal. Thus, context w covers {a mathematical formula}K⊑M in {a mathematical formula}D′. □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Definition 42 can be straightforwardly turned into an algorithm for computing an ϵ-refinement {a mathematical formula}D′ of {a mathematical formula}D: first, we compute all hypergraphs satisfying conditions (R1)–(R3); second, we compute a tree decomposition {a mathematical formula}Tv for each hypergraph {a mathematical formula}Hv; third, we construct decomposition {a mathematical formula}D′ so that conditions (R4)–(R9) are satisfied; and fourth, for each context v of {a mathematical formula}D and each {a mathematical formula}w∈Vv, we define {a mathematical formula}≺w′ by modifying {a mathematical formula}≺v to ensure condition (R8). As explained earlier, in condition (R9) we can don't-care nondeterministically choose {a mathematical formula}ϑ(q), and at least one suitable context is guaranteed to exist. Such an algorithm is fixed-parameter tractable, as shown by the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 44">
+       For each integer{a mathematical formula}mwd, one can compute an ϵ-refinement{a mathematical formula}D′of{a mathematical formula}Dwith{a mathematical formula}wd(D′)⩽mwd, or determine that such{a mathematical formula}D′does not exist, in time polynomial in{a mathematical formula}f(mwd),{a mathematical formula}ln(D), and{a mathematical formula}‖O‖+‖Q‖, for f a computable function.
+      </paragraph>
+      <paragraph label="Proof">
+       The L-hypergraphs {a mathematical formula}Hv corresponding to conditions (R1)–(R3) of Definition 42 can clearly be constructed in time polynomial in {a mathematical formula}ln(D) and {a mathematical formula}‖O‖+‖Q‖.An ϵ-refinement {a mathematical formula}D′ with {a mathematical formula}wd(D′)⩽mwd exists if and only if, for each {a mathematical formula}v∈V, hypertraph {a mathematical formula}Hv admits a tree decomposition {a mathematical formula}Tv with {a mathematical formula}wd(Tv)⩽mwd. For each {a mathematical formula}v∈V, all literals occurring in {a mathematical formula}Nv are contained in {a mathematical formula}O∪Q, so by Lemma 1, computing one {a mathematical formula}Tv with {a mathematical formula}wd(Tv)⩽mwd, or determining that one does not exist can be done in time {a mathematical formula}O(f(mwd)⋅(‖O‖+‖Q‖)).Decomposition {a mathematical formula}D′ can be obtained from {a mathematical formula}D by simply following conditions (R4)–(R8). Furthermore, for each query {a mathematical formula}q∈Q, one can define {a mathematical formula}ϑ′(q) as an arbitrary element of {a mathematical formula}Vϑ(q) satisfying condition (R9); due to condition (R3) and property (T1) of tree decomposition, such an element is guaranteed to exist. This construction is polynomial in {a mathematical formula}ln(D′) and {a mathematical formula}‖O‖+‖Q‖. Since the length of each {a mathematical formula}Dv is bounded by the time it takes to compute it, the length of {a mathematical formula}D′ is bounded by {a mathematical formula}O(ln(D)⋅f(mwd)⋅(‖O‖+‖Q‖)), so the entire construction runs in time polynomial in {a mathematical formula}f(mwd), {a mathematical formula}ln(D), and {a mathematical formula}‖O‖+‖Q‖. □
+      </paragraph>
+      <paragraph>
+       This allows us to generalize our result on fixed-parameter tractability of subsumption reasoning from Section 4.
+      </paragraph>
+      <paragraph label="Theorem 45">
+       For each control{a mathematical formula}C, the following problem is fixed-parameter tractable:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Inputs: a normalized{a mathematical formula}ALCIontology{a mathematical formula}Oand a set of queries{a mathematical formula}Q
+       </list-item>
+       <list-item label="•">
+        Parameter: an integer{a mathematical formula}mwd
+       </list-item>
+       <list-item label="•">
+        Problem: return “yes” if an ϵ-refinement{a mathematical formula}Dof the{a mathematical formula}C-decomposition of{a mathematical formula}Oand{a mathematical formula}Qexists with{a mathematical formula}wd(D)⩽mwd, and if also{a mathematical formula}O⊨K⊑Mholds for each query{a mathematical formula}K⊑M∈Q
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Immediate by Theorem 29, Theorem 43, Theorem 44, and Proposition 40, Proposition 41. □
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Soundness- and admissibility-preserving decomposition transformations
+     </section-title>
+     <paragraph>
+      In this section we present several soundness- and admissibility-preserving decomposition transformations that, under certain conditions, can delete edges and/or contexts from decompositions. These transformations can be useful in practice as they can reduce the number of inferences of the consequence-based algorithm; moreover, we use these transformations in Section 7 to establish an exponential upper bound on the decomposition size. Throughout this section, we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O, a finite set of queries {a mathematical formula}Q, and a sound and admissible decomposition {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 of {a mathematical formula}O and {a mathematical formula}Q.
+     </paragraph>
+     <paragraph>
+      Definition 46 introduces a notion of redundancy for ϵ-edges, as well as a notion of ϵ-edge contraction that extends edge contraction from graph theory: given an edge {a mathematical formula}〈v1,v2,ϵ〉 in {a mathematical formula}D, we merge contexts {a mathematical formula}v1 and {a mathematical formula}v2 into a new context v, eliminate the self-loop from v to v in order to preserve the tree shape of the enclosing ϵ-component, and define the core, known, and possible literals and the literal ordering of v to reflect both {a mathematical formula}v1 and {a mathematical formula}v2. Lemma 47 captures the properties of ϵ-edge contraction.
+     </paragraph>
+     <paragraph label="Definition 46">
+      An ϵ-edge{a mathematical formula}〈v1,v2,ϵ〉∈Eis redundant in{a mathematical formula}Dif{a mathematical formula}uknw(v1)⊆poss(v2). The result of contracting a (not necessarily redundant) ϵ-edge{a mathematical formula}〈v1,v2,ϵ〉∈Eis obtained as follows.
+     </paragraph>
+     <list>
+      <list-item>
+       Remove{a mathematical formula}v1and{a mathematical formula}v2from{a mathematical formula}V, and add a fresh context v to{a mathematical formula}V.
+      </list-item>
+      <list-item>
+       Replace each occurrence of{a mathematical formula}v1and{a mathematical formula}v2in ϑ and in{a mathematical formula}Eby v, and then remove the edge{a mathematical formula}〈v,v,ϵ〉from{a mathematical formula}E.
+      </list-item>
+      <list-item>
+       Set{a mathematical formula}core(v):=core(v1),{a mathematical formula}knw(v):=knw(v1)∪knw(v2),{a mathematical formula}poss(v):=poss(v1)∪poss(v2), and{a mathematical formula}≺v:=≺v1∩≺v2.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 47">
+      Contracting an ϵ-edge preserves soundness and admissibility of a decomposition. Contracting a redundant ϵ-edge does not increase the width of a decomposition.
+     </paragraph>
+     <paragraph label="Proof">
+      It is straightforward to check that contracting an ϵ-edge preserves all conditions of Definition 19, Definition 36. Assume now that a redundant ϵ-edge {a mathematical formula}〈v1,v2,ϵ〉∈E is contracted. Then, {a mathematical formula}uknw(v1)⊆poss(v2) implies{a mathematical formula} Consequently, the width of a decomposition can only decrease as a result of contraction. □
+     </paragraph>
+     <paragraph>
+      Definition 48 specifies when a context w is broader than a context u in {a mathematical formula}D; roughly speaking, w is then “less specific” regarding core literals, but allows “more” possible literals. Given such w and u, we can then redirect each {a mathematical formula}∃R.A-edge ending at u so that the edge ends at w. That this operation preserves decomposition soundness and admissibility follows immediately from Lemma 49; moreover, this transformation manipulates only edges, so it clearly preserves decomposition width and length.
+     </paragraph>
+     <paragraph label="Definition 48">
+      A context{a mathematical formula}w∈Vof{a mathematical formula}Dis broader than a context{a mathematical formula}u∈Vof{a mathematical formula}Dif{a mathematical formula}core(w)⊆core(u),{a mathematical formula}poss(w)⊇poss(u),{a mathematical formula}≺w⊆≺u, and{a mathematical formula}poss(W)⊆poss(U), where{a mathematical formula}Wand{a mathematical formula}Uare the ϵ-components of{a mathematical formula}Dsuch that{a mathematical formula}w∈Wand{a mathematical formula}u∈U. For such w and u, the result of redirecting u to w in{a mathematical formula}Dis obtained by replacing each edge{a mathematical formula}〈v,u,∃R.A〉in{a mathematical formula}Ewith{a mathematical formula}〈v,w,∃R.A〉, and by replacing u with w in ϑ.
+     </paragraph>
+     <paragraph label="Lemma 49">
+      Let{a mathematical formula}w,u∈Vbe contexts of{a mathematical formula}Dsuch that w is broader than u. Then,
+     </paragraph>
+     <list>
+      <list-item>
+       replacing an arbitrary{a mathematical formula}∃R.A-edge{a mathematical formula}〈v,u,∃R.A〉in{a mathematical formula}Ewith{a mathematical formula}〈v,w,∃R.A〉preserves soundness and admissibility, and
+      </list-item>
+      <list-item>
+       each query q that is covered in u is also covered in w.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      (Claim 1) Assume that some {a mathematical formula}〈v,u,∃R.A〉 in {a mathematical formula}E is replaced with {a mathematical formula}〈v,w,∃R.A〉. Only conditions (S2), (S3), and (P1) of Definition 36 concern {a mathematical formula}∃R.A-edges. To show that the “new” edge satisfies (S2), consider an arbitrary literal {a mathematical formula}∀inv(R).C∈poss(W); then {a mathematical formula}poss(W)⊆poss(U) implies {a mathematical formula}∀inv(R).C∈poss(U); hence, by applying condition (S2) to the “old” edge {a mathematical formula}〈v,u,∃R.A〉, we have {a mathematical formula}C∈poss(v) and {a mathematical formula}∀inv(R).C∈poss(u)⊆poss(w), as required. Condition (S3) is clearly preserved due to {a mathematical formula}poss(u)⊆poss(w). Condition (P1) is preserved since {a mathematical formula}≺w⊆≺u and a subset of an R-admissible literal ordering is R-admissible.(Claim 2) Consider an arbitrary query {a mathematical formula}K⊑M that is covered in u; hence, {a mathematical formula}core(u)⊆K⊆poss(u), {a mathematical formula}M∩poss(U)⊆poss(u), and M is {a mathematical formula}≺u-minimal. Since context w is broader than context u, we have {a mathematical formula}core(w)⊆K⊆poss(w), {a mathematical formula}M∩poss(W)⊆poss(w), and M is {a mathematical formula}≺w-minimal; but then, {a mathematical formula}K⊑M is also covered in w. □
+     </paragraph>
+     <paragraph>
+      Definition 50 introduces a notion of redundancy for {a mathematical formula}∃R.A-edges. Intuitively, an {a mathematical formula}∃R.A-edge {a mathematical formula}〈v,u,∃R.A〉 is redundant in {a mathematical formula}D if either {a mathematical formula}∃R.A is not possible in the ϵ-component of v so condition (S3) of Definition 36 is satisfied vacuously, or {a mathematical formula}D contains another {a mathematical formula}∃R.A-edge that satisfies condition (S3) for {a mathematical formula}∃R.A. It is obvious that deleting a redundant {a mathematical formula}∃R.A-edge in {a mathematical formula}D preserves soundness and admissibility; moreover, doing so can be particularly useful if {a mathematical formula}D is an ϵ-refinement of an ϵ-free decomposition. In particular, for each {a mathematical formula}v,u∈V in condition (R7) of Definition 42, decomposition {a mathematical formula}D then contains an {a mathematical formula}∃R.A-edge from each {a mathematical formula}w∈Vv to each {a mathematical formula}z∈Vu that satisfy {a mathematical formula}δv,u∃R.A∩uknw(v)⊆Lv(w) and {a mathematical formula}ϱv,u∃R.A∩uknw(u)⊆Lu(z); however, only one such edge may be needed to satisfy admissibility condition (S3), so deleting the redundant {a mathematical formula}∃R.A-edges might be beneficial in practice.
+     </paragraph>
+     <paragraph label="Definition 50">
+      An{a mathematical formula}∃R.A-edge{a mathematical formula}〈v,u,∃R.A〉∈Eis redundant in{a mathematical formula}Dif either{a mathematical formula}∃R.A∉poss(W), or another{a mathematical formula}∃R.A-edge{a mathematical formula}〈w,z,∃R.A〉∈Ewith{a mathematical formula}w∈Wexists that satisfies condition (S3) ofDefinition 36for{a mathematical formula}∃R.A∈poss(W), where{a mathematical formula}Wis the ϵ-component containing v.
+     </paragraph>
+     <paragraph>
+      Definition 51 says that an entire ϵ-component {a mathematical formula}U of {a mathematical formula}D may be redundant if, for each context {a mathematical formula}u∈U, either (i) there is no {a mathematical formula}∃R.A-edge from another ϵ-component to u, and u is not used to cover a query in {a mathematical formula}Q, or (ii) u can be redirected to a context in another ϵ-component. In such a case, we can redirect appropriately all contexts satisfying condition (ii) to obtain a decomposition in which no context in {a mathematical formula}U has an incoming {a mathematical formula}∃R.A-edge from another ϵ-component; but then, we can clearly delete all contexts in {a mathematical formula}U and all the related edges without affecting decomposition admissibility.
+     </paragraph>
+     <paragraph label="Definition 51">
+      An ϵ-component{a mathematical formula}Uof{a mathematical formula}Dis redundant in{a mathematical formula}Dif at least one of the following holds for each context{a mathematical formula}u∈U:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}v∈Ufor each{a mathematical formula}∃R.A-edge{a mathematical formula}〈v,u,∃R.A〉∈E, and{a mathematical formula}ϑ(q)≠ufor each query{a mathematical formula}q∈Q; or
+      </list-item>
+      <list-item label="•">
+       a context{a mathematical formula}w∈V∖Uexists that is broader than u.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 52">
+      Eliminating a redundant ϵ-component preserves soundness and admissibility, and it does not increase the width.
+     </paragraph>
+     <paragraph label="Proof">
+      By Lemma 49, step 1 preserves soundness and admissibility. Furthermore, by the definition of when {a mathematical formula}U is redundant in {a mathematical formula}D, after step 1 each context {a mathematical formula}u∈U neither occurs in an {a mathematical formula}∃R.A-edge {a mathematical formula}〈v,u,∃R.A〉 with {a mathematical formula}v∉U, nor is it used to cover a query from {a mathematical formula}Q; hence, step 2 preserves decomposition admissibility. Furthermore, removal of edges and contexts clearly preserves decomposition soundness. Finally, steps 1 and 2 clearly do not increase the width of a decomposition. □
+     </paragraph>
+     <paragraph>
+      Please note that context redirection, elimination of {a mathematical formula}∃R.A-edges, and elimination of redundant ϵ-components also apply to context structures (with obvious modifications), and they can be applied during execution of Algorithm 11. In this way, we obtain “structural” redundancy elimination rules that can further improve the performance of the consequence-based algorithm.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Bounds on decomposition length
+     </section-title>
+     <paragraph>
+      In this section we discuss the bounds on the length of decompositions of minimum width. In particular, in Section 7.1 we consider the lower bound, and in Section 7.2 we turn our attention to the upper bound.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Lower bound
+      </section-title>
+      <paragraph>
+       We now exhibit a family of ontologies {a mathematical formula}{On} and a fixed set of queries {a mathematical formula}Q such that each sound and admissible decomposition of {a mathematical formula}On and {a mathematical formula}Q of minimum width necessarily has exponential length. Intuitively, this is because each ontology {a mathematical formula}On has a “canonical” model {a mathematical formula}I containing exponentially many domain elements, each of which satisfies a distinct combination of atomic concepts. Therefore, to obtain a decomposition of {a mathematical formula}On and {a mathematical formula}Q of minimal width, we must introduce a context for each domain element of {a mathematical formula}I, and thus such a decomposition will actually reflect the structure of {a mathematical formula}I. This is interesting because it shows that, in general, one cannot minimize decomposition width and still expect to obtain a practically useful decomposition (i.e., a decomposition of polynomial size). We use this observation as a justification for our practical approach to decomposition construction that we presented in Sections 4.4 and 5.3.
+      </paragraph>
+      <paragraph label="Theorem 53">
+       Let{a mathematical formula}Q={C0⊑⊥}. A family of{a mathematical formula}ALCIontologies{a mathematical formula}{On}exists such that, for each{a mathematical formula}On,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        a sound, admissible, and ϵ-free decomposition of{a mathematical formula}Onand{a mathematical formula}Qof width 0 exists, and
+       </list-item>
+       <list-item label="2.">
+        each sound and admissible decomposition of{a mathematical formula}Onand{a mathematical formula}Qof width 0 has length at least exponential in{a mathematical formula}‖On‖.
+       </list-item>
+      </list>
+      <paragraph>
+       For readability, we split the proof of Theorem 53 into several claims. Let {a mathematical formula}Q={C0⊑⊥}, let n be a positive integer, and let {a mathematical formula}On be the ontology (of size linear in n) containing the following axioms for each {a mathematical formula}1⩽i⩽n.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}L={C0}∪{Ci,Ai,Bi,∃R.Ci,∃S.Ci,∀R.Ai,∀S.Ai,∀R.Bi,∀S.Bi|1⩽i⩽n} be the set of literals that occur in {a mathematical formula}On and {a mathematical formula}Q. An ABC-number is a set of atomic concepts of the form {a mathematical formula}X={X1,…,Xk,Ck}, where {a mathematical formula}0⩽k⩽n and each {a mathematical formula}Xi is either {a mathematical formula}Ai or {a mathematical formula}Bi. By a slight abuse of notation, we often treat X as the conjunction of the atomic concepts contained in X; furthermore, the rank of X is k; finally, {a mathematical formula}XR and {a mathematical formula}XS are ABC-numbers of rank {a mathematical formula}k+1 defined as{a mathematical formula} Note that {a mathematical formula}On⊨X⊑∃R.XR and {a mathematical formula}On⊨X⊑∃S.XS. Finally, for each ABC-number X, we define the set {a mathematical formula}Γ(X) of told subsumees of X w.r.t. {a mathematical formula}On as follows:{a mathematical formula} One can readily check that {a mathematical formula}On entails only told subsumptions—that is, for each ABC-number X and each {a mathematical formula}L∈L, we have{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The following claim proves the first item of Theorem 53.
+      </paragraph>
+      <paragraph label="Claim 54">
+       There exists a sound, admissible, and ϵ-free decomposition{a mathematical formula}Dof{a mathematical formula}Onand{a mathematical formula}Qsuch that{a mathematical formula}wd(D)=0.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 be defined as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Clearly, {a mathematical formula}D is an ϵ-free decomposition of {a mathematical formula}On and {a mathematical formula}Q. Furthermore, it is straightforward to check that {a mathematical formula}D is sound. Finally, {a mathematical formula}D satisfies all the admissibility conditions of Definition 20: conditions (S1) and (S2) hold trivially, the definition of {a mathematical formula}E ensures that condition (S3) is satisfied, the definition of {a mathematical formula}poss ensures that the ontology condition is satisfied, the trivial literal ordering {a mathematical formula}≺vX always satisfies the ordering condition, and the query {a mathematical formula}C0⊑⊥ is covered in context {a mathematical formula}v{C0}. Finally, since {a mathematical formula}knw(vX)=poss(vX) for each context {a mathematical formula}vX∈V, we have {a mathematical formula}wd(D)=0, as required. □
+      </paragraph>
+      <paragraph>
+       To prove the second item of Theorem 53, let {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 be an arbitrary sound and admissible decomposition of {a mathematical formula}On and {a mathematical formula}Q such that {a mathematical formula}wd(D)=0. Every ϵ-edge in a decomposition of width 0 is redundant in the sense of Definition 46, so we can assume without loss of generality that {a mathematical formula}D is ϵ-free. We prove in Claim 56 that, for each ABC-number X, there exists a context {a mathematical formula}vX∈V such that {a mathematical formula}poss(vX)=Γ(X). Now {a mathematical formula}Γ(X) is distinct for each ABC-number X, so {a mathematical formula}V clearly contains at least {a mathematical formula}2n contexts, which concludes the proof of Theorem 53. Towards proving Claim 56, we first prove the following auxiliary claim.
+      </paragraph>
+      <paragraph label="Claim 55">
+       Let{a mathematical formula}v∈Vbe a context and let X be an ABC-number. If{a mathematical formula}core(v)⊆Γ(X)and{a mathematical formula}poss(v)⊇X, then{a mathematical formula}poss(v)=Γ(X).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}v∈V be a context, and let X be an ABC-number such that {a mathematical formula}core(v)⊆Γ(X) and {a mathematical formula}poss(v)⊇X hold. By the ontology condition of Definition 20, set {a mathematical formula}poss(v) is closed under Γ; thus, {a mathematical formula}poss(v)⊇X implies {a mathematical formula}poss(v)⊇Γ(X). To show that {a mathematical formula}poss(v)⊆Γ(X) holds as well, consider an arbitrary literal {a mathematical formula}L∈poss(v). Since {a mathematical formula}wd(D)=0, we have {a mathematical formula}L∈knw(v). But then, by soundness condition (N3) of Definition 19, we have {a mathematical formula}On⊨core(v)⊑L. Furthermore, we have {a mathematical formula}On⊨X⊑Γ(X) by property (154), and {a mathematical formula}core(v)⊆Γ(X) clearly implies {a mathematical formula}On⊨Γ(X)⊑core(v). Together, all these observations imply that {a mathematical formula}On⊨X⊑L holds, which, by property (154), implies {a mathematical formula}L∈Γ(X). Consequently, we have {a mathematical formula}poss(v)=Γ(X), as required. □
+      </paragraph>
+      <paragraph label="Claim 56">
+       For each ABC-number X, a context{a mathematical formula}vX∈Vexists such that{a mathematical formula}poss(vX)=Γ(X).
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is by induction on the rank of X. For the base case, we have {a mathematical formula}X={C0}. Since {a mathematical formula}X⊑⊥∈Q, query {a mathematical formula}X⊑⊥ is covered in the context {a mathematical formula}vX=ϑ(X⊑⊥), and so we have {a mathematical formula}core(vX)⊆X⊆poss(vX) by the definition of covering. But then, Claim 55 implies that {a mathematical formula}poss(vX)=Γ(X) holds, as required.For the induction step, assume that the claim holds for each ABC-number of rank {a mathematical formula}k−1, and consider an arbitrary ABC-number of the form {a mathematical formula}Y={X1,…,Xk−1,Xk,Ck}; furthermore, let {a mathematical formula}X={X1,…,Xk−1,Ck−1}. By the induction hypothesis, a context {a mathematical formula}vX∈V exists such that {a mathematical formula}poss(vX)=Γ(X). We now consider the two possible forms of {a mathematical formula}Xk.Assume that {a mathematical formula}Xk=Ak, which implies {a mathematical formula}Y=XR. By applying admissibility condition (S3) of Definition 20 to an existential restriction {a mathematical formula}∃R.Ck∈Γ(X)=poss(vX), an edge {a mathematical formula}〈vX,vY,∃R.Ck〉∈E exists such that{a mathematical formula} Soundness condition (N1) of Definition 19 implies that {a mathematical formula}On⊨core(vX)⊓∃R.Ck⊑∃R.[core(vY)⊓Ck]. Now {a mathematical formula}On⊨X⊑Γ(X) holds by property (154); furthermore, {a mathematical formula}[core(vX)⊓∃R.Ck]⊆poss(vX)=Γ(X) holds by the definition of {a mathematical formula}poss, which clearly implies {a mathematical formula}On⊨Γ(X)⊑[core(vX)⊓∃R.Ck]; thus, we have {a mathematical formula}On⊨X⊑∃R.[core(vY)⊓Ck]; but then, {a mathematical formula}core(vY)⊆Γ(XR) holds by (155). Thus, for {a mathematical formula}Y=XR, we have {a mathematical formula}core(vY)⊆Γ(XR) and {a mathematical formula}poss(vY)⊇XR, so Claim 55 implies {a mathematical formula}poss(vY)=Γ(XR)=Γ(Y), as required.The analysis for the case {a mathematical formula}Xk=Bk is analogous to the one above, with the difference that role S is used instead of role R. □
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Upper bound
+      </section-title>
+      <paragraph>
+       We now show that, for each ontology {a mathematical formula}O and each set of queries {a mathematical formula}Q, a sound and admissible decomposition of {a mathematical formula}O and {a mathematical formula}Q exists that has minimum width and at most exponential length. Intuitively, this is because, given an arbitrary decomposition of minimal width, we can obtain the required decomposition as follows. First, we repeatedly eliminate redundant ϵ-edges; this ensures that each ϵ-component contains at most a polynomial number of contexts (cf. Lemma 57), so the number of distinct ϵ-components is exponential. Second, we eliminate “duplicates” by repeatedly eliminating redundant ϵ-components. We thus obtain a decomposition of {a mathematical formula}O and {a mathematical formula}Q of at most exponential length; since none of these transformations increases decomposition width, the resulting decomposition is of minimal width as well (cf. Theorem 58).
+      </paragraph>
+      <paragraph label="Lemma 57">
+       Let{a mathematical formula}Obe a normalized{a mathematical formula}ALCIontology, let{a mathematical formula}Qbe a finite set of queries, and let{a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉be an admissible decomposition of{a mathematical formula}Oand{a mathematical formula}Qthat has no redundant ϵ-edges. Then, for each ϵ-component{a mathematical formula}Wof{a mathematical formula}D, we have{a mathematical formula}|W|⩽max(|U|,1)for{a mathematical formula}U=⋃w∈Wuknw(w).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}W be an arbitrary ϵ-component of {a mathematical formula}D and let {a mathematical formula}n=|W|. If there exists a context {a mathematical formula}v∈W with {a mathematical formula}uknw(v)=∅, since {a mathematical formula}D has no redundant ϵ-edges, then v is the only context in {a mathematical formula}W, so {a mathematical formula}|W|=1 and the lemma holds. Thus, in the rest of the proof, we assume that {a mathematical formula}uknw(v)≠∅ for each context {a mathematical formula}v∈W.Let {a mathematical formula}v1,…,vn be an arbitrary ordering of {a mathematical formula}W obtained by an arbitrary depth-first traversal of the tree {a mathematical formula}DW. We define a function {a mathematical formula}λ:U→{1,…,n} by setting {a mathematical formula}λ(L):=min{i|L∈uknw(vi)}. We claim that λ is surjective—that is, for each {a mathematical formula}1⩽i⩽n, a literal L exists such that {a mathematical formula}λ(L)=i. For {a mathematical formula}i=1, since {a mathematical formula}uknw(v1)≠∅, a literal {a mathematical formula}L∈uknw(v1) exists such that {a mathematical formula}λ(L)=1. Consider now an arbitrary i with {a mathematical formula}1&lt;i⩽n, and let {a mathematical formula}vj be the parent of {a mathematical formula}vi in the depth-first traversal. Since {a mathematical formula}D has no redundant ϵ-edges, we have {a mathematical formula}uknw(vi)⊈poss(vj), so a literal L exists such that {a mathematical formula}L∈uknw(vi)∖poss(vj). Now if {a mathematical formula}λ(L)&lt;i, then {a mathematical formula}vλ(L) is visited in the depth-first traversal before {a mathematical formula}vi; thus, the unique path between {a mathematical formula}vλ(L) and {a mathematical formula}vi goes through {a mathematical formula}vj, so, by the connectedness condition (E3) of admissibility, we have {a mathematical formula}L∈poss(vj); however, this contradicts our choice of L. Consequently, we have {a mathematical formula}λ(L)=i, and so λ is surjective from U onto {a mathematical formula}{1,…,n}. But then, {a mathematical formula}|W|=n⩽|U|. □
+      </paragraph>
+      <paragraph label="Theorem 58">
+       Let{a mathematical formula}Obe a normalized{a mathematical formula}ALCIontology, let{a mathematical formula}Qbe a finite set of queries, and letLbe the set of literals occurring in{a mathematical formula}O∪Q. For each sound and admissible decomposition{a mathematical formula}D′of{a mathematical formula}Oand{a mathematical formula}Q, there exists a sound and admissible decomposition{a mathematical formula}Dof{a mathematical formula}Oand{a mathematical formula}Qsuch that{a mathematical formula}wd(D)⩽wd(D′)and{a mathematical formula}ln(D)⩽2O(|L|2).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}D′ be an arbitrary sound and admissible decomposition of {a mathematical formula}O and {a mathematical formula}Q, and let {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 be an arbitrary decomposition obtained from {a mathematical formula}D′ by applying the following (nondeterministic) transformations.
+       <list>
+        Set {a mathematical formula}≺v:=∅ for each context {a mathematical formula}v∈V.While there are redundant ϵ-edges, pick one such ϵ-edge and contract it.While there are redundant ϵ-components, pick one such ϵ-component and eliminate it.Due to step 2,
+       </list>
+       <paragraph>
+        {a mathematical formula}D contains no redundant ϵ-edges; hence, by Lemma 57, the cardinality of each ϵ-component of {a mathematical formula}D is bounded by {a mathematical formula}|L|. We define the type of an ϵ-component {a mathematical formula}W of {a mathematical formula}D to be the pair {a mathematical formula}〈core(W),{poss(v)|v∈W}〉. Now assume that {a mathematical formula}U and {a mathematical formula}W are two different ϵ-components of {a mathematical formula}D with the same type; then, for each context {a mathematical formula}u∈U, we can find a context {a mathematical formula}w∈W with {a mathematical formula}poss(u)=poss(w); such w is broader than u because
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}≺w=∅=≺u by step 1,
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}core(w)=core(W)=core(U)=core(u) by soundness condition (N2), and
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}poss(W)=⋃v∈Wposs(v)=⋃v∈Uposs(v)=poss(U).
+        </list-item>
+       </list>
+       <paragraph>
+        Consequently, such {a mathematical formula}U is redundant in {a mathematical formula}D; however, due to step 3, decomposition {a mathematical formula}D contains no redundant ϵ-components, so we obtain a contradiction. Therefore, all distinct ϵ-components of {a mathematical formula}D are of a different type.Thus, we can bound the number of ϵ-components of {a mathematical formula}D by computing the number of possible types. For each ϵ-component {a mathematical formula}W of {a mathematical formula}D, set {a mathematical formula}core(W) is a subset of L, so there are at most {a mathematical formula}2|L| such subsets; furthermore, set {a mathematical formula}{poss(v)|v∈W} is a subset of {a mathematical formula}2L of cardinality at most {a mathematical formula}|L|, so the number of such subsets is bounded by{a mathematical formula} Consequently, the number of ϵ-components in {a mathematical formula}D is bounded by {a mathematical formula}2|L|⋅(2|L|)(|L|+1). Since each ϵ-component contains at most {a mathematical formula}|L| contexts, we have {a mathematical formula}ln(D)⩽|L|⋅2|L|(|L|+2), as required. □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Decomposition width and length in practice
+     </section-title>
+     <paragraph>
+      In this section we discuss the results of our experiments, whose goal was to measure decomposition width and length of realistic ontologies using several different expansion strategies.
+     </paragraph>
+     <paragraph>
+      Our experiments are based on our ontology repository that contains a diverse set of ontologies, including standard benchmarks and numerous ontologies from the life sciences domain. Each ontology in the repository can be accessed using a unique five-digit identifier.{sup:4} To obtain our test corpus, we focused mostly on those ontologies in the repository that contain more than 1000 axioms and are not expressed in {a mathematical formula}EL or {a mathematical formula}DL-Litehorn: ontologies expressed in one of these two languages have a decomposition of polynomial length and zero width, so we did not consider such ontologies interesting. However, we also included several smaller “toy” ontologies, such as Pizza and Wine, which were developed to demonstrate various ontology modeling constructs. In this way we obtained a corpus of 44 ontologies shown in Table 6. Since our framework is applicable only to normalized {a mathematical formula}ALCI ontologies, we further transformed each ontology as follows. First, we eliminated from the ontology all axioms that are not supported in {a mathematical formula}SHI. Second, we transformed the result into a normalized {a mathematical formula}SHI ontology using a normalization procedure similar to the one presented by Motik et al. [14]. Third, we eliminated role inclusion and transitivity axioms as described in Section 2 to obtain a normalized {a mathematical formula}ALCI ontology. For each test ontology, Table 6 shows (i) the number of terminological axioms in the original ontology, (ii) the number of atomic concepts, atomic roles, and axioms in the {a mathematical formula}SHI ontology after elimination of unsupported axioms, and (iii) the number of literals, roles, and clauses in the final {a mathematical formula}ALCI ontology after normalization; ontologies are grouped to match Table 7, and the rationale behind the grouping will be explained shortly. For each normalized ontology {a mathematical formula}O, we defined the set {a mathematical formula}QO to contain a query {a mathematical formula}A⊑B for all pairs of atomic concepts A and B in {a mathematical formula}O that were not introduced during normalization; thus, {a mathematical formula}QO contains all queries relevant for ontology classification.
+     </paragraph>
+     <paragraph>
+      We developed three controls, {a mathematical formula}C1, {a mathematical formula}C2, and {a mathematical formula}C3, that use the cautious, refined cautious, and eager expansion strategies, respectively, described in Section 3.4.2. Each control {a mathematical formula}Ci used {a mathematical formula}mln=∞—that is, we did not restrict the number of contexts introduced by the strategies. Although this is not formally allowed in our presentation of the algorithm, it allowed us to see how the strategies perform when run freely, without being forced to reuse contexts. The maximum number of contexts that could be introduced by {a mathematical formula}C1 and {a mathematical formula}C2 was thus polynomial, but for {a mathematical formula}C3 it was exponential in the ontology size. Finally, each {a mathematical formula}Ci used an initialization function that, for each atomic concept A occurring, introduces a single context {a mathematical formula}vA with {a mathematical formula}core(vA)={A} to cover all queries of the form {a mathematical formula}A⊑B. Please note that the expansion strategies of {a mathematical formula}C1 and {a mathematical formula}C3 can reuse these “initial” contexts, but the refined cautious expansion strategy of {a mathematical formula}C2 cannot since a context of the form {a mathematical formula}vA is distinct from a context of the form {a mathematical formula}vAR for some role R.
+     </paragraph>
+     <paragraph>
+      For each normalized ontology {a mathematical formula}O, we conducted the following experiments. First, for each {a mathematical formula}1⩽i⩽3, we computed the {a mathematical formula}Ci-decomposition {a mathematical formula}Di of {a mathematical formula}O and {a mathematical formula}QO using the decomposition construction algorithm from Section 4.4. Second, for each {a mathematical formula}1⩽i⩽3, we computed the width of an ϵ-refinement {a mathematical formula}Di′ of {a mathematical formula}Di using the approach from Section 5.3. We computed tree decompositions of the relevant hypergraphs using the TreeD library;{sup:5} however, since our hypergraphs were large, we used a heuristic mode in which the library returns only an approximation of the treewidth, without the actual tree decomposition. Thus, we were able to establish only an upper bound on the width, but not the length of {a mathematical formula}Di′; however, by Lemma 57, we know that the size of each ϵ-component of {a mathematical formula}Di′ is at most {a mathematical formula}wd(Di), so an upper bound on {a mathematical formula}ln(Di′) is given by {a mathematical formula}ln(Di)⋅wd(Di).
+     </paragraph>
+     <paragraph>
+      Table 7 summarizes the results of our experiments. For readability, the ontologies were grouped into three subtables: Table 7a contains those ontologies for which all three strategies produce decompositions of different widths; Table 7b contains those ontologies for which the cautious and the refined cautious strategies produce decompositions of equal widths; and Table 7c contains those ontologies for which the choice of a strategy does not affect decomposition width. Moreover, each subtable is split into two parts, where the bottom part contains ontologies for which {a mathematical formula}wd(D3)=0: these are all Horn ontologies on which the decomposition construction algorithm with the eager strategy fully solves the reasoning problem. On the “go-anatomy-importer” ontology, the cautious and the refined cautious strategies produce decompositions of very large width, which the TreeD library was unable to process. On the “nif-gross” ontology, the eager strategy seems to produce a decomposition of very large length, and our decomposition construction algorithm ran out of memory after introducing about five million contexts.
+     </paragraph>
+     <paragraph>
+      Our experiments show that decomposition length, even with the eager strategy, is in most cases commensurate with the number of atomic concepts. This is the main reason why consequence-based algorithms perform well in practice: our test ontologies do not seem to incur a substantial amount of and-branching; moreover, unlike the hypertableau algorithms, consequence-based algorithms do not suffer from unnecessary and-branching. The only outlier is the “nif-gross” ontology, on which the eager strategy produces very large decompositions; the cautious strategy, however, produces a decomposition of reasonably small width. This suggests that the hybrid strategy from Section 3.4.2 might actually be very useful in practice.
+     </paragraph>
+     <paragraph>
+      The refined cautious strategy does not seem to provide much practical benefit over the cautious strategy: there are only ten ontologies (all shown in Table 7a) on which {a mathematical formula}wd(D1)&gt;wd(D2) holds, and in all cases the difference between {a mathematical formula}wd(D1) and {a mathematical formula}wd(D2) is negligible. Furthermore, only four decompositions satisfy {a mathematical formula}wd(D1′)&gt;wd(D2′)—that is, in all other cases, computing an ϵ-refinement of {a mathematical formula}D1 and {a mathematical formula}D2 produces decompositions of equal width. The refined cautious strategy, however, can still be useful in practice: as we discussed in more detail in Section 3.4.2, contexts introduced by this strategy can have more refined literal orderings, but our framework cannot estimate the effects of a literal ordering on the performance of reasoning.
+     </paragraph>
+     <paragraph>
+      Particularly interesting are the results shown in the bottom part of Table 7c: all ontologies shown there contain universal restrictions and/or inverse roles, but they “behave” like {a mathematical formula}EL ontologies in that there is no interaction between existential and universal restrictions and/or inverse roles; this is reflected by the fact that the cautious and the eager strategy introduce in most cases the same numbers of contexts. The only exception is the “bams-simplified” ontology, on which there is some interaction between existential and universal restrictions; however, even in this case, the cautious strategy can produce a decomposition of zero width. To understand how this can happen, consider the ontology {a mathematical formula}{A⊑∃R.B,A⊑∀R.C,B⊑C}: with the cautious strategy we get a context {a mathematical formula}vB with {a mathematical formula}core(vB)={B}, whereas with the eager strategy we get a context {a mathematical formula}v{B,C} with {a mathematical formula}core(v{B,C})={B,C}; however, in the former case C is a known consequence of B, so introducing a context with a “suboptimal” core does not increase decomposition width.
+     </paragraph>
+     <paragraph>
+      Finally, our experiments show that computing an ϵ-refinement can substantially reduce decomposition width: {a mathematical formula}wd(Di′) is substantially lower than {a mathematical formula}wd(Di) in all cases except when {a mathematical formula}wd(Di) is already very small. Moreover, the eager strategy seems to produce decompositions of least width: with the exception of four ontologies (“dolce-all”, “lipid”, “sct-sep”, and “vaccine”), decomposition {a mathematical formula}D3′ has width below 30, and often much less than 30. This suggests that our approach to reducing or-branching from Section 5 could improve the performance of consequence-based reasoners in practice.
+     </paragraph>
+     <paragraph>
+      We finish this section with the observation that, in all cases, decomposition width is substantially smaller than the number of literals in the ontology, so our results provide a tighter estimate of the algorithm's complexity than that obtained from the usual complexity arguments. This is particularly true for Horn ontologies: decomposition length on such ontologies is manageable and decomposition width is zero, which explains why such ontologies are generally easier to reason with. On non-Horn ontologies, however, the upper complexity bound obtained using our results may still be very large; for example, for a decomposition of width 30, the number of clauses derived in each context is bounded by {a mathematical formula}430≈1.15⋅1018—clearly, no algorithm deriving that many clauses can be deemed practical. This bound, however, only analyzes what could happen in the worst case and, similarly to propositional resolution, such worst cases are unlikely to occur in practice. We observed that decomposition widths of our test ontologies are mainly determined by universal restrictions involving inverse roles: in order to guarantee that all clauses needed to apply the {a mathematical formula}Pred rule are derived, sets {a mathematical formula}ϱv,u∃R.A are needed in condition (R7) of Definition 42, and these sets can be large. In our experience, however, clauses with many literals of the form {a mathematical formula}∀inv(R).C are rarely derived during reasoning, which is why most ontologies can still be handled in practice. Therefore, a small decomposition width provides an indication, but not a definite guarantee, that reasoning with a particular ontology is easy. In contrast, decomposition length measures directly the number of contexts constructed in the consequence-based algorithm, so length is generally a good measure of ontology hardness.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Theorem 6
+     <paragraph>
+      Throughout Appendix A, we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O, an admissible context structure {a mathematical formula}D=〈V,E,core,≺〉, and a clause system {a mathematical formula}S for {a mathematical formula}D such that no inference rule from Table 3 is applicable to {a mathematical formula}S; furthermore, we fix L to be the set of all literals that occur in {a mathematical formula}O, {a mathematical formula}D, or {a mathematical formula}S. We prove Theorem 6 by showing the following contrapositive claim: {a mathematical formula}O⊭K⊑M holds for each query {a mathematical formula}K⊑M for which a context {a mathematical formula}v∈V exists such that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       v is complete for {a mathematical formula}K⊑M,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}K⊑L∈ˆS(v) for each {a mathematical formula}L∈K, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}K⊑M{an inline-figure}S(v).
+      </list-item>
+     </list>
+     <paragraph>
+      To this end, we construct a model {a mathematical formula}I of {a mathematical formula}O that refutes each query satisfying the above conditions. The construction is organized as follows. Instead of directly constructing a model, for simplicity we construct a pre-model—a graph-like structure with nodes labeled by sets of literals. We introduce this notion in Appendix A.1, and we explain how to convert a pre-model into a model. In Appendix A.2 we show how to construct a propositional interpretation satisfying a set of clauses closed under hyperresolution. In Appendix A.3 we prove certain properties of our inference rules that will allow us to use the construction from Appendix A.2. Finally, in Appendix A.4 we use these propositional interpretations to construct the desired pre-model of {a mathematical formula}O.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       Pre-interpretations and pre-models
+      </section-title>
+      <paragraph>
+       In this section we introduce the notions of a pre-interpretation and a pre-model of an ontology, which we use to simplify the presentation of the subsequent proofs.
+      </paragraph>
+      <paragraph label="Definition 59">
+       A set of literals J satisfies a clause{a mathematical formula}K⊑M, written{a mathematical formula}J⊨K⊑M, if{a mathematical formula}K⊆Jimplies{a mathematical formula}M∩J≠∅; otherwise, J refutes {a mathematical formula}K⊑M, written{a mathematical formula}J⊭K⊑M.A pre-interpretation is a labeled graph{a mathematical formula}I=〈Δ,E,J〉where Δ is a nonempty set of nodes,{a mathematical formula}E⊆Δ×Δ×ΣRis a set of role-labeled edges, and{a mathematical formula}J:Δ→2ΣLis a labeling of nodes by sets of literals satisfying the following two conditions.
+      </paragraph>
+      <list>
+       <list-item>
+        For each node{a mathematical formula}x∈Δand each literal{a mathematical formula}∃R.A∈J(x), an edge{a mathematical formula}〈x,y,R〉∈Eexists such that{a mathematical formula}A∈J(y).
+       </list-item>
+       <list-item>
+        For each edge{a mathematical formula}〈x,y,R〉∈Eand all literals{a mathematical formula}∀R.Band{a mathematical formula}∀inv(R).C, we have that
+       </list-item>
+      </list>
+      <paragraph>
+       Given a pre-interpretation {a mathematical formula}I=〈Δ,E,J〉, we can construct an interpretation {a mathematical formula}I for all atomic concepts {a mathematical formula}A∈ΣA and all atomic roles {a mathematical formula}T∈ΣT as follows.{a mathematical formula}{a mathematical formula}{a mathematical formula} Interpretation {a mathematical formula}I satisfies the following property for each literal {a mathematical formula}L∈ΣL and each node {a mathematical formula}x∈Δ:{a mathematical formula} For atomic concepts, property (A.4) holds by the definition of {a mathematical formula}AI; furthermore, for literals of the form {a mathematical formula}∃R.A and {a mathematical formula}∀R.A, property (A.4) holds due to conditions {a mathematical formula}(I∃) and {a mathematical formula}(I∀), respectively. The converse of property (A.4), however, holds only for atomic concepts, which is why all clauses in {a mathematical formula}O must have only atomic concepts in their antecedents, and all queries must have only atomic concepts in their consequents. We next show that the interpretation {a mathematical formula}I obtained as specified above is indeed a model of {a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Lemma 60">
+       Let{a mathematical formula}I=〈Δ,E,J〉be a pre-interpretation, and let{a mathematical formula}Ibe the interpretation obtained from I as specified in(A.1), (A.2), (A.3). If I satisfies a normal clause α, then{a mathematical formula}I⊨α. Furthermore, if I refutes a query q, then{a mathematical formula}I⊭q.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}⨅i=1mAi⊑⨆j=1nLj be an arbitrary normal clause that is satisfied in I, and consider an arbitrary node {a mathematical formula}x∈Δ such that {a mathematical formula}x∈AiI for each {a mathematical formula}1⩽i⩽m. By (A.2), we have {a mathematical formula}Ai∈J(x) for each {a mathematical formula}1⩽i⩽m; but then, since I satisfies the clause by the assumption, we have {a mathematical formula}Lj∈J(x) for some {a mathematical formula}1⩽j⩽n; hence, we have {a mathematical formula}x∈LjI for some {a mathematical formula}1⩽j⩽n by (A.4). Since this holds for arbitrary {a mathematical formula}x∈Δ, we have {a mathematical formula}I⊨⨅i=1mAi⊑⨆j=1nLj.Let {a mathematical formula}⨅i=1mLi⊑⨆j=1nAj be an arbitrary query that is refuted in I. Thus, a node {a mathematical formula}x∈Δ exists such that {a mathematical formula}Li∈J(x) for each {a mathematical formula}1⩽i⩽m, and {a mathematical formula}Aj∉J(x) for each {a mathematical formula}1⩽j⩽n. But then, {a mathematical formula}x∈LiI for each {a mathematical formula}1⩽i⩽m by (A.4), and {a mathematical formula}x∉AjI for each {a mathematical formula}1⩽j⩽n by (A.2); consequently, we have {a mathematical formula}I⊭⨅i=1mLi⊑⨆j=1nAj. □
+      </paragraph>
+      <paragraph label="Corollary 61">
+       If a pre-model I of{a mathematical formula}Oexists that refutes a query{a mathematical formula}K⊑M, then{a mathematical formula}O⊭K⊑M.
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Constructing literal interpretations
+      </section-title>
+      <paragraph>
+       In this section, we show how the sets of clauses {a mathematical formula}S(v) and the corresponding literal orderings {a mathematical formula}≺v can be used to construct the sets {a mathematical formula}J(x) of a pre-model {a mathematical formula}I=〈Δ,E,J〉 that satisfies {a mathematical formula}O but refutes a query {a mathematical formula}K⊑M. Our construction is independent from the selected context v; therefore, we consider here just a single set of clauses {a mathematical formula}N.
+      </paragraph>
+      <paragraph>
+       Throughout Appendix A.2 we fix a literal ordering ≺, a set of clauses {a mathematical formula}N over L, and a clause {a mathematical formula}K⊑M over L satisfying the following conditions:{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Next, in Definition 62 we introduce a notion that determines when set {a mathematical formula}N contains “sufficiently many” hyperresolution consequences w.r.t. literal ordering ≺.
+      </paragraph>
+      <paragraph label="Definition 62">
+       Set{a mathematical formula}Nis closed under ≺-hyperresolution with a clause {a mathematical formula}⨅i=1nLi⊑M′ (not necessarily contained in{a mathematical formula}N) if, for each choice of n clauses{a mathematical formula}Ki⊑Mi⊔Li∈N,{a mathematical formula}1⩽i⩽n, each satisfying{a mathematical formula}Li⊀Mi, we have{a mathematical formula}⨅i=1nKi⊑M′⊔⨆i=1nMi∈ˆN.
+      </paragraph>
+      <paragraph>
+       The following lemma follows trivially from Definition 62 and the notion of clause strengthening.
+      </paragraph>
+      <paragraph label="Lemma 63">
+       Let{a mathematical formula}α1and{a mathematical formula}α2be arbitrary clauses such that{a mathematical formula}α1is a strengthening of{a mathematical formula}α2. If{a mathematical formula}Nis closed under ≺-hyperresolution with{a mathematical formula}α1, then{a mathematical formula}Nis also closed under ≺-hyperresolution with{a mathematical formula}α2.
+      </paragraph>
+      <paragraph>
+       For ≺, {a mathematical formula}N, and {a mathematical formula}K⊑M fixed as specified above, we next construct a set of literals J that refutes {a mathematical formula}K⊑M, but that satisfies each clause {a mathematical formula}⨅i=1nLi⊑M′ for which {a mathematical formula}N is closed under ≺-hyperresolution. We achieve this by essentially adapting the standard techniques from resolution theorem proving [31] to our setting. Towards this goal, we proceed as follows: we first present the construction of J; in Lemma 64 we prove certain properties of the productive clauses in {a mathematical formula}N; in Lemma 65 we show that J satisfies each clause {a mathematical formula}K′⊑M′ for which a strengthening is contained in {a mathematical formula}N and that satisfies {a mathematical formula}K′⊆K; in Lemma 66 we show that J refutes {a mathematical formula}K⊑M; and finally in Lemma 67 we prove the desired result.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}L1,L2,…,Lℓ be an arbitrary total ordering of L that extends ≺ such that the elements of M precede all the remaining literals from L—that is, for all i and j, we have that{a mathematical formula}{a mathematical formula} Since M is ≺-minimal by (A.5) and set L is finite, at least one such total ordering exists. For each {a mathematical formula}0⩽k⩽ℓ, let {a mathematical formula}Lk:={L1,…,Lk}, and let {a mathematical formula}Jk be an inductively defined set of literals such that {a mathematical formula}J0:=∅ and, for each {a mathematical formula}0&lt;k⩽ℓ, we have{a mathematical formula} Let {a mathematical formula}J:=Jℓ. Each set J that can be obtained by such a construction (which is nondeterministic due to the choice of the total ordering) is called a literal interpretation of L w.r.t. {a mathematical formula}N and ≺ refuting {a mathematical formula}K⊑M. Each clause {a mathematical formula}K′⊑M′⊔Lk∈N that satisfies the first condition in (A.10) for some k is said to be a productive clause, and the clause is said to produce the literal {a mathematical formula}Lk in J. Clearly, each literal in J is produced by at least one productive clause in {a mathematical formula}N.
+      </paragraph>
+      <paragraph label="Lemma 64">
+       Each productive clause{a mathematical formula}K′⊑M′⊔Lk∈Nsatisfies{a mathematical formula}K′⊆K,{a mathematical formula}M′∩J=∅, and{a mathematical formula}Lk⊀M′.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}K′⊑M′⊔Lk∈N be an arbitrary clause producing literal {a mathematical formula}Lk in J for some integer k. By (A.10), we have {a mathematical formula}K′⊆K, {a mathematical formula}M′∩Jk−1=∅, and {a mathematical formula}M′⊆Lk−1. Clearly {a mathematical formula}Jk−1=J∩Lk−1, so we have {a mathematical formula}M′∩J=∅. Finally, by (A.8), we have {a mathematical formula}Lk⊀L for each {a mathematical formula}L∈Lk−1; hence, due to {a mathematical formula}M′⊆Lk−1, we have {a mathematical formula}Lk⊀M′. □
+      </paragraph>
+      <paragraph label="Lemma 65">
+       For each clause{a mathematical formula}K′⊑M′such that{a mathematical formula}K′⊑M′∈ˆNand{a mathematical formula}K′⊆K, we have{a mathematical formula}M′∩J≠∅.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}K′⊑M′ be an arbitrary clause satisfying {a mathematical formula}K′⊑M′∈ˆN and {a mathematical formula}K′⊆K. Then, a clause {a mathematical formula}K1⊑M1∈N exists such that {a mathematical formula}K1⊆K′⊆K and {a mathematical formula}M1⊆M′ hold. Clause {a mathematical formula}K1⊑⊥ is thus a strengthening of {a mathematical formula}K⊑M, but {a mathematical formula}K⊑M{an inline-figure}N by assumption (A.7); thus, {a mathematical formula}M1≠∅. Let k be the largest integer for which {a mathematical formula}Lk∈M′ holds; hence, clause {a mathematical formula}K1⊑M1 is of the form {a mathematical formula}K1⊑M2⊔Lk where {a mathematical formula}M2⊆Lk−1. The claim of this lemma holds trivially if {a mathematical formula}M2∩J≠∅. Furthermore, if {a mathematical formula}M2∩J=∅, then by (A.10) clause {a mathematical formula}K1⊑M2⊔Lk produces {a mathematical formula}Lk∈J, so we again have {a mathematical formula}M′∩J≠∅, as required. □
+      </paragraph>
+      <paragraph label="Lemma 66">
+       We have{a mathematical formula}J⊭K⊑M—that is,{a mathematical formula}K⊆Jand{a mathematical formula}M∩J=∅.
+      </paragraph>
+      <paragraph label="Proof">
+       ({a mathematical formula}K⊆J) Consider an arbitrary literal {a mathematical formula}L∈K. Then {a mathematical formula}K⊑L∈ˆN by assumption (A.6), so a conjunction {a mathematical formula}K′⊆K exists such that {a mathematical formula}K′⊑⊥∈N or {a mathematical formula}K′⊑L∈N. The former contradicts {a mathematical formula}K⊑M{an inline-figure}N, which is assumption (A.7); hence, we have {a mathematical formula}K′⊑L∈N, so by (A.10) this clause produces {a mathematical formula}L∈J.({a mathematical formula}M∩J=∅) Assume that a literal {a mathematical formula}Lk∈M∩J exists, and let {a mathematical formula}K′⊑M′⊔Lk∈N be a clause that produces {a mathematical formula}Lk∈J. By (A.10), we have {a mathematical formula}M′⊆Lk−1 and {a mathematical formula}K′⊆K; furthermore, by (A.9) and {a mathematical formula}Lk∈M, we have {a mathematical formula}M′∪{Lk}⊆M. But then, {a mathematical formula}K′⊑M′⊔Lk∈N contradicts {a mathematical formula}K⊑M{an inline-figure}N, which is assumption (A.7). □
+      </paragraph>
+      <paragraph label="Lemma 67">
+       For each clause α such that{a mathematical formula}Nis closed under ≺-hyperresolution with α, we have{a mathematical formula}J⊨α.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that {a mathematical formula}α=⨅i=1nLi⊑M′ and that {a mathematical formula}Li∈J for each {a mathematical formula}1⩽i⩽n. For each {a mathematical formula}1⩽i⩽n, let {a mathematical formula}Ki⊑Mi⊔Li be some clause that produces {a mathematical formula}Li∈J; then {a mathematical formula}Ki⊆K, {a mathematical formula}Mi∩J=∅, and {a mathematical formula}Li⊀Mi by Lemma 64. Since {a mathematical formula}N is closed under ≺-hyperresolution with α, we have {a mathematical formula}⨅i=1nKi⊑M′⊔⨆i=1nMi∈ˆN. By {a mathematical formula}(⨅i=1nKi)⊆K and Lemma 65, we have {a mathematical formula}(M′⊔⨆i=1nMi)∩J≠∅. Finally, since {a mathematical formula}Mi∩J=∅ holds for each {a mathematical formula}1⩽i⩽n, we have {a mathematical formula}M′∩J≠∅. Consequently, we have {a mathematical formula}J⊨α, as required. □
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Properties of the consequence-based inference rules
+      </section-title>
+      <paragraph>
+       To apply the construction from Appendix A.2 to our clause system {a mathematical formula}S and the context structure {a mathematical formula}D=〈V,E,core,≺〉 (which were fixed at the beginning of Appendix A), we next prove the following two auxiliary lemmas about the consequence-based inference rules. Lemma 68 allows us to show that, for each context {a mathematical formula}v∈V, the set of literals obtained by applying the above construction to {a mathematical formula}S(v) satisfies each clause in {a mathematical formula}O; the lemma follows trivially from Definition 62 and the fact that the {a mathematical formula}Hyper rule is not applicable to {a mathematical formula}S. Furthermore, Lemma 69 shows a similar property for the clauses that participate in the {a mathematical formula}Pred rule.
+      </paragraph>
+      <paragraph label="Lemma 68">
+       For each context{a mathematical formula}v∈Vand each clause{a mathematical formula}α∈O, set{a mathematical formula}S(v)is closed under{a mathematical formula}≺v-hyperresolution with α.
+      </paragraph>
+      <paragraph label="Lemma 69">
+       For each edge{a mathematical formula}〈v,u,∃R.A〉∈Eand each clause{a mathematical formula}α=A⊓⨅i=1nBi⊑⨆j=1m∀inv(R).Cjsuch that{a mathematical formula}α∈ˆS(u), set{a mathematical formula}S(v)is closed under{a mathematical formula}≺v-hyperresolution with{a mathematical formula}∃R.A⊓⨅i=1n∀R.Bi⊑⨆j=1mCj.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider an arbitrary edge {a mathematical formula}〈v,u,∃R.A〉∈E and an arbitrary clause {a mathematical formula}α=A⊓⨅i=1nBi⊑⨆j=1m∀inv(R).Cj such that {a mathematical formula}α∈ˆS(u). By the definition of {a mathematical formula}∈ˆ, a subset {a mathematical formula}{Bi′}i=1n′ of {a mathematical formula}{Bi}i=1n and a subset {a mathematical formula}{Cj′}j=1m′ of {a mathematical formula}{Cj}j=1m exist such that{a mathematical formula} The {a mathematical formula}Pred rule is not applicable to clause system {a mathematical formula}S; thus, for each clause {a mathematical formula}K0⊑M0⊔∃R.A∈S(v) satisfying {a mathematical formula}∃R.A⊀vM0, and for each choice of {a mathematical formula}n′ clauses {a mathematical formula}Ki⊑Mi⊔∀R.Bi′, {a mathematical formula}1⩽i⩽n′, satisfying {a mathematical formula}∀R.Bi′⊀vMi, we have{a mathematical formula} Thus, {a mathematical formula}S(v) is closed under {a mathematical formula}≺v-hyperresolution with clause {a mathematical formula}∃R.A⊓⨅i=1n′∀R.Bi′⊑⨆j=1m′Cj′. By Lemma 63, then {a mathematical formula}S(v) is also closed under {a mathematical formula}≺v-hyperresolution with clause {a mathematical formula}∃R.A⊓⨅i=1n∀R.Bi⊑⨆j=1mCj since the former is a strengthening of the latter clause. □
+      </paragraph>
+     </section>
+     <section label="A.4">
+      <section-title>
+       The completeness claim
+      </section-title>
+      <paragraph>
+       We now complete the proof of Theorem 6 by constructing a pre-interpretation that satisfies {a mathematical formula}O but refutes the relevant queries. To simplify the presentation, given a context {a mathematical formula}v∈V and a clause {a mathematical formula}K⊑M, we write {a mathematical formula}v⊬K⊑M if and only if
+      </paragraph>
+      <list>
+       <list-item label="•">
+        M is {a mathematical formula}≺v-minimal (i.e., v is complete for {a mathematical formula}K⊑M),
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊑L∈ˆS(v) for each literal {a mathematical formula}L∈K, and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊑M{an inline-figure}S(v).
+       </list-item>
+      </list>
+      <paragraph label="Claim 70">
+       For each context{a mathematical formula}v∈Vand each clause{a mathematical formula}K⊑M, if{a mathematical formula}K⊑L∈ˆS(v)for each{a mathematical formula}L∈Kand{a mathematical formula}K⊑M{an inline-figure}S(v), then{a mathematical formula}K⊆L.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that there exists a literal {a mathematical formula}L∈K∖L; then, L does not occur in {a mathematical formula}S(v), so {a mathematical formula}K⊑L∈ˆS(v) implies {a mathematical formula}K⊑⊥∈ˆS(v), which contradicts the assumption that {a mathematical formula}K⊑M{an inline-figure}S(v). Thus, {a mathematical formula}K⊆L holds. □
+      </paragraph>
+      <paragraph>
+       Theorem 6 holds vacuously if no context {a mathematical formula}v∈V and no query {a mathematical formula}K⊑M exist such that {a mathematical formula}v⊬K⊑M. Thus, we assume that {a mathematical formula}v⊬K⊑M holds for at least one context {a mathematical formula}v∈V and at least one query {a mathematical formula}K⊑M; by the definition of clause strengthening, we then also have {a mathematical formula}v⊬K⊑M′ for {a mathematical formula}M′=M∩L; the latter clause is over L by Claim 70. Let {a mathematical formula}I=〈Δ,E,J〉 be defined as follows.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Set Δ is the smallest set that contains a distinguished element {a mathematical formula}δK⊑Mv for each context {a mathematical formula}v∈V and each clause {a mathematical formula}K⊑M over L such that {a mathematical formula}v⊬K⊑M. Set Δ is not empty due to the above assumption.
+       </list-item>
+       <list-item label="•">
+        For each {a mathematical formula}δK⊑Mv∈Δ, let {a mathematical formula}J(δK⊑Mv) be an arbitrary literal interpretation of L w.r.t. {a mathematical formula}S(v) and {a mathematical formula}≺v refuting {a mathematical formula}K⊑M.
+       </list-item>
+       <list-item label="•">
+        Set E is the smallest set containing {a mathematical formula}〈δK1⊑M1v,δA⊓K2⊑M2u,R〉 for each element {a mathematical formula}δK1⊑M1v∈Δ, each literal {a mathematical formula}∃R.A∈J(δK1⊑M1v), and each edge {a mathematical formula}〈v,u,∃R.A〉∈E such that {a mathematical formula}u⊬A⊓K2⊑M2, where {a mathematical formula}K2 and {a mathematical formula}M2 are as specified below.{a mathematical formula}{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       In the last item, we have {a mathematical formula}K2∪M2⊆L and {a mathematical formula}A∈L; thus, {a mathematical formula}u⊬A⊓K2⊑M2 ensures {a mathematical formula}δA⊓K2⊑M2u∈Δ, and so E is correctly defined. Next, in Claim 71 we show that I is a pre-interpretation, in Claim 72 we show that I is a pre-model of {a mathematical formula}O, and in Claim 73 we show that I refutes the relevant queries. The claim of Theorem 6 then follows from Claim 72, Claim 73, and Corollary 61.
+      </paragraph>
+      <paragraph label="Claim 71">
+       Structure I satisfies conditions{a mathematical formula}(I∃)and{a mathematical formula}(I∀)of pre-interpretations fromDefinition 59.
+      </paragraph>
+      <paragraph label="Proof">
+       (Property {a mathematical formula}I∃) Consider an arbitrary element {a mathematical formula}δK1⊑M1v∈Δ and an arbitrary literal {a mathematical formula}∃R.A∈J(δK1⊑M1v); we next show that an edge {a mathematical formula}〈δK1⊑M1v,γ,R〉∈E exists such that {a mathematical formula}A∈J(γ). The {a mathematical formula}Succ rule is not applicable to {a mathematical formula}S, so an edge {a mathematical formula}〈v,u,∃R.A〉∈E exists satisfying{a mathematical formula} Let {a mathematical formula}K2 and {a mathematical formula}M2 be as specified in (A.11) and (A.12). The following observations prove that {a mathematical formula}u⊬A⊓K2⊑M2.
+       <list>
+        Admissibility of {a mathematical formula}D and {a mathematical formula}〈v,u,∃R.A〉∈E imply, by Definition 4, that {a mathematical formula}≺u is R-admissible, so {a mathematical formula}M2 is {a mathematical formula}≺u-minimal.Consider an arbitrary literal {a mathematical formula}L∈A⊓K2; we show that {a mathematical formula}A⊓K2⊑L∈ˆS(u). Assume that {a mathematical formula}L∈K2, so L is an atomic concept {a mathematical formula}L=B. Then, by (A.11), we have {a mathematical formula}∀R.B∈J(δK1⊑M1v); thus, there exists at least one clause {a mathematical formula}K′⊑M′⊔∀R.B∈S(v) with {a mathematical formula}∀R.B⊀vM′ that produces {a mathematical formula}∀R.B in {a mathematical formula}J(δK1⊑M1v); hence {a mathematical formula}B∈Bp. But then {a mathematical formula}L⊑L∈ˆS(u) holds by (A.13), which is stronger than the required {a mathematical formula}A⊓K2⊑L∈ˆS(u). The case when {a mathematical formula}L=A follows directly from (A.13).Assume for contradiction that {a mathematical formula}A⊓K2⊑M2∈ˆS(u). By Lemma 69, set {a mathematical formula}S(v) is closed under {a mathematical formula}≺v-hyperresolution with clause{a mathematical formula} Recall that {a mathematical formula}∃R.A∈J(δK1⊑M1v), so the above clause is clearly refuted in {a mathematical formula}J(δK1⊑M1v). However, by Lemma 67, the clause is satisfied in {a mathematical formula}J(δK1⊑M1v), which is a contradiction. Consequently, we have {a mathematical formula}A⊓K2⊑M2{an inline-figure}S(u), as required.(Property
+       </list>
+       <paragraph>
+        {a mathematical formula}I∀) Consider an arbitrary edge {a mathematical formula}〈δK1⊑M1v,δA⊓K2⊑M2u,R〉∈E as in the definition of E, as well as arbitrary literals {a mathematical formula}∀R.B and {a mathematical formula}∀inv(R).C.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Assume that {a mathematical formula}∀R.B∈J(δK1⊑M1v). Then {a mathematical formula}B∈K2 holds by (A.11); but then, Lemma 66 implies {a mathematical formula}J(δA⊓K2⊑M2u)⊭A⊓K2⊑M2. Consequently, we have {a mathematical formula}B∈J(δA⊓K2⊑M2u), as required.
+        </list-item>
+        <list-item label="•">
+         Assume that {a mathematical formula}∀inv(R).C∈J(δA⊓K2⊑M2u). Then {a mathematical formula}∀inv(R).C∈L holds since {a mathematical formula}J(δA⊓K2⊑M2u) is a literal interpretation of L. Now, if {a mathematical formula}C∉J(δK1⊑M1v), then {a mathematical formula}∀inv(R).C∈M2 by (A.12), so {a mathematical formula}∀inv(R).C∉J(δA⊓K2⊑M2u) by Lemma 66, which contradicts our assumption. Consequently, we have {a mathematical formula}C∈J(δK1⊑M1v), as required.
+        </list-item>
+       </list>
+       <paragraph>
+        □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Claim 72">
+       Pre-interpretation I is a pre-model of{a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider an arbitrary element {a mathematical formula}δK⊑Mv∈Δ and an arbitrary normal clause {a mathematical formula}α∈O. By Lemma 68, set {a mathematical formula}S(v) is closed under {a mathematical formula}≺v-hyperresolution with α, so {a mathematical formula}J(δK⊑Mv)⊨α by Lemma 67. This holds for arbitrary {a mathematical formula}δK⊑Mv∈Δ, so we have {a mathematical formula}I⊨α. Finally, the latter holds for arbitrary {a mathematical formula}α∈O, so I is a pre-model of {a mathematical formula}O. □
+      </paragraph>
+      <paragraph label="Claim 73">
+       Pre-interpretation I refutes each query{a mathematical formula}K⊑Mfor which there exists a context{a mathematical formula}v∈Vsuch that v is complete for{a mathematical formula}K⊑M,{a mathematical formula}K⊑L∈ˆS(v)for each{a mathematical formula}L∈K, and{a mathematical formula}K⊑M{an inline-figure}S(v).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}K⊑M be an arbitrary query satisfying the preconditions of the claim, and let {a mathematical formula}M′=M∩L. Then {a mathematical formula}v⊬K⊑M′ holds as well, and this clause is over L by Claim 70. But then, {a mathematical formula}J(δK⊑M′v)⊭K⊑M′ by Lemma 66. Finally, each literal from {a mathematical formula}M∖M′ is not from L and so it cannot occur in {a mathematical formula}J(δK⊑M′v); thus, {a mathematical formula}J(δK⊑M′v)⊭K⊑M holds as well, so I refutes {a mathematical formula}K⊑M, as required. □
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix B">
+     Proof of Theorem 37
+     <paragraph>
+      We proceed similarly as in the proof of Theorem 6 in Appendix A. In the rest of Appendix B, we fix a normalized {a mathematical formula}ALCI ontology {a mathematical formula}O, an admissible decomposition {a mathematical formula}D=〈V,E,core,knw,poss,≺,ϑ〉 of {a mathematical formula}O and an arbitrary finite set of queries, and a clause system {a mathematical formula}S for {a mathematical formula}D satisfying the preconditions of Theorem 37; furthermore, we fix L to be the set of all literals that occur in {a mathematical formula}O, {a mathematical formula}D, or {a mathematical formula}S. We prove Theorem 37 by constructing a pre-interpretation that satisfies {a mathematical formula}O but refutes the relevant queries. To simplify the presentation, given an ϵ-component {a mathematical formula}W of {a mathematical formula}D, a context {a mathematical formula}v∈W, and a clause {a mathematical formula}K⊑M, we write {a mathematical formula}v⊬K⊑M if and only if
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}K⊆poss(v), {a mathematical formula}M∩poss(W)⊆poss(v), and M is {a mathematical formula}≺v-minimal (i.e., v is complete for {a mathematical formula}K⊑M),
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}K⊑L∈ˆS(v) for each literal {a mathematical formula}L∈K, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}K⊑M{an inline-figure}S(v).
+      </list-item>
+     </list>
+     <paragraph>
+      Theorem 37 holds vacuously if no context {a mathematical formula}v∈V and no query {a mathematical formula}K⊑M exist such that {a mathematical formula}v⊬K⊑M. Thus, we assume that {a mathematical formula}v⊬K⊑M holds for at least one context {a mathematical formula}v∈V and query {a mathematical formula}K⊑M; by the definition of clause strengthening, we then also have {a mathematical formula}v⊬K⊑M′ for {a mathematical formula}M′=M∩L; the latter clause is over L by Claim 70. Let {a mathematical formula}I=〈Δ,E,J〉 be defined as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Set Δ is the smallest set that contains a distinguished element {a mathematical formula}δK⊑Mv for each context {a mathematical formula}v∈V and each clause {a mathematical formula}K⊑M over L such that {a mathematical formula}v⊬K⊑M. Set Δ is not empty due to the above assumption.
+      </list-item>
+      <list-item label="•">
+       The value of function J is defined on each element {a mathematical formula}δK⊑Mv∈Δ as follows. Let {a mathematical formula}W be the ϵ-component of {a mathematical formula}D that contains v, and let {a mathematical formula}w0,w1,…,wn be an ordering of the elements of {a mathematical formula}W obtained by an arbitrary depth-first traversal of {a mathematical formula}DW starting from {a mathematical formula}w0=v. Conjunctions {a mathematical formula}K0,K1,…,Kn, disjunctions {a mathematical formula}M0,M1,…,Mn, and literal interpretations {a mathematical formula}J0,J1,…,Jn are defined inductively as follows.
+      </list-item>
+      <list-item label="•">
+       Set E is the smallest set containing {a mathematical formula}〈δK1⊑M1v,δA⊓K2⊑M2u,R〉 for all ϵ-components {a mathematical formula}W and {a mathematical formula}U of {a mathematical formula}D, each element {a mathematical formula}δK1⊑M1v∈Δ with {a mathematical formula}v∈W, each literal {a mathematical formula}∃R.A∈J(δK1⊑M1v), and each edge {a mathematical formula}〈v,u,∃R.A〉∈E with {a mathematical formula}u∈U such that {a mathematical formula}u⊬A⊓K2⊑M2, where {a mathematical formula}K2 and {a mathematical formula}M2 are as specified below.{a mathematical formula}{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      In the last item, we have {a mathematical formula}K2∪M2⊆L and {a mathematical formula}A∈L; thus, {a mathematical formula}u⊬A⊓K2⊑M2 ensures {a mathematical formula}δA⊓K2⊑M2u∈Δ, and so E is correctly defined. In contrast, the definition of {a mathematical formula}J(δK⊑Mv) relies on the existence of literal interpretations that refute certain clauses, and it is not obvious that these literal interpretations exist; hence, the following lemma proves that this is the case.
+     </paragraph>
+     <paragraph label="Claim 74">
+      The value of{a mathematical formula}J(δK⊑Mv)is correctly defined for each element{a mathematical formula}δK⊑Mv∈Δ.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider an arbitrary element {a mathematical formula}δK⊑Mv, and let {a mathematical formula}W, {a mathematical formula}w0,w1,…,wn, {a mathematical formula}K0,K1,…,Kn, {a mathematical formula}M0,M1,…,Mn, and {a mathematical formula}J0,J1,…,Jn be as specified above. We next inductively prove that {a mathematical formula}wi⊬Ki⊑Mi for each {a mathematical formula}0⩽i⩽n; this is sufficient to guarantee existence of the corresponding literal interpretation {a mathematical formula}Ji. For {a mathematical formula}i=0, we have {a mathematical formula}w0⊬K0⊑M0 immediately from the facts that {a mathematical formula}K0=K, {a mathematical formula}M0=M, and {a mathematical formula}δK⊑Mv∈Δ. Consider now an arbitrary integer {a mathematical formula}i&gt;0, and let {a mathematical formula}wj be the parent of {a mathematical formula}wi in the depth-first traversal of {a mathematical formula}DW. Since the ϵ-edges of {a mathematical formula}D are symmetric by admissibility condition (E1), the presence of the undirected edge {a mathematical formula}{wj,wi} in {a mathematical formula}DW implies that {a mathematical formula}〈wj,wi,ϵ〉∈E. Now {a mathematical formula}wi⊬Ki⊑Mi follows from the following observations.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Condition {a mathematical formula}Ki⊆poss(wi) holds trivially by the definition of {a mathematical formula}Ki.
+      </list-item>
+      <list-item label="•">
+       Condition {a mathematical formula}Mi∩poss(W)⊆poss(wi) holds trivially since {a mathematical formula}Mi⊆poss(wi) by the definition of {a mathematical formula}Mi.
+      </list-item>
+      <list-item label="•">
+       Disjunction {a mathematical formula}Mi is {a mathematical formula}≺wi-minimal by admissibility condition (P2) since {a mathematical formula}〈wj,wi,ϵ〉∈E and {a mathematical formula}Mi⊆poss(wj)∩poss(wi).
+      </list-item>
+      <list-item label="•">
+       Consider an arbitrary literal {a mathematical formula}L∈Ki; we show {a mathematical formula}Ki⊑L∈ˆS(wi). By the definition of {a mathematical formula}Ki, we have {a mathematical formula}L∈poss(wj)∩poss(wi); hence, {a mathematical formula}〈wj,wi,ϵ〉∈E implies {a mathematical formula}L⊑L∈ˆS(wi) by condition (I4) of Theorem 37, which is stronger than {a mathematical formula}Ki⊑L∈ˆS(wi).
+      </list-item>
+      <list-item label="•">
+       Assume for contradiction that {a mathematical formula}Ki⊑Mi∈ˆS(wi). Since {a mathematical formula}〈wj,wi,ϵ〉∈E and {a mathematical formula}S is closed under the {a mathematical formula}Epsilon rule, {a mathematical formula}S(wj) is closed under {a mathematical formula}≺wj-hyperresolution with some strengthening of {a mathematical formula}Ki⊑Mi. By Lemma 63, Lemma 67, we then have {a mathematical formula}Jj⊨Ki⊑Mi; however, by the definition of {a mathematical formula}Ki and {a mathematical formula}Mi we clearly have {a mathematical formula}Jj⊭Ki⊑Mi. Thus, {a mathematical formula}Ki⊑Mi{an inline-figure}S(wi) holds, as required.
+      </list-item>
+     </list>
+     <paragraph>
+      Next, we prove several important properties of J.
+     </paragraph>
+     <paragraph label="Claim 75">
+      Let{a mathematical formula}δK⊑Mv∈Δbe an arbitrary element, and let{a mathematical formula}Wbe the ϵ-component of{a mathematical formula}Dsuch that{a mathematical formula}v∈W. Then,
+     </paragraph>
+     <list>
+      <list-item>
+       {a mathematical formula}knw(W)⊆J(δK⊑Mv)⊆poss(W),
+      </list-item>
+      <list-item>
+       {a mathematical formula}J(δK⊑Mv)⊭K⊑M, and
+      </list-item>
+      <list-item>
+       {a mathematical formula}J(δK⊑Mv)⊨K′⊑M′for each clause{a mathematical formula}K′⊑M′for which a context{a mathematical formula}w∈Wexists such that{a mathematical formula}K′∪M′⊆poss(w)and{a mathematical formula}S(w)is closed under{a mathematical formula}≺w-hyperresolution with{a mathematical formula}K′⊑M′.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Consider an arbitrary element {a mathematical formula}δK⊑Mv∈Δ; clearly, we have {a mathematical formula}v⊬K⊑M. Furthermore, let {a mathematical formula}W be the ϵ-component of {a mathematical formula}D such that {a mathematical formula}v∈W, and let {a mathematical formula}w0,w1,…,wn, {a mathematical formula}K0,K1,…,Kn, {a mathematical formula}M0,M1,…,Mn, and {a mathematical formula}J0,J1,…,Jn be as specified in the definition of the pre-interpretation I. Before proceeding, we first prove the following auxiliary property (⁎). For all integers {a mathematical formula}0⩽i,j⩽n and each literal {a mathematical formula}L∈poss(wi)∩poss(wj), we have {a mathematical formula}L∈Ji if and only if {a mathematical formula}L∈Jj. Since {a mathematical formula}DW is a tree by admissibility condition (E2), the shortest path between {a mathematical formula}wi and {a mathematical formula}wj is unique; we now prove (⁎) by induction on the length of this path. Towards this goal, consider an arbitrary literal {a mathematical formula}L∈poss(wi)∩poss(wj); we have the following cases.
+      <list>
+       If {a mathematical formula}i=j, then {a mathematical formula}Ji=Jj, so clearly {a mathematical formula}L∈Ji if and only if {a mathematical formula}L∈Jj.Assume that {a mathematical formula}wj is the parent of {a mathematical formula}wi in the traversal of {a mathematical formula}DW. Then {a mathematical formula}Ki∪Mi=poss(wi)∩poss(wj) by the definition of {a mathematical formula}Ki and {a mathematical formula}Mi, which implies {a mathematical formula}L∈Ki∪Mi. Furthermore, by Lemma 66 we have {a mathematical formula}Ji⊭Ki⊑Mi. But then, if {a mathematical formula}L∈Ki, then by the definition of {a mathematical formula}Ki we have {a mathematical formula}L∈Jj, and {a mathematical formula}Ji⊭Ki⊑Mi implies {a mathematical formula}L∈Ji. Analogously, if {a mathematical formula}L∈Mi, then by the definition of {a mathematical formula}Mi we have {a mathematical formula}L∉Jj, and {a mathematical formula}Ji⊭Ki⊑Mi implies {a mathematical formula}L∉Ji.The case when {a mathematical formula}wi is the parent of {a mathematical formula}wj is symmetric to the previous one.The remaining possibility is that the length of the shortest path between {a mathematical formula}wi and {a mathematical formula}wj is greater than one, so let {a mathematical formula}wk be an arbitrary vertex on this path different from {a mathematical formula}wi and {a mathematical formula}wj. By admissibility condition (E3), we have {a mathematical formula}L∈poss(wk). Furthermore, the paths between {a mathematical formula}wi and {a mathematical formula}wk, and between {a mathematical formula}wk and {a mathematical formula}wj are both shorter than the path between {a mathematical formula}wi and {a mathematical formula}wj, so property (⁎) holds for i and k, and for k and j. But then, property (⁎) clearly holds for i and j as well.Property (⁎) clearly implies that, for each integer
+      </list>
+      <paragraph>
+       {a mathematical formula}0⩽i⩽n and each literal {a mathematical formula}L∈poss(wi), we have {a mathematical formula}L∈J(δK⊑Mv) if and only if {a mathematical formula}L∈Ji; we call this property (†). We are now ready to prove Properties 1–3 of this claim.(Property 1) The definition of {a mathematical formula}J(δK⊑Mv) in (B.3) clearly implies {a mathematical formula}J(δK⊑Mv)⊆poss(W). In order to prove {a mathematical formula}knw(W)⊆J(δK⊑Mv), consider an arbitrary literal {a mathematical formula}L∈knw(W); clearly, a context {a mathematical formula}wi∈W exists such that {a mathematical formula}L∈knw(wi). By condition (I2) of Theorem 37, we have {a mathematical formula}⊤⊑L∈ˆS(wi); hence {a mathematical formula}L∈Ji by Lemma 65. Consequently, {a mathematical formula}L∈J(δK⊑Mv) holds by property (†), as required.(Property 2) By Lemma 66, {a mathematical formula}K0=K, and {a mathematical formula}M0=M, we have {a mathematical formula}J0⊭K⊑M—that is, {a mathematical formula}K⊆J0 and {a mathematical formula}M∩J0=∅. Now {a mathematical formula}v⊬K⊑M implies {a mathematical formula}K⊆poss(v) and {a mathematical formula}M∩poss(W)⊆poss(v), so property (†) implies {a mathematical formula}K⊆J(δK⊑Mv) and {a mathematical formula}[M∩poss(W)]∩J(δK⊑Mv)=∅. Furthermore, since {a mathematical formula}poss(W)∩J(δK⊑Mv)=J(δK⊑Mv), we have {a mathematical formula}M∩J(δK⊑Mv)=∅; thus, {a mathematical formula}J(δK⊑Mv)⊭K⊑M holds, as required.(Property 3) Let {a mathematical formula}K′⊑M′ be a clause and let {a mathematical formula}wi∈W be a context such that {a mathematical formula}K′∪M′⊆poss(wi) and set {a mathematical formula}S(wi) is closed under {a mathematical formula}≺wi-hyperresolution with {a mathematical formula}K′⊑M′. By Lemma 67, we have {a mathematical formula}Ji⊨K′⊑M′. But then, since {a mathematical formula}K′∪M′⊆poss(wi), property (†) implies {a mathematical formula}J(δK⊑Mv)⊨K′⊑M′, as required. □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      To complete the proof of Theorem 37, the following claims show that structure I is a pre-interpretation, and that it satisfies {a mathematical formula}O but refutes the relevant queries.
+     </paragraph>
+     <paragraph label="Claim 76">
+      Structure I satisfies conditions{a mathematical formula}(I∃)and{a mathematical formula}(I∀)of pre-interpretations fromDefinition 59.
+     </paragraph>
+     <paragraph label="Proof">
+      (Condition {a mathematical formula}I∃) Consider an arbitrary element {a mathematical formula}δK1⊑M1v∈Δ and an arbitrary literal {a mathematical formula}∃R.A∈J(δK1⊑M1v); we show that an edge {a mathematical formula}〈δK1⊑M1v,γ,R〉∈E exists such that {a mathematical formula}A∈J(γ). Let {a mathematical formula}W be the ϵ-component of {a mathematical formula}D such that {a mathematical formula}v∈W. By admissibility condition (S3), an edge {a mathematical formula}〈w,u,∃R.A〉∈E exists such that {a mathematical formula}w∈W and conditions (B.6) and (B.7) are both satisfied.{a mathematical formula}{a mathematical formula} Let {a mathematical formula}U be the ϵ-component of {a mathematical formula}D such that {a mathematical formula}u∈U, and let {a mathematical formula}K2 and {a mathematical formula}M2 be as specified in (B.4) and (B.5), respectively. The following observations prove that {a mathematical formula}u⊬A⊓K2⊑M2 holds.
+      <list>
+       Condition {a mathematical formula}A⊓K2⊆poss(u) follows from (B.4), Property 1 of Claim 75, and (B.6).Admissibility condition (S2) implies {a mathematical formula}M2∩poss(U)⊆poss(u).Disjunction {a mathematical formula}M2 is {a mathematical formula}≺u-minimal since, by admissibility condition (P1), {a mathematical formula}〈w,u,∃R.A〉∈E implies that {a mathematical formula}≺u is R-admissible.Consider an arbitrary literal {a mathematical formula}L∈A⊓K2; we show that {a mathematical formula}A⊓K2⊑L∈ˆS(u). Assume that {a mathematical formula}L∈K2, so L is an atomic concept {a mathematical formula}L=B. Then, we have {a mathematical formula}∀R.B∈J(δK1⊑M1v)⊆poss(W) by (B.4) and Property 1 of Claim 75. Thus, we have {a mathematical formula}B∈poss(u) and {a mathematical formula}∀R.B∈poss(w) by (B.6) and (B.7), and then {a mathematical formula}B⊑B∈ˆS(u) by condition (I3) of Theorem 37, which is stronger than the required {a mathematical formula}A⊓K2⊑B∈ˆS(u). The proof for the case {a mathematical formula}L=A is analogous.Assume for contradiction that {a mathematical formula}A⊓K2⊑M2∈ˆS(u). By admissibility condition (S2), we have {a mathematical formula}C∈poss(w) for each {a mathematical formula}∀inv(R).C∈M2. Thus, since the {a mathematical formula}Pred rule from Table 5 is not applicable to {a mathematical formula}S(v), the {a mathematical formula}Pred from Table 3 is not applicable to {a mathematical formula}S(v) either. Hence, by Lemma 69, set {a mathematical formula}S(w) is closed under {a mathematical formula}≺w-hyperresolution with the clause{a mathematical formula} Recall that {a mathematical formula}∃R.A∈J(δK1⊑M1v), so the above clause is clearly refuted in {a mathematical formula}J(δK1⊑M1v). However, all literals on the left-hand side of this clause are contained in {a mathematical formula}poss(w) by (B.7), and each concept C on its right-hand side is contained in {a mathematical formula}poss(w); but then, Property 3 of Claim 75 implies that this clause is satisfied in {a mathematical formula}J(δK1⊑M1v), which is a contradiction. Consequently, we have {a mathematical formula}A⊓K2⊑M2{an inline-figure}S(u), as required.(Condition
+      </list>
+      <paragraph>
+       {a mathematical formula}I∀) Consider an arbitrary edge {a mathematical formula}〈δK1⊑M1v,δA⊓K2⊑M2u,R〉∈E and arbitrary literals {a mathematical formula}∀R.B and {a mathematical formula}∀inv(R).C, and let {a mathematical formula}U be the ϵ-component of {a mathematical formula}D such that {a mathematical formula}u∈U.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Assume that {a mathematical formula}∀R.B∈J(δK1⊑M1v). Then {a mathematical formula}B∈K2 by (B.4); hence Property 2 of Claim 75 implies{a mathematical formula} therefore {a mathematical formula}B∈J(δA⊓K2⊑M2u), as required.
+       </list-item>
+       <list-item label="•">
+        Assume that {a mathematical formula}∀inv(R).C∈J(δA⊓K2⊑M2u). Then {a mathematical formula}∀inv(R).C∈poss(U) by Property 1 of Claim 75. Now, if {a mathematical formula}C∉J(δK1⊑M1v), then (B.5) implies {a mathematical formula}∀inv(R).C∈M2, so {a mathematical formula}∀inv(R).C∉J(δA⊓K2⊑M2u) follows from Property 2 of Claim 75, which contradicts the assumption. Thus, we have {a mathematical formula}C∈J(δK1⊑M1v), as required.
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Claim 77">
+      Pre-interpretation I is a pre-model of{a mathematical formula}O.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider an arbitrary element {a mathematical formula}δK⊑Mv∈Δ and an arbitrary normal clause {a mathematical formula}K′⊑M′∈O; we show that {a mathematical formula}J(δK⊑Mv) satisfies {a mathematical formula}K′⊑M′. This is obvious if {a mathematical formula}K′⊈J(δK⊑Mv), so assume that {a mathematical formula}K′⊆J(δK⊑Mv). Let {a mathematical formula}W be the ϵ-component of {a mathematical formula}D such that {a mathematical formula}v∈W. Then, Property 1 of Claim 75 implies {a mathematical formula}K′⊆poss(W). Furthermore, by the ontology condition of Definition 36, a context {a mathematical formula}w∈W exists such that {a mathematical formula}K′∪M′⊆poss(w). Since {a mathematical formula}S is closed under the {a mathematical formula}Hyper rule from Table 5, set {a mathematical formula}S(w) is closed under {a mathematical formula}≺w-hyperresolution with {a mathematical formula}K′⊑M′. But then, Property 3 of Claim 75 implies {a mathematical formula}J(δK⊑Mv)⊨K′⊑M′, as required. □
+     </paragraph>
+     <paragraph label="Claim 78">
+      Pre-interpretation I refutes each query{a mathematical formula}K⊑Mfor which there exists a context{a mathematical formula}v∈Vsuch that v is complete for{a mathematical formula}K⊑M,{a mathematical formula}K⊑L∈ˆS(v)for each{a mathematical formula}L∈K, and{a mathematical formula}K⊑M{an inline-figure}S(v).
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}K⊑M be an arbitrary query satisfying the preconditions of the claim, and let {a mathematical formula}M′=M∩L. Then {a mathematical formula}v⊬K⊑M′ holds as well, and this clause is over L by Claim 70. But then, {a mathematical formula}J(δK⊑M′v)⊭K⊑M′ by Property 2 of Claim 75. Finally, each literal from {a mathematical formula}M∖M′ is not from L so it cannot occur in {a mathematical formula}J(δK⊑M′v); thus, {a mathematical formula}J(δK⊑M′v)⊭K⊑M holds as well, so I refutes {a mathematical formula}K⊑M, as required. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

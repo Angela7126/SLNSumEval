@@ -1,0 +1,817 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Piece of My Mind: A Sentiment Analysis Approachfor Online Dispute Detection</title>
+<!--Generated on Wed Jun 11 18:22:37 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-ulem.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Piece of My Mind: A Sentiment Analysis Approach
+<br class="ltx_break"/>for Online Dispute Detection</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Lu Wang 
+<br class="ltx_break"/>Department of Computer Science 
+<br class="ltx_break"/>Cornell University 
+<br class="ltx_break"/>Ithaca, NY 14853 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">luwang@cs.cornell.edu</span> 
+<br class="ltx_break"/>&amp;Claire Cardie 
+<br class="ltx_break"/>Department of Computer Science 
+<br class="ltx_break"/>Cornell University 
+<br class="ltx_break"/>Ithaca, NY 14853 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">cardie@cs.cornell.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We investigate the novel task of <span class="ltx_text ltx_font_italic">online dispute detection</span> and propose a sentiment analysis solution to the problem: we aim to identify the sequence of sentence-level sentiments expressed during a discussion and to use them as features in a classifier that predicts the DISPUTE/NON-DISPUTE label for the discussion as a whole.
+We evaluate dispute detection approaches on a newly created corpus of Wikipedia Talk page disputes and find that classifiers that rely on our sentiment tagging features outperform those that do not. The best model achieves a very promising F1 score of 0.78 and an accuracy of 0.80.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">As the web has grown in popularity and scope, so has the promise of collaborative information environments for the joint creation and exchange of knowledge <cite class="ltx_cite">[<a href="#bib.bib47" title="Time to split, virtually: âdiscourse architectureâ and âcommunity buildingâ create vibrant virtual publics" class="ltx_ref">11</a>, <a href="#bib.bib46" title="Digital formations: it and new architectures in the global realm" class="ltx_ref">18</a>]</cite>. Wikipedia, a wiki-based online encyclopedia, is arguably the best example: its distributed editing environment allows readers to collaborate as content editors and has facilitated the production of over four billion articles<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://en.wikipedia.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org</span></a></span></span></span> of surprisingly high quality <cite class="ltx_cite">[<a href="#bib.bib48" title="Internet encyclopaedias go head to head" class="ltx_ref">6</a>]</cite> in English alone since its debut in 2001.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Existing studies of collaborative knowledge systems have shown, however, that the quality of the generated content (e.g. an encyclopedia article) is highly correlated with the effectiveness of the online collaboration <cite class="ltx_cite">[<a href="#bib.bib3" title="Harnessing the wisdom of crowds in wikipedia: quality through coordination" class="ltx_ref">12</a>, <a href="#bib.bib50" title="Building successful online communities: evidence-based social design" class="ltx_ref">14</a>]</cite>; fruitful collaboration, in turn, inevitably requires dealing with the disputes and conflicts that arise <cite class="ltx_cite">[<a href="#bib.bib4" title="He says, she says: conflict and coordination in wikipedia" class="ltx_ref">13</a>]</cite>.
+Unfortunately, human monitoring of the often massive social media and collaboration sites to detect, much less mediate, disputes is not feasible.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this work, we investigate the heretofore novel task of <span class="ltx_text ltx_font_italic">dispute detection in online discussions</span>.
+Previous work in this general area has analyzed dispute-laden content to discover features correlated with conflicts and disputes <cite class="ltx_cite">[<a href="#bib.bib4" title="He says, she says: conflict and coordination in wikipedia" class="ltx_ref">13</a>]</cite>. Research focused primarily on cues derived from the edit history of the jointly created content (e.g. the number of revisions, their temporal density <cite class="ltx_cite">[<a href="#bib.bib4" title="He says, she says: conflict and coordination in wikipedia" class="ltx_ref">13</a>, <a href="#bib.bib51" title="Dynamics of conflicts in wikipedia" class="ltx_ref">23</a>]</cite>) and relied on small numbers of manually selected discussions known to involve disputes.
+In contrast, we investigate methods for the automatic detection, i.e. prediction, of discussions involving disputes. We are also interested in understanding whether, and which, linguistic features of the discussion are important for dispute detection.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Drawing inspiration from studies of human mediation of online conflicts (e.g. <cite class="ltx_cite">Billings and Watts (<a href="#bib.bib2" title="Understanding dispute resolution online: using text to reflect personal and substantive issues in conflict" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Kittur<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="He says, she says: conflict and coordination in wikipedia" class="ltx_ref">2007</a>)</cite>, <cite class="ltx_cite">Kraut and Resnick (<a href="#bib.bib50" title="Building successful online communities: evidence-based social design" class="ltx_ref">2012</a>)</cite>), we hypothesize that effective methods for dispute detection should take into account the sentiment and opinions expressed by participants in the collaborative endeavor.
+As a result, we propose a sentiment analysis approach for online dispute detection that identifies the sequence of sentence-level sentiments (i.e. very negative, negative, neutral, positive, very positive) expressed during the discussion and uses them as features in a classifier that predicts the <span class="ltx_text ltx_font_smallcaps">dispute</span>/<span class="ltx_text ltx_font_smallcaps">non-dispute</span> label for the discussion as a whole.
+Consider, for example, the snippet in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> from the Wikipedia Talk page for the article on Philadelphia; it discusses the choice of a picture for the article’s “infobox”. The sequence of almost exclusively negative statements provides evidence of a dispute in this portion of the discussion.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:221.9pt;" width="221.9pt">1-<span class="ltx_text ltx_font_bold">Emy111</span>: I think everyone is forgetting that my previous image was the lead image for well over a year! …</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:221.9pt;" width="221.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m1" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> <span class="ltx_text ltx_font_bold">Massimo</span>: I’m sorry to say so, but it is grossly over processed…</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:221.9pt;" width="221.9pt">2-<span class="ltx_text ltx_font_bold">Emy111</span>:
+i’m glad you paid more money for a camera than I did. <span class="ltx_text" style="color:#0000FF;">congrats…</span> i appreciate your constructive criticism. <span class="ltx_text" style="color:#0000FF;">thank you.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:221.9pt;" width="221.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> <span class="ltx_text ltx_font_bold">Massimo</span>:
+I just want to have the best picture as a lead for the article …</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:221.9pt;" width="221.9pt">3-<span class="ltx_text ltx_font_bold">Emy111</span>: Wow, I am really enjoying this photography debate…
+<span class="ltx_text" style="color:#0000FF;">[so don’t make assumptions you know nothing about.]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="{}_{\textbf{NN}}" display="inline"><msub><mi/><mtext mathcolor="#0000FF">𝐍𝐍</mtext></msub></math> [Really, grow up.]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="{}_{\textbf{N}}" display="inline"><msub><mi/><mtext mathcolor="#0000FF">𝐍</mtext></msub></math> [If you all want to complain about Photoshop editing, lets all go buy medium format film cameras, shoot film, and scan it, so no manipulation is possible.]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m5" class="ltx_Math" alttext="{}_{\textbf{O}}" display="inline"><msub><mi/><mtext mathcolor="#0000FF">𝐎</mtext></msub></math> [Sound good?]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m6" class="ltx_Math" alttext="{}_{\textbf{NN}}" display="inline"><msub><mi/><mtext mathcolor="#0000FF">𝐍𝐍</mtext></msub></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:221.9pt;" width="221.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m7" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> <span class="ltx_text ltx_font_bold">Massimo</span>: … I do feel it is a pity, that you turned out to be a sore loser…</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_small">From the Wikipedia Talk page for the article “Philadelphia”. Omitted sentences are indicated by ellipsis. Names of editors are in <span class="ltx_text ltx_font_bold">bold</span>. The start of each set of related turns is numbered; “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m9" class="ltx_Math" alttext="&gt;" display="inline"><mo mathsize="normal" stretchy="false">&gt;</mo></math>” is an indicator for the reply structure.</span></div>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Unfortunately, sentence-level sentiment tagging for this domain is challenging in its own right due to the less formal, often ungrammatical, language and the dynamic nature of online conversations.
+“<span class="ltx_text ltx_font_italic">Really, grow up</span>” (segment 3) should presumably be tagged as a negative sentence as should the sarcastic sentences “<span class="ltx_text ltx_font_italic">Sounds good?</span>” (in the same turn) and “<span class="ltx_text ltx_font_italic">congrats</span>” and “<span class="ltx_text ltx_font_italic">thank you</span>” (in segment 2). We expect that these, and other, examples will be difficult for the sentence-level classifier unless the discourse context of each sentence is considered.
+Previous research on sentiment prediction for online discussions, however, focuses on turn-level predictions <cite class="ltx_cite">[<a href="#bib.bib36" title="Agreement/disagreement classification: exploiting unlabeled data using contrast classifiers" class="ltx_ref">7</a>, <a href="#bib.bib35" title="Unifying local and global agreement and disagreement classification in online debates" class="ltx_ref">24</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>A notable exception is <cite class="ltx_cite">Hassan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib39" title="What’s with the attitude?: identifying sentences with attitude in online discussions" class="ltx_ref">2010</a>)</cite>, which identifies sentences containing “attitudes” (e.g. opinions), but does not distinguish them w.r.t. sentiment. Context information is also not considered.</span></span></span>
+As the first work that predicts sentence-level sentiment for online discussions, we investigate isotonic Conditional Random Fields (CRFs) <cite class="ltx_cite">[<a href="#bib.bib43" title="Isotonic conditional random fields and local sentiment flow" class="ltx_ref">16</a>]</cite> for the sentiment-tagging task as they preserve the advantages of the popular CRF-based sequential tagging models <cite class="ltx_cite">[<a href="#bib.bib30" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">15</a>]</cite> while providing an efficient mechanism for encoding domain knowledge — in our case, a sentiment lexicon — through isotonic constraints on model parameters.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">We evaluate our dispute detection approach using a newly created corpus of discussions from Wikipedia Talk pages (3609 disputes, 3609 non-disputes).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The talk page associated with each article records conversations among editors about the article content and allows editors to discuss the writing process, e.g. planning and organizing the content.</span></span></span>
+We find that classifiers that employ the learned sentiment features outperform others that do not. The best model achieves a very promising F1 score of 0.78 and an accuracy of 0.80 on the Wikipedia dispute corpus. To the best of our knowledge, this represents the first computational approach to automatically identify online disputes on a dataset of scale.</p>
+</div>
+<div id="S1.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Additional Related Work.</h4>
+
+<div id="S1.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Sentiment analysis has been utilized as a key enabling technique in a number of conversation-based applications. Previous work mainly studies the attitudes in spoken meetings <cite class="ltx_cite">[<a href="#bib.bib37" title="Identifying agreement and disagreement in conversational speech: use of Bayesian networks to model pragmatic dependencies" class="ltx_ref">5</a>, <a href="#bib.bib36" title="Agreement/disagreement classification: exploiting unlabeled data using contrast classifiers" class="ltx_ref">7</a>]</cite> or broadcast conversations <cite class="ltx_cite">[<a href="#bib.bib34" title="Detection of agreement and disagreement in broadcast conversations" class="ltx_ref">21</a>]</cite> using variants of Conditional Random Fields <cite class="ltx_cite">[<a href="#bib.bib30" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">15</a>]</cite>
+and predicts sentiment at the turn-level, while our predictions are made for each sentence.</p>
+</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Data Construction: A Dispute Corpus</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We construct the first dispute detection corpus to date; it consists of dispute and non-dispute discussions from Wikipedia Talk pages.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Step 1: Get Talk Pages of Disputed Articles.</span>
+Wikipedia articles are edited by different editors. If an article is observed to have disputes on its <span class="ltx_text ltx_font_italic">talk page</span>, editors can assign dispute tags to the article to flag it for attention.
+In this research, we are interested in talk pages whose corresponding articles are labeled with the following tags: <span class="ltx_text ltx_font_smallcaps">disputed</span>, <span class="ltx_text ltx_font_smallcaps">totallydisputed</span>, <span class="ltx_text ltx_font_smallcaps">disputed-section</span>, <span class="ltx_text ltx_font_smallcaps">totallydisputed-section</span>, <span class="ltx_text ltx_font_smallcaps">pov</span>.
+The tags indicate that an article is disputed, or the neutrality of the article is disputed (<span class="ltx_text ltx_font_smallcaps">pov</span>).</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We use the 2013-03-04 Wikipedia data dump, and extract talk pages for articles that are labeled with dispute tags by checking the revision history. This results in 19,071 talk pages.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Step 2: Get Discussions with Disputes.</span>
+Dispute tags can also be added to <span class="ltx_text ltx_font_italic">talk pages</span> themselves. Therefore, in addition to the tags mentioned above, we also consider the “Request for Comment” (<span class="ltx_text ltx_font_smallcaps">rfc</span>) tag on talk pages. According to Wikipedia<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://en.wikipedia.org/wiki/Wikipedia:Requests_for_comment" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org/wiki/Wikipedia:Requests_for_comment</span></a></span></span></span>, <span class="ltx_text ltx_font_smallcaps">rfc</span> is used to request outside opinions concerning the disputes.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">3609 discussions are collected with dispute tags found in the revision history. We further classify dispute discussions into three subcategories: <span class="ltx_text ltx_font_smallcaps">Controversy</span>, <span class="ltx_text ltx_font_smallcaps">Request for Comment (RFC)</span>, and <span class="ltx_text ltx_font_smallcaps">Resolved</span> based on the tags found in discussions (see Table <a href="#S2.T1" title="Table 1 ‣ 2 Data Construction: A Dispute Corpus ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+The numbers of discussions for the three types are 42, 3484, and 105, respectively.
+Note that dispute tags only appear in a small number of articles and talk pages. There may exist other discussions with disputes.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Dispute Subcategory</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Wikipedia Tags on Talk pages</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Controversy</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Controversial</span>, <span class="ltx_text ltx_font_smallcaps">totallydisputed</span>,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Disputed</span>, <span class="ltx_text ltx_font_smallcaps">Calm talk</span>, <span class="ltx_text ltx_font_smallcaps">POV</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Request for Comment</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">rfc</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Resolved</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">Any tag from above + <span class="ltx_text ltx_font_smallcaps">Resolved</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_small">Subcategory for disputes with corresponding tags. Note that each discussion in the <span class="ltx_text ltx_font_smallcaps">Resolved</span> class has more than one tag.</span></div>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Step 3: Get Discussions without Disputes.</span>
+Likewise, we collect non-dispute discussions from pages that are never tagged with disputes. We consider non-dispute discussions with at least 3 distinct speakers and 10 turns. 3609 discussions are randomly selected with this criterion. The average turn numbers for dispute and non-dispute discussions are 45.03 and 22.95, respectively.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Sentence-level Sentiment Prediction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">This section describes our sentence-level sentiment tagger, from which we construct features for dispute detection (Section <a href="#S4" title="4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Consider a discussion comprised of sequential turns; each turn consists of a sequence of sentences. Our model takes as input the sentences <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="\mathbf{x}=\{x_{1},\cdots,x_{n}\}" display="inline"><mrow><mi>𝐱</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math> from a single turn, and outputs the corresponding sequence of sentiment labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="\mathbf{y}=\{y_{1},\cdots,y_{n}\}" display="inline"><mrow><mi>𝐲</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>y</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="y_{i}\in\mathcal{O},\mathcal{O}=\{\mathrm{NN,N,O,P,PP}\}" display="inline"><mrow><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒪</mi></mrow><mo>,</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>=</mo><mrow><mo>{</mo><mrow><mi>NN</mi><mo>,</mo><mi mathvariant="normal">N</mi><mo>,</mo><mi mathvariant="normal">O</mi><mo>,</mo><mi mathvariant="normal">P</mi><mo>,</mo><mi>PP</mi></mrow><mo>}</mo></mrow></mrow></mrow></math>. The labels in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="\mathcal{O}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒪</mi></math> represent very negative (NN), negative (N), neutral (O), positive (P), and very positive (PP), respectively.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Given that traditional Conditional Random Fields (CRFs) <cite class="ltx_cite">[<a href="#bib.bib30" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">15</a>]</cite> ignore the ordinal relations among sentiment labels, we choose <span class="ltx_text ltx_font_italic">isotonic CRFs</span> <cite class="ltx_cite">[<a href="#bib.bib43" title="Isotonic conditional random fields and local sentiment flow" class="ltx_ref">16</a>]</cite> for sentence-level sentiment analysis as they can enforce monotonicity constraints on the parameters consistent with the ordinal structure and domain knowledge (e.g. word-level sentiment conveyed via a lexicon).
+Concretely, we take a lexicon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="\mathcal{M}=\mathcal{M}_{p}\cup\mathcal{M}_{n}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>=</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>p</mi></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>n</mi></msub></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="\mathcal{M}_{p}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>p</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="\mathcal{M}_{n}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>n</mi></msub></math> are two sets of features (usually words) identified as strongly associated with positive and negative sentiment. Assume <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="\mu_{\langle\sigma,w\rangle}" display="inline"><msub><mi>μ</mi><mrow><mo>⟨</mo><mrow><mi>σ</mi><mo>,</mo><mi>w</mi></mrow><mo>⟩</mo></mrow></msub></math> encodes the weight between label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> and feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, for each feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="w\in\mathcal{M}_{p}" display="inline"><mrow><mi>w</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>p</mi></msub></mrow></math>; then the isotonic CRF enforces <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="\sigma\leq\sigma^{\prime}\Rightarrow\mu_{\langle\sigma,w\rangle}\leq\mu_{%&#10;\langle\sigma^{\prime},w\rangle}" display="inline"><mrow><mi>σ</mi><mo>≤</mo><msup><mi>σ</mi><mo>′</mo></msup><mo>⇒</mo><msub><mi>μ</mi><mrow><mo>⟨</mo><mrow><mi>σ</mi><mo>,</mo><mi>w</mi></mrow><mo>⟩</mo></mrow></msub><mo>≤</mo><msub><mi>μ</mi><mrow><mo>⟨</mo><mrow><msup><mi>σ</mi><mo>′</mo></msup><mo>,</mo><mi>w</mi></mrow><mo>⟩</mo></mrow></msub></mrow></math>.
+For example, when “totally agree” is observed in training, parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m9" class="ltx_Math" alttext="\mu_{\langle\mathrm{PP},\mathrm{totally~{}agree}\rangle}" display="inline"><msub><mi>μ</mi><mrow><mo>⟨</mo><mrow><mi>PP</mi><mo>,</mo><mrow><mpadded width="+3.3pt"><mi>totally</mi></mpadded><mo>⁢</mo><mi>agree</mi></mrow></mrow><mo>⟩</mo></mrow></msub></math> is likely to increase. Similar constraints are defined on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m10" class="ltx_Math" alttext="\mathcal{M}_{n}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℳ</mi><mi>n</mi></msub></math>.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Our lexicon is built by combining MPQA <cite class="ltx_cite">[<a href="#bib.bib26" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">22</a>]</cite>, General Inquirer <cite class="ltx_cite">[<a href="#bib.bib25" title="The general inquirer: a computer approach to content analysis" class="ltx_ref">19</a>]</cite>, and SentiWordNet <cite class="ltx_cite">[<a href="#bib.bib24" title="SENTIWORDNET: a publicly available lexical resource for opinion mining" class="ltx_ref">3</a>]</cite> lexicons. Words with contradictory sentiments are removed. We use the features in Table <a href="#S3.T2" title="Table 2 ‣ 3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for sentiment prediction.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Lexical Features</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Syntactic/Semantic Features</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- unigram/bigram</th>
+<td class="ltx_td ltx_align_left ltx_border_r">- unigram with POS tag</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- number of words all uppercased</th>
+<td class="ltx_td ltx_align_left ltx_border_r">- dependency relation</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- number of words</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Conversation Features</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Discourse Features</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r">- quote overlap with target</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- initial uni-/bi-/tri-gram</th>
+<td class="ltx_td ltx_align_left ltx_border_r">- TFIDF similarity with target</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- repeated punctuations</th>
+<td class="ltx_td ltx_align_left ltx_border_r">(remove quote first)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- hedging phrases collected from</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Sentiment Features</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><cite class="ltx_cite">Farkas<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="The conll-2010 shared task: learning to detect hedges and their scope in natural language text" class="ltx_ref">2010</a>)</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r">- connective + sentiment words</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">- number of negators</th>
+<td class="ltx_td ltx_align_left ltx_border_r">- sentiment dependency relation</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">- sentiment words</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span><span class="ltx_text ltx_font_small">Features used in sentence-level sentiment prediction. Numerical features are first normalized by standardization, then binned into 5 categories.</span></div>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Syntactic/Semantic Features.</span>
+We have two versions of dependency relation features, the original form and a form that generalizes a word to its POS tag, e.g. “nsubj(wrong, you)” is generalized to “nsubj(<span class="ltx_text ltx_font_typewriter">ADJ</span>, you)” and “nsubj(wrong, <span class="ltx_text ltx_font_typewriter">PRP</span>)”.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Discourse Features.</span>
+We extract the initial unigram, bigram, and trigram of each utterance as discourse features <cite class="ltx_cite">[<a href="#bib.bib11" title="Empirical studies on the disambiguation of cue phrases" class="ltx_ref">9</a>]</cite>.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sentiment Features.</span>
+We gather connectives from the Penn Discourse TreeBank <cite class="ltx_cite">[<a href="#bib.bib12" title="The penn discourse treebank 2.0." class="ltx_ref">17</a>]</cite> and combine them with any sentiment word that precedes or follows it as new features. Sentiment dependency relations are the dependency relations that include a sentiment word. We replace those words with their polarity equivalents. For example, relation “nsubj(wrong, you)” becomes “nsubj(<span class="ltx_text ltx_font_typewriter">SentiWord<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="{}_{neg}" display="inline"><msub><mi/><mrow><mi>n</mi><mo mathvariant="monospace">⁢</mo><mi>e</mi><mo mathvariant="monospace">⁢</mo><mi>g</mi></mrow></msub></math></span>, you)”.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Online Dispute Detection</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Training A Sentiment Classifier</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Dataset.</span>
+We train the sentiment classifier using the <span class="ltx_text ltx_font_italic">Authority and Alignment in Wikipedia Discussions (AAWD)</span> corpus <cite class="ltx_cite">[<a href="#bib.bib28" title="Annotating social acts: authority claims and alignment moves in wikipedia talk pages" class="ltx_ref">1</a>]</cite> on a 5-point scale (i.e. NN, N, O, P, PP).
+AAWD consists of 221 English Wikipedia discussions with positive and negative alignment annotations.
+Annotators either label each sentence as positive, negative or neutral, or label the full turn. For instances that have only a turn-level label, we assume all sentences have the same label as the turn. We further transform the labels into the five sentiment labels. Sentences annotated as being a positive alignment by at least two annotators are treated as very positive (PP). If a sentence is only selected as positive by one annotator or obtains the label via turn-level annotation, it is positive (P). Very negative (NN) and negative (N) are collected in the same way. All others are neutral (O). Among all 16,501 sentences in AAWD, 1,930 and 1,102 are labeled as NN and N. 532 and 99 of them are PP and P. The other 12,648 are considered neutral.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Evaluation.</span>
+To evaluate the performance of the sentiment tagger, we compare to two baselines. (1) <span class="ltx_text ltx_font_bold">Baseline (Polarity)</span>: a sentence is predicted as positive if it has more positive words than negative words, or negative if more negative words are observed. Otherwise, it is neutral. (2) <span class="ltx_text ltx_font_bold">Baseline (Distance)</span> is extended from <cite class="ltx_cite">[<a href="#bib.bib39" title="What’s with the attitude?: identifying sentences with attitude in online discussions" class="ltx_ref">8</a>]</cite>. Each sentiment word is associated with the closest second person pronoun, and a surface distance is computed. An SVM classifier <cite class="ltx_cite">[<a href="#bib.bib31" title="Advances in kernel methods" class="ltx_ref">10</a>]</cite> is trained using features of the sentiment words and minimum/maximum/average of the distances.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">We also compare with two state-of-the-art methods that are used in sentiment prediction for conversations: (1) an SVM (RBF kernel) that is employed for identifying sentiment-bearing sentences <cite class="ltx_cite">[<a href="#bib.bib39" title="What’s with the attitude?: identifying sentences with attitude in online discussions" class="ltx_ref">8</a>]</cite>, and (dis)agreement detection <cite class="ltx_cite">[<a href="#bib.bib35" title="Unifying local and global agreement and disagreement classification in online debates" class="ltx_ref">24</a>]</cite> in online debates; (2) a
+Linear
+CRF for (dis)agreement identification in broadcast conversations <cite class="ltx_cite">[<a href="#bib.bib34" title="Detection of agreement and disagreement in broadcast conversations" class="ltx_ref">21</a>]</cite>.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Pos</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Neg</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Neutral</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Baseline (Polarity)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">22.53</td>
+<td class="ltx_td ltx_align_center ltx_border_t">38.61</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">66.45</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Baseline (Distance)</th>
+<td class="ltx_td ltx_align_center">33.75</td>
+<td class="ltx_td ltx_align_center">55.79</td>
+<td class="ltx_td ltx_align_center ltx_border_r">88.97</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">SVM (3-way)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">44.62</td>
+<td class="ltx_td ltx_align_center ltx_border_t">52.56</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">CRF (3-way)</th>
+<td class="ltx_td ltx_align_center">56.28</td>
+<td class="ltx_td ltx_align_center">56.37</td>
+<td class="ltx_td ltx_align_center ltx_border_r">89.41</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">CRF (5-way)</th>
+<td class="ltx_td ltx_align_center">58.39</td>
+<td class="ltx_td ltx_align_center">56.30</td>
+<td class="ltx_td ltx_align_center ltx_border_r">90.10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">isotonic CRF</th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">68.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">62.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">88.87</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_small">F1 scores for positive and negative alignment on Wikipedia Talk pages (AAWD) using 5-fold cross-validation. In each column, <span class="ltx_text ltx_font_bold">bold</span> entries (if any) are statistically significantly higher than all the rest.
+We also compare with an SVM and linear CRF trained with three classes (3-way).
+Our model based on the isotonic CRF produces significantly better results than all the other systems.</span></div>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We evaluate the systems using standard F1 on classes of positive, negative, and neutral, where samples predicted as PP and P are positive alignment, and samples tagged as NN and N are negative alignment.
+Table <a href="#S4.T3" title="Table 3 ‣ 4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> describes the main results on the AAWD dataset: our isotonic CRF based system significantly outperforms the alternatives for positive and negative alignment detection (paired-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>).</p>
+</div>
+<div id="S4.F2" class="ltx_figure">
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:312.2pt;"><img src="P14-2113/image001.png" id="S4.F2.g1" class="ltx_graphics" width="483" height="124" alt=""/>
+</span>
+<table class="ltx_tabular ltx_minipage ltx_align_middle" style="width:173.4pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold" style="text-decoration:underline;">Sample sentences (sentiment in parentheses)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">A</span>: no, I sincerely plead with you… (N) If not, you are just wasting my time. (NN)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">B</span>: I believe Sweet’s proposal… is quite silly. (NN)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">C</span>: Tell you what. (NN) If you can get two other editors to agree… I will shut up and sit down. (NN)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">D</span>: But some idiot forging your signature claimed that doing so would violate. (NN)… Please go have some morning coffee. (O)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">E</span>: And I don’t like coffee. (NN) Good luck to you. (NN)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">F</span>: Was that all? (NN)… I think that you are in error… (N)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"/></tr>
+</tbody>
+</table>
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:312.2pt;"><img src="P14-2113/image002.png" id="S4.F2.g2" class="ltx_graphics" width="483" height="124" alt=""/>
+</span>
+<table class="ltx_tabular ltx_minipage ltx_align_middle" style="width:173.4pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">A</span>: So far so confusing. (NN)…</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">B</span>: … I can not see a rationale for the landrace having its own article… (N) With Turkish Van being a miserable stub, there’s no such rationale for forking off a new article… (NN)…</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">C</span>: I’ve also copied your post immediately above to that article’s talk page since it is a great “nutshell” summary. (PP)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">D</span>: Err.. how can the opposite be true… (N)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">E</span>: Thanks for this, though I have to say some of the facts floating around this discussion are wrong. (P)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:204.9pt;" width="204.9pt"><span class="ltx_text ltx_font_bold">F</span>: Great. (PP) Let’s make sure the article is clear on this. (O)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:204.9pt;" width="204.9pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_small">Sentiment flow for a discussion with <span class="ltx_text ltx_font_bold">unresolved</span> dispute about the definition of “white people” (top) and a discussion with <span class="ltx_text ltx_font_bold">resolved</span> dispute on merging articles about van cat (bottom). The labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m3" class="ltx_Math" alttext="\{\mathrm{NN,N,O,P,PP}\}" display="inline"><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mi mathsize="normal" stretchy="false">NN</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">O</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">P</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">PP</mi></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></math> are mapped to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F2.m4" class="ltx_Math" alttext="\{-2,-1,0,1,2\}" display="inline"><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mrow><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">2</mn></mrow><mo mathsize="small" stretchy="false">,</mo><mrow><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">2</mn></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></math> in sequence. Sentiment values are convolved by Gaussian smoothing kernel, and cubic-spline interpolation is then conducted. Different speakers are represented by curves of different colors. Dashed vertical lines delimit turns. Representative sentences are labeled with letters and their sentiment labels are shown on the right. For unresolved dispute (top), we see that negative sentiment exists throughout the discussion. Whereas, for the resolved dispute (bottom), less negative sentiment is observed at the end of the discussion; participants also show appreciation after the problem is solved (e.g. E and F in the plot).</span></div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Dispute Detection</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We model dispute detection as a standard binary classification task, and investigate four major types of features as described below.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Lexical Features.</span>
+We first collect <span class="ltx_text ltx_font_typewriter">unigram</span> and <span class="ltx_text ltx_font_typewriter">bigram</span> features for each discussion.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Topic Features.</span>
+Articles on specific topics, such as politics or religions, tend to arouse more disputes. We thus extract the <span class="ltx_text ltx_font_typewriter">category</span> information of the corresponding article for each talk page. We further utilize <span class="ltx_text ltx_font_typewriter">unigrams</span> and <span class="ltx_text ltx_font_typewriter">bigrams</span> of the category as topic features.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Discussion Features.</span>
+This type of feature aims to capture the structure of the discussion. Intuitively, the more turns or the more participants a discussion has, the more likely there is a dispute. Meanwhile, participants tend to produce longer utterances when they make arguments. We choose <span class="ltx_text ltx_font_typewriter">number of turns</span>, <span class="ltx_text ltx_font_typewriter">number of participants</span>, <span class="ltx_text ltx_font_typewriter">average number of words in each turn</span> as features. In addition, the frequency of revisions made during the discussion has been shown to be good indicator for controversial articles <cite class="ltx_cite">[<a href="#bib.bib29" title="On ranking controversies in wikipedia: models and evaluation" class="ltx_ref">20</a>]</cite>, that are presumably prone to have disputes. Therefore, we encode the <span class="ltx_text ltx_font_typewriter">number of revisions</span> that happened during the discussion as a feature.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sentiment Features.</span>
+This set of features encode the sentiment distribution and transition in the discussion. We train our sentiment tagging model on the full AAWD dataset, and run it on the Wikipedia dispute corpus.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">Given that consistent negative sentiment flow usually indicates an ongoing dispute, we first extract features from <span class="ltx_text ltx_font_typewriter">sentiment distribution</span> in the form of <span class="ltx_text ltx_font_typewriter">number/probability of sentiment per type</span>.
+We also estimate the <span class="ltx_text ltx_font_typewriter">sentiment transition</span> probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="P(S_{t}\rightarrow S_{t+1})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>S</mi><mi>t</mi></msub><mo>→</mo><msub><mi>S</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math> from our predictions, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="S_{t}" display="inline"><msub><mi>S</mi><mi>t</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m3" class="ltx_Math" alttext="S_{t+1}" display="inline"><msub><mi>S</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub></math> are sentiment labels for the current sentence and the next.
+We then have features as <span class="ltx_text ltx_font_typewriter">number/portion of sentiment transitions per type</span>.</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">Features described above mostly depict the <span class="ltx_text ltx_font_italic">global</span> sentiment flow in the discussions. We further construct a <span class="ltx_text ltx_font_italic">local</span> version of them, since sentiment distribution may change as discussion proceeds. For example, less positive sentiment can be observed as dispute being escalated.
+We thus split each discussion into three equal length stages, and create sentiment distribution and transition features for each stage.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Prec</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Rec</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">F1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Acc</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Baseline (Random)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">50.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">50.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">50.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">50.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Baseline (All dispute)</th>
+<td class="ltx_td ltx_align_center">50.00</td>
+<td class="ltx_td ltx_align_center">100.00</td>
+<td class="ltx_td ltx_align_center">66.67</td>
+<td class="ltx_td ltx_align_center ltx_border_r">50.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Logistic Regression</th>
+<td class="ltx_td ltx_align_center ltx_border_t">74.76</td>
+<td class="ltx_td ltx_align_center ltx_border_t">72.29</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.50</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">73.94</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="{}_{Linear}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center">69.81</td>
+<td class="ltx_td ltx_align_center">71.90</td>
+<td class="ltx_td ltx_align_center">70.84</td>
+<td class="ltx_td ltx_align_center ltx_border_r">70.41</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m2" class="ltx_Math" alttext="{}_{RBF}" display="inline"><msub><mi/><mrow><mi>R</mi><mo>⁢</mo><mi>B</mi><mo>⁢</mo><mi>F</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">77.38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b">79.14</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">78.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">80.00</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span><span class="ltx_text ltx_font_small">Dispute detection results on Wikipedia Talk pages. The numbers are multiplied by 100. The items in <span class="ltx_text ltx_font_bold">bold</span> are statistically significantly higher than others in the same column (paired-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m5" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math> test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m6" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.05</mn></mrow></math>). SVM with the RBF kernel achieves the best performance in precision, F1, and accuracy.</span></div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Prec</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Rec</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Acc</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Lexical (Lex)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">75.86</td>
+<td class="ltx_td ltx_align_center ltx_border_t">34.66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">47.58</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61.82</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Topic (Top)</th>
+<td class="ltx_td ltx_align_center">68.44</td>
+<td class="ltx_td ltx_align_center">71.46</td>
+<td class="ltx_td ltx_align_center">69.92</td>
+<td class="ltx_td ltx_align_center ltx_border_r">69.26</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Discussion (Dis)</th>
+<td class="ltx_td ltx_align_center">69.73</td>
+<td class="ltx_td ltx_align_center">76.14</td>
+<td class="ltx_td ltx_align_center">72.79</td>
+<td class="ltx_td ltx_align_center ltx_border_r">71.54</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Sentiment (Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m1" class="ltx_Math" alttext="{}_{g+l}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>+</mo><mi>l</mi></mrow></msub></math>)</th>
+<td class="ltx_td ltx_align_center">72.54</td>
+<td class="ltx_td ltx_align_center">69.52</td>
+<td class="ltx_td ltx_align_center">71.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r">71.60</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Top + Dis</th>
+<td class="ltx_td ltx_align_center">68.49</td>
+<td class="ltx_td ltx_align_center">71.79</td>
+<td class="ltx_td ltx_align_center">70.10</td>
+<td class="ltx_td ltx_align_center ltx_border_r">69.38</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Top + Dis + Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m2" class="ltx_Math" alttext="{}_{g}" display="inline"><msub><mi/><mi>g</mi></msub></math></th>
+<td class="ltx_td ltx_align_center">77.39</td>
+<td class="ltx_td ltx_align_center">78.36</td>
+<td class="ltx_td ltx_align_center">77.87</td>
+<td class="ltx_td ltx_align_center ltx_border_r">77.74</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Top + Dis + Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m3" class="ltx_Math" alttext="{}_{g+l}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>+</mo><mi>l</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center">77.38</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic">79.14</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic">78.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">80.00</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Lex + Top + Dis + Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m4" class="ltx_Math" alttext="{}_{g+l}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>+</mo><mi>l</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_italic">78.38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b">75.12</td>
+<td class="ltx_td ltx_align_center ltx_border_b">76.71</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">77.20</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span><span class="ltx_text ltx_font_small">Dispute detection results with different feature sets by SVM with RBF kernel. The numbers are multiplied by 100. Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m9" class="ltx_Math" alttext="{}_{g}" display="inline"><msub><mi/><mi mathsize="normal" stretchy="false">g</mi></msub></math> represents global sentiment features, and Senti<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m10" class="ltx_Math" alttext="{}_{g+l}" display="inline"><msub><mi/><mrow><mi mathsize="normal" stretchy="false">g</mi><mo mathsize="normal" stretchy="false">+</mo><mi mathsize="normal" stretchy="false">l</mi></mrow></msub></math> includes both global and local features.
+The number in <span class="ltx_text ltx_font_bold">bold</span> is statistically significantly higher than other numbers in the same column (paired-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m11" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math> test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m12" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.05</mn></mrow></math>), and the <span class="ltx_text ltx_font_italic">italic</span> entry has the highest absolute value.</span></div>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Results and Error Analysis.</span>
+We experiment with logistic regression, SVM with linear and RBF kernels, which are effective methods in multiple text categorization tasks <cite class="ltx_cite">[<a href="#bib.bib31" title="Advances in kernel methods" class="ltx_ref">10</a>, <a href="#bib.bib1" title="Text categorization based on regularized linear classification methods" class="ltx_ref">25</a>]</cite>. We normalize the features by standardization and conduct a 5-fold cross-validation. Two baselines are listed: (1) labels are randomly assigned; (2) all discussions have disputes.</p>
+</div>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p">Main results for different classifiers are displayed in Table <a href="#S4.T4" title="Table 4 ‣ 4.2 Dispute Detection ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. All learning based methods outperform the two baselines, and among them, SVM with the RBF kernel achieves the best F1 score and accuracy (0.78 and 0.80).
+Experimental results with various combinations of features sets are displayed in Table <a href="#S4.T5" title="Table 5 ‣ 4.2 Dispute Detection ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. As it can be seen, sentiment features obtains the best accuracy among the four types of features. A combination of topic, discussion, and sentiment features achieves the best performance on recall, F1, and accuracy. Specifically, the accuracy is significantly higher than all the other systems (paired-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m2" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>).</p>
+</div>
+<div id="S4.SS2.p10" class="ltx_para">
+<p class="ltx_p">After a closer look at the results, we find two main reasons for incorrect predictions. Firstly, sentiment prediction errors get propagated into dispute detection. Due to the limitation of existing general-purpose lexicons, some opinionated dialog-specific terms are hard to catch. For example, “I told you over and over again…” strongly suggests a negative sentiment, but no single word shows negative connotation. Constructing a lexicon tuned for conversational text may improve the performance. Secondly, some dispute discussions are harder to detect than the others due to different dialog structures. For instance, the recalls for dispute discussions of “controversy”, “RFC”, and “resolved” are 0.78, 0.79, and 0.86 respectively. We intend to design models that are able to capture dialog structures in the future work.</p>
+</div>
+<div id="S4.SS2.p11" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sentiment Flow Visualization.</span>
+We visualize the sentiment flow of two disputed discussions in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+The plots reveal persistent negative sentiment in unresolved disputes (top). For the resolved dispute (bottom), participants show gratitude when the problem is settled.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We present a sentiment analysis-based approach to online dispute detection. We create a large-scale dispute corpus from Wikipedia Talk pages to study the problem. A sentiment prediction model based on isotonic CRFs is proposed to output sentiment labels at the sentence-level. Experiments on our dispute corpus also demonstrate that classifiers trained with sentiment tagging features outperform others that do not.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Acknowledgments</span> 
+We heartily thank the Cornell NLP Group, the reviewers, and Yiye Ruan for helpful comments. We also thank Emily Bender and Mari Ostendorf for providing the AAWD dataset. This work was supported in part by NSF grants IIS-0968450 and IIS-1314778, and DARPA DEFT Grant FA8750-13-2-0015. The views and conclusions contained herein are those of the authors and should not be interpreted as necessarily representing the official policies or endorsements, either expressed or implied, of NSF, DARPA or the U.S. Government.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. M. Bender, J. T. Morgan, M. Oxley, M. Zachry, B. Hutchinson, A. Marin, B. Zhang and M. Ostendorf</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Annotating social acts: authority claims and alignment moves in wikipedia talk pages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">LSM ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 48–57</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-96-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2021109.2021116" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Billings and L. A. Watts</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Understanding dispute resolution online: using text to reflect personal and substantive issues in conflict</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1447–1456</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-929-9</span>,
+<a href="http://dblp.uni-trier.de/db/conf/chi/chi2010.html#BillingsW10" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SENTIWORDNET: a publicly available lexical resource for opinion mining</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 417–422</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="SENTIWORDNET: A publicly available lexical resource for opinion mining" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Farkas, V. Vincze, G. Móra, J. Csirik and G. Szarvas</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The conll-2010 shared task: learning to detect hedges and their scope in natural language text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CoNLL ’10: Shared Task</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-84-8</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1870535.1870536" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.T2" title="Table 2 ‣ 3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Galley, K. McKeown, J. Hirschberg and E. Shriberg</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying agreement and disagreement in conversational speech: use of Bayesian networks to model pragmatic dependencies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Morristown, NJ, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 669+</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1218955.1219040" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/1218955.1219040" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS0.SSS0.P1.p1" title="Additional Related Work. ‣ 1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Giles</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Internet encyclopaedias go head to head</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Nature</span> <span class="ltx_text ltx_bib_volume">438</span> (<span class="ltx_text ltx_bib_number">7070</span>), <span class="ltx_text ltx_bib_pages"> pp. 900–901</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Hahn, R. Ladner and M. Ostendorf</span><span class="ltx_text ltx_bib_year">(2006-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Agreement/disagreement classification: exploiting unlabeled data using contrast classifiers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York City, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 53–56</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N06/N06-2014" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS0.SSS0.P1.p1" title="Additional Related Work. ‣ 1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Hassan, V. Qazvinian and D. Radev</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What’s with the attitude?: identifying sentences with attitude in online discussions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1245–1255</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1870658.1870779" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hirschberg and D. Litman</span><span class="ltx_text ltx_bib_year">(1993-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Empirical studies on the disambiguation of cue phrases</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Comput. Linguist.</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 501–530</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dl.acm.org/citation.cfm?id=972487.972490" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p6" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Joachims</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Advances in kernel methods</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">B. Schölkopf, C. J. C. Burges and A. J. Smola (Eds.)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 169–184</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-19416-3</span>,
+<a href="http://dl.acm.org/citation.cfm?id=299094.299104" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p8" title="4.2 Dispute Detection ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Jones and S. Rafaeli</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Time to split, virtually: âdiscourse architectureâ and âcommunity buildingâ create vibrant virtual publics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Electronic Markets</span> <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 214–223</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Kittur and R. E. Kraut</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Harnessing the wisdom of crowds in wikipedia: quality through coordination</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CSCW ’08</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 37–46</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-007-4</span>,
+<a href="http://doi.acm.org/10.1145/1460563.1460572" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1460563.1460572" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Kittur, B. Suh, B. A. Pendleton and E. H. Chi</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">He says, she says: conflict and coordination in wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CHI ’07</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 453–462</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-59593-593-9</span>,
+<a href="http://doi.acm.org/10.1145/1240624.1240698" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1240624.1240698" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. E. Kraut and P. Resnick</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building successful online communities: evidence-based social design</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Lafferty, A. McCallum and F. C. N. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’01</span>, <span class="ltx_text ltx_bib_place">San Francisco, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 282–289</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-55860-778-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=645530.655813" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS0.SSS0.P1.p1" title="Additional Related Work. ‣ 1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p3" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Mao and G. Lebanon</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Isotonic conditional random fields and local sentiment flow</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p3" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Prasad and B. Webber</span><span class="ltx_text ltx_bib_year">(28-30)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The penn discourse treebank 2.0.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Marrakech, Morocco</span> (<span class="ltx_text ltx_bib_language">english</span>).
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://www.lrec-conf.org/proceedings/lrec2008/</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 2-9517408-4-0</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p7" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Sack</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Digital formations: it and new architectures in the global realm</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">R. Lathham and S. Sassen (Eds.)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 242–282</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. J. Stone, D. C. Dunphy, M. S. Smith and D. M. Ogilvie</span><span class="ltx_text ltx_bib_year">(1966)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The general inquirer: a computer approach to content analysis</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Vuong, E. Lim, A. Sun, M. Le, H. W. Lauw and K. Chang</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On ranking controversies in wikipedia: models and evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WSDM ’08</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 171–182</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-59593-927-2</span>,
+<a href="http://doi.acm.org/10.1145/1341531.1341556" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1341531.1341556" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p4" title="4.2 Dispute Detection ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Wang, S. Yaman, K. Precoda, C. Richey and G. Raymond</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detection of agreement and disagreement in broadcast conversations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 374–378</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-88-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2002736.2002813" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS0.SSS0.P1.p1" title="Additional Related Work. ‣ 1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’05</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 347–354</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1220575.1220619" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1220575.1220619" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Sentence-level Sentiment Prediction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Yasseri, R. Sumi, A. Rung, A. Kornai and J. Kertész</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamics of conflicts in wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoRR</span> <span class="ltx_text ltx_bib_volume">abs/1202.3643</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Yin, P. Thomas, N. Narang and C. Paris</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unifying local and global agreement and disagreement classification in online debates</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WASSA ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 61–69</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2392963.2392978" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Training A Sentiment Classifier ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Zhang and F. J. Oles</span><span class="ltx_text ltx_bib_year">(2001-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Text categorization based on regularized linear classification methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Inf. Retr.</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–31</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1386-4564</span>,
+<a href="http://dx.doi.org/10.1023/A:1011441423217" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1023/A:1011441423217" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p8" title="4.2 Dispute Detection ‣ 4 Online Dispute Detection ‣ A Piece of My Mind: A Sentiment Analysis Approach for Online Dispute Detection" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:22:37 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

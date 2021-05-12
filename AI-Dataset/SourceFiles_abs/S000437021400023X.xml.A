@@ -1,0 +1,1112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Generating custom propagators for arbitrary constraints.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Constraint Programming is a proven technology for solving complex combinatorial problems from a range of disciplines, including scheduling (nurse rostering, resource allocation for data centres), planning (contingency planning for air traffic control, route finding for international container shipping, assigning service professionals to tasks) and design (of cryptographic S-boxes, carpet cutting to minimise waste). Constraint solving of a combinatorial problem proceeds in two phases. First, the problem is modelled as a set of decision variables with a set of constraints on those variables that a solution must satisfy. A decision variable represents a choice that must be made in order to solve the problem. Consider Sudoku as a simple example. Each cell in the {a mathematical formula}9×9 square must be filled in such a way that each row, column and {a mathematical formula}3×3 sub-square contain all distinct non-zero digits. In a constraint model of Sudoku, each cell is a decision variable with the domain {a mathematical formula}{1…9}. The constraints require that subsets of the decision variables corresponding to the rows, columns and sub-squares of the Sudoku grid are assigned distinct values.
+     </paragraph>
+     <paragraph>
+      The second phase is solving the modelled problem using a constraint solver. A solution is an assignment to decision variables satisfying all constraints, e.g. a valid solution to a Sudoku puzzle. A constraint solver typically works by performing a systematic search through a space of possible solutions. This space is usually vast, so search is combined with constraint propagation, a form of inference that allows the solver to narrow down the search space considerably. A constraint propagator is an algorithm that captures a particular pattern of such inference, for example requiring each of a collection of variables to take distinct values. A state-of-the-art constraint solver has a suite of such propagators to apply as appropriate to an input problem. In this paper we will consider propagators that establish a property called Generalised Arc Consistency (GAC) [1], which requires that every value in the domains of the variables in the scope of a particular constraint participates in at least one assignment that satisfies that constraint.
+     </paragraph>
+     <paragraph>
+      Constraint models of structured problems often contain many copies of a constraint, which differ only in their scope. English Peg Solitaire,{sup:1} for example, is naturally modelled with a move constraint for each of 76 moves, at each of 31 time steps, giving 2356 copies of the constraint [2]. Efficient implementation of such a constraint is vital to solving efficiency, but choosing an implementation is often difficult.
+     </paragraph>
+     <paragraph>
+      The solver may provide a hand-optimised propagator matching the constraint. If it does not, the modeller can use a variety of algorithms which achieve GAC propagation for arbitrary constraints, for example GAC2001 [3], GAC-Schema [4], MDDC [5], STR2 [6], the Trie table constraint [7], or Regular [8]. Typically these propagators behave well when the data structure they use (whether it is a trie, multi-valued decision diagram (MDD), finite automaton, or list of tuples) is small. They all run in exponential time in the worst case, but run in polynomial time when the data structure is of polynomial size.
+     </paragraph>
+     <paragraph>
+      The algorithms we give herein generate GAC propagators for arbitrary constraints that run in time {a mathematical formula}O(nd) (where n is the number of variables and d is the maximum domain size), in extreme cases an exponential factor faster than any table constraint propagator [3], [7], [9], [5], [6], [10], [11], [12], [13]. As our experiments show, generated propagators can even outperform hand-optimised propagators when performing the same propagation. It can take substantial time to generate a GAC propagator, however the generation time is more than repaid on the most difficult problem instances in our experiments.
+     </paragraph>
+     <paragraph>
+      Our approach is general but in practice does not scale to large constraints as it precomputes domain deletions for all possible inputs of the propagator (i.e. all reachable subsets of the initial domains). However, it remains widely applicable — like the aforementioned Peg Solitaire model, many other constraint models contain a large number of copies of one or more small constraints.
+     </paragraph>
+     <paragraph>
+      Propagator trees
+     </paragraph>
+     <paragraph>
+      Our first approach is to generate a binary tree to store domain deletions for all reachable subdomains. The tree branches on whether a particular literal (variable, value pair) is in domain or not, and each node of the tree is labelled with a set of domain deletions. After some background in Section 2, the basic approach is described in Section 3.
+     </paragraph>
+     <paragraph>
+      We have two methods of executing the propagator trees. The first is to transform the tree into a program, compile it and link it to the constraint solver. The second is a simple virtual machine: the propagator tree is encoded as a sequence of instructions, and the constraint solver has a generic propagator that executes it. Both these methods are described in Section 3.5.
+     </paragraph>
+     <paragraph>
+      The generated trees can be very large, but this approach is made feasible for small constraints (both to generate the tree, and to transform, compile and execute it) by refinements and heuristics described in Section 4. The binary tree approach is experimentally evaluated in Section 5, demonstrating a clear speed-up on three different problem classes.
+     </paragraph>
+     <paragraph>
+      Exploiting symmetry
+     </paragraph>
+     <paragraph>
+      The second part of the paper is about exploiting symmetry. We define the symmetry of a constraint as a permutation group on the literals, such that any permutation in the group maintains the semantics of the constraint. This allows us to compress the propagator trees: any two subtrees that are symmetric are compressed into one. In some cases this replaces an exponential sized tree with a polynomially sized symmetry-reduced tree. Section 6 gives the necessary theoretical background. In that section we develop a novel algorithm for finding the canonical image of a sequence of sets under a group that acts pointwise on the sets. We believe this is a small contribution to computational group theory.
+     </paragraph>
+     <paragraph>
+      Section 7 describes how the symmetry-reduced trees are generated, and gives some bounds on their size under some symmetry groups. Executing the symmetry-reduced trees is not as simple as for the standard trees. Both the code generation and VM approaches are adapted in Section 7.3.
+     </paragraph>
+     <paragraph>
+      In Section 8 we evaluate symmetry-reduced trees compared to standard propagator trees. We show that exploiting symmetry allows propagator trees to scale to larger constraints.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Theoretical background
+     </section-title>
+     <paragraph>
+      We briefly give the most relevant definitions, and refer the reader elsewhere for more detailed discussion [1].
+     </paragraph>
+     <paragraph label="Definition 1">
+      A CSP instance, P, is a triple {a mathematical formula}〈V,D,C〉, where: V is a finite set of variables; D is a function from variables to their domains, where {a mathematical formula}∀v∈V:D(v)⊂Z and {a mathematical formula}D(v) is finite; and C is a set of constraints. A literal of P is a pair {a mathematical formula}〈v,d〉, where {a mathematical formula}v∈V and {a mathematical formula}d∈D(v). An assignment to any subset {a mathematical formula}X⊆V is a set consisting of exactly one literal for each variable in X. Each constraintc is defined over a list of variables, denoted {a mathematical formula}scope(c). A constraint either forbids or allows each assignment to the variables in its scope. An assignment S to Vsatisfies a constraint c if S contains an assignment allowed by c. A solution to P is any assignment to V that satisfies all the constraints of P.
+     </paragraph>
+     <paragraph>
+      Constraint propagators work with subdomain lists, as defined below.
+     </paragraph>
+     <paragraph label="Definition 2">
+      For a set of variables {a mathematical formula}X={x1…xn} with original domains {a mathematical formula}D(x1),…,D(xn), a subdomain listS for X is a function from variables to sets of domain values that satisfies: {a mathematical formula}∀i∈{1…n}:S(xi)⊆D(xi). We extend the ⊆ notation to write {a mathematical formula}R⊆S for subdomain lists R and S iff {a mathematical formula}∀i∈{1…n}:R(xi)⊆S(xi). Given a CSP instance {a mathematical formula}P=〈V,D,C〉, a search state for P is a subdomain list for V. An assignment A is contained in a subdomain list S iff {a mathematical formula}∀〈v,d〉∈A:d∈S(v) (and if {a mathematical formula}S(v) is not defined then {a mathematical formula}d∈S(v) is false).
+     </paragraph>
+     <paragraph>
+      Backtracking search operates on search states to solve CSPs. During solving, the search state is changed in two ways: branching and propagation. Propagation removes literals from the current search state without removing solutions. Herein, we consider only propagators that establish Generalised Arc Consistency (GAC), which we define below. Branching is the operation that creates a search tree. For a particular search state S, branching splits S into two states {a mathematical formula}S1 and {a mathematical formula}S2, typically by splitting the domain of a variable into two disjoint sets. For example, in {a mathematical formula}S1 branching might make an assignment {a mathematical formula}x↦a (by excluding all other literals of x), and in {a mathematical formula}S2 remove only the literal {a mathematical formula}x↦a. {a mathematical formula}S1 and {a mathematical formula}S2 are recursively solved in turn.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Given a constraint c and a subdomain list S of {a mathematical formula}scope(c), a literal {a mathematical formula}〈v,d〉 is supported iff there exists an assignment that satisfies c and is contained in S and contains {a mathematical formula}〈v,d〉. S is Generalised Arc Consistent (GAC) with respect to c iff, for every {a mathematical formula}d∈S(v), the literal {a mathematical formula}〈v,d〉 is supported.
+     </paragraph>
+     <paragraph>
+      Any literal that does not satisfy the test in Definition 3 may be removed. In practice, CP solvers fail and backtrack if any domain is empty. Therefore propagators can assume that every domain has at least one value in it when they are called. Therefore we give a definition of GAC propagator that has as a precondition that all domains contain at least one value. This precondition allows us to generate smaller and more efficient propagators in some cases.
+     </paragraph>
+     <paragraph label="Definition 4">
+      Given a CSP {a mathematical formula}P=〈V,D,C〉, a search state S for P where each variable {a mathematical formula}x∈V has a non-empty domain: {a mathematical formula}|S(x)|&gt;0, and a constraint {a mathematical formula}c∈C, the GAC propagator for c returns a new search state {a mathematical formula}S′ which:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       For all variables not in {a mathematical formula}scope(c): is identical to S.
+      </list-item>
+      <list-item label="2.">
+       For all variables in {a mathematical formula}scope(c): omits all (and only) literals in S that are not supported in c, and is otherwise identical to S.
+      </list-item>
+     </list>
+    </section>
+    <section label="3">
+     <section-title>
+      Propagator generation
+     </section-title>
+     <paragraph>
+      We introduce this section by giving a naïve method that illustrates our overall approach. Then we present a more sophisticated method that forms the basis for the rest of this paper.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       A naïve method
+      </section-title>
+      <paragraph>
+       GAC propagation is NP-hard for some families of constraints defined intensionally. For example, establishing GAC on the constraint {a mathematical formula}∑ixi=0 is NP-hard, as it is equivalent to the subset-sum problem [14] (§35.5). However, given a constraint c on n variables, each with domain size d, it is possible to generate a GAC propagator that runs in time {a mathematical formula}O(nd). The approach is to precompute the deletions performed by a GAC algorithm for every subdomain list for {a mathematical formula}scope(c). Thus, much of the computational cost is moved from the propagator (where it may be incurred many times during search) to the preprocessing step (which only occurs once).
+      </paragraph>
+      <paragraph>
+       The precomputed deletions are stored in an array T mapping subdomain lists to sets of literals. The generated propagator reads the domains (in {a mathematical formula}O(nd) time), looks up the appropriate subdomain list in T and performs the required deletions. T can be indexed as follows: for each literal in the initial domains, represent its presence or absence in the subdomain list with a bit, and concatenate the bits to form an integer.
+      </paragraph>
+      <paragraph>
+       T can be generated in {a mathematical formula}O((2d−1)n.n.dn) time. There are {a mathematical formula}2d−1 non-empty subdomains of a size d domain, and so {a mathematical formula}(2d−1)n non-empty subdomain lists on n variables. For each, GAC is enforced in {a mathematical formula}O(n.dn) time and the set of deletions is recorded. As there are at most nd deletions, T is size at most {a mathematical formula}(2d−1)n.nd.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Propagator trees
+      </section-title>
+      <paragraph>
+       The main disadvantage of the naïve method is that it computes and stores deletions for many subdomain lists that cannot be reached during search. A second disadvantage is that it must read the entire search state (for variables in scope) before looking up the deletions. We address both problems by using a tree to represent the generated propagator. The tree represents only the subdomain lists that are reachable: no larger subdomain list fails or is entailed. This improves the average- but not the worst-case complexity.
+      </paragraph>
+      <paragraph>
+       In this section we introduce the concept of a propagator tree. This is a rooted binary tree with labels on each node representing actions such as querying domains and pruning domain values. A propagator tree can straightforwardly be translated into a program or an executable bytecode. We will describe an algorithm that generates a propagator tree, given any propagator and entailment checker for the constraint in question. First we define propagator tree.
+      </paragraph>
+      <paragraph label="Definition 5">
+       A propagator tree node is a tuple {a mathematical formula}T=〈Left,Right,Prune,Test〉, where Left and Right are propagator tree nodes (or Nil), Prune is a set of literals to be deleted at this node, and Test is a single literal. Any of the items in the tuple may be Nil. A propagator tree is a rooted tree of nodes of type T. The root node is named r. We use dot to access members of a tree node v, so for example the left subtree is {a mathematical formula}v.Left.
+      </paragraph>
+      <paragraph label="Example 1">
+       Suppose we have the constraint {a mathematical formula}x∨y with initial domains of {a mathematical formula}{0,1}. An example propagator tree for this constraint is shown in Fig. 1. The tree first branches to test whether {a mathematical formula}0∈D(x). In the branch where {a mathematical formula}0∉D(x), it infers that {a mathematical formula}1∈D(x) because otherwise {a mathematical formula}D(x) would be empty. Both subtrees continue to branch until the domains {a mathematical formula}D(x) and {a mathematical formula}D(y) are completely known. In two cases, pruning is required (when {a mathematical formula}D(x)={0} and when {a mathematical formula}D(y)={0}).
+      </paragraph>
+      <paragraph>
+       An execution of a propagator tree follows a path in the tree starting at the root r. At each vertex v, the propagator prunes the set of literals specified by {a mathematical formula}v.Prune. If {a mathematical formula}v.Test is Nil, then the propagator is finished. Otherwise, the propagator tests if the literal {a mathematical formula}v.Test=(xi,a) is in the current subdomain list S. If {a mathematical formula}a∈S(xi), then the next vertex in the path is the left child {a mathematical formula}v.Left, otherwise it is the right child {a mathematical formula}v.Right. If the relevant child is Nil, then the propagator is finished.
+      </paragraph>
+      <paragraph label="Example 2">
+       Continuing from Example 1, suppose we have {a mathematical formula}D(x)={0}, {a mathematical formula}D(y)={0,1}. The dashed arrows in Fig. 1 show the execution of the propagator tree, starting at r. First the value 0 of {a mathematical formula}D(x) is tested, and found to be in the domain. Second, the value 1 of {a mathematical formula}D(x) is tested and found to be not in the domain. This leads to a leaf node where 0 is pruned from {a mathematical formula}D(y). The other value of y is assumed to be in the domain (otherwise the domain is empty and the solver will fail and backtrack).
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Comparing propagator trees to handwritten propagators
+      </section-title>
+      <paragraph>
+       Handwritten propagators make use of many techniques for efficiency. For example they often have state variables that are incrementally updated and stored between calls to the propagator. They also make extensive use of triggers — notifications from the solver about how domains have changed since the last call (for example, literal {a mathematical formula}〈x,a〉 has been pruned).
+      </paragraph>
+      <paragraph>
+       In contrast, propagator trees are stateless. They also do not use triggers. It is not clear how triggers could be used with a single tree because the order that trigger events arrive has no relation to the order of branching in the tree. In future work we plan to create multiple propagator trees which will be executed for different trigger events, dividing responsibility for achieving GAC among the trees.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Generating propagator trees
+      </section-title>
+      <paragraph>
+       SimpleGenTree (Algorithm 1) is our simplest algorithm to create a propagator tree given a constraint c and the initial domains D. The algorithm is recursive and builds the tree in depth-first left-first order. When constructed, each node in a propagator tree will test values to obtain more information about S, the current subdomain list (Definition 2). At a given tree node, each literal from the initial domains D may be in S, or out, or unknown (not yet tested). SimpleGenTree has a subdomain list SD for each tree node, representing values that are in S or unknown. It also has a second subdomain list ValsIn, representing values that are known to be in S. Algorithm 1 is called as SimpleGenTree(c, D, ∅), where c is the parameter of the Propagate function (called on line 1) and D is the initial domains. For all our experiments, Propagate is a positive GAC table propagator and thus c is a list of satisfying tuples.
+      </paragraph>
+      <paragraph>
+       SimpleGenTree proceeds in two stages. First, it runs a propagation algorithm on SD to compute the prunings required given current knowledge of S. This set of prunings is conservative in the sense that they can be performed whatever the true value of S because {a mathematical formula}S⊆SD. The prunings are stored in the current tree node, and each pruned value is removed from SD to form {a mathematical formula}SD′. If a domain is empty in {a mathematical formula}SD′, the algorithm returns. Pruned values are also removed from ValsIn to form {a mathematical formula}ValsIn′ — these values are known to be in S, but the propagator tree will remove them from S. Furthermore, if only one value remains for some variable in {a mathematical formula}SD′, the value is added to {a mathematical formula}ValsIn′ (otherwise the domain would be empty).
+      </paragraph>
+      <paragraph>
+       Propagate is assumed to empty all variable domains if the constraint is not satisfiable with the subdomain list SD. A GAC propagator (according to Definition 4) will do this, however Propagate does not necessarily enforce GAC. The proof of correctness below is simplified by assuming Propagate always enforces GAC.
+      </paragraph>
+      <paragraph>
+       Throughout this paper we will only consider GAC propagators according to Definition 4. If the Propagate function does not enforce GAC then the propagator tree that is generated does not necessarily enforce the same degree of consistency as Propagate. Characterising non-GAC propagator trees is not straightforward and we leave an investigation of this to future work.
+      </paragraph>
+      <paragraph>
+       The second stage is to choose a literal and branch. This literal is unknown, i.e. in {a mathematical formula}SD′ but not {a mathematical formula}ValsIn′. SimpleGenTree recurses for both left and right branches. On the left branch, the chosen literal is added to ValsIn, because it is known to be present in S. On the right, the chosen literal is removed from SD. There are two conditions that terminate the recursion. In both cases the algorithm attaches the deletions to the current node and returns. The first condition is that all domains have been emptied by propagation. The second condition is {a mathematical formula}SD′=ValsIn′. At this point, we have complete knowledge of the current search state S: {a mathematical formula}SD′=ValsIn′=S.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Executing a propagator tree
+      </section-title>
+      <paragraph>
+       We compare two approaches to executing propagator trees. The first is to translate the tree into program code and compile it into the solver. This results in a very fast propagator but places limitations on the size of the tree. The second approach is to encode the propagator tree into a stream of instructions, and execute them using a simple virtual machine.
+      </paragraph>
+      <section label="3.5.1">
+       <section-title>
+        Code generation
+       </section-title>
+       <paragraph>
+        Algorithm 2 (GenCode) generates a program from a propagator tree via a depth-first, left-first tree traversal. It is called initially with the root r. GenCode creates the body of the propagator function, the remainder is solver specific. In the case of Minion solver specific code is very short and the same for all propagator trees.
+       </paragraph>
+      </section>
+      <section label="3.5.2">
+       <section-title>
+        Virtual machine
+       </section-title>
+       <paragraph>
+        The propagator tree is encoded into an array of integers. Each instruction is encoded as a unique integer followed by some operands. The virtual machine has only three instructions, as follows.
+       </paragraph>
+       <list>
+        <list-item label="Branch :">
+         {a mathematical formula}〈var,val,pos〉 — If the value val is not in the domain of the variable var then jump to position pos. Otherwise, execution continues with the next instruction in the sequence. A jump to −1 ends execution of the virtual machine.
+        </list-item>
+        <list-item label="Prune :">
+         {a mathematical formula}〈var1,val1,var2,val2,…,−1〉 — Prune a set of literals from the variable domains. The operands are a list of variable–value pairs terminated by −1.
+        </list-item>
+        <list-item label="Return :">
+         {a mathematical formula}〈〉 — End execution of the virtual machine.
+        </list-item>
+       </list>
+       <paragraph>
+        Tree nodes are encoded in depth-first left-first order, and execution of the instruction stream starts at location 0. Any node that has a left child is immediately followed by its left child. The Branch instruction will either continue at the next instruction (the left child) or jump to the location of the right child. When an internal node is encoded, the position of its right child is not yet known. We insert placeholders for pos in the branch instruction and fill them in during a second pass.
+       </paragraph>
+       <paragraph>
+        The VM clearly has the advantage that no compilation is required, however it is somewhat slower than the code generation approach in our experiments below.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Correctness
+      </section-title>
+      <paragraph>
+       In order to prove the SimpleGenTree algorithm correct, we assume that the Propagate function called on line 1 enforces GAC exactly as in Definition 3. In particular, if Propagate produces a domain wipe-out, it must delete all values of all variables in the scope. This is not necessarily the case for GAC propagators commonly used in solvers. We also assume that the target constraint solver removes all values of all variables in a constraint if our propagator tree empties any individual domain. In practice, constraint solvers often have some shortcut method, such as a special function Fail for these situations, but our proofs are slightly cleaner for assuming domains are emptied. Finally we implicitly match up nodes in the generated trees with corresponding points in the generated code for the propagator. Given these assumptions, we will prove that the code we generate does indeed establish GAC.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Assuming that the Propagate function in line1establishes GAC, then: given inputs{a mathematical formula}(c,SD,ValsIn), ifAlgorithm 1returns at line4or line8, the resulting set of prunings achieve GAC for the constraint c on any search state S such that{a mathematical formula}ValsIn⊆S⊆SD.
+      </paragraph>
+      <paragraph label="Proof">
+       If Algorithm 1 returns on either line 4 or line 8, the set of deletions returned are those generated on line 1. These deletions achieve GAC propagation for the search state SD.If the GAC propagator for c would remove a literal from SD, then that literal is in no assignment which satisfies c and is contained in SD. As S is contained in SD, that literal must also be in no assignment that satisfies c and is contained in S. Therefore any literals in S that are removed by a GAC propagator for SD would also be removed by a GAC propagator for S.We now show no extra literals would be removed by a GAC propagator for S. This is separated into two cases. The first case is if Algorithm 1 returns on line 4. Then GAC propagation on SD has removed all values from all domains. There are therefore no further values which can be removed, so the result follows trivially.The second case is if Algorithm 1 returns on line 8. Then {a mathematical formula}SD′=ValsIn′ on line 7. Any literals added to {a mathematical formula}ValsIn′ on line 6 are also in S, as literals are added when exactly one value exists in the domain of a variable in SD, and so this value must also be in S, otherwise there would be an empty domain in S. Thus we have {a mathematical formula}ValsIn′⊆(S∖Deletions)⊆SD′. But since {a mathematical formula}ValsIn′=SD′, we also have {a mathematical formula}SD′=S∖Deletions. Since we know {a mathematical formula}SD′ is GAC by the assumed correctness of the Propagate function, so is {a mathematical formula}S∖Deletions.  □
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Assuming that the Propagate function in line1establishes GAC, then: given inputs{a mathematical formula}(c,SD,ValsIn), then the code generatorAlgorithm 2applied to the result ofAlgorithm 1returns a correct GAC propagator for search states S such that{a mathematical formula}ValsIn⊆S⊆SD.
+      </paragraph>
+      <paragraph label="Proof">
+       We shall proceed by induction on the size of the tree generated by Algorithm 1. The base is that the tree contains just a single leaf node, and this case is implied by Lemma 1. The rest of the proof is therefore the induction step that a tree node is correct given both its left and right children (if present) are correct. For this proof, we implicitly match up nodes generated by Algorithm 1 with points in the code generated by Algorithm 2.By the same argument used in Lemma 1, the Deletions generated on line 1 can also be removed from S. If applying these deletions to S leads to a domain wipe-out, then the constraint solver sets {a mathematical formula}S(x)=∅ for all {a mathematical formula}x∈scope(c), and the propagator has established GAC, no matter what happens in the rest of the tree.If no domain wipe-out occurs, we progress to line 9. At this point we know that {a mathematical formula}ValsIn′⊆S∖Deletions⊆SD′. Also, since we passed line 7, we know that {a mathematical formula}ValsIn′≠SD′, and therefore there is at least one literal for the heuristic to choose. There are now two cases. The literal {a mathematical formula}(y,l) chosen by the heuristic is in S, or not.If {a mathematical formula}l∈S(y), then the generated propagator will branch left. The propagator generated after this branch is generated from the tree produced by {a mathematical formula}SimpleGenTree(c,SD′,ValsIn′∪(y,l)). Since {a mathematical formula}l∈S(y), we have {a mathematical formula}ValsIn′∪(y,l)⊆S∖Deletions⊆SD′. Since the tree on the left is strictly smaller, we can appeal to the induction hypothesis that we have generated a correct GAC propagator for {a mathematical formula}S∖Deletions. Since we know that Deletions were correctly deleted from S, we have a correct GAC propagator at this node for S.If {a mathematical formula}l∉S(y), the generated propagator branches right. The propagator on the right is generated from the tree given by {a mathematical formula}SimpleGenTree(c,SD′∖(y,l),ValsIn′) on {a mathematical formula}S∖Deletions. Here we have {a mathematical formula}ValsIn′⊆S∖Deletions⊆SD′∖(y,l). As in the previous case, the requirements of the induction hypothesis are met and we have a correct GAC propagator for S.Finally we note that the set {a mathematical formula}SD∖ValsIn is always reduced by at least one literal on each recursive call to Algorithm 1. Therefore we know the algorithm will eventually terminate. □
+      </paragraph>
+      <paragraph label="Corollary 1">
+       Assuming the Propagate function correctly establishes GAC for any constraint c, then the code generatorAlgorithm 2applied to the result ofAlgorithm 1with inputs{a mathematical formula}(c,D,∅), where D are the initial domains of the variables in c, generates a correct GAC propagator for all search states.
+      </paragraph>
+      <paragraph label="Proof">
+       If r is the time a solver needs to remove a value from a domain, and s the time to check whether or not a value is in the domain of a variable, the code generated byAlgorithm 2runs in time{a mathematical formula}O(ndmax(r,s)).The execution of the algorithm is to go through a single branch of an if/then/else tree. The tree cannot be of depth greater than nd since one literal is chosen at each depth and there are at most nd literals in total. Furthermore, on one branch any given literal can either be removed from a domain or checked, but not both. This is because Algorithm 1 never chooses a test from a removed value. Therefore the worst case is nd occurrences of whichever is more expensive out of testing domain membership and removing a value from a domain.  □
+      </paragraph>
+      <paragraph>
+       In some solvers both r and s are {a mathematical formula}O(1), e.g. where domains are stored only in bitarrays. In such solvers our generated GAC propagator is {a mathematical formula}O(nd).
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Generating smaller trees
+     </section-title>
+     <paragraph>
+      Algorithm 3 shows the GenTree algorithm. This is a refinement of SimpleGenTree. We present this without proof of correctness, but a proof would be straightforward since the effect is only to remove nodes in the tree for which no propagation can occur in the node and the subtree beneath it.
+     </paragraph>
+     <paragraph>
+      The first efficiency measure is that GenTree always returns Nil when no pruning is performed at the current node and both children are Nil, thus every leaf node of the generated propagator tree performs some pruning. The second measure is to use an entailment checker. A constraint is entailed with respect to a subdomain list SD if every tuple allowed on SD is allowed by the constraint. When a constraint is entailed there is no possibility of further pruning. We assume we have a function {a mathematical formula}entailed(c,SD) to check this. The function is called at the start of GenTree, and also after the subdomain list is updated by pruning (line 9). In both cases, entailment leads to the function returning before making the recursive calls.
+     </paragraph>
+     <paragraph>
+      To illustrate the difference between SimpleGenTree and GenTree, consider Fig. 2. The constraint is very small ({a mathematical formula}x∨y on boolean variables, the same constraint as used in Fig. 1) but even so SimpleGenTree generates 7 more nodes than GenTree. The figure illustrates the effectiveness and limitations of entailment checking. Subtree C contains no prunings, therefore it would be removed by GenTree with or without entailment checking. However, the entailment check is performed at the topmost node in subtree C, and GenTree immediately returns (line 2) without exploring the four nodes beneath. Subtree B is entailed, but the entailment check does not reduce the number of nodes explored by GenTree compared to SimpleGenTree. Subtree A is not entailed, however GAC does no prunings here so GenTree will explore this subtree but not output it.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Bounds on tree size
+      </section-title>
+      <paragraph>
+       At each internal node, the tree branches for some literal in {a mathematical formula}SD′ that is not in {a mathematical formula}ValsIn′. Each unique literal may be branched on at most once down any path from the root to a leaf node. This means the number of bifurcations is at most nd down any path. Therefore the size of the tree is at most {a mathematical formula}2×(2nd)−1=2nd+1−1 which is {a mathematical formula}O(2nd).
+      </paragraph>
+      <paragraph>
+       The dominating cost of GenTree for each node is calling the constraint propagator on line 3. We use GAC2001, and its time complexity is {a mathematical formula}O(n2dn)[3]. Detecting entailment is less expensive. To implement entailment and the heuristic, we maintain a list of all tuples within SD that do not satisfy the constraint. It takes {a mathematical formula}O(ndn) to filter this list at each node, and the constraint is entailed when the list is empty. Overall the time complexity of GenTree is {a mathematical formula}O(n2dn×2nd).
+      </paragraph>
+      <paragraph>
+       For many constraints GenTree is very efficient and does not approach its upper bound. The lemma below gives an example of a constraint where GenTree does generate a tree of exponential size.
+      </paragraph>
+      <paragraph label="Lemma 3">
+       Consider the parity constraint on a list of variables{a mathematical formula}〈x1,…,xn〉with domain{a mathematical formula}{0,1}. The constraint is satisfied when the sum of the variables is even. Any propagator tree for this constraint must have at least{a mathematical formula}2n−1nodes.
+      </paragraph>
+      <paragraph label="Proof">
+       The parity constraint propagates in exactly one case. When all but one variable is assigned, the remaining variable must be assigned such that the parity constraint is true. If there are two or more unassigned variables, then no propagation can be performed.Suppose we select the first {a mathematical formula}n−1 variables and assign them in any way (naming the assignment A), leaving {a mathematical formula}xn unassigned. {a mathematical formula}xn must then be assigned either 0 or 1 by pruning, and the value depends on every other variable (and on every other variable being known to be assigned). The tree node that performs the pruning for A cannot be reached for any other assignment {a mathematical formula}B≠A to the first {a mathematical formula}n−1 variables, as the node for A requires knowing the whole of A to be able to prune {a mathematical formula}xn. Therefore there must be a distinct node in the propagator tree for each of the {a mathematical formula}2n−1 assignments to the first {a mathematical formula}n−1 variables.  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Heuristic
+      </section-title>
+      <paragraph>
+       The choice of literal to branch on is very important, and can make a huge difference in the size of the propagator tree. In this section we propose some dynamic heuristics and compare them.
+      </paragraph>
+      <paragraph>
+       Entailment heuristic
+      </paragraph>
+      <paragraph>
+       To minimise the size of the tree, the aim of this heuristic is to cause Algorithm 3 to return before branching. There are a number of conditions that cause this: entailment (lines 1 and 9); domain wipe-out (line 6); and complete domain information (line 9).
+      </paragraph>
+      <paragraph>
+       The proposed heuristic greedily attempts to make the constraint entailed. This is done by selecting the literal contained in the greatest number of disallowed tuples of c that are valid with respect to {a mathematical formula}SD′. If this literal is invalid (as in the right subtree beneath the current node), then the greatest possible number of disallowed tuples will be removed from the set.
+      </paragraph>
+      <paragraph>
+       Smallest Domain heuristics
+      </paragraph>
+      <paragraph>
+       Smallest Domain First (SDF) is a popular variable ordering heuristic for CP search. We investigate two ways of adapting SDF. The first, Smallest Maybe First (SMF) selects a variable with the smallest non-zero number of literals in {a mathematical formula}SD′∖ValsIn′. SMF will tend to prefer variables with small initial domains, then prefer to obtain complete domain information for one variable before moving on to the next. Preferring small domains could be a good choice because on average each deleted value from a small domain will be in a large number of satisfying tuples. Ties are broken by the static order of the variables in the scope. Once a variable is chosen, the smallest literal for that variable is chosen from {a mathematical formula}SD′∖ValsIn′.
+      </paragraph>
+      <paragraph>
+       The second adaptation is Smallest Maybe+Domain First (SM+DF). This is similar to SMF with two changes: when selecting the variable {a mathematical formula}SD′ is used in place of {a mathematical formula}SD′∖ValsIn′, and variables are chosen from the set of variables that have at least one literal in {a mathematical formula}SD′∖ValsIn′ (otherwise SM+DF could choose a variable with no remaining literals to branch on).
+      </paragraph>
+      <paragraph>
+       Comparison
+      </paragraph>
+      <paragraph>
+       We compare the three proposed heuristics Entail, SMF and SM+DF against corresponding anti-heuristics AntiEntail and LMF (Largest Maybe First), one static ordering, and a dynamic random ordering (at each node a literal is chosen at random with uniform probability). We used all the constraints from both sets of experiments (in Sections 5 and 8).
+      </paragraph>
+      <paragraph>
+       The static ordering for Peg Solitaire and LABS is the order the constraints are written in Sections 5.2 and 5.3 respectively. For Life, Immigration and Brian's Brain, the neighbour variables are branched first, then the variable representing the current time-step, then the next time-step.
+      </paragraph>
+      <paragraph>
+       Table 1 shows the size of propagator trees for each of the heuristics. Static, SMF and SM+DF performed well overall. SMF and SM+DF produced trees of identical size. In two cases (Brian Sym and Immigration Sym) the tree generated with the static ordering is slightly larger than SMF. In most cases SMF performed better than its anti-heuristic LMF. SMF also has the advantage that the user need not provide an ordering.
+      </paragraph>
+      <paragraph>
+       Comparing the Entailment heuristic to Random shows that Entailment does have some value, but Entailment proved to be worse than SMF and Static in most cases. Also, Entailment is beaten by its anti-heuristic in 6 cases as opposed to 4 for SMF.
+      </paragraph>
+      <paragraph>
+       We use the SMF heuristic for all experiments in Sections 5 and 8.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Implementation of GenTree
+      </section-title>
+      <paragraph>
+       The implementation of Algorithm 3 is recursive and very closely follows the structure of the pseudocode. It is instantiated with the GAC2001 table propagator [3]. The implementation maintains a list of disallowed tuples of c that are valid with respect to SD (or {a mathematical formula}SD′ after line 4). This list is used by the entailment checker: when the list becomes empty, the constraint is entailed. It is also used to calculate the entailment heuristic described above. It is implemented in Python and is not highly optimised. It is executed using the PyPy JIT compiler{sup:2} version 1.9.0.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experimental evaluation of propagator trees
+     </section-title>
+     <paragraph>
+      In all the case studies below, we use the solver Minion [16] 0.15. We experiment with 3 propagator trees, in each case comparing against hand-optimised propagators provided in Minion, and also against generic GAC propagators (as described in the subsection below). All instances were run 5 times and the mean was taken. In all cases times are given for an 8-core Intel Xeon E5520 at 2.27 GHz with 12 GB RAM. Minion was compiled with {a mathematical formula}g++ 4.7.3, optimisation level {a mathematical formula}−O3. For all experiments 6 Minion processes were executed in parallel. We ran all experiments with a 24 hour timeout, except where otherwise stated.
+     </paragraph>
+     <paragraph>
+      Table 2 reports the time taken to run GenTree, and separately to compile each propagator and link it to Minion. The propagator trees are compiled exactly as every other constraint in Minion is compiled. Specifically they are compiled once for each variable type, 7 times in total. In the case of Life, in our previous work [15] we compiled the propagator tree once (for Boolean variables), taking 217 s, whereas here it takes 4054.17 s. In each experiment in this section, we build exactly one propagator tree, which is then used for all instances in that experiment, and on multiple scopes for each instance.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Generic GAC propagators
+      </section-title>
+      <paragraph>
+       In some cases a generic GAC propagator can enforce GAC in polynomial time. Typically this occurs if the size of the data structure representing the constraint is bounded by a polynomial. Generic propagators can also perform well when there is no polynomial time bound simply because they have been the focus of much research effort.
+      </paragraph>
+      <paragraph>
+       We compare propagator trees to three table constraints: Table, Lighttable, and {a mathematical formula}STR2+. Table uses a trie data structure with watched literals [7]. Lighttable employs the same trie data structure but is stateless and uses static triggers. Lighttable searches for support for each value of every variable each time it is called. Finally {a mathematical formula}STR2+ is the optimised simple tabular reduction propagator by Lecoutre [6].
+      </paragraph>
+      <paragraph>
+       We also compare against MDDC, the MDD propagator of Cheng and Yap [5]. The MDD is constructed from the set of satisfying tuples. The MDDC propagator is implemented exactly as described by Cheng and Yap, and we used the sparse set variant. To construct the MDD, we used a simpler algorithm than Cheng and Yap. Our implementation first builds a complete trie representing the positive tuples, then converts the trie to an MDD by compressing identical subtrees.
+      </paragraph>
+      <paragraph>
+       Many of our benchmark constraints can be represented compactly using a Regular constraint [8]. We manually created deterministic finite automata for these constraints. These automata are given elsewhere [17] for space reasons. In the experiments we use the Regular decomposition of Beldiceanu et al. [18] which has a sequence of auxiliary variables representing the state of the automaton at each step, and a set of ternary table constraints each representing the transition table. We enforce GAC on the table constraints and this obtains GAC on the original Regular constraint.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Case study: English Peg Solitaire
+      </section-title>
+      <paragraph>
+       English Peg Solitaire is a one-player game played with pegs on a board. It is Problem 37 at www.csplib.org. The game and a model are described by Jefferson et al. [2]. The game has 33 board positions (fields), and begins with 32 pegs and one hole. The aim is to reduce the number of pegs to 1. At each move, a peg (A) is jumped over another peg (B) and into a hole, and B is removed. As each move removes one peg, we fix the number of time steps in our model to 32.
+      </paragraph>
+      <paragraph>
+       The model we use is as follows. The board is represented by a Boolean array {a mathematical formula}b[32,33] where the first index is the time step {a mathematical formula}{0…31} and the second index is the field {a mathematical formula}{1…33}. The moves are represented by Boolean variables {a mathematical formula}moves[31,76], where the first index is the time step {a mathematical formula}{0…30} (where move 0 connects board states 0 and 1), and the second index is the move number, where there are 76 possible moves. The third set of Boolean variables are {a mathematical formula}equal[31,33], where the first index is the time step {a mathematical formula}{0…30} and the second is the field. The following constraint is posted for each equal variable: {a mathematical formula}equal[x,y]⇔(b[x,y]=b[x+1,y]). The board state for the first and last time step are filled in, with one hole at the starting position, and one peg at the same position in the final time step. We consider only starting positions 1, 2, 4, 5, 9, 10, or 17, because all other positions can be reached by symmetry from one of these seven.
+      </paragraph>
+      <paragraph>
+       For each time step {a mathematical formula}t∈{0…30}, exactly one move must be made, therefore constraints are posted to enforce {a mathematical formula}∑imoves[t,i]=1. Also for each time step t, the number of pegs on the board is {a mathematical formula}32−t, therefore constraints are posted to enforce {a mathematical formula}∑i=133b[t,i]=32−t.
+      </paragraph>
+      <paragraph>
+       The bulk of the constraints model the moves. At each time step {a mathematical formula}t∈{0…30}, for each possible move {a mathematical formula}m∈{0…75}, the effects of move m are represented by an arity 7 Boolean constraint. Move m jumps a piece from field {a mathematical formula}f1 to {a mathematical formula}f3 over field {a mathematical formula}f2. The constraint is as follows.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Also, a frame constraint is posted to ensure that all fields other than {a mathematical formula}f1, {a mathematical formula}f2 and {a mathematical formula}f3 remain the same. The constraint states (for all relevant fields {a mathematical formula}f4) that {a mathematical formula}equal[t,f4]=1 when {a mathematical formula}moves[t,m]=1.
+      </paragraph>
+      <paragraph>
+       In this experiment, the arity 7 move constraint is implemented in nine different ways, and all other constraints are invariant. First the move constraint is implemented as a propagator tree (compiled or using the VM). As shown in Table 2, the propagator tree was generated by GenTree in 0.37 s and compiled in 21.58 s. The tree has 315 nodes, and GenTree explored 509 nodes.
+      </paragraph>
+      <paragraph>
+       The Reified Sumgeq implementation uses a sum to represent the conjunction. The negation of some b variables is achieved with views [19], therefore no auxiliary variables are introduced. The sum constraint is reified to the {a mathematical formula}moves[t,m] variable, as follows: {a mathematical formula}[(b[t,f1]+⋯+b[t+1,f3])⩾6]⇔moves[t,m].
+      </paragraph>
+      <paragraph>
+       The Min implementation uses a single min constraint. Again views are used for negation and no auxiliary variables are introduced. The constraint is as follows: {a mathematical formula}min(b[t,f1],…,b[t+1,f3])=moves[t,m].
+      </paragraph>
+      <paragraph>
+       The move constraint is also implemented using the Lighttable, Table, MDDC and {a mathematical formula}STR2+ propagators. The table has 64 satisfying tuples. The Regular implementation [17] has 9 states and uses a ternary table constraint (representing the transition table) with 17 satisfying tuples.
+      </paragraph>
+      <paragraph>
+       Table 3 shows our results for peg solitaire. All nine methods enforce GAC, therefore they search exactly the same space. When one or more methods completed the search within the 24 hour timeout, we give the node count. The compiled propagator tree outperforms Min by a substantial margin, which is perhaps remarkable given that Min is a hand-optimised propagator. The compiled propagator tree outperforms Reified Sumgeq by an even wider margin. None of the generic GAC methods Lighttable, Table, MDDC, Regular or {a mathematical formula}STR2+ come close to the handwritten propagators or the propagator tree. For the harder instances, the compiled propagator tree more than repays the overhead of its generation and compilation compared to Min. For example instance 10 was solved in 187 s by the Min implementation and 147 s (169 s when including the cost of building the propagator tree) with propagator trees.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Case study: low autocorrelation binary sequences
+      </section-title>
+      <paragraph>
+       The Low Autocorrelation Binary Sequence (LABS) problem is described by Gent and Smith [20]. The problem is to find a sequence s of length n of symbols {a mathematical formula}{−1,1}. For each interval {a mathematical formula}k∈{1…n−1}, the correlation {a mathematical formula}Ck is the sum of the products {a mathematical formula}s[i]×s[i+k] for all {a mathematical formula}i∈{0…n−k−1}. The overall correlation {a mathematical formula}Cmin is the sum of the squares of all {a mathematical formula}Ck: {a mathematical formula}Cmin=∑k=1n−1(Ck)2. {a mathematical formula}Cmin must be minimised.
+      </paragraph>
+      <paragraph>
+       The sequence is modelled directly, using variables {a mathematical formula}s[n]∈{−1,1}. For each {a mathematical formula}k∈{1…n−1}, and each {a mathematical formula}i∈{0…n−k−1}, we have a variable {a mathematical formula}pki∈{−1,1} and the product constraint {a mathematical formula}pki=s[i]×s[i+k]. For each {a mathematical formula}k∈{1…n−1} we have a variable {a mathematical formula}Ck∈{−n…n}. {a mathematical formula}Ck is constrained to be the sum of {a mathematical formula}pki for all i. There are also variables {a mathematical formula}Ck2∈{0…n2}, and a binary lighttable constraint is used to link {a mathematical formula}Ck and {a mathematical formula}Ck2. Finally we have {a mathematical formula}Cmin=∑k=1n−1Ck2, and {a mathematical formula}Cmin is minimised. Gent and Smith identified 7 symmetric images of the sequence [20]. For each symmetric image we post one lexleq (lexicographic ordering) constraint to break the symmetry. Gent and Smith also proposed a variable and value ordering that we use here.
+      </paragraph>
+      <paragraph>
+       There are more ternary product constraints than any other constraint in LABS. {a mathematical formula}Ck is a sum of products: {a mathematical formula}Ck=(s[0]×s[k])+(s[1]×s[k+1])+⋯ . To test propagator trees on this problem, we combine pairs of product constraints into a single arity 5 constraint: {a mathematical formula}(s[i]×s[k+i])+(s[i+1]×s[k+i+1])=pki. This allows almost half of the {a mathematical formula}pki variables to be removed. When there are an odd number of products, one of the original product constraints is retained for the largest value of i.
+      </paragraph>
+      <paragraph>
+       We compare eight models of LABS: Product, the model with ternary product constraints; Propagator tree, where the new 5-ary constraint has a propagator tree, and this is either compiled or executed in the VM; Table, Lighttable, MDDC and {a mathematical formula}STR2+ where the 5-ary constraint is implemented with a generic propagator using a table with 16 satisfying tuples; and Regular[17] which has 10 states and uses a ternary table constraint (representing the transition table) with 17 satisfying tuples. All models except Product enforce GAC on the 5-ary constraint. All other constraints are the same for all eight models.
+      </paragraph>
+      <paragraph>
+       As shown in Table 2, the propagator tree was generated by GenTree in 0.32 s. The algorithm explored 621 nodes and the tree has 372 nodes. It was compiled in 20.89 s.
+      </paragraph>
+      <paragraph>
+       Table 4 shows our results for LABS sizes 25 to 30. The instances were solved to optimality. The Propagator Tree, Table, Lighttable, MDDC, Regular and {a mathematical formula}STR2+ models search the same number of nodes as each other, and exhibit stronger propagation than Product, but their node rate is lower than Product in all cases. The generic GAC propagator (and Regular decomposition) models are slower than Product. However, both propagator tree variants are faster than Product, and for the larger instances it more than repays the overhead of compiling the specialised constraint.
+      </paragraph>
+      <paragraph>
+       The virtual machine also performs better than might be expected, almost matching the speed of the compiled propagator tree while saving the compilation time.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Case study: maximum density oscillating life
+      </section-title>
+      <paragraph>
+       Conway's Game of Life was invented by John Horton Conway. The game is played on a square grid. Each cell in the grid is in one of two states (alive or dead). The state of the board evolves over time: for each cell, its new state is determined by its previous state and the previous state of its eight neighbours (including diagonal neighbours). Oscillators are patterns that return to their original state after a number of steps (referred to as the period). A period 1 oscillator is named a still life.
+      </paragraph>
+      <paragraph>
+       Various problems in Life have been modelled in constraints. Bosch and Trick considered period 2 oscillators and still lifes [21]. Smith [22] and Chu et al. [23] considered the maximum-density still life problem. Here we consider the problem of finding oscillators of various periods. We use simple models for the purpose of evaluating the propagator generation technique rather than competing with the sophisticated still-life models in the literature. However, to our knowledge we present the first model of oscillators of period greater than 2.
+      </paragraph>
+      <paragraph>
+       The problem of size {a mathematical formula}n×n (i.e. live cells are contained within an {a mathematical formula}n×n bounding box at each time step) and period p is represented by a 3-dimensional array of Boolean variables {a mathematical formula}b[n+4,n+4,p] indexed (from 0) by position i, j and time step t. To enforce the bounding box, for each t, the rows 0, 1, {a mathematical formula}n+2 and {a mathematical formula}n+3 are set to 0. Similarly, columns 0, 1, {a mathematical formula}n+2 and {a mathematical formula}n+3 are set to 0. For a cell {a mathematical formula}b[i,j,t] at time step t, the liveness of its successor {a mathematical formula}b[i,j,(t+1)modp] is determined as follows. The 8 adjacent cells are summed: {a mathematical formula}s=∑adjacent(b[i,j,t]), and the transition rules are as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(s&gt;3∨s&lt;2)⇒b[i,j,(t+1)modp]=0;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(s=3)⇒b[i,j,(t+1)modp]=1; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(s=2)⇒b[i,j,(t+1)modp]=b[i,j,t].
+       </list-item>
+      </list>
+      <paragraph>
+       We refer to the grid at a particular time step as a layer. For each pair of layers, a watchvecneq (vector not-equal) constraint is used to constrain them to be distinct. To break some symmetries, the first layer is constrained to be lex less than all subsequent layers. Also, the first layer may be reflected horizontally and vertically, and rotated 90 degrees, so it is constrained to be lex less or equal than each of its 7 symmetric images. To find oscillators of maximum density, the number of dead cells in the first layer is summed to a variable m which is then minimised.
+      </paragraph>
+      <paragraph>
+       The liveness constraint involves 10 Boolean variables. As shown in Table 2, GenTree takes 8.26 s. The algorithm explored 86,685 nodes, and the resulting propagator tree has 26,524 nodes. Compilation took 4054.17 s.
+      </paragraph>
+      <paragraph>
+       The propagator tree is compared to six other implementations. The Sum implementation adds an auxiliary variable {a mathematical formula}s[i,j,t]∈0…8 for each {a mathematical formula}b[i,j,t], and the sum constraint {a mathematical formula}s[i,j,t]=∑adjacent(b[i,j,t−1]). {a mathematical formula}s[i,j,t], {a mathematical formula}b[i,j,t−1] and {a mathematical formula}b[i,j,t] are linked by a ternary table (lighttable) constraint encoding the liveness rules. The Table, Lighttable, MDDC and {a mathematical formula}STR2+ implementations simply encode the arity 10 constraint using a table with 512 satisfying tuples. The Regular implementation [17] has 18 states and uses a ternary table constraint (representing the transition table) with 35 satisfying tuples.
+      </paragraph>
+      <paragraph>
+       We used instances with parameters {a mathematical formula}n∈{5,6,7} and period {a mathematical formula}p∈{2,3,4,5,6}. Results are shown in Table 5, Table 6. All five generic GAC methods are shown in Table 6, Table 5 includes only the best generic GAC method (MDDC). In 13 cases, the instances timed out after 24 hours, but otherwise they were solved to optimality. All models explored the same number of nodes in all cases (node counts are slightly different to those we reported previously [15] because a different optimisation function was used).
+      </paragraph>
+      <paragraph>
+       The propagator tree is substantially faster than the sum implementation. For instance {a mathematical formula}n=7{a mathematical formula}p=5, Compiled is 5.3 times faster than Sum. Also, Sum is consistently faster than MDDC. For the six hardest instances that were solved ({a mathematical formula}n=6, {a mathematical formula}p∈{4,5,6}, and {a mathematical formula}n=7, {a mathematical formula}p∈{3,4,5}), the VM more than paid back its 8.26s overhead compared to Sum. For the most difficult solved instance ({a mathematical formula}n=7, {a mathematical formula}p=5) the compiled propagator tree more than paid back its overhead of 4062 s (GenTree plus compilation). Furthermore, note that the propagator tree is identical in each case: that is the arity 10 constraint is independent of n and p since it depends only on the rules of the game. Therefore the overhead can be amortised over this entire set of runs, as well as any future problems needing this constraint. We can conclude that the propagator tree is the best choice for this set of instances, and by a very wide margin.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Symmetry in propagator trees
+     </section-title>
+     <paragraph>
+      We have described a technique for generating a propagator which runs in polynomial time for any constraint, at the cost of exponential pre-processing time, and exponential space complexity. The pre-processing cost can be amortised over all uses of the constraint, but the space complexity is relevant whenever the constraint is used. If this grows larger than the physical memory of the computer being used the speed of the propagator drops dramatically, so this is often the limiting factor.
+     </paragraph>
+     <paragraph>
+      In all three of the case studies above, the constraint has symmetry. For example, in Maximum Density Oscillating Life, the eight variables representing the neighbours of the cell may be permuted freely without changing the semantics of the constraint. There is potential to save both pre-processing time and reduce the space complexity by merging symmetric subtrees of the propagator trees.
+     </paragraph>
+     <paragraph>
+      While the technique of merging identical subtrees to compress a tree is well known, merging symmetric subtrees is novel to the best of our knowledge, and requires an extension of an existing group-theoretic algorithm [24]. This extended algorithm is implemented in the GAP computational algebra system [25].
+     </paragraph>
+     <paragraph>
+      The use of symmetry can reduce an exponential size propagator tree to polynomial size when the constraint is highly symmetric. In this section we present the necessary group theory background and algorithms to be able to identify symmetric subtrees. In the section that follows we adapt the GenTree algorithm to generate symmetry-reduced trees.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Group theory background
+      </section-title>
+      <paragraph>
+       Generating symmetry-reduced trees requires a number of concepts from group theory. These are given in brief below. For a more in-depth discussion of group theory, see [26].
+      </paragraph>
+      <paragraph label="Definition 6">
+       Given a set S, a permutation of S is a bijective function on the members of S. Given two permutations f and g, {a mathematical formula}(f.g)(x)=g(f(x)). A group G on S is a set of permutations of S which contains the identity function e and satisfies the conditions {a mathematical formula}f,g∈G→f.g∈G and {a mathematical formula}f∈G→f−1∈G. Following traditional group theory notation, we denote the image of {a mathematical formula}s∈S under a permutation g as {a mathematical formula}sg.For convenience, given a permutation g of S and a set {a mathematical formula}T⊆S, we define {a mathematical formula}Tg={tg|t∈T}. Also we define {a mathematical formula}〈A1,…,An〉g=〈A1g,…,Ang〉.The h conjugate of a group G, denoted {a mathematical formula}Gh, is the group consisting of the elements {a mathematical formula}{h−1.g.h|g∈G}. The stabiliser of a set S in a group G, denoted {a mathematical formula}stab(G,S), is the subgroup of G consisting of the members {a mathematical formula}{g∈G|Sg=S}. Stabilisers for other objects are defined in the same way. Stabilisers are always themselves groups [26].
+      </paragraph>
+      <paragraph>
+       To generate symmetry-reduced trees, we need a way of finding if there exists a permutation which maps one subtree to another. This could be done by comparing all possible pairs of subtrees, but it is more efficient to use a canonicalising function, defined in Definition 7.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Given a group G on a set S, a canonicalising function{a mathematical formula}f:T→G is a function which satisfies the property that for all {a mathematical formula}t1,t2 in T, if there exists g in G such that {a mathematical formula}t1g=t2, then the permutations {a mathematical formula}g1=f(t1) and {a mathematical formula}g2=f(t2) have the property that {a mathematical formula}t1g1=t2g2. The canonical image of {a mathematical formula}t∈T is {a mathematical formula}tf(t).
+      </paragraph>
+      <paragraph>
+       We use the letter T in this definition to represent any set where the appropriate operation is defined: permutations {a mathematical formula}g∈G can be applied to members of T. Note that our canonicalising function returns a group element rather than the image. It is trivial to obtain the image given the group element, but not vice versa.
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider the group G of all permutations on {a mathematical formula}S={1,2,3,4,5}. Suppose we need a canonicalising function for subsets of S. One such canonicalising function f maps a set of size n to the set {a mathematical formula}{1…n}. Suppose we have sets {a mathematical formula}S1={1,3,5} and {a mathematical formula}S2={1,4,5}. {a mathematical formula}f(S1) must map the values {a mathematical formula}{1,3,5} to {a mathematical formula}{1,2,3} in some order, and {a mathematical formula}{2,4} to {a mathematical formula}{4,5} in some order. One suitable {a mathematical formula}f(S1) is {a mathematical formula}{1↦3,2↦5,3↦1,4↦4,5↦2}. Similarly, one suitable {a mathematical formula}f(S2) is {a mathematical formula}{1↦1,2↦4,3↦5,4↦3,5↦2}. The important fact is that {a mathematical formula}S1f(S1)=S2f(S2)={1,2,3}.
+      </paragraph>
+      <paragraph>
+       The reason to use a canonicalising function is that we can store the canonical image of every subtree, and know that there exists a permutation from one subtree to another within G iff they have the same canonical image. The canonicalisation function we use is not specific to propagator trees, it acts on a sequence of objects. It is developed in Appendix A.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Symmetries of constraints
+      </section-title>
+      <paragraph>
+       The propagator trees created by the algorithm GenTree (Algorithm 3) can be executed in {a mathematical formula}O(nd) time, where n is the arity of the constraint, and d is the domain size. However they have the disadvantage that they can have {a mathematical formula}O(2nd) nodes. In this section we show how to generate symmetry-reduced trees, and that they can be much more compact than standard propagator trees. In particular, for some constraints (and associated symmetry groups) the space required is polynomial in n and d rather than exponential. First we must define symmetry of both assignments and constraints.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Consider a total assignment A to a set of variables X, and a permutation g of the literals of X. The image of A under g (denoted {a mathematical formula}Ag) is defined iff applying g pointwise to A (i.e.  applying g to each literal in A separately) produces another total assignment of X. In this case {a mathematical formula}Ag is defined as the total assignment generated by the pointwise image of A under g.
+      </paragraph>
+      <paragraph>
+       This definition ensures that a total assignment is mapped to another total assignment, thus for any two literals from A, their images in {a mathematical formula}Ag may not refer to the same variable.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Consider a constraint c and a permutation g of the literals of variables in {a mathematical formula}scope(c). {a mathematical formula}cg is defined iff {a mathematical formula}Ag is defined for each assignment A that satisfies c. In this case, {a mathematical formula}cg is defined as the constraint with the same scope as c that is satisfied by the set {a mathematical formula}{Ag|A satisfies c}. g is a symmetry of c iff {a mathematical formula}cg=c. G is a symmetry group of c iff {a mathematical formula}∀g∈G.cg=c.
+      </paragraph>
+      <paragraph>
+       Cohen et al. [27] surveyed definitions of symmetry for CSP, and gave two precise definitions, solution symmetry and constraint symmetry. If we define a CSP containing only one constraint and only the variables in its scope, then our Definition 9 is identical to solution symmetry, but not identical to constraint symmetry.
+      </paragraph>
+      <paragraph>
+       In some cases, our tree generation algorithm will not work correctly with the whole group G as defined above. To avoid this problem, we allow permutations {a mathematical formula}g∈G that permute variables, and permute values within the domains, but not that map two literals of the same variable onto two different variables. More precisely, each {a mathematical formula}g∈G must have the following property.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Given constraint c, a permutation g is variable-stable iff, given two literals {a mathematical formula}〈x,d1〉, {a mathematical formula}〈x,d2〉 from the same variable, then {a mathematical formula}g(〈x,d1〉) and {a mathematical formula}g(〈x,d2〉) are also literals from the same variable.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Symmetries of propagator trees
+      </section-title>
+      <paragraph>
+       Examining Algorithm 3, we see that each node of the tree is generated from 3 pieces of information. The constraint being propagated (which is fixed), the set of literals which are known to be present, called ValsIn, and those literals that are not known to be deleted, called SD (for subdomain list). Note that {a mathematical formula}ValsIn⊆SD at all times.
+      </paragraph>
+      <paragraph label="Definition 11">
+       The node-state of a tree node S comprises {a mathematical formula}SValsIn and {a mathematical formula}SSD. The constraint being propagated is implicit. The image of S under permutation g is {a mathematical formula}Sg where {a mathematical formula}SValsIng={〈x,a〉g|〈x,a〉∈SValsIn}, and {a mathematical formula}SSDg={〈x,a〉g|〈x,a〉∈SSD}.
+      </paragraph>
+      <paragraph>
+       To apply a symmetry {a mathematical formula}g∈G to a propagator tree we define an image function in Definition 12.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Given a propagator tree T defined on constraint c and a literal permutation {a mathematical formula}g∈G, then {a mathematical formula}Tg is defined recursively as follows:{a mathematical formula}{a mathematical formula}The group element g is applied pointwise to Prune and Test, and the image function is applied recursively to the Left and Right subtrees.
+      </paragraph>
+      <paragraph>
+       Theorem 2 shows an important, but very simple, result relating the images of trees under a permutation. This theorem does not require that the permutation is a symmetry of the constraint, as it applies the permutation to both the constraint and the propagator tree. This result is almost self-evident, as it performs a simple relabelling. However, it is the basis for all the symmetric tree results we will build.
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propagator tree T generated for a constraint c and node-state S, and given any variable-stable permutation g,{a mathematical formula}Tgis a propagator tree for constraint{a mathematical formula}cgand node-state{a mathematical formula}Sg.The proof of this theorem follows simply from the definition of these concepts. A variable-stable permutation can be seen as a simple relabelling of the variable names, and the values in the domain of each variable. As these labels are unimportant, this simple relabelling has no effect on the correctness of {a mathematical formula}Tg for {a mathematical formula}cg and {a mathematical formula}Sg. □
+      </paragraph>
+      <paragraph label="Proof">
+       Given a propagator tree T generated for a constraint c and node-state S, and given any variable-stable permutation g which is a symmetry of c,{a mathematical formula}Tgis a propagator tree for constraint c and node-state{a mathematical formula}Sg.Follows trivially from Theorem 2, and the fact that {a mathematical formula}cg=c as g is a symmetry of c. □
+      </paragraph>
+      <paragraph>
+       Corollary 2 is the basis of our approach. When generating a propagator tree, if the current node-state {a mathematical formula}S′ is symmetric to some previously seen node-state S, then instead of generating a propagator tree for {a mathematical formula}S′, we can re-use the propagator tree built for S.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Constraint symmetries and variable-stability
+      </section-title>
+      <paragraph>
+       All constraints we use in our experiments have only variable-stable symmetries. However constraint symmetries that are not variable-stable do occur, particularly in problems involving allDifferent constraints. Consider the following example.
+      </paragraph>
+      <paragraph label="Example 4">
+       Let {a mathematical formula}x1, {a mathematical formula}x2, {a mathematical formula}x3 be variables with domain {a mathematical formula}{1,2,3} and let g be the permutation that maps {a mathematical formula}xi↦j to {a mathematical formula}xj↦i for all {a mathematical formula}i,j∈{1,2,3}. The constraint {a mathematical formula}c=allDifferent(x1,x2,x3) has the symmetry g.
+      </paragraph>
+      <paragraph>
+       Theorem 2 (the critical proof of this paper) relies on the permutation g being variable-stable. This raises the question of whether variable stability is required. Example 5 demonstrates that applying permutations that are not variable-stable can lead to invalid propagators.
+      </paragraph>
+      <paragraph label="Example 5">
+       Consider the symmetry in Example 4. We will create a GAC propagator tree for constraint c. Recall that propagator trees are never invoked on a search state with an empty domain (Definition 4). We construct a propagator tree that first branches for each value of {a mathematical formula}x1. In the case where the domain of {a mathematical formula}x1 is empty, the tree performs no deletions and returns (this case will never be reached). In all other cases the propagator performs GAC.However, if we applied the symmetry in Example 4 to it, it would branch on literals {a mathematical formula}x1↦1, {a mathematical formula}x2↦1 and {a mathematical formula}x3↦1 first. Suppose {a mathematical formula}x1, {a mathematical formula}x2 and {a mathematical formula}x3 were all assigned the value 3, the propagator would perform no deletions and return. This is clearly incorrect.
+      </paragraph>
+      <paragraph>
+       To avoid this problem, throughout the rest of this paper we consider only variable-stable permutations.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Generating and executing symmetry-reduced propagator trees
+     </section-title>
+     <paragraph>
+      We can adapt GenTree (Algorithm 3) to generate symmetry-reduced trees using the canonicalisation function. Suppose we are part-way through generating a propagator tree, and we reach a node-state S. Suppose also that S will be an internal node in the completed tree. We compute the canonical image of S, and check if any other node-state with an identical canonical image has already been seen. If not, then we carry on as before. If so, we generate a new type of node that performs a jump to the previously seen symmetric node-state. Each jump has a permutation of the literals associated with it.
+     </paragraph>
+     <paragraph>
+      The other key ingredient is that when a symmetry-reduced tree is executed a permutation of the literals is maintained. The domains are viewed and pruned through the lens of this permutation, and it is updated when a jump is performed.
+     </paragraph>
+     <paragraph>
+      First we give the algorithm for generating the symmetry-reduced trees, then discuss the symmetry groups that may be used and bounds on the size of the trees. Following that we discuss efficient execution of symmetry-reduced trees in Section 7.3.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Generating symmetry-reduced trees in detail
+      </section-title>
+      <paragraph>
+       Recall that the node-state consists of ValsIn and SD (Definition 11). In the new algorithm, we maintain the following two data structures to track node-states seen so far.
+      </paragraph>
+      <list>
+       <list-item>
+        — Hash table indexed by canonical image c, containing a pair {a mathematical formula}〈g,id〉 where {a mathematical formula}g∈G is a permutation mapping a node-state S to c, and id is a number that identifies the node where S was seen.
+       </list-item>
+       <list-item>
+        — Set (implemented as a hash table) containing canonical images. When a tree node is deleted because it (and the subtree beneath it) contains no prunings, the canonical image of it is stored in DeletedLookup.
+       </list-item>
+      </list>
+      <paragraph>
+       CanonicalLookup contains the canonical image of every node-state seen so far. Thus it allows us to efficiently check if the current node-state is symmetrically equivalent to any previous node-state. Also, it allows us to compute a permutation from the current node-state to the previous node-state via their shared canonical image.
+      </paragraph>
+      <paragraph>
+       The reason for DeletedLookup is more subtle. When a tree node is deleted because it contains no prunings (lines 17 and 18 of GenTree) it could be removed from CanonicalLookup, and this would prevent a jump being inserted to the deleted node. However, a tree node can only be deleted in this way after the subtree beneath it has been explored (potentially a time consuming process) and this work would be repeated if we reached a symmetric node-state in the future. Therefore we retain the deleted node in CanonicalLookup, and also insert it in DeletedLookup.
+      </paragraph>
+      <paragraph>
+       Algorithm 4 (GenTreeSym) is similar in structure to GenTree. Lines 14–24 and 29 have been added, and the function name on lines 26 and 27 has been changed. Other lines in GenTreeSym are identical to GenTree.
+      </paragraph>
+      <paragraph>
+       In the new section the first task is to compute the canonical image of the current node-state. This is done by calling CanSym which encodes the node state as a sequence of sets of integers, calls CanonicalSetList (Algorithm 7 in Appendix A) and returns both the canonicalising permutation g and the canonical image CanImage. CanImage is then looked up in CanonicalLookup. If it is not present, it is added (line 24) and the algorithm continues as GenTree would. If the canonical image is in CanonicalLookup, the algorithm branches for three cases. It makes at most one new node, either containing a jump or some deletions.
+      </paragraph>
+      <paragraph>
+       One important point is that we calculate the canonical image after pruning domains. This means that a node found in CanonicalLookup is only symmetric after deletions have been applied. Hence, on line 18, the algorithm discovers that the current node-state is symmetric to a previously deleted node, but the current node must perform the pruning so it cannot be deleted. Also, on line 22, the deletions are stored with (and performed before) the permutation and jump.
+      </paragraph>
+      <paragraph>
+       Fig. 3 shows an example of a symmetry-reduced propagator tree created by GenTreeSym with the entailment heuristic. Fig. 4 illustrates the difference made by symmetry reduction on the LABS 2 constraint.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Bounds on tree size
+      </section-title>
+      <paragraph>
+       The sole reason for exploiting symmetry is to reduce the size of the generated trees. In this section we will show that for a wide range of constraints, symmetry-reduced trees achieve a polynomial bound in tree size, where standard propagator trees are exponential. We will consider one class of symmetric constraints, given in Definition 13.
+      </paragraph>
+      <paragraph label="Definition 13">
+       A partially symmetric constraint defined by the parameters {a mathematical formula}〈n1,d1,n2,d2〉 is a constraint with {a mathematical formula}n1+n2 variables, where the first {a mathematical formula}n1 variables have domain size {a mathematical formula}d1 and the last {a mathematical formula}n2 variables have domain size {a mathematical formula}d2. Further, the constraint has, for each {a mathematical formula}i,j∈{1…n1}, the symmetry that swaps the assignment to variables i and j, leaving all other variables unchanged.
+      </paragraph>
+      <paragraph>
+       Of the constraints we consider in our experiments below, all three variants of Life fit Definition 13, with {a mathematical formula}n1=8 and {a mathematical formula}n2=2. All the symmetry of Life and Brian's Brain is captured in that definition. Peg Solitaire also fits the definition with {a mathematical formula}n1=3. In the experiments we exploit more symmetries, such as permuting values, that further reduce the tree size. Lemma 4 gives a simple bound on the number of equivalence classes of node-states a partially symmetric constraint can have.
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Given a partially symmetric constraint defined by the parameters{a mathematical formula}〈n1,d1,n2,d2〉, there are{a mathematical formula}O((3d2−d2−1)n2.(n1+1)(3d1−d1−1))equivalence classes of node-states (Definition 11).
+      </paragraph>
+      <paragraph label="Proof">
+       A variable with d domain values has {a mathematical formula}3d states, because there are 3 values a literal can have, either known present, known not present, or unknown. We discount the state where all values are not present, because we assume the propagator is never invoked for such domains. Also we discount the d states where all but one literal are known not present, and the remaining literal is unknown, because we know that at least one literal must be present. Therefore a variable of domain size d has {a mathematical formula}3d−d−1 possible states.Consider the {a mathematical formula}n1 symmetric variables. As the order of these variables is unimportant, we can fully characterise each equivalence class by the number of symmetric variables it contains of each {a mathematical formula}3d1−d1−1 possible state, giving a bound of {a mathematical formula}(n1+1)(3d1−d1−1). This bound is a loose approximation but is sufficient to show that the number of equivalence classes is polynomial in {a mathematical formula}n1 when {a mathematical formula}d1 is fixed.The number of states of any one of the {a mathematical formula}n2 asymmetric variables can take is {a mathematical formula}3d2−d2−1. Therefore the number of states of the asymmetric variables is simply {a mathematical formula}(3d2−d2−1)n2. Therefore the total number of equivalence classes of node-states is {a mathematical formula}O((3d2−d2−1)n2.(n1+1)(3d1−d1−1)). □
+      </paragraph>
+      <paragraph>
+       Lemma 4 does not directly give a bound on the size of the symmetry-reduced tree, because a tree can contain multiple nodes belonging to one equivalence class. The first of these nodes has a subtree beneath it, and the rest of them have a jump to the first.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose a constraint c (with symmetry group G) has e equivalence classes of node states. The number of nodes of a symmetry-reduced tree for c is{a mathematical formula}O(e).Given the symmetry-reduced tree T for c and G, remove all symmetric jumps from the tree to form the labelled binary tree {a mathematical formula}T′. In {a mathematical formula}T′, the nodes corresponding to jump nodes in T are now leaf nodes. For each equivalence class, there can be at most one interior node belonging to the class because any other node in the class must be a leaf node in {a mathematical formula}T′ (and a jump node in T). Therefore there are at most e interior nodes, and at most {a mathematical formula}2e+1 nodes in total.  □
+      </paragraph>
+      <paragraph>
+       The lemma above gives us a bound on the symmetry-reduced tree size which is polynomial in {a mathematical formula}n1 and exponential in {a mathematical formula}n2. This can be compared to the bound of {a mathematical formula}O(2nd) derived in Section 4.1.
+      </paragraph>
+      <section label="7.2.1">
+       <section-title>
+        A tighter bound given branching restrictions
+       </section-title>
+       <paragraph>
+        While we have shown that using symmetry-reduced trees can, in highly symmetric constraints, produce a polynomial bound in tree size, these polynomials can be extremely large. For example, for a constraint with total variable symmetry and variables of domain size 3 the upper bound is {a mathematical formula}O(n23). In this section we will substantially tighten this bound.
+       </paragraph>
+       <paragraph>
+        In order to find a tighter bound, we restrict the branching order. We choose a variable x, and branch only on literals of x until we have complete knowledge of the domain of x. This is similar to enumeration branching (also known as d-way branching) in CP search [1] (4.2), however we are still performing 2-way branches.
+       </paragraph>
+       <paragraph>
+        In order to prove this result, we first derive a bound with true enumeration branching. This is performed by selecting a variable, and branching for each variable state. For a variable with domain size d, there will be {a mathematical formula}2d−1 non-empty subdomains therefore at most {a mathematical formula}2d−1 branches.
+       </paragraph>
+       <paragraph label="Lemma 6">
+        Given enumeration branching, there are{a mathematical formula}O((2d2)n2(n1+1)2d1)equivalence classes of node-states of a partially symmetric constraint with parameters{a mathematical formula}〈n1,d1,n2,d2〉.
+       </paragraph>
+       <paragraph label="Proof">
+        There are clearly {a mathematical formula}2d−1 non-empty subdomains for a variable of domain size d. While we may deduce that some literals in variables not yet branched on are either in or out by GAC propagation, two node-states which are equivalent before GAC will be equivalent after GAC, therefore we can treat the domains of variables we have not branched on as completely unknown for the purpose of counting equivalence classes.Including the completely unknown state, each variable has {a mathematical formula}2d states. We can apply the same reasoning as Lemma 4 to show that there are{a mathematical formula} equivalence classes of node-states. □
+       </paragraph>
+       <paragraph>
+        Suppose the number of equivalence classes is e. Using a similar argument to Lemma 5, we can show that the number of interior (non-jump, non-leaf) nodes is e, therefore the total number of nodes is {a mathematical formula}(2d−1)e+1 (where d is the maximum of {a mathematical formula}d1 and {a mathematical formula}d2).
+       </paragraph>
+       <paragraph>
+        Now we must convert the result to binary trees. For each node with t children, we convert it to {a mathematical formula}t−1 nodes by branching on each value in the domain in turn. We call this whole-variable branching. For an enumeration tree with {a mathematical formula}(2d−1)e+1 nodes and a branching factor of {a mathematical formula}2d−1 we have {a mathematical formula}(2d−1)×((2d−1)e+1)−1 nodes in the binary tree. Combining this with Lemma 6 leads to the following theorem.
+       </paragraph>
+       <paragraph label="Theorem 3">
+        Given a partially symmetric constraint c defined by parameters{a mathematical formula}〈n1,d1,n2,d2〉, the size of a symmetry-reduced tree for c that performs whole-variable branching is as follows, where{a mathematical formula}d=max(d1,d2).{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        To take our example of a totally symmetric constraint with domain size 3, the bound from the previous section is {a mathematical formula}O(n23), and we have improved it to {a mathematical formula}O(n8).
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Execution of symmetry-reduced trees
+      </section-title>
+      <paragraph>
+       We extend both methods of executing standard propagator trees to work with symmetry-reduced trees in the sections below.
+      </paragraph>
+      <section label="7.3.1">
+       <section-title>
+        Virtual machine
+       </section-title>
+       <paragraph>
+        We extend the virtual machine described in Section 3.5.2 with two more instructions:
+       </paragraph>
+       <list>
+        <list-item label="Perm :">
+         {a mathematical formula}〈l1,l2,…,ln〉 — Apply the given permutation of the literals. The number of operands is the sum of the sizes of the initial domains.
+        </list-item>
+        <list-item label="Jump :">
+         {a mathematical formula}〈pos〉 — Jump to the position given.
+        </list-item>
+       </list>
+       <paragraph>
+        To perform a jump to a symmetrically-equivalent state, the instruction stream must have a Perm followed by a Jump.
+       </paragraph>
+       <paragraph>
+        When execution starts, the variable domains may be queried and pruned directly. However, after the execution jumps to a symmetric state, the instructions no longer directly relate to the variable domains. Each literal queried or pruned must be mapped through a permutation. Suppose the execution makes a second jump to a symmetric state. Now each literal queried or pruned must be mapped through two permutations (or the composition of them). We need some mechanism for storing and composing permutations as the propagator is executed. In Algorithm 5 we give the (almost trivial) algorithm to compose two permutations. It takes three references p, q and r to blocks of memory, and composes p (the currently stored permutation) with q and stores the result in r.
+       </paragraph>
+       <paragraph>
+        The most straightforward method of composing permutations begins with the identity {a mathematical formula}p(i)=i and a spare buffer r. Each time a new permutation q must be composed with p, we call {a mathematical formula}compose(p,q,r) then copy r into p. This has a number of inefficiencies. Repeatedly copying r into q is expensive. Also, it is necessary to initialise p at the start of the algorithm. Further, all domain queries and prunings must be done through the permutation, incurring a cost even for propagator trees that do not contain any permutations.
+       </paragraph>
+       <paragraph>
+        To solve these problems, we introduce a four state finite state machine which removes many of these costs. This finite state machine is shown in Algorithm 6. This machine provides two functions. Apply takes an integer i and returns the image of i under the current permutation. Update takes a permutation reference q and updates the state accordingly.
+       </paragraph>
+       <paragraph>
+        Algorithm 6 minimises the costs of storing and applying permutation as far as possible, avoiding all copying.
+       </paragraph>
+       <paragraph>
+        The state machine above could be implemented as Apply and Update functions, each containing a switch statement. However, this would introduce a substantial inefficiency, particularly for Apply which is very heavily used. Instead we compile the whole virtual machine once for each of the four states. The Apply function for each state is now very simple and efficient, and is readily inlined. The Update function for each state performs the composition then jumps into a different specialisation of the virtual machine.
+       </paragraph>
+       <paragraph>
+        One particular advantage of specialising the whole VM for each of the four states is that in State 1 the Apply function is the identity, and the compiler is able to optimise it away. This removes all cost when a propagator tree contains no Perm instructions, therefore we use the same virtual machine for our experiments with both symmetry-reduced and standard propagator trees.
+       </paragraph>
+      </section>
+      <section label="7.3.2">
+       <section-title>
+        Code generation
+       </section-title>
+       <paragraph>
+        The use of jumps in symmetry-reduced trees means we cannot use the simple nested if/then/else structure used in Section 3.5.1. Instead, we produce code that closely follows the virtual machine instructions. Each instruction becomes a block of code with a label, and Branch and Jump instructions use goto to jump to the appropriate label.
+       </paragraph>
+       <paragraph>
+        Code generation produces a very large function, therefore we compile it once and it is not specialised for the four states of the permutation state machine. The Apply and Update functions used here contain switch statements with one branch for each of the four states. This means Apply and Update are likely to be less efficient than in the VM.
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Refining GenTreeSym by limiting jumping
+      </section-title>
+      <paragraph>
+       We will see below that eliminating symmetries can greatly reduce the size of a propagator tree. However, there are situations near the leaves where the space taken to insert a jump is greater than the size of the subtree that it replaces, therefore inserting a jump will increase the size of the propagator tree. Furthermore, when the propagator tree is executed, additional jumps will slow down propagation.
+      </paragraph>
+      <paragraph>
+       To address this problem, we first assume that the representation is the virtual machine instructions given in Sections 3.5.2 and 7.3.1. This means we can calculate the size {a mathematical formula}st of the destination subtree in terms of the number of integers in the VM instructions. We can also calculate the size {a mathematical formula}sj of the proposed jump in the same way. If {a mathematical formula}st&lt;sj, then to insert the jump would increase the overall tree size.
+      </paragraph>
+      <paragraph>
+       We introduce a new parameter JumpCutoff that controls when to insert a jump. If {a mathematical formula}st&gt;JumpCutoff×sj then a jump is inserted, otherwise GenTreeSym continues as GenTree would. Prior to line 22 of GenSymTree {a mathematical formula}st and {a mathematical formula}sj are calculated, and line 22 is only executed if the condition holds, otherwise the algorithm continues at line 25.
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}st is the size of the destination subtree {a mathematical formula}T1. Suppose we do not insert a jump, and instead generate a new subtree {a mathematical formula}T2. {a mathematical formula}T1 and {a mathematical formula}T2 are generated from symmetric states, so we might expect them to be the same size. However, the state of CanonicalLookup may have changed, therefore {a mathematical formula}T2 may be smaller. In some rare cases this means that changing JumpCutoff does not have the expected effect.
+      </paragraph>
+      <paragraph>
+       For values between 0 and 1 of JumpCutoff, we should see the size of the tree decreasing and propagation speed increasing. As JumpCutoff is increased above 1, the size of the tree will probably increase, and we expect that larger trees will also have faster propagation speed. When JumpCutoff=∞, GenTreeSym generates exactly the same tree as GenTree. For the LABS Six constraint, and symmetry group given in Section 8.3, Fig. 5 shows the tree size for values of JumpCutoff from 0 to 10. This graph shows a minimum at 1.0 as expected.
+      </paragraph>
+      <paragraph>
+       For all our experiments we use {a mathematical formula}JumpCutoff=1 to obtain the smallest (in the VM representation) symmetry-reduced trees.
+      </paragraph>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Complexity of execution of symmetry-reduced trees
+      </section-title>
+      <paragraph>
+       To find the complexity we need the set {a mathematical formula}ValsMaybe=SD∖ValsIn. This set has the property that its size is monotonically reduced as the tree is executed. Each branch reduces ValsMaybe by one literal, whether the literal is in or out of domain. Deletions may reduce the size of ValsMaybe. Jumps potentially change the literals in ValsMaybe but not its size. We also need to observe that a jump cannot take us to a node with another jump instruction, because jump nodes are not entered in the CanonicalLookup table in Algorithm 4, and jump destinations are always taken from CanonicalLookup.
+      </paragraph>
+      <paragraph>
+       We use the size of ValsMaybe as our measure of progress. At the root node the size is at most nd, therefore in an execution path we have at most nd nodes where we branch, plus one leaf node. We also have up to nd jump nodes, because there are at most nd destinations.
+      </paragraph>
+      <paragraph>
+       To perform {a mathematical formula}O(nd) branches has a cost of {a mathematical formula}O(nds), where s is the cost of testing whether a value is in the domain. Performing {a mathematical formula}O(nd) permutation applications and jumps has a cost of {a mathematical formula}O(n2d2). The cost of deleting literals is less straightforward. We use r for the cost of deleting a single literal. When we perform a jump, the destination node may delete literals that have already been deleted. Since we have at most {a mathematical formula}2nd+1 nodes and trivially {a mathematical formula}O(nd) deletions at each node, the cost of deleting literals is {a mathematical formula}O(n2d2r). Combining the three gives us a total cost of {a mathematical formula}O(nds+n2d2+n2d2r).
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Given a solver where querying and deleting literals is{a mathematical formula}O(1)(such as Minion) the complexity of executing a symmetry-reduced tree is{a mathematical formula}O(n2d2).
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Experimental evaluation of symmetry-reduced trees
+     </section-title>
+     <paragraph>
+      In this section we compare the scalability of symmetry-reduced trees to that of propagator trees, and also measure the overhead of exploiting symmetry when the propagator is executed. We use the same three problems as in Section 5, and also add two variants of Life, Life Immigration and Brian's Brain, both of which have three colours.
+     </paragraph>
+     <paragraph>
+      For each constraint, we have a group of permutations of the literals. To describe the group compactly we only give the group generators, therefore to obtain the full group all possible products of the generators must be added.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Time taken to generate propagators
+      </section-title>
+      <paragraph>
+       In this section we compare the time taken to run GenTree and GenTreeSym. This is relevant for both the VM and code generation. For code generation, we report the time to compile the propagator tree and link it to Minion. These figures are shown in Table 7, and empty cells denote the computer running out of memory (&gt;12 GiB). For GenTreeSym we have an additional column in Table 7 for group computation performed in GAP.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Case study: English Peg Solitaire
+      </section-title>
+      <paragraph>
+       The English Peg Solitaire problem is described in Section 5.2. We generate propagators for the following constraint on boolean variables.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The symmetry group we use is as follows: {a mathematical formula}x1, {a mathematical formula}x3 and {a mathematical formula}x6 are interchangeable, and so are {a mathematical formula}x2, {a mathematical formula}x4 and {a mathematical formula}x5. The following pairs of literals may be swapped simultaneously: ({a mathematical formula}x1↦0, {a mathematical formula}x2↦1) and ({a mathematical formula}x1↦1, {a mathematical formula}x2↦0) (i.e. the two variables are exchanged and the values {a mathematical formula}0,1 are exchanged). The size of the group is 720.
+      </paragraph>
+      <paragraph>
+       The standard propagator tree has 315 nodes, and the algorithm explores 509 nodes when generating it. The symmetry-reduced tree has 94 nodes and GenTreeSym explored 121 nodes.
+      </paragraph>
+      <paragraph>
+       Table 8 shows our results for peg solitaire. We omit run times and just give node rates because all methods explore the same tree. Of the two hand-written propagators (Min and Reified Sumgeq), Min is always superior (Table 3) so we omit Reified Sumgeq from this table. We also omit Lighttable, Table, MDDC, {a mathematical formula}STR2+ and Regular.
+      </paragraph>
+      <paragraph>
+       Table 8 shows very little overhead from exploiting symmetry when using the VM. However when using code generation, the overhead can be more than 25%. As we noted in Section 7.3.2, code generation has the disadvantage that the Apply and Update functions are less efficient than in the VM. Even so, code generation outperforms the VM whether or not we apply symmetry reduction.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Case study: low autocorrelation binary sequences
+      </section-title>
+      <paragraph>
+       The Low Autocorrelation Binary Sequence problem is described in Section 5.3. In the previous experiment, we grouped pairs of product constraints to form a 5-ary constraint and reduce the number of auxiliary variables. In this experiment we combine sets of 2, 3, 4, 5 and 6 product constraints to form constraints of arity 5, 7, 9, 11 and 13. Take for example the constraint of arity 7, where the domains of {a mathematical formula}x1…x6 are {a mathematical formula}{−1,1} and the domain of {a mathematical formula}x7 is {a mathematical formula}{−3,−1,1,3}:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The generators of the symmetry group for the arity 7 constraint are as follows. {a mathematical formula}x1 and {a mathematical formula}x2 are interchangeable, and pairs ({a mathematical formula}x1,x2), ({a mathematical formula}x3,x4) and ({a mathematical formula}x5,x6) are interchangeable. {a mathematical formula}x1 and {a mathematical formula}x2 may be negated simultaneously (i.e. for both variables, swap the values −1 and 1). Finally, {a mathematical formula}x1, {a mathematical formula}x3, {a mathematical formula}x5 and {a mathematical formula}x7 may be negated simultaneously. This final generator states that if each term in the sum is negated, then the total is also negated. The symmetry group is adapted in the straightforward way to other arities.
+      </paragraph>
+      <paragraph>
+       For Lighttable, Table, MDDC and {a mathematical formula}STR2+, the size of the table when grouping 2, 3, 4, 5, and 6 product constraints is 16, 64, 256, 1024 and 4096. The Regular decomposition was consistently the slowest method when grouping 2 product constraints, and so we did not extend it to 3, 4, 5 and 6.
+      </paragraph>
+      <paragraph>
+       Table 9 shows run times for the largest instance of LABS ({a mathematical formula}n=30), and the sizes of the propagator trees (number of nodes) for each arity. From the tree sizes we can see that exploiting symmetry allows propagator trees to scale much better. The tree for six pairs (arity 13) with symmetry is smaller than the tree for three pairs (arity 7) without symmetry. Exploiting symmetry can reduce the tree size by orders of magnitude.
+      </paragraph>
+      <paragraph>
+       However, as the constraints are scaled up, we find that the solver becomes less efficient. This is explained by two factors. First, increasing the length of the constraints does not strengthen propagation, because the sum of products is a tree. Second, propagator trees have no incremental state and cannot exploit triggers (as described in Section 3.3). Each time they are called they start from scratch, with a bound of {a mathematical formula}O(n2d2) (when using symmetry), therefore the cost of executing a propagator tree is likely to increase as the arity increases. In contrast, the cost of the product propagator is {a mathematical formula}O(1), and the sum is {a mathematical formula}O(n).
+      </paragraph>
+      <paragraph>
+       The same pattern can be seen on the {a mathematical formula}n=25 instance (Table 10). For both {a mathematical formula}n=25 and {a mathematical formula}n=30, the fastest configuration is the compiled standard propagator tree, group two. Longer constraints slow the solver down substantially. The other instances {a mathematical formula}n∈{26,27,28,29} also exhibit the same pattern.
+      </paragraph>
+      <paragraph>
+       Table 9, Table 10 also show that propagator trees compare well to the generic GAC propagators as the arity is increased. {a mathematical formula}STR2+ is the fastest of the generic GAC propagators and it is consistently slower than all propagator tree methods.
+      </paragraph>
+      <paragraph>
+       This experiment has demonstrated that symmetry is very helpful in extending the scalability of propagator trees. However, on this particular problem, increasing the arity does not allow more powerful propagation.
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Case study: maximum density oscillating life &amp; variants
+      </section-title>
+      <paragraph>
+       Life, and the problem of finding maximum density oscillators, is described in Section 5.4. In addition to Life, we sought related automata where the cells have three states. This allows us to scale up the number of literals in the generated constraints, and demonstrate the value of symmetry reduction.
+      </paragraph>
+      <paragraph>
+       Immigration [28] and Brian's Brain [29] are both variants of Life where the cells have three states. For both Immigration and Brian's Brain, it is not possible to generate the standard propagator tree within 12 GB memory, however it is possible to generate symmetry-reduced trees.
+      </paragraph>
+      <paragraph>
+       The Life, Immigration and Brian's Brain constraints all have the symmetry that the first eight variables (representing the neighbours) are interchangeable. In Immigration it is also possible to swap the two alive states for all variables simultaneously.
+      </paragraph>
+      <paragraph>
+       Life
+      </paragraph>
+      <paragraph>
+       Of the three problems, only Life can be used to compare propagator trees with symmetry-reduced trees. The Life constraint has {a mathematical formula}8!=40,320 symmetries, the standard propagator tree has 26,524 nodes and the symmetry-reduced tree has 410 nodes. Table 11 shows that the symmetry-reduced tree is less efficient than the standard tree on this problem, taking up to 3 times longer to solve to optimality. Code generation proved to be somewhat more efficient than the VM for the symmetry-reduced tree.
+      </paragraph>
+      <paragraph>
+       In the previous Life experiment we found Sum to be more efficient than any of the generic propagators and the Regular decomposition (as shown in Table 5, Table 6). The symmetry-reduced tree compares well to Sum, being approximately twice as fast for all instances.
+      </paragraph>
+      <paragraph>
+       As Table 7 shows, the overhead of generating the compiled, symmetry-reduced Life propagator is 50.15 s in total, therefore on five instances ({a mathematical formula}n=6, {a mathematical formula}p∈{5,6} and {a mathematical formula}n=7, {a mathematical formula}p∈{3,4,5}) that propagator tree more than pays back its overhead.
+      </paragraph>
+      <paragraph>
+       Immigration
+      </paragraph>
+      <paragraph>
+       Immigration is similar to Life, but there are two alive states (usually represented as two colours). When a cell becomes alive, it takes the state of the majority of the 3 neighbouring live cells that caused it to become alive. Otherwise the rules of Immigration are the same as those of Life. The Immigration constraint has the same scope as the Life constraint, but each variable has three values.
+      </paragraph>
+      <paragraph>
+       The Immigration constraint has {a mathematical formula}8!×2=80,640 symmetries. It is not possible to generate the standard propagator tree within 12 GB of memory. The symmetry-reduced tree has 34,712 nodes.
+      </paragraph>
+      <paragraph>
+       For the Sum model each Immigration constraint is represented as follows. For each {a mathematical formula}b[i,j,t], we introduce two auxiliary variables {a mathematical formula}sdead[i,j,t] and {a mathematical formula}s1[i,j,t] both with domain {a mathematical formula}{0…8}. {a mathematical formula}sdead is the number of dead adjacent cells, and {a mathematical formula}s1 is the number in live state 1 adjacent cells. Both are linked to the adjacent cells using an occurrence constraint. {a mathematical formula}sdead[i,j,t], {a mathematical formula}s1[i,j,t], {a mathematical formula}b[i,j,t] and {a mathematical formula}b[i,j,t+1] are linked with a lighttable constraint encoding the liveness rules. This encoding does not enforce GAC on the original constraint.
+      </paragraph>
+      <paragraph>
+       As in previous experiments we have five generic GAC methods: Lighttable, Table, MDDC and {a mathematical formula}STR2+ with a table containing 19,683 satisfying tuples, and the Regular decomposition [17] with 25 states and ternary table constraints (for the transition table) with 67 satisfying tuples.
+      </paragraph>
+      <paragraph>
+       Table 12 shows that the symmetry-reduced tree methods outperform all five generic GAC methods while exploring the same search tree. Table and MDDC are the most efficient among the five generic GAC methods, and VM outperforms both Table and MDDC by approximately two times. VM is somewhat faster than code generation on this problem. Finally, the symmetry-reduced tree methods are substantially more efficient than the Sum model. Sum is slower per node and explores many more nodes than VM.
+      </paragraph>
+      <paragraph>
+       The total overhead of generating the VM symmetry-reduced propagator is 1293.9 s. Therefore, for instances {a mathematical formula}n=5, {a mathematical formula}p∈{5,6} and {a mathematical formula}n=6, {a mathematical formula}p∈{2,3,4} it repays its overhead (even if the propagator were generated once for each instance) and remains substantially faster than the other methods. Because the constraint is the same for all instances, the cost can actually be amortised over all instances.
+      </paragraph>
+      <paragraph>
+       Brian's Brain
+      </paragraph>
+      <paragraph>
+       Brian's Brain is another variant of Life with three values: dead, alive and dying. If a cell is dead and has exactly two alive (not dying) neighbours, it will become alive, otherwise it remains dead. If a cell is alive, it is always dying after one time step. If a cell is dying, it becomes dead after one time step.
+      </paragraph>
+      <paragraph>
+       The Brian's Brain constraint has {a mathematical formula}8!=40,320 symmetries. It is not possible to generate the standard propagator tree for this constraint within 12 GiB of memory. The symmetry-reduced propagator tree has 135,575 nodes. This can be executed using the VM, but not by code generation (Section 7.3.2) because the compiler exceeds 12 GiB of memory.
+      </paragraph>
+      <paragraph>
+       For the Sum model each Brian's Brain constraint is represented as follows. For each {a mathematical formula}b[i,j,t], we introduce one auxiliary variable {a mathematical formula}salive[i,j,t] with domain {a mathematical formula}{0…8}. This is linked to the adjacent cells using an occurrence constraint. {a mathematical formula}salive[i,j,t], {a mathematical formula}b[i,j,t] and {a mathematical formula}b[i,j,t+1] are linked with a lighttable constraint encoding the liveness rules. This encoding does not enforce GAC on the original constraint.
+      </paragraph>
+      <paragraph>
+       As for Immigration we have five generic GAC methods: Lighttable, Table, MDDC and {a mathematical formula}STR2+ with a table containing 19,683 satisfying tuples, and the Regular decomposition [17] with 11 states and ternary table constraints (the transition table) with 27 satisfying tuples.
+      </paragraph>
+      <paragraph>
+       Table 13 shows our results. In the case of Brian's Brain, the Sum encoding performs particularly badly. For example when {a mathematical formula}n=6, {a mathematical formula}p=6, Sum takes over 600 times more search nodes than the other methods.
+      </paragraph>
+      <paragraph>
+       Once again the symmetry-reduced tree outperforms all types of table constraint and the Regular decomposition. The total overhead of generating the symmetry-reduced tree (from Table 7) is 2749 s. If the tree were generated once for each instance, it would repay its overhead only on the hardest instance {a mathematical formula}n=8, {a mathematical formula}p=6. However in general we amortise the cost of generating the tree over all instances.
+      </paragraph>
+     </section>
+     <section label="8.5">
+      <section-title>
+       XCSP benchmarks
+      </section-title>
+      <paragraph>
+       Our final experiment is on the XCSP benchmarks compiled by Christophe Lecoutre.{sup:3} We used CSP and MaxCSP benchmarks and discarded WCSP. MaxCSP instances are treated as CSP. Benchmarks containing only intensional constraints were discarded. All remaining benchmarks were translated to Minion file format.
+      </paragraph>
+      <paragraph>
+       In this section we say a relation is a semantic description of a constraint, and a scope is the application of a relation to a particular set of variables in a particular benchmark. XCSP benchmarks contain both positive and negative extensional relations. We represent an extensional relation by a set of initial domains, a table of (satisfying or unsatisfying) tuples of domain values, and a single boolean value indicating whether the table is positive or negative. Two relations are distinct iff this representation is distinct.
+      </paragraph>
+      <paragraph>
+       The table below summarises the occurrences of extensional relations and scopes in the benchmark set. The first line indicates that (of the 6.5 million scopes) in 10.61% of cases the same relation has no other scope, and in 85.60% of cases the same relation has at least 99 other scopes (the 100+ column). The second line indicates that most of the relations have only one scope.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We focus on relations with 100 or more scopes. This means we consider only 827 relations, but over 85% of scopes.
+      </paragraph>
+      <paragraph>
+       The largest constraints for which we have successfully generated symmetry-reduced trees are Brian's Brain and Immigration (both of which have 30 literals) and LABS Six (which has 31 literals). All three took over two minutes to generate (Table 7). To avoid long generation times we filtered out the 113 relations that have more than 30 literals.
+      </paragraph>
+      <paragraph>
+       For the remaining 714 relations we found the symmetry group of each relation using a graph automorphism algorithm implemented in GAP. We ran GenTree and GenTreeSym on these 714 relations. GenTree was limited to exploring 3 million nodes, and GenTreeSym was limited to exploring 400,000 nodes. Within these limits, both algorithms generated trees for the same set of 683 relations. GenTree took a total of 184,291 s, and GenTreeSym took 147,863 s (including both Python and GAP) when executed in parallel on a 32-core AMD Opteron 6272 at 2.1 GHz.
+      </paragraph>
+      <paragraph>
+       The symmetry-reduced trees algorithm performed only 8% as much search while generating propagator trees, and the symmetry-reduced trees took 13% as much space as the standard trees. However both approaches generated trees for the same set of relations within the node limits. There are two reasons for this: firstly the library (named SCSCP) we used to link Python and GAP is quite slow therefore we have a much lower node limit on GenTreeSym than GenTree. Secondly, the symmetry groups were in the main quite small, with most having between 1 and 1024 symmetries.
+      </paragraph>
+      <paragraph>
+       The VM instructions for these 1366 propagator trees were stored on disk using an SHA-1 hash of the relation as part of the filename. For this experiment Minion was extended with a special table constraint that computes the hash of the relation and attempts to load a matching propagator tree. If there is no propagator tree it uses a generic GAC propagator.
+      </paragraph>
+      <paragraph>
+       We filtered the benchmark set to remove any benchmarks containing no scopes of the set of 683 relations. We also filtered out benchmarks that take more than 12 GiB memory.{sup:4} 1930 benchmarks remained from 34 series.
+      </paragraph>
+      <paragraph>
+       On the Life, LABS, Peg Solitaire, Immigration and Brian's Brain problem classes, no one generic GAC propagator clearly dominates the others. Minion's Table propagator, MDDC and {a mathematical formula}STR2+ are each most efficient for different subsets of the instances. For this experiment we need both positive and negative table propagators, and we do not have a negative {a mathematical formula}STR2+ propagator. Therefore we compare propagator trees to Minion's Table propagator and its negative counterpart (both using a trie datastructure), and to MDDC (the Sparse variant, as in previous experiments) using an MDD generated from either a positive or negative table.
+      </paragraph>
+      <paragraph>
+       When comparing MDDC to propagator trees, each benchmark is executed three times. First it is executed with all extensional relations implemented by MDDC. Second, each of the 683 relations with a standard propagator tree are implemented by the propagator tree and the other relations by MDDC. Third, each of the relations with a symmetry-reduced propagator tree are implemented by that propagator tree and the others by MDDC. Similarly, to compare to Table each benchmark was executed three times. Each run had a time limit of 30 minutes and they were performed 32 in parallel on an AMD Opteron 6272 at 2.1 GHz.
+      </paragraph>
+      <paragraph>
+       Fig. 6 plots the results for benchmarks where there was 100 or fewer nodes of search (1470 benchmarks). These plots compare total time. On these benchmarks, on average propagator trees provide very little benefit compared to either MDDC or Table.
+      </paragraph>
+      <paragraph>
+       Fig. 7 shows the results for all benchmarks with more than 100 search nodes (460 benchmarks). Many benchmarks timed out so we use node rate in these plots. The plots for standard and symmetry-reduced trees are broadly similar, and for both we find most points lie between a factor of 3 speed-up and equal speed. Comparing MDDC to Table, the results are also broadly similar. For both MDDC and Table, most points lie between 1 and 3 times speed-up.
+      </paragraph>
+      <paragraph>
+       Comparing Table to standard trees using geometric means, the speed-up factor is 1.61. 184,291 s was spent generating the standard trees, which is on average 401 s per benchmark. On average, after 657 s of search the standard tree configuration has paid off the initial cost of GenTree. Of the 460 benchmarks, 303 searched for more than 1000 s and so more than paid off the cost of generating the trees.
+      </paragraph>
+      <paragraph>
+       When generating the standard trees, we observed that in almost all cases GenTree takes less than 5 s, and the total time is inflated by a small number that take thousands of seconds. Setting a limit of 5 s would dramatically reduce the total time (to less than 3570 s) while generating 633 propagator trees as opposed to 683, and we expect it would reduce the pay-off point dramatically too.
+      </paragraph>
+      <paragraph>
+       Finally, our experiments underestimate the effect of propagator trees because they include propagating all other extensional and intensional constraints and the search algorithm.
+      </paragraph>
+     </section>
+     <section label="8.6">
+      <section-title>
+       Experimental conclusions
+      </section-title>
+      <paragraph>
+       These experiments have demonstrated that symmetry is useful in extending the scalability of propagator trees. On LABS, we found that the symmetry-reduced trees were orders of magnitude smaller than standard propagator trees. For Life, we found the symmetry-reduced tree was 64 times smaller. Also, we were able to scale up to Immigration and Brain's Brain (with 30 literals, compared to 20 for Life).
+      </paragraph>
+      <paragraph>
+       The efficiency of symmetry-reduced trees during execution (compared to standard propagator trees) is good for LABS and Peg Solitaire, but for Life we found them to be approximately two times slower. Even so, symmetry-reduced trees outperformed table constraints in all our experiments except XCSP, where symmetry-reduced trees still performed better on average than table constraints. For each problem, the best symmetry-reduced tree outperforms all other methods except standard propagator trees.
+      </paragraph>
+      <paragraph>
+       Finally we compared standard and symmetry-reduced trees to generic GAC propagators using a large set of XCSP benchmarks. This experiment showed that propagator trees can be of benefit on a wide range of problems, with a few conditions: that the problems should be sufficiently difficult that they cause the solver to do a non-trivial amount of search, that there are relations small enough to apply GenTree or GenTreeSym, and that some of those relations have multiple scopes in the set of problems.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      GAC table propagators
+     </paragraph>
+     <paragraph>
+      There are a variety of algorithms which achieve GAC propagation for arbitrary constraints, for example GAC2001 [3], GAC-Schema [4], MDDC [5], STR2 [6] and Regular [8]. These approaches can typically enforce GAC in polynomial time when their data structure is of polynomial size (whether it is a list of tuples, a trie, an MDD or a finite automaton). In the worst case they have exponential time complexity. Our approach differs in that it guarantees polynomial time propagation after an exponential preprocessing step.
+     </paragraph>
+     <paragraph>
+      In GAC2001 and GAC-Schema, constraints presented as a set of allowed tuples have the allowed tuples stored as a simple list. There have been a number of attempts to improve upon these algorithms by using different data structures to store the allowed tuples. Notable examples are tries [7], Binary Decision Diagrams [9], Multi-valued Decision Diagrams [5] and c-tuples (compressed tuples) [11]. In all cases the worst case complexity is polynomial in the size of the data structure. In some cases the data structure can be much smaller than an explicit list of all allowed tuples, but the worst case time remains exponential. That is, establishing GAC during search can take time {a mathematical formula}dn, compared to our worst case of {a mathematical formula}O(nd), or {a mathematical formula}O(n2d2) with symmetry reduction (assuming the solver can query and remove domain values in {a mathematical formula}O(1) time).
+     </paragraph>
+     <paragraph>
+      Other improvements to GAC table propagators, such as caching and reusing results [30], have also improved average-case performance, but have not removed the worst-case exponential behaviour.
+     </paragraph>
+     <paragraph>
+      Constraint handling rules
+     </paragraph>
+     <paragraph>
+      Constraint Handling Rules is a framework for representing constraints and propagation. Apt and Monfroy [31] have shown how to generate rules to enforce GAC for any constraint, although they state that the rules will have an exponential running time in the worst case. ARM [32] will automatically generate sets of constraint handling rules for a constraint, but may not achieve GAC. Further, how completely and efficiently the rules will be executed is dependent on the CHR system the rules are used in.
+     </paragraph>
+     <paragraph>
+      The major difference therefore between these techniques and the algorithms in this paper is that our algorithms provide guaranteed polynomial-time execution during search, at the cost of much higher space requirements and preprocessing time than any previous technique. Work in CHR is closest in spirit to our work, but does not guarantee to achieve GAC in polynomial time.
+     </paragraph>
+     <paragraph>
+      It is possible that techniques from knowledge compilation [33] (in particular prime implicants) could be usefully applied to propagator generation. However, the rules encoded in a propagator tree are not prime implicants — the set of known domain deletions is not necessarily minimal. We do not at present know of a data structure which exploits prime implicants and allows {a mathematical formula}O(nd) traversal.
+     </paragraph>
+     <paragraph>
+      Symmetry
+     </paragraph>
+     <paragraph>
+      There is a large body of work on symmetry breaking in constraint programming. The research focuses on reducing search effort by avoiding search states that are symmetric to previously-seen states, using a number of different techniques. For example, Symmetry Breaking During Search [20] posts constraints during search to forbid visiting symmetric states in the future. Symmetry Breaking by Dominance Detection (SBDD) [34] checks each state for symmetry to previously-seen states. Also, there are many approaches to breaking symmetry by adding constraints prior to search, for example lexicographic ordering constraints [35].
+     </paragraph>
+     <paragraph>
+      Of these approaches, our algorithm is most similar to SBDD. However, unlike SBDD we are not merely checking if the current state is dominated, we need a reference to the previous (symmetric) state and a permutation mapping one to the other. Therefore we store all previous states, whereas in SBDD sibling states are merged in the database. Also, our algorithm runs in polynomial time during search, whereas SBDD solves an NP-complete problem at every node.
+     </paragraph>
+     <paragraph>
+      Our definition of symmetry is based on Cohen et al. [27].
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      We have presented a novel and general approach to propagating small constraints. The approach is to generate a custom stateless propagator that enforces GAC in {a mathematical formula}O(nd). This is a spectacular improvement over other general techniques, which are exponential in the worst case, but comes with an equally spectacular tradeoff. This is that the stored propagator can be very large — it scales exponentially in the size of the constraint — therefore generating and storing it is only feasible in general at very small sizes.
+     </paragraph>
+     <paragraph>
+      We have presented two methods for storing and then executing the generated constraints. One is to construct special purpose code (in our case in {a mathematical formula}C++) and then compile it before use. The second is that we use a simple virtual machine with a tiny special purpose instruction set in which propagator trees can be executed. The second method has the advantage of not requiring compilation — apart from the convenience of not needing a compiler sometimes the propagator code becomes too big to compile.
+     </paragraph>
+     <paragraph>
+      We demonstrated that the propagator generation approach can be highly efficient compared to table constraints. For example, on Life {a mathematical formula}n=7, {a mathematical formula}p=4, the standard propagator tree is 9.7 times faster than MDDC, and 7.2 times faster than an encoding using a sum constraint. Remarkably, propagator trees can even be faster than hand-optimised propagators. For example, we achieved a 27% speedup on a min constraint in peg solitaire instance 10.
+     </paragraph>
+     <paragraph>
+      We significantly extended the scalability of our approach by exploiting symmetry within the constraint. To do this we introduced symmetry-reduced trees and algorithms for dealing with them. This allowed us to scale up from the Life constraint (with 20 literals) to extended variants of Life with 30 literals. While this may seem a small step, it enabled us to solve variants of Life for which we could not previously build trees. On the LABS problem we observed three orders of magnitude reduction in the size of the generated propagator tree. Again we provided both compiled and virtual machine implementations. However run time worsens to {a mathematical formula}O(n2d2) in the worst case from {a mathematical formula}O(nd) in the non-symmetric case. This did cause a slowdown in our experiments compared to the non-symmetric version where available, but we still achieved very good performance.
+     </paragraph>
+     <paragraph>
+      Our analysis of the XCSP benchmark set showed that while there were 750,346 different constraint relations applied to over 6.5 million scopes, the most common 827 constraint relations covered over 85% of the constraint scopes. This demonstrates how a small number of specialised propagators can cover a large proportion of the constraint scopes in a large set of benchmarks.
+     </paragraph>
+     <paragraph>
+      We believe that our approach of building special purpose generated constraint propagators has considerable promise for the future. While surprisingly fast, the propagator trees are entirely stateless — there is no state stored between calls, and no local variables. They also do not make use of trigger events, which are often essential to the efficiency of propagators. Therefore we believe there is scope to scale the approach further and to improve efficiency. Additionally, we believe that symmetry-reduced trees are worthy of further study. They are a general construction and further study may show them to have other important applications beyond constructing efficient propagators.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Canonicalisation of sequences of objects
+     </section-title>
+     <paragraph>
+      In order to generate symmetry-reduced trees, we need to identify symmetric node-states. To do this, we use a canonicalisation function. A node-state is represented by a sequence of sets. We develop a canonicalisation function which operates on sequences of objects (including sets). The function is novel to the best of our knowledge, and is an extension of an existing group-theoretic algorithm [24]. The algorithm requires that the objects in the sequence can be stabilised and have a canonicalising function.
+     </paragraph>
+     <paragraph label="Definition 14">
+      Given the following:
+      <list>
+       a list {a mathematical formula}L=[l1,…,ln];a canonicalising function{a mathematical formula}f(li,Hc) for the {a mathematical formula}li and any group {a mathematical formula}Hc; anda stabilising function {a mathematical formula}s(li,Hs) which returns (for any group {a mathematical formula}Hs) the subgroup of {a mathematical formula}Hs which stabilises {a mathematical formula}li,If
+      </list>
+      <paragraph>
+       L is the empty list return the identity element of G, otherwise,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Find {a mathematical formula}GCan=f(L[1],G).
+       </list-item>
+       <list-item label="2.">
+        Find {a mathematical formula}GStab=s(L[1]GCan,G).
+       </list-item>
+       <list-item label="3.">
+        Generate the list {a mathematical formula}L′ where {a mathematical formula}∀i∈{2..n}.L′[i−1]=L[i]GCan, which is one element shorter than L.
+       </list-item>
+       <list-item label="4.">
+        Return the permutation {a mathematical formula}GCan.Can(L′,GStab).
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph>
+      The following theorem proves the correctness of the key definition above.
+     </paragraph>
+     <paragraph label="Theorem 5">
+      The function{a mathematical formula}Can(L,G), given inDefinition 14, is a canonicalisation function.
+     </paragraph>
+     <paragraph label="Proof">
+      The permutation returned by {a mathematical formula}Can(L,G) in Definition 14 is always a member of G, as it is constructed by composing elements of G. Therefore it suffices to prove for any sequences L and M of equal length, if there exists {a mathematical formula}g∈G such that {a mathematical formula}Lg=M then {a mathematical formula}LCan(L,G)=MCan(M,G). We proceed by induction on the length of L and M. If they are empty, then the result is trivially true.We shall refer to {a mathematical formula}f(L[1],G) as c, and {a mathematical formula}f(M[1],G) as d. As f is a canonicalising function, and {a mathematical formula}L[1]g=M[1], then {a mathematical formula}L[1]c and {a mathematical formula}M[1]d are equal. Therefore both {a mathematical formula}s(L[1]c,G) and {a mathematical formula}s(M[1]d,G) are the same group. Call this group GStab.Now we consider the recursive call to Can. For L, this involves applying c to {a mathematical formula}L[2],…,L[n]. For M, this involves applying d to {a mathematical formula}M[2],…,M[n], which is the same as applying {a mathematical formula}g.d to {a mathematical formula}L[2],…,L[n].We will now prove that there exists a group element h in GStab that maps {a mathematical formula}L[2..n]c to {a mathematical formula}M[2..n]d. h is the equivalent of g in the inductive step. As discussed earlier, {a mathematical formula}L[1]c=M[1]d and {a mathematical formula}M[1]d=L[1]g.d. Let h be defined such that {a mathematical formula}c.h=g.d. It is trivially true that {a mathematical formula}L[1]c.h=L[1]g.d and therefore {a mathematical formula}L[1]c=M[1]d=L[1]g.d=L[1]c.h, so h is in the stabiliser of {a mathematical formula}L[1]c, which is GStab.Let {a mathematical formula}a=Can(L[2..n]c,GStab) and {a mathematical formula}b=Can(M[2..n]d,GStab). As the group element h which maps {a mathematical formula}L[2..n]c to {a mathematical formula}M[2..n]d is in GStab, by the inductive hypothesis, {a mathematical formula}L[2..n]c.a=M[2..n]d.b. As a and b are in GStab, {a mathematical formula}L[1]c.a=L[1]c and {a mathematical formula}M[1]d.b=M[1]d. Therefore {a mathematical formula}Lc.a=Md.b, so {a mathematical formula}LCan(L,G)=MCan(M,G). □
+     </paragraph>
+     <paragraph>
+      We now provide a concrete implementation of Can (Definition 14) for a list of sets of points (represented using integers) in Algorithm 7. This algorithm assumes the existence of two pre-existing group theory algorithms:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       SetStabiliser({a mathematical formula}S,G) : Generates the subset of G which stabilises S.
+      </list-item>
+      <list-item label="2.">
+       MinimalImagePerm({a mathematical formula}S,[Stab,]G) : Generates the element h of G such that {a mathematical formula}∀g∈G.h(S)⩽g(S). The function may optionally be given {a mathematical formula}Stab=SetStabiliser(S,G) to provide a performance improvement. This is the canonicalising function for sets that we use in Algorithm 7.
+      </list-item>
+     </list>
+     <paragraph>
+      SetStabiliser is provided by any computational group theory package. The algorithm MinimalImagePerm is built from the SmallestImage algorithm of Linton [24]. The original algorithm of Linton provides the canonical image of a set, and we modified it to return the permutation which generates the canonical image. It is simple to augment the algorithm to produce this as it progresses.
+     </paragraph>
+     <paragraph>
+      Calculating set stabilisers and minimal images are both expensive operations, while calculating the conjugate of a group is very cheap. In [24], the algorithm SmallestImage({a mathematical formula}S,G) may be given the result of SetStabiliser({a mathematical formula}S,G), which in some cases leads to a substantial speed improvement. As we have to calculate at least one set stabiliser during each step of our algorithm anyway, we generate one early so we can pass it to MinimalImagePerm, and then conjugate it for the next step of the algorithm.
+     </paragraph>
+     <paragraph label="Proof">
+      Given a list of sets{a mathematical formula}L=〈S1,…,Sn〉and a group G, thenAlgorithm 7is a canonicalising function.Theorem 5 proves the abstract algorithm correct. Algorithm 7 optimises the basic algorithm shown in Definition 14 by not transforming the whole list at every step, but by constructing the permutation ModPerm which must be applied to the rest of the list at each step. The final value of variable ModPerm is the canonicalising permutation. Also, we use the basic group theory result that for all {a mathematical formula}g∈G, {a mathematical formula}s(x,G)g=s(xg,G), which allows us to calculate just one stabiliser and use it in two places. Finally, if the group becomes trivial we are able to terminate the algorithm early.  □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

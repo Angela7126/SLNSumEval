@@ -1,0 +1,1258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Study of Concept-based Weighting Regularization for Medical Records Search</title>
+<!--Generated on Tue Jun 10 17:58:56 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Study of Concept-based Weighting Regularization 
+<br class="ltx_break"/>for Medical Records Search</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yue Wang, Xitong Liu, Hui Fang 
+<br class="ltx_break"/>Department of Electrical &amp; Computer Engineering,
+<br class="ltx_break"/>University of Delaware, USA
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">wangyue,xtliu,hfang</span>}<span class="ltx_text ltx_font_typewriter">@udel.edu</span>
+
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">An important search task in the biomedical domain is to find medical
+records of patients who are qualified for a clinical trial.
+One commonly used approach is to apply NLP tools to map terms
+from queries and documents to concepts and then compute
+the relevance scores based on the concept-based representation.
+However, the mapping results are not perfect, and none
+of previous work studied how to deal with them in the retrieval process.
+In this paper, we focus on addressing the limitations caused by the imperfect
+mapping results and study how to further improve the retrieval performance of
+the concept-based ranking methods. In particular, we apply axiomatic approaches
+and propose two weighting regularization methods that adjust the weighting
+based on the relations among the concepts. Experimental results show that the
+proposed methods are effective to improve the retrieval performance, and their
+performances are comparable to other top-performing systems in the TREC Medical
+Records Track.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">With the increasing use of electronic health records,
+it becomes urgent to leverage this rich information
+resource about patients’ health conditions to transform
+research in health and medicine. As an example, when
+developing a cohort for a clinical trial,
+researchers need to identify patients matching a set of clinical
+criteria based on their medical records during their
+hospital visits <cite class="ltx_cite">[<a href="#bib.bib41" title="White paper: toward a national framework for the secondary use of health data: an american medical informatics association white paper" class="ltx_ref">22</a>, <a href="#bib.bib39" title="Achieving a nationwide learning health system" class="ltx_ref">8</a>]</cite>. This selection
+process is clearly a domain-specific retrieval problem,
+which searches for <span class="ltx_text ltx_font_italic">relevant medical records</span> that contain
+useful information about their corresponding patients’
+qualification to the criteria specified in a query,
+e.g., “female patient with breast cancer with mastectomies during
+admission”.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Intuitively, to better solve this domain-specific retrieval problem,
+we need to understand the requirements specified in a query
+and identify the documents satisfying these requirements based on
+their semantic meanings. In the past decades, significant efforts
+have been put on constructing biomedical knowledge bases <cite class="ltx_cite">[<a href="#bib.bib53" title="An overview of metamap: historical perspective and recent advances" class="ltx_ref">2</a>, <a href="#bib.bib28" title="Medical Subject Headings (MeSH)" class="ltx_ref">17</a>, <a href="#bib.bib20" title="ICD-9-CM: International Classification of Diseases, 9th Revision, Clinical Modification, 5th Edition" class="ltx_ref">4</a>]</cite>
+and developing natural language processing (NLP) tools, such as MetaMap,
+to utilize the information from the knowledge bases <cite class="ltx_cite">[<a href="#bib.bib23" title="Effective mapping of biomedical text to the UMLS Metathesaurus: the MetaMap program." class="ltx_ref">3</a>, <a href="#bib.bib24" title="UMLS-Interface and UMLS-Similarity : Open Source Software for Measuring Paths and Semantic Similarity" class="ltx_ref">19</a>]</cite>.
+These efforts make it possible to map free text to concepts and use
+these concepts to represent queries and documents.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Indeed, <span class="ltx_text ltx_font_italic">concept-based representation</span> is one of the commonly used approaches
+that leverage knowledge bases to improve the retrieval performance
+<cite class="ltx_cite">[<a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a>, <a href="#bib.bib12" title="Learning to combine representations for medical records search" class="ltx_ref">14</a>]</cite>.
+The basic idea is to represent both queries and documents as
+“bags of concepts”, where the concepts are identified based on the information
+from the knowledge bases. This method has been shown to be more effective
+than traditional term-based representation in the medical record retrieval
+because of its ability to handle the ambiguity in the medical terminology.
+However, this method also suffers the limitation that its effectiveness depends
+on the accuracy of the concept mapping results. As a result, directly
+applying existing weighting strategies might lead to non-optimal retrieval
+performance.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, to address the limitation caused by the inaccurate concept mapping results,
+we propose to regularize the weighting strategies in the concept-based
+representation methods. Specifically, by applying the axiomatic approaches <cite class="ltx_cite">[<a href="#bib.bib44" title="An exploration of axiomatic approaches to information retrieval" class="ltx_ref">7</a>]</cite>,
+we analyze the retrieval functions with concept-based representation and find that
+they may violate some reasonable retrieval constraints. We then propose two concept-based
+weighting regularization methods so that the regularized retrieval functions would satisfy
+the retrieval constraints and achieve better retrieval performance.
+Experimental results over two TREC collections show that both proposed concept-based weighting
+regularization methods can improve the retrieval performance,
+and their performance is comparable with the best systems of the TREC Medical
+Records tracks <cite class="ltx_cite">[<a href="#bib.bib46" title="Overview of the TREC 2011 Medical Records Track" class="ltx_ref">25</a>, <a href="#bib.bib47" title="Overview of the TREC 2012 Medical Records Track" class="ltx_ref">24</a>]</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Many NLP techniques have been developed to understand the semantic meaning
+of textual information, and are often applied to improve the search accuracy.
+However, due to the inherent ambiguity of natural languages, the results of
+NLP tools are not perfect.
+One of our contributions is to present a
+general methodology that can be used
+to adjust existing IR techniques based on the inaccurate NLP results.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The Medical Records track of the Text REtrieval Conference (TREC)
+provides a common platform to study the medical records retrieval problem
+and evaluate the proposed methods <cite class="ltx_cite">[<a href="#bib.bib46" title="Overview of the TREC 2011 Medical Records Track" class="ltx_ref">25</a>, <a href="#bib.bib47" title="Overview of the TREC 2012 Medical Records Track" class="ltx_ref">24</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Concept-based representation has been studied for the medical record retrieval
+problem <cite class="ltx_cite">[<a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a>, <a href="#bib.bib12" title="Learning to combine representations for medical records search" class="ltx_ref">14</a>, <a href="#bib.bib8" title="Inferring conceptual relationships to improve medical records search" class="ltx_ref">13</a>, <a href="#bib.bib69" title="Retrieving Medical Records: NEC Labs America at TREC 2012 Medical Record Track" class="ltx_ref">20</a>, <a href="#bib.bib18" title="AEHRC &amp; QUT at TREC 2011 Medical Track : a concept-based information retrieval approach" class="ltx_ref">9</a>, <a href="#bib.bib19" title="Exploiting SNOMED CT Concepts &amp; Relationships for Clinical Information Retrieval: Australian e-Health Research Centre and Queensland University of Technology at the TREC 2012 Medical Track" class="ltx_ref">10</a>]</cite>.
+For example, Qi and Laquerre used MetaMap to generate the concept-based
+representation and then apply a vector space retrieval model for ranking, and their
+results are one of the top ranked runs in the TREC 2012 Medical Records track <cite class="ltx_cite">[<a href="#bib.bib69" title="Retrieving Medical Records: NEC Labs America at TREC 2012 Medical Record Track" class="ltx_ref">20</a>]</cite>.
+To further improve the performance, Limsopatham et al. proposed a task-specific
+representation, i.e., using only four types of concepts (symptom, diagnostic test,
+diagnosis and treatment) in the concept-based representation and a query expansion
+method based on the relationships among the medical concepts
+<cite class="ltx_cite">[<a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a>, <a href="#bib.bib8" title="Inferring conceptual relationships to improve medical records search" class="ltx_ref">13</a>]</cite>.
+Moreover, they also proposed a learning approach to combine
+both term-based and concept-based representation to further improve the
+performance <cite class="ltx_cite">[<a href="#bib.bib12" title="Learning to combine representations for medical records search" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Our work is also related to domain-specific IR <cite class="ltx_cite">[<a href="#bib.bib1" title="Toward a semantic granularity model for domain-specific information retrieval" class="ltx_ref">26</a>, <a href="#bib.bib70" title="The role of knowledge in conceptual retrieval: a study in the domain of clinical medicine" class="ltx_ref">16</a>, <a href="#bib.bib71" title="Knowledge-intensive conceptual retrieval and passage extraction of biomedical literature" class="ltx_ref">29</a>]</cite>.
+For example, Yan et al. proposed a granularity-based document ranking
+model that utilizes ontologies to identify document concepts.
+However, none of the previous work has studied how to regularize
+the weight of concepts based on their relations.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">It is well known that the effectiveness of a retrieval function is closely related to
+the weighting strategies <cite class="ltx_cite">[<a href="#bib.bib44" title="An exploration of axiomatic approaches to information retrieval" class="ltx_ref">7</a>, <a href="#bib.bib43" title="Pivoted document length normalization" class="ltx_ref">23</a>]</cite>. Various term weighting strategies have been
+proposed and studied for the term-based representation <cite class="ltx_cite">[<a href="#bib.bib6" title="Probabilistic models of information retrieval based on measuring the divergence from randomness" class="ltx_ref">1</a>, <a href="#bib.bib43" title="Pivoted document length normalization" class="ltx_ref">23</a>, <a href="#bib.bib21" title="Okapi at TREC-3" class="ltx_ref">21</a>]</cite>.
+However, existing studies on concept-based representation still used weighting
+strategies developed for term-based representation such as vector space models <cite class="ltx_cite">[<a href="#bib.bib69" title="Retrieving Medical Records: NEC Labs America at TREC 2012 Medical Record Track" class="ltx_ref">20</a>]</cite>
+and divergence from randomness (DFR) <cite class="ltx_cite">[<a href="#bib.bib8" title="Inferring conceptual relationships to improve medical records search" class="ltx_ref">13</a>]</cite> and did not
+take the inaccurate concept mapping results into consideration.
+Compared with previous work, we focus on addressing the limitation caused by the inaccurate
+concept mapping. Note that our efforts are orthogonal to existing work, and it is expected to
+bring additional improvement to the retrieval performance.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1057/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="676" height="299" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example of MetaMap result for a query.</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Concept-based Representation for Medical Records Retrieval</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Problem Formulation</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We follow the problem setup used in the TREC medical record track <cite class="ltx_cite">[<a href="#bib.bib46" title="Overview of the TREC 2011 Medical Records Track" class="ltx_ref">25</a>, <a href="#bib.bib47" title="Overview of the TREC 2012 Medical Records Track" class="ltx_ref">24</a>]</cite>.
+The task is to retrieve relevant patient visits with respect to a query. Since each visit can be
+associated with multiple medical records, the relevance of a visit is related to the relevance
+of individual associated medical records. Existing studies computed the relevance
+scores at either visit-level, where all the medical records of a visit are merged into
+a visit document <cite class="ltx_cite">[<a href="#bib.bib54" title="NLM at TREC 2012 Medical Records Track" class="ltx_ref">5</a>, <a href="#bib.bib7" title="Learning to selectively rank patients’ medical history" class="ltx_ref">15</a>]</cite>, or record-level, where we can
+first compute the relevance score of individual records and then aggregate their scores
+as the relevance score of a visit <cite class="ltx_cite">[<a href="#bib.bib7" title="Learning to selectively rank patients’ medical history" class="ltx_ref">15</a>, <a href="#bib.bib16" title="Combining multi-level evidence for medical record retrieval" class="ltx_ref">30</a>, <a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a>]</cite>.
+In this paper, we focus on the visit-level relevance because of its simplicity.
+In particular, given a patient’s visit, all the medical records generated from this visit are
+merged as a document. Note that
+our proposed concept-weighting strategies can also be easily applied to record-level relevance modeling.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Since the goal is to retrieve medical records of patients that satisfying requirements
+specified in a query, the relevance of medical records should be modeled based on
+how well they match all the requirements (i.e., aspects) specified in the queries.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Background: UMLS and MetaMap</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Unified Medical Language System (UMLS) is a metathesaurus containing
+information from more than 100 controlled medical terminologies
+such as the Systematized Nomenclature of Medicine Clinical Terms (SNOMED-CT)
+and Medical Subject Headings (MeSH). Specifically, it contains the information
+about over 2.8 million biomedical concepts. Each concept is labeled with a
+Concept Unique Identifier (CUI) and has a preferred name and a semantic type.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Moreover, NLP tools for utilizing the information from
+UMLS have been developed. In particular, MetaMap <cite class="ltx_cite">[<a href="#bib.bib23" title="Effective mapping of biomedical text to the UMLS Metathesaurus: the MetaMap program." class="ltx_ref">3</a>]</cite> can
+take a text string as the input, segment it into phrases,
+and then map each phrase to <span class="ltx_text ltx_font_italic">multiple</span> UMLS CUIs with confidence scores.
+The confidence score is an indicator of the quality of the phrase-to-concept
+mapping by MetaMap. It is computed by four metrics: centrality, variation, coverage
+and cohesiveness <cite class="ltx_cite">[<a href="#bib.bib23" title="Effective mapping of biomedical text to the UMLS Metathesaurus: the MetaMap program." class="ltx_ref">3</a>]</cite>. These four measures try to evaluate the mapping
+from different angles, such as the involvement of the central part, the distance of the
+concept to the original phrase, and how well the concept matches the phrase.
+The maximum confidence in MetaMap is 1000.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the MetaMap results for an example query
+“children with dental caries”.
+Two <span class="ltx_text ltx_font_italic">query aspects</span>, i.e., “children” and “dental caries”, are identified.
+Each of them is mapped to multiple concepts, and each concept is associated with
+the confidence score as well as more detailed information about this concept.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Concept-based Representation</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Traditional retrieval models are based on “bag of terms” representation. One limitation
+of this representation is that relevance scores are computed based on the matching of terms
+rather than the meanings. As a result, the system may fail to retrieve the relevant documents
+that do not contain any query terms.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">To overcome this limitation, concept-based representation has been proposed to bridge the
+vocabulary gap between documents and queries <cite class="ltx_cite">[<a href="#bib.bib69" title="Retrieving Medical Records: NEC Labs America at TREC 2012 Medical Record Track" class="ltx_ref">20</a>, <a href="#bib.bib12" title="Learning to combine representations for medical records search" class="ltx_ref">14</a>, <a href="#bib.bib19" title="Exploiting SNOMED CT Concepts &amp; Relationships for Clinical Information Retrieval: Australian e-Health Research Centre and Queensland University of Technology at the TREC 2012 Medical Track" class="ltx_ref">10</a>]</cite>.
+In particular, MetaMap is used to map terms from queries and documents (e.g., medical records)
+to the semantic concepts from biomedical knowledge bases such as UMLS.
+Within the concept-based representation, the query can then
+be represented as a bag of all the generated CUIs in the MetaMap results.
+For example, the query from Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> can be represented as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="\{C0008059,C0680063,C0011334,C0333519,\\&#10;C0226984\}" display="inline"><mrow><mo>{</mo><mrow><mrow><mi>C</mi><mo>⁢</mo><mn>0008059</mn></mrow><mo>,</mo><mrow><mi>C</mi><mo>⁢</mo><mn>0680063</mn></mrow><mo>,</mo><mrow><mi>C</mi><mo>⁢</mo><mn>0011334</mn></mrow><mo>,</mo><mrow><mi>C</mi><mo>⁢</mo><mn>0333519</mn></mrow><mo>,</mo><mrow><mi>C</mi><mo>⁢</mo><mn>0226984</mn></mrow></mrow><mo>}</mo></mrow></math>. Documents can
+be represented in a similar way.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">After converting both queries and documents to concept-based representations using
+MetaMap, previous work applied existing retrieval functions such as vector
+space models <cite class="ltx_cite">[<a href="#bib.bib43" title="Pivoted document length normalization" class="ltx_ref">23</a>]</cite> to rank the documents. Note that when referring to
+existing retrieval functions in the paper, they include traditional keyword matching
+based functions such as pivoted normalization <cite class="ltx_cite">[<a href="#bib.bib43" title="Pivoted document length normalization" class="ltx_ref">23</a>]</cite>, Okapi <cite class="ltx_cite">[<a href="#bib.bib21" title="Okapi at TREC-3" class="ltx_ref">21</a>]</cite>,
+Dirichlet prior <cite class="ltx_cite">[<a href="#bib.bib22" title="A study of smoothing methods for language models applied to Ad Hoc information retrieval" class="ltx_ref">27</a>]</cite> and basic axiomatic functions <cite class="ltx_cite">[<a href="#bib.bib44" title="An exploration of axiomatic approaches to information retrieval" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+<div id="S3.F2" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_tiny">
+<img src="P14-1057/image002.png" id="S3.F2.g1" class="ltx_graphics" width="210" height="141" alt=""/></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_tiny">
+<img src="P14-1057/image003.png" id="S3.F2.g2" class="ltx_graphics" width="210" height="141" alt=""/></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_tiny">
+<img src="P14-1057/image004.png" id="S3.F2.g3" class="ltx_graphics" width="210" height="141" alt=""/></span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> Exploratory data analysis (From left to right are choosing minimum, average and maximum IDF concepts as the representing concepts, respectively. The removed concepts are highlighted in the figures.).</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Weighting Strategies for Concept-based Representation</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Motivation</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Although existing retrieval functions can be directly applied to concept-based
+representation, they may lead to non-optimal performance. This is mainly caused
+by the fact that MetaMap may generate more than one mapped concepts for an
+aspect, i.e., a semantic unit in the text.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Ideally, an aspect will be mapped to only <span class="ltx_text ltx_font_italic">one</span> concept, and
+different concepts would represent different semantic meanings. Under such
+a situation, traditional retrieval functions would likely work well and generate
+satisfying retrieval performance since the relations among concepts are
+independent which is consistent with the assumptions made in traditional IR
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Introduction to information retrieval" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">However, the mapping results generated by MetaMap are not perfect. Although
+MetaMap is able to rank all the candidate concepts with the confidence score
+and pick the most likely one, the accuracy is not very high. In particular,
+our preliminary results show that turning on the disambiguation functionality
+provided by MetaMap (i.e., returning only the most likely concept for each query)
+could lead to worse retrieval performance than using all the candidate mappings.
+Thus, we use the one-to-many mapping results generated by MetaMap, in which
+each aspect can be mapped to multiple concepts.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Unfortunately, such one-to-many concept mappings could hinder the retrieval
+performance in the following two ways.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">The multiple concepts generated from the same aspect are related, which
+is inconsistent with the independence assumption made in the existing retrieval
+functions <cite class="ltx_cite">[<a href="#bib.bib2" title="Introduction to information retrieval" class="ltx_ref">18</a>]</cite>. For example, as shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+“dental caries” is mapped to three concepts. It is clear that the concepts
+are related, but existing retrieval functions are unable to capture their
+relations and would compute the weight of each concept independently.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">The one-to-many mapping results generated by MetaMap could arbitrarily
+inflate the weights of some query aspects.
+For example, as shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, query aspect “children” is mapped
+to 2 concepts while “dental caries” is mapped to 3 concepts.
+In the existing retrieval functions,
+term occurrences are important relevance signals. However,
+when converting the text to concepts representation using MetaMap, the
+occurrences of the concepts are determined by not only the original term occurrences,
+a good indicator of relevance, but also the number of mapped concepts,
+which is determined by MetaMap and has nothing to do with the relevance status.
+As a result, the occurrences of concepts might
+not be a very accurate indicator of importance of the corresponding query aspect.</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">To address the limitations caused by the inaccurate mapping results, we propose to
+apply axiomatic approaches <cite class="ltx_cite">[<a href="#bib.bib44" title="An exploration of axiomatic approaches to information retrieval" class="ltx_ref">7</a>]</cite> to regularize the weighting strategies for
+concept-based representation methods. In particular, we first formalize retrieval
+constraints that any reasonable concept-based representation methods should satisfy
+and then discuss how to regularize the existing weighting strategies to satisfy
+the constraints and improve the retrieval performance.</p>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p">We first explain the notations used in this section. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m1" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m2" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> denote a query
+and a document with the concept-based representation.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m3" class="ltx_Math" alttext="S(Q,D)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></math> is the relevance score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m5" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m6" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math> denotes
+a concept, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m7" class="ltx_Math" alttext="\mathcal{A}(e)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> denotes the query aspect associated with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m8" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>, i.e., a set of concepts that are mapped to the same phrases as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m9" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> by using
+MetaMap. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m10" class="ltx_Math" alttext="i(e)" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> is the normalized confidence score of the mapping for concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m11" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> generated
+by MetaMap. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m12" class="ltx_Math" alttext="c(e,D)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></math> denotes the occurrences of concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m13" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m14" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m15" class="ltx_Math" alttext="df(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> denotes the number of documents containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m16" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m17" class="ltx_Math" alttext="|D|" display="inline"><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></math> is the document length of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m18" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m19" class="ltx_Math" alttext="Imp_{c}(e)" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>c</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> is the importance of the concept
+such as the concept IDF value, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m20" class="ltx_Math" alttext="Imp_{A}(\mathcal{A})" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>)</mo></mrow></mrow></math> is the importance
+of the aspect.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Unified concept weighting regularization</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We now discuss how to address the first challenge, i.e,. how to regularize
+the weighting strategy so that we can take into consideration the fact that
+concepts associated with the same query aspect are not independent.
+We call a concept is a <span class="ltx_text ltx_font_italic">variant</span> of another one if both of them are
+associated with the same aspect.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Intuitively, given a query with two aspects, a document covering
+both aspects should be ranked higher than those covering only one
+aspect. We can formalize the intuition in the concept-based
+representation as the following constraint.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Unified Constraint:</span> Let query be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="Q=\{e_{1},e_{2},e_{3}\}" display="inline"><mrow><mi>Q</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>e</mi><mn>3</mn></msub></mrow><mo>}</mo></mrow></mrow></math>,
+and we know that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> is a variant of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="e_{3}" display="inline"><msub><mi>e</mi><mn>3</mn></msub></math>.
+Assume we have two documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="D_{1}" display="inline"><msub><mi>D</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="D_{2}" display="inline"><msub><mi>D</mi><mn>2</mn></msub></math> with the same
+document length, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m6" class="ltx_Math" alttext="|D_{1}|=|D_{2}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>D</mi><mn>1</mn></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mo fence="true">|</mo><msub><mi>D</mi><mn>2</mn></msub><mo fence="true">|</mo></mrow></mrow></math>. If we know that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m7" class="ltx_Math" alttext="c(e_{1},D_{1})=c(e_{3},D_{2})&gt;0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>3</mn></msub><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m8" class="ltx_Math" alttext="c(e_{1},D_{2})=c(e_{3},D_{1})=0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>3</mn></msub><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m9" class="ltx_Math" alttext="c(e_{2},D_{1})=c(e_{2},D_{2})&gt;0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m10" class="ltx_Math" alttext="S(Q,D_{1})&gt;S(Q,D_{2})" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">It is clear that existing retrieval functions would violate
+this constraint since they ignore the relations among concepts.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">One simple strategy to fix this problem is to merge all the concept
+variants as a single concept and select one representative concept to
+replace all occurrences of other variants in both queries and documents.
+By merging the concepts together, we are aiming to purify the concepts and
+make the similar concepts centralized so that the assumption that all
+the concepts are independent would hold.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">Formally, the adjusted occurrences of a concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> in a document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> is shown as follows:</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<table id="S6.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\displaystyle c_{mod}(e,D)\!=\!\left\{\!\!\begin{array}[]{ll}\sum_{e^{\prime}%&#10;\in EC(e)}c(e^{\prime},D)&amp;\!\!e\!=\!Rep(\!EC(e))\\&#10;0&amp;\!\!e\!\neq\!Rep(\!EC(e))\end{array}\right." display="inline"><mrow><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0.8pt">=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></mrow></mtd><mtd columnalign="left"><mrow><mpadded lspace="-3.4pt" width="-5.1pt"><mi>e</mi></mpadded><mo rspace="0.8pt">=</mo><mrow><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mrow><mpadded lspace="-3.4pt" width="-5.1pt"><mi>e</mi></mpadded><mo rspace="0.8pt">≠</mo><mrow><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m1" class="ltx_Math" alttext="c(e,D)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></math> is the original occurrence of concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m3" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m4" class="ltx_Math" alttext="EC(e)" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> denotes a set of all the variants of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m5" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> including itself
+(i.e., all the concepts with the same preferred name as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m6" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>), and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m7" class="ltx_Math" alttext="Rep(EC(e))" display="inline"><mrow><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> denotes the representative concept from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m8" class="ltx_Math" alttext="EC(e)" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p">It is trivial to prove that, with such changes, existing retrieval
+functions would satisfy the above constraint since the constraint
+implies TFC2 constraint defined in the previous study <cite class="ltx_cite">[<a href="#bib.bib5" title="A formal study of information retrieval heuristics" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.p10" class="ltx_para">
+<p class="ltx_p">Now the remaining question is how to select the representative concept
+from all the variants. There are three options: select the concept
+with the maximum IDF, average IDF, or minimum IDF. We conduct
+exploratory data analysis on these three options. In particular,
+for each option, we generate a plot indicating the correlation
+between the IDF value of a concept and the relevance probability
+of the concept (i.e., the probability that a document containing
+the concept is relevant). Note that both original and replaced
+IDF values are shown in the plot for each option. Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the
+results. It is clear that the right plot (i.e., selecting the concept
+with the maximum IDF as the representative concept) is the best
+choice since the changes make the points less scattered.
+In fact, this can also be confirmed by experimental results as reported
+in Table <a href="#S5.T5" title="Table 5 ‣ 5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Thus, we use the concept with the maximum
+IDF value as the representative concept of all the variants.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Balanced concept weighting regularization</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We now discuss how to address the second challenge, i.e., how to
+regularize the weighting strategy to deal with the arbitrarily
+inflated statistics caused by the one-to-many mappings.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">The arbitrary inflation could impact the importance of the query aspects.
+For example, as shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, one aspect is mapped
+to two concepts while the other is mapped to three.
+Moreover, it could also impact the accuracy of the concept IDF values.
+Consider “colonoscopies” and “adult”, it is clear that the first term
+is more important than the second one, which is consistent with their
+term IDF values, i.e., 7.52 and 2.92, respectively. However, with the
+concept-based representation, the IDF value of the concept “colonoscopies”(C0009378) is
+2.72, which is even smaller than that of concept “adult” (C1706450), i.e., 2.92.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">To fix the negative impact on query aspects, we could leverage the findings in the
+previous study <cite class="ltx_cite">[<a href="#bib.bib36" title="Query aspect based term weighting regularization in information retrieval" class="ltx_ref">28</a>]</cite> and regularize the weighting strategy based on the length
+of query aspects to favor documents covering more query aspects. Since each concept
+mapping is associated with a confidence score, we can incorporate them into the
+regularization function as follows:</p>
+<table id="S4.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E2.m1" class="ltx_Math" alttext="f(e,Q)=(1-\alpha)+\alpha\cdot\Big(\frac{\sum_{e^{\prime}\in Q}i(e^{\prime})}{%&#10;\sum_{e^{\prime\prime}\in\mathcal{A}(e)}i(e^{\prime\prime})}\Big)," display="block"><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>+</mo><mrow><mi>α</mi><mo>⋅</mo><mrow><mo>(</mo><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mi>Q</mi></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mi>′′</mi></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mi>′′</mi></msup><mo>)</mo></mrow></mrow></mrow></mfrac><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="i(e)" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> is the normalized confidence score of concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> generated by MetaMap,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is a parameter between 0 and 1 to control the effect of the regularization.
+When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is set to 0, there is no regularization. This regularization function
+aims to penalize the weight of concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m5" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> based on its variants as well as the
+concepts from other aspects. In particular, a concept would receive more penalty
+(i.e., its weight will be decreased more) when it has more variants and the mappings
+of these variants are more accurate.</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">To fix the negative impact on the concept IDF values, we propose to regularize
+the weighting based on the importance of the query aspect. This regularization
+can be formalized as the following constraint.</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Balanced Constraint:</span> Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m1" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> be a query with two concepts and the
+concepts are associated with different aspects, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m2" class="ltx_Math" alttext="Q=\{e_{1},e_{2}\}" display="inline"><mrow><mi>Q</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><mo>}</mo></mrow></mrow></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m3" class="ltx_Math" alttext="\mathcal{A}(e_{1})\neq\mathcal{A}(e_{2})" display="inline"><mrow><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>≠</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></mrow></math>.
+Assume <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m4" class="ltx_Math" alttext="D_{1}" display="inline"><msub><mi>D</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m5" class="ltx_Math" alttext="D_{2}" display="inline"><msub><mi>D</mi><mn>2</mn></msub></math> are two documents with the same length, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m6" class="ltx_Math" alttext="|D_{1}|=|D_{2}|" display="inline"><mrow><mrow><mo fence="true">|</mo><msub><mi>D</mi><mn>1</mn></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mo fence="true">|</mo><msub><mi>D</mi><mn>2</mn></msub><mo fence="true">|</mo></mrow></mrow></math>,
+and they cover different concepts with the same occurrences, i.e.,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m7" class="ltx_Math" alttext="c(e_{1},D_{1})=c(e_{2},D_{2})&gt;0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m8" class="ltx_Math" alttext="c(e_{2},D_{1})=c(e_{1},D_{2})=0" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>2</mn></msub><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow></math>.
+If we know <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m9" class="ltx_Math" alttext="Imp_{c}(e_{1})=Imp_{c}(e_{2})" display="inline"><mrow><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>c</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>c</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m10" class="ltx_Math" alttext="Imp_{A}(\mathcal{A}(e_{1}))&lt;Imp_{A}(\mathcal{A}(e_{2}))" display="inline"><mrow><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>&lt;</mo><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+then we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m11" class="ltx_Math" alttext="S(Q,D_{1})&lt;S(Q,D_{2})" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&lt;</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS3.p6" class="ltx_para">
+<p class="ltx_p">This constraint requires that the relevance score of a document should be
+affected by not only the importance of the concepts but also the importance
+of the associated query aspect. In a way, the constraint aims to counteract
+the arbitrary statistics inflation caused by MetaMap results and balance
+the weight among concepts based on the importance of the associated query aspects.
+And it is not difficult to show that existing retrieval functions violate this constraint.</p>
+</div>
+<div id="S4.SS3.p7" class="ltx_para">
+<p class="ltx_p">Now the question is how to revise the retrieval functions to make them satisfy
+this constraint. We propose to incorporate the importance of query aspect
+into the previous regularization function in Equation (<a href="#S4.E2" title="(2) ‣ 4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) as follows:</p>
+</div>
+<div id="S4.SS3.p8" class="ltx_para">
+<table id="S4.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m1" class="ltx_Math" alttext="f(e,Q)=(1-\alpha)+\alpha\cdot\Big(\frac{\sum_{e^{\prime}\in Q}i(e^{\prime})}{%&#10;\sum_{e^{\prime\prime}\in\mathcal{A}(e)}i(e^{\prime\prime})}\Big)\cdot Imp_{A}%&#10;(\mathcal{A}(e))." display="block"><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>+</mo><mrow><mrow><mi>α</mi><mo>⋅</mo><mrow><mo>(</mo><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mi>Q</mi></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mi>′′</mi></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mi>′′</mi></msup><mo>)</mo></mrow></mrow></mrow></mfrac><mo>)</mo></mrow><mo>⋅</mo><mi>I</mi></mrow><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS3.p9" class="ltx_para">
+<p class="ltx_p">Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p9.m1" class="ltx_Math" alttext="Imp_{A}(\mathcal{A}(e))" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> is the importance of a query aspect and can
+be estimated based on the terms from the query aspect. In this paper, we
+use the maximum term IDF value from the aspect to estimate the importance,
+which performs better than using minimum and average IDF values as shown
+in the experiments (i.e., Table <a href="#S5.T6" title="Table 6 ‣ 5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).
+We plan to study other options in the future work.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Discussions</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Both proposed regularization methods can be combined with any existing
+retrieval functions. In this paper, we focus on one of the state of the art
+weighting strategies, i.e., F2-EXP function derived from axiomatic
+retrieval model <cite class="ltx_cite">[<a href="#bib.bib44" title="An exploration of axiomatic approaches to information retrieval" class="ltx_ref">7</a>]</cite>, and
+explain how to incorporate the regularization methods into the function.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">The original F2-EXP retrieval function is shown as follows:</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<table id="S6.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="\displaystyle S(Q,D)=\sum_{e\in Q\cap D}c(e,Q)\cdot(\frac{N}{df(e)})^{0.35}%&#10;\cdot\frac{c(e,D)}{c(e,D)+b+\frac{b\times|D|}{avdl}}" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>e</mi><mo>∈</mo><mrow><mi>Q</mi><mo>∩</mo><mi>D</mi></mrow></mrow></munder></mstyle><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow><mo>⋅</mo><msup><mrow><mo>(</mo><mstyle displaystyle="true"><mfrac><mi>N</mi><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>)</mo></mrow><mn>0.35</mn></msup><mo>⋅</mo><mstyle displaystyle="true"><mfrac><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mi>b</mi><mo>+</mo><mfrac><mrow><mi>b</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></mrow><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>l</mi></mrow></mfrac></mrow></mfrac></mstyle></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p3.m1" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> is a parameter control the weight of the document length normalization.</p>
+</div>
+<div id="S4.SS4.p4" class="ltx_para">
+<p class="ltx_p">With the unified concept weighting regularization, the revised function
+based on F2-EXP function, i.e., <span class="ltx_text ltx_font_italic">Unified</span>, is shown as follows:</p>
+</div>
+<div id="S4.SS4.p5" class="ltx_para">
+<table id="S6.EGx3" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="\displaystyle S(Q,D)\!=\!\!\!\!\sum_{e\in Q\cap D}\!\!\!c_{mod}(e,Q)\!\cdot\!(%&#10;\frac{N}{df(t)})^{0.35}\!\cdot\!\frac{c_{mod}(e,D)}{c_{mod}(e,D)\!+\!b\!+\!%&#10;\frac{b\times|D|}{avdl}}" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0pt">=</mo><mrow><mpadded width="-5.1pt"><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>e</mi><mo>∈</mo><mrow><mi>Q</mi><mo>∩</mo><mi>D</mi></mrow></mrow></munder></mstyle></mpadded><mrow><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0.8pt">⋅</mo><mpadded width="-1.7pt"><msup><mrow><mo>(</mo><mstyle displaystyle="true"><mfrac><mi>N</mi><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>)</mo></mrow><mn>0.35</mn></msup></mpadded><mo rspace="0.8pt">⋅</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0.8pt">+</mo><mpadded width="-1.7pt"><mi>b</mi></mpadded><mo rspace="0.8pt">+</mo><mfrac><mrow><mi>b</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></mrow><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>l</mi></mrow></mfrac></mrow></mfrac></mstyle></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS4.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p6.m1" class="ltx_Math" alttext="c_{mod}(e,D)" display="inline"><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p6.m2" class="ltx_Math" alttext="c_{mod}(e,Q)" display="inline"><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></math> denote the modified occurrences
+as shown in Equation (<a href="#S4.E1" title="(1) ‣ 4.2 Unified concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). It can be shown that this function
+satisfies the unified constraint but violates the balanced constraint.</p>
+</div>
+<div id="S4.SS4.p7" class="ltx_para">
+<p class="ltx_p">Following the similar strategy used in the previous study <cite class="ltx_cite">[<a href="#bib.bib36" title="Query aspect based term weighting regularization in information retrieval" class="ltx_ref">28</a>]</cite>,
+we can further incorporate the regularization function proposed in
+Equation (<a href="#S4.E3" title="(3) ‣ 4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) to the above function to make it satisfy
+the balanced constraint as follows:</p>
+</div>
+<div id="S4.SS4.p8" class="ltx_para">
+<table id="S6.EGx4" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\displaystyle S(Q,D)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m3" class="ltx_Math" alttext="\displaystyle\!\sum_{e\in Q\cap D}\!\!\!c_{mod}(e,Q)\!\cdot\!(\frac{N}{df(t)})%&#10;^{0.35}\!\cdot\!f(e,Q)" display="inline"><mrow><mpadded width="-5.1pt"><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>e</mi><mo>∈</mo><mrow><mi>Q</mi><mo>∩</mo><mi>D</mi></mrow></mrow></munder></mstyle></mpadded><mrow><mrow><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0.8pt">⋅</mo><mpadded width="-1.7pt"><msup><mrow><mo>(</mo><mstyle displaystyle="true"><mfrac><mi>N</mi><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>)</mo></mrow><mn>0.35</mn></msup></mpadded><mo rspace="0.8pt">⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m3" class="ltx_Math" alttext="\displaystyle\cdot\!\frac{c_{mod}(e,D)}{c_{mod}(e,D)\!+\!b\!+\!\frac{b\times|D%&#10;|}{avdl}}" display="inline"><mrow><mi/><mo rspace="0.8pt">⋅</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><msub><mi>c</mi><mrow><mi>m</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>D</mi></mrow><mo>)</mo></mrow></mrow><mo rspace="0.8pt">+</mo><mpadded width="-1.7pt"><mi>b</mi></mpadded><mo rspace="0.8pt">+</mo><mfrac><mrow><mi>b</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></mrow><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>l</mi></mrow></mfrac></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS4.p9" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p9.m1" class="ltx_Math" alttext="f(e,Q)" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></math> is the newly proposed regularization function as shown in Equation (<a href="#S4.E3" title="(3) ‣ 4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+This method is denoted as <span class="ltx_text ltx_font_italic">Balanced</span>, and can be shown that it satisfies both constraints.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of collections.</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small"># of unique tokens</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">AvgDL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">AvgQL11</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">AvgQL12</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Term</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">263,356</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2,659</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.82</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Concept</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">58,192</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2,673</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">7.81</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.T2" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Description of Methods</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Name</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Representation</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Ranking strategies</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Term-BL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Term</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">F2-EXP (i.e., Equation (</span><a href="#S4.E4" title="(4) ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a><span class="ltx_text ltx_font_small">))</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Concept-BL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Concept (i.e., Section </span><a href="#S3.SS3" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a><span class="ltx_text ltx_font_small">)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F2-EXP (i.e., Equation (</span><a href="#S4.E4" title="(4) ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a><span class="ltx_text ltx_font_small">))</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">TSConcept-BL</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Task specific concept (</span><cite class="ltx_cite"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a><span class="ltx_text ltx_font_small">]</span></cite><span class="ltx_text ltx_font_small">)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F2-EXP (i.e., Equation (</span><a href="#S4.E4" title="(4) ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a><span class="ltx_text ltx_font_small">))</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Unified</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Concept (i.e., Section </span><a href="#S4.SS2" title="4.2 Unified concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a><span class="ltx_text ltx_font_small">)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">F2-EXP + Unified (i.e., Equation (</span><a href="#S4.E5" title="(5) ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a><span class="ltx_text ltx_font_small">))</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Concept (i.e., Section </span><a href="#S4.SS3" title="4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a><span class="ltx_text ltx_font_small">)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F2-EXP + Balanced (i.e., Equation (</span><a href="#S4.Ex1" title="(6) ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a><span class="ltx_text ltx_font_small">))</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.T3" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Performance under optimized parameter settings</div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med12</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAP</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">bpref</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">infNDCG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">infAP</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Term-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.3474</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">0.4727</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.4695</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.2106</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Concept-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.3967</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.5476</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5243</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.2497</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">TSConcept-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.3964</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.5329</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5283</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.2694</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Unified</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="0.4235^{T}" display="inline"><msup><mn>0.4235</mn><mi>T</mi></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="0.5443^{T}" display="inline"><msup><mn>0.5443</mn><mi>T</mi></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="0.5416^{T}" display="inline"><msup><mn>0.5416</mn><mi>T</mi></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="0.2586^{T}" display="inline"><msup><mn>0.2586</mn><mi>T</mi></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m5" class="ltx_Math" alttext="\mathbf{0.4561^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.4561</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m6" class="ltx_Math" alttext="\mathbf{0.5697^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.5697</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m7" class="ltx_Math" alttext="\mathbf{0.5767^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.5767</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m8" class="ltx_Math" alttext="\mathbf{0.2859^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.2859</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.T4" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Testing Performance</div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Trained on</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med12</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med11</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Tested on</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Med12</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Measures</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAP</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">bpref</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">infNDCG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">infAP</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Term-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.3451</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">0.4682</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.4640</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.2040</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Concept-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.3895</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.5394</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5194</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.2441</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">TSConcept-BL</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.3901</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.5286</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5208</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.2662</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Unified</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="0.4176^{T,C}" display="inline"><msup><mn>0.4176</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="0.5391^{T}" display="inline"><msup><mn>0.5391</mn><mi>T</mi></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="0.5346^{T}" display="inline"><msup><mn>0.5346</mn><mi>T</mi></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="0.2514^{T}" display="inline"><msup><mn>0.2514</mn><mi>T</mi></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m5" class="ltx_Math" alttext="\mathbf{0.4497^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.4497</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m6" class="ltx_Math" alttext="\mathbf{0.5627^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.5627</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m7" class="ltx_Math" alttext="\mathbf{0.5736^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.5736</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m8" class="ltx_Math" alttext="\mathbf{0.2811^{\mathit{T,C,TS}}}" display="inline"><msup><mn mathvariant="bold">0.2811</mn><mrow><mi>T</mi><mo>,</mo><mi>C</mi><mo>,</mo><mi>𝑇𝑆</mi></mrow></msup></math></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Experiment Setup</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments using two data sets from the TREC
+Medical Records track 2011 and 2012. The data sets are denoted as <span class="ltx_text ltx_font_italic">Med11</span>
+and <span class="ltx_text ltx_font_italic">Med12</span>. Both data sets used the same document collection
+with 100,866 medical records, each of which is associated with a unique
+patient visit to the hospital or emergency department. Since the task is
+to retrieve relevant visits, we merged all the records from a visit to form
+a single document for the visit, which leads to 17,198 documents in the collection.
+There are 34 queries in <span class="ltx_text ltx_font_italic">Med11</span>
+and 47 in <span class="ltx_text ltx_font_italic">Med12</span>.
+These queries were developed by domain experts based on the “inclusion
+criteria” of a clinical study <cite class="ltx_cite">[<a href="#bib.bib46" title="Overview of the TREC 2011 Medical Records Track" class="ltx_ref">25</a>, <a href="#bib.bib47" title="Overview of the TREC 2012 Medical Records Track" class="ltx_ref">24</a>]</cite>.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">After applying MetaMap to both documents and queries, we can construct a concept-based
+collection.
+Since documents are often much longer, we can first segment them into sentences,
+get the mapping results for each sentence, and then merge
+them together to generate the concept-based representation for
+the documents.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T1" title="Table 1 ‣ 4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> compares the statistics of the term-based and the concept-based collections,
+including the number of unique tokens in the collection (i.e., the number of terms for term-based representation
+and the number of concepts for concept-based representation), the average number of tokens in the documents (AvgDL)
+and the average number of tokens in the queries for these two collections (AvgQL11 and
+AvgQL12).
+It is interesting to see that the number of unique tokens is much smaller when using the concept-based indexing.
+This is expected since terms are semantically related and a group of related terms would be
+mapped to one semantic concept. Moreover, we observe that the document length
+and query length are similar for both collections. This is caused by the
+fact that concepts are related and the MetaMap would map an aspect
+to multiple related concepts.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> summarizes the methods that we compare in
+the experiments.
+Following the evaluation methodology used in the medical record track,
+we use MAP@1000 as the primary measure for <span class="ltx_text ltx_font_italic">Med11</span> and also report bpref. For <span class="ltx_text ltx_font_italic">Med12</span>, we take infNDCG@100 as the primary
+measure and also report infAP@100. Different measures were
+chosen for these two sets mainly because
+different pooling strategies were used to create the judgment pools
+<cite class="ltx_cite">[<a href="#bib.bib47" title="Overview of the TREC 2012 Medical Records Track" class="ltx_ref">24</a>]</cite>.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Performance Comparison</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the performance under optimized parameter settings
+for all the methods over both data sets. The performance is optimized in terms
+of MAP in <span class="ltx_text ltx_font_italic">Med11</span>, and infNDCG in <span class="ltx_text ltx_font_italic">Med12</span>, respectively.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> are tuned from 0 to 1 with the step 0.1.
+Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="{}^{T}" display="inline"><msup><mi/><mi>T</mi></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="{}^{C}" display="inline"><msup><mi/><mi>C</mi></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m5" class="ltx_Math" alttext="{}^{TS}" display="inline"><msup><mi/><mrow><mi>T</mi><mo>⁢</mo><mi>S</mi></mrow></msup></math> indicate improvement over Term-BL, Concept-BL
+and TSConcept-BL is statistically significant at 0.05 level based on Wilcoxon
+signed-rank test, respectively.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Results show that <span class="ltx_text ltx_font_italic">Balanced</span> method can significantly improve the
+retrieval performance over both collections. <span class="ltx_text ltx_font_italic">Unified</span> method
+outperforms the baseline methods in terms of the primary measure on both
+collections, although it fails to improve the infAP on <span class="ltx_text ltx_font_italic">Med12</span> for
+one baseline method. It is not surprising to see that <span class="ltx_text ltx_font_italic">Balanced</span> method
+is more effective than <span class="ltx_text ltx_font_italic">Unified</span> since the former satisfies both of the
+proposed retrieval constraints while the latter satisfies only one.
+Finally, we noticed that the performance difference between
+TSConcept-BL and Concept-BL is not as significant as the ones reported in the
+previous study <cite class="ltx_cite">[<a href="#bib.bib11" title="A task-specific query and document representation for medical records search" class="ltx_ref">12</a>]</cite>, which is probably caused by
+the difference of problem set up (i.e., record-level vs. visit-level as discussed
+in Section <a href="#S3.SS1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>).</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">We also conduct experiments to train parameters on one collection and compare
+the testing performance on the other collection. The results are summarized
+in Table <a href="#S5.T4" title="Table 4 ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Clearly, <span class="ltx_text ltx_font_italic">Balanced</span> is still the most
+effective regularization method. The testing performance is very close
+to the optimal performance, which indicates that the proposed methods are robust
+with respect to the parameter setting.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">Moreover, we would like to point out that the testing performance of <span class="ltx_text ltx_font_italic">Balanced</span>
+is comparable to the top ranked runs from the TREC Medical records track.
+For example, the performance of the best automatic system in <span class="ltx_text ltx_font_italic">Med11</span>
+(e.g., CengageM11R3) is 0.552 in terms of bpref, while the performance of the best
+automatic system in <span class="ltx_text ltx_font_italic">Med12</span> (e.g., udelSUM) is 0.578 in terms
+of infNDCG. Note that the top system of <span class="ltx_text ltx_font_italic">Med12</span> used multiple external resources such
+as Wikipedia and Web, while we did not use such resources.
+Moreover, our performance might be
+further improved if we apply the result filtering methods used by many TREC participants
+<cite class="ltx_cite">[<a href="#bib.bib51" title="DCU@TRECMed 2012: Using adhoc Baselines for Domain-Specific Retrieval" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>Selecting representative concepts</div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MAP</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">bpref</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Unified (i.e., Unified-max)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.4235</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.5443</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Unified-min</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.3894</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.5202</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Unified-avg</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.4164</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5303</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.T6" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span>Estimating query aspect importance</div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MAP</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">bpref</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced (i.e., Balanced-max)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.4561</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.5697</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced-min</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.4216</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.5484</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced-avg</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.4397</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5581</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.T7" class="ltx_table">
+<div class="ltx_caption ltx_centering ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 7: </span>Regularization components in <span class="ltx_text ltx_font_italic">Balanced</span></div>
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">MAP</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">bpref</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Balanced</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.4561</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.5697</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Confidence only</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.4294</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.5507</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Importance only</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.4373</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.5598</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>More Analysis</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">In the <span class="ltx_text ltx_font_italic">Unified</span> method, we chose the concept with the maximum IDF as the representative
+concept among all the variants. We now conduct experiments on <span class="ltx_text ltx_font_italic">Med11</span> to compare its performance
+with those of using average IDF and minimum IDF ones as the representative concept.
+The results are shown in Table <a href="#S5.T5" title="Table 5 ‣ 5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. It is clear that using maximum IDF is
+the best choice, which is consistent with our observation from the data exploratory
+analysis shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">In the <span class="ltx_text ltx_font_italic">Balanced</span> method, we used the maximum IDF value to estimate the query importance.
+We also conduct experiments to compare its performance with those using the minimum and
+average IDF values. Table <a href="#S5.T6" title="Table 6 ‣ 5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> summarizes the results, and shows that using
+the maximum IDF value performs better than the other choices.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">As shown in Equation (<a href="#S4.E3" title="(3) ‣ 4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), the <span class="ltx_text ltx_font_italic">Balanced</span> method regularizes the
+weights through two components: (1) normalized confidence score of each aspect,
+i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p3.m1" class="ltx_Math" alttext="\frac{\sum_{e^{\prime}\in Q}i(e^{\prime})}{\sum_{e^{\prime\prime}\in\mathcal{A%&#10;}(e)}i(e^{\prime\prime})}" display="inline"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mi>Q</mi></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mi>′′</mi></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mrow></msub><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>e</mi><mi>′′</mi></msup><mo>)</mo></mrow></mrow></mrow></mfrac></math>;
+and (2) the importance of the query aspect, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p3.m2" class="ltx_Math" alttext="Imp_{A}(\mathcal{A}(e))" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><msub><mi>p</mi><mi>A</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>.
+To examine the effectiveness of each component, we conduct experiments using
+the modified <span class="ltx_text ltx_font_italic">Balanced</span> method with only one of the components.
+The results are shown in Table <a href="#S5.T7" title="Table 7 ‣ 5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+It is clear that both components are essential to improve the retrieval
+performance.</p>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="P14-1057/image005.png" id="S5.F3.g1" class="ltx_graphics ltx_centering" width="677" height="227" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span> Improvement of proposed methods (Compared with the Concept-BL method).</div>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Finally, we report the performance improvement of the proposed methods
+over the <span class="ltx_text ltx_font_italic">Concept-BL</span> for each query in Figure <a href="#S5.F3" title="Figure 3 ‣ 5.3 More Analysis ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+Clearly, both of the proposed methods can improve the effectiveness of
+most queries, and the <span class="ltx_text ltx_font_italic">Balanced</span> method is more robust than
+the <span class="ltx_text ltx_font_italic">Unified</span> method.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Medical record retrieval is an important domain-specific IR problem.
+Concept-based representation is an effective approach to dealing with
+ambiguity terminology in medical domain. However, the results of the
+NLP tools used to generate the concept-based representation are often
+not perfect. In this paper, we present a general methodology that
+can use axiomatic approaches as guidance to regularize the concept
+weighting strategies to address the limitations caused by the inaccurate
+concept mapping and improve the retrieval performance.
+In particular, we proposed two weighting regularization methods based
+on the relations among concepts. Experimental results show that the proposed
+methods can significantly outperform existing retrieval functions.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">There are many interesting directions for our future work.
+First, we plan to study how to automatically predict whether to use concept-based
+indexing based on the quality of MetaMap results, and explore whether
+the proposed methods are applicable for other entity linking methods.
+Second, we will study how to leverage other information from knowledge bases to
+further improve the performance.
+Third, more experiments could be conducted to examine the effectiveness of the
+proposed methods when using other ranking strategies.
+Finally, it would be interesting to study how to
+follow the proposed methodology to study other domain-specific IR problems.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Amati and C. J. Van Rijsbergen</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic models of information retrieval based on measuring the divergence from randomness</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM TOIS.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. R. Aronson and F. Lang</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An overview of metamap: historical perspective and recent advances</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">JAMIA</span> <span class="ltx_text ltx_bib_volume">17</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 229–236</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. R. Aronson</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effective mapping of biomedical text to the UMLS Metathesaurus: the MetaMap program.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Background: UMLS and MetaMap ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. M. I. Corporation</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ICD-9-CM: International Classification of Diseases, 9th Revision, Clinical Modification, 5th Edition</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Practice Management Information Corporation</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 9781570661501</span>,
+<a href="http://books.google.com/books?id=SNziAAAAMAAJ" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Demner-Fushman, S. Abhyankar, A. Jimeno-Yepes, R. Loane, F. Lang, J. G. Mork, N. Ide and A. R. Aronson</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NLM at TREC 2012 Medical Records Track</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Fang, T. Tao and C. Zhai</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A formal study of information retrieval heuristics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p9" title="4.2 Unified concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Fang and C. Zhai</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An exploration of axiomatic approaches to information retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p3" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S4.SS1.p6" title="4.1 Motivation ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS4.p1" title="4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. P. Friedman, A. K. Wong and D. Blumenthal</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Achieving a nationwide learning health system</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Science Translational Medicine</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Koopman, M. Lawley and P. Bruza</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">AEHRC &amp; QUT at TREC 2011 Medical Track : a concept-based information retrieval approach</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Koopman, G. Zuccon, A. Nguyen, D. Vickers, L. Butt and P. D. Bruza</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting SNOMED CT Concepts &amp; Relationships for Clinical Information Retrieval: Australian e-Health Research Centre and Queensland University of Technology at the TREC 2012 Medical Track</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Leveling, L. Goeuriot, L. Kelly and G. J. F. Jones</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DCU@TRECMed 2012: Using adhoc Baselines for Domain-Specific Retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p4" title="5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Limsopatham, C. Macdonald and I. Ounis</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A task-specific query and document representation for medical records search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Proceedings of ECIR’13</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.SS2.p2" title="5.2 Performance Comparison ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Limsopatham, C. Macdonald and I. Ounis</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inferring conceptual relationships to improve medical records search</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Limsopatham, C. Macdonald and I. Ounis</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to combine representations for medical records search</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Limsopatham, C. Macdonald and I. Ounis</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to selectively rank patients’ medical history</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lin and D. Demner-Fushman</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The role of knowledge in conceptual retrieval: a study in the domain of clinical medicine</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’06</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 99–106</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-59593-369-7</span>,
+<a href="http://doi.acm.org/10.1145/1148170.1148191" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1148170.1148191" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. E. Lipscomb</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Medical Subject Headings (MeSH)</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Medical Library Association</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. Manning, P. Raghavan and H. Schutze</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="4.1 Motivation ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Motivation ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. T. McInnes, T. Pedersen and S. V. S. Pakhomov</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">UMLS-Interface and UMLS-Similarity : Open Source Software for Measuring Paths and Semantic Similarity</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Qi and P. Laquerre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Retrieving Medical Records: NEC Labs America at TREC 2012 Medical Record Track</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S.E. Robertson, S. Walker, S. Jones, M.M. Hancock-Beaulieu and M. Gatford</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Okapi at TREC-3</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 109–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p3" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Safran, M. Bloomrosen, W. E. Hammond, S. Labkoff, S. Markel-Fox, P. C. Tang and D. E. Detmer</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">White paper: toward a national framework for the secondary use of health data: an american medical informatics association white paper</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">JAMIA</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Singhal, C. Buckley and M. Mitra</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Pivoted document length normalization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p3" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. M. Voorhees and W. Hersh</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the TREC 2012 Medical Records Track</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Experiment Setup ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS1.p4" title="5.1 Experiment Setup ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. M. Voorhees and R. M. Tong</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the TREC 2011 Medical Records Track</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Experiment Setup ‣ 5 Experiments ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Yan, R. Y.K. Lau, D. Song, X. Li and J. Ma</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Toward a semantic granularity model for domain-specific information retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM TOIS</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Zhai and J. Lafferty</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study of smoothing methods for language models applied to Ad Hoc information retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p3" title="3.3 Concept-based Representation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Zheng and H. Fang</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Query aspect based term weighting regularization in information retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p3" title="4.3 Balanced concept weighting regularization ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.p7" title="4.4 Discussions ‣ 4 Weighting Strategies for Concept-based Representation ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Zhou, C. Yu, N. Smalheiser, V. Torvik and J. Hong</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Knowledge-intensive conceptual retrieval and passage extraction of biomedical literature</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Zhu and B. Carterette</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining multi-level evidence for medical record retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Problem Formulation ‣ 3 Concept-based Representation for Medical Records Retrieval ‣ A Study of Concept-based Weighting Regularization  for Medical Records Search" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:58:56 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

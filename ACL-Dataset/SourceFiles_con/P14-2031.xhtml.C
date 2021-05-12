@@ -1,0 +1,524 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Automatically Detecting Corresponding Edit-Turn-Pairs in Wikipedia.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       In this study, we analyze links between edits in Wikipedia articles and turns from their discussion page.
+Our motivation is to better understand implicit details about the writing process and knowledge flow in collaboratively created resources.
+Based on properties of the involved edit and turn, we have defined constraints for corresponding edit-turn-pairs.
+We manually annotated a corpus of 636 corresponding and non-corresponding edit-turn-pairs.
+Furthermore, we show how our data can be used to automatically identify corresponding edit-turn-pairs.
+With the help of supervised machine learning, we achieve an accuracy of .87 for this task.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The process of user interaction in collaborative writing has been the topic of many studies in recent years
+        [9]
+        .
+Most of the resources used for collaborative writing do not explicitly allow their users to interact directly, so that the implicit effort of coordination behind the actual writing is not documented.
+Wikipedia, as one of the most prominent collaboratively created resources, offers its users a platform to coordinate their writing, the so called talk or discussion pages
+        [18]
+        .
+In addition to that, Wikipedia stores all edits made to any of its pages in a revision history, which makes the actual writing process explicit.
+We argue that linking these two resources helps to get a better picture of the collaborative writing process.
+To enable such interaction, we extract segments from discussion pages, called turns, and connect them to corresponding edits in the respective article.
+Consider the following snippet from the discussion page of the article “Boron” in the English Wikipedia.
+On February 16th of 2011, user
+        JCM83
+        added the
+        turn
+        :
+        [backgroundcolor=gray!30, linewidth=0pt, leftmargin=0, rightmargin=0, skipabove=4pt, skipbelow=3pt, innertopmargin=3pt, innerbottommargin=3pt]
+Shouldn’t borax be wikilinked in the “etymology” paragraph?
+
+Roughly five hours after that turn was issued on the discussion page, user
+        Sbharris
+        added a wikilink to the “History and etymology” section of the article by performing the following
+        edit
+        :
+        [backgroundcolor=gray!30, linewidth=0pt, leftmargin=0, rightmargin=0, skipabove=4pt, skipbelow=3pt, innertopmargin=3pt, innerbottommargin=3pt]
+        ''
+        borax
+        ''
+        →
+        [[borax]]
+
+This is what we define as a corresponding
+        edit-turn-pair
+        .
+More details follow in Section
+        2
+        .
+To the best of our knowledge, this study is the first attempt to detect corresponding edit-turn-pairs in the English Wikipedia fully automatically.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Our motivation for this task is two-fold.
+First, an automatic detection of corresponding edit-turn-pairs in Wikipedia pages might help users of the encyclopedia to better understand the development of the article they are reading.
+Instead of having to read through all of the discussion page which can be an exhausting task for many of the larger articles in the English Wikipedia, users could focus on those discussions that actually had an impact on the article they are reading.
+Second, assuming that edits often introduce new knowledge to an article, it might be interesting to analyze how much of this knowledge was actually generated within the discourse on the discussion page.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The detection of correspondence between edits and turns is also relevant beyond Wikipedia.
+Many companies use Wikis to store internal information and documentation
+        [1]
+        .
+An alignment between edits in the company Wiki and issues discussed in email conversations, on mailing lists, or other forums, can be helpful to track the flow or generation of knowledge within the company.
+This information can be useful to improve communication and knowledge sharing.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In the limited scope of this paper, we will focus on two research questions.
+First, we want to understand the nature of correspondence between Wikipedia article edits and discussion page turns.
+Second, we want to know the distinctive properties of corresponding edit-turn-pairs and how to use these to automatically detect corresponding pairs.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Edit-Turn-Pairs
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In this section, we will define the basic units of our task, namely edits and turns.
+Furthermore, we will explain the kind of correspondence between edits and turns we are interested in.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Edits
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         To capture a fine-grained picture of changes to Wikipedia article pages, we rely on the notion of edits defined in our previous work
+         [6]
+         .
+Edits are coherent modifications based on a pair of adjacent revisions from Wikipedia article pages.
+To calculate edits, a line-based diff comparison between the old revision and the new revision is made, followed by several post-processing steps.
+Each pair of adjacent revisions found in the edit history of an article consists of one or more edits, which describe either inserted, deleted, changed or relocated text.
+Edits are associated with metadata from the revision they belong to, this includes the comment (if present), the user name and the time stamp.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Turns
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         Turns are segments from Wikipedia discussion pages.
+To segment discussion pages into turns, we follow a procedure proposed by
+         Ferschke et al. (2012)
+         .
+With the help of the Java Wikipedia Library
+         [19]
+         , we access discussion pages from a database.
+Discussion pages are then segmented into
+         topics
+         based upon the structure of the page.
+Individual turns are retrieved from topics by considering the revision history of the discussion page.
+This procedure successfully segmented 94 % of all turns in a corpus from the Simple English Wikipedia
+         [11]
+         .
+Along with each turn, we store the name of its user, the time stamp, and the name of the topic to which the turn belongs.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Corresponding Edit-Turn-Pairs
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         An edit-turn-pair is defined as a pair of an edit from a Wikipedia article’s revision history and a turn from the discussion page bound to the same article.
+If an article has no discussion page, there are no edit-turn-pairs for this article.
+A definition of correspondence is not straightforward in the context of edit-turn-pairs.
+         Ferschke et al. (2012)
+         suggest four types of explicit performatives in their annotation scheme for dialog acts of Wikipedia turns.
+Due to their performative nature, we assume that these dialog acts make the turn they belong to a good candidate for a corresponding edit-turn-pair.
+We therefore define an edit-turn-pair as corresponding, if:
+i) The turn is an
+         explicit suggestion, recommendation or request
+         and the edit performs this suggestion, recommendation or request,
+ii) the turn is an
+         explicit reference or pointer
+         and the edit adds or modifies this reference or pointer,
+iii) the turn is a
+         commitment to an action in the future
+         and the edit performs this action, and
+iv) the turn is a
+         report of a performed action
+         and the edit performs this action.
+We define all edit-turn-pairs which do not conform to the upper classification as non-corresponding.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Corpus
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        With the help of Amazon Mechanical Turk
+        , we crowdsourced annotations on a corpus of edit-turn-pairs from 26 random English Wikipedia articles in various thematic categories.
+The search space for corresponding edit-turn-pairs is quite big, as any edit to an article may correspond to any turn from the article’s discussion page.
+Assuming that most edit-turn-pairs are non-corresponding, we expect a heavy imbalance in the class distribution.
+It was important to find a reasonable amount of corresponding edit-turn-pairs before the actual annotation could take place, as we needed a certain amount of positive seeds to keep turkers from simply labeling pairs as non-corresponding all the time.
+In the following, we explain the step-by-step approach we chose to create a suitable corpus for the annotation study.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Filtering
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         We applied various filters to avoid annotating trivial content.
+Based on an automatic classification using the model presented in our previous work
+         [7]
+         , we excluded edits classified as Vandalism, Revert or Other.
+Furthermore, we removed all edits which are part of a revision created by bots, based on the Wikimedia user group
+         scheme.
+To keep the class imbalance within reasonable margins, we limited the time span between edits and turns to 86,000 seconds (about 24 hours).
+The result is a set of 13,331 edit-turn-pairs, referred to as
+         ETP-all
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Preliminary Annotation Study
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         From ETP-all, a set of 262 edit-turn-pairs have been annotated as corresponding as part of a preliminary annotation study with one human annotator.
+This step is intended to make sure that we have a substantial number of corresponding pairs in the data for the final annotation study.
+However, we still expect a certain amount of non-corresponding edit-turn-pairs in this data, as the annotator judged the correspondence based on the entire revision and not the individual edit.
+We refer to this 262 edit-turn-pairs as
+         ETP-unconfirmed
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Mechanical Turk Annotation Study
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         Finally, for the Mechanical Turk annotation study, we selected 500 random edit-turn-pairs from ETP-all excluding ETP-unconfirmed.
+Among these, we expect to find mostly non-corresponding pairs.
+From ETP-unconfirmed, we selected 250 random edit-turn-pairs.
+The resulting 750 pairs have each been annotated by five turkers.
+The turkers were presented the turn text, the turn topic name, the edit in its context, and the edit comment (if present).
+The context of an edit is defined as one preceding and one following paragraph of the edited paragraph.
+Each edit-turn-pair could be labeled as “corresponding”, “non-corresponding” or “can’t tell”.
+To select good turkers and to block spammers, we carried out a pilot study on a small portion of manually confirmed corresponding and non-corresponding pairs, and required turkers to pass a qualification test.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P3.p2">
+        <p class="ltx_p">
+         The average pairwise percentage agreement over all pairs is 0.66.
+This was calculated as
+         1N⁢∑i=1N∑c=1CvicC
+         ,
+where
+         N=750
+         is the overall number of annotated edit-turn-pairs,
+         C=R2-R2
+         is the number of pairwise comparisons,
+         R=5
+         is the number of raters per edit-turn-pair, and
+         vic=1
+         if a pair of raters
+         c
+         labeled edit-turn-pair
+         i
+         equally, and 0 otherwise.
+The moderate pairwise agreement reflects the complexity of this task for non-experts.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P4">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Gold Standard
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P4.p1">
+        <p class="ltx_p">
+         To rule out ambiguous cases, we created the Gold Standard corpus with the help of majority voting.
+We counted an edit-turn-pair as corresponding, if it was annotated as “corresponding” by least three out of five annotators, and likewise for non-corresponding pairs.
+Furthermore, we deleted 21 pairs for which the turn segmentation algorithm clearly failed (e.g. when the turn text was empty).
+This resulted in 128 corresponding and 508 non-corresponsing pairs, or 636 pairs in total.
+We refer to this dataset as
+         ETP-gold
+         .
+To assess the reliability of these annotations, one of the co-authors manually annotated a random subset of 100 edit-turn-pairs contained in ETP-gold as corresponding or non-corresponding.
+The inter-rater agreement between ETP-gold (majority votes over Mechanical Turk annotations) and our expert annotations on this subset is Cohen’s
+         κ=.72
+         .
+We consider this agreement high enough to draw conclusions from the annotations
+         [2]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P4.p2">
+        <p class="ltx_p">
+         Obviously, this is a fairly small dataset which does not cover a representative sample of articles from the English Wikpedia.
+However, given the high price for a new corresponding edit-turn-pair (due to the high class imbalance in random data), we consider it as a useful starting point for research on edit-turn-pairs in Wikipedia.
+We make ETP-gold freely available.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P4.p3">
+        <p class="ltx_p">
+         As shown in Figure
+         1
+         , more than 50% of all corresponding edit-turn-pairs in ETP-gold occur within a time span of less than one hour.
+In our 24 hours search space, the probability to find a corresponding edit-turn-pair drops steeply for time spans of more than 6 hours.
+We therefore expect to cover the vast majority of corresponding edit-turn-pairs within a search space of 24 hours.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Machine Learning with Edit-Turn-Pairs
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We used DKPro TC
+        [5]
+        to carry out the machine learning experiments on edit-turn-pairs.
+For each edit, we stored both the edited paragraph and its context from the old revision as well as the edited paragraph and context from the new revision.
+We used Apache OpenNLP
+        for the segmentation of edit and turn text.
+Training and testing the classifier has been carried out with the help of the Weka Data Mining Software
+        [12]
+        .
+We used the Sweble parser
+        [8]
+        to remove Wiki markup.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Features
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         In the following, we list the features extracted from preprocessed edits and turns.
+The
+         edit text
+         is composed of any inserted, deleted or relocated text from both the old and the new revision.
+The
+         edit context
+         includes the edited paragraph and one preceding and one following paragraph.
+The
+         turn text
+         includes the entire text from the turn.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Similarity between turn and edit text
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P1.p1">
+         <p class="ltx_p">
+          We propose a number of features which are purely based on the textual similarity between the text of the turn, and the edited text and context.
+We used the cosine similarity, longest common subsequence, and word n-gram similarity measures.
+Cosine similarity was applied on binary weighted term vectors (
+          L2
+          norm).
+The word n-gram measure
+          [15]
+          calculates a Jaccard similarity coefficient on trigrams.
+Similarity has been calculated between
+i) the plain edit text and the turn text,
+ii) the edit and turn text after any wiki markup has been removed,
+iii) the plain edit context and turn text, and
+iv) the edit context and turn text after any wiki markup has been removed.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Based on metadata of edit and turn
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p1">
+         <p class="ltx_p">
+          Several of our features are based on metadata from both the edit and the turn.
+We recorded whether the name of the edit user and the turn user are equal,
+the absolute time difference between the turn and the edit, and
+whether the edit occurred before the turn.
+Cosine similarity, longest common subsequence, and word n-gram similarity were also applied to measure the similarity between the edit comment and the turn text as well as the similarity between the edit comment and the turn topic name.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P3">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Based on either edit or turn
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P3.p1">
+         <p class="ltx_p">
+          Some features are based on the edit or the turn alone and do not take into account the pair itself.
+We recorded whether the edit is an insertion, deletion, modification or relocation.
+Furthermore, we measured the length of the edit text and the length of the turn text.
+The 1,000 most frequent uni-, bi- and trigrams from the turn text are represented as binary features.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Classification Experiments
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We treat the automatic classification of edit-turn-pairs as a binary classification problem.
+Given the small size of ETP-gold, we did not assign a fixed train/test split to the data.
+For the same reason, we did not further divide the data into train/test and development data.
+Rather, hyperparameters were optimized using grid-search over multiple cross-validation experiments, aiming to maximize accuracy.
+To deal with the class imbalance problem, we applied cost-sensitive classification.
+In correspondence with the distribution of class sizes in the training data, the cost for false negatives was set to 4, and for false positives to 1.
+A reduction of the feature set as judged by a
+         χ2
+         ranker improved the results for both Random Forest as well as the SVM, so we limited our feature set to the 100 best features.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         In a 10-fold cross-validation experiment, we tested a Random Forest classifier
+         [3]
+         and an SVM
+         [16]
+         with polynomial kernel.
+Previous work
+         [11, 4]
+         has shown that these algorithms work well for edit and turn classification.
+As baseline, we defined a majority class classifier, which labels all edit-turn-pairs as non-corresponding.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Discussion and Error Analysis
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         The classification results for the above configuration are displayed in Table
+         1
+         .
+Due to the high class imbalance in the data, the majority class baseline sets a challenging accuracy score of .80.
+Both classifiers performed significantly better than the baseline (non-overlapping confidence intervals, see Table
+         1
+         ).
+With an overall macro-averaged F1 of .79, Random Forest yielded the best results, both with respect to precision as well as recall.
+The low F1 on corresponding pairs is likely due to the small number of training examples.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         To understand the mistakes of the classifier, we manually assessed error patterns within the model of the Random Forest classifier.
+Some of the false positives (i.e. non-corresponding pairs classified as corresponding)
+were caused by pairs where the revision (as judged by its comment or the edit context) is related to the turn text, however the specific edit in this pair is not.
+This might happen, when somebody corrects a spelling error in a paragraph that is heavily disputed on the discussion page.
+Among the false negatives, we found errors caused by a missing direct textual overlap between edit and turn text.
+In these cases, the correspondence was indicated only (if at all) by some relationship between turn text and edit comment.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Besides the work by
+        Ferschke et al. (2012)
+        which is the basis for our turn segmentation, there are several studies dedicated to discourse structure in Wikipedia.
+        Viégas et al. (2007)
+        propose 11 dimensions to classify discussion page turns.
+The most frequent dimensions in their sample are requests for coordination and requests for information.
+Both of these may be part of a corresponding edit-turn-pair, according to our definition in Section
+        2
+        .
+A subsequent study
+        [17]
+        adds more dimensions, among these an explicit category for references to article edits.
+This dimension accounts for roughly 5 to 10% of all turns.
+        Kittur and Kraut (2008)
+        analyze correspondence between article quality and activity on the discussion page.
+Their study shows that both implicit coordination (on the article itself) and explicit coordination (on the discussion page of the article) play important roles for the improvement of article quality.
+In the present study, we have analyzed cases where explicit coordination lead to implicit coordination and vice versa.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Kaltenbrunner and Laniado (2012)
+        analyze the development of discussion pages in Wikipedia with respect to time and compare dependences between edit peaks in the revision history of the article itself and the respective discussion page.
+They find that the development of a discussion page is often bound to the topic of the article, i.e. articles on time-specific topics such as events grow much faster than discussions about timeless, encyclopedic content.
+Furthermore, they observed that the edit peaks in articles and their discussion pages are mostly independent.
+This partially explains the high number of non-corresponding edit-turn-pairs and the consequent class imbalance.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        While there are several studies which analyze the high-level relationship between discussion and edit activity in Wikipedia articles, very few have investigated the correspondence between edits and turns on the textual level.
+Among the latter,
+        Ferron and Massa (2014)
+        analyze 88 articles and their discussion pages related to traumatic events.
+In particular, they find a correlation between the article edits and their discussions around the anniversaries of the events.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

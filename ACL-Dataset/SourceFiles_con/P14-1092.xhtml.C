@@ -1,0 +1,807 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Discourse Complements Lexical Semanticsfor Non-factoid Answer Reranking.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We propose a robust answer reranking model for non-factoid questions that integrates lexical semantics with discourse information, driven by two representations of discourse: a shallow representation centered around discourse markers, and a deep one based on Rhetorical Structure Theory.
+We evaluate the proposed model on two corpora from different genres and domains: one from Yahoo! Answers and one from the biology domain, and two types of non-factoid questions: manner and reason. We experimentally demonstrate that the discourse structure of non-factoid answers provides information that is complementary to lexical semantic similarity between question and answer, improving performance up to 24% (relative) over a state-of-the-art model that exploits lexical semantic similarity alone. We further demonstrate excellent domain transfer of discourse information, suggesting these discourse features have general utility to non-factoid question answering.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Driven by several international evaluations and workshops such as the Text
+REtrieval Conference (TREC)
+        and the Cross Language Evaluation Forum (CLEF),
+        the task of question answering (QA) has received considerable attention. However, most of this effort has focused on factoid questions rather than more complex non-factoid (NF) questions, such as manner, reason, or causation questions. Moreover, the vast majority of QA models explore only
+local linguistic structures, such as syntactic dependencies or semantic role frames, which are generally restricted to individual sentences. This is problematic for NF QA, where questions are answered
+not by atomic facts, but
+by larger cross-sentence conceptual structures that convey the desired answers. Thus, to answer NF questions, one needs a model of what these answer structures look like.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Driven by this observation, our main hypothesis is that the discourse structure of NF answers provides complementary information to state-of-the-art QA models that measure the similarity (either lexical and/or semantic) between question and answer.
+We propose a novel answer reranking (AR) model that combines lexical semantics (LS) with discourse information, driven by two representations of discourse: a shallow representation centered around discourse markers and surface text information, and a deep one based on the Rhetorical Structure Theory (RST) discourse framework
+        [7]
+        .
+To the best of our knowledge, this work is the first to systematically explore within- and cross-sentence structured discourse features for NF AR. The contributions of this work are:
+       </p>
+       <ol class="ltx_enumerate" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We demonstrate that modeling discourse is greatly beneficial for NF AR for two types of NF questions, manner (
+           “how”
+           ) and reason (
+           “why”
+           ), across two large datasets from different genres and domains – one from the community question-answering (CQA) site of Yahoo! Answers
+           , and one from a biology textbook.
+Our results show statistically significant improvements of up to 24% on top of state-of-the-art LS models
+           [22]
+           .
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We demonstrate that both shallow and deep discourse representations are useful, and, in general, their combination performs best.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           We show that discourse-based QA models using inter-sentence features considerably outperform single-sentence models when answers span multiple sentences.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          4.
+         </span>
+         <div class="ltx_para" id="I1.i4.p1">
+          <p class="ltx_p">
+           We demonstrate good domain transfer performance between these corpora, suggesting that answer discourse structures are largely independent of domain, and thus broadly applicable to NF QA.
+          </p>
+         </div>
+        </li>
+       </ol>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The body of work on factoid QA is too broad to be discussed here (see, e.g., the TREC workshops for an overview). However, in the context of LS, Yih et al.
+        [22]
+        recently addressed the problem of answer sentence selection and demonstrated that LS models, including recurrent neural network language models (RNNLM), have a higher contribution to overall performance than exploiting syntactic analysis. We extend this work by showing that discourse models coupled with LS achieve the best performance for NF AR.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The related work on NF QA is considerably more scarce, but several trends are clear. First, most NF QA approaches tend to use multiple similarity models (information retrieval or alignment) as features in discriminative rerankers
+        [16, 5, 19, 17]
+        .
+Second, and more relevant to this work, all these approaches focus either on bag-of-word representations or linguistic structures that are restricted to single sentences (e.g., syntactic dependencies, semantic roles, or standalone discourse cue phrases).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Answering
+        how
+        questions using a single discourse marker,
+        by
+        , was previously explored by Prager et al.
+        [14]
+        , who searched for
+        by
+        followed by a present participle (e.g.
+        by *ing
+        ) to elevate answer candidates in a ranking framework. Verberne et al.
+        [20]
+        extracted 47 cue phrases such as
+        because
+        from a small collection of web documents, and used the cosine similarity between an answer candidate and a bag of words containing these cue phrases as a single feature in their reranking model for non-factoid
+        why
+        QA. Extending this, Oh et al.
+        [12]
+        built a classifier to identify causal relations using a small set of cue phrases (e.g.,
+        because
+        and
+        is caused by
+        ). This classifier was then used to extract instances of causal relations in answer candidates, which were turned into features in a reranking model for Japanense
+        why
+        QA.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        In terms of discourse parsing, Verberne et al.
+        [18]
+        conducted an initial evaluation of the utility of RST structures to
+        why
+        QA by evaluating performance on a small sample of seven WSJ articles drawn from the RST Treebank
+        [1]
+        . They later concluded that while discourse parsing appears to be useful for QA, automated discourse parsing tools are required before this approach can be tested at scale
+        [19]
+        .
+Inspired by this previous work and recent work in discourse parsing
+        [3]
+        , our work is the first to systematically explore structured discourse features driven by several discourse representations, combine discourse with lexical semantic models, and evaluate these representations on thousands of questions using both in-domain and cross-domain experiments.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Approach
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        The proposed answer reranking component is embedded in the QA framework illustrated in Figure
+        1
+        .
+This framework functions in two distinct scenarios, which use the same AR model, but differ in the way candidate answers are retrieved:
+       </p>
+       <p class="ltx_p ltx_align_left">
+        CQA:
+       </p>
+       <p class="ltx_p">
+        In this scenario, the task is defined as reranking all the user-posted answers for a particular question to boost the community-selected best answer to the top position. This is a commonly used setup in the CQA community
+        [21]
+        .
+        Thus, for a given question, all its answers are fetched from the answer collection, and an initial ranking is constructed based on the cosine similarity between theirs and the question’s lemma vector representations, with lemmas weighted using
+        tf.idf
+        (Ch. 6,
+        [8]
+        ).
+       </p>
+       <p class="ltx_p ltx_align_left">
+        Traditional QA:
+       </p>
+       <p class="ltx_p">
+        In this scenario answers are dynamically constructed from larger documents
+        [13]
+        .
+We use this setup to answer questions from a biology textbook, where each section is indexed as a standalone document, and
+each paragraph in a given document is considered as a candidate answer.
+We implemented the document indexing and retrieval stage using Lucene
+        . The candidate answers are scored using a linear interpolation of two cosine similarity scores: one between the entire parent document and question (to model global context), and a second between the answer candidate and question (for local context).
+        Because the number of answer candidates is typically large (e.g., equal to the number of paragraphs in the textbook), we return the
+        N
+        top candidates with the highest scores.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        These answer candidates are then passed to the answer reranking component, the focus of this work.
+AR analyzes the candidates using more expensive techniques to extract discourse and LS features (detailed in §
+        4
+        ), and these features are then used in concert with a learning framework to rerank the candidates and elevate correct answers to higher positions.
+For the learning framework, we used SVM
+        r⁢a⁢n⁢k
+        , a variant of Support Vector Machines for structured output adapted to ranking problems.
+        In addition to these features, each reranker also includes a single feature containing the score of each candidate, as computed by the above candidate retrieval (CR) component.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Models and Features
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We propose two separate discourse representation schemes – one shallow, centered around discourse markers, and one deep, based on RST.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Discourse Marker Model
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         The discourse marker model (DMM) extracts cross-sentence discourse structures centered around a discourse marker.
+This extraction process is illustrated in the top part of Figure
+         2
+         .
+These structures are represented using three components: (1) A
+         discourse marker
+         from Daniel Marcu’s list (see Appendix B in Marcu
+         [9]
+         ), that serves as a divisive boundary between sentences. Examples of these markers include
+         and, in, that, for, if, as, not, by,
+         and
+         but
+         ; (2)
+         two marker arguments
+         , i.e., text segments before and after the marker, labeled to indicate if they are related to the question text or not; and (3)
+         a sentence range
+         around the marker, which defines the length of these segments (e.g.,
+         ±
+         2 sentences).
+For example, a marker feature may take the form of:
+         QSEG BY OTHER SR2
+         ,
+which means that the the marker
+         by
+         has been detected in an answer candidate. Further, the text preceeding
+         by
+         matches text from the question (and is therefore labeled
+         QSEG
+         ), while the text after
+         by
+         differs considerably from the question text, and is labeled
+         OTHER
+         . In this particular example, the scope of this similarity matching occurs over a span of
+         ±
+         2 sentences around the marker.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Note that our marker arguments are akin to EDUs in RST, but, in this shallow representation, they are simply constructed around discourse markers and bound by an arbitrary sentence range.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p ltx_align_left">
+         Argument Labels:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         We label marker arguments based on their similarity to question content.
+If text before or after a marker out to a given sentence range matches the entire text of the question (with a cosine similarity score larger than a threshold), that argument takes on the label
+         QSEG
+         , or
+         OTHER
+         otherwise.
+In this way the features are only partially lexicalized with the discourse markers. Argument labels indicate only if lemmas from the question were found in a discourse structure present in an answer candidate, and do not speak to the specific lemmas that were found. We show in §
+         5
+         that these lightly lexicalized features perform well in domain and transfer between domains. We explore other argument labeling strategies in §
+         5.7
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p ltx_align_left">
+         Feature Values:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p6">
+        <p class="ltx_p">
+         Our reranking framework uses real-valued features.
+The values of the discourse features are the mean of the similarity scores (e.g., cosine similarity using
+         tf.idf
+         weighting) of the two marker arguments and the corresponding question. For example, the value of the
+         QSEG BY QSEG SR1
+         feature in Figure
+         2
+         is the average of the cosine similarities of the question text with the answer texts before/after
+         by
+         out to a distance of one sentence before/after the marker.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p7">
+        <p class="ltx_p">
+         It is important to note that these discourse features are more expressive than features based on discourse markers alone
+         [5, 19]
+         . First, the argument sequences used here capture cross-sentence discourse structures. Second, these features model the intensity of the match between the text surrounding the discourse structure and the question text using both the assigned argument labels and the feature values.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Discourse Parser Model
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The discourse parser model (DPM) is based on the RST discourse framework
+         [7]
+         .
+In RST, the text is segmented into a sequence of non-overlapping fragments called elementary discourse units (EDUs), and binary discourse relations recursively connect neighboring units. Most relations are
+         hypotactic
+         , where one of the units in the relation (the
+         nucleus
+         ) is considered more important than the other (the
+         satellite
+         ). A few relations are
+         paratactic
+         , where both participants have equal importance. In the bottom part of Figure
+         2
+         , we show hypotactic relations as directed arrows, from the nucleus to the satellite.
+In this work, we construct the RST discourse trees using the parser of Feng and Hirst
+         [3]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Relying on a proper discourse framework facilitates the modeling of the numerous implicit relations that are not driven by discourse markers (see Ch. 21 in Jurafsky and Martin
+         [6]
+         ). However, this also introduces noise because discourse analysis is a complex task and discourse parsers are not perfect.
+To mitigate this, we used a simple feature generation strategy, which creates one feature for each individual discourse relation by concatenating the relation type with the labels of the discourse units participating in it.
+To this end, for every relation, we extract the entire text dominated by each of its arguments, and we generate labels for the two participants in the relation using the same strategy as the DMM (based on the similarity with the question content).
+Similar to the DMM, these features take real values obtained by averaging the cosine similarity of the arguments with the question content.
+         Fig.
+         2
+         shows several such features, created around two RST
+         Elaboration
+         relations, indicating that the latter sentences expand on the information at the beginning of the answer.
+Other common relations include
+         Attribution
+         ,
+         Contrast
+         ,
+         Background
+         , and
+         Evaluation
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Lexical Semantics Model
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Inspired by the work of Yih et al.
+         [22]
+         , we include lexical semantics in our reranking model.
+Several of their proposed models rely on proprietary data; here we focus on LS models that rely on open-source data and frameworks.
+In particular, we use the recurrent neural network language model (RNNLM) of Mikolov et al.
+         [10, 11]
+         .
+Like any language model, a RNNLM estimates the probability of observing a word given the preceding context, but, in this process, it learns word embeddings into a latent, conceptual space with a fixed number of dimensions.
+Consequently, related words tend to have vectors that are close to each other in this space.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         We derive two LS measures from these vectors, which are then are included as features in the reranker. The first is a measure of the overall LS similarity of the question and answer candidate, which is computed as the cosine similarity between the two composite vectors of the question and the answer candidate. These composite vectors are assembled by summing the vectors for individual question (or answer candidate) words, and re-normalizing this composite vector to unit length. Both this overall similarity score, as well as the average pairwise cosine similarity between each word in the question and answer candidate, serve as features.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Data
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         To test the utility of our approach, we experimented with the two QA scenarios introduced in §
+         3
+         using the following two datasets:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p ltx_align_left">
+         Yahoo! Answers Corpus (YA):
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         Yahoo! Answers
+         is an open domain community-generated QA site, with questions and answers that span formal and precise to informal and ambiguous language. Due to the speed limitations of the discourse parser, we randomly drew 10,000 QA pairs from the corpus of
+         how
+         questions described by Surdeanu et al.
+         [17]
+         using their filtering criteria, with the additional criterion that answers had to contain at least four community-generated answers, one of which was voted as the top answer. The number of answers to each question ranged from 4 to over 50, with the average 9.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p ltx_align_left">
+         Biology Textbook Corpus (Bio):
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p5">
+        <p class="ltx_p">
+         This corpus focuses on the domain of cellular biology, and consists of 185
+         how
+         and 193
+         why
+         questions hand-crafted by a domain expert. Each question has one or more gold answers identified in Campbell’s Biology
+         [15]
+         , a popular undergraduate text. The entire biology text (at paragraph granularity) serves as the possible set of answers. Note that while our system retrieves answers at paragraph granularity, the expert was not constrained in any way during the annotation process, so gold answers might be smaller than a paragraph or span multiple paragraphs. This complicates evaluation metrics on this dataset (see §
+         5.3
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p6">
+        <p class="ltx_p">
+         For the YA CQA corpora, 50% of QA pairs were used for training, 25% for development, and 25% for test. Because of the small size of the Bio corpus, it was evaluated using 5-fold cross-validation, with three folds for training, one for development, and one for test.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p7">
+        <p class="ltx_p">
+         The following additional resources were used:
+        </p>
+        <p class="ltx_p ltx_align_left">
+         Discourse Markers:
+        </p>
+        <p class="ltx_p">
+         A set of 75 high-frequency
+         single-word discourse markers were extracted from Marcu’s
+         [9]
+         list of cue phrases, and used for feature generation in DMM. These discourse markers are extremely common in the answer corpora – for example, the YA corpus contains
+an average of 7 markers per answer.
+        </p>
+        <p class="ltx_p ltx_align_left">
+         Discourse Trees:
+        </p>
+        <p class="ltx_p">
+         We generated all discourse trees using the parser of Feng and Hirst
+         [3]
+         . For YA, we parsed entire answers. For Bio, we parsed individual paragraphs. Note that, because these domains are considerably different from the RST Treebank, the parser fails to produce a tree on a large number of answer candidates: 6.2% for YA, and 41.1% for Bio. In these situations, we constructed artificial discourse trees using a right-attachment heuristic and a single relation label
+         X
+         .
+        </p>
+        <p class="ltx_p ltx_align_left">
+         Lexical Semantics:
+        </p>
+        <p class="ltx_p">
+         We trained two different RNNLMs for this work. First, for the YA experiments we trained an open-domain RNNLM using the entire Gigaword corpus of approximately 4G words.
+         For the Bio experiments, we trained a domain specific RNNLM over a concatenation of the textbook and a subset of Wikipedia specific to biology. The latter was created by extracting: (a) pages matching a word/phrase in a glossary of biology (derived from the textbook); plus (b) pages hyperlinked from (a) that are also tagged as being in a small set of (hand-selected) biology-related categories. The combined dataset contains 7.7M words. For all RNNLMs we used 200-dimensional vectors.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Hyper Parameter Tuning
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         The following hyper parameters were tuned using grid search to maximize P@1 on each development partition:
+(a) the segment matching thresholds that determine the minimum cosine similarity between an answer segment and a question for the segment to be labeled
+         QSEG
+         ; and (b) SVM
+         r⁢a⁢n⁢k
+         ’s regularization parameter C.
+For all experiments, the sentence range parameter (
+         SRx
+         ) for DMM ranged from 0 (within sentence) to
+         ±
+         3 sentences.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Evaluation Metrics
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         For YA, we used the standard implementations for P@1 and mean reciprocal rank (MRR)
+         [8]
+         . In the Bio corpus, because answer candidates are not guaranteed to match gold annotations exactly, these metrics do not immediately apply. We adapted them to this dataset by weighing each answer by its overlap with gold answers, where overlap is measured as the highest F1 score between the candidate and a gold answer. Thus, P@1 reduces to this F1 score for the top answer. For MRR, we used the rank of the candidate with the highest overlap score, weighed by the inverse of the rank. For example, if the best answer for a question appears at rank
+         2
+         with an F1 score of
+         0.3
+         , the corresponding MRR score is
+         0.3/2
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Overall Results
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         Table
+         1
+         analyzes the performance of the proposed reranking model on the three datasets and against two baselines. The first baseline sorts the candidate answers in descending order of the scores produced by the candidate retrieval (CR) module. The second baseline (CR + LS) trains a reranking model without discourse, using just the CR and LS features.
+For YA, we include an additional baseline that selects an answer randomly.
+We list multiple versions of the proposed reranking model, broken down by the features used.
+For Bio, we retrieved the top
+         20
+         answer candidates in CR. At this setting, the oracle performance (i.e., the performance with perfect reranking of the 20 candidates) was 69.6% P@1 for Bio HOW, and 72.3% P@1 for Bio WHY. These relatively low oracle scores, which serve as a performance ceiling for our approach, highlight the difficulty of the task. For YA, we used all answers provided for each given question.
+For all experiments we used a linear SVM kernel.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         Examining Table
+         1
+         , several trends are clear. Both discourse models significantly increase both P@1 and MRR performance over all baselines broadly across genre, domain, and question types. More specifically, DMM and DPM show similar performance benefits when used individually, but their combination generally outperforms the individual models, illustrating the fact that the two models capture related but different discourse information.
+This is a motivating result for discourse analysis, especially considering that the discourse parser was trained on a domain different from the corpora used here.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p3">
+        <p class="ltx_p">
+         Lexical semantic features increase performance for all settings, but demonstrate far more utility to the open-domain YA corpus. This disparity is likely due to the difficulty in assembling LS training data at an appropriate level for the biology corpus, contrasted with the relative abundance of large scale open-domain lexical semantic resources. For the YA corpus, where lexical semantics showed the most benefit, simply adding LS features to the CR baseline increases baseline P@1 performance from 19.57 to 26.57, a +36% relative improvement. Most importantly, comparing lines 5 and 9 with their respective baselines (lines 2 and 6, respectively) indicates that LS is largely orthogonal to discourse. Line 5, the top-performing model with discourse but without LS outperforms the CR baseline by +5.24 absolute P@1 improvement. Similarly, line 9, the top-performing model that combines discourse with LS has a +5.69 absolute P@1 improvement over the CR + LS baseline.
+That this absolute performance increase is nearly identical indicates that LS features are complementary to and additive with the full discourse model. Indeed, an analysis of the questions improved by discourse vs. LS (line 5 vs. 6) showed that the intersection of the two sets is low (approximately a third of each set).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p4">
+        <p class="ltx_p">
+         Finally, while the discourse models perform well for HOW or
+         manner
+         questions, performance on Bio WHY corpus suggests that
+         reason
+         questions are particularly amenable to discourse analysis. Relative improvements on WHY questions reach +38% (without LS) and +24% (with LS), with absolute performance on these non-factoid questions jumping from 28% to nearly 40% P@1.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p5">
+        <p class="ltx_p">
+         Table
+         2
+         shows one example where discourse helps boost the correct answer to the top position. In this example, the correct answer contains multiple
+         Elaboration
+         relations that are both cross sentence (e.g., between the first two sentences) and intra-sentence (e.g., between the first part of the second sentence and the phrase “with myelination”). Model features associated with
+         Elaboration
+         relations are ranked highly by the learned model. In contrast, the answer preferred by the baseline contains mostly
+         Joint
+         relations, which “represent the lack of a rhetorical relation between the two nuclei”
+         [7]
+         and have very small weights in the model.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.5
+        </span>
+        Intra vs. Inter-sentence Features
+       </h3>
+       <div class="ltx_para" id="S5.SS5.p1">
+        <p class="ltx_p">
+         To tease apart the relative contribution of discourse features that occur only within a single sentence versus features that span multiple sentences, we examined the performance of the full model when using only intra-sentence features, i.e.,
+         SR0
+         features for DMM, and features based on discourse relations where both EDUs appear in the same sentence for DPM, versus the full intersentence models. The results are shown in Table
+         3
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS5.p2">
+        <p class="ltx_p">
+         For the Bio corpus where answer candidates consist of entire paragraphs of a biology text, overall performance is dominated by inter-sentence discourse features. Conversely, for YA, a large proportion of performance comes from features that span only a single sentence. This is caused by the fact that YA
+answers are far shorter and of variable grammatical quality, with 39% of answer candidates consisting of only a single sentence, and 57% containing two or fewer sentences.
+All in all, this experiment emphasizes that modeling both intra- and inter-sentence discourse (where available) is beneficial for non-factoid QA.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS6">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.6
+        </span>
+        Domain Transfer
+       </h3>
+       <div class="ltx_para" id="S5.SS6.p1">
+        <p class="ltx_p">
+         Because these discourse models appear to capture high-level information about answer structures, we hypothesize that the models should make use of many of the same discourse features, even when training on data from different domains. Table
+         4
+         shows that of the highest-weighted SVM features learned when training models for HOW questions on YA and Bio, many are shared (e.g., 56.5% of the features in the top half of both DPMs are shared), suggesting that a core set of discourse features may be of utility across domains.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS6.p2">
+        <p class="ltx_p">
+         To test the generality of these features, we performed a transfer study where the full model was trained and tuned on the open-domain YA corpus, then evaluated as is on Bio HOW. This is a somewhat radical setup, where the target corpus has both a different genre (formal text vs. CQA) and different domain (biology vs. open domain). These experiments were performed in several groups: both with and without LS features, as well as using either a single SVM or an ensemble model that linearly interpolates the predictions of two SVM classifiers (one each for DMM and DPM).
+         The results are summarized in Table
+         5
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS6.p3">
+        <p class="ltx_p">
+         The transferred models always outperform the baselines, but only the ensemble model’s improvement is statistically significant. This confirms existing evidence that ensemble models perform better cross-domain because they overfit less
+         [2, 4]
+         .
+The ensemble model without LS (third line) has a nearly identical P@1 score as the equivalent in-domain model (line 13 in Table 1), while slightly surpassing in-domain MRR performance.
+To the best of our knowledge, this is one of the most striking demonstrations of domain transfer in answer ranking for non-factoid QA, and highlights the generality of these discourse features in identifying answer structures across domains and genres.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS6.p4">
+        <p class="ltx_p">
+         The results of the transferred models that include LS features are slightly lower, but still approach statistical significance for P@1 and are significant for MRR.
+We hypothesize that the limited transfer observed for models with LS compared to their counterparts without LS is due to the disparity in the size and utility of the biology LS training data compared to the open-domain LS resources. The open-domain YA model learns to place more weight on LS features, which are unable to provide the same utility in the biology domain.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS7">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.7
+        </span>
+        Integrating Discourse and LS
+       </h3>
+       <div class="ltx_para" id="S5.SS7.p1">
+        <p class="ltx_p">
+         So far, we have treated LS and discourse as distinct features in the reranking model, However,
+given that LS features greatly improve the CR baseline, we hypothesize that a natural extension to the discourse models would be to make use of LS similarity (in addition to the traditional information retrieval similarity) to label discourse segments. For example, for the question
+         ”How do cells replicate?”
+         , answer discourse segments containing LS associates of
+         cell
+         and
+         replicate
+         , e.g.,
+         nucleus, membrane, genetic
+         , and
+         duplicate
+         , should be considered as related to the question (i.e., be labeled
+         QSEG
+         ).
+We implemented two such models, denoted DMM
+         L⁢S
+         and DPM
+         L⁢S
+         , by replacing the component that assigns argument labels with one that relies on LS.
+Specifically, as in §
+         4.3
+         , we compute the cosine similarity between the composite LS vectors of the question text and each marker argument (in DMM) or EDU (in DPM), and label the corresponding answer segment
+         QSEG
+         if this score is higher than a threshold, or
+         OTHER
+         otherwise.
+This way, the DMM and DPM features jointly capture discourse structures and semantic similarity between answer segments and question.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS7.p2">
+        <p class="ltx_p">
+         To test this, we use the YA corpus, which has the best-performing LS model. Because we are adding two new discourse models, we now tune four segment matching thresholds, one for each of the DMM, DPM, DMM
+         L⁢S
+         , and DPM
+         L⁢S
+         models.
+         The results are shown in Table
+         6
+         .
+These results demonstrate that incorporating LS in the discourse models further increases performance for all configurations, nearly doubling the relative performance benefits over models that do not integrate LS and discourse (compare with lines 6–9 of Table
+         1
+         ). For example, the last model in the table, which combines four discourse representations, improves P@1 by 24%, whereas the equivalent model without this integration (line 9 in Table
+         1
+         ) outperforms the baseline by only 15%.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS8">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.8
+        </span>
+        Error Analysis
+       </h3>
+       <div class="ltx_para" id="S5.SS8.p1">
+        <p class="ltx_p">
+         We performed an error analysis of the full QA model (CR + LS + DMM + DPM) across the entire Bio corpus (lines 17 and 25 from Table
+         1
+         ).
+We chose the Bio setup for this analysis because it is more complex than the CQA one: here gold answers may have a granularity completely different from what the system choses as best answers (in our particular case, the QA system is currently limited to answers consisting of single paragraphs, whereas gold answers may be of any size).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p2">
+        <p class="ltx_p">
+         Here, 94 of the 378 Bio HOW and WHY questions have improved answer scores, while 36 have reduced performance relative to the CR baseline.
+Of these 36 questions where answer scores decreased, nearly two thirds were directly related to the paragraph granularity of the candidate answer retrieval (see §
+         5.1
+         ):
+        </p>
+        <p class="ltx_p ltx_align_left">
+         Same Subsection (50%):
+        </p>
+        <p class="ltx_p">
+         In these cases, the model selected an on-topic answer paragraph in the same subsection of the textbook as a gold answer. Often times this paragraph directly preceded or followed the gold answer.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p3">
+        <p class="ltx_p ltx_align_left">
+         Answer Window Size (14%):
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p4">
+        <p class="ltx_p">
+         Here, both the CR and full model chose a paragraph containing a different gold answer. However, as discussed, gold answers may unevenly straddle paragraph boundaries, and the paragraph chosen by the model happened to have a somewhat lower overlap with its gold answer than the one chosen by the baseline.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p5">
+        <p class="ltx_p ltx_align_left">
+         Similar Topic (25%):
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p6">
+        <p class="ltx_p">
+         The model chose a paragraph that had a similar topic to the question, but doesn’t answer the question.
+These are challenging errors, often associated with short questions (e.g.
+         ”How does HIV work?”
+         ) that provide few keywords. In these cases, discourse features tend to dominate, and shift the focus towards answers that have many discourse structures deemed relevant.
+For example, for the above question, the model chose a paragraph containing many discourse structures positively correlated with high-quality answers, but which describes the origins of HIV instead of how the virus enters a cell.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p7">
+        <p class="ltx_p ltx_align_left">
+         Similar Words, Different Topic (8%):
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p8">
+        <p class="ltx_p">
+         The model chose a paragraph that had many of the same words as the question, but is on a different topic. For example, for the question
+         ”How are fossil fuels formed, and why do they contain so much energy?”
+         , the model selected an answer that mentions fossil fuels in a larger discussion of human ecological footprints. Here, the matching of both keywords and discourse structures shifted the answer towards a different, incorrect topic.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p9">
+        <p class="ltx_p">
+         Finally, in one case (3%), the model identified an answer paragraph that contained a gold answer, but was missed by the domain expert annotator.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS8.p10">
+        <p class="ltx_p">
+         In summary, this analysis suggests that, for the majority of errors, the QA system selects an answer that is both topical and adjacent to a gold answer selected by the domain expert. This suggests that most errors are minor and are driven by current limitations of our answer boundary selection mechanism, rather than the inherent limitations of the discourse model.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

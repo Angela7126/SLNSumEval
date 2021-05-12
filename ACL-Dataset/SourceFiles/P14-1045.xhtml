@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Predicting the relevance of distributional semantic similarity with contextual information</title>
+<!--Generated on Tue Jun 10 17:43:12 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Predicting the relevance of distributional semantic similarity with contextual information</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Philippe Muller 
+<br class="ltx_break"/>IRIT, Toulouse University 
+<br class="ltx_break"/>Université Paul Sabatier
+<br class="ltx_break"/>118 Route de Narbonne
+<br class="ltx_break"/>31062 Toulouse Cedex 04
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">philippe.muller@irit.fr</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Cécile Fabre 
+<br class="ltx_break"/>CLLE, Toulouse University 
+<br class="ltx_break"/>Université Toulouse-Le Mirail
+<br class="ltx_break"/>5 allÃ©es A. Machado
+<br class="ltx_break"/>31058 Toulouse Cedex
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">cecile.fabre@univ-tlse2.fr</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Clémentine Adam 
+<br class="ltx_break"/>CLLE, Toulouse University 
+<br class="ltx_break"/>Université Toulouse-Le Mirail
+<br class="ltx_break"/>5 allÃ©es A. Machado
+<br class="ltx_break"/>31058 Toulouse Cedex
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">clementine.adam@univ-tlse2.fr</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Using distributional analysis methods to compute semantic proximity links between words has become commonplace in NLP.
+The resulting relations are often noisy or difficult to interpret in general.
+This paper focuses on the issues of evaluating a distributional resource and filtering
+the relations it contains, but instead of considering it in abstracto, we focus on pairs of words in context.
+In a discourse, we are interested in knowing if the semantic link between two items is
+a by-product of textual coherence or is irrelevant.
+We first set up a human annotation of semantic links with or without contextual information to show the importance
+of the textual context in evaluating the relevance of semantic similarity, and to assess the prevalence of actual semantic
+relations between word tokens. We then built an experiment to automatically
+predict this relevance, evaluated on the reliable reference data set which was the outcome of the first annotation.
+We show that in-document information greatly improve the prediction made by the similarity level alone.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The goal of the work presented in this paper is to improve distributional thesauri, and to help evaluate the content of such resources.
+A distributional thesaurus is a lexical network that lists semantic neighbours, computed from a corpus and a similarity measure between
+lexical items, which generally captures the similarity of contexts in which the items occur. This way of building
+a semantic network has been very popular since <cite class="ltx_cite">[]</cite>, even though the nature of the information it contains is
+hard to define, and its evaluation is far from obvious. A distributional thesaurus includes a lot of “noise” from a semantic point of view,
+but also lists relevant lexical pairs that escape classical lexical relations such as synonymy or hypernymy.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">There is a classical dichotomy when evaluating NLP components between extrinsic and intrinsic evaluations <cite class="ltx_cite">[]</cite>, and this applies to
+distributional thesauri <cite class="ltx_cite">[]</cite>. Extrinsic evaluations measure the capacity of a system in which a resource or a component to evaluate has been
+used, for instance in this case information retrieval <cite class="ltx_cite">[]</cite> or word sense disambiguation <cite class="ltx_cite">[]</cite>.
+Intrinsic evaluations try to measure the resource itself with respect to some human standard or judgment, for instance by comparing a distributional resource with respect
+to an existing synonym dictionary or similarity judgment produced by human subjects <cite class="ltx_cite">[]</cite>. The shortcomings of these methods
+have been underlined in <cite class="ltx_cite">[]</cite>.
+Lexical resources designed for other objectives put the spotlight on specific areas of the distributional thesaurus. They are not suitable for the evaluation of the whole range of semantic relatedness that is exhibited by distributional similarities, which exceeds the limits of classical lexical relations, even though
+researchers have tried to collect equivalent resources manually, to be used as a gold standard <cite class="ltx_cite">[]</cite>.
+One advantage of distributional similarities is to exhibit a lot of different semantic relations, not necessarily standard lexical relations. Even with respect to established lexical resources,
+distributional approaches may improve coverage, complicating the evaluation even more.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The method we propose here has been designed as an intrinsic evaluation with a view to validate semantic proximity links in a broad perspective, to cover what <cite class="ltx_cite">[]</cite> call “non classical lexical semantic relations”. For instance, agentive relations (author/publish, author/publication) or associative relations (actor/cinema) should be considered. At the same time, we want to filter associations that can be considered as accidental in a semantic perspective (e.g. flag and composer are similar because they
+appear a lot with nationality names). We do this by judging the relevance of a lexical relation in a context where both elements of a lexical pair occur. We show not only that this improves the reliability of human judgments, but also that it gives a framework where this relevance can be predicted automatically. We hypothetize that evaluating and filtering semantic relations in texts where lexical items occur would help
+tasks that naturally make use of semantic similarity relations, but assessing this goes beyond the present work.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In the rest of this paper, we describe the resource we used as a case study, and the data we collected to evaluate its content (section <a href="#S2" title="2 Evaluation of lexical similarity in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+We present the experiments we set up to automatically filter semantic relations in context, with various groups of features that take into account
+information from the corpus used to build the thesaurus and contextual information related to occurrences of semantic neighbours <a href="#S3" title="3 Experiments: predicting relevance in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+Finally we discuss some related work on the evaluation and improvement of distributional resources (section <a href="#S4" title="4 Related work ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Evaluation of lexical similarity in context</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Data</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use a distributional resource for French, built on a 200M word corpus extracted from the French Wikipedia, following principles laid out in <cite class="ltx_cite">[]</cite> from
+a structured model <cite class="ltx_cite">[]</cite>, i.e. using syntactic contexts. In this approach, contexts are triples (governor,relation,dependent) derived from syntactic dependency structures.
+Governors and dependents are verbs, adjectives and nouns. Multiword units are available, but they form a very small subset of the resulting neighbours. Base elements in the thesaurus are of two types: arguments (dependents’ lemma) and predicates (governor+relation). This is to keep the predicate/argument distinction since
+similarities will be computed between predicate pairs or argument pairs, and a lexical item can appear in many predicates and as an argument (e.g. <em class="ltx_emph">interest</em> as argument, <em class="ltx_emph">interest_for</em> as one predicate).
+The similarity of distributions was computed with Lin’s score <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">We will talk of lexical neighbours or distributional neighbours to label pairs of predicates or arguments, and in the rest of the paper we consider only lexical pairs with a
+Lin score of at least 0.1, which means about 1.4M pairs. This somewhat arbitrary level is an <em class="ltx_emph">a priori</em> threshold to limit the resulting database, and it is conservative
+enough not to exclude potential interesting relations.
+The distribution of scores is given figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Data ‣ 2 Evaluation of lexical similarity in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>; 97% of the selected pairs have a score between 0.1 and 0.29.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1045/image002.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="594" height="420" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Histogram of Lin scores for pairs considered. </div>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">To ease the use of lexical neighbours in our experiments, we merged together predicates that include the same lexical unit, <em class="ltx_emph">a posteriori</em>. Thus there is no need
+for a syntactic analysis of the context considered when exploiting the resource, and sparsity is less of an issue<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Whenever two predicates with the same lemma have common neighbours, we
+average the score of the pairs.</span></span></span>.</p>
+</div>
+<div id="S2.F2" class="ltx_figure">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:433.6pt;border:1px solid black;">
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">[…]
+Le ventre de l’impala de même que ses lèvres et sa </span><span class="ltx_text ltx_font_footnote" style="background-color:#FFFF4D;">queue</span><span class="ltx_text ltx_font_footnote"> sont blancs.
+Il faut aussi mentionner leurs lignes noires uniques à chaque individu au bout des </span><span class="ltx_text ltx_font_footnote" style="background-color:#FFFF4D;">oreilles</span><span class="ltx_text ltx_font_footnote">, sur le dos de la </span><span class="ltx_text ltx_font_footnote" style="background-color:#FFFF4D;">queue</span><span class="ltx_text ltx_font_footnote"> et sur le front. Ces lignes noires sont très utiles aux impalas puisque ce sont des signes qui leur permettent de se reconnaitre entre eux. Ils possèdent aussi des glandes sécrétant des odeurs sur les </span><span class="ltx_text ltx_font_footnote" style="background-color:#99FF99;">pattes</span><span class="ltx_text ltx_font_footnote"> arrières et sur le front. Ces odeurs permettent également aux individus de se reconnaitre entre eux. Il a également des coussinets noirs situés, à l’arrière de ses </span><span class="ltx_text ltx_font_footnote" style="background-color:#99FF99;">pattes</span><span class="ltx_text ltx_font_footnote">.
+Les impalas mâles et femelles ont une morphologie différente. En effet, on peut facilement distinguer un mâle par ses </span><span class="ltx_text ltx_font_footnote" style="background-color:#9999FF;">cornes</span><span class="ltx_text ltx_font_footnote"> en forme de S qui mesurent de 40 à 90 cm de long.</span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">Les impalas vivent dans les savanes où l’</span><span class="ltx_text ltx_font_footnote" style="background-color:#FF9999;">herbe</span><span class="ltx_text ltx_font_footnote"> (courte ou moyenne) abonde. Bien qu’ils apprécient la proximité d’une source d’eau, celle-ci n’est généralement pas essentielle aux impalas puisqu’ils peuvent se satisfaire de l’eau contenue dans l’</span><span class="ltx_text ltx_font_footnote" style="background-color:#FF9999;">herbe</span><span class="ltx_text ltx_font_footnote"> qu’ils consomment. Leur environnement est relativement peu accidenté et n’est composé que d’</span><span class="ltx_text ltx_font_footnote" style="background-color:#FF9999;">herbes</span><span class="ltx_text ltx_font_footnote">, de buissons ainsi que de quelques arbres.</span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">[…]</span></p>
+</span><span class="ltx_text ltx_font_footnote"></span></p>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Example excerpt during the annotation of lexical pairs: annotators focus on a target item (here <em class="ltx_emph">corne</em>, horn, in blue) and must judge yellow words (pending: <em class="ltx_emph">oreille/queue</em>, ear/tail), either validating their relevance (green words: <em class="ltx_emph">pattes</em>, legs) or rejecting them (red words: <em class="ltx_emph">herbe</em>, grass). The text describes the morphology of the impala, and its habitat. </div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Annotation</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">In order to evaluate the resource, we set up an annotation in context: pairs of lexical items are to be judged in their context of use, in texts where they occur together.
+To verify that this methodology is useful, we did a preliminary annotation to contrast judgment on lexical pairs with or without this contextual information.
+Then we made a larger annotation in context once we were assured of the reliability of the methodology.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">For the preliminary test, we asked three annotators to judge the similarity of pairs of lexical items without any context (<span class="ltx_text ltx_font_sansserif ltx_font_small">no-context</span>), and to judge the similarity of pairs presented within a paragraph where they both occur (<span class="ltx_text ltx_font_sansserif ltx_font_small">in context</span>).
+The three annotators were linguists, and two of them (1 and 3) knew about the resource and how it was built.
+For each annotation, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="100" display="inline"><mn>100</mn></math> pairs were randomly selected, with the following constraints:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">for the <span class="ltx_text ltx_font_sansserif ltx_font_small">no-context</span> annotation, candidate pairs had a Lin score above <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="0.2" display="inline"><mn>0.2</mn></math>, which placed them in the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="14\%" display="inline"><mrow><mn>14</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of lexical neighbours with respect to the similarity level.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">for the <span class="ltx_text ltx_font_sansserif ltx_font_small">in context</span> annotation, the only constraint was that the pairs occur in the same paragraph somewhere in the corpus used to build the resource. The example paragraph was chosen at random.</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The guidelines given in both cases were the same: “Do you think the two words are semantically close ? In other words, is there a semantic relation between them, either classical (synonymy, hypernymy, co-hyponymy, meronymy, co-meronymy) or not (the relation can be paraphrased but does not belong to the previous cases) ?”</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">For the pre-test, agreement was rather moderate without context (the average of pairwise kappas was .46), and much better with a context (average = .68), with agreement rates
+above 90%.
+This seems to validate the feasability of a reliable annotation of relatedness in context, so we went on for a larger annotation with two of the previous annotators.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_tt">Annotators</td>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="2">Non-contextual</td>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="2">Contextual</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center">Agreement rate</td>
+<td class="ltx_td ltx_align_center">Kappa</td>
+<td class="ltx_td ltx_align_center">Agreement rate</td>
+<td class="ltx_td ltx_align_center">Kappa</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">N1+N2</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="77\%" display="inline"><mrow><mn>77</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.52</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="91\%" display="inline"><mrow><mn>91</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.66</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">N1+N3</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="70\%" display="inline"><mrow><mn>70</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center">0.36</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="92\%" display="inline"><mrow><mn>92</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center">0.69</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">N2+N3</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="79\%" display="inline"><mrow><mn>79</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center">0.50</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="92\%" display="inline"><mrow><mn>92</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center">0.69</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">Average</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="75,3\%" display="inline"><mrow><mn>75</mn><mo>,</mo><mrow><mn>3</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0,46</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="91,7\%" display="inline"><mrow><mn>91</mn><mo>,</mo><mrow><mn>7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0,68</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb">Experts</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">NA</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">NA</td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m9" class="ltx_Math" alttext="90.8\%" display="inline"><mrow><mn>90.8</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_bb">0.80</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Inter-annotator agreements with Cohen’s Kappa for contextual and non-contextual annotations. N1, N2, N3 were annotators during the pre-test; expert annotation was made on a different dataset from the same corpus, only with the full discourse context. </div>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">For the larger annotation, the protocol was slightly changed: two annotators were given 42 full texts from the original corpus where lexical neighbours occurred. They were asked to judge
+the relation between two items types, regardless of the number of occurrences in the text. This time there was no filtering of the lexical pairs beyond the 0.1 threshold of the original resource.
+We followed the well-known postulate <cite class="ltx_cite">[]</cite> that all occurrences of a word in the same discourse tend to have the same sense (“one sense per discourse”),
+in order to decrease the annotator workload. We also assumed that the relation between these items remain stable within the document, an arguably strong
+hypothesis that needed to be checked against inter-annotator agreement before beginning the final annotation .
+It turns out that the kappa score (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p5.m1" class="ltx_Math" alttext="0.80" display="inline"><mn>0.80</mn></math>) shows a better inter-annotator agreement than during the preliminary test, which can be explained by the larger context given to the annotator (the whole text),
+and thus more occurrences of each element in the pair to judge, and also because the annotators were more experienced after the preliminary test.
+Agreement measures are summed-up table <a href="#S2.T1" title="Table 1 ‣ 2.2 Annotation ‣ 2 Evaluation of lexical similarity in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+An excerpt of an example text, as it was presented to the annotators, is shown figure <a href="#S2.F2" title="Figure 2 ‣ 2.1 Data ‣ 2 Evaluation of lexical similarity in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S2.SS2.p6" class="ltx_para">
+<p class="ltx_p">Overall, it took only a few days to annotate 9885 pairs of lexical items. Among the pairs that were presented to the annotators, about 11% were judged as relevant by the annotators.
+It is not easy to decide if the non-relevant pairs are just noise, or context-dependent associations that were not present in the actual text considered (for polysemy reasons for instance), or just low-level associations.
+An important aspect is thus to guarantee that there is a correlation between the similarity score (Lin’s score here), and the evaluated relevance of the neighbour pairs.
+Pearson correlation factor shows that Lin score is indeed significantly correlated to the annotated relevance of lexical pairs, albeit not strongly (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p6.m1" class="ltx_Math" alttext="r=0.159" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>0.159</mn></mrow></math>).</p>
+</div>
+<div id="S2.SS2.p7" class="ltx_para">
+<p class="ltx_p">The produced annotation<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Freely available, and distributed with this submission.</span></span></span> can be used as a reference to explore various aspects of distributional resources, with the caveat
+that it is as such a bit dependent on the particular resource used. We nonetheless assume that some of the relevant pairs would appear in other thesauri, or would be of interest in an evaluation of another resource.</p>
+</div>
+<div id="S2.SS2.p8" class="ltx_para">
+<p class="ltx_p">The first thing we can analyse from the annotated data is the impact of a threshold on Lin’s score to select relevant lexical pairs.
+The resource itself is built by choosing a cut-off which is supposed to keep pairs with a satisfactory similarity, but this threshold is rather arbitrary.
+Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Annotation ‣ 2 Evaluation of lexical similarity in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the influence of the threshold value to select relevant pairs, when considering precision and recall
+of the pairs that are kept when choosing the threshold, evaluated against the human annotation of relevance in context.
+In case one wants to optimize the F-score (the harmonic mean of precision and recall) when extracting relevant pairs, we can see that the optimal point is at .24 for a threshold of .22 on Lin’s score.
+This can be considered as a baseline for extraction of relevant lexical pairs, to which we turn in the following section.</p>
+</div>
+<div id="S2.F3" class="ltx_figure"><img src="P14-1045/image001.png" id="S2.F3.g1" class="ltx_graphics" width="486" height="344" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Precision and recall on relevant links with respect to a threshold on the similarity measure (Lin’s score)</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experiments: predicting relevance in context</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The outcome of the contextual annotation presented above is a rather sizeable dataset of validated semantic links, and we showed these linguistic judgments to be reliable.
+We used this dataset to set up a supervised classification experiment in order to automatically predict the relevance of a semantic link in a given discourse.
+We present now the list of features that were used for the model. They can be divided in three groups, according to their origin: they are computed from the whole corpus, gathered from the distributional resource, or extracted from the considered text which contains the semantic pair to be evaluated.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Features</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">For each pair <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span>/<span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span>, we computed a set of features from Wikipedia (the corpus used to derive the distributional similarity):
+We first computed the frequencies of each item in the corpus, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="freq_{a}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="freq_{b}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow></math>, from which we derive</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="freq_{min}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="freq_{max}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub></mrow></math> : the min and max of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="freq_{a}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m4" class="ltx_Math" alttext="freq_{b}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow></math> ;</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="freq_{\times}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mo>×</mo></msub></mrow></math>: the combination of the two, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="\log(freq_{a}\times freq_{b})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow><mo>×</mo><mi>f</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></math></p>
+</div></li>
+</ul>
+<p class="ltx_p">We also measured the syntagmatic association of <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span>, with a mutual information measure <cite class="ltx_cite">[]</cite>, computed from the cooccurrence of two tokens within the same paragraph
+in Wikipedia. This is a rather large window, and thus gives a good coverage with respect to the neighbour database (70% of all pairs).</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">A straightforward parameter to include to predict the relevance of a link is of course the similarity
+measure itself, here Lin’s information measure.
+But this can be complemented by additional information on the similarity of the neighbours, namely:</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">each neighbour productivity : <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="prod_{a}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m2" class="ltx_Math" alttext="prod_{b}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow></math> are defined as the numbers of
+neighbours of respectively <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m3" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m4" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span> in the database (thus related tokens with a similarity above the threshold), from which we derive three features as for frequencies: the min, the max, and the log of the product. The idea is that neighbours whith very high productivity give rise to less reliable relations.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">the ranks of tokens in other related items neighbours: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="rank_{a-b}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>a</mi><mo>-</mo><mi>b</mi></mrow></msub></mrow></math> is defined
+as the rank of <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m2" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> among neighbours of <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m3" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span>  ordered with respect to Lin’s score; <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m4" class="ltx_Math" alttext="rang_{b-a}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>g</mi><mrow><mi>b</mi><mo>-</mo><mi>a</mi></mrow></msub></mrow></math> is defined similarly and again we consider as features the min, max and log-product of these ranks.</p>
+</div></li>
+</ul>
+<p class="ltx_p">We add two categorial features, of a more linguistic nature:</p>
+<ul id="I4" class="ltx_itemize">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m1" class="ltx_Math" alttext="cats" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>s</mi></mrow></math> is the pair of part-of-speech for the related items, e.g. to distinguish the relevance of NN or VV pairs.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="predarg" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math> is related to the predicate/argument distinction:
+are the related items predicates or arguments ?</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:86.7pt;" width="86.7pt">Feature</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:325.2pt;" width="325.2pt">Description</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="freq_{\min}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mo>min</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="\min(freq_{a},freq_{b})" display="inline"><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="freq_{\max}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mo>max</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="\max(freq_{a},freq_{b})" display="inline"><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m5" class="ltx_Math" alttext="freq_{\times}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mo>×</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="\log(freq_{a}\times freq_{b})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>a</mi></msub></mrow><mo>×</mo><mi>f</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>q</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m7" class="ltx_Math" alttext="im" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m8" class="ltx_Math" alttext="im=\log\frac{P(a,b)}{P(a)\cdot P(b)}" display="inline"><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi></mrow><mo>=</mo><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow><mo>⋅</mo><mi>P</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>b</mi><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="lin" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt">Lin’s score</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m10" class="ltx_Math" alttext="rank_{\min}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mo>min</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m11" class="ltx_Math" alttext="\min(rank_{a-b},rank_{b-a})" display="inline"><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>a</mi><mo>-</mo><mi>b</mi></mrow></msub></mrow><mo>,</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>b</mi><mo>-</mo><mi>a</mi></mrow></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m12" class="ltx_Math" alttext="rank_{\max}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mo>max</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m13" class="ltx_Math" alttext="\max(rank_{a-b},rank_{b-a})" display="inline"><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>a</mi><mo>-</mo><mi>b</mi></mrow></msub></mrow><mo>,</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>b</mi><mo>-</mo><mi>a</mi></mrow></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m14" class="ltx_Math" alttext="rank_{\times}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mo>×</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m15" class="ltx_Math" alttext="\log(rank_{a-b}\times rank_{b-a})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>a</mi><mo>-</mo><mi>b</mi></mrow></msub></mrow><mo>×</mo><mi>r</mi></mrow><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mrow><mi>b</mi><mo>-</mo><mi>a</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m16" class="ltx_Math" alttext="prod_{\min}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mo>min</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m17" class="ltx_Math" alttext="\min(prod_{a},prod_{b})" display="inline"><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m18" class="ltx_Math" alttext="prod_{\max}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mo>max</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m19" class="ltx_Math" alttext="\max(prod_{a},prod_{b})" display="inline"><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m20" class="ltx_Math" alttext="prod_{\times}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mo>×</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m21" class="ltx_Math" alttext="\log(prod_{a}\times prod_{b})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>×</mo><mi>p</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m22" class="ltx_Math" alttext="cats" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>s</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">neighbour pos pair</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m23" class="ltx_Math" alttext="predarg" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">predicate or argument</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m24" class="ltx_Math" alttext="freqtxt_{\min}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>min</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m25" class="ltx_Math" alttext="\min(freqtxt_{a},freqtxt_{b})" display="inline"><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m26" class="ltx_Math" alttext="freqtxt_{\max}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>max</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m27" class="ltx_Math" alttext="\max(freqtxt_{a},freqtxt_{b})" display="inline"><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m28" class="ltx_Math" alttext="freqtxt_{\times}" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>×</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m29" class="ltx_Math" alttext="\log(freqtxt_{a}\times freqstxt_{b})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>a</mi></msub></mrow><mo>×</mo><mi>f</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m30" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>ipf</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m31" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>ipf</span>(<span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m32" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span>)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m33" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math><span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m34" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>ipf</span>(<span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m35" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m36" class="ltx_Math" alttext="copr_{ph}" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><msub><mi>r</mi><mrow><mi>p</mi><mo>⁢</mo><mi>h</mi></mrow></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">copresence in a sentence</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m37" class="ltx_Math" alttext="copr_{para}" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><msub><mi>r</mi><mrow><mi>p</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">copresence in a paragraph</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m38" class="ltx_Math" alttext="sd" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>d</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">smallest distance between <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m39" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m40" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m41" class="ltx_Math" alttext="gd" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mi>d</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">highest distance between <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m42" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m43" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m44" class="ltx_Math" alttext="ad" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">average distance between <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m45" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m46" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m47" class="ltx_Math" alttext="prodtxt_{\min}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>min</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m48" class="ltx_Math" alttext="\min(prod_{a},prod_{b})" display="inline"><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m49" class="ltx_Math" alttext="prodtxt_{\max}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>max</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m50" class="ltx_Math" alttext="\max(prod_{a},prod_{b})" display="inline"><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m51" class="ltx_Math" alttext="prodtxt_{\times}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>×</mo></msub></mrow></math></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m52" class="ltx_Math" alttext="\log(prod_{a}\times prod_{b})" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>a</mi></msub></mrow><mo>×</mo><mi>p</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>d</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:86.7pt;" width="86.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m53" class="ltx_Math" alttext="cc" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>c</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:325.2pt;" width="325.2pt">belong to the same lexical connected component</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Summary of features used in the supervised model, with respect to two lexical items <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m56" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m57" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>. The first group is corpus related, the second group is related to the
+distributional database, the third group is related to the textual context. Freq is related to the frequencies in the corpus, Freqtext the frequencies in the considered text. </div>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">The last set of features derive from the occurrences of related tokens in the considered discourses:</p>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">First, we take into account the frequencies of items within the text, with three features as before: the min of the frequencies of the two related items, the max, and the log-product.
+Then we consider a <span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m1" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>idf</span> <cite class="ltx_cite">[]</cite> measure, to evaluate the specificity and arguably the importance
+of a word in a document or within a document. Several variants of <span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m2" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>idf</span> have been proposed to adapt the measure to more local areas in a text with respect to the whole document.
+For instance <cite class="ltx_cite">[]</cite> propose a <span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m3" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>isf</span>(<span class="ltx_text ltx_font_italic">term frequency <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m4" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math> inverse sentence frequency</span>), for topic segmentation. We similarly defined a <span class="ltx_text ltx_font_italic">tf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m5" class="ltx_Math" alttext="\cdot" display="inline"><mo mathvariant="normal">⋅</mo></math>ipf</span>measure based on the
+frequency of a word within a paragraph with respect to its frequency within the text. The resulting feature we used is the product of this measure for <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m6" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m7" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span>.</p>
+</div>
+<div id="S3.SS1.p7" class="ltx_para">
+<p class="ltx_p">A few other contextual features are included in the model: the distances between pairs of related items, instantiated as:</p>
+<ul id="I5" class="ltx_itemize">
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p">distance in words between occurrences of related word types:</p>
+<ul id="I5.I1" class="ltx_itemize">
+<li id="I5.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I5.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">minimal distance between two occurrences (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.I1.i1.p1.m1" class="ltx_Math" alttext="sd" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>d</mi></mrow></math>)</p>
+</div></li>
+<li id="I5.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I5.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">maximal distance between two occurrences (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.I1.i2.p1.m1" class="ltx_Math" alttext="gd" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mi>d</mi></mrow></math>)</p>
+</div></li>
+<li id="I5.I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I5.I1.i3.p1" class="ltx_para">
+<p class="ltx_p">average distance (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.I1.i3.p1.m1" class="ltx_Math" alttext="ad" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>d</mi></mrow></math>) ;</p>
+</div></li>
+</ul>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p">boolean features indicating whether <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i2.p1.m1" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">neighbour<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i2.p1.m2" class="ltx_Math" alttext="{}_{b}" display="inline"><msub><mi/><mi>b</mi></msub></math></span> appear in the same sentence (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i2.p1.m3" class="ltx_Math" alttext="copr_{s}" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><msub><mi>r</mi><mi>s</mi></msub></mrow></math>) or the same paragraph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I5.i2.p1.m4" class="ltx_Math" alttext="copr_{para}" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><msub><mi>r</mi><mrow><mi>p</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi></mrow></msub></mrow></math>).</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS1.p8" class="ltx_para">
+<p class="ltx_p">Finally, we took into account the network of related lexical items, by considering the largest sets of words present in the text and connected in the database (self-connected components), by adding
+the following features:</p>
+<ul id="I6" class="ltx_itemize">
+<li id="I6.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i1.p1" class="ltx_para">
+<p class="ltx_p">the degree of each lemma, seen as a node in this similarity graph, combined as above in minimal degree of the pair, maximal degree, and product of degrees (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i1.p1.m1" class="ltx_Math" alttext="prodtxt_{\min}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>min</mo></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i1.p1.m2" class="ltx_Math" alttext="prodtxt_{\max}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>max</mo></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i1.p1.m3" class="ltx_Math" alttext="prodtxt_{\times}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msub><mi>t</mi><mo>×</mo></msub></mrow></math>).
+This is the number of pairs (present in the text) where a lemma appears in.</p>
+</div></li>
+<li id="I6.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i2.p1" class="ltx_para">
+<p class="ltx_p">a boolean feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="I6.i2.p1.m1" class="ltx_Math" alttext="cc" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>c</mi></mrow></math> saying whether a lexical pair belongs to a connected component of the text, except the largest. This reflects the fact that a small component may concern a lexical field which is more specific and thus more relevant to the text.</p>
+</div>
+<div id="I6.i2.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F4" title="Figure 4 ‣ 3.1 Features ‣ 3 Experiments: predicting relevance in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows examples of self-connected components in an excerpt of the page on <span class="ltx_text ltx_font_italic">Gorille</span> (gorilla), e.g. the set {<span class="ltx_text ltx_font_italic">pelage, dos, fourrure</span>} (coat, back, fur).</p>
+</div>
+<div id="S3.F4" class="ltx_figure">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:433.6pt;border:1px solid black;">
+<p class="ltx_p">Le gorille est après le bonobo et le chimpanzé , du <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">point</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-17 -8 34 15" width="34"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -17 -8 h 34 v 15 h -34 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -16 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="31">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">vue</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFBFBF"><g><g fill="#FFBFBF"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">génétique</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> , l’ <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">animal</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> le plus <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFBFBF"><g><g fill="#FFBFBF"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">proche</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de l’ <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFBFBF"><g><g fill="#FFBFBF"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">humain</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> . Cette <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-38 -8 75 15" width="75"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FF66FF"><g><g fill="#FF66FF"><path d="M -38 -8 h 75 v 15 h -75 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -36 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="73">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">parenté</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> a été <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">confirmée</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> par les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-58 -8 117 15" width="117"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FF66FF"><g><g fill="#FF66FF"><path d="M -58 -8 h 117 v 15 h -117 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -57 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="114">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">similitudes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> entre les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-58 -8 117 15" width="117"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFB366"><g><g fill="#FFB366"><path d="M -58 -8 h 117 v 15 h -117 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -57 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="114">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">chromosomes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-38 -8 75 15" width="75"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -38 -8 h 75 v 15 h -75 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -36 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="73">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">groupes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">sanguins</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> . Notre <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFB366"><g><g fill="#FFB366"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">génome</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> ne <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-38 -8 75 15" width="75"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -38 -8 h 75 v 15 h -75 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -36 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="73">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">diffère</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> que de 2 % de celui du gorille .</p>
+<p class="ltx_p">Redressés , les gorilles <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-53 -8 107 15" width="107"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -53 -8 h 107 v 15 h -107 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -52 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="104">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">atteignent</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> une <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">taille</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de 1,75 <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">mètre</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> , mais ils sont en <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">fait</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> un peu plus <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">grands</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> car ils ont les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">genoux</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> fléchis . L’ <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">envergure</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> des <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">bras</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-38 -8 75 15" width="75"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -38 -8 h 75 v 15 h -75 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -36 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="73">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">dépasse</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> la <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">longueur</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> du <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">corps</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">peut</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">atteindre</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> 2,75 <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">mètres</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> .</p>
+<p class="ltx_p">Il <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">existe</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> une <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">grande</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-53 -8 107 15" width="107"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -53 -8 h 107 v 15 h -107 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -52 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="104">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">différence</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">masse</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> entre les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">sexes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> : les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FF9999"><g><g fill="#FF9999"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">femelles</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">pèsent</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de 90 à 150 <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-58 -8 117 15" width="117"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -58 -8 h 117 v 15 h -117 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -57 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="114">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">kilogrammes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FF9999"><g><g fill="#FF9999"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">mâles</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> jusqu’ à 275. En <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">captivité</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> , particulièrement bien <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-38 -8 75 15" width="75"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -38 -8 h 75 v 15 h -75 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -36 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="73">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">nourris</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> , ils <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-53 -8 107 15" width="107"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -53 -8 h 107 v 15 h -107 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -52 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="104">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">atteignent</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> 350 <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-58 -8 117 15" width="117"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -58 -8 h 117 v 15 h -117 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -57 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="114">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">kilogrammes</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> .</p>
+<p class="ltx_p">Le <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3FFB3"><g><g fill="#B3FFB3"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">pelage</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">dépend</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> du <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">sexe</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et de l’ <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-17 -8 34 15" width="34"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#ECD9C6"><g><g fill="#ECD9C6"><path d="M -17 -8 h 34 v 15 h -34 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -16 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="31">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">âge</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> . Chez les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FF9999"><g><g fill="#FF9999"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">mâles</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> les plus <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#ECD9C6"><g><g fill="#ECD9C6"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">âgés</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> se <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">développe</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> sur le <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-17 -8 34 15" width="34"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3FFB3"><g><g fill="#B3FFB3"><path d="M -17 -8 h 34 v 15 h -34 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -16 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="31">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">dos</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> une <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3FFB3"><g><g fill="#B3FFB3"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">fourrure</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">gris</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> argenté , d’ où leur <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-17 -8 34 15" width="34"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -17 -8 h 34 v 15 h -34 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -16 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="31">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">nom</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> de “<svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-17 -8 34 15" width="34"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3FFB3"><g><g fill="#B3FFB3"><path d="M -17 -8 h 34 v 15 h -34 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -16 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="31">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">dos</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> argentés” . Le <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3FFB3"><g><g fill="#B3FFB3"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">pelage</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> des gorilles de <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">montagne</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> est particulièrement <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-22 -8 44 15" width="44"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -22 -8 h 44 v 15 h -44 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -21 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="42">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">long</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et soyeux .</p>
+<p class="ltx_p">Comme tous les anthropoÃ¯des , les gorilles sont dépourvus de <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-27 -8 55 15" width="55"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3B3FF"><g><g fill="#B3B3FF"><path d="M -27 -8 h 55 v 15 h -55 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -26 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="52">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">queue</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> . Leur <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">anatomie</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> est <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-48 -8 96 15" width="96"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -48 -8 h 96 v 15 h -96 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -47 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="93">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">puissante</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> , le <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-33 -8 65 15" width="65"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3B3FF"><g><g fill="#B3B3FF"><path d="M -33 -8 h 65 v 15 h -65 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -31 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="62">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">visage</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> et les <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-43 -8 86 15" width="86"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#B3B3FF"><g><g fill="#B3B3FF"><path d="M -43 -8 h 86 v 15 h -86 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -42 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="83">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">oreilles</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> sont glabres et ils <svg xmlns="http://www.w3.org/2000/svg" height="15" version="1.1" viewBox="-53 -8 107 15" width="107"><g transform="matrix(1 0 0 -1 0 -1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#D9D9D9"><g><g fill="#D9D9D9"><path d="M -53 -8 h 107 v 15 h -107 Z" style="stroke:none"/></g></g><g><g transform="matrix(1 0 0 1 -52 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="104">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">présentent</p></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></g></svg> des torus supra-orbitaires marqués .</p>
+</span>
+
+<svg xmlns="http://www.w3.org/2000/svg" height="1" version="1.1" viewBox="0 0 1 1" width="1"><g transform="matrix(1 0 0 -1 0 1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g/></g></g></g></g></g></svg></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>A few connected lexical components of the similarity graph, projected on a text, each in a different color. 
+The groups are, in order of appearance of the first element: {genetic, close, human}, {similarity, kinship}, {chromosome, genome}, {male, female}, {coat, back, fur}, {age/N, aged/A}, {ear, tail, face}.
+The text describes the gorilla species, more particularly its morphology.
+Gray words are other lexical elements in the neighbour database.
+</div>
+</div></li>
+</ul>
+<p class="ltx_p">The last feature is probably not entirely independent from the productivity of an item, or from the tf.ipf measure.</p>
+</div>
+<div id="S3.SS1.p9" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T2" title="Table 2 ‣ 3.1 Features ‣ 3 Experiments: predicting relevance in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> sums up the features used in our model.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Model</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our task is to identify relevant similarities between lexical items, between all possible related pairs, and
+we want to train an inductive model, a classifier, to extract the relevant links.
+We have seen that the relevant/not relevant classification is very imbalanced, biased towards the “not relevant” category
+(about 11%/89%), so we applied methods dedicated to counter-balance this, and will focus on the precision and recall
+of the predicted relevant links.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Following a classical methodology, we made a 10-fold cross-validation to evaluate robustly the performance of the classifiers.
+We tested a few popular machine learning methods, and report on two of them, a naive bayes model and the best method on our dataset, the Random Forest classifier
+<cite class="ltx_cite">[]</cite>. Other popular methods (maximum entropy, SVM) have shown slightly inferior combined F-score, even though precision and recall might yield
+more important variations. As a baseline, we can also consider a simple threshold on the lexical similarity score, in our case Lin’s measure, which we have shown
+to yield the best F-score of 24% when set at 0.22.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">To address class imbalance, two broad types of methods can be applied to help the model focus on the minority class. The first one
+is to resample the training data to balance the two classes, the second one is to penalize differently the two classes during training when the model makes
+a mistake (a mistake on the minority class being made more costly than on the majority class).
+We tested the two strategies, by applying the classical Smote method of <cite class="ltx_cite">[]</cite> as a kind of resampling, and the ensemble method MetaCost of <cite class="ltx_cite">[]</cite> as
+a cost-aware learning method. Smote synthetizes and adds new instances similar to the minority class instances and is more efficient than a mere resampling.
+MetaCost is an interesting meta-learner that can use any classifier as a base classifier.
+We used Weka’s implementations of these methods <cite class="ltx_cite">[]</cite>, and our experiments and comparisons are thus easily replicated on our dataset, provided with this paper,
+even though they can be improved by refinements of these techniques.
+We chose the following settings for the different models: naive bayes uses a kernel density estimation for numerical features, as this generally improves performance.
+For Random Forests, we chose to have ten trees, and each decision is taken on a randomly chosen set of five features.
+For resampling, Smote advises to double the number of instances of the minority class, and we observed that a bigger resampling degrades performances.
+For cost-aware learning, a sensible choice is to invert the class ratio for the cost ratio, i.e. here the cost of a mistake on a relevant link (false negative) is exactly 8.5 times higher than
+the cost on a non-relevant link (false positive), as non-relevant instances are 8.5 times more present than relevant ones.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Results</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We are interested in the precision and recall for the “relevant” class. If we take the best simple classifier (random forests), the precision and recall are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="68.1\%" display="inline"><mrow><mn>68.1</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="24.2\%" display="inline"><mrow><mn>24.2</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> for an F-score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="35.7\%" display="inline"><mrow><mn>35.7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>, and this is significantly beaten
+by the Naive Bayes method as precision and recall are more even (F-score of 41.5%). This is already a big improvement on the use of the similarity measure alone (24%).
+Also note that predicting every link as relevant would result in a 2.6% precision, and thus a 5% F-score.
+The random forest model is significantly improved by the balancing techniques: the overall best F-score of 46.3% is reached with Random Forests and the cost-aware learning method.
+Table <a href="#S3.T3" title="Table 3 ‣ 3.3 Results ‣ 3 Experiments: predicting relevance in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> sums up the scores for the different configurations, with precision, recall, F-score and the confidence interval on the F-score. We analysed the learning curve by doing a cross-validation on reduced set of instances (from 10% to 90%); F1-scores range from 37.3% with 10% of instances and stabilize at 80%, with small increment in every case.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Method</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">Precision</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">Recall</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">F-score</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">CI</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Baseline (Lin threshold)</th>
+<td class="ltx_td ltx_align_right ltx_border_t">24.0</td>
+<td class="ltx_td ltx_align_right ltx_border_t">24.0</td>
+<td class="ltx_td ltx_align_right ltx_border_t">24.0</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">RF</th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">68.1</span></td>
+<td class="ltx_td ltx_align_right">24.2</td>
+<td class="ltx_td ltx_align_right">35.7</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 3.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">NB</th>
+<td class="ltx_td ltx_align_right">34.8</td>
+<td class="ltx_td ltx_align_right">51.3</td>
+<td class="ltx_td ltx_align_right">41.5</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 2.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">RF+resampling</th>
+<td class="ltx_td ltx_align_right ltx_border_t">56.6</td>
+<td class="ltx_td ltx_align_right ltx_border_t">32.0</td>
+<td class="ltx_td ltx_align_right ltx_border_t">40.9</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 3.3</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">NB+resampling</th>
+<td class="ltx_td ltx_align_right">32.8</td>
+<td class="ltx_td ltx_align_right">54.0</td>
+<td class="ltx_td ltx_align_right">40.7</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 2.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">RF+cost aware learning</th>
+<td class="ltx_td ltx_align_right ltx_border_t">40.4</td>
+<td class="ltx_td ltx_align_right ltx_border_t">54.3</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">46.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m5" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 2.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">NB+cost aware learning</th>
+<td class="ltx_td ltx_align_right ltx_border_bb">27.3</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold">61.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb">37.8</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 2.2</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Classification scores (%) on the relevant class. CI is the confidence interval on the F-score (RF = Random Forest, NB= naive bayes).</div>
+</div>
+<div id="S3.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Features</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Prec.</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Recall</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">F-score</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">all</th>
+<td class="ltx_td ltx_align_center ltx_border_t">40.4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">54.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">46.3</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m1" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> corpus feat.</th>
+<td class="ltx_td ltx_align_center">37.4</td>
+<td class="ltx_td ltx_align_center">52.8</td>
+<td class="ltx_td ltx_align_center">43.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m2" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> similarity feat.</th>
+<td class="ltx_td ltx_align_center">36.1</td>
+<td class="ltx_td ltx_align_center">49.5</td>
+<td class="ltx_td ltx_align_center">41.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m3" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> contextual feat.</th>
+<td class="ltx_td ltx_align_center ltx_border_bb">36.5</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">54.8</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">43.8</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Impact of each group of features on the best scores (%) : the lowest the results, the bigger the impact of the removed group of features.</div>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The filtering approach we propose seems to yield good results, by augmenting the similarity built on the whole corpus with signals from
+the local contexts and documents where related lexical items appear together.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">To try to analyse the role of each set of features, we repeated the experiment but changed the set of features used during training, and
+results are shown table <a href="#S3.T4" title="Table 4 ‣ 3.3 Results ‣ 3 Experiments: predicting relevance in context ‣ Predicting the relevance of distributional semantic similarity with contextual information" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> for the best method (RF with cost-aware learning).</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">We can see that similarity-related features (measures, ranks) have the biggest impact, but the other ones also seem to play a significant role.
+We can draw the tentative conclusion that the quality of distributional relations depends on the contextualizing of the related lexical items, beyond just the similarity score and the ranks of items as neighbours of other items.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Related work</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Our work is related to two issues: evaluating distributional resources, and improving them.
+Evaluating distributional resources is the subject of a lot of methodological reflection <cite class="ltx_cite">[]</cite>, and
+as we said in the introduction, evaluations can be divided between extrinsic and intrinsic evaluations.
+In extrinsic evaluations, models are evaluated against benchmarks focusing on a single task or a single aspect
+of a resource: either discriminative, TOEFL-like tests <cite class="ltx_cite">[]</cite>, analogy production <cite class="ltx_cite">[]</cite>,
+or synonym selection <cite class="ltx_cite">[]</cite>.
+In intrinsic evaluations, associations norms are used, such as the 353 word-similarity dataset <cite class="ltx_cite">[]</cite>, e.g. <cite class="ltx_cite">[]</cite>, or specifically designed test cases, as in <cite class="ltx_cite">[]</cite>.
+We differ from all these evaluation procedures as we do not focus on an <em class="ltx_emph">essential</em> view of the relatedness of two lexical items, but evaluate the link
+in a context where the relevance of the link is in question, an “existential” view of semantic relatedness.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">As for improving distributional thesauri, outside of
+numerous alternate approaches to the construction,
+there is a body of work focusing on
+improving an existing resource, for instance
+reweighting context features once an initial thesaurus is built <cite class="ltx_cite">[]</cite>,
+or post-processing the resource to filter bad neighbours or re-ranking neighbours of a given
+target <cite class="ltx_cite">[]</cite>. They still use “essential” evaluation measures (mostly synonym extraction),
+although the latter comes close to our work since it also trains a model to detect (intrinsically) bad neighbours by using example sentences with the words to discriminate.
+We are not aware of any work that would try to evaluate differently semantic neighbours according to the context they appear in.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We proposed a method to reliably evaluate distributional semantic similarity in a broad sense by considering
+the validation of lexical pairs in contexts where they both appear. This helps cover non classical semantic relations
+which are hard to evaluate with classical resources. We also presented a supervised learning model which combines
+global features from the corpus used to built a distributional thesaurus and local features from the text where
+similarities are to be judged as relevant or not to the coherence of a document.
+It seems from these experiments that the quality of distributional relations depends on the contextualizing of the related
+lexical items, beyond just the similarity score and the ranks of items as neighbours of other items.
+This can hopefully help filter out lexical pairs when word lexical similarity is used as an information source
+where context is important: lexical disambiguation <cite class="ltx_cite">[]</cite>, topic segmentation <cite class="ltx_cite">[]</cite>. This can also be
+a preprocessing step when looking for similarities at higher levels, for instance at the sentence level <cite class="ltx_cite">[]</cite> or
+other macro-textual level <cite class="ltx_cite">[]</cite>, since these are always aggregation functions of word similarities.
+There are limits to what is presented here: we need to evaluate the importance of the level of noise in the distributional neighbours database, or at least the quantity of non-semantic relations present,
+and this depends on the way the database is built. Our starting corpus is relatively small compared to current efforts in this framework. We are confident that the same methodology can be followed,
+even though the quantitative results may vary, since it is independent of the
+particular distributional thesaurus we used, and the way the similarities are computed.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:43:12 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

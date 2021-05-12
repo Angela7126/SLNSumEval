@@ -1,0 +1,830 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning to Predict Distributions of Words Across Domains</title>
+<!--Generated on Tue Jun 10 17:59:33 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning to Predict Distributions of Words Across Domains</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Danushka Bollegala 
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>University of Liverpool
+<br class="ltx_break"/>Liverpool,
+<br class="ltx_break"/>L69 3BX, UK
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">danushka.bollegala@</span> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">liverpool.ac.uk</span>
+&amp;David Weir
+<br class="ltx_break"/>Department of Informatics 
+<br class="ltx_break"/>University of Sussex 
+<br class="ltx_break"/>Falmer, Brighton,
+<br class="ltx_break"/>BN1 9QJ, UK 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">d.j.weir@</span> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sussex.ac.uk</span>
+&amp;John Carroll 
+<br class="ltx_break"/>Department of Informatics 
+<br class="ltx_break"/>University of Sussex 
+<br class="ltx_break"/>Falmer, Brighton,
+<br class="ltx_break"/>BN1 9QJ, UK 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">j.a.carroll@</span> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sussex.ac.uk </span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Although the distributional hypothesis has been applied successfully in many natural language processing tasks,
+systems using distributional information have been limited to a single domain because
+the distribution of a word can vary between domains as the word’s predominant meaning changes.
+However, if it were possible to <span class="ltx_text ltx_font_italic">predict</span> how the distribution
+of a word changes from one domain to another, the predictions could be used to
+adapt a system trained in one domain to work in another.
+We propose an unsupervised method to predict the distribution of
+a word in one domain, given its distribution in another domain.
+We evaluate our method on two tasks: cross-domain part-of-speech tagging
+and cross-domain sentiment classification. In both tasks, our method significantly outperforms
+competitive baselines and returns results that are statistically comparable to current state-of-the-art methods,
+while requiring no task-specific customisations.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The Distributional Hypothesis, summarised by the memorable line of
+<cite class="ltx_cite"/> – <em class="ltx_emph">You shall know a word by the company it keeps</em> –
+has inspired a diverse range of research in natural language processing.
+In such work, a word is represented by the distribution of other words that co-occur with it.
+Distributional representations of words have been successfully used in
+many language processing tasks such as
+entity set expansion <cite class="ltx_cite">[]</cite>,
+part-of-speech (POS) tagging and chunking <cite class="ltx_cite">[]</cite>,
+ontology learning <cite class="ltx_cite">[]</cite>,
+computing semantic textual similarity <cite class="ltx_cite">[]</cite>,
+and lexical inference <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">However, the distribution of a word often varies
+from one domain<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In this paper, we use the term <span class="ltx_text ltx_font_italic">domain</span> to refer to a collection of
+documents about a particular topic, for example reviews of a particular kind of product.</span></span></span> to another.
+For example, in the domain of portable computer reviews the word <span class="ltx_text ltx_font_italic">lightweight</span> is often associated
+with positive sentiment bearing words such as <span class="ltx_text ltx_font_italic">sleek</span> or <span class="ltx_text ltx_font_italic">compact</span>,
+whereas in the movie review domain the same word is often associated with negative sentiment-bearing words such as
+<span class="ltx_text ltx_font_italic">superficial</span> or <span class="ltx_text ltx_font_italic">formulaic</span>.
+Consequently, the distributional representations of the word <span class="ltx_text ltx_font_italic">lightweight</span> will differ considerably between the
+two domains. In this paper, given the distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="\vec{w}_{\cS}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the source domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="\cS" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></math>,
+we propose an unsupervised method for <span class="ltx_text ltx_font_italic">predicting</span> its distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="\vec{w}_{\cT}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math>
+in a different target domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m5" class="ltx_Math" alttext="\cT" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></math>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The ability to predict how the distribution of a word varies from one domain to another is vital
+for numerous adaptation tasks. For example, unsupervised cross-domain sentiment classification
+<cite class="ltx_cite">[]</cite> involves using sentiment-labeled
+user reviews from the source domain, and unlabeled reviews from both the source and the target domains
+to learn a sentiment classifier for the target domain.
+Domain adaptation (DA) of sentiment classification becomes extremely challenging
+when the distributions of words in the source and the target domains are very different,
+because the features learnt from the source domain labeled reviews might not appear in the
+target domain reviews that must be classified. By predicting the distribution of a word
+across different domains, we can find source domain features that are similar to the features in
+target domain reviews, thereby reducing the mismatch of features between the two domains.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We propose a two-step unsupervised approach to predict the distribution of a word across domains.
+First, we create two lower dimensional latent feature spaces separately for the source and the target domains
+using Singular Value Decomposition (SVD).
+Second, we learn a mapping from the source domain latent feature space to the target domain latent feature space
+using Partial Least Square Regression (PLSR).
+The SVD smoothing in the first step both reduces the data sparseness in distributional representations
+of individual words, as well as the dimensionality of the feature space, thereby enabling us to efficiently
+and accurately learn a prediction model using PLSR in the second step.
+Our proposed cross-domain word distribution prediction method is unsupervised in the sense that
+it does not require any labeled data in either of the two steps.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Using two popular multi-domain datasets, we evaluate the proposed method in two prediction tasks:
+(a) predicting the POS of a word in a target domain,
+and (b) predicting the sentiment of a review in a target domain.
+Without requiring any task specific customisations, systems based on our distribution prediction method
+significantly outperform competitive baselines in both tasks.
+Because our proposed distribution prediction method is unsupervised and
+task independent, it is potentially useful for a wide range of DA tasks
+such entity extraction <cite class="ltx_cite">[]</cite> or dependency parsing <cite class="ltx_cite">[]</cite>.
+Our contributions are summarised as follows:</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Given the distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="\vec{w}_{\cS}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in a source domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m3" class="ltx_Math" alttext="\cS" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></math>, we propose a method for learning
+its distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m4" class="ltx_Math" alttext="\vec{w}_{\cT}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math> in a target domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m5" class="ltx_Math" alttext="\cT" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></math>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Using the learnt distribution prediction model, we propose a method to learn a cross-domain POS tagger.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Using the learnt distribution prediction model, we propose a method to learn a cross-domain sentiment classifier.</p>
+</div></li>
+</ul>
+<p class="ltx_p">To our knowledge, ours is the first successful attempt to learn a model that predicts the distribution of a word
+across different domains.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Learning semantic representations for words using documents from a single domain has received much attention
+lately <cite class="ltx_cite">[]</cite>.
+As we have already discussed, the semantics of a word varies across different domains, and
+such variations are not captured by models that only learn a single semantic representation for
+a word using documents from a single domain.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The POS of a word is influenced both by its context (<span class="ltx_text ltx_font_italic">contextual bias</span>), and
+the domain of the document in which it appears (<span class="ltx_text ltx_font_italic">lexical bias</span>). For example, the word <span class="ltx_text ltx_font_italic">signal</span> is
+predominately used as a noun in MEDLINE, whereas it appears predominantly as an adjective in the Wall Street Journal (WSJ) <cite class="ltx_cite">[]</cite>.
+Consequently, a tagger trained on WSJ would incorrectly tag <span class="ltx_text ltx_font_italic">signal</span> in MEDLINE.
+<cite class="ltx_cite"/> append the source domain labeled data with predicted pivots (i.e. words that
+appear in both the source and target domains)
+to adapt a POS tagger to a target domain.
+<cite class="ltx_cite"/> propose a cross-domain POS tagging method by training two separate models:
+a generalised model and a domain-specific model. At tagging time, a sentence is tagged by the model
+that is most similar to that sentence.
+<cite class="ltx_cite"/> train a Conditional Random Field (CRF) tagger with features retrieved from
+a smoothing model trained using both source and target domain unlabeled data.
+Adding latent states to the smoothing model further improves the POS tagging accuracy <cite class="ltx_cite">[]</cite>.
+<cite class="ltx_cite"/> propose a training set filtering method where they eliminate
+shorter words from the training data based on the intuition that
+longer words are more likely to be examples of productive linguistic processes than shorter words.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The sentiment of a word can vary from one domain to another.
+In Structural Correspondence Learning (SCL) <cite class="ltx_cite">[]</cite>,
+a set of pivots are chosen using pointwise mutual information.
+Linear predictors are then learnt to predict the occurrence of those pivots, and SVD
+is used to construct a lower dimensional representation in which a binary classifier is trained.
+Spectral Feature Alignment (SFA) <cite class="ltx_cite">[]</cite> also uses pivots to compute an alignment between
+domain specific and domain independent features. Spectral clustering is performed on a bipartite
+graph representing domain specific and domain independent features to find a lower-dimensional
+projection between the two sets of features.
+The cross-domain sentiment-sensitive thesaurus (SST) <cite class="ltx_cite">[]</cite>
+groups together words that express similar sentiments in different domains. The created thesaurus is used
+to expand feature vectors during train and test stages in a binary classifier.
+However, unlike our method, SCL, SFA, or SST do <span class="ltx_text ltx_font_italic">not</span> learn a prediction model between
+word distributions across domains.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Prior knowledge of the sentiment of words, such as sentiment lexicons,
+has been incorporated into cross-domain sentiment classification.
+<cite class="ltx_cite"/> propose a joint sentiment-topic model that imposes a sentiment-prior
+depending on the occurrence of a word in a sentiment lexicon.
+<cite class="ltx_cite"/> represent source and target domain reviews as nodes in a graph
+and apply a label propagation algorithm to predict the sentiment labels for target domain
+reviews from the sentiment labels in source domain reviews. A sentiment lexicon is used
+to create features for a document. Although incorporation of prior sentiment knowledge is
+a promising technique to improve accuracy in cross-domain sentiment classification,
+it is complementary to our task of distribution prediction across domains.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">unsupervised</span> DA setting that we consider does not assume
+the availability of labeled data for the target domain. However, if a small amount of labeled data
+is available for the target domain, it can be used to further improve the performance of DA
+tasks <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Distribution Prediction</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>In-domain Feature Vector Construction</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Before we tackle the problem of learning a model to predict the distribution of a word across domains,
+we must first compute the distribution of a word from a single domain.
+For this purpose, we represent a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> using unigrams and bigrams that co-occur with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in a sentence
+as follows.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Given a document <span class="ltx_text ltx_font_sansserif">H</span>, such as a user-review of a product, we split <span class="ltx_text ltx_font_sansserif">H</span> into sentences,
+and lemmatize each word in a sentence using the RASP system <cite class="ltx_cite">[]</cite>.
+Using a standard stop word list, we filter out frequent non-content unigrams and select
+the remainder as unigram features to represent a sentence.
+Next, we generate bigrams of word lemmas and remove any bigrams that consists only of stop words.
+Bigram features capture negations more accurately than unigrams, and have been found to be useful
+for sentiment classification tasks.
+Table <a href="#S3.T1" title="Table 1 ‣ 3.1 In-domain Feature Vector Construction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the unigram and bigram features we extract for a sentence using this procedure.
+Using data from a single domain, we construct a feature co-occurrence matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>
+in which columns correspond to unigram features and rows correspond to either unigram or bigram features.
+The value of the element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="a_{ij}" display="inline"><msub><mi>a</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> in the co-occurrence matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>
+is set to the number of sentences in which the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th features co-occur.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Typically, the number of unique bigrams is much larger than that of unigrams.
+Moreover, co-occurrences of bigrams are rare compared to co-occurrences of unigrams,
+and co-occurrences involving a unigram and a bigram.
+Consequently, in matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>, we consider co-occurrences only between unigrams vs. unigrams,
+and bigrams vs. unigrams. We consider each row in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math> as representing the distribution of a
+feature (i.e. unigrams or bigrams) in a particular domain over the unigram features extracted from that domain
+(represented by the columns of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>).
+We apply Positive Pointwise Mutual Information (PPMI) to the co-occurrence
+matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>. This is a variation of the Pointwise Mutual Information (PMI) <cite class="ltx_cite">[]</cite>,
+in which all PMI values that are less than zero are replaced with zero <cite class="ltx_cite">[]</cite>.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="\mat{F}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow></math> be the matrix that results when PPMI is applied to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m6" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>.
+Matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m7" class="ltx_Math" alttext="\mat{F}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow></math> has the same number of rows, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m8" class="ltx_Math" alttext="n_{r}" display="inline"><msub><mi>n</mi><mi>r</mi></msub></math>, and columns, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m9" class="ltx_Math" alttext="n_{c}" display="inline"><msub><mi>n</mi><mi>c</mi></msub></math>,
+as the raw co-occurrence matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m10" class="ltx_Math" alttext="\mat{A}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>A</mi></mrow></math>.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">sentence</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">This is an interesting and well researched book</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_tt" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">unigrams</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">this, is, an, interesting, and, well, researched,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">(surface)</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">book</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">unigrams</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">this, be, an, interest, and, well, research, book</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">(lemma)</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:167.9pt;" width="167.9pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">unigrams</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">interest, well, research, book</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">(features)</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:167.9pt;" width="167.9pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">bigrams</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">this+be, be+an, an+interest, interest+and,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">(lemma)</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">and+well, well+research, research+book</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">bigrams</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">an+interest, interest+and, and+well,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">(features)</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:167.9pt;" width="167.9pt"><span class="ltx_text ltx_font_small">well+research, research+book</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Extracting unigram and bigram features.</div>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">Note that in addition to the above-mentioned representation, there are many other ways to
+represent the distribution of a word in a particular domain <cite class="ltx_cite">[]</cite>.
+For example, one can limit the definition of co-occurrence to words that are linked by some dependency relation <cite class="ltx_cite">[]</cite>,
+or extend the window of co-occurrence to the entire document <cite class="ltx_cite">[]</cite>.
+Since the method we propose in Section <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> to predict the distribution of a word across domains
+does not depend on the particular feature representation method, any of these alternative methods could be used.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">To reduce the dimensionality of the feature space, and create dense representations for words,
+we perform SVD on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="\mat{F}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow></math>. We use the left singular vectors corresponding to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> largest
+singular values to compute a rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> approximation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m4" class="ltx_Math" alttext="\hat{\mat{F}}" display="inline"><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover></math>, of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m5" class="ltx_Math" alttext="\mat{F}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow></math>.
+We perform truncated SVD using SVDLIBC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://tedlab.mit.edu/~dr/SVDLIBC/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://tedlab.mit.edu/~dr/SVDLIBC/</span></a></span></span></span>.
+Each row in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m6" class="ltx_Math" alttext="\hat{\mat{F}}" display="inline"><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover></math> is considered as representing a word in a
+lower <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m7" class="ltx_Math" alttext="k\ ({\ll}n_{c})" display="inline"><mrow><mpadded width="+5.0pt"><mi>k</mi></mpadded><mspace width="veryverythickmathspace"/><mrow><mo>(</mo><mrow><mi/><mo>≪</mo><msub><mi>n</mi><mi>c</mi></msub></mrow><mo>)</mo></mrow></mrow></math> dimensional feature space corresponding to a particular domain.
+Distribution prediction in this lower dimensional feature space is preferrable
+to prediction over the original feature space because there are reductions in overfitting, feature sparseness, and the learning time.
+We created two matrices, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m8" class="ltx_Math" alttext="\hat{\mat{F}}_{\cS}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m9" class="ltx_Math" alttext="\hat{\mat{F}}_{\cT}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math>
+from the source and target domains, respectively, using the above mentioned procedure.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Cross-Domain Feature Vector Prediction</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We propose a method to learn a model that can predict the distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\vec{w}_{\cT}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math> of a word
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the target domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="\cT" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></math>, given its distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="\vec{w}_{\cS}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> in the source domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="\cS" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></math>.
+We denote the set of features that occur in both domains by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="\cW=\{w^{(1)},\ldots,w^{(n)}\}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\cW</mtext></merror><mo>=</mo><mrow><mo>{</mo><mrow><msup><mi>w</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>w</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></math>.
+In the literature, such features are often referred to as <span class="ltx_text ltx_font_italic">pivots</span>,
+and they have been shown to be useful for DA, allowing the
+weights learnt to be transferred from one domain to another.
+Various criteria have been proposed for selecting a small set of pivots for
+DA, such as the mutual information of a word with the two domains <cite class="ltx_cite">[]</cite>.
+However, we do not impose any further restrictions on the set of pivots <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="\cW" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cW</mtext></merror></math> other than
+that they occur in both domains.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="w^{(i)}\in\cW" display="inline"><mrow><msup><mi>w</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>∈</mo><merror class="ltx_ERROR undefined undefined"><mtext>\cW</mtext></merror></mrow></math>, we denote the corresponding rows in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="\hat{\mat{F}}_{\cS}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="\hat{\mat{F}}_{\cT}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math>
+by column vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="\vec{w}_{\cS}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="\vec{w}_{\cT}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>.
+Note that the dimensionality of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="\vec{w}_{\cS}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="\vec{w}_{\cT}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math> need not be equal,
+and we may select different numbers of singular vectors to approximate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="\hat{\mat{F}}_{\cS}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="\hat{\mat{F}}_{\cT}" display="inline"><msub><mover accent="true"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>F</mi></mrow><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math>.
+We model distribution prediction as a multivariate regression
+problem where, given a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="\{(\vec{w}_{\cS}^{(i)},\vec{w}_{\cT}^{(i)})\}^{n}_{i=1}" display="inline"><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup></math> consisting of pairs
+of feature vectors selected from each domain for the pivots in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m11" class="ltx_Math" alttext="\cW" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cW</mtext></merror></math>, we learn a mapping
+from the inputs (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m12" class="ltx_Math" alttext="\vec{w}_{\cS}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>) to the outputs (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m13" class="ltx_Math" alttext="\vec{w}_{\cT}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>).</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">We use Partial Least Squares Regression (PLSR) <cite class="ltx_cite">[]</cite> to learn a regression model
+using pairs of vectors. PLSR has been applied in Chemometrics <cite class="ltx_cite">[]</cite>, producing
+stable prediction models even when the number of samples is considerably smaller than the
+dimensionality of the feature space. In particular, PLSR fits a smaller number of latent variables (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="10-100" display="inline"><mrow><mn>10</mn><mo>-</mo><mn>100</mn></mrow></math> in practice)
+such that the correlation between the feature vectors for pivots in the two domains
+are maximised in this latent space.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="\mat{X}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>X</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="\mat{Y}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>Y</mi></mrow></math> denote matrices formed by arranging respectively the vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="\vec{w}_{\cS}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>s and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m4" class="ltx_Math" alttext="\vec{w}_{\cT}^{(i)}" display="inline"><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math> in rows. PLSR decomposes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m5" class="ltx_Math" alttext="\mat{X}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>X</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m6" class="ltx_Math" alttext="\mat{Y}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>Y</mi></mrow></math> into a series of products
+between rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m7" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> matrices as follows:</p>
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle\mat{X}\approx\sum_{l=1}^{L}\vec{\lambda}_{l}\vec{p}_{l}\T=%&#10;\mathbf{\Lambda}\mat{P}\T" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>X</mi></mrow><mo>≈</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>l</mi><mo>=</mo><mn>1</mn></mrow><mi>L</mi></munderover></mstyle><mrow><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>⁢</mo><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow><mo>=</mo><mrow><mi>𝚲</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>P</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\displaystyle\mat{Y}\approx\sum_{l=1}^{L}\vec{\gamma}_{\l}\vec{q}_{l}\T=%&#10;\mathbf{\Gamma}\mat{Q}\T." display="inline"><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>Y</mi></mrow><mo>≈</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>l</mi><mo>=</mo><mn>1</mn></mrow><mi>L</mi></munderover></mstyle><mrow><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>ł</mi></msub><mo>⁢</mo><msub><mover accent="true"><mi>q</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow><mo>=</mo><mrow><mi>𝚪</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m8" class="ltx_Math" alttext="\vec{\lambda}_{l}" display="inline"><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m9" class="ltx_Math" alttext="\vec{\gamma}_{l}" display="inline"><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m10" class="ltx_Math" alttext="\vec{p}_{l}" display="inline"><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m11" class="ltx_Math" alttext="\vec{q}_{l}" display="inline"><msub><mover accent="true"><mi>q</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math> are column
+vectors, and the summation is taken over the rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m12" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> matrices that result from the outer product of
+those vectors. The matrices, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m13" class="ltx_Math" alttext="\mathbf{\Lambda}" display="inline"><mi>𝚲</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m14" class="ltx_Math" alttext="\mathbf{\Gamma}" display="inline"><mi>𝚪</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m15" class="ltx_Math" alttext="\mat{P}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>P</mi></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m16" class="ltx_Math" alttext="\mat{Q}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>Q</mi></mrow></math>
+are constructed respectively by arranging <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m17" class="ltx_Math" alttext="\vec{\lambda}_{l}" display="inline"><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m18" class="ltx_Math" alttext="\vec{\gamma}_{l}" display="inline"><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m19" class="ltx_Math" alttext="\vec{p}_{l}" display="inline"><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m20" class="ltx_Math" alttext="\vec{q}_{l}" display="inline"><msub><mover accent="true"><mi>q</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></math>
+vectors as columns.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_caption ltx_font_small">Learning a prediction model.</span><span class="ltx_text ltx_font_small">
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="\mat{X}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">X</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m2" class="ltx_Math" alttext="\mat{Y}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">Y</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m3" class="ltx_Math" alttext="L" display="inline"><mi mathsize="normal" stretchy="false">L</mi></math>.
+<span class="ltx_ERROR undefined">\ENSURE</span>Prediction matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m4" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">M</mi></mrow></math>.
+<span class="ltx_ERROR undefined">\STATE</span>Randomly select <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m5" class="ltx_Math" alttext="\vec{\gamma}_{l}" display="inline"><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></math> from columns in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m6" class="ltx_Math" alttext="\mat{Y}_{l}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></math>. 
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m7" class="ltx_Math" alttext="\vec{v}_{l}=\mat{X}_{l}\T\vec{\gamma}_{l}/\norm{\mat{X}_{l}\T\vec{\gamma}_{l}}" display="inline"><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">/</mo><merror class="ltx_ERROR undefined undefined"><mtext>\norm</mtext></merror></mrow><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math> 
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m8" class="ltx_Math" alttext="\vec{\lambda}_{l}=\mat{X}_{l}\vec{v}_{l}" display="inline"><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m9" class="ltx_Math" alttext="\vec{q}_{l}=\mat{Y}_{l}\T\vec{\lambda}_{l}/\norm{\mat{Y}_{l}\T\vec{\lambda}_{l}}" display="inline"><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">q</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">/</mo><merror class="ltx_ERROR undefined undefined"><mtext>\norm</mtext></merror></mrow><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m10" class="ltx_Math" alttext="\vec{\gamma}_{l}=\mat{Y}_{l}\vec{q}_{l}" display="inline"><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">q</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m11" class="ltx_Math" alttext="\vec{\gamma}_{l}" display="inline"><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></math> is unchanged go to Line <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>; otherwise go to Line <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m12" class="ltx_Math" alttext="c_{l}=\vec{\lambda}_{l}\T\vec{\gamma}_{l}/\norm{\vec{\lambda}_{l}\T\vec{\gamma%&#10;}_{l}}" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">/</mo><merror class="ltx_ERROR undefined undefined"><mtext>\norm</mtext></merror></mrow><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math> 
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m13" class="ltx_Math" alttext="\vec{p}_{l}=\mat{X}_{l}\T\vec{\lambda}_{l}/\vec{\lambda}_{l}\T\vec{\lambda}_{l}" display="inline"><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">/</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m14" class="ltx_Math" alttext="\mat{X}_{l+1}=\mat{X}_{l}-\vec{\lambda}_{l}\vec{p}_{l}\T" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mrow><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msub></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">-</mo><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m15" class="ltx_Math" alttext="\mat{Y}_{l+1}=\mat{Y}_{l}-c_{l}\vec{\lambda}_{l}\vec{q}_{l}\T" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mrow><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msub></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">Y</mi><mi mathsize="normal" stretchy="false">l</mi></msub></mrow><mo mathsize="normal" stretchy="false">-</mo><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">λ</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">q</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">l</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow></mrow></math>.
+<span class="ltx_ERROR undefined">\STATE</span>Stop if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m16" class="ltx_Math" alttext="l=L" display="inline"><mrow><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="normal" stretchy="false">=</mo><mi mathsize="normal" stretchy="false">L</mi></mrow></math>; otherwise <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m17" class="ltx_Math" alttext="l=l+1" display="inline"><mrow><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></mrow></math> and return to Line <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+<span class="ltx_ERROR undefined">\STATE</span>Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m18" class="ltx_Math" alttext="\mat{C}={\rm diag}(c_{1},\ldots,c_{L})" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><mi mathsize="normal" stretchy="false">diag</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">c</mi><mi mathsize="normal" stretchy="false">L</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m19" class="ltx_Math" alttext="\mat{V}=[\vec{v}_{1}\ldots\vec{v}_{L}]" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">V</mi></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">[</mo><mrow><msub><mover accent="true"><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">⁢</mo><msub><mover accent="true"><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mi mathsize="normal" stretchy="false">L</mi></msub></mrow><mo mathsize="small" stretchy="false">]</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m20" class="ltx_Math" alttext="\mat{M}=\mat{V}(\mat{P}\T\mat{V})\inv\mat{C}\mat{Q}\T" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">M</mi></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">V</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">P</mi><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">V</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\inv</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">Q</mi><mo mathsize="small" stretchy="false">⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\T</mtext></merror></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m21" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">M</mi></mrow></math>
+
+</span>
+Our method for learning a distribution prediction model is shown in Algorithm <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+It is based on the two block NIPALS routine <cite class="ltx_cite">[]</cite> and
+iteratively discovers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m22" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> pairs of vectors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m23" class="ltx_Math" alttext="\vec{\lambda}_{l},\vec{\gamma}_{l})" display="inline"><mrow><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>,</mo><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>)</mo></mrow></math> such that the covariances,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m24" class="ltx_Math" alttext="{\rm Cov}(\vec{\lambda}_{l},\vec{\gamma}_{l})" display="inline"><mrow><mi>Cov</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>,</mo><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></mrow><mo>)</mo></mrow></mrow></math>,
+are maximised under the constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m25" class="ltx_Math" alttext="\displaystyle\norm{\vec{p}_{l}}=\norm{\vec{q}_{l}}=1" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\norm</mtext></merror><mo>⁢</mo><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></mrow><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\norm</mtext></merror><mo>⁢</mo><msub><mover accent="true"><mi>q</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></mrow><mo>=</mo><mn>1</mn></mrow></math>.
+Finally, the prediction matrix, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m26" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi></mrow></math> is computed using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m27" class="ltx_Math" alttext="\vec{\lambda}_{l},\vec{\gamma}_{l},\vec{p}_{l},\vec{q}_{l}" display="inline"><mrow><msub><mover accent="true"><mi>λ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>,</mo><msub><mover accent="true"><mi>γ</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>,</mo><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub><mo>,</mo><msub><mover accent="true"><mi>q</mi><mo stretchy="false">→</mo></mover><mi>l</mi></msub></mrow></math>.
+The predicted distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m28" class="ltx_Math" alttext="\hat{\vec{w}}_{\cT}" display="inline"><msub><mover accent="true"><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math> of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m29" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m30" class="ltx_Math" alttext="\cT" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></math> is given by</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\hat{\vec{w}}_{\cT}=\mat{M}\vec{w}_{\cS}." display="block"><mrow><mrow><msub><mover accent="true"><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><mo stretchy="false">^</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">Our distribution prediction learning method is unsupervised in the sense that
+it does not require manually labeled data for a particular task from any of the domains.
+This is an important point, and means that the distribution prediction method is
+independent of the task to which it may subsequently be applied.
+As we go on to show in Section <a href="#S6" title="6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, this enables us to use the same
+distribution prediction method for both POS tagging and sentiment classification.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Domain Adaptation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The main reason that a model trained only on the source domain labeled data performs poorly in the target domain
+is the <span class="ltx_text ltx_font_italic">feature mismatch</span> – few features in target domain test instances appear
+in source domain training instances. To overcome this problem, we use the proposed
+distribution prediction method to find those related features in the source domain that
+correspond to the features appearing in the target domain test instances.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We consider two DA tasks: (a) cross-domain POS tagging (Section <a href="#S4.SS1" title="4.1 Cross-Domain POS Tagging ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>), and (b) cross-domain sentiment classification (Section <a href="#S4.SS2" title="4.2 Cross-Domain Sentiment Classification ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>).
+Note that our proposed distribution prediction method can be applied to numerous other NLP tasks that involve sequence labelling and document classification.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Cross-Domain POS Tagging</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We represent each word using a set of features such as capitalisation (whether the first letter of
+the word is capitalised), numeric (whether the word contains digits), prefixes up to four letters,
+and suffixes up to four letters <cite class="ltx_cite">[]</cite>.
+Next, for each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in a source domain labeled (i.e. manually POS tagged) sentence,
+we select its neighbours <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in the source domain as additional features.
+Specifically, we measure the similarity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="{\rm sim}(\vec{u}^{(i)}_{\cS},\vec{w}_{\cS})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>, between
+the source domain distributions of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, and select the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m6" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> similar neighbours <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m7" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>
+for each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m8" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> as additional features for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m9" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. We refer to such features as <span class="ltx_text ltx_font_italic">distributional features</span> in this work.
+The value of a neighbour <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m10" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> selected as a distributional feature is set to
+its similarity score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m11" class="ltx_Math" alttext="{\rm sim}(\vec{u}^{(i)}_{\cS},\vec{w}_{\cS})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>.
+Next, we train a CRF model using all features (i.e. capitalisation, numeric, prefixes, suffixes, and
+distributional features) on source domain labeled sentences.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We train a PLSR model, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi></mrow></math>, that predicts the target domain distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="\mat{M}\vec{u}^{(i)}_{\cS}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow></math>
+of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in the source domain labeled sentences, given its distribution, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="\vec{u}^{(i)}_{\cS}" display="inline"><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>.
+At test time, for each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> that appears in a target domain test sentence, we measure the similarity,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="{\rm sim}(\mat{M}\vec{u}^{(i)}_{\cS},\vec{w}_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow><mo>,</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>, and select the most similar <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>
+in the source domain labeled sentences as the
+distributional features for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m9" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, with their values set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m10" class="ltx_Math" alttext="{\rm sim}(\mat{M}\vec{u}^{(i)}_{\cS},\vec{w}_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow><mo>,</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>.
+Finally, the trained CRF model is applied to a target domain test sentence.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Note that distributional features are always selected from the source domain during both train and test times, thereby
+increasing the number of overlapping features between the trained model and test sentences.
+To make the inference tractable and efficient, we use a first-order Markov factorisation, in which we consider all pairwise combinations
+between the features for the current word and its immediate predecessor.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Cross-Domain Sentiment Classification</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Unlike in POS tagging, where we must individually tag each word in a target domain test sentence, in sentiment classification
+we must classify the sentiment for the entire review. We modify the DA method presented in
+Section <a href="#S4.SS1" title="4.1 Cross-Domain POS Tagging ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a> to satisfy this requirement as follows.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Let us assume that we are given a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\{(\vec{x}^{(i)}_{\cS},y^{(i)})\}_{i=1}^{n}" display="inline"><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msubsup><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> labeled reviews <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\vec{x}^{(i)}_{\cS}" display="inline"><msubsup><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>
+for the source domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="\cS" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></math>. For simplicity, let us consider binary sentiment classification where each review <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="\vec{x}^{(i)}" display="inline"><msup><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> is
+labeled either as positive (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="y^{(i)}=1" display="inline"><mrow><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>=</mo><mn>1</mn></mrow></math>) or negative (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="y^{(i)}=-1" display="inline"><mrow><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mo>-</mo><mn>1</mn></mrow></mrow></math>).
+Our cross-domain binary sentiment classification method can be easily extended to the multi-class setting as well.
+First, we lemmatise each word in a source domain labeled review <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="\vec{x}^{(i)}_{\cS}" display="inline"><msubsup><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math>,
+and extract both unigrams and bigrams as features to represent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m9" class="ltx_Math" alttext="\vec{x}^{(i)}_{\cS}" display="inline"><msubsup><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></math> by a binary-valued feature vector.
+Next, we train a binary classification model, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m10" class="ltx_Math" alttext="\vec{\theta}" display="inline"><mover accent="true"><mi>θ</mi><mo stretchy="false">→</mo></mover></math>, using those feature vectors.
+Any binary classification algorithm can be used to learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m11" class="ltx_Math" alttext="\vec{\theta}" display="inline"><mover accent="true"><mi>θ</mi><mo stretchy="false">→</mo></mover></math>.
+In our experiments, we used L2 regularised logistic regression.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Next, we train a PLSR model, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi></mrow></math>, as described in Section <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> using unlabeled reviews in the
+source and target domains. At test time, we represent a test target review <span class="ltx_text ltx_font_sansserif">H</span> using a binary-valued feature vector
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\vec{h}" display="inline"><mover accent="true"><mi>h</mi><mo stretchy="false">→</mo></mover></math> of unigrams and bigrams of lemmas of the words in <span class="ltx_text ltx_font_sansserif">H</span>, as we did for source domain labeled train reviews.
+Next, for each feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="w^{(j)}" display="inline"><msup><mi>w</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup></math> extracted from <span class="ltx_text ltx_font_sansserif">H</span>, we measure the similarity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="{\rm sim}(\mat{M}\vec{u}^{(i)}_{\cS},\vec{w}^{(j)}_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow><mo>,</mo><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></math>,
+between the target domain distribution of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="w^{(j)}" display="inline"><msup><mi>w</mi><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msup></math>,
+and each feature (unigram or bigram) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m6" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in the source domain labeled reviews.
+We score each source domain feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m7" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> for its relatedness to <span class="ltx_text ltx_font_sansserif">H</span> using
+the formula:</p>
+<table id="S4.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m1" class="ltx_Math" alttext="{\rm score}(u^{(i)},{\rm\textsf{H}})=\frac{1}{|{\rm\textsf{H}}|}\sum_{j=1}^{|{%&#10;\rm\textsf{H}}|}{\rm sim}(\mat{M}\vec{u}^{(i)}_{\cS},\vec{w}^{(j)}_{\cT})" display="block"><mrow><mrow><mi>score</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mtext>𝖧</mtext></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><mtext>𝖧</mtext><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mtext>𝖧</mtext><mo fence="true">|</mo></mrow></munderover><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msubsup><mover accent="true"><mi>u</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msubsup></mrow><mo>,</mo><msubsup><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m8" class="ltx_Math" alttext="{|{\rm\textsf{H}}|}" display="inline"><mrow><mo fence="true">|</mo><mtext>𝖧</mtext><mo fence="true">|</mo></mrow></math> denotes the total number of features extracted from the test review <span class="ltx_text ltx_font_sansserif">H</span>.
+We select the top scoring <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m9" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m10" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> as distributional features for
+<span class="ltx_text ltx_font_sansserif">H</span>, and append those to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m11" class="ltx_Math" alttext="\vec{h}" display="inline"><mover accent="true"><mi>h</mi><mo stretchy="false">→</mo></mover></math>.
+The corresponding values of those distributional features are set to the scores given by Equation <a href="#S4.E4" title="(4) ‣ 4.2 Cross-Domain Sentiment Classification ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+Finally, we classify <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m12" class="ltx_Math" alttext="\vec{h}" display="inline"><mover accent="true"><mi>h</mi><mo stretchy="false">→</mo></mover></math> using the trained binary classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m13" class="ltx_Math" alttext="\vec{\theta}" display="inline"><mover accent="true"><mi>θ</mi><mo stretchy="false">→</mo></mover></math>.
+Note that given a test review, we find the distributional features that are similar to <span class="ltx_text ltx_font_italic">all</span>
+the words in the test review from the source domain. In particular, we <span class="ltx_text ltx_font_italic">do not</span> find distributional features
+independently for each word in the test review. This enables us to find distributional features that are
+consistent with all the features in a test review.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Model Choices</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">For both POS tagging and sentiment classification, we experimented with several alternative approaches for feature weighting,
+representation, and similarity measures using development data, which we randomly selected from the
+training instances from the datasets described in Section <a href="#S5" title="5 Datasets ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">For feature weighting for sentiment classification, we considered using the number of occurrences of a feature in a review
+and tf-idf weighting <cite class="ltx_cite">[]</cite>. For representation, we considered distributional features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="u^{(i)}" display="inline"><msup><mi>u</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in descending
+order of their scores given by Equation <a href="#S4.E4" title="(4) ‣ 4.2 Cross-Domain Sentiment Classification ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, and then taking the inverse-rank as the values for
+the distributional features <cite class="ltx_cite">[]</cite>.
+However, none of these alternatives resulted in performance gains.
+With respect to similarity measures, we experimented with cosine similarity and
+the similarity measure proposed by <cite class="ltx_cite"/>; cosine similarity performed
+consistently well over all the experimental settings.
+The feature representation was held fixed during these similarity measure comparisons.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">For POS tagging, we measured the effect of varying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>, the number of distributional features,
+using a development dataset. We observed that setting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> larger than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> did not result in significant
+improvements in tagging accuracy, but only increased the train time due to the larger feature space.
+Consequently, we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m4" class="ltx_Math" alttext="r=10" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>10</mn></mrow></math> in POS tagging.
+For sentiment analysis, we used all features in the source domain
+labeled reviews as distributional features, weighted by their scores given by Equation <a href="#S4.E4" title="(4) ‣ 4.2 Cross-Domain Sentiment Classification ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+taking the inverse-rank.
+In both tasks, we parallelised similarity computations using BLAS<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://www.openblas.net/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.openblas.net/</span></a></span></span></span>
+level-3 routines to speed up the computations.
+The source code of our implementation is publicly available<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://www.csc.liv.ac.uk/~danushka/software.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.csc.liv.ac.uk/~danushka/software.html</span></a></span></span></span>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Datasets</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">To evaluate DA for POS tagging,
+following <cite class="ltx_cite"/>, we use sections <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="2-21" display="inline"><mrow><mn>2</mn><mo>-</mo><mn>21</mn></mrow></math> from Wall Street Journal (WSJ) as the source domain
+labeled data. An additional <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="100,000" display="inline"><mrow><mn>100</mn><mo>,</mo><mn>000</mn></mrow></math> WSJ sentences from the 1988 release of the WSJ corpus are used as
+the source domain unlabeled data.
+Following <cite class="ltx_cite"/>, we use the POS labeled sentences in the SACNL
+dataset <cite class="ltx_cite">[]</cite> for the five target domains: QA forums, Emails, Newsgroups, Reviews, and Blogs.
+Each target domain contains around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> POS labeled test sentences and around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="100,000" display="inline"><mrow><mn>100</mn><mo>,</mo><mn>000</mn></mrow></math> unlabeled sentences.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">To evaluate DA for sentiment classification,
+we use the Amazon product reviews collected by <cite class="ltx_cite"/> for four different product categories:
+books (<span class="ltx_text ltx_font_bold">B</span>), DVDs (<span class="ltx_text ltx_font_bold">D</span>), electronic items (<span class="ltx_text ltx_font_bold">E</span>), and kitchen appliances (<span class="ltx_text ltx_font_bold">K</span>).
+There are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> positive and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> negative sentiment labeled reviews for each domain.
+Moreover, each domain has on average <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="17,547" display="inline"><mrow><mn>17</mn><mo>,</mo><mn>547</mn></mrow></math> unlabeled reviews.
+We use the standard split of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m4" class="ltx_Math" alttext="800" display="inline"><mn>800</mn></math> positive and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m5" class="ltx_Math" alttext="800" display="inline"><mn>800</mn></math> negative labeled reviews from each domain
+as training data, and the remainder for testing.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments and Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">For each domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m1" class="ltx_Math" alttext="\cD" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\cD</mtext></merror></math> in the SANCL (POS tagging) and Amazon review (sentiment classification) datasets,
+we create a PPMI weighted co-occurrence matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m2" class="ltx_Math" alttext="\mat{F}_{\cD}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><msub><mi>F</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cD</mtext></merror></msub></mrow></math>.
+On average, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m3" class="ltx_Math" alttext="\mat{F}_{\cD}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><msub><mi>F</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cD</mtext></merror></msub></mrow></math> created for a target domain in the SANCL dataset contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m4" class="ltx_Math" alttext="104,598" display="inline"><mrow><mn>104</mn><mo>,</mo><mn>598</mn></mrow></math> rows and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m5" class="ltx_Math" alttext="65,528" display="inline"><mrow><mn>65</mn><mo>,</mo><mn>528</mn></mrow></math> columns,
+whereas those numbers in the Amazon dataset are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m6" class="ltx_Math" alttext="27,397" display="inline"><mrow><mn>27</mn><mo>,</mo><mn>397</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m7" class="ltx_Math" alttext="35,200" display="inline"><mrow><mn>35</mn><mo>,</mo><mn>200</mn></mrow></math> respectively.
+In cross-domain sentiment classification, we measure the binary sentiment classification accuracy for the target domain
+test reviews for each pair of domains (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m8" class="ltx_Math" alttext="12" display="inline"><mn>12</mn></math> pairs in total for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m9" class="ltx_Math" alttext="4" display="inline"><mn>4</mn></math> domains).
+On average, we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m10" class="ltx_Math" alttext="40,176" display="inline"><mrow><mn>40</mn><mo>,</mo><mn>176</mn></mrow></math> pivots for a pair of domains in the Amazon dataset.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">In cross-domain POS tagging, WSJ is always the source domain, whereas the five domains in SANCL dataset
+are considered as the target domains. For this setting we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m1" class="ltx_Math" alttext="9822" display="inline"><mn>9822</mn></math> pivots on average.
+The number of singular vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> selected in SVD, and the number of PLSR dimensions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>
+are set respectively to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m4" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m5" class="ltx_Math" alttext="50" display="inline"><mn>50</mn></math> for the remainder of the experiments described in the paper.
+Later we study the effect of those two parameters on the performance of the proposed method.
+The L-BFGS <cite class="ltx_cite">[]</cite> method is used to train the CRF and logistic regression models.</p>
+</div>
+<div id="S6.F1" class="ltx_figure"><img src="" id="S6.F1.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Cross-Domain sentiment classification.</div>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>POS Tagging Results</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T2" title="Table 2 ‣ 6.1 POS Tagging Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the token-level POS tagging accuracy for <span class="ltx_text ltx_font_italic">unseen</span> words (i.e. words that appear in the target
+domain test sentences but not in the source domain labeled train sentences). By limiting the evaluation to unseen words
+instead of all words, we can evaluate the gain in POS tagging accuracy solely due to DA.
+The <span class="ltx_text ltx_font_bold">NA</span> (no-adapt) baseline simulates the effect of not performing any
+DA. Specifically, in POS tagging, a CRF trained on source domain labeled sentences is applied
+to target domain test sentences, whereas in sentiment classification, a logistic regression classifier
+trained using source domain labeled reviews is applied to the target domain test reviews.
+The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{\cS_{pred}}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mi>𝐩𝐫𝐞𝐝</mi></msub></math> baseline directly uses the source domain
+distributions for the words instead of projecting them to the target domain. This is equivalent to setting
+the prediction matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m2" class="ltx_Math" alttext="\mat{M}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi></mrow></math> to the unit matrix. The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m3" class="ltx_Math" alttext="\mathbf{\cT_{pred}}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mi>𝐩𝐫𝐞𝐝</mi></msub></math> baseline uses the
+target domain distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m4" class="ltx_Math" alttext="\vec{w}_{\cT}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math> for a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m6" class="ltx_Math" alttext="\mat{M}\vec{w}_{\cS}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow></math>.
+If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m7" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> does not appear in the target domain, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m8" class="ltx_Math" alttext="\vec{w}_{\cT}" display="inline"><msub><mover accent="true"><mi>w</mi><mo stretchy="false">→</mo></mover><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></math> is set to the zero vector.
+The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m9" class="ltx_Math" alttext="\cS_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m10" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> baselines simulate the two alternatives of using source
+and target domain distributions instead of learning a PLSR model.
+The DA method proposed in Section <a href="#S4.SS1" title="4.1 Cross-Domain POS Tagging ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a> is shown as the <span class="ltx_text ltx_font_bold">Proposed</span> method.
+<span class="ltx_text ltx_font_bold">Filter</span> denotes the training set filtering method proposed by <cite class="ltx_cite"/>
+for the DA of POS taggers.</p>
+</div>
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Target</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">NA</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m1" class="ltx_Math" alttext="\cS_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m2" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Filter</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Proposed</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">QA</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m3" class="ltx_Math" alttext="67.34" display="inline"><mn>67.34</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m4" class="ltx_Math" alttext="68.18" display="inline"><mn>68.18</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m5" class="ltx_Math" alttext="68.75" display="inline"><mn>68.75</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m6" class="ltx_Math" alttext="57.08" display="inline"><mn>57.08</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m7" class="ltx_Math" alttext="\mathbf{69.28}^{\dagger}" display="inline"><msup><mn mathvariant="bold">69.28</mn><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Emails</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m8" class="ltx_Math" alttext="65.62" display="inline"><mn>65.62</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m9" class="ltx_Math" alttext="66.62" display="inline"><mn>66.62</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m10" class="ltx_Math" alttext="67.07" display="inline"><mn>67.07</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m11" class="ltx_Math" alttext="65.61" display="inline"><mn>65.61</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m12" class="ltx_Math" alttext="\mathbf{67.09}" display="inline"><mn mathvariant="bold">67.09</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Newsgroups</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m13" class="ltx_Math" alttext="75.71" display="inline"><mn>75.71</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m14" class="ltx_Math" alttext="75.09" display="inline"><mn>75.09</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m15" class="ltx_Math" alttext="75.57" display="inline"><mn>75.57</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m16" class="ltx_Math" alttext="70.37" display="inline"><mn>70.37</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m17" class="ltx_Math" alttext="\mathbf{75.85}^{\dagger}" display="inline"><msup><mn mathvariant="bold">75.85</mn><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Reviews</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m18" class="ltx_Math" alttext="56.36" display="inline"><mn>56.36</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m19" class="ltx_Math" alttext="54.60" display="inline"><mn>54.60</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m20" class="ltx_Math" alttext="56.68" display="inline"><mn>56.68</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m21" class="ltx_Math" alttext="47.91" display="inline"><mn>47.91</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m22" class="ltx_Math" alttext="\mathbf{56.93}^{\dagger}" display="inline"><msup><mn mathvariant="bold">56.93</mn><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Blogs</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m23" class="ltx_Math" alttext="76.64" display="inline"><mn>76.64</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m24" class="ltx_Math" alttext="54.78" display="inline"><mn>54.78</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m25" class="ltx_Math" alttext="76.90" display="inline"><mn>76.90</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m26" class="ltx_Math" alttext="74.56" display="inline"><mn>74.56</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m27" class="ltx_Math" alttext="\mathbf{76.97}^{\dagger}" display="inline"><msup><mn mathvariant="bold">76.97</mn><mo>†</mo></msup></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>POS tagging accuracies on SANCL.</div>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">From Table <a href="#S6.T2" title="Table 2 ‣ 6.1 POS Tagging Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we see that the <span class="ltx_text ltx_font_bold">Proposed</span> method achieves the best performance in all five domains,
+followed by the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m1" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> baseline.
+Recall that the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m2" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> baseline cannot find source domain words that do not appear in the target domain
+as distributional features for the words in the target domain test reviews. Therefore, when the overlap between
+the vocabularies used in the source and the target domains is small, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m3" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> cannot reduce the mismatch between the feature spaces.
+Poor performance of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m4" class="ltx_Math" alttext="\cS_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> baseline shows that the distributions of a word in the source and target domains
+are different to the extent that the distributional features found using source domain distributions are inadequate.
+The two baselines <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m5" class="ltx_Math" alttext="\cS_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m6" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> collectively motivate our
+proposal to learn a distribution prediction model from the source domain to the target.
+The improvements of <span class="ltx_text ltx_font_bold">Proposed</span> over the previously proposed
+<span class="ltx_text ltx_font_bold">Filter</span> are statistically significant in all domains except the Emails domain (denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m7" class="ltx_Math" alttext="\dagger" display="inline"><mo>†</mo></math>
+in Table <a href="#S6.T2" title="Table 2 ‣ 6.1 POS Tagging Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> according to the Binomial exact test at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m8" class="ltx_Math" alttext="95\%" display="inline"><mrow><mn>95</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> confidence).
+However, the differences between the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m9" class="ltx_Math" alttext="\cT_{pred}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and
+<span class="ltx_text ltx_font_bold">Proposed</span> methods are not statistically significant.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Sentiment Classification Results</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S6.F1" title="Figure 1 ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, we compare the <span class="ltx_text ltx_font_bold">Proposed</span>
+cross-domain sentiment classification method (Section <a href="#S4.SS2" title="4.2 Cross-Domain Sentiment Classification ‣ 4 Domain Adaptation ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>)
+against several baselines and the current state-of-the-art methods.
+The baselines <span class="ltx_text ltx_font_bold">NA</span>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{\cS_{pred}}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mi>𝐩𝐫𝐞𝐝</mi></msub></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m2" class="ltx_Math" alttext="\mathbf{\cT_{pred}}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror><mi>𝐩𝐫𝐞𝐝</mi></msub></math> are defined similarly as in Section <a href="#S6.SS1" title="6.1 POS Tagging Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+<span class="ltx_text ltx_font_bold">SST</span> is the Sentiment Sensitive Thesaurus proposed by <cite class="ltx_cite"/>.
+<span class="ltx_text ltx_font_bold">SST</span> creates a single distribution for a word using both source and target domain reviews,
+instead of two separate distributions as done by the <span class="ltx_text ltx_font_bold">Proposed</span> method.
+<span class="ltx_text ltx_font_bold">SCL</span> denotes the Structural Correspondence Learning method proposed by <cite class="ltx_cite"/>.
+<span class="ltx_text ltx_font_bold">SFA</span> denotes the Spectral Feature Alignment
+method proposed by <cite class="ltx_cite"/>.
+<span class="ltx_text ltx_font_bold">SFA</span> and <span class="ltx_text ltx_font_bold">SCL</span> represent the current state-of-the-art methods for
+cross-domain sentiment classification.
+All methods are evaluated under the same settings, including train/test split, feature spaces, pivots, and classification algorithms
+so that any differences in performance can be directly attributable to their domain adaptability.
+For each domain, the accuracy obtained by a classifier trained using labeled data from that domain
+is indicated by a solid horizontal line in each sub-figure. This upper baseline represents the classification
+accuracy we could hope to obtain if we were to have labeled data for the target domain.
+Clopper-Pearson <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p1.m3" class="ltx_Math" alttext="95\%" display="inline"><mrow><mn>95</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> binomial confidence intervals are superimposed on each vertical bar.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">From Figure <a href="#S6.F1" title="Figure 1 ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> we see that the <span class="ltx_text ltx_font_bold">Proposed</span> method reports the best results
+in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="8" display="inline"><mn>8</mn></math> out of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m2" class="ltx_Math" alttext="12" display="inline"><mn>12</mn></math> domain pairs, whereas <span class="ltx_text ltx_font_bold">SCL</span>, <span class="ltx_text ltx_font_bold">SFA</span>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m3" class="ltx_Math" alttext="\mathbf{\cS_{pred}}" display="inline"><msub><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror><mi>𝐩𝐫𝐞𝐝</mi></msub></math>
+report the best results in other cases.
+Except for the <span class="ltx_text ltx_font_bold">D-E</span> setting in which <span class="ltx_text ltx_font_bold">Proposed</span> method significantly outperforms
+both <span class="ltx_text ltx_font_bold">SFA</span> and <span class="ltx_text ltx_font_bold">SCL</span>, the performance of the <span class="ltx_text ltx_font_bold">Proposed</span> method
+is not statistically significantly different to that of <span class="ltx_text ltx_font_bold">SFA</span> or <span class="ltx_text ltx_font_bold">SCL</span>.</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">The selection of pivots is vital to the performance of <span class="ltx_text ltx_font_bold">SFA</span>.
+However, unlike <span class="ltx_text ltx_font_bold">SFA</span>, which requires us to carefully select a small subset of pivots (ca. less than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m1" class="ltx_Math" alttext="500" display="inline"><mn>500</mn></math>)
+using some heuristic approach, our <span class="ltx_text ltx_font_bold">Proposed</span> method does not require any pivot selection.
+Moreover, <span class="ltx_text ltx_font_bold">SFA</span> projects source domain reviews to a lower-dimensional latent space,
+in which a binary sentiment classifier is subsequently trained. At test time <span class="ltx_text ltx_font_bold">SFA</span> projects a target review
+into this lower-dimensional latent space and applies the trained classifier.
+In contrast, our <span class="ltx_text ltx_font_bold">Proposed</span> method predicts the distribution of a word in the target domain,
+given its distribution in the source domain, thereby explicitly <span class="ltx_text ltx_font_italic">translating</span> the source domain reviews
+to the target. This property enables us to apply the proposed distribution prediction method to tasks other than sentiment
+analysis such as POS tagging where we must identify distributional features for individual words.</p>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">Unlike our distribution prediction method, which is unsupervised,
+<span class="ltx_text ltx_font_bold">SST</span> requires labeled data for the source domain to learn a feature mapping
+between a source and a target domain in the form of a thesaurus.
+However, from Figure <a href="#S6.F1" title="Figure 1 ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> we see that in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m1" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> out of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m2" class="ltx_Math" alttext="12" display="inline"><mn>12</mn></math> domain-pairs the <span class="ltx_text ltx_font_bold">Proposed</span>
+method returns higher accuracies than <span class="ltx_text ltx_font_bold">SST</span>.</p>
+</div>
+<div id="S6.F2" class="ltx_figure"><img src="" id="S6.F2.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>The effect of PLSR dimensions.</div>
+</div>
+<div id="S6.F3" class="ltx_figure"><img src="" id="S6.F3.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>The effect of SVD dimensions.</div>
+</div>
+<div id="S6.SS2.p5" class="ltx_para">
+<p class="ltx_p">To evaluate the overall effect of the number of singular vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> used in the SVD step, and the number of
+PLSR components <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> used in Algorithm <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>, we conduct two experiments.
+To evaluate the effect of the PLSR dimensions, we fixed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m3" class="ltx_Math" alttext="k=1000" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>1000</mn></mrow></math> and measured the cross-domain
+sentiment classification accuracy over a range of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> values.
+As shown in Figure <a href="#S6.F2" title="Figure 2 ‣ 6.2 Sentiment Classification Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, accuracy remains stable across a wide range of PLSR dimensions.
+Because the time complexity of Algorithm <a href="#S3.SS2" title="3.2 Cross-Domain Feature Vector Prediction ‣ 3 Distribution Prediction ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> increases linearly with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m5" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>, it is desirable that
+we select smaller <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p5.m6" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> values in practice.</p>
+</div>
+<div id="S6.SS2.p6" class="ltx_para">
+<p class="ltx_p">To evaluate the effect of the SVD dimensions, we fixed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m1" class="ltx_Math" alttext="L=100" display="inline"><mrow><mi>L</mi><mo>=</mo><mn>100</mn></mrow></math> and measured the cross-domain sentiment
+classification accuracy for different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> values as shown in Figure <a href="#S6.F3" title="Figure 3 ‣ 6.2 Sentiment Classification Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+We see an overall decrease in classification accuracy when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> is increased.
+Because the dimensionality of the source and target domain feature spaces is equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>,
+the complexity of the least square regression problem increases with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>.
+Therefore, larger <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> values result in overfitting to the train data and classification accuracy is reduced
+on the target test data.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"><span class="ltx_text ltx_font_small">Measure</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:142.3pt;" width="142.3pt"><span class="ltx_text ltx_font_small">Distributional features</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_tt" style="width:56.9pt;" width="56.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m1" class="ltx_Math" alttext="{\rm sim}(u_{\cS},w_{\cS})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:142.3pt;" width="142.3pt"><span class="ltx_text ltx_font_small">thin (0.1733), digestible (0.1728), small+print (0.1722)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:56.9pt;" width="56.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m2" class="ltx_Math" alttext="{\rm sim}(u_{\cT},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:142.3pt;" width="142.3pt"><span class="ltx_text ltx_font_small">travel+companion (0.6018), snap-in (0.6010), touchpad (0.6016)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:56.9pt;" width="56.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m3" class="ltx_Math" alttext="{\rm sim}(u_{\cS},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:142.3pt;" width="142.3pt"><span class="ltx_text ltx_font_small">segregation (0.1538), participation (0.1512), depression+era (0.1508)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:56.9pt;" width="56.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m4" class="ltx_Math" alttext="{\rm sim}(\mat{M}u_{\cS},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:142.3pt;" width="142.3pt"><span class="ltx_text ltx_font_small">small (0.2794), compact (0.2641), sturdy (0.2561)</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m8" class="ltx_Math" alttext="3" display="inline"><mn mathsize="normal" stretchy="false">3</mn></math> distributional features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m9" class="ltx_Math" alttext="u\in\cS" display="inline"><mrow><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="normal" stretchy="false">∈</mo><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></mrow></math> for the word <span class="ltx_text ltx_font_italic">lightweight</span> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m10" class="ltx_Math" alttext="w" display="inline"><mi mathsize="normal" stretchy="false">w</mi></math>).</div>
+</div>
+<div id="S6.SS2.p7" class="ltx_para">
+<p class="ltx_p">As an example of the distribution prediction method,
+in Table <a href="#S6.T3" title="Table 3 ‣ 6.2 Sentiment Classification Results ‣ 6 Experiments and Results ‣ Learning to Predict Distributions of Words Across Domains" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> we show the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p7.m1" class="ltx_Math" alttext="3" display="inline"><mn>3</mn></math> similar distributional features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p7.m2" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> in the <span class="ltx_text ltx_font_italic">books</span> (source) domain,
+predicted for the <span class="ltx_text ltx_font_italic">electronics</span> (target) domain word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p7.m3" class="ltx_Math" alttext="w={\rm\textit{lightweight}}" display="inline"><mrow><mi>w</mi><mo>=</mo><mtext>𝑙𝑖𝑔ℎ𝑡𝑤𝑒𝑖𝑔ℎ𝑡</mtext></mrow></math>, by
+different similarity measures. Bigrams are indicted by a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p7.m4" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math> sign and the similarity scores
+of the distributional features are shown within brackets.</p>
+</div>
+<div id="S6.SS2.p8" class="ltx_para">
+<p class="ltx_p">Using the source domain distributions for both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m1" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m3" class="ltx_Math" alttext="{\rm sim}(u_{\cS},w_{\cS})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>) produces
+distributional features that are specific to the books domain, or to the dominant adjectival sense of
+<span class="ltx_text ltx_font_italic">having no importance or influence</span>.
+On the other hand, using target domain distributions for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m4" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m6" class="ltx_Math" alttext="{\rm sim}(u_{\cT},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>)
+returns distributional features
+of the dominant nominal sense of <span class="ltx_text ltx_font_italic">lower in weight</span> frequently associated with electronic devices.
+Simply using source domain distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m7" class="ltx_Math" alttext="u_{\cS}" display="inline"><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p8.m8" class="ltx_Math" alttext="{\rm sim}(u_{\cS},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>)
+returns totally unrelated distributional features.
+This shows that word distributions in source and target domains are
+very different and some adaptation is required prior to computing distributional features.</p>
+</div>
+<div id="S6.SS2.p9" class="ltx_para">
+<p class="ltx_p">Interestingly, we see that by using the distributions predicted by the proposed method (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p9.m1" class="ltx_Math" alttext="{\rm sim}(\mat{M}u_{\cS},w_{\cT})" display="inline"><mrow><mi>sim</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\mat</mtext></merror><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msub><mi>u</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></mrow><mo>,</mo><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cT</mtext></merror></msub></mrow><mo>)</mo></mrow></mrow></math>)
+we overcome this problem and find relevant distributional features from the source domain.
+Although for illustrative purposes we used the word <span class="ltx_text ltx_font_italic">lightweight</span>, which occurs in both the source and the target domains, our proposed method does not require the source domain distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p9.m2" class="ltx_Math" alttext="w_{\cS}" display="inline"><msub><mi>w</mi><merror class="ltx_ERROR undefined undefined"><mtext>\cS</mtext></merror></msub></math> for a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p9.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in a target domain document.
+Therefore, it can find distributional features even for words occurring only in the target domain,
+thereby reducing the feature mismatch between the two domains.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We proposed a method to predict the distribution of a word across domains.
+We first create a distributional representation for a word using the data from a single domain,
+and then learn a Partial Least Square Regression (PLSR) model to predict the distribution of a word
+in a target domain given its distribution in a source domain.
+We evaluated the proposed method in two domain adaptation tasks: cross-domain POS tagging and
+cross-domain sentiment classification.
+Our experiments show that without requiring any task-specific customisations to our distribution
+prediction method, it outperforms competitive baselines and achieves comparable results to
+the current state-of-the-art domain adaptation methods.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:59:33 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

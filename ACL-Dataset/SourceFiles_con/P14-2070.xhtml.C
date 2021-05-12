@@ -1,0 +1,541 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   DepecheMood: a Lexicon for Emotion Analysis from Crowd-Annotated News.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       While many lexica annotated with words polarity are available for sentiment analysis, very few tackle the harder task of emotion analysis and are
+usually quite limited in coverage. In this paper, we present a novel approach for extracting – in a totally automated way – a high-coverage and high-precision lexicon of roughly 37 thousand terms annotated
+with emotion scores, called
+       DepecheMood
+       .
+Our approach exploits in an original way ‘crowd-sourced’ affective annotation implicitly provided by readers of news articles from
+       rappler.com
+       .
+By providing new state-of-the-art performances in unsupervised settings for regression and classification tasks, even using a naïve approach, our experiments show the
+beneficial impact of harvesting
+social media data for affective lexicon building.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Sentiment analysis has proved useful in several application scenarios,
+for instance in buzz monitoring – the marketing technique for keeping track of consumer responses to services and
+products – where identifying positive and negative customer experiences helps to assess product and service demand, tackle crisis management, etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        On the other hand, the use of finer-grained models, accounting for the role of individual emotions, is still in its infancy.
+The simple division in
+‘positive’ vs. ‘negative’ comments may not suffice, as in these examples: ‘
+        I’m so miserable, I dropped my IPhone in the water and now it’s not working anymore
+        ’
+(
+        sadness
+        ) vs. ‘
+        I am very upset, my new IPhone keeps not working!
+        ’ (
+        anger
+        ). While both texts express a negative sentiment, the latter, connected to anger, is more relevant
+for buzz monitoring.
+Thus, emotion analysis represents a natural evolution of sentiment analysis.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Many approaches to sentiment analysis make use of lexical resources – i.e. lists of positive and negative words – often deployed as baselines or as features for other methods,
+usually machine learning based
+        []
+        . In these lexica, words are associated with their prior polarity, i.e. whether such word out of context evokes something positive or
+something negative. For example,
+        wonderful
+        has a positive connotation – prior polarity – while
+        horrible
+        has a negative one.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The quest for a high precision and high coverage lexicon, where words are associated with either sentiment or emotion scores,
+has several reasons.
+First,
+it is fundamental for tasks such as affective modification of existing texts, where words’ polarity together with
+their score are necessary for creating multiple
+        graded
+        variations of the original text
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Second, considering word order makes a difference in sentiment analysis. This calls
+for a role of compositionality, where the score of a sentence is computed by composing the scores of the words up in the syntactic tree. Works worth mentioning in this
+connection are:
+        , which uses recursive neural networks to learn compositional rules for sentiment analysis, and
+        []
+        which exploit hand-coded rules to compose the emotions expressed by words in a sentence.
+In this respect, compositional approaches represent a new promising trend, since all other approaches, either using semantic similarity or Bag-of-Words (BOW) based machine-learning, cannot
+handle, for example, cases of texts with same wording but different words order:
+“
+        The dangerous killer escaped one month ago, but recently he was arrested
+        ” (
+        relief
+        ,
+        happyness
+        ) vs. “
+        The dangerous killer was arrested one month ago, but recently he
+escaped
+        ” (
+        fear
+        ). The work in
+        []
+        partially accounts for this problem and argues that using word bigram features allows improving over BOW based methods, where words are taken as features in isolation. This way it is possible to capture simple
+compositional
+phenomena like polarity reversing in “
+        killing cancer
+        ”.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Finally, tasks such as copywriting, where evocative names are a key element to a successful product
+        []
+        require exhaustive lists of emotion
+related words. In such cases no context is given and the brand name alone, with its perceived prior polarity, is responsible for stating the area of competition and evoking
+semantic associations. For example
+        Mitsubishi
+        changed the name of one of its SUVs for the Spanish market, since the original name
+        Pajero
+        had a very negative prior
+polarity, as it means ‘wanker’ in Spanish
+        []
+        . Evoking emotions is also fundamental for a successful name: consider names of a perfume like
+        Obsession
+        , or technological products like MacBook
+        air
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        In this work, we aim at automatically producing a high coverage and high precision emotion lexicon using distributional semantics, with numerical scores associated with each emotion, like it has already been done for sentiment
+analysis. To this end, we take advantage in an original way of massive crowd-sourced affective annotations associated with news articles, obtained by crawling the
+        rappler.com
+        social
+news network. We also evaluate our lexicon by integrating it in unsupervised classification and
+regression settings for emotion recognition. Results indicate that the use of our resource, even if automatically acquired, is highly beneficial in affective text recognition.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Within the broad field of sentiment analysis, we hereby provide a short
+review of research efforts put towards building sentiment and emotion lexica, regardless of the approach in which
+such lists are then used (machine learning, rule based or deep learning). A general overview can be found in
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Sentiment Lexica
+        .
+In recent years there has been an increasing focus on producing lists of words (lexica) with prior
+polarities, to be used in sentiment analysis.
+When building such lists, a trade-off between coverage of the resource and its precision is to be found.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        One of the most well-known resources is
+        SentiWordNet
+        (SWN)
+        []
+        , in which each entry is associated with the numerical scores
+        Pos(s)
+        and
+        Neg(s)
+        , ranging from 0 to 1. These scores –
+automatically assigned starting from a bunch of seed terms – represent the positive and negative valence (or posterior polarity) of each entry, that takes the form
+        lemma#pos#sense-number
+        .
+Starting from SWN, several prior polarities for words (
+        SWN-prior
+        ), in the form
+        lemma#PoS
+        , can be computed (e.g. considering only the first-sense, averaging on all the senses, etc.).
+These approaches, detailed in
+        []
+        , produce a list of 155k words, where the lower precision given by the automatic scoring of SWN is compensated
+by the high coverage.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Another widely used resource is
+        ANEW
+        []
+        , providing
+valence scores for 1k words, which were manually assigned by several annotators. This resource has a low coverage, but the precision is maximized.
+Similarly, the
+        SO-CAL
+        entries
+        []
+        were
+manually tagged by a small number
+of annotators with a multi-class label (from
+        very_negative
+        to
+        very_positive
+        ). These ratings were further
+validated through crowd-sourcing, ending up with a list of roughly 4k words.
+More recently, a resource that replicated ANEW annotation approach using crowd-sourcing, was released
+        []
+        , providing sentiment scores for 14k words.
+Interestingly, this resource annotates the most frequent words in English, so, even if lexicon coverage is still far lower than SWN-prior, it grants a high coverage, with human precision, of language use.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Finally, the
+        General
+Inquirer
+        lexicon
+        []
+        provides a binary
+classification (
+        positive
+        /
+        negative
+        ) of 4k
+sentiment-bearing words, while the resource in
+        []
+        expands the General
+Inquirer to 6k words.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        Emotion Lexica
+        .
+Compared to sentiment lexica, far less emotion lexica have been produced, and all have lower coverage.
+One of the most used resources is
+        WordNetAffect
+        []
+        which contains manually assigned affective labels to WordNet synsets
+(
+        anger
+        ,
+        joy
+        ,
+        fear
+        , etc.). It currently provides 900 annotated synsets and 1.6k words in the form
+        lemma#PoS#sense
+        , corresponding to roughly 1 thousand
+        lemma#PoS
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        AffectNet
+        , part of the SenticNet project
+        []
+        , contains 10k words (out of 23k entries) taken from ConceptNet and aligned with WordNetAffect. This
+resource extends WordNetAffect labels to concepts like ‘have breakfast’.
+        Fuzzy Affect Lexicon
+        []
+        contains roughly 4k
+        lemma#PoS
+        manually annotated by one linguist using 80 emotion labels.
+        EmoLex
+        []
+        contains almost 10k lemmas annotated with an intensity label for each emotion using Mechanical Turk.
+Finally
+        Affect database
+        is an extension of SentiFul
+        []
+        and contains 2.5K words in the form
+        lemma#PoS
+        . The latter is the only lexicon
+providing words annotated also with emotion scores rather than only with labels.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Dataset Collection
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        To build our emotion lexicon we harvested all the news articles from
+        rappler.com
+        , as of June 3rd 2013: the final dataset consists of
+13.5 M words over 25.3 K documents, with an average of 530 words per document. For each document, along with the text we also harvested the information displayed by Rappler’s
+        Mood Meter
+        , a small interface
+offering the readers the opportunity to click on the emotion that a given Rappler story made them feel. The
+idea behind the Mood Meter is actually “getting people to
+        crowdsource
+        the mood for the
+day”
+        , and returning the percentage of votes for each
+emotion label for a given story. This way, hundreds of thousands votes have been collected since the launch of the service.
+In our novel approach to ‘crowdsourcing’, as compared to other NLP tasks that rely on tools like Amazon’s Mechanical Turk
+        []
+        , the subjects are aware of the ‘implicit annotation task’ but
+they are not paid. From this data, we built a document-by-emotion matrix
+        MD⁢E
+        , providing the voting percentages for each document
+in the eight affective dimensions available in Rappler. An excerpt is provided in Table
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        The idea of using documents annotated with emotions is not new
+        []
+        , but these works had the limitation of
+providing a single emotion label per document, rather than a score for each emotion, and, moreover, the annotation was performed by the author of the document alone.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Table
+        2
+        reports the average percentage of votes for each emotion on the whole corpus:
+        happiness
+        has a far higher percentage of votes (at least three times). There
+are several possible explanations, out of the scope of the present paper, for this bias: (i) it is due to cultural characteristics of the audience
+(ii)
+the bias is in the dataset itself, being formed mainly by ‘positive’ news; (iii) it is a psychological phenomenon due to the fact that people tend to express more positive moods on
+social networks
+        []
+        . In any case, the predominance of happy mood has been found in other datasets, for instance
+        LiveJournal.com
+        posts
+        []
+        .
+In the following section we will discuss how we handled this problem.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Emotion Lexicon Creation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        As a next step we built a word-by-emotion matrix starting from
+        MD⁢E
+        using an approach based on compositional semantics.
+To do so, we first lemmatized and PoS tagged all the documents (where PoS can be adj., nouns, verbs, adv.) and kept only those
+        lemma#PoS
+        present also in WordNet, similar to SWN-prior and WordNetAffect resources, to which we want to align.
+We then computed the term-by-document matrices using raw frequencies, normalized
+frequencies, and tf-idf (
+        MW⁢D,f
+        ,
+        MW⁢D,n⁢f
+        and
+        MW⁢D,t⁢f⁢i⁢d⁢f
+        respectively), so to test which of the three weights is better.
+After that, we applied matrix multiplication between the document-by-emotion and word-by-document matrices (
+        MD⁢E⋅MW⁢D
+        ) to obtain a (raw) word-by-emotion matrix
+        MW⁢E
+        . This method allows us to ‘merge’ words with emotions by summing the products of the weight of a word with the weight of the emotions in each document.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Finally, we transformed
+        MW⁢E
+        by first applying
+normalization column-wise
+(so to eliminate the over representation for happiness as discussed in Section
+        3
+        )
+and then scaling the data row-wise so to sum up to one.
+An excerpt of the final Matrix
+        MW⁢E
+        is presented in Table
+        3
+        , and it can be interpreted as a list of
+words with scores that represent how much
+weight a given word has in the affective dimensions we consider. So, for example,
+        awe#n
+        has a predominant weight in
+        inspired
+        (0.38),
+        comical#a
+        has a predominant weight in
+        amused
+        (0.51), while
+        kill#v
+        has a predominant weight in
+        afraid
+        ,
+        angry
+        and
+        sad
+        (0.23, 0.21 and 0.27 respectively). This matrix, that we call
+        DepecheMood
+        , represents our emotion lexicon, it contains 37k entries and is freely available for research purposes at http://git.io/MqyoIg.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        To evaluate the performance we can obtain with our lexicon, we use the public dataset provided for the SemEval 2007 task on ‘Affective Text’
+        []
+        . The task was focused on emotion recognition in one thousand news headlines,
+both in regression and classification settings. Headlines typically consist of a few words and are often written with the
+intention to ‘provoke’ emotions so to attract the readers’ attention. An example of headline from the dataset is the following: “
+        Iraq car
+bombings kill 22 People, wound more than 60
+        ”. For the regression task the values provided are:
+        &lt;
+        anger (0.32), disgust (0.27), fear (0.84),
+joy (0.0), sadness (0.95), surprise (0.20)&gt;
+        while for the classification task the labels provided are {
+        FEAR, SADNESS
+        }.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        This dataset is of interest to us since the ‘compositional’ problem is less prominent given the simplified
+syntax of news headlines, containing, for example, fewer adverbs (like negations or intensifiers) than normal sentences
+        []
+        . Furthermore, this is to our
+knowledge the only dataset available providing numerical scores for emotions. Finally, this dataset was meant for unsupervised approaches (just a small trial sample was
+provided), so to avoid simple text categorization approaches.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        As the affective dimensions present in the test set – based on the six basic emotions model
+        []
+        – do not exactly
+match with the ones provided by Rappler’s Mood Meter, we first define a mapping between the two when possible, see
+Table
+        4
+        . Then, we proceed to transform the test headlines to the
+        lemma#PoS
+        format.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        Only one test headline contained exclusively words not present in
+        DepecheMood
+        , further indicating the high-coverage nature of our resource. In Table
+        5
+        we report the coverage of some Sentiment and Emotion Lexica of different sizes on the same dataset. Similar to Warriner et al. (2013), we
+observe that even if the number of entries of our lexicon is far lower than SWN-prior approaches, the fact that we extracted and annotated words from documents grants a high
+coverage of language use.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p5">
+       <p class="ltx_p">
+        Since our primary goal is to assess the quality of
+        DepecheMood
+        we first focus on the regression task.
+We do so by using a very naïve approach, similar to “WordNetAffect presence” discussed in
+        []
+        : for each headline,
+we simply compute a value, for any affective dimension, by averaging the corresponding affective scores –obtained from
+        DepecheMood
+        - of all
+        lemma#PoS
+        present in the headline.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p6">
+       <p class="ltx_p">
+        In Table
+        6
+        we report the results obtained using the three versions of our resource (Pearson correlation), along with the best performance on each emotion of
+other systems
+        (
+        b⁢e⁢s⁢ts⁢e
+        ); the last column contains the upper bound of inter-annotator agreement.
+For all the 5 emotions we improve over the best performing
+systems (
+        DISGUST
+        has no alignment with our labels and was discarded).
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p7">
+       <p class="ltx_p">
+        Interestingly, even using a sub-optimal alignment for
+        SURPRISE
+        we still manage to outperform other systems. Considering the naïve approach we used, we can
+reasonably conclude that the quality and coverage of our resource are the reason of such results, and that adopting more complex approaches (i.e. compositionality) can possibly further improve
+performances in text-based emotion recognition.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p8">
+       <p class="ltx_p">
+        As a final test, we evaluate our resource in the classification task.
+The naïve approach used in this case consists in mapping the average of the scores of
+all words in the headline to a binary decision with fixed threshold at 0.5 for each emotion (after min-max normalization on all test headlines scores).
+In Table
+        7
+        we report the results (F1 measure) of our
+approach along with the best performance of other systems on each emotion (
+        b⁢e⁢s⁢ts⁢e
+        ), as in the previous case.
+For 3 emotions out of 5 we improve over the best performing systems, for one emotion we obtain the same results, and for one emotion we do not outperform other systems. In this case the difference
+in performances among the various ways of representing the word-by-document matrix is more prominent: normalized frequencies (
+        n⁢f
+        ) provide the best results.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

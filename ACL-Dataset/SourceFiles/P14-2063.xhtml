@@ -1,0 +1,1030 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Building Sentiment Lexicons for All Major Languages</title>
+<!--Generated on Wed Jun 11 17:50:50 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on Mar, 2014.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Building Sentiment Lexicons for All Major Languages</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yanqing Chen 
+<br class="ltx_break"/>Computer Science Dept.
+<br class="ltx_break"/>Stony Brook University 
+<br class="ltx_break"/>Stony Brook, NY 11794 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">cyanqing@cs.stonybrook.edu</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Steven Skiena 
+<br class="ltx_break"/>Computer Science Dept. 
+<br class="ltx_break"/>Stony Brook University 
+<br class="ltx_break"/>Stony Brook, NY 11794 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">skiena@cs.stonybrook.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation">Mar, 2014</div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Sentiment analysis in a multilingual world remains a challenging problem, because developing language-specific sentiment lexicons is an extremely resource-intensive process. Such lexicons remain a scarce resource for most languages.</p>
+<p class="ltx_p">In this paper, we address this lexicon gap by building high-quality sentiment lexicons for 136 major languages. We integrate a variety of linguistic resources to produce an immense knowledge graph. By appropriately propagating from seed words, we construct sentiment lexicons for each component language of our graph. Our lexicons have a polarity agreement of 95.7% with published lexicons, while achieving an overall coverage of 45.2%.</p>
+<p class="ltx_p">We demonstrate the performance of our lexicons in an extrinsic analysis of 2,000 distinct historical figures’ Wikipedia articles on 30 languages. Despite cultural difference and the intended neutrality of Wikipedia articles, our lexicons show an average sentiment correlation of 0.28 across all language pairs.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Sentiment analysis of English texts has become a large and active research area, with many commercial applications, but the barrier of language limits the ability to assess the sentiment of most of the world’s population.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Although several well-regarded sentiment lexicons are available in English <cite class="ltx_cite">[<a href="#bib.bib20" title="Sentiwordnet: a publicly available lexical resource for opinion mining" class="ltx_ref">9</a>, <a href="#bib.bib6" title="Sentiment analysis and subjectivity" class="ltx_ref">17</a>]</cite>, the same is not true for most of the world’s languages. Indeed, our literature search identified only 12 <span class="ltx_text ltx_font_italic">publicly available</span> sentiment lexicons for only 5 non-English languages (Chinese mandarin, German, Arabic, Japanese and Italian). No doubt we missed some, but it is clear that these resources are not widely available for most important languages.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we strive to produce a comprehensive set of sentiment lexicons for the worlds’ major languages. We make the following contributions:</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">New Sentiment Analysis Resources</span> –
+We have generated sentiment lexicons for 136 major languages via graph propagation which are now publicly available<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>https://sites.google.com/site/datascienceslab/projects/</span></span></span>. We validate our own work through other publicly available, human annotated sentiment lexicons. Indeed, our lexicons have polarity agreement of 95.7% with these published lexicons, plus an overall coverage of 45.2%.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Large-Scale Language Knowledge Graph Analysis</span> –
+We have created a massive comprehensive knowledge graph of 7 million vocabulary words from 136 languages with over 131 million semantic inter-language links, which proves valuable when doing alignment between definitions in different languages.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Extrinsic Evaluation</span> –
+We elucidate the sentiment consistency of entities reported in different language editions of Wikipedia using our propagated lexicons. In particular, we pick 30 languages and compute sentiment scores for 2,000 distinct historical figures. Each language pair exhibits a Spearman sentiment correlation of at least 0.14, with an average correlation of 0.28 over all pairs.</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The rest of this paper is organized as follows.
+We review related work in Section <a href="#S2" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. In Section <a href="#S3" title="3 Knowledge Graph Construction ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we describe our resource processing and design decisions. Section <a href="#S4" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> discusses graph propagation methods to identify sentiment polarity across languages. Section <a href="#S5" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> evaluates our results against each available human-annotated lexicon. Finally, in Section <a href="#S6" title="6 Extrinsic Evaluation: Consistency of Wikipedia Sentiment ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we present our extrinsic evaluation of sentiment consistency in Wikipedia prior to our conclusions.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Sentiment analysis is an important area of NLP with a large and growing literature. Excellent surveys of the field include <cite class="ltx_cite">[<a href="#bib.bib1" title="Sentiment analysis and opinion mining" class="ltx_ref">18</a>, <a href="#bib.bib7" title="Opinion mining and sentiment analysis" class="ltx_ref">21</a>]</cite>, establishing that rich online resources have greatly expanded opportunities for opinion mining and sentiment analysis. <cite class="ltx_cite">Godbole<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Large-scale sentiment analysis for news and blogs." class="ltx_ref">2007</a>)</cite> build up an English lexicon-based sentiment analysis system to evaluate the general reputation of entities. <cite class="ltx_cite">Taboada<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Lexicon-based methods for sentiment analysis" class="ltx_ref">2011</a>)</cite> present a more sophisticated model by considering patterns, including negation and repetition using adjusted weights. <cite class="ltx_cite">Liu (<a href="#bib.bib6" title="Sentiment analysis and subjectivity" class="ltx_ref">2010</a>)</cite> introduces an efficient method, at the state of the art, for doing sentiment analysis and subjectivity in English.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Researchers have investigated topic or domain dependent approaches to identify opinions. <cite class="ltx_cite">Jijkoun<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Generating focused topic-specific sentiment lexicons" class="ltx_ref">2010</a>)</cite> focus on generating topic specific sentiment lexicons. <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Sentiment analysis with global topics and local dependency." class="ltx_ref">2010</a>)</cite> extract sentiment with global and local topic dependency. <cite class="ltx_cite">Gindl<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Cross-domain contextualisation of sentiment lexicons" class="ltx_ref">2010</a>)</cite> perform sentiment analysis according to cross-domain contextualization and <cite class="ltx_cite">Pak and Paroubek (<a href="#bib.bib29" title="Twitter as a corpus for sentiment analysis and opinion mining." class="ltx_ref">2010</a>)</cite> focus on Twitter, doing research on colloquial format of English.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Work has been done to generalize sentiment analysis to other languages. <cite class="ltx_cite">Denecke (<a href="#bib.bib28" title="Using sentiwordnet for multilingual sentiment analysis" class="ltx_ref">2008</a>)</cite> performs multilingual sentiment analysis using SentiWordNet. <cite class="ltx_cite">Mihalcea<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib31" title="Learning multilingual subjective language via cross-lingual projections" class="ltx_ref">2007</a>)</cite> learn multilingual subjectivity via cross-lingual projections. <cite class="ltx_cite">Abbasi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="Sentiment analysis in multiple languages: feature selection for opinion classification in web forums" class="ltx_ref">2008</a>)</cite> extract specific language features of Arabic which requires language-specific knowledge. <cite class="ltx_cite">Gînscă<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Sentimatrix: multilingual sentiment analysis service" class="ltx_ref">2011</a>)</cite> work on better sentiment analysis system in Romanian.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">The ready availability of machine translation to and from English has prompted efforts to employ translation for sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib2" title="International sentiment analysis for news and blogs" class="ltx_ref">6</a>]</cite>. <cite class="ltx_cite">Banea<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Multilingual subjectivity analysis using machine translation" class="ltx_ref">2008</a>)</cite> demonstrate that machine translation can perform quite well when extending the subjectivity analysis to multi-lingual environment, which makes it inspiring to replicate their work on lexicon-based sentiment analysis.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Machine learning approaches to sentiment analysis are attractive, because of the promise of reduced manual processing. <cite class="ltx_cite">Boiy and Moens (<a href="#bib.bib30" title="A machine learning approach to sentiment analysis in multilingual web texts" class="ltx_ref">2009</a>)</cite> conduct machine learning sentiment analysis using multilingual web texts. Deep learning approaches draft off of distributed word embedding which offer concise features reflecting the semantics of the underlying vocabulary. <cite class="ltx_cite">Turian<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib26" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">2010</a>)</cite> create powerful word embedding by training on real and corrupted phrases, optimizing for the replaceability of words. <cite class="ltx_cite">Zou<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Bilingual word embeddings for phrase-based machine translation" class="ltx_ref">2013</a>)</cite> combine machine translation and word representation to generate bilingual language resources. <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">2012</a>)</cite> demonstrates a powerful approach to English sentiment using word embedding, which can easily be extended to other languages by training on appropriate text corpora.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Knowledge Graph Construction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section we will describe how we leverage off a variety of NLP resources to construct the semantic connection graph we will use to propagate sentiment lexicons.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2063/image002.png" id="S3.F1.g1" class="ltx_graphics" width="271" height="199" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Illustration of our knowledge graph, showing links between words and edge representation to preserve source identity. For each edge between corresponding words, a 5-bit integer will record the existence of 5 possible semantic links.</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The Polyglot project <cite class="ltx_cite">[<a href="#bib.bib12" title="Polyglot: distributed word representations for multilingual nlp" class="ltx_ref">3</a>]</cite> identified the 100,000 most frequently used words in each language’s Wikipedia. Drawing a candidate lexicon from Wikipedia has some downsides (e.g. limited use of informal words), but is representative and convenient over a large number of languages. In particular, we collect total of 7,741,544 high-frequency words from 136 languages to serve as vertices in our graph.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We seek to identify as many semantic links across languages as possible to connect our network, and so integrated several resources:</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Wiktionary</span> – This growing resource has entries for 171 languages, edited by people with sufficient background knowledge. Wiktionary provides about 19.7% of the total links covering 382,754 vertices in our graph.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Machine Translation</span> -
+We script the Google translation API to get even more semantic links. In particular we ask for translations of each word in our English vocabulary to 57 languages with available translators as well as going from each known vocabulary word in other languages to English. In total, machine translation provides 53.2% of the total links and establishes connections between 3.5 million vertices.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Transliteration Links</span> –
+Natural flow brings words across languages with little morphological change. Closely related language pairs (i.e. Russian and Ukrainian) share many characters/words in common. Though not always true, words with same spelling usually have similar meanings so this can improve the coverage of semantic links. Transliteration provides 22.1% of the total links in our experiment.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">WordNet</span> –
+Finally, we gather synonyms and antonyms of English words from WordNet, which prove particularly useful in propagating sentiment across languages.
+In total we collect over 100,000 pairs of synonyms and antonyms and created 5.0% of the total links.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Links do not always agree in a bidirectional manner, particularly for multi-sense words, thus all links in our network are unidirectional. Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Knowledge Graph Construction ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> illustrates how we encode links from different resources in an integer edge value.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Graph Propagation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Sentiment propagation starts from English sentiment lexicons. Through semantic links in our knowledge graph, words are able to extend their sentiment polarities to adjacent neighbors. We experimented with both graph propagation algorithm <cite class="ltx_cite">[<a href="#bib.bib10" title="The viability of web-derived polarity lexicons" class="ltx_ref">28</a>]</cite> and label propagation algorithm <cite class="ltx_cite">[<a href="#bib.bib11" title="Learning from labeled and unlabeled data with label propagation" class="ltx_ref">29</a>, <a href="#bib.bib9" title="Semi-supervised polarity lexicon induction" class="ltx_ref">22</a>]</cite>. The primary difference between is that label propagation takes multiple paths between two vertices into consideration, while graph propagation utilizes only the best path between word pairs.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We report results from using Liu’s lexicons <cite class="ltx_cite">[<a href="#bib.bib6" title="Sentiment analysis and subjectivity" class="ltx_ref">17</a>]</cite> as seed words. Liu’s lexicons contain 2006 positive words and 4783 negative words. Of these, 1422 positive words and 2956 negative words (roughly 64.5%) appear among the 100,000 English vertices in our graph.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"> <span class="ltx_text ltx_font_bold">Dataset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Propagation</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Acc</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Cov</span></th>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Arabic</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.93</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.45</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.94</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.46</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">German</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.97</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.31</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.97</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.32</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">English</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.92</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.55</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.90</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.69</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Italian</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.29</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.72</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.32</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Japanese</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.57</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.12</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.56</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.15</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Chinese-1</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.95</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.62</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.94</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.65</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t" rowspan="2">Chinese-2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Label</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.97</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.70</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">Graph</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.97</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">0.72</span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Graph propagation vs label propagation. <span class="ltx_text ltx_font_italic">Acc</span> represents the ratio of identical polarity between our analysis and the published lexicons. <span class="ltx_text ltx_font_italic">Cov</span> reflects what faction of our lexicons overlap with published lexicons.</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Language</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math><span class="ltx_text ltx_font_small">lexicon</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">+/- Ratio</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Language</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math><span class="ltx_text ltx_font_small">lexicon</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">+/- Ratio</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Language</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math><span class="ltx_text ltx_font_small">lexicon</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="\|" display="inline"><mo>∥</mo></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">+/- Ratio</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Afrikaans</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2299</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Albanian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2076</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Amharic</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#00FF00;">46</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.63</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Arabic</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2794</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Aragonese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">97</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.47</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Armenian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1657</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Assamese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">493</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.49</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Azerbaijani</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1979</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Bashkir</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">19</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.63</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Basque</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1979</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Belarusian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1526</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.43</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Bengali</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2393</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Bosnian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2020</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Breton</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">184</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Bulgarian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2847</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.40</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Burmese</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">461</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.48</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Catalan</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">3204</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.37</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Cebuano</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">56</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Chechen</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">26</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.65</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Chinese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3828</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.34</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Chuvash</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">17</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.76</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Croatian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2208</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Czech</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2599</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Danish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">3340</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.38</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Divehi</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">67</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.67</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Dutch</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3976</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.38</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">English</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">4376</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.32</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Esperanto</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2604</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Estonian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2105</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Faroese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">123</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Finnish</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">3295</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">French</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#0000FF;">4653</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.35</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Frisian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">224</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Gaelic</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">345</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.50</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Galician</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2714</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.37</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">German</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3974</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.38</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Georgian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2202</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Greek</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2703</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Gujarati</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2145</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.44</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Haitian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">472</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.44</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Hebrew</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2533</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.36</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Hindi</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3640</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Hungarian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">3522</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.38</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Icelandic</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1770</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Ido</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">183</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.49</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Interlingua</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">326</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.50</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Indonesian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2900</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.37</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Italian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#0000FF;">4491</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.36</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Irish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1073</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.45</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Japanese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1017</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Javanese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">168</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Kazakh</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">81</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.65</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Kannada</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2173</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Kirghiz</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">246</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.49</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Khmer</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">956</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.49</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Korean</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2118</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Kurdish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">145</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.48</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Latin</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2033</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.46</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Latvian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1938</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Limburgish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">93</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.46</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Lithuanian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2190</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Luxembourg</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">224</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.52</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Macedonian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2965</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Malagasy</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">48</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.54</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Malayalam</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">393</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.50</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Malay</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2934</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Maltese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">863</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.50</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Marathi</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1825</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.48</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Manx</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">90</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Mongolian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">130</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.52</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Nepali</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">504</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.49</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Norwegian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">3089</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Nynorsk</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1894</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Occitan</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">429</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.40</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Oriya</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">360</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Ossetic</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#00FF00;">12</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.67</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Panjabi</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">79</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.63</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Pashto</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">198</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Persian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2477</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Polish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">3533</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Portuguese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3953</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.35</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Quechua</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">47</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.55</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Romansh</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">116</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.48</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Romanian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">3329</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.39</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Russian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2914</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.43</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Sanskrit</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">178</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.59</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Sami</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">24</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.71</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Serbian</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2034</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Sinhala</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1122</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.43</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Slovak</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2428</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Slovene</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2244</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Spanish</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#0000FF;">4275</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.36</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Sundanese</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">476</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Swahili</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1314</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Swedish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#0000FF;">3722</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Tamil</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2057</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.40</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Tagalog</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1858</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.44</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Tajik</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">97</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.62</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Tatar</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">76</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Telugu</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2523</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Thai</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1279</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.51</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Tibetan</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">24</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.63</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Turkmen</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">78</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.56</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Turkish</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">2500</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Uighur</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">18</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.44</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small"> Ukrainian</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">2827</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.41</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Urdu</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">1347</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.39</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Uzbek</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">111</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.57</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small"> Vietnamese</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1016</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small">0.38</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Volapuk</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small" style="color:#00FF00;">43</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr"><span class="ltx_text ltx_font_small" style="color:#FF8000;">0.70</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Walloon</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">193</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small" style="color:#BF0040;">0.32</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_small"> Welsh</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">1647</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_small">0.42</span></td>
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">Yiddish</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">395</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_small">0.43</span></td>
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">Yoruba</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">276</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.50</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Sentiment lexicon statistics. We tag 10 languages having most/least sentiment words with <span class="ltx_text" style="color:#0000FF;">blue</span>/<span class="ltx_text" style="color:#00FF00;">green</span> color and 10 languages having highest/lowest ratio of positive words with <span class="ltx_text" style="color:#FF8000;">orange</span>/<span class="ltx_text" style="color:#BF0040;">purple</span> color.</div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Our knowledge network is comprised of links from a heterogeneous collection of sources, of different coverage and reliability. For the task of deciding sentiment polarity of words, only antonym links are negative. An edge gains zero weight if both negative and positive links exist. Edges having multiple positive links will be credited the highest weight among all these links. We conducted a grid search on the weight of each type of links to maximize the best overall accuracy on our test data of published non-English sentiment lexicons. To avoid potential overfitting problems, grid search starts from SentiWordNet English lexicons <cite class="ltx_cite">[<a href="#bib.bib20" title="Sentiwordnet: a publicly available lexical resource for opinion mining" class="ltx_ref">9</a>]</cite> instead of Liu’s.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Lexicon Evaluation</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We collected all available published sentiment lexicons from non-English languages to serve as standard for our evaluation, including Arabic, Italian, German and Chinese. Coupled with English sentiment lexicons provides in total seven different test cases to experiment against, specifically:</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Arabic</span>: <cite class="ltx_cite">[<a href="#bib.bib16" title="Subjectivity and sentiment analysis of modern standard arabic." class="ltx_ref">2</a>]</cite>.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">German</span>: <cite class="ltx_cite">[<a href="#bib.bib17" title="SentiWS-a publicly available german-language resource for sentiment analysis." class="ltx_ref">23</a>]</cite>.</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">English</span>: <cite class="ltx_cite">[<a href="#bib.bib20" title="Sentiwordnet: a publicly available lexical resource for opinion mining" class="ltx_ref">9</a>]</cite>.</p>
+</div></li>
+<li id="I3.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Italian</span>: <cite class="ltx_cite">[<a href="#bib.bib19" title="Sentiment analysis on italian tweets" class="ltx_ref">5</a>]</cite>.</p>
+</div></li>
+<li id="I3.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Japanese</span>: <cite class="ltx_cite">[<a href="#bib.bib18" title="Building lexicon for sentiment analysis from massive collection of html documents." class="ltx_ref">15</a>]</cite>.</p>
+</div></li>
+<li id="I3.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i6.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Chinese-1</span>, <span class="ltx_text ltx_font_italic">Chinese-2</span>: <cite class="ltx_cite">[<a href="#bib.bib15" title="Exploring english lexicon knowledge for chinese sentiment analysis" class="ltx_ref">13</a>]</cite>.</p>
+</div></li>
+</ul>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"> Type</th>
+<th class="ltx_td ltx_align_left ltx_border_t">Person</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Z-score distribution</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l" rowspan="2">Good</td>
+<td class="ltx_td ltx_align_left">Leonardo da Vinci</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><img src="P14-2063/image004.png" id="S5.T3.g1" class="ltx_graphics" width="379" height="56" alt=""/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"> Steven Spielberg</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><img src="P14-2063/image005.png" id="S5.T3.g2" class="ltx_graphics" width="379" height="56" alt=""/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l" rowspan="2">Bad</td>
+<td class="ltx_td ltx_align_left">Adolf Hitler</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><img src="P14-2063/image001.png" id="S5.T3.g3" class="ltx_graphics" width="379" height="56" alt=""/></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"> Osama bin Laden</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><img src="P14-2063/image006.png" id="S5.T3.g4" class="ltx_graphics" width="379" height="56" alt=""/></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Z-score distribution examples. We label 10 languages with their language code and other using tick marks on the x-axis.</div>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">We present the accuracy and coverage achieved by two propagation model in Table <a href="#S4.T1" title="Table 1 ‣ 4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Both models achieve similar accuracy while slightly more words in graph propagation can be verified via published lexicons. Performance is not good on Japanese because of mismatching between our dictionary and the test data.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> reveals that very sparse sentiment lexicons resulted for a small but notable fraction of the languages we analyzed.
+In particular, only 20 languages yielded lexicons of less than 100 words. Without exception, they all have very small available definitions in Wikitionary. By contrast, 48 languages had lexicons with over 2,000 words, another 16 with between 1,000 and 2,000: clearly large enough to perform a meaningful analysis.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Extrinsic Evaluation: Consistency of Wikipedia Sentiment</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We consider evaluating our lexicons on the consistency of Wikipedia pages about a particular individual person among various languages. As our candidate entities for analysis, we use the Wikipedia pages of 2,000 most significant people as measured in the recent book <span class="ltx_text ltx_font_italic">Who’s Bigger?</span> <cite class="ltx_cite">[<a href="#bib.bib22" title="Who’s bigger?: where historical figures really rank" class="ltx_ref">24</a>]</cite>. The sentiment polarity of a page is simply computed by subtracting the number of negative words from that of positive words, divided by the sum of both.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">The differing ratio of positive and negative polarity terms in Table <a href="#S4.T2" title="Table 2 ‣ 4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> means that sentiment cannot be directly compared across languages. For more consistent evaluation we compute the z-score of each entity against the distribution of all its language’s entities.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">We use the Spearman correlation coefficient to measure the consistence of sentiment distribution across all entities with pages in a particular language pair.
+Figure <a href="#S6.F2" title="Figure 2 ‣ 6 Extrinsic Evaluation: Consistency of Wikipedia Sentiment ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the results for 30 languages with largest propagated sentiment lexicon size. All pairs of language exhibit positive correlation (and hence generally stable and consistent sentiment), with an average correlation of 0.28.</p>
+</div>
+<div id="S6.F2" class="ltx_figure"><img src="P14-2063/image003.png" id="S6.F2.g1" class="ltx_graphics" width="541" height="406" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Heatmap of sentiment correlation between 30 languages.</div>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Finally, Table <a href="#S5.T3" title="Table 3 ‣ 5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> illustrates sentiment consistency over all 136 languages (represented by blue tick marks), with the first 10 languages in Figure <a href="#S6.F2" title="Figure 2 ‣ 6 Extrinsic Evaluation: Consistency of Wikipedia Sentiment ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> granted labels.
+Respected artists like <span class="ltx_text ltx_font_italic">Steven Spielberg</span> and <span class="ltx_text ltx_font_italic">Leonardo da Vinci</span> show as consistently positive sentiment as notorious figures like
+<span class="ltx_text ltx_font_italic">Osama bin Laden</span> and <span class="ltx_text ltx_font_italic">Adolf Hitler</span> are negative.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Our knowledge graph propagation is generally effective at producing useful sentiment lexicons. Interestingly, the ratio of positive sentiment words is strongly connected with number of sentiment words – it is noteworthy that English has the smallest ratio of positive lexicon terms. The phenomenon possibly shows that many negative words reflecting cultural nuances do not translate wel. We believe that this ratio can be considered as quality measurement of the propagation.
+Similar approaches can be extended to other NLP tasks using different semantic links, specific dictionary and special seed words. Future work will revolve around learning modifiers, negation terms, and various entity/sentiment attribution.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was partially supported by NSF Grants DBI-1060572 and IIS-1017181, and a Google Faculty Research Award.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Abbasi, H. Chen and A. Salem</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis in multiple languages: feature selection for opinion classification in web forums</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems (TOIS)</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Abdul-Mageed, M. T. Diab and M. Korayem</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Subjectivity and sentiment analysis of modern standard arabic.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 587–591</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i1.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Al-Rfou, B. Perozzi and S. Skiena</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Polyglot: distributed word representations for multilingual nlp</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1307.1662</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Knowledge Graph Construction ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Banea, R. Mihalcea, J. Wiebe and S. Hassan</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual subjectivity analysis using machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 127–135</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Basile and M. Nissim</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis on italian tweets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">WASSA 2013</span>, <span class="ltx_text ltx_bib_pages"> pp. 100</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i4.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Bautin, L. Vijayarenu and S. Skiena</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">International sentiment analysis for news and blogs</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Second Int. Conf. on Weblogs and Social Media (ICWSM 2008)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Boiy and M. Moens</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A machine learning approach to sentiment analysis in multilingual web texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Information retrieval</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 526–558</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Denecke</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using sentiwordnet for multilingual sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 507–512</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiwordnet: a publicly available lexical resource for opinion mining</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 417–422</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i3.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p3" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Gindl, A. Weichselbraun and A. Scharl</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-domain contextualisation of sentiment lexicons</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">19th European Conference on Artificial Intelligence (ECAI)</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Godbole, M. Srinivasaiah and S. Skiena</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale sentiment analysis for news and blogs.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ICWSM</span> <span class="ltx_text ltx_bib_volume">7</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Gînscă, E. Boroş, A. Iftene, D. TrandabĂţ, M. Toader, M. Corîci, C. Perez and D. Cristea</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentimatrix: multilingual sentiment analysis service</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 189–195</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. He, H. Alani and D. Zhou</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring english lexicon knowledge for chinese sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CIPS-SIGHAN Joint Conference on Chinese Language Processing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i6.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Jijkoun, M. de Rijke and W. Weerkamp</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating focused topic-specific sentiment lexicons</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 585–594</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Kaji and M. Kitsuregawa</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building lexicon for sentiment analysis from massive collection of html documents.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1075–1083</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i5.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Li, M. Huang and X. Zhu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis with global topics and local dependency.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Liu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis and subjectivity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Handbook of natural language processing</span> <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 568</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Liu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment analysis and opinion mining</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Morgan and Claypool</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea, C. Banea and J. Wiebe</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning multilingual subjective language via cross-lingual projections</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 976</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Pak and P. Paroubek</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter as a corpus for sentiment analysis and opinion mining.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion mining and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations and trends in information retrieval</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–135</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Rao and D. Ravichandran</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised polarity lexicon induction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 675–682</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Remus, U. Quasthoff and G. Heyer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SentiWS-a publicly available german-language resource for sentiment analysis.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i2.p1" title="5 Lexicon Evaluation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Skiena and C. Ward</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Who’s bigger?: where historical figures really rank</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Extrinsic Evaluation: Consistency of Wikipedia Sentiment ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, B. Huval, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic compositionality through recursive matrix-vector spaces</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Taboada, J. Brooke, M. Tofiloski, K. Voll and M. Stede</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexicon-based methods for sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 267–307</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Velikovich, S. Blair-Goldensohn, K. Hannan and R. McDonald</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The viability of web-derived polarity lexicons</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 777–785</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhu and Z. Ghahramani</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning from labeled and unlabeled data with label propagation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Technical Report CMU-CALD-02-107, Carnegie Mellon University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Graph Propagation ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Y. Zou, R. Socher, D. Cer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual word embeddings for phrase-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1393–1398</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Building Sentiment Lexicons for All Major Languages" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:50:50 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

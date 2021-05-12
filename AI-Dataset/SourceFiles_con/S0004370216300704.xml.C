@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Extracting qualitative relations from categorical data.
+   </title>
+   <abstract>
+    Qualitative modeling is traditionally concerned with the abstraction of numerical data. In numerical domains, partial derivatives describe the relation between the independent and dependent variable; qualitatively, they tell us the trend of the dependent variable. In this paper, we address the problem of extracting qualitative relations in categorical domains. We generalize the notion of partial derivative by defining the probabilistic discrete qualitative partial derivative (PDQ PD). PDQ PD is a qualitative relation between the target class c and the discrete attribute; the derivative corresponds to ordering the attribute's values, ai, by P(c|ai) in a local neighborhood of the reference point, respecting the ceteris paribus principle. We present an algorithm for computation of PDQ PD from labeled attribute-based training data. Machine learning algorithms can then be used to induce models that explain the influence of the attribute's values on the target class in different subspaces of the attribute space.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A data set collected at the Institute of Oncology, Ljubljana, Slovenia, contains data on 1220 patients with breast cancer. Each patient was given one of the two possible chemotherapy treatments: CMF{sup:1} or anthracycline-based chemotherapy. No treatment is generally superior to another; the physician's role is to determine the optimal treatment for each particular patient [1]. The data contains demographic and clinical data, the chosen treatment and whether the cancer recurred in a certain period. How do we induce a useful model from such data? In a more general case, the physician may need to make several (dependent or independent) decisions, and there may be multiple objectives – like the patient's survival, comfort and side-effects – to optimize. Which algorithms are suitable for analyzing the data collected in such studies?
+     </paragraph>
+     <paragraph>
+      The problem resembles a number of different tasks. Model induction belongs to the field of classical machine learning; however, here we deal with one or more categorical or numeric target variables, and with attributes at and beyond our control, which need to be treated differently. From another perspective, the problem is superficially similar to preference learning, yet the preferences are not explicitly given but need to be extracted from the data. The resulting model may be represented as a CP-net, but the task here is to derive the preferences rather than the structure of the network. We will explore the relation with other methods at appropriate points later in the paper. The methods we will present are also not limited to induction of (clinical or general) decision support systems like the one described above.
+     </paragraph>
+     <paragraph>
+      Our venture point is qualitative modeling. Qualitative predictive models in their original form are a substitute for regression models. Instead of predicting the numerical value of the dependent variable, they only predict the direction of its change with respect to the change(s) of independent variable(s). They are particularly useful for complex problems in, for instance, economy [2], where exact numerical relations may be unattainable, while qualitative models may still correctly describe, for example, the conditions under which a decrease of interest rates will stimulate economic growth and how will this affect the unemployment rate. Kupiers [3] argued that qualitative models should be used for reasoning about continuous phenomena with incomplete or unreliable knowledge. Despite the popularity of qualitative models in some branches of science, most notably economy, they gained but a little traction in machine learning, resulting in only a few algorithms for their automated induction from data [4], [5]. Most qualitative models are still derived manually.
+     </paragraph>
+     <paragraph>
+      In mathematical terms, qualitative models can be viewed as models that predict the sign of partial derivatives, also dubbed qualitative partial derivatives. This makes them attractive for the problem at hand: relations between the outcomes and the variables under our control resemble derivatives. The dependent variables in our case are discrete, which requires a different definition of derivative. We assume that the variables by which we differentiate are categorical as well, since categorical variables are indeed common and since using discrete values may increase the reliability in the spirit of the above findings and, finally, because it is easier to differentiate categorical variables with respect to another categorical and not continuous variable.
+     </paragraph>
+     <paragraph>
+      The paper's basic contributions are contained in Section 2:
+     </paragraph>
+     <list>
+      <list-item label="a)">
+       the definition of probabilistic discrete qualitative partial derivative,
+      </list-item>
+      <list-item label="b)">
+       the algorithm for computation of such derivatives at each data point,
+      </list-item>
+      <list-item label="c)">
+       induction of models, that is, generalization via machine learning from derivatives.
+      </list-item>
+     </list>
+     <paragraph>
+      In Section 2.1, we define a new type of qualitative relation, probabilistic discrete qualitative partial derivative (PDQ PD) which relates categorical variables. The definition is based on recasting the qualitative partial derivative in probabilistic terms: instead of predicting the effect of change in numeric input variable on the numeric output, we predict the effect of a certain change of the categorical input variable on the probability of the target class. To end up with a qualitative model, we are interested in whether the change was positive or negative (or none).
+     </paragraph>
+     <paragraph>
+      The first step in computation of derivatives requires calculating the conditional probabilities of class values with the target attribute and all other relevant attributes as conditions. The set of relevant attributes at each data point are determined using a greedy approach (Section 2.2). Probabilities are then clustered to obtain partial ordering (Section 2.3). Both procedures, which constitute the new algorithm Qube, are heuristic and also depend on the availability of suitable data in the vicinity of the point where the derivative is computed, therefore some smoothing or generalization is necessary.
+     </paragraph>
+     <paragraph>
+      The paper puts less emphasis on the third point (c). By using the computed derivatives as labels, an arbitrary machine learning method can be used for induction of qualitative models (Section 2.4). We experiment with decision trees because of their simplicity and interpretability. When aiming for accuracy, one can choose support vector machines, neural networks or other modern methods. Alternatively, the data produced by Qube can be visualized or used for construction of CP-nets. Exploring these options is beyond the scope of the paper.
+     </paragraph>
+     <paragraph>
+      We demonstrate different uses of the method and observe its properties on several examples in Section 3. We start with an artificial data set resembling the one described in the beginning but with known ground truth, so the results can be evaluated (Section 3.1). This example also shows why direct use of machine learning algorithms on such data does not yield useful results. We continue by systematically observing the behavior of the algorithm with respect to the data size and noise, again using a purely synthetic domain. The third case is typical for qualitative modeling: the data describes a complex physical phenomenon and the modeling must find a simple qualitative description, in this case in terms of PDQ PDs. The final experiment is run on medical data in which we do not have control over any of the attributes. This shows how qualitative partial derivatives are also useful for analysis of standard machine learning data.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Methods
+     </section-title>
+     <paragraph>
+      We start by a definition of probabilistic discrete qualitative partial derivatives based on conditional probabilities of the target class given the attribute values. The computation of these probabilities from data requires selecting proper subsets of examples, which we describe next. Finally, we show how to combine the computed probabilities into partial derivatives and use them to induce qualitative models.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Probabilistic discrete qualitative partial derivative
+      </section-title>
+      <paragraph>
+       The derivative of a function {a mathematical formula}f(x) at a certain point {a mathematical formula}x0, {a mathematical formula}f′(x0) tells us, informally, the change of the function value corresponding to a certain (small) change in the value of the function's argument, e.g.{a mathematical formula} For functions of multiple arguments, e.g.{a mathematical formula}f(x1,x2,…,xn), we compute derivatives by each argument {a mathematical formula}xi separately and denote them by {a mathematical formula}∂f/∂xi.
+      </paragraph>
+      <paragraph>
+       Qualitative derivatives, which we will denote by {a mathematical formula}@f@x, are similar to ordinary derivatives except that they give only the direction of change, that is, whether the function will increase or decrease when its argument increases. A qualitative derivative of a function is positive (negative, zero) if the continuous derivative is positive (negative, zero).
+      </paragraph>
+      <paragraph>
+       Now consider a multivariate distribution which assigns a probability y to each element of Cartesian product of {a mathematical formula}A1×A2×…×An. In machine learning, {a mathematical formula}(a1,a2,…,an)∈A1×A2×…×An can be values of discrete attributes {a mathematical formula}A1,A2,…An describing an example; we will call this example a reference example. The probability that such an example belongs to some target class c is thus:{a mathematical formula} Recall that qualitative derivative of f with respect to {a mathematical formula}xi computed at {a mathematical formula}x1,x2,… tells whether a certain change of {a mathematical formula}xi will increase or decrease the function value if other arguments remain constant. Let the probabilistic discrete qualitative partial derivative at {a mathematical formula}(a1,a2,…,an) with respect to {a mathematical formula}Ai tell whether a change of value of the attribute {a mathematical formula}Ai from {a mathematical formula}ai to {a mathematical formula}ai′ will increase or decrease the probability of the target class:{a mathematical formula} Let us define a total order on set {a mathematical formula}Ai, with respect to fixed values of {a mathematical formula}aj for all {a mathematical formula}j≠i:{a mathematical formula} This allows us to rewrite (3) as{a mathematical formula} The derivative {a mathematical formula}@f/@Ai:ai→ai′ for any pair {a mathematical formula}ai and {a mathematical formula}ai′ can thus be described by a total ordering of attribute values {a mathematical formula}Ai.
+      </paragraph>
+      <paragraph>
+       It is known that on summer Mondays the rain in Spain stays mainly in the plain, that is{a mathematical formula} Therefore,{a mathematical formula} since going from the plain to the mountains decreases the probability of rain (on summer Mondays in Spain).
+      </paragraph>
+      <paragraph>
+       Equivalently, we can write that {a mathematical formula}mountains≺plain (for summer Mondays in Spain). The derivative is defined by the total ordering of values. Assuming that there are only three types of locations in the Spain, with the third, the seashore, getting the least rain, the derivative may equal{a mathematical formula} The relation refers to the specific data point, that is, for summer Mondays in Spain. Weather patterns for Spanish winters or for summer Sundays in Britain may be different.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Computation of conditional probabilities
+      </section-title>
+      <paragraph>
+       To compute the derivative with respect to {a mathematical formula}Ai, we have to estimate the conditional probabilities {a mathematical formula}p(c|a1,…,an) at a single point {a mathematical formula}E=(a1,a2,…,an) from data sample for different values of {a mathematical formula}Ai. For example, to compute the derivative of rain likelihood with respect to the location on summer Mondays in Spain, we must compute {a mathematical formula}p(rain|location,summer,Monday,Spain) for all {a mathematical formula}location∈{plain, {a mathematical formula}mountains,seashore}.
+      </paragraph>
+      <paragraph>
+       These probabilities cannot be estimated directly using a perfect Bayesian approach, for instance by relative frequencies, since there may be only a few or even no examples in the data which match the conditional part. We also cannot use a naive Bayesian method since it would reduce the PDQ PD to comparison of {a mathematical formula}p(c|a1) and {a mathematical formula}p(c|a1′), canceling out all the terms corresponding to values of other attributes: the naive Bayesian assumption of conditional independence of attributes given the class implies that the derivative {a mathematical formula}@f@Ai:ai→ai′ is constant over the entire attribute space.
+      </paragraph>
+      <paragraph>
+       The problem requires a semi-naive Bayesian approach. We replace the condition in {a mathematical formula}p(c|a1,…,an) with a relaxed condition {a mathematical formula}P(c|ai,D), where {a mathematical formula}D⊆{a1,…,an} includes only the attribute values that are conditionally dependent on {a mathematical formula}ai given the class, and the values of the attribute with respect to which we compute the derivative. Ignoring the conditionally independent values does not change the computed derivative (see the proof in the Appendix). In our running example, we may discover that day of the week plays no role in rain likelihood, so it suffices to compute probabilities {a mathematical formula}p(rain|location,summer,Spain), that is, {a mathematical formula}D={summer,Spain}.{sup:2}
+      </paragraph>
+      <paragraph>
+       We construct the set of conditions {a mathematical formula}D with a greedy approach. We start with an empty set {a mathematical formula}D.
+      </paragraph>
+      <paragraph>
+       To check whether an attribute {a mathematical formula}Aj should be added to {a mathematical formula}D, we try to reject the assumption that the value of the attribute {a mathematical formula}Ai is conditionally (given {a mathematical formula}D) independent of whether {a mathematical formula}Aj has the value {a mathematical formula}aj or not, that is, {a mathematical formula}p(Aj=aj,Ai|c,D)=p(Aj=aj|c,D)p(Ai|c,D). If the assumption holds, the condition {a mathematical formula}Aj=aj is unrelated to {a mathematical formula}Ai and does not need to be added to {a mathematical formula}D.
+      </paragraph>
+      <paragraph>
+       Note that we do not check the total independence of {a mathematical formula}Aj and {a mathematical formula}Ai: we consider all values of {a mathematical formula}Ai, while for {a mathematical formula}Aj we consider only {a mathematical formula}ajvs. other values of {a mathematical formula}Aj.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        All values of {a mathematical formula}Ai need to be considered so that we can use the same set of conditions {a mathematical formula}D for all derivatives with respect to {a mathematical formula}Ai at a certain reference example. This ensures that probabilities {a mathematical formula}p(c|ai,D) for all {a mathematical formula}ai∈Ai in (3) are comparable and thus useful for defining a total ordering of {a mathematical formula}Ai.
+       </list-item>
+       <list-item label="•">
+        For {a mathematical formula}Aj, we are interested only in whether {a mathematical formula}aj can be substituted by other values of {a mathematical formula}Aj without affecting {a mathematical formula}Ai.
+       </list-item>
+      </list>
+      <paragraph>
+       The independence assumption is checked by the {a mathematical formula}χ2 test. We construct separate tables with {a mathematical formula}2×|Ai| cells for class c and for its complement; their rows correspond to whether {a mathematical formula}Aj=aj and columns correspond to the values of {a mathematical formula}Ai. From the first table, we compute the expected absolute frequencies as {a mathematical formula}n(c,D)p(aj|c,D)p(v|c,D) and {a mathematical formula}n(c,D)(1−p(aj|c,D))p(v|c,D), where {a mathematical formula}v∈Ai and {a mathematical formula}n(c,D) is the number of examples in class c that satisfy the conditions {a mathematical formula}D. Frequencies for the complement of c are computed analogously. The observed frequencies are computed from the training data by taking the conditions {a mathematical formula}D into account.
+      </paragraph>
+      <paragraph>
+       The sum of {a mathematical formula}χ2 statistics for the two tables is distributed according to {a mathematical formula}χ2 distribution with {a mathematical formula}2(|Ai|−1) degrees of freedom. The greedy algorithm for construction of {a mathematical formula}D starts with an empty set. At each step, it tests the independence assumption for all attributes not within {a mathematical formula}D and computes the corresponding p-value. We select the one with the lowest value and add it to {a mathematical formula}D. We stop the procedure when the lowest p-value is above the specified threshold or when the number of examples matching the conditions {a mathematical formula}D falls below the given minimum. This is needed to ensure the reliability of {a mathematical formula}χ2 statistics and of estimated conditional probabilities. Our use of p-value does not require adjustments for multiple hypotheses testing since the p-value is used only as a stopping criteria and not to claim the significance of the alternative hypothesis. After completing the set of conditions {a mathematical formula}D, we compute {a mathematical formula}p(c|ai,D) for all {a mathematical formula}ai∈Ai using relative frequency, Laplacean estimate or m-estimate [6] on examples matching {a mathematical formula}D. The pseudo code of the algorithm is shown in Algorithm 1, Algorithm 2.
+      </paragraph>
+      <paragraph>
+       Although the proposed greedy procedure is simplistic, it works well in practice. We must also keep in mind that the selection of attributes needs to be fast since it is recomputed for each point at which we compute the derivative, which rules out any advanced search for sets of dependent values.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Computation of derivatives
+      </section-title>
+      <paragraph>
+       The total order of {a mathematical formula}Ai is determined by the order of the corresponding probabilities as defined in (3). To handle noisy data, we will however treat two probabilities (and the corresponding values of {a mathematical formula}Ai) as equal if they differ by less than a user-provided threshold.
+      </paragraph>
+      <paragraph>
+       For this, we use hierarchical clustering of values with average linkage [7] using the difference of probabilities as distances. The clustering is stopped when the distance between the closest clusters is greater than some predefined threshold (in our experiments set to 0.2).
+      </paragraph>
+      <paragraph>
+       For example, let {a mathematical formula}Ai be a five-valued attribute with values {a mathematical formula}v1 to {a mathematical formula}v5. Probabilities {a mathematical formula}p(c|vi,D) for these values equal 0.1, 0.2, 0.3, 0.5 and 0.6, respectively. Let the merging threshold be 0.2. We recognize {a mathematical formula}v1 and {a mathematical formula}v2 as equivalent and assign them the average probability of {a mathematical formula}(0.1+0.2)/2=0.15. Next we merge {a mathematical formula}v4 and {a mathematical formula}v5, the average probability is {a mathematical formula}0.5+0.6=0.55. Finally, we merge {a mathematical formula}v1 and {a mathematical formula}v2 with {a mathematical formula}v3; the average probability is {a mathematical formula}(0.1+0.2+0.3)/3=0.2. We then stop since the difference between {a mathematical formula}p=0.2 ({a mathematical formula}v1 to {a mathematical formula}v3) and {a mathematical formula}p=0.55 ({a mathematical formula}v4 to {a mathematical formula}v5) exceeds the threshold of 0.2. The resulting total ordering of {a mathematical formula}Ai is {a mathematical formula}v1=v2=v3≺v4=v5. In case of ties, clustering chooses the pair to merge at random, potentially resulting in different possible results.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Induction of qualitative models
+      </section-title>
+      <paragraph>
+       To induce a qualitative model with respect to a certain attribute {a mathematical formula}Ai, we first compute the PDQ PD for the entire learning set: for each example, we compute the set of dependent values {a mathematical formula}D and find the total ordering of attribute values {a mathematical formula}Ai as explained in the previous two sections. We replace the original class labels with partial derivatives (that is, the total ordering) and induce a model for predicting the ordering. In principle, any learning algorithm can be used for this task.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      The described approach is new and we are not aware of any method that can be used on similar data in a similar fashion. The aim of this section is rather to demonstrate the different scenarios under which Qube can be used, to qualitatively compare its results with the direct use of machine learning methods that can be run on this type of data, and to observe its behavior under different conditions.
+     </paragraph>
+     <paragraph>
+      In all below experiments we use Qube to compute partial derivatives, replace the original target variable with the derivatives and then induce a model from the modified data. This approach is more practical than analyzing the derivatives directly, and it is also the anticipated use of Qube. For modeling, we use classification trees to be able to compare the models to the ground truth relations. In practice, symbolic methods would be used when we are interested in interpretability, while sub-symbolic methods may be preferred when we aim for higher accuracy.
+     </paragraph>
+     <paragraph>
+      We start with data that resembles the motivation from the beginning of the paper. We constructed a similar data set with three different treatments and a control group, but with a known ground-truth concept so that we can, unlike in the data from the motivation, observe the correctness of the model. We also show why using Qube for this data is more appropriate than inducing the classification trees directly from the data.
+     </paragraph>
+     <paragraph>
+      We will then use a similar data set, but with a simpler target concept to observe the accuracy of the method on different data sizes and noise levels.
+     </paragraph>
+     <paragraph>
+      The third scenario is a typical use case from qualitative modeling. The data is generated using a rather complex physical model and the standard task of qualitative modeling is to subsume it with a simple but qualitatively correct model. With Qube, the model will take the form of qualitative partial derivatives.
+     </paragraph>
+     <paragraph>
+      The last use case will show that PDQ PD are not limited to decision support or preference induction, but can also be useful in general labeled attribute-based data. For this case, we used actual medical data, again generalized the compute derivatives in the form of rules and then asked two medical doctors evaluate interpretability and correctness of the rules.
+     </paragraph>
+     <paragraph>
+      We ran all experiments with parameters that were fixed in advance. The threshold for stopping the clustering was always 0.2, as described in Section 2.3. The m in the m-estimate [6] of probabilities was set to the common setting {a mathematical formula}m=2. Classification trees were induced using our reimplementation of the C4.5 algorithm [8] with the following arguments: max_depth=5, mForPruning=2, sameMajorityPruning=True, binarization=False, max_majority = 0.95.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Rat data set
+      </section-title>
+      <section label="3.1.1">
+       <section-title>
+        Data
+       </section-title>
+       <paragraph>
+        One thousand sick rats with different genetic predispositions are given one of the three treatments (1, 2, or 3) or no treatment (0). The outcome describes the rat's survival (1) or death (0). Four attributes describing the important genetic markers, {a mathematical formula}A1={0,1},A2={0,1,2},A3={0,1,2},A4={0,1}, constitute the following hidden ground truth model:
+       </paragraph>
+       <paragraph>
+        The probability of survival is {a mathematical formula}100% for the rats with genetic marker {a mathematical formula}A3=1 disregarding the treatment type.
+       </paragraph>
+       <paragraph>
+        Treatment 1 works perfectly for the combination of markers {a mathematical formula}A1=1∧A3=2∧A4=0, while the rats with the same combination of genetic markers that receive treatment 2 have only {a mathematical formula}65% chance of survival. Treatment 3 works well for rats with {a mathematical formula}A1=0∧A2∈{1,2}; the probability of survival in this group is {a mathematical formula}85%. If the rat is given some treatment but does not match the necessary condition, it dies.
+       </paragraph>
+       <paragraph>
+        The survival rate for rats that do not receive the treatment ({a mathematical formula}treatment=0) is {a mathematical formula}20%. Table 2 presents a small sample of the data set.
+       </paragraph>
+       <paragraph>
+        In a real world scenario, the researchers studying the effect of treatments do not know the model and thus work in the reverse direction: they measure the genetic parameters, carry out the experiment, and compile the data (Table 2) with a goal of learning the relation between the treatment and the genetic markers (Table 1).
+       </paragraph>
+      </section>
+      <section label="3.1.2">
+       <section-title>
+        Experiment
+       </section-title>
+       <paragraph>
+        The desired output is {a mathematical formula}survived=1 and selected variable in which the clinicians are interested is treatment. In the formalism described above, we are interested in a PDQ PD {a mathematical formula}@survived=1@treatment.
+       </paragraph>
+       <paragraph>
+        We used Qube to calculate {a mathematical formula}@survived=1@treatment for each learning example in the original data set. The result is an ordering of treatment types by increasing probability of survival for each rat. We replaced the original outcome (survival vs. death) with those orderings and induced a decision tree in Fig. 1.
+       </paragraph>
+      </section>
+      <section label="3.1.3">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        Analyzing the tree branch by branch, we see that the model almost perfectly matches the underlying hidden model.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The leaf of the branch corresponding to {a mathematical formula}A1=1∧A3=2∧A4=0 states that {a mathematical formula}0=3≺2≺1. This is correct because for this combination of genetic markers, treatment 1 ({a mathematical formula}p(survived)=100%) is better than treatment 2 ({a mathematical formula}p(survived)=65%), while treatment 3 has no effect, which makes it equally non-desirable as no treatment (0).
+        </list-item>
+        <list-item label="•">
+         Similarly, branches {a mathematical formula}A1=0∧A2=1 and {a mathematical formula}A1=0∧A2=2 end in preference relation {a mathematical formula}0=1=2≺3, which is in agreement with the fact that rats with {a mathematical formula}A1=0∧A2∈{1,2} should be treated with {a mathematical formula}treatment=3 ({a mathematical formula}p(survived)=85%).
+        </list-item>
+        <list-item label="•">
+         Branch {a mathematical formula}A1=1∧A3=0∧A2=0 states that no treatment (0) is better than treatments 1, 2 or 3: {a mathematical formula}1=2=3≺0. This rule complies with the default rule of the ground truth model; {a mathematical formula}20% of the rats receiving treatment 0 also survive, unlike the mistreated rats, which die.
+        </list-item>
+        <list-item label="•">
+         The remaining leaves state that the treatment type has no effect on the survival – there are no preferred treatments ({a mathematical formula}0=1=2=3) for some combinations of genetic markers.
+        </list-item>
+       </list>
+       <paragraph>
+        In some branches, no treatment is equivalent to some treatments since the leaf covers some rats that are susceptible to those treatments and some that are not.
+       </paragraph>
+       <paragraph>
+        We contrasted this model with a classical machine learning approach of inducing a model (in this case classification tree) from the original data, without substituting the outcomes with partial derivatives. The resulting tree is shown in Fig. 2. The tree may correctly predict the survival, but this is not what the researcher is interested in. The attribute of interest, treatment, does not even emerge in the final model. If we disable the tree pruning, the treatment attribute may appear in the tree, but not necessarily in the leaves, which makes the direct interpretation and use in decision making difficult.
+       </paragraph>
+       <paragraph>
+        The tree induced from the data prepared by Qube expresses the preferences in the leaves, which is a natural way for a clinician interested in the most appropriate treatment for the specific rat: following the attribute values from the root of the tree, the preference in the leaf tells the optimal treatment.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Equality data set
+      </section-title>
+      <section label="3.2.1">
+       <section-title>
+        Data
+       </section-title>
+       <paragraph>
+        We study the behavior of the algorithm under varying the number of learning examples (N), the number of attributes (#atts), and level of noise (μ) with a slightly simpler target concept that allows us to automatically assess the correctness of the model.
+       </paragraph>
+       <paragraph>
+        The underlying concept f in this data set is a binary variable representing the equality of the attributes {a mathematical formula}A1∈{1,2} and {a mathematical formula}A2∈{1,2,3}:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Other attributes are unrelated to the output variable. Attributes {a mathematical formula}A3, {a mathematical formula}A4 and {a mathematical formula}A5 have five, four and six values, respectively, and the attributes {a mathematical formula}Ai for {a mathematical formula}i&gt;5 have a random number of values in the interval {a mathematical formula}[2,5].
+       </paragraph>
+       <paragraph>
+        We compute PDQ PDs of the target output value {a mathematical formula}f=1 with respect to {a mathematical formula}A1,A2 and {a mathematical formula}A3. Each attribute has a different number of values, so we can examine the influence of the attribute cardinality.
+       </paragraph>
+       <paragraph>
+        The correct models (Table 3) are less intuitive than in the rat data.
+       </paragraph>
+       <paragraph>
+        For {a mathematical formula}@f=1@A1, when {a mathematical formula}A2 equals 1 the value {a mathematical formula}A1=1 is “preferred” over {a mathematical formula}A1=2 since {a mathematical formula}f=1 requires {a mathematical formula}A1=A2. The situation is inverted for {a mathematical formula}A2=2 where {a mathematical formula}A1=2 is “preferred” over {a mathematical formula}A1=1. Since {a mathematical formula}A1 and {a mathematical formula}A2 have different number of values, an interesting case appears when {a mathematical formula}A2=3. There is no value {a mathematical formula}A1 could take to increase the likelihood of {a mathematical formula}f=1, i.e. {a mathematical formula}A1=A2; the effects of {a mathematical formula}A1=1 and {a mathematical formula}A1=2 are the same, qualitatively {a mathematical formula}1=2.
+       </paragraph>
+       <paragraph>
+        The case of {a mathematical formula}@f=1@A2 is similar: when {a mathematical formula}A1=1, {a mathematical formula}A2=1 increases the likelihood of {a mathematical formula}f=1 in comparison with the other two values. Analogously, when {a mathematical formula}A1=2, {a mathematical formula}A2=2 has higher likelihood for {a mathematical formula}f=1 than 1 and 3.
+       </paragraph>
+       <paragraph>
+        The third model seems the simplest of the three: {a mathematical formula}@f=1@A3 as neither value of {a mathematical formula}A3 increases the likelihood of {a mathematical formula}f=1.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       <section-title>
+        Experiment
+       </section-title>
+       <paragraph>
+        We randomly generated data sets for different number of learning examples {a mathematical formula}N={100,500,1000}, number of attributes {a mathematical formula}#atts={5,10,30,50}, and level of noise {a mathematical formula}μ={0%,5%,10%,30%}. Level of noise refers to the fraction of learning examples with corrupted values of the output variable f.
+       </paragraph>
+       <paragraph>
+        For each set of parameters (N, #atts, μ) we sampled ten data sets, computed the PDQ PDs {a mathematical formula}@f=1@Ai, for {a mathematical formula}i∈{1,2,3}, and induced the qualitative models using the C4.5 algorithm. We compared the obtained models with theoretically correct models as described in Table 3. In the following results, we treat the obtained models as correct only if they perfectly match their theoretical counterparts. The models that are only partially correct (e.g. one branch of the tree is wrong) are treated as wrong. (See Fig. 3 and Fig. 4.)
+       </paragraph>
+       <paragraph>
+        Table 4 reports the results for different sizes of data sets: the table contains fractions of correctly reconstructed models over 10 random runs for {a mathematical formula}@f=1@A1, {a mathematical formula}@f=1@A2, {a mathematical formula}@f=1@A3; the symbol {an inline-figure}  means that the models were correct in all 10 runs and {an inline-figure}  means that the model was never correct. Throughout all the experiments, the p-value was set to 0.05 and the threshold was set to 20.
+       </paragraph>
+      </section>
+      <section label="3.2.3">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        In data sets without the added noise, Qube almost always produces correct models for all values of N and #atts; it fails 2 out of 10 times on the smallest data set and with 50 dummy attributes. In the presence of noise, the number of induced incorrect models increases with higher values of added noise and increasing number of dummy attributes. However, the effect of noise and dummy attributes diminishes with increasing size of the data set N.
+       </paragraph>
+       <paragraph>
+        We also evaluated the complexity of the algorithm measuring the time it needed for the calculation of a PDQ PD, including the learning time of the classification tree algorithm. Table 5 summarizes the average times (in seconds) over three runs per data set. It shows quadratic growth in N and linear growth in the number of attributes.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Billiards
+      </section-title>
+      <section label="3.3.1">
+       <section-title>
+        Data
+       </section-title>
+       <paragraph>
+        Billiards is a common name for table games played with a stick and a set of balls, such as snooker or pool and their variants. The goals of the games vary, but the main idea is common to all: the player uses the stick to stroke the cue ball aiming at another ball to achieve the desired effect. The friction between the table and the balls, the spin of the cue ball and the collision of the balls combine into a very complex physical system [9]. However, despite the complexity, an amateur player can still learn the basic principles of how to stroke the cue ball without knowing much about the physics behind it. In this case study we will use our method to induce a simple model, which could be used by a human player for ranking different shot types in different ball settings.
+       </paragraph>
+       <paragraph>
+        Our goal is to learn shot preferences in different circumstances from simulated data. Although it is possible to pocket the black ball with several different type of shots, some shots are more appropriate than others thus increasing the probability of a successful shot. For example, if a hole, a black ball and a cue ball are collinear, a direct shot is preferred over a rail-first shot because it is much more difficult to correctly estimate the reflection angles so that the black ball would pocket (not to say that it makes no sense to do so). However, in the presence of other balls which may present an obstacle for a direct shot, a rail-first shot may be preferred.
+       </paragraph>
+       <paragraph>
+        We consider the problem of stroking a cue ball in order to pocket the black ball in the presence of other balls that may present an obstacle in the player's attempt to make the desired stroke. The balls have a fixed position as shown in Fig. 5. Usually, a player has several different options how to hit the black ball [9], however, in this case study, we will only consider direct shots and rail-first shots. In the former, the white ball directly hits the black ball, while in the latter, the white ball first hits the rail (also called cushion) and only then the black ball. For the sake of our case study, we derived 4 possible actions a player can make: strong direct shot, weak direct shot, left-rail-first shot and right-rail-first shot. Strong and weak direct shots (Fig. 6a) differ in the force applied by the player, which is visible in different initial velocities of the white ball. The difference between left and right rail-first shots are shown in Figs. 6b and 6c. In the left-rail-first shot, the white ball will pass the black ball on the left, hit the rail, and then hit the black ball. Similarly, in the right-rail-first shot, the white ball will first pass the black ball on the right, hit the rail, and then hit the black ball.
+       </paragraph>
+       <paragraph>
+        We created a data set of 1000 shots (i.e. learning examples), where each example is described by the following four attributes:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         S – whether a ball blocking a straight shot was present (values:yes/no),
+        </list-item>
+        <list-item label="•">
+         L – whether a ball blocking a left shot was present (values:yes/no),
+        </list-item>
+        <list-item label="•">
+         R – whether a ball blocking a right shot was present (values:yes/no),
+        </list-item>
+        <list-item label="•">
+         ShotType – shot type (values:StrDir, WeakDir, LeftRail, RightRail),
+        </list-item>
+       </list>
+       <paragraph>
+        and the class variable black in pocket with values yes and no. The goal (target class) in our method is thus ‘black in pocket = yes’, namely, whether the shot forced the black ball into a pocket. The attribute values of each single example were randomly selected, while the value of the class was determined using the billiards simulator [10]. Each shot in the simulator is defined by: shot direction, stick elevation, shot velocity and shot follow. The most important property of a shot is its direction, as it has the dominant effect on the direction of the black ball after it is hit by the white ball. First, we computed the optimal stroke direction φ that results in pocketing the black ball. However, to account for human imprecision, we added uniform noise in the interval {a mathematical formula}[−0.2deg⁡,0.2deg⁡]. Therefore, the value of stroke direction in the simulator is set to a random value selected from the interval {a mathematical formula}[φ−0.2,φ+0.2]. We would expect that more difficult shots are more prone to changes in the optimal stroke setting. Similarly, other properties of the shot were randomly chosen from specified intervals, however these did not require computation of their optimal values. The exact specifications of shot properties are given in Table 6.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Experiment
+       </section-title>
+       <paragraph>
+        The induced preference model is shown in Fig. 7.
+       </paragraph>
+      </section>
+      <section label="3.3.3">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        Induced relations are correct.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}S=no∧L=no: Balls S and L are not on the table. In this case, strong direct shot is preferred over weak direct shot since the velocity of the black ball may not be sufficient for the black ball to reach the pocket using the weak shot. A weak shot is preferred over left rail-first shot which is preferred over right rail-first shot. In general, rail-first shots are less successful than direct shots due to distortions caused by cue ball hitting the rail. However, left rail-first shot is usually better since the path of the ball is shorter than the path in the right rail-first shot. It is irrelevant whether ball R is present or not because it can only block the right rail-first shot which has the lowest preference in any case.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}S=no∧L=yes: Ball L is blocking the left rail-first shot which makes both direct shots preferred over the rail-first shots. The preference of direct shots is the same as above while both rail-first shots are equally preferred.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}S=yes∧L=no∧R=no: Ball S is blocking direct shots which makes both rail-first shots preferable and both direct shots equally bad. Left rail-first shot is preferred over the right one for the same reason as above.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}S=yes∧L=no∧R=yes: Balls S and R are blocking the shots. The left rail-first shot is preferred over all other shots since it is the only open shot.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}S=yes∧L=yes: Balls S and L are blocking both direct and left rail-first shots. There are no shot preferences since all shots are equally hopeless. It seems that the right rail-first shot should be preferred from the others in a similar way that the left rail-first shot is preferred in the previous situation above. Fig. 6c indicates that the black ball should travel much longer distance compared to the case in Fig. 6b meaning that the shot should be stronger. A strong rail-shot is a very difficult one and rarely succeeds, which explains why the preferences are all equal in this case.
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Bacterial infections in elderly
+      </section-title>
+      <paragraph>
+       In this last experiment we run the algorithm on a real problem and, at the same time, show its usefulness in a domain where we are interested in partial derivatives without being able to control any of the variables.
+      </paragraph>
+      <section label="3.4.1">
+       <section-title>
+        Data
+       </section-title>
+       <paragraph>
+        The aim of the realistic study is to qualitatively asses the influence of individual risk factors for mortality due to bacterial infection in elderly population. The proportion of elderly people in developed world is rapidly growing [11]. It is estimated that by 2020, the elderly will constitute more than 16% of the population in the USA [12]. Bacterial infection is a common cause of mortality in the aged: nearly 14% of hospital admissions in elderly patients are due to bacterial infection [13] and they account for one third of all deaths in older population [14]. Compared with the younger population, bacterial infection in elderly usually presents with different clinical symptoms. The signs of infection in older patients may be less apparent or even absent, which presents unique diagnostic challenges to clinicians [11].
+       </paragraph>
+       <paragraph>
+        The data was collected at the Department of Infectious Diseases of the University Medical Center Ljubljana, Slovenia. Patients were enrolled in the study in the period from June 1st, 2004 to December 31st, 2005 using the following inclusion criteria: (i) age ≥65 years, (ii) hospitalization due to bacterial infection, (iii) routine laboratory tests performed.
+       </paragraph>
+       <paragraph>
+        Data included 602 patients having C-reactive protein value above 60 mg/l upon the admission to the hospital, which indicated a bacterial infection. Patients were identified prospectively and data were collected prospectively over the time of the study by assistants that were blinded to the study purpose. An infectious diseases specialist who was unaware of the final outcome reviewed the charts and excluded the patients with nonbacterial infections. We observed the mortality; the outcome (class) was a binary variable DEATH with the following distribution: {a mathematical formula}DEATH=Yes: {a mathematical formula}77/602=12.8% and {a mathematical formula}DEATH=No: {a mathematical formula}525/602=87.2%.
+       </paragraph>
+       <paragraph>
+        Data consists of 31 categorical attributes (Table 7), defined by clinicians who carried out the study.
+       </paragraph>
+       <paragraph>
+        Demographic data included: sex, age, nursing home residence, immobility, presence of permanent urine catheter, presence of pressure ulcer, presence of prosthetic medical device (artificial heart valve or joint prosthesis). Comorbidities included: diabetes mellitus, coronary artery disease, congestive heart disease, chronic obstructive pulmonary disease, renal impairment, liver disease, cerebrovascular disease, immunosupression. Immunosupression was defined as prolonged therapy (6 months or more) with corticosteroids, treatment with citostatic agents or other immunomodulatory agents, patients with transplanted organs or tissues, patients with malignancy. Vital signs were collected from nursing data and included: body temperature, respiratory rate, heart rate, systolic blood pressure, oxygen saturation. We recorded whether patients experienced frailty from the onset of the disease. Frailty was defined as inability to perform daily tasks (e.g. feeding, bathing, etc.) that patients were able to perform themselves before the onset of the illness. We recorded whether mental status changed from the onset of the current disease. Mental status was recorded as normal/oriented, responsive but disoriented, unconscious. Laboratory data included leukocyte count, percentage of band forms, platelets, blood creatinine and urea value, glucose value, serum sodium concentration and presence of abnormal liver function tests. We recorded all microbiological specimens obtained and final diagnosis at discharge. The primary outcome for the study was functional decline 21–28 days after hospital discharge. Functional decline was defined as discharge disposition to a nursing home care facility, any significant decline in functional or cognitive ability, or overall quality of life observed by patients themselves, their relatives or nursing staff.
+       </paragraph>
+       <paragraph>
+        We set {a mathematical formula}DEATH=Yes as a target class, therefore predicting the risk posed by different factors.
+       </paragraph>
+      </section>
+      <section label="3.4.2">
+       <section-title>
+        Experiment
+       </section-title>
+       <paragraph>
+        We again built a qualitative tree from the entire data set, taking the PDQ PD as the class variable. The resulting model explains a qualitative relation between mortality and the attribute {a mathematical formula}Ai, assuming ceteris paribus: how does the risk change if we change {a mathematical formula}Ai but keep all other attributes' values fixed. Table 8 lists the models for all attributes.
+       </paragraph>
+      </section>
+      <section label="3.4.3">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        Two clinical doctors evaluated the above models regarding their use in clinical practise. They found the models easy to understand and in accordance with the domain knowledge, except for the following two models: {a mathematical formula}@DEATH=Yes/@ KIDNEY DISEASE and {a mathematical formula}@DEATH=Yes/@ CATHETER. While additional medical tests should be carried out to explain the model for kidney disease, further analysis of the models for CATHETER revealed that the algorithm discovered a subgroup of immobile patients that usually also have the urine catheter: COMORBIDITIES ≠0 and THROMBOCYTES &gt;100 and PRESSURE ULCER = Yes. This results in the ordering No ≺ Yes in this leaf of the tree. The model still correctly captures the patterns in the data but does not imply causality.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The motivation for our work comes from the field of qualitative reasoning where Qube can be used for learning qualitative models from categorical data. Qualitative reasoning has been mostly concerned with qualitative physics [15], [16], [17], [18], [19]. In these works the model was provided by an expert and then used in qualitative simulations. There are only a few algorithms for automated induction of such models [20] and even these are limited to learning from numerical data [4], [5]. There are, to the best of our knowledge, no algorithms for learning qualitative models from categorical data.
+     </paragraph>
+     <paragraph>
+      An important part of our method deals with relaxing the strong independence assumption of naive Bayesian approach. There exist a number of methods for this purpose, yet none fits our context. Kononenko introduced semi-naive Bayes[21] and Langley and Sage [22] proposed Selective Bayesian Classiffier, a variant of the naive method that uses only a subset of the attributes in making predictions. Since their algorithm is only searching for subset of attributes that yields highest classification accuracy, it can not reveal attribute dependencies. Kohavi [23] proposed NBTree, an algorithm for induction of a hybrid of decision-tree classifiers and naive Bayes classifiers. Friedman and Goldszmidt introduced tree augmented naive Bayes (TAN)[24] which allows for attributes having another attribute as a parent in the Bayesian network representation. SuperParent TAN, proposed by Keogh and Pazzani [25], improves on classification accuracy of TAN by introducing a new heuristic for exploring dependencies among the attributes. In Bayesian network representation TAN allows attributes to have one other attribute as a parent. Keogh and Pazzani show that approximating the underlying probability distribution is not the best way to improve classification accuracy. A different approach is described in [26], where an Apriori frequent pattern mining algorithm is employed to discover frequent itemsets of arbitrary size together with their class supports.
+     </paragraph>
+     <paragraph>
+      A lazy algorithm, named Locally Weighted Naive Bayes (LWNB) is proposed in [27]. LWNB relaxes the independence assumption by learning local models at prediction time. The models are learned on weighted set of training instances in the neighborhood of the test instance. In LWNB, the test example neighborhood is chosen using the k-nearest neighbors algorithm. A step further is the Lazy Bayesian Rules (LBR) algorithm [28]. LBR search of the local neighborhood is not based on a global metric. Instead, for each test example, LBR uses a greedy search to generate a Bayesian rule with an antecedent that matches the test example. The basic difference between these approaches and ours is that these methods are concerned with optimizing the accuracy of predictions and not with estimations of the chosen attribute's influence on the target class probability.
+     </paragraph>
+     <paragraph>
+      Although Qube can be used for learning preferences, it is fundamentally different from the existing preference learning approaches [29], [30], [31]. Preference learning usually starts with the data that already describes the preferences, and the task of the learning algorithms is limited to their generalization [32], [33], [34], [35]. For a contrast, Qube calculates the PDQ PDs for each learning example, which can then be used for modeling preferences. While one could continue by using the standard preference learning approaches [33], [34], we use simple machine learning algorithms and treat preferences as values of a new class variable. Theoretically, it is possible that the number of class values exceeds a reasonable amount but it can be practically very well controlled by setting the threshold parameter (for joining the values) and the size of the neighborhood of the reference example (a kind of smoothing the data). The most relevant preference learning method to apply preference learning to the result of Qube would be label ranking. Similarly, we could continue by learning CP-nets [36], which represent this type of preferences. The main difference to our approach is that it represents the preferences on a single attribute {a mathematical formula}Ai conditioned on the other attributes while CP-nets simultaneously represent preferences on all attribute combinations. Our representation is suitable when we have control over one attribute but not over the others as shown in Section 3.1.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix">
+     <paragraph>
+      In a semi-naive Bayesian approach we replace the condition in {a mathematical formula}p(c|a1,…,an) with a relaxed condition {a mathematical formula}P(c|ai,D), where {a mathematical formula}D⊆{a1,…,an} includes only the attribute values that are conditionally dependent on {a mathematical formula}ai given the class. Here we prove that the ordering of probabilities {a mathematical formula}p(c|a1,…,ai,…,an) does not change if we omit from the conditional part the values that are conditionally independent from {a mathematical formula}ai given the class c. Let us first redefine the PDQ PD using conditional log odds ratios:{a mathematical formula} where {a mathematical formula}c¯ is the complement of the target class c. It is easy to see that (7) is equivalent to (3).
+     </paragraph>
+     <paragraph>
+      Let us without loss of generality assume that values {a mathematical formula}a1 to {a mathematical formula}ak, {a mathematical formula}k&lt;i are conditionally independent of values {a mathematical formula}ak+1 to {a mathematical formula}an, given the class. Applying Bayesian rule, using the independence assumption, canceling the identical terms and reapplying the Bayesian rule turns (7) into{a mathematical formula} This is equivalent to (3) without values {a mathematical formula}a1 to {a mathematical formula}ak. Therefore, {a mathematical formula}p(c|a1,…,ai,…,an)≤p(c|a1,…,ai′,…,an)⟺p(c|ak+1,…,ai,…,an)≤p(c|ak+1,…,ai′,…,an).
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

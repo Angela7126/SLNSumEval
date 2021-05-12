@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic Detection of Machine Translated Text and Translation Quality Estimation</title>
+<!--Generated on Wed Jun 11 17:45:27 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatic Detection of Machine Translated Text and Translation Quality Estimation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Roee Aharoni
+<br class="ltx_break"/>Dept. of Computer Science
+<br class="ltx_break"/>Bar Ilan University
+<br class="ltx_break"/>Ramat-Gan, Israel 52900
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">roee.aharoni@gmail.com</span> 
+<br class="ltx_break"/>&amp;Moshe Koppel
+<br class="ltx_break"/>Dept. of Computer Science
+<br class="ltx_break"/>Bar Ilan University
+<br class="ltx_break"/>Ramat-Gan, Israel 52900
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">moishk@gmail.com
+<br class="ltx_break"/>&amp;</span>Yoav Goldberg
+<br class="ltx_break"/>Dept. of Computer Science
+<br class="ltx_break"/>Bar Ilan University
+<br class="ltx_break"/>Ramat-Gan, Israel 52900
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">yoav.goldberg@gmail.com
+<br class="ltx_break"/></span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We show that it is possible to automatically detect
+machine translated text at sentence level from monolingual corpora,
+using text classification methods. We show further that the accuracy with which a
+learned classifier can detect text as machine translated is strongly correlated with
+the translation quality of the machine translation system that generated it.
+Finally, we offer a generic machine translation quality estimation technique based on this approach,
+which does not require reference sentences.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The recent success and proliferation of statistical machine translation (MT) systems raise a number of important questions. Prominent among these are how to evaluate the quality of such a system efficiently and how to detect the output of such systems (for example, to avoid using it circularly as input for refining MT systems).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we will answer both these questions. First, we will show that using style-related linguistic features, such as frequencies of parts-of-speech n-grams and function words, it is possible to learn classifiers that distinguish machine-translated text from human-translated or native English text. While this is a straightforward and not entirely novel result, our main contribution is to relativize the result. We will see that the success of such classifiers are strongly correlated with the quality of the underlying machine translation system. Specifically, given a corpus consisting of both machine-translated English text (English being the target language) and native English text (not necessarily the reference translation of the machine-translated text), we measure the accuracy of the system in classifying the sentences in the corpus as machine-translated or not. This accuracy will be shown to decrease as the quality of the underlying MT system increases. In fact, the correlation is strong enough that we propose that this accuracy measure itself can be used as a measure of MT system quality, obviating the need for a reference corpus, as for example is necessary for BLEU <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The paper is structured as follows: In the next section, we review previous related work. In the third section, we describe experiments regarding the detection of machine translation and in the fourth section we discuss the use of detection techniques as a machine translation quality estimation method. In the final section we offer conclusions and suggestions for future work.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Previous Work</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Translationese</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The special features of translated texts have been studied widely for many years. Attempts to define their characteristics, often called ”Translation Universals”, include <cite class="ltx_cite">[]</cite>. The differences between native and translated texts found there go well beyond systematic translation errors and point to a distinct ”Translationese” dialect.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Using automatic text classification methods in the field of translation studies had many use cases in recent years, mainly as an empirical method of measuring, proving or contradicting translation universals. Several works <cite class="ltx_cite">[]</cite> used text classification techniques in order to distinguish human translated text from native language text at document or paragraph level, using features like word and POS n-grams, proportion of grammatical words in the text, nouns, finite verbs, auxiliary verbs, adjectives, adverbs, numerals, pronouns, prepositions, determiners, conjunctions etc. Koppel and Ordan <cite class="ltx_cite">[]</cite> classified texts to original or translated, using a list of 300 function words taken from LIWC <cite class="ltx_cite">[]</cite> as features. Volanski et al. <cite class="ltx_cite">[]</cite> also tested various hypotheses regarding ”Translationese”, using 32 different linguistically-informed features, to assess the degree to which different sets of features can distinguish between translated and original texts.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Machine Translation Detection</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Regarding the detection of machine translated text, Carter and Inkpen <cite class="ltx_cite">[]</cite> translated the Hansards of the 36th Parliament of Canada using the Microsoft Bing MT web service, and conducted three detection experiments at document level, using unigrams, average token length, and type-token ratio as features. Arase and Zhou <cite class="ltx_cite">[]</cite> trained a sentence-level classifier to distinguish machine translated text from human generated text on English and Japanese web-page corpora, translated by Google Translate, Bing and an in-house SMT system. They achieved very high detection accuracy using application-specific feature sets for this purpose, including indicators of the ”Phrase Salad” <cite class="ltx_cite">[]</cite> phenomenon or ”Gappy-Phrases” <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">While Arase and Zhou <cite class="ltx_cite">[]</cite> considered MT detection at sentence level, as we do in this paper, they did not study the correlation between the translation quality of the machine translated text and the ability to detect it. We show below that such detection is possible with very high accuracy only on low-quality translations. We examine this detection accuracy vs. quality correlation, with various MT systems, such as rule-based and statistical MT, both commercial and in-house, using various feature sets.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Detection Experiments</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Features</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We wish to distinguish machine translated English sentences from either human-translated sentences or native English sentences. Due to the sparseness of the data at the sentence level, we use common content-independent linguistic features for the classification task. Our features are binary, denoting the presence or absence of each of a set of part-of-speech n-grams acquired using the Stanford POS tagger <cite class="ltx_cite">[]</cite>, as well as the presence or absence of each of 467 function words taken from LIWC <cite class="ltx_cite">[]</cite>.
+We consider only those entries that appear at least ten times in the entire corpus, in order to reduce sparsity in the data. As our learning algorithm we use SVM with sequential minimal optimization (SMO), taken from the WEKA machine learning toolkit <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Detecting Different MT Systems</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the first experiment set, we explore the ability to detect outputs of machine translated text from different MT systems, in an environment containing both human generated and machine translated text. For this task, we use a portion of the Canadian Hansard corpus <cite class="ltx_cite">[]</cite>, containing 48,914 parallel sentences from French to English. We translate the French portion of the corpus using several MT systems, respectively: Google Translate, Systran, and five other commercial MT systems available at the http://itranslate4.eu website, which enables to query example MT systems built by several european MT companies. After translating the sentences, we take 20,000 sentences from each engine output and conduct the detection experiment by labeling those sentences as MT sentences, and another 20,000 sentences, which are the human reference translations, labeled as reference sentences. We conduct a 10-fold cross-validation experiment on the entire 40,000 sentence corpus. We also conduct the same experiment using 20,000 random, non-reference sentences from the same corpus, instead of the reference sentences. Using simple linear regression, we also obtain an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="R^{2}" display="inline"><msup><mi>R</mi><mn>2</mn></msup></math> value (coefficient of determination) over the measurements of detection accuracy and BLEU score, for each of three feature set combinations (function words, POS tags and mixed) and the two data combinations (MT vs. reference and MT vs. non reference sentences). The detection and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="R^{2}" display="inline"><msup><mi>R</mi><mn>2</mn></msup></math> results are shown in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Detecting Different MT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">{axis}</span>
+<p class="ltx_p">[width=7.5cm,height=7.5cm,
+xlabel= BLEU,ylabel=detection accuracy (%)]</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=red,mark=*,style=solid] coordinates  (36.06, 63.34) (29, 72.02) (24.66, 72.36) (18.25, 78.20) (15.44, 79.57) (12.36, 80.90) (8.39 , 89.36) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>mix-nr</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=blue,mark=*,style=solid] coordinates  (36.06, 59.51) (29, 69.47) (24.66, 69.77) (18.25, 75.86) (15.44, 78.11) (12.36, 79.24) ( 8.39, 88.85) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>mix-r</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=red,mark=x,style=densely dotted] coordinates (36.06, 60.43) (29, 69.17) (24.66, 69.87) (18.25, 69.78) (15.44, 71.38) (12.36, 75.46) ( 8.39, 84.97) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>fw-nr</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=blue,mark=x,style=densely dotted] coordinates (36.06, 57.27) (29, 66.05) (24.66, 67.48) (18.25, 67.06) (15.44, 68.58) (12.36, 73.37) ( 8.39, 84.79) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>fw-r</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=red,mark=x,style=densely dashed] coordinates (36.06, 60.32) (29, 64.39) (24.66, 66.61) (18.25, 73) (15.44, 73.90) (12.36, 74.33) ( 8.39, 79.60) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>pos-nr</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=blue,mark=x,style=densely dashed] coordinates (36.06, 57.21) (29, 65.55) (24.66, 64.1225) (18.25, 70.29) (15.44, 73.065) (12.36, 73.0475) ( 8.39, 78.84) ;
+<span class="ltx_ERROR undefined">\addlegendentry</span>pos-r</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Correlation between detection accuracy and BLEU score on commercial MT systems, using POS, function words and mixed features against reference and non-reference sentences.</div>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">As can be seen, best detection results are obtained using the full combined feature set. It can also be seen that, as might be expected, it is easier to distinguish machine-translated sentences from a non-reference set than from the reference set. In Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Detecting Different MT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, we show the relationship of the observed detection accuracy for each system with the BLEU score of that system. As is evident, regardless of the feature set or non-MT sentences used, the correlation between detection accuracy and BLEU score is very high, as we can also see from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="R^{2}" display="inline"><msup><mi>R</mi><mn>2</mn></msup></math> values in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Detecting Different MT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt">Features</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Data</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Google</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Moses</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Systran</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">ProMT</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Linguatec</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Skycode</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Trident</th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="R^{2}" display="inline"><msup><mi>R</mi><mn>2</mn></msup></math></th>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">mixed</td>
+<td class="ltx_td ltx_align_center ltx_border_t">MT/non-ref</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">63.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">72.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">72.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">78.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">79.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">80.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">89.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.946</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">mixed</td>
+<td class="ltx_td ltx_align_center">MT/ref</td>
+<td class="ltx_td ltx_align_center">59.51</td>
+<td class="ltx_td ltx_align_center">69.47</td>
+<td class="ltx_td ltx_align_center">69.77</td>
+<td class="ltx_td ltx_align_center">75.86</td>
+<td class="ltx_td ltx_align_center">78.11</td>
+<td class="ltx_td ltx_align_center">79.24</td>
+<td class="ltx_td ltx_align_center">88.85</td>
+<td class="ltx_td ltx_align_center">0.944</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">func. w.</td>
+<td class="ltx_td ltx_align_center">MT/non-ref</td>
+<td class="ltx_td ltx_align_center">60.43</td>
+<td class="ltx_td ltx_align_center">69.17</td>
+<td class="ltx_td ltx_align_center">69.87</td>
+<td class="ltx_td ltx_align_center">69.78</td>
+<td class="ltx_td ltx_align_center">71.38</td>
+<td class="ltx_td ltx_align_center">75.46</td>
+<td class="ltx_td ltx_align_center">84.97</td>
+<td class="ltx_td ltx_align_center">0.798</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">func. w.</td>
+<td class="ltx_td ltx_align_center">MT/ref</td>
+<td class="ltx_td ltx_align_center">57.27</td>
+<td class="ltx_td ltx_align_center">66.05</td>
+<td class="ltx_td ltx_align_center">67.48</td>
+<td class="ltx_td ltx_align_center">67.06</td>
+<td class="ltx_td ltx_align_center">68.58</td>
+<td class="ltx_td ltx_align_center">73.37</td>
+<td class="ltx_td ltx_align_center">84.79</td>
+<td class="ltx_td ltx_align_center">0.779</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">POS</td>
+<td class="ltx_td ltx_align_center">MT/non-ref</td>
+<td class="ltx_td ltx_align_center">60.32</td>
+<td class="ltx_td ltx_align_center">64.39</td>
+<td class="ltx_td ltx_align_center">66.61</td>
+<td class="ltx_td ltx_align_center">73</td>
+<td class="ltx_td ltx_align_center">73.9</td>
+<td class="ltx_td ltx_align_center">74.33</td>
+<td class="ltx_td ltx_align_center">79.6</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.978</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">POS</td>
+<td class="ltx_td ltx_align_center">MT/ref</td>
+<td class="ltx_td ltx_align_center">57.21</td>
+<td class="ltx_td ltx_align_center">65.55</td>
+<td class="ltx_td ltx_align_center">64.12</td>
+<td class="ltx_td ltx_align_center">70.29</td>
+<td class="ltx_td ltx_align_center">73.06</td>
+<td class="ltx_td ltx_align_center">73.04</td>
+<td class="ltx_td ltx_align_center">78.84</td>
+<td class="ltx_td ltx_align_center">0.948</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Classifier performance, including the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="R^{2}" display="inline"><msup><mi>R</mi><mn>2</mn></msup></math> coefficient describing the correlation with BLEU. </div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">MT Engine</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Example</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Google Translate</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">These</span> days, <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">but</span> <span class="ltx_text ltx_font_bold">one</span> <span class="ltx_text ltx_font_bold">were</span> subject <span class="ltx_text ltx_font_bold">to</span> <span class="ltx_text ltx_font_bold">a</span> vote,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> direct link <span class="ltx_text ltx_font_bold">to</span> <span class="ltx_text ltx_font_bold">the</span> post September 11th.”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Moses</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">these</span> days , <span class="ltx_text ltx_font_bold">except</span> <span class="ltx_text ltx_font_bold">one</span> <span class="ltx_text ltx_font_bold">were</span> <span class="ltx_text ltx_font_bold">the</span> subject <span class="ltx_text ltx_font_bold">of</span> <span class="ltx_text ltx_font_bold">a</span> vote ,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> direct link <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">the</span> <span class="ltx_text ltx_font_bold">after</span> 11 September .”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Systran</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">From</span> <span class="ltx_text ltx_font_bold">these</span> days, <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">except</span> <span class="ltx_text ltx_font_bold">one</span> <span class="ltx_text ltx_font_bold">were</span> <span class="ltx_text ltx_font_bold">the</span> object <span class="ltx_text ltx_font_bold">of</span> <span class="ltx_text ltx_font_bold">a</span> vote,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">were</span> connected <span class="ltx_text ltx_font_bold">a</span> direct link <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">after</span> September 11th.”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Linguatec</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">Of</span> <span class="ltx_text ltx_font_bold">these</span> days, <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">except</span> <span class="ltx_text ltx_font_bold">one</span> <span class="ltx_text ltx_font_bold">were</span> making <span class="ltx_text ltx_font_bold">the</span> object <span class="ltx_text ltx_font_bold">of</span> <span class="ltx_text ltx_font_bold">a</span> vote</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> straightforward tie <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">after</span> September 11.”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">ProMT</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">These</span> days, <span class="ltx_text ltx_font_bold">very</span> safe <span class="ltx_text ltx_font_bold">one</span> <span class="ltx_text ltx_font_bold">all</span> made object <span class="ltx_text ltx_font_bold">a</span> vote,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> direct link <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">after</span> September 11th.”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Trident</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">From</span> <span class="ltx_text ltx_font_bold">these</span> <span class="ltx_text ltx_font_bold">all</span> days, <span class="ltx_text ltx_font_bold">except</span> <span class="ltx_text ltx_font_bold">one</span> operated object voting,</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> direct rope <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">after</span> 11 septembre.”</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Skycode</th>
+<td class="ltx_td ltx_align_center ltx_border_t">”<span class="ltx_text ltx_font_bold">In</span> <span class="ltx_text ltx_font_bold">these</span> days, <span class="ltx_text ltx_font_bold">all</span> safe <span class="ltx_text ltx_font_bold">one</span> made <span class="ltx_text ltx_font_bold">the</span> object <span class="ltx_text ltx_font_bold">in</span> <span class="ltx_text ltx_font_bold">a</span> vote</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">and</span> <span class="ltx_text ltx_font_bold">all</span> <span class="ltx_text ltx_font_bold">had</span> <span class="ltx_text ltx_font_bold">a</span> direct connection <span class="ltx_text ltx_font_bold">with</span> <span class="ltx_text ltx_font_bold">him</span> <span class="ltx_text ltx_font_bold">after</span> 11 <span class="ltx_text ltx_font_bold">of</span> September.”</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Outputs from several MT systems for the same source sentence (function words marked in bold)</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>In-House SMT Systems</h3>
+
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_center ltx_border_tt">Parallel</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">Monolingual</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">BLEU</th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">SMT-1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">2000k</td>
+<td class="ltx_td ltx_align_center ltx_border_t">2000k</td>
+<td class="ltx_td ltx_align_center ltx_border_t">28.54</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-2</td>
+<td class="ltx_td ltx_align_center">1000k</td>
+<td class="ltx_td ltx_align_center">1000k</td>
+<td class="ltx_td ltx_align_center">27.76</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-3</td>
+<td class="ltx_td ltx_align_center">500k</td>
+<td class="ltx_td ltx_align_center">500k</td>
+<td class="ltx_td ltx_align_center">29.18</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-4</td>
+<td class="ltx_td ltx_align_center">100k</td>
+<td class="ltx_td ltx_align_center">100k</td>
+<td class="ltx_td ltx_align_center">23.83</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-5</td>
+<td class="ltx_td ltx_align_center">50k</td>
+<td class="ltx_td ltx_align_center">50k</td>
+<td class="ltx_td ltx_align_center">24.34</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-6</td>
+<td class="ltx_td ltx_align_center">25k</td>
+<td class="ltx_td ltx_align_center">25k</td>
+<td class="ltx_td ltx_align_center">22.46</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">SMT-7</td>
+<td class="ltx_td ltx_align_center">10k</td>
+<td class="ltx_td ltx_align_center">10k</td>
+<td class="ltx_td ltx_align_center">20.72</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Details for Moses based SMT systems</div>
+</div>
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">In the second experiment set, we test our detection method on SMT systems we created, in which we have control over the training data and the expected overall relative translation quality. In order to do so, we use the Moses statistical machine translation toolkit <cite class="ltx_cite">[]</cite>. To train the systems, we take a portion of the Europarl corpus <cite class="ltx_cite">[]</cite>, creating 7 different SMT systems, each using a different amount of training data, for both the translation model and language model. We do this in order to create different quality translation systems, details of which are described in Table <a href="#S3.T3" title="Table 3 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. For purposes of classification, we use the same content independent features as in the previous experiment, based on function words and POS tags, again with SMO-based SVM as the classifier. For data, we use 20,000 random, non reference sentences from the Hansard corpus, against 20,000 sentences from one MT system per experiment, again resulting in 40,000 sentence instances per experiment. The relationship between the detection results for each MT system and the BLEU score for that system, resulting in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="R^{2}=0.774" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.774</mn></mrow></math>, is shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">{axis}</span>
+<p class="ltx_p">[title=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m1" class="ltx_Math" alttext="R^{2}=0.789" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.789</mn></mrow></math>,width=7.5cm,height=7.5cm,
+xlabel= BLEU,ylabel=detection accuracy (%)]
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=*] coordinates (29.18,72.33) (28.54,73.10) (27.76,73.90) (24.34,74.12) (23.83,73.59) (22.46,74.78) (20.72,75.98) ;</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=black,mark=none,style=dashed] table[
+y=create col/linear regression=y=Y] 
+X Y
+29.18 72.33
+28.54 73.10
+27.76 73.90
+24.34 74.12
+23.83 73.59
+22.46 74.78
+20.72 75.98
+;</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Correlation between detection accuracy and BLEU score on in-house Moses-based SMT systems against non-reference sentences using content independent features.</div>
+</div>
+<div id="S3.F3" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">{axis}</span>
+<p class="ltx_p">[title=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m1" class="ltx_Math" alttext="R^{2}=0.774" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.774</mn></mrow></math>, width=7.5cm,height=7.5cm,
+xlabel= human evaluation score,ylabel=detection accuracy (%)]
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=*] coordinates 
+(0.638,58.58) (0.604,58.61) (0.591,57.63) (0.573,58.78) (0.562,59.38) (0.541,58.63) (0.512,59.86) (0.486,58.53) (0.439,60.46) (0.429,61.65) (0.420,62.66) (0.389,60.83) (0.322,64.10) ;</p><span class="ltx_ERROR undefined">\addplot</span>
+<p class="ltx_p">[color=black,mark=none,style=dashed] table[
+y=create col/linear regression=y=Y] 
+X Y
+0.638 58.58
+0.604 58.61
+0.591 57.63
+0.573 58.78
+0.562 59.38
+0.541 58.63
+0.512 59.86
+0.486 58.53
+0.439 60.46
+0.429 61.65
+0.420 62.66
+0.389 60.83
+0.322 64.10
+;</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Correlation between detection accuracy and human evaluation scores on systems from WMT13’ against reference sentences. 
+<br class="ltx_break"/></div>
+</div>
+<div id="S3.F4" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">{axis}</span>
+<p class="ltx_p">[title=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m1" class="ltx_Math" alttext="R^{2}=0.556" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.556</mn></mrow></math>, width=7.5cm,height=7.5cm,
+xlabel= human evaluation score,ylabel=detection accuracy (%)]
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=*] coordinates 
+(0.638,74.05) (0.604,73.56) (0.591,73.36) (0.573,73.63) (0.562,73.83) (0.541,74.10) (0.512,74.36) (0.486,73.80) (0.439,74.55) (0.429,75.10) (0.420,75.65) (0.389,73.71) (0.322,76.68) ;
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=none,style=dashed] table[
+y=create col/linear regression=y=Y] 
+X Y
+0.638 74.05
+0.604 73.56
+0.591 73.36
+0.573 73.63
+0.562 73.83
+0.541 74.10
+0.512 74.36
+0.486 73.80
+0.439 74.55
+0.429 75.10
+0.420 75.65
+0.389 73.71
+0.322 76.68
+;</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Correlation between detection accuracy and human evaluation scores on systems from WMT 13’ against non-reference sentences. </div>
+</div>
+<div id="S3.F5" class="ltx_figure"><span class="ltx_ERROR undefined">{tikzpicture}</span><span class="ltx_ERROR undefined">{axis}</span>
+<p class="ltx_p">[title=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m1" class="ltx_Math" alttext="R^{2}=0.829" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.829</mn></mrow></math>, width=7.5cm,height=7.5cm,
+xlabel= human evaluation score,ylabel=detection accuracy (%)]
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=*] coordinates 
+(0.638,60.92) (0.604,61.54) (0.591,62.41) (0.573,62.87) (0.562,62.46) (0.541,62.97) (0.512,63.81) (0.486,62.87) (0.439,64.09) (0.429,64.72) (0.420,66.81) (0.389,65.24) (0.322,65.87) ;
+<span class="ltx_ERROR undefined">\addplot</span>[color=black,mark=none,style=dashed] table[
+y=create col/linear regression=y=Y] 
+X Y
+0.638 60.92
+0.604 61.54
+0.591 62.41
+0.573 62.87
+0.562 62.46
+0.541 62.97
+0.512 63.81
+0.486 62.87
+0.439 64.09
+0.429 64.72
+0.420 66.81
+0.389 65.24
+0.322 65.87
+;</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Correlation between detection accuracy and human evaluation scores on systems from WMT 13’ against non-reference sentences, using the syntactic CFG features described in section 4.2 </div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Machine Translation Evaluation</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Human Evaluation Experiments</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">As can be seen in the above experiments, there is a strong correlation between the BLEU score and the MT detection accuracy of our method. In fact, results are linearly and negatively correlated with BLEU, as can be seen both on commercial systems and our in-house SMT systems. We also wish to consider the relationship between detection accuracy and a human quality estimation score. To do this, we use the French-English data from the 8th Workshop on Statistical Machine Translation - WMT13’ <cite class="ltx_cite">[]</cite>, containing outputs from 13 different MT systems and their human evaluations. We conduct the same classification experiment as above, with features based on function words and POS tags, and SMO-based SVM as the classifier. We first use 3000 reference sentences from the WMT13’ English reference translations, against the matching 3000 output sentences from one MT system at a time, resulting in 6000 sentence instances per experiment. As can be seen in Figure <a href="#S3.F3" title="Figure 3 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the detection accuracy is strongly correlated with the evaluations scores, yielding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="R^{2}=0.774" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.774</mn></mrow></math>. To provide another measure of correlation, we compared every pair of data points in the experiment to get the proportion of pairs ordered identically by the human evaluators and our method, with a result of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="0.846" display="inline"><mn>0.846</mn></math> (66 of 78). In the second experiment, we use 3000 random, non reference sentences from the newstest 2011-2012 corpora published in WMT12’ <cite class="ltx_cite">[]</cite> against 3000 output sentences from one MT system at a time, again resulting in 6000 sentence instances per experiment. While applying the same classification method as with the reference sentences, the detection accuracy rises, while the correlation with the translation quality yields <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="R^{2}=0.556" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.556</mn></mrow></math>, as can be seen in Figure <a href="#S3.F4" title="Figure 4 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Here, the proportion of identically ordered pairs is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="0.782" display="inline"><mn>0.782</mn></math> (61 of 78).</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Syntactic Features</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We note that the second leftmost point in Figures <a href="#S3.F3" title="Figure 3 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, <a href="#S3.F4" title="Figure 4 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> is an outlier: that is, our method has a hard time detecting sentences produced by this system although it is not highly rated by human evaluators. This point represents the Joshua <cite class="ltx_cite">[]</cite> SMT system. This system is syntax-based, which apparently confound our POS and FW-based classifier, despite it’s low human evaluation score. We hypothesize that the use of syntax-based features might improve results. To verify this intuition, we create parse trees using the Berkeley parser <cite class="ltx_cite">[]</cite> and extract the one-level CFG rules as features. Again, we represent each sentence as a boolean vector, in which each entry represents the presence or absence of the CFG rule in the parse-tree of the sentence. Using these features alone, without the FW and POS tag based features presented above, we obtain an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="R^{2}=0.829" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>0.829</mn></mrow></math> with a proportion of identically ordered pairs at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="0.923" display="inline"><mn>0.923</mn></math> (72 of 78), as shown in Figure <a href="#S3.F5" title="Figure 5 ‣ 3.3 In-House SMT Systems ‣ 3 Detection Experiments ‣ Automatic Detection of Machine Translated Text and Translation Quality Estimation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussion and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have shown that it is possible to detect machine translation from monolingual corpora containing both machine translated text and human generated text, at sentence level. There is a strong correlation between the detection accuracy that can be obtained and the BLEU score or the human evaluation score of the machine translation itself. This correlation holds whether or not a reference set is used. This suggests that our method might be used as an unsupervised quality estimation method when no reference sentences are available, such as for resource-poor source languages. Further work might include applying our methods to other language pairs and domains, acquiring word-level quality estimation or integrating our method in a machine translation system. Furthermore, additional features and feature selection techniques can be applied, both for improving detection accuracy and for strengthening the correlation with human quality estimation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank Noam Ordan and Shuly Wintner for their help and feedback on the early stages of this work. This research was funded in part by the Intel Collaborative Research Institute for Computational Intelligence.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:45:27 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

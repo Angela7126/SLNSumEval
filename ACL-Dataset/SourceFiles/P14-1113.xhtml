@@ -1,0 +1,1061 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Semantic Hierarchies via Word Embeddings</title>
+<!--Generated on Tue Jun 10 18:46:45 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Semantic Hierarchies via Word Embeddings</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ruiji Fu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Jiang Guo<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Bing Qin<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Wanxiang Che<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Haifeng Wang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>, Ting Liu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>Research Center for Social Computing and Information Retrieval 
+<br class="ltx_break"/>Harbin Institute of Technology, China 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m8" class="ltx_Math" alttext="{}^{{\ddagger}}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Baidu Inc., Beijing, China 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">rjfu, jguo, bqin, car, tliu</span>}<span class="ltx_text ltx_font_typewriter">@ir.hit.edu.cn
+<br class="ltx_break"/>wanghaifeng@baidu.com</span>
+
+</span><span class="ltx_author_notes"><span>  Email correspondence.</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Semantic hierarchy construction aims to build structures of concepts linked by hypernym–hyponym (“is-a”) relations.
+A major challenge for this task is the automatic discovery of such relations.
+This paper proposes a novel and effective method for the construction of semantic hierarchies based on word embeddings,
+which can be used to measure the semantic relationship between words.
+We identify whether a candidate word pair has hypernym–hyponym relation by using the word-embedding-based semantic projections between words and their hypernyms.
+Our result, an F-score of 73.74%, outperforms the state-of-the-art methods on a manually labeled test dataset.
+Moreover, combining our method with a previous manually-built hierarchy extension method can further improve F-score to 80.29%.</p>
+</div><span class="ltx_ERROR undefined">{CJK}</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">UTF8gbsn</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Semantic hierarchies are natural ways to organize knowledge.
+They are the main components of ontologies or semantic thesauri <cite class="ltx_cite">[<a href="#bib.bib27" title="WordNet: a lexical database for english" class="ltx_ref">16</a>, <a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">27</a>]</cite>.
+In the WordNet hierarchy, senses are organized according to the “is-a” relations.
+For example, “<span class="ltx_text ltx_font_typewriter">dog</span>” and “<span class="ltx_text ltx_font_typewriter">canine</span>” are connected by a directed edge.
+Here, “<span class="ltx_text ltx_font_typewriter">canine</span>” is called a hypernym of “<span class="ltx_text ltx_font_typewriter">dog</span>.”
+Conversely, “<span class="ltx_text ltx_font_typewriter">dog</span>” is a hyponym of “<span class="ltx_text ltx_font_typewriter">canine</span>.”
+As key sources of knowledge, semantic thesauri and ontologies can support many natural language processing applications.
+However, these semantic resources are limited in its scope and domain, and their manual construction is knowledge intensive and time consuming.
+Therefore, many researchers have attempted to automatically extract semantic relations or to construct taxonomies.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1113/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="333" height="154" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>An example of semantic hierarchy construction.</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">A major challenge for this task is the automatic discovery of hypernym-hyponym relations.
+<cite class="ltx_cite">Fu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">2013</a>)</cite> propose a distant supervision method to extract hypernyms for entities from multiple sources.
+The output of their model is a list of hypernyms for a given enity (left panel, Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+However, there usually also exists hypernym–hyponym relations among these hypernyms.
+For instance, “æ¤ç© (<span class="ltx_text ltx_font_typewriter">plant</span>)” and “æ¯èç§ (<span class="ltx_text ltx_font_typewriter">Ranunculaceae</span>)” are both hypernyms of the entity “ä¹å¤´ (<span class="ltx_text ltx_font_typewriter">aconit</span>),”
+and “æ¤ç© (<span class="ltx_text ltx_font_typewriter">plant</span>)” is also a hypernym of “æ¯èç§ (<span class="ltx_text ltx_font_typewriter">Ranunculaceae</span>).”
+Given a list of hypernyms of an entity, our goal in the present work is to construct a semantic hierarchy of these hypernyms (right panel, Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In this study, we focus on Chinese semantic hierarchy construction. The proposed method can be easily adapted to other languages.</span></span></span></p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Some previous works extend and refine manually-built semantic hierarchies by using other resources (e.g., Wikipedia) <cite class="ltx_cite">[<a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">27</a>]</cite>.
+However, the coverage is limited by the scope of the resources.
+Several other works relied heavily on lexical patterns, which would suffer from deficiency because such patterns can only cover a small proportion of complex linguistic circumstances <cite class="ltx_cite">[<a href="#bib.bib3" title="Automatic acquisition of hyponyms from large text corpora" class="ltx_ref">10</a>, <a href="#bib.bib5" title="Learning syntactic patterns for automatic hypernym discovery" class="ltx_ref">23</a>]</cite>.
+Besides, distributional similarity methods <cite class="ltx_cite">[<a href="#bib.bib30" title="Directional distributional similarity for lexical inference" class="ltx_ref">11</a>, <a href="#bib.bib31" title="Identifying hypernyms in distributional semantic spaces" class="ltx_ref">12</a>]</cite> are based on the assumption that a term can only be used in contexts where its hypernyms can be used and that a term might be used in any contexts where its hyponyms are used.
+However, it is not always rational.
+Our previous method based on web mining <cite class="ltx_cite">[<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">8</a>]</cite> works well for hypernym extraction of entity names, but it is unsuitable for semantic hierarchy construction which involves many words with broad semantics.
+Moreover, all of these methods do not use the word semantics effectively.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">This paper proposes a novel approach for semantic hierarchy construction based on word embeddings.
+Word embeddings, also known as distributed word representations, typically represent words with dense, low-dimensional and real-valued vectors.
+Word embeddings have been empirically shown to preserve linguistic regularities, such as the semantic relationship between words <cite class="ltx_cite">[<a href="#bib.bib12a" title="Linguistic regularities in continuous space word representations" class="ltx_ref">15</a>]</cite>.
+For example,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="v(" display="inline"><mrow><mi>v</mi><mo>(</mo></mrow></math><span class="ltx_text ltx_font_typewriter">king<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext=")-v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">-</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>queen<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m3" class="ltx_Math" alttext=")\approx v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">≈</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>man<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m4" class="ltx_Math" alttext=")-v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">-</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>woman<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m5" class="ltx_Math" alttext=")" display="inline"><mo mathvariant="normal">)</mo></math></span>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m6" class="ltx_Math" alttext="v(w)" display="inline"><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> is the embedding of the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m7" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>.
+We observe that a similar property also applies to the hypernym–hyponym relationship (Section <a href="#S3.SS3" title="3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>), which is the main inspiration of the present study.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">However, we further observe that hypernym–hyponym relations are more complicated than a single offset can represent.
+To address this challenge, we propose a more sophisticated and general method — learning a linear projection which maps words to their hypernyms (Section <a href="#S3.SS3.SSS1" title="3.3.1 A Uniform Linear Projection ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.1</span></a>).
+Furthermore, we propose a piecewise linear projection method based on relation clustering to better model hypernym–hyponym relations (Section <a href="#S3.SS3.SSS2" title="3.3.2 Piecewise Linear Projections ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.2</span></a>).
+Subsequently, we identify whether an unknown word pair is a hypernym–hyponym relation using the projections (Section <a href="#S3.SS4" title="3.4 Hypernym-hyponym Relation Identification ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>).
+To the best of our knowledge, we are the first to apply word embeddings to this task.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">For evaluation, we manually annotate a dataset containing 418 Chinese entities and their hypernym hierarchies, which is the first dataset for this task as far as we know.
+The experimental results show that our method achieves an F-score of 73.74% which significantly outperforms the previous state-of-the-art methods.
+Moreover, combining our method with the manually-built hierarchy extension method proposed by <cite class="ltx_cite">Suchanek<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">2008</a>)</cite> can further improve F-score to 80.29%.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Background</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">As main components of ontologies, semantic hierarchies have been studied by many researchers.
+Some have established concept hierarchies based on manually-built semantic resources such as WordNet <cite class="ltx_cite">[<a href="#bib.bib27" title="WordNet: a lexical database for english" class="ltx_ref">16</a>]</cite>.
+Such hierarchies have good structures and high accuracy,
+but their coverage is limited to fine-grained concepts (e.g., “<span class="ltx_text ltx_font_typewriter">Ranunculaceae</span>” is not included in WordNet.).
+We have made similar obsevation that about a half of hypernym–hyponym relations are absent in a Chinese semantic thesaurus.
+Therefore, a broader range of resources is needed to supplement the manually built resources.
+In the construction of the famous ontology YAGO, <cite class="ltx_cite">Suchanek<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">2008</a>)</cite> link the categories in Wikipedia onto WordNet.
+However, the coverage is still limited by the scope of Wikipedia.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Several other methods are based on lexical patterns.
+They use manually or automatically constructed lexical patterns to mine hypernym–hyponym relations from text corpora.
+A hierarchy can then be built based on these pairwise relations.
+The pioneer work by <cite class="ltx_cite">Hearst (<a href="#bib.bib3" title="Automatic acquisition of hyponyms from large text corpora" class="ltx_ref">1992</a>)</cite> has found out that
+linking two noun phrases (NPs) via certain lexical constructions often implies hypernym relations.
+For example, NP<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> is a hypernym of NP<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math> in the lexical pattern “such NP<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> as NP<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math>.”
+<cite class="ltx_cite">Snow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Learning syntactic patterns for automatic hypernym discovery" class="ltx_ref">2005</a>)</cite> propose to automatically extract large numbers of lexico-syntactic patterns and subsequently detect hypernym relations from a large newswire corpus.
+Their method relies on accurate syntactic parsers, and the quality of the automatically extracted patterns is difficult to guarantee.
+Generally speaking, these pattern-based methods often suffer from low recall or precision because of the coverage or the quality of the patterns.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The distributional methods assume that the contexts of hypernyms are broader than the ones of their hyponyms.
+For distributional similarity computing, each word is represented as a semantic vector composed of the pointwise mutual information (PMI) with its contexts.
+<cite class="ltx_cite">Kotlerman<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="Directional distributional similarity for lexical inference" class="ltx_ref">2010</a>)</cite> design a directional distributional measure to infer hypernym–hyponym relations based on the standard IR Average Precision evaluation measure.
+<cite class="ltx_cite">Lenci and Benotto (<a href="#bib.bib31" title="Identifying hypernyms in distributional semantic spaces" class="ltx_ref">2012</a>)</cite> propose another measure focusing on the contexts that hypernyms do not share with their hyponyms.
+However, broader semantics may not always infer broader contexts.
+For example, for terms “<span class="ltx_text ltx_font_typewriter">Obama</span>’ and “<span class="ltx_text ltx_font_typewriter">American people</span>”, it is hard to say whose contexts are broader.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Our previous work <cite class="ltx_cite">[<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">8</a>]</cite> applies a web mining method to discover the hypernyms of Chinese entities from multiple sources.
+We assume that the hypernyms of an entity co-occur with it frequently.
+It works well for named entities.
+But for class names (e.g., singers in Hong Kong, tropical fruits) with wider range of meanings, this assumption may fail.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">In this paper, we aim to identify hypernym–hyponym relations using word embeddings, which have been shown to preserve good properties for capturing semantic relationship between words.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Method</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we first define the task formally.
+Then we elaborate on our proposed method composed of three major steps, namely, word embedding training, projection learning, and hypernym–hyponym relation identification.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Task Definition</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Given a list of hypernyms of an entity, our goal is to construct a semantic hierarchy on it (Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+We represent the hierarchy as a directed graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math>, in which the nodes denote the words, and the edges denote the hypernym–hyponym relations.
+Hypernym-hyponym relations are <span class="ltx_text ltx_font_italic">asymmetric</span> and <span class="ltx_text ltx_font_italic">transitive</span> when words are unambiguous:</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="\forall x,y\in L:x" display="inline"><mrow><mrow><mrow><mrow><mo>∀</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>∈</mo><mi>L</mi></mrow><mo>:</mo><mi>x</mi></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m3" class="ltx_Math" alttext="y\Rightarrow\neg(y" display="inline"><mrow><mi>y</mi><mo>⇒</mo><mi mathvariant="normal">¬</mi><mrow><mo>(</mo><mi>y</mi></mrow></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m4" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m5" class="ltx_Math" alttext="x)" display="inline"><mrow><mi>x</mi><mo>)</mo></mrow></math></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="\forall x,y,z\in L:(x" display="inline"><mrow><mo>∀</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi><mo>∈</mo><mi>L</mi><mo>:</mo><mrow><mo>(</mo><mi>x</mi></mrow></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m3" class="ltx_Math" alttext="z\land z" display="inline"><mrow><mi>z</mi><mo>∧</mo><mi>z</mi></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m4" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m5" class="ltx_Math" alttext="y)\Rightarrow x" display="inline"><mrow><mi>y</mi><mo>)</mo><mo>⇒</mo><mi>x</mi></mrow></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m6" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m7" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math></p>
+</div></li>
+</ul>
+<p class="ltx_p">Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> denotes the list of hypernyms.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> denote the hypernyms in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>.
+We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math> to represent a hypernym–hyponym relation in this paper.
+Actually, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> are unambiguous as the hypernyms of a certain entity.
+Therefore, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> should be a directed acyclic graph (DAG).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Word Embedding Training</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Various models for learning word embeddings have been proposed, including neural net language models <cite class="ltx_cite">[<a href="#bib.bib1" title="A neural probabilistic language model" class="ltx_ref">1</a>, <a href="#bib.bib2" title="A scalable hierarchical distributed language model" class="ltx_ref">17</a>, <a href="#bib.bib12a" title="Linguistic regularities in continuous space word representations" class="ltx_ref">15</a>]</cite> and spectral models <cite class="ltx_cite">[<a href="#bib.bib37a" title="Multi-view learning of word embeddings via cca" class="ltx_ref">6</a>]</cite>.
+More recently, <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite> propose two log-linear models, namely the <span class="ltx_text ltx_font_italic">Skip-gram</span> and <span class="ltx_text ltx_font_italic">CBOW</span> model, to efficiently induce word embeddings.
+These two models can be trained very efficiently on a large-scale corpus because of their low time complexity.
+Additionally, their experiment results have shown that the <span class="ltx_text ltx_font_italic">Skip-gram</span> model performs best in identifying semantic relationship among words.
+Therefore, we employ the <span class="ltx_text ltx_font_italic">Skip-gram</span> model for estimating word embeddings in this study.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">Skip-gram</span> model adopts log-linear classifiers to predict context words given the current word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="\mathbf{w}(t)" display="inline"><mrow><mi>𝐰</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> as input. First, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="\mathbf{w}(t)" display="inline"><mrow><mi>𝐰</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> is projected to its embedding. Then, log-linear classifiers are employed, taking the embedding as input and predict <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="\mathbf{w}(t)" display="inline"><mrow><mi>𝐰</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math>’s context words within a certain range, e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> words in the left and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> words in the right. After maximizing the log-likelihood over the entire dataset using stochastic gradient descent (SGD), the embeddings are learned.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1113/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="530" height="217" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Clusters of the vector offsets in training data. The figure shows that the vector offsets distribute in some clusters. The left cluster shows some hypernym–hyponym relations about animals. The right one shows some relations about people’s occupations.</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Projection Learning</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12a" title="Linguistic regularities in continuous space word representations" class="ltx_ref">2013b</a>)</cite> observe that word embeddings preserve interesting linguistic regularities, capturing a considerable amount of syntactic/semantic relations.
+Looking at the well-known example: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="v(" display="inline"><mrow><mi>v</mi><mo>(</mo></mrow></math><span class="ltx_text ltx_font_typewriter">king<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext=")-v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">-</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>queen<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext=")\approx v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">≈</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>man<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m4" class="ltx_Math" alttext=")-v(" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">-</mo><mi>v</mi><mo mathvariant="normal">(</mo></mrow></math>woman<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m5" class="ltx_Math" alttext=")" display="inline"><mo mathvariant="normal">)</mo></math></span>, it indicates that the embedding offsets indeed represent the shared semantic relation between the two word pairs.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">We observe that the same property also applies to some hypernym–hyponym relations.
+As a preliminary experiment, we compute the embedding offsets between some randomly sampled hypernym–hyponym word pairs and measure their similarities. The results are shown in Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+<span class="ltx_text ltx_font_small"></span></p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">No.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Examples</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">1</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="v({\tt\text{虾}})-v({\tt\text{对虾}})\approx v({\tt\text{鱼}})-v({\tt\text%&#10;{金鱼}})" display="inline"><mrow><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">è¾</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">å¯¹è¾</mtext><mo>)</mo></mrow></mrow></mrow><mo>≈</mo><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">é±¼</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">éé±¼</mtext><mo>)</mo></mrow></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="v({\tt\text{shrimp}})-v({\tt\text{prawn}})\approx v({\tt\text{fish}})-v({\tt%&#10;\text{gold fish}})" display="inline"><mrow><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">shrimp</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">prawn</mtext><mo>)</mo></mrow></mrow></mrow><mo>≈</mo><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">fish</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">gold fish</mtext><mo>)</mo></mrow></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">2</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="v({\tt\text{工人}})-v({\tt\text{木匠}})\approx v({\tt\text{演员}})-v({%&#10;\tt\text{小丑}})" display="inline"><mrow><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">å·¥äºº</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">æ¨å </mtext><mo>)</mo></mrow></mrow></mrow><mo>≈</mo><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">æ¼å</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">å°ä¸</mtext><mo>)</mo></mrow></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="v({\tt\text{laborer}})-v({\tt\text{carpenter}})\approx v({\tt\text{actor}})-v(%&#10;{\tt\text{clown}})" display="inline"><mrow><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">laborer</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">carpenter</mtext><mo>)</mo></mrow></mrow></mrow><mo>≈</mo><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">actor</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">clown</mtext><mo>)</mo></mrow></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">3</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="v({\tt\text{工人}})-v({\tt\text{木匠}})" display="inline"><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">å·¥äºº</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">æ¨å </mtext><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_small" style="color:#FF0000;"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="\not\approx" display="inline"><mo mathcolor="#FF0000" mathsize="normal" stretchy="false">≉</mo></math></span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m7" class="ltx_Math" alttext="v({\tt\text{鱼}})-v({\tt\text{金鱼}})" display="inline"><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">é±¼</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">éé±¼</mtext><mo>)</mo></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m8" class="ltx_Math" alttext="v({\tt\text{laborer}})-v({\tt\text{carpenter}})" display="inline"><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">laborer</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">carpenter</mtext><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_small" style="color:#FF0000;"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m9" class="ltx_Math" alttext="\not\approx" display="inline"><mo mathcolor="#FF0000" mathsize="normal" stretchy="false">≉</mo></math></span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m10" class="ltx_Math" alttext="v({\tt\text{fish}})-v({\tt\text{gold fish}})" display="inline"><mrow><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">fish</mtext><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>v</mi><mo>⁢</mo><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">gold fish</mtext><mo>)</mo></mrow></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Embedding offsets on a sample of hypernym–hyponym word pairs.</div>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">The first two examples imply that a word can also be mapped to its hypernym by utilizing word embedding offsets.
+However, the offset from “<span class="ltx_text ltx_font_typewriter">carpenter</span>” to “<span class="ltx_text ltx_font_typewriter">laborer</span>” is distant from the one from “<span class="ltx_text ltx_font_typewriter">gold fish</span>” to “<span class="ltx_text ltx_font_typewriter">fish</span>,” indicating that hypernym–hyponym relations should be more complicated than a single vector offset can represent.
+To verify this hypothesis, we compute the embedding offsets over all hypernym–hyponym word pairs in our training data and visualize them.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Principal Component Analysis (PCA) is applied for dimensionality reduction.</span></span></span>
+Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows that the relations are adequately distributed in the clusters, which implies that hypernym–hyponym relations indeed can be decomposed into more fine-grained relations.
+Moreover, the relations about animals are spatially close, but separate from the relations about people’s occupations.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">To address this challenge, we propose to learn the hypernym–hyponym relations using projection matrices.</p>
+</div>
+<div id="S3.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.1 </span>A Uniform Linear Projection</h4>
+
+<div id="S3.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Intuitively, we assume that all words can be projected to their hypernyms based on a uniform transition matrix.
+That is, given a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and its hypernym <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>, there exists a matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m3" class="ltx_Math" alttext="\Phi" display="inline"><mi mathvariant="normal">Φ</mi></math> so that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m4" class="ltx_Math" alttext="y=\Phi x" display="inline"><mrow><mi>y</mi><mo>=</mo><mrow><mi mathvariant="normal">Φ</mi><mo>⁢</mo><mi>x</mi></mrow></mrow></math>.
+For simplicity, we use the same symbols as the words to represent the embedding vectors.
+Obtaining a consistent exact <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m5" class="ltx_Math" alttext="\Phi" display="inline"><mi mathvariant="normal">Φ</mi></math> for the projection of all hypernym–hyponym pairs is difficult.
+Instead, we can learn an approximate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m6" class="ltx_Math" alttext="\Phi" display="inline"><mi mathvariant="normal">Φ</mi></math> using Equation <a href="#S3.E1" title="(1) ‣ 3.3.1 A Uniform Linear Projection ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> on the training data, which minimizes the mean-squared error:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\Phi^{*}=\operatorname*{arg\,min}_{\Phi}\frac{1}{N}\sum_{(x,y)}\parallel\Phi x%&#10;-y\parallel^{2}" display="block"><mrow><msup><mi mathvariant="normal">Φ</mi><mo>*</mo></msup><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mi mathvariant="normal">Φ</mi></msub><mo>⁡</mo><mfrac><mn>1</mn><mi>N</mi></mfrac></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></munder><msup><mrow><mo fence="true">∥</mo><mrow><mrow><mi mathvariant="normal">Φ</mi><mo>⁢</mo><mi>x</mi></mrow><mo>-</mo><mi>y</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m7" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS1.p1.m8" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math> word pairs in the training data.
+This is a typical linear regression problem.
+The only difference is that our predictions are multi-dimensional vectors instead of scalar values.
+We use SGD for optimization.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.2 </span>Piecewise Linear Projections</h4>
+
+<div id="S3.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">A uniform linear projection may still be under-representative for fitting all of the hypernym–hyponym word pairs, because the relations are rather diverse, as shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+To better model the various kinds of hypernym–hyponym relations, we apply the idea of piecewise linear regression <cite class="ltx_cite">[<a href="#bib.bib28" title="Drainage principles and applications." class="ltx_ref">20</a>]</cite> in this study.</p>
+</div>
+<div id="S3.SS3.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Specifically, the input space is first segmented into several regions.
+That is, all word pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m1" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math> in the training data are first clustered into several groups, where word pairs in each group are expected to exhibit similar hypernym–hyponym relations.
+Each word pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m2" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math> is represented with their vector offsets: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p2.m3" class="ltx_Math" alttext="y-x" display="inline"><mrow><mi>y</mi><mo>-</mo><mi>x</mi></mrow></math> for clustering.
+The reasons are twofold: (1) Mikolov’s work has shown that the vector offsets imply a certain level of semantic relationship.
+(2) The vector offsets distribute in clusters well, and the word pairs which are close indeed represent similar relations, as shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.SS3.SSS2.p3" class="ltx_para">
+<p class="ltx_p">Then we learn a separate projection for each cluster, respectively (Equation <a href="#S3.E2" title="(2) ‣ 3.3.2 Piecewise Linear Projections ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\Phi_{k}^{*}=\operatorname*{arg\,min}_{\Phi_{k}}\frac{1}{N_{k}}\sum_{(x,y)\in C%&#10;_{k}}\parallel\Phi_{k}x-y\parallel^{2}" display="block"><mrow><msubsup><mi mathvariant="normal">Φ</mi><mi>k</mi><mo>*</mo></msubsup><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub></msub><mo>⁡</mo><mfrac><mn>1</mn><msub><mi>N</mi><mi>k</mi></msub></mfrac></mrow><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi>C</mi><mi>k</mi></msub></mrow></munder><msup><mrow><mo fence="true">∥</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>-</mo><mi>y</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p3.m1" class="ltx_Math" alttext="N_{k}" display="inline"><msub><mi>N</mi><mi>k</mi></msub></math> is the amount of word pairs in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p3.m2" class="ltx_Math" alttext="k^{th}" display="inline"><msup><mi>k</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p3.m3" class="ltx_Math" alttext="C_{k}" display="inline"><msub><mi>C</mi><mi>k</mi></msub></math>.</p>
+</div>
+<div id="S3.SS3.SSS2.p4" class="ltx_para">
+<p class="ltx_p">We use the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p4.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-means algorithm for clustering, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS2.p4.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> is tuned on a development dataset.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.3.3 </span>Training Data</h4>
+
+<div id="S3.SS3.SSS3.p1" class="ltx_para">
+<p class="ltx_p">To learn the projection matrices, we extract training data from a Chinese semantic thesaurus, Tongyi Cilin (Extended) (CilinE for short) which contains 100,093 words <cite class="ltx_cite">[<a href="#bib.bib17" title="LTP: a chinese language technology platform" class="ltx_ref">3</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="www.ltp-cloud.com/download/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.ltp-cloud.com/download/</span></a></span></span></span>
+CilinE is organized as a hierarchy of five levels, in which the words are linked by hypernym–hyponym relations (right panel, Figure <a href="#S3.F3" title="Figure 3 ‣ 3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+Each word in CilinE has one or more sense codes (some words are polysemous) that indicate its position in the hierarchy.</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1113/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="346" height="214" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Hierarchy of CilinE and an Example of Training Data Generation</div>
+</div>
+<div id="S3.SS3.SSS3.p2" class="ltx_para">
+<p class="ltx_p">The senses of words in the first level, such as “ç© (<span class="ltx_text ltx_font_typewriter">object</span>)” and “æ¶é´ (<span class="ltx_text ltx_font_typewriter">time</span>),” are very general.
+The fourth level only has sense codes without real words.
+Therefore, we extract words in the second, third and fifth levels to constitute hypernym–hyponym pairs (left panel, Figure <a href="#S3.F3" title="Figure 3 ‣ 3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).</p>
+</div>
+<div id="S3.SS3.SSS3.p3" class="ltx_para">
+<p class="ltx_p">Note that mapping one hyponym to multiple hypernyms with the same projection (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m1" class="ltx_Math" alttext="\Phi x" display="inline"><mrow><mi mathvariant="normal">Φ</mi><mo>⁢</mo><mi>x</mi></mrow></math> is unique) is difficult.
+Therefore, the pairs with the same hyponym but different hypernyms are expected to be clustered into separate groups.
+Figure <a href="#S3.F3" title="Figure 3 ‣ 3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows that the word “<span class="ltx_text ltx_font_typewriter">dragonfly</span>” in the fifth level has two hypernyms: “<span class="ltx_text ltx_font_typewriter">insect</span>” in the third level and “<span class="ltx_text ltx_font_typewriter">animal</span>” in the second level.
+Hence the relations <span class="ltx_text ltx_font_typewriter">dragonfly</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m2" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math> <span class="ltx_text ltx_font_typewriter">insect</span> and <span class="ltx_text ltx_font_typewriter">dragonfly</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p3.m3" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math> <span class="ltx_text ltx_font_typewriter">animal</span> should fall into different clusters.</p>
+</div>
+<div id="S3.SS3.SSS3.p4" class="ltx_para">
+<p class="ltx_p">In our implementation, we apply this constraint by simply dividing the training data into two categories, namely, <span class="ltx_text ltx_font_italic">direct</span> and <span class="ltx_text ltx_font_italic">indirect</span>.
+Hypernym-hyponym word pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m1" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math> is classified into the <span class="ltx_text ltx_font_italic">direct</span> category, only if there doesn’t exist another word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m2" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> in the training data, which is a hypernym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and a hyponym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>.
+Otherwise, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS3.p4.m5" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math> is classified into the <span class="ltx_text ltx_font_italic">indirect</span> category.
+Then, data in these two categories are clustered separately.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Hypernym-hyponym Relation Identification</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">Upon obtaining the clusters of training data and the corresponding projections, we can identify whether two words have a hypernym–hyponym relation.
+Given two words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>, we find cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m3" class="ltx_Math" alttext="C_{k}" display="inline"><msub><mi>C</mi><mi>k</mi></msub></math> whose center is closest to the offset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m4" class="ltx_Math" alttext="y-x" display="inline"><mrow><mi>y</mi><mo>-</mo><mi>x</mi></mrow></math>, and obtain the corresponding projection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m5" class="ltx_Math" alttext="\Phi_{k}" display="inline"><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub></math>.
+For <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> to be considered a hypernym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, one of the two conditions below must hold.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Condition 1:</span> The projection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="\Phi_{k}" display="inline"><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub></math> puts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="\Phi_{k}x" display="inline"><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow></math> close enough to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> (Figure <a href="#S3.F4" title="Figure 4 ‣ 3.4 Hypernym-hyponym Relation Identification ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+Formally, the euclidean distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="\Phi_{k}x" display="inline"><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m5" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m6" class="ltx_Math" alttext="d(\Phi_{k}x,y)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> must be less than a threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m7" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math>.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="d(\Phi_{k}x,y)=\parallel\Phi_{k}x-y\parallel^{2}&lt;\delta" display="block"><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><msup><mrow><mo fence="true">∥</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>-</mo><mi>y</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>&lt;</mo><mi>δ</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS4.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Condition 2:</span> There exists another word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m1" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> satisfying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m3" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m4" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m5" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m6" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m7" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>.
+In this case, we use the transitivity of hypernym–hyponym relations.</p>
+</div>
+<div id="S3.F4" class="ltx_figure"><img src="P14-1113/image004.png" id="S3.F4.g1" class="ltx_graphics ltx_centering" width="223" height="140" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>In this example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m8" class="ltx_Math" alttext="\Phi_{k}x" display="inline"><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow></math> is located in the circle with center <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m9" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and radius <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m10" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math>. So <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m11" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is considered as a hypernym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m12" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. Conversely, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m13" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is not a hypernym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m14" class="ltx_Math" alttext="x^{\prime}" display="inline"><msup><mi>x</mi><mo>′</mo></msup></math>.</div>
+</div>
+<div id="S3.F5" class="ltx_figure"><img src="P14-1113/image005.png" id="S3.F5.g1" class="ltx_graphics ltx_centering" width="332" height="126" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>(a) If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m8" class="ltx_Math" alttext="d(\Phi_{j}y,x)&gt;d(\Phi_{k}x,y)" display="inline"><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>j</mi></msub><mo>⁢</mo><mi>y</mi></mrow><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>, we remove the path from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m9" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m10" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>; (b) if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m11" class="ltx_Math" alttext="d(\Phi_{j}y,x)&gt;d(\Phi_{k}x,z)" display="inline"><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>j</mi></msub><mo>⁢</mo><mi>y</mi></mrow><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>k</mi></msub><mo>⁢</mo><mi>x</mi></mrow><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m12" class="ltx_Math" alttext="d(\Phi_{j}y,x)&gt;d(\Phi_{i}z,y)" display="inline"><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>j</mi></msub><mo>⁢</mo><mi>y</mi></mrow><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi mathvariant="normal">Φ</mi><mi>i</mi></msub><mo>⁢</mo><mi>z</mi></mrow><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>, we reverse the path from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m13" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m14" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.</div>
+</div>
+<div id="S3.SS4.p5" class="ltx_para">
+<p class="ltx_p">Besides, the final hierarchy should be a DAG as discussed in Section <a href="#S3.SS1" title="3.1 Task Definition ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+However, the projection method cannot guarantee that theoretically, because the projections are learned from pairwise hypernym–hyponym relations without the whole hierarchy structure.
+All pairwise hypernym–hyponym relation identification methods would suffer from this problem actually.
+It is an interesting problem how to construct a globally optimal semantic hierarchy conforming to the form of a DAG.
+But this is not the focus of this paper.
+So if some conflicts occur, that is,
+a relation circle exists, we remove or reverse the weakest path heuristically (Figure <a href="#S3.F5" title="Figure 5 ‣ 3.4 Hypernym-hyponym Relation Identification ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).
+If a circle has only two nodes, we remove the weakest path.
+If a circle has more than two nodes, we reverse the weakest path to form an <span class="ltx_text ltx_font_italic">indirect</span> hypernym–hyponym relation.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Setup</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experimental Data</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this work, we learn word embeddings from a Chinese encyclopedia corpus named Baidubaike<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Baidubaike (<a href="baike.baidu.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">baike.baidu.com</span></a>) is one of the largest Chinese encyclopedias containing more than 7.05 million entries as of September, 2013.</span></span></span>, which contains about 30 million sentences (about 780 million words).
+The Chinese segmentation is provided by the open-source Chinese language processing platform LTP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="www.ltp-cloud.com/demo/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.ltp-cloud.com/demo/</span></a></span></span></span> <cite class="ltx_cite">[<a href="#bib.bib17" title="LTP: a chinese language technology platform" class="ltx_ref">3</a>]</cite>.
+Then, we employ the <span class="ltx_text ltx_font_italic">Skip-gram</span> method (Section <a href="#S3.SS2" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>) to train word embeddings.
+Finally we obtain the embedding vectors of 0.56 million words.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The training data for projection learning is collected from CilinE (Section <a href="#S3.SS3.SSS3" title="3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>).
+We obtain 15,247 word pairs of hypernym–hyponym relations (9,288 for <span class="ltx_text ltx_font_italic">direct</span> relations and 5,959 for <span class="ltx_text ltx_font_italic">indirect</span> relations).</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">For evaluation, we collect the hypernyms for 418 entities, which are selected randomly from Baidubaike, following <cite class="ltx_cite">Fu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">2013</a>)</cite>.
+We then ask two annotators to manually label the semantic hierarchies of the correct hypernyms.
+The final data set contains 655 unique hypernyms and 1,391 hypernym–hyponym relations among them.
+We randomly split the labeled data into 1/5 for development and 4/5 for testing (Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Experimental Data ‣ 4 Experimental Setup ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+The hierarchies are represented as relations of pairwise words.
+We measure the inter-annotator agreement using the kappa coefficient <cite class="ltx_cite">[<a href="#bib.bib22" title="Nonparametric statistics for the behavioral sciences" class="ltx_ref">22</a>]</cite>.
+The kappa value is 0.96, which indicates a good strength of agreement.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold">Relation</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold"># of word pairs</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">Dev.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">Test</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">hypernym–hyponym</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">312</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1,079</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">hyponym–hypernym<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">312</td>
+<td class="ltx_td ltx_align_center">1,079</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">unrelated</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1,044</td>
+<td class="ltx_td ltx_align_center">3,250</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">Total</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1,668</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">5,408</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>The evaluation data. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math>Since hypernym–hyponym relations and hyponym–hypernym relations have one-to-one correspondence, their numbers are the same.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Evaluation Metrics</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We use precision, recall, and F-score as our metrics to evaluate the performances of the methods.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Since hypernym–hyponym relations and its reverse (hyponym–hypernym) have one-to-one correspondence, their performances are equal.
+For simplicity, we only report the performance of the former in the experiments.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results and Analysis</h2>
+
+<div id="S5.F6" class="ltx_figure"><img src="P14-1113/image006.png" id="S5.F6.g1" class="ltx_graphics ltx_centering" width="301" height="215" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Performance on development data w.r.t. cluster size.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Varying the Amount of Clusters</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We first evaluate the effect of different number of clusters based on the development data.
+We vary the numbers of the clusters both for the <span class="ltx_text ltx_font_italic">direct</span> and <span class="ltx_text ltx_font_italic">indirect</span> training word pairs.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S5.F6" title="Figure 6 ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, the performance of clustering is better than non-clustering (when the cluster number is 1),
+thus providing evidences that learning piecewise projections based on clustering is reasonable.
+We finally set the numbers of the clusters of <span class="ltx_text ltx_font_italic">direct</span> and <span class="ltx_text ltx_font_italic">indirect</span> to 20 and 5, respectively, where the best performances are achieved on the development data.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Comparison with Previous Work</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we compare the proposed method with previous methods, including manually-built hierarchy extension, pairwise relation extraction based on patterns, word distributions, and web mining (Section <a href="#S2" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+Results are shown in Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">P(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">R(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">F(%)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">92.41</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">60.61</td>
+<td class="ltx_td ltx_align_center ltx_border_t">73.20</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="{}_{Pattern}" display="inline"><msub><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">97.47</td>
+<td class="ltx_td ltx_align_center ltx_border_r">21.41</td>
+<td class="ltx_td ltx_align_center">35.11</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="{}_{Snow}" display="inline"><msub><mi/><mrow><mi>S</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">60.88</td>
+<td class="ltx_td ltx_align_center ltx_border_r">25.67</td>
+<td class="ltx_td ltx_align_center">36.11</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="{}_{balApinc}" display="inline"><msub><mi/><mrow><mi>b</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">54.96</td>
+<td class="ltx_td ltx_align_center ltx_border_r">53.38</td>
+<td class="ltx_td ltx_align_center">54.16</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m5" class="ltx_Math" alttext="{}_{invCL}" display="inline"><msub><mi/><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>L</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">49.63</td>
+<td class="ltx_td ltx_align_center ltx_border_r">62.84</td>
+<td class="ltx_td ltx_align_center">55.46</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m6" class="ltx_Math" alttext="{}_{Fu}" display="inline"><msub><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>u</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">87.40</td>
+<td class="ltx_td ltx_align_center ltx_border_r">48.19</td>
+<td class="ltx_td ltx_align_center">62.13</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m7" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.54</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.99</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">73.74</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m8" class="ltx_Math" alttext="{}_{Emb+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">80.59</td>
+<td class="ltx_td ltx_align_center ltx_border_r">72.42</td>
+<td class="ltx_td ltx_align_center">76.29</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m9" class="ltx_Math" alttext="{}_{Emb+Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">79.78</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">80.81</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold">80.29</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Comparison of the proposed method with existing methods in the test set.</div>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Pattern</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Translation</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_typewriter">w</span> æ¯[ä¸ä¸ª<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="|" display="inline"><mo>|</mo></math>ä¸ç§] <span class="ltx_text ltx_font_typewriter">h</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_typewriter">w</span> is a [a kind of] <span class="ltx_text ltx_font_typewriter">h</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">w</span> [ã] ç­ <span class="ltx_text ltx_font_typewriter">h</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">w</span>[,] and other <span class="ltx_text ltx_font_typewriter">h</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">h</span> [ï¼] å«[å] <span class="ltx_text ltx_font_typewriter">w</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">h</span>[,] called <span class="ltx_text ltx_font_typewriter">w</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">h</span> [ï¼] [å]å¦ <span class="ltx_text ltx_font_typewriter">w</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">h</span>[,] such as <span class="ltx_text ltx_font_typewriter">w</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_typewriter">h</span> [ï¼] ç¹å«æ¯ <span class="ltx_text ltx_font_typewriter">w</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_typewriter">h</span>[,] especially <span class="ltx_text ltx_font_typewriter">w</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Chinese Hearst-style lexical patterns. The contents in square brackets are omissible.</div>
+</div>
+<div id="S5.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.2.1 </span>Overall Comparison</h4>
+
+<div id="S5.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p1.m1" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math> refers to the manually-built hierarchy extension method of <cite class="ltx_cite">Suchanek<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">2008</a>)</cite>.
+In our experiment, we use the category taxonomy of Chinese Wikipedia<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><a href="dumps.wikimedia.org/zhwiki/20131205/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dumps.wikimedia.org/zhwiki/20131205/</span></a></span></span></span> to extend CilinE.
+Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows that this method achieves a high precision but also a low recall, mainly because of the limited scope of Wikipedia.</p>
+</div>
+<div id="S5.SS2.SSS1.p2" class="ltx_para">
+<p class="ltx_p">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p2.m1" class="ltx_Math" alttext="{}_{Pattern}" display="inline"><msub><mi/><mrow><mi>P</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> refers to the pattern-based method of <cite class="ltx_cite">Hearst (<a href="#bib.bib3" title="Automatic acquisition of hyponyms from large text corpora" class="ltx_ref">1992</a>)</cite>.
+We extract hypernym–hyponym relations in the Baidubaike corpus, which is also used to train word embeddings (Section <a href="#S4.SS1" title="4.1 Experimental Data ‣ 4 Experimental Setup ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>).
+We use the Chinese Hearst-style patterns (Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) proposed by <cite class="ltx_cite">Fu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">2013</a>)</cite>, in which <span class="ltx_text ltx_font_typewriter">w</span> represents a word, and <span class="ltx_text ltx_font_typewriter">h</span> represents one of its hypernyms.
+The result shows that only a small part of the hypernyms can be extracted based on these patterns
+because only a few hypernym relations are expressed in these fixed patterns, and many are expressed in highly flexible manners.</p>
+</div>
+<div id="S5.SS2.SSS1.p3" class="ltx_para">
+<p class="ltx_p">In the same corpus, we apply the method M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p3.m1" class="ltx_Math" alttext="{}_{Snow}" display="inline"><msub><mi/><mrow><mi>S</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> originally proposed by <cite class="ltx_cite">Snow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Learning syntactic patterns for automatic hypernym discovery" class="ltx_ref">2005</a>)</cite>.
+The same training data for projections learning from CilinE (Section <a href="#S3.SS3.SSS3" title="3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>) is used as seed hypernym–hyponym pairs.
+Lexico-syntactic patterns are extracted from the Baidubaike corpus by using the seeds.
+We then develop a logistic regression classifier based on the patterns to recognize hypernym–hyponym relations.
+This method relies on an accurate syntactic parser, and the quality of the automatically extracted patterns is difficult to guarantee.</p>
+</div>
+<div id="S5.SS2.SSS1.p4" class="ltx_para">
+<p class="ltx_p">We re-implement two previous distributional methods M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p4.m1" class="ltx_Math" alttext="{}_{balApinc}" display="inline"><msub><mi/><mrow><mi>b</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math> <cite class="ltx_cite">[<a href="#bib.bib30" title="Directional distributional similarity for lexical inference" class="ltx_ref">11</a>]</cite> and M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p4.m2" class="ltx_Math" alttext="{}_{invCL}" display="inline"><msub><mi/><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>L</mi></mrow></msub></math> <cite class="ltx_cite">[<a href="#bib.bib31" title="Identifying hypernyms in distributional semantic spaces" class="ltx_ref">12</a>]</cite> in the Baidubaike corpus.
+Each word is represented as a feature vector in which each dimension is the PMI value of the word and its context words.
+We compute a score for each word pair and apply a threshold to identify whether it is a hypernym–hyponym relation.</p>
+</div>
+<div id="S5.SS2.SSS1.p5" class="ltx_para">
+<p class="ltx_p">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m1" class="ltx_Math" alttext="{}_{Fu}" display="inline"><msub><mi/><mrow><mi>F</mi><mo>⁢</mo><mi>u</mi></mrow></msub></math> refers to our previous web mining method <cite class="ltx_cite">[<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">8</a>]</cite>.
+This method mines hypernyms of a given word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> from multiple sources and returns a ranked list of the hypernyms.
+We select the hypernyms with scores over a threshold of each word in the test set for evaluation.
+This method assumes that frequent co-occurrence of a noun or noun phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> in multiple sources with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> indicate possibility of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> being a hypernym of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>.
+The results presented in <cite class="ltx_cite">Fu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">2013</a>)</cite> show that the method works well when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m7" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is an entity, but not when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p5.m8" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is a word with a common semantic concept.
+The main reason may be that there are relatively more introductory pages about entities than about common words in the Web.</p>
+</div>
+<div id="S5.SS2.SSS1.p6" class="ltx_para">
+<p class="ltx_p">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p6.m1" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math> is the proposed method based on word embeddings.
+Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows that the proposed method achieves a better recall and F-score than all of the previous methods do.
+It can significantly (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p6.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>) improve the F-score over the state-of-the-art method M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p6.m3" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math>.</p>
+</div>
+<div id="S5.SS2.SSS1.p7" class="ltx_para">
+<p class="ltx_p">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m1" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math> and M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m2" class="ltx_Math" alttext="{}_{CilinE}" display="inline"><msub><mi/><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math> can also be combined.
+The combination strategy is to simply merge all positive results from the two methods together, and then to infer new relations based on the transitivity of hypernym–hyponym relations.
+The F-score is further improved from 73.74% to 76.29%.
+Note that, the combined method achieves a 4.43% recall improvement over M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m3" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math>, but the precision is almost unchanged.
+The reason is that the inference based on the relations identified automatically may lead to error propagation.
+For example, the relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m5" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is incorrectly identified by M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m7" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math>.
+When the relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m8" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m9" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m10" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> from M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m11" class="ltx_Math" alttext="{}_{CilinE}" display="inline"><msub><mi/><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math> is added, it will cause a new incorrect relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m12" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m13" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p7.m14" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>.</p>
+</div>
+<div id="S5.SS2.SSS1.p8" class="ltx_para">
+<p class="ltx_p">Combining M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p8.m1" class="ltx_Math" alttext="{}_{Emb}" display="inline"><msub><mi/><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math> with M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p8.m2" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math> achieves a 7% F-score improvement over the best baseline M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.p8.m3" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math>.
+Therefore, the proposed method is complementary to the manually-built hierarchy extension method <cite class="ltx_cite">[<a href="#bib.bib14" title="Yago: a large ontology from wikipedia and wordnet" class="ltx_ref">27</a>]</cite>.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">P(%)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">R(%)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">F(%)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m1" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.39</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">19.29</td>
+<td class="ltx_td ltx_align_center ltx_border_t">31.12</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="{}_{Emb+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r">71.16</td>
+<td class="ltx_td ltx_align_center ltx_border_r">52.80</td>
+<td class="ltx_td ltx_align_center">60.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m3" class="ltx_Math" alttext="{}_{Emb+Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">69.13</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">61.65</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_bold">65.17</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Performance on the out-of-CilinE data in the test set.</div>
+</div>
+<div id="S5.F7" class="ltx_figure"><img src="P14-1113/image007.png" id="S5.F7.g1" class="ltx_graphics ltx_centering" width="304" height="266" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Precision-Recall curves on the out-of-CilinE data in the test set.</div>
+</div>
+</div>
+<div id="S5.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.2.2 </span>Comparison on the Out-of-CilinE Data</h4>
+
+<div id="S5.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">We are greatly interested in the practical performance of the proposed method on the hypernym–hyponym relations outside of CilinE.
+We say a word pair is outside of CilinE, as long as there is one word in the pair not existing in CilinE.
+In our test data, about 62% word pairs are outside of CilinE.
+Table <a href="#S5.T5" title="Table 5 ‣ 5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows the performances of the best baseline method and our method on the out-of-CilinE data.
+The method exploiting the taxonomy in Wikipedia, M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p1.m1" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math>, achieves the highest precision but has a low recall.
+By contrast, our method can discover more hypernym–hyponym relations with some loss of precision, thereby achieving a more than 29% F-score improvement.
+The combination of these two methods achieves a further 4.5% F-score improvement over M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p1.m2" class="ltx_Math" alttext="{}_{Emb+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math>.
+Generally speaking, the proposed method greatly improves the recall but damages the precision.</p>
+</div>
+<div id="S5.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Actually, we can get different precisions and recalls by adjusting the threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p2.m1" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> (Equation <a href="#S3.E3" title="(3) ‣ 3.4 Hypernym-hyponym Relation Identification ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+Figure <a href="#S5.F7" title="Figure 7 ‣ 5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> shows that M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p2.m2" class="ltx_Math" alttext="{}_{Emb+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math> achieves a higher precision than M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p2.m3" class="ltx_Math" alttext="{}_{Wiki+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>i</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math> when their recalls are the same.
+When they achieve the same precision, the recall of M<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS2.p2.m4" class="ltx_Math" alttext="{}_{Emb+CilinE}" display="inline"><msub><mi/><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>E</mi></mrow></mrow></msub></math> is higher.</p>
+</div>
+<div id="S5.F8" class="ltx_figure"><img src="P14-1113/image008.png" id="S5.F8.g1" class="ltx_graphics ltx_centering" width="323" height="350" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>An example for error analysis. The red paths refer to the relations between the named entity and its hypernyms extracted using the web mining method <cite class="ltx_cite">[<a href="#bib.bib24" title="Exploiting multiple sources for open-domain hypernym discovery" class="ltx_ref">8</a>]</cite>. The black paths with hollow arrows denote the relations identified by the different methods. The boxes with dotted borders refer to the concepts which are not linked to correct positions.</div>
+</div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Error Analysis and Discussion</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We analyze error cases after experiments.
+Some cases are shown in Figure <a href="#S5.F8" title="Figure 8 ‣ 5.2.2 Comparison on the Out-of-CilinE Data ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.
+We can see that there is only one general relation “æ¤ç© (<span class="ltx_text ltx_font_typewriter">plant</span>)” <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math> “çç© (<span class="ltx_text ltx_font_typewriter">organism</span>)” existing in CilinE.
+Some fine-grained relations exist in Wikipedia, but the coverage is limited.
+Our method based on word embeddings can discover more hypernym–hyponym relations than the previous methods can.
+When we combine the methods together, we get the correct hierarchy.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F8" title="Figure 8 ‣ 5.2.2 Comparison on the Out-of-CilinE Data ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a> shows that our method loses the relation “ä¹å¤´å± (<span class="ltx_text ltx_font_typewriter">Aconitum</span>)” <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m1" class="ltx_Math" alttext="\xrightarrow{H}" display="inline"><mover accent="true"><mo>→</mo><mo>𝐻</mo></mover></math> “æ¯èç§ (<span class="ltx_text ltx_font_typewriter">Ranunculaceae</span>).”
+It is because they are very semantically similar (their cosine similarity is 0.9038).
+Their representations are so close to each other in the embedding space
+that we have not find projections suitable for these pairs.
+The error statistics show that when the cosine similarities of word pairs are greater than 0.8, the recall is only 9.5%.
+This kind of error accounted for about 10.9% among all the errors in our test set.
+One possible solution may be adding more data of this kind to the training set.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In addition to the works mentioned in Section <a href="#S2" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we introduce another set of related studies in this section.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Evans (<a href="#bib.bib12" title="A framework for named entity recognition in the open domain" class="ltx_ref">2004</a>)</cite>, <cite class="ltx_cite">Ortega-Mendoza<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Using lexical patterns for extracting hyponyms from the web" class="ltx_ref">2007</a>)</cite>, and <cite class="ltx_cite">Sang (<a href="#bib.bib26" title="Extracting hypernym pairs from the web" class="ltx_ref">2007</a>)</cite> consider web data as a large corpus and use search engines to identify hypernyms based on the lexical patterns of <cite class="ltx_cite">Hearst (<a href="#bib.bib3" title="Automatic acquisition of hyponyms from large text corpora" class="ltx_ref">1992</a>)</cite>.
+However, the low quality of the sentences in the search results negatively influence the precision of hypernym extraction.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Following the method for discovering patterns automatically <cite class="ltx_cite">[<a href="#bib.bib5" title="Learning syntactic patterns for automatic hypernym discovery" class="ltx_ref">23</a>]</cite>,
+<cite class="ltx_cite">McNamee<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Learning named entity hyponyms for question answering" class="ltx_ref">2008</a>)</cite> apply the same method to extract hypernyms of entities in order to improve the performance of a question answering system.
+<cite class="ltx_cite">Ritter<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="What is this, anyway: automatic hypernym discovery" class="ltx_ref">2009</a>)</cite> propose a method based on patterns to find hypernyms on arbitrary noun phrases.
+They use a support vector machine classifier to identify the correct hypernyms from the candidates that match the patterns.
+As our experiments show, pattern-based methods suffer from low recall because of the low coverage of patterns.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Besides <cite class="ltx_cite">Kotlerman<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="Directional distributional similarity for lexical inference" class="ltx_ref">2010</a>)</cite> and  <cite class="ltx_cite">Lenci and Benotto (<a href="#bib.bib31" title="Identifying hypernyms in distributional semantic spaces" class="ltx_ref">2012</a>)</cite>, other researchers also propose directional distributional similarity methods <cite class="ltx_cite">[<a href="#bib.bib33" title="Characterising measures of lexical distributional similarity" class="ltx_ref">30</a>, <a href="#bib.bib34" title="The distributional inclusion hypotheses and lexical entailment" class="ltx_ref">9</a>, <a href="#bib.bib35" title="LEDIR: an unsupervised algorithm for learning directionality of inference rules." class="ltx_ref">2</a>, <a href="#bib.bib36" title="Instance-based evaluation of entailment rule acquisition" class="ltx_ref">28</a>, <a href="#bib.bib37" title="Context-theoretic semantics for natural language: an overview" class="ltx_ref">4</a>]</cite>.
+However, their basic assumption that a hyponym can only be used in contexts where its hypernyms can be used and that a hypernym might be used in all of the contexts where its hyponyms are used may not always rational.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Snow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Semantic taxonomy induction from heterogenous evidence" class="ltx_ref">2006</a>)</cite> provides a global optimization scheme for extending WordNet, which is different from the above-mentioned pairwise relationships identification methods.</p>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p">Word embeddings have been successfully applied in many applications, such as in sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib27a" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">26</a>]</cite>, paraphrase detection <cite class="ltx_cite">[<a href="#bib.bib26a" title="Dynamic pooling and unfolding recursive autoencoders for paraphrase detection" class="ltx_ref">25</a>]</cite>, chunking, and named entity recognition <cite class="ltx_cite">[<a href="#bib.bib6" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">29</a>, <a href="#bib.bib19" title="Natural language processing (almost) from scratch" class="ltx_ref">5</a>]</cite>.
+These applications mainly utilize the representing power of word embeddings to alleviate the problem of data sparsity.
+<cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite> and <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12a" title="Linguistic regularities in continuous space word representations" class="ltx_ref">2013b</a>)</cite> further observe that the semantic relationship of words can be induced by performing simple algebraic operations with word vectors.
+Their work indicates that word embeddings preserve some interesting linguistic regularities, which might provide support for many applications.
+In this paper, we improve on their work by learning multiple linear projections in the embedding space, to model hypernym–hyponym relationships within different clusters.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion and Future Work</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">This paper proposes a novel method for semantic hierarchy construction based on word embeddings, which are trained using a large-scale corpus.
+Using the word embeddings, we learn the hypernym–hyponym relationship by estimating projection matrices which map words to their hypernyms. Further improvements are made using a cluster-based approach in order to model the more fine-grained relations.
+Then we propose a few simple criteria to identity whether a new word pair is a hypernym–hyponym relation.
+Based on the pairwise hypernym–hyponym relations, we build semantic hierarchies automatically.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">In our experiments, the proposed method significantly outperforms state-of-the-art methods and achieves the best F1-score of 73.74% on a manually labeled test dataset.
+Further experiments show that our method is complementary to the previous manually-built hierarchy extension methods.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">For future work, we aim to improve word embedding learning under the guidance of hypernym–hyponym relations.
+By including the hypernym–hyponym relation constraints while training word embeddings,
+we expect to improve the embeddings such that they become more suitable for this task.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported by National Natural Science Foundation of China (NSFC) via grant 61133012, 61273321 and the National 863 Leading Technology Research Project via grant 2012AA011102.
+Special thanks to Shiqi Zhao, Zhenghua Li, Wei Song and the anonymous reviewers for insightful comments and suggestions.
+We also thank Xinwei Geng and Hongbo Cai for their help in the experiments.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Janvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Bhagat, P. Pantel, E. H. Hovy and M. Rey</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LEDIR: an unsupervised algorithm for learning directionality of inference rules.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 161–170</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Che, Z. Li and T. Liu</span><span class="ltx_text ltx_bib_year">(2010-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LTP: a chinese language technology platform</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 13–16</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C10-3004" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS3.p1" title="3.3.3 Training Data ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.3</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Experimental Data ‣ 4 Experimental Setup ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Clarke</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-theoretic semantics for natural language: an overview</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 112–119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib37a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Dhillon, D. P. Foster and L. H. Ungar</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-view learning of word embeddings via cca</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 199–207</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Evans</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A framework for named entity recognition in the open domain</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Recent Advances in Natural Language Processing III: Selected Papers from RANLP 2003</span> <span class="ltx_text ltx_bib_volume">260</span>, <span class="ltx_text ltx_bib_pages"> pp. 267–274</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Fu, B. Qin and T. Liu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting multiple sources for open-domain hypernym discovery</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1224–1234</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Experimental Data ‣ 4 Experimental Setup ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S5.F8" title="Figure 8 ‣ 5.2.2 Comparison on the Out-of-CilinE Data ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>,
+<a href="#S5.SS2.SSS1.p2" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S5.SS2.SSS1.p5" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Geffet and I. Dagan</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The distributional inclusion hypotheses and lexical entailment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 107–114</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. A. Hearst</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic acquisition of hyponyms from large text corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 539–545</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS1.p2" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S6.p2" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Kotlerman, I. Dagan, I. Szpektor and M. Zhitomirsky-Geffet</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Directional distributional similarity for lexical inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 359–389</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS1.p4" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Lenci and G. Benotto</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying hypernyms in distributional semantic spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 75–79</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS1.p4" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. McNamee, R. Snow, P. Schone and J. Mayfield</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning named entity hyponyms for question answering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 799–804</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p3" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1301.3781</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib12a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.p1" title="3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. A. Miller</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: a lexical database for english</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">11</span>), <span class="ltx_text ltx_bib_pages"> pp. 39–41</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Mnih and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A scalable hierarchical distributed language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1081–1088</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Word Embedding Training ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. M. Ortega-Mendoza, L. Villaseñor-Pineda and M. Montes-y-Gómez</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using lexical patterns for extracting hyponyms from the web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">MICAI 2007: Advances in Artificial Intelligence</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 904–911</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ritter, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What is this, anyway: automatic hypernym discovery</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 88–93</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p3" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Ritzema</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Drainage principles and applications.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS2.p1" title="3.3.2 Piecewise Linear Projections ‣ 3.3 Projection Learning ‣ 3 Method ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3.2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. T. K. Sang</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting hypernym pairs from the web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 165–168</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Siegel and N. J. Castellan Jr</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Nonparametric statistics for the behavioral sciences</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Experimental Data ‣ 4 Experimental Setup ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning syntactic patterns for automatic hypernym discovery</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">L. K. Saul, Y. Weiss and L. Bottou (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 17</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1297–1304</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS1.p3" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic taxonomy induction from heterogenous evidence</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 801–808</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P06-1101" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1220175.1220276" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p5" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib26a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, E. H. Huang, J. Pennin, C. D. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic pooling and unfolding recursive autoencoders for paraphrase detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 801–809</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib27a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. M. Suchanek, G. Kasneci and G. Weikum</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Yago: a large ontology from wikipedia and wordnet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Web Semantics: Science, Services and Agents on the World Wide Web</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 203–217</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Background ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS1.p1" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>,
+<a href="#S5.SS2.SSS1.p8" title="5.2.1 Overall Comparison ‣ 5.2 Comparison with Previous Work ‣ 5 Results and Analysis ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2.1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Szpektor, E. Shnarch and I. Dagan</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Instance-based evaluation of entailment rule acquisition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 456–463</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1058" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p6" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Weeds, D. Weir and D. McCarthy</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Characterising measures of lexical distributional similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1015</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Learning Semantic Hierarchies via Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:46:45 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

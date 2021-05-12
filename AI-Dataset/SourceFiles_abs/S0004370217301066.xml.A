@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Overlapping layered learning.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Task decomposition is a popular approach for learning complex control tasks when monolithic learning—trying to learn the complete task all at once—is difficult or intractable [4], [5], [6]. Layered learning [7] is a hierarchical task decomposition machine learning paradigm that enables learning of complex behaviors by incrementally learning a series of sub-behaviors. A key feature of layered learning is that higher layers directly depend on the learned lower layers. In its original formulation, lower layers were frozen prior to learning higher layers. Freezing lower layers can be restrictive, however, as doing so limits the combined behavior search space over all layers. Concurrent layered learning [8] reduced this restriction in the search space by introducing the possibility of learning some of the behaviors simultaneously by “reopening” learning at the lower layers while learning the higher layers. A potential drawback of increasing the size of the search space, however, is an increase in the dimensionality and thus possibly the difficulty of what is being learned.
+     </paragraph>
+     <paragraph>
+      This article considers an extension to the layered learning paradigm, known as overlapping layered learning, that allows learning certain parameterized behaviors independently, and then later stitching them together by learning at the “seams” where their influences overlap. Overlapping layered learning aims to provide a middle ground between reductions in the search space caused by freezing previously learned layers and the increased dimensionality of concurrent layered learning. Additionally, for complex tasks where it is difficult to learn one subtask in the presence of another, it reduces the dimensionality of the parameter search space by focusing only on parts responsible for subtasks working together.
+     </paragraph>
+     <paragraph>
+      The UT Austin Villa 2014 RoboCup 3D simulation team, using overlapping layered learning, learned a total of 19 layered behaviors for a simulated soccer-playing robot, organized both in series and in parallel. To the best of our knowledge this is more than three times the number of layered behaviors in any prior layered learning system. Furthermore, the complete learning process is repeated on four different heterogeneous robot body types, showcasing its generality as a paradigm for efficient behavior learning. The resulting team won the RoboCup 2014 championship with an undefeated record, scoring 52 goals and conceding none.
+     </paragraph>
+     <paragraph>
+      Primary contributions of this article are twofold. First, we introduce the overlapping layered learning paradigm, and present general scenarios where its use is beneficial. Second, we provide a detailed description and analysis of our machine learning approach, incorporating overlapping layered learning, to create a large and complex control system that was a core component of the 2014 RoboCup 3D simulation league championship team as well as three subsequent championship teams.
+     </paragraph>
+     <paragraph>
+      The remainder of this article is organized as follows. Section 2 provides background information on the original layered learning paradigm which is the basis for this work. Section 3 specifies and motivates the overlapping layered learning paradigm while contrasting it with traditional and concurrent layered learning. In Section 4 we introduce the RoboCup 3D simulation domain in which we evaluate this research. Section 5 details the overlapping layered learning approach of the 2014 UT Austin Villa team and in Section 6 we provide detailed analysis of its performance. Section 7 discusses related work while Section 8 concludes.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Layered learning paradigm
+     </section-title>
+     <paragraph>
+      Table 1 summarizes the principles of the original layered learning paradigm which are described in detail in this section.{sup:1}
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Principle 1
+      </section-title>
+      <paragraph>
+       Layered learning is designed for domains that are too complex for learning a mapping directly from the input to the output representation. Instead, the layered learning approach consists of breaking a problem down into several task layers. At each layer, a concept needs to be acquired. A machine learning (ML) algorithm abstracts and solves the local concept-learning task.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Principle 2
+      </section-title>
+      <paragraph>
+       Layered learning uses a bottom–up incremental approach to hierarchical task decomposition. Starting with low-level subtasks, the process of creating new ML subtasks continues until reaching the high-level task that deal with the full domain complexity. The appropriate learning granularity and subtasks to be learned are determined as a function of the specific domain. The task decomposition in layered learning is not automated. Instead, the layers are defined by the ML opportunities in the domain.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Principle 3
+      </section-title>
+      <paragraph>
+       Machine learning is used as a central part of layered learning to exploit data in order to train and/or adapt the overall system. ML is useful for training functions that are difficult to fine-tune manually. It is useful for adaptation when the task details are not completely known in advance or when they may change dynamically. In the former case, learning can be done off-line and frozen for future use. In the latter, on-line learning is necessary: since the learner needs to adapt to unexpected situations, it must be able to alter its behavior even while executing its task. Like the task decomposition itself, the choice of machine learning method depends on the subtask.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Principle 4
+      </section-title>
+      <paragraph>
+       The key defining characteristic of layered learning is that each learned layer directly affects the learning at the next layer. A learned subtask can affect the subsequent layer by:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        constructing the set of training examples;
+       </list-item>
+       <list-item label="•">
+        providing the features used for learning; and/or
+       </list-item>
+       <list-item label="•">
+        pruning the output set.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Formalism
+      </section-title>
+      <paragraph>
+       Consider the learning task of identifying a hypothesis h from among a class of hypotheses H which map a set of state feature variables S to a set of outputs O such that, based on a set of training examples, h is most likely (of the hypotheses in H) to represent unseen examples. When using the layered learning paradigm, the complete learning task is decomposed into hierarchical subtask layers {a mathematical formula}{L1,L2,…,Ln} with each layer defined as{a mathematical formula} where:
+      </paragraph>
+      <list>
+       <list-item>
+        is the input vector of state features relevant for learning subtask {a mathematical formula}Li. {a mathematical formula}Fi→=&lt;Fi1,Fi2,…&gt;. {a mathematical formula}∀j,F1j∈S.
+       </list-item>
+       <list-item>
+        is the set of outputs from among which to choose for subtask {a mathematical formula}Li. {a mathematical formula}On=O.
+       </list-item>
+       <list-item>
+        is the set of training examples used for learning subtask {a mathematical formula}Li. Each element of {a mathematical formula}Ti consists of a correspondence between an input feature vector {a mathematical formula}f→∈Fi→ and {a mathematical formula}o∈Oi.
+       </list-item>
+       <list-item>
+        is the ML algorithm used at layer {a mathematical formula}Li to select a hypothesis mapping {a mathematical formula}Fi→↦Oi based on {a mathematical formula}Ti.
+       </list-item>
+       <list-item>
+        is the policy representation mapping {a mathematical formula}Fi→ to {a mathematical formula}Oi.{sup:2}
+       </list-item>
+       <list-item>
+        is the result of running {a mathematical formula}Mi on {a mathematical formula}Ti. {a mathematical formula}hi is a specific instantiation of {a mathematical formula}Hi and is a function from {a mathematical formula}Fi→ to {a mathematical formula}Oi.
+       </list-item>
+      </list>
+      <paragraph>
+       As set out in Principle 2 of layered learning, the definitions of the layers {a mathematical formula}Li are given a priori. Principle 4 is addressed via the following stipulation. {a mathematical formula}∀i&lt;n, {a mathematical formula}hi directly affects {a mathematical formula}Li+1 in at least one of three ways:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}hi is used to construct one or more features {a mathematical formula}Fi+1k.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}hi is used to construct elements of {a mathematical formula}Ti+1; and/or
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}hi is used to prune the output set {a mathematical formula}Oi+1.
+       </list-item>
+      </list>
+      <paragraph>
+       It is noted above in the definition of {a mathematical formula}Fi→ that ∀j, {a mathematical formula}F1j∈S. Since {a mathematical formula}Fi+1→ can consist of new features constructed using {a mathematical formula}hi, the more general version of the above special case is that {a mathematical formula}∀i,j, {a mathematical formula}Fij∈S∪k=1i−1Ok.
+      </paragraph>
+      <paragraph>
+       In the context of this work all learned behaviors—or hypotheses—are represented by parameterized policies, where a parameterized policy with k parameters for layer {a mathematical formula}Li is the set of parameters {a mathematical formula}Hi={Hi1,…,Hik}, and the hypothesis is the corresponding set of the parameters' learned values {a mathematical formula}hi={hi1,…,hik}.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Overlapping layered learning paradigm
+     </section-title>
+     <paragraph>
+      As explained in Section 2, layered learning is a hierarchical learning paradigm that enables learning of complex behaviors by incrementally learning a series of sub-behaviors—each learned sub-behavior is a layer in the learning progression. Higher layers depend on lower layers for learning. This dependence can include providing features for learning, such as initial seed values for parameters when H is a parameterized policy, as well as a previous learned layer's behavior being incorporated into the learning task for the next layer to be learned. In layered learning's original sequential formulation, layers are learned in a sequential bottom–up fashion and, after a layer is learned, it—the learned hypothesis h of the layer—is frozen before beginning learning of the next layer.
+     </paragraph>
+     <paragraph>
+      Concurrent layered learning, on the other hand, purposely does not freeze newly learned layers, but instead keeps them open during learning of subsequent layers: {a mathematical formula}hi is not frozen before the training of {a mathematical formula}Li+1 begins. Thus, the effect that {a mathematical formula}hi has on {a mathematical formula}Ti+1 is not fixed during learning of {a mathematical formula}Li+1, and in fact changes as {a mathematical formula}hi continues to be learned. We denote the continued learning of {a mathematical formula}hi as {a mathematical formula}Hi⊆Hi+1, meaning that {a mathematical formula}Hi—the set of parameters that the values of {a mathematical formula}hi are assigned to—is a subset of {a mathematical formula}Hi+1, and thus the parameters {a mathematical formula}Hi are fully included in what is learned for the hypothesis {a mathematical formula}hi+1—the parameter values {a mathematical formula}hi are re-learned—in the subsequent layer of learning {a mathematical formula}Li+1. Previously learned layers' behaviors are left open so that learning may enter areas of the behavior search space that are closer to the combined layers' optimum behavior as opposed to being confined to areas of the joint layer search space where the behaviors of previously learned layers are fixed. While concurrent layered learning does not restrict the search space in the way that freezing learned layers does, the increase in the search space's dimensionality can make learning slower and more difficult.
+     </paragraph>
+     <paragraph>
+      Overlapping layered learning seeks to find a tradeoff between freezing each layer once learning is complete and leaving previously learned layers open. It does so by keeping some, but not necessarily all, parts of previously learned layers open during learning of subsequent layers. The part of previously learned layers left open is the “overlap” with the next layer being learned. In this regard concurrent layered learning can be thought of as an extreme of overlapping layered learning with a “full overlap” between layers. Additionally, overlapping layered learning allows for behaviors to be learned independently in parallel—not just sequentially in series—and then later stitched together by learning at the “seams” where their influences overlap.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      A layer of learning can be partially left open by freezing only a subset of its learned behavior's policy's parameters during subsequent layers of learning. We denote a set of parameters {a mathematical formula}H′ as being open and learned in a layer of learning {a mathematical formula}Li if the set of parameters are included in the layer's learned policy representation {a mathematical formula}Hi (i.e. {a mathematical formula}H′⊆Hi), and conversely a set of previously learned values {a mathematical formula}h′ for parameters {a mathematical formula}H′ are frozen if they are still part of the layer of learning—in the context of this work previously learned and frozen parameter values serve to define behavior used in the training task {a mathematical formula}Ti which we denote as {a mathematical formula}h′≺Ti—but are not included in the layer's learned policy representation (i.e. {a mathematical formula}H′∩Hi=∅). A previously learned set of parameter values {a mathematical formula}h′ may also be used to initialize or seed values of {a mathematical formula}Hi. We denote such a relationship as {a mathematical formula}h′⇢Hi.
+     </paragraph>
+     <paragraph>
+      The following are several general scenarios, depicted in the bottom row of Fig. 1, for overlapping layered learning that help to clarify the learning paradigm and identify situations in which it is useful:
+     </paragraph>
+     <list>
+      <list-item>
+       Two or more behaviors are learned independently in the same or different layers, and then are combined together for a joint behavior at a subsequent layer by relearning some subset of the behaviors' parameters or “seam” between the behaviors. Let {a mathematical formula}Li,b represent learning of the bth independent behavior in the ith layer of learning. In the case of two independent behaviors learned in parallel in the same layer, which we notate as {a mathematical formula}hi,1 learned in {a mathematical formula}Li,1 and {a mathematical formula}hi,2 learned in {a mathematical formula}Li,2, they are combined in a subsequent layer of learning {a mathematical formula}Lj,b, where {a mathematical formula}j&gt;i, to learn a joint behavior {a mathematical formula}hj,b containing parts or all of either or both of {a mathematical formula}Hi,1 and {a mathematical formula}Hi,2 (i.e. {a mathematical formula}Hi,1∈Lj,b, {a mathematical formula}Hi,2∈Lj,b, and {a mathematical formula}∃H′⊆{Hi,1∪Hi,2} s.t. both {a mathematical formula}H′≠∅ and {a mathematical formula}H′⊆Hj,b). This scenario is best when subtask behaviors are too complex and/or potentially interfere with each other during learning, such that they must be learned independently, but ultimately need to work together for a combined task. Example: A basketball playing robot that must be able to dribble the ball across the court and shoot it in the basket. The tasks of dribbling and shooting are too complex to attempt to learn them together, but after the tasks are learned independently they can be combined by re-optimizing parameters that control the point on the court at which the robot stops dribbling and the angle at which the robot shoots the ball.
+      </list-item>
+      <list-item>
+       Only part, but not all, of a previously learned layer's behavior parameters are left open when learning a subsequent layer with new parameters. Thus there exists a non-empty proper subset of parameters {a mathematical formula}Hi′ of a learned behavior {a mathematical formula}hi that are re-learned in the behavior {a mathematical formula}hi+1 as part of the subsequent layer of learning {a mathematical formula}Li+1 (i.e. {a mathematical formula}∃Hi′⊂Hi s.t. {a mathematical formula}Hi′≠∅ and {a mathematical formula}Hi′⊂Hi+1). The part of the previously learned layer's parameters left open is the “seam” between the layers. Partial concurrent learning is beneficial if full concurrent learning unnecessarily increases the dimensionality of the search space to the point that it hinders learning, and completely freezing the previous layer diminishes the potential behavior of the layers working together. Example: Teaching one robot to pick up and hand an object to another robot. First a robot is taught to pick up an object and then reach out its arm and release the object. The second robot is then taught to reach out its arm and catch the object released by the first robot. During learning by the second robot to catch the object, the part of the previously learned behavior of the first robot to hand over the object is left open so that the first robot can adjust its release point of the object to a place that the second robot can be sure to reach.
+      </list-item>
+      <list-item>
+       After a layer is learned and frozen, and then a subsequent layer is learned, part or all of the previously learned layer is then unfrozen and relearned to better work with the newly learned layer that is now fully or partially frozen. We consider re-optimizing a previously frozen layer under new conditions as a new learned layer behavior with the “seam” between behaviors being the unfrozen part of the previous learned layer. Thus there exists a non-empty subset of parameters {a mathematical formula}Hi′ of a learned behavior {a mathematical formula}hi that is frozen in a subsequent layer of learning {a mathematical formula}Lj, where {a mathematical formula}j&gt;i, but then is eventually unfrozen and re-learned in the behavior {a mathematical formula}hk as part of a later layer of learning {a mathematical formula}Lk, where {a mathematical formula}k&gt;j (i.e. {a mathematical formula}∃Hi′⊆Hi s.t. {a mathematical formula}Hi′≠∅, {a mathematical formula}hi′≺Tj but {a mathematical formula}Hi′∩Hj=∅(learned values{a mathematical formula}hi′for parameters{a mathematical formula}Hi′are frozen in{a mathematical formula}Lj), and {a mathematical formula}Hi′⊆Hk(learned values{a mathematical formula}hi′for parameters{a mathematical formula}Hi′are unfrozen in{a mathematical formula}Lk)). This scenario is useful when a subtask is required to be learned before the next subsequent task layer can be learned, but then refining or relearning the initial learned subtask layer's behavior to better work with the newly learned subsequent task layer's behavior provides a benefit. Example: Teaching a robot to walk. First the robot needs to learn how to stand up so that if it falls over it can get back up and continue trying to walk. Eventually the robot learns to walk so well that it barely if ever falls over during training. Later, when the robot does eventually fall over, it is found that the walking motion learned by the robot is not stable if the robot tries to walk right after standing up. The robot needs to relearn the standing up behavior layer such that after doing so it is in a stable position to start walking with the learned walking behavior layer.
+      </list-item>
+     </list>
+    </section>
+    <section label="4">
+     <section-title>
+      Testbed domain: 3D simulated RoboCup soccer
+     </section-title>
+     <paragraph>
+      Robot soccer has served as an excellent testbed for learning scenarios in which multiple skills, decisions, and controls have to be learned by a single agent, and agents themselves have to cooperate or compete. There is a rich literature based on this domain addressing a wide spectrum of topics from low-level concerns, such as perception and motor control [9], [10], to high-level decision-making [11]. The domain serves both as the motivation for the research presented in this paper and the evaluation testbed. We therefore introduce it in this section.
+     </paragraph>
+     <paragraph>
+      The RoboCup 3D simulation environment is based on SimSpark [12], [13],{sup:3} a generic physical multiagent systems simulator. SimSpark uses the Open Dynamics Engine{sup:4} (ODE) library for its realistic simulation of rigid body dynamics with collision detection and friction. ODE also provides support for the modeling of advanced motorized hinge joints.
+     </paragraph>
+     <paragraph>
+      The robot agents in the simulation are modeled after the Nao robot, which has a height of about 57 cm and a mass of 4.5 kg. The agents interact with the simulator by sending torque commands and receiving perceptual information. Each robot has 22 degrees of freedom: six in each leg, four in each arm, and two in the neck. Joint perceptors provide the agent with noise-free angular measurements every simulation cycle (20 ms), while joint effectors allow the agent to specify the torque and direction in which to move a joint. Although there is no intentional noise in actuation, there is slight actuation noise that results from approximations in the physics engine and the need to constrain computations to be performed in real-time.
+     </paragraph>
+     <paragraph>
+      Visual information about the environment is given to an agent every third simulation cycle (60 ms) through noisy measurements of the distance and angle to objects within a restricted vision cone ({a mathematical formula}120∘). Agents are also outfitted with noisy accelerometer and gyroscope perceptors, as well as force resistance perceptors on the sole of each foot. Additionally, a single agent can communicate with the other agents every other simulation cycle (40 ms) by sending messages limited to 20 bytes.
+     </paragraph>
+     <paragraph>
+      In addition to the standard Nao robot model, four additional variations of the standard model, known as heterogeneous types, are available for use. The variations from the standard model include changes in leg and arm length, hip width, and also the addition of toes to the robot's foot. Fig. 2 shows a visualization of the standard Nao robot and the soccer field during a game.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Overlapping layered learning applied to robot soccer
+     </section-title>
+     <paragraph>
+      UT Austin has been a perennial participant in the annual RoboCup soccer competitions, and has won the championship six times between 2011 and 2017. The team began using sequential layered learning in 2011, but introduced overlapping layered learning in 2014, and has used it since. In this section, we therefore focus on that year's team.
+     </paragraph>
+     <paragraph>
+      The 2014 UT Austin Villa team introduced an extensive layered learning approach to learn skills for the robot such as getting up, walking, and kicking. This approach includes sequential layered learning where a newly learned layer is frozen before learning of subsequent layers, as well as overlapping layers where parts of previously learned layers are re-optimized as part of the current layer being learned.
+     </paragraph>
+     <paragraph>
+      In total over 500 parameters were optimized during the course of layered learning. All parameters were optimized using the Covariance Matrix Adaptation Evolution Strategy (CMA-ES) algorithm [14], which has been successfully applied previously to learning skills in the RoboCup 3D simulation domain [15]. CMA-ES is a policy search algorithm that successively generates and evaluates sets of candidates—with each candidate being a set of parameter values—sampled from a multivariate Gaussian distribution. Once CMA-ES generates a group of candidates, each candidate is evaluated with respect to an objective function—also known as a fitness measure—that returns a real number value indicating how well a candidate performed on the training task being learned. When all the candidates in the group are evaluated, the mean of the multivariate Gaussian distribution is recalculated as a weighted average of the candidates with the highest returned values. The covariance matrix of the distribution is also updated to bias the generation of the next set of candidates toward directions of previously successful search steps.
+     </paragraph>
+     <paragraph>
+      A total of 705,000 learning trials were performed during the process of optimizing 19 behaviors. As CMA-ES is a parallel search algorithm, optimization was performed on a Condor [16] distributed computing cluster allowing for many jobs to be run in parallel. Running the complete optimization process took about 5 days, and we calculated it could theoretically be completed in as little as 49 hours assuming no job queuing delays on the computing cluster, and all possible parallelism during the optimization process is exploited. Note that this same amount of computation, when performed sequentially on a single computer,{sup:5} would take approximately 561 days, or a little over 1.5 years, to finish.
+     </paragraph>
+     <paragraph>
+      The following subsections document the overlapping layered learning parts of the approach used by the team. Full details of all of the learned behavior layers are provided in Appendix A,{sup:6} and a diagram of how all the different layered learning behaviors fit together during the course of learning can be seen in Fig. 3.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Getup and walking using PLLR
+      </section-title>
+      <paragraph>
+       The UT Austin Villa team employs an omnidirectional walk engine using a double inverted pendulum model to control walking. The walk engine has many parameters that need to be optimized in order to create a stable and fast walk including the length and frequency of steps as well as center of mass offsets. Full details of the walk engine and its parameters are given in Appendix B. Instead of having a single set of parameters for the walk engine, which in previous work we found to limit performance [1], walking is broken up into different subtasks for each of which a set of walk engine parameters is learned.
+      </paragraph>
+      <paragraph>
+       Before optimizing parameters for the walk engine, “getup” behaviors are learned so that if the robot falls over it is able to stand back up and start walking again. Getup behaviors are necessary for faster learning during walk optimizations, as without the ability to get up after falling, a walk optimization task would have to be terminated as soon as the robot fell over. There are two such behaviors for getting up: GetUp_Front_Primitive for standing up from lying face down and Getup_Back_Primitive for standing up from lying face up. Each getup behavior consists of different joint angle movements that form a fixed series of poses. The poses themselves are specified in a parameterized skill description language. Information about the skill description language is provided in Appendix D. During learning, getup behaviors are evaluated based on how quickly the robot is able to stand up [17].
+      </paragraph>
+      <paragraph>
+       After the getup primitive behaviors are learned, we start optimizing the first walk engine parameter set in the next layer of learning. This is the Walk_GoToTarget behavior which is used for walking to different target locations on the soccer field. Learning this walk is accomplished by having the robot walk to a series of target points on the field in the form of an obstacle course, and the robot is rewarded for how quickly it can complete the obstacle course while being penalized for every time it falls over. After the Walk_GoToTarget parameter set is learned and fixed, the Walk_Sprint walk engine parameter set used to quickly walk straight forward—to targets within {a mathematical formula}15∘ of the robot's current heading—is then optimized in the third layer of learning using the same obstacle course optimization task. Full details of how these walk parameter sets are optimized can be found in Appendix C. Note that the optimization tasks used for learning different walk parameter sets purposely transition between all previously learned walk parameter sets and the current one being learned to ensure that the robot can smoothly transition between them without losing stability.
+      </paragraph>
+      <paragraph>
+       After learning both the Walk_GoToTarget and Walk_Sprint walk engine parameter sets, we re-optimize the getups by learning the GetUp_Front_Behavior and GetUp_Back_Behavior behaviors in the fourth layer of learning. GetUp_Front_Behavior and GetUp_Back_Behavior are overlapping layered learning behaviors as they contain the same parameters as the previously learned GetUp_Front_Primitive and GetUp_Back_Primitive behaviors respectively. The getup behavior parameters are re-optimized from their primitive behavior values through the same optimization as the getup primitives, but with the addition that right after completing a getup behavior the robot is asked to walk in different directions and is penalized if it falls over while trying to do so. Unlike the getup primitive behaviors, which were learned in isolation, the relearned getup behaviors are stable transitioning from standing up and then almost immediately walking. One might think that the walk parameter sets learned would be stable transitioning from the original learned getups due to the getup primitive behaviors being used in the walk parameter optimization tasks, however this is not always the case. During learning, walks become stable such that toward the end of optimizing a walk parameter set the robot almost never falls, and thus rarely uses the getup primitive behaviors. Relearning the getup behaviors is an example of previous learned layer refinement (PLLR).
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Kicking using CILB
+      </section-title>
+      <paragraph>
+       Four primitive kick behaviors were learned by the 2014 UT Austin Villa team (Kick_Long_Primitive, Kick_Low_Primitive, Kick_High_Primitive, and Kick_Fast_Primitive). Each kick primitive, or kicking motion, was learned by placing the robot at a fixed position behind the ball and having it optimize joint angles for a fixed set of key motion frames defined by a skill description language. Information about the skill description language is provided in Appendix D. Note that initial attempts at learning kicks directly with the walk, instead of learning kick primitives independently, proved to be too difficult due to the variance in stopping positions of the walk as the robot approached to kick the ball.
+      </paragraph>
+      <paragraph>
+       While the kick primitive behaviors work quite well when the robot is placed in a standing position behind the ball, they are very hard to execute when the robot tries to walk up to the ball and kick it. One reason for this difficulty is that when the robot approaches the ball to kick it using the Walk_ApproachToKick walk parameter set—used for approaching and stopping at a precise position behind the ball before executing a kick—the precise offset position from the ball that the kick primitives were optimized to work with do not match that of the position the robot stops at after walking up to the ball. In order to allow the robot to transition from walking to kicking, full kick behaviors for all the kicks are optimized (Kick_Long_Behavior, Kick_Low_Behavior, Kick_High_Behavior, Kick_Fast_Behavior). Each full kick behavior is learned by having the robot walk up to the ball and attempt to kick it from different starting positions—as opposed to having the robot just standing behind the ball as was done when optimizing the kick primitive behaviors.
+      </paragraph>
+      <paragraph>
+       The full kick behaviors are overlapping layered learning behaviors because they re-optimize previous learned parameters. In the case of Kick_Fast_Behavior, only the x and y kick primitive offset position parameters from the ball, which is the target position for the walk to reach for the kick to be executed, are re-optimized. The fast kick is quick enough that it almost immediately kicks the ball after transitioning from walking, and thus just needs to be in the correct position near the ball to do so. A comparison of overlapping layered learning paradigms for learning Kick_Fast_Behavior is shown in Fig. 4. The above overlapping layered approach of first independently learning the walk approach and kick, and then learning the two position parameters, does better than both the sequential layered learning approach where all kick parameters are learned after freezing the approach, and the concurrent layered learning approach where both approach and kick parameters are learned simultaneously.
+      </paragraph>
+      <paragraph>
+       For the other full kick behaviors, all kick parameters from their respective kick primitive behaviors are re-optimized. Unlike the fast kick, there is at least a one second delay between stopping, walking, and kicking the ball, during which the robot can easily become destabilized and fall over. By opening up all kicking parameters the robot has the necessary freedom to learn kick motions that maintain its stability between stopping after walking and making contact with the ball. Learning the kick behaviors by combining them with the Walk_ApproachToKick behavior for walking up to the ball are all examples of combining independently learned behaviors (CILB).
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       KickOff using both CILB and PCLL
+      </section-title>
+      <paragraph>
+       For kickoffs the robot is allowed to “teleport” itself to a starting position next to the ball before kicking it, and thus does not need to worry about walking up to the ball. Scoring directly off a kickoff is not allowed, however, as another robot must first touch the ball before it goes into the opponent's goal. In order to score on a kickoff we perform a multiagent task where one robot touches the ball before another kicks it.
+      </paragraph>
+      <paragraph>
+       The first behavior optimized for scoring off the kickoff is KickOff_Kick_Primitive in which a robot kicks the ball from the middle of the field. The robot is rewarded for kicking the ball as high and as far as possible as long as the ball crosses the goal line below the height of the goal. In parallel a behavior for another robot is learned to lightly touch the ball called KickOff_Touch_Primitive. Here a robot is rewarded for touching the ball lightly and, after ensuring that the robot has made contact with the ball, that the ball moves as little as possible. Finally an overlapping layered behavior called KickOff_Kick_Behavior is learned which re-optimizes x, y, and θ angle offset positions from the ball from both the KickOff_Kick_Primitive and KickOff_Touch_Primitive behaviors. Re-optimizing these positioning parameters together is important so that the robots do not accidentally collide with each other and also so that the kicking robot is at a good position to kick the ball after the first agent touches it. Learning KickOff_Kick_Behavior is another example of combining independently learned behaviors (CILB).
+      </paragraph>
+      <paragraph>
+       In addition to the positioning parameters of both robots being re-optimized for KickOff_Kick_Behavior, a new parameter that determines the time at which the first robot touches the ball is optimized. This synchronized timing parameter is necessary so that the robots are synced with each other and the kicking robot does not accidentally try to kick the ball before the first robot has touched it. As a new parameter is optimized along with a subset of previously learned parameters, learning KickOff_Kick_Behavior is also an example of partial concurrent layered learning (PCLL).
+      </paragraph>
+      <paragraph>
+       Further information about the kickoff, including how a seed for the kick was learned through observation, can be found in [18].
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Results and analysis
+     </section-title>
+     <paragraph>
+      At the 2014 RoboCup 3D simulation competition—the first year the UT Austin Villa team used overlapping layered learning—UT Austin Villa finished first among 12 teams while scoring 52 goals and conceding none across 15 games. Considering that most of the team's strategy layer—including team formations using a dynamic role assignment and formation positioning system [19]—remained unchanged from that of the previous year's second place finishing team, a key component to the 2014 team's improvement and success at the competition was the new approach incorporating overlapping layered learning used to learn the team's low level behaviors.
+     </paragraph>
+     <paragraph>
+      After every RoboCup competition teams are required to release the binaries that they used during the competition. In order to analyze the performance of the different components of our overlapping layered learning approach before the 2014 competition, we played 1000 games with different versions of the UT Austin Villa team against each of the top three teams from the RoboCup 2013 competition. The following subsections provide analysis of game results when turning on and off the kickoff and kicking components learned though an overlapping layered learning approach. Additionally, to demonstrate the generality of our overlapping layered learning approach, we provide data that isolates the performance of our complete overlapping layered learning approach applied to different robot models.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Overall team performance
+      </section-title>
+      <paragraph>
+       Table 2 shows the average goal difference across all games against each opponent achieved by the complete 2014 UT Austin Villa team. Against all opponents the team had a significantly positive goal difference, and in fact out of the 3000 games played the team only lost one game (to AustinVilla2013). These game results show the effectiveness of the team's overlapping layered learning approach in dramatically improving the performance of the team from the previous year in which the team achieved second place at the competition—the 2014 team is able to beat the previous year's team by an average of 1.525 goals.
+      </paragraph>
+      <paragraph>
+       Data provided in Appendix E, showing the overall team's performance when playing against the released 2014 teams' binaries, corroborates the overall team's strong performance. When playing 1000 games against each of the eleven 2014 opponents UT Austin Villa did not lose a single game out of the 11,000 played, and had at least an average goal difference of 2 against every opponent. Additionally, bolstered by the team's strong set of skills developed through overlapping layered learning techniques, UT Austin Villa won all games it played at the RoboCup 2015 [20], 2016 [21], and 2017 competitions.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       KickOff performance
+      </section-title>
+      <paragraph>
+       To isolate the performance of the learned multiagent behavior to score off the kickoff, we disabled this feature and instead just had the robot taking the kickoff kick the ball toward the opponent's goal to a position as close as possible to one of the goal posts without scoring. Table 3 shows results from playing against the top three teams at RoboCup 2013 without attempting to score on the kickoff.
+      </paragraph>
+      <paragraph>
+       By comparing results in Table 3 to that of Table 2 we see a significant drop in performance when not attempting to score on kickoffs. This result is not surprising as we found that the kickoff was able to score around 90% of the time against Apollo3D and FCPortugal, and over 60% of the time against the 2013 version of UT Austin Villa. The combination of using both CILB and PCLL overlapping layered learning led to a large boost to the team's performance.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Kicking performance
+      </section-title>
+      <paragraph>
+       To isolate the performance of kicking learned through an overlapping layered learning approach we disable all kicking (except for on kickoffs where we once again have a robot kick the ball as far as possible toward the opponent's goal without scoring) and used an “always dribble” behavior. Data from playing against the top three teams at the RoboCup 2013 competition when only dribbling is shown in Table 4.
+      </paragraph>
+      <paragraph>
+       Here we see another significant drop in performance when comparing Table 4 to Table 3. Kicking provided a large gain in performance, nearly doubling the average goal difference against FCPortugal, compared to only dribbling. This result is in stark contrast to when UT Austin Villa won the 2011 RoboCup competition, in which the team tried to incorporate kicking skills without using an overlapping layered learning approach, and found that kicking actually hurt the performance of the team [22].
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Different robot models
+      </section-title>
+      <paragraph>
+       At the 2014 RoboCup competition teams were given the option of using five different robot types with the requirement that at least three different types of robots must be used on a team and no more than seven of any one type. The five types of robots available were the following:
+      </paragraph>
+      <list>
+       <list-item>
+        Standard Nao model
+       </list-item>
+       <list-item>
+        Longer legs and arms
+       </list-item>
+       <list-item>
+        Quicker moving feet
+       </list-item>
+       <list-item>
+        Wider hips and longest legs and arms
+       </list-item>
+       <list-item>
+        Added toes to foot
+       </list-item>
+      </list>
+      <paragraph>
+       We applied our overlapping layered learning approach for learning behaviors to each of the available robot types. Game data from playing against the top three teams at RoboCup 2013 is provided in Table 5 for each robot type.
+      </paragraph>
+      <paragraph>
+       While there are some differences in performance between the different robot types, likely due to the differences in their body models, all of the robot types are able to reliably beat the top teams from the 2013 RoboCup competition. This shows the efficacy of our overlapping layered learning approach and its ability to generalize to different robot models. During the 2014 competition the UT Austin Villa team used seven type 4 robot models as they showed the best performance, two type 0 robot models as they displayed the best performance on kickoffs, and one each of the type 1 and type 3 robot models as they were the fastest at walking [3].
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Summary of results
+      </section-title>
+      <paragraph>
+       Results from the data we collected in Section 6.1 and Appendix E provide evidence of the 2014 team's overall improvement and success gained by incorporating overlapping layered learning into the approach used to learn the team's low level behaviors. In particular, kicks learned through overlapping layered learning techniques boosted the performance of the team as shown by the data isolating the kicks' contributions to game results in Sections 6.2 and 6.3. Finally, the generality of our learning approach is demonstrated by its success when applied to different robot models in Section 6.4.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Within RoboCup soccer domains there has been previous work in using layered learning approaches to learn complex agent behaviors. Stone used layered learning to train three behaviors for agents in the RoboCup 2D simulation domain and specified an additional two that could be learned as well [7]. Gustafson et al. used two layers of learning when applying genetic programming to the keep away subtask within the RoboCup 2D simulation domain [23]. Whiteson and Stone later introduced concurrent layered learning within the same keepaway domain during which four layers were learned. Cherubini et al. used layered learning for teaching AIBO robots soccer skills that included six behaviors [24]. Layered learning has also been applied to non-RoboCup domains such as Boolean logic [25], non-playable characters in video games [26], and concept synthesis in road traffic simulations [27]. To the best of our knowledge our overlapping layered learning approach, containing 19 learned behaviors, has more than three times the behaviors of any previous layered learning systems.
+     </paragraph>
+     <paragraph>
+      Work by Mondesire has discussed the concept of learned layers overlapping, and focuses on a concern of information needed to perform a subtask being lost or forgotten as it is replaced during the learning of a task in a subsequent layer [28]. Our work differs in that we are not concerned with the performance of individual subtasks in isolation, but instead are interested in maximizing the performance of subtasks when they are combined.
+     </paragraph>
+     <paragraph>
+      Our use of CMA-ES as the optimization algorithm allows for a high degree of parallelization during learning, and recent work by Salimans et al. has corroborated the success and scalability of evolution strategies when applied to reinforcement learning tasks [29]. While our implementation of overlapping layered learning uses CMA-ES for learning the component skills, its hierarchical nature also bears some resemblance to, and shares some motivation with, classic approaches to hierarchical reinforcement learning for learning complex behaviors. Most hierarchical reinforcement learning approaches use gated behaviors: a gating function decides which among a collection of behaviors should be executed, with each behavior mapping potential environment states to low-level actions [30]. In these approaches, the behaviors and gating function are all control tasks with similar inputs and actions (sometimes abstracted). Layered learning, on the other hand, allows for conceptually different tasks, such as a soccer player evaluating the probability of a pass being successful and moving to get open for a pass [8], at the different layers.
+     </paragraph>
+     <paragraph>
+      One widely used approach to hierarchical reinforcement learning is the MAXQ algorithm [31]. The MAXQ algorithm learns at all levels of a hierarchy simultaneously. MAXQ converges to a recursively optimal policy in which learned subtasks are locally optimal as opposed to being hierarchically optimal—the learned substasks' policies are not necessarily optimal when taking into account transitions to and from other subtasks. Also, unlike MAXQ, layered learning allows for the flexibility of using different machine learning algorithms at each level of the hierarchy.
+     </paragraph>
+     <paragraph>
+      Another popular approach to hierarchical reinforcement learning is the options framework [32]. Options, or temporally extended actions, can be thought of as learned policies with initiation and termination conditions used to complete subtasks. Layers in our behavior hierarchy can be seen as options in the sense that they are policies that run for limited periods of time within the overall behavior. In the context of robot soccer one could learn two separate options for both walking and kicking a ball, and—after finding out that the robot is unable to transition from the walk option to the kick option without falling—then learn a third option as a bridge to transition between walking and kicking that stops and stabilizes the robot before it kicks the ball. However, it could be inefficient and slow to need to execute three option behaviors to walk to and kick the ball. Instead, it may be possible to learn a better policy through overlapping layered learning and CILB that is more efficient and faster to execute: a policy consisting of a new behavior that combines the previously learned walking and kicking subtask behaviors without needing to stop and stabilize the robot before kicking the ball.
+     </paragraph>
+     <paragraph>
+      Progressive neural networks [33] follow some of the concepts of layered learning. These networks have been successfully used to learn policies for a series of related reinforcement learning tasks. Progressive neural networks are sequentially trained on individual tasks, with only the weights for a single column of the network being learned for the current task the network is being trained on. After each task is learned the weights of the neural network are frozen, and a new column with open weights is added to the network before learning the next task. The outputs from the layers of the previously learned task's network column is used as inputs to the layers of the current task's network column that is being learned. The architecture of progressive neural networks—where the output of a previously learned task is used as input to the next task being learned—is similar in spirit to layered learning. The architecture differs from overlapping layered learning, however, in that learned weights of the network are never unfrozen and relearned. Furthermore, progressive neural networks leverage task similarities to learn successive tasks through transfer learning [34], in which they focus on learning policies for tasks that are performed in isolation from each other, where as overlapping layered learning is better suited for developing subtasks that work well together and can smoothly transition between each other.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Summary and discussion
+     </section-title>
+     <paragraph>
+      This article introduces overlapping layered learning methodologies and motivates general scenarios for their use. The article also includes a detailed description and experimental analysis of the extensive overlapping layered learning approach used by the UT Austin Villa team in winning the 2014 RoboCup 3D simulation competition.{sup:7} Furthermore, the complete learning process is repeated on four different robot body types, showcasing its generality as a paradigm for efficient behavior learning. While first introduced in 2014, overlapping layered learning has continued to be used successfully by the UT Austin Villa team in all years since then as well.
+     </paragraph>
+     <paragraph>
+      Currently the overlapping layered learning methodologies require a person to select which parameters to freeze and leave open during each successive layer of learning. Additionally, learning of complex skills is manually segmented into different layers of learning. Future work in the area of layered learning includes the automated determination of appropriate subtasks for layered learning, as well as automated identification and selection of useful layer overlap or “seams” to use with overlapping layered learning methodologies. If these selection processes can be automated it would lessen the burden and potential need for someone with expert domain knowledge when performing optimizations.
+     </paragraph>
+     <paragraph>
+      A base code release of the 2015 UT Austin Villa RoboCup 3D simulation agent [35], which includes hooks for optimizing the skills and behaviors presented in this work, can be found at http://github.com/LARG/utaustinvilla3d.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Learned behavior layers
+     </section-title>
+     <paragraph>
+      For all layers of learned behaviors the CMA-ES [14] algorithm is used as the ML algorithm (M). All input feature vector ({a mathematical formula}F→) for learned behavior layers include the position of each of the robots' 22 joints, as well as the robots' three dimensional {a mathematical formula}(x,y,z) accelerometer and gyroscope measurements. Any behavior in which a kick is learned also takes in as input the x and y position of the ball relative to the robots. The output (O) for all behavior layers are current target positions for each of the robots' joints. A diagram of how all the layers connect with each other can be seen in Fig. 3 within Section 5.
+     </paragraph>
+     <list>
+      <list-item>
+       The robot learns a behavior to stand up when starting from lying on its front.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a behavior to stand up when starting from lying on its back.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       Single robot behavior where the robot learns to lightly touch the ball resulting in little ball motion.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       Single robot kick behavior where the robot learns a kick that scores on a kickoff from a motionless ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a short but fast to execute kick starting from a standing position behind the ball. The robot is also expected to be stable and still standing after the kick.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a walk for moving to general target positions on the field.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       A two robot behavior is learned for scoring on a kickoff with one robot lightly touching ball before the other robot kicks the ball in the goal.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a kicking motion to kick the ball a long distance starting from a standing position behind the ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a walk for quickly walking in the forward direction.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a kicking motion to kick the ball over opponents starting from a standing position behind the ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a kicking motion to kick the ball such that it stays below the height of the goal when starting from a standing position behind the ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to stand up when starting from lying on its front and then walks around.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to stand up when starting from lying on its back and then walks around.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a walk for dribbling the ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns a walk for stopping at a precise position behind the ball in preparation to kick the ball.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to walk to the ball and perform a short but fast to execute kick. The robot is also expected to be stable and still standing after the kick.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to walk to the ball and perform a high kick to kick the ball over opponents.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to walk to the ball and perform a low kick that stays below the height of the goal.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       The robot learns to walk to the ball and perform a long kick.
+      </list-item>
+     </list>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Walk engine
+     </section-title>
+     <paragraph>
+      The UT Austin Villa team uses an omnidirectional walk engine based on one that was originally designed for the real Nao robot [36]. The omnidirectional walk is crucial for allowing the robot to request continuous velocities in the forward, side, and turn directions, permitting it to approach continually changing destinations (often the ball) more smoothly and quickly than the team's previous set of unidirectional walks [15].
+     </paragraph>
+     <paragraph>
+      The walk engine, though based closely on that of Graf et al. [36], differs in some of the details. Specifically, unlike Graf et al., the walk engine uses a sigmoid function for the forward component and uses proportional control to adjust the desired step sizes. The walk engine uses a simple set of sinusoidal functions to create the motions of the limbs with limited feedback control. The work flow of how joint commands are generated for the walk is shown in Fig. B.5. The walk engine processes desired walk velocities chosen by the behavior, chooses destinations for the feet and torso, and then uses inverse kinematics to determine the joint positions required. Finally, PID controllers for each joint convert these positions into torque commands that are sent to the simulator.
+     </paragraph>
+     <paragraph>
+      The walk engine selects a trajectory for the torso to follow, and then determines where the feet should be with respect to the torso location. The walk uses x as the forwards dimension, y as the sideways dimension, z as the vertical dimension, and θ as rotating about the z axis. The trajectory is chosen using a double linear inverted pendulum, where the center of mass is swinging over the stance foot. In addition, as in Graf et al.'s work [36], the walk engine uses the simplifying assumption that there is no double support phase, so that the velocities and positions of the center of mass must match when switching between the inverted pendulums formed by the respective stance feet.
+     </paragraph>
+     <paragraph>
+      We now describe the mathematical formulas that calculate the positions of the feet with respect to the torso. More than 40 walk engine parameters were used, but only the ones we optimize are listed in Table B.6.
+     </paragraph>
+     <paragraph>
+      To smooth changes in the velocities, the walk engine uses a simple proportional controller to filter the requested velocities coming from the behavior module. Specifically, the walk engine calculates {a mathematical formula}stepi,t+1=stepi,t+δstep(desiredi,t+1−stepi,t)∀i∈{x,y,θ}. In addition, the value is cropped within the maximum step sizes so that {a mathematical formula}−maxStepi≤stepi,t+1≤maxStepi.
+     </paragraph>
+     <paragraph>
+      The phase is given by {a mathematical formula}ϕstart≤ϕ≤ϕend, and {a mathematical formula}t=ϕ−ϕstartϕend−ϕstart is the current fraction through the phase. At each time step, ϕ is incremented by {a mathematical formula}Δseconds/ϕlength, until {a mathematical formula}ϕ≥ϕend. At this point, the stance and swing feet change and ϕ is reset to {a mathematical formula}ϕstart. Initially, {a mathematical formula}ϕstart=−0.5 and {a mathematical formula}ϕend=0.5. However, the start and end times will change to match the previous pendulum, as given by the equations{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The stance foot remains fixed on the ground, and the swing foot is smoothly lifted and placed down, based on a cosine function. The current distance of the feet from the torso is given by{a mathematical formula} It is desirable for the robot's center of mass to steadily shift side to side, allowing it to stably lift its feet. The side to side component when no side velocity is requested is given by{a mathematical formula} where {a mathematical formula}ysep is the distance between the feet. If a side velocity is requested, {a mathematical formula}ystance is augmented by{a mathematical formula} These equations allow the y component of the feet to smoothly incorporate the desired sideways velocity while still shifting enough to remain dynamically stable over the stance foot.
+     </paragraph>
+     <paragraph>
+      Next, the forwards component is given by{a mathematical formula} These functions are designed to keep the robot's center of mass moving forwards steadily, while the feet quickly, but smoothly approach their destinations. Furthermore, to keep the robot's center of mass centered between the feet, there is an additional offset to the forward component of both the stance and swing feet, given by{a mathematical formula} After these calculations, all of the x and y targets are corrected for the current position of the center of mass. Finally, the requested rotation is handled by opening and closing the groin joints of the robot, rotating the foot targets. The desired angle of the groin joint is calculated by{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      After these targets are calculated for both the swing and stance feet with respect to the robot's torso, the inverse kinematics module calculates the joint angles necessary to place the feet at these targets. Further description of the inverse kinematic calculations is given in [36].
+     </paragraph>
+     <paragraph>
+      To improve the stability of the walk, the walk engine tracks the desired center of mass as calculated from the expected commands. Then, the walk engine compares this value to the sensed center of mass after handling the delay between sending commands and sensing center of mass changes of approximately 20 ms. If this error is too large, it is expected that the robot is unstable, and action must be taken to prevent falling. As the robot is more stable when walking in place, the walk engine immediately reduces the step sizes by a factor of the error. In the extreme case, the robot will attempt to walk in place until it is stable. The exact calculations are given by{a mathematical formula} This solution is less than ideal, but performs effectively enough to stabilize the robot in many situations.
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Optimization process and training tasks for learning walk parameter sets
+     </section-title>
+     <paragraph>
+      The following subsections detail the optimization process and training tasks used during the layered learning approach to develop three walk parameter sets needed for general walking, sprinting, and dribbling the ball. The Covariance Matrix Adaptation Evolution Strategy (CMA-ES) algorithm [14] was used to learn the walk engine parameters listed in Table B.6 for each set of walk parameters. Further details about the development of the optimization process—first implemented for the 2011 team—are available in [1], however here we only present the details most relevant to the 2014 team.
+     </paragraph>
+     <section label="C.1">
+      <section-title>
+       Walk_GoToTarget parameter set optimization
+      </section-title>
+      <paragraph>
+       To learn walk parameters for moving to general target positions on the field we created a training task—called the goToTarget optimization task—consisting of an obstacle course in which the robot tries to navigate to a variety of target positions on the field. Each target is active, one at a time for a fixed period of time, which varies from one target to the next, and the robot is rewarded based on its distance traveled toward the active target. If the robot reaches an active target, the robot receives an extra reward based on extrapolating the distance it could have traveled given the remaining time on the target. In addition to the target positions, the robot has stop targets, where it is penalized for any distance it travels. To promote stability, the robot is given a penalty if it falls over during the optimization run.
+      </paragraph>
+      <paragraph>
+       In the following equations specifying the agent's rewards for targets, {a mathematical formula}Fall is 5 if the robot fell and 0 otherwise, {a mathematical formula}dtarget is the distance traveled toward the target, and {a mathematical formula}dmoved is the total distance moved. Let {a mathematical formula}ttotal be the full duration a target is active and {a mathematical formula}ttaken be the time taken to reach the target or {a mathematical formula}ttotal if the target is not reached.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The goToTarget optimization includes quick changes of target/direction for focusing on the reaction speed of the agent, as well as targets with longer durations to improve the straight line speed of the agent. The stop targets ensure that the agent is able to stop quickly, while remaining stable. The trajectories that the agent follows during the optimization are described in Fig. C.6.
+      </paragraph>
+     </section>
+     <section label="C.2">
+      <section-title>
+       Walk_Sprint parameter set optimization
+      </section-title>
+      <paragraph>
+       To further improve the forward speed of the agent, we optimized a parameter set for walking straight forwards for ten seconds starting from a complete stop. Unfortunately, when the robot tried to switch between the forward walk and Walk_GoToTarget parameter sets it was unstable and usually fell over. This instability is due to the parameter sets being learned in isolation, resulting in them being incompatible.
+      </paragraph>
+      <paragraph>
+       To overcome this incompatibility, we ran the goToTarget subtask optimization again, but this time we fixed the Walk_GoToTarget parameter set and learned a new parameter set. We call these parameters the Walk_Sprint parameter set, and the agent uses them when its orientation is within {a mathematical formula}15∘ of its target. The Walk_Sprint parameter set was seeded with the values from the Walk_GoToTarget parameter set. This approach to optimization is an example of sequential layered learning as the output of one learned subtask (the Walk_GoToTarget parameter set) is fed in as input to the learning of the next subtask (the learning of the Walk_Sprint parameter set). By learning the Walk_Sprint parameter set in conjunction with the Walk_GoToTarget parameter set, the robot was stable switching between the two parameter sets.
+      </paragraph>
+     </section>
+     <section label="C.3">
+      <section-title>
+       Walk_PositionToDribble parameter set optimization
+      </section-title>
+      <paragraph>
+       Although adding the Walk_GoToTarget and Walk_Sprint walk engine parameter sets improved the stability, speed, and game performance of the agent, the agent was still a little slow when positioning to dribble the ball. This slowness is explained by the fact that the goToTarget subtask optimization emphasizes quick turns and forward walking speed while positioning around the ball involves more side-stepping to circle the ball. To account for this discrepancy, the agent learned a third parameter set which we call the Walk_PositionToDribble parameter set. To learn this parameter set, we created a new driveBallToGoal2{sup:8} optimization in which the agent is evaluated on how far it is able to dribble the ball over 15 seconds when starting from a variety of positions and orientations from the ball. The Walk_PositionToDribble parameter set is used when the agent is .8 meters from the ball and is seeded with the values from the Walk_GoToTarget parameter set. Both the Walk_GoToTarget and Walk_Sprint parameter sets are fixed and the optimization naturally includes transitions between all three parameter sets, which constrained them to be compatible with each other. As learning of the Walk_PositionToDribble parameter set takes the two previously learned parameter sets as input, it is a third layer of sequential layered learning.
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix D">
+     <section-title>
+      Skill description language
+     </section-title>
+     <paragraph>
+      The UT Austin Villa agent has skills for getting up after falling and kicking, each of which is implemented as a periodic state machine with multiple key frames, where a key frame is a static pose of fixed joint positions. Key frames are separated by a waiting time that lets the joints reach their target angles. To provide flexibility in designing and parameterizing skills, we designed an intuitive skill description language that facilitates the specification of key frames and the waiting times between them. Below is an illustrative example describing a kick skill.
+     </paragraph>
+     <list>
+      <list-item>
+       SKILLKICK_LEFT_LEGKEYFRAME1setTargetJOINT1$jointvalue1JOINT2$jointvalue2...setTargetJOINT34.3JOINT452.5wait0.08KEYFRAME2increaseTargetJOINT1-2JOINT27...setTargetJOINT3$jointvalue3JOINT4(2*$jointvalue3)wait0.08...
+      </list-item>
+     </list>
+     <paragraph>
+      As seen above, joint angle values can either be numbers or be parameterized as $&lt;varname&gt;, where &lt;varname&gt; is a variable value that can be loaded after being learned. Values for skills and other configurable variables are read in and loaded at runtime from parameter files.
+     </paragraph>
+    </section>
+    <section label="Appendix E">
+     <section-title>
+      Competition results
+     </section-title>
+     <paragraph>
+      In winning the 2014 RoboCup competition UT Austin Villa finished with an undefeated record of 13 wins and 2 ties [3].{sup:9} During the competition the team scored 52 goals without conceding any. Despite finishing with an undefeated record, the relatively few number of games played at the competition, coupled with the complex and stochastic environment of the RoboCup 3D simulator, make it difficult to determine UT Austin Villa being better than other teams by a statistically significant margin. At the end of the competition, however, all teams were required to release their binaries used during the competition. Results of UT Austin Villa playing 1000 games against each of the other 11 teams' released binaries from the competition are shown in Table E.7.
+     </paragraph>
+     <paragraph>
+      UT Austin Villa finished with at least an average goal difference greater than two goals against every opponent. Additionally UT Austin Villa did not lose a single game out of the 11,000 that were played in Table E.7. These game results show that UT Austin Villa winning the 2014 competition was far from a chance occurrence.
+     </paragraph>
+     <paragraph>
+      The overlapping layered learning system employed by UT Austin Villa was also vital in the team winning the subsequent competitions in 2015 [20], 2016 [21], and 2017. Table E.8 shows post competition analysis of the 2015 competition in which UT Austin Villa was again able to beat all opponents by an average goal difference of over two goals. The team was also able to beat all opponents at the 2016 competition by at least an average goal difference of close to two goals as shown by the post 2016 competition analysis in Table E.9. Post 2017 competition analysis, provided in Table E.10, shows that UT Austin Villa was able to beat all opponents at the 2017 competition by an average goal difference of almost four goals.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

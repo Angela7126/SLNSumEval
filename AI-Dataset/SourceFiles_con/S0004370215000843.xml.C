@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Representations for robot knowledge in the KnowRob framework.
+   </title>
+   <abstract>
+    In order to robustly perform tasks based on abstract instructions, robots need sophisticated knowledge processing methods. These methods have to supply the difference between the (often shallow and symbolic) information in the instructions and the (detailed, grounded and often real-valued) information needed for execution. For filling these information gaps, a robot first has to identify them in the instructions, reason about suitable information sources, and combine pieces of information from different sources and of different structure into a coherent knowledge base. To this end we propose the KnowRob knowledge processing system for robots. In this article, we discuss why the requirements of a robot knowledge processing system differ from what is commonly investigated in AI research, and propose to re-consider a KR system as a semantically annotated view on information and algorithms that are often already available as part of the robot's control system. We then introduce representational structures and a common vocabulary for representing knowledge about robot actions, events, objects, environments, and the robot's hardware as well as inference procedures that operate on this common representation. The KnowRob system has been released as open-source software and is being used on several robots performing complex object manipulation tasks. We evaluate it through prototypical queries that demonstrate the expressive power and its impact on the robot's performance.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      As robotic agents, such as robot factory workers, co-workers, and home assistant robots, scale towards more and more complex tasks in open environments, they will require more flexibility in plan execution. Plans that explicitly spell out every detail of a task only perform well as long as the execution context remains static, but are difficult to adapt in an open, dynamic world. A promising approach for increasing flexibility is to postpone decisions from programming time to execution time by only including the essential aspects of the task in the plan. Humans successfully use this technique when explaining tasks to other humans in terms of vague instructions such as “set the table” or “pour water into the glass”. Similarly, instruction sheets that are commonly used in factories and chemical laboratories only briefly summarize the main actions, leaving less important aspects open. The parts that are not spelled out are usually those that can be adapted to the situation at hand. While such information gaps can increase overall flexibility, they need to be filled appropriately before the plan can be executed. To this end, a robot needs to supply the “delta” between the information in the (abstract, symbolic and often vague) instructions and the (specific, explicit, and often real-valued) parameters needed by its action components. This means that it has to interpret the instructions given the current execution context and its background knowledge, and come up with suitable values that can be understood by its motion generation and control components.
+     </paragraph>
+     <paragraph>
+      This robotics use case requires capabilities of a knowledge representation and reasoning (KR&amp;R) system that differ from what is commonly investigated in AI research. Let us consider the example in the left part of Fig. 1 that shows a typical scene in the blocks world that is still a common scenario in KR research. Researchers in knowledge representation model the scenario as a dynamical system in a knowledge base and approach control, prediction, and analysis tasks by inferring their solutions purely based on this model. The knowledge bases are based on logical [36], STRIPS- or PDDL-based [27], [14], probabilistic [18], or other representations. For example, in the logical approach, researchers try to axiomatize the system dynamics, in particular the conditions under which actions can be successfully performed, and the causal laws that relate actions to their effects, such that the solutions of control, prediction, and analysis tasks become the logical consequences of the respective axiomatization.
+     </paragraph>
+     <paragraph>
+      While these approaches are very elegant as they approach a variety of control problems in a uniform framework, they also typically yield a number of implementation and applicability issues. Since the tasks are solved by inference and search, the computational costs are often high and not predictable. When the physics of the domain become more complicated, the number of axioms grows very fast as we have seen in the axiomatizations of the famous egg-cracking problem [28]. Many approaches thus abstract away from geometric and physical properties that, however, are crucial for robots as they often determine the outcome and feasibility of an action. For the employed coarse-grained discretizations, it is often difficult to find the appropriate level of abstraction for continuous quantities which are pervasive in robotics applications. Once abstracted, information cannot be accessed on a finer level of detail. Examples of inferences that depend upon such continuous quantities are the reachability of objects and the stability of object placements [7].
+     </paragraph>
+     <paragraph>
+      The right part of Fig. 1 visualizes how the scene of the block-stacking task may more realistically look like for the robot. It can easily be seen that it is significantly more complex than the blocks world model, making the application of many AI reasoning methods difficult. However, all of this information is already present in the robot's internal data structures: the robot's pose and movements, recognized objects, environment structures, etc. And for many inference tasks, such as the visibility of objects or the reachability of locations, there are efficient and well-understood algorithms in robotics that operate on these data structures. Reachability can be computed by inverse kinematics calculations [38]. Visibility can be computed by rendering the scene from a given viewpoint [29]. These algorithms do not require abstraction into a symbolic knowledge base, and by operating on the original data, can often compute much more detailed results than logical inference.
+     </paragraph>
+     <paragraph>
+      In this paper, we argue that instead of abstracting the data into a purely symbolic knowledge base, robots shall rather keep the original, high-resolution, continuous data and only compute a “symbolic view” on it as needed. This on-demand abstraction can always provide the appropriate level of detail: Robotics algorithms can operate on the original data, logical inferences can be computed on a more abstract symbolic level. Queries can combine inferences made at all levels of abstraction.
+     </paragraph>
+     <paragraph>
+      This is the approach taken by the KnowRob knowledge processing system that we present in this article. It consists of a (rather shallow) symbolic knowledge base that provides semantic representations of the robot's data structures that primarily serves as integration layer for various inference algorithms. The representation can be shallow compared to expressive AI reasoning methods since few inferences are done at this level. For example, it does not have to model the appearance of objects if the visibility reasoning algorithm can read it from a linked 3D model. And it does not have to model physical laws if an algorithm for computing object stability can read its physical properties from a CAD model and parameterize a simulator with them. The role of a KR system therefore shifts from a world model that has to be consistent and complete towards a semantic integration layer. The correctness of inferences is then determined by the correctness of the algorithms rather than a complete and correct axiomatization that would anyway be difficult to guarantee if information is read from noisy sensors.
+     </paragraph>
+     <paragraph>
+      The remainder of this paper is organized as follows. We start with an overview of lessons learned while investigating knowledge-enabled robot control and explain how the findings have been implemented in the KnowRob system. The following section explains the representations of objects, their parts, properties, and locations in the environment as well as the robot's self-model. It is followed by the representations of events and actions at the instance and class level and methods for projecting the effects of actions on objects. We evaluate our approach by the knowledge content, scalability, example queries showing inferences it enables, examples of robot experiments and its adoption by the open-source research community. The paper finishes with a comparison with related approaches and our conclusions.
+     </paragraph>
+     <paragraph>
+      While parts of the KnowRob system have been described in several earlier (conference) papers, this article tries to set these individual aspects in relation and to explain how they contribute to the overall representation and reasoning capabilities. It is accompanied by open-source software, ontologies and knowledge bases.{sup:1} Several online tutorials on simulated and real robot data explain how the system works and what it can be used for. In addition, we have created a cloud-based version of the KnowRob knowledge processing system called OPEN-EASE.{sup:2} Users can create a free account and try the system without installation by sending queries via a web browser. By providing the software and representations, we would like to give the reader the opportunity to try the system and assess its performance for different applications.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Lessons learned about robot knowledge processing
+     </section-title>
+     <paragraph>
+      In the introduction, we have argued that there are important differences between knowledge processing methods for robots and the topics commonly investigated in KR&amp;R research. In this section, we would like to summarize our insights and lessons learned while implementing the different versions of the KnowRob system, and motivate the design decisions that have been influenced by them.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       No fixed levels of abstraction, no layers, no “black boxes”
+      </section-title>
+      <paragraph>
+       A core observation is that a KR&amp;R system for robots has to consider both continuous, subsymbolic data and symbolic knowledge, and support both abstraction and concretization. However, we found that any choice of one or more fixed levels of abstraction turned out to be inappropriate for use cases that either needed coarser or more detailed models. Especially the concretization of abstract information is not well supported in most approaches that treat the underlying layers as “black boxes”. We therefore chose to store information in the most detailed format available, and abstract to the appropriate level when this information is needed for inferences. Besides providing information at the right level of abstraction, this approach also alleviates the problem that the symbolic knowledge deviates from the continuous-level data since the former is computed from the latter at query time.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       A knowledge base should reuse data structures of the robot's control program
+      </section-title>
+      <paragraph>
+       The content of a robot KR system has to be continuously updated with new perceptual or actuation data. As this information is already present in the robot's control system, we consider the KR system as a kind of ‘parasite’ on top of the existing data structures whose task is to make sense from them and to lift them to a conceptual level. As a consequence, the content of the knowledge base is grounded in these data structures that have carefully been developed by a robot programmer in such a way that they are grounded in the outer world, for instance using specialized perception routines. If they were not grounded, the robot would not be able to perform its tasks. This approach differs from other AI knowledge bases that directly refer to entities in the outer world, making the grounding problem more difficult.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Symbolic knowledge bases are useful, but not sufficient
+      </section-title>
+      <paragraph>
+       Symbolic representations are undeniably very useful for structuring the knowledge base by providing a “type system” and for performing logical and qualitative inference. However, the level of detail and the many types of information required for successfully accomplishing robot tasks, such as exact times, 3D geometric information, kinematic structures and appearance models, are difficult to encode in purely symbolic form. A proper representation of the robot's complex dynamic surroundings would require very expressive formalisms, while the fact that much information is obtained from partial observations with noisy sensors will inevitably lead to wrong and inconsistent information that is difficult to resolve in a purely logical knowledge base.
+      </paragraph>
+      <paragraph>
+       Our knowledge base only has a rather shallow symbolic representation of general concepts, while most information about the robot, its environment and perceptions is merely a “virtual knowledge base” computed at runtime from the data structures of the robot's control program. In a way, this approach is in line with Brooks' observation that “the world is its own best model. It is always exactly up to date. It always contains every detail there is to be known. The trick is to sense it appropriately and often enough” [6]. As a consequence, much less reasoning is done at the symbolic level, which relaxes the requirements on the correctness, completeness and consistency of the knowledge base. We thus cannot guarantee either of them, but due to the structure of the knowledge base, this is much less of an issue than in other systems.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Robots need multiple inference methods
+      </section-title>
+      <paragraph>
+       One query to the knowledge base may require the use of different inference methods and different information sources. For example, a robot may ask if its gripper has been inside a container during a pick-up task in order to verify that a pick-up action has been attempted. Such a query requires temporal reasoning about events during the pick-up action, ontological reasoning to determine which objects are containers and three-dimensional spatial reasoning to determine the “inside” relation. These reasoners need access to the robot's task logs, to proprioceptive information about the gripper movements, to the environment model and to general knowledge about types of objects. We therefore decided to use a common underlying representation for all these kinds of information and to have an ensemble of expert reasoners operate on this shared knowledge. This approach is similar to other ensemble-of-experts architectures such as the IBM Watson system [11] that has demonstrated impressive performance on real-world question answering not by using a single reasoning method, but a collection of several specialized ones. In contrast, many classical AI reasoning methods focus on either temporal or qualitative spatial or ontological reasoning, while not supporting the other ones.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Evaluating a robot knowledge base is difficult
+      </section-title>
+      <paragraph>
+       There is a wide range of aspects that contribute to the performance of a robot knowledge processing system, including the number of facts it contains, the coverage of relevant knowledge areas, the range of inference methods that are supported, the run time for common queries, the scalability regarding the amount of information stored, the usefulness of the computed results for robot tasks, etc. However, few of these aspects can easily be quantified, and some such as the runtime for answering queries depend on factors such as the size of the knowledge base or even the way how the query is formulated. While we try to evaluate as many of these aspects as possible, exhaustively covering all of them is usually beyond the scope of a paper. However, since the KnowRob system has been available as open-source software for a while, we consider the adoption by the community and the novel application areas it has been used in by external developers another strong indicator of its quality. In addition, we have developed a web-based version of the knowledge base that users can try without requiring any installation to evaluate its usefulness for their particular use case.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     The KnowRob robot knowledge processing system
+     <paragraph>
+      The concepts explained in the previous section have been implemented in the current version of the KnowRob robot knowledge processing system. In an earlier paper [43], we have introduced KnowRob with an emphasis on systems aspects such as the knowledge storage and techniques for integrating the knowledge base with the robot's data structures, perception and control system. In this article, we focus on its representational structures and how they contribute to its reasoning capabilities.
+     </paragraph>
+     <paragraph>
+      Since KnowRob combines information of many types from different sources and several inference methods, their integration becomes an important issue. This includes both the integration at the representational level, to ensure that all modules share a common language, and the integration at the programmatic level, to ensure that the right inference methods are called when processing a query.
+     </paragraph>
+     <paragraph>
+      We approach the former by representing all knowledge in the system with respect to a common ontology. The structures presented in the following sections have been implemented in the Web Ontology Language OWL [50], a standardized language based on Description Logics. The core of the knowledge base is formed by a large ontology that conceptualizes the robotics domain. Its upper levels have been derived from OpenCyc [23], a widely used and comprehensive upper ontology. Staying compatible with OpenCyc allows us to incorporate extensions made by other researchers, for example mappings to other ontologies like WordNet [10]. The general-purpose upper ontology can be extended with micro-theories that add domain-specific knowledge or special-purpose inference methods. Compared to other knowledge representation formalisms, OWL has rather shallow semantics and only allows few kinds of inferences to be made on the relations between classes and individuals. As OWL inference would not be sufficient as the only inference method, KnowRob allows to complement it with other reasoning algorithms. They do not have to be of logical nature, but can employ any kind of computation as long as they read their input data from the knowledge base and produce facts formulated in the common representation language. OWL is thus primarily used as “glue” at the representational level, as a common and structured language for describing the world.
+     </paragraph>
+     <paragraph>
+      For integrating the different modules at the programmatic level, we use the logical programming language SWI Prolog [53]. The OWL ontologies are loaded into the system using SWI Prolog's Semantic Web library [52], representing their triple structure as Prolog predicates. Since Prolog has both declarative and procedural semantics, it allows to combine this logical knowledge base with programming: Using Prolog's Foreign Language Interface, we can integrate external reasoning tools and also expose them as Prolog predicates. For example, we could create a predicate reachable(O, L, R) which describes that an object O can be reached from a location L by the robot R that is, behind the scenes, evaluated by computing a solution to the underlying inverse kinematics problem. This common interface allows to combine inferences in a single Prolog query, for example to ask for all objects of type Cup that are reachable by the robot PR2 from its current location L:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Efficiency is of key importance for robots since results have to be available fast enough to still be relevant for the current actions and to not slow down the task execution. To achieve efficient and scalable inference, we can employ specialized inference techniques (which exploit the structure of a problem to become efficient) or simply implement inferences procedurally that would be very difficult or even intractable using pure logical reasoning. In many cases, we have found that the search trees for our queries become rather flat, which lets them resemble Datalog programs that do not require a deep search for solutions and can therefore be answered very efficiently.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Example: integration of inference methods with the OWL knowledge base
+      </section-title>
+      <paragraph>
+       Fig. 2 illustrates how external reasoners are integrated into the OWL model that serves as conceptual framework for storing the information they produce and consume. It visualizes a small excerpt of the knowledge base, representing a sequence of two actions in a plan for making pancakes. The upper part of the figure describes the conceptual model of this problem as an OWL model. The different colors indicate that already this small example requires the combination of knowledge from different areas. The gray arrows in the figure visualize the subClassOf relations, black arrows denote other relations like the objectActedOn of an action. The first action, PickingUpAnObject, is performed on an object of type Spatula which is stored in Drawer-31, an instance of a drawer at a specified pose (i.e. position and orientation). PickingUpAnObject is a subclass of the class Movement-Translation, which by itself is a specialization of ActionOnObject. OWL classes inherit properties from their parents, which is a powerful tool for representing knowledge in a generic way. The second action, FlippingSomething, is linked to the first one using the nextAction relation, allowing inference about the sequence and temporal aspects. The Spatula serves as toolUsed in this action and is graspedAt the Handle, which is one of its physicalParts. The flipping action is performed on a Pancake that is located on top of a PancakeMaker. Before execution, the system has checked whether the actions are feasibleOnRobot on the PR2Robot to make sure that all required capabilities are available.
+      </paragraph>
+      <paragraph>
+       While these structures could be defined manually in OWL, they will usually be populated by a variety of automated reasoners that are ‘hooked’ into the OWL representation to compute relations or fill the conceptual view with content. In the example, the relations with a gray circle are not asserted manually, but computed at query time by the inference tools in the lower part of the figure. Some reasoners can not only compute a relation between existing individuals, but also create new individuals, for example based on perception results, and integrate them into the knowledge base.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Representation of objects and spatial information
+     </section-title>
+     <paragraph>
+      This section introduces the representations and associated inference methods for objects and other spatial information. We start with class-level knowledge about objects types, continue with object instances, the representation of positions and orientations, the computation of qualitative spatial relations, and the representation of the object geometry and their composition from parts. The last subsection deals with special kinds of objects, namely parts of the robot and their properties.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Class-level object knowledge
+      </section-title>
+      <paragraph>
+       Object type information is organized in a large ontology that ranges from very generic classes such as SpatialThing to specific ones such as Refrigerator–Freezer. In total the KnowRob ontology contains about 7000 object classes. Whereas the upper levels have been manually imported from OpenCyc to obtain a sound basis for the ontology, many of the more specialized classes have been generated automatically from existing information. For instance, we have explored how information from online shops, in particular the category structure, can be translated into a class taxonomy [44] to facilitate the creation of large-scale ontologies.
+      </paragraph>
+      <paragraph>
+       The classes are annotated with properties that describe for instance that an Oven has HeatingFood as its primary function and a Handle as properPhysicalPart. Properties are inherited by sub-classes, and by inheriting from multiple super-classes, different facets of an object can be described: A Refrigerator, for example, is a subclass of both Box-Container, ElectricalHouseholdAppliance and RefrigeratedStorageDevice, and inherits the properties of all of these classes. This way, objects can be classified along different dimensions (e.g. shape, need for electricity, temperature), and rules can be formulated in a generic fashion by selecting the appropriate superclass.
+      </paragraph>
+      <paragraph>
+       Compared to other approaches, for example [15], the KnowRob ontology is rather weakly axiomatized and contains fewer class restrictions that define concepts. For robots operating in an open world, definitions such as “A living room is a room with exactly one sofa and at least one TV” often turn out to be too brittle since a living room without a TV or with two sofas would cause a logical inconsistency. Inference about such fuzzy or uncertain relations is therefore performed by integrated probabilistic reasoners [32] instead of description logics.
+      </paragraph>
+      <paragraph>
+       The two most common reasoning tasks at the object class level are the selection of all subclasses of a generic concept (e.g. all Container objects) using common OWL inference, and the computation of a semantic similarity between classes. In [37], we have shown that a similarity computed as the weighted distance of two concepts in the ontology can for example be used to reason about object locations: Objects are often stored at places where semantically similar objects are located. The following equation computes the WUP similarity [56] from the depths of two concepts {a mathematical formula}C1 and {a mathematical formula}C2 and their least common superconcept in the ontology:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Object instances and environment maps
+      </section-title>
+      <paragraph>
+       The robot's environment is represented using instances of these object classes. Instead of directly representing the objects in the outer world, the OWL individuals are merely considered as a description of them. Objects are thus referenced by their properties, not their identity, and multiple (possibly partial) descriptions of an object can exist. The descriptions, called “designators” [26], can be redundant (e.g. if an object has been detected by different methods), incomplete (e.g. if something has been detected, but its type is not yet known) or inconsistent (e.g. in case of perception failures). This is very useful to distinguish the time when an object has been created and when it was first detected, to maintain a belief about objects that do not exist any more, and to unify multiple instances once the robot finds out that they refer to the same object in the real world. This is supported by the OWL language that does not make the Unique Name Assumption, but rather provides constructs (owl:sameAs, owl:differentFrom) for describing whether or not two identifiers refer to the same object.
+      </paragraph>
+      <paragraph>
+       Any set of object instances can be associated with an instance of a SemanticEnvironmentMap (Fig. 3 left) that may additionally store map-level information such as the address of the space described by the map [33], [41]. Object instances can be composed in a part-of hierarchy to describe the composition of complex objects or kinematic structures such as robot parts or kitchen cabinets (Fig. 3 right). Appearance models or 3D surface mesh models can be associated with each subcomponent (see also Section 4.5). Since there is no structural difference between static objects in an environment map, movable objects detected by the robot's perception system, and parts of the robot, any kind of object information in the system can easily be compared.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Representation of positions and orientations
+      </section-title>
+      <paragraph>
+       Among the most important information for a robot are object poses (i.e. their positions and orientations) and their changes over time. In KnowRob, pose values are stored as a {a mathematical formula}4×4 matrix that encodes both translations and rotations with respect to a given coordinate system (with the coordinates of the environment map as a default). While this is fairly common, representing how the values change over time is a bit more difficult. On the logical level, it requires the ability to qualify a relation (in this case the atLocation property that links an object instance to a pose) with the time when it was valid, turning it from a binary relation between the object and the pose to a ternary one that also includes the time. While ternary relations are not directly supported by OWL, they can be converted into a set of binary relations by introducing a first-class object with binary links to all entities.
+      </paragraph>
+      <paragraph>
+       On a semantic level, we would like to represent the type of belief about an object's position, e.g. if an object has been perceived or if the robot just expects to find it there. We therefore use the (typed) event that has lead to the belief about an object pose as the reified relation object. For example, if an object has been perceived using the robot's camera, we create an instance of the class VisualPerception that is linked to the object, its pose and the time point. This structure is visualized in the left and right parts of Fig. 5. These events are subclasses of the class MentalEvent as visualized in Fig. 4. Multiple events can be assigned to one object, either for storing several detections over time, or (possibly differing) poses determined using different methods. This representation allows to reason about changes over time (previous world states can be reconstructed by only considering events before a given time) and about discrepancies between e.g. the desired and the perceived poses.
+      </paragraph>
+      <paragraph>
+       The representation is similar to the fluent calculus [47] in which fluents are data structures that represent the change of values over time. In our case, however, the reified objects are more than just a changing value because they provide a memory of past states, they describe the source of this relation by their type, and allow to reason about multiple “possible worlds”, for example the perceived, desired and simulated world.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Reasoning about object poses: computation of qualitative spatial relations
+      </section-title>
+      <paragraph>
+       Humans usually describe locations in qualitative terms (e.g. “on the table”) instead of exact coordinates, which can also be useful for robots, for example to formulate more generic rules (e.g. “all objects on the table shall be put into the refrigerator”). In this section, we show how such qualitative relations can be computed from the spatio-temporal object pose representation introduced in the previous section. The computation is done on demand by inference procedures that are attached to the OWL properties they compute, which avoids the storage of an exploding number of pair-wise relations as well as the frame problem of determining which relations have to be updated when an object has been moved.
+      </paragraph>
+      <paragraph>
+       The representation of object poses using MentalEvents provides the information for evaluating qualitative spatial relations between objects over time. We assume that the last perceived pose of an object is still valid at the time the relation is evaluated, which is the case if no other agents or self-moving objects exist. In general, a relation rel between A and B that is true at time T is expressed in KnowRob by the holds(rel(A, B), Time) predicate. Fig. 5 illustrates its implementation in the box in the lower center that accesses the detections of the two objects table_2 and icetea_8 shown at the left and right edges. The first step is to search for perceptions of the top and bottom objects that were valid at Time. If no explicit end time is set for a perception, it remains valid until the current time or until another perception of the same object has been made. The procedure searches for perceptions with a validity interval that contains Time and reads the poses where objects have been perceived in these events using the event_occurs_at predicate. By comparing the object poses and (optionally) their dimensions, all relations in Fig. 6 can be computed. For the “on top of” property, one has to check whether the z coordinate of the top object is larger than that of the bottom object and compare the object dimensions (omitted in this example). Since the majority of queries are concerned with the current world state, KnowRob offers a simplified query mechanism that uses the current time as default (upper block in Fig. 5).
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Object geometry and functional parts
+      </section-title>
+      <paragraph>
+       In particular fine manipulation or tool usage require detailed geometric information about the objects involved that is difficult to represent in a symbolic knowledge base. We therefore extend the object classes with links to detailed three-dimensional CAD models, which provide a very detailed geometric description and are often available from free databases on the Web. While such monolithic CAD models are already useful, e.g. for visualization or grasp planning, robots often need to interact with specific object parts that have functional meaning for the action at hand: For picking up items, they should use the handle; for pouring something from or into a container, they need information about its opening direction and volume; for pouring something onto a surface, they have to select a suitable horizontal surface.
+      </paragraph>
+      <paragraph>
+       These inferences require a tight integration of geometric and semantic information, which we again implement as a “virtual knowledge base”, i.e. a conceptual model with attached procedures for computing the relations, on top of the 3D models. The virtual symbolic “view” on the model can be generated at runtime and allows to answer logical queries about the geometric model and its functional components. The structure of these part-based model is exactly the same as for other composed objects such as cupboards (as shown in Fig. 3 right), but each instance of a sub-part such as a Handle or a Container is grounded in a (sub-)mesh of the CAD model. Once the objects have been recognized in a scene, the object-relative poses of the identified parts can be translated to scene-global positions.
+      </paragraph>
+      <paragraph>
+       In [46], we have described how such a model can be created automatically from a CAD model by linking geometric analysis methods with knowledge-based definitions of these components. Fig. 7 outlines the main processing steps of the proposed approach: The model is segmented based on the surface curvature, and geometric primitives such as cones, spheres and planar surfaces are fitted to the segments. After these bottom-up processing steps, the system can apply knowledge about functional parts in a top-down fashion. It uses logical rules that define the components in terms of geometric primitives in order to identify these functional object parts. For example, a handle can be defined in the knowledge base as a cylinder of certain dimensions, or a container can be formed by a concave cylinder that is closed by a planar surface at one end. The rules are composable, so definitions of other kinds of handles can easily be included by adding appropriate rules. The resulting models allow the evaluation of logical queries on geometric object models and to reason about functional parts at both a geometric and semantic level.
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Robot components and capabilities
+      </section-title>
+      <paragraph>
+       Besides models of the outer world, robots also need representations of their own structure and capabilities: They allow a robot to reason about which components it consists of, which properties they have, how they are (kinematically) connected, and which capabilities they enable. This can for instance be useful to determine if the robot is lacking components that are required for a given action. While commonly used robot description formats such as URDF{sup:3} or COLLADA [2] provide information about the kinematics, dynamics and 3D surface of a robot, they lack semantic information about its parts. For example, they do not represent which of the components are sensors, or which group of components forms a gripper. In KnowRob, robots are described using the Semantic Robot Description Language (SRDL) originally proposed in [21] that extends these low-level robot models with semantic representations. At the lowest level, the robot's hardware is (like in URDF) described in terms of links and joints (Fig. 8 left). This representation can automatically be generated from a URDF robot model and is again very similar to the models of composite objects in general (Fig. 3). At a higher level, the links and joints can be aggregated to semantically meaningful components such as arms and hands (Fig. 8 right). Also, links that correspond to sensors or actuators can be annotated with properties, for instance the field of view of a camera or the resolution of a laser scanner. On top of the component model, SRDL describes abstract capabilities such as “navigation” or “object recognition” and their dependencies on components. At the highest level, actions can define dependencies on components (e.g. a camera with certain properties) and capabilities (e.g. recognition of textured objects). These dependencies can automatically be checked against a robot model to infer about whether all components required for the action are available. In addition, the component model can also be used for other kinds of reasoning, for example to compute which camera can see an object based on its pose and field of view [54].
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Representation of events and actions
+     </section-title>
+     <paragraph>
+      In addition to models of their spatial context, robots need representations of temporal events and, importantly, of the actions they perform. In KnowRob, instances of observed events and performed actions form an episodic memory of the robot's experiences. We will introduce their representation in Sections 5.1 and 5.2. Action models at the class level describe abstract plan schemata that can for example be generated from instructions given by humans. Gaps in these descriptions can be filled using planning techniques. In Sections 5.4, we explain how action effects are represented and reasoned about in KnowRob. In the end of this section, we discuss how action models can be extended with models of processes that are triggered as side-effects of actions and may influence their results.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Events and temporal information
+      </section-title>
+      <paragraph>
+       Temporal information such as the start time of an event, the duration of an action, or the contemporaneity of two events is highly important for robots that act in dynamic environments. Similar to OpenCyc, we consider an event as “a dynamic situation in which the state of the world changes”.{sup:4} Events can be instantaneous (such as the moment when a perception is made) or temporally extended, such as the execution of a trajectory for reaching towards an object. Each event has a startTime and, if its duration is finite, also an endTime. Both relations link an event to a TimePoint, a special case of a TimeInterval with zero duration. This event representation, visualized in Fig. 9, serves as basis for temporal reasoning using time interval logics such as Allen's interval algebra [1]. Similar to the methods for reasoning about qualitative spatial relations introduced in Section 4.4, the relations between time intervals are implemented as Prolog predicates that read information from the OWL-based model. Actions are considered as a special kind of event, so the same representations and inference methods can be used for both actions and general events.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Action instances
+      </section-title>
+      <paragraph>
+       Action instances represent actions that have been performed in some way – either by the robot itself in the real world [54], as part of an envisioning procedure [42], or by a human demonstrating them to the robot [4]. While some of these models will contain more information than others (for example, the goal of an action can be logged by the robot, but cannot be observed for human actions), all share the same basic structure visualized in Fig. 9. This common language makes it easy to combine or compare action information from these different sources. Each action has a startTime and endTime, in addition to further information on its parameters such as manipulated or perceived objects. Hierarchical task structures can be built up by the subAction relation. Besides the actions that are part of the task tree, asynchronous events such as sensor readings can be stored using the same mechanisms and be related to simultaneous actions using the temporal reasoning methods introduced in the previous section.
+      </paragraph>
+      <paragraph>
+       Again, this abstract symbolic model is complemented with continuous-level information, for example about the trajectories of robot movements as visualized in Fig. 1 (right). During task execution, detailed log files of the movements performed by the robot or human are recorded in a high-volume database [54]. Based on the start and end times, query predicates can later read poses of body parts at semantically described time points, e.g. the end of a reaching motion, or time intervals [5].
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Action classes
+      </section-title>
+      <paragraph>
+       Similar to the ontology of object types, the action ontology, which contains about 130 action classes, mostly serves for providing the vocabulary for representing tasks. In comparison, there are more class restrictions that describe the actions' preconditions and effects as explained in Section 5.4.1. We make use of the taxonomic structure for generalization by inheriting restrictions from their superclasses.
+      </paragraph>
+      <paragraph>
+       Robot plans are modeled as “action recipes” that abstractly describe the composition of tasks from sub-actions, the types of these actions, their relative ordering, as well as action parameters e.g. which object is to be manipulated or at which locations the action is to be performed. These action models have originally been developed as “action recipes” as part of the RoboEarth language [45] for the exchange of task descriptions between robots and has been extended to other use cases since. The description of a concrete task usually derives specific sub-classes from the general action classes in the KnowRob ontology and annotates them with task-specific information about objects, tools, locations or timing. These derived action classes are then arranged in a (partially) sequential order. The example code below is an excerpt of a plan for setting a table.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The upper part describes the task SetATable as a subclass of Action with a set of subActions. The lower part consists of definitions of task-specific subclasses of generic action classes. The class PutPlaceMatInFrontOfChair, as an example, is defined as a subclass of the generic PuttingSomethingSomewhere action from the KnowRob ontology, with the additional restriction that the objectActedOn needs to be a PlaceMat, and the toLocation has to fulfill the requirements described for the class Place1, which by itself is described as some Place which is inFrontOf-Generally of some Chair-PieceOfFurniture. These structures allow to construct task descriptions at an arbitrary level of abstraction or specificity. The separation of task-specific classes in a task description and generic classes in the main action ontology allows to extract re-usable knowledge and put it into the main knowledge base, from where it can be inherited by other tasks derived from the same action classes.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Effects of actions on objects
+      </section-title>
+      <paragraph>
+       A robot has to reason about the effects of its actions on the objects it manipulates. Pick-and-place tasks merely change their positions (which can be described using the techniques introduced in Section 4.3. More complex activities like cooking meals involve more substantial changes of the objects themselves: Objects can be created or destroyed (e.g. when chopping vegetables) and can substantially change their types, appearance, and aggregate states (e.g. mixing and baking cookie dough). Robots therefore have to be able to represent which effects an action had and which objects got transformed into which other ones. In KnowRob, the representation of action effects consists of (1) declarative specifications of the inputs and outputs of an action, which can be used for searching for actions with the desired effects, and (2) projection rules to envision the world state after an action has been performed.
+      </paragraph>
+      <section label="5.4.1">
+       <section-title>
+        Declarative models of action effects
+       </section-title>
+       <paragraph>
+        The declarative effect specifications extend the class taxonomy with information on the relation between actions and the objects they interact with. They are mainly used for searching for actions that have the desired effects and whose pre-conditions can be made true. Fig. 10 lists the most important properties that are used for representing action effects: preActors, displayed in the upper part of the figure, describe action properties that are supposed to hold before the action takes place. They include the agent (doneBy), the initial locations and states (fromLocation, fromState), or the thingIncorporated that is merged into the objectAddedTo. The postActors relations describe the outcome of an action, for example the outputsCreated, the targetPosture or 1 the toLocation of a transport action. These properties are used in class restrictions for describing the inputs, outputs, pre- and postconditions of an action class. Using common OWL inference, the robot can thus find actions with the desired properties while generalizing along the class taxonomy. For example, the robot can search for an Action that turns a Device from DeviceStateOff to DeviceStateOn, and will obtain the action class TurningOnPoweredDevice:{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="5.4.2">
+       <section-title>
+        Projecting action effects
+       </section-title>
+       <paragraph>
+        Complementary to the declarative effect axioms from the previous section, there are procedural projection rules for computing how a concrete world state would change after performing an action. While the declarative axioms are defined at the class level, the projection rules assert these relations for a concrete set of action and object instances. The consistency of the two representations has to be ensured by the programmer.
+       </paragraph>
+       <paragraph>
+        In the context of KnowRob, we are mainly interested in a light-weight and rather superficial form of envisioning that allows to spot major gaps in the task instructions. In the current implementation, the rules operate on a rather coarse, qualitative level and their predictions are neither very exact nor complete. A detailed prediction of the world state after an action has been performed would require much more sophisticated (and computationally expensive) methods that are for example based on physical simulation [20] – though even those are limited regarding the level of realism they can achieve.
+       </paragraph>
+       <paragraph>
+        The projection rules have been implemented as Prolog predicates that establish the links between an action instance and the objects that act as its inputs or outputs, are newly created or destroyed. They can be associated with actions at any level of the taxonomy, for example the rather generic rule for turning a device on, or a specific rule for dough that starts to bake when exposed to heat. Below is an example of a projection rule for the “mixing baking mix to batter” action. The predicate first checks its applicability conditions (the action is of the given type, the object is specified, and no projection of this action has been done so far). Then it creates the new object instances and asserts the relations between the input objects, the action, and the generated outputs. These relations correspond directly to the declarative specifications in the OWL ontology.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Initially, i.e. before the projection rule was applied, the only relation set for the action was the generic objectActedOn that linked it to an instance of MixForBakedGoods. Such generic relations can often be obtained from instructions. The projection rule then refined and extended the description by asserting properties such as objectAddedTo, outputsCreated and thingIncorporated that describe the relations in much more detail. This additional information is important for reasoning about how objects are transformed during a task and for identifying inconsistencies and knowledge gaps.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      We characterize the performance of the proposed knowledge processing system along five dimensions: The size of the ontology, its runtime performance, examples of supported queries that cover different knowledge areas, examples of robot experiments in which KnowRob has been used, and the adoption of the open-source software library by the community, which we consider both as an indicator of its usability and its fitness for applications beyond those it was initially conceived for.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Knowledge content
+      </section-title>
+      <paragraph>
+       The KnowRob ontology and its sub-ontologies currently include about 8000 classes describing events and temporal things, actions, objects and spatial things, as well as mathematical concepts and meta-information. There are about 130 action classes, 7000 object classes and 150 robot-specific concepts which can be described by over 300 kinds of properties. The classes cover a wide range of concepts about mobile manipulation robots, household chores, cooking and fetch-and-carry tasks. Extensions by third-party developers include knowledge about industrial assembly tasks, search and rescue in alpine environments, and underwater robotics.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Run time and scalability
+      </section-title>
+      <paragraph>
+       Like in any Prolog program, the run time of a query depends on factors such as the size of the knowledge base, the order of predicates in a conjunction and their respective branching factors. Since KnowRob includes many external, i.e. non-Prolog, reasoners that may trigger complex computations, the runtime is also affected by which reasoners are to be considered. While general statements about the runtime efficiency are therefore difficult to make, the performance of a specific query can be predicted and tested very well. This aligns well with how KnowRob is used by the robot's control program: Control decisions are formulated as queries to the knowledge base that read required parameters. While their results are computed at runtime, the structure of the queries is known at plan design time, and their performance can thus be tested and optimized as needed.
+      </paragraph>
+      <paragraph>
+       To quantify the performance in a common task, we have simulated the creation of a large number of object perceptions as described in Section 4.3, which are among the most complex structures in KnowRob. For each simulated perception event, the system has to create the VisualPerception instance, the object instance and the pose matrix with its 16 elements (stored as OWL datatype properties). The following code has been used to create these structures for N ranging from 100 to 1,000,000 objects – which corresponds to storing one object perception per seconds for more than eleven days in a row. The time() predicate measures the CPU time consumed by evaluating a predicate. After creating the N object perceptions, we measure the time for querying for the pose of an arbitrary object.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Fig. 11 (left) plots the average CPU time needed for creating one object-perception-pose structure and the time for querying for a pose after the N poses have been created. Both times are almost constant, the time for querying for the pose value jumps between one and two milliseconds, which is the resolution of the time() predicate. The right diagram plots the number of atoms in the knowledge base and the memory consumption of the Prolog UNIX process. Both increase almost linearly with the number of objects. Other queries that do not involve interaction with external components are usually answered in about 30–50 ms, queries that involve the on-demand analysis of CAD models (as an example of an expensive external inference procedure) require between 5–60 s, depending on the complexity of the object mesh.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      Example queries supported by KnowRob
+      <paragraph>
+       In this section, we will explain how the different representations contribute to the overall reasoning capabilities of KnowRob. In particular, we emphasize the benefit of having a common representation language that supports a wide range of queries which combine different kinds of information from different sources.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Reasoning about robot capabilities
+        </section-title>
+        <paragraph>
+         When processing instructions for a novel task, one cannot assume that all required capabilities are available on the robot. The system should therefore be able to decide whether important components or capabilities are missing by comparing the dependencies of a task description with a model of the available capabilities. While instructions usually do not come with suitable dependency specifications, they can often be inherited from the parent classes in the action ontology that the actions in the task are derived from (as explained in Section 5.3). The following example queries ask for the components and capabilities that are required for a task MakingPancakes. The returned dependencies have been inherited from the classes Reaching and PickingUpAnObject that some sub-actions of the MakingPancakes task are derived from. The two lower queries compare the required components and capabilities with those available on a given robot to identify missing ones. These examples show how robot models, task descriptions and the action ontology can be combined in a query.{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Exchanging information with other robots
+        </section-title>
+        <paragraph>
+         As long as all hardware components are available, the robot could try to launch software components that provide missing capabilities. Missing software components, e.g. detailed instructions for sub-tasks, environment maps or object models can also be downloaded from web-based knowledge bases such as RoboEarth [51]. For formulating queries to this system and for integrating the results with the existing knowledge base, it is important to have all information in the same language. The representation language used in RoboEarth [45] is a subset of the representations described in this paper, so information described in that language can simply be loaded into KnowRob. The following query downloads an environment map and an object model; it is formulated using the part-of relation between the building, floor and room (Section 4.2). After download, the system automatically downloads models for all object classes whose instances appear in the map if they are not available yet.{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Locating objects in the environment
+        </section-title>
+        <paragraph>
+         To ground the abstract object descriptions in an instruction into actual objects in the environment, the robot needs to add actions for searching for these objects and for retrieving them from their storage locations. If the objects' locations are known, they can simply be looked up in the environment map (Section 4.2), but often this is not the case. Then, the system has to reason about likely locations given the available knowledge about the locations of other objects and their properties. This can for example be done using generic rules for storage locations [3] or based on a semantic similarity to other objects in the environment as explained in Section 4.1. If the inferred location is inside a container, the robot can query the semantic map for an articulation model that can parameterize the action for opening the container. The following query is an example how to obtain the opening trajectory of the container that is inferred to be the most likely storage location for milk; its result is show in Fig. 12 (left).{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Integrating experiences and observations of human actions
+        </section-title>
+        <paragraph>
+         Observations of human actions and memorized experiences can provide valuable information about objects, motions, locations and other action parameters. In our system, these kinds of memories are stored as instances of the respective action classes as explained in Section 5.2. This way, retrieving examples of the execution of an action reduces to reading all instances of the respective action class. An example query for the motion of taking a dinner plate out of a cupboard is given below, its results are visualized in Fig. 12 (right). This query combines information from the action instances with the action and object ontology and the logged continuous movements.{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Selecting functional object parts
+        </section-title>
+        <paragraph>
+         Using the part-based object representation, the system can automatically identify and locate relevant functional object parts in CAD models. Once the object is recognized in a scene, these relative locations can be translated into scene-global coordinates that the robot can use for interacting with the object. Below are example queries that are needed for selecting the right parts for pouring pancake batter onto a pancake maker. For picking up the bottle of pancake mix, the robot can query for a handle that is part of the bottle instance using the following query:{a mathematical formula} For controlling the pouring motion, the part of the bottle that needs to be controlled is the opening. A reasonably general heuristic is to assume that the cone (as generalized cylinder) that is at the top of a bottle is its cap. This heuristic rule can be formulated as follows based on the geometric primitives identified in the CAD model by selecting all cones and sorting them based on their z coordinate. This example shows how logical rules can be formulated in the knowledge base that are evaluated on the object components extracted using geometric analysis.{a mathematical formula}
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Example use cases on a physical robot
+      </section-title>
+      <paragraph>
+       The KnowRob system has been applied in several experiments on physical robots. Fig. 13 shows examples of three tasks on two different robots: The left two pictures show a drink serving task performed by a PR2 robot (left) and an Amigo robot (center). Both robots execute the same task description (Section 5.3) and parameterize it with semantic models of the environment (Section 4.2), of the drink pack to be served (Section 4.1), and the articulated model of the cabinet that describes how the door can be opened (Section 4.5). The robots used abstract models of their hardware and their capabilities (Section 4.6) to decide if they are able to perform the task.
+      </paragraph>
+      <paragraph>
+       The right image in Fig. 13 shows a pancake making task realized on the PR2 robot. In this task, KnowRob has again been used for representing the actions to be performed, the environment model and the objects to be manipulated. Especially the actions for pouring batter onto the pancake maker and for flipping a pancake include complex motions that have been parameterized with part-based object models that have automatically been derived from CAD models (Section 4.5). Based on these models, the robot could determine which parts of the objects it needs to interact with, e.g. to grasp the spatulas at their handles and to consider the position of the bottle opening when pouring.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Open-source release &amp; community adoption
+      </section-title>
+      <paragraph>
+       KnowRob has been available as open-source software for several years, and several research groups and collaborative research projects have chosen it as knowledge base for their robot applications. While no classical evaluation measure, the breadth of applications that third-party researchers use the system for are, in our opinion, an indication of the usability and usefulness of the system. For example, several European research projects use KnowRob for representing knowledge to be exchanged between robots (RoboEarth{sup:5}), for integrating information from the Web with task demonstrations given by humans (RoboHow{sup:6}), for elderly-care robots (SRS{sup:7}), for assembly tasks in industrial applications (SMErobotics{sup:8}), for reasoning about safe human–robot cooperation (SAPHARI{sup:9}), and for multi-robot search-and-rescue tasks in alpine disaster scenarios (SHERPA{sup:10}). Other (not yet published) applications include underwater robotics and multi-player online games that use the spatio-temporal object representation for virtual scenes.
+      </paragraph>
+      <paragraph>
+       To further promote the use of knowledge representation and reasoning methods for robotics applications, we have created a web-based version of the KnowRob system called Open-EASE. Its core is formed by the same KnowRob knowledge base that also runs on the robot, but users (or robots) can access and query the knowledge base over the Internet using a WebSocket interface.{sup:11}Open-EASE does not require any installation and offers a rich set of browser-based visualizations for query results.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,957 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Convolutional Neural Network for Modelling Sentences.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       The ability to accurately represent sentences is central to language understanding. We describe a convolutional architecture dubbed the Dynamic Convolutional Neural Network (DCNN) that we adopt for the semantic modelling of sentences. The network uses Dynamic
+       k
+       -Max Pooling, a global pooling operation over linear sequences. The network handles input sentences of varying length and induces a feature graph over the sentence that is capable of explicitly capturing short and long-range relations. The network does not rely on a parse tree and is easily applicable to any language. We test the DCNN in four experiments: small scale binary and multi-class sentiment prediction, six-way question classification and Twitter sentiment prediction by distant supervision. The network achieves excellent performance in the first three tasks and a greater than
+       25⁢%
+       error reduction in the last task with respect to the strongest baseline.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The aim of a sentence model is to analyse and represent the semantic content of a sentence for purposes of classification or generation. The sentence modelling problem is at the core of many tasks involving a degree of natural language comprehension. These tasks include sentiment analysis, paraphrase detection, entailment recognition, summarisation, discourse analysis, machine translation, grounded language learning and image retrieval.
+Since individual sentences are rarely observed or not observed at all, one must represent a sentence in terms of features that depend on the words and short
+        n
+        -grams in the sentence that are frequently observed. The core of a sentence model involves a feature function that defines the process by which the features of the sentence are extracted from the features of the words or
+        n
+        -grams.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Various types of models of meaning have been proposed. Composition based methods have been applied to vector representations of word meaning obtained from co-occurrence statistics to obtain vectors for longer phrases. In some cases, composition is defined by algebraic operations over word meaning vectors to produce sentence meaning vectors
+        []
+        . In other cases, a composition function is learned and either tied to particular syntactic relations
+        []
+        or to particular word types
+        []
+        . Another approach represents the meaning of sentences by way of automatically extracted logical forms
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        A central class of models are those based on neural networks. These range from basic neural bag-of-words or bag-of-
+        n
+        -grams models to the more structured recursive neural networks and to time-delay neural networks based on convolutional operations
+        []
+        . Neural sentence models have a number of advantages. They can be trained to obtain generic vectors for words and phrases by predicting, for instance, the contexts in which the words and phrases occur. Through supervised training, neural sentence models can fine-tune these vectors to information that is specific to a certain task. Besides comprising powerful classifiers as part of their architecture, neural sentence models can be used to condition a neural language model to generate sentences word by word
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        We define a convolutional neural network architecture and apply it to the semantic modelling of sentences. The network handles input sequences of varying length. The layers in the network interleave one-dimensional convolutional layers and dynamic
+        k
+        -max pooling layers. Dynamic
+        k
+        -max pooling is a generalisation of the max pooling operator. The max pooling operator is a non-linear subsampling function that returns the maximum of a set of values
+        []
+        . The operator is generalised in two respects. First,
+        k
+        -max pooling over a linear sequence of values returns the subsequence of
+        k
+        maximum values in the sequence, instead of the single maximum value. Secondly, the pooling parameter
+        k
+        can be dynamically chosen by making
+        k
+        a function of other aspects of the network or the input.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The convolutional layers apply one-dimensional filters across each row of features in the sentence matrix. Convolving the same filter with the
+        n
+        -gram at every position in the sentence allows the features to be extracted independently of their position in the sentence. A convolutional layer followed by a dynamic pooling layer and a non-linearity form a feature map. Like in the convolutional networks for object recognition
+        []
+        , we enrich the representation in the first layer by computing multiple feature maps with different filters applied to the input sentence. Subsequent layers also have multiple feature maps computed by convolving filters with all the maps from the layer below. The weights at these layers form an order-4 tensor. The resulting architecture is dubbed a Dynamic Convolutional Neural Network.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Multiple layers of convolutional and dynamic pooling operations induce a structured feature graph over the input sentence. Figure 1 illustrates such a graph. Small filters at higher layers can capture syntactic or semantic relations between non-continuous phrases that are far apart in the input sentence. The feature graph induces a hierarchical structure somewhat akin to that in a syntactic parse tree. The structure is not tied to purely syntactic relations and is internal to the neural network.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        We experiment with the network in four settings. The first two experiments involve predicting the sentiment of movie reviews
+        []
+        . The network outperforms other approaches in both the binary and the multi-class experiments. The third experiment involves the categorisation of questions in six question types in the TREC dataset
+        []
+        . The network matches the accuracy of other state-of-the-art methods that are based on large sets of engineered features and hand-coded knowledge resources.
+The fourth experiment involves predicting the sentiment of Twitter posts using distant supervision
+        []
+        . The network is trained on 1.6 million tweets labelled automatically according to the emoticon that occurs in them. On the hand-labelled test set, the network achieves a greater than
+        25⁢%
+        reduction in the prediction error with respect to the strongest unigram and bigram baseline reported in
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        The outline of the paper is as follows. Section 2 describes the background to the DCNN including central concepts and related neural sentence models. Section 3 defines the relevant operators and the layers of the network. Section 4 treats of the induced feature graph and other properties of the network. Section 5 discusses the experiments and inspects the learnt feature detectors.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Background
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The layers of the DCNN are formed by a convolution operation followed by a pooling operation. We begin with a review of related neural sentence models. Then we describe the operation of
+        one-dimensional convolution
+        and the classical Time-Delay Neural Network (TDNN)
+        []
+        . By adding a max pooling layer to the network, the TDNN can be adopted as a sentence model
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Related Neural Sentence Models
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Various neural sentence models have been described. A general class of basic sentence models is that of Neural Bag-of-Words (NBoW) models. These generally consist of a projection layer that maps words, sub-word units or
+         n
+         -grams to high dimensional embeddings; the latter are then combined component-wise with an operation such as summation. The resulting combined vector is classified through one or more fully connected layers.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         A model that adopts a more general structure provided by an external parse tree is the Recursive Neural Network (RecNN)
+         []
+         . At every node in the tree the contexts at the left and right children of the node are combined by a classical layer. The weights of the layer are shared across all nodes in the tree. The layer computed at the top node gives a representation for the sentence.
+The Recurrent Neural Network (RNN) is a special case of the recursive network where the structure that is followed is a simple linear chain
+         []
+         . The RNN is primarily used as a language model, but may also be viewed as a sentence model with a linear structure. The layer computed at the last word represents the sentence.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         Finally, a further class of neural sentence models is based on the convolution operation and the TDNN architecture
+         []
+         . Certain concepts used in these models are central to the DCNN and we describe them next.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Convolution
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         The
+         one-dimensional convolution
+         is an operation between a vector of weights
+         𝐦∈ℝm
+         and a vector of inputs viewed as a sequence
+         𝐬∈ℝs
+         . The vector
+         𝐦
+         is the
+         filter
+         of the convolution. Concretely, we think of
+         𝐬
+         as the input sentence and
+         𝐬i∈ℝ
+         is a single feature value associated with the
+         i
+         -th word in the sentence. The idea behind the one-dimensional convolution is to take the dot product of the vector
+         𝐦
+         with each
+         m
+         -gram in the sentence
+         𝐬
+         to obtain another sequence
+         𝐜
+         :
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        𝐜j=𝐦⊺⁢𝐬j-m+1:j
+
+(1)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         Equation
+         1
+         gives rise to two types of convolution depending on the range of the index
+         j
+         . The
+         narrow
+         type of convolution requires that
+         s≥m
+         and yields a sequence
+         𝐜∈ℝs-m+1
+         with
+         j
+         ranging from
+         m
+         to
+         s
+         . The
+         wide
+         type of convolution does not have requirements on
+         s
+         or
+         m
+         and yields a sequence
+         𝐜∈ℝs+m-1
+         where the index
+         j
+         ranges from
+         1
+         to
+         s+m-1
+         . Out-of-range input values
+         𝐬i
+         where
+         i&lt;1
+         or
+         i&gt;s
+         are taken to be zero. The result of the narrow convolution is a subsequence of the result of the wide convolution. The two types of one-dimensional convolution are illustrated in Fig. 2.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         The trained weights in the filter
+         𝐦
+         correspond to a linguistic feature detector that learns to recognise a specific class of
+         n
+         -grams. These
+         n
+         -grams have size
+         n≤m
+         , where
+         m
+         is the width of the filter. Applying the weights
+         𝐦
+         in a wide convolution has some advantages over applying them in a narrow one. A wide convolution ensures that all weights in the filter reach the entire sentence, including the words at the margins. This is particularly significant when
+         m
+         is set to a relatively large value such as 8 or 10. In addition, a wide convolution guarantees that the application of the filter
+         𝐦
+         to the input sentence
+         𝐬
+         always produces a valid non-empty result
+         𝐜
+         , independently of the width
+         m
+         and the sentence length
+         s
+         . We next describe the classical convolutional layer of a TDNN.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Time-Delay Neural Networks
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         A TDNN convolves a sequence of inputs
+         𝐬
+         with a set of weights
+         𝐦
+         . As in the TDNN for phoneme recognition
+         []
+         , the sequence
+         𝐬
+         is viewed as having a time dimension and the convolution is applied over the time dimension. Each
+         𝐬j
+         is often not just a single value, but a vector of
+         d
+         values so that
+         𝐬∈ℝd×s
+         . Likewise,
+         𝐦
+         is a matrix of weights of size
+         d×m
+         . Each row of
+         𝐦
+         is convolved with the corresponding row of
+         𝐬
+         and the convolution is usually of the narrow type. Multiple convolutional layers may be stacked by taking the resulting sequence
+         𝐜
+         as input to the next layer.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        <p class="ltx_p">
+         The Max-TDNN sentence model is based on the architecture of a TDNN
+         []
+         . In the model, a convolutional layer of the narrow type is applied to the sentence matrix
+         𝐬
+         , where each column corresponds to the feature vector
+         𝐰i∈ℝd
+         of a word in the sentence:
+        </p>
+        𝐬=[𝐰1…𝐰s]
+
+(2)
+        <p class="ltx_p">
+         To address the problem of varying sentence lengths, the Max-TDNN takes the maximum of each row in the resulting matrix
+         𝐜
+         yielding a vector of
+         d
+         values:
+        </p>
+        𝐜m⁢a⁢x=[max⁡(𝐜1,:)⋮max⁡(𝐜d,:)]
+
+(3)
+        <p class="ltx_p">
+         The aim is to capture the most relevant feature, i.e. the one with the highest value, for each of the
+         d
+         rows of the resulting matrix
+         𝐜
+         . The fixed-sized vector
+         𝐜m⁢a⁢x
+         is then used as input to a fully connected layer for classification.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p3">
+        <p class="ltx_p">
+         The Max-TDNN model has many desirable properties. It is sensitive to the order of the words in the sentence and it does not depend on external language-specific features such as dependency or constituency parse trees. It also gives largely uniform importance to the signal coming from each of the words in the sentence, with the exception of words at the margins that are considered fewer times in the computation of the narrow convolution. But the model also has some limiting aspects. The range of the feature detectors is limited to the span
+         m
+         of the weights. Increasing
+         m
+         or stacking multiple convolutional layers of the narrow type makes the range of the feature detectors larger; at the same time it also exacerbates the neglect of the margins of the sentence and increases the minimum size
+         s
+         of the input sentence required by the convolution. For this reason higher-order and long-range feature detectors cannot be easily incorporated into the model.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p4">
+        <p class="ltx_p">
+         The max pooling operation has some disadvantages too. It cannot distinguish whether a relevant feature in one of the rows occurs just one or multiple times and it forgets the order in which the features occur. More generally, the pooling factor by which the signal of the matrix is reduced at once corresponds to
+         s-m+1
+         ; even for moderate values of
+         s
+         the pooling factor can be excessive.
+The aim of the next section is to address these limitations while preserving the advantages.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Convolutional Neural Networks with Dynamic
+       k
+       -Max Pooling
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We model sentences using a convolutional architecture that alternates wide convolutional layers with dynamic pooling layers given by
+        dynamic k-max pooling
+        . In the network the width of a feature map at an intermediate layer varies depending on the length of the input sentence; the resulting architecture is the Dynamic Convolutional Neural Network. Figure 3 represents a DCNN. We proceed to describe the network in detail.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Wide Convolution
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Given an input sentence, to obtain the first layer of the DCNN we take the embedding
+         𝐰i∈ℝd
+         for each word in the sentence and construct the sentence matrix
+         𝐬∈ℝd×s
+         as in Eq.
+         2
+         . The values in the embeddings
+         𝐰i
+         are parameters that are optimised during training.
+A convolutional layer in the network is obtained by convolving a matrix of weights
+         𝐦∈ℝd×m
+         with the matrix of activations at the layer below. For example, the second layer is obtained by applying a convolution to the sentence matrix
+         𝐬
+         itself. Dimension
+         d
+         and filter width
+         m
+         are hyper-parameters of the network. We let the operations be
+         wide
+         one-dimensional convolutions as described in Sect.
+         2.2
+         . The resulting matrix
+         𝐜
+         has dimensions
+         d×(s+m-1)
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        k
+        -Max Pooling
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We next describe a pooling operation that is a generalisation of the max pooling over the time dimension used in the Max-TDNN sentence model and different from the local max pooling operations applied in a convolutional network for object recognition
+         []
+         . Given a value
+         k
+         and a sequence
+         𝐩∈ℝp
+         of length
+         p≥k
+         ,
+         k-max pooling
+         selects the subsequence
+         𝐩m⁢a⁢xk
+         of the
+         k
+         highest values of
+         𝐩
+         . The order of the values in
+         𝐩m⁢a⁢xk
+         corresponds to their original order in
+         𝐩
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         The
+         k
+         -max pooling operation makes it possible to pool the
+         k
+         most active features in
+         𝐩
+         that may be a number of positions apart; it preserves the order of the features, but is insensitive to their specific positions. It can also discern more finely the number of times the feature is highly activated in
+         𝐩
+         and the progression by which the high activations of the feature change across
+         𝐩
+         .
+The
+         k
+         -max pooling operator is applied in the network after the topmost convolutional layer. This guarantees that the input to the fully connected layers is independent of the length of the input sentence.
+But, as we see next, at intermediate convolutional layers the pooling parameter
+         k
+         is not fixed, but is dynamically selected in order to allow for a smooth extraction of higher-order and longer-range features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Dynamic
+        k
+        -Max Pooling
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         A
+         dynamic k-max pooling
+         operation is a
+         k
+         -max pooling operation where we let
+         k
+         be a function of the length of the sentence and the depth of the network. Although many functions are possible, we simply model the pooling parameter as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        kl=max⁡(kt⁢o⁢p,  ⌈L-lL⁢s⌉)
+
+(4)
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         where
+         l
+         is the number of the current convolutional layer to which the pooling is applied and
+         L
+         is the total number of convolutional layers in the network;
+         kt⁢o⁢p
+         is the fixed pooling parameter for the topmost convolutional layer (Sect.
+         3.2
+         ). For instance, in a network with three convolutional layers and
+         kt⁢o⁢p=3
+         , for an input sentence of length
+         s=18
+         , the pooling parameter at the first layer is
+         k1=12
+         and the pooling parameter at the second layer is
+         k2=6
+         ; the third layer has the fixed pooling parameter
+         k3=kt⁢o⁢p=3
+         . Equation
+         4
+         is a model of the number of values needed to describe the relevant parts of the progression of an
+         l
+         -th order feature over a sentence of length
+         s
+         . For an example in sentiment prediction, according to the equation a first order feature such as a positive word occurs
+         at most
+         k1
+         times in a sentence of length
+         s
+         , whereas a second order feature such as a negated phrase or clause occurs at most
+         k2
+         times.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Non-linear Feature Function
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         After (dynamic)
+         k
+         -max pooling is applied to the result of a convolution, a bias
+         𝐛∈ℝd
+         and a non-linear function
+         g
+         are applied component-wise to the pooled matrix. There is a single bias value for each row of the pooled matrix.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         If we temporarily ignore the pooling layer, we may state how one computes each
+         d
+         -dimensional column
+         a
+         in the matrix
+         𝐚
+         resulting after the convolutional and non-linear layers. Define
+         𝐌
+         to be the matrix of diagonals:
+        </p>
+        𝐌=[diag⁢(𝐦:,1),…,diag⁢(𝐦:,m)]
+
+(5)
+       </div>
+       <div class="ltx_para" id="S3.SS4.p3">
+        <p class="ltx_p">
+         where
+         𝐦
+         are the weights of the
+         d
+         filters of the wide convolution.
+Then after the first pair of a convolutional and a non-linear layer, each column
+         a
+         in the matrix
+         𝐚
+         is obtained as follows, for some index
+         j
+         :
+        </p>
+        a=g⁢(𝐌⁢[𝐰j⋮𝐰j+m-1]+𝐛)
+
+(6)
+       </div>
+       <div class="ltx_para" id="S3.SS4.p4">
+        <p class="ltx_p">
+         Here
+         a
+         is a column of first order features. Second order features are similarly obtained by applying Eq.
+         6
+         to a sequence of first order features
+         aj,…,aj+m′-1
+         with another weight matrix
+         𝐌′
+         . Barring pooling, Eq.
+         6
+         represents a core aspect of the feature extraction function and has a rather general form that we return to below. Together with pooling, the feature function induces position invariance and makes the range of higher-order features variable.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.5
+        </span>
+        Multiple Feature Maps
+       </h3>
+       <div class="ltx_para" id="S3.SS5.p1">
+        <p class="ltx_p">
+         So far we have described how one applies a wide convolution, a (dynamic)
+         k
+         -max pooling layer and a non-linear function to the input sentence matrix to obtain a first order
+         feature map
+         . The three operations can be repeated to yield feature maps of increasing order and a network of increasing depth. We denote a feature map of the
+         i
+         -th order by
+         𝐅i
+         . As in convolutional networks for object recognition, to increase the number of learnt feature detectors of a certain order, multiple feature maps
+         𝐅1i,…,𝐅ni
+         may be computed in parallel at the same layer. Each feature map
+         𝐅ji
+         is computed by convolving a distinct set of filters arranged in a matrix
+         𝐦j,ki
+         with each feature map
+         𝐅ki-1
+         of the lower order
+         i-1
+         and summing the results:
+        </p>
+        𝐅ji=∑k=1n𝐦j,ki*𝐅ki-1
+
+(7)
+       </div>
+       <div class="ltx_para" id="S3.SS5.p2">
+        <p class="ltx_p">
+         where
+         *
+         indicates the wide convolution. The weights
+         𝐦j,ki
+         form an order-4 tensor. After the wide convolution, first dynamic
+         k
+         -max pooling and then the non-linear function are applied individually to each map.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS6">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.6
+        </span>
+        Folding
+       </h3>
+       <div class="ltx_para" id="S3.SS6.p1">
+        <p class="ltx_p">
+         In the formulation of the network so far, feature detectors applied to an individual row of the sentence matrix
+         𝐬
+         can have many orders and create complex dependencies across the same rows in multiple feature maps. Feature detectors in different rows, however, are independent of each other until the top fully connected layer. Full dependence between different rows could be achieved by making
+         𝐌
+         in Eq.
+         5
+         a full matrix instead of a sparse matrix of diagonals. Here we explore a simpler method called
+         folding
+         that does not introduce any additional parameters. After a convolutional layer and before (dynamic)
+         k
+         -max pooling, one just sums every two rows in a feature map component-wise. For a map of
+         d
+         rows, folding returns a map of
+         d/2
+         rows, thus halving the size of the representation. With a folding layer, a feature detector of the
+         i
+         -th order depends now on two rows of feature values in the lower maps of order
+         i-1
+         . This ends the description of the DCNN.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Properties of the Sentence Model
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We describe some of the properties of the sentence model based on the DCNN. We describe the notion of the
+        feature graph
+        induced over a sentence by the succession of convolutional and pooling layers. We briefly relate the properties to those of other neural sentence models.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Word and
+        n
+        -Gram Order
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         One of the basic properties is sensitivity to the order of the words in the input sentence. For most applications and in order to learn fine-grained feature detectors, it is beneficial for a model to be able to discriminate whether a specific
+         n
+         -gram occurs in the input. Likewise, it is beneficial for a model to be able to tell the
+         relative
+         position of the most relevant
+         n
+         -grams. The network is designed to capture these two aspects. The filters
+         𝐦
+         of the wide convolution in the first layer can learn to recognise specific
+         n
+         -grams that have size less or equal to the filter width
+         m
+         ; as we see in the experiments,
+         m
+         in the first layer is often set to a relatively large value such as
+         10
+         . The subsequence of
+         n
+         -grams extracted by the generalised pooling operation induces invariance to absolute positions, but maintains their order and relative positions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         As regards the other neural sentence models, the class of NBoW models is by definition insensitive to word order. A sentence model based on a recurrent neural network is sensitive to word order, but it has a bias towards the latest words that it takes as input
+         []
+         . This gives the RNN excellent performance at language modelling, but it is suboptimal for remembering at once the
+         n
+         -grams further back in the input sentence. Similarly, a recursive neural network is sensitive to word order but has a bias towards the topmost nodes in the tree; shallower trees mitigate this effect to some extent
+         []
+         . As seen in Sect.
+         2.3
+         , the Max-TDNN is sensitive to word order, but max pooling only picks out a single
+         n
+         -gram feature in each row of the sentence matrix.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Induced Feature Graph
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Some sentence models use internal or external structure to compute the representation for the input sentence. In a DCNN, the convolution and pooling layers induce an internal feature graph over the input. A node from a layer is connected to a node from the next higher layer if the lower node is involved in the convolution that computes the value of the higher node. Nodes that are not selected by the pooling operation at a layer are dropped from the graph. After the last pooling layer, the remaining nodes connect to a single topmost root. The induced graph is a connected, directed acyclic graph with weighted edges and a root node; two equivalent representations of an induced graph are given in Fig.
+         1
+         . In a DCNN without folding layers, each of the
+         d
+         rows of the sentence matrix induces a subgraph that joins the other subgraphs only at the root node. Each subgraph may have a different shape that reflects the kind of relations that are detected in that subgraph. The effect of folding layers is to join pairs of subgraphs at lower layers before the top root node.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Convolutional networks for object recognition also induce a feature graph over the input image. What makes the feature graph of a DCNN peculiar is the global range of the pooling operations. The (dynamic)
+         k
+         -max pooling operator can draw together features that correspond to words that are many positions apart in the sentence. Higher-order features have highly variable ranges that can be either short and focused or global and long as the input sentence. Likewise, the edges of a subgraph in the induced graph reflect these varying ranges. The subgraphs can either be localised to one or more parts of the sentence or spread more widely across the sentence. This structure is internal to the network and is defined by the forward propagation of the input through the network.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Of the other sentence models, the NBoW is a shallow model and the RNN has a linear chain structure. The subgraphs induced in the Max-TDNN model have a single fixed-range feature obtained through max pooling. The recursive neural network follows the structure of an external parse tree. Features of variable range are computed at each node of the tree combining one or more of the children of the tree. Unlike in a DCNN, where one learns a clear hierarchy of feature orders, in a RecNN low order features like those of single words can be directly combined with higher order features computed from entire clauses. A DCNN generalises many of the structural aspects of a RecNN. The feature extraction function as stated in Eq.
+         6
+         has a more general form than that in a RecNN, where the value of
+         m
+         is generally 2. Likewise, the induced graph structure in a DCNN is more general than a parse tree in that it is not limited to syntactically dictated phrases; the graph structure can capture short or long-range semantic relations between words that do not necessarily correspond to the syntactic relations in a parse tree. The DCNN has internal input-dependent structure and does not rely on externally provided parse trees, which makes the DCNN directly applicable to hard-to-parse sentences such as tweets and to sentences from any language.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We test the network on four different experiments. We begin by specifying aspects of the implementation and the training of the network. We then relate the results of the experiments and we inspect the learnt feature detectors.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Training
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         In each of the experiments, the top layer of the network has a fully connected layer followed by a softmax non-linearity that predicts the probability distribution over classes given the input sentence.
+The network is trained to minimise the cross-entropy of the predicted and true distributions; the objective includes an
+         L2
+         regularisation term over the parameters.
+The set of parameters comprises the word embeddings, the filter weights and the weights from the fully connected layers. The network is trained with mini-batches by backpropagation and the gradient-based optimisation is performed using the Adagrad update rule
+         []
+         .
+Using the well-known convolution theorem, we can compute fast one-dimensional linear convolutions at all rows of an input matrix by using Fast Fourier Transforms. To exploit the parallelism of the operations, we train the network on a GPU. A Matlab implementation processes multiple millions of input sentences per hour on one GPU, depending primarily on the number of layers used in the network.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Sentiment Prediction in Movie Reviews
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         The first two experiments concern the prediction of the sentiment of movie reviews in the Stanford Sentiment Treebank
+         []
+         . The output variable is binary in one experiment and can have five possible outcomes in the other: negative, somewhat negative, neutral, somewhat positive, positive. In the binary case, we use the given splits of 6920 training, 872 development and 1821 test sentences. Likewise, in the fine-grained case, we use the standard 8544/1101/2210 splits. Labelled phrases that occur as subparts of the training sentences are treated as independent training instances. The size of the vocabulary is 15448.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Table 1 details the results of the experiments. In the three neural sentence models—the Max-TDNN, the NBoW and the DCNN—the word vectors are parameters of the models that are randomly initialised; their dimension
+         d
+         is set to 48. The Max-TDNN has a filter of width
+         6
+         in its narrow convolution at the first layer; shorter phrases are padded with zero vectors. The convolutional layer is followed by a non-linearity, a max-pooling layer and a softmax classification layer. The NBoW sums the word vectors and applies a non-linearity followed by a softmax classification layer. The adopted non-linearity is the
+         tanh
+         function.
+The hyper parameters of the DCNN are as follows. The binary result is based on a DCNN that has a wide convolutional layer followed by a folding layer, a dynamic
+         k
+         -max pooling layer and a non-linearity; it has a second wide convolutional layer followed by a folding layer, a
+         k
+         -max pooling layer and a non-linearity. The width of the convolutional filters is 7 and 5, respectively. The value of
+         k
+         for the top
+         k
+         -max pooling is 4. The number of feature maps at the first convolutional layer is 6; the number of maps at the second convolutional layer is 14. The network is topped by a softmax classification layer. The DCNN for the fine-grained result has the same architecture, but the filters have size 10 and 7, the top pooling parameter
+         k
+         is 5 and the number of maps is, respectively, 6 and 12. The networks use the
+         tanh
+         non-linear function. At training time we apply dropout to the penultimate layer after the last
+         tanh
+         non-linearity
+         []
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         We see that the DCNN significantly outperforms the other neural and non-neural models. The NBoW performs similarly to the non-neural
+         n
+         -gram based classifiers. The Max-TDNN performs worse than the NBoW likely due to the excessive pooling of the max pooling operation; the latter discards most of the sentiment features of the words in the input sentence.
+Besides the RecNN that uses an external parser to produce structural features for the model, the other models use
+         n
+         -gram based or neural features that do not require external resources or additional annotations. In the next experiment we compare the performance of the DCNN with those of methods that use heavily engineered resources.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Question Type Classification
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         As an aid to question answering, a question may be classified as belonging to one of many question types. The TREC questions dataset involves six different question types, e.g. whether the question is about a location, about a person or about some numeric information
+         []
+         . The training dataset consists of 5452 labelled questions whereas the test dataset consists of 500 questions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         The results are reported in Tab. 2. The non-neural approaches use a classifier over a large number of manually engineered features and hand-coded resources. For instance,
+         present a Maximum Entropy model that relies on 26 sets of syntactic and semantic features including unigrams, bigrams, trigrams, POS tags, named entity tags, structural relations from a CCG parse and WordNet synsets.
+We evaluate the three neural models on this dataset with mostly the same hyper-parameters as in the binary sentiment experiment of Sect.
+         5.2
+         . As the dataset is rather small, we use lower-dimensional word vectors with
+         d=32
+         that are initialised with embeddings trained in an unsupervised way to predict contexts of occurrence
+         []
+         . The DCNN uses a single convolutional layer with filters of size 8 and 5 feature maps. The difference between the performance of the DCNN and that of the other high-performing methods in Tab. 2 is not significant (
+         p&lt;0.09
+         ). Given that the only labelled information used to train the network is the training set itself, it is notable that the network matches the performance of state-of-the-art classifiers that rely on large amounts of engineered features and rules and hand-coded resources.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Twitter Sentiment Prediction with Distant Supervision
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         In our final experiment, we train the models on a large dataset of tweets, where a tweet is automatically labelled as positive or negative depending on the emoticon that occurs in it. The training set consists of 1.6 million tweets with emoticon-based labels and the test set of about 400 hand-annotated tweets. We preprocess the tweets minimally following the procedure described in
+         ; in addition, we also lowercase all the tokens. This results in a vocabulary of 76643 word types. The architecture of the DCNN and of the other neural models is the same as the one used in the binary experiment of Sect.
+         5.2
+         . The randomly initialised word embeddings are increased in length to a dimension of
+         d=60
+         . Table 3 reports the results of the experiments. We see a significant increase in the performance of the DCNN with respect to the non-neural
+         n
+         -gram based classifiers; in the presence of large amounts of training data these classifiers constitute particularly strong baselines. We see that the ability to train a sentiment classifier on automatically extracted emoticon-based labels extends to the DCNN and results in highly accurate performance. The difference in performance between the DCNN and the NBoW further suggests that the ability of the DCNN to both capture features based on long
+         n
+         -grams and to hierarchically combine these features is highly beneficial.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.5
+        </span>
+        Visualising Feature Detectors
+       </h3>
+       <div class="ltx_para" id="S5.SS5.p1">
+        <p class="ltx_p">
+         A filter in the DCNN is associated with a feature detector or neuron that learns during training to be particularly active when presented with a specific sequence of input words. In the first layer, the sequence is a continuous
+         n
+         -gram from the input sentence; in higher layers, sequences can be made of multiple separate
+         n
+         -grams. We visualise the feature detectors in the first layer of the network trained on the binary sentiment task (Sect.
+         5.2
+         ). Since the filters have width 7, for each of the 288 feature detectors we rank all
+         7
+         -grams occurring in the validation and test sets according to their activation of the detector. Figure
+         4
+         presents the top five
+         7
+         -grams for four feature detectors. Besides the expected detectors for positive and negative sentiment, we find detectors for particles such as ‘not’ that negate sentiment and such as ‘too’ that potentiate sentiment. We find detectors for multiple other notable constructs including ‘all’, ‘or’, ‘with…that’, ‘as…as’. The feature detectors learn to recognise not just single
+         n
+         -grams, but patterns within
+         n
+         -grams that have syntactic, semantic or structural significance.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Envisioning the qualitative effects of robot manipulation actions using simulation-based projections.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In recent years, we have seen substantial progress towards personal robot assistants which are able to perform everyday household chores such as cleaning a room{sup:1} or preparing a meal [2]. However, designing and building robots that can autonomously perform an open-ended set of manipulation tasks in human environments remains an unsolved problem and poses many challenges to the field [30]. One of the challenges is enabling robots to learn how to perform novel tasks from natural instructions, for example interpreting natural language instructions [56] or analyzing observations of a human performing the task [4]. Based on such information, a robot has to understand the nature of the task, that is, it has to reason about how the physical effects of a manipulation action depend on the way the action is executed. In particular, to perform the task itself, the robot has to understand how its own manipulation actions produce physical effects. For example, how does the pose of the robot's end-effector affect the outcome of a pouring action when a liquid is poured from one container to another.
+     </paragraph>
+     <paragraph>
+      Within Artificial Intelligence (AI), the problem of reasoning about actions is often considered in the area of classical planning. In contrast to the question of how the effects of an action depend on how it is executed?, the question that classical planning typically considers is what effects are caused by an action? However, in the context of robotics, the problem has to be approached from a different direction, because how an action is executed has a major influence on its consequences. Furthermore, classical planning approaches are inadequate for everyday manipulation for two reasons: open-ended tasks make classical planning intractable; and robot control programs cannot be adequately represented by sequences of actions [44]. Logical axiomatizations for representing and reasoning about actions and their effects have also been developed for problems such as cracking an egg [41], [47]. However, when temporal projections are made on the basis of logical formalizations, the physical details of the manipulation actions are abstracted away, and variants of the problem could only be handled by extending the underlying theory. To enable robots to reason about the future, they have to predict the effects of their actions before committing to them. This requires them to handle an enormous amount of interdependent temporal data [11].
+     </paragraph>
+     <paragraph>
+      Evidence from cognitive psychology and neuroscience shows that humans perform their actions based on the expected consequences of their actions [21], [26]. One of the important factors that determine how a human performs an action is end-state comfort [59]. Mirror neurons allow humans to perform mental simulations and thereby enable us to recognize and understand the outcome of actions [51]. The simulation theory of cognition is mainly based on three components: that behavior can be simulated; that perception can be simulated; and, finally, that real and simulated actions can provoke perceptual simulations of their most likely consequences [25]. Thus, the question what would happen if I perform this action? can be answered by simulating the action and looking at the simulated perceptual outcome. Subsequently, the perceptual outcome can serve as stimulus for new simulated behavior. Evidence show that even high-level cognitive processes are grounded in bodily-based simulations [54].
+     </paragraph>
+     <paragraph>
+      Within this line of research we are interested in how robots can predict the possible outcomes of both single actions, like reaching for an object, and complex tasks, through mental simulations. We illustrate this with the following concrete example scenario.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Example scenario: making pancakes
+      </section-title>
+      <paragraph>
+       In this article, we use making pancakes as a running example to illustrate what physical knowledge robots need to competently accomplish everyday manipulation tasks. As mentioned above, understanding everyday physical phenomena, that is representing and reasoning about them, is an endeavor in the field of Artificial Intelligence which dates at least back to the work of Hayes [23]. More recently, there has been work on physical reasoning problems such as “cracking an egg” [47] which is listed on the common sense problem page.{sup:2} In analogy to the problems listed on that page, we have formulated the task of making pancakes as follows: “A robot pours ready-made pancake mix onto a preheated pancake maker. Properly performed, the mix is poured into the center of the pancake maker (without spilling) where it forms a round shape. The robot lets it cook until the underside of the pancake is golden brown and its edges are dry. Then, the robot carefully pushes a spatula under the pancake, lifts the spatula with the pancake on top, and quickly turns its wrist to put the pancake upside down back onto the pancake maker. The robot waits for the other side of the pancake to cook fully. Finally, it uses the spatula to move the pancake onto an upturned dinner plate.” whereby a solution to the problem should also take the following variants into account: “What happens if the robot pours too much or too little pancake mix onto the pancake maker, or it pours the mix close to the edge? What happens if the robot flips the pancake too soon or too late, or turns its wrist too slowly? What happens if the robot pushes only half of the spatula's blade under the pancake? What happens if the robot uses a knife, fork or spoon to flip the pancake? What happens if the pancake mix is too thick or too thin, or the ingredients of the mix are not homogeneously mixed?”
+      </paragraph>
+      <paragraph>
+       By following the description of the challenge problem, a robot can acquire basic knowledge about the task. However, the robot does not know what could happen when itself performs the task in a certain way. This knowledge is obtained by what we call here envisioning.{sup:3} We consider envisioning functionally similar to de Kleer [32], de Kleer and Brown [33]. It denotes the kind of qualitative reasoning that predicts what might or could happen in a given situation. However, as we generate symbolic descriptions of what could happen based on simulation-based projections, the underlying principles are different from de Kleer [32]. In this work, we understand envisioning as an ability of a robot to predict and to reason about possible outcomes of its parameterized actions based on physics-based simulations. Through envisioning a robot can learn a mapping between different context conditions and qualitative action effects. In this sense, it shares similarities with classical and/or motion planning as it also makes predictions about future states. But at the same time it is different, as it is based on physics-based simulations. In fact, envisioning is complementary to planning methods as it takes a fully instantiated plan (a sequence of parameterized actions) as its input to reason about the effects and the dynamics of manipulation actions. By varying the initial conditions and the context, envisioning reasons about the generality (or the limitations) of a plan which could have been generated using classical and motion planning methods. Hence, envisioning provides supplementary reasoning capabilities that go beyond simple predictions, enabling robots to know what could happen when they themselves perform a task within a given context.
+      </paragraph>
+      <paragraph>
+       For a simplification of the task above, we consider the natural language instructions a human may use to describe the process of making a pancake:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Pour the pancake mix into a frying pan.
+       </list-item>
+       <list-item label="•">
+        Flip the pancake around.
+       </list-item>
+       <list-item label="•">
+        Place the pancake onto a plate.
+       </list-item>
+      </list>
+      <paragraph>
+       Humans can understand such instructions easily, and can immediately follow them. However, for robots these instructions are highly underspecified and therefore they need other means to acquire the relevant knowledge which enables them to perform the task. Fig. 1 highlights some questions a robot has to answer in order to accomplish the task successfully.
+      </paragraph>
+      <paragraph>
+       To understand what makes this particular task interesting, let us first consider the task-related objects, second the actions a robot has to carry out to perform the task, and finally the physical effects that could result from the actions. The task-related objects mentioned in the natural language instructions above are a pan (pancake maker), a pancake mix, a pancake, and a plate. Not mentioned in the description are some additional tools, for example, the container holding the mix and the spatula for flipping the pancake. Inferring these missing objects is straightforward for humans given their common sense. However, robots have to figure out these objects by other means. Overall, the task scenario contains objects with different physical properties, namely solid, liquid, and deformable objects. This task covers a range of manipulation problems since it involves a spectrum of different object types.
+      </paragraph>
+      <paragraph>
+       The main actions of this task are pouring the mix and flipping the pancake, where the latter action can naturally be split into the following sub-actions: pushing the spatula under the pancake, lifting it, and turning the spatula.
+      </paragraph>
+      <paragraph>
+       Successfully pouring the mix onto the pancake maker requires that the container holding the mix is positioned at the right height over the pancake maker. At this position the container has to be tilted for some time at the right angle, so that the mix flows out onto the pancake maker. Fig. 2 shows our robot, Rosie, pouring a pancake mix onto a pancake maker.
+      </paragraph>
+      <paragraph>
+       As mentioned above, flipping the pancake can be considered as several sub-actions. For pushing the spatula under the pancake the spatula has to be held at an appropriate angle to get under the pancake. When lifting and turning the pancake the spatula has to be tilted at the correct angle so the pancake falls off and lands upside-down on the pancake maker. Fig. 3 shows some aspects of Rosie performing the flipping action.
+      </paragraph>
+      <paragraph>
+       The pouring and the flipping actions performed by the robot could have various effects ranging from desired to undesired. Some of the undesired effects are depicted in Fig. 4. During the pouring action, the robot could spill some pancake mix onto the table or it could pour the mix onto the pancake maker with lots of splashes. During the flipping action, the robot could damage the pancake by touching it from the top, or the pancake could get stuck to the spatula.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Physical reasoning in AI
+      </section-title>
+      <paragraph>
+       Robots should be able to handle variants of the original problem. An intrinsic feature of everyday manipulation tasks is that they will never be repeated under exactly the same conditions. For example, the ingredients or tools a robot has to use might differ; or if the pancake mix has a higher viscosity then the robot has to pour for a longer duration than usual. Not all variants of a problem can be foreseen, yet a robot should be able to cope with variants without the need to extend the underlying theory.
+      </paragraph>
+      <paragraph>
+       In conclusion, reasoning components for robots should be able to deal with the problems laid out above. That is, they should operate at a level of abstraction that considers the robot's actuators, sensors and control routines; handle interfering effects; and also cope with variants of a problem. In the next section we will outline the principle by which we enable robots to envision the outcome of their own actions adequately.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Our approach
+      </section-title>
+      <paragraph>
+       Our aim is to allow robots to reason semantically about objects and actions that rely on the richness of the continuous world. To do this we embed reasoning components deeply within robot control programs, allowing programmers to write more general control programs in a concise way. Our components allow task- and context-related decisions to be made, and action parameters determined, based on the underlying robotic components. The following excerpt of LISP pseudo-code illustrates the basic idea of our constraint-based action specifications, as applied to the example of pouring:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The type of the action is pour, the object ?obj is a part of an object of type pancake-mix contained in a mug, and the destination ?loc is a location on the pancake-maker. The desired effect of the action is a conjunction of several constraints. The object bound to the variable ?obj should be of small size and have a round shape. Furthermore, the location bound to ?loc should be centered on the pancake-maker. An undesired effect of the pouring action is the spilling of ?obj of type pancake-mix.
+      </paragraph>
+      <paragraph>
+       The above example should give the reader only an idea about how we embed the use of naive physics and commonsense knowledge within cognition-enabled robot control. The aim of this work is not to realize this control mechanism, but rather to acquire the commonsense knowledge and generate the models that can be used within reasoning components. As will be shown later, we generate a model in form of a decision tree to determine the tilt angle of the container when pouring the pancake mix based on a desired pancake size and a given task context.
+      </paragraph>
+      <paragraph>
+       By considering the scenario of making pancakes, we aim to find the appropriate representations and inference mechanisms to enable robots to predict the effects of actions which depend on the way they are executed, i.e. their parameterizations. Therefore we have designed, implemented, and analyzed a framework that allows us to envision the outcome of parameterized robot actions based on physics-based simulations [35], [36], [37]. Fig. 6 shows the robot Rosie pushing the spatula under pancake and envisioning the action through mental simulation.
+      </paragraph>
+      <paragraph>
+       Though we have used the example of Rosie to motivate the overall problem of making pancakes, in the remainder of the article we use the PR2 robot to illustrate our ideas. This switch is done mainly for historical reasons as the original work on making pancakes started with Rosie [2]. However, more recently it has been transferred to the PR2 platform.{sup:4}
+      </paragraph>
+      <paragraph>
+       Fig. 7 shows how we extend the previously presented approach to commonsense reasoning. Based on a logical axiomatization (i.e., a description of a manipulation scenario and a fully instantiated robot plan) a physics-based simulation is parameterized. The states of task-relevant objects and actions are monitored and their data structures are logged. These log files are interpreted and translated into interval-based first-order representations, called timelines. These logged timelines allow the robot to perform logical queries on the outcome of the scenario. These queries play a key role in the constraint-based action specifications described above. Further, we show how decision trees can be learned from timelines and how they can be used for planning and action monitoring.
+      </paragraph>
+      <paragraph>
+       Despite using physics-based simulations, our research does not aim to determine the physical effects of action at a detailed level. Instead we aim to capture the qualitative effects and understand how these depend on the parameters of the respective manipulation actions. Furthermore, the developed representations and inference mechanisms should allow the robot to diagnose and revise executed actions; and in the context of learning, they should allow the robot to explore the parameter space of actions more efficiently.
+      </paragraph>
+     </section>
+     <section label="1.4">
+      <section-title>
+       Contributions
+      </section-title>
+      <paragraph>
+       In this work, we have integrated methods from the fields of Artificial Intelligence and Robotics in order to envision and qualitatively evaluate the physical effects of robot manipulation actions. To this end, we have realized an open source programming environment which combines logic programming and physics-based simulation in a coherent framework. The main contributions of this work are as follows. We have:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        established an interface for parameterizing and controlling physics-based simulations from the logic programming environment Prolog.
+       </list-item>
+       <list-item label="•">
+        linked first-order representations to physical object models that can be instantiated in simulation.
+       </list-item>
+       <list-item label="•">
+        started a library of physical object models and specialized physical behaviors which are not covered by rigid-body simulations, for example, the mixing of liquids.
+       </list-item>
+       <list-item label="•">
+        developed a monitoring and logging mechanism (configurable from Prolog) that observes data structures of interest within the simulator.
+       </list-item>
+       <list-item label="•">
+        introduced interval-based first-order representations (timelines) that tightly integrate sub-symbolic and symbolic information from logged simulations as a powerful means for reasoning about and learning from the consequences of robots' actions.
+       </list-item>
+      </list>
+     </section>
+     <section label="1.5">
+      <section-title>
+       Outline
+      </section-title>
+      <paragraph>
+       The rest of the article is structured as follows. Related work is reviewed in Section 2. We explain the envisioning framework in Section 3. In Section 4, we describe one example of a specialized physical behavior: how fluids are represented and simulated within the framework. Experimental results of various manipulation scenarios are reported in Section 5. We discuss our approach and the experiments in Section 6. Finally, we summarize the approach, give an outlook on future work and conclude in Section 7.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The present work can be considered as interdisciplinary research between two fields: Robotics and AI. With this research, we want to enable robots to reason about the consequences of action parameterizations, thereby allowing them to make appropriate decisions about action by using well-established methods from AI plus detailed physical simulations.
+     </paragraph>
+     <paragraph>
+      Smith and Morgan [53] have stressed the importance of using simulations in AI research. They developed the open source simulator IsisWorld for investigating problems in commonsense reasoning. Although they also employ a physics engine for their simulations, they consider actions such as picking up an object only at a very abstract level, whereas we focus on the physical details of such actions in order to recognize qualitative phenomena occurring during their execution.
+     </paragraph>
+     <paragraph>
+      In Johnston and Williams [27], a general simulation framework and logic-based reasoning methods, in particular tableau-based reasoning, are integrated in order to establish a practical approach to commonsense reasoning. In contrast to their work, we are not aiming at commonsense reasoning in general but rather at reasoning for naive physics problems in the context of everyday robot object manipulation. Instead of looking at isolated problems, we aim for a tight integration between our proposed reasoning system and other processes such as planning, e.g., to predict whether a meal will be edible after executing a specific plan for cooking pasta.
+     </paragraph>
+     <paragraph>
+      Work by Ueda et al. [57] describes the design and implementation of a programming system based on EusLisp that make use of a simulation for deformable objects. Thereby, robot control programs can easily exploit the specialized computations made by the simulation. Similarly, we use the logic programming environment Prolog and utilize a physics-based robot simulator. In addition, we have integrated methods for making simulation-based temporal projections into Prolog's backtracking mechanism in order to perform reasoning about action parameterizations for robot manipulation tasks.
+     </paragraph>
+     <paragraph>
+      The interactive cooking simulator [29] is relevant for our work, since the research aims at a deep understanding of cooking operations, which could bring new insights with respect to representations and reasoning mechanisms for manipulation actions in everyday meal-preparation tasks.
+     </paragraph>
+     <paragraph>
+      Exploiting physical simulators for effectively solving sub-problems in the context of robotics has become more attractive as shown by a number of recent investigations, where simulations are employed for planning in robocup soccer [62] and for navigating in environments with deformable objects [16]. A detailed evaluation for using physics engines for improving the physical reasoning capabilities of robots is given in [60]. But other fields also recognize simulators as valuable tools and utilize them, e.g., for character animation [13] and motion tracking [58].
+     </paragraph>
+     <paragraph>
+      In the context of Naive Physics [23], [24], solutions to the problem of egg cracking [46], were formulated based on logical axiomatizations [41], [47]. These approaches are limited in use for robotics as the physical details of the task are abstracted away and variants cannot be handled very flexibly. It is to overcome such limitations that we propose a simulation-based approach. Please refer to our earlier work for a more detailed account on the problem of egg cracking using simulation-based techniques [37].
+     </paragraph>
+     <paragraph>
+      The integration of numerical simulation and qualitative methods has been investigated before [61], for example, work on qualitative-numeric simulation [5] and self-explanatory simulations [15]. Work by Lugrin and Cavazza [42] has shown an integration of numerical simulation and qualitative modeling based on the Qualitative Process Theory [14] for virtual interactive environments. But no-one we are aware of has investigated a simulation-based approach for making predictions in the context of everyday robot object manipulation.
+     </paragraph>
+     <paragraph>
+      We ground logical predicates, such as {a mathematical formula}contacts(o1,o2), in the data from logged simulations. This is similar to work by Siskind [52], who grounded semantics in visual perception. Similarly, we ground only primitive predicates in logged simulations. Complex predicates are formulated in Prolog and are based on primitive or other complex predicates similar to definitions of symbolic chronicles [18].
+     </paragraph>
+     <paragraph>
+      A simulation-based approach for temporal projection in reactive planning is proposed in [48], where prediction is used to detect interfering effects of continuous and concurrent actions. Similarly, our work proposes a simulation-based approach for naive physics reasoning for robot manipulation tasks.
+     </paragraph>
+     <paragraph>
+      Lakshmanan et al. [40] have developed a motion planning algorithm for folding clothes which they have evaluated in simulated and real robot experiments. Their work is complementary ours, as we assume that an action plan is given whereas they generate such a plan, i.e., a sequence of motion primitives. However, our framework could evaluate which of the generated motion plans could be successful and which could fail, for example, because the robot is not able to reach parts of the cloth from some of its poses.
+     </paragraph>
+     <paragraph>
+      Approaches to robot grasping have used planning and learning from experience to generate possible grasps [12], [45]. These approaches provide complementary information to our work and could be integrated to some extent. In particular, it would be interesting to integrate the feedback from real world experiences into the simulation and thereby improve its accuracy.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      The envisioning framework
+     </section-title>
+     <paragraph>
+      In this section we describe the overall envisioning framework. First, we give a general overview of the framework and its components, and second we explain the different components of the framework in detail.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Overview
+      </section-title>
+      <paragraph>
+       The general principle of the framework is depicted in Fig. 8, it is accessed via a logic-based interface, meaning that both the framework's input and output are formalized using first-order representations. The input is a description of a situated manipulation Scenario along with a parameterized Action plan that potentially solves the problem. The output of the envisioning framework is a Timeline which holds information about object states, their relationships to other objects and the performed actions of the robot. For example, a robot formalizes the problem of making pancakes by providing a minimalist description of the environment including the kitchen work space; manipulable objects such as a container holding the pancake mix and a spatula; and a specification of the robot itself. In addition, the robot provides an instantiated action plan based on the plan's corresponding parameter space for pouring the ready-to-use pancake mix onto the pancake maker, flipping the half-baked pancake and placing the fully-baked pancake onto a plate. Finally, based on the envisioned timeline the robot is able to evaluate its parameterized action plan with respect to various performance measures, for example, whether the pancake mix was poured onto the pancake maker without spilling. In order to evaluate a set of given action plans we sample parameter values from the parameter space associated with a plan. In [38], we have shown how a sensible range of parameter values can be extracted from observations of human demonstrations.
+      </paragraph>
+      <paragraph>
+       Table 1 illustrates the individual steps of the envisioning process with the example of flipping a pancake. In step (1) a new scenario called Pancakes is asserted using a logical language and thereby an empty simulation environment is set up. Steps (2) and (3) make further assertions to the scenario. The variables kitchen and pr2 are instances in a given knowledge base that are now associated with the scenario. These instances have also links to physical models that are then instantiated in the simulation environment. In step (4), the parameter space (ParamSpace) of the action plan (flip) is retrieved from the knowledge base. For each parameterization P of the action plan (flip) envisioning is performed. Within the envisioning process the action plan is executed and the state evolution of the simulator is monitored and logged. Finally, the data structures of the logged simulations are abstracted and represented as timelines. Note that the envision predicate takes a Scenario (Pancakes) and a parameterized Action plan (flip(P)) as input as shown in Fig. 8. Its output is a TimelineTL. Given Prolog's backtracking mechanism a set of timelines TLs is retrieved using the setof predicate. Eventually, step (5) evaluates which timelines represent successful trials. Logical predicates such as holds_tt can be used to determine whether certain conditions hold within a time interval. For example, the query in step (5) asks whether the pancake was first on the pancake maker, then on the spatula during the flipping action, and finally back on the pancake maker.
+      </paragraph>
+      <paragraph>
+       Fig. 9 visualizes how the process is embedded within Prolog's backtracking mechanism. Given Prolog's depth-first search strategy a proof tree is generated whereby the branches correspond to different parameterizations of robot action plans. The top-level predicate (envision) is based on two other predicates, namely simulate and translate. The simulate predicate executes the action plan within the simulator and logs the world state at each point in time. Afterwards the translate predicate converts the logged data structures into symbolic representations, called timelines. Eventually, the timelines are evaluated with respect to desired and undesired effects.
+      </paragraph>
+      <paragraph>
+       To cope with the uncertainty inherent in robot object manipulation, the same set of action parameters can be applied under varying conditions. To some extent, the physics-based simulation is already stochastic. Additionally, the poses of objects and the robot itself, and the initial state of objects can be varied. Thereby, the robustness of a single parameterized plan can be evaluated on the basis of the set of resulting timelines. Furthermore, it is possible to learn a joint probability distribution over the different outcomes of a robot plan. However, learning such a distribution is beyond the scope of this paper.
+      </paragraph>
+      <paragraph>
+       After we have looked at the general principle of the framework and its input and output specifications, we show how the envisioning functionality is achieved through the interplay of various components. Fig. 10 shows the components of the framework as well as their interactions among each other.
+      </paragraph>
+      <paragraph>
+       As stated earlier, the framework's interface is based on first-order representations. We employ Prolog{sup:5} to realize the interface of the envisioning framework. Given domain knowledge (a knowledge base), a scenario description and an action plan, Prolog initializes and orchestrates the overall envisioning process and eventually evaluates the resulting timelines. One of the main constituents of the envisioning process is a physics-based simulation in which a specified robot performs manipulation actions according to its parameterized action plan. During simulation, dedicated monitoring routines observe the world state, including object poses, velocities, contacts between objects, etc. Similarly, the actions of the robot are monitored and logged. After the execution of the robot control program, the logs are read by Prolog and translated into interval-based first-order representations, called timelines. Eventually, the timelines are evaluated with respect to predefined goal conditions and other performance measures. Now that we have placed all components of the framework into context, we will explain how the individual components are realized.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Knowledge base
+      </section-title>
+      <paragraph>
+       The robot is equipped with knowledge about situated manipulation problems, action plans that describe how to solve these problems, and parameter spaces of primitive actions occurring in the plans. For representing the knowledge, we mainly use Description Logic (DL), in particular the semantic web ontology language OWL.{sup:6} We build our representations on OpenCyc's{sup:7} upper-ontology and extend type and property descriptions whenever necessary.
+      </paragraph>
+      <paragraph>
+       Following our previous work, we represent the environment of the robot with semantic maps [55]. These maps describe not only the geometric properties of the environment, but also describe semantic categories like cooking top using an ontology. Similarly, the everyday objects that are to be manipulated by the robot are described within the ontology. All physical objects are derived from a generic Object concept. The three major subclasses are Solid, Fluid, and Deformable. Fluid has further specializations, namely Liquid and GranularFluid. Given the principle of inheritance, properties of a concept are derived from their super-concepts. For example, Object has a property named HasModel that relates Object to PhysicalModel. Thereby all sub-concepts of Object as well as their respective sub-concepts have this property. As the environment is simulated, it makes sense to relate all objects to physical models. These models can be described in all formats that can be loaded into the physical simulator Gazebo.{sup:8} In this work, we mainly make use of physical object models described in the Unified Robot Description Format (URDF).{sup:9} But other formats such as COLLADA{sup:10} are also feasible. Eventually, an instance of an object is linked to a physical model that can be instantiated within the Gazebo simulator.
+      </paragraph>
+      <paragraph>
+       Fig. 11 shows an excerpt of the ontology. At the top, it visualizes the relation between Object and PhysicalModel, on the left, the hierarchical object taxonomy including the concepts Liquid, Solid, PancakeMix and Container, on the right, the sub-concepts of PhysicalModel, and at the bottom it shows instances and their relations among each other. The in relation between PancakeMix and Container is explained in Section 3.6.
+      </paragraph>
+      <paragraph>
+       The robot itself is specified by the Semantic Robot Description Language (SRDL) which we introduced in [39]. The description includes the kinematic structure of the robot as well as a semantic description of its sensors and actuators. All of the aforementioned descriptions have links to physical models that can be instantiated within a simulator. Action plans are represented hierarchically within the ontology as depicted in Fig. 12. Note that the order of actions is implicitly defined by a depth-first traversal strategy.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Prolog—a logic programming environment
+      </section-title>
+      <paragraph>
+       Prolog is at the heart of the envisioning framework. It serves as an interface to the robot, and coordinates all other components of the framework using a simple language for making temporal projections. Within this language we use a notation similar to that used in the Event Calculus [34]. To support reasoning in our system we have developed the following temporal projection language in Prolog.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Temporal projection language
+        </section-title>
+        <paragraph>
+         To initiate a projection, a new scenario is asserted and task-relevant descriptions are added to it, then a robot control program is executed using control parameters selected from a specified range of possible values. States that are traversed during simulation are monitored, logged, and translated into timelines. Eventually, the generated timelines are subject to further evaluations of specialized predicates. For example, a timeline can be evaluated with respect to desired (or undesired) outcomes, qualitative spatial relations, or other performance criteria such as the speed of execution.
+        </paragraph>
+        <paragraph>
+         The following Prolog query shows how the simulation-based temporal projection can be used. Terms starting with an upper-case letter such as Scenario denote variables, terms starting with a lower-case such as kitchen_env denote concrete instances in the knowledge base, and the predicate occurs is an example of a specialized predicate that is evaluated on a given timeline:
+        </paragraph>
+        <list>
+         <list-item>
+          ?-assert_scenario(Scenario),assert_scenario(Scenario,kitchen_env),assert_scenario(Scenario,pr2_robot),assert_scenario(Scenario,obj1),param_space(actionplan,ParamSpace),setof(T,(member(P,ParamSpace),envision(Scenario,actionplan(P),T)),Ts),member(Timeline,Ts),holds(occurs(event),Time,Timeline).
+         </list-item>
+        </list>
+        <paragraph>
+         asserts an entity or set of entities to a given scenario. There are three ways of asserting an entity: either by naming the entity, if it is already known by the knowledge base including its physical specifications that are needed by the simulator; by providing the physical specifications of a previously unknown entity explicitly; or by providing an object type that can be generated by the object model factory.envision(Scenario, Plan(Params), Timeline)performs a simulation-based temporal projection for an asserted scenario and a fully instantiated robot control program/plan, and returns an ID of the projected timeline. This program is realized by two subprograms, namely simulate and translate.simulate(Scenario, Plan(Params), Log)sets up and runs the simulation. First, the Gazebo simulator is launched and all entities that were added to the given scenario by the assert_scenario command are loaded successively. If necessary, entity specifications are generated on-the-fly by the object model factory and spawned into the simulator. Second, the robot control program is executed, where formal parameters are selected from their respective ranges. By utilizing Prolog's backtracking mechanism the cross product of all valid parameter instantiations is automatically generated. After a certain time, the simulation is stopped and all processes are shut down. The output variable Log points to the log files of the robot control program and the task-related objects.translate(Log, Timeline)translates the logged simulations into a timeline, by using the first-order predicate Holds(f,t). To differentiate between the individual timelines, a unique ID (Timeline) is generated and attached to the individual fluents and events.holds(Fluent, Time, Timeline)retrieves the given Timeline and evaluates it with respect to a fluent (Fluent) that might have held at a point in time (Time) during the simulation. If the specified fluent is found in the timeline the predicate evaluates to true.occurs(Event)is evaluated with respect to an event (Event). The predicate is used within the holds predicate, i.e., holds(occurs(Event), Time, Timeline), which retrieves the given Timeline and evaluates it with respect to an event that might have occurred at a point in time (Time) during the simulation. If the specified event is found in the timeline the predicate evaluates to true.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Physics-based simulation
+      </section-title>
+      <paragraph>
+       Within our approach, we utilize the physics-based simulator Gazebo{sup:11} to compute the effects of robot actions, object interactions and other physical events. We augmented its rigid-body physics to simulate specialized behaviors.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Rigid-body simulation
+        </section-title>
+        <paragraph>
+         In principle a physics-based simulator works as follows: the simulator starts its computation of physical effects based on an initial configuration. Then it periodically receives motor control commands which are translated into forces and it updates the state of the simulated world according to physical laws. Within each update step, forces are applied to affected objects by considering both the object's current dynamic state and its properties such as mass and friction.
+        </paragraph>
+        <paragraph>
+         The initial configuration of the Gazebo simulator is based on an XML file, called world file. It describes properties of the simulation, specifies parameters for the physics engine (ODE{sup:12}) and describes all things occurring in the world, including robots, sensors and everyday objects. Within a world file each object has its own model description. Such model descriptions comprise mainly the object's shape and a set of physical properties such as size, mass, and rigidity. When properties are not explicitly specified within the knowledge base, we simply assume default values.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Augmented simulation
+        </section-title>
+        <paragraph>
+         The Gazebo simulator is limited to rigid body dynamics. Since we want to simulate naive physics problems with phenomena such as breaking, mixing, and cooking we augment object model descriptions with detailed shape models, controllers for simulating physical phenomena, and monitors for logging states of objects. The extended model descriptions are collected in a library for simulating phenomena of everyday physics.
+        </paragraph>
+        <paragraph>
+         Instead of modeling objects as rigid bodies, we describe the shape of objects similar to Johnston and Williams [27] with graph-based structures which allow us to inspect physical aspects at a more detailed level. These model configurations are derived from the information stored in the knowledge base. The basic entities for modeling the shape of an object are bodies and joints, which are mutually connected. Properties of an object such as type, mass, spatial extensions, and rigidity determine the attributes of these basic entities.
+        </paragraph>
+        <paragraph>
+         In order to simulate new classes of objects, for example, objects that are breakable and objects that change their state from liquid to a deformable structure we add controllers to the object model descriptions. These controllers are called within each simulation step and perform some specialized computation. The computation can be based on physical properties calculated by the simulator or on results computed by other controllers. Thereby object attributes such as being broken and being cooked can be computed. For example, if a force applied to an object exceeds a certain threshold over a period of time a controller will disconnect the affected joint between two bodies and thereby the object structure will break. The simulation of fluids and deformable objects will be explained in Section 4. To make objects subject to physical processes such as breaking and cooking we only have to add respective attributes to object instances in the knowledge base.
+        </paragraph>
+        <paragraph>
+         In previous work, we analyzed the diversity and variability of activities within the household domain [50]. This showed that in a given domain there are only a limited number of activities and processes that have to be implemented, making our approach scalable. In Section 4, we provide more details on the augmented simulation. In particular, we will explain how fluids are represented and simulated within the framework. As the augmented fluid simulation is complex, we first continue with the remaining components of the envisioning system for the sake of a better understanding.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Monitoring of simulations and actions
+      </section-title>
+      <paragraph>
+       In addition to controllers realizing physical behaviors, we add monitoring routines to observe and log the state of objects at each simulation step. Additionally we monitor the actions the robot is performing.
+      </paragraph>
+      <paragraph>
+       Actions of the robot are monitored as follows. Ideally, robot control programs would be written as plans. For example, using a plan language such as CRAM [3] allows a robot to reason about its own programs. However, in this work we treat a robot control program as a black box, so it can be implemented in any kind of language. In order to reason about the actions of a robot, we assume that at least the actions of interest are logged using a simple interface. The begin and the end of an action as well as its parameters should be logged by the control program. This allows robots to relate their actions to the physical events of the simulation. An example of an action log for picking up a spatula using the left robot arm is shown in Table 2. In the excerpt of the log, the hierarchical decomposition of actions and sub-actions is visible. The pick_up action is decomposed into several action primitives including opening and closing the gripper, and moving the arm's end-effector into certain pose.
+      </paragraph>
+      <paragraph>
+       The data structures of the world state we are monitoring are the position, orientation, linear and angular velocities, and the bounding boxes of objects and their respective parts. Furthermore, we observe the physical contacts between objects and log information such as contact points, contacts normals, and forces. All this information is constantly monitored and only changes are logged.
+      </paragraph>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Fluents, events and timelines
+      </section-title>
+      <paragraph>
+       Reasoning about everyday object manipulation requires robots to understand the spatial and physical configurations of objects and their parts over time. This section focuses on the knowledge representation part of our framework. A general overview on spatial, physical and temporal reasoning is given in the book by Davis [8]. Robots should be able to extract information about an object's position, its contacts, and its spatial relations to other objects from its environment in order to reason about a task. Since we employ physical simulation, all this information can be abstracted from the data structures of the simulator. Conceptually, the robot can access this information using the predicate SimulatorValue as follows:{a mathematical formula} where position is an example function for retrieving information about an object o at a certain point in time t. Eventually, the information about the object's position is bound to the variable pos. Table 3 lists further functions that can be used to access information about an object's world state. All functions provide information for a given object, e.g. its position, orientation, velocity, dimension, and its bounding box. As we will see later, many spatial relations are computed based on the object's bounding box. Thereby, the bbox function plays an important role for reasoning about the object's state.
+      </paragraph>
+      <paragraph>
+       Another set of functions that can be accessed via the SimulatorValue predicate provides information about an object's contacts. Contact information is crucial for the interpretation and analysis of the physical effects of actions. As information about contacts are always reported between two objects, all functions take two objects as arguments. For example, the contacts function is true when there is a contact between two objects at a certain point in time. It is a symmetric function, that is, whenever object {a mathematical formula}o1 is in contact with {a mathematical formula}o2, object {a mathematical formula}o2 is in contact with {a mathematical formula}o1. However, note that not all functions about contacts are symmetric. For example, the force function provides information about the force one object exerts onto another. Thus, the reported information about the force has a direction. Table 4 shows functions that extract information about contacts between objects including contact positions, normals, penetration depths and forces.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Fluents
+        </section-title>
+        <paragraph>
+         Based on the low-level information about an object's world state and its contacts, we define fluents, i.e. conditions over time, about an object's spatial relationships to other objects. Here we distinguish between different types of spatial relations. Table 5 gives an overview of the implemented fluents.
+        </paragraph>
+        <paragraph>
+         Fluents describe conditions over time, for example the condition that object A is on object B. Therefore, fluents have to be related to time. In this work, we represent fluents as functions and use similar notations to the Event Calculus [34]. The Holds predicate is used to test whether a fluent is true at a certain point in time or not. Fluents that are interpreted as functions are called reified. The Holds predicate looks as follows:{a mathematical formula} where f is an arbitrary fluent from Table 5 and t a point in time. Note that Table 5 only lists example relations. A complete overview is given in [35].
+        </paragraph>
+        <paragraph>
+         The truth values of fluents are defined by logical sentences. These sentences are formed on the basis of other fluents and/or predicates that are grounded in the data structures of the simulator. For example, the on fluent is defined as follows:{a mathematical formula}
+        </paragraph>
+        <paragraph>
+         An object {a mathematical formula}o1 is on another object {a mathematical formula}o2 whenever the objects are in contact with each other and the first object is above the second. The contacts fluent is simply defined by the value reported by the simulator:{a mathematical formula} The above fluent retrieves the bounding boxes of both objects and compares them in order to compute its truth value:{a mathematical formula} The Holds predicate, introduced above, can be used to assess a condition at a certain point in time. However, many conditions hold not only a single point in time, but rather during a certain time span. To express that a fluent holds during whole interval, we define another predicate as follows:{a mathematical formula} whereby f denotes a fluent and {a mathematical formula}[t1,t2] is a time interval. Sometimes we also use i to denote a time interval. The {a mathematical formula}HoldsThroughout predicate allows us to reason about conditions over time. In order to relate fluents that hold at different intervals we implemented predicates realizing the thirteen temporal relationships according to Allen [1]. For example, the following logical sentence can be used to describe that the pancake mix was in the container before it was on the pancake maker:{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Events
+        </section-title>
+        <paragraph>
+         Besides fluents, a temporal representation must be able to describe the occurrence of events and actions. In analogy to fluents, we assess the truth value of events and actions using the Holds and the {a mathematical formula}HoldsThroughout predicates, i.e.:
+        </paragraph>
+        <paragraph>
+         {a mathematical formula} For example, the event of cooking the pancake mix is formalized as{a mathematical formula} Actions of a robot can be represented similarly. Pouring the pancake mix can be represented as{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Timelines
+        </section-title>
+        <paragraph>
+         In this work, we have developed timelines as a data structure to represent all information about narratives. Similar to chronicles [18], timelines represent reified fluents in temporally qualified predicates. Fig. 13 visualizes the fluents and events of the “Making Pancakes” problem that are captured by a timeline. The actions of the robot correspond to the formal representation shown in Fig. 12. The cooking event is relatively short, since it only transforms the mix into a pancake. This behavior can be recognized by a change from fluent on(mix, pan) to on(pancake, pan). The undesired effect of spilling some pancake mix onto a table is represented by the fluent spilled.
+        </paragraph>
+        <paragraph>
+         Timelines are comprehensive data structures that are consulted for answering queries about a particular narrative or a set of multiple narratives. Therefore, it is important that queries can be formulated in a way that relate to either single or multiple timelines. We achieve this, by extending all previously introduced predicates by a timeline argument. Hence the Holds predicate is finally formalized as follows:{a mathematical formula} and the {a mathematical formula}HoldsThroughout predicate as:{a mathematical formula} whereby tl is a unique ID for accessing a timeline. Similarly, the SimulatorValue predicate is extended with an additional argument.
+        </paragraph>
+        <paragraph>
+         We use Prolog's search mechanism to retrieve answers from a set of timelines. In general, the linear search for particular objects, fluents, and/or events over a set timelines is quite slow. Therefore, we have designed and implemented several internal data structures that allow for an efficient search. For example, we use object-dependent skip lists [49] of temporal events to find fluents and events related to an object. Furthermore, instead of linear search we use binary search methods to retrieve information from a timeline in logarithmic time.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Augmented simulation of fluids
+     </section-title>
+     <paragraph>
+      Fluids play an important role in everyday cleaning and meal preparation tasks. Davis [9] presents a formal solution to the problem of pouring liquids. In his work on the representation of matter [10] he investigated the advantages and disadvantages of various representations, including those for liquids. The purpose of simulating liquids in our work is to observe the impact of the robot's action with respect to the liquid's behavior. Different approaches have been incorporated to simulate liquids depending on the required level of accuracy needed [20]. In [31], we proposed two complementary approaches for simulating liquids, (1) a graph-based model similar to [27] and (2) a Monte-Carlo simulation for modeling diffusion and convection [17]. Neither simulates liquids in all their aspects, but they provide enough information for making logical inferences about qualitative phenomena.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Representing fluids using graph-based models
+      </section-title>
+      <paragraph>
+       The model for representing fluids was adapted from the work of Johnston and Williams [27]. Originally, it was designed to simulate a wide range of physical phenomena including diverse domains such as physical solids or liquids. In this approach, matter is represented as a hyper-graph where each vertex and edge is annotated with a frame that is bound to a clock and linked to update rules that respond to discrete-time variants of Newton's laws of mechanics.
+      </paragraph>
+      <paragraph>
+       Our pancake mix model can be in two states: first, the mix is liquid, and second, the mix becomes a deformable pancake after cooking. In the simulation we use a graph-based model for representing the mix and the pancake. The vertices of the graph are particles where each particle is defined by a round shape with an associated diameter, a mass and a visual appearance model. The benefit of this model is that it is realized as a graph with no connection between the vertices whenever the state is liquid. This means that the individual particles can freely move to some extent. This is useful for performing the pouring task. Due to the fact the particles are not connected with joints, the simulated liquid can be poured over the pancake maker where the particles disperse due to their round shape. A controller is attached to the spheres that applies small forces to the particles in order to simulate the viscosity of the pancake mix. Currently, we do not consider heat as the trigger of transforming the liquid to a solid pancake, but simply assume the event occurs after a fixed time. We identify all particles on the pancake maker and create the pancake based on a fluid particle clustering algorithm (Fig. 14).
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Clustering of fluid particles
+      </section-title>
+      <paragraph>
+       Let us assume that someone pours some pancake mix onto a pancake maker as illustrated in Fig. 15. After pouring, some particles reside in the container, some are spilled onto the table, and others are on the pancake maker. If we want to address the particles in these three locations, it makes sense to group them in clusters. This reflects also how humans address fluids such as milk or sugar in natural language, e.g., there is some milk spilled onto the table. We use a Euclidean clustering strategy for computing the groups of particles as shown in Algorithm 1. Instead of looking at the individual particles when interpreting the outcome of a manipulation scenario we look at clusters of particles. For every cluster we compute information such as mean, covariance, size (number of particles), and its bounding box. Whenever new particles become part of, or are separated from, a cluster we assign a new ID to them. That is, clusters of particles have only a limited time during which they exist. Hence, we can recognize which actions cause changes to clusters and their properties.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Monte-Carlo simulation of fluids
+      </section-title>
+      <paragraph>
+       Deformable bodies are a major challenge to simulate, requiring a lot of computational power [6]. The physical simulation approach [17] uses a Monte-Carlo process to simulate diffusion of liquids. Molecular movement is either provoked from heat or from a difference in potential. The rate of change depends on the diffusion coefficient and its respective change. This is a well known concept in physics described by Eq. (1) and denoted as the macroscopic diffusion equation or Fick's second law of diffusion. This differential equation takes into consideration a change of concentration over time:{a mathematical formula} where C denotes the concentration and D the diffusion coefficient. It can be shown [17] that a random walk gives one particular solution for the above partial differential equation. Motivated by this idea we applied an algorithm proposed by Frenkel et al. to simulate this physical effect [31].
+      </paragraph>
+      <paragraph>
+       Stirring a material is another type of mass transfer called convection. Convection is the movement of mass due to forced fluid movement. Convective mass transfer is a faster mass transfer than diffusion and happens when stirring is involved. The faster the fluid moves, the more mass transfer occurs and therefore the less time it takes to mix the ingredients together [19]. We simulated this physical property by simply introducing an impulse in the stirring direction to the particles in the point cloud that are in reach of the cooking spoon.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Measuring the homogeneity of mixed fluids
+      </section-title>
+      <paragraph>
+       We are particularly interested in the homogeneity of a liquid after stirring. We decided to use the local density of the particles represented as point cloud as a measure of divergence, while using the assumption that the inverse of this is a measure of homogeneity. This distance measure is known as the Jensen–Shannon divergence [43] and used widely in information theory. It is defined as:{a mathematical formula} where {a mathematical formula}S(P,Q) is the Kullback divergence shown in Eq. (3), and P and Q are two probability distributions defined over a discrete random variable x.{a mathematical formula} We represent the point cloud as a three-dimensional grid. Each cell of the grid represents a discrete probability distribution x defined on the mixed probabilities of the two classes P and Q (red and blue particles), that could be computed as the relative frequency (Fig. 16).
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      For showing the feasibility of our approach, we have conducted several robot manipulation experiments in simulation including the problem of making pancakes as described in Section 1.1. The robot model used in our experiments is the PR2 robot platform developed by Willow Garage.{sup:13} The PR2 has an omnidirectional base, a telescoping spine and a pan-tilt head. Each of the two compliant arms of the platform have four degrees of freedom (DOF) with an additional three DOF in the wrist and one DOF gripper. It has a laser sensor on the base, a tilting laser sensor for acquiring 3D point clouds, two stereo camera setups and a high resolution camera in the head. The hands also have cameras in the forearms, while the grippers have three-axis accelerometers and fingertip pressure sensor arrays. The entire setup is realistically modeled in the Gazebo simulator.
+     </paragraph>
+     <paragraph>
+      In this work, we present experimental results for the task of making pancakes. We have divided the task into three sub-tasks: mixing, pouring and flipping. These sub-tasks represent rather basic actions which are relevant for many meal preparation tasks, meaning the following results can be generalized to other tasks, for example making omelets.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Mixing fluids—analysis of homogeneity
+      </section-title>
+      <paragraph>
+       In this experiment, the robot pours the contents of two containers into a bowl and stirs them. We used the Monte-Carlo method described in Section 4.3 to simulate the physical effect of using different trajectories to mix fluids. We selected the coefficients to represent two viscous fluids and performed four experiments where the robot stirred the fluids using (1) an elliptical trajectory, (2) a spiral trajectory, (3) a linear trajectory, and (4) no trajectory (without stirring). The results are shown in Fig. 17. They were evaluated on the basis of the homogeneity measure (Section 4.4). When the robot does not stir the fluids, the ingredients do not mix very well because only the diffusion process is influencing the homogeneity. Hence, the result of the experiment confirms our hypothesis that stirring increases the homogeneity of mixed fluids. Furthermore, our results show that an elliptical trajectory achieves the best mixing. Given the knowledge of homogeneous and non-homogeneous regions, a robot could adapt the trajectory dynamically using reinforcement learning. A qualitative interpretation could be based on a logical predicate that is true when the homogeneity is above a certain threshold and otherwise false. Thereby a robot could decide when to stop stirring with a particular trajectory.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Pouring fluids—reasoning about clusters
+      </section-title>
+      <paragraph>
+       In this experiment, we address the scenario of pouring some pancake mix located in a container onto a pancake maker. Using the resulting timelines, we analyze the qualitative outcome of the action and learn decision trees that can predict the action's physical effects. The parameterization of the task includes the gripper position, the pouring angle and the pouring time. We also looked at different container types and fill levels. Table 6 gives an overview of attributes and their respective ranges that are relevant for a pouring action. Some of the attributes are controllable parameters of the pouring action such as angle, time, and position. Others describe the context of the scenario. Context-dependent attributes such as the fill level and container type are perceptible by the robot. Effects of the action include the size of the pancake and the amount of spilled particles. Effectively all attributes, except the container type, are continuous by nature. However, as motivated earlier, we would like to learn interpretable action models. Therefore, we discretize the ranges of all continuous attributes to nominal concepts using Euclidean clustering methods.
+      </paragraph>
+      <paragraph>
+       The task was considered to be successful if no pancake mix was spilled, i.e. after pouring the liquid resides on the pancake maker or in the container, and not on other objects such the kitchen table. We used the resulting clusters and their corresponding contact and spatial information to examine the outcome. Fig. 18 shows how clusters of pancake mix are spatially related to other objects before, during and after the pouring action on a single timeline.
+      </paragraph>
+      <paragraph>
+       The following Prolog expression shows how information about clusters can be retrieved from timelines (TL):
+      </paragraph>
+      <list>
+       <list-item>
+        ?-holds_tt(occurs(pour(Params)),I,TL),[_,End]=I,partOf(X,pancake_mix),holds(on(X,pmaker),Time,TL),after(Time,End),simulator_value(size(X,Size),Time,TL).
+       </list-item>
+      </list>
+      <paragraph>
+       where X denotes a cluster of pancake mix in contact with a pancake maker after a pouring action has been carried out. Fig. 19 shows results from experiments in which the position of the container was varied in the x and y directions over the pancake maker. The figure shows the amount of pancake mix (particles) that were spilled onto the table. The tested positions are organized in a grid structure above the pancake maker (red dots). Given the symmetry of the pancake maker, for each of the positions the pouring direction was always pointing towards north. As explained earlier, we mapped the value of the particle count to a number of discretized classes (Small, Medium, and Large) to be able to interpret the results qualitatively. Note that a similar query to the one above can be embedded within the constraint-based action specification laid out in Section 1.3.
+      </paragraph>
+      <paragraph>
+       Additionally, we used logical queries such as the one above to extract data for learning decision trees in order to classify pancake sizes and pouring angles. The input data that we extract from each simulation run is a tuple as follows:{a mathematical formula} whereby container denotes the type of container (mug or bottle), particles denotes the fill level of the container (few or many), time denotes the duration of pouring (short, medium, long), angle denotes the angle of the container while pouring (low, medium, high), and size denotes the size of the resulting pancake (small, medium, large).
+      </paragraph>
+      <paragraph>
+       Fig. 20 shows two situations after a pouring action has been performed using the same parameterization. The left image depicts the situation when a mug was used for pouring, the right when a bottle was used. The distinctive distributions of particles on the pancake maker show how the outcome of a pouring action depends qualitatively on the context, that is, on the type of the container.
+      </paragraph>
+      <paragraph>
+       Fig. 21 visualizes the relation of pouring angle and duration (time) quantitatively. The top row of the figure shows results when the container contains only a few particles (50). The bottom row visualizes the results for many particles (200). The left column shows the results for the mug, the right for the bottle. Looking at the results, it can be observed that the size of a container's opening (mug vs. bottle) has a dramatic effect on number of particles that are poured onto the pancake maker. Additionally, the type of the container has also a noticeable effect on the continuity of the function describing the amount of pancake mix. The discontinuity results from the fact that the opening of the bottle occasionally got clogged up. Furthermore, it can be noted that a different fill level (few vs. many) has more impact on the bottle than on the mug. In general, it can be seen that the pouring angle is more important for controlling the amount of pancake mix than the time.
+      </paragraph>
+      <paragraph>
+       Whenever it is desirable to describe quantitative measurements by qualitative concepts one has to find an appropriate mapping between both. For example, if we want to distinguish between three different sizes of pancakes, namely Small, Medium and Large, we have to provide a mapping that relates, for example, each size to a certain number of particles. Such a mapping can either be based on thresholds or it can be learned.
+      </paragraph>
+      <paragraph>
+       We use a decision tree to predict the pancake sizes that a particular (pre-pouring) configuration will achieve. Decision trees have the advantage that their internal structure is easily interpretable: each internal node of the tree is a test on an attribute; each branch represents a different outcome of such a test; and each leaf node represents a class label. By following the paths from the root node of the tree to the leaves the classification rules can be extracted. We ran Weka's J48 algorithm [22] in its default parameterization on our experimental data. The resulting decision tree is visualized in Fig. 22. Overall, the learned model achieves an accuracy of 92.41%. That is, out of the 474 instances used for learning, 438 are classified correctly during 10-fold cross-validation. The most decisive attribute is the fill level. If there are only a few particles available, the robot can only make small pancakes. When many particles are available the size of the pancake depends first on the type of container, and second on the tilting angle. Only if the container is a bottle with a small opening and the pouring angle is high, can the robot make pancakes of different sizes by varying the pouring duration. The confusion matrix in Table 7 shows that mainly pancakes of medium size were misclassified.
+      </paragraph>
+      <paragraph>
+       We also learned an action model for determining the pouring angle required to produce a pancake of a desired size. Again we used Weka's J48 algorithm. The learned decision tree, depicted in Fig. 23, achieves an accuracy of 64.35% in the 10-fold cross-validation. As the confusion matrix in Table 8 shows, mainly the mid angles were misclassified.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Flipping a pancake
+      </section-title>
+      <paragraph>
+       The third experiment also follows the making pancakes scenario. We investigated the problem of flipping a half-baked deformable pancake using a spatula at different angles.
+      </paragraph>
+      <paragraph>
+       The pancake simulation used in this scenario is built out of small spherical particles connected by flexible joints. This enables the model to have the behavior of a soft deformable body (Fig. 24). During this scenario, the simulated PR2 robot uses a spatula to flip a pancake on the pancake maker. The parameter of interest in this case is the angle of the spatula. The qualitative results of the experiments performed in this scenario are shown in Table 9. The experiments were launched using the following query:
+      </paragraph>
+      <list>
+       <list-item>
+        ?-param_space(flip_pancake,ParamSpace),setof(T,(member(P,ParamSpace),envision(flipping,flip_pancake(P),T)),Ts),member(Timeline,Ts).
+       </list-item>
+      </list>
+      <paragraph>
+       The following Prolog query was used to evaluate whether the flipping action was successful or not:
+      </paragraph>
+      <list>
+       <list-item>
+        ?-holds_tt(on(pancake,pancake_maker),I1,TL),holds_tt(occurs(flip(pancake)),I2,TL),holds_tt(on(pancake,pancake_maker),I3,TL),overlaps(I1,I2),overlaps(I2,I3).
+       </list-item>
+      </list>
+      <paragraph>
+       That is, the pancake has to be on the pancake maker before and after the flipping action. In the query above, we used the overlaps relations as the temporal relation between the fluents and the flipping action. In general, all 13 possible temporal relations between time intervals can be used to constrain the query [1]. Fig. 25 visualizes the temporal relations between the on fluent and the flipping action.
+      </paragraph>
+      <paragraph>
+       Note that a query such as the one above that was used to find flipping events across timelines, can also be used to determine the objects the pancake is on top of. For example, during the execution of the flipping action, the pancake would be on a blade, which is a part of the spatula object.
+      </paragraph>
+      <paragraph>
+       How to explore the parameter space of an action effectively?
+      </paragraph>
+      <paragraph>
+       This incomplete list of contexts and queries illustrates where the developed framework and learned models can be employed in order to adjust the behavior, and to improve the overall performance, of robots. Hence, we believe that the underlying idea and the developed methods of this work can have a broad impact in field of robotics.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this section, we discuss why autonomous robots should be endowed with methods allowing them to make temporal projections about naive physics problems. We provide arguments to base these methods on detailed physical simulations and elaborate on the necessary fidelity of these simulations. Furthermore, we outline how our approach of logic programming using a simulation-based temporal projection can be used to adjust the behavior of robots. Finally, we examine how far the proposed approach can be taken, and also name some possible application scenarios.
+     </paragraph>
+     <paragraph>
+      One might argue that most robotic applications are developed for specialized tasks and thereby robots do not need robust commonsense reasoning capabilities, or as we propose, capabilities for naive physics reasoning. But in the context of autonomous personal robots, the set of everyday manipulation tasks is not fixed, and furthermore, task and environment conditions change all the time. Therefore robots need flexible mechanisms to reason about the parameters of their control programs.
+     </paragraph>
+     <paragraph>
+      In the literature there exist approaches which use symbolic reasoning methods to make inferences about simple physical problems [41], [47]. The main limitations of these approaches in the context of robotics are threefold: (a) important details such as positions of manipulators and objects are abstracted away; (b) variants of problems such as manipulating an object with different physical properties cannot be handled without extending the logical theory; and (c) consequences of concurrent actions and events are very difficult to foresee with pure symbolic reasoning, e.g., what does a robot see when turning its camera while navigating through its environment? All of these limitations do not occur in physics-based simulators. Moreover, to obtain a simulation that is as close as possible to the real world, parameters of the simulator can be learned by applying machine learning technologies as in [28].
+     </paragraph>
+     <paragraph>
+      One important issue when using high-fidelity physics models in simulations is performance. Currently, our system cannot make predictions in a time that would allow us to use it for planning during execution. Nevertheless, it is a powerful tool for robots to mentally simulate (offline) the consequences of their own actions either to prepare themselves for new tasks or to consider task failures.
+     </paragraph>
+     <paragraph>
+      Related to the issue of performance is the issue of the right fidelity, i.e. how to make the physically simulated models robust enough to enable effective behavior, and yet small enough to be usable during execution. When creating physical models we are concerned only about getting the qualitative behavior of objects correct; we are not aiming to produce models that reflect every single detail of reality. Very detailed models do not readily provide the information needed to choose the appropriate action parameterization, therefore we abstract the reality into a smaller qualitative state space.
+     </paragraph>
+     <paragraph>
+      Although it would be desirable to use the presented approach for action planning with realistic physical models, we are currently not aiming at either the high performance and or realistic models that this would necessitate. Instead, the developed system represents a proof-of-concept of how to use simulation technologies for symbolic reasoning. In the long run, we assume that issues regarding performance and the appropriate fidelity of physical models will be addressed by the game and animation industry (e.g. [7]), providing powerful technologies that robots could employ.
+     </paragraph>
+     <paragraph>
+      The realized logic programming framework allows robots and programmers to automatically determine the appropriate action parameters by setting up a manipulation scenario, by executing differently parameterized control programs in simulation, and finally, by evaluating queries based on the resulting timelines. An interface to the logic programming framework is provided by both Prolog's command-line and a ROS{sup:14} service, which takes arbitrary Prolog queries as a request and provides the respective variable bindings as a response. This allows naive physics reasoning for manipulation tasks to be flexibly integrated into control programs and planners in order to effectively change the robot's behavior as outlined by the example given in Section 1.3.
+     </paragraph>
+     <paragraph>
+      Planning is increasingly considering physical platforms in complex, real world environments. The presented framework could provide more precise guidance in the planning process since the simulation-based methods for making temporal projections are tightly linked to the technical details of platforms under question. However, currently this would only be possible offline as we have laid out above. Naive physics reasoning could also be used as a tool for developing robot control programs. Programmers could recognize and prevent problems from occurring during execution more easily. Additionally, the presented framework could be used for benchmarking purposes. For example, data generated by the simulations could serve as basis for inference tasks. Thereby, different approaches to physical reasoning could be compared in a straightforward way. In general, the use of the open source software such as Gazebo and ROS allow researchers and developers to apply naive physics reasoning to new problems, including other robot platforms and different objects, quite easily. Therefore we believe that logic programming using detailed physical simulations is a well-suited tool for making predictions about every manipulation tasks and also for other potential applications.
+     </paragraph>
+     <paragraph>
+      It is clear that one would not want to adopt our approach of full-fidelity physics simulation for all kinds of problems, e.g. problems in motion planning can be solved by employing more specific planners as primitives. However, some kind of limited simulation seems to be very plausible, at least for some very hard problems. We believe that lifting physics-based simulations to a symbolic level is beneficial for deriving solutions for robot manipulation, and also other domains such as robot navigation in dynamic environments, where current methods are not effective.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      In this paper, we presented a framework for envisioning the effects of everyday robot manipulation actions using physics-based simulations.
+     </paragraph>
+     <paragraph>
+      Within this framework, we designed and implemented components for asserting the initial conditions of a manipulation scenario and for utilizing a simulation-based approach for making temporal projections about parameterized robot control programs. We conducted experiments for three scenarios in which the formal parameters of robot control programs were systematically selected from ranges of possible values. These experiments, or more precisely their resulting timelines, were evaluated with respect to specified performance criteria, e.g. desired and undesired effects. We also discussed the demands of equipping robots with means to perform naive physics reasoning and provided arguments for basing this reasoning on detailed physical simulation.
+     </paragraph>
+     <paragraph>
+      In future work, we will continue our research on how we can extract information from human demonstrations performed in a virtual manipulation environment to automatically determine the parameter space of robot manipulation actions from timelines [38]. Furthermore, to cope with the uncertainty inherent in robot manipulation tasks we will extend our approach by integrating probabilistic representations over timelines as briefly outlined in Section 3.1. Finally, we will also integrate our system with a real robot. This integration will pose several challenges. For instance, a robot has to recognize task-related objects and it has to estimate their poses in order to assert and instantiate a new scenario within the framework. Secondly, during the execution of an action plan the robot has to observe the objects in the real world and it has to continuously estimate their states in order to allow the framework to generate timelines. For some types of objects, such as fluids, this would be very challenging. However, as a first step towards an integrated system we will start with a rigid object manipulation scenario.
+     </paragraph>
+     <paragraph>
+      We believe that the presented framework provides important functionality for robots by giving them the ability to autonomously determine the action parameterizations for underspecified and ambiguous instructions by the means of logic programs using simulation-based temporal projections.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

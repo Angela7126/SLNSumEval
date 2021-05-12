@@ -1,0 +1,696 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Predicting optimal solution costs with bidirectional stratified sampling in regular search spaces.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Many real-world problems can be cast as state-space search problems. For instance, state-space search algorithms have been used in a number of applications: robotics [37], domain-independent planning [2], chemical compounds discovery [14], bin packing [23], sequence alignment [22], automating layouts of sewers [4], and network routing [36], among others.
+     </paragraph>
+     <paragraph>
+      Heuristic search algorithms such as A* [13] and Iterative-Deepening-A* (IDA*) [24] are guided by the cost function {a mathematical formula}f(s)=g(s)+h(s) while finding solutions for state-space problems. Here, {a mathematical formula}g(s) is the cost of reaching state s from the root of the underlying search tree representing the state-space problem and {a mathematical formula}h(s) is a heuristic function providing an estimate of the cost-to-go of a solution going through state s in the underlying search tree.
+     </paragraph>
+     <paragraph>
+      Such algorithms are designed to find a least-cost path from a start state to a goal state in state-space search problems. The solution cost of such a path is found as a byproduct. In this paper we are interested in applications for which one only needs to know the optimal solution cost or an accurate estimate of the optimal solution cost – the solution path is not needed. For example, consider the owner of a construction company that is required to quickly assess the monetary cost of a project for bidding purposes. In this case, only the cost of executing the project is needed. The actual construction plan could be formulated later, if the bid is won. Thus, an important question to be answered is the following. Can one accurately and quickly predict the optimal solution cost of a problem without finding an optimal sequence of actions from the start to a goal?
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Heuristic functions
+      </section-title>
+      <paragraph>
+       The heuristic function {a mathematical formula}h(⋅) used by heuristic search algorithms is in fact an estimate of the optimal solution cost. This estimate is called admissible if it never overestimates the cost of the lowest-cost path from state s to the goal. Heuristic search algorithms, such as A* and IDA* guided by the f function are guaranteed to find an optimal solution when h is admissible [13], [24]. A considerable amount of effort has been devoted to creating admissible heuristics [8], [16], [48], [51] and inadmissible heuristics [11], [20], [44], [49]. Admissible heuristics frequently provide inaccurate predictions of the optimal solution cost as they are biased to never overestimate the actual cost [12]. In some cases, even inadmissible heuristics are biased towards admissibility [11], [44].
+      </paragraph>
+      <paragraph>
+       Regardless of admissibility, heuristics share a property: the heuristic evaluation must be fast enough to be computed for every node generated during search (in some settings it is more efficient to perform lazy heuristic computation during node expansion [42], [50]), while a solution cost predictor is run only on the start state. In fact, often, heuristic functions sacrifice accuracy for speed. By contrast, solution cost predictors aim at accurately predicting the optimal solution cost of a problem instance. While algorithms for predicting the optimal solution cost can be viewed as a heuristic, they differ from a heuristic conceptually in that: 1) they are not required to be fast enough to guide search algorithms; 2) they do not favor admissibility; 3) they aim at making accurate predictions and thus our measure of effectiveness is prediction accuracy, in contrast to the solution quality and search time used to measure the effectiveness of heuristic functions.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Contributions
+      </section-title>
+      <paragraph>
+       In this paper we present an algorithm for quickly and accurately predicting the optimal solution cost of state-space search problems. Our solution cost predictor, Bidirectional Stratified Sampling (BiSS), overcomes the two drawbacks of the Solution Cost Predictor (SCP) [33], another algorithm we introduced for predicting the optimal solution cost. Namely, in contrast to SCP, BiSS scales to very large state spaces and it has the guarantee of eventually converging to the correct answer. We describe SCP in Section 2.4 below.
+      </paragraph>
+      <paragraph>
+       A preliminary version of this paper appeared in the Proceedings of the International Conference on Automated Planning and Scheduling (2012) [28] and as a short paper in the Proceedings of the Symposium on Combinatorial Search [30]. The current paper substantially extends its preliminary versions. In addition to a comprehensive explanation of the algorithm, we include new experimental results. To be specific, in this paper we make the following contributions.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        We introduce BiSS, a prediction algorithm that has two advantages over SCP: (1) it entirely avoids the time-consuming preprocessing required by SCP; and (2) unlike SCP, BiSS is guaranteed to return the optimal solution cost in the limit as its sample size goes to infinity.
+       </list-item>
+       <list-item label="•">
+        We show empirically that BiSS scales to state spaces much larger than can be solved optimally. In particular, we predict the average solution cost for the Sliding-Tile puzzles up to the {a mathematical formula}8×8 configuration, which has more than 10{sup:88} reachable states, and provide indirect evidence that BiSS's predictions for these huge state spaces are quite accurate.
+       </list-item>
+       <list-item label="•">
+        As an application of BiSS we show how to quickly learn strong heuristics from predictions. We show that it is possible to reduce the time required for learning strong heuristic functions from days to minutes by using BiSS's predictions to label the training set.
+       </list-item>
+      </list>
+      <paragraph>
+       Although BiSS overcomes two of the main limitations of SCP, it has two disadvantages SCP does not have. First, BiSS only produces predictions for domains with single goal states. Second, BiSS is applicable only to domains for which it is possible to “reason” backwards from the goal state. We discuss BiSS's weaknesses in Section 6.
+      </paragraph>
+      <paragraph>
+       This paper is organized as follows. In the next section we review Chen's Stratified Sampling (SS) [7], an algorithm for efficiently estimating the size of search trees. In Section 3 we describe BiSS, which is a bidirectional variation of SS for predicting the optimal solution cost, and show that BiSS is guaranteed to produce perfect predictions as the sample size tends to infinity. In Section 4 we show empirically that BiSS produces accurate predictions of the optimal solution cost, scaling to state spaces much larger than can be solved optimally. In Section 5 we show how to use BiSS to generate a training set to learn strong heuristic functions. In Section 6 we list BiSS's limitations and finally, in Section 7, we conclude the paper.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Problem formulation
+      </section-title>
+      <paragraph>
+       Given a directed and implicitly defined search tree representing a state-space search problem rooted at start state {a mathematical formula}s⁎[38], called the underlying search tree (UST), we are interested in estimating the optimal solution cost of a path from {a mathematical formula}s⁎ to the goal node without necessarily finding an actual path from {a mathematical formula}s⁎ to the goal. We assume state-space problems with unit-edge costs and a single goal state.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      BiSS uses a partition of the states in the problem's underlying state space which we call a type system. Type systems have been used to guide the sampling of prediction algorithms for estimating the number of nodes expanded by state-space search algorithms [6], [27], [10], [53], [5], [31], [32]. BiSS also uses a type system to guide its sampling, but instead of producing predictions of the number of nodes expanded, BiSS produces predictions of the optimal solution cost of a given state-space search problem.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Type systems for state-space problems
+      </section-title>
+      <paragraph>
+       For convenience, we define the type system as a partition of the nodes in the problem's UST.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Type systemLet {a mathematical formula}S(s⁎)=(N,E) be a UST rooted at {a mathematical formula}s⁎, where N is its set of nodes and for each {a mathematical formula}s∈N, {a mathematical formula}{s′|(s,s′)∈E} is s's set of child nodes. {a mathematical formula}T={t1,…,tk} is a type system for {a mathematical formula}S(s⁎) if it is a disjoint partitioning of N. If {a mathematical formula}s∈N and {a mathematical formula}t∈T with {a mathematical formula}s∈t, we write {a mathematical formula}T(s)=t.
+      </paragraph>
+      <paragraph label="Example 1">
+       For the Sliding-Tile puzzle (described in A.2), for example, one could define a type system based on the position of the blank tile. In this case, two nodes s and {a mathematical formula}s′ would be of the same type if s has the blank in the same position as {a mathematical formula}s′, regardless of the configuration of the other tiles in the two nodes.
+      </paragraph>
+      <paragraph>
+       We call a type system heuristic-based if all nodes of the same type have the same heuristic value. For a heuristic-based type system we define {a mathematical formula}h(t) to be the heuristic value of the states of type t. We assume in this work that the type system used is heuristic-based.
+      </paragraph>
+      <paragraph>
+       The simplest heuristic-based type system we use is the one introduced by Zahavi et al. [53] in which two nodes are of the same type if they have the same heuristic value. We also use variations of Zahavi et al.'s type system introduced by Lelis et al. [34]. To be specific, in our type systems, in addition to accounting for the heuristic value of the node when computing its type, we also account for the heuristic distribution of the children and sometimes even the grandchildren of the node in the UST when computing its type. The exact type systems we use are defined in the experimental section of this paper (Section 4.2).
+      </paragraph>
+      <section label="2.1.1">
+       <section-title>
+        Type systems are not abstractions
+       </section-title>
+       <paragraph>
+        A common misconception is to think of type systems as state-space abstractions. Although type systems and abstractions are similar, they are conceptually different, as we now explain. Prieditis [41] defines a state-space abstraction as a simplified version of the problem in which (1) the cost of the least-cost path between two abstracted states must be less than or equal to the cost of the least-cost path between the corresponding two states in the original state-space; and (2) goal states in the original state-space must be goal states in the abstracted state-space.
+       </paragraph>
+       <paragraph>
+        In contrast with state-space abstractions, a type system does not have these two requirements. A type system is just a partition of the nodes in the UST, and a type system does not necessarily define the relation between the types. Indeed, in some cases it is possible to represent a type system as a graph by defining the relation between pairs of types. This is what it is done with CDP and SCP (explained below) by sampling the state space and learning a set of conditional probabilities. By contrast, abstractions necessarily offer a partition of the nodes in the UST. Therefore, although type systems cannot necessarily be used as abstractions, abstractions can always be used as type systems.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Predicting the size of the search tree
+      </section-title>
+      <paragraph>
+       Both SCP and BiSS, algorithms for estimating the optimal solution cost, are based on methods developed for estimating the search tree size. Knuth [21] developed a method for estimating the size of the search tree expanded by search algorithms such as chronological backtracking. Knuth's method works by sampling a small portion of the search tree and from there inferring the total search tree size. Under the mild assumption that the time required for expanding nodes is constant throughout the search tree, an estimate of the size of the search tree provides an estimate of the search algorithm's running time. Knuth noted that users of search algorithms usually do not know a priori how long the search will take. Knuth's method was later improved by Chen [6] through the use of a type system to reduce the variance of sampling. We call Chen's method Stratified Sampling (SS). BiSS is based on SS, which is explained in detail in Section 2.5.
+      </paragraph>
+      <paragraph>
+       Independently of Knuth and Chen, Korf et al. [27] developed a method for estimating the size of the search tree expanded by Iterative-Deepening A* (IDA*) [24]. Korf et al.'s method makes accurate predictions of the IDA* search tree size for the special case of consistent heuristics{sup:1} and for sets of start states. Zahavi et al. [53] generalized Korf et al.'s method by presenting CDP, a method that also produces accurate estimates of the IDA* search tree size when inconsistent heuristics are employed.
+      </paragraph>
+      <paragraph>
+       SS and CDP have in common the use of a type system to guide their sampling. Lelis et al. [34] discovered that the type systems developed to be used with CDP could substantially improve SS's prediction power. The main difference between SS and CDP is that while the former samples the search tree one wants to predict the size of, the latter samples the entire state space. Due to this difference in sampling strategy, as the number of samples grow large, SS has the guarantee of producing perfect predictions, while CDP does not. This distinction of sampling strategies is important in the context of solution cost prediction because the method we present in this paper, BiSS, is based on SS and it also has the guarantee of producing perfect predictions, while SCP, based on CDP, does not have such a guarantee.
+      </paragraph>
+      <paragraph>
+       As a practical application of SS, Paudel et al. [40] showed how the prediction algorithm can be used to partition the workload of large work-list based applications on distributed/shared-memory systems.
+      </paragraph>
+      <paragraph>
+       In the next section we explain CDP and in Section 2.4 we explain SCP – for a detailed explanation of CDP and SCP the reader should refer to Zahavi et al. [53] and Lelis et al. [33]. In Section 2.5 we turn our attention to SS.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Conditional distribution prediction (CDP)
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}t,u∈T. {a mathematical formula}p(t|u) denotes the average fraction of the children generated by a node of type u that are of type t. {a mathematical formula}bu is the average number of children generated by a node of type u. For example, if nodes of type u generate 5 children on average ({a mathematical formula}bu=5) and 2 of them are of type t, then {a mathematical formula}p(t|u)=0.4. CDP samples the state space in order to estimate {a mathematical formula}p(t|u) and {a mathematical formula}bu for all {a mathematical formula}t,u∈T. CDP does its sampling as a preprocessing step and, although type systems are defined for nodes in a search tree rooted at {a mathematical formula}s⁎, sampling is done before knowing the start state {a mathematical formula}s⁎. This is achieved by considering a state s drawn randomly from the state space as a node in a search tree. We denote by {a mathematical formula}π(t|u) and {a mathematical formula}βu the respective estimates of {a mathematical formula}p(t|u) and {a mathematical formula}bu obtained through sampling. In CDP, the values of {a mathematical formula}π(t|u) and {a mathematical formula}βu are used to estimate the number of nodes expanded on an iteration of IDA*.
+      </paragraph>
+      <paragraph>
+       The following example illustrates CDP's prediction process.
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider the example in Fig. 1. Here, after sampling the state space to calculate the values of {a mathematical formula}π(t|u) and {a mathematical formula}βu, we want to predict the number of nodes expanded on an iteration of IDA* with cost bound d for start state {a mathematical formula}s0. CDP generates all nodes at distance r from {a mathematical formula}s0 to seed its prediction. In this example we generate all nodes at distance 1 from {a mathematical formula}s0, depicted in the figure by {a mathematical formula}s1 and {a mathematical formula}s2. Given that {a mathematical formula}T(s1)=u1 and {a mathematical formula}T(s2)=u2 and that IDA* does not prune {a mathematical formula}s1 and {a mathematical formula}s2, the first level of prediction will contain one node of type {a mathematical formula}u1 and one of type {a mathematical formula}u2, represented by the two upper squares in the right part of Fig. 1. We now use the values of π and β to estimate the types of the nodes on the next level of search. For instance, to estimate how many nodes of type {a mathematical formula}t1 there will be on the next level of search we sum up the number of nodes of type {a mathematical formula}t1 that are generated by nodes of type {a mathematical formula}u1 and {a mathematical formula}u2. Thus, the estimated number of nodes of type {a mathematical formula}t1 at the second level of search is given by {a mathematical formula}π(t1|u1)βu1+π(t1|u2)βu2. If {a mathematical formula}h(t1)+2 (heuristic value of type {a mathematical formula}t1 plus its g-cost) exceeds the cost bound d, then the number of nodes of type {a mathematical formula}t1 is set to zero, because IDA* would have pruned those nodes. This process is repeated for all types at the second level of prediction. Similarly, we get estimates for the third level of the search tree. Prediction goes on until all types are pruned. The sum of the estimated number of nodes of every type is the estimated number of nodes expanded by IDA* with cost bound d for start state {a mathematical formula}s0.
+      </paragraph>
+      <paragraph>
+       In summary, CDP predicts the number of nodes expanded by IDA* with cost bound d, by predicting the number of nodes of each type generated by IDA* at every level of the search up to and including level d. This is done incrementally. First the prediction is seeded with the types of the nodes at distance r from start. The number of nodes of each type is then estimated for level {a mathematical formula}r+1 of the search. This prediction process continues to deeper and deeper levels until reaching the level of the cost bound d. The total number of nodes predicted by CDP is the sum of the estimated number of nodes of different types at every level, added to the number of nodes expanded in the initial search to level r.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Solution cost predictor (SCP)
+      </section-title>
+      <paragraph>
+       We say that a type t generates a type {a mathematical formula}t′ if there exist two nodes s and {a mathematical formula}s′ such that {a mathematical formula}s∈t, {a mathematical formula}s′∈t′, and s is the parent of {a mathematical formula}s′ in the UST. We use the term type space to denote the graph whose vertices are the types, and where every two types t and {a mathematical formula}t′ have a directed edge between them if at least one node of type t generates at least one node of type {a mathematical formula}t′. The weight of an edge between types t and {a mathematical formula}t′ in the type space is given by the probability of a node of type t generating a node of type {a mathematical formula}t′; note that these probabilities are the {a mathematical formula}π(⋅|⋅)-values learned during CDP's sampling.
+      </paragraph>
+      <paragraph>
+       SCP requires the type system to have special types containing only goal nodes. We call this kind of type a goal type, and define it as follows.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Goal typeA type {a mathematical formula}tg∈T is a goal type if for all nodes {a mathematical formula}s∈tg, s is a goal node.
+      </paragraph>
+      <paragraph>
+       The SCP sampling procedure is the same as CDP's, but with the following difference: we perform a goal test on each node s sampled. If s is a goal, then its type becomes a goal type with only goal nodes in it. There can be as many goal types as different goal nodes in a search tree. After sampling, SCP predicts the optimal solution cost for a given start state {a mathematical formula}s⁎ based on the values of {a mathematical formula}π(t|u) and {a mathematical formula}βu.
+      </paragraph>
+      <paragraph>
+       SCP estimates the probability of a goal node existing at a level of search by approximating the probability of a node of a goal type existing at a level of search. The probability that a node of a goal type exists at the ith level of the search tree depends on (a) the probability that nodes exist at level {a mathematical formula}i−1 that can potentially generate a goal node; and (b) the probability that at least one node at level {a mathematical formula}i−1 indeed generates a goal node. In general, we define {a mathematical formula}p(i,t,s⁎,d) as the approximated probability of finding at least one node of type t, in a search tree rooted at state {a mathematical formula}s⁎, at level i, with cost bound d. SCP assumes the variables {a mathematical formula}π(⋅|⋅) to be independent.
+      </paragraph>
+      <paragraph label="Example 3">
+       We now illustrate how {a mathematical formula}p(i,t,s⁎,d) is calculated with the example shown in Fig. 2. Assume that only nodes of types {a mathematical formula}t1,t2 and {a mathematical formula}t3 can generate a node of type {a mathematical formula}t4 in the type space. In other words, for any type {a mathematical formula}t∉{t1,t2,t3}, we have that {a mathematical formula}π(t4|t)=0. A node of type {a mathematical formula}t4 exists at level {a mathematical formula}i+1 iff at least one of the nodes of types {a mathematical formula}t1,t2 or {a mathematical formula}t3 at the previous level generates one or more instances of the type {a mathematical formula}t4.
+      </paragraph>
+      <paragraph>
+       SCP predicts i to be the optimal solution cost of start state {a mathematical formula}s⁎ with i being the first level in which the probability of a goal type existing exceeded a threshold value c set by the user.
+      </paragraph>
+      <section label="2.4.1">
+       <section-title>
+        Sampling drawbacks
+       </section-title>
+       <paragraph>
+        The sampling strategy used by both CDP and SCP has two drawbacks. First, it can be prohibitively time-consuming. Second, the prediction algorithms using such a strategy are not guaranteed to produce perfect estimates as the number of samples grow large (CDP of the search tree size and SCP of the optimal solution cost). This is because the values of {a mathematical formula}π(t|u) and {a mathematical formula}βu are dependent on the state space as opposed to being dependent on the problem instance [34]. Thus, due to SCP's sampling strategy, the parameter c does not necessarily approximate the actual probability of finding a goal type at a given level of the search from the start state.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Stratified sampling for tree size prediction (SS)
+      </section-title>
+      <paragraph>
+       The prediction algorithm introduced in this paper, BiSS, is based on a method by Knuth [21] that was later improved by Chen [7]. In this section, we describe their method; in Subsection 2.5.1 we describe how it can be adapted to do optimal solution cost prediction.
+      </paragraph>
+      <paragraph>
+       Knuth [21] presents a method to predict the size of a search tree by repeatedly performing a random walk from the start state. Each individual random walk is called a probe. Knuth's method assumes that all branches have similar structure in terms of the branching factors along the path. Thus, walking on one path is enough to derive an estimation of the structure of the entire tree. Despite its simplicity, his method provided accurate predictions in the domains tested such as the longest uncrossed knight's path. However, Knuth himself pointed out that his method was not effective when the tree being sampled is unbalanced. Chen [7] addressed this problem with a stratification of the search tree through a type system (see Definition 1) to reduce the variance of the probing process.
+      </paragraph>
+      <paragraph>
+       Chen's SS is a general method for approximating any function of the form{a mathematical formula} where z is any function assigning a numerical value to a node. {a mathematical formula}φ(s⁎) represents a numerical property of the search tree rooted at {a mathematical formula}s⁎. For instance, if {a mathematical formula}z(s) is the cost of processing node s, then {a mathematical formula}φ(s⁎) is the cost of traversing the tree. If {a mathematical formula}z(s)=1 for all {a mathematical formula}s∈S(s⁎), then {a mathematical formula}φ(s⁎) is the size of the tree. If {a mathematical formula}z(s) returns 1 if s is a goal node and 0 otherwise, then {a mathematical formula}φ(s⁎) is the number of goal nodes in the search tree.
+      </paragraph>
+      <paragraph>
+       Instead of traversing the entire tree and summing all z-values, SS assumes subtrees rooted at nodes of the same type will have equal values of φ and so only one node of each type, chosen randomly, is expanded. This is the key to SS's efficiency since the search trees of practical interest have far too many nodes to be examined exhaustively.
+      </paragraph>
+      <paragraph>
+       Given a node {a mathematical formula}s⁎ and a type system T, SS estimates {a mathematical formula}φ(s⁎) as follows. First, it samples the tree rooted at {a mathematical formula}s⁎ and returns a set A of representative-weight pairs, with one such pair for every unique type seen during sampling. In the pair {a mathematical formula}〈s,w〉 in A for type {a mathematical formula}t∈T, s is the unique node of type t that was expanded during search and w is an estimate of the number of nodes of type t in the search tree rooted at {a mathematical formula}s⁎. {a mathematical formula}φ(s⁎) is then approximated by {a mathematical formula}φˆ(s⁎,T), defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Algorithm 1 shows SS in detail. For convenience, the set A is divided into subsets, one for every layer in the search tree; {a mathematical formula}A[i] is the set of representative-weight pairs for the types encountered at level i.
+      </paragraph>
+      <paragraph>
+       In SS the types are required to be partially ordered: a node's type must be strictly greater than the type of its parent. Chen suggests that this can always be guaranteed by adding the depth of a node to the type system and then sorting the types lexicographically. In our implementation of SS, types at one level are treated separately from types at another level by the division of A into the {a mathematical formula}A[i]. If the same type occurs on different levels the occurrences will be treated as though they were different types – the depth of search is implicitly included into all of our type systems.
+      </paragraph>
+      <paragraph>
+       Representative nodes from {a mathematical formula}A[i] are expanded to get representative nodes for {a mathematical formula}A[i+1] as follows. {a mathematical formula}A[0] is initialized to contain only the root of the search tree to be probed, with weight 1 (Line 1). In each iteration (Lines 4 through 13), all nodes in {a mathematical formula}A[i] are expanded. The children of each node in {a mathematical formula}A[i] are considered for inclusion in {a mathematical formula}A[i+1]. If a child {a mathematical formula}sˆ has a type t that is already represented in {a mathematical formula}A[i+1] by another node {a mathematical formula}s′, then a merge action on {a mathematical formula}sˆ and {a mathematical formula}s′ is performed. In a merge action we increase the weight in the corresponding representative-weight pair of type t by the weight {a mathematical formula}w(s) of {a mathematical formula}sˆ's parent s (from level i) since there were {a mathematical formula}w(s) nodes at level i that are assumed to have children of type t at level {a mathematical formula}i+1. {a mathematical formula}sˆ will replace {a mathematical formula}s′ according to the probability shown in Line 8. Chen [7] proved that this probability reduces the variance of the estimation. Once all the states in {a mathematical formula}A[i] are expanded, we move to the next iteration. In Chen's original version of SS, the process continued until {a mathematical formula}A[i] was empty; Chen was assuming the tree naturally had a bounded depth.
+      </paragraph>
+      <paragraph>
+       One run of the SS algorithm is called a probe. Chen proved that {a mathematical formula}φˆ(s⁎,T) converges to {a mathematical formula}φ(s⁎) in the limit as the number of probes goes to infinity.
+      </paragraph>
+      <section label="2.5.1">
+       <section-title>
+        Using SS for optimal solution cost prediction
+       </section-title>
+       <paragraph>
+        A possible approach for using SS for predicting the optimal solution cost is as follows. One could run SS and have it stop when a goal state is generated. The cost of the path found to the goal state is an upper bound on the optimal solution cost, so the minimum of these upper bounds over a set of runs gives an estimate of the optimal solution cost.
+       </paragraph>
+       <paragraph>
+        In a preliminary experiment we ran on the ({a mathematical formula}5×5)-Sliding-Tile puzzle (24-puzzle) using the same heuristic function and the same number of probes we use in our experiments below, the predictions produced by this approach were less accurate than the relatively inaccurate Manhattan Distance heuristic. However, after we published the preliminary version of this paper [28], we tried the same strategy on domains such as the Blocks World and the Pancake puzzle and found that SS could find near-optimal solution paths on those spaces. This finding evolved into an algorithm called Stratified Tree Search (STS) [35]. STS differs from SS in that the former stops when it encounters the goal and the latter when reaching leaf nodes. Also, STS outputs the best solution encountered across multiple probes, while SS averages the results of multiple probes. Although BiSS does not find solution paths, it produces accurate estimates in all our experiments; STS fails to find near-optimal solutions on the Sliding-Tile puzzle. For a reference, see Table 3 of Lelis et al. [35], where we present the average suboptimality of 27.6 for STS on the ({a mathematical formula}5×5)-Sliding-Tile puzzle. This suboptimality value means that if used as a prediction algorithm, STS would produce predictions with errors of {a mathematical formula}27.6% on average. By contrast, as we show in Section 4.5 below, BiSS produces predictions with an error of approximately {a mathematical formula}3% on average. Since the two algorithms have different purposes – STS finds near-optimal solution paths and BiSS produces solution cost predictions – we did not perform further experiments comparing the two algorithms.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Bidirectional stratified sampling (BiSS)
+     </section-title>
+     <paragraph>
+      In this section we describe our new algorithm BiSS, a bidirectional version of SS. First BiSS samples the state space for the given start and goal states, then it uses the information gathered during sampling to estimate the optimal solution cost from start to goal. In Section 3.1 we describe how BiSS samples the state space. In Section 3.2 we describe how to combine multiple samples to produce an estimate of the optimal solution cost and we present the pseudocode of the complete BiSS algorithm. BiSS is designed in a way that is guaranteed to produce perfect estimates of the optimal solution cost in the limit, as the number of samples goes to infinity; in Section 3.3 we prove this.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       BiSS's sampling procedure
+      </section-title>
+      <paragraph>
+       BiSS is a bidirectional variant of SS for predicting optimal solution costs. It interleaves the execution of two copies of SS, one proceeding forwards from the start state, the other proceeding backwards (using inverse operators) from the goal state. We switch between the two searches after completing an SS “step” in a given direction. One “step” in a particular direction corresponds to the expansion of all the representative nodes at a given level. When referring to the array A in the SS algorithm, we will use a superscript to distinguish the array used in the forward search ({a mathematical formula}AF) from the one used in the backward search ({a mathematical formula}AB). For example, {a mathematical formula}AB[3] is the set of (node, weight) pairs for the nodes expanded at level 3 of the backward search.
+      </paragraph>
+      <paragraph>
+       Fig. 3 illustrates the situation after three steps in each direction. Nodes around both the start state s and goal state g are shown. The black nodes are those that BiSS expands in its first three steps from s and its first three steps from g.
+      </paragraph>
+      <section label="3.1.1">
+       <section-title>
+        Sampling stopping condition
+       </section-title>
+       <paragraph>
+        The stopping condition for bidirectional state-space search, when an optimal solution path is required, involves testing if a state has been generated in both directions.{sup:2} Since {a mathematical formula}AF and {a mathematical formula}AB contain individual states that have been generated by SS in each direction, testing if a state has been generated in both directions could be used in BiSS. However, {a mathematical formula}AF[n] and {a mathematical formula}AB[m] contain only one state of each type, chosen at random, so if the number of distinct types is much smaller than the number of states this test is doomed to failure. We therefore base our stopping condition on the set of types that have occurred at each level of the searches and define {a mathematical formula}τF[n]={T(s)|〈s,w〉∈AF[n]}, the set of types of nodes expanded at level n by the copy of the SS algorithm searching forward from the start state, and {a mathematical formula}τB[m]={T(s)|〈s,w〉∈AB[m]}, the set of types of nodes expanded at level m by the copy of the SS algorithm searching backward from the goal state.
+       </paragraph>
+       <paragraph>
+        The naive stopping condition would be to stop as soon as {a mathematical formula}τF[n] and {a mathematical formula}τB[m] have a type in common, where n and m are the most recently generated levels. The problem with this approach is that, often in practice, states of the same type might occur close to the start and the goal even if the start and goal are far apart. In Fig. 3, for example, states a and b might have the same type ({a mathematical formula}T(a)=T(b)) even though the actual distance between start and goal is greater than 6 (the combined distance from start to a and from goal to b).
+       </paragraph>
+       <paragraph>
+        We therefore use a more elaborate condition to decide when to stop the bidirectional search, requiring the type sets at the frontiers of the two searches to overlap for several consecutive levels. We call this stopping condition a match between the two searches, defined as follows.
+       </paragraph>
+       <paragraph label="Definition 3">
+        MatchFor any n and m we say that {a mathematical formula}τF[n] and {a mathematical formula}τB[m] match if {a mathematical formula}τF[n+v]∩{a mathematical formula}τB[m−v]≠∅ for all {a mathematical formula}v∈{0,1,⋯,K} where K is defined so it grows linearly with m as follows: {a mathematical formula}K=max⁡{⌊γ⋅m⌋,1}. Here {a mathematical formula}γ∈[0,1] is an input parameter.
+       </paragraph>
+       <paragraph>
+        After each step in each direction we test if the same type occurs in both {a mathematical formula}τF[n] and {a mathematical formula}τB[m], where n and m are the most recently generated levels in the respective search directions. If this happens, we extend the forward search up to level {a mathematical formula}n+K so that a match, as defined in Definition 3, can be fully tested. This concept of match is illustrated in Fig. 4 for {a mathematical formula}K=2. Each circle in the figure represents a set of types at a level of search ({a mathematical formula}τF[⋅] or {a mathematical formula}τB[⋅]); each {a mathematical formula}tv denotes just one of the types in the corresponding set. The forward search has a state of type {a mathematical formula}t0 at level n; the backward search also has a state of type {a mathematical formula}t0 at level m. The forward search continues for K more levels, producing (among others) a node of type {a mathematical formula}t1 at level {a mathematical formula}n+1 and a node of type {a mathematical formula}t2 at level {a mathematical formula}n+2. This yields a match since there are nodes of type {a mathematical formula}t1 and {a mathematical formula}t2 at levels {a mathematical formula}m−1 and {a mathematical formula}m−2, respectively, of the backwards search.
+       </paragraph>
+       <paragraph>
+        If a match occurs at step n from the start state and at step m from the goal state, then the searches terminate and {a mathematical formula}n+m is returned as an estimate of the optimal solution cost. If a match does not occur, then the searches resume from levels {a mathematical formula}n+1 and m, or from levels n and {a mathematical formula}m+1 depending on which frontier advanced last before checking for the match. Note that in terms of implementation, the layers of the forward search that are expanded while checking for a match can be kept in memory and reused in future layer expansions by the algorithm in case a match does not occur.
+       </paragraph>
+       <paragraph>
+        When a type system makes use of properties of the children and/or grandchildren of a node the definition of match only makes sense if the children/grandchildren are computed in the backward search using the forward version of the operators. Otherwise, the forward and backward searches might assign different types to the same state, thus making it impossible for a match to occur.
+       </paragraph>
+       <paragraph>
+        Chen assumes an SS probe eventually terminates by reaching leaf nodes of the search tree. We also assume that each of BiSS's probes eventually terminates. In our case a probe will finish if it either reaches leaf nodes ({a mathematical formula}AF[n] or {a mathematical formula}AB[m] is empty), or if a match is found between the forward and backward frontiers. If the former happens, it means this BiSS probe predicts there is no path from start to goal. If the latter happens, this BiSS probe produces an estimate of the optimal solution cost. In all our experiments every BiSS probe finished by finding a match between the forward and backward frontiers.
+       </paragraph>
+       <paragraph>
+        We note that our matching criterion is asymmetric in the sense that it is the forward search that is extended K extra levels. An alternative matching criterion is to extend each frontier {a mathematical formula}K/2 extra levels. We have experimented with this alternative approach while designing the algorithm and observed that we would need larger values of K for obtaining results similar to those obtained by only extending the forward search K extra steps. We conjecture that by extending the forward search we are able to reach a region of the state space where the heuristic function used to define the type system is more accurate. For example, intuitively, heuristic functions such as pattern databases can be more accurate around the goal state, and by extending the forward search we might reach this “discriminative” region of the state space. By contrast, when extending the backward search we tend to reach a less discriminative, and thus less informative, region of the state space. Since the running time of the algorithm increases as we increase the value of K (a larger value of K results in more type comparisons), we decided to only extend the forward search while looking for a match.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Combining multiple probes to produce the overall prediction
+      </section-title>
+      <paragraph>
+       The procedure just described represents one probe of BiSS. We now describe how the information obtained from a set of p probes can be aggregated to produce a more accurate solution cost prediction. Let the type frontiers generated by probe i be denoted τ{a mathematical formula}[iFni] and {a mathematical formula}τiB[mi], where {a mathematical formula}ni is the depth of the last level generated in the forward direction by probe i and {a mathematical formula}mi is the depth of the last level generated in the backwards direction by probe i. Let {a mathematical formula}τ⁎F[n] denote the union of all the {a mathematical formula}τiF[n], for {a mathematical formula}0≤n≤maxi⁡{ni} and let {a mathematical formula}τ⁎B[m] denote the union of all the {a mathematical formula}τiB[m], for {a mathematical formula}0≤m≤maxi⁡{mi}. We treat {a mathematical formula}τiF[n]=∅ if BiSS did not reach level n during the i-th probe of the forward search. Likewise, we treat {a mathematical formula}τiB[m]=∅ if BiSS did not reach level m during the i-th probe of the backward search.
+      </paragraph>
+      <paragraph>
+       To compute the final estimate of the optimal solution cost we once again use our matching scheme (Definition 3) as follows. We set m and n to zero and gradually increment them, checking for a match between {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m] after each increment; {a mathematical formula}n+m is returned as the predicted optimal solution cost when the first match occurs. In Section 3.3 we show that such an approach allows BiSS to guarantee asymptotic exact predictions. In summary, the complete BiSS algorithm works as follows: we use our matching scheme as the stopping criterion for different independent probes to obtain the sets {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m]; then we use the same matching scheme to produce the final prediction given the sets {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m].
+      </paragraph>
+      <paragraph>
+       Algorithm 2 describes the overall BiSS algorithm, which receives a start state {a mathematical formula}s⁎, a goal state g, a number of probes p, a γ value for determining when the forward and the backward frontiers match, and a type system T. BiSS returns an estimated cost c of the optimal path from {a mathematical formula}s⁎ to g.
+      </paragraph>
+      <paragraph>
+       In lines 2 through 6 of Algorithm 2BiSS performs p bidirectional probes. The process of performing a probe is described in Algorithm 3. As we described in Section 3.1, during a probe BiSS interleaves the execution of two copies of SS, one proceeding forwards from {a mathematical formula}s⁎ and another backwards from g. Algorithm 4 describes the process of moving one step in each direction. The reader will notice that Algorithm 4 is very similar to one iteration of SS, with the difference that in Algorithm 4 we keep track of all types encountered during the expansion of the n-th layer in the τstructure. Note that if Algorithm 4 is expanding one layer of the forward search, then we use the forward operators to generate the children {a mathematical formula}sˆ of s, and we use the backward operators otherwise. The set of all types encountered during the p probes in the forward search is stored in the structure {a mathematical formula}τ⁎F (line 4 of Algorithm 2). Similarly, the set of all types encountered during the p probes in the backward search is stored in the structure {a mathematical formula}τ⁎B (line 5 of Algorithm 2).
+      </paragraph>
+      <paragraph>
+       Once BiSS finishes the p probes it uses the information stored in {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎B to produce an estimate of the optimal solution cost (from line 7 to line 17 of Algorithm 2). BiSS looks for a match of the forward and the backward frontiers while accounting for the set of types in {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎B. That is, once a match occurs between {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎BBiSS, returns {a mathematical formula}nF+nB as the estimated optimal solution cost of a path between {a mathematical formula}s⁎ and g.
+      </paragraph>
+      <paragraph>
+       BiSS's pseudocode can be optimized in two different ways. First, there is no need to store sets {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎B in memory when using a single probe. That is, the value of {a mathematical formula}nF+nB when a match is found in Algorithm 3 is already the output of the overall algorithm. Second, when using multiple probes, {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎B can be aggregated to {a mathematical formula}AF and {a mathematical formula}AB while searching for a match in Algorithm 3. This will possibly allow BiSS to find a match more quickly in Algorithm 3. This is because sets {a mathematical formula}AF and {a mathematical formula}AB will then contain not only the types encountered during the current probe, but also all the types encountered before that. Intuitively, by enlarging the sizes of {a mathematical formula}AF and {a mathematical formula}AB one increases the chances of finding a match. This optimization is possible because BiSS's predicted value depends on {a mathematical formula}τ⁎F and {a mathematical formula}τ⁎B, then there is no need to search to a depth in Algorithm 3 that will not be reached while searching for a match between {a mathematical formula}τ⁎F and τ{a mathematical formula}⁎B in Algorithm 2.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Theoretical analysis
+      </section-title>
+      <paragraph>
+       Assuming a BiSS probe always terminates, we now prove that, as the number of probes goes to infinity, the probability of BiSS producing perfect predictions approaches one.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Let {a mathematical formula}BFSF[n] be the set of types of all nodes at distance n from the start state as if enumerated using a Breadth-First Search to depth n, and {a mathematical formula}BFSB[m] be the set of types of all nodes at distance m in the backwards direction.
+      </paragraph>
+      <paragraph label="Proof">
+       For any level n in the forward search and any level m in the backward search, the probability of{a mathematical formula}τ⁎F[n]being equal to{a mathematical formula}BFSF[n]and{a mathematical formula}τ⁎B[m]being equal to{a mathematical formula}BSFB[m]approaches one as{a mathematical formula}p→∞.Every node in the UST has a nonzero probability of being the representative node of its type during a BiSS probe (line 8 of Algorithm 4). Therefore, every node in the UST has a nonzero probability of being expanded by BiSS. As the number of probes {a mathematical formula}p→∞, the probability of at least one node of each type at each level of the tree rooted at s being expanded approaches one. The same argument is also true for the tree rooted at g. Therefore, the probability of {a mathematical formula}τ⁎F[n] being equal to {a mathematical formula}BFSF[n] and {a mathematical formula}τ⁎B[m] being equal to {a mathematical formula}BSFB[m] approaches one as {a mathematical formula}p→∞.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Given start state s with optimal solution cost{a mathematical formula}c⁎, goal state g, type system T, any value{a mathematical formula}γ∈[0,1], and a number p of probes, the probability ofBiSSproducing an estimate{a mathematical formula}cˆ⁎with{a mathematical formula}cˆ⁎≤c⁎approaches one as{a mathematical formula}p→∞.If there exists a path from s to g with cost {a mathematical formula}c⁎, then, for some v, bidirectional Breadth-First Search would find a state that occurs both in the forward frontier of depth v starting from s and in the backward frontier of depth {a mathematical formula}v′ starting from g, where {a mathematical formula}v′∈{v,v−1} and {a mathematical formula}c⁎=v+v′. This means that {a mathematical formula}BFSF[v+y] and {a mathematical formula}BFSB[v′−y] have at least one type in common for all {a mathematical formula}y∈{0,1,⋯,K} with {a mathematical formula}K=max⁡{⌊γ⋅v⌋,1} and {a mathematical formula}γ∈[0,1]. Hence, for any {a mathematical formula}γ∈[0,1], as {a mathematical formula}p→∞, it follows from Lemma 1 that BiSS finds the level n and the level m for which {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m] match with respect to γ with probability approaching one. Since the candidate values for n and m are gradually increased, the first such values n and m found must fulfill that the probability of having {a mathematical formula}cˆ⁎=n+m≤c⁎ approaches one.  □
+      </paragraph>
+      <paragraph>
+       Lemma 2 guarantees that in the limit, as the number of probes grows large, BiSS will always underestimate the actual optimal solution cost. Note, however, that the number of probes used in practical scenarios will likely not be large enough to meet this asymptotic guarantee. Thus, in practice, BiSS can also overestimate the actual optimal solution cost.
+      </paragraph>
+      <paragraph>
+       By mapping the goal state g to a special unique goal type[33] (Definition 2) and setting {a mathematical formula}γ=1.0, we prove that, as {a mathematical formula}p→∞, the probability of BiSS producing a perfect prediction approaches one.
+      </paragraph>
+      <paragraph label="Proof">
+       Given a start state s, a goal state g, a type system T mapping g to a goal type,{a mathematical formula}γ=1.0, and a number p of probes, the probability ofBiSSproducing an estimate{a mathematical formula}cˆ⁎with{a mathematical formula}cˆ⁎=c⁎approaches one as{a mathematical formula}p→∞.Let {a mathematical formula}cˆ⁎=n+m where {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m] is the first match found by BiSS for {a mathematical formula}γ=1.0. That the probability of having {a mathematical formula}n+m≤c⁎ approaches one as {a mathematical formula}p→∞ follows from Lemma 2.We now prove that the probability of having {a mathematical formula}n+m≥c⁎ also approaches one as {a mathematical formula}p→∞. Note that {a mathematical formula}τ⁎B[0] contains only the goal type {a mathematical formula}tg. Thus, with {a mathematical formula}γ=1.0, a match between {a mathematical formula}τ⁎F[n] and {a mathematical formula}τ⁎B[m] occurs only if {a mathematical formula}tg∈τ⁎F[m+n]. Since {a mathematical formula}tg contains only the goal state g, g must be on a path of cost {a mathematical formula}m+n from s. Such a path is encountered with probability approaching one as {a mathematical formula}p→∞ (Lemma 1). Since {a mathematical formula}c⁎ is the optimal solution cost for s, this implies that, in this case, {a mathematical formula}m+n≥c⁎. Consequently, the probability of having {a mathematical formula}m+n=c⁎ approaches one as {a mathematical formula}p→∞.  □
+      </paragraph>
+      <paragraph>
+       The proof of Theorem 1 assumes that BiSS's probing expanded states of all possible types in every level before checking for a match between {a mathematical formula}τ⁎F[⋅] and τ{a mathematical formula}[⁎B⋅]. This theorem proves that BiSS correctly predicts the optimal solution cost when {a mathematical formula}γ=1.0 and the number of probes goes to infinity. In the next section we show empirically that BiSS also produces accurate predictions with a limited number of probes and lower γ-values.
+      </paragraph>
+      <paragraph>
+       When predicting the search tree size SS assumes that nodes of the same type root subtrees of the same size [7]. BiSS assumes that subtrees {a mathematical formula}Rs and {a mathematical formula}Rs′ rooted at nodes s and {a mathematical formula}s′ of the same type have the same set of types at any level i. Let {a mathematical formula}Rsi and {a mathematical formula}Rs′i be the sets of nodes encountered at level i of subtrees {a mathematical formula}Rs and {a mathematical formula}Rs′, respectively. Given a type system T, BiSS assumes that{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Intuitively, a single probe of BiSS is able to produce a perfect prediction of the optimal solution cost when using a type system that has goal types and obeys Equation (1) for all nodes s and {a mathematical formula}s′ of the same type, and when {a mathematical formula}γ=1.0. This is because a single probe of BiSS's forward and backward searches would encounter exactly the set of types in BFSF and BFSB.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Running time analysis
+      </section-title>
+      <paragraph>
+       What dictates the time complexity of BiSS is {a mathematical formula}|T|, the size of the type system being used, b, the problem's branching factor, p, the number of probes, and {a mathematical formula}C=maxi⁡{ni+mi}, the largest {a mathematical formula}ni+mi value returned by the probes. We assume the representative-weight pairs (maintained by all the collections such as {a mathematical formula}AF[.], {a mathematical formula}AB[.]) are stored in a hash table and that the insert and search operations on the table are made in constant time. We further assume a probe will terminate with a match of the two frontiers. BiSS generates {a mathematical formula}|T|⋅b nodes at each step of the forward or backward frontiers in the worst case. Therefore, BiSS generates up to {a mathematical formula}|T|⋅b⋅C nodes during each probe. In the worst case, when checking for a match between the two frontiers there will be a nonempty intersection between {a mathematical formula}τF[.] and τ{a mathematical formula}[B.] for all values of v (as in Definition 3) except the last one. When {a mathematical formula}γ=1.0 this results in {a mathematical formula}|T|⋅C2 comparisons until the match is found and the probe terminates. Therefore, in the worst case, BiSS's running time is on the order of {a mathematical formula}p⋅(|T|⋅b⋅C+|T|⋅C2).
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Memory requirement analysis
+      </section-title>
+      <paragraph>
+       The size of the type system {a mathematical formula}|T| and {a mathematical formula}C=maxi⁡{ni+mi} determine the memory complexity of BiSS. We again assume a probe will always finish with a match between the two frontiers. In the worst case there will be {a mathematical formula}|T| states at each level of both forward and backward frontier. As the difference of the number of steps between {a mathematical formula}τF[⋅] and {a mathematical formula}τB[⋅] will be at most one we can approximate the number of representative-weight pairs to be stored in memory when {a mathematical formula}γ=1.0 as {a mathematical formula}C⋅|T|+C2⋅|T|. The first term in the sum accounts for the pairs in the forward frontier, and the second for the pairs in the backward frontier. Recall that the memory requirement for the forward frontier is larger as this is the frontier we advance while looking for a match. Thus, BiSS's worst-case memory requirement is on the order of {a mathematical formula}C⋅|T|.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      In this section we empirically evaluate the accuracy and runtime of BiSS.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Heuristic functions as baselines
+      </section-title>
+      <paragraph>
+       As stated earlier, while not designed to, heuristic functions themselves can be used as predictors of the optimal solution cost if they are applied to the start state. They are typically faster but less accurate than predictors designed exclusively to predict the optimal solution cost. To show this we also compare the accuracy of BiSS's predictions with the accuracy of two heuristic functions. First, it is natural to compare BiSS to the heuristic used to define its type system. In our experiment, this heuristic is always admissible. However, as we observed in our experiments with SCP[33], admissible heuristic functions are known to be poor estimators of the optimal solution cost compared to inadmissible heuristics. For examples of inadmissible heuristics see, e.g., Bonet and Geffner [2], Hoffmann and Nebel [17], and Richter, Helmert, and Westphal [43]. Like we did in the SCP experiments [33], we choose the Bootstrap heuristic [20] to represent the class of inadmissible heuristics for two reasons. First, IDA* with the Bootstrap heuristic was found to produce near-optimal solutions while expanding relatively few nodes, which suggests the heuristic is providing accurate estimates of the optimal solution cost. Second, the Bootstrap heuristic was shown to be superior to some of the inadmissible heuristics mentioned above on the Blocks World (Jabbari Arfaee et al. [20]). Third, the bootstrap heuristic was shown to be more accurate than a simple linear regression that tries to learn the heuristic error [20], [49], and thus provides also a comparison against methods that estimate solution cost by learning the error of the heuristic. We explain the Bootstrap system in detail in Section 5.1.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Type systems
+      </section-title>
+      <paragraph>
+       We use the following type systems in our experiments.{a mathematical formula} where {a mathematical formula}h(s) is the heuristic value of node s, {a mathematical formula}c(s,k) is how many of s's children have heuristic value k, and H is the maximum heuristic value a node can assume;{a mathematical formula} where {a mathematical formula}gc(s,k) is how many of s's grandchildren have heuristic value k.
+      </paragraph>
+      <paragraph>
+       Two nodes have the same type according to {a mathematical formula}Tc if they have the same heuristic value and, for each k, they both have the same number of children with heuristic value k. {a mathematical formula}Tgc additionally requires the same heuristic distribution for the grandchildren.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Experimental setup
+      </section-title>
+      <paragraph>
+       In this section we run BiSS with the same set of input parameters for all the experiments. In particular, we use 2 probes and {a mathematical formula}γ=0.5. As K also depends on the number of steps m (see Definition 3), BiSS is able to make accurate predictions in domains with different average solution costs while using the same γ-value. In Section 4.8 we empirically study how BiSS is affected by the choice of the input parameters and present a procedure that can help choosing BiSS's parameters.
+      </paragraph>
+      <paragraph>
+       For BiSS the type system and the set of input parameters (p and γ) were chosen so that BiSS would make predictions quickly. For instance, BiSS's predictions are more accurate using the larger {a mathematical formula}Tgc type system. However, using {a mathematical formula}Tgc in domains with a large branching factor could result in very large type systems, which would result in slow prediction computations. Thus, {a mathematical formula}Tc will be preferred in that case. Besides {a mathematical formula}Tc and {a mathematical formula}Tgc one could also create type systems “in between” those two by evaluating only a subset of the children or a subset of the grandchildren of a node while calculating its type. The type system used in each experiment is specified in Appendix A. We used the same type systems with both BiSS and SCP.
+      </paragraph>
+      <paragraph>
+       Predictions are compared using relative unsigned error (Lelis et al. [33]) for a set of optimal solution costs. For all start states with optimal solution cost X one computes the absolute difference of the predicted solution cost and X, adds these up, divides by the number of start states with optimal solution cost X and then divides by X. A system that makes perfect predictions will have a relative unsigned error of 0.00. We also present the standard deviation of the relative unsigned error in our table of results below. All our experiments are run on 2.67 GHz Intel Xeon CPUs.
+      </paragraph>
+      <paragraph>
+       In this paper we use four different problem domains: the Blocks World, the Sliding-Tile puzzle, the Pancake puzzle, and Rubik's Cube. Taken together these domains offer a good challenge for the prediction systems evaluated as they have very distinct properties. For instance, the Blocks World, the Pancake puzzle and Rubik's Cube have shallow solutions; the Sliding-Tile puzzle has deeper solutions. The Pancake puzzle and the Blocks World have larger branching factors; the Sliding-Tile puzzle has a much lower branching factor. For a detailed description of each of these domains see Appendix A.
+      </paragraph>
+      <paragraph>
+       In the Blocks World, the Sliding-Tile puzzle, and the Pancake puzzle we use two state space sizes: a smaller size used to compare BiSS to SCP and a larger size to demonstrate the scalability of BiSS. SCP cannot be run on the large versions of the domains as its preprocessing step would be prohibitively time-consuming. First we present the results on the smaller versions of the problem domains (Section 4.4) and then we present the results on the larger versions of the problem domains (Section 4.5). Initially we present only the accuracy results, and in Section 4.6 we show the empirical runtime of BiSS. Finally, in Section 4.7 we present prediction results on very large versions of the Sliding-Tile puzzle (up to the {a mathematical formula}8×8 configuration).
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Accuracy comparison of BiSS and SCP
+      </section-title>
+      <paragraph>
+       In this section we present prediction results on the 15 Blocks World, the ({a mathematical formula}4×4)-Sliding-Tile puzzle (15-puzzle), and the 10 Pancake puzzle. Accuracy was measured over 1000 randomly generated instances of each domain. The results are shown in Table 1. The first column shows the optimal solution cost, followed by the relative unsigned error of different predictors. The optimal solution cost for the problem instances used in this experiment were obtained with IDA*. We compare BiSS with SCP, Bootstrap (BS), and the heuristic (h) used to define the type system for BiSS and SCP. We also show the percentage of problem instances for which a predictor makes perfect predictions ({a mathematical formula}cˆ⁎=c⁎), and the number of problem instances used to compute each entry of the tables (column “n”). The best value in each row is in bold.
+      </paragraph>
+      <paragraph>
+       BiSS is very accurate for the 15 Blocks World (upper part of Table 1); its predictions are nearly perfect. Bootstrap and SCP's errors vary considerably with the optimal solution cost of the problem instances and are much higher than BiSS's error. The base heuristic function h used in this experiment was the very weak “Out of Place” heuristic, which counts the number of blocks not in their goal position, cf. Jabbari Arfaee et al. [20]. We observe that the accuracy of the Out of Place heuristic decreases as we increase the optimal solution cost.
+      </paragraph>
+      <paragraph>
+       Manhattan Distance (MD) was the heuristic function h used in the experiments on the 15-puzzle. As observed in Table 1, MD underestimates the actual solution cost by about 30%. The Bootstrap heuristic, SCP and BiSS with our default set of parameters (2 probes and {a mathematical formula}γ=0.5) are all very accurate for this domain. SCP is slightly more accurate than BiSS for small solution costs but the trend shifts for larger costs. However, in results not shown, if the number of probes and the γ-value are increased, BiSS and SCP make predictions of similar accuracy for the small costs too. Both predictors are more accurate than the Bootstrap heuristic.
+      </paragraph>
+      <paragraph>
+       The heuristic h used in the 10 Pancake puzzle experiment was the maximum of the regular and the dual lookups [54] of a pattern database built by keeping the identity of the four smallest pancakes and turning the other pancakes into “don't cares”. For the pancake puzzle we also compare to the “GAP” heuristic [15], a highly accurate hand-crafted admissible heuristic for this domain. Our table of results show that even GAP is not as accurate as BiSS for the 10 Pancake puzzle.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Larger domains
+      </section-title>
+      <paragraph>
+       In this section we present the prediction results on the 20 Blocks World, ({a mathematical formula}5×5)-Sliding-Tile puzzle (24-puzzle), 35 Pancake puzzle, and the {a mathematical formula}3×3×3 Rubik's Cube (again, for a description of the domains see Appendix A). Unless stated otherwise, in this experiment we used the same heuristic functions used in the experiment on smaller domains. Also, like in the former experiment, with the exception of the 24-puzzle, accuracy is measured over 1000 random instances in each domain. In the 24-puzzle we measure accuracy over 433 random instances, which were solved optimally using IDA* with the 6-6-6-6 disjoint pattern database with reflection along the main diagonal [26].
+      </paragraph>
+      <paragraph>
+       We present the results on the larger versions of the Blocks World, the Sliding-Tile puzzle, and the Pancake puzzle in Table 2, Table 3, Table 4, respectively; the results on Rubik's Cube will be shown in Table 5.
+      </paragraph>
+      <paragraph>
+       For the 20 Blocks World, again BiSS makes nearly perfect predictions and is far more accurate than the Bootstrap heuristic. BiSS's predictions are also substantially more accurate than the values of the heuristic h used to build the type system. For example, for problem instances with optimal solution cost of 37 BiSS makes perfect predictions, while the heuristic has an error of 47%.
+      </paragraph>
+      <paragraph>
+       BiSS is substantially more accurate than Bootstrap on the 24-puzzle. For example, for instances with optimal solution cost of 100, BiSS's predictions are only 3 moves ({a mathematical formula}0.03⁎100) different than the true optimal solution cost, on average, whereas Bootstrap's are 8 moves different.
+      </paragraph>
+      <paragraph>
+       For the 35 Pancake puzzle the optimal solutions were obtained by having IDA* with the GAP heuristic solve the problems. For this domain we also present results of BiSS using the GAP heuristic to define its type system (BiSS+G in Table 4). All methods tested produced accurate predictions for this domain. BiSS+G is the prediction method which produces the least accurate predictions, although the predictions are still accurate (largest error observed is 0.10 for cost 29). However, BiSS+G would produce predictions as accurate as the other methods should we use {a mathematical formula}γ=0.4 instead of 0.5 (results for {a mathematical formula}γ=0.4 are not included for clarity and uniformity). We further discuss parameter selection in Section 4.8.
+      </paragraph>
+      <paragraph>
+       For Rubik's Cube we compare BiSS's predictions with Bootstrap and with the maximum of the three pattern database heuristics introduced by Korf [25]. We also used Korf's pattern database heuristics with IDA* to solve 1000 problem instances generated with a random walk of length 30 from the goal state. The prediction results we report are only for the instances which IDA* managed to solve with a 30-minute time limit. As shown in Table 5, BiSS is able to produce predictions which are far superior to those produced by Bootstrap and the pattern database heuristic.
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Empirical runtime
+      </section-title>
+      <paragraph>
+       BiSS's runtime is polynomial in the size of the type system, the predicted solution cost, the number of probes, and the branching factor (Section 3.4). Table 6 shows how this time complexity translates into actual runtime ({a mathematical formula}p=2 and {a mathematical formula}γ=0.5) by showing the fastest (min), the average (mean), and slowest (max) prediction runtimes for the set of problem instances used in the accuracy experiment above.
+      </paragraph>
+      <paragraph>
+       BiSS is considerably faster than solving the problem suboptimally; the mean times for Bootstrap to suboptimally solve one single instance were 3 hours and 49 minutes for the 20 Blocks World, 14 minutes and 5 seconds for the 24-puzzle, 2 hours and 29 minutes for the 35 Pancake puzzle, and 10 hours and 54 minutes for Rubik's Cube [20].
+      </paragraph>
+     </section>
+     <section label="4.7">
+      <section-title>
+       Predictions for very large state spaces
+      </section-title>
+      <paragraph>
+       We also used BiSS (again using {a mathematical formula}p=2, {a mathematical formula}γ=0.5, and the {a mathematical formula}Tgc type system with Manhattan Distance) to predict the optimal solution cost of problem instances for the ({a mathematical formula}n×n)-Sliding-Tile puzzle with {a mathematical formula}n∈{6,7,8}, i.e., state spaces much too large to be solved optimally by any known technique in a reasonable time. The number of instances for which predictions were made and the average time (in minutes) taken by BiSS to compute one prediction are shown in the first two rows of Table 7. We have no way to verify the accuracy of the individual predictions directly, but we did devise a way to evaluate the accuracy of the average predicted optimal solution cost on these sets of instances; the average predictions are shown in the third row of Table 7.
+      </paragraph>
+      <paragraph>
+       Parberry [39] proved lower and upper bounds for the average solution cost of the {a mathematical formula}n2-puzzle to be cubic in n. Thus one way to estimate the average solution cost for the Sliding-Tile puzzle is to fit a cubic polynomial to the known average solution costs and then infer the unknown average solution costs. The average solution cost for the ({a mathematical formula}2×2), ({a mathematical formula}3×3), and ({a mathematical formula}4×4) puzzles are roughly 3, 22, and 53, respectively. The average solution cost obtained from solving the 433 instances of the ({a mathematical formula}5×5) puzzle in Section 4.5 is approximately 101. The third-order polynomial fit for these data is {a mathematical formula}0.8333⋅n3−1.5⋅n2+10.6667⋅n−19. The results for the polynomial fit, shown in the final row of Table 7, are very close to BiSS's average predictions.
+      </paragraph>
+     </section>
+     <section label="4.8">
+      <section-title>
+       Parameter selection
+      </section-title>
+      <paragraph>
+       In our experiments we fixed the number of probes p to 2 and the confidence parameter γ to 0.5. How would BiSS's accuracy and running time be affected by different settings of these parameters? We use the relative signed error to better understand the impact of different p and γ on BiSS's predictions. The relative signed error is calculated by summing the difference between the predicted cost with the actual optimal solution cost for each problem instance. This sum is then divided by the sum of the actual costs. A system that always underestimates the actual optimal solution cost will have a negative relative signed error.
+      </paragraph>
+      <paragraph>
+       According to Lemma 2 for {a mathematical formula}γ&lt;1.0BiSS will have a zero or negative relative signed error in the limit of large p. This trend is illustrated in an experiment on the 15-puzzle shown in Fig. 5, where each curve shows the average relative signed error of the predictions over 1000 random instances for different values of γ. With sufficiently small values of γBiSS will almost always underestimate the optimal solution cost, so it will have a negative signed error even when {a mathematical formula}p=1, which will only get worse as p is increased. For larger values of γBiSS will overestimate the optimal solution cost when {a mathematical formula}p=1 so its signed error will be positive. Increasing p will drive the signed error towards 0, i.e., increase the accuracy of the predictions, until p is large enough that the signed error becomes negative. At this point further increases of p will cause accuracy to get worse.
+      </paragraph>
+      <paragraph>
+       Fig. 6 presents the relative unsigned errors of our parameter selection experiment. Increasing the number of probes for small values of γ will increase the error. In particular, the error increases as we increase the number of probes for the smaller values of γ (0.4, 0.5, and 0.6). By contrast, as we increase the number of probes we decrease the error for the larger values of γ (0.7 and 0.8). However, it is likely that by continually increasing the number of probes the error will also increase for the larger values of γ.
+      </paragraph>
+      <paragraph>
+       We observed trends similar to the ones shown in Fig. 5, Fig. 6 in all other domains.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Learning strong heuristic functions from predictions
+     </section-title>
+     <paragraph>
+      The use of machine learning to learn a heuristic function is an active research topic, see for instance [3], [19], [11], [20], [44], [52]. One of the main challenges faced by these learning systems is to collect training instances. We now describe one successful system developed for learning strong heuristic functions for large state spaces called Bootstrap. Then we are going to show how to use BiSS to dramatically reduce the training time required by Bootstrap to learn strong heuristic functions.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       The Bootstrap learning system
+      </section-title>
+      <paragraph>
+       Jabbari Arfaee et al. [20] presented a learning system, Bootstrap, that generates training data through bootstrapping. Bootstrap tries to solve problem instances with a (possibly weak) initial heuristic {a mathematical formula}h0 within a time limit. The instances that the method manages to solve form a training set that is used to learn another, stronger heuristic {a mathematical formula}h1. The process is then repeated with {a mathematical formula}h1 replacing {a mathematical formula}h0, hoping that some of the instances not solved in the previous iteration will be solved and a new training set will be obtained. Experiments showed that IDA* finds near-optimal solutions for state-space problems with a heuristic learned by the Bootstrap system.
+      </paragraph>
+      <paragraph>
+       We refer to Jabbari Arfaee et al.'s system as the Bootstrap system and to the heuristics learned by their system as the Bootstrap heuristics (or BS, as used in Section 4 above).
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        The Bootstrap drawback
+       </section-title>
+       <paragraph>
+        Although the Bootstrap system is able to learn strong heuristic functions for large state spaces, the process of learning can be time-consuming. For example, the Bootstrap system takes two days to learn a strong heuristic for Rubik's Cube. The learning process is time-consuming for two reasons. First, Bootstrap spends a substantial amount of time trying and failing to solve problem instances to form its training set. This procedure is time-consuming because it is hard to separate the hard-to-solve from the easy-to-solve instances. It is difficult to make this separation even when using methods for predicting the IDA* search tree size such as CDP[53] and SS[7]. In addition to being able to predict the size of the search tree, in order to be able to separate the easy from the hard instances one has to know the optimal solution cost of those instances. SCP or BiSS could be used to estimate the optimal solution cost, but even accurate predictions of the optimal solution cost (e.g., predictions with relative unsigned error within 0.02) could be misleading. For instance, if BiSS predicts the optimal solution cost of a problem instance of the 24-puzzle is 100 when it is actually 102, the instance is in fact much harder to solve than we predict it is. This is because the size of the search tree usually grows exponentially with the solution cost. The second reason for the Bootstrap learning process being slow is that it ultimately learns from the easy instances first. Therefore, it can take several iterations until a heuristic is created that is able to solve hard instances quickly.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Using BiSS to learn heuristic functions
+      </section-title>
+      <paragraph>
+       We propose BiSS-h, a different approach to learning heuristics, with the goal of reducing learning time. Instead of using search to solve problem instances to generate a training set, we first generate a set of problem instances and then we use BiSS to label these instances to form our training set.
+      </paragraph>
+      <paragraph>
+       Algorithm 5 presents BiSS-h. It takes as input a value γ and a type system T, both required by BiSS. Recall that γ dictates how much the forward and the backward frontiers must overlap so that a match occurs. Higher values of γ will require a larger overlap of the frontiers, thus the predictions will tend to overestimate the optimal solution cost for a fixed number of probes. A training set with solution costs that overestimate the actual values will bias the heuristic function learned from that set to also overestimate its estimations of the cost-to-go. Similarly, lower values of γ will require a smaller overlap of the frontiers, and the predictions will tend to underestimate the optimal solution cost. Aiming at learning a heuristic that produces near-optimal estimates of the cost-to-go, we choose a value of γ that will produce near-optimal predictions. Namely, we use {a mathematical formula}γ=0.5.
+      </paragraph>
+      <paragraph>
+       In line 1 BiSS-h collects the set of instances I that will form the training set. In our experiments we use a general method that collects instances by performing random walks from the goal and also by generating truly random instances when possible. We mix instances generated by random walks of short length with random instances so that the training set will contain both easy and hard problem instances. We describe how the training instances were generated for each domain in Appendix A. For each instance i in I we generate one training pair {a mathematical formula}(i,ci). This is in contrast with the Bootstrap method, which uses, for every bootstrap instance solved by the method, all the nodes on the path to the goal. By doing so Bootstrap balances the number of easy and hard instances in its training set. As BiSS does not solve a problem instance, it does not generate a path from start to goal. Thus, we add easy instances to our training set with random walks of short length. After we collect the set I and BiSS makes predictions {a mathematical formula}ci for each instance {a mathematical formula}i∈I, the resulting training set Γ is used for learning a heuristic function h.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        Using neural networks
+       </section-title>
+       <paragraph>
+        The learning algorithm we use in our experiments is the same used by Jabbari Arfaee et al.: a neural network (NN) with one output neuron representing cost-to-goal and three hidden units trained using standard backpropagation and mean squared error (MSE). Training ended after 500 epochs or when MSE &lt; 0.005. The time required to train a NN is only a few seconds, thus we ignore this time when computing the learning time for both Bootstrap and BiSS-h. For Bootstrap and BiSS-h we always used exactly the same set of learning features, which we describe in Appendix A.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Experimental evaluation of BiSS-h
+      </section-title>
+      <section label="5.3.1">
+       <section-title>
+        Experimental setup
+       </section-title>
+       <paragraph>
+        Again our experiments are on the 20 Blocks World, 24-puzzle, 35 Pancake puzzle, and Rubik's Cube.
+       </paragraph>
+       <paragraph>
+        We compare BiSS-h solely to Bootstrap because (1) we wanted to show that a solution cost predictor is able to reduce the time required for learning heuristic functions, and (2) in terms of search performance, IDA* using a Bootstrap heuristic outperforms standard suboptimal search algorithms on the domains tested [20]. Both systems are tested on the same test instances.
+       </paragraph>
+       <paragraph>
+        As we are interested in learning effective heuristics quickly, we use BiSS-h with the smallest training sets reported by Jabbari Arfaee et al. [20] (500 training instances). Smaller training sets result in shorter learning time.
+       </paragraph>
+       <paragraph>
+        We evaluate Bootstrap and BiSS-h primarily on the basis of the time required to learn a heuristic. To ensure that the heuristics learned are of roughly the same quality, we also measure the average solving time and average suboptimality of the solutions. We compute the suboptimality for one problem instance as follows. We divide the cost of the solution found by the optimal cost and then subtract one from the result of the division and multiply by 100. For instance, a value of suboptimality of 5.7 for learning algorithm X means in average the solutions found by IDA* using the heuristic learned by X were 5.7% longer than optimal. All heuristics were tested using the same implementation of IDA*.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       <section-title>
+        Experimental results
+       </section-title>
+       <paragraph>
+        Table 8 shows the BiSS-h experimental results. We observe that with BiSS-h we reduce the time required for learning from the order of hours and days to minutes, while keeping the quality of the learned heuristics roughly the same. An important fact to note from the data in Table 8 is that this is the first time, to the best of our knowledge, that near-optimal solutions have been found for Rubik's Cube in substantially less time than optimal solutions – he fastest known average optimal solving time for random instances of Rubik's Cube is due to Zahavi et al. [54]: 12 hours, 16 minutes and 41 seconds on average. We note that Zahavi et al. used 3 GHz CPUs in their experiments, while we used 2.67 GHz Intel Xeon CPUs. Thus, our learning and solving times should be expected to be the same or slightly lower than the ones presented in Table 8 if we used the same machines used by Zahavi et al. Moreover, if using 200 training instances instead of 500 we can learn a strong heuristic in only 21 minutes for this domain while keeping the solving time roughly the same.
+       </paragraph>
+       <paragraph>
+        Bootstrap's learning times are prohibitive when one is interested in solving a single problem instance. To address this problem, Jabbari Arfaee et al. suggested a method that interleaves learning heuristics and solving the given target instance. By using the interleaving method the Bootstrap system finds solutions of similar quality to those presented in Table 8, but in much less time. On average, it solves an instance of the 24-puzzle in 14 minutes and 5 seconds; an instance of the 35 Pancake puzzle in 1 hour and 42 minutes; and an instance of Rubik's Cube in 10 hours and 54 minutes [20]. Only on the 24-puzzle is the interleaving system of Bootstrap slightly faster than BiSS-h for learning a general-purpose heuristic function. Our results suggest that it tends to be faster to use BiSS-h to learn a general-purpose heuristic function {a mathematical formula}h(⋅) and then use {a mathematical formula}h(⋅) to solve the problem instance than to use Bootstrap's interleaving process.
+       </paragraph>
+      </section>
+      <section label="5.3.3">
+       <section-title>
+        The selection of training instances matters
+       </section-title>
+       <paragraph>
+        The BiSS-h results shown in Table 8 were generated by using a strategy which selected a mix of easy-to-solve (generated with short random walks from the goal) and harder-to-solve (generated randomly whenever possible) training instances. IDA* solved only 10 out of the 50 test instances with a time limit of one hour per instance when using this strategy with the 20 Blocks World. BiSS-h clearly failed to learn a strong heuristic in this case.
+       </paragraph>
+       <paragraph>
+        We then ran our system again but, instead of using the training set consisting of random walk instances and truly random instances, we used the instances used by Bootstrap on its last iteration, including all the instances on a path to the goal found by Bootstrap. With these instances our system learned a strong heuristic: learning time of 7 hours (here the learning time represents the time required by BiSS to label the training instances), solving time of 1.4 seconds, and suboptimality of 8.8. By contrast, Bootstrap requires 11 days and 1 hour to complete learning, IDA* using the resulting Bootstrap heuristic finds solutions with average solving time of 23 seconds, and average suboptimality of 9.6% [20].
+       </paragraph>
+       <paragraph>
+        The failure of BiSS-h on the 20 Blocks World with our standard set of training instances suggests that the selection of the training instances is crucial in the learning process. As shown in Table 2BiSS is able to accurately assign labels to the set of instances. Investigating how to select the training instances to learn effective heuristic functions is an interesting and challenging direction of future work.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Limitations of BiSS
+     </section-title>
+     <paragraph>
+      BiSS has a few weaknesses. First, BiSS does not have error bounds that are applicable in practice. Such bounds could be critical in real-world applications in which one needs to know how inaccurate the predictions can be in the worst case. Currently one has to trust the empirical accuracy of the predictions.
+     </paragraph>
+     <paragraph>
+      Second, BiSS is able to produce predictions only for domains with single goal states. This can potentially preclude the application of BiSS to domain-independent planning, for instance, where a set of goal conditions is provided instead of a goal state. If there are only a small number of goal states, the backward search can be initialized with all of them, so that each BiSS probe will estimate the optimal cost of reaching the nearest goal state.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      Optimal planning and heuristic search systems solve state-space search problems by finding a least-cost path from start to goal. As a byproduct of having an optimal path they also determine the optimal solution cost. However, there are situations in which the optimal path is not needed – one is interested only in the optimal solution cost. In this paper we presented BiSS, an efficient algorithm that accurately predicts the optimal solution cost without finding a least-cost path from start to goal. BiSS is based on the ideas of bidirectional search and stratified sampling.
+     </paragraph>
+     <paragraph>
+      BiSS does not require preprocessing and is guaranteed to return the optimal solution cost in the limit as the number of its probes goes to infinity. We showed empirically that BiSS makes very accurate predictions in several domains. BiSS's predictions, with an appropriate setting of its parameters, were never worse than SCP's in our experiments and were sometimes much better. BiSS scales much better than SCP. Finally, we showed it could be applied to state spaces much larger than can be solved optimally in a reasonable time.
+     </paragraph>
+     <paragraph>
+      In this paper we also presented BiSS-h, a learning system that uses a solution cost predictor instead of a search algorithm to generate the training set required to learn heuristics. BiSS-h is able to learn effective heuristics much faster than Bootstrap – a learning method that uses a search algorithm to generate the training set. Our system reduces the time required by Bootstrap to learn effective heuristics from days to minutes. The batch learning process of BiSS-h is even faster than Bootstrap's interleaving process for solving a single instance.
+     </paragraph>
+     <paragraph>
+      Speeding up the process of learning heuristic functions is just one of the applications of a solution cost predictor. As two other examples, SCP has been applied for setting the w-value of Weighted IDA* and the bound for Potential Search [47]; in both applications we observed search speedups [29]. Exploring other applications of BiSS is an exciting direction of future research.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Problem domains
+     </section-title>
+     <section label="A.1">
+      <section-title>
+       Blocks world
+      </section-title>
+      <paragraph>
+       In the blocks world domain one is given a set of n distinct blocks and the goal is to have the blocks stacked up in a specific order. The blocks world is illustrated in Fig. 7, where the blocks on the lefthand side of the figure represent some initial configuration of the problem and the blocks on the righthand side represent the goal configuration.
+      </paragraph>
+      <paragraph>
+       A solution for the problem shown in Fig. 7 is to unstack block 1 from block 2; stack block 2 on block 1; finally, stack block 3 on block 2.
+      </paragraph>
+      <paragraph>
+       Depending on the number n of blocks this domain can have very large state spaces. For instance, when using {a mathematical formula}n=20 this domain has approximately 10{sup:20} different states.
+      </paragraph>
+      <paragraph>
+       Optimal solutions on the Blocks World were obtained with Slaney and Thiébaux's [45] solver. In both cases, for ease of comparison to SCP and Bootstrap, the goal state is fixed and has all blocks in a single stack. The type system used is {a mathematical formula}Tc, built with the very weak “Out of Place” heuristic, which counts the number of blocks not in their goal position, cf. Jabbari Arfaee et al. [20].
+      </paragraph>
+      <section label="A.1.1">
+       <section-title>
+        Learning setup
+       </section-title>
+       <paragraph>
+        The features used for the NN were seven 2-block pattern databases, the number of out of place blocks, and the number of stacks of blocks. BiSS uses the {a mathematical formula}Tc type system with the Out of Place heuristic to predict the optimal solution cost of the instances in I. We discuss how the training instances in I were selected in Section 5.3.3. We used 50 random instances as the test set in the experiment presented in Section 5.3.
+       </paragraph>
+      </section>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Sliding-Tile puzzle
+      </section-title>
+      <paragraph>
+       The Sliding-Tile puzzle [46] with parameters n and m consists of {a mathematical formula}n×m−1 numbered tiles that can be moved in a grid. A state is a vector of length {a mathematical formula}n×m in which component k names what is located in the kth puzzle position (either a number in {a mathematical formula}{1,…,n×m−1} representing a tile or a special symbol representing the blank). Every operator swaps the blank with a tile adjacent to it. The left part of Fig. 8 shows the goal state that we used for the 15-puzzle, while the right part shows a state created from the goal state by applying two operators, namely swapping the blank with tile 1 and then swapping it with tile 5. The number of states reachable from any given state is {a mathematical formula}(n×m)!/2, cf. [1].
+      </paragraph>
+      <paragraph>
+       We used {a mathematical formula}Tgc with Manhattan Distance (MD) as the type system in our experiments with the Sliding-Tile puzzle.
+      </paragraph>
+      <section label="A.2.1">
+       <section-title>
+        Learning setup
+       </section-title>
+       <paragraph>
+        The features used for the NN were Manhattan Distance (MD), number of out-of-place tiles, position of the blank, and five 4-tile pattern databases. BiSS used the {a mathematical formula}Tgc type system with MD to predict the optimal solution cost of the instances in I. For this domain, 400 out of the 500 training instances were generated with random walks from the goal. The length of each random walk was chosen randomly between 1 and 50 moves. The 100 remaining training instances were generated randomly; 50 random problem instances constituted the test set.
+       </paragraph>
+      </section>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Pancake puzzle
+      </section-title>
+      <paragraph>
+       In the Pancake puzzle [9] with parameter n, a state is a permutation of n numbered tiles and has {a mathematical formula}n−1 successors, with the lth successor formed by reversing the order of the first {a mathematical formula}l+1 positions of the permutation ({a mathematical formula}1≤l≤n−1). The upper part of Fig. 9 shows the goal state of the 15-pancake puzzle, while the lower part shows a state in which the first four positions have been reversed.
+      </paragraph>
+      <paragraph>
+       All n! permutations are reachable from any given state.
+      </paragraph>
+      <paragraph>
+       One may think of each tile as a pancake and each permutation as a pile of pancakes that have to be sorted into the goal permutation. To move a pancake from position p into position {a mathematical formula}p′ in the pile, all the pancakes stacked from position p to position {a mathematical formula}p′ have to be flipped together.
+      </paragraph>
+      <paragraph>
+       In our experiments on the 35 Pancake puzzle the 5–5–5–5–5–5–5 additive pattern database heuristic [51] was used to construct a “coarser” version of the {a mathematical formula}Tc type system. Even though very accurate, BiSS's prediction computations were slow when using the {a mathematical formula}Tc type system. In order to speed up the predictions, we reduced the size of the type system by accounting for the heuristic value of only three of the children of a node, instead of taking into account the heuristic values of all the children. We also experimented with a coarser {a mathematical formula}Tc type system using the GAP heuristic [15] instead of the additive pattern databases.
+      </paragraph>
+      <section label="A.3.1">
+       <section-title>
+        Learning setup
+       </section-title>
+       <paragraph>
+        The input features for the NN were seven 5-token pattern databases (but instead of using the regular lookup from the pattern databases, we use the maximum of the regular and the dual lookups [54]), a binary value indicating whether the middle pancake is out of place, and the number of the largest out-of-place pancake. BiSS used the {a mathematical formula}Tc type system with the additive pattern databases as heuristic functions [51]. The training instances for the 35 Pancake puzzle were generated exactly in the same way they were generated for the Sliding-Tile puzzle. We used 50 random instances as the test set in the experiment described in Section 5.3.
+       </paragraph>
+      </section>
+     </section>
+     <section label="A.4">
+      <section-title>
+       Rubik's Cube
+      </section-title>
+      <paragraph>
+       Rubik's Cube is a {a mathematical formula}3×3×3 cube made up of 20 moveable {a mathematical formula}1×1×1 “cubies” with colored stickers on each exposed face [25]. Each face of the cube can be independently rotated by 90 degrees clockwise or counterclockwise, or by 180 degrees. The left part of Fig. 10 shows the goal state for Rubik's Cube while the right part shows the state produced by rotating the right face 90 degrees counterclockwise.
+      </paragraph>
+      <paragraph>
+       We use the {a mathematical formula}Tc type system with the maximum of three pattern databases [25] as heuristic function. However, when computing {a mathematical formula}Tc(s) (see Equation (2)), instead of using {a mathematical formula}h(s) as the maximum of the three pattern databases, we use the values of each pattern database separately in the type system; we use the maximum of the three pattern databases when computing {a mathematical formula}Tc's {a mathematical formula}c(⋅,⋅)-values, however.
+      </paragraph>
+      <section label="A.4.1">
+       <section-title>
+        Learning setup
+       </section-title>
+       <paragraph>
+        The features used for Rubik's Cube are the three pattern databases introduced by Korf [25]. The test set used in the experiment described in Section 5.3 consists of Korf's 10 instances [25]. BiSS uses the {a mathematical formula}Tc type system described above in Appendix A.4. For this domain, we generated easy and hard training instances solely with random walks from the goal. The length of each random walk for Rubik's Cube was chosen randomly between 1 and 80 moves.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

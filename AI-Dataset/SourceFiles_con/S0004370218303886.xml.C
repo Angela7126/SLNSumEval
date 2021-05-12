@@ -1,0 +1,1376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Second-order propositional modal logic: Expressiveness and completeness results.
+   </title>
+   <abstract>
+    In this paper we advance the state-of-the-art on the application of second-order propositional modal logic (SOPML) in the representation of individual and group knowledge, as well as temporal and spatial reasoning. The main theoretical contributions of the paper can be summarized as follows. Firstly, we introduce the language of (multi-modal) SOPML and interpret it on a variety of different classes of Kripke frames according to the features of the accessibility relations and of the algebraic structure of the quantification domain of propositions. We provide axiomatisations for some of these classes, and show that SOPML is unaxiomatisable on the remaining classes. Secondly, we introduce novel notions of (bi)simulations and prove that they indeed preserve the interpretation of formulas in (the universal fragment of) SOPML. Then, we apply this formal machinery to study the expressiveness of Second-order Propositional Epistemic Logic (SOPEL) in representing higher-order knowledge, i.e., the knowledge agents have about other agents' knowledge, as well as graph-theoretic notions (e.g., 3-colorability, Hamiltonian paths, etc.) The final outcome is a rich formalism to represent and reason about relevant concepts in artificial intelligence, while still having a model checking problem that is no more computationally expensive than that of the less expressive quantified boolean logic.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Modal logic is nowadays a well-established area in mathematical logic, which has also become one of the most popular formal frameworks in artificial intelligence for knowledge representation and reasoning [7], [26]. This success is due to several reasons, including an expressive and flexible formal language, which enjoys nice computational properties. In particular, at the core of the semantics of modal logic lies the notion of world, or state. Indeed, this concept is very natural when studying computational notions (a system evolving over time from a previous to a successive state), accounts of agency (states that are preferred, desired, or epistemically possible), and of interaction (states that can be winning, losing, terminal, initial, etc.). Indeed, distributed computing [25], reactive systems [43], multi-agent systems [32], and game theory [31] have all benefited from the application of tools and techniques from modal logic, and this list is by no means exhaustive. Most importantly, the worlds in the models for modal logic are connected by means of indexed relations {a mathematical formula}Ra, for some index a, which model (program) transitions, epistemic or desired alternatives, or the effect of possible moves, where index a can assume a number of readings: a specific program, a dimension of time, say, future or past, an agent, a move, etc. Each accessibility relation {a mathematical formula}Ra in the semantics is then paired with a necessity operator {a mathematical formula}□a in the modal language, where a formula {a mathematical formula}□aφ is then true in a world w of a model, if φ is true in every world v that is a-accessible from w (see Definition 8 for a formal definition). Informally, this may be read as: after every execution of a, in each future time along dimension a, in every world considered possible or desired by agent a, or in every world that is the result of performing move a, formula φ holds.
+     </paragraph>
+     <paragraph>
+      The language of modal logic provides a crisp, variable-free way of expressing a variety of properties of interest. It is also important to realise that there is not just one modal logic: although the well-known normal axiomatisation K characterises the class of validities on all models for modal logic, this does not mean that all logics for, say, agency, are the same and correspond to K. It only means that they are typically extensions of K. As a simple example, the property (i){a mathematical formula}□aφ→φ appears reasonable when {a mathematical formula}□a denotes ‘agent a knows that …’, but is perhaps less desirable when it is read as ‘agent a believes that …’, as philosophically knowledge is analysed as truthful belief [28]. One of the reasons for the success of modal logic is that in many relevant cases a syntactic scheme corresponds to an additional constraint on the accessibility relation {a mathematical formula}Ra: in the case of (i), reflexivity of {a mathematical formula}Ra is, in a precise sense, sufficient and necessary for its validity.
+     </paragraph>
+     <paragraph>
+      To appreciate this point, we use a little bit more detail (we assume some familiarity with modal logic, precise definitions are given in Section 2). As already mentioned, central in the semantics of modal logic is the notion of (Kripke) frame {a mathematical formula}F, which comprises of a set W of worlds and accessibility relations {a mathematical formula}Ra, for indices {a mathematical formula}a∈I. We can then define a notion of validity ⊨ on frames and formulate the result mentioned above as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Characterisations such as (1) are referred to as correspondence results[6], because they establish a correspondence between a first-order property on frames (i.e., reflexivity) and a modal validity (i.e., (i)). Another example of correspondence is that between the first-order formula {a mathematical formula}∀x∀y(Ra(x,y)→Rb(x,y)) and modal schema {a mathematical formula}□bφ→□aφ, which intuitively says that, e.g., whatever is achieved by program b, is also achieved by a, or that a knows at least as much as b.
+     </paragraph>
+     <paragraph>
+      Mathematically elegant and powerful as correspondence theory may be, it also has shortcomings. Firstly, note that in the case of (1), correspondence is defined globally, i.e., (i) has to be valid throughout the frame. This means that for instance (using a doxastic reading of (i)), we cannot model situations in which a's beliefs are true, but b does not know that. Indeed, if the truthfulness of agent a's beliefs is tantamount to the validity of (i), then (ii){a mathematical formula}Kb(□aφ→φ) is also a validity, enforcing agent b's knowledge.
+     </paragraph>
+     <paragraph>
+      Secondly, in (1) quantification appears at the meta-, and therefore the outermost, level. It is therefore impossible to distinguish (and to express in the language of modal logic) the following two situations: in the first, b knows that a has perfect information and is a perfect reasoner, and therefore, b knows a priori that whatever a believes must be correct. Informally, this would be represented as {a mathematical formula}Kb( for all ϕ(□aϕ→ϕ)), which is not a well-formed formula however. In the second situation b has verified, for every φ that a happens to believe, that φ is in fact true. Informally, this would be represented as {a mathematical formula}(for all ϕ,Kb(□aϕ→ϕ)).
+     </paragraph>
+     <paragraph>
+      As observed in [3], by allowing for quantification over propositions – and thus obtaining the language of second-order propositional modal logic (sopml) – both issues mentioned above can be addressed. The formal definition of {a mathematical formula}∀pψ is given in Definition 8, but informally, given a valuation V which tells us in which worlds {a mathematical formula}V(p) the atom p is true, {a mathematical formula}∀pψ holds if for every {a mathematical formula}V′ that differs from V in at most the set {a mathematical formula}V(p) (i.e., {a mathematical formula}V′(q)=V(q) for all {a mathematical formula}q≠p), the formula ψ holds. As regards the first example, the sopml formula {a mathematical formula}∀p(□ap→p)∧¬Kb∀p(□ap→p) intuitively expresses that all beliefs of agent a are correct, but b does not know this fact. Moreover, the two different readings in the second example can be represented by formulas {a mathematical formula}Kb∀p(□ap→p) and {a mathematical formula}∀pKb(□ap→p), respectively. Readers familiar with the philosophy literature on the topic may recognize the difference between {a mathematical formula}Kb∀p(□ap→p) and {a mathematical formula}∀pKb(□ap→p) as the distinction between de dicto and de re quantification.
+     </paragraph>
+     <paragraph>
+      Importantly, the truth of {a mathematical formula}∀p(□ap→p) at world w enforces the truthfulness of agent a's beliefs in w only, therefore this is a local property of the frame, as opposed to the global validity of (i). This fact allows agent b to consider (epistemically) possible a different world {a mathematical formula}w′ in which (i) does not hold.
+     </paragraph>
+     <paragraph>
+      The aim of this paper is to further the applications of propositional quantification and second-order propositional modal logic in knowledge representation and reasoning, through exploring and securing their theoretical foundations. In particular, the original contributions of the paper can be summarised as follows.
+     </paragraph>
+     <paragraph>
+      Firstly, in Section 2 we introduce the language of multi-agent second-order propositional modal logic, and provide it with a semantics in terms of Kripke frames extended with a domain D of sets of worlds for the interpretation of quantification. The differences between our definition and the existing definitions of sopml (e.g. [11], [21], [37]) are that (i) in addition to the full, boolean and unrestricted domains of quantification that were studied before, we also consider modal domains, and (ii) we use a multi-agent language, which allows us to express higher-order properties of knowledge, i.e., knowledge about other agents' knowledge, including truthfulness of knowledge, inclusion of one agent's knowledge in that of another.
+     </paragraph>
+     <paragraph>
+      In Section 3 we illustrate the richness of the formal framework, particularly to express local properties in modal logic (lpml) [16], [17]. We compare and contrast our approach with [18], and show that the latter can be subsumed in the account here put forward. This validates our endeavour from the viewpoint of applications. However, we maintain that for sopml to be adopted as a specification language in artificial intelligence and knowledge representation, appropriate theoretical results and formal tools need to be developed.
+     </paragraph>
+     <paragraph>
+      To this end, in Section 4 we present a number of results about the axiomatisation of several classes of validites. The key findings are that (i) with the exception of single-agent S5, sopml is unaxiomatisable over all of the commonly used classes of frames, when a full domain of quantification is considered; (ii) on frames with a coarser domain of quantification, sopml without a common knowledge operator is axiomatisable, but sopml* with common knowledge is unaxiomatisable in general. As a by-product we obtain several undecidability results.
+     </paragraph>
+     <paragraph>
+      Furthermore, in Section 5 we develop original truth-preserving bisimulations for sopml. Bisimulations bring to the fore when two models can be considered the same, and they can be used to test the limits of what can be expressed: when two models for a language {a mathematical formula}L are bisimilar but disagree on some property {a mathematical formula}Φ∈L′, it shows that Φ is not expressible in {a mathematical formula}L. We provide several instances of such occurrences. To conclude, our main aim in this paper is to provide formal tools so as to facilitate the use of sopml as a language for knowledge representation, as well as temporal and spatial reasoning in artificial intelligence.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Related Work.
+      </section-title>
+      <paragraph>
+       This contribution is inspired by a series of papers on lpml, an extension of propositional modal logic to express local properties [16], [17], [18]. Here, instead of introducing an ad hoc language (with an adjustment for each local property one has in mind), we make use of the general framework of second-order propositional multi-modal logic. In Section 3 we provide a detailed comparison of the two approaches.
+      </paragraph>
+      <paragraph>
+       Mono-modal sopml was first considered in [11], [21], [37], mainly in relation with axiomatisability and (un)decidability questions. In particular, [21] provided several axiomatisations for normal modal logics interpreted on a variety of classes of frames. However, it considered only mono-modal languages, whereas here we adopt a multi-modal perspective. Then, [37] proved decidability and independence results pertaining to second-order extensions of the mono-modal logic S5. Notwithstanding these early, significant results, the high computational complexity of sopml and some undecidability and unaxiomatisability results might partially explain why sopml has been studied far less than propositional modal logic, and it has been virtually unexplored as a specification language for knowledge representation and reasoning. For instance, only recently sopml has been proved complete w.r.t. the algebraic semantics in which quantification is interpreted on arbitrary meets and joints [33]. Here we consider a multi-modal version of sopml, and its epistemic counterpart: second-order propositional epistemic logic (sopel).
+      </paragraph>
+      <paragraph>
+       Among the more recent contributions, [36] shows that there is a validity-preserving translation from second-order logic to sopml, for modalities weaker than or equal to S4.2, implying that for these modalities sopml is unaxiomatisable. Hereafter we add to the picture and show that multi-modal S5 is unaxiomatisable as well. Further, [12] provided sopml with analogues of the van Benthem-Rosen and Goldblatt-Thomason theorems, while in [22] propositional quantification and bisimulations are analysed in the context of modal logic. However, the kind of quantification considered in [22] is preserved by standard bisimulations, and therefore the resulting logic is provably as expressive as epistemic logic, strictly weaker than sopml. In [39], [40] the author proves that the quantifier alternation hierarchy of sopml formulas induces an infinite corresponding semantic hierarchy over the class of finite directed graphs. As a by-product, he obtains that, for this class of structures, sopml with the universal modality and Monadic Second-Order Logic are equally expressive.
+      </paragraph>
+      <paragraph>
+       Propositional quantification has also been considered in the context of richer modal languages, namely the temporal logics ltl and ctl. A quantified version of ltl, called qltl, has been introduced and analysed in [49], [48], mainly in relation with the verification of reactive systems. In particular, the model-checking problem for the k-alternation fragment was proved to be k-EXPSPACE-complete. More recently, [41] discusses qctl, a quantified version of the braching-time temporal logic ctl. The authors prove several complexity and expressivity results for a logic that has more modal operators than sopml. They also consider two different kinds of semantics for their logic: the former is comparable to sopml on full frames, while the latter is based on tree-unwindings. To our knowledge, no results are known about the relative expressivity of qctl and sopml. It is also outside the scope of this paper to find such results, although it is an interesting question for future research.
+      </paragraph>
+      <paragraph>
+       More directly related to the present contribution are [3], [4] by some of the authors. In [3] we introduced epistemic quantified boolean logic (eqbl), an epistemic variant of sopml, and provided axiomatisability and model-checking results. Differently from the reference, here we tackle general sopml, defined also on modalities strictly weaker than S5. Indeed, in this paper we analyse all normal modalities. Moreover, we provide novel unaxiomatisability and undecidability results, as well as give full details on the construction of the canonical models to prove completeness. As regards [4], we define a novel notion of (bi)simulation that generalises the one given therein. Finally, we apply these results to analyse the expressivity of sopml in capturing relevant properties in temporal and spatial reasoning.
+      </paragraph>
+      <paragraph>
+       These investigations have been extended to public announcement logic (pal). Specifically, in [5] the authors applied propositional quantification to pal to analyses arbitrary public announcements and to formalise notions such as preservation, successfulness, and knowability. Hereafter we do not consider such extensions and keep on a purely epistemic setting.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section we introduce the formal machinery that will be used throughout the rest of the paper, and we prove some preliminary results. First, we present the language of second-order propositional modal logic (sopml), some of its fragments, and their interpretation on Kripke frames and models.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       The Formal Languages
+      </section-title>
+      <paragraph>
+       To introduce the language of second-order propositional modal logic, we fix a set AP of atomic propositions and a finite set I of indices. Any language {a mathematical formula}L built upon AP (using connectives and modal operators) is said to be a language overAP.
+      </paragraph>
+      <paragraph label="Definition 1">
+       SOPMLThe language{a mathematical formula}Lsopmlcontains formulas ψ as defined by the following BNF:{a mathematical formula}where{a mathematical formula}p∈APand{a mathematical formula}a∈I.
+      </paragraph>
+      <paragraph>
+       For this language and those to be introduced shortly, we will omit parenthesis if doing so causes no confusion. The language {a mathematical formula}Lsopml contains modal formulas {a mathematical formula}□aψ, for every index {a mathematical formula}a∈I. A general reading of this would be ‘according to the aspect or dimension a, formula ψ holds’. The box can have more concrete interpretations, for instance dynamic (after execution of program or action a, ψ holds), temporal or spatial (along dimensions a, ψ), or deontic (in all situations that abide to norm a, ψ is true). Indices may also denote agents, in which case {a mathematical formula}□aψ can represent attitudes that relate to goals (‘agent a desires ψ’, or ‘has ψ as a goal’), that are intentional (agent a intends to achieve ψ), or informational (‘agent a believes ψ’ or ‘a knows that ψ’). The latter, epistemic interpretation of {a mathematical formula}□a will obtain some special attention in this paper, and we will write {a mathematical formula}Kaψ rather than {a mathematical formula}□aψ.
+      </paragraph>
+      <paragraph>
+       Further, the quantified formula {a mathematical formula}∀pψ informally says that ‘for all interpretations of p, ψ obtains’. As usual, the quantifier ∃ is dual to ∀: {a mathematical formula}∃pψ::=¬∀p¬ψ. Analogously, in {a mathematical formula}Lsopml, {a mathematical formula}◇aϕ is a shorthand for {a mathematical formula}¬□a¬ϕ, and {a mathematical formula}Ma is dual to {a mathematical formula}Ka.
+      </paragraph>
+      <paragraph>
+       Hereafter we consider also the extension {a mathematical formula}Lsopml⁎ of {a mathematical formula}Lsopml obtained by adding the following clause: if ψ is a formula, then {a mathematical formula}□⁎ψ is also a formula. Instead of {a mathematical formula}□⁎ψ, in the epistemic interpretation we will write Cψ (it is common knowledge that ψ). To give a hint of what this operator means in epistemic logic, define Eψ (everybody knows that ψ) as {a mathematical formula}⋀a∈IKaψ. Then, formula Cψ intuitively captures the infinite conjunction {a mathematical formula}ψ∧Eψ∧EEψ∧EEEψ∧… (the usual definitions for {a mathematical formula}⊤,⊥,∨,∧, and ↔ apply). To sum up, whenever we consider the epistemic interpretation of modal operators, we write {a mathematical formula}Ka and C, and define formulas ψ in the language {a mathematical formula}Lsopel⁎ of second-order propositional epistemic logic (sopel) according to the following BNF:{a mathematical formula} for {a mathematical formula}p∈AP and {a mathematical formula}a∈I. Standard references for modal logic are [7], [9], while for epistemic logic we refer to [20], [45].
+      </paragraph>
+      <paragraph>
+       We write sopml for the family of logics that are based on the languages {a mathematical formula}Lsopml and {a mathematical formula}Lsopml⁎. Throughout most of the paper, it is not very important whether we are considering a language with or without operator {a mathematical formula}□⁎ (see Definition 8 for its interpretation). In the places where the difference between {a mathematical formula}Lsopml and {a mathematical formula}Lsompl⁎ is important, we write sopml{sup:⁎} for the logic based on {a mathematical formula}Lsopml⁎.
+      </paragraph>
+      <paragraph>
+       The name ‘second-order propositional modal (epistemic) logic’ is related to second-order quantification, as will become apparent in Section 3. In particular, this formalism has been studied in relation to monadic second-order logic – mso, see [12], [36] and also Section 3.
+      </paragraph>
+      <paragraph label="Example 2">
+       To give a flavour of the expressivity of{a mathematical formula}Lsopml⁎, we present some specifications written in this language. We use variants of{a mathematical formula}□ain our notation: their meaning will be clear from the context. Using{a mathematical formula}Lsopml⁎one can for instance express that agent a believes that agent b always has some unfulfilled desires:{a mathematical formula}Ba□⁎∃p(Dbp∧¬p), where operators{a mathematical formula}Baand{a mathematical formula}Dbare used to represent the doxastic and desire dimensions for agent a and b respectively, whereas{a mathematical formula}□⁎is interpreted on the reachability relation w.r.t. all agents' moves.As a further example, formula (i) {a mathematical formula}∀p(□ap→□bp)expresses, in a dynamic context, that every result guaranteed by program a is also guaranteed by program b, or, provided a doxastic interpretation of the box operator, agent b believes everything that agent a believes. Deontically, the formula{a mathematical formula}∃p(Op∧¬p)expresses that the current world is not ideal: there are facts that ought to hold, but they do not. Finally, the doxastic-epistemic formula (ii) {a mathematical formula}Kb∃p(Bap∧¬p)intuitively expresses that agent b knows that agent a's beliefs are incorrect, while (iii) {a mathematical formula}∀p(Bap→p)∧□α∃q(Baq∧¬q))denotes that currently, agent a's beliefs are correct, but after executing program α, this ceases to be the case. We remark that by using propositional quantification we can reason about general properties of knowledge, e.g., truthfulness, inclusion, equivalence, of agents' knowledge and beliefs, as in specifications (i), (ii), and (iii).
+      </paragraph>
+      <paragraph>
+       In this paper we consider various fragments of {a mathematical formula}Lsopml⁎ and {a mathematical formula}Lsopml. To begin with, the languages {a mathematical formula}Lml of (propositional) modal logic and {a mathematical formula}Lel of (propositional) epistemic logic ({a mathematical formula}Lml⁎ and {a mathematical formula}Lel⁎, respectively) are obtained by removing clause {a mathematical formula}∀pψ from the definitions of {a mathematical formula}Lsopml and {a mathematical formula}Lsopel ({a mathematical formula}Lsopml⁎ and {a mathematical formula}Lsopel⁎, respectively). Likewise, the language {a mathematical formula}Lqbf of quantified boolean formulas omits clauses {a mathematical formula}□aψ from {a mathematical formula}Lsopml, while propositional logic {a mathematical formula}Lpl is defined in a standard way by considering only propositional connectives. Moreover, the universal fragment {a mathematical formula}La−sopml⁎ of {a mathematical formula}Lsopml⁎ is defined by the following BNF:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Notice that in {a mathematical formula}La−sopml⁎ negation applies to atoms only. Hence, {a mathematical formula}La−sopml⁎ contains no formula of the form {a mathematical formula}∃pψ, {a mathematical formula}◇aψ, or {a mathematical formula}◇⁎ψ. For convenience, we will also denote the set of atoms AP by {a mathematical formula}Lap. A special role in this paper will be played by the languages {a mathematical formula}Lx of sort x, the set of sort symbols being {a mathematical formula}{ap,pl,ml,sopml}. We will shortly see that for each sort x, the language {a mathematical formula}Lx is linked to an interesting class of frames (defined in terms of types y: see the paragraph above Definition 8). This connection is made precise in Lemma 11, item 2. We summarise the main inclusions between languages in Figure 1. We observe that languages {a mathematical formula}Lx⁎ are defined only for {a mathematical formula}x∈{ml,a−sopml,sopml}.
+      </paragraph>
+      <paragraph>
+       We now introduce some syntactic notions that will be used throughout the paper. Hereafter we use ♯ as a placeholder for any unary operator ¬, {a mathematical formula}□a, {a mathematical formula}□⁎, and Q for any quantifier ∀, ∃.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Subformula and free atomsThe sets{a mathematical formula}Sub(ϕ)and{a mathematical formula}fr(ϕ), for the subformulas and free atoms of formula{a mathematical formula}ϕ∈Lsopml⁎, respectively, are recursively defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A sentence is a formula ϕ with an empty set of free atoms, i.e., {a mathematical formula}fr(ϕ)=∅. The set {a mathematical formula}bnd(ϕ) of bound atoms in ϕ is defined as usual as the set of all atoms q appearing in the scope of any quantifier Qq. We assume that for each formula {a mathematical formula}ϕ∈Lsopml⁎, {a mathematical formula}fr(ϕ) and {a mathematical formula}bnd(ϕ) are disjoint. Actually, we impose that each quantifier binds a different variable. Both constraints can be enforced without loss of generality by renaming bound variables.
+      </paragraph>
+      <paragraph>
+       We now define when a formula ψ can substitute an atom p within a formula. In particular, such a substitution should not create any new binding.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Free for …Given an atom{a mathematical formula}p∈fr(ϕ), a formula ψ is free for p in ϕ iff p does not appear in ϕ within the scope of any quantifier Qq for{a mathematical formula}q∈fr(ψ). Alternatively, we can define whetherψ is free for p in ϕby induction on the structure of ϕ as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We finally introduce a notion of substitution for free formulas.
+      </paragraph>
+      <paragraph label="Definition 5">
+       SubstitutionWhenever ψ is free for{a mathematical formula}p∈fr(ϕ), the substitution{a mathematical formula}ϕ[p/ψ]is inductively defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Intuitively, ψ being free for p in ϕ means that a substitution of p by ψ in ϕ does not create any new binding. As an example, ¬q is free for p in {a mathematical formula}∃r(r→p) but not in {a mathematical formula}ϕ=∃q(p↔q). After we have introduced our semantics, it will be clear that, while {a mathematical formula}∃q(p↔q) is actually a validity, if we were to blindly substitute p with ¬q in ϕ, we would obtain {a mathematical formula}∃q(¬q↔q), which is tantamount to a contradiction. But note that, since ¬q is not free for p in ϕ, by Definition 5, {a mathematical formula}ϕ[p/¬q] is not well-defined. Also note that the procedure above does not guarantee that after a substitution a variable r only occurs in the scope of a single quantifier Qr. For instance, {a mathematical formula}∀r(r→p)[p/∀r(q→r)]=∀r(r→∀r(q→r)). However, reading the semantics, it will become clear that the latter formula is equivalent to {a mathematical formula}∀r(r→∀s(q→s)): bounded variables can always be renamed (so that, in particular, every formula is equivalent to one in which every formula is bound at most once).
+      </paragraph>
+      <paragraph label="Example 6">
+       As a further example of the expressive power ofsopel, consider the following specification: agent b knows everything that a knows, and agent c knows this fact, but d does not. This epistemic situation can be recast in{a mathematical formula}Lsopelas the following formula:{a mathematical formula}In particular, we can reason further about agent d's knowledge. Indeed, agent d might know that a knows something ignored by b, without being able to explicitly point out the content of a's extra knowledge. This can be recast in{a mathematical formula}Lsopelby the following formula:{a mathematical formula}However, d could actually know about a specific fact that a knows, but b ignores, as expressed in the following formula:{a mathematical formula}We remark that (3) corresponds to the de re reading of our specification, while (2) is its de dicto formalisation. Here we do not discuss in detail the de re/de dicto distinction, as it is beyond the scope of the present contribution, and refer instead to the seminal paper[46]. In particular, according to our semantics (to be introduced next), (3) is strictly stronger than (and entails) (2). Indeed, the implication (3) ⇒ (2) is a validity, but the converse implication (2) ⇒ (3) does not hold in general. Thus, among other things,sopelallows us to distinguish the two readings – de re and de dicto – of individual knowledge.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Kripke Frames and Models
+      </section-title>
+      <paragraph>
+       To provide a meaning to formulas of second-order propositional modal logic, we consider multi-modal Kripke frames and models, extended with a domain for the interpretation of quantifiers.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Kripke frameA Kripke frame is a tuple{a mathematical formula}F=〈W,D,R〉where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        W is a set of possible worlds;
+       </list-item>
+       <list-item label="•">
+        D is the domain of propositions, i.e., a subset of{a mathematical formula}2W;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}R:I→2W×Wassigns a binary relation on W to each index in I.
+       </list-item>
+      </list>
+      <paragraph>
+       As is common in propositional modal logic (pml), for every index {a mathematical formula}a∈I, {a mathematical formula}Ra is an accessibility relation between worlds in W[7]. Differently from standard Kripke frames, Definition 7 includes a set {a mathematical formula}D⊆2W of “admissible” propositions for the interpretation of atoms and quantifiers. Clearly, the Kripke frames in Definition 7 are related to general frames[7], [44]. However, there are some notable differences. Firstly, in general frames the domain D of propositions is a boolean algebra with operators, whereas no such assumption is made in the present case. Secondly, the language interpreted on general frames is usually a plain modal logic, while here we address quantification as well. Indeed, propositional quantification makes our language strictly more expressive than propositional modal logic interpreted on general frames, as will become apparent later on (see for instance Example 10 and recall that pml interpreted on general frames is as expressive as pml interpreted on Kripke frames).
+      </paragraph>
+      <paragraph>
+       The accessibility relations can satisfy various properties, e.g., seriality, symmetry, transitivity, reflexivity, etc. When interpreting the language {a mathematical formula}Lsopel⁎ we assume that each {a mathematical formula}Ra is an equivalence relation (i.e., symmetric, transitive and reflexive), in line with the epistemic reading of modal operators [45]. Finally, for each agent index {a mathematical formula}a∈I and {a mathematical formula}w∈W, we let {a mathematical formula}Ra(w)={w′|Ra(w,w′)}. If {a mathematical formula}Ra is an equivalence relation, then {a mathematical formula}Ra(w) is the equivalence class of w according to {a mathematical formula}Ra.
+      </paragraph>
+      <paragraph>
+       To interpret formulas in {a mathematical formula}Lsopml⁎ on Kripke frames, we introduce assignments as functions {a mathematical formula}V:AP→D. Also, for {a mathematical formula}U∈D, the assignment {a mathematical formula}VUp assigns U to p and coincides with V on all other atoms. Hence, atoms can only be assigned propositions in {a mathematical formula}D⊆2W. A Kripke model over {a mathematical formula}F is then defined as a pair {a mathematical formula}M=〈F,V〉.
+      </paragraph>
+      <paragraph>
+       We now define the notion of satisfaction for formulas in {a mathematical formula}Lsopml⁎.
+      </paragraph>
+      <paragraph label="Definition 8">
+       SemanticsWe define whether Kripke model{a mathematical formula}M=〈F,V〉 satisfies formula{a mathematical formula}φ∈Lsopml⁎at world w, or{a mathematical formula}(M,w)⊨φ, as follows:{a mathematical formula}where{a mathematical formula}RC=(⋃a∈IRa)⁎is the reflexive transitive closure of{a mathematical formula}⋃a∈IRa, and{a mathematical formula}MUp=〈F,VUp〉.
+      </paragraph>
+      <paragraph>
+       Given Definition 8, we say that {a mathematical formula}□a is the necessity operator for {a mathematical formula}Ra and that {a mathematical formula}□⁎ is the necessity operator for the transitive reflexive closure of {a mathematical formula}⋃a∈IRa. By the definition, a quantified formula {a mathematical formula}∀pψ (respectively, {a mathematical formula}∃pψ) is true at world w iff for every (respectively, some) assignment of propositions in D to atom p, ψ is true. Further, as is the case for the common knowledge operator C, {a mathematical formula}(M,w)⊨□⁎ψ iff {a mathematical formula}(M,w′)⊨ψ for every world {a mathematical formula}w′reachable from w, i.e., for every {a mathematical formula}w′ such that for some sequence {a mathematical formula}w0,…,wk of worlds, (i){a mathematical formula}w0=w, (ii){a mathematical formula}wk=w′, and (iii) for every {a mathematical formula}i&lt;k, {a mathematical formula}wi=wi+1 or {a mathematical formula}Ra(wi,wi+1) for some {a mathematical formula}a∈I. Hence, in non-epistemic contexts, {a mathematical formula}□⁎ can be interpreted as a reachability operator, analogous to the common knowledge operator C.
+      </paragraph>
+      <paragraph>
+       The satisfaction set {a mathematical formula}〚φ〛M of formula φ in model {a mathematical formula}M is defined as {a mathematical formula}{w∈W|(M,w)⊨φ}. We omit the subscript {a mathematical formula}M whenever clear by the context. We now introduce various notions of truth and validity. First, we write {a mathematical formula}(F,V,w)⊨ϕ as a shorthand for {a mathematical formula}(〈F,V〉,w)⊨ϕ. Then, we say that ϕ is true at w, or {a mathematical formula}(F,w)⊨ϕ, iff {a mathematical formula}(F,V,w)⊨ϕ for every assignment V; ϕ is valid in a frame {a mathematical formula}F, or {a mathematical formula}F⊨ϕ, iff {a mathematical formula}(F,w)⊨ϕ for every world w in {a mathematical formula}F; ϕ is valid in a class {a mathematical formula}K of frames, or {a mathematical formula}K⊨ϕ, iff {a mathematical formula}F⊨ϕ for every {a mathematical formula}F∈K. Also, ϕ is true in a model {a mathematical formula}M, or {a mathematical formula}M⊨ϕ, iff {a mathematical formula}(M,w)⊨ϕ for every world w. Finally, ϕ is satisfiable iff for some model {a mathematical formula}M and world w, {a mathematical formula}(M,w)⊨ϕ.
+      </paragraph>
+      <paragraph>
+       In the rest of the paper we consider specific classes of Kripke frames and models, which feature pre-eminently in the literature on sopml[21], [44]. To introduce them, we first define operators {a mathematical formula}[a]:2W→2W, for every {a mathematical formula}a∈I, such that {a mathematical formula}[a](U)={w∈W|Ra(w)⊆U} while operator {a mathematical formula}[]⁎:2W→2W is introduced so that {a mathematical formula}[]⁎(U)={w∈W|for every n∈N, for every sequence w0,…,wn, if w0=w and for every i&lt;n,wi=wi+1 or Ra(wi,wi+1) for some a∈I, then wn∈U}. Notice that for {a mathematical formula}RC defined as the reflexive transitive closure of {a mathematical formula}∪a∈IRa, we have {a mathematical formula}[C](U)={w∈W|RC(w)⊆U}=[]⁎(U).
+      </paragraph>
+      <paragraph label="Definition 9">
+       A Kripke frame{a mathematical formula}Fis{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A Kripke model {a mathematical formula}M=〈F,V〉 is boolean (modal, full, respectively) whenever the underlying frame {a mathematical formula}F is. We distinguish the class {a mathematical formula}Kall of all Kripke frames, the class {a mathematical formula}Kbool of all boolean frames, the class {a mathematical formula}Kmodal of all modal frames, and the class {a mathematical formula}Kfull of all full frames. Observe that, by using an analogy with monadic second-order logic, the class of full frames corresponds to the basic interpretation of sopml, where any frame is uniquely identified by fixing the set W of worlds and accessibility relations, as the domain D is equal to {a mathematical formula}2W. On the other hand, the other classes of frames are related to the Henkin interpretation of mso, where D can be a possibly strict subset of {a mathematical formula}2W (cf. [51]). Hereafter, we often refer to {a mathematical formula}Kall-, {a mathematical formula}Kbool-, and {a mathematical formula}Kmodal-frames as non-full frames, even though they do contain full frames.
+      </paragraph>
+      <paragraph>
+       Furthermore, within each of the classes in Definition 9, we will consider further conditions on the accessibility relations {a mathematical formula}Ra: reflexivity r, transitivity t, and symmetry s. Hereafter, given type {a mathematical formula}y∈Y={all,bool,modal,full} and subset {a mathematical formula}τ⊆{r,t,s}, {a mathematical formula}Kyτ denotes the corresponding class of frames satisfying the properties in τ. For simplicity, {a mathematical formula}Kye denotes class {a mathematical formula}Ky{r,t,s} (which we also write as {a mathematical formula}Kyrts) of frames in which all accessibility relations are equivalences, that is, the class of epistemic frames for the interpretation of sopel. We define a function {a mathematical formula}ˆ:X→Y from language sort symbols to type symbols as follows: {a mathematical formula}apˆ=all; {a mathematical formula}plˆ=bool; {a mathematical formula}mlˆ=modal; and {a mathematical formula}sopmlˆ=full. In total, we obtain 32 classes {a mathematical formula}Kyτ of frames. However, we only consider 20 of them: the subsets {a mathematical formula}τ⊆{r,t,s} corresponding to the 5 normal modalities K, T, S4, B, and S5, combined with the 4 types all, bool, modal, and full. Further classes of frames could be introduced, for instance the class where every formula in {a mathematical formula}Lsopml⁎ defines a proposition in D. However, such a class is not directly relevant for the results below and its introduction requires a non-trivial generalisation of Kripke frames [44]. Thus, such extensions are beyond the scope of the present paper.
+      </paragraph>
+      <paragraph>
+       Observe that if we define {a mathematical formula}Th(K)={ϕ∈Lsopml⁎|K⊨ϕ}, then clearly{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In Section 4.1 we show that these inclusions are strict, but first we illustrate some applications of sopel in reasoning about knowledge.
+      </paragraph>
+      <paragraph label="Example 10">
+       To assess the expressivity ofsopelin knowledge representation, we contrast it with comparative epistemic logic –cel[18].celextends propositional modal logic with formulas{a mathematical formula}a≽b, the intuitive interpretation of which is: agent b knows at least as much as agent a. Semantically, the clause for satisfaction of such formulas at world w in model{a mathematical formula}Mis given as{a mathematical formula}In this sense{a mathematical formula}a≽balso expresses a local property of frame{a mathematical formula}F, namely the inclusion{a mathematical formula}Rb(w)⊆Ra(w).We show that the comparison between agent a's and agent b's knowledge can be recast insopelas{a mathematical formula}In particular, the RHS of (5) is tantamount to the satisfaction of (6) at w, whenever model{a mathematical formula}Mis full. More precisely, for an arbitrary model{a mathematical formula}Mwe have{a mathematical formula}The converse also holds for full{a mathematical formula}M, but has counterexamples in the classes of boolean and modal models. As a result, formulas{a mathematical formula}a≽band (6) have the same meaning in the class of full models, and thereforecelcan indeed be mimicked insopel. We discuss this fact in more detail in Section3.Moreover, insopelwe can make distinctions that are not expressible in epistemic logic. Related to Example2, in{a mathematical formula}Lsopelwe can state thatb knows that a's beliefs are not truthful by using formula{a mathematical formula}Notice that (7) expresses that b knows that there exists some fact believed by a, which is false, possibly without being able to explicitly point out the actual content of a's false belief. On the other hand, it could be the case that for some proposition p, agent b knows that a wrongly believes it, as expressed in the following:{a mathematical formula}The formula displayed at (7) is usually referred to as a de dicto reading of the statement above, where quantifier ∃p appears within the scope of modal operator{a mathematical formula}Ka, while (8) corresponds to the de re reading of the same statement, in which ∃p appears outside the scope of{a mathematical formula}Ka(we refer the interested reader in the two different readings to[46]). We remark that (7) and (8) are not equivalent in general, (8) being strictly stronger than (7). Specifically, to account for the difference between (7) and (8), consider frame{a mathematical formula}Gin Fig. 2(a), where the W- and R-components are as depicted, and{a mathematical formula}D={{w}|w∈W}. Clearly,{a mathematical formula}(G,V,w1)⊨Bap∧¬pfor{a mathematical formula}V(p)={u1}, and similarly{a mathematical formula}(G,V′,w2)⊨Bap∧¬pfor{a mathematical formula}V′(p)={u2}. Hence,{a mathematical formula}(G,w)⊨(7)for{a mathematical formula}w∈{w1,w2}. On the other hand, for no{a mathematical formula}U∈D,{a mathematical formula}(G,VUp,w)⊨Bap∧¬p. Therefore,{a mathematical formula}(G,w)⊭(8)for{a mathematical formula}w∈{w1,w2}. Finally, we observe that{a mathematical formula}∃pKaϕ→Ka∃pϕis a validity in every class of frames. As a result, insopel(8) is strictly stronger than (7), and we can distinguish the de dicto and de re readings of agent b's higher-level knowledge.Finally, consider frame{a mathematical formula}G′in Fig. 2(b) with{a mathematical formula}D′={{w′}|w′∈W′}. Let{a mathematical formula}Mand{a mathematical formula}M′be models based on{a mathematical formula}Gand{a mathematical formula}G′respectively, in such a way that assignments V and{a mathematical formula}V′make the same atoms true in{a mathematical formula}w1,{a mathematical formula}w2, and{a mathematical formula}w′, and similarly for{a mathematical formula}u1,{a mathematical formula}u2and{a mathematical formula}u′. One can check that{a mathematical formula}(M′,w′)⊨(8)(and (7) as well). However,{a mathematical formula}(M,w2)and{a mathematical formula}(M′,w′), satisfy the same formulas in{a mathematical formula}Lml(indeed, the two models are bisimilar), implying that the de re formula (8) cannot be expressed inpml. We return to this example in Section5.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Preliminary Results
+      </section-title>
+      <paragraph>
+       In this section we prove some preliminary results on the model-theory of second-order propositional modal logic, that will be frequently used in the rest of the paper. To start with, in Lemma 11 we extend some basic but useful results in the theory of quantification. In particular, in first-order logic item 1 of Lemma 11 is known as the coincidence lemma, and item b as the substitution lemma (cf. [19]).
+      </paragraph>
+      <paragraph label="Lemma 11">
+       <list>
+        <list-item label="1.">
+         Let ϕ be a formula in{a mathematical formula}Lsopml⁎and{a mathematical formula}Fa frame in{a mathematical formula}Kall. If assignments V and{a mathematical formula}V′coincide on{a mathematical formula}fr(ϕ), then{a mathematical formula}
+        </list-item>
+        <list-item label="2.">
+         Recall that{a mathematical formula}X={ap,pl,ml,sopml}and{a mathematical formula}ˆ={(ap,all),(pl,bool),(ml,modal),(sopml,full)}. Let{a mathematical formula}x∈X. Then,
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       The proof of this lemma is immediate, so we include it only in the appendix. These results show that quantification in sopml is “well-behaved”: by item 1 of Lemma 11, models built over the same frame and agreeing on the interpretation of free atoms, satisfy the same formulas. It follows in particular that a sentence ϕ is either satisfied by any assignment or none, that is, {a mathematical formula}(F,w)⊨ϕ iff for every model {a mathematical formula}M over {a mathematical formula}F, {a mathematical formula}(M,w)⊨ϕ, iff for some model {a mathematical formula}M over {a mathematical formula}F, {a mathematical formula}(M,w)⊨ϕ. As a consequence of Lemma 11, item a, the domain of quantification in a model includes the set of denotations of formulas in that model, according to the various fragments of {a mathematical formula}Lsopml⁎. Moreover, by Lemma 11, item b, the syntactic operation of substitution {a mathematical formula}ϕ[p/ψ] corresponds to the semantic notion of reinterpretation {a mathematical formula}M〚ψ〛p.
+      </paragraph>
+      <paragraph>
+       In Section 4 we will make use of generated submodels, a concept that is commonly used in modal logic.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Generated SubmodelGiven model{a mathematical formula}M=〈W,D,R,V〉and world{a mathematical formula}w∈W, the submodel generated by w is the model{a mathematical formula}Mw=〈Ww,Dw,Rw,Vw〉such that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Wwis the set of worlds reachable from w, i.e.,{a mathematical formula}Ww=(⋃a∈IRa)⁎(w);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Dw={Uw⊆Ww|Uw=U∩Wwfor someU∈D};
+       </list-item>
+       <list-item label="•">
+        for every{a mathematical formula}a∈I,{a mathematical formula}Rw,a=Ra∩Ww2;
+       </list-item>
+       <list-item label="•">
+        for every{a mathematical formula}p∈AP,{a mathematical formula}Vw(p)=V(p)∩Ww.
+       </list-item>
+      </list>
+      <paragraph>
+       The subframe generated byw is then defined as {a mathematical formula}Fw=〈Ww,Dw,Rw〉. The relevant property of a generated submodel {a mathematical formula}Mw is that {a mathematical formula}(M,w)⊨□⁎ϕ if and only if {a mathematical formula}(Mw,w′)⊨ϕ for every {a mathematical formula}w′∈Ww. It is also important to note that if {a mathematical formula}M is full, modal or boolean, then so is {a mathematical formula}Mw.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       For{a mathematical formula}y∈{all,bool,modal,full}and{a mathematical formula}τ⊆{r,t,s}, if a frame{a mathematical formula}Fbelongs to{a mathematical formula}Kyτthen also{a mathematical formula}Fw∈Kyτ.
+      </paragraph>
+      <paragraph>
+       The proof is immediate, so we omit it.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Model Checking
+       </section-title>
+       <paragraph>
+        In order to explore the computational properties of sopml, we consider the complexity of its model checking problem. Then, in the next section we analyse the (lack of) finite model property for sopml. Before we can determine – or even define – the complexity of model checking, however, we first need to define the size of formulas and models. Our definition of the former is entirely as usual.
+       </paragraph>
+       <paragraph label="Definition 14">
+        Formula SizeLet{a mathematical formula}ϕ∈Lsopml⁎be a formula. The size of ϕ, denoted{a mathematical formula}|ϕ|, is given recursively by:{a mathematical formula}|p|=1,{a mathematical formula}|ψ1→ψ2|=|ψ1|+|ψ2|+1, and{a mathematical formula}|♯ψ|=|∀pψ|=|ψ|+1.
+       </paragraph>
+       <paragraph>
+        Similarly, the size of a model {a mathematical formula}M can be defined in a straightforward way.
+       </paragraph>
+       <paragraph label="Definition 15">
+        Model SizeThe size {a mathematical formula}|M|of model{a mathematical formula}M=〈W,D,R,V〉is given by{a mathematical formula}|M|=|W|+|D|+∑a∈I|Ra|+∑p∈AP|V(p)|.A model{a mathematical formula}Mis finite if{a mathematical formula}|M|&lt;∞.
+       </paragraph>
+       <paragraph>
+        Now that we have defined the sizes of formulas and models, we can define the model checking problem and determine its complexity.
+       </paragraph>
+       <paragraph label="Definition 16">
+        Model Checking for SOPMLGiven a formula{a mathematical formula}ϕ∈Lsopml⁎, a finite model{a mathematical formula}Mand a world w of{a mathematical formula}M, the model checking problem forsopmlis to determine whether{a mathematical formula}(M,w)⊨ϕ.
+       </paragraph>
+       <paragraph>
+        Then, we are able to prove the following complexity result.
+       </paragraph>
+       <paragraph label="Theorem 17">
+        Model Checking ComplexityThe model checking problem forsopmlis PSPACE-complete with respect to{a mathematical formula}|ϕ|+|M|.
+       </paragraph>
+       <paragraph label="Proof">
+        As regards hardness, we reduce satisfiability of quantified boolean formulas to sopml model checking. Given a formula {a mathematical formula}ϕ∈Lqbf, consider the frame {a mathematical formula}F=〈{w},(w,w),{{w},∅}〉 and an arbitrary assignment V, and define {a mathematical formula}M=〈F,V〉. Then, we have that ϕ is satisfiable iff {a mathematical formula}(M,w)⊨∃p→ϕ, where {a mathematical formula}p→ are all the atoms in ϕ. Because the satisfiability problem for quantified boolean formulas is PSPACE-hard, it follows that model checking sopml is PSPACE-hard as well.As regards being in PSPACE, an algorithm in PSPACE for model checking sopml is shown as Algorithm 1.{sup:1} It is based on standard model checking algorithms for modal logic [8], which run in polynomial time. The difference between these standard algorithms for modal logic and Algorithm 1 is that we need an extra case for the ∀p operator. This extra case is why Algorithm 1 takes polynomial space as opposed to polynomial time.Algorithm 1 recursively calls itself. The depth of this recursion is bounded by {a mathematical formula}|ϕ|. Furthermore, at each stage we need to keep only one of these recursive calls in memory at a time. For example, in the {a mathematical formula}∀pψ step, if {a mathematical formula}U,U′∈D we can first compute {a mathematical formula}X∩〚ψ〛MUp and then flush the memory dedicated to computing {a mathematical formula}〚ψ〛MUp before computing {a mathematical formula}〚ψ〛MU′p. It follows that the space requirement of Algorithm 1 is polynomial with respect to {a mathematical formula}|ϕ|+|M|. □
+       </paragraph>
+       <paragraph>
+        As a result, model checking sopml is no more computationally complex than the corresponding problem for quantified boolean formulas. Thus, the enhanced expressiveness comes at no extra computational cost, when compared with qbf. With respect to propositional modal logic, the complexity increases from PTIME to PSPACE. However, this is something to be expected given the extra expressive power of propositional quantification.
+       </paragraph>
+       <paragraph>
+        We should also note that the complexity of the model checking problem depends more strongly on {a mathematical formula}|ϕ| than on {a mathematical formula}|M|. The recursion in Algorithm 1 can be seen as a tree with depth bounded by {a mathematical formula}|ϕ| and branching factor bounded by {a mathematical formula}|M|. So the algorithm is called at most {a mathematical formula}|M||ϕ| times. As a result, while the space complexity of the algorithm is polynomial in both {a mathematical formula}|ϕ| and {a mathematical formula}|M|, its time complexity is exponential in {a mathematical formula}|ϕ| and polynomial in {a mathematical formula}|M|.
+       </paragraph>
+       <paragraph>
+        Furthermore, we can obtain the same PSPACE result when using a more concise representation of {a mathematical formula}M. So far, we have defined the size of {a mathematical formula}M as {a mathematical formula}|M|=|W|+|D|+∑a∈I|Ra|+∑p∈AP|V(p)|. This means that, among other things, we simply count the number of elements in D as one of the components of {a mathematical formula}M. So, in effect, we are treating D as a list. In some cases, however, there are other natural representations of D that are much more concise. Suppose, for example, that {a mathematical formula}M has a full domain, so {a mathematical formula}D=2W. Then instead of representing D as a list of sets we could represent it symbolically as {a mathematical formula}2W. More generally, we can assume that D is given by some membership function f, so {a mathematical formula}D={Y⊆W|f(Y,W)}. The only requirement we place upon it is that f should not be too hard to compute; we assume that determining whether {a mathematical formula}f(Y,W) can be done in polynomial space with respect to {a mathematical formula}|W|.
+       </paragraph>
+       <paragraph>
+        Then the model checking problem for sopml is PSPACE-complete not just in {a mathematical formula}|ϕ|+|M| but also in {a mathematical formula}|ϕ|+|W|+|R|+|V|, which can be exponentially smaller. With regard to hardness, note that the hardness part of the proof of Theorem 17 uses a fixed model, so in that regard the definition of model size is irrelevant. It follows that the model checking problem is also PSPACE-hard with respect to {a mathematical formula}|ϕ|+|W|+|R|+|V|. With regard to being in PSPACE, a slight modification to Algorithm 1 suffices. Suppose that we replace the {a mathematical formula}∀pψ case of that algorithm with{a mathematical formula} The proof that this amended algorithm runs in PSPACE with respect to {a mathematical formula}|ϕ|+|W|+|R|+|V| can be done in the same way as the proof of Theorem 17, so we omit it here.
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Finite Model Property
+       </section-title>
+       <paragraph>
+        We now briefly argue why sopml does not have the final model property. Consider the following set of formulas:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Now suppose that Γ holds at some pointed model {a mathematical formula}(M,w). Then the first two formulas of Γ require {a mathematical formula}Ra to be serial on {a mathematical formula}{w}∪Ra(w), and the third enforces transitivity of {a mathematical formula}Ra (also at w). Finally, if world w satisfies {a mathematical formula}□a∃p(p∧□a¬p), then, by Example 24 item 1, we know that {a mathematical formula}¬Ra(v,v) for all {a mathematical formula}v∈Ra(w), which implies that {a mathematical formula}¬Ra(w,w), so that {a mathematical formula}Ra is irreflexive over {a mathematical formula}{w}∪Ra(w). But it is easy to verify that a transitive, serial, and irreflexive relation on {a mathematical formula}Ra(w) requires {a mathematical formula}Ra(w) to be infinite. In other words, we found a finite set Γ of formulas in sopml that only has infinite models.
+       </paragraph>
+       <paragraph label="Theorem 18">
+        The logicsopmldoes not have the finite model property.
+       </paragraph>
+       <paragraph>
+        Theorem 18 is a generalisation of a result presented in [40, Section 3]. As the name of that section (‘SOPMLE = MSO’) suggests, it demonstrates that sopmle, which is sopml with a universal modality, has the same expressive power as MSO. And obviously, mso can force a model to be infinite (use the relational properties of our example above), and therefore sopmle can. Note that in our example, we don't assume a universal modality in our language, though.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Local Properties in Modal Logic
+     </section-title>
+     <paragraph>
+      In the introduction we discussed the difference between a global property as expressed by the modal schema (i){a mathematical formula}□aφ→φ, whose validity entails that the accessibility relation in a given frame is reflexive, and a local property such as the one represented by the sopml formula {a mathematical formula}∀p(□ap→p) that, as we shall see, on full frames holds exactly in reflexive worlds. Along this line, in [16], [17], [18] a sophisticated account was put forward to express local properties, by adding dedicated modal operators to a basic propositional modal logic. To present the language of local properties in modal logic, or LPML, to compare the two approaches, and more generally to discuss the expressive power of sopml, we consider a monadic second-order logic and a first-order fragment interpreted on Kripke frames.
+     </paragraph>
+     <paragraph>
+      Given a frame {a mathematical formula}F=〈W,D,R〉 and a set AP of atoms, we define an MSO alphabet containing binary predicate constants {a mathematical formula}Ra for every agent index {a mathematical formula}a∈I, a unary predicate variable P for every atom {a mathematical formula}p∈AP, and a set {a mathematical formula}X of individual variables. Then, MSO formulas Θ in {a mathematical formula}Lmso are defined in BNF as follows:{a mathematical formula} where {a mathematical formula}a∈I and {a mathematical formula}x,y∈X.
+     </paragraph>
+     <paragraph>
+      We also consider the first-order fragment {a mathematical formula}Lfo of MSOobtain by removing clause {a mathematical formula}∀PΘ from the BNF above. This is indeed the first-order language considered in [18]. Moreover, we denote as {a mathematical formula}Lfo1 the fragment of {a mathematical formula}Lfo containing formulas with at most one free individual variable. This fragment is well-known to be rich enough to express properties of frames such as reflexivity, symmetry, and transitivity (note that more than one variable is needed for e.g. transitivity, but at most one is free).
+     </paragraph>
+     <paragraph>
+      As regards the interpretation of MSO and FO (First-Order) formulas, an assignmentρ now is a function associating a world {a mathematical formula}w∈W to every individual variable x, and a set {a mathematical formula}U∈D to every predicate variable P. For {a mathematical formula}w∈W and {a mathematical formula}U∈D, the variants {a mathematical formula}ρwx and {a mathematical formula}ρUP are defined similarly to sopml.
+     </paragraph>
+     <paragraph label="Definition 19">
+      Semantics of MSOWe define whether frame{a mathematical formula}F=〈W,D,R〉 satisfies formula{a mathematical formula}Θ∈Lmsofor an assignment ρ, or{a mathematical formula}(F,ρ)⊨Θ, as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Obviously Definition 19 induces an interpretation of formulas in {a mathematical formula}Lfo as well. In particular, for a formula {a mathematical formula}Θ(x)∈Lfo1, we write {a mathematical formula}(F,w)⊨Θ to denote that {a mathematical formula}(F,ρ)⊨Θ for {a mathematical formula}ρ(x)=w, and {a mathematical formula}F⊨Θ if {a mathematical formula}(F,w)⊨Θ for all {a mathematical formula}w∈W. The different interpretation of the satisfaction relation ⊨ for sopml and MSO respectively will be clear from the context. Note that the transitive closure {a mathematical formula}R⁎ of R can be easily defined in MSO.
+     </paragraph>
+     <paragraph>
+      We illustrate the relationship between second-order propositional modal logic and monadic second-order logic (MSO) through translation ST that extends the standard translation between modal and first-order logic [7]:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Clearly, for every formula {a mathematical formula}ϕ∈Lsopml⁎, {a mathematical formula}STx(ϕ)∈Lmso is a formula where x is the only free individual variable. If {a mathematical formula}ψ∈Lml is a purely propositional modal formula, then {a mathematical formula}STx(ψ)∈Lfo is a first-order formula, as obtained via the standard translation. In particular, {a mathematical formula}STx(ψ) belongs to {a mathematical formula}Lfo1.
+     </paragraph>
+     <paragraph>
+      We now get the following preservation result for the standard translation, that will be used in the completeness proof.
+     </paragraph>
+     <paragraph label="Lemma 20">
+      For every model{a mathematical formula}M=〈F,V〉, world{a mathematical formula}w∈W, and formula{a mathematical formula}ψ∈Lsopml⁎,{a mathematical formula}whenever{a mathematical formula}ρ(x)=wand{a mathematical formula}ρ(Pi)=V(pi).
+     </paragraph>
+     <paragraph>
+      The proof is mostly standard, and can be found in Appendix A. As a consequence of Lemma 20, there is a one-to-one correspondence between formulas in sopml and their standard translations in MSO in the following sense: a frame {a mathematical formula}F validates the universal closure {a mathematical formula}∀p→ψ of a formula {a mathematical formula}ψ∈Lsopml⁎ iff property {a mathematical formula}∀P→STx(ψ)∈Lmso holds in {a mathematical formula}F, where {a mathematical formula}P→ are all the unary predicates appearing in {a mathematical formula}STx(ψ).
+     </paragraph>
+     <paragraph>
+      We now briefly recall some basic modal theory on local definability: we refer the interested reader to [7], [9] for further details. We use θ (or {a mathematical formula}θ(a→,p→) to emphasise sequences {a mathematical formula}a→ of indices and {a mathematical formula}p→ of atoms) for formulas in {a mathematical formula}Lml. Likewise, we use {a mathematical formula}Θ∈Lfo1 for first-order formulas with at most one free variable interpreted over states (or {a mathematical formula}Θ(a→,x) to denote that Θ mentions {a mathematical formula}a→ as indices and has x as the free variable).
+     </paragraph>
+     <paragraph label="Definition 21">
+      Let{a mathematical formula}θ∈Lmland{a mathematical formula}Θ∈Lfo1,
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       θ defines frame property Θ iff for all frames{a mathematical formula}F,{a mathematical formula}F⊨θiff{a mathematical formula}F⊨Θ.
+      </list-item>
+      <list-item label="2.">
+       θ locally defines Θ iff for all{a mathematical formula}Fand all{a mathematical formula}w∈F,{a mathematical formula}(F,w)⊨θiff{a mathematical formula}(F,w)⊨Θ.
+      </list-item>
+     </list>
+     <paragraph>
+      As examples of Definition 21, consider the well-known schemes T{a mathematical formula}□aφ→φ, 4{a mathematical formula}□aφ→□a□aφ, and B{a mathematical formula}φ→□a◇aφ, that (locally) define the properties of reflexivity, transitivity, and symmetry on frames. Furthermore, by Lemma 20 it is clear that every {a mathematical formula}θ∈Lml (locally) defines {a mathematical formula}∀P→STx(θ)∈Lmso, whenever {a mathematical formula}∀P→STx(θ) is equivalent to some {a mathematical formula}Θ∈Lfo1.
+     </paragraph>
+     <paragraph>
+      In the theory of pml, when formula θ locally defines Θ and some other mild conditions hold, one obtains the following connection between axiomatisation and completeness: if an axiomatisation Ax is complete for a class {a mathematical formula}K of frames, then {a mathematical formula}Ax+θ is complete for class {a mathematical formula}{F∈K|F⊨∀xΘ} of frames satisfying condition Θ. So for instance, taking the basic modal logic K, which is sound and complete with respect to the class {a mathematical formula}K of all frames, the logic {a mathematical formula}K+T is sound and complete with respect to class {a mathematical formula}{F∈K|F⊨∀xRa(x,x) for all a∈I}, that is, the class of reflexive frames. As further examples, whereas {a mathematical formula}S5=K+T+4+B is sound and complete with respect to class {a mathematical formula}S5={F∈K| for all a∈I,Ra is an equivalence relation}, the logic {a mathematical formula}S5+{□bφ→□cφ|b,c∈I} is sound and complete with respect to {a mathematical formula}{F∈S5|F⊨∀x(Rc(x)⊆Rb(x)) for all b,c∈I}.
+     </paragraph>
+     <paragraph>
+      This is an appealing modular feature of modal logic. Yet, as also remarked by van Ditmarsch et al. ([16], [17], [18]) this can only be applied if one adds formula θ as a global property: assuming θ as an axiom implies that it becomes a validity. For instance, adding formula {a mathematical formula}Baφ→φ to an axiom system, in order to model that agent a's beliefs are correct, implies that in the resulting logic, it is common knowledge that a's beliefs are correct, and this fact will always remain true.
+     </paragraph>
+     <paragraph>
+      To compare our approach based on sopml to van Ditmarsch et al.'s LPML, we first provide a brief account of the latter.
+     </paragraph>
+     <section label="3.1">
+      Local properties and LPML
+      <paragraph>
+       This section on LPML is based on [16], [17], [18]: we refer the reader to these references for a more extensive exposition. The term ‘logic’ is maybe not appropriate for LPML; rather, it is a specific approach to ‘connect’, in a modal object language, a modal formula {a mathematical formula}θ∈Lml and a first-order property {a mathematical formula}Θ∈Lfo1 through the introduction of a relational atom ⊡ (or {a mathematical formula}⊡(a→)), in such a way that on Kripke models ⊡ is interpreted as Θ locally. More precisely, the language of LPML extends {a mathematical formula}Lml with formulas of type {a mathematical formula}⊡(a→), whose interpretation is provided by an associated formula {a mathematical formula}Θ⊡(a→,x)∈Lfo1, according to the following satisfaction clause:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       By clause (9) we say that formula {a mathematical formula}⊡(a→)expresses locally first-order property {a mathematical formula}Θ⊡ (at w).
+      </paragraph>
+      <paragraph>
+       Then, LPML investigates how operator ⊡ can help us, in the object language, to build a bridge between modal formulas {a mathematical formula}θ⊡ and first-order properties {a mathematical formula}Θ⊡ that {a mathematical formula}θ⊡ locally defines. So, for instance, we can have {a mathematical formula}⊡(a)=Refl(a) for {a mathematical formula}Θ⊡(a,x)=Ra(x,x), or {a mathematical formula}⊡(b,c)=Sup(b,c) for {a mathematical formula}Θ⊡(b,c,x)=∀y(Rc(x,y)→Rb(x,y)) (for more examples, see Table 1).
+      </paragraph>
+      <paragraph>
+       Recalling that operator ⊡ is part of the object language of lpml, [18] then adds to the basic modal logic K, for specific formulas {a mathematical formula}θ⊡∈Lml, an axiom {a mathematical formula}Ax⊡ and an inference rule {a mathematical formula}R⊡. Further, [18, Theorem 2] provides a sufficient condition on the relationship between {a mathematical formula}θ⊡,⊡ and {a mathematical formula}Θ⊡, called local harmony, under which {a mathematical formula}K+Ax⊡+R⊡ is a sound and complete axiomatisation for the class of models that satisfy {a mathematical formula}Θ⊡.
+      </paragraph>
+      <paragraph label="Definition 22">
+       Local HarmonyFormulas{a mathematical formula}θ(a→,p→)∈Lml,{a mathematical formula}Θ(a→,x)∈Lfo1, and{a mathematical formula}⊡(a→)inlpmlare in local harmony iff (i) θ (locally) defines Θ, and (ii) ⊡ expresses Θ locally.
+      </paragraph>
+      <paragraph>
+       A model {a mathematical formula}M for lpml is a tuple {a mathematical formula}〈W,R,I,V〉 where {a mathematical formula}W,R and V are as for pml and I assigns a first order property to each relational atom ⊡. We follow [18] in assuming that for each symbol {a mathematical formula}⊡θ(a→), there is a {a mathematical formula}Lml-formula {a mathematical formula}θ(a→,p→) and a {a mathematical formula}Lfo1-formula {a mathematical formula}Θ(a→,x) such that the three are in local harmony and {a mathematical formula}I(⊡θ(a→))=Θ(a→,x). To be explicit about this, we call such a model {a mathematical formula}M an intended model for lpml.
+      </paragraph>
+      <paragraph>
+       One could say that lpml as a language can express every formula in {a mathematical formula}Lfo1, as there are no restrictions, in the object language, on the relational atoms ⊡ that can be added to standard pml (i.e., Table 1 can in principle be extended with an atom {a mathematical formula}⊡(a→) for any property {a mathematical formula}Θ(a→,x)). However, the aim of lpml is not to express arbitrary first-order properties Θ, but to reason locally about properties like truthfulness of agent a's beliefs, or an agent c knowing more than b. In particular, there has to exists a modal formula θ that (locally) defines Θ, that is, Θ has to be equivalent to {a mathematical formula}∀P→STx(θ). lpml expresses such first-order properties by adding atoms like {a mathematical formula}Refl(a) and {a mathematical formula}Sup(b,c), respectively. We reckon that sopml, allowing for quantification over propositions as in {a mathematical formula}∀p(Bap→p) and {a mathematical formula}∀p(Kbp→Kap), is an alternative way to study local properties which is at least as natural as lpml and provably as expressive, in a sense we explain below.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      Local properties, lpml and sopml on full frames
+      <paragraph>
+       We first compare lpml to sopml on full frames. On the other classes of frames there are some notable differences that we discuss in Section 3.3. Here we show that if formulas {a mathematical formula}Θ⊡(a→,x) and {a mathematical formula}θ⊡(a→,p→) are in local harmony with some atom {a mathematical formula}⊡(a→), then formula {a mathematical formula}⊡(a→) is equivalent to {a mathematical formula}∀p→θ(a→,p→)∈Lsopml⁎, within the class of full frames. Hence, sopml is at least as expressive as lpml. To make this more precise, note that lpml is only able to reason about local properties if all triples {a mathematical formula}θ(a→,p→), {a mathematical formula}⊡(a→), and {a mathematical formula}Θ(a→) are in local harmony. Recall that a lpml model {a mathematical formula}M that guarantees this is an intended model. We will also interpret such an intended model {a mathematical formula}M as a model for sopml: one just discards the lpml information connecting {a mathematical formula}⊡(a→) and {a mathematical formula}Θ⊡(a→,x), and then adds the constraint that the model is full. Now, consider the translation t from lpml formulas to sopml formulas that distributes over all connectives and modal operators, and moreover says{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We then obtain the following equivalence result.
+      </paragraph>
+      <paragraph label="Theorem 23">
+       For every intendedlpmlmodel{a mathematical formula}M,{a mathematical formula}w∈M, and formula φ inlpml, we have{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A proof of Theorem 23 is given in Appendix A. This theorem implies, in a sense, that what can be done in lpml, can also be done in sopml: if {a mathematical formula}θ(a→,p→), {a mathematical formula}⊡(a→) and {a mathematical formula}Θ(a→) are in local harmony, then, to reason locally about a scheme θ, one can either use the universal closure {a mathematical formula}∀p→θ in sopml, or atom {a mathematical formula}⊡(a→) in lpml. The result also suggests ways in which sopml may be more appropriate to reason about local properties, namely cases where Θ is not locally defined by any formula {a mathematical formula}θ∈Lml (i.e., there is no θ such that {a mathematical formula}∀P→STx(θ) is equivalent to Θ), or, conversely, when θ does not define a first-order property Θ locally (i.e., there is no Θ such that {a mathematical formula}∀P→STx(θ) is equivalent to Θ). Hereafter we consider some similar cases.
+      </paragraph>
+      <paragraph label="Example 24">
+       Consider the following first-order formulas:
+       <list>
+        {a mathematical formula}Θ1=¬Ra(x,x)(irreflexivity){a mathematical formula}Θ2=∃x1,…,xn⋀i≤n(Ra(x,xi)∧⋀i≠j≤nxi≠xj)(having at least n a-successors){a mathematical formula}Θ3=∀y((Ra(x,y)∧Ra(y,x))→x=y)(anti-symmetry){a mathematical formula}Θ4=∀y(Rb(x,y)→¬Ra(x,y))({a mathematical formula}Raand{a mathematical formula}Rbhave empty intersection){a mathematical formula}Θ5=∀y((Ra(x,y)∧Rb(x,y))→Rc(x,y))({a mathematical formula}Rccontains the intersection of{a mathematical formula}Raand{a mathematical formula}Rb).It is well-known that these first-order properties are not definable in modal logic
+       </list>
+       <paragraph>
+        [7], [9]. However, consider the following formulas insopml:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}φ1=∃p(□ap∧¬p)
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}φ2=∃p1,…,pn(⋀i≤n◇a(pi∧⋀j≤n,j≠i¬pj))
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}φ3=∃p(p∧∀q(◇a(q∧◇ap)→q))
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}φ4=∃p(□ap∧□b¬p)
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}φ5=∀p(□cp→∃q(□aq∧□b(q→p)))
+        </list-item>
+       </list>
+       <paragraph>
+        which are such that each{a mathematical formula}φilocally defines{a mathematical formula}Θi({a mathematical formula}1≤i≤5). We formalise this result in the following lemma.
+       </paragraph>
+      </paragraph>
+      <paragraph label="Lemma 25">
+       Consider formulas{a mathematical formula}φi∈Lsopmland{a mathematical formula}Θi∈Lfo1in Example24, for{a mathematical formula}i=1,…,5. Let x be the only free variable in{a mathematical formula}Θiand assume{a mathematical formula}ρ(x)=w. Assume{a mathematical formula}Fis a full frame, then,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The proof of some items of the lemma is to be found in Appendix A. In particular, sopml can express properties that are not definable in standard modal logic.
+      </paragraph>
+      <paragraph label="Proposition 27">
+       Distributed KnowledgeTo come back to an example from epistemic logic, an interesting notion in collective knowledge is that of distributed knowledge Dφ. The intuition here is that distributed knowledge is the knowledge of a ‘wise man’ (cf.[20]) with whom all agents have shared their knowledge. The typical example is a situation where, for instance, one agent knows φ, another knows that{a mathematical formula}φ→ψ, implying distributed knowledge of ψ. A more concrete example goes as follows: it is distributed knowledge in every group of agents (provided everybody knows their own birthday) whether two agents share their birthday. The notion of distributed knowledge Dφ for n agents has an axiomatisation that is sound and complete with respect to models where the corresponding relation{a mathematical formula}RDis the intersection of all the individual agents' accessibility relations. However, intersection is not locally definable in modal logic (for more on modal properties of distributed knowledge, or implicit knowledge as it is sometimes called, see for instance[30], [47]). However, insopml, using Example24.5 we can express that agent c knows exactly what the distributed knowledge of agents a and b is:{a mathematical formula}Notice that (10) uses exactly the idea of the typical example of distributed knowledge between two agents discussed above: if agent c knows some fact p, i.e., p is distributed knowledge between a and b, then there exists some fact q such that a knows q and b knows{a mathematical formula}q→p. So, they are able to derive p by pooling together their knowledge.Can we generalise this to n agents? Indeed we can, as follows. Define{a mathematical formula}and let{a mathematical formula}Then, we can prove the following result.For every full frame{a mathematical formula}F,{a mathematical formula}(F,w)⊨φiff{a mathematical formula}(F,w)⊨Θ(x).The proof is a generalisation of the proof of Lemma25for{a mathematical formula}Θ5. It follows that operator D locally expresses the distributed knowledge of ψ among agents{a mathematical formula}1,…,n:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Discussion. From Examples 24 and 26 it follows that sopml is strictly more expressive than propositional modal logic, and it can also express local properties that cannot be dealt with in lpml. Example 24 also indicates when sopml can axiomatise frames that cannot be characterised in pml: for instance, formula {a mathematical formula}∃p(□p∧¬p) characterises irreflexive frames, in the same way as {a mathematical formula}∃p(□p∧◇◇¬p) characterises intransitive frames. Venema [52] calls such characterisations negatively definable. The idea here is the following: suppose that formula {a mathematical formula}θ∈Lml locally defines some property Θ; is there a formula that locally defines ¬Θ? As an example, whereas {a mathematical formula}Ra(x,x) is (locally) defined by {a mathematical formula}□ap→p, the negation {a mathematical formula}¬R(x,x) is not (locally) defined by {a mathematical formula}¬(□p→p), or equivalently, {a mathematical formula}□ap∧¬p, since this would require that on frames for this formula, atom p were false. Gabbay [23] came up with a derivation rule, rather than an axiom, to characterise irreflexivity, while [52] analyses more generally when a negative characterisation of some class of frames also leads to an axiomatisation of such class. For our discussion, it is important to realise that reflexivity is actually characterised by a modal scheme{a mathematical formula}□aφ→φ, and, in contrast, by formula {a mathematical formula}∀p(□ap→p) in sopml. But then, irreflexivity is characterised by the negation of that sopml formula: {a mathematical formula}∃p(□p∧¬p). Moreover, notice that sopml allows us to interpret such formulas locally, so that we can reason about models that have both reflexive and irreflexive points.
+      </paragraph>
+      <paragraph>
+       From Example 24 we also learn that there are first-order properties Θ that cannot be characterised by any modal formula {a mathematical formula}θ∈Lml, while we do have a formula in sopml characterising it. It is also possible to come up with formulas in sopml that do not correspond to any first-order formula (hence, in sopml one could reason locally about them, but not in lpml). A first example of such formulas is {a mathematical formula}∃p¬δ for {a mathematical formula}δ=(◇p∧◇□¬p)→◇(□−1◇p∧□¬p) (here {a mathematical formula}□−1 is interpreted as the converse of relation R for □). As argued in [52], although δ as a scheme characterises Dedekind-complete frames among the linear orderings, the frames for ¬δ are not elementary, that is, not first-order definable. A further example is the Löb formula {a mathematical formula}∀p(□(□p→p)→□p): this formula characterises frames with R being transitive and its converse well-founded [52, p. 8].
+      </paragraph>
+      <paragraph>
+       To conclude our comparison between sopml and lpml, we observe that the ⊡ operators act in fact as a sort of linguistic black boxes, bringing the metalanguage of the theory of first-order logic into the object language of modal logic. In contrast, sopml is more transparent, as everything is done in the object language. In addition, for the first-order conditions in [18] there must always be a suitable modal counterpart. Indeed, the axioms {a mathematical formula}Ax⊡:⊡(a→)→θ⊡(a→,p→) in [18] make sense only as long as there is a propositional modal formula {a mathematical formula}θ⊡ related to ⊡, and this is not always the case as discussed above. We will see later that none of this has to be assumed to axiomatise sopml.
+      </paragraph>
+      <paragraph>
+       Revisiting Example 24, it is no surprise that the sopml formulas in this example all use existential quantification, because we have the following.
+      </paragraph>
+      <paragraph label="Lemma 28">
+       For a finite set{a mathematical formula}{p1,…,pn}of atoms, define{a mathematical formula}∀p→as{a mathematical formula}∀p1…∀pn(this is well-defined because{a mathematical formula}∀p∀qϕis equivalent to{a mathematical formula}∀q∀pϕ). Then for all frames{a mathematical formula}F, worlds w, assignments V, and formulas ϕ in SOPML we have
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}(F,w)⊨ϕiff(F,w)⊨∀p→ϕ
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}(F,w)⊨∀fr→(ϕ)ϕiff{a mathematical formula}(F,V,w)⊨∀fr→(ϕ)ϕ
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}(F,w)⊨ϕiff{a mathematical formula}(F,V,w)⊨ϕ, where ϕ is a sentence (i.e.,{a mathematical formula}fr(ϕ)=∅).
+       </list-item>
+      </list>
+     </section>
+     <section label="3.3">
+      Local properties and sopml on non-full frames
+      <paragraph>
+       So far, we have only looked at how SOPML can represent local properties on full frames. Here, we consider local properties on frames with a coarser domain of quantification. Let us return to formula{a mathematical formula} which is intended to express that everything a knows is true. Looking at the semantics of sopml, we can see that (11) holds in {a mathematical formula}(M,w) if and only if{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If the domain D is equal to the power set {a mathematical formula}2W, then (12) is equivalent to {a mathematical formula}w∈Ra(w), so to {a mathematical formula}Ra being locally reflexive. In general, however, there is no guarantee that D is equal to {a mathematical formula}2W. So on non-full frames, (11) does not characterize reflexivity. In fact, on such frames, there is no sopml formula that characterizes reflexivity.
+      </paragraph>
+      <paragraph>
+       Whether this is an important downside of sopml depends on the object of study. If one is after a logic that can reason about graph-theoretic properties like reflexivity, then one should consider sopml only on full frames, since on other frames sopml cannot express these properties. If, on the other hand, the goal is to reason about a particular subject (such as knowledge) and only use graphs to represent that subject, then sopml is useful even on non-full frames. After all, even though (11) does not, in general, correspond to reflexivity, it does still express the fact that everything known by a is true—with one caveat.
+      </paragraph>
+      <paragraph>
+       The quantifier ∀p quantifies only over those valuations of p that are part of the domain D. So, strictly speaking, (11) means that “for every element {a mathematical formula}U∈D, if a knows U then U is true.” There are three main ways to interpret this.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        We could explicitly retain the reference to D, and interpret (11) as “every atomic (resp. boolean, modal) proposition that a knows is true” if D is any (resp. boolean, modal) domain of quantification.
+       </list-item>
+       <list-item label="2.">
+        We could consider D to be the set of properties that are relevant for the problem that we are modeling. In this interpretation, the formula {a mathematical formula}∀p(Kap→p) might hold even if there is some proposition {a mathematical formula}T∈2W∖D such that T is false but known by a. However, because {a mathematical formula}T∉D it is not a relevant property, we don't care whether a is wrong about it.
+       </list-item>
+       <list-item label="3.">
+        We could interpret D as the set of propositions that can be conceptualized. This allows us to interpret (11) as “everything that a knows is true”, where it is understood that being able to conceptualize a proposition is a precondition for knowing that proposition.
+       </list-item>
+      </list>
+      <paragraph>
+       As an example of the latter situation, suppose that Alice is looking at a blue object. However, due to a trick of the light, the object seems green to her. She forms the belief that the object is green. This belief is false, so {a mathematical formula}∀p(Kap→p) does not hold. Now, suppose that Bob is looking at the same object, but that Bob is from a culture that does not distinguish between green and blue. Instead, Bob's culture uses a single concept for these colours that we will translate as “green/blue”. Bob makes the same observation as Alice, but based on that observation he forms the belief that the object is green/blue. This belief is correct, so, assuming that b's other beliefs are correct as well, {a mathematical formula}∀p(Kbp→p) holds.{sup:2} The difference between Alice and Bob does not lie in their accessibility relations. Instead, it is caused by the different ways in which they divide the set of possible worlds into concepts.
+      </paragraph>
+      <paragraph>
+       The conditions on D then place restrictions on the conceptual space that we assume the agents to have. If D is boolean, then the concepts “green” and “blue” need to be accompanied by concepts “not green” and “green or blue”. If D is modal, then the concept “green” needs to be accompanied by a concept “knowing to be green”, and if D is full then every set of worlds corresponds to some concept.
+      </paragraph>
+      <paragraph>
+       Regardless of the interpretation that we choose, every formula discussed in Table 1 expresses a property of sopml models. The properties that are expressed by these formulas can be found in Table 2. Note that the properties in Table 2 are generalisations of those in Table 1, and that they are equivalent to their counterparts when D is full. The properties in question require some slightly awkward notation, but conceptually they are not very hard to grasp: they correspond to the properties in Table 1, except we consider only those sets of worlds that are in the domain D. Take, for example, {a mathematical formula}∀p(□ap→p). On full frames, this corresponds to {a mathematical formula}w∈Ra(w), which is equivalent to every superset of {a mathematical formula}Ra(w) containing w, so to {a mathematical formula}∀U∈2W(Ra(w)⊆U→w∈U). The corresponding property for non-full frames is obtained by replacing {a mathematical formula}2W by the domain D.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      (In)completeness
+     </section-title>
+     <paragraph>
+      One well-established way to understand a logic is to introduce an axiomatisation for it. After all, since there is an infinite number of valid formulas, we cannot explicitly enumerate all of them. But if we have a complete axiomatisation, then we can at least implicitly know the valid formulas and understand why they are valid.
+     </paragraph>
+     <paragraph>
+      It turns out that not all variants of SOPML are axiomatisable. Still, even if a logic is unaxiomatisable it is worthwhile to prove that it is so, for two reasons. Firstly, of course, if we have a proof that no axiomatisation exists, then we can stop trying to find an axiomatisation. Secondly, even though an unaxiomatisability result arguably provides less insight regarding the theorems of the logic than an axiomatisation, it does still tell us something about the logic, particularly about its computational complexity.
+     </paragraph>
+     <paragraph>
+      In this paper we discuss many different variants of sopml, which differ on the domain of quantification (full, modal, boolean, any), restrictions on the accessibility relations (reflexive, transitive, symmetric), availability of common knowledge, and the number of indices. For some of these variants, axiomatisability and unaxiomatisability results are known from [21], [36], [37]. In particular, [21] provides axiomatisations for all single agent normal logics interpreted on boolean and generic frames, as well as an axiomatisation for epistemic full frames. Here we extend several of these results to the multi-modal case for the first time. Tables 3 and 4 give an overview of these results. In summary, the results are that sopml without common knowledge is unaxiomatisable on full frames (with the exception of the special case of single-agent S5), but axiomatisable on modal, boolean and the class of all frames, while sopml with common knowledge is unaxiomatisable regardless of the domain of quantification{sup:3}. Note that, if {a mathematical formula}|I|=1 then {a mathematical formula}□⁎ reduces to □ on S5 frames, so the entries in the first column of Table 4 follow immediately from the results in the first column of Table 3.
+     </paragraph>
+     <paragraph>
+      So in most cases, adding common knowledge makes the validity problem harder. This is in contrast to the model checking problem, where adding common knowledge is “free”, in the sense that model checking for sopml is PSPACE-complete, whether or not we have a common knowledge operator (see Theorem 17).
+     </paragraph>
+     <paragraph>
+      We restrict ourselves to the classes of models for logics S5 and K in these tables. This is because these two classes are the most relevant for our analysis. Our axiomatisability results are slightly more general, see Theorem 43 for the exact statement. Our unaxiomatisability results are stated for logics S5 and K, but with a few minor modifications these proofs could easily be adapted to other normal modalities, including KD45 and S4.2. Such results give us useful insights into the computational properties of sopml, as well as its amenability for knowledge representation and reasoning.
+     </paragraph>
+     <paragraph label="Remark 29">
+      In most of this paper, we use different notation forsopml({a mathematical formula}□a,◊a,□⁎) andsopel({a mathematical formula}Ka,Ma,C). In this section we discuss bothsopmlandsopel, so for the sake of readability we only use thesopmlnotation.Also, we writesopmlto denote generically logics without operator{a mathematical formula}□⁎, whilesopml{sup:⁎}refers to logics with{a mathematical formula}□⁎. The distinction will be clear from the context.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Complete Axiomatisations
+      </section-title>
+      <paragraph>
+       This section is devoted to axiomatise several classes of validities on Kripke frames built on sets I of agent indices and AP of atomic propositions. We first present a class of logics {a mathematical formula}Kx, one for each {a mathematical formula}x∈{ap,pl,ml}. In this section all logics are defined on languages without common knowledge.
+      </paragraph>
+      <paragraph label="Definition 30">
+       Logics {a mathematical formula}KxFor each{a mathematical formula}x∈{ap,pl,ml}, the axioms and inference rules of{a mathematical formula}Kxare as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The axioms Prop and K are standard of any modal logic, as are the rules Modus Ponens (MP) and Necessitation (Nec). Note how axiom Exx is parameterised by {a mathematical formula}x∈{ap,pl,ml}. The axiom specifies the language {a mathematical formula}Lx which acts as the domain of quantification, or, more precisely, what kind of formulas can be substituted as an instance for the universal quantifier. Axiom BF is known as the Barcan formula and it says the following. In our models {a mathematical formula}M=〈W,D,R,V〉 the domain of quantification D is defined globally, and does not depend on the world w of evaluation. To give an example where the dependence of D on world w would cease BF to hold, consider a structure {a mathematical formula}N=〈W,{Dw}w∈W,R,V〉, with {a mathematical formula}W={x,y,z} and {a mathematical formula}R={(x,y),(y,z)}. Also, suppose {a mathematical formula}Dx={{x},{y,z}} and {a mathematical formula}Dy=2W≠Dx. Then, by restricting the clause for quantification in Definition 8 to each {a mathematical formula}Dw, we have {a mathematical formula}(N,x)⊨∀p□(p→□p) but not {a mathematical formula}(N,x)⊨□∀p(p→□p). In Example 31 we prove that the converse of BF is derivable in all {a mathematical formula}Kx.
+      </paragraph>
+      <paragraph>
+       The scheme of axioms Exx and the Generalisation rule Gen are typical principles of quantification. Axiom Exx is the elimination axiom for ∀: if something holds for all allowed valuations, then it also holds for each instance from the domain (which can be the set of all atoms, boolean formulas, or modal formulas.) The rule of Generalisation is the introduction rule for ∀: if ψ follows from ϕ for an arbitrary p, we infer that {a mathematical formula}∀pψ follows from ϕ.
+      </paragraph>
+      <paragraph>
+       As customary in pml, by considering a suitable combination of axioms
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       we can introduce the following normal extensions of {a mathematical formula}Kx, also for {a mathematical formula}x∈{ap,pl,ml}:
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This gives us 15 logics, 5 for each type {a mathematical formula}x∈X.
+      </paragraph>
+      <paragraph>
+       The notions of proof and theoremhood are defined as usual. A formula ϕ is derivable in logic L from a set Δ of formulas, or {a mathematical formula}Δ⊢Lϕ, iff for some {a mathematical formula}ϕ0,…,ϕm∈Δ, formula {a mathematical formula}⋀i≤mϕi→ϕ is a theorem in L, or {a mathematical formula}⊢L⋀i≤mϕi→ϕ.
+      </paragraph>
+      <paragraph label="Example 31">
+       As an example, we provide proofs in logic{a mathematical formula}Kapof the following theorems and derived inference rules, which will be routinely used in the rest of the section, often without explicit mention:
+       <list>
+        converse of the Barcan formulaCBF{a mathematical formula}□∀pϕ→∀p□ϕ:{a mathematical formula}vacuous quantification{a mathematical formula}ϕ→∀pϕ, whenever p does not appear in ϕ:{a mathematical formula}By axiomExapwe then obtain{a mathematical formula}ϕ↔∀pϕ, whenever p does not appear in ϕ.distribution of quantification{a mathematical formula}∀p(ϕ→ψ)→(∀pϕ→∀pψ):{a mathematical formula}Since
+       </list>
+       <paragraph>
+        CBF, vacuous quantification and distribution of quantification are provable in{a mathematical formula}Kap, they are theorems in all the other 14 logics above. We also recall that inferring{a mathematical formula}□aϕ→□aψfrom{a mathematical formula}ϕ→ψis a derivable rule in modal logic, and whenever p does not appear free in ϕ, formula{a mathematical formula}∀p(ϕ→ψ)→(ϕ→∀pψ)is a theorem in all our logics.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We now prove the soundness and completeness results for logics {a mathematical formula}Lx w.r.t. the corresponding class {a mathematical formula}K of Kripke frames, starting with soundness. In the rest of the paper L ranges over {a mathematical formula}{K,T,S4,B,S5}. Given a logic {a mathematical formula}Lx, let {a mathematical formula}τ(Lx) be a subset of {a mathematical formula}{r,t,s}, such that {a mathematical formula}Lx includes axiom T iff τ contains r (for reflexivity), {a mathematical formula}Lx includes axiom 4 iff τ contains t (for transitivity), and {a mathematical formula}Lx includes axiom B iff τ contains s (for symmetry).
+      </paragraph>
+      <paragraph label="Theorem 32">
+       SoundnessFor{a mathematical formula}x∈{ap,pl,ml}, for every logic{a mathematical formula}Lxand formula{a mathematical formula}ϕ∈Lsopml,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       As customary, the axioms of each logic {a mathematical formula}Lx are shown to be valid in the corresponding class {a mathematical formula}Kxˆτ(Lx) of frames, and the inference rules are shown to preserve validity in {a mathematical formula}Kxˆτ(Lx). Specifically, axioms Prop, K, MP, and Nec are valid in any frame. The validity of axioms T, 4, and B in specific classes of frames follows as in standard propositional modal logics [7]. The validity of axioms Exx in each corresponding class of frames follows by Lemma 11.(2), while the validity of Gen follows by Lemma 11.(1). We provide a proof for {a mathematical formula}Exap: suppose that {a mathematical formula}(M,w)⊨∀pϕ, that is, for every {a mathematical formula}U∈D, {a mathematical formula}(MUp,w)⊨ϕ. By Lemma 11.(a), {a mathematical formula}〚ψ〛∈D, hence in particular {a mathematical formula}(M〚ψ〛p,w)⊨ϕ. Then, by Lemma 11.(b), {a mathematical formula}(M,w)⊨ϕ[p/ψ]. As regards Gen, suppose that {a mathematical formula}(M,w)⊨ϕ and {a mathematical formula}p∉fr(ϕ). In particular, for every {a mathematical formula}U∈D, {a mathematical formula}V(fr(ϕ))=VUp(fr(ϕ)), and by Lemma 11.(1), we have {a mathematical formula}(MUp,w)⊨ϕ as well. By MP we obtain that {a mathematical formula}(MUp,w)⊨ψ, and since U is arbitrary, {a mathematical formula}(M,w)⊨∀pψ. Moreover, the Barcan formula BF is valid as in any frame all worlds have the same domain of quantification, namely {a mathematical formula}D⊆2W. Indeed, {a mathematical formula}(M,w)⊨∀p□aϕ iff for all {a mathematical formula}U∈D, {a mathematical formula}(MUp,w)⊨□aϕ, iff for every {a mathematical formula}w′∈Ra(w), {a mathematical formula}(MUp,w′)⊨ϕ. But this means that for every {a mathematical formula}w′∈Ra(w), {a mathematical formula}(M,w′)⊨∀pϕ, that is, {a mathematical formula}(M,w)⊨□a∀pϕ. □
+      </paragraph>
+      <paragraph>
+       As a consequence of Theorem 32, all our 15 logics are sound w.r.t. the corresponding classes of frames. Moreover, as a by-product of soundness, we obtain that the inclusions (4) between theories put forward in Section 2.2 are all strict:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To prove this, observe that each axiom Exx holds in {a mathematical formula}Kxˆ, but in no more general class of frames. Finally, let Exsopml be the scheme {a mathematical formula}∀pϕ→ϕ[p/ψ], for {a mathematical formula}ψ∈Lsopml. It is easy to check that Ex{a mathematical formula}∈sopmlTh(Kfull), but Ex{a mathematical formula}∉sopmlTh(Kmodal).
+      </paragraph>
+      <paragraph>
+       Next we state the completeness result. Here we use the notation of Theorem 32.
+      </paragraph>
+      <paragraph label="Theorem 33">
+       CompletenessFor{a mathematical formula}x∈{ap,pl,ml}, and every formula{a mathematical formula}ϕ∈Lsopml,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Theorem 33 guarantees completeness of a logic of sort x, with respect to models of type {a mathematical formula}xˆ, for the sorts of atomic propositions and propositional and modal formulas. Completeness also holds if we add properties such as reflexivity, transitivity, and symmetry to the frames, as long as we add the corresponding axioms from {a mathematical formula}{T,4,B} to the logic. To our knowledge this is the first completeness result for sopml in a multi-agent setting.
+      </paragraph>
+      <paragraph>
+       To prove Theorem 33 for {a mathematical formula}x∈{ap,pl,ml}, we show that if a formula ϕ is {a mathematical formula}Lx-consistent, then we can construct an appropriate model {a mathematical formula}MLx that satisfies ϕ. For logic Lap (respectively, Lpl, Lml) this amounts to finding models whose underlying frame is any frame (respectively, a boolean algebra or a boolean algebra with operators). We begin with the cases for Lap for clarity's sake.
+      </paragraph>
+      <section label="4.1.1">
+       Completeness of Lap
+       <paragraph>
+        In this section we show that if a formula ϕ is {a mathematical formula}Lap-consistent, that is, {a mathematical formula}⊬Lap¬ϕ, then we can construct a (canonical) model {a mathematical formula}MLap=〈F,V〉 that satisfies ϕ. Moreover, {a mathematical formula}F is shown to belong to the class {a mathematical formula}Kall of all frames. This implies that {a mathematical formula}Kall⊭¬ϕ.
+       </paragraph>
+       <paragraph label="Definition 34">
+        Let{a mathematical formula}Λ⊆Lsopmlbe sets of formulas over set AP of atoms, and Y a denumerable set of atoms. We say that Λ is{a mathematical formula}We omit the subscript{a mathematical formula}Lapwhenever clear by the context.
+       </paragraph>
+       <paragraph>
+        We remark that, by the definition of derivability, a set Λ is inconsistent iff for some {a mathematical formula}ϕ0,…,ϕm∈Λ, {a mathematical formula}⊢⋀i≤mϕi→⊥, that is, {a mathematical formula}⊢⋀i≤mϕi→¬ψ for every {a mathematical formula}ψ∈Λ.
+       </paragraph>
+       <paragraph>
+        We now prove that every consistent set can be saturated.
+       </paragraph>
+       <paragraph label="Lemma 35">
+        SaturationLet Δ be a maximal set of formulas over AP. Then there exists a saturated set of formulas Φ over{a mathematical formula}AP∪Y, such that{a mathematical formula}Δ⊂Φ, where Y is an infinite set of new atoms (i.e., disjoint from AP).
+       </paragraph>
+       <paragraph label="Proof">
+        Let {a mathematical formula}θ0,θ1,… be an enumeration of the formulas over {a mathematical formula}AP∪Y, and {a mathematical formula}q0,q1,… an enumeration of atoms in Y. We define by induction a sequence {a mathematical formula}Φ0,Φ1,… of sets of formulas over {a mathematical formula}AP∪Y as follows:{a mathematical formula}Notice that, since Y is an infinite set of new atoms and finitely many θ appear in {a mathematical formula}Φn∖Φ0, for each {a mathematical formula}n∈N, we can always find an atom {a mathematical formula}q∈Y that does not appear in {a mathematical formula}Φn∪{θn}. Now we prove by induction on n that every {a mathematical formula}Φn is consistent. First of all, {a mathematical formula}Φ0=Δ is consistent by hypothesis. As to the inductive step, suppose that {a mathematical formula}Φn is consistent, we consider the various cases. If {a mathematical formula}Φn+1=Φn∪{θn} and {a mathematical formula}θn is not of the form {a mathematical formula}∃pχ, then {a mathematical formula}Φn∪{θn}=Φn+1 has to be consistent, by construction. Further, {a mathematical formula}Φn+1=Φn∪{θn,χ[p/q]} if {a mathematical formula}Φn∪{θn} is consistent, {a mathematical formula}θn is of the form {a mathematical formula}∃pχ, and q is the first atom that does not appear in {a mathematical formula}Φn∪{θn}. To obtain a contradiction, suppose that {a mathematical formula}Φn+1 is inconsistent. In particular, for some {a mathematical formula}φ0,…,φm∈Φn,{a mathematical formula}Since q is assumed not to appear in {a mathematical formula}Φn nor in {a mathematical formula}θn, by an application of Gen we obtain{a mathematical formula} i.e., {a mathematical formula}⊢(⋀i≤mφi∧θn)→¬θn, and, since {a mathematical formula}⊢(⋀i≤mφi∧θn)→θn trivially, we obtain that {a mathematical formula}⊢(⋀i≤mφi∧θn)→⊥, that is, {a mathematical formula}Φn∪{θn} is not consistent, against hypothesis. Hence, {a mathematical formula}Φn+1=Φn∪{θn,χ[p/q]} is indeed consistent.Finally, {a mathematical formula}Φn+1=Φn∪{¬θn} only if {a mathematical formula}Φn∪{θn} is not consistent. Indeed, if {a mathematical formula}Φn is consistent, {a mathematical formula}Φn∪{θn} and {a mathematical formula}Φn∪{¬θn} cannot be both inconsistent, since otherwise for some {a mathematical formula}φ0,…,φm,φ0′,…,φm′′∈Φn,{a mathematical formula} and by propositional reasoning,{a mathematical formula} and therefore {a mathematical formula}Φn itself is inconsistent, a contradiction. Hence, {a mathematical formula}Φn∪{¬θn}=Φn+1 is indeed consistent.Now let {a mathematical formula}Φ=⋃n∈NΦn: Φ is consistent as each {a mathematical formula}Φn is. If that were not the case, there would be {a mathematical formula}φ0,…,φm∈Φ such that {a mathematical formula}⊢⋀i≤mφi→⊥. Then suppose that k is the smallest index such that all {a mathematical formula}ϕi appear in {a mathematical formula}Φk. It follows that {a mathematical formula}Φk is inconsistent as well, against hypothesis. Moreover, Φ extends Δ and it is maximal and Y-rich by construction. □
+       </paragraph>
+       <paragraph>
+        We now describe informally the construction of the canonical model for a formula ϕ such that {a mathematical formula}⊬¬ϕ. First, define W as the set of all saturated sets w of formulas over {a mathematical formula}AP∪Y as obtained in Lemma 35. Notice that W is non-empty as the set {a mathematical formula}{ϕ} is consistent by hypothesis, and by Lemma 35 there exists a saturated set {a mathematical formula}Φ⊇{ϕ} in W. Further, for {a mathematical formula}w,w′∈W and {a mathematical formula}a∈I, define {a mathematical formula}Ra(w,w′) iff {a mathematical formula}{ψ|□aψ∈w}⊆w′. Finally, for every atom {a mathematical formula}p∈AP∪Y, we consider set {a mathematical formula}Up={w∈W|p∈w}⊆W and define the domain D of propositions as {a mathematical formula}{Up|p∈AP∪Y}.
+       </paragraph>
+       <paragraph label="Definition 36">
+        Canonical ModelThe canonical modelLis a tuple{a mathematical formula}ML=〈W,D, R, V〉 where (i) W, D and R are defined as above; and (ii) V is the assignment such that{a mathematical formula}V(p)=Up.
+       </paragraph>
+       <paragraph>
+        Note that every consistent formula ϕ must be contained in some {a mathematical formula}Φ∈W. Next we prove that the canonical model w.r.t. any {a mathematical formula}Lap is indeed a model based on a frame in {a mathematical formula}Kallτ(Lap) (recall that {a mathematical formula}apˆ=all and that {a mathematical formula}Lap represents 5 different logics: {a mathematical formula}Kap,Tap,S4ap,Bap, and {a mathematical formula}S5ap).
+       </paragraph>
+       <paragraph label="Lemma 37">
+        The canonical model{a mathematical formula}MLapin Definition36is a Kripke model based on a frame in{a mathematical formula}Kallτ(Lap).
+       </paragraph>
+       <paragraph label="Proof">
+        By the remarks above, W is a non-empty set of saturated sets, D is a subset of {a mathematical formula}2W, and V is a function from {a mathematical formula}AP∪Y to D. Moreover, axiom T (respectively, 4, B) enforces relation {a mathematical formula}Ra on W to be reflexive (respectively, transitive, symmetric), as it is the case for propositional modal logic. As an illustrative example, we consider the case for T: by maximality, for every {a mathematical formula}w∈W, {a mathematical formula}□aψ→ψ∈w for every formula {a mathematical formula}ψ∈Lsopml, and by closure under MP we have {a mathematical formula}{ψ∈Lsopml|□ψ∈w}⊆w, that is, {a mathematical formula}Ra(w,w) by definition. □
+       </paragraph>
+       <paragraph>
+        We can finally prove the truth lemma for logics Lap. Here we adapt the proof in [20] for propositional epistemic languages without common knowledge.
+       </paragraph>
+       <paragraph label="Lemma 38">
+        Truth lemmaFor every logic{a mathematical formula}Lap, in the canonical model{a mathematical formula}MLap, for every{a mathematical formula}w∈Wand every formula ψ over{a mathematical formula}AP∪Y,{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proof">
+        The proof is by induction on the length of ψ. As to the base of induction for {a mathematical formula}ψ=p, by definition of satisfaction, {a mathematical formula}(MLap,w)⊨p iff {a mathematical formula}w∈V(p) iff {a mathematical formula}p∈w.For {a mathematical formula}ψ=¬χ, {a mathematical formula}(MLap,w)⊨ψ iff {a mathematical formula}(MLap,w)⊭χ, iff by induction hypothesis {a mathematical formula}χ∉w. Since w is maximal, this is the case iff {a mathematical formula}ψ∈w.For {a mathematical formula}ψ=χ→χ′, {a mathematical formula}(MLap,w)⊨ψ iff {a mathematical formula}(MLap,w)⊭χ or {a mathematical formula}(MLap,w)⊨χ′. By induction hypothesis this is the case iff {a mathematical formula}χ∉w or {a mathematical formula}χ′∈w; in both cases we have that {a mathematical formula}ψ∈w, as w is maximal.Suppose that {a mathematical formula}ψ=∀pχ. ⇐ Let {a mathematical formula}ψ∈w. By axiom Exap we have that {a mathematical formula}χ[p/q]∈w for every {a mathematical formula}q∈AP∪Y. By induction hypothesis {a mathematical formula}(MLap,w)⊨χ[p/q] for every q. Now, take an arbitrary {a mathematical formula}Uq={w∈W|q∈w} in the domain D of the canonical model. By Lemma 11.(b), {a mathematical formula}((MLap)Uqp,w)⊨χ, and since variant {a mathematical formula}VUqp was chosen arbitrarily, we obtain that {a mathematical formula}(MLap,w)⊨ψ. ⇒ Assume that {a mathematical formula}ψ∉w. Since w is maximal, {a mathematical formula}∃p¬χ∈w, and w is Y-rich, so {a mathematical formula}¬χ[p/q]∈w for some atom {a mathematical formula}q∈Y. Then, by induction hypothesis, {a mathematical formula}(MLap,w)⊭χ[p/q], and by Lemma 11.(b), {a mathematical formula}((MLap)V(q)p,w)⊭χ. In particular, for {a mathematical formula}Uq=V(q)∈D, {a mathematical formula}((MLap)Uqp,w)⊭χ, i.e., {a mathematical formula}(MLap,w)⊭ψ.Suppose that {a mathematical formula}ψ=□aχ. ⇐ Assume that {a mathematical formula}ψ∈w and {a mathematical formula}v∈Ra(w). By definition of {a mathematical formula}Ra, {a mathematical formula}χ∈v; therefore by induction hypothesis {a mathematical formula}(MLap,v)⊨χ. Thus, {a mathematical formula}(MLap,w)⊨ψ. ⇒ Assume that {a mathematical formula}ψ∉w and consider set {a mathematical formula}{ϕ|□aϕ∈w}∪{¬χ}. This set is consistent, for if not, then for some {a mathematical formula}ϕ1,…,ϕn∈{ϕ|□aϕ∈w}, {a mathematical formula}⊢⋀ϕ→χ. Then, by axiom K, {a mathematical formula}⊢⋀□aϕ→□aχ and since {a mathematical formula}⋀□aϕ∈w, also {a mathematical formula}□aχ∈w against hypothesis. Now we want to saturate {a mathematical formula}Δ={ϕ|□aϕ∈w}∪{¬χ} to obtain {a mathematical formula}v∈W such that {a mathematical formula}Ra(w,v) and {a mathematical formula}¬χ∈v. However, we cannot directly apply Lemma 35 to Δ, as it is a set of formulas over {a mathematical formula}AP∪Y. We prove that Δ can nonetheless be extended to a saturated set Φ of formulas over {a mathematical formula}AP∪Y. The proof structure is similar to the one for Lemma 35, namely, we define a sequence {a mathematical formula}Φ0,Φ1,… of sets of formulas over {a mathematical formula}AP∪Y as follows:{a mathematical formula}We prove by induction on n that every {a mathematical formula}Φn is consistent (and well-defined). First of all, {a mathematical formula}Φ0=Δ is consistent as shown above. As to the inductive step, suppose that {a mathematical formula}Φn is consistent. We only consider the case where {a mathematical formula}Φn∪{θn} is consistent and {a mathematical formula}θn is of the form {a mathematical formula}∃pζ, and show that {a mathematical formula}Φn+1 is well-defined, that is, there exists {a mathematical formula}q∈AP∪Y such that {a mathematical formula}Φn∪{θn,ζ[p/q]} is consistent as well. To obtain a contradiction, suppose that for every {a mathematical formula}q∈AP∪Y, there exist {a mathematical formula}□aφ0,…,□aφm in w such that{a mathematical formula} where {a mathematical formula}ψ0,…,ψn are all the formulas in {a mathematical formula}Φn∖Δ.By axiom K we obtain{a mathematical formula} and since all {a mathematical formula}□aφi belong to w, by maximality we derive that {a mathematical formula}□a(⋀i≤kψi∧θn→¬ζ[p/q])∈w for all {a mathematical formula}q∈AP∪Y (*). Take an atom q not occurring in {a mathematical formula}⋀i≤kψi∧θn and consider the formula {a mathematical formula}∀q□a(⋀i≤kψi∧θn→¬ζ[p/q]). We claim that this formula is a member of w, because, if not, by maximality, {a mathematical formula}∃q◇a(⋀i≤kψi∧θn∧ζ[p/q])∈w, and, by saturation, for some {a mathematical formula}q′∈AP∪Y, we have {a mathematical formula}◇a(⋀i≤kψi∧θn∧ζ[p/q′])∈w, contradicting (*).Since {a mathematical formula}∀q□a(⋀i≤kψi∧θn→¬ζ[p/q])∈w by axiom BF we obtain that {a mathematical formula}□a∀q(⋀i≤kψi∧θn→¬ζ[p/q])∈w as well, and since q is assumed not to appear in {a mathematical formula}⋀i≤kψi∧θn we derive {a mathematical formula}□a(⋀i≤kψi∧θn→∀q¬ζ[p/q])∈w, and therefore {a mathematical formula}⋀i≤kψi∧θn→∀q¬ζ[p/q]∈Δ. Further, since {a mathematical formula}ψ0,…,ψn belong to {a mathematical formula}Φn, we obtain that {a mathematical formula}Φn∪{θn}⊢∀q¬ζ[p/q]. But this contradicts the fact that {a mathematical formula}Φn∪{θn} is consistent (recall that {a mathematical formula}θn=∃pζ). As a result, {a mathematical formula}Φn∪{θn,ζ[p/q]} is indeed consistent for some {a mathematical formula}q∈AP∪Y.The other inductive cases of the construction go as in Lemma 35. Finally, {a mathematical formula}Φ=⋃n∈NΦn is consistent as each {a mathematical formula}Φn is so. In particular, Φ is a saturated set in W such that {a mathematical formula}Φ∈Ra(w) by construction. By induction hypothesis {a mathematical formula}(MLap,Φ)⊭χ, that is, {a mathematical formula}(MLap,w)⊭ψ. □
+       </paragraph>
+       <paragraph>
+        By Lemma 38, if {a mathematical formula}⊬Lap¬ϕ then there exists a saturated set {a mathematical formula}w⊇{ϕ} such that in the canonical model {a mathematical formula}MLap, we have {a mathematical formula}(MLap,w)⊨ϕ. Moreover, {a mathematical formula}MLap is based on a frame {a mathematical formula}F∈Kall. Thus, {a mathematical formula}Kall⊭¬ϕ. This concludes the completeness proof for Lap.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       Completeness of {a mathematical formula}Lpl and {a mathematical formula}Lml
+       <paragraph>
+        In this section we discuss how to adapt the completeness proof for Lap in the previous section to logics Lpl and Lml. As regards Lpl, we need to modify the definition of the canonical model and the proof of the truth lemma, starting with the former.
+       </paragraph>
+       <paragraph label="Definition 39">
+        Canonical ModelThe canonical model forLplis a tuple{a mathematical formula}MLpl=〈W,D,R,V〉where
+       </paragraph>
+       <list>
+        <list-item label="•">
+         W, R and V are given as in Definition36;
+        </list-item>
+        <list-item label="•">
+         D is the domain of sets{a mathematical formula}Uψ={w∈W|ψ∈w}⊆W, for every propositional formula{a mathematical formula}ψ∈Lplover{a mathematical formula}AP∪Y.
+        </list-item>
+       </list>
+       <paragraph>
+        Given Definition 39 of canonical model, we can show that it is indeed based on a boolean frame.
+       </paragraph>
+       <paragraph label="Lemma 40">
+        The canonical model{a mathematical formula}MLplis boolean.
+       </paragraph>
+       <paragraph label="Proof">
+        We have to prove that domain D is closed under boolean operations. Let {a mathematical formula}Uϕ and {a mathematical formula}Uϕ′ be sets in D, we show that {a mathematical formula}Uϕ∩Uϕ′=Uϕ∧ϕ′∈D. Clearly, {a mathematical formula}w∈Uϕ∩Uϕ′ iff {a mathematical formula}ϕ∈w and {a mathematical formula}ϕ′∈w, and by maximality, this is the case iff {a mathematical formula}ϕ∧ϕ′∈w as well. Closure under disjunction is proved similarly. As to taking complement, we show that {a mathematical formula}W∖Uϕ=U¬ϕ∈D. Again, {a mathematical formula}w∉Uϕ iff {a mathematical formula}ϕ∉w, and by maximality, this is the case iff {a mathematical formula}¬ϕ∈w. □
+       </paragraph>
+       <paragraph>
+        As a consequence of Lemma 40, {a mathematical formula}MLpl is based on a frame in {a mathematical formula}Kbool. Moreover, we are able to prove the following version of the truth lemma.
+       </paragraph>
+       <paragraph label="Lemma 41">
+        Truth lemmaFor every logic{a mathematical formula}Lpl, in the canonical model{a mathematical formula}MLpl, for every{a mathematical formula}w∈Wand every formula ψ over{a mathematical formula}AP∪Y,{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proof">
+        To prove the truth lemma for {a mathematical formula}Lpl we have to modify the proof of Lemma 38. Specifically, we can first prove that for every {a mathematical formula}ψ∈Lpl, {a mathematical formula}(MLpl,w)⊨ψ iff {a mathematical formula}ψ∈w, as in Lemma 38. In particular, we obtain that {a mathematical formula}Uφ=〚φ〛MLpl={w∈W|(MLpl,w)⊨φ}∈D. Then, the proof for any {a mathematical formula}ψ∈Lsopml is given by induction on the length of ψ, similarly as in Lemma 38, the only case of interest being quantified formulas. For {a mathematical formula}ψ=∀pχ, if {a mathematical formula}ψ∈w then by axiom Expl we have that {a mathematical formula}χ[p/φ]∈w, for any {a mathematical formula}ϕ∈Lpl. By induction hypothesis, {a mathematical formula}(MLpl,w)⊨χ[p/φ]. Now consider the set {a mathematical formula}Uφ=〚φ〛MLpl∈D. By Lemma 11.(b), it is the case that {a mathematical formula}((MLpl)Uφp,w)⊨χ, and since the choice of φ (and therefore of variant {a mathematical formula}VUφp) is arbitrary, we obtain that {a mathematical formula}(MLpl,w)⊨∀pχ. As to the implication from left to right, the proof is the same as in Lemma 38, as each w is maximal and rich. □
+       </paragraph>
+       <paragraph>
+        As a consequence of Lemma 41, the truth lemma also holds for boolean frames and we obtain a completeness proof for Lpl.
+       </paragraph>
+       <paragraph>
+        We now discuss how to modify the procedure above to obtain completeness results for the logics Lml. Firstly, the canonical model for Lml is now defined as a tuple {a mathematical formula}MLml=〈W,D,R,V〉 where (i)W, R and V are given as in Definition 36; and (ii)D is the domain of sets {a mathematical formula}Uψ={w∈W|ψ∈w}⊆W, for every modal formula {a mathematical formula}ψ∈Lml over {a mathematical formula}AP∪Y. In particular, it is easy to check that the domain D in {a mathematical formula}MLml is a boolean algebra with operators. Secondly, by adapting the proof of Lemma 41, we can prove the truth lemma for {a mathematical formula}MLml:
+       </paragraph>
+       <paragraph label="Lemma 42">
+        Truth lemmaFor every logic{a mathematical formula}Lml, in the canonical model{a mathematical formula}MLml, for every{a mathematical formula}w∈Wand every formula ψ over{a mathematical formula}AP∪Y,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        This completes the completeness proof for the logics {a mathematical formula}Lml.
+       </paragraph>
+       <paragraph>
+        We conclude the section by summarising the soundness and completeness results for our logics w.r.t. the relevant classes of frames.
+       </paragraph>
+       <paragraph label="Theorem 43">
+        Soundness and CompletenessFor{a mathematical formula}x∈{ap,pl,ml}, each logic{a mathematical formula}Lxis sound and complete w.r.t. the class{a mathematical formula}Kxˆτ(Lx)of frames that are reflexive (respectively, transitive, symmetric), whenever{a mathematical formula}Lxincludes axiomT(respectively,4,B).
+       </paragraph>
+       <paragraph>
+        As a result, for types ap, pl, and ml we are able to prove soundness and completeness for all normal modalities (i.e., {a mathematical formula}K,T,S4,B, and S5) in a multi-modal setting.
+       </paragraph>
+      </section>
+      <section label="4.1.3">
+       <section-title>
+        Generalised Completeness
+       </section-title>
+       <paragraph>
+        We now extend the completeness results in the previous section by considering extra axioms expressing properties of frames. Specifically, let L be any axiomatisation mentioned in Theorem 43. Then, if we extend L with the universal closure {a mathematical formula}∀p→ψ of a formula {a mathematical formula}ψ∈Lsopml, the resulting calculus {a mathematical formula}L+∀p→ψ is sound and complete w.r.t. the class of frames satisfying the MSO condition {a mathematical formula}∀x∀P→STx(ψ), where {a mathematical formula}P→ are all the unary predicates appearing in {a mathematical formula}STx(ψ).
+       </paragraph>
+       <paragraph label="Theorem 44">
+        Let ψ be a formula insopml, then the logic{a mathematical formula}L+∀p→ψis sound and complete w.r.t. the corresponding class{a mathematical formula}Kof frames satisfying{a mathematical formula}∀x∀P→STx(ψ).
+       </paragraph>
+       <paragraph label="Proof">
+        Soundness follows immediately by Lemma 20, as every frame that satisfies condition {a mathematical formula}∀x∀P→STx(ψ)=∀xSTx(∀p→ψ), also validates {a mathematical formula}∀p→ψ. As to completeness, if {a mathematical formula}∀p→ψ is an axiom, then it appears in every state of the canonical model {a mathematical formula}M, and by the truth lemma, {a mathematical formula}M validates {a mathematical formula}∀p→ψ. Finally, by another application of Lemma 20, {a mathematical formula}F validates {a mathematical formula}∀x∀P→STx(ψ). □
+       </paragraph>
+       <paragraph>
+        By the result above we immediately obtain that for every formula {a mathematical formula}θ(a→,p→) appearing in Table 1, {a mathematical formula}L+∀pθ(a→,p→) is sound and complete w.r.t. the class of frames satisfying {a mathematical formula}∀x∀P→Θ(a→,x). For instance, {a mathematical formula}K+∃p(□ap∧¬p) is a sound and complete axiomatisation of the class of irreflexive frames (notice that, since {a mathematical formula}∃p(□ap∧¬p) is a sentence, its universal closure is equal to the formula itself.) More generally, there is a one-to-one correspondence between a sopml axiom {a mathematical formula}∀p→θ and the MSO condition {a mathematical formula}∀x∀P→STx(θ) on the corresponding class of sound and complete frames.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Incompleteness
+      </section-title>
+      <paragraph>
+       In Section 4.1 we provided complete axiomatisations for languages without common knowledge, in the classes of all, boolean, and modal frames. In this section we prove our main unaxiomatisability results for sopml. Specifically, in Section 4.2.1 we show that the set of validities in sopel (without common knowledge) interpreted on full frames is unaxiomatisable whenever we assume at least two agents in our frames. Further, in Section 4.2.2 we prove that, with common knowledge, sopml is unaxiomatisable on modal frames already when considering a single agent. We then demonstrate (Corollaries 58, 61 and 63 as well as Theorem 62) how this proof can be extended to the other classes of frames. These results complete Tables 3 and 4.
+      </paragraph>
+      <section label="4.2.1">
+       2-agent sopel on Full Frames is Unaxiomatisable
+       <paragraph>
+        Recall that, as discussed at the beginning of Section 4, an axiomatisation for single-agent sopel on full frames was introduced in [21]. Here we show that, this result cannot be generalised to the multi-agent case, i.e., we demonstrate that multi-agent sopel is not recursively axiomatisable on full frames.
+       </paragraph>
+       <paragraph>
+        We prove this unaxiomatisability result by reducing the validity problem of diadic second order logic (DSO) to the validity problem of sopel. Since the former is known not to be recursively enumerable, this implies that the latter is also not recursively enumerable, and therefore in particular not axiomatisable. The reduction that we use is somewhat similar to the one used in [36] to prove the unaxiomatisability of single-agent sopml on full frames with S4.2 or weaker modalities. Specifically, both the proof from [36] and the proof presented here represent a second order domain {a mathematical formula}Dom in a Kripke model by taking {a mathematical formula}Dom⊆W and {a mathematical formula}(Dom×Dom)⊆W. Quantification over diadic relations on Dom then corresponds to propositional (i.e., monadic) quantification over {a mathematical formula}(Dom×Dom). The difference between the two proofs lies in how they characterize the models where {a mathematical formula}Dom⊆W and {a mathematical formula}Dom×Dom⊆W, and in how second order formulas are translated once such a characterisation has been established.
+       </paragraph>
+       <paragraph>
+        Since the reduction is from the validity problem of diadic second order logic, let us first briefly define this logic.
+       </paragraph>
+       <paragraph>
+        Let a set {a mathematical formula}X of first-order variables and a set {a mathematical formula}R of second order variables be given. Then the language of diadic second order logic is given by the following normal form:{a mathematical formula} where {a mathematical formula}x,x∈X and {a mathematical formula}R∈R.
+       </paragraph>
+       <paragraph>
+        The formulas of DSO can be evaluated on models {a mathematical formula}(Dom,ρ) that consist of a domain Dom and an assignment function ρ that assigns to each first-order variable x an element {a mathematical formula}ρ(x)∈Dom and to each second-order variable R a relation {a mathematical formula}ρ(R)⊆Dom×Dom. Given a model {a mathematical formula}(Dom,ρ) an element {a mathematical formula}d∈Dom and a relation {a mathematical formula}E⊆Dom×Dom, the assignments {a mathematical formula}ρ[x↦d] and {a mathematical formula}ρ[R↦E] are the modifications of ρ that map {a mathematical formula}x∈X to {a mathematical formula}d∈Dom and {a mathematical formula}R∈R to {a mathematical formula}E⊆Dom×Dom, respectively.
+       </paragraph>
+       <paragraph>
+        Given these preliminaries, we can define the semantics of DSO in the usual way.
+       </paragraph>
+       <paragraph label="Definition 45">
+        We define whether a model{a mathematical formula}(Dom,ρ)satisfies a formula θ ofDSOrecursively as follows:{a mathematical formula}A formula θ ofDSOis valid, denoted ⊨θ, if{a mathematical formula}(Dom,ρ)⊨θfor every model{a mathematical formula}(Dom,ρ).
+       </paragraph>
+       <paragraph>
+        In general, a formula of DSO can contain free first- and second-order variables. Our goal is to make a reduction from the validity problem of DSO, however, so we only care about whether a formula is valid. If θ is a DSO formula with a free first-order variable x (a free second-order variable R, respectively), then θ is valid if and only if {a mathematical formula}∀xθ ({a mathematical formula}∀Rθ, respectively) is valid. As a result, it suffices for us to consider only the sentences of DSO, i.e., the formulas without free variables. Furthermore, if θ is a sentence then whether {a mathematical formula}(Dom,ρ)⊨θ depends only on Dom. As such, we can consider our models to be given by the domain Dom only, where we say that {a mathematical formula}Dom⊨θ if and only if {a mathematical formula}(Dom,ρ)⊨θ for every assignment ρ.
+       </paragraph>
+       <paragraph>
+        Now, let us introduce the reduction from the validity problem of DSO to sopel's. This reduction has two parts: firstly, we define a formula {a mathematical formula}ψmodel of sopel and use it to characterize a specific class of pointed models. Then, we define a translation f from the formulas of DSO to the formulas of sopel, with the property that for every formula θ in DSO, there is a model Dom such that {a mathematical formula}Dom⊨θ iff there is a pointed model {a mathematical formula}(M,w) of sopml such that {a mathematical formula}(M,w)⊨ψmodel∧f(θ).
+       </paragraph>
+       <paragraph>
+        Before defining {a mathematical formula}ψmodel and {a mathematical formula}f(ϕ), however, let us present an auxiliary formula {a mathematical formula}ψunique(a,χ) that will be useful in several places. This formula is very similar to a uniqueness formula introduced in [12].
+       </paragraph>
+       <paragraph label="Definition 46">
+        Let{a mathematical formula}a∈Ibe an index and{a mathematical formula}χ∈Lsopmla formula. Then{a mathematical formula}
+       </paragraph>
+       <paragraph label="Lemma 47">
+        Let a be an index in I,{a mathematical formula}χ∈Lsopmlany formula,{a mathematical formula}Many full epistemic model, and w any world in{a mathematical formula}M. Then{a mathematical formula}(M,w)⊨ψunique(a,χ)if and only if there is exactly one a-successor{a mathematical formula}w′of w such that{a mathematical formula}(M,w′)⊨χ.
+       </paragraph>
+       <paragraph label="Proof">
+        Suppose {a mathematical formula}(M,w)⊨ψunique(a,χ). Then, in particular, {a mathematical formula}(M,w)⊨◊aχ, so there is at least one a-successor {a mathematical formula}w′ of w such that {a mathematical formula}(M,w′)⊨χ. Suppose now, towards a contradiction, that there are two different a-successors {a mathematical formula}w′ and {a mathematical formula}w″ of w such that χ holds on both {a mathematical formula}w′ and {a mathematical formula}w″. Then, since {a mathematical formula}M is a full model, there is some assignment for q such that q holds in {a mathematical formula}w′ but not in {a mathematical formula}w″. As a result, for this choice of q, we have {a mathematical formula}(M,w)⊨◊a(q∧χ)∧¬□a(χ→q), contradicting the fact that {a mathematical formula}(M,w)⊨∀q(◊a(q∧χ)→□a(χ→q)). It follows that the assumption of such {a mathematical formula}w′ and {a mathematical formula}w″ existing must be false, so there is at most one a-successor {a mathematical formula}w′ of w such that {a mathematical formula}(M,w′)⊨χ.Suppose then that there is exactly one a-successor {a mathematical formula}w′ of w such that {a mathematical formula}(M,w′)⊨χ. Then there is at least one such successor, so {a mathematical formula}(M,w)⊨◊aχ. Furthermore, for every assignment of q, we have {a mathematical formula}◊a(q∧χ) if and only if {a mathematical formula}(M,w′)⊨q∧χ, in which case we also have {a mathematical formula}□a(χ→q). It follows that {a mathematical formula}(M,w)⊨∀q(◊a(q∧χ)→□a(χ→q)). Together with the previously established {a mathematical formula}(M,w)⊨◊aχ, this implies that {a mathematical formula}(M,w)⊨ψunique(a,χ). □
+       </paragraph>
+       <paragraph>
+        Now we can use {a mathematical formula}ψunique to define {a mathematical formula}ψmodel and f.
+       </paragraph>
+       <paragraph label="Definition 48">
+        The formula{a mathematical formula}ψmodelis given by{a mathematical formula}where{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The meaning of the named subformulas ({a mathematical formula}ψD,ψexcl,ψconnect,ψ≥1 and {a mathematical formula}ψ≤1) is discussed in the proof of Theorem 50.
+       </paragraph>
+       <paragraph label="Definition 49">
+        Let translation function f is recursively defined as follows.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        We can now prove the main result of this section.
+       </paragraph>
+       <paragraph label="Theorem 50">
+        For everyDSOsentence θ,{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proof">
+        First, let us consider the models that satisfy {a mathematical formula}ψmodel. Let {a mathematical formula}(M,w0) be any full epistemic pointed model such that {a mathematical formula}(M,w0)⊨ψmodel, and let {a mathematical formula}Dom:=Ra(w0). The primary connective of {a mathematical formula}ψmodel is {a mathematical formula}□a, so let us consider any {a mathematical formula}w∈Dom.The conjunct {a mathematical formula}ψD holds at w if and only if (i) w satisfies {a mathematical formula}pD and (ii) w has only one b-successor that satisfies {a mathematical formula}pD (and by (i) this unique successor has to be w itself). We refer to the b-successors of w as the cone on w, as drawn in the following figure. Note that cones of any two different {a mathematical formula}w,w′∈Dom cannot overlap, since by the fact that {a mathematical formula}M is an epistemic model, this would imply that {a mathematical formula}Rb(w,w′), contradicting the uniqueness of the {a mathematical formula}pD-world.{a mathematical formula}The conjunct {a mathematical formula}ψexcl holds if and only if every state in a cone satisfies exactly one of {a mathematical formula}pD, start and end. Now, consider {a mathematical formula}ψconnect. It holds if and only if every {a mathematical formula}¬pD state in a cone is connected by the relation a to exactly one state that satisfies start, to exactly one state that satisfies end, and only to states that satisfy either start or end. We had already established that no world in a cone can satisfy both start and end, so it follows that every such {a mathematical formula}¬pD state is either a start state paired by a with an end state, or an end state paired by a with a start state. Note that if a start or end state is in the cone of w, then the state that it is paired up with could be in the cone of w, in the cone of some different state {a mathematical formula}w′ or it might not be in any cone at all.Now, consider formula {a mathematical formula}ψ≥1. It states that for every choice of p, if w has an a-successor {a mathematical formula}w′ that satisfies p, then there is a path {a mathematical formula}w⟼be1⟼ae2⟼bw″ such that {a mathematical formula}e1 satisfies start, {a mathematical formula}e2 satisfies end and {a mathematical formula}w″ satisfies p. This is the case if and only if for every {a mathematical formula}w,w′∈D, there is at least one such path {a mathematical formula}w⟼be1⟼ae2⟼bw′. Note that this also applies for {a mathematical formula}w=w′. Our schematic illustration can therefore be extended to the following:{a mathematical formula}Finally, formula {a mathematical formula}ψ≤1 states that for any choice of p, if w has a unique a-successor {a mathematical formula}w′ that satisfies p, then w also has a unique b-successor {a mathematical formula}e1 such that (i) {a mathematical formula}e1 satisfies start, (ii) {a mathematical formula}e1 has an a-successor {a mathematical formula}e2 that satisfies end, and (iii) {a mathematical formula}e2 has a b-successor {a mathematical formula}w″ that satisfies {a mathematical formula}p∧pD. This is the case if and only if for every {a mathematical formula}w,w′∈D there is at most one path {a mathematical formula}w⟼be1⟼ae2⟼bw′ where {a mathematical formula}e1 satisfies start and {a mathematical formula}e2 satisfies end.All in all, the conjuction of {a mathematical formula}ψ≥1 and {a mathematical formula}ψ≤1 means that there is exactly one path {a mathematical formula}w⟼be1⟼ae2⟼bw′ with {a mathematical formula}(M,e1)⊨start and {a mathematical formula}(M,e2)⊨end between each {a mathematical formula}w,w′∈D.The pointed model {a mathematical formula}(M,w0) is then used in the following way. The suggestively named set Dom can be treated as the domain of a DSO model. First-order quantification is then interpreted on selecting exactly one world {a mathematical formula}w∈Dom. Note that this is precisely what translation function f does: first-order quantification {a mathematical formula}∀xθ is translated as {a mathematical formula}∀px(ψunique(a,px)→f(θ)). On the other hand, second-order quantification is interpreted on selecting exactly those start worlds that are on a path {a mathematical formula}w⟼be1⟼ae2⟼bw′, where pair {a mathematical formula}(w,w′) is in the chosen relation. Again, this is exactly what translation f does: {a mathematical formula}∀Rθ is translated as {a mathematical formula}∀pRf(θ), and the relational atom {a mathematical formula}R(x,y) is then translated as {a mathematical formula}◊a(px∧◊b(pR∧start∧◊a(end∧◊bpy))), which means exactly that {a mathematical formula}R(x,y) holds iff {a mathematical formula}pR is true in the start-world in between the unique {a mathematical formula}px- and {a mathematical formula}py-worlds.It follows that {a mathematical formula}Dom⊨θ if and only if {a mathematical formula}(M,w0)⊨f(θ). Since all we assumed about {a mathematical formula}M is that it is a full epistemic model and that {a mathematical formula}(M,w0)⊨ψmodel, it follows that ⊨θ if and only if {a mathematical formula}Kfulle⊨ψmodel→f(θ). □
+       </paragraph>
+       <paragraph>
+        As a consequence of the fact that validity in DSO is not recursively enumerable, we immediately obtain the following corollary.
+       </paragraph>
+       <paragraph label="Corollary 51">
+        Multi-agentsopmlon full epistemic frames is unaxiomatisable.
+       </paragraph>
+       <paragraph label="Remark 52">
+        We used only two indices for modalities in our reduction, so the unaxiomatisability result holds whenever the set of indices contains at least two elements.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       Single-agent sopml{sup:⁎} is Unaxiomatisable on Modal Frames
+       <paragraph>
+        In Section 44 we introduced sound and complete axiomatisations for sopml on the classes of modal, boolean, and all frames. The version of sopml that we considered there does not contain common knowledge, however. This is a fundamental restriction; the variant sopml{sup:⁎}, which is obtained by adding common knowledge to sopml, is not axiomatisable on any class of frames. Here, we show that sopml{sup:⁎} is not axiomatisable with respect to general or epistemic models that have modal, boolean or arbitrary domain of quantification. It can also be shown that sopml{sup:⁎} is unaxiomatisable on intermediate classes of models, such as those for logics KD45 (i.e., serial, transitive and symmetric models) or S4.2 (i.e., reflexive, transitive and convergent models). We do not include proofs for these classes, however, since they are very similar to the proofs for the cases we treat.
+       </paragraph>
+       <paragraph>
+        We prove the unaxiomatisability of sopml{sup:⁎} on modal models by a reduction from the non-halting problem to the validity problem of sopml{sup:⁎}. Since the non-halting Turing machines are not recursively enumerable, neither are the validities of sopml{sup:⁎} with respect to modal models. The proof that we use here is inspired by a similar proof from [38], in which the non-halting problem is reduced to the validity problem of a logic called Arbitrary Arrow Update Logic with Common Knowledge.
+       </paragraph>
+       <paragraph>
+        Before defining our reduction, let us first define the non-halting problem for Turing machines. A Turing machine, first defined in [50], is an abstract model of computation that consists of (i) an infinite tape, with {a mathematical formula}Z cells that can each contain a symbol, but that initially contain a “null” symbol {a mathematical formula}α0; (ii) a read/write head that can read the symbol in a cell or write a symbol to it; (iii) a method to keep track of what state the machine is currently in; and (iv) a set of instructions that, based on the current state and the current symbol under the read/write head, determines what symbol is to be written, what the next state of the machine should be, and whether the read/write head should move to the left, to the right or remain in place. The Turing machines that we consider here are deterministic so for each combination of state and symbol there is exactly one instruction. Formally, a Turing machine T can be defined as follows.
+       </paragraph>
+       <paragraph label="Definition 53">
+        A Turing machine T is a triple{a mathematical formula}T=(Λ,S,Δ), where Λ is a finite alphabet containing the symbol{a mathematical formula}α0, S is a finite set of states containing the distinct states{a mathematical formula}s0and{a mathematical formula}send, and{a mathematical formula}Δ:Λ×S→Λ×S×{left,right,remain}is a transition function.The functions{a mathematical formula}Δ1,Δ2and{a mathematical formula}Δ3are the projections of Δ to its first, second and third coordinate, respectively.
+       </paragraph>
+       <paragraph>
+        We can assume without loss of generality that {a mathematical formula}Δ2(α,s)≠s0 for all {a mathematical formula}α∈Λ and {a mathematical formula}s∈S, so that the machine never returns to its initial state.{sup:4} The execution of such a machine T can be represented as a function {a mathematical formula}ET:Z×N→Λ×S×{yes,no}. The horizontal direction {a mathematical formula}Z represents positions on the tape. The vertical direction {a mathematical formula}N represents time. So {a mathematical formula}ET(n,m)=(α,s,yes) indicates that at time m, the n-th position on the tape contains symbol α, the machine is in state s and the read/write head is in position n. Likewise, {a mathematical formula}ET(n,m)=(α,s,no) indicates that at time m the read/write head is not at position n. Note that {a mathematical formula}ET contains some redundant information: the state is a property of the machine, not of any particular position on the tape. Furthermore, the read/write head is in exactly one position at a time. So, for example, if {a mathematical formula}ET(n,m)=(α,s,yes), then we must have {a mathematical formula}ET(n+1,m)=(β,s,no) for some symbol β.
+       </paragraph>
+       <paragraph>
+        A Turing machine T has a designated end state {a mathematical formula}send. We say that Thalts if the machine ever reaches this end state, so if for any {a mathematical formula}(n,m) and any {a mathematical formula}α∈Λ, we have {a mathematical formula}ET(n,m)=(α,send,yes).
+       </paragraph>
+       <paragraph label="Definition 54">
+        Halting ProblemThe halting problem is to determine, for a given Turing machine T, whether T halts. The non-halting problem is the complement of the halting problem, i.e., to determine whether a given Turing machine doesn't halt.
+       </paragraph>
+       <paragraph>
+        Although neither of them used this terminology, Church [13] and Turing [50] independently showed that the halting problem is undecidable. More precisely, the halting Turing machines are recursively enumerable, but the non-halting Turing machines are not.
+       </paragraph>
+       <paragraph label="Remark 55">
+        The intuition behind the end state is that the machine stops when it reaches{a mathematical formula}send, so no more computation happens after that point. Here, however, in order to avoid special cases it is more convenient to assume that every Turing machine keeps going forever, whether or not it reaches{a mathematical formula}send. So, whether or not a machine formally halts (reaches the end state), it never informally halts (stops).
+       </paragraph>
+       <paragraph>
+        When reducing the non-halting problem to validity in sopml{sup:⁎}, it is useful to represent time not by the naturals {a mathematical formula}N but by the integers {a mathematical formula}Z, since this allows us to avoid special cases at time {a mathematical formula}t=0. For every time {a mathematical formula}t&lt;0 we then say that the machine is in a dummy state {a mathematical formula}svoid∉S, which can be read as “the computation has not started yet.”
+       </paragraph>
+       <paragraph>
+        Now that the necessary concepts are defined, we can give our reduction of the non-halting problem to the validity problem of sopml{sup:⁎} on modal frames. This reduction has three parts. Firstly, we define a sopml{sup:⁎} formula {a mathematical formula}ψgrid that holds in a pointed model {a mathematical formula}(M,w) if and only if {a mathematical formula}M represents a {a mathematical formula}Z×Z grid. Then, we define a formula {a mathematical formula}ψsane that enforces a few sanity constraints that are necessary in order for us to interpret the grid as representing the execution of some Turing machine. Finally, we define a formula {a mathematical formula}ψT that holds if and only if the Turing machine encoded by the grid is the specific machine T. Before defining these formulas, however, let us explain a “trick” that we will use. Typically, if we wanted to have a {a mathematical formula}Z×Z grid in a modal logic, we would use four accessibility relations {a mathematical formula}Rright,Rleft,Rup and {a mathematical formula}Rdown. However, we also want to show that even single-agent sopml{sup:⁎} is unaxiomatisable. So we will use only a single relation R.
+       </paragraph>
+       <paragraph>
+        We still need to represent the four possible directions, however. We do this by “coloring” the worlds of our model with propositional atoms {a mathematical formula}{1,⋯,9}, in a repeating pattern{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        So if a world satisfies 5, then the world above it satisfies 8, and if a world satisfies 6 then the world to its right satisfies 4. For ever direction {a mathematical formula}x∈dir:={left,right,up,down}, let {a mathematical formula}fx:{1,⋯,9}→{1,⋯,9} be the function that gives the next number in direction x, e.g. {a mathematical formula}fup(8)=2. Further, since we use only one agent a, we write □ for {a mathematical formula}□a. This operator, together with functions {a mathematical formula}fx, can then be used to define {a mathematical formula}□x and {a mathematical formula}◊x for {a mathematical formula}x∈dir as abbreviations:{a mathematical formula} These abbreviations are then used in formulas {a mathematical formula}ψgrid,ψsane and {a mathematical formula}ψT defined as follows.
+       </paragraph>
+       <paragraph label="Definition 56">
+        Let{a mathematical formula}S,Λ,{pos,rpos,rpos}⊆AP, and let{a mathematical formula}T=(Λ,S,Δ)be a Turing machine. The formula{a mathematical formula}χTis given as{a mathematical formula}χT:=ψgrid∧ψsane∧ψT∧s0∧pos, where formulas{a mathematical formula}ψgrid,{a mathematical formula}ψsaneand{a mathematical formula}ψTare as shown in TablesTable 5, Table 6, Table 7.
+       </paragraph>
+       <paragraph>
+        The formulas {a mathematical formula}ψgrid, {a mathematical formula}ψsane and {a mathematical formula}ψT may look complex, but that it slightly misleading. While these formulas are certainly long, every named subformula encodes a property of either a grid or a Turing machine in a rather straightforward way.
+       </paragraph>
+       <paragraph>
+        We start by considering the formula {a mathematical formula}ψgrid which, as the name implies, encodes a grid. Specifically, let {a mathematical formula}(M,w0) be any pointed model (based on a modal frame) such that {a mathematical formula}(M,w0)⊨ψgrid. We use the worlds of {a mathematical formula}M to represent the points of {a mathematical formula}Z×Z, in the following way: (i) the world {a mathematical formula}w0 represents {a mathematical formula}(0,0); (ii) if a world w represents {a mathematical formula}(n,m), then every right-successor of w represents {a mathematical formula}(n+1,m); and (iii) similarly for the other three directions.
+       </paragraph>
+       <paragraph>
+        We show that every point {a mathematical formula}(n,m) is represented by at least one world, that every world in the generated submodel represents at least one point, and that all the worlds that represent a single point {a mathematical formula}(n,m) are modally indistinguishable. Let w be any world in the generated submodel of {a mathematical formula}(M,w0). The main connective of {a mathematical formula}ψgrid is {a mathematical formula}□⁎, so labels, direction, {a mathematical formula}uniquex for every {a mathematical formula}x∈dir, {a mathematical formula}inversexy for every {a mathematical formula}(x,y)∈inv_dir and {a mathematical formula}commutexy for all {a mathematical formula}(x,y)∈perp_dir hold at w.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         By labels, the world w satisfies exactly one label {a mathematical formula}i∈{1,⋯,9}.
+        </list-item>
+        <list-item label="•">
+         By the first conjunct of direction, the world w has at least one x-successor for every {a mathematical formula}x∈dir. It follows that every point in {a mathematical formula}Z×Z is represented by at least one world. Furthermore, by the second conjunct of direction, every successor of w satisfies one of the labels that allow us to identify it as an x-successor for some {a mathematical formula}x∈dir. It follows that every world in the generated submodel represents at least one point.
+        </list-item>
+        <list-item label="•">
+         The formula {a mathematical formula}uniquex implies that, for every U in the domain of quantification D, either every x-successor of w is in U, or no x-successor is in U. Since {a mathematical formula}M is based on a modal frame, this implies that all x-successors of w are modally indistinguishable from one another.
+        </list-item>
+        <list-item label="•">
+         The formula {a mathematical formula}inversexy implies that, for every {a mathematical formula}U∈D, if {a mathematical formula}w∈U then every xy-successor of w is also in U. Again, since {a mathematical formula}M is based on a modal frame, this implies that w is modally indistinguishable from its xy-successors. Note that this formula holds for all {a mathematical formula}(x,y)∈inv_dir.
+        </list-item>
+        <list-item label="•">
+         The formula {a mathematical formula}commutexy implies that, for every {a mathematical formula}U∈D, if there is an xy-successor {a mathematical formula}w′ of w such that {a mathematical formula}w′∈U, then every yx-successor of w is in U. This implies that the xy-successors of w are modally indistinguishable from its yx-successors.
+        </list-item>
+        <list-item label="•">
+         Taken together, {a mathematical formula}uniquex (for every {a mathematical formula}x∈dir), {a mathematical formula}inversexy (for every {a mathematical formula}(x,y)∈inv_dir) and {a mathematical formula}commutexy (for every {a mathematical formula}(x,y)∈perp_dir) imply that all worlds representing a single point {a mathematical formula}(n,m) are modally indistinguishable from one another.
+        </list-item>
+       </list>
+       <paragraph>
+        We say that tape position n at time m contains the symbol α if the worlds representing {a mathematical formula}(n,m) satisfy the propositional atom α. Likewise, if the worlds representing {a mathematical formula}(n,m) satisfy the propositional atom s, then the machine is in state s at time m. Finally, if the worlds representing {a mathematical formula}(n,m) satisfy the atom pos, then the read/write head is in position n at time m, if they satisfy rpos then position n is to the right of the read/write head at time m and if they satisfy lpos then position n is to the left of the head.
+       </paragraph>
+       <paragraph>
+        Note that, because all worlds representing {a mathematical formula}(n,m) are modally indistinguishable, it does not matter at which world we check whether these atoms are true; if s holds in any world representing {a mathematical formula}(n,m) then s holds on all worlds representing {a mathematical formula}(n,m). In particular, since we use propositional atoms to represent the state of the Turing machine, the symbols on the tape, as well as the position of the read/write head, the modal indistinguishability of all worlds representing {a mathematical formula}(n,m) means that all those worlds agree on the symbol, state, and on whether the read/write head is in that position. If a modal formula ϕ holds on the worlds that represent {a mathematical formula}(n,m), we abuse notation by writing {a mathematical formula}(M,(n,m))⊨ϕ.{sup:5}
+       </paragraph>
+       <paragraph>
+        The formula {a mathematical formula}ψsane imposes a number of sanity constraints: if {a mathematical formula}(M,w) satisfies both {a mathematical formula}ψgrid and {a mathematical formula}ψsane, then {a mathematical formula}M can almost be seen as the execution of a Turing machine. We will first discuss the subformulas of {a mathematical formula}ψsane in detail, and explain which sanity constraints they represent. After that, we will briefly discuss why {a mathematical formula}ψsane only guarantees that {a mathematical formula}M can almost be seen as the execution of a Turing machine.
+       </paragraph>
+       <paragraph>
+        As with {a mathematical formula}ψgrid, the main connective of {a mathematical formula}ψsane is {a mathematical formula}□⁎. So suppose {a mathematical formula}(M,w0)⊨ψgrid∧ψsane, and let w be any world in the generated submodel of {a mathematical formula}(M,w0).
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The formula {a mathematical formula}position1 implies that the grid points represented by w being (i) the location of the read/write head, (ii) to the right of the head, and (iii) to the left of the head, are mutually exclusive.
+        </list-item>
+        <list-item label="•">
+         The formula {a mathematical formula}position2 implies that if the point represented by w is either at the read/write head or to its right, then w's right-successor is to the right of the read/write head, and similarly for the left side. Together with {a mathematical formula}position1, this implies that for every {a mathematical formula}m∈Z, there is at most one n such that {a mathematical formula}(M,(n,m))⊨pos.
+        </list-item>
+        <list-item label="•">
+         The formula one_state implies that there is exactly one state s such that {a mathematical formula}(M,w)⊨s.
+        </list-item>
+        <list-item label="•">
+         The formula same_state implies that w satisfies the same state as its left- and right- successors. So for every time m, there is exactly one state s such that {a mathematical formula}(M,(n,m))⊨s for all n.
+        </list-item>
+        <list-item label="•">
+         The formula one_symbol implies that there is exactly one symbo l α such that {a mathematical formula}(M,w)⊨α.
+        </list-item>
+        <list-item label="•">
+         Recall that we use {a mathematical formula}svoid as a dummy state which indicates that the execution of T has not started yet. The formula void_state implies that {a mathematical formula}svoid holds on all worlds below worlds that satisfy either {a mathematical formula}s0 or {a mathematical formula}svoid, so {a mathematical formula}svoid does indeed hold in all worlds that represent points before the execution of T started in {a mathematical formula}s0.
+        </list-item>
+        <list-item label="•">
+         The formula initial_symbol guarantees that, in the initial state, the entire tape contains the symbol {a mathematical formula}α0.
+        </list-item>
+        <list-item label="•">
+         The formula symbol_unchanged guarantees that whenever the read/write head is not at a particular position of the tape, then the symbol at that position remains unchanged.
+        </list-item>
+       </list>
+       <paragraph>
+        The above is almost sufficient to show that {a mathematical formula}M represents the execution of some Turing machine, except for the following: (i) there is no guarantee that {a mathematical formula}s0 is satisfied anywhere, so the execution might never start; (ii) while the read/write head is guaranteed to be in at most one position, it is not guaranteed to be in at least position at all times; and (iii) the symbols that are written, the state changes, and the movement of the read/write head could be random, as opposed to fully determined by a set of rules. Whereas {a mathematical formula}ψsane almost guarantees that {a mathematical formula}M can be seen as the execution of some Turing machine, the formula {a mathematical formula}ψT narrows this down to the specific machine T. In the process, it also solves one of the problems that remained after considering {a mathematical formula}ψsane.
+       </paragraph>
+       <paragraph>
+        Suppose that {a mathematical formula}(M,w0)⊨χT, so in addition to {a mathematical formula}(M,w0)⊨ψgrid∧ψsane we also have {a mathematical formula}(M,w0)⊨ψT∧s0∧pos. Then, the subformula position_change in {a mathematical formula}ψT guarantees that the read/write head moves in accordance with {a mathematical formula}Δ3, the subformula state_change guarantees that the state changes in accordance with {a mathematical formula}Δ2, and the subformula symbol_change guarantees that the symbol that is written on the tape by the read/write head is in accordance with {a mathematical formula}Δ1. Note that this solves problem (iii) of {a mathematical formula}ψsane: the movement, state changes, and written symbols are in accordance with the deterministic set of rules that is represented by Δ.
+       </paragraph>
+       <paragraph>
+        Finally, consider the conjuncts {a mathematical formula}s0 and pos in {a mathematical formula}χT. These solve the other two problems of {a mathematical formula}ψsane: the execution starts at state {a mathematical formula}s0 in the point represented by {a mathematical formula}w0, which represent point {a mathematical formula}(0,0). Furthermore, the read/write head starts there as well, so the read/write head is initially in at least one position. From the fact that the head moves deterministically, and that this is encoded in {a mathematical formula}ψT, it then follows that the read/write head is also in at least one position at every time after {a mathematical formula}m=0.
+       </paragraph>
+       <paragraph>
+        To conclude, the above shows that if {a mathematical formula}(M,w0)⊨χT, then the generated submodel of {a mathematical formula}(M,w0) represents a grid, and this grid contains the encoding of an execution of T.
+       </paragraph>
+       <paragraph label="Theorem 57">
+        A Turing machine T is halting if and only if{a mathematical formula}Kmodal⊨χT→◊⁎send, and non-halting if and only{a mathematical formula}Kmodal⊨χT→□⁎¬send.
+       </paragraph>
+       <paragraph label="Proof">
+        Let {a mathematical formula}(M,w0) be any pointed model such that {a mathematical formula}(M,w0)⊨χT. Then, as shown above, every world in the generated submodel represents some point {a mathematical formula}(n,m) in a {a mathematical formula}Z×Z grid and, furthermore, the worlds representing a point {a mathematical formula}(n,m) satisfy {a mathematical formula}s∈S if and only if the system is in state s at time m. It follows that the generated submodel contains a {a mathematical formula}send world if and only if T is halting, from which the theorem follows immediately. □
+       </paragraph>
+       <paragraph>
+        As an immediate consequence of Theorem 57, we obtain the following result.
+       </paragraph>
+       <paragraph label="Corollary 58">
+        sopml{sup:⁎}is not axiomatisable on modal frames for any number of agents.
+       </paragraph>
+       <paragraph>
+        This unaxiomatisability result can be extended to the classes of boolean and all frames, since the modal frames can be characterized inside boolean or any frame. Let {a mathematical formula}ϕ¬:=∀p∃q□⁎(¬p↔q), {a mathematical formula}ϕ∨:=∀p∀q∃r□⁎((p∨q)↔r) and {a mathematical formula}ϕ□:=⋀a∈Ag∀p∃q□⁎(□ap↔q). The following lemma is entirely straightforward, so we state it without proof.
+       </paragraph>
+       <paragraph label="Lemma 59">
+        Let{a mathematical formula}(M,w)be a pointed model based on any frame. Then, the generated submodel of{a mathematical formula}(M,w)is based on a modal frame if and only if{a mathematical formula}(M,w)⊨ϕ¬∧ϕ∨∧ϕ□.
+       </paragraph>
+       <paragraph>
+        Hence, the following corollary follows immediately from Lemma 59.
+       </paragraph>
+       <paragraph label="Corollary 60">
+        A formula{a mathematical formula}ϕ∈Lsopmlis valid on modal frames if and only if{a mathematical formula}(ϕ¬∧ϕ∨∧ϕ□)→ϕis valid on all or boolean frames.
+       </paragraph>
+       <paragraph>
+        As a result of the unaxiomatisability of sopml{sup:⁎} on modal frames, we finally obtain unaxiomatisability for all classes of frames.
+       </paragraph>
+       <paragraph label="Corollary 61">
+        sopml{sup:⁎}is not axiomatisable neither on the class of all frames nor on the class of boolean frames, for any number of agents.
+       </paragraph>
+       <paragraph>
+        So far, we have shown that sopml{sup:⁎} is unaxiomatisable for modal, boolean, and all frames. This result can be extended to the corresponding classes of epistemic frames as well. The proofs for epistemic frames is very similar to the proofs above however, so we include them in the appendix only.
+       </paragraph>
+       <paragraph label="Theorem 62">
+        If{a mathematical formula}|I|≥2, then the validities insopml{sup:⁎}over modal epistemic frames are not recursively enumerable.In particular,sopml{sup:⁎}is not axiomatisable on the class of modal epistemic frames.
+       </paragraph>
+       <paragraph>
+        The same characterisation of boolean and all frames also applies to epistemic frames. So we also have the following corollary.
+       </paragraph>
+       <paragraph label="Corollary 63">
+        sopml{sup:⁎}is not axiomatisable on the class of all or boolean epistemic frames, for any number of agents.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Simulations and Bisimulation
+     </section-title>
+     <paragraph>
+      In this section we investigate the expressive power of second-order propositional modal logic by introducing truth-preserving (bi)simulation relations for sopml. Bisimulations are an essential tool for the model theory of propositional modal logic, as they provide non-trivial sufficient conditions under which two models satisfy the same formulas in pml[7], [27]. Moreover, propositional modal logic is characterized by the well-known van Benthem theorem as the bisimulation-invariant fragment of first-order logic [6]. Hereafter we introduce simulations and bisimulations for sopml and prove that they are indeed truth-preserving. Further, in Section 5.2 we present a notion of abstraction for frames and show that an abstraction of a frame simulates that frame. Finally, in Section 5.3 we provide examples of the application of (bi)simulations to the analysis of the expressive power of sopml in spatial and temporal reasoning.
+     </paragraph>
+     <paragraph>
+      We should note that SOPML (bi)simulations are somewhat less well behaved than PML bisimulations. In particular, given two PML models there is a unique greatest bisimulation between the two. Furthermore, this greatest bisimulation is the bisimilarity relation, and can also be characterized as the greatest fixed point of a partition refinement operator. In contrast, between two SOPML models there need not be a unique greatest bisimulation, see Example 72. While we could define a partition refinement operator like in the PML case, and any bisimulation would be a fixed point of this operator, it would not have a unique greatest fixed point. The SOPML bisimilarity relation, meanwhile, is not guaranteed to be a bisimulation itself.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Simulations and Bisimulations
+      </section-title>
+      <paragraph>
+       We define the notion of (bi)simulations on frames, although it is immediate to extend this definition to models. In the rest of the section we consider frames {a mathematical formula}F=〈W,D,R〉, {a mathematical formula}F′=〈W′,D′,R′〉, and models {a mathematical formula}M=〈F,V〉, {a mathematical formula}M′=〈F′,V′〉 defined on {a mathematical formula}F and {a mathematical formula}F′ respectively. In the following, Σ denotes a relation {a mathematical formula}Σ⊆D×D.
+      </paragraph>
+      <paragraph label="Definition 64">
+       Frame SimulationGiven frames{a mathematical formula}Fand{a mathematical formula}F′, a simulation is a pair{a mathematical formula}(σ,Σ)of relations{a mathematical formula}∅≠σ⊆W×W′,{a mathematical formula}Σ⊆D×D′such that (i) for every{a mathematical formula}U∈D,{a mathematical formula}Σ(U,U′)for some{a mathematical formula}U′∈D′; and (ii) {a mathematical formula}σ(w,w′)implies
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        for every{a mathematical formula}v∈W,{a mathematical formula}a∈I, if{a mathematical formula}Ra(w,v)then{a mathematical formula}σ(v,v′)for some{a mathematical formula}v′∈Ra′(w′);
+       </list-item>
+       <list-item label="2.">
+        for every{a mathematical formula}U∈D,{a mathematical formula}U′∈D′,{a mathematical formula}Σ(U,U′)implies{a mathematical formula}w∈Uiff{a mathematical formula}w′∈U′.
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that condition 1 in Definition 64 expresses the standard notion of simulation in pml. Hence, simulations for sopml extend the corresponding definition for pml (we devote more discussion to this point later on). The definition of simulation above differs from a similar notion put forward in [4]. Specifically, in [4] only a relation on states is considered, thus obtaining a strictly weaker notion.
+      </paragraph>
+      <paragraph>
+       We say that state {a mathematical formula}w′simulatesw, or {a mathematical formula}w⪯w′, iff {a mathematical formula}σ(w,w′) holds for some simulation pair {a mathematical formula}(σ,Σ). Similarly, a set {a mathematical formula}U′simulatesU, or {a mathematical formula}U⪯U′, iff {a mathematical formula}Σ(U,U′) holds for some simulation pair {a mathematical formula}(σ,Σ). Note that it may be that {a mathematical formula}w≺w′ holds because of {a mathematical formula}(σ1,Σ1) and {a mathematical formula}U≺U′ holds because of {a mathematical formula}(σ2,Σ2), while {a mathematical formula}(σ1,Σ2) is not a simulation pair. To see this, consider the frames {a mathematical formula}G1=〈{w1,w2},{{w1},{w2}},{(w1,w2),(w2,w1)}〉 and {a mathematical formula}G2=〈{x1,x2},{{x1},{x2}},{(x1,x2),{a mathematical formula}(x2,x1)}〉. Clearly, {a mathematical formula}w1⪯x1 and {a mathematical formula}{w1}⪯{x2}. However, it is not the case that {a mathematical formula}w1∈{w1} iff {a mathematical formula}x1∈{x2}. Nonetheless, each ⪯ is a preorder, i.e., a reflexive and transitive relation. Finally, a frame {a mathematical formula}F′simulates{a mathematical formula}F, or {a mathematical formula}F⪯F′, iff for every {a mathematical formula}w∈W, {a mathematical formula}w⪯w′ for some {a mathematical formula}w′∈W′.
+      </paragraph>
+      <paragraph>
+       Observe that for pml (that is, whenever we ignore the quantification domain D), the notion of simulation given on frames is vacuous, as we discard the evaluation of propositional atoms in the various states. Then, for instance, all serial frames simulate each other. However, this remark does not apply to sopml, as we also have to take into account propositional quantification.
+      </paragraph>
+      <paragraph>
+       We illustrate the newly introduced notion by an example.
+      </paragraph>
+      <paragraph label="Example 65">
+       Consider frames{a mathematical formula}G=〈W,R,D〉and{a mathematical formula}G′=〈W′,R′,D′〉over set{a mathematical formula}I={a,b,c}of indices, depicted in Figure3, with
+       <list>
+        {a mathematical formula}W={w1,w2,w3};{a mathematical formula}Ra={(w1,w3),(w3,w1)},{a mathematical formula}Rb={(w1,w2),(w2,w1)},{a mathematical formula}Rc={(w2,w3),(w3,w2)};{a mathematical formula}D={{w1},{w2},{w3}};{a mathematical formula}W′={us|sis a finite sequence on{a mathematical formula}{1,2,3}starting with 1, with no adjacent repetition};for every{a mathematical formula}i∈I,{a mathematical formula}Ri′={(us,us′)|s′=s⋅mandRi(wlast(s),wm)};let{a mathematical formula}Un′={us|last(s)=n}, then{a mathematical formula}D′={U1′,U2′,U3′}.Intuitively, frame
+       </list>
+       <paragraph>
+        {a mathematical formula}Gcan be thought of as a scenario where robots a, b, and c move around locations{a mathematical formula}w1,{a mathematical formula}w2,{a mathematical formula}w3(robot a moves between{a mathematical formula}w1and{a mathematical formula}w3, etc.) Frame{a mathematical formula}G′then captures the same scenario but with the additional possibility to reason about some notion of history, or time (one might for instance add an atom{a mathematical formula}piwhich is true exactly at nodes at level i. To do this, one needs to make appropriate assumptions about{a mathematical formula}D′in{a mathematical formula}G′, like requiring that the frame is full. We do not consider these matters further.)Now consider the pair{a mathematical formula}(σ,Σ)of relations{a mathematical formula}σ⊆W×W′and{a mathematical formula}Σ⊆D×D′such that{a mathematical formula}σ(wn,us)holds iff{a mathematical formula}last(s)=nand{a mathematical formula}Σ({wn},Um′)holds iff{a mathematical formula}n=m. We check that{a mathematical formula}(σ,Σ)is indeed a simulation. Firstly, for every{a mathematical formula}{wn}∈D, we have{a mathematical formula}Σ({wn},Un′)for{a mathematical formula}Un∈D′. Secondly, if{a mathematical formula}σ(wn,us)and{a mathematical formula}Ri(wn,wm), then{a mathematical formula}s′=s⋅mis such that{a mathematical formula}Ri′(us,us′)and{a mathematical formula}σ(wm,us′). Thirdly, if{a mathematical formula}σ(wn,us)and{a mathematical formula}Σ({wk},Um′), then{a mathematical formula}last(s)=nand{a mathematical formula}k=m. Therefore,{a mathematical formula}wn∈{wk}iff{a mathematical formula}n=k, iff{a mathematical formula}last(s)=m, iff{a mathematical formula}us∈Um′.Finally, we observe that for every{a mathematical formula}wn∈W,{a mathematical formula}σ(wn,us)for{a mathematical formula}last(s)=n. Thus, frame{a mathematical formula}G′simulates{a mathematical formula}G.
+       </paragraph>
+      </paragraph>
+      <paragraph label="Lemma 66">
+       We have the following regarding the relation between simulations and properties of frames.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        It can be checked in NPTIME whether there exists a simulation relation between two frames.
+       </list-item>
+       <list-item label="2.">
+        If a frame{a mathematical formula}F′simulates a boolean (respectively modal, full) frame{a mathematical formula}F, then{a mathematical formula}F′need not to be boolean (respectively modal, full). Nor does{a mathematical formula}F′being boolean (modal, full) imply that{a mathematical formula}Fis also boolean (modal, full).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Thus, similar frames do not necessarily belong to the same class. Below we compare these results with those available for bisimulations. □
+      </paragraph>
+      <paragraph>
+       We now state the following preservation result for the universal fragment of sopml.
+      </paragraph>
+      <paragraph label="Theorem 67">
+       If{a mathematical formula}w⪯w′, then for every{a mathematical formula}φ∈La−sopml⁎,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Since {a mathematical formula}w⪯w′, there is a simulation pair {a mathematical formula}(σ,Σ) such that {a mathematical formula}σ(w,w′). Fix this σ. One can prove by induction on φ that if {a mathematical formula}(F,V,w)⊭φ for some assignment V, then {a mathematical formula}(F′,Σ(V),w′)⊭φ, where {a mathematical formula}Σ(V) is any assignment {a mathematical formula}V′ such that for every {a mathematical formula}p∈AP, {a mathematical formula}Σ(V(p),V′(p)). We only show the step for the quantifier. We write {a mathematical formula}Σ(V)(p) for {a mathematical formula}(Σ(V))(p). By clause (i) of Definition 64, {a mathematical formula}Σ(V)(p)∈D′.For {a mathematical formula}φ=∀pψ, {a mathematical formula}(F,V,w)⊭φ iff for some {a mathematical formula}U∈D, {a mathematical formula}(F,VUp,w)⊭ψ. By induction hypothesis, {a mathematical formula}(F′,Σ(VUp),w′)⊭ψ. By condition (i) in Definition 64, for {a mathematical formula}U∈D, {a mathematical formula}Σ(U,U′) for some {a mathematical formula}U′∈D′. In particular, we have that {a mathematical formula}Σ(VUp)=Σ(V)U′p whenever {a mathematical formula}Σ(U,U′), and therefore {a mathematical formula}(F′,Σ(V)U′p,w′)⊭ψ for {a mathematical formula}U′∈D′, that is, {a mathematical formula}(F′,Σ(V),w′)⊭φ. □
+      </paragraph>
+      <paragraph>
+       As an immediate consequence of Theorem 67 we obtain the following corollary.
+      </paragraph>
+      <paragraph label="Corollary 68">
+       If{a mathematical formula}F⪯F′, then for every{a mathematical formula}φ∈La−sopml⁎,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Thus, the notion of simulation introduced in Definition 64 preserves the universal fragment of sopml, similarly to the case for standard simulations and pml.
+      </paragraph>
+      <paragraph label="Example 69">
+       Consider again frames{a mathematical formula}Gand{a mathematical formula}G′in Example65. We showed that{a mathematical formula}G′simulates{a mathematical formula}G. Moreover, we can easily check that{a mathematical formula}G′validates the following formula insopml{a mathematical formula}which intuitively says that the agents can only move to a different position (so they cannot choose to remain in the same state). By Corollary68we deduce that (14) is valid in{a mathematical formula}Gas well.
+      </paragraph>
+      <paragraph>
+       Simulations can naturally be extended to bisimulations. Also in this case, our focus is at the level of frames. In the following the converse of a relation R is the relation {a mathematical formula}R−1={(u,v)|R(v,u)}.
+      </paragraph>
+      <paragraph label="Definition 70">
+       Frame BisimulationGiven frames{a mathematical formula}Fand{a mathematical formula}F′, a bisimulation is a pair{a mathematical formula}(ω,Ω)of relations{a mathematical formula}∅≠ω⊆W×W′,{a mathematical formula}Ω⊆D×D′such that both{a mathematical formula}(ω,Ω)and{a mathematical formula}(ω−1,Ω−1)are simulations. That is, (i) for every{a mathematical formula}U∈D,{a mathematical formula}Ω(U,U′)for some{a mathematical formula}U′∈D′, and for every{a mathematical formula}U′∈D′,{a mathematical formula}Ω(U,U′)for some{a mathematical formula}U∈D′; and (ii) {a mathematical formula}ω(w,w′)implies
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        for every{a mathematical formula}v∈W,{a mathematical formula}a∈I, if{a mathematical formula}Ra(w,v)then{a mathematical formula}ω(v,v′)for some{a mathematical formula}v′∈Ra′(w′);
+       </list-item>
+       <list-item label="2.">
+        for every{a mathematical formula}v′∈W′,{a mathematical formula}a∈I, if{a mathematical formula}Ra′(w′,v′)then{a mathematical formula}ω(v,v′)for some{a mathematical formula}v∈Ra(w);
+       </list-item>
+       <list-item label="3.">
+        for every{a mathematical formula}U∈D,{a mathematical formula}U′∈D′,{a mathematical formula}Ω(U,U′)implies{a mathematical formula}w∈Uiff{a mathematical formula}w′∈U′.
+       </list-item>
+      </list>
+      <paragraph>
+       States w and {a mathematical formula}w′ are bisimilar, or {a mathematical formula}w≈w′, iff {a mathematical formula}ω(w,w′) holds for some bisimulation pair {a mathematical formula}(ω,Ω). Similarly, sets {a mathematical formula}U′ and U are bisimilar, or {a mathematical formula}U≈U′, iff {a mathematical formula}Ω(U,U′) holds for some bisimulation pair {a mathematical formula}(ω,Ω). Again, similarly to the case for simulations, the pair {a mathematical formula}(≈,≈) is not necessarily a bisimulation (see Example 72), but each ≈ is an equivalence relation. This is in contrast to the situation in pml, where the bisimilarity relation is itself a bisimulation. Finally, frames {a mathematical formula}F and {a mathematical formula}F′ are bisimilar, or {a mathematical formula}F≈F′, iff (i) for every {a mathematical formula}w∈W, {a mathematical formula}w≈w′ for some {a mathematical formula}w′∈W′; and (ii) for every {a mathematical formula}w′∈W′, {a mathematical formula}w≈w′ for some {a mathematical formula}w∈W.
+      </paragraph>
+      <paragraph label="Example 71">
+       Notice that frames{a mathematical formula}Gand{a mathematical formula}G′in Example65are actually bisimilar. To prove this fact, we show that the converse relations{a mathematical formula}σ−1⊆W′×Wand{a mathematical formula}Σ−1⊆D′×Dform a simulation pair. Firstly, for every{a mathematical formula}Un′∈D′, the set{a mathematical formula}U={wn}∈Dis such that{a mathematical formula}Σ(U,U′). Secondly, if{a mathematical formula}σ−1(us,wn)and{a mathematical formula}Ri′(us,us′)then{a mathematical formula}last(s)=nand{a mathematical formula}s′=s⋅mfor{a mathematical formula}wm∈Wsuch that{a mathematical formula}Ri(wn,wm). Hence,{a mathematical formula}σ−1(us′,wm). As to (3), the proof is identical as for simulations.
+      </paragraph>
+      <paragraph label="Example 72">
+       Let frames{a mathematical formula}Hand{a mathematical formula}H′be as in Figure4, where the domain of{a mathematical formula}His given by{a mathematical formula}D={{w1,w3},{w2,w3}}and the domain of{a mathematical formula}H′is given by{a mathematical formula}D′={{x1,x2},{x2}}. Now, take{a mathematical formula}ω1={(w1,x1),(w3,x3)},{a mathematical formula}Ω1={({w1,w3},{x1,x2}),({w2,w3},{x2})},{a mathematical formula}ω2={(w2,x1),(w3,x2)}and{a mathematical formula}Ω2={({w1,w3},{x2}),({w2,w3},{x1,x2})}.The pairs{a mathematical formula}(ω1,Ω1)and{a mathematical formula}(ω2,Ω2)are both bisimulations. Furthermore, it is easy to verify that for every{a mathematical formula}i∈{1,2}and every bisimulation{a mathematical formula}(ω,Ω), if{a mathematical formula}ωi⊆ωand{a mathematical formula}Ωi⊆Ω, then{a mathematical formula}(ω,Ω)=(ωi,Ωi). In other words,{a mathematical formula}(ω1,Ω1)and{a mathematical formula}(ω2,Ω2)are maximal bisimulations.So, there is no unique greatest bisimulation. Furthermore, note that{a mathematical formula}w1≈x1and{a mathematical formula}w2≈x1, yet there is no bisimulation that relates both{a mathematical formula}w1and{a mathematical formula}w2with{a mathematical formula}x1. In particular,{a mathematical formula}(≈,≈)is not a bisimulation.
+      </paragraph>
+      <paragraph>
+       We now state the following adaptation of Lemma 66.
+      </paragraph>
+      <paragraph label="Lemma 73">
+       <list>
+        <list-item label="1.">
+         It can be checked in NPTIME whether there exists a bisimulation relation between two frames.
+        </list-item>
+        <list-item label="2.">
+         Let{a mathematical formula}Fand{a mathematical formula}F′be frames and let w and{a mathematical formula}w′be worlds of{a mathematical formula}Fand{a mathematical formula}F′, respectively, such that{a mathematical formula}w≈w′. Then{a mathematical formula}Fwis boolean (respectively modal) iff{a mathematical formula}Fw′′is. However, if{a mathematical formula}Fwis full, then{a mathematical formula}Fw′′need not be full.Moreover, if{a mathematical formula}Fwand{a mathematical formula}Fw′′are full, then they are isomorphic.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       With regard to point 1, note that, as with simulations, we can simply guess a pair {a mathematical formula}(ω,Ω) and check in polynomial time whether it is a bisimulation. A proof of point 2 is included in the appendix
+      </paragraph>
+      <paragraph>
+       Compare the situation for bisimulations with the weaker results available in Lemma 66 for simulations. Specifically, bisimulations preserve the class of boolean and modal frames. Moreover, in the case of full frames, bisimulations collapse into isomorphisms.
+      </paragraph>
+      <paragraph>
+       We now state the main preservation result of this section. Its proof is similar to that of Theorem 67, and it is in the appendix.
+      </paragraph>
+      <paragraph label="Theorem 74">
+       If{a mathematical formula}w≈w′, then for every formula{a mathematical formula}φ∈Lsopml⁎,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As an immediate consequence of Theorem 74 we obtain the following.
+      </paragraph>
+      <paragraph label="Corollary 75">
+       If{a mathematical formula}F≈F′, then for every{a mathematical formula}φ∈Lsopml⁎,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We can now infer that bisimulations in sopml are ‘stronger’ than the corresponding notion for pml: whereas we noticed that the frames of Figure 2 are bisimilar in pml, as a consequence of Theorem 74, and Example 10, which says that the frames do not agree on formula (8), we conclude that they are not bisimilar in the sopml sense.
+      </paragraph>
+      <paragraph label="Example 76">
+       We now consider two graph-theoretic properties. First, the notion of 3-colorability, as formalised by the followingsopmlformula, where operator □ is interpreted as the necessity operator for the edges{a mathematical formula}E⊆W2of a graph{a mathematical formula}G=〈W,E〉, while{a mathematical formula}□⁎is, as usual, the necessity operator for the reflexive and transitive closure of E:{a mathematical formula}The truth of (15) in a vertex{a mathematical formula}v∈Gimplies that (i) all vertices in the subgraph generated by v are coloured by either{a mathematical formula}p1,{a mathematical formula}p2, or{a mathematical formula}p3; (ii) each vertex has at most one colour; and (iii) no two adjacent vertices have the same colour. Thus, the subgraph generated by v is 3-colorable. Observe that frame{a mathematical formula}Gin Figure3(a) is indeed 3-colorable, and since states{a mathematical formula}w1and{a mathematical formula}u1are bisimilar, as an immediate consequence of Theorem74, also frame{a mathematical formula}G′is 3-colorable. Notice that the truth of (15) implies that the graph is 3-colorable, while the converse holds only for full frames.To illustrate further the (in)expressivity ofsopmlthrough simulations, we consider one more graph-theoretic property: the existence of a Hamiltonian path, i.e., a path that visits all vertices in a graph exactly once. Again, frame{a mathematical formula}Gin Figure3(a) has a Hamiltonian path{a mathematical formula}w1,w2,w3. Now consider the finite graph{a mathematical formula}G″which is obtained from{a mathematical formula}Gand{a mathematical formula}G′in Figure3as follows. In{a mathematical formula}G′replace the worlds{a mathematical formula}u12and{a mathematical formula}u13by a copy of{a mathematical formula}w2and{a mathematical formula}w3from{a mathematical formula}Grespectively, and remove all the worlds different from{a mathematical formula}u1. It is not difficult to see that{a mathematical formula}G″is bisimilar with{a mathematical formula}G, but does not allow a Hamiltonian path.
+      </paragraph>
+      <paragraph label="Proposition 77">
+       The property of having a Hamiltonian path is not expressible insopml.
+      </paragraph>
+      <paragraph>
+       Proposition 77 follows directly from the second part of Example 76 and it implies that such paths are not expressible under the general semantics. Proposition 77 also follows from [42, Corollary 7.24], which says that it is impossible to test in mso whether a graph is Hamiltonian. Indeed, it is known that such property is expressible in the language mso2, an extension of mso, which is strictly more expressive than sopml[15, Prop. 5.13].
+      </paragraph>
+      <paragraph>
+       Discussion. We now compare our definition of (bi)simulation for sopml, with the standard notion of (bi)simulation for pml[7]. Observe that if a frame {a mathematical formula}F′ simulates {a mathematical formula}F in sopml, with simulation pair {a mathematical formula}(σ,Σ), then for every model {a mathematical formula}M=〈F,V〉 based on {a mathematical formula}F, model {a mathematical formula}M′=〈F′,Σ(V)〉 on {a mathematical formula}F′pml-simulates {a mathematical formula}M. In particular, if {a mathematical formula}σ(w,w′) then for every {a mathematical formula}v∈W, {a mathematical formula}a∈I, {a mathematical formula}Ra(w,v) implies that {a mathematical formula}σ(v,v′) for some {a mathematical formula}v′∈Ra′(w′) by condition (ii).1 in Definition 64. Moreover, {a mathematical formula}w∈V(p)∈D iff {a mathematical formula}w′∈Σ(V)(p)∈D′ by conditions (i) and (ii).2. Therefore, if {a mathematical formula}M′ satisfies any universal formula ϕ in pml, then ϕ also holds in {a mathematical formula}M. Hence, Definition 64 of simulation for frames in sopml is indeed a generalisation of the model-theoretic notion in pml. Furthermore, if frames {a mathematical formula}F′ and {a mathematical formula}F are bisimilar in sopml, with bisimulation pair {a mathematical formula}(ω,Ω), then models {a mathematical formula}M=〈F,V〉 and {a mathematical formula}M′=〈F′,Ω(V)〉 are also bisimilar in pml. Likewise, models {a mathematical formula}M′=〈F′,V′〉 and {a mathematical formula}M=〈F,Ω−1(V)〉 are pml-bisimilar as well. So in this case too, sopml bisimulations on frames generalise pml bisimulations on models.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Abstraction
+      </section-title>
+      <paragraph>
+       This section is devoted to the definition of a notion of abstraction for Kripke frames. Abstractions are deemed useful for system verification, as they allow to ignore some selected features of the system, thus focusing only on the properties relevant for the verification task [14]. Indeed, a key fact about abstractions is that they simulate the original system. Hereafter we prove such a result for sopml, starting with a family of equivalence relations on states.
+      </paragraph>
+      <paragraph label="Definition 78">
+       EquivalenceGiven a frame{a mathematical formula}F, let ∼ be the equivalence relation on W such that for every state{a mathematical formula}w,w′∈W,{a mathematical formula}w∼w′implies that for every{a mathematical formula}U∈D,{a mathematical formula}w∈Uiff{a mathematical formula}w′∈U. Further, denote by{a mathematical formula}[w]={w′∈W|w′∼w}the equivalence class of w in{a mathematical formula}F, and for a set{a mathematical formula}U⊆W, let{a mathematical formula}[U]be{a mathematical formula}{[w]|w∈U}.
+      </paragraph>
+      <paragraph label="Definition 79">
+       Clearly, if we replace ‘implies’ in Definition 78 by ‘iff’, we obtain the coarsest equivalence relation satisfying the conditions in Definition 78. AbstractionGiven a frame{a mathematical formula}F, the abstraction {a mathematical formula}FA=〈WA,DA,RA〉of{a mathematical formula}F(according to equivalence relation ∼ as in Definition78) is the frame such that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}WA={[w]|w∈W};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}DA={[U]|U∈D};
+       </list-item>
+       <list-item label="•">
+        for every{a mathematical formula}a∈I,{a mathematical formula}RaA([w],[w′])iff{a mathematical formula}Ra(v,v′)for some{a mathematical formula}v∈[w],{a mathematical formula}v′∈[w′].
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that the coarsest abstraction {a mathematical formula}FA is finite whenever the interpretation domain D in {a mathematical formula}F is, and of size {a mathematical formula}|WA|=O(2D) at most.
+      </paragraph>
+      <paragraph label="Example 80">
+       To illustrate abstractions, we show that the frame{a mathematical formula}Gin Example65is (isomorphic to) the coarsest abstraction{a mathematical formula}G′Aof{a mathematical formula}G′. First of all, two worlds{a mathematical formula}usand{a mathematical formula}us′are equivalent according to the coarsest equivalence ∼ iff for all{a mathematical formula}Un′∈D′,{a mathematical formula}us∈Un′iff{a mathematical formula}us′∈Un′, iff{a mathematical formula}last(s)=last(s′). So, in abstraction{a mathematical formula}G′Awe have three equivalence classes{a mathematical formula}[ut⋅1],{a mathematical formula}[ut⋅2], and{a mathematical formula}[ut⋅3], for sequences{a mathematical formula}t∈{1,2,3}+beginning with 1. As to the accessibility relations,{a mathematical formula}Ri′A([ut⋅n],[ut′⋅m])iff for{a mathematical formula}ut⋅n,{a mathematical formula}ut′⋅min{a mathematical formula}W′,{a mathematical formula}Ri′(ut⋅n,ut′⋅m), that is,{a mathematical formula}t′=t⋅nand{a mathematical formula}Ri(wn,wm). Hence, for instance, for agent a, we have{a mathematical formula}Ra′A([ut⋅1],[ut′⋅3])and{a mathematical formula}R′′Aa([ut⋅3],[ut′⋅1]), as required. Finally,{a mathematical formula}D′A={[Un′]|Un′∈D′}={{[ut⋅1]},{[ut⋅2]},{[ut⋅3]}}. Clearly, the abstraction{a mathematical formula}G′Aof{a mathematical formula}G′is isomorphic to{a mathematical formula}G, with mapping{a mathematical formula}wi↦[ut⋅i]for{a mathematical formula}i=1,2,3.
+      </paragraph>
+      <paragraph>
+       We now extend a standard result in modal logic, namely that abstractions are indeed simulations, to sopml.
+      </paragraph>
+      <paragraph label="Lemma 81">
+       Given a frame{a mathematical formula}Fwith abstraction{a mathematical formula}FA, the pair of mappings{a mathematical formula}w↦[w]and{a mathematical formula}U↦[U]is a simulation.
+      </paragraph>
+      <paragraph label="Proof">
+       We show that the pair {a mathematical formula}(↦,↦) of mappings satisfies Definition 64. As to condition (i), if {a mathematical formula}U∈D then {a mathematical formula}U↦[U] for {a mathematical formula}[U]∈DA. Next, for (i).1 suppose that {a mathematical formula}Ra(w,v). Then, for {a mathematical formula}[v]∈WA we have that {a mathematical formula}RaA([w],[v]) and {a mathematical formula}v↦[v]. Finally, as to (ii).2, if {a mathematical formula}w↦[w] and {a mathematical formula}w∈U, then clearly {a mathematical formula}[w]∈[U]. On the other hand, if {a mathematical formula}[w]∈[U] then for some {a mathematical formula}v∈[w], {a mathematical formula}v∈U. However, {a mathematical formula}v∈[w] implies that {a mathematical formula}v∼w. In particular, {a mathematical formula}w∈U by the constraint on ∼. □
+      </paragraph>
+      <paragraph>
+       We remark that the abstraction {a mathematical formula}FA of a full frame {a mathematical formula}F is isomorphic to {a mathematical formula}F. In fact, for every {a mathematical formula}w∈W, the set {a mathematical formula}{w} belongs to D, and since {a mathematical formula}w∼w′ iff for all {a mathematical formula}U∈D, {a mathematical formula}w∈U iff {a mathematical formula}w′∈U, {a mathematical formula}w∼w′ implies in particular that {a mathematical formula}w∈{w′}, that is, {a mathematical formula}w=w′. As a consequence, {a mathematical formula}w↦{w} is the only simulation on states between {a mathematical formula}F and {a mathematical formula}FA, and it is also an isomorphism. Further, in Example 80 we observed that frame {a mathematical formula}G is (isomorphic to) the coarsest abstraction of {a mathematical formula}G′. Hence, Lemma 81 provides an alternative proof of the fact that {a mathematical formula}G simulates {a mathematical formula}G′, that we discussed in Example 71.
+      </paragraph>
+      <paragraph>
+       The following corollary follows immediately from Lemmas 67 and 81.
+      </paragraph>
+      <paragraph label="Corollary 82">
+       Let{a mathematical formula}Fbe a frame with abstraction{a mathematical formula}FA. For every universal formula{a mathematical formula}φ∈La−sopml⁎,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The results presented above have an impact that goes beyond their theoretical interest. As an example, we observed that relevant properties P of frames (such as reflexivity, transitivity, symmetry, etc.) are definable in propositional modal logic in the sense that for some formula ϕ in pml, a frame {a mathematical formula}F validates ϕ iff {a mathematical formula}F satisfies property P. In sopml more properties become frame-definable within the class of full frames. For instance, in Section 3 we showed that a full frame {a mathematical formula}F is irreflexive iff {a mathematical formula}F⊨∃p(□p∧¬p). On the other hand, whenever we consider the class of all frames, several properties are non-definable (even where they might be definable in pml). For instance, the frame {a mathematical formula}G in Example 65 is symmetric, while {a mathematical formula}G′ is not. Since, {a mathematical formula}G and {a mathematical formula}G′ are bisimilar, and therefore satisfy the same formulas in sopml, we conclude that symmetry is not definable in the class of all frames. Likewise, irreflexivity nor reflexivity are definable on the class of all frames: take {a mathematical formula}F consisting of only one reflexive world w with {a mathematical formula}D={{w},∅}, and {a mathematical formula}F′ consisting of two worlds {a mathematical formula}w1′,w2′ with {a mathematical formula}R′={(w1′,w2′),(w2′,w1′)} and {a mathematical formula}D′={{w1′,w2′},∅}. The pointed frames {a mathematical formula}(F,w) and {a mathematical formula}(F′,w1′) are bisimilar, but {a mathematical formula}F is reflexive (hence reflexivity cannot be expressed on all frames) while {a mathematical formula}F′ is irreflexive (hence irreflexivity cannot be expressed). Such results provide us with further knowledge on the expressive power of sopml.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Bisimulations and Expressivity
+      </section-title>
+      <paragraph>
+       In this section we explore the expressivity of sopml, also by using the (bi)simulations introduced in Section 5.1. We focus on some temporal and spatial properties typically used in artificial intelligence. In what follows we say that a property P is expressible in a language {a mathematical formula}L and class {a mathematical formula}K of frames iff for some formula {a mathematical formula}ϕ∈L, we have that for all {a mathematical formula}F∈K, {a mathematical formula}F⊨ϕ iff {a mathematical formula}F has property P. Sometimes we omit either {a mathematical formula}L or {a mathematical formula}K, whenever these are clear from the context.
+      </paragraph>
+      <paragraph>
+       First of all, consider Dedekind-completeness of a total order ≤, i.e., a total, transitive, and antisymmetric binary relation: a totally ordered set is Dedekind-complete if every non-empty subset that has an upper bound, has a least upper bound. We recall that the Dedekind-completeness of the real numbers is not expressible in pmlPML: the proof makes use of a propositional bisimulation between the structure {a mathematical formula}(R,≤) of reals and the rationals {a mathematical formula}(Q,≤)[1]. Thus, by using simulations we immediately obtain the following inexpressibility result.
+      </paragraph>
+      <paragraph label="Lemma 83">
+       Dedekind-completeness is not expressible in the universal fragment{a mathematical formula}La−sopmlin the class of full frames.
+      </paragraph>
+      <paragraph label="Proof">
+       Clearly, the identity relation is a simulation between structures {a mathematical formula}(Q,≤) and {a mathematical formula}(R,≤) seen as full frames, i.e., {a mathematical formula}(Q,≤)⪯(R,≤), and if Dedekind-completeness were expressible as a formula ϕ in a-sopml, {a mathematical formula}(R,≤)⊨ϕ would imply {a mathematical formula}(Q,≤)⊨ϕ, a contradiction. □
+      </paragraph>
+      <paragraph>
+       Recall that formula {a mathematical formula}δ=(◇p∧◇□¬p)→◇(□−1◇p∧□¬p) has been introduced in Section 3.2 to express Dedekind-completeness. Intuitively, δ fails in {a mathematical formula}(Q,≤) since, for instance, the set {a mathematical formula}{q∈Q|q&lt;2} is non-empty and upper bounded, and therefore satisfies the antecedent. However, it has no least upper bound to satisfy the consequent.
+      </paragraph>
+      <paragraph>
+       As a further example, we prove that neither finiteness nor infinity of the state space W are expressible in boolean frames. This is in line with the situation in pml.
+      </paragraph>
+      <paragraph label="Lemma 84">
+       In language{a mathematical formula}Lsopml⁎neither finiteness nor infinity are expressible in the class of boolean frames.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider frame {a mathematical formula}G1=〈N,succ,{N,∅}〉 of the naturals with the successor relation and the reflexive-point frame {a mathematical formula}G2=〈{w′},{(w′,w′)},{{w′},∅}〉 in Figure 5, which are boolean by definition of {a mathematical formula}D1 and {a mathematical formula}D2. In particular, the relations ω mapping every natural {a mathematical formula}n∈N to {a mathematical formula}w′, and Ω mapping {a mathematical formula}N to {a mathematical formula}{w′} and the empty set ∅ to itself, form a bisimulation pair. Thus, {a mathematical formula}G1 and {a mathematical formula}G2 validate the same formulas in sopml. However, {a mathematical formula}G1 is infinite while {a mathematical formula}G2 is finite. □
+      </paragraph>
+      <paragraph>
+       To conclude our brief review of expressivity results in sopml, we show that for the sublanguage of {a mathematical formula}Lsopml without the reflexive and transitive closure operator {a mathematical formula}□⁎, finiteness is not even expressible in full frames. For {a mathematical formula}n∈N, let {a mathematical formula}[n] be the set {a mathematical formula}{0,…,n}, {a mathematical formula}Gn the frame {a mathematical formula}〈[n],succ,2[n]〉, and {a mathematical formula}GN=〈N,succ,2N〉 the frame isomorphic to the structure of natural numbers endowed with the successor relation. Both {a mathematical formula}GN and each {a mathematical formula}Gn are full. Let G be the class of all frames {a mathematical formula}Gn, for {a mathematical formula}n∈N, and consider the following result.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider{a mathematical formula}ϕ∉Th(GN) with finite modal depth {a mathematical formula}k∈N, where the modal depth is defined as in the propositional case, as the maximum nesting of modal operators [7]. We can assume without loss of generality that {a mathematical formula}(GN,V,0)⊭ϕ for some assignment V. We prove that {a mathematical formula}(Gk,V′,0)⊭ϕ, where assignment {a mathematical formula}V′ is such that {a mathematical formula}V′(p)=V(p)∩[k] for every {a mathematical formula}p∈AP (since our frames are full, {a mathematical formula}V(p)∩[k] is admissiable in {a mathematical formula}Gk). More precisely we prove, using induction on n, that if ψ is a subformula of ϕ of modal depth {a mathematical formula}n≤k, then for all ℓ with {a mathematical formula}0≤ℓ≤k−n, it holds that {a mathematical formula}(GN,V,ℓ)⊨ψ iff {a mathematical formula}(Gk,V′,ℓ)⊨ψ.We start with the case for {a mathematical formula}n=0. If ψ is an atom p, then {a mathematical formula}(GN,V,ℓ)⊨ψ iff {a mathematical formula}ℓ∈V(p), iff {a mathematical formula}ℓ∈V′(p), iff {a mathematical formula}(Gk,V′,ℓ)⊨ψ, for all {a mathematical formula}0≤ℓ≤k. The cases for propositional connectives are immediate. Finally, suppose {a mathematical formula}ψ=∃pχ, and that (⁎) {a mathematical formula}(GN,V,ℓ)⊨χ iff {a mathematical formula}(Gk,V′,ℓ)⊨χ for all {a mathematical formula}0≤ℓ≤k. Then {a mathematical formula}(GN,V,ℓ)⊨ψ implies that for some {a mathematical formula}U∈D, {a mathematical formula}(GN,VUp,ℓ)⊨ψ. Consider {a mathematical formula}U′=U∩[k]∈D′. In particular, {a mathematical formula}(VUp)′=VU′′p. By (⁎), {a mathematical formula}(Gk,VU′′p,ℓ)⊨χ, that is, {a mathematical formula}(Gk,V′,ℓ)⊨ψ.Now suppose that ψ is a subformula of ϕ of modal depth {a mathematical formula}n+1≤k, and let {a mathematical formula}0≤ℓ≤k−(n+1). Assume that {a mathematical formula}ψ=◇χ. Then, {a mathematical formula}(GN,V,ℓ)⊨ψ implies that {a mathematical formula}(GN,V,ℓ+1)⊨χ for {a mathematical formula}1≤ℓ+1≤k−n. By induction hypothesis {a mathematical formula}(Gk,V′,ℓ+1)⊨χ, that is, {a mathematical formula}(Gk,V′,ℓ)⊨ψ. The direction from from {a mathematical formula}(Gk,V′,ℓ) to {a mathematical formula}(GN,V,ℓ) is similar, and the cases for the propositional connectives and the quantifier go as before. □
+      </paragraph>
+      <paragraph label="Corollary 86">
+       In language{a mathematical formula}Lsopmlfiniteness is not expressible on full frames.
+      </paragraph>
+      <paragraph label="Proof">
+       As a consequence of Lemma 85, {a mathematical formula}(GN,V,0)⊭ϕ implies {a mathematical formula}(Gk,V′,0)⊭ϕ for some {a mathematical formula}k∈N, i.e., {a mathematical formula}ϕ∉Th(G). Hence, if ϕ expressed ‘being finite’, then it would be valid in G, and hence also in {a mathematical formula}GN, a contradiction. Thus, finiteness is not expressible even in the class of full frames. □
+      </paragraph>
+      <paragraph>
+       In this section we made use of (bi)simulations to show that sopml can express notions, such as Dedekind-completeness, that are not expressible in pml; whereas other properties, such as finiteness, cannot even be expressed in sopml. Together with the remarks in Section 5.1 on 3-colorability and the existence of Hamiltonian paths, these results provide us with some interesting insight into the application of model-theoretic techniques to the analysis of the expressivity of sopml.
+      </paragraph>
+      <paragraph>
+       In our opinion bisimulations for sopml raise a number of interesting questions. We believe that one in particular deserves more attention. The Van Benthem theorem is a well-known result in model theory, stating that modal logic is the bisimulation-invariant fragment of first-order logic [6]. In the light of the notion of bisimulation provided above, it makes sense to ask the same question in the present context: is sopml the bisimulation-invariant fragment of monadic second-order logic, possibly when interpreted on a particular class of frames? In [35] it is proved that the modal μ-calculus is the bisimulation-invariant fragment of MSO, but according to the standard notion of bisimulation for pml. Presently it is not clear how this result relates to the current setting. We leave this problem open for future work.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Selected Proofs
+     </section-title>
+     <paragraph label="Lemma 11">
+      <list>
+       <list-item label="1.">
+        Let ϕ be a formula in{a mathematical formula}Lsopml⁎and{a mathematical formula}Fa frame in{a mathematical formula}Kall. If assignments V and{a mathematical formula}V′coincide on{a mathematical formula}fr(ϕ), then{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        Recall that{a mathematical formula}X={ap,pl,ml,sopml}and{a mathematical formula}ˆ={(ap,all),(pl,bool),(ml,modal),(sopml,full)}. Let{a mathematical formula}x∈X. Then,
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof">
+      The proofs are by induction on the structure of {a mathematical formula}ϕ∈Lsopml⁎.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       If {a mathematical formula}ϕ=p, then {a mathematical formula}fr(ϕ)={p} and {a mathematical formula}(M,w)⊨ϕ iff {a mathematical formula}w∈V(p)=V′(p), iff {a mathematical formula}(M′,w)⊨ϕ. The inductive cases for the propositional connectives are immediate.If {a mathematical formula}ϕ=□aψ, then {a mathematical formula}(M,w)⊨ϕ iff for all {a mathematical formula}w′∈Ra(w), {a mathematical formula}(M,w′)⊨ψ. Since {a mathematical formula}fr(ϕ)=fr(ψ), V and {a mathematical formula}V′ coincide on {a mathematical formula}fr(ψ) as well, and by induction hypothesis for all {a mathematical formula}w′∈Ra(w), {a mathematical formula}(M′,w′)⊨ψ, i.e., {a mathematical formula}(M′,w)⊨ϕ. The case for {a mathematical formula}ϕ=□⁎ψ is similar.If {a mathematical formula}ϕ=∀pψ, then {a mathematical formula}(M,w)⊨ϕ iff for any {a mathematical formula}U∈D, {a mathematical formula}(MUp,w)⊨ψ. Since {a mathematical formula}fr(ϕ)=fr(ψ)∖{p}, {a mathematical formula}VUp and {a mathematical formula}VU′p coincide on {a mathematical formula}fr(ψ), and by induction hypothesis {a mathematical formula}(MU′p,w)⊨ψ. Since U has been chosen arbitrarily, this is the case iff {a mathematical formula}(M′,w)⊨ϕ.
+      </list-item>
+      <list-item label="a">
+       The case for {a mathematical formula}x=ap is immediate, as assignments are functions in D. Hence, {a mathematical formula}V(p)∈D for every {a mathematical formula}p∈AP.The case for {a mathematical formula}x=pl, follows from equalities {a mathematical formula}〚¬ψ〛=W∖〚ψ〛, {a mathematical formula}〚ψ∧ψ′〛=〚ψ〛∩〚ψ′〛, {a mathematical formula}〚ψ∨ψ′〛=〚ψ〛∪〚ψ′〛 and the fact that D is a boolean algebra.As for {a mathematical formula}x=ml, notice that {a mathematical formula}〚□aψ〛=[a](〚ψ〛), {a mathematical formula}〚□⁎ψ〛=[]⁎(〚ψ〛), and D is a boolean algebra closed under operators {a mathematical formula}[a] and {a mathematical formula}[]⁎.The case for {a mathematical formula}x=sopml, is immediate, as {a mathematical formula}〚ψ〛⊆W for every {a mathematical formula}ψ∈Lsopml⁎.
+      </list-item>
+      <list-item label="b">
+       The inductive cases for propositional connectives and modal operators are immediate, as these simply commute with substitution.If {a mathematical formula}ϕ=∀rφ for {a mathematical formula}r≠p, then {a mathematical formula}(MV(q)p,w)⊨ϕ iff for every {a mathematical formula}U∈D, {a mathematical formula}((MV(q)p)Ur,w)⊨φ. Since {a mathematical formula}r≠p and q is free for p in ϕ, we have {a mathematical formula}q≠r and assignment {a mathematical formula}(VV(q)p)Ur is equal to {a mathematical formula}(VUr)VUr(q)p. As a consequence, we obtain {a mathematical formula}((MUr)VUr(q)p,w)⊨φ, i.e., {a mathematical formula}(MUr,w)⊨φ[p/q] by induction hypothesis. But this means that {a mathematical formula}(M,w)⊨∀r(φ[p/q])=(∀rφ)[p/q].As regards cases {a mathematical formula}x=pl,ml,sopml, we make use of item 1. We only prove the inductive step for {a mathematical formula}ϕ=∀rφ, with {a mathematical formula}r≠p, the other cases being similar to the case for {a mathematical formula}x=ap above. Observe that {a mathematical formula}(M〚ψ〛p,w)⊨ϕ iff for every {a mathematical formula}U∈D, {a mathematical formula}((M〚ψ〛p)Ur,w)⊨φ. Since {a mathematical formula}r≠p and ψ is free for p in ϕ, we have {a mathematical formula}r∉fr(ψ), and by item 1 above, {a mathematical formula}〚ψ〛M=〚ψ〛MUr. Therefore assignment {a mathematical formula}(V〚ψ〛p)Ur is equal to {a mathematical formula}(VUr)〚ψ〛MUrp. Hence, we obtain {a mathematical formula}((MUr)〚ψ〛MUrp,w)⊨φ, i.e., {a mathematical formula}(MUr,w)⊨φ[p/ψ] by induction hypothesis. But this means that {a mathematical formula}(M,w)⊨∀r(φ[p/ψ])=(∀rφ)[p/ψ]. □
+      </list-item>
+     </list>
+     <paragraph label="Lemma 20">
+      For every model{a mathematical formula}M=〈F,V〉, world{a mathematical formula}w∈W, and formula{a mathematical formula}ψ∈Lsopml⁎,{a mathematical formula}whenever{a mathematical formula}ρ(x)=wand{a mathematical formula}ρ(Pi)=V(pi).
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is by induction on the structure of ψ. Since the steps for modal logic formulas is common, we only show the case for the quantifier. For {a mathematical formula}ψ=∀pϕ, {a mathematical formula}(M,w)⊨ψ iff for all {a mathematical formula}U∈D, {a mathematical formula}(MUp,w)⊨ϕ, that is, {a mathematical formula}(F,ρ′)⊨STx(ϕ) by induction hypothesis, for {a mathematical formula}ρ′ that coincides with ρ but {a mathematical formula}ρ′(P)=U. However, this means that {a mathematical formula}(F,ρUP)⊨STx(ϕ), i.e., {a mathematical formula}(F,ρ)⊨∀P(STx(ϕ))=STx(ψ). □
+     </paragraph>
+     <paragraph label="Theorem 23">
+      For every intendedlpmlmodel{a mathematical formula}M,{a mathematical formula}w∈M, and formula φ inlpml, we have{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We will only prove the crucial clause{a mathematical formula} Before doing that, let us first show what it means for the following specific case: {a mathematical formula}θ(a,b,p)=□ap→□bp, {a mathematical formula}⊡(a,b)=Sup(a,b), and {a mathematical formula}Θ(a,b,x)=∀y(Rb(x,y)→Ra(x,y)), also written as {a mathematical formula}Rb(x)⊆Ra(x).⇐ Since {a mathematical formula}(M,w)⊨Sup(a,b), we have that {a mathematical formula}Rb(x)⊆Ra(x) holds in {a mathematical formula}(M,w), and hence in {a mathematical formula}(F,w). Since {a mathematical formula}□ap→□bp locally defines {a mathematical formula}Rb(x)⊆Ra(x), we have {a mathematical formula}(F,w)⊨(□ap→□bp), and in particular {a mathematical formula}(F,w)⊨∀p(□ap→□bp). Since {a mathematical formula}∀p(□ap→□bp) is a sentence, we obtain {a mathematical formula}(M,w)⊨∀p(□ap→□bp). ⇒ Now suppose that {a mathematical formula}(M,w)⊭Sup(a,b). Then {a mathematical formula}(F,w)⊭Sup(a,b). Since {a mathematical formula}□ap→□bp locally defines {a mathematical formula}Rb(x)⊆Ra(x), we know that {a mathematical formula}(F,w)⊭□ap→□bp, and since {a mathematical formula}F is full, for some assignment {a mathematical formula}V′, we have {a mathematical formula}(F,V′,w)⊭□ap→□bp, that is, {a mathematical formula}(M,w)⊭∀p(□ap→□bp).As for the general case: ⇐ Since {a mathematical formula}(M,w)⊨⊡(a→), we have that {a mathematical formula}Θ(a→,x) holds in {a mathematical formula}(M,w), and hence in {a mathematical formula}(F,w) (note that {a mathematical formula}Θ∈Lfo1 only talks about what is accessible from what). Since {a mathematical formula}θ(a→,p→) locally defines {a mathematical formula}Θ(a→,x), we have {a mathematical formula}(F,w)⊨θ(a→,p→), and in particular {a mathematical formula}(F,w)⊨∀p→θ(a→,p→). Since {a mathematical formula}∀p→θ(a→,p→) is a sentence, {a mathematical formula}(M,w)⊨∀pθ(a→,p→). ⇒ Suppose that {a mathematical formula}(M,w)⊭⊡(a→). Then, {a mathematical formula}(F,w)⊭⊡(a→), and therefore {a mathematical formula}(F,w)⊭Θ(a→,x). Since {a mathematical formula}θ(a→,p→) locally defines {a mathematical formula}Θ(a→,x), we know that {a mathematical formula}(F,w)⊭θ(a→,p→), and since {a mathematical formula}F is full, for some assignment {a mathematical formula}V′, we have {a mathematical formula}(F,V′,w)⊭θ(a→,p→), that is, {a mathematical formula}(M,w)⊭∀p→θ(a→,p→). □
+     </paragraph>
+     <paragraph label="Lemma 25">
+      Consider formulas{a mathematical formula}φi∈Lsopmland{a mathematical formula}Θi∈Lfo1in Example24, for{a mathematical formula}i=1,…,5. Let x be the only free variable in{a mathematical formula}Θiand assume{a mathematical formula}ρ(x)=w. Assume{a mathematical formula}Fis a full frame, then,{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      All items are relatively immediate. We only proved the first and the last ones. Rather than {a mathematical formula}(F,ρ)⊨Θ, we will also write {a mathematical formula}F⊨Θ(w), and say that Θ holds for w in {a mathematical formula}F.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Suppose {a mathematical formula}F is full and irreflexive at w, that is, {a mathematical formula}¬Ra(w,w), then clearly {a mathematical formula}(F,w)⊨∃p(□ap∧¬p), by considering the assignment {a mathematical formula}V(p)=Ra(w) for which {a mathematical formula}w∉V(p). As to the converse, suppose that {a mathematical formula}F,w⊨∃p(□ap∧¬p). Hence, for every model {a mathematical formula}M on {a mathematical formula}F, {a mathematical formula}(M,w)⊨∃p(□ap∧¬p), i.e., {a mathematical formula}(M,w)⊭∀p(□ap→p). However, by Lemma 20 below, this is the case iff {a mathematical formula}Ra(w,w) does not hold. Hence, {a mathematical formula}Θ1(w) holds in {a mathematical formula}F.
+      </list-item>
+      <list-item label="2.">
+       Suppose that {a mathematical formula}Θ5(w) holds in {a mathematical formula}F and let V be such that {a mathematical formula}(F,V,w)⊨□cp. It is easy to check that {a mathematical formula}(F,VRa(w)q,w)⊨□aq∧□b(q→p). In words, if we modify V in such a way that q becomes true in exactly w's a-successors, then for every b-successor of w that satisfies q (note that this successor must then also be an a-successor), p must be true. Conversely, suppose that {a mathematical formula}Θ5(w) does not hold, i.e., for some {a mathematical formula}v∈W, we have {a mathematical formula}Ra(w,v) and {a mathematical formula}Rb(w,v), but not {a mathematical formula}Rc(w,v). We now show that {a mathematical formula}(F,w)⊨¬φ5=∃p(□cp∧∀q(□aq→◇b(q∧¬p))). The assignment V such that {a mathematical formula}V(p)=Rc(w) is a witness for this: if p is exactly true in the c-successors of w, then it is false in v, so whenever {a mathematical formula}□aq is true in w, we have that {a mathematical formula}q∧¬p holds in v, and hence {a mathematical formula}◇b(q∧¬p) holds in w. □
+      </list-item>
+     </list>
+     <paragraph>
+      Recall that in Section 4.2, we stated the following theorem without proof:
+     </paragraph>
+     <paragraph label="Theorem 62">
+      If{a mathematical formula}|I|≥2, then the validities insopml{sup:⁎}over modal epistemic frames are not recursively enumerable.In particular,sopml{sup:⁎}is not axiomatisable on the class of modal epistemic frames.
+     </paragraph>
+     <paragraph>
+      Here, we provide the proof. The proof strategy that we use is very similar to the one used in the proof of Theorem 57: we define formulas {a mathematical formula}ξgrid, {a mathematical formula}ξsane and {a mathematical formula}ξT that serve the same purpose as {a mathematical formula}ψgrid, {a mathematical formula}ψsane and {a mathematical formula}ψT, respectively.
+     </paragraph>
+     <paragraph>
+      The main difference lies in how we define a grid, now that we use two-agent S5 as opposed to single agent K. This time, we use the following pattern: each point {a mathematical formula}(n,m)∈Z×Z is represented not by a single world, but instead by (at least) five different worlds that are related to each other by the relation {a mathematical formula}R(a). One of these five worlds satisfies the propositional atom center, the other four worlds satisfy the atoms {a mathematical formula}left,right,up and down, respectively. The left world of {a mathematical formula}(n,m) is then related by {a mathematical formula}R(b) to the right world of {a mathematical formula}(n−1,m), and similarly for the other directions; see also the following diagram.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      As before, this allows us to define {a mathematical formula}□x and {a mathematical formula}◊x (for {a mathematical formula}x∈dir) as abbreviations:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Then we define a grid in almost exactly the same way as the K-case:{a mathematical formula} where {a mathematical formula}dir,inv_dir and perp_dir are as before, and {a mathematical formula}L:={left,right,up,down,center}.
+     </paragraph>
+     <paragraph>
+      Note that {a mathematical formula}uniquex, {a mathematical formula}inversexy and {a mathematical formula}commutexy are identical to their counterparts in the proof of Theorem 57, but the other subformulas are different.
+     </paragraph>
+     <paragraph>
+      If {a mathematical formula}M,w0⊨ξgrid, then we associate the worlds of {a mathematical formula}M with the points of {a mathematical formula}Z×Z in the following way: (i) {a mathematical formula}w0 and all its a-successors represent {a mathematical formula}(0,0), (ii) if w represents {a mathematical formula}(n,m), {a mathematical formula}M,w⊨left, {a mathematical formula}w′ is a b-successor of w and {a mathematical formula}M,w′⊨right, then {a mathematical formula}w′ represents {a mathematical formula}(n−1,m), (iii) similarly for the other directions and (iv) if w represents {a mathematical formula}(n,m) then so does every c-successor of {a mathematical formula}(n,m) for every {a mathematical formula}c∉{a,b}.
+     </paragraph>
+     <paragraph>
+      As before, we show that every point {a mathematical formula}(n,m) is represented by at least one world and that each world represents at least one point. Since every point is represented by at least one center world, one right world, one left world, one up world and one down world, we obviously cannot guarantee that all the worlds representing a point are indistinguishable. We will show, however, that all center worlds representing {a mathematical formula}(n,m) are modally indistinguishable from one another.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       labels guarantees that every world (i) satisfies exactly one of the labels from L and (ii) has a successor that satisfies l for every {a mathematical formula}l∈L.
+      </list-item>
+      <list-item label="•">
+       directions guarantees that every left world is paired with a right world through the relation {a mathematical formula}R(b), and similarly for the other directions. Due to how we defined {a mathematical formula}◊x and {a mathematical formula}□x as abbreviations, this means that every center world has and x-successor that is also a center world, for every {a mathematical formula}x∈dir. That, in turn, implies that every point {a mathematical formula}(n,m) is represented by at least one world.
+      </list-item>
+      <list-item label="•">
+       same says that for every {a mathematical formula}U∈D, if w is in U then so are all of its a- and b-successors that share the same label. Since we are working with a modal domain of quantification, this implies that every label is unique (up to modal indistinguishability) in its a- and b-equivalence classes. Note that, together with the fact that {a mathematical formula}left,right,up and down worlds occur only in pairs, this implies that whenever a world w represents some point {a mathematical formula}(n,m), then every a- or b-successor of w also represents some point {a mathematical formula}(n′,m′). So every world in the generated submodel represents some point {a mathematical formula}(n,m).
+      </list-item>
+      <list-item label="•">
+       remain says that for any agent c other than a and b, w is modally indistinguishable from its c-successors. This implies that if w and {a mathematical formula}w′ represent the same point {a mathematical formula}(n,m) due to rule (iv), then w and {a mathematical formula}w′ are modally indistinguishable.
+      </list-item>
+      <list-item label="•">
+       The formulas {a mathematical formula}uniquex,inversexy and {a mathematical formula}commutexy, for the relevant x and y, guarantee that if w and {a mathematical formula}w′ represent the same point {a mathematical formula}(n,m) due to rules (ii) and (iii), then w and {a mathematical formula}w′ are modally indistinguishable.
+      </list-item>
+     </list>
+     <paragraph>
+      We have now shown that every point {a mathematical formula}(n,m) is represented, that every world represents a point and that all worlds representing a single point are modally indistinguishable.
+     </paragraph>
+     <paragraph>
+      Variants {a mathematical formula}ξsane and {a mathematical formula}ξT of {a mathematical formula}ψsane and {a mathematical formula}ψT can then be defined. The only required modification is that in {a mathematical formula}ξsane and {a mathematical formula}ξT we only put requirements on center world, e.g., the subformula {a mathematical formula}⋁s∈states(s∧⋀s′∈states∖{s}¬s′) of {a mathematical formula}ψsane should be replaced with {a mathematical formula}center→⋁s∈states(s∧⋀s′∈states∖{s}¬s′) in {a mathematical formula}ξsane. Since these modifications are rather trivial, we do not list them here in detail.
+     </paragraph>
+     <paragraph>
+      Overall, if we define {a mathematical formula}ζT:=ξgrid∧ξsane∧ξT∧s0∧pos, then {a mathematical formula}M,w⊨ζT implies that {a mathematical formula}M encodes the execution of T. It follows that T is non-halting if and only if {a mathematical formula}M,w⊨ζT→□⁎(center→¬send). In particular, this implies that the valid formulas of sopml{sup:⁎} over modal S5 frames are not recursively enumerable.
+     </paragraph>
+     <paragraph label="Lemma 87">
+      <list>
+       <list-item label="1.">
+        It can be checked in NPTIME whether there exists a bisimulation relation between two frames.
+       </list-item>
+       <list-item label="2.">
+        Let{a mathematical formula}Fand{a mathematical formula}F′be frames and let w and{a mathematical formula}w′be worlds of{a mathematical formula}Fand{a mathematical formula}F′, respectively, such that{a mathematical formula}w≈w′. Then{a mathematical formula}Fwis boolean (respectively modal) iff{a mathematical formula}Fw′′is. However, if{a mathematical formula}Fwis full, then{a mathematical formula}Fw′′need not be full.Moreover, if{a mathematical formula}Fwand{a mathematical formula}Fw′′are full, then they are isomorphic.
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Proof">
+      We provide a proof of point 2. Suppose that {a mathematical formula}w≈w′, so there is some bisimulation {a mathematical formula}(ω,Ω) such that {a mathematical formula}ω(w,w′). Note that it follows that for every world {a mathematical formula}w1 of {a mathematical formula}Fw there is a world {a mathematical formula}w1′ of {a mathematical formula}Fw′′ such that {a mathematical formula}ω(w1,w1′), and vice versa.Now, suppose that {a mathematical formula}Dw′′ is closed under complement, and take any {a mathematical formula}U∈Dw. There is at least one {a mathematical formula}U′∈Dw′′ such that {a mathematical formula}Ω(U,U′). Furthermore, since {a mathematical formula}Dw′′ is closed under complement, we have {a mathematical formula}Ww′′∖U′∈Dw′′. There is also at least one {a mathematical formula}T∈Dw such that {a mathematical formula}Ω(T,Ww′′∖U′). Now, take any {a mathematical formula}w1∈Ww. As noted above, there is at least one {a mathematical formula}w1′∈Ww′′ such that {a mathematical formula}ω(w1,w1′). Because {a mathematical formula}(ω,Ω) is a bisimulation, we have {a mathematical formula}w1∈U iff {a mathematical formula}w1′∈U′ and {a mathematical formula}w1∈T iff {a mathematical formula}w1′∈Ww′′∖U′. Exactly one of {a mathematical formula}w1′∈U′ and {a mathematical formula}w1′∈Ww′′ are true, so we also have that exactly one of {a mathematical formula}w1∈U and {a mathematical formula}w1∈T is true. So {a mathematical formula}Ww∖U=T∈Dw.We have shown that if {a mathematical formula}Dw′′ is closed under complement, then so is {a mathematical formula}Dw. It can be shown in a similar way that if {a mathematical formula}Dw′′ is closed under intersection or under {a mathematical formula}[a] then so is {a mathematical formula}Dw. So {a mathematical formula}Fw is boolean (respectively modal) if {a mathematical formula}Fw′′ is. Since bisimilarity is symmetrical, the reverse holds as well.In order to see that {a mathematical formula}Fw can be full without {a mathematical formula}Fw′ being full, consider the frame {a mathematical formula}F given by {a mathematical formula}W={w},Ra=W×W,D=2W and the frame {a mathematical formula}F′ given by {a mathematical formula}W′={w′,v′},Ra′=W′×W′ and {a mathematical formula}D′={∅,W′}. We have {a mathematical formula}w≈w′, as witnessed by {a mathematical formula}ω={(w,w′),(w,v′)} and {a mathematical formula}Ω={(∅,∅),(W,W′)}. Furthermore, both frames are identical to their respective generated submodels. Yet {a mathematical formula}F is full while {a mathematical formula}F′ is not.Finally, suppose that {a mathematical formula}Fw and {a mathematical formula}Fw′′ are both full. Suppose that for some {a mathematical formula}w∈Ww we have {a mathematical formula}ω(w,w1′) and {a mathematical formula}ω(w,w2′). Let {a mathematical formula}U∈Dw be such that {a mathematical formula}Ω(U,{w1′}). Then {a mathematical formula}w1′∈{w1′} iff {a mathematical formula}w1∈U iff {a mathematical formula}w2′∈{w1′}, which implies that {a mathematical formula}w1′=w2′. So ω is injective. Furthermore, as noted above, for every {a mathematical formula}w1 there is a {a mathematical formula}w1′ such that {a mathematical formula}ω(w1,w1′) and vice versa, so ω is surjective. It follows that ω is an isomorphism. □
+     </paragraph>
+     <paragraph label="Theorem 74">
+      If{a mathematical formula}w≈w′, then for every formula{a mathematical formula}φ∈Lsopml⁎,{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We prove the implication from right to left, the opposite direction being symmetric. If {a mathematical formula}w≈w′ then {a mathematical formula}ω(w,w′) holds for some bisimulation pair {a mathematical formula}(ω,Ω). As above, we show by induction on φ that if {a mathematical formula}(F,V,w)⊭φ for some assignment V, then {a mathematical formula}(F′,Ω(V),w′)⊭φ, where {a mathematical formula}Ω(V) is any assignment such that for every {a mathematical formula}p∈AP, {a mathematical formula}(Ω(V))(p)=U′ with {a mathematical formula}Ω(V(p),U′). Since ω is a simulation relation in particular, the base cases for {a mathematical formula}φ=p and {a mathematical formula}φ=¬p are as in Theorem 67, as well as the inductive cases for propositional connectives and {a mathematical formula}φ=□aψ, {a mathematical formula}φ=□⁎ψ, and {a mathematical formula}φ=∀pψ.For {a mathematical formula}φ=◇aψ, {a mathematical formula}(F′,Ω(V),w′)⊨φ iff for some {a mathematical formula}v′∈Ra′(w′), {a mathematical formula}(F′,Ω(V),v′)⊨ψ. By bisimulation, for some {a mathematical formula}v∈Ra(w), {a mathematical formula}ω(v,v′). In particular, {a mathematical formula}(F,V,v)⊨ψ by induction hypothesis. That is, {a mathematical formula}(F,V,w)⊨φ. The case for {a mathematical formula}φ=◇⁎ψ is similar.For {a mathematical formula}φ=∃pψ, {a mathematical formula}(F′,Ω(V),w′)⊨φ iff for some {a mathematical formula}U′∈D′, {a mathematical formula}(F′,(Ω(V))U′p,w′)⊨ψ. Now consider {a mathematical formula}U∈D such that {a mathematical formula}Ω(U,U′)∈D. In particular, assignments {a mathematical formula}(Ω(V))U′p and {a mathematical formula}Ω(VUp) coincides. Hence, {a mathematical formula}(F′,Ω(VUp),w′)⊨ψ, and by induction hypothesis, {a mathematical formula}(F,VUp,w)⊨ψ for {a mathematical formula}U∈D, that is, {a mathematical formula}(F,V,w)⊨φ. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

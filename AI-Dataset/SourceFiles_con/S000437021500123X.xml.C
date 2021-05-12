@@ -1,0 +1,817 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Robot task planning and explanation in open and uncertain worlds.
+   </title>
+   <abstract>
+    A long-standing goal of AI is to enable robots to plan in the face of uncertain and incomplete information, and to handle task failure intelligently. This paper shows how to achieve this. There are two central ideas. The first idea is to organize the robot's knowledge into three layers: instance knowledge at the bottom, commonsense knowledge above that, and diagnostic knowledge on top. Knowledge in a layer above can be used to modify knowledge in the layer(s) below. The second idea is that the robot should represent not just how its actions change the world, but also what it knows or believes. There are two types of knowledge effects the robot's actions can have: epistemic effects (I believe X because I saw it) and assumptions (I'll assume X to be true). By combining the knowledge layers with the models of knowledge effects, we can simultaneously solve several problems in robotics: (i) task planning and execution under uncertainty; (ii) task planning and execution in open worlds; (iii) explaining task failure; (iv) verifying those explanations. The paper describes how the ideas are implemented in a three-layer architecture on a mobile robot platform. The robot implementation was evaluated in five different experiments on object search, mapping, and room categorization.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A long-standing challenge robotics poses for AI is how to act in uncertain and unfamiliar environments. As an example, imagine a robot that is switched on in an unfamiliar building, without a map, and given the task of finding a particular object. Questions that roboticists must answer include the following: How should the robot integrate different kinds of information, such as commonsense knowledge and sensory input? How can the robot plan in the face of uncertain knowledge? How can the robot plan to achieve the task when it does not know about all the required objects and places? How can the robot deal with task failure intelligently? This paper gives answers to all these problems, using two core ideas. The first idea is to organize knowledge into three levels, such that knowledge in a higher level enables reasoning about knowledge at lower levels. The second idea is to give the robot models of the effects of its actions on what it knows. One class of knowledge-modifying actions is assumptive actions. We show how planning with assumptions, combined with layered knowledge, solves several problems in AI for robotics: (i) planning and acting under uncertainty, (ii) planning and acting in open worlds, (iii) explaining task failure, and (iv) verifying explanations.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       IDD—a schema for robot knowledge
+      </section-title>
+      <paragraph>
+       We propose a three-layer organization of knowledge: instance, default, and diagnostic (Fig. 1). We refer to this idea using the term IDD schema. Knowledge at a higher level is used to modify knowledge at lower levels. Knowledge is of two types: representations of state, and representations of the effects of actions on state. The instance layer contains only state information, describing the current environment. This state information includes the locations and categories of specific objects, rooms, and places in the current building, the whereabouts of particular people and what they know. The default layer contains general knowledge about categories—for example, which types of objects are typically found in kitchens. The default layer also contains knowledge of action effects on the instance state. This could be knowledge of the physical effects of actions, such as moving the robot, or of the knowledge effects of actions, such as asking where a particular object is. These knowledge-modifying (or epistemic) actions also include the ability to make assumptions about the existence of specific object instances—for example, assuming that there is a dining room in a particular house. Finally, the diagnostic layer contains only action knowledge. First, it contains assumptive actions for creating new general knowledge—hypothesizing that cornflakes boxes can often be found in dining rooms. Second, it contains the action models from the default layer augmented with possible causes of failure—the robot could not see the cornflakes box because it was hidden inside something. These two types of diagnostic knowledge can be used in conjunction with the other knowledge layers to help explain task failure. The robot could, for example, explain that it cannot find the cornflakes box because someone put it in a cupboard that it assumes is in the dining room. This diagnostic knowledge can also be used to hypothesize new default knowledge: the robot could hypothesize that cornflakes boxes are often kept in cupboards in dining rooms. Default and diagnostic knowledge are separated to enable efficient reasoning: simpler default knowledge is used most of the time, and more complex diagnostic knowledge is used only when needed.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       An instantiation of the IDD schema
+      </section-title>
+      <paragraph>
+       The schema above could be implemented in many ways, depending on the representations chosen. In this paper, the following choices have been made (Fig. 1) for the implementation of our robot system called “Dora”. First, in the instance layer the current state is what we call a relational map (brown), represented as a libelled graph.{sup:2} The nodes correspond to physical entities (objects, places) present in the current environment. The arcs represent relations between, and properties of, these entities. These arcs can be deterministic or probabilistic.{sup:3} For example, the probability that Placeholder1 leads to a meeting room is inferred to be 0.3. The instance layer also contains possible facts that the robot assumes to be true (blue). Each assumption inherits the probability of its directly supporting fact(s), so the assumption ASSUME(leads-to(placeholder1,meetingroom)) also has probability 0.3. General knowledge about state is captured in the default-knowledge graph (cream) with use of the same formalism as for the relational map. In Fig. 1, a meeting room is a subtype of room for example, and by default the probability{sup:4} that a meeting room contains a magazine is 0.8. Since the relational map and the default knowledge are both relational graphs, they can be linked to create a single graph. This makes joint inference over the two layers possible with use of a single inference mechanism. Critically, it also makes it possible to imagine unseen entities in the relational map by use of the default-knowledge graph as a generative model for elements in the relational map. For example, if you think a room is likely to be a kitchen, you can assume the existence of instances of common kitchen objects in that room. In Fig. 1 the predicted instance state (blue) consists entirely of assumptive knowledge, but in general predicted instance states will contain a mix of assumptions (Dora assumes the magazine is in the office), physical information (the magazine is in the office), and epistemic information (Dora knows that the magazine is in the office). Using knowledge in the diagnostic layer, one can also make assumptions predicting new default knowledge. Further details of the specific state representations employed in the instance and default layers will be given in Section 3, and further details of the action representations will be given in Section 4.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       A three-level architecture
+      </section-title>
+      <paragraph>
+       In addition to representations, an architecture is required (Fig. 2). A central problem in robotic architectures is how to design a system to acquire a stable representation of the world suitable for planning and reasoning. Events occur rapidly and concurrently, in each of the robot's sensory and action modalities. Our approach is to employ a distributed blackboard system to control the flow of information. This distributed system is organized into three architectural layers that are independent of the three knowledge layers described above. At the lowest architectural layer, called the (competence layer), a group of processes related to a specific modality or skill (e.g. dialogue, or mapping and navigation) share information with each other via a blackboard or working memory. They transmit abstracted summaries of that information, designed to be temporally stable, to the belief layer. This middle layer has processes that link, or bind, information from different competences and modalities. This binding creates a set of symbols, describing the instance state—here the relational map—that can support task planning in the deliberative layer of the architecture.{sup:5} Using this method, we have designed many retaskable robot systems, which reuse and share many components. The Dora system described in this paper comprises more than 100 concurrently running components. We refer the reader to more detailed descriptions of our architectural approach elsewhere, as while important, it is not the focus of this paper [16], [19], [17].
+      </paragraph>
+     </section>
+     <section label="1.4">
+      <section-title>
+       Road map
+      </section-title>
+      <paragraph>
+       Having sketched the idea of knowledge layers, and their instantiation, we show in Section 2 how they are used with planning, by means of an example that will be used throughout the paper. Following this, Section 3 describes the state representation (relational map, default knowledge graph) in detail. This state representation is able to integrate knowledge from different sources such as visual sensing, dialogue, and common sense. Sections 4 and 5 then describe the action representation, and the planning approach able to reason with the action and state representations to solve problems (i)–(iv). An overview of the robot implementation is given in Section 6, and Section 7 gives results on the performance of the solutions to problems (i)–(iv).
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      An illustrative example
+     </section-title>
+     <paragraph>
+      We start with an example run of the robot. Dora is switched on in an unfamiliar office building and given the task{sup:6} of finding an object: a copy of AI Magazine. Dora has the following sensing abilities: it can detect objects and people using vision; it can map free space with a laser and a depth camera; it can acquire information about objects and rooms via dialogue with a human; and it can sense the 2D shape and visual appearance of a room. The initial map state is shown in Fig. 3 (left). In this, blue dots are laser readings, light blue marks free space, yellow-red dots indicate obstacle height, green areas are raised horizontal surfaces and grey planes are wall segments fitted to the laser data. When switched on, the robot thus obtains a local occupancy map, and the first node (place1) in the relational map is created at its current location, as shown in Fig. 3 (left), and in Fig. 1 (brown panel). This is a place node, and two empty place-holder nodes are created in yet to be visited locations. Each place-holder is predicted to turn into a full place node when visited. Each place node has an associated visual appearance, and a 2D shape for the surroundings. These appearance and shape categories are obtained, respectively, from visual and laser-based categorizers [35].
+     </paragraph>
+     <paragraph>
+      The room category is then determined via Bayesian inference on the relational map, guided by the default-knowledge graph. The latter represents the hierarchy of room types (meeting rooms, offices etc.), and object types (magazines, tables, containers, etc.). It encodes commonsense room type-object type relations, expressed probabilistically ({a mathematical formula}Pr⁡(contains(meetingroom,magazine))=0.8); probabilities of visual and 2D appearance for room types; and the probabilities of direct connectivity between room types ({a mathematical formula}Pr⁡(connected(office,corridor))=0.95). The object-room relations enable a room's category to be inferred from object detections (“I see a fridge and a microwave so this is a kitchen with probability 0.6.”). In the example, visual appearance and shape combine with default knowledge to give the distribution over the category of room1: {a mathematical formula}〈Pr⁡(office)=0.52,Pr⁡(corridor)=0.24,Pr⁡(meetingroom)=0.24〉. In Fig. 3, the pie chart attached to the node for place1 shows this distribution, where purple is office, yellow is corridor, and orange is meeting room. The resulting relational map constitutes the robot's belief state, used as the initial belief state for planning. After obtaining the initial relational map, Dora is given a goal description that a magazine must exist and the robot must know where it is, written:{sup:7}
+     </paragraph>
+     <list>
+      <list-item>
+       (exists(?o-object)(and(=(label?o)magazine)(K(position?o))))
+      </list-item>
+     </list>
+     <section label="2.1">
+      <section-title>
+       Planning with hypotheses
+      </section-title>
+      <paragraph>
+       To create a plan to find the magazine, Dora must reason about two entities that do not yet exist in its relational map: the magazine and the room that object is in. This incompleteness in knowledge requires open-world planning—that is, planning that takes into account the fact that new entities may become known to the robot during plan execution. Given the initial relational map, the planner hypothesizes extensions to it. To create these extensions, the planner has assumptive actions it can take, each making one or more assumptions about instance knowledge. The planner selects a sequence of assumptive actions that are likely to be true according to default knowledge, and which enable goal achievement. The planner does not make task-irrelevant assumptions. In Fig. 1 (blue panel), five assumptions have been made in this way: (i) a meeting room exists; (ii) there is a route from a place-holder to the hypothesized meeting room; (iii) this meeting room contains objects of type magazine; (iv) a particular instance of type magazine exists; and (v) it exists in this instance of a meeting room. The remainder of the plan (Fig. 3) is to move to the hypothesized meeting room and to plan to conduct a visual search for the object when the robot gets there. The task-driven selection of assumptions is the key step in dealing efficiently with incomplete information, and we describe our approach to it in detail in Section 4.
+      </paragraph>
+      <paragraph>
+       Next, the first physical plan step, (move place1 placeholder1), is executed. When the robot reaches the place-holder, the relational map changes. This invalidates the current plan—because, for example, the place-holder does not belong to a new room—and so execution monitoring triggers replanning. This cycle of planning, execution, and belief updating continues until either the goal is achieved or a plan cannot be found (see the rightmost box in Fig. 2).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Planning under observational uncertainty
+      </section-title>
+      <paragraph>
+       The continual planner is actually composed of two planners: a classical planner (Fast Downward [18]), and a decision-theoretic (partially observable Markov decision process, POMDP) planner. The classical planner also makes decisions about when to make a call to the POMDP planner, and thus we refer to the whole planning system as a switching planner. The POMDP planner is advantageous for reasoning about situations with uncertain belief state and actively controlled but unreliable perception. The continual planner uses assumptive actions to create the POMDP for the POMDP planner to solve, as described in Section 4. In Fig. 4 (three minutes into the run) Dora has found a meeting room, created a set of visual fixations, and is executing a POMDP plan that sequences these. If the robot sees the magazine with sufficient confidence, it will terminate in success. If it fails to find the magazine in the meeting room, Dora will replan and search for it in other rooms—in this case the office where the robot started. If it does not find the object, it will eventually declare a task failure. This happens when the relational map has a low probability that the magazine exists in any of the existing rooms, and there are no unexplored place-holders that could lead to other rooms. Because of this, the likelihood of the best sequence of assumptions—consistent with the object being findable—is sufficiently low that there is no plan with an acceptably low cost. Task failure is thus declared. Fig. 5 (left) shows the map at this point.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Explaining unexpected failure
+      </section-title>
+      <paragraph>
+       Whenever a task failure is declared, Dora raises a new goal to explain it. The sequence of plans gave a sequence of expected observations (the robot should see the magazine in the meeting room, or failing that in the office). In the case of task failure, these observations did not occur, so there was a mismatch between expectation and experience. We refer to the difference between the two as the set of surprises. The aim is to explain the surprises that caused the task failure. This problem is closely related to explanation-based learning, where explanations are generated by planning with a domain theory [30]. We pose it as the problem of finding an additional set of assumptions that change the expected outcomes to make them consistent with the actual observations. Diagnostic knowledge is used to enable these new assumptions to be made. There are two types of diagnostic knowledge. The first type extends the action models from the default layer with knowledge of how those actions might fail. These failure modes are represented with use of what are termed conditional effects in the planning community. The resulting, more complex action models would make normal planning more time-consuming, and so are used only when unexpected failures occur. The second type of diagnostic knowledge is a new set of assumptive actions that can hypothesize new pieces of default knowledge. Using these two new kinds of actions, Dora tries to find a modified version of the plan that consists of the original plan, preceded by a new sequence of additional assumptions. Addition of these assumptions in front of the old plan results in the previously surprising outcomes becoming expected outcomes. In this run the explanation is as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Meeting rooms have containers by default: (new-dk-inroom container meetingroom).
+       </list-item>
+       <list-item label="2.">
+        Containers have magazines inside them by default: (new-dk-inobject magazine container meetingroom).
+       </list-item>
+       <list-item label="3.">
+        There is a container in the meeting room: (object-in-room-new container room2 meetingroom).
+       </list-item>
+       <list-item label="4.">
+        There is a magazine in the container: (object-in-object-new magazine container object1 room2 meetingroom).
+       </list-item>
+      </list>
+      <paragraph>
+       All of these actions are assumptions. Assumptions 1 and 2 hypothesize new default relations between objects and places (default assumptions), and assumptions 3 and 4 hypothesize new instance knowledge (instance assumptions). Having devised this explanation, Dora creates a goal to verify each assumption. A plan is created for the conjunction of these goals, as shown in Fig. 5 (right). Dora can also make assumptions in this new planning process. In this case, Dora hypothesizes the existence of a person, who can be asked questions in order to verify each part of the explanation. When the person is found, Dora asks questions to verify the assumptions:
+      </paragraph>
+      <list>
+       <list-item label="Q1:">
+        Is there a container in this room? (ask-for-object-existence dora container object7 in room2)
+       </list-item>
+       <list-item label="Q2:">
+        Is there a magazine in the container? (ask-for-object-existence dora magazine object6 in object7)
+       </list-item>
+       <list-item label="Q3:">
+        Are magazines typically in containers? (ask-for-dk-inobject dora magazine container)
+       </list-item>
+       <list-item label="Q4:">
+        Are containers typically in meeting rooms? (ask-for-dk-inroom dora container meetingroom)
+       </list-item>
+      </list>
+      <paragraph>
+       If Dora receives a positive answer to a question, it can update the relevant knowledge. In the case of Q1 and Q2, this means updating the relational map. For Q3 and Q4, it means updating the default knowledge. Thus, Dora can plan and verify explanations that lead to updating of both instance and default knowledge. This example has sketched how problems (i)–(iv) are solved. We now detail each aspect of the solution, starting with the state representation.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Representing instance and default state
+     </section-title>
+     <paragraph>
+      Fig. 1 shows the relational map (brown) and the default-knowledge graph (cream) for the running example.{sup:8} The relational map has already been described. In addition to the already mentioned features, the default-knowledge graph also includes “is-a” for type relations, and “has-a” relations for spatial properties such as shape, size or appearance, and for room-object associations.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Inference and state estimation
+      </section-title>
+      <paragraph>
+       To allow (Bayesian) inference across the default-knowledge graph and the relational map, the joint representation is compiled into a chain graph[35], the structure of which is adapted on the fly according to the state of the underlying belief models. Chain graphs provide a natural generalization of directed (Bayesian network) and undirected (Markov random field) graphical models, allowing us to model both “directed” causal (such as “is-a” relations) and “undirected” symmetric or associative relations (such as connectivity of room types). The use of a chain graph allows us to model circular dependencies originating from loops in the topological graph, as well as permitting direct use of the probabilistic relations between the concepts. In our implementation, chain graph inference is event driven, triggered by updates to the relational map. For example, if an appearance property or object detection alters the probability of a relation, inference propagates the consequences throughout the graph. In our work, the underlying inference is approximate, and uses the fast loopy belief propagation procedure [31]. A chain graph supporting the running example of Fig. 1, Fig. 2, Fig. 3, Fig. 4, Fig. 5 is shown in Fig. 6. Each place node is represented by a set of random variables, one for each relation it is involved in. These are connected to a random variable over the room category, representing the “has-a” relations between rooms and their properties. The room category variables are connected by undirected links to one another, according to the actual connectivity of instances of rooms in the relational map. The potential functions {a mathematical formula}ϕrc(⋅,⋅) come from the default knowledge about connectivity of room types. The remaining variables represent the shape and appearance properties of the surrounding space, as observed from each place node, and also the presence of objects. These are connected to observations of features extracted directly from the sensory input. As explained in Section 6.2.2, these links are quantified by the categorical models of sensory information. Finally, the distributions {a mathematical formula}Prs⁡(⋅|⋅), {a mathematical formula}Pra⁡(⋅|⋅), and {a mathematical formula}Proi⁡(⋅|⋅) represent the default knowledge about shape, appearance and object co-occurrence, respectively. They allow for inference about other properties and room categories—for example, that the room is likely to be a kitchen, because you probably observed cornflakes in it. After inference, the resulting combined graph provides the belief state for planning (Fig. 2). Thus, when we refer to belief state, we mean not only the instance state, but also the default knowledge. The processes that maintain this belief state integrate evidence, arriving asynchronously, from many concurrent sensing processes. Thus, in architectural terms, as opposed to knowledge terms, we also have three-layers. This three-layer architecture, shown in Fig. 2, will be described in more detail in Section 6.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Planning
+     </section-title>
+     <paragraph>
+      There are two approaches to task planning we might take: classical planning and decision-theoretic planning. Classical planning is fast, but cannot reason about multiple action outcomes, unreliable observations, or multiple possible worlds. It thus produces a linear plan, which succeeds only if all the actions in the plan succeed. Decision-theoretic planning, by contrast, produces a policy maximizing the probability of success{sup:9} from any belief state the robot might reach during plan execution, taking account of the probabilities of every possible action outcome in those states. Decision-theoretic planning thus handles multiple action outcomes (Markov decision processes, MDPs) and unreliable observations (POMDPs), but at an unfeasible computational cost given the size of typical robot domains. We therefore developed a continual switching planner [11], which switches between a deterministic planner [18] and a POMDP solver, as required.{sup:10} This creates a linear plan, with some actions in that plan being calls to a decision-theoretic (POMDP) planner. This enables us to solve large problems quickly, while utilizing decision-theoretic planning where its benefits are greatest.
+     </paragraph>
+     <paragraph>
+      As mentioned previously, there are two concepts necessary to enable deterministic planning in incomplete and uncertain worlds: knowledge-level predicates and assumptive actions. Two knowledge-level predicates [33] model the robot's epistemic state over time: a knowledge predicate and an assumptive predicate. Physical actions (such as sensing actions) can have knowledge predicates as effects, as described in Sections 4.2 and 4.3. Assumptive actions, discussed in Section 4.5, are by contrast “virtual actions” that only have assumptive predicates as effects, establishing possible, but uncertain facts about the world. An assumptive action succeeds with a probability equal to the probability of the facts it establishes according to the belief state. Assumptive actions always occur at the beginning of a plan, and are used to satisfy preconditions for physical actions later in the plan. Assumptions may, and often do, depend on each other, allowing us to model non-trivial dependencies.
+     </paragraph>
+     <paragraph>
+      This brings us to the cost function that each part of the switching planner seeks to optimize. The POMDP solver simply finds the optimal policy. The linear plan succeeds with the probability of the sequence of assumptions it makes, and so is suboptimal in an uncertain world. Its degree of suboptimality cannot strictly be known without full decision-theoretic planning being performed. A reasonable upper bound on suboptimality is the difference between the goal reward, and that reward weighted by the probability of the linear plan succeeding. Finally, we need to account for the costs of the plan. Since the plan starts with uncertain assumptions, we cannot assign failure probabilities to each step of the deterministic physical plan. An upper bound on the linear plan cost, but a lower bound on the decision-theoretic cost, is achieved by incurring the full costs of all the actions in the linear plan. Given reward R for the goal state, this results in our trying to minimize the following:{a mathematical formula} where π denotes the linear plan, {a mathematical formula}ai denotes its ith action, {a mathematical formula}c(ai) denotes the cost of that action, and {a mathematical formula}ρ(ai) denotes its probability of succeeding.{sup:11} This formulation penalizes the linear plan according to a regret term, which discourages the sequential planner from scheduling unlikely assumptions. Typically only the assumptive actions have a non-zero probability of failure, and so in most of our examples {a mathematical formula}∏ai∈πρ(ai) is precisely the probability of a particular world in which the physical part of the linear plan succeeds.
+     </paragraph>
+     <paragraph>
+      Algorithm 1 and Fig. 2 give an overview of the cycle of planning and execution. First, the deterministic planner creates a linear plan that achieves the goal. As part of this, it makes a sequence of assumptions to select a possible world in which the subsequent physical actions will succeed. If the outcome of the next physical action is non-deterministic,{sup:12} a POMDP is created for that portion of the planning problem. This POMDP includes goal actions, which allow the POMDP planner to achieve a terminal reward by committing to a particular action effect to be communicated back to the continual planner. The robot then executes the policy generated by the POMDP planner until a goal action is reached (lines 13 ff.), before continuing with the execution of the rest of the linear plan. After each action in the linear plan has been executed, the relational map is updated. Execution will continue (line 21) until the goal is achieved or the plan becomes invalid, at which point replanning occurs.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Planning framework and notation
+      </section-title>
+      <paragraph>
+       In the rest of this section, we detail the machinery that enables our planning approach to work in open and uncertain worlds, before showing how to use it to explain failures in Section 5. Our planning framework is based on PDDL 3.1, an extension of PDDL 3.0 [10]. To support decision-theoretic planning, we have added the probabilistic effects and initial state descriptions from Probabilistic PDDL [53] and our own extensions for describing probabilistic observation models. We refer to the resulting language as DTPDDL [11] (for “decision-theoretic PDDL”).
+      </paragraph>
+      <paragraph>
+       In our implementation, we encode the planning domain using DTPDDL. This is translated into a representation called {a mathematical formula}SAS+ for the deterministic planner [4], while the POMDP solver uses the full DTPDDL representation. In most of the following examples, we show action examples as lifted DTPDDL operators. We will also find it useful to explain some ideas using {a mathematical formula}SAS+ notation. Informally, {a mathematical formula}SAS+ is a planning formalism in which states are represented as a set of variables with finite domains, and action preconditions and effects consist of assignments of values to variables.{sup:13} Formally, an {a mathematical formula}SAS+ task Π is a tuple {a mathematical formula}〈V,A,s0,g〉 of variables, actions, an initial state, and a goal description. Each variable {a mathematical formula}v∈V has a finite domain{a mathematical formula}dom(v) with the unknown value ⊥ contained in every domain. A state s can be regarded as a set of facts {a mathematical formula}v=x which assigns to each variable an element of its domain. By default, every variable is set to the unknown value, and we use {a mathematical formula}def(s)={v=x∈s:x≠⊥} to denote the set of defined assignments of a state. An action {a mathematical formula}a∈A has a precondition {a mathematical formula}pre(a), effects {a mathematical formula}eff(a), associated costs {a mathematical formula}c(a), and probabilities {a mathematical formula}ρ(a). Preconditions are sets of assignments, and effects are sets of either simple assignments or conditional effects.
+      </paragraph>
+      <paragraph>
+       For reasons of brevity, we refrain from giving a formal definition for action and plan application, as we use the normal {a mathematical formula}SAS+ semantics. We refer to the result of applying action a in state s as {a mathematical formula}app(s,a) and that of applying a sequence of actions {a mathematical formula}a0,…,an as {a mathematical formula}app(s,a0,…,an). An example of an action operator is that for the move action:
+      </paragraph>
+      <list>
+       <list-item>
+        (:actionmove:parameters(?a-robot?from?to-place):precondition(and(connected?from?to)(=(is-in?a)?from)):effect(and(increase(total-cost)2)(assign(probability)1.0)(assign(is-in?a)?to)(assign(placestatus?to)trueplace)(K(in-room?to))))
+       </list-item>
+      </list>
+      <paragraph>
+       Its preconditions are that the robot has to be at the starting place ?from and that ?from and ?to are connected. Executing the action causes the robot to be at ?to, turns it into a place node, and has a knowledge effect which will be explained in the next section. There are two special effects in this action: (increase (total-cost) 2) assigns costs c of 2 to the action, and (assign (probability) 1.0) sets the action's success probability ρ to 1.0. If those effects are absent, action costs are 1.0 for physical actions and 0 for virtual actions (such as assumptions), and the default value for probabilities is 1.0. The use of (assign (probability)) is semantically different from the use of probabilistic action effects such as in PPDDL (which are also used in the observation models described in Section 4.4). Instead of describing alternative action outcomes, action probabilities less than 1.0 increase the likelihood that the entire plan fails.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Representing knowledge state
+      </section-title>
+      <paragraph>
+       We now detail the two knowledge-level predicates we use. The knowledge predicate {a mathematical formula}K(v) indicates that the value of v is known.{sup:14} The assumptive predicate {a mathematical formula}A(v,x) states that the planner has made the assumption{sup:15} that v has the value x. Knowledge predicates obey a few rules that are enforced by the planning system:
+      </paragraph>
+      <paragraph label="Definition 1">
+       For a variable v and a value {a mathematical formula}x∈dom(v)∖{⊥}, the following conditions hold in each state s:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(∃x)(v=x)∈s⇒K(v)∈s.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(v=x)∈s⇒A(v,x)∈s∧(∀x′≠x)A(v,x′)∉s.
+       </list-item>
+      </list>
+      <paragraph>
+       The first condition means that if a variable is set to a value other than the unknown value, this variable must be known to the robot.{sup:16} The second condition ensures assumptions cannot contradict existing variable assignments. The initial state {a mathematical formula}s0 is special in that knowledge cannot be asserted by setting {a mathematical formula}K(v): if we knew the value of v, that fact has to be part of the initial state.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Representing the knowledge effects of actions
+      </section-title>
+      <paragraph>
+       The knowledge predicate {a mathematical formula}K(v) can be used to model the effects of sensing actions. For example, when the robot moves to a new place, it will know to which room the place belongs. This is modelled by the effect (K (in-room ?to)) of the move operator. In this case, the actual value of the in-room variable is irrelevant for the outcome: we will gain the information in any case. For other sensors, the outcome may depend on the value of the variable we are trying to sense. For example, when searching for an object, even if sensing were deterministic, the robot would only learn the object location if it actually were where the robot looked. If we modelled sensing in our object search operator in the same way as in the move operator, the robot might end up looking in the wrong place repeatedly, because the knowledge effect asserts that executing the action will result in knowing the object's location unconditionally. This can be avoided by our making the knowledge effect a conditional effect. A conditional effect {a mathematical formula}C▹e means that the effect e will occur only if C is true when the action is executed. In PDDL it is written with the when keyword. For our search-for-object action, this can be applied as follows:
+      </paragraph>
+      <list>
+       <list-item>
+        (:actionsearch-for-object:parameters(?a-robot?l-label?r-room?p-place?o-visualobject):precondition(and(=(is-in?a)?p)(=(in-room?p)?r)(=(label?o)?l)(cones-created?lin?r)):effect(and(increase(total-cost)(search-cost?l?o))(when(A(position?o)?r)(K(position?o)))))
+       </list-item>
+      </list>
+      <paragraph>
+       The conditional effect forces the planner to look for the object in places where it can be assumed to be. Of course, for this to work, we require that the (A (position ?o) ?r) predicates have the correct values. A naive continual planner could simply make all assumptions that are sufficiently likely to be true. This would ensure that the robot searches only those rooms where the object is likely to be. Such a coarse approach, however, discards most of the probabilistic knowledge the system possesses. This is why we introduce assumptive actions, and allow them to inherit probabilities from the current belief state, as a way to discriminate between plans according to their probability of success.
+      </paragraph>
+      <paragraph>
+       Having described how knowledge and knowledge effects are represented, we need to use that knowledge during planning. In the simplest case, a knowledge-level predicate is an explicit precondition (as in the conditional effect above) or part of a goal such as the one given to Dora in our example:
+      </paragraph>
+      <list>
+       <list-item>
+        (exists(?o-object)(and(=(label?o)magazine)(K(position?o))))
+       </list-item>
+      </list>
+      <paragraph>
+       There are subtler uses of knowledge-level predicates. For example, the search action has the precondition that the robot must be in the room which it plans to search: (= (is-in ?a) ?p) and (= (in-room ?p) ?r). But when planning in partially explored environments, we do not yet know to which room a place node belongs. Suppose, however, that we can make an assumption about a place-node's room, then the knowledge effect (K (in-room ?to)) of the move action should allow us to use the search action in a plan. We achieve this by applying a simple transformation to all physical actions: whenever there is a precondition {a mathematical formula}(v=x), we replace it by the two knowledge-level conditions {a mathematical formula}K(v) and {a mathematical formula}A(v,x). This means that an action can be scheduled once suitable values for its preconditions are assumed and the preconditions are known. At the same time, plans that were valid before this transformation remain so: because a fact {a mathematical formula}(v=x) implies {a mathematical formula}K(v) and {a mathematical formula}A(v,x), the new action is applicable whenever the original action was. Also, the planner will never try to schedule an action whose preconditions are only satisfied by assumed knowledge. This is because in the initial state {a mathematical formula}K(v) implies, by definition, that v has some known value assigned, and an assumption may not contradict that assigned value.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Probabilistic observation models
+      </section-title>
+      <paragraph>
+       Knowledge-level predicates are sufficient to model the qualitative knowledge changes needed for continual planning. To allow decision-theoretic planning of sensing, DTPDDL adds observation models to PDDL. These describe the signals that the robot may receive when actions are executed, for example, for person search:
+      </paragraph>
+      <list>
+       <list-item>
+        (:actionlook-for-people:parameters(?a-robot?pl-place):precondition(=(is-in?a)?pl):effect(and(increase(total-cost)10)))
+       </list-item>
+      </list>
+      <list>
+       <list-item>
+        (:observeperson:parameters(?a-robot?p-person?pl-place):execution(look-for-people?a?pl):effect(and(when(=(is-in?p)?pl)(probabilistic0.7(observed(does-exist?p)true)))(when(not(=(is-in?p)?pl))(probabilistic0.001(observed(does-exist?p)true)))))
+       </list-item>
+      </list>
+      <paragraph>
+       The action look-for-people does not have any effects except to incur the action cost. However, the person observation model—acquired off line from data—specifies that whenever the look-for-people action is executed, the robot correctly detects each person present with probability 0.7, or generates a false positive with probability 0.001. These observation models can be used by the POMDP planner, but not the classical planner. We thus automatically translate them into epistemic effects as follows: if an assignment {a mathematical formula}v=x is part of an observation model's precondition or conditional effect, we add a conditional effect {a mathematical formula}A(v,x)▹K(v) to the triggering action's effects:
+      </paragraph>
+      <list>
+       <list-item>
+        (:actionlook-for-people:parameters(?a-robot?p-person?pl-place):precondition(=(is-in?a)?pl):effect(and(increase(total-cost)10)(when(A(is-in?p)?pl)(K(is-in?p)))))
+       </list-item>
+      </list>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Planning with assumptions
+      </section-title>
+      <paragraph>
+       To choose between possible worlds according to the belief state, we introduce assumptive actions. These are virtual actions, that have effects only on A-predicates, and which are the only actions that do so.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Assumptive actionAn assumptive action {a mathematical formula}a∈Aa⊆A is an action with the following restrictions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        In every plan π, a must occur before any physical action.
+       </list-item>
+       <list-item label="•">
+        All effects in {a mathematical formula}eff(a) are of the form {a mathematical formula}A(v,x),x∈dom(v).
+       </list-item>
+       <list-item label="•">
+        If a has an effect {a mathematical formula}A(v,x), then it may never be applied if a conflicting assumptive predicate {a mathematical formula}A(v,x′),x′≠x already exists.
+       </list-item>
+      </list>
+      <paragraph>
+       The first condition ensures that we can make assumptions only before any real actions are executed. It reflects the fact that assumptions are about the current uncertain state of the world, not future changes. The second condition simply states that assumptive actions cannot affect anything besides assumptive predicates. The third condition prevents the planner from making an assumption that either contradicts a previously made assumption or a known fact about the world (because {a mathematical formula}v=x implies {a mathematical formula}A(v,x), Definition 1). Thus the planner cannot assume two contradictory facts at the same time. We write the set of assumptions as {a mathematical formula}Aa, and call the remaining actions {a mathematical formula}Ap=A∖Aaphysical actions.
+      </paragraph>
+      <section label="4.5.1">
+       <section-title>
+        Instance assumptions based on uncertain instance knowledge
+       </section-title>
+       <paragraph>
+        Assumptive actions allow us to model probabilistic instance states—for example, in the relational map. If a variable v has a discrete value distribution with {a mathematical formula}Pr⁡(v=x0)=p0,…,Pr⁡(v=xn)=pn, we can create a set of assumptions {a mathematical formula}a0,…,an that represent this distribution by setting the effect {a mathematical formula}eff(ai)={A(v,xi)} and the assumption's probability {a mathematical formula}ρ(ai)=pi. We use this scheme for closed-form probability distributions over the robot's instance knowledge. Thus, this type of assumptive action provides a solution, in a linear planning framework, to problem (i): planning under uncertainty. Recall the distribution over the room categories for room1 from the example: {a mathematical formula}〈Pr⁡(office)=0.52,Pr⁡(corridor)=0.24,Pr⁡(meetingroom)=0.24〉.
+       </paragraph>
+       <paragraph>
+        In the planning problem, this distribution will be represented by the following assumptions:
+       </paragraph>
+       <list>
+        <list-item>
+         (:assumptioncategory-room1-corridor:effect(and(A(categoryroom1)corridor)(assign(probability)0.24)))(:assumptioncategory-room1-meetingroom:effect(and(A(categoryroom1)meetingroom)(assign(probability)0.24)))(:assumptioncategory-room1-office:effect(and(A(categoryroom1)office)(assign(probability)0.52)))
+        </list-item>
+       </list>
+      </section>
+      <section label="4.5.2">
+       <section-title>
+        Instance assumptions based on default knowledge
+       </section-title>
+       <paragraph>
+        Assumptive actions become much more powerful when combined with default knowledge, providing a solution to open-world planning. They can generate object or place instances with the probability that they exist according to the default-knowledge graph. To achieve this, we specify assumptive actions with parameters for probabilities. The probabilities are filled in at planning time with values obtained from the robot's default knowledge:
+       </paragraph>
+       <list>
+        <list-item>
+         (:assumptionsobject-in-room:parameters(?l-label?r-room?c-category):precondition(and(A(category?r)?c)(not(defined(Pr-contains-instance?r?c?l)))):effect(and(A(contains?r?l)true)(assign(probability)(Pr-contains-by-default?c?l))))
+        </list-item>
+       </list>
+       <paragraph>
+        states that if we assume a room to be of category ?c, we assume that an object of type ?l is in the room with the probability (Pr-contains-by-default ?c ?l) that an object of type ?l exists in a room of category ?c. For example, the robot can assume the existence of a cornflakes box in a kitchen it has found. These assumptions can be linked in a chain: assume the existence of the kitchen, and then assume the existence of the cornflakes box given that the kitchen exists. If both instance and default knowledge can support an assumption, instance knowledge has priority. Assumptive actions can explicitly prioritize the sources of information employed in their preconditions. In the example above, we disallow the assumption if instance knowledge (Pr-contains-instance ?r ?c ?l), sourced from the relational map, is available. New instance assumptions will also automatically become available to the planner as new places and objects are added to the relational map. Because most planners work on grounded representations of the planning problem, adding new objects during the planning process is not possible. Thus, to enable open-world planning, we create a predefined number of virtual objects. Assumptive actions then hypothesize new objects by giving properties to these virtual objects. The number of virtual objects can be scaled as required for a domain.{sup:17} This use of assumptive actions with default knowledge provides our solution to problem (ii): open-world planning.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Planning in open worlds: an example
+      </section-title>
+      <paragraph>
+       In our running example, the following assumptions allow the planner to assume the existence of a meeting room:
+      </paragraph>
+      <list>
+       <list-item>
+        (:assumptionleads-to-room-placeholder1-meetingroom:effect(and(A(leads-to-roomplaceholder1meetingroom)true)(assign(probability)0.304)))
+       </list-item>
+      </list>
+      <list>
+       <list-item>
+        (:assumptionroom-from-placeholder:parameters(?p-place?r-room?c-category):precondition(and(=(placestatus?p)placeholder)(A(leads-to-room?p?c)true)(is-virtual?r)):effect(and(assign(in-room?p)?r)(assign(category?r)?c)))
+       </list-item>
+      </list>
+      <paragraph>
+       The first assumption is created from instance knowledge and has a likelihood equal to the probability of finding a meeting room somewhere beyond placeholder1. This is computed from the relational map and the default-knowledge graph. Specifically, it uses the likelihoods of room-type connectivity, from known rooms to a room of the desired type. The second assumption uses a virtual room object (in this case room2, identified as virtual by the is-virtual predicate) to “create” a meeting room that lies beyond the place-holder placeholder1.
+      </paragraph>
+     </section>
+     <section label="4.7">
+      <section-title>
+       The switching planner: an example
+      </section-title>
+      <paragraph>
+       With these concepts, we can now illustrate how the switching planner in our system works. At the beginning of each planning process we create a plain PDDL planning task that can be used by Fast Downward [18] as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Uncertain instance knowledge is converted into grounded assumptions (Section 4.5).{sup:18}
+       </list-item>
+       <list-item label="2.">
+        Preconditions that enforce the conditions from Definition 2 (assumptions may not be contradictory and must occur before any physical action) are added to all assumptive actions.
+       </list-item>
+       <list-item label="3.">
+        Observation models are converted into conditional knowledge effects (Section 4.4).
+       </list-item>
+       <list-item label="4.">
+        Certain instance knowledge facts are assignments in the initial planning state.
+       </list-item>
+      </list>
+      <paragraph>
+       All these transformations are inexpensive to perform and are applied every time the deterministic planner is called. Creating a straight-line plan from this planning task will result in the example plan in Fig. 3. To illustrate how the actions interact, Fig. 7 shows the same plan represented as a graph. Note the multiple actions and preconditions that some assumptions support.
+      </paragraph>
+      <paragraph>
+       If one of the assumptions in that plan turns out to be false, or if the plan execution fails for any other reason, a new plan is created and the process starts again. After several planning-execution cycles, we may reach a physical action with a non-deterministic outcome.{sup:19} In the second plan in our running example, shown in Fig. 4, the search-for-object action's knowledge effect depends on the assumption that the magazine is in room2. This triggering action causes the planner to switch to decision-theoretic mode [11].
+      </paragraph>
+      <paragraph>
+       The goal of the POMDP subproblem is to achieve the effect of the triggering action. To ensure the POMDP is small enough to solve, we include only relevant facts in its domain, starting with an absolutely minimal set of variables. These variables are all the facts of which we are certain, and any uncertain assumptive predicates on which the triggering action depends, called relevant assumptions.{sup:20}Fig. 8(a) shows the relevant assumptions for our example, and Fig. 8(b) shows the resulting minimal initial belief state. To this minimal set, we add a limited number of uncertain variables, from the full domain, which (a) are observable by the robot, and (b) if known help to determine whether the minimal relevant assumptions hold. If there are many such variables, the belief space will grow too large. We order and select them by the amount of information they give as to whether the minimal relevant assumptions hold. The measure of information used is the conditional entropy of the minimal belief state. We first compute the unconditional entropy {a mathematical formula}H(b0)=−∑s∈b0Pr⁡(s)log⁡Pr⁡(s) of the minimal belief state {a mathematical formula}b0. In our example, this is {a mathematical formula}−(0.8log⁡0.8+0.2log⁡0.2)=0.5. Then for every eligible fact y, we compute the conditional entropy {a mathematical formula}H(b0|y)=Pr⁡(y)H(b0|y)+Pr⁡(¬y)H(b0|¬y). In our example, we consider the (visible object1) facts, which represent whether the object lies within a group of view cones. Fig. 8(c) shows a belief state in which facts about four cone groups have been added, along with their conditional entropies with respect to the minimal state {a mathematical formula}b0. We select the facts greedily, adding those with the lowest conditional entropy first. We continue until there is no more benefit to be gained from adding new facts, or the size of the belief state is too big. The resulting belief state in our example is quite small, as shown in Fig. 8(c). This formulation of the state space for the POMDP subproblem with use of assumptions contributes to our solution to problems (i) and (ii).
+      </paragraph>
+      <paragraph>
+       Having formulated the POMDP subproblem, the robot plans for this subtask, executes the policy, and repeatedly updates the belief state. When the belief about the magazine's presence (or absence) has passed a threshold, the POMDP goal action is executed, committing to the presence (absence) of the magazine. Control passes back to the continual planner, which then either continues executing its original plan, or replans.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Explaining failures
+     </section-title>
+     <paragraph>
+      If the robot declares a task failure (“I can't find a plan likely to find the magazine”), this means that the likelihood of success of the best remaining plan is too low to consider. At this point Dora should explain the failure and verify its explanation—problems (iii) and (iv). This section describes how both problems can be solved using assumptions. The first insight is that a task failure must mean that in each plan so far at least one assumption was incorrect. To formally define what we mean by “explanations” and “failures”, however, we cannot just model the last plan, we must model the sequence of plans created by the continual planning process, and thereby the sequence of expected states that results.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Continual planning processGiven a planning task {a mathematical formula}Π=〈V,A,s0,g〉, a continual planning process{a mathematical formula}PΠ=〈Π,Lπ,Ls〉 consists of the underlying planning task Π and sequences of plans {a mathematical formula}Lπ=[π0,…,πn] and states {a mathematical formula}Ls=[s0,…,sn+1] with the following properties:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}π0 is a solution to the original planning task Π; that is, a plan that reaches g from the initial state {a mathematical formula}s0.
+      </list-item>
+      <list-item label="•">
+       Each plan {a mathematical formula}πi can be divided into assumptions, the executed portion of the plan and the unexecuted portion of the plan, {a mathematical formula}πia,πie,πiu.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}si,i&gt;0 is the state observed by the robot after executing {a mathematical formula}πi−1e.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}πi is a solution to the modified planning task {a mathematical formula}Πi=〈V,A,si,g〉; that is, a plan that reaches g from the previous observed state {a mathematical formula}si.
+      </list-item>
+     </list>
+     <paragraph>
+      The expected state after plan {a mathematical formula}πi is denoted {a mathematical formula}si+1′=app(si,πia,πie) and is the result of the application of {a mathematical formula}πi's assumptions and executed actions from its initial state. So, in our example, after searching the meeting room, the robot expects to know where the magazine is. We use the following shorthand for the plan's actions: {a mathematical formula}ai,j for the jth assumption of {a mathematical formula}πia, {a mathematical formula}ei,j for the jth executed action in {a mathematical formula}πie, and {a mathematical formula}ui,j for the jth unexecuted action in {a mathematical formula}πiu. See Fig. 9 for an illustration of a sequence of three plans that uses this notation. Given this definition, we define surprise as based on the differences between the expected states {a mathematical formula}si′ and the perceived states {a mathematical formula}si:
+     </paragraph>
+     <paragraph label="Definition 4">
+      SurpriseLet {a mathematical formula}πi be the ith plan in a continual planning process with initial state {a mathematical formula}si, expected state {a mathematical formula}si+1′ after execution of {a mathematical formula}πie, and observed state {a mathematical formula}si+1. Then a fact σ is a surprise of{a mathematical formula}πi iff {a mathematical formula}σ∈si+1 and {a mathematical formula}σ∉si+1′.
+     </paragraph>
+     <paragraph>
+      So a surprise is a fact in the observed state {a mathematical formula}si+1 that is not part of the expected state {a mathematical formula}si+1′. Since states are full assignments of values to variables, this includes cases of facts missing from {a mathematical formula}si+1. In our example, the observed state is not seeing the magazine in the meeting room. This machinery enables us to define the surprises of a continual planning process:
+     </paragraph>
+     <paragraph label="Definition 5">
+      Surprises in continual planningLet {a mathematical formula}PΠ be a continual planning process. Then the surprises{a mathematical formula}S of {a mathematical formula}PΠ are defined as a sequence of sets of surprises, one for each planning cycle:{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      This definition of surprise is quite general: any observed, but unexpected fact is a surprise. So Dora might be surprised to find a cornflakes box in the office, but this is not helpful in explaining why the magazine was not found. We thus want to concentrate on the subset of surprises that might have caused the task failure: the task-relevant surprises. This is the set that breaks at least one precondition of an action later in the plan. In fact, whenever the continual planner replans, this must have been caused by a surprise according to Definition 4. Having defined surprises, we can consider how to explain them, thus addressing our problem number (iv). To do this, we reuse our assumption mechanism. An explanation is defined as a sequence of assumptions that change the expected behaviour to be the same as the behaviour that has been observed.
+     </paragraph>
+     <paragraph label="Definition 6">
+      ExplanationGiven a surprise σ of {a mathematical formula}πi, an explanation{a mathematical formula}E for σ is a sequence of assumptive actions so that{a mathematical formula} Given a sequence of sets of surprises {a mathematical formula}S=[S0,…Sn], {a mathematical formula}E is an explanation for {a mathematical formula}S iff it is an explanation for each {a mathematical formula}σ∈Si for every {a mathematical formula}Si∈S.
+     </paragraph>
+     <paragraph>
+      The first condition simply states that when the original plan sequence is executed, given the explanatory assumptions, the resulting state must contain the surprising observation that we want to explain. The second condition ensures that these explanations do not cause any new surprises. As explanations consist of assumptive actions which each have a probability, the probability of an explanation is simply the product of those probabilities: {a mathematical formula}ρ(E)=∏ϵ∈Ep(ϵ).
+     </paragraph>
+     <paragraph>
+      For illustration (Fig. 10), let us take a simplified version of our example task, focusing only on the sensing actions. In this example, we have a sequence of two plans, both failing to achieve their goal. Both plans start with three assumptive actions, first establishing the category of a room, then assuming the existence of the type of target object in that room, and finally placing a virtual object there, so that there is a concrete instance of “magazine” that the planner can reason about. These assumptions are followed by a single search_for_object action, which would satisfy the goal (K (position object1)) if the assumptions were correct.
+     </paragraph>
+     <paragraph>
+      The surprises are, in both cases, the missing effect of the search action, so {a mathematical formula}S0=S1={¬(K (position object1))} and {a mathematical formula}S=[S0,S1]. A possible explanation is that the magazine is actually in a third room, room3:{a mathematical formula} would be an explanation for {a mathematical formula}S0 and {a mathematical formula}S1 and therefore also for {a mathematical formula}S.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Preventing explanation by omission
+      </section-title>
+      <paragraph>
+       This example, however, betrays a weakness of this definition of explanations: it is sufficient to withdraw an assumption to explain a surprise. A sufficient explanation would be {a mathematical formula}E=[category-room3-meetingroom]. Intuitively the explanation is inadequate. The reason lies in the fact that state variables either take a specific value{sup:21} or the unknown value ⊥. The role of assumptions is precisely to assign specific values to unknown variables. The purpose of those assignments is to enable later physical actions in the plan to succeed, by satisfying the conditions in their desired conditional effects. From our example, consider the action that searches the room for the magazine. Its effect is for Dora to know where the object is. The condition of that effect is that the magazine is in the room. In planning terms, that condition is unsatisfied if the location of the magazine is unknown. Making the assumption that the magazine is in room2 satisfies the condition. Thus, to trivially explain why Dora did not see the magazine we could simply withdraw the assumption: the location becomes unknown again, the plan will fail, and so an explanation has been provided.
+      </paragraph>
+      <paragraph>
+       This style of explanation by omission is unsatisfactory. It relies on the implicit closed-world assumption in the action models—everything the robot does not know to be true is assumed to be false. Plan failure is then explained in terms of the robot not knowing the things needed for the plan to succeed. But the true state of the world, rather than the robot's lack of knowledge, was the direct cause of plan failure. An explanation must thus commit to specific statements about the world (assignments of specific values to variables) that explain the failure. So this is what is enforced in our approach. We could do this by assuming a value for every single variable in the state description. In other words, to construct an explanation by completely defining a possible world. This is unnecessary. Since the robot only needs to explain the task-relevant surprises, it needs to fix the values of only those variables that might have affected the outcomes of its plan. A minimal set of variables is thus those which were initially unknown, and that occur in the conditions of conditional effects for the executed actions. No other variables, which can be changed by assumptions, could influence any of the outcomes that caused failure. Enforcing an assignment, with use of assumptions, to every variable in this minimal set, ensures that the explanation produced cannot rely on explanation by omission. Of course, this minimal set may not be enough, so assumptions about additional variables are allowed. Formally, we require that if {a mathematical formula}e∈⋃i=0nπie was an executed action and {a mathematical formula}C▹eff is a conditional effect of e, then for each condition {a mathematical formula}vi=xi∈C there must be an assumption {a mathematical formula}ϵ∈E and a value {a mathematical formula}x′∈dom(vi) with {a mathematical formula}vi=x′∈eff(ϵ). In the running example, the conditions in the search actions' conditional effects would force us to make some assumption about the position of the magazine—that is, about (position object1).
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Finding explanations as a planning problem
+      </section-title>
+      <paragraph>
+       Since an explanation is a sequence of assumptions, finding one is a new planning problem. We allow the planner to create a new sequence of assumptions that precedes the executed actions of the original sequence of plans. Then we force the planner to replay that sequence of executed actions, checking that the physical actions now cause the effects originally observed by the robot. If a plan is found, its assumptions are an explanation for the task-relevant surprises.
+      </paragraph>
+      <paragraph>
+       Given a continual planning process {a mathematical formula}PΠ with {a mathematical formula}Π=〈V,A,s0,g〉, we create a new planning task {a mathematical formula}Πˆ=〈Vˆ,Aˆ,sˆ0,gˆ〉 as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The planner is allowed to make all the assumptions {a mathematical formula}Aa of the original plan, but the only physical actions that are allowed are the executed actions of the original plan. To these we add a set of observation actions{a mathematical formula}oi, which are used to check if the simulated execution results in the same state sequence as that originally experienced by the robot. We also add an action variable M to the state. This forces the planner to execute all physical actions in order (see Fig. 11). In the initial state it has the value of the first executed action {a mathematical formula}e0,0, and the goal is to reach the final value Ω, i.e. to execute all physical actions. To that end, every physical or observation action {a mathematical formula}a∈Apˆ has a precondition {a mathematical formula}M=a and an effect {a mathematical formula}M=succ(a), with the successor function {a mathematical formula}succ(⋅) defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Recall that assumptions may occur only before the first physical action. Thus, the planning problem has a solution only if the planner can find a sequence of assumptions that allow all the original physical actions to be executed in sequence, and which results in expected and actual observations {a mathematical formula}si matching. If we want to force the planner to make assumptions about certain variables {a mathematical formula}v∈V to prevent explanations by omission, we can add the required conditions to the goal. This approach finds explanations, but has two shortcomings:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        It tries to explain surprises it cannot explain. Every surprise must be explained. So if an external agent changes a fact about the environment that the robot implicitly assumes to be static, no explanations will be found, not even for surprises that could be explained. We would like partial explanations when full explanations are not possible.
+       </list-item>
+       <list-item label="2.">
+        It will make more assumptions than necessary. Even if every surprise can be explained, the planner may have to make a large number of assumptions, even though most surprises can be explained in a straightforward way. This can cause a substantial slowdown if longer action sequences have to be explained.
+       </list-item>
+      </list>
+      <paragraph>
+       The solution to the first problem is to avoid trying to explain the unexplainable. This is achieved by limiting the facts checked by the observation actions to those that are caused by conditional effects—that is, to those observations that can be affected by assumptions. We note that for a variable v and the observed states {a mathematical formula}si and {a mathematical formula}si+1, there are three possibilities for the actions {a mathematical formula}πie that were executed in between:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Case 1:v occurs only in unconditional effects of {a mathematical formula}πie. Then v will change as expected, or it has a cause outside the domain model. So it cannot be explained.
+       </list-item>
+       <list-item label="•">
+        Case 2:v does not occur in any effect of {a mathematical formula}πie. Then any change in v will have a cause outside the domain model. So, again, it cannot be explained.
+       </list-item>
+       <list-item label="•">
+        Case 3:v occurs in at least one conditional effect of {a mathematical formula}πie. A change in v may be caused by the conditional effect triggering differently from expected, which could be changed by an assumption. Thus, it might be explainable.
+       </list-item>
+      </list>
+      <paragraph>
+       Hence the observation action {a mathematical formula}oi+1 needs to check observations only in case 3; in the first two cases the value is either expected or inexplicable. Unchecked facts are instead part of the effect of {a mathematical formula}oi+1, so the remaining plan is simulated correctly.
+      </paragraph>
+      <paragraph>
+       To address the second problem, we use the fact that assumptions can often be determined in an efficient backward chaining manner, rather than by forward search. Specifically, many assumptions can be determined from one observation. If an observation is unexpected, and all the conditional effects that cause it have a common subset of conditions, then it follows that this common subset must hold. Thus, assumptions that set the conditions must be part of any explanation. Formally, if a variable v changes between {a mathematical formula}si and {a mathematical formula}si+1 from x to {a mathematical formula}x′, then let {a mathematical formula}C={c0,…,cm} denote the conditions of those conditional effects {a mathematical formula}cj▹ej, which assign {a mathematical formula}v=x′ as an effect—that is, {a mathematical formula}(v=x′)∈ej. If there is a set of common preconditions {a mathematical formula}Prev={A(v0,x0),…,A(vn,xn)} so that {a mathematical formula}Prev⊆ci for all conditions {a mathematical formula}ci∈C, then the assumptions in {a mathematical formula}Prev must be contained in any explanation. In practice this improvement significantly cuts planning time, especially for longer failed plans. It also leads to shorter explanations.
+      </paragraph>
+      <paragraph>
+       We can force the planner to return multiple explanations. Each is an explanation ranked by its probability according to the belief state, thereby allowing the robot to verify explanations in order of plausibility. In this assumptive framework, failures can be explained with the use of assumptions based on either instance or default knowledge. In the first case, failures are explained by the choosing of uncertain facts from the relational map—such as positing that the type of room searched was different from that originally supposed. In the second case, by our allowing instance assumptions based on default knowledge, explanations posit the existence of new places or objects—such as the existence of a new room the object might be in. Thus, by using assumptions for explanations, we can also leverage the mix of relational and commonsense knowledge employed for regular task planning. We refer to these as closed-world and open-world explanations. However, without additional machinery these explanations are still quite limited in power. To give them more power we need to introduce the third level of our knowledge schema: diagnostic knowledge.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Diagnostic knowledge
+      </section-title>
+      <paragraph>
+       Explaining failures requires explicit assumptions, but many assumptions in the default layer are implicit. To find richer explanations we must make these implicit assumptions explicit. The diagnostic layer contains two types of action models that achieve this: diagnostic actions and default assumptions.
+      </paragraph>
+      <paragraph>
+       Diagnostic actions are based on the default layer's models of physical actions, augmented with additional possible outcomes and their causes. As an example, recall the default move action from Fig. 12(a). This has two effects: one physical effect, in which the robot ends up at the new location; and one knowledge effect, in which the robot knows the room type of the new location. But even if this action's preconditions are satisfied, the effects are not guaranteed. The route might be temporarily blocked by a person, for example, or the door might be closed. In this case the physical effect will not happen. Even if the robot can reach the new location, the knowledge effect may fail: if the place node represents a doorway, there is no room to which it belongs. We can explicitly model these failure modes using conditional effects. Fig. 12(b) shows this for the move action: the preconditions for the action's execution remain the same but its effects are dependent on additional predicates. This augmented action model is stored in the diagnostic layer. In fact every physical action model in the default layer has a more complex counterpart in the diagnostic layer. When explanations are required, these more complex action models are recruited. This gives the planner many more possible failure modes, expressed using conditional effects, and thus a greater variety of explanations.
+      </paragraph>
+      <paragraph>
+       The second type of diagnostic knowledge is a new kind of assumption. The default layer contains assumptive actions that hypothesize new instance states. In the diagnostic layer there are corresponding default assumptions that can hypothesize new default knowledge about state. This default state knowledge includes is-a and contains relations between types of entities. A default assumptive action has as its effect an assumption that a new relation exists between two entities already in the default-knowledge graph. For example, (A (contains (meetingroom container))), meaning “meeting rooms typically have containers”. Since default knowledge affects the inferences made about relational state, new defaults increase the likelihoods of explanations involving instance assumptions. Thus, default assumptions allow the robot to generate more general explanations than are possible with instance assumptions alone. For example, only with default assumptions can the robot hypothesize that cereal boxes are often kept in cupboards in dining rooms.
+      </paragraph>
+      <paragraph>
+       The diagnostic actions and default assumptive actions are employed only for planning of explanations. This is because they would add unnecessary complexity to regular task planning. It is also an open question how to assign probabilities to default assumptions, as they deal by definition with new knowledge. Diagnostic actions are restricted to planning of explanations because their many conditional effects slow regular task planning.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Verification
+      </section-title>
+      <paragraph>
+       If an explanation has been found, the planner can pass the explanation to the motivation component, which can then decide to try to verify whether the explanation is correct. Verification tasks are normal planning tasks, which use the default layer's planning domain. Typically the only way to verify explanations is to ask questions of a human, since if other options were available, they were exhausted during the initial round of task planning. This, in turn, can require assumptions about the locations of humans able to answer the robot's questions. However, the robot cannot currently confirm all explanations it can produce. In particular, assumptions about the non-existence of objects are things the robot cannot plan to verify. Since planning to verify assumptions also uses our assumptive framework, this completes our approach to problem (iv).
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Implementation
+     </section-title>
+     <paragraph>
+      In this section, the robot implementation is described. We start with the architecture, and follow with brief descriptions of the components for localization and mapping, place categorization, navigation, object search, person search, dialogue, and the sourcing of default knowledge.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Architecture
+      </section-title>
+      <paragraph>
+       We use a three-layer architecture, comparable in some respects to others such as 3T [32]. The three layers of the architecture are independent of the three knowledge layers. The architectural layers, shown in Fig. 2, are termed the competence, belief, and deliberative layers. The competence layer contains concurrently running sensor and action processes. Sensory competences send information to the belief layer. Action competences implement the physical actions of the planner. The deliberative layer contains the planner, and systems for execution and goal management. The belief layer mediates between the competence and deliberative layers. It contains the relational map, the default-knowledge graph, and the chain graph inference engine that maintains the belief state. See Sections 1 and 3) for further information.
+      </paragraph>
+      <paragraph>
+       The function of the belief layer is to provide a stable set of symbols for planning. Stability means that a symbol must persist at least as long as the planner takes to use it. This requires careful symbol design, abstracting away rapidly changing information that is irrelevant to task planning. Belief state updates must be timely, and incremental, as signals arrive asynchronously from the different competences. The competence layer provides the belief layer with rapidly changing instance information from each modality (dialogue, depth sensing, vision, and laser). Each competence maintains its own internal representation (e.g. a metric map), and is itself composed of multiple components that asynchronously update a competence-specific working memory, and transmit abstract information only to the knowledge layer [52]. Components in the competence layer either run continuously or are explicitly called on demand as needed. Examples of the former are metric mapping, localization, visual place appearance classification and topological map maintenance. Examples of the latter are natural language processing, and active search behaviours for objects and humans. Components are called on demand if they are resource intensive, or only needed occasionally.
+      </paragraph>
+      <paragraph>
+       In summary, the belief layer implements a representational separation between the deliberative and competence layers. It also insulates the deliberative layer from implementation changes to components in the competence layer. The entire architecture is an instantiation of the CoSy Architecture Schema (CAS) [6], implemented with the CAS Toolkit (CAST) [16]. This is a component-based, event-driven integration framework that has been used to develop multiple robot systems [45], [15], [13]. CAST enables development of loosely coupled, component-based systems governed by the exchange of information and knowledge via multiple working memories. We describe each competence in turn.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Continuously operating competences
+      </section-title>
+      <paragraph>
+       Continuously operating competences run constantly and push information to the belief layer, causing asynchronous updates to the relational map. They also maintain their own local representations—for example, a metric map is maintained by the mapping competence—which are not exposed to the belief layer explicitly, but which are used by other competences (e.g. navigation and movement).
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Localization and mapping
+       </section-title>
+       <paragraph>
+        We employ a hybrid map representation, comprising feature-based and local metric grid maps, together with a topological graph. This topological map consists of nodes called places (corresponding one to one with the places in the relational map), connected through edges representing traversable routes. The underlying simultaneous localization and mapping techniques and obstacle perception methods are based on work by Hawes et al. [15], Pronobis et al. [37] and Zender et al. [55]. For the purpose of this paper, it is enough to know that these techniques allow the robot to be well localized and to build a 3D metric map using information taken from 2D laser scans, 3D point clouds from a depth camera, and odometry data. This metric map explicitly represents free space at floor level and the heights of detected objects, and removes transient obstacles after repeated scans. None of this metric information is transmitted to the knowledge layer, but is used for navigation when movement actions are executed. Places are created at regular intervals as the robot moves, and at doorways. Doorways are detected in the laser scan, and rooms are defined as groups of nodes, each room being connected to another room by at least one doorway [15]. Doorways are defined as not belonging to any room. Space that has not yet been traversed by the robot has no places in it. Therefore, the robot can add hypothesized places in unexplored locations within 2D laser scan range. These hypothetical places allow reasoning about unvisited space, and planning and execution of exploration. Hypothetical places correspond to the place-holders in the relational map. For an example map, see Fig. 13.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Place categorization
+       </section-title>
+       <paragraph>
+        A categorization algorithm augments place nodes with information about room categories as described by Pronobis et al. [36]. Following Pronobis and Jensfelt [35], a small set of views is acquired at each place, and two types of low-level features are extracted: (a) geometric features from laser range data which are indicative of room shape and size, and (b) global appearance features based on composed receptive field histograms obtained from second-order, normalized Gaussian derivative filters applied to the illumination channel, captured from a wide-angle camera, at two scales. On the basis of these features, independent categorical models are built for shape (e.g. elongated or rectangular), size (e.g. small or large) and visual appearance (e.g corridor-like or office-like) properties, with classification being realized with support vector machines. For each of the places, the categorizer then creates relations between that place and properties—for example, a place is linked to the geometric concept “rectangular”. These place-property relations are modelled probabilistically, on the basis of confidence measures derived from the distances between the classified samples and discriminative model hyperplanes [36]. The accumulated confidences gained from the support vector machine models across views are normalized to gain probabilities. The place-property relations are transmitted with their probabilities to the belief layer.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       On-demand competences
+      </section-title>
+      <paragraph>
+       On-demand competences run only when explicitly triggered by an action in a plan devised by the deliberative layer in the architecture. All such actions have epistemic effects, as modelled in the default-knowledge graph.
+      </paragraph>
+      <section label="6.3.1">
+       <section-title>
+        Navigation
+       </section-title>
+       <paragraph>
+        The movement and navigation competence implements the move actions available to the planner. Movement can occur between pairs of adjacent or non-adjacent places. In the latter case, the robot does not have to travel exactly through intermediate place nodes in the topological graph. The move action manoeuvres the robot to the centre of a place. Precise navigation is performed by communication with the localization and mapping competence described above. That competence also estimates the place node of the robot at the end of the movement and communicates it to the belief layer.
+       </paragraph>
+      </section>
+      <section label="6.3.2">
+       <section-title>
+        Object search
+       </section-title>
+       <paragraph>
+        To find objects, the robot must conduct a visual search. Visual object detection uses scale-invariant feature transform (SIFT) based recognition [40] of pretrained object instance models. The problem of active visual search has previously been investigated, e.g. by Kollar and Roy [24], Aydemir et al. [1], Ekvall et al. [7]. We employ an approach developed by [3], utilizing topological relations proposed by Sjöö et al. [44]. This works as follows. The 3D grid map and target object type jointly determine a probability distribution over the object location—for example, many objects (cornflakes boxes, books, magazines) are often located on raised surfaces such as tables. Our view-point generation component exploits this information, using a strategy similar to that in [12]. The object probability distribution comprises a set of uniform distributions on the real plane, one for each likely supporting surface, as shown in Fig. 14. Places in the topological map constitute the possible viewing locations, and different viewing directions are sampled from each place. Each potential view point is then evaluated on the basis of the probability of the target object being within the view cone defined by the view point, taking into account the field of view of the camera. A set of view points is grown in a greedy fashion until at least {a mathematical formula}95% of the probability mass is covered (Fig. 14). The view points sharing a place are grouped, those groups are transmitted to the belief layer, and are added to the relational map. The switching planner then uses them in planning visual search.
+       </paragraph>
+      </section>
+      <section label="6.3.3">
+       <section-title>
+        Dialogue
+       </section-title>
+       <paragraph>
+        The system engages in dialogue, both to receive goals and to acquire knowledge from a human. A dialogue initiated by the robot is very similar to any other planned knowledge-acquiring action and hence is modelled similarly. The dialogue model is based on the work of Skočaj et al. [46], Janíček [21] and will only briefly be outlined in the following. There are two types of dialogue actions: engagement, and questions triggered by the deliberative layer. The answers to questions yield an update to the relational map. We support two question types: polar questions{sup:22} (“Is this a kitchen?”) and open questions (“What room is this?”). In the planner, polar questions are modelled as more reliable since they have a lower risk of being misinterpreted. The question content is generated by reference to the relational map and the default-knowledge graph. We employ the approach by Zender et al. [54] to generate such questions, and in particular the generate suitable referring expressions. For the experiments reported here, natural language input was through text rather than speech recognition, but the rest of the natural language processing chain was employed. The robot generated spoken output.
+       </paragraph>
+      </section>
+      <section label="6.3.4">
+       <section-title>
+        Person search
+       </section-title>
+       <paragraph>
+        Finding a person to talk to is a precondition for dialogue. We implemented an active person search competence based on RGBD images. It is modelled by the planner as an action look-for-person that has the uncertain effect of seeing a person at a place when that person is within 3 m. Whenever the action is called, the robot scans the room by rotating through 360°. It stops between scans, in angles of {a mathematical formula}80% of the aperture of the depth camera, so as to provide some overlap between views. For each view acquired, the OpenCV face detector (using cascades of simple detectors for simple Haar-like features [28]) is run to yield a number of potential faces. To reduce the number of false positives, those hypotheses are filtered with use of a simple heuristic: the distance to a face—estimated by our assuming a constant size for human faces—must be within 50 cm of the median depth camera output for the corresponding pixels. The detected person is associated with the nearest place in the relational map.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Acquiring probabilistic knowledge
+      </section-title>
+      <paragraph>
+       While the structure of the default knowledge can be designed manually, we require probabilities for the relations encoded. These are captured semi-automatically for quantities such as object type-room type relations. A set of possible object-room relations was extracted from the Open Mind Indoor Common Sense (OMICS) database.{sup:23} Probabilities for relations were estimated from image search-engine queries on the Web [13]. The observation models for the POMDP planner were built empirically. We ran object detection on a range of target objects, in two office environments, and under varying lighting conditions. Room categorization reliabilities were calculated using confidence scores from learned prototypes, as described in Section 6.2.2.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      This section reports the results of 46 test runs, all made in an office environment depicted in Fig. 15(a). Three different tasks were given: explore space, categorize rooms and find a target object. The explanation subsystem was further tested in two additional experiments, as shown in Fig. 15(c). The purpose of these experiments is to show the solution to the four problems outlined: (i) planning under state and observation uncertainty, (ii) planning in open worlds with incomplete information, (iii) planning to explain failure and (iv) planning to verify explanations.
+     </paragraph>
+     <paragraph>
+      In experiment 1, the robot was tasked with exploring with the goal of building a complete topological map. While doing this, the robot passively senses room categories, using either the laser or both the laser and visual appearance (Section 6.2.2). In experiment 2, Dora was given the goal to categorize all the rooms in the environment, allowing active sensing in the form of dialogue. This experiment shows the ability of the planner to deploy the best information-gathering modality. It also shows the use of instance assumptions from instance knowledge to plan under uncertainty. In experiment 3, the robot was tasked, as in the running example, with finding an object, starting with no map. This experiment shows the ability to switch to decision-theoretic sessions, and to use instance assumptions derived from default knowledge, to plan in open worlds. In experiment 4, all the suitable runs that failed in experiments 1–3, plus seven additional runs with forced failures, were given to the planner to explain the failures using diagnostic knowledge. This experiment shows the ability of the system to use a mix of default assumptions and instance assumptions to create explanations for task failure. Finally, in experiment 5, the ability to verify the explanation was tested, as in the running example. This shows the ability to plan again with instance assumptions in order to verify an explanation that involves hypothesized new default knowledge.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Overall quantitative analysis
+      </section-title>
+      <paragraph>
+       The runs for each test condition{sup:24} are summarized in Fig. 15(c). The system exhibits robust behaviour during exploration and categorization, but only succeeds half the time for object search. Explanations were found in most cases, but only one of the two attempts at verification of an explanation fully succeeded. Success criteria were strict: no intervention by the operator was allowed, and if the robot was physically inactive for more than five minutes, the run was cancelled and recorded as a timeout failure. In Fig. 15(b) the time spent on planning under the different test conditions is reported. The absolute planning time integrates the duration of all planner calls in a run and averages them over all successful runs for each test condition. The absolute planning time is significantly higher for the find test condition compared to categorize and explore. This indicates the inherently more complicated planning problem in the find test condition. Section 7.4 sheds light on failure modes. All the analyses record the overall runtime, the state uncertainty, and the action sequences taken by the robot.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Experiment 1—explore: continual planning
+      </section-title>
+      <paragraph>
+       The robot was tasked with exploring all of its accessible environment, using the following goal:
+      </paragraph>
+      <list>
+       <list-item>
+        (forall(?p-place)(=(placestatus?p)trueplace))
+       </list-item>
+      </list>
+      <paragraph>
+       thereby building a complete topological map. While doing this, room-categorization routines run passively in the background. To show the effect of different sensing modalities on categorization ability (Section 6.2.2), we used two different test conditions: test condition {a mathematical formula}Claser, where only laser-based features were used for room categorization; and test condition {a mathematical formula}Ccombined, where the robot had both laser and visual appearance features. This should not affect exploration behaviour, but should affect room categorization ability. Three runs were made for {a mathematical formula}Claser and four runs were made for {a mathematical formula}Ccombined, each run starting in a different room. Each run started without a map.
+      </paragraph>
+      <paragraph>
+       An example exploration run under test condition {a mathematical formula}Claser starting in Office 1 (place 0) is shown in Figs. 16(a) and 17. In Fig. 16(a) the final map is shown with all place-holders and rooms explored. The executed action sequence is shown in Fig. 17.{sup:25} This figure shows that the average entropy over the room categories declines, but ends fairly high. The robot is particularly uncertain about the categories of Office 1, Office 2 and Meeting room. All seven exploration runs resulted in a fully explored map, taking {a mathematical formula}1192±156 seconds.{sup:26} Under test condition {a mathematical formula}Claser, the average entropy after exploration ({a mathematical formula}Hˆlaser=0.42±0.17) was significantly (with {a mathematical formula}p=0.004 in a t-test) higher than under test condition {a mathematical formula}Ccombined ({a mathematical formula}Hˆcombined=0.17±0.15). This confirms that vision improves categorization.{sup:27} In experiment 2, room categorization is used as the goal to expose how the system plans active information gathering.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Experiment 2—categorize: planning with uncertain state and multiple information sources
+      </section-title>
+      <paragraph>
+       Immediately after it completed each exploration run, the robot was given a goal to determine the category of all the rooms in the environment it had previously explored:
+      </paragraph>
+      <list>
+       <list-item>
+        (forall(?r-room)(K(category?r)))
+       </list-item>
+      </list>
+      <paragraph>
+       that is, to know the category of all room instances with high certainty ({a mathematical formula}Pr⁡&gt;0.95). Two different test conditions, {a mathematical formula}Claser and {a mathematical formula}Ccombined, were again employed. The hypothesis is that by using visual appearance the task will be completed faster. If only the laser is used, the robot will be less certain, and so will choose dialogue actions to determine the categories of the rooms. An example categorization run under {a mathematical formula}Claser is depicted in Fig. 18.{sup:28} This shows that Dora drives to each room, searches for a person (see Section 6) and then asks that person about the room category using a polar question.{sup:29} A typical dialogue follows:
+      </paragraph>
+      <list>
+       <list-item>
+        robot:hellohumanhuman:hellodorarobot:okrobot:isthisroomanoffice?human:yesrobot:ok
+       </list-item>
+      </list>
+      <paragraph>
+       The uncertainty about room category drops significantly after each dialogue (timestamps 323, 571, and 836 in Fig. 18). Fig. 19 shows the plan structure: the assumptive actions cope with the uncertainty in room categories, by supposing a particular set of categories is true. Those assumptions are instance assumptions, and thus each assumption's probability is taken from the relational map. The assumptions are also used to hypothesize people in each room who can be asked about the category of that room. Thus, it can be seen how the assumptive actions are used to reason about uncertain worlds with a classical planner. The dialogue actions are chosen when uncertainty is high. This is typically the case when only the laser is used for room categorization.
+      </paragraph>
+      <paragraph>
+       Under test condition {a mathematical formula}Claser, the robot was able to categorize all rooms in {a mathematical formula}600±389 seconds. In all these runs the robot had to ask humans to gain the necessary certainty. Under {a mathematical formula}Ccombined, the robot took only {a mathematical formula}206±121 seconds and only asked the human about the meeting room, since it was already certain enough about the other rooms.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Experiment 3—find: planning with incomplete state, uncertain state and unreliable observations
+      </section-title>
+      <paragraph>
+       The final and most complex task was to find a magazine placed in the environment:
+      </paragraph>
+      <list>
+       <list-item>
+        (exists(?o-visualobject)(and(=(label?o)magazine)(K(position?o))))
+       </list-item>
+      </list>
+      <paragraph>
+       Informally speaking, this goal is to find a magazine. This object search task is an extension of our own work [13], [1]. In this article there are three novel features of the experimental conditions. First, diagnostic knowledge is available for the first time, to provide explanations in the case of failing runs. Second, the work by Hanheide et al. [13] was carried out in a closed world, where the map was known in advance, and only room categories were uncertain, while the work by Aydemir et al. [1] was carried out with a cut-down planning domain, so that the robot performed only object search. Finally, for the first time, we deployed the robot in an environment it had not seen before—that is, the room categorization was not trained in the environment it was deployed in. Hence, the robot deals with greater uncertainty than in previous work. Also, we incorporate, for the first time, the ability to search for humans and to engage in dialogue.
+      </paragraph>
+      <paragraph>
+       Two different test conditions were used for the search task. In the first test condition, {a mathematical formula}Cc, we put the object to be found (a copy of AI Magazine) on a table in its default room type: the meeting room.{sup:30} In the second test condition, {a mathematical formula}Cnc, the magazine was put in Office 2, an unlikely place for the object (P(mag|office)=0.0475). In each run, the robot started in Office 1 with no map.
+      </paragraph>
+      <section label="7.4.1">
+       <section-title>
+        Example run
+       </section-title>
+       <paragraph>
+        An example run of test condition {a mathematical formula}Cc (object in meeting room) is shown Fig. 20. Plans from a similar run are shown in Fig. 3, Fig. 4. These show how the assumptive planning is used from the start of the run to hypothesize the necessary entities to produce a plan. Fig. 16(b) shows the map resulting from this run.
+       </paragraph>
+       <paragraph>
+        The robot starts in Office 1. To cope with the incomplete map, Dora made essentially the same assumptions described in the running example and shown in Fig. 3 (right). These assume the existence of a meeting room, that an unexplored place-holder leads to that room and that the meeting room contained a magazine. These instance assumptions are based on probabilities from the default-knowledge graph. Thus, if the default probabilities were to change, the assumption probabilities would also change. With this initial plan, Dora explored Office 1, then detected the doorway (timestamp 99 in Fig. 20) to the corridor. Certainty about the categories of both the corridor and Office 1 was obtained quickly via vision. Next, Dora peeked into Office 2 (place 14 at timestamp 459), but correctly recognized it as an office and ignored it, instead exploring the corridor, on the assumption it would lead to a meeting room. Hence, Dora continued to explore until it reached the meeting room (place 23, timestamp 816). Before it could search for the object, the whole room had to be explored. The long waiting time between the explore action at timestamp 1046 and the next action at timestamp 1321 is due to planning. This is caused by the substantial likelihood, in the relational map, of this room being an office (see the top bars in Fig. 20). This makes successful plans less likely—because the magazine is less likely to be in an office—causing planning to be slow.
+       </paragraph>
+       <paragraph>
+        Owing to the uncertainty in the room categories, the planner then decided that it should first become more certain about the room category, before engaging in visual search. Therefore, Dora searched for a person to ask (at place 27 and place 25, action annotated in yellow in Fig. 20). Since no person could be found, it decided to search for the object anyway (timestamp 1599). The robot generated view cones for this room, and found the magazine on the table when looking from place 24. This example run highlights the ability of the system to plan informed by the degree of belief-state uncertainty. It also shows the use of assumptive actions based on default knowledge to fill in incomplete state information, with their probabilities being generated from the default-knowledge graph. It also shows the switching planner choosing to employ the POMDP planner (green actions in Fig. 20) when faced with unreliable observation actions (visual search). The robot chooses intelligently when to explore, to consult a human, or to start visual search. Dora also successfully replans in the presence of new information (e.g. a new place-holder is discovered) or action failures (e.g. no human could be found in the room).
+       </paragraph>
+      </section>
+      <section label="7.4.2">
+       <section-title>
+        Quantitative analysis
+       </section-title>
+       <paragraph>
+        For the 11 successful runs it took Dora {a mathematical formula}1340±555 seconds (∼22 minutes) to find the object. The number of actions executed ranged between 18 and 49 ({a mathematical formula}31.125±10.4). There were a variety of system failure modes. In two runs, the battery simply went flat. In five runs the robot was immobile for five minutes, classified as a timeout, owing to replanning taking too long. This was, in turn, caused by the uncertainty about the room categories being rather high. A milder case of long planning time has been discussed in the example run. This shows that the planner can still fail to quickly return a plan in the face of high uncertainty. The final failure mode was due to errors in the robot's perception system. This includes cases where the robot looked at the object but simply did not see it, cases where the robot had a false-positive detection of an object (run 14) or where it erroneously deleted a place-holder from its map so that exploration stopped (run 9). These cases highlight the opportunity for explanations.
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Experiment 4—explaining failure: planning with diagnostic knowledge
+      </section-title>
+      <paragraph>
+       Failures also include cases where the object that the robot searches for cannot be seen, or where it simply does not exist within the search environment. To test the explanation performance of our system, we analyzed the generated explanations for three perception failure runs of the find test condition outlined before and an additional seven runs under a specifically designed explain test condition, where the object was hidden on a shelf in the meeting room. Of the 10 runs where the search failed, the system was able to generate an explanation for nine runs. Using the optimizations described in Section 5.2, the system generated explanations for runs consisting of up to 50 actions and 22 plans, taking up to 76 seconds to plan. The one run (e6) we could not generate any explanation for was of similar size, but contained a number of movement errors in addition to the search failure. In this case, the planner failed to find any explanation after exhausting the 2 GB of allocated memory.
+      </paragraph>
+      <section label="7.5.1">
+       Explanations generated during find
+       <paragraph>
+        The system hypothesizes several explanations in each case. These are ranked by likelihood. The most likely explanations are listed in Table 1. The failing cases from the find experiment due to perceptual errors are listed as runs 2, 9 and 14 in Table 1. From a post hoc analysis of the robot's representation in these find runs we concluded that the actual problem in cases 2 and 9 was a missed place-holder during exploration—that is, the robot tried to reach a place-holder and could not navigate there successfully, causing this place-holder to be deleted from the map and stopping the robot from exploring further. The inference that an initially hypothesized place does not exist can be drawn from such a navigation failure by the explanation system. For instance, in run 9 (condition {a mathematical formula}Cc, object in meeting room), where a place-holder was eradicated owing to a navigation problem, the system could not understand how to reach the meeting room, and so correctly concluded that the object must be outside the known and accessible environment. In run 2 (condition {a mathematical formula}Cnc, object in office), however, the system failed to enter Office 2, again owing to an error in the perception of place-holders. As a consequence, the robot found and searched the meeting room (without) the object in it. It concluded that the failure must be due to the object being hidden in a container, a sensible explanation given its high a priori probability of finding magazines in meeting rooms.
+       </paragraph>
+      </section>
+      <section label="7.5.2">
+       <section-title>
+        Elicited explanations
+       </section-title>
+       <paragraph>
+        Our system failed only three times under the find test condition in a way that permitted generation of an explanation. We therefore conducted another seven search runs, in which the object was hidden so as to ensure failure. Again, the results are as detailed in Table 1. In each case a variety of explanations is posed. Run e4 is similar to run 9, with the conclusion that there is no room that contains a magazine. In e2 and e3 the magazine is hypothesized not to exist. In runs e5 and e7 the explanation is that there must be some kind of container in the meeting room occluding the object. The preferred explanation depends on the certainty with which the system assumes that it has searched a meeting room. If it is certain that there is a meeting room in the environment, the conclusion drawn is that the object exists, but is hidden; if it is less certain, the likelier explanation is that the object does not exist. In run e2, for example, there were no unforeseen movement problems, so the only failure to be explained was not finding the object. As the robot was certain about one room being an office and not so certain about there being a meeting room, it could make the assumption that no magazine was present with high probability (0.82). This, in turn, enabled the assumption that the magazine instance (here the virtual object object2) does not exist at all, which is sufficient to explain why the sensing actions did not have the desired result. The generated explanations were as follows:{a mathematical formula}{a mathematical formula} This is interpreted as “The object does not exist in any room”, or put simply, “The object does not exist”.
+       </paragraph>
+       <paragraph>
+        In run e5, the most probable explanation was that the object is hidden in some other container. To elicit this case, we put the robot in the meeting room and closed the door to have it search only that room. Also, a human told the robot that it was in a meeting room so that it was absolutely certain about the room category. In this case, the likeliest explanation indeed looks different:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Dora here assumes that the object does exist, but it just cannot be seen, because it is presumably hidden in a container. While the explanation from the previous run would be valid for this run as well, its probability would be much lower, as the object-not-in-room assumption is much less likely for magazines in meeting rooms than in offices. Dora knows the concept that objects can be inside other objects, as well as that there are objects of type “container”. It has, however, no default knowledge for these in the way it has for magazines in meeting rooms. But we allow Dora to make assumptions about default knowledge: the first two assumptions establish the possibility that containers can often be found in meeting rooms and that magazines can often be found in those containers (the latter has a lower probability of 0.8 on the basis of the existing knowledge about magazines in meeting rooms). The second of those assumptions has the same probability as the assumption that the magazine is in the room. The next two assumptions establish that there is an instance of “container” in the room. The last two assumptions build on the first two, so as to assume that a magazine is in the container. These are the same types of assumptions that are used for task-based planning. Here, we present only the likeliest explanation, but the system can generate an ordered list of alternative explanations.
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.6">
+      <section-title>
+       Experiment 5—verifying explanations: planning with incomplete state again
+      </section-title>
+      <paragraph>
+       After creating an explanation, Dora autonomously creates a new goal, via the mechanisms of the goal management system [14], so as to verify the hypotheses made. For the example run above, the goal is to verify the existence of the two assumed objects object0 (of type container) and object2 (of type magazine). We ran two additional tests to show the ability of the robot to verify explanations. These were runs starting with a map created by exploration and categorization, but without any idea of object location. In both cases the door to Office 2 was shut. The robot was tasked with finding the magazine, even though it was not within view. On declaring task failure, the robot automatically planned an explanation for the failure, planned a verification of this explanation and executed the verification plan.
+      </paragraph>
+      <paragraph>
+       Both runs successfully completed all stages up to the execution of the verification plan. The verification plan for one of the two runs can be seen in Fig. 5. This again uses assumptions, but now to hypothesize the existence of a person who can answer the questions needed to verify the robot's hypothesized explanation of the failure. Thus, it can be seen how assumptive planning is again used to plan in an incomplete world. In these runs, the robot tried to verify both the hypotheses about new instance knowledge and the hypotheses about new default knowledge. To verify the instance hypotheses, Dora approaches the human (once detected) and asks two questions:
+      </paragraph>
+      <list>
+       <list-item>
+        Robot:Isthereacontainerinthemeetingroom?Human:Yes.Robot:Isthereamagazineinthecontainer?Human:Yes.
+       </list-item>
+      </list>
+      <paragraph>
+       This satisfies the two instance-knowledge goals as now Dora knows where the object is, even if it cannot be seen. The robot then attempts to verify the default-knowledge hypotheses with two further questions:
+      </paragraph>
+      <list>
+       <list-item>
+        Robot:Aremagazinestypicallyincontainers?Human:Yes.Robot:Arecontainerstypicallyinmeetingrooms?Human:Yes.
+       </list-item>
+      </list>
+      <paragraph>
+       At this point the verification plan has been successfully completed, and Dora can update both the relational map and the default-knowledge graph. In the verification runs, one run completed all four questions, and one run terminated after asking the second question. Nevertheless, the second run completed all the stages of search, explanation and verification, and most of the execution of the verification plan. These complex runs show the ability of the robot implementation of the theory to solve every problem, (i)–(iv), in a single run.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Discussion of related work
+     </section-title>
+     <paragraph>
+      Our architecture is informed by classic three-layer architectures, such as those proposed originally by Simmons et al. [43] or Peter Bonasso et al. [32], featuring a combination of deliberative and reactive control. This paper has focused on the belief and deliberative layers of our architecture. There are few integrated robot systems that combine domain-independent planning with domain-specific knowledge. Within that community, the need for a high-level continual planning and execution monitoring subsystem is widely recognized [52], [49], [25], [56]. The domain-specific knowledge in our approach is structured in three layers, as discussed in Section 1. Various approaches to organizing knowledge in different layers have been developed. Suh et al. [48] present one of the most complete approaches to represent ontological default and instance knowledge in a robot. Also, the KNOWROB architecture of Tenorth and Beetz [50] combines formal, encyclopaedic knowledge with observations from several perception modules, corresponding to our instance and default knowledge. Their representation is one of the few that also supports reasoning about knowledge-gathering actions, but does not support the level of goal-driven planning our system supports and lacks any diagnostic knowledge. Jain et al. [20] present a knowledge representation scheme focusing on learned probabilistic relations. They proposed the use of Markov logic networks and Bayesian logic networks to represent the uncertain default knowledge, an alternative to our use of chain graphs as the underlying representation.
+     </paragraph>
+     <paragraph>
+      Commonsense, or default knowledge, has been used to guide task planning in robots, such as in the work of Galindo et al. [8], in which a semantic map containing information about typical room-object relationships is used to plan to fill in incomplete information about room types, or the locations of objects. The main contribution of that work is to interleave planning with deductive reasoning about type relations that adds conclusions as they can be drawn, and which reduces the size of the planning domain by pruning irrelevant items. The restrictions on that work are that it assumes a prebuilt metric map, segmented into rooms, and does not reason decision-theoretically either about the value of the information, or the sensor unreliability. Hawes et al. [15], [52] also interleave planning with reasoning about a semantic map, but plan with models of the epistemic effects of actions. The use of a continual replanner allows the use of a closed-world planning domain in what is an open world. Whenever new objects or rooms appear, replanning in the new closed world occurs. But unlike the current paper, neither of these approaches explicitly reason about the fact that sensing actions can increase the size of the planning domain, nor the benefits of this for goal achievement. Epistemic effects of sensing actions have also been tackled with a conditional-planning approach that uses the PKS planner [33], which has been applied to planning robot manipulation actions interleaved with sensing actions [25]. This approach models knowledge gained via sensing in a separate database, and also employs a replanning approach to cope with action failure and surprising information.
+     </paragraph>
+     <paragraph>
+      Probabilistic approaches which do reason about sensing effects have been applied to object search and robot planning in a variety of settings. Velez et al. [51] planned trajectories in a continuous space to maximize the reliability of object detection using a learned observation model. The key contribution is the use of a model of the correlations in sensor behaviour at nearby locations, thus driving the robot to gather more informative views. Martinez-Cantin et al. [29] give a POMDP formulation of active visual mapping, use direct policy search to find a solution, and use Monte Carlo simulation to generate imaginary observations and action outcomes during optimization. The main challenge of decision-theoretic planning in partially observable environments is intractability. Kaplow et al. [22] employed a variable resolution map to achieve scaling with a robotic wheelchair. All three of these approaches concerned path planning in a continuous space. Task-level robot control with a decision-theoretic framework was first tackled by Pineau et al. [34] using a POMDP planner to derive a high-level controller for a mobile robot with a dialogue system by exploiting hierarchy to reduce the state space.
+     </paragraph>
+     <paragraph>
+      Approaches that mix commonsense and probabilistic knowledge have been developed recently. Zhang et al. [56] combined decision-theoretic planning at the low level, with high-level inference based on non-monotonic logics, although the implementation is restricted to a closed world. Kunze et al. [26] mixed commonsense and probabilistic knowledge in a semantic map of room-object relations in a large-scale space. This is used to support a decision-theoretic planner, which optimizes the object search to trade off between the likelihood of a particular object being present in a location and the cost of visiting that location. The main restriction is that they do not model sensor unreliability, so the decision-theoretic problem is equivalent in complexity to MDP solving. Also, in their work they have a closed world, so their robot cannot explore unknown environments. Hanheide et al. [13] extended this broad approach to partially observable environments. This achieved the scaling required, by employing a planner that switches between decision-theoretic and non-decision-theoretic planning on the fly [11], and showed its application to active visual search. Later, Aydemir et al. [2] showed the first use of assumptive planning to extend this to object search in an open world. Hanheide et al. [13] and Aydemir et al. [2] also provided an advance by employing a semantic map that allows belief updating using different knowledge sources. There are two advances made here that go beyond that work. The first is our extension of the assumptive actions to handle multiple tasks for the first time, such as mapping, categorization or object search. The second is our extension of assumptive planning to generate, and verify, explanations for task failure.
+     </paragraph>
+     <paragraph>
+      Open-world planning has also been tackled by Talamadupula et al. [49], for a team of robots using the notion of open-world quantified goals, which specify rewards over open sets of objects. The planning approach is a replanning approach similar to the continual planning approach here, and objects are generated as effects of the sensing actions. The approach does not allow the use of assumptive actions or decision-theoretic reasoning. In terms of explaining why a goal cannot be reached, there is some overlap with counterfactual reasoning [27], belief revision [9] and consistency-based diagnosis [39]. All these frameworks deal with identifying a set of propositions or beliefs that either lead to inconsistencies or permit the robot to deduce an observation, while we have a set of operators that allow us to transform states. The idea of detecting discrepancies between expected and observed state also comes up in the goal-driven autonomy framework of Klenk et al. [23], where discrepancies trigger the generation of explanations, which in turn lead to the creation of new goals. There is also a relationship to work in explanation-based learning [30]. In this work, misclassifications led to explanations in terms of a background domain theory that were then used to drive learning.
+     </paragraph>
+     <paragraph>
+      Explanation for robots has also been tackled with use of event calculus [41], [42] where it is posed as abduction of possible causes for perceptual events, within a background theory. Finally, Sohrabi et al. [47] tackled the problem of planning to provide explanations using an extension of linear temporal logic that has the ability to reference past events and action occurrences. An explanation is a set of clauses in the logic, representing an assumption about the initial state, and an executable plan that would cause the observations from that state. Shorter explanations are preferred by using a cost function that sums the formulae required, each weighted by explanation preference rules that are domain specific. By contrast, we employ a probabilistic formulation that prefers more likely explanations.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Conclusion
+     </section-title>
+     <section label="9.2">
+      <section-title>
+       Questions for future work
+      </section-title>
+      <paragraph>
+       The division into three layers of knowledge is predicated on the notion that, normally, when activities are planned, it is most efficient to utilize default knowledge since this reduces the space of plans and outcomes significantly. Planning with explicit representations of all possible default violations generates unnecessary work. It is better to fold in diagnostic knowledge as necessary to explain failure. This is the motivation behind the use of a diagnostic layer. In recent years, the planning community has developed much more efficient algorithms, but even these have limits. To progress, further ways of automatically determining the relevant information for a planning problem are necessary. This can be seen as a problem of determining what subset of instance and default knowledge should be in the attentional frame: the foreground used to create the planning domain. Work on this will be critical to scaling robots to plan with large knowledge bases.
+      </paragraph>
+      <paragraph>
+       A second problem arises from the attempt to understand the space of mechanisms by which default knowledge can be extended in a principled manner. Our approach to explanations, hypothesizing new default knowledge, is one possible starting point. The larger problem, however, is concerned not just with the mechanisms for hypothesizing new default knowledge, but with automatically searching for new ways of organizing existing default knowledge. Projects such as CYC have been concerned with this, but it is not entirely clear how to exploit their insights in robotics. A third problem is that, in our system, we draw the distinction between default and diagnostic knowledge by hand. In general, this should be done autonomously by the robot. In such a way, the robot could control what it considers as default knowledge, and thus control the efficiency of its regular task planning. Finally, many of the failures robots suffer are because of violations of tacit design assumptions. In the face of this, it is not reasonable to expect an explanation-based approach to fare well, since designers will not readily encode these tacit assumptions in the diagnostic knowledge. But are there ways in which a robot might analyze its execution traces to identify the possible points at which such violations occurred?
+      </paragraph>
+      <paragraph>
+       Each of these questions is a hard open research problem in its own right. This paper has posed problems of planning under uncertainty, in open worlds, and provision of explanations, in a single framework. Such an overarching framework is also needed for these additional problems, outlined above, and for the many others that remain.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Supplementary material
+     </section-title>
+     <paragraph>
+      The following is the Supplementary material related to this article.{a mathematical formula}
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

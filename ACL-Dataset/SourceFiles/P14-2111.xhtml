@@ -1,0 +1,922 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" prefix="dcterms: http://purl.org/dc/terms/">
+<head>
+<title>Normalizing tweets with edit scripts and recurrent neural embeddings</title>
+<!--Generated on Wed Jun 11 18:22:09 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Normalizing tweets with edit scripts and recurrent neural embeddings</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Grzegorz Chrupała
+<br class="ltx_break"/>Tilburg Center for Cognition and Communication 
+<br class="ltx_break"/>Tilburg University 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">g.chrupala@uvt.nl</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Tweets often contain a large proportion of abbreviations,
+alternative spellings, novel words and other non-canonical
+language. These features are problematic for standard language
+analysis tools and it can be desirable to convert them to canonical
+form. We propose a novel text normalization model based on learning
+edit operations from labeled data while incorporating features
+induced from unlabeled data via character-level neural text
+embeddings. The text embeddings are generated using an Simple
+Recurrent Network. We find that enriching the feature set with text
+embeddings substantially lowers word error rates on an English tweet
+normalization dataset. Our model improves on state-of-the-art with
+little training data and without any lexical resources.</p>
+</div><span class="ltx_ERROR undefined">\setlist</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">nolistsep</p>
+</div><span class="ltx_ERROR undefined">\definecolor</span>
+<div id="p2" class="ltx_para">
+<p class="ltx_p">mydarkbluergb0,0.08,0.45</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A stream of posts from Twitter contains text written in a large
+variety of languages and writing systems, in registers ranging from
+formal to internet slang. Substantial effort has been expended in
+recent years to adapt standard NLP processing pipelines to be able to
+deal with such content. One approach has been text normalization, i.e. transforming tweet text into a more canonical form which standard NLP
+tools expect. A multitude of resources and approaches have been used
+to deal with normalization: hand-crafted and (semi-)automatically
+induced dictionaries, language models, finite state transducers,
+machine translation models and combinations thereof. Methods such as
+those of <cite class="ltx_cite">Han and Baldwin (<a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>)</cite>, <cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Insertion, deletion, or substitution?: normalizing text messages without pre-categorization nor supervision" class="ltx_ref">18</a>)</cite>,
+<cite class="ltx_cite">Gouws<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="Unsupervised mining of lexical variants from noisy text" class="ltx_ref">10</a>)</cite> or <cite class="ltx_cite">Han<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite> are
+unsupervised but they typically use many adjustable parameters which
+need to be tuned on some annotated data. In this work we suggest a
+simple, supervised character-level string transduction model which
+easily incorporates features automatically learned from large amounts
+of unlabeled data and needs only a limited amount of labeled training
+data and no lexical resources.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Our model learns sequences of edit operations from labeled data using
+a Conditional Random Field <cite class="ltx_cite">(<a href="#bib.bib10" title="Conditional Random Fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">15</a>)</cite>.
+Unlabeled data is incorporated following recent work on using
+character-level text embeddings for text segmentation
+<cite class="ltx_cite">(<a href="#bib.bib28" title="Text segmentation with character-level text embeddings" class="ltx_ref">4</a>)</cite>, and word and sentence boundary detection
+<cite class="ltx_cite">(<a href="#bib.bib27" title="Elephant: sequence labeling for word and sentence segmentation" class="ltx_ref">9</a>)</cite>. We train a recurrent neural network
+language model <cite class="ltx_cite">(<a href="#bib.bib32" title="Recurrent neural network based language model" class="ltx_ref">19</a>; <a href="#bib.bib31" title="Statistical language models based on neural networks" class="ltx_ref">21</a>)</cite> on
+a large collection of tweets. When run on new strings, the activations
+of the units in the hidden layer at each position in the string are
+recorded and used as features for training the string transduction
+model.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The principal contributions of our work are: (i) we show that a
+discriminative sequence labeling model is apt for text
+normalization and performs at state-of-the-art levels with small
+amounts of labeled training data; (ii) we show that character-level
+neural text embeddings can be used to effectively incorporate information
+from unlabeled data into the model and can substantially boost text
+normalization performance.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methods</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Many approaches to text normalization adopt the noisy
+channel setting, where the model normalizing source string <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> into
+target canonical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is factored into two parts: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="\hat{t}=\operatorname*{arg\,max}_{t}P(t)P(s|t)" display="inline"><mrow><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover><mo>=</mo><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mi>t</mi></msub><mi>P</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>)</mo></mrow></mrow></math>. The error term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="P(s|t)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>s</mi><mo>|</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> models how canonical
+strings are transformed into variants such as e.g. misspellings,
+emphatic lengthenings or abbreviations. The language model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="P(t)" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math>
+encodes which target strings are probable.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We think this decomposition is less appropriate in the context of text
+normalization than in applications from which it was borrowed such as
+Machine Translations. This is because it is not obvious what kind of
+data can be used to estimate the language model: there is plentiful
+text from the source domain, but little of it is in normalized <span class="ltx_text ltx_font_italic">target</span>
+form. There is also much edited text such as news text, but it
+comes from a very different domain. One of the main advantages of
+the noisy channel decomposition is that is makes it easy to exploit
+large amounts of unlabeled data in the form of a language model. This
+advantage does not hold for text normalization.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We thus propose an alternative approach where normalization is modeled
+directly, and which enables easy incorporation of unlabeled data from
+the <span class="ltx_text ltx_font_italic">source</span> domain.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Learning to transduce strings</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our string transduction model works by learning the sequence of edits
+which transform the input string into the output string. Given a pair
+of strings such a sequence of edits (known as the shortest edit
+script) can be found using the <span class="ltx_text ltx_font_smallcaps">Diff</span> algorithm
+<cite class="ltx_cite">(<a href="#bib.bib12" title="A file comparison program" class="ltx_ref">22</a>; <a href="#bib.bib13" title="An O(ND) difference algorithm and its variations" class="ltx_ref">23</a>)</cite>. Our version of <span class="ltx_text ltx_font_smallcaps">Diff</span> uses the
+following types of edits:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">nil</span> – no edits,</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">del</span> – delete character at this position,</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">ins<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="(\cdot)" display="inline"><mrow><mo mathvariant="normal">(</mo><mo mathvariant="normal">⋅</mo><mo mathvariant="normal">)</mo></mrow></math></span> – insert specified string before character
+at this position.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The input string is extended with an empty
+symbol to account for the cases where an insertion is needed at
+the end of the string.</span></span></span></p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2.1 Learning to transduce strings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows a shortest edit script for the pair of
+strings (<span class="ltx_text ltx_font_italic">c wat, see what</span>).</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Input</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">c</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">␣</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">w</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">a</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">t</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Edit</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">del</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">ins</span><span class="ltx_text ltx_font_small">(see)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">nil</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">ins</span><span class="ltx_text ltx_font_small">(h)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">nil</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Output</span></th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">see␣</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">w</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">ha</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">t</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Example edit script.</div>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">We use a sequence labeling model to learn to label input strings with
+edit scripts. The training data for the model is generated by
+computing shortest edit scripts for pairs of original and normalized
+strings. As a sequence labeler we use Conditional Random Fields
+<cite class="ltx_cite">(<a href="#bib.bib10" title="Conditional Random Fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">15</a>)</cite>. Once trained the model is
+used to label new strings and the predicted edit script is applied to
+the input string producing the normalized output string. Given source
+string <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> the predicted target string <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="\hat{t}" display="inline"><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></math> is:</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\hat{t}=\operatorname*{arg\,max}_{t}P(\mathrm{ses}(s,t)|s)" display="block"><mrow><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover><mo>=</mo><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mi>t</mi></msub><mi>P</mi><mrow><mo>(</mo><mi>ses</mi><mrow><mo>(</mo><mi>s</mi><mo>,</mo><mi>t</mi><mo>)</mo></mrow><mo>|</mo><mi>s</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="e=\mathrm{ses}(s,t)" display="inline"><mrow><mi>e</mi><mo>=</mo><mrow><mi>ses</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></math> is the shortest edit script mapping <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m5" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m6" class="ltx_Math" alttext="P(e|s)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>s</mi><mo>)</mo></mrow></mrow></math> is modeled with a linear-chain Conditional Random Field.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Character-level text embeddings</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Simple Recurrent Networks (SRNs) were introduced by
+<cite class="ltx_cite">Elman (<a href="#bib.bib29" title="Finding structure in time" class="ltx_ref">7</a>)</cite> as models of temporal, or sequential,
+structure in data, including linguistic data
+<cite class="ltx_cite">(<a href="#bib.bib30" title="Distributed representations, simple recurrent networks, and grammatical structure" class="ltx_ref">8</a>)</cite>. More recently SRNs were used as language
+models for speech recognition and shown to outperform classical n-gram
+language models <cite class="ltx_cite">(<a href="#bib.bib32" title="Recurrent neural network based language model" class="ltx_ref">19</a>; <a href="#bib.bib31" title="Statistical language models based on neural networks" class="ltx_ref">21</a>)</cite>.
+Another version of recurrent neural nets has been used to generate
+plausible text with a character-level language model
+<cite class="ltx_cite">(<a href="#bib.bib7" title="Generating text with recurrent neural networks" class="ltx_ref">24</a>)</cite>. We use SRNs to induce
+character-level text representations from unlabeled Twitter data to
+use as features in the string transduction model.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The units in the hidden layer at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> receive connections from
+input units at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> and also from the hidden units at the previous
+time step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math>. The hidden layer predicts the state of the output
+units at the next time step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="t+1" display="inline"><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></math>. The input vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="w(t)" display="inline"><mrow><mi>w</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> represents the input element at current time
+step, here the current character. The output vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="y(t)" display="inline"><mrow><mi>y</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> represents
+the predicted probabilities for the next character. The activation
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m7" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math> of
+a hidden unit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> is a function of the current input and the state of the
+hidden layer at the previous time step: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m9" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math>:</p>
+<table id="S2.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="s_{j}(t)=\sigma\left(\sum_{i=1}^{I}w_{i}(t)U_{ji}+\sum_{l=1}^{L}s_{j}(t-1)W_{%&#10;jl}\right)" display="block"><mrow><mrow><msub><mi>s</mi><mi>j</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>I</mi></munderover><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow><mo>⁢</mo><msub><mi>U</mi><mrow><mi>j</mi><mo>⁢</mo><mi>i</mi></mrow></msub></mrow></mrow><mo>+</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>l</mi><mo>=</mo><mn>1</mn></mrow><mi>L</mi></munderover><mrow><msub><mi>s</mi><mi>j</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>W</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m10" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> is the sigmoid function and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m11" class="ltx_Math" alttext="U_{ji}" display="inline"><msub><mi>U</mi><mrow><mi>j</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> is the weight between
+input component <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m12" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and hidden unit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m13" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m14" class="ltx_Math" alttext="W_{jl}" display="inline"><msub><mi>W</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> is the weight
+between hidden unit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m15" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m16" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math> and hidden unit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m17" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m18" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>.
+The representation of recent history is stored in a limited number of
+recurrently connected hidden units. This forces the network to make
+the representation compressed and abstract rather than just memorize
+literal history. <cite class="ltx_cite">Chrupała (<a href="#bib.bib28" title="Text segmentation with character-level text embeddings" class="ltx_ref">4</a>)</cite> and
+<cite class="ltx_cite">Evang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Elephant: sequence labeling for word and sentence segmentation" class="ltx_ref">9</a>)</cite> show that these text embeddings can be
+useful as features in textual segmentation tasks. We use them to bring
+in information from unlabeled data into our string transduction
+model and then train a character-level SRN language model on unlabeled
+tweets. We run the trained model on new tweets and record the
+activation of the hidden layer at each position as the model predicts
+the next character. These activation vectors form our text
+embeddings: they are discretized and used as input features to the
+supervised sequence labeler as described in
+Section <a href="#S3.SS4" title="3.4 Features ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Setup</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We limit the size of the string alphabet by always working with UTF-8
+encoded strings, and using bytes rather than characters as basic
+units.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Unlabeled tweets</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In order to train our SRN language model we collected a set of tweets
+using the Twitter sampling API. We use the raw sample directly without
+filtering it in any way, relying on the SRN to learn the structure of
+the data. The sample consists of 414 million bytes of UTF-8 encoded in
+a variety of languages and scripts text. We trained a 400-hidden-unit
+SRN, to predict the next byte in the sequence using backpropagation
+through time. Input bytes were encoded using one-hot representation.
+We modified the RNNLM toolkit <cite class="ltx_cite">(<a href="#bib.bib8" title="Recurrent neural network language models" class="ltx_ref">20</a>)</cite> to record the activations
+of the hidden layer and ran it with the default learning rate
+schedule. Given that training SRNs on large amounts of text takes a
+considerable amount of time we did not vary the size of the hidden
+layer. We did try to filter tweets by language and create specific
+embeddings for English but this had negligible effect on tweet
+normalization performance.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<p class="ltx_p ltx_align_center">
+<img src="P14-2111/image001.png" id="S3.F1.g1" class="ltx_graphics" width="206" height="56" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Tweets randomly generated with an SRN</div>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The trained SRN language model can be used to generate random text by
+sampling the next byte from its predictive distribution
+and extending the string with the
+result. Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 Unlabeled tweets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows example strings
+generated in this way: the network seems to prefer to output
+pseudo-tweets written consistently in a single script with words and
+pseudo-words mostly from a single language. The generated byte
+sequences are valid UTF-8 strings.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">should h</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">should d</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">will s</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">will m</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">should a</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">@justth</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">@neenu</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">@raven_</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">@lanae</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">@despic</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">maybe</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">u maybe y</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">cause i</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">wen i</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">when i</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Nearest neighbors in embedding space.</div>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S3.T2" title="Table 2 ‣ 3.1 Unlabeled tweets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> in the first column we show the suffix of a
+string for which the SRN is predicting the last byte. The rest of
+each row shows the nearest neighbors of this string in embedding
+space, i.e. strings for which the SRN is activated in a similar way
+when predicting its last byte as measured by cosine similarity.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Normalization datasets</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">A difficulty in comparing approaches to tweet normalization is the
+sparsity of publicly available datasets. Many authors evaluate on
+private tweet collections and/or on the text message corpus of
+<cite class="ltx_cite">Choudhury<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Investigation and modeling of the structure of texting language" class="ltx_ref">2</a>)</cite>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">For English, <cite class="ltx_cite">Han and Baldwin (<a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>)</cite> created a small tweet dataset
+annotated with normalized variants at the word level. It is hard to
+interpret the results from <cite class="ltx_cite">Han and Baldwin (<a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>)</cite>, as
+the evaluation is carried out by assuming that the words to be
+normalized are known in advance:
+<cite class="ltx_cite">Han<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite> remedy this shortcoming by evaluating a
+number of systems without pre-specifying ill-formed tokens. Another
+limitation is that only word-level normalization is covered in the
+annotation; e.g. splitting or merging of words is not allowed. The
+dataset is also rather small: 549 tweets, which contain 2139 annotated
+out-of-vocabulary (OOV) words. Nevertheless, we use it here for
+training and evaluating our model. This dataset does not specify a
+development/test split. In order to maximize the size of the training
+data while avoiding tuning on test data we use a split
+cross-validation setup: we generate 10 cross-validation folds, and use
+5 of them during development to evaluate variants of our model. The
+best performing configuration is then evaluated on the remaining 5
+cross-validation folds.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Model versions</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">The simplest way to normalize tweets with a string transduction model
+is to treat whole tweets as input sequences. Many other tweet
+normalization methods work in a word-wise fashion: they first identify
+OOV words and then replace them with normalized forms. Consequently,
+publicly available normalization datasets are annotated at word level.
+We can emulate this setup by training the sequence labeler on words,
+instead of whole tweets. This approach sacrifices some generality,
+since transformations involving multiple words cannot be
+learned. However, word-wise models are more comparable with previous
+work. We investigated the following models:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">oov-only</span> is trained on individual words
+and in-vocabulary (IV) words are discarded for training, and left
+unchanged for prediction.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We used the IV/OOV annotations in
+the <cite class="ltx_cite">Han<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite> dataset, which are automatically
+derived from the aspell dictionary.</span></span></span></p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">all-words</span> is trained on all words and allowed to change IV words.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Document</span> is trained on whole tweets.</p>
+</div></li>
+</ul>
+<p class="ltx_p">Model <span class="ltx_text ltx_font_smallcaps">oov-only</span> exploits
+the setting when the task is constrained to only normalize words
+absent from a reference dictionary, while <span class="ltx_text ltx_font_smallcaps">document</span> is the one
+most generally applicable but does not benefit from any
+constraints. To keep model size within manageable limits we reduced
+the label set for models <span class="ltx_text ltx_font_smallcaps">all-words</span> and <span class="ltx_text ltx_font_smallcaps">document</span> by
+replacing labels which occur less than twice in the training data with
+<span class="ltx_text ltx_font_smallcaps">nil</span>. For <span class="ltx_text ltx_font_smallcaps">oov-only</span> we were able to use the full label set.
+As our sequence labeling model we use the Wapiti implementation of
+Conditional Random Fields <cite class="ltx_cite">(<a href="#bib.bib11" title="Practical very large scale CRFs" class="ltx_ref">16</a>)</cite> with the
+L-BFGS optimizer and elastic net regularization with default settings.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Features</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">We run experiments with two feature sets: <span class="ltx_text ltx_font_smallcaps">n-gram</span> and <span class="ltx_text ltx_font_smallcaps">n-gram+srn</span>. <span class="ltx_text ltx_font_smallcaps">n-gram</span> are character n-grams of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>–<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="3" display="inline"><mn>3</mn></math> in
+a window of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m3" class="ltx_Math" alttext="(-2,+2)" display="inline"><mrow><mo>(</mo><mrow><mrow><mo>-</mo><mn>2</mn></mrow><mo>,</mo><mrow><mo>+</mo><mn>2</mn></mrow></mrow><mo>)</mo></mrow></math> around the current position. For the <span class="ltx_text ltx_font_smallcaps">n-gram+srn</span> feature set we augment <span class="ltx_text ltx_font_smallcaps">n-gram</span> with features
+derived from the activations of the hidden units as the SRN is trying
+to predict the current character. In order to use the activations in
+the CRF model we discretize them as follows. For each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m4" class="ltx_Math" alttext="K=10" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>10</mn></mrow></math>
+most active units out of total <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m5" class="ltx_Math" alttext="J=400" display="inline"><mrow><mi>J</mi><mo>=</mo><mn>400</mn></mrow></math> hidden units, we create
+features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m6" class="ltx_Math" alttext="(f(1)\ldots f(K))" display="inline"><mrow><mo>(</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>K</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></math> defined as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m7" class="ltx_Math" alttext="f(k)=1" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow><mo>=</mo><mn>1</mn></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m8" class="ltx_Math" alttext="s_{j(k)}&gt;0.5" display="inline"><mrow><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msub><mo>&gt;</mo><mn>0.5</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m9" class="ltx_Math" alttext="f(k)=0" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow></math> otherwise, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m10" class="ltx_Math" alttext="s_{j(k)}" display="inline"><msub><mi>s</mi><mrow><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msub></math> returns the activation
+of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m11" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math><sup class="ltx_sup">th</sup> most active unit.</p>
+</div>
+</div>
+<div id="S3.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.5 </span>Evaluation metrics</h3>
+
+<div id="S3.SS5.p1" class="ltx_para">
+<p class="ltx_p">As our evaluation metric we use word error rate (WER) which is defined
+as the Levenshtein edit distance between the predicted word sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p1.m1" class="ltx_Math" alttext="\hat{t}" display="inline"><mover accent="true"><mi>t</mi><mo stretchy="false">^</mo></mover></math>
+and the target word sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, normalized by the total number of
+words in the target string.
+A more generally applicable metric would be character error rate, but
+we report WERs to make our results easily comparable with previous
+work. Since the English dataset is pre-tokenized and only covers
+word-to-word transformations, this choice has little importance here
+and character error rates show a similar
+pattern to word error rates.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results of our development
+experiments. <span class="ltx_text ltx_font_smallcaps">No-op</span> is a baseline which leaves text unchanged.
+As expected the most constrained model <span class="ltx_text ltx_font_smallcaps">oov-only</span> outperforms the
+more generic models on this dataset.
+For all model variations, adding SRN features substantially improves
+performance: the relative error reductions range from 12% for <span class="ltx_text ltx_font_smallcaps">oov-only</span> to 30% for <span class="ltx_text ltx_font_smallcaps">all-words</span>. Table <a href="#S4.T4" title="Table 4 ‣ 4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+shows the non-unique normalizations made by the <span class="ltx_text ltx_font_smallcaps">oov-only</span> model
+with SRN features which were missed without them. SRN features seem to
+be especially useful for learning long-range, multi-character edits,
+e.g. <span class="ltx_text ltx_font_italic">fb</span> for <span class="ltx_text ltx_font_italic">facebook</span>.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Model</th>
+<th class="ltx_td ltx_align_left">Features</th>
+<th class="ltx_td ltx_align_right">WER (%)</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">no-op</span></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_right ltx_border_t">11.7</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">document</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">ngram</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t">6.8</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">document</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">ngram+SRN</span></td>
+<td class="ltx_td ltx_align_right">5.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">all words</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">ngram</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t">7.2</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">all words</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">ngram+SRN</span></td>
+<td class="ltx_td ltx_align_right">5.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">oov-only</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">ngram</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t">5.1</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">oov-only</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">ngram+SRN</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">4.5</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>WERs on development data.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T5" title="Table 5 ‣ 4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows the non-unique
+normalizations which were missed by the best model: they are a mixture of
+relatively standard variations which happen to be infrequent in our
+data, like <span class="ltx_text ltx_font_italic">tonite</span> or <span class="ltx_text ltx_font_italic">gf</span>, and a few idiosyncratic respellings like
+<span class="ltx_text ltx_font_italic">uu</span> or <span class="ltx_text ltx_font_italic">bhee</span>. Our supervised approach makes it easy to
+address the first type of failure by simply annotating additional
+training examples.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_t">9 cont continued</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">5 gon gonna</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">4 bro brother</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4 congrats congratulations</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">3 yall you</td>
+<td class="ltx_td ltx_align_left ltx_border_r">3 pic picture</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 wuz what’s</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 mins minutes</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l">2 juss just</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">2 fb facebook</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Improvements from SRN features.</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_t">4 1 one</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">2 withh with</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 uu you</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 tonite tonight</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 thx thanks</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 thiis this</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 smh somehow</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 outta out</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 n in</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 m am</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 hmwrk homework</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 gf girlfriend</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 fxckin fucking</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 dha the</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">2 de the</td>
+<td class="ltx_td ltx_align_left ltx_border_r">2 d the</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l">2 bhee be</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">2 bb baby</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Missed transformations.</div>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Method</th>
+<td class="ltx_td ltx_align_right">WER (%)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">No-op</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t">11.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">HB-dict</th>
+<td class="ltx_td ltx_align_right ltx_border_t">6.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">GHM-dict</th>
+<td class="ltx_td ltx_align_right">7.6</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">S-dict</th>
+<td class="ltx_td ltx_align_right">9.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Dict-combo</th>
+<td class="ltx_td ltx_align_right">4.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Dict-combo+HB-norm</th>
+<td class="ltx_td ltx_align_right">7.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">oov-only ngram+srn</span> (test)</th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">4.8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>WERs compared to previous work.</div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T6" title="Table 6 ‣ 4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> presents evaluation results of several
+approaches reported in <cite class="ltx_cite">Han<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite> as well as the
+model which did best in our development experiments. HB-dict is the
+Internet slang dictionary from <cite class="ltx_cite">Han and Baldwin (<a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>)</cite>. GHM-dict is the
+automatically constructed dictionary from
+<cite class="ltx_cite">Gouws<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="Unsupervised mining of lexical variants from noisy text" class="ltx_ref">10</a>)</cite>; S-dict is the automatically constructed
+dictionary from <cite class="ltx_cite">(<a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite>; Dict-combo are all the
+dictionaries combined and Dict-combo+HB-norm are all dictionaries
+combined with approach of <cite class="ltx_cite">Han and Baldwin (<a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>)</cite>. The WER reported for
+<span class="ltx_text ltx_font_smallcaps">oov-only ngram+srn</span> is on the test folds only. The score on the
+full dataset is a bit better: 4.66%. As can be seen our approach it
+the best performing approach overall and in particular it does much
+better than all of the single dictionary-based methods. Only the
+combination of all the dictionaries comes close in performance.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In the field of tweet normalization the approach of
+<cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Insertion, deletion, or substitution?: normalizing text messages without pre-categorization nor supervision" class="ltx_ref">18</a>, <a href="#bib.bib22" title="A broad-coverage normalization system for social media language" class="ltx_ref">17</a>)</cite> shows some similarities to ours: they gather
+a collection of OOV words together with their canonical forms from the
+web and train a character-level CRF sequence labeler on the edit
+sequences computed from these pairs. They use this as the error model
+in a noisy-channel setup combined with a unigram language model.
+In addition to character n-gram features they use phoneme
+and syllable features, while we rely on the SRN embeddings to provide
+generalized representations of input strings.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Kaufmann and Kalita (<a href="#bib.bib2" title="Syntactic normalization of Twitter messages" class="ltx_ref">14</a>)</cite> trained a phrase-based statistical
+translation model on a parallel text message corpus and applied it to tweet
+normalization. In comparison to our first-order linear-chain CRF, an MT
+model with reordering is more flexible but for this reason needs more
+training data. It also suffers from language model mismatch mentioned
+in Section <a href="#S2" title="2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>: optimal results were obtained by using a
+low weight for the language model trained on a balanced text corpus.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Many other approaches to tweet normalization are more unsupervised in
+nature <cite class="ltx_cite">(e.g. <a href="#bib.bib25" title="Lexical normalisation of short text messages: makn sens a# twitter" class="ltx_ref">12</a>; <a href="#bib.bib16" title="Unsupervised mining of lexical variants from noisy text" class="ltx_ref">10</a>; <a href="#bib.bib6" title="Normalizing microtext." class="ltx_ref">25</a>; <a href="#bib.bib24" title="Automatically constructing a normalisation dictionary for microblogs" class="ltx_ref">13</a>)</cite>. They
+still require annotated development data for tuning parameters and a
+variety of heuristics. Our approach works well with similar-sized
+training data, and unlike unsupervised approaches can easily benefit
+from more if it becomes available.
+Further afield, our work has connections to research on
+morphological analysis: for example <cite class="ltx_cite">Chrupała<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib18" title="Learning morphology with Morfette" class="ltx_ref">3</a>)</cite> use
+edit scripts to learn lemmatization rules while
+<cite class="ltx_cite">Dreyer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib21" title="Latent-variable modeling of string transductions with finite-state methods" class="ltx_ref">6</a>)</cite> propose a discriminative model for
+string transductions and apply it to morphological tasks.
+While <cite class="ltx_cite">Chrupała (<a href="#bib.bib28" title="Text segmentation with character-level text embeddings" class="ltx_ref">4</a>)</cite> and <cite class="ltx_cite">Evang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Elephant: sequence labeling for word and sentence segmentation" class="ltx_ref">9</a>)</cite> use
+character-level SRN text embeddings for learning segmentation, and
+recurrent nets themselves have been used for sequence transduction
+<cite class="ltx_cite">(<a href="#bib.bib1" title="Sequence transduction with recurrent neural networks" class="ltx_ref">11</a>)</cite>, to our knowledge <span class="ltx_text ltx_font_italic">neural text
+embeddings</span> have not been previously applied to string transduction.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Learning sequences of edit operations from examples while
+incorporating unlabeled data via neural text embeddings constitutes a
+compelling approach to tweet normalization. Our results are especially
+interesting considering that we trained on only a small annotated data
+set and did not use any other manually created resources such as
+dictionaries. We want to push performance further by expanding the
+training data and incorporating existing lexical resources. It will
+also be important to check how our method generalizes to other
+language and datasets <cite class="ltx_cite">(e.g. <a href="#bib.bib9" title="Normalization of Dutch user-generated content" class="ltx_ref">5</a>; <a href="#bib.bib26" title="Introducción a la tarea compartida Tweet-Norm 2013: normalización léxica de tuits en espaÃ±ol" class="ltx_ref">1</a>)</cite>.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">The general form of our model can be used in settings where
+normalization is not limited to word-to-word transformations. We are
+planning to find or create data with such characteristics and evaluate
+our approach under these conditions.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Alegria, N. Aranberri, V. Fresno, P. Gamallo, L. Padró, I. San Vicente, J. Turmo and A. Zubiaga</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introducción a la tarea compartida Tweet-Norm 2013: normalización léxica de tuits en espaÃ±ol</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 36–45</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Conclusion ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Choudhury, R. Saraf, V. Jain, A. Mukherjee, S. Sarkar and A. Basu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Investigation and modeling of the structure of texting language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Document Analysis and Recognition (IJDAR)</span> <span class="ltx_text ltx_bib_volume">10</span> (<span class="ltx_text ltx_bib_number">3-4</span>), <span class="ltx_text ltx_bib_pages"> pp. 157–174</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Normalization datasets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Chrupała, G. Dinu and J. Van Genabith</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning morphology with Morfette</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Chrupała</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Text segmentation with character-level text embeddings</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. de Clercq, B. Desmet, S. Schulz, E. Lefever and V. Hoste</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Normalization of Dutch user-generated content</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 179–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Conclusion ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Dreyer, J. R. Smith and J. Eisner</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent-variable modeling of string transductions with finite-state methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1080–1089</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. L. Elman</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding structure in time</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive science</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 179–211</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. L. Elman</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations, simple recurrent networks, and grammatical structure</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine learning</span> <span class="ltx_text ltx_bib_volume">7</span> (<span class="ltx_text ltx_bib_number">2-3</span>), <span class="ltx_text ltx_bib_pages"> pp. 195–225</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Evang, V. Basile, G. Chrupała and J. Bos</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Elephant: sequence labeling for word and sentence segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Gouws, D. Hovy and D. Metzler</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised mining of lexical variants from noisy text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 82–90</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p3" title="4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Graves</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sequence transduction with recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">arXiv:1211.3711</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Han and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical normalisation of short text messages: makn sens a# twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 368–378</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Normalization datasets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.p3" title="4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Han, P. Cook and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically constructing a normalisation dictionary for microblogs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 421–432</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i1.p1" title="3.3 Model versions ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S1.p1" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Normalization datasets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.p3" title="4 Results ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kaufmann and J. Kalita</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Syntactic normalization of Twitter messages</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Lafferty, A. McCallum and F. C. N. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional Random Fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’01</span>, <span class="ltx_text ltx_bib_place">San Francisco, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 282–289</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-55860-778-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=645530.655813" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p3" title="2.1 Learning to transduce strings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Lavergne, O. Cappé and F. Yvon</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Practical very large scale CRFs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 504–513</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Model versions ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Liu, F. Weng and X. Jiang</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A broad-coverage normalization system for social media language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1035–1044</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Liu, F. Weng, B. Wang and Y. Liu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Insertion, deletion, or substitution?: normalizing text messages without pre-categorization nor supervision</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 71–76</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, M. Karafiát, L. Burget, J. ÄernockÃ½ and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network based language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1045–1048</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network language models</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\href</span>http://rnnlm.orghttp://rnnlm.org</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Unlabeled tweets ‣ 3 Experimental Setup ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical language models based on neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Brno University of Technology</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Miller and E. W. Myers</span><span class="ltx_text ltx_bib_year">(1985)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A file comparison program</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Software: Practice and Experience</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">11</span>), <span class="ltx_text ltx_bib_pages"> pp. 1025–1040</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Learning to transduce strings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. W. Myers</span><span class="ltx_text ltx_bib_year">(1986)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An O(ND) difference algorithm and its variations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Algorithmica</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">1-4</span>), <span class="ltx_text ltx_bib_pages"> pp. 251–266</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Learning to transduce strings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Sutskever, J. Martens and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating text with recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1017–1024</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Character-level text embeddings ‣ 2 Methods ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Xue, D. Yin and B. D. Davison</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Normalizing microtext.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 74–79</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related work ‣ Normalizing tweets with edit scripts and recurrent neural embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div><div class="ltx_rdf" about="" property="dcterms:creator"/>
+<div class="ltx_rdf" about="" property="dcterms:subject"/>
+<div class="ltx_rdf" about="" property="dcterms:subject"/>
+<div class="ltx_rdf" about="" property="dcterms:title"/>
+
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:22:09 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

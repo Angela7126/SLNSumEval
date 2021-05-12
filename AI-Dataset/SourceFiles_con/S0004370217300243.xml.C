@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    A cooperative game-theoretic approach to the social ridesharing problem.
+   </title>
+   <abstract>
+    In this work, we adopt a cooperative game theoretic approach in order to tackle the social ridesharing (SR) problem, where a set of commuters, connected through a social network, form coalitions and arrange one-time rides at short notice. In particular, we address two fundamental aspects of this problem. First, we focus on the optimisation problem of forming the travellers' coalitions that minimise the travel cost of the overall system. To this end, we model the formation problem as a Graph-Constrained Coalition Formation (GCCF) one, where the set of feasible coalitions is restricted by a graph (i.e., the social network). Our approach allows users to specify both spatial and temporal preferences for the trips. Second, we tackle the payment allocation aspect of SR, by proposing the first approach that computes kernel-stable payments for systems with thousands of agents. We conduct a systematic empirical evaluation that uses real-world datasets (i.e., GeoLife and Twitter). We are able to compute optimal solutions for medium-sized systems (i.e., with 100 agents), and high quality solutions for very large systems (i.e., up to 2000 agents). Our results show that our approach improves the social welfare (i.e., reduces travel costs) by up to 36.22% with respect to the scenario with no ridesharing. Finally, our payment allocation method computes kernel-stable payments for 2000 agents in less than an hour—while the state of the art is able to compute payments only for up to 100 agents, and does so 84 times slower than our approach.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The concept of real-time ridesharing, where people arrange one-time rides at short notice with their private cars, is rapidly shifting the way people commute for their daily activities. Companies such as Maramoja{sup:1} or Lyft{sup:2} allow users to quickly share their positions and arrange rides with other people they know/trust within minutes, hence providing a credible alternative to standard transportation systems (such as taxis or public transport). A clear trend for such companies is to build a community of users, where commuters can rate drivers/passengers, and then use such information to automatically form groups of commuters that know/trust each other. Following this trend, here we provide an approach that, given the desired starting point and destination, and the time constraints on the pick-up and the arrival of the commuters, can form groups that share cars to lower associated transportation costs (i.e., travel time and fuel), while considering the constraints imposed by the social network. We call this problem the social ridesharing (SR) problem. In particular, we provide a model for the SR problem casting this as a Graph-Constrained Coalition Formation (GCCF) problem. Specifically, following relevant literature on GCCF [36], [45], we consider a coalition to be feasible, only if the commuters involved in such coalition form a connected subgraph of the social network.
+     </paragraph>
+     <paragraph>
+      Within such SR scenario, we first address the optimisation problem of minimising the total cost of all the coalitions formed by the system. Given this, we define the value of each coalition as the travel cost of the associated car. Specifically, we present the first model that encodes the above discussed scenario as a GCCF problem, and we provide a novel formulation of coalitional values on the basis of the spatial preferences of the agents. Subsequently, we generalise our model incorporating the temporal preferences of the agents, so to allow them to express constraints on the departure and the arriving time. Our approach allows us to derive efficient methods for the computation of the path and the departure time of the driver, which provide the optimal solution the considered model.{sup:3} Finally, we show how to solve the GCCF problem associated to the SR scenario by means of a modified version of CFSS (i.e., the state of the art approach for solving GCCF), a branch and bound algorithm proposed in previous work [7] that is based on the graph-theoretic concept of edge contraction. Specifically, in this paper we propose SR-CFSS, which significantly extends CFSS by implementing a novel bounding technique devised for the SR scenario, and by ensuring the validity of the constraints imposed by our SR model.
+     </paragraph>
+     <paragraph>
+      We empirically evaluate our approach on real-world datasets for both spatial (i.e., GeoLife by Microsoft Research [50]) and social data (i.e., Twitter [30]). Results show that our approach can produce significant cost reductions (up to {a mathematical formula}−36.22% with respect to no ridesharing) and it scales to large numbers of agents, computing approximate solutions for very large systems (i.e., up to 2000 agents) and providing good quality guarantees (i.e., {a mathematical formula}71% of the optimal in the worst case) within minutes.
+     </paragraph>
+     <paragraph>
+      Having solved the optimisation problem posed by GCCF, we then turn to the problem of splitting the travel costs (corresponding to each car) among its passengers, i.e., we solve the payment allocation problem. Payments to the commuters need to be computed given the passengers' distinct needs (e.g., shorter/longer trips), roles (e.g., drivers/riders, less/more socially connected) and opportunity costs (e.g., taking a bus, their car, or a taxi).
+     </paragraph>
+     <paragraph>
+      One key aspect of payment allocation in Coalition Formation (CF) is the game-theoretic concept of stability, which measures how agents are keen to maintain the provided payments instead of deviating to a configuration deemed to be more rewarding from their individual point of view. Here, we induce stable payments in the context of the SR problem, employing the kernel[14] stability concept. Kernel-stable payoffs are perceived as fair, since they ensure that agents do not feel compelled to claim part of their partners' payoff. Kernel stability has been widely studied in cooperative game theory, and various approaches have been proposed to compute kernel-stable payments [29], [39]. However, as we discuss in Section 5, state of the art approaches exhibit inefficiency (i.e., they do not avoid considering infeasible solutions) and redundancy (i.e., they consider coalitions more than once). These drawbacks severely limit their scalability. In contrast, a better way to tackle this problem is to exploit the structure of the graph in order to consider only the coalitions that are indeed feasible, so to avoid any unnecessary computation.
+     </paragraph>
+     <paragraph>
+      We achieve this by means of the PK (Payments in the Kernel) algorithm, our method to compute a kernel-stable allocation given a coalition structure, and we apply it to the SR scenario. In particular, we address the shortcomings of the state of the art algorithm [39] in real-world scenarios, by designing an efficient parallel approach that scales up to thousands of agents. Specifically, we benchmark PK adopting the same realistic environment used for testing SR-CFSS, showing that our method computes payments for 2000 agents in less than an hour and it is 84 times faster than the state of the art in the best case. Moreover, our method can be efficiently parallelised, i.e., it achieves a speed-up of 10.6× on a 12-core CPU with respect to the serial approach.
+     </paragraph>
+     <paragraph>
+      Finally, we develop new insights into the relationship between payments incurred by a user by virtue of its position in its social network and its role (rider or driver). In general, our experimental results suggest that the kernel can be a valuable stability concept in the context of SR, as it results in a reasonable payment allocation that can be directly correlated with some simple properties of the agents in the system (i.e., network centrality and being a driver/rider).
+     </paragraph>
+     <paragraph>
+      In more detail, this paper advances{sup:4} the state of the art as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We model SR as GCCF that considers the desired starting point and destination, and the time constraints on the pick-up and the arrival.
+      </list-item>
+      <list-item label="•">
+       We propose SR-CFSS, a significantly extended version of CFSS (i.e., the state of the art approach for solving GCCF), to provide optimal solutions, and approximate solutions with quality guarantees for large-scale systems.
+      </list-item>
+      <list-item label="•">
+       We propose PK, the first approach able to compute kernel-stable payments for systems with thousands of agents.
+      </list-item>
+      <list-item label="•">
+       We evaluate our algorithms with realistic datasets, i.e., GeoLife from Microsoft Research for the geospatial data and Twitter for social networks. Results show that SR-CFSS computes optimal solutions in minutes for systems including up to 100 agents, and provides approximate solutions for systems including up to 2000 agents, with good quality guarantees (i.e., with a maximum performance ratio of 1.41 in the worst case). PK is able to compute payments for 2000 agents in less than an hour and it is 84 times faster than the state of the art in the best case.
+      </list-item>
+      <list-item label="•">
+       We analyse the relationship between payments incurred by a user by virtue of its position in the social network and its role (rider/driver).
+      </list-item>
+     </list>
+     <paragraph>
+      The rest of the paper is organised as follows. Section 2 illustrates the background on the GCCF problem, the kernel, and discusses the relationship between our work and the existing literature. Section 3 details our GCCF model for SR and Section 4 extends such model to include time constraints. In Section 5 we discuss PK, our approach to compute kernel-stable payments. Sections 6 and 7 present our experimental evaluation, where we benchmark SR-CFSS and PK, respectively. Section 8 concludes the paper and outlines future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background &amp; related work
+     </section-title>
+     <paragraph>
+      The purpose of this section is threefold. In Section 2.1 we define the GCCF problem, and we provide some background on the state of the art algorithm to solve it, i.e., CFSS. In Section 2.2 we discuss payment computation and the stability concept adopted by our approach, i.e., the kernel. Finally, in Section 2.3 we discuss the relationship between our work and the literature on ridesharing.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       GCCF problem definition
+      </section-title>
+      <paragraph>
+       The Coalition Structure Generation (CSG) problem [38] takes as input a finite set of n agents {a mathematical formula}A={a1,…,an} and a characteristic function {a mathematical formula}v:2A→R, that maps each coalition {a mathematical formula}S∈2A to its value, describing how much collective payoff a set of players can gain by forming a coalition. A coalition structure CS is a partition of the set of agents into disjoint coalitions. The set of all coalition structures is {a mathematical formula}Π(A). The value of a coalition structure CS is assessed as the sum of the values of its composing coalitions, i.e., {a mathematical formula}V(CS)=∑S∈CSv(S).
+      </paragraph>
+      <paragraph>
+       CSG aims at identifying {a mathematical formula}CS⁎, the most valuable coalition structure, i.e., {a mathematical formula}CS⁎=argmaxCS∈Π(A)V(CS). The computational complexity of the CSG problem is due to the size of its search space. In fact, a set of n agents can be partitioned in {a mathematical formula}Ω((nln⁡(n))n) ways, i.e., the nth Bell number [6], since, in standard CSG, every possible subset of agents is potentially a valid coalition.
+      </paragraph>
+      <paragraph label="Definition 1">
+       In many realistic scenarios, constraints influence the process of coalition formation. Following the work of Myerson [36] and Demange [16], and more recent work by Voice et al. [44], [45], in this paper we focus on a specific type of constraints that encodes synergies or relationships among the agents and that can be expressed by a graph, where nodes represent agents and edges encode the relationships between the agents. In this setting, edges enable connected agents to form a coalition and a coalition is considered feasible only if its members represent the vertices of a connected subgraph. In order to model these settings, Myerson [36] first proposed a definition of feasible coalition by considering an undirected graph {a mathematical formula}G=(A,E), where {a mathematical formula}E⊆A×A is a set of edges between agents, representing the relationships between them: feasible coalitionA coalition S is feasible if all of its members are connected in the subgraph of G induced by S, i.e., for each pair of players {a mathematical formula}ai,aj∈S there is a path in G that connects {a mathematical formula}ai and {a mathematical formula}aj without going out of S.
+      </paragraph>
+      <paragraph>
+       Thus, given a graph G the set of feasible coalitions is {a mathematical formula}FC(G)={S⊆A|The subgraph induced by S on G is connected}. A Graph-Constrained Coalition Formation (GCCF) problem is a CSG problem together with a graph G, where a coalition S is considered feasible if {a mathematical formula}S∈FC(G). In GCCF problems a coalition structure CS is considered feasible if each of its coalitions is feasible, i.e., {a mathematical formula}CS(G)={CS∈Π(A)|CS⊆FC(G)}. The goal for a GCCF problem is to identify {a mathematical formula}CS⁎, which is the most valuable feasible coalition structure, i.e., {a mathematical formula}CS⁎=argmaxCS∈CS(G)V(CS). After the definition of the GCCF problem, we now present CFSS, the state of the art algorithm to solve it.
+      </paragraph>
+      <section label="2.1.1">
+       <section-title>
+        The CFSS algorithm
+       </section-title>
+       <paragraph>
+        CFSS [7] is a search-based algorithm that solves the GCCF problem. CFSS works by representing the solution space {a mathematical formula}CS(G) of the GCCF problem as a rooted search tree, which is guaranteed to contain each {a mathematical formula}CS∈CS(G) only once without any redundancy. Each solution in such search tree is constructed by a unique sequence of edge contraction operations starting from the initial graph G. Intuitively, the contraction of an edge represents the merging of the coalitions associated to its incident vertices, as shown in Fig. 1. Such an operation can be used to generate the entire search space {a mathematical formula}CS(G), which can be traversed with polynomial memory requirements in order to find the optimal solution. This is possible because CFSS is based on a depth-first traversal (see Algorithm 9 in Appendix C) of the search tree, and, hence, at each point of the search, only the ancestors of the current node need to be maintained in memory. For this reason, CFSS can solve large-scale GCCF instances with more than 2000 agents [7]. The superior scalability of CFSS with respect to classic CSG solution algorithms is also possible thanks to the reduced search space that must be explored, due to the presence of the graph that constrains the number of feasible coalitions. An in-depth discussion about the CFSS algorithm is provided by Bistaffa et al. [7].
+       </paragraph>
+       <paragraph>
+        Having discussed the optimisation part of GCCF, we now discuss the second fundamental aspect of CF, i.e., payment computation, which, as mentioned in the introduction, is crucial in the context of SR.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Payment computation
+      </section-title>
+      <paragraph>
+       The payment computation problem involves the computation of a payoff vector x, which specifies a payoff {a mathematical formula}x[i] for each agent {a mathematical formula}ai∈A as a compensation of their contributions. This problem has been thoroughly studied in the cooperative-game theory literature, thus we suggest the reader to refer to the book by Chalkiadakis et al. [10] for a more extensive discussion of all the technical aspect on this subject. In the context of this discussion, we are particularly interested in computing payoff vectors that are efficient (i.e., the entire value of S is split among the members of S) and individually rational (i.e., each agent {a mathematical formula}ai receives a payoff {a mathematical formula}x[i] that is at least the value of its singleton). Efficiency and individual rationality are fundamental in real-world applications such as SR, as they formalise natural properties that are often assumed in practice. Efficiency expresses the principle that the entire travel cost of each car should be divided among its passengers, while individual rationality states that a rational agent does not join a car if such an action results in a cost higher than going alone.
+      </paragraph>
+      <paragraph>
+       Furthermore, computing payments that are stable is of utmost importance in systems with selfish rational agents, i.e., agents who are only interested in the maximisation of their payoffs [10]. As such, payoffs have to be distributed among agents to ensure that members are rewarded according to their bargaining power [10]. Stability ensures that agents will not deviate from the provided solution to a different one that is better from their individual point of view. In cooperative game-theory, stability has been defined with several concepts, e.g., the stable set, the nucleus, the kernel, and the core [10]. The core is one of the most widely studied stability concepts, but its computation has an exponential complexity with respect to the number of agents [11]. As such, it is not suitable for large-scale systems, as confirmed by our past research [43]. Furthermore, it is not guaranteed that core-stable solutions always exist [10], as evidenced by our experiments in Appendix B. Thus, in this paper we focus on the kernel.
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        The kernel
+       </section-title>
+       <paragraph>
+        The kernel is a stability concept introduced by Davis and Maschler [14]. A key feature of the kernel is that it is always possible to compute a kernel-stable payoff allocation. Moreover, a number of approaches [8], [29] can compute an approximation of the kernel when the size of coalitions is limited in a polynomial time with respect to the number of agents. The kernel provides stability within a given coalition structure, and under a given payoff allocation, by defining how payoffs should be distributed so that agents cannot outweigh (cf. below) their current partners, i.e., the other members of their coalition. Kernel-stable payoffs are perceived as fair,{sup:5} since they ensure that agents do not feel compelled to claim part of their partners payoff. We define the excess of a coalition S with respect to a given payoff vector x as {a mathematical formula}e(S,x)=v(S)−x(S), where {a mathematical formula}x(S)=∑ai∈Sx[i]. A positive excess is interpreted as a measure of threat: in the current payoff distribution, if some agents deviate by forming coalition with positive excess, they are able to increase their payoff by redistributing the coalitional excess among themselves. On this basis, we define the notion of surplus.
+       </paragraph>
+       <paragraph label="Definition 2">
+        surplusGiven a coalition structure CS and a coalition {a mathematical formula}S∈CS, we consider {a mathematical formula}ai,aj∈S. Then, the surplus{a mathematical formula}sij of {a mathematical formula}ai over {a mathematical formula}aj with respect to a given payoff configuration x, is defined by{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        In other words, {a mathematical formula}sij is the maximum of the excesses of all coalitions {a mathematical formula}S′ that include {a mathematical formula}ai and exclude {a mathematical formula}aj, with {a mathematical formula}S′ not in the given coalition structure CS (since under CS agents {a mathematical formula}ai and {a mathematical formula}aj belong to the same coalition S). We say that agent {a mathematical formula}ai outweighs agent {a mathematical formula}aj if {a mathematical formula}sij&gt;sji. When this is the case, {a mathematical formula}ai can claim part of {a mathematical formula}aj's payoff by threatening to walk away (or to expel {a mathematical formula}aj) from their coalition. When any two agents in a coalition cannot outweigh one another, the payoff vector lies in the kernel – i.e., it is stable. In addition, the set of kernel-stable payoff vectors is always non-empty [10].
+       </paragraph>
+       <paragraph>
+        Stearns [41] provides a payoff transfer scheme which converges to a vector in the kernel by means of payoff transfers from agents with less bargaining power to their more powerful partners, until the latter cannot claim more payoff from the former. Unfortunately, this may require an infinite number of steps to terminate. To alleviate this issue, Klusch and Shehory [29] introduced the ϵ-kernel in order to represent an allocation whose payoffs do not differ from an element in the kernel by more than ϵ. The current state of the art approach to compute an ϵ-kernel payoff allocation for classic CF has been proposed by Shehory and Kraus [39] (see Algorithm 4 in Section 5). Such an algorithm does not specify how x should be initialised, and assumes that a payoff vector is provided as an input. The first (and most expensive) phase is the computation of the surplus matrix s, which iterates over the entire set of coalitions to assess the maximum excess (Equation (1)) for each pair of agents in each coalition. Once the surplus matrix has been computed, a transfer between the pair of agents with the highest surplus difference (i.e., {a mathematical formula}sij−sji) is set up, while ensuring that each payment is individually rational. This scheme is iteratively executed until the ratio between the maximum surplus difference δ and the value of the considered coalition structure is within a predefined parameter ϵ. This ensures that the computed payoff allocation is ϵ-kernel stable. On the one hand, the computation of Equation (1) is a key bottleneck for classic CF, since it involves enumerating an exponential number of coalitions, i.e., {a mathematical formula}Θ(2n). On the other hand, when the size of the coalitions is limited to k members, such an algorithm has polynomial time complexity [39], since the coalitions are {a mathematical formula}O(nk)[29].
+       </paragraph>
+       <paragraph>
+        Despite having polynomial time complexity under certain assumptions, such an approach has some drawbacks that hinder its applicability in real-world scenarios, and especially in the SR scenario we consider. First, it is designed for classic CF, failing to exploit the graph-constrained nature of this problem. Second, this algorithm assumes that computation of the characteristic function has a {a mathematical formula}O(1) time complexity (e.g., coalitional values are stored in memory or provided by an oracle). This hypothesis, although appropriate in several settings, does not apply to SR, in which the value of a coalition is the solution of a routing problem, which cannot be assessed with a {a mathematical formula}O(1) time complexity (see Sections 3.1 and 3.2). Furthermore, coalitional values cannot be stored in memory, as it would require tens of GB even for medium-sized instances (e.g., 100 agents). These shortcomings lead to inefficiencies that prevent the application of the method proposed by Shehory and Kraus in our case (see Section 5).
+       </paragraph>
+       <paragraph>
+        Having discussed the approaches to address the two main aspects of CF, in the next section we elaborate on the existing literature on ridesharing.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       We now elaborate on related work in the areas of ridesharing and temporal constraint optimisation.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Ridesharing
+       </section-title>
+       <paragraph>
+        Ridesharing poses several challenges that have been addressed by a number of works in the Artificial Intelligence literature. In the context of optimisation, most studies [5], [22], [46], [47] tackle only one or two particular objectives [1] among the followings: minimise the overall distance travelled by the cars in the system, minimise the overall travel time, or maximise the number of participants. This allows to achieve solutions of tractable computational complexity, but, on the other hand, these approaches do not generalise to scenarios such as SR, in which a more complex cost model is considered (see Section 3). Specifically, Baldacci et al. [5] adopt a Lagrangian column generation method in order to compute the optimal way of assigning commuters to cars while minimising unmatched participants. A similar objective is pursued by Ghoseiri et al. [22], who also try to fulfil individual preferences such as age, gender, smoke, and pet restrictions. Several papers [46], [47] consider an agent-based system where autonomous rider and driver agents locally establish ride-shares with the objective of maximising the number of served riders. Winter and Nittel [46] consider a setting where short-range wireless communication devices (e.g., Bluetooth or WiFi) are used, showing that limiting the information dissemination between agents provides a benefit in terms of computation requirements, while it does not significantly impact the solution quality. Xing et al. [47] consider a highly dynamic ride-share system where drivers and riders are matched en-route.
+       </paragraph>
+       <paragraph>
+        Recently, Kamar and Horvitz [26] addressed the computational aspects related to ridesharing, proposing an interesting model to evaluate ridesharing plans, on which we base our model for SR. In particular, such work is mostly focused on incentive design aspects for ridesharing. Similarly, Kleiner et al. [28] and Zhao et al. [49] tackle the same challenge adopting a mechanism design perspective. Now, we also focus on the computation of incentives (in the form of payments), but, in contrast with the above works, we focus on the computation of payoffs that are stable in a game-theoretic sense, which is fundamental in contexts with selfish rational agents.
+       </paragraph>
+       <paragraph>
+        As a final remark, notice that none of the works in the literature consider the role of the social network as we do, which, as mentioned in the introduction, is crucial for real-world ridesharing services.
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Temporal constraint optimisation
+       </section-title>
+       <paragraph>
+        Problems involving time constraints arise in various areas of computer science, especially in the context of scheduling [15] and vehicle routing [13], [42]. In particular, Dechter [15] define the so-called Simple Temporal Problems (STP), a particular type of Constraint Satisfaction Problem (CSP) in which a variable {a mathematical formula}τi corresponds to a continuous time point and a binary constraint {a mathematical formula}(τi,τj) is associated to one time range that contains the valid values for {a mathematical formula}τj−τi. In the context of SR, if {a mathematical formula}τ1 and {a mathematical formula}τ2 are respectively the departure and the arrival time for a particular agent, the constraint {a mathematical formula}(τ1,τ2) associated to the range {a mathematical formula}[0′,60′] means that its arrival cannot happen more than 60 minutes after its departure. Khatib et al. [27] later extended the concept of STP associating a function (i.e., a preference) to each constraint, in order to differentiate among valid solutions and select the one that best meets such preferences. The authors also characterise the complexity of solving such problem (denoted as STPP) as NP-Complete in the general case, while it is tractable if preferences are expressed by linear functions. Such complexity results by virtue of the fact that STPPs with linear preferences can be expressed as Linear Programming (LP) problems, which can be solved in polynomial time [12]. However, even if our preferences are linear (Equations (11) and (12)), our time domain is discrete, resulting in a problem of Integer LP, which is NP-Hard in the general case [12]. Nonetheless, our formalisation allows us to restrict such problem to a particular, tractable case. Specifically, our scenario requires to compute only the optimal departure time for the first point in the path, i.e., {a mathematical formula}τS⁎, since we assume no delay between the arrival to a point and the departure for the next point in the path (Equation (10)).{sup:6}
+       </paragraph>
+       <paragraph>
+        These challenges have also been studied in the Vehicle Routing Problem (VRP) literature [13], [42], and, specifically, in the context of the Vehicle Routing Problem with Time Windows (VRPTW) [25]. To the best of our knowledge, these works adopt a different perspective with respect to our approach, as their main focus is on logistics challenges (e.g., routing, scheduling). While these aspects also appear in our paper, here we are mainly interested in studying and solving the SR problem from a CF perspective, i.e., solving the CSG and the payment computation problems.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A GCCF approach for SR
+     </section-title>
+     <paragraph>
+      The social ridesharing (SR) problem considers a set of riders {a mathematical formula}A={a1,…,an}, where {a mathematical formula}n&gt;0 is the total number of riders, and a non-empty{sup:7} set of drivers {a mathematical formula}D⊆A, containing the riders owning a car. Notice that our SR approach cannot increase the number of cars in the system, i.e., SR can only improve the traffic or leave it unaffected. Every driver {a mathematical formula}ai∈D can host up to {a mathematical formula}seats(ai) riders in his car, including himself, where the function {a mathematical formula}seats:A→N0 provides the number of seats of each car. If {a mathematical formula}ai∉D, then {a mathematical formula}seats(ai)=0.
+     </paragraph>
+     <paragraph>
+      The map of the geographic environment in which the SR problem takes place is represented by a connected graph {a mathematical formula}M=(P,Q), where P is the set of geographic points of the map and {a mathematical formula}Q⊆P×P is the set of edges among these points. Each edge is associated to a length by means of the function {a mathematical formula}λ:Q→R+, where {a mathematical formula}R+={i∈R|i≥0}. Similarly, we define {a mathematical formula}R−={i∈R|i≤0}. {a mathematical formula}N+ and {a mathematical formula}N− are defined in the corresponding ways.
+     </paragraph>
+     <paragraph label="Definition 4">
+      pathA path composed by m points, each belonging to P, is represented as an m-tuple, denoting as {a mathematical formula}L[k] the kth point of L. A path is allowed to cross the same point multiple times.set of paths {a mathematical formula}L{a mathematical formula}L is the set of all paths among the points in P.
+     </paragraph>
+     <paragraph>
+      Each rider {a mathematical formula}ai∈A has to commute from a starting point {a mathematical formula}piσ∈P, i.e., its pick-up point, to a destination {a mathematical formula}piω∈P.
+     </paragraph>
+     <paragraph>
+      A key aspect of the SR scenario is the presence of a social network, modelled as a graph {a mathematical formula}G=(A,E) with {a mathematical formula}E⊆A×A, which restricts the formation of groups. To this end, we define a feasible coalition as follows.
+     </paragraph>
+     <paragraph label="Constraint 1">
+      feasible coalition for SRGiven a graph G and a set of riders {a mathematical formula}S⊆A, S is a feasible coalition if it induces a connected subgraph on G, and if it contains at least one rider whose car has enough seats for all the members. Formally, we state such a requirement as follows. {a mathematical formula}|S|&gt;1⇒∃ai∈S∩D:seats(ai)≥|S|, i.e., at least one rider has a car with enough seats for all the riders.
+     </paragraph>
+     <paragraph>
+      Notice that such a constraint allows a rider {a mathematical formula}ai∉D to be in a singleton. In fact, if the total number of available seats is less than the total number of riders in the system, such a rider might need to resort to public transport paying a cost {a mathematical formula}k({ai}) for the ticket. Formally, the function {a mathematical formula}k:Asingle−Dsingle→R− provides such a cost, where {a mathematical formula}Asingle={{ai}|ai∈A}, and {a mathematical formula}Dsingle={{ai}|ai∈D}.{sup:8} If {a mathematical formula}ai∈D, then {a mathematical formula}{ai} is not associated with any value by {a mathematical formula}k(⋅), as we assume that such riders always prefer to use their car with respect to public transport.{sup:9}
+     </paragraph>
+     <paragraph>
+      Now, in several ridesharing online services (e.g., Lyft and Uber) a commuter declares whether he is available as a driver or as a rider, hence the two sets are disjoint and a feasible set of riders S contains at most one driver. Formally, the following additional constraint must hold:
+     </paragraph>
+     <paragraph label="Constraint 2">
+      {a mathematical formula}|S∩D|≤1, i.e., the number of drivers per coalition can be 0 (i.e., S contains a single rider without a car) or 1.
+     </paragraph>
+     <paragraph>
+      Notice that Constraint 2 is optional, but it holds in several established real-world services, arising from aspects of practical nature.{sup:10} Nonetheless, since our approach supports a more general model, it can also be applied to scenarios where such a constraint does not hold. Having defined our notion of a feasible coalition, in the following section we detail how we associate a value to each feasible coalition, i.e., we define the characteristic function properly.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Coalitional value definition
+      </section-title>
+      <paragraph>
+       When a shared car is arranged, it drives through a path that contains all the starting points and destinations of its passengers. Notice that not all the permutation of these points are valid (e.g., it is not reasonable to go to a rider's destination and then to its starting point). More formally, a valid path must fulfil two constraints to correctly accommodate the needs of all the passengers.
+      </paragraph>
+      <paragraph label="Constraint 4">
+       valid pathGiven a feasible set of riders S and a path {a mathematical formula}L∈L of m points, L is said to be valid if the following constraints hold:{a mathematical formula}∃ai∈S:seats(ai)≥|S|∧L[1]=piσ∧L[m]=piω, i.e., L goes from the driver's starting point to its destination.{a mathematical formula}∀ai∈S∃x,y:L[x]=piσ∧L[y]=piω∧x&lt;y, i.e., for each rider, its starting point precedes its destination.
+      </paragraph>
+      <paragraph>
+       Notice that a valid path can cross the same point multiple times.{sup:11} We refer to the set of all valid paths for a given feasible set of riders S with {a mathematical formula}VL(S). {a mathematical formula}VL(S) is always non-empty, since we assume that M is a connected graph.{sup:12}
+      </paragraph>
+      <paragraph>
+       Following Kamar and Horvitz [26], we define {a mathematical formula}v(S) as{a mathematical formula} where {a mathematical formula}LS⁎ represents the optimal path for S (Equation (3)). On the one hand, if {a mathematical formula}S∩D=∅, Constraint 1 imposes that S is formed by a single rider without a car, hence its cost is provided by {a mathematical formula}k(S). On the other hand, if S contains at least one driver, its value is the sum of the following negative{sup:13} cost functions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}t:L→R−, i.e., the time cost of driving through a given path,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}c:L→R−, i.e., the cognitive cost{sup:14} of driving through a given path,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}f:L→R−, i.e., the fuel cost of driving through a given path.
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, we define the function {a mathematical formula}value:L→R− as the sum of the above three functions, i.e., {a mathematical formula}value(L)=t(L)+c(L)+f(L). We assume that such functions are additive, as defined in what follows.
+      </paragraph>
+      <paragraph label="Definition 7">
+       additivityA function {a mathematical formula}z:L→R− is said to be additive if, given two paths {a mathematical formula}L1,L2∈L such that the last point of {a mathematical formula}L1 is the first of {a mathematical formula}L2, then {a mathematical formula}z(L1⊕L2)=z(L1)+z(L1), where ⊕ represents the concatenation of paths.
+      </paragraph>
+      <paragraph>
+       Additivity trivially applies to any cost function in real-world ridesharing scenario. Notice that we do not assume that the above cost functions are monotonic with respect to the length of the path, i.e., longer paths can results in lower costs. Finally, {a mathematical formula}LS⁎ represents the optimal path for S, defined as{a mathematical formula} Considering this, a SR problem can be easily translated into a GCCF problem, as each feasible set of riders is indeed a feasible coalition and {a mathematical formula}v(⋅) provides its coalitional value. Hence, {a mathematical formula}CS⁎ represents the optimal coalition structure which maximises the social welfare (i.e., minimises the total cost) for the system. However, the computation of the optimal path in Equation (3) is NP-hard [31], which would not be solvable in realistic scenarios. Hence, in the next section we show how a reasonable assumption allows us make such computation tractable, by means of well-known optimisation techniques [20].
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Optimal path computation
+      </section-title>
+      <paragraph>
+       The computational complexity of Equation (3) is due to the size of its search space, formed by all the valid paths for S, i.e., all the paths in the graph M that contain the starting points and destinations of the members of S in an order that satisfies Constraints 3 and 4. Notice that, given a particular sequence of starting points and destinations that satisfies such constraints, the solution space of Equation (3) contains multiple valid paths, as the following example shows.
+      </paragraph>
+      <paragraph>
+       Fig. 2 shows an example map containing the starting points and destinations of 2 agents, in which only one sequence of points is valid, i.e., {a mathematical formula}L=〈p1σ,p2σ,p2ω,p1ω〉. Nonetheless, the set of valid paths is much larger (i.e., {a mathematical formula}33=27 valid paths), since there exist 3 possible paths for each of the 3 pairs of consecutive points in L. However, it is reasonable to assume that the driver will go through the shortest path for each of these 3 pairs of points.{sup:15}
+      </paragraph>
+      <paragraph label="Assumption 1">
+       When the driver has to go from one point in L to the next one, it will choose the shortest path (considering {a mathematical formula}λ(⋅)) connecting such points.
+      </paragraph>
+      <paragraph>
+       Assumption 1 allows us to collapse the search space of Equation (3) to {a mathematical formula}VT(S).
+      </paragraph>
+      <paragraph label="Definition 8">
+       {a mathematical formula}VT(S)Given a feasible coalition S, {a mathematical formula}VT(S) is the set of tuples that contain all and only the starting points and destinations of the members of S (without repetitions) and that satisfy Constraints 3 and 4.
+      </paragraph>
+      <paragraph label="Definition 9">
+       In order to explain how to simplify the solution of Equation (3) given the above assumption, we define the function {a mathematical formula}concat(⋅). {a mathematical formula}concat(⋅)Given {a mathematical formula}L∈VT(S), the function {a mathematical formula}concat:VT(S)→L provides the path obtained as the concatenation of all the shortest paths between one point in L and the following one. Formally, {a mathematical formula}concat(L) is a tuple defined as {a mathematical formula}concat(L)=⨁k=1|L|−1sp(L[k],L[k+1]), where {a mathematical formula}sp:P×P→R+ provides the shortest path between two points, considering the length provided by {a mathematical formula}λ(⋅).
+      </paragraph>
+      <paragraph>
+       The function {a mathematical formula}concat(⋅) can be computed in {a mathematical formula}O((|L|−1)⋅(|Q|+|P|⋅log⁡|P|)), assuming that {a mathematical formula}sp(⋅) is implemented using Dijkstra's algorithm [18]. Moreover, if M is a Euclidean graph, {a mathematical formula}concat(⋅) can be computed in {a mathematical formula}O((n−1)⋅|Q|) with the A* algorithm [24]. Against this background, Equation (3) can be rewritten as{a mathematical formula} by exploiting the additivity property (Definition 7) of the {a mathematical formula}value(⋅) function. Notice that the search space of Equation (4) is {a mathematical formula}VT(S), which is significantly smaller than {a mathematical formula}VL(S) in Equation (3), and although being still exponential with respect to {a mathematical formula}|S|, such computational complexity is manageable for reasonably sized groups of riders. In fact, {a mathematical formula}VT(S) contains only 2520 valid tuples for {a mathematical formula}|S|=5 (i.e., the number of seats of an average car). Such a result allows us to evaluate each coalition S by means of Equation (2), and hence we can address SR as GCCF.
+      </paragraph>
+      <paragraph>
+       Furthermore, on the basis of Assumption 1 we later formulate Proposition 2, the fundamental theoretical result that allows us to compute an upper bound for the SR characteristic function. This, in turn, allows us to use the CFSS algorithm [7] to solve the SR problem efficiently.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Solving the social ridesharing problem with CFSS
+      </section-title>
+      <paragraph>
+       In order to solve the SR problem, the original version of CFSS [7] must be modified to assess the additional constraints introduced in Section 3. In particular, to ensure that Constraint 1 and Constraint 2 hold, we must avoid the formation of coalitions which are not feasible sets of riders. This is achieved by preventing the contractions of the green edges that would result in the violation of such constraints. Notice that such edges must be marked in red (see Section 2.1.1 above), even if we are not visiting the corresponding subtrees. In fact, this is equivalent to traversing such search spaces and discarding any solution they may contain, because such solutions would violate the above mentioned constraints.
+      </paragraph>
+      <paragraph>
+       A crucial feature of CFSS is the use of a branch and bound search strategy to prune significant parts of the search space, which can be used if the characteristic function is the sum of a superadditive and a subadditive part, i.e., an {a mathematical formula}m+a function [7]. However, Equation (2) is not {a mathematical formula}m+a, since it depends on {a mathematical formula}LS⁎, and in particular on the actual position of the starting points and destinations.
+      </paragraph>
+      <paragraph>
+       As an example, consider Fig. 3, which shows the starting points and destinations for 3 riders, i.e., {a mathematical formula}A={a1,a2,a3}, in which only {a mathematical formula}a1 owns a car, i.e., {a mathematical formula}D={a1}. For simplicity, we assume that {a mathematical formula}v(S) is equal to the length of {a mathematical formula}LS⁎, and {a mathematical formula}k({a2})=k({a3})=−1. In this example, {a mathematical formula}v({a1})=−3, {a mathematical formula}v({a2})=−1, {a mathematical formula}v({a3})=−1. However, we notice that {a mathematical formula}p2σ and {a mathematical formula}p2ω are actually part of the path travelled by {a mathematical formula}a1, hence it is reasonable for {a mathematical formula}a2 to join {a mathematical formula}a1 in the coalition {a mathematical formula}{a1,a2}. In fact, {a mathematical formula}v({a1,a2})=v({a1})=−3&gt;v({a1})+v({a2})=−3−1=−4. The optimal path for {a mathematical formula}S={a1,a3} is {a mathematical formula}LS⁎=〈p1σ,p3σ,p3ω,p1ω〉. On the other hand, {a mathematical formula}a3's starting point and destination are outside {a mathematical formula}a1's path, hence ridesharing is not effective in this case: {a mathematical formula}v({a1,a3})=−7&lt;v({a1})+v({a3})=−3−1=−4. Notice that this particular characteristic function cannot be seen as the sum of a superadditive and a subadditive part, since it exhibits a superadditive behaviour for some coalition structures, i.e., {a mathematical formula}v({a1,a2})&gt;v({a1})+v({a2}), while it is subadditive for some others, i.e., {a mathematical formula}v({a1,a3})&lt;v({a1})+v({a3}).
+      </paragraph>
+      <paragraph>
+       Hence, in the next section we provide alternative bounding techniques that can be used in our ridesharing scenario to use branch and bound within CFSS.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Bound computation
+       </section-title>
+       <paragraph>
+        Given a feasible coalition structure CS in our search tree, we now show how to compute an upper bound {a mathematical formula}M(CS) for the values assumed by the characteristic function in {a mathematical formula}ST(CS), i.e., {a mathematical formula}M(CS)≥V(CSi)∀CSi∈ST(CS), where {a mathematical formula}ST(CS) is the subtree (i.e., a portion of the entire search tree) rooted at the node corresponding to CS. {a mathematical formula}ST(CS) can be also seen as the set of all coalition structures that cover CS (i.e., {a mathematical formula}ST(CS)={CS′|∀S∈CS∃S′∈CS′ such that S⊆S′}). We use this value to avoid visiting {a mathematical formula}ST(CS) if {a mathematical formula}M(CS) is not greater than the current best solution. This allows us to realise the same pruning technique discussed in [7] in the context of {a mathematical formula}m+a functions.
+       </paragraph>
+       <paragraph>
+        In what follows, we provide a method to compute {a mathematical formula}M(CS) in scenarios where Constraint 2 holds. In these environments it is not possible to merge two coalitions that each contain one driver, since only single riders not owning a car are allowed to join existing groups. It is easy to see that the addition of a rider to a feasible coalition S can only result in a greater cost. This principle allows us to prove Proposition 1. First, we define {a mathematical formula}Ad(CS).
+       </paragraph>
+       <paragraph label="Definition 10">
+        {a mathematical formula}Ad(CS)Given a coalition structure CS, {a mathematical formula}Ad(CS) is the set of coalitions in CS that contain at least one driver, i.e., the set of cars. Formally, {a mathematical formula}Ad(CS)={S∈CS|S∩D≠∅}.
+       </paragraph>
+       <paragraph label="Proof">
+        If Constraint2holds, for any feasible coalition structure CS{a mathematical formula}is an upper bound for the value of any{a mathematical formula}CS′in{a mathematical formula}ST(CS), i.e., the subtree rooted in CS. Formally,{a mathematical formula}M1(CS)≥V(CS′)for all{a mathematical formula}CS′∈ST(CS).See Appendix A.  □
+       </paragraph>
+       <paragraph>
+        We now discuss how to compute an upper bound without assuming Constraint 2. We first make the following definitions.
+       </paragraph>
+       <paragraph label="Definition 11">
+        {a mathematical formula}Pab{a mathematical formula}Pab is the set of the starting points and destinations of all the riders, i.e., {a mathematical formula}Pab={p∈P|∃ai∈A:p=piσor p=piω}.
+       </paragraph>
+       <paragraph label="Definition 12">
+        {a mathematical formula}Ppairs{a mathematical formula}Ppairs is the set of all the pairs of different points in {a mathematical formula}Pab, i.e., {a mathematical formula}Ppairs={(p,q)∈Pab×Pab|p≠q}.
+       </paragraph>
+       <paragraph label="Definition 13">
+        {a mathematical formula}P1,a(ai) and P1,b(ai)Given a rider {a mathematical formula}ai∈A, {a mathematical formula}P1,a(ai) is the set of all the shortest paths from {a mathematical formula}ai's starting point to the starting points and destinations of any other rider, i.e., {a mathematical formula}P1,a={L|L=sp(piσ,p)∀p∈Pab:p≠piσ}. Similarly, we define {a mathematical formula}P1,b(ai) considering {a mathematical formula}ai's destination.
+       </paragraph>
+       <paragraph label="Definition 14">
+        {a mathematical formula}P2,a(ai) and P2,b(ai)Given a rider {a mathematical formula}ai∈A, {a mathematical formula}P2,a(ai) is the concatenation of all the pairs of shortest paths from {a mathematical formula}ai's starting point to the starting points and destinations of any other rider, i.e., {a mathematical formula}{L|L=sp(piσ,p)⊕sp(piσ,q)∀(p,q)∈Ppairs:p≠piσ and q≠piσ}. Similarly, we define {a mathematical formula}P2,b(ai) considering {a mathematical formula}ai's destination.
+       </paragraph>
+       <paragraph label="Definition 15">
+        {a mathematical formula}m(⋅)The function {a mathematical formula}m:A→R− is defined as{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Intuitively, the purpose of {a mathematical formula}m(ai) is to provide an upper bound on the {a mathematical formula}value(⋅) function corresponding to the edges incident on {a mathematical formula}piσ and {a mathematical formula}piω, when such edges are part of a path L driven by a car. If {a mathematical formula}ai is a driver, such an upper bound is calculated by considering the best edges (i.e., the ones that maximise {a mathematical formula}value(⋅)) incident on each point (Equation (6a)). In contrast, if {a mathematical formula}ai is not a driver, Equation (6b) considers the best pairs of edges incident on each point. We now provide an example to better explain how the {a mathematical formula}m(⋅) function is calculated.
+       </paragraph>
+       <paragraph>
+        Fig. 4 shows the starting points and destinations of 3 riders, in which the edges represent the shortest paths between any pair of points (under Assumption 1). Furthermore, assume that a coalition is formed among such agents, and that {a mathematical formula}a1 and {a mathematical formula}a2 are drivers, while {a mathematical formula}a3 is not. Notice that we do not know in advance whether {a mathematical formula}a1 or {a mathematical formula}a2 will be the optimal driver of such a car. For the sake of brevity, in the following discussion we only refer to the agents' starting points, but the same concepts apply symmetrically to the destinations. Notice that, since {a mathematical formula}a3 is not a driver, {a mathematical formula}p3σ will necessarily be an inner point in L (Constraint 3). It follows that L contains exactly two undirected edges incident on {a mathematical formula}p3σ. Since we are interested in computing an upper bound on {a mathematical formula}value(⋅), we consider the pair of edges incident on {a mathematical formula}p3σ that maximises such function (Equation (6b)).
+       </paragraph>
+       <paragraph>
+        On the other hand, since we do not know in advance if {a mathematical formula}a1 (resp. {a mathematical formula}a2) will be the optimal driver of the car, we cannot predict whether {a mathematical formula}p1σ (resp. {a mathematical formula}p2σ) will be the first point or an inner point in L. In other words, we do not know exactly whether one or two edges incident on {a mathematical formula}p1σ (resp. {a mathematical formula}p2σ) will be part of L. Therefore, in Equation (6a) we assume that only one edge is present in L, as a conservative measure. This is guaranteed to provide an upper bound on {a mathematical formula}value(⋅), as such a function is negative and, hence, the value of the best pair of edges is lower than the value of the best single edge. We now define {a mathematical formula}M2(⋅) on the basis of {a mathematical formula}m(⋅).
+       </paragraph>
+       <paragraph label="Definition 16">
+        {a mathematical formula}M2(⋅)The function {a mathematical formula}M2:CS(G)→R− is defined as{a mathematical formula} Intuitively, {a mathematical formula}Ud(CS) is the set of all agents (both riders and drivers) that are passengers of a car in CS. The {a mathematical formula}12 term is necessary since, if we sum all the values of the couples of edges incident to the points that form a given path, we consider each edge twice.
+       </paragraph>
+       <paragraph>
+        We now prove the following lemma, that will support the proof of Proposition 2.
+       </paragraph>
+       <paragraph label="Proof">
+        Given a feasible coalition structure CS and a coalition structure{a mathematical formula}CS′∈ST(CS)such that{a mathematical formula}V(CS′)&gt;M2(CS), then{a mathematical formula}See Appendix A.  □
+       </paragraph>
+       <paragraph>
+        Building upon this lemma, we now prove Proposition 2. Notice that, as previously mentioned, Proposition 2 is based on the validity of Assumption 1, which is also the key concept that allows us to compute the optimal path for a given coalition using Equation (4) in a feasible amount of time.
+       </paragraph>
+       <paragraph label="Proof">
+        IfAssumption 1holds, for any feasible coalition structure CS{a mathematical formula}M2(CS)is an upper bound for the value of any{a mathematical formula}CS′in{a mathematical formula}ST(CS), i.e., the subtree rooted in CS. Formally,{a mathematical formula}M2(CS)≥V(CS′)for all{a mathematical formula}CS′∈ST(CS).See Appendix A.  □
+       </paragraph>
+       <paragraph>
+        Proposition 1, Proposition 2 allows us to compute an upper bound on {a mathematical formula}V(⋅) for all the coalition structures in {a mathematical formula}ST(CS). As a consequence, we can solve the SR problem by adopting a branch and bound approach based on CFSS [7], which we call SR-CFSS (Algorithm 1). In addition to the different bounding technique, SR-CFSS differs from CFSS as it enforces Constraint 1 and, optionally, Constraint 2, which ensure the computation of a correct solution for the SR problem. Specifically, this is achieved by including an additional check (i.e., line 4 in the SR-Children routine) that discards the solutions that violate such constraints. Notice that SR-CFSS derives all the anytime approximate properties of CFSS, since we can apply the technique discussed in [7] using {a mathematical formula}M1(⋅) or {a mathematical formula}M2(⋅) respectively defined in Equations (5) and (7). Intuitively, we can stop the execution of SR-CFSS after a given time budget and provide the best coalition structure found during the search. Furthermore, we employ our bounding techniques to compute an upper bound on the value of the characteristic function in the remaining part of the search space. In our experiments in Section 6.5, SR-CFSS provides solutions that are guaranteed to be at least the 71% of the optimal.
+       </paragraph>
+       <paragraph>
+        The model defined in Section 3 takes into account only the spatial aspect of the SR problem. In what follows, we show how to incorporate the time preferences of the commuters in our model and algorithms.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Time constraints for social ridesharing
+     </section-title>
+     <paragraph>
+      We now assume that each rider {a mathematical formula}ai∈A specifies its desired departure time {a mathematical formula}τiσ within the time window{a mathematical formula}θiσ=[τiσ−αiσ,τiσ+βiσ]⊆N+.{sup:16} Similarly, {a mathematical formula}ai expresses its preferences on the arriving time {a mathematical formula}τiω by means of the time window {a mathematical formula}θiω=[τiω−αiω,τiω+βiω]⊆N+. Fig. 5 shows an example of such time constraints.
+     </paragraph>
+     <paragraph>
+      Without loss of generality, we assume that each agent {a mathematical formula}ai expresses reasonable time preferences on the arriving time (e.g., if {a mathematical formula}ai is a driver, the arriving time under the hypothesis that she drives alone should not be outside {a mathematical formula}θiω). Notice that, for the sake of generality, our model includes both the upper bound for start time and lower bound for arrival time, even if they may appear not very common. Such bounds can be easily “removed” by setting them to +∞ and −∞, respectively. We include these time preferences in Equation (2) as follows:{a mathematical formula} where {a mathematical formula}LS⁎ and {a mathematical formula}τS⁎ represent the optimal path and the optimal departure time for S (Equation (14)), respectively. We define {a mathematical formula}value(LS⁎,τS⁎)=t(LS⁎)+c(LS⁎)+f(LS⁎)+θS(LS⁎,τS⁎). We introduce the term {a mathematical formula}θS:VL(S)×N+→R− as a measure of the extent to which the time preferences of the members of S have been fulfilled by a trip starting at a given time and going through a given valid path. We quantify such an extent with a cost for each starting point and destination that is proportional to the time difference between the actual pick-up/arriving time and the desired one. In order to formally define such a cost, denoted as {a mathematical formula}θS(L,τ) (where τ is the departure time), we first define the arrival time at each point p of L given τ as {a mathematical formula}timeL:L×N+→N+, i.e.,{a mathematical formula} where {a mathematical formula}δ:Q→N+ measures the travel time trough a given edge. We assume that {a mathematical formula}δ(⋅) does not change during the execution of the algorithm, given its short-lived nature. We define {a mathematical formula}ΔSσ:S×VL(S)×N+→R− and {a mathematical formula}ΔSω:S×VL(S)×N+→R− (for starting points and destinations respectively) for each {a mathematical formula}ai∈S, i.e.,{a mathematical formula}{a mathematical formula} Finally, we define {a mathematical formula}θS(L,τ) as{a mathematical formula} where τ is the departure time and {a mathematical formula}γ1,γ2∈R+ are the costs associated to one time unit of delay/anticipation for starting points and destinations respectively. Notice that, even if other formulations for {a mathematical formula}θS are possible, the crucial feature is the enforcement of the hard constraint (i.e., {a mathematical formula}θS=−∞) outside {a mathematical formula}θi.
+     </paragraph>
+     <paragraph>
+      Equations (11) and (12) induce hard constraints on the departure/arriving time for each {a mathematical formula}ai∈S, as each {a mathematical formula}ai is not willing to leave/arrive earlier that {a mathematical formula}τi−αi nor later than {a mathematical formula}τi+βi. Thus, we define {a mathematical formula}θS=−∞ if any of the constraints is violated.
+     </paragraph>
+     <paragraph label="Definition 17">
+      temporally infeasible coalitionS is said to be temporally infeasible if {a mathematical formula}θS(L,τ)=−∞ for all {a mathematical formula}L∈VT(S) and all {a mathematical formula}τ∈θjσ∀aj∈S∩D.
+     </paragraph>
+     <paragraph>
+      We define the optimal path {a mathematical formula}LS⁎ and the optimal departure time {a mathematical formula}τS⁎ as follows:{a mathematical formula} We reduce the search space for {a mathematical formula}LS⁎ in Equation (14) by applying the same techniques discussed in Section 3.2 (i.e., by considering Assumption 1) and obtaining{a mathematical formula} In Equation (15), the computation of {a mathematical formula}τS⁎ is still carried out in a naïve way, going through every possible timestep in the time windows specified by the drivers in S. In the following section, we explain a better approach to compute {a mathematical formula}τS⁎.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Optimal departure time computation
+      </section-title>
+      <paragraph>
+       In this section we address the problem of computing the optimal departure time {a mathematical formula}τS⁎ for a given coalition S. Specifically, we now propose an algorithm to compute the best departure time for a car S (given a tuple {a mathematical formula}L∈VT(S) and a driver {a mathematical formula}aj∈S∩D), so to avoid trying every possible departure time for the trip of S. Algorithm 3 achieves this by considering the ideal departure time of the driver, i.e., {a mathematical formula}τjσ, and by applying a sequence of shifts so to obtain the optimal τ.
+      </paragraph>
+      <paragraph>
+       First (lines 1–7), we initialise τ with the ideal departure time of the driver, and we initialise p, n and z, which will respectively count the number of points in which we register an arriving time that is late, early or on time, with respect to the desire expressed by the agents for those points. The variables {a mathematical formula}post and {a mathematical formula}antic function as guards to check to what extent it is possible to delay/anticipate departure without violating any time constraint. Finally, we also define diffs which contains the difference between the actual and the ideal time, for every point in L. Lines 8–11 set these variables. After this, at line 12 we check whether it is possible to satisfy all the time constraints. If the conditional statement is true, then at least two points are outside of their time window, one is late and one is ahead of time, or it may be necessary to anticipate τ of a given amount, but such action would result in the violation of another constraint. In such cases we return a null solution. If no constraints are violated, we improve τ in the cycle at lines 13–26 so that {a mathematical formula}∑i=1|L||diffs[i]| is minimised and does not invalidate any constraint. Notice that, to achieve this result, it is enough to check the direction of the points of the path. On the one hand, if the majority of the points are positive (the car is late) we anticipate τ. On the other hand, if the majority of the points are negative (the car is early) we delay τ.
+      </paragraph>
+      <paragraph>
+       Once we have a method to compute the optimal τ given a tuple {a mathematical formula}L∈VT(S) and a driver {a mathematical formula}aj∈S∩D, we can finally compute the optimal path {a mathematical formula}LS⁎ and the optimal driver {a mathematical formula}aS⁎ by modifying Equation (15) in the following way:{a mathematical formula}{a mathematical formula}LS⁎ and {a mathematical formula}aS⁎ are computed by selecting the best combination over the possible valid tuples in {a mathematical formula}VT(S) and drivers in S. For each of these combinations, we consider the corresponding optimal departure time provided by Algorithm 3. If such algorithm returns a null solution, the corresponding {a mathematical formula}value(⋅) is −∞, and hence, that particular combination is discarded. Equation (16) implicitly provides {a mathematical formula}τS⁎, which is the optimal departure time for the maximising {a mathematical formula}LS⁎ and {a mathematical formula}aS⁎. Notice that, following the same discussion at the end of Section 3.2, the search space of Equation (16) is at most {a mathematical formula}2520⋅5=12600 combinations of valid tuples and drivers for {a mathematical formula}|S|=5, and thus, it can be exhausted with a manageable effort.
+      </paragraph>
+      <paragraph>
+       For some coalitions it is impossible to satisfy all time constraints. Such coalitions are given a value of −∞ by Equations (11) and (12), and hence, they can never be part of the optimal solution. However, the techniques discussed so far detect such infeasibility only after the execution of Algorithm 3. By contrast, we would identify such coalitions in advance and avoid their formation within SR-CFSS. By doing so, we could reduce the search space, hence improving the performance of our approach. We now show how we achieve this objective.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Detecting temporally infeasible coalitions
+      </section-title>
+      <paragraph>
+       In this section we propose a method that allows us to prune parts of the search space that are guaranteed to always contain temporally infeasible coalitions (i.e., coalitions characterised by a set of time constraints that is not satisfiable), which cannot therefore appear in any feasible solution.
+      </paragraph>
+      <paragraph>
+       One simple approach would be to check, for each solution CS computed during the traversal of the search tree, if CS contains a temporally infeasible coalition, and in such case, discard CS and the corresponding subtree {a mathematical formula}ST(CS). Unfortunately, such a technique can lead to the exclusion of valid solutions. Specifically, given a coalition structure CS that contains a temporally infeasible coalition, {a mathematical formula}ST(CS) (i.e., the portion of the search space rooted at CS) can indeed contain valid solutions, and, hence, {a mathematical formula}ST(CS) cannot be entirely pruned. We provide the following example to better explain this concept. Let {a mathematical formula}S={a1,a2} with {a mathematical formula}a1∈D (i.e., {a mathematical formula}a1 is the driver), and let {a mathematical formula}θ1σ=[09:00−15′,09:00+15′] and {a mathematical formula}θ2σ=[09:45−15′,09:45+15′]. Assuming that the path that links {a mathematical formula}p1σ and {a mathematical formula}p2σ (i.e., the starting points of {a mathematical formula}a1 and {a mathematical formula}a2 respectively) corresponds to a travel time of 10 minutes, it is not possible to find a departure time τ such that {a mathematical formula}a1 does not arrive too early at {a mathematical formula}p2σ. Thus, {a mathematical formula}θ2σ will always be violated, and hence, S is temporally infeasible. Now, assume that, as the result of an edge contraction, {a mathematical formula}S′=S∪{a3} is formed, with {a mathematical formula}θ3σ=[09:20−15′,09:20+15′]. If the paths from {a mathematical formula}p1σ to {a mathematical formula}p3σ and from {a mathematical formula}p3σ to {a mathematical formula}p2σ both require 10 minutes, it is possible to satisfy the time constraints of all the members of {a mathematical formula}S′. Hence, {a mathematical formula}S′ is not temporally infeasible.
+      </paragraph>
+      <paragraph>
+       Nevertheless, under certain conditions it is possible to identify a particular type of temporally infeasible coalitions that will always result in other temporally infeasible coalitions as a result of an edge contraction. Such coalitions can be safely discarded from {a mathematical formula}FC(G), pruning a significant portion of the search space. Intuitively, if there exists a passenger {a mathematical formula}ai whose temporal preferences induce a time window outside the driver's time window (e.g., {a mathematical formula}ai latest departure time is earlier that the driver's earliest departure time), any coalition involving these two agents will always be temporally infeasible.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}ai,aj∈Awith{a mathematical formula}ai∈Dand{a mathematical formula}aj∉D. If we consider Constraint2(i.e., one driver per car) and{a mathematical formula}[τjσ+βjσ,τjω−αjω]⊈[τiσ−αiσ,τiω+βiω], then{a mathematical formula}aiand{a mathematical formula}ajcan never be in a time feasible coalition together, i.e.,{a mathematical formula}∀S∈FC(G):{ai,aj}⊆S, S is a temporally infeasible coalition.See Appendix A.  □
+      </paragraph>
+      <paragraph>
+       If we consider a scenario that enforces Constraint 2, then Proposition 3 can be used to identify couples of agents {a mathematical formula}(ai,aj) that can never be part of the same coalition, effectively introducing some additional hard constraints on the formation of coalitions. Such constraints can be easily expressed by marking each edge {a mathematical formula}(ai,aj) (if existent) as red in the initial graph G, so to avoid the formation of a coalition in which {a mathematical formula}ai and {a mathematical formula}aj are together. On the other hand, if {a mathematical formula}ai and {a mathematical formula}aj are not connected by an edge in G, we introduce a new red edge, since if we do not do so, then {a mathematical formula}ai and {a mathematical formula}aj will be part of the same coalition for at least one coalition structure in the search tree. As an example, consider Fig. 6.
+      </paragraph>
+      <paragraph>
+       Assume that {a mathematical formula}a2 and {a mathematical formula}a3's time constraints satisfy Proposition 3. If we do not introduce a new red edge between {a mathematical formula}a2 and {a mathematical formula}a3, the grand coalition will be evaluated during the traversal of the search tree, even if such coalition is guaranteed to be temporally infeasible. On the other hand, the introduction of such red edge avoids such inefficiency in our approach. Against this background, we can exploit time constraints to restrict the formation of coalitions. We can also employ the upper bound computation techniques discussed in Section 3.3.1, as we motivate hereafter.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Bound computation
+      </section-title>
+      <paragraph>
+       The upper bound methods proposed in Section 3.3.1 can also be applied when we introduce time constraint, as shown by the following proposition.
+      </paragraph>
+      <paragraph label="Proof">
+       Proposition 1, Proposition 2are valid even if we substitute the definition of{a mathematical formula}v(S)in Equation(2)with the definition in Equation(9).See Appendix A.  □
+      </paragraph>
+      <paragraph>
+       The techniques discussed so far (i.e., Sections 3 and 4) constitute our approach to compute the optimal arrangement of cars among a set of agents with given spatial, temporal, and social preferences. Formally, we discussed how we solve the CSG problem associated to SR. In the next section, we tackle the problem of dividing the cost associated to each car among its passengers in a fair and stable way, i.e., we solve the payment computation aspect of the CF problem. We now propose the PK algorithm, which exploits the structural properties of the SR scenario to improve upon the approach by Shehory and Kraus [39].
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Payments for SR
+     </section-title>
+     <paragraph>
+      Payment computation represents a key challenge in the CF process and it is of utmost importance when offering ridesharing services, especially when considering commuters with rational behaviours. One key aspect of payment distribution in CF is the game-theoretic concept of stability, which measures how agents are keen to maintain the provided payments instead of deviating to a configuration deemed to be more rewarding from their individual point of view. Here, we induce stable payments in the context of the SR problem, employing the kernel[14] stability concept. Shehory and Kraus [39] adopt a transfer scheme (Algorithm 4) that represents the state of the art approach to compute kernel-stable payments. Such an algorithm has been designed to compute payments for CF scenarios in which the set of coalitions is not restricted by a graph. Such an approach can be readily applied also when the size of coalitions is limited to k members, as it happens in a SR scenario in which all cars have k seats [48].
+     </paragraph>
+     <paragraph label="Definition 18">
+      k-CFA CF problem is said to be a k-CF problem if the size of coalitions is limited to k members.
+     </paragraph>
+     <paragraph>
+      In k-CF, the maximisation at line 5 has to be assessed among the coalitions of size up to k which include {a mathematical formula}ai but exclude {a mathematical formula}aj. This set, denoted as {a mathematical formula}R, can be easily obtained as {a mathematical formula}R={{ai}∪S|S is a h-combination of {a mathematical formula}A−{ai,aj},∀h∈{1,…,k−1}}. Unfortunately, in GCCF scenarios such as SR this simple approach would iterate over several infeasible coalitions (i.e., which do not induce a connected subgraph of the social network), leading to inefficiency and reducing the scalability of the entire algorithm. In contrast, a better way to tackle this problem is to exploit the structure of the graph in order to consider only the coalitions that are indeed feasible. In addition, Algorithm 4 considers many coalitions more than once at the maximisation in the loop at lines 2–5. We provide the following example to clarify why this redundancy exists. Consider the set of agent {a mathematical formula}A=D={a1,a2,a3,a4} and the graph G shown in Fig. 7. Such a graph induces the set of feasible coalitions {a mathematical formula}FC(G)={{a1}, {a mathematical formula}{a2}, {a mathematical formula}{a3}, {a mathematical formula}{a4}, {a mathematical formula}{a1,a2}, {a mathematical formula}{a1,a3}, {a mathematical formula}{a1,a4}, {a mathematical formula}{a1,a2, {a mathematical formula}a3}, {a mathematical formula}{a1,a2,a4}, {a mathematical formula}{a1,a3,a4}, {a mathematical formula}{a1,a2,a3,a4}}, and assumes a coalition structure {a mathematical formula}CS={{a1,a2,a3,a4}}.
+     </paragraph>
+     <paragraph>
+      The loop requires 12 iterations, each looking at the coalitions reported in Table 1. Note that 23 (marked in bold) out of 33 coalitions (i.e., {a mathematical formula}70%) are evaluated more than once. This process substantially reduces the efficiency and the scalability of the algorithm in SR scenarios, where the computation cost required to assess coalitional values is not negligible and caching is not an option. In fact, storing all these values in memory is not affordable even for systems with hundreds of agents: since {a mathematical formula}FC(G) can contain up to {a mathematical formula}O(nk) coalitions, for {a mathematical formula}k=5 and {a mathematical formula}n=100, storing all coalitional values requires tens of GB of memory. Thus, each coalitional value must be computed only when needed, since computing them more than once reduces efficiency and scalability, as shown in Section 7.2.
+     </paragraph>
+     <paragraph>
+      To overcome these issues, in the next section we present the PK algorithm, our payment scheme that scales up to systems with thousands of agents.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       The PK algorithm
+      </section-title>
+      <paragraph>
+       We now present the PK (Payments in the Kernel) algorithm, our method to compute an ϵ-kernel payoff allocation given a coalition structure, and we apply it to the SR scenario. Our contribution improves on the k-CF version of Algorithm 4 by adopting a novel approach to calculate the surplus matrix s. Instead of computing each value {a mathematical formula}sij using the maximisation at line 5 for each pair of agents in each {a mathematical formula}S∈CS, we iterate over the set of feasible coalitions (as specified in Definition 5) induced by G, and we update the appropriate values of the surplus matrix for each of such coalitions. Specifically, this is achieved by iterating over the set of {a mathematical formula}kˆ-subgraphs of G, i.e., the set of connected subgraphs of G with at most k nodes, and then executing the update by means of the UpdateMax routine (Algorithm 7) only for those {a mathematical formula}kˆ-subgraphs that actually correspond to feasible coalitions. This additional check is mandatory since not all {a mathematical formula}kˆ-subgraphs necessarily satisfy Constraint 1, and hence, represent feasible coalitions. By so doing, we ensure the exact coverage of {a mathematical formula}FC(G), as proved by Proposition 6.
+      </paragraph>
+      <paragraph>
+       PK is detailed in Algorithm 5. After having initialised the payoff vector x by equally splitting each coalitional value among the members of the coalition, ComputeMatrix computes the surplus matrix in each iteration of the main loop. In such a routine, UpdateMax is executed for each coalition that induces a {a mathematical formula}kˆ-subgraph of G. These coalitions are computed with the EnumerateCsg algorithm proposed by Moerkotte and Neumann [35], which can list all the subgraphs of a given graph without redundancy (i.e., each subgraph is computed only once). Then, UpdateMax only considers the coalitions that satisfy Constraint 1 of the SR problem (line 1). For every S of such coalitions, lines 3–8 update all the values {a mathematical formula}sij for which {a mathematical formula}ai is a member of S and {a mathematical formula}aj is part of {a mathematical formula}S′ (i.e., the coalition in CS that contains {a mathematical formula}ai) but is not part of S. The correctness of our approach is ensured by Proposition 5.
+      </paragraph>
+      <paragraph label="Proof">
+       Algorithm 6computes each{a mathematical formula}sijcorrectly.See Appendix A.  □
+      </paragraph>
+      <paragraph>
+       Our surplus matrix-calculating method has polynomial time complexity, while computing all feasible coalitions only once, as shown by Proposition 6.
+      </paragraph>
+      <paragraph label="Proof">
+       Algorithm 6lists all feasible coalitions only once and it has a worst-case time complexity of{a mathematical formula}O(nk).See Appendix A.  □
+      </paragraph>
+      <paragraph>
+       In the next proposition, we prove that PK has a polynomial time complexity.
+      </paragraph>
+      <paragraph label="Proof">
+       Algorithm 5has a polynomial worst-case time complexity with respect to n, i.e.,{a mathematical formula}O(−log2⁡(ϵ)⋅nk+1).See Appendix A.  □
+      </paragraph>
+      <paragraph>
+       PK provides a polynomial method to compute kernel-stable payments. Nonetheless, the {a mathematical formula}O(nk) operations required for surplus matrix calculation may not be affordable in real-world scenarios with thousands of agents and {a mathematical formula}k=5 (i.e., the number of seats of an average sized car). Hence, we next propose a parallel version of PK, which allows us to distribute the computational burden among different threads, taking advantage of modern multi-core hardware.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       P-PK
+      </section-title>
+      <paragraph>
+       We now detail P-PK, the parallel version of our approach, in which the most computation-intensive task, i.e., the computation of the matrix s, is distributed among T available threads. In particular, Algorithm 8 details our parallel version of the ComputeMatrix routine, obtained by having each thread t to compute a separate matrix {a mathematical formula}st. Such a matrix is constructed considering the coalitions in {a mathematical formula}DIV(G,t,k), i.e., the tth fraction of the set of all {a mathematical formula}kˆ-subgraphs of G, computed using the D-SlyCE algorithm [45].{sup:17} Specifically, this fraction is obtained by splitting the first generation of children nodes in the search tree generated by the EnumerateCsg algorithm among the available threads, allowing a fair division of the set of the {a mathematical formula}kˆ-subgraphs while ensuring that all feasible coalitions are computed exactly once. Thus, it also distributes the computation of the coalitional values.
+      </paragraph>
+      <paragraph>
+       We provide the following example to clarify how this division is realised. Consider the same {a mathematical formula}FC(G) of the example in Section 5, and assume {a mathematical formula}T=4. Then, the necessary coalitions are distributed by doing the following partitioning:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}DIV(G,1,k)={{a1},{a2},{a3}}
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}DIV(G,2,k)={{a4},{a1,a2},{a1,a3}}
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}DIV(G,3,k)={{a1,a4},{a1,a2,a3}}
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}DIV(G,4,k)={{a1,a2,a4},{a1,a3,a4}}
+       </list-item>
+      </list>
+      <paragraph>
+       Note that, since each matrix {a mathematical formula}st is modified only by thread t, Algorithm 8 contains only one synchronisation point (i.e., before line 6), hence providing a full parallelisation. After that, the final surplus matrix s is computed with a maximisation on all the above matrices (lines 6–8), ensuring that the output of P-ComputeMatrix is equal to the one of ComputeMatrix, since each feasible coalition in {a mathematical formula}FC(G) has been computed by a thread. Notice that P-PK requires storing t separate surplus matrices, one per thread. Hence, its memory requirements are {a mathematical formula}O(t⋅n2), i.e., still polynomial in the number of agents.
+      </paragraph>
+      <paragraph>
+       Having discussed our CF approach for the SR scenario, we now present our experimental evaluation. In particular, in the next section we benchmark SR-CFSS, our algorithm that solves the GCCF aspect of SR. Then, in Section 7 we empirically evaluate PK, our payment allocation algorithm.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Evaluating the SR-CFSS algorithm
+     </section-title>
+     <paragraph>
+      The main goals of the empirical analysis are i) to estimate the social welfare improvement when our SR model is used, ii) to evaluate the performance of the optimal version of SR-CFSS in terms of runtime and scalability, iii) to evaluate the approximate performance and guarantees that SR-CFSS can provide on a large number of agents, i.e., up to 2000 agents, and iv) to investigate the impact of time constraints on the above properties.
+     </paragraph>
+     <paragraph>
+      Since there are no publicly available datasets which include both spatial and social data for the same users, in our empirical evaluation we consider two separate real-world datasets and we superimpose the first on the second one. In particular, our map {a mathematical formula}M=(P,Q) is a realistic representation of the city of Beijing (Fig. 8), with {a mathematical formula}|P|=8330 points and {a mathematical formula}|Q|=13290 edges, equivalent to an average resolution of a point every ∼10 meters. This map has been derived from the GeoLife dataset [34], [50] provided by Microsoft Research, which comprises 17621 trajectories with a total distance of about 1.2 million km, recorded by different GPS loggers with a variety of sampling rates. These trajectories are adopted to sample random paths used to provide starting points and destinations. Moreover, such a dataset also includes the timestamp of each trajectory, allowing us to create a distribution of the departure and arrival times (Fig. 9), which is used to sample such parameters for each agent in all our experiments, unless otherwise stated (i.e., in all experiments considering time constraints except Section 6.2). As expected, this distribution exhibit two peaks, one in the morning from 7:00 to 9:00 and one in the evening from 17:00 to 19:00.
+     </paragraph>
+     <paragraph>
+      In each experiment, the graph G is a subgraph of a large crawl of the Twitter social graph. Specifically, such dataset is a graph with 41.6 million nodes and 1.4 billion edges published as part of the work by Kwaket al. [30]. In particular, G is obtained by means of a standard algorithm [37] to extract a subgraph from a larger graph, i.e., a breadth-first traversal starting from a random node of the whole graph, adding each node and the corresponding arcs to G, until the desired number of nodes is reached. In our empirical evaluation there is no mapping between the trajectory data and the social graph, since they belong to independent projects. In all our experiments, the default number of agents n is 50. We adopt a cost model that considers fuel expenses, i.e., {a mathematical formula}v(C)=Kfuel⋅LC⁎‾, where {a mathematical formula}LC⁎‾ represents the length of {a mathematical formula}LC⁎ in km, {a mathematical formula}Kfuel=−0.06‾ €/km (considering a fuel cost of −1 € per litre and an average consumption of 1 litre of fuel every 15 km) and {a mathematical formula}k({ai})=−3 € {a mathematical formula}∀ai∈A, which represents the average public transportation cost, i.e., a bus or a train ticket. Moreover, we assume that each car has a capacity of 5 seats, i.e., {a mathematical formula}seats(ai)=5∀ai∈D. When time constraints are considered, we define {a mathematical formula}γ=−2{a mathematical formula}€/h and a time window (i.e., the duration of {a mathematical formula}θi) of 30', unless otherwise stated. All our tests account for Constraint 2 (drivers always drive their cars). Hence, since both bounding techniques detailed in Section 3.3.1 are valid and, in general, one does not dominate on the other, we take the minimum one at each step of the algorithm, providing a more effective pruning. Each test is repeated on 20 random instances, and we report the average and the standard error of the mean. SR-CFSS is implemented in C{sup:18} and executed on a machine with a 3.40 GHz CPU and 16 GB of memory.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Social welfare improvement without time constraints
+      </section-title>
+      <paragraph>
+       In our first experiment we consider the improvement of the social welfare (i.e., the cost reduction for the overall system) when using our SR model without time constraints, compared to the scenario in which every rider adopts its own conveyance (i.e., no ridesharing). This gives an indication of what gain can be achieved by the overall community when using our system for ridesharing. Formally, we define the social welfare improvement as {a mathematical formula}100⋅|V(CS⁎)−V(Asingle)V(Asingle)|. Such an improvement is influenced by the percentage of drivers in the system (Fig. 10), which determines the number of available seats and the number of riders that can share a ride without having to resort to public transport. Moreover, with more drivers it is more probable that a rider can join a car whose path is closer to him/her. On the other hand, if the majority of the riders own a car (i.e., {a mathematical formula}&gt;80%), ridesharing is not very effective since too few riders without a car can benefit from sharing their commutes with a driver. In particular, when only the {a mathematical formula}10% of the total riders own a car, the average cost reduction is {a mathematical formula}−23.49%, reaching {a mathematical formula}−36.22% when half of the riders owns a car. To show the importance of an optimal approach, we benchmark our algorithm against a greedy one, in which every driver chooses its next stop as the closest among the destinations points of his current passengers and the starting points of the remaining riders. This choice is made considering the constraints imposed by the social network, avoiding the formation of infeasible coalitions. As Fig. 10 shows, our method allows superior cost reductions with respect to such a greedy approach, which can provide a maximum improvement of {a mathematical formula}−19.55% for {a mathematical formula}|D|=20%. Notice that, when the majority of the riders owns a car, the greedy approach cannot improve upon the value of the baseline (i.e., no ridesharing).
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Social welfare improvement with time constraints
+      </section-title>
+      <paragraph>
+       We now investigate how the social welfare improvement varies when we introduce time constraints. Specifically, we now study the influence of the duration of {a mathematical formula}θi (i.e., the width of the time window) and the distribution of the agents' departure times on the social welfare. To this end, we vary these two parameters as follows. On the one hand, we sample the departure times of the agents within a time window of 6 hours according to 3 probability distributions (Fig. 11). Specifically, we consider a uniform distribution (i.e., the departure times are distributed uniformly in the time window) and two Gaussian distributions, in which the agents who desire to leave in the two central hours of the time window are the {a mathematical formula}30% (soft peak) and the {a mathematical formula}40% (hard peak) of the total respectively. On the other hand, we vary the width of the time window {a mathematical formula}θi for each agent. For simplicity, we assume that {a mathematical formula}αiσ=βiσ=αiω=βiω are all equal for all agents, and we vary such value, namely {a mathematical formula}θi's radius, within {a mathematical formula}[5′,60′]. Following the result of the experiments in the previous section, we only consider {a mathematical formula}D=50%, i.e., the scenario that results in the highest social welfare improvement. Fig. 12 shows that, in general, the social welfare improvement increases when we increase the {a mathematical formula}θi's radius. In fact, with larger time windows it is easier to satisfy time constraints and, hence, to form coalitions to reduce the overall travel cost. Notice that such an improvement saturates when the radius exceeds 30 minutes, since larger {a mathematical formula}θi's radii are associated to larger costs by the {a mathematical formula}θC component, which contributes to reduce the social welfare improvement. In addition, Fig. 12 also shows that the hard peak distribution provides the highest social welfare improvement (8.79%) with respect to the soft peak (6.62%) and the uniform (3.62%) ones. In fact, if the departure times of more agents are concentrated in a shorter time period, the cost provided by the {a mathematical formula}θC component is lower. Moreover, SR-CFSS can evaluate a larger number of feasible solutions, since less temporally infeasible coalition structures have to be discarded. Finally, notice that, since time constraints result in additional costs and, more important, a reduced solution space, they cause a reduction of the social welfare improvement, as confirmed by the results in Section 6.4.
+      </paragraph>
+      <paragraph>
+       We further investigate the behaviour of the social welfare improvement by increasing the {a mathematical formula}θi's radius only of a particular class of commuters, in order to identify which classes are more sensitive to the variation of such parameter in terms of overall cost reduction. Specifically, we observe 3 interesting classes of agents, i.e., drivers, riders, and hubs (i.e., agents whose connectivity in the social graph is significantly above the average), and we vary the {a mathematical formula}θi's radius within {a mathematical formula}[15′,60′] only for the considered class, while setting such parameter equal to 15′ for the other classes.
+      </paragraph>
+      <paragraph>
+       Fig. 13 shows that the social welfare improvement has the biggest increase for the drivers ({a mathematical formula}+6.28%), reaching a final maximum of {a mathematical formula}14.24%. Such increase is slightly lower for hubs ({a mathematical formula}+5.1%), while it is only {a mathematical formula}+1.27% for riders. These results prove the impact of a larger {a mathematical formula}θi's radius for drivers and hubs, which results in a larger number of potential coalitions, and, hence, a larger social welfare improvement.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Runtime performance without time constraints
+      </section-title>
+      <paragraph>
+       In this section we discuss the performance of our approach in terms of runtime needed to compute the optimal solution of a SR problem without time constraints. Fig. 14 shows the runtime with respect to the number of agents adopting our SR model without time constraints. Our approach is tested in 3 scenarios, i.e., with low ({a mathematical formula}10%), medium ({a mathematical formula}50%) and high ({a mathematical formula}80%) percentage of drivers, showing that this parameter has a significant influence on the performance of our algorithm. In fact, the size of the search space is determined by the number of available seats (reduced when such a percentage is low) and the number of riders without a car who can benefit from sharing their commutes (reduced when the majority of the agents owns a car), consistently with the behaviour of the social welfare improvement detailed in the previous section. Notice that, in any case, our approach can solve systems with 100 agents in a reasonable amount of time, i.e., about 2 hours at most for {a mathematical formula}|D|=50%. This runtime is suitable for services with day-ahead or week-ahead requests (e.g., Lyft). Such a performance is possible thanks to our bounding techniques (see Section 3.3.1) that allow to prune a significant part of the search space. In more detail, such techniques allow an average pruning of the {a mathematical formula}97.5% of the search space (resulting in an average runtime improvement of about 4 hours) on 20 random instances with {a mathematical formula}n=60 and {a mathematical formula}|D|=50%.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Runtime performance with time constraints
+      </section-title>
+      <paragraph>
+       When we consider time constraints (Fig. 15), we notice a significant performance improvement of SR-CFSS, which can compute the optimal solution for 100 agents in 30 seconds, i.e., over two orders of magnitude faster than the above case. This improved performance also results in an increased scalability, as SR-CFSS can solve systems with 150 agents, i.e., 50 additional agents with respect to 100 agents in the previous experiment, in the same amount of time, and 200 in less than a day. We further investigate the impact of time constraints on the performance of SR-CFSS by varying the {a mathematical formula}θi's radius, as discussed in Section 6.2. Fig. 16 shows that larger radii correspond to harder SR problems. As an example, instances with a {a mathematical formula}θi's radius equal to 15 minutes are solved by SR-CFSS more than two orders of magnitude faster with respect to when we consider 45 minutes. As discussed in Section 6.2, larger radii correspond to a larger number of feasible solutions, since fewer temporally infeasible coalition structures have to be discarded. These results confirm the impact of time constraints on the dimension of the solution space, which results in two main outcomes. On the one hand, scenarios with time constraints are easier to solve, since the number of solutions is lower. On the other hand, the reduced number of solutions allows a lower social welfare improvement in such scenarios (see Section 6.2).
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Approximate performance
+      </section-title>
+      <paragraph label="Definition 19">
+       In this section we evaluate the quality of the solutions computed by the approximate version of SR-CFSS on a very large set of agents (i.e., 2000). A standard measure to evaluate the quality of the solutions of approximate algorithms is the Performance Ratio (PR) [3]. PRGiven an instance I of an optimisation problem, its optimal solution {a mathematical formula}Optim(I) and an approximate solution {a mathematical formula}Approx(I), the performance ratio{a mathematical formula}PR(I)=max⁡(Approx(I)Optim(I),Optim(I)Approx(I)).
+      </paragraph>
+      <paragraph label="Definition 20">
+       Both in the case of minimisation and maximisation problems, the PR is equal to 1 in the case of an optimal solution, and can assume arbitrarily large values in the case of poor approximate solutions. In our case, computing the optimal solution {a mathematical formula}Optim(I) for large-scale GCCF problems is not possible, hence the PR is not an applicable measure of quality. Thus, we define the Maximum Performance Ratio (MPR) following the above definition, and considering the upper bound on the optimal solution provided by Proposition 1, Proposition 2. MPRGiven a GCCF instance I, we denote the approximate solution computed by CFSS as {a mathematical formula}Approx(I) and the upper bound on the optimal solution as {a mathematical formula}Bound(I). Then, we define the Maximum Performance Ratio {a mathematical formula}MPR(I)=max⁡(Approx(I)Bound(I),Bound(I)Approx(I)).
+      </paragraph>
+      <paragraph>
+       Since {a mathematical formula}|Bound(I)|≤|V(CSI⁎)|, where {a mathematical formula}CSI⁎ is the optimal solution of I, {a mathematical formula}MPR(I) represents an upper bound for {a mathematical formula}PR(I). The MPR provides an important quality guarantee for the approximate solution {a mathematical formula}Approx(I), since {a mathematical formula}Approx(I) always lies within a factor of {a mathematical formula}MPR(I) with respect to the optimal solution.{sup:19} We run SR-CFSS on instances adopting the model without time constraints with {a mathematical formula}n∈{500,1000,2000} and we stop the execution after a time budget of 100 seconds. Then, we compute {a mathematical formula}Bound(I) as defined in Proposition 1, Proposition 2. Specifically, since both propositions are applicable, we compute the upper bound using both techniques and then we consider the lowest one. Fig. 17 shows that, on average, {a mathematical formula}Bound(I) is only {a mathematical formula}6.65% higher than {a mathematical formula}Approx(I) (i.e., the solution found within the time limit) for {a mathematical formula}n=500 and {a mathematical formula}|D|=80%, reaching a maximum of {a mathematical formula}+29.92% when {a mathematical formula}n=2000 and {a mathematical formula}|D|=50%. In the worst case, SR-CFSS provides a maximum performance ratio of 1.41 and thus solutions whose values are at least {a mathematical formula}71% of the optimal. We obtained very similar results also when we consider time constraints, and hence, we do not report them here. Such a behaviour is reasonable since the maximum performance ratio is heavily influenced by the value of {a mathematical formula}Bound(I) and, as detailed in Section 4.3, we apply the same technique whether or not we consider time constraints.
+      </paragraph>
+     </section>
+     <section label="6.6">
+      <section-title>
+       SR-CFSS vs. C-Link: solution quality comparison
+      </section-title>
+      <paragraph>
+       In our final experiment we further evaluate the approximate performance of SR-CFSS by comparing it against C-Link [21], one of the most recent CSG heuristic approaches. Specifically, we generate random SR instances with {a mathematical formula}n∈{1000,1200,…,2000}, considering 20 repetitions for each n. Then, we solve each instance with C-Link (adopting the best heuristic proposed by Farinelli et al. [21], i.e., Gain-Link) and then we run SR-CFSS on the same instance with a time budget equal to C-Link's runtime.
+      </paragraph>
+      <paragraph>
+       Fig. 18 shows the average and the standard error of the mean of the ratio between the value of the solution computed by C-Link and the one computed by SR-CFSS. Since we consider solutions with negative values, when such ratio is &gt;1 the solution computed by C-Link is better (i.e., corresponds to a lower cost) than the one computed by SR-CFSS. Our results show that, for {a mathematical formula}n&lt;1600, the quality of C-Link's solutions is better than SR-CFSS. Then, for {a mathematical formula}n≥1600 SR-CFSS outperforms C-Link in terms of solution quality. In particular, for {a mathematical formula}n=2000 the solutions provided by our approach correspond to costs that are, on average, 2.28 times lower than the counterpart ones.
+      </paragraph>
+     </section>
+     <section label="6.7">
+      <section-title>
+       Summary of results
+      </section-title>
+      <paragraph>
+       Our empirical evaluation demonstrates that our approach results in a significant cost reduction when applied to SR scenarios, reaching {a mathematical formula}−36.22% when half of the agents in the system owns a car. Such a scenario, resulting in the best cost improvement, is characterised by the largest search space, i.e., it is the most computationally intensive to solve with respect to other percentages of drivers. As expected, the introduction of time constraints reduces the cost improvement for the system, since it limits the number of possible solutions, reducing the size of the search space. As a consequence, computing SR solutions with time constraints is less computationally demanding. Crucially, results show that SR-CFSS is a viable method for the computation of SR solutions, especially in large-scale scenarios (i.e., with 2000 agents), where our approach provides good approximate solutions whose quality is at least {a mathematical formula}71% of the optimal.
+      </paragraph>
+      <paragraph>
+       After the empirical evaluation of SR-CFSS, we now benchmark PK.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Evaluating the PK algorithm
+     </section-title>
+     <paragraph>
+      In this section, we focus on the evaluation of our approach to the computation of kernel-stable payments for SR. The main goals of the empirical analysis are i) to test the performance of PK when computing payments for systems of thousands of agents, ii) to perform an analysis of the features that influence the distribution of payments among the agents, iii) to investigate the impact of time constraints on the above properties, iii) to compare the efficiency of PK with respect to the state of the art approach proposed by Shehory and Kraus, and iv) to estimate the speed-up obtainable by using P-PK with respect to PK.
+     </paragraph>
+     <paragraph>
+      In all our tests, we adopt the same methodology and datasets discussed in Section 6 (i.e., we adopt the GeoLife and Twitter datasets), unless otherwise stated. In the experiments looking at the performance of PK (i.e., Sections 7.1, 7.2 and 7.3) we only consider the SR model without time constraints, since the performance of PK is negligibly affected by them.{sup:20} PK is implemented in C{sup:21} and executed on a machine with a 3.40 GHz CPU and 16 GB of memory.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Runtime performance
+      </section-title>
+      <paragraph>
+       In our first experiment, we evaluate the performance of our approach when computing payments in large-scale instances. Fig. 19 shows the runtime needed to execute P-PK on systems with {a mathematical formula}n∈{100,500,1000,1500,2000}. In each test, the coalition structure has been computed using the approximate version of SR-CFSS using our SR model without time constraints.
+      </paragraph>
+      <paragraph>
+       Our results show that P-PK is able to compute payments for 2000 agents with a runtime ranging from 13 to 50 minutes, hence it can successfully scale to large systems. In particular, for each value of n, we consider {a mathematical formula}|D|∈{10%,50%,80%}. Our results also show the influence of the percentage of drivers on the complexity of the problem. On average, computing payments on an instance with {a mathematical formula}|D|=80% is easier with respect to {a mathematical formula}|D|=10% and {a mathematical formula}|D|=50%. Our findings are consistent with the results in Section 6.1, showing that the scenario with {a mathematical formula}|D|=50% is more difficult to solve since more drivers are available, hence it is possible to form more cars, resulting in a larger search space. In fact, the number of feasible coalitions is determined by the number of available seats (reduced when such a percentage is low) and the number of riders without a car who can benefit from sharing their commutes (reduced when the majority of the agents owns a car).
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Benchmarking PK
+      </section-title>
+      <paragraph>
+       Fig. 20 shows the runtime needed by our approach to compute a kernel-stable payoff vector, comparing it with the state of the art approach by Shehory and Kraus [39], i.e., Algorithm 4. In particular, we consider the runtime needed to solve SR instances with {a mathematical formula}n∈{30,40,50,60,70,80,90,100} and {a mathematical formula}|D|=50%. We employ the sequential version of PK, since Algorithm 4 is also sequential.
+      </paragraph>
+      <paragraph>
+       Our results show that PK is at least one order of magnitude faster than the counterpart approach, outperforming the state of the art by 27 times in the worst case, with an average improvement of 53 times, and a best case improvement of 84 times. Thus, our comparison has been run only up to {a mathematical formula}n=100, since the counterpart approach becomes impractical for instances with thousands of agents. In fact, with 1000 agents it requires over one day of computation, compared to a runtime of 2 hours required by PK, and 14 minutes required by P-PK. In particular, the approach in [39] is slower due to several redundant computations of many coalitional values, with a significant impact on the runtime.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Parallel performance
+      </section-title>
+      <paragraph>
+       Here we analyse the speed-up that can be achieved by using P-PK with respect to PK, i.e., its sequential version. We ran the algorithms on instances with 500 agents and {a mathematical formula}|D|=50%, using a machine with 2 Intel® Xeon® E5-2420.
+      </paragraph>
+      <paragraph>
+       The speed-up measured during these tests has been compared with the maximum theoretical one provided by the Amdahl's Law [2], considering an estimated non-parallelisable part of {a mathematical formula}1%, due to memory allocation and thread initialisation. Fig. 21 shows that the actual speed-up follows the theoretical one for up to 12 threads (i.e., the number of physical cores for this machine), reaching a final speed-up of 14.85× with all 24 threads active.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Costs and network centrality
+      </section-title>
+      <paragraph>
+       PK computes a cost allocation that is guaranteed to be kernel-stable. A priori, such an allocation does not have any particular property linked with structure of the problem. The purpose of this section is to analyse the relationship between the cost incurred by a commuter and the properties that determine its importance in the environment, i.e., being a node with a high degree in the social network, or being driver or rider. To this end, we first compute the optimal solution of a SR problem without time constraints on random instances with {a mathematical formula}n∈{30,40,50,60,70,80,90,100} and {a mathematical formula}|D|∈{10%,50%,80%}, and we use our algorithm to compute a kernel-stable payoff vector. Then, to assess this correlation in a quantified manner, we define the normalised cost{a mathematical formula}c‾i and the normalised degree{a mathematical formula}d‾i for each agent {a mathematical formula}ai as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For any {a mathematical formula}ai in a coalition S with {a mathematical formula}|S|&gt;1, we define its normalised cost{a mathematical formula}c‾i as{a mathematical formula} where {a mathematical formula}minxS and {a mathematical formula}maxxS are the minimum and the maximum values of the negative values of x among the members of S, i.e., {a mathematical formula}minxS⁡=minai∈S⁡−x[i] and {a mathematical formula}maxxS⁡=maxai∈S⁡−x[i]. Note that we consider negative values since in our model, costs are represented by negative values for {a mathematical formula}x[i].
+       </list-item>
+       <list-item label="•">
+        For any {a mathematical formula}ai in a coalition S with {a mathematical formula}|S|&gt;1, we define its normalised degree{a mathematical formula}d‾i as{a mathematical formula} where {a mathematical formula}deg(ai) is the degree of {a mathematical formula}ai in the social network, and {a mathematical formula}mindS and {a mathematical formula}maxdS are the minimum and the maximum degrees of the members of S.
+       </list-item>
+      </list>
+      <paragraph>
+       When the denominator of {a mathematical formula}c‾i is 0, i.e, when {a mathematical formula}maxxS⁡=minxS, it means that all the agents in C have the same payoff. In these cases, {a mathematical formula}c‾i is defined to be 0.5 as a middle point between 0 and 1 (the same discussion applies to {a mathematical formula}d‾i).
+      </paragraph>
+      <paragraph>
+       Notice that, a direct comparison of two agents that are not part of the same coalition would not be appropriate for determining their overall power or benefits derived from participation in the SR setting, since payments computed according to the kernel do not consider agents belonging to different coalitions. Nonetheless, it would definitely be interesting to have a way to measure and compare the power of the agents, regardless of the coalition to which each one belongs. To allow this comparison, both {a mathematical formula}c‾i and {a mathematical formula}d‾i are normalised between 0 (for the agents having the minimum costs/degrees in their coalitions) and 1 (similarly for the agents with maximum costs/degrees). The normalisation is done with respect to the coalition the agent belongs to, because to reach kernel-stability, payment transfers only take place among agents within the same coalition. As an example, if an agent's normalised cost is 0.4, it means that its incurred cost is a value placed at the 40% of the range between the minimum and the maximum costs incurred by the agents in its coalition. Finally, note that agents in singletons have been excluded, as they do not have to split their value.
+      </paragraph>
+      <paragraph>
+       In Fig. 22 we report the average and the standard error of the mean for the normalised cost with respect to the normalised degree. Our results clearly show that costs are strongly influenced by the degree of the agents, and whether they are drivers or riders. Specifically, in our tests drivers had to pay costs that were on average {a mathematical formula}16% lower than riders. Moreover, agents with the minimum number of social connections in their coalition (i.e., with a normalised degree of 0) paid a cost {a mathematical formula}171% higher than the ones with the highest degree.
+      </paragraph>
+      <paragraph>
+       We now investigate how the features of the cost distributions studied above are affected by the introduction of time constraints. Fig. 23 shows a behaviour similar to the one discussed in the above section. Moreover, we notice that the introduction of time constraints results in significantly lower costs for the drivers (i.e., drivers pay costs that are on average {a mathematical formula}35% lower than the previous experiment), while riders' costs are comparable in both scenarios. These results can be explained by recalling that time constraints significantly reduce the solution space (see Sections 6.2 and 6.4), and hence, the influence of drivers (who are crucial to determine whether or not a coalition can be formed) is stronger if the pool of possible alternative coalitions is smaller.
+      </paragraph>
+      <paragraph>
+       We further investigate the role of time constraints in the payment distribution process by studying to what extent more tolerant agents are rewarded with lower costs. To this end, we assign a random {a mathematical formula}θi's radius within {a mathematical formula}{5′,10′,15′,20′, {a mathematical formula}25′,30′} to each agent and we look at the corresponding normalised cost. Fig. 24 shows that the agents that are willing to tolerate more with respect to their ideal departure/leaving time are rewarded by the system with lower costs, as a consequence of the fact that, by having a larger {a mathematical formula}θi's radius, they can choose among a larger pool of alternatives and hence, they achieve a higher bargaining power in the payment distribution process.
+      </paragraph>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Summary of results
+      </section-title>
+      <paragraph>
+       In general, our experimental results suggest that the kernel can be a valid stability concept in the context of SR. In fact, it induces a reasonable behaviour in the formation of groups, which can be directly correlated with some simple properties of the agents in the system (i.e., network centrality and being a driver or a rider). Moreover, the computation of kernel-stable payments has a tractable complexity and hence, it is a viable approach for large-scale environments.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs of propositions
+     </section-title>
+     <paragraph label="Proof">
+      If Constraint2holds, for any feasible coalition structure CS{a mathematical formula}is an upper bound for the value of any{a mathematical formula}CS′in{a mathematical formula}ST(CS), i.e., the subtree rooted in CS. Formally,{a mathematical formula}M1(CS)≥V(CS′)for all{a mathematical formula}CS′∈ST(CS).By contradiction. Suppose there exists a coalition structure {a mathematical formula}CS′∈ST(CS) such that {a mathematical formula}V(CS′)&gt;M1(CS), i.e., {a mathematical formula}CS′ results in a cost lower (see footnote 13) than {a mathematical formula}M1(CS). Now, since {a mathematical formula}CS′∈ST(CS) and Constraint 2 holds, {a mathematical formula}CS′ must have been formed by adding single riders to already formed cars in CS. All such cars correspond to coalitions whose values are lower than the original ones, since the addition of a single rider cannot reduce the cost. This contradicts {a mathematical formula}V(CS′)&gt;M1(CS).  □
+     </paragraph>
+     <paragraph label="Proof">
+      Given a feasible coalition structure CS and a coalition structure{a mathematical formula}CS′∈ST(CS)such that{a mathematical formula}V(CS′)&gt;M2(CS), then{a mathematical formula}By contradiction. First notice that{a mathematical formula} i.e., {a mathematical formula}V(CS′) is the sum of the values of all the cars in {a mathematical formula}CS′ plus the values of the singletons of riders that are not drivers. From {a mathematical formula}V(CS′)&gt;M2(CS), it follows that{a mathematical formula} Since {a mathematical formula}V(CS′∖Ad(CS′))=∑S∈Ad(CS′)k(S)≤0 (Equation (2)), it follows that{a mathematical formula} Since we only merge coalitions in the formation of new coalition structures in {a mathematical formula}ST(CS), it is impossible that a rider exits a car, i.e., {a mathematical formula}Ud(CS)⊆Ud(CS′). Moreover, since the function {a mathematical formula}m(⋅) is negative (see Definition 15), it is also true that{a mathematical formula} Now, suppose that (A.1) is not true, i.e., {a mathematical formula}v(S′)≤12⋅∑ai∈S′m(ai),∀S′∈Ad(CS′). If we apply such property to all the coalitions {a mathematical formula}S′ considered in the summation {a mathematical formula}∑S′∈Ad(CS′)v(S′)=V(CS′), we obtain{a mathematical formula} which contradicts (A.2).  □
+     </paragraph>
+     <paragraph label="Proof">
+      IfAssumption 1holds, for any feasible coalition structure CS{a mathematical formula}M2(CS)is an upper bound for the value of any{a mathematical formula}CS′in{a mathematical formula}ST(CS), i.e., the subtree rooted in CS. Formally,{a mathematical formula}M2(CS)≥V(CS′)for all{a mathematical formula}CS′∈ST(CS).By contradiction. Suppose there exists a coalition structure {a mathematical formula}CS′∈ST(CS) such that {a mathematical formula}V(CS′)&gt;M2(CS). By applying Lemma 1, there exists {a mathematical formula}S′∈Ad(CS′) such that {a mathematical formula}v(S′)&gt;12⋅∑ai∈S′m(ai). Since Assumption 1 holds, it follows that{a mathematical formula} for some {a mathematical formula}LS′⁎∈VT(S′). Now, {a mathematical formula}value(⋅) is additive (Definition 7), thus it can be seen as the sum of the costs of all the subpaths that form {a mathematical formula}concat(LS′⁎). Formally,{a mathematical formula} By combining (A.3) and (A.4) we obtain{a mathematical formula} Now, it is easy to see that the cost provided by {a mathematical formula}∑ai∈S′m(ai) cannot be higher than twice{sup:22} the cost of any valid path that goes through the starting points and destinations of the members of {a mathematical formula}S′. It follows that {a mathematical formula}12⋅∑ai∈S′m(ai) cannot be lower than the corresponding {a mathematical formula}value(⋅) for any of such valid paths, since we consider negative cost functions. This contradicts (A.5).  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}ai,aj∈Awith{a mathematical formula}ai∈Dand{a mathematical formula}aj∉D. If we consider Constraint2(i.e., one driver per car) and{a mathematical formula}[τjσ+βjσ,τjω−αjω]⊈[τiσ−αiσ,τiω+βiω], then{a mathematical formula}aiand{a mathematical formula}ajcan never be in a time feasible coalition together, i.e.,{a mathematical formula}∀S∈FC(G):{ai,aj}⊆S, S is a time infeasible coalition.If {a mathematical formula}[τjσ+βiσ,τjω−αjω]⊈[τiσ−αiσ,τiω+βiω], then {a mathematical formula}τjσ+βiσ&lt;τiσ−αiσ or {a mathematical formula}τjω−αjω&gt;τiω+βiω. Intuitively, {a mathematical formula}aj's latest departure time is earlier than {a mathematical formula}ai's earliest departure time or {a mathematical formula}aj's earliest arriving time is later than {a mathematical formula}ai's latest arriving time. Since we consider Constraint 2, {a mathematical formula}ai can be the only driver of any coalition containing both {a mathematical formula}ai and {a mathematical formula}aj. Thus, it is trivial to verify that the above time constraint will always be violated, since travelling back in time is not (yet) possible.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Proposition 1, Proposition 2are valid even if we substitute the definition of{a mathematical formula}v(S)in Equation(2)with the definition in Equation(9).Given a coalition {a mathematical formula}S∈FC(G), the value provided by {a mathematical formula}v(S) in Equation (2) is necessarily greater than the one provided by Equation (9), since the latter is equal to the former with the addition of {a mathematical formula}θS(LS⁎,τS⁎), which is negative by definition. Notice that the {a mathematical formula}t(LS⁎)+c(LS⁎)+f(LS⁎) is exactly the same, since we make Assumption 1 in both cases, and we assess {a mathematical formula}LS⁎ in the same way. As a consequence, given a feasible coalition structure CS, {a mathematical formula}V(CS) is greater if we consider Equation (2) with respect to Equation (9). Therefore, since Proposition 1, Proposition 2 provide upper bounds and are valid considering Equation (2), they are also valid with Equation (9).  □
+     </paragraph>
+     <paragraph label="Proof">
+      Algorithm 6computes each{a mathematical formula}sijcorrectly.Once the loop has ended, each {a mathematical formula}sij stores the maximum excess among all feasible coalitions with {a mathematical formula}ai but without {a mathematical formula}aj, with both {a mathematical formula}ai and {a mathematical formula}aj part of the same coalition in CS. This matches line 5 of Algorithm 4.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Algorithm 6lists all feasible coalitions only once and it has a worst-case time complexity of{a mathematical formula}O(nk).Algorithm 6 lists all {a mathematical formula}kˆ-subgraph of G exactly once [45]. Note that the number of {a mathematical formula}kˆ-subgraphs is {a mathematical formula}O(nk), since we only consider coalitions with up to k members [39]. Hence, Algorithm 6 makes at most {a mathematical formula}O(nk) calls to UpdateMax. Finally, note that the time complexity of UpdateMax is constant with respect to n, since computing {a mathematical formula}e(S,x) requires the computation of {a mathematical formula}v(S) (which has constant time complexity), and the loop at lines 3–8 requires {a mathematical formula}O(k2) iterations. Moreover, UpdateMax only considers coalitions that satisfy Constraint 1 (whose check is constant with respect to n) and it computes each coalitional value only once at line 2. Thus, Algorithm 6 computes all feasible coalitions only once and its worst-case time complexity is {a mathematical formula}O(nk).  □
+     </paragraph>
+     <paragraph label="Proof">
+      Algorithm 5has a polynomial worst-case time complexity with respect to n, i.e.,{a mathematical formula}O(−log2⁡(ϵ)⋅nk+1).Here we refer to equations and lemmas provided by Stearns [41]. Each iteration of Algorithm 5 identifies the agents {a mathematical formula}ai and {a mathematical formula}aj with the maximum surplus difference {a mathematical formula}δ=sij−sij, performing a transfer of size d from {a mathematical formula}aj to {a mathematical formula}ai. Thus, by Lemma 1 [41], in the following iteration these surpluses will be {a mathematical formula}sij′=sij−d and {a mathematical formula}sji′=sji+d. Notice that {a mathematical formula}sij′−sji′=sij−sji−2⋅d=δ−2⋅d. Now, by definition of d (lines 11–14 of Algorithm 5), {a mathematical formula}d≤δ2, hence {a mathematical formula}sij′−sji′≥0. Therefore, we can affirm that the transfer from {a mathematical formula}aj to {a mathematical formula}ai is indeed a K-transfer, since it satisfies Equation (4), (5), (6) and (7) [41]. Lemma 2 [41] ensures the convergence of Algorithm 2, by affirming that a K-transfer cannot increase the larger surpluses in the system. Specifically, in the next iteration the difference between the surpluses between {a mathematical formula}aj to {a mathematical formula}ai will be half of what was in the previous one. After λ iterations, its value will be {a mathematical formula}12λ of the original one. Thus, it will take {a mathematical formula}λ=log2⁡([δ0v(CS)]ϵ) iterations to ensure that {a mathematical formula}[δ0v(CS)]2λ≤ϵ, with {a mathematical formula}δ0 being the original maximum {a mathematical formula}sij surplus. Since we have n agents into the setting, it will take {a mathematical formula}λ⋅n=O(−log2⁡(ϵ)⋅n) iterations to convergence. Then, we know by Proposition 2 that ComputeMatrix, which dominates the time complexity of each iteration, has a worst-case time complexity of {a mathematical formula}O(nk). Given this, Algorithm 2 has a worst-case time complexity of {a mathematical formula}O(−log2⁡(ϵ)⋅nk+1).  □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Existence of the core in the SR scenario
+     </section-title>
+     <paragraph>
+      As introduced in Section 2.2, the core[10] is a very strong stability concept, whose computation has an exponential time complexity with respect to the number of agents. An in-depth discussion of the complexity aspects of core-related problems is provided by Chalkiadakis et al. [11].
+     </paragraph>
+     <paragraph>
+      Due to its strength, the core is not guaranteed to be always non-empty, i.e., it is not always possible to compute a core-stable payment allocation. Consider the following SR instance, which, for simplicity, does not take into account time constraints. Such instance has been generated from the datasets discussed in Section 6. Let G be the graph in Fig. 25. The only driver is agent {a mathematical formula}a5. Consider the following coalitional values (only feasible coalitions are reported):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The optimal coalition structure in the above instance is {a mathematical formula}CS⁎={{a5,a0,a2, {a mathematical formula}a3,a4},{a1}}. We implemented a Linear Programming (LP) algorithm{sup:23} that computes a core-stable payment allocation, if it exists. Using such an algorithm, we determined that the core is empty in the above instance.
+     </paragraph>
+     <paragraph>
+      We ran further experiments to evaluate the percentage of instances that have an empty core in the SR scenario. Fig. 26 shows such a percentage, considering 60 SR instances generated from our datasets for each n. Our results show that, most of the times, the core is empty in the SR scenario, in contrast with the kernel, which always exists. Specifically, the core is empty in the 75% of the instances with 13 agents or more. More important, our results confirm that, as expected, the number of instances with an empty core increases when we increase the number of agents. Henceforth, the core is not a viable stability concept for large-scale SR problems we are interested to tackle.
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Pseudo-code of the CFSS algorithm
+     </section-title>
+     <paragraph>
+      In this appendix we report the pseudo-code of the CFSS algorithm [7], which solves the GCCF problem corresponding to a given graph G. Notice that, being a branch and bound algorithm, CFSS requires a technique to compute an upper-bound {a mathematical formula}M(⋅) for the characteristic function. A complete discussion about the techniques used to compute {a mathematical formula}M(⋅) and, in general, about the CFSS algorithm (Algorithm 9, Algorithm 10), is provided by Bistaffa et al. [7].
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

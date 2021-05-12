@@ -1,0 +1,939 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Distant Supervision for Relation Extraction with Matrix Completion</title>
+<!--Generated on Tue Jun 10 18:09:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Distant Supervision for Relation Extraction with Matrix Completion</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Miao Fan<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger,\ddagger,*}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>,</mo><mo>‡</mo><mo>,</mo><mo>*</mo></mrow></msup></math>, Deli Zhao<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>, Qiang Zhou<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Zhiyuan Liu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\diamond,\ddagger}" display="inline"><msup><mi/><mrow><mo>⋄</mo><mo>,</mo><mo>‡</mo></mrow></msup></math>, Thomas Fang Zheng<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Edward Y. Chang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> CSLT, Division of Technical Innovation and Development,
+<br class="ltx_break"/>Tsinghua National Laboratory for Information Science and Technology, Tsinghua University, China.
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m8" class="ltx_Math" alttext="{}^{\diamond}" display="inline"><msup><mi/><mo>⋄</mo></msup></math> Department of Computer Science and Technology, Tsinghua University, China. 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m9" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math> HTC Beijing Advanced Technology and Research Center, China.
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m10" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math><span class="ltx_text ltx_font_typewriter">fanmiao.cslt.thu@gmail.com</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">The essence of distantly supervised relation extraction is that it is an <span class="ltx_text ltx_font_italic">incomplete</span> multi-label classification problem with <span class="ltx_text ltx_font_italic">sparse</span> and <span class="ltx_text ltx_font_italic">noisy</span> features. To tackle the sparsity and noise challenges, we propose solving the classification problem using matrix completion on factorized matrix of minimized rank.
+We formulate relation classification as completing the unknown labels of testing items (entity pairs) in a sparse matrix that concatenates training and testing textual features with training labels.
+Our algorithmic framework is based on the assumption that the rank of item-by-feature and item-by-label joint matrix is low. We apply two optimization models to recover the underlying low-rank matrix leveraging the sparsity of feature-label matrix. The matrix completion problem is then solved by the fixed point continuation (FPC) algorithm, which can find the global optimum. Experiments on two widely used datasets with different dimensions of textual features demonstrate that our low-rank matrix completion approach significantly outperforms the baseline and the state-of-the-art methods.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Relation Extraction (RE) is the process of generating structured relation knowledge from unstructured natural language texts. Traditional supervised methods <cite class="ltx_cite">[<a href="#bib.bib38" title="Exploring various knowledge in relation extraction" class="ltx_ref">28</a>, <a href="#bib.bib1" title="A review of relation extraction" class="ltx_ref">1</a>]</cite> on small hand-labeled corpora, such as MUC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://www.itl.nist.gov/iaui/894.02/related projects/muc/</span></span></span> and ACE<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://www.itl.nist.gov/iad/mig/tests/ace/</span></span></span>, can achieve high precision and recall. However, as producing hand-labeled corpora is laborius and expensive, the supervised approach can not satisfy the increasing demand of building large-scale knowledge repositories with the explosion of Web texts.
+To address the lacking training data issue, we consider the distant <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>]</cite> or weak <cite class="ltx_cite">[<a href="#bib.bib18" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">13</a>]</cite> supervision paradigm attractive, and we improve the effectiveness of the paradigm in this paper.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1079/image022.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="254" height="92" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Training corpus generated by the basic alignment assumption of distantly supervised relation extraction. The relation instances are the triples related to President Barack Obama in the Freebase, and the relation mentions are some sentences describing him in the Wikipedia.</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The intuition of the paradigm is that one can take advantage of several knowledge bases, such as WordNet<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://wordnet.princeton.edu</span></span></span>, Freebase<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://www.freebase.com</span></span></span> and YAGO<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>http://www.mpi-inf.mpg.de/yago-naga/yago</span></span></span>, to automatically label free texts, like Wikipedia<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>http://www.wikipedia.org</span></span></span> and New York Times corpora<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>http://catalog.ldc.upenn.edu/LDC2008T19</span></span></span>, based on some heuristic alignment assumptions.
+An example accounting for the basic but practical assumption is illustrated in Figure 1, in which we know that the two entities (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_typewriter">Barack Obama, U.S.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span>) are not only involved in the <span class="ltx_text ltx_font_italic">relation instances<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>According to convention, we regard a structured triple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="r(e_{i},e_{j})" display="inline"><mrow><mi>r</mi><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><mrow><msub><mi>e</mi><mi>i</mi></msub><mo mathvariant="italic">,</mo><msub><mi>e</mi><mi>j</mi></msub></mrow><mo mathvariant="italic">)</mo></mrow></mrow></math> as a relation instance which is composed of a pair of entities &lt;<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="e_{i},e_{j}" display="inline"><mrow><msub><mi>e</mi><mi>i</mi></msub><mo mathvariant="italic">,</mo><msub><mi>e</mi><mi>j</mi></msub></mrow></math>&gt;and a relation name <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> with respect to them.</span></span></span></span> coming from knowledge bases (<span class="ltx_text ltx_font_typewriter">President-of(Barack Obama, U.S.)</span> and <span class="ltx_text ltx_font_typewriter">Born-in(Barack Obama, U.S.)</span>), but also co-occur in several <span class="ltx_text ltx_font_italic">relation mentions<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup><span class="ltx_text ltx_font_upright">The sentences that contain the given entity pair are called relation mentions.</span></span></span></span></span> appearing in free texts (<span class="ltx_text ltx_font_typewriter">Barack Obama is the 44th and current President of the U.S.</span> and <span class="ltx_text ltx_font_typewriter">Barack Obama was born in Honolulu, Hawaii, U.S.</span>, etc.). We extract diverse textual features from all those <span class="ltx_text ltx_font_italic">relation mentions</span> and combine them into a rich feature vector labeled by the <span class="ltx_text ltx_font_italic">relation names</span> (<span class="ltx_text ltx_font_typewriter">President-of</span> and <span class="ltx_text ltx_font_typewriter">Born-in</span>) to produce a <span class="ltx_text ltx_font_italic">weak</span> training corpus for relation classification.</p>
+</div>
+<div id="S1.F2" class="ltx_figure"><img src="P14-1079/image001.png" id="S1.F2.g1" class="ltx_graphics ltx_centering" width="705" height="241" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>The procedure of noise-tolerant low-rank matrix completion. In this scenario, distantly supervised relation extraction task is transformed into completing the labels for testing items (entity pairs) in a sparse
+matrix that concatenates training and testing textual features with training labels. We seek to recover the underlying low-rank matrix and to complete the unknown testing labels simultaneously.</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">This paradigm is promising to generate large-scale training corpora automatically. However, it comes up against three technical challeges:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sparse features</span>. As we cannot tell what kinds of features are effective in advance, we have to use NLP toolkits, such as Stanford CoreNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>http://nlp.stanford.edu/downloads/corenlp.shtml</span></span></span>, to extract a variety of textual features, e.g., named entity tags, part-of-speech tags and lexicalized dependency paths. Unfortunately, most of them appear only once in the training corpus, and hence leading to very sparse features.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Noisy features</span>. Not all relation mentions express the corresponding relation instances. For example, the second relation mention in Figure 1 does not explicitly describe any relation instance, so features extracted from this sentence can be noisy. Such analogous cases commonly exist in feature extraction.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Incomplete labels</span>. Similar to noisy features, the generated labels can be incomplete. For example, the fourth relation mention in Figure 1 should have been labeled by the relation <span class="ltx_text ltx_font_typewriter">Senate-of</span>. However, the incomplete knowledge base does not contain the corresponding relation instance (<span class="ltx_text ltx_font_typewriter">Senate-of(Barack Obama, U.S.)</span>). Therefore, the distant supervision paradigm may generate incomplete labeling corpora.</p>
+</div></li>
+</ul>
+<p class="ltx_p">In essence, distantly supervised relation extraction is an <span class="ltx_text ltx_font_italic">incomplete</span> multi-label classification task with <span class="ltx_text ltx_font_italic">sparse</span> and <span class="ltx_text ltx_font_italic">noisy</span> features.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we formulate the relation-extraction task from a novel perspective of using matrix completion with low rank criterion. To the best of our knowledge, we are the first to apply this technique on relation extraction with distant supervision.
+More specifically, as shown in Figure 2, we model the task with a sparse matrix whose rows present items (entity pairs) and columns contain noisy textual features and incomplete relation labels. In such a way, relation classification is transformed into a problem of completing the unknown labels for testing items in the sparse matrix that concatenates training and testing textual features with training labels, based on the assumption that the item-by-feature and item-by-label joint matrix is of low rank.
+The rationale of this assumption is that noisy features and incomplete labels are semantically correlated. The low-rank factorization of the sparse feature-label matrix delivers the low-dimensional representation of de-correlation for features and labels.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We contribute two optimization models, DRMC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>It is the abbreviation for <span class="ltx_text ltx_font_bold">D</span>istant supervision for <span class="ltx_text ltx_font_bold">R</span>elation extraction with <span class="ltx_text ltx_font_bold">M</span>atrix <span class="ltx_text ltx_font_bold">C</span>ompletion</span></span></span>-b and DRMC-1, aiming at exploiting the sparsity to recover the underlying low-rank matrix and to complete the unknown testing labels simultaneously. Moreover, the logistic cost function is integrated in our models to reduce the influence of noisy features and incomplete labels, due to that it is suitable for binary variables. We also modify the fixed point continuation (FPC) algorithm <cite class="ltx_cite">[<a href="#bib.bib22" title="Fixed point and bregman iterative methods for matrix rank minimization" class="ltx_ref">16</a>]</cite> to find the global optimum.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Experiments on two widely used datasets demonstrate that our noise-tolerant approaches outperform the baseline and the state-of-the-art methods. Furthermore, we discuss the influence of feature sparsity, and our approaches consistently achieve better performance than compared methods under different sparsity degrees.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The idea of distant supervision was firstly proposed in the field of bioinformatics <cite class="ltx_cite">[<a href="#bib.bib11" title="Constructing biological knowledge bases by extracting information from text sources." class="ltx_ref">8</a>]</cite>. Snow et al. <cite class="ltx_cite">[<a href="#bib.bib29" title="Learning syntactic patterns for automatic hypernym discovery" class="ltx_ref">23</a>]</cite> used WordNet as the knowledge base to discover more hpyernym/hyponym relations between entities from news articles. However, either bioinformatic database or WordNet is maintained by a few experts, thus hardly kept up-to-date.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">As we are stepping into the <span class="ltx_text ltx_font_italic">big data</span> era, the explosion of unstructured Web texts simulates us to build more powerful models that can automatically extract relation instances from large-scale online natural language corpora without hand-labeled annotation.
+Mintz et al. <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>]</cite> adopted Freebase <cite class="ltx_cite">[<a href="#bib.bib5" title="Freebase: a collaboratively created graph database for structuring human knowledge" class="ltx_ref">3</a>, <a href="#bib.bib4" title="Freebase: a shared database of structured general human knowledge" class="ltx_ref">2</a>]</cite>, a large-scale crowdsourcing knowledge base online which contains billions of relation instances and thousands of relation names, to <span class="ltx_text ltx_font_italic">distantly supervise</span> Wikipedia corpus. The basic alignment assumption of this work is that if a pair of entities participate in a relation, <span class="ltx_text ltx_font_italic">all sentences</span> that mention these entities are labeled by that relation name. Then we can extract a variety of textual features and learn a multi-class logistic regression classifier. Inspired by multi-instance learning <cite class="ltx_cite">[<a href="#bib.bib23" title="A framework for multiple-instance learning" class="ltx_ref">17</a>]</cite>, Riedel et al. <cite class="ltx_cite">[<a href="#bib.bib27" title="Modeling relations and their mentions without labeled text" class="ltx_ref">22</a>]</cite> relaxed the strong assumption and replaced <span class="ltx_text ltx_font_italic">all sentences</span> with <span class="ltx_text ltx_font_italic">at least one sentence</span>. Hoffmann et al. <cite class="ltx_cite">[<a href="#bib.bib18" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">13</a>]</cite> pointed out that many entity pairs have more than one relation. They extended the multi-instance learning framework <cite class="ltx_cite">[<a href="#bib.bib27" title="Modeling relations and their mentions without labeled text" class="ltx_ref">22</a>]</cite> to the multi-label circumstance. Surdeanu et al. <cite class="ltx_cite">[<a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>]</cite> proposed a novel approach to multi-instance multi-label learning for relation extraction, which jointly modeled all the sentences in texts and all labels in knowledge bases for a given entity pair.
+Other literatures
+<cite class="ltx_cite">[<a href="#bib.bib33" title="Reducing wrong labels in distant supervision for relation extraction" class="ltx_ref">25</a>, <a href="#bib.bib24" title="Distant supervision for relation extraction with an incomplete knowledge base" class="ltx_ref">18</a>, <a href="#bib.bib37" title="Towards accurate distant supervision for relational facts extraction" class="ltx_ref">27</a>, <a href="#bib.bib36" title="Filling knowledge base gaps for distant supervision of relation extraction" class="ltx_ref">26</a>]</cite> addressed more specific issues, like how to construct the negative class in learning or how to adopt more information, such as name entity tags, to improve the performance.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Our work is more relevant to Riedel et al.’s <cite class="ltx_cite">[<a href="#bib.bib28" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">21</a>]</cite> which considered the task as a matrix factorization problem. Their approach is composed of several models, such as PCA <cite class="ltx_cite">[<a href="#bib.bib10" title="A generalization of principal components analysis to the exponential family" class="ltx_ref">7</a>]</cite> and collaborative filtering <cite class="ltx_cite">[<a href="#bib.bib21" title="Factorization meets the neighborhood: a multifaceted collaborative filtering model" class="ltx_ref">15</a>]</cite>. However, they did not concern about the data noise brought by the basic assumption of distant supervision.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Model</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We apply a new technique in the field of applied mathematics, i.e., low-rank matrix completion with convex optimization. The breakthrough work on this topic was made by Candès and Recht <cite class="ltx_cite">[<a href="#bib.bib8" title="Exact matrix completion via convex optimization" class="ltx_ref">5</a>]</cite> who proved that most low-rank matrices can be perfectly recovered from an incomplete set of entries. This promising theory has been successfully applied on many active research areas, such as computer vision <cite class="ltx_cite">[<a href="#bib.bib7" title="Matrix completion for multi-label image classification" class="ltx_ref">4</a>]</cite>, recommender system <cite class="ltx_cite">[<a href="#bib.bib26" title="Fast maximum margin matrix factorization for collaborative prediction" class="ltx_ref">20</a>]</cite> and system controlling <cite class="ltx_cite">[<a href="#bib.bib13" title="A rank minimization heuristic with application to minimum order system approximation" class="ltx_ref">9</a>]</cite>.
+Our models for relation extraction are based on the theoretic framework proposed by Goldberg et al. <cite class="ltx_cite">[<a href="#bib.bib15" title="Transduction with matrix completion: three birds with one stone" class="ltx_ref">10</a>]</cite>, which formulated the multi-label transductive learning as a matrix completion problem. The new framework for classification enhances the robustness to data noise by penalizing different cost functions for features and labels.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Formulation</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Suppose that we have built a training corpus for relation classification with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> items (entity pairs), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>-dimensional textual features, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> labels (relations), based on the basic alignment assumption proposed by Mintz et al. <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>]</cite>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="X_{train}\in\mathbb{R}^{n\times d}" display="inline"><mrow><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="Y_{train}\in\mathbb{R}^{n\times t}" display="inline"><mrow><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mi>t</mi></mrow></msup></mrow></math> denote the feature matrix and the label matrix for training, respectively. The linear classifier we adopt aims to explicitly learn the weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="{\bf W}\in\mathbb{R}^{d\times t}" display="inline"><mrow><mi>𝐖</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mi>t</mi></mrow></msup></mrow></math> and the bias column vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="{\bf b}\in\mathbb{R}^{t\times 1}" display="inline"><mrow><mi>𝐛</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>t</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math> with the constraint of minimizing the loss function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>,</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\mathop{\operatorname*{arg~{}min}}_{{\bf W,b}}~{}~{}l(Y_{train},\left[{\begin{%&#10;array}[]{*{20}{c}}{\bf 1}&amp;{{X_{train}}}\end{array}}\right]\left[{\begin{array}%&#10;[]{*{20}{c}}{\bf b}^{T}\\&#10;{\bf W}\end{array}}\right])," display="block"><mrow><mrow><mpadded width="+6.6pt"><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mrow><mi>𝐖</mi><mo>,</mo><mi>𝐛</mi></mrow></msub></mpadded><mrow><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub><mo>,</mo><mrow><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mn>𝟏</mn></mtd><mtd columnalign="center"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msup><mi>𝐛</mi><mi>T</mi></msup></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="center"><mi>𝐖</mi></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <span class="ltx_text ltx_font_bold">1</span> is the all-one column vector.
+Then we can predict the label matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="Y_{test}\in\mathbb{R}^{m\times t}" display="inline"><mrow><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mi>t</mi></mrow></msup></mrow></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> testing items with respect to the feature matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m11" class="ltx_Math" alttext="X_{test}\in\mathbb{R}^{m\times d}" display="inline"><mrow><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>m</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math>.
+Let</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="{\bf Z}=\left[\begin{array}[]{*{20}{c}}{{X_{train}}}&amp;{{Y_{train}}}\\&#10;{{X_{test}}}&amp;{{Y_{test}}}\end{array}\right]." display="block"><mrow><mrow><mi>𝐙</mi><mo>=</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></mtd><mtd columnalign="center"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="center"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></mtd><mtd columnalign="center"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This linear classification problem can be transformed into completing the unobservable entries in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m12" class="ltx_Math" alttext="Y_{test}" display="inline"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math> by means of the observable entries in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m13" class="ltx_Math" alttext="X_{train}" display="inline"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m14" class="ltx_Math" alttext="Y_{train}" display="inline"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m15" class="ltx_Math" alttext="X_{test}" display="inline"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math>,
+based on the assumption that the rank of matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m16" class="ltx_Math" alttext="{\bf Z}\in\mathbb{R}^{(n+m)\times(d+t)}" display="inline"><mrow><mi>𝐙</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></math> is low. The model can be written as,</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\begin{split}&amp;\mathop{\operatorname*{arg~{}min}}_{{\bf Z}\in\mathbb{R}^{(n+m)%&#10;\times(d+t)}}~{}~{}\text{rank}({\bf Z})\\&#10;&amp;\text{s.t.}~{}~{}\forall(i,j)\in\Omega_{X},~{}~{}z_{ij}=x_{ij},\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}~{}(1\leq i\leq n+m,~{}~{}1\leq j\leq d),\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}~{}\forall(i,j)\in\Omega_{Y},~{}~{}z_{i(j+d)}=y_{ij},\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}~{}(1\leq i\leq n,~{}~{}1\leq j\leq t),\end{split}" display="block"><mrow><mpadded width="+6.6pt"><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mrow><mi>𝐙</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></msub></mpadded><mtext>rank</mtext><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow><mpadded width="+6.6pt"><mtext>s.t.</mtext></mpadded><mo>∀</mo><mrow><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo rspace="9.1pt">,</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><mrow><mo lspace="28.9pt">(</mo><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>n</mi><mo>+</mo><mi>m</mi><mo rspace="9.1pt">,</mo><mn>1</mn><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>d</mi><mo>)</mo></mrow><mo>,</mo><mo lspace="28.9pt">∀</mo><mrow><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo rspace="9.1pt">,</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>=</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><mrow><mo lspace="28.9pt">(</mo><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>n</mi><mo rspace="9.1pt">,</mo><mn>1</mn><mo>≤</mo><mi>j</mi><mo>≤</mo><mi>t</mi><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m17" class="ltx_Math" alttext="\Omega_{X}" display="inline"><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub></math> to represent the index set of observable feature entries in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m18" class="ltx_Math" alttext="X_{train}" display="inline"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m19" class="ltx_Math" alttext="X_{test}" display="inline"><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m20" class="ltx_Math" alttext="\Omega_{Y}" display="inline"><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></math> to denote the index set of observable label entries in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m21" class="ltx_Math" alttext="Y_{train}" display="inline"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Formula (2) is usually impractical for real problems as the entries in the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math> are corrupted by noise. We thus define</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="{\bf Z}={\bf Z^{*}}+{\bf E}," display="block"><mrow><mrow><mi>𝐙</mi><mo>=</mo><mrow><msup><mi>𝐙</mi><mo>*</mo></msup><mo>+</mo><mi>𝐄</mi></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="{\bf Z^{*}}" display="inline"><msup><mi>𝐙</mi><mo>*</mo></msup></math> as the underlying low-rank matrix</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="{\bf Z^{*}}=\left[{\begin{array}[]{*{20}{c}}{{X^{*}}}&amp;{{Y^{*}}}\end{array}}%&#10;\right]=\left[{\begin{array}[]{*{20}{c}}{X_{train}^{*}}&amp;{Y_{train}^{*}}\\&#10;{X_{test}^{*}}&amp;{Y_{test}^{*}}\end{array}}\right]," display="block"><mrow><mrow><msup><mi>𝐙</mi><mo>*</mo></msup><mo>=</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msup><mi>X</mi><mo>*</mo></msup></mtd><mtd columnalign="center"><msup><mi>Y</mi><mo>*</mo></msup></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msubsup><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow><mo>*</mo></msubsup></mtd><mtd columnalign="center"><msubsup><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow><mo>*</mo></msubsup></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="center"><msubsup><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow><mo>*</mo></msubsup></mtd><mtd columnalign="center"><msubsup><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow><mo>*</mo></msubsup></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">and <span class="ltx_text ltx_font_bold">E</span> is the error matrix</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="{\bf E}=\left[{\begin{array}[]{*{20}{c}}{E_{X_{train}}}&amp;{E_{Y_{train}}}\\&#10;{E_{X_{test}}}&amp;{0}\end{array}}\right]." display="block"><mrow><mrow><mi>𝐄</mi><mo>=</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msub><mi>E</mi><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></msub></mtd><mtd columnalign="center"><msub><mi>E</mi><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></msub></msub></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="center"><msub><mi>E</mi><msub><mi>X</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></msub></mtd><mtd columnalign="center"><mn>0</mn></mtd><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/><mtd/></mtr></mtable><mo>]</mo></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">The rank function in Formula (2) is a non-convex function that is difficult to be optimized. The surrogate of the function can be the convex nuclear norm <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="{\bf||Z||_{*}}=\sum\sigma_{k}({\bf Z})" display="inline"><mrow><msub><mrow><mo fence="true">||</mo><mi>𝐙</mi><mo fence="true">||</mo></mrow><mo>*</mo></msub><mo>=</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>σ</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></mrow></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib8" title="Exact matrix completion via convex optimization" class="ltx_ref">5</a>]</cite>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\sigma_{k}" display="inline"><msub><mi>σ</mi><mi>k</mi></msub></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="th" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math> largest singular value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math>. To tolerate the noise entries in the error matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="{\bf E}" display="inline"><mi>𝐄</mi></math>, we minimize the cost functions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="C_{x}" display="inline"><msub><mi>C</mi><mi>x</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="C_{y}" display="inline"><msub><mi>C</mi><mi>y</mi></msub></math> for features and labels respectively, rather than using the hard constraints in Formula (2).</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">According to Formula (1), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="{\bf Z^{*}}\in\mathbb{R}^{(n+m)\times(d+t)}" display="inline"><mrow><msup><mi>𝐙</mi><mo>*</mo></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>+</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></math> can be represented as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="[X^{*},{\bf W}X^{*}]" display="inline"><mrow><mo>[</mo><mrow><msup><mi>X</mi><mo>*</mo></msup><mo>,</mo><mrow><mi>𝐖</mi><mo>⁢</mo><msup><mi>X</mi><mo>*</mo></msup></mrow></mrow><mo>]</mo></mrow></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="[X^{*},Y^{*}]" display="inline"><mrow><mo>[</mo><mrow><msup><mi>X</mi><mo>*</mo></msup><mo>,</mo><msup><mi>Y</mi><mo>*</mo></msup></mrow><mo>]</mo></mrow></math>, by explicitly modeling the bias vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="{\bf b}" display="inline"><mi>𝐛</mi></math>. Therefore, this convex optimization model is called <span class="ltx_text ltx_font_bold">DRMC-b</span>,</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\begin{split}&amp;\mathop{\operatorname*{arg~{}min}}_{{\bf Z,b}}~{}~{}\mu||{\bf Z}%&#10;||_{*}+\frac{1}{|{\Omega_{X}}|}\sum_{(i,j)\in{\Omega_{X}}}{C_{x}(z_{ij},x_{ij}%&#10;)}\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}+\frac{\lambda}{{|{\Omega_{Y}}|}}%&#10;\sum_{(i,j)\in{\Omega_{Y}}}{C_{y}(z_{i(j+d)}+b_{j},y_{ij})},\\&#10;\end{split}" display="block"><mrow><mrow><mrow><mpadded width="+6.6pt"><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mrow><mi>𝐙</mi><mo>,</mo><mi>𝐛</mi></mrow></msub></mpadded><mrow><mi>μ</mi><mo>⁢</mo><msub><mrow><mo fence="true">||</mo><mi>𝐙</mi><mo fence="true">||</mo></mrow><mo>*</mo></msub></mrow></mrow><mo>+</mo><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub></mrow></munder><mrow><msub><mi>C</mi><mi>x</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>+</mo><mrow><mfrac><mi>λ</mi><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></mrow></munder><mrow><msub><mi>C</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>+</mo><msub><mi>b</mi><mi>j</mi></msub></mrow><mo>,</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m6" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> are the positive trade-off weights. More specifically, we minimize the nuclear norm <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m7" class="ltx_Math" alttext="||{\bf Z}||_{*}" display="inline"><msub><mrow><mo fence="true">||</mo><mi>𝐙</mi><mo fence="true">||</mo></mrow><mo>*</mo></msub></math> via employing the regularization terms, i.e., the cost functions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m8" class="ltx_Math" alttext="C_{x}" display="inline"><msub><mi>C</mi><mi>x</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m9" class="ltx_Math" alttext="C_{y}" display="inline"><msub><mi>C</mi><mi>y</mi></msub></math> for features and labels.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">If we implicitly model the bias vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="{\bf b}" display="inline"><mi>𝐛</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="{\bf Z^{*}}\in\mathbb{R}^{(n+m)\times(1+d+t)}" display="inline"><mrow><msup><mi>𝐙</mi><mo>*</mo></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><mi>d</mi><mo>+</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></math> can be denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="[{\bf 1},X^{*},{\bf W^{{}^{\prime}}}X^{*}]" display="inline"><mrow><mo>[</mo><mrow><mn>𝟏</mn><mo>,</mo><msup><mi>X</mi><mo>*</mo></msup><mo>,</mo><mrow><msup><mi>𝐖</mi><msup><mi/><mo>′</mo></msup></msup><mo>⁢</mo><msup><mi>X</mi><mo>*</mo></msup></mrow></mrow><mo>]</mo></mrow></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="[X^{*},Y^{*}]" display="inline"><mrow><mo>[</mo><mrow><msup><mi>X</mi><mo>*</mo></msup><mo>,</mo><msup><mi>Y</mi><mo>*</mo></msup></mrow><mo>]</mo></mrow></math>, in which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="{\bf W^{{}^{\prime}}}" display="inline"><msup><mi>𝐖</mi><msup><mi/><mo>′</mo></msup></msup></math> takes the role of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m6" class="ltx_Math" alttext="[{\bf b}^{T};{\bf W}]" display="inline"><mrow><mo>[</mo><mrow><msup><mi>𝐛</mi><mi>T</mi></msup><mo>;</mo><mi>𝐖</mi></mrow><mo>]</mo></mrow></math> in DRMC-b. Then we derive another optimization model called <span class="ltx_text ltx_font_bold">DRMC-1</span>,</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\begin{split}&amp;\mathop{\operatorname*{arg~{}min}}_{{\bf Z}}~{}~{}\mu||{\bf Z}||%&#10;_{*}+\frac{1}{|{\Omega_{X}}|}\sum_{(i,j)\in{\Omega_{X}}}{C_{x}(z_{i(j+1)},x_{%&#10;ij})}\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}+\frac{%&#10;\lambda}{{|{\Omega_{Y}}|}}\sum_{(i,j)\in{\Omega_{Y}}}{C_{y}(z_{i(j+d+1)},y_{ij%&#10;})}\\&#10;&amp;~{}~{}~{}~{}~{}~{}~{}\text{s.t.}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}%&#10;~{}~{}~{}{\bf Z}(:,1)={\bf 1},\\&#10;\end{split}" display="block"><mrow><mpadded width="+6.6pt"><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mi>𝐙</mi></msub></mpadded><mi>μ</mi><mo>|</mo><mo>|</mo><mi>𝐙</mi><mo>|</mo><msub><mo>|</mo><mo>*</mo></msub><mo>+</mo><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo fence="true">|</mo></mrow></mfrac><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub></mrow></munder><msub><mi>C</mi><mi>x</mi></msub><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub><mo>,</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow><mo lspace="75.1pt">+</mo><mfrac><mi>λ</mi><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mfrac><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></mrow></munder><msub><mi>C</mi><mi>y</mi></msub><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>+</mo><mi>d</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow><mpadded lspace="23.1pt" width="+23.1pt"><mtext>s.t.</mtext></mpadded><mo mathvariant="italic" separator="true">       </mo><mi>𝐙</mi><mrow><mo>(</mo><mo>:</mo><mo>,</mo><mn>1</mn><mo>)</mo></mrow><mo>=</mo><mn>𝟏</mn><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m7" class="ltx_Math" alttext="{\bf Z}(:,1)" display="inline"><mrow><mi>𝐙</mi><mrow><mo>(</mo><mo>:</mo><mo>,</mo><mn>1</mn><mo>)</mo></mrow></mrow></math> denotes the first column of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m8" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math>.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">For our relation classification task, both features and labels are binary. We assume that the actual entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> belonging to the underlying matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m2" class="ltx_Math" alttext="{\bf Z^{*}}" display="inline"><msup><mi>𝐙</mi><mo>*</mo></msup></math> is randomly generated via a sigmoid function <cite class="ltx_cite">[<a href="#bib.bib20" title="Why the logistic function? a tutorial discussion on probabilities and neural networks" class="ltx_ref">14</a>]</cite>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m3" class="ltx_Math" alttext="Pr(u|v)=1/(1+e^{-uv})" display="inline"><mrow><mi>P</mi><mi>r</mi><mrow><mo>(</mo><mi>u</mi><mo>|</mo><mi>v</mi><mo>)</mo></mrow><mo>=</mo><mn>1</mn><mo>/</mo><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>-</mo><mrow><mi>u</mi><mo>⁢</mo><mi>v</mi></mrow></mrow></msup><mo>)</mo></mrow></mrow></math>, given the observed binary entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m4" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> from the observed sparse matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m5" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math>. Then, we can apply the log-likelihood cost function to measure the conditional probability and derive the <span class="ltx_text ltx_font_italic">logistic cost function</span> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m6" class="ltx_Math" alttext="C_{x}" display="inline"><msub><mi>C</mi><mi>x</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m7" class="ltx_Math" alttext="C_{y}" display="inline"><msub><mi>C</mi><mi>y</mi></msub></math>,</p>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="C(u,v)=-\log Pr(u|v)=\log(1+e^{-uv})," display="block"><mrow><mi>C</mi><mrow><mo>(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo>)</mo></mrow><mo>=</mo><mo>-</mo><mi>log</mi><mi>P</mi><mi>r</mi><mrow><mo>(</mo><mi>u</mi><mo>|</mo><mi>v</mi><mo>)</mo></mrow><mo>=</mo><mi>log</mi><mrow><mo>(</mo><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>-</mo><mrow><mi>u</mi><mo>⁢</mo><mi>v</mi></mrow></mrow></msup><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">After completing the entries in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m1" class="ltx_Math" alttext="Y_{test}" display="inline"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math>, we adopt the sigmoid function to calculate the conditional probability of relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m2" class="ltx_Math" alttext="r_{j}" display="inline"><msub><mi>r</mi><mi>j</mi></msub></math>, given entity pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m3" class="ltx_Math" alttext="p_{i}" display="inline"><msub><mi>p</mi><mi>i</mi></msub></math> pertaining to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m4" class="ltx_Math" alttext="y_{ij}" display="inline"><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m5" class="ltx_Math" alttext="Y_{test}" display="inline"><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math>,</p>
+<table id="S3.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="Pr(r_{j}|p_{i})=\frac{1}{1+e^{-y_{ij}}},~{}~{}~{}y_{ij}\in Y_{test}." display="block"><mrow><mi>P</mi><mi>r</mi><mrow><mo>(</mo><msub><mi>r</mi><mi>j</mi></msub><mo>|</mo><msub><mi>p</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>-</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow></msup></mrow></mfrac><mo rspace="12.4pt">,</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>∈</mo><msub><mi>Y</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Finally, we can achieve Top-N predicted relation instances via ranking the values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p6.m6" class="ltx_Math" alttext="Pr(r_{j}|p_{i})" display="inline"><mrow><mi>P</mi><mi>r</mi><mrow><mo>(</mo><msub><mi>r</mi><mi>j</mi></msub><mo>|</mo><msub><mi>p</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Algorithm</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The matrix rank minimization problem is NP-hard. Therefore, Candés and Recht <cite class="ltx_cite">[<a href="#bib.bib8" title="Exact matrix completion via convex optimization" class="ltx_ref">5</a>]</cite> suggested to use a convex relaxation, the nuclear norm minimization instead. Then, Ma et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Fixed point and bregman iterative methods for matrix rank minimization" class="ltx_ref">16</a>]</cite> proposed the fixed point continuation (FPC) algorithm which is fast and robust. Moreover, Goldfrab and Ma <cite class="ltx_cite">[<a href="#bib.bib16" title="Convergence of fixed-point continuation algorithms for matrix rank minimization" class="ltx_ref">11</a>]</cite> proved the convergence of the FPC algorithm for solving the nuclear norm minimization problem. We thus adopt and modify the algorithm aiming to find the optima for our noise-tolerant models, i.e., Formulae (3) and (4).</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Fixed point continuation for DRMC-b</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Algorithm 1 describes the modified FPC algorithm for solving DRMC-b, which contains two steps for each iteration,</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Gradient step:</span> In this step, we infer the matrix gradient <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="g({\bf Z})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></math> and bias vector gradient <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="g({\bf b})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐛</mi><mo>)</mo></mrow></mrow></math> as follows,</p>
+<table id="S4.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m1" class="ltx_Math" alttext="g(z_{ij})=\begin{cases}\frac{1}{|\Omega_{X}|}\frac{-x_{ij}}{1+e^{x_{ij}z_{ij}}%&#10;},&amp;(i,j)\in\Omega_{X}\\&#10;\frac{\lambda}{|\Omega_{Y}|}\frac{-y_{i(j-d)}}{1+e^{y_{i(j-d)}(z_{ij}+b_{j})}}%&#10;,&amp;(i,j-d)\in\Omega_{Y}\\&#10;0,&amp;otherwise\end{cases}" display="block"><mrow><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mfrac><mrow><mo>-</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow></msup></mrow></mfrac></mrow><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mfrac><mi>λ</mi><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mfrac><mrow><mo>-</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>+</mo><msub><mi>b</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></msup></mrow></mfrac></mrow><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi></mrow></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mn>0</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">and</p>
+<table id="S4.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex8.m1" class="ltx_Math" alttext="g(b_{j})=\frac{\lambda}{|\Omega_{Y}|}\sum_{i:(i,j)\in\Omega_{Y}}{\frac{-y_{ij}%&#10;}{1+e^{y_{ij}(z_{i(j+d)}+b_{j})}}}." display="block"><mrow><mrow><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>b</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mi>λ</mi><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>:</mo><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></mrow></mrow></munder><mfrac><mrow><mo>-</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>+</mo><msub><mi>b</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></msup></mrow></mfrac></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">We use the gradient descents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="{\bf A}={\bf Z}-\tau_{z}g({\bf Z})" display="inline"><mrow><mi>𝐀</mi><mo>=</mo><mrow><mi>𝐙</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="{\bf b}={\bf b}-\tau_{b}g({\bf b})" display="inline"><mrow><mi>𝐛</mi><mo>=</mo><mrow><mi>𝐛</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>b</mi></msub><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐛</mi><mo>)</mo></mrow></mrow></mrow></mrow></math> to gradually find the global minima of the cost function terms in Formula (3), where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="\tau_{z}" display="inline"><msub><mi>τ</mi><mi>z</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="\tau_{b}" display="inline"><msub><mi>τ</mi><mi>b</mi></msub></math> are step sizes.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Shrinkage step:</span> The goal of this step is to minimize the nuclear norm <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="{\bf||Z||_{*}}" display="inline"><msub><mrow><mo fence="true">||</mo><mi>𝐙</mi><mo fence="true">||</mo></mrow><mo>*</mo></msub></math> in Formula (3). We perform the singular value decomposition (SVD) <cite class="ltx_cite">[<a href="#bib.bib17" title="Calculating the singular values and pseudo-inverse of a matrix" class="ltx_ref">12</a>]</cite> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="{\bf A}" display="inline"><mi>𝐀</mi></math> at first, and then cut down each singular value. During the iteration, any negative value in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="{\bf\Sigma-\tau_{z}\mu}" display="inline"><mrow><mi>𝚺</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>𝐳</mi></msub><mo>⁢</mo><mi>μ</mi></mrow></mrow></math> is assigned by zero, so that the rank of reconstructed matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m4" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math> will be reduced, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m5" class="ltx_Math" alttext="{\bf Z}={\bf U}max({\bf\Sigma-\tau_{z}\mu},0){\bf V^{T}}" display="inline"><mrow><mi>𝐙</mi><mo>=</mo><mrow><mi>𝐔</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>𝚺</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>𝐳</mi></msub><mo>⁢</mo><mi>μ</mi></mrow></mrow><mo>,</mo><mn>0</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>𝐕</mi><mi>𝐓</mi></msup></mrow></mrow></math>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_caption">FPC algorithm for solving DRMC-b</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>
+<span class="ltx_ERROR undefined">\REQUIRE</span>   
+<br class="ltx_break"/>Initial matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="{\bf Z_{0}}" display="inline"><msub><mi>𝐙</mi><mn>𝟎</mn></msub></math>, bias <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="{\bf b_{0}}" display="inline"><msub><mi>𝐛</mi><mn>𝟎</mn></msub></math>; Parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="\mu,\lambda" display="inline"><mrow><mi>μ</mi><mo>,</mo><mi>λ</mi></mrow></math>;
+<br class="ltx_break"/>Step sizes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="\tau_{z},\tau_{b}" display="inline"><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>,</mo><msub><mi>τ</mi><mi>b</mi></msub></mrow></math>.
+<br class="ltx_break"/>
+<span class="ltx_rule" style="width:186.5pt;height:0.4pt;background:black;display:inline-block;"> </span>
+<br class="ltx_break"/>Set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m5" class="ltx_Math" alttext="{\bf Z}={\bf Z_{0}}" display="inline"><mrow><mi>𝐙</mi><mo>=</mo><msub><mi>𝐙</mi><mn>𝟎</mn></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m6" class="ltx_Math" alttext="{\bf b}={\bf b_{0}}." display="inline"><mrow><mrow><mi>𝐛</mi><mo>=</mo><msub><mi>𝐛</mi><mn>𝟎</mn></msub></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m7" class="ltx_Math" alttext="\mu=\mu_{1}&gt;\mu_{2}&gt;...&gt;\mu_{F}" display="inline"><mrow><mi>μ</mi><mo>=</mo><msub><mi>μ</mi><mn>1</mn></msub><mo>&gt;</mo><msub><mi>μ</mi><mn>2</mn></msub><mo>&gt;</mo><mi mathvariant="normal">…</mi><mo>&gt;</mo><msub><mi>μ</mi><mi>F</mi></msub></mrow></math>
+<span class="ltx_ERROR undefined">\WHILE</span>relative error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m8" class="ltx_Math" alttext="&gt;\varepsilon" display="inline"><mrow><mi/><mo>&gt;</mo><mi>ε</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Gradient step: 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m9" class="ltx_Math" alttext="{\bf A}={\bf Z}-\tau_{z}g({\bf Z}),{\bf b}={\bf b}-\tau_{b}g({\bf b})." display="inline"><mrow><mrow><mrow><mi>𝐀</mi><mo>=</mo><mrow><mi>𝐙</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo><mrow><mi>𝐛</mi><mo>=</mo><mrow><mi>𝐛</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>b</mi></msub><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐛</mi><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Shrinkage step:
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m10" class="ltx_Math" alttext="{\bf U}{\bf\Sigma}{\bf V^{T}}=\text{SVD}({\bf A})" display="inline"><mrow><mrow><mi>𝐔</mi><mo>⁢</mo><mi>𝚺</mi><mo>⁢</mo><msup><mi>𝐕</mi><mi>𝐓</mi></msup></mrow><mo>=</mo><mrow><mtext>SVD</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>𝐀</mi><mo>)</mo></mrow></mrow></mrow></math>,
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m11" class="ltx_Math" alttext="{\bf Z}={\bf U}~{}max({\bf\Sigma-\tau_{z}\mu},0)~{}{\bf V^{T}}." display="inline"><mrow><mrow><mi>𝐙</mi><mo>=</mo><mrow><mpadded width="+3.3pt"><mi>𝐔</mi></mpadded><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>𝚺</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>𝐳</mi></msub><mo>⁢</mo><mi>μ</mi></mrow></mrow><mo>,</mo><mn>0</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>𝐕</mi><mi>𝐓</mi></msup></mrow></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\ENDWHILE</span></p>
+</div><span class="ltx_ERROR undefined">\ENDFOR</span>
+<div id="S4.SS1.p5" class="ltx_para">
+<br class="ltx_break"/>
+<p class="ltx_p"><span class="ltx_rule" style="width:186.5pt;height:0.4pt;background:black;display:inline-block;"> </span>
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\ENSURE</span>   Completed Matrix <span class="ltx_text ltx_font_bold">Z</span>, bias <span class="ltx_text ltx_font_bold">b</span>. 
+
+To accelerate the convergence, we use a continuation method to improve the speed. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> is initialized by a large value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="\mu_{1}" display="inline"><msub><mi>μ</mi><mn>1</mn></msub></math>, thus resulting in the fast reduction of the rank at first. Then the convergence slows down as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> decreases while obeying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m4" class="ltx_Math" alttext="\mu_{k+1}=max(\mu_{k}\eta_{\mu},\mu_{F})" display="inline"><mrow><msub><mi>μ</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>μ</mi><mi>k</mi></msub><mo>⁢</mo><msub><mi>η</mi><mi>μ</mi></msub></mrow><mo>,</mo><msub><mi>μ</mi><mi>F</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m5" class="ltx_Math" alttext="\mu_{F}" display="inline"><msub><mi>μ</mi><mi>F</mi></msub></math> is the final value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m6" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m7" class="ltx_Math" alttext="\eta_{\mu}" display="inline"><msub><mi>η</mi><mi>μ</mi></msub></math> is the decay parameter.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">For the stopping criteria in inner iterations, we define the <span class="ltx_text ltx_font_italic">relative error</span> to measure the residual of matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m1" class="ltx_Math" alttext="{\bf Z}" display="inline"><mi>𝐙</mi></math> between two successive iterations,</p>
+<table id="S4.Ex9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m1" class="ltx_Math" alttext="\frac{||{\bf Z}^{k+1}-{\bf Z}^{k}||_{F}}{max(1,||{\bf Z}^{k}||_{F})}\leq\varepsilon," display="block"><mrow><mrow><mfrac><msub><mrow><mo fence="true">||</mo><mrow><msup><mi>𝐙</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msup><mo>-</mo><msup><mi>𝐙</mi><mi>k</mi></msup></mrow><mo fence="true">||</mo></mrow><mi>F</mi></msub><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>,</mo><msub><mrow><mo fence="true">||</mo><msup><mi>𝐙</mi><mi>k</mi></msup><mo fence="true">||</mo></mrow><mi>F</mi></msub></mrow><mo>)</mo></mrow></mrow></mfrac><mo>≤</mo><mi>ε</mi></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m2" class="ltx_Math" alttext="\varepsilon" display="inline"><mi>ε</mi></math> is the convergence threshold.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Fixed point continuation for DRMC-1</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Algorithm 2 is similar to Algorithm 1 except for two differences. First, there is no bias vector <span class="ltx_text ltx_font_bold">b</span>. Second, a projection step is added to enforce the first column of matrix <span class="ltx_text ltx_font_bold">Z</span> to be <span class="ltx_text ltx_font_bold">1</span>. In addition, The matrix gradient <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="g({\bf Z})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></math> for DRMC-1 is</p>
+<table id="S4.Ex10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m1" class="ltx_Math" alttext="g(z_{ij})=\begin{cases}\frac{1}{|\Omega_{X}|}\frac{-x_{i(j-1)}}{1+e^{x_{i(j-1)%&#10;}z_{ij}}},&amp;(i,j-1)\in\Omega_{X}\\&#10;\frac{\lambda}{|\Omega_{Y}|}\frac{-y_{i(j-d-1)}}{1+e^{y_{i(j-d-1)}z_{ij}}},&amp;(i%&#10;,j-d-1)\in\Omega_{Y}\\&#10;0,&amp;otherwise\end{cases}." display="block"><mrow><mrow><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mfrac><mrow><mo>-</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub><mo>⁢</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow></msup></mrow></mfrac></mrow><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mfrac><mi>λ</mi><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mfrac><mrow><mo>-</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub><mo>⁢</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow></msup></mrow></mfrac></mrow><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mrow><mi>j</mi><mo>-</mo><mi>d</mi><mo>-</mo><mn>1</mn></mrow></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mn>0</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mtd></mtr></mtable></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_caption">FPC algorithm for solving DRMC-1</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>
+<span class="ltx_ERROR undefined">\REQUIRE</span>   
+<br class="ltx_break"/>Initial matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="{\bf Z_{0}}" display="inline"><msub><mi>𝐙</mi><mn>𝟎</mn></msub></math>; Parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="\mu,\lambda" display="inline"><mrow><mi>μ</mi><mo>,</mo><mi>λ</mi></mrow></math>;
+<br class="ltx_break"/>Step sizes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\tau_{z}" display="inline"><msub><mi>τ</mi><mi>z</mi></msub></math>.
+<br class="ltx_break"/>
+<span class="ltx_rule" style="width:186.5pt;height:0.4pt;background:black;display:inline-block;"> </span>
+<br class="ltx_break"/>Set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="{\bf Z}={\bf Z_{0}}." display="inline"><mrow><mrow><mi>𝐙</mi><mo>=</mo><msub><mi>𝐙</mi><mn>𝟎</mn></msub></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="\mu=\mu_{1}&gt;\mu_{2}&gt;...&gt;\mu_{F}" display="inline"><mrow><mi>μ</mi><mo>=</mo><msub><mi>μ</mi><mn>1</mn></msub><mo>&gt;</mo><msub><mi>μ</mi><mn>2</mn></msub><mo>&gt;</mo><mi mathvariant="normal">…</mi><mo>&gt;</mo><msub><mi>μ</mi><mi>F</mi></msub></mrow></math>
+<span class="ltx_ERROR undefined">\WHILE</span>relative error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="&gt;\varepsilon" display="inline"><mrow><mi/><mo>&gt;</mo><mi>ε</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Gradient step: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="{\bf A}={\bf Z}-\tau_{z}g({\bf Z})." display="inline"><mrow><mrow><mi>𝐀</mi><mo>=</mo><mrow><mi>𝐙</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐙</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Shrinkage step:
+
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="{\bf U}{\bf\Sigma}{\bf V^{T}}=\text{SVD}({\bf A})" display="inline"><mrow><mrow><mi>𝐔</mi><mo>⁢</mo><mi>𝚺</mi><mo>⁢</mo><msup><mi>𝐕</mi><mi>𝐓</mi></msup></mrow><mo>=</mo><mrow><mtext>SVD</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>𝐀</mi><mo>)</mo></mrow></mrow></mrow></math>,
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m9" class="ltx_Math" alttext="{\bf Z}={\bf U}~{}max({\bf\Sigma-\tau_{z}\mu},0)~{}{\bf V^{T}}." display="inline"><mrow><mrow><mi>𝐙</mi><mo>=</mo><mrow><mpadded width="+3.3pt"><mi>𝐔</mi></mpadded><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>𝚺</mi><mo>-</mo><mrow><msub><mi>τ</mi><mi>𝐳</mi></msub><mo>⁢</mo><mi>μ</mi></mrow></mrow><mo>,</mo><mn>0</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>𝐕</mi><mi>𝐓</mi></msup></mrow></mrow><mo>.</mo></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Projection step:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m10" class="ltx_Math" alttext="{\bf Z}(:,1)={\bf 1}." display="inline"><mrow><mi>𝐙</mi><mrow><mo>(</mo><mo>:</mo><mo>,</mo><mn>1</mn><mo>)</mo></mrow><mo>=</mo><mn>1.</mn></mrow></math>
+<span class="ltx_ERROR undefined">\ENDWHILE</span></p>
+</div><span class="ltx_ERROR undefined">\ENDFOR</span>
+<div id="S4.SS2.p3" class="ltx_para">
+<br class="ltx_break"/>
+<p class="ltx_p"><span class="ltx_rule" style="width:186.5pt;height:0.4pt;background:black;display:inline-block;"> </span>
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\ENSURE</span>   Completed Matrix <span class="ltx_text ltx_font_bold">Z</span>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:48.4pt;" width="48.4pt">Dataset</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"># of training tuples</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"># of testing tuples</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:71.1pt;" width="71.1pt">% with more than one label</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"># of features</th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"># of relation labels</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:48.4pt;" width="48.4pt">NYT’10</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt">4,700</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt">1,950</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:71.1pt;" width="71.1pt">7.5%</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt">244,903</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt">51</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:48.4pt;" width="48.4pt">NYT’13</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:56.9pt;" width="56.9pt">8,077</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:56.9pt;" width="56.9pt">3,716</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:71.1pt;" width="71.1pt">0%</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:56.9pt;" width="56.9pt">1,957</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r" style="width:56.9pt;" width="56.9pt">51</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics about the two widely used datasets.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Model</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NYT’10 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>=2)</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NYT’10 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>=3)</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NYT’10 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>=4)</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NYT’10 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>=5)</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NYT’13</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">DRMC-b</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">51.4 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 8.7 (51)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">45.6 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 3.4 (46)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">41.6 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 2.5 (43)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">36.2 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 8.8(37)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">84.6 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m9" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 19.0 (85)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">DRMC-1</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">16.0 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m10" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 1.0 (16)</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">16.4 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m11" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 1.1(17)</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">16 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m12" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 1.4 (17)</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">16.8 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m13" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 1.5(17)</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">15.8 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m14" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math> 1.6 (16)</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>The range of optimal ranks for DRMC-b and DRMC-1 through five-fold cross validation. The threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m17" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> means filtering the features that appear less than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m18" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> times.
+The values in brackets pertaining to DRMC-b and DRMC-1 are the exact optimal ranks that we choose for the completed matrices on testing sets.</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In order to conduct reliable experiments, we adjust and estimate the parameters for our approaches, DRMC-b and DRMC-1, and compare them with other four kinds of landmark methods <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>, <a href="#bib.bib18" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">13</a>, <a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>, <a href="#bib.bib28" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">21</a>]</cite> on two public datasets.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Dataset</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The two widely used datasets that we adopt are both automatically generated by aligning Freebase to New York Times corpora.
+The first dataset<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>http://iesl.cs.umass.edu/riedel/ecml/</span></span></span>, NYT’10, was developed by Riedel et al. <cite class="ltx_cite">[<a href="#bib.bib27" title="Modeling relations and their mentions without labeled text" class="ltx_ref">22</a>]</cite>, and also used by Hoffmann et al. <cite class="ltx_cite">[<a href="#bib.bib18" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">13</a>]</cite> and Surdeanu et al. <cite class="ltx_cite">[<a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>]</cite>. Three kinds of features, namely, lexical, syntactic and named entity tag features, were extracted from relation mentions.
+The second dataset<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>http://iesl.cs.umass.edu/riedel/data-univSchema/</span></span></span>, NYT’13, was also released by Riedel et al. <cite class="ltx_cite">[<a href="#bib.bib28" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">21</a>]</cite>, in which they only regarded the lexicalized dependency path between two entities as features.
+Table 1 shows that the two datasets differ in some main attributes. More specifically, NYT’10 contains much higher dimensional features than NYT’13, whereas fewer training and testing items.</p>
+</div>
+<div id="S5.F3" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S5.F2.sf1" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;"><img src="P14-1079/image012.png" id="S5.F2.sf1.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>DRMC-b on NYT’10 validation set (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.sf1.m2" class="ltx_Math" alttext="\theta=5" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>5</mn></mrow></math>).</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F2.sf2" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image015.png" id="S5.F2.sf2.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>DRMC-1 on NYT’10 validation set (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.sf2.m2" class="ltx_Math" alttext="\theta=5" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>5</mn></mrow></math>).</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F2.sf3" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image016.png" id="S5.F2.sf3.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(c) </span>DRMC-b on NYT’13 validation set.</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F2.sf4" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image017.png" id="S5.F2.sf4.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(d) </span>DRMC-1 on NYT’13 validation set.</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Five-fold cross validation for rank estimation on two datasets.</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Parameter setting</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this part, we address the issue of setting parameters: the trade-off weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>, the step sizes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="\tau_{z}" display="inline"><msub><mi>τ</mi><mi>z</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="\tau_{b}" display="inline"><msub><mi>τ</mi><mi>b</mi></msub></math>, and the decay parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m5" class="ltx_Math" alttext="\eta_{\mu}" display="inline"><msub><mi>η</mi><mi>μ</mi></msub></math>.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="\lambda=1" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow></math> to make the contribution of the cost function terms for feature and label matrices equal in Formulae (3) and (4).
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> is assigned by a series of values obeying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="\mu_{k+1}=max(\mu_{k}\eta_{\mu},\mu_{F})" display="inline"><mrow><msub><mi>μ</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>μ</mi><mi>k</mi></msub><mo>⁢</mo><msub><mi>η</mi><mi>μ</mi></msub></mrow><mo>,</mo><msub><mi>μ</mi><mi>F</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math>.
+We follow the suggestion in <cite class="ltx_cite">[<a href="#bib.bib15" title="Transduction with matrix completion: three birds with one stone" class="ltx_ref">10</a>]</cite> that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> starts at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="\sigma_{1}\eta_{\mu}" display="inline"><mrow><msub><mi>σ</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>η</mi><mi>μ</mi></msub></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m6" class="ltx_Math" alttext="\sigma_{1}" display="inline"><msub><mi>σ</mi><mn>1</mn></msub></math> is the largest singular value of the matrix <span class="ltx_text ltx_font_bold">Z</span>. We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m7" class="ltx_Math" alttext="\eta_{\mu}=0.01" display="inline"><mrow><msub><mi>η</mi><mi>μ</mi></msub><mo>=</mo><mn>0.01</mn></mrow></math>. The final value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m8" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math>, namely <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m9" class="ltx_Math" alttext="\mu_{F}" display="inline"><msub><mi>μ</mi><mi>F</mi></msub></math>, is equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m10" class="ltx_Math" alttext="0.01" display="inline"><mn>0.01</mn></math>.
+Ma et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Fixed point and bregman iterative methods for matrix rank minimization" class="ltx_ref">16</a>]</cite> revealed that as long as the non-negative step sizes satisfy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m11" class="ltx_Math" alttext="\tau_{z}&lt;min(\frac{4|\Omega_{Y}|}{\lambda},|\Omega_{X}|)" display="inline"><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>&lt;</mo><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mfrac><mrow><mn>4</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mrow><mi>λ</mi></mfrac><mo>,</mo><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>X</mi></msub><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m12" class="ltx_Math" alttext="\tau_{b}&lt;\frac{4|\Omega_{Y}|}{\lambda(n+m)}" display="inline"><mrow><msub><mi>τ</mi><mi>b</mi></msub><mo>&lt;</mo><mfrac><mrow><mn>4</mn><mo>⁢</mo><mrow><mo fence="true">|</mo><msub><mi mathvariant="normal">Ω</mi><mi>Y</mi></msub><mo fence="true">|</mo></mrow></mrow><mrow><mi>λ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></math>, the FPC algorithm will guarantee to converge to a global optimum. Therefore, we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m13" class="ltx_Math" alttext="\tau_{z}=\tau_{b}=0.5" display="inline"><mrow><msub><mi>τ</mi><mi>z</mi></msub><mo>=</mo><msub><mi>τ</mi><mi>b</mi></msub><mo>=</mo><mn>0.5</mn></mrow></math> to satisfy the above constraints on both two datasets.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Rank estimation</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Even though the FPC algorithm converges in iterative fashion, the value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="\varepsilon" display="inline"><mi>ε</mi></math> varying with different datasets is difficult to be decided. In practice, we record the rank of matrix <span class="ltx_text ltx_font_bold">Z</span> at each round of iteration until it converges at a rather small threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="\varepsilon=10^{-4}" display="inline"><mrow><mi>ε</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>4</mn></mrow></msup></mrow></math>. The reason is that we suppose the optimal low-rank representation of the matrix <span class="ltx_text ltx_font_bold">Z</span> conveys the truly effective information about underlying semantic correlation between the features and the corresponding labels.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">We use the five-fold cross validation on the validation set and evaluate the performance on each fold with different ranks. At each round of iteration, we gain a recovered matrix and average the F1<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m1" class="ltx_Math" alttext="F1=\frac{2\times precision\times recall}{precision+recall}" display="inline"><mrow><mrow><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow><mo>=</mo><mfrac><mrow><mrow><mrow><mrow><mn>2</mn><mo>×</mo><mi>p</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi></mrow><mo>×</mo><mi>r</mi></mrow><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>l</mi></mrow><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi></mrow><mo>+</mo><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></mfrac></mrow></math></span></span></span> scores from Top-5 to Top-all predicted relation instances to measure the performance. Figure 3 illustrates the curves of average F1 scores. After recording the rank associated with the highest F1 score on each fold, we compute the mean and the standard deviation to estimate the range of optimal rank for testing. Table 2 lists the range of optimal ranks for DRMC-b and DRMC-1 on NYT’10 and NYT’13.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">On both two datasets, we observe an identical phenomenon that the performance gradually increases as the rank of the matrix declines before reaching the optimum. However, it sharply decreases if we continue reducing the optimal rank. An intuitive explanation is that the high-rank matrix contains much noise and the model tends to be overfitting, whereas the matrix of excessively low rank is more likely to lose principal information and the model tends to be underfitting.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Method Comparison</h3>
+
+<div id="S5.F4" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S5.F3.sf1" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image018.png" id="S5.F3.sf1.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>NYT’10 testing set (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F3.sf1.m2" class="ltx_Math" alttext="\theta=5" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>5</mn></mrow></math>).</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F3.sf2" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image019.png" id="S5.F3.sf2.g1" class="ltx_graphics" width="339" height="254" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>NYT’13 testing set.</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Method comparison on two testing sets.</div>
+</div>
+<div id="S5.F5" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S5.F4.sf1" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image020.png" id="S5.F4.sf1.g1" class="ltx_graphics" width="339" height="244" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>NYT’10 testing set (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F4.sf1.m2" class="ltx_Math" alttext="\theta=5" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>5</mn></mrow></math>).</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F4.sf2" class="ltx_figure ltx_align_center">
+<p class="ltx_p"><span class="ltx_text" style="position:relative; bottom:-28.5pt;">
+<img src="P14-1079/image021.png" id="S5.F4.sf2.g1" class="ltx_graphics" width="339" height="243" alt=""/></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>NYT’13 testing set.</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Precision-Recall curve for DRMC-b and DRMC-1 with different ranks on two testing sets.</div>
+</div>
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">Firstly, we conduct experiments to compare our approaches with Mintz-09 <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>]</cite>, MultiR-11 <cite class="ltx_cite">[<a href="#bib.bib18" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">13</a>]</cite>, MIML-12 and MIML-at-least-one-12 <cite class="ltx_cite">[<a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>]</cite> on NYT’10 dataset. Surdeanu et al. <cite class="ltx_cite">[<a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>]</cite> released the open source code<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup>http://nlp.stanford.edu/software/mimlre.shtml</span></span></span> to reproduce the experimental results on those previous methods. Moreover, their programs can control the feature sparsity degree through a threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> which filters the features that appears less than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> times. They set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m3" class="ltx_Math" alttext="\theta=5" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>5</mn></mrow></math> in the original code by default. Therefore, we follow their settings and adopt the same way to filter the features. In this way, we guarantee the fair comparison for all methods. Figure 4 (a) shows that our approaches achieve the significant improvement on performance.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">We also perform the experiments to compare our approaches with the state-of-the-art NFE-13<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">16</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">16</sup>Readers may refer to the website, http://www.riedelcastro.org/uschema for the details of those methods. We bypass the description due to the limitation of space.</span></span></span> <cite class="ltx_cite">[<a href="#bib.bib28" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">21</a>]</cite> and its sub-methods (N-13, F-13 and NF-13) on NYT’13 dataset. Figure 4 (b) illustrates that our approaches still outperform the state-of-the-art methods.</p>
+</div>
+<div id="S5.F6" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig1" class="ltx_figure ltx_align_center"><img src="P14-1079/image002.png" id="S5.F6.g1" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig2" class="ltx_figure ltx_align_center"><img src="P14-1079/image003.png" id="S5.F6.g2" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig3" class="ltx_figure ltx_align_center"><img src="P14-1079/image004.png" id="S5.F6.g3" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig4" class="ltx_figure ltx_align_center"><img src="P14-1079/image005.png" id="S5.F6.g4" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig5" class="ltx_figure ltx_align_center"><img src="P14-1079/image006.png" id="S5.F6.g5" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig6" class="ltx_figure ltx_align_center"><img src="P14-1079/image007.png" id="S5.F6.g6" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig7" class="ltx_figure ltx_align_center"><img src="P14-1079/image008.png" id="S5.F6.g7" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig8" class="ltx_figure ltx_align_center"><img src="P14-1079/image009.png" id="S5.F6.g8" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig9" class="ltx_figure ltx_align_center"><img src="P14-1079/image010.png" id="S5.F6.g9" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig10" class="ltx_figure ltx_align_center"><img src="P14-1079/image011.png" id="S5.F6.g10" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig11" class="ltx_figure ltx_align_center"><img src="P14-1079/image013.png" id="S5.F6.g11" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S5.F6.fig12" class="ltx_figure ltx_align_center"><img src="P14-1079/image014.png" id="S5.F6.g12" class="ltx_graphics" width="176" height="132" alt=""/>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Feature sparsity discussion on NYT’10 testing set. Each row (from top to bottom, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F6.m2" class="ltx_Math" alttext="\theta=4,3,2" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mn>4</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>2</mn></mrow></mrow></math>) illustrates a suite of experimental results. They are, from left to right, five-fold cross validation for rank estimation on DRMC-b and DRMC-1, method comparison and precision-recall curve with different ranks, respectively.</div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Top-N</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NFE-13</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">DRMC-b</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">DRMC-1</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Top-100</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">62.9%</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">82.0%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">80.0%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">Top-200</td>
+<td class="ltx_td ltx_align_center ltx_border_r">57.1%</td>
+<td class="ltx_td ltx_align_center ltx_border_r">77.0%</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">80.0%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">Top-500</td>
+<td class="ltx_td ltx_align_center ltx_border_r">37.2%</td>
+<td class="ltx_td ltx_align_center ltx_border_r">70.2%</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">77.0%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Average</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">52.4%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">76.4%</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">79.0%</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Precision of NFE-13, DRMC-b and DRMC-1 on Top-100, Top-200 and Top-500 predicted relation instances.</div>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">In practical applications, we also concern about the precision on Top-N predicted relation instances. Therefore, We compare the precision of Top-100s, Top-200s and Top-500s for DRMC-1, DRMC-b and the state-of-the-art method NFE-13 <cite class="ltx_cite">[<a href="#bib.bib28" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">21</a>]</cite>. Table 3 shows that DRMC-b and DRMC-1 achieve 24.0% and 26.6% precision increments on average, respectively.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Discussion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have mentioned that the basic alignment assumption of distant supervision <cite class="ltx_cite">[<a href="#bib.bib25" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">19</a>]</cite> tends to generate noisy (noisy features and incomplete labels) and sparse (sparse features) data. In this section, we discuss how our approaches tackle these natural flaws.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Due to the noisy features and incomplete labels, the underlying low-rank data matrix with truly effective information tends to be corrupted and the rank of observed data matrix can be extremely high. Figure 5 demonstrates that the ranks of data matrices are approximately 2,000 for the initial optimization of DRMC-b and DRMC-1. However, those high ranks result in poor performance. As the ranks decline before approaching the optimum, the performance gradually improves, implying that our approaches filter the noise in data and keep the principal information for classification via recovering the underlying low-rank data matrix.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Furthermore, we discuss the influence of the feature sparsity for our approaches and the state-of-the-art methods. We relax the feature filtering threshold (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m1" class="ltx_Math" alttext="\theta=4,3,2" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mn>4</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>2</mn></mrow></mrow></math>) in Surdeanu et al.’s <cite class="ltx_cite">[<a href="#bib.bib32" title="Multi-instance multi-label learning for relation extraction" class="ltx_ref">24</a>]</cite> open source program to generate more sparse features from NYT’10 dataset. Figure 6 shows that our approaches consistently outperform the baseline and the state-of-the-art methods with diverse feature sparsity degrees.
+Table 2 also lists the range of optimal rank for DRMC-b and DRMC-1 with different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p3.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>.
+We observe that for each approach, the optimal range is relatively stable. In other words, for each approach, the amount of truly effective information about underlying semantic correlation keeps constant for the same dataset, which, to some extent, explains the reason why our approaches are robust to sparse features.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion and Future Work</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we contributed two noise-tolerant optimization models<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">17</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">17</sup>The source code can be downloaded from <a href="https://github.com/nlpgeek/DRMC/tree/master" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/nlpgeek/DRMC/tree/master</span></a></span></span></span>, DRMC-b and DRMC-1, for distantly supervised relation extraction task from a novel perspective. Our models are based on matrix completion with low-rank criterion. Experiments demonstrated that the low-rank representation of the feature-label matrix can exploit the underlying semantic correlated information for relation classification and is effective to overcome the difficulties incurred by sparse and noisy features and incomplete labels, so that we achieved significant improvements on performance.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Our proposed models also leave open questions for distantly supervised relation extraction task. First, they can not process new coming testing items efficiently, as we have to reconstruct the data matrix containing not only the testing items but also all the training items for relation classification, and compute in iterative fashion again. Second, the volume of the datasets we adopt are relatively small. For the future work, we plan to improve our models so that they will be capable of incremental learning on large-scale datasets <cite class="ltx_cite">[<a href="#bib.bib9" title="Foundations of large-scale multimedia information management and retrieval" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work is supported by National Program on Key Basic Research Project (973 Program) under Grant 2013CB329304, National Science Foundation of China (NSFC) under Grant No.61373075.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Bach and S. Badaskar</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A review of relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Literature review for Language and Statistics II</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Bollacker, R. Cook and P. Tufts</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freebase: a shared database of structured general human knowledge</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">22</span>, <span class="ltx_text ltx_bib_pages"> pp. 1962</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aaai.org/Papers/AAAI/2007/AAAI07-355.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Bollacker, C. Evans, P. Paritosh, T. Sturge and J. Taylor</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freebase: a collaboratively created graph database for structuring human knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1247–1250</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1376746" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. S. Cabral, F. Torre, J. P. Costeira and A. Bernardino</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Matrix completion for multi-label image classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 190–198</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. J. Candès and B. Recht</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exact matrix completion via convex optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations of Computational mathematics</span> <span class="ltx_text ltx_bib_volume">9</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 717–772</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Formulation ‣ 3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.p1" title="3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.p1" title="4 Algorithm ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Y. Chang</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Foundations of large-scale multimedia information management and retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p2" title="7 Conclusion and Future Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins, S. Dasgupta and R. E. Schapire</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A generalization of principal components analysis to the exponential family</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 617–624</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Craven and J. Kumlien</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Constructing biological knowledge bases by extracting information from text sources.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1999</span>, <span class="ltx_text ltx_bib_pages"> pp. 77–86</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aaai.org/Papers/ISMB/1999/ISMB99-010.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Fazel, H. Hindi and S. P. Boyd</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A rank minimization heuristic with application to minimum order system approximation</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 4734–4739</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=945730" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Goldberg, B. Recht, J. Xu, R. Nowak and X. Zhu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transduction with matrix completion: three birds with one stone</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 757–765</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS2.p2" title="5.2 Parameter setting ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Goldfarb and S. Ma</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Convergence of fixed-point continuation algorithms for matrix rank minimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations of Computational Mathematics</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 183–210</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Algorithm ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Golub and W. Kahan</span><span class="ltx_text ltx_bib_year">(1965)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Calculating the singular values and pseudo-inverse of a matrix</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the Society for Industrial &amp; Applied Mathematics, Series
+B: Numerical Analysis</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 205–224</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Fixed point continuation for DRMC-b ‣ 4 Algorithm ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Hoffmann, C. Zhang, X. Ling, L. Zettlemoyer and D. S. Weld</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Knowledge-based weak supervision for information extraction of overlapping relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 541–550</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-1055" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Dataset ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS4.p1" title="5.4 Method Comparison ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.p1" title="5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Jordan</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Why the logistic function? a tutorial discussion on probabilities and neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Cognitive Science Technical Report</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p5" title="3.1 Formulation ‣ 3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Koren</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factorization meets the neighborhood: a multifaceted collaborative filtering model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 426–434</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1401944" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Ma, D. Goldfarb and L. Chen</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fixed point and bregman iterative methods for matrix rank minimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Mathematical Programming</span> <span class="ltx_text ltx_bib_volume">128</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 321–353</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://link.springer.com/article/10.1007/s10107-009-0306-5" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Algorithm ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS2.p2" title="5.2 Parameter setting ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Maron and T. Lozano-Pérez</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A framework for multiple-instance learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in neural information processing systems</span>, <span class="ltx_text ltx_bib_pages"> pp. 570–576</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Min, R. Grishman, L. Wan, C. Wang and D. Gondek</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distant supervision for relation extraction with an incomplete knowledge base</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 777–782</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1095" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Mintz, S. Bills, R. Snow and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distant supervision for relation extraction without labeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1003–1011</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Formulation ‣ 3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.SS4.p1" title="5.4 Method Comparison ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.p1" title="5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p1" title="6 Discussion ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Rennie and N. Srebro</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast maximum margin matrix factorization for collaborative prediction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 713–719</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1102441" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Model ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Riedel, L. Yao, A. McCallum and B. M. Marlin</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Relation extraction with matrix factorization and universal schemas</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 74–84</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1008" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Dataset ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS4.p2" title="5.4 Method Comparison ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.SS4.p3" title="5.4 Method Comparison ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.p1" title="5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Riedel, L. Yao and A. McCallum</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling relations and their mentions without labeled text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning and Knowledge Discovery in Databases</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 148–163</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Dataset ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning syntactic patterns for automatic hypernym discovery</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in Neural Information Processing Systems 17</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://ilpubs.stanford.edu:8090/665" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, J. Tibshirani, R. Nallapati and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-instance multi-label learning for relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 455–465</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2391003" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Dataset ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS4.p1" title="5.4 Method Comparison ‣ 5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.p1" title="5 Experiments ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p3" title="6 Discussion ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Takamatsu, I. Sato and H. Nakagawa</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reducing wrong labels in distant supervision for relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 721–729</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390626" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Xu, R. Hoffmann, L. Zhao and R. Grishman</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Filling knowledge base gaps for distant supervision of relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 665–670</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2117" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhang, J. Zhang, J. Zeng, J. Yan, Z. Chen and Z. Sui</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards accurate distant supervision for relational facts extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 810–815</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2141" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Zhou, J. Su, J. Zhang and M. Zhang</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring various knowledge in relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 427–434</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Distant Supervision for Relation Extraction with Matrix Completion" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:09:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

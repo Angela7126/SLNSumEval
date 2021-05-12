@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Model-based furniture recognition for building semantic object maps.
+   </title>
+   <abstract>
+    This paper presents an approach to creating a semantic map of an indoor environment incrementally and in closed loop, based on a series of 3D point clouds captured by a mobile robot using an RGB-D camera. Based on a semantic model about furniture objects (represented in an OWL-DL ontology with rules attached), we generate hypotheses for locations and 6DoF poses of object instances and verify them by matching a geometric model of the object (given as a CAD model) into the point cloud. The result, in addition to the registered point cloud, is a consistent mesh representation of the environment, further enriched by object models corresponding to the detected pieces of furniture. We demonstrate the robustness of our approach against occlusion and aperture limitations of the RGB-D frames, and against differences between the CAD models and the real objects. We evaluate the complete system on two challenging datasets featuring partial visibility and totaling over 800 frames. The results show complementary strengths and weaknesses of processing each frame directly vs. processing the fully registered scene, which accord with intuitive expectations.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <section label="1.1">
+      <section-title>
+       Closed-loop incremental semantic mapping
+      </section-title>
+      <paragraph>
+       Building 3D maps of indoor environments by mobile robots has received increasing interest since the launch of inexpensive 3D sensors such as the Microsoft Kinect. Several successful approaches exist that generate 3D point cloud maps (e.g., [1], [2]) or mesh representations (e.g., [3]) based on RGB-D data. Yet, automatically providing additional semantic information to the maps, such as location and type of furniture present, is still not well understood. Information on a semantic level, however, is necessary for many advanced tasks of an autonomous robot, such as object search or place recognition. Also, it has advantages for the map building process itself: If the class and location of objects in the map are known, object models could be used to hypothesize missing sensor data, or loop-closing in mapping can be based on semantic as well as geometric information.
+      </paragraph>
+      <paragraph>
+       A semantic map is necessarily hybrid in the classical sense of Kuipers [4], including at least geometric information and semantic knowledge [5]. Intuitively, the process of generating a semantic map (semantic mapping, for short) should be closed-loop and incremental. Closed-loop means that object recognition and labeling in the sensor data (“bottom-up”) should not strictly precede processing on the semantic level, but that knowledge and reasoning on the semantic level should be able to influence object classification, recognition and the mapping process as a whole (“top-down”). For example, the information that some room is an office room should lead reasoning on the semantic level to hypothesize that certain types of objects are likely or unlikely to be present, respectively; such hypotheses then bias or guide bottom-up sensor data processing. Incremental means that the semantic map building process does not have to wait for the sensor data of some scene or environment to be complete (no matter how such completeness would have to be defined and determined), but has to start right away, based on individual sensor takes, such as single RGB-D frames or 3D laser scans. This expectation fits with the closed-loop property, as the increase of environment knowledge in the semantic map over the mapping process is supported by both sensor data and prior knowledge, e.g., about object classes and their relations. Incrementality poses a challenge, though, as such individual sensor takes suffer greatly from occlusions and limitations due to sensor aperture or view pose constraints – in addition to the unavoidable regular sensor noise.
+      </paragraph>
+      <paragraph>
+       Closed-loop, incremental semantic mapping is currently not well understood. There is quite some body of literature about its ingredients, as will be discussed in the Related Work section; however, there are only few systems doing it in integration. This paper contributes a detailed case study of such a system. It presents an approach to semantic mapping that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        reconstructs the surfaces from noisy 3D data, captured from a Kinect camera, and creates a triangle mesh;
+       </list-item>
+       <list-item label="2.">
+        recognizes furniture objects in the point clouds based on structural descriptions from an OWL-DL ontology;
+       </list-item>
+       <list-item label="3.">
+        and finally adjusts their poses using ICP, and augments the created map with CAD models corresponding to the furniture objects.
+       </list-item>
+      </list>
+      <paragraph>
+       We call model-based object recognition the ensemble of these three steps, used in integration with a knowledge base (given in OWL-DL, in this case) and a module for building geometric 3D point cloud maps. Using state of the art SLAM algorithms, these annotated point clouds can then be used to maintain a consistent semantic map of the complete environment, consisting of both the geometry and the semantic knowledge.
+      </paragraph>
+      <paragraph>
+       We would like to emphasize the role that using a formally well-understood knowledge representation and reasoning (KR&amp;R) formalism plays in closed-loop, incremental semantic mapping, rather than using some ad-hoc set of object labels. Using arbitrary labels like “table”, “tasse”, or “q17”, which may or may not have a meaning for humans, may suffice for purely bottom-up recognition, classification, or labeling of segments of sensor data. Whenever the intention is to reason with and about objects or events perceived by the robot, though, using some KR&amp;R formalism with a well-defined semantics and, ideally, efficient reasoners available is the obvious choice. Such reasoning is needed for the top-down part of closed-loop semantic mapping in the first place; it may be employed in other robot tasks using the previously acquired semantic map, such as object search (e.g., [6], [7]), human robot interaction on a high conceptual level [8], detecting norm violations [9].
+      </paragraph>
+      <paragraph>
+       Many researchers in semantic mapping have recently been using description logics (DL, [10]) as such a formalism, in particular the DL variants OWL-DL and OWL-lite, as available in the OWL W3C standard [11]; we are using OWL-DL in the work reported here, too. DL is an obvious choice for a KR&amp;R formalism in semantic mapping, as it allows to represent and reason about object ontologies, providing a structured representation of object classes and instances, but of some relations between objects, too, which the declarative part of a semantic map is expected to contain. Existing DL reasoners provide reasoning services such as consistency checking and subsumption within an ontology for free and in a highly optimized way. They allow sound inferences to be made across all hierarchical levels of the ontology without further effort. For example, questions like “How many pieces of furniture does room R contain?”, or “Which pieces of furniture on this floor are suitable storage places for a milk jug?” could be answered right away, based on perceptions of individual chairs, tables, shelves and so on. As many representation and reasoning problems in robotics naturally include uncertainty, such as by sensor noise and/or interpretation uncertainties, several researchers have recently embedded the ontological reasoning provided by DL reasoners into probabilistic frameworks like Markov Logic Networks [12], [13] or Bayesian Logic Networks [14]. The bottom line here is:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Using a well-founded KR&amp;R formalism for representing and reasoning in the semantic part of a semantic map is strongly advised, if not needed, in semantic mapping; previous AI work in KR&amp;R has yielded a wide variety of such formalisms that are ready to be used.
+       </list-item>
+       <list-item label="2.">
+        Variants of DL have been used in much of the recent semantic mapping research, and we have done so in the work reported here.
+       </list-item>
+      </list>
+      <paragraph>
+       “Pure” DL is certainly not the final word regarding a suitable KR&amp;R formalism, as it cannot well handle uncertainty and n-ary relations, just to mention two points. Identifying or developing more fitting formalisms is an important issue for interdisciplinary research between AI and Robotics, which we recommend to put on the common agenda, but do not intend to detail in this paper.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Contribution of this paper
+      </section-title>
+      <paragraph>
+       The approach detailed in this paper combines a number of techniques that make it suitable for being used in on-line, incremental semantic mapping, starting from a stream of RGB-D frames: meshing of 3D points and referring to geometric features are used to compensate sensor noise and aperture limitations, and early closed-loop usage of the semantic knowledge is used to generate object hypotheses for guiding low-level sensor data processing. The techniques are equally applicable to registered sets of RGB-D frames covering large areas and, hence, larger objects not captured in single frames.
+      </paragraph>
+      <paragraph>
+       In previous publications, we have presented partial results of this case study using 3D laser scanner data [15] and single RGB-D frames [16]. This paper presents an extended version of these conference publications. Additionally, we include new comprehensive results about what effect the degree of similarity between CAD model and actual object has on the quality of the final pose estimation, and we apply the method to a full scene point cloud using a 6D SLAM algorithm. The system implementing the method is evaluated on two different datasets consisting of a total of 810 point clouds containing six different classes of furniture. The complete data sets are available at http://kos.informatik.uni-osnabrueck.de/furniture_recognition/.
+      </paragraph>
+      <paragraph>
+       The paper next discusses related work, which is substantial in particular with respect to the individual parts of robotic mapping and object recognition. We then describe model-based object recognition in detail. After that, evaluation results are presented and discussed. To conclude, we sketch future work motivated by the findings of this case study.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In the field of semantic mapping, several authors have proposed algorithms that label point clouds with semantic information. For instance, Rusu et al. [17] detect several types of furniture and approximate them as cuboids. Nüchter and Hertzberg [5] classify coarse structures (walls, floors, doors) using a semantic network and detect smaller objects using a trained classifier. Mason and Marthi [18] autonomously build a semantic object map over a long time span, focusing on small and medium-sized objects instead of furniture. Pangercic et al. [19] build a semantic map based on the detection of furniture parts in a set of 3D point clouds. Similar to our approach, they employ a description logic ontology as part of their system; however, their approach is strictly bottom-up (recognized objects are fed into the ontological knowledge base), whereas our approach uses semantic knowledge inside the recognition loop. Neumann and Möller [20] investigate the use of description logics for high-level scene interpretation tasks; they do not explicitly refer to semantic mapping, but their abductive approach to object and object aggregate perception is clearly suitable for the task.
+     </paragraph>
+     <paragraph>
+      CAD models have been used for object recognition before. For mass-produced objects, ranging from furniture over household appliances to tableware, CAD models exist and are widely available – either as the exact model directly from the manufacturer or as a similar model via sources like the Google 3D Warehouse. The first approaches in this direction started in the mid-nineties using vision based sensors [21] or a combination of a laser projector, a stereo camera and several additional cameras [22]. These approaches have in common that they try to recognize objects at a known position, i.e., the object in question is already centered in the obtained sensor data and no additional objects or occlusions are present in the sensor data. A more recent approach on a larger scale is presented by Bosché [23], where several matched 3D laser scans of a construction site are compared to a model in order to track progress and detect divergences between model and actual construction site. A prerequisite for this work is a correct model in advance, i.e., it is known what the sensors are supposed to measure and subsequently a quantitative analysis concerning the differences between expected measurements and received measurements is performed. In contrast to these approaches we neither demand a complete model of the perceived scene nor do we require the exact poses of candidates for object recognition in advance, but employ general domain knowledge to generate object hypotheses and use CAD models to refine these. From this characterization, our approach is similar to the work of Klank et al. [24], Mozos et al. [25], Usenko et al. [26] and Wohlkinger et al. [27]. The major difference to the system presented by Klank et al. [24] is that we perform the actual CAD matching with the 3D environmental data instead of 2D image data. Mozos et al. [25] and Usenko et al. [26] use CAD models to create synthetic point clouds of several types of furniture and extract geometric features which are used to build a vocabulary of objects via machine learning techniques. After a probabilistic Hough voting step to generate likely object hypotheses, they apply a RANSAC approach to fit the objects into the scene and confirm/refute their hypotheses. Like our approach, they use a parts-based representation of the furniture, and describe each part using geometric features. The features used in their approach are all directly based on the points belonging to each part. Our system includes a surface reconstruction step, which enables us to use the area of a planar patch as a feature. Another difference is that our system generates hypotheses using an ontological reasoner instead of probabilistic Hough voting.
+     </paragraph>
+     <paragraph>
+      An impressive recent approach to the problem of 3D object mapping is the SLAM++ system by Salas-Moreno et al. [28], which performs real-time recognition of 3D furniture models in RGB-D data. This allows them to build a 3D object map of the scene and use that map in the SLAM loop to simultaneously track the camera pose. The key difference to our approach is that our system is applicable to arbitrary 3D data like point clouds from laser scanners and does not rely on the special structure of RGB-D frames. This allows us to use arbitrary 3D sensors or use several registered frames as input to cope with the recognition of large objects that cannot be captured in a single frame.
+     </paragraph>
+     <paragraph>
+      Lastly, the work by Lai et al. [29] should be recognized, which reports promising results in object labeling using full RGB-D information (color and depth). However their work focuses on streams of registered point clouds and thus the available data is usually much more complete than from a single frame.
+     </paragraph>
+     <paragraph>
+      Inspired by Gibson's [30] debated theory in psychology to understand perception as direct perception of affordances for an agent in its environment, several authors in computer vision and robotics have pursued approaches sharing the general structure of model-based perception – just that their models are formulated in terms of (directly perceivable) affordances rather than geometric features. Chemero and Turvey [31] give an overview about usages of the affordance concept in Robotics and AI, emphasizing the difference between traditional Gibsonian (direct perception related) and representationalist approaches co-existing in the literature.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Model-based object recognition
+     </section-title>
+     <paragraph>
+      In recent years, CAD models of many kinds of objects have become widely available. One resource of CAD models is Google's 3D Warehouse, which allows querying and retrieving CAD models of virtually any kind of object via the web. In the domain of furniture recognition, CAD models are often available directly from the manufacturer or from companies specialized in creating CAD models for interior designers. We use a database of CAD models supplied by our university's furniture manufacturer.
+     </paragraph>
+     <paragraph>
+      In this paper, we focus on the domain of furniture recognition for several reasons: First, due to the widespread use of CAD models in interior design, the availability of CAD models in this domain is especially strong. Second, most kinds of furniture feature a set of planar surfaces which can be robustly recognized in 3D point clouds. Third, due to the rigidness of furniture, these planar surfaces are in a clearly defined relation to each other.
+     </paragraph>
+     <paragraph>
+      Fig. 1 shows the embedding of our system in a general semantic mapping framework. We see our model-based object recognition method as complementary to appearance-based methods based on 2D image features or 3D shape features.
+     </paragraph>
+     <paragraph>
+      Using the information contained in CAD models for object recognition has several advantages. Instead of having one classifier for each kind of object, only the geometric primitives have to be detected. Based on these, objects are reconstructed. Also, no classifier training and no labeled training sets are required; to add a new object class, only the CAD model is required. In the future, it would even be conceivable that such a CAD model could be retrieved on-line from the web. Another advantage is that once an object is recognized, the corresponding part of the sensor data can be replaced by the CAD model, thus filling up occlusions in the sensor data.
+     </paragraph>
+     <paragraph>
+      On the other hand, appearance-based methods have an advantage where the to-be-recognized object is non-rigid, does not consist of clearly identifiable geometric primitives of a certain minimum size or where labeled training data, but no CAD model is available.
+     </paragraph>
+     <paragraph>
+      We see our model-based object recognition method as an instance of a more general system architecture (Fig. 1), consisting of three steps: (1) surface reconstruction (Section 3.1), as an instance of geometric primitive detection, transforms the input point cloud into a triangle mesh and extracts planar regions; (2) planar region classification (Section 3.2), as an instance of hypothesis generation, classifies the planar regions, detects furniture objects, and calculates initial pose estimates based on the planar regions; (3) final pose adjustment (Section 3.3), as an instance of hypothesis verification, computes the final pose using ICP, and places the corresponding CAD model in the scene.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Surface reconstruction
+      </section-title>
+      <paragraph>
+       Surface reconstruction is our implementation of the geometric primitive detection step in Fig. 1. The plane extraction for object recognition is done on a mesh representation of the surfaces captured with the Kinect camera using the Las Vegas Surface Reconstruction Toolkit (LVR) [32]. LVR provides an open source C++ library with implementations of several algorithms for polygonal map generation. A comparison with state of the art reconstruction algorithms [33] showed that LVR's Marching Cubes implementation outperforms other state of the art methods like Poisson Reconstruction [34] or Delaunay based methods [35], [36] in arbitrary environments with respect to geometrical accuracy and topological soundness of the generated meshes. The surface reconstruction process mainly consists of two steps: initial mesh generation using Marching Cubes followed by a post-processing pipeline of several mesh optimization and segmentation algorithms.
+      </paragraph>
+      <paragraph>
+       Mesh generation is done using an optimized Marching Cubes implementation that utilizes Hoppe's distance function [37] to estimate an isosurface representation of the point cloud data. To generate this isosurface, surface normals for the data points have to be estimated. This is done using an adaptive RANSAC-based approach that is optimized for sparse data sets containing Kinect specific discretization effects and noise [32]. To estimate a normal, a local plane is fitted to the k nearest points of a query point (“k-neighborhood”) using RANSAC. For performance reasons, the k-neighborhood should be as small as possible. Unfortunately, the point density of Kinect frames and laser scans is not constant, so the k-value has to be adapted to ensure stable results. Due to discretization effects of the measurement principle of the Kinect, the point clouds often contain line shaped artifacts. If the k value is too small, the k-neighborhood will be aligned on such a line, which makes the normal approximation depend solely on local noise. To avoid this effect, we analyze the bounding box of the k-neighborhood. In line shaped alignments, one side of the bounding box will be significantly longer than the others. If such a condition is detected, the initial k value will be increased dynamically until the bounding box criterion is fulfilled. An example for this process is shown in Fig. 2. The combination of RANSAC based normal estimation with k adaption ensures stable normals even in sparse and noisy point clouds and is thus well suited for Kinect input data. Usually a k-neighborhood of 10 neighbors is sufficient.
+      </paragraph>
+      <paragraph>
+       To approximate a triangle mesh representation to the isosurface defined by the points and normals, a modified Marching Cubes algorithm is used. This initial mesh is enhanced by several mesh optimization algorithms. To remove artifacts based on outliers in the point cloud data, small clusters of connected triangles are automatically removed. Furthermore, LVR delivers a hole filling procedure to close holes in the mesh that result from occlusions. After initial mesh generation, hole filling and outlier removal, connected planar patches in the mesh are extracted. The planar segmentation is done using a region growing approach. For an arbitrarily chosen start triangle, the normals of all neighboring triangles are analyzed. As long as the normal of a neighbor triangle differs no more than a user defined threshold from the start triangle, this face is marked as used and a new search is started recursively. In our implementation, we used a threshold of 3° to account for the present sensor noise. Initial experiments showed that higher tolerances lead to under-segmentation, while a stronger threshold will abort recursion due to fluctuations resulting from sensor noise. All patches on the same plane are stored in a list that represents the current plane. The recursive search is carried on until a bend in the surfaces or a border edge in the mesh is found. After all triangles of a planar region are found, a new search is started from an unused triangle. This process is carried on until all triangles in the mesh have been checked (cf. Algorithm 1).
+      </paragraph>
+      <paragraph>
+       The output of this algorithm is a set of planar clusters represented through contour polygons that can be used to generate the model hypotheses for the object recognition process. In principle, other approaches to detect planar polygons like [38], [39] or [40] could be used. The main benefit of our approach is that we can extract the exact concave contours of the planar regions, while the other approaches are using unions of convex hulls or α-shapes.
+      </paragraph>
+      <paragraph>
+       To compute model hypotheses, the actual size of an extracted plane is needed. In contrast to point clouds, the exact area can be easily computed in a mesh representation by summing up the areas of the created triangles. In real-life application scenarios, the interesting surfaces of furniture will usually be populated with objects on top of them, especially in table top scenarios. For example, take a laid breakfast table where the table top contains dishes, bowls and various other objects that are needed for a proper breakfast. These objects will certainly create occlusions and holes in the reconstruction of the table top plane. As long as our region growing algorithm can find connected patches of the surface between the present objects, we will get a representation of that area, but the estimated area will be significantly reduced due to the occlusions. To restore the initial plane, we re-triangulate the outer contour of the plane, which is detected via topological sorting. To get an optimized contour representation, we fuse edges on the same line via contour tracing using the psimpl library [41]. The outer contour is then triangulated using the OpenGL tesselator. This way, all holes within the plane are closed and we get a realistic approximation of the area of an occluded planar surface (cf. Fig. 4).
+      </paragraph>
+      <paragraph>
+       This approach works fine as long as the outer contour is not interrupted by shadows of present objects. In this case, the shadow might break the outline and create a bay in the contour which in turn will decrease the estimated surface. Alternatively, one could use a convex hull approach to estimate a surface, but by doing so the surface of non-convex polygons – like the L-shaped desk in the office dataset (Section 4) – would be overestimated. Our approach can be used for arbitrary shapes. Another problem occurs when a surface is too populated. In this case, the region growing procedure will not be able to find a connected remaining surface and the estimated plane will be split. An approach to solve this problem is to detect close patches which satisfy similar plane equations. In these cases, their areas can be summed up. While these optimizations make the area estimation more stable, the classification step that is described in the next subsection still needs to be robust to variations from the true area size. An analysis to evaluate the robustness of our approach is presented in Section 4.
+      </paragraph>
+      <paragraph>
+       To determine whether a plane is horizontal or vertical, we analyze the orientation of the normal of a planar patch. If the angle between the normal and the y axis is smaller than 3°, we label it as horizontal. To classify vertical patches we project the normal onto the x–z plane. If a patch is perfectly perpendicular to the x–z plane, the length l of the projection is exactly 1. To account for small orientation errors, we classify all patches with {a mathematical formula}‖l−1‖&lt;0.3 as vertical.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Planar region classification
+      </section-title>
+      <paragraph>
+       Planar region classification is our implementation of the hypothesis generation step in Fig. 1. Once all planar regions have been extracted in the previous step, those regions corresponding to pieces of furniture have to be classified. Here, we make use of the fact that most pieces of furniture are comprised of planar structures that have a certain size, orientation, height above ground and spatial relation to each other. These features (and combinations of features) are expressed in an OWL-DL ontology in combination with SWRL rules.
+      </paragraph>
+      <paragraph>
+       The Web Ontology Language (OWL) is the standard proposed by the W3C consortium as the knowledge representation formalism for the Semantic Web. One of its three sub-languages, OWL-DL, corresponds to a Description Logic [11], a subset of First-Order Logic that provides many expressive language features while guaranteeing decidability. It has been extended by SWRL, the Semantic Web Rule Language, [42], which allows to write Horn-like rules in combination with an OWL-DL knowledge base and includes so-called built-ins for arithmetic comparisons and calculations. We decided to use OWL-DL as the knowledge representation format for this work for several reasons: OWL-DL ontologies can be easily re-used and linked with other sources of domain knowledge from the Semantic Web, they easily scale to arbitrarily large knowledge bases, and fast reasoning support is available. In our implementation, we use the open-source OWL-DL reasoner Pellet [43], which provides full support for OWL-DL ontologies using SWRL rules.
+      </paragraph>
+      <paragraph>
+       The class hierarchy of the ontology we use here is shown in Fig. 3. The basic classes are Furniture (the parent class of all recognized furniture objects) and Plane (the planar regions of which Furniture objects are comprised). A set of SWRL rules is applied to the extracted planar regions to assign them classes in the Plane sub-hierarchy; for example, the lower plane of a shelf can be characterized by the following SWRL rule:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       These rules are not exclusive, so one planar region can receive multiple labels (e.g., MiddleShelfPlane and ChairSeatPlane). The definitions of the classes in the Furniture sub-hierarchy refer to these labels; e.g., the fact that a Shelf consists of three planes on top of each other can be stated as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Likewise, chairs are defined by a seat and a backrest, both with certain sizes, orientations, heights above ground and which are perpendicular to each other. In this work, these rules (which encode the structural model of the object) were constructed manually. The parameters can be measured directly from the CAD model – e.g., in the example above, the lower shelf plane has a height above ground of 0.13 m; adding a margin of 0.05 m to compensate for errors in the estimated height, one arrives at the specified range (0.08 m; 0.18 m). We hope to automate this process in future work.
+      </paragraph>
+      <paragraph>
+       The classification of planar patches into furniture objects is performed by the Pellet reasoner. Initially, each planar patch that was extracted during surface reconstruction, along with its geometric features (size, position, orientation, bounding box) and relations to other planar patches is added as an individual to the ontology's ABox. Next, the reasoner jointly classifies all planar patches, using the SWRL rules and class definitions outlined above.
+      </paragraph>
+      <paragraph>
+       For each detected object, initial position and orientation are estimated. The position is always the centroid of their main plane. Since chairs have two perpendicular planes (the backrest and the seat), a unique orientation can be calculated by the vertical component of the difference vector between the centroids of those planes (assuming an upright position of the chair). For tables and shelves, the PCA of the points corresponding to their main plane is calculated to define the orientation. Note that the PCA of a rotationally symmetric object, such as a round table, is not well-defined. This does not impact the recognition rate of our system, only the initial orientation estimate; if the object has distinct non-planar features (such as table legs), this orientation error can be corrected by the next processing step.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Final pose adjustment and model replacement
+      </section-title>
+      <paragraph>
+       Final Pose Adjustment is our implementation of the hypothesis verification step in Fig. 1. The initial pose estimate calculated in the previous step is potentially inaccurate, since it wholly depends on an abstraction of the recognized objects as sets of planar regions. Solving this problem requires closing the loop from the output of our reasoning process back to the low-level sensor data.
+      </paragraph>
+      <paragraph>
+       To improve the pose estimate, we match a CAD model with the original point cloud data using the well-known Iterative Closest Point (ICP) algorithm [44]. Since ICP needs two point clouds as input, we create a surface sampling of the CAD model to fulfill the algorithm's requirements. The sampling process assumes that the surface of the CAD model is represented by a collection of triangles, which is common for standard CAD formats. Each triangle's area is sampled by 3D points, according to a desired point density, which should correlate with the measurement point density of the used sensor. Each triangle can be sampled either in a regular fashion (see [45] for details) or in a random fashion, where the number of random sample points is determined by the size of the triangle's area and the desired point density. Since we sample the complete surface of the CAD model, the resultant point sampling does not consider (self-)occlusion from the sensor's point of view. While this is generally a valid idea when matching against a registered point cloud (combining data from several individual frames), there certainly is room for improvement concerning the matching process for single frames. During the matching process, all sampled points are assigned the same weight, which in general yields stable and satisfactory results (see experiment 4.2). Different weights for certain points of the surface sampling, e.g., points belonging to the seating surface and backrest of a chair might improve the alignment of the CAD models. We have not investigated this idea yet, but it remains an interesting open point for further research. While the output of ICP, i.e., the average point-to-point error, gives us a rough idea how well the sampled CAD model fits to the point cloud data, a more sophisticated evaluation of the final result is an important part of future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Results
+     </section-title>
+     <paragraph>
+      We performed three experiments to evaluate the robustness and accuracy of our recognition system. First, we investigated the effectiveness of our hole filling procedure separately to see whether it is capable of estimating the true surface area of a table under the influence of increasing amounts of clutter. Second, we tested the robustness of our system with respect to the required similarity between CAD model and actual object. Lastly, we evaluated the detection accuracy of our complete system on two series of point clouds captured by a mobile robot.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Robustness against occlusion
+      </section-title>
+      <paragraph>
+       In real life applications, furniture is usually used to store objects, so an obvious problem for our detection procedure is that the surfaces relevant for recognition may be partially occluded. To evaluate the robustness of the surface extraction procedure against occlusions, we gradually added typical objects like books, cups and bottles to a table surface and tried to segment the table top. We compared the table top surface that was determined by summing up the reconstructed triangle surfaces during simple region growing with the contour triangulation approach. The results of this experiment are shown in Fig. 4 and Table 1. Using region growing, the shadows caused by the present objects reduce the detectable surface area with increasing number of objects. These holes are filled up when the outer contour is triangulated. Hence, the detected area for contour triangulation stays close to ground truth until the outer contour is broken by a shadow (here in the presence of 12 objects), while the detected area using region growing gradually becomes smaller due to shadows. The small variances in the reconstructed areas are caused by noise in the input data that can lead to slightly different triangulations using LVR's Planar Marching Cubes algorithm, which shifts the vertices of the contours to the nearest data point [46]. Since the reconstruction is based on the noisy input, it is unlikely that the exact ground truth value is hit.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Robustness of CAD matching
+      </section-title>
+      <paragraph>
+       While various CAD models for a wide range of objects, including furniture, are freely available on the world web wide via sources like Google 3D Warehouse, it is often not easy to find the exact model for a particular piece of furniture. Also, the physical object might differ from the CAD model for other reasons (e.g., damage or other modifications).
+      </paragraph>
+      <paragraph>
+       To investigate how robust our ICP matching step is with respect to such differences between CAD model and actual object, we conducted an experiment where we matched several CAD models of chairs against recorded point data of a chair. A photograph of the chair and a view of the resulting point cloud can be seen in Fig. 5. The point cloud displayed in Fig. 5b was created from five registered Kinect frames.
+      </paragraph>
+      <paragraph>
+       We matched this data against six different CAD models of chairs that were retrieved from Google 3D Warehouse (Fig. 6). We considered the Chair 1 model (top left) as a best fit of the actual chair, while Chairs 2–4 were expected to be similar enough to produce meaningful matching results. For comparison, we included a model of a stool (Chair 5) and a wing chair (Chair 6), which we expected to be too different from the chair in the sensor data to produce good results.
+      </paragraph>
+      <paragraph>
+       To assess the performance, we define a reference pose{a mathematical formula}Xi,ref as a replacement for ground truth which is not available. The reference pose was calculated for each model by manually aligning the model to the point cloud, followed by ICP for the final adjustment (Fig. 8, top row). All models ended up close to the initial pose except for Chair 6 (the wing chair); this is due to the large number of points in the wing chair's base.
+      </paragraph>
+      <paragraph>
+       For the actual experiment, our ICP model alignment step was run on each chair model from three different initial poses, resulting in the final pose{a mathematical formula}Xi; see Fig. 7 for the initial poses and Fig. 8 for the final poses.
+      </paragraph>
+      <paragraph>
+       A pose {a mathematical formula}Xi itself is composed as a 2-tuple {a mathematical formula}(Xˆi,X˜i), where {a mathematical formula}Xˆi=(x,y,z)T describes the translation part of the pose and {a mathematical formula}X˜i=(p,q,r,s)T denotes the rotation as a quaternion. In order to provide a meaningful error between a reference pose {a mathematical formula}Xi,ref and final pose {a mathematical formula}Xi, we calculate the translational error {a mathematical formula}etranslation and the rotational error {a mathematical formula}erotation. The translational error is simply defined as the Euclidean distance between two poses:{a mathematical formula} while {a mathematical formula}erotation is a unit quaternion distance metric introduced by Kuffner [47] as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Using a unit quaternion distance metric has the advantage that it does not suffer from ambiguities, unlike the common method of comparing Euler angles.
+      </paragraph>
+      <paragraph>
+       The resulting final errors for the six CAD models in this experiment are shown in Table 2. As expected, Chairs 1–4 converged about equally well to the reference pose (except for one outlier from Chair 4), whereas Chairs 5 and 6 did not converge well.
+      </paragraph>
+      <paragraph>
+       However it has to be noticed that the data used in this experiment was not very challenging, since the chair is completely captured in the point cloud data and there are no other objects near the chair. To evaluate the effects of choosing a different CAD model on the performance of the complete system, we ran the complete pipeline as explained in the next subsection once for each chair model. Table 3 compares the final translation and rotation errors after ICP alignment on the seminar room dataset (see Section 4.3, Table 4c). The results clearly indicate that as long as the CAD model is “similar enough” (chairs 1–4) to the objects found in the data, our system works. The results for chairs 2–4 were even slightly better than for chair 1, which we considered the best fit for the actual object and which is used in the subsequent experiments.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Complete system
+      </section-title>
+      <paragraph>
+       To evaluate our recognition system, we captured two series of point clouds from a Kinect camera mounted on a mobile robot (see Fig. 9). In the first scenario, the robot was tele-operated around an office while continuously capturing point cloud data at 2.2 Hz, resulting in a total of 431 point clouds. The office contained 13 recognizable objects from 5 classes (1 desk, 1 conference table, 1 office chair, 5 conference chairs and 5 book shelves). For the second dataset, the robot was driven through a seminar room, capturing a total of 379 point clouds. The objects present in this dataset are 12 seminar tables and 20 chairs. One challenging aspect of this dataset is that there is a high level of occlusion.
+      </paragraph>
+      <paragraph>
+       For both datasets, we registered the point clouds into a consistent full-scene point cloud, using SLAM6D from 3DTK [48]. The full-scene point clouds were used to generate the ground truth poses for each piece of furniture by hand. These poses are used to evaluate the results of our classification and the ICP refinement step.
+      </paragraph>
+      <paragraph>
+       Ground truth data for each frame was generated by manually labeling each frame with the information which of the objects occur in that frame. The ground truth poses of each object were estimated by manually placing each CAD model into a scene consisting of the fully registered datasets. In combination with the camera trajectory obtained from the registration process, the ground truth object poses in each frame can be computed. A detection is considered “true positive” if its distance to the nearest true object pose of the same class was below a threshold, depending on the CAD model's size (15 cm for chairs, 25 cm for shelves, 45 cm for tables). If multiple detections fell into that range, only the nearest was counted as a true positive, and the others as false positives.
+      </paragraph>
+      <paragraph>
+       These high thresholds were chosen based on experience and reflect the diminishing depth resolution of the Kinect sensor (at 5 m the depth resolution is approx. 5 cm – even without noise depth measurements can differ substantially from the real distance) accompanied by additional random noise, as well as the size of the discriminating planar surfaces of the object classes. Furthermore if all individual point clouds are registered perfectly, there will still be noisy “shadow points” around each object. Our ground truth poses are located in the middle of the noisy point cloud resembling the objects in question.
+      </paragraph>
+      <paragraph>
+       Note that the recognition system itself does not require prior registration; it can work both directly on unregistered single-frame point clouds or on a registered full-scene point cloud. Both approaches have their advantages; directly processing each frame eliminates the computational cost for registration, removes the risk of registration failures, and avoids artifacts arising from combining many point clouds from a noisy sensor. Single frame processing is therefore better-suited for online operation in an incremental semantic mapping framework. On the other hand, the narrow field of view and occlusions – that may be recovered by viewing at an object from different angles – make it more likely that a piece of furniture is not fully visible.
+      </paragraph>
+      <paragraph>
+       The detection results both for single frames and the full scene on both datasets are shown in Table 4. In addition to the detection results, the translation and rotation error of the initial guess (based on PCA for tables and shelves, and based on the vector from backrest to seat for chairs) and the translation and rotation error after ICP pose correction are shown. Fig. 11 depicts some exemplary object detections, Fig. 10 shows the final results of the system running in full-scene mode.
+      </paragraph>
+      <paragraph>
+       For the single point clouds, our approach achieves detection rates of 46.0% and 79.4% on the two data sets. We expect that these results can be improved significantly in the future by integrating information over several frames instead of treating each frame independently. The results show that our approach is not only robust enough to deal with the noise present in low cost 3D sensors, but also copes with occlusion and partial visibility, typical for sensors with a small opening angle. Unexpectedly, the final ICP pose correction did not improve the average initial guess on single frames for the first dataset. We attribute this to the fact that we matched a complete CAD model to a partially occluded object view; possible solutions are outlined in the next section. In the second dataset however, ICP clearly improved the rotation of the chairs compared to the initial guess from the SWRL rules.
+      </paragraph>
+      <paragraph>
+       The results also show varying detection success for the different classes. Shelves have one of the lowest detection rates and highest final pose error in our experiments. This is not surprising: All shelves in our data set were completely filled with books, so only a small portion of the actual shelf was visible. This also explains why the final pose correction performed worse on shelves compared to the other object classes. In addition, we currently do not handle aggregates of objects: If two shelf segments or two tables are positioned with no gap between them, the planar classification will combine them into one potential object, with the possible location at the center of the combined plane. This usually leads to one false positive (for the non-existent object at the center location) and several false negatives for actual objects creating the aggregated plane. Another problematic object is the big L-shaped desk: The desk is so big that only a small part of it is visible in most single frames.
+      </paragraph>
+      <paragraph>
+       A comparison between single-frame and full-scene mode reveals that both approaches have their complementary strengths and weaknesses. Both classification accuracy and final pose error for most objects (especially big ones, like tables) are better in full-scene mode, since there are less problems with partial visibility due to occlusion or limited aperture. On the other hand, the detection rate for chairs in the seminar table dataset is higher in single-frame mode. The main reason for this seems to be that since chairs are relatively small compared to tables, limited aperture doesn't pose as much of a problem in single-frame mode. On the other hand, since the chairs were relatively close together, registration errors and accumulated sensor noise in full-scene mode often lead to two chairs being recognized as one object, preventing detection.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Runtime of the system
+      </section-title>
+      <paragraph>
+       The runtime performance of our system and its components are shown in Table 5. All experiments have been performed on a standard laptop (2.6 GHz Core i7 CPU, 8 GB RAM). The single point clouds are processed at full resolution (245,304 points on average), while the full scene was downsampled to about one tenth of all points (9,475,220 points).
+      </paragraph>
+      <paragraph>
+       Most of the processing time is spent on the surface reconstruction step. This could in principle be replaced by faster but less accurate methods. For the RGB-D data used here, Kinect Fusion is a good candidate, although the meshes have to be post-processed to get a topologically correct mesh representation [33], which is required for region growing. For our experiments, we decided to use the Marching Cubes implementation from our LVR library, since it computes meshes that are accurate and topologically sound. The classification and pose adjustment steps are fast. The whole scene consisting of 379 point clouds, i.e., about 9.5 million points, was processed in about 2.5 minutes.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

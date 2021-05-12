@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD</title>
+<!--Generated on Wed Jun 11 18:29:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Punctuation Processing for Projective Dependency Parsing<span class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>This work was done while the first author was visiting SUTD</span></span></span></h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ji Ma<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>, Yue Zhang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math> and Jingbo Zhu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger^{\star}}" display="inline"><msup><mi/><msup><mo>†</mo><mo>⋆</mo></msup></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Northeastern University, Shenyang, China
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Singapore University of Technology and Design, Singapore 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{\star}" display="inline"><msup><mi/><mo>⋆</mo></msup></math>Hangzhou YaTuo Company, 358 Wener Rd., Hangzhou, China, 310012 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">majineu@gmail.com
+<br class="ltx_break"/>yue_zhang@sutd.edu.sg
+<br class="ltx_break"/>zhujingbo@mail.neu.edu.cn</span>
+
+<br class="ltx_break"/>
+<br class="ltx_break"/>
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Modern statistical dependency parsers assign lexical heads to punctuations as well as words. Punctuation parsing errors lead to low parsing accuracy on words.
+In this work, we propose an alternative approach to addressing punctuation in dependency parsing. Rather than assigning lexical heads to punctuations, we treat punctuations as properties of their neighbouring words, used as features to guide the parser to build the dependency graph.
+Integrating our method with an arc-standard parser yields a <math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="93.06\%" display="inline"><mrow><mn>93.06</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> unlabelled attachment score, which is the best accuracy by a single-model transition-based parser reported so far.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The task of dependency parsing is to identify the lexical head of each of the tokens in a string. Modern statistical parsers <cite class="ltx_cite">[<a href="#bib.bib11" title="Online large-margin training of dependency parsers" class="ltx_ref">8</a>, <a href="#bib.bib38" title="MaltParser: a language-independent system for data-driven dependency parsing" class="ltx_ref">10</a>, <a href="#bib.bib39" title="Dynamic programming for linear-time incremental parsing." class="ltx_ref">5</a>, <a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">14</a>]</cite> treat all the tokens equally, assigning lexical heads to punctuations as well as words. Punctuations arguably play an important role in syntactic analysis. However, there are a number of reasons that it is not necessary to parse punctuations:</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">First, the lexical heads of punctuations are not as well defined as those of words. Consequently, punctuations are not as consistently annotated in treebanks as words, making it harder to parse punctuations. For example, modern statistical parsers achieve above <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="90\%" display="inline"><mrow><mn>90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> unlabelled attachment score (UAS) on words. However, the UAS on punctuations are generally below <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="85\%" display="inline"><mrow><mn>85</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Moreover, experimental results showed that parsing accuracy of content words drops on sentences which contain higher ratios of punctuations. One reason for this result is that projective dependency parsers satisfy the “no crossing links” constraint, and errors in punctuations may prevent correct word-word dependencies from being created (see section 2). In addition, punctuations cause certain type of features inaccurate. Take valency features for example, previous work <cite class="ltx_cite">[<a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">14</a>]</cite> has shown that such features are important to parsing accuracy, e.g., it may inform the parser that a verb already has two objects attached to it. However, such information might be inaccurate when the verb’s modifiers contain punctuations.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Ultimately, it is the dependencies between words that provide useful information for real world applications. Take machine translation or information extraction for example, most systems take advantage of the head-modifier relationships between word pairs rather than word-punctuation pairs to make better predictions. The fact that most previous work evaluates parsing accuracies without taking punctuations into account is also largely due to this reason.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Given the above reasons, we propose an alternative approach to punctuation processing for dependency parsing. In this method, punctuations are not associated with lexical heads, but are treated as properties of their neighbouring words.</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">System</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">E-F</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">A-S</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">A-S-64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">MST</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dev UAS</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">91.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">93.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">92.56</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Test UAS</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.75</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">90.34</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.84</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Dev UAS-p</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">83.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">79.69</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">84.80</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">84.42</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Test UAS-p</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">84.67</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">79.64</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">87.80</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">85.67</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Dev</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m1" class="ltx_Math" alttext="{}^{-}" display="inline"><msup><mi/><mo>-</mo></msup></math><span class="ltx_text ltx_font_small"> UAS</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">90.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">89.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">91.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">90.11</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Test</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m2" class="ltx_Math" alttext="{}^{-}" display="inline"><msup><mi/><mo>-</mo></msup></math><span class="ltx_text ltx_font_small"> UAS</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">90.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">89.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">91.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">89.82</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Parsing accuracies. “E-F” and “MST” denote easy-first parser and MSTparser, respectively. “A-S” and “A-S 64” denote our arc-standard parser with beam width 1 and 64, respectively. “UAS” and “UAS-p” denote word and punctuation unlabelled attachment score, respectively. “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m4" class="ltx_Math" alttext="{}^{-}" display="inline"><msup><mi/><mo>-</mo></msup></math>” denotes the data set with punctuations removed.</div>
+</div>
+<div id="S1.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Length</span></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m1" class="ltx_Math" alttext="1\sim 20" display="inline"><mrow><mn>1</mn><mo>∼</mo><mn>20</mn></mrow></math></th>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m2" class="ltx_Math" alttext="21-40" display="inline"><mrow><mn>21</mn><mo>-</mo><mn>40</mn></mrow></math></th>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m3" class="ltx_Math" alttext="41-60" display="inline"><mrow><mn>41</mn><mo>-</mo><mn>60</mn></mrow></math></th>
+<th class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Punc </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m4" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m5" class="ltx_Math" alttext="0\sim 15" display="inline"><mrow><mn>0</mn><mo>∼</mo><mn>15</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m6" class="ltx_Math" alttext="15\sim 30" display="inline"><mrow><mn>15</mn><mo>∼</mo><mn>30</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m7" class="ltx_Math" alttext="&gt;30" display="inline"><mrow><mi/><mo>&gt;</mo><mn>30</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m8" class="ltx_Math" alttext="0\sim 15" display="inline"><mrow><mn>0</mn><mo>∼</mo><mn>15</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m9" class="ltx_Math" alttext="15\sim 30" display="inline"><mrow><mn>15</mn><mo>∼</mo><mn>30</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m10" class="ltx_Math" alttext="&gt;30" display="inline"><mrow><mi/><mo>&gt;</mo><mn>30</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m11" class="ltx_Math" alttext="0\sim 15" display="inline"><mrow><mn>0</mn><mo>∼</mo><mn>15</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m12" class="ltx_Math" alttext="15\sim 30" display="inline"><mrow><mn>15</mn><mo>∼</mo><mn>30</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m13" class="ltx_Math" alttext="&gt;30" display="inline"><mrow><mi/><mo>&gt;</mo><mn>30</mn></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">E-F</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m14" class="ltx_Math" alttext="94.56" display="inline"><mn>94.56</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m15" class="ltx_Math" alttext="92.88" display="inline"><mn>92.88</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m16" class="ltx_Math" alttext="87.67" display="inline"><mn>87.67</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m17" class="ltx_Math" alttext="91.84" display="inline"><mn>91.84</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m18" class="ltx_Math" alttext="91.82" display="inline"><mn>91.82</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m19" class="ltx_Math" alttext="83.87" display="inline"><mn>83.87</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m20" class="ltx_Math" alttext="89.83" display="inline"><mn>89.83</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m21" class="ltx_Math" alttext="88.01" display="inline"><mn>88.01</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m22" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">A-S</span></th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m23" class="ltx_Math" alttext="93.87" display="inline"><mn>93.87</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m24" class="ltx_Math" alttext="92.00" display="inline"><mn>92.00</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m25" class="ltx_Math" alttext="90.05" display="inline"><mn>90.05</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m26" class="ltx_Math" alttext="90.81" display="inline"><mn>90.81</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m27" class="ltx_Math" alttext="90.15" display="inline"><mn>90.15</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m28" class="ltx_Math" alttext="75.00" display="inline"><mn>75.00</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m29" class="ltx_Math" alttext="88.06" display="inline"><mn>88.06</mn></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">88.89</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m30" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">A-S-64</span></th>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m31" class="ltx_Math" alttext="95.28" display="inline"><mn>95.28</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m32" class="ltx_Math" alttext="94.43" display="inline"><mn>94.43</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m33" class="ltx_Math" alttext="88.15" display="inline"><mn>88.15</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m34" class="ltx_Math" alttext="92.96" display="inline"><mn>92.96</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m35" class="ltx_Math" alttext="92.63" display="inline"><mn>92.63</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m36" class="ltx_Math" alttext="76.61" display="inline"><mn>76.61</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m37" class="ltx_Math" alttext="90.78" display="inline"><mn>90.78</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m38" class="ltx_Math" alttext="88.76" display="inline"><mn>88.76</mn></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m39" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">MST</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m40" class="ltx_Math" alttext="94.90" display="inline"><mn>94.90</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m41" class="ltx_Math" alttext="93.55" display="inline"><mn>93.55</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m42" class="ltx_Math" alttext="88.15" display="inline"><mn>88.15</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m43" class="ltx_Math" alttext="92.45" display="inline"><mn>92.45</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">93.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m44" class="ltx_Math" alttext="77.42" display="inline"><mn>77.42</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m45" class="ltx_Math" alttext="90.89" display="inline"><mn>90.89</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m46" class="ltx_Math" alttext="89.77" display="inline"><mn>89.77</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m47" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Parsing accuracies vs punctuation ratios, on the development set</div>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Our method is simple and can be easily incorporated into state-of-the-art parsers. In this work, we report results on an arc-standard transition-based parser. Experiments show that our method achieves about <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p6.m1" class="ltx_Math" alttext="0.90\%" display="inline"><mrow><mn>0.90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> UAS improvement over the greedy baseline parser on the standard Penn Treebank test set. Although the improvement becomes smaller as the beam width grows larger, we still achieved <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p6.m2" class="ltx_Math" alttext="93.06\%" display="inline"><mrow><mn>93.06</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> UAS with a beam of width 64, which is the best result for transition-based parsers reported so far. Our code will be available at https://github.com/majineu/Parser/Punc/A-STD.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Influence of Punctuations on Parsing</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we conduct a set of experiments to show the influence of punctuations on dependency parsing accuracies.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Setup</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the Wall Street Journal portion of the Penn Treebank with the standard splits: sections 02-21 are used as the training set; section 22 and section 23 are used as the development and test set, respectively. Penn2Malt is used to convert bracketed structures into dependencies. We use our own implementation of the Part-Of-Speech (POS) tagger proposed by <cite class="ltx_cite">Collins (<a href="#bib.bib4" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">2002</a>)</cite> to tag the development and test sets. Training set POS tags are generated using 10-fold jack-knifing.
+Parsing accuracy is evaluated using unlabelled attachment score (UAS), which is the percentage of words that are assigned the correct lexical heads.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">To show that the influence of punctuations on parsing is independent of specific parsing algorithms, we conduct experiments using three parsers, each representing a different parsing methodology: the open source MSTParser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We trained a second order labelled parser with all the configurations set to the default value. The code is publicly available at http://sourceforge.net/projects/mstparser/</span></span></span><cite class="ltx_cite">[<a href="#bib.bib41" title="Online learning of approximate dependency parsing algorithms" class="ltx_ref">9</a>]</cite>,
+our own re-implementation of an arc-standard transition-based parser <cite class="ltx_cite">[<a href="#bib.bib44" title="Algorithms for deterministic incremental dependency parsing." class="ltx_ref">11</a>]</cite>, which is trained using global learning and beam-search <cite class="ltx_cite">[<a href="#bib.bib45" title="A tale of two parsers: Investigating and combining graph-based and transition-based dependency parsing" class="ltx_ref">13</a>]</cite> with a rich feature set <cite class="ltx_cite">[<a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">14</a>]</cite>
+<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Some feature templates in <cite class="ltx_cite">Zhang and Nivre (<a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">2011</a>)</cite> involve head word and head POS tags which are not available for an arc-standard parser. Interestingly, without those features our arc-standard parser still achieves <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="92.84\%" display="inline"><mrow><mn>92.84</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> UAS which is comparable to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="92.90\%" display="inline"><mrow><mn>92.90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> UAS obtained by the arc-eager parser of <cite class="ltx_cite">Zhang and Nivre (<a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">2011</a>)</cite></span></span></span>,
+and our own re-implementation of the easy-first parser <cite class="ltx_cite">[<a href="#bib.bib20" title="An efficient algorithm for easy-first non-directional dependency parsing" class="ltx_ref">4</a>]</cite> with an extended feature set <cite class="ltx_cite">[<a href="#bib.bib3" title="Easy-first pos tagging and dependency parsing with beam search" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-2128/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="616" height="178" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Illustration of processing paired punctuation. The property of a word is denoted by the punctuation below that word.</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Punctuations and Parsing Accuracy</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our first experiment is to show that, compared with words, punctuations are more difficult to parse and to learn. To see this, we evaluate the parsing accuracies of the selected parsers on words and punctuations, separately. Results are listed in Table 1, where row 2 and row 3 list the UAS of words (all excluding punctuations) on the development and test set, respectively. Row 4 and row 5 list accuracies of punctuations (all excluding words) on the development and test set, respectively. We can see that although all the parsers achieve above <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="90\%" display="inline"><mrow><mn>90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> UAS on words, the UAS on punctuations are mostly below <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="85\%" display="inline"><mrow><mn>85</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">As for learning, we calculate the percentage of parameter updates that are caused by associating punctuations with incorrect heads during training of the easy-first parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>For the greedy easy-first parser, whether a parameter update is caused by punctuation error can be determined with no ambiguity.</span></span></span>. The result is that more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="31\%" display="inline"><mrow><mn>31</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the parameter updates are caused due to punctuations, though punctuations account for only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="11.6\%" display="inline"><mrow><mn>11.6</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the total tokens in the training set.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The fact that parsers achieve low accuracies on punctuations is to some degree expected, because the head of a punctuation mark is linguistically less well-defined.
+However, a related problem is that parsing accuracy on <span class="ltx_text ltx_font_italic">words</span> tends to drop on the sentences which contain high ratio of <span class="ltx_text ltx_font_italic">punctuations</span>.
+To see this, we divide the sentences in the development set into sub-sets according the punctuation ratio (percentage of punctuations that a sentence contains), and then evaluate parsing accuracies on the sub-sets separately.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">The results are listed in Table 2. Since long sentences are inherently more difficult to parse, to make a fair comparison, we further divide the development set according to sentence lengths as shown in the first row<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>1694 out of 1700 sentences on the development set with length no larger than 60 tokens</span></span></span>. We can see that most of the cases, parsing accuracies drop on sentences with higher punctuation ratios. Note that this negative effect on parsing accuracy might be overlooked since most previous work evaluates parsing accuracy <span class="ltx_text ltx_font_italic">without</span> taking punctuations into account.</p>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">By inspecting the parser outputs, we found that error propagation caused by assigning incorrect head to punctuations is one of the main reason that leads to this result. Take the sentence shown in Figure 1 (a) for example, the word <span class="ltx_text ltx_font_italic">Mechanisms</span> is a modifier of <span class="ltx_text ltx_font_italic">entitled</span> according to the gold reference. However, if the quotation mark, “, is incorrectly recognized as a modifier of <span class="ltx_text ltx_font_italic">was</span>, due to the “no crossing links” constraint, the arc between <span class="ltx_text ltx_font_italic">Mechanisms</span> and <span class="ltx_text ltx_font_italic">entitled</span> can never be created.</p>
+</div>
+<div id="S2.SS2.p6" class="ltx_para">
+<p class="ltx_p">A natural question is whether it is possible to reduce such error propagation by simply removing all punctuations from parsing. Our next experiment aims at answering this question. In this experiment, we first remove all punctuations from the original data and then modify the dependency arcs accordingly in order to maintain word-word dependencies in the original data. We re-train the parsers on the modified training set and evaluate parsing accuracies on the modified data.</p>
+</div>
+<div id="S2.SS2.p7" class="ltx_para">
+<p class="ltx_p">Results are listed in row 6 and row 7 of Table 1. We can see that parsing accuracies on the modified data drop significantly compared with that on the original data. The result indicates that by removing punctuations, we lose some information that is important for dependency parsing.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Punctuation as Properties</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In our method, punctuations are treated as properties of its neighbouring words. Such properties are used as additional features to guide the parser to construct the dependency graph.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">unigram</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math><span class="ltx_text ltx_font_small"> in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="\beta_{0},\beta_{1},\beta_{2},\beta_{3},\sigma_{0},\sigma_{1},\sigma_{2}" display="inline"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>,</mo><msub><mi>β</mi><mn>2</mn></msub><mo>,</mo><msub><mi>β</mi><mn>3</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>1</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>2</mn></msub></mrow></math></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="p_{punc}" display="inline"><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math><span class="ltx_text ltx_font_small"> in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m5" class="ltx_Math" alttext="\beta_{0},\beta_{1},\beta_{2},\sigma_{0},\sigma_{1}" display="inline"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>,</mo><msub><mi>β</mi><mn>2</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>1</mn></msub></mrow></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m6" class="ltx_Math" alttext="p_{punc}\odot p_{w},p_{punc}\odot p_{t}" display="inline"><mrow><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>p</mi><mi>w</mi></msub></mrow><mo>,</mo><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>p</mi><mi>t</mi></msub></mrow></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">bigram</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m7" class="ltx_Math" alttext="p,q" display="inline"><mrow><mi>p</mi><mo>,</mo><mi>q</mi></mrow></math><span class="ltx_text ltx_font_small"> in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m8" class="ltx_Math" alttext="(\sigma_{0},\beta_{0}),(\sigma_{0},\beta_{1}),(\sigma_{0},\beta_{2}),(\sigma_{%&#10;0},\sigma_{1}),(\sigma_{0},\sigma_{2})" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m9" class="ltx_Math" alttext="p_{punc}\odot q_{punc},p_{punc}\odot q_{t},p_{punc}\odot q_{w}" display="inline"><mrow><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>q</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub></mrow><mo>,</mo><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>q</mi><mi>t</mi></msub></mrow><mo>,</mo><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>q</mi><mi>w</mi></msub></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m10" class="ltx_Math" alttext="p,q" display="inline"><mrow><mi>p</mi><mo>,</mo><mi>q</mi></mrow></math><span class="ltx_text ltx_font_small"> in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m11" class="ltx_Math" alttext="(\sigma_{2},\sigma_{0}),(\sigma_{1},\sigma_{0}),(\sigma_{2},\sigma_{0})" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>2</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>1</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>2</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m12" class="ltx_Math" alttext="p_{punc}\odot q_{t},p_{punc}\odot p_{t}\odot q_{t}" display="inline"><mrow><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>q</mi><mi>t</mi></msub></mrow><mo>,</mo><mrow><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>p</mi><mi>t</mi></msub><mo>⊙</mo><msub><mi>q</mi><mi>t</mi></msub></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m13" class="ltx_Math" alttext="p,q" display="inline"><mrow><mi>p</mi><mo>,</mo><mi>q</mi></mrow></math><span class="ltx_text ltx_font_small"> in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m14" class="ltx_Math" alttext="(\sigma_{2},\sigma_{0}),(\sigma_{1},\sigma_{0}),(\sigma_{0},\beta_{0})" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>2</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>1</mn></msub><mo>,</mo><msub><mi>σ</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>σ</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>0</mn></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m15" class="ltx_Math" alttext="d_{pq}\odot p_{punc}\odot p_{t}\odot q_{t}" display="inline"><mrow><msub><mi>d</mi><mrow><mi>p</mi><mo>⁢</mo><mi>q</mi></mrow></msub><mo>⊙</mo><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub><mo>⊙</mo><msub><mi>p</mi><mi>t</mi></msub><mo>⊙</mo><msub><mi>q</mi><mi>t</mi></msub></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Feature templates. For an element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m26" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> either on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m27" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m28" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> of an arc-standard parser, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m29" class="ltx_Math" alttext="p_{punc}" display="inline"><msub><mi>p</mi><mrow><mi>p</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m30" class="ltx_Math" alttext="p_{w}" display="inline"><msub><mi>p</mi><mi>w</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m31" class="ltx_Math" alttext="p_{t}" display="inline"><msub><mi>p</mi><mi>t</mi></msub></math> to denote the punctuation property, head word and head tag of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m32" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, respectively. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m33" class="ltx_Math" alttext="d_{pq}" display="inline"><msub><mi>d</mi><mrow><mi>p</mi><mo>⁢</mo><mi>q</mi></mrow></msub></math> denotes the distance between the two elements <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m34" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m35" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>.</div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Paired Punctuation</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our method distinguishes <span class="ltx_text ltx_font_italic">paired</span> punctuations from other punctuations. Here paired punctuations include brackets and quotations marks, whose Penn Treebank POS tags are the following four:</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\textrm{-LRB-}\quad\quad\textrm{-RRB-}\quad\quad\textrm{``}\quad\quad\textrm{''}" display="block"><mrow><mtext>-LRB-</mtext><mo separator="true">  </mo><mtext>-RRB-</mtext><mo separator="true">  </mo><mtext>“</mtext><mo separator="true">  </mo><mtext>”</mtext></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">The characteristics of paired punctuations include: (1) they typically exist in pairs; (2) they serve as <span class="ltx_text ltx_font_italic">boundaries</span> that there is only one dependency arc between the words inside the boundaries and the words outside. Take the sentence in Figure 1 (a) for example, the only arc cross the boundary is (Mechanisms, entitled) where entitled is the head.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">To utilize such boundary information, we further classify paired punctuations into two categories: those that serve as the beginning of the boundary, whose POS tags are either -LRB- or “, denoted by <span class="ltx_text ltx_font_smallcaps">Bpunc</span>; and those that serve as the end of the boundary, denoted by <span class="ltx_text ltx_font_smallcaps">Epunc</span>.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Before parsing starts, a preprocessing step is used to first attach the paired punctuations as properties of their neighbouring words, and then remove them from the sentence. In particular, we attach <span class="ltx_text ltx_font_smallcaps">Bpunc</span>s to their right neighbours and <span class="ltx_text ltx_font_smallcaps">Epunc</span>s to their left neighbours, as shown in Figure 1 (b). Note that in Figure 1 (a), the left neighbour of ” is also a punctuation. In such cases, we simply remove these punctuations since the existence of paired punctuations already indicates that there should be a boundary.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">During parsing, when a dependency arc with lexical head <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> is created, the property of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> is updated by the property of its left (or right) most child to keep track whether there is a <span class="ltx_text ltx_font_smallcaps">Bpunc</span> (or <span class="ltx_text ltx_font_smallcaps">Epunc</span>) to the left (or right) side of the sub-tree rooted at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>,
+as shown in Figure 1 (c). When <span class="ltx_text ltx_font_smallcaps">Bpunc</span>s and <span class="ltx_text ltx_font_smallcaps">Epunc</span>s meet each other at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>, a <span class="ltx_text ltx_font_smallcaps">Paired</span> property is assigned to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> to capture that the words within the paired punctuations form a sub-tree, rooted at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m6" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>. See Figure 1 (d).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Practical Issues</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">It is not uncommon that two <span class="ltx_text ltx_font_smallcaps">Bpuncs</span> appear adjacent to each other. For example,</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">(“Congress’s Environmental Buccaneers,” Sept. 18)</span>.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">In our implementation, <span class="ltx_text ltx_font_smallcaps">Bpunc</span> or <span class="ltx_text ltx_font_smallcaps">Epunc</span> properties are implemented using flags.
+In the example, we set two flags <span class="ltx_text ltx_font_italic">“</span> and <span class="ltx_text ltx_font_italic">(</span> on the word Congrees’s. When <span class="ltx_text ltx_font_smallcaps">Bpunc</span> and <span class="ltx_text ltx_font_smallcaps">Epunc</span> meet each other, the corresponding flags are turned off. In the example, when Congrees’s is identified as a modifier of Buccaneers, the <span class="ltx_text ltx_font_italic">”</span> flag of Buccaneers is turned off. However, we do not assign a <span class="ltx_text ltx_font_smallcaps">Paired</span> property to Buccaneers since its <span class="ltx_text ltx_font_italic">(</span> flag is still on. The <span class="ltx_text ltx_font_smallcaps">Paired</span> property is assigned only when all the flags are turned off.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Non-Paired Punctuations</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Though some types of non-paired punctuations may capture certain syntactic patterns, we do not make further distinctions between them, and treat these punctuations uniformly for simplicity.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">Before parsing starts and after the preprocessing step for paired punctuations, our method employs a second preprocessing step to attach non-paired punctuations to their left neighbouring words. It is guaranteed that the property of the left neighbouring words of non-paired punctuations must be empty. Otherwise, it means the non-paired punctuation is adjacent to a paired punctuation. In such cases, the non-paired punctuation would be removed in the first processing step.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">During parsing, non-paired punctuations are also passed bottom-up: the property of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> is updated by its <span class="ltx_text ltx_font_italic">right</span>-most dependent to keep track whether there is a punctuation to the right side of the tree rooted at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m2" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>. The only special case is that if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m3" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> already contains a <span class="ltx_text ltx_font_smallcaps">Bpunc</span> property, then our method simply ignores the non-paired property since we maintain the boundary information with the highest priority.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Features</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">We incorporate our method into the arc-standard transition-based parser, which uses a stack <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> to maintain partially constructed trees and a buffer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> for the incoming words <cite class="ltx_cite">[<a href="#bib.bib44" title="Algorithms for deterministic incremental dependency parsing." class="ltx_ref">11</a>]</cite>. We design a set of features to exploit the potential of using punctuation properties for the arc-standard parser.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">The feature templates are listed in Table 3. In addition to the features designed for paired punctuations, such as bigram punctuation features listed in line 3 of Table 3, we also design features for non-paired punctuations.
+For example, the distance features in line 5 of Table 3 is used to capture the pattern that if a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> with comma property is the left modifier of a noun or a verb, the distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and its lexical head is often larger than 1. In other words, they are not adjacent.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Our first experiment is to investigate the effect of processing paired punctuations on parsing accuracy. In this experiment, the method introduced in Section 3.1 is used to process paired punctuations, and the non-paired punctuations are left un-touched.
+Feature templates used in this experiment are those listed in the top three rows of Table 3 together with those used for the baseline arc-standard parser.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Results on the development set are shown in the second column of Table 4. We can see that when the beam width is set to 1, our method achieves an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="0.49" display="inline"><mn>0.49</mn></math> UAS improvement. By comparing the outputs of the two parsers, two types of errors made by the baseline parser are effectively corrected.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Paired</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">91.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">91.47</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.88</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.34</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">4</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.50</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.61</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.70</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">8</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.73</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.76</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.82</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">16</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.90</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.94</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.99</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">64</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">92.99</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">93.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">93.10</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Parsing accuracies on the development set. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m3" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> denotes the beam width.</div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">The first is that our method is able to capture the pattern that there is only one dependency arc between the words within the paired-punctuations and the words outside, while the baseline parser sometimes creates more dependency arcs that cross the boundary.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">The second is more interesting. Our method is able to capture that the root, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>, of the sub-tree within the paired-punctuation, such as “Mechanisms” in Figure 1, generally serves as a modifier of the words outside, while the baseline parser occasionally make <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math> as the head of the sentence.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">As we increase the beam width, the improvement of our method over the baseline becomes smaller. This is as expected, since beam search also has the effect of reducing error propagation <cite class="ltx_cite">[<a href="#bib.bib1" title="Analyzing the effect of global learning and beam-search on transition-based dependency parsing" class="ltx_ref">15</a>]</cite>, thereby alleviating the errors caused by punctuations.</p>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">In the last experiment, we examine the effect of incorporating all punctuations using the method introduced in Section 2. In this experiment, we use all the feature templates in Table 3 and those in the baseline parser. Results are listed in the fourth column of Table 4, which shows that parsing accuracies can be further improved by also processing non-paired punctuations. The overall accuracy improvement when the beam width is 1 reaches <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="0.91\%" display="inline"><mrow><mn>0.91</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>. The extra improvements mainly come from better accuracies on the sentences with comma. However, the exact type of errors that are corrected by using non-paired punctuations is more difficult to summarize.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">The final results on the test set are listed in Table 5<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>The number of training iteration is determined using the development set.</span></span></span>. Table 5 also lists the accuracies of state-of-the-art transition-based parsers. In particular, “Huang 10” and “Zhang 11” denote <cite class="ltx_cite">Huang and Sagae (<a href="#bib.bib39" title="Dynamic programming for linear-time incremental parsing." class="ltx_ref">2010</a>)</cite> and <cite class="ltx_cite">Zhang and Nivre (<a href="#bib.bib40" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">2011</a>)</cite>, respectively. “Bohnet 12” and “Choi 13” denote <cite class="ltx_cite">Bohnet and Nivre (<a href="#bib.bib42" title="A transition-based system for joint part-of-speech tagging and labeled non-projective dependency parsing" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Choi and Mccallum (<a href="#bib.bib2" title="Transition-based dependency parsing with selectional branching" class="ltx_ref">2013</a>)</cite>, respectively.
+We can see that our method achieves the best accuracy for single-model transition-based parsers.</p>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">system</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Comp</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Root</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">37.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.45</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">All-Punc</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.32</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">41.35</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Baseline-64</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.84</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">46.90</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">95.57</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">All-Punc-64</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">93.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">48.55</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">95.53</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Huang 10</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">92.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m1" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m2" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Zhang 11</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.90</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">48.00</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">91.80</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Choi 13</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.96</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m3" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m4" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Bohnet 12</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">93.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m5" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m6" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Final result on the test set.</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion and Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this work, we proposed to treat punctuations as properties of context words for dependency parsing. Experiments with an arc-standard parser showed that our method effectively improves parsing performance and we achieved the best accuracy for single-model transition-based parser.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Regarding punctuation processing for dependency parsing, <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Improving dependency parsing using punctuation." class="ltx_ref">2010</a>)</cite> proposed to utilize punctuations to segment sentences into small fragments and then parse the fragments separately. A similar approach is proposed by <cite class="ltx_cite">Spitkovsky<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib47" title="Punctuation: making a point in unsupervised dependency parsing" class="ltx_ref">2011</a>)</cite> which also designed a set of constraints on the fragments to improve unsupervised dependency parsing.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We highly appreciate the anonymous reviewers for their insightful suggestions.
+This research was supported by the National Science Foundation of China (61272376; 61300097; 61100089), the Fundamental Research Funds for the Central Universities
+(N110404012), the research grant T2MOE1301 from Singapore Ministry of Education (MOE) and the start-up grant SRG ISTD2012038 from SUTD.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Bohnet and J. Nivre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A transition-based system for joint part-of-speech tagging and labeled non-projective dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP-CoNLL ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1455–1465</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390948.2391114" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p7" title="4 Results ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Choi and A. Mccallum</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transition-based dependency parsing with selectional branching</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p7" title="4 Results ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’02</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/1118693.1118694" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and M. Elhadad</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient algorithm for easy-first non-directional dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 742–750</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-932432-65-5</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1857999.1858114" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang and K. Sagae</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic programming for linear-time incremental parsing.</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1077–1086</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-67-1</span>,
+<a href="http://dblp.uni-trier.de/db/conf/acl/acl2010.html#HuangS10" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p7" title="4 Results ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Li, W. Che and T. Liu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving dependency parsing using punctuation.</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 53–56</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-0-7695-4288-1</span>,
+<a href="http://dblp.uni-trier.de/db/conf/ialp/ialp2010.html#LiCL10" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Conclusion and Related Work ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ma, J. Zhu, T. Xiao and N. Yang</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Easy-first pos tagging and dependency parsing with beam search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 110–114</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2020" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Crammer and F. Pereira</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of dependency parsers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’05</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 91–98</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1219840.1219852" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1219840.1219852" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald and F. Pereira</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning of approximate dependency parsing algorithms</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 81–88</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre, J. Hall, J. Nilsson, A. Chanev, G. Eryigit, S. Kübler, S. Marinov and E. Marsi</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MaltParser: a language-independent system for data-driven dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">13</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 95–135</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre</span><span class="ltx_text ltx_bib_year">(2008-12-15)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Algorithms for deterministic incremental dependency parsing.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 513–553</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dblp.uni-trier.de/db/journals/coling/coling34.html#Nivre08" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.SS4.p1" title="3.4 Features ‣ 3 Punctuation as Properties ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. I. Spitkovsky, H. Alshawi and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Punctuation: making a point in unsupervised dependency parsing</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="pubs/punctuation.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Conclusion and Related Work ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and S. Clark</span><span class="ltx_text ltx_bib_year">(2008-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tale of two parsers: Investigating and combining graph-based and transition-based dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Honolulu, Hawaii</span>, <span class="ltx_text ltx_bib_pages"> pp. 562–571</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D08-1059" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and J. Nivre</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transition-based dependency parsing with rich non-local features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 188–193</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-2033" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Setup ‣ 2 Influence of Punctuations on Parsing ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.p7" title="4 Results ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and J. Nivre</span><span class="ltx_text ltx_bib_year">(2012-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Analyzing the effect of global learning and beam-search on transition-based dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mumbai, India</span>, <span class="ltx_text ltx_bib_pages"> pp. 1391–1400</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C12-2136" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p5" title="4 Results ‣ Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:29:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

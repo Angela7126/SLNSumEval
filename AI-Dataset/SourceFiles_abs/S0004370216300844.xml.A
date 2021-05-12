@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    H-index manipulation by merging articles: Models, theory, and experiments.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The H-index is a widely used measure for estimating the productivity and impact of researchers, journals, and institutions. Hirsch [22] defined the index as follows: a researcher has H-index h if h of the researcher's articles have at least h citations and all other articles have at most h citations. Several publicly accessible databases such as AMiner, Google Scholar, Scopus, and Web of Science compute the H-index of researchers. Such metrics are therefore visible to hiring committees and funding agencies when comparing researchers and proposals.{sup:1}
+     </paragraph>
+     <paragraph>
+      Although the H-index of Google Scholar profiles is computed automatically, profile owners can still affect their H-index by merging articles in their profile. The intention of providing the option to merge articles is to enable researchers to identify different versions of the same article. For example, a researcher may want to merge a journal version and a version on arXiv.org, which are found as two different articles by Google's web crawlers. This may decrease a researcher's H-index if both articles counted towards it before merging, or increase the H-index since the merged article may have more citations than each of the individual articles. Since the Google Scholar interface permits to merge arbitrary pairs of articles, this leaves the H-index of Google Scholar profiles vulnerable to manipulation by insincere authors.
+     </paragraph>
+     <paragraph>
+      In extreme cases, the merging operation may yield an arbitrarily large H-index even if each single article is cited only a few times: If the author has, for example, {a mathematical formula}h2 articles that are cited once, each by a distinct article from another author, then the H-index of the profile is 1. Creating h merged articles, each consisting of h original articles, gives a profile with H-index h. This is the maximum H-index achievable with {a mathematical formula}h2 citations.
+     </paragraph>
+     <paragraph>
+      Increasing the H-index even by small values could be tempting in particular for young researchers, who are scrutinized more often than established researchers.{sup:2} Hirsch [22] estimates that, for the field of physics, the H-index of a successful researcher increases by roughly one per year of activity. Hence, an insincere author might try to save years of research work with the push of a few buttons.
+     </paragraph>
+     <paragraph>
+      H-index manipulation by article merging has been studied by de Keijzer and Apt [9]. In their model, each article in a profile comes with a number of citations. Merging two articles, one with x and one with y citations, replaces these articles by a new article with {a mathematical formula}x+y citations. The obtained article may then be merged with further articles to obtain articles with even higher citation numbers. In this model, one can determine in polynomial time whether it is possible to improve the H-index by merging, but maximizing the H-index by merging is strongly NP-hard [9]. We extend the results of de Keijzer and Apt [9] as follows.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       We propose two further ways of measuring the number of citations of a merged article. One of them seems to be the measure used by Google Scholar.
+      </list-item>
+      <list-item label="2.">
+       We propose a model for restricting the set of allowed merge operations. Although Google Scholar allows merges between arbitrary articles, such a restriction is well motivated: An insincere author may try to merge only similar articles in order to conceal the manipulation.
+      </list-item>
+      <list-item label="3.">
+       We consider the variant of H-index manipulation in which only a limited number of merges may be applied in order to achieve a desired H-index. This is again motivated by the fact that an insincere author may try to conceal the manipulation by performing only few changes to her or his own profile.
+      </list-item>
+      <list-item label="4.">
+       We analyze each problem variant presented here within the framework of parameterized computational complexity [8], [12], [19], [25]. That is, we identify parameters p—properties of the input measured in integers—and aim to design fixed-parameter algorithms, which have running time {a mathematical formula}f(p)⋅nO(1) for a computable function f independent of the input size n. In some cases, this allows us to give efficient algorithms for realistic problem instances despite the NP-hardness of the problems in general. We also show parameters that presumably cannot lead to fixed-parameter algorithms by showing some problem variants to be W[1]-hard for these parameters.
+      </list-item>
+      <list-item label="5.">
+       We evaluate our theoretical findings by performing experiments with real-world data based on the publication profiles of AI researchers. In particular, we use profiles of some young and up-and-coming researchers from the 2011 and 2013 editions of the IEEE “AI's 10 to watch” list [1], [33].
+      </list-item>
+     </list>
+     <paragraph>
+      Related work  Using the models introduced here, Elkind and Pavlou [27] recently studied manipulation for two alternatives to the H-index: the i10-index, the number of articles with at least ten citations, and the g-index [14], which is the largest number g such that the g most-cited articles are cited at least g times on average. They also considered the scenario where merging articles can influence the profiles of other authors. In a follow-up work to our findings, we analyzed the complexity of unmerging already merged articles so to manipulate the H-index with respect to the citation measures introduced here [5]. Notably, in the model corresponding to Google Scholar, the complexity is much lower for unmerging rather than for merging articles.
+     </paragraph>
+     <paragraph>
+      A different way of manipulating the H-index is by strategic self-citations [10], [28]; Bartneck and Kokkelmans [3] consider approaches to detect these. Strategic self-citations take some effort and are irreversible. Thus, they can permanently damage an author's reputation. In comparison, article merging is easy, reversible and usually justified.
+     </paragraph>
+     <paragraph>
+      Bodlaender and van Kreveld [6] showed that, in a previous version of the Google Scholar interface, which only allowed merges of articles displayed together on one page, it was NP-hard to decide whether a given set of articles can be merged at all.
+     </paragraph>
+     <paragraph>
+      The problem of maximizing the H-index in the model of de Keijzer and Apt [9] is essentially a special case of the scheduling problems Bin Covering[2], [7] and Machine Covering[20], [29].
+     </paragraph>
+     <paragraph>
+      A considerable body of work on manipulation can be found in the computational social choice literature [15], [16]. If we view citations as articles voting on other articles, then the problem we consider here is somewhat analogous to strategic candidacy [13].
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Our models
+      </section-title>
+      <paragraph>
+       We propose two new models for the merging of articles. These models take into consideration two aspects that are not captured by the model of de Keijzer and Apt [9]:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The number of citations of an article resulting from a merge is not necessarily the sum of the citations of the merged articles. This is in particular the case for Google Scholar.
+       </list-item>
+       <list-item label="2.">
+        In order to hide manipulation, it would be desirable to only merge related articles instead of arbitrary ones. For example, one could only merge articles with similar titles.
+       </list-item>
+      </list>
+      <paragraph>
+       To capture the second aspect, our model allows for constraints on the compatibility of articles. To capture the first aspect, we represent citations not by mere citation counts, but using a directed citation graph{a mathematical formula}D=(V,A). The vertices of D are the articles of the author's profile plus the articles that cite them, and there is an arc {a mathematical formula}(u,v) in D if article u cites article v.
+      </paragraph>
+      <paragraph>
+       To simplify notation, we assume from now on that we are an author who wants to maximize her or his H-index by merging articles. Let {a mathematical formula}W⊆V denote the articles in our profile. In the following, these articles are called atomic articles and we aim to maximize our H-index by merging some articles in W. The result of a sequence of article merges is a partition {a mathematical formula}P of W. We call each part {a mathematical formula}P∈P with {a mathematical formula}|P|≥2 a merged article. Note that having a merged article P corresponds to performing {a mathematical formula}|P|−1 successive merges on the articles contained in P. It is sometimes convenient to alternate between the partitioning and merging interpretations.
+      </paragraph>
+      <paragraph>
+       The aim is to find a partition {a mathematical formula}P of W with a large H-index, where the H-index of a partition{a mathematical formula}P is the largest number h such that there are at least h parts {a mathematical formula}P∈P whose number {a mathematical formula}μ(P) of citations is at least h. Herein, we have multiple possibilities of defining the measure {a mathematical formula}μ(P) of citations of an article in {a mathematical formula}P. Before describing these possibilities, we introduce some further notation.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}degDin(v) denote the indegree of an article v in the citation graph D, that is, its number of citations. Analogously, we will use {a mathematical formula}degDout(v) to denote the outdegree of an article v in the citation graph D. Moreover, let {a mathematical formula}NDin(v):={u|(u,v)∈A} denote the set of articles that cite v and let {a mathematical formula}ND−Win(v):={u|(u,v)∈A∧u∉W} denote the set of articles that cite v and are not contained in W (thus, the articles in {a mathematical formula}ND−Win(v) cannot be merged). For each part {a mathematical formula}P∈P, we consider the following three citation measures for defining the number {a mathematical formula}μ(P) of citations of P. They are illustrated in Fig. 1. The measure{a mathematical formula} defines the number of citations of a merged article P to be the sum of the citations of the atomic articles it contains. This is the measure proposed by de Keijzer and Apt [9]. In contrast, the measure{a mathematical formula} defines the number of citations of a merged article P as the number of distinct atomic articles citing at least one atomic article in P. We verified empirically that, at the time of writing, Google Scholar used the {a mathematical formula}unionCite measure. The measure{a mathematical formula} is, in our opinion, the most natural one: a set of merged articles is indeed considered to be one article, that is, at most one citation of a part {a mathematical formula}P′∈P to a part {a mathematical formula}P∈P is counted. In contrast to the two other measures, merging two articles under the {a mathematical formula}fusionCite measure may lower the number of citations of the resulting article and of other articles. Note that, in contrast to {a mathematical formula}unionCite and {a mathematical formula}sumCite, the number of citations of an article according to {a mathematical formula}fusionCiteP may depend on the partition {a mathematical formula}P. We omit the index {a mathematical formula}P where it is clear from the context.
+      </paragraph>
+      <paragraph>
+       To model constraints on permitted article merges, we consider an undirected compatibility graph{a mathematical formula}G=(V,E). We call two articles compatible if they are adjacent in G. We say that a partition {a mathematical formula}P of the articles W complies with G if, for each part {a mathematical formula}P∈P, all articles in P are pairwise compatible, that is, if the subgraph {a mathematical formula}G[P] of G induced by P is a clique. Thus, if the compatibility graph G is a clique, then there are no constraints: all partitions of W comply with G in this case.
+      </paragraph>
+      <paragraph>
+       Formally, for each measure {a mathematical formula}μ∈{sumCite,unionCite,fusionCite}, we are interested in the following problem: {a mathematical formula}H-Index Manipulation(μ)Input:A citation graph {a mathematical formula}D=(V,A), a compatibility graph {a mathematical formula}G=(V,E), a set {a mathematical formula}W⊆V of articles, and a non-negative integer h.Question:Is there a partition of W that complies with G and that has H-index at least h with respect to measure μ? Throughout this work, we use {a mathematical formula}n:=|V| to denote the number of input articles and {a mathematical formula}m:=|E|+|A| to denote the overall number of edges and arcs in the two input graphs. Moreover, we use {a mathematical formula}G[S] to denote the subgraph of G induced by a subset S of its vertices.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Our results
+      </section-title>
+      <paragraph>
+       We study the complexity of H-Index Manipulation with respect to several structural features of the input instances. In particular, we consider the following three parameters:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The size c of the largest connected component in the compatibility graph G. We expect this size to be small if only reasonable merges are allowed or if all merges have to appear reasonable, that is, if compatible articles should superficially look similar.
+       </list-item>
+       <list-item label="•">
+        The number k of merges. An insincere author would hide manipulations using a small number of merges.
+       </list-item>
+       <list-item label="•">
+        The H-index to be achieved. Although one is interested in maximizing the H-index, we expect this number also to be relatively small, since even experienced researchers seldom have an H-index of greater than 50.{sup:3}
+       </list-item>
+      </list>
+      <paragraph>
+       Table 1 summarizes our theoretical results. For example, we find that, with respect to the {a mathematical formula}unionCite measure used by Google Scholar, it is easier to manipulate the H-index if only a small number of articles can be merged into one (small c). The {a mathematical formula}unionCite measure is complex enough to make increasing the H-index by one an NP-hard problem even if the compatibility graph G is a clique. In contrast, for the {a mathematical formula}sumCite measure and the compatibility graph being a clique, it can be decided in polynomial time whether the H-index can be increased by one [9].
+      </paragraph>
+      <paragraph>
+       We implemented the manipulation algorithms exploiting small k and small c. Experimental results show that all of our sample AI authors can increase their H-index by only three merges but that usually merging articles with highly dissimilar titles is required to obtain a substantial improvement.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Preliminaries
+      </section-title>
+      <paragraph>
+       We analyze H-Index Manipulation with respect to its classic and its parameterized complexity. The aim of parameterized complexity theory is to analyze problem difficulty not only in terms of the input size, but also with respect to an additional parameter, typically an integer p[8], [12], [19], [25]. Thus, formally, an instance of a parameterized problem is a pair {a mathematical formula}(I,p) consisting of the input I and the parameter p. A parameterized problem with parameter p is fixed-parameter tractable (FPT) if there is an algorithm that decides an instance {a mathematical formula}(I,p) in {a mathematical formula}f(p)⋅|I|O(1) time, where f is an arbitrary computable function depending only on p. Clearly, if the problem is NP-hard, then we expect f to grow superpolynomially.
+      </paragraph>
+      <paragraph>
+       There are parameterized problems for which there is good evidence that they are not fixed-parameter tractable: Analogously to the concept of NP-hardness, the concept of W[1]-hardness was developed. It is widely assumed that a W[1]-hard parameterized problem cannot be fixed-parameter tractable. To show that a parameterized problem with parameter {a mathematical formula}p′ is W[1]-hard, a parameterized reduction from a known W[1]-hard parameterized problem with parameter p can be used. This is a reduction that runs in {a mathematical formula}f(p)⋅|I|O(1) time and produces instances such that the parameter {a mathematical formula}p′ is upper-bounded by some function {a mathematical formula}g(p). Determining whether an undirected graph G has a clique of order p is well known to be W[1]-hard with respect to p.
+      </paragraph>
+      <paragraph>
+       The notion of a problem kernel tries to capture the existence of efficient and provably effective preprocessing rules [21], [24]. More precisely, we say that a parameterized problem has a problem kernel if every instance can be reduced in polynomial time to an equivalent instance whose size depends only on the parameter. The algorithm computing the problem kernel is called kernelization and is often presented as a series of data reduction rules. A data reduction rule transforms an instance {a mathematical formula}(I,p) of a parameterized problem into an instance {a mathematical formula}(I′,p′) of the same problem; a data reduction rule is correct if {a mathematical formula}(I,p) is a yes-instance if and only if {a mathematical formula}(I′,p′) is a yes-instance.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Compatibility graphs with small connected components
+     </section-title>
+     <paragraph>
+      In this section, we analyze the parameterized complexity of H-Index Manipulation parameterized by the size c of the largest connected component of the compatibility graph. This parameterization is motivated by the fact that one would merge only similar articles and that usually each article is similar to only few other articles.
+     </paragraph>
+     <paragraph>
+      The following theorem shows that H-Index Manipulation is solvable in linear time for the citation measures {a mathematical formula}sumCite and {a mathematical formula}unionCite if c is constant. The algorithm exploits that, for these two measures, merging articles does not affect other articles. Thus, we can solve each connected component independently of the others.
+     </paragraph>
+     <paragraph label="Theorem 1">
+      {a mathematical formula}H-Index Manipulation(μ)is solvable in{a mathematical formula}O(3c⋅(n+m))time for{a mathematical formula}μ∈{sumCite,unionCite}if the connected components of the compatibility graph G have size at most c.
+     </paragraph>
+     <paragraph label="Proof">
+      Clearly, articles from different connected components of G cannot be together in a part of any partition complying with G. Thus, independently for each connected component C of G, we compute a partition of the articles of C that complies with G and has the maximum number of parts P with {a mathematical formula}μ(P)≥h.We first show that this approach is correct and then show how to execute it efficiently. Obviously, if an algorithm creates a partition {a mathematical formula}P of the set W of our own articles that complies with G and has at least h parts P with {a mathematical formula}μ(P)≥h, then we face a yes-instance. Conversely, if the input is a yes-instance, then there is a partition {a mathematical formula}P of W complying with G and having at least h parts P with {a mathematical formula}μ(P)≥h. Consider any connected component C of G and the restriction {a mathematical formula}PC={P∈P|P⊆V(C)} of {a mathematical formula}P to C, where {a mathematical formula}V(C) is the vertex set of C. Note that each part in {a mathematical formula}P is either contained in {a mathematical formula}V(C) or disjoint from it and, thus, {a mathematical formula}PC is a partition of {a mathematical formula}V(C). Moreover, merging articles of one connected component does not affect the number of citations of articles in other connected components with respect to {a mathematical formula}sumCite or {a mathematical formula}unionCite. Thus, if we replace the sets of {a mathematical formula}PC in {a mathematical formula}P by a partition of C that has a maximum number of parts P with {a mathematical formula}μ(P)≥h, then we obtain a partition that still has H-index at least h. Thus, our algorithm indeed finds a partition with H-index at least h.We now show how to compute, for each connected component C of G, a partition that maximizes the number of parts with at least h citations. In order to achieve a running time of {a mathematical formula}O(3c⋅(n+m)), we employ dynamic programming. First, for each connected component C of G and every {a mathematical formula}V′⊆V(C), we initialize a table{a mathematical formula} A table entry {a mathematical formula}Q[V′] thus stores whether merging {a mathematical formula}V′ results in an article with at least h citations. Obviously, if {a mathematical formula}G[V′] is not a clique, then {a mathematical formula}V′ cannot be a part in any partition complying with G. Therefore, we set {a mathematical formula}Q[V′]:=−∞ in this case. All table entries {a mathematical formula}Q[V′] for all vertex subsets {a mathematical formula}V′ of all connected components of G can be computed in {a mathematical formula}O(2c⋅(n+m)) time.Now, for every vertex subset {a mathematical formula}V′⊆V(C) of a connected component C, we define {a mathematical formula}T[V′] to be the maximum number of parts P with {a mathematical formula}μ(P)≥h in any partition of {a mathematical formula}V′ complying with G. Obviously, we have the recurrence relation{a mathematical formula} After computing the table Q, we can compute {a mathematical formula}T[V(C)] for each connected component C using dynamic programming: compute {a mathematical formula}T[V′] for each subset {a mathematical formula}V′⊆V(C) in the order of increasing cardinality. To this end, for each such subset {a mathematical formula}V′⊆V(C), we iterate over all subsets {a mathematical formula}V″⊆V′. Thus, the computation of T works in {a mathematical formula}O(3cc) time since there are at most {a mathematical formula}3c partitions of {a mathematical formula}V(C) into {a mathematical formula}V(C)∖(V′∪V″), {a mathematical formula}V′∖V″, and {a mathematical formula}V″. Herein, the factor c accounts for operations with sets of cardinality at most c. Thus, the total running time is {a mathematical formula}O(2c⋅(n+m)+3cc)⊆O(3c⋅(n+m)).  □
+     </paragraph>
+     <paragraph>
+      We have seen that H-Index Manipulation is solvable in linear time for the citation measures {a mathematical formula}sumCite and {a mathematical formula}unionCite if the compatibility graph has constant-size connected components. In contrast, constant-size components of the compatibility graph do not help when the {a mathematical formula}fusionCite measure is used. This we show by a reduction from the NP-hard 3-Bounded Positive 1-in-3-SAT problem [11].
+     </paragraph>
+     <paragraph label="Theorem 2">
+      {a mathematical formula}H-Index Manipulation(fusionCite)is NP-hard even if all of the following conditions hold:
+     </paragraph>
+     <list>
+      <list-item label="i)">
+       the largest connected component of the compatibility graph has size two,
+      </list-item>
+      <list-item label="ii)">
+       the citation graph is acyclic, and
+      </list-item>
+      <list-item label="iii)">
+       the input instance has H-index{a mathematical formula}h−1.
+      </list-item>
+     </list>
+     <paragraph>
+      Regarding (ii), note that citation graphs are often acyclic in practice as papers tend to cite only earlier papers. Thus, it is important that Theorem 2 does not require cycles in the citation graph.
+     </paragraph>
+     <paragraph label="Proof">
+      We prove Theorem 2 using a polynomial-time many-one reduction from the NP-hard 3-Bounded Positive 1-in-3-SAT problem [11]. 3-Bounded Positive 1-in-3-SATInput:A formula ϕ in 3-conjunctive normal form containing only positive literals and with each literal contained in at most three clauses.Question:Is there a truth assignment to the variables of ϕ that sets exactly one variable per clause to “true”? Let n be the number of variables of ϕ and let m be the number of clauses. If {a mathematical formula}m+n is odd, then we simply duplicate the instance. If {a mathematical formula}(m+n)/2&lt;18, then we solve ϕ using brute force and output a corresponding trivial yes- or no-instance of {a mathematical formula}H-Index Manipulation(fusionCite). Otherwise, we now create an instance of H-Index Manipulation with {a mathematical formula}h:=m+n. The construction is illustrated in Fig. 2.For each variable {a mathematical formula}xi of ϕ, we introduce a variable gadget consisting of
+      <list>
+       four articles {a mathematical formula}Xi,T1,Xi,T2,Xi,F1, and {a mathematical formula}Xi,F2,two edges {a mathematical formula}{Xi,T1,Xi,T2} and {a mathematical formula}{Xi,F1,Xi,F2} in the compatibility graph G, andtwo arcs {a mathematical formula}(Xi,T1,Xi,F1) and {a mathematical formula}(Xi,T2,Xi,F1) in the citation graph D.To connect the clause gadget for the clause
+      </list>
+      <paragraph>
+       {a mathematical formula}cj=(xi∨xk∨xℓ) to the corresponding variable gadgets, for all {a mathematical formula}z∈{i,k,ℓ} and all {a mathematical formula}y∈{i,k,ℓ}∖{z}, we add the arcs {a mathematical formula}(Cj,z1,Xz,F2), {a mathematical formula}(Cj,z2,Xz,F2), {a mathematical formula}(Cj,z1,Xy,T2), and {a mathematical formula}(Cj,z2,Xy,T2).Observe that the constructed citation graph is acyclic since each variable gadget and each clause gadget is acyclic and all other arcs are from clause gadgets to variable gadgets. Moreover, since each variable occurs in at most three clauses of ϕ and each clause has only three variables, every created article has at most {a mathematical formula}3⋅3⋅2=18 incoming citations. Since {a mathematical formula}(m+n)/2=h/2≥18, we can finally add, for each of the created articles, a distinct set of articles to D such that each pair {a mathematical formula}{Xi,T1,Xi,T2}, {a mathematical formula}{Xi,F1,Xi,F2}, or {a mathematical formula}{Cj,z1,Cj,z2} is cited exactly h times in total and each single article is cited less than h times. In particular, because articles of the form {a mathematical formula}Xi,T1 and {a mathematical formula}Cj,z2 are never cited by any article in variable or clause gadgets, we can add these additional citations so that {a mathematical formula}Xi,T1 is cited once and {a mathematical formula}Xi,T2 is cited {a mathematical formula}h−1 times for each variable {a mathematical formula}xi of ϕ and so that {a mathematical formula}Cj,z2 in some pair {a mathematical formula}{Cj,z1,Cj,z2} for a clause {a mathematical formula}cj is cited once, whereas {a mathematical formula}Cj,z1 is cited {a mathematical formula}h−1 times. This concludes the construction of our {a mathematical formula}H-Index Manipulation(fusionCite) instance. Note that, for each of the {a mathematical formula}h=m+n clauses and variables, we created at least one article with {a mathematical formula}h−1 citations, which gives an instance with H-index {a mathematical formula}h−1. We now prove the correctness of the presented reduction.First, if we have an assignment for ϕ that sets exactly one variable in each clause to true, then we merge the pair {a mathematical formula}{Xi,T1,Xi,T2} for all true variables {a mathematical formula}xi and merge the pairs {a mathematical formula}{Cj,i1,Cj,i2} for all clauses {a mathematical formula}cj containing {a mathematical formula}xi. We will thus get {a mathematical formula}h=m+n articles with h citations. To show the converse, we first make two important observations:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each variable {a mathematical formula}xi of ϕ, at most one of the pairs {a mathematical formula}p1:={Xi,T1,Xi,T2} and {a mathematical formula}p2:={Xi,F1,Xi,F2} can be merged into an article P with {a mathematical formula}fusionCite(P)≥h: Observe that the sum of the citations of each pair is exactly h. However, if both {a mathematical formula}p1 and {a mathematical formula}p2 are merged, then the article resulting from merging {a mathematical formula}p2 will get at most {a mathematical formula}h−1 citations: it gets a citation from each of the articles of {a mathematical formula}p1, which will be counted only as one citation after merging {a mathematical formula}p1.
+       </list-item>
+       <list-item label="2.">
+        For each clause {a mathematical formula}cj=(xi∨xk∨xℓ), at most one of the pairs {a mathematical formula}p1:={Cj,i1,Cj,i2}, {a mathematical formula}p2:={Cj,k1,Cj,k2}, {a mathematical formula}p3:={Cj,ℓ1,Cj,ℓ2} can be merged into an article P with {a mathematical formula}fusionCite(P)≥h: Assume that {a mathematical formula}px for some {a mathematical formula}x∈{1,2,3} is merged into an article P with {a mathematical formula}fusionCite(P)≥h. Then, no pair {a mathematical formula}py with {a mathematical formula}y&gt;x can be merged into such an article: {a mathematical formula}py can get at most {a mathematical formula}h−1 citations when merged since {a mathematical formula}py gets a citation from each of the two articles of {a mathematical formula}px. By the same argument, if any {a mathematical formula}py with {a mathematical formula}y&lt;x could be merged into one article P with {a mathematical formula}fusionCite(P)≥h, then this would contradict the assumption that merging {a mathematical formula}px yields such an article.
+       </list-item>
+      </list>
+      <paragraph>
+       Since we ask for merging articles in order to increase the H-index to {a mathematical formula}h:=m+n, which is precisely the number of variables and clauses in the input formula, we have to create at least one article with h citations for each variable gadget and for each clause gadget. That is, if we can achieve H-index h, then, for each variable gadget and each clause gadget, exactly one pair is merged into an article with at least h citations. Moreover, if, for some clause {a mathematical formula}cj=(xi∨xk∨xℓ) the pair {a mathematical formula}{Cj,z1,Cj,z2} is merged for some {a mathematical formula}z∈{i,k,ℓ}, then the pair {a mathematical formula}{Xz,F1,Xz,F2} cannot be merged into an article with h citations since it gets one citation from each of {a mathematical formula}Cj,z1 and {a mathematical formula}Cj,z2. It follows that {a mathematical formula}{Xz,T1,Xz,T2} has to be merged. Moreover, for {a mathematical formula}y∈{i,k,ℓ}∖{z}, the pair {a mathematical formula}{Xz,T1,Xz,T2} cannot be merged into an article with h citations, since it gets one citation from each of {a mathematical formula}Cj,z1 and {a mathematical formula}Cj,z2. It follows that {a mathematical formula}{Xz,F1,Xz,F2} has to be merged.Thus, we obtain an assignment for ϕ that sets exactly one variable of each clause to true by setting those variables {a mathematical formula}xi to true for which the pair {a mathematical formula}{Xi,T1,Xi,T2} is merged into an article with at least h citations.  □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Merging few articles or increasing the H-Index by one
+     </section-title>
+     <paragraph>
+      In this section, we consider two variants of H-Index Manipulation: Cautious H-Index Manipulation, where we allow to merge at most k articles, and H-Index Improvement, where we ask whether it is possible to increase the H-index at all.
+     </paragraph>
+     <paragraph>
+      Cautious H-Index Manipulation is motivated by the fact that insincere authors could try to conceal their manipulation by merging only few articles. Formally, the problem is defined as follows, where {a mathematical formula}μ∈{sumCite,unionCite,fusionCite} as before. {a mathematical formula}Cautious H-Index Manipulation(μ)Input:A citation graph {a mathematical formula}D=(V,A), a compatibility graph {a mathematical formula}G=(V,E), a set {a mathematical formula}W⊆V of articles, and non-negative integers h and k.Question:Is there a partition {a mathematical formula}P of W that
+     </paragraph>
+     <list>
+      <list-item label="i)">
+       complies with G,
+      </list-item>
+      <list-item label="ii)">
+       has H-index at least h with respect to μ, and
+      </list-item>
+      <list-item label="iii)">
+       is such that the number {a mathematical formula}∑P∈P(|P|−1) of merges is at most k?
+      </list-item>
+     </list>
+     <paragraph>
+      We show that Cautious H-Index Manipulation parameterized by k is fixed-parameter tractable only for the {a mathematical formula}sumCite measure and when the compatibility graph is a clique. Allowing arbitrary compatibility graphs or using more complex measures leads to W[1]-hardness with respect to k.
+     </paragraph>
+     <paragraph>
+      The second problem considered in this section, {a mathematical formula}H-Index Improvement(μ), was introduced by de Keijzer and Apt [9]; it is formally defined as follows. {a mathematical formula}H-Index Improvement(μ)Input:A citation graph {a mathematical formula}D=(V,A), a compatibility graph {a mathematical formula}G=(V,E), and a set {a mathematical formula}W⊆V of articles.Question:Is there a partition {a mathematical formula}P of W that complies with G and has a larger H-index with respect to μ than the partition of W into singletons?Theorem 2(iii) shows that {a mathematical formula}H-Index Improvement(fusionCite) is NP-hard even when the compatibility graph has connected components of size at most two. However, de Keijzer and Apt [9] gave a polynomial-time algorithm for {a mathematical formula}H-Index Improvement(sumCite) if the compatibility graph is a clique. We flesh out the boundary between hardness and tractability by proving that more general compatibility graphs lead to NP-hardness in the case of {a mathematical formula}sumCite and that even clique compatibility graphs lead to NP-hardness in the case of {a mathematical formula}unionCite and {a mathematical formula}fusionCite.
+     </paragraph>
+     <paragraph>
+      First, we consider the case of general compatibility graphs. Here, we obtain hardness results for both problem variants by reductions from Multicolored Clique: Multicolored CliqueInput:An ℓ-partite undirected graph H along with the ℓ partite sets.Question:Is there a clique with ℓ vertices contained in H?Multicolored Clique is known to be NP-hard and W[1]-hard with respect to ℓ[17]. Both hardness results hold for {a mathematical formula}sumCite and, thus, also for {a mathematical formula}unionCite and {a mathematical formula}fusionCite.
+     </paragraph>
+     <paragraph label="Theorem 3">
+      Parameterized by k,{a mathematical formula}Cautious H-Index Manipulation(sumCite)is W[1]-hard. Moreover,{a mathematical formula}H-Index Improvement(sumCite)is NP-hard.
+     </paragraph>
+     <paragraph>
+      The theorem directly follows from the following lemma, from which we will derive another hardness result in the next section.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      There is a polynomial-time many-one reduction fromMulticolored Cliqueto{a mathematical formula}Cautious H-Index Manipulation(sumCite)with{a mathematical formula}k=ℓ−1and{a mathematical formula}h=ℓand toH-Index Improvement.
+     </paragraph>
+     <paragraph label="Proof">
+      The two reductions from the Multicolored Clique problem differ only in specifying the H-index that we want to achieve and the upper bound on the number of merges for Cautious H-Index Manipulation. The reductions work as follows. We create a citation graph D, a compatibility graph G, and a set of articles W, such that the instance {a mathematical formula}(D,G,W,h:=ℓ,k:=ℓ−1) of Cautious H-Index Manipulation and the instance {a mathematical formula}(D,G,W) of H-Index Improvement are yes-instances if and only if {a mathematical formula}(H,ℓ) is a yes-instance for Multicolored Clique.Our Cautious H-Index Manipulation and H-Index Improvement instances have an article set {a mathematical formula}W=W≥⊎W&lt;, where {a mathematical formula}W&lt;:=V(H) and {a mathematical formula}W≥ consists of {a mathematical formula}ℓ−1 new articles. For each article {a mathematical formula}w∈W≥ we introduce a set of ℓ articles that are not contained in W and that cite w and no other article. Similarly, for each article {a mathematical formula}w∈W&lt; we introduce one article not in W that cites w and no other article. In this way, we have implicitly defined the citation graph D. Next, we construct the compatibility graph G from H by adding each article in {a mathematical formula}W≥ as an independent vertex. This concludes the construction. Clearly, we can carry it out in polynomial time. Note that the reduction is a parameterized reduction from Multicolored Clique parameterized by ℓ to Cautious H-Index Manipulation parameterized by k since {a mathematical formula}k=ℓ−1.Now we prove the equivalence of the three instances. If the Multicolored Clique instance {a mathematical formula}(H,ℓ) is a yes-instance, then there is a clique S of size ℓ in H. Merging the corresponding articles {a mathematical formula}S⊆W&lt; complies with the compatibility graph and, hence, yields a merged article with ℓ citations. Together with the {a mathematical formula}ℓ−1 articles in {a mathematical formula}W≥, this results in ℓ articles with ℓ citations and, hence, H-index at least {a mathematical formula}ℓ=h. Furthermore, exactly {a mathematical formula}ℓ−1 merges are performed in this way, implying that the Cautious H-Index Manipulation instance is a yes-instance.Note that the H-index of the singleton partition {a mathematical formula}W of W is {a mathematical formula}ℓ−1. That is, the Cautious H-Index Manipulation instance asks to increase the H-index of {a mathematical formula}W by one. Thus, clearly, if the Cautious H-Index Manipulation instance is a yes-instance, then also the H-Index Improvement instance is.Finally, assume that the H-Index Improvement instance is yes. Then there is a merged article S with ℓ citations. Since only articles in {a mathematical formula}W&lt; can be merged, S consists of at least ℓ articles. Furthermore, {a mathematical formula}G[S]=H[S] is a clique since the merging has to comply with G. Hence, the Multicolored Clique instance is yes, concluding the proof that all three instances are equivalent.  □
+     </paragraph>
+     <paragraph>
+      Now we restrict the compatibility graph to be a clique, meaning that arbitrary pairs of articles can be merged. Recall that {a mathematical formula}H-Index Improvement(sumCite) is polynomial-time solvable in this case [9]. We also achieve a (fixed-parameter) tractability result for {a mathematical formula}Cautious H-Index Manipulation(sumCite) parameterized by the number k of article merges.
+     </paragraph>
+     <paragraph label="Theorem 4">
+      If the compatibility graph G is a clique, then{a mathematical formula}Cautious H-Index Manipulation(sumCite)is solvable in{a mathematical formula}O(9kk⋅(k+n+m))time, where k is the number of allowed article merges.
+     </paragraph>
+     <paragraph label="Proof">
+      Assume that {a mathematical formula}(D,G,W,h,k) is a yes-instance and let {a mathematical formula}P be a partition of W with H-index at least h and at most k merges. Let {a mathematical formula}M:={v∈W|v∈P,P∈P,|P|≥2} be the set of articles that have been merged with other articles, and let {a mathematical formula}W′:={v∈W|degDin(v)≤h} be the set of articles with at most h citations. Let {a mathematical formula}v1,v2,… be the articles of {a mathematical formula}W′ ordered by non-increasing citation counts. We claim that we may assume that {a mathematical formula}M={v1,…,v|M|}. Otherwise, we are in one of the following cases:
+      <list>
+       There is an article {a mathematical formula}v∈M with more than h citations. That is, {a mathematical formula}v∈P∈P and {a mathematical formula}|P|≥2. In this case, we may simply split P into {a mathematical formula}P∖{v} and {a mathematical formula}{v} without dropping the H-index of {a mathematical formula}P below h.There is an article {a mathematical formula}vi∈M with {a mathematical formula}i&gt;|M|. That is, {a mathematical formula}vi∈P∈P with {a mathematical formula}|P|≥2. Then, since the compatibility graph is a clique, we may replace {a mathematical formula}vi in P with an arbitrary article {a mathematical formula}vj∉M and {a mathematical formula}j≤|M| (which clearly exists) without decreasing the H-index of {a mathematical formula}P.Since the only nontrivial connected component
+      </list>
+      <paragraph>
+       C of the compatibility graph after the above preprocessing is a clique, we apply the algorithm only to C. Thus, the auxiliary table Q, used to store whether merging a set {a mathematical formula}V′ of articles creates an article with at least h citations, may ignore the compatibility graph. More formally, for all {a mathematical formula}V′⊆V(C), we let{a mathematical formula} In order to ensure that we make at most k merges, we need an additional index in the main table T. More precisely, for a set {a mathematical formula}V′⊆V(C) of vertices, let {a mathematical formula}T[V′,k] be the maximum number of parts P with {a mathematical formula}μ(P)≥h in any partition of {a mathematical formula}V′ that can be obtained from the singleton partition by performing at most k merges. Then,{a mathematical formula} Since the ground set {a mathematical formula}V(C) of articles considered in the dynamic programming table has size at most 2k, this algorithm has a running time of {a mathematical formula}O(9kk⋅(k+n+m)).  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      For the {a mathematical formula}unionCite and {a mathematical formula}fusionCite measure, we obtain hardness results for both Cautious H-Index Manipulation and H-Index Improvement; the (parameterized) reductions are from the Independent Set problem.Independent SetInput:An undirected graph H and a non-negative integer ℓ.Question:Is there an independent set of size at least ℓ in H, that is, a set of ℓ pairwise nonadjacent vertices?Independent Set is NP-hard and W[1]-hard with respect to ℓ[12].
+     </paragraph>
+     <paragraph label="Theorem 5">
+      For{a mathematical formula}μ∈{unionCite,fusionCite},{a mathematical formula}Cautious H-Index Manipulation(μ)is W[1]-hard parameterized by k even if the compatibility graph is a clique.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}(H,ℓ) be an instance of Independent Set. We construct an instance {a mathematical formula}(D,G,W,h,k:=ℓ−1) of Cautious H-Index Manipulation that is a yes-instance if and only if {a mathematical formula}(H,ℓ) is a yes-instance for Independent Set. Clearly, this is a parameterized reduction with respect to ℓ and k.Let {a mathematical formula}n:=|V(H)| and {a mathematical formula}h:=ℓn. Without loss of generality, we assume that {a mathematical formula}n&gt;ℓ&gt;1. Our Cautious H-Index Manipulation instance has an article set {a mathematical formula}W=W≥⊎W&lt;, where {a mathematical formula}W&lt;:=V(H) and {a mathematical formula}W≥ consists of {a mathematical formula}h−1 new articles. Next, for each article {a mathematical formula}w∈W≥, we introduce h new articles not in W that cite w and no other article. The citations of the articles in {a mathematical formula}W&lt; are defined as follows. For each pair of adjacent vertices {a mathematical formula}u,v∈V(H), we introduce a new article {a mathematical formula}e{u,v} not contained in W that cites the articles {a mathematical formula}u,v∈W&lt; and no other articles. Furthermore, we increase the citation counts of each article in {a mathematical formula}W&lt; to exactly n. That is, for each article {a mathematical formula}w∈W&lt; we introduce new articles not contained in W that cite only w until w has n citations. The compatibility graph G is a clique. This concludes the construction.Clearly, the construction can be carried out in polynomial time. Moreover, the reduction is a parameterized reduction from Independent Set parameterized by ℓ to Cautious H-Index Manipulation parameterized by k since {a mathematical formula}k=ℓ−1. Note that no article in W cites another article in W and, hence, for any part P in a partition of W, we have {a mathematical formula}unionCite(P)=fusionCite(P).Let us prove the correctness of the reduction. Assume first that {a mathematical formula}(H,ℓ) is a yes-instance and let S be an independent set of size ℓ in H. Then, merging all articles of S into one article in the Cautious H-Index Manipulation instance is valid since the compatibility graph G is a clique. Furthermore, it yields a merged article S with {a mathematical formula}unionCite(S)≥h citations: Since the vertices in S are independent in G, there is no article {a mathematical formula}e{u,v} citing both {a mathematical formula}u,v∈S in the Cautious H-Index Manipulation instance. Thus, the citations of the articles in S are pairwise disjoint. Together with the {a mathematical formula}h−1 atomic articles in {a mathematical formula}W≥ we have H-index h.Conversely, assume that {a mathematical formula}(D,G,W,h,ℓ−1) is a yes-instance. Since we are allowed to merge at most {a mathematical formula}ℓ−1 times in order to achieve an H-index of {a mathematical formula}h=ℓn and since each article in {a mathematical formula}W&lt; has exactly n citations, we need to merge ℓ articles of {a mathematical formula}W&lt; into one article. That is, there is a part {a mathematical formula}S⊆W&lt; in any solution for Cautious H-Index Manipulation with {a mathematical formula}unionCite(S)≥h citations. This means that the articles contained in S have pairwise disjoint sets of citations because each of them has only {a mathematical formula}n=h/ℓ citations. Thus, S is an independent set in H.  □
+     </paragraph>
+     <paragraph>
+      The reduction for Theorem 5 exploits the fact that at most k merges are allowed. Hence, to show NP-hardness for H-Index Improvement, we need a different reduction. Note that the NP-hardness for the {a mathematical formula}fusionCite measure and general compatibility graphs already follows from Theorem 2(iii). We complement this result by the following theorem.
+     </paragraph>
+     <paragraph label="Theorem 6">
+      {a mathematical formula}H-Index Improvement(μ)is NP-hard for{a mathematical formula}μ∈{unionCite,fusionCite}even if the compatibility graph is a clique.
+     </paragraph>
+     <paragraph label="Proof">
+      We give a polynomial-time reduction from Independent Set. Let {a mathematical formula}(H,ℓ) be an instance of Independent Set and let {a mathematical formula}q:=|E(H)|. Without loss of generality, we assume that {a mathematical formula}q≥ℓ&gt;2. We now construct an instance of H-Index Improvement with citation graph D, a set V of articles, and a subset {a mathematical formula}W⊆V of own articles. The compatibility graph G will be a clique on all articles. We introduce citations so that the H-index of the singleton partition of W will be {a mathematical formula}q−1, hence the goal in the constructed instance will be to achieve H-index at least q.The article set W is partitioned into three parts {a mathematical formula}W=W≥⊎W−1⊎W&lt;. The first part, {a mathematical formula}W≥, consists of {a mathematical formula}q−ℓ−1 articles, and for each article {a mathematical formula}w∈W≥ we introduce q articles not in W that cite w and no other article. The second part, {a mathematical formula}W−1, consists of ℓ articles, and for each article {a mathematical formula}w∈W−1 we introduce {a mathematical formula}q−1 articles not in W that cite w and no other article. The last part, {a mathematical formula}W&lt;, contains the vertices of the Independent Set instance, that is, {a mathematical formula}W&lt;:=V(H). Finally, for each edge {a mathematical formula}{u,v}∈E(H) we introduce one article {a mathematical formula}e{u,v} not in W that cites both u and v. This concludes the construction of the citation graph D. Note that the singleton partition of W has H-index {a mathematical formula}q−1. Hence, we have created an instance {a mathematical formula}(D,G,W) of H-Index Improvement where we are looking to increase the H-index to at least q. Clearly, we can carry out this construction in polynomial time. Furthermore, since there are no self-citations, that is, no articles in W cite each other, for any subset P of W we have {a mathematical formula}unionCite(P)=fusionCite(P). Let us now prove the equivalence of the two instances.Assume that {a mathematical formula}(H,ℓ) is a yes-instance. We claim that then also the H-Index Improvement instance is a yes-instance. Choose an independent set S of size ℓ in H. Take each of the corresponding articles in S and merge them with the articles in {a mathematical formula}W−1, pairing them one by one. This creates ℓ merged articles with q citations each. Together with the articles in {a mathematical formula}W≥, we now have {a mathematical formula}q−1 articles with q citations, some of them merged. To create another article with q citations, simply merge all articles in {a mathematical formula}W&lt;∖S into one article: Since S is an independent set, for each article {a mathematical formula}e{u,v} citing {a mathematical formula}W&lt;, either u or v is not in S. Hence, the merged article {a mathematical formula}W&lt;∖S has q citations. Thus, {a mathematical formula}(D,G,W) is a yes-instance.Now assume that {a mathematical formula}(D,G,W) is a yes-instance and let us show that also {a mathematical formula}(H,ℓ) is. Take a partition {a mathematical formula}P of W with H-index at least q. Note that any subset {a mathematical formula}R⊆W&lt; has {a mathematical formula}μ(R)≥q only if R is a vertex cover of H (a vertex cover of a graph is a subset X of the vertices such that each edge is incident with some vertex in X). Hence, as there are at most {a mathematical formula}q−1 parts {a mathematical formula}P∈P with {a mathematical formula}P⊈W&lt;, there is at least one part {a mathematical formula}P∈P such that {a mathematical formula}P∩W&lt; is a vertex cover of H. For the sake of contradiction, assume that there are two parts {a mathematical formula}P1,P2 such that {a mathematical formula}P1∩W&lt; and {a mathematical formula}P1∩W&lt; are vertex covers for H. Then {a mathematical formula}P1∪P2⊇V(H)=W&lt;. Furthermore, each remaining part of {a mathematical formula}P contains only articles in {a mathematical formula}W≥∪W−1, that is, out of these parts, at most {a mathematical formula}q−ℓ−1+⌊ℓ/2⌋ can have at least q citations. However, as {a mathematical formula}ℓ&gt;2, there are at most {a mathematical formula}q−⌈ℓ/2⌉−1+2≤q−1 parts with at least q citations in {a mathematical formula}P, a contradiction. Thus, there is exactly one part {a mathematical formula}P∈P such that {a mathematical formula}R:=P∩W&lt; is a vertex cover of H.Take {a mathematical formula}S:=V(H)∖R. Note that, since R is a vertex cover of H, S is an independent set in H; we claim that S has size at least ℓ. Since there is exactly one part in {a mathematical formula}P that contains a vertex cover of H, each remaining part has at least q citations and there are at least {a mathematical formula}q−1 of them. This means that no two articles in {a mathematical formula}W≥∪W−1 are merged. Hence, each article in {a mathematical formula}W−1 is merged into an article in S, that is, S contains at least ℓ articles.  □
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Achieving a moderately large H-index
+     </section-title>
+     <paragraph>
+      We now consider the H-index that we want to achieve as a parameter. This parameter is often not very large as researchers in the early stage of their career have an H-index below 20. Even for more experienced researchers the H-index seldom exceeds 50. Hence, in many cases, the value of a desired H-index is sufficiently low to serve as useful parameter in terms of gaining efficient fixed-parameter algorithms. However, note that Lemma 1 immediately implies that {a mathematical formula}H-Index Manipulation(μ) is W[1]-hard with respect to the target H-index h. This hardness also transfers to the {a mathematical formula}unionCite and {a mathematical formula}fusionCite measures:
+     </paragraph>
+     <paragraph label="Corollary 1">
+      {a mathematical formula}H-Index Manipulation(μ)is W[1]-hard with respect to the target H-index h for each{a mathematical formula}μ∈{sumCite,unionCite,fusionCite}.
+     </paragraph>
+     <paragraph>
+      In contrast, we now show that {a mathematical formula}H-Index Manipulation(μ) is fixed-parameter tractable for any citation measure {a mathematical formula}μ∈{sumCite,unionCite,fusionCite} if the compatibility graph is a clique. To this end, we describe a kernelization algorithm, that is, a polynomial-time data reduction algorithm that produces an equivalent instance whose size is upper-bounded by some function of the parameter h.
+     </paragraph>
+     <paragraph>
+      One particular difficulty in designing data reduction rules for the {a mathematical formula}fusionCite measure is that citations in {a mathematical formula}D[W] are somewhat fragile as they may be “destroyed”, for example, if two adjacent vertices in W are merged. Thus, we take the following route to obtain the problem kernel. First, in {a mathematical formula}O(n+m) time, we use a greedy strategy to compute a maximal matching in the undirected graph underlying the citation graph D. If this matching has size at least {a mathematical formula}h2, then we show that there is a partition achieving H-index h. Otherwise, we use the fact that the articles that do not participate in the matching do not cite each other to design further data reduction rules.
+     </paragraph>
+     <paragraph label="Reduction Rule 1">
+      Let {a mathematical formula}(D,G,W,h) be an instance of {a mathematical formula}H-Index Manipulation(μ) for {a mathematical formula}μ∈{sumCite,unionCite,fusionCite} such that G is a clique. Compute a maximal matching in D by iteratively putting an arc into the matching as long as possible. If the resulting matching has size at least {a mathematical formula}h2, then accept.
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Reduction Rule1is correct and an application can be performed in{a mathematical formula}O(n+m)time.
+     </paragraph>
+     <paragraph label="Proof">
+      To see the claim about the running time, observe that it suffices to iterate once over all edges, maintaining a label for each vertex that indicates whether it has an incident edge in the matching.  □
+     </paragraph>
+     <paragraph>
+      Now assume that we have computed a maximal matching of size at most {a mathematical formula}h2 in D in {a mathematical formula}O(n+m) time. Then, the vertices incident to the matching arcs form a vertex cover C of size at most {a mathematical formula}2h2 for D. It remains to upper bound the number of articles in the independent set {a mathematical formula}V∖C. To this end, we first give a data reduction rule that ensures that each article in C cites only few articles in {a mathematical formula}W∖C. To do this, we need the following lemma, which enables us to assume that a solution merges only few articles in the independent set.
+     </paragraph>
+     <paragraph label="Lemma 3">
+      Let{a mathematical formula}(D,G,W,h)be a yes-instance of{a mathematical formula}H-Index Manipulation(μ), where{a mathematical formula}μ∈{sumCite,unionCite,fusionCite}, such that G is a clique and let{a mathematical formula}X⊆Wsuch that no article in X cites any other article in X. Then, there is a partition{a mathematical formula}Pof W that has H-index at least h with respect to μ and such that at most{a mathematical formula}h2atomic articles from X are not singletons in{a mathematical formula}P.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a partition {a mathematical formula}P⁎ that has H-index at least h with respect to μ and such that the number of atomic articles from X that are not singletons in {a mathematical formula}P⁎ is minimum. If {a mathematical formula}P⁎ has more than h merged articles or a merged article P with {a mathematical formula}μ(P)&lt;h, then one of the merged articles can be split into its atomic articles without decreasing the H-index below h. Thus, assume that {a mathematical formula}P⁎ contains at most h merged articles P, each with {a mathematical formula}μ(P)≥h. To prove the lemma, it is enough to show that there is no merged article {a mathematical formula}P⁎∈P⁎ containing more than h atomic articles {a mathematical formula}a1,…,aℓ∈X, where {a mathematical formula}ℓ&gt;h. We will lead the existence of such an article {a mathematical formula}P⁎ to a contradiction.If {a mathematical formula}μ=sumCite, then it is clear that {a mathematical formula}P⁎ can be replaced by two articles {a mathematical formula}P⁎∖{ai},{ai} in {a mathematical formula}P⁎ for some {a mathematical formula}i∈{1,…,ℓ} so that still {a mathematical formula}sumCite(P⁎∖{ai})≥h, contradicting our choice of {a mathematical formula}P⁎.For {a mathematical formula}μ=unionCite, consider the articles {a mathematical formula}Pj:=(P⁎∖X)∪{a1,…,aj} for {a mathematical formula}j∈{1,…,ℓ}. If {a mathematical formula}unionCite(Pj)&lt;unionCite(Pj+1) for each {a mathematical formula}j∈{1,…,ℓ−1}, then {a mathematical formula}unionCite(Ph)≥h and replacing {a mathematical formula}P⁎ by {a mathematical formula}Ph in {a mathematical formula}P⁎ and adding the articles of {a mathematical formula}P⁎∖Ph as singletons yields a partition with more singletons from X and H-index at least h, thus contradicting our choice of {a mathematical formula}P⁎. Otherwise, there is a {a mathematical formula}j∈{1,…,ℓ−1} such that {a mathematical formula}unionCite(Pj)≥unionCite(Pj+1), meaning that {a mathematical formula}aj+1 is cited by a subset of the atomic articles that cite {a mathematical formula}Pj. Then, replacing {a mathematical formula}P⁎ by the two articles {a mathematical formula}P⁎∖{aj+1} and {a mathematical formula}{aj+1} in {a mathematical formula}P⁎ yields a partition with H-index at least h and more singletons from X, contradicting our choice of {a mathematical formula}P⁎.Similarly, for {a mathematical formula}μ=fusionCite, consider the series of partitions {a mathematical formula}Pj for {a mathematical formula}j∈{1,…,ℓ−1} arising from replacing {a mathematical formula}P⁎ by the {a mathematical formula}ℓ−j+1 (merged) articles {a mathematical formula}Pj and {a mathematical formula}{aj+1},…,{aℓ} in {a mathematical formula}P⁎. If {a mathematical formula}fusionCitePj(Pj)&lt;fusionCitePj+1(Pj+1) for each {a mathematical formula}j∈{1,…,ℓ−1}, then {a mathematical formula}fusionCitePh(Ph)≥h and each remaining merged article {a mathematical formula}P′∈Ph∩P⁎ has {a mathematical formula}fusionCitePh(P′)≥fusionCiteP(P′). Yet {a mathematical formula}Ph has less atomic articles from X that are not singletons than {a mathematical formula}P⁎, which contradicts our choice of {a mathematical formula}P⁎. If, otherwise, there is a {a mathematical formula}j∈{1,…,ℓ−1} such that {a mathematical formula}fusionCitePj(Pj)≥fusionCitePj+1(Pj+1), then we consider two cases.In the first case, {a mathematical formula}aj+1 does not cite any article in {a mathematical formula}P⁎∖X. Since articles in X do not cite each other and {a mathematical formula}aj+1∈X, it follows that {a mathematical formula}aj+1 does not cite any article in {a mathematical formula}P⁎. Therefore, {a mathematical formula}fusionCitePj(Pj)≥fusionCitePj+1(Pj+1) implies that the set of (merged) articles that cite {a mathematical formula}aj+1 is a subset of the (merged) articles that cite {a mathematical formula}Pj. This implies that the set of (merged) articles that cite {a mathematical formula}aj+1 is a subset of the (merged) articles that cite {a mathematical formula}Pℓ. Thus, replacing the merged article {a mathematical formula}P⁎=Pℓ by the two articles {a mathematical formula}P⁎∖{aj} and {a mathematical formula}{aj} in {a mathematical formula}P, we obtain a partition with H-index at least h that has one less atomic article from X that is not a singleton. This contradicts our choice of {a mathematical formula}P⁎.In the second case, {a mathematical formula}aj+1 cites at least one article in {a mathematical formula}P⁎∖X. Let c be the number of (merged) articles outside of {a mathematical formula}Pj that cite {a mathematical formula}aj+1 and none of the articles in {a mathematical formula}Pj and let d be the number of (merged) articles outside of {a mathematical formula}Pj that cite both {a mathematical formula}aj+1 and an article in {a mathematical formula}Pj. We have {a mathematical formula}c≤d+1 since, otherwise, {a mathematical formula}fusionCitePj(Pj)&lt;fusionCitePj+1(Pj+1). Since no article in X cites {a mathematical formula}aj+1 and {a mathematical formula}Pℓ∖Pj⊆X, we also have {a mathematical formula}c′≤d′+1, where {a mathematical formula}c′ is the number of (merged) articles outside of {a mathematical formula}Pℓ that cite {a mathematical formula}aj+1 and none of the articles in {a mathematical formula}Pℓ∖{aj+1} and where {a mathematical formula}d′ is the number of (merged) articles outside of {a mathematical formula}Pℓ that cite both {a mathematical formula}aj+1 and an article in {a mathematical formula}Pℓ∖{aj+1}. Replacing the merged article {a mathematical formula}Pℓ by the two articles {a mathematical formula}Pℓ∖{aj} and {a mathematical formula}{aj} in {a mathematical formula}P⁎, we obtain a partition with H-index at least h that has one less atomic article from X that is not a singleton. This is a contradiction to the choice of {a mathematical formula}P⁎.  □
+     </paragraph>
+     <paragraph>
+      The idea for the following data reduction rule is that, if an article in a vertex cover C cites many articles outside of C, then only few of these are in merged articles and only few of the remaining articles are needed to maintain the citations of the merged articles. Hence, superfluous citations can be removed.
+     </paragraph>
+     <paragraph label="Reduction Rule 2">
+      Let {a mathematical formula}(D,G,W,h) be an instance of {a mathematical formula}H-Index Manipulation(μ), where {a mathematical formula}μ∈{sumCite,unionCite,fusionCite}, such that G is a clique and let C be a vertex cover in D. If there is an article {a mathematical formula}v∈C that cites more than {a mathematical formula}2h2+2h articles in {a mathematical formula}W∖C, then remove an arbitrary citation {a mathematical formula}(v,w) for some {a mathematical formula}w∈W∖C.
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Reduction Rule2is correct and can be exhaustively applied in{a mathematical formula}O(n+m)time.
+     </paragraph>
+     <paragraph label="Proof">
+      We first prove the correctness. Clearly, if the instance resulting from an application of Reduction Rule 2 is a yes-instance, then also the original instance is a yes-instance. For the converse, consider a partition {a mathematical formula}P with H-index h for {a mathematical formula}(D,G,W,h) that does not have H-index h after removing {a mathematical formula}(v,w) from D. Without loss of generality, we can assume that there are no merged articles {a mathematical formula}P∈P with {a mathematical formula}μ(P)&lt;h, because unmerging such articles can only increase the number of citations of other articles (in the case of {a mathematical formula}fusionCite) and, hence, cannot decrease the H-index of {a mathematical formula}P.Observe that, after the deletion of citation {a mathematical formula}(v,w) from D, there is at most one merged article {a mathematical formula}P∈P such that {a mathematical formula}μ(P)&lt;h. We claim that, among the articles cited by v, there is an atomic article with less than h citations that we can add to P so that P has h citations again, thus yielding a partition with H-index at least h. Let U denote the set of more than {a mathematical formula}2h2+2h articles in {a mathematical formula}W∖C that are cited by v. By Lemma 3, we may assume that at most {a mathematical formula}h2 of the articles in U are in merged articles. Thus, since {a mathematical formula}P does not have H-index h, there is an article {a mathematical formula}u∈U that is a singleton in {a mathematical formula}P and satisfies {a mathematical formula}μ({u})&lt;h. If {a mathematical formula}μ=sumCite, then adding u to P yields a partition with H-index h because u has at least one citation (from v). If {a mathematical formula}μ=unionCite, then observe that v does not cite P. Hence, adding u to P yields a partition with H-index h since v cites {a mathematical formula}P∪{u}. It remains to handle the case {a mathematical formula}μ=fusionCite.Note that having {a mathematical formula}fusionCiteP(P)&lt;h after deleting {a mathematical formula}(v,w) from D means {a mathematical formula}v∉P. Recall that, by Lemma 3, we may assume that at most {a mathematical formula}h2 of the articles in U are in merged articles. Furthermore, there are at most {a mathematical formula}h−1 articles in U that cite P and at most {a mathematical formula}h−1 articles {a mathematical formula}u∈U with {a mathematical formula}fusionCiteP(u)≥h. Denote the remaining articles of U by {a mathematical formula}u1,…,uℓ. That is, each {a mathematical formula}ui is cited by v, is a singleton in {a mathematical formula}P, does not cite P, and has {a mathematical formula}fusionCiteP(ui)&lt;h. Observe that, if one of these articles, say {a mathematical formula}ui, does not cite any merged article in {a mathematical formula}P, then adding {a mathematical formula}ui to P yields a partition with H-index h. Hence, assume that each article {a mathematical formula}ui for {a mathematical formula}i∈{1,…,ℓ} cites at least one merged article. Observe furthermore that, if there is some {a mathematical formula}ui such that each merged article {a mathematical formula}P′≠P that is cited by {a mathematical formula}ui receives h citations from {a mathematical formula}u1,…,ui−1, then adding {a mathematical formula}ui to P yields a partition with H-index h (recall that {a mathematical formula}ui does not cite P). Call such an article {a mathematical formula}uigood. We claim that there is at least one good article. Assign to each {a mathematical formula}ui the integer {a mathematical formula}ci:=∑P′∈P∖{P}min⁡{h,cites(i,P′)}, where {a mathematical formula}cites(i,P′) is the number of citations of {a mathematical formula}P′ from {a mathematical formula}u1,…,ui−1. Observe that each {a mathematical formula}ui either cites at least one merged article {a mathematical formula}P′≠P that receives less than {a mathematical formula}h+1 citations from {a mathematical formula}u1,…,ui−1 or it is good. Hence, either {a mathematical formula}ci&gt;ci−1 or {a mathematical formula}ui is good. Furthermore, if {a mathematical formula}ci≥(h−1)h, then {a mathematical formula}ui is good. Thus, if {a mathematical formula}ℓ&gt;(h−1)h, then there is a good article. Because {a mathematical formula}ℓ≥|U|−h2−(h−1)−(h−1) and {a mathematical formula}|U|≥2h2+2h, there is a good article indeed.Regarding the running time, for each article {a mathematical formula}v∈V, it can be checked in {a mathematical formula}O(degDout(v)) time whether the rule is applicable. In the same time, all citations exceeding the number {a mathematical formula}2h2+2h can be deleted. Since application of the reduction rule to one article cannot make it applicable to other articles, it follows that it can exhaustively be applied in {a mathematical formula}O(∑v∈VdegDout(v))=O(n+m) time.  □
+     </paragraph>
+     <paragraph>
+      Finally, we need the following cleanup rule.
+     </paragraph>
+     <paragraph label="Reduction Rule 3">
+      Let {a mathematical formula}(D,G,W,h) be an instance of {a mathematical formula}H-Index Manipulation(μ), where {a mathematical formula}μ∈{sumCite,unionCite,fusionCite}, such that G is a clique.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If there are h articles in W with h citations each, then accept.
+      </list-item>
+      <list-item label="•">
+       If there is an article in W that is not cited, then remove this article.
+      </list-item>
+      <list-item label="•">
+       If there is an article in {a mathematical formula}V∖W that cites no other article, then remove this article.
+      </list-item>
+      <list-item label="•">
+       If there is an article in W that is cited by more than h articles in {a mathematical formula}V∖W, then remove an arbitrary one of these citations.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Reduction Rule3is correct and can be exhaustively applied in{a mathematical formula}O(n+m)time.It is clear that Reduction Rule 3 can be exhaustively applied in {a mathematical formula}O(n+m) time. For the correctness, the only non-obvious part is the last one. To see that it is correct, let v be an article to which it has been applied, and observe that every merged article that v can be contained in has at least h citations before applying the rule, as well as after applying the rule.  □
+     </paragraph>
+     <paragraph>
+      Combining all data reduction rules above, we can give the promised polynomial-size problem kernel.
+     </paragraph>
+     <paragraph label="Theorem 7">
+      If the compatibility graph is a clique, then a{a mathematical formula}(4h4+6h3+5h2)-article problem kernel for{a mathematical formula}H-Index Manipulation(μ)is computable in{a mathematical formula}O(n+m)time, where{a mathematical formula}μ∈{sumCite,unionCite,fusionCite}.
+     </paragraph>
+     <paragraph label="Proof">
+      To compute the problem kernel, apply exhaustively Reduction Rules Reduction Rule 1, Reduction Rule 2, Reduction Rule 3. By the corresponding lemmas, the resulting instance is a yes-instance if and only if the input instance is a yes-instance, and the rules can be carried out in {a mathematical formula}O(n+m) time.To see the upper bound on the size, let C be the vertex cover of D computed from the matching of Reduction Rule 1. Note that {a mathematical formula}|C|≤2h2. We upper bound the size of W and, due to reducedness with respect to Reduction Rule 3, it then suffices to upper bound the number of articles that cite or are cited by articles in C. We divide the articles into four groups:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The set {a mathematical formula}W≥⊆W of articles with at least h citations from articles in {a mathematical formula}V∖W,
+      </list-item>
+      <list-item label="•">
+       the set {a mathematical formula}W&lt;⊆W of articles with less than h citations from articles in {a mathematical formula}V∖W,
+      </list-item>
+      <list-item label="•">
+       the set {a mathematical formula}V&lt;⊆V∖(W∪C) of articles that cite articles in {a mathematical formula}W&lt;, and
+      </list-item>
+      <list-item label="•">
+       the set {a mathematical formula}V≥⊆V∖(W∪C∪V&lt;) of articles that cite articles in {a mathematical formula}W≥ but no article in {a mathematical formula}W&lt;.
+      </list-item>
+     </list>
+     <paragraph>
+      Applying an arbitrary algorithm that decides H-Index Manipulation to the instances resulting from the problem kernel in Theorem 7 now yields the following classification result.
+     </paragraph>
+     <paragraph label="Corollary 2">
+      If the compatibility graph is a clique, then{a mathematical formula}H-Index Manipulation(μ)with{a mathematical formula}μ∈{sumCite,unionCite,fusionCite}is linear-time solvable for constant h.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      In this section, we examine by how much authors can increase their H-indices when allowing only merges of articles with similar titles or when fixing the allowed number of merges. To this end, we gathered article and citation data of AI researchers, computed compatibility graphs based on similarity of article titles, and implemented heuristics and exact algorithms for maximizing the H-index. Herein, we focused on the islands of tractability that we determined in our theoretical analysis, that is, the cases of small number of merges and small connected components in the compatibility graph for the measures {a mathematical formula}sumCite and {a mathematical formula}unionCite. These cases are also practically relevant, as {a mathematical formula}unionCite is the measure used by Google Scholar. The implemented algorithms are mainly based on Theorem 1, Theorem 4.
+     </paragraph>
+     <paragraph>
+      Data acquisition  We crawled Google Scholar data of 22 selected authors of IJCAI'13. Our (biased) selection was based on capturing authors in their early career, for whom H-index manipulation would seem most attractive. Specifically, we selected authors who have a Google Scholar profile, an H-index between 8 and 20, between 100 and 1000 citations, who are active between 5 and 10 years, and do not have a professor position.
+     </paragraph>
+     <paragraph>
+      In addition, we crawled Google Scholar data of AI's 10 to Watch, a list of young accomplished researchers in AI that is compiled every two years by IEEE Intelligent Systems. The dataset contains five profiles from the 2011 and eight profiles from the 2013 edition of the list [1], [33]. Some profiles were omitted due to difficulties in the crawling process, for example, because of articles that could not be attributed unambiguously to the respective author due to non-unique author names. Compared to the IJCAI 2013 author set, AI's 10 To Watch 2011 contains researchers who are more experienced and AI's 10 To Watch 2013 falls in between these two data sets in this regard. Table 2 gives an overview of the properties of the data sets.
+     </paragraph>
+     <paragraph>
+      For each author, we computed upper and lower bounds for the H-index increase when allowing at most {a mathematical formula}k=1,…,12 merges of arbitrary articles and the maximum possible H-index increase when merging only articles whose titles have a similarity above a certain compatibility threshold {a mathematical formula}t=0.1,0.2,…,0.9. The compatibility thresholding is described in more detail below.
+     </paragraph>
+     <paragraph>
+      Generating compatibility graphs  Compatibility graphs are constructed using the following simplified ‘bag of words model’: Compute for each article u the set of words {a mathematical formula}T(u) in its title. Draw an edge between articles u and v if {a mathematical formula}|T(u)∩T(v)|≥t⋅|T(u)∪T(v)|, where {a mathematical formula}t∈[0,1] is the compatibility threshold. For {a mathematical formula}t=0, the compatibility graph is a clique. For {a mathematical formula}t=1, only articles with the same words in the title are adjacent. Inspection showed that, for {a mathematical formula}t≤0.3, already very dissimilar articles are considered compatible.
+     </paragraph>
+     <paragraph>
+      Implemented algorithms  We implemented our algorithms for the parameter “maximum connected component size c of the compatibility graph” (Theorem 1) and for the parameter k of allowed merges (Theorem 4). We ran both algorithms using both the {a mathematical formula}sumCite and {a mathematical formula}unionCite measures. Note that, when applied with the {a mathematical formula}unionCite measure, the algorithm for Theorem 4 does not necessarily compute the maximum possible H-index increase (cf. Theorem 5), but we note that it yields a lower bound. Moreover, running it with {a mathematical formula}sumCite yields an upper bound for the maximum achievable H-Index with {a mathematical formula}unionCite and thus, we obtain both a lower and upper bound on the achievable H-index with respect to {a mathematical formula}unionCite using k merges.
+     </paragraph>
+     <paragraph>
+      The fixed-parameter algorithm for parameter c, the size of the connected components of the compatibility graph, is not able to solve all instances. In particular, it fails for {a mathematical formula}t=0.2, where it runs out of memory in most cases. We thus implemented an alternative solution strategy that is based on the enumeration of cliques in the compatibility graph, exploiting the fact that any merged article is a clique in the compatibility graph G. Thus, a partition of the article set W that complies with G directly corresponds to a set of vertex-disjoint cliques in G.
+     </paragraph>
+     <paragraph>
+      Starting with {a mathematical formula}h=1, we do the following.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Enumerate all minimal sets P such that P is a clique in the compatibility graph and {a mathematical formula}μ(P)&gt;h. Each set P is a potential merged article in a merged profile that achieves H-index h; clearly, we can restrict attention to minimal sets.
+      </list-item>
+      <list-item label="2.">
+       Find a maximum-cardinality set {a mathematical formula}P′ of potential merged articles such that {a mathematical formula}P∩P′=∅ for each pair {a mathematical formula}P,P′∈P′.
+      </list-item>
+      <list-item label="3.">
+       If {a mathematical formula}|P′|&gt;h, then an H-index of at least h can be achieved via merging. Continue with {a mathematical formula}h←h+1. Otherwise, an H-index of h cannot be achieved; return {a mathematical formula}h−1 as the maximum H-index that can be achieved via merging.
+      </list-item>
+     </list>
+     <paragraph>
+      In the implementation of Step 1, we first enumerate all maximal cliques of the compatibility graph and then check for each subset of each maximal clique whether it is a minimal set such that {a mathematical formula}μ(P)&gt;h. In Step 2, the size of {a mathematical formula}P′ is computed by constructing an auxiliary graph whose vertices are the potential merged articles and where edges are added between potential merged articles that have nonempty intersection. In this graph, {a mathematical formula}P′ is a maximum-cardinality independent set. We compute {a mathematical formula}P′ by computing a minimum-cardinality vertex cover via a simple fixed-parameter algorithm for the parameter vertex cover size.
+     </paragraph>
+     <paragraph>
+      This algorithm has a higher worst-case running time than the fixed-parameter algorithm for parameter c: the overall number of potential merged articles p may be exponential in c and we solve Independent Set on a graph of order p. Nevertheless, it works for the three data sets as the number of potential merged articles is much lower than in a worst-case instance.
+     </paragraph>
+     <paragraph>
+      Source code and data are freely available at http://fpt.akt.tu-berlin.de/hindex.
+     </paragraph>
+     <paragraph>
+      Experimental results  We ran our algorithms under a time limit of one hour on a 3.6 GHz Intel Xeon E5-1620 processor and a memory limit of 64 GB. Under these limits, the fixed-parameter algorithm for parameter k, the number of allowed merges, failed to solve instances with {a mathematical formula}k≥11. Thus, Fig. 3 shows results for {a mathematical formula}k≤10 only. The fixed-parameter algorithm for parameter c, the size of the connected components of the compatibility graph, failed to solve instances with a compatibility threshold {a mathematical formula}t≤0.2. Instances with {a mathematical formula}k≤10 and {a mathematical formula}t≥0.3 were usually solved within few seconds and using at most 100 MB of memory. The algorithm based on clique enumeration solved each instance with {a mathematical formula}t≥0.2 in several minutes. None of our algorithms was able to solve all instances with {a mathematical formula}t=0.1. Thus, Fig. 4 shows results for {a mathematical formula}t≥0.2 only.
+     </paragraph>
+     <paragraph>
+      Fig. 3 shows the H-index increase over all authors for each number {a mathematical formula}k=1,…,10 of allowed article merges when the compatibility graph is a clique. Remarkably, three merges are sufficient for all of our sample authors to increase their H-index by at least one. Let us put this number into perspective: as shown in Table 2, we measured that, without manipulation, on average the H-index in each group of our sample authors grows between 1.24 and 2.77 per year (which is higher than the one-per-year increase observed by Hirsch [22] in physics). Thus, from Fig. 3, one can conclude that two merges could save about nine months of work for half of our AI's 10 To Watch 2011 group, about four months of work for half of our AI's 10 To Watch 2013 group, and 19 months of work for half of our IJCAI'13 group.
+     </paragraph>
+     <paragraph>
+      Fig. 4 shows the H-index increase over all authors for {a mathematical formula}unionCite and each compatibility threshold {a mathematical formula}t=0.2,0.3,…,0.9. Remarkably, when using a compatibility threshold {a mathematical formula}t≥0.6, {a mathematical formula}75% of our sample authors cannot increase their H-index by merging compatible articles. We conclude that increasing the H-index substantially by article merges should be easy to discover since it is necessary to merge articles with highly dissimilar titles for such a manipulation.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Outlook
+     </section-title>
+     <paragraph>
+      Clearly, it is interesting to consider merging articles in order to increase other measures than the H-index, like the g-index [14], [31], the w-index [30], or the i10-index of a certain author. The i10-index, the number of articles with at least ten citations, is also currently used by Google Scholar. Elkind and Pavlou [27] performed a study in this direction and, among other results, showed that the g-index and the i10-index seem somewhat easier to manipulate than the H-index. In addition, they also studied a scenario where the manipulator wants to take into account the impact of the manipulation actions on other researchers (distinguishing between friends and competitors).
+     </paragraph>
+     <paragraph>
+      Moreover, merging articles in order to increase one index might decrease other indices, like the overall number of citations. Hence, it is also interesting to study the problem of increasing the H-index by merging without decreasing the overall number of citations or the i10-index below a predefined threshold. A systematic study of computing Pareto optimal solutions could also be interesting.
+     </paragraph>
+     <paragraph>
+      The computational problems related to optimal merging of articles in the different measures are quite natural as evidenced for example by their relation to Bin Covering and Machine Covering. Thus, improvements over the presented algorithms would be desirable as well as a study of further parameterizations in a broad multivariate complexity analysis [18], [23], [26].
+     </paragraph>
+     <paragraph>
+      Altogether, our experiments show that the merging option leaves some room for manipulation but that substantial manipulation requires merging visibly unrelated articles. Hiring committees that use the H-index in their evaluation thus should either examine the article merges more closely or rely on databases that do not allow article merges.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

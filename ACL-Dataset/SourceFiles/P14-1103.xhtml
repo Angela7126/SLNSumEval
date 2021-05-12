@@ -1,0 +1,453 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Nonparametric Learning of Phonological Constraints in Optimality Theory</title>
+<!--Generated on Tue Jun 10 18:36:20 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Nonparametric Learning of Phonological Constraints in Optimality Theory</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Gabriel Doyle 
+<br class="ltx_break"/>Department of Linguistics 
+<br class="ltx_break"/>UC San Diego 
+<br class="ltx_break"/>La Jolla, CA, USA 92093 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">gdoyle@ucsd.edu</span> 
+<br class="ltx_break"/>&amp;Klinton Bicknell 
+<br class="ltx_break"/>Department of Linguistics 
+<br class="ltx_break"/>Northwestern University 
+<br class="ltx_break"/>Evanston, IL, USA 60208 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">kbicknell@northwestern.edu</span> 
+<br class="ltx_break"/>&amp;Roger Levy 
+<br class="ltx_break"/>Department of Linguistics 
+<br class="ltx_break"/>UC San Diego 
+<br class="ltx_break"/>La Jolla, CA, USA 92093
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">rlevy@ucsd.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a method to jointly learn features and weights directly from distributional data in a log-linear framework. Specifically, we propose a non-parametric Bayesian model for learning phonological markedness constraints directly from the distribution of input-output mappings in an Optimality Theory (OT) setting. The model uses an Indian Buffet Process prior to learn the feature values used in the log-linear method, and is the first algorithm for learning phonological constraints without presupposing constraint structure.
+The model learns a system of constraints that explains observed data as well as the phonologically-grounded constraints of a standard analysis, with a violation structure corresponding to the standard constraints. These results suggest an alternative data-driven source for constraints instead of a fully innate constraint set.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Many aspects of human cognition involve the interaction of constraints that push a decision-maker toward different options, whether in something so trivial as choosing a movie or so important as a fight-or-flight response. These constraint-driven decisions can be modeled with a log-linear system. In these models, a set of constraints is weighted and their violations are used to determine a probability distribution over outcomes. But where do these constraints come from?</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">We consider this question by examining the dominant framework in modern phonology, Optimality Theory <cite class="ltx_cite">[, OT]</cite>, implemented in a log-linear framework, MaxEnt OT <cite class="ltx_cite">[]</cite>, with output forms’ probabilities based on a weighted sum of constraint violations. OT analyses generally assume that the constraints are innate and universal, both to obviate the problem of learning constraints’ identities and to limit the set of possible languages.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We propose a new approach: to learn constraints with limited innate phonological knowledge by identifying sets of constraint violations that explain the observed distributional data, instead of selecting constraints from an innate set of constraint definitions. Because the constraints are identified as sets of violations, this also permits constraints specific to a given language to be learned. This method, which we call IBPOT, uses an Indian Buffet Process (IBP) prior to define the space of possible constraint violation matrices, and uses Bayesian reasoning to identify constraint matrices likely to have generated the observed data.
+In identifying constraints solely by their extensional violation profiles, this method does not directly identify the intensional definitions of the identified constraints, but to the extent that the resulting violation profiles are phonologically interpretable, we may conclude that the data themselves guide constraint identification.
+We test IBPOT on tongue-root vowel harmony in Wolof, a West African language.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The set of constraints learned by the model satisfy two major goals: they explain the data as well as the standard phonological analysis, and their violation structures correspond to the standard constraints. This suggests an alternative data-driven genesis for constraints, rather than the traditional assumption of fully innate constraints.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Phonology and Optimality Theory</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>OT structure</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Optimality Theory has been used for constraint-based analysis of many areas of language, but we focus on its most successful application: phonology. We consider an OT analysis of the mappings between underlying forms and their phonological manifestations – i.e., mappings between forms in the mental lexicon and the actual vocalized forms of the words.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Although phonology is usually framed in terms of sound, sign languages also have components that serve equivalent roles in the physical realization of signs <cite class="ltx_cite">[]</cite>.</span></span></span></p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Stated generally, an OT system takes some input, generates a set of candidate outputs, determines what constraints each output violates, and then selects a candidate output with a relatively unobjectionable violation profile. To do this, an OT system contains four major components: a generator <span class="ltx_text ltx_font_smallcaps">Gen</span>, which generates candidate output forms for the input; a set of constraints <span class="ltx_text ltx_font_smallcaps">Con</span>, which penalize candidates; a evaluation method <span class="ltx_text ltx_font_smallcaps">Eval</span>, which selects an winning candidate; and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>, a language-particular weighting of constraints that <span class="ltx_text ltx_font_smallcaps">Eval</span> uses to determine the winning candidate.
+Previous OT work has focused on identifying the appropriate formulation of <span class="ltx_text ltx_font_smallcaps">Eval</span> and the values and acquisition of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>, while taking <span class="ltx_text ltx_font_smallcaps">Gen</span> and <span class="ltx_text ltx_font_smallcaps">Con</span> as given. Here, we expand the learning task by proposing an acquisition method for <span class="ltx_text ltx_font_smallcaps">Con</span>.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">To learn <span class="ltx_text ltx_font_smallcaps">Con</span>, we propose a data-driven markedness constraint learning system that avoids both innateness and tractability issues. Unlike previous OT learning methods, which assume known constraint definitions and only learn the relative strength of these constraints, the IBPOT learns constraint violation profiles and weights for them simultaneously. The constraints are derived from sets of violations that effectively explain the observed data, rather than being selected from a pre-existing set of possible constraints.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>OT as a weighted-constraint method</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Although all OT systems share the same core structure, different choices of <span class="ltx_text ltx_font_smallcaps">Eval</span> lead to different behaviors. In IBPOT, we use the log-linear <span class="ltx_text ltx_font_smallcaps">Eval</span> developed by <cite class="ltx_cite"/> in their MaxEnt OT system. MEOT extends traditional OT to account for variation (cases in which multiple candidates can be the winner), as well as gradient/probabilistic productions <cite class="ltx_cite">[]</cite> and other constraint interactions (e.g., cumulativity) that traditional OT cannot handle <cite class="ltx_cite">[]</cite>. MEOT also is motivated by the general MaxEnt framework, whereas most other OT formulations are ad hoc constructions specific to phonology.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">In MEOT, each constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="C_{i}" display="inline"><msub><mi>C</mi><mi>i</mi></msub></math> is associated with a weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="w_{i}&lt;0" display="inline"><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>&lt;</mo><mn>0</mn></mrow></math>. (Weights are always negative in OT; a constraint violation can never make a candidate more likely to win.) For a given input-candidate pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="(x,y)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="f_{i}(y,x)" display="inline"><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></math> is the number of violations of constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="C_{i}" display="inline"><msub><mi>C</mi><mi>i</mi></msub></math> by the pair. As a maximum entropy model, the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is proportional to the exponential of the weighted sum of violations, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m8" class="ltx_Math" alttext="\sum_{i}w_{i}f_{i}(y,x)" display="inline"><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>. If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m9" class="ltx_Math" alttext="\mathcal{Y}(x)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is the set of all output candidates for the input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m10" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, then the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m11" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> as the winning output is:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="p(y|x)=\dfrac{\exp\left(\sum_{i}w_{i}f_{i}(y,x)\right)}{\sum_{z\in\mathcal{Y}(%&#10;x)}\exp\left(\sum_{i}w_{i}f_{i}(z,x)\right)}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>z</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>z</mi><mo>,</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">This formulation represents a probabilistic extension of the traditional formulation of OT <cite class="ltx_cite">[]</cite>. Traditionally, constraints form a strict hierarchy, where a single violation of a high-ranked constraint is worse than any number of violations of lower-ranked constraints. Traditional OT is also deterministic, with the optimal candidate always selected. In MEOT, the constraint weights define hierarchies of varying strictness, and some probability is assigned to all candidates. If constraints’ weights are close together, multiple violations of lower-weighted constraints can reduce a candidate’s probability below that of a competitor with a single high-weight violation. As the distance between weights in MEOT increases, the probability of a suboptimal candidate being chosen approaches zero; thus the traditional formulation is a limit case of MEOT.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1103/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="700" height="906" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Tableaux for the Wolof input forms <span class="ltx_ERROR undefined">\textipa</span>ete, <span class="ltx_ERROR undefined">\textipa</span>EtE, <span class="ltx_ERROR undefined">\textipa</span>Ite, and <span class="ltx_ERROR undefined">\textipa</span>itE. Black indicates violation, white no violation. Scores are calculated for a MaxEnt OT system with constraint weights of -64, -32, -16, and -8, approximating a traditional hierarchical OT design. Values of grey-striped cells have negligible effects on the distribution (see Sect. <a href="#S4.SS3" title="4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>).</div>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>OT in practice</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S2.F1" title="Figure 1 ‣ 2.2 OT as a weighted-constraint method ‣ 2 Phonology and Optimality Theory ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows <span class="ltx_text ltx_font_italic">tableaux</span>, a visualization for OT, applied in Wolof <cite class="ltx_cite">[]</cite>. We are interested in four Wolof constraints that combine to induce vowel harmony: <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>, <span class="ltx_text ltx_font_smallcaps">Parse</span>[rtr], <span class="ltx_text ltx_font_smallcaps">Harmony</span>, and <span class="ltx_text ltx_font_smallcaps">Parse</span>[atr]. The meaning of these constraints will be discussed in Sect. <a href="#S4.SS1" title="4.1 Wolof vowel harmony ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>; for now, we will only consider their violation profiles. Each column represents a constraint, with weights decreasing left-to-right. Each tableau looks at a single input form, noted in the top-left cell: <span class="ltx_ERROR undefined">\textipa</span>ete, <span class="ltx_ERROR undefined">\textipa</span>EtE, <span class="ltx_ERROR undefined">\textipa</span>Ite, or <span class="ltx_ERROR undefined">\textipa</span>itE.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">Each row is a candidate output form. A black cell indicates that the candidate, or input-candidate pair, violates the constraint in that column.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>In general, a constraint can be violated multiple times by a given candidate, but we will be using binary constraints (violated or not) in this work. See Sect. <a href="#S5.SS2" title="5.2 Extending the learning model ‣ 5 Discussion and Future Work ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a> for further discussion.</span></span></span> A white cell indicates no violation. Grey stripes are overlaid on cells whose value will have a negligible impact on the distribution due to the values of higher-ranked constraint.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">Constraints fall into two categories, faithfulness and markedness, which differ in what information they use to assign violations. Faithfulness constraints penalize mismatches between the input and output, while markedness constraints consider only the output. Faithfulness violations include phoneme additions or deletions between the input and output; markedness violations include penalizing specific phonemes in the output form, regardless of whether the phoneme is present in the input.</p>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">In MaxEnt OT, each constraint has a weight, and the candidates’ scores are the sums of the weights of violated constraints. In the <span class="ltx_ERROR undefined">\textipa</span>ete tableau at top left, output <span class="ltx_ERROR undefined">\textipa</span>ete has no violations, and therefore a score of zero. Outputs <span class="ltx_ERROR undefined">\textipa</span>Ete and <span class="ltx_ERROR undefined">\textipa</span>etE violate both <span class="ltx_text ltx_font_smallcaps">Harmony</span> (weight 16) and <span class="ltx_text ltx_font_smallcaps">Parse</span>[atr] (weight 8), so their scores are 24. Output <span class="ltx_ERROR undefined">\textipa</span>EtE violates <span class="ltx_text ltx_font_smallcaps">Parse</span>[atr], and has score 8. Thus the log-probability of output <span class="ltx_ERROR undefined">\textipa</span>EtE is 1/8 that of <span class="ltx_ERROR undefined">\textipa</span>ete, and the log-probability of disharmonious <span class="ltx_ERROR undefined">\textipa</span>Ete and <span class="ltx_ERROR undefined">\textipa</span>etE are each 1/24 that of <span class="ltx_ERROR undefined">\textipa</span>ete. As the ratio between scores increases, the log-probability ratios can become arbitrarily close to zero, approximating the deterministic situation of traditional OT.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Learning Constraints</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">Choosing a winning candidate presumes that a set of constraints <span class="ltx_text ltx_font_smallcaps">Con</span> is available, but where do these constraints come from? The standard assumption within OT is that <span class="ltx_text ltx_font_smallcaps">Con</span> is innate and universal. But in the absence of direct evidence of innate constraints, we should prefer a method that can derive the constraints from cognitively-general learning over one that assumes they are pre-specified. Learning appropriate model features has been an important idea in the development of constraint-based models <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.SS4.p2" class="ltx_para">
+<p class="ltx_p">The innateness assumption can induce tractability issues as well. The strictest formulation of innateness posits that virtually all constraints are shared across all languages, even when there is no evidence for the constraint in a particular language <cite class="ltx_cite">[]</cite>. Strict universality is undermined by the extremely large set of constraints it must weight, as well as the possible existence of language-particular constraints <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.SS4.p3" class="ltx_para">
+<p class="ltx_p">A looser version of universality supposes that constraints are built compositionally from a set of constraint templates or primitives or phonological features <cite class="ltx_cite">[]</cite>. This version allows language-particular constraints, but it comes with a computational cost, as the learner must be able to generate and evaluate possible constraints while learning the language’s phonology. Even with relatively simple constraint templates, such as the phonological constraint learner of Hayes and Wilson <cite class="ltx_cite">[]</cite>, the number of possible constraints expands exponentially. Depending on the specific formulation of the constraints, the constraint identification problem may even be NP-hard <cite class="ltx_cite">[]</cite>. Our approach of casting the learning problem as one of identifying violation profiles is an attempt to determine the amount that can be learned about the active constraints in a paradigm without hypothesizing intensional constraint definitions.
+The violation profile information used by our model could then be used to narrow the search space for intensional constraints, either by performing post-hoc analysis of the constraints identified by our model or by combining intensional constraint search into the learning process. We discuss each of these possibilities in Section <a href="#S5.SS2" title="5.2 Extending the learning model ‣ 5 Discussion and Future Work ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.</p>
+</div>
+<div id="S2.SS4.p4" class="ltx_para">
+<p class="ltx_p">Innateness is less of a concern for faithfulness than markedness constraints. Faithfulness violations are determined by the changes between an input form and a candidate, yielding an independent motivation for a universal set of faithfulness constraints <cite class="ltx_cite">[]</cite>. Some markedness constraints can also be motivated in a universal manner <cite class="ltx_cite">[]</cite>, but many markedness constraints lack such grounding.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><cite class="ltx_cite"/>§4.8]McCarthy08 gives examples of “ad hoc” intersegmental constraints. Even well-known constraint types, such as generalized alignment, can have disputed structures <cite class="ltx_cite">[]</cite>.</span></span></span> As such, it is unclear where a universal set of markedness constraints would come from.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>The IBPOT Model</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Structure</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The IBPOT model defines a generative process for mappings between input and output forms based on three latent variables: the constraint violation matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> (faithfulness) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> (markedness), and the weight vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. The cells of the violation matrices correspond to the number of violations of a constraint by a given input-output mapping. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="F_{ijk}" display="inline"><msub><mi>F</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mi>k</mi></mrow></msub></math> is the number of violations of faithfulness constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="F_{k}" display="inline"><msub><mi>F</mi><mi>k</mi></msub></math> by input-output pair type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="(x_{i},y_{j})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></math>; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="M_{jl}" display="inline"><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> is the number of violations of markedness constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="M_{\cdot l}" display="inline"><msub><mi>M</mi><mrow><mi/><mo>⋅</mo><mi>l</mi></mrow></msub></math> by output candidate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>. Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> is shared across inputs, as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m11" class="ltx_Math" alttext="M_{jl}" display="inline"><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> has the same value for all input-output pairs with output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m12" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>. The weight vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m13" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> provides weight for both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m14" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m15" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>. Probabilities of output forms are given by a log-linear function:</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle p(y_{j}|x_{i})=" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"/>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m2" class="ltx_Math" alttext="\displaystyle\frac{\exp\left(\sum_{k}w_{k}F_{ijk}+\sum_{l}w_{l}M_{jl}\right)}{%&#10;{\sum\limits_{y_{z}\in\mathcal{Y}(x_{i})}}\exp\left(\sum_{k}w_{k}F_{izk}+\sum_%&#10;{l}w_{l}M_{zl}\right)}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><msub><mi>w</mi><mi>k</mi></msub><mo>⁢</mo><msub><mi>F</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mi>k</mi></mrow></msub></mrow></mrow><mo>+</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>l</mi></msub><mrow><msub><mi>w</mi><mi>l</mi></msub><mo>⁢</mo><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>z</mi></msub><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></munder><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><msub><mi>w</mi><mi>k</mi></msub><mo>⁢</mo><msub><mi>F</mi><mrow><mi>i</mi><mo>⁢</mo><mi>z</mi><mo>⁢</mo><mi>k</mi></mrow></msub></mrow></mrow><mo>+</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>l</mi></msub><mrow><msub><mi>w</mi><mi>l</mi></msub><mo>⁢</mo><msub><mi>M</mi><mrow><mi>z</mi><mo>⁢</mo><mi>l</mi></mrow></msub></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Note that this is the same structure as Eq. <a href="#S2.E1" title="(1) ‣ 2.2 OT as a weighted-constraint method ‣ 2 Phonology and Optimality Theory ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> but with faithfulness and markedness constraints listed separately. As discussed in Sect. <a href="#S2.SS4" title="2.4 Learning Constraints ‣ 2 Phonology and Optimality Theory ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>, we assume that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> is known as part of the output of <span class="ltx_text ltx_font_smallcaps">Gen</span> <cite class="ltx_cite">[]</cite>. The goal of the IBPOT model is to learn the markedness matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> and weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> for both the markedness and faithfulness constraints.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">As for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, we need a non-parametric prior, as there is no inherent limit to the number of markedness constraints a language will use. We use the Indian Buffet Process <cite class="ltx_cite">[]</cite>, which defines a proper probability distribution over binary feature matrices with an unbounded number of columns. The IBP can be thought of as representing the set of dishes that diners eat at an infinite buffet table. Each diner (i.e., output form) first draws dishes (i.e., constraint violations) with probability proportional to the number of previous diners who drew it: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="p(M_{jl}=1|\{M_{zl}\}_{z&lt;j})=n_{l}/j" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>|</mo><msub><mrow><mo>{</mo><msub><mi>M</mi><mrow><mi>z</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>}</mo></mrow><mrow><mi>z</mi><mo>&lt;</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow><mo>=</mo><msub><mi>n</mi><mi>l</mi></msub><mo>/</mo><mi>j</mi></mrow></math>. After choosing from the previously taken dishes, the diner can try additional dishes that no previous diner has had. The number of new dishes that the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th customer draws follows a Poisson(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="\alpha/j" display="inline"><mrow><mi>α</mi><mo>/</mo><mi>j</mi></mrow></math>) distribution. The complete specification of the model is then:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="M\sim IBP(\alpha)" display="inline"><mrow><mi>M</mi><mo>∼</mo><mrow><mi>I</mi><mo>⁢</mo><mi>B</mi><mo>⁢</mo><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math>;</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m6" class="ltx_Math" alttext="\mathcal{Y}(x_{i})={\sc Gen}(x_{i})" display="inline"><mrow><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi mathvariant="normal">Gen</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m7" class="ltx_Math" alttext="w\sim-\Gamma(1,1)" display="inline"><mrow><mi>w</mi><mo>∼</mo><mrow><mo>-</mo><mrow><mi mathvariant="normal">Γ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>;</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m8" class="ltx_Math" alttext="y|x_{i}\sim LogLin(M,F,w,\mathcal{Y}(x_{i}))" display="inline"><mrow><mi>y</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>∼</mo><mi>L</mi><mi>o</mi><mi>g</mi><mi>L</mi><mi>i</mi><mi>n</mi><mrow><mo>(</mo><mi>M</mi><mo>,</mo><mi>F</mi><mo>,</mo><mi>w</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Inference</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">To perform inference in this model, we adopt a common Markov chain Monte Carlo estimation procedure for IBPs <cite class="ltx_cite">[]</cite>. We alternate approximate Gibbs sampling over the constraint matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, using the IBP prior, with a Metropolis-Hastings method to sample constraint weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">We initialize the model with a randomly-drawn markedness violation matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> and weight vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. To learn, we iterate through the output forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>; for each, we split <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="M_{-j\cdot}" display="inline"><msub><mi>M</mi><mrow><mrow><mo>-</mo><mi>j</mi></mrow><mo>⁣</mo><mo>⋅</mo></mrow></msub></math> into “represented” constraints (those that are violated by at least one output form other than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>) and “non-represented” constraints (those violated only by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>). For each represented constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="M_{\cdot l}" display="inline"><msub><mi>M</mi><mrow><mi/><mo>⋅</mo><mi>l</mi></mrow></msub></math>, we re-sample the value for the cell <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="M_{jl}" display="inline"><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math>. All non-represented constraints are removed, and we propose new constraints, violated only by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>, to replace them. After each iteration through <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, we use Metropolis-Hastings to update the weight vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m11" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>.</p>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Represented constraint sampling</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We begin by resampling <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="M_{jl}" display="inline"><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub></math> for all represented constraints <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="M_{\cdot l}" display="inline"><msub><mi>M</mi><mrow><mi/><mo>⋅</mo><mi>l</mi></mrow></msub></math>, conditioned on the rest of the violations (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="M_{-(jl)},F" display="inline"><mrow><msub><mi>M</mi><mrow><mo>-</mo><mrow><mo>(</mo><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow><mo>)</mo></mrow></mrow></msub><mo>,</mo><mi>F</mi></mrow></math>) and the weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. This is the sampling counterpart of drawing existing features in the IBP generative process. By Bayes’ Rule, the posterior probability of a violation is proportional to product of the likelihood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m5" class="ltx_Math" alttext="p(Y|M_{jl}=1,M_{-jl},F,w)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>Y</mi><mo>|</mo><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>,</mo><msub><mi>M</mi><mrow><mo>-</mo><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></msub><mo>,</mo><mi>F</mi><mo>,</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> from Eq. <a href="#S3.E2" title="(2) ‣ 3.1 Structure ‣ 3 The IBPOT Model ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> and the IBP prior probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m6" class="ltx_Math" alttext="p(M_{jl}=1|M_{-jl})=n_{-jl}/n" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>M</mi><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>|</mo><msub><mi>M</mi><mrow><mo>-</mo><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></msub><mo>)</mo></mrow><mo>=</mo><msub><mi>n</mi><mrow><mo>-</mo><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></msub><mo>/</mo><mi>n</mi></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m7" class="ltx_Math" alttext="n_{-jl}" display="inline"><msub><mi>n</mi><mrow><mo>-</mo><mrow><mi>j</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></msub></math> is the number of outputs other than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m8" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math> that violate constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m9" class="ltx_Math" alttext="M_{\cdot l}" display="inline"><msub><mi>M</mi><mrow><mi/><mo>⋅</mo><mi>l</mi></mrow></msub></math>.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Non-represented constraint sampling</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">After sampling the represented constraints for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>, we consider the addition of new constraints that are violated only by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>. This is the sampling counterpart to the Poisson draw for new features in the IBP generative process. Ideally, this would draw new constraints from the infinite feature matrix; however, this requires marginalizing the likelihood over possible weights, and we lack an appropriate conjugate prior for doing so. We approximate the infinite matrix with a truncated Bernoulli draw over unrepresented constraints <cite class="ltx_cite">[]</cite>. We consider in each sample at most <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="K^{*}" display="inline"><msup><mi>K</mi><mo>*</mo></msup></math> new constraints, with weights based on the auxiliary vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m4" class="ltx_Math" alttext="w^{*}" display="inline"><msup><mi>w</mi><mo>*</mo></msup></math>. This approximation retains the unbounded feature set of the IBP, as repeated sampling can add more and more constraints without limit.</p>
+</div>
+<div id="S3.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">The auxiliary vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="w^{*}" display="inline"><msup><mi>w</mi><mo>*</mo></msup></math> contains the weights of all the constraints that have been removed in the previous step. If the number of constraints removed is less than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="K^{*}" display="inline"><msup><mi>K</mi><mo>*</mo></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="w^{*}" display="inline"><msup><mi>w</mi><mo>*</mo></msup></math> is filled out with draws from the prior distribution over weights. We then consider adding any subset of these new constraints to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m4" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, each of which would be violated only by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m5" class="ltx_Math" alttext="y_{j}" display="inline"><msub><mi>y</mi><mi>j</mi></msub></math>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m6" class="ltx_Math" alttext="M^{*}" display="inline"><msup><mi>M</mi><mo>*</mo></msup></math> represent a (possibly empty) set of constraints paired with a subset of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m7" class="ltx_Math" alttext="w^{*}" display="inline"><msup><mi>w</mi><mo>*</mo></msup></math>. The posterior probability of drawing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m8" class="ltx_Math" alttext="M^{*}" display="inline"><msup><mi>M</mi><mo>*</mo></msup></math> from the truncated Bernoulli distribution is the product of the prior probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m9" class="ltx_Math" alttext="M^{*}" display="inline"><msup><mi>M</mi><mo>*</mo></msup></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m10" class="ltx_Math" alttext="\left(\frac{\frac{\alpha}{K^{*}}}{N_{Y}+\frac{\alpha}{K^{*}}}\right)" display="inline"><mrow><mo>(</mo><mfrac><mfrac><mi>α</mi><msup><mi>K</mi><mo>*</mo></msup></mfrac><mrow><msub><mi>N</mi><mi>Y</mi></msub><mo>+</mo><mfrac><mi>α</mi><msup><mi>K</mi><mo>*</mo></msup></mfrac></mrow></mfrac><mo>)</mo></mrow></math> and the likelihood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m11" class="ltx_Math" alttext="p(Y|M^{*},w^{*},M,w,F)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>Y</mi><mo>|</mo><msup><mi>M</mi><mo>*</mo></msup><mo>,</mo><msup><mi>w</mi><mo>*</mo></msup><mo>,</mo><mi>M</mi><mo>,</mo><mi>w</mi><mo>,</mo><mi>F</mi><mo>)</mo></mrow></mrow></math>, including the new constraints <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m12" class="ltx_Math" alttext="M^{*}" display="inline"><msup><mi>M</mi><mo>*</mo></msup></math>.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Weight sampling</h4>
+
+<div id="S3.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">After sampling through all candidates, we use Metropolis-Hastings to estimate new weights for both constraint matrices. Our proposal distribution is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="Gamma({w_{k}}^{2}/\eta,\eta/w_{k})" display="inline"><mrow><mi>G</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mmultiscripts><mi>w</mi><mi>k</mi><none/><none/><mn>2</mn></mmultiscripts><mo>/</mo><mi>η</mi></mrow><mo>,</mo><mrow><mi>η</mi><mo>/</mo><msub><mi>w</mi><mi>k</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></math>, with mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math> and mode <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="w_{k}-\frac{\eta}{w_{k}}" display="inline"><mrow><msub><mi>w</mi><mi>k</mi></msub><mo>-</mo><mfrac><mi>η</mi><msub><mi>w</mi><mi>k</mi></msub></mfrac></mrow></math> (for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="w_{k}&gt;1" display="inline"><mrow><msub><mi>w</mi><mi>k</mi></msub><mo>&gt;</mo><mn>1</mn></mrow></math>). Unlike Gibbs sampling on the constraints, which occurs only on markedness constraints, weights are sampled for both markedness and faithfulness features.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiment</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Wolof vowel harmony</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We test the model by learning the markedness constraints driving Wolof vowel harmony <cite class="ltx_cite">[]</cite>. Vowel harmony in general refers to a phonological phenomenon wherein the vowels of a word share certain features in the output form even if they do not share them in the input. In the case of Wolof, harmony encourages forms that have consistent tongue root positions.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The Wolof vowel system has two relevant features, tongue root position and vowel height. The tongue root can either be advanced (ATR) or retracted (RTR), and the body of the tongue can be in the high, middle, or low part of the mouth. These features define six vowels:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">high</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">mid</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">low</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">ATR</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>i</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>e</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>@</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">RTR</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>I</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>E</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">\textipa</span>a</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">We test IBPOT on the harmony system provided in the Praat program <cite class="ltx_cite">[]</cite>, previously used as a test case by <cite class="ltx_cite"/> for MEOT learning with known constraints. This system has four constraints:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The version in Praat includes a fifth constraint, but its value never affects the choice of output in our data and is omitted in this analysis.</span></span></span></p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Markedness:</p>
+<ul id="I1.I1" class="ltx_itemize">
+<li id="I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>: do not have <span class="ltx_ERROR undefined">\textipa</span>I (high RTR vowel)</p>
+</div></li>
+<li id="I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Harmony</span>: do not have RTR and ATR vowels in the same word</p>
+</div></li>
+</ul>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Faithfulness:</p>
+<ul id="I1.I2" class="ltx_itemize">
+<li id="I1.I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I1.I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Parse</span>[rtr]: do not change RTR input to ATR output</p>
+</div></li>
+<li id="I1.I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I1.I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Parse</span>[atr]: do not change ATR input to RTR output</p>
+</div></li>
+</ul>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">These constraints define the phonological standard that we will compare IBPOT to, with a ranking from strongest to weakest of <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="&gt;&gt;" display="inline"><mrow><mo>&gt;</mo><mo>⁣</mo><mo>&gt;</mo></mrow></math> <span class="ltx_text ltx_font_smallcaps">Parse</span>[rtr] <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="&gt;&gt;" display="inline"><mrow><mo>&gt;</mo><mo>⁣</mo><mo>&gt;</mo></mrow></math> <span class="ltx_text ltx_font_smallcaps">Harmony</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="&gt;&gt;" display="inline"><mrow><mo>&gt;</mo><mo>⁣</mo><mo>&gt;</mo></mrow></math> <span class="ltx_text ltx_font_smallcaps">Parse</span>[atr]. Under this ranking, Wolof harmony is achieved by changing a disharmonious ATR to an RTR, unless this creates an <span class="ltx_ERROR undefined">\textipa</span>I vowel. We see this in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.2 OT as a weighted-constraint method ‣ 2 Phonology and Optimality Theory ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, where three of the four winners are harmonic, but with input <span class="ltx_ERROR undefined">\textipa</span>itE, harmony would require violating one of the two higher-ranked constraints.
+As in previous MEOT work, all Wolof candidates are faithful with respect to vowel height, either because height changes are not considered by <span class="ltx_text ltx_font_smallcaps">Gen</span>, or because of a high-ranked faithfulness constraint blocking height changes.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>In the present experiment, we assume that <span class="ltx_text ltx_font_smallcaps">Gen</span> does not generate candidates with unfaithful vowel heights. If unfaithful vowel heights were allowed by <span class="ltx_text ltx_font_smallcaps">Gen</span>, these unfaithful candidates would incur a violation approximately as strong as <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>, as neither unfaithful-height candidates nor <span class="ltx_ERROR undefined">\textipa</span>I candidates are attested in the Wolof data.</span></span></span></p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">The Wolof constraints provide an interesting testing ground for the model, because it is a small set of constraints to be learned, but contains the <span class="ltx_text ltx_font_smallcaps">Harmony</span> constraint, which can be violated by non-adjacent segments. Non-adjacent constraints are difficult for string-based approaches because of the exponential number of possible relationships across non-adjacent segments. However, the Wolof results show that by learning violations directly, IBPOT does not encounter problems with non-adjacent constraints.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">The Wolof data has 36 input forms, each of the form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m1" class="ltx_Math" alttext="V_{1}tV_{2}" display="inline"><mrow><msub><mi>V</mi><mn>1</mn></msub><mo>⁢</mo><mi>t</mi><mo>⁢</mo><msub><mi>V</mi><mn>2</mn></msub></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m2" class="ltx_Math" alttext="V_{1}" display="inline"><msub><mi>V</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m3" class="ltx_Math" alttext="V_{2}" display="inline"><msub><mi>V</mi><mn>2</mn></msub></math> are vowels that agree in height. Each input form has four candidate outputs, with one output always winning. The outputs appear for multiple inputs, as shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.2 OT as a weighted-constraint method ‣ 2 Phonology and Optimality Theory ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The candidate outputs are the four combinations of tongue-roots for the given vowel heights; the inputs and candidates are known to the learner. We generate simulated data by observing 1000 instances of the winning output for each input.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>Since data, matrix, and weight likelihoods all shape the learned constraints, there must be enough data for the model to avoid settling for a simple matrix that poorly explains the data. This represents a similar training set size to previous work <cite class="ltx_cite">[]</cite>.</span></span></span> The model must learn the markedness constraints <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> and <span class="ltx_text ltx_font_smallcaps">Harmony</span>, as well as the weights for all four constraints.</p>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p">We make a small modification to the constraints for the test data: all constraints are limited to binary values. For constraints that can be violated multiple times by an output (e.g., <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> twice by <span class="ltx_ERROR undefined">\textipa</span>ItI), we use only a single violation. This is necessary in the current model definition because the IBP produces a prior over binary matrices. We generate the simulated data using only single violations of each constraint by each output form. Overcoming the binarity restriction is discussed in Sect. <a href="#S5.SS2" title="5.2 Extending the learning model ‣ 5 Discussion and Future Work ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Experiment Design</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We run the model for 10000 iterations, using deterministic annealing through the first 2500 iterations. The model is initialized with a random markedness matrix drawn from the IBP and weights from the exponential prior. We ran versions of the model with parameter settings between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="0.01" display="inline"><mn>0.01</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="0.05" display="inline"><mn>0.05</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="0.5" display="inline"><mn>0.5</mn></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="\eta" display="inline"><mi>η</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="2" display="inline"><mn>2</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m8" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m9" class="ltx_Math" alttext="K^{*}" display="inline"><msup><mi>K</mi><mo>*</mo></msup></math>. All these produced quantitatively similar results; we report values for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m10" class="ltx_Math" alttext="\alpha=1" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>1</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m11" class="ltx_Math" alttext="\eta=0.5" display="inline"><mrow><mi>η</mi><mo>=</mo><mn>0.5</mn></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m12" class="ltx_Math" alttext="K^{*}=5" display="inline"><mrow><msup><mi>K</mi><mo>*</mo></msup><mo>=</mo><mn>5</mn></mrow></math>, which provides the least bias toward small constraint sets.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">To establish performance for the phonological standard, we use the IBPOT learner to find constraint weights but do not update <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>. The resultant learner is essentially MaxEnt OT with the weights estimated through Metropolis sampling instead of gradient ascent. This is done so that the IBPOT weights and phonological standard weights are learned by the same process and can be compared. We use the same parameters for this baseline as for the IBPOT tests. The results in this section are based on nine runs each of IBPOT and MEOT; ten MEOT runs were performed but one failed to converge and was removed from analysis.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Results</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">A successful set of learned constraints will satisfy two criteria: achieving good data likelihood (no worse than the phonological-standard constraints) and acquiring constraint violation profiles that are phonologically interpretable. We find that both of these criteria are met by IBPOT on Wolof.</p>
+</div>
+<div id="S4.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Likelihood comparison</h4>
+
+<div id="S4.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">First, we calculate the joint probability of the data and model given the priors, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p1.m1" class="ltx_Math" alttext="p(Y,M,w|F,\alpha)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>Y</mi><mo>,</mo><mi>M</mi><mo>,</mo><mi>w</mi><mo>|</mo><mi>F</mi><mo>,</mo><mi>α</mi><mo>)</mo></mrow></mrow></math>, which is proportional to the product of three terms: the data likelihood <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p1.m2" class="ltx_Math" alttext="p(Y|M,F,w)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>Y</mi><mo>|</mo><mi>M</mi><mo>,</mo><mi>F</mi><mo>,</mo><mi>w</mi><mo>)</mo></mrow></mrow></math>, the markedness matrix probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p1.m3" class="ltx_Math" alttext="p(M|\alpha)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>M</mi><mo>|</mo><mi>α</mi><mo>)</mo></mrow></mrow></math>, and the weight probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p1.m4" class="ltx_Math" alttext="p(w)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math>. We present both the mean and MAP values for these over the final 1000 iterations of each run. Results are shown in Table <a href="#S4.T1" title="Table 1 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2">MAP</td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2">Mean</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">IBPOT</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">PS</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">IBPOT</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">PS</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Data</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-1.52</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">-3.94</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-5.48</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-9.23</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-51.7</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">-53.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-54.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-53.3</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-44.2</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">-71.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-50.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-78.1</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Joint</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">-97.4</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t">-128.4</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">-110.6</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">-140.6</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Data, markedness matrix, weight vector, and joint log-probabilities for the IBPOT and the phonological standard constraints. MAP and mean estimates over the final 1000 iterations for each run. All IBPOT/PS differences are significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="p&lt;.005" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.005</mn></mrow></math> for MAP <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m8" class="ltx_Math" alttext="p&lt;.001" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow></math> for others).</div>
+</div>
+<div id="S4.SS3.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">All eight differences are significant according to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>-tests over the nine runs. In all cases but mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p2.m2" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, the IBPOT method has a better log-probability. The most important differences are those in the data probabilities, as the matrix and weight probabilities are reflective primarily of the choice of prior. By both measures, the IBPOT constraints explain the observed data better than the phonologically standard constraints.</p>
+</div>
+<div id="S4.SS3.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">Interestingly, the mean <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> probability is lower for IBPOT than for the phonological standard. Though the phonologically standard constraints exist independently of the IBP prior, they fit the prior better than the average IBPOT constraints do. This shows that the IBP’s prior preferences can be overcome in order to have constraints that better explain the data.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-1103/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="726" height="939" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Phonologically standard (<span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>, <span class="ltx_text ltx_font_smallcaps">Harmony</span>) and learned (<span class="ltx_text ltx_font_italic">M1,M2</span>) constraint violation profiles for the output forms. Learned weights for the standard constraints are -32.8 and -15.3; for <span class="ltx_text ltx_font_italic">M1</span> and <span class="ltx_text ltx_font_italic">M2</span>, they are -26.5 and -8.4. Black indicates violation, white no violation. Grey stripes indicate cells whose values have negligible effects on the probability distribution.</div>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Constraint comparison</h4>
+
+<div id="S4.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our second criterion is the acquisition of meaningful constraints, that is, ones whose violation profiles have phonologically-grounded explanations. IBPOT learns the same number of markedness constraints as the phonological standard (two); over the final 1000 iterations of the model runs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P2.p1.m1" class="ltx_Math" alttext="99.2\%" display="inline"><mrow><mn>99.2</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the iterations had two markedness constraints, and the rest had three.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Turning to the form of these constraints, Figure <a href="#S4.F2" title="Figure 2 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows violation profiles from the last iteration of a representative IBPOT run.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Specifically, from the run with the median joint posterior.</span></span></span> Because vowel heights must be faithful between input and output, the Wolof data is divided into nine separate <span class="ltx_text ltx_font_italic">paradigms</span>, each containing the four candidates (ATR/RTR <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P2.p2.m1" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> ATR/RTR) for the vowel heights in the input.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">The violations on a given output form only affect probabilities within its paradigm. As a result, learned constraints are consistent within paradigms, but across paradigms, the same constraint may serve different purposes.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">For instance, the strongest learned markedness constraint, shown as <span class="ltx_text ltx_font_italic">M1</span> in Figure <a href="#S4.F2" title="Figure 2 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, has the same violations as the top-ranked constraint that actively distinguishes between candidates in each paradigm. For the five paradigms with at least one high vowel (the top row and left column), <span class="ltx_text ltx_font_italic">M1</span> has the same violations as <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>, as <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> penalizes some but not all of the candidates. In the other four paradigms, <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> penalizes none of the candidates, and the IBPOT learner has no reason to learn it. Instead, it learns that <span class="ltx_text ltx_font_italic">M1</span> has the same violations as <span class="ltx_text ltx_font_smallcaps">Harmony</span>, which is the highest-weighted constraint that distinguishes between candidates in these paradigms. Thus in the high-vowel paradigms, <span class="ltx_text ltx_font_italic">M1</span> serves as <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>, while in the low/mid-vowel paradigms, it serves as <span class="ltx_text ltx_font_smallcaps">Harmony</span>.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">The lower-weighted <span class="ltx_text ltx_font_italic">M2</span> is defined noisily, as the higher-ranked <span class="ltx_text ltx_font_italic">M1</span> makes some values of <span class="ltx_text ltx_font_italic">M2</span> inconsequential. Consider the top-left paradigm of Figure <a href="#S4.F2" title="Figure 2 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, the high-high input, in which only one candidate does not violate <span class="ltx_text ltx_font_italic">M1</span> (<span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span>). Because <span class="ltx_text ltx_font_italic">M1</span> has a much higher weight than <span class="ltx_text ltx_font_italic">M2</span>, a violation of <span class="ltx_text ltx_font_italic">M2</span> has a negligible effect on a candidate’s probability.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>Given the learned weights in Fig. <a href="#S4.F2" title="Figure 2 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, if the losing candidate violates <span class="ltx_text ltx_font_italic">M1</span>, its probability changes from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P2.p5.m1" class="ltx_Math" alttext="10^{-12}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>12</mn></mrow></msup></math> when the preferred candidate does not violate <span class="ltx_text ltx_font_italic">M2</span> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P2.p5.m2" class="ltx_Math" alttext="10^{-8}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>8</mn></mrow></msup></math> when it does.</span></span></span> In such cells, the constraint’s value is influenced more by the prior than by the data. These inconsequential cells are overlaid with grey stripes in Figure <a href="#S4.F2" title="Figure 2 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p6" class="ltx_para">
+<p class="ltx_p">The meaning of <span class="ltx_text ltx_font_italic">M2</span>, then, depends only on the consequential cells. In the high-vowel paradigms, <span class="ltx_text ltx_font_italic">M2</span> matches <span class="ltx_text ltx_font_smallcaps">Harmony</span>, and the learned and standard constraints agree on all consequential violations, despite being essentially at chance on the indistinguishable violations (58%). On the non-high paradigms, the meaning of <span class="ltx_text ltx_font_italic">M2</span> is unclear, as <span class="ltx_text ltx_font_smallcaps">Harmony</span> is handled by <span class="ltx_text ltx_font_italic">M1</span> and <span class="ltx_text ltx_font_smallcaps">*<span class="ltx_ERROR undefined">\textipa</span>I</span> is unviolated. In all four paradigms, the model learns that the RTR-RTR candidate violates <span class="ltx_text ltx_font_italic">M2</span> and the ATR-ATR candidate does not; this appears to be the model’s attempt to reinforce a pattern in the lowest-ranked faithfulness constraint (<span class="ltx_text ltx_font_smallcaps">Parse</span>[atr]), which the ATR-ATR candidate never violates.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p7" class="ltx_para">
+<p class="ltx_p">Thus, while the IBPOT constraints are not identical to the phonologically standard ones, they reflect a version of the standard constraints that is consistent with the IBPOT framework.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>In fact, it appears this constraint organization is favored by IBPOT as it allows for lower weights, hence the large difference in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P2.p7.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> log-probability in Table <a href="#S4.T1" title="Table 1 ‣ Likelihood comparison ‣ 4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</span></span></span> In paradigms where each markedness constraint distinguishes candidates, the learned constraints match the standard constraints. In paradigms where only one constraint distinguishes candidates, the top learned constraint matches it and the second learned constraint exhibits a pattern consistent with a low-ranked faithfulness constraint.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussion and Future Work</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Relation to phonotactic learning</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our primary finding from IBPOT is that it is possible to identify constraints that are both effective at explaining the data and representative of theorized phonologically-grounded constraints, given only input-output mappings and faithfulness violations. Furthermore, these constraints are successfully acquired without any knowledge of the phonological structure of the data beyond the faithfulness violation profiles. The model’s ability to infer constraint violation profiles without theoretical constraint structure provides an alternative solution to the problems of the traditionally innate and universal OT constraint set.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">As it jointly learns constraints and weights, the IBPOT model calls to mind Hayes and Wilson’s <cite class="ltx_cite">[]</cite> joint phonotactic learner. Their learner also jointly learns weights and constraints, but directly selects its constraints from a compositional grammar of constraint definitions. This limits their learner in practice by the rapid explosion in the number of constraints as the maximum constraint definition size grows. By directly learning violation profiles, the IBPOT model avoids this explosion, and the violation profiles can be automatically parsed to identify the constraint definitions that are consistent with the learned profile. The inference method of the two models is different as well; the phonotactic learner selects constraints greedily, whereas the sampling on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> in IBPOT asymptotically approaches the posterior.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">The two learners also address related but different phonological problems. The phonotactic learner considers phonotactic problems, in which only output matters. The constraints learned by Hayes and Wilson’s learner are essentially OT markedness constraints, but their learner does not have to account for varied inputs or effects of faithfulness constraints.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Extending the learning model</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">IBPOT, as proposed here, learns constraints based on binary violation profiles, defined extensionally. A complete model of constraint acquisition should provide intensional definitions that are phonologically grounded and cover potentially non-binary constraints. We discuss how to extend the model toward these goals.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">IBPOT currently learns extensional constraints, defined by which candidates do or do not violate the constraint. Intensional definitions are needed to extend constraints to unseen forms. Post hoc violation profile analysis, as in Sect. <a href="#S4.SS3" title="4.3 Results ‣ 4 Experiment ‣ Nonparametric Learning of Phonological Constraints in Optimality Theory" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>, provides a first step toward this goal. Such analysis can be integrated into the learning process using the Rational Rules model <cite class="ltx_cite">[]</cite> to identify likely constraint definitions compositionally. Alternately, phonological knowledge could be integrated into a joint constraint learning process in the form of a naturalness bias on the constraint weights or a phonologically-motivated replacement for the IBP prior.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">The results presented here use binary constraints, where each candidate violates each constraint only once, a result of the IBP’s restriction to binary matrices. Non-binarity can be handled by using the binary matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> to indicate whether a candidate violates a constraint, with a second distribution determining the number of violations.
+Alternately, a binary matrix can directly capture non-binary constraints; <cite class="ltx_cite"/> converted existing non-binary constraints into a binary OT system by representing non-binary constraints as a set of equally-weighted overlapping constraints, each accounting for one violation. The non-binary harmony constraint, for instance, becomes a set {*(at least one disharmony), *(at least two disharmonies), etc.}.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">Lastly, the Wolof vowel harmony problem provides a test case with overlaps in the candidate sets for different inputs. This candidate overlap helps the model find appropriate constraint structures. Analyzing other phenomena may require the identification of appropriate abstractions to find this same structural overlap. English regular plurals, for instance, fall into broad categories depending on the features of the stem-final phoneme. IBPOT learning in such settings may require learning an appropriate abstraction as well.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">A central assumption of Optimality Theory has been the existence of a fixed inventory of universal markedness constraints innately available to the learner, an assumption by arguments regarding the computational complexity of constraint identification. However, our results show for the first time that nonparametric, data-driven learning can identify sparse constraint inventories that both accurately predict the data and are phonologically meaningful, providing a serious alternative to the strong nativist view of the OT constraint inventory.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We wish to thank Eric Baković, Emily Morgan, Mark Myslín, the UCSD Computational Psycholinguistics Lab, the Phon Company, and the reviewers for their discussions and feedback on this work. This research was supported by NSF award IIS-0830535 and an Alfred P. Sloan Foundation Research Fellowship to RL.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:36:20 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

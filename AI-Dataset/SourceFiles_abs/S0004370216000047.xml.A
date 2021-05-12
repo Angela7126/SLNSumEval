@@ -1,0 +1,1126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Domain expansion for ASP-programs with external sources.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Answer Set Programming (ASP) is a declarative programming approach which due to expressive and efficient systems like clasp[29],{sup:1}DLV[40],{sup:2} and smodels[48]{sup:3} has been gaining popularity in several application areas, and in particular in artificial intelligence [8]. A problem at hand is represented by a set of rules (an ASP program) such that its models, called answer sets, encode the solutions to the problem. Compared to the similar approach of SAT solving, the rules might contain variables as a shortcut for all ground instances, transitive closure can be readily expressed as well as negation as failure; further extensions including optimization constructs, aggregates, preferences and many other features have turned ASP into an expressive and powerful problem solving tool.
+     </paragraph>
+     <paragraph>
+      Recent developments in computing require access from ASP programs to external sources, as information is increasingly stored in different sources and formats, or because complex, specific tasks cannot be expressed directly or efficiently in the program itself. A prominent example are DL-programs[23], which integrate rules with description logic ontologies in such a way that queries to an ontology can be made in the rules; the formalism supports reasoning tasks which cannot be realized in ontologies alone, e.g., default classification. Another application with need for external access is planning in agent systems, which might require to import information from sensors and send commands back to agents, e.g. robots [47]; action or plan feasibility under physical or geometric constraints might be tested using special external libraries, etc. In other scenarios, the actions might be simple, but the planning domain is implicit in an external data structure; for example, in advanced route planning tasks for smart city applications [26] where Open Street Map data or some connection database may be used. Abstracting and accessing such data through an external interface is natural, as the data might not be fully accessible or too big to be simply added to the ASP program. Related to this is light-weight data access on the Web (e.g., XML, RDF [38] or other data repositories), which is getting more frequent and desired in complex applications, for instance in information integration; but like for a street map, a complete a priori data import is usually infeasible (in particular, in case of recursive data access). A concrete application scenario is, for instance, from the biomedical domain [27] where different online knowledge resources about genes, drugs and diseases are assessed in order to answer complex queries regarding their mutual relationships, e.g., for drugs that treat a certain disease while not targeting a particular gene.
+     </paragraph>
+     <paragraph>
+      Finally, ASP is a popular host for experimental implementations of logic-based AI formalisms; however, the expressive capability of ordinary ASP may not be sufficient to cater a particular formalism, or a direct encoding in ASP may be cumbersome; in this case, it is convenient if some condition checks can be outsourced to external computation. For example, implementations of Dung-style semantics for abstract argumentation [14] (this will be more discussed below) or of multi-context systems [7], fall in this class.
+     </paragraph>
+     <paragraph>
+      To cater for the need of external source access, hex-programs[24] extend ASP with so-called external atoms, through which the user can couple any external data source with a logic program. Roughly, an external atom can be seen as an API that passes information from the program, given by predicate extensions, to an external source and receives output values of an (abstract) function which that source computes, implemented in whatever language. This powerful abstraction is, for specific data sources that amount to logical theories, related in spirit to SAT modulo theories[4] but more versatile due to the possibility to use variables. It also generalizes a number of ASP extensions, among them VI-programs[11], ASP with monotone constraint atoms [42], constraint ASP [30], programs with aggregates [28], programs with function symbols [49], as well as other formalisms which aim at the integration of external sources (e.g., DL-programs). The abstract nature of hex-programs makes them a representative of a class of formalisms that is useful to discuss the new techniques on a concrete yet general level; the results carry over to the less general formalisms (which we shall exemplify) and are thus relevant beyond hex-programs alone.
+     </paragraph>
+     <paragraph>
+      hex-programs and instantiations such as DL-programs have already been considered for a range of applications; besides those mentioned above they include e.g. complaint management in e-government [53], material culture analysis [43], user interface adaptation [50], or ontology integration in the biomedical domain [36] (see also [45]). However, a wider takeup in practice requires efficient evaluation methods. Due to the abstract nature of hex-programs, providing such methods is non-trivial; scalable algorithms have been introduced only recently (cf. [17], [21]). In a sense, the situation is akin to ordinary ASP: although the formal semantics was around since the early 1990's, only with the advent of efficient solvers (such as smodels[48] and DLV[40]) ASP could be widely established; broader deployment to real-world applications still took further time.{sup:4}
+     </paragraph>
+     <paragraph>
+      The predominant evaluation approach of current ASP solvers is grounding &amp; search, which roughly speaking means that a ground (variable-free) version of the program is generated by substituting constants for variables, and thereafter an answer set of the resulting ground (propositional) program is searched; both steps use quite sophisticated algorithms. In this paper, we focus on the grounding step. This step is non-trivial and significantly more involved than for ordinary ASP because external atoms may introduce new constants that are not present in the program; this is commonly referred to as value invention.
+     </paragraph>
+     <paragraph>
+      In particular, a naive support of value invention may easily lead to infinite program groundings and answer sets, as the following example demonstrates. Consider the program{a mathematical formula} where the external atom {a mathematical formula}&amp;appendA[X](Y) returns in Y the string in X with character ‘A’ appended. Due to the cycle over {a mathematical formula}r3 and {a mathematical formula}r4, the start string a will be expanded infinitely many times, i.e., the program has an infinite grounding and answer set (assuming that the external source processes all finite strings over an alphabet).
+     </paragraph>
+     <paragraph>
+      Moreover, even in cases where a finite subset of the grounding suffices to compute the answer sets of the original program, the set of relevant constants is often not known a priori. For instance, let {a mathematical formula}Π′ be program Π where rule {a mathematical formula}r3 is replaced by {a mathematical formula}r3′:s(Y)←r(X),&amp;reach[X](Y), where the external atom {a mathematical formula}&amp;reach[X](Y) computes for a (fixed and finite) graph that is stored externally the set of all nodes Y which are directly reachable from the node X. The overall program then computes the set of nodes reachable from the start node a. It appears that then, due to finiteness of the graph, only finitely many rules are relevant for evaluation. However due to an API style interface, external sources are largely black boxes to an ASP solver. Thus the set of constants that is relevant for evaluation is formally not clear.
+     </paragraph>
+     <paragraph>
+      To ensure that a finite fragment of the program's grounding is faithful, i.e., has the same answer sets as the original program (referred to as finite restrictability), and is efficiently computable, traditional approaches impose syntactic safety conditions on a program, such as strong domain-expansion safety [25], which we will recapitulate below, or VI-restrictedness [11]. However, they often limit expressiveness too much, i.e., programs may not fulfill the safety conditions while they are clearly finitely restrictable; the program {a mathematical formula}Π′ above is an example.
+     </paragraph>
+     <paragraph>
+      In order to evaluate programs which are finitely restrictable but violate the formal safety criteria, a common workaround is to use a domain predicate d, where each constant c from the domain of the external source is added as a fact {a mathematical formula}d(c) to the program and type literals {a mathematical formula}d(X) are added for “unsafe” variables X in rule bodies. That is, all constants which might be relevant for evaluation are imported a priori into the program. This often requires the user to define an additional external atom which allows for importing the external domain. For instance, in case of program {a mathematical formula}Π′ one can define an external atom {a mathematical formula}&amp;nodes[](Y), which returns all nodes Y in the graph, and add a rule {a mathematical formula}d(Y)←&amp;nodes[](Y) to the program to compute the domain. The domain atom {a mathematical formula}d(Y) can then be added to the bodies of all rules which use the external domain (in {a mathematical formula}Π′ this is rule {a mathematical formula}r3′) in order to make the program strongly safe and allow for evaluating it using the traditional methods. Another application which makes use of domain predicates is the realization of DL-programs [23] via hex-programs, where the external atoms query a description logic ontology. The individuals (i.e., constants) occurring in the ontology are added to the program in this way. However, this workaround is not only inconvenient, but also infeasible for large external domains. In particular, it often imports many constants that are actually irrelevant for the instance at hand. For example, in the program {a mathematical formula}Π′ from above a domain atom imports all nodes of the graph, even if only few nodes might be reachable from the given start node. If {a mathematical formula}Π′ is extended to some advanced application on the graph such as route planning, naively grounding the program over a larger graph will be simply infeasible (see Section 5 for a concrete example); the same holds for a similar ordinary ASP program with the graph given straight as facts.
+     </paragraph>
+     <paragraph>
+      Therefore, the current approach has two limitations: it imposes unnecessary syntactic restrictions on the program, and, as a consequence, while domain predicates can be used to circumvent these restrictions, this is not only inconvenient but also leads to a combinatorial explosion of the grounding which is unmanageable in many practical applications.
+     </paragraph>
+     <paragraph>
+      This motivates our two main contributions. First, we introduce a new notion of safety that still ensures finite restrictability of the program without requiring the user to use domain predicates. However, rather than merely to generalize an existing notion of safety, we develop a generic notion which can incorporate besides syntactic also semantic information about sources, and which is flexible with regard to further generalizations and extensions. Second, on top of this notion of safety we then develop a novel grounding algorithm which does not rely on a naive import of the full domain.
+     </paragraph>
+     <paragraph>
+      In more detail, the contributions in this article are briefly summarized as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We introduce liberal domain-expansion (lde) safety, which is parameterized with term bounding functions (TBFs). Such functions embody criteria that ensure that only finitely many ground instances of a term expression in a program matter. The notion provides a generic framework in which TBFs can be modularly replaced and combined, which offers attractive flexibility and future extensibility. We give sample TBFs which exploit like traditional approaches syntactic structure, but also TBFs that build on semantic properties of the program, hinging on cyclicity and meta-information; this allows us to cover the program Π above. Thanks to modularity, these TBFs can be fruitfully combined into a single, more powerful TBF. Notably, by resorting to lde-safety domain predicates may be dispensed.
+      </list-item>
+      <list-item label="•">
+       We present a new grounding algorithm for lde-safe programs. The algorithm is based on a grounder for ordinary ASP programs, which is iteratively called to enlarge the ground program until all relevant constants are respected; between the calls of the ordinary ASP grounder, external sources may be evaluated.
+      </list-item>
+      <list-item label="•">
+       We consider some applications that take advantage of lde-safety and present an experimental evaluation. The applications include, among others, recursive processing of data structures, abstract argumentation frameworks, and route planning scenarios. The evaluation of our grounding algorithms will show that lde-safety not only relieves the user from writing domain predicates (and external atoms which import the domain), but also leads to significantly better performance in many cases. In fact, the realization of our applications is in some cases impossible with the traditional notion of safety.
+      </list-item>
+      <list-item label="•">
+       We discuss a number of related notions of safety and find that lde-safety is already more general than many approaches using the TBFs presented here, and it allows to accommodate others.
+      </list-item>
+     </list>
+     <paragraph>
+      To summarize, lde-safety is a significant advance for ASP with external source access, which on the one hand improves existing applications, while on the other it empowers new applications that would not be possible without it; to wit, some route planning tasks that we consider are infeasible using ordinary ASP. This demonstrates the potential of our results and of the dlvhex-system implementing them.
+     </paragraph>
+     <paragraph>
+      Organization. The remainder of this article is organized as follows. In the next section, we recall hex-programs and strong domain-expansion safety. In Section 3, we introduce liberal domain safety and consider different ways to instantiate it. In Section 4, we present the new grounding algorithm and discuss its integration into the hex-model building framework. Section 5 is devoted to implementation and an experimental evaluation. After the discussion of related work in Section 6, we conclude in Section 7 with a summary and open issues. In order not to distract from reading, proofs have been moved to Appendix B.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We start with basic definitions and recall hex-programs from [24]. The signature consists of mutually disjoint sets {a mathematical formula}P of predicates, {a mathematical formula}X of external predicates, {a mathematical formula}C of constants, and {a mathematical formula}V of variables. Note that {a mathematical formula}C may contain constants that do not occur explicitly in a hex program and can even be infinite. Terms are elements from the set {a mathematical formula}C∪V. For the sake of simplicity, we disallow function symbols in this paper, but under appropriate safety criteria, an extension of our approach is straightforward. For any list {a mathematical formula}t=t1,…,tℓ of elements, we let {a mathematical formula}ti refer to its i-th element; t is implicitly cast to the set {a mathematical formula}{t1,…,tℓ} in the context of set operations (thus e.g. {a mathematical formula}x∈t expresses membership of x in t).
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Syntax
+      </section-title>
+      <paragraph>
+       hex-programs generalize (disjunctive) extended logic programs under the answer set semantics [32] with external atoms. (Ordinary) atoms are of the form {a mathematical formula}p(t), where {a mathematical formula}p∈P is a predicate of arity {a mathematical formula}ℓ=ar(p)≥0 and {a mathematical formula}t=t1,…,tℓ is a list of terms (from {a mathematical formula}C∪V). External atoms are of form {a mathematical formula}&amp;g[X](Y), where {a mathematical formula}&amp;g∈X, {a mathematical formula}X=X1,…,Xℓ and each {a mathematical formula}Xi∈P∪C∪V is an input parameter, and {a mathematical formula}Y=Y1,…,Yk and each {a mathematical formula}Yi∈C∪V is an output term.
+      </paragraph>
+      <paragraph>
+       Each {a mathematical formula}&amp;g∈X has input arity {a mathematical formula}ari(&amp;g)≥0 and output arity {a mathematical formula}aro(&amp;g)≥0. Each input argument i of {a mathematical formula}&amp;g ({a mathematical formula}1≤i≤ari(&amp;g)) has typeconst or pred, denoted {a mathematical formula}τ(&amp;g,i), where {a mathematical formula}τ(&amp;g,i)=pred if {a mathematical formula}Xi∈P and {a mathematical formula}τ(&amp;g,i)=const otherwise.
+      </paragraph>
+      <paragraph>
+       A hex-program (or program) consists of rules r of form{a mathematical formula} where each {a mathematical formula}ai is an (ordinary) atom and each {a mathematical formula}bj is either an ordinary atom or an external atom, and {a mathematical formula}k+n&gt;0.
+      </paragraph>
+      <paragraph>
+       The head of r is {a mathematical formula}H(r)={a1,…,an}, the body is {a mathematical formula}B(r)=B+(r)∪notB−, where {a mathematical formula}B+(r)={b1,…,bm} is the positive body, {a mathematical formula}B−(r)={bm+1,…,bn} is the negative body, and {a mathematical formula}notS={notb|b∈S}. For any rule, set of rules O, etc., let {a mathematical formula}A(O) and {a mathematical formula}EA(O) be the set of all ordinary and external atoms occurring in O, respectively; O is ground, if no variable occurs in it. For a program Π, let {a mathematical formula}CΠ⊆C be the set of constants that occur in Π.
+      </paragraph>
+      <paragraph>
+       For the sake of a simpler notation, we assume in the following w.l.o.g. that external predicates with input lists are standardized apart, i.e., each occurrence of an external atom {a mathematical formula}&amp;g[X] in the program is unique (this can be achieved by renaming variables or by adding dummy input constants if needed).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Semantics
+      </section-title>
+      <paragraph>
+       An assignmentA is a set of atoms, where an atom a is said to be true in A if {a mathematical formula}a∈A and false otherwise. The semantics of a hex-program Π is defined via its grounding {a mathematical formula}grnd(Π) (over {a mathematical formula}C) as usual, where the value of a ground external atom {a mathematical formula}&amp;g[p](c) wrt. an assignment A is given by the value {a mathematical formula}f&amp;g(A,p,c) of a decidable {a mathematical formula}1+k+l-ary Boolean oracle function{a mathematical formula}f&amp;g, where k and l are the lengths of p and l, respectively. The input parameter {a mathematical formula}pi∈p is monotonic if {a mathematical formula}f&amp;g(A,p,c)≤f&amp;g(A′,p,c) whenever {a mathematical formula}A′⊇A augments A only by atoms a with predicate {a mathematical formula}pi; it is antimonotonic if {a mathematical formula}f&amp;g(A,p,c)≤f&amp;g(A′,p,c) whenever {a mathematical formula}A′⊆A reduces A only by atoms a with predicate {a mathematical formula}pi; otherwise {a mathematical formula}pi is nonmonotonic. Let {a mathematical formula}pm, {a mathematical formula}pa and {a mathematical formula}pn denote the sets of monotonic, antimonotonic, and nonmonotonic predicate input parameters in p, respectively.
+      </paragraph>
+      <paragraph>
+       Satisfaction of (sets of) ground literals, rules, programs etc. O wrt. A (denoted {a mathematical formula}A⊨O, i.e., A is a model of O) extends naturally from ordinary logic programs to hex-programs, by taking external atoms into account. That is, an ordinary atom a is true wrt. A, denoted {a mathematical formula}A⊨a, if {a mathematical formula}a∈A, and it is false, denoted {a mathematical formula}A⊭a, if {a mathematical formula}a∉A. An external atom {a mathematical formula}a=&amp;g[p](c) is true, denoted {a mathematical formula}A⊨a, if {a mathematical formula}f&amp;g(A,p,c)=1 and false, denoted {a mathematical formula}A⊭a, otherwise. Importantly, we make the restriction that for any assignment A and list of terms p, the set {a mathematical formula}{c|f&amp;g(A,p,c)=1} is finite and computable.
+      </paragraph>
+      <paragraph>
+       For a rule r of form (1), {a mathematical formula}A⊨r if either {a mathematical formula}A⊨ai for some {a mathematical formula}1≤i≤k, {a mathematical formula}A⊨bj for some {a mathematical formula}m&lt;j≤n, or {a mathematical formula}A⊭bj for some {a mathematical formula}1≤j≤m. Finally, {a mathematical formula}A⊨Π, if {a mathematical formula}A⊨r for every {a mathematical formula}r∈Π. An answer set of a hex-program Π is any model A of the FLP-reduct{a mathematical formula}ΠA of Π wrt. A, given by {a mathematical formula}ΠA={r∈grnd(Π)|A⊨B(r)}[28], which is subset-minimal, i.e., there exists no model {a mathematical formula}A′⊊A of {a mathematical formula}ΠA.{sup:5} The set of all answer sets of Π is denoted by {a mathematical formula}AS(Π).
+      </paragraph>
+      <paragraph label="Example 1">
+       Consider the program{a mathematical formula} where {a mathematical formula}&amp;concat[X,a](Y) is true iff Y is the concatenation of X and a (which is true for exactly one value Y), and consider the assignment {a mathematical formula}A={dom(aa),t(a),s(aa),t(aa),s(aaa)}. It can be seen that A is an answer set of Π. Indeed, {a mathematical formula}ΠA (which in abuse of notation denotes the FLP-reduct of the grounding of Π wrt. A) is{a mathematical formula} Clearly, {a mathematical formula}A⊨ΠA, and no atoms can be switched to false such that the resulting assignment {a mathematical formula}A′ fulfills {a mathematical formula}A′⊨ΠA; hence, A is an answer set of Π. In fact, A is the only answer set of Π, i.e., {a mathematical formula}AS(Π)={A}. □
+      </paragraph>
+      <paragraph>
+       Note that in the previous example, a finite portion of the grounding of the program is sufficient to compute its answer sets. This property, which we call finite restrictability, is essential for computing the answer in finite time. More formally, for programs {a mathematical formula}Π′ and Π we write {a mathematical formula}Π′≡Π if {a mathematical formula}AS(Π′)=AS(Π). Then,
+      </paragraph>
+      <paragraph label="Definition 1">
+       A program Π is finitely restrictable, if there exists some finite subset {a mathematical formula}Π′⊆grnd(Π) such that {a mathematical formula}Π′≡Π.
+      </paragraph>
+      <paragraph>
+       As finite restrictability of a program is clearly undecidable in general, we are interested in decidable cases where {a mathematical formula}Π′ can be effectively computed from Π. To this end, suitable notions of safety are useful.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Safety
+      </section-title>
+      <paragraph>
+       The notion of safety has been introduced in the context of logic programming on data bases (viewed as facts of a logic program) to guarantee finite results of datalog queries. A program is safe, if each variable in a rule r occurs also in a positive body atom in {a mathematical formula}B+(r). However, due to external atoms, we need additional safety criteria.
+      </paragraph>
+      <paragraph label="Example 2">
+       Let {a mathematical formula}&amp;concat[X,a](Y) be true iff Y is the string concatenation of X and a. Then program {a mathematical formula}Π={s(a).s(Y)←s(X),&amp;concat[X,a](Y)} is safe but not finitely restrictable. Note that Π has the single (infinite) answer set {a mathematical formula}{s(ai)|i≥1}.  □
+      </paragraph>
+      <paragraph>
+       Thus the notion of strong safety was introduced by [25], which limits the output of cyclic external atoms (to be formalized by the following definitions). In hinges on the concept of external atom dependencies. In the following, let {a mathematical formula}a→meb (resp. {a mathematical formula}a→neb) denote that a depends external monotonically (resp. nonmonotonically) on b.
+      </paragraph>
+      <paragraph label="Definition 2">
+       External atom dependenciesLet Π be a hex-program and let {a mathematical formula}a=&amp;g[X](Y) be an external atom in Π.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For every {a mathematical formula}b=p(Z)∈⋃r∈ΠH(r), we have {a mathematical formula}a→meb if {a mathematical formula}p∈Xm and {a mathematical formula}a→neb otherwise.
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}{a,p(Z)}⊆B+(r) for {a mathematical formula}r∈Π, some {a mathematical formula}Xi∈X is in Z and {a mathematical formula}τ(&amp;g,i)=const, then {a mathematical formula}a→mep(Z).
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}{a,&amp;h[V](U)}⊆B+(r) for some {a mathematical formula}r∈Π, some {a mathematical formula}Xi∈X is in U and {a mathematical formula}τ(&amp;g,i)=const, then {a mathematical formula}a→me&amp;h[V](U).
+       </list-item>
+      </list>
+      <paragraph label="Definition 3">
+       Atom dependenciesFor a hex-program Π and (ordinary or external) atoms {a mathematical formula}a,b, we say
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        a depends monotonically on b, denoted {a mathematical formula}a→mb, if:
+       </list-item>
+       <list-item label="(ii)">
+        a depends nonmonotonically on b, denoted {a mathematical formula}a→nb, if {a mathematical formula}a∈H(r) and {a mathematical formula}b∈B−(r) for some {a mathematical formula}r∈Π.
+       </list-item>
+      </list>
+      <paragraph>
+       The following definition represents these dependencies.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Atom dependency graphFor a hex-program Π, its atom dependency graph{a mathematical formula}ADG(Π) has as nodes {a mathematical formula}VA the (nonground) atoms occurring in non-facts r (i.e., {a mathematical formula}k≠1 or {a mathematical formula}n&gt;0) of Π and as edges {a mathematical formula}EA the dependency relations {a mathematical formula}→m,→n,→me,→ne between these atoms in Π.
+      </paragraph>
+      <paragraph label="Example 3">
+       For the program Π from Example 1, we have {a mathematical formula}&amp;concat[X,a](Y)→met(X), {a mathematical formula}s(Y)→m&amp;concat[X,a](Y), {a mathematical formula}t(X)→ms(X) and {a mathematical formula}t(X)→mdom(X).
+      </paragraph>
+      <paragraph>
+       This allows us to introduce strong safety as follows.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Strong safetyAn atom {a mathematical formula}b=&amp;g[X](Y) in a rule r of a program Π is strongly safe wrt. Π, if either b is not involved in any cycles in {a mathematical formula}ADG(Π), or every variable in Y occurs also in some positive ordinary atom {a mathematical formula}a∈B+(r) that does not depend on b in {a mathematical formula}ADG(Π). A program Π is strongly safe, if every external atom in a rule {a mathematical formula}r∈Π is strongly safe in Π.
+      </paragraph>
+      <paragraph>
+       The notion of strong domain-expansion safety is then as follows [25].
+      </paragraph>
+      <paragraph label="Definition 6">
+       Strong domain-expansion safetyA program Π is strongly domain-expansion (sde) safe, if it is safe and each external atom occurring in any rule r of Π is strongly safe wrt. r and Π.
+      </paragraph>
+      <paragraph label="Example 4">
+       cont'dConsider the program Π of Example 2. The external atom {a mathematical formula}a=&amp;concat[X,a](Y) is not strongly safe because it is in a cycle and no ordinary body atom contains Y. However, a would be strongly safe, and hence also Π, if the rule body would contain an atom {a mathematical formula}p(Y) and p would occur in Π apart from this only in facts. Likewise, the program {a mathematical formula}Π′ in the introduction is not strongly safe as the external atom {a mathematical formula}&amp;reach[X](Y) is not safe.  □
+      </paragraph>
+      <paragraph>
+       For this notion of safety, the following result was established.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       (See[25].) Every strongly domain-expansion safehex-program Π is finitely restrictable.
+      </paragraph>
+      <paragraph>
+       More in detail, [25] presented an algorithm which constructs a finite portion {a mathematical formula}Π′ of the grounding of a given sde-safe Π such that {a mathematical formula}Π′≡Π.
+      </paragraph>
+      <paragraph>
+       While many hex-programs are sde-safe, there are also simple and intuitive programs which lack this property, as shown by the program {a mathematical formula}Π′ in the introduction. However, this does not necessarily mean that such programs are not finitely restrictable, i.e., the other direction of the proposition does not hold.
+      </paragraph>
+      <paragraph label="Example 5">
+       cont'dWhile the program in Example 2 has indeed no equivalent finite grounding, the program {a mathematical formula}Π′ in the introduction is not strongly safe either but in fact it is finitely restrictable.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Liberal safety
+     </section-title>
+     <paragraph>
+      To overcome the overly restrictive limitations of strong safety, we introduce the new notion of liberal domain-expansion (lde) safety which incorporates both syntactic and semantic properties of the program at hand. Compared to the latter, this gives us a larger class of programs which are guaranteed to have a finite grounding that preserves all answer sets. Unlike strong domain-expansion safety, liberal domain-expansion safety is not a property of entire atoms but of attribute positions, i.e., pairs of predicates and argument positions. Intuitively, an attribute position is lde-safe, if the number of different terms in a grounding which preserves all answer sets (i.e. has the same answer sets as the original program) is finite. A program is lde-safe, if all its attribute positions are lde-safe. The ultimate goal is therefore to identify lde-safe attributes. For this, we will exploit both syntactic and semantic criteria which are sound (i.e., there is actually an equivalent grounding with only finitely many different terms at lde-safe attributes), but not necessarily complete. The identification of concrete such criteria is often driven by knowledge about the intuitive meaning of language features; once a candidate for a criterion is available, a formal proof its soundness is usually straightforward.
+     </paragraph>
+     <paragraph>
+      Our notion of lde-safety is designed in an extensible fashion, such that several safety criteria can be easily integrated. For this we parameterize our definition of lde-safety by a term bounding function (TBF), which identifies variables in a rule that are ensured to have only finitely many instantiations in the answer set preserving grounding. Finiteness of the overall grounding follows then from the properties of TBFs. Concrete syntactic and semantic properties are realized in some sample TBFs (cf. Section 3.4).
+     </paragraph>
+     <paragraph>
+      For an ordinary predicate {a mathematical formula}p∈P, we call a pair {a mathematical formula}(p,i) the i-th attribute position of p for all {a mathematical formula}1≤i≤ar(p) and denote it more prominently as {a mathematical formula}att(p,i). As a shortcut for all attribute positions of a given predicate p, let {a mathematical formula}att(p)={att(p,1),…,att(p,ar(p))}. Similarily, we call a triplet {a mathematical formula}(&amp;g[X],T,i) with {a mathematical formula}T∈{i,o} the i-th input attribute position if {a mathematical formula}T=i and the i-th output attribute position of an external predicate with input list if {a mathematical formula}T=o for all {a mathematical formula}1≤i≤arT(&amp;g) and denote it more prominently as {a mathematical formula}attT(&amp;g[X],i). Akin to ordinary predicates, let {a mathematical formula}attT(&amp;g[X])={attT(&amp;g[X],1),…,att(&amp;g[X],arT(&amp;g))} for {a mathematical formula}T∈{i,o} be the sets of all input and output attribute positions, respectively. For a ground program P, the range of an attribute position {a mathematical formula}att(p,i) is intuitively the set of ground terms which occur at position i of p. Formally, {a mathematical formula}range(att(p,i),Π)={ti|p(t1,…,tar(p))∈A(Π)}; for an attribute position {a mathematical formula}attT(&amp;g[X],i) with {a mathematical formula}T∈{i,o} we have {a mathematical formula}range(attT(&amp;g[x],i),Π)={xiT|&amp;g[xi](xo)∈EA(Π)}, where {a mathematical formula}xs=x1s,…,xars(&amp;g)s.
+     </paragraph>
+     <paragraph label="Example 6">
+      Reconsider program Π from Example 1. Examples for attribute positions are {a mathematical formula}att(t,1) (the first argument of predicate t), {a mathematical formula}atti(&amp;concat[X,x],2) (the second input argument of external predicate with input list {a mathematical formula}&amp;concat[X,x]) and {a mathematical formula}atto(&amp;concat[X,x],1) (the first output argument of external predicate with input list {a mathematical formula}&amp;concat[X,x]). Furthermore, {a mathematical formula}range(att(t,1),Π)={a} (the set of terms occurring as first argument of predicate t).  □
+     </paragraph>
+     <paragraph>
+      Formally, our approach builds on a monotone grounding operator, boundedness of terms and liberal domain-expansion (lde) safety of attribute positions. Intuitively, the operator is used to define an upper bound for the set of programs which can be considered to be lde-safe, namely all programs which can be finitely grounded by this operator. While this operator provides an operational definition of safety and cannot be used to decide it (the class of lde-safe programs is in general undecidable{sup:6}), the concepts of boundedness and lde-safety then define criteria which can be used to identify (a subset of all) lde-safe programs.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Monotone grounding operator
+      </section-title>
+      <paragraph>
+       We first introduce a monotone grounding operator which is intended to serve as a witness for the finite groundability. That is, liberal domain expansion safety will be defined such that for an lde-safe program, the least fixpoint of {a mathematical formula}GΠ is a finite grounding that is equivalent to the original program Π (however, not all such programs will be necessarily identified as lde-safe). The operator is defined as follows:{a mathematical formula} where rθ is the ground instance of r under a variable substitution {a mathematical formula}θ:V→C. That is, {a mathematical formula}GΠ takes a ground program {a mathematical formula}Π′ as input and returns all rules from {a mathematical formula}grnd(Π) whose positive body is satisfied under some assignment over the atoms of {a mathematical formula}Π′. Intuitively, the operator iteratively extends the grounding by new rules if they are possibly relevant for the evaluation, where relevance is in terms of satisfaction of the positive rule body under some assignment constructible over the atoms which are possibly derivable so far. Obviously, the least fixpoint {a mathematical formula}GΠ∞(∅) of this operator is a subset of {a mathematical formula}grnd(Π); after the formal introduction of our new notion of safety, we will show that for an lde-safe program Π, the least fixpoint of the operator is indeed finite and equivalent to the original program Π because all rule instances which are not added have unsatisfied bodies anyway.
+      </paragraph>
+      <paragraph label="Example 7">
+       Consider the following program Π:{a mathematical formula} The least fixpoint of {a mathematical formula}GΠ is the following ground program:{a mathematical formula} Rule {a mathematical formula}r4′ is added in the first iteration and rule {a mathematical formula}r5′ in the second. □
+      </paragraph>
+      <paragraph>
+       Based on this operator, the general idea of our approach uses two concepts which mutually refer to each other. First, call a term t in a rule bounded, if the number of substitutions in {a mathematical formula}GΠ∞(∅) for term t is finite. Second, we call an attribute position α de-safe, if in the program {a mathematical formula}GΠ∞(∅) only finitely many terms which occur at argument position α.
+      </paragraph>
+      <paragraph>
+       Even in decidable cases, computing the overall sets of bounded terms and safe attribute positions directly is not straightforward because both the global structure of a program and the semantics of external atoms influence these sets. Thus our approach works incrementally: beginning from the empty sets, terms which are newly identified as bounded may trigger the identification of further lde-safe attribute positions and vice versa.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Boundedness of terms
+      </section-title>
+      <paragraph>
+       We first focus on boundedness of terms. In order to make the approach extensible as mentioned, the criteria for a term to be bounded are no hard-coded. Instead, to stay flexible, we use abstract term bounding functions (concrete instances will be shown below).
+      </paragraph>
+      <paragraph label="Definition 7">
+       Term bounding function (TBF)A term bounding function, denoted {a mathematical formula}b(Π,r,S,B), maps a program Π, a rule {a mathematical formula}r∈Π, a set S of (already safe) attribute positions, and a set B of (already bounded) terms in r to an enlarged set of (bounded) terms {a mathematical formula}b(Π,r,S,B)⊇B, such that every {a mathematical formula}t∈b(Π,r,S,B) has finitely many substitutions in {a mathematical formula}GΠ∞(∅).
+      </paragraph>
+      <paragraph>
+       Intuitively, a TBF receives a set of already bounded terms and a set of attribute positions that are already known to be lde-safe. Taking the program into account, the TBF then identifies and returns further terms which are also bounded.
+      </paragraph>
+      <paragraph label="Example 8">
+       Consider program Π from Example 7 and the function {a mathematical formula}b(Π,r,S,B) with {a mathematical formula}b(Π,r2,S,B)={ax} and {a mathematical formula}b(Π,r3,S,B)={aax} (for any S and B) and {a mathematical formula}b(Π,r,S,B)=∅ for {a mathematical formula}r∉{r2,r3} (and any S and B). It identifies (only) the terms ax in rule {a mathematical formula}r2 and aax in rule {a mathematical formula}r3 as bounded. Then b is a valid TBF because there are indeed only finitely many substitutions for ax in {a mathematical formula}r2 and aax in {a mathematical formula}r3 in the least fixpoint of {a mathematical formula}GΠ as shown in the ground program in Example 7 (in fact, there is only one substitution for each of these terms, namely the term itself).In contrast, for the program {a mathematical formula}Π′={r1:str(a);r2:str(X)←str(Y),&amp;appendA[Y](X)} a function {a mathematical formula}b′(Π,r,S,B) with {a mathematical formula}X∈b(Π′,r2,∅,∅) would not be a valid TBF because there are infinitely many substitutions for X in {a mathematical formula}GΠ′. □
+      </paragraph>
+      <paragraph>
+       TBFs are intended to formalize concrete safety criteria based on syntactic or semantic properties (for which we will give examples below). By encapsulating these properties in TBFs, the definition of lde-safety below is independent of such properties and thus extensible.
+      </paragraph>
+      <paragraph>
+       As {a mathematical formula}b(Π,r,S,B) in Example 8 shows, a TBF is not required to identify a maximal set of bounded terms (also a in {a mathematical formula}r1 is bounded). Instead, Definition 7 requires TBFs only to be monotonic and to not return false positives. Because the operator {a mathematical formula}GΠ is fixed, there is also a fixed set of bounded terms for each program and it is in principle possible to define a TBF which simply identifies for each rule a fixed set of bounded terms independent of S and B (as in b from Example 8). However, it turns out that the direct identification of bounded terms is often not trivial in realistic examples. Therefore, our approach is intended to work incrementally such that the identification of bounded terms and lde-safe attribute positions (to be formally introduced below) cyclically trigger each other. For this reason, Definition 7 passes the sets S and B of already safe attribute positions and already bounded terms, respectively, to the TBF in order to inform it about the current status; these sets can (but do not have to) be used by the TBF in order to guide the identification of further bounded terms.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Liberal domain-expansion safety of attribute positions
+      </section-title>
+      <paragraph>
+       We now turn to the formalization of lde-safety as our second main concept. We provide a mutually inductive definition that takes the empty set of lde-safe attribute positions {a mathematical formula}S0(Π) as its basis. Then, by using a TBF each iteration step {a mathematical formula}n≥1 computes first the set of known bounded terms {a mathematical formula}Bn(r,Π) for all rules r, and then an enlarged set of known lde-safe attribute positions {a mathematical formula}Sn(Π). The set of known lde-safe attribute positions in step {a mathematical formula}n+1 thus depends on the TBF, which in turn depends on the known lde-safe attribute positions from step n.
+      </paragraph>
+      <paragraph>
+       In order to simplify the formal definition, we introduce the following notions. First, we associate with a TBF {a mathematical formula}b(Π,r,S,B) and fixed Π, r and S an operator {a mathematical formula}bΠ,r,S(B)=b(Π,r,S,B). This allows us to compactly represent the least fixpoint of a set B under {a mathematical formula}b(Π,r,S,B) by {a mathematical formula}bΠ,r,S∞(∅); note that the set of terms in program Π is finite as thus the least fixpoint is finite as well. That is, {a mathematical formula}bΠ,r,S∞(∅) applies the TBF b to Π, r and S and an incrementally extended set B (beginning from the empty set), until no more bounded terms can be identified.
+      </paragraph>
+      <paragraph>
+       Second, we say that an input attribute position {a mathematical formula}atti(&amp;g[X],i) is finite with respect to bounded terms B and lde-safe attribute positions S, if either {a mathematical formula}τ(&amp;g,i)=const and {a mathematical formula}Xi∈B or {a mathematical formula}τ(&amp;g,i)=pred and {a mathematical formula}att(Xi)⊆S. That is, the input attribute position is either a term which is known to be bounded, or it is a predicate such that all its attribute positions are known to be safe.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Liberal domain-expansion safetyLet b be a term bounding function.
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        The bounded terms in {a mathematical formula}r∈Π in step {a mathematical formula}n≥1 are {a mathematical formula}Bn(r,Π)=bΠ,r,Sn−1∞(∅).
+       </list-item>
+       <list-item label="(b)">
+        The lde-safe attribute positions are {a mathematical formula}S∞(Π)=⋃i≥0Si(Π) where {a mathematical formula}S0(Π)=∅ and for {a mathematical formula}n≥0, {a mathematical formula}a∈Sn+1(Π) if:
+        <list>
+         {a mathematical formula}a=att(p,i) and for all {a mathematical formula}r∈Π,p(t)∈H(r) we have {a mathematical formula}ti∈Bn+1(r,Π);{a mathematical formula}a=atti(&amp;g[X],i) which is finite wrt. bounded terms {a mathematical formula}Bn+1(r,Π) and lde-safe attribute positions {a mathematical formula}Sn(Π);{a mathematical formula}a=atto(&amp;g[X],i), {a mathematical formula}&amp;g[X](Y)∈B+(r) and either {a mathematical formula}Yi∈Bn+1(r,Π) or {a mathematical formula}atti(&amp;g[X])⊆Sn(Π).A program Π is
+        </list>
+        <paragraph>
+         liberally domain-expansion (lde) safe, if it is safe and all its attribute positions are lde-safe.
+        </paragraph>
+       </list-item>
+      </list>
+      <paragraph>
+       Note that lde-safety is always relative to a given TBF. That is, a program might be lde-safe wrt. one TBF but not wrt. another one; in the following, we will explicitly specify the currently used TBF unless this is clear from context.
+      </paragraph>
+      <paragraph>
+       Intuitively, the iterative definition of the lde-safe attribute positions {a mathematical formula}S∞(Π) starts with the empty set {a mathematical formula}S0(Π)=∅ of attribute positions. Then, each iteration {a mathematical formula}n+1 consists of two steps in order to define the expanded set of known lde-safe attribute positions {a mathematical formula}Sn+1(Π).
+      </paragraph>
+      <paragraph>
+       (a) For each rule {a mathematical formula}r∈Π, the set {a mathematical formula}Bn+1(r,Π) of terms in this rule which are known to be bounded is identified, i.e., which are known to have only finitely many substitutions in {a mathematical formula}GΠ∞(∅). For this purpose, the TBF b is employed which identifies such terms by making use of the fact that the attribute positions {a mathematical formula}Sn(Π) from the previous iteration are already known to be lde-safe. The identification of bounded terms is again iterative by applying the TBF until a fixpoint is reached.
+      </paragraph>
+      <paragraph>
+       (b) Based on the sets of known bounded terms {a mathematical formula}Bn+1(r,Π) for all {a mathematical formula}r∈Π in the {a mathematical formula}(n+1)-st iteration, the set of known lde-safe attribute positions {a mathematical formula}Sn+1(Π) is defined. The intuition here is to identify an attribute position as lde-safe whenever the set of known bounded terms and the set of known lde-safe attribute positions from the previous iteration imply that only finitely many values will occur at this attribute position in {a mathematical formula}GΠ∞(∅). (i) For ordinary attribute positions, this is the case if all terms which occur at this argument position in rule heads (i.e., which may generate values at this argument position) are bounded. (ii) For an input attribute position of an external atom, this is the case if it is finite, i.e., if it is a constant input parameter which is bounded, or if it is a predicate input parameter with a predicate whose attribute positions are all already known to be lde-safe. (iii) For an output attribute position of an external atom, this is the case if either the term at the respective output position is known to be bounded (e.g. because it occurs in another body atom at a position which is known to be lde-safe), or because all of its inputs are already known to be lde-safe attribute positions. In the latter case, since there also finitely many different inputs to the external atom, there can also be only finitely many different outputs (cf. the restriction on the oracle functions introduced in Section 2).
+      </paragraph>
+      <paragraph>
+       Note that, all sets involved in this definition are defined (and can be computed) in a strictly acyclic fashion. This is visualized in Fig. 1, where the sets as by Definition 8 are defined from left to right and top to bottom.
+      </paragraph>
+      <paragraph>
+       We now give a short example based on the simple TBF from Example 8, while an exhaustive example is delayed until we have introduced realistic TBFs in Section 3.4.
+      </paragraph>
+      <paragraph label="Example 9">
+       cont'dReconsider the program Π and the TBF b from Example 8. Because terms ax in {a mathematical formula}r2 and aax in {a mathematical formula}r3 are identified as bounded, we have {a mathematical formula}B1(r2,Π)={ax} and {a mathematical formula}B1(r3,Π)={aax}. For the set of safe attribute positions identified in the first iteration, we therefore have {a mathematical formula}att(dom,1)∈S1(Π) by Condition (i) of Definition 8. Intuitively this states that attribute position {a mathematical formula}att(dom,1) is safe, because it is only defined by the terms ax in {a mathematical formula}r2 and aax in {a mathematical formula}r3, which are have been identified as bounded by the TBF b. Since the TBF b as introduced in Example 8 does not identify further terms as bounded in the next iteration, there are also no more attribute positions which can be identified as safe and we end up with {a mathematical formula}S∞(Π)={att(dom,1)}. Note that TBF b from Example 8 is a very simply example TBF; we will reconsider this program in Example 10 but use a stronger (and practical) TBF, which allows for identification of more lde-safe attribute positions (and lde-safety of the overall program).  □
+      </paragraph>
+      <paragraph>
+       We next show that {a mathematical formula}S∞(Π) is finite, thus the inductive definition can be used for computing {a mathematical formula}S∞(Π): the iteration can be aborted after finitely many steps. We first formalize that a program has only finitely many lde-safe attributes.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       For every TBF b, the set{a mathematical formula}S∞(Π)is finite.
+      </paragraph>
+      <paragraph>
+       Next, recall that the intuition of an lde-safe attribute is that there are only finitely many terms at this position in a grounding which preserves all answer stes. The grounding {a mathematical formula}GΠ∞(∅) serves as witness. This can be formalized by stating that lde-safe attribute positions have a finite range in {a mathematical formula}GΠ∞(∅). We first formalize the idea for attributes which are identified as lde-safe after a certain number of iterations.
+      </paragraph>
+      <paragraph label="Proposition 3">
+       For every TBF b and{a mathematical formula}n≥0, if{a mathematical formula}α∈Sn(Π), then the range of α in{a mathematical formula}GΠ∞(∅)is finite.
+      </paragraph>
+      <paragraph>
+       This results carries over to all lde-safe attributes identified after an arbitrary number of steps.
+      </paragraph>
+      <paragraph label="Corollary 4">
+       For every TBF b, if{a mathematical formula}α∈S∞(Π), then{a mathematical formula}range(α,GΠ∞(∅))is finite.
+      </paragraph>
+      <paragraph>
+       This means that such attribute positions occur with only finitely many arguments in the grounding computed by {a mathematical formula}GΠ. This result implies that also the whole grounding {a mathematical formula}GΠ∞(∅) is finite.
+      </paragraph>
+      <paragraph label="Corollary 5">
+       If Π is an lde-safe program, then{a mathematical formula}GΠ∞(∅)is finite.
+      </paragraph>
+      <paragraph>
+       As follows from these propositions, {a mathematical formula}S∞(Π) is also finitely constructible. Note that the propositions hold independently of a concrete TBF (because the properties of TBFs are sufficiently strong). This allows for a modular exchange or combination of the TBFs without changing the definition of lde-safety.
+      </paragraph>
+      <paragraph>
+       We now make use of the results from above to show that lde-safe programs are finitely restrictable. However, we remark that the following proposition does not directly lead to an efficient implementation; the algorithm presented in Section 4 makes use of several optimizations.
+      </paragraph>
+      <paragraph label="Proposition 6">
+       Every lde-safe program Π is finitely restrictable, and it holds that{a mathematical formula}GΠ∞(∅)≡Π.
+      </paragraph>
+      <paragraph>
+       Also this proposition holds independently of a concrete term bounding function. However, functions that are too liberal are excluded by the preconditions in the definition of TBFs.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Sample term bounding functions
+      </section-title>
+      <paragraph>
+       We now introduce sample term bounding functions that exploit syntactic and semantic properties of external atoms to guarantee boundedness of variables. By our previous result, this ensures also finiteness of the ground program computed by {a mathematical formula}GΠ∞(∅).
+      </paragraph>
+      <section label="3.4.1">
+       <section-title>
+        Syntactic criteria
+       </section-title>
+       <paragraph>
+        We first identify some syntactic properties that can be exploited for our purposes.
+       </paragraph>
+       <paragraph label="Definition 9">
+        Syntactic term bounding functionLet {a mathematical formula}bsyn(Π,r,S,B) be defined such that we have {a mathematical formula}t∈bsyn(Π,r,S,B) iff
+       </paragraph>
+       <list>
+        <list-item label="(i)">
+         t is a constant in r; or
+        </list-item>
+        <list-item label="(ii)">
+         there is an atom {a mathematical formula}q(s)∈B+(r) such that {a mathematical formula}t=sj and {a mathematical formula}att(q,j)∈S for some {a mathematical formula}1≤j≤ar(q); or
+        </list-item>
+        <list-item label="(iii)">
+         for some {a mathematical formula}&amp;g[X](Y)∈B+(r), we have {a mathematical formula}t∈Y and every {a mathematical formula}a∈atti(&amp;g[X]) is finite wrt. B and S.
+        </list-item>
+       </list>
+       <paragraph>
+        Note that the criteria encoded in this TBF are motivated by the intuitive meaning of rules and other language components. Intuitively, (i) a constant is trivially bounded because it is never substituted by other terms in the grounding. Case (ii) states that terms occurring at lde-safe attribute position positions are bounded. This is because the attribute position is already known to be filled by only finitely many terms in a grounding which preserves all answer sets. This property carries over to the term at this position, which has then only finitely many instances. More specifically, it encodes that an attribute position {a mathematical formula}att(q,j) (where {a mathematical formula}1≤j≤ar(q)) is lde-safe (thus has a finite range in {a mathematical formula}GΠ∞(∅)), implies that the term at this attribute position is bounded. Case (iii) expresses that if all input attribute positions to an external atom are finite, then also its output is finite. This is motivated by the restriction that a given input makes an external atom true for only finitely many different outputs (cf. Section 2). Therefore, finiteness of the number of different input values carries over to the number of different output values.
+       </paragraph>
+       <paragraph label="Proposition 7">
+        The function{a mathematical formula}bsyn(Π,r,S,B)is a TBF.
+       </paragraph>
+       <paragraph label="Example 10">
+        At this point, all attribute positions are lde-safe and so is the program.  □
+       </paragraph>
+       <paragraph>
+        Example 10 also demonstrates why we have chosen an incremental approach which cyclically identifies bounded terms and safe attribute positions. Observe that the least fixpoint of {a mathematical formula}GΠ for the program Π is finite and thus all terms in Π are bounded. While it is in principle possible to define a TBF which directly identifies all terms as bounded, this is not trivial as the reasons for a term to be bounded can be complex. For instance, variable X in rule {a mathematical formula}r4 is bounded because of the following intuitive reason. Attribute position {a mathematical formula}att(dom,1) is safe as it is defined only by the facts. Therefore, variable Y in {a mathematical formula}r4 is bounded, which implies that only finitely many variables for {a mathematical formula}s(Y) are derived, hence also {a mathematical formula}att(s,1) is safe. This implies that also X in {a mathematical formula}r4 is bounded. A direct identification of the bounded terms would result in a complex condition whose correctness would be difficult to assert. In contrast, incrementally enlarging the sets of known bounded terms and safe attribute positions, as formalized by Definition 7, Definition 8, allows for formally representing this reasoning chain by a set of much simpler conditions, which are directly motivated by the intuitive meaning of bounded terms and safe attribute positions.
+       </paragraph>
+      </section>
+      <section label="3.4.2">
+       <section-title>
+        Semantic properties
+       </section-title>
+       <paragraph>
+        We now define a TBF exploiting meta-information about external sources. The first two properties involve meta-information that directly ensures an output attribute position of an external source is finite.
+       </paragraph>
+       <paragraph label="Definition 10">
+        Finite domainAn external predicate {a mathematical formula}&amp;g∈X has a finite domain in (output argument) i,{a mathematical formula}1≤i≤aro(&amp;g), if {a mathematical formula}{xi|f&amp;g(A,y,x)=1 for some y and x} is finite for all A.
+       </paragraph>
+       <paragraph>
+        Intuitively, the property states that only finitely many different values occur at a certain output position (independent of the input). This is perhaps the most direct way to ensure boundedness of the respective term.
+       </paragraph>
+       <paragraph label="Example 11">
+        An external atom {a mathematical formula}&amp;md5[S](Y) computing the MD5 hash value Y of a string S is finite domain wrt. the (single) output element, as its domain is finite (yet very large). □
+       </paragraph>
+       <paragraph label="Example 12">
+        The program {a mathematical formula}Π′ from the introduction can be identified as lde-safe, once it is known that the output domain of {a mathematical formula}&amp;reach[X](Y) is finite due to finiteness of the graph. □
+       </paragraph>
+       <paragraph>
+        A relaxed notion of finiteness allows for open domains, but forbids constants in the output of an external source which do not already appear in the extension of the respective input predicate parameter, i.e., all output values at a certain position already occur in the input with no new values being invented.
+       </paragraph>
+       <paragraph label="Definition 11">
+        Relative finite domainAn external predicate {a mathematical formula}&amp;g∈X has a finite domain in (output argument) i,{a mathematical formula}1≤i≤aro(&amp;g), relative to (predicate input) argument j,{a mathematical formula}1≤j≤ari(&amp;g), if {a mathematical formula}{xi|f&amp;g(A,y,x)=1 for some x}⊆{c∈c|c∈ext(A,yj)} is finite for all A and y.
+       </paragraph>
+       <paragraph label="Example 13">
+        An external atom {a mathematical formula}&amp;diff[dom,set](Y) has a finite domain in output argument 1 relative to predicate input argument 1 because each constant c must already occur in the extension of dom wrt. A if {a mathematical formula}f&amp;g(A,dom,set,c)=1.
+       </paragraph>
+       <paragraph>
+        While the previous properties derive boundedness of an output term of an external atom from finiteness of its input, we now reverse the direction. An external atom may have the property that only a finite number of different inputs can yield a certain output, which is formalized as follows.
+       </paragraph>
+       <paragraph label="Definition 12">
+        Finite fiberAn external predicate {a mathematical formula}&amp;g∈X has a finite fiber, if set {a mathematical formula}{y|f&amp;g(A,y,x)=1} is finite for all A and x.
+       </paragraph>
+       <paragraph label="Example 14">
+        Let {a mathematical formula}&amp;sq[X](S) be an external atom that computes the square S of the integer X. Then for a given S, there are at most two distinct values for X.  □
+       </paragraph>
+       <paragraph>
+        In the following, we say that a term t is captured by an attribute position α, if t occurs at the (input or output) argument position specified by α. The four properties above lead to the following TBF.
+       </paragraph>
+       <paragraph label="Definition 13">
+        Semantic term bounding functionLet {a mathematical formula}bsem(Π,r,S,B) be defined such that we have {a mathematical formula}t∈bsem(Π,r, {a mathematical formula}S,B) iff
+       </paragraph>
+       <list>
+        <list-item label="(i)">
+         for a {a mathematical formula}&amp;g[Y](X)∈B+(r), {a mathematical formula}&amp;g has a finite domain in i and {a mathematical formula}t=Xi; or
+        </list-item>
+        <list-item label="(ii)">
+         for a {a mathematical formula}&amp;g[Y](X)∈B+(r), {a mathematical formula}&amp;g has a relative finite domain in i wrt. j, {a mathematical formula}att(Yj)⊆S and {a mathematical formula}t=Xi; or
+        </list-item>
+        <list-item label="(iii)">
+         for a {a mathematical formula}&amp;g[Y](X)∈B+(r), {a mathematical formula}&amp;g has a finite fiber, {a mathematical formula}X⊆B and {a mathematical formula}t∈Y.
+        </list-item>
+       </list>
+       <paragraph>
+        This TBF is directly motivated by the properties introduced above.
+       </paragraph>
+       <paragraph label="Proposition 8">
+        Function{a mathematical formula}bsem(Π,r,S,B)defined above is a TBF.
+       </paragraph>
+       <paragraph>
+        An extended semantic TBF which takes also cyclicity and well-orderings into account is shown in Appendix A due to its lengthy definition.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Modular combinations of term-bounding functions
+      </section-title>
+      <paragraph>
+       Note that a program might be lde-safe wrt. one TBF but not wrt. another TBF. Fortunately, multiple TBFs can be combined in order to generate another, even more general TBF. Thus, rather than changing the TBF for every program, our approach is intended to be extended over time by integrating more criteria whenever new properties are discovered that allow for deriving finite groundability. The following proposition allows us to construct TBFs modularly from multiple TBFs and thus ensures this kind of future extensibility.
+      </paragraph>
+      <paragraph label="Theorem 9">
+       Let{a mathematical formula}bi(Π,r,S,B),{a mathematical formula}1≤i≤ℓbe TBFs. Then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       That is, the function assessing term boundedness by logical disjunction of the given TBFs, is also a TBF.
+      </paragraph>
+      <paragraph>
+       In particular, a TBF which exploits syntactic and semantic properties simultaneously is given by {a mathematical formula}bsynsem(Π,r,S,B) which is defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 15">
+       Consider the program{a mathematical formula} where {a mathematical formula}&amp;reach[X](Y) returns the nodes Y that are directly reachable from a node X in some externally given graph (e.g., in a search space), {a mathematical formula}&amp;distance[a,Y](D) returns the shortest distance D between a and Y, and {a mathematical formula}&amp;limit[D]() is true for all integers D up to a certain number. Informally, this program imports all nodes within a certain distance from the node a; for a possibly infinite graph, this however might not be feasible in finite time. However, if each node is known to have only finitely many neighbors, by combining syntactic and semantic information, we conclude that Π has a finite grounding as all external atoms have finite fibers. In particular, {a mathematical formula}&amp;limit[D]() and {a mathematical formula}&amp;distance[a,Y](D) have finite fibers since only finitely many values for D are within the limit and for each of them finitely many nodes Y with that distance from a exist as each node has only finitely many neighbors. Moreover, {a mathematical formula}&amp;reach[X](Y) has a finite fiber because each node Y is reachable only from finitely many X. Without proper semantic knowledge about the external sources (e.g., if the nodes can have infinitely many neighbors), finiteness of the grounding is not guaranteed. Moreover, also the syntactic structure of the program is relevant to derive finiteness as after removing {a mathematical formula}&amp;limit[D]() finiteness is no longer guaranteed.
+      </paragraph>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Domain predicates
+      </section-title>
+      <paragraph>
+       Recall that, as stated in the introduction, using domain predicates d is a common technique to ensure strong safety of a hex-program (which does, however, not work for the program Π in Section 1). For instance this technique was applied in implementing DL-programs [23] and terminological default theories [2] in dlvhex using the DL-plugin, which provides generic external atoms for querying description logic ontologies. However, exploiting lde-safety, sometimes domain predicates may be dropped. We illustrate this with an example.
+      </paragraph>
+      <paragraph label="Example 16">
+       Bird-penguinWe consider here a simple DL-program {a mathematical formula}(Π,O) which can be viewed as a hex-program Π (left side) with access to an external ontology {a mathematical formula}O (right side) containing the conceptual knowledge that penguins are birds and do not fly, and the assertion (data) that lia is a bird; the rules express that birds fly unless the opposite is derivable:{a mathematical formula} Here the expressions {a mathematical formula}DL[⋯](X) are so-called DL-atoms, which in the hex-view are just user-friendly syntax for external atoms {a mathematical formula}&amp;dlC[⋯](X) whose input parameters consist of a query (a concept name) and optional additions of facts (assertions) to the ontology prior to query evaluation. To determine the birds that fly, rule {a mathematical formula}r1 retrieves all birds known by the ontology using a DL-atom {a mathematical formula}DL[Bird](X). Intuitively, the DL-atom {a mathematical formula}DL[Flier⊎flies;¬Flier] returns all individuals in ¬Flier assuming that the concept Flier is augmented with the extension of the predicate flies. The rules {a mathematical formula}r2 and {a mathematical formula}r3 encode then the conclusion that a bird flies by default. In particular, this is concluded for lia, as the program has the single answer set {a mathematical formula}{bird(lia),flies(lia)}.While the program Π is safe, it is not strongly safe; this is because the external atom {a mathematical formula}DL[Flier⊎flies;¬Flier](X) in rule {a mathematical formula}r3 is involved in a cycle through negation. This can be remedied using a domain predicate d as described, by adding the literal {a mathematical formula}d(X) in the body of {a mathematical formula}r3 and the fact {a mathematical formula}d(lia). Alternatively, assuming that all individuals in the ontology are birds, strong safety is gained by using bird as domain predicate and simply adding {a mathematical formula}bird(X) in the body of {a mathematical formula}r3; we denote the resulting rule by {a mathematical formula}r3′ and the resulting program by {a mathematical formula}Π′. In fact, little reflection reveals that projected on flies, the answer sets of {a mathematical formula}Π′ remain the same even if this assumption is not made.On the other hand, Π is lde-safe, as X in {a mathematical formula}DL[Flier⊎flies;¬Flier](X) can take only finitely many values. This relieves the user from using a domain predicate, which—even if possible—is often cumbersome in practice.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     Grounding liberally domain-expansion safe hex-programs
+     <paragraph>
+      In this section, we present a grounding algorithm for lde-safe programs. It is based on iteratively grounding the program and then checking whether the grounding contains all relevant ground rules. The check works by evaluating external sources under relevant assignments and testing whether they introduce any new constants that were not respected in the grounding. If so, then the set of constants is expanded and the program is grounded again; otherwise, the unrespected constants from {a mathematical formula}C are irrelevant for ensuring that the grounding has the same answer sets as the original program. For lde-safe programs, this procedure will eventually reach a fixpoint, i.e., all relevant constants are respected in the grounding. While the operator {a mathematical formula}GΠ could be directly used for grounding in principle (the output is finite for lde-safe programs), its complexity is not optimal. In particular, the instantiation of a single rule has exponential runtime, although this is in many cases not necessary. In addition to the singleton usage of each external predicate as introduced in Section 2, we further assume in the following that rules are standardized apart (i.e., share no variables).
+     </paragraph>
+     <paragraph>
+      Towards a practical grounding algorithm we start with some basic concepts that are all demonstrated in Example 18 below. Let R be a set of external atoms and let r be a rule. By {a mathematical formula}r|R we denote the rule obtained by removing external atoms that are not in R, i.e., such that {a mathematical formula}H(r|R)=H(r) and {a mathematical formula}Bs(r|R)=((Bs(r)∩A(r))∪(Bs(r)∩R)) for {a mathematical formula}s∈{+,−}. Furthermore, {a mathematical formula}Π|R=⋃r∈Πr|R, for a program Π. Furthermore, let {a mathematical formula}var(r)⊆V be the set of variables appearing in a rule r.
+     </paragraph>
+     <paragraph label="Definition 14">
+      Liberal domain-expansion safety relevanceA set R of external atoms is relevant for lde-safety of a program Π, if {a mathematical formula}Π|R is lde-safe and {a mathematical formula}var(r)=var(r|R), for all {a mathematical formula}r∈Π.
+     </paragraph>
+     <paragraph>
+      Intuitively, if an external atom is not relevant, then it cannot introduce new constants. Note that for a program, the set of lde-safety relevant external atoms is not necessarily unique. While the algorithm works for any such set, a particular choice may influence the efficiency in principle, even if in realistic applications few possibilities seem suggestive. We will use in our experiments a greedy approach which aims at minimizing the set as fewer external atoms usually increase the efficiency. In the following, we assume that for a program Π a fixed set R of lde-safety relevant external atoms has been selected and denote by {a mathematical formula}R‾=EA(Π)∖R the set of external atoms that are not lde-safety relevant.
+     </paragraph>
+     <paragraph>
+      We further need the concepts of input auxiliary and external atom guessing rules. We say that an external atom {a mathematical formula}&amp;g[Y](X)joins an atom b, if some variable from Y occurs in b, where in case b is an external atom the occurrence is in the output list of b.
+     </paragraph>
+     <paragraph label="Definition 15">
+      Input auxiliary ruleLet Π be a program and let {a mathematical formula}&amp;g[Y](X) be some external atom occurring in a rule {a mathematical formula}r∈Π. Then, for each such atom, a rule {a mathematical formula}rinp&amp;g[Y](X) is composed as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the head is {a mathematical formula}H(rinp&amp;g[Y](X))={ginp(Y)}, where {a mathematical formula}ginp is a fresh predicate, and
+      </list-item>
+      <list-item label="•">
+       the body {a mathematical formula}B(rinp&amp;g[Y](X)) contains each {a mathematical formula}b∈B+(r)∖{&amp;g[Y](X)} s.t. {a mathematical formula}&amp;g[Y](X) joins b and {a mathematical formula}b∉R‾.
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, input auxiliary rules are used to derive all ground tuples y under which the external atom needs to be evaluated. Next, we introduce external atom guessing rules.
+     </paragraph>
+     <paragraph label="Definition 16">
+      External atom guessing ruleLet Π be a program and let furthermore {a mathematical formula}&amp;g[Y](X) be some external atom. Then a rule {a mathematical formula}rguess&amp;g[Y](X) is composed as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the head is {a mathematical formula}H(rguess&amp;g[Y](X))={e&amp;g(X),ne&amp;g[Y](X)}, and
+      </list-item>
+      <list-item label="•">
+       the body {a mathematical formula}B(rguess&amp;g[Y](X)) contains
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, the rule guesses the truth value of the external atom using a choice between the external replacement atom{a mathematical formula}e&amp;g[Y](X) and fresh atom {a mathematical formula}ne&amp;g[Y](X).
+     </paragraph>
+     <paragraph>
+      Our approach is based on a grounder for ordinary ASP programs. Compared to the naive grounding {a mathematical formula}grndC(Π), which substitutes all constants for all variables in all possible ways, we allow the ASP grounder {a mathematical formula}GroundASP to optimize rules.
+     </paragraph>
+     <paragraph label="Definition 17">
+      We call rule {a mathematical formula}r′ an o-strengthening of a rule r, if {a mathematical formula}H(r′)=H(r), {a mathematical formula}B(r′)⊆B(r) and {a mathematical formula}B(r)∖B(r′) contains only ordinary literals and no external atoms replacements.
+     </paragraph>
+     <paragraph>
+      For a rule r (resp. a program Π), let {a mathematical formula}os(r) (resp. Π) be the set of all o-strengthenings of r (resp. rules in Π).
+     </paragraph>
+     <paragraph label="Definition 18">
+      An algorithm {a mathematical formula}GroundASP is a faithful ASP grounder, if for a safe ordinary program Π it returns a ground program {a mathematical formula}Π′⊆os(grndCΠ(Π)) s.t. {a mathematical formula}Π′≡Π and for all {a mathematical formula}r∈grndCΠ(Π)
+     </paragraph>
+     <list>
+      <list-item label="•">
+       if {a mathematical formula}os(r)∩Π′=∅, then every answer set of {a mathematical formula}grndCΠ(Π) falsifies some ordinary literal in {a mathematical formula}B(r); and
+      </list-item>
+      <list-item label="•">
+       if {a mathematical formula}r′∈Π′ for some {a mathematical formula}r′∈os(r), then every answer set of {a mathematical formula}grndCΠ(Π) satisfies {a mathematical formula}B(r)∖B(r′).
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, rules may be eliminated if their body is always false, and ordinary body literals may be removed from the grounding if they are always true, as long as this does not change the answer sets.
+     </paragraph>
+     <paragraph label="Example 17">
+      Let {a mathematical formula}Π={r1:a(t).r2:b∨c.r3:e←b,f.r4:d←a(X).}. A faithful ASP grounder may optimize this program to {a mathematical formula}Π′={r1:a(t).r2:b∨c.r4′:d}; both programs have the answer sets {a mathematical formula}{a(t),b,d} and {a mathematical formula}{a(t),c,d}. Moreover, {a mathematical formula}r3 can be dropped as f is false in all answer sets, and the only instance {a mathematical formula}d←a(t) of {a mathematical formula}r4 can be reduced to its o-strengthening {a mathematical formula}r4′ as {a mathematical formula}a(t) is true in all answer sets.  □
+     </paragraph>
+     <paragraph>
+      The algorithm is formally stated in Algorithm GroundHEX; our naming convention is as follows. Program Π is the non-ground program, while program {a mathematical formula}Πp is the non-ground ordinary ASP prototype program, which is an iteratively updated extension of Π with additional rules. In each step, the preliminary ground program{a mathematical formula}Πpg is produced by grounding {a mathematical formula}Πp using a standard ASP grounding algorithm. Program {a mathematical formula}Πpg converges against a fixpoint from which the final groundhex-program{a mathematical formula}Πg is extracted.
+     </paragraph>
+     <paragraph>
+      The algorithm first chooses a set of lde-safety relevant external atoms using a heuristics (e.g., a greedy approach as in our implementation), and introduces input auxiliary rules {a mathematical formula}rinp&amp;g[Y](X) for every external atom {a mathematical formula}&amp;g[Y](X) in a rule r in Π in Part (a). For all non-relevant external atoms, we introduce guessing rules for external atoms which ensure that the ground instances of these external atoms are introduced in the grounding, even if we do not explicitly add them. Then, all external atoms {a mathematical formula}&amp;g[Y](X) in all rules r in {a mathematical formula}Πp are replaced by ordinary replacement atoms{a mathematical formula}e&amp;g[Y](X). This allows the algorithm to use a faithful ASP grounder {a mathematical formula}GroundASP in the main loop at (b). After the grounding step, the algorithm checks if the grounding is large enough, i.e., if it contains all relevant constants. For this, it traverses all relevant external atoms at (c) and all relevant input tuples at (d) and at (e). Then, constants returned by external sources are added to {a mathematical formula}Πp at (f); if the constants were already respected, then this will have no effect. Thereafter the main loop starts over again. The algorithm will find a program which respects all relevant constants. It then removes auxiliary input rules and translates replacement atoms to external atoms at (g). Note that for ordinary ASP programs, the algorithm essentially reduces to a single call of {a mathematical formula}GroundASP and thus does not cause overhead.
+     </paragraph>
+     <paragraph>
+      We illustrate our grounding algorithm with the following example.
+     </paragraph>
+     <paragraph label="Example 18">
+      Let Π be the following program:{a mathematical formula} Here, {a mathematical formula}&amp;diff[s1,s2](x) is true for all elements x, which are in the extension of {a mathematical formula}s1 but not in that of {a mathematical formula}s2, and {a mathematical formula}&amp;count[s](i) is true for the integer i corresponding to the number of elements in s. The program partitions the domain (extension of d) into two sets (extensions of s and n) and computes the size of s. The external atoms {a mathematical formula}&amp;diff[d,n](Y) and {a mathematical formula}&amp;diff[d,s](Y) are not relevant for lde-safety, thus R in step (a) of GroundHEX can be set to {a mathematical formula}{&amp;count[s](Z)}. Program {a mathematical formula}Πp at the beginning of the first iteration, i.e., when reaching (b), is as follows (neglecting input auxiliary rules, which are facts). Let {a mathematical formula}e1(Y), {a mathematical formula}e2(Y) and {a mathematical formula}e3(Z) be shorthands for {a mathematical formula}er1,&amp;diff[d,n](Y), {a mathematical formula}er2,&amp;diff[d,s](Y), and {a mathematical formula}er3,&amp;count[s](Z), respectively.{a mathematical formula} The program {a mathematical formula}Πpg then contains no instances of {a mathematical formula}r3 as the optimizer recognizes that {a mathematical formula}er3,&amp;count[s](Z) occurs in no rule head and no ground instance can be true in any answer set. Then the algorithm comes to the checking phase (step (c)). It does not evaluate the external atoms in {a mathematical formula}r1 and {a mathematical formula}r2, because they are not relevant for lde-safety because of the domain predicate {a mathematical formula}d(Y). But it evaluates {a mathematical formula}&amp;count[s](Z) under all {a mathematical formula}A⊆{s(a),s(b),s(c)} (step (d)) because the external atom is nonmonotonic in s. In the course of this, in step (f) the algorithm adds the rules {a mathematical formula}{e3(Z)∨ne3(Z)←|Z∈{0,1,2,3}} to {a mathematical formula}Πp. After the second iteration, the algorithm terminates. □
+     </paragraph>
+     <paragraph>
+      It appears that this algorithm is sound and complete. This is independent of a concrete TBF, i.e., the following result (and the lemmas used in its proof) hold for all programs which are lde-safe wrt. any TBF.
+     </paragraph>
+     <paragraph label="Theorem 10">
+      If Π is an lde-safehex-program, then{a mathematical formula}GroundHEX(Π)≡Π.
+     </paragraph>
+     <paragraph>
+      The new grounding algorithm has all properties that are required in order to use it in the existing model-building framework for hex-program evaluation, presented in [16]. As shown in Example 18, Algorithm GroundHEX needs to evaluate external atoms under exponentially many different interpretations in the worst case. This worst case applies whenever a nonmonotonic external atom is necessary for lde-safety, because then the external atom needs to be evaluated under all possible inputs. However, this worst case can be effectively avoided in most practically relevant cases by program decomposition as supported by the existing framework; see [18] for details.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Implementation and evaluation
+     </section-title>
+     <paragraph>
+      For implementing our technique, we integrated gringo[31]{sup:7} as grounder (implementation of Algorithm {a mathematical formula}GroundASP) and clasp into our prototype system dlvhex. The evaluation is driven by an evaluation framework that relies on decomposition of the program into multiple units, which are independently grounded and solved, where GroundHEX is used for grounding; for more information, see [16], [45]. External sources can be easily added by using a convenient API provided by the system. Internally, the system exploits clasp's SMT interface for realizing external calls. To this end, clasp makes callbacks to the dlvhex core whenever its generic propagation methods (exploiting unit clauses and minimality considerations) cannot derive further truth values. The callback is then delegated to external sources to derive further truth values (if possible).
+     </paragraph>
+     <paragraph>
+      The system is available from http://www.kr.tuwien.ac.at/research/systems/dlvhex as open-source software and provides convenient interfaces for adding external sources and intervening in the algorithms depending on the needs of the application at hand. The system has been successfully applied to a range of applications (e.g. multi-context systems, dl-programs) and runs on multiple platforms, including Linux, Mac OS X and Microsoft Windows.
+     </paragraph>
+     <paragraph>
+      Platform and settings  We evaluated the implementation on a Linux server with two 12-core AMD 6176 SE CPUs with 128 GB RAM running an HTCondor load distribution system{sup:8} which ensures robust runtimes (i.e., multiple runs of the same instance have negligible deviations) and using dlvhex version 2.3.0. The grounder and solver backends for all benchmarks are gringo 3.0.4 and clasp 2.1.3. For each instance, we limited the CPU usage to two cores and 8 GB RAM. The timeout for all instances was 300 seconds. The encodings of all benchmarks discussed in this section have been included in Appendix C; the instances are available from http://www.kr.tuwien.ac.at/staff/redl/aspext, and the required plugins from the repository (https://github.com/hexhex).
+     </paragraph>
+     <paragraph>
+      While in principle different grounding and solving backends can be used, we chose gringo and clasp for our experiments. The reason is that our algorithms use these components as black boxes (as explicitly shown for the grounding algorithm) and that a different backends do not influence the behavior of our algorithms; that is, the selection of a certain grounding and solving backend, or a certain version of such as backend, is an independent dimension (similar to e.g. the variable selection heuristics, etc.) which does not provide new insights concerning the two techniques that we want to compare. Moreover, as DLV is only available as binary and does not provide an API, its use within dlvhex would require interprocess communication and parsing of results; this overhead could bias the performance comparison. Hence, we decided to focus on comparing strong and liberal safety.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Problem suite
+      </section-title>
+      <paragraph>
+       We now present the problems we are going to use as benchmarks and discuss the results for instances in a separate subsection.
+      </paragraph>
+      <paragraph>
+       While the modeling advantages of a broader class of supported programs and a less restricted syntax are contributions on their own, the main motivation for liberal safety was to improve efficiency. In contrast to strong safety, lde-safety needs no blind generation and import of a maximal set of possibly relevant constants. Instead, the algorithms compute the domain depending on the actual instance. The hypothesis is that we can expect lde-safety to eliminate large parts of the irrelevant domain and of the ground program in advance, which might lead to a decrease in grounding time and solving time.
+      </paragraph>
+      <paragraph>
+       Reachability  We consider reachability, where the edge relation is provided as an external atom {a mathematical formula}&amp;out[X](Y) delivering all nodes Y that are directly reached from a node X. The traditional implementation imports all nodes into the program and then uses domain predicates. An alternative is to query outgoing edges of nodes on-the-fly, which needs no domain predicates. This benchmark is motivated by route planning applications, where importing the full map might be infeasible due to the amount of data.
+      </paragraph>
+      <paragraph>
+       Set partitioning  In this benchmark we consider a program similar to Example 18, which implements for each domain element x a choice from {a mathematical formula}sel(x) and {a mathematical formula}nsel(x) by an external atom, i.e., a partitioning of the domain into two subsets, where sel may contain at most two elements. The program is as follows:{a mathematical formula} where {a mathematical formula}&amp;diff[p,q](X) computes the set of all elements X which are in the extension of p but not in the extension of q. Note that under lde-safety, the domain predicate domain is not needed as {a mathematical formula}&amp;diff does not introduce new constants.
+      </paragraph>
+      <paragraph>
+       Bird-penguin variant  For our experiments, we used a variant of the Bird-Penguin program {a mathematical formula}Π′ in Example 16. Structurally, {a mathematical formula}Π′ is for grounding similar to the Set Partitioning problem, as the external atom in rule {a mathematical formula}r3 is monotonic, and grounding is expected to behave similarly. For a worst case which cannot be avoided by the greedy heuristics, we replaced this atom with a slightly more general, nonmonotonic external atom which also outputs a special constant cons if the extended ontology is satisfiable. With a growing number of birds, we get a growing number of cycles with nonmonotonic external atoms which combinatorially intermingle the worst case for the heuristics when {a mathematical formula}bird(X) is dropped from rule {a mathematical formula}r3′.
+      </paragraph>
+      <paragraph>
+       Recursive processing of data structures  This problem is representative for a range of applications which process data structures recursively. As an example, we implement the merge sort algorithm using external atoms for splitting a list in half and merging two sorted lists, where lists are encoded as constants consisting of elements and delimiters. Since the merging operation is implemented as an external source, also the operator for comparing two elements is implicitly given by the external source.
+      </paragraph>
+      <paragraph>
+       However, this is only a representative of a class of applications and performance cannot be compared to native merge sort implementations. Other applications of a similar structure are the application of algorithms to graph structures (e.g. balance maintenance in AVL trees, insertion into B-trees), binary search in dictionaries, and recursive Web queries.
+      </paragraph>
+      <paragraph>
+       Argumentation  In this benchmark, we use a hex-program which computes specific extensions for Dung-style abstract argumentation frameworks (AFs) [14], given that code for an extension test is available. AFs are directed graphs with the nodes being interpreted as arguments and the arcs as attacks between arguments. A typical reasoning task is the computation of extensions, which are sets of nodes that fulfill certain properties, depending on the semantics being used, and cautious and brave reasoning, i.e., checking whether an argument is contained in all or at least one extension, respectively. Many reasoning tasks are intractable or even beyond NP, depending on the type of extension considered. Here we consider ideal set extensions, i.e., extensions which have to be ideal sets of the AF at hand; notably, testing whether a set of arguments is an ideal set of an AF is co-{a mathematical formula}NP-complete [15]. Thus a natural guess-and-check computation of an ideal set extension that uses an external atom to decide the extension property reflects this complexity in the ideal set check, which is done in our ASP program using a standard saturation technique; the encoding is generic and might be adapted for other semantics.
+      </paragraph>
+      <paragraph>
+       In addition, we perform a processing of the arguments in the computed extension, e.g., by using an external atom for generating {an inline-figure} code for the visualization of the AF (the graph with ideal sets being marked) using a graphics library. The challenge here is that argument processing depends nonmonotonically on the ideal sets (the {an inline-figure} code of one ideal set is, in general, incomparable to that of another ideal set). As discussed in Section 4, this is the worst case for the new grounding algorithm if no program decomposition is used, but can be avoided by our new evaluation heuristics in this case.
+      </paragraph>
+      <paragraph>
+       Route planning  Inspired by semantically enriched route planning, which has been studied in the MyITS project [26] for smart city applications, we consider here two route planning scenarios using the public transport system of Vienna. The data is available under creative commons license (cc-by) from data.wien.gv.at and contains a map of 158 subway, tram, city bus and rapid transit train lines with a total number of 1701 stations. Since the data does not contain information about the distances between stations, we uniformly assumed costs of 1, 2 and 3 for each stop traveled by subway/rapid transit train, tram or bus, respectively. We further assumed costs of 10 for each necessary change representing walking and waiting time. However, with more detailed data, our encoding would also allow for using different values for each line or station. Access to the data is provided via an external atom {a mathematical formula}&amp;path[s,d](a,b,c,l), which returns for a start location s and a destination d the shortest direct connection (computed using Dijkstra's algorithm), represented as set edges {a mathematical formula}(a,b) between stations a and b with costs c using line l.
+      </paragraph>
+      <paragraph>
+       For instance, a journey from Wien Mitte to Taubstummengasse is possible using subway line U4 from Wien Mitte to Karlsplatz (with intermediate stop at Stadtpark), changing to line U1, and going from Karlsplatz to Taubstummengasse (which is just one stop). This will be represented as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In order to model changes between lines, our graph has for each station and each line which arrives at this station a separate node, with a label consisting of the actual name of the station and the respective line. To foster a change, the external atom returns a tuple {a mathematical formula}(a,a′,10,change), where a and {a mathematical formula}a′ are two nodes representing the same station but for different lines, and change is just a dedicated “line” representing walks between platforms, cf. Fig. 2 (dashed lines indicates changes with costs 10, solid lines indicate trips with the costs given in parentheses). In order to relieve the user from writing line-specific names of stations in the input to the program, we further have for each station a generic node which is connected to all line-specific nodes for this station.
+      </paragraph>
+      <paragraph>
+       Note that there will never be cycles in the direct path between two stations because the costs are minimized, thus the set representation is sufficient and there is no need to formally store the order of the edges. Further note that tuples (1) and (6) do not really represent changes but are merely the connections between the generic stations and the line-specific nodes. This allows the user to use the constants Wien Mitte and Taubstummengasse in the input without predetermining which line to take at these stations. However, as these spurious changes at the start and at the destination node are necessary in any route, this does not affect the minimization of the costs.
+      </paragraph>
+      <paragraph>
+       Route planning can be subject to side constraints, where the user not only wants a route connecting two or more locations, but that it satisfies additional semantic conditions, like ending in a restaurant or next to a park; this may be determined using suitable information sources and ontologies [26]. Here we concentrate on a plain setting and consider two concrete applications as show cases.
+      </paragraph>
+      <paragraph>
+       Single route planning. In the first scenario we consider route planning of a single person who wants to visit a number of locations. Additionally, we have the side constraint that the person wants to go for lunch in a restaurant if and only if the tour is longer than the given limit of cost 300. Because the external source allows only for computing direct connections between two locations, it cannot solve the task completely and there needs to be interaction between the hex-program and the external source.
+      </paragraph>
+      <paragraph>
+       Pair route planning. In our second scenario we consider two persons. Each of them wants to visit a number. Additionally, the two persons want to meet, thus the two tours need to intersect at some point. Possible meeting locations are drawn randomly. We further have the side constraint, that the meeting location shall be a restaurant, if at least one of the tours is longer than the limit of costs 300.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Benchmark results
+      </section-title>
+      <paragraph>
+       We evaluated the implementation on a Linux server with two 12-core AMD 6176 SE CPUs with 128 GB RAM. For this we use five benchmarks and present the total wall clock runtime (wt), the grounding time (gt) and the solving time (st) when computing the first answer set. We possibly have {a mathematical formula}wt≠gt+st because wt includes also computations other than grounding and solving (e.g., passing models through the evaluation graph). The numbers in parentheses indicate the number of instances and timeouts, respectively. For determining lde-safety relevant external atoms, our implementation follows a greedy strategy and tries to identify as many external atoms as irrelevant as possible. Detailed benchmark results are available at http://www.kr.tuwien.ac.at/staff/redl/grounding/allbenchmarks.ods.
+      </paragraph>
+      <paragraph>
+       Reachability  We use random graphs with a node count from 5 to 70 and an edge probability of 0.25. For each count, we average over 10 instances. The results are shown in Table 1a. Here we can observe that the encoding without domain predicates is more efficient in all cases because only a small part of the map is active in the logic program, which does not only lead to a smaller grounding, but also to a smaller search space during solving.
+      </paragraph>
+      <paragraph>
+       Set partitioning  We considered domains with {a mathematical formula}n⁎10 elements, {a mathematical formula}1≤n≤6. The results for the program with and without the domain predicate are presented in Table 1b. Since {a mathematical formula}&amp;diff is monotonic in the first parameter and antimonotonic in the second, the measured overhead is small in the grounding step. Although the ground programs of the strongly safe and the liberally safe variants of the program are identical, the solving step is slower in the latter case; we explain this with caching effects. Grounding lde-safe programs needs more memory than grounding strongly safe programs, which might have negative effects on the later solving step. However, the total slowdown is moderate.
+      </paragraph>
+      <paragraph>
+       Bird-penguin variant  We considered ontologies with n distinct birds, for which respective assertions (facts) were added to the ontology, and the non-monotonic variant of the external atom in rule {a mathematical formula}r3. The results in Table 1c show a slowdown for the encoding without domain predicates. It is mainly caused by the grounding, but also solving becomes slightly slower without domain predicates due to caching effects. While this example was tailored for the worst case, grounding of the regular Bird-Penguin program is easy, with as well as without domain predicate (similar as Set Partitioning). Furthermore, we could in applications of DL-programs sometimes even experience a sensible run time improvement by removing domain predicates.
+      </paragraph>
+      <paragraph>
+       Recursive processing of data structures  In order to implement the application with strong safety, one must manually add a domain predicate with the set of all instances of the data structures at hand as extension, e.g., the set of all permutations of the input list. This number is factorial in the input size and thus already unmanageable for very small instances. The problems are both due to grounding and solving. Similar problems arise with other recursive data structures when strong safety is required (e.g., trees, for the pushdown automaton from [19], where the domain is the set of all strings up to a certain length). However, only a small part of the domain will ever be relevant during computation, hence the new grounding algorithm for lde-safe programs performs quite well, as shown in Table 1d.
+      </paragraph>
+      <paragraph>
+       Note that the latest DLV version from 2012 supports list processing by dedicated built-in predicates. However, while this feature might appear to allow for implementing a similar application at first glance, it in fact comes with several limitations. First, DLV supports only low level list processing predicates such as splitting off the first element. Implementing advanced operations such as splitting lists in half and merging two sorted lists is cumbersome; external atoms are more convenient. Second, DLV's built-in comparison predicates &lt; and &gt; impose for non-numeric constants some fixed ordering; the desired ordering must in general be computed within a sub-program. This adds to the complexity and can be problematic in case of unknown values and become even infeasible, as (large) sets of facts encoding the comparison may have to be provided or computed. Third and most severe, the recursive rules over lists violate DLV's safety criteria, and the safety check must be disabled; but then termination is no longer guaranteed. Therefore, encoding this application in ordinary ASP is not appealing.
+      </paragraph>
+      <paragraph>
+       Route planning  For each instance size n we generated 50 instances by randomly drawing n locations to visit plus n possible locations for having lunch (the data does not provide information about such locations, but usually there are restaurants or snack bars in the near area of stations). We show for each instance size the averages of the total runtimes, the grounding times, the solving times, the percentage of instances for which a solution was found within the time limit (column solution (%)),{sup:9} the average path length (costs) of the instances with solutions (column length), the average number of necessary changes, not counting changes between generic and line-specific station nodes (column changes), and the percentage of instances with solutions which require a restaurant visit due to length of the tour (column lunch (%)). The results are shown in Tables 2a, 2c and 2e using the full map, the map restricted to tram and subway, and the map restricted to subway only, respectively. In addition to the wall clock, grounding and solving time, we further show for the instances which have a solution the average path length (column length) average number of necessary changes.
+      </paragraph>
+      <paragraph>
+       The hardness of the benchmark stems from the side constraint. Without this constraint, the tour could be computed deterministically by successive calls of the external source, once the sequence of locations was guessed. However, due to side constraint, not only the overall tour does depend on the individual locations, but also the individual locations depend on the overall tour (they need to contain a restaurant iff the tour is too long). This leads to a cycle over the external atom &amp;path. With the notion of strong safety, this requires the output variables of this external atom to be bounded by domain predicates, thus the whole map needs to be imported a priori.
+      </paragraph>
+      <paragraph>
+       Single route planning. We considered instances with {a mathematical formula}1≤n≤15 locations to visit. The sequence in which the locations are visited is guessed non-deterministically in the logic program. While the direct connections between two locations are of minimum length by definition of the external atom, the length of the overall tour is only optimal wrt. to the chosen sequence of locations, but other sequences might lead to a shorter overall tour. However, we have the constraint that for visiting n locations there should be at most {a mathematical formula}⌈n×1.5⌉ changes. Due to this constraint not all instances have a solution. It would be easy to extend the scenario to predetermine the sequence of locations by additional constraints, e.g., by global weak constraints in order to minimize the costs.
+      </paragraph>
+      <paragraph>
+       For each instance size n we generated 50 instances by randomly drawing n locations to visit plus n possible locations for having lunch (the data does not provide information about such locations, but usually there are restaurants or snack bars in the near area of stations). We show for each instance size the averages of the total runtimes, the grounding times, the solving times, the percentage of instances for which a solution was found within the time limit (column solution (%)), the average path length (costs) of the instances with solutions (column length), the average number of necessary changes, not counting changes between generic and line-specific station nodes (column changes), and the percentage of instances with solutions which require a restaurant visit due to length of the tour (column lunch (%)). The results are shown in Tables 2a, 2c and 2e using the full map, the map restricted to tram and subway, and the map restricted to subway only, respectively. In addition to the wall clock, grounding and solving time, we further show for the instances which have a solution the average path length (column length) average number of necessary changes. The results show only the runtimes without domain predicates and liberal safety, as for strong safety we observed only timeout instances.
+      </paragraph>
+      <paragraph>
+       Pair route planning. We created for each instance size of {a mathematical formula}1≤n≤15 locations (with at most {a mathematical formula}⌈n×1.5⌉ changes) a number of 50 instances, where the n locations for each person, n possible (non-restaurant) meeting locations and n restaurants are drawn randomly. The results are shown in Tables 2b, 2d and 2f using the full map, the map restricted to tram and subway, and the map restricted to subway only, respectively. Columns length and changes show the sums of the lengths of the tours and of the necessary changes for both persons. For single route planning, the results show only the runtimes without domain predicates and liberal safety; for strong safety we again observed only timeout instances.
+      </paragraph>
+      <paragraph>
+       Observations. In both scenarios we can observe that importing the whole map a priori is merely impossible. Already the grounder fails with a timeout, but due to the large number of (unnecessary) external atoms in the ground program, also solving would not be reasonably possible with the given data. Only liberal safety allows for solving the task in the given time limit by importing only the relevant part of the map during grounding. The external atom implements a cache both for the graph representation of the map and the results of Dijkstra's algorithm. The first external source call needs on our benchmark system approximately 5 seconds to load the map (in case of the full map, but not for single route planning with {a mathematical formula}n=1 which will not call the external source). Moreover, Dijkstra's algorithm computes for a given start node the shortest paths to all nodes, thus after the external source has been called for a certain start node, successive calls for the same start node are significantly faster. In particular, the cache is already filled with all relevant data during grounding, thus solving will spend only very little time in external sources and the solving time will mainly be caused by the hex evaluation algorithms.
+      </paragraph>
+      <paragraph>
+       For pair route planning, note that even instances with {a mathematical formula}n=1 have a path longer than 0 because the location for the meeting is not included in instance size n.
+      </paragraph>
+      <paragraph>
+       As expected, a restriction of the map to trams and subway or to subway only usually yields smaller runtimes. Also the number of changes decreases because multiple tram and especially subway lines have usually more shared stations than bus lines. With increasing number of locations to visit, the number of restaurant visits usually increases as well. However, this is not a strict rule and the tables show some exceptions as the locations were drawn at random and their distances is an important factor.
+      </paragraph>
+      <paragraph>
+       Summary  Our new grounding algorithm allows for grounding lde-safe programs. Instances that can be grounded by the traditional algorithm as well, usually require domain predicates to be manually added (often cumbersome and infeasible in practice, as for recursive data structures). Our algorithm does not only relieve the user from writing domain predicates, but in many cases also has a significantly better performance. Nonmonotonic external atoms might be problematic for our new algorithm. However, in many cases, the worst case can be avoided by our new decomposition heuristics.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Related notions of safety
+     </section-title>
+     <paragraph>
+      Our notion of lde-safety using {a mathematical formula}bsyn(Π,r,S,B)∪bextsem(Π,r,S,B) compares to the traditionally used sde-safety and to other formalizations.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Strong safety
+      </section-title>
+      <paragraph>
+       One can now show that lde-safety is strictly less restrictive than sde-safety.
+      </paragraph>
+      <paragraph label="Proposition 11">
+       Every sde-safe program Π is lde-safe.
+      </paragraph>
+      <paragraph>
+       The converse does not hold, as there are clearly lde-safe programs that are not strongly safe, cf. the program {a mathematical formula}Π′ from the introduction.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       VI-restricted programs
+      </section-title>
+      <paragraph>
+       Calimeri et al. [11] introduced the notion of VI-restrictedness for VI programs, which amount to the class of hex-programs in which all input parameters to external atoms are of type const. Their notion of attribute position dependency graph is related to ours, but our notion is more fine-grained for attribute positions of external predicates. While we use a node {a mathematical formula}attT(&amp;g[X],i) for each external predicate {a mathematical formula}&amp;g with input list X in a rule r and {a mathematical formula}T∈{i,o}, {a mathematical formula}1≤i≤arT(&amp;g), Calimeri et al. use just one attribute position {a mathematical formula}att(&amp;g[X],i) for each {a mathematical formula}i∈{1,…,ari(&amp;g)+aro(&amp;g)} independent of X. Thus, neither multiple occurrences of {a mathematical formula}&amp;g with different input lists in a rule, Thus, neither multiple occurrences of {a mathematical formula}&amp;g with different input lists in a rule, nor of the same attribute position in multiple rules are distinguished; this collapses distinct nodes in our attribute position dependency graph into one.
+      </paragraph>
+      <paragraph label="Example 19">
+       Consider program {a mathematical formula}Π={r1:t(X)←s(X),&amp;e[X](Y), {a mathematical formula}r2:r(X)←t(Z),&amp;e[Z](Y)}. We have the attribute positions{a mathematical formula} with edges{a mathematical formula} originating from the first rule of Π, and the edges{a mathematical formula} originating from the second rule of Π. In contrast, [11] have attribute positions{a mathematical formula} with edges{a mathematical formula}  □
+      </paragraph>
+      <paragraph>
+       Using {a mathematical formula}bs2, we establish the following result.
+      </paragraph>
+      <paragraph label="Proposition 12">
+       Every VI-restricted program Π is lde-safe.
+      </paragraph>
+      <paragraph>
+       The converse does not hold, as there are clearly lde-safe VI-programs (due to semantic criteria) that are not VI-restricted.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Logic programs with function symbols
+      </section-title>
+      <paragraph>
+       Syrjänen [49] defined ω-restricted logic programs, which allow function symbols in an ordinary logic program under a level mapping to control the introduction of new terms with function symbols to ensure decidability. Calimeri et al. [11] observe that such programs Π can be rewritten to VI-programs {a mathematical formula}F(Π) using special external predicates that compose/decompose terms from/into function symbols and a list of arguments, such that {a mathematical formula}F(Π) is VI-restricted. As every VI-restricted program, viewed as a hex-program, is by Proposition 12 also lde-safe, we obtain:
+      </paragraph>
+      <paragraph label="Proposition 13">
+       If an ordinary logic program Π is ω-restricted, then{a mathematical formula}F(Π)is lde-safe.
+      </paragraph>
+      <paragraph>
+       As lde-safety is strictly more liberal than VI-restrictedness, it is also more liberal than ω-restrictedness. More expressive variants of ω-restricted programs are λ-restricted programs [31], argument-restricted programs [41] and Γ-acyclic programs [35]. These notions can be captured within our framework as well, but argument-restricted programs Π exist such that {a mathematical formula}F(Π) is not lde-safe wrt. {a mathematical formula}bs2. The reason is that specific properties of the external atoms resp. sources for term (de)composition are needed, while our TBF {a mathematical formula}bs2 builds on general external sources. However, tailored TBFs can be used (which shows the flexibility of our modular approach). A further generalization of Γ-acyclic programs are bounded programs, which do not track the propagation of single terms through the program but consider whole rule bodies [34]. This allows for deriving termination even if the term depth of single terms increases, as long as the set of terms in a rule does not increase. Also the notions of model-faithful (MFA) and model-summarizing acyclicity (MSA)[33], which have been developed in the context of positive existential rules, can be expressed in our framework. They are both more refined than other notions of acyclicity to identify cases where the chase procedure for query answering terminates, but MSA acyclicity is coarser and less complex to check than MFA acyclicity. The key idea is a dependency analysis by examining the actual structure of the so-called universal model of the program formed by the existential rules. This analysis, however, can be done within a term bounding function, and thus these notions can be captured in our framework.
+      </paragraph>
+      <paragraph>
+       Similarly, i.e., by means of dedicated external atoms for (de)composing terms and a specialized TBF, so-called FD programs [12] map into our framework. Finitary programs [6], [5] and FG programs [12], however, differ more fundamentally from our approach and cannot be captured as lde-safe programs using TBFs, as they are not effectively recognizable (and FD-programs are even not finitely restrictable in general).
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Term rewriting systems
+      </section-title>
+      <paragraph>
+       A term rewriting system is a set of rules for rewriting terms to other terms. Termination is usually shown by proving that the right-hand side of every rule is strictly smaller than its left-hand side [51], [52]. Our notion of benign cycles is similar, but different from term rewriting systems the values do not need to strictly decrease. While terms that stay equal may prevent termination in term rewriting systems, they do not harm in our case because they cannot expand the grounding infinitely.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Programs with existential quantification
+      </section-title>
+      <paragraph>
+       There are extensions of ASP towards integration of logical existential quantification, see e.g., [1]. In order to guarantee finite restrictability, syntactic conditions are employed in order to ensure that a finite subset of the grounding suffices for query answering. The approach by [1] makes use of a chase procedure adopted from [10]. Existential quantifiers can also easily be integrated into our algorithm. To this end, a generalized version of the algorithm presented in this paper supports hooks which can be used to integrate application-specific termination criteria. As an example, query answering over programs with existential quantifiers can sometimes be done using a finite grounding even if the program has infinite models. To this end, depending on the number of existentially quantified variables in the query, the grounding process is terminated after a finite number of steps; we refer to [22] for details.
+      </paragraph>
+     </section>
+     <section label="6.6">
+      <section-title>
+       Other notions of safety
+      </section-title>
+      <paragraph>
+       Related to our semantic properties are the approaches by [46], [44], and [37]. They exploited finiteness of attribute positions (cf. item (i) in Definition 13) in sets of Horn clauses and derive finiteness of further attribute positions using finiteness dependencies. This is related to item (ii) in Definition 13 and item (iii) in Definition 9. However, they did this for query answering over infinite databases but not for model building.
+      </paragraph>
+      <paragraph>
+       Less related to our work are [9], [39], and [3], where safety resp. argument restrictedness was extended to arbitrary first-order formulas with(out) function symbols under the stable model semantics rather than a generalization of the concepts given.
+      </paragraph>
+      <paragraph>
+       While a formal comparison with our approach is only possible for concrete other notions of safety, we can at a meta-level say that in general arbitrary notions of safety with finite groundings that are based on the program rules can be easily expressed in our approach. This is because TBFs as in Definition 7 have full access to the program at hand. Thus, the simulation of some approach by a term bounding function is easily possible by declaring all variables in all rules as bounded, if the approach considers the given program to be safe. While this naive simulation works for all approaches which can decide safety based on the program at hand, other notions (e.g. VI-restricted programs) are based on an iterative expansion of sets of safe variables, external sources or rules. For such approaches, a simulation by exploiting the incremental extension of bounded terms as in Definition 8 may be applied.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      We have presented a framework for obtaining classes of hex-programs, which are ASP programs with external sources, that allow for finite groundings sufficient for evaluation over an infinite domain (which arises by “value invention” in external atoms). It is based on term bounding functions (TBFs) and enables modular exchange and combination of such functions under the novel notion of liberal domain expansion (lde) safety. Hitherto separate syntactic and semantic safety criteria can be combined, which pushes the class of hex-program with evaluation via finite grounding considerably. We have provided sample TBFs that capture syntactic criteria similar to but more fine-grained than ones by [11], and semantic criteria related to those by [46] and [44], but target model generation (not query answering). Deploying them, classes that strictly enlarger classes available through well-known safety notions for ASP programs are obtained, and other notions can be modularly integrated. An implementation of lde-safety in the dlvhex-framework is available for use.
+     </paragraph>
+     <paragraph>
+      Together with lde-safety, we have also presented a new grounding algorithm for hex-programs. In contrast to previous grounding techniques for ASP and hex-programs, it can handle all lde-safe programs directly and does not rely on program decomposition. This is an advantage, as program splitting negatively affects learning techniques described by [17]. The worst case of the new algorithm can be effectively avoided as shown by [18]. An experimental evaluation of our implementation on synthetic and real applications shows a clear benefit.
+     </paragraph>
+     <paragraph>
+      Open issues and future work  While lde-safe hex-programs are ready for use via the dlvhex-system, several issues remain naturally for future work. One such issue is to identify further TBFs and suitable well-orderings of domains in practice. Of particular interest are external atoms that provide built-in functions and simulate, in a straightforward manner, particular interpreted function symbols. On the implementation side, further refinement and optimizations are an issue, as well as a library of TBFs and a plugin architecture that supports creating customized TBFs easily, to make our framework more broadly usable. Connected with this are refinements of our algorithm and heuristics. Here, meta-information about external sources to identify programs that allow for a better grounding and to reduce worst case costs of inputs are of interest. A particular challenge is also a sensitive integration of grounding and solving under decomposition, which are currently not much aligned. Finally, exploring on the application side the benefits of our results e.g. for domain-specific value invention (i.e., existential quantifiers under restrictions, which occurs prominently in configuration problems) appears to be an interesting direction.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Extended semantic term bounding function
+     </section-title>
+     <paragraph>
+      In addition to the properties from Section 3.4.2, cyclicity and wellorderings can be exploited for deriving boundedness of terms. Our concept is based on malign cycles in the positive attribute position dependency graphs, which are the source of any infinite value invention. The positive attribute position dependency graph{a mathematical formula}GA(Π) has as nodes the attribute positions of Π and its edges model the information flow between the attribute positions. For instance, if for rule r we have {a mathematical formula}p(X)∈H(r) and {a mathematical formula}q(Y)∈B+(r) such that {a mathematical formula}Xi=Yj for some {a mathematical formula}Xi∈X and {a mathematical formula}Yj∈Y, then we have a flow from {a mathematical formula}att(q,j) to {a mathematical formula}att(p,i).
+     </paragraph>
+     <paragraph>
+      Formally, the positive attribute position dependency graph is defined as follows.
+     </paragraph>
+     <paragraph label="Definition 19">
+      Positive attribute position dependency graphFor a given hex-program Π, the positive attribute position dependency graph{a mathematical formula}GA(Π)=〈Attr,E〉 has as nodes Attr the set of all attribute positions in Π and the least set of edges E such that for all {a mathematical formula}r∈Π:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}p(X)∈H(r), {a mathematical formula}q(Y)∈B+(r) and for some {a mathematical formula}i,j we have that {a mathematical formula}Xi=Yj is a variable, then {a mathematical formula}(att(q,j),att(p,i))∈E.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}&amp;g[X](Y)∈B+(r), {a mathematical formula}p(Z)∈B+(r) and for some {a mathematical formula}i,j we have that {a mathematical formula}Zi=Xj and {a mathematical formula}τ(&amp;g,i)=const, then {a mathematical formula}(att(p,i),atti(&amp;g[X],j))∈E.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}&amp;g[X](Y)∈B+(r), {a mathematical formula}&amp;h[V](U)∈B+(r) and for some {a mathematical formula}i,j we have that {a mathematical formula}Vi=Yj and {a mathematical formula}τ(&amp;h,i)=const, then {a mathematical formula}(atto(&amp;g[X],j),att[(&amp;h,)X]ii)∈E.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}&amp;g[X](Y)∈B+(r) then {a mathematical formula}(atti(&amp;g[X],i),atto(&amp;g[X],j))∈E for all {a mathematical formula}1≤i≤iar(&amp;g) and {a mathematical formula}1≤j≤oar(&amp;g).
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}p(X)∈H(r), {a mathematical formula}&amp;g[Y](Z)∈B+(r) and for some {a mathematical formula}i,j we have that {a mathematical formula}Xi=Zj is a variable, then {a mathematical formula}(atto(&amp;g[X],j),att(p,i))∈E.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}&amp;g[X](Y)∈B+(r) s.t. {a mathematical formula}p=Xi and {a mathematical formula}τ(&amp;g,i)=pred, then {a mathematical formula}(att(p,k),atti(&amp;g[X],i))∈E for all {a mathematical formula}1≤k≤ar(p).
+      </list-item>
+     </list>
+     <paragraph>
+      The transitive closure of the edge relation in {a mathematical formula}GA is denoted by {a mathematical formula}→GA+. Intuitively, {a mathematical formula}GA(Π) models the information flow in Π.
+     </paragraph>
+     <paragraph label="Example 20">
+      cont'dThe (positive) attribute position dependency graph of the program from Example 7 has the attribute positions{a mathematical formula} and the edges{a mathematical formula} (see Fig. 3).  □
+     </paragraph>
+     <paragraph label="Definition 20">
+      Benign and malign cyclesA cycle K in {a mathematical formula}GA(Π) is benign wrt. a set of safe attribute positions S, if there exists a well-ordering {a mathematical formula}≤C of {a mathematical formula}C, such that for every attribute position {a mathematical formula}atto(&amp;g[X],j)∉S in the cycle, we have that {a mathematical formula}f&amp;g(A,x1,…,xm,t1,…tn)=0 whenever
+     </paragraph>
+     <list>
+      <list-item label="•">
+       some {a mathematical formula}xi for {a mathematical formula}1≤i≤m is a predicate parameter, {a mathematical formula}atti(&amp;g[X],i)∉S is in K, and {a mathematical formula}(s1,…,sar(xi))∈ext(A,xi), and {a mathematical formula}tj≰Csk for some {a mathematical formula}1≤k≤ar(xi); or
+      </list-item>
+      <list-item label="•">
+       some {a mathematical formula}xi for {a mathematical formula}1≤i≤m is a constant input parameter, {a mathematical formula}atti(&amp;g[X],i)∉S is in K, and {a mathematical formula}tj≰Cxi.
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, a cycle is benign if external atoms never deliver larger values wrt. to their yet unsafe cyclic input. As there is a least element, this ensures a finite grounding.
+     </paragraph>
+     <paragraph label="Example 21">
+      cont'dThe cycle in {a mathematical formula}GA(Π) (dashed lines in Fig. 3) is malign wrt. {a mathematical formula}S=∅ because there is no well-ordering as required by Definition 20. Intuitively, this is because the external atom infinitely extends the string.If we replace {a mathematical formula}&amp;concat[X,x](Y) in Π by {a mathematical formula}&amp;tail[X](Y), i.e., we compute the string Y from X with the first character removed, then the cycle in the adapted attribute position dependency graph becomes benign using &lt; over the string lengths as well-ordering.  □
+     </paragraph>
+     <paragraph>
+      We can now define an extended semantic term bounding function which takes into account the properties from Section 3.4.2 and malign cycles.
+     </paragraph>
+     <paragraph label="Definition 21">
+      Extended semantic term bounding functionLet {a mathematical formula}bextsem(Π,r,S,B) be defined such that we have {a mathematical formula}t∈bextsem(Π,r, {a mathematical formula}S,B) iff
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       t is captured by some attribute position α in {a mathematical formula}B+(r) that is not reachable from malign cycles in {a mathematical formula}GA(Π) wrt. S, i.e., if {a mathematical formula}α=att(p,i) then {a mathematical formula}t=ti for some body atom {a mathematical formula}p(t1,…,tℓ)∈B+(r), and if {a mathematical formula}α=attT(&amp;g[X],i) then {a mathematical formula}t=YiT for some external atom {a mathematical formula}&amp;g[Yi](Yo)∈B+(r) where {a mathematical formula}YT=X1T,…,Yar(&amp;g)T; or
+      </list-item>
+      <list-item label="(ii)">
+       {a mathematical formula}t∈bsem(Π,r, {a mathematical formula}S,B).
+      </list-item>
+     </list>
+     <paragraph label="Proposition 14">
+      Function{a mathematical formula}bextsem(Π,r,S,B)defined above is a TBF.
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Proofs
+     </section-title>
+     <section label="B.1">
+      Liberal safety (Section 3)
+      <paragraph label="Proof of Proposition 2">
+       There are only finitely many ordinary and external predicates with finite (input and output) arity. □
+      </paragraph>
+      <paragraph>
+       For the following proofs, let {a mathematical formula}Bn+1,j denote the intermediate result when computing {a mathematical formula}bΠ,r,Sn(Π)∞(∅) after the j-th iteration. Then {a mathematical formula}Bn(r,Π)=⋃j≥0Bn,j and for each {a mathematical formula}t∈Bn(r,Π) there is some {a mathematical formula}j≥0 such that {a mathematical formula}t∈Bn,j(r,Π).
+      </paragraph>
+      <paragraph label="Proof of Proposition 3">
+       We prove this by induction on n.For {a mathematical formula}n=0 we have {a mathematical formula}S0(Π)=∅ and the proposition holds trivially.For the induction step {a mathematical formula}n↦n+1, assume that the attribute positions in {a mathematical formula}Sn(Π) are lde-safe (outer induction hypothesis). We first show that for each rule r and term {a mathematical formula}t∈Bn+1(r,Π), the set of ground instances of r in {a mathematical formula}GΠ∞(∅) contains only finitely many different substitutions for t.As stated above, since {a mathematical formula}t∈Bn+1(r,Π) there is some {a mathematical formula}j≥0 such that {a mathematical formula}t∈Bn+1,j(r,Π). We consider {a mathematical formula}Bn+1,j(r,Π) and again prove this by induction on j. For {a mathematical formula}j=0 we have {a mathematical formula}Bn+1,0(r,Π)=∅ and the proposition holds trivially. For the induction step {a mathematical formula}j↦j+1, assume that the terms in {a mathematical formula}Bn+1,j(r,Π) are bounded (inner induction hypothesis). Let {a mathematical formula}t∈Bn+1,j+1(r,Π). If {a mathematical formula}t∈Bn+1,j(r,Π) then the claim follows from the inner induction hypothesis. Otherwise t is added in step {a mathematical formula}j+1. By the outer induction hypothesis all attribute positions in {a mathematical formula}Sn(Π) have a finite range in {a mathematical formula}GΠ∞(∅). By the inner induction hypothesis there are only finitely many substitutions for all terms {a mathematical formula}t∈Bn+1,j(r,Π) in {a mathematical formula}GΠ∞(∅). This fulfills the conditions of TBFs (Definition 7). Since b is a TBF, this implies that there are also only finitely many substitutions for all {a mathematical formula}t∈b(r,Sn(Π),Bn+1,j). This proves the inner induction statement and, by definition of {a mathematical formula}Bn(r,Π), also that for each {a mathematical formula}t∈Bn+1(r,Π) the set of ground instances of r in {a mathematical formula}GΠ∞(∅) contains only finitely many different substitutions for t.If {a mathematical formula}att(p,i)∈Sn+1(Π), then for each rule {a mathematical formula}r∈Π and atom {a mathematical formula}p(t1,…,tar(p))∈H(r) we have {a mathematical formula}ti∈Bn+1(r,Π). As we have shown, this means that there are only finitely many different substitutions for {a mathematical formula}ti in the ground instances of r in the set {a mathematical formula}GΠ∞(∅). As there are also only finitely many different rules in Π, and the number of substitutions for the term {a mathematical formula}ti in the head of r is finite, this implies that also the set {a mathematical formula}{ti|p(t1,…,tar(p))∈A(GΠ∞(∅))} is finite.If {a mathematical formula}atti(&amp;g[X],i)∈Sn+1(Π), then the i-th input parameter is either of type constant and {a mathematical formula}Yi is a constant or a variable, or it is of type predicate. If it is of type constant and {a mathematical formula}Yi is a constant, then there exists only one ground instance. If it is of type constant and {a mathematical formula}Yi is a variable, then {a mathematical formula}Yi∈Bn+1(r,Π), for which we have shown that there are only finitely many different substitutions for Y. If it is of type predicate input parameter p, then the range of all attribute positions {a mathematical formula}att(p,1),…,att(p,ar(p)) in {a mathematical formula}GΠ∞(∅) is finite by the (outer) induction hypothesis.If {a mathematical formula}atto(&amp;g[X],i)∈Sn+1(Π), then either {a mathematical formula}atti(&amp;g[X],1),…,atti(&amp;g[X],ari(&amp;g))∈Sn(Π), or r contains some {a mathematical formula}&amp;g[Y](X) s.t. {a mathematical formula}Yi is bounded.If {a mathematical formula}atti(&amp;g[X],1),…,atti(&amp;g[X],ari(&amp;g))∈Sn(Π), then the range of all input parameters in {a mathematical formula}GΠ∞(∅) is finite by the (outer) induction hypothesis. But then there exist only finitely many oracle calls to {a mathematical formula}&amp;g. As each such call can introduce only finitely many new values, also the range of each output parameter in {a mathematical formula}GΠ∞(∅) is finite. If r contains an external atom {a mathematical formula}&amp;g[Y](X) such that {a mathematical formula}Yi is bounded, then only finitely many substitutions for {a mathematical formula}atto(&amp;g[X],i) can satisfy the rule body, thus {a mathematical formula}GΠ∞(Π) will also contain only finitely many values for {a mathematical formula}atto(&amp;g[X],i). Thus, the (outer) induction hypothesis holds for {a mathematical formula}n+1, which proves the statement. □
+      </paragraph>
+      <paragraph label="Proof of Corollary 4">
+       If {a mathematical formula}a∈S∞ then {a mathematical formula}a∈Sn for some {a mathematical formula}n≥0 and the claim follows from Proposition 3. □
+      </paragraph>
+      <paragraph label="Proof of Corollary 5">
+       Since Π is lde-safe by assumption, {a mathematical formula}a∈S∞(Π) for all attribute positions a of Π. Then by Corollary 4, the range of all attribute positions of Π in {a mathematical formula}GΠ∞(∅) is finite. But then there exists also only a finite number of ground atoms in {a mathematical formula}GΠ∞(∅). Since the original non-ground program Π is finite, this implies that also the grounding is finite. □
+      </paragraph>
+      <paragraph label="Proof of Proposition 6">
+       We construct the grounding {a mathematical formula}grndC(Π) as the least fixpoint {a mathematical formula}GΠ∞(∅) of the grounding operator {a mathematical formula}GΠ(X), which is known to be finite by Corollary 5. The set C is then implicitly given by the set of constants appearing in {a mathematical formula}grndC(Π). It remains to show that indeed {a mathematical formula}grndC(Π)≡posgrndC(Π). We will show the more general proposition {a mathematical formula}grndC(Π)≡posgrndC′(Π) for any {a mathematical formula}C′⊇C.(⇒) Suppose {a mathematical formula}A∈AS(grndC(Π)). We show now that A is an answer set of {a mathematical formula}grndC′(Π). First observe that {a mathematical formula}A⊭B+(r) for all {a mathematical formula}r∈grndC′(Π)∖grndC(Π); otherwise {a mathematical formula}r∈GΠ(grndC(Π)), which contradicts the assumption that {a mathematical formula}grndC(Π) is the least fixpoint of {a mathematical formula}GΠ(∅). Therefore, {a mathematical formula}A⊨grndC′(Π). Moreover {a mathematical formula}fgrndC(Π)A=fgrndC′(Π)A, hence A is a subset-minimal model of the FLP-reduct of {a mathematical formula}grndC′(Π) iff A is a subset-minimal model of the FLP-reduct of {a mathematical formula}grndC(Π), which is the case because {a mathematical formula}A∈AS(grndC(Π)). Therefore {a mathematical formula}A∈AS(grndC′(Π)).(⇐) Now suppose {a mathematical formula}A∈AS(grndC′(Π)). Then we have {a mathematical formula}A′=A∩A(grndC(Π))} is a model of {a mathematical formula}grndC(Π). Then we have {a mathematical formula}A′⊭B+(r) for all {a mathematical formula}r∈grndC′(Π)∖grndC(Π); otherwise {a mathematical formula}r∈GΠ(grndC(Π)), which contradicts the assumption that {a mathematical formula}grndC(Π) is the least fixpoint of {a mathematical formula}GΠ(∅). Therefore, {a mathematical formula}A′⊨grndC′(Π). But this implies that {a mathematical formula}A=A′: by construction of {a mathematical formula}A′ we have {a mathematical formula}A′⊆A, and {a mathematical formula}A′⊊A would imply that A is not subset-minimal, which contradicts the assumption that {a mathematical formula}A∈AS(grndC′(Π)). Moreover, {a mathematical formula}fgrndC(Π)A′=fgrndC′(Π)A. Therefore {a mathematical formula}A′ is a subset-minimal model of the FLP-reduct of {a mathematical formula}grndC(Π) iff A is a subset-minimal model of the FLP-reduct of {a mathematical formula}grndC′(Π), which is the case because {a mathematical formula}A∈AS(grndC′(Π)). Thus we have {a mathematical formula}A′∈AS(grndC(Π)). The observation {a mathematical formula}A′=A concludes the proof. □
+      </paragraph>
+      <paragraph label="Proof of Proposition 7">
+       If t is in the output of {a mathematical formula}bsyn(Π,r,S,B), then one of the conditions holds. If Condition (i) holds, then t is a constant, hence there is only one ground instance. If Condition (ii) holds, then t must also occur as value for {a mathematical formula}att(q,j), which has a finite range by assumption.If Condition (iii) holds, then t is output of an external atom such that there are only finitely many substitutions of its constant inputs and the attribute positions of all predicate inputs have a finite range by assumption. Thus there are only finitely many different oracle calls with finite output each. □
+      </paragraph>
+      <paragraph label="Proof of Proposition 8">
+       If Condition (i) holds, then the claim follows immediately from finiteness of the domain of the respective external atom.If Condition (ii) holds, then the external atom cannot introduce new constants. Because the set of constants in the extension of the respective input parameter {a mathematical formula}Yj is finite by assumption that {a mathematical formula}att(Yj,k)∈S for all {a mathematical formula}1≤k≤ar(Yj), it follows that also the set of constants in the output of the external atom is finite.If Condition (iii) holds, then there are only finitely many different substitutions for t because the output of the respective external atom is bound by the precondition of TBFs and the finite fiber ensures that there are only finitely many different inputs for each output. □
+      </paragraph>
+      <paragraph label="Proof of Theorem 9">
+       For {a mathematical formula}t∈b(Π,r,S,B), {a mathematical formula}t∈bi(Π,r,S,B) for some {a mathematical formula}1≤i≤ℓ. Then there are only finitely many substitutions for t in {a mathematical formula}GΠ∞(∅) because {a mathematical formula}bi is a TBF. □
+      </paragraph>
+     </section>
+     <section label="B.2">
+      Grounding liberally domain-expansion safe hex-programs (Section 4)
+      <paragraph>
+       Towards a proof of the soundness and correctness of Algorithm GroundHEX we first consider a slower but easier to prove variant GroundHEXNaive of it, for which we show soundness and completeness; we then prove that the optimizations in GroundHEX do not harm these properties.
+      </paragraph>
+      <paragraph>
+       Compared to the naive Algorithm GroundHEXNaive, Algorithm GroundHEX contains the following modifications. The first one concerns the ordinary ASP grounder. We allow the grounder to optimize the grounding as formalized by Definition 18.
+      </paragraph>
+      <paragraph>
+       The second change concerns the external atoms evaluated at (d). Intuitively, an external atom may be skipped if it can only return constants, which are guaranteed to appear also elsewhere in the grounding.
+      </paragraph>
+      <paragraph>
+       The third optimization concerns the enumeration of assignments. Note that Step (c) in GroundHEXNaive enumerates all models of {a mathematical formula}Πpg. That is, in order to ground the program, an ASP solver must be called, which is computationally expensive and in fact unnecessary. Step (d) in GroundHEX simply enumerates assignments directly extracted from the partial grounding, constructed in a way guaranteeing that all relevant ground instances of the external atoms are represented in the grounding.
+      </paragraph>
+      <paragraph>
+       We now illustrate the algorithm with an example.
+      </paragraph>
+      <paragraph label="Example 22">
+       Let {a mathematical formula}Π={d(x);q(Y)←d(X),&amp;concat[X,a](Y)} be the program, where the external atom {a mathematical formula}&amp;concat[c1,c2](c3) is true iff {a mathematical formula}c3 is the concatenation of {a mathematical formula}c1 and {a mathematical formula}c2. Then in the first iteration {a mathematical formula}Πp={d(x)∨d(y);q(Y)←d(X),e&amp;concat[X,a](Y);ginp(X)←d(X)}, where {a mathematical formula}ginp is the unique auxiliary input predicate for {a mathematical formula}&amp;concat[X,a](Y). The grounding step yields then {a mathematical formula}Πpg={d(x); {a mathematical formula}q(Y)←d(X),e&amp;concat[X,a](Y);ginp(X,a)←d(X)|X,Y∈{x,y}}. Now the algorithm comes to the checking phase at (c) and (d). Note that {a mathematical formula}ginp(x,a) and {a mathematical formula}ginp(y,a) appear in all models A of {a mathematical formula}Πpg. Therefore the algorithm evaluates {a mathematical formula}&amp;concat under inputs {a mathematical formula}x,a and {a mathematical formula}y,a and collects all output tuples x such that {a mathematical formula}f&amp;g(A,x,a,x)=1 resp. {a mathematical formula}f&amp;g(A,y,a,x)=1 holds. This holds for the output tuples xa and ya. Thus, Step (f) adds the rules {a mathematical formula}e&amp;g[x,a](xa)∨ne&amp;g[x,a](xa)← and {a mathematical formula}e&amp;g[y,a](xa)∨ne&amp;g[y,a](ya)← to {a mathematical formula}Πp and grounding starts over again. In the next iteration, the rule instances {a mathematical formula}q(xa)←d(x),e&amp;concat[x,a](xa) and {a mathematical formula}q(ya)←d(y),e&amp;concat[y,a](ya) will appear in {a mathematical formula}Πpg. However, as no new atoms {a mathematical formula}ginp(y) appears in any of the models of the updated {a mathematical formula}Πpg, the loop terminates after the second iteration.  □
+      </paragraph>
+      <paragraph>
+       We now come to the formal proof that this procedure always returns a grounding which has the same answer sets as the original program. As the programs {a mathematical formula}Πp and {a mathematical formula}Πpg are iteratively updated in the algorithm, whenever we write {a mathematical formula}Πp or {a mathematical formula}Πpg in one of the proofs, then by convention we refer to the status after the main loop terminated, i.e., at Step (g) (resp. Step (g) in Algorithm GroundHEX).
+      </paragraph>
+      <paragraph>
+       A key concept in our proofs will be that of representation of external atoms in a ground program.
+      </paragraph>
+      <paragraph label="Definition 22">
+       For a ground external atom {a mathematical formula}&amp;g[y](x) in a rule r, its representation degree in a program Π is 0, if Π contains a rule {a mathematical formula}e&amp;g[y](x)∨ne&amp;g[y](x)←. It is {a mathematical formula}n+1, if Π contains a rule with head {a mathematical formula}e&amp;g[y](x)∨ne&amp;g[y](x) and the maximum representation degree of all {a mathematical formula}&amp;h[w](v) s.t. {a mathematical formula}es,&amp;h[w](v) occurs in the body, is n. Otherwise (i.e., there is no rule with head {a mathematical formula}e&amp;g[y](x)∨ne&amp;g[y](x)), the representation degree is undefined.
+      </paragraph>
+      <paragraph>
+       If the representation degree for some ground external atom is undefined, we also say that the external atom is not represented. Intuitively, if an external atom is represented, this means that the program contains a guessing rule for the respective replacement atom. The representation degree specifies on how many other external atom replacements this guess depends on. Note that in general, an external atom can have multiple representation degrees simultaneously. However, in the following we will only use its minimum representation degree and can therefore drop the prefix minimum.
+      </paragraph>
+      <paragraph>
+       Towards a proof of the soundness and correctness of Algorithm GroundHEXNaive, we first prove the following lemma.
+      </paragraph>
+      <paragraph label="Lemma 15">
+       Let{a mathematical formula}Πg=GroundHEXNaive(Π)and C be the constants which appear in{a mathematical formula}Πg. Then for any{a mathematical formula}C′⊇Cand each modelAof{a mathematical formula}grndC(Π),{a mathematical formula}A⊭B(r)for all{a mathematical formula}r∈grndC′(Π)∖grndC(Π).
+      </paragraph>
+      <paragraph label="Proof">
+       Let A be a model of {a mathematical formula}grndC(Π). Then it can be extended to a model {a mathematical formula}Apg of {a mathematical formula}Πpg as follows:
+       <list>
+        For all {a mathematical formula}e&amp;g[y](x)∈A(Πpg), add {a mathematical formula}e&amp;g[y](x) if {a mathematical formula}f&amp;g(A,y,x)=1 and add atom {a mathematical formula}ne&amp;g[y](x) otherwise.Add all {a mathematical formula}ginp&amp;g(y)∈A(Πpg), for all predicates {a mathematical formula}ginp&amp;g occurring in the head of some {a mathematical formula}rinpa (for an external atom {a mathematical formula}a=&amp;g[Y](X)).We show now that
+       </list>
+       <paragraph>
+        A is also a model of {a mathematical formula}grndC′(Π). Let {a mathematical formula}r∈grndC′(Π) and suppose {a mathematical formula}A⊭r, then {a mathematical formula}A⊭H(r) and {a mathematical formula}A⊨B(r). Since {a mathematical formula}A⊨B(r), we have {a mathematical formula}A⊨a for each ordinary literal {a mathematical formula}a∈B(r). If there would be only ordinary literals in {a mathematical formula}B(r), then {a mathematical formula}Πg would also contain this rule instance because all constants in {a mathematical formula}B(r) must appear in the atoms which are true in A and thus in {a mathematical formula}Πg. Hence, A could not be a model of {a mathematical formula}Πg. Therefore there must be external atoms in {a mathematical formula}B(r).We show now that each positive external atom in r is represented in {a mathematical formula}Πpg (with degree 0). Suppose there is an external atom in {a mathematical formula}B(r) which is not represented in {a mathematical formula}Πpg. Then, due to safety of r, which forbids cyclic passing of constant input within a rule body, there is also a ‘first’ unrepresented external atom {a mathematical formula}&amp;g[v](u), i.e., one such that all its input constants in v either: (1) appear in a positive ordinary atom, (2) appear in the output list of a represented external atom, or (3) were already constants in the program. In all three cases, the input auxiliary rule for {a mathematical formula}&amp;g[v](u) is instantiated for this v because its body atoms are potentially true (they are ordinary atoms or replacement atoms of represented external atoms), i.e., {a mathematical formula}ginp&amp;g(v) appears in the program and is therefore true in {a mathematical formula}Apg. Thus, the loop at (e) would evaluate {a mathematical formula}&amp;g with {a mathematical formula}Apg and v and determine all tuples w s.t. {a mathematical formula}f&amp;g(Apg,v,w)=1. However, {a mathematical formula}f&amp;g(Apg,v,u)=0, because otherwise rule {a mathematical formula}e&amp;g[v](u)∨ne&amp;g[v](u)← would have been added at (f) to {a mathematical formula}Πp and thus {a mathematical formula}&amp;g[v](u) would be represented in {a mathematical formula}Πpg, which contradicts our assumption. But if {a mathematical formula}f&amp;g(Apg,v,u)=0 then also {a mathematical formula}f&amp;g(A,v,u)=0 because {a mathematical formula}Apg and A differ only on input auxiliary atoms and external atom replacement atoms, which would imply {a mathematical formula}A⊭B(r).Thus, all positive external atoms are represented in {a mathematical formula}Πpg. But as default-negated ones cannot introduce new values due to ordinary safety, all constants in r also appear in {a mathematical formula}Πg, thus {a mathematical formula}r∈Πg. But then A could not be a model of {a mathematical formula}Πg if {a mathematical formula}A⊨B(r), hence {a mathematical formula}A⊭B(r).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Now we can show that Algorithm GroundHEXNaive is sound and complete.
+      </paragraph>
+      <paragraph label="Theorem 16">
+       If Π is a lde-safehex-program and{a mathematical formula}Πg=GroundHEXNaive(Π), then{a mathematical formula}Πg≡Π.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}Πg=GroundHEXNaive(Π). For the proof, observe that {a mathematical formula}Πg=grndC(Π) where C is the set of all constants which appear in {a mathematical formula}Πg. We show now{a mathematical formula} for any {a mathematical formula}C′⊇C. Because {a mathematical formula}Π≡grndC(Π) for Herbrand universe {a mathematical formula}C⊇C by definition of the hex-semantics, this implies the proposition.Termination of the algorithm follows from Theorem 10, where we will prove that an optimized version of the algorithm, which may produce a larger grounding (wrt. the number of constants) but need less iterations, terminates. As the grounding produced by this algorithm is even smaller, it terminates as well.(⇒) Let {a mathematical formula}A∈AS(grndC(Π)). By Lemma 15 it is also a model of {a mathematical formula}grndC′(Π). It remains to show that it is also a subset-minimal model of {a mathematical formula}fgrndC′(Π)A. Since {a mathematical formula}C⊆C′, {a mathematical formula}fgrndC(Π)A⊆fgrndC′(Π)A. By Lemma 15, {a mathematical formula}A⊭B(r) for any {a mathematical formula}r∈grndC′(Π)∖grndC(Π), thus {a mathematical formula}fgrndC(Π)A=fgrndC′(Π)A. But since {a mathematical formula}A∈AS(grndC(Π)), it is a minimal model of {a mathematical formula}fgrndC(Π)A, thus also of {a mathematical formula}fgrndC′(Π)A, i.e., {a mathematical formula}A∈AS(grndC′(Π)).(⇐) Let {a mathematical formula}A′∈AS(grndC′(Π)). We show that {a mathematical formula}A=A′∩A(grndC(Π)) is an answer set of {a mathematical formula}grndC(Π). Because {a mathematical formula}grndC(Π)⊆grndC′(Π), it is trivial that A is a model of {a mathematical formula}grndC(Π). It remains to show that it is also a subset-minimal model of {a mathematical formula}fgrndC(Π)A. By Lemma 15, A is a model of {a mathematical formula}grndC′(Π). Clearly, {a mathematical formula}A⊆A′. But {a mathematical formula}A⊊A′ would imply that {a mathematical formula}A′ is not subset-minimal, which contradicts the assumption that it is an answer set of {a mathematical formula}grndC′(Π), thus {a mathematical formula}A=A′. Because {a mathematical formula}grndC(Π)⊆grndC′(Π) and {a mathematical formula}A⊭B(r) for all {a mathematical formula}r∈grndC′(Π)∖grndC(Π), it holds that {a mathematical formula}fgrndC(Π)A=fgrndC′(Π)A. Because A is a subset-minimal model of {a mathematical formula}grndC′(Π)A, it is a subset-minimal model of {a mathematical formula}fgrndC(Π)A. Thus, A is an answer set of {a mathematical formula}grndC(Π).  □
+      </paragraph>
+      <paragraph>
+       We now come to the proof of soundness and completeness of our optimized Algorithm GroundHEX. We start with a lemma analogous to Lemma 15.
+      </paragraph>
+      <paragraph label="Lemma 17">
+       Let{a mathematical formula}Πg=GroundHEX(Π)and C be the constants which appear in{a mathematical formula}Πg. Then for any{a mathematical formula}C′⊇Cand each modelAof{a mathematical formula}grndC(Π),{a mathematical formula}A⊭B(r)for all{a mathematical formula}r∈grndC′(Π)∖grndC(Π).
+      </paragraph>
+      <paragraph label="Proof">
+       Let A be an model of {a mathematical formula}grndC(Π). Then it can be extended to a model {a mathematical formula}Apg of {a mathematical formula}Πpg as follows:
+       <list>
+        For all {a mathematical formula}e&amp;g[y](x)∈A(Πpg), add {a mathematical formula}e&amp;g[y](x) if {a mathematical formula}f&amp;g(Ag,y,x)=1 and add atom {a mathematical formula}ne&amp;g[y](x) otherwise.Add all {a mathematical formula}ginp&amp;g(y)∈A(Πpg), for all predicates {a mathematical formula}ginp&amp;g occurring in the head of some {a mathematical formula}rinpa (for an external atom {a mathematical formula}a=&amp;g[Y](X)).We show now that
+       </list>
+       <paragraph>
+        A is a model of {a mathematical formula}grndC′(Π). Let {a mathematical formula}r∈grndC′(Π) and suppose {a mathematical formula}A⊭r, i.e., {a mathematical formula}A⊭H(r) but {a mathematical formula}A⊨B(r).As we have seen in the proof of Theorem 16, all lde-safety relevant positive external atoms in r are represented with degree 0 in the program computed by Algorithm GroundHEXNaive. As such external atoms are handled equivalently by our optimized algorithm, they are also represented in {a mathematical formula}Πpg. We show that this holds also for positive external atoms which are not lde-safety relevant.Suppose r contains an external atom which is not lde-safety relevant and which is not represented in {a mathematical formula}Πpg. Then there is a ‘first’ such external atom {a mathematical formula}&amp;g[v](u) in {a mathematical formula}B(r), i.e., its input list only contains constants which (1) appear in ordinary atoms, (2) appear in lde-safety relevant external atoms, or (3) were already constants in the program. In all three cases, the input auxiliary rule for {a mathematical formula}&amp;g[v](u) is instantiated for this v because its body atoms are potentially true (ordinary atoms appear also in {a mathematical formula}B(r) and are potentially true, otherwise r would not have been added to {a mathematical formula}Πg; external atoms are all not lde-safety relevant and are potentially true since they are represented with degree 0), i.e., {a mathematical formula}ginp&amp;g(v) appears in the program. Moreover, the respective external atom guessing rule is instantiated for v and u because all its body atoms are potentially true (with the same argument as for input auxiliary rules). Thus, {a mathematical formula}&amp;g[v](u) would be represented in {a mathematical formula}Πp with some degree &gt;0, and thus also in {a mathematical formula}Πpg and {a mathematical formula}Πg.Thus, all positive external atoms are represented in {a mathematical formula}Πpg. But as default-negated ones cannot introduce new values due to ordinary safety, all constants in r also appear in {a mathematical formula}Πg, thus a strengthening of r would be in {a mathematical formula}Πg. But then A could not be a model of {a mathematical formula}Πg if {a mathematical formula}A⊨B(r), hence {a mathematical formula}A⊭B(r). □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We now show some additional lemmas to simplify the proof of soundness and completeness of the optimized algorithm GroundHEX.
+      </paragraph>
+      <paragraph label="Lemma 18">
+       Let{a mathematical formula}Πg=GroundHEX(Π)and C be the constants which appear in{a mathematical formula}Πg. Every answer setAof{a mathematical formula}Πgcan be extended to an answer set{a mathematical formula}Apgof{a mathematical formula}Πpg.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}A∈AS(Πg). Then {a mathematical formula}Apg is constructed by iteratively adding additional atoms to A as follows:
+       <list>
+        If the body B of an external atom guessing rule {a mathematical formula}e&amp;g[y](x)∨ne&amp;g[y](x)←B in {a mathematical formula}Πpg is satisfied by {a mathematical formula}Apg, add {a mathematical formula}e&amp;g[y](x) if {a mathematical formula}f&amp;g(A,y,x)=1 and add atom {a mathematical formula}ne&amp;gy(x) otherwise.Add all {a mathematical formula}ginp&amp;g(y)∈A(Πpg) if the body of the respective input auxiliary rule is satisfied by {a mathematical formula}Apg.Then the fixpoint of this operation
+       </list>
+       <paragraph>
+        {a mathematical formula}Apg is by construction a model of all input auxiliary rules and external atom guessing rules. Moreover, it is also a model of all remaining rules because A is a model of the corresponding rules in {a mathematical formula}Πg with external atoms in place of replacement atoms, and we set the truth values of the external atom replacement atoms exactly to the truth values of the external atoms in A. Note that there might be external atoms in {a mathematical formula}Πg for which neither {a mathematical formula}e&amp;g[y](x) nor {a mathematical formula}ne&amp;g[y](x) is added to {a mathematical formula}Apg, but then the body of the respective external atom guessing rule is unsatisfied by {a mathematical formula}Apg. But since the body of an external atom guessing rule is a subset of the body of the rule where this external atom occurs, also this rule is satisfied.It remains to show that {a mathematical formula}Apg is also a subset-minimal model of {a mathematical formula}fΠpgApg. Suppose there is a smaller model {a mathematical formula}Apg′⊊Apg. Then {a mathematical formula}Apg∖Apg′ must contain at least one atom which is not a replacement atom or an input auxiliary atom, because by construction of {a mathematical formula}Apg such atoms are only set to true if necessary, i.e., if they are supported by A, and all rules used to derive such atoms are also in {a mathematical formula}fΠpgApg. We now show that the restriction of A to ordinary atoms {a mathematical formula}A′⊊A (i.e., without replacement atoms {a mathematical formula}e&amp;g[y](x) and {a mathematical formula}ne&amp;g[y](x) and without external atom input atoms {a mathematical formula}ginp&amp;g(y)) is a model of {a mathematical formula}fΠgA, which contradicts the assumption that A is an answer set of {a mathematical formula}Πg.Note that, except for the external atom guessing and input auxiliary rules, the reduct {a mathematical formula}fΠpgApg contains the same rules as {a mathematical formula}fΠgA with replacement atoms instead of external atoms. Thus, for {a mathematical formula}r∈fΠgA, the corresponding {a mathematical formula}rpg∈fΠpgApg contains the same ordinary literals in the head and body.We show now that {a mathematical formula}Apg′⊨rpg implies {a mathematical formula}A′⊨r. If {a mathematical formula}Apg′ is a model of {a mathematical formula}rpg, then we have either (1) {a mathematical formula}Apg′⊨h for some {a mathematical formula}h∈H(rpg), or (2) {a mathematical formula}Apg′⊭b for some {a mathematical formula}b∈B(rpg). In Case (1), we also have {a mathematical formula}h∈H(r). Since {a mathematical formula}Apg′ and {a mathematical formula}A′ coincide on non-replacement and non-input atoms, this implies {a mathematical formula}A′⊨r. In Case (2), b is either (2a) a non-replacement literal, or (2b) a (positive or default-negated) external atom replacement. In Case (2a), we also have {a mathematical formula}b∈B(r). Since {a mathematical formula}Apg′ and {a mathematical formula}A′ coincide on such atoms, this implies {a mathematical formula}A′⊨r. In Case (2b), we either have ({a mathematical formula}2b′) {a mathematical formula}Apg⊭b, or ({a mathematical formula}2b″) b is positive (since a default-negated atom cannot become false by removing atoms from the assignment) and some literal {a mathematical formula}b′ in the body of the external atom guessing or in the input rule for b is false in {a mathematical formula}Apg′; in this case b is represented in {a mathematical formula}Πp with some degree n. In Case ({a mathematical formula}2b′), A falsifies by construction of {a mathematical formula}Apg the external atom in {a mathematical formula}B(r) which corresponds to the replacement atom b. In Case ({a mathematical formula}2b″), {a mathematical formula}b′ also appears in {a mathematical formula}B(rpg). Note that {a mathematical formula}b′ can be another external replacement atom. But in this case, the external atom corresponding to {a mathematical formula}b′ is represented with some degree &lt;n. Thus, we start the case distinction for {a mathematical formula}b′ again. However, because the degree is reduced with every iteration, we will eventually end up in one of the other cases.Thus, {a mathematical formula}A′ would be a model of {a mathematical formula}fΠgA, which contradicts the assumption that A is an answer set of {a mathematical formula}Πg. This shows that {a mathematical formula}Apg is an answer set of {a mathematical formula}Πpg.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Lemma 19">
+       Let{a mathematical formula}Πg=GroundHEX(Π)and C be the constants which appear in{a mathematical formula}Πg. Every answer setAof{a mathematical formula}grndC(Π)can be extended to an answer set{a mathematical formula}Apof{a mathematical formula}grndC(Πp).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}A∈AS(grndC(Π)). Then {a mathematical formula}Ap is constructed by iteratively adding additional atoms to A as follows:
+       <list>
+        If the body B of an external atom guessing rule {a mathematical formula}e&amp;g[y](x)∨ne&amp;g[y](x)←B in {a mathematical formula}grndC(Πp) is satisfied by {a mathematical formula}Ap, add {a mathematical formula}e&amp;g[y](x) if {a mathematical formula}f&amp;g(A,y,x)=1 and add atom {a mathematical formula}ne&amp;g[y](x) otherwise.Add all {a mathematical formula}ginp&amp;g(y)∈A(grndC(Πp)) if the body of the respective input auxiliary rule is satisfied by {a mathematical formula}Ap.Then the fixpoint of this operation
+       </list>
+       <paragraph>
+        {a mathematical formula}Ap is by construction a model of all ground input auxiliary rules and external atom guessing rules. Moreover, it is also a model of all remaining rules in {a mathematical formula}grndC(Πp) because A is a model of the corresponding rules in {a mathematical formula}grndC(Π) with external atoms in place of replacement atoms, and we set the truth values of the external atom replacement atoms exactly to the truth values of the external atoms in A. Note that there might be external atoms {a mathematical formula}&amp;g[y](x) for which neither {a mathematical formula}e&amp;g[y](x) nor {a mathematical formula}ne&amp;g[y](x) is added to {a mathematical formula}Ap, but then the body of the respective external atom guessing rule is unsatisfied by {a mathematical formula}Ap. But since the body of an external atom guessing rule is a subset of the body of the rule where this external atom occurs, also this rule is satisfied.Thus {a mathematical formula}Ap is a model of {a mathematical formula}grndC(Πp). It remains to show that it is also a subset-minimal model of {a mathematical formula}fgrndC(Πp)Ap. Suppose there is a smaller model {a mathematical formula}Ap′⊊Ap. Then {a mathematical formula}Ap∖Ap′ must contain at least one atom which is not a replacement atom or an input auxiliary atom, because by construction of {a mathematical formula}Ap such atoms are only set to true if necessary, i.e., if they are supported by A, and all rules used to derive such atoms are also in {a mathematical formula}fgrndC(Πp)Ap. We now show that the restriction of A to ordinary atoms {a mathematical formula}A′⊊A (i.e., without replacement atoms {a mathematical formula}e&amp;g[y](x) and {a mathematical formula}ne&amp;g[y](x) and without external atom input atoms {a mathematical formula}ginp&amp;g(y)) is a model of {a mathematical formula}fgrndC(Π)A, which contradicts the assumption that A is an answer set of {a mathematical formula}grndC(Π).Note that, except for the external atom guessing and input auxiliary rules, the reduct {a mathematical formula}fgrndC(Πp)Ap contains the same rules as {a mathematical formula}fgrndC(Π)A with replacement atoms instead of external atoms. Thus, for {a mathematical formula}r∈fgrndC(Π)A, the corresponding {a mathematical formula}rp∈fgrndC(Πp)Ap contains the same ordinary literals in the head and body.We show now that {a mathematical formula}Ap′⊨rp implies {a mathematical formula}A′⊨r. If {a mathematical formula}Ap′ is a model of {a mathematical formula}rp, then we have either (1) {a mathematical formula}Ap′⊨h for some {a mathematical formula}h∈H(rp), or (2) {a mathematical formula}Ap′⊭b for some {a mathematical formula}b∈B(rp). In Case (1), we also have {a mathematical formula}h∈H(r). Since {a mathematical formula}Ap′ and {a mathematical formula}A′ coincide on non-replacement and non-input atoms, this implies {a mathematical formula}A′⊨r. In Case (2), b is either (2a) a non-replacement literal, or (2b) a (positive or default-negated) external atom replacement. In Case (2a), we also have {a mathematical formula}b∈B(r). Since {a mathematical formula}Ap′ and {a mathematical formula}A′ coincide on ordinary atoms, this implies {a mathematical formula}A′⊨r. In Case (2b), we either have ({a mathematical formula}2b′) {a mathematical formula}Ap⊭b, or ({a mathematical formula}2b″) b is positive (since a default-negated atom cannot become false by removing atoms from the assignment) and some literal {a mathematical formula}b′ in the body of the external atom guessing or in the input rule for b is false in {a mathematical formula}Ap′; in this case b is represented in {a mathematical formula}grndC(Πp) with some degree n. In Case ({a mathematical formula}2b′), A falsifies by construction of {a mathematical formula}Ap the external atom in {a mathematical formula}B(r) which corresponds to the replacement atom b. In Case ({a mathematical formula}2b″), {a mathematical formula}b′ also appears in {a mathematical formula}B(rp). Note that {a mathematical formula}b′ can be another external replacement atom. But in this case, the external atom corresponding to {a mathematical formula}b′ is represented with some degree &lt;n. Thus, we start the case distinction for {a mathematical formula}b′ again. However, because the degree is reduced with every iteration, we will eventually end up in one of the other cases.Thus, {a mathematical formula}A′ would be a model of {a mathematical formula}fgrndC(Π)A, which contradicts the assumption that A is an answer set of {a mathematical formula}grndC(Π). This shows that {a mathematical formula}Ap is an answer set of {a mathematical formula}grndC(Πp). □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Lemma 20">
+       Let{a mathematical formula}Πg=GroundHEX(Π)and C be the constants which appear in{a mathematical formula}Πg. It holds that{a mathematical formula}AS(Πg)=AS(grndC(Π)).
+      </paragraph>
+      <paragraph label="Proof">
+       (⇒) Let {a mathematical formula}A∈AS(Πg). Then by Lemma 18 it can be extended to an answer set {a mathematical formula}Apg of {a mathematical formula}Πpg. By Definition 18, {a mathematical formula}Apg is also an answer set of {a mathematical formula}grndC(Πp).Let {a mathematical formula}r∈grndC(Π) and let {a mathematical formula}r′ be the respective rule in {a mathematical formula}grndC(Πp) with replacement atoms instead of external atoms. (1) If there is no strengthening of r in {a mathematical formula}Πg, then there is also no strengthening of {a mathematical formula}r′ in {a mathematical formula}Πpg. Then by Definition 18, every answer set of {a mathematical formula}grndC(Πp) falsifies some ordinary body literal of {a mathematical formula}r′. Thus this holds also for {a mathematical formula}Apg. But all ordinary literals of {a mathematical formula}r′ are also in r and A coincides with {a mathematical formula}Apg on ordinary literals, thus A is a model of r. (2) If there is a strengthening {a mathematical formula}r¯ of r in {a mathematical formula}Πg, then there is also a strengthening {a mathematical formula}r′¯ of {a mathematical formula}r′ in {a mathematical formula}Πpg from which {a mathematical formula}r¯ was generated by replacing external replacement atoms by external atoms. Because {a mathematical formula}Apg is an answer set of {a mathematical formula}grndC(Πp), it is also a model of {a mathematical formula}r′¯. Moreover, by Definition 18, it satisfies also all ordinary literals {a mathematical formula}B(r′)∖B(r′¯). This is the same set as {a mathematical formula}B(r)∖B(r¯). Because A and {a mathematical formula}Apg coincide on ordinary literals, also A is a model of r. Thus, A is a model of {a mathematical formula}grndC(Π).We show now that A is also a subset-minimal model of {a mathematical formula}fgrndC(Π)A. Because we have seen that {a mathematical formula}A⊭B(r) for every {a mathematical formula}r∈grndC(Π) which has no strengthening in {a mathematical formula}Πg, it follows that {a mathematical formula}fΠgA contains a strengthening {a mathematical formula}r¯ for every rule {a mathematical formula}r∈fgrndC(Π)A. Conversely, by Definition 18 every rule in {a mathematical formula}fΠgA is a strengthening of some rule {a mathematical formula}r∈fgrndC(Π)A. Thus, the rules in {a mathematical formula}fgrndC(Π)A are even more restrictive, i.e., every model of {a mathematical formula}fgrndC(Π)A is also a model of {a mathematical formula}fΠgA. Thus, if there would be a smaller model {a mathematical formula}A′⊊A of {a mathematical formula}fgrndC(Π)A, it would also be a model of {a mathematical formula}fΠgA, which contradicts the assumption that A is an answer set of {a mathematical formula}Πg.(⇐) Let {a mathematical formula}A∈AS(grndC(Π)), then it is also a model of {a mathematical formula}Πg because this program is (possibly) less restrictive. It remains to show that A is also a subset-minimal model of {a mathematical formula}fΠgA. By Lemma 19, A can be extended to an answer set {a mathematical formula}Ap of {a mathematical formula}grndC(Πp).Let for every {a mathematical formula}r∈grndC(Π) be {a mathematical formula}r′ the respective rule in {a mathematical formula}grndC(Πp) with replacement atoms instead of external atoms. Note that the rules in {a mathematical formula}fΠgA are strengthenings of the rules in {a mathematical formula}fgrndC(Π)A. Let {a mathematical formula}r∈grndC(Π). (1) If there is no strengthening of r in {a mathematical formula}Πg, then also {a mathematical formula}r′ has no strengthening in {a mathematical formula}Πpg. But this means, that every answer set of {a mathematical formula}grndC(Πp) falsifies an ordinary body literal in {a mathematical formula}r′, thus also {a mathematical formula}Ap. Because A and {a mathematical formula}Ap coincide on ordinary literals, also A falsifies some ordinary literal in {a mathematical formula}B(r), thus r is not in {a mathematical formula}fgrndC(Π)A. (2) Now suppose there is a strengthening {a mathematical formula}r¯ of r in {a mathematical formula}Πg. Then {a mathematical formula}A⊨B(r) implies {a mathematical formula}A⊨B(r¯). Conversely, if {a mathematical formula}A⊨B(r¯), then the missing literals in {a mathematical formula}B(r)∖B(r¯) are satisfied as well because they are satisfied by all answer sets of {a mathematical formula}grndC(Πp), including {a mathematical formula}Ap, which coincides with A on ordinary atoms (otherwise the literal would not have been removed by the optimizer).Now suppose {a mathematical formula}fΠgA has a smaller model {a mathematical formula}A′⊊A. Then {a mathematical formula}A′ is a model of {a mathematical formula}fgrndC(Π)A because we have seen that the missing literals are satisfied as well. □
+      </paragraph>
+      <paragraph>
+       Now we can prove Theorem 10.
+      </paragraph>
+      <paragraph label="Proof of Theorem 10">
+       We first ignore modification (iii) and show that the algorithm is still correct if only modifications (i) and (ii) are active.We need to show that {a mathematical formula}AS(Πg)=AS(Π). Recall that we have {a mathematical formula}AS(Πg)=AS(grndC(Π)) by Lemma 20, thus it is sufficient to show that {a mathematical formula}AS(grndC(Π))=AS(grndC′(Π)) for any {a mathematical formula}C′⊇C.(⇒) Let {a mathematical formula}A∈AS(grndC(Π)). By Lemma 17, A is a model of {a mathematical formula}grndC′(Π). It remains to show that it is also a subset-minimal model of {a mathematical formula}fgrndC′(Π)A. As {a mathematical formula}C⊆C′, {a mathematical formula}fgrndC(Π)A⊆fgrndC′(Π)A. Moreover, by Lemma 17{a mathematical formula}A⊭B(r) for any {a mathematical formula}r∈grndC′(Π)∖grndC(Π), thus {a mathematical formula}fgrndC(Π)A=fgrndC′(Π)A. But since {a mathematical formula}A∈AS(grndC(Π)), it is a subset-minimal model of {a mathematical formula}fgrndC(Π)A, thus it is also a model of {a mathematical formula}fgrndC′(Π)A, i.e., {a mathematical formula}A∈AS(grndC′(Π)).(⇐) Let {a mathematical formula}A′∈AS(grndC′(Π)). We show that {a mathematical formula}A=A′∩A(grndC(Π)) is an answer set of {a mathematical formula}grndC(Π).Because {a mathematical formula}grndC(Π)⊆grndC′(Π), it is trivial that A is a model of {a mathematical formula}grndC(Π). It remains to show that it is also a subset-minimal model of {a mathematical formula}fgrndC(Π)A.By Lemma 17, A is also a model of {a mathematical formula}grndC′(Π). But then {a mathematical formula}A=A′ because {a mathematical formula}A⊊A′ would imply that {a mathematical formula}A′ is not subset-minimal, which contradicts the assumption that it is an answer set of {a mathematical formula}grndC′(Π). Because {a mathematical formula}grndC(Π)⊆grndC′(Π) and {a mathematical formula}A⊭B(r) for all {a mathematical formula}r∈grndC′(Π)∖grndC(Π) by Lemma 17, we have {a mathematical formula}fgrndC(Π)A=fgrndC′(Π)A. Because A is a subset-minimal model of {a mathematical formula}grndC′(Π)A, it is a subset-minimal model of {a mathematical formula}fgrndC(Π)A. Thus, A is an answer set of {a mathematical formula}grndC(Π).Finally, consider modification (iii). While Algorithm GroundHEXNaive loops for all models of {a mathematical formula}Πpg, the optimized algorithm constructs the considered assignments such that the output of the external atoms is maximized: all monotonic input atoms are set to true, all antimonotonic input atoms to false, and for nonmonotonic input atoms all combinations are checked (except facts, which are always true). Every model of {a mathematical formula}Πpg considered by Algorithm GroundHEX, is contained in some assignment enumerated by Algorithm GroundHEXNaive. The output of the external atom wrt. this assignment may be larger, but never smaller. Thus, the optimized algorithm only produces larger but never smaller groundings wrt. the set of constants. As we have shown in Lemma 17, this guarantees that the program has the same answer sets.We also need to show that the algorithm terminates. But this follows from the observation that each run of the loop at (c) corresponds to a (restricted) application of operator {a mathematical formula}GΠ; while {a mathematical formula}GΠ instantiates rules whenever their positive body is satisfied by some of the enumerated assignments, our algorithm also respects the negative part of the rule body, i.e., it is even more restrictive. But by Corollary 5, {a mathematical formula}GΠ∞(∅) is finite for lde-safe programs, thus the grounding produced by our algorithm is finite as well. Therefore the algorithm terminates. □
+      </paragraph>
+     </section>
+     <section label="B.3">
+      Related notions of safety (Section 6)
+      <paragraph label="Proof of Proposition 11">
+       Suppose Π is strongly safe. We show that for any attribute position α of Π, we have {a mathematical formula}a∈Sn(Π) for some {a mathematical formula}n≥0, i.e., a is lde-safe.Let a be an attribute position of Π and let j be the number of malign cycles wrt. ∅ in {a mathematical formula}GA(Π) from which a is reachable. We prove by induction that if a is reachable from {a mathematical formula}j≥0 malign cycles wrt. ∅ in {a mathematical formula}GA(Π), then a is lde-safe.If {a mathematical formula}j=0 we make a case distinction. Case 1: if a is of form {a mathematical formula}att(p,i), then there is no information flow from a malign cycle wrt. ∅ to {a mathematical formula}att(p,i). Therefore, for every rule r with {a mathematical formula}p(t1,…,tℓ)∈H(r) we have that {a mathematical formula}ti∈Bn+1(r,Π) for all {a mathematical formula}n≥0 due to Condition (i) in Definition 21. But then {a mathematical formula}att(p,i) is lde-safe.Case 2: if a is of form {a mathematical formula}atti(&amp;g[X],i), then for every {a mathematical formula}Yi∈Y with {a mathematical formula}type(&amp;g,i)=const we have {a mathematical formula}Yi∈Bn+1(r,Π) due to Condition (i) in Definition 21, and for every predicate {a mathematical formula}pi∈Y with {a mathematical formula}type(&amp;g,i)=pred we have that {a mathematical formula}att(pi,j) is lde-safe for every {a mathematical formula}1≤j≤ar(pi) by Case 1; note that {a mathematical formula}att(pi,j) is not reachable from any malign cycle wrt. ∅ because this would by transitivity of reachability mean that also {a mathematical formula}atti(&amp;g[X],i) is reachable from such a cycle, which contradicts our assumption. But then also {a mathematical formula}atti(&amp;g[X],i) is lde-safe by Definition 8.Case 3: if a is of form {a mathematical formula}atto(&amp;g[X],i), then no {a mathematical formula}atti(&amp;g[X],j) for {a mathematical formula}1≤j≤ari(&amp;g) is reachable from a malign cycle wrt. ∅, because then also {a mathematical formula}atto(&amp;g[X],i) would be reachable from such a cycle. But then by Definition 8, {a mathematical formula}atto(&amp;g[X],i) is lde-safe. Hence, attribute positions of any kind, which are not reachable from malign cycles wrt. ∅, are lde-safe.Induction step {a mathematical formula}j↦j+1: If a is reachable from {a mathematical formula}j+1 malign cycles wrt. ∅, then there is an attribute position {a mathematical formula}α′ in such a cycle C from which a is reachable. The malign cycle C wrt. ∅ contains an attribute position of kind {a mathematical formula}atto(&amp;g[X],i), corresponding to an external atom {a mathematical formula}&amp;g[Y](X) in rule r. Since {a mathematical formula}atto(&amp;g[X],i) is cyclic in {a mathematical formula}GA(Π), {a mathematical formula}&amp;g[Y](X) is cyclic in {a mathematical formula}ADG(Π). Then by strong safety of Π, each variable in Y occurs in a body atom {a mathematical formula}p(t1,…,tℓ)∈B+(r) which is not part of C, i.e., it is captured by {a mathematical formula}att(p,k) for some {a mathematical formula}1≤k≤ar(p). But since {a mathematical formula}p(t1,…,tℓ) is not part of the cycle C in {a mathematical formula}ADG(Π), also {a mathematical formula}att(p,k) is not part of it. Therefore {a mathematical formula}att(p,k) is reachable from (at least) one malign cycle wrt. ∅ less than a, i.e., it is reachable from at most j malign cycles. Thus {a mathematical formula}att(p,k) is lde-safe by induction hypothesis. But then by Condition (ii) in Definition 9, also a is lde-safe. □
+      </paragraph>
+      <paragraph label="Proof of Proposition 12">
+       We first reformulate the definitions of blocking and savior attribute positions in an inductive way, which is possible because criteria are monotonic.Blocking:
+       <list>
+        {a mathematical formula}blocked0(r)=∅ for all {a mathematical formula}r∈Π{an inline-figure}{a mathematical formula}blocked∞(r)=⋃n≥0blockedn(r)For
+       </list>
+       <paragraph>
+        {a mathematical formula}n=0 this is trivial.For the induction step {a mathematical formula}n↦n+1, suppose {a mathematical formula}att(p,i)∈blockedn+1(r). Then {a mathematical formula}att(p,i) is dangerous and captures some X in r. For every {a mathematical formula}&amp;g[Y](X) with {a mathematical formula}X∈X and for every variable {a mathematical formula}Y∈Y there is a body atom {a mathematical formula}q(t1,…,tℓ) such that {a mathematical formula}X=tj for some {a mathematical formula}1≤j≤ar(q) and {a mathematical formula}att(q,j)∈saviorn Then, by the induction hypothesis, {a mathematical formula}att(q,j) is lde-safe. But then by Condition (ii) in Definition 9 all input variables {a mathematical formula}Y∈Y are declared bounded in the first step, i.e., {a mathematical formula}Y∈Bn+1,1(r,Π). Then by Condition (iii) in Definition 9 also all output variables {a mathematical formula}X∈X are declared bounded in the second step, i.e., {a mathematical formula}X∈Bn+1,2(r,Π). Thus we have {a mathematical formula}X∈Bn+1(r,Π,Sn(Π)).Now suppose {a mathematical formula}att(p,i) in {a mathematical formula}saviorn+1. Then we have for all {a mathematical formula}r∈Π with {a mathematical formula}p(t1,…,tℓ)∈H(r) that
+       </paragraph>
+       <list>
+        <list-item label="(i)">
+         {a mathematical formula}ti is a constant; or
+        </list-item>
+        <list-item label="(ii)">
+         {a mathematical formula}ti is captured by some {a mathematical formula}att(q,j)∈saviorn in {a mathematical formula}B+(r); or
+        </list-item>
+        <list-item label="(iii)">
+         {a mathematical formula}att(p,i)∈blockedn(r).
+        </list-item>
+       </list>
+       <paragraph>
+        In Case (i), {a mathematical formula}ti∈Bn+1(r,Π,Sn(Π)) by Condition (i) in Definition 9. In Case (ii), {a mathematical formula}att(q,j) is lde-safe by the induction hypothesis and thus {a mathematical formula}ti is declared bounded by Condition (ii) in Definition 9. In Case (iii), it holds that {a mathematical formula}ti∈Bn+1(r,Π,S) as shown above.This shows that all dangerous (but blocked) attribute positions are lde-safe. It remains to show that also all non-dangerous attribute positions are lde-safe. Let a be such an attribute position. If it occurs in a cycle in {a mathematical formula}GA(Π), then it occurs also in a cycle in {a mathematical formula}GA¯(Π) because in this graph nodes from {a mathematical formula}GA(Π) may be merged, i.e., the graph is less fine-grained. If it is of type {a mathematical formula}att(p,i), then it is dangerous and we already know that it is lde-safe. Otherwise it is an external input attribute position of form {a mathematical formula}atti(&amp;g[X],i) or an output attribute position of form {a mathematical formula}atto(&amp;g[X],i). If it is an input attribute position, then we know that its cyclic input depends (possibly transitively) on lde-safe ordinary attribute positions. As the output attribute positions of external atoms become lde-safe as soon as the input becomes lde-safe by Definition 8, lde-safety will be propagated by Condition (iii) in Definition 9 along the cycle, beginning at the ordinary predicates, i.e., the input parameter will be declared lde-safe after finitely many steps (since the cycle is of finite length). This shows that all attribute positions in cycles in {a mathematical formula}GA(Π) are lde-safe.As all attribute positions in cycles are lde-safe, the remaining attribute positions (attribute positions which depend on a cycle but are not in a cycle) will also be declared lde-safe after finitely many steps by Definition 8. □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Proof of Proposition 13">
+       By Theorem 7 by [11]{a mathematical formula}F(Π) is VI-restricted, and thus by Proposition 12 it is also lde-safe using {a mathematical formula}bsynsem(Π,r,S,B). □
+      </paragraph>
+      <paragraph label="Proof of Proposition 14">
+       If t is in the output of {a mathematical formula}bextsem(Π,r,S,B), then one of the conditions holds. If Condition (i) holds, then there is no information flow from malign cycles wrt. S to t. However, such cycles are the only source of infinite groundings: the attribute positions in S have a finite domain by assumption. For the remaining attribute positions in the cycle, the well-ordering guarantees that only finitely many different values can be produced in the cycle.If Condition (ii) holds, then the claim follows from Proposition 8. □
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Benchmark problem encodings
+     </section-title>
+     <paragraph>
+      In this appendix, we give details to some of the encodings used for our benchmarks in Section 5; for the complete set of encodings we refer to [45]. The encodings are very natural representations of the underlying problems in hex and have not been optimized for our algorithms, thus they have been developed under realistic conditions. For each problem we show the lde-safe version and point out how it can be transformed into a strongly safe program. However, in all programs the underlying idea is the same, namely to import or generate a sufficiently large domain in advance and use this domain to manually bound variables which are otherwise not (strongly) safe.
+     </paragraph>
+     <section label="C.1">
+      <section-title>
+       Reachability
+      </section-title>
+      <paragraph>
+       We assume that the instance consists of two facts {a mathematical formula}start(s) and {a mathematical formula}end(e). The goal is to check if node e is reachable from node s and to compute a witness in this case (i.e., a path from s to e).
+      </paragraph>
+      <paragraph>
+       The problem encoding uses the following set of rules to import the relevant part of the graph, consisting of all nodes and edges reachable from s. We use an external atom {a mathematical formula}&amp;out[X](Y) to get all nodes Y which are directly reachable from the node X.{a mathematical formula} We then guess the path as a set of pairs {a mathematical formula}(n,i), where n is the node visited in step i. Constraints are used to ensure that the path is consecutive and reaches e in the last step.{a mathematical formula} The strongly safe version of the program needs to import the whole graph a priory because the external atom {a mathematical formula}&amp;out[X](Y) appears in a cycle and thus needs a domain predicate which bounds Y. This can be realized by adding an external atom {a mathematical formula}&amp;allNodes[](Y) to the first rule of the encoding, provided that it is true for all nodes Y of the graph.
+      </paragraph>
+     </section>
+     <section label="C.2">
+      <section-title>
+       Mergesort
+      </section-title>
+      <paragraph>
+       In this benchmark encoding, lists are encoded as string constants. A dedicated separator character allows for decoding the list representations in the external atoms.
+      </paragraph>
+      <paragraph>
+       We first use a set of rules to split the input list inp, given by a fact {a mathematical formula}list(inp), recursively into half. For each list l, its halves {a mathematical formula}l1 and {a mathematical formula}l2 are generated by the use of an external atom {a mathematical formula}&amp;splitHalf[l](l1,l2). We then derive an atom {a mathematical formula}sublist(l,l1,l2) that allows us later to reassemble the list from its (sorted) sublists. Let ϵ denote the empty list.{a mathematical formula} We declare each sublist of length 1 immediately as sorted. We use an external atom {a mathematical formula}&amp;getLength[l](L) to get the length L of list l.{a mathematical formula} Finally, we realize the merge step as follows. For each list l and its sublists {a mathematical formula}l1 and {a mathematical formula}l2, we determine the sorted versions {a mathematical formula}s1 and {a mathematical formula}s2 of {a mathematical formula}l1 and {a mathematical formula}l2, respectively, and merge them using external atom {a mathematical formula}&amp;merge[s1,s2](s) to get the sorted version of l.{a mathematical formula} Note that both the splitting and the merging part uses external atoms in cycles, thus the program is not strongly safe. In order to make it strongly safe, we need to generate all lists (i.e., permutations of the input list) a priori and add domain predicates.
+      </paragraph>
+      <paragraph>
+       For the strongly safe version of the program, note that the domain for sorting a list of size n consists of all n! permutations (we cannot exclude any permutations in advance unless we solve parts of the problem before grounding). That is, for a strongly safe encoding one needs to generate all permutations l and add them as facts of kind {a mathematical formula}perm(l) to the program. This allows for adding atoms of kind {a mathematical formula}perm(L) to the remaining rules in order to make a variable L safe, but is clearly infeasible in practice.
+      </paragraph>
+     </section>
+     <section label="C.3">
+      <section-title>
+       Route planning
+      </section-title>
+      <paragraph>
+       We present the encodings for the two route planning scenarios separately. Once the single route planning scenario was introduced, the extension to pair route planning is quite simple. In fact, we will present a more general encoding which allows for planning tours for an arbitrary number of persons.
+      </paragraph>
+      <section label="C.3.1">
+       <section-title>
+        Single route planning
+       </section-title>
+       <paragraph>
+        We start by guessing a sequence of the locations which are defined in the instance by facts of kind {a mathematical formula}location(loc). The following rules ensure that for a set L of n locations, the atoms {a mathematical formula}seq(i,loci) for {a mathematical formula}0≤i&lt;n, order the locations such that {a mathematical formula}L={loci|0≤i&lt;n}.{a mathematical formula} The following rules choose exactly one restaurant and add it to the set of locations to visit, if necessary; possible locations for having lunch are assumed to be defined by facts of kind {a mathematical formula}possibleRestaurant(r).{a mathematical formula} We further need rules to check if our tour has to include a restaurant. The constant limit is to be replaced by an integer which defines the maximal costs of a tour without restaurant. The external atom {a mathematical formula}&amp;longerThan[path,limit]() is true if the path encoded in the extension of path is longer than limit, and false otherwise. Note that despite the rules (R3) and (R4), the choice between haveLunch and {a mathematical formula}haveLunch‾ in rule (R2) is not redundant due to the use of the FLP-reduct.{sup:10}{a mathematical formula}{a mathematical formula}{a mathematical formula} The following rules plan the tour using the external atom {a mathematical formula}&amp;path[L1,L2](X,Y,Cost,Type). Atoms of form {a mathematical formula}path(L1,L2,X,Y,Cost,Type) are used to encode the path (consisting of edges {a mathematical formula}(X,Y) with costs Cost and type Type) from L1 to L2. Since the same station may be visited multiple times, the end points L1 to L2 must be included to make the representation unique.{a mathematical formula} Finally, we ensure that all pairs of sequent locations are connected. Otherwise, the program would still have answer sets (leaving some locations unconnected) if a location is not reachable.{a mathematical formula} For the strongly safe version of the program, the full map material needs to be imported in advance. Under the assumption that it is encoded as a set of facts of kind {a mathematical formula}map(x,y,c,t) to represent connections between stations x and y with costs c and type t, adding the atom {a mathematical formula}map(X,Y,Cost,Type) to rule (R5) makes the program strongly safe, but obviously blows up the grounding.
+       </paragraph>
+      </section>
+      <section label="C.3.2">
+       <section-title>
+        Pair and group route planning
+       </section-title>
+       <paragraph>
+        Compared to single route planning, the predicates location, seq, haveSeq, haveLoc and path are extended by an additional argument P, which is inserted at argument position 1. It allows for discriminating multiple persons. While we considered the special case of two persons in our benchmarks, the encoding is strictly more general and allows arbitrary many persons who need to be defined as facts of kind {a mathematical formula}person(p).{a mathematical formula} Computing the path and ensuring its existence is extended to multiple persons as follows.{a mathematical formula} As above, adding {a mathematical formula}map(X,Y,Cost,Type) to the former rule makes the program strongly safe.
+       </paragraph>
+       <paragraph>
+        The following rules choose a meeting point and include it in the tour of each person. It is assumed that the possible meeting locations are defined by facts of form {a mathematical formula}possibleMeeting(m).{a mathematical formula} If the tour is longer than the given limit limit, then the meeting location should be a restaurant. The external atom {a mathematical formula}&amp;longerThanForPerson[path,p,limit]() is true if the path for person p encoded in the extension of path is longer than limit, and false otherwise.{a mathematical formula} As for the encoding from Section C.3, the choice between haveLunch and {a mathematical formula}haveLunch‾ is not redundant.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

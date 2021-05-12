@@ -1,0 +1,819 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html prefix="dcterms: http://purl.org/dc/terms/" xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Normalizing tweets with edit scripts and recurrent neural embeddings.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \setlist
+     </span>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       nolistsep
+      </p>
+     </div>
+     <div class="ltx_para" id="p2">
+      <p class="ltx_p">
+       mydarkbluergb0,0.08,0.45
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        A stream of posts from Twitter contains text written in a large
+variety of languages and writing systems, in registers ranging from
+formal to internet slang. Substantial effort has been expended in
+recent years to adapt standard NLP processing pipelines to be able to
+deal with such content. One approach has been text normalization, i.e. transforming tweet text into a more canonical form which standard NLP
+tools expect. A multitude of resources and approaches have been used
+to deal with normalization: hand-crafted and (semi-)automatically
+induced dictionaries, language models, finite state transducers,
+machine translation models and combinations thereof. Methods such as
+those of
+        Han and Baldwin (12)
+        ,
+        Liu et al. (18)
+        ,
+        Gouws et al. (10)
+        or
+        Han et al. (13)
+        are
+unsupervised but they typically use many adjustable parameters which
+need to be tuned on some annotated data. In this work we suggest a
+simple, supervised character-level string transduction model which
+easily incorporates features automatically learned from large amounts
+of unlabeled data and needs only a limited amount of labeled training
+data and no lexical resources.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Our model learns sequences of edit operations from labeled data using
+a Conditional Random Field
+        (15)
+        .
+Unlabeled data is incorporated following recent work on using
+character-level text embeddings for text segmentation
+        (4)
+        , and word and sentence boundary detection
+        (9)
+        . We train a recurrent neural network
+language model
+        (19; 21)
+        on
+a large collection of tweets. When run on new strings, the activations
+of the units in the hidden layer at each position in the string are
+recorded and used as features for training the string transduction
+model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The principal contributions of our work are: (i) we show that a
+discriminative sequence labeling model is apt for text
+normalization and performs at state-of-the-art levels with small
+amounts of labeled training data; (ii) we show that character-level
+neural text embeddings can be used to effectively incorporate information
+from unlabeled data into the model and can substantially boost text
+normalization performance.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Methods
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Many approaches to text normalization adopt the noisy
+channel setting, where the model normalizing source string
+        s
+        into
+target canonical form
+        t
+        is factored into two parts:
+        t^=arg⁢maxtP(t)P(s|t)
+        . The error term
+        P(s|t)
+        models how canonical
+strings are transformed into variants such as e.g. misspellings,
+emphatic lengthenings or abbreviations. The language model
+        P⁢(t)
+        encodes which target strings are probable.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        We think this decomposition is less appropriate in the context of text
+normalization than in applications from which it was borrowed such as
+Machine Translations. This is because it is not obvious what kind of
+data can be used to estimate the language model: there is plentiful
+text from the source domain, but little of it is in normalized
+        target
+        form. There is also much edited text such as news text, but it
+comes from a very different domain. One of the main advantages of
+the noisy channel decomposition is that is makes it easy to exploit
+large amounts of unlabeled data in the form of a language model. This
+advantage does not hold for text normalization.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        We thus propose an alternative approach where normalization is modeled
+directly, and which enables easy incorporation of unlabeled data from
+the
+        source
+        domain.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Learning to transduce strings
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Our string transduction model works by learning the sequence of edits
+which transform the input string into the output string. Given a pair
+of strings such a sequence of edits (known as the shortest edit
+script) can be found using the
+         Diff
+         algorithm
+         (22; 23)
+         . Our version of
+         Diff
+         uses the
+following types of edits:
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            nil
+            – no edits,
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            del
+            – delete character at this position,
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            ins(⋅)
+            – insert specified string before character
+at this position.
+           </p>
+          </div>
+         </li>
+        </ul>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Table
+         1
+         shows a shortest edit script for the pair of
+strings (
+         c wat, see what
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         We use a sequence labeling model to learn to label input strings with
+edit scripts. The training data for the model is generated by
+computing shortest edit scripts for pairs of original and normalized
+strings. As a sequence labeler we use Conditional Random Fields
+         (15)
+         . Once trained the model is
+used to label new strings and the predicted edit script is applied to
+the input string producing the normalized output string. Given source
+string
+         s
+         the predicted target string
+         t^
+         is:
+        </p>
+        t^=arg⁢maxtP(ses(s,t)|s)
+        <p class="ltx_p">
+         where
+         e=ses⁢(s,t)
+         is the shortest edit script mapping
+         s
+         to
+         t
+         .
+         P(e|s)
+         is modeled with a linear-chain Conditional Random Field.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Character-level text embeddings
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Simple Recurrent Networks (SRNs) were introduced by
+         Elman (7)
+         as models of temporal, or sequential,
+structure in data, including linguistic data
+         (8)
+         . More recently SRNs were used as language
+models for speech recognition and shown to outperform classical n-gram
+language models
+         (19; 21)
+         .
+Another version of recurrent neural nets has been used to generate
+plausible text with a character-level language model
+         (24)
+         . We use SRNs to induce
+character-level text representations from unlabeled Twitter data to
+use as features in the string transduction model.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         The units in the hidden layer at time
+         t
+         receive connections from
+input units at time
+         t
+         and also from the hidden units at the previous
+time step
+         t-1
+         . The hidden layer predicts the state of the output
+units at the next time step
+         t+1
+         . The input vector
+         w⁢(t)
+         represents the input element at current time
+step, here the current character. The output vector
+         y⁢(t)
+         represents
+the predicted probabilities for the next character. The activation
+         sj
+         of
+a hidden unit
+         j
+         is a function of the current input and the state of the
+hidden layer at the previous time step:
+         t-1
+         :
+        </p>
+        sj⁢(t)=σ⁢(∑i=1Iwi⁢(t)⁢Uj⁢i+∑l=1Lsj⁢(t-1)⁢Wj⁢l)
+        <p class="ltx_p">
+         where
+         σ
+         is the sigmoid function and
+         Uj⁢i
+         is the weight between
+input component
+         i
+         and hidden unit
+         j
+         , while
+         Wj⁢l
+         is the weight
+between hidden unit
+         l
+         at time
+         t-1
+         and hidden unit
+         j
+         at time
+         t
+         .
+The representation of recent history is stored in a limited number of
+recurrently connected hidden units. This forces the network to make
+the representation compressed and abstract rather than just memorize
+literal history.
+         Chrupała (4)
+         and
+         Evang et al. (9)
+         show that these text embeddings can be
+useful as features in textual segmentation tasks. We use them to bring
+in information from unlabeled data into our string transduction
+model and then train a character-level SRN language model on unlabeled
+tweets. We run the trained model on new tweets and record the
+activation of the hidden layer at each position as the model predicts
+the next character. These activation vectors form our text
+embeddings: they are discretized and used as input features to the
+supervised sequence labeler as described in
+Section
+         3.4
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We limit the size of the string alphabet by always working with UTF-8
+encoded strings, and using bytes rather than characters as basic
+units.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Unlabeled tweets
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         In order to train our SRN language model we collected a set of tweets
+using the Twitter sampling API. We use the raw sample directly without
+filtering it in any way, relying on the SRN to learn the structure of
+the data. The sample consists of 414 million bytes of UTF-8 encoded in
+a variety of languages and scripts text. We trained a 400-hidden-unit
+SRN, to predict the next byte in the sequence using backpropagation
+through time. Input bytes were encoded using one-hot representation.
+We modified the RNNLM toolkit
+         (20)
+         to record the activations
+of the hidden layer and ran it with the default learning rate
+schedule. Given that training SRNs on large amounts of text takes a
+considerable amount of time we did not vary the size of the hidden
+layer. We did try to filter tweets by language and create specific
+embeddings for English but this had negligible effect on tweet
+normalization performance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The trained SRN language model can be used to generate random text by
+sampling the next byte from its predictive distribution
+and extending the string with the
+result. Figure
+         1
+         shows example strings
+generated in this way: the network seems to prefer to output
+pseudo-tweets written consistently in a single script with words and
+pseudo-words mostly from a single language. The generated byte
+sequences are valid UTF-8 strings.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         In Table
+         2
+         in the first column we show the suffix of a
+string for which the SRN is predicting the last byte. The rest of
+each row shows the nearest neighbors of this string in embedding
+space, i.e. strings for which the SRN is activated in a similar way
+when predicting its last byte as measured by cosine similarity.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Normalization datasets
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         A difficulty in comparing approaches to tweet normalization is the
+sparsity of publicly available datasets. Many authors evaluate on
+private tweet collections and/or on the text message corpus of
+         Choudhury et al. (2)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         For English,
+         Han and Baldwin (12)
+         created a small tweet dataset
+annotated with normalized variants at the word level. It is hard to
+interpret the results from
+         Han and Baldwin (12)
+         , as
+the evaluation is carried out by assuming that the words to be
+normalized are known in advance:
+         Han et al. (13)
+         remedy this shortcoming by evaluating a
+number of systems without pre-specifying ill-formed tokens. Another
+limitation is that only word-level normalization is covered in the
+annotation; e.g. splitting or merging of words is not allowed. The
+dataset is also rather small: 549 tweets, which contain 2139 annotated
+out-of-vocabulary (OOV) words. Nevertheless, we use it here for
+training and evaluating our model. This dataset does not specify a
+development/test split. In order to maximize the size of the training
+data while avoiding tuning on test data we use a split
+cross-validation setup: we generate 10 cross-validation folds, and use
+5 of them during development to evaluate variants of our model. The
+best performing configuration is then evaluated on the remaining 5
+cross-validation folds.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Model versions
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The simplest way to normalize tweets with a string transduction model
+is to treat whole tweets as input sequences. Many other tweet
+normalization methods work in a word-wise fashion: they first identify
+OOV words and then replace them with normalized forms. Consequently,
+publicly available normalization datasets are annotated at word level.
+We can emulate this setup by training the sequence labeler on words,
+instead of whole tweets. This approach sacrifices some generality,
+since transformations involving multiple words cannot be
+learned. However, word-wise models are more comparable with previous
+work. We investigated the following models:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            oov-only
+            is trained on individual words
+and in-vocabulary (IV) words are discarded for training, and left
+unchanged for prediction.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            all-words
+            is trained on all words and allowed to change IV words.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Document
+            is trained on whole tweets.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         Model
+         oov-only
+         exploits
+the setting when the task is constrained to only normalize words
+absent from a reference dictionary, while
+         document
+         is the one
+most generally applicable but does not benefit from any
+constraints. To keep model size within manageable limits we reduced
+the label set for models
+         all-words
+         and
+         document
+         by
+replacing labels which occur less than twice in the training data with
+         nil
+         . For
+         oov-only
+         we were able to use the full label set.
+As our sequence labeling model we use the Wapiti implementation of
+Conditional Random Fields
+         (16)
+         with the
+L-BFGS optimizer and elastic net regularization with default settings.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Features
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         We run experiments with two feature sets:
+         n-gram
+         and
+         n-gram+srn
+         .
+         n-gram
+         are character n-grams of size
+         1
+         –
+         3
+         in
+a window of
+         (-2,+2)
+         around the current position. For the
+         n-gram+srn
+         feature set we augment
+         n-gram
+         with features
+derived from the activations of the hidden units as the SRN is trying
+to predict the current character. In order to use the activations in
+the CRF model we discretize them as follows. For each of the
+         K=10
+         most active units out of total
+         J=400
+         hidden units, we create
+features
+         (f⁢(1)⁢…⁢f⁢(K))
+         defined as
+         f⁢(k)=1
+         if
+         sj⁢(k)&gt;0.5
+         and
+         f⁢(k)=0
+         otherwise, where
+         sj⁢(k)
+         returns the activation
+of the
+         k
+         <sup class="ltx_sup">
+          th
+         </sup>
+         most active unit.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.5
+        </span>
+        Evaluation metrics
+       </h3>
+       <div class="ltx_para" id="S3.SS5.p1">
+        <p class="ltx_p">
+         As our evaluation metric we use word error rate (WER) which is defined
+as the Levenshtein edit distance between the predicted word sequence
+         t^
+         and the target word sequence
+         t
+         , normalized by the total number of
+words in the target string.
+A more generally applicable metric would be character error rate, but
+we report WERs to make our results easily comparable with previous
+work. Since the English dataset is pre-tokenized and only covers
+word-to-word transformations, this choice has little importance here
+and character error rates show a similar
+pattern to word error rates.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Results
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Table
+        3
+        shows the results of our development
+experiments.
+        No-op
+        is a baseline which leaves text unchanged.
+As expected the most constrained model
+        oov-only
+        outperforms the
+more generic models on this dataset.
+For all model variations, adding SRN features substantially improves
+performance: the relative error reductions range from 12% for
+        oov-only
+        to 30% for
+        all-words
+        . Table
+        4
+        shows the non-unique normalizations made by the
+        oov-only
+        model
+with SRN features which were missed without them. SRN features seem to
+be especially useful for learning long-range, multi-character edits,
+e.g.
+        fb
+        for
+        facebook
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Table
+        5
+        shows the non-unique
+normalizations which were missed by the best model: they are a mixture of
+relatively standard variations which happen to be infrequent in our
+data, like
+        tonite
+        or
+        gf
+        , and a few idiosyncratic respellings like
+        uu
+        or
+        bhee
+        . Our supervised approach makes it easy to
+address the first type of failure by simply annotating additional
+training examples.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Table
+        6
+        presents evaluation results of several
+approaches reported in
+        Han et al. (13)
+        as well as the
+model which did best in our development experiments. HB-dict is the
+Internet slang dictionary from
+        Han and Baldwin (12)
+        . GHM-dict is the
+automatically constructed dictionary from
+        Gouws et al. (10)
+        ; S-dict is the automatically constructed
+dictionary from
+        (13)
+        ; Dict-combo are all the
+dictionaries combined and Dict-combo+HB-norm are all dictionaries
+combined with approach of
+        Han and Baldwin (12)
+        . The WER reported for
+        oov-only ngram+srn
+        is on the test folds only. The score on the
+full dataset is a bit better: 4.66%. As can be seen our approach it
+the best performing approach overall and in particular it does much
+better than all of the single dictionary-based methods. Only the
+combination of all the dictionaries comes close in performance.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In the field of tweet normalization the approach of
+        Liu et al. (18, 17)
+        shows some similarities to ours: they gather
+a collection of OOV words together with their canonical forms from the
+web and train a character-level CRF sequence labeler on the edit
+sequences computed from these pairs. They use this as the error model
+in a noisy-channel setup combined with a unigram language model.
+In addition to character n-gram features they use phoneme
+and syllable features, while we rely on the SRN embeddings to provide
+generalized representations of input strings.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Kaufmann and Kalita (14)
+        trained a phrase-based statistical
+translation model on a parallel text message corpus and applied it to tweet
+normalization. In comparison to our first-order linear-chain CRF, an MT
+model with reordering is more flexible but for this reason needs more
+training data. It also suffers from language model mismatch mentioned
+in Section
+        2
+        : optimal results were obtained by using a
+low weight for the language model trained on a balanced text corpus.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        Many other approaches to tweet normalization are more unsupervised in
+nature
+        (e.g. 12; 10; 25; 13)
+        . They
+still require annotated development data for tuning parameters and a
+variety of heuristics. Our approach works well with similar-sized
+training data, and unlike unsupervised approaches can easily benefit
+from more if it becomes available.
+Further afield, our work has connections to research on
+morphological analysis: for example
+        Chrupała et al. (3)
+        use
+edit scripts to learn lemmatization rules while
+        Dreyer et al. (6)
+        propose a discriminative model for
+string transductions and apply it to morphological tasks.
+While
+        Chrupała (4)
+        and
+        Evang et al. (9)
+        use
+character-level SRN text embeddings for learning segmentation, and
+recurrent nets themselves have been used for sequence transduction
+        (11)
+        , to our knowledge
+        neural text
+embeddings
+        have not been previously applied to string transduction.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        Learning sequences of edit operations from examples while
+incorporating unlabeled data via neural text embeddings constitutes a
+compelling approach to tweet normalization. Our results are especially
+interesting considering that we trained on only a small annotated data
+set and did not use any other manually created resources such as
+dictionaries. We want to push performance further by expanding the
+training data and incorporating existing lexical resources. It will
+also be important to check how our method generalizes to other
+language and datasets
+        (e.g. 5; 1)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        The general form of our model can be used in settings where
+normalization is not limited to word-to-word transformations. We are
+planning to find or create data with such characteristics and evaluate
+our approach under these conditions.
+       </p>
+      </div>
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:creator">
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:subject">
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:subject">
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:title">
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

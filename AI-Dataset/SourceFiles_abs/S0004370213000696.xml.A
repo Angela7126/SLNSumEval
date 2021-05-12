@@ -1,0 +1,1191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Teaching and leading an ad hoc teammate: Collaboration without pre-coordination.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Imagine that you are called to participate in a search and rescue scenario, where the robots you designed are supposed to help search for survivors in a major earthquake. Alternately, suppose you are part of a Mars exploration party, where your rover is sent (as part of a team) to explore the planet. In both cases, you already deployed an old robot you designed years ago for the mission, and you want also to use a new robot built by someone else, that has more information about the environment (but perhaps has poor actuators). These two robots were designed by different parties in different decades, thus cannot communicate directly and do not use the same coordination protocols. Will you be able to utilize the information gained by the newly designed robot to make the robots perform better as a team in their mission?
+     </paragraph>
+     <paragraph>
+      This scenario is an example of an ad hoc team setting. Multiple agents (in this case robots) with different knowledge and capabilities find themselves in a situation such that their goals and utilities are perfectly aligned (effectively, everyoneʼs sole interest is to help find survivors), yet they have had no prior opportunity to coordinate. In addition to the setting described above, ad hoc teams may arise among any robots or software agents that have been programmed by different groups and/or at different times such that it was not known at development time that they would need to coordinate.
+     </paragraph>
+     <paragraph>
+      This article focuses on the subclass of such settings in which we are designing a new agent that has full information about its environment, that must coordinate with an older, less aware, more reactive agent whose behavior is known. Let A be the ad hoc agent that we control and design, and has full information about the environment. Let B be the agent that we cannot control, that adapts to the environment as it perceives it, i.e., it chooses its next action based on what it observed in the environment (mainly, the actions of its teammate). A main question that arises is: can Aʼs information be used to influence B to perform actions leading to higher team utility? Given that this is an ad hoc teamwork setting, B can be assumed to choose actions that it believes to be optimal for the team—based on its limited view of the world. However, these actions might result in poor team utility in the long run. For example, the robot with limited information about the search and rescue environment will choose to help recover one person it can sense, but will disregard numerous people it cannot currently observe.
+     </paragraph>
+     <paragraph>
+      While designing the ad hoc agent A, its behavior as an ad hoc agent must be adept at assessing the capabilities of other agents (especially in relation to its own capabilities), it must also be adept at assessing the other agentsʼ knowledge states, and must be proficient at estimating the effects of its actions on the other agents.
+     </paragraph>
+     <paragraph>
+      In this article we address two repeated decision making settings for ad hoc agents.
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       Simultaneous decision making, in which agents A and B make their decisions at the same time. In this case, Agent A could lead Agent B to perform actions resulting in long-term higher team utility. This interaction between the agents is modeled using game theoretic tools, specifically, by a matrix game representation.
+      </list-item>
+      <list-item label="(2)">
+       Sequential decision making, in which Agent B selects its action after observing the outcome of Aʼs (and possibly its own past) actions. Here, the actions chosen by Agent A can teach Agent B of the optimal action it should choose, yielding highest possible team utility in the long run. In this case, we model the interaction between the agents by a novel cooperative k-armed bandit formalism.
+      </list-item>
+     </list>
+     <paragraph>
+      In both cases we can directly control the behavior of Agent A, and by choosing appropriate actions this agent (indirectly) influences the behavior of Agent B, whose decision-making algorithm is assumed to be known and reflect its assumption that the environment (specifically, Agent A) will continue to perform similarly to what was observed so far. Computing the optimal behavior for the ad hoc agent A is done using dynamic programming algorithms, for both leading and teaching Agent B. In both cases the agentʼs goal is the same—maximize team utility, where the utility is computed as the sum of payoffs gained by performing each action (joint action in simultaneous play, or individual actions in sequential play).
+     </paragraph>
+     <paragraph>
+      The remainder of this article is organized as follows. Sections 2 and 3 introduce detailed theoretical analysis of these ad hoc teamwork problems. First, in Section 2, we examine the case of leading ad hoc teams, in which the two agents act repeatedly and simultaneously in a situation appropriately captured by iterated matrix games. Second, in Section 3, we turn to the teaching in ad hoc teams, a scenario in which the agents alternate in their turns to make decisions, as can be captured by a novel cooperative k-armed bandit formalism. Section 4 discusses prior research most related to our specific studies and the ad hoc teamwork problem itself; and Section 5 discusses the results in the broad perspective of the general problem of ad hoc teamwork and concludes.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Problem scope and motivation
+      </section-title>
+      <paragraph>
+       The challenge of ad hoc teamwork, as presented in the ad hoc teamwork introductory paper [1], is: To create an autonomous agent that is able to efficiently and robustly collaborate with previously unknown teammates on tasks to which they are all individually capable of contributing as team members.
+      </paragraph>
+      <paragraph>
+       In this article, we analyze the simplest, and in some sense most basic and fundamental, special case of the ad hoc teamwork problem.To this end, we strip away as much complexity as possible while still retaining the most essential feature of ad hoc teamwork, namely that an individual agent must determine on the fly how to cooperate with at least one other teammate. Specifically, we assume that there is only one teammate, and that its behavior is fixed and known.
+      </paragraph>
+      <paragraph>
+       Admittedly, allowing for the teammateʼs behavior to be fixed and known may seem, at first blush, to remove an essential component of the teamwork being “ad hoc.” However, consider a disaster rescue scenario in which robots developed by many different people in different parts of the world converge to work together to locate and extract victims from places that are yet too dangerous for human rescue teams to enter. The behavior and capabilities of each type of robot may be known a priori, even if the particular combination of robots to be contributed is not. In this case, the ad hoc team agent must determine, on the fly, how to act given the current team composition. The robots certainly form a team: they are fully cooperative with no notion of individual self-interest separate from the teamʼs interest. They all aim to act so as to maximize the likelihood of finding survivors, even if it means risking their own safety. More generally, any legacy agent that has been developed in the past but is no longer easily reprogrammable could become a teammate with fixed and known behavior to a newer, more intelligent agent that is capable of reasoning about ad hoc teamwork.
+      </paragraph>
+      <paragraph>
+       Throughout the article, we will consider Agent A to be the agent that is within our control, known as the ad hoc agent; whereas Agent B, which reacts in a fixed way, is given by the environment.
+      </paragraph>
+      <paragraph>
+       As a second example of ad hoc teamwork with fixed and known Agent B, consider the problem of robotic exploration.{sup:1} Assume that a robot was deployed on Mars a decade ago for the sole purpose of exploring and retrieving essential information about the soil. When the robot was deployed, its designers did not know when, if, or to what extent the robot would be able to interact with other robots as a team. However, since they envisioned the possibility that other robots would be deployed at some point, its designers equipped it with basic teamwork capabilities, namely: examining the behavior of other possible robots, and making the best decision (in this case positioning for explorations) based on their observed behavior. For example, it is aware that the team utility will be greater if the two robots explore different areas. A decade later, substantially more information about Mars is available, and another robot is indeed sent to Mars holding that information. The mission of this new robot is not only to explore the more fruitful areas on Mars, but also to influence the exploration pattern of the initial robot such that it will travel to these areas as well. Since the older robot (Agent B) cannot communicate directly with the new robot (Agent A), the only influence can be through the actions of the new robot. If Agents A and B make decisions simultaneously, then the setting can be modeled as a simultaneous repeated matrix game, as shown in Section 2. In this case, A should choose a set of actions leading Agent B to the new area for exploration yielding optimal utility for the team.
+      </paragraph>
+      <paragraph>
+       On the other hand, consider a case in which Agents A and B do not act simultaneously, but they can observe their teammateʼs actions and change their plan for the next day accordingly. Specifically in this example, A and B need to recharge their battery in a docking station, allowing each one of them to act sequentially (one robot active while the other recharges). Additionally, B cannot be maneuvered into exploring areas that it did not know of at the time of deployment, but chooses to explore each day one of the areas that (based on its previous observation) will most likely gain highest utility. Agent A, being recently designed, also receives the chances of getting high utility from an area of exploration based on new equipment it carries with it. Agent A can make the obvious choice of exploring only the newly discovered area, but it can also use its equipment to reveal information for Agent B. In this case, A should choose each day an action that teaches Agent B the utilities of its available actions. As shown in Section 3, the interaction between the agents is captured by a novel cooperative k-armed bandit formalism.
+      </paragraph>
+      <paragraph>
+       The examples described above serve to emphasize the sense in which the ad hoc teamwork problem can arise even when the teammatesʼ behaviors are fixed and known, specifically by elaborating upon the idea of interacting with legacy agents. The importance of interaction with such sub-optimal agents (that, for example, do not use learning algorithms or other intelligent means for determining optimality of their behavior) is the essence of ad hoc teamwork: not all teammates can be assumed to be equally capable. In the following sections we concentrate on technical contributions of each of the two problems: teaching and leading in ad hoc teamwork, in this simplified, known, environment.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Leading a teammate: Repeated scenarios with simultaneous actions
+     </section-title>
+     <paragraph>
+      In this section, we consider the case of an ad hoc team player, Agent A that is interacting with a teammate, Agent B, with whom it cannot communicate directly, but that is capable of adapting to its teammateʼs behavior. Specifically, Agent B observes its teammate as part of the environment, and adapts its actions according to the best response to some fixed history window of its observation of the environment (specifically, Agent Aʼs past moves). Therefore, Agent Aʼs goal is to find the sequence of actions that will lead he team to the highest (expected) payoff in a fully cooperative setting. In the Mars rover example described in Section 1.1, we would like to find the set of actions performed by the ad hoc robot that will lead the team to explore the most beneficial areas on Mars. We discuss in this section several teammate models for Agent B: a basic case, in which it decides its actions based on the last state of the environment it observed (specifically, Agent Aʼs last action), the case in which it can store more information and choose its action based on a larger memory size, and the case in which its actions could be random.
+     </paragraph>
+     <paragraph>
+      We begin by abstracting this setting to a game-theoretic formalism in which the agents interact in a fully cooperative iterative normal form game.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Formalism
+      </section-title>
+      <paragraph>
+       We represent the multiagent interaction of interest as a fully cooperative iterative normal-form game between two agents, Agent A and Agent B. Let the x actions available to Agent A be {a mathematical formula}a0,a1,…,ax−1 and the y actions available to its teammate, Agent B, be {a mathematical formula}b0,b1,…,by−1. The immediate payoff (a real number) when A and B select actions {a mathematical formula}ai and {a mathematical formula}bj, {a mathematical formula}mi,j is stored in row i and column j of the payoff matrix M: {a mathematical formula}M[i,j]=mi,j. In addition we define the value of the highest payoff in the matrix, which could be realized by multiple entries, to be {a mathematical formula}m⁎. Without loss of generality, throughout this section, we assume that {a mathematical formula}mx−1,y−1=m⁎.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For example, consider the payoff matrix M1 for a scenario in which agents A and B each have three possible actions. If both agents select action 0 (i.e., their joint action is {a mathematical formula}(a0,b0)), then the joint team payoff is {a mathematical formula}m0,0=25. Similarly if their joint action is {a mathematical formula}(a2,b0) their joint payoff is 0. In this case, there is a unique joint action that leads to {a mathematical formula}m⁎: {a mathematical formula}m2,2=m⁎=40.
+      </paragraph>
+      <paragraph>
+       Assume that {a mathematical formula}b0 is Agent Bʼs default action or that, for whatever reason, the agents have been playing {a mathematical formula}(a0,b0) in the past. This could be, for example, because Agent B is not fully aware of Agent Aʼs payoffs so that it cannot unilaterally identify the best joint action, or because B does not fully trust that A will play its part of the best joint action. In the Mars rover example, this could be the initial state in which the new rover found the existing rover, before it realized that the new rover is part of its environment. The question we examine is what sequence of actions should Agent A take so as to maximize the teamʼs undiscounted long-term payoff over iterative interactions using the identical payoff matrix? The answer to this question depends on Agent Bʼs strategy. For example, if Agent B is non-adaptive and always selects {a mathematical formula}b0, then the best Agent A can do is always select {a mathematical formula}a0.
+      </paragraph>
+      <paragraph>
+       However, if Agent B is adaptive, Agent A can lead it towards the optimal joint action by taking a sequence of actions the responses to which will cause Agent B to abandon {a mathematical formula}b0 and choose other actions. In order to do so, it may need to accept short-term losses with respect to the current payoffs (e.g., immediate payoffs of less than 25); however in the long run these losses will be offset by the repeated advantageous payoff of {a mathematical formula}(a2,b2).{sup:2}
+      </paragraph>
+      <paragraph>
+       In this article, we consider a particular class of strategies that Agent B could be using. Though they may not be the most sophisticated imaginable strategies, they are reasonable and often studied in the literature. The fact that they are possibly suboptimal represents the philosophy that Agent A must be able to adapt to its teammates as they are, not as they should be. That is, we assume that we have control only over Agent A, not over Agent B.
+      </paragraph>
+      <paragraph>
+       In particular, we specify Agent B as being a bounded-memory best response agent with an ϵ-greedy action strategy. That is, the agentʼs behavior is determined by two parameters: a memory size mem; and a random action rate ϵ. The agent considers the most recent mem actions taken by its teammate (Agent A), and assumes that they have been generated by the maximum likelihood policy that assigns fixed probabilities to each action. For example, if {a mathematical formula}mem=4 and Agent Aʼs last four actions were {a mathematical formula}a1,a0,a1,a1, then Agent B assumes that Agent Aʼs next action will be {a mathematical formula}a0 with probability 0.25 and {a mathematical formula}a1 with probability 0.75. It then selects the action that is the best response to this assumed policy with probability {a mathematical formula}1−ϵ; with probability ϵ it chooses a random action. For example, for payoff matrix M1 in this situation, it would select {a mathematical formula}b1 with probability {a mathematical formula}1−ϵ. We denote this best response action as {a mathematical formula}BR(a1,a0,a1,a1)=b1. Note that when {a mathematical formula}ϵ=1, the agent acts completely randomly.
+      </paragraph>
+      <paragraph>
+       To illustrate, we begin by considering the case of {a mathematical formula}mem=1 and {a mathematical formula}ϵ=0. For the remainder of this section, we consider the same case, in which Agent B always selects the action that is the best response to Agent Aʼs previous action: {a mathematical formula}b0, {a mathematical formula}b1, or {a mathematical formula}b2 depending on whether Aʼs last action was {a mathematical formula}a0, {a mathematical formula}a1, or {a mathematical formula}a2 respectively.
+      </paragraph>
+      <paragraph>
+       Now consider Agent Aʼs possible action sequences starting from the joint action {a mathematical formula}(a0,b0) with payoff {a mathematical formula}m0,0=25. Because its last action was {a mathematical formula}a0, it knows that B will select {a mathematical formula}b0 on the next play. It could immediately jump to action {a mathematical formula}a2, leading to the joint action {a mathematical formula}(a2,b0). This action will lead to an immediate payoff of {a mathematical formula}m2,0=0, but then will cause Agent B to select {a mathematical formula}b2 next, enabling a payoff of 40 on the next turn and thereafter (assuming A continues to select {a mathematical formula}a2 as it should). The resulting sequence of joint actions would be {a mathematical formula}S0=[(a0,b0),(a2,b0),(a2,b2),(a2,b2),…] leading to payoffs {a mathematical formula}[25,0,40,40,…].
+      </paragraph>
+      <paragraph>
+       Alternatively, Agent A could move more gradually through the matrix, first selecting {a mathematical formula}a1 for a joint payoff of 10 and leading B to select {a mathematical formula}b1 on its next turn. It could then shift to {a mathematical formula}a2 for a payoff of 33, followed by 40 thereafter. The resulting sequence of joint actions would be {a mathematical formula}S1=[(a0,b0),(a1,b0),(a2,b1),(a2,b2),(a2,b2),…] leading to payoffs {a mathematical formula}[25,10,33,40,40,…].
+      </paragraph>
+      <paragraph>
+       We define the cost{a mathematical formula}C(S) of a joint action sequence S to be the loss from playing S when compared to always playing the joint action {a mathematical formula}(ax−1,by−1), which leads to payoff {a mathematical formula}m⁎—in the case of M1, 40. Thus{a mathematical formula} and{a mathematical formula} In this case, {a mathematical formula}S1 is preferable to {a mathematical formula}S0, and is in fact the optimal (lowest cost) sequence starting from {a mathematical formula}(a0,b0).
+      </paragraph>
+      <paragraph>
+       We define the length{a mathematical formula}L(S) of a joint action sequence S to be the number of joint actions prior to the first instance of the infinite sequence of joint actions that yield {a mathematical formula}m⁎.{sup:3} Thus {a mathematical formula}L(S0)=2 and {a mathematical formula}L(S1)=3. Note that {a mathematical formula}S1 has lower cost even though it is longer. Note also that sequences that begin with a joint action {a mathematical formula}(ai,bj) such that {a mathematical formula}mi,j=m⁎ have both length 0 and cost 0.
+      </paragraph>
+      <paragraph>
+       For a given payoff matrix, we define {a mathematical formula}Sn⁎(ai,bj) to be the lowest cost sequence of length n or less starting from joint action {a mathematical formula}(ai,bj). {a mathematical formula}S⁎(ai,bj) is the lowest cost such sequence of any length. Thus, for matrix M1, {a mathematical formula}S2⁎(a0,b0)=S0 and {a mathematical formula}S3⁎(a0,b0)=S⁎(a0,b0)=S1.
+      </paragraph>
+      <paragraph>
+       For the special case that no sequence of a given length exists (e.g., if {a mathematical formula}n=0 or {a mathematical formula}n=1), we define {a mathematical formula}S⁎(ai,bj)=ω and {a mathematical formula}C(ω)=∞. Thus, for M1, {a mathematical formula}C(S0⁎(a0,b0))=C(S1⁎(a0,b0))=∞, but {a mathematical formula}C(S1⁎(a2,b1))=7 and {a mathematical formula}C(S0⁎(a2,b2))=0.
+      </paragraph>
+      <paragraph>
+       Finally, for a given payoff matrix M, we are interested in the length of the longest optimal sequence over all the possible starting points. We define this value as {a mathematical formula}L¯(M)=maxi,jL(S⁎(ai,bj)). For example, in matrix M1, {a mathematical formula}L(S⁎(a0,b0))=L(S1)=3, and there is no optimal sequence longer than 3 starting from any other cell of the matrix (as we will prove below). Thus {a mathematical formula}L¯(M1)=3.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Finding optimal sequences and analysis
+      </section-title>
+      <paragraph>
+       In this section, we develop algorithms for finding {a mathematical formula}S⁎(ai,bj) given a payoff matrix M, and we examine the question of how long these {a mathematical formula}S⁎ʼs can be. We divide the analysis based on Agent Bʼs strategy. First, in Section 2.2.1 we assume that Agent B has {a mathematical formula}mem=1 and {a mathematical formula}ϵ=0 as in Section 2.1. Next in Section 2.2.2 we consider the more difficult case of {a mathematical formula}mem&gt;1. Then, in Section 2.2.3 we allow Agent Bʼs actions to be random by considering {a mathematical formula}ϵ&gt;0.
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        Deterministic teammate with 1-Step memory
+       </section-title>
+       <paragraph>
+        We begin by presenting an efficient algorithm for finding all of the {a mathematical formula}S⁎ʼs for a matrix M when interacting with a deterministic teammate ({a mathematical formula}ϵ=0) that always selects the best response to our most recent action ({a mathematical formula}mem=1). Detailed in pseudocode as Algorithm 1, it uses dynamic programming, using the {a mathematical formula}Sn−1⁎ʼs to compute the {a mathematical formula}Sn⁎ʼs.
+       </paragraph>
+       <paragraph>
+        The algorithm takes as input an {a mathematical formula}x×y dimensional payoff matrix M and begins by initializing the optimal sequence of length 0 for every cell in the matrix according to the definition (lines 1–5). It then enters the main loop (7–21) that successively finds the best sequences of increasingly longer lengths (as indicated by the variable len).
+       </paragraph>
+       <paragraph>
+        A key insight that aids efficiency is that for a given {a mathematical formula}ai, the optimal sequences for {a mathematical formula}b1–by are the same as the optimal sequence starting from {a mathematical formula}(ai,b0), other than the first joint action. The reason is that {a mathematical formula}ai determines Agent Bʼs next action independently from Agent Bʼs current action: in all cases, its next action will be {a mathematical formula}bBR(ai). Thus, Agent Aʼs task is to select its action, {a mathematical formula}aact, that leads to the best possible joint action of the form {a mathematical formula}(aact,bBR(ai)).
+       </paragraph>
+       <paragraph>
+        This very computation is carried out in lines 10–16, specifically for Agent Bʼs action {a mathematical formula}b0. First, it is possible that the optimal sequence of length len, {a mathematical formula}Slen⁎(ai,b0) is the same as that of length {a mathematical formula}len−1. Thus it is initialized as such (line 10). Then for each possible next action on the part of Agent A, denoted {a mathematical formula}aact, the cost of the resulting sequence is simply the cost of the current joint action {a mathematical formula}(ai,b0), which is {a mathematical formula}m⁎−mi,0, plus the cost of the best possible sequence of length {a mathematical formula}len−1 that starts from {a mathematical formula}(aact,bBR(ai)). If that cost is less than the cost of the best sequence of length len found so far, then the running best sequence is updated accordingly by prepending joint action {a mathematical formula}(ai,b0) to the sequence {a mathematical formula}Slen−1⁎(aact,bBR(ai)) (lines 14–16).
+       </paragraph>
+       <paragraph>
+        The resulting optimal sequence is then used to determine the optimal sequence starting from all other values of {a mathematical formula}(ai,bj) for {a mathematical formula}1⩽j&lt;y by simply replacing the first joint action in the sequence {a mathematical formula}Slen⁎(ai,b0) with the joint action {a mathematical formula}(ai,bj) (lines 17–19). At the end of this loop, the optimal sequence of length len starting from any joint action {a mathematical formula}(ai,bj) ({a mathematical formula}Slen⁎(ai,bj)) is known and stored.
+       </paragraph>
+       <paragraph>
+        The computational complexity of the main loop of Algorithm 1 (lines 7–21) is quadratic in x and linear in y. Assuming x and y are of similar dimension (Agents A and B have roughly the same number of possible actions), we can call the dimensionality of M to be {a mathematical formula}d=max(x,y). In that case, the main loop has complexity {a mathematical formula}O(d2). Note that sequence costs {a mathematical formula}C(S) can be calculated incrementally in constant time as the sequences are constructed.
+       </paragraph>
+       <paragraph>
+        The only thing left to determine is how many times this main loop needs to be run. In particular, for what value of len is it no longer possible to find a better sequence than the best of length {a mathematical formula}len−1. We denote this value {a mathematical formula}UPPERBOUND(L¯(M)). The following two theorems prove that this value is exactly {a mathematical formula}min(x,y). Thus the overall computational complexity of Algorithm 1 is {a mathematical formula}O(d3).
+       </paragraph>
+       <paragraph>
+        First, in Theorem 2.1, we prove that there is no need to consider sequences of length greater than {a mathematical formula}min(x,y): {a mathematical formula}UPPERBOUND(L¯(M))⩽min(x,y). Then, in Theorem 2.2, we show that it is necessary to consider sequences up to length {a mathematical formula}min(x,y): {a mathematical formula}UPPERBOUND(L¯(M))⩾min(x,y).
+       </paragraph>
+       <paragraph label="Theorem 2.1">
+        When interacting with a teammate with{a mathematical formula}mem=1and{a mathematical formula}ϵ=0based on an{a mathematical formula}x×ydimensional payoff matrix M,{a mathematical formula}L¯(M)⩽min(x,y).
+       </paragraph>
+       <paragraph label="Proof">
+        We argue that {a mathematical formula}∀M,L¯(M)⩽min(x,y) by first showing that {a mathematical formula}L¯(M)⩽x and then showing that {a mathematical formula}L¯(M)⩽y. Intuitively, both cases hold because an optimal sequence can visit every row and column in the matrix at most once. If there were multiple visits to the same row or column, any steps in between could be excised from the sequence to get a lower-cost sequence. The formal arguments for the two cases are quite similar, though with a couple of subtle differences.
+       </paragraph>
+       <paragraph>
+        This is equivalent to proving {a mathematical formula}∀n⩾x, and {a mathematical formula}∀i,j,Sn+1⁎(ai,bj)=Sn⁎(ai,bj). Suppose not. Then ∃k and a corresponding sequence {a mathematical formula}S′ such that {a mathematical formula}S′=Sn+1⁎(ai,bj)=PREPEND((ai,bj),Sn⁎(ak,bBR(i))) with {a mathematical formula}C(S′)&lt;C(Sn⁎(ai,bj)). Since {a mathematical formula}Sn⁎(ai,bj) is the optimal sequence of length n or less, {a mathematical formula}L(S′)=n+1. {a mathematical formula}n+1&gt;x, so by the pigeonhole principle, ∃q such that Agent A selects {a mathematical formula}aq more than once in {a mathematical formula}S′ prior to the first instance of the terminal joint action with value {a mathematical formula}m⁎. Assume that {a mathematical formula}(aq,br) appears earlier in the sequence than {a mathematical formula}(aq,br′). In both cases, Agent Bʼs next action in the sequence must be {a mathematical formula}BR(aq). Thus after joint action {a mathematical formula}(aq,br), Agent A could have continued as it actually did after {a mathematical formula}(aq,br′). This revised sequence would have cost less than {a mathematical formula}S′, violating the assumption that {a mathematical formula}S′=Sn+1⁎(ai,bj). Therefore {a mathematical formula}L¯(M)⩽x.
+       </paragraph>
+       <paragraph>
+        Similarly, this case is equivalent to proving that {a mathematical formula}∀n⩾y, and {a mathematical formula}∀i,j,Sn+1⁎(ai,bj)=Sn⁎(ai,bj). Suppose not. Then ∃k and a corresponding sequence {a mathematical formula}S′ such that {a mathematical formula}S′=Sn+1⁎(ai,bj)=PREPEND((ai,bj),Sn⁎(ak,bBR(i))) with {a mathematical formula}C(S′)&lt;C(Sn⁎(ai,bj)). Since {a mathematical formula}Sn⁎(ai,bj) is the optimal sequence of length n or less, {a mathematical formula}L(S′)=n+1. {a mathematical formula}n+1&gt;y, so by the pigeonhole principle, ∃r such that Agent B selects {a mathematical formula}br more than once in {a mathematical formula}S′ after the first entry {a mathematical formula}(ai,bj) and up to and including the first instance of the terminal joint action with value {a mathematical formula}m⁎.{sup:4} Assume that {a mathematical formula}(aq,br) appears earlier in the sequence than {a mathematical formula}(aq′,br). Then at the point when Agent A selected {a mathematical formula}aq leading to {a mathematical formula}(aq,br), it could have instead selected {a mathematical formula}aq′, and then finished the sequence as from {a mathematical formula}(aq′,br) in {a mathematical formula}S′. Again, this revised sequence would have cost less than {a mathematical formula}S′, violating the assumption that {a mathematical formula}S′=Sn+1⁎(ai,bj). Therefore {a mathematical formula}L¯(M)⩽y.Therefore {a mathematical formula}∀M,L¯(M)⩽min(x,y). □
+       </paragraph>
+       <paragraph label="Theorem 2.2">
+        {a mathematical formula}∀x,y,∃{a mathematical formula}x×ydimensional matrix M such that, when interacting with a teammate with{a mathematical formula}mem=1and{a mathematical formula}ϵ=0,{a mathematical formula}L¯(M)=min(x,y).
+       </paragraph>
+       <paragraph label="Proof">
+        To prove existence, we construct such a matrix.
+       </paragraph>
+       <paragraph>
+        Consider the matrix M2 where {a mathematical formula}δ=10/x. All cells on the diagonal are {a mathematical formula}100−δ except for the bottom right corner, {a mathematical formula}mx−1,y−1=m⁎=100. All cells below this diagonal are {a mathematical formula}100−2δ, and all other cells are 0. We show that for M2, {a mathematical formula}L(S⁎(a0,b0))=x. Specifically,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        To see that this sequence is optimal, note that its cost is {a mathematical formula}δ+(x−1)⁎2δ&lt;2xδ=20. Note further, that ∀i, {a mathematical formula}BR(ai)=bi. Now working backwards, in order to reach the optimal joint action {a mathematical formula}(ax−1,by−1), Agent A must have selected action {a mathematical formula}ax−1 in the iteration prior to the first appearance of {a mathematical formula}(ax−1,by−1) in the sequence. When that happened, if Agent B had selected anything other than {a mathematical formula}by−2 ({a mathematical formula}by−1 is not an option since we are considering the iteration prior to the first appearance of {a mathematical formula}by−1 in the sequence), then there would have been a payoff of 0, leading to a sequence cost of ⩾100. Thus joint action {a mathematical formula}(ax−1,by−2) must appear in the optimal sequence. Similarly, considering the first appearance of this joint action, for Agent B to have selected {a mathematical formula}by−2, Agent A must have selected {a mathematical formula}ax−2 on the prior iteration. Again, any joint action other than {a mathematical formula}(ax−2,by−3) (here {a mathematical formula}by−2 is not an option for the same reason as above) leads to a payoff of 0 and a sequence cost of ⩾100. Continuing this line of reasoning, we can see that all the cells under the diagonal must appear in the optimal sequence starting from joint action {a mathematical formula}(a0,b0). Furthermore, adding any additional joint actions (including those on the diagonal) only raise the cost. Therefore the sequence presented above, of length x, is indeed {a mathematical formula}S⁎(a0,b0). It is easy to see that no optimal sequence from any other cell is longer.{sup:5} Thus {a mathematical formula}∀x,∃x×x dimension matrix M such that {a mathematical formula}L¯(M)=x=min(x,y).
+       </paragraph>
+       <paragraph>
+        If {a mathematical formula}x&lt;y we can construct a matrix {a mathematical formula}M2′ that includes the {a mathematical formula}x×x dimensional version of M2 as a submatrix and contains an additional {a mathematical formula}y−x columns of all 0ʼs. By the same argument as above, {a mathematical formula}S⁎(a0,b0) is the same sequence as above, which is of length x: {a mathematical formula}L¯(M2′)=x=min(x,y).
+       </paragraph>
+       <paragraph>
+        In this case, we can construct a matrix {a mathematical formula}M2′ based on the {a mathematical formula}y×y dimensional version of M2 that adds {a mathematical formula}x−y rows of all 0ʼs. Again, {a mathematical formula}S⁎(a0,b0) is the same as above and {a mathematical formula}L¯(M2′)=y=min(x,y).Therefore, {a mathematical formula}∀x,y,∃ an {a mathematical formula}x×y dimensional matrix M such that {a mathematical formula}L¯(M)=min(x,y). □
+       </paragraph>
+       <paragraph>
+        Theorem 2.1, Theorem 2.2 establish that the value of the call to the function UPPERBOUND in line 21 of Algorithm 1 is {a mathematical formula}min(x,y).
+       </paragraph>
+       <paragraph>
+        Note that in our analysis of this case in which Agent B has {a mathematical formula}mem=1 and {a mathematical formula}ϵ=0, all of the arguments hold even if there are multiple cells in the payoff matrix M with value {a mathematical formula}m⁎. Furthermore, Algorithm 1 computes the optimal sequence of joint actions from all starting points, not just a particular starting point, all in polynomial time in the dimensionality of the matrix.
+       </paragraph>
+      </section>
+      <section label="2.2.2">
+       <section-title>
+        Longer teammate memory
+       </section-title>
+       <paragraph>
+        In this section we extend our analysis from the previous section to consider interacting with teammates with {a mathematical formula}mem&gt;1. This case presents considerably more difficulty than the previous one in two ways. First, though the algorithm can be naturally extended, it is no longer polynomial, but rather exponential in mem. Second, it is no longer straightforward to compute {a mathematical formula}UPPERBOUND(L¯(M)), the maximum value of {a mathematical formula}L(S⁎(ai,bj)). We identify a lower bound on this maximum value, but can only conjecture that it is a tight bound.
+       </paragraph>
+       <paragraph>
+        Since the algorithm and analysis is so similar to that in Section 2.2.1, rather than presenting them fully formally, we discuss how they differ from the previous case.
+       </paragraph>
+       <paragraph>
+        To begin with, we need an added bit of notation for indicating sequences. Because Agent Bʼs actions are now no longer determined by just Agent Aʼs previous action, but rather by Agent Aʼs history of previous mem actions, we keep track of these actions in the sequence, indicating a step as {a mathematical formula}(ai,bj)[h0;h1;…;hmem−1] where {a mathematical formula}h0=ai is Agent Aʼs most recent action, {a mathematical formula}h1 is its prior action, etc. Then Agent Bʼs next action in the sequence must be {a mathematical formula}br=BR(h0,h1,…,hmem−1) and if Agent Aʼs next action is {a mathematical formula}aq, then the next element in the sequence is {a mathematical formula}(aq,br)[aq;ai;h1;…;hmem−2].
+       </paragraph>
+       <paragraph>
+        For example, returning to matrix M1 from Section 2.1, consider the case in which Agent B has {a mathematical formula}mem=3 (and still {a mathematical formula}ϵ=0 throughout this section). A valid sequence starting from {a mathematical formula}(a0,b0)[a0;a0;a0] is{a mathematical formula} Note that because {a mathematical formula}BR(a2,a0,a0)=b0, Agent A needs to select {a mathematical formula}a2 twice before Agent B will shift to {a mathematical formula}b2. {a mathematical formula}C(S2)=15+40+40=95. As in Section 2.1, there is another valid sequence {a mathematical formula}S3 in which Agent A leads Agent B through joint actions {a mathematical formula}(a1,b0) and {a mathematical formula}(a2,b1) on the way to {a mathematical formula}(a2,b2). But now, Agent A must select {a mathematical formula}a1 twice before B will switch to {a mathematical formula}b1 and then {a mathematical formula}a2 three times before B will switch to {a mathematical formula}b2. Thus {a mathematical formula}C(S3)=25+2⁎30+3⁎7=106. Hence, unlike in Section 2.1, when Agent B has {a mathematical formula}mem=3, Agent A is best off jumping straight to {a mathematical formula}a2.
+       </paragraph>
+       <paragraph>
+        The first necessary alteration to Algorithm 1 in this case is that it is no longer sufficient to simply calculate {a mathematical formula}Slen⁎ for every joint action {a mathematical formula}(ai,bj) on each loop of the algorithm. Rather, we must now calculate such values for each joint action-history {a mathematical formula}(ai,bj)[h0;…;hmem−1]. Since {a mathematical formula}h0 is constrained to be the same as {a mathematical formula}ai, there are {a mathematical formula}xmem−1 such histories for each joint action, leading to a total of {a mathematical formula}xmemy optimal sequences computed on each main loop of the algorithm. To accommodate this alteration, we simply need to nest additional for loops after lines 2 and 10 of Algorithm 1 that iterate over the (exponential number of) possible histories.
+       </paragraph>
+       <paragraph>
+        The second necessary alteration to Algorithm 1 in this case is that it is no longer sufficient to simply arrive at a joint action {a mathematical formula}(ai,bj) such that {a mathematical formula}mi, {a mathematical formula}j=m⁎. Rather, the agents must arrive at such an action with a history of Agent Aʼs actions such that if it keeps playing {a mathematical formula}ai, Agent B will keep selecting {a mathematical formula}bj. We define such a joint action-history to be stable.
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        To see why the concept of stability is necessary, consider matrix M3. A valid sequence starting from {a mathematical formula}(a2,b2)[a2;a1;a0] proceeds to {a mathematical formula}(a2,b2)[a2;a2;a1] if Agent A selects {a mathematical formula}a2. However from there, Agent Bʼs best response is {a mathematical formula}b0, not {a mathematical formula}b2. Thus the agents do not remain stably at joint action {a mathematical formula}(a2,b2).
+       </paragraph>
+       <paragraph>
+        To accommodate this situation, the only change to Algorithm 1 that is needed is that in line 3, only stable joint-action histories such that {a mathematical formula}mi,j=m⁎ should be initialized to the sequence of repeated terminal joint actions. Unstable ones should be initialized to ω (along with all instances such that {a mathematical formula}mi,j&lt;m⁎, no matter what the history). We can check stability by computing the best response to all histories that result from repeating action {a mathematical formula}ai until the entire history window is full of action {a mathematical formula}ai. If any of these best responses is not {a mathematical formula}bj, then the joint action-history is not stable.
+       </paragraph>
+       <paragraph>
+        Third, the main loop of Algorithm 1 needs to be altered to accommodate the inclusion of histories. In particular, in line 12, care needs to be taken to compute {a mathematical formula}S′ correctly, with Agent Bʼs action being based on the best response to the current history, and the history being the result of taking action {a mathematical formula}ai from the current history. Furthermore the PREPEND and REPLACEHEAD operators must manipulate the histories (and incremental cost computations) in the appropriate, obvious ways.
+       </paragraph>
+       <paragraph>
+        Finally, and most significantly, the value of UPPERBOUND in line 21 of Algorithm 1 must be altered. Unfortunately, we only can prove a lower bound of this value and a loose upper bound ({a mathematical formula}min(x,y)⁎xmem−1). We conjecture, but have not proven, that the lower bound is tight as it is in Section 2.2.1.
+       </paragraph>
+       <paragraph label="Theorem 2.3">
+        {a mathematical formula}∀x,y,∃{a mathematical formula}x×ydimensional matrix M such that, when interacting with a teammate with{a mathematical formula}mem&gt;1and{a mathematical formula}ϵ=0,{a mathematical formula}L¯(M)=(min(x,y)−1)⁎mem+1.
+       </paragraph>
+       <paragraph label="Proof">
+        (sketch) This theorem, which is the analog of Theorem 2.2, can be proven using a similar construction. In particular, redefining δ as {a mathematical formula}δ=10/((x−1)⁎mem+1), the same matrix M2 serves as our existence proof. Consider the optimal sequence starting from {a mathematical formula}(a0,b0) with history full of {a mathematical formula}a0ʼs. In that case, Agent A needs to select action {a mathematical formula}a1mem times before Agent B will switch to {a mathematical formula}b1. Similarly, it then needs to select {a mathematical formula}a2mem times before B will switch to {a mathematical formula}b2, and so on until A has selected each of the actions {a mathematical formula}a1–{a mathematical formula}ax−1mem times. The additional one is for the initial action ({a mathematical formula}a0,b0) which appears only once in the sequence. As before, any joint actions with payoff 0 will lead to a higher sequence cost than this entire sequence, and any additional joint actions also increase the cost.Also as before, the cases of {a mathematical formula}x≠y are covered by simply adding extra rows or columns of 0ʼs to M2 as needed. □
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        In [2], we conjectured that the lower bound from Theorem 2.3 was tight. That is, we conjectured that it was always the case that {a mathematical formula}L¯(M)⩽(min(x,y)−1)⁎mem+1. The intuition was that neither Agent A nor Agent B would ever select any one action more than mem times without foregoing some repetitions of its other actions. However, we now know that there are counterexamples to that conjecture. For example, consider the {a mathematical formula}4×5 matrix, M4.{sup:6} If Agent Bʼs {a mathematical formula}mem=2 (and its {a mathematical formula}ϵ=0), the optimal sequence from {a mathematical formula}(a0,b0) starting with history {a mathematical formula}[a0;a0] ends at {a mathematical formula}(a3,b4) and has length 8: {a mathematical formula}L(S⁎(a0,b0)[0;0;0])=8&gt;(min(x,y)−1)⁎mem+1=7. Specifically, in {a mathematical formula}S⁎Agent A selects {a mathematical formula}a1 twice, then {a mathematical formula}a2 twice, but then returns to {a mathematical formula}a0 before selecting {a mathematical formula}a3 thereafter. Due to this example, and others like it, we revise our previous conjecture as follows.
+       </paragraph>
+       <paragraph label="Conjecture 2.1">
+        When interacting with a teammate with{a mathematical formula}mem&gt;1and{a mathematical formula}ϵ=0based on an{a mathematical formula}x×ydimensional payoff matrix M,{a mathematical formula}L¯(M)⩽(y−1)⁎mem+1.
+       </paragraph>
+       <paragraph>
+        Proving or disproving this conjecture is left as an important direction for future work. It may also be possible to find a tighter bound, particularly for matrices such that {a mathematical formula}y&gt;x. An additional important direction for future work is developing heuristics for more efficiently finding the {a mathematical formula}S⁎ʼs when {a mathematical formula}mem&gt;1. Unfortunately, the problem is NP hard—see Appendix A for a proof. The exponential runtime in mem of the algorithm for finding the {a mathematical formula}S⁎ʼs is of practical significance. Our algorithm finds all the best sequences for a {a mathematical formula}60×60 matrix in less than 30 seconds of user time on a 1 GHz laptop (calculated by the Unix time command) when {a mathematical formula}mem=1, but it can only handle an {a mathematical formula}18×18 matrix in that time when {a mathematical formula}mem=2, a {a mathematical formula}9×9 matrix when {a mathematical formula}mem=3, {a mathematical formula}6×6 when {a mathematical formula}mem=4, and {a mathematical formula}4×4 when {a mathematical formula}mem=5. For larger matrices than those listed, java ran out of heap space with the default settings, often after running for more than 10 minutes.
+       </paragraph>
+      </section>
+      <section label="2.2.3">
+       <section-title>
+        Teammate randomness
+       </section-title>
+       <paragraph>
+        Until this point, we have assumed that Agent B acts deterministically: Agent A could predict Agent Bʼs next action with certainty based on its own previous actions. In this section we relax that assumption by allowing Bʼs ϵ to be greater than 0.
+       </paragraph>
+       <paragraph>
+        Once again, Algorithm 1 needs to be changed minimally to accommodate this case, so we just describe the changes. In fact, here, the only change necessary is that costs of joint actions be computed as expected values in comparison to the expected value of the optimal joint action.
+       </paragraph>
+       <paragraph>
+        The expected value of a joint action {a mathematical formula}EV(ai,bj)=(1−ϵ)mi,j+ϵy(∑k=0y−1mi,k). {a mathematical formula}m⁎ is then defined to be the maximum expected value of a joint action in M. The cost of a sequence {a mathematical formula}C(S) is then the sum of the differences between {a mathematical formula}m⁎ and the expected values of the joint actions in the sequence. After these changes in notation, which simply generalize our previous notation (all prior definitions hold for the case when {a mathematical formula}ϵ=0), the only change necessary to Algorithm 1 is in line 13: the term {a mathematical formula}mi,0 must be replaced by {a mathematical formula}EV(ai,b0). The notion of stable joint action-histories remains unchanged from Section 2.2.2.
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Note that as ϵ changes, both the optimal sequence of joint actions and the “target” joint actions (the ones that lead to expected value of {a mathematical formula}m⁎) can change. For example, consider the {a mathematical formula}4×4 matrix, M5. If Agent Bʼs {a mathematical formula}mem=3, then if its {a mathematical formula}ϵ=0, the optimal sequence from {a mathematical formula}(a0,b0) starting with history {a mathematical formula}[a0;a0;a0] ends at {a mathematical formula}(a3,b3) and has length 10: {a mathematical formula}L(S⁎(a0,b0)[0;0;0])=10. When {a mathematical formula}ϵ=0.1, and {a mathematical formula}ϵ=0.3 the optimal lengths are 8 and 3 respectively, still ending at {a mathematical formula}(a3,b3). When {a mathematical formula}ϵ=0.4, the optimal sequence is of length 3, but now ends at {a mathematical formula}(a2,b2). All of these sequences have different costs.
+       </paragraph>
+       <paragraph>
+        The intuitive reason for these changes is that as ϵ increases, it is no longer sufficient to reach a good cell in the matrix, but rather Agent A must aim for a good row: any value in the row is possible to be the payoff of the joint action. For this reason, with high ϵ, the row corresponding to {a mathematical formula}a2 is preferable to that corresponding to {a mathematical formula}a3 (the sum of the values is higher).
+       </paragraph>
+       <paragraph>
+        The analysis of the algorithmic runtime remains mostly unchanged. For efficiency, the expected values of joint actions can be cached so that they only need to be computed once. However ϵ does have some effects on the value of UPPERBOUND in line 21 of the algorithm. For {a mathematical formula}ϵ&lt;1, Theorem 2.1, Theorem 2.2, Theorem 2.3 all hold, though δ in the example matrix M2 needs to be generalized to {a mathematical formula}δ=20(1−ϵ)((x+1)⁎mem)(2−2ϵ+ϵy). However when {a mathematical formula}ϵ=1, {a mathematical formula}UPPERBOUND(L¯(M))=1: Agent A can always jump immediately to the action that leads to the row with the highest expected value, which will be attained by all joint actions in that row. It is not clear whether ϵ has any effect on Conjecture 2.1.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Empirical results
+      </section-title>
+      <paragraph>
+       All variations of the algorithm presented in Section 2.2 are fully implemented. In this section, we present some brief empirical results from running them in various settings that shed some light on the nature and prevalence of our problem of interest.
+      </paragraph>
+      <paragraph>
+       In particular, we consider how frequently action sequences of various lengths appear in random matrices. At first blush, it may seem that when interacting with an agent with {a mathematical formula}mem=1, matrices for which there {a mathematical formula}∃(ai,bj) such that {a mathematical formula}L(S⁎(ai,bj))&gt;2 (such as M1 in Section 2.1) would be relatively rare in practice.
+      </paragraph>
+      <paragraph>
+       To test this hypothesis, we generated random {a mathematical formula}x×y matrices such that {a mathematical formula}mx−1,y−1=100 and all other values {a mathematical formula}mi,j are generated uniformly randomly from {a mathematical formula}[0,100]. Table 1 shows the distribution of {a mathematical formula}L¯(M) for {a mathematical formula}x×x matrices when Agent Bʼs {a mathematical formula}mem=1 or 3. For matrices larger than {a mathematical formula}7×7, the {a mathematical formula}mem=3 case takes more than a day to run on a modern laptop, so we stop at that point. Matrices such that {a mathematical formula}x≠y did not show any interestingly different patterns.
+      </paragraph>
+      <paragraph>
+       From these results we see that even in {a mathematical formula}3×3 matrices with {a mathematical formula}mem=1, it is not uncommon for Agent A to need to reason about the cost of various sequence lengths: In 44 of 1000 cases, there is at least one joint action from which Agent A is best off not jumping immediately to action {a mathematical formula}a2. In 104 of the cases, all optimal sequences are of length 1, which occurs exactly when {a mathematical formula}b2 is the best response to all of Aʼs actions: {a mathematical formula}∀0⩽i&lt;x, {a mathematical formula}BR(ai)=by−1 (as expected, this occurrence becomes less common as the matrix size increases). In the other 852 cases, Agent A is best off switching to {a mathematical formula}a2 immediately, leading to longest sequences of length 2.
+      </paragraph>
+      <paragraph>
+       Though matrices such that {a mathematical formula}L¯(M)&gt;2 are not uncommon, it is also noticeable that matrices with optimal sequences of lengths close to the theoretical maximum do not occur naturally as the matrix size increases. A carefully selected construct such as M2 in Section 2.2 is required to find such sequences.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Simultaneous action summary
+      </section-title>
+      <paragraph>
+       A brief summary of the results from this section on repeated scenarios with simultaneous actions is as follows, both as a table, and also with slightly more explanation of each item, as a bulleted list.
+      </paragraph>
+      <paragraph>
+       Deterministic teammate with 1-Step memory:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Can find optimal action sequence efficiently: {a mathematical formula}O(d3)
+       </list-item>
+       <list-item label="•">
+        Maximum length of optimal sequence: {a mathematical formula}min(x,y)
+       </list-item>
+      </list>
+      <paragraph>
+       Longer teammate memory:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Cannot find optimal action sequence efficiently: NPhard
+       </list-item>
+       <list-item label="•">
+        Maximum length of optimal sequence: open problem—between {a mathematical formula}(min(x,y)−1)⁎mem+1 and {a mathematical formula}min(x,y)⁎xmem−1
+       </list-item>
+      </list>
+      <paragraph>
+       Random teammate:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Same as deterministic teammate: depends on teammate memory size, with same bounds above applying.
+       </list-item>
+      </list>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Teaching a teammate: Sequential scenarios with differing abilities
+     </section-title>
+     <paragraph>
+      Section 2 explored the scenario in which Agent B is fixed and known and the two agents repeatedly take simultaneous actions. This section maintains the assumption that Agent B is fixed and known, but now considers the case in which the teammates interact in a sequential turn-taking scenario, as motivated in Section 1.1. This scenario can be formalized as a finite-horizon cooperative k-armed bandit [3] in a way that, to the best of our knowledge, has never been considered before in the literature. The formalism can be applied to any multiagent decision-making setting that shares the essential characteristics of the scenario described above, and can also be generalized to ad hoc teamwork settings.
+     </paragraph>
+     <paragraph>
+      In this section, we characterize the conditions under which certain actions are potentially optimal in such a finite-horizon, cooperative k-armed bandit, and we present a dynamic programming algorithm that solves for the optimal action when the payoffs come from a discrete distribution. For Gaussian distributions we present some theoretical and experimental results and identify an open problem. While k-armed bandits are often used to study the exploration versus exploitation challenge, nobody has previously considered a multiagent cooperative setting in which the agents have different knowledge states and action capabilities. Thus our formalization is simultaneously a practical method for multiagent team decision-making, and a novel contribution to the literature on k-armed bandits.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Formalism
+      </section-title>
+      <paragraph>
+       The k-armed bandit problem [3] is a much-studied problem in sequential decision making. The basic setting is as follows. At each time step, a learning agent selects one of the k arms to pull. The arm returns a payoff according to a fixed, but generally unknown, distribution. Similar to the problem of leading teammates presented in Section 2.1, the agentʼs goal is to maximize the team utility, specifically, to maximize the sum of the payoffs it receives over time. The k-armed bandit is a classic setting for studying the exploration vs. exploitation problem: at any given time, the agent could greedily select the arm that has paid off the best so far, or it could select a different arm in order to gather more information about its distribution. It is also the basis for reinforcement learning theory, representing the stateless action selection problem [4].
+      </paragraph>
+      <paragraph>
+       In order to study the ad hoc team problem laid out in this section we extend the standard setting to include two distinct agents, known as the teacher (Agent A) and the learner (Agent B), who select arms alternately, starting with the teacher. We initially consider a bandit with just three arms such that the teacher is able to select from any of the three arms, while the learner is only able to select from among the two arms with the lower expected payoffs. We consider the fully cooperative case such that the teacherʼs goal is to maximize the expected sum of the payoffs received by the two agents over time (the teacher is risk neutral). Specifically, we make the following assumptions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The payoff distributions of all arms are fully known to the teacher, but unknown to the learner.
+       </list-item>
+       <list-item label="•">
+        The learner can only select from among the two arms with the lower expected payoffs.
+       </list-item>
+       <list-item label="•">
+        The results of all actions are fully observable (to both agents).
+       </list-item>
+       <list-item label="•">
+        The number of rounds (actions per agent) remaining is finite and known to the teacher.
+       </list-item>
+      </list>
+      <paragraph>
+       We assume that the learnerʼs behavior (Agent B) is fixed and known: it acts greedily, always selecting the arm with the highest observed sample average so far. Any arm that has never been pulled is assumed to have a sample average of ∞. Thus, the learner always prefers selecting an arm that has not been selected previously. If there is more than one such arm, it selects randomly from among them. This assumption reflects optimism in the face of uncertainty on the part of the learner (optimistic initialization).
+      </paragraph>
+      <paragraph>
+       The teacher must then decide whether to do what is best in the short term, namely pull the arm with the highest expected payoff; or whether to increase the information available to its teammate, the learner, by pulling a different arm. Note that if the teacher were acting alone, trivially its optimal action would be to always pull the arm with highest expected payoff. Referring to the Mars rover example from Section 1.1, the new rover should decide whether to explore alone areas that are more beneficial for the mission and disregard the existing robotsʼ whereabouts, or try to influence the area the old robot is exploring, by choosing to explore a less beneficial zone. The arms here refer to the possible zones the robots can explore with their possible benefits to the team.
+      </paragraph>
+      <paragraph>
+       By these assumptions, the learner is both less capable and less knowledgeable than the teacher, and it does not understand direct communication from the teacher. It is tempting to think that we should begin by improving the learner. But in the ad hoc team setting, that is not an option. The learner “is what it is” either because it is a legacy agent, or because it has been programmed by others. Our task is to determine the teacherʼs best actions given such learner behavior.
+      </paragraph>
+      <paragraph>
+       We use the following notation for the three arms. The learner selects between Arm1 and Arm2, while the teacher can additionally choose {a mathematical formula}Arm⁎. While we consider two different forms of distributions for the payoffs, throughout the section we use the following notation:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}μi is the expected payoff of {a mathematical formula}Armi ({a mathematical formula}i∈{1,2,⁎}).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ni is the number of times {a mathematical formula}Armi has been pulled (observed) in the past.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}mi is the cumulative payoff from all the past pulls of {a mathematical formula}Armi.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}x¯i=mini is the observed sample average so far.
+       </list-item>
+       <list-item label="•">
+        r is the number of rounds left.
+       </list-item>
+      </list>
+      <paragraph>
+       Throughout the section we assume that {a mathematical formula}μ⁎&gt;μ1&gt;μ2. If {a mathematical formula}μ⁎ is not the largest, then the teacherʼs choice is trivially to always select the arm with the largest expected payoff. The ordering of Arm1 and Arm2 is without loss of generality. In this setting, the question we ask is, which arm should the teacher pull, as a function of r and all the {a mathematical formula}ni, {a mathematical formula}x¯i, and {a mathematical formula}Armi payoff distributions (including {a mathematical formula}μi)?
+      </paragraph>
+      <paragraph>
+       We will consider two different forms of payoff distributions for the arms. First, in the simpler “discrete” case, each {a mathematical formula}Armi returns either a 1 or a 0 with probability {a mathematical formula}pi. Thus {a mathematical formula}μi=pi and {a mathematical formula}mi is the number of times the arm has yielded a payoff of 1. In this case, we derive a polynomial memory and time algorithm for determining the teacherʼs optimal action in any situation. The analysis generalizes naturally to any discrete distribution. Second, in the more difficult “normal” case, each {a mathematical formula}Armi returns a value from a Gaussian distribution with standard deviation {a mathematical formula}σi (and mean {a mathematical formula}μi). In this case, we can only determine the optimal action efficiently when {a mathematical formula}r=1, though the optimal action can be estimated numerically when {a mathematical formula}r&gt;1.
+      </paragraph>
+      <paragraph>
+       We begin with theoretical results that hold for any type of distribution in Section 3.2. We then present the complete solution to the discrete case in Section 3.3 followed by our analysis of the normal case in Section 3.4.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Arbitrary distribution arms
+      </section-title>
+      <paragraph>
+       In this section, we present theoretical results that apply regardless of the forms of the distributions of the payoffs from the three arms.
+      </paragraph>
+      <section label="3.2.1">
+       The teacher should consider pulling Arm1
+       <paragraph>
+        First, to understand that the problem specified in Section 3.1 is not trivial, we show that there are situations in which the teacher should not greedily optimize its short-term payoff by pulling {a mathematical formula}Arm⁎, but rather should increase the amount of information available to the learner by pulling Arm1.
+       </paragraph>
+       <paragraph>
+        In fact, even with just one round remaining ({a mathematical formula}r=1), it is not difficult to construct such a case. For example, suppose that {a mathematical formula}μ⁎=10, {a mathematical formula}μ1=9, {a mathematical formula}μ2=5, {a mathematical formula}x¯1=6, {a mathematical formula}x¯2=7, {a mathematical formula}n1=n2=1. Suppose further that the distribution of payoffs from Arm1 is such that the probability of obtaining a value greater than 8 is {a mathematical formula}η&gt;12. Thus with probability η, after an agent selects Arm1, its sample average will be greater than {a mathematical formula}x¯2.
+       </paragraph>
+       <paragraph>
+        Should the teacher select {a mathematical formula}Arm⁎, then the learner will select Arm2 (because {a mathematical formula}x¯1&lt;x¯2), yielding an expected total payoff during the round of {a mathematical formula}μ⁎+μ2=15. On the other hand, should the teacher select Arm1, there is a greater than 50% chance that the learner will select Arm1 as well. The expected payoff is then {a mathematical formula}μ1+ημ1+(1−η)μ2&gt;9+92+52=16.
+       </paragraph>
+       <paragraph>
+        Therefore there are situations in which it is better for the teacher to pull Arm1 than {a mathematical formula}Arm⁎. This article is devoted to characterizing exactly what those situations are.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       The teacher should never pull Arm2
+       <paragraph>
+        Second, we argue that the teacher should only consider pulling {a mathematical formula}Arm⁎ or Arm1. On the surface, this result appears obvious: why should the teacher pull Arm2 just to prevent the learner from doing the same? In fact, there is a relatively straightforward proof that applies when {a mathematical formula}x¯1&lt;x¯2 (similar to our proof of Theorem 3.2 below). However the proof of the fully general result that includes the seemingly simpler case that {a mathematical formula}x¯1&gt;x¯2 is surprisingly subtle. We sketch the proof below. The full proof appears in Appendix B.
+       </paragraph>
+       <paragraph label="Theorem 3.1">
+        It is never optimal for the teacher to pull{a mathematical formula}Arm2.
+       </paragraph>
+       <paragraph label="Proof sketch">
+        The proof uses induction on r.
+       </paragraph>
+       <paragraph label="Base case">
+        {a mathematical formula}r=1. If the teacher starts by pulling Arm2, the best expected value the team can achieve is {a mathematical formula}μ2+μ1. Meanwhile, if it starts with {a mathematical formula}Arm⁎, the worst the team expects is {a mathematical formula}μ⁎+μ2. This expectation is higher since {a mathematical formula}μ⁎&gt;μ1.
+       </paragraph>
+       <paragraph label="Inductive step">
+        Assume that the teacher should never pull Arm2 with {a mathematical formula}r−1 rounds left. Let {a mathematical formula}π⁎ be the optimal teacher action policy that maps the states of the arms (their {a mathematical formula}μi, {a mathematical formula}ni, and {a mathematical formula}x¯i) and the number of rounds left to the optimal action: the policy that leads to the highest long-term expected value. Consider the sequence, S, that begins with Arm2 and subsequently results from the teacher following {a mathematical formula}π⁎. To show: there exists a teacher action policy {a mathematical formula}π′ starting with {a mathematical formula}Arm⁎ (or Arm1) that leads to a sequence T with expected value greater than that of S. That is, the initial pull of Arm2 in S does not follow {a mathematical formula}π⁎.The underlying idea is that the sequence T should start with the teacher pulling {a mathematical formula}Arm⁎ repeatedly, and tracking the values obtained by the learner to see if it can ever discern what the sequence S would have looked like after some number of rounds (it simulates sequence S). This may not be possible, for example if sequence S begins with a pull of Arm1, whereas after the initial pull of Arm2 in T, the values are such that Arm1 is never pulled.If the teacher ever does get to the point that all of the learnerʼs pulls of Arm1 and Arm2 in T can be used in simulating S, then the teacher can mimic S from that point until it runs out of rounds (we can prove that the simulation necessarily ends with fewer rounds executed in S than in T). Then nothing that would have happened after the mimicking ended (that is that will happen in S) could have higher expected value than all the extra pulls of {a mathematical formula}Arm⁎ that came before the mimicking started in T.If, on there other hand, there is never a point that all the pulls of Arm1 and Arm2 can be used in the simulation, then sequence T must have more pulls of {a mathematical formula}Arm⁎ and fewer pulls of Arm2 than sequence S (which itself requires some care to prove rigorously).Either way, the sequence T has higher expected value than sequence S, so the initial pull of Arm2 in S was suboptimal. □
+       </paragraph>
+       <paragraph>
+        Thus, when the teacher decides to teach the learner, it does so by pulling Arm1. Pulling {a mathematical formula}Arm⁎ can be thought of as exploiting, or maximizing short-term payoff. In the remainder of this section, we sometimes refer to the teacher pulling Arm1 as “teaching,” and pulling {a mathematical formula}Arm⁎ as “not teaching.”
+       </paragraph>
+      </section>
+      <section label="3.2.3">
+       Never teach when {a mathematical formula}x¯1&gt;x¯2
+       <paragraph>
+        Third, we show that the teacherʼs choice is clear whenever {a mathematical formula}x¯1&gt;x¯2. That is, if the current sample average of Arm1 is greater than that of Arm2 such that the learner will choose Arm1 next, then the teacher should always choose {a mathematical formula}Arm⁎: it should not teach.
+       </paragraph>
+       <paragraph label="Theorem 3.2">
+        When{a mathematical formula}x¯1&gt;x¯2, it is always optimal for the teacher not to teach (to pull{a mathematical formula}Arm⁎).
+       </paragraph>
+       <paragraph label="Proof">
+        When {a mathematical formula}r=1, the theorem is clearly true: the expected reward for the round when not teaching is already the maximum possible: {a mathematical formula}μ⁎+μ1. When {a mathematical formula}r&gt;1 the argument is a simpler version of the proof to Theorem 3.1. Consider the sequence S that begins with Arm1 and then follows the optimal policy {a mathematical formula}π⁎ thereafter. Compare it with the sequence T that results from the teacher pulling {a mathematical formula}Arm⁎ in the first two rounds, then mimicking sequence S thereafter: following {a mathematical formula}π⁎ as if there were one more round remaining than is actually remaining. Since the first two values in S are equivalent to the learnerʼs first two values in T (it will begin with Arm1 because {a mathematical formula}x¯1&gt;x¯2), the sequences are identical other than the teacherʼs first two pulls of {a mathematical formula}Arm⁎ in T and the last action of each agent in S. Thus the expected value of {a mathematical formula}T−S⩾(μ⁎+μ⁎)−(μ⁎+μ1)&gt;0. Since S is the best the teacher can do if it starts with Arm1, and T is a lower bound on how well it can do otherwise, the teacher should never pull Arm1 when {a mathematical formula}x¯1&gt;x¯2. □
+       </paragraph>
+      </section>
+      <section label="3.2.4">
+       Do not teach when {a mathematical formula}n1=0 and/or {a mathematical formula}n2=0
+       <paragraph>
+        When starting a new task such that the learner has no experience with any of its arms, the teacher should pull {a mathematical formula}Arm⁎: it should not teach. The proof proceeds similarly to the proof of Theorem 3.2. In fact, the proof generalizes to the statement that the teacher should never do what the student is about to do anyway.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Discrete distribution arms
+      </section-title>
+      <paragraph>
+       In Section 3.2, we presented theoretical results that do not depend in any way on the form of the distributions governing the payoffs from the various arms: the teacher should never pull Arm2, and it should only consider Arm1 when {a mathematical formula}x¯1&lt;x¯2. In this section and the next, we analyze when exactly the teacher should select Arm1, which depends on the exact distributions of the payoffs. We first restrict our attention to binary distributions such that each {a mathematical formula}Armi returns a 1 with probability {a mathematical formula}pi, and a 0 otherwise. Referring to the Mars rover example, this case is equivalent to a “success” and “failure” in the exploration mission in the zone: was the robot able to produce valuable information today in its exploration mission, or not? Here, {a mathematical formula}μi=pi, and {a mathematical formula}mi is the number of times the arm has yielded a payoff of 1 thus far. In this setting we can solve for the optimal teacher action using finite horizon dynamic programming. The algorithm generalizes to any discrete distribution.
+      </paragraph>
+      <section label="3.3.1">
+       {a mathematical formula}x¯1&lt;x¯2,r=1
+       <paragraph>
+        To develop intuition, we begin by considering what the teacher should do when {a mathematical formula}r=1 (one action remaining for each agent). As shown in Section 3.2, the teacher should never teach when {a mathematical formula}x¯1&gt;x¯2.
+       </paragraph>
+       <paragraph>
+        When {a mathematical formula}x¯1&lt;x¯2 (i.e., {a mathematical formula}m1n1&lt;m2n2), there are two conditions that must hold for it to be worthwhile for the teacher to teach. First, it must be the case that pulling Arm1 could change the learnerʼs action from Arm2 to Arm1; and second, it must be the case that the expected cost of teaching is less than the expected benefit of teaching. Specifically, we need the following to hold:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}m1+1n1+1&gt;m2n2
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}p⁎−p1&lt;p1(p1−p2)
+        </list-item>
+       </list>
+       <paragraph>
+        The right hand side of the second inequality is the probability that Arm1 will yield a 1 multiplied by the difference in expected values between Arm1 and Arm2.
+       </paragraph>
+       <paragraph>
+        Note that we can also explicitly calculate the expected values of both not teaching ({a mathematical formula}EVnt) and teaching ({a mathematical formula}EVt). {a mathematical formula}EVnt=p⁎+p2 and {a mathematical formula}EVt=p1+p12+(1−p1)p2.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Algorithm
+       </section-title>
+       <paragraph>
+        Building on the intuition from Section 3.3.1, this section presents our fully-implemented polynomial memory and time dynamic programming algorithm for determining the teacherʼs optimal action with any number of rounds left. It takes as input initial values for {a mathematical formula}m1,n1,m2,n2, and r, which we denote as {a mathematical formula}M1,N1,M2,N2, and R respectively, and it outputs whether the teacherʼs expected value is higher if it teaches by pulling Arm1 or if it exploits by pulling {a mathematical formula}Arm⁎.
+       </paragraph>
+       <paragraph>
+        The dynamic programming algorithm works backwards from smaller to bigger values of r, computing the expected value of the optimal action from any possible values of {a mathematical formula}m1, {a mathematical formula}n1, {a mathematical formula}m2, and {a mathematical formula}n2 that could be reached from the initial values.
+       </paragraph>
+       <paragraph>
+        First, consider the values that {a mathematical formula}m1, {a mathematical formula}n1, {a mathematical formula}m2, and {a mathematical formula}n2 can take on when there are r rounds left.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Because both agents can pull Arm1 any number of times, with r rounds left (after {a mathematical formula}R−r rounds have passed), {a mathematical formula}n1 can range from {a mathematical formula}N1 (if Arm1 was never selected) to {a mathematical formula}N1+2(R−r).
+        </list-item>
+        <list-item label="•">
+         Any number of the {a mathematical formula}n1−N1 times that Arm1 was pulled, {a mathematical formula}m1 could have increased by 1. Thus {a mathematical formula}m1 can range from {a mathematical formula}M1 to {a mathematical formula}M1+(n1−N1).
+        </list-item>
+        <list-item label="•">
+         Because only the learner pulls Arm2, it will be pulled at most once per round. But the range of {a mathematical formula}n2 depends on the value {a mathematical formula}n1, because the learner only pulls Arm2 when it does not pull Arm1. Thus {a mathematical formula}n2 can range from {a mathematical formula}N2+max(0,R−r−(n1−N1)) to {a mathematical formula}N2+(R−r)−max(0,n1−N1−(R−r)).
+        </list-item>
+        <list-item label="•">
+         Similarly to {a mathematical formula}m1, {a mathematical formula}m2 can range from {a mathematical formula}M2 to {a mathematical formula}M2+(n2−N2).
+        </list-item>
+       </list>
+       <paragraph>
+        The algorithm, detailed as pseudocode in Algorithm 2, is structured as nested for loops using these ranges. For each reachable combination of values, the algorithm computes the teacherʼs optimal action (Arm1 or {a mathematical formula}Arm⁎), denoted {a mathematical formula}Act[⋅]; and the expected long-term value of taking that action, denoted {a mathematical formula}Val[⋅]: the expected sum of payoffs for the optimal action and all future actions by both the teacher and the learner.
+       </paragraph>
+       <paragraph>
+        First, in Line 1, the expected value with zero rounds remaining is defined to be 0 since there are no more actions to be taken. Then, in the body of the nested for loops (Lines 7–45), the expected values of both teaching by pulling Arm1 ({a mathematical formula}EVt) and not teaching by pulling {a mathematical formula}Arm⁎ ({a mathematical formula}EVnt) with r rounds remaining are computed based on the stored values for the possible resulting states with {a mathematical formula}r−1 rounds remaining.
+       </paragraph>
+       <paragraph>
+        The values of these possible resulting states are denoted as {a mathematical formula}EVabcd where {a mathematical formula}a,b,c, and d denote the increments to {a mathematical formula}m1,n1,m2, and {a mathematical formula}n2 respectively between rounds r and {a mathematical formula}r−1 (Lines 7–17). For example, Line 25 computes the expected value for not teaching when {a mathematical formula}n1,n2&gt;0 and {a mathematical formula}m1n1&gt;m2n2. In the current round, the teacher exploits (does not teach) by pulling {a mathematical formula}Arm⁎ and the learner pulls Arm1, leading to an expected return of {a mathematical formula}p⁎+p1. This value is then added to the expected value of the resulting state with {a mathematical formula}r−1 rounds remaining. Due to the learnerʼs action, the value of {a mathematical formula}n1 is incremented by 1. With a probability of {a mathematical formula}p1, this action returns a payoff of 1, causing {a mathematical formula}m1 to be incremented as well. With a probability of {a mathematical formula}1−p1, {a mathematical formula}m1 is not incremented. Thus the expected value after the current round is {a mathematical formula}p1EV1100+(1−p1)EV0100. Note that there are special cases for the situations in which {a mathematical formula}n1 and/or {a mathematical formula}n2 are 0 corresponding to the assumed learner behavior as specified in Section 3.1.
+       </paragraph>
+       <paragraph>
+        Once the expected values of teaching and not teaching have been computed, they are compared in Line 38, and the {a mathematical formula}Act[⋅] and {a mathematical formula}Val[⋅] entries are set according to the result. Finally, the appropriate action with R rounds remaining is returned (Line 50). Note that by storing the optimal actions along the way ({a mathematical formula}Act[⋅]), the algorithm eliminates the need to do any additional computations in the future as the number of rounds remaining (r) decreases to 1. For all possible results of the teacherʼs and learnerʼs actions, the optimal teacher action in all future rounds is already stored.
+       </paragraph>
+      </section>
+      <section label="3.3.3">
+       <section-title>
+        Algorithm analysis
+       </section-title>
+       <paragraph>
+        In this section we analyze the memory and runtime properties of Algorithm 2, specifically showing that it is polynomial in R in both respects.
+       </paragraph>
+       <paragraph>
+        First, notice that both the memory and the runtime complexity is determined by the number of iterations through the nested for loop. Each iteration through the loop requires that one expected value and one optimal action be stored; and the computation within the loop is constant with respect to r.
+       </paragraph>
+       <paragraph>
+        Thus the relevant quantity is the number of combinations of values {a mathematical formula}m1, {a mathematical formula}n1, {a mathematical formula}m2, {a mathematical formula}n2, and r can take in the body of the loop. Looking at their ranges as laid out at the beginning of Section 3.3.2, it is clear that this number is bounded above by {a mathematical formula}2R⁎2R⁎R⁎R⁎R=4R5. Therefore both the memory and runtime complexities of this algorithm for computing the optimal teacher action with R rounds remaining for any starting values of the other variables are {a mathematical formula}O(R5).
+       </paragraph>
+       <paragraph>
+        Although the algorithm runs iteratively, using dynamic programming, in principle we can convert the stored data structure into closed form computations of both teaching and not teaching. This conversion is based on the probabilities of the various possible outcomes of the pulls of the arms. However the closed form equations will be dependent upon {a mathematical formula}m1, {a mathematical formula}n1, {a mathematical formula}m2, and {a mathematical formula}n2.
+       </paragraph>
+      </section>
+      <section label="3.3.4">
+       <section-title>
+        Other discrete distributions
+       </section-title>
+       <paragraph>
+        The algorithm and analysis to this point in this section all deal with the binary case in which each arm returns either 1 or 0 on each pull: 1 for a success and 0 for a failure. However, the algorithm and analysis extend trivially to distributions in which the success and failure payoffs from each arm differ from 1 and 0 and differ across the arms. The key property is that each arm has a success payoff that is realized with probability {a mathematical formula}pi and a (lower) failure payoff that is realized otherwise. Either or both of the payoffs can even be negative, representing an action penalty. In order to adapt the algorithm, the calculations of the expected values in lines 18–37 need to be changed to reflect the revised payoffs, and the calculations of the sample average (e.g. in Line 24), need to reflect the revised payoffs by multiplying {a mathematical formula}m1 and {a mathematical formula}m2 appropriately and computing the weighted averages with {a mathematical formula}n1−m1 and {a mathematical formula}n2−m2 respectively.
+       </paragraph>
+       <paragraph>
+        The results can also be generalized from binary distributions to any discrete distribution. In this case the algorithm includes extra nested for loops for each possible outcome of pulling an arm (not just two per arm). The exponent of the space and runtime complexities of the algorithm is increased accordingly, but the algorithm remains polynomial.
+       </paragraph>
+      </section>
+      <section label="3.3.5">
+       <section-title>
+        Numerical results and experiments
+       </section-title>
+       <paragraph>
+        With the aid of the algorithm presented in Section 3.3.2, we tested several conjectures experimentally. In this section we consider the following questions:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Are there any patterns in the optimal action as a function of r when all other parameters are held constant?
+        </list-item>
+        <list-item label="2.">
+         How sensitive is the expected value computation to the relationship between {a mathematical formula}m1, {a mathematical formula}n1, {a mathematical formula}m2, {a mathematical formula}n2, {a mathematical formula}p1, {a mathematical formula}p2, and {a mathematical formula}p⁎?
+        </list-item>
+        <list-item label="3.">
+         When Algorithm 2 is run, how many of the states tend to have Arm1 (teaching) as the optimal action?
+        </list-item>
+       </list>
+       <paragraph>
+        First, consider the effect of increasing the number of rounds remaining to be played, r. Intuitively, as r increases, the more time there is to benefit from teaching. For example, consider the case in which {a mathematical formula}p⁎=.5, {a mathematical formula}p1=.4, and {a mathematical formula}p2=.16. Suppose that the learner has observed Arm1 being pulled 3 times, one of which successfully gave a payoff of 1 ({a mathematical formula}m1=1, {a mathematical formula}n1=3) as well as Arm2 being pulled 5 times, two of which succeeded ({a mathematical formula}m2=2, {a mathematical formula}n2=5).
+       </paragraph>
+       <paragraph>
+        In this case, with one round left the teacher should not teach: although condition 1 from Section 3.3.1 holds, condition 2 does not. In particular the probabilities are such that the cost of teaching ({a mathematical formula}.5−.4=.1) is not outweighed by the expected benefit of teaching ({a mathematical formula}.4⁎(.4−.16)=.096). However, when {a mathematical formula}r=2, there is enough time for the learner to take advantage of the added knowledge. In this case, the expected value of teaching, {a mathematical formula}EVt=1.3544 is greater than that of not teaching, {a mathematical formula}EVnt=1.32.
+       </paragraph>
+       <paragraph>
+        Though this result matches intuition, there are also cases such that increasing r changes the optimal action from teaching to not teaching. In fact, with {a mathematical formula}r=3 or 4 and all other values above unchanged, the optimal action of the teacher is again not to teach. For {a mathematical formula}r&gt;4 (at least up to 16), the optimal action is to teach. However, there are even cases such that increasing r from 1 to 2 leads to a change in optimal action from teaching to not teaching. We will revisit this phenomenon in Section 3.4.3 in the context of arms with Gaussian distributions. The intuition is that with just one round remaining, there is a small enough cost to teaching that the teacher ought to try to get the learner to forgo Arm2 even though the chances of succeeding are small; but with two rounds remaining, the learnerʼs initial selection of Arm2 will almost surely be sufficient for it to “teach itself” that it should select Arm1 on the next round. This scenario is exemplified by the following parameters: {a mathematical formula}p⁎=.076075, {a mathematical formula}p1=.076, {a mathematical formula}p2=.075, {a mathematical formula}m1=3020, {a mathematical formula}n1=40000, {a mathematical formula}m2=910, {a mathematical formula}n2=12052.{sup:7} In this case, both constraints from Section 3.3.1 are satisfied, thus the optimal action when {a mathematical formula}r=1 is Arm1 (teach). However when {a mathematical formula}r=2, {a mathematical formula}EVt=.302228&lt;EVnt=.303075: the optimal teacher action is {a mathematical formula}Arm⁎.
+       </paragraph>
+       <paragraph>
+        Second, note that the optimal action is very sensitive to the exact values of all the parameters. For example, when {a mathematical formula}p⁎=.5, {a mathematical formula}p1=.4, {a mathematical formula}p2=.16, {a mathematical formula}r=4,m2=2, and {a mathematical formula}n2=5 (the same parameters considered at the beginning of this section), the teacherʼs optimal action can differ even for identical values of {a mathematical formula}x¯1. When {a mathematical formula}m1=1 and {a mathematical formula}n1=3, the optimal action is not to teach ({a mathematical formula}Arm⁎), but when {a mathematical formula}m1=2 and {a mathematical formula}n1=6, the optimal action is to teach (Arm1)—even though {a mathematical formula}x¯1 is {a mathematical formula}13 in both cases. Similarly small changes in any of the other parameter values can change the teacherʼs optimal action.
+       </paragraph>
+       <paragraph>
+        Third, we consider how many of the states tend to have Arm1 (teaching) as the optimal action when running Algorithm 2. For example, when {a mathematical formula}p⁎=.5, {a mathematical formula}p1=.4, {a mathematical formula}p2=.16, {a mathematical formula}m1=n1=m2=n2=1, solving for the optimal action with 15 rounds to go ({a mathematical formula}r=15) leads to 81 600 optimal actions computed (iterations through the for loops), 80 300 of which are not to teach ({a mathematical formula}Arm⁎). In general, it seems that at least 90% of the optimal actions are {a mathematical formula}Arm⁎, even when the ultimate correct action is to teach, and usually significantly more than that. This observation perhaps suggests that in the Gaussian case below, when the optimal action cannot be solved for so easily, the default heuristic should be not to teach. We examine this hypothesis in Section 3.4.3.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Normal distribution arms
+      </section-title>
+      <paragraph>
+       In Section 3.3, we focused on arms with discrete payoff distributions. However in general ad hoc team settings, action payoffs may come from continuous distributions. In this section we turn to the case in which the distributions are Gaussian. Now, in addition to the expected value {a mathematical formula}μi, which is the mean of the distribution, arms are characterized by a standard deviation, {a mathematical formula}σi.
+      </paragraph>
+      <paragraph>
+       There are two main reasons that this case is more complicated than the discrete case. First, rather than a discrete set of possible future states, there are infinitely many possible outcomes from each pull. Second, in contrast to the constraints laid out in Section 3.3.1 for when it is worthwhile to teach, in the Gaussian case the μʼs and the {a mathematical formula}x¯ʼs (which correspond to the pʼs and the mʼs and nʼs in the binary case) interact in the same inequality, rather than constituting independent constraints.
+      </paragraph>
+      <paragraph>
+       Both of these complications are readily illustrated even with {a mathematical formula}r=1. We thus begin by analyzing that case in Section 3.4.1. Recall that all the results from Section 3.2 still apply in this case. For example, it is only worth considering teaching when {a mathematical formula}x¯1&lt;x¯2. We then consider the case when {a mathematical formula}r=2 in Section 3.4.2 and present some empirical data in Section 3.4.3. In contrast to the discrete case, we do not have an algorithm for exactly computing the optimal action when {a mathematical formula}r&gt;1. In principle it can be estimated numerically, though with increasing inefficiency as r increases.
+      </paragraph>
+      <section label="3.4.1">
+       {a mathematical formula}x¯1&lt;x¯2, {a mathematical formula}r=1
+       <paragraph>
+        In order to analyze this case, we make use of the cumulative distribution function (CDF) of the normal distribution, denoted as {a mathematical formula}Φμ,σ(v). Exactly as in the binary case, with one round left, the teacher should teach when the expected cost of teaching, {a mathematical formula}μ⁎−μ1, is less than the probability that teaching will successfully cause the learner to switch its choice from Arm2 to Arm1, {a mathematical formula}Φμ1,σ1(y), multiplied by the benefit of successful teaching, {a mathematical formula}μ1−μ2. Here y is the minimum return from Arm1 that would cause the sample average of Arm1 to surpass that of Arm2: {a mathematical formula}m1+yn1+1=x¯2.
+       </paragraph>
+       <paragraph>
+        Therefore, the teacher should pull Arm1 if and only if{a mathematical formula} (recall that {a mathematical formula}x¯1=m1n1 by definition). Otherwise, the teacher should pull {a mathematical formula}Arm⁎. We can then compute the expected value of the optimal action as:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If {a mathematical formula}x¯1&gt;x¯2, {a mathematical formula}EVnt=μ⁎+μ1
+        </list-item>
+        <list-item label="•">
+         Else, if the optimal action is to teach, {a mathematical formula}EVt=μ1+μ2Φmu1,σ1(x¯2(n1+1)−x¯1n1)+μ1(1−Φmu1,σ1(x¯2(n1+1)−x¯1n1))
+        </list-item>
+        <list-item label="•">
+         Else {a mathematical formula}EVnt=μ⁎+μ2.
+        </list-item>
+       </list>
+       <paragraph>
+        Since there are readily available packages, for example in Java, for computing {a mathematical formula}Φμ1,σ1(y), this result can be considered a closed form solution for finding the optimal teacher action and its expected value when {a mathematical formula}r=1.
+       </paragraph>
+      </section>
+      <section label="3.4.2">
+       {a mathematical formula}x¯1&lt;x¯2, {a mathematical formula}r⩾2
+       <paragraph>
+        In contrast, when {a mathematical formula}r&gt;1, there is no such closed form method for finding the optimal action. Rather, integrals over functions need to be estimated numerically. For example, consider the case in which {a mathematical formula}r=2. In this case, {a mathematical formula}EVnt and {a mathematical formula}EVt can be estimated numerically by sampling from the armsʼ distributions and using the results to compute a sample EV based on the appropriate case from the expected value computation from Section 3.4.1. The resulting sample EVʼs can then be averaged. Doing so is akin to computing the value of a double integral (since the definition of Φ also includes an integral). As r increases, the inefficiency of this process compounds: for each sample, and at each round, it is necessary to estimate the values of both {a mathematical formula}EVnt and {a mathematical formula}EVt so that the optimal action from that point can be determined. In a sense, the value of a nested integral, with a total of r levels of depth, needs to be computed. Alternatively, the continuous distribution can be approximated with a discrete distribution and then solved as in Section 3.3. To date, we have not been able to characterize anything more formal or concrete about this case. Instead we discuss some conjectures and heuristics in the following section.
+       </paragraph>
+      </section>
+      <section label="3.4.3">
+       <section-title>
+        Numerical results and experiments
+       </section-title>
+       <paragraph>
+        Even if we cannot practically determine in general what the teacherʼs optimal action is, it may be possible to find some reasonable heuristics. To this end, in this section we consider the following questions, the first of which is parallel to the first question considered in Section 3.3.5:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Are there any rules or patterns in the optimal action as a function of r (when all other parameters are held constant)?
+        </list-item>
+        <list-item label="2.">
+         How do various teacher heuristics compare to one another in performance?
+        </list-item>
+       </list>
+       <paragraph>
+        First, just as in the binary case, intuition suggests that increasing r should make it more beneficial to teach since there is more time for the added information to be used by the learner. However again, we can find a counterexample even with {a mathematical formula}r=1 and 2.
+       </paragraph>
+       <paragraph>
+        Consider the case in which {a mathematical formula}(μ⁎,σ⁎)=(10,0), {a mathematical formula}(μ1,σ1)=(9,2), and {a mathematical formula}(μ2,σ2)=(7,2). Suppose that the learner has observed Arm1 being pulled once when it got a payoff of 6.99 ({a mathematical formula}x¯1=6.99, {a mathematical formula}n1=1), and it observed Arm2 once for a payoff of 8 ({a mathematical formula}x¯2=8, {a mathematical formula}n2=1).
+       </paragraph>
+       <paragraph>
+        With these values it is barely not worth it for the teacher to teach with {a mathematical formula}r=1. That is, with these values, Inequality (1) is not satisfied, but if {a mathematical formula}x¯1 were 7.01, then it would be satisfied. Thus we know with certainty that the teacherʼs optimal action is {a mathematical formula}Arm⁎.
+       </paragraph>
+       <paragraph>
+        When {a mathematical formula}r=2, we can determine experimentally what the teacherʼs optimal action is by averaging the results of multiple trials when the teacher starts by teaching vs. not teaching and then acting optimally in the last round. In this case, when averaging over 2000 samples, the teacher reliably does better teaching (34.4 average return over the last 2 rounds) than when not teaching (34.2). Though the numbers are close and have high variance within a set of 2000 samples, the result is robust across multiple sets of 2000 samples.
+       </paragraph>
+       <paragraph>
+        When doing these experiments, we can gain a deeper understanding by considering the average situation after the teacher and learner have each taken one action, such that there is one more round remaining. First, consider the case in which the teacher does not teach with two rounds remaining. Thus it selects {a mathematical formula}Arm⁎ and the learner selects Arm2. Though the teacherʼs action has no impact on the relationship between {a mathematical formula}x¯1 and {a mathematical formula}x¯2 for the final round, the learnerʼs action does. In one set of 2000 samples, the status after the first round was as follows:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}x¯1&gt;x¯2: 29.5%
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}x¯1&lt;x¯2, Inequality 1 true (worth teaching): 39.2%
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}x¯1&lt;x¯2, Inequality 1 false (not worth teaching): 31.4%
+        </list-item>
+       </list>
+       <paragraph>
+        Weighting all three cases by their frequency, the total average expected value during the last round was 17.737.
+       </paragraph>
+       <paragraph>
+        On the other hand, when the teacher selects Arm1 with two rounds remaining, we see the following breakdown after the first round:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}x¯1&gt;x¯2: 64.0%
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}x¯1&lt;x¯2, Inequality 1 true (worth teaching): 14.1%
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}x¯1&lt;x¯2, Inequality 1 false (not worth teaching): 22.0%
+        </list-item>
+       </list>
+       <paragraph>
+        Again weighting the three cases by their frequency, the total average expected value during the last round was 18.322.
+       </paragraph>
+       <paragraph>
+        So in this case, after teaching in the second last round, the expected value of the last round is higher than when not teaching in the second last round. Most of this advantage comes because it is more likely that {a mathematical formula}x¯1&gt;x¯2 prior to the final round. This advantage makes up for the slight cost of teaching in the initial round.
+       </paragraph>
+       <paragraph>
+        Though perhaps typical, it is not always the case that increasing r increases the benefit of teaching. Just as we found in the binary case in Section 3.3.5, in the Gaussian case it is also possible that increasing r from 1 to 2 and holding all other parameters constant could cause a switch from teaching being optimal to not teaching being optimal.
+       </paragraph>
+       <paragraph>
+        For example, consider the case in which {a mathematical formula}(μ⁎,σ⁎)=(2.025,0), {a mathematical formula}(μ1,σ1)=(2,1), and {a mathematical formula}(μ2,σ2)=(1,.0001). Suppose that {a mathematical formula}x¯1=3,n1=1, and {a mathematical formula}x¯2=3.4, {a mathematical formula}n2=1. Inequality 1 holds because the cost of teaching, {a mathematical formula}μ⁎−μ1=.025, is less than the potential benefit, {a mathematical formula}μ1−μ2=1, times the probability that teaching will succeed, {a mathematical formula}1−Φμ,σ(.38)=.036. Thus the optimal action when {a mathematical formula}r=1 is Arm1.
+       </paragraph>
+       <paragraph>
+        However with two rounds remaining, the optimal action is {a mathematical formula}Arm⁎. Again considering sets of 2000 samples, the expected value of teaching is reliably 8.85 (4.025 of which comes from the last round), while that of not teaching is 8.70 (3.750 from the last round). Intuitively in this case, teaching is generally unlikely to help, and is also generally unnecessary: the learner will “teach itself” that Arm1 is better than Arm2 when it selects Arm2 the first time. However with just one round remaining, it is worth it for the teacher to take a chance that teaching will help because even though the odds are low, so is the cost.{sup:8}
+       </paragraph>
+       <paragraph>
+        Second, in addition to being of theoretical interest, the phenomenon that increasing r can cause teaching to be less worthwhile also has practical import, in particular in the context of considering possible heuristics for the teacher when {a mathematical formula}r&gt;1. Specifically, we tested the following three heuristic teacher strategies under a variety of conditions:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Never teach;
+        </list-item>
+        <list-item label="2.">
+         Teach iff {a mathematical formula}x¯1&lt;x¯2;
+        </list-item>
+        <list-item label="3.">
+         Teach iff it would be optimal to teach if {a mathematical formula}r=1 and all other parameters were unchanged.
+        </list-item>
+       </list>
+       <paragraph>
+        Heuristic 3 would be particularly appealing were it the case that increasing r always made teaching more worthwhile. As it is, we found that none of these heuristics consistently outperforms the others.
+       </paragraph>
+       <paragraph>
+        Specifically, we compared the three heuristics under the six possible relationships of {a mathematical formula}μ1, {a mathematical formula}μ2, {a mathematical formula}x¯1, and {a mathematical formula}x¯2 subject to the constraint that {a mathematical formula}x¯1&lt;x¯2 (e.g. {a mathematical formula}x¯1&lt;x¯2&lt;μ1&lt;μ2, or {a mathematical formula}μ1&lt;x¯1&lt;μ2&lt;x¯2). For each comparison, we sampled {a mathematical formula}μ1 and {a mathematical formula}μ2 uniformly at random from {a mathematical formula}[0,10], setting the lower of the two draws to be {a mathematical formula}μ2; sampled {a mathematical formula}σ1 and {a mathematical formula}σ2 uniformly at random from {a mathematical formula}[0,1]; set {a mathematical formula}n1=n2=1; and drew {a mathematical formula}m1 and {a mathematical formula}m2 from their respective distributions until the required relationship between {a mathematical formula}μ1, {a mathematical formula}μ2, {a mathematical formula}x¯1, and {a mathematical formula}x¯2 was satisfied. Holding all of these values constant, we then tested all three heuristics for 9 different values of r ranging from 2 to 500.{sup:9} Each test consisted of 10 trials, with the results being averaged. We then repeated the entire process with new draws of {a mathematical formula}μ1, {a mathematical formula}μ2, {a mathematical formula}x¯1, and {a mathematical formula}x¯2 five times for each of the six relationships.
+       </paragraph>
+       <paragraph>
+        An analysis of these results revealed that each heuristic outperforms the other two under some circumstances. Finding more sophisticated heuristic and/or principled teacher strategies that perform consistently well is one of the main open directions of future work in the context of this research.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.5">
+      <section-title>
+       More than three arms
+      </section-title>
+      <paragraph>
+       To this point, we have assumed that the learner has only two arms available and the teacher has only one additional arm. In this section we generalize to the case in which there are more than three arms total.
+      </paragraph>
+      <paragraph>
+       Observe that adding additional arms that are only available to the teacher does not change anything. Only the best such arm (the one with the greatest expected value) should ever be considered by the teacher. We continue to call that arm {a mathematical formula}Arm⁎; the others can be ignored entirely.
+      </paragraph>
+      <paragraph>
+       Thus, we focus on the case in which there are additional arms available to both the teacher and the learner: {a mathematical formula}Arm1,Arm2,…,Armz such that {a mathematical formula}μ1&gt;μ2&gt;⋯&gt;μz. In brief, the results we presented in Sections 3.2 Arbitrary distribution arms, 3.3 Discrete distribution arms, 3.4 Normal distribution arms all extend naturally to this more general case. We generalize the notation from Section 3.1 in the obvious ways.
+      </paragraph>
+      <section label="3.5.1">
+       It can be beneficial for the teacher to pull Arm1–{a mathematical formula}Armz−1
+       <paragraph>
+        Now it is not only Arm1 that the teacher needs to consider teaching with. For instance, consider any {a mathematical formula}Armc, {a mathematical formula}1⩽c&lt;z. By way of intuition, suppose that the arms that are better in expectation than {a mathematical formula}Armc are only barely so, and that their current sample averages ({a mathematical formula}x¯ʼs) are much less than {a mathematical formula}x¯c. Suppose further that the learner would currently select {a mathematical formula}Armc+1 ({a mathematical formula}x¯c+1 is higher than any of the other {a mathematical formula}x¯ʼs). It can then be best for the teacher to target elevating {a mathematical formula}Armcʼs sample average so as to make it the learnerʼs next choice.
+       </paragraph>
+       <paragraph>
+        Extending the example from Section 3.2.1, let {a mathematical formula}r=1, {a mathematical formula}μ⁎=10, {a mathematical formula}μ1=9.1, {a mathematical formula}μc=9, {a mathematical formula}μc+1=5, {a mathematical formula}x¯c=6, {a mathematical formula}x¯c+1=7, {a mathematical formula}nc=nc+1=1. Let all the other sample averages {a mathematical formula}x¯i=−100, {a mathematical formula}ni=1. The remaining expected values can be anything subject to the constraint that {a mathematical formula}μi&gt;μi+1. As in Section 3.2.1, suppose that the distribution of payoffs from {a mathematical formula}Armc is such that the probability of obtaining a value greater than 8 is {a mathematical formula}η&gt;12. Thus with probability η, after an agent selects {a mathematical formula}Armc, its sample average will be greater than {a mathematical formula}x¯c+1. Suppose further that none of the distributions of Arm1–{a mathematical formula}Armc−1 are such that the probability of obtaining a value greater than 114 (as would be needed to raise the sample average over 7) is small.
+       </paragraph>
+       <paragraph>
+        Carrying through as in Section 3.2.1, it is clear that the teacher pulling {a mathematical formula}Armc yields a higher expected team value than pulling {a mathematical formula}Arm⁎ or any other arm. Thus the learner needs to consider pulling at least {a mathematical formula}Arm⁎ and Arm1–{a mathematical formula}Armz−1.
+       </paragraph>
+      </section>
+      <section label="3.5.2">
+       The teacher should never pull {a mathematical formula}Armz
+       <paragraph>
+        The proof of Theorem 3.1 that the teacher should never pull the arm with the worst expected value extends to the case with more than two leaner arms, but becomes even slightly more subtle. The key is to consider Arm1–{a mathematical formula}Armz−1 as a single arm with an irregular distribution. Since pulling {a mathematical formula}Armz does not affect the sample averages of any of the other arms, the sequence of draws from Arm1–{a mathematical formula}Armz−1 is constant regardless of whether or not there are points in time at which {a mathematical formula}Armz appears to be best ({a mathematical formula}x¯z is highest). Thus throughout the proof, the v values can represent the sequence of pulls from Arm1–{a mathematical formula}Armz−1, and {a mathematical formula}S1(n) and {a mathematical formula}T1(n) can represent the number of pulls of those arms in the two sequences, while {a mathematical formula}S2(n) and {a mathematical formula}T2(n) can represent the number of pulls of {a mathematical formula}Armz. At the end of case 2 of the proof, there will be at least one extra pull of {a mathematical formula}Armz in sequence S corresponding to a pull of {a mathematical formula}Arm⁎ in sequence T.
+       </paragraph>
+       <paragraph>
+        For the remainder of this section, we continue to refer to pulling {a mathematical formula}Arm⁎ as “not teaching,” but now must specify with which arm when referring to “teaching.”
+       </paragraph>
+      </section>
+      <section label="3.5.3">
+       Never teach with {a mathematical formula}Armi when {a mathematical formula}x¯i&gt;x¯j, {a mathematical formula}∀j≠i
+       <paragraph>
+        The proof of Theorem 3.2 from Section 3.2.3 generalizes directly to the following statement. The teacher should never take the action that the learner would take next on its own if the teacher were to pull {a mathematical formula}Arm⁎.
+       </paragraph>
+      </section>
+      <section label="3.5.4">
+       Do not teach when {a mathematical formula}n1=n2=⋯=nz=0
+       <paragraph>
+        This result carries through from Section 3.2.4. The teacher is best off selecting {a mathematical formula}Arm⁎ while the learner selects each arm for the first time, rather than selecting one of those arms itself and shortening the period of time that it takes the learner to do so. Nothing can happen in the final rounds to compensate for the lost chances to get an expected value of {a mathematical formula}μ⁎ at the beginning.
+       </paragraph>
+      </section>
+      <section label="3.5.5">
+       <section-title>
+        No other distribution-independent constraints
+       </section-title>
+       <paragraph>
+        Other than the constraints Sections 3.5.2 The teacher should never pull, 3.5.3 Never teach with, 3.5.4 Do not teach when, any action could be optimal for the teacher. For example, there are situations in which the teacher should teach with {a mathematical formula}Armj even when {a mathematical formula}∃i&lt;j s.t. {a mathematical formula}x¯i&gt;x¯j. That is, pulling Arm2 may be optimal, even when {a mathematical formula}x¯1&gt;x¯2.
+       </paragraph>
+       <paragraph>
+        This last fact is perhaps somewhat surprising. It arises when {a mathematical formula}r⩾2 and {a mathematical formula}∃k&gt;j s.t. {a mathematical formula}μk≪μj and {a mathematical formula}x¯k&gt;x¯j (the learner mistakenly believes that {a mathematical formula}Armk is better than {a mathematical formula}Armj, when in fact it is much worse). Then it can be better to ensure that {a mathematical formula}Armj is pulled as many times as possible, to minimize the chance that {a mathematical formula}Armk is ever pulled. For example, if {a mathematical formula}x¯1&gt;x¯z&gt;x¯2, but the distributions of Arm1 and Arm2 are such that there is a chance that Arm1ʼs sample average will dip below {a mathematical formula}Armzʼs, but Arm2ʼs sample average could be first elevated above {a mathematical formula}Armzʼs, then it could be optimal for the teacher to teach with Arm2. Similarly for any other arm other than {a mathematical formula}Armz itself.
+       </paragraph>
+       <paragraph>
+        More concretely, consider arms with binary distributions in which {a mathematical formula}p⁎=.101, {a mathematical formula}p1=.1, {a mathematical formula}p2=.095, and {a mathematical formula}p3=.0001. Assume further that {a mathematical formula}m1=1, {a mathematical formula}n1=3, {a mathematical formula}m2=1, {a mathematical formula}n2=4, {a mathematical formula}m3=7, and {a mathematical formula}n3=24, so that {a mathematical formula}x¯1&gt;x¯3&gt;x¯2. In this case, when there are 2 rounds remaining ({a mathematical formula}r=2), the expected value of selecting Arm2 is higher (.3215) than the expected value of selection {a mathematical formula}Arm⁎ (.3202). We know that the teacher shouldnʼt select Arm3 ever, nor in this case Arm1, since that is the arm that the learner would select next on its own.
+       </paragraph>
+       <paragraph>
+        Similarly, one can construct an example using arms with normal distributions.{sup:10} Let the {a mathematical formula}(μ⁎,σ⁎)=(10,0), {a mathematical formula}(μ1,σ1)=(9,100), {a mathematical formula}(μ2,σ2)=(8,2), and {a mathematical formula}(μ3,σ3)=(−1010,1). Furthermore, assume that {a mathematical formula}n1=n2=n3=1 and {a mathematical formula}x¯1=5.02, {a mathematical formula}x¯2=5, and {a mathematical formula}x¯3=5.01. Again in this case, if {a mathematical formula}r=2, it is best to pull Arm2 so as to minimize the probability that the learner will ever pull Arm3.
+       </paragraph>
+       <paragraph>
+        One commonality between the above two examples, is that it would be quite unlikely to ever get into the state described from having pulled the arms listed. That is, given that {a mathematical formula}μ3=−1010, itʼs extremely unlikely that {a mathematical formula}x¯3 would ever be 5.01. However, itʼs also possible to construct an example in which the starting state is quite likely. For the purpose of this example, weʼll use simple discrete distributions of the arms (neither binary nor normal). Assume the following distributions of the arms:{a mathematical formula} In this case, the {a mathematical formula}x¯ʼs all have a 50% chance of arising after the listed number of pulls. And once again, if {a mathematical formula}r=2, it is best to pull Arm2 so as to minimize the probability that the learner will ever pull Arm3.
+       </paragraph>
+      </section>
+      <section label="3.5.6">
+       Discrete distributions, {a mathematical formula}x¯1&lt;x¯i for some {a mathematical formula}i,r=1
+       <paragraph>
+        The results from Section 3.3.1 generalize directly. In particular, let {a mathematical formula}Armi be the learnerʼs arm with the highest sample average {a mathematical formula}x¯i. The teacher should consider teaching with any {a mathematical formula}Armj, {a mathematical formula}j&lt;z, {a mathematical formula}j≠i such that:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}mj+1nj+1&gt;mini
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}p⁎−pj&lt;pj⁎(pj−pi)
+        </list-item>
+       </list>
+       <paragraph>
+        Those are the arms with higher expected value than {a mathematical formula}Arm⁎. From among those arms, it should select the {a mathematical formula}Armj with the highest expected value {a mathematical formula}EV=pj+pj2+(1−pj)pi.
+       </paragraph>
+      </section>
+      <section label="3.5.7">
+       <section-title>
+        Discrete distributions, algorithm
+       </section-title>
+       <paragraph>
+        Similarly, the algorithm generalizes directly. Expected values and optimal actions must now be calculated for all reachable values of {a mathematical formula}m1–mz and {a mathematical formula}n1–nz. Since the teacher could teach with any arm other than {a mathematical formula}Armz, the ranges of the variables {a mathematical formula}m1–mz−1 and {a mathematical formula}n1–{a mathematical formula}nz−1 match those of {a mathematical formula}m1 and {a mathematical formula}n1 in Section 3.3.2. The range of {a mathematical formula}mz matches that of {a mathematical formula}m2 in Section 3.3.2, and {a mathematical formula}nz is similar to {a mathematical formula}n2, except that the two occurrences of {a mathematical formula}n1−N1 (both inside “max” operators) need to be changed to {a mathematical formula}∑i=1z−1ni−Ni.
+       </paragraph>
+       <paragraph>
+        Beyond that, the inner loop need only be extended to compute and compare the expected values of all z possible teacher actions, in all cases storing the maximum such value.
+       </paragraph>
+      </section>
+      <section label="3.5.8">
+       <section-title>
+        Discrete distributions, algorithm analysis and generalization
+       </section-title>
+       <paragraph>
+        Both the memory and runtime bounds of the extended algorithm generalize naturally to {a mathematical formula}O(R2z+1). The extended algorithm generalizes to arbitrary success and failure payoffs exactly as in Section 3.3.4.
+       </paragraph>
+      </section>
+      <section label="3.5.9">
+       Normal distributions, {a mathematical formula}x¯1&lt;x¯i for some {a mathematical formula}i,r=1
+       <paragraph>
+        Exactly as the results from Section 3.3.1 generalize as described in Section 3.5.6, the results from Section 3.4.1 generalize as well. Specifically, let {a mathematical formula}Armi be the learnerʼs arm with the highest sample average {a mathematical formula}x¯i. The teacher should consider teaching with any {a mathematical formula}Armj, {a mathematical formula}j&lt;z, {a mathematical formula}j≠i such that the equivalent of Inequality 1 is satisfied:{a mathematical formula} Those are the arms with higher expected value than {a mathematical formula}Arm⁎. From among those arms, it should select the {a mathematical formula}Armj with the highest expected value {a mathematical formula}EV=μj+μiΦmuj,σj(x¯i(nj+1)−x¯jnj)+μj(1−Φmuj,σj(x¯i(nj+1)−x¯jnj)).
+       </paragraph>
+      </section>
+      <section label="3.5.10">
+       Normal distributions, {a mathematical formula}x¯1&lt;x¯i for some {a mathematical formula}i,r⩾2
+       <paragraph>
+        Similarly to Section 3.4.2, we do not have any closed form solution to this case.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Sequential action summary
+      </section-title>
+      <paragraph>
+       A brief summary of the results from this section on sequential (turn-taking) scenarios with differing abilities is as follows.
+      </paragraph>
+      <paragraph>
+       Arms with any payoff distributions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}x¯1&gt;x¯2: do not teach
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}n1=0 and/or {a mathematical formula}n2=0: do not teach
+       </list-item>
+      </list>
+      <paragraph>
+       Arms with discrete payoff distributions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Polynomial algorithm for optimal teacher action
+       </list-item>
+      </list>
+      <paragraph>
+       Arms with normal payoff distributions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}x¯1&lt;x¯2, {a mathematical formula}r=1: closed form solution for optimal teacher action
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}x¯1&lt;x¯2, {a mathematical formula}r⩾2: only numerical solutions
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The broad context for this research is ad hoc teams in which teammates need to work together without any prior coordination. This perspective is complementary with most prior treatments of agent teamwork. For example, frameworks such as STEAM [5], and BITE [6] define explicit coordination protocol and languages. SharedPlans [7] specifies the intentions the members of the team must all adopt and about which they all must be mutually aware. In applications such as the annual RoboCup robot soccer competitions, entire teams of agents are designed in unison, enabling explicit pre-coordination via structures such as “locker room agreements” [8].
+     </paragraph>
+     <paragraph>
+      The concept of ad hoc human teams has arisen recently in military and industrial settings, especially with the rise of outsourcing. There have also been autonomous agents developed to help support human ad hoc team formation [9], [10], [11]. This work relies on an analysis of the sources of team variability, including member characteristics, team characteristics, and task characteristics [10]. In addition, software agents have been used to support the operation of human teams [12], and for distributed information gathering from distinct, otherwise independent information sources [13].
+     </paragraph>
+     <paragraph>
+      There are only a few examples of prior research that we are aware of that take a perspective similar to our ad hoc team perspective. The most closely related examples have been referred to as pickup teams[14] and impromptu teams[15]. Both pickup teams and impromptu teams are defined in the same spirit as our ad hoc teams. However both focus on tightly coordinated tasks in which there are well-defined roles for the various agents, and therefore a higher degree of common knowledge. Pickup teams, as defined in [14] build on market-based task allocation schemes to enable heterogeneous robots to work together on highly synchronized actions. The work is implemented in a treasure hunt domain. Similarly, impromptu teams assume that the teammates, other than the impromptu player, are all members of a coherent team that actively consider the impromptu player as a part of the team. Their approach is based on a “playbook” formalism that defines roles and behaviors for each team player. That work is implemented in a robot soccer domain.
+     </paragraph>
+     <paragraph>
+      In this article, we define ad hoc teamwork very broadly, in a way that is able to accommodate the assumptions made by both pickup teams and impromptu teams, as well as scenarios that include many types of teammates. Our definition of ad hoc teamwork encompasses role-based and tightly-coupled tasks as well as loosely-coupled tasks with agents that barely interact. It also covers many types of teammates: those with which the ad hoc team player can communicate and those with which it cannot; those that are more mobile and those that are less mobile; those with better sensing capabilities and those with worse capabilities. Following on this broad definition, we then focus in on a particularly fundamental type of ad hoc teamwork, namely settings with just one teammate that has fixed and known behavior. We consider both a simultaneous, repeated action scenario (in Section 2) and a sequential, turn-taking scenario in which the agents have different action capabilities (Section 3).
+     </paragraph>
+     <paragraph>
+      Another piece of prior work that takes a perspective similar to ours is that of Brafman and Tennenholtz [16] in which they consider a teacher agent and a learner agent repeatedly engaging in a joint activity. While the learner has no prior knowledge of this activity, the teacher understands its dynamics. As in our models, the teacherʼs goal is also to lead the learner to adopt a particular behavior.
+     </paragraph>
+     <paragraph>
+      They focus on settings in which the agents play a {a mathematical formula}2×2 matrix game. While the teacher knows the matrix, the learner does not know the payoff function, although he can perceive the payoff he receives. For example, the teacher may try to teach the learner to cooperate in the Prisonerʼs dilemma game. Unlike our k-armed bandit model, Brafman and Tennenholtz consider only situations in which the outcome of their agentsʼ actions is deterministic. This limitation makes teaching considerably easier. Brafman and Tennenholtz also mainly considered situations where teaching is not costly: the goal of their teacher is to maximize the number of times that the learner chooses the “right” action. Thus in some sense, the teacher is not “embedded” in the environment. For this problem they propose an optimal teaching policy using MDPs. For the more challenging situations where teaching is costly, as in our model, they propose a teaching policy that is evaluated via experimentation in a simple coordination game.
+     </paragraph>
+     <paragraph>
+      A recent study by Wu et al. [17] investigates the problem of online planning for ad hoc teamwork, and examine it as an optimization problem. Assuming they have access to drawing samples of team actions, they learn possible teammateʼs actions, modeled by a Multiagent Markov Decision Process (MMDP). This model allows the agent to choose a best response to the teammateʼs action. Their goal, similar to our work, is to maximize the teamʼs joint utility. Their assumption that samples of teammatesʼ actions are available in a simulated environment makes it impossible to use their methods in the problems described in this article, in which learning (or leading) is costly.
+     </paragraph>
+     <paragraph>
+      Liemhetcharat and Veloso [18] suggest a new method for modeling the performance of a team of agents using synergy graphs. In a team of heterogeneous agents, the performance of several agents that are teamed up is not necessarily based only on their individual capabilities, but on how they interact as a team (synergy). The synergy graphs model this interaction. Based on its structure, a subgroup of the agents, that are most appropriate for performing a task, is chosen. Modeling interaction between team members in ad hoc teamwork can also benefit from using this synergy measure. However, in their work, Liemhetcharat and Veloso are interested in building an optimal team (or subteam), and not in influencing the given team to perform as well as possible (without the ability to choose specific team members for the mission).
+     </paragraph>
+     <paragraph>
+      Related to the concept of teacher/learner is also the work by Zilles et al. [19]. In their work, they seek to be sample efficient in the learning process of the learner by knowing that the samples are given by a cooperative teacher. Unlike the work presented here, they focus their control over the learner rather than on the teacher, i.e., they do not answer the question on how to better teach a cooperative agent in ad hoc teamwork, but how to better utilize information coming from a knowledgeable, cooperative source.
+     </paragraph>
+     <paragraph>
+      Also somewhat related is the recent work of Zhang et al. [20] on “environment design.” Here, the controlling agent can alter aspects of the environment for a learning agent in an MDP so as to influence its behavior towards a particular goal. Once again, the controlling agent is not itself embedded in the environment and taking actions itself.
+     </paragraph>
+     <paragraph>
+      Finally, our own recent work has explored role-based approaches to ad hoc teamwork [21]; ad hoc teamwork to influence a flock of simple agents [22]; and empirical studies of ad hoc teamwork [23], including experiments with learning teammate models from observations [24].
+     </paragraph>
+     <paragraph>
+      Though there has been little other work on the ad hoc teamwork problem itself, the specific scenarios we consider touch upon vast literatures in iterated game theory and in k-armed bandits. Nonetheless, our work introduces new ways of looking at both types of formalisms. In the remainder of this section, we focus in on work that relates to each type of formalism separately.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Repeated scenarios with simultaneous actions
+      </section-title>
+      <paragraph>
+       Our work in Section 2 builds on existing research in game theory and in opponent modeling. Game theory [25] provides a theoretical foundation for multiagent interaction, and though originally intended as a model for human encounters (or those of human institutions or governments) has become much more broadly applied over the last several decades. In particular, the field of multiagent systems within artificial intelligence has adopted game theory as one of its primary tools for modeling interaction among automated agents, or interaction in mixed human-automated agent encounters [26].
+      </paragraph>
+      <paragraph>
+       There is a vast research literature covering iterated play on normal form game matrices, the overall framework that we explore in Section 2. Some of that research focuses on automated players, while other work focuses on human players. Many of these papers have examined the specific questions of what, and how, agents can learn when repeatedly playing a matrix game; special emphasis has been given to developing learning algorithms that guarantee convergence to an equilibrium in self-play, or that converge to playing best response against another player that is using one of a fixed set of known strategies.
+      </paragraph>
+      <paragraph>
+       For example, Powers and Shoham [27] considered multiagent learning when an agent plays against bounded-memory opponents that can themselves adapt to the actions taken by the first agent. They presented an algorithm that achieved an ϵ-best response against that type of opponent, and guaranteed a minimum payoff against any opponent. A small selection of other research on multiagent learning includes Jürgensʼ work on Bayesian learning in repeated games [28], Conitzer and Sandholmʼs work [29] on a learning algorithm that converges in self-play, Youngʼs examination of the kinds of learning that lead to a Nash equilibrium or other types of equilibria [30], Littmanʼs multiagent reinforcement learning algorithm [31], and Chakraborty and Stoneʼs [32] presentation of an algorithm that aims for optimality against any learning opponent that can be modeled as a memory-bounded adversary. Shoham et al. provide a survey of multiagent reinforcement learning [33].
+      </paragraph>
+      <paragraph>
+       There are also a large number of articles in the economics and game theory literature on repeated matrix games, also often focused on issues related to reaching equilibria. Hart and Mas-Colell [34] presented an adaptive procedure that leads to a correlated equilibrium among agents playing a repeated game, while Neyman and Okada [35] considered two-player repeated games in which one agent, with a restricted set of strategies, plays against an unrestricted player (and considered the asymptotic behavior of the set of equilibrium payoffs).
+      </paragraph>
+      <paragraph>
+       Axelrod [36] conducted several well-known computer tournament experiments on repeated play of the Prisonerʼs Dilemma, pitting computer programs playing various strategies against one another. These strategies were evaluated on the basis of their overall success in the tournaments, as well as other factors (e.g., given a population that is playing some strategy, what is that populationʼs resistance to invasion by a competing strategy, assuming that winning strategies reproduce more successfully).
+      </paragraph>
+      <paragraph>
+       A popular game theoretic model that may lead agents to converge to an equilibrium is that of fictitious play [37], in which agents play best response under the assumption that their opponents have a unchanging (though possibly mixed) strategy. At each step, each agent imagines that others will play as they have played up to this point, and responds according to the empirical frequency of those opponentsʼ past play. Young [38], [39] explored a related concept called “adaptive play”, which similarly models a dynamic process whereby agents, each employing bounded-memory best-response algorithms based upon a random sample of past plays of the game, may gradually move towards an equilibrium (the specific choice of equilibrium by a population of agents may be affected by small amounts of noise, which are part of the adaptive play model).
+      </paragraph>
+      <paragraph>
+       Much of the research above focused specifically on automated agent repeated play; similar questions have been taken up by researchers who have considered repeated play among humans. For example, a seminal paper by Nyarko and Schotter [40] investigated the beliefs that humans have as they repeatedly play a constant-sum two-person game; the authors elicited the playersʼ beliefs during play, and factored those beliefs into the model of how players chose their moves.
+      </paragraph>
+      <paragraph>
+       All of the research mentioned above differs in fundamental ways from the work presented in this article. First, our model assumes that the agents are cooperative; we are not considering general payoff matrices that model opponent rewards, nor zero sum games. Second, we are not examining the learning behavior of our agent (or agents), but rather are assuming that one agent is playing some variant on a best-response strategy, and its partner is fashioning its play accordingly, for their mutual benefit. This lack of symmetry between agentsʼ algorithms distinguishes our model from that of, for example, the fictitious play model as well as Youngʼs adaptive play model. In addition, we are exploring different aspects of the interaction than do those models.
+      </paragraph>
+      <paragraph>
+       More closely related to our current work is research by Claus and Boutilier [41] that, first of all, considers cooperative agents with identical payoffs, and then considers how (using reinforcement learning) these agents can converge to the maximal payoff. That research considers the dynamics of the convergence (e.g., speed of convergence), and the sliding average rewards that agents accrue as they explore their payoffs. What distinguishes our work is its emphasis on the path through matrix payoffs imposed by a reasoning Agent A, faced with a best-response Agent B as its partner. The process of movement through the matrix is deliberate and optimal, the path “searched-for,” based on knowledge of partner behavior, rather than the Q-learning techniques explored by Claus and Boutilier.
+      </paragraph>
+      <paragraph>
+       Indeed, the algorithms in this article make an explicit assumption that the teammate observing the agent is playing a best-response policy to the observed actions of the agent. In doing so, the agent is actually planning its actions intending for them to be observed and interpreted. Intended plan recognition (in contrast to keyhole recognition) is the term used when the observed agent knows that it is being observed, and is acting under the constraints imposed by this knowledge [42].
+      </paragraph>
+      <paragraph>
+       Much of the work on planning for intended recognition settings has focused on natural language dialogue systems. Here, one agent plans its utterances or speech acts intending for them to be interpreted and understood in specific ways. Seminal work in this area was carried out by Sidner [43] and later Lochbaum [44], who have focused on collaborative dialogue settings. However, unlike our work, their focus is on the interpretation (the recognition), rather than on the planning of observed actions. Lochbaum later investigated planning [45], but here the focus was on natural language, and did not involve any notion of game-theory.
+      </paragraph>
+      <paragraph>
+       The SharedPlans framework [46], [7], [47] summarizes the set of beliefs and intentions needed for collaborative activity, and provides the rationale for the process of revising beliefs and intentions. Partial SharedPlans allows agents, as in an ad hoc team, to differ not only in their beliefs about the ways to perform an action and the state of the world, but also in their assessments of the ability and willingness of an individual to perform an action. However, while SharedPlans specifies a logical framework which provides guidelines informing agent design, it does not provide detailed algorithms for specific cases, such as the cases covered in this article.
+      </paragraph>
+      <paragraph>
+       Because our Algorithm 1 is—to a limited extent—reasoning about the teammate reasoning about itself, it is in fact engaged in a special case of recursive modeling. Among the first to consider such deep nesting were Vidal and Durfee (in particular, their Recursive Modeling Method—RMM [48]) and Gmytrasiewicz and Durfee (e.g., [49]). The first focused on algorithms that allow the agent to decide how deep to continue the recursive modeling, such that it does not spend precious resources on recursive modeling that does not provide gains. The latter focused on efficient representations that allow rational modeling of others, including recursion. Ultimately, however, it is the case that it is not always beneficial to engage in deeper nesting of models [50]. We thus choose to leave this issue open for future investigation. Specifically, an interesting question is what happens when the teammate is also trying to select actions that would cause the agent to shift policies. In this case, our agent would have to address 3-level recursive modeling.
+      </paragraph>
+      <paragraph>
+       Han et al. [51] examined a closely related problem of controlling the collective behavior of self-organized multi-agent system by one agent. They consider self organized teams of physically interacting agents, concentrating on flocking of birds, where their goal is to design an agent, denoted as a shill agent, that will be able to gradually change the heading of the entire team to a desired heading. They evaluate the system in terms of physical capabilities of the shill agent and the team (velocity, initial heading) and provide theoretical and simulation results showing that it is possible, under some conditions, for one agent to change the heading of the entire team. Different from our approach, they do not consider game theoretic evaluation of the individual actions and their impact on the team behavior, nor do they examine uncertain behavior.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Sequential action scenarios with differing abilities
+      </section-title>
+      <paragraph>
+       In the context of our k-armed bandit instantiation of ad hoc teams from Section 3, our research is characterized by cooperative agents with asymmetric information and asymmetric capabilities which are acting in an uncertain environment in which both agents are embedded in the environment (their actions affect the teamʼs payoff) but the agents cannot communicate directly. To the best of our knowledge, no prior research meets all of the above characteristics. Here we mention the most closely related work that has some of these characteristics.
+      </paragraph>
+      <paragraph>
+       As in the matrix game setting, some of this related work has been done within the context of multiagent reinforcement learning, a generalization of k-armed bandits in which there are multiple states where the actions have different effects. For example, Lin [52] describes an approach to integrating teaching with reinforcement learning in which the learner is given some successful action trajectories. In the survival task studied by Lin, teaching did not make a significant improvement, but this approach appeared beneficial with learning robots [53]. The teacher in Linʼs model is not embedded in the environment and it does not face the dilemma of exploitation versus teaching. Similarly, most other work on imitation learning or learning by demonstration similarly considers scenarios in which the teacher, sometimes a human, is not embedded in the environment, but rather tries to train the learner to improve its individual actions, e.g., [54], [55], [56], [57].
+      </paragraph>
+      <paragraph>
+       There are two sources of incomplete information in cooperative reinforcement learning: whether the agents can observe the state of the environment and whether they are able to observe the reward obtained by the other agents. Schneider et al. [58] considered distributed reinforcement learning, in which agents have complete information about the state of the environment, but only observe their own reinforcement reward. They investigate rules that allow individual agents to share reinforcement with their neighbors. Peshkin et al. [59] considered the complementary problem in which the agents receive a shared reward but have incomplete information about the world state. They propose a gradient-based distributed policy search method for cooperative games.
+      </paragraph>
+      <paragraph>
+       Schaerf et al. [60] study the process of multiagent reinforcement learning in the context of load balancing of a set of resources when agents cannot observe the reward obtained by others. They show that when agents share their efficiency estimation of the different resources (as in our model) the system efficiency may not improve, and might even be harmed. The reason for this findings is that Schaerf et al.ʼs agents compete over the resources. Thus, having a better picture of the system leads to all of them competing over the “good” recourses and thus decreasing the overall performance of the system. They conclude that a better load-balancing mechanism is needed when communication is possible.
+      </paragraph>
+      <paragraph>
+       There are many other approaches for cooperative multiagent learning (see surveys at [61], [62], [63]). But to the best of our knowledge, none covers any work with cooperative agents with asymmetric information and asymmetric capabilities which are acting in an uncertain environment in which the teacher is embedded in the environment but the agents cannot communicate.
+      </paragraph>
+      <paragraph>
+       The k-armed bandit problem has been extensively studied (see a survey at [64]), but also in this literature we are not familiar with any work that considered a teacher and a student with asymmetric capabilities and information who aim to maximize the joint reward. There are several models that have been considered in which players can observe the choices or the outcomes of other players. Such models have been used for modeling experimentation in teams. In these settings, as in ours, a set of players choose independently between the different arms. The reward distributions of each arm is fixed, but characterized by parameters that are initially unknown to the players. Most of the works consider the case where each player tries to maximize its own expected reward and thus if the outcome of other players are observable a free riding problem is created since each wants the others to try the risky arms (e.g., [65], [66]).
+      </paragraph>
+      <paragraph>
+       Aoyagi [67] studies a model of a two-armed bandit process played by several players, where they can observe the actions of other players, but not the outcome of these actions. He proved that under a certain restriction on the probability of distribution of the arms, the players will settle on the same arm in any Nash equilibrium of the game. This shows that each agent learns from the behavior of the other agents, even if communication is not possible.
+      </paragraph>
+      <paragraph>
+       A study in which the agents are cooperative is presented in [68]. They study a two-armed bandit situation with multiple players where the risky arm distributes lump-sum payoffs according to a Poisson process. They show that if the agents try to maximize the average expected payoff then the efficient strategy is one with a common cut-off for which if the belief about the risky arm is above the cut-off all the agents will choose the risky arm. Otherwise, all of them will choose the other arm.
+      </paragraph>
+      <paragraph>
+       Situations in which the agents do not have symmetric roles are studied in the context of the principal-agent problem where the arms of the bandit are analogous to different effort levels of the agent and the principal would like the agent to choose the highest level effort [69]. The principal has the option to obtain the true value of each arm. It is shown that, if the information acquisition decision is observable by the agent, in every refined equilibrium, the principal delays information acquisition until the agentʼs beliefs become pessimistic enough. If this decision is unobservable, the timing of the information acquisition is indeterminate. This setting is much different than ours because of the conflicting utilities of the principal and the agent.
+      </paragraph>
+      <paragraph>
+       Multi-player multi-armed bandit problems have been also used to model the challenges facing users of collaborative decision-making systems such as reputation systems in e-commerce, collaborative filtering systems, and resource location systems for peer-to-peer networks. Here the main challenge is deciding which player to trust [70]. We assume that the learner sees the actual outcomes of the teacher and no issues of trust arise.
+      </paragraph>
+      <paragraph>
+       There are several additional approaches taken in game-theoretic research that have potential relevance to our overall scenario of collaboration in ad-hoc settings, although they remain outside the scope of our current work.
+      </paragraph>
+      <paragraph>
+       Cooperative (coalitional) game theory is concerned with groups of self-interested agents that work together to increase their utility; much of the research in this area is concerned with how a groupʼs “profit” from joint activity can be divided among its members in a way that motivates them to remain in the group. The models used differ from those explored in this paper, but future work could profitably explore connections between these areas. Classic foundational work in this area includes [71], but there continues to be important research in recent years exploring new models of coalitional games (including from a computational perspective) [72].
+      </paragraph>
+      <paragraph>
+       Finally, there are classic game theory solution concepts that appear to have relevance in future research on ad hoc teams. For example, Aumannʼs notion of “strong Nash equilibrium” [73], a Nash equilibrium where no coalition can cooperatively deviate in a way that benefits all members assuming that non-member actions are fixed (i.e., an equilibrium defined in terms of all possible coalitional deviations, rather than all possible unilateral deviations), could be applied to interactions among agents in ad hoc encounters. In addition, Aumannʼs later solution concept of “correlated equilibrium” [74], where agents do not want to deviate from a strategy recommended by (or associated with) the value of a public signal (assuming that others do not deviate), could also be applied to ad hoc cooperation.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Summary and discussion
+     </section-title>
+     <paragraph>
+      The main contributions of this article are in the contexts of two specific instantiations of ad hoc teamwork chosen to represent the simplest, most fundamental cases. Specifically, we focused our attention on cases with a single teammate that exhibits fixed and known behavior, and then examined two variations on this theme. First, in Section 2, we considered simultaneous, repeated action settings by adopting the iterated matrix game formalism. Second, in Section 3, we considered a turn-taking scenario by adopting, and adapting, the k-armed bandit formalism.
+     </paragraph>
+     <paragraph>
+      In both cases, we proved several theorems regarding situations in which we know which actions are or cannot be optimal for the ad hoc team agent. In both cases, we supplemented our theoretical results with some experiments analysis designed to test the aspects of the problems that were not analyzable theoretically.
+     </paragraph>
+     <paragraph>
+      First, we introduced (Section 2) a novel game theoretic formulation for modeling ad hoc teamwork for simultaneous decision making. We focused on the case in which an intelligent agent interacts repeatedly in a fully cooperative setting with a teammate that responds by selecting its best response to a fixed history of actions, possibly with some randomness. Based on its teammateʼs behavior, the intelligent agent can lead it to take a series of joint actions that is optimal for their joint long-term payoff. The length of this series was proven to be linear in the minimal number of actions of Agent A or B when Bʼs memory is of size 1, leading to a polynomial time complexity for determining the optimal set of actions for the ad hoc agent. When B bases its decisions on a longer memory size, this time complexity cannot be guaranteed. Specifically, we have shown that determining the maximal size of an optimal series of joint actions is NP hard.
+     </paragraph>
+     <paragraph>
+      We then presented (Section 3) a multiagent cooperative k-armed bandit for modeling sequential decision making in ad hoc teamwork. Here, the agents have different knowledge states and different action capabilities. We have studied in detail the task of a teacher that knows the payoff distributions of all of the arms as it interacts with a learner that does not know the distributions, and that can only pull a subset of the arms. The teacherʼs goal is to maximize the expected sum of payoffs as the two agents alternate actions. At any point, it can either exploit its best available action or increase the learnerʼs knowledge by demonstrating one of the learnerʼs actions. Within the specific scenario examined in this article, we proved several theorems regarding situations in which we know which actions are or cannot be optimal for the teacher. We then narrowed our focus to two different types of probability distributions for the arms. For discrete distributions, we presented a polynomial memory and time algorithm for finding the teacherʼs optimal action. When the arms have Gaussian distributions, we can only find the optimal action efficiently when there is one round left. In both cases we augment the theoretical results with some experimental analysis using our fully-implemented algorithms.
+     </paragraph>
+     <paragraph>
+      Our analysis—both in matrix game representation and in the k-armed bandit—opens up various exciting directions for future research. In both models of ad hoc teamwork, it is assumed that the ad hoc agent is well aware of the its teammate behavior (although little of our analysis relies on the fact that Agent B is following a specific policy). Examining unknown behavior is a key factor in ad hoc teamwork, that should be addressed in the future. Similarly, leading and teaching more sophisticated agents—those that may explore independently—is also an important future direction. Our current approaches are limited to leading or teaching one teammate. Facing multiple teammates in ad hoc settings is a fundamental problem that will open various interesting research directions in the future, that include, other than the simplest, yet challenging, case of multiple agents as described in this article, also multiple possible teammate behavior, uncertainty in teammate behavior and more (note that initial results for leading multiple teammates in ad hoc settings can be found in [75]). In addition, our proposed algorithm for leading a teammate is exponential in the teammateʼs memory size, making solutions to interaction scenarios with more than a few possible actions per agent intractable. Heuristics enabling a streamlining of this algorithm would be very useful.
+     </paragraph>
+     <paragraph>
+      Many other generalizations to this cooperative k-armed bandit are possible. For example, we have verified that at least some of our results can be extended to the discounted, infinite horizon case [76]. Specifically, we verified that in the 3-arm case, the teacher should still consider pulling Arm1, but should never pull Arm2, and that it should never pull Arm1 when {a mathematical formula}n1=0 and/or {a mathematical formula}n2=0. The results for more than three arms from Section 3.5 were also verified in the discounted, infinite horizon case. One could also consider arms with additional types of distributions, or types of distributions that differ among the arms (e.g. some discrete and some Gaussian). Additionally, our algorithm for computing the optimal teaching algorithm is exponential in the number of arms. Exploring possible approximation algorithms could be beneficial.
+     </paragraph>
+     <paragraph>
+      In the broader context, this research is just one step towards the long-term goal of creating a fully capable ad hoc team player. In order to achieve this goal, many more studies of this magnitude will be needed that consider situations in which, for example, there are more than two teammates, the teammates can communicate directly, the teammatesʼ behaviors are not fully known, or some teammates have more knowledge and/or capabilities than our agent. We intend to follow up on these challenges in our future research and hope that this research will inspire others to also work towards the eventual creation of fully general ad hoc team players.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     NP-hardness of finding {a mathematical formula}S⁎ʼs when {a mathematical formula}mem&gt;1
+     <paragraph>
+      In Section 2.2.2, we examined the complexity of finding the optimal (lowest cost) path through a matrix when Agent Bʼs {a mathematical formula}mem&gt;1. Here we prove that the problem is NP-hard by a reduction from the Hamiltonian Path problem{sup:11}: Given an n-node unweighted, undirected graph G, an initial node and a destination node, is there a simple path from initial to destination of length n? That is, can we visit each node exactly once? This decision problem is NP-complete.
+     </paragraph>
+     <paragraph>
+      Here we will show that if it were possible to find {a mathematical formula}S⁎ for a given matrix M with Agent Bʼs {a mathematical formula}mem&gt;1 (as defined in Section 2) in polynomial time, then it would also be possible to find a Hamiltonian path in polynomial time. To do so, we assume that we are given an n-node graph G such that {a mathematical formula}Gij=1 if and only if there is an edge in G connecting nodes i and j. Otherwise, {a mathematical formula}Gij=0. We construct a matrix M in a particular way such that there is a path through the matrix of cost (as per Section 2) no more than a target value of {a mathematical formula}n⁎(n4−1), if and only if there is a Hamiltonian Path in graph G. Note that we focus on NP-completeness of the decision problem, which establishes NP-hardness of the optimization problem (since the optimal cost path through the matrix answers the question of whether or not there exists a path with cost less than {a mathematical formula}n⁎(n4−1). Note also that, as required, the construction of the matrix can be done in time polynomial in all the relevant variables.
+     </paragraph>
+     <paragraph>
+      We let Agent Bʼs {a mathematical formula}mem=n and we construct Matrix M as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Agent A has {a mathematical formula}(n−1)⁎n+2 actions. The first action is a “start” action, and Agent Bʼs memory is initialized to n copies of that action. Each of the next {a mathematical formula}(n−1)⁎n actions represents a combination {a mathematical formula}(i,t) of a node i in the graph and a time step {a mathematical formula}t⩾2. Mʼs payoffs will be constructed so that if the sequence satisfying the maximum cost requirement in M (if any) includes action {a mathematical formula}(i,t), then the corresponding Hamiltonian path passes through node i on timestep t. Finally, there is a “done” action to be taken at the end of the path.
+      </list-item>
+      <list-item label="•">
+       Agent B has {a mathematical formula}n⁎n+n+1 actions. The first {a mathematical formula}n⁎n actions are similar to Agent Aʼs: one for each combination of {a mathematical formula}j∈G and {a mathematical formula}t⩾1. If the satisfying sequence through M includes Agent B taking action {a mathematical formula}(j,t), then the Hamiltonian path visits node j at time t. The next n actions are designed as “trap” actions which Agent B will be induced to play if Agent A ever plays two actions corresponding to the same node in the graph: actions {a mathematical formula}(i,s) and {a mathematical formula}(i,t). There is one trap action for each node, called action j. Finally, the last action is the “done” action to be played at the end of the sequence.
+      </list-item>
+      <list-item label="•">
+       Mʼs payoffs are constructed as follows, with the nodes named as indicated in the bullets above. The initial node in the Hamiltonian path (the one visited on time step 1) is called “initial.”
+      </list-item>
+     </list>
+     <paragraph>
+      For example, for this 4-node graph, with A given as the initial node of a potential Hamiltonian path,{a mathematical formula} the resulting matrix M would be constructed as follows (with {a mathematical formula}n=4).
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Following a path through the matrix that corresponds to a Hamiltonian path (if one existed) would give payoffs of 1 at every step until reaching {a mathematical formula}m⁎ ({a mathematical formula}n4) and staying there forever. Thus the cost of the n-step path would be {a mathematical formula}n⁎(n4−1).
+     </paragraph>
+     <paragraph>
+      Because there is no positive payoff in the matrix greater than {a mathematical formula}n2, any path longer than n steps must have a cost of at least {a mathematical formula}(n+1)(n4−n2)=n5+n4−n3−n2&gt;n5−n=n⁎(n4−1). In other words, if there is a path through the matrix corresponding to a Hamiltonian path in the graph, then any longer path through the matrix must have higher cost.
+     </paragraph>
+     <paragraph>
+      Furthermore, the matrix is carefully constructed such that any diversion from the path corresponding to a Hamiltonian path either will get a payoff of {a mathematical formula}−n5 on at least one step (which by itself makes the target cost impossible to reach), will prevent us from getting one of the 1ʼs, or else will make it so that the path to (done, done) will require more than n total steps. In particular, if Agent A ever takes two actions that lead Agent B to select a trap action, then Agent B will not take a different action until the {a mathematical formula}n+1st step after the first action that led to the trap, causing the path to (done,done) to be at least {a mathematical formula}n+2 steps long. By this construction, it follows trivially also that if there exists a Hamiltonian path in G, then there is a path of cost {a mathematical formula}⩽n⁎(n4−1) in the matrix.
+     </paragraph>
+     <paragraph>
+      In this context, the purpose of the numbers in the graph, as indicated by the list of items (a)–(m) above can be understood as follows.
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       These payoffs are the 1ʼs for each “correct” step in the path.
+      </list-item>
+      <list-item label="(b)">
+       These large negative payoffs prevent taking a step when there is no corresponding edge in the graph.
+      </list-item>
+      <list-item label="(c)">
+       These payoffs lure Agent B to do what Agent A did last.
+      </list-item>
+      <list-item label="(d)">
+       These payoffs prevent Agent A from skipping to an action corresponding to a later time step.
+      </list-item>
+      <list-item label="(e)">
+       These payoffs ensure that it is still attractive for Agent B to copy Agent Aʼs last move.
+      </list-item>
+      <list-item label="(f)">
+       These payoffs are chosen carefully so that it Agent B doesnʼt move to a trap action after Agent A takes just a single action corresponding to a given node, but if it ever takes two such actions, then Agent B will be lured into the trap.
+      </list-item>
+      <list-item label="(g)">
+       The payoffs for other trap actions are 0.
+      </list-item>
+      <list-item label="(h)">
+       The payoff for selecting done only comes at {a mathematical formula}m⁎.
+      </list-item>
+      <list-item label="(i)">
+       The payoff that induces Agent B to take its initialize action on the first step.
+      </list-item>
+      <list-item label="(j)">
+       A payoff that prevents Agent A from taking an action corresponding to the initial node ever again (lest Agent B take the trap action).
+      </list-item>
+      <list-item label="(k)">
+       This payoff prevents Agent B from taking the done action until all memory of Agent A taking the start action is past, i.e. after at least {a mathematical formula}n=mem steps.
+      </list-item>
+      <list-item label="(l)">
+       These payoffs play no special role.
+      </list-item>
+      <list-item label="(m)">
+       These payoffs are for taking the last step on the Hamiltonian path (reaching the destination node).
+      </list-item>
+      <list-item label="(n)">
+       These payoffs ensure that if Agent A takes the done action before step n, then the cost is already higher than the target of {a mathematical formula}n⁎(n4−1).
+      </list-item>
+     </list>
+     <paragraph>
+      Therefore, if we could find the optimal sequence through any matrix in polynomial time, then we could use this ability to also solve the Hamiltonian path problem. That is, finding {a mathematical formula}S⁎ when {a mathematical formula}mem&gt;1 is NP-hard. □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     Proof of Theorem 3.1
+     <paragraph label="Theorem B.1">
+      It is never optimal for the teacher to pull{a mathematical formula}Arm2.
+     </paragraph>
+     <paragraph label="Proof">
+      By induction on the number of rounds left, r.
+     </paragraph>
+     <paragraph label="Base case">
+      {a mathematical formula}r=1. If the teacher starts by pulling Arm2, the best expected value the team can achieve is {a mathematical formula}μ2+μ1. Meanwhile, if it starts with {a mathematical formula}Arm⁎, the worst the team expects is {a mathematical formula}μ⁎+μ2. This expectation is higher since {a mathematical formula}μ⁎&gt;μ1.
+     </paragraph>
+     <paragraph label="Inductive step">
+      Assume that the teacher should never pull Arm2 with {a mathematical formula}r−1 rounds left. Let {a mathematical formula}π⁎ be the optimal teacher action policy that maps the states of the arms (their {a mathematical formula}μi, {a mathematical formula}ni, and {a mathematical formula}x¯i) and the number of rounds left to the optimal action: the policy that leads to the highest long-term expected value. Consider the sequence, S, that begins with Arm2 and subsequently results from the teacher following {a mathematical formula}π⁎. To show: there exists a teacher action policy {a mathematical formula}π′ starting with {a mathematical formula}Arm⁎ (or Arm1) that leads to a sequence T with expected value greater than that of S. That is, the initial pull of Arm2 in S does not follow {a mathematical formula}π⁎.In order to define such a policy {a mathematical formula}π′, we define {a mathematical formula}S1(n) and {a mathematical formula}S2(n) as the number of pulls of Arm1 and Arm2 respectively after n total steps of S. As shorthand, we denote {a mathematical formula}S(n)=(S1(n),S2(n)).Similarly, define the number of pulls of Arm1 and Arm2 after n steps of T (e.g. when using {a mathematical formula}π′) as {a mathematical formula}T(n)=(T1(n),T2(n)).Next, define the relation &gt; such that {a mathematical formula}T(n)&gt;S(m) iff {a mathematical formula}T1(n)⩾S1(m) and {a mathematical formula}T2(n)⩾S2(m) where at least one of the inequalities is strict. That is {a mathematical formula}T(n)&gt;S(m) if at least one of the arms has pulled more times after n steps in T than after m steps in S, and neither arm has been pulled fewer times.Finally, we define the concept of the teacher simulating sequence S based on the knowledge of what values would have resulted from each of the actions, starting with the teacherʼs pull of Arm2 at step 1.{sup:12} It can only do that as long as it has already seen the necessary values—otherwise it does not know what the state of the sample averages would be when it is the learnerʼs turn to act. After n steps of the sequence T, let the number of steps that it can simulate in the S sequence be {a mathematical formula}Sim(n). Specifically, {a mathematical formula}Sim(n) is the largest value m such that {a mathematical formula}T(n)⩾S(m).By way of illustration, let the values that will be obtained from the first pulls of Arm2 be {a mathematical formula}u0,u1,u2,… and let those that will be obtained from the first pulls of Arm1 be {a mathematical formula}v0,v1,v2,… . Consider the following possible beginning of sequence S where pulls of {a mathematical formula}Arm⁎ are marked with {a mathematical formula}a⁎, n is the step number, the teacherʼs actions are in the row marked “T” and the learnerʼs actions are in the row marked “L” (note that by the induction hypothesis, the teacher never pulls Arm2 after the first step).{a mathematical formula} In this sequence, {a mathematical formula}S(0)=(0,0), {a mathematical formula}S(1)=(0,1), {a mathematical formula}S(2)=(1,1), {a mathematical formula}S(3)=(2,1), {a mathematical formula}S(4)=S(5)=(3,1), etc.Meanwhile, suppose that the teacherʼs first action in sequence T is {a mathematical formula}Arm⁎ and the learnerʼs first action is Arm1, leading to {a mathematical formula}v0. Then {a mathematical formula}T(0)=T(1)=(0,0) and {a mathematical formula}T(2)=T(3)=(1,0).Until the learner sees a pull from Arm2 in sequence T, it cannot simulate any steps of S: {a mathematical formula}Sim(1)=Sim(2)=Sim(3)=0. If the teacherʼs second action in T is {a mathematical formula}Arm⁎ and learnerʼs 2nd action is Arm2, then in the example sequence above, {a mathematical formula}Sim(4)=2.We are now ready to define the teacherʼs policy {a mathematical formula}π′ for generating T. Let n be the total number of actions taken so far. Then:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       If {a mathematical formula}n=0, {a mathematical formula}T(n)&gt;S(Sim(n)) or {a mathematical formula}Sim(n) is odd, then select {a mathematical formula}Arm⁎;
+      </list-item>
+      <list-item label="2.">
+       Else ({a mathematical formula}T(n)=S(Sim(n)) and {a mathematical formula}Sim(n) is even), select the next action of S (i.e. the action π would select if there were {a mathematical formula}r−Sim(n)2 rounds left).
+      </list-item>
+     </list>
+     <paragraph label="Case 1">
+      There is a least n, call it {a mathematical formula}n′, such that {a mathematical formula}T(n)=S(Sim(n)) and {a mathematical formula}Sim(n) is even.Until that point, the teacher keeps pulling {a mathematical formula}Arm⁎. We can thus show that {a mathematical formula}Sim(n′)&lt;n′ as follows. After {a mathematical formula}n′ steps, there are exactly {a mathematical formula}n′2uʼs and vʼs in the T sequence ({a mathematical formula}T1(n′)+T2(n′)=n′2). But after {a mathematical formula}n′ steps, there are at least{a mathematical formula}n′2+1uʼs and vʼs in the S sequence ({a mathematical formula}S1(n′)+S2(n′)⩾n′2+1) because the first value is a u and all the learnerʼs actions are uʼs or vʼs. Thus the simulation of S always lags behind T in terms of number of steps simulated: {a mathematical formula}Sim(n′)&lt;n′.Note that if it is ever the case that {a mathematical formula}T(n)=S(Sim(n)) and {a mathematical formula}Sim(n) is odd (it is the learnerʼs turn to act in S), then the teacher will pull {a mathematical formula}Arm⁎ once more after which the learner will do what it would have done in sequence S after {a mathematical formula}Sim(n) steps. That will cause both {a mathematical formula}T(n) and {a mathematical formula}S(Sim(n)) to increment by the same amount, and {a mathematical formula}Sim(n) to be even. Thus in the subsequent round, the teacher will switch to step 2 of its strategy.Once the teacher has switched to step 2 of its strategy, then it will continue using that step: sequence T will follow S exactly for its remaining {a mathematical formula}2r−n′ steps. To see that, observe that in each round, {a mathematical formula}T(n) and {a mathematical formula}S(n) will increment by the same amount, and {a mathematical formula}Sim(n) will increment by exactly 2, thus remaining even.Now compare the sequences T and S. Up until the point of step {a mathematical formula}n′ in T and {a mathematical formula}Sim(n′) in S, the only difference between the sequences is that there are {a mathematical formula}n′−Sim(n′) extra pulls of {a mathematical formula}Arm⁎ in T. There then follow {a mathematical formula}2r−n′ steps in the two sequences that are identical. The final {a mathematical formula}n′−Sim(n′) steps in S include at least one pull of Arm1 or Arm2 (the learnerʼs first action). Thus the expected value of {a mathematical formula}T−S (the difference between the sum of their expected values) is at least {a mathematical formula}μ⁎−μ1&gt;0.
+     </paragraph>
+     <paragraph label="Case 2">
+      It is never the case that {a mathematical formula}T(n)=S(Sim(n)) and {a mathematical formula}Sim(n) is even. Then the teacher continues playing {a mathematical formula}Arm⁎ throughout the T sequence (r times).First, by the same argument as above, since the teacher always pulls {a mathematical formula}Arm⁎, it is always the case that {a mathematical formula}Sim(n′)&lt;n′.Next, we argue that {a mathematical formula}T2(2r)=S2(Sim(2r)). That is, after {a mathematical formula}Sim(2r) steps, the next step in S is a pull of Arm2 (because {a mathematical formula}x¯2&gt;x¯1). Otherwise, S could be simulated another step further by consuming another v value from T. We show this by induction on the number of steps in the T sequence i, showing that it is always the case that {a mathematical formula}T2(i)=S2(Sim(i)).This equation holds at the beginning (e.g. when {a mathematical formula}i=2): {a mathematical formula}T(2)=(1,0), {a mathematical formula}S(Sim(2))=(0,0), so {a mathematical formula}T2(2)=S2(Sim(2))=0.Now assume {a mathematical formula}T2(i−1)=S2(Sim(i−1)). There are three possibilities for the next action in T. If it is a pull of {a mathematical formula}Arm⁎ or Arm1, then {a mathematical formula}T2(i)=T2(i−1) and {a mathematical formula}Sim(i)=Sim(i−1)⟹S2(Sim(i))=S2(Sim(i−1)), so the condition still holds. If it is a pull of Arm2, then {a mathematical formula}T2(i)=T2(i−1)+1 and {a mathematical formula}S2(Sim(i))=S2(Sim(i−1))+1 because the new u value can be used to continue the simulation of S by at least one step, and there are no additional uʼs in T to increase {a mathematical formula}S2(Sim(i)) any further. Therefore {a mathematical formula}T2(i)=S2(Sim(i)).Note that in general, {a mathematical formula}S1(Sim(i)) could be much greater than {a mathematical formula}S1(Sim(i−1)): there could be several v values from T that are then able to be used for simulating S. But if all of the available vʼs from T are used, we get that {a mathematical formula}T(i)=S(Sim(i)), which violates the Case 2 assumption and puts us into Case 1 above (or will put us there one round later if {a mathematical formula}Sim(i) is odd).Thus we have shown that after all 2r steps of T, the next action in the simulated version of S (step {a mathematical formula}Sim(2r)+1) must be Arm2.Finally, we compare the expected values of T and S. As above, there are several values in common between the two sequences, namely exactly the uʼs and vʼs from T that were used to simulate the first {a mathematical formula}Sim(2r) steps of S (as well as possibly some pulls of {a mathematical formula}Arm⁎). Let the sum of these u and v values be called common.Now consider the values of T and of S that are not in common: those values from T that were not used to simulate S, and those values in S that come after the simulation ended (after step {a mathematical formula}Sim(2r)), plus all of the pulls of {a mathematical formula}Arm⁎. All of these “uncommon” values in T are from {a mathematical formula}Arm⁎ and Arm1. In fact, exactly r of the values are from {a mathematical formula}Arm⁎ and exactly {a mathematical formula}T1(2r)−S1(Sim(2r)) of them are from Arm1. The uncommon values from S include at most {a mathematical formula}r−1 from {a mathematical formula}Arm⁎ (because the first teacher action was Arm2), and at least one from Arm2 (step {a mathematical formula}Sim(2r)+1).Thus the expected values of the two sequences satisfy the following inequalities.{a mathematical formula}{a mathematical formula} Thus {a mathematical formula}EV(T)−EV(S)⩾μ⁎−μ2&gt;0.Therefore in both cases, the expected value of sequence T exceeds that of sequence S. Since S is the best the teacher can do if it starts with Arm2, and T is a lower bound on how well it can do otherwise, the teacher should never pull Arm2. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

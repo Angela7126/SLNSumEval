@@ -1,0 +1,2569 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Robust Entity Clustering via Phylogenetic Inference.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Variation poses a serious challenge for determining who
+or what a name refers to. For instance, Wikipedia contains more than 100
+variations of the name
+        Barack Obama
+        as redirects to the
+U.S. President article, including:
+       </p>
+       <table class="ltx_tabular ltx_centering ltx_align_middle">
+        <tbody class="ltx_tbody">
+         <tr class="ltx_tr">
+          <td class="ltx_td ltx_align_left">
+           President Obama
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Barack H. Obama, Jr.
+          </td>
+         </tr>
+         <tr class="ltx_tr">
+          <td class="ltx_td ltx_align_left">
+           Barak Obamba
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Barry Soetoro
+          </td>
+         </tr>
+        </tbody>
+       </table>
+       <p class="ltx_p">
+        To relate different names, one solution is to use specifically tailored measures of name similarity such as
+Jaro-Winkler similarity
+        []
+        . This approach is brittle, however, and fails to adapt to the test data. Another option is to train a model like stochastic edit distance from known pairs of similar names
+        []
+        , but this requires supervised data in the test domain.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Even the best model of name similarity is not enough by itself, since two names that are similar—even identical—do not
+        necessarily
+        corefer. Document context is needed to determine whether they may be talking about two different people.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper, we propose a method for jointly (1) learning similarity between names and (2) clustering name mentions into entities, the two major components of cross-document coreference resolution systems
+        []
+        . Our model is an evolutionary generative
+process based on the name variation model of
+        , which stipulates that names are often copied from previously
+generated names, perhaps with mutation (spelling edits). This can
+deduce that rather than being names for different entities,
+        Barak
+Obamba
+        and
+        Barock obama
+        more likely arose from the frequent
+name
+        Barack Obama
+        as a common ancestor, which accounts for most
+of their letters.
+This can also relate seemingly dissimilar names via multiple steps in the generative process:
+       </p>
+       <p class="ltx_p ltx_align_center">
+        Taylor Swift
+        →
+        T-Swift
+        →
+        T-Swizzle
+       </p>
+       <p class="ltx_p">
+        Our model learns without supervision that these all refer to the
+the same entity.
+Such creative spellings are especially common on Twitter and other
+social media; we give more examples of
+coreferents learned by our model in Section
+        8.4
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Our primary contributions are improvements on
+        for the entity clustering task. Their inference procedure only clustered types (distinct names) rather
+than tokens (mentions in context), and relied on expensive matrix inversions for learning. Our novel approach features:
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        [noitemsep,nolistsep]
+        <li class="ltx_item" id="I1.ix1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          §
+          4.1
+         </span>
+         <div class="ltx_para" id="I1.ix1.p1">
+          <p class="ltx_p">
+           A topical model of which entities from previously written text an author tends to mention from previously written text.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.ix2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          §
+          4.2
+         </span>
+         <div class="ltx_para" id="I1.ix2.p1">
+          <p class="ltx_p">
+           A name mutation model that is sensitive
+to features of the input and output characters and takes a
+reader’s comprehension into account.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.ix3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          §
+          5
+         </span>
+         <div class="ltx_para" id="I1.ix3.p1">
+          <p class="ltx_p">
+           A scalable Markov chain Monte Carlo sampler
+used in training and inference.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.ix4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          §
+          7
+         </span>
+         <div class="ltx_para" id="I1.ix4.p1">
+          <p class="ltx_p">
+           A minimum Bayes risk decoding procedure to
+pick an output clustering. The procedure is applicable to any model capable
+of producing a posterior over coreference decisions.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        We evaluate our approach by comparing to several baselines on datasets from three different genres: Twitter, newswire, and blogs.
+        [author=jason,color=RedOrange,fancyline,size=
+        ,]summarize results? and add John Smith here if you do it in the conclusions
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Overview and Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Cross-document coreference resolution (CDCR) was first introduced by
+        . Most approaches since then are based on the intuitions that coreferent names tend to have “similar” spellings and tend to appear in “similar” contexts. The distinguishing feature of our system is that both notions of similarity are learned together without supervision.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        We adopt a “phylogenetic” generative model of coreference. The basic insight is that coreference is created when an author thinks of an entity that was mentioned earlier in a similar context, and mentions it again in a similar way. The author may alter the name mention string when copying it, but both names refer to the same entity. Either name may later be copied further, leading to an evolutionary tree of mentions—a phylogeny.
+        <span class="ltx_text ltx_font_small">
+         [author=jason,color=RedOrange,fancyline,size=,]please add a figure with an example of a phylogeny? Phylogenetic models are new to information extraction. In computational historical linguistics,
+        </span>
+        have also modeled the mutation of strings along the edges of a phylogeny; but for them the phylogeny is observed and most mentions are not, while we observe the mentions only.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        To apply our model to the CDCR task, we observe that the probability that two name mentions are coreferent is the probability that they arose from a common ancestor in the phylogeny. So we design a Monte Carlo sampler to reconstruct likely phylogenies. A phylogeny must explain every observed name. While our model is capable of generating each name independently,
+        a phylogeny will generally achieve higher probability if it explains similar names as being similar by mutation (rather than by coincidence)
+        . Thus, our sampled phylogenies tend to make similar names coreferent—especially long or unusual names that would be expensive to generate repeatedly, and especially in contexts that are topically similar and therefore have a higher prior probability of coreference.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        For learning, we iteratively adjust our model’s parameters to better explain our samples. That is, we do unsupervised training via Monte Carlo EM.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        What is learned? An important component of a CDCR system is its model of name similarity
+        []
+        , which is often fixed up front. This role is played in our system by the name mutation model, which we take to be a variant of stochastic edit distance
+        []
+        . Rather than fixing its parameters before we begin CDCR, we
+        learn
+        them (without supervision) as part of CDCR, by training from samples of reconstructed phylogenies.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        Name similarity is also an important component of
+        within
+        -document coreference resolution, and efforts in that area bear resemblance to our approach.
+        describe an “entity-centered” model where a distance-dependent Chinese restaurant process is used to pick previous coreferent mentions
+        within
+        a document. Similarly,
+        learn a mention similarity model based on labeled data. Our
+        cross
+        -document setting has no observed mention ordering and no observed entities: we must sum over all possibilities, a challenging inference problem.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        The second major component of CDCR is context-based disambiguation of similar or identical names that refer to the same entity. Like
+        and
+        we use topics as the contexts, but learn mention topics
+        jointly
+        with other model parameters.
+        <span class="ltx_text ltx_font_small">
+         [author=noa,color=SeaGreen,fancyline,size=,]I removed a paragraph here that I think is funny and not really necessary.
+        </span>
+        <span class="ltx_text ltx_font_small">
+         [author=jason,color=RedOrange,fancyline,size=,]I think with this paragraph Mark was trying to work in citations of Wick and Yogotama, but I agree the paragraph didn’t fit. Mark? I added a nocite to ensure they’re at least in the bib.
+        </span>
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        [author=jason,color=RedOrange,fancyline,size=,]probably add discussion of “name-ethnicity classification and ethnicity-sensitive name matching” (AAAI 2012)
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Generative Model of Coreference
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Let
+        𝒙=(x1,…,xN)
+        denote an ordered sequence of distinct
+named-entity mentions in documents
+        𝒅=(d1,…,dD)
+        . We assume that each document has a (single) known
+        <span class="ltx_text ltx_font_small">
+         [author=mark,color=RoyalBlue,fancyline,size=,]We got dinged in the last submission for trying to generalize the model to language without any data to back it up. I think its fine to do this, but we should remember that was an issue for a reviewer.
+        </span>
+        <span class="ltx_text ltx_font_small">
+         [author=jason,color=RedOrange,fancyline,size=,]As you see, I already amplified the footnote to give our defense of this. I also expanded the discussion of multilinguality in Appendix
+        </span>
+        4
+        .
+language,
+and that its mentions and their types have been identified by a
+named-entity recognizer. We use the object-oriented notation
+        x.v
+        for attribute
+        v
+        of mention
+        x
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Our model generates an ordered sequence
+        𝒙
+        although we do not
+observe its order. Thus each mention
+        x
+        has
+        latent
+        position
+        x.i
+        (e.g.,
+        x729.i=729
+        ). The entire corpus, including these
+entities, is generated according to standard topic model assumptions;
+we first generate a topic distribution for a document, then sample topics and words
+for the document
+        []
+        .
+However, any topic may generate an entity type, e.g.
+        person
+        ,
+which is then replaced by a
+specific name: when
+        person
+        is generated, the model chooses a
+        previous
+        mention of any person and copies it, perhaps mutating its
+name.
+        <span class="ltx_text ltx_font_small">
+         Alternatively, the model may manufacture a name for a new person, though
+the name itself may not be new.
+        </span>
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        If all previous
+        mentions
+        were
+equally likely, this would be a Chinese Restaurant Process
+(CRP) in
+which frequently mentioned
+        entities
+        are more likely to be mentioned
+again (“the rich get richer”). We refine that idea by saying that the
+current topic, language, and document influence the choice of
+which previous mention to copy, similar to the distance-dependent CRP
+        []
+        .
+        <span class="ltx_text ltx_font_small">
+         This will help distinguish multiple
+        </span>
+        John Smith
+        entities if they tend to appear in different
+contexts.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        Formally, each mention
+        x
+        is derived from a parent mention
+        x.p
+        where
+        x.p.i&lt;x.i
+        (the parent came first),
+        x.e=x.p.e
+        (same entity) and
+        x.n
+        is a copy or
+mutation of
+        x.p.n
+        . In the special case where
+        x
+        is a first
+mention of
+        x.e
+        ,
+        x.p
+        is the special symbol
+        ♢
+        ,
+        x.e
+        is a newly
+allocated entity of some appropriate type, and the name
+        x.n
+        is
+generated from scratch.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        Our goal is to reconstruct mappings
+        𝒑,𝒊,𝒛
+        that
+specify the latent properties of the mentions
+        x
+        .
+The mapping
+        𝒑:x↦x.p
+        forms a phylogenetic tree on the
+mentions, with root
+        ♢
+        . Each entity corresponds to a subtree
+that is rooted at some child of
+        ♢
+        . The mapping
+        𝒊:x↦x.i
+        gives an ordering consistent with that tree in the sense that
+        (∀x)⁢x.p.i&lt;x.i
+        .
+Finally, the mapping
+        𝒛:x↦x.z
+        specifies, for each
+mention, the topic that generated it. While
+        𝒊
+        and
+        𝒛
+        are not
+necessary for creating coref clusters, they are needed to produce
+        𝒑
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Detailed generative story
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Given a few constants that are referenced in the main text, we assume that the
+corpus
+        𝒅
+        was generated as follows.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        First, for each topic
+        z=1,…⁢K
+        and each language
+        ℓ
+        , choose a multinomial
+        𝜷z⁢ℓ
+        over the word vocabulary, from a symmetric Dirichlet with concentration parameter
+        η
+        . Then set
+        m=0
+        (entity count),
+        i=0
+        (mention count), and for each document index
+        d=1,…,D
+        :
+       </p>
+       <ol class="ltx_enumerate" id="I2">
+        <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I2.i1.p1">
+          <p class="ltx_p">
+           Choose the document’s length
+           L
+           and language
+           ℓ
+           . (The distributions
+used to choose these are unimportant because these variables are always observed.)
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I2.i2.p1">
+          <p class="ltx_p">
+           Choose its topic distribution
+           𝝍d
+           from an asymmetric
+Dirichlet prior with parameters
+           𝒎
+           <cite class="ltx_cite">
+            <span class="ltx_text ltx_font_small">
+             [
+            </span>
+            <span class="ltx_text ltx_font_small">
+             ]
+            </span>
+           </cite>
+           .
+           <span class="ltx_text ltx_font_small">
+           </span>
+           <span class="ltx_text ltx_font_small">
+            [author=jason,color=RedOrange,fancyline,size=,]If we’re using
+           </span>
+           []
+           , then don’t we have to say how
+           𝒎
+           is sampled? Note: I simplified it from
+           τ⁢𝒎
+           here and in the main document. So now
+           𝒎
+           is unnormalized.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I2.i3.p1">
+          <p class="ltx_p">
+           For each token position
+           k=1,…,L
+           :
+          </p>
+          <ol class="ltx_enumerate" id="I2.I1">
+           <li class="ltx_item" id="I2.I1.i1" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_enumerate">
+             (a)
+            </span>
+            <div class="ltx_para" id="I2.I1.i1.p1">
+             <p class="ltx_p">
+              Choose a topic
+              zd⁢k∼𝝍d
+              .
+             </p>
+            </div>
+           </li>
+           <li class="ltx_item" id="I2.I1.i2" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_enumerate">
+             (b)
+            </span>
+            <div class="ltx_para" id="I2.I1.i2.p1">
+             <p class="ltx_p">
+              Choose a word conditioned on the topic and language,
+              wd⁢k∼𝜷zd⁢k⁢ℓ
+              .
+             </p>
+            </div>
+           </li>
+           <li class="ltx_item" id="I2.I1.i3" style="list-style-type:none;">
+            <span class="ltx_tag ltx_tag_enumerate">
+             (c)
+            </span>
+            <div class="ltx_para" id="I2.I1.i3.p1">
+             <p class="ltx_p">
+              If
+              wd⁢k
+              is a named entity type (
+              person
+              ,
+              place
+              ,
+              org
+              , …) rather than an ordinary word,
+then increment
+              i
+              and:
+             </p>
+             <ol class="ltx_enumerate" id="I2.I1.I1">
+              <li class="ltx_item" id="I2.I1.I1.i1" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_enumerate">
+                i.
+               </span>
+               <div class="ltx_para" id="I2.I1.I1.i1.p1">
+                <p class="ltx_p">
+                 create a new mention
+                 x
+                 with
+                 <math alttext="\begin{aligned}\displaystyle x.e.t&amp;\displaystyle=w_{dk}&amp;\displaystyle x.d&amp;%
+\displaystyle=d&amp;\displaystyle x.\ell&amp;\displaystyle=\ell\\
+\displaystyle x.i&amp;\displaystyle=i&amp;\displaystyle x.z&amp;\displaystyle=z_{dk}&amp;%
+\displaystyle x.k&amp;\displaystyle=k\end{aligned}" class="ltx_Math" display="inline" id="I2.I1.I1.i1.p1.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+                  <mtable columnspacing="0.4em" rowspacing="0.2ex">
+                   <mtr>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       e
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       t
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <msub>
+                       <mi>
+                        w
+                       </mi>
+                       <mrow>
+                        <mi>
+                         d
+                        </mi>
+                        <mo>
+                         ⁢
+                        </mo>
+                        <mi>
+                         k
+                        </mi>
+                       </mrow>
+                      </msub>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       d
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <mi>
+                       d
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi mathvariant="normal">
+                       ℓ
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <mi mathvariant="normal">
+                       ℓ
+                      </mi>
+                     </mrow>
+                    </mtd>
+                   </mtr>
+                   <mtr>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       i
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <mi>
+                       i
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       z
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <msub>
+                       <mi>
+                        z
+                       </mi>
+                       <mrow>
+                        <mi>
+                         d
+                        </mi>
+                        <mo>
+                         ⁢
+                        </mo>
+                        <mi>
+                         k
+                        </mi>
+                       </mrow>
+                      </msub>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="right">
+                     <mrow>
+                      <mi>
+                       x
+                      </mi>
+                      <mo separator="true">
+                       .
+                      </mo>
+                      <mi>
+                       k
+                      </mi>
+                     </mrow>
+                    </mtd>
+                    <mtd columnalign="left">
+                     <mrow>
+                      <mi>
+                      </mi>
+                      <mo>
+                       =
+                      </mo>
+                      <mi>
+                       k
+                      </mi>
+                     </mrow>
+                    </mtd>
+                   </mtr>
+                  </mtable>
+                 </math>
+                </p>
+               </div>
+              </li>
+              <li class="ltx_item" id="I2.I1.I1.i2" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_enumerate">
+                ii.
+               </span>
+               <div class="ltx_para" id="I2.I1.I1.i2.p1">
+                <p class="ltx_p">
+                 Choose the parent
+                 x.p
+                 from a
+distribution conditioned on the attributes just set (see
+§
+                 4.1
+                 ).
+                 <span class="ltx_text ltx_font_small">
+                  [author=jason,color=RedOrange,fancyline,size=,]if we restore
+                 </span>
+                 α
+                 then it should be mentioned here
+                </p>
+               </div>
+              </li>
+              <li class="ltx_item" id="I2.I1.I1.i3" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_enumerate">
+                iii.
+               </span>
+               <div class="ltx_para" id="I2.I1.I1.i3.p1">
+                <p class="ltx_p">
+                 If
+                 x.p=♢
+                 , increment
+                 m
+                 and set
+                 x.e=
+                 a
+new entity
+                 em
+                 . Else set
+                 x.e=x.p.e
+                 .
+                </p>
+               </div>
+              </li>
+              <li class="ltx_item" id="I2.I1.I1.i4" style="list-style-type:none;">
+               <span class="ltx_tag ltx_tag_enumerate">
+                iv.
+               </span>
+               <div class="ltx_para" id="I2.I1.I1.i4.p1">
+                <p class="ltx_p">
+                 Choose
+                 x.n
+                 from a distribution conditioned on
+                 x.p.n
+                 and
+                 x.ℓ
+                 (see §
+                 4.2
+                 ).
+                </p>
+               </div>
+              </li>
+             </ol>
+            </div>
+           </li>
+          </ol>
+         </div>
+        </li>
+       </ol>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Notice that the tokens
+        wd⁢k
+        in document
+        d
+        are exchangeable: by
+collapsing out
+        𝝍d
+        , we can regard them as having been generated
+from a CRP. Thus, for fixed values of the non-mention tokens and
+their topics, the probability of generating the mention sequence
+        𝒙
+        is proportional to the product of the probabilities of the
+choices in step
+        3
+        at the positions
+        d⁢k
+        where mentions
+were generated. These choices generate a topic
+        x.z
+        (from the CRP
+for document
+        d
+        ), a type
+        x.e.t
+        (from
+        βx.z
+        ), a parent
+mention (from the distribution over previous mentions), and a name
+string (conditioned on the parent’s name if any).
+§
+        5
+        uses this fact to construct an MCMC sampler for
+the latent parts of
+        𝒙
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Sub-model for parent selection
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         To select a parent for a mention
+         x
+         of type
+         t=x.e.t
+         , a simple
+model (as mentioned above) would be a CRP: each previous mention of
+the same type is selected with probability proportional to 1, and
+         ♢
+         is selected with probability proportional to
+         αt&gt;0
+         .
+A larger choice of
+         αt
+         results in smaller entity clusters,
+because it prefers to create new entities of type
+         t
+         rather than copying old ones.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We modify this story by re-weighting
+         ♢
+         and previous mentions according to their relative suitability as the parent of
+         x
+         :
+         <span class="ltx_text ltx_font_small">
+          [author=noa,color=SeaGreen,fancyline,size=,]I have features on
+         </span>
+         ♢
+         here since e.g. position in document may be predictive of if a new entity is being started.
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]Ok, but then the factors of
+         </span>
+         αtn⁢(x)+αt
+         should no longer be used, so I deleted them and simplified. Presumably you’re not still using those?? In fact, we no longer have any
+         α
+         parameter.
+        </p>
+        Prϕ(x.p∣x)=exp(ϕ⋅𝐟(x.p,x))Z⁢(x)
+
+(1)
+        <p class="ltx_p">
+         where
+         x.p
+         ranges over
+         ♢
+         and all previous mentions of the same type as
+         x
+         , that is, mentions
+         p
+         such that
+         p.i&lt;x.i
+         and
+         p.e.t=x.e.t
+         .
+The normalizing constant
+         Z(x)=def∑pexp(ϕ⋅𝐟(x.p,x))
+         is chosen so that the probabilities sum to 1.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         This is a conditional log-linear model parameterized by
+         ϕ
+         ,
+where
+         ϕk∼𝒩⁢(0,σk2)
+         .
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]formerly
+         </span>
+         𝒩⁢(μk,σk)
+         which I think was wrong The features
+         𝐟
+         are extracted from the attributes of
+         x
+         and
+         x.p
+         . Our most important feature tests whether
+         x.p.z=x.z
+         . This binary feature has a high weight if authors mainly choose mentions from the same topic. To model which (other) topics tend to be selected, we also have a binary feature for each parent topic
+         x.p.z
+         and each topic pair
+         (x.p.z,x.z)
+         .
+         <span class="ltx_text ltx_font_small">
+         </span>
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Sub-model for name mutation
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Let
+         x
+         denote a mention with parent
+         p=x.p
+         . As in
+         , its name
+         x.n
+         is a stochastic transduction of
+its parent’s name
+         p.n
+         . That is,
+        </p>
+        Pr𝜽(x.n∣p.n)
+
+(2)
+        <p class="ltx_p">
+         is given by the probability that applying a random sequence of edits
+to the characters of
+         p.n
+         would yield
+         x.n
+         . The contextual
+probabilities of different edits depend on learned parameters
+         𝜽
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         (
+         2
+         ) is the total probability of
+         all
+         edit
+sequences that derive
+         x.n
+         from
+         p.n
+         . It can be computed in
+time
+         O(|x.n|⋅|p.n|)
+         by dynamic programming.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         The probability of a
+         single
+         edit sequence, which corresponds to
+a monotonic alignment of
+         x.n
+         to
+         p.n
+         , is a product of individual
+edit probabilities of the form
+         Pr𝜽((ab)∣a^)
+         , which
+is conditioned on the next input character
+         a^
+         . The edit
+         (ab)
+         replaces input
+         a∈{ϵ,a^}
+         with
+output
+         b∈{ϵ}∪Σ
+         (where
+         ϵ
+         is the empty
+string and
+         Σ
+         is the
+alphabet of language
+         x.ℓ
+         ). Insertions and deletions are the
+cases where respectively
+         a=ϵ
+         or
+         b=ϵ
+         —we do not
+allow both at once. All other edits are substitutions.
+When
+         a^
+         is the special end-of-string symbol
+         #
+         ,
+the only allowed edits are the insertion
+         (ϵb)
+         and the substitution
+         (##)
+         . We
+define the edit probability using a locally normalized log-linear
+model:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           Pr𝜽((ab)∣a^)=exp⁡(𝜽⋅𝐟⁢(a^,a,b))∑a′,b′exp⁡(𝜽⋅𝐟⁢(a^,a′,b′))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         We use a small set of simple feature functions
+         𝐟
+         , which consider conjunctions of the attributes of the characters
+         a^
+         and
+         b
+         : character, character class (letter, digit, etc.), and case (upper vs. lower).
+         <span class="ltx_text ltx_font_small">
+          [author=noa,color=SeaGreen,fancyline,size=,]Will add more features back in for camera-ready most likely: they slow down the experiments a lot and didn’t help that much on dev data.
+         </span>
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         More generally, the probability (
+         2
+         ) may also be
+conditioned on other variables such as on the languages
+         p.ℓ
+         and
+         x.ℓ
+         —this leaves room for a transliteration model when
+         x.ℓ≠p.ℓ
+         —and on the entity type
+         x.t
+         .
+The features in (
+         3
+         ) may then depend on these
+variables as well.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p6">
+        <p class="ltx_p">
+         Notice that we use a locally normalized probability for each edit. This enables faster and simpler training than the similar model of
+         , which uses a globally normalized probability for the whole edit sequence.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p7">
+        <p class="ltx_p">
+         When
+         p=♢
+         , we are generating a new name
+         x.n
+         . We use the same model, taking
+         ♢.n
+         to be the empty string (but with
+         #♢
+         rather than
+         #
+         as the end-of-string symbol). This yields a feature-based unigram language model (whose character probabilities may differ from usual insertion probabilities because they see
+         #♢
+         as the lookahead character).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p8">
+        <p class="ltx_p">
+         Pragmatics.
+         We can optionally make the model more sophisticated. Authors tend to
+         avoid
+         names
+         x.n
+         that readers would misinterpret (given the previously generated names). The edit model thinks that
+         Pr𝜽(𝖢𝖨𝖠∣♢)
+         is relatively high (because
+         CIA
+         is a short string) and so is
+         Pr𝜽(𝖢𝖨𝖠∣Chuck’s Ice Art)
+         . But in fact, if
+         CIA
+         has already been frequently used to refer to the Central Intelligence Agency, then an author is unlikely to use it for a different entity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p9">
+        <p class="ltx_p">
+         To model this pragmatic effect, we multiply our definition of
+         Pr𝜽(x.n∣p.n)
+         by an extra factor
+         Pr(x.e∣x)γ
+         , where
+         γ≥0
+         is the effect strength.
+         <span class="ltx_text ltx_font_small">
+          Here
+         </span>
+         Pr(x.e∣x)
+         is the probability that a reader correctly identifies the entity
+         x.e
+         . We take this to be the probability that a reader who knows our sub-models would guess some parent having the correct entity (or
+         ♢
+         if
+         x
+         is a first mention):
+         ∑p′:p′.e=x.ew⁢(p′,x)/∑p′w⁢(p′,x)
+         .
+Here
+         p′
+         ranges over mentions (including
+         ♢
+         ) that precede
+         x
+         in the ordering
+         𝒊
+         , and
+         w⁢(p′,x)
+         —defined later in sec.
+         5.3
+         —is proportional to the posterior probability that
+         x.p=p′
+         , given
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]really also given all the rest of the state of the sampler. Also, for footnote, could consider guess of
+         </span>
+         p′.z
+         name
+         x.n
+         and topic
+         x.z
+         .
+         <span class="ltx_text ltx_font_small">
+         </span>
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Inference by Block Gibbs Sampling
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We use a block Gibbs sampler, which from an initial state
+        (𝒑0,𝒊0,𝒛0)
+        repeats these steps:
+       </p>
+       <ol class="ltx_enumerate" id="I3">
+        [nosep]
+        <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I3.i1.p1">
+          <p class="ltx_p">
+           Sample the ordering
+           𝒊
+           from its conditional distribution given all other variables.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I3.i2.p1">
+          <p class="ltx_p">
+           Sample the topic vector
+           𝒛
+           likewise.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I3.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I3.i3.p1">
+          <p class="ltx_p">
+           Sample the phylogeny
+           𝒑
+           likewise.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I3.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          4.
+         </span>
+         <div class="ltx_para" id="I3.i4.p1">
+          <p class="ltx_p">
+           Output the current sample
+           st=(𝒑,𝒊,𝒛)
+           .
+          </p>
+         </div>
+        </li>
+       </ol>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        It is difficult to draw exact samples at steps
+        1
+        and
+        2
+        . Thus, we sample
+        𝒊
+        or
+        𝒛
+        from a
+simpler proposal distribution, but correct the discrepancy using the
+Independent Metropolis-Hastings (IMH) strategy: with an appropriate probability, reject the proposed new value and instead use another copy of the current value
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Resampling the ordering
+        𝒊
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We resample the ordering
+         𝒊
+         of the mentions
+         𝒙
+         ,
+conditioned on the other variables. The current phylogeny
+         𝒑
+         already defines a partial order on
+         𝒙
+         , since each parent must
+precede its children. For instance, phylogeny (a) below requires
+         ♢≺x
+         and
+         ♢≺y
+         . This partial order
+is compatible with 2 total orderings,
+         ♢≺x≺y
+         and
+         ♢≺y≺x
+         . By contrast, phylogeny (b)
+requires the total ordering
+         ♢≺x≺y
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         We first sample an ordering
+         𝒊♢
+         (the ordering of mentions with parent
+         ♢
+         , i.e. all mentions)
+         uniformly
+         at random from the set of orderings compatible with the current
+         𝒑
+         . (We provide details about this procedure in Appendix
+         A
+         .)
+         <span class="ltx_text ltx_font_small">
+          However, such orderings
+are not in fact equiprobable given the other variables—some
+orderings better explain why that phylogeny was chosen in the first
+place, according to our competitive parent selection model
+(§
+         </span>
+         4.1
+         ). To correct for this bias using IMH,
+we accept the proposed ordering
+         𝒊♢
+         with probability
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S5.E4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           a=min⁡(1,Pr(𝒑,𝒊♢,𝒛,𝒙∣𝜽,ϕ)Pr(𝒑,𝒊,𝒛,𝒙∣𝜽,ϕ))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (4)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         𝒊
+         is the current ordering. Otherwise we reject
+         𝒊♢
+         and reuse
+         𝒊
+         for the new sample.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Resampling the topics
+        𝒛
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Each context word and each named entity is associated with a latent
+topic. The topics of
+         context words
+         are assumed exchangeable, and
+so we resample them using Gibbs sampling
+         []
+         .
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]when and how often do you do this? do you use auxiliary data?
+         </span>
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Unfortunately, this is prohibitively expensive for the (non-exchangeable) topics of the
+         named mentions
+         <math alttext="x" class="ltx_Math" display="inline" id="S5.SS2.p2.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mi>
+           x
+          </mi>
+         </math>
+         . A Gibbs sampler would have to choose a new value for
+         x.z
+         with probability proportional to the resulting joint probability of the full sample. This probability is expensive to evaluate because changing
+         x.z
+         will change the probability of
+         many
+         edges in the current phylogeny
+         𝒑
+         . (Equation (
+         1
+         ) puts
+         x
+         is in competition with other parents, so
+         every
+         mention
+         y
+         that follows
+         x
+         must recompute how happy it is with its current parent
+         y.p
+         .)
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         Rather than resampling one topic at a time, we resample
+         𝒛
+         as a block. We use a proposal distribution for which block sampling is efficient, and use IMH to correct the error in this proposal distribution.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         Our proposal distribution is an undirected graphical model whose random variables are the topics
+         𝒛
+         and whose graph structure is given by the current phylogeny
+         𝒑
+         :
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]abuse of notation in referring to
+         </span>
+         x.z
+         here
+        </p>
+        Q(𝒛)∝∏x≠♢Ψx(x.z)Ψx.p,x(x.p.z,x.z)
+
+(5)
+        <p class="ltx_p">
+         Q⁢(𝒛)
+         is an approximation to the posterior distribution over
+         𝒛
+         . As detailed below, a proposal can be sampled from
+         Q⁢(𝒛)
+         in time
+         O⁢(|𝒛|⁢K2)
+         where
+         K
+         is the number of topics, because the only interactions among topics are along the edges of the tree
+         𝒑
+         . The unary factor
+         Ψx
+         gives a weight for each possible value of
+         x.z
+         , and the binary factor
+         Ψx.p,x
+         gives a weight for each possible value of the pair
+         (x.p.z,x.z)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p5">
+        <p class="ltx_p">
+         The
+         Ψx(x.z)
+         factors in (
+         5
+         ) approximate the topic model’s prior distribution over
+         𝒛
+         .
+         Ψx(x.z)
+         is proportional to the probability that a Gibbs sampling step for an ordinary topic model would choose this value of
+         x.z
+         . This depends on whether—in the current sample—
+         x.z
+         is currently common in
+         x
+         ’s document and
+         x.t
+         is commonly generated by
+         x.z
+         . It ignores the fact that we will also be resampling the topics of the other mentions.
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]cut a nice point here for space
+         </span>
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p6">
+        <p class="ltx_p">
+         The
+         Ψx.p,x
+         factors in (
+         5
+         ) approximate
+         Pr(𝒑∣𝒛,𝒊)
+         (up to a constant factor), where
+         𝒑
+         is the current phylogeny. Specifically,
+         Ψx.p,x
+         approximates the probability of a single edge. It ought to be given by (
+         1
+         ), but we use only the numerator of (
+         1
+         ), which avoids modeling the competition among parents.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p7">
+        <p class="ltx_p">
+         We sample from
+         Q
+         using standard methods,
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]can
+we cite a section of Koller &amp; Friedman? similar to sampling from
+a linear-chain CRF by running the backward algorithm followed by
+forward sampling. Specifically, we run the sum-product algorithm from
+the leaves up to the root
+         </span>
+         ♢
+         , at each node
+         x
+         computing the following for each topic
+         z
+         :
+        </p>
+        βx⁢(z)=defΨx⁢(z)⋅\smashoperator⁢[l]⁢∏y∈children⁢(x)∑z′Ψx,y⁢(z,z′)⋅βy⁢(z′)
+        <p class="ltx_p">
+         Then we sample from the root down to the leaves, first sampling
+         ♢.z
+         from
+         β♢
+         , then at each
+         x≠♢
+         sampling the topic
+         x.z
+         to be
+         z
+         with probability
+proportional to
+         Ψx.p,x(x.p.z,z)⋅βx(z)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p8">
+        <p class="ltx_p">
+         Again we use IMH to correct for the bias in
+         Q
+         : we accept the
+resulting proposal
+         𝒛^
+         with probability
+        </p>
+        min⁡(1, Pr(𝒑,𝒊,𝒛^,𝒙∣𝜽,ϕ)Pr(𝒑,𝒊,𝒛,𝒙∣𝜽,ϕ)⋅Q⁢(𝒛)Q⁢(𝒛^))
+
+(6)
+        <p class="ltx_p">
+         While
+         Pr(𝒑,𝒊,𝒛^,𝒙∣𝜽,ϕ)
+         might seem slow to compute because it contains many factors (
+         1
+         ) with different denominators
+         Z⁢(x)
+         , one can share work by visiting the mentions
+         x
+         in their order
+         𝒊
+         . Most summands in
+         Z⁢(x)
+         were already included in
+         Z⁢(x′)
+         , where
+         x′
+         is the latest previous mention having the same attributes as
+         x
+         (e.g., same topic).
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]Nick, I assume you use this trick?
+         </span>
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p9">
+        <p class="ltx_p">
+         [author=jason,color=RedOrange,fancyline,size=,]cut out a speedup here for space
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Resampling the phylogeny
+        𝒑
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         It is easy to resample the phylogeny. For each
+         x
+         , we must choose a parent
+         x.p
+         from among the possible parents
+         p
+         (having
+         p.i&lt;x.i
+         and
+         p.e.t=x.e.t
+         ). Since the ordering
+         𝒊
+         prevents cycles, the resulting phylogeny
+         𝒑
+         is indeed a tree.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         Given the topics
+         𝒛
+         , the ordering
+         𝒊
+         , and the observed
+names, we choose an
+         x.p
+         value according to its posterior probability. This is proportional to
+         w(x.p,x)=defPrϕ(x.p∣x)⋅Pr𝜽(x.n∣x.p.n)
+         , independent of any other mention’s choice of parent. The two factors here are given by (
+         1
+         ) and (
+         2
+         ) respectively. As in the previous section, the denominators
+         Z⁢(x)
+         in the
+         Pr(x.p∣x)
+         factors can be computed efficiently with shared work.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         With the pragmatic model (section
+         4.2
+         ), the parent choices are no longer independent; then the samples of
+         𝒑
+         should be corrected by IMH as usual.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Initializing the sampler
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         The initial sampler state
+         (𝒛0,𝒑0,𝒊0)
+         is obtained as follows.
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]nick, a LaTeXnote: you can use inline lists with itemize* if you want to compactify like this (we’re already using enumitem package)
+(1) We fix topics
+         </span>
+         𝒛0
+         via collapsed Gibbs sampling
+         []
+         . The sampler is run for 1000 iterations, and the final sampler state is taken to be
+         𝒛0
+         . This process treats all topics as exchangeable, including those associated with named entities.
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]Well, maybe they’re exchangeable if you’re ignoring the names at this step and just treating the types as words. Are you?
+(2) Given the topic assignment
+         </span>
+         𝒛0
+         , initialize
+         𝒑0
+         to the phylogeny rooted at
+         ♢
+         that maximizes
+         ∑xlogw(x.p,x)
+         . This is a maximum rooted directed spanning tree problem that can be solved in time
+         O⁢(n2)
+         <cite class="ltx_cite">
+          <span class="ltx_text ltx_font_small">
+           [
+          </span>
+          <span class="ltx_text ltx_font_small">
+           ]
+          </span>
+         </cite>
+         . The weight
+         w(x.p,x)
+         is defined as in section
+         5.3
+         —except that since we do not yet have an ordering
+         𝒊
+         , we do not restrict the possible values of
+         x.p
+         to mentions
+         p
+         with
+         p.i&lt;x.p.i
+         .
+(3) Given
+         𝒑0
+         , sample an ordering
+         𝒊0
+         using the procedure described in §
+         5.1
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Parameter Estimation
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        Evaluating the likelihood and its partial derivatives with respect to the parameters of the model requires marginalizing over our latent variables. As this marginalization is intractable, we resort to Monte Carlo EM
+procedure
+        []
+        which iterates the following two steps:
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        E-step:
+        Collect samples by MCMC simulation as
+in §
+        5
+        ,
+given current model parameters
+        𝜽
+        and
+        ϕ
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        M-step:
+        Improve
+        𝜽
+        and
+        ϕ
+        to increase
+        <span class="ltx_text ltx_font_small">
+        </span>
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx3">
+        <tr class="ltx_equation ltx_align_baseline" id="S6.E7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          ℒ=def1S⁢∑s=1Slog⁢Pr𝜽,ϕ(𝒙,𝒑s,𝒊s,𝒛s)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (7)
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        It is not necessary to locally maximize
+        ℒ
+        at each M-step, merely to
+improve it if it is not already at a local maximum
+        []
+        . We improve it by a single update: at the
+        t
+        th M-step, we update our parameters to
+        Φt=(𝜽t,ϕt)
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx4">
+        <tr class="ltx_equation ltx_align_baseline" id="S6.E8">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Φt=Φt-1+ε⁢Σt⁢∇Φ⁡ℒ⁢(𝒙,Φt-1)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (8)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        [author=jason,color=RedOrange,fancyline,size=,]
+        Σt
+        looks too much like a summation; please change name. Also, should
+        Σt
+        be described as a (diagonal) matrix?
+where
+        ε
+        is a fixed scaling term and
+        Σt
+        is an adaptive
+learning rate given by AdaGrad
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        We now describe how to compute the gradient
+        ∇Φ⁡ℒ
+        .
+The gradient with respect to the parent selection parameters
+        ϕ
+        is
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx5">
+        <tr class="ltx_equation ltx_align_baseline" id="S6.E9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          ∑1S(𝐟(p,x)-∑p′Prϕ(p′∣x)𝐟(p′,x))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (9)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        The outer summation ranges over all edges in the
+        S
+        samples. The other variables in (
+        9
+        ) are associated with the edge being summed over. That edge explains a mention
+        x
+        as a mutation of some parent
+        p
+        in the context of a particular sample
+        (𝒑s,𝒊s,𝒛s)
+        . The possible parents
+        p′
+        range over
+        ♢
+        and the mentions that precede
+        x
+        according to the ordering
+        𝒊s
+        , while the features
+        𝒇
+        and distribution
+        Prϕ
+        depend on the topics
+        𝒛s
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p6">
+       <p class="ltx_p">
+        As for the mutation parameters, let
+        cp,x
+        be the fraction of samples in which
+        p
+        is the parent of
+        x
+        . This is the expected number of times that the string
+        p.n
+        mutated into
+        x.n
+        . Given this weighted set of string pairs, let
+        ca^,a,b
+        be the expected number of times that edit
+        (ab)
+        was chosen in context
+        a^
+        : this can be computed using dynamic programming to marginalize over the latent edit sequence that maps
+        p.n
+        to
+        x.n
+        , for each
+        (p,x)
+        .
+The gradient of
+        ℒ
+        with respect to
+        𝜽
+        is
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx6">
+        <tr class="ltx_equation ltx_align_baseline" id="S6.E10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          ∑a^,a,bca^,a,b(𝐟(a^,a,b)-∑a′,b′Pr𝜽(a′,b′∣a^)𝐟(a^,a′,b′))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (10)
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Consensus Clustering
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        From a single phylogeny
+        𝒑
+        , we deterministically obtain a clustering
+        𝒆
+        by removing the root
+        ♢
+        . Each of the resulting
+connected components corresponds to a cluster of mentions. Our model gives a distribution over phylogenies
+        𝒑
+        (given
+observations
+        𝒙
+        and learned parameters
+        Φ
+        )—and thus gives
+a posterior distribution over clusterings
+        𝒆
+        , which can be used
+to answer various queries.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        A traditional query is to request a
+        single
+        clustering
+        𝒆
+        . We prefer the
+clustering
+        𝒆*
+        that minimizes Bayes risk
+(MBR)
+        []
+        :
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx7">
+        <tr class="ltx_equation ltx_align_baseline" id="S7.E11">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          𝒆*=argmin𝒆′∑𝒆L(𝒆′,𝒆)Pr(𝒆∣𝒙,𝜽,ϕ)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (11)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        This minimizes our expected loss, where
+        L⁢(𝒆′,𝒆)
+        denotes
+the loss associated with picking
+        𝒆′
+        when the true clustering is
+        𝒆
+        .
+In practice, we again estimate the expectation by sampling
+        𝒆
+        values.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p3">
+       <p class="ltx_p">
+        The Rand index
+        []
+        —unlike our actual evaluation measure—is an
+        efficient
+        choice of loss function
+        L
+        for use with (
+        11
+        ):
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx8">
+        <tr class="ltx_equation ltx_align_baseline" id="S7.Ex2">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          R⁢(𝒆′,𝒆)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =defTP+TNTP+FP+TN+FN=TP+TN(N2)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where the true positives (TP), true negatives (TN), false positives
+(FP), and false negatives (FN) use the clustering
+        𝒆
+        to evaluate how well
+        𝒆′
+        classifies the
+        (N2)
+        mention
+pairs as coreferent or not. More similar clusterings achieve larger
+        R
+        , with
+        R⁢(𝒆′,𝒆)=1
+        iff
+        𝒆′=𝒆
+        . In all cases,
+        0≤R⁢(𝒆′,𝒆)=R⁢(𝒆,𝒆′)≤1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p4">
+       <p class="ltx_p">
+        The MBR decision rule for the (negated) Rand index is easily seen to be equivalent to
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A2.EGx9">
+        <tr class="ltx_equation ltx_align_baseline" id="S7.E12">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          𝒆*
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =argmax𝒆′⁡𝔼⁢[TP]+𝔼⁢[TN]
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (12)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S7.Ex3">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =argmax𝒆′⁡\smashoperator⁢[r]⁢∑i,j:xi∼xjsi⁢j+\smashoperator⁢[r]⁢∑i,j:xi≁xj(1-si⁢j)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        ∼
+        denotes coreference according to
+        𝒆′
+        .
+As explained above, the
+        si⁢j
+        are coreference probabilities
+        si⁢j
+        that can be estimated from a sample of clusterings
+        𝒆
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p5">
+       <p class="ltx_p">
+        This objective corresponds to min-max graph cut
+        []
+        , an NP-hard
+problem with an approximate solution
+        []
+        .
+        <span class="ltx_text ltx_font_small">
+        </span>
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S8">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        8
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S8.p1">
+       <p class="ltx_p">
+        In this section, we describe experiments on three different datasets. Our main results are described first: Twitter features many instances of name variation that we would like our model to be able to learn. We also report the performance of different ablations of our full approach, in order to see which consistently helped across the different splits. We report additional experiments on the ACE 2008 corpus, and on a political blog corpus, to demonstrate that our approach is applicable in different settings.
+       </p>
+      </div>
+      <div class="ltx_para" id="S8.p2">
+       <p class="ltx_p">
+        For Twitter and ACE 2008, we report the standard
+        B3
+        metric
+        []
+        . For the political blog dataset, the reference does not consist of entity annotations, and so we follow the evaluation procedure of
+        .
+        <span class="ltx_text ltx_font_small">
+         [author=jason,color=RedOrange,fancyline,size=,]re-insert reference here to significance testing discussion (and actual tests) in supplementary material
+        </span>
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S8.SS1">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         8.1
+        </span>
+        Twitter
+       </h3>
+       <div class="ltx_para" id="S8.SS1.p1">
+        <p class="ltx_p">
+         Data.
+         We use a novel corpus of Twitter posts
+discussing the 2013 Grammy Award ceremony. This is a challenging
+corpus, featuring many instances of name variation. The dataset consists of five
+splits (by entity), the smallest of which is 604 mentions and the
+largest is 1374. We reserve the largest split for development
+purposes, and report our results on the remaining four. Appendix
+         B
+         provides more detail about the dataset.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS1.p2">
+        <p class="ltx_p">
+         Baselines.
+         We use the discriminative entity clustering
+algorithm of
+         as our baseline; their approach was
+found to outperform another generative model which produced a flat
+clustering of mentions via a Dirichlet process mixture model. Their
+method uses Jaro-Winkler string similarity to match names, then
+clusters mentions with matching names (for disambiguation) by
+comparing their unigram context distributions using the Jenson-Shannon
+metric.
+We also compare to the
+         exact-match
+         baseline, which
+assigns all strings with the same name to the same entity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS1.p3">
+        <p class="ltx_p">
+         Procedure.
+         We run four test experiments in which one split is used to pick model hyperparameters and the remaining three are used for test.
+For the discriminative baseline, we tune the string match threshold,
+context threshold, and the weight of the context model prior (all via
+grid search). For our model, we tune
+         only
+         the fixed weight of the root feature, which determines the
+precision/recall trade-off (larger values of this feature result in
+more attachments to
+         ♢
+         and hence more entities). We leave other
+hyperparameters fixed: 16 latent topics, and Gaussian priors
+         𝒩⁢(0,1)
+         on all log-linear parameters. For
+         phylo
+         , the
+entity clustering is the result of (1) training the model using EM,
+(2) sampling from the posterior to obtain a distribution over
+clusterings, and (3) finding a consensus clustering. We use 20
+iterations of EM with 100 samples per E-step for training, and use
+1000 samples after training to estimate the posterior. We report
+results using three variations of our model:
+         phylo
+         does not
+consider mention context (all mentions effectively have the same
+topic) and determines mention entities from a single sample of
+         𝒑
+         (the last);
+         phylo+topic
+         adds context
+(§
+         5.2
+         );
+         phylo+topic+mbr
+         uses the full posterior
+and consensus clustering to pick the output clustering
+(§
+         7
+         ). Our results are shown in
+Table
+         1
+         .
+         <span class="ltx_text ltx_font_small">
+         </span>
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S8.SS2">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         8.2
+        </span>
+        Newswire
+       </h3>
+       <div class="ltx_para" id="S8.SS2.p1">
+        <p class="ltx_p">
+         Data.
+         We use the ACE 2008 dataset, which is described in detail in
+         .
+It is split into a development portion and a test
+portion.
+The baseline system took the first mention from each (gold)
+within-document coreference chain as the canonical mention, ignoring
+other mentions in the chain; we follow the same procedure in our
+experiments.
+         <span class="ltx_text ltx_font_small">
+         </span>
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS2.p2">
+        <p class="ltx_p">
+         Baselines &amp; Procedure.
+         We use the same baselines as in §
+         8.1
+         . On development data, modeling pragmatics as in §
+         4.2
+         gave large improvements for organizations (8 points in F-measure),
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]but maybe just for
+         </span>
+         org
+         ? correcting the tendency to assume that short names like
+         CIA
+         were coincidental homonyms. Hence we allowed
+         γ&gt;0
+         and tuned it on development data.
+         <span class="ltx_text ltx_font_small">
+         </span>
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]let’s test pragmatics everywhere for the final version, and fix the issues in the footnote
+Results are in Table
+         </span>
+         2
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S8.SS3">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         8.3
+        </span>
+        Blogs
+       </h3>
+       <div class="ltx_para" id="S8.SS3.p1">
+        <p class="ltx_p">
+         Data.
+         The CMU political blogs
+dataset consists of 3000 documents about
+U.S. politics
+         []
+         . Preprocessed as described in
+         ,
+the data consists of 10647 entity mentions. Unlike our other datasets,
+mentions are not annotated with entities: the reference consists of a
+table of 126 entities, where each row is the
+         canonical name
+         of one
+entity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS3.p2">
+        <p class="ltx_p">
+         Baselines.
+         We compare to the system results reported
+in Figure 2 of
+         . This includes a baseline
+hierarchical clustering approach, the “EEA” name canonicalization
+system of
+         , as well the model proposed by
+         . Like the output of our model, the output of
+their hierarchical clustering baseline is a mention clustering, and
+therefore must be mapped to a table of canonical entity names to
+compare to the reference table.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS3.p3">
+        <p class="ltx_p">
+         Procedure &amp; Results
+         We tune our method as in previous experiments, on the initialization
+data used by
+         which consists of a subset of 700
+documents of the full dataset. The tuned model then produced a mention
+clustering on the full political blog corpus. As the
+mapping from clusters to a table is not fully detailed in
+         , we used a simple heuristic: the
+         most frequent
+         name in each cluster is taken as the
+canonical name, augmented by any titles from a predefined list appearing
+in any other name in the cluster. The resulting table is
+then evaluated against the reference, as described in
+         . We achieved a response score of 0.17 and a
+reference score of 0.61. Though not state-of-the-art, this result is
+close to the score of the “EEA” system of
+         , as reported in Figure 2 of
+         ,
+         <span class="ltx_text ltx_font_small">
+          [author=jason,color=RedOrange,fancyline,size=,]so we lose slightly to EEA but EEA loses big to Yogotama?
+which is specifically designed for the task of
+canonicalization.
+         </span>
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S8.SS4">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         8.4
+        </span>
+        Discussion
+       </h3>
+       <div class="ltx_para" id="S8.SS4.p1">
+        <p class="ltx_p">
+         On the Twitter dataset, we obtained a 12.6-point F1 improvement over the baseline. To understand our model’s
+behavior, we looked at the sampled phylogenetic
+trees on development data. One reason our model does well in
+this noisy domain is that it is able to relate seemingly dissimilar names
+via successive steps. For instance, our model learned to relate many variations of
+         LL
+Cool J
+         :
+        </p>
+        <table class="ltx_tabular ltx_centering ltx_align_middle">
+         <tbody class="ltx_tbody">
+          <tr class="ltx_tr">
+           <td class="ltx_td ltx_align_left">
+            Cool James
+           </td>
+           <td class="ltx_td ltx_align_left">
+            LLCoJ
+           </td>
+           <td class="ltx_td ltx_align_left">
+            El-El Cool John
+           </td>
+          </tr>
+          <tr class="ltx_tr">
+           <td class="ltx_td ltx_align_left">
+            LL
+           </td>
+           <td class="ltx_td ltx_align_left">
+            LL COOL JAMES
+           </td>
+           <td class="ltx_td ltx_align_left">
+            LLCOOLJ
+           </td>
+          </tr>
+         </tbody>
+        </table>
+        <p class="ltx_p">
+         In the sample we inspected, these mentions were also assigned the
+same topic, further boosting the probability of the configuration.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS4.p2">
+        <p class="ltx_p">
+         The ACE dataset, consisting of editorialized newswire, naturally
+contains less name variation than Twitter data. Nonetheless, we find that
+the variation that does appear is often properly handled by our
+model. For instance, we see several instances of variation due to
+transliteration that were all correctly grouped together, such
+as
+         Megawati Soekarnoputri
+         and
+         Megawati Sukarnoputri
+         .
+The pragmatic model was also effective in grouping common acronyms into the same entity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS4.p3">
+        <p class="ltx_p">
+         We found that multiple samples tend to give different phylogenies (so
+the sampler is mobile), but essentially the same clustering into
+entities (which is why consensus clustering did not improve much over
+simply using the last sample). Random restarts of EM might create
+more variety by choosing different locally optimal parameter settings.
+It may also be beneficial to explore other sampling techniques
+         []
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS4.p4">
+        <p class="ltx_p">
+         Our method assembles observed names into an evolutionary tree. However, the true tree must include many names that fall outside our small observed corpora, so our model would be a more appropriate fit for a far larger corpus. Larger corpora also offer stronger signals that might enable our Monte Carlo methods to mix faster and detect regularities more accurately.
+        </p>
+       </div>
+       <div class="ltx_para" id="S8.SS4.p5">
+        <p class="ltx_p">
+         A common error of our system is to connect mentions that share long substrings, such as different
+         person
+         s who share a last name, or different
+         organization
+         s that contain
+         University of
+         . A more powerful name mutation than the one we use here would recognize entire words, for example inserting a common title or replacing a first name with its common nickname. Modeling the
+         internal structure
+         of names
+         []
+         in the mutation model is a promising future direction.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S9">
+      <h2 class="ltx_title ltx_font_small ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        9
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S9.p1">
+       <p class="ltx_p">
+        Our primary contribution consists of new modeling ideas, and associated inference techniques, for the problem of cross-document coreference resolution. We have described how writers systematically plunder (
+        ϕ
+        ) and then systematically modify (
+        𝜽
+        ) the work of past writers. Inference under such models could also play a role in tracking evolving memes and social influence, not merely in establishing strict coreference. Our model also provides an alternative to the distance-dependent CRP.
+        3
+       </p>
+      </div>
+      <div class="ltx_para" id="S9.p2">
+       <p class="ltx_p">
+        Our implementation is available for research use at:
+        https://bitbucket.org/noandrews/phyloinf
+        .
+       </p>
+      </div>
+     </div>
+     <span class="ltx_ERROR undefined">
+      \appendixpage
+     </span>
+     <div class="ltx_appendix" id="A1">
+      <h2 class="ltx_title ltx_font_small ltx_title_appendix">
+       <span class="ltx_tag ltx_tag_appendix">
+        Appendix A
+       </span>
+       Sampling orderings uniformly at random conditioned on a phylogeny
+      </h2>
+      <div class="ltx_para" id="A1.p1">
+       <p class="ltx_p">
+        In general, the subtree rooted at vertex
+        x
+        defines a partial ordering on its own mentions. To sample a total
+ordering
+        𝒊x
+        uniformly at random from among those compatible
+with that partial ordering, first recursively sample
+        M
+        orderings
+        𝒊y1,…,𝒊yM
+        compatible with the
+        M
+        subtrees
+rooted at
+        x
+        ’s children. Then uniformly sample an interleaving of
+the
+        M
+        orderings,and prepend
+        x
+        itself to this
+interleaving to obtain
+        𝒊x
+        . To sample an interleaving, select one of the input orderings
+        𝒊y
+        at random, with probability proportional
+to its size
+        |𝒊y|
+        , and print and delete its first element.
+Repeating this step until all of the input orderings are empty will
+print a random interleaving. Note that in the base case where
+        x
+        is a leaf (so
+        M=0
+        ), this procedure terminates immediately, having printed the empty ordering. Our
+        𝒊♢
+        is
+the output of running this recursive process with
+        x=♢
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_appendix" id="A2">
+      <h2 class="ltx_title ltx_font_small ltx_title_appendix">
+       <span class="ltx_tag ltx_tag_appendix">
+        Appendix B
+       </span>
+       Twitter Grammy corpus
+      </h2>
+      <div class="ltx_subsection" id="A2.SS1">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         B.1
+        </span>
+        Collection
+       </h3>
+       <div class="ltx_para" id="A2.SS1.p1">
+        <p class="ltx_p">
+         Using the Twitter 1% streaming API, we collected all tweets during the 2013 Grammy music awards ceremony, which occurred on Feb 10, 2013 between 8pm eastern (1:00am GMT) and 11:30pm (4:30 GMT).
+We used Carmen geolocation
+         [1]
+         to identify tweets that originated in the United States or Canada and removed tweets that did not have a language of English selected as the UI for the tweet author. This yielded a total of 564,892 tweets. We then selected tweets that contained the string “grammy” (case insensitive), reducing the set to 50,429 tweets. These tweets were processed for POS and NER using the University of Washington Twitter NLP tools
+         <span class="ltx_text ltx_font_small">
+         </span>
+         [3]
+         . Tweets that did not include a person mention were removed. For simplicity, we selected a single person reference per tweet. The final set contained 15,736 tweets. Of these, 5000 have been annotated for entities.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="A2.SS2">
+       <h3 class="ltx_title ltx_font_small ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         B.2
+        </span>
+        Annotation
+       </h3>
+       <div class="ltx_para" id="A2.SS2.p1">
+        <p class="ltx_p">
+         A first human annotator made a first pass of 1,000 tweets and then considered the remaining 4,000 tweets. This provided an opportunity to refine the annotation guidelines after reviewing some of the data.
+The annotator was asked to assign a unique integer to each entity and to annotate each tweet containing a mention of that person with the corresponding integer. Additionally, the annotator was asked to fix incorrect mention strings. If the extracted mention was incorrect or referred to a non-person, it was removed. If it was mostly correct, but omitted/excluded a token, the annotator corrected it.
+Similar to
+         Guo et al. (2013)
+         , ambiguous mentions were removed. However, unlike their annotation effort, all persons, including those not in Wikipedia, were included. Mentions that were comprised of usernames were excluded (e.g. @taylorswift13). Following this protocol, the annotator removed 423 tweets.
+A second annotator inspected the annotations to correct mistakes and fix ambiguous references. The final annotated corpus contains 4,577 annotated tweets and 273 distinct entities. This corpus was then split into five folds by first sorting the entities by number of mentions, then performing systematic sampling of the entities on the sorted list.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

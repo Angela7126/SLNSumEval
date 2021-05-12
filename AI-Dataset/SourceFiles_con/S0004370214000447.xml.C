@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Learning hierarchical task network domains from partially observed plan traces.
+   </title>
+   <abstract>
+    Hierarchical Task Network (HTN) planning is an effective yet knowledge intensive problem-solving technique. It requires humans to encode knowledge in the form of methods and action models. Methods describe how to decompose tasks into subtasks and the preconditions under which those methods are applicable whereas action models describe how actions change the world. Encoding such knowledge is a difficult and time-consuming process, even for domain experts. In this paper, we propose a new learning algorithm, called HTNLearn, to help acquire HTN methods and action models. HTNLearn receives as input a collection of plan traces with partially annotated intermediate state information, and a set of annotated tasks that specify the conditions before and after the tasks' completion. In addition, plan traces are annotated with potentially empty partial decomposition trees that record the processes of decomposing tasks to subtasks. HTNLearn outputs are a collection of methods and action models. HTNLearn first encodes constraints about the methods and action models as a constraint satisfaction problem, and then solves the problem using a weighted MAX-SAT solver. HTNLearn can learn methods and action models simultaneously from partially observed plan traces (i.e., plan traces where the intermediate states are partially observable). We test HTNLearn in several HTN domains. The experimental results show that our algorithm HTNLearn is both effective and efficient.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Hierarchical Task Network (HTN) planning is an effective yet knowledge intensive method for problem-solving [67], [20]. HTN planning has been successfully used in a number of real-world applications [20], [62], [63], [13]. It requires as input both methods that describe how to decompose a task into subtasks and the preconditions under which they are applicable and action models that describe how actions alter the world [67], [46]. These methods and action models are traditionally encoded by human experts. This task is difficult and time-consuming even for domain experts, since it requires lots of domain knowledge-engineering effort. For example, developing the Bridge Baron,{sup:1} a commercial bridge playing algorithm that uses HTN planning techniques, took several years of development that involved major knowledge engineering effort. This suggests that it is important to develop learning algorithms to help humans build domains (i.e., action models and HTN methods) for HTN planning, aiming at saving human efforts, such as time cost, in designing HTN domains (as shown in the experiment of Section 5.3.3).
+     </paragraph>
+     <paragraph>
+      While the representation and inferencing capabilities of HTN are well understood [67], [20], the HTN knowledge has traditionally been manually defined by human experts. There has been much interest on developing learning algorithms for the task structure and applicability conditions of the HTN methods. For instance, Ilghami et al. [30] proposed an algorithm to learn preconditions of HTN methods, under the assumption that the preconditions and effects of actions in the domain were completely specified and there was complete observability of the states of the world. Xu and Muñoz-Avila [66] presented an algorithm to learn preconditions of HTN methods under the assumption that an ontology indicating relations between the objects was given. Nejati et al. [47], [52] developed approaches to learn the hierarchical structures that related the tasks and subtasks under the assumption that we have the ability to completely observe any world state and to formulate the skills to be learned in the form of Horn clauses. In [27], the HTN-MAKER algorithm learns the decomposition methods for Hierarchical Task Networks. Despite the success of current HTN learning algorithms, the above algorithms developed are all based on the assumption that the action models are known beforehand and the states are completely observable. The problem of learning the whole HTN model simultaneously, which is composed of method preconditions, method structures, and action models, has not been addressed. This problem is hard, since the information given is limited, i.e., the only knowledge provided is a set of annotated tasks that indicates conditions that must be held before and after the task is executed and a collection of plan traces, some of which might be annotated with nonempty partial decomposition trees.{sup:2} A decomposition tree denotes the structure of decomposing a task into subtasks, each of which is in turn further decomposed until primitive tasks are obtained. All tasks and conditions in a decomposition tree are fully grounded. A partial decomposition tree denotes a decomposition tree with some missing subtasks and their related edges from a decomposition tree. We should not assume that such partially annotated trees are given, but we wish to take advantage of them if they are provided.{sup:3}
+     </paragraph>
+     <paragraph>
+      This motivates us to develop a novel HTN learning algorithm that can cope with this problem. This is also an important problem, as in many real-world applications, neither the task hierarchy nor the action model is provided. We present several examples illustrating the applicability of HTN learning.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       In software engineering, large-scale industrial projects are often composed of thousands of software artifacts, such as requirement documents, design documents, code, bug reports, test cases, etc. The goal of software traceability in software engineering is to discover and manage the relationships that exist between these software artifacts to facilitate the efficient retrieval of relevant information, which is necessary for many software engineering tasks [2], [3]. There is a correspondence between this domain and HTN planning; each artifact can be viewed as a primitive/non-primitive task, and relationships between artifacts can be viewed as HTN structures. It is not difficult to collect partial relations between tasks (i.e., partial decomposition trees) and specify annotated tasks when developing projects. As a result, our learning algorithm can help acquire the relationships between artifacts in the form of HTN task structures. Furthermore, in this domain information about the relations between pieces of software is frequently provided by the software designer.
+      </list-item>
+      <list-item label="•">
+       In the area of web service composition, many researchers have attempted to automate the process of linking hierarchical Web services to achieve complex tasks [24]. For example, consider a website providing a service of suggesting travel itineraries. This service is decomposed to smaller services, such as weather-checking service and airplane-checking service, which are provided by other websites. Likewise, airplane-checking service is decomposed to much smaller services, such as collecting airplane information and suggesting airlines. In fact web service composition with the semantic web language OWL-S can be translated into an HTN planning model [65], [33]. Standard description languages such as SOAP (Simple Object Access Protocol){sup:4} are used to describe hierarchical relations among services, specifically the syntax and semantics (including task relationships and service behaviors) of the services. However, although the standard protocols of SOAP can describe the syntax of the web services, it is rather difficult if we rely on web service providers to label the semantic content of each service, especially when we consider the case that the Web services may come from many different sources. However, it is feasible to check the log data and acquire a large number of examples, which can then be used to learn the task relationships and service behaviors from examples [60]. Similarly, in this scenario, we can get a large number of logs as partial decomposition trees, and use them to learn the task relationships (HTN structures) and service behaviors (or action models), even when we do not have precise descriptions of all events happening during the web service composition process.
+      </list-item>
+      <list-item label="•">
+       In the UNIX operating system, batched OS commands have hierarchical structures. For example, consider command for deleting a file. This task is accomplished by executing a sequence of low-level commands, such as opening the directory of the file and backing up some content of the file. Furthermore, backup is decomposed to much smaller commands, such as create a new empty file and copy the content to the new file, and so on. If we view each batched command as a task, the relations between batched commands can be viewed as HTN structures. Building the complex hierarchical relations between commands by hand is difficult, since there are a large number of commands in OS and relations among them are very complicated. However, it is possible to collect plan traces partially annotated with state information. For example, we can collect batch commands in an operating system that indicates the name of each command along with some partial information about directory location, structure and content. If we view such an application as a planning domain, a batch command is a list of actions. We can easily get the action schemas (action names and its parameters) by using the UNIX history command. However, we cannot get the complete intermediate state information between these commands by reading the batch command file alone [69]. We also assume that it is possible for humans to specify a set of annotated tasks. For example, for a task of deleting a file in an operating system, it is obvious that the preconditions of the task are: the file is already created and is annotated as “unneeded”. The effect is that the file is deleted. Note that the task of deleting a file may require many subtasks to achieve it, e.g., open the directory of the file, backup some content of the file, etc. The preconditions and effects of a task describe only what it means for the task to be accomplished (e.g., what effects will be observed in the state of the world after the task is accomplished) but not how to accomplish the task (e.g., what subtasks or actions must be accomplished to achieve the task). With the collected plan traces and hand-written annotated tasks as inputs, it would be possible to learn the relations among tasks.
+      </list-item>
+     </list>
+     <paragraph>
+      A common trait in these domains is that the intermediate states are partially observable and the action definitions are partially given. For example, in the web service composition domain, it will be difficult to have annotated all information sources and their contents or in the software engineering domain to have the formal action model definition of all actions that can be made upon the software artifacts. Hence, existing HTN learning algorithms are unsuitable for learning in these domains. We will expand this point in the related work section.
+     </paragraph>
+     <paragraph>
+      In this paper, we present a new learning algorithm, called HTNLearn, to learn HTN models for HTN planning. An HTN model consists of two parts: (1) a set of HTN methods including method preconditions and method structures (i.e., the method's task and subtasks), and (2) a set of action models, each of which is associated with a precondition list, an add list and a delete list. We will give a detailed description of each of these elements in the problem definition section. Learning the two parts simultaneously is a challenging task since the information given is limited, unlike some previous systems that assume (1) complete state observability of the world and (2) action models are known. It is also advantageous to learn all parts of an HTN model simultaneously since they are inter-related and thus can be optimized together. Our algorithm models the problem of learning HTN models as a maximum satisfiability problem (or a MAX-SAT problem [7]). In our method, we first build constraints based on inputs; then we calculate their corresponding weights using a frequent set mining algorithm. After that, we solve all the weighted constraints with a weighted MAX-SAT solver [7], [37]. Finally, we generate the HTN model based on the solution to the constraint satisfaction problem.
+     </paragraph>
+     <paragraph>
+      In [70], we presented an original version of HTNLearn, which was called HTN-Learner. HTN-Learner can learn method preconditions and action models simultaneously, but requires that method structures be given as input; while HTNLearn, which extends from HTN-Learner, can learn method structures, method preconditions, and action models simultaneously from partially observed plan traces which are annotated with partial decomposition trees. In addition, we evaluate HTNLearn in more detail, including evaluations with respect to partiality of decomposition trees, and running times with respect to partiality of decomposition trees and human efforts saved by HTNLearn. The latter is an important new consideration of our work not only with respect to the original version of HTNLearn but also relative to other HTN learning algorithms. We envision HTNLearn obtaining a first draft of the HTN model, one that will be revised by the domain expert. Our experimental evaluation empirically assesses the effort for this revision.
+     </paragraph>
+     <paragraph>
+      We organize the paper as follows. We first introduce the related work in the next section, and then give the definition of our learning problem. After that, we address our main learning algorithm HTNLearn and evaluate HTNLearn in the experiment section. Finally, we conclude the paper together with the future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Action model learning
+      </section-title>
+      <paragraph>
+       Approaches have been proposed to learn action models from plan traces automatically. The first one is to learn action models from plan traces with complete intermediate state information. Chrisman [10] demonstrated how to learn stochastic actions with no conditional effects. Gil [21] described a system called EXPO, bootstrapped by an incomplete STRIPS-like domain description with the rest being filled in through experience. Sablon and Bruynooghe [54] presented a method to learn action models from its own experience and from its observation of a domain expert. They exploit the idea of concept induction in first-order predicate logic of inductive logic programming (ILP) [43], which allows it to utilize ILP's noise-handling techniques while learning without losing representational power. Similarly, in [5], a system was presented to learn preconditions for teleo-operators (TOP) using ILP. The examples used require the positive or negative examples of propositions held in states just before each action's application. ILP can learn well when the positive and negative examples of states for all target actions are given. Wang [61] described an approach to automatically learn planning operators by observing expert solution traces and refine the operators through practice in a learning-by-doing paradigm. It uses the knowledge extracted when observing experts solve problems. Oates and Cohen [49] used a general classification system to learn the effects and preconditions of actions, identifying irrelevant variables. Schmill et al. [55] proposed to learn operators with approximate computation in relevant domains by assuming that the world is completely observable. Blythe et al. [6] proposed to acquire action models by interacting with a human expert. In [50], [51], a probabilistic, relational planning rule representation was learned, which could compactly model noisy, nondeterministic action effects. Holmes and Isbell Jr. [28] modeled synthetic items based on experience to construct action models. Walsh and Littman [60] proposed an efficient algorithm for learning action schemas for describing Web services. Cresswell et al. [12] presented a system called LOCM designed to carry out automated induction of action models from sets of example plans. LOCM assumes that a planning domain consists of sets (called sorts) of object instances, where each object behaves in the same way as any other object in its sort [58]. Compared with previous systems, LOCM can learn action models with action sequences as input, and was shown to work well under the assumption that the output domain model could be represented in an object-centered representation.
+      </paragraph>
+      <paragraph>
+       Among these methods, one of their limitations is all the intermediate observations need to be known. However, in many real applications such as activity recognition from wireless sensor networks, biological applications of AI Planning, intelligent user interfaces and Web services [20], [33], [23], [18], sometimes we cannot assume that complete intermediate state information to be given. Approaches have been developed to learn action models where the intermediate state information is not completely observable such as the ARMS system [68], [69] and SLAF[1], [57], [56], [44]. ARMS (action-relation modeling system) can automatically discover action models from a set of successfully observed plan traces. Unlike previous work in action model learning, ARMS does not assume complete knowledge of intermediate states of observed plan traces. These plan traces are obtained by an agent who does not know the logical encoding of the actions and can only partially observe state information between the actions. Specifically, ARMS gathers knowledge from the statistical distribution of frequent sets of actions in plan traces. It builds a weighted propositional satisfiability problem and solves it using a weighted MAX-SAT solver. It extracts constraints from plan traces and STRIPS models by itself, and solves these constraints with a weighted MAX-SAT solver [7]. Finally, it generates STRIPS models from the output of weighted MAX-SAT. SLAF (Simultaneously Learning And Filtering) is a tractable, exact solution for the problem of identifying actions' effects in partially observable STRIPS domains. It resembles version spaces and logical filtering in that it identifies all the models that are consistent with observations. It maintains and outputs a relational logical representation of all possible action-schema models after a sequence of executed actions and partial observations. To improve the performance, Shahaf et al. [57] proposed an efficient algorithm to learn preconditions and effects of deterministic action models. To learn complex action models, beyond STRIPS representations, Zhuo et al. [74] proposed a framework LAMP to acquire complex action models with quantifiers and implications. Zhuo et al. also explored knowledge from the Web [75], [73] or noisy input data [71] for learning action models, or simultaneously acquired action models for multiple agents [72]. These works aim at learning action models rather than learning HTN models as in our work, which includes both action models and methods.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Learning control knowledge
+      </section-title>
+      <paragraph>
+       There has been substantial research on learning control knowledge from previous experience to speed up planning for given action models. Minton et al. [42], [41] studied explanation-based learning (EBL) and its role in improving problem solving performance through experience. Unlike inductive systems, which learn by abstracting common properties from multiple examples, EBL systems explain why a particular example is an instance of a concept. The explanations are then converted into operational recognition rules. In order to solve problems effectively, a problem solver must be able to exploit domain-specific search control knowledge. Although previous research has demonstrated that explanation-based learning is a viable approach for acquiring such knowledge, in practice the control knowledge learned via EBL may not be useful. To be useful, the cumulative benefits of applying the knowledge must outweigh the cumulative costs of testing whether the knowledge is applicable. Estlin and Mooney [15] present the SCOPE system for learning search-control rules that improve the performance of a partial-order planner. SCOPE integrates explanation-based and inductive learning techniques to acquire control rules for a partial-order planner. Learned rules are in the form of selection heuristics that help the planner choose between competing plan refinements. Simpson et al. [53], [40] describe a Graphical Interface for Planning with Objects called (GIPO) that have been built to investigate and support the knowledge engineering process in the building of applied AI Planning systems. Winner and Veloso [64] present a DISTILL system to learn program-like plan templates from example plans. These templates can be used to generate new plans. The focus of [64] is on how to extract plan templates from example plans as a substitute for planners. The plan templates represent the structural relations among actions. Lau et al. [34] proposed to solve a programming by demonstration (PBD) problem using a version-space learning algorithm by acquiring the normal behavior in terms of repetitive tasks. When a user is found to start a repetitive task of going through a sequence of states, the system can use the learned action sequence to map from initial to goal states directly. Marthi et al. [39] proposed semantics for high-level actions that supported proofs that a high-level plan will (or will not) achieve a goal, without first reducing the plan to primitive action sequences. Baum et al. [4] present a synthesis of two approaches, including a structure-based approximation of uniform abstraction and a dynamic locality-based approximation of envelope methods. Their solution is based on selectively ignoring some of the dimensions in some parts of the state space in order to obtain an approximate solutions with a lower computational cost. The idea of learning high-level plans in these approaches is related to learning HTNs. However, these works focus on learning control policies to speed-up the search process when solving planning problems; in principle, these problems could be solved without the learned control policies – albeit inefficiently. In contrast, in our work we are acquiring planning knowledge for solving planning problems; without this learned knowledge these planning problems cannot be solved. Another difference is that in our work we are learning planning knowledge from partial state information and incomplete traces.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Learning macro-operators
+      </section-title>
+      <paragraph>
+       Another type of control knowledge is learning macro-operators. Macro-operators are sequences of actions that can be reused as if they are a single planning operator. In planning, the use of macro-operators can significantly reduce the planning effort. Fikes et al. [17] propose to build generalized plans and use them as macro-operators and monitor plan execution. Korf [31] proposes to learn efficient strategies for solving difficult problems by searching macro-operators. Iba [29] develops a system, called MACLEARN, to learn new macro-operators, which can be defined based on other macro-operators, to improve the efficiency of problem solving. MARVIN [11] generates macros from the plan of a reduced version of the given problem after eliminating symmetries, which learns macros from action sequences that lead its FF style search to successfully escape plateaus. Botea et al. [8] present and compare two automated methods that learn relevant information from previous experience in a domain and use it to solve new problem instances by lifting partial-order macros from plans based on an analysis of causal links between successive actions. Without focusing on exploiting particular planner or domain properties, Newton et al. [48] propose an offline method that learns macros genetically from plans for arbitrarily chosen planners and domains. He et al. [22] presented a POMDP algorithm for planning under uncertainty with macro-actions that automatically constructed and evaluated open-loop macro-actions within forward-search planning, where the planner branches on observations only at the end of macro-actions. Macro-operators can be seen as primitive HTNs. That is, HTNs decomposing non-primitive tasks into primitive tasks. We are interested in learning general HTNs including situations in which non-primitive tasks are decomposed into non-primitive tasks. This is an important distinction as illustrated by the fact that when restricted to STRIPS planning, macro-operators (e.g., as used in [31]) are strictly equivalent to STRIPS planning whereas HTN planning is strictly more expressive than STRIPS planning [14]. That is, there are problems that can be expressed as HTN planning problems that cannot be expressed as STRIPS planning problems.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       HTN learning
+      </section-title>
+      <paragraph>
+       Another related work is learning HTN conditions or decomposition structures. Garland et al. [19] presented an approach implemented in a development environment for constructing and maintaining a hierarchical task model from a set of annotated examples provided by domain experts, where the task model constructed did not include preconditions or effects, i.e., without methods' preconditions, actions' preconditions or actions' effects. Ilghami et al. [30] and Xu and Muñoz-Avila [66] proposed eager (in the form of version spaces) and lazy learning (in the form of case-based reasoning) algorithms respectively to learn the preconditions of HTN methods, given as input the hierarchical relationships between tasks, the action models, and a complete description of the intermediate states. Nejati et al. [47], [52] used means-end analysis to learn structures and preconditions of the input plans, assuming that a model of the tasks in the form of Horn clauses was given. Hogg et al. [27] presented an algorithm, called HTN-MAKER, to learn structures by assuming that annotated tasks are given in the form of preconditions and effects (we made the same assumption in our work). HTN-Learner, which was presented in our previous work [70], can learn method preconditions and action models simultaneously, but requires that method structures be given as input. Despite the success of previous systems, none of them can simultaneously learn method preconditions, method structures and action models.
+      </paragraph>
+      <paragraph>
+       There are also some algorithms designed to learn HTNs in nondeterministic planning domains where actions might have multiple outcomes [25], or learn probabilistic HTNs that capture user preferences by examining user-produced plans [38]. Hogg et al. [26] presented an algorithm that integrated HTN learning with Reinforcement Learning to learn HTN methods for planning. These approaches assume that the action model is given.
+      </paragraph>
+      <paragraph>
+       To give an intuitive picture of the difference between our algorithm HTNLearn and previous learning systems, we list the systems as well as what can be learned by these systems in Table 1 (the relations among these systems can also be found in Fig. 1). Note that we omit systems that aim to learn HTNs in nondeterministic domains in Table 1. The first row of Table 1 is our algorithm HTNLearn presented in this article. We can see that HTNLearn, which is designed based on HTN-Learner [70], is able to learn method structures, method preconditions and action models simultaneously, while other systems only learn parts of them.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Problem definition
+     </section-title>
+     <paragraph>
+      We are focusing on a variant of HTN planning called Ordered Task Decomposition ([45] and Chapter 11 of [20]), which is the most commonly used variant of HTN planning. In this variant the planning system generates a plan by decomposing tasks in the order they will be later executed. Tasks are decomposed into simpler and simpler subtasks until primitive tasks are reached, which can be performed directly. Specifically, for each non-primitive task, the planner chooses an applicable method and instantiates it to decompose the task into subtasks. When the decomposition process reaches a primitive subtask, the planner accomplishes it by applying its corresponding action in the usual STRIPS fashion [16]. The process stops when all non-primitive tasks are decomposed into primitive subtasks, and outputs an action sequence (i.e., a plan) as a solution. There have been some planners proposed to solve HTN planning problems, e.g., Nau et al. [46] developed a domain-independent system, called SHOP, to solve HTN planning problems, and Kuter et al. [32] presented a planning algorithm, called Yoyo, for solving planning problems in fully observable nondeterministic domains by combining an HTN-based mechanism for constraining its search and a Binary Decision Diagram (BDD) [9] representation for reasoning about sets of states and state transitions.
+     </paragraph>
+     <paragraph>
+      A Hierarchical Task Network (HTN) planning problem can be defined as a quadruple {a mathematical formula}(s0,T,M,A), where {a mathematical formula}s0 is an initial state, which is a conjunction of propositions, T is a list of tasks that need to be accomplished, M is a set of HTN methods, which specify how a high-level task can be decomposed into a totally ordered set of lower-level subtasks, and A is a set of actions, which correspond to primitive subtasks that can be directly executed [67], [20].
+     </paragraph>
+     <paragraph>
+      In this definition, each task has a task name with zero or more arguments, each of which is either a variable symbol or a constant symbol. An annotated task[27] is defined by {a mathematical formula}(t,PRE,EFF), where PRE and EFF are sets of preconditions and effects of task t, respectively. The preconditions and effects of an annotated task indicate conditions that must be satisfied in the states immediately before and immediately after achieving the task. A method is defined as {a mathematical formula}(m,t,PRE,SUB), where m is a unique method name with zero or more arguments, t is the head task the method m decomposes, PRE is a list of preconditions of the method, and SUB is a list of subtasks into which the head task t may be decomposed. The arguments of m consist of the arguments of the head task and the subtasks. Subtasks may be primitive or non-primitive. A primitive task correspond to an action schema. An action schema is composed of an action name and zero or more arguments. A non-primitive task must be further decomposed. Each precondition of an HTN method is a literal, and the set of preconditions must be satisfied before the method can be applied to decompose a non-primitive task. We define a method precondition as a triple {a mathematical formula}(m,t,PRE), and a method structure as {a mathematical formula}(m,t,SUB). An action model a is composed of a quadruplet {a mathematical formula}(o,PRE,ADD,DEL), where o is an action schema, PRE is a precondition list, ADD is an add list and DEL is a delete list, which follows the STRIPS description [16].
+     </paragraph>
+     <paragraph>
+      A solution to an HTN planning problem {a mathematical formula}(s0,T,M,A) is a list of decomposition trees[67], [20]. There is one tree for each task t in T and the root of each tree is the corresponding task t. Decomposition trees indicate how each task in T is achieved. The nodes of a decomposition tree are tasks. Interior nodes contain non-primitive tasks. Their children are the subtasks of the applicable method used to decompose the non-primitive task. Leaf nodes contain primitive tasks. A leaf node is a completely instantiated action; the list of actions {a mathematical formula}〈a1,a2,…,an〉 in the tree can be directly executed from the initial state to accomplish the root level task. We denote by {a mathematical formula}EXEC(i) the state between {a mathematical formula}ai and {a mathematical formula}ai+1, which represents the state after executing actions {a mathematical formula}〈a1,a2,…,ai〉.
+     </paragraph>
+     <paragraph>
+      An example of decomposition tree is shown in Fig. 2. This tree includes two non-primitive tasks: ‘(remove ?x)’ and ‘(superpose ?x ?y)’. The task ‘(remove ?x)’ moves to the table the whole stack whose bottom block is '?x', i.e., the order of blocks above ‘?x’ (including ‘?x’) remains unchanged; the task ‘(superpose ?x ?y)’ stacks block '?x' on top of the block '?y', i.e., the order of blocks above ‘?x’ (including ‘?x’) remains unchanged; ‘unstack’, ‘putdown’, ‘pickup’ and ‘stack’ are four actions to un-stack, put down, pickup and stack a block. Fig. 2(a) depicts the initial state. Fig. 2(b) depicts the goal state. By decomposing the task “(remove B)” into subtasks (and further decomposing these subtasks into smaller subtasks) using decomposition methods, as is shown in Fig. 2(c), the planner can achieve the task.
+     </paragraph>
+     <paragraph label="The HTN learning problem">
+      Our learning method is designed to solve the above-mentioned learning problem for which annotated tasks are given by the user. We can learn decomposition methods for HTNs when their intended tasks are annotated. Since the annotated tasks are defined as preconditions and effects, the methods we can learn are restricted to those models expressible using STRIPS representations. However, our definition does not preclude that more complex HTN models are elicited. For example, a user might provide an incomplete set of tasks and methods that contain intrinsic problem structure that is not expressible in STRIPS representations and the user provides annotated tasks to fill the gaps in the HTN model. Hence, while those gaps (or annotated tasks) will need to be equivalent to STRIPS representations, the overall elicited model can be more complex, i.e., including intrinsic structures and preconditions/effects representations.
+     </paragraph>
+    </section>
+    <section label="4">
+     The HTNLearn algorithm
+     <paragraph>
+      In this section, we present the algorithm for learning HTN from partial decomposition trees. In particular, we first present an overview of the algorithm HTNLearn in Section 4.1, and then provide a detailed description of each step in Sections 4.2 Step 1: extract predicates and action schemas, 4.3 Step 2: build method constraints, 4.4 Step 3: build state constraints, 4.5 Step 4: build decomposition constraints, 4.6 Step 5: build task constraints, 4.7 Step 6: build hard constraints, 4.8 Step 7: solve all the constraints.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Algorithm framework
+      </section-title>
+      <paragraph>
+       HTNLearn takes as input a set of annotated tasks and a set of partial decomposition trees annotated with partially observed intermediate states. It outputs a collection of action models and a collection of methods. A key point of HTNLearn is its ability to learn with partial information; namely, HTNLearn copes with situations where only partially observed states and partial decomposition trees are given. To achieve this, HTNLearn constructs constraints (weighted by the frequency of their occurrences) that reflect the information as it becomes available. Specifically, it builds the following kinds of constraints from the given input:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Method constraints encode the information about the method preconditions and method structures.
+       </list-item>
+       <list-item label="•">
+        State constraints encode information about the action models.
+       </list-item>
+       <list-item label="•">
+        Decomposition constraints and task constraints enhance the learned HTN models using statistical information from the partial decomposition trees
+       </list-item>
+       <list-item label="•">
+        Hard constraints ensure the learned HTN models are consistent with the inputs.
+       </list-item>
+      </list>
+      <paragraph>
+       Based on these constraints, HTNLearn builds a set of clauses to be solved as a weighted maximum satisfiability problem. We use a weighted MAX-SAT solver for this purpose [36]. The solution to this MAX-SAT problem is the HTN model including the set of action models and HTN methods that best explains the given inputs. An overview of the algorithm is shown in Algorithm 1.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Step 1: extract predicates and action schemas
+      </section-title>
+      <paragraph>
+       Action models and methods are defined in terms of predicates. In addition, action models are described by action schemas. In this step, we extract predicates and action schemas from the given partial decomposition trees annotated with the observed intermediate states. We do this extraction in the following two steps.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        We scan all the states including initial, intermediate and goal states, and select the predicates corresponding to the variable versions of propositions (i.e., substituting instantiated parameters (objects) of propositions with variables) in each state. For example, by scanning the initial state {a mathematical formula}s0={(on A B)(on B C)(on C D)(ontable D)(clear A)(handempty)} in Fig. 4, we attain the following predicates (we delete all the duplicate predicates): {(on ?x - block ?y - block) (ontable ?x - block) (clear ?x - block) (handempty)}. We assume that the type of each object is known. When converting an object to a variable, we associate the variable with the object's type,{sup:5} e.g., since the type of object “A” is known as “block”, we associate its corresponding variable “?x” with “block”.
+       </list-item>
+       <list-item label="2.">
+        We scan all the instantiated actions from the leaves of the partial decomposition trees, and attain action schemas by substituting all the instantiated parameters with variables. For example, by scanning the leaves of the partial decomposition tree in Fig. 4, we can extract the following action schemas: {(unstack ?x - block ?y - block) (putdown ?x - block) (pickup ?x - block) (stack ?x - block ?y - block)}.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Step 2: build method constraints
+      </section-title>
+      <paragraph label="Definition 1">
+       In this step, we encode the structure information from the given partial decomposition trees and annotated tasks. Intuitively, if the preconditions of an annotated task t are included in a state {a mathematical formula}si (before the execution of action {a mathematical formula}ai), and the effects of t are included by a state {a mathematical formula}sj (after the execution of action {a mathematical formula}aj), t is likely achieved by the action sequence {a mathematical formula}〈ai,…,aj〉, where {a mathematical formula}i≤j. We call the structure {a mathematical formula}〈t,a[i,…,j]〉 a candidate primitive hierarchy (see Definition 1). The set of which is denoted by {a mathematical formula}Hcand. Furthermore, if another annotated task {a mathematical formula}t′ is achieved by a subsequence of {a mathematical formula}〈ai,…,aj〉, we can conjecture that {a mathematical formula}t′ is one of the descendants of t, i.e., {a mathematical formula}t′ is either a subtask of t, or, recursively, a subtask of a subtask descendant of t. In this way, we can build a set of candidate non-primitive hierarchies (see Definition 2), denoted by {a mathematical formula}Hnon. Furthermore, to ensure the learned method structures are succinct, we filter unneeded non-primitive hierarchies (i.e., hierarchies that can be inferred by other hierarchies in {a mathematical formula}Hnon) from {a mathematical formula}Hnon, resulting in a set of candidate method structures, denoted by {a mathematical formula}Scand. Based on {a mathematical formula}Scand, we build a set of method constraints to capture the final set of method structures. In the following, we first give the definitions of primitive hierarchy and non-primitive hierarchy, and then describe how to generate candidate primitive hierarchies and candidate method structures, and finally present method constraints. Primitive hierarchyA primitive hierarchy is a tuple {a mathematical formula}〈t,a[1,…,k]〉, where t is a task, and {a mathematical formula}a[1,…,k] is an action sequence {a mathematical formula}a1,…,ak generated by decomposing task t with one or more decomposition methods. Note that t can be a primitive task, in which case k is 1.
+      </paragraph>
+      <paragraph label="Definition 2">
+       As an example, in Fig. 2, “〈(remove B), [(unstack A B) (putdown A) (unstack B C) (putdown B) (pickup A) (stack A B)]〉” is a primitive hierarchy. Non-primitive hierarchyA tuple {a mathematical formula}〈h,h[1,…,m]〉, where h and {a mathematical formula}hi are primitive hierarchies, is called a non-primitive hierarchy, if the action sequence of h is the same as the result of concatenating all the action sequences of {a mathematical formula}h1,…,hm in order.
+      </paragraph>
+      <paragraph>
+       In order to encode the hierarchical relationship among tasks, we build a set of candidate primitive hierarchies {a mathematical formula}Hcand, which serves as a set of basic structures for building method constraints. We do this by simply scanning each partial decomposition tree in {a mathematical formula}Πpart and each annotated task in {a mathematical formula}T and exploiting their relations between states and task preconditions and task effects to build {a mathematical formula}Hcand. The detailed description is given in Algorithm 2.
+      </paragraph>
+      <paragraph>
+       In step 6 of Algorithm 2, the procedure {a mathematical formula}conflict(si,PRE(t)) returns true if there is a proposition in {a mathematical formula}si contradicting some literal in {a mathematical formula}PRE(t). For example, if there exists {a mathematical formula}p∈P such that {a mathematical formula}¬p∈si and {a mathematical formula}p∈PRE(t), then they are contradicting one other, and the procedure returns true. Otherwise, it returns false.
+      </paragraph>
+      <paragraph>
+       Furthermore, using the candidate primitive hierarchies {a mathematical formula}Hcand generated by Algorithm 2, we generate a set of candidate method structures {a mathematical formula}Scand. The procedure of generating candidate method structures can be found in Algorithm 3. In step 2 of Algorithm 3, we build all possible non-primitive hierarchies by simply scanning different combinations of primitive hierarchies in {a mathematical formula}Hcand. In Steps 3–7, we choose those non-primitive hierarchies that have no subsequences of primitive hierarchies occurring in other non-primitive hierarchies, and store them in {a mathematical formula}Scand. Specifically, given three non-primitive hierarchies {a mathematical formula}g1=〈ha,h[1,…,m]〉, {a mathematical formula}g2=〈hb,h[x,…,y]〉 and {a mathematical formula}g3=〈ha,h[1,…,x−1,b,y+1,…,m]〉, where {a mathematical formula}ha and {a mathematical formula}hb are two primitive hierarchies different from {a mathematical formula}h1,…,hm, and {a mathematical formula}1≤x≤y≤m, we will delete {a mathematical formula}g1 and just keep {a mathematical formula}g2 and {a mathematical formula}g3 in {a mathematical formula}Scand because {a mathematical formula}g1 can be generated by applying {a mathematical formula}g2 and {a mathematical formula}g3.
+      </paragraph>
+      <paragraph>
+       It is possible that Algorithm 3 will generate an exponential number of methods on the number of actions in the partial decomposition tree (i.e., the input for Algorithm 2). Such situations can happen depending on the definitions of the given annotated tasks; annotated tasks may make multiple groupings of the actions possible, which in turn may result in multiple possible groupings of the parent tasks at the next level, and subsequently propagate this combinatorial effect to higher levels of the hierarchy. As we will see in the experiments, this is not the case for the particular domains and the particular annotated tasks used. But if such a situation were to occur, Algorithm 2, Algorithm 3 can be easily modified to reduce the number of methods generated by restricting the types of groupings allowed (e.g., always grouping the largest possible sequences of actions/tasks).
+      </paragraph>
+      <paragraph>
+       Using {a mathematical formula}Hcand and {a mathematical formula}Scand, we build constraints as follows. We denote the final set of primitive hierarchies as {a mathematical formula}H, and the final set of method structures as STR.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each {a mathematical formula}h=〈t,a[i,…,j]〉∈Hcand, if the following constraints are satisfied,{a mathematical formula} we conjecture that {a mathematical formula}h∈H. Note that {a mathematical formula}EXEC(i−1) represents the state after executing actions {a mathematical formula}a1,…,ai−1.
+       </list-item>
+       <list-item label="2.">
+        For each {a mathematical formula}〈h,h[1,…,m]〉∈Scand, if the following constraints are satisfied,{a mathematical formula} we conjecture that {a mathematical formula}〈t,t[1,…,m]〉∈STR, where t is the task being decomposed in h, and {a mathematical formula}ti is the task being decomposed in {a mathematical formula}hi ({a mathematical formula}1≤i≤m).
+       </list-item>
+      </list>
+      <paragraph>
+       We build the constraints for creating the method structures STR iteratively based on the above two cases. To generate a method {a mathematical formula}mk for a method structure in STR, we set {a mathematical formula}mk's parameters to be all the different parameters of the tasks in the method structure. We also need to build constraints for generating {a mathematical formula}mk's preconditions. We exploit a straightforward way to generate the preconditions by assuming that, if a predicate {a mathematical formula}p∈P frequently appears in the state where the method {a mathematical formula}mk is executed and its parameters are included in {a mathematical formula}mk, then p is one of {a mathematical formula}mk's preconditions. We denote the method structure's corresponding primitive hierarchy by {a mathematical formula}〈t,a[i,…,j]〉. We capture this idea with the following constraint (note that the constraint is defined for all predicates {a mathematical formula}p∈P and all methods {a mathematical formula}mk),{a mathematical formula} where {a mathematical formula}PARA(p) and {a mathematical formula}PARA(mk) are the sets of p and {a mathematical formula}mk's parameters respectively. Note that {a mathematical formula}p∈EXEC(i−1) means p either exists in the initial state and is not deleted by the action sequence {a mathematical formula}〈a1,…,ai−1〉, or is added by some action {a mathematical formula}a′ prior to {a mathematical formula}ai and is not deleted by actions between {a mathematical formula}a′ and {a mathematical formula}ai. With the precondition list {a mathematical formula}PRE(mk) and the structure {a mathematical formula}STR(mk)∈STR, we can build a set of method constraints MC as follows:{a mathematical formula} where {a mathematical formula}M denotes a set of methods.
+      </paragraph>
+      <paragraph>
+       We have thus built the set of all the method constraints MC for creating a set of methods {a mathematical formula}M based on the given plan traces. We use the procedure “calculate_weights(MC)” to combine all the instantiated constraints into their corresponding variable-form constraints and calculate their weights. The intuition behind this procedure is that if a constraint is more frequently satisfied in the plan traces, this constraint is more likely to be true. This is the same intuition that MAX-SAT uses for the weights, i.e., the larger the weight is, the more likely the constraint will be satisfied (a similar idea is used in [69]). This procedure takes place in the following two steps.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        We replace all the instantiated arguments in MC with their corresponding variables, and denote the result as {a mathematical formula}MC′.
+       </list-item>
+       <list-item label="2.">
+        We calculate the weighted method constraints (denoted as WMC) by{a mathematical formula} where {a mathematical formula}countNum(f,MC′) returns the number of occurrences of f in {a mathematical formula}MC′.
+       </list-item>
+      </list>
+      <paragraph>
+       We assume that two methods {a mathematical formula}m1 and {a mathematical formula}m2 with the same STR (i.e., {a mathematical formula}STR(m1)=STR(m2)) can be combined into a single method, denoted by {a mathematical formula}m′, whose preconditions are composed of the common preconditions between {a mathematical formula}m1 and {a mathematical formula}m2 (i.e., {a mathematical formula}PRE(m′)=PRE(m1)∩PRE(m2)). This is consistent with the definition of the methods' preconditions (i.e., preconditions are conjunctive). Since {a mathematical formula}m1 and {a mathematical formula}m2 can be viewed as a method with two disjunctive preconditions {a mathematical formula}PRE(m1) and {a mathematical formula}PRE(m2), in all cases that {a mathematical formula}m1 and {a mathematical formula}m2 are applicable, their combined method {a mathematical formula}m′ is also applicable. This suggests it is reasonable to use {a mathematical formula}m′ instead of {a mathematical formula}m1 and {a mathematical formula}m2 since {a mathematical formula}m′ cover all the cases that either {a mathematical formula}m1 or {a mathematical formula}m2 cover in the given decomposition trees.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Step 3: build state constraints
+      </section-title>
+      <paragraph>
+       The sets of conditions, i.e., actions' preconditions, actions' effects and methods' preconditions, are generated based on the following observations: (1) if a predicate frequently appears before an action a is executed, and its parameters are also the parameters of a, then the predicate is likely to be a precondition of a. Likewise, (2) if a predicate frequently appears before a method m is applied, it is likely to be a precondition of m; (3) if a predicate frequently appears after a is executed, it is likely to be an effect of the a. This information is encoded in the form of constraints in our learning process. Since these constraints are built from the relations between states and actions, or states and methods, we call these constraints state constraints. The following is the process of building the set SC of state constraints ({a mathematical formula}PARA(p) denotes the set of parameters of p):
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each predicate {a mathematical formula}p∈P in the state where an action a is executed and {a mathematical formula}PARA(p)⊆PARA(a), we build a constraint {a mathematical formula}p∈PRE(a). This constraint indicates that predicate p might be a precondition of action a. We denote the set of these constraints as {a mathematical formula}SCpa.
+       </list-item>
+       <list-item label="2.">
+        For each predicate p in the state after an action a is executed such that {a mathematical formula}PARA(p)⊆PARA(a), we build a constraint {a mathematical formula}p∈ADD(a). This constraint indicates that predicate p might be an effect of action a. We denote the set of these constraints as {a mathematical formula}SCap.
+       </list-item>
+       <list-item label="3.">
+        For each predicate p in the state where a method m is applied, we build a constraint {a mathematical formula}p∈PRE(m). This constraint indicates that predicate p might be a precondition of method m. We denote the set of these constraints as {a mathematical formula}SCpm.
+       </list-item>
+      </list>
+      <paragraph>
+       As a result of Step 3, we generate three kinds of constraints {a mathematical formula}SCpa, {a mathematical formula}SCap and {a mathematical formula}SCpm, which are put together to form the state constraints SC. With SC, we build weighted state constraints WSC with the procedure “calculate_weights(SC)”, which is presented in the end of Section 4.3 (i.e., using MC instead of SC).
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Step 4: build decomposition constraints
+      </section-title>
+      <paragraph>
+       In this step, we build decomposition constraints to encode the structure information provided by decomposition trees. (1) If a task T can be decomposed into n subtasks {a mathematical formula}st1,st2,…,stn, we find that the sub-tree of the decomposition tree whose root is subtask {a mathematical formula}sti often provides some of the preconditions of the method {a mathematical formula}mt+1 decomposing subtask {a mathematical formula}sti+1. In addition, (2) we find that the parameters of a precondition should be included in the list of parameters of the action or method the precondition belongs to. Analogously, (3) the parameters of an effect should be included in the list of parameters of the action that the precondition belongs to. The decomposition constraints DC are built based on these three assumptions by the procedure shown in Algorithm 4.
+      </paragraph>
+      <paragraph>
+       In the fourth step of Algorithm 4, we consider two tasks {a mathematical formula}sti and {a mathematical formula}stj that have the same parent and such that {a mathematical formula}sti occurs earlier than {a mathematical formula}stj. In the fifth step, {a mathematical formula}ni is the number of actions to accomplish the subtask {a mathematical formula}sti, which is denoted as {a mathematical formula}ai1,ai2,…,aini. In the sixth step, {a mathematical formula}mj is the method which is applied to the subtask {a mathematical formula}stj. In the seventh step, GP is generated by {a mathematical formula}GP={p|PARA(p)⊆PRS∧p∈P}. In the last step, the generated constraint c is:{a mathematical formula} With DC, we build the set of weighted decomposition constraints WDC using the procedure “calculate_weights(DC)”, which is presented in the end of Section 4.3 (using MC instead of DC).
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Step 5: build task constraints
+      </section-title>
+      <paragraph>
+       If a task is directly decomposed into a list of actions by a certain HTN method, then these actions may have strong relations with each other. Specifically, an action a often provides a predicate for a's succeeding action b, such that b can be executed (the predicate is one of b's preconditions). For all k ({a mathematical formula}i≤k&lt;j), we formulate these task constraints as follows:{a mathematical formula} We call this kind of constraints task constraints and denote them as TC. We calculate the weighted task constraints WTC with the procedure “calculate_weights(TC)”, which is presented in the end of Section 4.3 (using MC instead of TC).
+      </paragraph>
+     </section>
+     <section label="4.7">
+      <section-title>
+       Step 6: build hard constraints
+      </section-title>
+      <paragraph>
+       In this step, we build three types of hard constraints (denoted by HC), i.e., partialness constraints, action constraints and plan constraints, to ensure that the learned HTN models are consistent with the known structures of partial decomposition trees, the STRIPS conventions and the plan traces (i.e, the leaves of the partial decomposition trees), respectively. In the following we describe each type of hard constraints in detail.
+      </paragraph>
+      <section label="4.7.1">
+       <section-title>
+        Partialness constraints
+       </section-title>
+       <paragraph>
+        These constraints ensure that the learned HTN models are consistent with the given partial decomposition trees. Specifically, the method structures indicated in the partial decomposition trees should be reflected in the learned methods. For example, given the partial decomposition tree in Fig. 3, the method structure 〈(superpose ?x ?y), [(pickup ?x), stack(?x ?y)]〉 should be learned, where ?x is a variable that is instantiated by “A”, and ?y is a variable that is instantiated by “B” in Fig. 3. We build a set of constraints, called partialness constraints, to ensure these method structures are learned.
+       </paragraph>
+       <paragraph>
+        We build partialness constraints by simply performing the following two steps. (1) We scan all the given partial decomposition trees and collect all method structures {a mathematical formula}g=〈t,t[1,…,m]〉, where t is decomposed to {a mathematical formula}t1,…,tm. (2) We replace all the parameters in the tasks of g with their corresponding variables, and build constraints {a mathematical formula}g∈STR and store them in HC.
+       </paragraph>
+      </section>
+      <section label="4.7.2">
+       <section-title>
+        Action constraints
+       </section-title>
+       <paragraph>
+        To make sure that the learned action models are consistent with typical STRIPS conventions made when hand-writing STRIPS domains, we generate additional constraints, called action constraints. We formulate the constraints as follows [69] and store them in HC:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         An action may not add a fact (instantiated atom) which already exists before the action is applied. This constraint can be encoded as:{a mathematical formula} where p is an atom in P, {a mathematical formula}ADD(a) is a set of added effects of the action a, and {a mathematical formula}PRE(a) is a set of preconditions of a in A.
+        </list-item>
+        <list-item label="2.">
+         An action may not delete a fact which does not exist before the action is applied. This constraint can be encoded as:{a mathematical formula} where {a mathematical formula}DEL(a) is a set of delete effects of a.
+        </list-item>
+       </list>
+       <paragraph>
+        These constraints are placed to ensure the learned action models are succinct, and, typically, existing planning domains follow these conventions. However, our learning algorithm can work without them.
+       </paragraph>
+      </section>
+      <section label="4.7.3">
+       <section-title>
+        Plan constraints
+       </section-title>
+       <paragraph>
+        These constrains are in place so that the learned action models are consistent with the training plan traces. They impose a requirement on the relationship between ordered actions in plan traces, and ensure that the causal links in the plan traces are not broken. These requirements are: (1) for each precondition p of an action {a mathematical formula}aj in a plan trace, either p is in the initial state, or there is an action {a mathematical formula}ai ({a mathematical formula}i&lt;j) prior to {a mathematical formula}aj that adds p and there is no action {a mathematical formula}ak ({a mathematical formula}i&lt;k&lt;j) between {a mathematical formula}ai and {a mathematical formula}aj that deletes p, and (2) for each literal q in a state {a mathematical formula}sj, either q is in the initial state {a mathematical formula}s0, or there is an action {a mathematical formula}ai before {a mathematical formula}sj that adds q while no action {a mathematical formula}ak deletes q. We formulate these constraints as follows and store them in HC:{a mathematical formula} and{a mathematical formula} For example, since “holding” is a precondition of the action “putdown”, either “holding” is an atom in the initial state or there is an action, such as “pickup”, that adds it, and it is never deleted by any actions between “pickup” and “putdown”. Otherwise, the action “putdown” cannot be executed after the action “pickup”.
+       </paragraph>
+       <paragraph>
+        We require the above constraints to be hard, i.e., they should be satisfied to ensure that the learned HTN models are consistent with the partial decomposition trees, the STRIPS conventions and the plan traces. To do this, we assign a large enough weight, denoted by {a mathematical formula}wmax, to these constraints. In our experiment, we simply chose the maximal weight of all the constraints in WMC, WSC, WDC and WTC as the value of {a mathematical formula}wmax, to make the weight of hard constraints “comparable” to soft constraints (and view the soft constraints with the maximal weight as hard constraints as well).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.8">
+      <section-title>
+       Step 7: solve all the constraints
+      </section-title>
+      <paragraph>
+       Following Steps 2–6, we built six types of weighted constraints to encode the information needed to generate the action models and the methods. In this step, we put all these constraints together and solve them with a weighted MAX-SAT solver.
+      </paragraph>
+      <paragraph>
+       In MAX-SAT, a proposition variable {a mathematical formula}xi may take values false or true. A literal {a mathematical formula}li is either a variable {a mathematical formula}xi or its negation {a mathematical formula}x¯i. A clause is a disjunction of literals, and a CNF formula ϕ is a conjunction of clauses. An assignment of truth values to the propositional variables satisfies a literal {a mathematical formula}xi if {a mathematical formula}xi takes the value true and satisfies a literal {a mathematical formula}x¯i if {a mathematical formula}xi takes the value false. An assignment satisfies a clause if it satisfies at least one literal of the clause, and satisfies a CNF formula if it satisfies all the clauses of the formula. An assignment for a CNF formula ϕ is complete if all the variables occurring in ϕ have been assigned; otherwise, it is partial. The MAX-SAT problem for a CNF formula ϕ is to find an assignment of values to propositional variables that minimizes the number of unsatisfied clauses (or equivalently, that maximizes the number of satisfied clauses). The MAX-SAT problem is NP-hard, since the boolean satisfiability problem, which is NP-complete, can be easily reduced into MAX-SAT. One extension to MAX-SAT is weighted MAX-SAT which asks for the maximum weight which can be satisfied by any assignment, given a set of weighted clauses. There have been many approaches that solve weighted MAX-SAT problems, such as MaxSatz [37], [36], [35], which implements a lower bound computation method that consists of incrementing the lower bound by one for every disjoint inconsistent subset that can be detected by unit propagation.
+      </paragraph>
+      <paragraph>
+       In HTNLearn, we exploit MaxSatz to solve all the built constraints, and attain a true or false assignment to maximally express the weighted constraints. According to the assignment, we can acquire the HTN model directly. For example, if “{a mathematical formula}p∈ADD(a)” is assigned true in the result of the solver, then p will be converted into an effect of the action a in the HTN model. Another example, if “{a mathematical formula}g∈STR” is assigned true, then g will be converted into a method structure.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      To evaluate the performance of HTNLearn, we design and carry out experiments in both synthetic and benchmark domains. Specifically, we evaluate the accuracy of the HTN model learned by HTNLearn,{sup:6} estimate the human effort saved by HTNLearn and measure HTNLearn's running time. These experiments are described in the following subsections:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Section 5.3.1 presents the accuracy results for the domains learned with HTNLearn when complete decomposition trees are provided.
+      </list-item>
+      <list-item label="•">
+       Section 5.3.2 presents the accuracy results for domains learned with HTNLearn when partial decomposition trees are provided.
+      </list-item>
+      <list-item label="•">
+       Section 5.3.3 presents results about the estimated amount of human effort that is saved when creating HTN models based on the models learned by HTNLearn.
+      </list-item>
+      <list-item label="•">
+       Section 5.3.4 presents the running time of HTNLearn when learning HTN models with respect to number of plan traces given in the input.
+      </list-item>
+     </list>
+     <section label="5.1">
+      <section-title>
+       Datasets and experimental setup
+      </section-title>
+      <paragraph>
+       We use the HTN domains called htn-blocks, htn-depots, htn-driverlog and htn-ebusiness for training and testing. Table 3 presents the number of actions, tasks and methods in these domains.
+      </paragraph>
+      <paragraph>
+       htn-blocks:In Table 3, htn-blocks is created based on the blocks world domain from IPC-2,{sup:7} which is composed of four actions (primitive tasks) as is given in the blocks world domain; and three tasks describing procedures that reverse two blocks in the same or different stacks, remove a block in a stack, and superpose a block on another block, respectively; and ten methods that decompose tasks into subtasks.htn-driverlog:The domain htn-driverlog is created based on the domain driverlog from IPC-3,{sup:8} which is composed of six actions, four tasks and ten methods. The six actions have the same meanings as described in the IPC-3's driverlog domain. The four tasks covers procedures that move an object from one location to another, schedule a truck to a target location, drive a truck from one location to another, and tell a driver to walk to a target location, respectively. The ten methods are used to decompose tasks to subtasks including primitive tasks.htn-depots:The htn-depots domain is also created based on the domain depots from IPC-3, which is composed of: six actions given by IPC-3's depots; eight tasks to move a crate from one place to another, clean crates above some crate, remove a crate as well as crates above the crate, superpose a crate (as well as crates above the crate) on another crate, install a crate into a truck, uninstall a crate from a truck, get a hoist to a target place, and drive a truck to a target domain. There are also thirteen methods to decompose tasks.htn-ebusiness:In the last row of Table 3, htn-ebusiness is created based on the simplified processes of electronic business. It consists of four actions specifying buying goods from a sales network, scheduling goods from a warehouse to another, transporting goods from a warehouse to a client, and paying for goods, respectively. There are three tasks covering the procedures that a client shops goods from sales network (must get the goods successfully), goods are transported from one warehouse to another, and goods are transported from a warehouse to a client, respectively. There are also five methods that decompose tasks to subtasks.
+      </paragraph>
+      <paragraph>
+       For each of these domains, we use a version of the domain consisting of hand-crafted methods and operators. This version is our ground-truth model. We generate 200 plan traces and their decomposition trees using this version of the domain. We gave these 200 plan traces, a subset of the decomposition trees (see below for details), and a collection of annotated tasks as input to HTNLearn. We then compare the resulting domain with the ground-truth model.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Evaluation metrics
+      </section-title>
+      <paragraph>
+       For the HTNLearn algorithm, we will evaluate the learned HTN methods and the learned action models separately. First, it is possible that our HTNLearn learns more decomposition methods than that in its corresponding ground-truth model. We define two metrics to measure the learning accuracy, which are called precision and recall, respectively. Precision and recall are often used in Information Retrieval (IR) [59]. In our definition, we will take the similar meaning as used in IR. We denote the sets of all the learned method structures and the ground-truth method structures by {a mathematical formula}Sl and {a mathematical formula}Sg, respectively. Thus, we define precision and recall as follows (note that a learned structure and a ground-truth structure are the same if and only if both their corresponding tasks and subtask lists are the same):{a mathematical formula} and{a mathematical formula}Precision measures how many of the learned structures are actually ground-truth structures while recall measures how many of the ground-truth structures are actually learned. A perfect precision (i.e., a score of 1.0) means that every method learned by HTNLearn matches ground-truth method structures (but says nothing about whether all ground-truth structures were learned), whereas a perfect recall (i.e., a score of 1.0) means that all ground-truth structures were learned by HTNLearn (but says nothing about how well they match those structures).
+      </paragraph>
+      <paragraph>
+       We define the accuracy of the learned structures, denoted by {a mathematical formula}Accs, as the combination of precision and recall (which can be viewed as the F-measure defined by [59]). Formally, {a mathematical formula}Accs can be calculated by the following equation when neither precision nor recall is 0:{a mathematical formula} We define {a mathematical formula}Accs to be 0 if either precision or recall is 0. Since the harmonic mean of precision and recall tends toward the smaller one, it tends to mitigate the impact of the larger one and aggravate the impact of the smaller one.
+      </paragraph>
+      <paragraph>
+       We would like to see how much human effort is needed to tune the applicability conditions of HTN models, which include precondition lists, add lists and delete lists of action models, and precondition lists of HTN methods. The human effort is measured by counting how many predicates need to be added to or deleted from the learned models to match the ground-truth models. Specifically, for each learned action model a, we denote its corresponding ground-truth action model as {a mathematical formula}ag. We define the error rate of a's preconditions as{a mathematical formula} where {a mathematical formula}allPossiblePre(a) means the set of all possible preconditions of a, i.e., the set of all predicates in P (extracted by the first step of Algorithm 1) whose parameters are included in a. For example, Let P be the predicate set {a mathematical formula}{p1,p2,p3,p4}. If there are three predicates {a mathematical formula}p1, {a mathematical formula}p2, {a mathematical formula}p3 whose parameters are included by a, all possible preconditions of a are {a mathematical formula}{p1,p2,p3}. Likewise, we can define the error rates of a's effects and a's effects, which is denoted as {a mathematical formula}Eadd(a) and {a mathematical formula}Edel(a), respectively. For each learned method m whose structure {a mathematical formula}STR(m) is in {a mathematical formula}Sl∩Sg, we can calculate the error rate of m's preconditions accordingly, which is denoted by {a mathematical formula}Epre(m). Furthermore, we define the error rate of the learned applicability conditions as the average of these four kinds of error rates, i.e.,{a mathematical formula} and the accuracy as {a mathematical formula}Accc=1−Ec. Note that when calculating error rates of preconditions of the learned methods, we only focus on methods whose method structures belong to ground-truth structures {a mathematical formula}Sg. Any other method is viewed as incorrect and do not need to be considered.
+      </paragraph>
+      <paragraph>
+       We will show experimental results with the accuracy measures {a mathematical formula}Accs and {a mathematical formula}Accc when complete decomposition trees are provided for the traces and when partial decomposition trees are provided (including the case where the partial tree is empty). We will also measure the running time of our HTNLearn with respect to different number of decomposition trees.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Experimental results
+      </section-title>
+      <section label="5.3.1">
+       <section-title>
+        Accuracy with complete decomposition trees
+       </section-title>
+       <paragraph>
+        First, we would like to see how the accuracy changes when increasing number of decomposition trees are given for the case when these decomposition trees are complete. In this setting, our learning problem is reduced to learning action models and method preconditions simultaneously, with no need to learn method structures (since method structures can be directly extracted from decomposition trees), as is done by our previous work [70].
+       </paragraph>
+       <paragraph>
+        An alternative to HTNLearn also solving this problem would be to learn the action models with ARMS [69] and separately learn the method preconditions with an existing algorithm such as CaMeL [30]. To determine the importance of learning the action models and method preconditions simultaneously, we ran an experiment comparing HTNLearn against a hybrid system, that we call it {a mathematical formula}ARMS+, which first uses ARMS to learn the action models and then uses the method-based constraints to learn the method preconditions.
+       </paragraph>
+       <paragraph>
+        We varied the fraction of intermediate states provided from 1/5 to 1. The factor {a mathematical formula}N/5 (with {a mathematical formula}1≤N≤5) means only N intermediate states are observed among five sequential states. For the factor 1 (i.e., {a mathematical formula}N=5), all 5 intermediate states are observed. Note that each observed intermediate state is assumed to be complete (i.e., no atoms are missing in its description). We run this experiment five times and calculate the average accuracy. The results are shown in Fig. 5. In all cases, the accuracies of HTNLearn are higher than that of {a mathematical formula}ARMS+. This is expected, because constraints about the action models may provide information that may be exploited to find more accurate method preconditions, and vice versa. The differences are more significant on the more complex domains such as htn-depots, where combining the structural and action models provides additional useful constraints that would not be generated when the two are learned separately. An increase in the number of intermediate states that are specified generally increases the accuracy of both systems.
+       </paragraph>
+       <paragraph>
+        We would like to test how accuracy changes when each observed intermediate state is not complete. We set the percentage of intermediate states as 1/3, and vary the percentage of propositions in each state from 20% to 100%. We run HTNLearn five times and calculate an average of accuracies. The result is shown in Fig. 6. From Fig. 6, we can see that the accuracy {a mathematical formula}Accc generally increases when the percentage of observed propositions becomes higher. This is consistent with our intuition, since the more propositions are observed, the more knowledge can be used for improving the learning result. By comparing the curves of HTNLearn and {a mathematical formula}ARMS+, we can also find that the accuracy {a mathematical formula}Accc of HTNLearn is higher than that of {a mathematical formula}ARMS+. The potential reason is as stated in the previous paragraph, i.e., constraints on action models may help learn more accurate method preconditions.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       <section-title>
+        Accuracy with partial decomposition trees
+       </section-title>
+       <paragraph>
+        In this experiment, we would like to evaluate the performance of HTNLearn on learning method structures with only partial decomposition structures as input. We set the percentage of observed intermediate states to be 1/3; when provided, each of the intermediate states was complete. We varied the percentage of partial structures from 0, 25%, 50%, 75% to 100%. When the percentage is “0”, it means that the partial decomposition tree is empty and only the plan trace is provided, while 100% means that the complete decomposition tree is provided. When the percentage is set to be 25%, it means there is one non-primitive task whose decomposition is known among four non-primitive tasks in each decomposition tree, likewise for other percentages. The results were shown in Fig. 7.
+       </paragraph>
+       <paragraph>
+        From Fig. 7, we can see that for all cases, when percentage of partial structures increases, {a mathematical formula}Accs increases correspondingly. This is reasonable, since the larger the number of partial structures, the more correct structures can be extracted directly from the inputted partial decomposition trees. In addition, {a mathematical formula}Accc also becomes higher when the percentage gets larger. This is because the structure information would provide valuable information for building decomposition constraints DC, which may help learn the HTN conditions. We observed that the accuracy of the learned structures {a mathematical formula}Accs was not less than 0.8 for all the cases when the percentage was not less than 50%. This reveals our learning algorithm HTNLearn could indeed help acquire structure knowledge, which could be provided for people to build HTN models. We further test the human efforts saved by HTNLearn in Section 5.3.3. The number of method structures learned by HTNLearn is not large. To empirically show this fact, we recorded the average numbers (we ran HTNLearn five times to calculate an average) of method structures learned for all domains by setting the percentage of partial structures to be 50%. The results were 13, 15, 18, and 7 method structures learned for the htn-blocks, htn-driverlog, htn-depots, and htn-business domains, respectively.
+       </paragraph>
+       <paragraph>
+        We now consider the relations between HTNLearn and other learning systems. There are no HTN learning systems that can be trivially extended to learn HTN structures without knowing action models. Extending some techniques, such as grammar inferencing techniques, to first learn HTN structures and then action models neglects the close relations between HTN structures and action models. These relations are helpful for improving the learning quality of HTN models as demonstrated in our experiments. In particular, action models can be used to generate intermediate states between actions by executing plan traces. These states can be further used to recognize HTN structures with the help of annotated tasks (i.e., which help determine what action subsequence achieves which annotated task by checking if preconditions and effects of the annotated task are satisfied in the first and last state of the subsequence respectively). In other words, action models are helpful for learning HTN structure. Conversely, the improved HTN structures can also help learn action models, since HTN structures suggest close relations between actions (e.g., actions produces conditions for their subsequent actions). These relations are useful for learning preconditions and effects of actions.
+       </paragraph>
+       <paragraph>
+        We would like to examine any relationship between {a mathematical formula}Accs and {a mathematical formula}Accc. To do so, we fit curves to see how {a mathematical formula}Accc changes when {a mathematical formula}Accs becomes larger. The results are shown in Fig. 8. We find that {a mathematical formula}Accc becomes larger as {a mathematical formula}Accs gets larger for all domains. This exhibits that structure information could really help learn HTN conditions. The potential reason could be the same mentioned in the previous paragraph, i.e., structure information may help constrain the relationship between conditions, which may, as a result, help improve the learning result of the HTN conditions.
+       </paragraph>
+      </section>
+      <section label="5.3.3">
+       Human efforts saved by HTNLearn
+       <paragraph>
+        In this experiment, we would like to see how much benefit can be attained by HTNLearn when creating new HTN models, i.e., how much effort can be saved by HTNLearn. To do this, we invited two groups of people to do testing, each of which had eight members. We took care to balance members of these groups; in the first group, six were university students and faculty, and two were engineers from a company. In the second group, five were university students and faculty and the remaining three were engineers from a company. All participants were between 20 and 35 years of age, and had some general background knowledge about AI planning. All participants were told the description of domains, including the meaning of each task and each action, in natural language (i.e., without any logic-language description).
+       </paragraph>
+       <paragraph>
+        We conducted two user studies with the above-mentioned two groups of people. In the first case, we ran HTNLearn by setting the percentage of states to be 1/3 (each of which was complete), the percentage of partial structures to be 50%. The first group are told to create HTN models based on the learned models. In the second case, we let the second group create HTN models without any learned HTN models. We recorded the times used to create HTN models by these two groups, and calculated their accuracies (including {a mathematical formula}Accs and {a mathematical formula}Accc), respectively. The results are shown in Fig. 9, Fig. 10, where the red “◊” indicates the testing result of the first case (i.e., building HTN models based on learned HTN models) and the blue “□” indicates the testing result of the second case (i.e., building HTN models without learned HTN models).
+       </paragraph>
+       <paragraph>
+        From Fig. 9, we found that the time spent in the first case was much lower than that of the second case for all four HTN domains. This exhibits that our HTNLearn algorithm can indeed save time in creating HTN models. Furthermore, we found that the accuracies of {a mathematical formula}Accs and {a mathematical formula}Accc of the first case were much higher than those of the second case. This indicates that HTNLearn can indeed improve the model quality when creating HTN models.
+       </paragraph>
+       <paragraph>
+        In summary, from Fig. 7 we can see that, when the percentage of structures is set to be 50%, the accuracies of structures and conditions are both not less than 80%. Furthermore, from Fig. 9, Fig. 10 show the learnt HTN models can indeed largely help humans create more accurate models, as well as saving times in creating HTN models, when the percentage of a structure is set to be 50%. Based on these observations, we conjecture that learning with a structure percentage larger than 50% might produce acceptably accurate models for humans to further refine and finally attain high-quality models.
+       </paragraph>
+      </section>
+      <section label="5.3.4">
+       <section-title>
+        Running time
+       </section-title>
+       <paragraph>
+        To test the running time of HTNLearn, we ran HTNLearn with respect to different percentages of partial structures, by setting the percentage of states to be 1/3, the number of partial decomposition trees to be 200, and the percentage of structures in the partial decomposition trees was set to 50%. We randomly selected the states (with a probability of 1/3) five times, and recorded an average of the running time. The results are shown in Fig. 11. We can see that in all cases the running time generally goes down as the percentage of structures becomes higher. The reason for this is because the problem space (or the number of clauses or variables of the MAX-SAT problem) becomes smaller as the percentage of structures becomes larger, i.e., there is no need to search a large number of possible method structures. This reduces the running time for the MAX-SAT solver to get the final solution. To verify the fact that the problem space becomes smaller as the percentage of structures becomes larger, we show the change of the number of clauses and variables of the MAX-SAT problem with respect to the percentage of structures in domain htn-blocks in Table 4. From Table 4, we can see that the number of clauses or variables generally decreases when the percentage of structures becomes larger, which indicates the problem space becomes smaller with the percentage increasing in the htn-blocks domain (and likewise for other domains).
+       </paragraph>
+       <paragraph>
+        We also would like to see how the running time changes when increasing number of decomposition trees are given. We also set the percentage of states to be 1/3, each of which was complete, and the percentage of partial structures to be 50%. The result is shown in Table 5. The running time of HTNLearn increases polynomially with the size of the input. To verify our claim, we use the relationship between the size of the given partial decomposition trees and the CPU time to estimate a function that could best fit these points. We've found that we are able to fit the performance curve with a polynomial of order 2 or order 3. The fitting curve for the domain htn-blocks can be found in Fig. 12 (other curves for other domains that are not shown here are similar to Fig. 12). We computed the polynomial for fitting htn-blocks, which is {a mathematical formula}−0.0002x3+0.0527x2−2.0466x+29.7333.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Summary
+      </section-title>
+      <paragraph>
+       From the experiments we draw following conclusions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Our HTNLearn algorithm can effectively learn HTN models, including structures and conditions, from partially observed plan traces with high accuracy. The accuracy of the leaned models increases the more plan traces are provided.
+       </list-item>
+       <list-item label="•">
+        Our HTNLearn algorithm can help reduce the human effort in creating HTN models. Comparing to creating HTN models from scratch, manually extending the learned models saves time and results in more accurate models.
+       </list-item>
+       <list-item label="•">
+        Our HTNLearn algorithm requires a small amount of training time to learn high-quality models; its running time increases polynomially on the number of plan traces given.
+       </list-item>
+      </list>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

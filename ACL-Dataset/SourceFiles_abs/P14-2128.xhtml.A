@@ -1,0 +1,466 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Punctuation Processing for Projective Dependency ParsingThis work was done while the first author was visiting SUTD.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The task of dependency parsing is to identify the lexical head of each of the tokens in a string. Modern statistical parsers
+        [8, 10, 5, 14]
+        treat all the tokens equally, assigning lexical heads to punctuations as well as words. Punctuations arguably play an important role in syntactic analysis. However, there are a number of reasons that it is not necessary to parse punctuations:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        First, the lexical heads of punctuations are not as well defined as those of words. Consequently, punctuations are not as consistently annotated in treebanks as words, making it harder to parse punctuations. For example, modern statistical parsers achieve above
+        90⁢%
+        unlabelled attachment score (UAS) on words. However, the UAS on punctuations are generally below
+        85⁢%
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Moreover, experimental results showed that parsing accuracy of content words drops on sentences which contain higher ratios of punctuations. One reason for this result is that projective dependency parsers satisfy the “no crossing links” constraint, and errors in punctuations may prevent correct word-word dependencies from being created (see section 2). In addition, punctuations cause certain type of features inaccurate. Take valency features for example, previous work
+        [14]
+        has shown that such features are important to parsing accuracy, e.g., it may inform the parser that a verb already has two objects attached to it. However, such information might be inaccurate when the verb’s modifiers contain punctuations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Ultimately, it is the dependencies between words that provide useful information for real world applications. Take machine translation or information extraction for example, most systems take advantage of the head-modifier relationships between word pairs rather than word-punctuation pairs to make better predictions. The fact that most previous work evaluates parsing accuracies without taking punctuations into account is also largely due to this reason.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Given the above reasons, we propose an alternative approach to punctuation processing for dependency parsing. In this method, punctuations are not associated with lexical heads, but are treated as properties of their neighbouring words.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Our method is simple and can be easily incorporated into state-of-the-art parsers. In this work, we report results on an arc-standard transition-based parser. Experiments show that our method achieves about
+        0.90⁢%
+        UAS improvement over the greedy baseline parser on the standard Penn Treebank test set. Although the improvement becomes smaller as the beam width grows larger, we still achieved
+        93.06⁢%
+        UAS with a beam of width 64, which is the best result for transition-based parsers reported so far. Our code will be available at https://github.com/majineu/Parser/Punc/A-STD.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Influence of Punctuations on Parsing
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In this section, we conduct a set of experiments to show the influence of punctuations on dependency parsing accuracies.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Setup
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         We use the Wall Street Journal portion of the Penn Treebank with the standard splits: sections 02-21 are used as the training set; section 22 and section 23 are used as the development and test set, respectively. Penn2Malt is used to convert bracketed structures into dependencies. We use our own implementation of the Part-Of-Speech (POS) tagger proposed by
+         Collins (2002)
+         to tag the development and test sets. Training set POS tags are generated using 10-fold jack-knifing.
+Parsing accuracy is evaluated using unlabelled attachment score (UAS), which is the percentage of words that are assigned the correct lexical heads.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         To show that the influence of punctuations on parsing is independent of specific parsing algorithms, we conduct experiments using three parsers, each representing a different parsing methodology: the open source MSTParser
+         <cite class="ltx_cite">
+          [
+          <a class="ltx_ref" href="#bib.bib41" title="Online learning of approximate dependency parsing algorithms">
+           9
+          </a>
+          ]
+         </cite>
+         ,
+our own re-implementation of an arc-standard transition-based parser
+         [11]
+         , which is trained using global learning and beam-search
+         [13]
+         with a rich feature set
+         [14]
+         ,
+and our own re-implementation of the easy-first parser
+         [4]
+         with an extended feature set
+         [7]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Punctuations and Parsing Accuracy
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Our first experiment is to show that, compared with words, punctuations are more difficult to parse and to learn. To see this, we evaluate the parsing accuracies of the selected parsers on words and punctuations, separately. Results are listed in Table 1, where row 2 and row 3 list the UAS of words (all excluding punctuations) on the development and test set, respectively. Row 4 and row 5 list accuracies of punctuations (all excluding words) on the development and test set, respectively. We can see that although all the parsers achieve above
+         90⁢%
+         UAS on words, the UAS on punctuations are mostly below
+         85⁢%
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         As for learning, we calculate the percentage of parameter updates that are caused by associating punctuations with incorrect heads during training of the easy-first parser
+         . The result is that more than
+         31⁢%
+         of the parameter updates are caused due to punctuations, though punctuations account for only
+         11.6⁢%
+         of the total tokens in the training set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         The fact that parsers achieve low accuracies on punctuations is to some degree expected, because the head of a punctuation mark is linguistically less well-defined.
+However, a related problem is that parsing accuracy on
+         words
+         tends to drop on the sentences which contain high ratio of
+         punctuations
+         .
+To see this, we divide the sentences in the development set into sub-sets according the punctuation ratio (percentage of punctuations that a sentence contains), and then evaluate parsing accuracies on the sub-sets separately.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         The results are listed in Table 2. Since long sentences are inherently more difficult to parse, to make a fair comparison, we further divide the development set according to sentence lengths as shown in the first row
+         . We can see that most of the cases, parsing accuracies drop on sentences with higher punctuation ratios. Note that this negative effect on parsing accuracy might be overlooked since most previous work evaluates parsing accuracy
+         without
+         taking punctuations into account.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        <p class="ltx_p">
+         By inspecting the parser outputs, we found that error propagation caused by assigning incorrect head to punctuations is one of the main reason that leads to this result. Take the sentence shown in Figure 1 (a) for example, the word
+         Mechanisms
+         is a modifier of
+         entitled
+         according to the gold reference. However, if the quotation mark, “, is incorrectly recognized as a modifier of
+         was
+         , due to the “no crossing links” constraint, the arc between
+         Mechanisms
+         and
+         entitled
+         can never be created.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p6">
+        <p class="ltx_p">
+         A natural question is whether it is possible to reduce such error propagation by simply removing all punctuations from parsing. Our next experiment aims at answering this question. In this experiment, we first remove all punctuations from the original data and then modify the dependency arcs accordingly in order to maintain word-word dependencies in the original data. We re-train the parsers on the modified training set and evaluate parsing accuracies on the modified data.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p7">
+        <p class="ltx_p">
+         Results are listed in row 6 and row 7 of Table 1. We can see that parsing accuracies on the modified data drop significantly compared with that on the original data. The result indicates that by removing punctuations, we lose some information that is important for dependency parsing.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Punctuation as Properties
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In our method, punctuations are treated as properties of its neighbouring words. Such properties are used as additional features to guide the parser to construct the dependency graph.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Paired Punctuation
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Our method distinguishes
+         paired
+         punctuations from other punctuations. Here paired punctuations include brackets and quotations marks, whose Penn Treebank POS tags are the following four:
+        </p>
+        -LRB--RRB-“”
+        <p class="ltx_p">
+         The characteristics of paired punctuations include: (1) they typically exist in pairs; (2) they serve as
+         boundaries
+         that there is only one dependency arc between the words inside the boundaries and the words outside. Take the sentence in Figure 1 (a) for example, the only arc cross the boundary is (Mechanisms, entitled) where entitled is the head.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         To utilize such boundary information, we further classify paired punctuations into two categories: those that serve as the beginning of the boundary, whose POS tags are either -LRB- or “, denoted by
+         Bpunc
+         ; and those that serve as the end of the boundary, denoted by
+         Epunc
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         Before parsing starts, a preprocessing step is used to first attach the paired punctuations as properties of their neighbouring words, and then remove them from the sentence. In particular, we attach
+         Bpunc
+         s to their right neighbours and
+         Epunc
+         s to their left neighbours, as shown in Figure 1 (b). Note that in Figure 1 (a), the left neighbour of ” is also a punctuation. In such cases, we simply remove these punctuations since the existence of paired punctuations already indicates that there should be a boundary.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         During parsing, when a dependency arc with lexical head
+         wh
+         is created, the property of
+         wh
+         is updated by the property of its left (or right) most child to keep track whether there is a
+         Bpunc
+         (or
+         Epunc
+         ) to the left (or right) side of the sub-tree rooted at
+         wh
+         ,
+as shown in Figure 1 (c). When
+         Bpunc
+         s and
+         Epunc
+         s meet each other at
+         wh
+         , a
+         Paired
+         property is assigned to
+         wh
+         to capture that the words within the paired punctuations form a sub-tree, rooted at
+         wh
+         . See Figure 1 (d).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Practical Issues
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         It is not uncommon that two
+         Bpuncs
+         appear adjacent to each other. For example,
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         (“Congress’s Environmental Buccaneers,” Sept. 18)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         In our implementation,
+         Bpunc
+         or
+         Epunc
+         properties are implemented using flags.
+In the example, we set two flags
+         “
+         and
+         (
+         on the word Congrees’s. When
+         Bpunc
+         and
+         Epunc
+         meet each other, the corresponding flags are turned off. In the example, when Congrees’s is identified as a modifier of Buccaneers, the
+         ”
+         flag of Buccaneers is turned off. However, we do not assign a
+         Paired
+         property to Buccaneers since its
+         (
+         flag is still on. The
+         Paired
+         property is assigned only when all the flags are turned off.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Non-Paired Punctuations
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Though some types of non-paired punctuations may capture certain syntactic patterns, we do not make further distinctions between them, and treat these punctuations uniformly for simplicity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         Before parsing starts and after the preprocessing step for paired punctuations, our method employs a second preprocessing step to attach non-paired punctuations to their left neighbouring words. It is guaranteed that the property of the left neighbouring words of non-paired punctuations must be empty. Otherwise, it means the non-paired punctuation is adjacent to a paired punctuation. In such cases, the non-paired punctuation would be removed in the first processing step.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         During parsing, non-paired punctuations are also passed bottom-up: the property of
+         wh
+         is updated by its
+         right
+         -most dependent to keep track whether there is a punctuation to the right side of the tree rooted at
+         wh
+         . The only special case is that if
+         wh
+         already contains a
+         Bpunc
+         property, then our method simply ignores the non-paired property since we maintain the boundary information with the highest priority.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Features
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         We incorporate our method into the arc-standard transition-based parser, which uses a stack
+         σ
+         to maintain partially constructed trees and a buffer
+         β
+         for the incoming words
+         [11]
+         . We design a set of features to exploit the potential of using punctuation properties for the arc-standard parser.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         The feature templates are listed in Table 3. In addition to the features designed for paired punctuations, such as bigram punctuation features listed in line 3 of Table 3, we also design features for non-paired punctuations.
+For example, the distance features in line 5 of Table 3 is used to capture the pattern that if a word
+         w
+         with comma property is the left modifier of a noun or a verb, the distance between
+         w
+         and its lexical head is often larger than 1. In other words, they are not adjacent.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Results
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Our first experiment is to investigate the effect of processing paired punctuations on parsing accuracy. In this experiment, the method introduced in Section 3.1 is used to process paired punctuations, and the non-paired punctuations are left un-touched.
+Feature templates used in this experiment are those listed in the top three rows of Table 3 together with those used for the baseline arc-standard parser.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Results on the development set are shown in the second column of Table 4. We can see that when the beam width is set to 1, our method achieves an
+        0.49
+        UAS improvement. By comparing the outputs of the two parsers, two types of errors made by the baseline parser are effectively corrected.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        The first is that our method is able to capture the pattern that there is only one dependency arc between the words within the paired-punctuations and the words outside, while the baseline parser sometimes creates more dependency arcs that cross the boundary.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        The second is more interesting. Our method is able to capture that the root,
+        wh
+        , of the sub-tree within the paired-punctuation, such as “Mechanisms” in Figure 1, generally serves as a modifier of the words outside, while the baseline parser occasionally make
+        wh
+        as the head of the sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        As we increase the beam width, the improvement of our method over the baseline becomes smaller. This is as expected, since beam search also has the effect of reducing error propagation
+        [15]
+        , thereby alleviating the errors caused by punctuations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        In the last experiment, we examine the effect of incorporating all punctuations using the method introduced in Section 2. In this experiment, we use all the feature templates in Table 3 and those in the baseline parser. Results are listed in the fourth column of Table 4, which shows that parsing accuracies can be further improved by also processing non-paired punctuations. The overall accuracy improvement when the beam width is 1 reaches
+        0.91⁢%
+        . The extra improvements mainly come from better accuracies on the sentences with comma. However, the exact type of errors that are corrected by using non-paired punctuations is more difficult to summarize.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        The final results on the test set are listed in Table 5
+        . Table 5 also lists the accuracies of state-of-the-art transition-based parsers. In particular, “Huang 10” and “Zhang 11” denote
+        Huang and Sagae (2010)
+        and
+        Zhang and Nivre (2011)
+        , respectively. “Bohnet 12” and “Choi 13” denote
+        Bohnet and Nivre (2012)
+        and
+        Choi and Mccallum (2013)
+        , respectively.
+We can see that our method achieves the best accuracy for single-model transition-based parsers.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusion and Related Work
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this work, we proposed to treat punctuations as properties of context words for dependency parsing. Experiments with an arc-standard parser showed that our method effectively improves parsing performance and we achieved the best accuracy for single-model transition-based parser.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Regarding punctuation processing for dependency parsing,
+        Li et al. (2010)
+        proposed to utilize punctuations to segment sentences into small fragments and then parse the fragments separately. A similar approach is proposed by
+        Spitkovsky et al. (2011)
+        which also designed a set of constraints on the fragments to improve unsupervised dependency parsing.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,981 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Bilingually-constrained Phrase Embeddings for Machine Translation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We propose Bilingually-constrained Recursive Auto-encoders (BRAE) to learn semantic phrase embeddings (compact vector representations for phrases), which can distinguish the phrases with different semantic meanings.
+The BRAE is trained in a way that minimizes the semantic distance of translation equivalents and maximizes the semantic distance of non-translation pairs simultaneously.
+After training, the model learns how to embed each phrase semantically in two languages and also learns how to transform semantic embedding space in one language to the other.
+We evaluate our proposed method on two end-to-end SMT tasks (phrase table pruning and decoding with phrasal semantic similarities) which need to measure semantic similarity between a source phrase and its translation candidates.
+Extensive experiments show that the BRAE is remarkably effective in these two tasks.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Due to the powerful capacity of feature learning and representation, Deep (multi-layer) Neural Networks (DNN) have achieved a great success in speech and image processing
+        [13, 15, 6]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Recently, statistical machine translation (SMT) community has seen a strong interest in adapting and applying DNN to many tasks, such as word alignment
+        [29]
+        , translation confidence estimation
+        [19, 18, 31]
+        , phrase reordering prediction
+        [16]
+        , translation modelling
+        [1, 12]
+        and language modelling
+        [7, 26]
+        .
+Most of these works attempt to improve some components in SMT based on
+        word embedding
+        , which converts a word into a dense, low dimensional, real-valued vector representation
+        [2, 3, 5, 20]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        However, in the conventional (phrase-based) SMT, phrases are the basic translation units. The models using word embeddings as the direct inputs to DNN cannot make full use of the whole syntactic and semantic information of the phrasal translation rules. Therefore, in order to successfully apply DNN to model the whole translation process, such as modelling the decoding process, learning compact vector representations for the basic phrasal translation units is the essential and fundamental work.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In this paper, we explore the phrase embedding, which represents a phrase (sequence of words) with a real-valued vector. In some previous works, phrase embedding has been discussed from different views.
+        Socher et al. (2011)
+        make the phrase embeddings capture the sentiment information.
+        Socher et al. (2013)
+        enable the phrase embeddings to mainly capture the syntactic knowledge.
+        Li et al. (2013)
+        attempt to encode the reordering pattern in the phrase embeddings.
+        Kalchbrenner and Blunsom (2013)
+        utilize a simple convolution model to generate phrase embeddings from word embeddings.
+        Mikolov et al. (2013)
+        consider a phrase as an indivisible
+        n
+        -gram. Obviously, these methods of learning phrase embeddings either focus on some aspects of the phrase (e.g. reordering pattern), or impose strong assumptions (e.g. bag-of-words or indivisible
+        n
+        -gram). Therefore, these phrase embeddings are not suitable to fully represent the phrasal translation units in SMT due to the lack of semantic meanings of the phrase.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Instead, we focus on learning phrase embeddings from the view of semantic meaning, so that our phrase embedding can fully represent the phrase and best fit the phrase-based SMT. Assuming the phrase is a meaningful composition of its internal words, we propose Bilingually-constrained Recursive Auto-encoders (BRAE) to learn semantic phrase embeddings. The core idea behind is that a phrase and its correct translation should share the same semantic meaning. Thus, they can supervise each other to learn their semantic phrase embeddings. Similarly, non-translation pairs should have different semantic meanings, and this information can also be used to guide learning semantic phrase embeddings.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        In our method, the standard recursive auto-encoder (RAE) pre-trains the phrase embedding with an unsupervised algorithm by minimizing the reconstruction error
+        [22]
+        , while the bilingually-constrained model learns to fine-tune the phrase embedding by minimizing the semantic distance between translation equivalents and maximizing the semantic distance between non-translation pairs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        We use an example to explain our model. As illustrated in Fig. 1, the Chinese phrase on the left and the English phrase on the right are translations with each other. If we learn the embedding of the Chinese phrase correctly, we can regard it as the gold representation for the English phrase and use it to guide the process of learning English phrase embedding. In the other direction, the Chinese phrase embedding can be learned in the same way. This procedure can be performed with an co-training style algorithm so as to minimize the semantic distance between the translation equivalents
+        . In this way, the result Chinese and English phrase embeddings will capture the semantics as much as possible. Furthermore, a transformation function between the Chinese and English semantic spaces can be learned as well.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        With the learned model, we can accurately measure the semantic similarity between a source phrase and a translation candidate. Accordingly, we evaluate the BRAE model on two end-to-end SMT tasks (phrase table pruning and decoding with phrasal semantic similarities) which need to check whether a translation candidate and the source phrase are in the same meaning. In phrase table pruning, we discard the phrasal translation rules with low semantic similarity. In decoding with phrasal semantic similarities, we apply the semantic similarities of the phrase pairs as new features during decoding to guide translation candidate selection. The experiments show that up to 72% of the phrase table can be discarded without significant decrease on the translation quality, and in decoding with phrasal semantic similarities up to 1.7 BLEU score improvement over the state-of-the-art baseline can be achieved.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p9">
+       <p class="ltx_p">
+        In addition, our semantic phrase embeddings have many other potential applications. For instance, the semantic phrase embeddings can be directly fed to DNN to model the decoding process. Besides SMT, the semantic phrase embeddings can be used in other cross-lingual tasks (e.g. cross-lingual question answering) and monolingual applications such as textual entailment, question answering and paraphrase detection.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Recently, phrase embedding has drawn more and more attention. There are three main perspectives handling this task in monolingual languages.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        One method considers the phrases as bag-of-words and employs a convolution model to transform the word embeddings to phrase embeddings
+        [4, 12]
+        .
+        Gao et al. (2013)
+        also use bag-of-words but learn BLEU sensitive phrase embeddings. This kind of approaches does not take the word order into account and loses much information. Instead, our bilingually-constrained recursive auto-encoders not only learn the composition mechanism of generating phrases from words, but also fine tune the word embeddings during the model training stage, so that we can induce the full information of the phrases and internal words.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Another method
+        [20]
+        deals with the phrases having a meaning that is not a simple composition of the meanings of its individual words, such as
+        New York Times
+        . They first find the phrases of this kind. Then, they regard these phrases as indivisible units, and learn their embeddings with the context information. However, this kind of phrase embedding is hard to capture full semantics since the context of a phrase is limited. Furthermore, this method can only account for a very small part of phrases, since most of the phrases are compositional. In contrast, our method attempts to learn the semantic vector representation for any phrase.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        The third method views any phrase as the meaningful composition of its internal words. The recursive auto-encoder is typically adopted to learn the way of composition
+        [22, 23, 21, 24, 16]
+        . They pre-train the RAE with an unsupervised algorithm. And then, they fine-tune the RAE according to the label of the phrase, such as the syntactic category in parsing (Socher et al., 2013a), the polarity in sentiment analysis
+        [23, 24]
+        , and the reordering pattern in SMT
+        [16]
+        . This kind of semi-supervised phrase embedding is in fact performing phrase clustering with respect to the phrase label. For example, in the RAE-based phrase reordering model for SMT
+        [16]
+        , the phrases with the similar reordering tendency (e.g. monotone or swap) are close to each other in the embedding space, such as the prepositional phrases. Obviously, this kind methods of semi-supervised phrase embedding do not fully address the semantic meaning of the phrases. Although we also follow the composition-based phrase embedding, we are the first to focus on the semantic meanings of the phrases and propose a bilingually-constrained model to induce the semantic information and learn transformation of the semantic space in one language to the other.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Bilingually-constrained Recursive Auto-encoders
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        This section introduces the Bilingually-constrained Recursive Auto-encoders (BRAE), that is inspired by two observations. First, the recursive auto-encoder provides a reasonable composition mechanism to embed each phrase. And the semi-supervised phrase embedding
+        [23, 21, 16]
+        further indicates that phrase embedding can be tuned with respect to the label. Second, even though we have no correct semantic phrase representation as the gold label, the phrases sharing the same meaning provide an indirect but feasible way.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        We will first briefly present the unsupervised phrase embedding, and then describe the semi-supervised framework. After that, we introduce the BRAE on the network structure, objective function and parameter inference.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Unsupervised Phrase Embedding
+       </h3>
+       <div class="ltx_subsubsection" id="S3.SS1.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.1.1
+         </span>
+         Word Vector Representations
+        </h4>
+        <div class="ltx_para" id="S3.SS1.SSS1.p1">
+         <p class="ltx_p">
+          In phrase embedding using composition, the word vector representation is the basis and serves as the input to the neural network. After learning word embeddings with DNN
+          [2, 5, 20]
+          , each word in the vocabulary
+          V
+          corresponds to a vector
+          x∈ℝn
+          , and all the vectors are stacked into an embedding matrix
+          L∈ℝn×|V|
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS1.p2">
+         <p class="ltx_p">
+          Given a phrase which is an ordered list of
+          m
+          words, each word has an index
+          i
+          into the columns of the embedding matrix
+          L
+          . The index
+          i
+          is used to retrieve the word’s vector representation using a simple multiplication with a binary vector
+          e
+          which is zero in all positions except for the
+          i
+          th index:
+         </p>
+         xi=L⁢ei∈ℝn
+
+(1)
+         <p class="ltx_p">
+          Note that
+          n
+          is usually set empirically, such as
+          n=50,100,200
+          . Throughout this paper,
+          n=3
+          is used for better illustration as shown in Fig. 1.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS1.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.1.2
+         </span>
+         RAE-based Phrase Embedding
+        </h4>
+        <div class="ltx_para" id="S3.SS1.SSS2.p1">
+         <p class="ltx_p">
+          Assuming we are given a phrase
+          w1⁢w2⁢⋯⁢wm
+          , it is first projected into a list of vectors
+          (x1,x2,⋯,xm)
+          using Eq. 1. The RAE learns the vector representation of the phrase by recursively combining two children vectors in a bottom-up manner
+          [23]
+          . Fig. 2 illustrates an instance of a RAE applied to a binary tree, in which a standard auto-encoder (in box) is re-used at each node. The standard auto-encoder aims at learning an abstract representation of its input. For two children
+          c1=x1
+          and
+          c2=x2
+          , the auto-encoder computes the parent vector
+          y1
+          as follows:
+         </p>
+         p=f⁢(W(1)⁢[c1;c2]+b(1))
+
+(2)
+         <p class="ltx_p">
+          Where we multiply the parameter matrix
+          W(1)∈ℝn×2⁢n
+          by the concatenation of two children
+          [c1;c2]∈ℝ2⁢n×1
+          . After adding a bias term
+          b(1)
+          , we apply an element-wise activation function such as
+          f=t⁢a⁢n⁢h⁢(⋅)
+          , which is used in our experiments. In order to apply this auto-encoder to each pair of children, the representation of the parent
+          p
+          should have the same dimensionality as the
+          ci
+          ’s.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS2.p2">
+         <p class="ltx_p">
+          To assess how well the parent’s vector represents its children, the standard auto-encoder reconstructs the children in a reconstruction layer:
+         </p>
+         [c1′;c2′]=f(2)⁢(W(2)⁢p+b(2))
+
+(3)
+         <p class="ltx_p">
+          Where
+          c1′
+          and
+          c2′
+          are reconstructed children,
+          W(2)
+          and
+          b(2)
+          are parameter matrix and bias term for reconstruction respectively, and
+          f(2)=t⁢a⁢n⁢h⁢(⋅)
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS2.p3">
+         <p class="ltx_p">
+          To obtain the optimal abstract representation of the inputs, the standard auto-encoder tries to minimize the reconstruction errors between the inputs and the reconstructed ones during training:
+         </p>
+         Er⁢e⁢c⁢([c1;c2])=12⁢||[c1;c2]-[c1′;c2′]||2
+
+(4)
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS2.p4">
+         <p class="ltx_p">
+          Given
+          y1=p
+          , we can use Eq. 2 again to compute
+          y2
+          by setting the children to be
+          [c1;c2]=[y1;x3]
+          . The same auto-encoder is re-used until the vector of the whole phrase is generated.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS2.p5">
+         <p class="ltx_p">
+          For unsupervised phrase embedding, the only objective is to minimize the sum of reconstruction errors at each node in the optimal binary tree:
+         </p>
+         R⁢A⁢Eθ⁢(x)=argminy∈A⁢(x)∑s∈yEr⁢e⁢c⁢([c1;c2]s)
+
+(5)
+         <p class="ltx_p">
+          Where
+          x
+          is the list of vectors of a phrase, and
+          A⁢(x)
+          denotes all the possible binary trees that can be built from inputs
+          x
+          . A greedy algorithm (Socher et al., 2011) is used to generate the optimal binary tree
+          y
+          . The parameters
+          θ=(W,b)
+          are optimized over all the phrases in the training data.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Semi-supervised Phrase Embedding
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The above RAE is completely unsupervised and can only induce general representations of the multi-word phrases. Several researchers extend the original RAEs to a semi-supervised setting so that the induced phrase embedding can predict a target label, such as polarity in sentiment analysis
+         [23]
+         , syntactic category in parsing
+         [21]
+         and phrase reordering pattern in SMT
+         [16]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         In the semi-supervised RAE for phrase embedding, the objective function over a (phrase, label) pair
+         (x,t)
+         includes the reconstruction error and the prediction error, as illustrated in Fig. 3.
+        </p>
+        E⁢(x,t;θ)=α⁢Er⁢e⁢c⁢(x,t;θ)+(1-α)⁢Ep⁢r⁢e⁢d⁢(x,t;θ)
+
+(6)
+        <p class="ltx_p">
+         Where the hyper-parameter
+         α
+         is used to balance the reconstruction and prediction error. For label prediction, the cross-entropy error is usually used to calculate
+         Ep⁢r⁢e⁢d
+         . By optimizing the above objective, the phrases in the vector embedding space will be grouped according to the labels.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        The BRAE Model
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We know from the semi-supervised phrase embedding that the learned vector representation can be well adapted to the given label. Therefore, we can imagine that learning semantic phrase embedding is reasonable if we are given gold vector representations of the phrases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         However, no gold semantic phrase embedding exists. Fortunately, we know the fact that the two phrases should share the same semantic representation if they express the same meaning. We can make inference from this fact that if a model can learn the same embedding for any phrase pair sharing the same meaning, the learned embedding must encode the semantics of the phrases and the corresponding model is our desire.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         As translation equivalents share the same semantic meaning, we employ high-quality phrase translation pairs as training corpus in this work. Accordingly, we propose the Bilingually-constrained Recursive Auto-encoders (BRAE), whose basic goal is to minimize the semantic distance between the phrases and their translations.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.1
+         </span>
+         The Objective Function
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS1.p1">
+         <p class="ltx_p">
+          Unlike previous methods, the BRAE model jointly learns two RAEs (Fig. 4 shows the network structure): one for source language and the other for target language. For a phrase pair
+          (s,t)
+          , two kinds of errors are involved:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS1.p2">
+         <p class="ltx_p">
+          1.
+          reconstruction error
+          Er⁢e⁢c⁢(s,t;θ)
+          : how well the learned vector representations
+          ps
+          and
+          pt
+          represent the phrase
+          s
+          and
+          t
+          respectively?
+         </p>
+         Er⁢e⁢c⁢(s,t;θ)=Er⁢e⁢c⁢(s;θ)+Er⁢e⁢c⁢(t;θ)
+
+(7)
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS1.p3">
+         <p class="ltx_p">
+          2.
+          semantic error
+          Es⁢e⁢m⁢(s,t;θ)
+          : what is the semantic distance between the learned vector representations
+          ps
+          and
+          pt
+          ?
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS1.p4">
+         <p class="ltx_p">
+          Since word embeddings for two languages are learned separately and locate in different vector space, we do not enforce the phrase embeddings in two languages to be in the same semantic vector space. We suppose there is a transformation between the two semantic embedding spaces. Thus, the semantic distance is bidirectional: the distance between
+          pt
+          and the transformation of
+          ps
+          , and that between
+          ps
+          and the transformation of
+          pt
+          . As a result, the overall semantic error becomes:
+         </p>
+         Es⁢e⁢m(s,t;θ)=Es⁢e⁢m(s|t,θ)+Es⁢e⁢m(t|s,θ)
+
+(8)
+         <p class="ltx_p">
+          Where
+          Es⁢e⁢m(s|t,θ)=Es⁢e⁢m(pt,f(Wslps+bsl))
+          means the transformation of
+          ps
+          is performed as follows: we first multiply a parameter matrix
+          Wsl
+          by
+          ps
+          , and after adding a bias term
+          bsl
+          we apply an element-wise activation function
+          f=t⁢a⁢n⁢h⁢(⋅)
+          . Finally, we calculate their Euclidean distance:
+         </p>
+         Es⁢e⁢m(s|t,θ)=12||pt-f(Wslps+bsl)||2
+
+(9)
+         <p class="ltx_p">
+          Es⁢e⁢m(t|s,θ)
+          can be calculated in exactly the same way. For the phrase pair
+          (s,t)
+          , the joint error is:
+         </p>
+         E⁢(s,t;θ)=α⁢Er⁢e⁢c⁢(s,t;θ)+(1-α)⁢Es⁢e⁢m⁢(s,t;θ)
+
+(10)
+         <p class="ltx_p">
+          The hyper-parameter
+          α
+          weights the reconstruction and semantic error. The final BRAE objective over the phrase pairs training set
+          (S,T)
+          becomes:
+         </p>
+         JB⁢R⁢A⁢E=1N⁢∑(s,t)∈(S,T)E⁢(s,t;θ)+λ2⁢||θ||2
+
+(11)
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.2
+         </span>
+         Max-Semantic-Margin Error
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS2.p1">
+         <p class="ltx_p">
+          Ideally, we want the learned BRAE model can make sure that the semantic error for the positive example (a source phrase
+          s
+          and its correct translation
+          t
+          ) is much smaller than that for the negative example (the source phrase
+          s
+          and a bad translation
+          t′
+          ). However, the current model cannot guarantee this since the above semantic error
+          Es⁢e⁢m(s|t,θ)
+          only accounts for positive ones.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS2.p2">
+         <p class="ltx_p">
+          We thus enhance the semantic error with both positive and negative examples, and the corresponding max-semantic-margin error becomes:
+         </p>
+         Es⁢e⁢m*(s|t,θ)=max{0,Es⁢e⁢m(s|t,θ)-Es⁢e⁢m(s|t′,θ)+1}
+
+(12)
+         <p class="ltx_p">
+          It tries to minimize the semantic distance between translation equivalents and maximize the semantic distance between non-translation pairs simultaneously.
+Using the above error function, we need to construct a negative example for each positive example. Suppose we are given a positive example
+          (s,t)
+          , the correct translation
+          t
+          can be converted into a bad translation
+          t′
+          by replacing the words in
+          t
+          with randomly chosen target language words. Then, a negative example
+          (s,t′)
+          is available.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.3
+         </span>
+         Parameter Inference
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS3.p1">
+         <p class="ltx_p">
+          Like semi-supervised RAE
+          [16]
+          , the parameters
+          θ
+          in our BRAE model can also be divided into three sets:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p2">
+         <p class="ltx_p">
+          θL
+          : word embedding matrix
+          L
+          for two languages (Section 3.1.1);
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p3">
+         <p class="ltx_p">
+          θr⁢e⁢c
+          : recursive auto-encoder parameter matrices
+          W(1)
+          ,
+          W(2)
+          , and bias terms
+          b(1)
+          ,
+          b(2)
+          for two languages (Section 3.1.2);
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p4">
+         <p class="ltx_p">
+          θs⁢e⁢m
+          : transformation matrix
+          Wl
+          and bias term
+          bl
+          for two directions in semantic distance computation (Section 3.3.1).
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p5">
+         <p class="ltx_p">
+          To have a deep understanding of the parameters, we rewrite Eq. 10:
+         </p>
+         E(s,t;θ)=α(Er⁢e⁢c(s;θ)+Er⁢e⁢c(t;θ))+(1-α)(Es⁢e⁢m*(s|t,θ)+Es⁢e⁢m*(t|s,θ))=(αEr⁢e⁢c(s;θs)+(1-α)Es⁢e⁢m*(s|t,θs))+(αEr⁢e⁢c(t;θt)+(1-α)Es⁢e⁢m*(t|s,θt))
+
+(13)
+         <p class="ltx_p">
+          We can see that the parameters
+          θ
+          can be divided into two classes:
+          θs
+          for the source language and
+          θt
+          for the target language. The above equation also indicates that the source-side parameters
+          θs
+          can be optimized independently as long as the semantic representation
+          pt
+          of the target phrase
+          t
+          is given to compute
+          Es⁢e⁢m(s|t,θ)
+          with Eq. 9. It is similar for the target-side parameters
+          θt
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p6">
+         <p class="ltx_p">
+          Assuming the target phrase representation
+          pt
+          is available, the optimization of the source-side parameters is similar to that of semi-supervised RAE. We apply the Stochastic Gradient Descent (SGD) algorithm to optimize each parameter:
+         </p>
+         θs=θs-η⁢∂⁡Js∂⁡θs
+
+(14)
+         <p class="ltx_p">
+          In order to run SGD algorithm, we need to solve two problems: one for parameter initialization and the other for partial gradient calculation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p7">
+         <p class="ltx_p">
+          In parameter initialization,
+          θr⁢e⁢c
+          and
+          θs⁢e⁢m
+          for the source language is randomly set according to a normal distribution. For the word embedding
+          Ls
+          , there are two choices. First,
+          Ls
+          is initialized randomly like other parameters. Second, the word embedding matrix
+          Ls
+          is pre-trained with DNN
+          [2, 5, 20]
+          using large-scale unlabeled monolingual data. We prefer to the second one since this kind of word embedding has already encoded some semantics of the words. In this work, we employ the toolkit Word2Vec
+          [20]
+          to pre-train the word embedding for the source and target languages. The word embeddings will be fine-tuned in our BRAE model to capture much more semantics.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p8">
+         <p class="ltx_p">
+          The partial gradient for one instance is computed as follows:
+         </p>
+         ∂⁡Js∂⁡θs=∂E(s|t,θs)∂⁡θs+λ⁢θs
+
+(15)
+         <p class="ltx_p">
+          Where the source-side error given the target phrase representation includes reconstruction error and updated semantic error:
+         </p>
+         E(s|t,θs)=αEr⁢e⁢c(s;θs)+(1-α)Es⁢e⁢m*(s|t,θs)
+
+(16)
+         <p class="ltx_p">
+          Given the current
+          θs
+          , we first construct the binary tree (as illustrated in Fig. 2) for any source-side phrase using the greedy algorithm
+          [23]
+          . Then, the derivatives for the parameters in the fixed binary tree will be calculated via backpropagation through structures
+          [10]
+          . Finally, the parameters will be updated using Eq. 14 and a new
+          θs
+          is obtained.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p9">
+         <p class="ltx_p">
+          The target-side parameters
+          θt
+          can be optimized in the same way as long as the source-side phrase representation
+          ps
+          is available. It seems a paradox that updating
+          θs
+          needs
+          pt
+          while updating
+          θt
+          needs
+          ps
+          . To solve this problem, we propose an co-training style algorithm which includes three steps:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p10">
+         <p class="ltx_p">
+          1.
+          Pre-training:
+          applying unsupervised phrase embedding with standard RAE to pre-train the source- and target-side phrase representations
+          ps
+          and
+          pt
+          respectively (Section 2.1.2);
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p11">
+         <p class="ltx_p">
+          2.
+          Fine-tuning:
+          with the BRAE model, using target-side phrase representation
+          pt
+          to update the source-side parameters
+          θs
+          and obtain the fine-tuned source-side phrase representation
+          ps′
+          , and meanwhile using
+          ps
+          to update
+          θt
+          and get the fine-tuned
+          pt′
+          , and then calculate the joint error over the training corpus;
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p12">
+         <p class="ltx_p">
+          3.
+          Termination Check:
+          if the joint error reaches a local minima or the iterations reach the pre-defined number (25 is used in our experiments), we terminate the training procedure, otherwise we set
+          ps=ps′
+          ,
+          pt=pt′
+          , and go to step 2.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        With the semantic phrase embeddings and the vector space transformation function, we apply the BRAE to measure the semantic similarity between a source phrase and its translation candidates in the phrase-based SMT. Two tasks are involved in the experiments: phrase table pruning that discards entries whose semantic similarity is very low and decoding with the phrasal semantic similarities as additional new features.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Hyper-Parameter Settings
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         The hyper-parameters in the BRAE model include the dimensionality of the word embedding
+         n
+         in Eq. 1, the balance weight
+         α
+         in Eq. 10,
+         λ⁢s
+         in Eq. 11, and the learning rate
+         η
+         in Eq. 14.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         For the dimensionality
+         n
+         , we have tried three settings
+         n=50,100,200
+         in our experiments. We empirically set the learning rate
+         η=0.01
+         . We draw
+         α
+         from 0.05 to 0.5 with step 0.05, and
+         λ⁢s
+         from
+         {10-6,10-5,10-4,10-3,10-2}
+         . The overall error of the BRAE model is employed to guide the search procedure. Finally, we choose
+         α=0.15
+         ,
+         λL=10-2
+         ,
+         λr⁢e⁢c=10-3
+         and
+         λs⁢e⁢m=10-3
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        SMT Setup
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We have implemented a phrase-based translation system with a maximum entropy based reordering model using the bracketing transduction grammar
+         [27, 28]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         The SMT evaluation is conducted on Chinese-to-English translation. Accordingly, our BRAE model is trained on Chinese and English. The bilingual training data from LDC
+         contains 0.96M sentence pairs and 1.1M entity pairs with 27.7M Chinese words and 31.9M English words. A 5-gram language model is trained on the Xinhua portion of the English Gigaword corpus and the English part of bilingual training data. The NIST MT03 is used as the development data. NIST MT04-06 and MT08 (news data) are used as the test data. Case-insensitive BLEU is employed as the evaluation metric. The statistical significance test is performed by the re-sampling approach
+         [14]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         In addition, we pre-train the word embedding with toolkit Word2Vec on large-scale monolingual data including the aforementioned data for SMT. The monolingual data contains 1.06B words for Chinese and 1.12B words for English. To obtain high-quality bilingual phrase pairs to train our BRAE model, we perform forced decoding for the bilingual training sentences and collect the phrase pairs used. After removing the duplicates, the remaining 1.12M bilingual phrase pairs (length ranging from 1 to 7) are obtained.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Phrase Table Pruning
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Pruning most of the phrase table without much impact on translation quality is very important for translation especially in environments where memory and time constraints are imposed. Many algorithms have been proposed to deal with this problem, such as significance pruning
+         [11, 25]
+         , relevance pruning
+         [8]
+         and entropy-based pruning
+         [17, 30]
+         . These algorithms are based on corpus statistics including co-occurrence statistics, phrase pair usage and composition information. For example, the significance pruning, which is proven to be a very effective algorithm, computes the probability named p-value, that tests whether a source phrase
+         s
+         and a target phrase
+         t
+         co-occur more frequently in a bilingual corpus than they happen just by chance. The higher the p-value, the more likely of the phrase pair to be spurious.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         Our work has the same objective, but instead of using corpus statistics, we attempt to measure the quality of the phrase pair from the view of semantic meaning. Given a phrase pair
+         (s,t)
+         , the BRAE model first obtains their semantic phrase representations
+         (ps,pt)
+         , and then transforms
+         ps
+         into target semantic space
+         ps*
+         ,
+         pt
+         into source semantic space
+         pt*
+         . We finally get two similarities
+         S⁢i⁢m⁢(ps*,pt)
+         and
+         S⁢i⁢m⁢(pt*,ps)
+         . Phrase pairs that have a low similarity are more likely to be noise and more prone to be pruned. In experiments, we discard the phrase pair whose similarity in two directions are smaller than a threshold
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         Table 1 shows the comparison results between our BRAE-based pruning method and the significance pruning algorithm. We can see a common phenomenon in both of the algorithms: for the first few thresholds, the phrase table becomes smaller and smaller while the translation quality is not much decreased, but the performance jumps a lot at a certain threshold (16 for Significance pruning, 0.8 for BRAE-based one).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p4">
+        <p class="ltx_p">
+         Specifically, the Significance algorithm can safely discard 64% of the phrase table at its threshold 12 with only 0.1 BLEU loss in the overall test. In contrast, our BRAE-based algorithm can remove 72% of the phrase table at its threshold 0.7 with only 0.06 BLEU loss in the overall evaluation. When the two algorithms using a similar portion of the phrase table
+         (35% in BRAE and 36% in Significance), the BRAE-based algorithm outperforms the Significance algorithm on all the test sets except for MT04. It indicates that our BRAE model is a good alternative for phrase table pruning. Furthermore, our model is much more intuitive because it is directly based on the semantic similarity.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Decoding with Phrasal Semantic Similarities
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         Besides using the semantic similarities to prune the phrase table, we also employ them as two informative features like the phrase translation probability to guide translation hypotheses selection during decoding. Typically, four translation probabilities are adopted in the phrase-based SMT, including phrase translation probability and lexical weights in both directions. The phrase translation probability is based on co-occurrence statistics and the lexical weights consider the phrase as bag-of-words. In contrast, our BRAE model focuses on compositional semantics from words to phrases. Therefore, the semantic similarities computed using our BRAE model are complementary to the existing four translation probabilities.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         The semantic similarities in two directions
+         S⁢i⁢m⁢(ps*,pt)
+         and
+         S⁢i⁢m⁢(pt*,ps)
+         are integrated into our baseline phrase-based model. In order to investigate the influence of the dimensionality of the embedding space, we have tried three different settings
+         n=50,100,200
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p3">
+        <p class="ltx_p">
+         As shown in Table 2, no matter what
+         n
+         is, the BRAE model can significantly improve the translation quality in the overall test data. The largest improvement can be up to 1.7 BLEU score (MT06 for
+         n=50
+         ). It is interesting that with dimensionality growing, the translation performance is not consistently improved. We speculate that using
+         n=50
+         or
+         n=100
+         can already distinguish good translation candidates from bad ones.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.5
+        </span>
+        Analysis on Semantic Phrase Embedding
+       </h3>
+       <div class="ltx_para" id="S4.SS5.p1">
+        <p class="ltx_p">
+         To have a better intuition about the power of the BRAE model at learning semantic phrase embeddings, we show some examples in Table 3. Given the BRAE model and the phrase training set, we search from the set the most semantically similar English phrases for any new input English phrase.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p2">
+        <p class="ltx_p">
+         The input phrases contain different number of words. The table shows that the unsupervised RAE can at most capture the syntactic property when the phrases are short. For example, the unsupervised RAE finds
+         do not want
+         for the input phrase
+         do not agree
+         . When the phrase becomes longer, the unsupervised RAE cannot even capture the syntactic property. In contrast, our BRAE model learns the semantic meaning for each phrase no matter whether it is short or relatively long. This indicates that the proposed BRAE model is effective at learning semantic phrase embeddings.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Discussions
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Applications of The BRAE model
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         As the semantic phrase embedding can fully represent the phrase, we can go a step further in the phrase-based SMT and feed the semantic phrase embeddings to DNN in order to model the whole translation process (e.g. derivation structure prediction). We will explore this direction in our future work. Besides SMT, the semantic phrase embeddings can be used in other cross-lingual tasks, such as cross-lingual question answering, since the semantic similarity between phrases in different languages can be calculated accurately.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         In addition to the cross-lingual applications, we believe the BRAE model can be applied in many monolingual NLP tasks which depend on good phrase representations or semantic similarity between phrases, such as named entity recognition, parsing, textual entailment, question answering and paraphrase detection.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Model Extensions
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         In fact, the phrases having the same meaning are translation equivalents in different languages, but are paraphrases in one language. Therefore, our model can be easily adapted to learn semantic phrase embeddings using paraphrases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Our BRAE model still has some limitations. For example, as each node in the recursive auto-encoder shares the same weight matrix, the BRAE model would become weak at learning the semantic representations for long sentences with tens of words. Improving the model to semantically embed sentences is left for our future work.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

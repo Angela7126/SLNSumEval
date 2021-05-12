@@ -1,0 +1,1197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Political Ideology Detection Using Recursive Neural Networks</title>
+<!--Generated on Tue Jun 10 18:39:16 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Political Ideology Detection Using Recursive Neural Networks</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mohit Iyyer<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>, Peter Enns<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>, Jordan Boyd-Graber<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{3,4}" display="inline"><msup><mi/><mrow><mn>3</mn><mo>,</mo><mn>4</mn></mrow></msup></math>, Philip Resnik<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{2,4}" display="inline"><msup><mi/><mrow><mn>2</mn><mo>,</mo><mn>4</mn></mrow></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>Computer Science, <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>Linguistics, <math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{3}" display="inline"><msup><mi/><mn>3</mn></msup></math>iSchool, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="m8" class="ltx_Math" alttext="{}^{4}" display="inline"><msup><mi/><mn>4</mn></msup></math><span class="ltx_text ltx_font_smallcaps">umiacs</span> 
+<br class="ltx_break"/>University of Maryland 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">miyyer,peter,jbg</span>}<span class="ltx_text ltx_font_typewriter">@umiacs.umd.edu</span>, <span class="ltx_text ltx_font_typewriter">resnik@umd.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">An individual’s words often reveal their political ideology. Existing automated
+techniques to identify ideology from text focus on bags of words or wordlists,
+ignoring syntax. Taking inspiration from recent work in sentiment analysis that
+successfully models the compositional aspect of language, we apply a recursive
+neural network (<span class="ltx_text ltx_font_smallcaps">RNN</span>) framework to the task of identifying the political
+position evinced by a sentence. To show the importance of modeling
+subsentential elements, we crowdsource political annotations at a phrase and
+sentence level. Our model outperforms existing models on our newly annotated
+dataset and an existing dataset.</p>
+</div><span class="ltx_ERROR undefined">\NewEnviron</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">smalign</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S0.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S0.E1.m1" class="ltx_Math" alttext="\displaystyle\BODY" display="inline"><merror class="ltx_ERROR undefined undefined"><mtext>\BODY</mtext></merror></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Many of the issues discussed by politicians and the media are so
+nuanced that even word choice entails choosing an ideological
+position. For example, what liberals call the “estate tax”
+conservatives call the “death tax”; there are no ideologically
+neutral alternatives <cite class="ltx_cite">[<a href="#bib.bib29" title="Moral politics: how liberals and conservatives think, second edition" class="ltx_ref">14</a>]</cite>. While objectivity remains
+an important principle of journalistic professionalism, scholars and
+watchdog groups claim that the media are
+biased <cite class="ltx_cite">[<a href="#bib.bib33" title="A measure of media bias" class="ltx_ref">10</a>, <a href="#bib.bib32" title="What drives media slant? evidence from us daily newspapers" class="ltx_ref">6</a>, <a href="#bib.bib34" title="Objective evidence on media bias: newspaper coverage of congressional party switchers" class="ltx_ref">18</a>]</cite>,
+backing up their assertions by publishing examples of obviously biased
+articles on their websites. Whether or not it reflects an underlying
+lack of objectivity, quantitative changes in the popular framing of an
+issue over time—favoring one ideologically-based position over
+another—can have a substantial effect on the evolution of policy
+<cite class="ltx_cite">[<a href="#bib.bib35" title="Media framing of capital punishment and its impact on individuals’ cognitive responses" class="ltx_ref">5</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Manually identifying ideological bias in political text, especially in the age
+of big data, is an impractical and expensive process. Moreover, bias may be
+localized to a small portion of a document, undetectable by coarse-grained
+methods. In this paper, we examine the problem of detecting ideological bias on
+the sentence level. We say a sentence contains <em class="ltx_emph">ideological bias</em> if its
+author’s political position (here <em class="ltx_emph">liberal</em> or
+<em class="ltx_emph">conservative</em>, in the sense of U.S. politics) is evident
+from the text.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1105/image001.png" id="S1.F1.g1" class="ltx_graphics" width="677" height="262" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>An example of compositionality in ideological bias detection
+(red <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> conservative, blue <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> liberal, gray
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m6" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> neutral) in which modifier phrases and punctuation
+cause polarity switches at higher levels of the parse tree.</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Ideological bias is difficult to detect, even for humans—the task
+relies not only on political knowledge but also on the annotator’s
+ability to pick up on subtle elements of language use.
+For example, the sentence in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+includes phrases typically associated with conservatives, such as
+“small businesses” and “death tax”. When we take more of the
+structure into account, however, we find that scare quotes and a
+negative propositional attitude (<em class="ltx_emph">a lie about X</em>) yield an
+evident liberal bias.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Existing approaches toward bias detection have not gone far beyond
+“bag of words” classifiers, thus ignoring richer linguistic context
+of this kind and often operating at the level of whole documents. In
+contrast, recent work in sentiment analysis has used deep learning to
+discover compositional effects
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Semi-Supervised Recursive Autoencoders for Predicting Sentiment Distributions" class="ltx_ref">27</a>, <a href="#bib.bib8" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">28</a>]</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Building from those insights, we introduce a recursive neural network
+(<span class="ltx_text ltx_font_smallcaps">rnn</span>) to detect ideological bias on the sentence level. This
+model requires richer data than currently available, so we develop a
+new political ideology dataset annotated at the phrase level. With
+this new dataset we show that <span class="ltx_text ltx_font_smallcaps">rnn</span>s not only label sentences well but also improve further when given additional phrase-level
+annotations. <span class="ltx_text ltx_font_smallcaps">rnn</span>s are quantitatively more effective than
+existing methods that use syntactic and semantic features separately,
+and we also illustrate how our model correctly identifies ideological
+bias in complex syntactic constructions.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Recursive Neural Networks</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Recursive neural networks (<span class="ltx_text ltx_font_smallcaps">rnn</span>s) are machine learning
+models that capture syntactic and semantic composition. They have achieved
+state-of-the-art performance on a variety of sentence-level <span class="ltx_text ltx_font_smallcaps">nlp</span>
+tasks, including sentiment analysis, paraphrase detection, and parsing
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Dynamic Pooling and Unfolding Recursive Autoencoders for Paraphrase Detection" class="ltx_ref">26</a>, <a href="#bib.bib30" title="The Role of Syntax in Vector Space Models of Compositional Semantics" class="ltx_ref">13</a>]</cite>. <span class="ltx_text ltx_font_smallcaps">rnn</span>
+models represent a shift from previous research on ideological bias
+detection in that they do not rely on hand-made lexicons,
+dictionaries, or rule sets. In this section, we describe a supervised
+<span class="ltx_text ltx_font_smallcaps">rnn</span> model for bias detection and highlight differences from
+previous work in training procedure and initialization.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><img src="P14-1105/image002.png" id="S2.F2.g1" class="ltx_graphics" width="676" height="340" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>An example <span class="ltx_text ltx_font_smallcaps">rnn</span> for the phrase “so-called climate
+change”. Two <em class="ltx_emph">d</em>-dimensional word vectors (here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m2" class="ltx_Math" alttext="d=6" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>6</mn></mrow></math>) are
+composed to generate a phrase vector of the same dimensionality,
+which can then be recursively used to generate vectors at
+higher-level nodes.</div>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Model Description</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">By taking into account the hierarchical nature of language, <span class="ltx_text ltx_font_smallcaps">rnn</span>s
+can model <em class="ltx_emph">semantic composition</em>, which is the principle that a
+phrase’s meaning is a combination of the meaning of the words within
+that phrase and the syntax that combines those words. While semantic
+composition does not apply universally (e.g., sarcasm and idioms),
+most language follows this principle. Since most ideological bias
+becomes identifiable only at higher levels of sentence trees (as
+verified by our annotation, Figure <a href="#S3.F4" title="Figure 4 ‣ Annotation Results ‣ 3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>), models relying
+primarily on word-level distributional statistics are not desirable
+for our problem.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The basic idea behind the standard <span class="ltx_text ltx_font_smallcaps">rnn</span> model is that each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in a
+sentence is associated with a vector representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="x_{w}\in\mathbb{R}^{d}" display="inline"><mrow><msub><mi>x</mi><mi>w</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math>.
+Based on a parse tree, these words form phrases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>
+(Figure <a href="#S2.F2" title="Figure 2 ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). Each of these phrases also has an associated
+vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="x_{p}\in\mathbb{R}^{d}" display="inline"><mrow><msub><mi>x</mi><mi>p</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math> of the same dimension as the word vectors. These
+phrase vectors should represent the meaning of the phrases composed of
+individual words. As phrases themselves merge into complete sentences, the
+underlying vector representation is trained to retain the sentence’s whole meaning.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">The challenge is to describe how vectors combine to form complete
+representations. If two words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="w_{a}" display="inline"><msub><mi>w</mi><mi>a</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="w_{b}" display="inline"><msub><mi>w</mi><mi>b</mi></msub></math> merge to form phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, we
+posit that the phrase-level vector is</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="x_{p}=f{(W_{L}\cdot x_{a}+W_{R}\cdot x_{b}+b_{1})}," display="block"><mrow><mrow><msub><mi>x</mi><mi>p</mi></msub><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>W</mi><mi>L</mi></msub><mo>⋅</mo><msub><mi>x</mi><mi>a</mi></msub></mrow><mo>+</mo><mrow><msub><mi>W</mi><mi>R</mi></msub><mo>⋅</mo><msub><mi>x</mi><mi>b</mi></msub></mrow><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m4" class="ltx_Math" alttext="W_{L}" display="inline"><msub><mi>W</mi><mi>L</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m5" class="ltx_Math" alttext="W_{R}" display="inline"><msub><mi>W</mi><mi>R</mi></msub></math> are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m6" class="ltx_Math" alttext="d\times d" display="inline"><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow></math> left and right composition matrices
+shared across all nodes in the tree, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m7" class="ltx_Math" alttext="b_{1}" display="inline"><msub><mi>b</mi><mn>1</mn></msub></math> is a bias term, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m8" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> is a
+nonlinear activation function such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m9" class="ltx_Math" alttext="\tanh" display="inline"><mi>tanh</mi></math>. The word-level vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m10" class="ltx_Math" alttext="x_{a}" display="inline"><msub><mi>x</mi><mi>a</mi></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m11" class="ltx_Math" alttext="x_{b}" display="inline"><msub><mi>x</mi><mi>b</mi></msub></math> come from a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m12" class="ltx_Math" alttext="d\times V" display="inline"><mrow><mi>d</mi><mo>×</mo><mi>V</mi></mrow></math> dimensional word embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m13" class="ltx_Math" alttext="W_{e}" display="inline"><msub><mi>W</mi><mi>e</mi></msub></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m14" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>
+is the size of the vocabulary.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">We are interested in learning representations that can distinguish
+political polarities given labeled data. If an element of this vector space,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m1" class="ltx_Math" alttext="x_{d}" display="inline"><msub><mi>x</mi><mi>d</mi></msub></math>, represents a sentence with liberal bias, its vector should be distinct
+from the vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m2" class="ltx_Math" alttext="x_{r}" display="inline"><msub><mi>x</mi><mi>r</mi></msub></math> of a conservative-leaning sentence.</p>
+</div>
+<div id="S2.SS1.p5" class="ltx_para">
+<p class="ltx_p">Supervised <span class="ltx_text ltx_font_smallcaps">rnn</span>s achieve this distinction by applying a regression that takes the
+node’s vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m1" class="ltx_Math" alttext="x_{p}" display="inline"><msub><mi>x</mi><mi>p</mi></msub></math> as input and produces a prediction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m2" class="ltx_Math" alttext="\hat{y}_{p}" display="inline"><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>p</mi></msub></math>. This is
+a softmax layer</p>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\hat{y}_{d}=\mbox{softmax}(W_{cat}\cdot x_{p}+b_{2})," display="block"><mrow><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>d</mi></msub><mo>=</mo><mrow><mtext>softmax</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>W</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⋅</mo><msub><mi>x</mi><mi>p</mi></msub></mrow><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where the softmax function is</p>
+<table id="S2.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\mbox{softmax}(q)=\frac{\exp{q}}{\sum_{j=1}^{k}\exp{q_{j}}}" display="block"><mrow><mrow><mtext>softmax</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>q</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mi>q</mi></mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>k</mi></msubsup><mrow><mi>exp</mi><mo>⁡</mo><msub><mi>q</mi><mi>j</mi></msub></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m3" class="ltx_Math" alttext="W_{cat}" display="inline"><msub><mi>W</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow></msub></math> is a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m4" class="ltx_Math" alttext="k\times d" display="inline"><mrow><mi>k</mi><mo>×</mo><mi>d</mi></mrow></math> matrix for a dataset with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p5.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-dimensional labels.</p>
+</div>
+<div id="S2.SS1.p6" class="ltx_para">
+<p class="ltx_p">We want the predictions of the softmax layer to match our annotated
+data; the discrepancy between categorical predictions and annotations
+is measured through the cross-entropy loss. We optimize the model
+parameters to minimize the cross-entropy loss over all sentences in
+the corpus. The cross-entropy loss of a single sentence is the sum
+over the true labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p6.m1" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> in the sentence,</p>
+<table id="S2.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m1" class="ltx_Math" alttext="\ell(\hat{y}_{s})=\sum\limits_{p=1}^{k}y_{p}*log(\hat{y}_{p})." display="block"><mrow><mrow><mrow><mi mathvariant="normal">ℓ</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>s</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>p</mi><mo>=</mo><mn>1</mn></mrow><mi>k</mi></munderover><mrow><mrow><msub><mi>y</mi><mi>p</mi></msub><mo>*</mo><mi>l</mi></mrow><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>p</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p7" class="ltx_para">
+<p class="ltx_p">This induces a supervised objective function over all sentences: a
+regularized sum over all node losses normalized by the number of nodes
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p7.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> in the training set,</p>
+<table id="S2.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E6.m1" class="ltx_Math" alttext="C=\frac{1}{N}\sum\limits_{i}^{N}\ell(pred_{i})+\frac{\lambda}{2}\left\lVert%&#10;\theta\right\rVert^{2}." display="block"><mrow><mrow><mi>C</mi><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi><mi>N</mi></munderover><mrow><mi mathvariant="normal">ℓ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>d</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>+</mo><mrow><mfrac><mi>λ</mi><mn>2</mn></mfrac><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mi>θ</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p8" class="ltx_para">
+<p class="ltx_p">We use <span class="ltx_text ltx_font_smallcaps">l-bfgs</span> with parameter averaging <cite class="ltx_cite">[<a href="#bib.bib26" title="Simple customization of recursive neural networks for semantic relation classification" class="ltx_ref">12</a>]</cite> to optimize the
+model parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p8.m1" class="ltx_Math" alttext="\theta=(W_{L},W_{R},W_{cat},W_{e},b_{1},b_{2})" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>W</mi><mi>L</mi></msub><mo>,</mo><msub><mi>W</mi><mi>R</mi></msub><mo>,</mo><msub><mi>W</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>,</mo><msub><mi>W</mi><mi>e</mi></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>. The gradient of
+the objective, shown in Eq. (<a href="#S2.E7" title="(7) ‣ 2.1 Model Description ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>), is computed using backpropagation through
+structure <cite class="ltx_cite">[<a href="#bib.bib24" title="Learning task-dependent distributed representations by backpropagation through structure" class="ltx_ref">8</a>]</cite>,</p>
+<table id="S2.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E7.m1" class="ltx_Math" alttext="\frac{\partial C}{\partial\theta}=\frac{1}{N}\sum\limits_{i}^{N}\frac{\partial%&#10;\ell(\hat{y}_{i})}{\partial\theta}+\lambda\theta." display="block"><mrow><mrow><mfrac><mrow><mo>∂</mo><mo>⁡</mo><mi>C</mi></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>θ</mi></mrow></mfrac><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi><mi>N</mi></munderover><mfrac><mrow><mrow><mo>∂</mo><mo>⁡</mo><mi mathvariant="normal">ℓ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>θ</mi></mrow></mfrac></mrow></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><mi>θ</mi></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Initialization</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">When initializing our model, we have two choices: we can initialize all of our
+parameters randomly or provide the model some prior knowledge. As we see in
+Section <a href="#S4" title="4 Experiments ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, these choices have a significant effect on final
+performance.</p>
+</div>
+<div id="S2.SS2.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Random</h5>
+
+<div id="S2.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The most straightforward choice is to initialize the word embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="W_{e}" display="inline"><msub><mi>W</mi><mi>e</mi></msub></math>
+and composition matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="W_{L}" display="inline"><msub><mi>W</mi><mi>L</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="W_{R}" display="inline"><msub><mi>W</mi><mi>R</mi></msub></math> randomly such that without any
+training, representations for words and phrases are arbitrarily projected into
+the vector space.</p>
+</div>
+</div>
+<div id="S2.SS2.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">word2vec</h5>
+
+<div id="S2.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The other alternative is to initialize the word embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="W_{e}" display="inline"><msub><mi>W</mi><mi>e</mi></msub></math> with
+values that reflect the meanings of the associated word types. This improves
+the performance of <span class="ltx_text ltx_font_smallcaps">rnn</span> models over random initializations
+<cite class="ltx_cite">[<a href="#bib.bib28" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">4</a>, <a href="#bib.bib2" title="Dynamic Pooling and Unfolding Recursive Autoencoders for Paraphrase Detection" class="ltx_ref">26</a>]</cite>. We initialize our model with
+300-dimensional <em class="ltx_emph">word2vec</em> toolkit vectors generated by a continuous
+skip-gram model trained on around 100 billion words from the Google News corpus
+<cite class="ltx_cite">[<a href="#bib.bib15" title="Efficient estimation of word representations in vector space" class="ltx_ref">16</a>]</cite>.</p>
+</div>
+<div id="S2.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">The word2vec embeddings have linear relationships (e.g., the closest vectors to
+the average of “green” and “energy” include phrases such as “renewable
+energy”, “eco-friendly”, and “efficient lightbulbs”). To preserve these
+relationships as phrases are formed in our sentences, we initialize our left and
+right composition matrices such that parent vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is computed by taking the
+average of children <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p2.m4" class="ltx_Math" alttext="W_{L}=W_{R}=0.5\mathbb{I}_{d\times d}" display="inline"><mrow><msub><mi>W</mi><mi>L</mi></msub><mo>=</mo><msub><mi>W</mi><mi>R</mi></msub><mo>=</mo><mrow><mn>0.5</mn><mo>⁢</mo><msub><mi>𝕀</mi><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow></msub></mrow></mrow></math>). This
+initialization of the composition matrices has previously been effective for
+parsing <cite class="ltx_cite">[<a href="#bib.bib16" title="Parsing With Compositional Vector Grammars" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Datasets</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We performed initial experiments on a dataset of Congressional debates that has
+annotations on the author level for partisanship, not ideology. While the two
+terms are highly correlated (e.g., a member of the Republican party likely agrees
+with conservative stances on most issues), they are not identical. For example,
+a moderate Republican might agree with the liberal position on increased gun
+control but take conservative positions on other issues. To avoid conflating
+partisanship and ideology we create a new dataset annotated for ideological bias
+on the sentence and phrase level. In this section we describe our initial
+dataset (Convote) and explain the procedure we followed for creating our new
+dataset (<span class="ltx_text ltx_font_smallcaps">ibc</span>).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Available at <a href="http://cs.umd.edu/~miyyer/ibc" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://cs.umd.edu/~miyyer/ibc</span></a></span></span></span></p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Convote</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The Convote dataset <cite class="ltx_cite">[<a href="#bib.bib13" title="Get out the vote: determining support or opposition from Congressional floor-debate transcripts" class="ltx_ref">29</a>]</cite> consists of <span class="ltx_text ltx_font_smallcaps">us</span>
+Congressional floor debate transcripts from 2005 in which all speakers
+have been labeled with their political party (Democrat, Republican, or
+independent). We propagate party labels down from the speaker to all
+of their individual sentences and map from party label to ideology
+label (Democrat <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> liberal,
+Republican <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> conservative). This is an expedient choice;
+in future work we plan to make use of work in political science
+characterizing candidates’ ideological positions empirically based on
+their behavior <cite class="ltx_cite">[<a href="#bib.bib36" title="Measuring bias and uncertainty in dw-nominate ideal point estimates via the parametric bootstrap" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">While the Convote dataset has seen widespread use for document-level
+political classification, we are unaware of similar efforts at the
+sentence level.</p>
+</div>
+<div id="S3.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.1 </span>Biased Sentence Selection</h4>
+
+<div id="S3.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">The strong correlation between <span class="ltx_text ltx_font_smallcaps">us</span> political parties and
+political ideologies (Democrats with liberal, Republicans with
+conservative) lends confidence that this dataset contains a rich mix
+of ideological statements. However, the raw Convote dataset contains
+a low percentage of sentences with explicit ideological
+bias.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Many sentences in Convote are variations on “I think
+this is a good/bad bill”, and there is also substantial
+parliamentary boilerplate language.</span></span></span> We therefore use the features
+in Yano et al. <cite class="ltx_cite">[<a href="#bib.bib5" title="Shedding (a thousand points of) light on biased language" class="ltx_ref">32</a>]</cite>, which correlate with
+political bias, to select sentences to annotate that have a higher
+likelihood of containing bias. Their features come from the
+Linguistic Inquiry and Word Count lexicon (<span class="ltx_text ltx_font_smallcaps">liwc</span>)
+<cite class="ltx_cite">[<a href="#bib.bib14" title="Linguistic inquiry and word count [computer software]" class="ltx_ref">20</a>]</cite>, as well as from lists of “sticky
+bigrams” <cite class="ltx_cite">[<a href="#bib.bib37" title="Class-based n-gram models of natural language" class="ltx_ref">2</a>]</cite> strongly associated with one party or
+another (e.g., “illegal aliens” implies conservative, “universal
+healthcare” implies liberal).</p>
+</div>
+<div id="S3.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">We first extract the subset of sentences that contains any words in the
+<span class="ltx_text ltx_font_smallcaps">liwc</span> categories of Negative Emotion, Positive Emotion,
+Causation, Anger, and Kill verbs.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>While Kill verbs are not a
+category in <span class="ltx_text ltx_font_smallcaps">liwc</span>, Yano et al. <cite class="ltx_cite">[<a href="#bib.bib5" title="Shedding (a thousand points of) light on biased language" class="ltx_ref">32</a>]</cite>
+adopted it from <cite class="ltx_cite">Greene and Resnik (<a href="#bib.bib20" title="More than words: syntactic packaging and implicit sentiment" class="ltx_ref">2009</a>)</cite> and
+showed it to be a useful predictor of political bias.
+It includes words such
+as “slaughter” and “starve”.</span></span></span> After computing a list of the top
+100 sticky bigrams for each category, ranked by log-likelihood ratio,
+and selecting another subset from the original data that included only
+sentences containing at least one sticky bigram, we take the union of
+the two subsets. Finally, we balance the resulting dataset so that
+it contains an equal number of sentences from Democrats and
+Republicans, leaving us with a total of 7,816 sentences.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Ideological Books</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In addition to Convote, we use the Ideological
+Books Corpus (<span class="ltx_text ltx_font_smallcaps">ibc</span>) developed by Gross et
+al. <cite class="ltx_cite">[<a href="#bib.bib6" title="Testing the etch-a-sketch hypothesis: a computational analysis of mitt romney’s ideological makeover during the 2012 primary vs. general elections" class="ltx_ref">11</a>]</cite>. This is a collection of books and
+magazine articles written between 2008 and 2012 by authors with well-known
+political leanings. Each document in the <span class="ltx_text ltx_font_smallcaps">ibc</span> has been manually labeled with
+coarse-grained ideologies (right, left, and center) as well as fine-grained
+ideologies (e.g., religious-right, libertarian-right) by political science
+experts.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">There are over a million sentences in the <span class="ltx_text ltx_font_smallcaps">ibc</span>, most of which have no
+noticeable political bias. Therefore we use the filtering procedure outlined in
+Section  <a href="#S3.SS1.SSS1" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a> to obtain a subset of 55,932 sentences. Compared
+to our final Convote dataset, an even larger percentage of the <span class="ltx_text ltx_font_smallcaps">ibc</span> sentences
+exhibit no noticeable political bias.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>This difference can be mainly
+attributed to a historical topics in the <span class="ltx_text ltx_font_smallcaps">ibc</span> (e.g., the Crusades,
+American Civil War). In Convote, every sentence is part of a debate about 2005
+political policy.</span></span></span> Because our goal is to distinguish between
+liberal and conservative bias, instead of the more general task of classifying
+sentences as “neutral” or “biased”, we filter the dataset further using
+<span class="ltx_text ltx_font_smallcaps">dualist</span> <cite class="ltx_cite">[<a href="#bib.bib11" title="Closing the loop: fast, interactive semi-supervised annotation with queries on features and instances" class="ltx_ref">23</a>]</cite>, an active learning tool, to reduce the
+proportion of neutral sentences in our dataset. To train the <span class="ltx_text ltx_font_smallcaps">dualist</span>
+classifier, we manually assigned class labels of “neutral” or “biased” to 200
+sentences, and selected typical partisan unigrams to represent the “biased”
+class. <span class="ltx_text ltx_font_smallcaps">dualist</span> labels 11,555 sentences as politically biased, 5,434 of
+which come from conservative authors and 6,121 of which come from liberal
+authors.</p>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Annotating the <span class="ltx_text ltx_font_smallcaps">ibc</span></h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">For purposes of annotation, we define the task of political ideology
+detection as identifying, if possible, the political position of a
+given sentence’s author, where position is either <em class="ltx_emph">liberal</em> or
+<em class="ltx_emph">conservative</em>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>This is a simplification, as the
+ideological hierarchy in <span class="ltx_text ltx_font_smallcaps">ibc</span> makes clear.</span></span></span> We used the
+Crowdflower crowdsourcing platform (crowdflower.com), which has
+previously been used for subsentential sentiment annotation
+<cite class="ltx_cite">[<a href="#bib.bib42" title="Grammatical structures for word-level sentiment detection" class="ltx_ref">22</a>]</cite>, to obtain human annotations of the
+filtered <span class="ltx_text ltx_font_smallcaps">ibc</span> dataset for political bias on both the sentence and
+phrase level. While members of the Crowdflower workforce are certainly
+not experts in political science, our simple task and the ubiquity of
+political bias allows us to acquire useful annotations.</p>
+</div>
+<div id="S3.SS2.SSS1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Crowdflower Task</h5>
+
+<div id="S3.SS2.SSS1.P1.p1" class="ltx_para">
+<p class="ltx_p">First, we parse the filtered <span class="ltx_text ltx_font_smallcaps">ibc</span> sentences using the Stanford constituency
+parser <cite class="ltx_cite">[<a href="#bib.bib16" title="Parsing With Compositional Vector Grammars" class="ltx_ref">25</a>]</cite>. Because of the expense of labeling every node in a sentence, we only label one path in each sentence. The
+process for selecting paths is as follows: first, if any paths contain one of
+the top-ten partisan unigrams,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>The words that the multinomial naïve
+Bayes classifier in <span class="ltx_text ltx_font_smallcaps">dualist</span> marked as highest probability given a
+polarity: market, abortion, economy, rich, liberal, tea, economic, taxes, gun,
+abortion</span></span></span> we select the longest such path; otherwise, we select the path with the most open class
+constituencies (<span class="ltx_text ltx_font_smallcaps">np</span>, <span class="ltx_text ltx_font_smallcaps">vp</span>, <span class="ltx_text ltx_font_smallcaps">adjp</span>). The root node of a sentence is
+always included in a path.</p>
+</div>
+<div id="S3.SS2.SSS1.P1.p2" class="ltx_para">
+<p class="ltx_p">Our task is shown in Figure <a href="#S3.F3" title="Figure 3 ‣ Annotation Results ‣ 3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Open class constituencies are
+revealed to the worker incrementally, starting with the <span class="ltx_text ltx_font_smallcaps">np</span>, <span class="ltx_text ltx_font_smallcaps">vp</span>, or
+<span class="ltx_text ltx_font_smallcaps">adjp</span> furthest from the root and progressing up the tree. We choose this
+design to prevent workers from changing their lower-level phrase annotations
+after reading the full sentence.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS1.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph"> Filtering the Workforce</h5>
+
+<div id="S3.SS2.SSS1.P2.p1" class="ltx_para">
+<p class="ltx_p">To ensure our annotators have a basic understanding of <span class="ltx_text ltx_font_smallcaps">us</span>
+politics, we restrict workers to <span class="ltx_text ltx_font_smallcaps">us</span> <span class="ltx_text ltx_font_smallcaps">ip</span> addresses and
+require workers manually annotate one node from 60 different “gold ”
+paths annotated by the authors. We select these nodes such that the
+associated phrase is either obviously biased or obviously
+neutral. Workers must correctly annotate at least six of eight gold
+paths before they are granted access to the full task. In addition,
+workers must maintain 75% accuracy on gold paths that randomly appear
+alongside normal paths. Gold paths dramatically improve the quality of
+our workforce: 60% of contributors passed the initial quiz (the 40%
+that failed were barred from working on the task), while only 10% of
+workers who passed the quiz were kicked out for mislabeling subsequent
+gold paths.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS1.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph"> Annotation Results</h5>
+
+<div id="S3.SS2.SSS1.P3.p1" class="ltx_para">
+<p class="ltx_p">Workers receive the following instructions:
+<br class="ltx_break"/></p>
+</div>
+<div id="S3.SS2.SSS1.P3.p2" class="ltx_para">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:390.3pt;" width="390.3pt">Each task on this page contains a set of phrases from a single sentence. For each phrase, decide whether or not the author favors a political position to the left (<em class="ltx_emph">Liberal</em>) or right (<em class="ltx_emph">Conservative</em>) of center.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:390.3pt;" width="390.3pt"><span class="ltx_ERROR undefined">{itemize*}</span>
+
+<li class="ltx_item">
+<div id="S3.SS2.SSS1.P3.p2.p1" class="ltx_para">
+<p class="ltx_p">If the phrase is indicative of a position to the left of center, please choose <em class="ltx_emph">Liberal</em>.
+
+<li class="ltx_item">
+<div id="S3.SS2.SSS1.P3.p2.p1.p1" class="ltx_para">
+<p class="ltx_p">If the phrase is indicative of a position to the right of center, please choose <em class="ltx_emph">Conservative</em>.
+
+<li class="ltx_item">
+<div id="S3.SS2.SSS1.P3.p2.p1.p1.p1" class="ltx_para">
+<p class="ltx_p">If you feel like the phrase indicates some position to the left or right of the political center, but you’re not sure which direction, please mark <em class="ltx_emph">Not neutral, but I’m unsure of which direction</em>.
+
+<li class="ltx_item">
+<div id="S3.SS2.SSS1.P3.p2.p1.p1.p1.p1" class="ltx_para">
+<p class="ltx_p">If the phrase is not indicative of a position to the left or right of center, please mark <em class="ltx_emph">Neutral</em>.</p>
+</div></li></p>
+</div></li></p>
+</div></li></p>
+</div></li></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:390.3pt;" width="390.3pt"/></tr>
+</tbody>
+</table>
+</div>
+<div id="S3.SS2.SSS1.P3.p3" class="ltx_para">
+<p class="ltx_p">We had workers annotate 7,000 randomly selected paths from the filtered
+<span class="ltx_text ltx_font_smallcaps">ibc</span> dataset, with half of the paths coming from conservative authors and
+the other half from liberal authors, as annotated by Gross et
+al. <cite class="ltx_cite">[<a href="#bib.bib6" title="Testing the etch-a-sketch hypothesis: a computational analysis of mitt romney’s ideological makeover during the 2012 primary vs. general elections" class="ltx_ref">11</a>]</cite>. Three workers annotated each path in the
+dataset, and we paid $0.03 per sentence. Since identifying political bias is a
+relatively difficult and subjective task, we include all sentences where at
+least two workers agree on a label for the root node in our final dataset,
+except when that label is “Not neutral, but I’m unsure of which direction”. We
+only keep phrase-level annotations where at least two workers agree on the
+label: 70.4% of all annotated nodes fit this definition of agreement. All
+unannotated nodes receive the label of their closest annotated ancestor. Since
+the root of each sentence is always annotated, this strategy ensures that every
+node in the tree has a label. Our final balanced <span class="ltx_text ltx_font_smallcaps">ibc</span> dataset consists of
+3,412 sentences (4,062 before balancing and removing neutral sentences) with a
+total of 13,640 annotated nodes. Of these sentences, 543 switch polarity
+(liberal <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.P3.p3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> conservative or vice versa) on an annotated path.</p>
+</div>
+<div id="S3.SS2.SSS1.P3.p4" class="ltx_para">
+<p class="ltx_p">While we initially wanted to incorporate neutral labels into our model, we
+observed that lower-level phrases are almost always neutral while full sentences
+are much more likely to be biased (Figure <a href="#S3.F4" title="Figure 4 ‣ Annotation Results ‣ 3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). Due to this
+discrepancy, the objective function in Eq. (<a href="#S2.E6" title="(6) ‣ 2.1 Model Description ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>) was minimized by making
+neutral predictions for almost every node in the dataset.</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1105/image003.png" id="S3.F3.g1" class="ltx_graphics" width="341" height="279" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Example political ideology annotation task showing incremental reveal of
+progressively longer phrases.</div>
+</div>
+<div id="S3.F4" class="ltx_figure"><img src="P14-1105/image004.png" id="S3.F4.g1" class="ltx_graphics" width="288" height="216" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Proportion of liberal, conservative, and neutral annotations
+with respect to node depth (distance from root). As we get farther
+from the root of the tree, nodes are more likely to be neutral.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section we describe our experimental framework. We discuss strong
+baselines that use lexical and syntactic information (including framing-specific features from previous work) as well as multiple <span class="ltx_text ltx_font_smallcaps">RNN</span>
+configurations. Each of these models have the same
+task: to predict sentence-level ideology labels for sentences in a test set. To account for label imbalance, we subsample the data so that there are an equal
+number of labels and report accuracy over this balanced dataset.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Baselines</h3>
+<span class="ltx_ERROR undefined">{itemize*}</span>
+<li class="ltx_item">
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_bold ltx_font_smallcaps">random</span> baseline chooses a label at random from
+{<em class="ltx_emph">liberal</em>, <em class="ltx_emph">conservative</em>}.
+
+<li class="ltx_item">
+<div id="S4.SS1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">1</span>, our most basic logistic regression baseline, uses only
+bag of words (<em class="ltx_emph">BoW</em>) features.
+
+<li class="ltx_item">
+<div id="S4.SS1.p1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">2</span> uses only <em class="ltx_emph">BoW</em> features. However, <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">2</span> also
+includes phrase-level annotations as separate training
+instances.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>The Convote dataset was not annotated on the
+phrase level, so we only provide a result for the IBC dataset.</span></span></span>
+
+<li class="ltx_item">
+<div id="S4.SS1.p1.p1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">3</span> uses <em class="ltx_emph">BoW</em> features as well as syntactic pseudo-word
+features from Greene &amp; Resnik <cite class="ltx_cite">[<a href="#bib.bib20" title="More than words: syntactic packaging and implicit sentiment" class="ltx_ref">9</a>]</cite>. These
+features from dependency relations specify properties of verbs
+(e.g., transitivity or nominalization).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>We do not include
+phrase-level annotations in the <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">3</span> feature set because the
+pseudo-word features can only be computed from full sentence
+parses.</span></span></span>
+
+<li class="ltx_item">
+<div id="S4.SS1.p1.p1.p1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> is a logistic regression model trained on the
+average of the pretrained word embeddings for each sentence
+(Section <a href="#S2.SS2" title="2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>).</p>
+</div>
+<div id="S4.SS1.p1.p1.p1.p1.p2" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> baseline allows us to compare against a strong
+lexical representation that encodes syntactic and semantic information without the <span class="ltx_text ltx_font_smallcaps">RNN</span> tree structure.
+(<span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">1</span>, <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">2</span>) offer a comparison to simple bag of words models, while the <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">3</span> baseline contrasts traditional syntactic features with those learned by <span class="ltx_text ltx_font_smallcaps">RNN</span> models.</p>
+</div></li></p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Convote</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">IBC</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_smallcaps">random</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">50%</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">50%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">1</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r">64.7%</td>
+<td class="ltx_td ltx_align_right ltx_border_r">62.1%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">2</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r">–</td>
+<td class="ltx_td ltx_align_right ltx_border_r">61.9%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">3</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r">66.9%</td>
+<td class="ltx_td ltx_align_right ltx_border_r">62.6%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r">66.6%</td>
+<td class="ltx_td ltx_align_right ltx_border_r">63.7%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">1</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">69.4%</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">66.2%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">1-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold">70.2</span>%</td>
+<td class="ltx_td ltx_align_right ltx_border_r">67.1%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r">–</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">69.3</span>%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Sentence-level bias detection accuracy.
+The <span class="ltx_text ltx_font_smallcaps">rnn</span> framework, adding phrase-level data, and initializing
+with word2vec all improve performance over logistic regression
+baselines. The <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">2</span> and <span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> models were not trained on
+Convote since it lacks phrase annotations.</div>
+</div></li></p>
+</div></li></p>
+</div></li></p>
+</div></li>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span><span class="ltx_text ltx_font_smallcaps">rnn</span> Models</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">For <span class="ltx_text ltx_font_smallcaps">rnn</span> models, we generate a feature vector for every node in the tree.
+Equation <a href="#S2.E2" title="(2) ‣ 2.1 Model Description ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> allows us to percolate the representations to the root of the
+tree. We generate the final instance representation by concatenating the root
+vector and the average of all other vectors <cite class="ltx_cite">[<a href="#bib.bib1" title="Semi-Supervised Recursive Autoencoders for Predicting Sentiment Distributions" class="ltx_ref">27</a>]</cite>. We train
+an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math>-regularized logistic regression model over these concatenated vectors
+to obtain final accuracy numbers on the sentence level.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">To analyze the effects of initialization and phrase-level annotations, we report
+results for three different <span class="ltx_text ltx_font_smallcaps">rnn</span> settings. All three models were
+implemented as described in Section <a href="#S2" title="2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> with the nonlinearity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>
+set to the normalized <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="\tanh" display="inline"><mi>tanh</mi></math> function,</p>
+<table id="S4.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m1" class="ltx_Math" alttext="f(v)=\frac{\tanh(v)}{\left\lVert\tanh(v)\right\rVert}." display="block"><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mi>v</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>tanh</mi><mo>⁡</mo><mrow><mo>(</mo><mi>v</mi><mo>)</mo></mrow></mrow><mrow><mo fence="true">∥</mo><mrow><mi>tanh</mi><mo>⁡</mo><mrow><mo>(</mo><mi>v</mi><mo>)</mo></mrow></mrow><mo fence="true">∥</mo></mrow></mfrac></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">We perform 10-fold cross-validation on the training data to find the best
+<span class="ltx_text ltx_font_smallcaps">rnn</span> hyperparameters.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="[\lambda_{W_{e}}=" display="inline"><mrow><mo>[</mo><msub><mi>λ</mi><msub><mi>W</mi><mi>e</mi></msub></msub><mo>=</mo></mrow></math>1e-6<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext=",\lambda_{W}=" display="inline"><mrow><mo>,</mo><msub><mi>λ</mi><mi>W</mi></msub><mo>=</mo></mrow></math>1e-4<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext=",\lambda_{W_{cat}}=" display="inline"><mrow><mo>,</mo><msub><mi>λ</mi><msub><mi>W</mi><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow></msub></msub><mo>=</mo></mrow></math>1e-3<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext=",\beta=0.3]" display="inline"><mrow><mo>,</mo><mi>β</mi><mo>=</mo><mn>0.3</mn><mo>]</mo></mrow></math></span></span></span></p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We report results for <span class="ltx_text ltx_font_smallcaps">rnn</span> models with the following configurations:
+<span class="ltx_ERROR undefined">{itemize*}</span>
+
+<li class="ltx_item">
+<div id="S4.SS2.p3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">1</span> initializes all parameters randomly and uses only sentence-level labels for training.
+
+<li class="ltx_item">
+<div id="S4.SS2.p3.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">1-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> uses the word2vec initialization described in Section <a href="#S2.SS2" title="2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> but is also trained on only sentence-level labels.
+
+<li class="ltx_item">
+<div id="S4.SS2.p3.p1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> is initialized using word2vec embeddings and also includes annotated
+phrase labels in its training. For this model, we also introduce a hyperparameter
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.p1.p1.p1.m1" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> that weights the error at annotated nodes (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.p1.p1.p1.m2" class="ltx_Math" alttext="1-\beta" display="inline"><mrow><mn>1</mn><mo>-</mo><mi>β</mi></mrow></math>) higher than
+the error at unannotated nodes (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.p1.p1.p1.m3" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>); since we have more confidence in
+the annotated labels, we want them to contribute more towards the objective
+function.</p>
+</div>
+<div id="S4.SS2.p3.p1.p1.p2" class="ltx_para">
+<p class="ltx_p">For all RNN models, we set the word vector dimension <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.p1.p1.p2.m1" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> to 300 to facilitate
+direct comparison against the <span class="ltx_text ltx_font_smallcaps">lr</span><span class="ltx_text ltx_font_bold">-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> baseline.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>Using smaller vector
+sizes (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.p1.p1.p2.m2" class="ltx_Math" alttext="d\in\{50,100\}" display="inline"><mrow><mi>d</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>50</mn><mo>,</mo><mn>100</mn></mrow><mo>}</mo></mrow></mrow></math>, as in previous work) does not significantly change
+accuracy.</span></span></span></p>
+</div></li></p>
+</div></li></p>
+</div></li></p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Where Compositionality Helps Detect Ideological Bias</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we examine the <span class="ltx_text ltx_font_smallcaps">rnn</span> models to see why they improve over our baselines. We also give examples of sentences that are correctly classified by our best <span class="ltx_text ltx_font_smallcaps">rnn</span> model but incorrectly classified by all of the baselines. Finally, we investigate sentence constructions that our model cannot handle and offer possible explanations for these errors.</p>
+</div>
+<div id="S5.SS2.SSS1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Experimental Results</h5>
+
+<div id="S5.SS2.SSS1.P1.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Baselines ‣ 4 Experiments ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the <span class="ltx_text ltx_font_smallcaps">rnn</span> models outperforming the bag-of-words baselines as well as the word2vec baseline on both datasets. The increased accuracy suggests that the trained <span class="ltx_text ltx_font_smallcaps">rnn</span>s are capable of detecting bias polarity switches at higher levels in parse trees. While phrase-level annotations do not improve baseline performance, the <span class="ltx_text ltx_font_smallcaps">rnn</span> model significantly benefits from these annotations because the phrases are themselves derived from nodes in the network structure. In particular, the phrase annotations allow our best model to detect bias accurately in complex sentences that the baseline models cannot handle.</p>
+</div>
+<div id="S5.SS2.SSS1.P1.p2" class="ltx_para">
+<p class="ltx_p">Initializing the <span class="ltx_text ltx_font_smallcaps">rnn</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS1.P1.p2.m1" class="ltx_Math" alttext="W_{e}" display="inline"><msub><mi>W</mi><mi>e</mi></msub></math> matrix with word2vec embeddings
+improves accuracy over randomly initialization by 1%. This is similar
+to improvements from pretrained vectors from neural language models
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Semi-Supervised Recursive Autoencoders for Predicting Sentiment Distributions" class="ltx_ref">27</a>]</cite>.</p>
+</div>
+<div id="S5.SS2.SSS1.P1.p3" class="ltx_para">
+<p class="ltx_p">We obtain better results on Convote than on <span class="ltx_text ltx_font_smallcaps">ibc</span> with both bag-of-words and <span class="ltx_text ltx_font_smallcaps">rnn</span> models. This result was unexpected since the Convote labels are noisier than the annotated <span class="ltx_text ltx_font_smallcaps">ibc</span> labels; however, there are three possible explanations for the discrepancy. First, Convote has twice as many sentences as <span class="ltx_text ltx_font_smallcaps">ibc</span>, and the extra training data might help the model more than <span class="ltx_text ltx_font_smallcaps">ibc</span>’s better-quality labels. Second, since the sentences in Convote were originally spoken, they are almost half as short (21.3 words per sentence) as those in the <span class="ltx_text ltx_font_smallcaps">ibc</span> (42.2 words per sentence). Finally, some information is lost at every propagation step, so <span class="ltx_text ltx_font_smallcaps">rnn</span>s are able to model the shorter sentences in Convote more effectively than the longer <span class="ltx_text ltx_font_smallcaps">ibc</span> sentences.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS1.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Qualitative Analysis</h5>
+
+<div id="S5.SS2.SSS1.P2.p1" class="ltx_para">
+<p class="ltx_p">As in previous work <cite class="ltx_cite">[<a href="#bib.bib1" title="Semi-Supervised Recursive Autoencoders for Predicting Sentiment Distributions" class="ltx_ref">27</a>]</cite>, we visualize the learned vector space by
+listing the most probable n-grams for each political affiliation in
+Table <a href="#S5.T2" title="Table 2 ‣ Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. As expected, conservatives emphasize values such as freedom and religion while disparaging excess government spending and their liberal opposition. Meanwhile, liberals inveigh against the gap between the rich and the poor while expressing concern for minority groups and the working class.</p>
+</div>
+<div id="S5.SS2.SSS1.P2.p2" class="ltx_para">
+<p class="ltx_p">Our best model is able to accurately model the compositional effects of bias in sentences with complex syntactic structures. The first three sentences in Figure <a href="#S5.F5" title="Figure 5 ‣ Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> were correctly classified by our best model (<span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span>) and incorrectly classified by all of the baselines. Figures <a href="#S5.F5" title="Figure 5 ‣ Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>A and C show traditional conservative phrases, “free market ideology” and “huge amounts of taxpayer money”, that switch polarities higher up in the tree when combined with phrases such as “made worse by” and “saved by”. Figure <a href="#S5.F5" title="Figure 5 ‣ Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>B shows an example of a bias polarity switch in the opposite direction: the sentence negatively portrays supporters of nationalized health care, which our model picks up on.</p>
+</div>
+<div id="S5.F5" class="ltx_figure"><img src="P14-1105/image005.png" id="S5.F5.g1" class="ltx_graphics ltx_centering" width="674" height="378" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Predictions by <span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> on four sentences from the
+<span class="ltx_text ltx_font_smallcaps">ibc</span>. Node color is the true label (red for
+conservative, blue for liberal), and an “X” next to a node
+means the model’s prediction was wrong. In <em class="ltx_emph">A</em> and
+<em class="ltx_emph">C</em>, the model accurately detects
+conservative-to-liberal polarity switches, while in <em class="ltx_emph">B</em>
+it correctly predicts the liberal-to-conservative switch. In
+<em class="ltx_emph">D</em>, negation confuses our model.</div>
+</div>
+<div id="S5.SS2.SSS1.P2.p3" class="ltx_para">
+<p class="ltx_p">Our model often makes errors when polarity switches occur at nodes that are high
+up in the tree. In Figure <a href="#S5.F5" title="Figure 5 ‣ Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>D, “be used as an instrument to achieve charitable or social ends” reflects a liberal ideology, which the model predicts
+correctly. However, our model is unable to detect the polarity switch when this
+phrase is negated with “should not”. Since many different issues are discussed
+in the <span class="ltx_text ltx_font_smallcaps">ibc</span>, it is likely that our dataset has too few examples of some of
+these issues for the model to adequately learn the appropriate ideological
+positions, and more training data would resolve many of these errors.</p>
+</div>
+<div id="S5.T2" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">n</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Most conservative n-grams</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Most liberal n-grams</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">Salt, Mexico, housework, speculated, consensus, lawyer, pharmaceuticals, ruthless, deadly, Clinton, redistribution</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">rich, antipsychotic, malaria, biodiversity, richest, gene, pesticides, desertification, Net, wealthiest, labor, fertilizer, nuclear, HIV</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">3</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">prize individual liberty, original liberal idiots, stock market crash, God gives freedom, federal government interference, federal oppression nullification, respect individual liberty, Tea Party patriots, radical Sunni Islamists, Obama stimulus programs</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">rich and poor,“corporate greed”, super rich pay, carrying the rich, corporate interest groups, young women workers, the very rich, for the rich, by the rich, soaking the rich, getting rich often, great and rich, the working poor, corporate income tax, the poor migrants</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">5</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">spending on popular government programs, bailouts and unfunded government promises, North America from external threats, government regulations place on businesses, strong Church of Christ convictions, radical Islamism and other threats</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">the rich are really rich, effective forms of worker participation, the pensions of the poor, tax cuts for the rich, the ecological services of biodiversity, poor children and pregnant women, vacation time for overtime pay</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">7</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">government intervention helped make the Depression Great, by God in His image and likeness, producing wealth instead of stunting capital creation, the traditional American values of limited government, trillions of dollars to overseas oil producers, its troubled assets to federal sugar daddies, Obama and his party as racialist fanatics</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_footnote">African Americans and other disproportionately poor groups; the growing gap between rich and poor; the Bush tax cuts for the rich; public outrage at corporate and societal greed; sexually transmitted diseases , most notably AIDS; organize unions or fight for better conditions, the biggest hope for health care reform</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 2: </span> Highest probability n-grams for conservative and liberal ideologies, as predicted by the <span class="ltx_text ltx_font_smallcaps">rnn</span><span class="ltx_text ltx_font_bold">2-(</span><span class="ltx_text ltx_font_smallcaps">w2v</span><span class="ltx_text ltx_font_bold">)</span> model.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">A growing <span class="ltx_text ltx_font_smallcaps">nlp</span> subfield detects private states such as opinions,
+sentiment, and beliefs <cite class="ltx_cite">[<a href="#bib.bib38" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">31</a>, <a href="#bib.bib10" title="Opinion mining and sentiment analysis" class="ltx_ref">19</a>]</cite>
+from text. In general, work in this category tends to combine
+traditional surface lexical modeling (e.g., bag-of-words) with
+hand-designed syntactic features or lexicons. Here we review the most
+salient literature related to the present paper.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Automatic Ideology Detection</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Most previous work on ideology detection ignores the syntactic
+structure of the language in use in favor of familiar bag-of-words
+representations for the sake of simplicity. For example, Gentzkow and
+Shapiro <cite class="ltx_cite">[<a href="#bib.bib32" title="What drives media slant? evidence from us daily newspapers" class="ltx_ref">6</a>]</cite> derive a “slant index” to
+rate the ideological leaning of newspapers. A newspaper’s slant index
+is governed by the frequency of use of partisan collocations of 2-3
+tokens. Similarly, authors have relied on simple models of language
+when leveraging inferred ideological positions. E.g.,
+<cite class="ltx_cite">Gerrish and Blei (<a href="#bib.bib31" title="Predicting legislative roll calls from text" class="ltx_ref">2011</a>)</cite> predict the voting patterns of
+Congress members based on bag-of-words representations of bills and
+inferred political leanings of those members.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Recently, <cite class="ltx_cite">Sim<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Measuring ideological proportions in political speeches" class="ltx_ref">2013</a>)</cite> have proposed a model to infer
+mixtures of ideological positions in documents, applied to
+understanding the evolution of ideological rhetoric used by political
+candidates during the campaign cycle. They use an <span class="ltx_text ltx_font_smallcaps">hmm</span>-based
+model, defining the states as a set of fine-grained political
+ideologies, and rely on a closed set of lexical bigram features
+associated with each ideology, inferred from a manually labeled
+ideological books corpus. Although it takes elements of discourse
+structure into account (capturing the“burstiness” of ideological
+terminology usage), their model explicitly ignores intrasentential
+contextual influences of the kind seen in
+Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Other approaches on the document level use
+topic models to analyze bias in news articles, blogs, and political
+speeches <cite class="ltx_cite">[<a href="#bib.bib39" title="Staying informed: supervised and semi-supervised multi-view topical analysis of ideological perspective" class="ltx_ref">1</a>, <a href="#bib.bib40" title="A joint topic and perspective model for ideological discourse" class="ltx_ref">15</a>, <a href="#bib.bib41" title="Lexical and hierarchical topic regression" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Subjectivity Detection</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">Detecting subjective language, which conveys opinion or speculation, is a
+related <span class="ltx_text ltx_font_smallcaps">nlp</span> problem. While sentences lacking subjective language may
+contain ideological bias (e.g., the topic of the sentence), highly-opinionated
+sentences likely have obvious ideological leanings. In addition,
+sentiment and subjectivity analysis offers methodological approaches that can be
+applied to automatic bias detection.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Wiebe<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Learning subjective language" class="ltx_ref">2004</a>)</cite> show that low-frequency words and some collocations
+are a good indicators of subjectivity. More recently,
+<cite class="ltx_cite">Recasens<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="Linguistic models for analyzing and detecting biased language" class="ltx_ref">2013</a>)</cite> detect biased words in sentences using indicator
+features for bias cues such as hedges and factive verbs in addition to standard
+bag-of-words and part-of-speech features. They show that this type of
+linguistic information dramatically improves performance over several standard
+baselines.</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Greene and Resnik (<a href="#bib.bib20" title="More than words: syntactic packaging and implicit sentiment" class="ltx_ref">2009</a>)</cite> also emphasize the connection between syntactic and
+semantic relationships in their work on “implicit sentiment”, which refers to
+sentiment carried by sentence structure and not word choice. They use syntactic
+dependency relation features combined with lexical information to achieve then
+state-of-the-art performance on standard sentiment analysis datasets. However,
+these syntactic features are only computed for a thresholded list of
+domain-specific verbs. This work extends their insight of modeling
+sentiment as an interaction between syntax and semantics to
+ideological bias.</p>
+</div>
+<div id="S6.SS2.SSS1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Future Work</h5>
+
+<div id="S6.SS2.SSS1.P1.p1" class="ltx_para">
+<p class="ltx_p">There are a few obvious directions in which this work can be
+expanded. First, we can consider more nuanced political ideologies
+beyond <em class="ltx_emph">liberal</em> and <em class="ltx_emph">conservative</em>. We show that it is
+possible to detect ideological bias given this binary problem;
+however, a finer-grained study that also includes neutral annotations
+may reveal more subtle distinctions between ideologies. While
+acquiring data with obscure political biases from the <span class="ltx_text ltx_font_smallcaps">ibc</span> or
+Convote is unfeasible, we can apply a similar analysis to social media
+(e.g., Twitter or Facebook updates) to discover how many different
+ideologies propagate in these networks.</p>
+</div>
+<div id="S6.SS2.SSS1.P1.p2" class="ltx_para">
+<p class="ltx_p">Another direction is to implement more sophisticated <span class="ltx_text ltx_font_smallcaps">rnn</span> models
+(along with more training data) for bias detection. We attempted to
+apply syntactically-untied <span class="ltx_text ltx_font_smallcaps">rnn</span>s <cite class="ltx_cite">[<a href="#bib.bib16" title="Parsing With Compositional Vector Grammars" class="ltx_ref">25</a>]</cite> to our
+data with the idea that associating separate matrices for phrasal
+categories would improve representations at high-level nodes. While
+there were too many parameters for this model to work well here, other
+variations might prove successful, especially with more data. Finally,
+combining sentence-level and document-level models might improve bias
+detection at both levels.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this paper we apply recursive neural networks to political ideology
+detection, a problem where previous work relies heavily on
+bag-of-words models and hand-designed lexica. We show that our
+approach detects bias more accurately than existing methods on two
+different datasets. In addition, we describe an approach to
+crowdsourcing ideological bias annotations. We use this approach to
+create a new dataset from the <span class="ltx_text ltx_font_smallcaps">ibc</span>, which is labeled at both the
+sentence and phrase level.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank the anonymous reviewers, Hal Daumé, Yuening Hu, Yasuhiro
+Takayama, and Jyothi Vinjumur for their insightful comments. We also
+want to thank Justin Gross for providing the <span class="ltx_text ltx_font_smallcaps">ibc</span> and Asad Sayeed for help with the Crowdflower task design, as well as Richard Socher and Karl Moritz Hermann for assisting us with our model implementations. This work was
+supported by <span class="ltx_text ltx_font_smallcaps">nsf</span> Grant CCF-1018625. Boyd-Graber is also
+supported by <span class="ltx_text ltx_font_smallcaps">nsf</span> Grant IIS-1320538. Any opinions, findings,
+conclusions, or recommendations expressed here are those of the
+authors and do not necessarily reflect the view of the sponsor.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_font_footnote ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ahmed and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Staying informed: supervised and semi-supervised multi-view topical analysis of ideological perspective</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. F. Brown, P. V. Desouza, R. L. Mercer, V. J. D. Pietra and J. C. Lai</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Class-based n-gram models of natural language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">cl</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 467–479</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS1.p1" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Carroll, J. B. Lewis, J. Lo, K. T. Poole and H. Rosenthal</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measuring bias and uncertainty in dw-nominate ideal point estimates via the parametric bootstrap</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Political Analysis</span> <span class="ltx_text ltx_bib_volume">17</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 261–275</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.SSS0.P2.p1" title="word2vec ‣ 2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. E. Dardis, F. R. Baumgartner, A. E. Boydstun, S. De Boef and F. Shen</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Media framing of capital punishment and its impact on individuals’ cognitive responses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Mass Communication &amp; Society</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 115–140</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gentzkow and J. M. Shapiro</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What drives media slant? evidence from us daily newspapers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Econometrica</span> <span class="ltx_text ltx_bib_volume">78</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 35–71</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Gerrish and D. M. Blei</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting legislative roll calls from text</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p1" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Goller and A. Kuchler</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning task-dependent distributed representations by backpropagation through structure</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p8" title="2.1 Model Description ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Greene and P. Resnik</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">More than words: syntactic packaging and implicit sentiment</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS1.p2" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>,
+<a href="#S4.SS1.p1.p1.p1.p1" title="4.1 Baselines ‣ 4 Experiments ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S6.SS2.p3" title="6.2 Subjectivity Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Groseclose and J. Milyo</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A measure of media bias</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Quarterly Journal of Economics</span> <span class="ltx_text ltx_bib_volume">120</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 1191–1237</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gross, B. Acree, Y. Sim and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Testing the etch-a-sketch hypothesis: a computational analysis of mitt romney’s ideological makeover during the 2012 primary vs. general elections</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS1.P3.p3" title="Annotation Results ‣ 3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Hashimoto, M. Miwa, Y. Tsuruoka and T. Chikayama</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Simple customization of recursive neural networks for semantic relation classification</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p8" title="2.1 Model Description ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. M. Hermann and P. Blunsom</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Role of Syntax in Vector Space Models of Compositional Semantics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Lakoff</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Moral politics: how liberals and conservatives think, second edition</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">University of Chicago Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Lin, E. Xing and A. Hauptmann</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A joint topic and perspective model for ideological discourse</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning and Knowledge Discovery in Databases</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 17–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1301.3781</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.SSS0.P2.p1" title="word2vec ‣ 2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Nguyen, J. Boyd-Graber and P. Resnik</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical and hierarchical topic regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1106–1114</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Niven</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Objective evidence on media bias: newspaper coverage of congressional party switchers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journalism &amp; Mass Communication Quarterly</span> <span class="ltx_text ltx_bib_volume">80</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 311–326</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion mining and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Foundations and trends in information retrieval</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1-2</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. W. Pennebaker, M. E. Francis and R. J. Booth</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic inquiry and word count [computer software]</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Mahwah, NJ: Erlbaum Publishers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS1.p1" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Recasens, C. Danescu-Niculescu-Mizil and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic models for analyzing and detecting biased language</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS2.p2" title="6.2 Subjectivity Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. B. Sayeed, J. Boyd-Graber, B. Rusk and A. Weinberg</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grammatical structures for word-level sentiment detection</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS1.p1" title="3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Settles</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Closing the loop: fast, interactive semi-supervised annotation with queries on features and instances</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Sim, B. Acree, J. H. Gross and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measuring ideological proportions in political speeches</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Automatic Ideology Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing With Compositional Vector Grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">acl</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.SSS0.P2.p2" title="word2vec ‣ 2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS2.SSS1.P1.p1" title="Crowdflower Task ‣ 3.2.1 Annotating the ibc ‣ 3.2 Ideological Books ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>,
+<a href="#S6.SS2.SSS1.P1.p2" title="Future Work ‣ 6.2 Subjectivity Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, E. H. Huang, J. Pennington, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic Pooling and Unfolding Recursive Autoencoders for Paraphrase Detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">nips</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.SSS0.P2.p1" title="word2vec ‣ 2.2 Initialization ‣ 2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.p1" title="2 Recursive Neural Networks ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-Supervised Recursive Autoencoders for Predicting Sentiment Distributions</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 rnn Models ‣ 4 Experiments ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S5.SS2.SSS1.P1.p2" title="Experimental Results ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS2.SSS1.P2.p1" title="Qualitative Analysis ‣ 5 Where Compositionality Helps Detect Ideological Bias ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Y. Wu, J. Chuang, C. D. Manning, A. Y. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive deep models for semantic compositionality over a sentiment treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Thomas, B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Get out the vote: determining support or opposition from Congressional floor-debate transcripts</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe, T. Wilson, R. Bruce, M. Bell and M. Martin</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning subjective language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">cl</span> <span class="ltx_text ltx_bib_volume">30</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 277–308</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS2.p2" title="6.2 Subjectivity Detection ‣ 6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Yano, P. Resnik and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Shedding (a thousand points of) light on biased language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 152–158</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS1.p1" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>,
+<a href="#S3.SS1.SSS1.p2" title="3.1.1 Biased Sentence Selection ‣ 3.1 Convote ‣ 3 Datasets ‣ Political Ideology Detection Using Recursive Neural Networks" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:39:16 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

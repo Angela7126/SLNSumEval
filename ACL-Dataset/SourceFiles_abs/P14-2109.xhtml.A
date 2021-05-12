@@ -1,0 +1,400 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Parser Evaluation Using Derivation Trees: A Complement to evalb.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Phrase-structure parsing is usually evaluated using evalb
+        []
+        , which
+provides a score based on matching brackets. While this metric serves a valuable
+purpose in pushing parser research forward, it has limited utility for understanding
+what sorts of errors a parser is making. This is the case even if the score is broken down
+by brackets (NP, VP, etc.), because the
+brackets can represent different types of structures. We would also like to have answers
+to such questions as
+“How does the parser do on non-recursive NPs, separate from NPs resulting from modification? On PP attachment?” etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Answering such questions is the goal of this work, which
+combines two strands of research. First, inspired by the tradition of
+Tree Adjoining Grammar-based research
+        []
+        , we use a
+decomposition of the full trees into “elementary trees” (henceforth “etrees”), with
+a derivation tree that records how the etrees relate to each other, as in
+        .
+In particular, we
+use the “spinal” structure approach of
+        []
+        , where etrees are
+constrained to be unary-branching.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Second, we use a set of regular expressions (henceforth “regexes”) that categorize the possible structures in the treebank.
+These are best thought of as an extension of head-finding rules, which not only find a head but
+simultaneously
+identify each parent/children relation as one of a limited number of types of structures
+(right-modification, etc.).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The crucial step is that we integrate these regexes into the spinal etrees. The
+derivation trees provide elements of a
+dependency analysis, which allow us to calculate scores for head identification and
+attachment for different projections (e.g., PP). The
+regexes allow us to also provide scores based on spans of different construction types.
+Together these two aspects break down the evalb brackets into more meaningful categories,
+and the simultaneous head and span scoring allows us to separate these aspects in the analysis.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        After describing in more detail the basic framework, we show some aspects of the
+resulting analysis of the performance of the Berkeley parser
+        []
+        on three
+datasets: (a) OntoNotes WSJ sections 2-21
+        []
+        , (b) OntoNotes WSJ
+section 22, and (c) the “Answers” section of the English Web Treebank
+        []
+        . We trained
+the parser on sections 2-21, and so (a) is “test-on-train”.
+These three results together show how the parser is generalizing from the training
+data, and what aspects of the “domain adaptation” problem to the web material are particularly
+important.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Framework for analyzing parsing performance
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We first describe the use of the regexes in tree decomposition, and then give some examples
+of incorporating these regexes into the derivation trees.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Use of regular expressions
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Decomposing the original phrase-structure tree into the smaller
+components requires some method of determining the “head” of a nonterminal, from among its
+children nodes, similar to parsing
+work such as
+         . As described above, we are also interested
+in the type of linguistic construction represented by that one-level structure, each of which instantiates one of
+a few types - recursive coordination,
+simple head-and-sister, etc.
+We address both tasks together with the regexes.
+In contrast to the sort of head rules in
+         []
+         , these refer as little as possible to specific POS tags.
+Instead of explicitly listing the POS tags of possible heads, the heads are in most cases
+determined by their location in the structure.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Sample regexes are shown in Figure
+         1
+         . There are 49 regexes
+used.
+         Regexes ADJP-t and ADVP-t in (a) identify their terminal head to be the rightmost terminal, possibly
+preceded by some number of terminals or nonterminals, relying on a mapping that
+maps all terminals (except CC, which is mapped to CONJ) to TAG and all nonterminals (except CONJP and NML)
+to NT.
+Structures
+with a CONJ/CONJP/NML child do not match this rule and are handled by different regexes,
+which are all mutually exclusive. In some cases, we need to search for particular nonterminal
+heads, such as with the (b) regexes S-vp and SQ-vp, which identify the rightmost VP among the children
+of a S or SQ as the head.
+(c) NP-modr is a regex for a recursive NP
+with a right modifier. In this case, the NP on the left is identified as the
+head.
+(d) VP-crd is also a regex for a recursive structure, in this case for VP coordination, picking out
+the leftmost conjunct as the head of the structure. The regex names
+roughly describe their purpose - “mod” for right-modification, “crd” for coordination, etc. The suffix
+“-t” is for the simple non-recursive case in which the head is a terminal.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Regexes in the derivation trees
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         The names of these regexes are incorporated into the etrees themselves, as labels of
+the nonterminals. This allows an etree to contain information such as “this node represents
+right modification”.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         For example, Figure
+         3
+         shows the derivation tree
+resulting from the decomposition of the tree in Figure
+         5
+         . Each structure within a circle is one
+etree, and the derivation as a whole indicates how these etrees are
+combined. Here we indicate with arrows that point to the relevant regex. For example, the
+PP-t etree #a6 points to the NP-modr regex, which consists of the NP-t together with the
+PP-t. The nonterminals of the spinal etrees are the names of the
+regexes, with the simpler nonterminal labels trivially derivable from the regex
+names.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         The tree in Figure
+         5
+         is the parser output corresponding to the gold tree in Figure
+         5
+         , and in this
+case gets the PP-t attachment wrong, while everything else is the same as the gold.
+         This is reflected in the derivation tree in Figure
+         3
+         ,
+in which the NP-modr regex is absent, with the NP-t and PP-t etrees #b5 and #b6 both pointing to the VP-t regex in
+#b3. We show in Section
+         2.3
+         how this derivation tree representation is used to
+score this attachment error directly, rather than obscuring it as an NP bracket error as evalb would
+do.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Scoring
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         We decompose both the gold and parser output trees into derivation trees with spinal etrees,
+and score based on the regexes projected by each word. There is a match for
+a regex if the corresponding words in gold/parser files project to that regex, a precision error if the
+parser file does but the gold does not, and a recall error if the gold does but the parser file does
+not.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        <p class="ltx_p">
+         For example, comparing the trees in Figures
+         5
+         and
+         5
+         via their derivation
+trees in Figures
+         3
+         and Figures
+         3
+         , the word “trip” has
+a match for the regex NP-t, but a recall error for NP-modr. The word “make” has a match for the
+regexes VP-t, VP-aux, and S-vp, and so on. Summing such scores over the corresponding gold/parser
+trees gives us F-scores for each regex.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p3">
+        <p class="ltx_p">
+         There are two modifications/extensions to these F-scores that we also use:
+         (1) For each regex match, we score whether it matches based on the span as well. For example, “make”
+is a match for VP-t in Figures
+         3
+         and
+         3
+         , and is also
+a match for the span as well, since in both derivation trees it includes the words “make
+         …
+         Florida”.
+It is
+this matching for span as well as head that allows us to compare our results to evalb.
+We call the match
+just for the head the “F-h” score and the match that also includes the span information the “F-s” score.
+The F-s score roughly corresponds to the evalb score. However, the F-s score is for separate syntactic constructions (including also head identification), although we can also sum it over all the structures, as done later in Figure
+         6
+         . The simultaneous F-h and F-s scores let us identify constructions
+where the parser has the head projection correct, but gets the span wrong.
+         (2) Since the derivation tree is really a dependency tree with more complex nodes
+         []
+         , we can also score each regex
+for attachment.
+         For example, while “to” is a match for PP-t, its attachment
+is not, since in Figure
+         3
+         it is a child of the “trip” etree (#a5) and
+in Figure
+         3
+         it is a child of the “make” etree (#b3). Therefore our analysis
+results in an attachment score for every regex.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.4
+        </span>
+        Comparison with previous work
+       </h3>
+       <div class="ltx_para" id="S2.SS4.p1">
+        <p class="ltx_p">
+         This work is in the same basic line of research as the inter-annotator agreement analysis work in
+         . However, that work did not utilize regexes, and focused on
+comparing sequences of identical strings. The current work scores on general categories of structures,
+without the reliance on sequences of individual strings.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Analysis of parsing results
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We worked with the three datasets as described in the introduction. We trained
+the parser on sections 2-21 of OntoNotes WSJ, and parsed the three datasets with the
+gold tags, since at present we wish to analyze the parser
+performance in isolation from Part-of-Speech tagging errors.
+Table
+        1
+        shows the sizes of the three corpora in terms of tokens and brackets,
+for both the gold and parsed versions, with the evalb scores for the parsed versions.
+The score is lower for Answers, as also found by
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        To facilitate comparison of our analysis with evalb, we used
+corpora versions with the same bracket deletion (empty yields and most punctuation)
+as evalb.
+We ran the gold and parsed versions
+through our regex decomposition and derivation tree creation. Table
+        1
+        shows the number
+and percentage of brackets handled by our regexes. The high coverage (%)
+reinforces the point that there is a limited number of core structures in the treebank.
+In the results below in Table
+        2
+        and Figure
+        6
+        we combine the nonterminals that
+are not covered by one of the regexes with the simple non-recursive regex case for that
+nonterminal.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        We present the results in two ways. Table
+        2
+        lists the most frequent categories
+in the three datasets, with their percentage of the overall number of brackets (%gold), their score
+based just on the head identification (F-h), their score based on head identification and (left and
+right) span (F-s),
+and the
+attachment (att) and span-right (spanR) scores for those that match based on the head.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        The two graphs in Figure
+        6
+        show the cumulative results based on F-h and F-s,
+respectively. These show the cumulative score in order of the frequency of categories. For example,
+for sections 2-21, the score for NP-t is shown first, with 30.7% of the brackets, and then together
+with the VP-t category, they cover 45.2% of the brackets,
+etc.
+        The benefit of the approach described here is that now we can see the contribution to the
+evalb score of the particular types of constructions, and within those constructions, how well the parser
+is doing at getting the same head projection, but failing or not on the spans.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Analysis and future work
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         As this is work-in-progress, the analysis is not yet complete. We highlight a few points here.
+         (1) The high performance on the OntoNotes WSJ material is in large part
+due to the score on the non-recursive regexes of NP-t, VP-t, S-vp, and the auxiliaries (points 1, 2, 4, 6 in the graphs). Critical to this is the fact that
+the parser does well on determining the right edge of verbal structures, which affects the F-s score for
+VP-t (non-recursive), VP-aux, and S-vp.
+The spanR score for VP-t is 95.8 for Sections 2-21 and 93.7 for Section 22.
+         (2) We wouldn’t expect the
+test-on-training evalb score to be 100%, since it has to back off from the training data,
+but the results for the different categories vary widely, with e.g., the NP-modr F-h score
+much lower than other frequent regexes. This variance from the test-on-training dataset carries
+over almost exactly to Section 22.
+         (3) The different distribution of structures in Answers hurts performance.
+For example, the mediocre performance of the parser on SQ-vp barely affects the score with OntoNotes, but
+has a larger negative effect with Answers, due to its increased frequency in the latter.
+         (4) While the different distribution of constructions is a problem for
+Answers, more critical is the poor
+performance of the parser on determining the right edge of verbal constructions. This is only 85.4 for
+VP-t in Answers, compared to the OntoNotes results mentioned in (1). Since this affects
+the F-s scores for VP-t, VP-aux, and S-vp, the negative effect is large. Preliminary investigation shows that
+this is due in part to incorrect PP and SBAR placement
+(the PP-t and SBAR-s attachment scores (80.7 and 81.9) are worse for Answers compared
+to Section 22 (86.1 and 86.4)), and coordinated S-clauses with no
+conjunction.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         In sum, there is a wealth of information from this new type of analysis that we will use in
+our on-going work to better understand what the parser is learning and how it works on different genres.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,868 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Context-aware Learning for Sentence-level Sentiment Analysiswith Posterior Regularization</title>
+<!--Generated on Tue Jun 10 17:27:58 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-ulem.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Context-aware Learning for Sentence-level Sentiment Analysis
+<br class="ltx_break"/>with Posterior Regularization</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Bishan Yang
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>Cornell University
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">bishan@cs.cornell.edu</span> 
+<br class="ltx_break"/>&amp;Claire Cardie
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>Cornell University
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">cardie@cs.cornell.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper proposes a novel context-aware method for analyzing sentiment at the level of individual sentences. Most existing machine learning approaches suffer from limitations in the modeling of complex linguistic structures across sentences and often fail to capture non-local contextual cues that are important for sentiment interpretation. In contrast, our approach allows structured modeling of sentiment while taking into account both local and global contextual information. Specifically, we encode intuitive lexical and discourse knowledge as expressive constraints and integrate them into the learning of conditional random field models via posterior regularization. The context-aware constraints provide additional power to the CRF model and can guide semi-supervised learning when labeled data is limited. Experiments on standard product review datasets show that our method outperforms the state-of-the-art methods in both the supervised and semi-supervised settings.</p>
+</div><span class="ltx_ERROR undefined">\normalem</span>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The ability to extract sentiment from text is crucial for many opinion-mining applications such as opinion summarization, opinion question answering and opinion retrieval. Accordingly, extracting sentiment at the fine-grained level (e.g. at the sentence- or phrase-level) has received increasing attention recently due to its challenging nature and its importance in supporting these opinion analysis tasks <cite class="ltx_cite">[<a href="#bib.bib58" title="Opinion mining and sentiment analysis" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we focus on the task of sentence-level sentiment classification in online reviews. Typical approaches to the task employ supervised machine learning algorithms with rich features and take into account the interactions between words to handle compositional effects such as polarity reversal (e.g.  <cite class="ltx_cite">[<a href="#bib.bib22" title="Dependency tree-based sentiment classification using crfs with hidden variables" class="ltx_ref">16</a>, <a href="#bib.bib7" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">23</a>]</cite>). Still, their methods can encounter difficulty when the sentence on its own does not contain strong enough sentiment signals (due to the lack of statistical evidence or the requirement for background knowledge). Consider the following review for example,</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<blockquote class="ltx_quote">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">1. Hearing the music in real stereo is a true revelation. 2. You can feel that the music is no longer constrained by the mono recording. 3. In fact, it is more like the players are performing on a stage in front of you …
+</span></p>
+</blockquote>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Existing feature-based classifiers may be effective in identifying the positive sentiment of the first sentence due to the use of the word  <span class="ltx_text ltx_font_italic">revelation</span>, but they could be less effective in the last two sentences due to the lack of explicit sentiment signals. However, if we examine these sentences within the discourse context, we can see that: the second sentence expresses sentiment towards the same aspect –  <span class="ltx_text ltx_font_italic">the music</span> – as the first sentence; the third sentence expands the second sentence with the discourse connective  <span class="ltx_text ltx_font_italic">In fact</span>. These discourse-level relations help indicate that sentence 2 and 3 are likely to have positive sentiment as well.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The importance of discourse for sentiment analysis has become increasingly recognized. Most existing work considers discourse relations between adjacent sentences or clauses and incorporates them as constraints  <cite class="ltx_cite">[<a href="#bib.bib1" title="Fully automatic lexicon expansion for domain-oriented sentiment analysis" class="ltx_ref">11</a>, <a href="#bib.bib46" title="Unsupervised discovery of discourse relations for eliminating intra-sentence polarity ambiguities" class="ltx_ref">31</a>]</cite> or features in classifiers  <cite class="ltx_cite">Trivedi and Eisenstein (<a href="#bib.bib6" title="Discourse connectors for latent subjectivity in sentiment analysis" class="ltx_ref">2013</a>), Lazaridou<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="A bayesian model for joint unsupervised induction of sentiment, aspect and discourse representations" class="ltx_ref">2013</a>)</cite>. Very little work has explored long-distance discourse relations for sentiment analysis.  <cite class="ltx_cite">Somasundaran<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib48" title="Discourse level opinion interpretation" class="ltx_ref">2008</a>)</cite> defines coreference relations on opinion targets and applies them to constrain the polarity of sentences. However, the discourse relations were obtained from fine-grained annotations and implemented as hard constraints on polarity.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Obtaining sentiment labels at the fine-grained level is costly. Semi-supervised techniques have been proposed for sentence-level sentiment classification <cite class="ltx_cite">[<a href="#bib.bib33" title="Discovering fine-grained sentiment with latent variable structured prediction models" class="ltx_ref">27</a>, <a href="#bib.bib12" title="A weakly supervised model for sentence-level semantic orientation analysis with multiple experts" class="ltx_ref">21</a>]</cite>. However, they rely on a large amount of document-level sentiment labels that may not be naturally available in many domains.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a sentence-level sentiment classification method that can (1) incorporate rich discourse information at both local and global levels; (2) encode discourse knowledge as soft constraints during learning; (3) make use of unlabeled data to enhance learning. Specifically, we use the Conditional Random Field (CRF) model as the learner for sentence-level sentiment classification, and incorporate rich discourse and lexical knowledge as soft constraints into the learning of CRF parameters via Posterior Regularization (PR) <cite class="ltx_cite">[<a href="#bib.bib29" title="Posterior regularization for structured latent variable models" class="ltx_ref">7</a>]</cite>. As a framework for structured learning with constraints, PR has been successfully applied to many structural NLP tasks <cite class="ltx_cite">[<a href="#bib.bib30" title="Dependency grammar induction via bitext projection constraints" class="ltx_ref">6</a>, <a href="#bib.bib29" title="Posterior regularization for structured latent variable models" class="ltx_ref">7</a>, <a href="#bib.bib4" title="Cross-lingual discriminative learning of sequence models with posterior regularization" class="ltx_ref">5</a>]</cite>. Our work is the first to explore PR for sentiment analysis. Unlike most previous work, we explore a rich set of structural constraints that cannot be naturally encoded in the feature-label form, and show that such constraints can improve the performance of the CRF model.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">We evaluate our approach on the sentence-level sentiment classification task using two standard product review datasets. Experimental results show that our model outperforms state-of-the-art methods in both the supervised and semi-supervised settings. We also show that discourse knowledge is highly useful for improving sentence-level sentiment classification.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">There has been a large amount of work on sentiment analysis at various levels of granularity <cite class="ltx_cite">[<a href="#bib.bib58" title="Opinion mining and sentiment analysis" class="ltx_ref">18</a>]</cite>. In this paper, we focus on the study of sentence-level sentiment classification. Existing machine learning approaches for the task can be classified based on the use of two ideas. The first idea is to exploit sentiment signals at the sentence level by learning the relevance of sentiment and words while taking into account the context in which they occur:  <cite class="ltx_cite">Nakagawa<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib22" title="Dependency tree-based sentiment classification using crfs with hidden variables" class="ltx_ref">2010</a>)</cite> uses tree-CRF to model word interactions based on dependency tree structures;  <cite class="ltx_cite">Choi and Cardie (<a href="#bib.bib17" title="Learning with compositional semantics as structural inference for subsentential sentiment analysis" class="ltx_ref">2008</a>)</cite> applies compositional inference rules to handle polarity reversal;  <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib51" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">2013</a>)</cite> compute compositional vector representations for words and phrases and use them as features in a classifier.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The second idea is to exploit sentiment signals at the inter-sentential level.  <cite class="ltx_cite">Polanyi and Zaenen (<a href="#bib.bib18" title="Contextual valence shifters" class="ltx_ref">2006</a>)</cite> argue that discourse structure is important in polarity classification. Various attempts have been made to incorporate discourse relations into sentiment analysis:  <cite class="ltx_cite">Pang and Lee (<a href="#bib.bib26" title="A sentimental education: sentiment analysis using subjectivity summarization based on minimum cuts" class="ltx_ref">2004</a>)</cite> explored the consistency of subjectivity between neighboring sentences;  <cite class="ltx_cite">Mao and Lebanon (<a href="#bib.bib21" title="Isotonic conditional random fields and local sentiment flow" class="ltx_ref">2007</a>)</cite>,<cite class="ltx_cite">McDonald<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib34" title="Structured models for fine-to-coarse sentiment analysis" class="ltx_ref">2007</a>)</cite>, and <cite class="ltx_cite">Täckström and McDonald (<a href="#bib.bib33" title="Discovering fine-grained sentiment with latent variable structured prediction models" class="ltx_ref">2011a</a>)</cite> developed structured learning models to capture sentiment dependencies between adjacent sentences;  <cite class="ltx_cite">Kanayama and Nasukawa (<a href="#bib.bib1" title="Fully automatic lexicon expansion for domain-oriented sentiment analysis" class="ltx_ref">2006</a>)</cite> and <cite class="ltx_cite">Zhou<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Unsupervised discovery of discourse relations for eliminating intra-sentence polarity ambiguities" class="ltx_ref">2011</a>)</cite> use discourse relations to constrain two text segments to have either the same polarity or opposite polarities;  <cite class="ltx_cite">Trivedi and Eisenstein (<a href="#bib.bib6" title="Discourse connectors for latent subjectivity in sentiment analysis" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Lazaridou<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="A bayesian model for joint unsupervised induction of sentiment, aspect and discourse representations" class="ltx_ref">2013</a>)</cite> encode the discourse connectors as model features in supervised classifiers. Very little work has explored long-distance discourse relations.  <cite class="ltx_cite">Somasundaran<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib48" title="Discourse level opinion interpretation" class="ltx_ref">2008</a>)</cite> define opinion target relations and apply them to constrain the polarity of text segments annotated with target relations. Recently,  <cite class="ltx_cite">Zhang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Discourse level explanatory relation extraction from product reviews using first-order logic" class="ltx_ref">2013</a>)</cite> explored the use of explanatory discourse relations as soft constraints in a Markov Logic Network framework for extracting subjective text segments.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Leveraging both ideas, our approach exploits sentiment signals from both intra-sentential and inter-sentential context. It has the advantages of utilizing rich discourse knowledge at different levels of context and encoding it as soft constraints during learning.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Our approach is also semi-supervised. Compared to the existing work on semi-supervised learning for sentence-level sentiment classification  <cite class="ltx_cite">[<a href="#bib.bib33" title="Discovering fine-grained sentiment with latent variable structured prediction models" class="ltx_ref">27</a>, <a href="#bib.bib25" title="Semi-supervised latent variable models for sentence-level sentiment analysis" class="ltx_ref">28</a>, <a href="#bib.bib12" title="A weakly supervised model for sentence-level semantic orientation analysis with multiple experts" class="ltx_ref">21</a>]</cite>, our work does not rely on a large amount of coarse-grained (document-level) labeled data, instead, distant supervision mainly comes from linguistically-motivated constraints.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Our work also relates to the study of posterior regularization (PR) <cite class="ltx_cite">[<a href="#bib.bib29" title="Posterior regularization for structured latent variable models" class="ltx_ref">7</a>]</cite>. PR has been successfully applied to many structured NLP tasks such as dependency parsing, information extraction and cross-lingual learning tasks <cite class="ltx_cite">[<a href="#bib.bib30" title="Dependency grammar induction via bitext projection constraints" class="ltx_ref">6</a>, <a href="#bib.bib28" title="Alternating projections for learning with expectation constraints" class="ltx_ref">1</a>, <a href="#bib.bib29" title="Posterior regularization for structured latent variable models" class="ltx_ref">7</a>, <a href="#bib.bib4" title="Cross-lingual discriminative learning of sequence models with posterior regularization" class="ltx_ref">5</a>]</cite>. Most previous work using PR mainly experiments with feature-label constraints. In contrast, we explore a rich set of linguistically-motivated constraints which cannot be naturally formulated in the feature-label form. We also show that constraints derived from the discourse context can be highly useful for disambiguating sentence-level sentiment.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Approach</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present the details of our proposed approach. We formulate the sentence-level sentiment classification task as a sequence labeling problem. The inputs to the model are sentence-segmented documents annotated with sentence-level sentiment labels (positive, negative or neutral) along with a set of unlabeled documents. During prediction, the model outputs sentiment labels for a sequence of sentences in the test document. We utilize conditional random fields and use Posterior Regularization (PR) to learn their parameters with a rich set of context-aware constraints.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In what follows, we first briefly describe the framework of Posterior Regularization. Then we introduce the context-aware constraints derived based on intuitive discourse and lexical knowledge. Finally we describe how to perform learning and inference with these constraints.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Posterior Regularization</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">PR is a framework for structured learning with constraints <cite class="ltx_cite">[<a href="#bib.bib29" title="Posterior regularization for structured latent variable models" class="ltx_ref">7</a>]</cite>. In this work, we apply PR in the context of CRFs for sentence-level sentiment classification.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Denote <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math> as a sequence of sentences within a document and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\mathbf{y}" display="inline"><mi>𝐲</mi></math> as a vector of sentiment labels associated with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math>. The CRF model the following conditional probabilities:</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="p_{\theta}(\mathbf{y}|\mathbf{x})=\frac{\exp(\theta\cdot f(\mathbf{x},\mathbf{%&#10;y}))}{Z_{\theta}(\mathbf{x})}" display="block"><mrow><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>θ</mi><mo>⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mrow><msub><mi>Z</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="f(\mathbf{x},\mathbf{y})" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></mrow></math> are the model features, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> are the model parameters, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="Z_{\theta}(\mathbf{x})=\sum_{\mathbf{y}}\exp(\theta\cdot f(\mathbf{x},\mathbf{%&#10;y}))" display="inline"><mrow><mrow><msub><mi>Z</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>𝐲</mi></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>θ</mi><mo>⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math> is a normalization constant. The objective function for a standard CRF is to maximize the log-likelihood over a collection of labeled documents plus a regularization term:</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\max_{\theta}\mathcal{L}(\theta)=\max_{\theta}\sum_{(\mathbf{x},\mathbf{y})}%&#10;\log p_{\theta}(\mathbf{y}|\mathbf{x})-\frac{||\theta||_{2}^{2}}{2\delta^{2}}" display="block"><mrow><munder><mo movablelimits="false">max</mo><mi>θ</mi></munder><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><munder><mo movablelimits="false">max</mo><mi>θ</mi></munder><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></munder><mi>log</mi><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>-</mo><mfrac><msubsup><mrow><mo fence="true">||</mo><mi>θ</mi><mo fence="true">||</mo></mrow><mn>2</mn><mn>2</mn></msubsup><mrow><mn>2</mn><mo>⁢</mo><msup><mi>δ</mi><mn>2</mn></msup></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">PR makes the assumption that the labeled data we have is not enough for learning good model parameters, but we have a set of constraints on the posterior distribution of the labels. We can define the set of desirable posterior distrbutions as</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\mathcal{Q}=\{q(\mathbf{Y}):E_{q}[\phi(\mathbf{X},\mathbf{Y})]=\mathbf{b}\}" display="block"><mrow><mi class="ltx_font_mathcaligraphic">𝒬</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐘</mi><mo>)</mo></mrow></mrow><mo separator="true">:</mo><mrow><mrow><msub><mi>E</mi><mi>q</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐗</mi><mo>,</mo><mi>𝐘</mi></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow><mo>=</mo><mi>𝐛</mi></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> is a constraint function, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="\mathbf{b}" display="inline"><mi>𝐛</mi></math> is a vector of desired values of the expectations of the constraint functions under the distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In general, inequality constraints can also be used. We focus on the equality constraints since we found them to express the sentiment-relevant constraints well.</span></span></span>. Note that the distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> is defined over a collection of unlabeled documents where the constraint functions apply, and we assume independence between documents.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">The PR objective can be written as the original model objective penalized with a regularization term, which minimizes the KL-divergence between the desired model posteriors and the learned model posteriors with an L2 penalty <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Other convex functions can be used for the penalty. We use L2 norm because it works well in practice. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> is a regularization constant</span></span></span> for the constraint violations.</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\begin{split}\max_{\theta}&amp;\mathcal{L}(\theta)-\min_{q\in\mathcal{Q}}\{KL(q(%&#10;\mathbf{Y})||p_{\theta}(\mathbf{Y}|\mathbf{X}))\\&#10;&amp;+\beta||E_{q}[\phi(\mathbf{X},\mathbf{Y})]-\mathbf{b}||_{2}^{2}\}\end{split}" display="block"><mrow><munder><mo movablelimits="false">max</mo><mi>θ</mi></munder><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow><mo>-</mo><munder><mo movablelimits="false">min</mo><mrow><mi>q</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒬</mi></mrow></munder><mrow><mo>{</mo><mi>K</mi><mi>L</mi><mrow><mo>(</mo><mi>q</mi><mrow><mo>(</mo><mi>𝐘</mi><mo>)</mo></mrow><mo>|</mo><mo>|</mo><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>𝐘</mi><mo>|</mo><mi>𝐗</mi><mo>)</mo></mrow><mo>)</mo></mrow><mo>+</mo><mi>β</mi><mo>|</mo><mo>|</mo><msub><mi>E</mi><mi>q</mi></msub><mrow><mo>[</mo><mi>ϕ</mi><mrow><mo>(</mo><mi>𝐗</mi><mo>,</mo><mi>𝐘</mi><mo>)</mo></mrow><mo>]</mo></mrow><mo>-</mo><mi>𝐛</mi><mo>|</mo><msubsup><mo>|</mo><mn>2</mn><mn>2</mn></msubsup><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">The objective can be optimized by an EM-like scheme that iteratively solves the minimization problem and the maximization problem. Solving the minimization problem is equivalent to solving its dual since the objective is convex. The dual problem is</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\arg\max_{\lambda}\lambda\cdot\mathbf{b}-\log Z_{\lambda}(X)-\frac{1}{4\beta}|%&#10;|\lambda||_{2}^{2}" display="block"><mrow><mrow><mi>arg</mi><mo>⁢</mo><mrow><munder><mo movablelimits="false">max</mo><mi>λ</mi></munder><mo>⁡</mo><mrow><mi>λ</mi><mo>⋅</mo><mi>𝐛</mi></mrow></mrow></mrow><mo>-</mo><mrow><mrow><mi>log</mi><mo>⁡</mo><msub><mi>Z</mi><mi>λ</mi></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mfrac><mn>1</mn><mrow><mn>4</mn><mo>⁢</mo><mi>β</mi></mrow></mfrac><mo>⁢</mo><msubsup><mrow><mo fence="true">||</mo><mi>λ</mi><mo fence="true">||</mo></mrow><mn>2</mn><mn>2</mn></msubsup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p7" class="ltx_para">
+<p class="ltx_p">We optimize the objective function  <a href="#S3.E2" title="(2) ‣ 3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> using stochastic projected gradient, and compute the learning rate using AdaGrad <cite class="ltx_cite">[<a href="#bib.bib24" title="Adaptive subgradient methods for online learning and stochastic optimization" class="ltx_ref">4</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Context-aware Posterior Constraints</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We develop a rich set of context-aware posterior constraints for sentence-level sentiment analysis by exploiting lexical and discourse knowledge. Specifically, we construct the lexical constraints by extracting sentiment-bearing patterns within sentences and construct the discourse-level constraints by extracting discourse relations that indicate sentiment coherence or sentiment changes both within and across sentences. Each constraint can be formulated as equality between the expectation of a constraint function value and a desired value set by prior knowledge. The equality is not strictly enforced (due to the regularization in the PR objective  <a href="#S3.E2" title="(2) ‣ 3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). Therefore all the constraints are applied as soft constraints. Table  <a href="#S3.T1" title="Table 1 ‣ 3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> provides intuitive description and examples for all the constraints used in our model.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Types</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Description and Examples</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">Inter-sentential</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Lexical patterns</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">The sentence containing a polar lexical pattern </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math><span class="ltx_text ltx_font_footnote"> tends to have the polarity indicated by </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math><span class="ltx_text ltx_font_footnote">. Example lexical patterns are </span><span class="ltx_text ltx_font_italic ltx_font_footnote">annoying, hate, amazing, not disappointed, no concerns, favorite, recommend</span><span class="ltx_text ltx_font_footnote">.</span></p></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:85.4pt;"><span class="ltx_text ltx_font_footnote">Discourse Connectives (clause)</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">The sentence containing a discourse connective </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math><span class="ltx_text ltx_font_footnote"> which connects its two clauses that have opposite polarities indicated by the lexical patterns tends to have neutral sentiment. Example connectives are </span><span class="ltx_text ltx_font_italic ltx_font_footnote">while, although, though, but</span><span class="ltx_text ltx_font_footnote">.</span></p></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:85.4pt;"><span class="ltx_text ltx_font_footnote">Discourse Connectives (sentence)</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">Two adjacent sentences which are connected by a discourse connective </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math><span class="ltx_text ltx_font_footnote"> tends to have the same polarity if </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math><span class="ltx_text ltx_font_footnote"> indicates a </span><span class="ltx_text ltx_font_italic ltx_font_footnote">Expansion</span><span class="ltx_text ltx_font_footnote"> or </span><span class="ltx_text ltx_font_italic ltx_font_footnote">Contingency</span><span class="ltx_text ltx_font_footnote"> relation, e.g. </span><span class="ltx_text ltx_font_italic ltx_font_footnote">also, for example, in fact, because</span><span class="ltx_text ltx_font_footnote"> ; opposite polarities if </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math><span class="ltx_text ltx_font_footnote"> indicates a </span><span class="ltx_text ltx_font_italic ltx_font_footnote">Comparison</span><span class="ltx_text ltx_font_footnote"> relation, e.g. </span><span class="ltx_text ltx_font_italic ltx_font_footnote">otherwise, nevertheless, however</span><span class="ltx_text ltx_font_footnote">.</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">✓</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Coreference</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">The sentences which contain coreferential entities appeared as targets of opinion expressions tend to have the same polarity.</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">✓</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Listing patterns</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">A series of sentences connected via a listing tend to have the same polarity.</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">✓</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Global labels</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:284.5pt;"><span class="ltx_text ltx_font_footnote">The sentence-level polarity tends to be consistent with the document-level polarity.</span></p></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_footnote">✓</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Summarization of Posterior Constraints for Sentence-level Sentiment Classification</div>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Lexical Patterns</span> The existence of a polarity-carrying word alone may not correctly indicate the polarity of the sentence, as the polarity can be reversed by other polarity-reversing words. We extract lexical patterns that consist of polar words and negators <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The polar words are identified using the MPQA lexicon and the negators are identified using a handful of seed words extended by the General Inquirer dictionary and WordNet as described in  <cite class="ltx_cite">[<a href="#bib.bib17" title="Learning with compositional semantics as structural inference for subsentential sentiment analysis" class="ltx_ref">2</a>]</cite>.</span></span></span>, and apply the heuristics based on compositional semantics <cite class="ltx_cite">[<a href="#bib.bib17" title="Learning with compositional semantics as structural inference for subsentential sentiment analysis" class="ltx_ref">2</a>]</cite> to assign a sentiment value to each pattern.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">We encode the extracted lexical patterns along with their sentiment values as feature-label constraints. The constraint function can be written as</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\phi_{w}(x,y)=\sum_{i}f_{w}(x_{i},y_{i})" display="block"><mrow><mrow><msub><mi>ϕ</mi><mi>w</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><msub><mi>f</mi><mi>w</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="f_{w}(x_{i},y_{i})" display="inline"><mrow><msub><mi>f</mi><mi>w</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></math> is a feature function which has value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> when sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> contains the lexical pattern <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and its sentiment label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> equals to the expected sentiment value and has value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> otherwise. The constraint expectation value is set to be the prior probability of associating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m7" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> with its sentiment value. Note that sentences with neutral sentiment can also contain such lexical patterns. Therefore we allow the lexical patterns to be assigned a neutral sentiment with a prior probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m8" class="ltx_Math" alttext="r_{0}" display="inline"><msub><mi>r</mi><mn>0</mn></msub></math> (we compute this value as the empirical probability of neutral sentiment in the training documents). Using the polarity indicated by lexical patterns to constrain the sentiment of sentences is quite aggressive. Therefore we only consider lexical patterns that are strongly discriminative (many opinion words in the lexicon only indicate sentiment with weak strength). The selected lexical patterns include a handful of seed patterns (such as “pros” and “cons”) and the lexical patterns that have high precision (larger then 0.9) of predicting sentiment in the training data.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Discourse Connectives.</span> Lexical patterns can be limited in capturing contextual information since they only look at interactions between words within an expression. To capture context at the clause or sentence level, we consider discourse connectives, which are cue phrases or words that indicate discourse relations between adjacent sentences or clauses. To identify discourse connectives, we apply a discourse tagger trained on the Penn Discourse Treebank  <cite class="ltx_cite">[<a href="#bib.bib11" title="The penn discourse treebank 2.0." class="ltx_ref">20</a>]</cite> <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://www.cis.upenn.edu/~epitler/discourse.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cis.upenn.edu/~epitler/discourse.html</span></a></span></span></span> to our data. Discourse connectives are tagged with four senses: <span class="ltx_text ltx_font_italic">Expansion, Contingency, Comparison, Temporal</span>.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">Discourse connectives can operate at both intra-sentential and inter-sentential level. For example, the word “although” is often used to connect two polar clauses within a sentence, while the word “however” is often used to at the beginning of the sentence to connect two polar sentences. It is important to distinguish these two types of discourse connectives. We consider a discourse connective to be intra-sentential if it has the  <span class="ltx_text ltx_font_italic">Comparison</span> sense and connects two polar clauses with opposite polarities (determined by the lexical patterns). We construct a feature-label constraint for each intra-sentential discourse connective and set its expected sentiment value to be neutral.</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">Unlike the intra-sentential discourse connectives, the inter-sentential discourse connectives can indicate sentiment transitions between sentences. Intuitively, discourse connectives with the senses of <span class="ltx_text ltx_font_italic">Expansion</span> (e.g. also, for example, furthermore) and <span class="ltx_text ltx_font_italic">Contingency</span> (e.g. as a result, hence, because) are likely to indicate sentiment coherence; discourse connectives with the sense of <span class="ltx_text ltx_font_italic">Comparison</span> (e.g. but, however, nevertheless) are likely to indicate sentiment changes. This intuition is reasonable but it assumes the two sentences connected by the discourse connective are both polar sentences. In general, discourse connectives can also be used to connect non-polar (neutral) sentences. Thus it is hard to directly constrain the posterior expectation for each type of sentiment transitions using inter-sentential discourse connectives.</p>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">Instead, we impose constraints on the model posteriors by reducing constraint violations. We define the following constraint function:</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\phi_{c,s}(x,y)=\sum_{i}f_{c,s}(x_{i},y_{i},y_{i-1})" display="block"><mrow><mrow><msub><mi>ϕ</mi><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><msub><mi>f</mi><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> denotes a discourse connective, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m2" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> indicates its sense, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m3" class="ltx_Math" alttext="f_{c,s}" display="inline"><msub><mi>f</mi><mrow><mi>c</mi><mo>,</mo><mi>s</mi></mrow></msub></math> is a penalty function that takes value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m4" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math> when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m5" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m6" class="ltx_Math" alttext="y_{i-1}" display="inline"><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></math> form a contradictory sentiment transition, that is, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m7" class="ltx_Math" alttext="y_{i}\neq_{polar}y_{i-1}" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub><msub><mo>≠</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></msub><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m8" class="ltx_Math" alttext="s\in\{\textit{Expansion},\textit{Contingency}\}" display="inline"><mrow><mi>s</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mtext>𝐸𝑥𝑝𝑎𝑛𝑠𝑖𝑜𝑛</mtext><mo>,</mo><mtext>𝐶𝑜𝑛𝑡𝑖𝑛𝑔𝑒𝑛𝑐𝑦</mtext></mrow><mo>}</mo></mrow></mrow></math>, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m9" class="ltx_Math" alttext="y_{i}=_{polar}y_{i-1}" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub><msub><mo>=</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></msub><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m10" class="ltx_Math" alttext="s=\textit{Comparison}" display="inline"><mrow><mi>s</mi><mo>=</mo><mtext>𝐶𝑜𝑚𝑝𝑎𝑟𝑖𝑠𝑜𝑛</mtext></mrow></math>. The desired value for the constraint expectation is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m11" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> so that the model is encouraged to have less constraint violations.</p>
+</div>
+<div id="S3.SS2.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Opinion Coreference</span> Sentences in a discourse can be linked by many types of coherence relations <cite class="ltx_cite">[<a href="#bib.bib10" title="Speech and language processing: an introduction to natural language processing, computational linguistics, and speech recognition" class="ltx_ref">10</a>]</cite>. Coreference is one of the commonly used relations in written text. In this work, we explore coreference in the context of sentence-level sentiment analysis. We consider a set of polar sentences to be linked by the  <span class="ltx_text ltx_font_italic">opinion coreference</span> relation if they contain coreferring opinion-related entities. For example, the following sentences express opinions towards “the speaker phone”, “The speaker phone” and “it” respectively. As these opinion targets are coreferential (referring to the same entity “the speaker phone”), they are linked by the  <span class="ltx_text ltx_font_italic">opinion coreference</span> relation <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>In general, the opinion-related entities include both the opinion targets and the opinion holders. In this work, we only consider the targets since we experiment with single-author product reviews. The opinion holders can be included in a similar way as the opinion targets.</span></span></span>.</p>
+</div>
+<div id="S3.SS2.p9" class="ltx_para">
+<blockquote class="ltx_quote">
+<p class="ltx_p">My favorite features are <span class="ltx_text ltx_font_bold">the speaker phone</span> and the radio. <span class="ltx_text ltx_font_bold">The speaker phone</span> is very functional. I use <span class="ltx_text ltx_font_bold">it</span> in the car, very audible even with freeway noise.</p>
+</blockquote>
+</div>
+<div id="S3.SS2.p10" class="ltx_para">
+<p class="ltx_p">Our coreference relations indicated by opinion targets overlap with the <span class="ltx_text ltx_font_italic">same target</span> relation introduced in  <cite class="ltx_cite">[<a href="#bib.bib47" title="Supervised and unsupervised methods in employing discourse relations for improving opinion polarity classification" class="ltx_ref">24</a>]</cite>. The differences are: (1) we encode the coreference relations as soft constraints during learning instead of applying them as hard constraints during inference time; (2) our constraints can apply to both polar and non-polar sentences; (3) our identification of coreference relations is automatic without any fine-grained annotations for opinion targets.</p>
+</div>
+<div id="S3.SS2.p11" class="ltx_para">
+<p class="ltx_p">To extract coreferential opinion targets, we apply Stanford’s coreference system <cite class="ltx_cite">[<a href="#bib.bib8" title="Deterministic coreference resolution based on entity-centric, precision-ranked rules" class="ltx_ref">13</a>]</cite> to extract coreferential mentions in the document, and then apply a set of syntactic rules to identify opinion targets from the extracted mentions. The syntactic rules correspond to the shortest dependency paths between an opinion word and an extracted mention. We consider the 10 most frequent dependency paths in the training data. Example dependency paths include <span class="ltx_text ltx_font_italic">nsubj</span>(opinion, mention), <span class="ltx_text ltx_font_italic">nobj</span>(opinion, mention), and <span class="ltx_text ltx_font_italic">amod</span>(mention, opinion).</p>
+</div>
+<div id="S3.SS2.p12" class="ltx_para">
+<p class="ltx_p">For sentences connected by the opinion coreference relation, we expect their sentiment to be consistent. To encode this intuition, we define the following constraint function:</p>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\phi_{coref}(x,y)=\sum_{i,ant(i)=j,j\geq 0}f_{coref}(x_{i},x_{j},y_{i},y_{j})" display="block"><mrow><mrow><msub><mi>ϕ</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mrow><mi>i</mi><mo>,</mo><mrow><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow><mo>=</mo><mi>j</mi></mrow><mo>,</mo><mrow><mi>j</mi><mo>≥</mo><mn>0</mn></mrow></mrow></munder><mrow><msub><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>x</mi><mi>j</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m1" class="ltx_Math" alttext="ant(i)" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> denotes the index of the sentence which contains an antecedent target of the target mentioned in sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> (the antecedent relations over pairs of opinion targets can be constructed using the coreference resolver), and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m3" class="ltx_Math" alttext="f_{coref}" display="inline"><msub><mi>f</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>f</mi></mrow></msub></math> is a penalty function which takes value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m4" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math> when the expected sentiment coherency is violated, that is, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m5" class="ltx_Math" alttext="y_{i}\neq_{polar}y_{j}" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub><msub><mo>≠</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></msub><msub><mi>y</mi><mi>j</mi></msub></mrow></math>. Similar to the inter-sentential discourse connectives, modeling opinion coreference via constraint violations allows the model to handle neutral sentiment. The expected value of the constraint functions is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p12.m6" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math>.</p>
+</div>
+<div id="S3.SS2.p13" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Listing Patterns</span> Another type of coherence relations we observe in online reviews is listing, where a reviewer expresses his/her opinions by listing a series of statements followed by a sequence of numbers. For example, “1. It’s smaller than the ipod mini …. 2. It has a removable battery ….”. We expect sentences connected by a listing to have consistent sentiment. We implement this constraint in the same form as the coreference constraint (the antecedent assignments are constructed from the numberings).</p>
+</div>
+<div id="S3.SS2.p14" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Global Sentiment</span> Previous studies have demonstrated the value of document-level sentiment in guiding the semi-supervised learning of sentence-level sentiment  <cite class="ltx_cite">[<a href="#bib.bib25" title="Semi-supervised latent variable models for sentence-level sentiment analysis" class="ltx_ref">28</a>, <a href="#bib.bib12" title="A weakly supervised model for sentence-level semantic orientation analysis with multiple experts" class="ltx_ref">21</a>]</cite>. In this work, we also take into account this information and encode it as posterior constraints. Note that these constraints are not necessary for our model and can be applied when the document-level sentiment labels are naturally available.</p>
+</div>
+<div id="S3.SS2.p15" class="ltx_para">
+<p class="ltx_p">Based on an analysis of the Amazon review data, we observe that sentence-level sentiment usually doesn’t conflict with the document-level sentiment in terms of polarity. For example, the proportion of negative sentences in the positive documents is very small compared to the proportion of positive sentences. To encode this intuition, we define the following constraint function:</p>
+<table id="S3.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\phi_{g}(x,y)=\sum_{i}^{n}\delta(y_{i}\neq_{polar}g)/n" display="block"><mrow><msub><mi>ϕ</mi><mi>g</mi></msub><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi><mi>n</mi></munderover><mi>δ</mi><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><msub><mo>≠</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mi>g</mi><mo>)</mo></mrow><mo>/</mo><mi>n</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p15.m1" class="ltx_Math" alttext="g\in\{positive,negative\}" display="inline"><mrow><mi>g</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow><mo>,</mo><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow></mrow><mo>}</mo></mrow></mrow></math> denotes the sentiment value of a polar document, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p15.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the total number of sentences in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p15.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p15.m4" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> is an indicator function. We hope the expectation of the constraint function takes a small value. In our experiments, we set the expected value to be the empirical estimate of the probability of “conflicting” sentiment in polar documents using the training data.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Training and Inference</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">During training, we need to compute the constraint expectations and the feature expectations under the auxiliary distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> at each gradient step. We can derive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> by solving the dual problem in  <a href="#S3.E3" title="(3) ‣ 3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="q(\mathbf{y}|\mathbf{x})=\frac{exp(\theta\cdot f(\mathbf{x},\mathbf{y})+%&#10;\lambda\cdot\phi(\mathbf{x},\mathbf{y}))}{Z_{\lambda,\theta}(X)}" display="block"><mrow><mi>q</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>θ</mi><mo>⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mi>λ</mi><mo>⋅</mo><mi>ϕ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐲</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><msub><mi>Z</mi><mrow><mi>λ</mi><mo>,</mo><mi>θ</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="Z_{\lambda,\theta}(X)" display="inline"><mrow><msub><mi>Z</mi><mrow><mi>λ</mi><mo>,</mo><mi>θ</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mi>X</mi><mo>)</mo></mrow></mrow></math> is a normalization constant. Most of our constraints can be factorized in the same way as factorizing the model features in the first-order CRF model, and we can compute the expectations under <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m4" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> very efficiently using the forward-backward algorithm. However, some of our discourse constraints (opinion coreference and listing) can break the tractable structure of the model. For constraints with higher-order structures, we use Gibbs Sampling <cite class="ltx_cite">[<a href="#bib.bib37" title="Stochastic relaxation, gibbs distributions, and the bayesian restoration of images" class="ltx_ref">8</a>]</cite> to approximate the expectations. Given a sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m5" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math>, we sample a label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m6" class="ltx_Math" alttext="\mathbf{y}_{i}" display="inline"><msub><mi>𝐲</mi><mi>i</mi></msub></math> at each position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> by computing the unnormalized conditional probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m8" class="ltx_Math" alttext="p(\mathbf{y}_{i}=l|\mathbf{y}_{-i})\propto exp(\theta\cdot f(\mathbf{x},%&#10;\mathbf{y}_{i}=l,\mathbf{y}_{-i})+\lambda\cdot\phi(\mathbf{x},\mathbf{y}_{i}=l%&#10;,\mathbf{y}_{-i}))" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>i</mi></msub><mo>=</mo><mi>l</mi><mo>|</mo><msub><mi>𝐲</mi><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow><mo>∝</mo><mi>e</mi><mi>x</mi><mi>p</mi><mrow><mo>(</mo><mi>θ</mi><mo>⋅</mo><mi>f</mi><mrow><mo>(</mo><mi>𝐱</mi><mo>,</mo><msub><mi>𝐲</mi><mi>i</mi></msub><mo>=</mo><mi>l</mi><mo>,</mo><msub><mi>𝐲</mi><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow><mo>+</mo><mi>λ</mi><mo>⋅</mo><mi>ϕ</mi><mrow><mo>(</mo><mi>𝐱</mi><mo>,</mo><msub><mi>𝐲</mi><mi>i</mi></msub><mo>=</mo><mi>l</mi><mo>,</mo><msub><mi>𝐲</mi><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math> and renormalizing them. Since the possible label assignments only differ at position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, we can make the computation efficient by maintaining the structure of the coreference clusters and precomputing the constraint function for different types of violations.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">During inference, we find the best label assignment by computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="\arg\max_{\mathbf{y}}q(\mathbf{y}|\mathbf{x})" display="inline"><mrow><mi>arg</mi><msub><mo>max</mo><mi>𝐲</mi></msub><mi>q</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math>. For documents where the higher-order constraints apply, we use the same Gibbs sampler as described above to infer the most likely label assignment, otherwise, we use the Viterbi algorithm.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We experimented with two product review datasets for sentence-level sentiment classification: the Customer Review (CR) data <cite class="ltx_cite">[<a href="#bib.bib55" title="Mining and summarizing customer reviews" class="ltx_ref">9</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>Available at <a href="http://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html</span></a>.</span></span></span> which contains 638 reviews of 14 products such as cameras and cell phones, and the Multi-domain Amazon (MD) data from the test set of  <cite class="ltx_cite">Täckström and McDonald (<a href="#bib.bib33" title="Discovering fine-grained sentiment with latent variable structured prediction models" class="ltx_ref">2011a</a>)</cite> which contains 294 reivews from 5 different domains. As in  <cite class="ltx_cite">Qu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="A weakly supervised model for sentence-level semantic orientation analysis with multiple experts" class="ltx_ref">2012</a>)</cite>, we chose the books, electronics and music domains for evaluation. Each domain also comes with 33,000 extra reviews with only document-level sentiment labels.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We evaluated our method in two settings: supervised and semi-supervised. In the supervised setting, we treated the test data as unlabeled data and performed transductive learning. In the semi-supervised setting, our unlabeled data consists of both the available unlabeled data and the test data. For each domain in the MD dataset, we made use of no more than 100 unlabeled documents in which our posterior constraints apply. We adopted the evaluation schemes used in previous work: 10-fold cross validation for the CR dataset and 3-fold cross validation for the MD dataset. We also report both two-way classification (positive vs. negative) and three-way classification results (positive, negative or neutral). We use accuracy as the performance measure. In our tables, boldface numbers are statistically significant by paired t-test for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math> against the best baseline developed in this paper <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Significance test was not conducted over the previous methods as we do not have their results for each fold.</span></span></span>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We trained our model using a CRF incorporated with the proposed posterior constraints. For the CRF features, we include the tokens, the part-of-speech tags, the prior polarities of lexical patterns indicated by the opinion lexicon and the negator lexicon, the number of positive and negative tokens and the output of the vote-flip algorithm <cite class="ltx_cite">[<a href="#bib.bib36" title="Adapting a polarity lexicon using integer linear programming for domain-specific sentiment classification" class="ltx_ref">3</a>]</cite>. In addition, we include the discourse connectives as local or transition features and the document-level sentiment labels as features (only available in the MD dataset).</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">We set the CRF regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="\sigma=1" display="inline"><mrow><mi>σ</mi><mo>=</mo><mn>1</mn></mrow></math> and set the posterior regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> (a trade-off parameter we introduce to balance the supervised objective and the posterior regularizer in  <a href="#S3.E2" title="(2) ‣ 3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) by using grid search <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>We conducted 10-fold cross-validation on each training fold with the parameter space: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m4" class="ltx_Math" alttext="\beta:[0.01,0.05,0.1,0.5,1.0]" display="inline"><mrow><mi>β</mi><mo>:</mo><mrow><mo>[</mo><mrow><mn>0.01</mn><mo>,</mo><mn>0.05</mn><mo>,</mo><mn>0.1</mn><mo>,</mo><mn>0.5</mn><mo>,</mo><mn>1.0</mn></mrow><mo>]</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m5" class="ltx_Math" alttext="\gamma:[0.1,0.5,1.0,5.0,10.0]" display="inline"><mrow><mi>γ</mi><mo>:</mo><mrow><mo>[</mo><mrow><mn>0.1</mn><mo>,</mo><mn>0.5</mn><mo>,</mo><mn>1.0</mn><mo>,</mo><mn>5.0</mn><mo>,</mo><mn>10.0</mn></mrow><mo>]</mo></mrow></mrow></math>.</span></span></span>. For approximation inference with higher-order constraints, we perform 2000 Gibbs sampling iterations where the first 1000 iterations are burn-in iterations. To make the results more stable, we construct three Markov chains that run in parallel, and select the sample with the largest objective value.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">All posterior constraints were developed using the training data on each training fold. For the MD dataset, we also used the dvd domain as additional labeled data for developing the constraints.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Methods</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">CR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">MD</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">CRF</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">67.0</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">80.9</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">66.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="{}_{disc}" display="inline"><msub><mi/><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">81.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">67.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">69.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">PR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">82.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">70.6</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="3"><span class="ltx_text ltx_font_footnote">Previous work</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">TreeCRF </span><cite class="ltx_cite"><span class="ltx_text ltx_font_footnote">[</span><a href="#bib.bib22" title="Dependency tree-based sentiment classification using crfs with hidden variables" class="ltx_ref">16</a><span class="ltx_text ltx_font_footnote">]</span></cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">Dropout LR </span><cite class="ltx_cite"><span class="ltx_text ltx_font_footnote">[</span><a href="#bib.bib5" title="Fast dropout training" class="ltx_ref">29</a><span class="ltx_text ltx_font_footnote">]</span></cite></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">82.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_footnote">-</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Accuracy results (%) for supervised sentiment classification (two-way) </div>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Books</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Electronics</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Music</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Avg</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">VoteFlip</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">44.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">45.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">47.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">45.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">DocOracle</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">53.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">50.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">63.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">55.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">57.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">57.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">61.8</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">58.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">56.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">56.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">60.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">57.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="{}_{disc}" display="inline"><msub><mi/><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">57.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">57.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">62.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">59.0</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">60.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">59.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">63.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">61.1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">PR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">61.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">61.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">64.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">62.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="5"><span class="ltx_text ltx_font_footnote">Previous work</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">HCRF</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">61.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">58.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">58.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">MEM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">59.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">59.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">63.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_footnote">61.0</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Accuracy results (%) for semi-supervised sentiment classification (three-way) on the MD dataset</div>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Baselines.</span> We compared our method to a number of baselines: (1) <span class="ltx_text ltx_font_smallcaps">CRF</span>: CRF with the same set of model features as in our method. (2) <span class="ltx_text ltx_font_smallcaps">CRF-inf</span>: CRF augmented with inference constraints. We can incorporate the proposed constraints (constraints derived from lexical patterns and discourse connectives) as hard constraints into CRF during inference by manually setting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> in equation  <a href="#S3.E4" title="(4) ‣ 3.3 Training and Inference ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> to a large value,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> to 1000 for the lexical constraints and -1000 to the discourse connective constraints in the experiments</span></span></span>. When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is large enough, it is equivalent to adding hard constraints to the viterbi inference. To better understand the different effects of lexical and discourse constraints, we report results for applying only the lexical constraints (<span class="ltx_text ltx_font_smallcaps">CRF-inf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m4" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span>) as well as results for applying only the discourse constraints (<span class="ltx_text ltx_font_smallcaps">CRF-inf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m5" class="ltx_Math" alttext="{}_{disc}" display="inline"><msub><mi/><mrow><mi>d</mi><mo mathvariant="normal">⁢</mo><mi>i</mi><mo mathvariant="normal">⁢</mo><mi>s</mi><mo mathvariant="normal">⁢</mo><mi>c</mi></mrow></msub></math></span>). (3) <span class="ltx_text ltx_font_smallcaps">PR<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m6" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span>: a variant of our PR model which only applies the lexical constraints. For the three-way classification task on the MD dataset, we also implemented the following baselines: (4) <span class="ltx_text ltx_font_smallcaps">VoteFlip</span>: a rule-based algorithm that leverages the positive, negative and neutral cues along with the effect of negation to determine the sentence sentiment  <cite class="ltx_cite">[<a href="#bib.bib36" title="Adapting a polarity lexicon using integer linear programming for domain-specific sentiment classification" class="ltx_ref">3</a>]</cite>. (5) <span class="ltx_text ltx_font_smallcaps">DocOracle</span>: assigns each sentence the label of its corresponding document.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Books</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Electronics</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Music</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">pos/neg/neu</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">pos/neg/neu</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">pos/neg/neu</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">VoteFlip</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">43/42/47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">45/46/44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">50/46/46</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">DocOracle</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">54/60/49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">57/54/42</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">72/65/52</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">47/51/64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">60/61/52</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">67/60/58</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">46/52/63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">59/61/50</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">65/59/57</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">CRF-inf</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m2" class="ltx_Math" alttext="{}_{disc}" display="inline"><msub><mi/><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">47/51/64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">60/61/52</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">67/61/59</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m3" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">50/56/66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">64/63/53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">67/64/59</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">PR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">52/56/68</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">64/66/53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_footnote">69/65/60</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>F1 scores for each sentiment category (positive, negative and neutral) for semi-supervised sentiment classification on the MD dataset</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Example Sentences</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">CRF</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">PR</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:227.6pt;"><span class="ltx_text ltx_font_italic ltx_font_footnote">Example 1</span><span class="ltx_text ltx_font_footnote">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m1" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m2" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> If I could, I would like to return it or exchange for something better.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m3" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">/neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m4" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math></p></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m5" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neu</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m6" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m7" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m8" class="ltx_Math" alttext="\checkmark" display="inline"><mi mathvariant="normal">✓</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:227.6pt;"><span class="ltx_text ltx_font_italic ltx_font_footnote">Example 2</span><span class="ltx_text ltx_font_footnote">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m9" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m10" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> Things I wasn’t a fan of – the ending was to cutesy for my taste.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m11" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">/neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m12" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m13" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m14" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> Also, all of the side characters (particularly the mom, vee, and the teacher) were incredibly flat and stereotypical to me.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m15" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">/neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m16" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math></p></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m17" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neu</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m18" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m19" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">pos</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m20" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m21" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m22" class="ltx_Math" alttext="\checkmark" display="inline"><mi mathvariant="normal">✓</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:227.6pt;"><span class="ltx_text ltx_font_italic ltx_font_footnote">Example 3</span><span class="ltx_text ltx_font_footnote">: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m23" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m24" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> I also have excessive noise when I talk and have phone in my pocket while walking.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m25" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">/neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m26" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m27" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neu</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m28" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> But other models are no better.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m29" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">/neu</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m30" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math></p></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m31" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m32" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m33" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">pos</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m34" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m35" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m36" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">neg</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m37" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m38" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math><span class="ltx_text ltx_font_footnote">pos</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m39" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m40" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> Example sentences where <span class="ltx_text ltx_font_smallcaps">PR</span> succeeds and fails to correct the mistakes of <span class="ltx_text ltx_font_smallcaps">CRF</span></div>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Results</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We first report results on a binary (positive or negative) sentence-level sentiment classification task. For this task, we used the supervised setting and performed transductive learning for our model. Table <a href="#S4.T2" title="Table 2 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the accuracy results. We can see that <span class="ltx_text ltx_font_smallcaps">PR</span> significantly outperforms all other baselines in both the CR dataset and the MD dataset (average accuracy across domains is reported). The poor performance of <span class="ltx_text ltx_font_smallcaps">CRF-inf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span> indicates that directly applying lexical constraints as hard constraints during inference could only hurt the performance. <span class="ltx_text ltx_font_smallcaps">CRF-inf<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="{}_{disc}" display="inline"><msub><mi/><mrow><mi>d</mi><mo mathvariant="normal">⁢</mo><mi>i</mi><mo mathvariant="normal">⁢</mo><mi>s</mi><mo mathvariant="normal">⁢</mo><mi>c</mi></mrow></msub></math></span> slightly outperforms <span class="ltx_text ltx_font_smallcaps">CRF</span> but the improvement is not significant. In contrast, both <span class="ltx_text ltx_font_smallcaps">PR<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span> and <span class="ltx_text ltx_font_smallcaps">PR</span> significantly outperform <span class="ltx_text ltx_font_smallcaps">CRF</span>, which implies that incorporating lexical and discourse constraints as posterior constraints is much more effective. The superior performance of <span class="ltx_text ltx_font_smallcaps">PR</span> over <span class="ltx_text ltx_font_smallcaps">PR<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span> further suggests that the proper use of discourse information can significantly improve accuracy for sentence-level sentiment classification.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We also analyzed the model’s performance on a three-way sentiment classification task. By introducing the “neutral” category, the sentiment classification problem becomes harder. Table <a href="#S4.T3" title="Table 3 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results in terms of accuracy for each domain in the MD dataset. We can see that both <span class="ltx_text ltx_font_smallcaps">PR</span> and <span class="ltx_text ltx_font_smallcaps">PR<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span> significantly outperform all other baselines in all domains. The rule-based baseline <span class="ltx_text ltx_font_smallcaps">VoteFlip</span> gave the weakest performance because it has no prediction power on sentences with no opinion words. <span class="ltx_text ltx_font_smallcaps">DocOracle</span> performs much better than <span class="ltx_text ltx_font_smallcaps">VoteFlip</span> and performs especially well on the <span class="ltx_text ltx_font_italic">Music</span> domain. This indicates that the document-level sentiment is a very strong indicator of the sentence-level sentiment label. For the <span class="ltx_text ltx_font_smallcaps">CRF</span> baseline and its invariants, we observe a similar performance trend as in the two-way classification task: there is nearly no performance improvement from applying the lexical and discourse-connective-based constraints during CRF inference. In contrast, both <span class="ltx_text ltx_font_smallcaps">PR<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="{}_{lex}" display="inline"><msub><mi/><mrow><mi>l</mi><mo mathvariant="normal">⁢</mo><mi>e</mi><mo mathvariant="normal">⁢</mo><mi>x</mi></mrow></msub></math></span> and <span class="ltx_text ltx_font_smallcaps">PR</span> provide substantial improvements over <span class="ltx_text ltx_font_smallcaps">CRF</span>. This confirms that encoding lexical and discourse knowledge as posterior constraints allows the feature-based model to gain additional learning power for sentence-level sentiment prediction. In particular, incorporating discourse constraints leads to consistent improvements to our model. This demonstrates that our modeling of discourse information is effective and that taking into account the discourse context is important for improving sentence-level sentiment analysis. We also compare our results to the previously published results on the same dataset. HCRF <cite class="ltx_cite">[<a href="#bib.bib33" title="Discovering fine-grained sentiment with latent variable structured prediction models" class="ltx_ref">27</a>]</cite> and MEM <cite class="ltx_cite">[<a href="#bib.bib12" title="A weakly supervised model for sentence-level semantic orientation analysis with multiple experts" class="ltx_ref">21</a>]</cite> are two state-of-the-art semi-supervised methods for sentence-level sentiment classification. We can see that our best model <span class="ltx_text ltx_font_smallcaps">PR</span> gives the best results in most categories.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table  <a href="#S4.T4" title="Table 4 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the results in terms of F1 scores for each sentiment category (positive, negative and neutral). We can see that the PR models are able to provide improvements over all the sentiment categories compared to all the baselines in general. We observe that the <span class="ltx_text ltx_font_smallcaps">DocOracle</span> baseline provides very strong F1 scores on the positive and negative categories especially in the Books and Music domains, but very poor F1 on the neutral category. This is because it over-predicts the polar sentences in the polar documents, and predicts no polar sentences in the neutral documents. In contrast, our PR models provide more balanced F1 scores among all the sentiment categories. Compared to the CRF baseline and its variants, we found that the PR models can greatly improve the precision of predicting positive and negative sentences, resulting in a significant improvement on the positive/negative F1 scores. However, the improvement on the neutral category is modest. A plausible explanation is that most of our constraints focus on discriminating polar sentences. They can help reduce the errors of misclassifying polar sentences, but the model needs more constraints in order to distinguish neutral sentences from polar sentences. We plan to address this issue in future work.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Discussion</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We analyze the errors to better understand the merits and limitations of the PR model. We found that the PR model is able to correct many CRF errors caused by the lack of labeled data. The first row in Table  <a href="#S4.T5" title="Table 5 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows an example of such errors. The lexical features  <span class="ltx_text ltx_font_italic">return</span> and  <span class="ltx_text ltx_font_italic">exchange</span> may be good indicators of negative sentiment for the sentence. However, with limited labeled data, the CRF learner can only associate very weak sentiment signals to these features. In contrast, the PR model is able to associate stronger sentiment signals to these features by leveraging unlabeled data for indirect supervision. A simple lexicon-based constraint during inference time may also correct this case. However, hard-constraint baselines can hardly improve the performance in general because the contributions of different constraints are not learned and their combination may not lead to better predictions. This is also demonstrated by the limited performance of <span class="ltx_text ltx_font_smallcaps">CRF-inf</span> in our experiments.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We also found that the discourse constraints play an important role in improving the sentiment prediction. The lexical constraints alone are often not sufficient since their coverage is limited by the sentiment lexicon and they can only constrain sentiment locally. On the contrary, discourse constraints are not dependent on sentiment lexicons, and more importantly, they can provide sentiment preferences on multiple sentences at the same time. When combining discourse constraints with features from different sentences, the PR model becomes more powerful in disambiguating sentiment. The second example in Table  <a href="#S4.T5" title="Table 5 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows that the PR model learned with discourse constraints correctly predicts the sentiment of two sentences where no lexical constraints apply.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">However, discourse constraints are not always helpful. One reason is that they do not constrain the neutral sentiment. As a result they could not help disambiguate neutral sentiment from polar sentiment, such as the third example in Table  <a href="#S4.T5" title="Table 5 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. This is also a problem for most of our lexical constraints. In general, it is hard to learn reliable indicators for the neutral sentiment. In the MD dataset, a neutral label may be given because the sentence contains mixed sentiment or no sentiment or it is off-topic. We plan to explore more refined constraints that can deal with the neutral sentiment in future work. Another limitation of the discourse constraints is that they could be affected by the errors of the discourse parser and the coreference resolver. A potential way to address this issue is to learn discourse constraints jointly with sentiment. We plan to study this in future research.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a context-aware approach for learning sentence-level sentiment. Our approach incorporates intuitive lexical and discourse knowledge as expressive constraints while training a conditional random field model via posterior regularization. We explore a rich set of context-aware constraints at both intra- and inter-sentential levels, and demonstrate their effectiveness in the analysis of sentence-level sentiment. While we focus on the sentence-level task, our approach can be easily extended to handle sentiment analysis at finer levels of granularity. Our experiments show that our model achieves better accuracy than existing supervised and semi-supervised models for the sentence-level sentiment classification task.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported in part by DARPA-BAA-12-47 DEFT grant #12475008 and NSF grant BCS-0904822. We thank Igor Labutov for helpful discussion and suggestions; Oscar Täckström and Lizhen Qu for providing their Amazon review datasets; and the anonymous reviewers for helpful comments and suggestions.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Bellare, G. Druck and A. McCallum</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Alternating projections for learning with expectation constraints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 43–50</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Choi and C. Cardie</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning with compositional semantics as structural inference for subsentential sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 793–801</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Choi and C. Cardie</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adapting a polarity lexicon using integer linear programming for domain-specific sentiment classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 590–598</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p6" title="4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive subgradient methods for online learning and stochastic optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p7" title="3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Ganchev and D. Das</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-lingual discriminative learning of sequence models with posterior regularization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p7" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Ganchev, J. Gillenwater and B. Taskar</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency grammar induction via bitext projection constraints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 369–377</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p7" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Ganchev, J. Graça, J. Gillenwater and B. Taskar</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Posterior regularization for structured latent variable models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">99</span>, <span class="ltx_text ltx_bib_pages"> pp. 2001–2049</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p7" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Posterior Regularization ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Geman and D. Geman</span><span class="ltx_text ltx_bib_year">(1984)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stochastic relaxation, gibbs distributions, and the bayesian restoration of images</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Pattern Analysis and Machine Intelligence, IEEE Transactions on</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 721–741</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Training and Inference ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hu and B. Liu</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining and summarizing customer reviews</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 168–177</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Jurafsky, J. H. Martin, A. Kehler, K. Vander Linden and N. Ward</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Speech and language processing: an introduction to natural language processing, computational linguistics, and speech recognition</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>,  <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p8" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Kanayama and T. Nasukawa</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fully automatic lexicon expansion for domain-oriented sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 355–363</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Lazaridou, I. Titov and C. Sporleder</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A bayesian model for joint unsupervised induction of sentiment, aspect and discourse representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lee, A. Chang, Y. Peirsman, N. Chambers, M. Surdeanu and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deterministic coreference resolution based on entity-centric, precision-ranked rules</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p11" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Mao and G. Lebanon</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Isotonic conditional random fields and local sentiment flow</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in neural information processing systems</span> <span class="ltx_text ltx_bib_volume">19</span>, <span class="ltx_text ltx_bib_pages"> pp. 961</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Hannan, T. Neylon, M. Wells and J. Reynar</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structured models for fine-to-coarse sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 432</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Nakagawa, K. Inui and S. Kurohashi</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency tree-based sentiment classification using crfs with hidden variables</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 786–794</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.T2" title="Table 2 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A sentimental education: sentiment analysis using subjectivity summarization based on minimum cuts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinion mining and sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Now Pub</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Polanyi and A. Zaenen</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contextual valence shifters</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Computing attitude and affect in text: Theory and applications</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Prasad, N. Dinesh, A. Lee, E. Miltsakaki, L. Robaldo, A. K. Joshi and B. L. Webber</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The penn discourse treebank 2.0.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p4" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Qu, R. Gemulla and G. Weikum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A weakly supervised model for sentence-level semantic orientation analysis with multiple experts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 149–159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p14" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Results ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.p1" title="4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Y. Wu, J. Chuang, C. D. Manning, A. Y. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive deep models for semantic compositionality over a sentiment treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Somasundaran, G. Namata, J. Wiebe and L. Getoor</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supervised and unsupervised methods in employing discourse relations for improving opinion polarity classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 170–179</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p10" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Somasundaran, J. Wiebe and J. Ruppenhofer</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discourse level opinion interpretation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 801–808</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Trivedi and J. Eisenstein</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discourse connectors for latent subjectivity in sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 808–813</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Täckström and R. McDonald</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discovering fine-grained sentiment with latent variable structured prediction models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Advances in Information Retrieval</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 368–374</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Results ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.p1" title="4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Täckström and R. McDonald</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised latent variable models for sentence-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p14" title="3.2 Context-aware Posterior Constraints ‣ 3 Approach ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Wang and C. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast dropout training</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 118–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ 4 Experiments ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Zhang, J. Qian, H. Chen, J. Kang and X. Huang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discourse level explanatory relation extraction from product reviews using first-order logic</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Zhou, B. Li, W. Gao, Z. Wei and K. Wong</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised discovery of discourse relations for eliminating intra-sentence polarity ambiguities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 162–171</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Context-aware Learning for Sentence-level Sentiment Analysis with Posterior Regularization" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:27:58 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

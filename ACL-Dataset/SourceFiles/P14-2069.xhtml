@@ -1,0 +1,893 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon</title>
+<!--Generated on Wed Jun 11 17:55:52 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_font_bold ltx_font_Large ltx_title_document">A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Emotion lexicons play a crucial role in sentiment analysis and opinion
+mining. In this paper, we propose a novel Emotion-aware LDA (EaLDA)
+model to build a domain-specific lexicon for predefined emotions that
+include anger, disgust, fear, joy, sadness, surprise. The model uses
+a minimal set of domain-independent seed words as prior knowledge
+to discover a domain-specific lexicon, learning a fine-grained emotion
+lexicon much richer and adaptive to a specific domain. By comprehensive
+experiments, we show that our model can generate a high-quality fine-grained
+domain-specific emotion lexicon.</p>
+</div>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">‡]<span class="ltx_text ltx_font_bold">MinYang</span>§]<span class="ltx_text ltx_font_bold">BaolinPeng</span>§]<span class="ltx_text ltx_font_bold">ZhengChen</span>†,¶]<span class="ltx_text ltx_font_bold">DingjuZhu<span class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text ltx_font_medium">DingjuZhuisthecorrespondingauthor</span></span></span></span></span>‡]<span class="ltx_text ltx_font_bold">Kam-PuiChow<span class="ltx_ERROR undefined">\affil</span></span>[†]SchoolofComputerScience,SouthChinaNormalUniversity,Guangzhou,China<span class="ltx_ERROR undefined">\affil</span>[]<span class="ltx_text ltx_font_typewriter">dingjuzhu@gmail.com<span class="ltx_ERROR undefined">\affil</span></span>[‡]DepartmentofComputerScience,TheUniversityofHongKong,HongKong<span class="ltx_ERROR undefined">\affil</span>[]{<span class="ltx_text ltx_font_typewriter">myang,chow</span>}<span class="ltx_text ltx_font_typewriter">@cs.hku.hk<span class="ltx_ERROR undefined">\affil</span></span>[§]DepartmentofComputerScience,BeihangUniversity,Beijing,China<span class="ltx_ERROR undefined">\affil</span>[]<span class="ltx_text ltx_font_typewriter">b.peng@cse.buaa.edu.cn,tzchen86@gmail.com<span class="ltx_ERROR undefined">\affil</span></span>[¶]ShenzhenInstitutesofAdvancedTechnology,ChineseAcademyofSciences,Shenzhen,China</p>
+</div><span class="ltx_ERROR undefined">\setdefaultlanguage</span>
+<div id="p2" class="ltx_para">
+<p class="ltx_p">english</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Due to the popularity of opinion-rich resources (e.g., online review
+sites, forums, blogs and the microblogging websites), automatic extraction
+of opinions, emotions and sentiments in text is of great significance
+to obtain useful information for social and security studies. Various
+opinion mining applications have been proposed by different researchers,
+such as question answering, opinion mining, sentiment summarization,
+etc. As the fine-grained annotated data are expensive to get, the
+unsupervised approaches are preferred and more used in reality. Usually,
+a high quality emotion lexicon play a significant role when apply
+the unsupervised approaches for fine-grained emotion classification.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Thus far, most lexicon construction approaches focus on constructing
+general-purpose emotion lexicons <cite class="ltx_cite">[<a href="#bib.bib4" title="The general inquirer: a computer approach to content analysis." class="ltx_ref">11</a>, <a href="#bib.bib38" title="Mining and summarizing customer reviews" class="ltx_ref">7</a>, <a href="#bib.bib37" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">16</a>, <a href="#bib.bib39" title="HowNet and the computation of meaning" class="ltx_ref">4</a>]</cite>.
+However, since a specific word can carry various emotions in different
+domains, a general-purpose emotion lexicon is less accurate and less
+informative than a domain-specific lexicon <cite class="ltx_cite">[<a href="#bib.bib26" title="SentiWordNet 3.0: an enhanced lexical resource for sentiment analysis and opinion mining." class="ltx_ref">1</a>]</cite>.<span class="ltx_text" style="color:#FF0000;">
+</span>In addition, in previous work, most of the lexicons label the words
+on coarse-grained dimensions (positive, negative and neutrality).
+Such lexicons cannot accurately reflect the complexity of human emotions
+and sentiments. Lastly, previous emotion lexicons are mostly annotated
+based on many manually constructed resources (e.g., emotion lexicon,
+parsers, etc.). This limits the applicability of these methods to
+a broader range of tasks and languages.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text" style="color:#000000;">To meet the challenges mentioned above, we propose
+a novel EaLDA model to construct a domain-specific emotion lexicon
+consisting of six primary emotions (i.e., anger, disgust, fear, joy,
+sadness and surprise). The proposed EaLDA model extends the standard
+Latent Dirichlet Allocation (LDA) <cite class="ltx_cite">[<a href="#bib.bib11" title="Latent dirichlet allocation" class="ltx_ref">3</a>]</cite> model by
+employing a small set of seeds to </span>guide the model generating topics.
+Hence, the topics consequently group semantically related words into
+a same emotion category. The lexicon is thus able to best meet the
+user’s specific needs. Our approach is a weakly supervised approach
+since only some seeds emotion sentiment words are needed to lanch
+the process of lexicon construction. In practical applications, asking
+users to provide some seeds is easy as they usually have a good knowledge
+what are important in their domains.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Extensive experiments are carried out to evaluate our model both qualitatively
+and quantitatively using benchmark dataset. The results demonstrate
+that our EaLDA model improves the quality and the coverage of state-of-the-art
+fine-grained lexicon.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Emotion lexicon plays an important role in opinion mining and sentiment
+analysis. In order to build such a lexicon, many researchers have
+investigated various kinds of approaches. However, these methods could
+roughly be classified into two categories in terms of the used information.
+The first kind of approaches is based on thesaurus that utilizes synonyms
+or glosses<span class="ltx_text" style="color:#000000;"> to d</span>etermine the sentiment orientation
+of a word. The availability of the WordNet <cite class="ltx_cite">[<a href="#bib.bib27" title="WordNet: a lexical database for english" class="ltx_ref">9</a>]</cite><span class="ltx_text" style="color:#FF0000;">
+<span class="ltx_text" style="color:#000000;">database is an important starting point for many
+thesaurus-based approaches <cite class="ltx_cite">[<a href="#bib.bib43" title="Using wordnet to measure semantic orientations of adjectives" class="ltx_ref">8</a>, <a href="#bib.bib38" title="Mining and summarizing customer reviews" class="ltx_ref">7</a>, <a href="#bib.bib44" title="Sentiwordnet: a publicly available lexical resource for opinion mining" class="ltx_ref">5</a>]</cite>.
+The second kind of approaches is based on an idea that emotion words
+co-occurring with each others are likely to convey the same polarity.
+There are numerous studies in this field <cite class="ltx_cite">[<a href="#bib.bib41" title="Measuring praise and criticism: inference of semantic orientation from association" class="ltx_ref">14</a>, <a href="#bib.bib18" title="Creating subjective and objective sentence classifiers from unannotated texts" class="ltx_ref">15</a>, <a href="#bib.bib44" title="Sentiwordnet: a publicly available lexical resource for opinion mining" class="ltx_ref">5</a>, <a href="#bib.bib23" title="Robust sentiment detection on twitter from biased and noisy data" class="ltx_ref">2</a>]</cite>.</span></span></p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Most of the previous studies for emotion lexicon construction are
+limited to positive and negative emotions. Recently, to enhance the
+increasingly emotional data, a few researches have been done to identity
+the fine-grained emotion of words <cite class="ltx_cite">[<a href="#bib.bib48" title="Semeval-2007 task 14: affective text" class="ltx_ref">12</a>, <a href="#bib.bib47" title="The language of emotion in short blog texts." class="ltx_ref">6</a>, <a href="#bib.bib46" title="Building word-emotion mapping dictionary for online news" class="ltx_ref">10</a>]</cite>.
+For example, <cite class="ltx_cite">Gill<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib47" title="The language of emotion in short blog texts." class="ltx_ref">2008</a>)</cite> utilize computational linguistic
+tools to identity the emotions of the words (such as, joy, sadness,
+acceptance, disgust, fear, anger, surprise and anticipation). While,
+this approach is mainly for public use in general domains.<span class="ltx_text" style="color:#000000;">
+<cite class="ltx_cite">Rao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Building word-emotion mapping dictionary for online news" class="ltx_ref">2012</a>)</cite> propose an method of automatically building
+the word-emotion mapping dictionary for social emotion detection.
+However, the emtion lexicon is not outputed explicitly in this paper,
+and the approach is fully unsupervised which may be difficult to be
+adjusted to fit the personalized data set. </span></p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Our approach relates most closely to the method proposed by <cite class="ltx_cite">Xie and Li (<a href="#bib.bib36" title="Lexicon construction: a topic model approach" class="ltx_ref">2012</a>)</cite>
+for the construction of lexicon annotated for polarity based on LDA
+model. Our approach differs from <cite class="ltx_cite">[<a href="#bib.bib36" title="Lexicon construction: a topic model approach" class="ltx_ref">17</a>]</cite> in two important
+ways: first, we do not address the task of polarity lexicon construction,
+but instead we focus on building fine-grained emotion lexicon. Second,
+we don’t assume that every word in documents is subjective, which
+is impractical in real world corpus.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Algorithm</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we rigorously define the emotion-aware LDA model
+and its learning algorithm. We descrige with the model description,
+a Gibbs sampling algorithm to infer the model parameters, and finally
+how to generate a emotion lexicon based on the model output.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Model Description</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Like the standard LDA model, EaLDA is a generative model. To prevent
+conceptual confusion, we use a superscript “(e)” to indicate variables
+related to emotion topics, and use a superscript “(n)” to indicate
+variables of non-emotion topics. We assume that each document has
+two classes of topics: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> emotion topics (corresponding to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>
+different emotions) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> non-emotion topics (corresponding to
+topics that are not associated with any emotion). Each topic is represented
+by a multinomial distribution over words. In addition, we assume that
+the corpus vocabulary consists of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> distinct words indexed by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="\{1,\ldots,V\}" display="inline"><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>V</mi></mrow><mo>}</mo></mrow></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">For emotion topics, the EaLDA model draws the word distribution from
+a biased Dirichlet prior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="{\rm Dir}(\beta_{k}^{(e)})" display="inline"><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>β</mi><mi>k</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></math>. The vector
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\beta_{k}^{(e)}\in\mathbb{R}^{V}" display="inline"><mrow><msubsup><mi>β</mi><mi>k</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>∈</mo><msup><mi>ℝ</mi><mi>V</mi></msup></mrow></math> is constructed with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\beta_{k}^{(e)}:=\gamma_{0}^{(e)}(1^{V}-\Omega_{k})+\gamma_{1}^{(e)}\Omega_{k}" display="inline"><mrow><msubsup><mi>β</mi><mi>k</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>:=</mo><mrow><mrow><msubsup><mi>γ</mi><mn>0</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mn>1</mn><mi>V</mi></msup><mo>-</mo><msub><mi mathvariant="normal">Ω</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><msubsup><mi>γ</mi><mn>1</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><msub><mi mathvariant="normal">Ω</mi><mi>k</mi></msub></mrow></mrow></mrow></math>,
+for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="k\in\{1,\ldots,M\}" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>M</mi></mrow><mo>}</mo></mrow></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="\Omega_{k,w}=1" display="inline"><mrow><msub><mi mathvariant="normal">Ω</mi><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow></math> if and only if word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+is a seed word for emotion <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, otherwise <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="\Omega_{k,w}=0" display="inline"><mrow><msub><mi mathvariant="normal">Ω</mi><mrow><mi>k</mi><mo>,</mo><mi>w</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow></math>. The
+scalars <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="\gamma_{0}^{(e)}" display="inline"><msubsup><mi>γ</mi><mn>0</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="\gamma_{1}^{(e)}" display="inline"><msubsup><mi>γ</mi><mn>1</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></math> are hyperparameters
+of the model. Intuitively, when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m11" class="ltx_Math" alttext="\gamma_{1}^{(e)}&gt;\gamma_{0}^{(e)}" display="inline"><mrow><msubsup><mi>γ</mi><mn>1</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>&gt;</mo><msubsup><mi>γ</mi><mn>0</mn><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow></math>,
+the biased prior ensures that the seed words are more probably drawn
+from the associated emotion topic.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">The generative process of word distributions for non-emotion topics
+follows the standard LDA definition with a scalar hyperparameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="\beta^{(n)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">For each word in the document, we decide whether its topic is an emotion
+topic or a non-emotion topic by flipping a coin with head-tail probability
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="(p^{(e)},p^{(n)})" display="inline"><mrow><mo>(</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="(p^{(e)},p^{(n)})\sim{\rm Dir}(\alpha)" display="inline"><mrow><mrow><mo>(</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>∼</mo><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math>.
+The emotion (or non-emotion) topic is sampled according to a multinomial
+distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="{\rm Mult}(\theta^{(e)})" display="inline"><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="{\rm Mult}(\theta^{(n)})" display="inline"><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math>).
+Here, both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="\theta^{(e)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m6" class="ltx_Math" alttext="\theta^{(n)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math> are document-level
+latent variables. They are generated from Dirichlet priors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m7" class="ltx_Math" alttext="{\rm Dir}(\alpha^{(e)})" display="inline"><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m8" class="ltx_Math" alttext="{\rm Dir}(\alpha^{(n)})" display="inline"><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m9" class="ltx_Math" alttext="\alpha^{(s)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m10" class="ltx_Math" alttext="\alpha^{(n)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>
+being hyperparameters.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">We summarize the generative process of the EaLDA model as below:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">for each emotion topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="k\in\{1,\ldots,M\}" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>M</mi></mrow><mo>}</mo></mrow></mrow></math>, draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="\phi_{k}^{(e)}\sim{\rm Dir}(\beta_{k}^{(e)})" display="inline"><mrow><msubsup><mi>ϕ</mi><mi>k</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>∼</mo><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>β</mi><mi>k</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">for each non-emotion topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="k\in\{1,\ldots,K\}" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>K</mi></mrow><mo>}</mo></mrow></mrow></math>, draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="\phi_{k}^{(n)}\sim{\rm Dir}(\beta^{(n)})" display="inline"><mrow><msubsup><mi>ϕ</mi><mi>k</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>∼</mo><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">for each document</p>
+</div>
+<div id="I1.i3.p2" class="ltx_para">
+<ol id="I1.I1" class="ltx_enumerate">
+<li id="I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(a)</span> 
+<div id="I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m1" class="ltx_Math" alttext="\theta^{(e)}\sim{\rm Dir}(\alpha^{(e)})" display="inline"><mrow><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>∼</mo><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(b)</span> 
+<div id="I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m1" class="ltx_Math" alttext="\theta^{(n)}\sim{\rm Dir}(\alpha^{(n)})" display="inline"><mrow><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>∼</mo><mrow><mi>Dir</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(c)</span> 
+<div id="I1.I1.i3.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i3.p1.m1" class="ltx_Math" alttext="(p^{(e)},p^{(n)})\sim Dir(\alpha)" display="inline"><mrow><mrow><mo>(</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>∼</mo><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(d)</span> 
+<div id="I1.I1.i4.p1" class="ltx_para">
+<p class="ltx_p">for each word in document</p>
+</div>
+<div id="I1.I1.i4.p2" class="ltx_para">
+<ol id="I1.I1.I1" class="ltx_enumerate">
+<li id="I1.I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">i.</span> 
+<div id="I1.I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">draw topic class indicator <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.i1.p1.m1" class="ltx_Math" alttext="s\sim{\rm Bernoulli}(p_{s})" display="inline"><mrow><mi>s</mi><mo>∼</mo><mrow><mi>Bernoulli</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>p</mi><mi>s</mi></msub><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">ii.</span> 
+<div id="I1.I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">if <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.i2.p1.m1" class="ltx_Math" alttext="s=\mbox{``emotion topic''}" display="inline"><mrow><mi>s</mi><mo>=</mo><mtext>“emotion topic”</mtext></mrow></math></p>
+</div>
+<div id="I1.I1.I1.i2.p2" class="ltx_para">
+<ol id="I1.I1.I1.I1" class="ltx_enumerate">
+<li id="I1.I1.I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">A.</span> 
+<div id="I1.I1.I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I1.i1.p1.m1" class="ltx_Math" alttext="z^{(e)}\sim{\rm Mult}(\theta^{(e)})" display="inline"><mrow><msup><mi>z</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>∼</mo><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">B.</span> 
+<div id="I1.I1.I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I1.i2.p1.m1" class="ltx_Math" alttext="w\sim{\rm Mult}(\phi_{z^{(e)}}^{(e)})" display="inline"><mrow><mi>w</mi><mo>∼</mo><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>ϕ</mi><msup><mi>z</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></math> , emit word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I1.i2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math></p>
+</div></li>
+</ol>
+</div></li>
+<li id="I1.I1.I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">iii.</span> 
+<div id="I1.I1.I1.i3.p1" class="ltx_para">
+<p class="ltx_p">otherwise</p>
+</div>
+<div id="I1.I1.I1.i3.p2" class="ltx_para">
+<ol id="I1.I1.I1.I2" class="ltx_enumerate">
+<li id="I1.I1.I1.I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">A.</span> 
+<div id="I1.I1.I1.I2.i1.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I2.i1.p1.m1" class="ltx_Math" alttext="z^{(n)}\sim{\rm Mult}(\theta^{(n)})" display="inline"><mrow><msup><mi>z</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>∼</mo><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.I1.I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">B.</span> 
+<div id="I1.I1.I1.I2.i2.p1" class="ltx_para">
+<p class="ltx_p">draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I2.i2.p1.m1" class="ltx_Math" alttext="w\sim{\rm Mult}(\phi_{z^{(n)}}^{(n)})" display="inline"><mrow><mi>w</mi><mo>∼</mo><mrow><mi>Mult</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>ϕ</mi><msup><mi>z</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></math> , emit word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.I1.I2.i2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math></p>
+</div></li>
+</ol>
+</div></li>
+</ol>
+</div></li>
+</ol>
+</div></li>
+</ol>
+<p class="ltx_p">As an alternative representation, the graphical model of the the generative
+process is shown by Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 Model Description ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><svg xmlns="http://www.w3.org/2000/svg" height="348" version="1.1" viewBox="-184 -79 368 348" width="368"><g transform="matrix(1 0 0 -1 0 190)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M 14 0 C 14 8 8 14 0 14 C -8 14 -14 8 -14 0 C -14 -8 -8 -14 0 -14 C 8 -14 14 -8 14 0 Z M 0 0"/></g></g></g></g><g><g transform="matrix(1 0 0 1 -5 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math></p></foreignObject></switch></g></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M -54 0 C -54 12 -63 21 -75 21 C -87 21 -96 12 -96 0 C -96 -12 -87 -21 -75 -21 C -63 -21 -54 -12 -54 0 Z M -75 0"/></g></g></g><g><g transform="matrix(1 0 0 1 -93 -5)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m2" class="ltx_Math" alttext="w^{(e)}" display="inline"><msup><mi>w</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 96 0 C 96 12 87 21 75 21 C 63 21 54 12 54 0 C 54 -12 63 -21 75 -21 C 87 -21 96 -12 96 0 Z M 75 0"/></g></g></g><g><g transform="matrix(1 0 0 1 57 -5)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m3" class="ltx_Math" alttext="w^{(n)}" display="inline"><msup><mi>w</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M -54 82 C -54 94 -63 104 -75 104 C -87 104 -96 94 -96 82 C -96 71 -87 61 -75 61 C -63 61 -54 71 -54 82 Z M -75 82"/></g></g></g><g><g transform="matrix(1 0 0 1 -93 77)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m4" class="ltx_Math" alttext="z^{(e)}" display="inline"><msup><mi>z</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 96 82 C 96 94 87 104 75 104 C 63 104 54 94 54 82 C 54 71 63 61 75 61 C 87 61 96 71 96 82 Z M 75 82"/></g></g></g><g><g transform="matrix(1 0 0 1 57 77)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m5" class="ltx_Math" alttext="z^{(n)}" display="inline"><msup><mi>z</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 14 68 C 14 75 8 81 0 81 C -8 81 -14 75 -14 68 C -14 60 -8 54 0 54 C 8 54 14 60 14 68 Z M 0 68"/></g></g></g><g><g transform="matrix(1 0 0 1 -5 64)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m6" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math></p></foreignObject></switch></g></g></g></g></g></g><path d="M -75 61 L -75 23" style="fill:none"/><g><g transform="matrix(0 -1 1 0 -75 23)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 75 61 L 75 23" style="fill:none"/><g><g transform="matrix(0 -1 1 0 75 23)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M -53 0 L -15 0" style="fill:none"/><g><g transform="matrix(1 0 0 1 -15 0)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 53 0 L 15 0" style="fill:none"/><g><g transform="matrix(-1 0 0 -1 15 0)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 0 53 L 0 15" style="fill:none"/><g><g transform="matrix(0 -1 1 0 0 15)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M -54 165 C -54 177 -63 186 -75 186 C -87 186 -96 177 -96 165 C -96 153 -87 144 -75 144 C -63 144 -54 153 -54 165 Z M -75 165"/></g></g></g><g><g transform="matrix(1 0 0 1 -93 160)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m7" class="ltx_Math" alttext="\theta^{(e)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 96 165 C 96 177 87 186 75 186 C 63 186 54 177 54 165 C 54 153 63 144 75 144 C 87 144 96 153 96 165 Z M 75 165"/></g></g></g><g><g transform="matrix(1 0 0 1 57 160)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m8" class="ltx_Math" alttext="\theta^{(n)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 14 135 C 14 143 8 149 0 149 C -8 149 -14 143 -14 135 C -14 128 -8 121 0 121 C 8 121 14 128 14 135 Z M 0 135"/></g></g></g><g><g transform="matrix(1 0 0 1 -5 132)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m9" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math></p></foreignObject></switch></g></g></g></g></g></g><path d="M -75 143 L -75 105" style="fill:none"/><g><g transform="matrix(0 -1 1 0 -75 105)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 75 143 L 75 105" style="fill:none"/><g><g transform="matrix(0 -1 1 0 75 105)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 0 121 L 0 83" style="fill:none"/><g><g transform="matrix(0 -1 1 0 0 83)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M -54 247 C -54 259 -63 269 -75 269 C -87 269 -96 259 -96 247 C -96 236 -87 226 -75 226 C -63 226 -54 236 -54 247 Z M -75 247"/></g></g></g></g><g><g transform="matrix(1 0 0 1 -93 242)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m10" class="ltx_Math" alttext="\alpha^{(e)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M 96 247 C 96 259 87 269 75 269 C 63 269 54 259 54 247 C 54 236 63 226 75 226 C 87 226 96 236 96 247 Z M 75 247"/></g></g></g></g><g><g transform="matrix(1 0 0 1 57 242)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m11" class="ltx_Math" alttext="\alpha^{(n)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M 14 203 C 14 210 8 217 0 217 C -8 217 -14 210 -14 203 C -14 195 -8 189 0 189 C 8 189 14 195 14 203 Z M 0 203"/></g></g></g></g><g><g transform="matrix(1 0 0 1 -5 199)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m12" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></p></foreignObject></switch></g></g></g></g></g></g></g><path d="M -75 226 L -75 188" style="fill:none"/><g><g transform="matrix(0 -1 1 0 -75 188)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 75 226 L 75 188" style="fill:none"/><g><g transform="matrix(0 -1 1 0 75 188)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 0 189 L 0 150" style="fill:none"/><g><g transform="matrix(0 -1 1 0 0 150)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M -136 0 C -136 12 -146 21 -157 21 C -169 21 -179 12 -179 0 C -179 -12 -169 -21 -157 -21 C -146 -21 -136 -12 -136 0 Z M -157 0"/></g></g></g><g><g transform="matrix(1 0 0 1 -175 -5)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m13" class="ltx_Math" alttext="\phi^{(e)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M 179 0 C 179 12 169 21 157 21 C 146 21 136 12 136 0 C 136 -12 146 -21 157 -21 C 169 -21 179 -12 179 0 Z M 157 0"/></g></g></g><g><g transform="matrix(1 0 0 1 140 -5)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m14" class="ltx_Math" alttext="\phi^{(n)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g><g fill="#FFFFFF"><g stroke="#000000"><path d="M -136 82 C -136 94 -146 104 -157 104 C -169 104 -179 94 -179 82 C -179 71 -169 61 -157 61 C -146 61 -136 71 -136 82 Z M -157 82"/></g></g></g><g><g transform="matrix(1 0 0 1 -175 77)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m15" class="ltx_Math" alttext="\beta^{(e)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M 179 82 C 179 94 169 104 157 104 C 146 104 136 94 136 82 C 136 71 146 61 157 61 C 169 61 179 71 179 82 Z M 157 82"/></g></g></g></g><g><g transform="matrix(1 0 0 1 140 77)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="35">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m16" class="ltx_Math" alttext="\beta^{(n)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></p></foreignObject></switch></g></g></g></g></g></g></g><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><g><g fill="#FFFFFF"><g stroke="#000000"><g fill="#DFDFDF"><path d="M -144 157 C -144 165 -150 171 -157 171 C -165 171 -171 165 -171 157 C -171 150 -165 144 -157 144 C -150 144 -144 150 -144 157 Z M -157 157"/></g></g></g></g><g><g transform="matrix(1 0 0 1 -163 154)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m17" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math></p></foreignObject></switch></g></g></g></g></g></g></g><path d="M -136 0 L -98 0" style="fill:none"/><g><g transform="matrix(1 0 0 1 -98 0)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 136 0 L 98 0" style="fill:none"/><g><g transform="matrix(-1 0 0 -1 98 0)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M -157 61 L -157 23" style="fill:none"/><g><g transform="matrix(0 -1 1 0 -157 23)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M 157 61 L 157 23" style="fill:none"/><g><g transform="matrix(0 -1 1 0 157 23)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><path d="M -157 143 L -157 105" style="fill:none"/><g><g transform="matrix(0 -1 1 0 -157 105)"><g><g stroke-dashoffset="0.0pt"><g stroke-linejoin="miter"><path d="M -7 3 L 0 0 L -7 -3 Z"/></g></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -179 0)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 22)"><switch><foreignObject color="#000000" height="43" overflow="visible" width="43">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -146 -39)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m18" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math></p></foreignObject></switch></g></g></g></g><g><path d="M -137 26 L -178 26 C -181 26 -184 24 -184 21 L -184 -41 C -184 -44 -181 -46 -178 -46 L -137 -46 C -134 -46 -131 -44 -131 -41 L -131 21 C -131 24 -134 26 -137 26 Z M -184 -46" style="fill:none"/><g><g transform="matrix(1 0 0 1 -179 -10)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 32)"><switch><foreignObject color="#000000" height="64" overflow="visible" width="44">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 136 0)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 22)"><switch><foreignObject color="#000000" height="43" overflow="visible" width="43">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 169 -39)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m19" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math></p></foreignObject></switch></g></g></g></g><g><path d="M 178 26 L 137 26 C 134 26 131 24 131 21 L 131 -41 C 131 -44 134 -46 137 -46 L 178 -46 C 181 -46 184 -44 184 -41 L 184 21 C 184 24 181 26 178 26 Z M 131 -46" style="fill:none"/><g><g transform="matrix(1 0 0 1 136 -10)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 32)"><switch><foreignObject color="#000000" height="64" overflow="visible" width="44">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -97 45)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 59)"><switch><foreignObject color="#000000" height="118" overflow="visible" width="193">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 78 -31)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m20" class="ltx_Math" alttext="N_{d}" display="inline"><msub><mi>N</mi><mi>d</mi></msub></math></p></foreignObject></switch></g></g></g></g><g><path d="M 105 118 L -105 118 C -108 118 -111 116 -111 113 L -111 -46 C -111 -49 -108 -51 -105 -51 L 105 -51 C 108 -51 111 -49 111 -46 L 111 113 C 111 116 108 118 105 118 Z M -111 -51" style="fill:none"/><g><g transform="matrix(1 0 0 1 -97 33)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 71)"><switch><foreignObject color="#000000" height="142" overflow="visible" width="194">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -111 67)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 119)"><switch><foreignObject color="#000000" height="238" overflow="visible" width="222">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 101 -69)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.pic1.m21" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math></p></foreignObject></switch></g></g></g></g><g><path d="M 113 194 L -113 194 C -116 194 -118 191 -118 188 L -118 -73 C -118 -76 -116 -79 -113 -79 L 113 -79 C 116 -79 118 -76 118 -73 L 118 188 C 118 191 116 194 113 194 Z M -118 -79" style="fill:none"/><g><g transform="matrix(1 0 0 1 -111 57)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 129)"><switch><foreignObject color="#000000" height="259" overflow="visible" width="222">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g></g></g></g></g></g></g></svg>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>The Emotion-aware LDA model.</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Inference Algorithm</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Assuming hyperparameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="\alpha^{(e)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="\alpha^{(n)}" display="inline"><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="\beta^{(e)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="\beta^{(n)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>, we develop a collapsed Gibbs sampling
+algorithm to estimate the latent variables in the EaLDA model. The
+algorithm iteratively takes a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> from a document and sample
+the topic that this word belongs to.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Let the whole corpus excluding the current word be denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="n_{i,w}^{(e)}" display="inline"><msubsup><mi>n</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="n_{j,w}^{(n)}" display="inline"><msubsup><mi>n</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></math>) indicate the number of
+occurrences of topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="i^{(e)}" display="inline"><msup><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math> (or topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="j^{(n)}" display="inline"><msup><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>) with word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+in the whole corpus. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="m_{i}^{(e)}" display="inline"><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="m_{j}^{(n)}" display="inline"><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></math>) indicate
+the number of occurrence of topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="i^{(e)}" display="inline"><msup><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math> (or topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="j^{(n)}" display="inline"><msup><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math>)
+in the current document. All these counts are defined excluding the
+current word. Using the definition of the EaLDA model and the Bayes
+Rule, we find that the joint density of these random variables are
+equal to</p>
+<table id="S5.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m2" class="ltx_Math" alttext="\displaystyle{\rm Pr}\left(p^{(e)},p^{(n)},\theta^{(e)},\phi^{(e)},\theta^{(n)%&#10;},\phi^{(n)}|D\right)" display="inline"><mrow><mi>Pr</mi><mrow><mo>(</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>|</mo><mi>D</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\displaystyle\propto" display="inline"><mo>∝</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m2" class="ltx_Math" alttext="\displaystyle{\rm Pr}\left(p^{(e)},p^{(n)},\theta^{(e)},\phi^{(e)},\theta^{(n)%&#10;},\phi^{(n)}\right)" display="inline"><mrow><mi>Pr</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m2" class="ltx_Math" alttext="\displaystyle\quad\times\;{\rm Pr}\left(D|p^{(e)},p^{(n)},\theta^{(e)},\phi^{(%&#10;e)},\theta^{(n)},\phi^{(n)}\right)" display="inline"><mrow><mi mathvariant="normal"> </mi><mo rspace="5.3pt">×</mo><mi>Pr</mi><mrow><mo>(</mo><mi>D</mi><mo>|</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>θ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\displaystyle\propto" display="inline"><mo>∝</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m2" class="ltx_Math" alttext="\displaystyle\left(p^{(e)}\right)^{\alpha+(\sum_{i=1}^{M}m_{i}^{(e)})}\cdot%&#10;\left(p^{(n)}\right)^{\alpha+(\sum_{j=1}^{K}m_{j}^{(n)})}" display="inline"><mrow><msup><mrow><mo>(</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow><mrow><mi>α</mi><mo>+</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></msubsup><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></msup><mo>⋅</mo><msup><mrow><mo>(</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow><mrow><mi>α</mi><mo>+</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m2" class="ltx_Math" alttext="\displaystyle\cdot\prod_{i=1}^{M}\left(\theta_{i}^{(e)}\right)^{\alpha^{(e)}+m%&#10;_{i}^{(e)}-1}\cdot\prod_{j=1}^{K}\left(\theta_{j}^{(n)}\right)^{\alpha^{(n)}+m%&#10;_{j}^{(n)}-1}" display="inline"><mrow><mo>⋅</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></munderover></mstyle><msup><mrow><mo>(</mo><msubsup><mi>θ</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow><mrow><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>+</mo><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>-</mo><mn>1</mn></mrow></msup><mo>⋅</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover></mstyle><msup><mrow><mo>(</mo><msubsup><mi>θ</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow><mrow><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>+</mo><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>-</mo><mn>1</mn></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m2" class="ltx_Math" alttext="\displaystyle\cdot\prod_{i=0}^{1}\prod_{w=1}^{V}\left(\phi_{i,w}^{(e)}\right)^%&#10;{\beta_{i,w}^{(e)}+n_{i,w}^{(e)}-1}" display="inline"><mrow><mo>⋅</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mn>1</mn></munderover></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>w</mi><mo>=</mo><mn>1</mn></mrow><mi>V</mi></munderover></mstyle><msup><mrow><mo>(</mo><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow><mrow><msubsup><mi>β</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>n</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>-</mo><mn>1</mn></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m2" class="ltx_Math" alttext="\displaystyle\cdot\prod_{j=1}^{K}\prod_{w=1}^{V}\left(\phi_{j,w}^{(n)}\right)^%&#10;{\beta^{(n)}+n_{j,w}^{(n)}-1}" display="inline"><mrow><mo>⋅</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>w</mi><mo>=</mo><mn>1</mn></mrow><mi>V</mi></munderover></mstyle><msup><mrow><mo>(</mo><msubsup><mi>ϕ</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow><mrow><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>+</mo><msubsup><mi>n</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>-</mo><mn>1</mn></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">According to equation (<a href="#S3.E1" title="(1) ‣ 3.2 Inference Algorithm ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), we see that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="\{p^{(e)},p^{(n)}\}" display="inline"><mrow><mo>{</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="\{\theta_{i}^{(e)},\theta_{j}^{(n)}\}" display="inline"><mrow><mo>{</mo><mrow><msubsup><mi>θ</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msubsup><mi>θ</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow><mo>}</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="\{\phi_{i,w}^{(e)}\}" display="inline"><mrow><mo>{</mo><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>}</mo></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="\{\phi_{j,w}^{(n)}\}" display="inline"><mrow><mo>{</mo><msubsup><mi>ϕ</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>}</mo></mrow></math> are mutually independent sets of random
+variables. Each of these random variables satisfies Dirichlet distribution
+with a specific set of parameters. By the mutual independence, we
+decompose the probability of the topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> for the current word as</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="{\rm Pr}\left(z=i^{(e)}|D\right)\propto\mathbb{E}[p^{(e)}]\cdot\mathbb{E}[%&#10;\theta_{i}^{(e)}]\cdot\mathbb{E}[\phi_{i,w}^{(e)}]" display="block"><mrow><mi>Pr</mi><mrow><mo>(</mo><mi>z</mi><mo>=</mo><msup><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>|</mo><mi>D</mi><mo>)</mo></mrow><mo>∝</mo><mi>𝔼</mi><mrow><mo>[</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>]</mo></mrow><mo>⋅</mo><mi>𝔼</mi><mrow><mo>[</mo><msubsup><mi>θ</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow><mo>⋅</mo><mi>𝔼</mi><mrow><mo>[</mo><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="{\rm Pr}\left(z=j^{(n)}|D\right)\propto\mathbb{E}[p^{(n)}]\cdot\mathbb{E}[%&#10;\theta_{i}^{(n)}]\cdot\mathbb{E}[\phi_{j,w}^{(n)}]" display="block"><mrow><mi>Pr</mi><mrow><mo>(</mo><mi>z</mi><mo>=</mo><msup><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>|</mo><mi>D</mi><mo>)</mo></mrow><mo>∝</mo><mi>𝔼</mi><mrow><mo>[</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>]</mo></mrow><mo>⋅</mo><mi>𝔼</mi><mrow><mo>[</mo><msubsup><mi>θ</mi><mi>i</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow><mo>⋅</mo><mi>𝔼</mi><mrow><mo>[</mo><msubsup><mi>ϕ</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">Then, by examining the property of Dirichlet distribution, we can
+compute expectations on the right hand side of equation (<a href="#S3.E2" title="(2) ‣ 3.2 Inference Algorithm ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>)
+and equation (<a href="#S3.E3" title="(3) ‣ 3.2 Inference Algorithm ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) by</p>
+<table id="S5.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[p^{(e)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m3" class="ltx_Math" alttext="\displaystyle\cfrac{\alpha+\sum_{i=0}^{1}m_{i}^{(e)}}{2\alpha+\sum_{i=1}^{M}m_%&#10;{i}^{(e)}+\sum_{j=1}^{K}m_{j}^{(n)}}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><mi>α</mi><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mn>1</mn></msubsup><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow></mrow><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>α</mi></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></msubsup><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S3.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[p^{(n)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m3" class="ltx_Math" alttext="\displaystyle\cfrac{\alpha+\sum_{j=1}^{K}m_{j}^{(n)}}{2\alpha+\sum_{i=1}^{M}m_%&#10;{i}^{(e)}+\sum_{j=1}^{K}m_{j}^{(n)}}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><mi>α</mi><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>α</mi></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></msubsup><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+<tr id="S3.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[\theta_{i}^{(e)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msubsup><mi>θ</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m3" class="ltx_Math" alttext="\displaystyle\frac{\alpha^{(e)}+m_{i}^{(e)}}{M\alpha^{(e)}+\sum_{i^{\prime}=1}%&#10;^{M}m_{i^{\prime}}^{(e)}}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>+</mo><msubsup><mi>m</mi><mi>i</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mrow><mrow><mi>M</mi><mo>⁢</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mi>M</mi></msubsup><msubsup><mi>m</mi><msup><mi>i</mi><mo>′</mo></msup><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr id="S3.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[\theta_{j}^{(n)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msubsup><mi>θ</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m3" class="ltx_Math" alttext="\displaystyle\frac{\alpha^{(e)}+m_{j}^{(n)}}{K\alpha^{(n)}+\sum_{j^{\prime}=1}%&#10;^{K}m_{j^{\prime}}^{(n)}}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>+</mo><msubsup><mi>m</mi><mi>j</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow><mrow><mrow><mi>K</mi><mo>⁢</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>j</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>m</mi><msup><mi>j</mi><mo>′</mo></msup><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+<tr id="S3.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[\phi_{i,w}^{(e)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m3" class="ltx_Math" alttext="\displaystyle\frac{\beta_{i,w}^{(e)}+n_{i,w}^{(e)}}{\sum_{w^{\prime}=1}^{V}%&#10;\left(\beta_{i,w^{\prime}}^{(e)}+n_{i,w^{\prime}}^{(e)}\right)}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>β</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>n</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>w</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mi>V</mi></msubsup><mrow><mo>(</mo><mrow><msubsup><mi>β</mi><mrow><mi>i</mi><mo>,</mo><msup><mi>w</mi><mo>′</mo></msup></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>n</mi><mrow><mi>i</mi><mo>,</mo><msup><mi>w</mi><mo>′</mo></msup></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+<tr id="S3.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}[\phi_{j,w}^{(n)}]" display="inline"><mrow><mi>𝔼</mi><mo>⁢</mo><mrow><mo>[</mo><msubsup><mi>ϕ</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m3" class="ltx_Math" alttext="\displaystyle\frac{\beta_{j,w}^{(n)}+n_{j,w}^{(n)}}{V\beta^{(n)}+\sum_{w^{%&#10;\prime}=1}^{V}n_{j,w^{\prime}}^{(n)}}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>β</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup><mo>+</mo><msubsup><mi>n</mi><mrow><mi>j</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow><mrow><mrow><mi>V</mi><mo>⁢</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>w</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mi>V</mi></msubsup><msubsup><mi>n</mi><mrow><mi>j</mi><mo>,</mo><msup><mi>w</mi><mo>′</mo></msup></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">Using the above equations, we can sample the topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> for each word
+iteratively and estimate all latent random variables.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Constructing Emotion Lexicon</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Our final step is to construct the domain-specific emotion lexicon
+from the estimates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="\phi^{(e)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="\phi^{(n)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math> that we obtained
+from the EaLDA model.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in the vocabulary, we compare the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="M+1" display="inline"><mrow><mi>M</mi><mo>+</mo><mn>1</mn></mrow></math> values
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="\{\phi_{1,w}^{(e)},\ldots,\phi_{M,w}^{(e)}\}" display="inline"><mrow><mo>{</mo><mrow><msubsup><mi>ϕ</mi><mrow><mn>1</mn><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>ϕ</mi><mrow><mi>M</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></mrow><mo>}</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="\frac{1}{K}\sum_{i=1}^{K}\phi_{i,w}^{(n)}" display="inline"><mrow><mfrac><mn>1</mn><mi>K</mi></mfrac><mo>⁢</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></math>.
+If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="\phi_{i,w}^{(e)}" display="inline"><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msubsup></math> is the largest, then the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is added
+to the emotion dictionary for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m7" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th emotion. Otherwise, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m8" class="ltx_Math" alttext="\frac{1}{K}\sum_{i=1}^{K}\phi_{i,w}^{(n)}" display="inline"><mrow><mfrac><mn>1</mn><mi>K</mi></mfrac><mo>⁢</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><msubsup><mi>ϕ</mi><mrow><mi>i</mi><mo>,</mo><mi>w</mi></mrow><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msubsup></mrow></mrow></math>
+is the largest among the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m9" class="ltx_Math" alttext="M+1" display="inline"><mrow><mi>M</mi><mo>+</mo><mn>1</mn></mrow></math> values, which suggests that the word
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m10" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is more probably drawn from a non-emotion topic. Thus, the word
+is considered neutral and not included in the emotion dictionary.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Anger</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Disgust</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Fear</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Joy</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Sadness</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">Surprise</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">attack</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">mar</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">terror</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">good</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kill</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote" style="color:#000000;">surprise</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">warn</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">sex</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">troop</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">win</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">die</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">first</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">gunman</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">lebanon</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">flu</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">prize</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kidnap</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">jump</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">baghdad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">game</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">dead</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">victory</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">lose</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">marijuana</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">immigration</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">gaze</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">die</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">adopt</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">confuse</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">arrest</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">hit</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">cancer</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">cancer</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">madonna</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">crach</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">sweat</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kidnap</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">amish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kidnap</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">celebrity</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">leave</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">find</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kill</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">imigration</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">force</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">boost</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">cancer</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">attack</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">alzheim</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">sink</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">iraq</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">ship</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">flu</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">hiv</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">iraqi</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">force</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">fear</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">star</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">kidnap</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="color:#000000;">discover</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Part of Emotion example words</div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Algorithm</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Anger</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Disgust</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Fear</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Joy</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Sadness</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Surprise</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">WordNet-Affect</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">6.06%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">22.81%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">17.31%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">9.92%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">SWAT</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">7.06%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">18.27%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14.91%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.44%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11.78%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.03%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20.06%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">4.21%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.76%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.00%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UPAR7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3.02%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">4.72%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11.87%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.44%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.00%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">EaLDA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">16.65%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10.52%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">26.21%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">25.57%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">36.85%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">20.17%</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Experiment results for emotion classification in term of F1 score</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we report empirical evaluations of our proposed model.
+Since there is no metric explicitly measuring the quality of an emotion
+lexicon, we demonstrate the performance of our algorithm in two ways:
+(1) we perform a case study for the lexicon generated by our algorithm,
+and (2) we compare the results of solving emotion classification task
+using our lexicon against different methods, and demonstrate the advantage
+of our lexicon over other lexicons and other emotion classification
+systems.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Datasets</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments to evaluate the effectiveness of our model
+on SemEval-2007 dataset. This is an gold-standard English dataset
+used in the 14th task of the SemEval-2007 workshop which focuses on
+classification of emotions in the text. The attributes include the
+news headlines, the score of emotions of anger, disgust, fear, joy,
+sad and surprise normalizing from 0 to 100. Two data sets are available:
+a training data set consisting of 250 records, and a test data set
+with 1000 records. Following the strategy used in <cite class="ltx_cite">[<a href="#bib.bib48" title="Semeval-2007 task 14: affective text" class="ltx_ref">12</a>]</cite>,
+the task was carried out in an unsupervised setting for experiments.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">In experiments, data preprocessing is performed on the data set. First,
+the texts are tokenized with a natural language toolkit NLTK<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://www.nltk.org</span></span></span>. Then, we remove non-alphabet characters, numbers, pronoun, punctuation
+and stop words from the texts. Finally, Snowball stemmer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://snowball.tartarus.org/</span></span></span> is applied so as to reduce the vocabulary size and settle the issue
+of data spareness.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Emotion Lexicon Construction</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We first settle down the implementation details for the EaLDA model,
+specifying the hyperparameters that we choose for the experiment.
+We set topic number <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="M=6" display="inline"><mrow><mi>M</mi><mo>=</mo><mn>6</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="K=4" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>4</mn></mrow></math>, and hyperparameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="\alpha=0.75" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.75</mn></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="\alpha^{(e)}=\alpha^{(n)}=0.45" display="inline"><mrow><msup><mi>α</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup><mo>=</mo><msup><mi>α</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>=</mo><mn>0.45</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="\beta^{(n)}=0.5" display="inline"><mrow><msup><mi>β</mi><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>=</mo><mn>0.5</mn></mrow></math>. The vector
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="\beta^{(e)}" display="inline"><msup><mi>β</mi><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></msup></math> is constructed from the seed dictionary using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="\gamma=(0.25,0.95)" display="inline"><mrow><mi>γ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mn>0.25</mn><mo>,</mo><mn>0.95</mn></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">As mentioned, we use a few domain-independent seed words as prior
+information for our model. To be specific, the seed words list contains
+8 to 12 emotional words for each of the six emotion categories.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://minyang.me/acl2014/seed-words.html</span></span></span> However, it is important to note that the proposed models are flexible
+and do not need to have seeds for every topic.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Example words for each emotion gener<span class="ltx_text" style="color:#000000;">ated from the
+SemEval-2007 dataset are reported in Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Constructing Emotion Lexicon ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The
+judgment is to some extent subjective. What we reported here are based
+on our judgments what are appropriate and what are not for each emotion
+topic. From Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Constructing Emotion Lexicon ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, we observe that the generated
+words are informative and coherent. For example, the words “flu”
+and “cancer” are seemingly neutral by its surface meaning, actually
+expressing fear emotion for SemEval dataset. These domain-specific
+words are mostly not included in any other existing general-purpose
+emotion lexicons. The experimental results </span>show that our algorithm
+can successfully construct a fine-grained domain-specific emotion
+lexicon for this corpus that is able to understand the connotation
+of the words that may not be obvious without the context.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Document-level Emotion Classification</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We compare the performance between a popular emotion lexicon WordNet-Affect
+<cite class="ltx_cite">[<a href="#bib.bib49" title="WordNet affect: an affective extension of wordnet." class="ltx_ref">13</a>]</cite> and our approach for emotion classifica<span class="ltx_text" style="color:#000000;">tion
+task. We also compare our results with those obtained by three systems
+participating in the SemEval-2007 emotion annotation task: SWAT, UPAR7
+and UA. The emotion classification results is evaluated for each emotion
+category separately. For each emotion category, we evaluates it as
+a binary classification problem. In the evaluation of emotion lexicons,
+the binary classification is performed in a very simple way. For each
+emotion category and each text, we compare the number of words within
+this emotion category, and the average number of words within other
+emotion categories, to output a binary prediction of 1 or 0. This
+simple approach is chosen to evaluate the robustness of our emotion
+lexicon. </span></p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text" style="color:#000000;">In the experiments, performance is evaluated in
+terms of F1-score. We summarize the results in Table <a href="#S3.T2" title="Table 2 ‣ 3.3 Constructing Emotion Lexicon ‣ 3 Algorithm ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+As an easy observation, the emotion lexicon generated by the EaLDA
+model consistently and significantly outperforms the WordNet-Affect
+emotion lexicon and other three emotion classification systems. In
+particular, we are able to obtain an overall F1-score of 10.52% for
+disgust classification task which is difficult to work out using previously
+proposed methods. The advantage of our model may come from its capability
+of exploring domain-specific emotions which include not only explicit
+emotion words, but also implicit ones.</span></p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we have presented a novel emotion-aware LDA model that
+is able to quickly build a fine-grained domain-specific emotion lexicon
+for languages without many manually constructed resources. The proposed
+EaLDA model extends the standard LDA model by accepting a set of domain-independent
+emotion words as prior knowledge, and guiding to group semantically
+related words into the same emotion category. Thus, it makes the emotion
+lexicon containing much richer and adaptive domain-specific emotion
+words. Experimental results showed that the emotional lexicons generated
+by our algorithm is of high quality, and can assist emotion classification
+task.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For future works, we hope to extend the proposed EaLDA model by exploiting
+discourse structure knowledge, which has been shown significant in
+identifying the polarity of content-aware words.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Baccianella, A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SentiWordNet 3.0: an enhanced lexical resource for sentiment analysis and opinion mining.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 2200–2204</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Barbosa and J. Feng</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Robust sentiment detection on twitter from biased and noisy data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 36–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">the Journal of machine Learning research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Dong and Q. Dong</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">HowNet and the computation of meaning</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">World Scientific</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Esuli and F. Sebastiani</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiwordnet: a publicly available lexical resource for opinion mining</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 417–422</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. J. Gill, R. M. French, D. Gergle and J. Oberlander</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The language of emotion in short blog texts.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">8</span>, <span class="ltx_text ltx_bib_pages"> pp. 299–302</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hu and B. Liu</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining and summarizing customer reviews</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 168–177</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kamps, M. Marx, R. J. Mokken and M. De Rijke</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using wordnet to measure semantic orientations of adjectives</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. A. Miller</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: a lexical database for english</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">11</span>), <span class="ltx_text ltx_bib_pages"> pp. 39–41</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Rao, X. Quan, L. Wenyin, Q. Li and M. Chen</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building word-emotion mapping dictionary for online news</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. J. Stone, D. C. Dunphy and M. S. Smith</span><span class="ltx_text ltx_bib_year">(1966)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The general inquirer: a computer approach to content analysis.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Strapparava and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semeval-2007 task 14: affective text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 70–74</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Datasets ‣ 4 Experiments ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Strapparava and A. Valitutti</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet affect: an affective extension of wordnet.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">4</span>, <span class="ltx_text ltx_bib_pages"> pp. 1083–1086</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Document-level Emotion Classification ‣ 4 Experiments ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney and M. L. Littman</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measuring praise and criticism: inference of semantic orientation from association</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems (TOIS)</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 315–346</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe and E. Riloff</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Creating subjective and objective sentence classifiers from unannotated texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Computational Linguistics and Intelligent Text Processing</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 486–497</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 347–354</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Xie and C. Li</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexicon construction: a topic model approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 2299–2303</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:55:52 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

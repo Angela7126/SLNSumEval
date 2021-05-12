@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On topology-related properties of abstract argumentation semantics. A correction and extension to Dynamics of argumentation systems: A division-based method.
+   </title>
+   <abstract>
+    This research note provides novel results concerning the incremental computation of the stable and ideal argumentation semantics, by extending the division-based method presented in [1] and correcting a flawed claim given there. As a basis for these results, the note synthetically reviews and discusses the topology-related properties of directionality and SCC-recursiveness in abstract argumentation semantics and analyzes their relationships with the division-based method.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In abstract argumentation semantics, the study of topology-related properties is receiving increasing attention in recent years as they play a key role in the investigation and evaluation of different semantics proposals from various perspectives. In particular, these properties can be exploited for the definition of efficient algorithms for computational problems related to argumentation semantics. In this context, the problem of extension enumeration in dynamic argumentation systems has been considered in [1], where it has been shown that, after a local modification in the set of arguments and/or of their conflicts, one may obtain the new extensions with an incremental computation method, called division-based method, which partially reuses the extensions computed before the modification. In [1] this is proved for the admissible, grounded, preferred, complete, and ideal semantics, putting the main emphasis on their property of directionality. A more extended analysis, provided in this note, shows, however, that incremental computation has also important relationships with the property of SCC-recursiveness. On this basis, we are able to provide novel results concerning incremental computation for stable semantics (not considered in [1]) and ideal semantics (whose treatment in [1] was flawed, as it will be shown by a counterexample).
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. In Section 2 we recall the necessary background notions of abstract argumentation. In Section 3 we review two main topology-related properties of argumentation semantics, namely directionality and SCC-recursiveness and discuss their differences, while in Section 4 we analyze their relationships with the division-based method presented in [1]. Building on this analysis, we then provide novel results concerning incremental computation of stable and ideal semantics respectively in Sections 5 and 6. Some closely related works are discussed in Section 7. Finally, Section 8 concludes the paper.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      In this section we recall the fundamental elements of Dung's theory of abstract argumentation frameworks [2] and the relevant semantics notions.
+     </paragraph>
+     <paragraph label="Definition 1">
+      An argumentation framework is a pair {a mathematical formula}AF=〈A,→〉, where {a mathematical formula}A is a set of arguments and {a mathematical formula}→⊆(A×A) is a binary relation on {a mathematical formula}A, called the attack relation.
+     </paragraph>
+     <paragraph>
+      An argumentation framework {a mathematical formula}AF=〈A,→〉 can be represented as a directed graph, called the defeat graph, where nodes are the arguments and edges correspond to the elements of the attack relation. When {a mathematical formula}(α,β)∈→ (also denoted as {a mathematical formula}α→β) we say that α attacks β.
+     </paragraph>
+     <paragraph>
+      Since we will frequently consider properties of sets of arguments, it is useful to define suitable notations for them.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Given an argumentation framework {a mathematical formula}AF=〈A,→〉, an argument {a mathematical formula}α∈A and two (not necessarily disjoint) sets {a mathematical formula}S,P⊆A, we define: {a mathematical formula}S→α≡∃β∈S:β→α, {a mathematical formula}α→S≡∃β∈S:α→β, {a mathematical formula}S→P≡∃α∈S,β∈P:α→β, {a mathematical formula}S−≡{α∈A|α→S}, {a mathematical formula}S+≡{α∈A|S→α}.
+     </paragraph>
+     <paragraph>
+      We also define the restriction of an argumentation framework to a subset S of its arguments.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Let {a mathematical formula}AF=〈A,→〉 be an argumentation framework. The restriction of AF to {a mathematical formula}S⊆A is the argumentation framework {a mathematical formula}AF↓S=〈S,→∩(S×S)〉.
+     </paragraph>
+     <paragraph>
+      Given an argumentation framework encoding the conflicts in a set of arguments, a fundamental problem consists in determining the conflict outcome, namely which arguments can be considered justified. An argumentation semantics can be conceived, in broad terms, as a formal way to answer this question. More formally, in the extension-based approach an argumentation semantics {a mathematical formula}S specifies the criteria for identifying, for a generic argumentation framework, a set of extensions, where each extension is a set of arguments considered to be acceptable together. Given a generic argumentation semantics {a mathematical formula}S, the set of extensions prescribed by {a mathematical formula}S for a given argumentation framework AF is denoted as {a mathematical formula}ES(AF). If a semantics {a mathematical formula}S prescribes {a mathematical formula}ES(AF) to be a singleton for every argumentation framework AF, {a mathematical formula}S is said to belong to the unique-status approach, otherwise to the multiple-status approach. The argumentation semantics considered in this paper are quickly recalled in Definition 4, along with some basic underlying notions. Note that the grounded and ideal semantics belong to the unique-status approach, while admissible, complete, preferred, and stable semantics are multiple-status. It is also worth remarking that there are cases where the set of extensions prescribed by stable semantics is empty, while the existence of at least an extension is guaranteed in every argumentation framework for all the other semantics considered in this paper. For more details and introductory material on argumentation semantics at a general level the reader is referred to [3]. The ideal semantics, which is a subject of specific interest in this paper, has been introduced in [4], [5] and its generalized parametric properties have been recently investigated in [6].
+     </paragraph>
+     <paragraph label="Definition 4">
+      Let {a mathematical formula}AF=〈A,→〉 be an argumentation framework, {a mathematical formula}α∈A an argument, and {a mathematical formula}S⊆A a set of arguments
+     </paragraph>
+     <list>
+      <list-item label="•">
+       S is conflict-free, denoted as {a mathematical formula}cf(S), if and only if {a mathematical formula}S∩S−=∅;
+      </list-item>
+      <list-item label="•">
+       α is acceptable with respect to S (or α is defended by S) if and only if {a mathematical formula}{α}−⊆S+;
+      </list-item>
+      <list-item label="•">
+       the function {a mathematical formula}FAF:2A→2A which, given a set {a mathematical formula}S⊆A, returns the set of the acceptable arguments with respect to S, is called the characteristic function of AF;
+      </list-item>
+      <list-item label="•">
+       S is admissible (denoted as {a mathematical formula}S∈EAD(AF)) if and only if {a mathematical formula}cf(S) and {a mathematical formula}S⊆FAF(S);
+      </list-item>
+      <list-item label="•">
+       S is a complete extension (denoted as {a mathematical formula}S∈ECO(AF)) if and only if {a mathematical formula}cf(S) and {a mathematical formula}S=FAF(S);
+      </list-item>
+      <list-item label="•">
+       S is the grounded extension (denoted as {a mathematical formula}S=GE(AF) or {a mathematical formula}S∈EGR(AF)) if and only if S is the least fixed point of {a mathematical formula}FAF (equivalently, the least complete extension);
+      </list-item>
+      <list-item label="•">
+       S is a preferred extension (denoted as {a mathematical formula}S∈EPR(AF)) if and only if S is a maximal (with respect to set inclusion) admissible set;
+      </list-item>
+      <list-item label="•">
+       S is a stable extension (denoted as {a mathematical formula}S∈EST(AF)) if and only if {a mathematical formula}S+=A∖S (implying {a mathematical formula}cf(S));
+      </list-item>
+      <list-item label="•">
+       S is the ideal extension (denoted as {a mathematical formula}S=ID(AF) or {a mathematical formula}S∈EID(AF)) if and only if S is the maximal admissible set included in all preferred extensions.
+      </list-item>
+     </list>
+    </section>
+    <section label="3">
+     <section-title>
+      Topology-related properties in argumentation semantics
+     </section-title>
+     <paragraph>
+      While topological properties of argumentation frameworks have no immediately apparent relationships with the notions recalled in Definition 4, it is well known that they play an important role in the study of argumentation semantics. For instance, in [2] it is shown that in acyclic frameworks there is exactly one complete, preferred, and stable extension coinciding with the grounded extension and that the absence of odd-length cycles is a sufficient condition to ensure that stable extensions exist and coincide with preferred extensions, i.e. that the argumentation framework is coherent (see also [7]). While these and similar results concern the influence of specific topological conditions on semantics behavior, other studies, which are more relevant to the present paper, have revealed topology-related properties of argumentation semantics which are valid for any argumentation framework.
+     </paragraph>
+     <paragraph>
+      In particular, we recall and discuss in the following the properties of directionality and SCC-recursiveness.
+     </paragraph>
+     <paragraph>
+      The directionality property, introduced in [8], intuitively concerns the fact that the justification state of an argument α should be affected only by the justification state of the attackers of α (which in turn are affected by their attackers and so on), while the arguments which only receive an attack from α (and in turn those which are attacked by them and so on) should not have any effect on the state of α. To put it in other words, for a semantics satisfying the directionality property this means that, focusing on a part of the framework not receiving attacks from the other parts, you should get always the same results even if the other parts change. To formalize this intuition we need first to introduce the notion of unattacked set in a framework.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Given an argumentation framework {a mathematical formula}AF=〈A,→〉, a set {a mathematical formula}U⊆A is unattacked if and only if {a mathematical formula}∄α∈(A∖U):α→U. The set of unattacked sets of AF is denoted as {a mathematical formula}US(AF).
+     </paragraph>
+     <paragraph>
+      The directionality criterion is then defined by requiring an unattacked set to be unaffected by the remaining parts of the argumentation framework as far as extensions are concerned.
+     </paragraph>
+     <paragraph label="Definition 6">
+      A semantics {a mathematical formula}S satisfies the directionality criterion if and only if{a mathematical formula} where {a mathematical formula}AES(AF,U)≜{(E∩U)|E∈ES(AF)}.
+     </paragraph>
+     <paragraph>
+      In words, the intersection of any extension prescribed by {a mathematical formula}S for AF with an unattacked set U is equal to one of the extensions prescribed by {a mathematical formula}S for the restriction of AF to U, and vice versa.
+     </paragraph>
+     <paragraph>
+      It is shown in [8] that the admissible, complete, grounded, preferred and ideal semantics are directional, while stable semantics is not.
+     </paragraph>
+     <paragraph>
+      The SCC-recursiveness property, introduced in [9], requires a more articulated explanation: we provide the essential elements here, while the reader is referred to [9], [3] for more details and examples. SCC-recursiveness is based on the graph theoretical notion of Strongly Connected Components (SCCs), namely the equivalence classes induced by the path equivalence (i.e. mutual reachability) relation.
+     </paragraph>
+     <paragraph label="Definition 7">
+      Given an argumentation framework {a mathematical formula}AF=〈A,→〉, the binary relation of path-equivalence between arguments, denoted as {a mathematical formula}PEAF⊆(A×A), is defined as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}∀α∈A,(α,α)∈PEAF
+      </list-item>
+      <list-item label="•">
+       given two distinct arguments {a mathematical formula}α,β∈A, {a mathematical formula}(α,β)∈PEAF if and only if there is a path from α to β and a path from β to α.
+      </list-item>
+     </list>
+     <paragraph>
+      An important property of the SCC decomposition is that the graph obtained considering SCCs as single nodes is acyclic, i.e. the attack relation induces a partial order between the SCCs.
+     </paragraph>
+     <paragraph>
+      The SCC recursive scheme exploits this property and can be intuitively regarded as a constructive procedure to incrementally build extensions following the partial order of SCCs. Briefly, one “locally” applies some extension selection criterion to the initial SCCs, i.e. those not receiving attacks from other ones. Then, for each possible candidate partial extension identified in the initial SCCs, one accordingly suppresses some arguments from the original framework and the procedure is recursively applied to the new framework resulting from this modification, until no remaining arguments are left to process.
+     </paragraph>
+     <paragraph>
+      Formally, a semantics satisfies the SCC-recursiveness property if each of its extensions in any argumentation framework fits the constructive scheme sketched above, as specified by Definition 8 (which is admittedly quite complicated and whose detailed illustration is beyond the scope of the present paper).
+     </paragraph>
+     <paragraph label="Definition 8">
+      A given argumentation semantics {a mathematical formula}S is SCC-recursive if and only if for any argumentation framework {a mathematical formula}AF=〈A,→〉, {a mathematical formula}ES(AF)=GF(AF,A), where for any {a mathematical formula}AF=〈A,→〉 and for any set {a mathematical formula}C⊆A, the function {a mathematical formula}GF(AF,C)⊆2A is defined as follows:for any {a mathematical formula}E⊆A, {a mathematical formula}E∈GF(AF,C) if and only if
+     </paragraph>
+     <list>
+      <list-item label="•">
+       in case {a mathematical formula}|SCCSAF|=1, {a mathematical formula}E∈BFS(AF,C)
+      </list-item>
+      <list-item label="•">
+       otherwise, {a mathematical formula}∀S∈SCCSAF(E∩S)∈GF(AF↓UPAF(S,E),UAF(S,E)∩C)
+      </list-item>
+     </list>
+     <paragraph>
+      It is shown in [9] that the admissible, complete, grounded, preferred, and stable semantics are SCC-recursive.
+     </paragraph>
+     <paragraph>
+      It is worth remarking here that though the definitions of directionality and SCC-recursiveness have some basic structural similarity (in particular they both focus on properties of the intersections of the global extensions with specific parts of the framework) they reflect rather different intuitions. On the one hand, directionality can be essentially regarded as getting the same extensions when one obtains the same framework from different ones by suppressing some parts that are topologically uninfluential with respect to the remaining common one. On the other hand, SCC-recursiveness requires that all the intersections of a global extension with the different SCCs satisfy some (articulated) constraints, within the same framework.
+     </paragraph>
+     <paragraph>
+      To appreciate the difference, the following two points can be evidenced:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       directionality does not involve a notion of incremental construction of extensions, since it deals with what one finds out when one cancels (rather than adding) arguments, while SCC-recursiveness has an embedded notion of extension construction, starting from the initial SCCs and then following their partial order;
+      </list-item>
+      <list-item label="•">
+       SCC-recursiveness does not require uniform outcomes on equal restrictions of distinct frameworks, since the constraints of the SCC-recursive scheme need to be satisfied for the set of extensions of each framework individually. On the contrary, directionality requires a sort of regularity across globally different, but partially equal, frameworks.
+      </list-item>
+     </list>
+     <paragraph>
+      The differences pointed out above are made apparent by the fact that there are non-directional but SCC-recursive semantics, as well as directional but non-SCC-recursive semantics.
+     </paragraph>
+     <paragraph>
+      Stable semantics is SCC-recursive [9] but non-directional, as shown by the example in Fig. 1. Here, it is easy to see that {a mathematical formula}EST(AF1)={{β}}. When considering the unattacked set {a mathematical formula}U={α,β} we have that {a mathematical formula}EST(AF1↓U)={{α},{β}} but clearly this does not coincide with {a mathematical formula}AEST(AF1,U)={{β}}. Note, by the way, that, considering AF2, we have {a mathematical formula}AF1↓U=AF2↓U but in this case {a mathematical formula}EST(AF2)={{α,γ},{β}} and {a mathematical formula}EST(AF2↓U)=AEST(AF2,U). This kind of behavior does not affect the SCC-recursiveness of stable semantics, since, for instance, the only stable extension of {a mathematical formula}AF1 satisfies the requirements of Definition 8 and no other set is able to satisfy them for all the SCCs.
+     </paragraph>
+     <paragraph>
+      Ideal semantics is directional [8] but non-SCC-recursive (as to our knowledge, the latter fact has never been pointed out before in the literature), as shown by the example in Fig. 2, which requires a longer explanation. First it can be seen that {a mathematical formula}EPR(AF1)={{α,δ},{α,ε},{β,δ},{β,ε}}, while {a mathematical formula}EPR(AF2)={{ε}}. It follows that {a mathematical formula}ID(AF1)=∅ and {a mathematical formula}ID(AF2)={ε}. Observe now that {a mathematical formula}S⁎={δ,ε} is a strongly connected component in both frameworks and that, in both frameworks {a mathematical formula}ID(AF)∖S⁎=∅. According to Definition 8, for the ideal semantics to be SCC-recursive it must hold that {a mathematical formula}{ID(AF1)∩S⁎}={∅}=GF(AF1↓UPAF1(S⁎,ID(AF1)),UAF1(S⁎,ID(AF1))∩A) and {a mathematical formula}{ID(AF2)∩S⁎}={{ε}}=GF(AF2↓UPAF2(S⁎,ID(AF2)),UAF2(S⁎,ID(AF2))∩A).
+     </paragraph>
+     <paragraph>
+      Now we observe that:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}UPAF1(S⁎,ID(AF1))=UPAF2(S⁎,ID(AF2))=S⁎ (since the ideal extension has no elements outside {a mathematical formula}S⁎ in both frameworks);
+      </list-item>
+      <list-item label="•">
+       hence {a mathematical formula}AF1↓UPAF1(S⁎,ID(AF1))=AF2↓UPAF2(S⁎,ID(AF2))=〈{δ,ε},{(δ,ε),(ε,δ)}〉;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}UAF1(S⁎,ID(AF1))=UAF2(S⁎,ID(AF2))={ε} (since, in both frameworks, ε receives attacks within {a mathematical formula}S⁎ only, while δ receives an attack from γ which is not attacked in turn by the ideal extension).
+      </list-item>
+     </list>
+     <paragraph>
+      Now, noting that the parameters of the {a mathematical formula}GF function are the same in the two cases and that the restricted argumentation framework {a mathematical formula}AF⁎≡〈{δ,ε},{(δ,ε),(ε,δ)}〉 consists of a unique SCC, applying the first branch of Definition 8 it follows that{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      But this is clearly impossible since we know that{a mathematical formula} This shows that the ideal semantics is not SCC-recursive since the hypothetical base function of the ideal semantics should give two different outcomes with the same parameters. Not being SCC-recursive does not affect the directionality of ideal semantics, as directionality constrains the outcomes of the semantics on an unattacked set of arguments and has not to do with their “effects” on subsequent attacked parts. In fact, in both frameworks {a mathematical formula}ID(AF↓{α,β,γ})=ID(AF)∩{α,β,γ}=∅.
+     </paragraph>
+     <paragraph>
+      While in general, as just shown, SCC-recursiveness and directionality are independent properties, it has been shown in [8] and is recalled in Proposition 1 that for a semantics {a mathematical formula}S SCC-recursiveness implies directionality, provided that {a mathematical formula}S prescribes a nonempty set of extensions for any argumentation framework (this clearly does not hold for stable semantics, while it holds for all other semantics considered in this paper and for almost all the argumentation semantics considered in the literature).
+     </paragraph>
+     <paragraph label="Proposition 1">
+      Any SCC-recursive semantics{a mathematical formula}Ssuch that{a mathematical formula}∀AF=〈A,→〉∀C⊆ABFS(AF,C)≠∅, satisfies the directionality criterion.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      The division-based method and its relationship with directionality and SCC-recursiveness
+     </section-title>
+     <paragraph>
+      The division-based method presented in [1] deals with the dynamics of argumentation systems, i.e. it addresses contexts where an existing argumentation framework is modified by adding or deleting arguments and/or attacks. Briefly, to efficiently deal with a modification of an original framework {a mathematical formula}AF=〈A,→〉, the resulting framework {a mathematical formula}AF′=〈A′,→′〉 is partitioned into an affected and an unaffected subframework (denoted respectively as {a mathematical formula}AFa=〈Aa,→a〉 and {a mathematical formula}AFu=〈Au,→u〉). Existing outcomes of extension computation in the unaffected subframework can then be reused and only the affected subframework needs some recomputing.
+     </paragraph>
+     <paragraph>
+      The identification of the unaffected part corresponds to the property of directionality. In fact, the unaffected part consists of the arguments which are unreachable from the arguments or attacks that have been added or deleted, i.e. the set {a mathematical formula}Au is by definition an unattacked set. The process of partial recomputing of extensions is then formalized by introducing the notion of conditioned argumentation framework, the idea being that, after a modification, the unaffected subframework corresponds to the conditioning part while the affected part, which receives attacks from the unaffected one, is the conditioned framework.
+     </paragraph>
+     <paragraph label="Definition 9">
+      Given an argumentation framework {a mathematical formula}AF1=〈A1,→1〉, a conditioned argumentation framework with respect to AF1 is a tuple {a mathematical formula}CAF=(〈A2,→2〉,(C(A1),I(C(A1),A2))) in which
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}〈A2,→2〉 is an argumentation framework that is conditioned by {a mathematical formula}C(A1) in which {a mathematical formula}A2∩A1=∅;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}C(A1)⊆A1 is a nonempty set of arguments (called conditioning arguments) that have interactions with arguments in {a mathematical formula}A2, i.e., {a mathematical formula}∀α∈C(A1),∃β∈A2, such that {a mathematical formula}(α,β)∈I(C(A1),A2);
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}I(C(A1),A2)⊆C(A1)×A2 is the set of interactions from the arguments in {a mathematical formula}C(A1) to the arguments in {a mathematical formula}A2.
+      </list-item>
+     </list>
+     <paragraph>
+      The idea is that extension computation in AF2 depends on AF1 but not vice versa, hence one can use the extensions of AF1 as fixed conditions to determine the extensions of AF2. Formally, for a given semantics {a mathematical formula}S, given an extension {a mathematical formula}E1∈ES(AF1), an assigned {a mathematical formula}CAF is defined, denoted as {a mathematical formula}CAF[E1]=(〈A2,→2〉,(C(A1)[E1],I(C(A1),A2))) in which {a mathematical formula}C(A1)[E1] is a triple which partitions the elements of {a mathematical formula}C(A1) according to their status with respect to the extension {a mathematical formula}E1: {a mathematical formula}C(A1)[E1]≜(C(A1)∩E1,C(A1)∩E1+,C(A1)∖(E1∪E1+)).
+     </paragraph>
+     <paragraph>
+      Traditional Dung's semantics notions can be extended to conditioned frameworks in a relatively straightforward way according to the following definitions [1].
+     </paragraph>
+     <paragraph label="Definition 10">
+      Let {a mathematical formula}CAF[E1]=(〈A2,→2〉,(C(A1)[E1],I(C(A1),A2))) be an assigned {a mathematical formula}CAF with respect to {a mathematical formula}AF1=〈A1,→1〉, in which {a mathematical formula}E1∈ES(AF1), {a mathematical formula}S∈{CO,PR,GR,ID}
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A set {a mathematical formula}B⊆A2 is conflict-free if and only if {a mathematical formula}∄α,β∈B, such that {a mathematical formula}(α,β)∈→2.
+      </list-item>
+      <list-item label="•">
+       An argument {a mathematical formula}α∈A2 is acceptable with respect to a set {a mathematical formula}B⊆A2 under the condition {a mathematical formula}C(A1)[E1] if and only if the following two conditions hold:
+      </list-item>
+      <list-item label="•">
+       the function {a mathematical formula}FCAF[E1]=2A2→2A2 which, given a set {a mathematical formula}S⊆A2 returns the set of the acceptable arguments with respect to S under the condition {a mathematical formula}C(A1)[E1], is called the characteristic function of {a mathematical formula}CAF[E1];
+      </list-item>
+      <list-item label="•">
+       A conflict-free set {a mathematical formula}B⊆A2 is admissible if and only if each argument in B is acceptable with respect to B under the condition {a mathematical formula}C(A1)[E1].
+      </list-item>
+     </list>
+     <paragraph label="Definition 11">
+      Let {a mathematical formula}CAF[E1]=(〈A2,→2〉,(C(A1)[E1],I(C(A1),A2))) be an assigned {a mathematical formula}CAF with respect to {a mathematical formula}AF1=〈A1,→1〉, in which {a mathematical formula}E1∈ES(AF1), {a mathematical formula}S∈{CO,PR,GR,ID}. Let {a mathematical formula}B⊆A2 be a set of arguments.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       B is a complete extension if and only if B is admissible and each argument that is acceptable with respect to B under the condition {a mathematical formula}C(A1)[E1] is in B.
+      </list-item>
+      <list-item label="•">
+       B is a grounded extension if and only if B is the minimal (with respect to set-inclusion) complete extension.
+      </list-item>
+      <list-item label="•">
+       B is a preferred extension if and only if B is a maximal (with respect to set-inclusion) admissible set of arguments.
+      </list-item>
+      <list-item label="•">
+       B is ideal if and only if B is admissible and it is contained in every preferred extension. The ideal extension is the maximal (with respect to set-inclusion) ideal set.
+      </list-item>
+     </list>
+     <paragraph>
+      For a given semantics {a mathematical formula}S, the incremental computation presented in [1] considers each “traditional” extension {a mathematical formula}E1 of the unaffected subframework, which gives rise to an assigned {a mathematical formula}CAF on which the “conditioned” extensions prescribed by {a mathematical formula}S can be computed according to Definition 11. Combining {a mathematical formula}E1 with a conditioned extension gives rise to a global extension of the modified framework according to {a mathematical formula}S. The combination process envisaged is synthesized by the following definition.{sup:1}
+     </paragraph>
+     <paragraph label="Definition 12">
+      Let {a mathematical formula}AFu=〈Au,→u〉 be the unaffected subframework induced by a modification of {a mathematical formula}AF=〈A,→〉 resulting in a modified framework {a mathematical formula}AF′=〈A′,→′〉. With {a mathematical formula}E1∈ES(AFu) an extension of {a mathematical formula}AFu with respect to a semantics {a mathematical formula}S, let {a mathematical formula}CAF[E1] be the relevant assigned conditioned subframework, i.e. {a mathematical formula}CAF[E1]≜(〈Aa,→a〉,(C(Au)[E1],I(C(Au),Aa))) with {a mathematical formula}I(C(Au),Aa)=→′∩(Au×Aa). The set of resulting combined extensions of {a mathematical formula}AF′ is defined as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Then, the idea presented in [1] is that, for suitable semantics {a mathematical formula}S, it holds that{a mathematical formula} i.e. that the global extensions of the framework {a mathematical formula}AF′ coincide with the combinations of Definition 12.
+     </paragraph>
+     <paragraph>
+      In fact, [1] states that “the division-method is based on the notion of directionality of argumentation semantics” and considers as suitable the semantics satisfying this property. In particular, [1] considers the application of the division-based method to complete, grounded, preferred and ideal semantics (all of them satisfying directionality), while leaving apart stable semantics (which is SCC-recursive but not directional).
+     </paragraph>
+     <paragraph>
+      A deeper analysis shows, however, that the notion of directionality corresponds only to a step of the division-based method, while the intuition underlying the second step is, indeed, close to the property of SCC-recursiveness. In fact, the division-based method involves two distinct steps:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       first, the set {a mathematical formula}ES(AFu) is derived from the set of extensions of the original framework AF;
+      </list-item>
+      <list-item label="2.">
+       second, the set {a mathematical formula}ES(AFu) is used to determine the extensions of the modified framework {a mathematical formula}AF′ according to (2).
+      </list-item>
+     </list>
+     <paragraph>
+      The first step relies on the property of directionality of a semantics {a mathematical formula}S which ensures that, after the modification, “nothing changes” in the unaffected part (i.e. that {a mathematical formula}ES(AFu) can be computed by restricting {a mathematical formula}ES(AF) to {a mathematical formula}Au).
+     </paragraph>
+     <paragraph>
+      As to the second step, we observe that directionality does not include any hint on the role played by the “partial extensions” of the unaffected part in determining the global extensions of the modified framework. It only guarantees that any extension of the unaffected part can be extended to at least one global extension, or, in other words, that no partial extension gets lost when considering the combination with the extensions of the conditioned framework. This does not imply, though, that the information embedded in the partial extensions is sufficient for the construction of the global extensions.
+     </paragraph>
+     <paragraph>
+      On the other hand, the second step is strictly related to the property of SCC-recursiveness. First note that, after a modification, the unaffected part consists, by construction, of a set of SCCs preceding, in the partial order induced by the attack relation, the SCCs forming the affected part. SCC-recursiveness specifies in its definition how partial extensions in the preceding (according to the partial order induced by the attack relation) SCCs affect the subsequent ones, partly in a semantics-independent way (through the notions of {a mathematical formula}GF, {a mathematical formula}UAF(S,E), {a mathematical formula}UPAF(S,E)) and partly in a semantics-specific way (through the base function {a mathematical formula}BFS). This corresponds to the combination defined in (2), which on the other hand does not require {a mathematical formula}S to be directional, since it may well be the case that for an extension {a mathematical formula}E1∈ES(AFu) (and possibly all extensions) there is no {a mathematical formula}E2∈ES(CAF[E1]). To put it in other words, SCC-recursiveness ensures that the extensions of the unaffected part contain all the information necessary to determine the global extensions, but, differently from the case of directionality, it may happen that some partial extensions cannot be extended to global extensions.
+     </paragraph>
+     <paragraph>
+      These considerations suggest that for the division-based method to be applicable a semantics needs to be both directional and SCC-recursive: this is the case of admissible, grounded, complete, and preferred semantics. On the other hand, if a semantics satisfies only one of these properties the division-based method lacks one of its bases. In fact, stable semantics, which is not directional, is not considered for the application of the division-based method in [1]. On the other hand, ideal semantics (which is not SCC-recursive) is considered in [1] but, as we will show later, one of the relevant proofs is flawed and the division-based method turns out not to be applicable either.
+     </paragraph>
+     <paragraph>
+      This does not imply, however, that the goal of devising an incremental computation procedure for these semantics is unfeasible: for stable semantics, thanks to SCC-recursiveness, we can still rely on equality (3), while for ideal semantics, thanks to directionality, we can rely on equality (1). To “fill the gap” and obtain an incremental procedure for stable and ideal semantics we can then exploit their strong relationships with preferred semantics (which is both directional and SCC-recursive): this is done in the following sections.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Incremental computation of stable semantics
+     </section-title>
+     <paragraph>
+      In this section we propose a novel approach for the incremental computation of stable extensions of a modified framework {a mathematical formula}AF′, under the assumption that the preferred extensions of the original framework AF are available.
+     </paragraph>
+     <paragraph>
+      As a first step, we prove in Proposition 2 that equality (3) holds for stable semantics. To this purpose we need first to introduce the notion of stable extension of a conditioned framework in a natural way.
+     </paragraph>
+     <paragraph label="Definition 13">
+      Let {a mathematical formula}CAF[E1]=(〈A2,→2〉,(C(A1)[E1],I(C(A1),A2))) be an assigned {a mathematical formula}CAF with respect to {a mathematical formula}AF1=〈A1,→1〉, in which {a mathematical formula}E1∈EST(AF1), and let {a mathematical formula}B⊆A2 be a set of arguments. B is a stable extension (of the assigned {a mathematical formula}CAF) if and only if the following three conditions hold:
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       B is conflict-free;
+      </list-item>
+      <list-item label="(ii)">
+       {a mathematical formula}∄ξ∈C(A1), {a mathematical formula}β∈B, such that {a mathematical formula}ξ∈E1 and {a mathematical formula}(ξ,β)∈I(C(A1),A2);
+      </list-item>
+      <list-item label="(iii)">
+       for each argument {a mathematical formula}α∈(A2∖B),∃γ∈B, such that {a mathematical formula}(γ,β)∈→2 or {a mathematical formula}∃ξ∈C(A1), such that {a mathematical formula}ξ∈E1 and {a mathematical formula}(ξ,α)∈I(C(A1),A2).
+      </list-item>
+     </list>
+     <paragraph label="Proposition 2">
+      For any modified framework{a mathematical formula}AF′=〈A′,→′〉it holds that{a mathematical formula}CEST(AF′)=EST(AF′).
+     </paragraph>
+     <paragraph label="Proof">
+      According to Definition 12 we have to show that {a mathematical formula}{E1∪E2|E1∈EST(AFu)∧E2∈EST(CAF[E1])}=EST(AF′). Consider first a generic combination {a mathematical formula}(E1∪E2)∈CEST(AF′) and let us see that it is a stable extension of {a mathematical formula}AF′. From Definition 4, Definition 13, and the fact that {a mathematical formula}Au is an unattacked set, it is immediate to see that {a mathematical formula}(E1∪E2) is conflict free in {a mathematical formula}AF′. Considering now a generic argument {a mathematical formula}α∈(A′∖(E1∪E2)) we have that if {a mathematical formula}α∈Au then α is attacked by {a mathematical formula}E1 since {a mathematical formula}E1∈EST(AFu), otherwise {a mathematical formula}α∈Aa and then α is attacked by either {a mathematical formula}E2 or {a mathematical formula}E1 according to Definition 13. It follows that any such α is attacked by {a mathematical formula}(E1∪E2) in {a mathematical formula}AF′ and hence {a mathematical formula}(E1∪E2)∈EST(AF′), i.e. {a mathematical formula}CEST(AF′)⊆EST(AF′).Considering now a generic stable extension {a mathematical formula}S∈EST(AF′), we have to show that {a mathematical formula}(S∩Au)∈EST(AFu) and that {a mathematical formula}(S∩Aa)∈EST(CAF[S∩Au]).As to the first point, since S is conflict-free in {a mathematical formula}AF′, obviously {a mathematical formula}(S∩Au) is conflict-free in {a mathematical formula}AFu. Moreover, for any {a mathematical formula}α∈(Au∖S) we know that α is attacked by S in {a mathematical formula}AF′. By construction, arguments of {a mathematical formula}Au do not receive attacks from outside {a mathematical formula}Au in {a mathematical formula}AF′. It follows that α is attacked by {a mathematical formula}(S∩Au) and {a mathematical formula}(S∩Au)∈EST(AFu).As to the second point, since S is conflict-free in {a mathematical formula}AF′ it is again immediate to see that {a mathematical formula}(S∩Aa) is conflict-free and that it cannot receive attacks from {a mathematical formula}(S∩Au) (conditions (i) and (ii) of Definition 13). As to condition (iii) of Definition 13, for any argument {a mathematical formula}α∈(Aa∖S) we know that it is attacked by S in {a mathematical formula}AF′. It follows that either it is attacked by {a mathematical formula}(S∩Aa) or by an argument {a mathematical formula}ξ∈(S∩Au). In the latter case, clearly {a mathematical formula}ξ∈C(Au) and {a mathematical formula}(ξ,α)∈I(C(Au),Aa). Hence {a mathematical formula}(S∩Aa)∈EST(CAF[S∩Au]).Summing up, {a mathematical formula}S∈CEST(AF′), hence {a mathematical formula}CEST(AF′)⊇EST(AF′), which concludes the proof.  □
+     </paragraph>
+     <paragraph>
+      As already observed, this result is not sufficient to apply the division-based method to stable semantics since, due to its lack of directionality, the “unaffected” part is not actually unaffected in this case. In other words, from previous knowledge of the stable extensions of the original framework one cannot derive the stable extensions of the “unaffected” part. For instance, referring again to Fig. 1, if the self-attack involving γ is removed from AF1 then the framework AF2 is obtained. In this case, the unaffected framework is {a mathematical formula}AF1↓{α,β}=AF2↓{α,β}. Note that, in the first step of the division-based method, considering the intersection between the stable extensions of AF1 and {a mathematical formula}{α,β} yields {a mathematical formula}AEST(AF1,{α,β})={{β}}, i.e. we loose the partial extension {a mathematical formula}{α} which is needed in the second step to obtain {a mathematical formula}EST(AF2) by means of Eq. (2).
+     </paragraph>
+     <paragraph>
+      If one, however, assumes previous knowledge of the preferred extensions of the original framework, stable extensions of the “unaffected” part can easily be recovered and incremental computation profitably applied to stable semantics too. This is due to the following well-known facts:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       stable extensions are a subset of preferred extensions, namely, for any argumentation framework AF, {a mathematical formula}EST(AF)⊆EPR(AF);
+      </list-item>
+      <list-item label="•">
+       checking whether a given set is a stable extension is a standard polynomial-time procedure.
+      </list-item>
+     </list>
+     <paragraph>
+      Hence, assuming that for the original framework AF the set {a mathematical formula}EPR(AF) is known, thanks to directionality of preferred semantics we can derive simply by restriction to {a mathematical formula}AFu the set {a mathematical formula}EPR(AFu), i.e. {a mathematical formula}EPR(AFu)=AEPR(AF,Au). For each element {a mathematical formula}S∈EPR(AFu) we can then check in polynomial time whether {a mathematical formula}S∈EST(AFu) and this enumeration gives us the whole (possibly empty) set {a mathematical formula}EST(AFu). This set can then be used for application of the combination stated by Eq. (3), as in the “basic” division-based method. Turning to the example above, we get {a mathematical formula}AEPR(AF1,{α,β})={{α},{β}}=EST(AF1↓{α,β}), which can be used in equation (3) to obtain {a mathematical formula}EST(AF2)={{α,γ},{β}}.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Adjusting incremental computation of ideal semantics
+     </section-title>
+     <paragraph>
+      We first correct the claim of [1] concerning the applicability of the division-based method to ideal semantics by showing that the equality (3) does not hold for this semantics. As already discussed, this can be related to its lack of SCC-recursiveness and, in fact, is shown again by the example of Fig. 2. Let us assume that a modification of an argumentation framework AF leads to {a mathematical formula}AF′=AF1, with {a mathematical formula}AFu=AF1↓{α,β,γ}. Then, {a mathematical formula}ID(AFu)=∅. Consider now the conditioned argumentation framework {a mathematical formula}CAF=(AF1↓{δ,ε},({γ},{(γ,δ)})) and the relevant assigned framework {a mathematical formula}CAF[∅] with respect to {a mathematical formula}ID(AFu). We see that {a mathematical formula}{ε} is the only nonempty admissible set, and hence also the only preferred extension and ideal extension of {a mathematical formula}CAF[∅]. It follows that {a mathematical formula}CEID(AF′)={{ε}}. However {a mathematical formula}EID(AF′)={∅}≠CEID(AF′), which contradicts (3).
+     </paragraph>
+     <paragraph>
+      From a technical point of view, the problem lies in the section of the proof of Theorem 4 of [1] concerning ideal semantics and, more precisely, in its second item, referring to {a mathematical formula}E1,E2 in equality (2) and quoted in the following: “Second, {a mathematical formula}∀E1′∈EPR(〈Au,→u〉), {a mathematical formula}∀E2′∈EPR(CAF[E1′]), according to the proof in the case of preferred semantics, it holds that {a mathematical formula}E1′∪E2′ is a preferred extension of {a mathematical formula}AF′. Since both {a mathematical formula}E1 and {a mathematical formula}E2 are contained in every preferred set of arguments, we have {a mathematical formula}E1⊆E1′ and {a mathematical formula}E2⊆E2′, respectively. Therefore, {a mathematical formula}E1∪E2⊆E1′∪E2′. In other words, {a mathematical formula}E1∪E2 is contained in every preferred set of arguments {a mathematical formula}E1′∪E2′∈EPR(AF′).” As we have just seen, the final claim is not true: letting {a mathematical formula}E1=∅ and {a mathematical formula}E2={ε} in the example above, we have that {a mathematical formula}E1∪E2={ε} is not included in every preferred extension of {a mathematical formula}AF′. The flaw of the proof lies in the fact that, when evaluating the ideal extension of {a mathematical formula}CAF, one has to refer to the ideal extension of the unaffected part rather than to its preferred extensions. More precisely, in the expression {a mathematical formula}∀E2′∈EPR(CAF[E1′]) the proof uncorrectly considers a generic {a mathematical formula}E1′∈EPR(AFu) while it is the case that {a mathematical formula}E1′=E1∈EID(AFu), which no more guarantees the subsequent steps of the proof.
+     </paragraph>
+     <paragraph>
+      Having thus corrected the imprecise claim of [1], we observe that, nevertheless, the computation of the ideal extension may benefit of the incremental approach envisaged by the division-based method. In fact, the directionality property of ideal semantics guarantees anyway that the global ideal extension can be obtained by adding arguments to the ideal extension of the unaffected part, though this addition cannot follow the division-based method of [1] nor the SCC-recursive scheme. We observe however that the arguments to be added belong to the intersection of the preferred extensions and require an admissibility check: the computation of both those aspects may benefit from the fact that both admissible and preferred semantics are SCC-recursive. This is formally proved in Proposition 3.
+     </paragraph>
+     <paragraph label="Proposition 3">
+      Let{a mathematical formula}AFu=〈Au,→u〉be the unaffected subframework induced by a modification of{a mathematical formula}AF=〈A,→〉resulting in a modified framework{a mathematical formula}AF′=〈A′,→′〉.{a mathematical formula}where{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Letting {a mathematical formula}I′=ID(AFu)∪max⊆{E∈EAD(CAF[ID(AFu)])|∀P∈P⁎E⊆P}, we have to show that {a mathematical formula}I′ is the maximal admissible set included in all the preferred extensions of {a mathematical formula}AF′. The fact that {a mathematical formula}∀P′∈EPR(AF′)I′⊆P′ follows from the fact that for preferred semantics the equality (3) holds and from the definition of ideal extension. In fact, given a generic {a mathematical formula}P′∈EPR(AF′) we have that {a mathematical formula}(P′∩Au)∈EPR(AFu). Then, {a mathematical formula}(I′∩Au)=ID(AFu)⊆(P′∩Au). Moreover, {a mathematical formula}(P′∩(A∖Au))∈EPR(CAF[P′∩Au])⊆P⁎. Hence, by (4), {a mathematical formula}(I′∩(A∖Au))=max⊆{E∈EAD(CAF[ID(AFu)])|∀P∈P⁎E⊆P}⊆(P′∩(A∖Au)).Admissibility of {a mathematical formula}I′ follows from the fact that it is the union of {a mathematical formula}ID(AFu), which is an admissible set of {a mathematical formula}AFu, and of an admissible set of {a mathematical formula}CAF[ID(AFu)] and from the fact that the equality (3) holds for admissible semantics, as proved in [1] (as part of the proof concerning complete semantics).By the above properties and the definition of ideal extension, it follows that {a mathematical formula}I′⊆ID(AF′). Suppose now by contradiction that {a mathematical formula}I′≠ID(AF′), i.e. {a mathematical formula}I′⊊ID(AF′). Since the directionality of the ideal semantics ensures that {a mathematical formula}ID(AF′)∩Au=ID(AFu)=I′∩Au, it follows that {a mathematical formula}I′∖Au⊊ID(AF′)∖Au. Using again the fact that the equality (3) holds for admissible semantics, we have that {a mathematical formula}ID(AF′)∖Au∈EAD(CAF[ID(AFu)]). Taking again into account that (3) holds for preferred semantics and that the ideal extension is included in all the preferred extensions, we have that {a mathematical formula}∀P∈P⁎, {a mathematical formula}(ID(AF′)∖Au)⊆P and this contradicts the fact that {a mathematical formula}I′∖Au is, by definition, the maximal set in {a mathematical formula}EAD(CAF[ID(AFu)]) with such property.  □
+     </paragraph>
+     <paragraph>
+      On the basis of Proposition 3, we present in Algorithm 1 a procedure for the incremental computation of the ideal extension of a modified framework {a mathematical formula}AF′ given the ideal extension {a mathematical formula}ID(AFu) and the preferred extensions {a mathematical formula}EPR(AFu) of the unaffected framework. As already mentioned, it is assumed that the extensions of the original framework AF had been computed previously: obtaining {a mathematical formula}ID(AFu) and {a mathematical formula}EPR(AFu) from them is immediate, given the directionality property of both {a mathematical formula}ID and {a mathematical formula}PR.
+     </paragraph>
+     <paragraph>
+      The algorithm can be explained as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       lines 1–6: the whole set of the “locally preferred” extensions of {a mathematical formula}CAF, conditioned to the various elements of {a mathematical formula}EPR(AFu), is enumerated according to the division-based method and their intersection is stored in {a mathematical formula}ILP. Note that {a mathematical formula}ID(AF′)∖ID(AFu)⊆ILP.
+      </list-item>
+      <list-item label="•">
+       lines 7–8: the assigned framework with respect to {a mathematical formula}ID(AFu) is computed and stored in {a mathematical formula}CAF⁎ and the variable {a mathematical formula}ILP⁎ is initialized to {a mathematical formula}ILP.
+      </list-item>
+      <list-item label="•">
+       lines 9–12: the while loop iteratively reduces the set {a mathematical formula}ILP⁎. The idea, borrowed{sup:2} from Algorithm 2 of [6] and adapted here to the case of incremental computation, is as follows. In the first iteration, it is checked whether {a mathematical formula}ILP⁎ (at this moment coinciding with {a mathematical formula}ILP) is admissible,{sup:3} i.e. whether it coincides with {a mathematical formula}FCAF⁎(ILP⁎)∩ILP⁎. In this case, it follows that {a mathematical formula}ID(AFu)∪ILP is admissible (and maximal) in {a mathematical formula}AF′ and hence it is returned as its ideal extension at line 12, skipping the body of the while loop. Otherwise, the body of the while loop is executed and those arguments which are not defended by {a mathematical formula}ILP⁎ in {a mathematical formula}CAF⁎ are removed from {a mathematical formula}ILP⁎. Then the admissibility check is repeated and, if it is satisfied, the loop is exited and {a mathematical formula}ID(AFu)∪ILP⁎ is returned. The correctness of the produced result is proved in Proposition 4.
+      </list-item>
+     </list>
+     <paragraph label="Proposition 4">
+      Algorithm 1returns{a mathematical formula}ID(AF′).
+     </paragraph>
+     <paragraph label="Proof">
+      First, note that termination of Algorithm 1 is guaranteed. In particular, the while loop terminates in at most {a mathematical formula}|ILP| iterations. In fact at each iteration of its body it removes at least one argument from {a mathematical formula}ILP⁎ and clearly the empty set satisfies the termination condition.Letting {a mathematical formula}ID⁎≜ID(AFu)∪ILP⁎ we have now to prove that, at line 12, {a mathematical formula}ID⁎=ID(AF′). Letting {a mathematical formula}E′≜{E∈EAD(CAF[ID(AFu)])|∀P∈P⁎E⊆P}, according to Proposition 3, this amounts to show that {a mathematical formula}ILP⁎=max⊆E′.As to the fact that {a mathematical formula}ILP⁎∈E′, first note that {a mathematical formula}ILP⁎∈EAD(CAF[ID(AFu)]) follows from the fact that in the final iteration of the while loop it holds that {a mathematical formula}ILP⁎=FCAF⁎(ILP⁎)∩ILP⁎, where {a mathematical formula}CAF⁎=CAF[ID(AFu)] (line 8 of Algorithm 1). Then, the fact that {a mathematical formula}∀P∈P⁎ it holds that {a mathematical formula}ILP⁎⊆P, follows from {a mathematical formula}ILP⁎⊆ILP=⋂P∈P⁎P.The maximality of {a mathematical formula}ILP⁎ in {a mathematical formula}E′ remains now to be proved. First note that, in the light of Proposition 3 and of the uniqueness of the ideal extension, {a mathematical formula}ID′≜ID(AF′)∖Au is the unique maximal element of {a mathematical formula}E′, thus {a mathematical formula}∀E∈E′ it must be the case that {a mathematical formula}E⊆ID′. Suppose now by contradiction that {a mathematical formula}ILP⁎⊊ID′, namely that {a mathematical formula}∃α∈(ID′∖ILP⁎). Now, in virtue of Proposition 3, {a mathematical formula}∀β∈ID′ it holds that {a mathematical formula}β∈ILP, i.e. {a mathematical formula}ID′⊆ILP holds after the nested for loops. Hence {a mathematical formula}ID′⊆ILP⁎=ILP holds at line 8 of Algorithm 1 as well as when the first check on the condition of the while loop at line 9 is carried out. So {a mathematical formula}α∈ILP⁎ before the execution of the while loop, while, according to the absurd hypothesis, {a mathematical formula}α∉ILP⁎ after its execution. It follows that in some iteration of the while loop {a mathematical formula}α∉FCAF⁎(ILP⁎)∩ILP⁎, but this is impossible. In fact, from Proposition 3{a mathematical formula}ID′ is admissible in {a mathematical formula}CAF⁎, i.e. {a mathematical formula}ID′⊆FCAF⁎(ID′). Given the monotonicity of the characteristic function and the fact that {a mathematical formula}ID′⊆ILP⁎ before the execution of the while loop, it follows that at any iteration of the loop {a mathematical formula}ID′⊆FCAF⁎(ILP⁎)∩ILP⁎, which implies in particular {a mathematical formula}α∈FCAF⁎(ILP⁎)∩ILP⁎ and yields the desired contradiction.  □
+     </paragraph>
+     <paragraph>
+      We will now illustrate the operation of Algorithm 1 on the frameworks AF1 and {a mathematical formula}AF2 shown in Fig. 2. In both cases we assume that the attack {a mathematical formula}(γ,δ) has been added to a previous existing framework, so that the unaffected part consists of the arguments α, β, and γ and the affected part of the arguments δ and ε.
+     </paragraph>
+     <paragraph>
+      Considering AF1, it is therefore assumed that {a mathematical formula}EPR(AF1↓{α,β,γ})={{α},{β}}, and {a mathematical formula}ID(AF1↓{α,β,γ})=∅ are known a priori. At line 1, {a mathematical formula}ILP={δ,ε}. The nested for loops of lines 2–6 compute the conditioned preferred extensions and their intersection. For both {a mathematical formula}E1={α} and {a mathematical formula}E1={β} we have {a mathematical formula}EPR(CAF[E1])={{δ},{ε}}. Since their intersection is empty, {a mathematical formula}ILP=∅ and then also {a mathematical formula}ILP⁎=∅ at line 8. As a consequence {a mathematical formula}FCAF⁎(∅)∩∅=∅=ILP⁎ at the first check at line 9 and the algorithm terminates returning {a mathematical formula}∅∪∅=∅ as required.
+     </paragraph>
+     <paragraph>
+      Turning to AF2, it is assumed that {a mathematical formula}EPR(AF2↓{α,β,γ})={∅}, and {a mathematical formula}ID(AF1↓{α,β,γ})=∅ are known a priori, and, again, at line 1, {a mathematical formula}ILP={δ,ε}. For {a mathematical formula}E1=∅ we have {a mathematical formula}EPR(CAF[E1])={{ε}}. Then, {a mathematical formula}ILP={ε} and also {a mathematical formula}ILP⁎={ε} at line 8. As a consequence {a mathematical formula}FCAF⁎({ε})∩{ε}={ε}=ILP⁎ at the first check at line 9 and the algorithm terminates returning {a mathematical formula}∅∪{ε}={ε} as required.
+     </paragraph>
+     <paragraph>
+      To give another simple example where the body of the while loop is executed, consider the case where ε is deleted from AF1, which implies that the unaffected part consists of the arguments α, β, and γ, and the affected part of the argument δ. As above, it is assumed that {a mathematical formula}EPR(AF1↓{α,β,γ})={{α},{β}}, and {a mathematical formula}ID(AF1↓{α,β,γ})=∅ are known a priori. Then in line 1, {a mathematical formula}ILP={δ}. For both {a mathematical formula}E1={α} and {a mathematical formula}E1={β} we have {a mathematical formula}EPR(CAF[E1])={{δ}}, hence after the execution of the nested for loops of lines 2–6 we have, {a mathematical formula}ILP={δ} and then also {a mathematical formula}ILP⁎={δ} at line 8. Now {a mathematical formula}FCAF⁎({δ})∩{δ}=∅≠ILP⁎ at the first check at line 9 (since δ does not defend itself and is not defended by {a mathematical formula}ID(AF1↓{α,β,γ})=∅). Therefore the body of the while loop is executed assigning {a mathematical formula}ILP⁎=∅. Then the check is repeated and since {a mathematical formula}FCAF⁎(∅)∩∅=∅=ILP⁎, the algorithm terminates returning {a mathematical formula}∅∪∅=∅ as required.
+     </paragraph>
+     <paragraph>
+      As a final remark, we recall that computing the ideal extension is known to be {a mathematical formula}FP||NP-complete{sup:4}[10], [11]. Of course Algorithm 1 reflects this intractability: in fact it involves the enumeration of preferred extensions, which is an intractable problem by itself (in fact, harder than computing the ideal extension in the worst case). In this respect, it is worth remarking that the algorithm for constructing the ideal extension (and establishing the relevant complexity bound) provided in [11] does not require the enumeration of preferred extensions as it exploits a clever partition of arguments, based on their credulous acceptance according to admissible semantics, and a subsequent construction of a bipartite framework at a global level. Investigating whether these ideas can be exploited in a dynamic setting too is beyond the scope of this research note and represents an interesting question for future work. Here we can only remark that though Algorithm 1 (like any procedure inspired to the division-based method) cannot provide improvements with respect to worst case situations and does not include some of the advanced algorithmic solutions available in the literature for “static” global computation, it can anyway significantly increase efficiency in a dynamic argumentation context, by restricting the actual computation required to the, possibly small, portion of a framework affected by the modifications introduced.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Discussion and related works
+     </section-title>
+     <paragraph>
+      The issue of incremental computation in abstract argumentation (with or without explicit connections to argumentation dynamics) is receiving increasing attention in recent years. While a comprehensive discussion of the literature dealing with the various aspects of this matter would be beyond the scope of this focused research note, we discuss in this section some closely related works.
+     </paragraph>
+     <paragraph>
+      The work on splitting argumentation frameworks [12] shares with [1] the goal of avoiding the recomputation of extensions from scratch in a dynamic context. Differently from [1], which considers also deletions, in [12] only modifications (called expansions) involving additions of arguments or attacks are encompassed. Like in [1], the results in [12] are mainly based on the directionality property: considering a subclass of expansions called weak expansions (where the newly added arguments cannot attack the old ones), a splitting divides an argumentation framework into two subframeworks, such that only one of them receives attacks from the other. These directly correspond to the unaffected and affected subframework of [1] and some relevant monotonicity properties concerning extensions of semantics satisfying directionality had been previously pointed out in [13]. In [12] the effect of the unaffected subframework on the affected one is modeled in a different (but technically equivalent) way with respect to [1]: no notion of conditioning is introduced, but rather the affected framework is manipulated by deleting arguments or adding self-attacks to represent the effect of attackers from the unaffected subframework. Then, the splitting theorem (Theorem 2 of [12]) proves for stable, admissible, preferred, complete and grounded semantics, that combining extensions of the unaffected framework and of (the properly manipulated version of) the affected framework one gets global extensions and that every global extension gives rise to a local extension of the unaffected framework and (accordingly) to a local extension of (the properly manipulated version of) the affected framework. These results are basically similar to the ones in [1] as far as admissible, preferred, complete and grounded semantics are concerned, while the treatment of the (non-directional) stable semantics is specific of [12] and can be put in relationship with the approach to incremental computation of stable extensions proposed in Section 5 of the present paper. In fact, our Proposition 2 is the counterpart (in a different technical setting, as mentioned above) of the section concerning stable semantics in Theorem 2 of [12]. As such, it is not sufficient for incremental computation since, to this purpose, it is required that the considered semantics is directional (see the discussion in Section 5). In fact in Section 5.1 of [12], an example is provided for preferred, complete and grounded semantics, while stable is omitted. So the method for incremental computation of stable extensions proposed in the second part of Section 5 of the present paper has no counterpart in [12].
+     </paragraph>
+     <paragraph>
+      The splitting approach has also been applied in a static context as an incremental computation method able to improve performances with respect to monolithic algorithms [14]. In this work, different splittings of a given framework (all based on its SCC decomposition) are considered and an empirical evaluation is presented, showing that the splitting approach is able to ensure significant performance gains for preferred and stable semantics. The fact that also incremental computation of stable semantics is encompassed in this context is due to a basic difference between incremental computation in a static vs a dynamic context. In a static context, both the unaffected and affected subframeworks (and the relevant computation results) refer to the same “version” of the framework, while in dynamic context the unaffected subframework and the relevant computation results refer to a previous version of the framework (where, possibly, a different affected part was present) and have to be reused in a new version, to which the current affected subframework refers to. For semantics which are not directional, like stable semantics, the difference between the current affected subframework and the one in the previous version may affect the extensions of the unaffected subframework and prevent their reuse (in particular, local stable extensions not existing in the previous version may need to be considered). This gives rise to the need to resort to preferred extensions in the method proposed in Section 5, which refers to a dynamic context. Clearly, in a static context there is no matter of different versions nor of reuse: the extensions are in fact entirely computed from scratch and the notion of splitting is exploited inside the algorithm, which is structured in two steps. In particular, in the first step, one can directly compute the stable extensions of the unaffected subframework, as in this case the lack of directionality only implies that some of these local stable extensions may not be part of some global stable extensions, but (differently from the dynamic case) it cannot happen that some local (and hence global) stable extensions are overlooked.
+     </paragraph>
+     <paragraph>
+      Leaving apart the need to remark these technical differences, the empirical results in [14] are in fact encouraging as far as the practical advantages of incremental methods in abstract argumentation are concerned. Similarly encouraging results for the division-based method have been presented in [15].
+     </paragraph>
+     <paragraph>
+      It has also to be mentioned that, while both the division-based method and the splitting approach require that one of the subframeworks does not receive attacks from the other one, there is some recent interest in lifting this restriction and investigating semantics properties involving arbitrary partitions of a framework. Steps in this direction, which is beyond the scope of this research note, are represented by the notion of quasi-splitting in [16] and of Input/Output argumentation framework in [17].
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

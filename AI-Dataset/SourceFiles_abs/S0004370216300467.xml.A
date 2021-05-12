@@ -1,0 +1,890 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Querying incomplete information in RDF with SPARQL.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Incomplete information has been studied in-depth in relational databases [41], [30], [29] and knowledge representation [79], [15]. It is also an important issue in Semantic Web frameworks such as RDF, description logics, and OWL 2 especially given that all these systems rely on the Open World Assumption (OWA). Making the OWA means that we cannot capture negative information implicitly, i.e., if a formula ϕ is not entailed by our knowledge base, then we cannot assume its negation as in the Closed World Assumption (CWA). Application knowledge captured by databases and knowledge bases is often incomplete, thus the OWA is a useful assumption to make. In general, the richer an application domain is, the more possible it is that a framework based on incomplete information will be required. For example, medical and biological information systems, geographical information systems, planning and scheduling systems, as well as design systems are just a few examples of systems operating in application domains with very rich semantics that require modeling of incomplete information.
+     </paragraph>
+     <paragraph>
+      Incomplete information can also arise even if we start from complete databases, e.g., in relational view updates [1], data integration [51], or data exchange [26], [53], [7]. Incomplete information is also very important since it can serve as a means for representing all repairs of a possibly inconsistent database [8], [18], [23]. Thus, the detailed study of incomplete information has been a recurring theme in the literature throughout the years.
+     </paragraph>
+     <paragraph>
+      In the context of the Web, incomplete information has recently been studied in detail for XML [4], [12], [20]. As Semantic Web technologies achieve maturity and gain acceptance in a wide variety of application domains through the creation of ontologies and linked data pools, we expect the study of issues related to incomplete information to gain more attention in the Semantic Web community as well. There have been some recent papers that confirm our expectations.
+     </paragraph>
+     <paragraph>
+      Gutierrez et al. [35] introduce the concept of anonymous timestamps in general temporal RDF graphs, i.e., graphs G containing quads of the form {a mathematical formula}(s,p,o)[t] where t is a timestamp (a natural number) or an anonymous timestamp x stating that the triple {a mathematical formula}(s,p,o) is valid in some unknown time point x. Hurtado and Vaisman [39] subsequently extend the concept of general temporal RDF graphs so that one is allowed to express temporal constraints involving anonymous timestamps. Such temporal constraints are given using conjunctions of order constraints of the form {a mathematical formula}x1OPx2, where OP is an arithmetic comparison operator, such as &lt;, ≤, etc. Hurtado and Vaisman [39] call the resulting pairs {a mathematical formula}(G,ϕ)c-temporal graphs. In the same paper, the authors define a semantics for c-temporal graphs and study the relevant problem of entailment.
+     </paragraph>
+     <paragraph>
+      More recently, the work of Arenas and Pérez [10] examines the question of whether SPARQL is an appropriate language for RDF given the OWA typically associated with the framework. It defines certain answer semantics for SPARQL query evaluation based on well-known ideas from incomplete information research. According to this semantics, if G is an RDF graph then evaluating a SPARQL query q over G is defined as evaluating q over all graphs {a mathematical formula}H⊇G that are possible extensions of G according to the OWA, and then taking the intersection of all answers. Arenas and Pérez [10] show that if we evaluate a monotone graph pattern (e.g., one using only the operators AND, UNION, and FILTER) using the well-known W3C semantics [76], then we get the same result we would get if we used the certain answers semantics. The converse also holds, thus monotone SPARQL graph patterns have this nice property. However, the OPTIONAL operator (OPT) is not monotone and the two semantics do not coincide for it. Arenas and Pérez [10] define the notion of weak monotonicity that appears to capture the intuition behind OPT and show that a SPARQL query q is weakly monotone if and only if evaluating q under the W3C semantics gives the same result as evaluating q under a new semantics appropriate for weakly monotone queries. Finally, in the same work they show that the fragment of SPARQL consisting of the well-designed graph patterns defined originally by Pérez et al. [75] is weakly monotone.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Contributions
+      </section-title>
+      <paragraph>
+       In this paper we continue the line of research started by Gutierrez et al. [35], Hurtado and Vaisman [39], and Arenas and Pérez [10], and study in a general way an important kind of incomplete information that has so far been ignored in the context of RDF. Our contributions are the following.
+      </paragraph>
+      <paragraph>
+       We extend RDF with the ability to define a new kind of literals for each datatype. These literals will be called e-literals (“e” comes from the word “existential”) and can be used to represent values of properties that exist but are unknown or partially known. Such information is abundant in recent applications where RDF is being used (e.g., sensor networks [33], the modeling of geospatial information [49], [71]). In the proposed extension of RDF, called {a mathematical formula}RDFi (where “i” stands for “incomplete”), e-literals are allowed to appear only in the object position of triples.
+      </paragraph>
+      <paragraph>
+       Previous research on incomplete information in databases and knowledge representation has shown that in many applications, having the ability to state constraints about values that are only partially known is a very desirable feature and leads to the development of very expressive formalisms [30], [47]. In the spirit of this tradition, {a mathematical formula}RDFi allows partial information regarding property values represented by e-literals to be expressed by a quantifier-free formula of a first-order constraint language{a mathematical formula}L. Thus, {a mathematical formula}RDFi extends the concept of an RDF graph to the concept of an {a mathematical formula}RDFidatabase that is a pair {a mathematical formula}(G,ϕ) where G is an RDF graph possibly containing triples with e-literals in their object positions, and ϕ is a quantifier-free formula of {a mathematical formula}L. The choice of the constraint language {a mathematical formula}L parameterizes {a mathematical formula}RDFi making it a framework rather than a data model. Our workshop paper [69] motivates the need for introducing {a mathematical formula}RDFi by concentrating on the representation of incomplete spatial knowledge.
+      </paragraph>
+      <paragraph>
+       Following ideas from the incomplete information literature [41], [30], we develop a semantics for {a mathematical formula}RDFi databases and SPARQL query evaluation. The semantics defines the set of possible RDF graphs corresponding to an {a mathematical formula}RDFi database and the fundamental concept of certain answers for SPARQL query evaluation over an {a mathematical formula}RDFi database. We transfer the well-known concept of representation systems of Imieliński and Lipski [41] to the case of {a mathematical formula}RDFi, and show that CONSTRUCT queries without blank nodes in their templates and using only operators AND, UNION, and FILTER or the restricted fragment of graph patterns corresponding to the well-designed patterns of Pérez et al. [75] can be used to define a representation system for {a mathematical formula}RDFi. Our results on the monotonicity of CONSTRUCT queries (even in the case of well-designed patterns that contain operator OPT) indicate their importance and sets an interesting subject to explore in theoretical treatments of RDF.
+      </paragraph>
+      <paragraph>
+       We define the fundamental concept of certain answers to SPARQL queries over {a mathematical formula}RDFi databases and present an algorithm for its computation. Finally, we present complexity results for the associated decision problem, named certainty, by considering equality (language ECL), temporal (languages diPCL/dePCL), and spatial (languages RCL, TCL, and PCL) constraint languages and the class of CONSTRUCT queries that forms a representation system for {a mathematical formula}RDFi. Our results are summarized in Table 1 and show that the data complexity of the certainty problem for {a mathematical formula}RDFi and this class of queries increases from LOGSPACE{sup:1} (the upper bound for queries from this class over RDF graphs [75]) to coNP-complete for all of the considered constraint languages. This result is in line with similar complexity results for querying incomplete information in relational databases [30], [46]. The complexity of the closely related problem of SPARQL query evaluation over RDF graphs as manifested in the geospatial extensions stSPARQL [50] and GeoSPARQL [71] has not been investigated so far in any detail, and it remains an open problem.
+      </paragraph>
+      <paragraph>
+       The organization of the paper is as follows. Section 2 introduces {a mathematical formula}RDFi by giving examples and comparing it with well-known concepts of the relational database literature on incomplete information. Section 3 presents the properties that we expect constraint languages to have so that they can be used in {a mathematical formula}RDFi. In addition, it defines some useful constraint languages that are used in the paper. Section 4 formally introduces {a mathematical formula}RDFi and then Section 5 defines its semantics. Section 6 defines the evaluation of SPARQL queries over {a mathematical formula}RDFi databases and Section 7 presents two monotone fragments of SPARQL. Then, Section 8 defines the concept of certain answers and investigates which fragments of SPARQL can be used to define a representation system for {a mathematical formula}RDFi. Section 9 gives an algorithm for computing the certain answers for SPARQL queries over {a mathematical formula}RDFi databases and presents relevant complexity results for the associated decision problem. Then, Section 10 compares {a mathematical formula}RDFi with related work, and last, Section 11 summarizes our work and discusses future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Motivation
+     </section-title>
+     <paragraph>
+      Incomplete information is often present in geospatial applications where data is imprecise, indefinite, or qualitative. For example, in the FP7 European project TELEIOS{sup:2} satellite images are used for environmental disaster monitoring (e.g., fires, floods). The following is a list of triples (namespaces are omitted) that gives an example of the kind of representation employed in TELEIOS for representing pixels of a satellite image (called hotspots) corresponding to geographic regions that are probably on fire.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The above set of triples is a graph in the model stRDF of Koubarakis and Kyzirakos [49]. The stRDF model extends RDF with the ability to represent geometries over {a mathematical formula}Qk that change over time following the paradigm of constraint databases [44]. Geometries and valid times of triples correspond to semi-linear point sets that are the subsets of {a mathematical formula}Qk defined by Boolean combinations of linear constraints. In stRDF, such combinations of constraints are given as literals of type SemiLinearPointSet. The above graph represents definite information; it states that there is a hotspot corresponding to a fire taking place at the point {a mathematical formula}(24.82566,35.31064)∈Q2.
+     </paragraph>
+     <paragraph label="Example 2.1">
+      Due to the medium resolution of the satellite images, each image pixel representing a hotspot corresponds to a 3 km by 3 km rectangle in geographic space. Thus, a more appropriate representation of the real world situation that corresponds to a hotspot would be to state that there is a geographic region with unknown exact coordinates where a fire is taking place, and that region is included in a known 3 km by 3 km rectangle. This real world situation can be represented by an {a mathematical formula}RDFi database as shown in Example 2.1 below. The following is an {a mathematical formula}RDFi database.{a mathematical formula} Fire fire1 (shaded area of Fig. 1) is asserted to have taken place inside region {a mathematical formula}_R1. Term {a mathematical formula}_R1 is an e-literal of datatype SemiLinearPointSet and is asserted to be inside the rectangle formed by the points {a mathematical formula}(6,8) and {a mathematical formula}(23,19) (rectangle P in Fig. 1). This is stated with a constraint expressed in the language PCL to be defined below, in Section 3.2. NTPP is the “non-tangential proper part” relation of RCC-8 [78]. Constraints in PCL can express qualitative and quantitative spatial information about regions in {a mathematical formula}Q2.
+     </paragraph>
+     <paragraph>
+      E-literals in {a mathematical formula}RDFi are like existentially quantified variables in first-order logic or Skolem constants. That is, {a mathematical formula}RDFi treats e-literals the same way the RDF model theory [37] treats blank nodes. However, due to the mismatch in the treatment of blank nodes in the literature [9], [64], we choose to dissociate e-literals from blank nodes in {a mathematical formula}RDFi. This is captured formally by our definitions in Section 4 which employ two disjoint sets for the two concepts. A similar assumption is made by Gutierrez et al. [35] and Hurtado and Vaisman [39] where anonymous nodes are taken to be different from blank nodes. {a mathematical formula}RDFi databases like the one of Example 2.1 consist of two parts: a graph (i.e., a set of triples) and a global constraint. Global constraints can in general be quantifier-free formulae of some first-order constraint language. {a mathematical formula}RDFi databases are syntactic devices for the representation of incomplete information.
+     </paragraph>
+     <paragraph label="Example 2.2">
+      Let us consider the query “Find all fires that have occurred in a region which is a non-tangential proper part of rectangle {a mathematical formula}Q1 of Fig. 1” over the database of Example 2.1. Using SELECT in SPARQL, this query can be formulated as follows:{a mathematical formula} In the above query, the FILTER operator contains as a condition a constraint expressed in the PCL language. SPARQL queries in {a mathematical formula}RDFi differ from standard SPARQL only with respect to the FILTER operator which is extended with another kind of conditions that are Boolean combinations of atomic constraints of the constraint language {a mathematical formula}L with which {a mathematical formula}RDFi is parameterized.
+     </paragraph>
+     <paragraph>
+      If we examine the database of Example 2.1, we can see that the answer should be conditional[41]. We cannot say for sure whether fire1 satisfies the requirements of the query because the information in the database is indefinite (the exact geometry of {a mathematical formula}_R1 is not known). Fire fire1 qualifies only in the possible graphs where {a mathematical formula}_R1 is a non-tangential proper part of the rectangle mentioned in the query. For every object that qualifies as an answer, the query answering procedure should also provide a condition characterizing this set of possible graphs. Following the ideas of conditional tables of Imieliński and Lipski [41], this answer can be represented by the following set of conditional mappings:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Example 2.3">
+      The e-literals in the above answer are implicitly constrained by the global constraint of the original database. This will be captured formally in Section 6. Conditional mappings are different from standard SPARQL mappings [75] in the sense that they map variables to constants only if a condition holds. Thus, they are reminiscent of conditional tuples in the conditional table model of Grahne [30]. If we wanted to have an {a mathematical formula}RDFi database as the answer to a query like the one of Example 2.2, then we would have queried the {a mathematical formula}RDFi database of Example 2.1 using the CONSTRUCT query form of SPARQL. The query would be expressed as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The answer to this query would be an {a mathematical formula}RDFi database containing conditional triples adhering to the query template {a mathematical formula}{(?F,a,Fire)}. The template is instantiated for each conditional mapping from the evaluation of the graph pattern of the query, and the resulting triple together with the condition of the mapping form a conditional triple in the resulting database. Therefore, the answer to query of Example 2.3 consists of the following conditional triple:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In some cases the user might know that the information in the database is incomplete. Thus, she might wish to find all values that certainly satisfy some qualification (this is the well-known notion of certain answers in incomplete databases [30]). Let us consider the query of Example 2.3 again. If we rephrase it to “Find fires that have certainly occurred in a region which is a non-tangential proper part of rectangle {a mathematical formula}Q2 in Fig. 1”, then fire1 satisfies the query unconditionally and the certain answers is the set of RDF triples containing the following triple: fire1 a Fire.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Constraint languages
+     </section-title>
+     <paragraph>
+      We will consider many-sorted first-order languages, structures, and theories [25]. Every language {a mathematical formula}L will be interpreted over a fixed structure, called the intended structure, which will be denoted by {a mathematical formula}ML. If {a mathematical formula}ML is a structure then {a mathematical formula}Th(ML) will denote the theory of {a mathematical formula}ML, i.e., the set of sentences of {a mathematical formula}L that are true in {a mathematical formula}ML. For every language {a mathematical formula}L, the class of its atomic formulae will include true and false with obvious semantics. We will also distinguish a class of quantifier-free formulae called {a mathematical formula}L-constraints which will include the atomic formulae of {a mathematical formula}L and any Boolean combination of them. Every first-order language {a mathematical formula}L we consider has also a distinguished equality predicate, EQ, with the standard semantics.
+     </paragraph>
+     <paragraph>
+      In the following we define formally various constraint languages that allow us to explore the scope of modeling possibilities {a mathematical formula}RDFi offers.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       The language ECL
+      </section-title>
+      <paragraph>
+       Language ECL (Equality Constraint Language) is the first-order language of equality constraints. The atomic formulae of ECL are of the form {a mathematical formula}x1EQx2 where {a mathematical formula}x1,x2 are variables or constants interpreted over an infinite domain. The intended structure for this language, {a mathematical formula}MECL, interprets symbol EQ as equality and constants as “themselves”.
+      </paragraph>
+      <paragraph>
+       ECL has been used by Kanellakis et al. [44] for the development of an extended relational model based on ECL-constraints and by Imieliński and Lipski [41], Abiteboul et al. [3], and Grahne [30] for querying and updating incomplete information in relational databases. Therefore, when used in {a mathematical formula}RDFi, this language allows us to extend RDF with the ability to represent “marked nulls” as in classical relational databases [41].
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       The languages PCL and TCL
+      </section-title>
+      <paragraph>
+       Language PCL (Polygon Constraint Language) allows us to represent topological properties of non-empty regular closed subsets of {a mathematical formula}Q2. In topology, a subset of a topological space is said to be regular closed if it is equal to the closure of its interior (we will call these subsets regions for brevity). PCL is a first-order language with the following 8 binary predicate symbols corresponding to the topological relations of the RCC-8 calculus [78]: DC, EC, PO, TPP, NTPP, TPPi, NTPPi, and EQ. The constant symbols of PCL represent polygons in {a mathematical formula}Q2. We will write these constants as Boolean combinations of linear constraints in double quotes.{sup:3} Such quantifier-free formulae define sets of points in {a mathematical formula}Q2, called semi-linear sets, and can be used to represent a variety of spatial geometries, such as points, lines, line segments, bounded or unbounded polygons, convex or non-convex, as well as unions of polygons possibly with holes. In PCL, however, constants are restricted to those quantifier-free formulae defining point sets that represent bounded polygons, i.e., their area is finite. The terms and atomic formulae of PCL are defined as follows. Constants and variables are terms. An atomic formula of PCL is a formula of the form {a mathematical formula}t1Rt2 where {a mathematical formula}t1,t2 are terms and R is one of the RCC-8 predicates. For example, the following are PCL-constraints:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The intended structure for PCL, denoted by {a mathematical formula}MPCL, has the set of non-empty regions as its domain. {a mathematical formula}MPCL interprets each constant symbol by the corresponding polygon in {a mathematical formula}Q2 and each of the predicate symbols by the corresponding topological relation of RCC-8.
+      </paragraph>
+      <paragraph>
+       PCL is the language that we have used in the paper [69] and we will also use it in the examples of this article. PCL can be used to capture the topology of regions of interest some of which may be known to have a certain polygonal shape.
+      </paragraph>
+      <paragraph>
+       Language TCL (Topological Constraint Language) is defined like PCL, but now terms can only be variables (no topological reasoning with constants is allowed). Language TCL allows us to capture the topology of regions of interest to an application but makes no commitment regarding other non-topological properties of these regions, e.g., shape.
+      </paragraph>
+      <paragraph>
+       The following two languages, diPCL and dePCL, were defined by Koubarakis [46].
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       The languages diPCL and dePCL
+      </section-title>
+      <paragraph>
+       Language diPCL (discrete Point Constraint Language) allows us to make statements about points in discrete time. It is a first-order language with constants from the set of integers {a mathematical formula}Z, a binary function symbol −, and a binary predicate symbol &lt;. The terms and atomic formulae of diPCL are defined as follows. Constants and variables are terms. If {a mathematical formula}t1 and {a mathematical formula}t2 are constants or variables, then {a mathematical formula}t1−t2 is a term. An atomic formula of diPCL is a formula of the form {a mathematical formula}t&lt;c or {a mathematical formula}tEQc where t is a term and c is a constant. For example, the following are diPCL-constraints:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The intended structure for diPCL, denoted by {a mathematical formula}MdiPCL, has the set of integers as its domain. {a mathematical formula}MdiPCL interprets each constant symbol by the corresponding number in {a mathematical formula}Z, function symbol − by the subtraction operation over the integers, and predicate symbol &lt; by the relation “less than”. Then, theory {a mathematical formula}Th(MdiPCL) is a sub-theory of {a mathematical formula}Th(Z,+,&lt;), the theory of integers with addition and order (or Presburger arithmetic) [77].
+      </paragraph>
+      <paragraph>
+       The language dePCL (dense Point Constraint Language) allows us to make statements about points in dense time. Language dePCL is defined like diPCL above with the following exception: the constants of dePCL are from the set of rational numbers {a mathematical formula}Q that serves also as its domain. Then, theory {a mathematical formula}Th(MdePCL) is a sub-theory of {a mathematical formula}Th(R,+,&lt;), the theory of real numbers with addition and order [77].
+      </paragraph>
+      <paragraph>
+       Languages diPCL and dePCL are constraint languages that allow {a mathematical formula}RDFi to represent incomplete temporal information as in the works of Gutierrez et al. [35], Hurtado and Vaisman [39], and Koubarakis [48].
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       The language RCL
+      </section-title>
+      <paragraph>
+       Language RCL (Rectangle Constraint Language) allows us to capture spatial and metric constraints (e.g., topological or directional, and horizontal or vertical distance constraints among the edges of rectangles) involving rectangles with sides parallel to the axes in {a mathematical formula}Q2 (we will call them boxes). RCL is useful not only for modeling regions of space with such rectangular shapes but also for modeling minimum bounding rectangles that are typically used as approximations of spatial objects, e.g., in spatial data structures and elsewhere.
+      </paragraph>
+      <paragraph>
+       RCL is a first-order language with equality and two sorts: the sort {a mathematical formula}Q for rational constants, and the sort {a mathematical formula}R for boxes. The set of non-logical symbols of RCL includes: all rational constants of sort {a mathematical formula}Q, a binary function symbol − of sort {a mathematical formula}(Q,Q,Q), function symbols {a mathematical formula}LLx(⋅),LLy(⋅),URx(⋅),URy(⋅) of sort {a mathematical formula}(R,Q), and predicate symbol &lt; of sort {a mathematical formula}(Q,Q).
+      </paragraph>
+      <paragraph>
+       The terms and atomic formulae of RCL are defined as follows. Constants of sort {a mathematical formula}Q and variables of sort {a mathematical formula}R are terms. If r is a variable of sort {a mathematical formula}R then {a mathematical formula}LLx(r),LLy(r),URx(r) and {a mathematical formula}URy(r) are terms of sort {a mathematical formula}Q. If {a mathematical formula}t1, {a mathematical formula}t2 are terms of sort {a mathematical formula}Q, then {a mathematical formula}t1−t2 is a term of sort {a mathematical formula}Q. An atomic formula of RCL is a formula of the form {a mathematical formula}t&lt;c or {a mathematical formula}tEQc where t is a term of sort {a mathematical formula}Q and c a rational constant. For example, the following are RCL-constraints:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The intended structure for RCL, denoted by {a mathematical formula}MRCL, interprets each non-logical symbol as follows. Each rational constant is interpreted by its corresponding rational number. The function symbol − is interpreted by the subtraction operation over the rationals, while the function symbols {a mathematical formula}LLx(⋅), {a mathematical formula}LLy(⋅), {a mathematical formula}URx(⋅), and {a mathematical formula}URy(⋅) are interpreted by the easily-defined functions that given a box in {a mathematical formula}Q2, return the x- and y-coordinate of its lower-left and upper-right vertex respectively. Predicate &lt; is interpreted by the relation “less than” over {a mathematical formula}Q.
+      </paragraph>
+      <paragraph>
+       The above constraint languages will be considered again in Section 9 where we investigate how they affect the complexity of computing certain answers for queries over {a mathematical formula}RDFi databases. Although the definitions of these languages are general, the technical developments in that section make use of sentences with universal quantifiers only.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     The {a mathematical formula}RDFi framework
+     <paragraph>
+      As in theoretical treatments of RDF [34], we assume the existence of pairwise-disjoint, countably infinite sets I, B, and L that contain IRIs, blank nodes, and literals respectively. We also assume the existence of a set of typed literals U, disjoint from I, B, and L above, that we call e-literals. Further, we assume the existence of a datatype map M[37] and distinguish a set of datatypes A from M for which e-literals are allowed. For each datatype d in A, we assume the existence of a countably infinite set {a mathematical formula}Ud of e-literals. The sets {a mathematical formula}Ud are assumed to be pairwise disjoint. Then, set U above is simply the union of the sets {a mathematical formula}Ud. By convention, the identifiers of e-literals will start with an underscore, e.g., {a mathematical formula}_R5. Finally, we assume the existence of a many-sorted first-order constraint language {a mathematical formula}L with the properties discussed in Section 3. Language {a mathematical formula}L is related to the datatype map M in the following way:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The set of sorts of {a mathematical formula}L is the set of datatypes A of M.
+      </list-item>
+      <list-item label="•">
+       The set of constants of {a mathematical formula}L is the union of the lexical spaces of the datatypes in A.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ML interprets every constant c of {a mathematical formula}L with sort d by its corresponding value given by the lexical-to-value mapping of the datatype d in A.
+      </list-item>
+     </list>
+     <paragraph>
+      The set of constants of {a mathematical formula}L (equivalently: the set of literals of the datatypes in A) will be denoted by C. The set C is assumed to be disjoint from I, B, L, and U. The set of {a mathematical formula}RDFiterms, denoted by T, can now be defined as the union {a mathematical formula}I∪B∪L∪C∪U.
+     </paragraph>
+     <paragraph>
+      In the rest of our examples we will assume that {a mathematical formula}L is PCL, so C is the set of all polygons in {a mathematical formula}Q2 written in the linear constraint syntax of Section 3.
+     </paragraph>
+     <paragraph label="Definition 4.1">
+      We now define the basic concepts of {a mathematical formula}RDFi: e-triples, conditional triples, conditional graphs, global constraints, and databases. An e-triple is an element of the set {a mathematical formula}(I∪B)×I×T. If {a mathematical formula}(s,p,o) is an e-triple, s will be called the subject, p the predicate, and o the object of the triple. A conditional triple is a pair {a mathematical formula}(t,θ) where t is an e-triple and θ an {a mathematical formula}L-constraint. If {a mathematical formula}(t,θ) is a conditional triple, then θ will be called the condition of the triple. A conditional graph is a set of conditional triples. A global constraint is a satisfiable {a mathematical formula}L-constraint. An {a mathematical formula}RDFidatabase D is a pair {a mathematical formula}D=(G,ϕ) where G is a conditional graph and ϕ a global constraint.
+     </paragraph>
+     <paragraph label="Example 4.2">
+      In the rest of the paper, when we want to refer to standard RDF constructs we will write “RDF triple” and “RDF graph” so that no confusion with {a mathematical formula}RDFi is possible. Using the formal notation of this section, the pair{a mathematical formula} is the {a mathematical formula}RDFi database of Example 2.1 where g1 corresponds to the half-space representation of rectangle P in Fig. 1, i.e., the linear constraint {a mathematical formula}x≥6∧x≤23∧y≥8∧y≤19. In the rest of the article, we will re-use "g1" and introduce further aliases for polygonal constants when appropriate. By convention, different aliases will denote different (and non-equivalent) linear constraints, so that their comparison is immediate.
+     </paragraph>
+    </section>
+    <section label="5">
+     Semantics of {a mathematical formula}RDFi
+     <paragraph label="Example 5.1">
+      The semantics of {a mathematical formula}RDFi is inspired by Imieliński and Lipski [41]. An {a mathematical formula}RDFi database {a mathematical formula}D=(G,ϕ) corresponds to a set of possible RDF graphs each one representing a possible state of the real world. This set of possible graphs captures completely the semantics of an {a mathematical formula}RDFi database. The global constraint ϕ determines the set of possible RDF graphs corresponding to D; there is one RDF graph for each solution of ϕ obtained by considering the e-literals of ϕ as variables and solving the constraint ϕ. Let {a mathematical formula}D=(G,ϕ) be the {a mathematical formula}RDFi database given in Example 4.2. It mentions a hotspot, which is located in a region that is inside but does not intersect with the boundary of the rectangle P defined by the points {a mathematical formula}(6,8) and {a mathematical formula}(23,19) (see also Fig. 1). The same knowledge can be represented by a (possibly infinite) set of possible RDF graphs, one for each rectangle inside P. Two of these graphs are:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Definition 5.2">
+      In order to be able to go from {a mathematical formula}RDFi databases to the equivalent set of possible RDF graphs, the notion of valuation is needed. A valuation v is a function from U to C assigning to each e-literal from U a constant from C.
+     </paragraph>
+     <paragraph>
+      We denote by {a mathematical formula}v(t) the application of a valuation v to an e-triple t. The expression {a mathematical formula}v(t) replaces all e-literals _l appearing in t by {a mathematical formula}v(_l) and leaves all other terms the same. If θ is an {a mathematical formula}L-constraint (e.g., the condition of a conditional triple or the global constraint of a database), then the expression {a mathematical formula}v(θ) denotes the application of v to θ and is obtained from θ by replacing all e-literals _l of θ by {a mathematical formula}v(_l).
+     </paragraph>
+     <paragraph label="Definition 5.3">
+      Next, we give the definition of applying a valuation to a conditional graph. Let G be a conditional graph and v a valuation. Then {a mathematical formula}v(G) denotes the RDF graph{a mathematical formula}
+     </paragraph>
+     <paragraph label="Example 5.4">
+      The concept of valuations and their application to conditional graphs is demonstrated in the following example. Let {a mathematical formula}D=(G,ϕ) be the {a mathematical formula}RDFi database in Example 4.2 and {a mathematical formula}v1, {a mathematical formula}v2 two valuations such that {a mathematical formula}v1(_R1)="x≥11∧x≤15∧y≥13∧y≤15" and {a mathematical formula}v2(_R1)="x≥10∧x≤21∧y≥12∧y≤17". Then, expressions {a mathematical formula}v1(G) and {a mathematical formula}v2(G) correspond respectively to the RDF graphs {a mathematical formula}G1 and {a mathematical formula}G2 of Example 5.1. Evidently, the application of a valuation to a conditional graph replaces all e-literals of the graph with constants and keeps only those triples with conditions equivalent to true making the result an RDF graph.
+     </paragraph>
+     <paragraph label="Definition 5.5">
+      The set of valuations that satisfy the global constraint of an {a mathematical formula}RDFi database determines the set of possible RDF graphs that correspond to it. This set of graphs is denoted using the function Rep as it is traditional in incomplete relational databases. Let {a mathematical formula}D=(G,ϕ) be an {a mathematical formula}RDFi database. The set of RDF graphs corresponding to D is the following:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Notice that the definition of Rep above uses the containment relation instead of equality. The reason for this is to capture the OWA that the RDF model makes. By using the containment relation, {a mathematical formula}Rep(D) includes all RDF graphs H containing at least the triples of {a mathematical formula}v(G). In this respect, we follow the approach of Arenas and Pérez [10, Section 3], where the question of whether SPARQL is a good language for RDF is examined in the light of the fact that RDF adopts the OWA. To account for this, an RDF graph G is seen to correspond to a set of possible RDF graphs H such that {a mathematical formula}G⊆H (in the sense of the OWA: all triples in G also hold in H). The above definition takes this concept of Arenas and Pérez [10] to its rightful destination: the full treatment of incomplete information in RDF. As we have already noted in the introduction, the kinds of incomplete information we study here for RDF have not been studied in [10]; only the issue of OWA has been explored there.
+     </paragraph>
+     <paragraph>
+      In incomplete relational databases [41], Rep is a semantic function: it maps a table (a syntactic construct) to a set of relational instances (i.e., a set of possible worlds, a semantic construct). According to the well-known distinction between model-theoretic and proof-theoretic approaches to relational databases, Rep and the approaches based on it [41], [30] belong to the model-theoretic camp. However, the use of Rep in the above definition is different. It takes an {a mathematical formula}RDFi database (a syntactic construct) and maps it to a set of possible RDF graphs (a syntactic construct again). This set of possible graphs can then be mapped to a set of possible worlds using the well-known RDF model theory [37]. This is a deliberate choice in our work since we want to explore which well-known techniques from incomplete relational databases carry over to the RDF framework.
+     </paragraph>
+    </section>
+    <section label="6">
+     Evaluating SPARQL on {a mathematical formula}RDFi databases
+     <paragraph>
+      Let us now discuss how to evaluate SPARQL queries on {a mathematical formula}RDFi databases. We will use the algebraic syntax of SPARQL presented by Pérez et al. [75]. We will deal with both SELECT and CONSTRUCT query forms. Due to the presence of e-literals, query evaluation now becomes more complicated and is similar to query evaluation for conditional tables [41], [30]. This section provides the exact details.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Semantic extensions for incomplete information
+      </section-title>
+      <paragraph>
+       We use set semantics for query evaluation by extending the SPARQL query evaluation approach of Pérez et al. [75]. Blank nodes are interpreted as in SPARQL, i.e., as constants different from each other. Notice that this is not the same as the semantics of blank nodes in RDF model theory [37] where they are treated as existentially quantified variables.
+      </paragraph>
+      <paragraph>
+       We assume the existence of the following disjoint sets of variables: (i) the set of normal query variables{a mathematical formula}Vn that range over IRIs, blank nodes, or RDF literals, and (ii) the set of special query variables{a mathematical formula}Vs that range over literals from the set C or e-literals from the set U. We use V to denote the set of all variables {a mathematical formula}Vn∪Vs. Set V is disjoint from the set of terms T we defined in Section 4.
+      </paragraph>
+      <paragraph label="Definition 6.1">
+       We first define the concept of e-mappings (“e” from the word “existential”) which extends the concept of mappings of Pérez et al. [75] with the ability to have literals from the set C and e-literals as values for a special query variable. An e-mapping ν is a partial function {a mathematical formula}ν:V→T such that {a mathematical formula}ν(x)∈I∪B∪L if {a mathematical formula}x∈Vn and {a mathematical formula}ν(x)∈C∪U if {a mathematical formula}x∈Vs.
+      </paragraph>
+      <paragraph label="Example 6.2">
+       The notions of domain and restriction of an e-mapping as well as the notion of compatibility of two e-mappings are defined as for mappings in the obvious way [75] (we also use the same notation for them). The following are e-mappings:{a mathematical formula} where g2 is {a mathematical formula}x≥1∧x≤2∧y≥1∧y≤2. The domain of the above e-mappings consists of two query variables, namely, ?F and ?S. Variable ?F belongs to the set of normal query variables {a mathematical formula}Vn, while variable ?S belongs to the set of special query variables {a mathematical formula}Vs.
+      </paragraph>
+      <paragraph label="Definition 6.3">
+       We now extend the concept of e-mappings and define conditional mappings. A conditional mapping μ is a pair {a mathematical formula}(ν,θ) where ν is an e-mapping and θ is an {a mathematical formula}L-constraint.
+      </paragraph>
+      <paragraph label="Example 6.4">
+       The following are conditional mappings:{a mathematical formula} where g2 is as in Example 6.2, g3 is {a mathematical formula}x≥0∧x≤10∧y≥0∧y≤10, and g4 is {a mathematical formula}x≥0∧x≤1∧y≥0∧y≤1.
+      </paragraph>
+      <paragraph label="Definition 6.5">
+       The domain of a conditional mapping {a mathematical formula}μ=(ν,θ), denoted by {a mathematical formula}dom(μ), is the domain of ν, i.e., the subset of V where the partial function ν is defined. If {a mathematical formula}W⊆dom(μ), then the restriction of the mapping μ to W, denoted by {a mathematical formula}μ|W, is the mapping {a mathematical formula}(ν|W,θ) where {a mathematical formula}ν|W is the restriction of mapping ν to W.
+      </paragraph>
+      <paragraph label="Definition 6.6">
+       We now introduce the notion of compatible conditional mappings as it is done in [75] for standard mappings. To take into account e-literals, we also define the notion of possibly compatible conditional mappings, which is more relaxed than compatibility. Two conditional mappings {a mathematical formula}μ1=(ν1,θ1) and {a mathematical formula}μ2=(ν2,θ2) are compatible if the e-mappings {a mathematical formula}ν1 and {a mathematical formula}ν2 are compatible, i.e., for all {a mathematical formula}x∈dom(μ1)∩dom(μ2), we have {a mathematical formula}ν1(x)=ν2(x). The conditional mappings {a mathematical formula}μ1 and {a mathematical formula}μ2 are possibly compatible if for all {a mathematical formula}x∈dom(μ1)∩dom(μ2), we have {a mathematical formula}ν1(x)=ν2(x) or at least one of {a mathematical formula}ν1(x),ν2(x), where {a mathematical formula}x∈Vs, is an e-literal from U.
+      </paragraph>
+      <paragraph label="Example 6.7">
+       Mappings {a mathematical formula}μ1 and {a mathematical formula}μ2 from Example 6.4 are not compatible, while mappings {a mathematical formula}μ2 and {a mathematical formula}μ3 are. Further, all conditional mappings of Example 6.4 are pairwise possibly compatible.
+      </paragraph>
+      <paragraph label="Definition 6.8">
+       If two conditional mappings are possibly compatible, then we can define their join as follows. Let {a mathematical formula}μ1=(ν1,θ1) and {a mathematical formula}μ2=(ν2,θ2) be possibly compatible conditional mappings. The join{a mathematical formula}μ1⋈μ2 is a conditional mapping {a mathematical formula}(ν3,θ3) where:
+      </paragraph>
+      <list>
+       <list-item label="i.">
+        {a mathematical formula}ν3(x)=ν1(x) for {a mathematical formula}x∈dom(μ1)∖dom(μ2) and {a mathematical formula}ν3(x)=ν2(x) for {a mathematical formula}x∈dom(μ2)∖dom(μ1).
+       </list-item>
+       <list-item label="ii.">
+        For each {a mathematical formula}x∈dom(μ1)∩dom(μ2),ν3(x)=ν1(x) if {a mathematical formula}ν1(x) is an e-literal, otherwise {a mathematical formula}ν3(x)=ν2(x).
+       </list-item>
+       <list-item label="iii.">
+        {a mathematical formula}θ3 is {a mathematical formula}θ1∧θ2∧⋀x∈dom(μ1)∩dom(μ2)∩Vsξx where {a mathematical formula}ξx is {a mathematical formula}ν1(x)EQν2(x) if either {a mathematical formula}ν1(x) or {a mathematical formula}ν2(x) is an e-literal, otherwise {a mathematical formula}ξx is true.
+       </list-item>
+      </list>
+      <paragraph label="Example 6.9">
+       If {a mathematical formula}μ1 and {a mathematical formula}μ2 are the conditional mappings of Example 6.4, then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For two sets of conditional mappings {a mathematical formula}Ω1 and {a mathematical formula}Ω2, the operation of join is now defined as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The reader is invited to compare this definition with the definition of join of mappings for SPARQL [75]. The new aspect with conditional mappings is that due to the presence of e-literals, we have to anticipate the possibility that two mappings from {a mathematical formula}Ω1 and {a mathematical formula}Ω2 become compatible when e-literals are replaced by constants from C. We anticipate this case by adding relevant constraints to the condition of a mapping.
+      </paragraph>
+      <paragraph>
+       The operation of union is defined as in the standard case: {a mathematical formula}Ω1∪Ω2={μ|μ∈Ω1 or μ∈Ω2}.
+      </paragraph>
+      <paragraph>
+       We now define the operator of difference:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In the above set, symbol ⊃ denotes logical implication.
+      </paragraph>
+      <paragraph>
+       The reader is invited to compare this definition with the definition of difference by Pérez et al. [75]. In [75] the qualifying condition for a mapping μ from {a mathematical formula}Ω1 to be in the result of the difference {a mathematical formula}Ω1∖Ω2 is to be incompatible with all the mappings of {a mathematical formula}Ω2. That qualifying condition is maintained in the above definition for the set of mappings from {a mathematical formula}Ω1 that do not map any special variable to an e-literal (the first set of the union operator that makes up the set {a mathematical formula}Ω1∖Ω2).{sup:4} However, in the context of {a mathematical formula}RDFi such qualifying condition should be broadened to accommodate the case of mapping μ being possibly compatible with some mappings from {a mathematical formula}Ω2 and incompatible with the rest of the mappings from {a mathematical formula}Ω2 (the second set of the union operator that makes up the set {a mathematical formula}Ω1∖Ω2), i.e., accommodate the presence of e-literals. In this latter case, we need to capture the conditions under which each possibly compatible pair of mappings is made incompatible and impose them as further constraints to the condition of a mapping μ of the set {a mathematical formula}Ω1∖Ω2.
+      </paragraph>
+      <paragraph label="Example 6.10">
+       Let us now point out a subtlety in the formula of the previous definition that is used to capture the conditions for making a possibly compatible pair of mappings {a mathematical formula}μ∈Ω1, {a mathematical formula}μi∈Ω2 incompatible. This is the use of logical implication between the condition {a mathematical formula}θi of mapping {a mathematical formula}μi and the constraint under which this pair of mappings becomes incompatible, i.e., {a mathematical formula}¬(μ(x)EQμi(x)). The logical implication serves only to mark that this constraining should be taken into account only when the condition of mapping {a mathematical formula}θi is satisfiable. Otherwise, mapping {a mathematical formula}μi should not be affecting the result of the difference. Then, logical implication guarantees exactly that. Let {a mathematical formula}Ω1={μ11,μ12}, {a mathematical formula}Ω2={μ21,μ22} be sets of conditional mappings such that{a mathematical formula} Then, {a mathematical formula}Ω1∖Ω2={μ} where μ is constructed from {a mathematical formula}μ11∈Ω1:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The operation of left-outer join is defined as in the standard case [75]: {a mathematical formula}Ω1{an inline-figure}Ω2=(Ω1⋈Ω2)∪(Ω1∖Ω2).
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Graph pattern evaluation
+      </section-title>
+      <paragraph label="Definition 6.11">
+       Graph patterns in {a mathematical formula}RDFi are like in standard SPARQL [75] and are built recursively from triple patterns and the operators AND, UNION, OPT, and FILTER. However, the definition of triple patterns in {a mathematical formula}RDFi differs from the one in standard SPARQL and is as follows. A triple pattern is an element of the set {a mathematical formula}(I∪Vn)×(I∪Vn)×(I∪L∪C∪V).
+      </paragraph>
+      <paragraph>
+       Note that we do not allow blank nodes to appear in a triple pattern as in standard SPARQL since such blank nodes can equivalently be substituted by fresh query variables.
+      </paragraph>
+      <paragraph>
+       If p is a triple pattern, {a mathematical formula}var(p) denotes the variables appearing in p. A conditional mapping can be applied to a triple pattern. Let {a mathematical formula}μ=(ν,θ) be a conditional mapping and p a triple pattern such that {a mathematical formula}var(p)⊆dom(μ). We denote by {a mathematical formula}μ(p) the conditional triple {a mathematical formula}(t,θ) such that t is obtained from p by replacing each variable {a mathematical formula}x∈var(p) by {a mathematical formula}ν(x).
+      </paragraph>
+      <paragraph label="Definition 6.12">
+       An important fragment of SPARQL we consider in this work is the so-called well-designed graph patterns originally identified by Pérez et al. [75]. Let P be a graph pattern in the AND-FILTER-OPT fragment of SPARQL. Then P is well-designed if (1) P is safe, i.e., for every sub-pattern {a mathematical formula}(P1FILTERR) of P, it holds that {a mathematical formula}var(R)⊆var(P1), and (2) for every sub-pattern {a mathematical formula}P′=(P1OPTP2) of P and variable ?X, if ?X occurs both inside {a mathematical formula}P2 and outside {a mathematical formula}P′, then it also occurs in {a mathematical formula}P1.
+      </paragraph>
+      <paragraph>
+       Pérez et al. [75] and Arenas and Pérez [10] identified in well-designed graph patterns unique and interesting properties that make query evaluation more efficient in contrast to what would get without the syntactic restrictions imposed on the graph patterns by the above definition. In the context of this work, well-designed graph patterns play an important role because it is one of the two fragments of SPARQL graph patterns for which the SPARQL query evaluation as it is developed in this section is correct given the semantics of {a mathematical formula}RDFi introduced in Section 5. The correctness of SPARQL query evaluation is studied in Section 8 where representation systems for {a mathematical formula}RDFi are investigated.
+      </paragraph>
+      <paragraph label="Definition 6.13">
+       Based on the operations on sets of conditional mappings from the previous subsection, graph pattern evaluation in {a mathematical formula}RDFi can now be defined exactly as in standard SPARQL for RDF graphs [75] except for the case of evaluating a triple pattern. For the sake of readability, the evaluation of FILTER graph patterns is considered later in this section. Let {a mathematical formula}D=(G,ϕ) be an {a mathematical formula}RDFi database. Evaluating a graph pattern P over database D is denoted by {a mathematical formula}〚P〛D and is defined recursively as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If P is the triple pattern {a mathematical formula}(s,p,o) then{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        If P is {a mathematical formula}P1ANDP2 then {a mathematical formula}〚P〛D=〚P1〛D⋈〚P2〛D.
+       </list-item>
+       <list-item label="3.">
+        If P is {a mathematical formula}P1UNIONP2 then {a mathematical formula}〚P〛D=〚P1〛D∪〚P2〛D.
+       </list-item>
+       <list-item label="4.">
+        If P is {a mathematical formula}P1OPTP2 then {a mathematical formula}〚P〛D=〚P1〛D{an inline-figure}〚P2〛D.
+       </list-item>
+      </list>
+      <paragraph>
+       In Definition 6.13 (1), the first set making up {a mathematical formula}〚P〛D accommodates the case in which evaluation can be done as in standard SPARQL using triple pattern matching. The second set accommodates the case in which the triple pattern involves a literal o from the set C and the graph contains a conditional triple with an e-literal _l from U in the object position. We catch a possible match by adding in the condition of the mapping the constraint that restricts the value of e-literal _l to be equal to the literal o of the triple pattern (i.e., the constraint {a mathematical formula}_lEQo). In either case of Definition 6.13 (1), since the triples in the database are conditional, their conditions become parts of the conditions of the mappings in the answer.
+      </paragraph>
+      <paragraph label="Example 6.14">
+       Consider the following {a mathematical formula}RDFi database D{a mathematical formula} where g1 is as in Example 4.2, g5 is {a mathematical formula}x≥10∧x≤21∧y≥12∧y≤17, and g6 is {a mathematical formula}x≥2∧x≤6∧y≥4∧y≤8. Next we show how the evaluation of two triple patterns over the database D can be done.
+       <list>
+        Evaluation of triple pattern {a mathematical formula}(?F,occurredIn,"g1").{a mathematical formula}Evaluation of triple pattern {a mathematical formula}(?F,occurredIn,"g2") where g2 is as in Example 6.2.{a mathematical formula}These examples showcase the two possibilities of triple pattern matching that arise in
+       </list>
+       <paragraph>
+        Definition 6.13 (1) when the triple pattern involves a literal from the set C. Case (a) involves both kinds of matchings (both sets of Definition 6.13 (1) that make up {a mathematical formula}〚P〛D), while case (b) involves a matching derived from the second set of Definition 6.13 (1) that makes up {a mathematical formula}〚P〛D.
+       </paragraph>
+      </paragraph>
+      <paragraph label="Example 6.15">
+       Let us now give an example of an evaluation of graph pattern {a mathematical formula}P1ANDP2 over the database D of Example 4.2, where {a mathematical formula}P1,P2 are the triple patterns (?F, a, Fire) and (?F, occurredIn, ?R) respectively. According to the above definition, we have:{a mathematical formula} Evaluation of both triple patterns {a mathematical formula}P1,P2 is done as in standard SPARQL, but here conditions of matched triples have to be transferred to the respective answer, i.e., we have conditional mappings.
+      </paragraph>
+      <paragraph>
+       Let us now consider the operator FILTER. It is natural to allow FILTER graph patterns to contain an {a mathematical formula}L-constraint as expression that constrains query variables. When {a mathematical formula}L is PCL, examples of such expressions are the atomic PCL-constraints {a mathematical formula}?XNTPP?Y, {a mathematical formula}?XEQ"x≥1∧x≤2∧y≥1∧y≤2", or any Boolean combination of them.{sup:5} The extension of FILTER to the case of having expressions containing also other built-in conditions of standard SPARQL [75] is easy to define and is omitted. However, care must be taken so that {a mathematical formula}L-constraints and built-in conditions are not intermixed.
+      </paragraph>
+      <paragraph label="Definition 6.16">
+       The evaluation of FILTER graph patterns involving {a mathematical formula}L-constraints can now be defined as follows. Notice that the evaluation does not check for satisfaction of the constraints as in standard SPARQL [75], but simply imposes these constraints on the mappings that are in the answer of the graph pattern involved. Given an {a mathematical formula}RDFi database {a mathematical formula}D=(G,ϕ), a graph pattern P and an {a mathematical formula}L-constraint R, we have:{a mathematical formula} where {a mathematical formula}ν(R) denotes the application of e-mapping ν to condition R, i.e., the formula of {a mathematical formula}L-constraints obtained from R when each special variable x of R which also belongs to {a mathematical formula}dom(ν) is replaced by {a mathematical formula}ν(x).
+      </paragraph>
+      <paragraph label="Example 6.17">
+       The following example illustrates the definition and shows that the purpose of constraint {a mathematical formula}ν(R) is to deal in a uniform way with the case that the object of a triple is a constant from C or an e-literal from U. Notice that {a mathematical formula}ν(R) is required because mappings in our case can contain variables with e-literals as values, thus we might not be able to deduce their satisfaction yet. In an implementation, one can also simplify constraints at this stage; such issues are beyond the scope of this paper.Based on the evaluation of the graph pattern of Example 6.15, the evaluation of the graph pattern {a mathematical formula}((P1ANDP2)FILTERR), where R is the PCL-constraint {a mathematical formula}(?RNTPP"g5"), is the following:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Evaluation of SPARQL queries
+      </section-title>
+      <paragraph label="Definition 6.18">
+       Having defined the evaluation of graph patterns, in this section we introduce the SELECT and CONSTRUCT query forms of SPARQL and study their evaluation in {a mathematical formula}RDFi. Pérez et al. [74]A SELECT query is a pair {a mathematical formula}(W,P) where W is a set of variables from the set V and P is a graph pattern.
+      </paragraph>
+      <paragraph label="Example 6.19">
+       Let us consider the following query over the database of Example 4.2: “Find all fires that have occurred in a region which is a non-tangential proper part of the rectangle defined by the points {a mathematical formula}(10,12) and {a mathematical formula}(21,17)”. This query can be expressed as{a mathematical formula} where g5 is as in Example 6.14.
+      </paragraph>
+      <paragraph label="Definition 6.20">
+       Next we define the notion of an answer to a SELECT query. In contrast to SELECT queries over RDF graphs, SELECT queries over {a mathematical formula}RDFi databases have answers that consist of conditional mappings so they might be harder to understand (see Example 6.21 below).Let {a mathematical formula}q=(W,P) be a SELECT query. The answer to q over an {a mathematical formula}RDFi database {a mathematical formula}D=(G,ϕ) (in symbols {a mathematical formula}〚q〛D) is the pair {a mathematical formula}(Ω,ϕ) where Ω is the set of conditional mappings {a mathematical formula}{μ|W|μ∈〚P〛D} and ϕ the global constraint of D.
+      </paragraph>
+      <paragraph label="Example 6.21">
+       In contrast to standard SPARQL, answers to SELECT queries in {a mathematical formula}RDFi are pairs of a set of mappings and a global constraint rather than sets of mappings. The reason is that conditional mappings in the answer to a query might contain e-literals. These e-literals are constrained by the global constraint ϕ, which is also included in the answer.The answer to the query from Example 6.19 can be obtained from the evaluation of the respective graph pattern from Example 6.17. The answer is the pair {a mathematical formula}(Ω,ϕ) where the set of conditional mappings Ω and the global constraint ϕ are as follows:{a mathematical formula} This answer is conditional. Because the information in the database of Example 4.2 is indefinite (the exact geometry of {a mathematical formula}_R1 is not known), we cannot say for sure whether fire1 satisfies the requirements of the query. These requirements are satisfied under the condition given in the above mapping and the global constraint ϕ.
+      </paragraph>
+      <paragraph label="Definition 6.22">
+       Let us now introduce the notion of a template and define the CONSTRUCT query form. A template E is a finite subset of the set {a mathematical formula}(T∪V)×(I∪V)×(T∪V).
+      </paragraph>
+      <paragraph label="Definition 6.23">
+       The elements of a template are like triple patterns but blank nodes and e-literals are also allowed in the subject and object positions. We denote by {a mathematical formula}var(E) and {a mathematical formula}blank(E) the set of variables and set of blank nodes appearing in the elements of E respectively. Templates are used to specify the graph that results from the evaluation of a CONSTRUCT query. A CONSTRUCT query is a pair {a mathematical formula}(E,P), where E is a template and P a graph pattern.
+      </paragraph>
+      <paragraph label="Example 6.24">
+       Let us consider the query of Example 6.19. A new version of this query using the CONSTRUCT query form is:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 6.25">
+       If {a mathematical formula}μ=(ν,θ) is a conditional mapping and E a template, then we denote by {a mathematical formula}μ(E) the application of the conditional mapping μ to template E. The effect of expression {a mathematical formula}μ(E) is the replacement of every variable x of {a mathematical formula}var(E)∩dom(μ) by {a mathematical formula}ν(x) and the attachment of constraint θ to every element of E. Let us consider the template {a mathematical formula}E={(?F, a, ?Z),(?F, occurredIn, ?S)} and mapping {a mathematical formula}μ4 from Example 6.4. The result of applying {a mathematical formula}μ4 to E is the set {a mathematical formula}{((fire1, a, ?Z),true),((fire1, occurredIn, _R1),true)}.Notice that the definition above does not require a conditional mapping to share any variables with the template to which it is applied. As a consequence, the first element of {a mathematical formula}μ4(E) is not a valid conditional triple, i.e., the triple part of it is not an element of the set {a mathematical formula}(I∪B)×I×T as Definition 4.1 for e-triples requires. Such conditional triples are dropped from the answers to CONSTRUCT queries (see Definition 6.27 below).
+      </paragraph>
+      <paragraph label="Definition 6.26">
+       Next we define the notion of the answer to a CONSTRUCT query. The definition extends the specification of standard SPARQL [76] to account for the {a mathematical formula}RDFi framework and follows the formal approach of Pérez et al. [74]. Before we give the definition, we need to introduce the notion of a renaming function. Let E be a template, P a graph pattern, and {a mathematical formula}D=(G,ϕ) an {a mathematical formula}RDFi database. The set {a mathematical formula}{fμ|μ∈〚P〛D} is a set of renaming functions for E and {a mathematical formula}〚P〛D if the following properties are satisfied: 1) the domain of every function {a mathematical formula}fμ is {a mathematical formula}blank(E) and its range is a subset of {a mathematical formula}(B∖blank(G)), 2) every function {a mathematical formula}fμ is one-to-one, and 3) for every pair of distinct mappings {a mathematical formula}μ1,μ2∈〚P〛D, {a mathematical formula}fμ1,fμ2 have disjoint ranges.
+      </paragraph>
+      <paragraph label="Definition 6.27">
+       The application of a renaming function {a mathematical formula}fμ to a template E is denoted by {a mathematical formula}fμ(E) and results in renaming the blank nodes of E according to {a mathematical formula}fμ. Let {a mathematical formula}q=(E,P) be a CONSTRUCT query, {a mathematical formula}D=(G,ϕ) an {a mathematical formula}RDFi database and {a mathematical formula}F={fμ|μ∈〚P〛D} a fixed set of renaming functions. The answer to q over D (in symbols {a mathematical formula}〚q〛D) is the {a mathematical formula}RDFi database {a mathematical formula}D′=(G′,ϕ) where{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In the above definition, renaming functions are used to ensure that new blank nodes are created for each conditional mapping μ. The intersection with the set {a mathematical formula}(I∪B)×I×T makes sure that no illegal conditional triples are returned as answers (see Example 6.25 above).
+      </paragraph>
+      <paragraph label="Example 6.28">
+       The answer to the CONSTRUCT query from Example 6.24 can be obtained from the evaluation of the respective graph pattern from Example 6.17. The answer is the following {a mathematical formula}RDFi database:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 6.29">
+       Updates such as the above are customarily made by national agencies in charge of crisis management as a means of assessing the damage caused by a fire event after it has been completed. In the jargon of fire monitoring and management this process is known as “burnt scar mapping”.Let us consider the following CONSTRUCT query over the above database: “Find all fires and burnt areas that have been identified in a region which is a non-tangential proper part of the rectangle defined by the points (6, 8) and (23, 19)” (rectangle {a mathematical formula}Qr in Fig. 2(a)). This query is expressed as follows:{a mathematical formula} For brevity, we will refer to the template of the above query, the triple patterns and the condition of the FILTER operator as E, {a mathematical formula}P1,…,P4, and R respectively. We assume that the evaluation of graph pattern expressions is done from left to right, i.e., {a mathematical formula}((((P1ANDP2)ANDP3)ANDP4)FILTERR). Then, we will use P to refer to the AND graph pattern expression composed of {a mathematical formula}P1, {a mathematical formula}P2, {a mathematical formula}P3, and {a mathematical formula}P4.The evaluation of triple patterns results in the following sets of conditional mappings (see Definition 6.13 (1)).{a mathematical formula}According to Definition 6.13 (2) the evaluation of AND graph pattern expressions is done by joining the above sets of mappings as follows {a mathematical formula}(((Ω1⋈Ω2)⋈Ω3)⋈Ω4). The result, {a mathematical formula}Ω5, is shown below.{a mathematical formula}Having evaluated the graph pattern P, the evaluation of the graph pattern {a mathematical formula}PFILTERR just attaches the constraint {a mathematical formula}ν(R) to every conditional mapping {a mathematical formula}(ν,true) of the set {a mathematical formula}Ω5 above (see Definition 6.16). The resulting set of conditional mappings is the following:{a mathematical formula}As a last step for computing the answer to the CONSTRUCT query of this example is the application of the conditional mappings of the set Ω to the template E (see Definition 6.27). This leads to the {a mathematical formula}RDFi database {a mathematical formula}Dq=(Gq,ϕ) shown below.{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Monotonicity of SPARQL
+     </section-title>
+     <paragraph>
+      In this section, we define the notion of monotonicity for SPARQL queries evaluated over RDF graphs and prove that two important fragments of SPARQL are monotone. The first fragment employs graph patterns built using operators AND, UNION, and FILTER, while the second employs the well-designed graph patterns introduced in Section 6. As in Section 6, our only addition to standard SPARQL is the extension of FILTER operator with another kind of conditions that are constraints of {a mathematical formula}L. Due to this extension, the constants of {a mathematical formula}L should also be allowed to appear in RDF graphs. This set of constants corresponds to the typed literals of {a mathematical formula}RDFi from the set C defined in Section 4. In the following, we denote by {a mathematical formula}TC the terms of RDF that will be the union of the sets I, B, L, and C. Therefore, {a mathematical formula}TC differs from T, i.e., the terms of {a mathematical formula}RDFi, in that it does not include e-literals from the set U.
+     </paragraph>
+     <paragraph label="Notation 1">
+      Before proceeding to the details, we introduce some notation that will be useful in the remainder of this work. We denote by {a mathematical formula}QFC (resp. {a mathematical formula}QFS) the set of all CONSTRUCT (resp. SELECT) queries consisting of triple patterns, and graph pattern expressions from a class {a mathematical formula}F. Class AUF will denote the graph pattern expressions built using operators AND, UNION, and FILTER, while class WD will denote the well-designed graph patterns. We will denote by {a mathematical formula}QFC′ all CONSTRUCT queries without blank nodes in their templates.
+     </paragraph>
+     <paragraph label="Definition 7.1">
+      The following definition introduces the concept of monotonicity for SPARQL queries which is equivalent to the notion of monotonicity for graph patterns as defined by Arenas and Pérez [10]. A fragment {a mathematical formula}Q of SPARQL is monotone if for every {a mathematical formula}q∈Q and RDF graphs G and H such that {a mathematical formula}G⊆H, we have {a mathematical formula}〚q〛G⊆〚q〛H.
+     </paragraph>
+     <paragraph label="Definition 7.2">
+      Before proving which fragments of SPARQL queries are monotone, we recall the relevant notions of subsumption for standard mappings [75] and weak monotonicity for graph patterns [10]. Subsumption of mappings [75]Let {a mathematical formula}μ1,μ2 be mappings. We say that {a mathematical formula}μ1is subsumed by{a mathematical formula}μ2, denoted by {a mathematical formula}μ1⪯μ2, if {a mathematical formula}dom(μ1)⊆dom(μ2) and {a mathematical formula}μ1(x)=μ2(x) for every {a mathematical formula}x∈dom(μ1). Let {a mathematical formula}Ω1,Ω2 be sets of mappings. We say that {a mathematical formula}Ω1is subsumed by{a mathematical formula}Ω2, denoted by {a mathematical formula}Ω1⊑Ω2, if for every {a mathematical formula}μ1∈Ω1 there exists a mapping {a mathematical formula}μ2∈Ω2 such that {a mathematical formula}μ1⪯μ2.
+     </paragraph>
+     <paragraph label="Example 7.3">
+      Informally, if a mapping μ subsumes a mapping {a mathematical formula}μ′, then μ may contain additional information to {a mathematical formula}μ′, i.e., it may map additional variables to RDF terms. Let us consider the following mappings: {a mathematical formula}μ1={?F→fire1},μ2={?F→fire1,?S→"g2"}. Mapping {a mathematical formula}μ1 is subsumed by mapping {a mathematical formula}μ2, i.e., {a mathematical formula}μ1⪯μ2.
+     </paragraph>
+     <paragraph label="Definition 7.4">
+      Weak monotonicity [10]Let P be a graph pattern of SPARQL. P is said to be weakly monotone if for every pair {a mathematical formula}G,H of RDF graphs such that {a mathematical formula}G⊆H, it is {a mathematical formula}〚P〛G⊑〚P〛H.
+     </paragraph>
+     <paragraph label="Theorem 7.5">
+      The following theorem summarizes the properties of graph patterns with respect to monotonicity using the notation introduced above. Arenas and Pérez [10]The class of AUF graph patterns is monotone. The class of WD graph patterns is weakly monotone.
+     </paragraph>
+     <paragraph>
+      We stress here that our extension of the FILTER conditions to include {a mathematical formula}L-constraints does not affect in any way the proof of the above theorem. Testing whether such conditions are satisfied by a mapping is similar to checking whether a built-in condition is satisfied with the only exception that one might need a specialized algorithm for the new kind of conditions. For example, when the constraint language is PCL, satisfaction could be checked by an algorithm of computational geometry, since in that case we need to check whether a certain topological relation holds between two geometrical objects in {a mathematical formula}Q2. This is what is done in the geospatial RDF store Strabon [50], which implements the geospatial and temporal extensions of RDF and SPARQL, named stRDF and stSPARQL respectively, proposed by Koubarakis and Kyzirakos [49].
+     </paragraph>
+     <paragraph label="Proposition 7.6">
+      Having Theorem 7.5, it is now easy to prove Proposition 7.6 below, which gives us some fragments of SPARQL that are monotone. a) Language{a mathematical formula}QAUFSis monotone. b) The presence of OPT orCONSTRUCTmakes a fragment of SPARQL not monotone. c) Language{a mathematical formula}QAUFC′is monotone. d) Language{a mathematical formula}QWDC′is monotone.
+     </paragraph>
+     <paragraph label="Proof">
+      a) and b) The results are trivial extensions of relevant results by Arenas and Pérez [10].c) Consider a query {a mathematical formula}q=(E,P)∈QAUFC and let {a mathematical formula}G,H be two RDF graphs such that {a mathematical formula}G⊆H. According to Definition 4.6 of CONSTRUCT for RDF graphs as given by Pérez et al. [74] we have{a mathematical formula}{a mathematical formula}From the monotonicity property of AUF graph patterns (Theorem 7.5), we have that {a mathematical formula}〚P〛G⊆〚P〛H. Therefore, all mappings μ appearing in the union expression of formula (1) appear also in the union expression of formula (2). Hence, if the sets making up the union in formulae (1) and (2) are the same, then we shall get the required relation for monotonicity, that is, {a mathematical formula}〚q〛G⊆〚q〛H.Let us first consider CONSTRUCT queries without blank nodes in their template. Then, the renaming functions do not have any effect on the templates, therefore, the sets in formulae (1) and (2) are the same for same mappings. Thus, {a mathematical formula}〚q〛G⊆〚q〛H.The same does not hold if we allow blank nodes to appear in templates. The reason is that renaming functions rename blank nodes to fresh ones with respect to the underlying RDF graph over which a graph pattern is evaluated. Therefore, a renaming function used in formula (1) could have possibly renamed a blank node to a fresh one regarding G, but not a fresh one regarding H, i.e., that blank node could have been already in H.d) Consider a query {a mathematical formula}q=(E,P)∈QWDC′ and let {a mathematical formula}G,H be two RDF graphs such that {a mathematical formula}G⊆H. Let also {a mathematical formula}〚q〛G and {a mathematical formula}〚q〛H be as in formulae (1) and (2) respectively. Since the template E does not contain blank nodes, we can omit the renaming functions from these expressions and get{a mathematical formula}Since {a mathematical formula}P∈WD, by Theorem 7.5, P is weakly monotone. Therefore, {a mathematical formula}〚P〛G⊑〚P〛H. Hence, for every mapping {a mathematical formula}μ∈〚P〛G there exists mapping {a mathematical formula}μ′∈〚P〛H such that {a mathematical formula}μ⪯μ′. This means that μ and {a mathematical formula}μ′ map the common variables of their domains to the same RDF terms. Hence, if a mapping {a mathematical formula}μ∈〚P〛G produces triple t in {a mathematical formula}〚q〛G, that triple is also produced in {a mathematical formula}〚q〛H by a mapping {a mathematical formula}μ′∈〚P〛H such that {a mathematical formula}μ⪯μ′. Thus, {a mathematical formula}〚q〛G⊆〚q〛H.  □
+     </paragraph>
+     <paragraph>
+      It has been noted by Angles and Gutierrez [6] that the OPT operator of SPARQL can be used to express difference in SPARQL. For data models that make the OWA, such an operator is unnatural since negative information cannot be expressed. However, Proposition 7.6d) shows that the weak monotonicity property of well-designed graph patterns suffices to get a monotone fragment of SPARQL containing the OPT operator, i.e., the class of CONSTRUCT queries without blank nodes in their templates. This is a result that cannot be established for the case of SELECT queries, which can be proved to be weakly monotone for the class of well-designed patterns, but not monotone.
+     </paragraph>
+    </section>
+    <section label="8">
+     Representation systems for {a mathematical formula}RDFi
+     <paragraph>
+      Let us now recall the semantics of {a mathematical formula}RDFi: {a mathematical formula}Rep(D) is the set of possible RDF graphs corresponding to an {a mathematical formula}RDFi database D. Clearly, if we were to evaluate a query q over D, we could use the semantics of {a mathematical formula}RDFi and evaluate q over all RDF graphs of {a mathematical formula}Rep(D) as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      However, this is not the best answer we wish to have in terms of representation; we queried an {a mathematical formula}RDFi database and got an answer which is a set of RDF graphs. Any well-defined query language should have the closure property, i.e., the output (answer) should be of the same type as the input. Ideally, we would like to have an {a mathematical formula}RDFi database as the output. Thus, we are interested in finding an {a mathematical formula}RDFi database {a mathematical formula}〚q〛D representing the answer {a mathematical formula}〚q〛Rep(D). This requirement is translated to the following formula:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Example 8.1">
+      Formula (3) allows us to compute the answer to any query over an {a mathematical formula}RDFi database in a consistent way with respect to the semantics of {a mathematical formula}RDFi without having the need to apply the query on all possible RDF graphs. Expression {a mathematical formula}〚q〛D can be computed using the algebra of Section 6 above. But can the algebra of Section 6 always compute such a database {a mathematical formula}〚q〛D representing {a mathematical formula}〚q〛Rep(D)? In other words, can we prove (3) for all SPARQL queries considered in Section 6? The answer is no in general. The following example modeled after [31] illustrates this negative fact. Consider the {a mathematical formula}RDFi database D with the triple {a mathematical formula}(s,p,o) and a global constraint equal to true, and a CONSTRUCT query q over D that constructs an RDF graph out of triples having s as the subject. Then, triple {a mathematical formula}(s,p,o) and nothing else is in the resulting database {a mathematical formula}〚q〛D. However, equation (3) is not satisfied, since for instance {a mathematical formula}(c,d,e) occurs in some {a mathematical formula}g∈Rep(〚q〛D) according to the definition of Rep, whereas {a mathematical formula}(c,d,e)∉g for all {a mathematical formula}g∈〚q〛Rep(D).
+     </paragraph>
+     <paragraph>
+      Note that the above counterexample to (3) exploits only the fact that RDF makes the OWA. In other words, the counterexample would hold for any approach to incomplete information in RDF which respects the OWA. Thus, unless the CWA is adopted, which we do not want to do since we are in the realm of RDF, condition (3) has to be relaxed.{sup:6}
+     </paragraph>
+     <paragraph label="Notation 2">
+      In the rest of this section we follow the approach of incomplete relational databases [41], [30] and show how (3) can be weakened. The key concept for achieving this is the concept of certain answers that we define below. Before proceeding to the definition, we need to introduce some useful notation. Let {a mathematical formula}G be a set of RDF graphs and q a SPARQL query. The expression {a mathematical formula}⋂G will denote the set {a mathematical formula}⋂G∈GG. The expression {a mathematical formula}〚q〛G, which extends the notation of Pérez et al. [75] to the case of sets of RDF graphs, will denote the element-wise evaluation of q over {a mathematical formula}G, that is, {a mathematical formula}〚q〛G={〚q〛G|G∈G}.
+     </paragraph>
+     <paragraph label="Definition 8.2">
+      The following definition of certain answers extends the corresponding definition of Section 3.1 of Arenas and Pérez [10] by applying it to a more general incomplete information setting. Let q be a query and {a mathematical formula}G a set of RDF graphs. The certain answers to q over {a mathematical formula}G is the set {a mathematical formula}⋂〚q〛G.
+     </paragraph>
+     <paragraph label="Example 8.3">
+      Although the concept of certain answers is defined above for sets of RDF graphs, it is natural to refer to the certain answers of queries over {a mathematical formula}RDFi databases without introducing any further formal definition. This should not cause any confusion since the semantics of an {a mathematical formula}RDFi database makes the concept of an {a mathematical formula}RDFi database equivalent to a set of RDF graphs. Let us consider the following query over the database of Example 4.2: “Find all fires that have occurred in a region which is a non-tangential proper part of the rectangle defined by the points {a mathematical formula}(2,4) and {a mathematical formula}(28,22)” (see Fig. 1 in Section 2). The certain answers to this query is the set of mappings {a mathematical formula}{{?F →fire1}}.
+     </paragraph>
+     <paragraph label="Definition 8.4">
+      Given a fixed fragment {a mathematical formula}Q of SPARQL, two sets of RDF graphs cannot be distinguished by {a mathematical formula}Q if they give the same certain answers to every query in {a mathematical formula}Q. The next definition formalizes this fact using the concept of {a mathematical formula}Q-equivalence. Let {a mathematical formula}Q be a fragment of SPARQL, and {a mathematical formula}G, {a mathematical formula}H two sets of RDF graphs. {a mathematical formula}G and {a mathematical formula}H are called {a mathematical formula}Q-equivalent (denoted by {a mathematical formula}G≡QH) if they give the same certain answers to every query in the language, that is, {a mathematical formula}⋂〚q〛G=⋂〚q〛H for all {a mathematical formula}q∈Q.
+     </paragraph>
+     <paragraph label="Definition 8.5">
+      We can now define the notion of a representation system which gives a formal characterization of the correctness of computing the answer to a query directly on an {a mathematical formula}RDFi database instead of using the set of possible graphs given by Rep. Let {a mathematical formula}D be the set of all {a mathematical formula}RDFi databases, {a mathematical formula}G the set of all RDF graphs, {a mathematical formula}Rep:D→2G a function determining the set of possible RDF graphs corresponding to an {a mathematical formula}RDFi database, and {a mathematical formula}Q a fragment of SPARQL. The triple {a mathematical formula}〈D,Rep,Q〉 is a representation system if, for all {a mathematical formula}D∈D and all {a mathematical formula}q∈Q, there exists an {a mathematical formula}RDFi database {a mathematical formula}〚q〛D∈D such that {a mathematical formula}Rep(〚q〛D)≡Q〚q〛Rep(D).
+     </paragraph>
+     <paragraph label="Definition 8.6">
+      The next step towards the development of a representation system for {a mathematical formula}RDFi and SPARQL is to define the notion of coinitiality. Let {a mathematical formula}G and {a mathematical formula}H be sets of RDF graphs. We say that {a mathematical formula}G and {a mathematical formula}H are coinitial, denoted by {a mathematical formula}G≈H, if for every {a mathematical formula}G∈G there exists some {a mathematical formula}H∈H such that {a mathematical formula}H⊆G, and for every {a mathematical formula}H∈H there exists some {a mathematical formula}G∈G such that {a mathematical formula}G⊆H.
+     </paragraph>
+     <paragraph label="Example 8.7">
+      The following sets are coinitial:{a mathematical formula} To see why the sets {a mathematical formula}G and {a mathematical formula}H are coinitial, observe that for every {a mathematical formula}G∈G, there exists an element {a mathematical formula}H∈H such that {a mathematical formula}H⊆G. Take for example the pairs {a mathematical formula}(G1,H1), {a mathematical formula}(G2,H1), and {a mathematical formula}(G3,H2). Similarly, such elements in {a mathematical formula}G do exist for every element of {a mathematical formula}H, i.e., {a mathematical formula}(H1,G2) and {a mathematical formula}(H2,G3).
+     </paragraph>
+     <paragraph>
+      A direct consequence of the definition of coinitial sets is that they have the same greatest lower-bound elements with respect to the subset relation. In the above example, the greatest lower bound is {a mathematical formula}⋂G=⋂H={(a,b,c)}.
+     </paragraph>
+     <paragraph label="Proposition 8.8">
+      An important property of monotone SPARQL queries is that they preserve coinitiality. This is stated formally in the following proposition. Let{a mathematical formula}Qbe a monotone fragment of SPARQL and{a mathematical formula}Gand{a mathematical formula}Hsets of RDF graphs. If{a mathematical formula}G≈H, then for every{a mathematical formula}q∈Qit holds that{a mathematical formula}〚q〛G≈〚q〛H.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is straightforward from the monotonicity property. Since {a mathematical formula}G≈H we have the following:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       for every {a mathematical formula}G∈G there exists some {a mathematical formula}HG∈H such that {a mathematical formula}HG⊆G and
+      </list-item>
+      <list-item label="•">
+       for every {a mathematical formula}H∈H there exists some {a mathematical formula}GH∈G such that {a mathematical formula}GH⊆H.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 8.9">
+      It turns out that monotonicity is sufficient for establishing our results about representation systems. Thus, in the following, we focus on the monotone fragments of SPARQL as identified in Section 7, namely, {a mathematical formula}QAUFC′ and {a mathematical formula}QWDC′. Let{a mathematical formula}Gand{a mathematical formula}Hbe sets of RDF graphs. If{a mathematical formula}Gand{a mathematical formula}Hare coinitial then{a mathematical formula}Gand{a mathematical formula}Hare{a mathematical formula}QAUFC′-equivalent (i.e.,{a mathematical formula}G≡QAUFC′H) and{a mathematical formula}QWDC′-equivalent (i.e.,{a mathematical formula}G≡QWDC′H).
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is similar to the one given in [41, Lemma 4.2]. We give the proof for {a mathematical formula}QAUFC′. The proof for {a mathematical formula}QWDC′ is similar.We have to prove that {a mathematical formula}⋂〚q〛G=⋂〚q〛H for every {a mathematical formula}q∈QAUFC′. Let {a mathematical formula}G≈H. Then, from Proposition 8.8 and because of the monotonicity property of {a mathematical formula}QAUFC′, we have that {a mathematical formula}〚q〛G≈〚q〛H for every {a mathematical formula}q∈QAUFC′. Thus, for every {a mathematical formula}〚q〛G∈〚q〛G there exists a {a mathematical formula}〚q〛HG∈〚q〛H such that {a mathematical formula}〚q〛HG⊆〚q〛G. So, we have{a mathematical formula}To see why {a mathematical formula}⋂G∈G〚q〛G⊇⋂G∈G〚q〛HG, notice that the expressions {a mathematical formula}⋂G∈G〚q〛G and {a mathematical formula}⋂G∈G〚q〛HG can be written respectively as{a mathematical formula} and that the relation {a mathematical formula}〚q〛HGi⊆〚q〛Gi holds. Therefore, if an element x is in {a mathematical formula}⋂G∈G〚q〛HG, it will be in every {a mathematical formula}〚q〛HGi, and thus it will be in every {a mathematical formula}〚q〛Gi, which proves the relation. Now, to see why {a mathematical formula}⋂G∈G〚q〛HG⊇⋂H∈H〚q〛H, notice that the relation can be written as {a mathematical formula}⋂〚q〛HG⊇⋂〚q〛H where {a mathematical formula}HG≡{H∈H|H⊆G for some G∈G}. Thus, {a mathematical formula}HG⊆H, and therefore, {a mathematical formula}⋂HG⊇⋂H. Similarly if q is a monotone query, then {a mathematical formula}〚q〛HG⊆〚q〛H and {a mathematical formula}⋂〚q〛HG⊇⋂〚q〛H. Therefore, we showed that {a mathematical formula}⋂〚q〛G⊇⋂〚q〛H. We work similarly to prove {a mathematical formula}⋂〚q〛H⊇⋂〚q〛G and finally get {a mathematical formula}⋂〚q〛G=⋂〚q〛H.  □
+     </paragraph>
+     <paragraph label="Definition 8.10">
+      We will now present our main theorem which characterizes the evaluation of monotone {a mathematical formula}QAUFC′ and {a mathematical formula}QWDC′ queries (Theorem 8.15). Before we do this, we need a few definitions and preliminary results. The first definition allows us to apply a valuation to a conditional mapping. Let {a mathematical formula}v:U→C be a valuation and {a mathematical formula}μ=(ν,θ) a conditional mapping such that {a mathematical formula}ML⊨v(θ). Then {a mathematical formula}v(μ) denotes the mapping that is obtained from ν by replacing each e-literal _l appearing in ν by the constant {a mathematical formula}v(_l).
+     </paragraph>
+     <paragraph>
+      By applying a valuation to a conditional mapping, we get an ordinary mapping like in the case of RDF. This occurs because the application of the valuation to the constraint of the mapping makes the resulting constraint equivalent to true, and hence, we can simply disregard it.
+     </paragraph>
+     <paragraph label="Definition 8.11">
+      In a similar way, we can extend a valuation v to a set of mappings Ω as follows. Let Ω be a set of conditional mappings and {a mathematical formula}v:U→C a valuation. Then, {a mathematical formula}v(Ω)={v(μ)|μ=(ν,θ)∈Ω and ML⊨v(θ)}.
+     </paragraph>
+     <paragraph label="Definition 8.12">
+      The next definition allows us to apply a valuation to an {a mathematical formula}RDFi database. Let {a mathematical formula}v:U→C be a valuation and {a mathematical formula}D=(G,ϕ) an {a mathematical formula}RDFi database such that {a mathematical formula}ML⊨v(ϕ). Then {a mathematical formula}v(D) denotes the RDF graph {a mathematical formula}v(G).
+     </paragraph>
+     <paragraph label="Proposition 8.13">
+      Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase and q a query from a monotone fragment{a mathematical formula}Qof SPARQL. If for all valuations v such that{a mathematical formula}ML⊨v(ϕ)equality{a mathematical formula}v(〚q〛D)=〚q〛v(D)holds, then{a mathematical formula}Rep(〚q〛D)≈〚q〛Rep(D).
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}〚q〛D be the pair {a mathematical formula}D1=(G1,ϕ) and {a mathematical formula}G′ an RDF graph such that {a mathematical formula}G′∈Rep(D1). By the definition of Rep, there exists a valuation {a mathematical formula}v′ such that {a mathematical formula}ML⊨v′(ϕ) and {a mathematical formula}G′⊇v′(G1). Since {a mathematical formula}v(〚q〛D)=〚q〛v(D) and {a mathematical formula}ML⊨v′(ϕ) we get{a mathematical formula} where H is a new symbol introduced for convenience. Now, observe that {a mathematical formula}v′(D) is the RDF graph {a mathematical formula}v′(G) which is an element of {a mathematical formula}Rep(D) since {a mathematical formula}ML⊨v′(ϕ). Since also {a mathematical formula}〚q〛Rep(D)={〚q〛G|G∈Rep(D)}, it turns out that {a mathematical formula}H∈〚q〛Rep(D). To see this, notice that {a mathematical formula}H=〚q〛v′(D) and that {a mathematical formula}v′(D)∈Rep(D).This proves that, for each {a mathematical formula}G′∈Rep(〚q〛D), there exists an {a mathematical formula}H∈〚q〛Rep(D) such that {a mathematical formula}H⊆G′. To prove that {a mathematical formula}Rep(〚q〛D)≈〚q〛Rep(D) we need to show the same for the other direction.Let {a mathematical formula}H′ be an RDF graph such that {a mathematical formula}H′∈〚q〛Rep(D). Then {a mathematical formula}H′=〚q〛H for some {a mathematical formula}H∈Rep(D). By the definition of Rep, there exists a valuation {a mathematical formula}v′ such that {a mathematical formula}ML⊨v′(ϕ) and {a mathematical formula}H⊇v′(G) or equivalently {a mathematical formula}H⊇v′(D). Since {a mathematical formula}v(〚q〛D)=〚q〛v(D) and {a mathematical formula}ML⊨v′(ϕ), we have {a mathematical formula}〚q〛v′(D)=v′(〚q〛D). Since q belongs to a monotone fragment of SPARQL and {a mathematical formula}H⊇v′(D), we have {a mathematical formula}〚q〛H⊇〚q〛v′(D) which is equivalent to {a mathematical formula}H′⊇v′(〚q〛D). Now observe that since {a mathematical formula}ML⊨v′(ϕ), {a mathematical formula}v′(〚q〛D) is an RDF graph {a mathematical formula}G′ and that {a mathematical formula}G′∈Rep(〚q〛D). Therefore, we showed that for every {a mathematical formula}H′∈〚q〛Rep(D) there exists a {a mathematical formula}G′∈Rep(〚q〛D) such that {a mathematical formula}G′⊆H′. Hence, {a mathematical formula}Rep(〚q〛D)≈〚q〛Rep(D).  □
+     </paragraph>
+     <paragraph label="Proposition 8.14">
+      Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase,{a mathematical formula}q=(E,P)aCONSTRUCTquery without blank nodes in E, and v a valuation such that{a mathematical formula}ML⊨v(ϕ). Then,{a mathematical formula}v(〚P〛D)=〚P〛v(D)implies{a mathematical formula}v(〚q〛D)=〚q〛v(D).
+     </paragraph>
+     <paragraph label="Theorem 8.15">
+      The proof of Proposition 8.14 may be found in Appendix B. We are now ready to prove our main result. Representation TheoremThe triples{a mathematical formula}〈D,Rep,QAUFC′〉and{a mathematical formula}〈D,Rep,QWDC′〉are representation systems.
+     </paragraph>
+     <paragraph label="Proof">
+      We give a sketch of the proof. The full proof may be found in Appendix A.To prove that triple {a mathematical formula}〈D,Rep,QAUFC′〉 is a representation system, it is sufficient to show that for any {a mathematical formula}D=(G,ϕ)∈D and any query {a mathematical formula}q=(E,P)∈QAUFC′ the evaluation of q over D, that is {a mathematical formula}〚q〛D, is such that {a mathematical formula}Rep(〚q〛D)≡QAUFC′〚q〛Rep(D). By Lemma 8.9 it is sufficient to prove that{a mathematical formula}By Proposition 8.13, Proposition 8.14, relation (4) holds if {a mathematical formula}v(〚P〛D)=〚P〛v(D) holds for all valuations v such that {a mathematical formula}ML⊨v(ϕ). We prove this in Appendix A by induction on the structure of graph patterns P of {a mathematical formula}QAUFC′. To show that triple {a mathematical formula}〈D,Rep,QWDC′〉 is a representation system, the proof is similar to the above and differs only in the inductive step for the OPT operator.  □
+     </paragraph>
+     <paragraph>
+      Since SELECT queries in SPARQL take as input an RDF graph but return a set of mappings (i.e., we do not have closure), it is not clear how to include them in the developed concept of a representation system (also see the discussion on SELECT in Section 9).
+     </paragraph>
+     <paragraph label="Remark">
+      The concepts of {a mathematical formula}Q-equivalence (Definition 8.4), representation systems (Definition 8.5), and coinitiality (Definition 8.6) were originally defined by Imieliński and Lipski [41] for incomplete relational databases. In the same context, Grahne [30] refers to representation systems as weak query systems and to coinitiality as +-equivalence. If Definition 8.5 is modified so that formula (3) is used in place of its more relaxed version {a mathematical formula}Rep(〚q〛D)≡Q〚q〛Rep(D), then the concept of representation systems we get corresponds to the strong query systems of Grahne [30].
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Certain answers computation
+     </section-title>
+     <paragraph>
+      This section studies how the certain answers to a SPARQL query q over an {a mathematical formula}RDFi database D can be computed, i.e., how to compute {a mathematical formula}⋂〚q〛Rep(D). It also defines the associated decision problem, namely the certainty problem, and it studies its computational complexity.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       An algorithm for computing certain answers
+      </section-title>
+      <paragraph>
+       Having Theorem 8.15, it is easy to compute the certain answers to a query in the fragments {a mathematical formula}QAUFC′ and {a mathematical formula}QWDC′ of SPARQL. Since {a mathematical formula}〈D,Rep,QAUFC′〉 and {a mathematical formula}〈D,Rep,QWDC′〉 are representation systems, by Definition 8.5{a mathematical formula}Rep(〚q〛D)≡QAUFC′〚q〛Rep(D) and {a mathematical formula}Rep(〚q〛D)≡QWDC′〚q〛Rep(D) for all q in the above fragments and {a mathematical formula}RDFi databases {a mathematical formula}D∈D. Then, by Definition 8.4 and the identity query on the sets {a mathematical formula}Rep(〚q〛D) and {a mathematical formula}〚q〛Rep(D), we have {a mathematical formula}⋂Rep(〚q〛D)=⋂〚q〛Rep(D). Thus, we can equivalently compute the certain answers to q over D by computing the set {a mathematical formula}⋂Rep(〚q〛D), where {a mathematical formula}〚q〛D is computed using the algebra of Section 6.
+      </paragraph>
+      <paragraph label="Definition 9.1">
+       Before presenting the algorithm for certain answers computation, we need to introduce some auxiliary constructs similar to the ones defined by Imieliński and Lipski [41] and Grahne [30] in the case of incomplete relational databases. Let {a mathematical formula}D=(G,ϕ) be an {a mathematical formula}RDFi database. The EQ-completed form of D is the {a mathematical formula}RDFi database {a mathematical formula}DEQ=(GEQ,ϕ) where {a mathematical formula}GEQ is the same as G except that all e-literals {a mathematical formula}_l∈U appearing in G have been replaced in {a mathematical formula}GEQ by the constant {a mathematical formula}c∈C such that {a mathematical formula}ϕ⊨_lEQc (if such a constant exists).
+      </paragraph>
+      <paragraph label="Example 9.2">
+       In other words, in the EQ-completed form of an {a mathematical formula}RDFi database D, all e-literals that are entailed by the global constraint to be equal to a constant from C are substituted by that constant in all the triples in which they appear. This is demonstrated in the following example. Let us consider the {a mathematical formula}RDFi database {a mathematical formula}Dq=(Gq,ϕ) from Example 6.29. The EQ-completed form of {a mathematical formula}Dq is the {a mathematical formula}RDFi database {a mathematical formula}DqEQ=(GqEQ,ϕ), and is as follows:{a mathematical formula} In the conditional graph {a mathematical formula}GqEQ above, the e-literals {a mathematical formula}_R1, {a mathematical formula}_R2, and {a mathematical formula}_R3 from the conditional graph {a mathematical formula}Gq have been replaced by the constants "g7", "g7", and "g8" respectively, since the PCL-constraints {a mathematical formula}_R1EQ"g7", {a mathematical formula}_R2EQ"g7", and {a mathematical formula}_R3EQ"g8" are all entailed by the global constraint ϕ.
+      </paragraph>
+      <paragraph label="Definition 9.3">
+       Let {a mathematical formula}D=(G,ϕ) be an {a mathematical formula}RDFi database. The normalized form of D is the {a mathematical formula}RDFi database {a mathematical formula}D⁎=(G⁎,ϕ) where{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 9.4">
+       Given the above definition, the normalized form of an {a mathematical formula}RDFi database D is one that consists of the same global constraint and a graph in which conditional triples with the same triple part have been joined into a single conditional triple with a condition which is the disjunction of the conditions of the original triples. This is demonstrated in the following example. Let us consider the {a mathematical formula}RDFi database {a mathematical formula}DqEQ=(GqEQ,ϕ) from Example 9.2. The normalized form of {a mathematical formula}DqEQ is the {a mathematical formula}RDFi database {a mathematical formula}DqEQ⁎=(GqEQ⁎,ϕ), and is as follows:{a mathematical formula}In the conditional graph {a mathematical formula}GqEQ the e-triple (fire1, hasGeometry, "g7") appears in the triple part of two conditional triples. In the conditional graph {a mathematical formula}GqEQ⁎ above, these conditional triples have been combined into a new one, the triple part of which is the aforementioned e-triple and the conditional part the disjunction of the constraints of the combined conditional triples.
+      </paragraph>
+      <paragraph label="Lemma 9.5">
+       Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase. Then,{a mathematical formula}⋂Rep(D)=⋂Rep((DEQ)⁎).
+      </paragraph>
+      <paragraph label="Proof">
+       We will first prove that {a mathematical formula}⋂Rep(D)⊆⋂Rep((DEQ)⁎). Let t be an RDF triple such that {a mathematical formula}t∉⋂Rep((DEQ)⁎). Then, by the definition of Rep we get{a mathematical formula} Therefore, there exists valuation v such that {a mathematical formula}ML⊨v(ϕ) and {a mathematical formula}t∉v((GEQ)⁎), and thus
+       <list>
+        either there is no conditional triple {a mathematical formula}(t′,θ′)∈(GEQ)⁎ such that {a mathematical formula}ML⊨v(θ′), that is, {a mathematical formula}ML⊭v(θ′),or all conditional triples {a mathematical formula}(t′,θ′)∈(GEQ)⁎ such that {a mathematical formula}ML⊨v(θ′) are such that {a mathematical formula}v(t′)≠t.Observe now that for conditional triples in
+       </list>
+       <paragraph>
+        {a mathematical formula}(GEQ)⁎, {a mathematical formula}θ′ can be written as {a mathematical formula}⋁iθi′. So, if {a mathematical formula}(t′,θ′)∈(GEQ)⁎, then {a mathematical formula}(t′,θi′)∈GEQ. Therefore, there is a conditional triple {a mathematical formula}(t″,θi′)∈G, such that {a mathematical formula}t′ and {a mathematical formula}t″ possibly differ in their object position. In the following, we construct G and we show that {a mathematical formula}t∉v(G) for this particular v.For item a), since {a mathematical formula}ML⊭v(θ′) we have that {a mathematical formula}ML⊭v(θi′) for every {a mathematical formula}θi′, and thus such triples are dropped during application of valuation v to G. Hence, if it was the case that {a mathematical formula}t∈⋂Rep(D), it would be so only from item b). Consider now item b) and a triple {a mathematical formula}(t′,θ′)∈(GEQ)⁎. Since {a mathematical formula}ML⊨v(θ′) and {a mathematical formula}(t′,θi′)∈GEQ, then some (or even all) {a mathematical formula}θi′ would be such that {a mathematical formula}ML⊨v(θi′).Let us now construct the conditional graph G from {a mathematical formula}GEQ. Since {a mathematical formula}(t′,θi′)∈GEQ, there exists a conditional triple {a mathematical formula}(t″,θi′)∈G such that {a mathematical formula}t′ and {a mathematical formula}t″ possibly differ in their object position. Let {a mathematical formula}t′ be the e-triple {a mathematical formula}(s,p,o). Then:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         If {a mathematical formula}o∈C, then either {a mathematical formula}t″ is the same with {a mathematical formula}t′, or it has in its object position an e-literal _l such that {a mathematical formula}ϕ⊨_lEQo.
+        </list-item>
+        <list-item label="2.">
+         If {a mathematical formula}o∉C, then {a mathematical formula}t′ and {a mathematical formula}t″ are the same.
+        </list-item>
+       </list>
+       <paragraph>
+        Let us now apply valuation v to G. Notice that {a mathematical formula}v(G) contains only RDF triples coming from conditional triples with a condition θ such that {a mathematical formula}v(θ) is true. Thus, we could focus only on the conditional triples of G with such conditions (it is clear from above that such conditional triples do exist). To construct the RDF graph {a mathematical formula}v(G) it suffices to consider the two items above when applying v to a conditional triple {a mathematical formula}(t″,θi′) of G.According to item 2. and since {a mathematical formula}v(t′)≠t (we are considering item b) above), we have that {a mathematical formula}v(t″)≠t as well. As for item 1., if {a mathematical formula}t′=t″, then clearly we have {a mathematical formula}v(t″)≠t, since {a mathematical formula}v(t′)≠t. Otherwise, {a mathematical formula}t″ would be the triple {a mathematical formula}(s,p,_l) such that {a mathematical formula}ϕ⊨_lEQo. In such a case, the application of v to {a mathematical formula}t′ would leave {a mathematical formula}t′ unchanged, thus the RDF triple t would contain in the object position a literal from C and one that would be different from o. Since also {a mathematical formula}ϕ⊨_lEQo, then every valuation {a mathematical formula}v′ that makes {a mathematical formula}v′(ϕ)true it should make {a mathematical formula}v′(_lEQo)true as well. Thus, such valuations would map the e-literal _l to the constant o. Since the valuation v we consider is such a valuation, it maps _l to the constant o. Thus, again {a mathematical formula}v(t″)≠t.Therefore, we showed that {a mathematical formula}t∉v(G). Hence, from the definition of Rep we have {a mathematical formula}t∉⋂Rep(D) which proves that {a mathematical formula}⋂Rep(D)⊆⋂Rep((DEQ)⁎). The other direction of the proof for showing {a mathematical formula}⋂Rep((DEQ)⁎)⊆⋂Rep(D) is similar.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Theorem 9.6">
+       Having Lemma 9.5, it is easy to give an algorithm that computes the certain answers to a query. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase and q a query from{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′. The certain answers of q over D can be computed as follows: i) compute{a mathematical formula}〚q〛Daccording to Section6and let{a mathematical formula}Dq=(Gq,ϕ)be the resulting{a mathematical formula}RDFidatabase, ii) compute the{a mathematical formula}RDFidatabase{a mathematical formula}(Hq,ϕ)=((Dq)EQ)⁎, and iii) return the following set of RDF triples:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Notice that the certain answers for q over D is the set {a mathematical formula}⋂〚q〛Rep(D). By the Representation Theorem (Theorem 8.15) and since {a mathematical formula}q∈QAUFC′ or {a mathematical formula}q∈QWDC′, it suffices to show that the algorithm computes the set {a mathematical formula}⋂Rep(〚q〛D). Notice that equation {a mathematical formula}⋂〚q〛Rep(D)=⋂Rep(〚q〛D) is a logical consequence of Definition 8.5 for the identity query (see how the same equation was proved in the beginning of this section). By Lemma 9.5, it now suffices to prove that the given algorithm computes the set {a mathematical formula}⋂Rep(((〚q〛D)EQ)⁎), or using the notation of Theorem 9.6, the set {a mathematical formula}⋂Rep(((Dq)EQ)⁎).Step i) of the algorithm evaluates q over D, that is, it computes {a mathematical formula}Dq=(Gq,ϕ), while step ii) computes the EQ-completed form of {a mathematical formula}Dq, that is, {a mathematical formula}(Dq)EQ, and then its normalized form, {a mathematical formula}((Dq)EQ)⁎. It remains to show that step iii) computes exactly the intersection over the RDF graphs in {a mathematical formula}Rep(((Dq)EQ)⁎). Consider the set {a mathematical formula}⋂Rep(((Dq)EQ)⁎) or equivalently the set{a mathematical formula}An RDF triple t belongs to the above set iff for all valuations v such that {a mathematical formula}ML⊨v(ϕ), it holds {a mathematical formula}t∈v(((Dq)EQ)⁎). This is equivalent to requiring that a conditional triple {a mathematical formula}(t′,θ′) exists in {a mathematical formula}Hq such that {a mathematical formula}ML⊨v(θ′) and {a mathematical formula}t=v(t′) for all valuations v such that {a mathematical formula}ML⊨v(ϕ). Since step iii) requires that {a mathematical formula}ϕ⊨θ′ is true, then {a mathematical formula}ML⊨v(θ′) holds for all valuations v such that {a mathematical formula}ML⊨v(ϕ). Also, equation {a mathematical formula}t=v(t′) holds for any valuation v such that {a mathematical formula}ML⊨v(ϕ) iff {a mathematical formula}t′ respects the following two cases:
+       <list>
+        it does not contain any e-literal in the object position,it does contain an e-literal _l and all valuations v above map _l to the same constant {a mathematical formula}c∈C, which t has it in its object position.Since step iii) selects all conditional triples
+       </list>
+       <paragraph>
+        {a mathematical formula}(t′,θ) of {a mathematical formula}Hq such that {a mathematical formula}ϕ⊨θ and {a mathematical formula}o∉U, the first case above is satisfied. The second case above is out of question: {a mathematical formula}Hq does not contain such a triple since all such e-literals have already been substituted by the respective constant {a mathematical formula}c∈C such that {a mathematical formula}ϕ⊨_lEQc. Thus, step iii) computes exactly the set {a mathematical formula}⋂Rep(((Dq)EQ)⁎).  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Example 9.7">
+       The following example illustrates the algorithm of Theorem 9.6 for computing certain answers. Let us consider the {a mathematical formula}RDFi database {a mathematical formula}D=(G,ϕ) and the CONSTRUCT query q from Example 6.29. The certain answers to q over D can be computed according to the steps of Theorem 9.6 as follows:
+      </paragraph>
+      <list>
+       <list-item label="i)">
+        The {a mathematical formula}RDFi database {a mathematical formula}Dq=(Gq,ϕ) corresponding to the evaluation of q over D is the one from Example 6.29.
+       </list-item>
+       <list-item label="ii)">
+        The EQ-completed form of {a mathematical formula}Dq, {a mathematical formula}DqEQ, is given in Example 9.2. The normalized form of {a mathematical formula}DqEQ, {a mathematical formula}DqEQ⁎, is given in Example 9.4.
+       </list-item>
+       <list-item label="iii)">
+        The certain answers are the following set of RDF triples:{a mathematical formula} These RDF triples come from the triple part of the first two conditional triples of the {a mathematical formula}RDFi database {a mathematical formula}DqEQ⁎. The triple parts of these conditional triples do not have any e-literal in the object position and also their constraints are entailed by the global constraint ϕ. To see this, observe that the first condition requires that either the pair _R1 and _R2 or the pair _R1 and _R3 are completely inside rectangle {a mathematical formula}Qr of Fig. 2(a) (see also Example 6.29 on page 152 where these conditions {a mathematical formula}θi are defined). Observing the global constraint ϕ and since _R1 and _R2 are equal to "g7", which is clearly inside rectangle {a mathematical formula}Qr, this condition is entailed by ϕ. Consequently, we get the RDF triple (fire1, hasGeometry, "g7") in the certain answers. The same applies to the condition of the second conditional triple of database {a mathematical formula}DqEQ⁎ from which we get the RDF triple (ba1, hasGeometry, "g7"). As for the condition of the third conditional triple of database {a mathematical formula}DqEQ⁎, it can be easily seen that it is not entailed by ϕ since _R3 is required to be inside rectangle {a mathematical formula}Qr, a fact that does not hold because the global constraint requires that _R3 is equal to "g8" which is not completely inside {a mathematical formula}Qr.
+       </list-item>
+      </list>
+     </section>
+     <section label="9.2">
+      <section-title>
+       The certainty problem
+      </section-title>
+      <paragraph label="Definition 9.8">
+       In order to analyze the data complexity of computing the certain answers to a CONSTRUCT query over an {a mathematical formula}RDFi database when {a mathematical formula}L is a constraint language, we need to consider the associated decision problem. Following Grahne [30], we define the certainty problem. Let q be a CONSTRUCT query. The certainty problem for query q, RDF graph H, and {a mathematical formula}RDFi database D, is to decide whether {a mathematical formula}H⊆⋂〚q〛Rep(D). We denote this problem by {a mathematical formula}CERTC(q,H,D).
+      </paragraph>
+      <paragraph label="Theorem 9.9">
+       The next theorem shows how one can transform the certainty problem to the problem of deciding whether {a mathematical formula}ψ∈Th(ML) for an appropriate sentence ψ of {a mathematical formula}L. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase, _la vector of all e-literals in D, q a query from{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′, and H an RDF graph. Then,{a mathematical formula}CERTC(q,H,D)is equivalent to deciding whether formula{a mathematical formula}is true in{a mathematical formula}MLwhere{a mathematical formula}Θ(t,q,D,_l)is a disjunction{a mathematical formula}θ1∨⋯∨θkthat is constructed as follows. Let{a mathematical formula}〚q〛D=(G′,ϕ). Expression{a mathematical formula}Θ(t,q,D,_l)has a disjunct{a mathematical formula}θifor each conditional triple{a mathematical formula}(ti′,θi′)∈G′such that t and{a mathematical formula}ti′have the same subject and predicate. Condition{a mathematical formula}θiis then:
+      </paragraph>
+      <list>
+       <list-item label="–">
+        {a mathematical formula}θi′if t and{a mathematical formula}ti′have the same object as well.
+       </list-item>
+       <list-item label="–">
+        {a mathematical formula}θi′∧(_lEQo)if the object of t is{a mathematical formula}o∈Cand the object of{a mathematical formula}ti′is{a mathematical formula}_l∈U.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Working similar to the proof of Theorem 9.6, it suffices to show that an RDF triple t is in the certain answers of {a mathematical formula}q∈QAUFC′∪QWDC′ over D, that is, {a mathematical formula}t∈⋂Rep(〚q〛D), if and only if the following formula is valid:{a mathematical formula}Let {a mathematical formula}〚q〛D=(G′,ϕ) and consider an RDF triple {a mathematical formula}t∉⋂Rep(〚q〛D). Then there exists valuation v such that {a mathematical formula}ML⊨v(ϕ) and {a mathematical formula}t∉v(G′). Therefore, {a mathematical formula}G′ contains conditional triples {a mathematical formula}(t′,θ′) such that either
+       <list>
+        {a mathematical formula}ML⊭v(θ′) or{a mathematical formula}ML⊨v(θ′) and {a mathematical formula}t≠v(t′).In the former case and since
+       </list>
+       <paragraph>
+        {a mathematical formula}ML⊭v(θ′), formula (6) would be unsatisfiable. To see this, notice that {a mathematical formula}ML⊭v(θ′) implies {a mathematical formula}ML⊭v(θi′) and {a mathematical formula}ML⊭v(θi′∧(_lEQo)) and thus the disjunction {a mathematical formula}θ1∨…∨θk in (6) is always false, and hence the whole formula is unsatisfiable. In the latter case, notice that {a mathematical formula}t≠v(t′) implies one of the following cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         t and {a mathematical formula}t′ do not agree in the subject or predicate position, or
+        </list-item>
+        <list-item label="•">
+         if they do, either they do not agree in the object position, or their objects are not of the proper kind (i.e., the object of t is a constant from C and the object of {a mathematical formula}t′ is an e-literal from U), or if they are, then valuation v does not map that e-literal _l to that constant o, i.e., {a mathematical formula}v(_l)≠o.
+        </list-item>
+       </list>
+       <paragraph>
+        From the first case, no constraint {a mathematical formula}θi is included in formula (6). As for the second case, either no constraint {a mathematical formula}θi is generated (the case in which they also differ in the object position) or {a mathematical formula}θi is {a mathematical formula}θi′∧(_lEQo). As we pointed above, since valuation v does not map the e-literal _l to the constant o, then {a mathematical formula}θi is false. Hence, formula (6) is unsatisfiable as well.We sketch the other direction of the proof. We just need to consider an RDF triple t such that {a mathematical formula}t∈⋂Rep(〚q〛D) and prove that {a mathematical formula}(∀_l)(ϕ(_l)⊃Θ(t,q,D,_l)) is true in {a mathematical formula}ML. From Theorem 9.6, we have that{a mathematical formula} where {a mathematical formula}Hq is the conditional graph of the database {a mathematical formula}((〚q〛D)EQ)⁎. It is easy to see now that condition θ in the above set complies with the structure of expression {a mathematical formula}Θ(t,q,D,_l). Since also in the above set we have that {a mathematical formula}ϕ⊨θ, then {a mathematical formula}(∀_l)(ϕ(_l)⊃Θ(t,q,D,_l)) is true.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We can also prove a theorem like the above for SELECT queries by defining the relevant decision problem and developing appropriate versions of the relevant results of Section 8 that are needed. This involves first modifying Definition 8.4 so that {a mathematical formula}H and {a mathematical formula}G are sets of sets of mappings and q is a SELECT query form (we call this SELECT-equivalence). Then, the condition of Definition 8.5, modified so that {a mathematical formula}Q-equivalence is substituted by SELECT-equivalence, can be proved using essentially the same techniques as the ones used to prove Theorem 8.15.
+      </paragraph>
+      <paragraph label="Example 9.10">
+       The following example illustrates how one can use Theorem 9.9 to decide the certainty problem. Let us consider the {a mathematical formula}RDFi database {a mathematical formula}D=(G,ϕ), the CONSTRUCT query q from Example 6.29, and the certain answers H to q over D as computed in Example 9.7. In the following, we verify whether the elements of H belong to the certain answers of q over D. Having Theorem 9.9, we need only check the validity of formula (5), which in our example becomes{a mathematical formula} where {a mathematical formula}t1 is the RDF triple (fire1, hasGeometry, "g7") and {a mathematical formula}t2 the RDF triple (ba1, hasGeometry, "g7").Let us now expand the expressions {a mathematical formula}Θ(t1,q,D,_l) and {a mathematical formula}Θ(t2,q,D,_l). First, we need to compute {a mathematical formula}〚q〛D according to Section 6. This has been done already in Example 6.29 where the evaluation has resulted in the {a mathematical formula}RDFi database {a mathematical formula}Dq=(Gq,ϕ). Second, we need to expand the sub-formulae Θ considering only the conditional triples of {a mathematical formula}Gq the triple part of which matches with {a mathematical formula}t1 or {a mathematical formula}t2 on the subject and predicate positions. Triple {a mathematical formula}t1 matches with the first and third conditional triples of {a mathematical formula}Gq, while triple {a mathematical formula}t2 matches with the second one. Therefore, the sub-formulae Θ will be expanded based on the conditions of the matched triples. Up to this point, the sub-formulae Θ have the following structure:{a mathematical formula}Observe now that the object positions of {a mathematical formula}t1,t2 contain a constant, whereas the object positions of the matched conditional triples contain e-literals. According to Theorem 9.9, the above sub-formulae should be augmented with an equality constraint between these e-literals and the constants. The sub-formulae Θ are now the following:{a mathematical formula}The two conjuncts of formula (7) are now the following:{a mathematical formula}Since the universal quantifier ranges over the e-literals of the database, the above becomes as follows:{a mathematical formula}{a mathematical formula}Observe now that since ϕ entails {a mathematical formula}_R1EQ_R2 and {a mathematical formula}θ1, it also entails {a mathematical formula}θ2 and, therefore, it entails {a mathematical formula}θ1∧θ2. Since also ϕ entails {a mathematical formula}_R1EQ"g7", formulae (8) and (9) are valid.
+      </paragraph>
+     </section>
+     <section label="9.3">
+      <section-title>
+       The data complexity of the certainty problem
+      </section-title>
+      <paragraph>
+       The data complexity of the certainty problem, {a mathematical formula}CERTC(q,H,D), for q in the {a mathematical formula}QAUFC′ or {a mathematical formula}QWDC′ fragments of SPARQL and D in the set of {a mathematical formula}RDFi databases with constraints from ECL, dePCL, diPCL, and RCL is coNP-complete. This follows easily from known results by Grahne [30] for ECL and by Koubarakis [46], [48] and Van der Meyden [85] for dePCL, diPCL, and RCL. Thus, we have the expected increase in data complexity given that the data complexity of evaluating any SPARQL graph pattern over RDF graphs can be done in LOGSPACE [75].
+      </paragraph>
+      <paragraph label="Proposition 9.11">
+       The following proposition states this result for the language ECL formally. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase, q a query from the fragments of SPARQL{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′, and H an RDF graph. The certainty problem,{a mathematical formula}CERTC(q,H,D), is coNP-complete for data complexity when the language of{a mathematical formula}L-constraints is ECL.
+      </paragraph>
+      <paragraph label="Proof">
+       To decide {a mathematical formula}CERTC(q,H,D), we have to check that {a mathematical formula}H⊆⋂〚q〛Rep(D) which, by Definition 5.5, is equivalent to checking that {a mathematical formula}H⊆〚q〛v(D) for all valuations v such that {a mathematical formula}MECL⊨v(ϕ). Notice that the complement of this problem is to check whether there exists a valuation v such that {a mathematical formula}MECL⊨v(ϕ) and {a mathematical formula}H⊈〚q〛v(D). In other words, it suffices to find a valuation v and a triple {a mathematical formula}t∈H such that {a mathematical formula}MECL⊨v(ϕ) and {a mathematical formula}t∉〚q〛v(D). This last problem is in NP, thus the certainty problem is in coNP.Let us see why the complement problem defined above is in NP. We need only guess a valuation v with length equal to the number of e-literals in D, check that {a mathematical formula}MECL⊨v(ϕ), a computation that is in the AC complexity class, and then check that there exists {a mathematical formula}t∈H such that {a mathematical formula}t∉〚q〛v(D). The steps for accomplishing the latter check, using Definition 4.6 for evaluating CONSTRUCT query forms of standard SPARQL [74], are the following: 1) Choose the next triple {a mathematical formula}t∈H. 2) Loop over all candidate mappings μ for set {a mathematical formula}〚P〛v(D) generating a mapping per iteration, where P is the graph pattern of query q. 3) Check that {a mathematical formula}μ∈〚P〛v(D). 4) Construct the renaming function {a mathematical formula}fμ based on the mapping μ. 5) Generate set {a mathematical formula}Sμ={μ(fμ(E))∩(I∪B)×I×TC}. 6) Check whether {a mathematical formula}t∈Sμ. If yes, move to step 1, otherwise move to step 2. If there is no other mapping μ to check, return “yes”. If there is no other triple to choose, return “no”.Step 2 above requires logarithmic space since the space required to store a candidate mapping μ from the set {a mathematical formula}〚P〛v(D) is {a mathematical formula}O(|P|(log|P|+log|D|)) bits. This is because the mapping will contain {a mathematical formula}|P| variables and for each variable, it has to contain its value from D. The required space for each variable and value is {a mathematical formula}log|P| and {a mathematical formula}log|D|, respectively. Since q is fixed, the graph pattern P is also fixed, therefore the space becomes logarithmic in the size of the database D.Step 3 above can also be computed in LOGSPACE using the evaluation procedure EVAL presented by Pérez et al. [75]. Further, since q is fixed, then also the template E and graph pattern P are fixed. Thus, set {a mathematical formula}Sμ of step 5 is of fixed size.The coNP-hardness of {a mathematical formula}CERTC(q,H,D) comes from a reduction from 3DNF tautology, which is known to be coNP-complete, and it is similar to the one employed by Grahne [30, Theorem 5.11, p. 118].  □
+      </paragraph>
+      <paragraph label="Proposition 9.12">
+       A similar proposition to the above for the languages dePCL, diPCL, and RCL follows. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase, q a query from the fragments of SPARQL{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′, and H an RDF graph. The certainty problem,{a mathematical formula}CERTC(q,H,D), is coNP-complete for data complexity when the language of{a mathematical formula}L-constraints is one of dePCL, diPCL, or RCL.
+      </paragraph>
+      <paragraph label="Proof">
+       We sketch the proof for dePCL. The proof is similar for diPCL and RCL. Similar to the proof for ECL, we show that the complement of {a mathematical formula}CERTC(q,H,D) is NP-complete. To show membership in NP we use a non-deterministic Turing machine to guess in polynomial time a valuation v that satisfies ϕ and then iterate over every triple t of RDF graph H checking whether {a mathematical formula}t∉〚q〛v(D). This last check is done using the procedure described in the proof for ECL.Let us see now how we can guess a valuation v satisfying the global constraint ϕ of D in polynomial time. To do this, we have to guess a rational number for every e-literal of the database D, substitute these values for e-literals in the global constraint ϕ and check that ϕ is true in polynomial time. Using Lemma 7.3 and Theorem 8.5 of Koubarakis [48], and Theorem 9.9 of our work, we can restrict the values over which the e-literals range only to a finite number of integers. The exact ranges are given in [48] and depend on the maximum absolute value of the constants appearing in formula ϕ. Each value in these ranges takes up only polynomial amount of space with respect to the database size and the maximum absolute value of the constants of ϕ, thus the guessing step can be done in polynomial time. Then, it is trivial to verify that {a mathematical formula}v(ϕ) is true.This proves that the complement of {a mathematical formula}CERTC(q,H,D) is in NP and consequently that {a mathematical formula}CERTC(q,H,D) is in coNP. coNP-hardness of {a mathematical formula}CERTC(q,H,D) follows from Proposition 3.1 of Van der Meyden [85] where a sub-language of dePCL/diPCL, similar to RCL, is considered that contains only the “less-than” predicate over rational or integer constants. Therefore, this lower bound holds for the languages dePCL, diPCL, and RCL as well.  □
+      </paragraph>
+      <paragraph label="Proposition 9.13">
+       The following proposition analyzes the data complexity of the certainty problem when the constraint language is TCL. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase, q a query from the fragments of SPARQL{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′, and H an RDF graph. The certainty problem,{a mathematical formula}CERTC(q,H,D), is coNP-complete for data complexity when the language of{a mathematical formula}L-constraints is TCL.
+      </paragraph>
+      <paragraph label="Proof">
+       By Theorem 9.9, deciding {a mathematical formula}CERTC(q,H,D) is equivalent to deciding whether formula (5) is valid. The complement of this problem is to decide whether its negation is unsatisfiable, that is, whether{a mathematical formula} Formula (10) is unsatisfiable if every disjunct made up from each {a mathematical formula}t∈H is unsatisfiable. Each disjunct constitutes a satisfiability problem for TCL and overall we have {a mathematical formula}|H| such problems to decide. The satisfiability problem for TCL is NP-complete as shown by Renz and Nebel [81], and hence, the problem of deciding {a mathematical formula}|H| such problems remains NP-complete. Consequently, our initial problem {a mathematical formula}CERTC(q,H,D), which was the complement of satisfiability, is coNP-complete.A first remark on the above proof is that the satisfiability problem for TCL as defined by Renz and Nebel [81] requires as input a formula given in conjunctive normal formal (CNF) where each conjunct is a disjunction of TCL-constraints between the same pair of variables. The complexity of that problem (resp. for its complement) is not affected by the structure of the input formula. For an arbitrary formula of TCL-constraints Φ, the satisfiability (resp. validity) problem remains NP-complete (resp. coNP-complete). This holds because there exists a satisfiability-preserving encoding of Φ in the propositional modal logic S5 [14], [81], [87], which is a notational variant of the one-variable fragment of first-order logic, the satisfiability problem of which is NP-complete.A second remark is that satisfiability of Φ does not fix a specific topological space, whereas in our definition of TCL in Section 3, we restrict variables to range over regular closed subsets of {a mathematical formula}Q2. Therefore, it might be the case that Φ is satisfiable in some topological space other than {a mathematical formula}Q2. Fortunately, the above result still holds for {a mathematical formula}Q2 since it has been shown by Renz [80] that if a formula is satisfiable, then it is satisfiable for any dimension {a mathematical formula}d≥1.  □
+      </paragraph>
+      <paragraph label="Proposition 9.14">
+       A similar result to the above can be established for the data complexity of the certainty problem when the constraint language is PCL. This is formally stated in the proposition that follows. Let{a mathematical formula}D=(G,ϕ)be an{a mathematical formula}RDFidatabase, q a query from the fragments of SPARQL{a mathematical formula}QAUFC′or{a mathematical formula}QWDC′, and H an RDF graph. The certainty problem,{a mathematical formula}CERTC(q,H,D), is coNP-complete for data complexity when the language of{a mathematical formula}L-constraints is PCL.
+      </paragraph>
+      <paragraph label="Proof">
+       Similar to the proof for TCL, we show that the complement of {a mathematical formula}CERTC(q,H,D), that is, satisfiability of a PCL formula, is NP-complete. First, we observe that satisfiability for TCL is a sub-problem of PCL, i.e., when no polygonal constants are involved. Therefore, satisfiability for PCL is NP-hard. Next, we show that satisfiability for PCL is in NP.Let {a mathematical formula}M be the non-deterministic Turing machine that decides the problem {a mathematical formula}CSPSATS(RCC8) defined by Li et al. [52] in polynomial time. {a mathematical formula}M accepts a PCL formula Ψ in CNF iff Ψ is satisfiable. Let Φ be a Boolean combination of atomic PCL-constraints. Clearly, if Φ is satisfiable, then there exists a truth assignment σ for the PCL-constraints {a mathematical formula}R(u,v) appearing in Φ such that {a mathematical formula}σ(Φ) evaluates to true propositionally.{sup:7} We devise a non-deterministic Turing machine {a mathematical formula}M′ that runs in polynomial time and accepts Φ iff it is satisfiable. {a mathematical formula}M′ guesses an assignment σ, checks whether {a mathematical formula}σ(Φ) evaluates to true in polynomial time, and constructs a PCL formula Ψ in CNF that is given as input to {a mathematical formula}M to decide.Formula Ψ is constructed as follows. Let {a mathematical formula}terms(Φ) denote the variables or constant symbols appearing in Φ and {a mathematical formula}Tσ the set of pairs {a mathematical formula}(u,v) appearing in Φ such that {a mathematical formula}σ(R(u,v)) is true for some RCC-8 relation R. Then, Ψ contains: a) the PCL-constraint {a mathematical formula}R(u,v) as a conjunct whenever {a mathematical formula}(u,v)∈Tσ and b) the conjunct {a mathematical formula}⋁R∈BR(u,v){sup:8} for every pair of terms {a mathematical formula}(u,v) not appearing in Φ or in {a mathematical formula}Tσ. Therefore,{a mathematical formula} Note that Ψ contains at most 8 PCL-constraints for every pair of terms {a mathematical formula}u,v appearing in Φ. Therefore, its size is bounded by {a mathematical formula}8|terms(Φ)|2. We claim that the following equivalence holds: {a mathematical formula}M′ accepts Φ iff {a mathematical formula}M accepts Ψ. Therefore, satisfiability for PCL is in NP. In the following we prove the above claim.Let {a mathematical formula}DNF(Φ) denote the DNF form of Φ. Each disjunct of {a mathematical formula}DNF(Φ) is a conjunction of PCL-constraints appearing in Φ and constitutes a constraint network. Suppose that {a mathematical formula}M′ accepts Φ. Therefore, Φ is satisfiable, and hence, there exists truth assignment σ such that {a mathematical formula}σ(Φ) evaluates to true propositionally. Furthermore, there exists a disjunct {a mathematical formula}DNFi(Φ) for Φ that is satisfiable as well and {a mathematical formula}σ(DNFi(Φ)) is true. Consequently, the constraint network corresponding to {a mathematical formula}DNFi(Φ) is consistent. By construction, Ψ contains {a mathematical formula}DNFi(Φ) as a sub-formula, and hence, {a mathematical formula}M should accept it as well, since the rest of the conjuncts in Ψ not appearing in {a mathematical formula}DNFi(Φ) do not restrict Ψ in any way.Suppose now that {a mathematical formula}M accepts Ψ for a guessed assignment σ such that {a mathematical formula}σ(Φ) evaluates to true. Therefore, there exist PCL-constraints {a mathematical formula}R(u,v) for all possible pairs of the terms {a mathematical formula}u,v appearing in Ψ such that {a mathematical formula}Ψ′≡⋀u,v∈terms(Φ)R(u,v) is satisfiable and in agreement with σ. By construction, there exists {a mathematical formula}DNFi(Φ) such that {a mathematical formula}σ(DNFi(Φ)) is true, and therefore, {a mathematical formula}DNFi(Φ) should be consistent as a subformula of {a mathematical formula}Ψ′. Consequently, {a mathematical formula}M′ should accept Φ.We stress here that Li et al. [52] represent polygonal constants in V-representation, i.e., they use points instead of half-spaces like we have done in this work. Since we are in the topological space defined over {a mathematical formula}Q2, i.e., dimension is fixed, the complexity of {a mathematical formula}CSPSATS(RCC8) is not affected when constants are given in H-representation.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Comparison with related work
+     </section-title>
+     <paragraph>
+      Related work for incomplete information in RDF is discussed in the papers [35], [39], [10] and has been reviewed in the introduction. Here, we give the corresponding comparison with our work.
+     </paragraph>
+     <paragraph>
+      Comparing our work with Gutierrez et al. [35] and Hurtado and Vaisman [39], we point out that these papers study complementary issues in the sense that they concentrate on temporal information of a specific kind only (validity time for a tuple). From a technical point of view, the approach of Hurtado and Vaisman [39] is similar to ours since it is based on constraints, but, whereas we concentrate on query processing for {a mathematical formula}RDFi, they concentrate more on semantic issues such as temporal graph entailment. It is easy to see that {a mathematical formula}RDFi can be used to represent incomplete temporal information that can be modeled as the object of a triple using any of the temporal constraint languages of Koubarakis [47], namely diPCL and dePCL, which we defined in Section 3. An example of this situation is when we want to represent incomplete information about the time an event occurred. This is called user-defined time in the temporal database literature and it has not been studied by Gutierrez et al. [35] and Hurtado and Vaisman [39].
+     </paragraph>
+     <paragraph>
+      The study of incomplete information in RDF undertaken in this paper goes beyond Arenas and Pérez [10] where only the issue of OWA for RDF is investigated. Other cases of incomplete information in RDF can also be investigated using an approach similar to ours. For example, one such case could be the investigation of how blank nodes could be treated as a source of incomplete information employing the various semantics that have been adopted by both practitioners and theoreticians [9], [64], [38] and which deviate from the W3C RDF semantics [37] and SPARQL semantics [76].
+     </paragraph>
+     <paragraph>
+      Throughout the article, we gave examples of the use of {a mathematical formula}RDFi in geospatial applications and presented complexity results for the spatial constraint languages defined in Section 3, namely, TCL, PCL, and RCL. It is interesting to compare the expressive power that {a mathematical formula}RDFi gives us to other recent works that use semantic web data models and languages for geospatial applications. When equipped with a constraint language like TCL, PCL, or RCL, the {a mathematical formula}RDFi framework goes beyond the proposals of the geospatial extensions of SPARQL, stSPARQL [50] and GeoSPARQL [71], which cannot query incomplete geospatial information. While GeoSPARQL provides a vocabulary for asserting topological relations (the topology vocabulary extension), the semantics and complexity of query evaluation over RDF graphs in this case has not been investigated so far in any detail and remains an open problem.
+     </paragraph>
+     <paragraph>
+      Incomplete information as it is studied in this article can be also expressed in DLs equipped with concrete domains [11]. Informally, a concrete domain is a formalism for describing concrete qualities of real-world objects, such as temperature, time, and spatial extension, and hence, it allows for reasoning about domains, such as real numbers, time intervals, and spatial regions. A concrete domain is formalized as a first-order theory; it is defined over a set of objects, called domain, and a set of predicates interpreted over that domain. An example of a concrete domain is the real numbers with order where the domain is the set of real numbers, {a mathematical formula}R, and the set of predicates consists of the predicate &lt; interpreted by the “less-than” relation over the real numbers. Other examples include the Allen's interval and RCC-8 calculi [36], [63], [72], as well as the cardinal direction calculus [19].
+     </paragraph>
+     <paragraph>
+      Usually, a DL is glued with a concrete domain both through the TBox and the ABox. The TBox is extended with appropriate concept constructors that provide the means to associate individuals (i.e., objects from the logical domain of the DL) to objects from the concrete domain, and relate such objects through predicates provided by the concrete domain. For example, the concept of hotspot introduced in Section 2, could have been captured in the TBox of a DL extended with a concrete domain for the RCC-8 calculus using the following concept inclusion axioms{sup:9}:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In the second expression above, {a mathematical formula}correspondsTo is a role relating individuals of the logical domain, {a mathematical formula}loc is a partial function, called concrete feature, associating individuals to objects of the concrete domain (i.e., spatial regions), and {a mathematical formula}ntpp the predicate of the concrete domain corresponding to the relation “non-tangential proper part” of the RCC-8 calculus. The first inclusion above expresses the fact that a hotspot corresponds to a fire, while the second expresses the fact that a hotspot should spatially contain a fire.
+     </paragraph>
+     <paragraph>
+      Similarly, the ABox is extended by allowing assertions for associating individuals to objects of the concrete domain (e.g., using the concrete feature {a mathematical formula}loc introduced above) and stating relations that hold between the objects of the concrete domain (e.g., using the predicate {a mathematical formula}ntpp introduced above). Therefore, the integration of a DL with a concrete domain results in very expressive formalisms for knowledge representation and reasoning and is very beneficial, since all the results of the underlying theory of the concrete domain can be reused in the context of the DL.
+     </paragraph>
+     <paragraph>
+      DLs with concrete domains are far more expressive than {a mathematical formula}RDFi, because the TBox can define concepts based on the relations of the concrete objects associated with the individuals of the DL. Therefore, it goes beyond the terminological knowledge that can be captured in RDFS. As such, the works considering equipping a DL with a concrete domain for Allen's interval calculus or RCC-8 calculus [36], [63], [73], [72] go beyond {a mathematical formula}RDFi when equipped with diPCL/dePCL or TCL. However, the high expressivity of DLs with concrete domains does not come without problems. The complexity of concept satisfiability could be as high as PSPACE-complete or even NEXPTIME for RCC-8 [62], while decidability of concept satisfiability can be easily lost when considering general TBoxes, so one should restrict the expressiveness of the TBox or that of the concrete domain [62]. On the other hand, when considering DLs with an empty TBox, it is easy to see that their expressiveness matches that of {a mathematical formula}RDFi. In this respect, there are two DL reasoners that offer such reasoning capabilities, which we review in the following.
+     </paragraph>
+     <paragraph>
+      PelletSpatial [83] is a hybrid spatial reasoner that provides RCC-8 and OWL 2 reasoning and querying capabilities. In PelletSpatial, spatial relations are separated from OWL 2 relations providing a hybrid reasoner for both spatial and thematic data. Spatial relations are managed as an RCC-8 constraint network. Conjunctive query answering in PelletSpatial requires two phases: a) evaluating spatial query atoms over the constraint network by employing a path-consistency algorithm, and b) further constraining the set of bindings such that the non-spatial query atoms are satisfied. Compared to the {a mathematical formula}RDFi framework, PelletSpatial corresponds to {a mathematical formula}RDFi databases with a conjunction of TCL-constraints as a global constraint. Compared to our extension of SPARQL, the query language of PelletSpatial computes certain answers for SELECT queries using only the operators AND and FILTER with conjunctions of TCL-constraints allowed as expressions in FILTER graph patterns. The representational and querying power of {a mathematical formula}RDFi when {a mathematical formula}L is PCL is greater than the one of PelletSpatial since PCL is more expressive than TCL. However, PelletSpatial offers OWL representation and reasoning that is not offered by {a mathematical formula}RDFi.
+     </paragraph>
+     <paragraph>
+      Likewise, the DL reasoner RacerPro{sup:10} can associate an ABox with a spatial representation layer, called substrate, to provide spatial reasoning facilities [86]. RacerPro implements the RCC substrate that offers representation and querying facilities for RCC networks. The RCC substrate offers two sets of RCC relations: the set of RCC-5 relations and the set of RCC-8 relations. Fixing the RCC substrate to be used, one can then use it to assert topological relations between ABox individuals. Moreover, disjunctions of these relations can be used to represent indefinite knowledge regarding the spatial relation of two individuals. RacerPro can check for consistency of RCC networks as well as query knowledge entailed by an RCC network, the last feature of which is not present in PelletSpatial.
+     </paragraph>
+     <paragraph>
+      For efficiency reasons, the aforementioned spatial DL reasoners have opted for separating spatial relations from standard DL axioms as we have done by separating graphs and constraints. Since RDF graphs can be seen as DL ABoxes with atomic concepts only, all the results of this paper can be transferred to the relevant subsets of spatial DLs and their reasoners so they are of interest to this important semantic web area as well.
+     </paragraph>
+     <paragraph>
+      Recently there has also been an increased interest in extending the expressivity of Datalog, so that the resulting language is appropriate for handling incomplete information of two kinds: indefinite knowledge and missing values. Of particular importance are the works by Calí et al. [16], [17] and Leone et al. [5]. Calí et al. [16] proposed the extension {a mathematical formula}Datalog± as a unified framework for query answering and reasoning with incomplete data. The three main extensions to Datalog are the provision of existential variables in the head of rules, equalities, as well as the falsum (in symbols ⊥). Such extensions are enough to handle the expressiveness of other formalisms for knowledge representation and reasoning, such as description logics (e.g., the DL-Lite, {a mathematical formula}EL, and F-Logic Lite families), data exchange formalisms (e.g., tuple-generating dependencies), and graph query languages (e.g., SPARQL). Leone et al. [5] go one step further and extend {a mathematical formula}Datalog∨[23] (i.e., an extension of Datalog, called Disjunctive Datalog, that allows disjunctions in the head of rules) so that variables appearing in the head of rules can be existentially quantified. The resulting extension is denoted by {a mathematical formula}Datalog∨,∃ and makes it more expressive than {a mathematical formula}Datalog±. Leone et al. [5] provide a semantics for {a mathematical formula}Datalog∨,∃, study which fragments are decidable, study the problem of query answering for such fragments, as well as the corresponding computational complexity. It turns out that the expressivity of {a mathematical formula}Datalog∨,∃ is very high and it can naturally encode advanced ontology properties such as role transitivity, role hierarchy, role inverse, and concept inclusion axioms with union concepts on the right hand side.
+     </paragraph>
+     <paragraph>
+      The appearance of existential variables in the head of rules can be used to represent null values, since, after elimination of quantifiers from the rules, those variables play the role of Skolem constants. In addition, permitting rules with disjunctive heads gives the ability to represent missing values ranging over a finite set of values. This kind of incompleteness has been studied extensively in the literature of incomplete relational databases [41], [30], [3], [42] and their logical counterparts studied by Reiter [79], indefinite databases [68], incomplete deductive databases [32], [40], [45], and logic programming [61], [84]. Therefore, we expect that the problem of combining such formalisms with concrete domains so that the resulting extension is decidable will be of interest to the research community of incomplete information in the near future, since as noted above, decidability is very easy to lose when combining DLs with concrete domains even for the simple case of the {a mathematical formula}ALC language with general TBoxes [62].
+     </paragraph>
+     <paragraph>
+      Incomplete information has been studied a lot in logic programming as well [61], [84], [22], [88]. Approaches that consider extensions of rules with disjunctive heads [84] and existential quantification [88] or allow variables playing the role of marked null values in facts [22] are similar to the corresponding extensions of Datalog [24], [16], [17], [5]. With the exception of existential quantification, it is easy to see that the rest of the features considered for capturing incomplete information (i.e., classical negation, negation as failure, disjunctive heads) are part of the answer set programming (ASP) paradigm [59], [60]. In this respect, incomplete information had already been studied much earlier [28], [27] in the context of non-monotonic reasoning, before the term ASP had been coined.
+     </paragraph>
+     <paragraph>
+      The use of constraints for representing knowledge has also been pioneered by constraint logic programming (CLP) [43], [66]. In CLP, variables appearing in the body of rules can be further constrained by constraints attached to the body. Evaluation of such programs can be done using the traditional top-down and bottom-up evaluation methods equipped with a solver for processing the constraints of rules. Typically, such a solver is based on constraint propagation and other techniques developed in the context of constraint satisfaction. Languages diPCL/dePCL and RCL defined in Section 3 are only some examples of constraint languages that can be employed in such programs. Regarding the capturing of incomplete information, there have also been works aiming at combining non-monotonic reasoning and CLP. Notable works are those by Dix and Stolzenburg [21] who consider disjunctive logic programs extended with inequality constraints, and Marek and Truszczyński [65] and more recently Mellarkod et al. [67] who study how CLP and ASP can be integrated in general. This last combination of the two paradigms comes under the title constraint answer set programming (CASP) and is very fruitful both from a theoretical point of view and a practical alike, out of which a number of CASP solvers have sprung up. The recent article of Lierler [58] discusses the state-of-the-art in CASP relating the two perspectives.
+     </paragraph>
+     <paragraph>
+      Clearly, all approaches to incomplete information that are based on rules go beyond {a mathematical formula}RDFi and are more expressive. On the other hand, since the {a mathematical formula}RDFi framework is parameterized with a constraint language, it provides a very expressive framework that can handle incomplete information in a general way. The only requirement {a mathematical formula}RDFi imposes on the constraint language is the existence of an equality predicate.
+     </paragraph>
+     <paragraph>
+      Although related work in relational databases has been reviewed throughout the article, in the following, we list some prominent and more recent works on incomplete information. To a large extent, the study of incomplete information in databases is being kept active due to the contributions of Libkin and his colleagues [54], [55], [29], [56], [57], [13], [82] who are broadly concerned about the following two topics: a) A theory of incomplete information that would unify different data models (e.g., relational tables and XML documents [54], [82] or graph data models [13]) and semantics of incompleteness (e.g., certain answers and representation systems, logical theories, information ordering, combined with closed and open world assumptions [56], [55]), and cases in which the developed theory could result in efficient query evaluation procedures [29], [82]. b) Practical issues arising with respect to the management of incomplete information from the adopted industry standards, such as the SQL query language [56], [57].
+     </paragraph>
+    </section>
+    <section label="11">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      In this work, we proposed {a mathematical formula}RDFi, a framework that extends RDF with the ability to capture incomplete information using a first-order constraint language {a mathematical formula}L. We gave the formal semantics of {a mathematical formula}RDFi and formally defined how queries expressed in an extension of SPARQL that modifies the FILTER operator so that constraints of {a mathematical formula}L can also be included in the condition part can be evaluated over {a mathematical formula}RDFi databases. Following the work on incomplete relational databases by Imieliński and Lipski [41] and Grahne [30], we first showed that the monotone fragment of CONSTRUCT queries forms a representation system for {a mathematical formula}RDFi and then defined the corresponding certainty problem for {a mathematical formula}RDFi and SPARQL. Last, we demonstrated the usefulness of {a mathematical formula}RDFi in geospatial Semantic Web applications and compared the modeling capabilities of {a mathematical formula}RDFi with related formalisms found in the literature.
+     </paragraph>
+     <paragraph>
+      Our future work focuses on the following: 1) exploration of other fragments of SPARQL that can be used to define a representation system for {a mathematical formula}RDFi, 2) identification of subclasses of the various spatial and temporal constraint languages {a mathematical formula}L we considered for which the certainty problem is tractable, and 3) extension of the {a mathematical formula}RDFi framework so that incomplete information arises in the subject and object positions of triples. Regarding this last item, there is already a related line of research on querying incomplete graph data [13]. Therefore, it would be interesting to investigate how {a mathematical formula}RDFi relates to this body of work.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Theorem 8.15
+     <paragraph label="Proposition A.1">
+      Before going into the details of the proof, we need to show a proposition that the proof employs. The proposition shows that the result of applying a valuation to the join of two possibly compatible conditional mappings is the same as applying first the valuation to the conditional mappings and then computing their join as in standard RDF. Let{a mathematical formula}v:U→Cbe a valuation and{a mathematical formula}μ1=(ν1,θ1),{a mathematical formula}μ2=(ν2,θ2)be two possibly compatible conditional mappings such that{a mathematical formula}μ1⋈μ2=(ν3,θ3). Then,{a mathematical formula}v(μ1⋈μ2)=v(μ1)⋈v(μ2)whenever these mappings are defined (i.e., whenever{a mathematical formula}ML⊨v(θ3)and therefore{a mathematical formula}ML⊨v(θ1)and{a mathematical formula}ML⊨v(θ2)).
+     </paragraph>
+     <paragraph>
+      The proof follows easily from the definition of join for conditional mappings and is omitted.
+     </paragraph>
+     <paragraph>
+      Proof for{a mathematical formula}QAUFC′
+     </paragraph>
+     <paragraph>
+      The proof that the triple {a mathematical formula}〈D,Rep,QAUFC′〉 is a representation system continues here by showing that for every valuation v such that {a mathematical formula}ML⊨v(ϕ) equality {a mathematical formula}v(〚P〛D)=〚P〛v(D) holds. This equation is proved in the following using induction on the structure of graph patterns P of {a mathematical formula}QAUFC′.
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}P is (s,p,o)(base case):_
+     </paragraph>
+     <paragraph>
+      We shall prove that {a mathematical formula}v(〚P〛D)=〚P〛v(D). Let {a mathematical formula}μ∈v(〚P〛D). Then, there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ′)∈〚P〛D such that {a mathematical formula}v(μ′)=μ and {a mathematical formula}ML⊨v(θ′). We now distinguish two cases corresponding to Definition 6.13 (1):
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       In this case {a mathematical formula}o∈C. Therefore, {a mathematical formula}dom(ν′) does not contain any special query variable, hence the application of v to {a mathematical formula}μ′ leaves {a mathematical formula}ν′ unchanged. In other words {a mathematical formula}μ=v(μ′)=ν′.Now we have two cases corresponding to the two sets making up {a mathematical formula}〚P〛D.If {a mathematical formula}μ=ν′ is an element of the first set, then {a mathematical formula}μ′(P)∈G. Since {a mathematical formula}ML⊨v(θ′), this is written as {a mathematical formula}v(μ′(P))∈v(G), and because {a mathematical formula}ML⊨v(ϕ), this is equivalent to {a mathematical formula}v(μ′(P))∈v(D). Since also {a mathematical formula}v(μ′)=μ, we have {a mathematical formula}μ(P)∈v(D) and hence {a mathematical formula}μ∈〚P〛v(D).If {a mathematical formula}μ=ν′ is an element of the second set then {a mathematical formula}θ′ is {a mathematical formula}θ∧(_lEQo). Since {a mathematical formula}ML⊨v(θ′), we have {a mathematical formula}ML⊨v(θ) and {a mathematical formula}ML⊨v(_lEQo). From the second set of Definition 6.13 (1) that makes up {a mathematical formula}〚P〛D, we have {a mathematical formula}((μ(s),μ(p),_l),θ)∈G. Since {a mathematical formula}ML⊨v(θ), we can apply v to the above and get {a mathematical formula}v((μ(s),μ(p),_l))∈v(G). Since also {a mathematical formula}ML⊨v(ϕ) and {a mathematical formula}ML⊨v(_lEQo) we get {a mathematical formula}(μ(s),μ(p),o)∈v(D), which is equivalently written as {a mathematical formula}μ(P)∈v(D) or {a mathematical formula}μ∈〚P〛v(D).
+      </list-item>
+      <list-item label="(ii)">
+       In this case {a mathematical formula}o∈I∪L∪V. Therefore {a mathematical formula}ν′(o)∈I∪B∪L∪U∪C and {a mathematical formula}μ′(P)∈G. Since {a mathematical formula}ML⊨v(θ′), we can apply v to the previous relation and get {a mathematical formula}v(μ′(P))∈v(G). Because also {a mathematical formula}ML⊨v(ϕ), we have {a mathematical formula}v(μ′(P))∈v(D). The latter fact together with the fact that {a mathematical formula}v(μ′)=μ gives that {a mathematical formula}μ(P)∈v(D) and hence {a mathematical formula}μ∈〚P〛v(D).
+      </list-item>
+     </list>
+     <paragraph>
+      This establishes the fact that {a mathematical formula}v(〚P〛D)⊆〚P〛v(D). The other direction of the proof is similar and goes as follows.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}μ∈〚P〛v(D). Then, {a mathematical formula}μ(P)∈v(D). We now distinguish two cases corresponding to Definition 6.13 (1):
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       In this case {a mathematical formula}o∈C. Then, {a mathematical formula}dom(μ) does not contain any special query variable. Since {a mathematical formula}μ(P)∈v(D), there exists a conditional triple {a mathematical formula}((μ(s),μ(p),x),θ)∈G such that {a mathematical formula}ML⊨v(θ) and {a mathematical formula}v(x)=o.Now, we have two cases for x corresponding to the two sets making up {a mathematical formula}〚P〛D in Definition 6.13 (1):
+      </list-item>
+      <list-item label="(ii)">
+       In this case {a mathematical formula}o∈I∪L∪V. We have two cases to consider.If {a mathematical formula}o∈I∪L∪Vn, then {a mathematical formula}dom(μ) does not contain any special query variable. Since {a mathematical formula}μ(P)∈v(D), there exists a conditional triple {a mathematical formula}(μ(P),θ)∈G such that {a mathematical formula}ML⊨v(θ). By the first set making up {a mathematical formula}〚P〛D, the conditional mapping {a mathematical formula}μ′=(μ,θ) is an element of {a mathematical formula}〚P〛D, that is, {a mathematical formula}μ′∈〚P〛D. Since {a mathematical formula}ML⊨v(θ), we can apply valuation v to this expression and get {a mathematical formula}v(μ′)∈v(〚P〛D) that is equivalent to {a mathematical formula}μ∈v(〚P〛D), since the application of v to {a mathematical formula}μ′ leaves {a mathematical formula}μ′ (and μ) unchanged.Now if {a mathematical formula}o∈Vs, there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ) such that {a mathematical formula}μ′ and μ are possibly compatible, {a mathematical formula}dom(μ′)=dom(μ), and {a mathematical formula}ML⊨v(θ). The conditional mapping {a mathematical formula}μ′ is such that either {a mathematical formula}ν′=μ or {a mathematical formula}ν′(x)=μ(x) for every {a mathematical formula}x∈dom(μ)∖{o} and {a mathematical formula}ν′(o)∈U with {a mathematical formula}v(ν′(o))=μ(o). In either case {a mathematical formula}μ(P)∈v(D) implies {a mathematical formula}v(μ′(P))∈v(D), from which eliminating v, we get {a mathematical formula}μ′(P)∈G, or equivalently {a mathematical formula}μ′∈〚P〛D. Applying v to the last expression we have that {a mathematical formula}v(μ′)∈v(〚P〛D) and thus {a mathematical formula}μ∈v(〚P〛D).
+      </list-item>
+     </list>
+     <paragraph>
+      Inductive step:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}P is P1ANDP2.We have {a mathematical formula}v(〚P1〛D)=〚P1〛v(D) and {a mathematical formula}v(〚P2〛D)=〚P2〛v(D) from the inductive hypothesis. We will prove that {a mathematical formula}v(〚P1ANDP2〛D)=〚P1ANDP2〛v(D).Let {a mathematical formula}μ∈v(〚P1ANDP2〛D). Therefore there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ′)∈〚P1ANDP2〛D such that {a mathematical formula}μ=v(μ′) and {a mathematical formula}ML⊨v(θ′). Because {a mathematical formula}〚P1ANDP2〛D=〚P1〛D⋈〚P2〛D, there exist possibly compatible conditional mappings {a mathematical formula}μ1′=(ν1′,θ1′) and {a mathematical formula}μ2′=(ν2′,θ2′) such that {a mathematical formula}μ′=μ1′⋈μ2′, {a mathematical formula}μ1′∈〚P1〛D, and {a mathematical formula}μ2′∈〚P2〛D. Because of Proposition A.1 and the fact that {a mathematical formula}ML⊨v(θ′), we have{a mathematical formula}Since {a mathematical formula}ML⊨v(θ′) it also holds {a mathematical formula}ML⊨v(θ1′) and {a mathematical formula}ML⊨v(θ2′). Therefore, {a mathematical formula}v(μ1′)∈v(〚P1〛D) and {a mathematical formula}v(μ2′)∈v(〚P2〛D). Notice also that because {a mathematical formula}μ1′ and {a mathematical formula}μ2′ are possibly compatible, {a mathematical formula}v(μ1′) and {a mathematical formula}v(μ2′) are compatible. Therefore,{a mathematical formula} which is equivalent to {a mathematical formula}μ∈v(〚P1〛D)⋈v(〚P2〛D). From the equalities of the inductive hypothesis, we now get {a mathematical formula}μ∈(〚P1〛v(D)⋈〚P2〛v(D)) which is equivalent to {a mathematical formula}μ∈〚P1ANDP2〛v(D).This proof establishes that {a mathematical formula}v(〚P1ANDP2〛D)⊆〚P1ANDP2〛v(D). The other direction of the proof is similar and goes as follows.Let μ be a mapping such that {a mathematical formula}μ∈〚P1ANDP2〛v(D). Then {a mathematical formula}μ∈(〚P1〛v(D)⋈〚P2〛v(D)), which due to the inductive hypothesis gives us {a mathematical formula}μ∈v(〚P1〛D)⋈v(〚P2〛D). Therefore, there exist compatible mappings {a mathematical formula}μ1∈v(〚P1〛D) and {a mathematical formula}μ2∈v(〚P2〛D) such that {a mathematical formula}μ=μ1⋈μ2. Thus, there exist conditional mappings {a mathematical formula}μ1′=(ν1′,θ1′)∈〚P1〛D and {a mathematical formula}μ2′=(ν2′,θ2′)∈〚P2〛D such that {a mathematical formula}μ1=v(μ1′), {a mathematical formula}μ2=v(μ2′), {a mathematical formula}ML⊨v(θ1′) and {a mathematical formula}ML⊨v(θ2′). Notice also that {a mathematical formula}μ1′ and {a mathematical formula}μ2′ are possibly compatible.From Proposition A.1 and the fact that {a mathematical formula}μ=μ1⋈μ2, we have {a mathematical formula}μ=μ1⋈μ2=v(μ1′)⋈v(μ2′)=v(μ1′⋈μ2′). Because {a mathematical formula}μ1′∈〚P1〛D, {a mathematical formula}μ2′∈〚P2〛D, and {a mathematical formula}μ1′,μ2′ are possibly compatible, we have {a mathematical formula}μ1′⋈μ2′∈〚P1〛D⋈〚P2〛D. Now let {a mathematical formula}μ′=(ν′,θ′) be a conditional mapping such that {a mathematical formula}μ′=μ1′⋈μ2′. Since {a mathematical formula}ML⊨v(θ1′) and {a mathematical formula}ML⊨v(θ2′), the definition of join of two compatible mappings gives us {a mathematical formula}ML⊨v(θ′). Therefore we can apply the valuation v to {a mathematical formula}μ′ and get {a mathematical formula}v(μ′)∈v(〚P1〛D⋈〚P2〛D). From this and the fact that {a mathematical formula}v(μ′)=v(μ1′⋈μ2′)=μ we get {a mathematical formula}μ∈v(〚P1ANDP2〛D).
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}P is P1UNIONP2.We have {a mathematical formula}v(〚P1〛D)=〚P1〛v(D) and {a mathematical formula}v(〚P2〛D)=〚P2〛v(D) from the inductive hypothesis. We will prove that{a mathematical formula}A mapping μ is in {a mathematical formula}〚P1UNIONP2〛v(D) iff {a mathematical formula}μ∈〚P1〛v(D)∪〚P2〛v(D), which due to the inductive hypothesis is equivalent to {a mathematical formula}μ∈v(〚P1〛D)∪v(〚P2〛D), which can be seen to be equivalent to {a mathematical formula}μ∈v(〚P1〛D∪〚P2〛D), which is equivalent to {a mathematical formula}μ∈v(〚P1UNIONP2〛D).
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}P is P1FILTERR.We have {a mathematical formula}v(〚P1〛D)=〚P1〛v(D) from the inductive hypothesis. We will prove that {a mathematical formula}v(〚P1FILTERR〛D)=〚P1FILTERR〛v(D). Without loss of generality, we give the proof only for the case of filters that are atomic {a mathematical formula}L-constraints (Definition 6.16). Let μ be in {a mathematical formula}〚P1FILTERR〛v(D). By definition, this is equivalent to {a mathematical formula}μ∈〚P1〛v(D) and {a mathematical formula}μ⊨R. From the inductive hypothesis, we now have {a mathematical formula}μ∈v(〚P1〛D). Thus, there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ′)∈〚P1〛D such that {a mathematical formula}v(μ′)=μ and {a mathematical formula}ML⊨v(θ′).Let now {a mathematical formula}μ1=(ν′,θ1) be a conditional mapping with {a mathematical formula}θ1=θ′∧ν′(R). Because {a mathematical formula}μ⊨R, we have {a mathematical formula}ML⊨μ(R). Therefore {a mathematical formula}ML⊨v(ν′(R)) since {a mathematical formula}v(μ′)=μ. Now notice that because {a mathematical formula}ML⊨v(ν′(R)) and {a mathematical formula}ML⊨v(θ′), we have {a mathematical formula}ML⊨v(θ1). Therefore {a mathematical formula}v(μ1) is well defined and we have {a mathematical formula}v(μ1)=v(μ′)=μ.The way {a mathematical formula}μ1 and {a mathematical formula}μ′ have been defined above, together with the definition of the evaluation of FILTER graph patterns give us {a mathematical formula}μ1∈〚P1FILTERR〛D. We can apply valuation v to the above relation and get {a mathematical formula}v(μ1)∈v(〚P1FILTERR〛D) that is equivalent to {a mathematical formula}μ∈v(〚P1FILTERR〛D).This proof establishes that {a mathematical formula}〚P1FILTERR〛v(D)⊆v(〚P1FILTERR〛D). The other direction of the proof is similar and goes as follows.Let μ be a mapping in {a mathematical formula}v(〚P1FILTERR〛D). Then there exists a conditional mapping {a mathematical formula}μ1=(ν1,θ1)∈〚P1FILTERR〛D such that {a mathematical formula}v(μ1)=μ and {a mathematical formula}ML⊨v(θ1). Therefore, from the definition of FILTER evaluation there exists a conditional mapping {a mathematical formula}μ2=(ν1,θ2) such that {a mathematical formula}μ2∈〚P1〛D, where {a mathematical formula}θ1=θ2∧ν1(R). Since {a mathematical formula}ML⊨v(θ1), it holds that {a mathematical formula}ML⊨v(θ2) and {a mathematical formula}ML⊨v(ν1(R)). Thus {a mathematical formula}v(μ2)=v(μ1)=μ∈v(〚P1〛D). Now using the inductive hypothesis, we have {a mathematical formula}μ∈〚P1〛v(D). Because {a mathematical formula}ML⊨v(ν1(R)) and {a mathematical formula}μ=v(μ1), we have {a mathematical formula}ML⊨μ(R). Thus we also have {a mathematical formula}μ⊨R. Hence {a mathematical formula}μ∈〚P1FILTERR〛v(D).
+      </list-item>
+     </list>
+     <paragraph>
+      The above proves that the triple {a mathematical formula}〈D,Rep,QAUFC′〉 is a representation system.
+     </paragraph>
+     <paragraph>
+      Proof for{a mathematical formula}QWDC′
+     </paragraph>
+     <paragraph>
+      The proof that the triple {a mathematical formula}〈D,Rep,QWDC′〉 is also a representation system is the same as the previous one, while it differs only in the inductive step for the OPT operator. Thus, in this case, {a mathematical formula}P is P1OPTP2.
+     </paragraph>
+     <paragraph>
+      We have {a mathematical formula}v(〚P1〛D)=〚P1〛v(D) and {a mathematical formula}v(〚P2〛D)=〚P2〛v(D) from the inductive hypothesis. We need to prove {a mathematical formula}v(〚P1OPTP2〛D)=〚P1OPTP2〛v(D) or equivalently{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}μ∈v(〚P1OPTP2〛D). Then, there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ′)∈〚P1OPTP2〛D such that {a mathematical formula}μ=v(μ′) and {a mathematical formula}ML⊨v(θ′). Since {a mathematical formula}〚P1OPTP2〛D=〚P1〛D{an inline-figure}〚P2〛D=(〚P1〛D⋈〚P2〛D)∪(〚P1〛D∖〚P2〛D), then{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      For the former case, i.e., {a mathematical formula}μ′∈(〚P1〛D⋈〚P2〛D) the proof is the same as in the proof of Theorem 8.15, hence we finally get that {a mathematical formula}μ∈(〚P1〛v(D)⋈〚P2〛v(D)) and thus from formula (A.1) we have {a mathematical formula}μ∈〚P1OPTP2〛v(D). For the latter case, i.e., {a mathematical formula}μ′∈(〚P1〛D∖〚P2〛D), and the definition of difference for sets of conditional mappings we distinguish two sub-cases:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}μ′∈〚P1〛D and for all {a mathematical formula}μ2∈〚P2〛D, {a mathematical formula}μ′ and {a mathematical formula}μ2 are not possibly compatible. Since {a mathematical formula}ML⊨v(θ′), we can apply valuation v to {a mathematical formula}μ′ and get {a mathematical formula}μ=v(μ′)∈v(〚P1〛D). Since also every conditional mapping {a mathematical formula}μ2 of {a mathematical formula}〚P2〛D is not compatible to {a mathematical formula}μ′ — this is implied from not being possibly compatible to {a mathematical formula}μ′ — {a mathematical formula}v(μ′) is not compatible to every mapping {a mathematical formula}μ″∈v(〚P2〛D). Therefore, {a mathematical formula}v(μ′)∈(v(〚P1〛D)∖v(〚P2〛D)) which from our hypothesis is equivalent to {a mathematical formula}μ∈(〚P1〛v(D)∖〚P2〛v(D)). Hence, from formula (A.1) we have {a mathematical formula}μ∈〚P1 OPTP2〛v(D).
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}μ′ is the conditional mapping {a mathematical formula}(ν′,θ′) and there exists a conditional mapping {a mathematical formula}μ″=(ν′,θ)∈〚P1〛D such that
+       <list>
+        {a mathematical formula}μ″ is not compatible to some mappings of {a mathematical formula}〚P2〛D andfor the rest of mappings {a mathematical formula}μi=(νi,θi)∈〚P2〛D, {a mathematical formula}μ″ and {a mathematical formula}μi are possibly compatible and{a mathematical formula}Since
+       </list>
+       <paragraph>
+        {a mathematical formula}ML⊨v(θ′), we can apply valuation v to {a mathematical formula}μ′ and get {a mathematical formula}μ=v(μ′)∈v(〚P1〛D∖〚P2〛D), which can be written as {a mathematical formula}μ=v(μ′)∈(v(〚P1〛D)∖v(〚P2〛D)). To see this, notice that the above relation holds if and only if {a mathematical formula}v(μ′)∈v(〚P1〛D) and it is not compatible to every mapping {a mathematical formula}v(μ2) of {a mathematical formula}v(〚P2〛D). Since {a mathematical formula}ML⊨v(θ′) it holds {a mathematical formula}ML⊨v(θ) and thus {a mathematical formula}v(μ′)=v(μ″)∈v(〚P1〛D). Let us now take a mapping {a mathematical formula}μ2 in {a mathematical formula}〚P2〛D. Then, a) either {a mathematical formula}μ″, and consequently {a mathematical formula}μ′, is not compatible to {a mathematical formula}μ2, or b) {a mathematical formula}μ″, and consequently {a mathematical formula}μ′, is possibly compatible to {a mathematical formula}μ2. For the first case {a mathematical formula}v(μ′) is also not compatible to {a mathematical formula}v(μ2). For the second case {a mathematical formula}v(μ′) is also not compatible to {a mathematical formula}v(μ2). To see this, notice that {a mathematical formula}v(μ′) and {a mathematical formula}v(μ2) become compatible only when {a mathematical formula}v(μ′(x))=v(μ2(x)) for {a mathematical formula}x∈dom(μ′)∩dom(μ2). In such cases, however, {a mathematical formula}ML⊭θ′ and thus {a mathematical formula}v(μ′)∉v(〚P1〛D).Continuing the proof, from our hypothesis, the relation{a mathematical formula} now becomes {a mathematical formula}μ∈(〚P1〛v(D)∖〚P2〛v(D)) and thus from formula (A.1) we get {a mathematical formula}μ∈〚P1OPTP2〛v(D).
+       </paragraph>
+      </list-item>
+     </list>
+     <paragraph>
+      This proves that {a mathematical formula}v(〚P1OPTP2〛D)⊆〚P1OPTP2〛v(D). The other direction of the proof is similar.
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     Proof for Proposition 8.14
+     <paragraph>
+      Let {a mathematical formula}〚q〛D be the {a mathematical formula}RDFi database {a mathematical formula}D′=(G′,ϕ) where{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Then {a mathematical formula}v(〚q〛D) is the RDF graph {a mathematical formula}v(D′) where{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Likewise, let {a mathematical formula}〚q〛v(D) be the RDF graph H. According to the definition of the evaluation of CONSTRUCT queries on RDF graphs [74], H is the set{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      To prove our proposition, we have to show that {a mathematical formula}H=v(D′). Let {a mathematical formula}t∈H be an RDF triple. Then, there exists a mapping {a mathematical formula}μ∈〚P〛v(D) such that{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      From our assumption that {a mathematical formula}v(〚P〛D)=〚P〛v(D), we have {a mathematical formula}μ∈v(〚P〛D). Therefore, there exists a conditional mapping {a mathematical formula}μ′=(ν′,θ′)∈〚P〛D such that {a mathematical formula}ML⊨v(θ′) and {a mathematical formula}μ=v(μ′), and hence, relation (B.3) can equivalently be written as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Notice now that for a conditional triple t, relation {a mathematical formula}t∈((I×B)×I×T) is equivalent to relation {a mathematical formula}v(t)∈((I×B)×I×TC). This equivalence holds because v is a total function from U to C. Therefore, the above relation can be equivalently written as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      From (B.1) and since {a mathematical formula}ML⊨v(θ′) and {a mathematical formula}μ′∈〚P〛D, we have {a mathematical formula}{v(t′)|(t′,θ′)∈μ′(fμ′(E)) and t′∈((I∪B)×I×T)}⊆v(D′). Observe now that from relation (B.4) and by fixing the renaming function {a mathematical formula}fμ′ to rename blank nodes like {a mathematical formula}fμ does, we get {a mathematical formula}t∈v(D′). Note that this fixing respects Definition 6.26, since {a mathematical formula}blank(D)=blank(G)=blank(v(D)). Hence, we showed that every triple of H is a triple of {a mathematical formula}v(D′).
+     </paragraph>
+     <paragraph>
+      The other direction of the proof is similar and goes as follows. Let {a mathematical formula}t∈v(D′). Then, there exists a conditional mapping {a mathematical formula}μ=(ν,θ)∈〚P〛D and a conditional triple {a mathematical formula}(t′,θ)∈G′ such that {a mathematical formula}ML⊨v(θ) and {a mathematical formula}v(t′)=t. From (B.1) we then have{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Since {a mathematical formula}ML⊨v(θ), {a mathematical formula}v(μ) is defined and thus we have {a mathematical formula}v(μ)∈v(〚P〛D), which from our assumption that {a mathematical formula}v(〚P〛D)=〚P〛v(D), we get {a mathematical formula}μ′=v(μ)∈〚P〛v(D). Thus, applying valuation v to (B.5), we get{a mathematical formula} Since {a mathematical formula}μ′=v(μ) and {a mathematical formula}v(t′)=t, the above relation becomes{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Working as previously, we set {a mathematical formula}fμ to behave as {a mathematical formula}fμ′ and hence the above relation becomes{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      From the above and because of (B.2) and {a mathematical formula}μ′∈〚P〛v(D), we get {a mathematical formula}t∈H.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

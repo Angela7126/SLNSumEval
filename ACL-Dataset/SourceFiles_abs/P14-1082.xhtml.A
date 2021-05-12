@@ -1,0 +1,1027 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Translation Assistance by Translation of L1 Fragments in an L2 Context.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Whereas machine translation generally concerns the translation of
+whole sentences or texts from one language to the other, this study
+focusses on the translation of native language (henceforth L1) words
+and phrases, i.e. smaller fragments, in a foreign language (L2)
+context. Despite the major efforts and improvements, automatic
+translation does not yet rival human-level quality. Vexing issues are
+morphology, word-order change and long-distance dependencies. Although
+there is a morpho-syntactic component in this research, our
+scope is more constrained; its focus is on the faithful preservation
+of meaning from L1 to L2, akin to the role of the translation model in
+Statistical Machine Translation (SMT).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The cross-lingual context in our research question may at first seem
+artificial, but its design explicitly aims at applications related to
+computer-aided language learning
+        []
+        and computer-aided
+translation
+        []
+        . Currently, language learners need to refer to a
+bilingual dictionary when in doubt about a translation of a word or phrase.
+Yet, this problem arises in a context, not in isolation; the learner may have
+already translated successfully a part of the text into L2 leading up to the
+problematic word or phrase. Dictionaries are not the best source to look up
+context; they may contain example usages, but remain biased towards single
+words or short expressions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The proposed application allows code switching and produces context-sensitive
+suggestions as writing progresses. In this research we test the feasibility of
+the foundation of this idea.The following examples serve to illustrate the idea
+and demonstrate what output the proposed translation assistance system would
+ideally produce. The parts in bold correspond to respectively the inserted
+fragment and the system translation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           Input (L1=English,L2=Spanish):
+           “Hoy vamos a the swimming
+pool.”
+           Desired output:
+           “Hoy vamos a la piscina.”
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           Input (L1-English, L2=German):
+           “Das wetter ist wirklich
+abominable.”
+           Desired output:
+           “Das wetter ist wirklich ekelhaft.”
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           Input (L1=French,L2=English):
+           “I rentre à la maison because
+I am tired.”
+           Desired output:
+           “I return home because I am tired.”
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i4.p1">
+          <p class="ltx_p">
+           Input (L1=Dutch, L2=English):
+           “Workers are facing a massive aanval
+op their employment and social rights.”
+           Desired output:
+           “Workers are facing a massive attack on
+their employment and social rights.”
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The main research question in this research is how to disambiguate an L1 word
+or phrase to its L2 translation based on an L2 context, and whether such
+cross-lingual contextual approaches provide added value compared to baseline
+models that are not context informed or compared to standard language models.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Data preparation
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Preparing the data to build training and test data for our intended
+translation assistance system is not trivial, as the type of
+interactive translation assistant we aim to develop does not exist yet. We
+need to generate training and test data that realistically emulates
+the task. We start with a parallel corpus that is tokenised for both
+L1 and L2. No further linguistic processing such as part-of-speech
+tagging or lemmatisation takes place in our experiments; adding this
+remains open for future research.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The parallel corpus is randomly sampled into two large and
+equally-sized parts. One is the basis for the training set, and the
+other is the basis for the test set. The reason for such a large test
+split shall become apparent soon.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        From each of the splits (
+        S
+        ), a phrase-translation table is constructed
+automatically in an unsupervised fashion. This is done using the scripts
+provided by the Statistical Machine Translation system Moses
+        []
+        . It
+invokes GIZA++
+        []
+        to establish statistical word alignments based on
+the IBM Models and subsequently extracts phrases using the
+        grow-diag-final
+        algorithm
+        []
+        . The result, independent
+for each set, will be a phrase-translation table (
+        T
+        ) that maps phrases in L1
+to L2. For each phrase-pair (
+        fs,ft
+        ) this phrase-translation table holds the computed
+translation probabilities
+        P(fs|ft)
+        and
+        P(ft|fs)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Given these phrase-translation tables, we can now extract both training data
+and test data using the algorithm in Figure
+        1
+        . In our discourse, the source language (
+        s
+        ) corresponds to L1, the
+fallback language used for by the end-user for inserting fragments, whilst the
+target language (
+        t
+        ) is L2.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Step 4 is effectively a filter: two thresholds can be configured to discard
+weak alignments, i.e. those with low probabilities, from the phrase-translation
+table so that only strong couplings make it into the generated set. The
+parameter
+        λ1
+        adds a constraint based on the product of the two
+conditional probabilities
+        (P(ft|fs)⋅P(fs|ft))
+        , and sets a threshold
+that has to be surpassed. A second parameter
+        λ2
+        further limits the
+considered phrase pairs
+        (fs,ft)
+        to have the product of their conditional
+probabilities not not deviate more than a fraction
+        λ2
+        from the joint
+probability for the strongest possible pairing for
+        fs
+        , the source fragment.
+        fs⁢t⁢r⁢o⁢n⁢g⁢e⁢s⁢t⁢_⁢t
+        in Figure
+        1
+        corresponds to the best scoring
+translation for a given source fragment
+        fs
+        . This metric thus effectively
+prunes weaker alternative translations in the phrase-translation table from
+being considered if there is a much stronger candidate. Nevertheless, it has to
+be noted that even with
+        λ1
+        and
+        λ2
+        , the test set will include
+a certain amount of errors. This is due to the nature of the unsupervised
+method with which the phrase-translation table is constructed. For our purposes
+however, the test set suffices to test our hypothesis.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        In our experiments, we choose fixed values for these parameters, by
+manual inspection and judgement of the output. The
+        λ1
+        parameter was set to
+        0.01
+        and
+        λ2
+        to
+        0.8
+        . Whilst other
+thresholds may possibly produce cleaner sets, this is hard to evaluate
+as finding optimal values causes a prohibitive increase in complexity
+of the search space, and again this is not necessary to test our hypothesis.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        The output of the algorithm in Figure
+        1
+        is a modified set of sentence pairs
+        (s⁢e⁢n⁢t⁢e⁢n⁢c⁢et′,s⁢e⁢n⁢t⁢e⁢n⁢c⁢et)
+        , in which the same sentence pair may be used multiple times
+with different L1 substitutions for different fragments.
+The final
+test set is created by randomly sampling the desired number of test
+instances.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        Note that the training set and test set are constructed on their own
+respective and independently generated phrase-translation tables. This
+ensures complete independence of training and test data. Generating
+test data using the same phrase-translation table as the training data
+would introduce a bias. The fact that a phrase-translation table needs
+to be constructed for the test data is also the reason that the
+parallel corpus split from which the test data is derived has to be
+large enough, ensuring better quality.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p9">
+       <p class="ltx_p">
+        We concede that our current way of testing is a mere approximation of
+the real-world scenario. An ideal test corpus would consist of L2
+sentences with L1 fallback as crafted by L2 language learners with an
+L1 background. However, such corpora do not exist as
+yet. Nevertheless, we hope to show that our automated way of test set
+generation is sufficient to test the feasibility of our core
+hypothesis that L1 fragments can be translated to L2 using L2 context
+information.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       System
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We develop a classifier-based system composed of so-called “classifier
+experts”. Numerous classifiers are trained and each is an expert in
+translating a single word or phrase. In other words, for each word type or phrase type that
+occurs as a fragment in the training set, and which does not map to just a
+single translation, a classifier is trained. The classifier maps the L1 word
+or phrase in its L2 context to its L2 translation. Words or phrases that always
+map to a single translation are stored in a simple mapping table, as a
+classifier would have no added value in such cases. The classifiers use the IB1
+algorithm
+        []
+        as implemented in TiMBL
+        []
+        .
+        IB1 implements
+        k
+        -nearest neighbour classification. The choice for this algorithm is
+motivated by the fact that it handles multiple classes with ease, but first and
+foremost because it has been successfully employed for word sense
+disambiguation in other studies
+        []
+        , in particular in
+cross-lingual word sense disambiguation, a task closely resembling our current
+task
+        []
+        . It has also been used in machine translation studies in which
+local source context is used to classify source phrases into target phrases,
+rather than looking them up in a phrase table
+        []
+        . The
+idea of local phrase selection with a discriminative machine learning
+classifier using additional local (source-language) context was introduced in
+parallel to Stroppa
+        et al.
+        []
+        by Carpuat and Wu
+        []
+        and Giménez and Márquez
+        []
+        ;
+cf. Haque
+        et al.
+        []
+        for an overview of more recent
+methods.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        The feature vector for the classifiers represents a local context of
+neighbouring words, and optionally also global context keywords in a
+binary-valued bag-of-words configuration. The local context consists
+of an
+        X
+        number of L2 words to the left of the L1 fragment, and
+        Y
+        words to the right.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        When presented with test data, in which the L1 fragment is explicitly marked,
+we first check whether there is ambiguity for this L1 fragment and if a direct
+translation is available in our simple mapping table. If so, we are done
+quickly and need not rely on context information. If not, we check for the
+presence of a classifier expert for the offered L1 fragment; only then we can
+proceed by extracting the desired number of L2 local context words to the
+immediate left and right of this fragment and adding those to the feature
+vector. The classifier will return a probability distribution of the most likely
+translations given the context and we can replace the L1 fragment with the
+highest scoring L2 translation and present it back to the user.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        In addition to local context features, we also experimented with
+global context features. These are a set of L2 contextual keywords for
+each L1 word/phrase and its L2 translation occurring in the same
+sentence, not necessarily in the immediate neighbourhood of the L1
+word/phrase. The keywords are selected to be indicative for a specific
+translation. We used the method of extraction by
+        and
+encoded all keywords in a binary bag of words model. The experiments
+however showed that inclusion of such keywords did not make any
+noticeable impact on any of the results, so we restrict ourselves to
+mentioning this negative result.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        Our full system, including the scripts for data preparation, training, and
+evaluation, is implemented in Python and freely available as open-source from
+        http://github.com/proycon/colibrita/
+        . Version tag
+        v0.2.1
+        is
+representative for the version used in this research.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Language Model
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We also implement a statistical language model as an optional component of our
+classifier-based system and also as a baseline to compare our system to. The
+language model is a trigram-based back-off language model with Kneser-Ney
+smoothing, computed using SRILM
+         []
+         and trained on the same training
+data as the translation model. No additional external data was brought in, to
+keep the comparison fair.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         For any given hypothesis
+         H
+         , results from the L1 to L2 classifier are combined with
+results from the L2 language model. We do so by normalising the class
+probability from the classifier (
+         s⁢c⁢o⁢r⁢eT⁢(H)
+         ), which is our translation model, and the language model
+(
+         s⁢c⁢o⁢r⁢el⁢m⁢(H)
+         ), in such a way that the highest classifier score for
+the alternatives under consideration is always
+         1.0
+         , and the highest
+language model score of the sentence is always
+         1.0
+         . Take
+         s⁢c⁢o⁢r⁢eT⁢(H)
+         and
+         s⁢c⁢o⁢r⁢el⁢m⁢(H)
+         to be log probabilities, the search for the best (most
+probable) translation hypothesis
+         H^
+         can then be expressed as:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        H^=arg⁢maxH⁡(s⁢c⁢o⁢r⁢eT⁢(H)+s⁢c⁢o⁢r⁢el⁢m⁢(H))
+
+(1)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         If desired, the search can be parametrised with variables
+         λ3
+         and
+         λ4
+         , representing the weights we want to attach to the classifier-based
+translation model and the language model, respectively. In the current study we
+simply left both weights set to one, thereby assigning equal importance to
+translation model and language model.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Several automated metrics exist for the evaluation of L2 system
+output against the L2 reference output in the test set. We first
+measure absolute accuracy by simply counting all output fragments that
+exactly match the reference fragments, as a fraction of the total
+amount of fragments. This measure may be too strict, so we add a more
+flexible
+        word accuracy
+        measure which takes into account partial
+matches at the word level. If output
+        o
+        is a subset of reference
+        r
+        then a score of
+        |o||r|
+        is assigned for that sentence
+pair. If instead,
+        r
+        is a subset of
+        o
+        , then a score of
+        |r||o|
+        will be assigned. A perfect match will result
+in a score of
+        1
+        whereas a complete lack of overlap will be
+scored
+        0
+        . The word accuracy for the entire set is then computed by
+taking the sum of the word accuracies per sentence pair, divided by
+the total number of sentence pairs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We also compute a recall metric that measures the number of fragments that the
+system provided a translation for as a fraction of the total number of
+fragments in the input, regardless of whether the fragment is translated
+correctly or not. The system may skip fragments for which it can find no
+solution at all.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        In addition to these, the system’s output can be compared against the
+L2 reference translation(s) using established Machine Translation
+evaluation metrics. We report on BLEU, NIST, METEOR, and word error
+rate metrics WER and PER. These scores should generally be much
+better than the typical MT system performances as only local changes
+are made to otherwise “perfect” L2 sentences.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Baselines
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        A context-insensitive yet informed baseline was constructed to assess
+the impact of L2 context information in translating L1 fragments. The
+baseline selects the most probable L1 fragment per L2 fragment
+according to the phrase-translation table. This baseline, henceforth
+referred to as the ’most likely fragment’ baseline (MLF) is analogous
+to the ’most frequent sense’-baseline common in evaluating WSD
+systems.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        A second baseline was constructed by weighing the probabilities from
+the translation table directly with the L2 language model described
+earlier. It adds a LM component to the MLF baseline. This LM baseline
+allows the comparison of classification through L1 fragments in an L2
+context, with a more traditional L2 context modelling (i.e. target
+language modelling) which is also customary in MT decoders. Computing
+this baseline is done in the same fashion as previously illustrated in
+Equation
+        1
+        , where
+        s⁢c⁢o⁢r⁢eT
+        then represents the normalised
+        p(t|s)
+        score from the phrase-translation table rather than the class
+probability from the classifier.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Experiments &amp; Results
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        The data for our experiments were drawn from the Europarl parallel corpus
+        []
+        from which we extracted two sets of
+        200,000
+        sentence
+pairs each for several language pairs. These were used to form the
+training and test sets. The final test sets are a randomly sampled
+        5,000
+        sentence pairs from the
+        200,000
+        -sentence test split for each
+language pair.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        All input data for the experiments in this section are publicly available
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        Let us first zoom in to convey a sense of scale on a specific
+language pair. The actual Europarl training set we generate for
+English (L1) to Spanish (L2), i.e. English fallback in a Spanish
+context, consists of
+        5,608,015
+        sentence pairs. This number is much
+larger than the
+        200,000
+        we mentioned before because single sentence
+pairs may be reused multiple times with different marked fragments.
+From this training set of sentence pairs over
+        100,000
+        classifier
+experts are derived. The eleven largest classifiers are shown in
+Table
+        1
+        , along with the number of training
+instances per classifier. The full table would reveal a Zipfian
+distribution.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        Among the classifier experts are only words and phrases that are
+ambiguous and may thus map to multiple translations. This implies that
+such words and phrases must have occurred at least twice in the
+corpus, though this threshold is made configurable and could have been
+set higher to limit the number of classifiers. The remaining
+        246,380
+        unambiguous mappings are stored in a separate mapping table.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        For the classifier-based system, we tested various different feature
+vector configurations. The first experiment, of which the results are
+shown in Figure
+        2
+        , sets a fixed and symmetric local
+context size across all classifiers, and tests three context
+widths. Here we observe that a context width of one yields the best
+results. The BLEU scores, not included in the figure but shown in
+Table
+        2
+        , show a similar trend. This trend holds for
+all the MT metrics.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p6">
+       <p class="ltx_p">
+        Table
+        2
+        shows the results for English to Spanish in
+more detail and adds a comparison with the two baseline systems. The various
+        lXrY
+        configurations use the same feature vector setup for all classifier
+experts. Here
+        X
+        indicates the left context size and
+        Y
+        the right context
+size.
+The
+        auto
+        configuration
+does not uniformly apply the same feature vector setup to all classifier
+experts but instead seeks to find the optimal setup per
+classifier expert. This shall be further discussed in
+Section
+        6.1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p8">
+       <p class="ltx_p">
+        As expected, the LM baseline substantially outperforms the
+context-insensitive MLF baseline. Second, our classifier approach
+attains a substantially higher accuracy than the LM baseline. Third,
+we observe that adding the language model to our classifier leads to
+another significant gain (configuration
+        l1r1+LM
+        in the
+results in Table
+        2
+        ). It appears that the classifier
+approach and the L2 language model are able to complement each other.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p9">
+       <p class="ltx_p">
+        Statistical significance on the BLEU scores was tested using pairwise bootstrap
+sampling
+        []
+        . All significance tests were performed with
+        5,000
+        iterations. We compared the outcomes of several key configurations. We
+first tested
+        l1r1
+        against both baselines; both differences are
+significant at
+        p&lt;0.01
+        for both. The same significance level was found when
+comparing
+        l1r1+LM
+        against
+        l1r1
+        ,
+        auto+LM
+        against
+        auto
+        , as well as the LM baseline against the MLF baseline. Automatic
+feature selection
+        auto
+        was found to perform statistically better than
+        l1r1
+        , but only at
+        p&lt;0.05
+        . Conclusions with regard to context width
+may have to be tempered somewhat, as the performance of the
+        l1r1
+        configuration was found to not be significantly better than that of the
+        l2r2
+        configuration. However,
+        l1r1
+        performs significantly
+better than
+        l3r3
+        at
+        p&lt;0.01
+        , and
+        l2r2
+        performs significantly
+better than
+        l3r3
+        at
+        p&lt;0.01
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p10">
+       <p class="ltx_p">
+        In Table
+        3
+        we present some illustrative examples from
+the English
+        →
+        Spanish Europarl data. We show the difference
+between the most-likely-fragment baseline and our system.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p11">
+       <p class="ltx_p">
+        Likewise, Table
+        4
+        exemplifies small fragments from the
+        l1r1
+        configuration compared to the same configuration enriched with a
+language model. We observe in this data that the language model often has the
+added power to choose a correct translation that is not the first prediction of
+the classifier, but one of the weaker alternatives that nevertheless fits
+better. Though the classifier generally works best in the
+        l1r1
+        configuration, i.e. with context size one, the trigram-based language model
+allows further left-context information to be incorporated that influences the
+weights of the classifier output, successfully forcing the system to select
+alternatives. This combination of a classifier with context size one and
+trigram-based language model proves to be most effective and reaches the best
+results so far. We have not conducted experiments with language
+models of other orders.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Context optimisation
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         It has been argued that classifier experts in a word sense
+disambiguation ensemble should be individually optimised
+         []
+         . The latter study on cross-lingual WSD finds a
+positive impact when conducting feature selection per classifier. This
+intuitively makes sense; a context of one may seem to be better than
+any other when uniformly applied to all classifier experts, but it may
+well be that certain classifiers benefit from different feature
+selections. We therefore proceed with this line of investigation as
+well.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         Automatic configuration selection was done by performing leave-one-out
+testing (for small number of instances) or 10-fold-cross validation
+(for larger number of instances,
+         n≥20
+         ) on the training data per
+classifier expert. Various configurations were tested. Per classifier
+expert, the best scoring configuration was selected, referred to as
+the
+         auto
+         configuration in Table
+         2
+         . The
+         auto
+         configuration improves results over the uniformly
+applied feature selection. However, if we enable the language model
+as we do in the
+         auto+LM
+         configuration we do not notice an
+improvement over
+         l1r1+LM
+         , surprisingly. We suspect the lack
+of impact here can be explained by the trigram-based Language Model
+having less added value when the (left) context size of the classifier
+is two or three; they are now less complementary.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p3">
+        <p class="ltx_p">
+         Table
+         5
+         lists what context sizes have been chosen in the
+automatic feature selection. A context size of one prevails in the vast majority of
+cases, which is not surprising considering the good results we have already
+seen with this configuration.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p4">
+        <p class="ltx_p">
+         In this study we did not yet conduct optimisation of the classifier
+parameters. We used the IB1 algorithm with
+         k=1
+         and the default
+values of the TiMBL implementation. In earlier work
+         , we reported a decrease in performance due to overfitting
+when this is done, so we do not expect it to make a positive
+impact. The second reason for omitting this is more practical in
+nature; to do this in combination with feature selection would add
+substantial search complexity, making experiments far more time
+consuming, even prohibitively so.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p5">
+        <p class="ltx_p">
+         The bottom lines in Table
+         2
+         represent results when
+all right-context is omitted, emulating a real-time prediction when no
+right context is available yet. This has a substantial negative impact on
+results.
+We experimented with several asymmetric configurations and found that
+taking two words to the left and one to the right yields even better results than
+symmetric configurations for this data set. This result is in line
+with the positive effect of adding the LM to the
+         l1r1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p6">
+        <p class="ltx_p">
+         In order to draw accurate conclusions, experiments on a single data
+set and language pair are not sufficient. We therefore conducted a
+number of experiments with other language pairs, and present the
+abridged results in Table
+         6
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p7">
+        <p class="ltx_p">
+         There are some noticeable discrepancies for some experiments in
+Table
+         6
+         when compared to our earlier results in
+Table
+         2
+         . We see that the language model baseline for
+English
+         →
+         French shows the same substantial improvement over the
+baseline as our English
+         →
+         Spanish results. The same holds for the
+Chinese
+         →
+         English experiment. However, for English
+         →
+         Dutch
+and English
+         →
+         Chinese we find that the LM baseline actually performs
+slightly worse than baseline. Nevertheless, in all these cases, the positive
+effect of including a Language Model to our classifier-based system again
+shows. Also, we note that in all cases our system performs better than the two
+baselines.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p8">
+        <p class="ltx_p">
+         Another discrepancy is found in the BLEU scores of the
+English
+         →
+         Chinese experiments, where we measure an
+unexpected drop in BLEU score under baseline. However, all other
+scores do show the expected improvement. The error rate metrics show
+improvement as well. We therefore attach low importance to this
+deviation in BLEU here.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p9">
+        <p class="ltx_p">
+         In all of the aforementioned experiments, the system produced a single solution
+for each of the fragments, the one it deemed best, or no solution at all if it
+could not find any. Alternative evaluation metrics could allow the system to output
+multiple alternatives. Omission of a solution by definition causes a decrease in
+recall. In all of our experiments recall is high (well above
+         90⁢%
+         ), mostly
+because train and test data lie in the same domain and have been generated in
+the same fashion, lower recall is expected with more real-world data.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Discussion and conclusion
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        In this study we have shown the feasibility of a classifier-based translation
+assistance system in which L1 fragments are translated in an L2 context, in
+which the classifier experts are built individually per word or phrase. We
+have shown that such a translation assistance system scores both above a
+context-insensitive baseline, as well as an L2 language model baseline.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        Furthermore, we found that combining this cross-language
+context-sensitive technique with an L2 language model
+boosts results further.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p3">
+       <p class="ltx_p">
+        The presence of a one-word right-hand side context proves crucial for
+good results, which has implications for practical translation
+assistance application that translate as soon as the user finishes an
+L1 fragment. Revisiting the translation when right context becomes
+available would be advisable.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p4">
+       <p class="ltx_p">
+        We tested various configurations and conclude that small context sizes work
+better than larger ones. Automated configuration selection had positive
+results, yet the system with context size one and an L2 language model
+component often produces the best results. In static configurations, the
+failure of a wider context window to be more succesful may be attributed to the
+increased sparsity that comes from such an expansion.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p5">
+       <p class="ltx_p">
+        The idea of a comprehensive translation assistance system may extend
+beyond the translation of L1 fragments in an L2 context. There are
+more NLP components that might play a role if such a system were to
+find practical application. Word completion or predictive editing (in
+combination with error correction) would for instance seem an
+indispensable part of such a system, and can be implemented alongside
+the technique proposed in this study. A point of more
+practically-oriented future research is to see how feasible such
+combinations are and what techniques can be used.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p6">
+       <p class="ltx_p">
+        An application of our idea outside the area of translation assistance
+is post-correction of the output of some MT systems that, as a
+last-resort heuristic, copy source words or phrases into their output,
+producing precisely the kind of input our system is trained on. Our
+classification-based approach may be able to resolve some of these
+cases operating as an add-on to a regular MT system – or as a
+independent post-correction system.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p7">
+       <p class="ltx_p">
+        Our system allows L1 fragments to be of arbitrary length. If a
+fragment was not seen during training stage, and is therefore not
+covered by a classifier expert, then the system will be unable to
+translate it. Nevertheless, if a longer L1 fragment can be decomposed
+into subfragments that are known, then some recombination of the
+translations of said sub-fragments may be a good translation for the
+whole. We are currently exploring this line of investigation, in which
+the gap with MT narrows further.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p8">
+       <p class="ltx_p">
+        Finally, an important line of future research is the creation of a
+more representative test set. Lacking an interactive system that
+actually does what we emulate, we hypothesise that good approximations
+would be to use gap exercises, or cloze tests, that test specific
+aspects difficulties in language learning. Similarly, we may use L2
+learner corpora with annotations of code-switching points or
+errors. Here we then assume that places where L2 errors occur may be
+indicative of places where L2 learners are in some trouble, and might
+want to fall back to generating L1. By then manually translating gaps
+or such problematic fragments into L1 we hope to establish a more
+realistic test set.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

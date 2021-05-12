@@ -1,0 +1,1164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Robust Approach to Aligning Heterogeneous Lexical Resources</title>
+<!--Generated on Tue Jun 10 17:38:59 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Robust Approach to Aligning Heterogeneous Lexical Resources</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mohammad Taher Pilehvar 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Roberto Navigli 
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>Sapienza University of Rome
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">pilehvar,navigli</span>}<span class="ltx_text ltx_font_typewriter">@di.uniroma1.it</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Lexical resource alignment has been an active field of research over the last decade.
+However, prior methods for aligning lexical resources have been either specific to a particular pair of resources, or heavily dependent on the availability of hand-crafted alignment data for the pair of resources to be aligned.
+Here we present a unified approach that can be applied to an arbitrary pair of lexical resources, including machine-readable dictionaries with no network structure.
+Our approach leverages a similarity measure that enables the structural comparison of senses across lexical resources, achieving state-of-the-art performance on the task of aligning WordNet to three different collaborative resources: Wikipedia, Wiktionary and OmegaWiki.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Lexical resources are repositories of machine-readable knowledge that can be used in virtually any Natural Language Processing task. Notable examples are WordNet, Wikipedia and, more recently, collaboratively-curated resources such as OmegaWiki and Wiktionary <cite class="ltx_cite">[<a href="#bib.bib627" title="Collaboratively built semi-structured content and Artificial Intelligence: The story so far" class="ltx_ref">13</a>]</cite>. On the one hand, these resources are heterogeneous in design, structure and content, but, on the other hand, they often provide complementary knowledge which we would like to see integrated. Given the large scale this intrinsic issue can only be addressed automatically, by means of lexical resource alignment algorithms.
+Owing to its ability to bring together features like multilinguality and increasing coverage, over the past few years resource alignment has proven beneficial to a wide spectrum of tasks, such as Semantic Parsing <cite class="ltx_cite">[<a href="#bib.bib621" title="Putting pieces together: combining FrameNet, VerbNet and WordNet for robust semantic parsing" class="ltx_ref">33</a>]</cite>, Semantic Role Labeling <cite class="ltx_cite">[<a href="#bib.bib623" title="Semantic role labeling" class="ltx_ref">28</a>]</cite>, and Word Sense Disambiguation <cite class="ltx_cite">[<a href="#bib.bib581" title="BabelNet: The automatic construction, evaluation and application of a wide-coverage multilingual semantic network" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Nevertheless, when it comes to aligning textual definitions in different resources, the lexical approach <cite class="ltx_cite">[<a href="#bib.bib504" title="Automatic assignment of Wikipedia encyclopedic entries to WordNet synsets" class="ltx_ref">32</a>, <a href="#bib.bib622" title="Providing multilingual, multimodal answers to lexical database queries" class="ltx_ref">5</a>, <a href="#bib.bib615" title="Semi-automatic extension of GermaNet with sense definitions from Wiktionary" class="ltx_ref">11</a>]</cite> falls short because of the potential use of totally different wordings to define the same concept. Deeper approaches leverage semantic similarity to go beyond the surface realization of definitions <cite class="ltx_cite">[<a href="#bib.bib263" title="Meaningful clustering of senses helps boost word sense disambiguation performance" class="ltx_ref">26</a>, <a href="#bib.bib609" title="What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage" class="ltx_ref">20</a>, <a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>]</cite>.
+While providing good results in general, these approaches fail when the definitions of a given word are not of adequate quality and expressiveness to be distinguishable from one another.
+When a lexical resource can be viewed as a semantic graph, as with WordNet or Wikipedia, this limit can be overcome by means of alignment algorithms that exploit the network structure to determine the similarity of concept pairs.
+However, not all lexical resources provide explicit semantic relations between concepts and, hence, machine-readable dictionaries like Wiktionary have first to be transformed into semantic graphs before such graph-based approaches can be applied to them.
+To do this, recent work has proposed graph construction by monosemous linking, where a concept is linked to all the concepts associated with the monosemous words in its definition <cite class="ltx_cite">[<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">17</a>]</cite>.
+However, this alignment method still involves tuning of parameters which are highly dependent on the characteristics of the generated graphs and, hence, requires hand-crafted sense alignments for the specific pair of resources to be aligned, a task which has to be replicated every time the resources are updated.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper we propose a unified approach to aligning arbitrary pairs of lexical resources which is independent of their specific structure.
+Thanks to a novel modeling of the sense entries and an effective ontologization algorithm, our approach also fares well when resources lack relational structure or pair-specific training data is absent, meaning that it is applicable to arbitrary pairs without adaptation.
+We report state-of-the-art performance when aligning WordNet to Wikipedia, OmegaWiki and Wiktionary.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Resource Alignment</h2>
+
+<div id="S2.SS0.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Preliminaries.</h5>
+
+<div id="S2.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Our approach for aligning lexical resources exploits the graph structure of each resource. Therefore, we assume that a lexical resource <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> can be represented as an undirected graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the set of nodes, i.e., the concepts defined in the resource, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> is the set of undirected edges, i.e., semantic relations between concepts. Each concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m5" class="ltx_Math" alttext="c\in V" display="inline"><mrow><mi>c</mi><mo>∈</mo><mi>V</mi></mrow></math> is associated with a set of lexicalizations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m6" class="ltx_Math" alttext="\mathcal{L}_{G}(c)=\{w_{1},w_{2},...,w_{n}\}" display="inline"><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mi>G</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math>.
+For instance, WordNet can be readily represented as an undirected graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m7" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> whose nodes are synsets and edges are modeled after the relations between synsets defined in WordNet (e.g., hypernymy, meronymy, etc.), and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P1.p1.m8" class="ltx_Math" alttext="\mathcal{L}_{G}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mi>G</mi></msub></math> is the mapping between each synset node and the set of synonyms which express the concept.
+However, other resources such as Wiktionary do not provide semantic relations between concepts and, therefore, have first to be transformed into semantic networks before they can be aligned using our alignment algorithm.
+We explain in Section <a href="#S3" title="3 Lexical Resource Ontologization ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> how a semi-structured resource which does not exhibit a graph structure can be transformed into a semantic network.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Alignment algorithm.</h5>
+
+<div id="S2.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Given a pair of lexical resources <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math>, we align each concept in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m3" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> by mapping it to its corresponding concept(s) in the target lexicon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m4" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math>.
+Algorithm <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> formalizes the alignment process: the algorithm takes as input the semantic graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m5" class="ltx_Math" alttext="G_{1}" display="inline"><msub><mi>G</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m6" class="ltx_Math" alttext="G_{2}" display="inline"><msub><mi>G</mi><mn>2</mn></msub></math> corresponding to the two resources, as explained above, and produces as output an alignment in the form of a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m7" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> of concept pairs.
+The algorithm iterates over all concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m8" class="ltx_Math" alttext="c_{1}\in V_{1}" display="inline"><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>∈</mo><msub><mi>V</mi><mn>1</mn></msub></mrow></math> and, for each of them, obtains the set of concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m9" class="ltx_Math" alttext="C\subset V_{2}" display="inline"><mrow><mi>C</mi><mo>⊂</mo><msub><mi>V</mi><mn>2</mn></msub></mrow></math>, which can be considered as alignment candidates for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m10" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> (line <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+For a concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m11" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math>, alignment candidates in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m12" class="ltx_Math" alttext="G_{2}" display="inline"><msub><mi>G</mi><mn>2</mn></msub></math> usually consist of every concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m13" class="ltx_Math" alttext="c_{2}\in V_{2}" display="inline"><mrow><msub><mi>c</mi><mn>2</mn></msub><mo>∈</mo><msub><mi>V</mi><mn>2</mn></msub></mrow></math> that shares at least one lexicalization with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m14" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> in the same part of speech tag, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m15" class="ltx_Math" alttext="\mathcal{L}_{G_{1}}(c_{1})\cap\mathcal{L}_{G_{2}}(c_{2})\neq\emptyset" display="inline"><mrow><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><msub><mi>G</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>∩</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><msub><mi>G</mi><mn>2</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></mrow><mo>≠</mo><mi mathvariant="normal">∅</mi></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib505" title="A resource-poor approach for linking ontology classes to Wikipedia articles" class="ltx_ref">31</a>, <a href="#bib.bib609" title="What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage" class="ltx_ref">20</a>]</cite>.
+Once the set of target candidates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m16" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> for a source concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m17" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> is obtained, the alignment task can be cast as that of identifying those concepts in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m18" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> to which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m19" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> should be aligned.
+To do this, the algorithm calculates the similarity between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m20" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> and each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m21" class="ltx_Math" alttext="c_{2}\in C" display="inline"><mrow><msub><mi>c</mi><mn>2</mn></msub><mo>∈</mo><mi>C</mi></mrow></math> (line <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+If their similarity score exceeds a certain value denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m22" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> (line <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), the two concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m23" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m24" class="ltx_Math" alttext="c_{2}" display="inline"><msub><mi>c</mi><mn>2</mn></msub></math> are aligned and the pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m25" class="ltx_Math" alttext="(c_{1},c_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>,</mo><msub><mi>c</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math> is added to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p1.m26" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> (line <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Different resource alignment techniques usually vary in the way they compute the similarity of a pair of concepts across two resources (line <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> in Algorithm <a href="#S2.SS0.SSS0.P2" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+In the following, we present our novel approach for measuring the similarity of concept pairs.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S2.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">[t!]
+<span class="ltx_text ltx_caption">Lexical Resource Aligner</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span><span class="ltx_text ltx_font_small">[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span>graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m1" class="ltx_Math" alttext="H=(V_{H},E_{H})" display="inline"><mrow><mi mathsize="normal" stretchy="false">H</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mi mathsize="normal" stretchy="false">H</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">E</mi><mi mathsize="normal" stretchy="false">H</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m2" class="ltx_Math" alttext="G_{1}=(V_{1},E_{1})" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">G</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">E</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m3" class="ltx_Math" alttext="G_{2}=(V_{2},E_{2})" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">G</mi><mn mathsize="normal" stretchy="false">2</mn></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">2</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">E</mi><mn mathsize="normal" stretchy="false">2</mn></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math>, the similarity threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m4" class="ltx_Math" alttext="\theta" display="inline"><mi mathsize="normal" stretchy="false">θ</mi></math>, and the combination parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m5" class="ltx_Math" alttext="\beta" display="inline"><mi mathsize="normal" stretchy="false">β</mi></math>
+<span class="ltx_ERROR undefined">\ENSURE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p3.m6" class="ltx_Math" alttext="A" display="inline"><mi mathsize="normal" stretchy="false">A</mi></math>, the set of all aligned concept pairs</span></p>
+</div><span class="ltx_ERROR undefined">\STATE</span>
+<div id="S2.SS0.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p4.m1" class="ltx_Math" alttext="A\leftarrow\emptyset" display="inline"><mrow><mi>A</mi><mo>←</mo><mi mathvariant="normal">∅</mi></mrow></math><span class="ltx_text ltx_font_small"></span></p>
+</div><span class="ltx_ERROR undefined">\FORALL</span>
+<div id="S2.SS0.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m1" class="ltx_Math" alttext="c_{1}\in V_{1}" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="normal" stretchy="false">∈</mo><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m2" class="ltx_Math" alttext="C" display="inline"><mi mathsize="normal" stretchy="false">C</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m3" class="ltx_Math" alttext="\leftarrow" display="inline"><mo mathsize="normal" stretchy="false">←</mo></math> getCandidates<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m4" class="ltx_Math" alttext="(c_{1},V_{2})" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">2</mn></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math> 
+<span class="ltx_ERROR undefined">\FORALL</span>concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m5" class="ltx_Math" alttext="c_{2}\in C" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">2</mn></msub><mo mathsize="normal" stretchy="false">∈</mo><mi mathsize="normal" stretchy="false">C</mi></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m6" class="ltx_Math" alttext="sim" display="inline"><mrow><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m7" class="ltx_Math" alttext="\leftarrow" display="inline"><mo mathsize="normal" stretchy="false">←</mo></math> calculateSimilarity<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m8" class="ltx_Math" alttext="(H,G_{1},G_{2},c_{1},c_{2},\beta)" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">H</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">G</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">G</mi><mn mathsize="normal" stretchy="false">2</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">2</mn></msub><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">β</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math> 
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m9" class="ltx_Math" alttext="sim&gt;\theta" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi></mrow><mo mathsize="normal" stretchy="false">&gt;</mo><mi mathsize="normal" stretchy="false">θ</mi></mrow></math> 
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m10" class="ltx_Math" alttext="A" display="inline"><mi mathsize="normal" stretchy="false">A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m11" class="ltx_Math" alttext="\leftarrow" display="inline"><mo mathsize="normal" stretchy="false">←</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m12" class="ltx_Math" alttext="A" display="inline"><mi mathsize="normal" stretchy="false">A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m13" class="ltx_Math" alttext="\cup" display="inline"><mo mathsize="normal" stretchy="false">∪</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p5.m14" class="ltx_Math" alttext="\{(c_{1},c_{2})\}" display="inline"><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">c</mi><mn mathsize="normal" stretchy="false">2</mn></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></math> 
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDFOR</span></span></p>
+</div><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\RETURN</span>
+<div id="S2.SS0.SSS0.P2.p6" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS0.SSS0.P2.p6.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math><span class="ltx_text ltx_font_small"></span></p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1044/image003.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="1816" height="1403" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> The process of measuring the similarity of a pair of concepts across two resources. The method consists of two components: definitional and structural similarities, each measuring a similarity score for the given concept pair. The two scores are combined by means of parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> in the last stage.</div>
+</div>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Measuring the Similarity of Concepts</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> illustrates the procedure underlying our cross-resource concept similarity measurement technique.
+As can be seen, the approach consists of two main components: <span class="ltx_text ltx_font_italic">definitional similarity</span> and <span class="ltx_text ltx_font_italic">structural similarity</span>.
+Each of these components gets, as its input, a pair of concepts belonging to two different semantic networks and produces a similarity score.
+These two scores are then combined into an overall score (part (e) of Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) which quantifies the semantic similarity of the two input concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="c_{2}" display="inline"><msub><mi>c</mi><mn>2</mn></msub></math>.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The definitional similarity component computes the similarity of two concepts in terms of the similarity of their definitions, a method that has also been used in previous work for aligning lexical resources <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>, <a href="#bib.bib614" title="Automatically linking GermaNet to Wikipedia for harvesting corpus examples for GermaNet senses" class="ltx_ref">12</a>]</cite>.
+In spite of its simplicity, the mere calculation of the similarity of concept definitions provides a strong baseline, especially for cases where the definitional texts for a pair of concepts to be aligned are lexically similar, yet distinguishable from the other definitions.
+However, as mentioned in the introduction, definition similarity-based techniques fail at identifying the correct alignments in cases where different wordings are used or definitions are not of high quality.
+The structural similarity component, instead, is a novel graph-based similarity measurement technique which calculates the similarity between a pair of concepts across the semantic networks of the two resources by leveraging the semantic structure of those networks.
+This component goes beyond the surface realization of concepts, thus providing a deeper measure of concept similarity.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">The two components share the same backbone (parts (b) and (d) of Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), but differ in some stages (parts (a) and (c) in Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+In the following, we explain all the stages involved in the two components (gray blocks in the figure).</p>
+</div>
+<div id="S2.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.1 </span>Semantic signature generation</h4>
+
+<div id="S2.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">The aim of this stage is to model a given concept or set of concepts through a vectorial semantic representation, which we refer to as the <span class="ltx_text ltx_font_bold">semantic signature</span> of the input.
+We utilized Personalized PageRank <cite class="ltx_cite">[<a href="#bib.bib435" title="Topic-sensitive PageRank" class="ltx_ref">10</a>, <span class="ltx_text ltx_font_smallcaps">ppr</span>]</cite>, a random walk graph algorithm, for calculating semantic signatures.
+The original PageRank (<span class="ltx_text ltx_font_smallcaps">pr</span>) algorithm <cite class="ltx_cite">[<a href="#bib.bib224" title="Anatomy of a large-scale hypertextual Web search engine" class="ltx_ref">3</a>]</cite> computes, for a given graph, a single vector wherein each node is associated with a weight denoting its structural importance in that graph.
+<span class="ltx_text ltx_font_smallcaps">ppr</span> is a variation of <span class="ltx_text ltx_font_smallcaps">pr</span> where the computation is biased towards a set of initial nodes in order to capture the notion of importance with respect to those particular nodes.
+<span class="ltx_text ltx_font_smallcaps">ppr</span> has been previously used in a wide variety of tasks such as definition similarity-based resource alignment <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>]</cite>, textual semantic similarity <cite class="ltx_cite">[<a href="#bib.bib557" title="Lexical semantic relatedness with random graph walks" class="ltx_ref">14</a>, <a href="#bib.bib612" title="Align, Disambiguate and Walk: a Unified Approach for Measuring Semantic Similarity" class="ltx_ref">30</a>]</cite>, Word Sense Disambiguation <cite class="ltx_cite">[<a href="#bib.bib491" title="Personalizing PageRank for Word Sense Disambiguation" class="ltx_ref">1</a>, <a href="#bib.bib299" title="A New Minimally-supervised Framework for Domain Word Sense Disambiguation" class="ltx_ref">6</a>]</cite> and semantic text categorization <cite class="ltx_cite">[<a href="#bib.bib298" title="Two birds with one stone: learning semantic models for text categorization and Word Sense Disambiguation" class="ltx_ref">24</a>]</cite>.
+When applied to a semantic graph by initializing the random walks from a set of concepts (nodes), <span class="ltx_text ltx_font_smallcaps">ppr</span> yields a vector in which each concept is associated with a weight denoting its semantic relevance to the initial concepts.</p>
+</div>
+<div id="S2.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Formally, we first represent a semantic network consisting of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> concepts as a row-stochastic transition matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m2" class="ltx_Math" alttext="\mathbf{M}\in\mathbb{R}^{N\times N}" display="inline"><mrow><mi>𝐌</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>N</mi><mo>×</mo><mi>N</mi></mrow></msup></mrow></math>.
+The cell <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m3" class="ltx_Math" alttext="(i,j)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></math> in the matrix denotes the probability of moving from a concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> in the graph: 0 if no edge exists from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m6" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m7" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m8" class="ltx_Math" alttext="1/degree(i)" display="inline"><mrow><mrow><mn>1</mn><mo>/</mo><mi>d</mi></mrow><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> otherwise.
+Then the <span class="ltx_text ltx_font_smallcaps">ppr</span> vector, hence the semantic signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m9" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>𝐯</mi></msub></math> of vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m10" class="ltx_Math" alttext="{\mathbf{v}}" display="inline"><mi>𝐯</mi></math> is the unique solution to the linear system: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m11" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}}=(1-\alpha)\,{\mathbf{v}}+\alpha\,\mathbf{M}\,\mathcal%&#10;{S}_{\mathbf{v}}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>𝐯</mi></msub><mo>=</mo><mrow><mrow><mpadded width="+1.7pt"><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow></mpadded><mo>⁢</mo><mi>𝐯</mi></mrow><mo>+</mo><mrow><mpadded width="+1.7pt"><mi>α</mi></mpadded><mo>⁢</mo><mpadded width="+1.7pt"><mi>𝐌</mi></mpadded><mo>⁢</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>𝐯</mi></msub></mrow></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m12" class="ltx_Math" alttext="{\mathbf{v}}" display="inline"><mi>𝐯</mi></math> is the personalization vector of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m13" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> in which all the probability mass is put on the concepts for which a semantic signature is to be computed and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p2.m14" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is the damping factor, which is usually set to 0.85 <cite class="ltx_cite">[<a href="#bib.bib224" title="Anatomy of a large-scale hypertextual Web search engine" class="ltx_ref">3</a>]</cite>.
+We used the <span class="ltx_text ltx_font_smallcaps">ukb<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://ixa2.si.ehu.es/ukb/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_upright">http://ixa2.si.ehu.es/ukb/</span></a></span></span></span></span> off-the-shelf implementation of <span class="ltx_text ltx_font_smallcaps">ppr</span>.</p>
+</div>
+<div id="S2.SS1.SSS1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Definitional similarity signature.</h5>
+
+<div id="S2.SS1.SSS1.P1.p1" class="ltx_para">
+<p class="ltx_p">In the definitional similarity component, the two concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m1" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m2" class="ltx_Math" alttext="c_{2}" display="inline"><msub><mi>c</mi><mn>2</mn></msub></math> are first represented by their corresponding definitions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m3" class="ltx_Math" alttext="d_{1}" display="inline"><msub><mi>d</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m4" class="ltx_Math" alttext="d_{2}" display="inline"><msub><mi>d</mi><mn>2</mn></msub></math> in the respective resources <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m5" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m6" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math> (Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a), top).
+To improve expressiveness, we follow <cite class="ltx_cite">Niemann and Gurevych (<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">2011</a>)</cite> and further extend <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m7" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math> with all the word forms associated with concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m8" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> and its neighbours, i.e., the union of all lexicalizations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m9" class="ltx_Math" alttext="\mathcal{L}_{G_{i}}(x)" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><msub><mi>G</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> for all concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m10" class="ltx_Math" alttext="x\in\{c^{\prime}\in V_{i}:(c,c^{\prime})\in E_{i}\}\cup\{c\}" display="inline"><mrow><mi>x</mi><mo>∈</mo><mrow><mrow><mo>{</mo><mrow><mrow><msup><mi>c</mi><mo>′</mo></msup><mo>∈</mo><msub><mi>V</mi><mi>i</mi></msub></mrow><mo separator="true">:</mo><mrow><mrow><mo>(</mo><mrow><mi>c</mi><mo>,</mo><msup><mi>c</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow><mo>∈</mo><msub><mi>E</mi><mi>i</mi></msub></mrow></mrow><mo>}</mo></mrow><mo>∪</mo><mrow><mo>{</mo><mi>c</mi><mo>}</mo></mrow></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m11" class="ltx_Math" alttext="E_{i}" display="inline"><msub><mi>E</mi><mi>i</mi></msub></math> is the set of edges in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m12" class="ltx_Math" alttext="G_{i}" display="inline"><msub><mi>G</mi><mi>i</mi></msub></math>.
+In this component the personalization vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m13" class="ltx_Math" alttext="{\mathbf{v}}_{i}" display="inline"><msub><mi>𝐯</mi><mi>i</mi></msub></math> is set by uniformly distributing the probability mass over the nodes corresponding to the senses of all the content words in the extended definition of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m14" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math> according to the sense inventory of a semantic network <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m15" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>.
+We use the same semantic graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m16" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math> for computing the semantic signatures of both definitions.
+Any semantic network with a dense relational structure, providing good coverage of the words appearing in the definitions, is a suitable candidate for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P1.p1.m17" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math>.
+For this purpose we used the WordNet <cite class="ltx_cite">[<a href="#bib.bib65" title="WordNet: an electronic database" class="ltx_ref">7</a>]</cite> graph which was further enriched by connecting each concept to all the concepts appearing in its disambiguated gloss.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://wordnet.princeton.edu" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://wordnet.princeton.edu</span></a></span></span></span></p>
+</div>
+</div>
+<div id="S2.SS1.SSS1.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Structural similarity signature.</h5>
+
+<div id="S2.SS1.SSS1.P2.p1" class="ltx_para">
+<p class="ltx_p">In the structural similarity component (Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b), bottom), the semantic signature for each concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P2.p1.m1" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> is computed by running the <span class="ltx_text ltx_font_smallcaps">ppr</span> algorithm on its corresponding graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P2.p1.m2" class="ltx_Math" alttext="G_{i}" display="inline"><msub><mi>G</mi><mi>i</mi></msub></math>, hence a different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.P2.p1.m3" class="ltx_Math" alttext="\mathbf{M}_{i}" display="inline"><msub><mi>𝐌</mi><mi>i</mi></msub></math> is built for each of the two concepts.</p>
+</div>
+</div>
+</div>
+<div id="S2.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.2 </span>Signature unification</h4>
+
+<div id="S2.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p">As mentioned earlier, semantic signatures are vectors with dimension equal to the number of nodes in the semantic graph.
+Since the structural similarity signatures <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m1" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{1}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>1</mn></msub></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m2" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{2}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>2</mn></msub></msub></math> are calculated on different graphs and thus have different dimensions, we need to make them comparable by unifying them.
+We therefore propose an approach (part (c) of Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) that finds a common ground between the two signatures: to this end we consider all the concepts associated with monosemous words in the two signatures as landmarks and restrict the two signatures exclusively to those common concepts. Leveraging monosemous words as bridges between two signatures is a particularly reliable technique as typically a significant portion of all words in a lexicon are monosemous.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>For instance, we calculated that more than 80% of the words in WordNet are monosemous, with over 60% of all the synsets containing at least one of them.</span></span></span></p>
+</div>
+<div id="S2.SS1.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Formally, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m1" class="ltx_Math" alttext="\mathcal{I}_{G}(w)" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><mi>G</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> be an inventory mapping function that maps a term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> to the set of concepts which are expressed by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m4" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math>.
+Then, given two signatures <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m5" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{1}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>1</mn></msub></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m6" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{2}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>2</mn></msub></msub></math>, computed on the respective graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m7" class="ltx_Math" alttext="G_{1}" display="inline"><msub><mi>G</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m8" class="ltx_Math" alttext="G_{2}" display="inline"><msub><mi>G</mi><mn>2</mn></msub></math>, we first obtain the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m9" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math> of words that are monosemous according to both semantic networks, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m10" class="ltx_Math" alttext="\mathcal{M}=\{w\!:\!|\mathcal{I}_{G_{1}}(w)|\!=\!1\land|\mathcal{I}_{G_{2}}(w)%&#10;|\!=\!1\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>=</mo><mrow><mo>{</mo><mrow><mpadded width="-1.7pt"><mi>w</mi></mpadded><mo separator="true">:</mo><mrow><mrow><mo fence="true">|</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><msub><mi>G</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo rspace="0.8pt">=</mo><mrow><mn>1</mn><mo>∧</mo><mrow><mo fence="true">|</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><msub><mi>G</mi><mn>2</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></mrow><mo rspace="0.8pt">=</mo><mn>1</mn></mrow></mrow><mo>}</mo></mrow></mrow></math>.
+We then transform each of the two signatures <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m11" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{i}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mi>i</mi></msub></msub></math> into a new sub-signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m12" class="ltx_Math" alttext="\mathcal{S}^{\prime}_{\mathbf{v}_{i}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mi>i</mi></msub><mo>′</mo></msubsup></math> whose dimension is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m13" class="ltx_Math" alttext="|\mathcal{M}|" display="inline"><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo fence="true">|</mo></mrow></math>:
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m14" class="ltx_Math" alttext="k^{th}" display="inline"><msup><mi>k</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> component of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m15" class="ltx_Math" alttext="\mathcal{S}^{\prime}_{\mathbf{v}_{i}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mi>i</mi></msub><mo>′</mo></msubsup></math> corresponds to the weight in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m16" class="ltx_Math" alttext="\mathcal{S}_{\mathbf{v}_{i}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mi>i</mi></msub></msub></math> of the only concept of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m17" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m18" class="ltx_Math" alttext="\mathcal{I}_{G_{i}}(w_{k})" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><msub><mi>G</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math>.
+As an example, assume we are given two semantic signatures computed for two concepts in WordNet and Wiktionary.
+Also, consider the noun <span class="ltx_text ltx_font_italic">tradeoff</span> which is monosemous according to both these resources.
+Then, each of the two unified sub-signatures will contain a component whose weight is determined by the weight of the only concept associated with <span class="ltx_text ltx_font_italic">tradeoff<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m19" class="ltx_Math" alttext="{}_{n}" display="inline"><msub><mi/><mi>n</mi></msub></math></span> in the corresponding semantic signature.
+As a result of the unification process, we obtain a pair of equally-sized semantic signatures with comparable components.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.3 </span>Signature comparison</h4>
+
+<div id="S2.SS1.SSS3.p1" class="ltx_para">
+<p class="ltx_p">Having at hand the semantic signatures for the two input concepts, we proceed to comparing them (part (d) in Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+We leverage a non-parametric measure proposed by <cite class="ltx_cite">Pilehvar<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib612" title="Align, Disambiguate and Walk: a Unified Approach for Measuring Semantic Similarity" class="ltx_ref">2013</a>)</cite> which first transforms each signature into a list of sorted elements and then calculates the similarity on the basis of the average ranking of elements across the two lists:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="Sim(\mathcal{S}_{\mathbf{v}_{1}},\mathcal{S}_{\mathbf{v}_{2}})=\frac{\sum_{i=1%&#10;}^{|T|}(r_{i}^{1}+r_{i}^{2})^{-1}}{\sum_{i=1}^{|T|}(2i)^{-1}}" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>1</mn></msub></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>2</mn></msub></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><msup><mrow><mo>(</mo><mrow><msubsup><mi>r</mi><mi>i</mi><mn>1</mn></msubsup><mo>+</mo><msubsup><mi>r</mi><mi>i</mi><mn>2</mn></msubsup></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><msup><mrow><mo>(</mo><mrow><mn>2</mn><mo>⁢</mo><mi>i</mi></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is the intersection of all concepts with non-zero probability in the two signatures and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p1.m2" class="ltx_Math" alttext="r_{i}^{j}" display="inline"><msubsup><mi>r</mi><mi>i</mi><mi>j</mi></msubsup></math> is the rank of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p1.m3" class="ltx_Math" alttext="i^{th}" display="inline"><msup><mi>i</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> entry in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p1.m4" class="ltx_Math" alttext="j^{th}" display="inline"><msup><mi>j</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> sorted list.
+The denominator is a normalization factor to guarantee a maximum value of one.
+The method penalizes the differences in the higher rankings more than it does for the lower ones.
+The measure was shown to outperform the conventional cosine distance when comparing different semantic signatures in multiple textual similarity tasks <cite class="ltx_cite">[<a href="#bib.bib612" title="Align, Disambiguate and Walk: a Unified Approach for Measuring Semantic Similarity" class="ltx_ref">30</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS4" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.4 </span>Score combination</h4>
+
+<div id="S2.SS1.SSS4.p1" class="ltx_para">
+<p class="ltx_p">Finally (part (e) of Figure <a href="#S2.F1" title="Figure 1 ‣ Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), we calculate the overall similarity between two concepts as a linear combination of their definitional and structural similarities:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS4.p1.m1" class="ltx_Math" alttext="\beta\,Sim_{def}(\mathcal{S}_{\mathbf{v}_{1}},\mathcal{S}_{\mathbf{v}_{2}})+(1%&#10;-\beta)\,Sim_{str}(\mathcal{S}_{\mathbf{v}_{1}},\mathcal{S}_{\mathbf{v}_{2}})." display="inline"><mrow><mrow><mrow><mpadded width="+1.7pt"><mi>β</mi></mpadded><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><msub><mi>m</mi><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>f</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>1</mn></msub></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>2</mn></msub></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mpadded width="+1.7pt"><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>β</mi></mrow><mo>)</mo></mrow></mpadded><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><msub><mi>m</mi><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>1</mn></msub></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><msub><mi>𝐯</mi><mn>2</mn></msub></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>.</mo></mrow></math>
+In Section <a href="#S4.SS2.SSS1" title="4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>, we explain how we set, in our experiments, the values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS4.p1.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> and the similarity threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS4.p1.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> (cf. alignment algorithm in Section <a href="#S2" title="2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Lexical Resource Ontologization</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In Section <a href="#S2" title="2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we presented our approach for aligning lexical resources.
+However, the approach assumes that the input resources can be viewed as semantic networks, which seems to limit its applicability to structured resources only.
+In order to address this issue and hence generalize our alignment approach to any given lexical resource, we propose a method for transforming a given machine-readable dictionary into a semantic network, a process we refer to as <span class="ltx_text ltx_font_italic">ontologization</span>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Our ontologization algorithm takes as input a lexicon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> and outputs a semantic graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math> where, as already defined in Section <a href="#S2" title="2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the set of concepts in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> is the set of semantic relations between these concepts.
+Introducing relational links into a lexicon can be achieved in different ways.
+A first option is to extract binary relations between pairs of words from raw text. Both words in these relations, however, should be disambiguated according to the given lexicon <cite class="ltx_cite">[<a href="#bib.bib613" title="Automatically harvesting and ontologizing semantic relations" class="ltx_ref">29</a>]</cite>, making the task particularly prone to mistakes due to the high number of possible sense pairings.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Here, we take an alternative approach which requires disambiguation on the target side only, hence reducing the size of the search space significantly.
+We first create the empty undirected graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="G_{L}=(V,E)" display="inline"><mrow><msub><mi>G</mi><mi>L</mi></msub><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math> such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the set of concepts in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="E=\emptyset" display="inline"><mrow><mi>E</mi><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>.
+For each source concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="c\in V" display="inline"><mrow><mi>c</mi><mo>∈</mo><mi>V</mi></mrow></math> we create a bag of content words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="W=\{w_{1},\dots,w_{n}\}" display="inline"><mrow><mi>W</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math> which includes all the content words in its definition <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> and, if available, additional related words obtained from lexicon relations (e.g., synonyms in Wiktionary).
+The problem is then cast as a disambiguation task whose goal is to identify the intended sense of each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="w_{i}\in W" display="inline"><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>∈</mo><mi>W</mi></mrow></math> according to the sense inventory of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m9" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>: if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m10" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> is monosemous, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m11" class="ltx_Math" alttext="|\{\mathcal{I}_{G_{L}}(w_{i})\}|=1" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><mo>{</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><msub><mi>G</mi><mi>L</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>}</mo></mrow><mo fence="true">|</mo></mrow><mo>=</mo><mn>1</mn></mrow></math>, we connect our source concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m12" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> to the only sense <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m13" class="ltx_Math" alttext="c_{w_{i}}" display="inline"><msub><mi>c</mi><msub><mi>w</mi><mi>i</mi></msub></msub></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m14" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> and set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m15" class="ltx_Math" alttext="E:=E\cup\{\{c,c_{w_{i}}\}\}" display="inline"><mrow><mi>E</mi><mo>:=</mo><mrow><mi>E</mi><mo>∪</mo><mrow><mo>{</mo><mrow><mo>{</mo><mrow><mi>c</mi><mo>,</mo><msub><mi>c</mi><msub><mi>w</mi><mi>i</mi></msub></msub></mrow><mo>}</mo></mrow><mo>}</mo></mrow></mrow></mrow></math>; else, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m16" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> has multiple senses in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m17" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. In this latter case, we choose the most appropriate concept <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m18" class="ltx_Math" alttext="c_{i}\in\mathcal{I}_{G_{L}}(w_{i})" display="inline"><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>∈</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">ℐ</mi><msub><mi>G</mi><mi>L</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math> by finding the maximal similarity between the definition of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m19" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and the definitions of each sense of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m20" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>.
+To do this, we apply our definitional similarity measure introduced in Section <a href="#S2.SS1" title="2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+Having found the intended sense <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m21" class="ltx_Math" alttext="\hat{c}_{w_{i}}" display="inline"><msub><mover accent="true"><mi>c</mi><mo stretchy="false">^</mo></mover><msub><mi>w</mi><mi>i</mi></msub></msub></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m22" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>, we add the edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m23" class="ltx_Math" alttext="\{c,\hat{c}_{w_{i}}\}" display="inline"><mrow><mo>{</mo><mrow><mi>c</mi><mo>,</mo><msub><mover accent="true"><mi>c</mi><mo stretchy="false">^</mo></mover><msub><mi>w</mi><mi>i</mi></msub></msub></mrow><mo>}</mo></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m24" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>.
+As a result of this procedure, we obtain a semantic graph representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m25" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> for the lexicon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m26" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">As an example, consider the 4<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="{}^{th}" display="inline"><msup><mi/><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> sense of the noun <span class="ltx_text ltx_font_italic">cone</span> in Wiktionary (i.e., <span class="ltx_text ltx_font_italic">cone<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="{}_{n}^{4}" display="inline"><mmultiscripts><msup><mi/><mn mathvariant="normal">4</mn></msup><mprescripts/><mi>n</mi><none/></mmultiscripts></math></span>) which is defined as <span class="ltx_text ltx_font_italic">“The fruit of a conifer”</span>.
+The definition contains two content words: <span class="ltx_text ltx_font_italic">fruit<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="{}_{n}" display="inline"><msub><mi/><mi>n</mi></msub></math></span> and <span class="ltx_text ltx_font_italic">conifer<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m4" class="ltx_Math" alttext="{}_{n}" display="inline"><msub><mi/><mi>n</mi></msub></math></span>.
+The latter word is monosemous in Wiktionary, hence we directly connect <span class="ltx_text ltx_font_italic">cone<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m5" class="ltx_Math" alttext="{}_{n}^{4}" display="inline"><mmultiscripts><msup><mi/><mn mathvariant="normal">4</mn></msup><mprescripts/><mi>n</mi><none/></mmultiscripts></math></span> to the only sense of <span class="ltx_text ltx_font_italic">conifer<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m6" class="ltx_Math" alttext="{}_{n}" display="inline"><msub><mi/><mi>n</mi></msub></math></span>.
+The noun <span class="ltx_text ltx_font_italic">fruit</span>, however, has 5 senses in Wiktionary.
+We therefore measure the similarity between the definition of <span class="ltx_text ltx_font_italic">cone<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m7" class="ltx_Math" alttext="{}_{n}^{4}" display="inline"><mmultiscripts><msup><mi/><mn mathvariant="normal">4</mn></msup><mprescripts/><mi>n</mi><none/></mmultiscripts></math></span> and all the 5 definitions of <span class="ltx_text ltx_font_italic">fruit</span> and introduce a link from <span class="ltx_text ltx_font_italic">cone<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m8" class="ltx_Math" alttext="{}_{n}^{4}" display="inline"><mmultiscripts><msup><mi/><mn mathvariant="normal">4</mn></msup><mprescripts/><mi>n</mi><none/></mmultiscripts></math></span> to the sense of fruit which yields the maximal similarity value (defined as <span class="ltx_text ltx_font_italic">“(botany) The seed-bearing part of a plant…”</span>).</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1.SSS4.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Lexical resources.</h5>
+
+<div id="S4.SS1.SSS4.P1.p1" class="ltx_para">
+<p class="ltx_p">To enable a comparison with the state of the art, we followed <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> and performed an alignment of WordNet synsets (<span class="ltx_text ltx_font_smallcaps">wn</span>) to three different collaboratively-constructed resources: Wikipedia (<span class="ltx_text ltx_font_smallcaps">wp</span>), Wiktionary (<span class="ltx_text ltx_font_smallcaps">wt</span>), and OmegaWiki (<span class="ltx_text ltx_font_smallcaps">ow</span>).
+We utilized the DKPro software <cite class="ltx_cite">[<a href="#bib.bib626" title="Extracting lexical semantic knowledge from wikipedia and wiktionary" class="ltx_ref">35</a>, <a href="#bib.bib610" title="UBY - a large-scale unified lexical-semantic resource based on LMF" class="ltx_ref">9</a>]</cite> to access the information in the foregoing three resources.
+For <span class="ltx_text ltx_font_smallcaps">wp</span>, <span class="ltx_text ltx_font_smallcaps">wt</span>, <span class="ltx_text ltx_font_smallcaps">ow</span> we used the dump versions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS4.P1.p1.m1" class="ltx_Math" alttext="20090822" display="inline"><mn>20090822</mn></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS4.P1.p1.m2" class="ltx_Math" alttext="20131002" display="inline"><mn>20131002</mn></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS4.P1.p1.m3" class="ltx_Math" alttext="20131115" display="inline"><mn>20131115</mn></math>, respectively.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS4.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Evaluation measures.</h5>
+
+<div id="S4.SS1.SSS4.P2.p1" class="ltx_para">
+<p class="ltx_p">We followed previous work <cite class="ltx_cite">[<a href="#bib.bib581" title="BabelNet: The automatic construction, evaluation and application of a wide-coverage multilingual semantic network" class="ltx_ref">25</a>, <a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">17</a>]</cite> and evaluated the alignment performance in terms of four measures: precision, recall, F1, and accuracy.
+Precision is the fraction of correct alignment judgments returned by the system and recall is the fraction of alignment judgments in the gold standard dataset that are correctly returned by the system.
+F1 is the harmonic mean of precision and recall.
+We also report results for accuracy which, in addition to true positives, takes into account true negatives, i.e., pairs which are correctly judged as unaligned.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS4.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Lexicons and semantic graphs.</h5>
+
+<div id="S4.SS1.SSS4.P3.p1" class="ltx_para">
+<p class="ltx_p">Here, we describe how the four semantic graphs for our four lexical resources (i.e., <span class="ltx_text ltx_font_smallcaps">wn</span>, <span class="ltx_text ltx_font_smallcaps">wp</span>, <span class="ltx_text ltx_font_smallcaps">wt</span>, <span class="ltx_text ltx_font_smallcaps">ow</span>) were constructed.
+As mentioned in Section <a href="#S2.SS1.SSS1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>, we build the <span class="ltx_text ltx_font_smallcaps">wn</span> graph by including all the synsets and semantic relations defined in WordNet (e.g., hypernymy and meronymy) and further populate the relation set by connecting a synset to all the other synsets that appear in its disambiguated gloss.
+For <span class="ltx_text ltx_font_smallcaps">wp</span>, we used the graph provided by <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite>, constructed by directly connecting an article (concept) to all the hyperlinks in its first paragraph, together with the category links.
+Our <span class="ltx_text ltx_font_smallcaps">wn</span> and <span class="ltx_text ltx_font_smallcaps">wp</span> graphs have 118K and 2.8M nodes, respectively, with the average node degree being roughly 9 in both resources.</p>
+</div>
+<div id="S4.SS1.SSS4.P3.p2" class="ltx_para">
+<p class="ltx_p">The other two resources, i.e., <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>, do not provide a reliable network of semantic relations, therefore we used our ontologization approach to construct their corresponding semantic graphs.
+We report, in the following subsection, the experiments carried out to assess the accuracy of our ontologization method, together with the statistics of the obtained graphs for <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>.</p>
+</div>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Ontologization Experiments</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">For ontologizing <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>, the bag of content words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> is given by the content words in sense definitions and, if available, additional related words obtained from lexicon relations (see Section <a href="#S3" title="3 Lexical Resource Ontologization ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+In <span class="ltx_text ltx_font_smallcaps">wt</span>, both of these are in word surface form and hence had to be disambiguated.
+For <span class="ltx_text ltx_font_smallcaps">ow</span>, however, the encoded relations, though relatively small in number, are already disambiguated and, therefore, the ontologization was just performed on the definition’s content words.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The resulting graphs for <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span> contain 430K and 48K nodes, respectively, each providing more than 95% coverage of concepts, with the average node degree being around 10 for both resources.
+We present in Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, for <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>, the total number of edges together with their distribution across types (i.e., ambiguous and unambiguous) and sources (i.e., definitions and relations) from which candidate words were obtained.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Source</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Type</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wt</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">ow</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Definition</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">76.6%</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">50.7%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unambiguous</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">18.3%</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">32.9%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Relation</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2.8%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unambiguous</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2.3%</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.4%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_small">Total number of edges </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">2.1M</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">255K</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> The statistics of the generated graphs for <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>.
+We report the distribution of the edges across types (i.e., ambiguous and unambiguous) and sources (i.e., definitions and relations) from which candidate words were obtained.</div>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">The edges obtained from unambiguous entries are essentially sense disambiguated on both sides whereas those obtained from ambiguous terms are a result of our similarity-based disambiguation.
+Hence, given that a large portion of edges came from ambiguous words (see Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), we carried out an experiment to evaluate the accuracy of our disambiguation method.
+To this end, we took as our benchmark the dataset provided by <cite class="ltx_cite">Meyer and Gurevych (<a href="#bib.bib628" title="“Worth its weight in gold or yet another resource”; a comparative study of Wiktionary, OpenThesaurus and GermaNet" class="ltx_ref">2010</a>)</cite> for evaluating relation disambiguation in <span class="ltx_text ltx_font_smallcaps">wt</span>.
+The dataset contains 394 manually-disambiguated relations.
+We compared our similarity-based disambiguation approach against the state of the art on this dataset, i.e., the <span class="ltx_text ltx_font_smallcaps">wktwsd</span> system, which is a <span class="ltx_text ltx_font_smallcaps">wt</span> relation disambiguation algorithm based on a series of rules <cite class="ltx_cite">[<a href="#bib.bib629" title="To exhibit is not to loiter: a multilingual, sense-disambiguated Wiktionary for measuring verb similarity" class="ltx_ref">22</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the performance of our disambiguation method, together with that of <span class="ltx_text ltx_font_smallcaps">wktwsd</span>, in terms of Precision (P), Recall (R), F1, and accuracy.
+The “Human” row corresponds to the inter-rater F1 and accuracy scores, i.e., the upperbound performance on this dataset, as calculated by <cite class="ltx_cite">Meyer and Gurevych (<a href="#bib.bib628" title="“Worth its weight in gold or yet another resource”; a comparative study of Wiktionary, OpenThesaurus and GermaNet" class="ltx_ref">2010</a>)</cite>.
+As can be seen, our method proves to be very accurate, surpassing the performance of the <span class="ltx_text ltx_font_smallcaps">wktwsd</span> system in terms of precision, F1, and accuracy.
+This is particularly interesting as the <span class="ltx_text ltx_font_smallcaps">wktwsd</span> system uses a rule-based technique specific to relation disambiguation in <span class="ltx_text ltx_font_smallcaps">wt</span>, whereas our method is resource independent and can be applied to arbitrary words in the definition of any concept.
+We also note that the graph constructed by <cite class="ltx_cite">Meyer and Gurevych (<a href="#bib.bib628" title="“Worth its weight in gold or yet another resource”; a comparative study of Wiktionary, OpenThesaurus and GermaNet" class="ltx_ref">2010</a>)</cite> had an average node degree of around 1.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">More recently, <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> leveraged monosemous linking (cf. Section <a href="#S5" title="5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) in order to create denser semantic graphs for <span class="ltx_text ltx_font_smallcaps">ow</span> and <span class="ltx_text ltx_font_smallcaps">wt</span>.
+Our approach, however, thanks to the connections obtained through ambiguous words, can provide graphs with significantly higher coverage.
+As an example, for <span class="ltx_text ltx_font_smallcaps">wt</span>, <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> generated a graph where around 30% of the nodes were in isolation, whereas this number drops to around 5% in our corresponding graph.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">These results show that our ontologization approach can be used to obtain dense semantic graph representations of lexical resources, while at the same time preserving a high level of accuracy.
+Now that all the four resources are transformed into semantic graphs, we move to our alignment experiments.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Approach <span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wktwsd</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.780</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.800</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.790</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.840</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Our method</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.852</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.767</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.807</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.857</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Human </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.890</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.910</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> The performance of relation disambiguation for our similarity-based disambiguation method, as well as for the <span class="ltx_text ltx_font_smallcaps">wktwsd</span> system.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Alignment Experiments</h3>
+
+<div id="S4.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.1 </span>Experimental setup</h4>
+
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Approach</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Training type</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wp</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wt</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">ow</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">sb</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Cross-val.</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.780</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.780</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.780</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.950</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.670</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.650</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.660</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.910</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.749</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.691</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.716</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.886</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dwsa</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Tuning on subset</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.750</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.670</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.710</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.930</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.680</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.270</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.390</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.890</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.651</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.372</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.473</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.830</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">sb</span><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dwsa</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Cross-val. + tuning</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.750</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.870</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.810</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.950</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.680</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.710</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.690</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.920</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.794</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.688</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.735</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.898</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t" rowspan="6"><span class="ltx_text ltx_font_small">SemAlign</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unsupervised</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.709</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.929</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.805</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.943</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.642</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.799</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.712</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.923</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.664</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.761</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.709</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.872</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Tuning on subset</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.877</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.792</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.833</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.960</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.672</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.799</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.730</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.930</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.750</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.717</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.733</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.893</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Cross-val.</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.852</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.835</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.840</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.965</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.680</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.769</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.722</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.931</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.778</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.725</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.749</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.900</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Tuning on </span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wp</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.754</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.627</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.684</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.931</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.825</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.584</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.684</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.889</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Tuning on </span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wt</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.738</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.934</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.824</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.950</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.805</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.677</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.736</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.900</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Tuning on </span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">ow</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.744</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.925</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.824</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.950</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.684</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.766</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.723</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.930</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> The performance of different systems on the task of aligning WordNet to Wikipedia (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span>), Wiktionary (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>), and OmegaWiki (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span>) in terms of Precision (P), Recall (R), F1, and Accuracy (A).
+We present results for different configurations of our system (SemAlign), together with the state of the art in definition similarity-based alignment approaches (<span class="ltx_text ltx_font_smallcaps">sb</span>) and the best configuration of the state-of-the-art graph-based system, Dijkstra-WSA <cite class="ltx_cite">[<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">17</a>, <span class="ltx_text ltx_font_smallcaps">dwsa</span>]</cite>.</div>
+</div>
+<div id="S4.SS2.SSS1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Datasets.</h5>
+
+<div id="S4.SS2.SSS1.P1.p1" class="ltx_para">
+<p class="ltx_p">As our benchmark we tested on the gold standard datasets used in <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> for three alignment tasks: WordNet-Wikipedia (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span>), WordNet-Wiktionary (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>), and WordNet-OmegaWiki (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span>).
+However, the dataset for <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span> was originally built for the German language and, hence, was missing many English <span class="ltx_text ltx_font_smallcaps">ow</span> concepts that could be considered as candidate target alignments.
+We therefore fixed the dataset for the English language and reproduced the performance of previous work on the new dataset.
+The three datasets contained 320, 484, and 315 <span class="ltx_text ltx_font_smallcaps">wn</span> concepts that were manually mapped to their corresponding concepts in <span class="ltx_text ltx_font_smallcaps">wp</span>, <span class="ltx_text ltx_font_smallcaps">wt</span>, and <span class="ltx_text ltx_font_smallcaps">ow</span>, respectively.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS1.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Configurations.</h5>
+
+<div id="S4.SS2.SSS1.P2.p1" class="ltx_para">
+<p class="ltx_p">Recall from Section <a href="#S2" title="2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> that our resource alignment technique has two parameters: the similarity threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.P2.p1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and the combination parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS1.P2.p1.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>, both defined in [0, 1].
+We performed experiments with three different configurations:</p>
+</div>
+<div id="S4.SS2.SSS1.P2.p2" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Unsupervised</span>, where the two parameters are set to their middle values (i.e., 0.5), hence, no tuning is performed for either of the parameters. In this case, both the definitional and structural similarity scores are treated as equally important and two concepts are aligned if their overall similarity exceeds the middle point of the similarity scale.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Tuning</span>, where we follow <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> and tune the parameters on a subset of the dataset comprising 100 items.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Cross-validation</span>, where a 5-fold cross validation is carried out to find the optimal values for the parameters, a technique used in most of the recent alignment methods <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>, <a href="#bib.bib611" title="OntoWiktionary: constructing an ontology from the collaborative online dictionary Wiktionary" class="ltx_ref">21</a>, <a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">17</a>]</cite>.</p>
+</div></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="S4.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.2.2 </span>Results</h4>
+
+<div id="S4.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">We show in Table <a href="#S4.T3" title="Table 3 ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> the alignment performance of different systems on the task of aligning <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span>, <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>, and <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span> in terms of Precision (P), Recall (R), F1, and Accuracy.
+The <span class="ltx_text ltx_font_smallcaps">sb</span> system corresponds to the state-of-the-art definition similarity approaches for <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span> <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>]</cite>, <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span> <cite class="ltx_cite">[<a href="#bib.bib609" title="What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage" class="ltx_ref">20</a>]</cite>, and <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span> <cite class="ltx_cite">[<a href="#bib.bib610" title="UBY - a large-scale unified lexical-semantic resource based on LMF" class="ltx_ref">9</a>]</cite>.
+<span class="ltx_text ltx_font_smallcaps">dwsa</span> stands for Dijkstra-WSA, the state-of-the-art graph-based alignment approach of <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite>.
+The authors also provided results for SB+Dijkstra-WSA, a hybrid system where <span class="ltx_text ltx_font_smallcaps">dwsa</span> was tuned for high precision and, in the case when no alignment target could be found, the algorithm fell back on <span class="ltx_text ltx_font_smallcaps">sb</span> judgments.
+We also show the results for this system as <span class="ltx_text ltx_font_smallcaps">sb+dwsa</span> in the table.</p>
+</div>
+<div id="S4.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">For our approach (SemAlign) we show the results of six different runs each corresponding to a different setting.
+The first three (middle part of the table) correspond to the results obtained with the three configurations of SemAlign: unsupervised, with tuning on subset, and cross-validation (see Section <a href="#S4.SS2.SSS1" title="4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>).
+In addition to these, we performed experiments where the two parameters of SemAlign were tuned on pair-independent training data, i.e., a training dataset for a pair of resources different from the one being aligned.
+For this setting, we used the whole dataset of the corresponding resource pair to tune the two parameters of our system.
+We show the results for this setting in the bottom part of the table (last three lines).</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Approach</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wp</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">wt</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">wn</span><span class="ltx_text ltx_font_bold ltx_font_small">-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">ow</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">A</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dijkstra-WSA </span><span class="ltx_rule" style="width:0.0pt;height:8.6pt;background:black;display:inline-block;"/></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.750</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.670</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.710</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.930</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.680</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.270</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.390</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.890</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.651</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.372</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.473</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.830</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">SemAlign</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="{}_{str}" display="inline"><msub><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.877</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.788</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.830</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.959</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.604</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.643</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.623</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.907</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.654</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.602</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.627</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.853</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Performance of SemAlign when using only the structural similarity component (SemAlign<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m3" class="ltx_Math" alttext="{}_{str}" display="inline"><msub><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math>) compared to the state-of-the-art graph-based alignment approach, Dijkstra-WSA <cite class="ltx_cite">[<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">17</a>]</cite> for our three resource pairs: WordNet to Wikipedia (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span>), Wiktionary (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>), and OmegaWiki (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span>). </div>
+</div>
+<div id="S4.SS2.SSS2.p3" class="ltx_para">
+<p class="ltx_p">The main feature worth remarking upon is the consistency in the results across different resource pairs:
+the unsupervised system gains the best recall among the three configurations (with the improvement over <span class="ltx_text ltx_font_smallcaps">sb+dwsa</span> being always statistically significant<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>All significance tests are done using z-test at p <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS2.p3.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 0.05.</span></span></span>) whereas tuning, both on a subset or through cross-validation, consistently leads to the best performance in terms of F1 and accuracy (with the latter being statistically significant with respect to <span class="ltx_text ltx_font_smallcaps">sb+dwsa</span> on <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span> and <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>).</p>
+</div>
+<div id="S4.SS2.SSS2.p4" class="ltx_para">
+<p class="ltx_p">Moreover, the unsupervised system proves to be very robust inasmuch as it provides competitive results on all the three datasets, while it surpasses the performance of <span class="ltx_text ltx_font_smallcaps">sb+dwsa</span> on <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>.
+This is particularly interesting as the latter system involves tuning of several parameters, whereas SemAlign, in its unsupervised configuration, does not need any training data nor does it involve any tuning.
+In addition, as can be seen in the table, SemAlign benefits from pair-independent training data in most cases across the three resource pairs with performance surpassing that of <span class="ltx_text ltx_font_smallcaps">sb+dwsa</span>, a system which is dependent on pair-specific training data.
+The consistency in the performance of SemAlign in its different configurations and across different resource pairs indicates its robustness and shows that our system can be utilized effectively for aligning any pair of lexical resources, irrespective of their structure or availability of training data.</p>
+</div>
+<div id="S4.SS2.SSS2.p5" class="ltx_para">
+<p class="ltx_p">The system performance is generally higher on the alignment task for <span class="ltx_text ltx_font_smallcaps">wp</span> compared to <span class="ltx_text ltx_font_smallcaps">wt</span> and <span class="ltx_text ltx_font_smallcaps">ow</span>.
+We attribute this difference to the dictionary nature of the latter two, where sense distinctions are more fine-grained, as opposed to the relatively concrete concepts in the <span class="ltx_text ltx_font_smallcaps">wp</span> encyclopedia.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Similarity Measure Analysis</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We explained in Section <a href="#S2.SS1" title="2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a> that our concept similarity measure consists of two components: the definitional and the structural similarities.
+Measuring the similarity of two concepts in terms of their definitions has been investigated in previous work <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>, <a href="#bib.bib614" title="Automatically linking GermaNet to Wikipedia for harvesting corpus examples for GermaNet senses" class="ltx_ref">12</a>]</cite>.
+The structural similarity component of our approach, however, is novel, but at the same time one of the very few measures which enables the computation of the similarity of concepts across two resources directly and independently of the similarity of their definitions.
+A comparable approach is the Dijkstra-WSA proposed by <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> which, as also mentioned earlier in the Introduction, first connects the two resources’ graphs by leveraging monosemous linking and then aligns two concepts across the two graphs on the basis of their shortest distance.
+To gain more insight into the effectiveness of our structural similarity measure in comparison to the Dijkstra-WSA method, we carried out an experiment where our alignment system used only the structural similarity component, a variant of our system we refer to as SemAlign<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="{}_{str}" display="inline"><msub><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math>.
+Both systems (i.e., SemAlign<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="{}_{str}" display="inline"><msub><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math> and Dijkstra-WSA) were tuned on 100-item subsets of the corresponding datasets.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">We show in Table <a href="#S4.T4" title="Table 4 ‣ 4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> the performance of the two systems on our three datasets.
+As can be seen in the table, SemAlign<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="{}_{str}" display="inline"><msub><mi/><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi></mrow></msub></math> consistently improves over Dijkstra-WSA according to recall, F1 and accuracy with all the differences in recall and accuracy being statistically significant (p <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math> 0.05).
+The improvement is especially noticeable for pairs involving either <span class="ltx_text ltx_font_smallcaps">wt</span> or <span class="ltx_text ltx_font_smallcaps">ow</span> where, thanks to the relatively denser semantic graphs obtained by means of our ontologization technique, the gap in F1 is about 0.23 (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wt</span>) and 0.15 (<span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">ow</span>).</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">In addition, as we mentioned earlier, for <span class="ltx_text ltx_font_smallcaps">wn</span>-<span class="ltx_text ltx_font_smallcaps">wp</span> we used the same graph as that of Dijkstra-WSA, since both <span class="ltx_text ltx_font_smallcaps">wn</span> and <span class="ltx_text ltx_font_smallcaps">wp</span> provide a full-fledged semantic network and thus neither needed to be ontologized.
+Therefore, the considerable performance improvement over Dijkstra-WSA on this resource pair shows the effectiveness of our novel concept similarity measure independently of the underlying semantic network.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.SS3.SSS2.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Resource ontologization.</h5>
+
+<div id="S5.SS3.SSS2.P1.p1" class="ltx_para">
+<p class="ltx_p">Having lexical resources represented as semantic networks is highly beneficial.
+A good example is WordNet, which has been exploited as a semantic network in dozens of NLP tasks <cite class="ltx_cite">[<a href="#bib.bib65" title="WordNet: an electronic database" class="ltx_ref">7</a>]</cite>. A recent prominent case is Wikipedia <cite class="ltx_cite">[<a href="#bib.bib222" title="Mining meaning from Wikipedia" class="ltx_ref">18</a>, <a href="#bib.bib627" title="Collaboratively built semi-structured content and Artificial Intelligence: The story so far" class="ltx_ref">13</a>]</cite> which, thanks to its inter-article hyperlink structure, provides a rich backbone for structuring additional information <cite class="ltx_cite">[<a href="#bib.bib238" title="DBpedia: a nucleus for a web of open data" class="ltx_ref">2</a>, <a href="#bib.bib321" title="YAGO: a large ontology from Wikipedia and WordNet" class="ltx_ref">34</a>, <a href="#bib.bib631" title="Integrating syntactic and semantic analysis into the Open Information Extraction paradigm" class="ltx_ref">23</a>, <a href="#bib.bib630" title="Two is bigger (and better) than one: the Wikipedia Bitaxonomy Project" class="ltx_ref">8</a>]</cite>.
+However, there are many large-scale resources, such as Wiktionary for instance, which by their very nature are not in the form of a graph.
+This is usually the case with machine-readable dictionaries, where structuring the resource involves the arduous task of connecting lexicographic senses by means of semantic relations.
+Surprisingly, despite their vast potential, little research has been conducted on the automatic ontologization of collaboratively-constructed dictionaries like Wiktionary and OmegaWiki.
+<cite class="ltx_cite">Meyer and Gurevych (<a href="#bib.bib611" title="OntoWiktionary: constructing an ontology from the collaborative online dictionary Wiktionary" class="ltx_ref">2012a</a>)</cite> and <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> provided approaches for building graph representations of Wiktionary and OmegaWiki.
+The resulting graphs, however, were either sparse or had a considerable portion of the nodes left in isolation.
+Our approach, in contrast, aims at transforming a lexical resource into a full-fledged semantic network, hence providing a denser graph with most of its nodes connected.</p>
+</div>
+</div>
+<div id="S5.SS3.SSS2.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Resource alignment.</h5>
+
+<div id="S5.SS3.SSS2.P2.p1" class="ltx_para">
+<p class="ltx_p">Aligning lexical resources has been a very active field of research in the last decade.
+One of the main objectives in this area has been to enrich existing ontologies by means of complementary information from other resources.
+As a matter of fact, most efforts have been concentrated on aligning the <span class="ltx_text ltx_font_italic">de facto</span> community standard sense inventory, i.e. WordNet, to other resources. These include: the Roget’s thesaurus and Longman Dictionary of Contemporary English <cite class="ltx_cite">[<a href="#bib.bib499" title="Aligning WordNet with additional lexical resources" class="ltx_ref">15</a>]</cite>, FrameNet <cite class="ltx_cite">[<a href="#bib.bib617" title="Integrating WordNet and FrameNet using a knowledge-based Word Sense Disambiguation algorithm" class="ltx_ref">16</a>]</cite>, VerbNet <cite class="ltx_cite">[<a href="#bib.bib621" title="Putting pieces together: combining FrameNet, VerbNet and WordNet for robust semantic parsing" class="ltx_ref">33</a>]</cite> or domain-specific terminologies such as the Unified Medical Language System <cite class="ltx_cite">[<a href="#bib.bib620" title="Comparing terms, concepts and semantic classes in WordNet and the Unified Medical Language System" class="ltx_ref">4</a>]</cite>.
+More recently, the growth of collaboratively-constructed resources has seen the development of alignment approaches with Wikipedia <cite class="ltx_cite">[<a href="#bib.bib504" title="Automatic assignment of Wikipedia encyclopedic entries to WordNet synsets" class="ltx_ref">32</a>, <a href="#bib.bib238" title="DBpedia: a nucleus for a web of open data" class="ltx_ref">2</a>, <a href="#bib.bib321" title="YAGO: a large ontology from Wikipedia and WordNet" class="ltx_ref">34</a>, <a href="#bib.bib505" title="A resource-poor approach for linking ontology classes to Wikipedia articles" class="ltx_ref">31</a>, <a href="#bib.bib581" title="BabelNet: The automatic construction, evaluation and application of a wide-coverage multilingual semantic network" class="ltx_ref">25</a>]</cite>, Wiktionary <cite class="ltx_cite">[<a href="#bib.bib609" title="What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage" class="ltx_ref">20</a>]</cite> and OmegaWiki <cite class="ltx_cite">[<a href="#bib.bib610" title="UBY - a large-scale unified lexical-semantic resource based on LMF" class="ltx_ref">9</a>]</cite>.
+Last year <cite class="ltx_cite">Matuschek and Gurevych (<a href="#bib.bib608" title="Dijkstra-WSA: a graph-based approach to word sense alignment" class="ltx_ref">2013</a>)</cite> proposed Dijkstra-WSA, a graph-based approach relying on shortest paths between two concepts when the two corresponding resources graphs were combined by leveraging monosemous linking.
+Their method when backed off with other definition similarity based approaches <cite class="ltx_cite">[<a href="#bib.bib607" title="The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet" class="ltx_ref">27</a>, <a href="#bib.bib609" title="What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage" class="ltx_ref">20</a>]</cite>, achieved state-of-the-art results on the mapping of WordNet to different collaboratively-constructed resources.
+This approach, however, in addition to setting the threshold for the definition similarity component by means of cross validation, also required other parameters to be tuned, such as the allowed path length (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS2.P2.p1.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>) and the maximum number of edges in a graph.
+The optimal value for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS2.P2.p1.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> parameter varied from one resource pair to another, and even for a specific resource pair it had to be tuned for each configuration.
+This made the approach dependent on the training data for the specific pair of resources that were to be aligned.
+Instead of measuring the similarity of two concepts on the basis of their distance in the combined graph, our approach models each concept through a rich vectorial representation we refer to as semantic signature and compares the two concepts in terms of the similarity of their semantic signatures.
+This rich representation leads to our approach having a good degree of robustness such that it can achieve competitive results even in the absence of training data.
+This enables our system to be applied effectively for aligning new pairs of resources for which no training data is available, with state-of-the-art performance.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">This paper presents a unified approach for aligning lexical resources.
+Our method leverages a novel similarity measure which enables a direct structural comparison of concepts across different lexical resources.
+Thanks to an effective ontologization method, our alignment approach can be applied to any pair of lexical resources independently of whether they provide a full-fledged network structure.
+We demonstrate that our approach achieves state-of-the-art performance on aligning WordNet to three collaboratively-constructed resources with different characteristics, i.e., Wikipedia, Wiktionary, and OmegaWiki.
+We also show that our approach is robust across its different configurations, even when the training data is absent, enabling it to be used effectively for aligning new pairs of lexical resources for which no resource-specific training data is available.
+In future work, we plan to extend our concept similarity measure across different natural languages.
+We release all our data at <span class="ltx_text ltx_font_typewriter ltx_font_small">http://lcl.uniroma1.it/semalign</span>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:43.4pt;"><span class="ltx_text" style="position:relative; bottom:-0.3pt;"><img src="P14-1044/image001.png" id="Sx1.p1.g1" class="ltx_graphics" width="19" height="22" alt=""/></span></p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:312.2pt;">The authors gratefully acknowledge the support of the ERC Starting
+Grant MultiJEDI No. 259234.</p>
+</div>
+<div id="Sx1.p3" class="ltx_para">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:21.7pt;"><span class="ltx_text" style="position:relative; bottom:-0.2pt;"><img src="P14-1044/image002.png" id="Sx1.p3.g1" class="ltx_graphics" width="30" height="20" alt=""/></span></p>
+</div>
+<div id="Sx1.p4" class="ltx_para">
+<p class="ltx_p">We would like to thank Michael Matuschek for providing us with Wikipedia graphs and alignment datasets.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib491" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Personalizing PageRank for Word Sense Disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Athens, Greece</span>, <span class="ltx_text ltx_bib_pages"> pp. 33–41</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib238" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Auer, C. Bizer, G. Kobilarov, J. Lehmann, R. Cyganiak and Z. Ive</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DBpedia: a nucleus for a web of open data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Busan, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 722–735</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib224" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Brin and M. Page</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Anatomy of a large-scale hypertextual Web search engine</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Brisbane, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 107–117</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>,
+<a href="#S2.SS1.SSS1.p2" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib620" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Burgun and O. Bodenreider</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing terms, concepts and semantic classes in WordNet and the Unified Medical Language System</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Pittsburgh, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 77–82</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib622" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. de Melo and G. Weikum</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Providing multilingual, multimodal answers to lexical database queries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Valletta, Malta</span>, <span class="ltx_text ltx_bib_pages"> pp. 348–355</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib299" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Faralli and R. Navigli</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A New Minimally-supervised Framework for Domain Word Sense Disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1411–1422</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">C. Fellbaum (Ed.)</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: an electronic database</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.P1.p1" title="Definitional similarity signature. ‣ 2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>,
+<a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib630" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Flati, D. Vannella, T. Pasini and R. Navigli</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two is bigger (and better) than one: the Wikipedia Bitaxonomy Project</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Baltimore, Maryland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib610" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Gurevych, J. Eckle-Kohler, S. Hartmann, M. Matuschek, C. M. Meyer and C. Wirth</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">UBY - a large-scale unified lexical-semantic resource based on LMF</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Avignon, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 580–590</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS4.P1.p1" title="Lexical resources. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.SS2.SSS2.p1" title="4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib435" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. H. Haveliwala</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic-sensitive PageRank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Hawaii, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 517–526</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib615" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Henrich, E. Hinrichs and T. Vodolazova</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-automatic extension of GermaNet with sense definitions from Wiktionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">PoznaÅ, Poland</span>, <span class="ltx_text ltx_bib_pages"> pp. 126–130</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib614" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Henrich, E. W. Hinrichs and K. Suttner</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically linking GermaNet to Wikipedia for harvesting corpus examples for GermaNet senses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">In Journal for Language Technology and Computational Linguistics (JLCL)</span> <span class="ltx_text ltx_bib_volume">27</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–19</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Similarity Measure Analysis ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib627" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. H. Hovy, R. Navigli and S. P. Ponzetto</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collaboratively built semi-structured content and Artificial Intelligence: The story so far</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence</span> <span class="ltx_text ltx_bib_volume">194</span>, <span class="ltx_text ltx_bib_pages"> pp. 2–27</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib557" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Hughes and D. Ramage</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical semantic relatedness with random graph walks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 581–589</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib499" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Y. Kwong</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Aligning WordNet with additional lexical resources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 73–79</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib617" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Laparra and G. Rigau</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Integrating WordNet and FrameNet using a knowledge-based Word Sense Disambiguation algorithm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Borovets, Bulgaria.</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–6</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib608" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Matuschek and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dijkstra-WSA: a graph-based approach to word sense alignment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the Association for Computational Linguistics (TACL)</span> <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 151–164</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="Configurations. ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>,
+<a href="#I1.i3.p1" title="Configurations. ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.SSS4.P1.p1" title="Lexical resources. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.SS1.SSS4.P2.p1" title="Evaluation measures. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.SS1.SSS4.P3.p1" title="Lexicons and semantic graphs. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.SS1.p5" title="4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.SSS1.P1.p1" title="Datasets. ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>,
+<a href="#S4.SS2.SSS2.p1" title="4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Similarity Measure Analysis ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.T3" title="Table 3 ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.T4" title="Table 4 ‣ 4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib222" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Medelyan, D. Milne, C. Legg and I. H. Witten</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining meaning from Wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Human-Computer Studies</span> <span class="ltx_text ltx_bib_volume">67</span> (<span class="ltx_text ltx_bib_number">9</span>), <span class="ltx_text ltx_bib_pages"> pp. 716–754</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1071-5819</span>,
+<a href="http://dx.doi.org/http://dx.doi.org/10.1016/j.ijhcs.2009.05.004" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib628" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. M. Meyer and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">“Worth its weight in gold or yet another resource”; a comparative study of Wiktionary, OpenThesaurus and GermaNet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CICLing’10</span>, <span class="ltx_text ltx_bib_place">Iasi, Romania</span>, <span class="ltx_text ltx_bib_pages"> pp. 38–49</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 3-642-12115-2, 978-3-642-12115-9</span>,
+<a href="http://dx.doi.org/10.1007/978-3-642-12116-6_4" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/978-3-642-12116-6_4" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p4" title="4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib609" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. M. Meyer and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What psycholinguists know about Chemistry: aligning Wiktionary and WordNet for increased domain coverage</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Chiang Mai, Thailand</span>, <span class="ltx_text ltx_bib_pages"> pp. 883–892</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P2.p1" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.SSS2.p1" title="4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib611" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. M. Meyer and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">OntoWiktionary: constructing an ontology from the collaborative online dictionary Wiktionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Semi-Automatic Ontology Development: Processes and Resources</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 131–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i3.p1" title="Configurations. ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>,
+<a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib629" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. M. Meyer and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">To exhibit is not to loiter: a multilingual, sense-disambiguated Wiktionary for measuring verb similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mumbai, India</span>, <span class="ltx_text ltx_bib_pages"> pp. 1763–1780</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Ontologization Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib631" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Moro and R. Navigli</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Integrating syntactic and semantic analysis into the Open Information Extraction paradigm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 2148–2154</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib298" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Navigli, S. Faralli, A. Soroa, O. de Lacalle and E. Agirre</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two birds with one stone: learning semantic models for text categorization and Word Sense Disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Glasgow, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 2317–2320</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib581" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Navigli and S. P. Ponzetto</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BabelNet: The automatic construction, evaluation and application of a wide-coverage multilingual semantic network</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence</span> <span class="ltx_text ltx_bib_volume">193</span>, <span class="ltx_text ltx_bib_pages"> pp. 217–250</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.SSS4.P2.p1" title="Evaluation measures. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib263" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Navigli</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Meaningful clustering of senses helps boost word sense disambiguation performance</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 105–112</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib607" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Niemann and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The people’s web meets linguistic knowledge: automatic sense alignment of Wikipedia and WordNet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Oxford, United Kingdom</span>, <span class="ltx_text ltx_bib_pages"> pp. 205–214</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i3.p1" title="Configurations. ‣ 4.2.1 Experimental setup ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS1.P1.p1" title="Definitional similarity signature. ‣ 2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>,
+<a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS2.SSS2.p1" title="4.2.2 Results ‣ 4.2 Alignment Experiments ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2.2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Similarity Measure Analysis ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib623" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Palmer, D. Gildea and N. Xue</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Synthesis Lectures on Human Language Technologies</span>,  <span class="ltx_text ltx_bib_publisher">Morgan &amp; Claypool Publishers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib613" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Pantel and M. Pennacchiotti</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically harvesting and ontologizing semantic relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Amsterdam, The Netherlands</span>, <span class="ltx_text ltx_bib_pages"> pp. 171–195</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-58603-818-2</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Lexical Resource Ontologization ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib612" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. T. Pilehvar, D. Jurgens and R. Navigli</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Align, Disambiguate and Walk: a Unified Approach for Measuring Semantic Similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1341–1351</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Semantic signature generation ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>,
+<a href="#S2.SS1.SSS3.p1" title="2.1.3 Signature comparison ‣ 2.1 Measuring the Similarity of Concepts ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.3</span></a>.
+</span></li>
+<li id="bib.bib505" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Reiter, M. Hartung and A. Frank</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A resource-poor approach for linking ontology classes to Wikipedia articles</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. Bos and R. Delmonte (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Semantics in Text Processing</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Research in Computational Semantics</span>, Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 381–387</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Alignment algorithm. ‣ 2 Resource Alignment ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib504" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ruiz-Casado, E. Alfonseca and P. Castells</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic assignment of Wikipedia encyclopedic entries to WordNet synsets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lodz, Poland</span>, <span class="ltx_text ltx_bib_pages"> pp. 380–386</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib621" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Shi and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Putting pieces together: combining FrameNet, VerbNet and WordNet for robust semantic parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mexico City, Mexico</span>, <span class="ltx_text ltx_bib_pages"> pp. 100–111</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib321" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. M. Suchanek, G. Kasneci and G. Weikum</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">YAGO: a large ontology from Wikipedia and WordNet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Web Semantics</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 203–217</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS2.P1.p1" title="Resource ontologization. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS3.SSS2.P2.p1" title="Resource alignment. ‣ 5 Related Work ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib626" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Zesch, C. Müller and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting lexical semantic knowledge from wikipedia and wiktionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Marrakech, Morocco</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.SSS4.P1.p1" title="Lexical resources. ‣ 4 Experiments ‣ A Robust Approach to Aligning Heterogeneous Lexical Resources" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:38:59 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

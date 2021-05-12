@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Optimal Sokoban solving using pattern databases with specific domain knowledge.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A weighted state space problem {a mathematical formula}P=(S,A,s,T,w) consists of a set of states S, a finite set of actions A, an initial state {a mathematical formula}s∈S, a set of goal states {a mathematical formula}T⊆S, and a cost function {a mathematical formula}w:A→R. Each action {a mathematical formula}a∈A is a function {a mathematical formula}a:S→S that transforms a state into a successor state incurring cost {a mathematical formula}w(a). The set of goal states may be given explicitly, or implicitly by a goal condition. To a state space problem P corresponds a state space graph {a mathematical formula}G=(V,E,s,T) with vertices {a mathematical formula}V=S, initial vertex s, goal vertices T and edges {a mathematical formula}E⊆V×V. An edge {a mathematical formula}(u,v)∈E iff {a mathematical formula}v=a(u) for some action {a mathematical formula}a∈A. A state {a mathematical formula}u∈S has successors {a mathematical formula}Succ(u)={v|(u,v)∈E}. The objective is to find a shortest (least cost) path in G from s to some goal state. This can be accomplished by single-agent heuristic search algorithms such as {a mathematical formula}A⁎[1] and Iterative Deepening {a mathematical formula}A⁎ ({a mathematical formula}IDA⁎) [2]. They explore states guided by the function {a mathematical formula}f(u)=g(u)+h(u), where {a mathematical formula}g(u) is the distance from the initial state s to state {a mathematical formula}u∈S, and {a mathematical formula}h(u) is an estimate of the distance from u to a goal state. If the heuristic h is admissible, i.e., h never exceeds the shortest distance to the closest goal state, then these algorithms are guaranteed to find optimal solutions.
+     </paragraph>
+     <paragraph>
+      An abstraction transformation maps states u in the set of states S to abstract states{a mathematical formula}u′ in the set of abstract states{a mathematical formula}S′. The set of actions A induces corresponding actions {a mathematical formula}A′, and the set goal states T a set of corresponding abstract goal states{a mathematical formula}T′. In general, the abstraction transformation maps the set of states S into a smaller set of abstract states {a mathematical formula}S′, such that the distance from {a mathematical formula}u′ to the closest abstract goal state is at most the distance from u to the closest goal state. A pattern database (PDB), introduced by Culberson and Schaeffer [3], is a lookup table that stores for each abstract state {a mathematical formula}u′ the shortest distance to the closest abstract goal state. PDBs are typically built in a preprocessing phase by a backwards search from the set of abstract goal states. The preprocessing can be time consuming, but this cost is usually amortized over the solution of several initial states of the same problem.
+     </paragraph>
+     <paragraph>
+      PDBs are an active research topic and the current best optimal solvers for several state space problems use them. Examples are the Sliding-Tile puzzle [4], [5], Rubik's Cube [6], and Towers of Hanoi [7]. In this paper we study the application of PDBs to obtain optimal solutions for Sokoban.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Sokoban
+      </section-title>
+      <paragraph>
+       Sokoban is a state space problem on a maze grid, which is defined by squares occupied by immovable blocks (walls) and free squares. There are k movable blocks called stones and k goal squares. The man (Sokoban) is a movable block that can traverse free squares and push stones to adjacent free squares. A solution of Sokoban is a sequence of such actions that moves the stones from their initial positions to the goal squares. The most common objective is to find a solution which minimizes the number of pushes, without accounting the moves of the man. In this paper we are interested in an admissible solver for this objective. An admissible solver always finds an optimal solution to an instance if one exists, while a non-admissible solver can return any feasible solution.
+      </paragraph>
+      <paragraph>
+       In Sokoban a state is defined by the positions of the k stones and by the reachable component of the man, i.e., the set of free squares reachable by the man without pushing stones. A reachable component can be represented by a normalized position of the man, e.g. the leftmost upper free square of the component. A goal state is defined implicitly as a state in which each stone is on a different goal square. Sokoban has k! goal states, since the stones are unlabeled and can be placed on any goal square. A deadlock is a state {a mathematical formula}u∈S which is reachable from s but cannot reach any goal state. In general deadlocks are hard to detect. A particular situation of deadlocks in Sokoban is caused by dead squares. A free square is dead if a stone on it cannot be pushed to any goal square. Note that according to this definition a goal square is never dead.
+      </paragraph>
+      <paragraph>
+       Robot motion planning is a fundamental problem in robotics with a large range of applications. Sokoban is a simplified model of motion planning that computes a collision-free path between origin and destination points. There is a standard set of 90 problem instances used in the literature, ordered roughly from easiest to hardest in difficulty for a human to solve. Table 1 shows some search space properties of these instances. Sokoban is a challenging problem, and one of the remaining puzzles which humans solve better than computers. All instances of the standard set have been solved by humans, but even the best non-admissible solvers are not able to solve all of them. Sokoban is PSPACE-complete [8], and is harder to solve than other well-known single-agent search problems like Rubik's cube or the 24-puzzle, due to its large branching factor, greater solution length, larger search space size, and a more complex computation of the heuristic value [9]. Real world problem characteristics like the presence of deadlocks, states that are more complex to represent and generate, and a lack of symmetry also contribute to the difficulty of solving Sokoban. For this reason, only a few instances have been solved with admissible techniques, and most of the Sokoban solvers are concerned only with finding a solution using techniques without optimality guarantees.
+      </paragraph>
+      <section label="1.1.1">
+       <section-title>
+        Rolling stone
+       </section-title>
+       <paragraph>
+        Rolling stone is one of the best known solvers for Sokoban. It comes in an admissible and a non-admissible version. Both use an {a mathematical formula}IDA⁎ search and multiple domain-independent and domain-dependent enhancements. The admissible version, which we call {a mathematical formula}RS⁎, uses techniques like an enhanced heuristic, move ordering, tunnel macros, transposition and deadlock tables. When limited to explore 20 million nodes and with a deadlock table of approximately 22 million entries it solves six instances. {a mathematical formula}RS⁎ is currently the best admissible Sokoban solver [9]. In an attempt to solve more instances, the non-admissible version, referred to as RS, applies techniques that do not guarantee optimality such as goal cuts, pattern searches, relevance cuts, overestimation, and rapid random restart. RS is able to solve 57 instances within the same limits.
+       </paragraph>
+      </section>
+      <section label="1.1.2">
+       <section-title>
+        Other solvers
+       </section-title>
+       <paragraph>
+        Botea et al. [10] proposed planning on an abstraction of the search space. Applied to Sokoban they obtain a non-admissible solver which is able to solve ten instances from the standard set in less than three minutes and exploring less than one million nodes. Demaret et al. [11] describe a non-admissible solver that uses a hierarchical planning strategy along with deadlocks learning to solve Sokoban. Using this approach, they were able to solve 54 instances from the standard set. In this case, the stopping criterion was eight hours of running time per instance.
+       </paragraph>
+       <paragraph>
+        The state-of-the-art non-admissible solvers have been developed by the Sokoban community. Among the ones with the best results, JSoko is able to solve 71, YASC 79, and Takaken 86 instances [12], [13], [14], [15]. Since these results have not been published formally, it is not always clear which techniques have been used to achieve them.
+       </paragraph>
+      </section>
+      <section label="1.1.3">
+       <section-title>
+        Heuristics for Sokoban
+       </section-title>
+       <paragraph>
+        The best heuristic for Sokoban was proposed by Junghanns and Schaeffer [16]. To obtain a lower bound, it relaxes the restriction that a stone can block the path of another stone. Then, the distance of a stone to every goal square can be computed by solving an instance with only one stone. For the example in Fig. 1a these “naive distances” can be seen in Fig. 1b. Since each stone has to be assigned to a different goal square, the smallest number of pushes needed to bring each stone to a different goal square is a valid lower bound. This number is equal to the minimum cost of a perfect matching in the complete bipartite graph between stones and goal squares where the weight of a stone-goal edge is the naive distance of the stone from the goal. A minimum cost perfect matching can be found in {a mathematical formula}O(k3), where k is the number of stones [17]. We call this heuristic function MM. MM is the optimal solution value of an instance where the capacity constraints of the free squares have been relaxed, allowing several stones and the man to have the same position.
+       </paragraph>
+       <paragraph>
+        Two enhancements of MM were proposed by Junghanns and Schaeffer [16]. The first takes backout conflicts into account. Backout conflicts consider the position of the man when his movement is restricted in articulation squares by a stone. Articulation squares are squares whose removal disconnects the connected component of the instance. Fig. 1c shows the distances obtained when considering backout conflicts. Improved distances are shown in bold. For example, the distance of the stone at G4 to goal I3 increases from three to nine, since when considering the position of the man, the shortest path taking backout conflicts into account is G4–G3–F3–E3–D3–E3–F3–G3–H3–I3.
+       </paragraph>
+       <paragraph>
+        The second enhancement are linear conflicts (LC) which increase the heuristic value by two when a pair of adjacent stones is in the optimal path of each other: since for adjacent stones either the horizontal or the vertical movements are blocked, some move in the orthogonal direction must reduce the distance to some goal. Otherwise the lower bound can be increased by two. In Fig. 1a a linear conflict occurs between stones at D3 and E3.
+       </paragraph>
+       <paragraph>
+        Backout and linear conflicts preserve admissibility. When combined with MM we obtain the enhanced MM (EMM). EMM is the heuristic function used by {a mathematical formula}RS⁎[9].
+       </paragraph>
+      </section>
+      <section label="1.1.4">
+       <section-title>
+        Pattern databases for Sokoban
+       </section-title>
+       <paragraph>
+        Deadlock tables and pattern searches, proposed by Junghanns and Schaeffer [9], and other techniques that store the exact solution of subproblems [10], can be seen as precursors of PDBs in Sokoban. Deadlock tables exhaustively enumerate all possible configurations of a small rectangular area, and analyze, for each configuration, if the stones can be removed from the area. Configurations for which this is not the case are considered deadlocks. RS uses areas of five by four squares. The resulting 22 million entries are stored in a deadlock table. A deadlock table is independent of the instance and has to be computed only once. A state is a deadlock if a part of its configuration is found in the deadlock table. Pattern searches are computed by sub-searches for each instance during the main search trying to identify speculatively deadlocks and penalties to add to the heuristic value. These penalties are added in a non-admissible way [18, p. 88] and thus can lead to non-optimal solutions.
+       </paragraph>
+       <paragraph>
+        However, these approaches miss important characteristics of PDBs like an abstract goal state and the computation of the distance of a set of abstract states to the abstract goal state by backwards search. They are also not designed to be used as an admissible heuristic function. For example, RS with deadlock tables and pattern searches, using as lower bound only the value found by pattern searches, is unable to find a solution for any of the instances of the standard set.
+       </paragraph>
+       <paragraph>
+        The seminal article of Edelkamp [19] introduced PDBs to domain-independent planning. One of the test beds used was Sokoban on a set of 52 automatically generated, small instances. The author transformed Sokoban into a problem with an explicit goal state by mapping stones one-to-one to goals. In this way, some instances may have longer solutions or even become unsolvable. Compared to other optimal domain-independent planners using PDBs produced significantly better results. Haslum et al. [20] improved the application of PDBs in domain-independent planning by presenting an approach to select good abstractions automatically. Again Sokoban was used as a test bed, but without mapping stones to goal squares. They were able to solve 28 of 40 instances of medium difficulty selected from the Microban test set. Recently Sievers et al. [21] introduced an efficient implementation of the approach proposed by Haslum et al. [20] in the state-of-the-art domain-independent planner Fast Downward [22].
+       </paragraph>
+      </section>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Overview and contributions
+      </section-title>
+      <paragraph>
+       Consider a direct application of PDBs to Sokoban. A natural abstraction is to keep only {a mathematical formula}k′ of all k stones. This is admissible, since the cost of solving a subset of stones never exceeds the cost of solving the whole instance. We can construct a PDB which stores the shortest distance to the nearest abstract goal state. Since in Sokoban the goal state is defined implicitly, every placement of the {a mathematical formula}k′ stones on the k goal squares is an abstract goal state. Fig. 2 shows the abstract goal states for a toy instance with {a mathematical formula}k=4 and {a mathematical formula}k′=2. We call this PDB the multiple goal state PDB (MPDB).
+      </paragraph>
+      <paragraph>
+       It turns out that MPDBs are ineffective. In this paper we propose a different approach which introduces the idea of an intermediate goal state. We use PDBs to find a good heuristic value for the number of pushes necessary to reach the intermediate goal state, and EMM to estimate the number of pushes from there to a goal state. We compare the resulting heuristic with EMM, with MPDBs, and with the solvers {a mathematical formula}RS⁎ and Fast Downward using PDBs.
+      </paragraph>
+      <paragraph>
+       We show that applying PDBs to intermediate goal states can solve optimally more problem instances in less time. On initial states the proposed heuristic finds 62 better results and over a set of random initial states detects four times more deadlocks when compared to EMM. We increase the number of instances solved optimally from 10 to 20. All of them were solved using considerably less explored nodes and computational time than previous methods. This work extends a previous conference publication [23], by an improved domain decomposition, abstractions of more than two stones ({a mathematical formula}k′&gt;2), formal consistency proofs of the proposed heuristics, a domain-dependent tie breaking rule, a comprehensive experimental analysis, and a discussion of generalizations of our techniques to other domains.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      A heuristic based on pattern databases
+     </section-title>
+     <paragraph>
+      In this section, we describe how instances can be decomposed into a maze zone and a goal zone and define an intermediate goal state, explain the construction and storage of the PDB, introduce a new heuristic, and show how to compute it efficiently. We also demonstrate its consistency.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Instance decomposition
+      </section-title>
+      <paragraph>
+       Intuitively, if every stone has to pass over some fixed intermediate square to reach any of the goal squares, we can decompose an instance into two subproblems. The first is to bring all stones to the intermediate square, and the second is to move them from there to the goal squares. This is a relaxation of the original problem and thus cannot be used to solve it directly, but we can solve the two subproblems separately to obtain a lower bound on the length of an optimal solution. The main advantage of this approach for Sokoban is that it enables us to effectively apply PDBs to the first subproblem, since this subproblem has a single, well-defined goal state. For the second subproblem any heuristic can be used.
+      </paragraph>
+      <paragraph>
+       A sequence P of squares is a stone-path from square a to square b with man at square m, if there exists a solution of an instance with a single stone at a, a single goal square at b and the man initially at m such that the stone visits exactly the squares in P. Consider a fixed square c. We call a square a a maze square, if for all goal squares b and all positions of the man m all stone-paths from a square a to b with man at m contain c. The set of all maze squares forms the maze zone. Note that, by definition square c is part of the maze zone. All other non-dead and non-goal squares are called goal zone squares and form the goal zone. Each non-dead square c of the instance defines a different decomposition into maze and goal zones. We call c the intermediate square of that decomposition. A given decomposition corresponds to a new abstract state space for the maze subproblem, which is obtained by relaxing the capacity constraints of the intermediate square: we allow to place any number of stones and the man on it at the same time. In the corresponding intermediate abstract goal state all stones are placed at the intermediate square, and the man is in the single reachable component. By definition of an intermediate square a stone can be pushed from the maze zone to the goal zone only by passing over it.
+      </paragraph>
+      <paragraph>
+       We define a cut square as an intermediate square that maximizes the size of the maze zone. The set of cut squares can be obtained by analyzing all non-dead squares c. For each square c a reverse search from all goal squares is run. During the reverse search, we prohibit to place a stone on c, to limit the search to the goal zone. Then, all squares reachable from goal squares belong to the goal zone, and all other non-dead squares to the maze zone. Among all such squares, we choose one that maximizes the size of the maze zone, since the PDB provides better heuristic values for the maze zone.
+      </paragraph>
+      <paragraph>
+       Fig. 3 shows an example of an instance and three different decompositions. The instance shown in Fig. 3a has 40 non-dead and non-goal squares. Fig. 3b shows a possible decomposition into 13 maze squares (including the cut square) and 27 goal zone squares. The decomposition of Fig. 3c has 28 maze squares and 12 goal zone squares, and the one of Fig. 3d has 41 maze squares and an empty goal zone. The decomposition of Fig. 3d leads to the largest maze zone, and the black square at I10 is the unique cut square of this instance. Note that the decompositions concern only pushed stones, not the movement of the man. Even when placing a stone on the intermediate squares in Fig. 3 the reachable component of the man still includes all free squares.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Construction and storage of the PDB
+      </section-title>
+      <paragraph>
+       The application of PDBs to Sokoban is different from other puzzles in two aspects. First, in Sokoban each instance has a different state space and goal state. Thus, the PDB must be constructed for each instance, and the construction cost cannot be amortized over the solution of multiple initial states. This is also true for applications of PDB in domain-independent planning and there is no simple solution for this problem. For example, when considering the domain of Sokoban Haslum et al. [20] report that 85% of the total time is spent building the PDB. Therefore, PDBs must be constructed efficiently and should be effective when used to guide the search. Second, in Sokoban the stones are unlabeled, and thus a single PDB for a fixed number of {a mathematical formula}k′ stones, can be used for every subset of {a mathematical formula}k′ stones.
+      </paragraph>
+      <paragraph>
+       We call the PDB constructed using the intermediate abstract goal state an intermediate pattern database (IPDB). The number of stones in the abstraction determines the size of the IPDB. An IPDB-{a mathematical formula}k′ uses an abstraction of {a mathematical formula}k′ stones. It is constructed by a reverse search starting from the intermediate abstract goal state. Since we are only interested in distances to the maze zone, and stones on the cut square do not restrict the movement of the man, moving them to the goal zone can neither increase the man's freedom nor reduce the distance to the intermediate abstract goal state. Thus, we only allow movements from and to maze zone squares, without loosing admissibility.
+      </paragraph>
+      <paragraph>
+       Fig. 4a shows an instance, its decomposition and the intermediate abstract goal state for the construction of the IPDB. Fig. 4b shows all the abstract states stored in the IPDB-2 that were generated by the reverse search starting from the abstract goal state. The distance to the abstract goal state is shown in the upper right corner of each abstract state. The position of the man is normalized to the leftmost upper free square of its reachable component. In this instance six squares are reachable by pull moves from the cut square. Thus, there are {a mathematical formula}(62)=15 possible placements of the stones, and for each placement thirteen squares remain free. So in the worst case, the IPDB stores {a mathematical formula}15×13=450 abstract states. In practice the number of abstract states is much smaller, since the number of reachable components of the man is less than the number of free squares, usually 1 or 2, and not every placement of stones leads to a valid abstract state. In the example the PDB contains only 21 abstract states.
+      </paragraph>
+      <paragraph>
+       When the IPDB is built from an abstract goal state with two stones, it can be stored in a three-dimensional array with two indices for the position of each stone and one index for the non-normalized position of the man. This is possible because an IPDB built from two stones has a small number of entries. This storage enables fast queries since the index for the positions of the stones and the man can be computed in constant time. For larger IPDBs built from more than two stones ({a mathematical formula}k′&gt;2), this approach cannot be used, and we store each abstract state in a hash table. In this way, the PDB fits into memory, but the cost of a query is higher, since queries have to determine the reachable component of the man.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Computation of the heuristic value
+      </section-title>
+      <paragraph>
+       The heuristic value of a state is the sum of the heuristic value for the maze zone, obtained by the IPDB, a heuristic value for the goal zone, and global linear conflicts between stones adjacent to the cut square and a stone at the cut square. For the goal zone we use a heuristic function similar to the standard heuristic function EMM of Sokoban.
+      </paragraph>
+      <paragraph>
+       To obtain a lower bound for the maze zone using an IPDB-{a mathematical formula}k′, we have to partition all k stones into parts of size {a mathematical formula}k′. For any partition of the set of k stones into disjoint subsets of {a mathematical formula}k′ stones, the sum of the costs for solving each subset is an admissible heuristic value, since the cost of solving the whole subproblem is at least the total cost of solving each disjoint subproblem with {a mathematical formula}k′ stones independently. If {a mathematical formula}k′ does not divide k, we place {a mathematical formula}kmodk′ additional artificial stones on the cut square. Defining a fixed partition of the stones for the whole search is not a promising strategy since local interactions of the stones depend on their placement. For this reason the PDB is partitioned dynamically. This is particularly easy in Sokoban, since we need only a single PDB. Thus, among all possible partitions, we want to find one that maximizes the lower bound. This problem can be solved in polynomial time by a maximum weight matching when {a mathematical formula}k′=2, but is {a mathematical formula}NP-complete, for {a mathematical formula}k′&gt;2.
+      </paragraph>
+      <paragraph>
+       When the abstraction is composed by two stones we use a maximum weight matching algorithm in order to obtain the highest heuristic value in polynomial time. To obtain the maze heuristic value a complete graph with one vertex for each stone is build. Each pair of stones is connected by an edge whose weight is the cost of pushing both stones to the cut square, obtained by querying the IPDB. If the cost of some pair is not stored in the IPDB a deadlock is identified. If only one stone is in the maze zone the weight of the edge corresponds to the cost of pushing this stone to the cut square. If both stones are in the goal zone the edge weight is zero. When the number of stones is odd we add one artificial vertex that is connected to each other vertex by an edge whose weight corresponds to the cost of pushing the stone to the cut square. Fig. 5 shows the decomposition of the instance in Fig. 1a and the corresponding graph. The value of the maze heuristic function is the value of a maximum weight matching in this graph.
+      </paragraph>
+      <paragraph>
+       When the abstraction is composed by more than two stones, the problem of computing the highest heuristic value becomes equivalent to the maximum weight exact cover, an {a mathematical formula}NP-complete problem [24]. Since the heuristic value has to be computed for each state generated during the search, we use a simple and fast greedy randomized constructive procedure to approximate it. We start by querying the distance of every subset of {a mathematical formula}k′ of the k stones in the IPDB. Then we sort these distances in order of non-increasing increments, where the increment is the difference of the value stored in the IPDB and the sum of the distances for each stone to reach the cut square. Each of the k stones in the state can be part of only one selected subset of {a mathematical formula}k′ stones. Thus, selecting a subset will exclude other subsets which include the same stone. We heuristically generate {a mathematical formula}k+1 partitions of the k stones as follows. The first partition is obtained by repeatedly choosing a subset of highest increment, until all stones are covered. The remaining k partitions are obtained by a greedy randomized strategy. This strategy chooses some random subset from the first m subsets, and then completes the partition greedily. We repeat this strategy k times with {a mathematical formula}m=i(kk′)/k in iteration {a mathematical formula}i=1,…,k. Thus, in the last iteration we choose randomly among all subsets. The highest heuristic value obtained in all {a mathematical formula}k+1 partitions is used as the heuristic value. Observe that the heuristic obtained in this way is admissible, since every partition of the stones yields a lower bound on the shortest distance to bring the stones to the cut square. The constructive heuristic queries all {a mathematical formula}(kk′) subsets of {a mathematical formula}k′ from k stones in the IPDB. Depending on k and {a mathematical formula}k′ there can be a large number of queries, and for each one we have to find the reachable component of the man. Thus, this approach has a large computational cost. However, it detects all deadlocks formed by {a mathematical formula}k′ stones and provides good heuristic values.
+      </paragraph>
+      <paragraph>
+       For the goal zone we use the EMM, i.e. the value of a minimum matching of the stones and the goal squares and penalties for linear conflicts. The minimum matching is computed on the same bipartite graph used for EMM, shown in Fig. 1a, but the distances are computed in a slightly different way, as follows. All the stones in the maze zone are treated as if they were positioned at the cut square. For each such stone, the position of the man is defined as the original position of the stone in the maze zone. The stones in the goal zone or at goal squares remain at their current position and use the current position of the man. As for EMM, these distances already include backout conflicts. Finally, the detection of linear conflicts is limited to pairs of stones in the goal zone or at goal squares. For example, when computing the distances for the instance of Fig. 1a, only the position of the stone at H2 is used and the other stones in the maze zone are placed on the cut square G3. Note how the placement of the man at the original position of a stone influences its distance to the goals. For example, the stones originally at squares D3 and E3 have shortest distance 3 to goal square G2, but the shortest distance to G2 of the stone originally at square G4 is only 2. Finally, linear conflicts that include stones at the cut square are neither penalized by the maze lower bound nor by the goal lower bound. Such global linear conflict conflicts are penalized separately.
+      </paragraph>
+      <paragraph>
+       When passing from a state {a mathematical formula}u∈S to a successor {a mathematical formula}v∈Succ(u) the heuristic value has to be updated. Most of the time only the goal or the maze heuristic value changes, so we can avoid unnecessary computations. If a push is completely inside the maze zone, the goal heuristic value does not change since the distances in the bipartite graph do not change. Similarly, if a movement is done completely in the goal zone the maze heuristic value does not need to be computed again.
+      </paragraph>
+      <paragraph>
+       EMM identifies implicit deadlocks caused by two or more stones that can be pushed only to a single goal square. However, it does not identify a deadlock in which a position of one stone blocks all feasible paths of another. An IPDB-{a mathematical formula}k′ detects all possible interactions of at most {a mathematical formula}k′ stones and the position of the man in the maze zone. Since it is constructed exhaustively, if some configuration of the man and stones is not stored in the IPDB it must be a deadlock and thus can be discarded. An IPDB detects, for example, linear and backout conflicts, and the implicit deadlocks of the EMM. Fig. 6a shows an example of an instance where the lower bounds of EMM, IPDB-2, IPDB-3, and IPDB-4 are strictly increasing, and Figs. 6b–6d show a sequence of instances with deadlocks detected only IPDB-2, IPDB-3, and IPDB-4, but no weaker lower bound.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Consistency
+      </section-title>
+      <paragraph>
+       A heuristic h is consistent if, for all states {a mathematical formula}u,u′∈S, {a mathematical formula}h(u)≤h(u′)+w(u,u′). The {a mathematical formula}A⁎ algorithm using a consistent heuristic will find an optimal solution visiting each state at most once. To show consistency of h it is sufficient to show that this relation holds for any {a mathematical formula}u′∈Succ(u)[25]. In Sokoban, {a mathematical formula}w(u,u′)=1 for all states {a mathematical formula}u∈S, {a mathematical formula}u′∈Succ(u). Therefore, to establish consistency it is sufficient to show, that for any valid push of a stone the heuristic h decreases by at most 1 (see e.g. Edelkamp and Schrödl [26, p. 21]).
+      </paragraph>
+      <paragraph>
+       In this section we show that the proposed heuristic is consistent. We start by introducing some notation for Sokoban instances and define states formally, and then proceed to show consistency of the individual and the combined heuristics. The correspondence of state space problems and graphs allows us to use graph terminology. For example, a path of length k is a subgraph {a mathematical formula}P=(V,E) of G with vertex set {a mathematical formula}V={u0,…,uk} and edge (or action) set {a mathematical formula}E={(u0,u1),…,(uk−1,uk)} and we refer to a path by either its vertex or its edge set. Its cost is {a mathematical formula}w(P)=w(E)=∑e∈Ew(e). For a pair of states {a mathematical formula}u,u′∈S, let {a mathematical formula}w(u,u′)=w(P) for some path P from u to {a mathematical formula}u′ of minimum cost.
+      </paragraph>
+      <paragraph>
+       Let B be a set of stones, Q be the set of free squares of an instance, and {a mathematical formula}G⊆Q the set of goal squares. A state {a mathematical formula}u∈S is a pair {a mathematical formula}u=(m,p), where {a mathematical formula}m∈Q is the leftmost upper free square in the reachable component of the man, and {a mathematical formula}p:B→Q is an injective map from the stones to the free squares. State {a mathematical formula}u=(m,p)∈S is a goal state if the set of squares occupied by the stones {a mathematical formula}p(B)=∪b∈Bp(b)=G. For squares {a mathematical formula}q,r∈Q let {a mathematical formula}δ(q,r,m) be the shortest distance of a stone-path from q to r when the man is at m. Note that this definition already includes backout conflicts.
+      </paragraph>
+      <paragraph>
+       To a state {a mathematical formula}u=(m,p)∈S corresponds a complete bipartite graph {a mathematical formula}MM=(B∪˙G,E,d) between the stones and the goals, with edge set {a mathematical formula}E={{b,g}|b∈B,g∈G}, and weights {a mathematical formula}d(e)=δ(p(b),g,m) for {a mathematical formula}e={b,g}∈E. The cost of a matching {a mathematical formula}M⊆E in MM is{a mathematical formula} We write {a mathematical formula}M⁎ for the minimum cost perfect matching in MM. Note that MM, {a mathematical formula}M⁎, d, and c depend on the current state u. For a state {a mathematical formula}u∈S and a corresponding bipartite graph MM with minimum cost perfect matching {a mathematical formula}M⁎, the heuristic {a mathematical formula}hMM is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       It is well-known that the minimum matching heuristic for Sokoban is consistent (see e.g. Edelkamp and Schrödl [26, Ch. 1.7.3]). We begin to show, by a similar argument, that this also holds for {a mathematical formula}hMM which includes backout conflicts.
+      </paragraph>
+      <paragraph label="Theorem 2.1">
+       The heuristic{a mathematical formula}hMMis consistent.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider states {a mathematical formula}u∈S, {a mathematical formula}u′∈Succ(u), with corresponding bipartite graphs {a mathematical formula}MM=(B∪˙G,E,d) and {a mathematical formula}MM′=(B∪˙G,E,d′), matching costs c and {a mathematical formula}c′ and minimum cost perfect matchings {a mathematical formula}M⁎ and {a mathematical formula}M′⁎. Since {a mathematical formula}u′ is a successor of u only one stone has been moved. Its distance to any goal squares decreases by at most 1, and all other distances do not change. Thus we have {a mathematical formula}c′(M)≥c(M)−1 for all matchings {a mathematical formula}M⊆E. Therefore,{a mathematical formula} where the last inequality follows from the minimality of {a mathematical formula}M⁎ in state u.  □
+      </paragraph>
+      <paragraph label="Definition 2.1">
+       Linear conflictA triple {a mathematical formula}(q,r,m)∈Q3 where squares q and r are adjacent is a linear conflict if for an instance in state {a mathematical formula}u=(m,p)∈S with only two stones placed at q and r, and for all states {a mathematical formula}u′∈Succ(u), {a mathematical formula}hMM(u′)≥hMM(u)+1. Two stones {a mathematical formula}b,b′∈B of an arbitrary instance in state {a mathematical formula}u=(m,p)∈S are in a linear conflict, if {a mathematical formula}(p(b),p(b′),m) is a linear conflict.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}L(u) be the maximum number of linear conflicts in state {a mathematical formula}u∈S such that each stone is part of at most one linear conflict. (The value {a mathematical formula}L(u) is the size of a maximum matching in the conflict graph over the stones, where stones in linear conflict are connected by an edge.) The heuristic {a mathematical formula}hEMM is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       The heuristic{a mathematical formula}hEMMis consistent.Consider states {a mathematical formula}u∈S, {a mathematical formula}u′∈Succ(u). We have to show that {a mathematical formula}hEMM(u′)≥hEMM(u)−1. Since at most one stone moves, {a mathematical formula}L(u′)≥L(u)−1 and since {a mathematical formula}hMM is consistent, it is sufficient to show that if L decreases by 1 then {a mathematical formula}hMM must increase. If {a mathematical formula}L(u′)=L(u)−1 one linear conflict has been resolved. Then, {a mathematical formula}hMM(u′)≥hMM(u)+1 by definition of a linear conflict, and{a mathematical formula}  □
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         The maze zone subproblem
+        </section-title>
+        <paragraph>
+         Consider a decomposition of an instance into a maze zone and a goal zone, defined by some cut square. The maze zone subproblem is to bring all stones in the maze zone to the cut square, where the capacity constraints of the cut square have been relaxed. Suppose we know, for all subsets of squares {a mathematical formula}P⊆Q of size {a mathematical formula}k′ and positions of the man m the minimum cost {a mathematical formula}δ(P,m) of solving this subproblem with the {a mathematical formula}k′ stones placed at squares P. (As explained above, these values are computed by an exhaustive backwards search and stored in a PDB.) Then,{a mathematical formula} is an admissible heuristic for the maze zone subproblem, where {a mathematical formula}B is a partition of the set of stones in the maze zone B in state {a mathematical formula}u=(p,m)∈S into subsets of size {a mathematical formula}k′. The admissibility of {a mathematical formula}hM follows from the decomposition into independent subproblems of size {a mathematical formula}k′ and the optimality of δ. If {a mathematical formula}|B| is not a multiple of {a mathematical formula}k′ we add {a mathematical formula}|B|modk′ artificial stones and place them at the cut square.
+        </paragraph>
+        <paragraph label="Proof">
+         If, in each state{a mathematical formula}u∈Sa partition{a mathematical formula}Bthat maximizes{a mathematical formula}hM(u)is chosen, then heuristic{a mathematical formula}hMis consistent for the maze zone subproblem.The proof is similar to that of Theorem 2.1. Consider states {a mathematical formula}u=(m,p)∈S, {a mathematical formula}u′=(m′,p′)∈Succ(u), with corresponding optimal partitions {a mathematical formula}B⁎ and {a mathematical formula}B⁎′ of the stones. Since {a mathematical formula}u′ is a successor of u only one stone has been moved. Thus, for any partition of the stones, the distance of the part containing this stone decreases by at most 1, while all other distances do not change. Thus we have {a mathematical formula}∑P∈Bδ(p′(P),m′)≥∑P∈Bδ(p(P),m)−1 for all partitions {a mathematical formula}B. Therefore,{a mathematical formula} where the last inequality follows from the optimality of {a mathematical formula}B⁎.  □
+        </paragraph>
+        <paragraph>
+         Observe that for {a mathematical formula}k′=2 the optimal partition in Lemma 2.1 corresponds to a maximum weight matching in the complete graph over the stones B, where each edge {a mathematical formula}e={b,b′}, {a mathematical formula}b,b′∈B has weight {a mathematical formula}δ(e,m). For {a mathematical formula}k′&gt;2 the problem of finding the optimal partition is {a mathematical formula}NP-complete, and we usually cannot afford to compute it. In this case {a mathematical formula}hM is not guaranteed to be consistent, which is the case for the greedy heuristic explained in Section 2.3.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         The goal zone subproblem
+        </section-title>
+        <paragraph>
+         The goal zone subproblem is to bring all stones to the goal squares, after placing all stones of the maze zone at the cut square. To obtain the goal zone heuristic {a mathematical formula}hG, the problem is relaxed into an independent subproblem for each stone, where the man is placed at the original position of the stone in the maze zone, or remains at his current position in the goal zone or at goal squares. These distances are lower bounds on the shortest distance of each stone to the goal squares, as explained in Section 2.3. Therefore, for any placement of the stones, such that all stones are either at the cut square or in the goal zone, EMM, where linear conflicts are restricted to pairs of stones in the goal zone, is an admissible heuristic. By an argument very similar to Theorem 2.2 it can be shown to be consistent.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Consistency of the complete heuristic
+        </section-title>
+        <paragraph>
+         Finally, we show the consistency of the complete heuristic {a mathematical formula}hD, which is the sum of the maze zone heuristic {a mathematical formula}hM and the goal zone heuristic {a mathematical formula}hG with an additional penalty for global linear conflicts.
+        </paragraph>
+        <paragraph label="Definition 2.2">
+         Global and local linear conflictsFor a given instance decomposition into a maze and a goal zone, a linear conflict of two stones in state {a mathematical formula}u∈S is called global, if one of the stones is placed at the cut square.
+        </paragraph>
+        <paragraph>
+         It is admissible to consider global linear conflicts, because neither the heuristic of the goal zone subproblem nor that of the maze zone subproblem accounts for them. For the goal zone heuristic, this holds by definition, for the maze zone heuristic by relaxation of the capacity constraints of the cut square. However, the same stone cannot be part of a global linear conflict and a linear conflict in the goal zone. Thus, we redefine {a mathematical formula}L(u) to be the maximum number of global linear conflicts or linear conflicts in the goal zone in state {a mathematical formula}u∈S, such that each stone is part of at most one linear conflict. (As above, the value {a mathematical formula}L(u) is the size of a maximum matching in a corresponding conflict graph.) Let {a mathematical formula}hG(u)=hEMM(u)+2L(u) be the heuristic value of the goal zone subproblem, as described above. Again, by an argument similar Theorem 2.2, {a mathematical formula}hG with the new definition of L can be shown to be consistent. The complete heuristic is defined by{a mathematical formula}
+        </paragraph>
+        <paragraph label="Proof">
+         It is admissible since it has been obtained by relaxing the capacity constraints of the cut square, which allows us to decompose the problem into two independent subproblems, and the heuristics of the subproblems are admissible. Finally, from the independence of the subproblems we also have If heuristic{a mathematical formula}hMis consistent, then heuristic{a mathematical formula}hDis consistent.Consistency of {a mathematical formula}hD follows since {a mathematical formula}hM and {a mathematical formula}hG are independent: if {a mathematical formula}hM decreases then {a mathematical formula}hG cannot decrease and vice versa. Indeed, if {a mathematical formula}hM decreases, either a stone in the maze zone has been moved, and {a mathematical formula}hG does not change, since the goal zone subproblem is the same. Furthermore, the number of linear conflicts cannot decrease in this case, by definition of linear conflicts. Conversely, if {a mathematical formula}hG decreases a stone in the goal zone, on a goal square or on the cut square has been moved. If its new position is in the goal zone or on a goal square {a mathematical formula}hM does not change, since the maze zone subproblem is the same. Otherwise, if its new position is in the maze zone, {a mathematical formula}hM cannot decrease, since the maze zone subproblem is either the same, or has one stone more.  □
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Multiple goal state PDBs
+      </section-title>
+      <paragraph>
+       As mentioned in the introduction, a natural approach for a PDB would be to use an abstraction that keeps only {a mathematical formula}k′ of the k stones, and stores the distances to the nearest abstract goal state. In this case, every of the {a mathematical formula}(kk′) possible placements of {a mathematical formula}k′ stones on goal squares together with a reachable component for the man is an abstract goal state. Fig. 2 shows an example of the set of abstract goal states for a small instance. This is one of the main differences between IPDBs and MPDBs: an MPDB has a usually large number of goal states, whereas the IPDB has only one.
+      </paragraph>
+      <paragraph>
+       A reverse search from the set of abstract goal states builds the MPDB. The search continues until the whole abstract state space is explored. Every explored abstract state is stored in the MPDB with its distance to the closest abstract goal state. The storage is the same as for IPDBs.
+      </paragraph>
+      <paragraph>
+       In the MPDB, we have the distance from each abstract state to its closest abstract goal state. We can partition k stones into disjoint parts of size {a mathematical formula}k′, and each part represents an abstract state if we add the reachable component of the man. In this case, we can sum up the distance of each abstract state and get an admissible heuristic value. Note that several abstract states could be mapped to the same abstract goal state. The methods used to compute the partition are the same for IPDBs and MPDBs.
+      </paragraph>
+      <paragraph>
+       The lookup in MPDBs is simpler since it stores the heuristic value for the whole state. We query the distance of each abstract state, and the sum of the distances is the heuristic value. However, as in IPDBs, there is a particular situation when {a mathematical formula}k′ does not divide k. Consider the case when {a mathematical formula}k=8 and {a mathematical formula}k′=3. After the partition, we get two parts of size three, and one part of size two. The MPDB has distances for abstract states of size three, but not for two. This problem is not as trivial as it is for IPDBs. In this situation we do not know where to place an artificial stone: a stone on a different goal square may result in different distance for the abstract state. In such cases, we build a second MPDB with abstraction of size {a mathematical formula}kmodk′. The construction of the second, smaller MPDB is usually not significant compared to the construction cost of the main MPDB.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A domain-dependent tie breaking rule
+     </section-title>
+     <paragraph>
+      The {a mathematical formula}A⁎ algorithm often must choose one from multiple nodes with the same f-value. Without explicit tie breaking rules the implementation of the priority queue decides which node is explored next. A stable priority queue, for example, will explore tied nodes in the order of their generation. We can use domain-dependent knowledge to explicitly prioritize nodes with the same f-value. A traditional approach is to break ties in favor of nodes with the smallest h-value. Junghanns and Schaeffer [9] propose a tie breaking scheme which uses inertia as a first-level tie breaker, and the heuristic value as a second-level tie breaker. Inertia gives priority to a node which has been generated by a longer sequence of moves of the same stone. Here, we propose a new tie breaking rule called fill order.
+     </paragraph>
+     <paragraph>
+      Compared to other problems, Sokoban tends to generate a larger number of ties, since there are multiple combinations of stones on goal squares and the rest of the instance which have the same f-value. For example, in Fig. 7 the initial node (Fig. 7a) has descendants (Figs. 7c and 7d) with {a mathematical formula}f=93. Using the proposed heuristic function and breaking ties by generation order explores more than 5 million nodes to solve the instance, since several possible configurations of the stones on goal squares are explored before reaching the goal node. Some of these configurations are deadlocks like configuration in Fig. 7c.
+     </paragraph>
+     <paragraph>
+      But in fact the goal squares cannot be filled in an arbitrary order. Goal squares B3, B4 and B5, for example, have to be filled before any of the next columns of goal squares. Thus, we define a fill order for the goal squares which respects the restrictions that result from the placement of the goal squares in the maze.
+     </paragraph>
+     <paragraph>
+      The order is defined algorithmically as follows. Starting from a placement of all stones on the goal squares, we repeatedly remove a set of stones, until all stones have been removed. In each iteration, we process all remaining stones in an arbitrary order. For each stone we test if a reverse move can be applied to it. If a test succeeds we assign a priority of {a mathematical formula}2i to the corresponding goal square, where i is current total number of successful tests. Then we remove the set of all stones for which the test succeeded in the current iteration. On termination a priority value has been assigned to each goal square. The priority values represent a guess of the order in which the goal squares are filled in an optimal solution. The fill order of a node is defined as the sum of the priority values of the goal squares which are occupied by a stone. Thus, the fill order gives preference to nodes that place the stones at the goal squares of highest priority value first. The idea of the fill order is similar to goal macros [9] since both techniques try to use information from the state space related to the placement of goal squares to improve the effectiveness of the solver. The fill order, however, is admissible, since it is only used to break ties.
+     </paragraph>
+     <paragraph>
+      Fig. 7b shows the priorities of the goal squares of the example above. A state with a stone at B5 has priority 256 and a state with eight stones in the other goal squares has priority 255. In this way we get an absolute order for filling the goal squares. Using this rule of tie breaking we solve the example instance exploring less than 5000 nodes.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Computational results
+     </section-title>
+     <paragraph>
+      In this section we provide results of computational experiments with the proposed methods. We compare the heuristic function EMM to MPDBs, and to IPDBs. To be comparable, all three heuristics were implemented using the same basic algorithms and data structures.
+     </paragraph>
+     <paragraph>
+      We first evaluate the effectiveness of the instance decomposition and discuss the construction of the PDBs. Next, we compare the heuristics EMM, MPDB, and IPDB on the initial states and randomly generated states of the standard set of instances. We also investigate the impact of the standard tie breaking rules based on inertia, lower bound and fill order. Furthermore, we compare the performance of several Sokoban solvers using the new heuristics and the tie breaker to Rolling Stone with all admissible techniques. Finally, we test the performance of the Fast Downward domain-independent planner with PDBs in solving instances from the standard set.
+     </paragraph>
+     <paragraph>
+      All experiments were performed on a PC with an AMD Opteron CPU running at 2.39 GHz with 32 GB of RAM on the standard set of 90 instances. We use Blossom V to compute the matchings [27]. All experiments, if not otherwise stated, have been run with a limit of 20 million explored nodes, one hour of computation time and 32 GB of memory. In tables that report nodes, a prefix “&gt;” means that an optimal solution has not been found because the solvers reached the time limit. The memory limit of 32 GB was never reached in any run. Runs which reached the node limit of 20 M have an entry “&gt;”. The number of nodes does not include the nodes explored when constructing the PDB, but reported times include the construction time.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Instance decomposition and PDB construction
+      </section-title>
+      <paragraph>
+       Fig. 8 shows the results of the decomposition of the 90 instances from the standard set. For each instance the y-axis shows the percentage of squares in the maze zone of all non-dead squares. The x-axis plots the instances in order of decreasing percentages. The figure shows that all instances can be decomposed into goal and non-trivial maze zones (of size at least 3). Since the IPDB contains the exact distances from stones in the maze zone to the cut square we can expect our method to perform better for larger maze zones. This is the case for the standard instances: one-third has over 90% of the squares belonging to the maze zone and on average 67% of the squares belong to the maze zone. However, the effectiveness of the IPDB also depends on the characteristics of the instance. Some instances may have large goal zones, but the IPDB still can be effective if the “hard” part of the problem is in the maze zone, which is often the case in human-designed instances.
+      </paragraph>
+      <paragraph>
+       Table 2 shows the average and maximum time for constructing the PDB and the average and maximum number of entries. We have tested MPDB and IPDB with abstractions of size two and four, and with an abstraction of variable size {a mathematical formula}k′. The size {a mathematical formula}k′ depends on the instance, and is the largest value such that a PDB with abstractions of size {a mathematical formula}k′ can be constructed within the time and memory limits (one hour of computation time and 32 GB of memory).
+      </paragraph>
+      <paragraph>
+       The IPDB is built only in the maze zone, thus it can be built faster and has less entries than the MPDB. The IPDB-2 and MPDB-2 are always built in less than a second, and have less than {a mathematical formula}10,000 entries. The IPDB-4 uses never more than 3.1 M entries, and can be built in less than 200 seconds, while the IPDB-{a mathematical formula}k′ uses at most 85 M entries. An MPDB-4 uses up to 15.2 M entries and never takes more than 1300 seconds to build, and the MPDB-{a mathematical formula}k′ uses up to 64 M entries. The limit in constructing larger PDBs in the variable size case was always the time for constructing the PDB. For a variable size of the abstraction, MPDB results in an average of {a mathematical formula}k′=5.0 and IPDB of {a mathematical formula}k′=7.9. IPDB is able to build databases for larger abstractions because the maze zone is smaller.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Heuristics on initial states
+      </section-title>
+      <paragraph>
+       Table 3 compares the value of the heuristics, EMM, MPDB, and IPDB on the initial states of the instances from the standard set. Column “#” gives the number of the instance and column “UB” the best known upper bound according to the global Sokoban score file.{sup:1} For MPDB and IPDB we show the results for fixed abstractions of two and four stones (columns “2” and “4”) and of an abstraction of variable size (column “{a mathematical formula}k′”). The PDBs have been built as explained above. The best values found for each instance are shown in bold.
+      </paragraph>
+      <paragraph>
+       The table shows that EMM provides good results, MPDB provides weak heuristic values, and IPDB is able to significantly improve the values. MPDB-2 is always worse than EMM, MPDB-4 finds only one better result, and MPDB-{a mathematical formula}k′ improved EMM in nine instances. This shows that MPDB is not effective for Sokoban. Comparing with EMM, IPDB-2 improves the results of 31 instances, IPDB-4 of 58 instances, and IPDB-{a mathematical formula}k′ of 61 instances. Moreover, IPDB-{a mathematical formula}k′ provides the best results in 85 instances, and matches the upper bound value in 15 instances, compared to 8 instances for EMM.
+      </paragraph>
+      <paragraph>
+       The weakness of the lower bound of the MPDB has the same reason as the weakness of using a heuristic based on shortest distances of individual stones to goal squares compared to a minimum matching: the MPDB estimates the shortest distance to the nearest goals for each subset of stones, but does not require that the union of the selected goals over all subsets exactly covers the goal squares. Thus, usually multiple stones are assigned to the nearest goal squares, which leads to a weaker lower bound.
+      </paragraph>
+      <paragraph>
+       To estimate the behavior of the heuristics during the search we ran an experiment with {a mathematical formula}10,000 randomly generated states for each of the 90 instances. Each state was generated by placing the stones at random non-dead squares, and the man at a random free square. The number of stones was the same as that of the original instance. Table 4 shows the mean heuristic value h of EMM, MPDB, and IPDB, and the mean number of detected deadlocks (“DL”) over all 90 instances. The mean values are only over the states where none of the heuristic functions detected a deadlock to exclude artificially high heuristic values.
+      </paragraph>
+      <paragraph>
+       As in the standard initial states, EMM presents good heuristic values, while those of the MPDB are much lower, and IPDB is able to improve slightly over the EMM lower bound. We can also see by the average value of IPDB-{a mathematical formula}k′ that abstractions of more than four stones yield only marginal improvements. The difference between the methods in the capacity of detecting deadlocks is much more significant than the difference of the heuristic values. EMM detects in average over all instances a deadlock in 15% of the randomly generated states, MPDB in more than 80%. IPDBs detect a deadlock in about {a mathematical formula}65% of the states.
+      </paragraph>
+      <paragraph>
+       These differences come directly from the differences in the methods. The EMM detects deadlocks caused by sets of stones for which there is an insufficient number of goal squares. These deadlocks are also detected by the IPDB, since it applies EMM in the goal zone, and all stones must pass over the cut square. Thus, the IPDB detects never less deadlocks than EMM, and often more (see the examples in Fig. 6). In contrast, the MPDB is applied to the whole instance, and thus usually detects more deadlocks than the IPDB, since it also considers interactions of the stones inside the goal zone (an example would be any of the patterns in Figs. 6b–6d occurring in the goal zone). However, since the MPDB does not enforce a one-to-one mapping of stones to goals, it cannot detect all deadlocks detected by EMM and IPDB.
+      </paragraph>
+      <paragraph>
+       The MPDB-{a mathematical formula}k′ detects on average 89% of the randomly generated states as deadlocks. This percentage of deadlocks seems surprisingly high, but can be explained by the fact that the instances of Sokoban usually are built such that most of the stone placements generate deadlocks. Therefore, during the search, a promising sequence of movements can bring a group of stones near to the goals, but produce a deadlock in another group of stones. This reinforces the importance of deadlock detection, because if a heuristic function fails to detect deadlocks early, a large search effort can be spent in states that never lead to solutions. In instance #48, for example, 99% of the states are classified as deadlocks by IPDB-4 and MPDB-4, while EMM detects no deadlocks. Similar cases occur in several instances. These results show that PDBs have a significant capacity of detecting deadlocks.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Tie breaking rules
+      </section-title>
+      <paragraph>
+       This section presents results for three tie breaking rules: inertia (IN), lower bound (LB), and fill order (FO). We also test the six cases where one rule serves as a secondary tie breaker, and another six cases where the remaining rule serves as a third-level tie breaker, since these configurations can result in a different number of explored nodes and solved instances. All tests use the IPDB-2 as heuristic function.
+      </paragraph>
+      <paragraph>
+       The results are reported in Table 5. The first column gives the tie breaker used. The name of the first-level rule is followed by the name of the second- and third-level rule, if any. Any remaining ties are broken by giving preference to the earliest generated node (generation order, GO). The second column gives the total number of explored nodes. In this sum unsolved instances enter with 20 million nodes.
+      </paragraph>
+      <paragraph>
+       In total, 17 out of 90 instances were solved by at least one of the 16 tie breakers. Instances 1, 17 and 38 were solved by all of them. Rules IN and GO solve three instances, but IN explores slightly less nodes. Rule LB solves 12 instances and explores significantly fewer nodes. Finally, rule FO solves 15 instances exploring slightly more than half of the number of nodes explored by LB. This is the best result for any simple tie breaker.
+      </paragraph>
+      <paragraph>
+       Among the rules with a second-level tie breaker the two combinations of FO and IN obtain the best results. Rules that use LB in general present the worst results. The best rule is INFO. This configuration improves the results obtained using only the rule FO. Using a third-level tie breaker does not increase the number of solved instances or decrease the number of explored nodes.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Comparison of Sokoban solvers
+      </section-title>
+      <paragraph>
+       In this section, we compare the state-of-the-art Rolling Stone solver with all admissible techniques ({a mathematical formula}RS⁎) to solvers using the heuristic functions IPDB and MPDB. We first compare all heuristic functions using the INLB tie breaking rule of Rolling Stone. Next, we compare the heuristic functions using the tie breaking rule INFO. We also investigate to what extent PDBs with an abstraction of variable size can solve more instances. Finally, we describe experiments with the Fast Downward planner using PDBs in Sokoban. We do not report the solution length of optimally solved instances, since they always were equal to the best upper bounds shown in Table 3.
+      </paragraph>
+      <paragraph>
+       Our solvers use an {a mathematical formula}A⁎ search, since the memory consumption of the PDBs is low, and we can afford to store all generated nodes. The {a mathematical formula}A⁎ search avoids exploring duplicated nodes, which makes the use of transposition tables unnecessary. To provide a fair comparison with {a mathematical formula}RS⁎, we also report the results of an {a mathematical formula}A⁎ search using the same heuristic function EMM as {a mathematical formula}RS⁎. This solver is called EMM in the tables below.
+      </paragraph>
+      <paragraph>
+       Table 6 shows the results for all instances which could be solved by one of the solvers breaking ties by INLB. It reports for each solver the number of explored nodes and the time to find the optimal solution. The number of explored nodes for {a mathematical formula}RS⁎ are from Junghanns and Schaeffer [9]. To the best of our knowledge, no times have been published for {a mathematical formula}RS⁎. Both MPDB and IPDB are built from an abstraction with two stones.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}RS⁎ is able to solve 6 instances. The {a mathematical formula}A⁎ search with the same heuristic function and tie breaking rule solves ten instances, and explores about a factor 5 fewer nodes. This shows that storing all generated nodes is more effective than transposition and deadlock tables, and the tunnel macros used by {a mathematical formula}RS⁎. This is expected, since {a mathematical formula}RS⁎ was designed for reduced memory usage. The results for the MPDB show that the direct application of PDBs to Sokoban is ineffective. It solves only three instances and in general uses more computational time and explores more nodes than the other techniques. The IPDB solves eleven instances, explores more than a factor two less nodes than EMM, and is about three times faster. Furthermore, the more complex computation of the lower bound does not lead to a higher cost per node, and IPDB processes more nodes per second than EMM. Taken together, the IPDB is more than able to amortize the cost of constructing the PDB. Although MPDB detects much more deadlocks, its weaker lower bound leads to a poor performance. The IPDB seems to be a good compromise between quality of lower bound and deadlock detection.
+      </paragraph>
+      <paragraph>
+       We now turn to the analysis of the solvers when breaking ties by rule INFO. Table 7 shows the number of explored nodes and the solving time for all instances that could be solved by at least one of the solvers ({a mathematical formula}RS⁎, EMM, MPDB, IPDB). MPDB and IPDB were tested with abstractions of two and four stones. The test was limited to abstractions of at most four stones, since for some instances a PDB with five stones could not be built in an hour.
+      </paragraph>
+      <paragraph>
+       The cost for computing tie breakers INLB and INFO is similar, and therefore all solvers process about the same number of nodes per second. The performance of the MPDB does not improve: MPDB-2 explores about the same number of nodes as for tie breaking rule INLB, and MPDB-4 explores less nodes, but is more than two times slower than MPDB-2. Both solve only three instances. EMM and IPDB perform better when breaking ties by INFO. EMM solves three more instances, and explores significantly less nodes. IPDB-2 solves 15 instances, in considerably less computational time than EMM. IPDB-4 solves 20 instances. It reduces the number of explored nodes, and is about a factor of four faster than the other solvers. Computing the heuristics at each node takes much more time for PDBs with more than two stones. In all of the unsolved instances, both PDBs could not explore 20 million nodes in one hour, which can be observed in the results for MPDB-4. For the IBPB-4, however, this cost can be compensated by a much lower number of processed nodes.
+      </paragraph>
+      <paragraph>
+       To investigate the potential of using PDBs with larger abstractions, we determined for all instances the smallest {a mathematical formula}k′ such that the optimal solution can be found within our standard resource limits (one hour, 20M nodes). If the construction of the PDB needs more than one hour or more than 32 GB, the instance is considered unsolvable. For the MPDB the results from Table 7 do not change. No other instance could be solved with larger abstractions. Table 7 shows that the IPDB-4 solves five instances more than IPDB-2 (namely 5, 9, 65, 79, and 82). We found that two of them, instance 79 and 82, can be solved already with an abstraction of size 3, and one more instance (62) can be solved with an abstraction of size 5. So, larger abstraction sizes are not able to compensate the weak lower bound of the MPDB. The improvement in the IPDB is also rather limited, and it seems that better lower bounds and more detected deadlocks that come from interactions of five or more stones are rare and cannot amortize the larger cost for building the PDB.
+      </paragraph>
+      <paragraph>
+       Now we turn our attention to experiments that explore the performance of a state-of-the-art domain-independent planner using PDBs. We chose the Fast Downward planner, because it contains one of the most efficient implementation of pattern databases for domain-independent planning. In this experiment we use a time limit of four hours, and no limit on the number of nodes, since Fast Downward processes much more nodes per second. The planner was run with an {a mathematical formula}A⁎ algorithm and the PDBs from Haslum et al. [20] as implemented by Sievers et al. [21]. All other parameters have been left at their default values, which are commonly accepted as a good choice [28]. For the experiment we used the domain description from the International Planning Competition that comes with Fast Downward.
+      </paragraph>
+      <paragraph>
+       The planner could not solve any instance within the resource limits used. For all instances, either the construction of the PDB did not terminate, or the memory did exhaust before finding the optimal solution. This behavior has probably two reasons. First, the movement of the man is specified as an action of cost 0, which leads to a faster processing of the nodes, but also considerable more nodes must be explored. For example, in instance #1 Fast Downward explores more than 200 million nodes and reaches an f-value of 94, three below the optimal solution length. In contrast, the most expensive operation in our solver is the normalization of the position of the man, but this greatly reduces the number of unique states. Second, based on heuristic value on initial states, the lower bound is probably weak, for the same reason that the MPDB is weak in Sokoban. For example, the heuristic values of Fast Downward for the initial states of instances #1, #2, and #3 are 88, 100, and 105, respectively, compared to 97, 131, and 134 obtained by the IPDB.
+      </paragraph>
+      <paragraph>
+       Our last experiment compares the IPDB and the Fast Downward planner on instances of medium difficulty, with the same configuration as in the previous tests, and a time limit of {a mathematical formula}30m. The Microban test set, which Haslum et al. [20] used in their experiments turned out to be too simple: all solvers were able to solve at least 150 of the 155 instances. To find instances of medium difficulty, we have screened several other test sets and chosen Boxxle1. We have further removed 18 instances from the set which Fast Downward could solve by blind search in 5 min to avoid floor effects, leaving us with 90 test instances. In these instances in average {a mathematical formula}65% of the non-dead non-goal squares belong to the maze zone, similar to the xSokoban test set. The IPDB could solve 35 instances, exploring in average {a mathematical formula}1.2M nodes in {a mathematical formula}65s, and Fast Downward 14, exploring in average {a mathematical formula}8.8M nodes in {a mathematical formula}22.8s. IPDB-2 solves the latter 14 instances exploring in average 6911 nodes in {a mathematical formula}0.2s. This shows that IPBD-2 solves the puzzles much faster than Fast Downward, and explores less nodes. On the instances which could not be solved the IPDB always failed due to time constraints, while Fast Downward failed due to memory constraints.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Generalization of IPDBs
+     </section-title>
+     <paragraph>
+      In this section we discuss how IPDBs could be generalized to other problems. We give concrete examples of problems where IPDBs may lead to better heuristics. We also highlight some similarities between landmarks [29] and cut squares, and discuss how our approach could be an example of an abstraction based heuristic function enhanced by landmarks.
+     </paragraph>
+     <paragraph>
+      We have shown that an instance decomposition can improve the effectiveness of PDBs in Sokoban. Thus an instance decomposition is very likely to lead to improved heuristic functions in similar moving-block puzzles. These include all variants of Sokoban that have been studied in the literature, which allow to push several or even an unlimited number of stones, add the capacity of pulling stones, or require push and pull moves to slide until hitting the next obstacle [30], [31], [32]. Another example of a related puzzle where our idea may be applied is Atomix, where the player has to assemble a molecule in a maze grid. Atomix has no man and allows only slide moves, but like Sokoban has multiple goal states, since the assembly site of the molecule is not fixed.
+     </paragraph>
+     <paragraph>
+      More generally to apply IPDBs to a concrete problem, three properties are required. The problem must have a set of objects, a set of locations, and the objective is to move the objects to goal locations, in such a way that the mapping of objects to goal locations is not fixed beforehand. The effectiveness of IPDBs depends on the existence of a cut location that the objects must pass over to reach the goal locations. Such a cut location divides the locations into two sets: those reached before the cut, and those reached after the cut. In the first set, a PDB can be applied without suffering from the multiple abstract goal states. In the second set, any heuristic can be used. The admissibility of the resulting heuristic function is guaranteed by a cost partition [33], [34]: each heuristic has actions with zero cost in the opposite set of locations.
+     </paragraph>
+     <paragraph>
+      Several problems from the International Planning Competition (IPC) which are transportation problems satisfy these properties. Examples include the Storage and Tidybot domains. Both have objects with several goal locations and a topology which likely permits to find cut locations. For more realistic variants of some domains this also holds. An example is the Airport domain [35] from the IPC-4, which models an airport ground traffic planning. In this domain, airplanes must be moved from their original locations to a goal locations (runway or parking). In the definition of the domain used in the IPC, each airplane has a specific goal position. However, an airplane could as well go to one among several parking positions, instead of a specific one. The same applies to runways. Thus, we could change the objective to only define as the goal state for airplanes that they would be airborne or parked. In this setting, the planner can select the optimal park or runway locations. And thus, our approach could be used to enhance the effectiveness of PDBs.
+     </paragraph>
+     <paragraph>
+      It has been recognized that combining critical path methods, abstractions, and landmarks, three of the most successful techniques for obtaining good heuristic functions, can lead to better heuristics [36]. In particular, the combination of landmarks and abstractions has been pursued in lines of research like cartesian [37], [38] or implicit [39], [36] abstractions. Domshlak et al. [36] have shown that abstractions are highly sensitive to the goal specification, and that making landmarks explicitly available (by what they call an L-reformulation), the quality of an abstraction-based heuristic can be improved.
+     </paragraph>
+     <paragraph>
+      The effectiveness of our approach can be understood in the context of landmarks and abstractions. The cut squares used in our decomposition are related to landmarks [29], which are implicit sub-goals that must be accomplished in every optimal plan. Since every box b in the maze zone must pass over the cut square c, {a mathematical formula}at(b,c) is a fact landmark, and the set of pushes which achieve {a mathematical formula}at(b,c) form a (disjunctive) action landmark in the Sokoban domain. We use the cost partition mentioned above to obtain the subproblem of achieving this specific set of landmarks, and another subproblem of reaching the goal state from a state where all landmarks have been achieved. Landmarks usually make the heuristic path-dependent, since a landmark that has been achieved may not be true in a later state. We avoid this by relaxing the first subproblem in such a way that there exists an optimal solution where all landmarks are true in the corresponding goal state. Finally a PDB abstraction is used to find a better heuristic function for the first subproblem. It seems possible that this idea could be generalized to be applied in a domain-independent way.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      We have shown that PDBs can be applied successfully to find optimal solutions to Sokoban and improve the current state of the art. This result is not obvious, since a PDB must be build for each instance, and Sokoban has k! goal states, which lead to weak lower bounds. Indeed, MPDBs, a straightforward application of PDBs to Sokoban, are ineffective.
+     </paragraph>
+     <paragraph>
+      To be able to effectively apply PDBs to Sokoban we partition the search space into a maze and a goal zone, to obtain an explicit intermediate goal state. In this way, we can apply PDBs to compute a lower bound on the distance to the intermediate goal state, and use any existing lower bound for the distance from the intermediate goal state to some final goal state. We also propose a new domain-specific tie breaking rule called fill order.
+     </paragraph>
+     <paragraph>
+      We have shown that the lower bound can be effectively computed, dominates the state-of-the-art lower bound in 62 of the 90 instances of the standard set, and identifies four times more deadlocks in tests over random states. Our experiments also show that the fill order is an effective tie breaker. Applied together in an {a mathematical formula}A⁎ search, these techniques explore less nodes, and are an order of magnitude faster than other approaches. In one hour our solver finds the optimal solutions of 20 instances, compared to 6 for the state-of-the-art solver {a mathematical formula}RS⁎, and 10 for EMM.
+     </paragraph>
+     <paragraph>
+      Although MPDBs result in weak lower bounds, they detect more deadlocks than the other approaches. It remains to be studied if MPDBs can be applied effectively in Sokoban. It is further possible to use instance decompositions with several, smaller maze zones. PDBs for smaller maze zones have less entries which allow for larger abstractions, so we capture more interactions of stones within maze zones, but loose the interactions between maze zones. The net effect of this trade-off remains to be studied. It would be also interesting to apply PDBs and better tie breaking rules in non-admissible solvers.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

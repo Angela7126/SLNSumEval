@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Forward bounding on pseudo-trees for DCOPs and ADCOPs.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The distributed constraint optimization problem is a well known framework for representing and solving multi-agent coordination problems. A distributed constraints optimization problem (DCOP) consists of a set of agents that need to take on a value. Agents are constrained with value assignments of other agents. The goal of the agents is to find a full assignment, with a minimal sum of costs. Complete algorithms for solving DCOPs can be divided into two main categories: algorithms that use a pseudo tree (NCBB [1], the BnB-ADOPT family [2], [3], [4], [5]), and algorithms that do not use one (AFB [6], ConcFB [7]). A pseudo tree is a DFS tree of the constraints graph, where each agent is constrained with an ancestor or a descendant, but not with an agent from a different sub-tree. A pseudo tree thus divides the problem into separate sub-problems, which can be solved simultaneously, independent of one another. Such a division improves performance considerably. On the other hand, finding the best pseudo-tree (e.g., of minimal depth) is NP-hard. In addition, for densely constrained problems a good tree may not exist. Even when a good DFS tree is found, it may still have parts that consist of long chains (which do not divide the problem into sub-problems).
+     </paragraph>
+     <paragraph>
+      Algorithms that use a pseudo tree are designed for “good” trees, and tend to perform poorly when the problems are highly constrained. The group of algorithms that do not use a pseudo-tree are not effected by the existence of a “good” tree. Such algorithms may outperform pseudo tree based algorithms on highly constrained problems (cf. [6], [7]). On the other hand, such algorithms fail to take advantage of the possibility of dividing the problem into smaller sub-problems, and solve them simultaneously and independently. Another disadvantage of non-tree algorithms compared to tree-based algorithms, is that they require communication links between all agents, and not only among constrained agents.
+     </paragraph>
+     <paragraph>
+      An algorithm that can combine the advantages of both types of algorithms has the potential to be more efficient. In section 3 we present the first contribution of this study, the Pseudo Tree Forward Bound (PT-FB) algorithm, which combines the two types of DCOP algorithms by implementing a variation of Forward Bounding on a pseudo tree. The algorithm has 3 major properties:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       When possible, it divides the problem into sub-problems based on a pseudo-tree, which results in independent asynchronous search on the different sub-problems.
+      </list-item>
+      <list-item label="2.">
+       On parts of the tree which are essentially a chain, it relies on forward bounding to produce satisfactory results even when the pseudo tree is less than ideal.
+      </list-item>
+      <list-item label="3.">
+       It enforces a strict bound update, which increases the pruning of the problem.
+      </list-item>
+     </list>
+     <paragraph>
+      An algorithm that combines the above two approaches into search for distributed constraints satisfaction problems (DCSPs) was proposed in [8]. It has a very different structure from PT-FB, and it is based on a variation of AFC[9] with no-goods, which makes it inapplicable for DCOP search.
+     </paragraph>
+     <paragraph>
+      The proposed algorithm, PT-FB, enables a compromise between the communication link requirements in tree-based and in non-tree-based algorithms, since agents are unaware of agents in a different sub-tree. A correctness proof for PT-FB is sketched in section 4, followed by an extensive experimental evaluation of the PT-FB algorithm comparing its performance to state of the art DCOP algorithms in Section 5.
+     </paragraph>
+     <paragraph>
+      Having established the performance evaluation of the proposed algorithm on DCOPs, one can move on to address Asymmetric DCOPs (ADCOPs [10]). In an ADCOP every constraint has a different cost for each of the constrained agents. The assumption in the ADCOP framework is that although each agent has a different cost, they remain completely cooperative and search for a solution that minimizes the sum of costs of all agents.
+     </paragraph>
+     <paragraph>
+      In section 6 the second contribution of the present study is presented, a modified version of PT-FB which solves asymmetric DCOPs. This version of the PT-FB algorithm has the additional novelty in that no former search algorithm for ADCOPs has used a pseudo tree at all, in contrast to standard DCOP search algorithms where pseudo-trees (with no forward bounding) are common [2].
+     </paragraph>
+     <paragraph>
+      The modified algorithm (AsymPT-FB) uses the single phase approach (cf. [10]), which means that for every assignment the cost of both sides of each constraint is added before proceeding to the next agent. The method of achieving this is based on adding back-bounding to the original algorithm every time it performs forward-bounding. This simple modification produces a complete ADCOP algorithm that is empirically shown to greatly outperform the two algorithms presented in [10]. In terms of constraint privacy conservation the new algorithm is shown to be competitive with the algorithms in [10]. The experimental evaluation of AsymPT-FB, comparing it to other ADCOP algorithms, is presented in section 7.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Distributed constraints optimization problems
+      </section-title>
+      <paragraph>
+       A distributed constraint optimization problem (DCOP) is composed of a set of agents {a mathematical formula}A1,…,An, each holding a set of constrained variables. Each variable {a mathematical formula}Xi has a domain {a mathematical formula}Di – a set of possible values. Constraints (or relations) exist between variables. Each constraint involves some variables (possibly belonging to different agents) and defines a non-negative cost for every possible value combination of these variables. A binary constraint is a constraint involving only two variables. An assignment is a pair including a variable, and a value from that variable's domain. A partial assignment (PA) is a set of assignments, in which each variable appears at most once. The cost of a partial assignment is computed using all constraints that involve only variables that appear in the partial assignment. Each such constraint defines some cost for the value assignments detailed in the partial assignment. These costs are calculated, and the sum is noted as the cost of the partial assignment. A full assignment is a partial assignment that includes all the variables. A solution to the DCOP is a full assignment of minimal cost.
+      </paragraph>
+      <paragraph>
+       Following common practice (cf. [2], [11]) each agent is assumed to have a single variable and the terms “agent” and “variable” are sometimes used interchangeably. All constraints are assumed to be binary and the delay in delivering a message is finite. These assumptions are commonly used in DCOP algorithms [12], [13].
+      </paragraph>
+      <paragraph>
+       Previous DCOP algorithms can be divided into two main categories: forward bounding algorithms and pseudo-tree algorithms. In a forward bounding algorithm (AFB[6], ConcFB[7], etc.), an agent requests bound estimates from unassigned agents, and uses that information to prune parts of the search tree. In a pseudo-tree algorithm (ADOPT[12], BnB-ADOPT[2], BnB-ADOPT+ [3], NCBB[1], etc.), a DFS tree is constructed from the constraints graph, which allows the problem to be divided into several smaller sub-problems that can be searched concurrently.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Asymmetric DCOPs
+      </section-title>
+      <paragraph>
+       Asymmetric DCOPs generalize standard DCOPs in the following way: instead of assuming equal costs for constrained agents, ADCOP constraints explicitly define the cost of each participant. That is, assignments of domain values of agents to any constraint are mapped to a tuple of costs, one for each constrained agent.
+      </paragraph>
+      <paragraph>
+       More formally, an ADCOP is defined by the following tuple {a mathematical formula}&lt;A,X,D,R&gt;, where {a mathematical formula}A is a finite set of agents {a mathematical formula}A1,A2,...,An. {a mathematical formula}X is a finite set of variables {a mathematical formula}X1, {a mathematical formula}X2,...,Xm. Each variable is held by a single agent (an agent may hold more than one variable). {a mathematical formula}D is a set of domains {a mathematical formula}D1, {a mathematical formula}D2,...,Dm. Each domain {a mathematical formula}Di contains a finite set of values {a mathematical formula}vi0,vi1,...,vid which can be assigned to variable {a mathematical formula}Xi. Each constraint {a mathematical formula}C∈R of an asymmetric DCOP defines a set of non-negative costs for every possible value combination of the set of constrained variables and takes the following form: {a mathematical formula}C:Di1×Di2×⋯Dik→R+k. Put in words, a constraint C of k agents is a tuple of k real numbers, each denoting the cost of the constraint to one of the constrained agents. An assignment is a pair of a variable and a value from that variable's domain. A partial assignment (PA) is a set of assignments, in which each variable appears at most once. A solution of an ADCOP, as defined in [10], is a full assignment of aggregated minimal cost.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Forward-bounding on a pseudo-tree
+     </section-title>
+     <paragraph>
+      The proposed algorithm – Pseudo-Tree Forward Bounding (PT-FB) – is presented in the subsections below. Subsection 3.1 describes the main concepts and structure of PT-FB. Subsection 3.2 presents several algorithmic tools that extend the simplified version into the complete description of the algorithm. Subsection 3.3 contains the complete pseudo code of PT-FB, together with additional details.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       PT-FB – main concepts
+      </section-title>
+      <paragraph>
+       The algorithm Pseudo-tree Forward-bounding (PT-FB) starts by distributively constructing a pseudo tree.
+      </paragraph>
+      <paragraph>
+       Agent {a mathematical formula}Aj is called an ancestor of agent {a mathematical formula}Ai in the tree if {a mathematical formula}Aj is the parent of agent {a mathematical formula}Ai, or if {a mathematical formula}Aj is recursively the parent of an ancestor of agent {a mathematical formula}Ai. If agent {a mathematical formula}Aj is an ancestor of agent {a mathematical formula}Ai, then agent {a mathematical formula}Ai is called a descendant of agent {a mathematical formula}Aj. The pseudo-children of {a mathematical formula}Ai are defined as in [12], to be all descendants of {a mathematical formula}Ai which have a constraint with agent {a mathematical formula}Ai (denoted in the present study by {a mathematical formula}PC(Ai)). For example, in the pseudo-tree in Fig. 1, {a mathematical formula}PC(Aa)={Ab,Ac,Ad,Ag} and {a mathematical formula}PC(Ac)={Ae,Ag} and the pseudo children of all other agents are only their actual children (denoted {a mathematical formula}C(Ai)). The Earlier Constrained ancestor, {a mathematical formula}ECAi(Aj), is the latest ancestor of {a mathematical formula}Aj which is constrained with agent {a mathematical formula}Ai. For example, in Fig. 1 the {a mathematical formula}ECAg(Ae) is agent {a mathematical formula}Ac since it is the latest ancestor of agent {a mathematical formula}Ae which is constrained with {a mathematical formula}Ag. If agent {a mathematical formula}Ac was not constrained with {a mathematical formula}Ag then the {a mathematical formula}ECAg(Ae) would have been agent {a mathematical formula}Aa. One can define the {a mathematical formula}Latest_Divider(Ai) to be the latest ancestor of agent {a mathematical formula}Ai that has more than a single child. In other words, the {a mathematical formula}Latest_Divider(Ai) is the closest ancestor of {a mathematical formula}Ai, who divided the problem into sub-problems. All agents who are ancestors of {a mathematical formula}Aiand descendants of {a mathematical formula}Latest_Divider(Ai) are part of a chain in the pseudo-tree containing agent {a mathematical formula}Ai.
+      </paragraph>
+      <paragraph>
+       Agents on the distributed DFS tree compute a few necessary parameters on the fly. First, each agent running the standard DFS tree construction algorithm adds its depth to the standard “child” message it sends to its constrained children. The root agent that initiates the algorithm uses a depth of 0. This enables each agent to compute its depth. Next, agents need to know which of their children is an ancestor to a “pseudo child”. This is again easily computed during the run of the standard distributed DFS tree construction algorithm. Agents send “child” messages to all their immediate children and when a “child” message is received from an agent that is different than the direct child, before the “father” message due from that direct child, it produces the needed information. The “pseudo child” and the direct child that is its ancestor (e.g., in who's sub tree the “pseudo child” resides). Finally, the “latest divider” is computed by a single pass over the constructed tree, starting from the root and using a “branch-members” message. Agents with a single child just add themselves to the list of the ancestor on the “branch-members” message from which they received the message. Agents with several children send their children a new “branch-members” message containing only themselves.
+      </paragraph>
+      <paragraph>
+       The PT-FB algorithm uses 6 types of messages:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        CPA – a message containing a partial assignment (Current Partial Assignment), sent from an agent to its children.
+       </list-item>
+       <list-item label="2.">
+        Backtrack – sent from an agent to its parent when the agent has exhausted its search space.
+       </list-item>
+       <list-item label="3.">
+        LB_Request – sent from an agent to its descendants, requesting a lower bound estimate for a given partial assignment.
+       </list-item>
+       <list-item label="4.">
+        LB_Report – a lower bound estimate, sent as a response to a LB_Request.
+       </list-item>
+       <list-item label="5.">
+        UB – a message sent from an agent to specific ancestors, containing the cost of a solution found to the agent's sub-problem (e.g., the Upper Bound).
+       </list-item>
+       <list-item label="6.">
+        Reduce_UB – sent from an agent to its child, reducing the upper bound of the child in order to improve pruning.
+       </list-item>
+      </list>
+      <paragraph>
+       After constructing the pseudo tree, all agents assign values sequentially, starting with the root of the tree down to the leaves. The assignments are performed only by agents holding a CPA, which is a message received from the agent's parent in the pseudo tree. A CPA contains the Current Partial Assignment of all ancestors of the current agent. In addition, a CPA message contains an Upper Bound (UB) on the solution cost, and the {a mathematical formula}CPA_Cost, which is the accumulated cost of constraints between all assignments it contains. When an agent {a mathematical formula}Ai extends the CPA with an assignment to its variable (the variable of agent {a mathematical formula}Ai is denoted {a mathematical formula}Xi), it sends a LB_Request message, containing a copy of the CPA, to all of its descendants in the pseudo tree. An agent {a mathematical formula}Aj receiving a LB_Request calculates a lower bound on the added cost caused by extending the CPA with an assignment to its variable. It computes the value of {a mathematical formula}minvj∈Dj⁡∑Ak∈CPACost(vk,vj), where {a mathematical formula}Dj is the domain of {a mathematical formula}Xj, and {a mathematical formula}vk is the value assignment of {a mathematical formula}Xk in the received CPA. This lower bound is sent back in a LB_Report message. The agent {a mathematical formula}Ai which holds the original CPA can now check whether the sum of all of the reported costs added to the CPA cost exceeds the known UB. If so, it will try to assign a different value to its variable, or send a Backtrack message to its parent if no value assignment is possible. If the sum of the LB_Report message and the {a mathematical formula}CPA_Cost does not exceed the upper bound (UB), the CPA is sent forward to the agent's children on the pseudo-tree.
+      </paragraph>
+      <paragraph>
+       An agent sends forward a CPA to its children on the pseudo-tree in different ways, according to the number of children it has. If the agent has a single child, then the CPA sent to its child is clear. In this situation, the agent sends to its child a CPA with the UB currently known to it. The cost on this CPA is equal to the cost that the sending agent received from its parent, plus the added cost of assigning a value to its variable. In the case of a single child, the assigning agent waits for the response to its LB_Request before sending its CPA forward. If, on the other hand, the agent has more than one child, it effectively divides the problem into separate sub-problems, one for each of its children on the pseudo-tree. In order to do so, it asynchronously sends them a CPA with {a mathematical formula}cost=0, and an upper bound that is computed separately for each child, as follows{a mathematical formula} where {a mathematical formula}Ai is the sender and {a mathematical formula}Aj is the child. {a mathematical formula}Sub_Tree_LB(Ak,vi) is the currently best known lower bound on the cost of the sub tree rooted at each child {a mathematical formula}Ak ({a mathematical formula}≠Aj), given the partial assignment {a mathematical formula}CPA∪{vi}. The best known {a mathematical formula}Sub_Tree_LB(Ak,vi) starts as the sum of all LB_Reports received from members of that sub tree. When that sub tree finishes its search for a specific assignment {a mathematical formula}vi of agent {a mathematical formula}Ai, the value of {a mathematical formula}Sub_Tree_LB(Ak,vi) for that assignment will be changed to the cost of the best solution of that sub tree. The next subsections describe the method for obtaining a value for {a mathematical formula}Sub_Tree_LB(Ak,vi) before all LB_Reports have been received. The new values of {a mathematical formula}cost and UB enable agents in different sub trees to solve their sub problems independently. Each sub problem is solved independently and concurrently while agent {a mathematical formula}Ai waits for responses to its requests for lower-bounds to arrive before sending its CPA forward.
+      </paragraph>
+      <paragraph>
+       Fig. 1, provides a simple example in which each agent has two possible values, and the constraints involving agent {a mathematical formula}Aa are shown. Assume that agent {a mathematical formula}Aa knows of an upper bound {a mathematical formula}UB=10, and is attempting to assign the value {a mathematical formula}va=x from its domain. Since the assignment {a mathematical formula}va=x has a unary constraint cost of 1 the current CPA has {a mathematical formula}CPA_Cost=1 (note that unary constraints are only used in the example. The rest of the chapter assumes no unary constraints). The agent sends LB_Request with that assignment to all of its descendants (in this example it sends naively to all of the agents, in the following subsections savings of messages will be discussed).
+      </paragraph>
+      <paragraph>
+       When agent {a mathematical formula}Ab receives the LB_Request with {a mathematical formula}va=x it sees that its own added cost to that assignment can be no less than 2 (if it will assign {a mathematical formula}vb=x), so it send LB_Report back to {a mathematical formula}Aa with that number. When agent {a mathematical formula}Aa receives LB_Reports from agents {a mathematical formula}Ab, {a mathematical formula}Ad and {a mathematical formula}Af, it will update {a mathematical formula}Sub_Tree_LB(Ab,x) to be the sum of these messages (4 in our example).
+      </paragraph>
+      <paragraph>
+       Since all of the LB_Reports from {a mathematical formula}Ab's sub tree have arrived, {a mathematical formula}Aa sends it a CPA with its assignment. The CPA sent by {a mathematical formula}Aa to {a mathematical formula}Ab will have {a mathematical formula}cost=0 because {a mathematical formula}Aa has more than one child, and it is splitting the problem into sub-problems. {a mathematical formula}Aa has no information at the moment about {a mathematical formula}Sub_Tree_LB(Ac,x) so it is assumed to be 0, which means that we can see from equation (1) that in the CPA message {a mathematical formula}UBAb=9. Please note that the CPA is sent to {a mathematical formula}Abbefore the reports from {a mathematical formula}Ac have arrived. This deliberately demonstrates the concurrency of processing. When the rest of the LB_Reports arrive, a CPA message is sent to agent {a mathematical formula}Ac with the same {a mathematical formula}va=x and {a mathematical formula}cost, but from equation (1) we can see that the message's UB is tighter: {a mathematical formula}UBAc=10−1−4=5. Any solution for the sub-problem rooted at agent {a mathematical formula}Ac with a higher cost is irrelevant, because when added to the minimal cost of the sub-problem rooted at agent {a mathematical formula}Ab, (plus the previous {a mathematical formula}CPA_Cost) it will exceed the total problem's UB.
+      </paragraph>
+      <paragraph>
+       Upper Bounds are updated both up the tree and down the tree. Let us examine the different methods of UB propagation between agents, according to their number of children. When an agent has exactly one child, its upper bound UB is the same as that of its child's UB, which means that all agents within a chain in the pseudo tree share the same UB. As defined above, the {a mathematical formula}Latest_Divider(Ai) is the latest ancestor of agent {a mathematical formula}Ai that has more than a single child, the {a mathematical formula}Latest_Divider(Ai) is the closest ancestor of {a mathematical formula}Ai, who divided the problem into sub-problems. For example, in Fig. 1{a mathematical formula}Aa is the {a mathematical formula}Latest_Divider of all agents except {a mathematical formula}Ag and {a mathematical formula}Ah, and for them the {a mathematical formula}Latest_Divider is agent {a mathematical formula}Ae. In the example we have two chains, one consists of {a mathematical formula}{Ab,Ad,Af} and the other consists of {a mathematical formula}{Ac,Ae}.
+      </paragraph>
+      <paragraph>
+       When a leaf agent extends a CPA with an assignment to its variable, in effect it finds a new UB. That UB is relevant to all agents in its chain. The agent sends UB messages up to all members of its chain, up to the {a mathematical formula}Latest_Divider(Ai) (inclusive). Agents in {a mathematical formula}Ai's chain will simply update their UB, except for the {a mathematical formula}Latest_Divider(Ai), who needs to sum the UB values received from each one of its children. The {a mathematical formula}Latest_Divider(Ai) will then send its new UB to all members of its own chain, up to its own {a mathematical formula}Latest_Divider. This process is carried out until the root is able to compute the UB of the entire problem.
+      </paragraph>
+      <paragraph>
+       Each agent holds two variables for holding the value of the current upper bound: {a mathematical formula}Received_UB, which is the upper bound received from the agent's parent, and UB which is the minimum between {a mathematical formula}Received_UB and the upper bound computation from data received from its descendants as described above. When an agent with more than one child receives a Backtrack message from one of its children, it first updates the {a mathematical formula}Sub_Tree_LB of that child to be the latest UB received from that sub tree. This holds because the latest UB received from a sub-tree is the best solution found, and since the child has backtracked, no better solution exists.
+      </paragraph>
+      <paragraph>
+       This change affects the UB of its other children, according to equation (1). The agent then sends Reduce_UB messages to its other children, with the difference between the new computed {a mathematical formula}UBAj of its son agent {a mathematical formula}Aj, and the latest {a mathematical formula}UBAj sent to {a mathematical formula}Aj. An agent receiving a Reduce_UB message updates its {a mathematical formula}Received_UB and checks if it is lower than its current UB. If it is, it updates its UB and sends a Reduce_UB messages to its own children. This tight two way bound update greatly improves the pruning of the search tree.
+      </paragraph>
+      <paragraph>
+       Finally, when an agent receives a Backtrack message from one of its children, it does not wait for similar messages from its other children. Instead, it sends to the backtracked child a CPA message with the next assignment to its variable. This means that agents do not have to wait until other sub-trees finish their computations, which increases concurrency. As a result, when the other children backtrack they will potentially have a better UB, since the {a mathematical formula}Sub_Tree_LB of the first backtracking son/agent is now more accurate (e.g., tighter).
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       PT-FB – the full algorithm
+      </section-title>
+      <paragraph>
+       The simplified version of the PT-FB algorithm described above can be extended in several ways which greatly increase its efficiency. The first improvement is a method to reduce the number of LB_Request and LB_Report messages. Let us examine a situation where agent {a mathematical formula}Aj, which is a descendant of the current agent {a mathematical formula}Ai, is not constrained with {a mathematical formula}Ai. Obviously the LB_Report message sent by {a mathematical formula}Aj to {a mathematical formula}Ai is exactly the same as the LB_Report sent by {a mathematical formula}Aj to {a mathematical formula}Ai's parent. So instead of sending LB_Request messages to all descendants, an agent only sends LB_Request messages to descendants it is constrained with. The LB_Reports of all other descendants are received from the agent's parent together with the CPA message. In order to do so, the agent maintains two separate data structures, one for the LB_Reports received from its parent, and a second one, called {a mathematical formula}LB_Adjust, only for constrained descendants. The {a mathematical formula}LB_Adjust only contains the difference between the LB_Reports received from the agent's parent, and the LB_Report received directly from the constrained descendant. The two separate data structures offer an additional benefit for computing the sub-tree's lower bound, {a mathematical formula}Sub_Tree_LB. Even when an agent has not yet received LB_Reports from the given sub-tree, the {a mathematical formula}Sub_Tree_LB can be computed based on the LB_Reports received from the agent's parent. This allows a tighter UB computation on the fly for the children of that agent.
+      </paragraph>
+      <paragraph>
+       In Fig. 2, we show the difference between the flow of LB_Report messages before (left side) and after (right side) the improvement. Without the optimization, after agent {a mathematical formula}Ab received a CPA message, it sent LB_Request messages to {a mathematical formula}Ac and {a mathematical formula}Ad (not shown), and got the shown LB_Reports back from them. In the improved algorithm, agent {a mathematical formula}Ab received bound information from {a mathematical formula}Aa, together with the CPA message. This makes the LB_Request and LB_Report between {a mathematical formula}Ab and {a mathematical formula}Ad redundant, since {a mathematical formula}Ab got that information from {a mathematical formula}Aa. To complete the example, {a mathematical formula}Ab will store in the {a mathematical formula}LB_Adjust data structure the following data: {a mathematical formula}LB_Adjust(Ac)=1.
+      </paragraph>
+      <paragraph>
+       When agent {a mathematical formula}Ai receives the set of {a mathematical formula}LB_Reports from its parent, it can group the reports originated from its descendants according to which sub-tree they came from. For {a mathematical formula}Aj∈C(Ai), we denote by {a mathematical formula}Sub_Tree_LB(Aj) the sum of {a mathematical formula}LB_Reports originated from agents in {a mathematical formula}Aj's sub-tree. Note that this value is not dependent upon any value assignment of agent {a mathematical formula}Ai. This distinguishes it from {a mathematical formula}Sub_Tree_LB(Aj,vi) described in subsection 3.1, which is the best known lower bound for that sub-tree for {a mathematical formula}Ai assigning {a mathematical formula}vi. Note that for every {a mathematical formula}Aj and {a mathematical formula}vi, the relation {a mathematical formula}Sub_Tree_LB(Aj)≤Sub_Tree_LB(Aj,vi) always holds, which is why {a mathematical formula}Sub_Tree_LB(Aj) can be used as the best known lower bound when no other information exists.
+      </paragraph>
+      <paragraph>
+       The second improvement helps reduce computations. One maintains another data structure called {a mathematical formula}Local_Cost, which is defined as follows,{a mathematical formula} where {a mathematical formula}vk is the value assignment of each agent {a mathematical formula}Ak in the latest LB_Request sent from {a mathematical formula}Ak to {a mathematical formula}Ai. In other words, {a mathematical formula}Local_Costi(Aj,vi) is the sum of the cost of all constraints between agent {a mathematical formula}Ai with value assignment {a mathematical formula}vi and its ancestors, from the root down to agent {a mathematical formula}Aj, with the latest known value assignments. When agent {a mathematical formula}Ai receives a LB_Request message from agent {a mathematical formula}Aj, for each {a mathematical formula}vi∈Di it will update{a mathematical formula} where {a mathematical formula}ECAi(Aj) (Earlier Constrained ancestor) is the latest ancestor of {a mathematical formula}Aj which is constrained with agent {a mathematical formula}Ai (see section 3.1). The value of the LB_Report message sent by agent {a mathematical formula}Ai to agent {a mathematical formula}Aj is {a mathematical formula}minvi∈Di⁡Local_Costi(Aj,vi). This method provides several benefits. First, when an agent receives a LB_Report message it only needs to check its constraints with a single agent, instead of every assigned agent. Secondly, it means that LB_Request messages now contain only a single value assignment. As a result, when an agent receives a CPA message it needs no computations, since its added cost for every value {a mathematical formula}vi is already calculated and stored at {a mathematical formula}Local_Costi(parent(Ai),vi) (marked for simplicity as {a mathematical formula}Local_Costi(vi)).
+      </paragraph>
+      <paragraph>
+       In Fig. 3 a simple example is given of how the {a mathematical formula}Local_Cost data structure operates. The example is based on the pseudo-tree of Fig. 1. The left side shows the constraints of agent {a mathematical formula}Ag, and the right side shows agent {a mathematical formula}Ag's {a mathematical formula}Local_Cost data structure as it evolves with every LB_Request message. When agent {a mathematical formula}Ag receives the first message from {a mathematical formula}Aa containing the assignment {a mathematical formula}va=x it updates its data structure so that {a mathematical formula}Local_Costg(Aa,x)=4 and {a mathematical formula}Local_Costg(Aa,y)=1 directly from {a mathematical formula}Aa. Note that agent {a mathematical formula}Ag has no Earlier Constrained Agent from {a mathematical formula}Aa since it is the root agent. This means that {a mathematical formula}Aa is the first agent in the {a mathematical formula}Local_Costg data structure. Agent {a mathematical formula}Ag sends a LB_Report(1) message to {a mathematical formula}Aa since 1 is the minimal cost in the relevant row. Next, {a mathematical formula}Ag receives the assignment y from agent {a mathematical formula}Ac and adds the constraint cost it has with that assignment to the costs of the previous line in the data structure (since {a mathematical formula}ECAg(Ac)=Aa). The LB_Report message sent back to agent {a mathematical formula}Ac will contain the lower bound of 4. The same procedure happens when the message containing {a mathematical formula}Ae's assignment arrives. Note, that at this point if agent {a mathematical formula}Ag receives a CPA message the last line of the {a mathematical formula}Local_Cost data structure will contain the sum of its constraints cost with all other agents, for each of its possible value assignment. The last message in the example is a new value assignment from agent {a mathematical formula}Ac. Agent {a mathematical formula}Ag can count on the fact that the assignment of {a mathematical formula}Aa is unchanged (or it would have received a LB_Request message about it), and simply add the constraint cost to the costs of the previous line. Note that agent {a mathematical formula}Ag does not need to worry about the entries for {a mathematical formula}Ae, since {a mathematical formula}Ae's is currently unassigned. The information in {a mathematical formula}Ae's line is outdated, but it will be overridden when relevant data will arrive.
+      </paragraph>
+      <paragraph>
+       The third improvement to PT-FB relates to the structure of the pseudo tree. The desired pseudo tree is as shallow as possible, since a shallow tree can be divided into smaller independent sub-problems. In contrast, a deep tree consists of larger and fewer sub-problems. Since finding the best pseudo tree is NP-hard, the proposed preprocessing algorithm uses a simple heuristic. It simultaneously starts a distributed DFS algorithm at each agent which results in a number of DFS trees, each one rooted at a different agent. Then it selects the tree with the smallest height.
+      </paragraph>
+      <paragraph>
+       The final improvement to the simple version of the PT-FB algorithm is a simple value ordering heuristic. It selects first to assign the value with the lowest {a mathematical formula}Local_Cost.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Pseudo-code
+      </section-title>
+      <paragraph>
+       The pseudo code is presented from the perspective of agent {a mathematical formula}Ai, and all of the data structures are those held by it. The root agent starts the algorithm by calling Procedure 1, with an empty partial assignment, and {a mathematical formula}UpperBound=max_costn. The {a mathematical formula}Domain_LB data structure in line 6 holds the best known lower bound for each value {a mathematical formula}vi (given the current CPA). Note that we use in line 6 the abbreviated notation for {a mathematical formula}Local_Costi(Aparent,vi), as described in subsection 3.2.
+      </paragraph>
+      <paragraph>
+       In Procedure 2, the next {a mathematical formula}vi∈Di, after {a mathematical formula}vi′ (the prior value of agent {a mathematical formula}Ai, searched by {a mathematical formula}Aj) is selected (line 1). If no unsearched values for child {a mathematical formula}Aj exist, or no remaining {a mathematical formula}vi such that {a mathematical formula}Domain_LB(vi)&lt;UB, {a mathematical formula}null is returned.
+      </paragraph>
+      <paragraph>
+       When all LB_Report messages has arrived from a specific sub-tree (in Procedure 3), the {a mathematical formula}LB_Adjust and {a mathematical formula}Sub_Tree_LB_Adjust are computed (described in subsection 3.2). {a mathematical formula}srchVal (line 7) is a simple map between agent {a mathematical formula}Aj∈C(Ai) to the value assignment of {a mathematical formula}Ai in {a mathematical formula}Aj's context. The lower bound change effects the UB computation of other children which are searching on the same {a mathematical formula}vi, according to equation (1). They are informed by a Reduce_UB message (line 9–11). Finally a check is made to determine if the chosen assignment can still provide a solution with a smaller cost than UB. If it can, a call to the procedure continue Assignment is made in order to send the CPA forward.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In Procedure 5, a leaf agent has reached a solution to the sub problem it is in. A non-leaf agent will generate new CPA as needed and send them forward. In line 12, {a mathematical formula}last_sent_UB holds the last upper bound sent to {a mathematical formula}Ai's child, to be used later in Procedure 8.
+      </paragraph>
+      <paragraph>
+       When an agent with a single child receives an UB message (Procedure 6), it simply needs to update its UB. When an agent with more than one child receives an UB message, it combines the received CPA with the one it received from its parent, and with the other CPA it received from its other children (line 4), and save it. In order to perform line 4, the agent holds a data structure {a mathematical formula}BestCPA(vi,Achild) which holds for every {a mathematical formula}vi∈Di the lowest cost CPA received from each one of its children. {a mathematical formula}BestCPA is deleted when agent {a mathematical formula}Ai receives a new CPA from its parent. Combining all of the CPAs is straight-forward, since every agent can only be assigned in one of these CPAs. It then identifies from which sub-tree the message came (line 5), and for which {a mathematical formula}vi∈Di it is relevant and then calculates the best total Upper Bound found so far for {a mathematical formula}vi (line 8), and compares it to the old UB. A reduction in a {a mathematical formula}Sub_Tree_UB does not necessary mean that the calculated {a mathematical formula}totalUB is smaller than the old UB, since at the beginning the sum of all {a mathematical formula}Sub_Tree_UB is actually greater than the real UB. If the new {a mathematical formula}totalUB is better than the old UB (line 9), it is updated (line 10), and UB messages are sent to all members of the chain containing {a mathematical formula}Ai, up to {a mathematical formula}Latest_Divider(Ai) (lines 11–12).
+      </paragraph>
+      <paragraph>
+       When an agent with several children receives a Backtrack message (Procedure 7), it can conclude that the best UB it received from that sub tree is the optimal, so it can also be considered as the {a mathematical formula}Sub_Tree_LB. It saves that new {a mathematical formula}Sub_Tree_LB, and sends all children searching on the same {a mathematical formula}vi a Reduce_UB message, with the difference between the new and the old {a mathematical formula}Sub_Tree_LB.
+      </paragraph>
+      <paragraph>
+       An agent receiving a Reduce_UB message (Procedure 8), updates the {a mathematical formula}Received_UB from its parent, and then checks if it is better than its current UB. Next, the agent calculates the difference between the last computed UB for its children and the new one. If the agent has more than one child, the reduction of the UB is simply the difference between the new and the old UB. If the agent has only one child, then it shares with its child both UB and {a mathematical formula}Received_UB. Intuitively, the agent should just send forward the same {a mathematical formula}diff, but if the agent did not send an old Reduce UB (because the {a mathematical formula}Received_UB was higher then UB), it should send to its child the difference between the last UB sent, and the current {a mathematical formula}Received_UB.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Correctness of PT-FB
+     </section-title>
+     <paragraph>
+      In order to prove the correctness of PT-FB, two claims must be established. First, that the algorithm terminates and second, that when the algorithm terminates the cost of the complete assignment found by the algorithm is optimal. To prove termination, it is enough to show that the same partial assignment will not be searched twice. We can prove that recursively: First, consider the claim that an agent {a mathematical formula}Ai does not receive the same CPA from its parent twice. The assumption is trivial for the root. For a given CPA received from an agent's parent, it may send to its children several CPAs, but each one will have a different assignment to the agent's variable so they are all different from one another. Since an agent cannot receive the same CPA twice, and for a given CPA it will not send two identical CPAs to its child, the proof of termination is trivial.
+     </paragraph>
+     <paragraph label="Proof">
+      Next, one needs to show that upon termination the {a mathematical formula}cost of the assignment found by the algorithm is optimal. Assume by contradiction that an assignment with {a mathematical formula}cost′&lt;cost (returned by the algorithm) exists. Since the algorithm did not find that assignment, it must have been pruned along the way. An assignment can only be pruned in the procedure assign Next Val, in line 1 or in line 15, and only if {a mathematical formula}Domain_LB(vi)≥UB in the pruning agent. Let us now prove the following lemmas: For a given CPA from agent{a mathematical formula}Ai's parent, any complete assignment of the sub-problem of{a mathematical formula}Aiwith the assignment{a mathematical formula}viwill cost at least as much as{a mathematical formula}Domain_LB(vi).To prove Lemma 1, remember that {a mathematical formula}Domain_LBi(vi) is defined by:{a mathematical formula} (in procedure “when receive CPA” lines 4, 6). Since any descendant of {a mathematical formula}Ai will add to the cost of the complete assignment at least its {a mathematical formula}LB_Report, the cost of any complete assignment will be at least {a mathematical formula}Domain_LBi(vi). □
+     </paragraph>
+     <paragraph label="Proof">
+      For a given CPA from agent{a mathematical formula}Ai's parent, any complete assignment of the sub-problem of{a mathematical formula}Aiwith a cost greater than UB cannot be a part of a complete assignment of the entire problem with a cost smaller than the total UB.We will prove Lemma 2 by induction, by showing that for an assignment {a mathematical formula}CPAi with {a mathematical formula}costi&gt;UBAi to {a mathematical formula}Ai's sub problem, any complete assignment {a mathematical formula}CPAj⊃CPAi to {a mathematical formula}Ai's parent's ({a mathematical formula}Aj) sub-problem will have {a mathematical formula}costj&gt;UBAj. Let us first look at an agent's UB. An agent can receive its UB from its parent in the form of a CPA message or in the form of Reduce UB messages or from its descendants in the form of UB messages. If the agent's UB is a result of a UB message from its descendants, then a better solution has already been found and thus the new solution will result in a higher cost. If the UB was received from {a mathematical formula}Ai's parent {a mathematical formula}Aj, there can be two scenarios. If {a mathematical formula}Ai and {a mathematical formula}Aj are part of a chain, then {a mathematical formula}costi=costj, and {a mathematical formula}UBAi=UBAj. Otherwise, by manipulating equation (1) one finds that:{a mathematical formula} and from that it is easy to see that any solution {a mathematical formula}CPAi with {a mathematical formula}costi&gt;UBAi to {a mathematical formula}Ai's sub-problem means that any complete assignment {a mathematical formula}CPAj⊃CPAi to {a mathematical formula}Aj's sub-problem, has necessarily {a mathematical formula}costj&gt;UBAj. □
+     </paragraph>
+     <paragraph>
+      From Lemma 1 and Lemma 2 it follows that any pruned assignment cannot have a better cost than the cost found by the algorithm.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Experimental evaluation of PT-FB
+     </section-title>
+     <paragraph>
+      To evaluate the performance of PT-FB it is compared to bnb-ADOPT̂+ [3]{sup:1} and NCBB[1], which are pseudo tree based algorithms, and to ConcFB[7] as the best non-tree based algorithm. The performance of all algorithms was evaluated on randomly generated problems with the asynchronous simulator Agent Zero[14]. Two families of tests were performed. The first experiments were run on DCOP problems with 12 agents and a domain size of 8. The problems had a variety of constraints density, in the range of {a mathematical formula}p1=0.2to0.6. Constraints density {a mathematical formula}p1 is the probability of any two agents to be constrained. For any two constrained agents, a cost in the range of 0 to 100 was randomly generated for every combination of values. The second test was performed to see how the performance of each algorithm scales up when the number of agents increases. Similar settings to the first test were used but the number of agents was increased to 15.
+     </paragraph>
+     <paragraph>
+      In every setting, 50 problem instances were randomly generated and solved by every algorithm. Results are averaged over all problem instances with the same parameters values. All pseudo tree algorithms used the same tree building heuristic, in order to compare clearly the performance of the algorithms themselves. All algorithms were tested with the best heuristics and modifications presented in their relevant papers. There are three commonly used measures for evaluating the performance of DCOP algorithms [15], [16]. The number of non-concurrent constraints-checks (NCCCs) that evaluates distributed run-time. A different measure for evaluating non-concurrent run-time is the number of non-concurrent steps of computation (NSCS), which better represents the run time when computation is much faster than message sending. Finally, the total Message Count evaluates the network load of the algorithms.
+     </paragraph>
+     <paragraph>
+      Fig. 4 presents the run-time results of all algorithms, against the constraints density of the randomly generated DCOPs. Clearly, PT-FB outperforms all other state-of-the-art algorithms by a large margin, for all tested densities. However, the main advantage of PT-FB is in its performance in higher densities of constraints. Its NCCCs runtime is strikingly less affected by higher constraints density than both pseudo-tree based competitors and forward bounding ConcFB. When comparing Non-Concurrent Steps of Computation in Fig. 5, we can see that PT-FB largely outperforms bnb-ADOPT̂+, and that it perform better than NCBB by roughly a factor of 3. For run time measure of steps of computation, ConcFB is less affected by the change in density, since it does not dependent on a pseudo tree to be built. This makes it less efficient than PT-FB for low density problems (where good pseudo trees are usually found), but more efficient for density of 0.5 and higher. The clear advantage of PT-FB over all other algorithms with respect to NCCCs is probably due to the {a mathematical formula}Local_Cost data structure, which greatly reduces the amount of computation done for every computation of a bound. This data structure cannot be used in algorithms such as ConcFB or AFB, since it will have to save data for a varying number of contexts in each agent. In terms of network load, as seen in Fig. 6, the difference between PT-FB and the other pseudo tree algorithms remains. However, PT-FB performs better than ConcFB even on denser problems.
+     </paragraph>
+     <paragraph>
+      For problems with 15 agents, the BnB-ADOPT̂+ algorithm has been discarded since it takes an unreasonable amount of time to finish even problems with {a mathematical formula}p1=0.3. In terms of NCCCs in Fig. 7 it is clear that PT-FB still greatly outperform the other algorithms. For large {a mathematical formula}p1 values ConcFB performs similarly to NCBB. As before, when measuring steps of computation (NCSCs), ConcFB outperforms PT-FB for constraints densities above 0.4 (Fig. 8). In Fig. 9 one can see that ConcFB is now closer to the performance of PT-FB in terms of network load, even though it has not reached its performance. Overall it seems that for the NCSCs measure PT-FB does not perform as well as ConcFB for higher densities, but this may be misleading. This is because for a fixed value of {a mathematical formula}p1 and an increased number of agents, each agent has more neighbors on the average. For example for {a mathematical formula}p1=0.4 and 10 agents each agent has 4 neighbors on the average, where for the same {a mathematical formula}p1 and 20 agents each agent has 8 neighbors on the average. A higher number of neighbors means a less ideal pseudo-tree. When the number of neighbors is fixed (instead of the value of {a mathematical formula}p1) PT-FB scales up much better.
+     </paragraph>
+     <paragraph>
+      In order to prove the last statement another experiment was performed. In the last experiment each agent has three neighbors on the average, while the domain size remains 8 and the max cost remains 100. The experiment was run for an increasing number of agents. The results are presented in Fig. 10, Fig. 11, Fig. 12, and show that for a fixed average number of neighbors PT-FB scales much better than ConcFB for an increasing number of agents.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Modifying PT-FB for asymmetric DCOPs
+     </section-title>
+     <paragraph>
+      In real multi-agents systems the full cost of a specific interaction between two agents may not be shared equally among them. The outcome of an interaction between two agents may have a small cost for one agent and a larger cost for the other. Distributed constraints optimization problems for which the cost of constraints is different for the constrained agents are termed Asymmetric DCOPs (ADCOPs [10]). Former studies of ADCOP search algorithms have used forward bounding, but no attempt at using pseudo-trees has been studied. This is in contrast to standard DCOPs where pseudo-trees are routinely used [1], [2], [5]. This adds an additional novelty to the present extension of the PT-FB algorithm – both the use of a pseudo-tree and its combination with former asymmetric forward bounding [10].
+     </paragraph>
+     <paragraph>
+      An important feature of ADCOPs is that agents may prefer to maintain some degree of privacy of their constraints costs [17]. This aspect of ADCOP search, of maintaining some degree of privacy during search, will be addressed below.
+     </paragraph>
+     <paragraph>
+      This section presents an asymmetric version of PT-FB for solving ADCOPs – AsymPT-FB. The modification from PT-FB to AsymPT-FB resembles the modifications made from AFB[6] to ATWB[10]. Subsection 6.1 presents the necessary adjustments from PT-FB to AsymPT-FB. In subsection 6.2 the method of quantifying the loss of privacy by the use of entropy [17] is described and its implementation for ADCOP algorithms.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Asymetric PT-FB
+      </section-title>
+      <paragraph>
+       If we will attempt to use PT-FB as is in an ADCOP problem, the CPA's cost will only contain one side of every constraint. For example, when agent {a mathematical formula}Ab (Fig. 1) assigns a value to a CPA, it is unaware of the constrain cost between its assignment and {a mathematical formula}Aa's assignment, from agent {a mathematical formula}Aa perspective. In [10] two ways to tackle that problem are proposed. In the two phase approach, once the CPA have reached a leaf agent, it would have to return all the way to the root, while each agent is adding the other side of its constraints along the way. Since we believe that this method would miss a lot of pruning opportunities, we chose to proceed with the single phase approach.
+      </paragraph>
+      <paragraph>
+       In the single phase approach, the CPA must contain the complete cost (both side of every constraint) for the currently assigned variables. Achieving that will mean that when a CPA has reached a leaf agent, it will contain the entire cost of that specific sub-problem. Moreover, it will mean that the CPA will hold the maximum cost of its assignment at any moment, which will allow for pruning as early as possible.
+      </paragraph>
+      <paragraph>
+       In order to obtain the other side of each constraint cost, we will extend the LB_Request mechanism. Whenever an agent sends a LB_Request to its constrained descendants in the original algorithm, it will also send the same message to its constrained ancestors in the pseudo-tree. The necessary modification of the handling of a LB_Request are shown in Procedure 9. Mainly, it will be handled in the same way as before when received from an ancestor, but they will be handled differently if received from a descendant. An agent receiving a LB_Request from one of its descendants already has an assignment to its own variable, so it will simply send back the cost of its side of the constraint with the sender.
+      </paragraph>
+      <paragraph>
+       When handling LB_Reports (modifications in Procedure 10), the same distinction will be made – messages from descendants will be handled as before, while messages from an ancestor will be handled in a new way. Unlike a report from a descendant, an agent receiving a LB_Report from an ancestor will save them in a dedicated array – {a mathematical formula}AncestorsCost, which aggregates the reported costs from {a mathematical formula}Ai's ancestors, per {a mathematical formula}vi∈Di. This array is deleted whenever the agent backtracks. In addition, that value will be added to the {a mathematical formula}Domain_LB(vi) for additional pruning. In the rest of the pseudo code, {a mathematical formula}AncestorsCost(vi) should always be added to the {a mathematical formula}Received_Cost (in Procedure 5, lines 3, 11, 16, in Procedure 6, line 8). An agent will only send forward its CPA when every LB_Report from its ancestors have arrived, and thus when the CPA is sent forward it contains the complete cost of its partial assignment (e.g., costs that represent both sides of every constraint).
+      </paragraph>
+      <paragraph>
+       Note that since in AsymPT-FB an agent {a mathematical formula}Ai can send a different assignment of its variable to each child (just like in PT-FB), it may send several LB_Requests to its ancestors at the same time, one for each such value. This is unlike {a mathematical formula}Ai's descendant, which can only have one relevant assignment to {a mathematical formula}Ai's variable at any given time. This implies that only one LB_Request can be sent at a time. This adds another consideration – in PT-FB before agent {a mathematical formula}Ai sent a CPA to one of its children {a mathematical formula}Aj it only needed to wait for LB_Reports from {a mathematical formula}Aj's sub-tree. In AsymPT-FB it also needs to wait for LB_Reports from its ancestors, but only the LB_Reports containing the relevant assignment of {a mathematical formula}Ai. This is solved with a simple data structure that keeps track of the LB_Reports for every value in {a mathematical formula}Ai's domain. For every pending CPA it keeps track of what LB_Reports it is waiting for, and to which child the CPA should be sent.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Privacy of constraints
+      </section-title>
+      <paragraph>
+       An important property of ADCOP algorithms is their loss of privacy. Entropy was proposed as a measure for quantifying privacy loss in distributed constraints satisfaction problems [17]. The entropy of agent {a mathematical formula}Ai is defined as follows:{a mathematical formula} where {a mathematical formula}Γi is the set of neighbors of agent {a mathematical formula}Ai, {a mathematical formula}Sij is the set of possible states (i.e., possible constraints matrix values) of the constraint between {a mathematical formula}Ai and {a mathematical formula}Aj, and {a mathematical formula}pk is the probability of state k. Entropy measures the amount of the missing information about agent {a mathematical formula}Ai's constraints with its neighboring agents (in bits). In order to quantify the amount of privacy violation of an algorithm, one needs to sum for all agents the difference between the entropy that measures their state before the start of the algorithm and the entropy at the end of the algorithm's run.
+      </paragraph>
+      <paragraph>
+       AsymPT-FB uses a direct disclosure mechanism in the form of LB_Reports that are sent from an agent to its descendants. For every constraint only half of the data may be exposed, which puts a 50% upper limit on the privacy loss. With a more accurate evaluation and experimental evaluation we will show that this upper limit is rarely reached. In order to accurately evaluate the privacy loss incurred by AsymPT-FB we first need a tool for quantifying privacy. We use entropy for that goal, as described in section 2.2 by equation (4). This allows us to compare the privacy loss occurring by the run of AsymPT-FB to the privacy loss of the other ADCOP algorithms.
+      </paragraph>
+      <paragraph>
+       To remain similar to [10] the privacy loss is computed for distributed asymmetric Max CSPs. This is because the privacy loss occurring in a Max CSP problem may be considered as an upper limit for similar DCOP problems. This represents the fact that agents know the cost of a constraint in MaxCSP to be 1. Let us rewrite equation (4) for the simple case in which the set of possible states (constraint matrices) is given, and all states have the same probability. Agent {a mathematical formula}Ai has {a mathematical formula}|Sij| possible states for the constraint between it and agent {a mathematical formula}Aj (ignoring states in which the probability is 0). Since all states in {a mathematical formula}Sij have equal probability, for every state {a mathematical formula}k∈Sij the probability {a mathematical formula}pk=1|Sij|. When this information is combined with Eq. (4) one arrives at the following equation:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Let us first analyze where is privacy lost during the run of AsymPT-FB. A CPA reveals no information because each agent is only concerned about the constraints in which it is involved, and a CPA does not contain information about unassigned variables (and the receiver of the CPA is still unassigned). A Backtrack message also contains a negligible amount of information. This is because the receiving agent cannot know whether the Backtrack was triggered as a result of constraints some agent has with it, or as a result of constraints between two different agents. The most significant information leak may occur as a result of LB_Report messages. When an agent receives a LB_Report from one of its ancestors, the message contains a direct revelation of the constraint cost for a specific pair of assignments. This immediately removes from {a mathematical formula}Sij any constraint matrix in which the constraint cost of this assignment pair is different from the one in the LB_Report. A LB_Report message from a descendant may give away a small amount of information as well, but in our experiments we found that it was much less than 1% privacy loss, so we will ignore it.
+      </paragraph>
+      <paragraph>
+       The number of possible states for a Max CSP constraint between {a mathematical formula}Ai and {a mathematical formula}Aj is {a mathematical formula}2q, where q is the number of value pairs {a mathematical formula}vi,vj for which the constraint cost is not known at the end of the algorithm. The number of states can then be entered into Eq. (5) to get the entropy after the run of the algorithm. When compared to the entropy before the run of the algorithm (when all states are possible), we get the amount of privacy loss. The entropy calculations of SyncABB and ATWB presented in [10] are used in order to empirically compared it to the privacy loss of AsymPT-FB.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experimental evaluation of AsymPT-FB
+     </section-title>
+     <paragraph>
+      To evaluate the relevancy of AsymPT-FB we compared it to the previous algorithms for solving ADCOP – AsymABB and ATWB. The comparison was done for both performance and privacy. For performance, two of the measures described in section 5 were used – non-concurrent constraints checks (NCCC), and total number of messages in the network. For privacy loss during the run of the algorithm we used entropy, as detailed in section 6.2.
+     </paragraph>
+     <paragraph>
+      In order to show results that are easily comparable to the ones in [10] we used the exact same setting for the experiments. The experiments were done on asymmetric distributed max CSP problems, with 10 agents each with a domain size of 10. The probability for a constraint between any two agent ({a mathematical formula}p1) is 0.4. The test was done for {a mathematical formula}p2 (the probability for two values to be constrained between constrained agents) values ranging from 0.1 to 0.6, and in each setting 50 problem instances were generated and solved.
+     </paragraph>
+     <paragraph>
+      In Fig. 14, Fig. 15 it is easy to see that AsymPT-FB greatly outperforms the previous algorithms in all measures. For extremely simple problems ({a mathematical formula}p2 up to 0.2) SyncABB actually performs better than AsymPT-FB in network load. In terms of privacy loss, one can see in Fig. 13 that AsymPT-FB has about the same privacy conservation as ATWB, and that both of them have an upper bound of 50% of privacy loss. This is due to the fact that both algorithms lose privacy only in a single direction. SyncABB shows better privacy conservation than both of them for lower values of {a mathematical formula}p2, but for higher values it passes the 50% limit of the ATWB and SyncABB algorithms.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      A new family of search algorithms for DCOPs and Asymmetric DCOPs is presented. All algorithms are based on combining two concepts: a pseudo-tree and forward (or backward) bounding. A pseudo tree divides the problem into separate sub-problems, which can be solved simultaneously, independent of one another [1], [2], [3]. This allows for an inherently synchronous, yet concurrent, search of the problem. A forward (or backward) bound is a method of pruning the search space by combining estimates from all agents. In every step of the search the assigning agent broadcasts an estimate request to all relevant agents. When all estimates have returned it combines them and can prune parts of the search space based on that information.
+     </paragraph>
+     <paragraph>
+      The first algorithm presented, Pseudo Tree Forward Bound (PT-FB), solves Distributed Constraints Optimization Problems (DCOPs). It uses a variation of Forward Bounding (FB) on the structure of a pseudo-tree. The algorithm has 3 major properties:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       When possible, it divides the problem into sub-problems based on the pseudo-tree.
+      </list-item>
+      <list-item label="2.">
+       On parts of the tree which are essentially a chain, it performs FB synchronously. This produces satisfactory results even when the pseudo tree is less than ideal.
+      </list-item>
+      <list-item label="3.">
+       It enforces a strict bound update, which increases the pruning of the search space.
+      </list-item>
+     </list>
+     <paragraph>
+      An extensive experimental evaluation demonstrates that PT-FB greatly outperforms previous DCOP algorithms, both pseudo-tree based and forward bounding ones.
+     </paragraph>
+     <paragraph>
+      We have made several attempts to further extend the concepts of our algorithm, most notably we have tried to create a ConcFB[7] version on a pseudo tree. We were surprised to find that it did not perform as well as we anticipated. The ConcFB version outperformed PT-FB very slightly in terms of NCSCs, while performing much worse in terms of NCCCs. We believe it may be due to the fact that in PT-FB each agent maintains a complex context, which is expensive to recreate for every new Search Process (SP). This has led us to abandon the attempt for a concurrent version, which remains open for later studies.
+     </paragraph>
+     <paragraph>
+      Next, Asymmetric DCOPs (ADCOPs [10]) are addressed. As stated before, no former algorithm for asymmetric DCOPs used pseudo-trees. The only former ADCOP search algorithms used forward bounding. The pseudo-tree approach is completely novel, in addition to its combination with forward bounding (e.g., AsymPT-FB).
+     </paragraph>
+     <paragraph>
+      In an ADCOP constraints have different costs for each of the constrained agents. The ADCOP framework assumes that agents are cooperative and search for a solution that minimizes the sum of costs of all agents. One specific aspect of ADCOP algorithms is their ability to maintain some of the privacy of the agents' constraints cost. Every ADCOP algorithm keeps a balance between performance and maintaining privacy [10].
+     </paragraph>
+     <paragraph>
+      The asymmetric version of the PT-FB algorithm, AsymPT-FB, solves ADCOPs. The modified algorithm uses the single phase approach, which means that for every assignment the cost of both sides of each constraint is added before proceeding to the next agent. The method of achieving this is based on adding back-bounding to the original algorithm every time it performs forward-bounding. This simple modification produces a complete ADCOP algorithm that is empirically shown to greatly outperform the original algorithms proposed in [10], while remaining competitive in terms of constraints privacy conservation.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

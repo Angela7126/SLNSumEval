@@ -1,0 +1,1146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Metaphor Detection with Cross-Lingual Model Transfer</title>
+<!--Generated on Tue Jun 10 17:22:42 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Metaphor Detection with Cross-Lingual Model Transfer</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yulia Tsvetkov  Leonid Boytsov  Anatole Gershman  Eric Nyberg  Chris Dyer
+<br class="ltx_break"/>Language Technologies Institute 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15213  USA 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">ytsvetko, srchvrs, anatoleg, ehn, cdyer</span>}<span class="ltx_text ltx_font_typewriter">@cs.cmu.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We show that it is possible to reliably discriminate whether a syntactic construction is meant literally or metaphorically using lexical semantic features of the words that participate in the construction. Our model is constructed using English resources, and we obtain state-of-the-art performance relative to previous work in this language. Using a model transfer approach by pivoting through a bilingual dictionary, we show our model can identify metaphoric expressions in other languages. We provide results on three new test sets in Spanish, Farsi, and Russian. The results support the hypothesis that metaphors are conceptual, rather than lexical, in nature.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Lakoff and Johnson (<a href="#bib.bib24" title="Conceptual metaphor in everyday language" class="ltx_ref">1980</a>)</cite> characterize metaphor as reasoning about one thing in terms of another,
+i.e., a metaphor is a type of <span class="ltx_text ltx_font_italic">conceptual mapping</span>,
+where words or phrases are applied to objects and actions
+in ways that do not permit a literal interpretation.
+They argue that metaphors play a fundamental communicative role in verbal and written interactions, claiming that much of our everyday language is delivered in metaphorical terms.
+There is empirical evidence supporting the claim: recent corpus studies have estimated that the proportion of words used metaphorically ranges from 5% to 20% <cite class="ltx_cite">[<a href="#bib.bib10" title="Metaphor in usage" class="ltx_ref">33</a>]</cite>, and
+<cite class="ltx_cite">Thibodeau and Boroditsky (<a href="#bib.bib11" title="Metaphors we think with: the role of metaphor in reasoning" class="ltx_ref">2011</a>)</cite> provide evidence that a choice of metaphors affects decision making.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Given the prevalence and importance of metaphoric language, effective automatic detection of metaphors would have a number of benefits, both practical and scientific. Language processing applications that need to understand language or preserve meaning (information extraction, machine translation, dialog systems, sentiment analysis, and text analytics, etc.) would have access to a potentially useful high-level bit of information about whether something is to be understood literally or not. Second, scientific hypotheses about metaphoric language could be tested more easily at a larger scale with automation.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">However, metaphor detection is a hard problem.
+On one hand, there is a subjective component: humans may disagree
+whether a particular expression is used metaphorically or not, as there is no clear-cut semantic distinction between figurative and metaphorical language <cite class="ltx_cite">[<a href="#bib.bib20" title="Models of metaphor in NLP" class="ltx_ref">32</a>]</cite>.
+On the other, metaphors can be domain- and context-dependent.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>For example,
+<span class="ltx_text ltx_font_italic">drowning students</span> could be used metaphorically to describe the situation where students are overwhelmed with work, but
+in the sentence <span class="ltx_text ltx_font_italic">a lifeguard saved drowning students</span>, this phrase is used literally.</span></span></span></p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Previous work has focused on metaphor identification in English, using both extensive manually-created linguistic resources <cite class="ltx_cite">[<a href="#bib.bib47" title="CorMet: a computational, corpus-based conventional metaphor extraction system" class="ltx_ref">20</a>, <a href="#bib.bib26" title="Catching metaphors" class="ltx_ref">10</a>, <a href="#bib.bib27" title="Hunting elusive metaphors using lexical resources" class="ltx_ref">16</a>, <a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">40</a>, <a href="#bib.bib14" title="Using imageability and topic chaining to locate metaphors in linguistic corpora" class="ltx_ref">4</a>]</cite>
+and corpus-based approaches <cite class="ltx_cite">[<a href="#bib.bib30" title="Active learning for the identification of nonliteral language" class="ltx_ref">2</a>, <a href="#bib.bib6" title="Statistical metaphor processing" class="ltx_ref">30</a>, <a href="#bib.bib9" title="Metaphor identification in large texts corpora" class="ltx_ref">24</a>, <a href="#bib.bib48" title="Unsupervised metaphor identification using hierarchical graph factorization clustering" class="ltx_ref">29</a>, <a href="#bib.bib7" title="Identifying metaphorical word use with tree kernels" class="ltx_ref">12</a>]</cite>. We build on this foundation and also extend metaphor detection into other languages in which few resources may exist.
+Our work makes the following contributions: (1) we develop a new state-of-the-art English metaphor detection system that uses <span class="ltx_text ltx_font_italic">conceptual</span> semantic features, such as a degree of abstractness and semantic supersenses;<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="https://github.com/ytsvetko/metaphor" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/ytsvetko/metaphor</span></a></span></span></span> (2) we create new metaphor-annotated corpora for Russian and English;<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://www.cs.cmu.edu/~ytsvetko/metaphor/datasets.zip" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.cmu.edu/~ytsvetko/metaphor/datasets.zip</span></a></span></span></span> (3) using a paradigm of model transfer <cite class="ltx_cite">[<a href="#bib.bib4" title="Multi-source transfer of delexicalized dependency parsers" class="ltx_ref">21</a>, <a href="#bib.bib2" title="Token and type constraints for cross-lingual part-of-speech tagging" class="ltx_ref">41</a>, <a href="#bib.bib3" title="Cross-lingual transfer of semantic role labeling models" class="ltx_ref">15</a>]</cite>, we provide support for the hypothesis that metaphors are conceptual (rather than lexical) in nature by showing that our English-trained model can detect metaphors in Spanish, Farsi, and Russian.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methodology</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our task in this work is to define features that distinguish between metaphoric and literal uses of two syntactic constructions: subject-verb-object (SVO) and adjective-noun (AN) tuples.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Our decision to focus on SVO and AN metaphors is justified by corpus studies that estimate that verb- and adjective-based metaphors account for a substantial proportion of all metaphoric expressions,
+approximately 60% and 24%, respectively <cite class="ltx_cite">[<a href="#bib.bib19" title="Metaphor corpus annotated for source-target domain mappings" class="ltx_ref">31</a>, <a href="#bib.bib22" title="Automatic identification of conceptual metaphors with limited knowledge" class="ltx_ref">9</a>]</cite>.</span></span></span>
+We give examples of a prototypical metaphoric usage of each type:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">SVO metaphors.</span> A sentence containing a metaphoric SVO relation is <em class="ltx_emph">my car drinks gasoline</em>.
+According to Wilks <cite class="ltx_cite">[<a href="#bib.bib21" title="Making preferences more active" class="ltx_ref">42</a>]</cite>,
+this metaphor represents a violation of selectional preferences for the verb <span class="ltx_text ltx_font_italic">drink</span>,
+which is normally associated with animate subjects (the car is inanimate and, hence,
+cannot drink in the literal sense of the verb).</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">AN metaphors.</span> The phrase <em class="ltx_emph">broken promise</em> is an AN metaphor,
+where attributes from a concrete domain (associated with the concrete word <span class="ltx_text ltx_font_italic">broken</span>)
+are transferred to a more abstract domain, which
+is represented by the relatively abstract word <span class="ltx_text ltx_font_italic">promise</span>.
+That is, we map an abstract concept <span class="ltx_text ltx_font_italic">promise</span> to
+a concrete domain of physical things, where things can be literally broken to pieces.</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Motivated by Lakoff’s (1980) argument that metaphors are systematic conceptual mappings, we will use coarse-grained <em class="ltx_emph">conceptual</em>, rather than fine-grained <em class="ltx_emph">lexical</em> features, in our classifier.
+Conceptual features pertain to concepts and ideas as opposed to individual words or phrases expressed in a particular language. In this sense, as long as two words in two different languages refer to the same concepts, their conceptual features should be the same.
+Furthermore, we hypothesize that our coarse semantic features give us a language-invariant representation suitable for metaphor detection. To test this hypothesis, we use a cross-lingual model transfer approach: we use bilingual dictionaries to project words from other syntactic constructions found in other languages into English and then apply the English model on the derived conceptual representations.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Each SVO (or AN) instance will be represented by a triple (duple) from which a feature vector will be extracted.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Looking at components of the syntactic constructions independent of their context has its limitations, as discussed above with the <span class="ltx_text ltx_font_italic">drowning students</span> example; however, it simplifies the representation challenges considerably.</span></span></span> The vector will consist of the concatenation of the conceptual features (which we discuss below) for all participating words, and conjunction features for word pairs.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>If word one is represented by features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\mathbf{u}\in\mathbb{R}^{n}" display="inline"><mrow><mi>𝐮</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math> and word two by features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="\mathbf{v}\in\mathbb{R}^{m}" display="inline"><mrow><mi>𝐯</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>m</mi></msup></mrow></math> then the conjunction feature vector is the vectorization of the outer product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="\mathbf{u}\mathbf{v}^{\top}" display="inline"><msup><mi>𝐮𝐯</mi><mo>⊤</mo></msup></math>.</span></span></span> For example, to generate the feature vector for the SVO triple
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="(\textit{car},\textit{drink},\textit{gasoline})" display="inline"><mrow><mo>(</mo><mrow><mtext>𝑐𝑎𝑟</mtext><mo>,</mo><mtext>𝑑𝑟𝑖𝑛𝑘</mtext><mo>,</mo><mtext>𝑔𝑎𝑠𝑜𝑙𝑖𝑛𝑒</mtext></mrow><mo>)</mo></mrow></math>,
+we compute all the features for the individual words <span class="ltx_text ltx_font_italic">car</span>, <span class="ltx_text ltx_font_italic">drink</span>, <span class="ltx_text ltx_font_italic">gasoline</span>
+and combine them with the conjunction features for the pairs
+<span class="ltx_text ltx_font_italic">car drink</span> and <span class="ltx_text ltx_font_italic">drink gasoline</span>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We define three main feature categories (1) abstractness and imageability, (2) supersenses, (3) unsupervised vector-space word representations;
+each category corresponds to a group of features with a common theme and representation.</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Abstractness and imageability.</span>
+Abstractness and imageability were shown to be useful in detection of metaphors (it is easier to invoke mental pictures of concrete and imageable words) <cite class="ltx_cite">[<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">40</a>, <a href="#bib.bib14" title="Using imageability and topic chaining to locate metaphors in linguistic corpora" class="ltx_ref">4</a>]</cite>. We expect that abstractness, used in conjunction features (e.g., a feature denoting that the subject is abstract and the verb is concrete), is especially useful: semantically, an abstract agent performing a concrete action is a strong signal of metaphorical usage.</p>
+</div>
+<div id="I2.i1.p2" class="ltx_para">
+<p class="ltx_p">Although often correlated with abstractness, imageability is not a redundant property. While most abstract things are hard to visualize, some call up images, e.g., <span class="ltx_text ltx_font_italic">vengeance</span> calls up an emotional image, <span class="ltx_text ltx_font_italic">torture</span> calls up emotions and even visual images. There are concrete things that are hard to visualize too, for example, <span class="ltx_text ltx_font_italic">abbey</span> is harder to visualize than <span class="ltx_text ltx_font_italic">banana</span> (B. MacWhinney, personal communication).</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Supersenses.</span>
+Supersenses<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>Supersenses are called “lexicographer classes” in WordNet documentation <cite class="ltx_cite">[<a href="#bib.bib29" title="WordNet: an electronic lexical database" class="ltx_ref">8</a>]</cite>, <a href="http://wordnet.princeton.edu/man/lexnames.5WN.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://wordnet.princeton.edu/man/lexnames.5WN.html</span></a></span></span></span> are coarse semantic categories originating in WordNet. For nouns and verbs there are 45 classes: 26 for nouns and 15 for verbs, for example, <span class="ltx_text ltx_font_italic">noun.body</span>, <span class="ltx_text ltx_font_italic">noun.animal</span>, <span class="ltx_text ltx_font_italic">verb.consumption</span>, or <span class="ltx_text ltx_font_italic">verb.motion</span> <cite class="ltx_cite">[<a href="#bib.bib38" title="Broad-coverage sense disambiguation and information extraction with a supersense sequence tagger" class="ltx_ref">5</a>]</cite>. English adjectives do not, as yet, have a similar high-level semantic partitioning in WordNet, thus we use a 13-class taxonomy of adjective supersenses constructed by <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib49" title="Augmenting English adjective senses with supersenses" class="ltx_ref">2014</a>)</cite> (discussed in §<a href="#S3.SS2.SSS0.P2" title="Supersenses. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>).</p>
+</div>
+<div id="I2.i2.p2" class="ltx_para">
+<p class="ltx_p">Supersenses are particularly attractive features for metaphor detection: coarse sense taxonomies can be viewed as semantic concepts, and since concept mapping is a process in which metaphors are born, we expect different supersense co-occurrences in metaphoric and literal combinations. In “drinks gasoline”, for example, mapping to supersenses would yield a pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_italic">verb.consumption, noun.substance<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p2.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span>, contrasted with <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p2.m3" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_italic">verb.consumption, noun.food<math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p2.m4" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span> for “drinks juice”. In addition, this coarse semantic categorization is preserved in translation <cite class="ltx_cite">[<a href="#bib.bib8" title="Supersense tagging for Arabic: the MT-in-the-middle attack" class="ltx_ref">27</a>]</cite>, which makes supersense features suitable for cross-lingual approaches such as ours.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Vector space word representations.</span>
+Vector space word representations learned using unsupervised algorithms are often effective features in supervised learning methods <cite class="ltx_cite">[<a href="#bib.bib44" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">39</a>]</cite>. In particular, many such representations are designed to capture lexical semantic properties and are quite effective features in semantic processing, including named entity recognition <cite class="ltx_cite">[<a href="#bib.bib45" title="A preliminary evaluation of word representations for named-entity recognition" class="ltx_ref">38</a>]</cite>, word sense disambiguation <cite class="ltx_cite">[<a href="#bib.bib32" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">13</a>]</cite>, and lexical entailment <cite class="ltx_cite">[<a href="#bib.bib42" title="Entailment above the word level in distributional semantics" class="ltx_ref">1</a>]</cite>. In a recent study, <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib41" title="Exploiting similarities among languages for Machine Translation" class="ltx_ref">2013</a>)</cite> reveal an interesting cross-lingual property of distributed word representations: there is a strong similarity between the vector spaces across languages that can be easily captured by linear mapping. Thus, vector space models can also be seen as vectors of (latent) semantic concepts, that preserve their “meaning” across languages.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Model and Feature Extraction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section we describe a classification model,
+and provide details on mono- and cross-lingual implementation of features.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Classification using Random Forests</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">To make classification decisions, we use a random forest classifier <cite class="ltx_cite">[<a href="#bib.bib16" title="Random forests" class="ltx_ref">3</a>]</cite>,
+an ensemble of decision tree classifiers learned from many independent subsamples of the training data.
+Given an input, each tree classifier assigns a probability to each label;
+those probabilities are averaged to compute the probability distribution across the ensemble.
+Random forest ensembles are particularly suitable for our resource-scarce scenario:
+rather than overfitting, they produce a limiting value of the generalization error
+as the number of trees increases,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>See Theorem 1.2 in <cite class="ltx_cite">[<a href="#bib.bib16" title="Random forests" class="ltx_ref">3</a>]</cite> for details.</span></span></span>
+and no hyperparameter tuning is required.
+In addition, decision-tree classifiers learn non-linear responses to inputs and often outperform logistic regression <cite class="ltx_cite">[<a href="#bib.bib12" title="Tree induction vs. logistic regression: a learning-curve analysis" class="ltx_ref">26</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>In our experiments, random forests model slightly outperformed logistic regression and SVM classifiers.</span></span></span>
+Our random forest classifier models the probability that the input syntactic relation is metaphorical.
+If this probability is above a threshold, the relation is classified as metaphoric, otherwise it is literal.
+We used the <span class="ltx_text ltx_font_typewriter">scikit-learn</span> toolkit to train our classifiers <cite class="ltx_cite">[<a href="#bib.bib15" title="Scikit-learn: machine learning in Python" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Feature extraction</h3>
+
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Abstractness and imageability.</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The MRC psycholinguistic database is a large dictionary listing linguistic and psycholinguistic attributes obtained
+experimentally <cite class="ltx_cite">[<a href="#bib.bib31" title="MRC Psycholinguistic Database: Machine-usable dictionary, version 2.00" class="ltx_ref">43</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup><a href="http://ota.oucs.ox.ac.uk/headers/1054.xml" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://ota.oucs.ox.ac.uk/headers/1054.xml</span></a></span></span></span>
+It includes, among other data, 4,295 words rated by the degrees of abstractness and 1,156 words rated by the imageability.
+Similarly to <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>, we use a logistic regression classifier to propagate abstractness and imageability scores from MRC ratings to all words for which we have
+vector space representations.
+More specifically, we calculate the degree of abstractness and imageability of all English items
+that have a vector space representation, using vector elements as features.
+We train two separate classifiers for abstractness and imageability on a seed set of words from the MRC database.
+Degrees of abstractness and imageability are posterior probabilities of classifier predictions. We binarize these posteriors into abstract-concrete (or imageable-unimageable) boolean indicators using pre-defined thresholds.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>Thresholds are equal to 0.8 for abstractness and to 0.9 for imageability.
+They were chosen empirically based on accuracy during cross-validation.</span></span></span> Performance of these classifiers, tested on a sampled held-out data, is 0.94 and 0.85 for the abstractness and imageability classifiers, respectively.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Supersenses.</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">In the case of SVO relations, we incorporate supersense features for nouns and verbs;
+noun and adjective supersenses are used in the case of AN relations.</p>
+</div>
+<div id="S3.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Supersenses of nouns and verbs.</span>
+A lexical item can belong to several synsets, which are associated with different supersenses.
+Degrees of membership in different supersenses
+are represented by feature vectors, where each element corresponds to one supersense.
+For example, the word <span class="ltx_text ltx_font_italic">head</span> (when used as a noun) participates in 33 synsets,
+three of which are related to the supersense <span class="ltx_text ltx_font_italic">noun.body</span>.
+The value of the feature corresponding to this supersense is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="3/33\approx 0.09" display="inline"><mrow><mrow><mn>3</mn><mo>/</mo><mn>33</mn></mrow><mo>≈</mo><mn>0.09</mn></mrow></math>.</p>
+</div>
+<div id="S3.SS2.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Supersenses of adjectives.</span>
+WordNet lacks coarse-grained semantic categories for adjectives.
+To divide adjectives into groups,
+<cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib49" title="Augmenting English adjective senses with supersenses" class="ltx_ref">2014</a>)</cite> use 13 top-level classes from the adapted taxonomy of <cite class="ltx_cite">Hundsnurscher and Splett (<a href="#bib.bib39" title="Semantik der adjektive des Deutschen" class="ltx_ref">1982</a>)</cite>,
+which is incorporated in GermaNet <cite class="ltx_cite">[<a href="#bib.bib40" title="Germanet-a lexical-semantic net for German" class="ltx_ref">11</a>]</cite>.
+For example, the top-level classes in GermaNet include:
+<span class="ltx_text ltx_font_italic">adj.feeling</span> (e.g., willing, pleasant, cheerful); <span class="ltx_text ltx_font_italic">adj.substance</span> (e.g., dry, ripe, creamy);
+<span class="ltx_text ltx_font_italic">adj.spatial</span> (e.g., adjacent, gigantic).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>For the full taxonomy see <a href="http://www.sfs.uni-tuebingen.de/lsd/adjectives.shtml" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.sfs.uni-tuebingen.de/lsd/adjectives.shtml</span></a></span></span></span>
+For each adjective type in WordNet, they produce a vector with a classifier posterior probabilities
+corresponding to degrees of membership of this word in one of the 13 semantic classes,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup><a href="http://www.cs.cmu.edu/~ytsvetko/adj-supersenses.tar.gz" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.cmu.edu/~ytsvetko/adj-supersenses.tar.gz</span></a></span></span></span> similar to the feature vectors we build for nouns and verbs. For example, for a word <span class="ltx_text ltx_font_italic">calm</span> the top-2 categories (with the first and second highest degrees of membership) are <span class="ltx_text ltx_font_italic">adj.behavior</span> and <span class="ltx_text ltx_font_italic">adj.feeling</span>.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Vector space word representations.</h4>
+
+<div id="S3.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We employ 64-dimensional vector-space word representations constructed by <cite class="ltx_cite">Faruqui and Dyer (<a href="#bib.bib46" title="Improving vector space word representations using multilingual correlation" class="ltx_ref">2014</a>)</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup><a href="http://www.cs.cmu.edu/~mfaruqui/soft.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.cmu.edu/~mfaruqui/soft.html</span></a></span></span></span>
+Vector construction algorithm is a variation on traditional latent semantic analysis <cite class="ltx_cite">[<a href="#bib.bib43" title="Indexing by latent semantic analysis" class="ltx_ref">6</a>]</cite> that uses multilingual information to produce representations in which synonymous words have similar vectors.
+The vectors were trained on the news commentary corpus released by WMT-2011,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup><a href="http://www.statmt.org/wmt11/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.statmt.org/wmt11/</span></a></span></span></span> comprising 180,834 types.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Cross-lingual feature projection</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">For languages other than English, feature vectors are projected to English features using translation dictionaries.
+We used the Babylon dictionary,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">16</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">16</sup><a href="http://www.babylon.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.babylon.com</span></a></span></span></span> which is a proprietary resource, but any bilingual dictionary can in principle be used.
+For a non-English word in a source language,
+we first obtain all translations into English.
+Then, we average all feature vectors related to these translations.
+Consider an example related to projection of WordNet supersenses.
+A Russian word  <span class="ltx_text ltx_font_italic">голова</span>  is translated as <span class="ltx_text ltx_font_italic">head</span> and <span class="ltx_text ltx_font_italic">brain</span>.
+Hence, we select all the synsets of the nouns <span class="ltx_text ltx_font_italic">head</span> and <span class="ltx_text ltx_font_italic">brain</span>. There are 38 such synsets (33 for <span class="ltx_text ltx_font_italic">head</span> and 5 for <span class="ltx_text ltx_font_italic">brain</span>). Four of these synsets are associated with the supersense <span class="ltx_text ltx_font_italic">noun.body</span>. Therefore, the value of the feature <span class="ltx_text ltx_font_italic">noun.body</span> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="4/38\approx 0.11" display="inline"><mrow><mrow><mn>4</mn><mo>/</mo><mn>38</mn></mrow><mo>≈</mo><mn>0.11</mn></mrow></math>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Datasets</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section we describe a training and testing dataset as well a data collection procedure.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>English training sets</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">To train an SVO metaphor classifier, we employ the TroFi (Trope Finder) dataset.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">17</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">17</sup><a href="http://www.cs.sfu.ca/~anoop/students/jbirke/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.sfu.ca/~anoop/students/jbirke/</span></a></span></span></span>
+TroFi includes 3,737 manually annotated English sentences from the <span class="ltx_text ltx_font_italic">Wall Street Journal</span> <cite class="ltx_cite">[<a href="#bib.bib30" title="Active learning for the identification of nonliteral language" class="ltx_ref">2</a>]</cite>.
+Each sentence contains either literal or metaphorical use for one of 50 English verbs.
+First, we use a dependency parser <cite class="ltx_cite">[<a href="#bib.bib35" title="Turbo parsers: dependency parsing by approximate variational inference" class="ltx_ref">19</a>]</cite>
+to extract subject-verb-object (SVO) relations.
+Then, we filter extracted relations to eliminate parsing-related errors, and relations with verbs which are not in the TroFi verb list. After filtering, there are 953 metaphorical and 656 literal SVO relations which we use as a training set.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">In the case of AN relations, we construct and make publicly available a training set containing 884 metaphorical AN pairs and 884 pairs with literal meaning.
+It was collected by two annotators using public resources (collections of metaphors on the web).
+At least one additional person carefully examined and culled the collected metaphors,
+by removing duplicates, weak metaphors, and metaphorical phrases (such as <span class="ltx_text ltx_font_italic">drowning students</span>)
+whose interpretation depends on the context.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Multilingual test sets</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We collect and annotate metaphoric and literal test sentences in four languages.
+Thus, we compile eight test datasets, four for SVO relations, and four for AN relations.
+Each dataset has an equal number of metaphors and non-metaphors, i.e., the datasets are balanced.
+English (<span class="ltx_text ltx_font_smallcaps">en</span>) and Russian (<span class="ltx_text ltx_font_smallcaps">ru</span>) datasets have been compiled by our team and are publicly available.
+Spanish (<span class="ltx_text ltx_font_smallcaps">es</span>) and Farsi (<span class="ltx_text ltx_font_smallcaps">fa</span>) datasets are published elsewhere <cite class="ltx_cite">[<a href="#bib.bib50" title="Resources for the detection of conventionalized metaphors in four languages" class="ltx_ref">18</a>]</cite>. Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> lists test set sizes.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">svo</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">an</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">en</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t">222</td>
+<td class="ltx_td ltx_align_right ltx_border_t">200</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">ru</span></th>
+<td class="ltx_td ltx_align_right">240</td>
+<td class="ltx_td ltx_align_right">200</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">es</span></th>
+<td class="ltx_td ltx_align_right">220</td>
+<td class="ltx_td ltx_align_right">120</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">fa</span></th>
+<td class="ltx_td ltx_align_right">44</td>
+<td class="ltx_td ltx_align_right">320</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Sizes of the eight test sets. Each dataset is balanced, i.e., it has an equal number of metaphors and non-metaphors. For example, English SVO dataset has 222 relations: 111 metaphoric and 111 literal.</div>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We used the following procedure to compile the <span class="ltx_text ltx_font_smallcaps">en</span> and <span class="ltx_text ltx_font_smallcaps">ru</span> test sets.
+A moderator started with seed lists of 1000 most common verbs and adjectives.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">18</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">18</sup>Selection of 1000 most common verbs and adjectives achieves much broader lexical and domain coverage than what can be realistically obtained from continuous text. Our test sentence domains are, therefore, diverse: economic, political, sports, etc. </span></span></span></p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Then she used the SketchEngine, which provides searching capability for the TenTen Web corpus,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">19</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">19</sup><a href="http://trac.sketchengine.co.uk/wiki/Corpora/enTenTen" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://trac.sketchengine.co.uk/wiki/Corpora/enTenTen</span></a></span></span></span>
+to extract sentences with words that frequently co-occurred with words from the seed lists.
+From these sentences, she removed sentences that contained more than one metaphor, and sentences with non-SVO and non-AN metaphors. Remaining sentences were annotated by several native speakers (five for English and six for Russian),
+who judged AN and SVO phrases in context. The annotation instructions were general: <span class="ltx_text ltx_font_italic">“Please, mark in bold all words that, in your opinion, are used non-literally in the following sentences. In many sentences, all the words may be used literally.”</span> The Fleiss’ Kappas for 5 English and 6 Russian annotators are:
+<span class="ltx_text ltx_font_smallcaps">en-an</span> = .76, <span class="ltx_text ltx_font_smallcaps">ru-an</span> = .85, <span class="ltx_text ltx_font_smallcaps">en-svo</span> = .75, <span class="ltx_text ltx_font_smallcaps">ru-svo</span> = .78. For the final selection, we filtered out low-agreement (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>.8) sentences.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">The test candidate sentences were selected by a person who did not participate in the selection of the training samples. No English annotators of the test set, and only one Russian annotator out of 6 participated in the selection of the training samples. Thus, we trust that annotator judgments were not biased towards the cases that the system is trained to process.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>English experiments</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our task, as defined in Section <a href="#S2" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, is to classify SVO and AN relations as either metaphoric or literal. We first conduct a 10-fold cross-validation experiment on the training set defined in Section <a href="#S4.SS1" title="4.1 English training sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>. We represent each candidate relation using the features described in Section <a href="#S3.SS2" title="3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>, and evaluate performance of the three feature categories and their combinations.
+This is done by computing an accuracy in the 10-fold cross validation.
+Experimental results are given in Table <a href="#S5.T2" title="Table 2 ‣ 5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+where we also provide the number of features in each feature set.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center" colspan="2"><span class="ltx_text ltx_font_smallcaps">svo</span></th>
+<th class="ltx_td ltx_align_center" colspan="2"><span class="ltx_text ltx_font_smallcaps">an</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"># <span class="ltx_text ltx_font_smallcaps">feat</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">acc</span></th>
+<th class="ltx_td ltx_align_center"># <span class="ltx_text ltx_font_smallcaps">feat</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">acc</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">AbsImg</th>
+<td class="ltx_td ltx_align_right ltx_border_t">20</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.73<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_right ltx_border_t">16</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.76<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Supersense</th>
+<td class="ltx_td ltx_align_right">67</td>
+<td class="ltx_td ltx_align_right">0.77<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_right">116</td>
+<td class="ltx_td ltx_align_right">0.79<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">AbsImg+Sup.</th>
+<td class="ltx_td ltx_align_right">87</td>
+<td class="ltx_td ltx_align_right">0.78<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_right">132</td>
+<td class="ltx_td ltx_align_right">0.80<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">VSM</th>
+<td class="ltx_td ltx_align_right">192</td>
+<td class="ltx_td ltx_align_right">0.81</td>
+<td class="ltx_td ltx_align_right">228</td>
+<td class="ltx_td ltx_align_right">0.84<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">All</th>
+<td class="ltx_td ltx_align_right">279</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">0.82</span></td>
+<td class="ltx_td ltx_align_right">360</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">0.86</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>10-fold cross validation results for three feature categories and their combination, for classifiers trained on English SVO and AN training sets. # <span class="ltx_text ltx_font_smallcaps">feat</span> column shows a number of features.
+<span class="ltx_text ltx_font_smallcaps">acc</span> column reports an accuracy score in the 10-fold cross validation.
+Statistically significant differences (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m12" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>) from the all-feature combination are marked with a star.</div>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">These results show superior performance over previous state-of-the-art results, confirming our hypothesis that conceptual features are effective in metaphor classification. For the SVO task, the cross-validation accuracy is about 10% better than
+that of <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>.
+For the AN task, the cross validation accuracy is better by 8% than the result of <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> (two baseline methods are described in Section <a href="#S5.SS2" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>).
+We can see that all types of features have good performance on their own (VSM is the strongest feature type). Noun supersense features alone allows us to achieve an accuracy of 75%, i.e., adjective supersense features contribute 4% to adjective-noun supersense feature combination.
+Experiments with the pairs of features yield better results than individual features, implying that the feature categories are not redundant. Yet, combining all features leads to even higher accuracy during cross-validation.
+In the case of the AN task,
+a difference between the All feature combination and any other combination of features listed in Table <a href="#S5.T2" title="Table 2 ‣ 5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> is statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math> for both the sign and the permutation test).</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Although the first experiment shows very high scores, the 10-fold cross-validation cannot fully reflect the generality of the model, because all folds are parts of the same corpus.
+They are collected by the same human judges and belong to the same domain.
+Therefore, experiments on out-of-domain data are crucial.
+We carry out such experiments using held-out SVO and AN <span class="ltx_text ltx_font_smallcaps">en</span> test sets, described in Section <a href="#S4.SS2" title="4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a> and Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. In this experiment, we measure the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-score. We classify SVO and AN relations using a classifier trained on the All feature combination and balanced thresholds. The values of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-score are 0.76, both for SVO and AN tasks.
+This out-of-domain experiment suggests that our classifier is portable across domains and genres.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">However, (1) different application may have different requirements for recall/precision,
+and (2) classification results may be skewed towards having high precision and low recall (or vice versa).
+It is possible to trade precision for recall by choosing a different threshold.
+Thus, in addition to giving a single <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-score value for balanced thresholds,
+we present a Receiver Operator Characteristic (ROC) curve,
+where we plot a fraction of true positives against the fraction of false positives
+for 100 threshold values in the range from zero to one.
+The area under the ROC curve (AUC) can be interpreted as the probability
+that a classifier will assign a higher score to a randomly chosen positive example than to a randomly chosen negative example.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">20</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">20</sup>Assuming that positive examples are labeled by ones,
+and negative examples are labeled by zeros.</span></span></span>
+For a randomly guessing classifier, the ROC curve is a dashed diagonal line.
+A bad classifier has an ROC curve that goes close to the dashed diagonal or even below it.</p>
+</div>
+<div id="S5.F3" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.5
+<img src="" id="S5.F3.g1" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_bold">SVO</span></div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.5
+<img src="" id="S5.F3.g2" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_bold">AN</span></div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>ROC curves for classifiers trained using different feature sets (English SVO and AN test sets).</div>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">According to ROC plots in Figure <a href="#S5.F3" title="Figure 3 ‣ 5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+all three feature sets are effective, both for SVO and for AN tasks.
+Abstractness and Imageability features work better for adjectives and nouns,
+which is in line with previous findings <cite class="ltx_cite">[<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">40</a>, <a href="#bib.bib14" title="Using imageability and topic chaining to locate metaphors in linguistic corpora" class="ltx_ref">4</a>]</cite>.
+It can be also seen that VSM features are very effective.
+This is in line with results of <cite class="ltx_cite">Hovy<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Identifying metaphorical word use with tree kernels" class="ltx_ref">2013</a>)</cite>,
+who found that it is hard to improve over the classifier that uses only VSM features.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Comparison to baselines</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we compare our method to state-of-the-art
+methods of <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite> and of <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite>,
+who focused on classifying SVO and AN relations, respectively.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">In the case of SVO relations,
+we use software and datasets from <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>.
+These datasets, denoted as an <span class="ltx_text ltx_font_smallcaps">svo</span>-baseline,
+consist of 98 English and 149 Russian sentences.
+We train SVO metaphor detection tools on SVO relations extracted from TroFi sentences
+and evaluate them on the <span class="ltx_text ltx_font_smallcaps">svo</span>-baseline dataset.
+We also use the same thresholds for classifier posterior probabilities
+as <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>.
+Our approach is different from that of <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>
+in that it uses additional features (vector space word representations)
+and a different classification method (we use random forests while <cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite>
+use logistic regression).
+According to Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+we obtain higher performance scores for both Russian and English.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">en</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">ru</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">svo</span>-baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.78</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.76</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">This work</th>
+<td class="ltx_td ltx_align_center">0.86</td>
+<td class="ltx_td ltx_align_center">0.85</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Comparing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-scores of our SVO metaphor detection method to the baselines.</div>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">In the case of AN relations, we use the dataset (denoted as an <span class="ltx_text ltx_font_smallcaps">an</span>-baseline) created by <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> (see Section 4.1 in the referred paper for details).
+<cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> manually annotated 100 pairs
+where an adjective was one of the following: <span class="ltx_text ltx_font_italic">dark</span>, <span class="ltx_text ltx_font_italic">deep</span>, <span class="ltx_text ltx_font_italic">hard</span>, <span class="ltx_text ltx_font_italic">sweet</span>, and <span class="ltx_text ltx_font_italic">worm</span>. The pairs were presented to five human judges who rated each pair on a scale from 1 (very literal/denotative) to 4 (very non-literal/connotative).
+<cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> train logistic-regression employing only abstractness ratings as features. Performance of the method was evaluated using the 10-fold cross-validation separately
+for each judge.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">We replicate the above described evaluation procedure of <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite>
+using their model and features.
+In our classifier, we use the All feature combination and the balanced threshold as described in Section <a href="#S5.SS1" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps">an</span><span class="ltx_text ltx_font_bold">-baseline</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">This work</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Judge 1</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.73</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.75</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Judge 2</th>
+<td class="ltx_td ltx_align_center">0.81</td>
+<td class="ltx_td ltx_align_center">0.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Judge 3</th>
+<td class="ltx_td ltx_align_center">0.84</td>
+<td class="ltx_td ltx_align_center">0.88</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Judge 4</th>
+<td class="ltx_td ltx_align_center">0.79</td>
+<td class="ltx_td ltx_align_center">0.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Judge 5</th>
+<td class="ltx_td ltx_align_center">0.78</td>
+<td class="ltx_td ltx_align_center">0.77</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_italic">average</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.79</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.81</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Comparing AN metaphor detection method to the baselines: accuracy of the 10-fold cross validation on annotations of five human judges.</div>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">According to results in Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+almost all of the judge-specific <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-scores are slightly higher for our system,
+as well as the overall average <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-score.</p>
+</div>
+<div id="S5.SS2.p6" class="ltx_para">
+<p class="ltx_p">In both baseline comparisons,
+we obtain performance at least as good as in previously published studies.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Cross-lingual experiments</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">In the next experiment we corroborate the main hypothesis of this paper: a model trained on English data can be successfully applied to other languages.
+Namely, we use a trained English model discussed in Section <a href="#S5.SS1" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a> to classify
+literal and metaphoric SVO and AN relations in English, Spanish, Farsi and Russian test sets, listed in Section <a href="#S4.SS2" title="4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+This time we used all available features.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">Experimental results for all four languages,
+are given in Figure <a href="#S5.F6" title="Figure 6 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+The ROC curves for SVO and AN tasks are plotted in Figure <a href="#S5.F6" title="Figure 6 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and
+Figure <a href="#S5.F6" title="Figure 6 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, respectively.
+Each curve corresponds to a test set described in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+In addition, we perform an oracle experiment, to obtain actual <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p2.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-score values for best thresholds. Detailed results are shown in Table <a href="#S5.T5" title="Table 5 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S5.F6" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.5
+<img src="" id="S5.F6.g1" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span><span class="ltx_text ltx_font_bold">SVO</span></div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.5
+<img src="" id="S5.F6.g2" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span><span class="ltx_text ltx_font_bold">AN</span></div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Cross-lingual experiment: ROC curves for classifiers trained on the English data using a combination of all features, and applied to SVO and AN metaphoric and literal relations in four test languages: English, Russian, Spanish, and Farsi.</div>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">Consistent results with high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p3.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-scores are obtained across all four languages.
+Note that higher scores are obtained for the Russian test set.
+We hypothesize that this happens due to a higher-quality translation dictionary (which allows a more accurate model transfer). Relatively lower (yet reasonable) results for Farsi can be explained by a smaller size of the bilingual dictionary (thus, fewer feature projections can be obtained).
+Also note that, in our experience, most of Farsi metaphors are adjective-noun constructions. This is why the AN <span class="ltx_text ltx_font_smallcaps">fa</span> dataset in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is significantly larger than SVO <span class="ltx_text ltx_font_smallcaps">fa</span>.
+In that, for the AN Farsi task we observe high performance scores.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps">svo</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps">an</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">en</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t">0.79</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.85</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">ru</span></th>
+<td class="ltx_td ltx_align_right">0.84</td>
+<td class="ltx_td ltx_align_right">0.77</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">es</span></th>
+<td class="ltx_td ltx_align_right">0.76</td>
+<td class="ltx_td ltx_align_right">0.72</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps">fa</span></th>
+<td class="ltx_td ltx_align_right">0.75</td>
+<td class="ltx_td ltx_align_right">0.74</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Cross-lingual experiment: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>-scores for classifiers trained on the English data using a combination of all features, and applied, with optimal thresholds, to SVO and AN metaphoric and literal relations in four test languages: English, Russian, Spanish, and Farsi. </div>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F6" title="Figure 6 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and Table <a href="#S5.T5" title="Table 5 ‣ 5.3 Cross-lingual experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> confirm, that <span class="ltx_text ltx_font_italic">we obtain similar, robust results on four very different languages, using the same English classifiers</span>. We view this result as a strong evidence of language-independent nature of our metaphor detection method.
+In particular, this shows that proposed conceptual features
+can be used to detect selectional preferences violation across languages.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">To summarize the experimental section, our metaphor detection approach obtains state-of-the-art performance in English, is effective when applied to out-of-domain English data, and works cross-lingually.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Examples</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">Manual data analysis on adjective-noun pairs supports an abstractness-concreteness hypothesis formulated by several independent research studies. For example, in English we classify as metaphoric <span class="ltx_text ltx_font_italic">dirty word</span> and <span class="ltx_text ltx_font_italic">cloudy future</span>. Word pairs <span class="ltx_text ltx_font_italic">dirty diaper</span> and <span class="ltx_text ltx_font_italic">cloudy weather</span> have same adjectives. Yet they are classified as literal. Indeed, <span class="ltx_text ltx_font_italic">diaper</span> is a more concrete term than <span class="ltx_text ltx_font_italic">word</span> and <span class="ltx_text ltx_font_italic">weather</span> is more concrete than <span class="ltx_text ltx_font_italic">future</span>. Same pattern is observed in non-English datasets. In Russian,  <span class="ltx_text ltx_font_italic">больное общество</span>  “sick society” and  <span class="ltx_text ltx_font_italic">пустой звук</span>  “empty sound” are classified as metaphoric, while  <span class="ltx_text ltx_font_italic">больная бабушка</span>  “sick grandmother” and  <span class="ltx_text ltx_font_italic">пустая чашка</span>  “empty cup” are classified as literal.
+Spanish example of an adjective-noun metaphor is a well-known 
+
+
+
+
+ <span class="ltx_text ltx_font_italic">músculo económico</span> 
+
+
+
+
+
+
+
+ “economic muscle”.
+We also observe that non-metaphoric adjective noun pairs tend to have more imageable adjectives, such as literal 
+
+
+
+
+ <span class="ltx_text ltx_font_italic">derecho humano</span> 
+
+
+
+
+
+
+
+ “human right”. In Spanish, <span class="ltx_text ltx_font_italic">human</span> is more imageable than <span class="ltx_text ltx_font_italic">economic</span>.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">Verb-based examples that are correctly classified by our model are: <span class="ltx_text ltx_font_italic">blunder escaped notice<span class="ltx_ERROR undefined">\normal@char~</span></span>(metaphoric) and <span class="ltx_text ltx_font_italic">prisoner escaped jail<span class="ltx_ERROR undefined">\normal@char~</span></span>(literal). We hypothesize that supersense features are instrumental in the correct classification of these examples: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_italic">noun.person,verb.motion<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span> is usually used literally, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m3" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_italic">noun.act,verb.motion<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m4" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span> is used metaphorically.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">For a historic overview and a survey
+of common approaches to metaphor detection,
+we refer the reader to recent reviews by Shutova<span class="ltx_ERROR undefined">\normal@char~</span>et<span class="ltx_ERROR undefined">\normal@char~</span>al.<span class="ltx_ERROR undefined">\normal@char~</span><cite class="ltx_cite">[<a href="#bib.bib20" title="Models of metaphor in NLP" class="ltx_ref">32</a>, <a href="#bib.bib6" title="Statistical metaphor processing" class="ltx_ref">30</a>]</cite>.
+Here we focus only on recent approaches.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Shutova<span class="ltx_ERROR undefined">\normal@char~</span>et<span class="ltx_ERROR undefined">\normal@char~</span>al.<span class="ltx_ERROR undefined">\normal@char~</span><cite class="ltx_cite">[<a href="#bib.bib28" title="Metaphor identification using verb and noun clustering" class="ltx_ref">28</a>]</cite>
+proposed a bottom-up method:
+one starts from a set of seed metaphors
+and seeks phrases where verbs and/or nouns belong
+to the same cluster as verbs or nouns in seed examples.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Turney<span class="ltx_ERROR undefined">\normal@char~</span>et<span class="ltx_ERROR undefined">\normal@char~</span>al.<span class="ltx_ERROR undefined">\normal@char~</span><cite class="ltx_cite">[<a href="#bib.bib33" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">40</a>]</cite> show how abstractness scores
+could be used to detect metaphorical AN phrases.
+Neuman<span class="ltx_ERROR undefined">\normal@char~</span>et<span class="ltx_ERROR undefined">\normal@char~</span>al.<span class="ltx_ERROR undefined">\normal@char~</span><cite class="ltx_cite">[<a href="#bib.bib9" title="Metaphor identification in large texts corpora" class="ltx_ref">24</a>]</cite>
+describe a Concrete Category Overlap algorithm,
+where co-occurrence statistics and Turney’s abstractness scores are used to determine
+WordNet supersenses that correspond to literal usage of a given adjective or verb.
+For example, given an adjective,
+we can learn that it modifies
+concrete nouns that usually have the supersense <span class="ltx_text ltx_font_italic">noun.body</span>.
+If this adjective modifies a noun with the supersense <span class="ltx_text ltx_font_italic">noun.feeling</span>,
+we conclude that a metaphor is found.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Broadwell<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib14" title="Using imageability and topic chaining to locate metaphors in linguistic corpora" class="ltx_ref">2013</a>)</cite> argue that
+metaphors are highly imageable words that do not belong to a discussion topic.
+To implement this idea, they extend MRC imageability scores to all dictionary words
+using links among WordNet supersenses (mostly hypernym and hyponym relations).
+<cite class="ltx_cite">Strzalkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Robust extraction of metaphors from novel data" class="ltx_ref">2013</a>)</cite> carry out
+experiments in a specific (government-related) domain
+for four languages: English, Spanish, Farsi, and Russian.
+<cite class="ltx_cite">Strzalkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Robust extraction of metaphors from novel data" class="ltx_ref">2013</a>)</cite> explain the algorithm only for English
+and say that is the same for Spanish, Farsi, and Russian.
+Because they heavily rely on WordNet and availability of imageability scores,
+their approach may not be applicable to low-resource languages.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Hovy<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Identifying metaphorical word use with tree kernels" class="ltx_ref">2013</a>)</cite> applied tree kernels to metaphor detection.
+Their method also employs WordNet supersenses,
+but it is not clear from the description whether WordNet is essential or can be replaced
+with some other lexical resource.
+We cannot compare directly our model with this work because our classifier is restricted to detection of only SVO and AN metaphors.</p>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite> propose a cross-lingual detection
+method that uses only English lexical resources and a dependency parser.
+Their study focuses only on the verb-based metaphors.
+<cite class="ltx_cite">Tsvetkov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Cross-lingual metaphor detection using common semantic features" class="ltx_ref">2013</a>)</cite> employ only English and Russian data.
+Current work builds on this study, and incorporates new syntactic relations as metaphor candidates, adds several new feature sets and different, more reliable datasets for evaluating results. We demonstrate results on two new languages, Spanish and Farsi, to emphasize the generality of the method.</p>
+</div>
+<div id="S6.p7" class="ltx_para">
+<p class="ltx_p">A words sense disambiguation (WSD) is a related problem, where one identifies meanings of polysemous words.
+The difference is that in the WSD task, we need to select an already existing sense,
+while for the metaphor detection, the goal is to identify cases of sense borrowing.
+Studies showed that cross-lingual evidence allows one to achieve a state-of-the-art
+performance in the WSD task, yet, most cross-lingual WSD methods employ parallel corpora <cite class="ltx_cite">[<a href="#bib.bib51" title="Word sense disambiguation: a survey" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">The key contribution of our work is that
+we show how to identify metaphors across languages by building a model in English
+and applying it—without adaptation—to other languages: Spanish, Farsi, and Russian.
+This model uses language-independent (rather than lexical or language specific) conceptual features.
+Not only do we establish benchmarks for Spanish, Farsi, and Russian,
+but we also achieve state-of-the-art performance in English.
+In addition, we present a comparison of relative contributions of several types of features.
+We concentrate on metaphors in the context
+of two kinds of syntactic relations: subject-verb-object (SVO) relations and adjective-noun (AN) relations,
+which account for a majority of all metaphorical phrases.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Future work will expand the scope of metaphor identification by including nominal metaphoric relations as well as explore techniques for incorporating contextual features, which can play a key role in identifying certain kinds of metaphors. Second, cross-lingual model transfer can be improved with more careful cross-lingual feature projection.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We are extremely grateful to Shuly Wintner for
+a thorough review that helped us improve this draft;
+we also thank people who helped in
+creating the datasets and/or provided valuable feedback
+on this work: Ed Hovy, Vlad Niculae, Davida Fromm,
+Brian MacWhinney, Carlos Ramírez, and other members of the CMU METAL team.
+This work was supported by the U.S. Army Research Laboratory and
+the U.S. Army Research Office under contract/grant number W911NF-10-1-0533.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni, R. Bernardi, N. Do and C. Shan</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entailment above the word level in distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 23–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Birke and A. Sarkar</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Active learning for the identification of nonliteral language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">FigLanguages ’07</span>, <span class="ltx_text ltx_bib_pages"> pp. 21–28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p1" title="4.1 English training sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Breiman</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random forests</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Classification using Random Forests ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. A. Broadwell, U. Boz, I. Cases, T. Strzalkowski, L. Feldman, S. Taylor, S. Shaikh, T. Liu, K. Cho and N. Webb</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using imageability and topic chaining to locate metaphors in linguistic corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Social Computing, Behavioral-Cultural Modeling and Prediction</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 102–110</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i1.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.p5" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.p4" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ciaramita and Y. Altun</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Broad-coverage sense disambiguation and information extraction with a supersense sequence tagger</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 594–602</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. C. Deerwester, S. T. Dumais, T. K. Landauer, G. W. Furnas and R. A. Harshman</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Indexing by latent semantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">JASIS</span> <span class="ltx_text ltx_bib_volume">41</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 391–407</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P3.p1" title="Vector space word representations. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Faruqui and C. Dyer</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving vector space word representations using multilingual correlation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P3.p1" title="Vector space word representations. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">C. Fellbaum (Ed.)</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: an electronic lexical database</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Language, Speech and Communication</span>,  <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Gandy, N. Allan, M. Atallah, O. Frieder, N. Howard, S. Kanareykin, M. Koppel, M. Last, Y. Neuman and S. Argamon</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic identification of conceptual metaphors with limited knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 328–334</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gedigian, J. Bryant, S. Narayanan and B. Ciric</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Catching metaphors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 41–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Hamp and H. Feldweg</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Germanet-a lexical-semantic net for German</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 9–15</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P2.p3" title="Supersenses. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Hovy, S. Srivastava, S. K. Jauhar, M. Sachan, K. Goyal, H. Li, W. Sanders and E. Hovy</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying metaphorical word use with tree kernels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 52</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.p5" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.p5" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. H. Huang, R. Socher, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving word representations via global context and multiple word prototypes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 873–882</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Hundsnurscher and J. Splett</span><span class="ltx_text ltx_bib_year">(1982)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantik der adjektive des Deutschen</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Westdeutscher Verlag</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P2.p3" title="Supersenses. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kozhenikov and I. Titov</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-lingual transfer of semantic role labeling models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1190–1200</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Krishnakumaran and X. Zhu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hunting elusive metaphors using lexical resources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 13–20</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Lakoff and M. Johnson</span><span class="ltx_text ltx_bib_year">(1980)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conceptual metaphor in everyday language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Philosophy</span>, <span class="ltx_text ltx_bib_pages"> pp. 453–486</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Levin, T. Mitamura, D. Fromm, B. MacWhinney, J. Carbonell, W. Feely, R. Frederking, A. Gershman and C. Ramirez</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Resources for the detection of conventionalized metaphors in four languages</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Multilingual test sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. T. Martins, N. A. Smith, E. P. Xing, P. M. Q. Aguiar and M. A. T. Figueiredo</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Turbo parsers: dependency parsing by approximate variational inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 34–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 English training sets ‣ 4 Datasets ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. J. Mason</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CorMet: a computational, corpus-based conventional metaphor extraction system</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">30</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 23–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, S. Petrov and K. Hall</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-source transfer of delexicalized dependency parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, Q. V. Le and I. Sutskever</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting similarities among languages for Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoRR</span> <span class="ltx_text ltx_bib_volume">abs/1309.4168</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Navigli</span><span class="ltx_text ltx_bib_year">(2009-02)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word sense disambiguation: a survey</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Comput. Surv.</span> <span class="ltx_text ltx_bib_volume">41</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 10:1–10:69</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0360-0300</span>,
+<a href="http://doi.acm.org/10.1145/1459352.1459355" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1459352.1459355" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p7" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Neuman, D. Assaf, Y. Cohen, M. Last, S. Argamon, N. Howard and O. Frieder</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphor identification in large texts corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">PloS one</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. e62343</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, O. Grisel, M. Blondel, P. Prettenhofer, R. Weiss, V. Dubourg, J. Vanderplas, A. Passos, D. Cournapeau, M. Brucher, M. Perrot and E. Duchesnay</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scikit-learn: machine learning in Python</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2825–2830</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Classification using Random Forests ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Perlich, F. Provost and J. S. Simonoff</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tree induction vs. logistic regression: a learning-curve analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">4</span>, <span class="ltx_text ltx_bib_pages"> pp. 211–255</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Classification using Random Forests ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Schneider, B. Mohit, C. Dyer, K. Oflazer and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supersense tagging for Arabic: the MT-in-the-middle attack</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 661–667</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p2" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova, L. Sun and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphor identification using verb and noun clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1002–1010</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova and L. Sun</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised metaphor identification using hierarchical graph factorization clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 978–988</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova, S. Teufel and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical metaphor processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">39</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 301–353</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova and S. Teufel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphor corpus annotated for source-target domain mappings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 3255–3261</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Shutova</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Models of metaphor in NLP</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 688–697</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p1" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. J. Steen, A. G. Dorst, J. B. Herrmann, A. A. Kaal and T. Krennmayr</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphor in usage</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Linguistics</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 765–796</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Strzalkowski, G. A. Broadwell, S. Taylor, L. Feldman, B. Yamrom, S. Shaikh, T. Liu, K. Cho, U. Boz and I. Cases</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Robust extraction of metaphors from novel data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 67</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. H. Thibodeau and L. Boroditsky</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Metaphors we think with: the role of metaphor in reasoning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">PLoS One</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. e16782</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Tsvetkov, E. Mukomel and A. Gershman</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-lingual metaphor detection using common semantic features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 45</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P1.p1" title="Abstractness and imageability. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S5.SS1.p2" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S5.SS2.p2" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.p6" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Tsvetkov, N. Schneider, D. Hovy, A. Bhatia, M. Faruqui and C. Dyer</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Augmenting English adjective senses with supersenses</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i2.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.SSS0.P2.p3" title="Supersenses. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov, Y. Bengio and D. Roth</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A preliminary evaluation of word representations for named-entity recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney, Y. Neuman, D. Assaf and Y. Cohen</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Literal and metaphorical sense identification through concrete and abstract context</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 680–690</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i1.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.p2" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS1.p5" title="5.1 English experiments ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S5.SS2.p3" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S5.SS2.p4" title="5.2 Comparison to baselines ‣ 5 Experiments ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Täckström, D. Das, S. Petrov, R. McDonald and J. Nivre</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Token and type constraints for cross-lingual part-of-speech tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">TACL</span> <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Wilks</span><span class="ltx_text ltx_bib_year">(1978)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Making preferences more active</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 197–223</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="2 Methodology ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Wilson</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MRC Psycholinguistic Database: Machine-usable dictionary, version 2.00</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods, Instruments, &amp; Computers</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 6–10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS0.P1.p1" title="Abstractness and imageability. ‣ 3.2 Feature extraction ‣ 3 Model and Feature Extraction ‣ Metaphor Detection with Cross-Lingual Model Transfer" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:22:42 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

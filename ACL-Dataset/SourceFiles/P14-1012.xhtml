@@ -1,0 +1,1304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning New Semi-Supervised Deep Auto-encoder Features for Statistical Machine Translation</title>
+<!--Generated on Tue Jun 10 17:16:52 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning New Semi-Supervised Deep Auto-encoder Features 
+<br class="ltx_break"/>for Statistical Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Shixiang Lu, Zhenbiao Chen, Bo Xu 
+<br class="ltx_break"/>Interactive Digital Media Technology Research Center (IDMTech)
+<br class="ltx_break"/>Institute of Automation, Chinese Academy of Sciences, Beijing, China 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">shixiang.lu,zhenbiao.chen,xubo</span>}<span class="ltx_text ltx_font_typewriter">@ia.ac.cn</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper, instead of designing new features based on intuition, linguistic knowledge and domain, we learn some new and effective features using the deep auto-encoder (DAE) paradigm for phrase-based translation model. Using the unsupervised pre-trained deep belief net (DBN) to initialize DAE’s parameters and using the input original phrase features as a teacher for semi-supervised fine-tuning, we learn new semi-supervised DAE features, which are more effective and stable than the unsupervised DBN features. Moreover, to learn high dimensional feature representation, we introduce a natural horizontal composition of more DAEs for large hidden layers feature learning. On two Chinese-English tasks, our semi-supervised DAE features obtain statistically significant improvements of 1.34/2.45 (IWSLT) and 0.82/1.52 (NIST) BLEU points over the unsupervised DBN features and the baseline features, respectively.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Recently, many new features have been explored for SMT and significant performance have been obtained in terms of translation quality, such as syntactic features, sparse features, and reordering features. However, most of these features are manually designed on linguistic phenomena that are related to bilingual language pairs, thus they are very difficult to devise and estimate.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Instead of designing new features based on intuition, linguistic knowledge and domain, for the first time, Maskey and Zhou (2012) explored the possibility of inducing new features in an unsupervised fashion using deep belief net (DBN) <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Hinton et al.2006</a>]</cite> for hierarchical phrase-based translation model. Using the 4 original phrase features in the phrase table as the input features, they pre-trained the DBN by contrastive divergence <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Hinton2002</a>]</cite>, and generated new unsupervised DBN features using forward computation. These new features are appended as extra features to the phrase table for the translation decoder.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">However, the above approach has two major shortcomings. First, the input original features for the DBN feature learning are too simple, the limited 4 phrase features of each phrase pair, such as bidirectional phrase translation probability and bidirectional lexical weighting <cite class="ltx_cite">[<a href="#bib.bibx17" title="" class="ltx_ref">Koehn et al.2003</a>]</cite>, which are a bottleneck for learning effective feature representation. Second, it only uses the unsupervised layer-wise pre-training of DBN built with stacked sets of Restricted Boltzmann Machines (RBM) <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Hinton2002</a>]</cite>, does not have a training objective, so its performance relies on the empirical parameters. Thus, this approach is unstable and the improvement is limited. In this paper, we strive to effectively address the above two shortcomings, and systematically explore the possibility of learning new features using deep (multi-layer) neural networks (DNN, which is usually referred under the name <span class="ltx_text ltx_font_italic">Deep Learning</span>) for SMT.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">To address the first shortcoming, we adapt and extend some simple but effective phrase features as the input features for new DNN feature learning, and these features have been shown significant improvement for SMT, such as, phrase pair similarity <cite class="ltx_cite">[<a href="#bib.bibx33" title="" class="ltx_ref">Zhao et al.2004</a>]</cite>, phrase frequency, phrase length <cite class="ltx_cite">[<a href="#bib.bibx12" title="" class="ltx_ref">Hopkins and May2011</a>]</cite>, and phrase generative probability <cite class="ltx_cite">[<a href="#bib.bibx6" title="" class="ltx_ref">Foster et al.2010</a>]</cite>, which also show further improvement for new phrase feature learning in our experiments.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">To address the second shortcoming, inspired by the successful use of DAEs for handwritten digits recognition <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Hinton and Salakhutdinov2006</a>, <a href="#bib.bibx11" title="" class="ltx_ref">Hinton et al.2006</a>]</cite>, information retrieval <cite class="ltx_cite">[<a href="#bib.bibx30" title="" class="ltx_ref">Salakhutdinov and Hinton2009</a>, <a href="#bib.bibx24" title="" class="ltx_ref">Mirowski et al.2010</a>]</cite>, and speech spectrograms <cite class="ltx_cite">[<a href="#bib.bibx5" title="" class="ltx_ref">Deng et al.2010</a>]</cite>, we propose new feature learning using semi-supervised DAE for phrase-based translation model. By using the input data as the teacher, the “semi-supervised” fine-tuning process of DAE addresses the problem of “back-propagation without a teacher” <cite class="ltx_cite">[<a href="#bib.bibx29" title="" class="ltx_ref">Rumelhart et al.1986</a>]</cite>, which makes the DAE learn more powerful and abstract features <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Hinton and Salakhutdinov2006</a>]</cite>. For our semi-supervised DAE feature learning task, we use the unsupervised pre-trained DBN to initialize DAE’s parameters and use the input original phrase features as the “teacher” for semi-supervised back-propagation. Compared with the unsupervised DBN features, our semi-supervised DAE features are more effective and stable.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Moreover, to learn high dimensional feature representation, we introduce a natural horizontal composition for DAEs (HCDAE) that can be used to create large hidden layer representations simply by horizontally combining two (or more) DAEs <cite class="ltx_cite">[<a href="#bib.bibx2" title="" class="ltx_ref">Baldi2012</a>]</cite>, which shows further improvement compared with single DAE in our experiments.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">It is encouraging that, non-parametric feature expansion using gaussian mixture model (GMM) <cite class="ltx_cite">[<a href="#bib.bibx25" title="" class="ltx_ref">Nguyen et al.2007</a>]</cite>, which guarantees invariance to the specific embodiment of the original features, has been proved as a feasible feature generation approach for SMT. Deep models such as DNN have the potential to be much more representationally efficient for feature learning than shallow models like GMM. Thus, instead of GMM, we use DNN (DBN, DAE and HCDAE) to learn new non-parametric features, which has the similar evolution in speech recognition <cite class="ltx_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">Dahl et al.2012</a>, <a href="#bib.bibx8" title="" class="ltx_ref">Hinton et al.2012</a>]</cite>. DNN features are learned from the non-linear combination of the input original features, they strong capture high-order correlations between the activities of the original features, and we believe this deep learning paradigm induces the original features to further reach their potential for SMT.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Finally, we conduct large-scale experiments on IWSLT and NIST Chinese-English translation tasks, respectively, and the results demonstrate that our solutions solve the two aforementioned shortcomings successfully. Our semi-supervised DAE features significantly outperform the unsupervised DBN features and the baseline features, and our introduced input phrase features significantly improve the performance of DAE feature learning.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">The remainder of this paper is organized as follows. Section <a href="#S2" title="2 Related Work ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> briefly summarizes the recent related work about the applications of DNN for SMT tasks. Section <a href="#S3" title="3 Input Features for DNN Feature Learning ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents our introduced input features for DNN feature learning. Section <a href="#S4" title="4 Semi-Supervised Deep Auto-encoder Features Learning for SMT ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> describes how to learn our semi-supervised DAE features for SMT. Section <a href="#S5" title="5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> describes and discusses the large-scale experimental results. Finally, we end with conclusions in section <a href="#S6" title="6 Conclusions ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Recently, there has been growing interest in use of DNN for SMT tasks. Le et al. (2012) improved translation quality of n-gram translation model by using a bilingual neural LM, where translation probabilities are estimated using a continuous representation of translation units in lieu of standard discrete representations. Kalchbrenner and Blunsom (2013) introduced recurrent continuous translation models that comprise a class for purely continuous sentence-level translation models. Auli et al. (2013) presented a joint language and translation model based on a recurrent neural network which predicts target words based on an unbounded history of both source and target words. Liu et al. (2013) went beyond the log-linear model for SMT and proposed a novel additive neural networks based translation model, which overcome some of the shortcomings suffered by the log-linear model: linearity and the lack of deep interpretation and representation in features. Li et al. (2013) presented an ITG reordering classifier based on recursive auto-encoders, and generated vector space representations for variable-sized phrases, which enable predicting orders to exploit syntactic and semantic information. Lu et al. (2014) adapted and extended the max-margin based RNN <cite class="ltx_cite">[<a href="#bib.bibx31" title="" class="ltx_ref">Socher et al.2011</a>]</cite> into HPB translation with force decoding and converting tree, and proposed a RNN based word topology model for HPB translation, which successfully capture the topological structure of the words on the source side in a syntactically and semantically meaningful order.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">However, none of these above works have focused on learning new features automatically with input data, and while learning suitable features (representations) is the superiority of DNN since it has been proposed. In this paper, we systematically explore the possibility of learning new features using DNN for SMT.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Input Features for DNN Feature Learning</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The phrase-based translation model <cite class="ltx_cite">[<a href="#bib.bibx17" title="" class="ltx_ref">Koehn et al.2003</a>, <a href="#bib.bibx28" title="" class="ltx_ref">Och and Ney2004</a>]</cite> has demonstrated superior performance and been widely used in current SMT systems, and we employ our implementation on this translation model. Next, we adapt and extend some original phrase features as the input features for DAE feature learning.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Baseline phrase features</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We assume that source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="f=f_{1},\cdots,f_{l_{f}}" display="inline"><mrow><mi>f</mi><mo>=</mo><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>f</mi><msub><mi>l</mi><mi>f</mi></msub></msub></mrow></mrow></math> and target phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="e=e_{1},\cdots,e_{l_{e}}" display="inline"><mrow><mi>e</mi><mo>=</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>e</mi><msub><mi>l</mi><mi>e</mi></msub></msub></mrow></mrow></math> include <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="l_{f}" display="inline"><msub><mi>l</mi><mi>f</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="l_{e}" display="inline"><msub><mi>l</mi><mi>e</mi></msub></math> words, respectively. Following <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, we use the following 4 phrase features of each phrase pair <cite class="ltx_cite">[<a href="#bib.bibx17" title="" class="ltx_ref">Koehn et al.2003</a>]</cite> in the phrase table as the first type of input features, bidirectional phrase translation probability (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="P(e|f)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="P(f|e)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>), bidirectional lexical weighting (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="Lex(e|f)" display="inline"><mrow><mi>L</mi><mi>e</mi><mi>x</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="Lex(f|e)" display="inline"><mrow><mi>L</mi><mi>e</mi><mi>x</mi><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>),</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="X_{1}\rightarrow P(f|e),Lex(f|e),P(e|f),Lex(e|f)" display="block"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>→</mo><mi>P</mi><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow><mo>,</mo><mi>L</mi><mi>e</mi><mi>x</mi><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow><mo>,</mo><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><mo>,</mo><mi>L</mi><mi>e</mi><mi>x</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Phrase pair similarity</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Zhao et al. (2004) proposed a way of using term weight based models in a vector space as additional evidences for phrase pair translation quality. This model employ phrase pair similarity to encode the weights of content and non-content words in phrase translation pairs. Following <cite class="ltx_cite">[<a href="#bib.bibx33" title="" class="ltx_ref">Zhao et al.2004</a>]</cite>, we calculate bidirectional phrase pair similarity using cosine distance and BM25 distance as,</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="S^{cos}_{i}(e,f)=\frac{\sum_{j=1}^{l_{e}}\sum_{i=1}^{l_{f}}w_{e_{j}}p(e_{j}|f_%&#10;{i})w_{f_{i}}}{sqrt(\sum_{j=1}^{l_{e}}w_{e_{j}}^{2})sqrt(\sum_{j=1}^{l_{e}}{w_%&#10;{a}^{e_{j}}}^{2})}" display="block"><mrow><mrow><msubsup><mi>S</mi><mi>i</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>f</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>e</mi></msub></msubsup><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>f</mi></msub></msubsup><msub><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>j</mi></msub><mo>|</mo><msub><mi>f</mi><mi>i</mi></msub><mo>)</mo></mrow><msub><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub></msub></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>e</mi></msub></msubsup><msubsup><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub><mn>2</mn></msubsup></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>e</mi></msub></msubsup><mmultiscripts><mi>w</mi><mi>a</mi><msub><mi>e</mi><mi>j</mi></msub><none/><mn>2</mn></mmultiscripts></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="S^{cos}_{d}(f,e)=\frac{\sum_{i=1}^{l_{f}}\sum_{j=1}^{l_{e}}w_{f_{i}}p(f_{i}|e_%&#10;{j})w_{e_{j}}}{sqrt(\sum_{i=1}^{l_{f}}w_{f_{i}}^{2})sqrt(\sum_{i=1}^{l_{f}}{w_%&#10;{a}^{f_{i}}}^{2})}" display="block"><mrow><mrow><msubsup><mi>S</mi><mi>d</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>f</mi></msub></msubsup><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>e</mi></msub></msubsup><msub><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>e</mi><mi>j</mi></msub><mo>)</mo></mrow><msub><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub></msub></mrow><mrow><mi>s</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>f</mi></msub></msubsup><msubsup><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub><mn>2</mn></msubsup></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>f</mi></msub></msubsup><mmultiscripts><mi>w</mi><mi>a</mi><msub><mi>f</mi><mi>i</mi></msub><none/><mn>2</mn></mmultiscripts></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="p(e_{j}|f_{i})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>j</mi></msub><mo>|</mo><msub><mi>f</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="p(f_{i}|e_{j})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>|</mo><msub><mi>e</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> represents bidirectional word translation probability. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="w_{f_{i}}" display="inline"><msub><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="w_{e_{j}}" display="inline"><msub><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub></msub></math> are term weights for source and target words, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="w_{a}^{e_{j}}" display="inline"><msubsup><mi>w</mi><mi>a</mi><msub><mi>e</mi><mi>j</mi></msub></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="w_{a}^{f_{i}}" display="inline"><msubsup><mi>w</mi><mi>a</mi><msub><mi>f</mi><mi>i</mi></msub></msubsup></math> are the transformed weights mapped from all source/target words to the target/source dimension at word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="e_{j}" display="inline"><msub><mi>e</mi><mi>j</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math>, respectively.</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="S^{bm25}_{i}(e,f)=\sum_{i=1}^{l_{f}}idf_{f_{i}}\frac{(k_{1}+1)w_{f_{i}}(k_{3}+%&#10;1)w^{f_{i}}_{a}}{(K+w_{f_{i}})(k_{3}+w^{f_{i}}_{a})}" display="block"><mrow><mrow><msubsup><mi>S</mi><mi>i</mi><mrow><mi>b</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>25</mn></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>f</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>f</mi></msub></munderover><mrow><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><msub><mi>f</mi><mi>i</mi></msub></msub><mo>⁢</mo><mfrac><mrow><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>1</mn></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>3</mn></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>w</mi><mi>a</mi><msub><mi>f</mi><mi>i</mi></msub></msubsup></mrow><mrow><mrow><mo>(</mo><mrow><mi>K</mi><mo>+</mo><msub><mi>w</mi><msub><mi>f</mi><mi>i</mi></msub></msub></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>3</mn></msub><mo>+</mo><msubsup><mi>w</mi><mi>a</mi><msub><mi>f</mi><mi>i</mi></msub></msubsup></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="S^{bm25}_{d}(f,e)=\sum_{j=1}^{l_{e}}idf_{e_{j}}\frac{(k_{1}+1)w_{e_{j}}(k_{3}+%&#10;1)w^{e_{j}}_{a}}{(K+w_{e_{j}})(k_{3}+w^{e_{j}}_{a})}" display="block"><mrow><mrow><msubsup><mi>S</mi><mi>d</mi><mrow><mi>b</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>25</mn></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>l</mi><mi>e</mi></msub></munderover><mrow><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><msub><mi>e</mi><mi>j</mi></msub></msub><mo>⁢</mo><mfrac><mrow><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>1</mn></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>3</mn></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>w</mi><mi>a</mi><msub><mi>e</mi><mi>j</mi></msub></msubsup></mrow><mrow><mrow><mo>(</mo><mrow><mi>K</mi><mo>+</mo><msub><mi>w</mi><msub><mi>e</mi><mi>j</mi></msub></msub></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>k</mi><mn>3</mn></msub><mo>+</mo><msubsup><mi>w</mi><mi>a</mi><msub><mi>e</mi><mi>j</mi></msub></msubsup></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="k_{1}" display="inline"><msub><mi>k</mi><mn>1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="k_{3}" display="inline"><msub><mi>k</mi><mn>3</mn></msub></math> are set to be 1, 1 and 1000, respectively. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m12" class="ltx_Math" alttext="K=k_{1}((1-b)+J/avg(l))" display="inline"><mrow><mi>K</mi><mo>=</mo><mrow><msub><mi>k</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>b</mi></mrow><mo>)</mo></mrow><mo>+</mo><mrow><mrow><mi>J</mi><mo>/</mo><mi>a</mi></mrow><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>l</mi><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m13" class="ltx_Math" alttext="J" display="inline"><mi>J</mi></math> is the phrase length (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m14" class="ltx_Math" alttext="l_{e}" display="inline"><msub><mi>l</mi><mi>e</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m15" class="ltx_Math" alttext="l_{f}" display="inline"><msub><mi>l</mi><mi>f</mi></msub></math>), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m16" class="ltx_Math" alttext="avg(l)" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>l</mi><mo>)</mo></mrow></mrow></math> is the average phrase length. Thus, we have the second type of input features</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<table id="S3.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="X_{2}\rightarrow S^{cos}_{i}(f,e),S^{bm25}_{i}(f,e),S^{cos}_{d}(e,f),S^{bm25}_%&#10;{d}(e,f)" display="block"><mrow><msub><mi>X</mi><mn>2</mn></msub><mo>→</mo><mrow><mrow><msubsup><mi>S</mi><mi>i</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msubsup><mi>S</mi><mi>i</mi><mrow><mi>b</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>25</mn></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msubsup><mi>S</mi><mi>d</mi><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>f</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msubsup><mi>S</mi><mi>d</mi><mrow><mi>b</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>25</mn></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>e</mi><mo>,</mo><mi>f</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Phrase generative probability</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We adapt and extend bidirectional phrase generative probabilities as the input features, which have been used for domain adaptation <cite class="ltx_cite">[<a href="#bib.bibx6" title="" class="ltx_ref">Foster et al.2010</a>]</cite>. According to the background LMs, we estimate the bidirectional (source/target side) forward and backward phrase generative probabilities as</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<table id="S3.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="P_{f}(f)=P(f_{1})P(f_{2}|f_{1})\cdots P(f_{l_{f}}|f_{l_{f}-n+1},\cdots,f_{l_{f%&#10;}-1})" display="block"><mrow><msub><mi>P</mi><mi>f</mi></msub><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mn>1</mn></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mn>2</mn></msub><mo>|</mo><msub><mi>f</mi><mn>1</mn></msub><mo>)</mo></mrow><mi mathvariant="normal">⋯</mi><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><msub><mi>l</mi><mi>f</mi></msub></msub><mo>|</mo><msub><mi>f</mi><mrow><msub><mi>l</mi><mi>f</mi></msub><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>f</mi><mrow><msub><mi>l</mi><mi>f</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex8.m1" class="ltx_Math" alttext="P_{f}(e)=P(e_{1})P(e_{2}|e_{1})\cdots P(e_{l_{e}}|e_{l_{e}-n+1},\cdots,e_{l_{e%&#10;}-1})" display="block"><mrow><msub><mi>P</mi><mi>f</mi></msub><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><mn>1</mn></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><mn>2</mn></msub><mo>|</mo><msub><mi>e</mi><mn>1</mn></msub><mo>)</mo></mrow><mi mathvariant="normal">⋯</mi><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><msub><mi>l</mi><mi>e</mi></msub></msub><mo>|</mo><msub><mi>e</mi><mrow><msub><mi>l</mi><mi>e</mi></msub><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>e</mi><mrow><msub><mi>l</mi><mi>e</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex9.m1" class="ltx_Math" alttext="P_{b}(f)=P(f_{l_{f}})P(f_{l_{f}-1}|f_{l_{f}})\cdots P(f_{1}|f_{n},\cdots,f_{2})" display="block"><mrow><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><msub><mi>l</mi><mi>f</mi></msub></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mrow><msub><mi>l</mi><mi>f</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>|</mo><msub><mi>f</mi><msub><mi>l</mi><mi>f</mi></msub></msub><mo>)</mo></mrow><mi mathvariant="normal">⋯</mi><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mn>1</mn></msub><mo>|</mo><msub><mi>f</mi><mi>n</mi></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>f</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex10.m1" class="ltx_Math" alttext="P_{b}(e)=P(e_{l_{e}})P(e_{l_{e}-1}|e_{l_{e}})\cdots P(e_{1}|e_{n},\cdots,e_{2})" display="block"><mrow><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><msub><mi>l</mi><mi>e</mi></msub></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><mrow><msub><mi>l</mi><mi>e</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>|</mo><msub><mi>e</mi><msub><mi>l</mi><mi>e</mi></msub></msub><mo>)</mo></mrow><mi mathvariant="normal">⋯</mi><mi>P</mi><mrow><mo>(</mo><msub><mi>e</mi><mn>1</mn></msub><mo>|</mo><msub><mi>e</mi><mi>n</mi></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where, the bidirectional forward and backward<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Backward LM has been introduced by Xiong et al. (2011), which successfully capture both the preceding and succeeding contexts of the current word, and we estimate the backward LM by inverting the order in each sentence in the training data from the original order to the reverse order.</span></span></span> background 4-gram LMs are trained by the corresponding side of bilingual corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>This corpus is used to train the translation model in our experiments, and we will describe it in detail in section <a href="#S5.SS1" title="5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.</span></span></span>. Then, we have the third type of input features</p>
+<table id="S3.Ex11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex11.m1" class="ltx_Math" alttext="X_{3}\rightarrow P_{f}(e),P_{b}(e),P_{f}(f),P_{b}(f)" display="block"><mrow><msub><mi>X</mi><mn>3</mn></msub><mo>→</mo><mrow><mrow><msub><mi>P</mi><mi>f</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>P</mi><mi>b</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>P</mi><mi>f</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>P</mi><mi>b</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Phrase frequency</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">We consider bidirectional phrase frequency as the input features, and estimate them as</p>
+<table id="S3.Ex12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex12.m1" class="ltx_Math" alttext="P(f)=\frac{count(f)}{\sum_{|f_{i}|=|f|}count(f_{i})}" display="block"><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>f</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mo fence="true">|</mo><mi>f</mi><mo fence="true">|</mo></mrow></mrow></msub><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex13.m1" class="ltx_Math" alttext="P(e)=\frac{count(e)}{\sum_{|e_{j}|=|e|}count(e_{j})}" display="block"><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo fence="true">|</mo><msub><mi>e</mi><mi>j</mi></msub><mo fence="true">|</mo></mrow><mo>=</mo><mrow><mo fence="true">|</mo><mi>e</mi><mo fence="true">|</mo></mrow></mrow></msub><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>e</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="count(f)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></math>/<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="count(e)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> are the total number of phrase f/e appearing in the source/target side of the bilingual corpus, and the denominator are the total number of the phrases whose length are equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m3" class="ltx_Math" alttext="|f|" display="inline"><mrow><mo fence="true">|</mo><mi>f</mi><mo fence="true">|</mo></mrow></math>/<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m4" class="ltx_Math" alttext="|e|" display="inline"><mrow><mo fence="true">|</mo><mi>e</mi><mo fence="true">|</mo></mrow></math>, respectively. Then, we have the forth type of input features</p>
+<table id="S3.Ex14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex14.m1" class="ltx_Math" alttext="X_{4}\rightarrow P(f),P(e)" display="block"><mrow><msub><mi>X</mi><mn>4</mn></msub><mo>→</mo><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.5 </span>Phrase length</h3>
+
+<div id="S3.SS5.p1" class="ltx_para">
+<p class="ltx_p">Phrase length plays an important role in the translation process <cite class="ltx_cite">[<a href="#bib.bibx15" title="" class="ltx_ref">Koehn2010</a>, <a href="#bib.bibx12" title="" class="ltx_ref">Hopkins and May2011</a>]</cite>. We normalize bidirectional phrase length by the maximum phrase length, and introduce them as the last type of input features</p>
+<table id="S3.Ex15" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex15.m1" class="ltx_Math" alttext="X_{5}\rightarrow l_{e}^{n},l_{f}^{n}" display="block"><mrow><msub><mi>X</mi><mn>5</mn></msub><mo>→</mo><mrow><msubsup><mi>l</mi><mi>e</mi><mi>n</mi></msubsup><mo>,</mo><msubsup><mi>l</mi><mi>f</mi><mi>n</mi></msubsup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS5.p2" class="ltx_para">
+<p class="ltx_p">In summary, except for the first type of phrase feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math> which is used by <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, we introduce another four types of effective phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m2" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m3" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m4" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m5" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>. Now, the input original phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p2.m6" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> includes 16 features in our experiments, as follows,</p>
+<table id="S3.Ex16" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex16.m1" class="ltx_Math" alttext="X\rightarrow X_{1},X_{2},X_{3},X_{4},X_{5}" display="block"><mrow><mi>X</mi><mo>→</mo><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><msub><mi>X</mi><mn>3</mn></msub><mo>,</mo><msub><mi>X</mi><mn>4</mn></msub><mo>,</mo><msub><mi>X</mi><mn>5</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS5.p3" class="ltx_para">
+<p class="ltx_p">We build the DAE network where the first layer with visible nodes equaling to 16, and each visible node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p3.m1" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> corresponds to the above original features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS5.p3.m2" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> in each phrase pair.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Semi-Supervised Deep Auto-encoder Features Learning for SMT</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Each translation rule in the phrase-based translation model has a set number of features that are combined in the log-linear model <cite class="ltx_cite">[<a href="#bib.bibx27" title="" class="ltx_ref">Och and Ney2002</a>]</cite>, and our semi-supervised DAE features can also be combined in this model. In this section, we design our DAE network with various network structures for new feature learning.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Learning a Deep Belief Net</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Inspired by <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, we first learn a deep generative model for feature learning using DBN. DBN is composed of multiple layers of latent variables with the first layer representing the visible feature vectors, which is built with stacked sets of RBMs <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Hinton2002</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For a RBM, there is full connectivity between layers, but no connections within either layer. The connection weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>, hidden layer biases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and visible layer biases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> can be learned efficiently using the contrastive divergence <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Hinton2002</a>, <a href="#bib.bibx3" title="" class="ltx_ref">Carreira-Perpinan and Hinton2005</a>]</cite>. When given a hidden layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math>, factorial conditional distribution of visible layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> can be estimated by</p>
+<table id="S4.Ex17" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex17.m1" class="ltx_Math" alttext="P(v=1|h)=\sigma(b+h^{T}W^{T})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>v</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>h</mi><mo>)</mo></mrow><mo>=</mo><mi>σ</mi><mrow><mo>(</mo><mi>b</mi><mo>+</mo><msup><mi>h</mi><mi>T</mi></msup><msup><mi>W</mi><mi>T</mi></msup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> denotes the logistic sigmoid. Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math>, the element-wise conditional distribution of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math> is</p>
+<table id="S4.Ex18" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex18.m1" class="ltx_Math" alttext="P(h=1|v)=\sigma(c+v^{T}W)" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>h</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>v</mi><mo>)</mo></mrow><mo>=</mo><mi>σ</mi><mrow><mo>(</mo><mi>c</mi><mo>+</mo><msup><mi>v</mi><mi>T</mi></msup><mi>W</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">The two conditional distributions can be shown to correspond to the generative model,</p>
+<table id="S4.Ex19" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex19.m1" class="ltx_Math" alttext="P(v,h)=\frac{1}{Z}exp(-E(v,h))" display="block"><mrow><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>Z</mi></mfrac><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>-</mo><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where,</p>
+<table id="S4.Ex20" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex20.m1" class="ltx_Math" alttext="Z=\sum_{v,h}e^{-E(v,h)}" display="block"><mrow><mi>Z</mi><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow></munder><msup><mi>e</mi><mrow><mo>-</mo><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<table id="S4.Ex21" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex21.m1" class="ltx_Math" alttext="E(v,h)=-b^{T}v-c^{T}h-v^{T}Wh" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><msup><mi>b</mi><mi>T</mi></msup><mo>⁢</mo><mi>v</mi></mrow><mo>-</mo><mrow><msup><mi>c</mi><mi>T</mi></msup><mo>⁢</mo><mi>h</mi></mrow><mo>-</mo><mrow><msup><mi>v</mi><mi>T</mi></msup><mo>⁢</mo><mi>W</mi><mo>⁢</mo><mi>h</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.F1" class="ltx_figure"><img src="P14-1012/image001.png" id="S4.F1.g1" class="ltx_graphics ltx_centering" width="271" height="188" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Pre-training consists of learning a stack of RBMs, and these RBMs create an unsupervised DBN.</div>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">After learning the first RBM, we treat the activation probabilities of its hidden units, when they are being driven by data, as the data for training a second RBM. Similarly, a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="n_{th}" display="inline"><msub><mi>n</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msub></math> RBM is built on the output of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="n-1_{th}" display="inline"><mrow><mi>n</mi><mo>-</mo><msub><mn>1</mn><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msub></mrow></math> one and so on until a sufficiently deep architecture is created. These <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> RBMs can then be composed to form a DBN in which it is easy to infer the states of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m4" class="ltx_Math" alttext="n_{th}" display="inline"><msub><mi>n</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msub></math> layer of hidden units from the input in a single forward pass <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Hinton et al.2006</a>]</cite>, as shown in Figure <a href="#S4.F1" title="Figure 1 ‣ 4.1 Learning a Deep Belief Net ‣ 4 Semi-Supervised Deep Auto-encoder Features Learning for SMT ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. This greedy, layer-by-layer pre-training can be repeated several times to learn a deep, hierarchical model (DBN) in which each layer of features captures strong high-order correlations between the activities of features in the layer below.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">To deal with real-valued input features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> in our task, we use an RBM with Gaussian visible units (GRBM) <cite class="ltx_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">Dahl et al.2012</a>]</cite> with a variance of 1 on each dimension. Hence, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m2" class="ltx_Math" alttext="P(v|h)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>v</mi><mo>|</mo><mi>h</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m3" class="ltx_Math" alttext="E(v,h)" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow></math> in the first RBM of DBN need to be modified as</p>
+<table id="S4.Ex22" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex22.m1" class="ltx_Math" alttext="P(v|h)=\mathcal{N}(v;b+h^{T}W^{T},I)" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>v</mi><mo>|</mo><mi>h</mi><mo>)</mo></mrow><mo>=</mo><mi class="ltx_font_mathcaligraphic">𝒩</mi><mrow><mo>(</mo><mi>v</mi><mo>;</mo><mi>b</mi><mo>+</mo><msup><mi>h</mi><mi>T</mi></msup><msup><mi>W</mi><mi>T</mi></msup><mo>,</mo><mi>I</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S4.Ex23" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex23.m1" class="ltx_Math" alttext="E(v,h)=\frac{1}{2}(v-b)^{T}(v-b)-c^{T}h-v^{T}Wh" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>,</mo><mi>h</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>v</mi><mo>-</mo><mi>b</mi></mrow><mo>)</mo></mrow><mi>T</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>-</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><msup><mi>c</mi><mi>T</mi></msup><mo>⁢</mo><mi>h</mi></mrow><mo>-</mo><mrow><msup><mi>v</mi><mi>T</mi></msup><mo>⁢</mo><mi>W</mi><mo>⁢</mo><mi>h</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p6.m4" class="ltx_Math" alttext="I" display="inline"><mi>I</mi></math> is the appropriate identity matrix.</p>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p">To speed-up the pre-training, we subdivide the entire phrase pairs (with features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>) in the phrase table into small mini-batches, each containing 100 cases, and update the weights after each mini-batch. Each layer is greedily pre-trained for 50 epochs through the entire phrase pairs. The weights are updated using a learning rate of 0.1, momentum of 0.9, and a weight decay of 0.0002 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m3" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> learning rate. The weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m4" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> are initialized with small random values sampled from a zero-mean normal distribution with variance 0.01.</p>
+</div>
+<div id="S4.SS1.p8" class="ltx_para">
+<p class="ltx_p">After the pre-training, for each phrase pair in the phrase table, we generate the DBN features <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite> by passing the original phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> through the DBN using forward computation.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>From DBN to Deep Auto-encoder</h3>
+
+<div id="S4.F2" class="ltx_figure"><img src="P14-1012/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="283" height="287" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>After the unsupervised pre-training, the DBNs are “unrolled” to create a semi-supervised DAE, which is then fine-tuned using back-propagation of error derivatives.</div>
+</div>
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">To learn a semi-supervised DAE, we first “unroll” the above n layer DBN by using its weight matrices to create a deep, 2n-1 layer network whose lower layers use the matrices to “encode” the input and whose upper layers use the matrices in reverse order to “decode” the input <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Hinton and Salakhutdinov2006</a>, <a href="#bib.bibx30" title="" class="ltx_ref">Salakhutdinov and Hinton2009</a>, <a href="#bib.bibx5" title="" class="ltx_ref">Deng et al.2010</a>]</cite>, as shown in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 From DBN to Deep Auto-encoder ‣ 4 Semi-Supervised Deep Auto-encoder Features Learning for SMT ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. The layer-wise learning of DBN as above must be treated as a pre-training stage that finds a good region of the parameter space, which is used to initialize our DAE’s parameters. Starting in this region, the DAE is then fine-tuned using average squared error (between the output and input) back-propagation to minimize reconstruction error, as to make its output as equal as possible to its input.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">For the fine-tuning of DAE, we use the method of conjugate gradients on larger mini-batches of 1000 cases, with three line searches performed for each mini-batch in each epoch. To determine an adequate number of epochs and to avoid overfitting, we fine-tune on a fraction phrase table and test performance on the remaining validation phrase table, and then repeat fine-tuning on the entire phrase table for 100 epochs.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We experiment with various values for the noise variance and the threshold, as well as the learning rate, momentum, and weight-decay parameters used in the pre-training, the batch size and epochs in the fine-tuning. Our results are fairly robust to variations in these parameters. The precise weights found by the pre-training do not matter as long as it finds a good region of the parameter space from which to start the fine-tuning.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">The fine-tuning makes the feature representation in the central layer of the DAE work much better <cite class="ltx_cite">[<a href="#bib.bibx30" title="" class="ltx_ref">Salakhutdinov and Hinton2009</a>]</cite>. After the fine-tuning, for each phrase pair in the phrase table, we estimate our DAE features by passing the original phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> through the “encoder” part of the DAE using forward computation.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">To combine these learned features (DBN and DAE feature) into the log-linear model, we need to eliminate the impact of the non-linear learning mechanism. Following <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, these learned features are normalized by the average of each dimensional respective feature set. Then, we append these features for each phrase pair to the phrase table as extra features.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Horizontal Composition of Deep Auto-encoders (HCDAE)</h3>
+
+<div id="S4.F3" class="ltx_figure"><img src="P14-1012/image003.png" id="S4.F3.g1" class="ltx_graphics ltx_centering" width="264" height="259" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Horizontal composition of DAEs to expand high-dimensional features learning.</div>
+</div>
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Although DAE can learn more powerful and abstract feature representation, the learned features usually have smaller dimensionality compared with the dimensionality of the input features, such as the successful use for handwritten digits recognition <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Hinton and Salakhutdinov2006</a>, <a href="#bib.bibx11" title="" class="ltx_ref">Hinton et al.2006</a>]</cite>, information retrieval <cite class="ltx_cite">[<a href="#bib.bibx30" title="" class="ltx_ref">Salakhutdinov and Hinton2009</a>, <a href="#bib.bibx24" title="" class="ltx_ref">Mirowski et al.2010</a>]</cite>, and speech spectrograms <cite class="ltx_cite">[<a href="#bib.bibx5" title="" class="ltx_ref">Deng et al.2010</a>]</cite>. Moreover, although we have introduced another four types of phrase features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m3" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m4" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>), the only 16 features in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m5" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> are a bottleneck for learning large hidden layers feature representation, because it has limited information, the performance of the high-dimensional DAE features which are directly learned from single DAE is not very satisfactory.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">To learn high-dimensional feature representation and to further improve the performance, we introduce a natural horizontal composition for DAEs that can be used to create large hidden layer representations simply by horizontally combining two (or more) DAEs <cite class="ltx_cite">[<a href="#bib.bibx2" title="" class="ltx_ref">Baldi2012</a>]</cite>, as shown in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.3 Horizontal Composition of Deep Auto-encoders (HCDAE) ‣ 4 Semi-Supervised Deep Auto-encoder Features Learning for SMT ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Two single DAEs with architectures <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="16/m_{1}/16" display="inline"><mrow><mn>16</mn><mo>/</mo><msub><mi>m</mi><mn>1</mn></msub><mo>/</mo><mn>16</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="16/m_{2}/16" display="inline"><mrow><mn>16</mn><mo>/</mo><msub><mi>m</mi><mn>2</mn></msub><mo>/</mo><mn>16</mn></mrow></math> can be trained and the hidden layers can be combined to yield an expanded hidden feature representation of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="m_{1}+m_{2}" display="inline"><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>+</mo><msub><mi>m</mi><mn>2</mn></msub></mrow></math>, which can then be fed to the subsequent layers of the overall architecture. Thus, these new <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m4" class="ltx_Math" alttext="m_{1}+m_{2}" display="inline"><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>+</mo><msub><mi>m</mi><mn>2</mn></msub></mrow></math>-dimensional DAE features are added as extra features to the phrase table.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Differences in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="m_{1}" display="inline"><msub><mi>m</mi><mn>1</mn></msub></math>- and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="m_{2}" display="inline"><msub><mi>m</mi><mn>2</mn></msub></math>-dimensional hidden representations could be introduced by many different mechanisms (e.g., learning algorithms, initializations, training samples, learning rates, or distortion measures) <cite class="ltx_cite">[<a href="#bib.bibx2" title="" class="ltx_ref">Baldi2012</a>]</cite>. In our task, we introduce differences by using different initializations and different fractions of the phrase table.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments and Results</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Experimental Setup</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We now test our DAE features on the following two Chinese-English translation tasks.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">4-16-8-2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">4-16-8-4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">4-16-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-8-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">4-16-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">6-16-8-2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">6-16-8-4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">6-16-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">6-16-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">8-16-8-2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">8-16-8-4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">8-16-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-16-8-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">8-16-16-16-16-8-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">16-32-16-2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">16-32-16-4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">16-32-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-16-8-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-16-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-32-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-32-16-8-4</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">16-32-32-16-16-8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_script">16-32-32-16-8-4-2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_script">16-32-32-16-16-8-4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_script">16-32-32-32-16-16-8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_table">Table 1: </span>Details of the used network structure. For example, the architecture 16-32-16-2 (4 layers’ network depth) corresponds to the DAE with 16-dimensional input features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m5" class="ltx_Math" alttext="X" display="inline"><mi mathsize="normal" stretchy="false">X</mi></math>) (input layer), 32/16 hidden units (first/second hidden layer), and 2-dimensional output features (new DAE features) (output layer). During the fine-tuning, the DAE’s network structure becomes 16-32-16-2-16-32-16. Correspondingly, 4-16-8-2 and 6(8)-16-8-2 represent the input features are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m6" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m7" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m8" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math>.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r" rowspan="2">#</th>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r" rowspan="2">Features</td>
+<td class="ltx_td ltx_align_center ltx_border_r" colspan="2">IWSLT</td>
+<td class="ltx_td ltx_align_center" colspan="2">NIST</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center">Dev</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Test</td>
+<td class="ltx_td ltx_align_center">Dev</td>
+<td class="ltx_td ltx_align_left">Test</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">1</th>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">Baseline</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">50.81</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">41.13</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">36.12</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">32.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2</th>
+<td class="ltx_td ltx_align_center ltx_border_t" rowspan="8"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_2f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.92</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">42.07<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">36.33</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.11<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">3</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_2f</td>
+<td class="ltx_td ltx_align_center">52.49</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.22<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">36.92</td>
+<td class="ltx_td ltx_align_left">33.44<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">4</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.45</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">41.78<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m9" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">36.45</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.12<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m10" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">5</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m11" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4f</td>
+<td class="ltx_td ltx_align_center">52.45</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.06<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m12" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">36.88</td>
+<td class="ltx_td ltx_align_left">33.47<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m13" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">6</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m14" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_2+2f</td>
+<td class="ltx_td ltx_align_center">53.69</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.23<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m15" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.06</td>
+<td class="ltx_td ltx_align_left">33.68<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m16" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">7</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m17" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_8f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.74</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">41.85<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m18" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">36.61</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.24<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m19" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">8</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m20" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_8f</td>
+<td class="ltx_td ltx_align_center">52.33</td>
+<td class="ltx_td ltx_align_left ltx_border_r">42.98<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m21" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">36.81</td>
+<td class="ltx_td ltx_align_left">33.36<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m22" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">9</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m23" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4+4f</td>
+<td class="ltx_td ltx_align_center">52.52</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.26<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m24" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.01</td>
+<td class="ltx_td ltx_align_left">33.63<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m25" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">10</th>
+<td class="ltx_td ltx_align_center ltx_border_tt" rowspan="8"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m26" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m27" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_2f</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">52.21</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">42.24<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m28" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt">36.72</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">33.21<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m29" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">11</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m30" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_2f</td>
+<td class="ltx_td ltx_align_center">52.86</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.45<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m31" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.39</td>
+<td class="ltx_td ltx_align_left">33.83<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m32" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">12</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m33" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.83</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">42.08<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m34" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">34.45</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.07<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m35" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">13</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m36" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4f</td>
+<td class="ltx_td ltx_align_center">52.81</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.47<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m37" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.48</td>
+<td class="ltx_td ltx_align_left">33.92<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m38" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">14</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m39" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_2+2f</td>
+<td class="ltx_td ltx_align_center">53.05</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.58<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m40" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.59</td>
+<td class="ltx_td ltx_align_left">34.11<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m41" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">15</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m42" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_8f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">51.93</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">42.01<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m43" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">36.74</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.29<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m44" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">16</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m45" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_8f</td>
+<td class="ltx_td ltx_align_center">52.69</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.26<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m46" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.36</td>
+<td class="ltx_td ltx_align_left">33.75<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m47" class="ltx_Math" alttext="{}^{**}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">17</th>
+<td class="ltx_td ltx_align_left ltx_border_r">+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m48" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4+4f</td>
+<td class="ltx_td ltx_align_center">52.93</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.49<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m49" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">37.53</td>
+<td class="ltx_td ltx_align_left">34.02<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m50" class="ltx_Math" alttext="{}^{***}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">18</th>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m51" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m52" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m53" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m54" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">52.23</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">42.91<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m55" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt">36.96</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">33.65<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m56" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">19</th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m57" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m58" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m59" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m60" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m61" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_2f</td>
+<td class="ltx_td ltx_align_center ltx_border_t">53.55</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">44.17<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m62" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">38.23</td>
+<td class="ltx_td ltx_align_left ltx_border_t">34.50<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m63" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">20</th>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m64" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m65" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m66" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m67" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m68" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4f</td>
+<td class="ltx_td ltx_align_center">53.61</td>
+<td class="ltx_td ltx_align_left ltx_border_r">44.22<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m69" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">38.28</td>
+<td class="ltx_td ltx_align_left">34.47<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m70" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">21</th>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m71" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m72" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m73" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m74" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m75" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_2+2f</td>
+<td class="ltx_td ltx_align_center">53.75</td>
+<td class="ltx_td ltx_align_left ltx_border_r">44.28<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m76" class="ltx_Math" alttext="{}^{+****}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">38.35</td>
+<td class="ltx_td ltx_align_left">34.65<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m77" class="ltx_Math" alttext="{}^{+****}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">22</th>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m78" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m79" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m80" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m81" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m82" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_8f</td>
+<td class="ltx_td ltx_align_center">53.47</td>
+<td class="ltx_td ltx_align_left ltx_border_r">44.19<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m83" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">38.26</td>
+<td class="ltx_td ltx_align_left">34.46<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m84" class="ltx_Math" alttext="{}^{+***}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">23</th>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m85" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m86" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m87" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m88" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>)+HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m89" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4+4f</td>
+<td class="ltx_td ltx_align_center">53.62</td>
+<td class="ltx_td ltx_align_left ltx_border_r">44.29<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m90" class="ltx_Math" alttext="{}^{+****}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">38.39</td>
+<td class="ltx_td ltx_align_left">34.57<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m91" class="ltx_Math" alttext="{}^{+****}" display="inline"><msup><mi/><mrow><mo>+</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></msup></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>The translation results by adding new DNN features (DBN feature <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, our proposed DAE and HCDAE feature) as extra features to the phrase table on two tasks. “DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m113" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_xf”, “DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m114" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_xf”, “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m115" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_xf” and “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m116" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_xf” represent that we use DBN and DAE, input features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m117" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m118" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>, to learn x-dimensional features, respectively. “HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m119" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_x+xf” represents horizontally combining two DAEs and each DAE has the same x-dimensional learned features. All improvements on two test sets are statistically significant by the bootstrap resampling <cite class="ltx_cite">[<a href="#bib.bibx14" title="" class="ltx_ref">Koehn2004</a>]</cite>. *: significantly better than the baseline (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m120" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>), **: significantly better than “DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m121" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_xf” or “DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m122" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_xf” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m123" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>), ***: significantly better than “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m124" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_xf” or “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m125" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_xf” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m126" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>), ****: significantly better than “HCDAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m127" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_x+xf” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m128" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>), +: significantly better than “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m129" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m130" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m131" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m132" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m133" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>).</div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r" rowspan="2">Features</th>
+<th class="ltx_td ltx_align_center ltx_border_r" colspan="4">IWSLT</th>
+<th class="ltx_td ltx_align_center" colspan="4">NIST</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\sigma_{1}" display="inline"><msub><mi>σ</mi><mn>1</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="\sigma_{2}" display="inline"><msub><mi>σ</mi><mn>2</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="\sigma_{3}" display="inline"><msub><mi>σ</mi><mn>3</mn></msub></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="\sigma_{4}" display="inline"><msub><mi>σ</mi><mn>4</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m5" class="ltx_Math" alttext="\sigma_{1}" display="inline"><msub><mi>σ</mi><mn>1</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m6" class="ltx_Math" alttext="\sigma_{2}" display="inline"><msub><mi>σ</mi><mn>2</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m7" class="ltx_Math" alttext="\sigma_{3}" display="inline"><msub><mi>σ</mi><mn>3</mn></msub></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m8" class="ltx_Math" alttext="\sigma_{4}" display="inline"><msub><mi>σ</mi><mn>4</mn></msub></math></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m9" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4f</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.1678</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2873</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2037</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.1622</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.0691</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.1813</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.0828</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.1637</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">DBN_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m10" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4f</th>
+<td class="ltx_td ltx_align_center">0.2010</td>
+<td class="ltx_td ltx_align_center">0.1590</td>
+<td class="ltx_td ltx_align_center">0.2793</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.1692</td>
+<td class="ltx_td ltx_align_center">0.1267</td>
+<td class="ltx_td ltx_align_center">0.1146</td>
+<td class="ltx_td ltx_align_center">0.2147</td>
+<td class="ltx_td ltx_align_center">0.1051</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m11" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4f</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.5072</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.4486</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.1309</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.6012</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2136</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2168</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2047</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.2526</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m12" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>_4f</th>
+<td class="ltx_td ltx_align_center">0.5215</td>
+<td class="ltx_td ltx_align_center">0.4594</td>
+<td class="ltx_td ltx_align_center">0.2371</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.6903</td>
+<td class="ltx_td ltx_align_center">0.2421</td>
+<td class="ltx_td ltx_align_center">0.2694</td>
+<td class="ltx_td ltx_align_center">0.3034</td>
+<td class="ltx_td ltx_align_center">0.2642</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>The variance distributions of each dimensional learned DBN feature and DAE feature on the two tasks.</div>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">IWSLT</span>. The bilingual corpus is the Chinese-English part of Basic Traveling Expression corpus (BTEC) and China-Japan-Korea (CJK) corpus (0.38M sentence pairs with 3.5/3.8M Chinese/English words). The LM corpus is the English side of the parallel data (BTEC, CJK and CWMT08<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>the 4th China Workshop on Machine Translation</span></span></span>) (1.34M sentences). Our development set is IWSLT 2005 test set (506 sentences), and our test set is IWSLT 2007 test set (489 sentences).</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">NIST</span>. The bilingual corpus is LDC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>LDC2002E18, LDC2002T01, LDC2003E07, LDC2003E14, LDC2003T17, LDC2004T07, LDC2004T08, LDC2005T06, LDC2005T10, LDC2005T34, LDC2006T04, LDC2007T09</span></span></span> (3.4M sentence pairs with 64/70M Chinese/English words). The LM corpus is the English side of the parallel data as well as the English Gigaword corpus (LDC2007T07) (11.3M sentences). Our development set is NIST 2005 MT evaluation set (1084 sentences), and our test set is NIST 2006 MT evaluation set (1664 sentences).</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">We choose the Moses <cite class="ltx_cite">[<a href="#bib.bibx16" title="" class="ltx_ref">Koehn et al.2007</a>]</cite> framework to implement our phrase-based machine system. The 4-gram LMs are estimated by the SRILM toolkit with modified Kneser-Ney discounting. We perform pairwise ranking optimization <cite class="ltx_cite">[<a href="#bib.bibx12" title="" class="ltx_ref">Hopkins and May2011</a>]</cite> to tune feature weights. The translation quality is evaluated by case-insensitive IBM BLEU-4 metric.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r" rowspan="2">Features</th>
+<th class="ltx_td ltx_align_center ltx_border_r" colspan="2">IWSLT</th>
+<th class="ltx_td ltx_align_center" colspan="2">NIST</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">Dev</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Test</th>
+<th class="ltx_td ltx_align_center">Dev</th>
+<th class="ltx_td ltx_align_left">Test</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>_4f</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t">52.45</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">43.06</td>
+<td class="ltx_td ltx_align_center ltx_border_t">36.88</td>
+<td class="ltx_td ltx_align_left ltx_border_t">33.47</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">2</mn></msub></math>_4f</span></th>
+<td class="ltx_td ltx_align_center">52.76</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.38<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">37.28</td>
+<td class="ltx_td ltx_align_left">33.80<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m6" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m7" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">3</mn></msub></math>_4f</span></th>
+<td class="ltx_td ltx_align_center">52.61</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.27<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">37.13</td>
+<td class="ltx_td ltx_align_left">33.66<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m9" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m10" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m11" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">4</mn></msub></math>_4f</span></th>
+<td class="ltx_td ltx_align_center">52.52</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.24<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m12" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">36.96</td>
+<td class="ltx_td ltx_align_left">33.58<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m13" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m14" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m15" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi mathsize="normal" stretchy="false">X</mi><mn mathsize="normal" stretchy="false">5</mn></msub></math>_4f</span></th>
+<td class="ltx_td ltx_align_center">52.49</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.13<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m16" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">36.96</td>
+<td class="ltx_td ltx_align_left">33.56<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m17" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">+DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m18" class="ltx_Math" alttext="X" display="inline"><mi mathsize="normal" stretchy="false">X</mi></math>_4f</span></th>
+<td class="ltx_td ltx_align_center">52.81</td>
+<td class="ltx_td ltx_align_left ltx_border_r">43.47<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m19" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center">37.48</td>
+<td class="ltx_td ltx_align_left">33.92<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m20" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>The effectiveness of our introduced input features. “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m26" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m27" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi>X</mi><mi>i</mi></msub></math>_4f” represents that we use DAE, input features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m28" class="ltx_Math" alttext="X_{1}+X_{i}" display="inline"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>+</mo><msub><mi>X</mi><mi>i</mi></msub></mrow></math>, to learn 4-dimensional features. *: significantly better than “DAE_<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m29" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>_4f” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m30" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>).</div>
+</div>
+<div id="S5.F4" class="ltx_figure"><img src="P14-1012/image004.png" id="S5.F4.g1" class="ltx_graphics ltx_centering" width="568" height="274" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>The compared results of feature learning with different network structures on two development sets.</div>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">The baseline translation models are generated by Moses with default parameter settings. In the contrast experiments, our DAE and HCDAE features are appended as extra features to the phrase table. The details of the used network structure in our experiments are shown in Table <a href="#S5.T1" title="Table 1 ‣ 5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Results</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> presents the main translation results. We use DBN, DAE and HCDAE (with 6 layers’ network depth), input features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>, to learn 2-, 4- and 8-dimensional features, respectively. From the results, we can get some clear trends:</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">1. Adding new DNN features as extra features significantly improves translation accuracy (row 2-17 vs. 1), with the highest increase of 2.45 (IWSLT) and 1.52 (NIST) (row 14 vs. 1) BLEU points over the baseline features.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">2. Compared with the unsupervised DBN features, our semi-supervised DAE features are more effective for translation decoder (row 3 vs. 2; row 5 vs. 4; row 8 vs. 7; row 11 vs. 10; row 13 vs. 12; row 16 vs. 15). Specially, Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the variance distributions of the learned each dimensional DBN and DAE feature, our DAE features have bigger variance distributions which means our DAE features have more discriminative power, and also their variance distributions are more stable.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">3. HCDAE outperforms single DAE for high dimensional feature learning (row 6 vs. 5; row 9 vs. 8; row 14 vs. 13; row 17 vs. 16), and further improve the performance of DAE feature learning, which can also somewhat address the bring shortcoming of the limited input features.</p>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">4. Except for the phrase feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math> <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>, our introduced input features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m2" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> significantly improve the DAE feature learning (row 11 vs. 3; row 13 vs. 5; row 16 vs. 8). Specially, Table <a href="#S5.T4" title="Table 4 ‣ 5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the detailed effectiveness of our introduced input features for DAE feature learning, and the results show that each type of features are very effective for DAE feature learning.</p>
+</div>
+<div id="S5.SS2.p6" class="ltx_para">
+<p class="ltx_p">5. Adding the original features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m1" class="ltx_Math" alttext="X_{2}" display="inline"><msub><mi>X</mi><mn>2</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m2" class="ltx_Math" alttext="X_{3}" display="inline"><msub><mi>X</mi><mn>3</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m3" class="ltx_Math" alttext="X_{4}" display="inline"><msub><mi>X</mi><mn>4</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m4" class="ltx_Math" alttext="X_{5}" display="inline"><msub><mi>X</mi><mn>5</mn></msub></math>) and DAE/HCDAE features together can further improve translation performance (row 19-23 vs. 18), with the highest increase of 3.16 (IWSLT) and 2.06 (NIST) (row 21 vs. 1) BLEU points over the baseline features. DAE and HCDAE features are learned from the non-linear combination of the original features, they strong capture high-order correlations between the activities of the original features, as to be further interpreted to reach their potential for SMT. We suspect these learned features are complementary to the original features.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Analysis</h3>
+
+<div id="S5.F5" class="ltx_figure"><img src="P14-1012/image005.png" id="S5.F5.g1" class="ltx_graphics ltx_centering" width="292" height="339" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>The compared results of using single DAE and the HCDAE for feature learning on two development sets.</div>
+</div>
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F4" title="Figure 4 ‣ 5.1 Experimental Setup ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows our DAE features are not only more effective but also more stable than DBN features with various network structures. Also, adding more input features (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> vs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>) not only significantly improves the performance of DAE feature learning, but also slightly improves the performance of DBN feature learning.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F5" title="Figure 5 ‣ 5.3 Analysis ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows there is little change in the performance of using single DAE to learn different dimensional DAE features, but the 4-dimensional features work more better and more stable. HCDAE outperforms the single DAE and learns high-dimensional representation more effectively, especially for the peak point in each condition.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">Figures <a href="#S5.F5" title="Figure 5 ‣ 5.3 Analysis ‣ 5 Experiments and Results ‣ Learning New Semi-Supervised Deep Auto-encoder Features  for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> also shows the best network depth for DAE feature learning is 6 layers. When the network depth of DBN is 7 layers, the network depth of corresponding DAE during the fine-tuning is 13 layers. Although we have pre-trained the corresponding DBN, this DAE network is so deep, the fine-tuning does not work very well and typically finds poor local minima. We suspect this leads to the decreased performance.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, instead of designing new features based on intuition, linguistic knowledge and domain, we have learned new features using the DAE for the phrase-based translation model. Using the unsupervised pre-trained DBN to initialize DAE’s parameters and using the input original phrase features as the “teacher” for semi-supervised back-propagation, our semi-supervised DAE features are more effective and stable than the unsupervised DBN features <cite class="ltx_cite">[<a href="#bib.bibx23" title="" class="ltx_ref">Maskey and Zhou2012</a>]</cite>. Moreover, to further improve the performance, we introduce some simple but effective features as the input features for feature learning. Lastly, to learn high dimensional feature representation, we introduce a natural horizontal composition of two DAEs for large hidden layers feature learning.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">On two Chinese-English translation tasks, the results demonstrate that our solutions solve the two aforementioned shortcomings successfully. Firstly, our DAE features obtain statistically significant improvements of 1.34/2.45 (IWSLT) and 0.82/1.52 (NIST) BLEU points over the DBN features and the baseline features, respectively. Secondly, compared with the baseline phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m1" class="ltx_Math" alttext="X_{1}" display="inline"><msub><mi>X</mi><mn>1</mn></msub></math>, our introduced input original phrase features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m2" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> significantly improve the performance of not only our DAE features but also the DBN features.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">The results also demonstrate that DNN (DAE and HCDAE) features are complementary to the original features for SMT, and adding them together obtain statistically significant improvements of 3.16 (IWSLT) and 2.06 (NIST) BLEU points over the baseline features. Compared with the original features, DNN (DAE and HCDAE) features are learned from the non-linear combination of the original features, they strong capture high-order correlations between the activities of the original features, and we believe this deep learning paradigm induces the original features to further reach their potential for SMT.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported by 863 program in China (No. 2011AA01A207). We would like to thank Xingyuan Peng, Lichun Fan and Hongyan Li for their helpful discussions. We also thank the anonymous reviewers for their insightful comments.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bibx1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Auli et al.2013</span>
+<span class="ltx_bibblock">
+Michael Auli, Michel Galley, Chris Quirk and Geoffrey Zweig.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Joint language and translation modeling with recurrent neural networks.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>, pages 1044-1054.
+
+</span></li>
+<li id="bib.bibx2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Baldi2012</span>
+<span class="ltx_bibblock">
+Pierre Baldi.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Autoencoders, unsupervised learning, and deep architectures.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">JMLR: workshop on unsupervised and transfer learning</span>, 27:37-50.
+
+</span></li>
+<li id="bib.bibx3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Carreira-Perpinan and Hinton2005</span>
+<span class="ltx_bibblock">
+Miguel A. Carreira-Perpinan and Geoffrey E. Hinton.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock">On contrastive divergence learning.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of AI and Statistics</span>.
+
+</span></li>
+<li id="bib.bibx4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Dahl et al.2012</span>
+<span class="ltx_bibblock">
+George Dahl, Dong Yu, Li Deng, and Alex Acero.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Context-dependent pre-trained deep neural networks for large vocabulary speech recognition.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">IEEE Transactions on Audio, Speech, and Language Processing</span>, 20(1):30-42.
+
+</span></li>
+<li id="bib.bibx5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Deng et al.2010</span>
+<span class="ltx_bibblock">
+Li Deng, Mike Seltzer, Dong Yu, Alex Acero, Abdel-rahman Mohamed, and Geoffrey E. Hinton.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Binary coding of speech spectrograms using a deep auto-encoder.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of INTERSPEECH</span>, pages 1692-1695.
+
+</span></li>
+<li id="bib.bibx6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Foster et al.2010</span>
+<span class="ltx_bibblock">
+George Foster, Cyril Goutte, and Roland Kuhn.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Discriminative instance weighting for domain adaptation in statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>, pages 451-459.
+
+</span></li>
+<li id="bib.bibx7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hinton2002</span>
+<span class="ltx_bibblock">
+Geoffrey E. Hinton.
+
+</span>
+<span class="ltx_bibblock">2002.
+
+</span>
+<span class="ltx_bibblock">Training products of experts by minimizing contrastive divergence.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Neural Computation</span>, 14(8):1771-1800.
+
+</span></li>
+<li id="bib.bibx8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hinton et al.2012</span>
+<span class="ltx_bibblock">
+Geoffrey E. Hinton, Li Deng, Dong Yu, George Dahl, Abdel-rahman Mohamed, Navdeep Jaitly, Andrew Senior, Vincent Vanhoucke, Patrick Nguyen, Tara Sainath, and Brian Kingsbury.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Deep neural networks for acoustic modeling in speech tecognition.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">IEEE Signal Processing Magazine</span>, 29(6):82-97.
+
+</span></li>
+<li id="bib.bibx9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hinton et al.2011</span>
+<span class="ltx_bibblock">
+Geoffrey E. Hinton, Alex Krizhevsky, and Sida D. Wang.
+
+</span>
+<span class="ltx_bibblock">2001.
+
+</span>
+<span class="ltx_bibblock">Transforming auto-encoders.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ANN</span>.
+
+</span></li>
+<li id="bib.bibx10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hinton and Salakhutdinov2006</span>
+<span class="ltx_bibblock">
+Geoffrey E. Hinton and Ruslan R. Salakhutdinov.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">Reducing the dimensionality of data with neural networks.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Science</span>, 313:504-507.
+
+</span></li>
+<li id="bib.bibx11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hinton et al.2006</span>
+<span class="ltx_bibblock">
+Geoffrey E. Hinton, Simon Osindero, and Yee-Whye Teh.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">A fast learning algorithm for deep belief nets.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Neural Computation</span>, 18:1527-1544.
+
+</span></li>
+<li id="bib.bibx12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hopkins and May2011</span>
+<span class="ltx_bibblock">
+Mark Hopkins and Jonathan May
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Tuning as ranking.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>, pages 1352-1362.
+
+</span></li>
+<li id="bib.bibx13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Kalchbrenner and Blunsom2013</span>
+<span class="ltx_bibblock">
+Nal Kalchbrenner and Phil Blunsom.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Recurrent continuous translation models.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>, pages 1700-1709.
+
+</span></li>
+<li id="bib.bibx14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Koehn2004</span>
+<span class="ltx_bibblock">
+Philipp Koehn.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">Statistical significance tests from achine translation evaluation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 388-395.
+
+</span></li>
+<li id="bib.bibx15" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Koehn2010</span>
+<span class="ltx_bibblock">
+Philipp Koehn.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Statistical machine translation.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cambridge University Press</span>.
+
+</span></li>
+<li id="bib.bibx16" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Koehn et al.2007</span>
+<span class="ltx_bibblock">
+Philipp Koehn, Hieu Hoang, Alexandra Birch, Chris Callison-Burch, Marcello Federico, Nicola Bertoldi, Brooke Cowan, Wade Shen, Christine Moran, Richard Zens, Chris Dyer, Ondrej Bojar, Alexandra Constantin, and Evan Herbst.
+
+</span>
+<span class="ltx_bibblock">2007.
+
+</span>
+<span class="ltx_bibblock">Moses: Open source toolkit for statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL, Demonstration Session</span>, pages 177-180.
+
+</span></li>
+<li id="bib.bibx17" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Koehn et al.2003</span>
+<span class="ltx_bibblock">
+Philipp Koehn, Franz J. Och, and Daniel Marcu.
+
+</span>
+<span class="ltx_bibblock">2003.
+
+</span>
+<span class="ltx_bibblock">Statistical phrase-based translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of NAACL</span>, pages 48-54.
+
+</span></li>
+<li id="bib.bibx18" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Le et al.2012</span>
+<span class="ltx_bibblock">
+Hai-Son Le, Alexandre Allauzen, and François Yvon.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Continuous space translation models with neural networks.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of NAACL</span>, pages 39-48.
+
+</span></li>
+<li id="bib.bibx19" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Li2013</span>
+<span class="ltx_bibblock">
+Peng Li, Yang Liu, Maosong Sun.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Recursive autoencoders for ITG-based translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>, pages 567-577.
+
+</span></li>
+<li id="bib.bibx20" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Liu2013</span>
+<span class="ltx_bibblock">
+Lemao Liu, Taro Watanabe, Eiichiro Sumita, and Tiejun Zhao.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Additive neural networks for statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 791-801.
+
+</span></li>
+<li id="bib.bibx21" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Lu2014</span>
+<span class="ltx_bibblock">
+Shixiang Lu, Wei Wei, Xiaoyin Fu and Bo Xu.
+
+</span>
+<span class="ltx_bibblock">2014.
+
+</span>
+<span class="ltx_bibblock">Recursive neural network based word topology model for hierarchical phrase-based speech translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ICASSP</span>.
+
+</span></li>
+<li id="bib.bibx22" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Marton and Resnik2008</span>
+<span class="ltx_bibblock">
+Yuval Marton and Philip Resnik.
+
+</span>
+<span class="ltx_bibblock">2008.
+
+</span>
+<span class="ltx_bibblock">Soft syntactic constraints for hierarchical phrase-based translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 1003-1011.
+
+</span></li>
+<li id="bib.bibx23" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Maskey and Zhou2012</span>
+<span class="ltx_bibblock">
+Sameer Maskey and Bowen Zhou.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Unsupervised deep belief features for speech translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of INTERSPEECH</span>.
+
+</span></li>
+<li id="bib.bibx24" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mirowski et al.2010</span>
+<span class="ltx_bibblock">
+Piotr Mirowski, Marc¡¯Aurelio Ranzato, and Yann LeCun.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Dynamic auto-encoders for semantic indexing.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of NIPS-2010 Workshop on Deep Learning</span>.
+
+</span></li>
+<li id="bib.bibx25" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Nguyen et al.2007</span>
+<span class="ltx_bibblock">
+Patrick Nguyen, Milind Mahajan, and Xiaodong He.
+
+</span>
+<span class="ltx_bibblock">2007.
+
+</span>
+<span class="ltx_bibblock">Training non-parametric features for statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of WMT</span>, pages 72-79.
+
+</span></li>
+<li id="bib.bibx26" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Och and Ney2000</span>
+<span class="ltx_bibblock">
+Franz J. Och and Hermann Ney.
+
+</span>
+<span class="ltx_bibblock">2000.
+
+</span>
+<span class="ltx_bibblock">Improved statistical alignment models.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 440-447.
+
+</span></li>
+<li id="bib.bibx27" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Och and Ney2002</span>
+<span class="ltx_bibblock">
+Franz J. Och and Hermann Ney.
+
+</span>
+<span class="ltx_bibblock">2002.
+
+</span>
+<span class="ltx_bibblock">Discriminative training and maximum entropy models for statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 295-302.
+
+</span></li>
+<li id="bib.bibx28" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Och and Ney2004</span>
+<span class="ltx_bibblock">
+Franz J. Och and Hermann Ney.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">The alignment template approach to statistical machine translation.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Computational Linguistics</span>, 30(4):417-449.
+
+</span></li>
+<li id="bib.bibx29" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Rumelhart et al.1986</span>
+<span class="ltx_bibblock">
+David Rumelhart, Geoffrey E. Hinton, and Ronale Williams.
+
+</span>
+<span class="ltx_bibblock">1986.
+
+</span>
+<span class="ltx_bibblock">Learning internal representations by back-propagation errors.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Parallel Distributed Processing, Vol 1: Foundations, MIT Press</span>.
+
+</span></li>
+<li id="bib.bibx30" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Salakhutdinov and Hinton2009</span>
+<span class="ltx_bibblock">
+Ruslan R. Salakhutdinov and Geoffrey E. Hinton.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Semantic hashing.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">International Journal of Approximate Reasoning</span>, 50(7):969-978.
+
+</span></li>
+<li id="bib.bibx31" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Socher et al.2011</span>
+<span class="ltx_bibblock">
+Richard Socher, Cliff C. Lin, Andrew Y. Ng, and Christopher D. Manning.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Parsing natural scenes and natural language with recursive neural networks.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ICML</span>.
+
+</span></li>
+<li id="bib.bibx32" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Xiong et al.2011</span>
+<span class="ltx_bibblock">
+Deyi Xiong, Min Zhang, and Haizhou Li.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Enhancing language models in statistical machine translation with backward n-grams and mutual information triggers.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACL</span>, pages 1288-1297.
+
+</span></li>
+<li id="bib.bibx33" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Zhao et al.2004</span>
+<span class="ltx_bibblock">
+Bing Zhao, Stephan Vogel, and Alex Waibel.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">Phrase pair rescoring with term weightings for statistical machine translation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of EMNLP</span>.
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:16:52 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

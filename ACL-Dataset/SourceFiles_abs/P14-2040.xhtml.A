@@ -1,0 +1,1126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Detection of Topic and its Extrinsic Evaluation Through Multi-Document Summarization.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        As the volume of online documents has drastically increased, the
+analysis of topic bursts, topic drift or detection of topic is a
+practical problem attracting more and more attention
+        [1, 23, 2, 13, 15, 9]
+        . The
+earliest known approach is the work of Klinkenberg and Joachims
+        [12]
+        . They have attempted to handle concept changes by
+focusing a window with documents sufficiently close to the target
+concept. Mane
+        et. al.
+        proposed a method to generate maps that
+support the identification of major research topics and trends
+        [17]
+        . The method used Kleinberg’s burst detection algorithm,
+co-occurrences of words, and graph layout technique. Scholz
+        et. al.
+        have attempted to use different ensembles obtained by training
+several data streams to detect concept drift
+        [22]
+        . However
+the ensemble method itself remains a problem that how to manage several
+classifiers effectively. He and Parket attempted to find bursts, periods
+of elevated occurrence of events as a dynamic phenomenon instead of
+focusing on arrival rates
+        [11]
+        . However, the fact that
+topics are widely distributed in the stream of documents, and sometimes
+they frequently appear in the documents, and sometimes not often hamper
+such attempts.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        This paper proposes a method for detecting topic over time in series of
+documents. We reinforced words related to a topic with low frequencies
+by collecting documents from the corpus, and applied Latent Dirichlet
+Allocation (LDA)
+        [4]
+        to these documents in order to extract
+topic candidates. For the results of LDA, we applied Moving Average
+Convergence Divergence (MACD) to find topic words while He
+        et. al.
+        , applied it to find bursts. The MACD is a technique to analyze
+stock market trends
+        [19]
+        . It shows the relationship between
+two moving averages of prices modeling bursts as intervals of topic
+dynamics,
+        i.e.
+        , positive acceleration. Fukumoto
+        et. al
+        also
+applied MACD to find topics. However, they applied it only to the words
+with high frequencies in the documents
+        [10]
+        . In contrast,
+we applied it to the topic candidates obtained by LDA.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We examined our method by extrinsic evaluation,
+        i.e.
+        , we applied
+the results of topic detection to extractive multi-document
+summarization. We assume that a salient sentence includes words related
+to the target topic, and an event of each documents. Here, an event is
+something that occurs at a specific place and time associated with some
+specific actions
+        [1]
+        . We identified event words by using
+the traditional tf
+        ∗
+        idf method applied to the results of named
+entities. Each sentence in documents is represented using a vector of
+frequency weighted words that can be event or topic words. We used
+Markov Random Walk (MRW) to compute the rank scores for the
+sentences
+        [20]
+        . Finally, we selected
+a certain number of sentences according to the rank score into a
+summary.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Topic Detection
+      </h2>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Extraction of Topic Candidates
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         LDA presented by
+         [4]
+         models each document as a mixture of
+topics (we call it lda_topic to discriminate our
+         t⁢o⁢p⁢i⁢c
+         candidates),
+and generates a discrete probability distribution over words for each
+lda_topic. The generative process for LDA can be described as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            For each topic
+            k
+            = 1,
+            ⋯
+            ,
+            K
+            , generate
+            ϕk
+            ,
+multinomial distribution of words specific to the topic
+            k
+            from a
+Dirichlet distribution with parameter
+            β
+            ;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            For each document
+            d
+            = 1,
+            ⋯
+            ,
+            D
+            , generate
+            θd
+            ,
+multinomial distribution of topics specific to the document
+            d
+            from a Dirichlet distribution with parameter
+            α
+            ;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            For each word
+            n
+            = 1,
+            ⋯
+            ,
+            Nd
+            in document
+            d
+            ;
+           </p>
+          </div>
+          <div class="ltx_para" id="I1.i3.p2">
+           <ol class="ltx_enumerate" id="I1.I1">
+            <li class="ltx_item" id="I1.I1.i1" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (a)
+             </span>
+             <div class="ltx_para" id="I1.I1.i1.p1">
+              <p class="ltx_p">
+               Generate a topic
+               zd⁢n
+               of the
+               nt⁢h
+               word in the document
+               d
+               from the
+multinomial distribution
+               θd
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i2" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (b)
+             </span>
+             <div class="ltx_para" id="I1.I1.i2.p1">
+              <p class="ltx_p">
+               Generate a word
+               wd⁢n
+               , the word associated with the
+               nt⁢h
+               word in document
+               d
+               from multinomial
+               ϕz⁢d⁢n
+              </p>
+             </div>
+            </li>
+           </ol>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         Like much previous work on LDA, we used Gibbs sampling to
+estimate
+         ϕ
+         and
+         θ
+         . The sampling probability for topic
+         zi
+         in document
+         d
+         is given by:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p4">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P(zi∣z\i,W)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (n\i,jv+β)⁢(n\i,jd+α)(n\i,j⋅+W⁢β)⁢(n\i,⋅d+T⁢α).
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p5">
+        <p class="ltx_p">
+         z\i
+         refers to a topic set
+         Z
+         , not including
+the current assignment
+         zi
+         .
+         n\i,jv
+         is the count of
+word
+         v
+         in topic
+         j
+         that does not include the current assignment
+         zi
+         , and
+         n\i,j⋅
+         indicates a summation over
+that dimension.
+         W
+         refers to a set of documents, and
+         T
+         denotes the
+total number of unique topics. After a sufficient number of sampling
+iterations, the approximated posterior can be used to estimate
+         ϕ
+         and
+         θ
+         by examining the counts of word assignments to topics and
+topic occurrences in documents. The approximated probability of topic
+         k
+         in the document
+         d
+         ,
+         θdk^
+         , and the assignments
+word
+         w
+         to topic
+         k
+         ,
+         ϕkw^
+         are given by:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p6">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           θdk^
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Nd⁢k+αNd+α⁢K.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (2)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ϕkw^
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Nk⁢w+βNk+β⁢V.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p7">
+        <p class="ltx_p">
+         We used documents prepared by summarization tasks, NTCIR and
+DUC data as each task consists of series of documents with the same
+topic. We applied LDA to the set consisting
+of all documents in the summarization tasks and documents from the
+corpus. We need to estimate the appropriate number of lda_topic.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p8">
+        <p class="ltx_p">
+         Let
+         k′
+         be the number of lda_topics and
+         d′
+         be the number of topmost
+         d′
+         documents assigned to each lda_topic. We note that the result
+obtained by LDA can be regarded as the two types of clustering result
+shown in Figure
+         1
+         : (i) each cluster corresponds to each
+lda_topic (topic id0, topic id1
+         ⋯
+         in Figure
+         1
+         ), and
+each element of the clusters is the document in the summarization tasks
+(task1, task2,
+         ⋯
+         in Figure
+         1
+         ) or from the corpus (doc
+in Figure
+         1
+         ), and (ii) each cluster corresponds to the
+summarization task and each element of the clusters is the document in
+the summarization tasks or the document from the corpus assigned topic
+id. For example, DUC2005 consists of 50 tasks. Therefore the number of
+different clusters is 50. We call the former lda_topic cluster and the
+latter task cluster. We estimated
+         k′
+         and
+         d′
+         by using Entropy measure
+given by:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p9">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           E
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           -1log⁡l⁢∑jNjN⁢∑iP⁢(Ai,Cj)⁢log⁡P⁢(Ai,Cj).
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (4)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p10">
+        <p class="ltx_p">
+         l
+         refers to the number of clusters.
+         P⁢(Ai,Cj)
+         is a
+probability that the elements of the cluster
+         Cj
+         assigned to the correct
+class
+         Ai
+         .
+         N
+         denotes the total number of elements and
+         Nj
+         shows
+the total number of elements assigned to the cluster
+         Cj
+         . The value of
+         E
+         ranges from 0 to 1, and the smaller value of
+         E
+         indicates better
+result. Let
+         Et⁢o⁢p⁢i⁢c
+         and
+         Et⁢a⁢s⁢k
+         are entropy value of lda_topic
+cluster and task cluster, respectively. We chose the parameters
+         k′
+         and
+         d′
+         whose value of the summation of
+         Et⁢o⁢p⁢i⁢c
+         and
+         Et⁢a⁢s⁢k
+         is
+smallest. For each lda_topic, we extracted words whose probabilities
+are larger than zero, and regarded these as topic candidates.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Topic Detection by MACD
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         The proposed method does not simply use MACD to find bursts, but instead
+determines topic words in series of documents. Unlike Dynamic Topic
+Models
+         [3]
+         , it does not assume Gaussian distribution so that
+it is a natural way to analyze bursts which depend on the data. We
+applied it to extract topic words in series of documents. MACD histogram
+defined by Eq. (
+         6
+         ) shows a difference between the MACD and
+its moving average. MACD of a variable
+         xt
+         is defined by the
+difference of
+         n1
+         -day and
+         n2
+         -day moving averages,
+MACD(
+         n1
+         ,
+         n2
+         ) = EMA(
+         n1
+         ) - EMA(
+         n2
+         ). Here, EMA(
+         ni
+         ) refers
+to
+         ni
+         -day Exponential Moving Average (EMA). For a variable
+         x
+         =
+         x⁢(t)
+         which has a corresponding discrete time series
+         x
+         =
+{
+         xt
+         ∣
+         t
+         = 0,1,
+         ⋯
+         }, the
+         n
+         -day EMA is defined by
+Eq. (
+         5
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx4">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           EMA⁢(n)⁢[x]t
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           α⁢xt+(1-α)⁢EMA⁢(n-1)⁢[x]t-1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑k=0nα⁢(1-α)k⁢xt-k.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         α
+         refers to a smoothing factor and it is often taken to
+be
+         2(n+1)
+         . MACD histogram shows a difference between the MACD
+and its moving average
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx5">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           hist⁢(n1,n2,n3)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           MACD⁢(n1,n2)-
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           EMA⁢(n3)⁢[MACD⁢(n1,n2)].
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        <p class="ltx_p">
+         The procedure for topic detection with MACD is illustrated in Figure
+         2
+         . Let
+         A
+         be a series of documents and
+         w
+         be one of the
+topic candidates obtained by LDA. Each document in
+         A
+         is sorted in
+chronological order. We set
+         A
+         to the documents from
+the summarization task. Whether or not a word
+         w
+         is a topic word is judged as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p6">
+        <ol class="ltx_enumerate" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Create document-based MACD histogram where X-axis refers to
+            T
+            ,
+            i.e.
+            , a
+period of time (numbered from day 1 to 365). Y-axis is the
+document count in
+            A
+            per day. Hereafter, referred to as correct histogram.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Create term-based MACD histogram where X-axis refers to
+            T
+            , and
+Y-axis denotes bursts of word
+            w
+            in
+            A
+            . Hereafter, referred to
+as bursts histogram.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            We assume that if a term
+            w
+            is informative for summarizing a
+particular documents in a collection, its burstiness approximates
+the burstiness of documents in the collection. Because
+            w
+            is a representative word of each
+document in the task. Based on this assumption, we computed similarity between correct and
+word histograms by using KL-distance
+            . Let
+            P
+            and
+            Q
+            be a normalized distance of correct histogram, and bursts
+histogram, respectively. KL-distance is
+defined by
+            D(P∣∣Q)
+            =
+            ∑i=1P⁢(xi)⁢log⁡P⁢(xi)Q⁢(xi)
+            where
+            xi
+            refers bursts in time
+            i
+            . If the value of
+            D(P∣∣Q)
+            is smaller than a certain
+threshold value,
+            w
+            is regarded as a topic word.
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Extrinsic Evaluation to Summarization
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Event detection
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         An event word is something that occurs at a specific place and time
+associated with some specific actions
+         [2, 1]
+         . It
+refers to notions of who(person), where(place), when(time) including
+what, why and how in a document. Therefore, we can assume that named
+entities(NE) are linguistic features for event detection. An event word
+refers to the
+         t⁢h⁢e⁢m⁢e
+         of the document itself, and frequently appears in
+the document but not frequently appear in other documents. Therefore, we
+first applied NE recognition to the target documents to be summarized,
+and then calculated tf
+         ∗
+         idf to the results of NE recognition. We
+extracted words whose tf
+         ∗
+         idf values are larger than a certain
+threshold value, and regarded these as event words.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Sentence extraction
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We recall that our hypothesis about key sentences in multiple documents
+is that they include topic and event words. Each sentence in the documents
+is represented using a vector of frequency weighted words that can be
+event or topic words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Like much previous work on extractive summarization
+         [7, 18, 25]
+         , we used Markov Random Walk (MRW)
+model to compute the rank scores for the sentences. Given a set of
+documents to be summarized,
+         G
+         = (
+         S
+         ,
+         E
+         ) is a graph reflecting the
+relationships between two sentences.
+         S
+         is a set of vertices, and each
+vertex
+         si
+         in
+         S
+         is a sentence.
+         E
+         is a set of edges, and each
+edge
+         ei⁢j
+         in
+         E
+         is associated with an affinity weight
+         f(i→j)
+         between sentences
+         si
+         and
+         sj
+         (
+         i
+         ≠
+         j
+         ). The affinity weight is computed using cosine measure between the
+two sentences,
+         si
+         and
+         sj
+         . Two vertices are connected if their
+affinity weight is larger than 0 and we let
+         f(i→i)
+         = 0 to
+avoid self transition. The transition probability from
+         si
+         to
+         sj
+         is then defined as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx6">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           p(i→j)=
+          </td>
+          <td class="ltx_td ltx_align_center">
+           {f(i→j)∑k=1|S|f(i→k), ifΣ⁢f≠  0  0,  otherwise.
+          </td>
+          <td class="ltx_td">
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (7)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         We used the row-normalized matrix
+         Ui⁢j
+         =
+         (Ui⁢j)∣S∣×∣S∣
+         to describe
+         G
+         with each entry corresponding to
+the transition probability, where
+         Ui⁢j
+         =
+         p(i→j)
+         . To
+make
+         U
+         a stochastic matrix, the rows with all zero elements are
+replaced by a smoothing vector with all elements set to
+         1∣S∣
+         . The final transition matrix is given by formula
+(
+         8
+         ), and each score of the sentence is obtained by the
+principal eigenvector of the matrix
+         M
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx7">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E8">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           M
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           μ⁢UT+(1-μ)∣S∣⁢e→⁢e→T.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (8)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p6">
+        <p class="ltx_p">
+         We selected a
+certain number of sentences according to rank score into the summary.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Experimental settings
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We applied the results of topic detection to extractive multi-document
+summarization task, and examined how the results of topic detection
+affect the overall performance of the salient sentence selection. We
+used two tasks, Japanese and English summarization tasks,
+NTCIR-3
+         SUMM Japanese and
+DUC
+         English data. The baselines
+are (i) MRW model (
+         MRW
+         ): The method applies the MRW model only to
+the sentences consisted of noun words, (ii) Event detection (
+         Event
+         ): The method applies the MRW model to the result of event
+detection, (iii) Topic Detection by LDA (
+         LDA
+         ): MRW is applied to
+the result of topic candidates detection by LDA and (iv) Topic Detection
+by LDA and MACD (
+         LDA &amp; MACD
+         ): MRW is applied to the result of
+topic detection by LDA and MACD only,
+         i.e.
+         , the method does not
+include event detection.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        NTCIR data
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The data used in the NTCIR-3 multi-document summarization task is
+selected from 1998 to 1999 of Mainichi Japanese Newspaper documents. The
+gold standard data provided to human judges consists of FBFREE DryRun
+and FormalRun. Each data consists of 30 tasks. There are two types of
+correct summary according to the character length, “long” and
+“short”, All series of documents were tagged by CaboCha
+         [14]
+         . We used person name, organization, place and proper
+name extracted from NE recognition
+         [14]
+         for event detection,
+and noun words including named entities for topic detection. FBFREE
+DryRun data is used to tuning
+parameters,
+         i.e.
+         , the number of extracted words according to the
+tf
+         ∗
+         idf value, and the threshold value of KL-distance. The size that
+optimized the average Rouge-1(R-1) score across 30 tasks was chosen. As a
+result, we set tf
+         ∗
+         idf and KL-distance to 100 and 0.104, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         We used FormalRun as a test data, and another set consisted of 218,724
+documents from 1998 to 1999 of Mainichi newspaper as a corpus used in
+LDA and MACD. We estimated the number of
+         k′
+         and
+         d′
+         in LDA,
+         i.e.
+         , we searched
+         k′
+         and
+         d′
+         in steps of 100 from 200 to 900. Figure
+         3
+         illustrates entropy value against the number of topics
+         k′
+         and documents
+         d′
+         using 30 tasks of FormalRun data. Each plot
+shows that at least one of the documents for each summarization task is
+included in the cluster. We can see from Figure
+         3
+         that the
+value of entropy depends on the number of documents rather than the
+number of topics. From the result shown in Figure
+         3
+         , the
+minimum entropy value was 0.025 and the number of topics and documents
+were 400 and 300, respectively. We used them in the experiment. The
+summarization results are shown in Table
+         1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Table
+         1
+         shows that our
+approach, “Event &amp; Topic” outperforms other baselines, regardless of
+the summary type (long/short). Topic candidates include surplus words
+that are not related to the topic because the results obtained by “LDA” were worse
+than those obtained by “LDA &amp; MACD”, and even worse than “Event” in both
+short and long summary. This shows that integration of LDA and MACD is effective for topic detection.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        DUC data
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We used DUC2005 consisted of 50 tasks for training, and 50 tasks of
+DUC2006 data for testing in order to estimate parameters. We set
+tf
+         ∗
+         idf and KL-distance to 80 and 0.9. The minimum entropy value was
+0.050 and the number of topics and documents were 500 and 600,
+respectively. 45 tasks from DUC2007 were used to evaluate the
+performance of the method. All documents were tagged by Tree Tagger
+         [21]
+         and Stanford Named Entity Tagger
+         [8]
+         . We used person name, organization and location for
+event detection, and noun words including named entities for topic
+detection. AQUAINT
+corpus
+         which consists
+of 1,033,461 documents are used as a corpus in LDA and MACD. Table
+         2
+         shows Rouge-1 against unigrams.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         We can see from Table
+         2
+         that Rouge-1 obtained by our
+approach was also the best compared to the baselines. Table
+         2
+         also shows the performance of other research sites
+reported by
+         [5]
+         . The top site was “HybHSum” by
+         [5]
+         . However, the method is a semi-supervised
+technique that needs a tagged training data. Our approach achieves
+performance approaching the top-performing unsupervised method, “TTM”
+         [6]
+         , and is competitive to “PYTHY”
+         [24]
+         and “hPAM”
+         [16]
+         . Prior work including
+“TTM” has demonstrated the usefulness of semantic concepts for
+extracting salient sentences. For future work, we should be able to
+obtain further advantages in efficacy in our topic detection and
+summarization approach by disambiguating topic senses.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        The research described in this paper explores a method for detecting
+topic words over time in series of documents. The results of extrinsic
+evaluation showed that integration of LDA and MACD is effective for
+topic detection.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

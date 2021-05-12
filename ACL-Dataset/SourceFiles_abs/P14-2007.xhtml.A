@@ -1,0 +1,396 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Measuring Sentiment Annotation Complexity of Text.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The effort required by a human annotator to detect sentiment is not uniform for all texts. Compare the hypothetical tweet “
+        Just what I wanted: a good pizza.
+        ” with “
+        Just what I wanted: a cold pizza.
+        ”. The two are lexically and structurally similar. However, because of the sarcasm in the second tweet (in “cold” pizza, an undesirable situation followed by a positive sentiment phrase “just what I wanted”, as discussed in
+        Riloff et al.2013
+        ), it is more complex than the first for sentiment annotation. Thus, independent of how good the annotator is, there are sentences which will be perceived to be more complex than others. With regard to this, we introduce a metric called
+        sentiment annotation complexity (SAC)
+        . The SAC of a given piece of text (sentences, in our case) can be predicted using the linguistic properties of the text as features.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The primary question is whether such complexity measurement is necessary at all.
+        Fort et al2012
+        describe the necessity of annotation complexity measurement in manual annotation tasks. Measuring annotation complexity is beneficial in annotation crowdsourcing. If the complexity of the text can be estimated
+        even before the annotation begins
+        , the pricing model can be fine-tuned (pay less for sentences that are easy to annotate, for example). Also, in terms of an automatic SA engine which has multiple classifiers in its ensemble, a classifier may be chosen based on the complexity of sentiment annotation (for example, use a rule-based classifier for simple sentences and a more complex classifier for other sentences). Our metric adds value to sentiment annotation and sentiment analysis, in these two ways. The fact that sentiment expression may be complex is evident from a study of comparative sentences by
+        Ganapathibhotla and Liu2008
+        , sarcasm by
+        Riloff et al.2013
+        , thwarting by
+        Ramteke et al.2013
+        or implicit sentiment by
+        Balahur et al.2011
+        . To the best of our knowledge, there is no general approach to “measure” how complex a piece of text is, in terms of sentiment annotation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The central challenge here is to annotate a data set with SAC. To measure the “actual” time spent by an annotator on a piece of text, we use an eye-tracker to record eye-fixation duration: the time for which the annotator has actually focused on the sentence during annotation. Eye-tracking annotations have been used to study the cognitive aspects of language processing tasks like translation by
+        Dragsted2010
+        and sense disambiguation by
+        Joshi et al.2011
+        .
+        Mishra et al.2013
+        present a technique to determine translation difficulty index. The work closest to ours is by
+        Scott et al.2011
+        who use eye-tracking to study the role of emotion words in reading.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The novelty of our work is three-fold:
+        (a) The proposition of a metric to measure complexity of sentiment annotation, (b) The adaptation of past work that uses eye-tracking for NLP in the context of sentiment annotation, (c) The learning of regressors that automatically predict SAC using linguistic features.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Understanding Sentiment Annotation Complexity
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The process of sentiment annotation consists of two sub-processes: comprehension (where the annotator understands the content) and sentiment judgment (where the annotator identifies the sentiment). The complexity in sentiment annotation stems from an interplay of the two and we expect SAC to capture the combined complexity of both the sub-processes. In this section, we describe how complexity may be introduced in sentiment annotation in different classical layers of NLP.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The simplest form of sentiment annotation complexity is at the
+        lexical level
+        . Consider the sentence “
+        It is messy, uncouth, incomprehensible, vicious and absurd
+        ”. The sentiment words used in this sentence are uncommon, resulting in complexity.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        The next level of sentiment annotation complexity arises due to
+        syntactic complexity
+        . Consider the review: “
+        A somewhat crudely constructed but gripping, questing look at a person so racked with self-loathing, he becomes an enemy to his own race.
+        ”. An annotator will face difficulty in comprehension as well as sentiment judgment due to the complicated phrasal structure in this review.
+Implicit expression of sentiment introduces complexity at the
+        semantic and pragmatic
+        level. Sarcasm expressed in “
+        It’s like an all-star salute to disney’s cheesy commercialism
+        ” leads to difficulty in sentiment annotation because of positive words like “
+        an all-star salute
+        ”.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Manual annotation of complexity scores may not be intuitive and reliable. Hence, we use a cognitive technique to create our annotated dataset. The underlying idea is:
+        if we monitor annotation of two textual units of equal length, the more complex unit will take longer to annotate, and hence, should have a higher SAC
+        . Using the idea of “annotation time” linked with complexity, we devise a technique to create a dataset annotated with SAC.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        It may be thought that
+        inter-annotator agreement (IAA)
+        provides implicit annotation: the higher the agreement, the easier the piece of text is for sentiment annotation. However, in case of multiple expert annotators, this agreement is expected to be high for most sentences, due to the expertise. For example, all five annotators agree with the label for 60% sentences in our data set. However, the duration for these sentences has a mean of 0.38 seconds and a standard deviation of 0.27 seconds. This indicates that although IAA is easy to compute, it does not determine sentiment annotation complexity of text in itself.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Creation of dataset annotated with SAC
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We wish to predict sentiment annotation complexity of the text using a supervised technique. As stated above, the time-to-annotate is one good candidate. However, “simple time measurement” is not reliable because the annotator may spend time not doing any annotation due to fatigue or distraction. To accurately record the time, we use an eye-tracking device that measures the “duration of eye-fixations
+        ”. Another attribute recorded by the eye-tracker that may have been used is “saccade duration
+        ”. However, saccade duration is not significant for annotation of short text, as in our case. Hence, the SAC labels of our dataset are fixation durations with appropriate normalization.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        It may be noted that the eye-tracking device is used only to annotate training data. The actual prediction of SAC is done using linguistic features alone.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Eye-tracking Experimental Setup
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We use a sentiment-annotated data set consisting of movie reviews by
+         [Pang and Lee2005]
+         and tweets from
+         http://help.sentiment140.com/for-students
+         . A total of 1059 sentences (566 from a movie corpus, 493
+from a twitter corpus) are selected.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         We then obtain two kinds of annotation from five paid annotators: (a) sentiment (positive, negative and objective), (b) eye-movement as recorded by an eye-tracker. They are given a set of instructions beforehand and can seek clarifications. This experiment is conducted as follows:
+        </p>
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            A sentence is displayed to the annotator on the screen. The annotator verbally states the sentiment of this sentence, before (s)he can proceed to the next.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            While the annotator reads the sentence, a remote eye-tracker (Model: Tobii TX 300, Sampling rate: 300Hz) records the eye-movement data of the annotator. The eye-tracker is linked to a Translog II software
+            [Carl2012]
+            in order to record the data. A snapshot of the software is shown in figure
+            1
+            . The dots and circles represent position of eyes and fixations of the annotator respectively.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            The experiment then continues in modules of 50 sentences at a time. This is to prevent fatigue over a period of time. Thus, each annotator participates in this experiment over a number of sittings.
+           </p>
+          </div>
+         </li>
+        </ol>
+        <p class="ltx_p">
+         We ensure the quality of our dataset in different ways: (a) Our annotators are instructed to avoid unnecessary head movements and eye-movements outside the experiment environment. (b) To minimize noise due to head movements further, they are also asked to state the annotation verbally, which was then manually recorded, (c) Our annotators are students between the ages 20-24 with English as the primary language of academic instruction and have secured a TOEFL iBT score of 110 or above.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         We understand that sentiment is nuanced- towards a target, through constructs like sarcasm and presence of multiple entities. However, we want to capture the most natural form of sentiment annotation. So, the guidelines are kept to a bare minimum of “
+         annotating a sentence as positive, negative and objective as per the speaker
+         ”.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         This experiment results in a data set of 1059 sentences with a fixation duration recorded for each sentence-annotator pair
+         The multi-rater kappa IAA for sentiment annotation is 0.686.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Calculating SAC from eye-tracked data
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We now need to annotate each sentence with a SAC. We extract
+         fixation durations
+         of the five annotators for each of the annotated sentences. A single SAC score for sentence
+         s
+         for
+         N
+         annotators is computed as follows:
+        </p>
+        S⁢A⁢C⁢(s)=1N⁢∑n=1Nz⁢(n,d⁢u⁢r⁢(s,n))l⁢e⁢n⁢(s)w⁢h⁢e⁢r⁢e,z⁢(n,d⁢u⁢r⁢(s,n))=d⁢u⁢r⁢(s,n)-μ⁢(d⁢u⁢r⁢(n))σ⁢(d⁢u⁢r⁢(n))
+
+(1)
+        <p class="ltx_p">
+         In the above formula,
+         N
+         is the total number of annotators while
+         n
+         corresponds to a specific annotator.
+         d⁢u⁢r⁢(s,n)
+         is the fixation duration of annotator
+         n
+         on sentence
+         s
+         .
+         l⁢e⁢n⁢(s)
+         is the number of words in sentence
+         s
+         . This normalization over number of words assumes that long sentences may have high
+         d⁢u⁢r⁢(s,n)
+         but do not necessarily have high SACs.
+         μ⁢(d⁢u⁢r⁢(n))
+         ,
+         σ⁢(d⁢u⁢r⁢(n))
+         is the mean and standard deviation of fixation durations for annotator n across all sentences.
+         z(n,.)
+         is a function that z-normalizes the value for annotator
+         n
+         to standardize the deviation due to reading speeds. We convert the SAC values to a scale of 1-10 using min-max normalization.
+To understand how the formula records sentiment annotation complexity, consider the SACs of examples in section
+         2
+         . The sentence “it is messy , uncouth , incomprehensible , vicious and absurd” has a SAC of 3.3. On the other hand, the SAC for the sarcastic sentence “it’s like an all-star salute to disney’s cheesy commercialism.” is 8.3.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Predictive Framework for SAC
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The previous section shows how gold labels for SAC can be obtained using eye-tracking experiments. This section describes our predictive for SAC that uses four categories of linguistic features:
+        lexical, syntactic, semantic
+        and
+        sentiment-related
+        in order to capture the subprocesses of annotation as described in section
+        2
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Experiment Setup
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         The linguistic features described in Table
+         1
+         are extracted from the input sentences. Some of these features are extracted using Stanford Core NLP
+         tools and NLTK
+         [Bird et al.2009]
+         . Words that do not appear in Academic Word List
+         and General Service List
+         are treated as out-of-vocabulary words. The training data consists of 1059 tuples, with 13 features and gold labels from eye-tracking experiments.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         To predict SAC, we use Support Vector Regression (SVR)
+         [Joachims2006]
+         . Since we do not have any information about the nature of the relationship between the features and SAC, choosing SVR allows us to try multiple kernels. We carry out a 5-fold cross validation for both in-domain and cross-domain settings, to validate that the regressor does not overfit. The model thus learned is evaluated using: (a) Error metrics namely, Mean Squared Error estimate, Mean Absolute Error estimate and Mean Percentage Error. (b) the Pearson correlation coefficient between the gold and predicted SAC.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The results are tabulated in Table
+         2
+         . Our observation is that a quadratic kernel performs slightly better than linear. The correlation values are positive and indicate that even if the predicted scores are not as accurate as desired, the system is capable of ranking sentences in the correct order based on their sentiment complexity. The mean percentage error (MPE) of the regressors ranges between 22-38.21%. The cross-domain MPE is higher than the rest, as expected.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         To understand how each of the features performs, we conducted ablation tests by considering one feature at a time. Based on the MPE values, the best features are: Mean word length (MPE=27.54%), Degree of Polysemy (MPE=36.83%) and %ge of nouns and adjectives (MPE=38.55%). To our surprise, word count performs the worst (MPE=85.44%). This is unlike tasks like translation where length has been shown to be one of the best predictors in translation difficulty
+         [Mishra et al.2013]
+         . We believe that for sentiment annotation, longer sentences may have more lexical clues that help detect the sentiment more easily. Note that some errors may be introduced in feature extraction due to limitations of the NLP tools.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Discussion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Our proposed metric measures complexity of sentiment annotation, as perceived by human annotators. It would be worthwhile to study the
+        human-machine correlation
+        to see if
+        what is difficult for a machine is also difficult for a human
+        . In other words, the goal is to show that the confidence scores of a sentiment classifier are negatively correlated with SAC.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        We use three sentiment classification techniques: Naïve Bayes, MaxEnt and SVM with unigrams, bigrams and trigrams as features. The training datasets used are: a) 10000 movie reviews from Amazon Corpus
+        [McAuley et. al2013]
+        and b) 20000 tweets from the twitter corpus (same as mentioned in section
+        3
+        ). Using NLTK and Scikit-learn
+        with default settings, we generate six positive/negative classifiers, for all possible combinations of the three models and two datasets.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        The confidence score of a classifier
+        for given text t is computed as follows:
+       </p>
+       P:P⁢r⁢o⁢b⁢a⁢b⁢i⁢l⁢i⁢t⁢y⁢o⁢f⁢p⁢r⁢e⁢d⁢i⁢c⁢t⁢e⁢d⁢c⁢l⁢a⁢s⁢sC⁢o⁢n⁢f⁢i⁢d⁢e⁢n⁢c⁢e⁢(t)={P⁢i⁢f⁢p⁢r⁢e⁢d⁢i⁢c⁢t⁢e⁢dp⁢o⁢l⁢a⁢r⁢i⁢t⁢y⁢i⁢s⁢c⁢o⁢r⁢r⁢e⁢c⁢t1-P⁢o⁢t⁢h⁢e⁢r⁢w⁢i⁢s⁢e
+
+(2)
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        Table
+        3
+        presents the accuracy of the classifiers along with the correlations between the confidence score and observed SAC values. MaxEnt has the highest negative correlation of -0.29 and -0.26. For both domains, we observe a weak yet negative correlation which suggests that the perception of difficulty by the classifiers are in line with that of humans, as captured through SAC.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusion &amp; Future Work
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We presented a metric called Sentiment Annotation Complexity (SAC), a metric in SA research that has been unexplored until now. First, the process of data preparation through eye tracking, labeled with the SAC score was elaborated. Using this data set and a set of linguistic features, we trained a regression model to predict SAC. Our predictive framework for SAC resulted in a mean percentage error of 22.02%, and a moderate correlation of 0.57 between the predicted and observed SAC values. Finally, we observe a negative correlation between the classifier confidence scores and a SAC, as expected. As a future work, we would like to investigate how SAC of a test sentence can be used to choose a classifier from an ensemble, and to determine the pre-processing steps (entity-relationship extraction, for example).
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

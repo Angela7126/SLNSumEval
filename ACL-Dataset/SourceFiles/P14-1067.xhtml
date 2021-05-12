@@ -1,0 +1,1040 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Adaptive Quality Estimation for Machine Translation</title>
+<!--Generated on Tue Jun 10 18:04:12 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Adaptive Quality Estimation for Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Marco Turchi<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{(1)}" display="inline"><msup><mi/><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math> Antonios Anastasopoulos<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{(3)}" display="inline"><msup><mi/><mrow><mo>(</mo><mn>3</mn><mo>)</mo></mrow></msup></math> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_bold">José G. C. de Souza<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{(1,2)}" display="inline"><msup><mi/><mrow><mo mathvariant="bold">(</mo><mrow><mn mathvariant="normal">1</mn><mo mathvariant="bold">,</mo><mn mathvariant="normal">2</mn></mrow><mo mathvariant="bold">)</mo></mrow></msup></math></span> <span class="ltx_text ltx_font_bold">Matteo Negri<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{(1)}" display="inline"><msup><mi/><mrow><mo mathvariant="bold">(</mo><mn mathvariant="normal">1</mn><mo mathvariant="bold">)</mo></mrow></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{(1)}" display="inline"><msup><mi/><mrow><mo mathvariant="bold">(</mo><mn mathvariant="normal">1</mn><mo mathvariant="bold">)</mo></mrow></msup></math></span> FBK - Fondazione Bruno Kessler, Via Sommarive 18, 38123 Trento, Italy
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{(2)}" display="inline"><msup><mi/><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math> University of Trento, Italy
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{(3)}" display="inline"><msup><mi/><mrow><mo>(</mo><mn>3</mn><mo>)</mo></mrow></msup></math> National Technical University of Athens, Greece
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">turchi,desouza,negri</span>}<span class="ltx_text ltx_font_typewriter">@fbk.eu
+<br class="ltx_break"/>anastasopoulos.ant@gmail.com</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">The automatic estimation of machine translation (MT) output quality is a hard task in which the selection of the appropriate algorithm and the most predictive features over reasonably sized training sets plays a crucial role. When moving from controlled lab evaluations to real-life scenarios the task becomes even harder. For current MT quality estimation (QE) systems, additional complexity comes from the difficulty to model user and domain changes. Indeed, the instability of the systems with respect to data coming from different distributions calls for adaptive solutions that react to new operating conditions. To tackle this issue we propose an online framework for adaptive QE that targets reactivity and robustness to user and domain changes. Contrastive experiments in different testing conditions involving user and domain changes demonstrate the effectiveness of our approach.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">After two decades of steady progress, research in statistical machine translation (SMT) started to cross its path with translation industry with tangible mutual benefit. On one side, SMT research brings to the industry improved output quality and a number of appealing solutions useful to increase translators’ productivity. On the other side, the market needs suggest concrete problems to solve, providing real-life scenarios to develop and evaluate new ideas with rapid turnaround. The evolution of computer-assisted translation (CAT) environments is an evidence of this trend, shown by the increasing interest towards the integration of suggestions obtained from MT engines with those derived from translation memories (TMs).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The possibility to speed up the translation process and reduce its costs by post-editing good-quality MT output raises interesting research challenges. Among others, these include deciding <span class="ltx_text ltx_font_italic">what</span> to present as a suggestion, and <span class="ltx_text ltx_font_italic">how</span> to do it in the most effective way.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In recent years, these issues motivated research on automatic QE, which addresses the problem of estimating the quality of a translated sentence given the source and without access to reference translations <cite class="ltx_cite">[<a href="#bib.bib46" title="Confidence Estimation for Machine Translation" class="ltx_ref">4</a>, <a href="#bib.bib76" title="Estimating the sentence-level quality of machine translation systems" class="ltx_ref">30</a>, <a href="#bib.bib62" title="Match without a Referee: Evaluating MT Adequacy without Reference Translations" class="ltx_ref">22</a>]</cite>. Despite the substantial progress done so far in the field and in successful evaluation campaigns <cite class="ltx_cite">[<a href="#bib.bib81" title="Findings of the 2012 Workshop on Statistical Machine Translation" class="ltx_ref">6</a>, <a href="#bib.bib80" title="Findings of the 2013 Workshop on Statistical Machine Translation" class="ltx_ref">5</a>]</cite>, focusing on concrete market needs makes possible to further define the scope of research on QE. For instance, moving from controlled lab testing scenarios to real working environments poses additional constraints in terms of adaptability of the QE models to
+the variable conditions of a translation job.
+Such variability is due to two main reasons:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">The notion of MT output quality is highly subjective</span> <cite class="ltx_cite">[<a href="#bib.bib40" title="Comparing Human Perceptions of Post-editing Effort with Post-editing Operations" class="ltx_ref">16</a>, <a href="#bib.bib32" title="Coping with the Subjectivity of Human Judgements in MT Quality Estimation" class="ltx_ref">33</a>, <a href="#bib.bib3" title="Automatic Annotation of Machine Translation Datasets with Binary Quality Judgements" class="ltx_ref">34</a>]</cite>. Since the quality standards of individual users may vary considerably (<span class="ltx_text ltx_font_italic">e.g.</span> according to their knowledge of the source and target languages), the estimates of a static QE model trained with data collected from a group of post-editors might not fit with the actual judgements of a new user;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Each translation job has its own specificities</span> (domain, complexity of the source text, average target quality). Since data from a new job may differ from those used to train the QE model, its estimates on the new instances might result to be biased or uninformative.</p>
+</div></li>
+</ol>
+<p class="ltx_p">The ability of a system to self-adapt to the behaviour of specific users and domain changes is a facet of the QE problem that so far has been disregarded. To cope with these issues and deal with the erratic conditions of real-world translation workflows, we propose <span class="ltx_text ltx_font_bold">an adaptive approach to QE</span> that is sensitive and robust to differences between training and test data. Along this direction, our main contribution is a framework in which QE models can be trained and can continuously evolve over time accounting for knowledge acquired from post editors’ work.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Our approach is <span class="ltx_text ltx_font_bold">based on the online learning paradigm</span> and exploits a key difference between such framework and the batch learning methods currently used.
+On one side, the QE models obtained with batch methods are learned exclusively from a predefined set of training examples under the assumption that they have similar characteristics with respect to the test data. This makes them suitable for controlled evaluation scenarios where such condition holds. On the other side, online learning techniques are designed to learn in a stepwise manner (either from scratch, or by refining an existing model) from new, unseen test instances by taking advantage of external feedback.
+This makes them suitable for real-life scenarios where the new instances to be labelled can considerably differ from the data used to train the QE model.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">To develop our approach, different online algorithms have been embedded in the backbone of a QE system. This required the adaptation of its standard batch learning workflow to:</p>
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Perform online feature extraction from a source–target pair (<span class="ltx_text ltx_font_italic">i.e.</span> one instance at a time instead of processing an entire training set);</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Emit a prediction for the input instance;</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Gather user feedback for the instance (<span class="ltx_text ltx_font_italic">i.e.</span> calculating a “true label” based on the amount of user post-editions);</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Send the true label back to the model to update its predictions for future instances.</p>
+</div></li>
+</ol>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Focusing on the adaptability to user and domain changes, we report the results of comparative experiments with two online algorithms and the standard batch approach. The evaluation is carried out by measuring the global error of each algorithm on test sets featuring different degrees of similarity with the data used for training. Our results show that the sensitivity of online QE models to different distributions of training and test instances makes them more suitable than batch methods for integration in a CAT framework.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">Our adaptive QE infrastructure has been released as open source. Its C++ implementation is available at
+<a href="http://hlt.fbk.eu/technologies/aqet" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_small">http://hlt.fbk.eu/technologies/aqet</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">QE is generally cast as a supervised machine learning task, where a model trained from a collection of (<span class="ltx_text ltx_font_italic">source, target, label</span>) instances is used to predict labels<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Possible label types include <span class="ltx_text ltx_font_italic">post-editing effort scores</span> (<span class="ltx_text ltx_font_italic">e.g.</span> 1-5 Likert scores indicating the estimated percentage of MT output that has to be corrected), <span class="ltx_text ltx_font_italic">HTER values</span> <cite class="ltx_cite">[<a href="#bib.bib24" title="A study of translation edit rate with targeted human annotation" class="ltx_ref">28</a>]</cite>, and post-editing <span class="ltx_text ltx_font_italic">time</span> (<span class="ltx_text ltx_font_italic">e.g.</span> seconds per word).</span></span></span> for new, unseen test items <cite class="ltx_cite">[<a href="#bib.bib42" title="Machine Translation Evaluation versus Quality Estimation" class="ltx_ref">31</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In the last couple of years, research in the field received a strong boost by the shared tasks organized within the WMT workshop on SMT,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.statmt.org/wmt13/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.statmt.org/wmt13/</span></a></span></span></span> which is also the framework of our first experiment in §<a href="#S5" title="5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Current approaches to the tasks proposed at WMT have mainly focused on three main directions, namely:
+<span class="ltx_text ltx_font_italic">i)</span> feature engineering, as in
+<cite class="ltx_cite">[<a href="#bib.bib54" title="Tree Kernels for Machine Translation Quality Estimation" class="ltx_ref">12</a>, <a href="#bib.bib6" title="FBK-UEdin participation to the WMT13 quality estimation shared task" class="ltx_ref">10</a>, <a href="#bib.bib1" title="Exploiting Qualitative Information from Automatic Word Alignment for Cross-lingual NLP Tasks" class="ltx_ref">11</a>, <a href="#bib.bib8" title="The CNGL-DCU-Prompsit translation systems for WMT13" class="ltx_ref">26</a>]</cite>,
+<span class="ltx_text ltx_font_italic">ii)</span> model learning with a variety of classification and regression algorithms, as in <cite class="ltx_cite">[<a href="#bib.bib18" title="Feature decay algorithms for fast deployment of accurate statistical machine translation systems" class="ltx_ref">3</a>, <a href="#bib.bib17" title="SHEF-Lite: when less is more for translation quality estimation" class="ltx_ref">1</a>, <a href="#bib.bib75" title="The SDL Language Weaver Systems in the WMT12 Quality Estimation Shared Task" class="ltx_ref">29</a>]</cite>,
+and <span class="ltx_text ltx_font_italic">iii)</span> feature selection as a way to overcome sparsity and overfitting issues, as in <cite class="ltx_cite">[<a href="#bib.bib75" title="The SDL Language Weaver Systems in the WMT12 Quality Estimation Shared Task" class="ltx_ref">29</a>]</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Being optimized to perform well on specific WMT sub-tasks and datasets, current systems reflect variations along these directions but leave important aspects of the QE problem still partially investigated or totally unexplored.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>For a comprehensive overview of the QE approaches proposed so far we refer the reader to the WMT12 and WMT13 QE shared task reports <cite class="ltx_cite">[<a href="#bib.bib81" title="Findings of the 2012 Workshop on Statistical Machine Translation" class="ltx_ref">6</a>, <a href="#bib.bib80" title="Findings of the 2013 Workshop on Statistical Machine Translation" class="ltx_ref">5</a>]</cite>.</span></span></span> Among these, the necessity to model the diversity of human quality judgements and correction strategies <cite class="ltx_cite">[<a href="#bib.bib40" title="Comparing Human Perceptions of Post-editing Effort with Post-editing Operations" class="ltx_ref">16</a>, <a href="#bib.bib39" title="Post-editing Time as a Measure of Cognitive Effort." class="ltx_ref">15</a>]</cite> calls for solutions that: <span class="ltx_text ltx_font_italic">i)</span> account for annotator-specific behaviour, thus being capable of learning from inherently noisy datasets produced by multiple annotators, and <span class="ltx_text ltx_font_italic">ii)</span> self-adapt to changes in data distribution, learning from user feedback on new, unseen test items.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">These interconnected issues are particularly relevant in the CAT framework, where translation jobs from different domains are routed to professional translators with different idiolect, background and quality standards.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">The first aspect, modelling annotators’ individual behaviour and interdependences,
+has been addressed by Cohn and Specia <cite class="ltx_cite">[<a href="#bib.bib38" title="Modelling Annotator Bias with Multi-task Gaussian Processes: An Application to Machine Translation Quality Estimation" class="ltx_ref">8</a>]</cite>, who explored multi-task Gaussian Processes as a way to jointly learn from the output of multiple annotations. This technique is suitable to cope with the unbalanced distribution of training instances and yields better models when heterogeneous training datasets are available.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">The second problem, the adaptability of QE models, has not been explored yet.
+A common trait of all current approaches, in fact, is the reliance on batch learning techniques, which assume a “static” nature of the world where new unseen instances that will be encountered
+will be similar to the training data.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>This assumption holds in the WMT evaluation scenario, but it is not necessarily valid in real operating conditions.</span></span></span>
+However, similarly to translation memories that incrementally store translated segments and evolve over time incorporating users style and terminology,
+all components of a CAT tool (the MT engine and the mechanisms to assign quality scores to the suggested translations) should take advantage of translators feedback.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">On the MT system side, research on adaptive approaches tailored to interactive SMT and CAT scenarios explored the online learning protocol
+<cite class="ltx_cite">[<a href="#bib.bib31" title="Learning Quickly when Irrelevant Attributes Abound: A New Linear-Threshold Algorithm" class="ltx_ref">17</a>]</cite> to improve various aspects of the decoding process <cite class="ltx_cite">[<a href="#bib.bib36" title="Online Learning Algorithms for Computer-Assisted Translation. Deliverable D4.2, SMART: Statistical Multilingual Analysis for Retrieval and Translation." class="ltx_ref">7</a>, <a href="#bib.bib37" title="Online learning for interactive statistical machine translation" class="ltx_ref">23</a>, <a href="#bib.bib35" title="Online Learning via Dynamic Reranking for Computer Assisted Translation" class="ltx_ref">19</a>, <a href="#bib.bib34" title="Online adaptation strategies for statistical machine translation in post-editing scenarios" class="ltx_ref">20</a>, <a href="#bib.bib33" title="Online Learning Approaches in Computer Assisted Translation" class="ltx_ref">21</a>, <a href="#bib.bib10" title="Cache-based Online Adaptation for Machine Translation Enhanced Computer Assisted Translation" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">As regards QE models, our work represents the first investigation on incremental adaptation by exploiting users feedback to provide targeted (system, user, or project specific) quality judgements.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Online QE for CAT environments</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">When operating with advanced CAT tools, translators are presented with suggestions (either matching fragments from a translation memory or automatic translations produced by an MT system) for each sentence of a source document. Before being approved and published, translation suggestions may require different amounts of post-editing operations depending on their quality.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Each post-edition brings a wealth of dynamic knowledge about the whole translation process and the involved actors. For instance, adaptive QE components could exploit information about the distance between automatically assigned scores and the quality standards of individual translators (inferred from the amount of their corrections) to “profile” their behaviour.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">The online learning paradigm fits well with this research objective. In the online framework, differently from the batch mode, the learning algorithm sequentially processes an unknown sequence of instances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="X=x_{1},{x_{2}},...,{x_{n}}" display="inline"><mrow><mi>X</mi><mo>=</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><msub><mi>x</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub></mrow></mrow></math>, returning a prediction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="p(x_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> as output at each step. Differences between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="p(x_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> and the true label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="\hat{p}(x_{i})" display="inline"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> obtained as feedback are used by the learner to refine the next prediction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="p(x_{i+1})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">In our experiments on adaptive QE we aim to predict the quality of the suggested translations in terms of HTER, which measures the minimum edit distance between the MT output and its manually post-edited version in the [0,1] interval.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Edit distance is calculated as the number of edits (word insertions, deletions, substitutions, and shifts) divided by the number of words in the reference. Lower HTER values indicate better translations.</span></span></span>
+In this scenario:</p>
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">The set of instances <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is represented by (<span class="ltx_text ltx_font_italic">source, target</span>) pairs;</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">The prediction <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="p(x_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is the automatically estimated HTER score;</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">The true label <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m1" class="ltx_Math" alttext="\hat{p}(x_{i})" display="inline"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is the actual HTER score calculated over the target and its post-edition.</p>
+</div></li>
+</ul>
+<p class="ltx_p">At each step of the process, the goal of the learner is to exploit user post-editions to reduce the difference between the predicted HTER values and the true labels for the following (<span class="ltx_text ltx_font_italic">source, target</span>) pairs.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1067/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="321" height="209" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Online QE workflow. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m7" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>src<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m8" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m9" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>trg<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m10" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m11" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>pe<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m12" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> respectively stand for the source sentence, the target translation and the post-edited target.</div>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">As depicted in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Online QE for CAT environments ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, this is done as follows:</p>
+<ol id="I4" class="ltx_enumerate">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">At step <span class="ltx_text ltx_font_italic">i</span>, an unlabelled (<span class="ltx_text ltx_font_italic">source, target</span>) pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is sent to a feature extraction component. To this aim, we used an adapted version <cite class="ltx_cite">[<a href="#bib.bib2" title="An Efficient and User-friendly Tool for Machine Translation Quality Estimation" class="ltx_ref">27</a>]</cite> of the open-source QuEst<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><a href="http://www.quest.dcs.shef.ac.uk/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.quest.dcs.shef.ac.uk/</span></a></span></span></span> tool
+<cite class="ltx_cite">[<a href="#bib.bib30" title="QuEst - A Translation Quality Estimation Framework" class="ltx_ref">32</a>]</cite>. The tool, which implements a large number of features proposed by participants in the WMT QE shared tasks, has been modified to process one sentence at a time as requested for integration in a CAT environment;</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">The extracted features are sent to an online regressor, which returns a QE prediction score <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="p(x_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> in the [0,1] interval (set to 0 at the first round of the iteration);</p>
+</div></li>
+<li id="I4.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I4.i3.p1" class="ltx_para">
+<p class="ltx_p">Based on the post-edition done by the user, the true HTER label <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i3.p1.m1" class="ltx_Math" alttext="\hat{p}(x_{i})" display="inline"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is calculated by means of the TERCpp<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup><a href="goo.gl/nkh2rE" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">goo.gl/nkh2rE</span></a></span></span></span> open source tool;</p>
+</div></li>
+<li id="I4.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I4.i4.p1" class="ltx_para">
+<p class="ltx_p">The true label is sent back to the online algorithm for a stepwise model improvement. The updated model is then ready to process the following instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i4.p1.m1" class="ltx_Math" alttext="x_{i+1}" display="inline"><msub><mi>x</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></math>.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">This new paradigm for QE makes it possible to:
+<span class="ltx_text ltx_font_italic">i)</span> let the QE system learn from one point at a time without complete re-training from scratch, <span class="ltx_text ltx_font_italic">ii)</span> customize the predictions of an existing QE model with respect to a specific situation (post-editor or domain), or even <span class="ltx_text ltx_font_italic">iii)</span> build a QE model from scratch when training data is not available.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">For the sake of clarity it is worth observing that, at least in principle, a model built in a batch fashion could also be adapted to new test data. For instance, this could be done by running periodic re-training routines once a certain amount of new labelled instances has been collected (<span class="ltx_text ltx_font_italic">de facto</span> mimicking an online process). Such periodic updates, however, would not represent a viable solution in the CAT framework where post-editors’ work cannot be slowed by time-consuming procedures to re-train core system components from scratch.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation framework</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">To measure the adaptation capability of different QE models, we experiment with a range of conditions defined by variable degrees of similarity between training and test data.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The degree of similarity depends on several factors: the MT engine used, the domain of the documents to be translated, and the post-editing style of individual translators. In our experiments, the degree of similarity is measured in terms of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER, which is computed as the absolute value of the difference between the average HTER of the training and test sets. Large values indicate a low similarity between training and test data and a more challenging scenario for the learning algorithms.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experimental setup</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the range of possible evaluation scenarios, our experiments cover:</p>
+<ul id="I5" class="ltx_itemize">
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p">One artificial setting (§<a href="#S5" title="5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) obtained from the WMT12 QE shared task data, in which training/test instances are arranged to reflect homogeneous distributions of the HTER labels.</p>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p">Two settings obtained from data collected with a CAT tool in real working conditions, in which different facets of the adaptive QE problem interact with each other. In the first (<span class="ltx_text ltx_font_typewriter">user_change</span>, §<a href="#S6.SS1" title="6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>), training and test data from the same domain are obtained from different users. In the second (<span class="ltx_text ltx_font_typewriter">user+domain_change</span>, §<a href="#S6.SS2" title="6.2 Dealing with user and domain changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>), training and test data are obtained from different users and domains.</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For each setting, we compare an <span class="ltx_text ltx_font_italic">adaptive</span> and an <span class="ltx_text ltx_font_italic">empty</span> model against a system trained in <span class="ltx_text ltx_font_italic">batch</span> mode. The <span class="ltx_text ltx_font_italic">adaptive</span> model is built on top of an existing model created from the training data and exploits the new test instances to refine its predictions in a stepwise manner. The <span class="ltx_text ltx_font_italic">empty</span> model only learns from the test set, simulating the worst condition where training data is not available. The <span class="ltx_text ltx_font_italic">batch</span> model is built by learning only from the training data and is evaluated on the test set without exploiting information from the test instances.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Each model is also compared against a common baseline for regression tasks, which is particularly relevant in settings featuring different data distributions between training and test sets. This baseline (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> henceforth) is calculated by labelling each instance of the test set with the mean HTER score of the training set. Previous works <cite class="ltx_cite">[<a href="#bib.bib4" title="Topic Models for Translation Quality Estimation for Gisting Purposes" class="ltx_ref">25</a>]</cite> demonstrated that its results can be particularly hard to beat.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Performance indicator and feature set</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">To measure the adaptability of our model to a given test set we compute the Mean Absolute Error (MAE), a metric for regression problems also used in the WMT QE shared tasks. The MAE is the average of the absolute errors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="e_{i}=|f_{i}-y_{i}|" display="inline"><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>=</mo><mrow><mo fence="true">|</mo><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo fence="true">|</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math> is the prediction of the model and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> is the true value for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="i^{th}" display="inline"><msup><mi>i</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> instance.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">As our focus is on the algorithmic aspect, in all experiments we use the same feature set, which consists of the seventeen features proposed in <cite class="ltx_cite">[<a href="#bib.bib76" title="Estimating the sentence-level quality of machine translation systems" class="ltx_ref">30</a>]</cite>. This feature set, fully described in <cite class="ltx_cite">[<a href="#bib.bib81" title="Findings of the 2012 Workshop on Statistical Machine Translation" class="ltx_ref">6</a>]</cite>, takes into account the complexity of the source sentence (<span class="ltx_text ltx_font_italic">e.g.</span> number of tokens, number of translations per source word) and the fluency of the target translation (<span class="ltx_text ltx_font_italic">e.g.</span> language model probabilities). The results of previous WMT QE shared tasks have shown that these baseline features are particularly competitive in the regression task
+(with only few systems able to beat them at WMT12).</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Online algorithms</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">In our experiments we evaluate two online algorithms, OnlineSVR
+<cite class="ltx_cite">[<a href="#bib.bib28" title="Online support vector regression" class="ltx_ref">24</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup><a href="http://www2.imperial.ac.uk/~gmontana/onlinesvr.htm" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www2.imperial.ac.uk/~gmontana/onlinesvr.htm</span></a></span></span></span> and Passive-Aggressive Perceptron <cite class="ltx_cite">[<a href="#bib.bib27" title="Online Passive-Aggressive Algorithms" class="ltx_ref">9</a>]</cite>,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup><a href="https://code.google.com/p/sofia-ml/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/sofia-ml/</span></a></span></span></span> by comparing their performance with a batch learning strategy based on the Scikit-learn implementation of Support Vector Regression (SVR).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup><a href="http://scikit-learn.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://scikit-learn.org/</span></a></span></span></span></p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">The choice of the OnlineSVR and Passive-Aggressive (OSVR and PA henceforth) is motivated by different considerations.
+From a <span class="ltx_text ltx_font_bold">performance</span> point of view, as an adaptation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>-SVR which proved to be one of the top performing algorithms in the regression QE tasks at WMT, OSVR seems to be the best candidate. For this reason, we use the online adaptation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>-SVR proposed by <cite class="ltx_cite">[<a href="#bib.bib29" title="Accurate Online Support Vector Regression" class="ltx_ref">18</a>]</cite>. The goal of OnlineSVR is to find a way to add each new sample to one of three sets (support, empty, error) maintaining the consistency of a set of conditions known as Karush-Kuhn Tucker (KKT) conditions. For each new point, OSVR starts a cycle where the samples are moved across the three sets until the KKT conditions are verified and the new point is assigned to one of the sets. If the point is identified as a support vector, the parameters of the model are updated. This allows OSVR to benefit from the prediction capability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>-SVR in an online setting.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">From a <span class="ltx_text ltx_font_bold">practical</span> point of view, providing the best trade off between accuracy and computational time <cite class="ltx_cite">[<a href="#bib.bib19" title="A Comparison and Improvement of Online Learning Algorithms for Sequence Labeling." class="ltx_ref">13</a>]</cite>, PA represents a good solution to meet the demand of efficiency posed by the CAT framework. For each instance <span class="ltx_text ltx_font_italic">i</span>, after emitting a prediction and receiving the true label, PA computes the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>-insensitive hinge loss function. If its value is larger than the tolerance parameter (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>), the weights of the model are updated as much as the aggressiveness parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> allows. In contrast with OSVR, which keeps track of the most important points seen in the past (support vectors), the update of the weights is done without considering the previously processed <span class="ltx_text ltx_font_italic">i-1</span> instances. Although it makes PA faster than OSVR, this is a riskier strategy because it may lead the algorithm to change the model to adapt to outlier points.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments with WMT12 data</h2>
+
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="9"><span class="ltx_text ltx_font_small">WMT Dataset</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Batch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Adaptive</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Empty</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">HTER</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">200</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">754</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">13.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">13.2<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">∗</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m4" class="ltx_Math" alttext="13.5^{\ast}" display="inline"><msup><mn>13.5</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">600</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">754</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m5" class="ltx_Math" alttext="12.9^{\ast}" display="inline"><msup><mn>12.9</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m6" class="ltx_Math" alttext="13.5^{\ast}" display="inline"><msup><mn>13.5</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1500</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">754</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.22</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m7" class="ltx_Math" alttext="12.8^{\ast}" display="inline"><msup><mn>12.8</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m8" class="ltx_Math" alttext="13.5^{\ast}" display="inline"><msup><mn>13.5</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>MAE of the best performing <span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span> models on WMT12 data. Training sets of different size and the test set have been arranged to reflect homogeneous label distributions.
+</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The motivations for experiments with training and test data featuring homogeneous label distributions are twofold. First, since in this artificial scenario adaptation capabilities are not required for the QE component, batch methods operate in the ideal conditions (as training and test are independent and identically distributed). This makes possible to obtain from batch models the best possible performance to compare with. Second, this scenario provides the fairest conditions for such comparison because, in principle, online algorithms are not favoured by the possibility to learn from the diversity of the test instances.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For our controlled experiments we use the WMT12 English-Spanish corpus, which consists of 2,254 source-target pairs (1,832 for training, 422 for test). The HTER labels for our regression task are calculated from the post-edited version and the target sentences provided in the dataset.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">To avoid biases in the label distribution, the WMT12 training and test data have been merged, shuffled, and eventually separated to generate three training sets of different size (200, 600, and 1500 instances), and one test set with 754 instances. For each algorithm, the training sets are used for learning the QE models, optimizing parameters (<span class="ltx_text ltx_font_italic">i.e.</span> <span class="ltx_text ltx_font_italic">C</span>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>, the kernel and its parameters for SVR and OSVR; tolerance and aggressiveness for PA) through grid search in 10-fold cross-validation.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Evaluation is carried out by measuring the performance of the <span class="ltx_text ltx_font_italic">batch</span> (learning only from the training set), the <span class="ltx_text ltx_font_italic">adaptive</span> (learning from the training set and adapting to the test set), and the <span class="ltx_text ltx_font_italic">empty</span> (learning from scratch from the test set) models in terms of global MAE scores on the test set.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> reports the results achieved by the best performing algorithm for each type of model (<span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span>, <span class="ltx_text ltx_font_italic">empty</span>). As can be seen, close MAE values show a similar behaviour for the three types of models.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>Results marked with the “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m1" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>” symbol are NOT statistically significant compared to the corresponding batch model. The others are always statistically significant at p<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m2" class="ltx_Math" alttext="\leq" display="inline"><mo>≤</mo></math>0.005, calculated with approximate randomization <cite class="ltx_cite">[<a href="#bib.bib5" title="More Accurate Tests for the Statistical Significance of Result Differences" class="ltx_ref">35</a>]</cite>.</span></span></span> With the same amount of training data, the performance of the batch and the adaptive models (in this case always obtained with OSVR) is almost identical. This demonstrates that, as expected, the online algorithms do not take advantage of test data with a label distribution similar to the training set. All the models outperform the baseline, even if the minimal differences confirm the competitiveness of such a simple approach.</p>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">Overall, these results bring some interesting indications about the behaviour of the different online algorithms.
+First, the good results achieved by the empty models (less than one MAE point separates them from the best ones built on the largest training set) suggest their high potential when training data are not available.
+Second, our results show that OSVR is always the best performing algorithm for the adaptive and empty models. This suggests a lower capability of PA to learn from instances similar to the training data.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="9"><span class="ltx_text ltx_font_typewriter ltx_font_small">user_change</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt" colspan="9"><span class="ltx_text ltx_font_small">Legal Domain</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Batch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Adaptive</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Empty</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">HTER</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">21.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">21.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">21.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">11.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="12.6^{\ast}" display="inline"><msup><mn>12.6</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="12.9^{\ast}" display="inline"><msup><mn>12.9</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">13.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="13.9^{\ast}" display="inline"><msup><mn>13.9</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="15.2^{\ast}" display="inline"><msup><mn>15.2</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt ltx_border_t" colspan="9"><span class="ltx_text ltx_font_small">IT Domain</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Batch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Adaptive</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Empty</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">HTER</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">12.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m9" class="ltx_Math" alttext="17.5^{\ast}" display="inline"><msup><mn>17.5</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">9.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">15.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">14.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m10" class="ltx_Math" alttext="15^{\ast}" display="inline"><msup><mn>15</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m11" class="ltx_Math" alttext="15.5^{\ast}" display="inline"><msup><mn>15.5</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">sim2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">13.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m12" class="ltx_Math" alttext="14.4^{\ast}" display="inline"><msup><mn>14.4</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m13" class="ltx_Math" alttext="16.1^{\ast}" display="inline"><msup><mn>16.1</mn><mo>∗</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>MAE of the best performing <span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span> models on CAT data collected from different users in the same domain.</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments with CAT data</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">To experiment with adaptive QE in more realistic conditions we used a CAT tool<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>MateCat – <a href="http://www.matecat.com/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.matecat.com/</span></a></span></span></span> to collect two datasets of (<span class="ltx_text ltx_font_italic">source</span>, <span class="ltx_text ltx_font_italic">target</span>, <span class="ltx_text ltx_font_italic">post_edited target</span>) English-Italian tuples.The source sentences in the datasets come from two documents from different domains, respectively legal (L) and information technology (IT). The L document, which was extracted from a European Parliament resolution published on the EUR-Lex platform,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup><a href="http://eur-lex.europa.eu/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://eur-lex.europa.eu/</span></a></span></span></span> contains 164 sentences. The IT document, which was taken from a software user manual, contains 280 sentences. The source sentences were translated with two SMT systems built by training the Moses toolkit <cite class="ltx_cite">[<a href="#bib.bib21" title="Moses: open source toolkit for statistical machine translation" class="ltx_ref">14</a>]</cite> on parallel data from the two domains (about 2M sentences for IT and 1.5M for L). Post-editions were collected from eight professional translators (four for each document) operating with the CAT tool in real working conditions.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">According to the way they are created, the two datasets allow us to evaluate the adaptability of different QE models with respect to user changes within the same domain (§<a href="#S6.SS1" title="6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>), as well as user and domain changes at the same time (§<a href="#S6.SS2" title="6.2 Dealing with user and domain changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>).</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">For each document <span class="ltx_text ltx_font_italic">D</span> (L or IT), these two scenarios are obtained by dividing <span class="ltx_text ltx_font_italic">D</span> into two parts of equal size (80 instances for L and 140 for IT). The result is one training set and one test set for each post-editor within the same domain. For the <span class="ltx_text ltx_font_typewriter">user_change</span> experiments, training and test sets are selected from different post-editors within the same domain. For the <span class="ltx_text ltx_font_typewriter">user+domain_change</span> experiments, training and test sets are selected from different post-editors in different domains.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">On each combination of training and test sets, the <span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span>, and <span class="ltx_text ltx_font_italic">empty</span> models are trained and evaluated in terms of global MAE scores on the test set.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Dealing with user changes</h3>
+
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="9"><span class="ltx_text ltx_font_typewriter ltx_font_small">user+domain_change</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">Train</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">Test</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m2" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Batch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_small">Adaptive</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_small">Empty</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">HTER</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MAE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Alg</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">26.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">18.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">25.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr" style="background-color:#BFBFBF;">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">L rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">L cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">20.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">21.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">20.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">14.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#BFBFBF;">12.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">OSVR</span></td></tr>
+<tr class="ltx_tr" style="background-color:#BFBFBF;">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">L cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">L rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">19.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">21.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">21.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">16.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#BFBFBF;">11.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">12.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr" style="background-color:#BFBFBF;">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">IT cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">IT rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">12.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">19.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">19.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">17.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#BFBFBF;">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">12.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">15.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr" style="background-color:#BFBFBF;">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">IT rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">IT cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">9.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">16.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small" style="background-color:#BFBFBF;">15.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">PA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#BFBFBF;">15.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote" style="background-color:#BFBFBF;">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT cons</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">12.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">6.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">16.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT cons</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">14.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">IT rad</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">L rad</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">10.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">OSVR</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>MAE of the best performing <span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span> models on CAT data collected from different users and domains.</div>
+</div>
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Among the possible combinations of training and test data from different post-editors in the same domain, Table <a href="#S5.T2" title="Table 2 ‣ 5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> refers to two opposite scenarios.
+For each domain, these respectively involve the most dissimilar and the most similar post-editors according to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p1.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER. Also in this case, for each model (<span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span>) we only report the MAE of the best performing algorithm.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">The first scenario defines a challenging situation where two post-editors (<span class="ltx_text ltx_font_italic">rad</span> and <span class="ltx_text ltx_font_italic">cons</span>) are characterized by opposite behaviour. As evidenced by the high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER values, one of them (<span class="ltx_text ltx_font_italic">rad</span>) is the most “radical” post-editor (performing more corrections) while the other (<span class="ltx_text ltx_font_italic">cons</span>) is the most “conservative” one. As shown in Table <a href="#S5.T2" title="Table 2 ‣ 5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, global MAE scores for the online algorithms (both <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span>) indicate their good adaptation capabilities. This is evident from the significant improvements both over the baseline (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m2" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math>) and the batch models. Interestingly, the best results are always achieved by the <span class="ltx_text ltx_font_italic">empty</span> models (with MAE reductions up to 10 points when tested on <span class="ltx_text ltx_font_italic">rad</span> in the L domain, and 3.2 points when tested on <span class="ltx_text ltx_font_italic">rad</span> in the IT domain). These results (MAE reductions are always statistically significant) suggest that, when dealing with datasets with very different label distributions, the evident limitations of batch methods are more easily overcome by learning from scratch from the feedback of a new post-editor. This also holds when the amount of test points to learn from is limited, as in the L domain where the test set contains only 80 instances. From the application-oriented perspective that motivates our work, considering the high costs of acquiring large and representative QE training data, this is an important finding.</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">The second scenario defines a less challenging situation where the two post-editors (<span class="ltx_text ltx_font_italic">sim1</span> and <span class="ltx_text ltx_font_italic">sim2</span>) are characterized by the most similar behaviour (small <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER). This scenario is closer to the situation described in Section <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m2" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math><a href="#S5" title="5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Also in this case MAE results for the <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span> models are slightly worse, but not significantly, than those of the batch models and the baseline. However, considering the very small amount of “uninformative” instances to learn from (especially for the <span class="ltx_text ltx_font_italic">empty</span> models), these lower results are not surprising.</p>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p">A closer look at the behaviour of the online algorithms in the two domains leads to other observations. First, OSVR always outperforms PA for the <span class="ltx_text ltx_font_italic">empty</span> models and when post-editors have similar behaviour, which are situations where the algorithm does not have to quickly adapt or react to sudden changes.</p>
+</div>
+<div id="S6.SS1.p5" class="ltx_para">
+<p class="ltx_p">Second, PA seems to perform better for the <span class="ltx_text ltx_font_italic">adaptive</span> models when the post-editors have significantly different behaviour and a quick adaptation to the incoming points is required. This can be motivated by the fact that PA relies on a simpler and less robust learning strategy that does not keep track of all the information coming from the previously processed instances, and can easily modify its weights taking into consideration the last seen point (see Section <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p5.m1" class="ltx_Math" alttext="\S\ref{sec-arch}" display="inline"><mrow><mi mathvariant="normal">§</mi><mo>⁢</mo><mtext href="#S3"><a xmlns="http://www.w3.org/1999/xhtml" href="#S3" title="3 Online QE for CAT environments ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a></mtext></mrow></math>). For OSVR the addition of new points to the support set may have a limited effect on the whole model, in particular if the number of points in the set is large. This also results in a different processing time for the two algorithms.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>Their complexity depends on the number of features (<span class="ltx_text ltx_font_italic">f</span>) and the number of previously seen instances (<span class="ltx_text ltx_font_italic">n</span>). While for PA it is linear in <span class="ltx_text ltx_font_italic">f</span>, <span class="ltx_text ltx_font_italic">i.e.</span> <span class="ltx_text ltx_font_italic">O(f)</span>, for OSVR it is quadratic in <span class="ltx_text ltx_font_italic">n</span>, <span class="ltx_text ltx_font_italic">i.e.</span> <span class="ltx_text ltx_font_italic">O(n<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p5.m2" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn mathvariant="normal">2</mn></msup></math>*f)</span>.</span></span></span> For instance, in the <span class="ltx_text ltx_font_italic">empty</span> configurations on IT data, OSVR devotes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p5.m3" class="ltx_Math" alttext="6.0~{}ms" display="inline"><mrow><mpadded width="+3.3pt"><mn>6.0</mn></mpadded><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>s</mi></mrow></math> per instance to update the model, while PA devotes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p5.m4" class="ltx_Math" alttext="4.8~{}ms" display="inline"><mrow><mpadded width="+3.3pt"><mn>4.8</mn></mpadded><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>s</mi></mrow></math>, which comes at the cost of lower performance.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Dealing with user and domain changes</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the last round of experiments we evaluate the reactivity of different online models to simultaneous user and domain changes.
+To this aim, our QE models are created using a training set coming from one domain (L or IT), and then used to predict the HTER labels for the test instances coming from the other domain (<span class="ltx_text ltx_font_italic">e.g.</span> training on L, testing on IT).</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">Among the possible combinations of training and test data, Table <a href="#S6.T3" title="Table 3 ‣ 6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> refers to scenarios involving the most conservative and radical post-editors in each domain (previously identified with <span class="ltx_text ltx_font_italic">cons</span> and <span class="ltx_text ltx_font_italic">rad</span>)<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup>For brevity, we omit the results for the other post-editors which, however, show similar trends with respect to the previous experiments.</span></span></span>. In the table, results are ordered according to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER computed between the selected post-editor in the training domain (<span class="ltx_text ltx_font_italic">e.g.</span> <span class="ltx_text ltx_font_italic">L cons</span>) and the selected post-editor in the test domain (<span class="ltx_text ltx_font_italic">e.g.</span> <span class="ltx_text ltx_font_italic">IT rad</span>). For the sake of comparison, we also report (grey rows) the results of the experiments within the same domain presented in §<a href="#S6.SS1" title="6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>. For each type of model (<span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span> and <span class="ltx_text ltx_font_italic">empty</span>) we only show the MAE obtained by the best performing algorithm.</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">Intuitively, dealing with simultaneous user and domain changes represents a more challenging problem compared to the previous setting where only post-editors changes were considered. Such intuition is confirmed by the results of the <span class="ltx_text ltx_font_italic">adaptive</span> models that outperform both the baseline (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math>) and the <span class="ltx_text ltx_font_italic">batch</span> models even for low <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m2" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER values. Although in these cases the distance between training and test data is comparable to the experiments with similar post-editors working in the same domain (<span class="ltx_text ltx_font_italic">sim1</span> and <span class="ltx_text ltx_font_italic">sim2</span>), here the predictive power of the <span class="ltx_text ltx_font_italic">batch</span> models seems in fact to be lower.
+The same holds also for the <span class="ltx_text ltx_font_italic">empty</span> models except in two cases where the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p3.m3" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER is the smallest (2.2 and 5.0).
+This is a strong evidence of the fact that, in case of domain changes, online models can still learn from new test instances even if they have a label distribution similar to the training set.</p>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">When the distance between training and test increases, our results confirm our previous findings about the potential of the <span class="ltx_text ltx_font_italic">empty</span> models. The observed MAE reductions range in fact from 10.4 to 12.9 points for the two combinations with the highest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p4.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER.</p>
+</div>
+<div id="S6.SS2.p5" class="ltx_para">
+<p class="ltx_p">From the algorithmic point of view, our results indicate that OSVR achieves the best performance for all the combinations involving user and domain changes. This contrasts with the results of most of the combinations involving only user changes with post-editors characterized by opposite behaviour (grey rows in Table <a href="#S6.T3" title="Table 3 ‣ 6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). However, it has to be remarked that in the case of heterogeneous datasets the difference between the two algorithms is always very high. In our experiments, when PA outperforms OSVR, its MAE results are significantly lower and vice-versa (respectively up to 1.5 and 1.7 MAE points). This suggests that, although PA is potentially capable of achieving higher results and better adapt to the new test points, its instability makes it less reliable for practical use.</p>
+</div>
+<div id="S6.SS2.p6" class="ltx_para">
+<p class="ltx_p">As a final analysis of our results, we investigated how the performance of the different types of models (<span class="ltx_text ltx_font_italic">batch</span>, <span class="ltx_text ltx_font_italic">adaptive</span>, <span class="ltx_text ltx_font_italic">empty</span>) relates to the distance between training and test sets. To this aim, we computed the Pearson correlation between the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m1" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER (column 3 in Table <a href="#S6.T3" title="Table 3 ‣ 6.1 Dealing with user changes ‣ 6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) and the MAE of each model (columns 5, 6 and 8), which respectively resulted in 0.9 for the <span class="ltx_text ltx_font_italic">batch</span>, 0.63 for the <span class="ltx_text ltx_font_italic">adaptive</span> and -0.07 for the <span class="ltx_text ltx_font_italic">empty</span> model. These values confirm that <span class="ltx_text ltx_font_italic">batch</span> models are heavily affected by the dissimilarity between training and test data: large differences in the label distribution imply higher MAE results and vice-versa. This is in line with our previous findings about <span class="ltx_text ltx_font_italic">batch</span> models that, learning only from the training set, cannot leverage possible dissimilarities of the test set. The lower correlation observed for the <span class="ltx_text ltx_font_italic">adaptive</span> models also confirms our intuitions: adapting to the new test points, these models are in fact more robust to differences with the training data. As expected, the results of the <span class="ltx_text ltx_font_italic">empty</span> models are completely uncorrelated with the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p6.m2" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>HTER since they only use the test set.</p>
+</div>
+<div id="S6.SS2.p7" class="ltx_para">
+<p class="ltx_p">This analysis confirms that, even when dealing with different domains, the similarity between the training and test data is one of the main factors that should drive the choice of the QE model. When this distance is minimal, <span class="ltx_text ltx_font_italic">batch</span> models can be a reasonable option, but when the gap between training and test data increases, <span class="ltx_text ltx_font_italic">adaptive</span> or <span class="ltx_text ltx_font_italic">empty</span> models are a preferable choice to achieve good results.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In the CAT scenario, each translation job can be seen as a complex situation where the user (his personal style and background), the source document (the language and the domain) and the underlying technology (the translation memory and the MT engine that generate translation suggestions) contribute to make the task unique. So far, the adaptability to such specificities (a major challenge for CAT technology) has been mainly supported by the evolution of translation memories, which incrementally store translated segments incorporating the user style. The wide adoption of translation memories demonstrates the importance of capitalizing on such information to increase translators productivity.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">While this lesson recently motivated research on adaptive MT decoders that learn from user corrections, nothing has been done to develop adaptive QE components. In the first attempt to address this problem, we proposed the application of the online learning protocol to leverage users feedback and to tailor QE predictions to their quality standards. Besides highlighting the limitations of current batch methods to adapt to user and domain changes, we performed an application-oriented analysis of different online algorithms focusing on specific aspects relevant to the CAT scenario. Our results show that the wealth of dynamic knowledge brought by user corrections can be exploited to refine in a stepwise fashion the quality judgements in different testing conditions (user changes as well as simultaneous user and domain changes).</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">As an additional contribution, to spark further research on this facet of the QE problem, our adaptive QE infrastructure (integrating all the components and the algorithms described in this paper) has been released as open source. Its C++ implementation is available at <a href="http://hlt.fbk.eu/technologies/aqet" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_small">http://hlt.fbk.eu/technologies/aqet</span></a>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work has been partially supported by the EC-funded project MateCat (ICT-2011.4.2-287688).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Beck, K. Shah, T. Cohn and L. Specia</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SHEF-Lite: when less is more for translation quality estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Bertoldi, M. Cettolo and F. Marcello</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cache-based Online Adaptation for Machine Translation Enhanced Computer Assisted Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nice, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 1147–1162</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bicici</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature decay algorithms for fast deployment of accurate statistical machine translation systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blatz, E. Fitzgerald, G. Foster, S. Gandrabur, C. Goutte, A. Kulesza, A. Sanchis and N. Ueffing</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Confidence Estimation for Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Summer Workshop Final report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">JHU/CLSP</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib80" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Bojar, C. Buck, C. Callison-Burch, C. Federmann, B. Haddow, P. Koehn, C. Monz, M. Post, R. Soricut and L. Specia</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Findings of the 2013 Workshop on Statistical Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WMT-2013</span>, <span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–44</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-2201" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch, P. Koehn, C. Monz, M. Post, R. Soricut and L. Specia</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Findings of the 2012 Workshop on Statistical Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 10–51</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Performance indicator and feature set ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Cesa-Bianchi, G. Reverberi and S. Szedmak</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online Learning Algorithms for Computer-Assisted Translation. Deliverable D4.2, SMART: Statistical Multilingual Analysis for Retrieval and Translation.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Cohn and L. Specia</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modelling Annotator Bias with Multi-task Gaussian Processes: An Application to Machine Translation Quality Estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL-2013</span>, <span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 32–42</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1004" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Crammer, O. Dekel, J. Keshet, S. Shalev-Shwartz and Y. Singer</span><span class="ltx_text ltx_bib_year">(2006-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online Passive-Aggressive Algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">7</span>, <span class="ltx_text ltx_bib_pages"> pp. 551–585</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1248547.1248566" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Online algorithms ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. G.C. de Souza, C. Buck, M. Turchi and M. Negri</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">FBK-UEdin participation to the WMT13 quality estimation shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. G.C. de Souza, M. Esplà-Gomis, M. Turchi and M. Negri</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting Qualitative Information from Automatic Word Alignment for Cross-lingual NLP Tasks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 771–776</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hardmeier, J. Nivre and J. Tiedemann</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tree Kernels for Machine Translation Quality Estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 109–113</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. He and H. Wang</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Comparison and Improvement of Online Learning Algorithms for Sequence Labeling.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Mumbai, India</span>, <span class="ltx_text ltx_bib_pages"> pp. 1147–1162</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p3" title="4.3 Online algorithms ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, H. Hoang, A. Birch, C. Callison-Burch, M. Federico, N. Bertoldi, B. Cowan, W. Shen, C. Moran, R. Zens, C. Dyer, O. Bojar, A. Constantin and E. Herbst</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Moses: open source toolkit for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’07</span>, <span class="ltx_text ltx_bib_pages"> pp. 177–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Experiments with CAT data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Koponen, W. Aziz, L. Ramos and L. Specia</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Post-editing Time as a Measure of Cognitive Effort.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Diego, California</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Koponen</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing Human Perceptions of Post-editing Effort with Post-editing Operations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 181–190</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>,
+<a href="#S2.p3" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Littlestone</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning Quickly when Irrelevant Attributes Abound: A New Linear-Threshold Algorithm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 285–318</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ma, J. Theiler and S. Perkins</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate Online Support Vector Regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Computation</span> <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 2683–2703</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 Online algorithms ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Martínez-Gómez, G. Sanchis-Trilles and F. Casacuberta</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online Learning via Dynamic Reranking for Computer Assisted Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CICLing’11</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Martínez-Gómez, G. Sanchis-Trilles and F. Casacuberta</span><span class="ltx_text ltx_bib_year">(2012-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online adaptation strategies for statistical machine translation in post-editing scenarios</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Pattern Recognition</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">9</span>), <span class="ltx_text ltx_bib_pages"> pp. 3193–3203</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0031-3203</span>,
+<a href="http://dx.doi.org/10.1016/j.patcog.2012.01.011" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1016/j.patcog.2012.01.011" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Mathur, M. Cettolo and M. Federico</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online Learning Approaches in Computer Assisted Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Mehdad, M. Negri and M. Federico</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Match without a Referee: Evaluating MT Adequacy without Reference Translations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 171–â180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Ortiz-Martínez, I. García-Varea and F. Casacuberta</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning for interactive statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 546–554</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1857999.1858078" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Parrella</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online support vector regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Master’s Thesis, Department of Information Science, University of Genoa, Italy</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Online algorithms ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rubino, J. G.C. de Souza, J. Foster and L. Specia</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic Models for Translation Quality Estimation for Gisting Purposes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nice, France</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Experimental setup ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rubino, A. Toral, S. Cortés Vaíllo, J. Xie, X. Wu, S. Doherty and Q. Liu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The CNGL-DCU-Prompsit translation systems for WMT13</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 211–216</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Shah, M. Turchi and L. Specia</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An Efficient and User-friendly Tool for Machine Translation Quality Estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Reykjavik, Iceland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i1.p1" title="1. ‣ 3 Online QE for CAT environments ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Snover, B. Dorr, R. Schwartz, L. Micciulla and J. Makhoul</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study of translation edit rate with targeted human annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Cambridge, Massachusetts, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 223–231</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib75" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Soricut, N. Bach and Z. Wang</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The SDL Language Weaver Systems in the WMT12 Quality Estimation Shared Task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montréal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 145–151</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib76" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Specia, N. Cancedda, M. Dymetman, M. Turchi and N. Cristianini</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimating the sentence-level quality of machine translation systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 28–35</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Performance indicator and feature set ‣ 4 Evaluation framework ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Specia, D. Raj and M. Turchi</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Machine Translation Evaluation versus Quality Estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine translation</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 39–50</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Specia, K. Shah, J. G.C. de Souza and T. Cohn</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">QuEst - A Translation Quality Estimation Framework</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL-2013</span>, <span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 79–84</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-4014" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i1.p1" title="1. ‣ 3 Online QE for CAT environments ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Turchi, M. Negri and M. Federico</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coping with the Subjectivity of Human Judgements in MT Quality Estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 240–251</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Turchi and M. Negri</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Annotation of Machine Translation Datasets with Binary Quality Judgements</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Reykjavik, Iceland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 1 Introduction ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yeh</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">More Accurate Tests for the Statistical Significance of Result Differences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Saarbrucken, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 947–953</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p5" title="5 Experiments with WMT12 data ‣ Adaptive Quality Estimation for Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:04:12 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

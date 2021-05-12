@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Complexity-sensitive decision procedures for abstract argumentation.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Formal argumentation has evolved into an important field in Artificial Intelligence. Abstract argumentation frameworks (AFs for short), as introduced by Dung [1], are central in formal argumentation, providing a simple yet powerful formalism to reason about conflicts between arguments. The power of the formalism, however, comes at a price. In particular, many important reasoning problems for AFs are located on the second level of the polynomial hierarchy, including skeptical reasoning in the preferred semantics [2], and both skeptical and credulous reasoning in the semi-stable and the stage semantics [3]. This naturally raises the question about the origin of this high complexity and, in particular, calls for research on lower complexity fragments of the reasoning tasks. The focus of this article is both on the identification of such lower-complexity fragments of second-level reasoning problems arising from abstract argumentation, and on exploiting this knowledge in developing efficient complexity-sensitive decision procedures for the generic second-level problems.
+     </paragraph>
+     <paragraph>
+      Tractable (i.e., polynomial-time decidable) fragments have been quite thoroughly studied in the literature (see [4], [5], [6], [7], [8] for instance). However, there is only little work on identifying fragments which are located on the first level (NP/coNP layer), that is, in-between tractability and full second-level complexity.
+     </paragraph>
+     <paragraph>
+      Identification of first-level fragments of second-level reasoning tasks is important due to several reasons. Firstly, from a theoretical point of view, such fragments show particular (but not all) sources of complexity of the considered problems, and pave the way towards “trichotomy”-style results (see [9] for an example in the context of answer-set programming). Secondly, NP fragments can be efficiently reduced to the problem of satisfiability in classical propositional logic (SAT). This allows for realizations of argumentation procedures by employing sophisticated SAT-solver technology [10], [11] for reasoning over argumentation frameworks.
+     </paragraph>
+     <paragraph>
+      Going even further, in this work we aim at designing decision procedures for second-level argumentation problems by exploiting fragments extending such first-level fragments. To this end, we use the NP decision procedures as NP oracles in an iterative fashion. Such approaches fall under the general counter-example guided abstraction refinement (CEGAR) approach originating from the field of model checking [12], [13]. For problems complete for the second level of the polynomial hierarchy, this leads to general procedures which, in the worst case, requires an exponential number of calls to the NP oracle, which is indeed unavoidable under the assumption that the polynomial hierarchy does not collapse. Nevertheless, we show in this work that such procedures can be designed to behave adequately on input instances that fall into the considered NP fragment and on instances for which a relatively low number of oracle calls is sufficient; as a generic notion, we say that such a procedure is complexity-sensitive w.r.t. the NP fragment at hand. For instance, for the second-level problem of answer-set existence for disjunctive logic programs [14], the successful loop-formula approach (see, e.g. [15]) yields a polynomial reduction to SAT for the fragment of tight programs, although in general the resulting SAT instance is of exponential size. This approach gives thus a practical decision procedure for (the second-level problems of) answer-set programming that is at the same time complexity-sensitive w.r.t. the NP fragment of tight disjunctive programs.
+     </paragraph>
+     <paragraph>
+      In this work we identify various lower-complexity fragments of second-level reasoning problems arising from abstract argumentation, and show how some of the fragments can be exploited in complexity-sensitive CEGAR-style decision procedures for the generic second-level problems. The fragments identified and exploited are based on notions of “distance” to particular NP fragments. This leads to the intuition that, the higher the distance, the more iterative calls to the NP oracle are needed. We also employ the concept of distance to generalize known classes of NP fragments.
+     </paragraph>
+     <paragraph>
+      In more detail, we focus on three important semantics for abstract argumentation: the preferred, semi-stable and stage semantics. Our complexity analysis is based on six different classes of argumentation frameworks which are known to yield milder complexity results for at least one of these semantics. Firstly, we present complexity results for these classes in cases where the exact complexity for a particular semantics has not been established yet. Moreover, we categorize the classes into syntactical and semantical families. For the former family, we consider the known concepts of acyclic and odd-cycle free AFs, as well as a new class (so-called weak cyclic AFs).
+     </paragraph>
+     <paragraph>
+      As semantical subclasses we consider the prominent class of coherent AFs [2]; the class of AFs which possess at least one stable extension (stable-consistent AFs); and the class of AFs which possess a unique preferred extension.
+     </paragraph>
+     <paragraph>
+      Secondly, we consider alternative notions of distance in order to capture AFs which are “close” to one of the aforementioned classes. We consider the following realizations of distance:
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       graph-based distance measures, where the parameter is given by the number of arguments to be deleted from a given AF in order to fall into a specified class; and
+      </list-item>
+      <list-item label="(ii)">
+       extension-based distance measures, which apply to the semantical subclasses.
+      </list-item>
+     </list>
+     <paragraph>
+      For instance (among others), starting from the class of coherent AFs (where the preferred and stable extensions coincide), we consider as parameter the number of additional preferred extensions.
+     </paragraph>
+     <paragraph>
+      The main contributions of this article are the following:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We show new complexity results for acceptance problems in argumentation on certain fragments. In particular, for the class of frameworks which possess a unique preferred extension, semi-stable semantics yields milder complexity than stage semantics. To the best of our knowledge, this is the first result that indicates a difference between the complexities of these two semantics.
+      </list-item>
+      <list-item label="•">
+       We show that graph-based distance measures are in most cases tight: already a small distance from the subclass at hand leads to the full second-level complexity. This reveals that syntactic fragments based on such distance measures do not hint towards complexity-sensitive decision procedures.
+      </list-item>
+      <list-item label="•">
+       Towards the design of complexity-sensitive decision procedures, we also identify extension-based distance measures and show that certain problems can be solved by a bounded number (in terms of the distance) of NP-oracle calls.
+      </list-item>
+      <list-item label="•">
+       Exploiting the suitable extension-based distance measures, we develop a generic framework of complexity-sensitive decision procedures for the different second-level reasoning problems within abstract argumentation. We present our procedures in terms of (first-level) argumentation problems, i.e., we give novel characterizations of preferred, semi-stable, and stage semantics in terms of simpler semantics (such as stable and complete). The actual computation of the simpler semantics can be instantiated in various ways.
+      </list-item>
+      <list-item label="•">
+       We show in detail how the generic framework can be instantiated using an SAT-based CEGAR-style approach. For this, we develop novel SAT-encodings for the oracle calls, differing from previously suggested SAT-encodings of first-level AF reasoning problems [16]. Notably, we exploit possibilities of learning from counter-examples both on the level of the original argumentation framework as well as the SAT oracle during computation. Importantly, while monolithic SAT-encodings of second-level argumentation problems are deemed to be of exponential size, our procedures are truly complexity-sensitive in that the exponential space requirements may be circumvented in cases where it suffices to consider a small part of a monolithic encoding to decide the actual query.
+      </list-item>
+      <list-item label="•">
+       We have implemented a prototype of the SAT-based instantiation of our approach, exploiting a state-of-the-art conflict-driven clause learning (CDCL) SAT-solver as the underlying NP-oracle. Experiments show the high potential of the proposed approach compared to other state-of-the-art implementations for abstract argumentation, in particular the logic-programming approach based on monolithic encodings of second-level problems [17], [18] arising in argumentation.
+      </list-item>
+     </list>
+     <paragraph>
+      The rest of this article is organized as follows. After preliminaries on argumentation frameworks, their semantics, and related decision problems (Section 2), we review and prove new complexity results for reasoning with preferred, stage, and semi-stable semantics over several classes of AFs (Section 3). We then introduce extensions of these classes into syntactic classes of AFs based on graph-based distance measures, and show that these syntactic classes preserve the full second-level complexity under preferred, stage, and semi-stable semantics (Section 4). We then proceed by considering so-called extension-based distance measures which take the number of extensions into account, giving rise to so-called semantical subclasses of AFs, and provide positive upper bounds on the complexity of these subclasses (Section 5). These results give rise to novel complexity-sensitive decision procedures for skeptical and credulous acceptance (Section 6). After introducing the generic procedures, we show in detail how the procedures can be naturally instantiated using an SAT-solver as the NP-oracle within the procedures (Section 7). Before conclusions, we provide an experimental evaluation of the SAT-based instantiations of the procedures (Section 8).
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section we review (abstract) argumentation frameworks [1], the semantics studied in this paper (see also [19], [20]), and known complexity results for decision problems under the different semantics.
+     </paragraph>
+     <paragraph label="Definition 1">
+      An argumentation framework (AF) is a pair {a mathematical formula}F=(A,R) where A is a finite set of arguments and {a mathematical formula}R⊆A×A is the attack relation. For a given AF {a mathematical formula}F=(A,R) we use {a mathematical formula}AF to denote the set A of its arguments and {a mathematical formula}RF to denote its attack relation R. We sometimes use the notation {a mathematical formula}a↣Rb instead of {a mathematical formula}(a,b)∈R. For {a mathematical formula}S⊆A and {a mathematical formula}a∈A, we write {a mathematical formula}S↣Ra (resp. {a mathematical formula}a↣RS) in case there is a {a mathematical formula}b∈S such that {a mathematical formula}b↣Ra (resp. {a mathematical formula}a↣Rb). In case no ambiguity arises, we use ↣ instead of {a mathematical formula}↣R.
+     </paragraph>
+     <paragraph>
+      Semantics for argumentation frameworks assign to each AF {a mathematical formula}F=(A,R) a set {a mathematical formula}σ(F)⊆2A of extensions. We consider here for σ the functions stb, adm, prf, com, stg, and sem which stand for stable, admissible, preferred, complete, stage, and respectively, semi-stable semantics. Before giving the actual definitions for these semantics, we need to define a few more formal concepts.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Given an AF {a mathematical formula}F=(A,R), an argument {a mathematical formula}a∈A is defended (in F) by a set {a mathematical formula}S⊆A if for each {a mathematical formula}b∈A such that {a mathematical formula}b↣a, also {a mathematical formula}S↣b holds. Moreover, for {a mathematical formula}S⊆A, we define the range of S, denoted by {a mathematical formula}SR+, as the set {a mathematical formula}S∪{b|S↣b}.
+     </paragraph>
+     <paragraph>
+      We are now ready to define the concrete semantics for AFs.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Let {a mathematical formula}F=(A,R) be an AF. A set {a mathematical formula}S⊆A is conflict-free (in F), denoted {a mathematical formula}S∈cf(F), iff there are no {a mathematical formula}a,b∈S such that {a mathematical formula}(a,b)∈R. For {a mathematical formula}S∈cf(F), it holds that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}S∈stb(F) if for each {a mathematical formula}a∈A∖S, {a mathematical formula}S↣a, i.e. {a mathematical formula}SR+=A;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈adm(F) if each {a mathematical formula}a∈S is defended by S;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈prf(F) if {a mathematical formula}S∈adm(F) and there is no {a mathematical formula}T∈adm(F) with {a mathematical formula}T⊃S;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈com(F) if {a mathematical formula}S∈adm(F) and for each {a mathematical formula}a∈A defended by S, {a mathematical formula}a∈S holds;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈stg(F) if there is no {a mathematical formula}T∈cf(F) with {a mathematical formula}TR+⊃SR+;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}S∈sem(F), if {a mathematical formula}S∈adm(F) and there is no {a mathematical formula}T∈adm(F) with {a mathematical formula}TR+⊃SR+.
+      </list-item>
+     </list>
+     <paragraph>
+      We recall that for each AF F, {a mathematical formula}stb(F)⊆sem(F)⊆prf(F)⊆com(F)⊆adm(F) holds, and that for each of the considered semantics σ (except stable) {a mathematical formula}σ(F)≠∅ holds. Moreover, in case an AF has at least one stable extension, its stable, semi-stable, and respectively, stage extensions coincide.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider the AF {a mathematical formula}F=(A,R), with {a mathematical formula}A={a,b,c,d,e} and {a mathematical formula}R={(a,b), {a mathematical formula}(c,b), {a mathematical formula}(c,d), {a mathematical formula}(d,c), {a mathematical formula}(d,e), {a mathematical formula}(e,e)}. The graph representation of F is as follows:{a mathematical formula} Here {a mathematical formula}stb(F)=stg(F)=sem(F)={{a,d}}. The admissible sets of F are ∅, {a mathematical formula}{a}, {a mathematical formula}{c}, {a mathematical formula}{d}, {a mathematical formula}{a,c} and {a mathematical formula}{a,d}. The set of preferred extensions is {a mathematical formula}prf(F)={{a,c}, {a mathematical formula}{a,d}}. The complete extensions are {a mathematical formula}{a}, {a mathematical formula}{a,c} and {a mathematical formula}{a,d}. ◇
+     </paragraph>
+     <paragraph>
+      We assume the reader has knowledge about standard complexity classes, i.e. P, NP and L (logarithmic space). Nevertheless we briefly recapitulate the concept of oracle machines and some related complexity classes. Thus let {a mathematical formula}C denote some complexity class. By a {a mathematical formula}C-oracle machine we mean a (polynomial time) Turing machine which can access an oracle that decides a given (sub)-problem in {a mathematical formula}C within one step. We denote such machines as {a mathematical formula}PC if the underlying Turing machine is deterministic; and {a mathematical formula}NPC if the underlying Turing machine is nondeterministic. Moreover we consider oracle machines where the number of queries to the oracle is bounded by {a mathematical formula}f(k). We denote the corresponding complexity classes as {a mathematical formula}PC[f(k)] for deterministic machines.
+     </paragraph>
+     <paragraph>
+      In the following we consider complexity classes using NP-oracles. First, the class {a mathematical formula}Σ2P=NPNP denotes the set of problems which can be decided by a nondeterministic polynomial time algorithm that has (unrestricted) access to an NP-oracle. The class {a mathematical formula}Π2P=coNPNP is defined as the complementary class of {a mathematical formula}Σ2P, i.e. {a mathematical formula}Π2P=coΣ2P.
+     </paragraph>
+     <paragraph>
+      We now recall the complexity of reasoning in AFs for the following decision problems under different semantics σ:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Credulous Acceptance ({a mathematical formula}Credσ): Given an AF F and argument {a mathematical formula}a∈AF, is a contained in some {a mathematical formula}S∈σ(F)?
+      </list-item>
+      <list-item label="•">
+       Skeptical Acceptance ({a mathematical formula}Skeptσ): Given an AF F and argument {a mathematical formula}a∈AF, is a contained in each {a mathematical formula}S∈σ(F)?
+      </list-item>
+      <list-item label="•">
+       Verification ({a mathematical formula}Verσ): Given an AF F and a set {a mathematical formula}S⊆AF, is {a mathematical formula}S∈σ(F)?
+      </list-item>
+      <list-item label="•">
+       Existence ({a mathematical formula}Existsσ): Given an AF F, is {a mathematical formula}σ(F)≠∅?
+      </list-item>
+      <list-item label="•">
+       Non-emptiness ({a mathematical formula}Existsσ¬∅): Given an AF F, is there a set {a mathematical formula}S⊆AF,S≠∅ such that {a mathematical formula}S∈σ(F)?
+      </list-item>
+     </list>
+     <paragraph>
+      In accordance with the above problems we say that an argument is credulously (resp. skeptically) accepted iff it is contained in at least one extension (resp. in all extensions). Table 1 summarizes the computational complexity of these problems [4], [21], [1], [2], [22], [3], [23], where an entry {a mathematical formula}C-c denotes that the corresponding problem is complete for class {a mathematical formula}C.
+     </paragraph>
+     <paragraph>
+      We will focus on {a mathematical formula}Skeptprf, {a mathematical formula}Credsem, {a mathematical formula}Skeptsem, {a mathematical formula}Credstg and {a mathematical formula}Skeptstg. As Table 1 indicates, these problems are the ones on the second level of the polynomial hierarchy.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Subclasses of argumentation frameworks
+     </section-title>
+     <paragraph label="Definition 4">
+      In this section we review several classes of AFs where reasoning with preferred, stage or semi-stable semantics becomes easier compared to the results for the general case. Both earlier and new results are discussed. First, we consider the classes of acyclic and weakly cyclic AFs. An AF F is acyclic if there is no directed cycle of attacks in F; F is weakly cyclic if F can be made acyclic by deleting one argument (and its incident attacks) from each strongly connected component{sup:1} (SCC) of F. We denote these classes of AFs by {a mathematical formula}acyc and {a mathematical formula}wcyc. One can easily show that deciding whether a given AF falls into one of these classes can be done efficiently. First, it is well known that deciding whether a directed graph is cyclic or not can be done in polynomial time. Moreover, the SCCs of a graph can be computed in polynomial time. Thus, for testing whether a graph is in {a mathematical formula}wcyc one first computes the SCCs and then looks in each SCC for an argument which, if removed, turns the SCC into an acyclic graph.
+     </paragraph>
+     <paragraph>
+      It is well known that the problems we are interested here become tractable when restricted to acyclic AFs. For the class {a mathematical formula}wcyc (these are the AFs where the graph parameter cycle-rank is at most 1 [7]), we can make direct use of the following complexity result.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      (See[7].) For weakly cyclic AFs,{a mathematical formula}Skeptprfis coNP-complete.
+     </paragraph>
+     <paragraph>
+      The reasoning problems for stage and semi-stable semantics still maintain their full complexity when restricted to weak cyclic AFs [7].
+     </paragraph>
+     <paragraph>
+      We now turn to semantical subclasses.
+     </paragraph>
+     <paragraph label="Definition 5">
+      An AF F for which {a mathematical formula}stb(F)≠∅ is stable-consistent. We denote the class of such AFs by {a mathematical formula}stablecons.
+     </paragraph>
+     <paragraph>
+      We recall that testing an AF for the existence of a stable extension is NP-complete [21] (cf. Table 1). The following result is immediate from the fact that, in case an AF has at least one stable extension, its stable, semi-stable, and respectively, stage extensions coincide.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      For stable-consistent AFs,{a mathematical formula}Credσis NP-complete and{a mathematical formula}Skeptσis coNP-complete,{a mathematical formula}σ∈{sem,stg}.
+     </paragraph>
+     <paragraph>
+      However, in case of the preferred semantics, stable consistency is of no help for deciding skeptical acceptance.
+     </paragraph>
+     <paragraph label="Proof">
+      For stable-consistent AFs, the problem{a mathematical formula}Skeptprfis{a mathematical formula}Π2P-complete.Hardness follows from a reduction in [2] that maps the {a mathematical formula}Π2P-hard problem of deciding whether given a QBF {a mathematical formula}Φ=∀Y∃Zφ(Y,Z), where φ is a CNF formula {a mathematical formula}⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from {a mathematical formula}X=Y∪Z, is true to {a mathematical formula}Skeptprf. We build {a mathematical formula}FΦ=(AΦ,RΦ) as follows (see also Fig. 1):{a mathematical formula}{a mathematical formula} with {a mathematical formula}X¯={x¯|x∈X} and {a mathematical formula}x¯ being a fresh argument.We have that Φ is valid iff the argument φ is skeptically accepted in {a mathematical formula}FΦ[2]. Moreover, each model M of φ corresponds to the stable extension {a mathematical formula}M∪X∖M¯∪{φ} of {a mathematical formula}FΦ. Since the QBF-problem remains hard for instances where the propositional formula φ has at least one model, the result follows.  □
+     </paragraph>
+     <paragraph>
+      The next class relates preferred and stable extensions and was already introduced in Dungs seminal paper [1] and has been thoroughly discussed in [2].
+     </paragraph>
+     <paragraph label="Definition 6">
+      An AF F is coherent if {a mathematical formula}prf(F)=stb(F). We denote the class of such AFs by {a mathematical formula}coherent.
+     </paragraph>
+     <paragraph label="Proof">
+      For coherent AFs and{a mathematical formula}σ∈{prf,sem,stg},{a mathematical formula}Credσis NP-complete and{a mathematical formula}Skeptσis coNP-complete.The result for {a mathematical formula}σ=prf is clear by definition when taking the complexity of stable semantics (recall Table 1) into account. Since each AF possesses at least one preferred extension, each coherent AF is also stable-consistent. The result for the remaining cases {a mathematical formula}σ∈{sem,stg} thus follows immediately as well.  □
+     </paragraph>
+     <paragraph>
+      Testing coherence is in general even worse ({a mathematical formula}Π2P-complete [2]) than testing stable-consistency. At first glance this restricts the practical value of this fragment, but there is a class of easy detectable coherent AFs, namely the AFs without odd-length cycles. Thus, we introduce one further syntactical subclass.
+     </paragraph>
+     <paragraph label="Definition 7">
+      An AF F is odd-cycle free if there is no directed cycle consisting of an odd number of attacks in F. We denote the class of odd-cycle free AFs by {a mathematical formula}ocf.
+     </paragraph>
+     <paragraph>
+      In fact, testing for odd-length cycles in digraphs can be done in polynomial time (see e.g. [24]).
+     </paragraph>
+     <paragraph>
+      The following proposition generalizes the observation of [5] that for {a mathematical formula}F∈ocf reasoning with preferred semantics is complete for the first level of the polynomial hierarchy.
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs{a mathematical formula}F∈ocf, and{a mathematical formula}σ∈{prf,sem,stg},{a mathematical formula}Credσis NP-complete and{a mathematical formula}Skeptσis coNP-complete.Membership is immediate from the well-known result that every AF without odd-length cycles is coherent [1].The hardness for the case of preferred semantics was already shown in [5]. For the sake of completeness we restate the proof which also applies to semi-stable and stage semantics. To this end we use what [25] calls the standard translation of a CNF formula to an AF given below, which originates from the work of [21]. Starting from a propositional formula {a mathematical formula}φ(X)=⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from X, we build {a mathematical formula}Fφ=(Aφ,Rφ) as follows (see also Fig. 2):{a mathematical formula}{a mathematical formula} We have that φ is satisfiable iff the argument φ is credulously accepted iff the argument {a mathematical formula}φ¯ is not skeptically accepted [21]. As {a mathematical formula}Fφ is free of odd-length cycles, the theorem follows.  □
+     </paragraph>
+     <paragraph>
+      The final fragment we introduce is another semantical one. It makes use of the complexity gap between credulous and skeptical acceptance for preferred semantics.
+     </paragraph>
+     <paragraph label="Definition 8">
+      We denote the class of AFs F satisfying {a mathematical formula}|prf(F)|=1 by {a mathematical formula}uniqpref.
+     </paragraph>
+     <paragraph>
+      We next show that testing whether there is at most one preferred extensions is coNP-complete, using a result from [26].
+     </paragraph>
+     <paragraph label="Proof">
+      Deciding whether a given AF F falls into the class{a mathematical formula}uniqprefis coNP-complete.Membership is by a guess and check algorithm for falsifying that {a mathematical formula}F∈uniqpref. This algorithm guesses two sets {a mathematical formula}S,S′⊆A and tests whether {a mathematical formula}S∈adm(F), {a mathematical formula}S′∈adm(F) and {a mathematical formula}S∪S′∉adm(F).The statement {a mathematical formula}S∈adm(F), {a mathematical formula}S′∈adm(F) and {a mathematical formula}S∪S′∉adm(F) is equivalent to the fact that {a mathematical formula}|prf(F)|⩾2. To show this let us first assume that we have {a mathematical formula}S,S′ being admissible and {a mathematical formula}S∪S′∉adm(F). This implies that {a mathematical formula}S∪S′∉cf(F). As by definition of preferred extensions, each admissible set is contained in a preferred extensions we can consider {a mathematical formula}E,E′ s.t. {a mathematical formula}S⊆E∈prf(F) and {a mathematical formula}S′⊆E′∈prf(F). As {a mathematical formula}S∪S′∉cf(F) also {a mathematical formula}E∪E′∉cf(F) and thus {a mathematical formula}E≠E′. Now assuming that we have {a mathematical formula}E,E′∈prf(F) with {a mathematical formula}E≠E′. By definition {a mathematical formula}E∈adm(F), {a mathematical formula}E′∈adm(F) and as they are maximal also {a mathematical formula}E∪E′∉adm(F).We show the hardness part by the following reduction. Starting from a formula {a mathematical formula}φ(X)=⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from X, we build {a mathematical formula}Fφ=(Aφ,Rφ) as follows (see also Fig. 3){a mathematical formula}{a mathematical formula} We have that φ is satisfiable iff the set {a mathematical formula}{φ¯}∪C is not the only preferred extension [26].  □
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs{a mathematical formula}F∈uniqprefand{a mathematical formula}σ∈{prf,sem}, problems{a mathematical formula}Credσand{a mathematical formula}Skeptσare in NP.Credulous and skeptical acceptance coincide on AFs with a unique extension. Moreover, for each {a mathematical formula}F∈uniqpref, {a mathematical formula}sem(F)=prf(F) holds since the existence of a semi-stable extension is guaranteed for finite AFs, and each semi-stable extension is also preferred.  □
+     </paragraph>
+     <paragraph>
+      It is open whether these problems are also NP-hard. However, we can show NP-hardness under so-called randomized reductions[27].
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs{a mathematical formula}F∈uniqprefand{a mathematical formula}σ∈{prf,sem}, problems{a mathematical formula}Credσand{a mathematical formula}Skeptσare NP-hard under randomized reductions.To show hardness we consider UNIQUE SAT, a version of the SAT problem where it is guaranteed that there is at most one model. This version of SAT is NP-hard under randomized reductions [27]. We use a variation of the reduction from the proof of Proposition 6 to reduce UNIQUE SAT to {a mathematical formula}Credprf. More precisely, we extend the AF {a mathematical formula}Fφ=(Aφ,Rφ) by one self-attack {a mathematical formula}(φ¯,φ¯) (see also Fig. 4).Now the set {a mathematical formula}{φ¯}∪C is no longer admissible and {a mathematical formula}φ¯ cannot be contained in any preferred extension. One can show that each non-empty admissible set contains φ as follows. Indeed, consider a set E admissible for such a modified framework with {a mathematical formula}φ∉E. Then all {a mathematical formula}x,x¯ are not defended against {a mathematical formula}φ¯ and thus not in E. Moreover, also the arguments {a mathematical formula}c∈C are not defended by E as each of them is attacked by some {a mathematical formula}x,x¯, but none of the {a mathematical formula}x,x¯ are attacked by E. Hence also the {a mathematical formula}c∈C are not in E and consequently {a mathematical formula}E=∅ follows. Now, as each non-empty admissible set contains φ, such a set—by the standard argument—corresponds to a model of φ. Hence, taking into account that φ is guaranteed to have at most one model, we have at most one non-empty admissible set, and thus the AF has exactly one preferred extension.  □
+     </paragraph>
+     <paragraph label="Proof">
+      For the stage semantics, however, the complexity of acceptance problems remains as high as in the general case. For AFs{a mathematical formula}F∈uniqpref,{a mathematical formula}Credstgis{a mathematical formula}Σ2P-complete and{a mathematical formula}Skeptstgis{a mathematical formula}Π2P-complete.Consider an arbitrary AF {a mathematical formula}F=(A,R) and let {a mathematical formula}t∉A be a fresh argument. We construct {a mathematical formula}F′=(A∪{t},R∪{t,t}∪{(t,a)|a∈A}). As the new argument t is in conflict with itself it cannot be contained in a conflict-free set. Furthermore, as we do not add new conflicts between the original arguments, we have that {a mathematical formula}cf(F)=cf(F′). Moreover as all new attacks origin from t also the ranges of the conflict-free sets are unchanged and thus also {a mathematical formula}stg(F)=stg(F′). Finally, we have that {a mathematical formula}prf(F′)={∅} as none of the arguments can be defended against t. Hence any decision problem for stg can be directly expressed in AFs from {a mathematical formula}uniqpref.
+     </paragraph>
+     <paragraph>
+      To summarize, we have introduced several kinds of AF-subclasses. They can be grouped into syntactical ({a mathematical formula}acyc,wcyc,ocf), and semantical classes ({a mathematical formula}stablecons, {a mathematical formula}coherent,uniqpref). The complexity results are summarized in Table 2. In the next two sections, we study possibilities of extending the “good” complexity behavior of these classes. To this end, we will introduce certain distance measures with the aim of maintaining lower complexity as long as the distance to such a class is bound.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Graph-based distance measures
+     </section-title>
+     <paragraph>
+      A natural way to generalize the introduced subclasses is to consider the minimal number of arguments one has to delete from an AF so that the modified AF falls into the respective class (see also [8]). This gives rise to the following distance measure.
+     </paragraph>
+     <paragraph label="Definition 9">
+      Let {a mathematical formula}G be a graph class and {a mathematical formula}F=(A,R) an AF. We define {a mathematical formula}distG(F) as the minimal number k such that there is a set {a mathematical formula}S⊆A with {a mathematical formula}|S|=k and {a mathematical formula}(A∖S,R∩(A∖S×A∖S))∈G. If there is no such set S we define {a mathematical formula}distG(F)=∞.
+     </paragraph>
+     <paragraph>
+      We start with the class {a mathematical formula}wcyc of weakly cyclic AFs. Recall that this class decreases complexity only in the case of skeptical acceptance with respect to preferred semantics.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}Skeptprfis{a mathematical formula}Π2P-hard for AFs F with{a mathematical formula}distwcyc(F)=1.{a mathematical formula}Π2P-hardness is established by re-using the reduction from the proof of Proposition 3 and observing that deletion of the argument b in {a mathematical formula}FΦ results in a framework with SCCs of size at most 2 which is easily seen to be weakly cyclic.  □
+     </paragraph>
+     <paragraph>
+      In words, the subclass {a mathematical formula}wcyc is tight w.r.t. the introduced distance in the sense that a single argument violating membership in {a mathematical formula}wcyc is sufficient for the general {a mathematical formula}Π2P-hardness. An analogous result can be shown for the class {a mathematical formula}ocf.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}Skeptprfis{a mathematical formula}Π2P-hard, for AFs F with{a mathematical formula}distocf(F)=1.Similar as for Proposition 10, deleting argument b from the AF constructed in the proof of Proposition 3 yields an AF that is free of odd-length cycles.  □
+     </paragraph>
+     <paragraph>
+      The same effect can be shown for semi-stable acceptance.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}Credsemis{a mathematical formula}Σ2P-hard and{a mathematical formula}Skeptsemis{a mathematical formula}Π2P-hard, for AFs F with{a mathematical formula}distocf(F)=1.For a QBF {a mathematical formula}Φ=∀Y∃Zφ(Y,Z) with {a mathematical formula}φ=⋀c∈Cc in CNF build the AF {a mathematical formula}FΦsem=(AΦ,RΦ) with {a mathematical formula}X=Y∪Z as follows (see also Fig. 5):{a mathematical formula}{a mathematical formula}This reduction is a variation of the reduction presented in [3] and can be easily shown to be equivalent.{sup:2} Hence φ is skeptically accepted iff {a mathematical formula}φ¯ is not credulously accepted iff Φ is true. Finally, deleting the argument g results in an AF that is free of odd-length cycles.  □
+     </paragraph>
+     <paragraph>
+      For the stage semantics, we can give an even stronger result, namely in terms of acyclic frameworks.
+     </paragraph>
+     <paragraph label="Proposition 13">
+      {a mathematical formula}Credstgis{a mathematical formula}Σ2P-hard and{a mathematical formula}Skeptstgis{a mathematical formula}Π2P-hard, for AFs F with{a mathematical formula}distacyc(F)=1.
+     </paragraph>
+     <paragraph label="Proof">
+      Hardness results from a reduction from the MINSAT problem, i.e. deciding whether a variable z is in a ⊆-minimal model of a propositional formula {a mathematical formula}φ=⋀c∈Cc in CNF over atoms X. For the reduction we additionally assume an arbitrary order &lt; on the clauses of φ. We build the AF {a mathematical formula}Fφ,z=(A,R) where {a mathematical formula}z∈X as follows (see Fig. 6 for illustration):{a mathematical formula}{a mathematical formula}It is easy to see that the only cycle in the constructed AF is by the self-attacking argument b. Thus, {a mathematical formula}distacyc(Fφ,z)=1 as deleting the argument b would result in an acyclic AF. To prove the assertions we show that the following statements are equivalent:
+      <list>
+       z is in a minimal model of φ;z is credulously accepted (w.r.t. stg) in {a mathematical formula}Fφ,z;q is not skeptically accepted (w.r.t. stg) in {a mathematical formula}Fφ,z.{a mathematical formula}(1)⇔(2)
+      </list>
+      <paragraph>
+       We recall that each stage extension is also a ⊆-maximal conflict free set (mcf). Hence we consider only mcf sets as candidates for stage extensions. In the following we will use the relation {a mathematical formula}⩽R+ defined as {a mathematical formula}S⩽R+T iff {a mathematical formula}SR+⊆TR+.First let us consider mcf sets of {a mathematical formula}Fφ,z=(A,R) containing an argument {a mathematical formula}c′. For simplicity we enumerate the clauses {a mathematical formula}c1,…,cm and the arguments {a mathematical formula}c1′,…,cm′, according to the order &lt; on the clauses. Now one can easily check that these mcf sets are given by {a mathematical formula}{{ci′,φ,q},{ci′,ci,q}|1⩽i⩽m}. Further, we have that the arguments {a mathematical formula}c1′,…,cm′ are in conflict with each other but not attacked from any other argument. Thus, when concerning the {a mathematical formula}⩽R+-maximality (the maximality of the range) of the above mcf sets, they only compete with each other but not with any other mcf set. Comparing the range of these extensions we get that {a mathematical formula}{ci′,ci,q}+=A∖{b,c1′,…,ci−1′} and {a mathematical formula}{ci′,φ,q}+=A∖{ci,c1′,…,ci−1′}. Hence the stage extensions among them are the following {a mathematical formula}{{ci′,φ,q}|1⩽i⩽n}∪{{c1′,c1,q}}.Now let us consider mcf sets E such that for each {a mathematical formula}1⩽i⩽m, {a mathematical formula}ci′∉E. We already have stage extensions with ranges {a mathematical formula}A∖{b} and resp. {a mathematical formula}A∖{ci,c1′,…,ci−1′}. Hence, as {a mathematical formula}{c1′,…,cm′}∩E+=∅, the only way for E being {a mathematical formula}⩽R+-maximal is that {a mathematical formula}{b,c1,…,cm}⊆E+. When {a mathematical formula}b∈E+, we have that {a mathematical formula}φ∈E and hence for {a mathematical formula}1⩽i⩽m that {a mathematical formula}ci∉E. Hence, by the construction of {a mathematical formula}Fφ,z, {a mathematical formula}{b,c1,…,cm}⊆E+ iff {a mathematical formula}φ∈E and {a mathematical formula}X∩E is a model of φ. So there is a one-to-one correspondence between models M of φ and candidates for stage extensions {a mathematical formula}M⁎:=M∪(X∖M¯)∪{φ}∪{q|if z∉M}. By the construction the range of each candidate is clearly incomparable with the ranges of the already determined stage extensions {a mathematical formula}{{ci,φ,q}|1⩽i⩽n}∪{{E1,c1,q}}; and thus the {a mathematical formula}⩽R+-maximality of such a candidate only depends on the other candidates with {a mathematical formula}ci′∉E for {a mathematical formula}1⩽i⩽m. It remains to show that for two models {a mathematical formula}M,N, we have that {a mathematical formula}M⊆N iff {a mathematical formula}M⁎⩾R+N⁎.For the “only if” direction consider {a mathematical formula}M⊆N. Using that {a mathematical formula}M,N are models of φ we obtain that {a mathematical formula}(M⁎)+=A∖(M¯∪{c1′,…,cm′})∪{q|if x∉M} and {a mathematical formula}(N⁎)+=A∖(N¯∪{c1′,…,cm′})∪{q|if x∉N}. As by assumption {a mathematical formula}M⊆N we have that {a mathematical formula}A∖(M¯∪{c1′,…,cm′})⊇A∖(N¯∪{c1′,…,cm′}) and {a mathematical formula}{q|if x∉M}⊆{q|if x∉N}. Hence {a mathematical formula}M⁎⩾R+N⁎.For the “if” part let us consider {a mathematical formula}M⊈N. Hence there is some {a mathematical formula}x∈M such that {a mathematical formula}x∉N. But then we have that {a mathematical formula}x¯∉(M⁎)+ and {a mathematical formula}x¯∈(N⁎)+ and therefore {a mathematical formula}M⁎≱R+N⁎.Now if z is in a minimal model M then the corresponding {a mathematical formula}M⁎ has maximal range and by the definition of {a mathematical formula}M⁎ also {a mathematical formula}z∈M⁎, and thus z is credulously accepted. If z is credulously accepted the corresponding stage extension is of the form {a mathematical formula}M⁎ (as the other candidates do not contain arguments {a mathematical formula}x∈X) and thus there is a minimal model M also containing z.{a mathematical formula}(2)⇔(3): As z is the only argument which has a conflict with q we have that each mcf set, and thus also each stage extension, either contains q or z. Hence, if q is in all stage extensions, then z is not credulously accepted, and vice versa.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      For each {a mathematical formula}F∈acyc we have {a mathematical formula}F∈G, with {a mathematical formula}G∈{wcyc,ocf,coherent,uniqpref}, and thus the previous result generalizes to all these classes when {a mathematical formula}distG(F)=1.
+     </paragraph>
+     <paragraph>
+      Recall that Proposition 11, Proposition 12 directly yield corresponding hardness results for the classes {a mathematical formula}coherent and {a mathematical formula}stablecons for preferred and semi-stable semantics. It thus remains to consider the class {a mathematical formula}uniqpref.
+     </paragraph>
+     <paragraph label="Proposition 14">
+      {a mathematical formula}Credsemis{a mathematical formula}Σ2P-hard and{a mathematical formula}Skeptprf,{a mathematical formula}Skeptsemare{a mathematical formula}Π2P-hard for AFs F with{a mathematical formula}distuniqpref(F)=1.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider an arbitrary AF {a mathematical formula}F=(A,R), and consider the modified AF {a mathematical formula}F′=(A∪{r,g},R∪{(r,g)}∪{(g,a)|a∈A}) (see also Fig. 7). Then, {a mathematical formula}adm(F′)={E∪{r}|E∈adm(F)}∪{∅}.First, we have that each non-empty admissible set must contain r, because all arguments except {a mathematical formula}a,g are attacked by g, g is not acceptable and r is the only argument attacking g. Further g is the only argument attacked by r and hence for each {a mathematical formula}S⊆A we have that {a mathematical formula}S∪{r}∈adm(F′) iff {a mathematical formula}S∈adm(F).As an immediate consequence of this {a mathematical formula}prf(F′)={E∪{r}|E∈prf(F)} and by the fact that the range of admissible sets is only increased by {a mathematical formula}{r,g} we also have that {a mathematical formula}sem(F′)={E∪{r}|E∈sem(F)}.Moreover, {a mathematical formula}distuniqpref(F′)=1 since deleting argument r would result in an AF where {a mathematical formula}{g} is the only non-empty admissible set. This is by the fact that g is unattacked in the resulting AF and itself attacks all the remaining arguments. Hence credulous and skeptical acceptance (under the considered semantics) on arbitrary AFs reduces to AFs F with {a mathematical formula}distuniqpref(F)=1.  □
+     </paragraph>
+     <paragraph>
+      Table 3 summarizes our results which are all negative in the sense that full second-level complexity is reached when fragments are parameterized in a “syntactic” way; only {a mathematical formula}acyc yields some positive results (due to [8]). Here FPT (fixed-parameter tractability) means that for a fixed distance, a problem can be solved in polynomial time and the order of the polynomial time bound does not depend on the distance. However, we showed here as a new result that under the stage semantics, full complexity is obtained even for AFs F with {a mathematical formula}distacyc(F)⩾1 (this strengthens the NP/coNP-hardness results in [8]).
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Extension-based distance measures
+     </section-title>
+     <paragraph>
+      Here we consider different distance measures which take the number of extensions into account and thus naturally apply only to the semantical subclasses of AFs, i.e. {a mathematical formula}stablecons, {a mathematical formula}coherent, and {a mathematical formula}uniqpref.
+     </paragraph>
+     <paragraph>
+      We start by generalizing the class {a mathematical formula}stablecons for semantics sem and stg. In fact, for stable-consistent AFs we have that each semi-stable (resp. stage) extension has a range that covers the whole set of arguments. Hence a natural approach to relax this definition is to bound the number of arguments which are not in the range of the extensions.
+     </paragraph>
+     <paragraph label="Definition 10">
+      For a semantics σ and {a mathematical formula}k⩾0, we call an AF {a mathematical formula}F=(A,R)k-stable-consistent under σ if for each {a mathematical formula}E∈σ(F), {a mathematical formula}|A∖ER+|⩽k holds. We use {a mathematical formula}stableconsσk to denote the respective classes of AFs for given k and σ.
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs in{a mathematical formula}stableconsσk{a mathematical formula}(σ∈{sem,stg}),{a mathematical formula}Credσand{a mathematical formula}Skeptσare in{a mathematical formula}PNP.Consider an AF {a mathematical formula}F=(A,R). We can decide credulous (resp. skeptical) acceptance by considering all candidates for the range, i.e. sets S with {a mathematical formula}|A∖SR+|⩽k, and test whether there is an extension with range S that contains (resp. does not contain) the queried argument. But while (for fixed k) there are just polynomial many sets S the testing part is still {a mathematical formula}Σ2P/Π2P-hard.To overcome this we introduce two shortcuts. To this end let {a mathematical formula}S be the set of ranges we have to consider, which is initialized by {a mathematical formula}S={S⊆A||A∖S|⩽k}. First, if we know that there is an extension with range S, we do not have to consider subsets of S for the range of extensions, and thus delete them from {a mathematical formula}S. Second, we only consider maximal sets {a mathematical formula}S∈S. Then we know that there is no extension having a superset of S as range and we can simplify the check for extension by testing whether there is an admissible (resp. conflict-free) set having range S; this is clearly in NP (simply guess a set and check whether it is admissible/conflict-free and whether the range fits).In what follows we summarize these considerations and give a {a mathematical formula}PNP procedure deciding {a mathematical formula}Credsem (resp. {a mathematical formula}coSkeptsem) for the class {a mathematical formula}stableconssemk of AFs, which answers the query by calling either accept or reject:{a mathematical formula}If we replace adm by cf, we obtain the corresponding decision procedure for stage semantics, i.e., for the class {a mathematical formula}stableconsstgk.  □
+     </paragraph>
+     <paragraph>
+      Next, we parameterize coherence.
+     </paragraph>
+     <paragraph label="Definition 11">
+      An AF F is k-coherent, where {a mathematical formula}k⩾0, if {a mathematical formula}|prf(F)∖stb(F)|⩽k. We use {a mathematical formula}coherentk to denote the respective class of AFs for given k.
+     </paragraph>
+     <paragraph>
+      We do not consider the corresponding definitions for sem and stg as in Definition 10: The reason is that either a stable extension exists (hence, the AF is stable-consistent), or the parameter k, as used in Definition 11, would simply mention the number of semi-stable, resp. stage, extensions. In fact, we will consider these classes of AFs of bounded solution cardinality at the end of this section.
+     </paragraph>
+     <paragraph>
+      In the case of k-coherent AFs, the potential exponential number of stable extensions appears to cause additional difficulties. While we are unable to provide a hardness result using standard reductions at the moment, we provide a slightly weaker result (using randomized reductions) which still suggests that parameterized coherence does not allow for more efficient algorithms.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}Skeptprffor AFs in{a mathematical formula}coherentkis{a mathematical formula}Π2P-hard under randomized reductions; hardness holds even for{a mathematical formula}k=1.Consider the following promise problem: Given a QBF {a mathematical formula}Φ=∀Y∃Zφ(Y,Z) together with the fact that {a mathematical formula}∃⩽1Y∀Z¬φ(Y,Z) is true, decide whether Φ is true. By results in [27] and [26] (extension to QBFs), this problem is {a mathematical formula}Π2P-hard under randomized reductions. Now one can apply the reduction presented in the proof of Proposition 3 from QBFs to {a mathematical formula}Skeptprf (see also Fig. 1). The sets Y with {a mathematical formula}∀Z¬φ(Y,Z) are in one-to-one correspondence to the preferred extensions which are not stable. Hence using the promise problem results in an AF from the class {a mathematical formula}coherent1.  □
+     </paragraph>
+     <paragraph>
+      The final class we discuss is {a mathematical formula}uniqpref. The natural distance here is to consider frameworks which possess at most k preferred extensions. We will also apply the same idea for semi-stable and stage semantics.
+     </paragraph>
+     <paragraph label="Definition 12">
+      Let {a mathematical formula}σ∈{prf,sem,stg}. We denote by {a mathematical formula}solσk the class of all AFs F such that {a mathematical formula}|σ(F)|⩽k.
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs{a mathematical formula}F∈solprfk,{a mathematical formula}Skeptprfis in{a mathematical formula}PNP.We provide an algorithm which iteratively constructs the set {a mathematical formula}prf(F). The set {a mathematical formula}E serves this purpose and is initialized by {a mathematical formula}E:=∅. At each stage of the algorithm we construct a new preferred extension E as follows: Start with {a mathematical formula}E=∅, and iterate over all arguments a asking an NP-oracle whether there is a complete extension C of the given framework such that {a mathematical formula}E∪{a}⊆C and there is no {a mathematical formula}E′∈E such that {a mathematical formula}C⊆E′. If the oracle returns yes, add a to E and proceed with the next arguments. In the end, E is either a preferred extension (i.e. we cannot add further arguments) or the empty set. If {a mathematical formula}E≠∅, simply add E to the set {a mathematical formula}E and proceed with constructing the next preferred extension. If {a mathematical formula}E=∅, there is no non-empty complete extension that is not already contained in one of the extensions in {a mathematical formula}E, and hence the algorithm terminates. If {a mathematical formula}E=∅, add ∅ to {a mathematical formula}E.By the assumption {a mathematical formula}F∈solprfk, {a mathematical formula}prf(F) is of polynomial size and for each extension only a linear number of steps (iterating over all arguments) is needed. Hence the overall run-time is polynomial (using an NP oracle).  □
+     </paragraph>
+     <paragraph label="Proof">
+      For AFs in{a mathematical formula}solσk{a mathematical formula}(σ∈{sem,stg}),{a mathematical formula}Credσand{a mathematical formula}Skeptσare in{a mathematical formula}PNP.Let {a mathematical formula}F=(A,R). The algorithm we present below is quite similar to the algorithm in the proof of Theorem 3, but instead of computing {a mathematical formula}σ(F), we construct here {a mathematical formula}σ+(F):={ER+|E∈σ(F)}. Again, below we use {a mathematical formula}E as the set of the currently computed elements from {a mathematical formula}σ+(F), initialized as {a mathematical formula}E:=∅ and iteratively extend it. Moreover, let {a mathematical formula}bsem=com and {a mathematical formula}bstg=cf.Within each iteration, start with {a mathematical formula}S=∅ and iterate over all arguments {a mathematical formula}a∈A asking an NP-oracle whether there is a set {a mathematical formula}C∈bσ(F) such that {a mathematical formula}S∪{a}⊆CR+ and there is no {a mathematical formula}T∈E such that {a mathematical formula}CR+⊆T. If the oracle returns yes, add a to S and proceed with the next arguments. In the end, S is either the range of a σ-extension or the empty set. If {a mathematical formula}S≠∅, simply add S to the set {a mathematical formula}E and continue with constructing the next set. If {a mathematical formula}S=∅, there is no non-empty set in {a mathematical formula}bσ(F) such that {a mathematical formula}SR+ is not already contained in a set of {a mathematical formula}E, and hence the algorithm terminates. If {a mathematical formula}E=∅, add ∅ to {a mathematical formula}E.By assumption, the number of σ-extensions is bounded and so is the size of {a mathematical formula}σ+(F). To decide {a mathematical formula}Credσ (resp. co-{a mathematical formula}Skeptσ) for an argument a, iterate over all sets {a mathematical formula}S∈σ+(F) and ask an NP oracle whether there is an {a mathematical formula}E∈bσ(F) such that {a mathematical formula}ER+=S and {a mathematical formula}a∈E (resp. {a mathematical formula}a∉E).  □
+     </paragraph>
+     <paragraph>
+      Our results are summarized in Table 4. Recall that the {a mathematical formula}Π2P-hardness of {a mathematical formula}Skeptprf for class {a mathematical formula}stableconsσk was shown for randomized reductions. Furthermore, recall that {a mathematical formula}coherentk for {a mathematical formula}σ∈{sem,stg} reduces either to {a mathematical formula}stablecons or to {a mathematical formula}solσk. We did not consider k-stable-consistent AFs under prf since the full complexity was already reached for the class of stable-consistent AFs (recall Table 2).
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Complexity-sensitive procedures
+     </section-title>
+     <paragraph>
+      In this section we describe complexity-sensitive decision procedures for skeptical and credulous acceptance problems, which are on the second level of the polynomial hierarchy. Our procedures follow the lines of Theorem 1, Theorem 3, Theorem 4. As a result, the procedures are complexity-sensitive w.r.t. the classes exhibiting lowered complexity, as shown in the previous section (recall Table 4). At the same time, the procedures are applicable to the general second-level skeptical and credulous acceptance problems.
+     </paragraph>
+     <paragraph>
+      The general framework implemented by our procedures exploits NP-oracles, and uses oracle calls to decide NP-decidable relaxations of the input instance by over- and/or under-approximating the acceptance conditions of the problem at hand. The relaxation is iteratively strengthened based on the answers provided by the oracle calls. More specifically, at the beginning of the procedures, the candidate extensions are the NP-decidable admissible sets (or, alternatively, complete extensions) in case of preferred and semi-stable semantics, or conflict-free sets in case of stage semantics. We refer to the semantics that characterizes the initial candidate extensions as the chosen base semantics. Starting from the initial candidate extensions, the remaining set of candidate extensions is then non-trivially reduced in an iterative fashion based on the results returned by the previous oracle calls.
+     </paragraph>
+     <paragraph>
+      We will now explain in detail our procedures, starting with skeptical acceptance for preferred semantics.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Procedure for preferred semantics
+      </section-title>
+      <paragraph>
+       First let us consider preferred semantics and the problem of skeptical acceptance (recall that credulous acceptance is already in NP). Our procedure builds on Theorem 3 and, as an additional shortcut, uses the following observation: In coherent AFs an argument a is skeptically accepted iff a is not attacked by a preferred extension. In general, one has to drop the “if” direction. However, we still have that an argument is skeptically accepted only if a is not attacked by a preferred extension. As the latter is equivalent to a not being attacked by an admissible set or a complete extension we can test it with one call to an NP-oracle.
+      </paragraph>
+      <paragraph>
+       Our complexity-sensitive procedure for deciding skeptical acceptance of an argument w.r.t. preferred semantics is presented as Algorithm 1, {a mathematical formula}Skeptprf(F,α). First, the procedure applies the just explained shortcut. If this does not result in a decision for the input instance, the algorithm presented in the proof of Theorem 3 is applied, yielding a complexity-sensitive procedure for deciding skeptical acceptance in the class {a mathematical formula}solprfk. In the algorithm, we are free to choose the base semantics σ, i.e., the semantics used in the NP search procedures, to be either admissible or complete semantics. In practice, this choice might influence the actual running time of the procedure; experimental results on the impact of the choice are provided in Section 8. Finally, notice that in the following algorithms we use the function NP-Oracle not only to get yes/no answers for NP-queries, but also to obtain certain extensions. This does not fully match to the formal notion of an NP-oracle, which only return yes or no, but to a functional variant of it. However, NP-Oracle can be easily implemented by a linear number of calls to a classical NP-oracle (cf. proof of Theorem 3).
+      </paragraph>
+      <paragraph>
+       Algorithm 1 answers the skeptical acceptance of an argument α for an AF F under preferred semantics. As before the algorithm answers the query by calling either accept or reject. It first tries to construct an admissible set or complete extension, depending on the choice of the base semantics σ, which attacks α. In this case we can immediately reject the query. The outer while loop in line 5 now computes an admissible set or complete extension E, excluding α and ensuring that E is not a subset of an admissible set or complete extension {a mathematical formula}E′, which was checked before, i.e. is in {a mathematical formula}E. If such an E is found it is iteratively extended in the inner while loop, as long as this is possible. Afterwards E must be a subset maximal admissible set or complete extension, hence a preferred extension. Then we check if {a mathematical formula}α∉E. In this case we can reject the skeptical acceptance of α in F.
+      </paragraph>
+      <paragraph label="Example 2">
+       To illustrate the behavior of Algorithm 1 consider the following AF:{a mathematical formula} The AF has two preferred extensions {a mathematical formula}{b,e} and {a mathematical formula}{a,c,e} with e being the only skeptically accepted argument.Let us first test b for skeptical acceptance with Algorithm 1 and base semantics adm. Then, already in line 2 of the algorithm we obtain an admissible set attacking b, e.g. {a mathematical formula}{a,c}, and thus reject b.Now consider the argument e and base semantics com. As e is only attacked by d and d is in no complete extension the shortcut in line 2 does not apply. In line 5 we enter the while loop as for instance the emptyset ∅ is a complete extension that does not contain e. We pick ∅ as our candidate extension and in line 6 we enter the second while loop as {a mathematical formula}{b} is complete and a superset of ∅. In line 7 we choose {a mathematical formula}{b} for being our new candidate solution. Then we go back to line 6 and as {a mathematical formula}{b,e} is complete and a superset of {a mathematical formula}{b} we again update the candidate extension to be {a mathematical formula}{b,e}. Now as {a mathematical formula}{b,e} is maximal we skip the inner loop and in line 10 we check whether e is contained in our candidate. As {a mathematical formula}e∈{b,e} we enter the else part and add {a mathematical formula}{b,e} to the set of already considered candidates. Now back in line 5 we ask for a complete extension not contained in {a mathematical formula}{b,e} and not containing e. As the former is only satisfied by the set {a mathematical formula}{a,c,e}, the query fails and we skip the outer loop. Finally, as we could not construct a counter example for the skeptical acceptance of e we accept it.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Procedures for semi-stable and stage semantics
+      </section-title>
+      <paragraph>
+       We now turn to the problems of skeptical and credulous acceptance under semi-stable and stage semantics, and describe our complexity-sensitive procedures for these problems. Our procedures combine the results of Theorem 1, Theorem 4. For each of the cases of skeptical and credulous acceptance, the procedures for semi-stable and stage semantics only differ in the choice of the base semantics, and can hence be presented as a unified procedure.
+      </paragraph>
+      <paragraph>
+       Our procedure for deciding credulous acceptance for semi-stable semantics (using base semantics {a mathematical formula}σ∈{adm,com}) and credulous acceptance for stage semantics (using base semantics {a mathematical formula}σ=cf) is presented as Algorithm 2, {a mathematical formula}Credθ(F,α). The procedure first applies the algorithm from the proof of Theorem 1, but bounds the search depth to a fixed constant d as follows: We initialize {a mathematical formula}S to {a mathematical formula}{S⊆A||A∖S|⩽d+1} and only consider sets S with {a mathematical formula}|A∖S|⩽d in the first while loop. Hence, if {a mathematical formula}S=∅ in line 13 then all the sets S with {a mathematical formula}|A∖S|=d+1 are subsets of ranges of already considered extensions and thus no further extensions exists (as indeed all sets with {a mathematical formula}|A∖S|&gt;d+1 are subsets of sets with {a mathematical formula}|A∖S|=d+1). Hence the algorithm has to reject the instance.
+      </paragraph>
+      <paragraph>
+       If the algorithm from the proof of Theorem 1 does not result in deciding the input instance, the algorithm from the proof of Theorem 4 is applied. Hence Algorithm 2 is complexity-sensitive for {a mathematical formula}stablecons⩽d and {a mathematical formula}solk, the first one expressing that is complexity-sensitive w.r.t. {a mathematical formula}k′-stable-consistency as long {a mathematical formula}k′ is below some threshold d.
+      </paragraph>
+      <paragraph label="Example 3">
+       To illustrate the behavior of Algorithm 2, consider the following AF F:{a mathematical formula} The semi-stable extensions are {a mathematical formula}{b} and {a mathematical formula}{c,e} with ranges {a mathematical formula}{b}+={a,b,c} and {a mathematical formula}{c,e}+={b,c,d,e}.Let us first check whether c is credulously accepted with base-semantics adm and {a mathematical formula}d=1. In the first while loop we have to consider the sets {a mathematical formula}{a,b,c,d,e}, {a mathematical formula}{b,c,d,e}, {a mathematical formula}{a,c,d,e}, {a mathematical formula}{a,b,d,e}, {a mathematical formula}{a,b,c,e} and {a mathematical formula}{a,b,c,d}. In the first iteration we have to pick {a mathematical formula}S={a,b,c,d,e}. As there is no admissible set with range {a mathematical formula}{a,b,c,d,e}, i.e. no stable extension, we simply delete {a mathematical formula}{a,b,c,d,e} from {a mathematical formula}S. As {a mathematical formula}S still contains sets S with {a mathematical formula}|A∖S|⩽1 we pick another set S for instance {a mathematical formula}{b,c,d,e}. As {a mathematical formula}{c,e} is an admissible set with range {a mathematical formula}{b,c,d,e} we end up in line 6 and accept c.Now we consider the same argument c, but we set the parameter d to 0. In line 2 we initialize the set {a mathematical formula}S with {a mathematical formula}{{a,b,c,d,e},{b,c,d,e},{a,c,d,e}, {a mathematical formula}{a,b,d,e}, {a mathematical formula}{a,b,c,e},{a,b,c,d}}. Again we enter the first loop and pick {a mathematical formula}S={a,b,c,d,e} and then delete it from {a mathematical formula}S. Then there are not further sets in {a mathematical formula}S with {a mathematical formula}|A∖S|⩽0 and thus we skip the first loop. As {a mathematical formula}S≠∅ we next enter the second loop. Now we pick an admissible set containing c, for instance {a mathematical formula}{c}. Next we enter the inner loop to maximize the range of the candidate solution. As {a mathematical formula}{c,e} has a larger range we update our E to {a mathematical formula}{c,e} and as this is range maximal we skip the inner loop. Now as {a mathematical formula}c∈{c,e} the algorithms accepts c.
+      </paragraph>
+      <paragraph>
+       Our procedure for skeptical acceptance under semi-stable and stage semantics, presented as Algorithm 3, works in a similar fashion as Algorithm 2 exploiting Theorem 1, Theorem 4 once more. The key difference to Algorithm 2 is that, instead of constructing a witness for an argument to be credulously accepted, it attempts to construct a counter-example for an argument to be skeptically accepted, and only accepts if no such counter-example can be constructed.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Materializing the NP-oracles
+      </section-title>
+      <paragraph>
+       Our procedures just described make heavy use of NP-oracle queries for the base semantics applied in each case. Hence, in practical implementations of our procedures, one wants to make use of (existing) NP-solvers for the base semantics for deciding the oracle queries. However, some of our queries are rather non-standard, and thus are unlikely to be directly implemented in a solver for the base semantics.
+      </paragraph>
+      <paragraph>
+       We see two ways to deal with this problem. One alternative is to translate the oracle queries to standard AF reasoning tasks, like credulous/skeptical acceptance of an argument, existence of a stable extension, or existence of a non-empty extension, by modifying the frameworks for the queries.
+      </paragraph>
+      <paragraph>
+       As a second alternative, one can characterize argumentation semantics within other suitable formalisms, and then apply a decision procedure for the chosen formalism as the underlying NP-oracle for deciding the queries. In this approach, the key is to find a formalism that is well-suited for encoding the NP-queries, most preferably in an incremental manner, and for which at the same time efficient off-the-shelves implementations are readily available.
+      </paragraph>
+      <paragraph>
+       In the next section, we will present an instantiation of our procedures based on the second alternative, using Boolean satisfiability (SAT) as a well-suited formalism. In other words, the SAT-based instantiation is based on representing the NP-queries in a natural way in propositional logic, and applying readily available and highly optimized state-of-the-art SAT-solvers for decision of the queries. As will be later shown in Section 8, it turns out that an implementation of the SAT-based instantiation of our procedures provide a competitive approach for the second-level argumentation problems considered.
+      </paragraph>
+      <paragraph>
+       Before describing details on the SAT-based instantiation of our procedures, let us shortly outline the other possibility, i.e., the translation-based approach based on translating the oracle queries to standard AF reasoning tasks. We exemplify this alternative by providing translations for two of our NP-queries. We start with the NP query for an admissible/conflict-free set of a given range used in lines 5, 7 and 20, respectively, of Algorithm 2, Algorithm 3, respectively, which can be translated to computing a stable extension of a modified AF.
+      </paragraph>
+      <paragraph label="Proposition 15">
+       Let{a mathematical formula}F=(A,R)be an AF and{a mathematical formula}S⊆A, and define{a mathematical formula}FSstg,{a mathematical formula}FSsemas follows:{a mathematical formula}{a mathematical formula}This construction ensures the following correspondence:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}E∈stb(FSstg)iff{a mathematical formula}E∈cf(F)and{a mathematical formula}ER+=S; and
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}E∈stb(FSsem)iff{a mathematical formula}E∈adm(F)and{a mathematical formula}ER+=S.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       To prove (i) let us first consider a {a mathematical formula}E∈stb(FSstg). As the construction of {a mathematical formula}FSstg does not drop conflicts in S we have that {a mathematical formula}E∈cf(F) and further as {a mathematical formula}E∈stb(FSstg) and the attacks origin from F we have that {a mathematical formula}ER+⊃S. Moreover there is no argument {a mathematical formula}a∈E that attacks an argument in {a mathematical formula}A∖S as such an a is self-attacking in {a mathematical formula}FSstg. Hence also {a mathematical formula}ER+=S. Now let us consider {a mathematical formula}E∈cf(F) and {a mathematical formula}ER+=S. As {a mathematical formula}ER+=S also {a mathematical formula}E⊂S and there is no argument {a mathematical formula}a∈E attacking an element from {a mathematical formula}A∖S. Hence {a mathematical formula}E∈cf(FSstg) and as all attacks within S are preserved in {a mathematical formula}FSstg also {a mathematical formula}E∈stb(FSstg).Now to prove (ii) consider {a mathematical formula}E∈stb(FSsem). We show that {a mathematical formula}E∈adm(F). As before we have that {a mathematical formula}E∈cf(F) and {a mathematical formula}ER+=S. Next consider an argument a attacking an argument b in E. By construction {a mathematical formula}a∈S (otherwise b would be self-attacking and thus not in E), and as {a mathematical formula}ER+=S there is a {a mathematical formula}c∈E attacking a. Now consider an {a mathematical formula}E∈adm(F) and {a mathematical formula}ER+=S. Again as {a mathematical formula}ER+=S also {a mathematical formula}E⊂S and there is no argument {a mathematical formula}a∈E attacking an {a mathematical formula}A∖S. Furthermore as {a mathematical formula}E∈adm(F) and {a mathematical formula}ER+=S there is no argument {a mathematical formula}b∈A∖S attacking E. Hence {a mathematical formula}E∈cf(FSstg) and as all attacks within S are preserved in {a mathematical formula}FSsem also {a mathematical formula}E∈stb(FSsem).  □
+      </paragraph>
+      <paragraph>
+       Now consider the NP-query in line 6 of Algorithm 1, which asks whether there is a superset of the current candidate solution that is still admissible/complete.
+      </paragraph>
+      <paragraph label="Proof">
+       For an AF{a mathematical formula}F=(A,R),{a mathematical formula}S∈adm(F), and{a mathematical formula}FSdefined as the AF{a mathematical formula}(A∖SR+,R∩((A∖SR+)×(A∖SR+)))it holds that{a mathematical formula}S∈prf(F)iff{a mathematical formula}adm(FS)={∅}.First let us consider the case where {a mathematical formula}S∉prf(F), then there exists a non-empty {a mathematical formula}S′⊆A∖S such that {a mathematical formula}S∪S′∈adm(F). Now it is easy to see that also {a mathematical formula}S′∈adm(FS). Next let us consider the case where there exists a non-empty {a mathematical formula}S∈adm(FS). Then one can easily show that {a mathematical formula}S∪S′∈adm(F) and as {a mathematical formula}S′ is disjoint from S, also {a mathematical formula}S∉prf(A,R).  □
+      </paragraph>
+      <paragraph>
+       In the rest of the paper, however, our main focus will be on the second alternative, developing SAT-based instantiations of our generic complexity-sensitive procedures.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      SAT-based complexity-sensitive procedures
+     </section-title>
+     <paragraph>
+      In this section we describe instantiations based on SAT for the complexity-sensitive procedures (see Algorithm 1, Algorithm 2, Algorithm 3) described in the previous section. In the SAT-based instantiations, the queries, i.e. the inputs to the NP-oracle, are propositional formulas, encoding the currently remaining candidate extensions under the chosen base semantics.
+     </paragraph>
+     <paragraph>
+      Harnessing SAT for instantiating the procedures has several benefits. First, the NP-oracle calls can be encoded in a natural way using propositional logic. During the main iterative loop of the procedures, restricting the set of candidate extensions further, based on already found counter-examples, can be achieved by iteratively adding new clauses to the propositional formula, which encodes the initial candidate extensions. Hence the input to the SAT-solver, acting as the NP-oracle, needs not to be built from scratch before each oracle call. This can be seen as a form of no-good learning which further prunes the possible IN/OUT-labellings [28] of the arguments on the level of the propositional encoding. Furthermore, any off-the-shelf complete SAT-solver can hence be used as the NP-oracle. This relieves the implementer from the non-straight-forward task of implementing the actual NP search procedure. By applying SAT as the NP-oracle, the highly optimized and efficient conflict-driven clause learning (CDCL) SAT-solvers available today can be directly exploited. This especially includes CDCL SAT-solvers that can be applied incrementally, which basically means that (after a satisfiable oracle call) the SAT-solver can maintain its state from one oracle call to the next without needing to start search from scratch when adding further restrictions on the set of candidate extensions on the propositional level. Furthermore, the clauses learned within the CDCL SAT search, imposing further restrictions on the candidate extensions, can be kept from one iteration to another.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       A SAT-based complexity-sensitive framework
+      </section-title>
+      <paragraph>
+       The main structure of our SAT-based instantiation, based on the class {a mathematical formula}solσk, which applies well to all semantics under our consideration, can be represented as a unifying framework for all the semantics. In what follows we consider semantics {a mathematical formula}σ∈{prf,sem,stg}, a reasoning mode {a mathematical formula}M∈{Skept,Cred}, an AF {a mathematical formula}F=(A,R), and an argument {a mathematical formula}α∈A. The generic structure of our SAT-based framework is shown in Algorithm 4.
+      </paragraph>
+      <paragraph>
+       Notice that in the algorithms we use the function sat not only to get a yes answer if the provided formula is satisfiable and a no answer if the formula is unsatisfiable, but also to obtain a model in the former case. The dual function unsat returns yes iff the formula is unsatisfiable.
+      </paragraph>
+      <paragraph>
+       We will provide details for the generic concepts {a mathematical formula}ψσI(F) and {a mathematical formula}γσI as well as for the function {a mathematical formula}Shortcutsσ(F,α,M) for the different semantics separately below. Let us note at this point already that the procedure might terminate in {a mathematical formula}Shortcutsσ(F,α,M) in certain cases. Then, we also terminate the procedure with the status returned by {a mathematical formula}Shortcutsσ(F,α,M), i.e. accept or reject.
+      </paragraph>
+      <paragraph>
+       Overall, the procedure works as follows. Depending on the reasoning mode, we test whether there is an extension containing α, or whether there is an extension not containing α, hence accepting α credulously or rejecting it for skeptical reasoning. This is encoded via the query-literal q. In line 6, a formula is built to encode extensions of the base semantics, i.e. not taking maximality into account, together with the query q as well as semantics-specific shortcuts that can be applied for pruning the search space via learning inferred information; this will be discussed later in more detail. The Shortcuts function allows for refining the base encoding using the inferred information it outputs. The loop in line 7 follows the ideas of the main loops in the Algorithm 1, Algorithm 2, Algorithm 3: starting with a model that corresponds to a set of arguments satisfying the base semantics and our query q, each iteration then extends this set to a larger one satisfying q until we have a maximal set satisfying q. In line 11, the condition q is dropped for testing whether the set is maximal among all sets, i.e. whether it is an extension. If this is the case, the algorithm accepts. Otherwise, we learn that none of the smaller sets can be an extension (line 14). Finally, after excluding all sets satisfying the base semantics and q from being a valid extension, the algorithm rejects the query (line 17).
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Instantiating the framework
+      </section-title>
+      <paragraph>
+       A key aspect of instantiating the SAT-based framework is how the AF reasoning tasks are encoded as propositional formulas over the variables {a mathematical formula}X={xa|a∈A} and {a mathematical formula}Y={ya|a∈A} such that the models of the formulas are in correspondence with certain sets of arguments. The intuition behind the variables is that {a mathematical formula}xa is true iff a is in the set, and {a mathematical formula}ya is true iff a is in the range of the set.
+      </paragraph>
+      <section label="7.2.1">
+       <section-title>
+        Encoding the base semantics
+       </section-title>
+       <paragraph>
+        To ensure the relation between the set and its range, we apply the formula{a mathematical formula} together with a propositional encoding that restricts the models to correspond to particular types of AF extensions. To this end, we use the following propositional formulas {a mathematical formula}φcf(F), {a mathematical formula}φadm(F), and {a mathematical formula}φcom(F), respectively, to encode the conflict-free sets, admissible sets, and complete extensions, respectively for a given AF {a mathematical formula}F=(A,R):{a mathematical formula}{a mathematical formula}{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="7.2.2">
+       <section-title>
+        Preferred semantics
+       </section-title>
+       <paragraph>
+        For preferred semantics we are only interested in skeptical reasoning, since credulous reasoning for preferred semantics has a lower complexity.
+       </paragraph>
+       <paragraph>
+        Given an AF {a mathematical formula}F=(A,R) and an argument {a mathematical formula}α∈A we can choose the base semantics from {a mathematical formula}{adm,com}. The Shortcuts function for preferred semantics is shown in pseudocode in Algorithm 5. It implements the shortcut from Algorithm 1 (lines 2–4) and additionally exploits learning in case the shortcut does not decide the instance.
+       </paragraph>
+       <paragraph>
+        Here we simply check in line 1 whether there is a counter-example for skeptical acceptance of α under the chosen base-semantics witnessed by a set attacking α, and if not, learn in line 4 that this is the case. Furthermore, in the case of preferred semantics with a base semantics {a mathematical formula}σ∈{adm,com} the formulas {a mathematical formula}ψθI(F) and {a mathematical formula}γθI are:{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Here, given a set I satisfying base semantics of the main procedure, {a mathematical formula}ψprfI encodes the supersets {a mathematical formula}I′⊃I satisfying σ.{sup:3} By adding the formula {a mathematical formula}γprfI we learn that we are no longer interested in subsets of I, i.e. we need at least one argument from the complement, thereby reducing the search space.
+       </paragraph>
+      </section>
+      <section label="7.2.3">
+       <section-title>
+        Semi-stable and stage semantics
+       </section-title>
+       <paragraph>
+        Let us next consider semantics {a mathematical formula}θ∈{sem,stg}. For semi-stable, we have the choice of using either adm or com as base-semantics. For stage semantics, we use base semantics cf. The Shortcuts function for semi-stable and stage semantics, based on {a mathematical formula}stableconsσk, is presented in pseudocode in Algorithm 6.
+       </paragraph>
+       <paragraph>
+        The procedure follows the idea of the first loop in Algorithm 2, Algorithm 3, and thus in principle can decide the reasoning problems without any further investigations, but would be expensive for high values of k. To profit in cases where k is small from the complexity-sensitive perspective, and avoid unnecessary computational cost otherwise, we include again the parameter d to bound the search-depth to sets of arguments to those whose range S satisfies {a mathematical formula}|A∖S|⩽d.
+       </paragraph>
+       <paragraph>
+        The loop in line 7 iterates over sets {a mathematical formula}S⊆A. In line 8, maximal returns a maximal-cardinality set S from U (starting with {a mathematical formula}S=A). Line 9 builds the formula {a mathematical formula}fS encoding that sets of interest have range S. Line 10 tests whether there is a set with range S satisfying q under the base semantics. If so, we have found an extension satisfying q and accept. Line 12 tests whether there is an extension under base semantics which has range S. If so, we learn that we are no longer interested in sets {a mathematical formula}S′⊆S. Otherwise (line 16) we learn that we are not interested in extensions with range S. Finally, if all sets have been excluded from being the range of an extension satisfying q, the procedures rejects. In case the bound d is exceeded before this, we return the formula ψ as learnt information.
+       </paragraph>
+       <paragraph>
+        The helper formulas {a mathematical formula}ψσI and {a mathematical formula}γσI ({a mathematical formula}θ∈{sem,stg}) are:{a mathematical formula}{a mathematical formula} where {a mathematical formula}F=(A,R) is an AF, base-semantics {a mathematical formula}σ∈{adm,com} if {a mathematical formula}θ=sem and {a mathematical formula}σ=cf in case {a mathematical formula}θ=stg. For a set I satisfying base-semantics σ the formula {a mathematical formula}ψσI encodes sets {a mathematical formula}I′ satisfying σ and {a mathematical formula}IR+⊂(I′)R+, while formula {a mathematical formula}γσI encodes that we are no longer interested in sets {a mathematical formula}I′ with {a mathematical formula}(I′)R+⊆IR+.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We have implemented the SAT-based instantiations from Section 7 of our complexity-sensitive decision procedures as the SAT-based argumentation system CEGARTIX.{sup:4} In this section we present experimental results on the efficiency of CEGARTIX (v0.1a).
+     </paragraph>
+     <paragraph>
+      In the evaluation, we compare the performance of CEGARTIX to that of a recently proposed, state-of-the-art argumentation reasoning system [18] that exploits advances in answer-set programming (ASP). It turns out that CEGARTIX improves significantly over the state-of-the-art ASP-based system. Furthermore, we evaluate within CEGARTIX the impact of (i) applying the alternative base semantics and (ii) the impact of using different values of the parameter d within the shortcut functions for the different semantics.
+     </paragraph>
+     <paragraph>
+      CEGARTIX employs the CDCL SAT-solver Minisat [11] (v2.2.0) as the SAT oracle in an incremental mode, which allows us to retain from starting search from scratch when adding newly learnt information to a current satisfiable working formula.
+     </paragraph>
+     <paragraph>
+      In the experiments, we considered all the five reasoning tasks focused on in this article. The experiments were executed under OpenSUSE with 2.33-GHz Intel Xeon processors and 49-GB main memory. At most one query was run at a time to reduce performance bottlenecks. A timeout of five minutes was enforced on each individual run. We note that this high amount of memory is not actually used by the considered algorithms. We executed the algorithms with the hardest queries identified in our performance tests, see Section 8.2 for more details, with an additional hard limit of 4 GB, which was never reached.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Benchmarks
+      </section-title>
+      <paragraph>
+       As benchmarks we generated AFs ranging from 60 to 1000 arguments using two parameterized methods for randomly generating the attack relation, following the line of [18] for benchmarking. We note that, as identified in [29], there is still need for diverse benchmark libraries for AFs incorporating e.g. AFs from applications. Random AFsgenerated by inserting for any pair of arguments {a mathematical formula}(a,b) with {a mathematical formula}a≠b the attack from a to b with a given probability p.Grid AFsthat are sub-graphs of an {a mathematical formula}n×m grid-structure. We consider two different neighborhoods, one connecting arguments vertically and horizontally and one that additionally connects the arguments diagonally. Such a connection is a mutual attack with a given probability p and an attack in only one direction otherwise. In the last case the direction is chosen with 0.5 probability. See Fig. 8 for examples. For both methods, we used the values {a mathematical formula}p∈{0.1,0.2,0.3,0.4} and in addition for the grid AFs {a mathematical formula}n∈{5,10,15}. The parameter m can then be calculated from the total number of arguments in the framework. For the number of arguments, we distinguished between medium-sized AFs with 60, 70, 80, 90, 100, 110, 130, 160 and 200 arguments as well as larger AFs with 300, 400, 500, 600, 700, 800, 900 and 1000 arguments. For the former we generated random and grid attack relations, for the latter only grid AFs. Overall this resulted in 360 random AFs, 1080 medium-sized grid AFs as well as 960 large grid AFs for each neighborhood. The total number is 4440 generated AFs.
+      </paragraph>
+      <paragraph>
+       We let the solvers compute queries for all semantics in this paper, that is, for the semantics prf, sem and stg, using skeptical reasoning with all three, and additionally credulous reasoning with the latter two. For the random instances three different arguments were queried, while for the grid instances we used five arguments. This resulted in a total of 107 400 benchmark instances. We would like to stress that the generated AFs are by no means tailored to the fragments our approach is based on. Lastly note also that the number of attacks scales linearly with the number of arguments for grid AFs, while it scales quadratically with the number of arguments for random AFs.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Comparison with state-of-the-art
+      </section-title>
+      <paragraph>
+       We compare the performance of CEGARTIX to that of a recently proposed, state-of-the-art argumentation reasoning system [18] that exploits advances in answer-set programming (ASP) via the so-called metasp approach.{sup:5} This system is a further improvement of the ASPARTIX system [17]. For comparing CEGARTIX with the ASP-based approach, we used the state-of-the-art no-good learning disjunctive ASP solver claspD [31] (v1.1.2) combined with the grounder gringo [32] (v3.0.4).
+      </paragraph>
+      <paragraph>
+       For this comparison, we employed the base semantics {a mathematical formula}base-sem(σ)=com for {a mathematical formula}σ∈{prf,sem}, and {a mathematical formula}base-sem(stg)=cf within CEGARTIX. The parameter for the {a mathematical formula}Shortcutsσ(F,α,M) function for {a mathematical formula}σ∈{sem,stg} was set to {a mathematical formula}d=1. The reason for setting the shortcut parameter d to 1 was to allow for semi-stable and stage semantics a fast computation if a stable extension exists ({a mathematical formula}d=0 is sufficient for this) or if a semi-stable or stage extension with a range covering almost all arguments exists. On the other hand by setting d to 1 we keep the number of checks in the shortcut low.
+      </paragraph>
+      <paragraph>
+       We considered two metrics for comparison, namely, (cumulative) running time in seconds for all queries of a particular reasoning mode without timed out instances, and separately the number of timeouts. This has the effect that the figures depicting cumulative running times exclude timed out runs, and therefore show a faster performance if the number of timed out queries was high. For performance comparison of CEGARTIX with ASPARTIX, using the above mentioned metasp approach, we considered only medium-sized AFs.
+      </paragraph>
+      <paragraph>
+       Fig. 9, Fig. 10 present results on comparing ASPARTIX and CEGARTIX. On the left, the line plots comparing the cumulative running times (using logarithmic scale) are shown. On the right, the scatter plots present running time differences of individual queries, including timed out instances. The dotted lines denote ASPARTIX and the solid lines show the performance for CEGARTIX. For the plots on the left side, the running times for queries made on AFs with a particular number of arguments are grouped together. The number of timeouts are shown in Table 5 for ASPARTIX. Using CEGARTIX with the parameters noted above, no timeouts were encountered.
+      </paragraph>
+      <paragraph>
+       First consider Fig. 9 for skeptical reasoning with random AFs (upper left plot). CEGARTIX behaves very similarly for all three semantics with respect to the considered metric, and outperforms ASPARTIX. The difference of ASPARTIX and CEGARTIX is more distinct with semi-stable and stage semantics and less so for preferred semantics. Note that for AFs with 200 arguments, 29 and 44 timeouts were encountered for ASPARTIX under skeptical semi-stable and stage reasoning, respectively.
+      </paragraph>
+      <paragraph>
+       The grid structured AFs typically performed quite differently than random AFs, which is why we investigate them separately in Fig. 9 (lower left plot). In many cases the running times were in fact very close to 0. One can see that grid AFs are mostly trivial for CEGARTIX. CEGARTIX could solve skeptical reasoning tasks with preferred and semi-stable semantics combined within 10 s, while ASPARTIX took significantly more time. The stage semantics is the only one here with higher running times for CEGARTIX. We will consider the larger grid AFs below for a more detailed study of CEGARTIX.
+      </paragraph>
+      <paragraph>
+       Credulous reasoning shows in general a similar picture to skeptical, with the exception that for semi-stable reasoning on random AFs, ASPARTIX and CEGARTIX appear to be closer with respect to performance, which can be seen in Fig. 10 (on the left). However, a closer look at the encountered timed out instances reveals that CEGARTIX significantly outperforms ASPARTIX also in this case.
+      </paragraph>
+      <paragraph>
+       For deeper understanding, we also looked into scatter plots comparing ASPARTIX and CEGARTIX. These depict running time comparisons for individual instances for both solvers, including timed out instances. The scatter plots in Fig. 9, Fig. 10 are for skeptical preferred, semi-stable reasoning, and credulous semi-stable acceptance. The x-axis shows the running time of individual queries with ASPARTIX and the y-axis with CEGARTIX on the same instance. Due to the low running times of CEGARTIX on grid AFs, we only considered random AFs for scatter plots.
+      </paragraph>
+      <paragraph>
+       For preferred semantics, many queries are in favor of CEGARTIX. Except for a few instances, which are drastically faster for CEGARTIX, the difference is usually within a few seconds, however. Semi-stable semantics yields a different picture, depending on the reasoning mode. For skeptical queries CEGARTIX clearly outperforms ASPARTIX on basically all instances. Credulous reasoning overall also is solved faster by CEGARTIX. A number of queries, however, were computed more efficiently by ASPARTIX. We omit the scatter plots for stage reasoning as they show a behavior similar to skeptical semi-stable semantics.
+      </paragraph>
+      <paragraph>
+       In general stage and semi-stable semantics show a similar behavior, which reflects their similar nature as well as the similar procedures used for the evaluation of the semantics. It seems that, when considering range-maximality, the choice of the base-semantics (cf or com) has only minor effects on the qualitative behavior of the semantics. We will see a similar behavior in the next section, when comparing adm and com as base-semantics for semi-stable.
+      </paragraph>
+      <paragraph>
+       Finally we made some experiments regarding the memory usage of the algorithms. We let both CEGARTIX and ASPARTIX compute the skeptical acceptance under stage semantics on AFs with 200 arguments (these are the hardest instances used in the above comparison) and additionally enforced a hard limit of 4 GB of memory, which was never reached.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Impact of base semantics and shortcuts within CEGARTIX
+      </section-title>
+      <paragraph>
+       In this section we investigate the choice of the base semantics for solving the reasoning problems, as well as the effect of the shortcuts for semi-stable semantics, within CEGARTIX. We will again distinguish between random AFs and grid AFs, since CEGARTIX behaves quite differently on these two classes of AFs.
+      </paragraph>
+      <paragraph>
+       First we consider results regarding the impact of the base semantics. On random AFs there appears to be only a minimal effect for most CEGARTIX parameters and reasoning tasks. The cumulative running times were comparable between admissible and complete base semantics. Fig. 11 shows the performance resulting from applying different combinations of (i) parameter settings for the shortcut {a mathematical formula}d=0,1,2, and (ii) the alternative base semantics for semi-stable semantics and skeptical reasoning. The complete base semantics is slightly outperforming the admissible base for {a mathematical formula}d=2, for example. For credulous reasoning the difference between the choice of the base semantics was even smaller. The results for preferred semantics were similar.
+      </paragraph>
+      <paragraph>
+       The choice of the base semantics, however, has a stronger influence for reasoning under the preferred semantics on grid AFs. For certain queries the number of oracle calls rises tremendously using the admissible base semantics. This in turn can be seen in the cumulative running times in Fig. 12 for large grid AFs. In contrast, only a few SAT-solver calls are made when using the complete base semantics. We encountered a higher number of SAT-calls in 130 out of 9600 queries for preferred semantics on large grid AFs with admissibility base semantics. Algorithm 4 entered in these queries the outer while loop (line 7) more than 40 times, i.e. had to consider a new admissible set many times, while on the remaining 9470 queries this number was lower. In fact the average number the loop was entered in these 130 queries was 1179.01. This is also reflected in the running time. From these 130 queries we have that 75 had a running time of five up to 277.08 seconds. These make up the largest proportion of the cumulative running time in Fig. 12. Additionally we encountered 305 timeouts using admissibility base semantics for preferred reasoning and large grid AFs. For complete base semantics either using the shortcut was enough, or otherwise the query was decided without entering the outer loop in all large grid AFs, i.e. indicating that there did not exist a complete extension without the queried argument.
+      </paragraph>
+      <paragraph>
+       Regarding the number of SAT-calls for semi-stable semantics and skeptical reasoning, out of the 1080 queries on random AFs, using the shortcut with {a mathematical formula}d=0 the algorithm could solve 996 within the shortcut and the remaining with one application of the outer while loop (line 7) of Algorithm 4, for both base semantics. Since the number of SAT calls within the outer while loop is linearly bounded by the number of arguments in the AF, this means that the overall number of SAT-calls was low in these cases. Without the shortcuts we have that also the outer while loop was entered at most once for semi-stable skeptical reasoning.
+      </paragraph>
+      <paragraph>
+       For the performance of the shortcuts, we experienced a slight decrease of performance for random AFs using the shortcuts for semi-stable skeptical reasoning, see Fig. 11 on the left. For the grid AFs we again have a different picture. Here, as can be seen in Fig. 11 on the right, the shortcuts decrease the overall running time, due to the fact that for grid AFs with a neighborhood of at most four arguments we have no odd-cycles in the AFs, which in turn means that computing the stable extensions is sufficient. This is reflected in the running time using the shortcuts for semi-stable semantics. Here it is even sufficient to consider depth {a mathematical formula}d=0.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      To the best of our knowledge, our complexity-sensitive approach to developing decision procedures for second-level abstract argumentation problems is novel. The CEGAR approach has been harnessed for solving various other intrinsically hard reasoning problems [33], [34], [35], [36], [37], [38], [39], [40], [41]. However, we are not aware of earlier work on developing complexity-sensitive CEGAR-based procedures.
+     </paragraph>
+     <paragraph>
+      Systems developed for solving second-level AF reasoning problems typically rely on monolithic encodings in other reasoning problems of similar complexity, see e.g. [42], [43] for encodings in terms of quantified Boolean formulas or [17] for an answer-set programming based approach. Approaches to solving “easier”, i.e., first-level, AF problems are mostly monolithic; these include SAT-encodings [16] as well as CSP-encodings [44], [45].
+     </paragraph>
+     <paragraph>
+      A noteworthy exception is the family of labelling-based algorithms [46], [47], [48], [49], [50]. Typically such approaches deal with the problem of enumerating all extensions and thus, by the exponential number of extensions, systems are restricted to rather small AFs. The main idea of labelling-based algorithms is to distinguish different statuses of arguments, e.g. an argument can be in the extension, attacked by an argument in the extension, or neither. These statuses are encoded via different labels. Now if one argument is labeled with a certain label, this has immediate effects on the possible labels for its neighbors. On a high-level there are two different approaches to exploiting these effects in computing extensions. First, starting with all arguments being in the extension and resolving the conflicts by removing arguments from the extension and update the labels correspondingly (see e.g. [47]). A second family of algorithms which have similarities with our approach consist of algorithms which start from a small set, test whether it is preferred, and, if not, extend it by further arguments to finally reach a preferred extension (see e.g. [49], [50]). In [49] also optimizations for credulous and skeptical reasoning with preferred semantics are considered. A recent empirical comparison of different labelling-based approaches for enumerating preferred extensions can be found in [50]. The main difference between existing work on labelling-based algorithms and our procedures are as follows: (i) we delegate the combinatorial hard problems to a SAT-solver (an NP-oracle respectively), (ii) we do not have to deal with sets which are not admissible at all (but may become admissible by adding further arguments), and (iii) our procedures come with a (parametrized) complexity classification.
+     </paragraph>
+     <paragraph>
+      Other current branches in abstract argumentation are certain preprocessing techniques [51], [52], [53] to divide the problem into small pieces as well as implementations of fixed-parameter tractable algorithms [54], [6], [55]. While the concept of complexity-sensitivity as used in our approach bears some resemblance to fixed-parameter tractability and parameterized complexity, there are fundamental differences. Especially, while parameterized complexity usually studies parameterizations with respect to polynomial-time tractability, the CEGAR approach in general is typically based on exploiting “NP-tractability” via iterative calls to efficient NP decision procedures. Hence our work takes further steps towards a full classification for argumentation problems of high complexity. This also distinguishes our complexity results to the ones obtained in [8], where AFs with a small (graph-based) distance to tractable graph classes are studied. Moreover, the above-mentioned works on fixed-parameter tractability and splitting focus on the graph structure of an AF while in this work we also exploit structure in the set of the extensions.
+     </paragraph>
+     <paragraph>
+      Finally there is recent work on average-case algorithms for value-based argumentation [56], using an elaborate handling of the possible value orderings. However, this is a different setting and [56] focuses on the problem of handling the different possible value-orderings which do not occur in our setting.
+     </paragraph>
+     <paragraph>
+      This article extends work presented at the 13th International Conference on Principles of Knowledge Representation and Reasoning (KR 2012) [57], with the following improvements. First of all, we now provide full proofs of the results, and additional explanations and examples. In Section 6 we describe our complexity-sensitive procedures in a generic setting, while [57] was restricted to the SAT-based instantiation. The experiments with the CEGARTIX system have been extended in several directions. First we now include more details on the performance tests showing e.g. scatter plots and also incorporating more details for the stage semantics. We additionally conducted experiments with larger grid-structured AFs (up to 1000 arguments) and investigated in detail the choice of the base-semantics and shortcuts. We used newer versions of the systems we compared to, and re-ran all experiments.
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      In this work, we developed a novel method for solving hard problems in the area of argumentation in a “complexity-sensitive” way. From one perspective, the approach can be seen as an argumentation-customized incarnation of the counter-example guided abstraction refinement approach originating from the field of model checking. Our prototype implementation CEGARTIX employs SAT-solvers as underlying inference engines. Experiments show that CEGARTIX significantly outperforms existing systems developed for hard argumentation problems (i.e. problems under the preferred, semi-stable, or stage semantics). The fundamental aspects of our approach are generic, allowing in principle to exploit as the underlying NP-oracle systems developed for other reasoning problems such as CSP or ASP, or even native argumentation systems for “easier” semantics such as the stable or complete semantics. Building necessary ground for the complexity-sensitive approach, we also presented an extensive complexity theoretic analysis, providing new results for certain fragments of argumentation frameworks, as well as distance-based complexity analysis, complementing recent results from [8].
+     </paragraph>
+     <paragraph>
+      The promising experimental results suggest to apply our approach also to formalisms extending the Dung-style frameworks which we focused on here. In particular, abstract dialectical frameworks [58] would be an appealing target formalism since it generalizes other proposals such as bipolar [59] and extended argumentation frameworks [60]. In the opposite direction, one could consider further fragments of Dung-style frameworks. For preferred semantics, an interesting class are AFs having a bound number of odd cycles; the complexity of evaluating such AFs is currently open. An interesting research direction is to develop complexity-sensitive approaches for this fragment.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

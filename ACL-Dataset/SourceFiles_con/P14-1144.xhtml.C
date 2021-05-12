@@ -1,0 +1,1384 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Modeling Prompt Adherence in Student Essays.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Recently, researchers have begun exploring methods of scoring student essays with
+respect to particular dimensions of quality such as coherence, technical errors,
+and prompt adherence. The work
+on modeling prompt adherence,
+however, has been focused mainly
+on whether individual
+sentences adhere to the prompt. We
+present a new annotated corpus of essay-level
+prompt adherence scores and propose a feature-rich
+approach to scoring essays along the prompt
+adherence dimension. Our approach
+significantly
+outperforms a knowledge-lean baseline prompt adherence
+scoring system yielding
+improvements of up to 16.6%.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Automated essay scoring, the task of employing computer technology
+to evaluate and score written text, is one of the most important educational
+applications of natural language processing (NLP)
+(see
+        Shermis and Burstein (2003)
+        and
+        Shermis et al. (2010)
+        for an overview of the state of the art in this task).
+A major weakness of many existing scoring engines such as
+the Intelligent Essay Assessor™
+        [13]
+        is that they adopt a holistic scoring scheme, which
+summarizes the quality of an essay with a single score and thus provides
+very limited feedback to the writer.
+In particular, it is not clear which dimension of an essay (e.g., style,
+coherence, relevance) a score should be attributed to.
+Recent work addresses this problem by scoring a particular
+dimension of essay quality such as coherence
+        [16]
+        ,
+technical errors,
+organization
+        [18]
+        , and thesis clarity
+        [19]
+        .
+Essay grading software that provides feedback along multiple dimensions
+of essay quality such as E-
+        rater
+        /Criterion
+        [1]
+        has also begun to emerge.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Our goal in this paper is to develop a computational model for scoring an essay along an under-investigated dimension —
+        prompt adherence
+        . Prompt adherence refers to how related an essay’s content is to the prompt for which it was written.
+An essay with a high prompt adherence score consistently remains on the topic introduced by the prompt and is free of irrelevant digressions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        To our knowledge, little work has been done on scoring the prompt adherence of student essays since
+        Higgins et al. (2004)
+        .
+Nevertheless, there are major differences between Higgins et al.’s work and our work with respect to both the way the task is formulated and the approach.
+Regarding task formulation, while Higgins et al. focus on classifying each
+        sentence
+        as having either
+        good
+        or
+        bad
+        adherence to the prompt, we focus on assigning a prompt adherence score to the entire
+        essay
+        , allowing the score to range from one to four points at half-point increments.
+As far as the approach is concerned, Higgins et al. adopt a
+        knowledge-lean
+        approach to the task, where almost all of the features they employ are computed based on a word-based semantic similarity measure known as
+        Random Indexing
+        [10]
+        .
+On the other hand, we employ a large variety of features, including lexical and knowledge-based features that encode how well the concepts in an essay match those in the prompt, LDA-based features that provide semantic generalizations of lexical features, and “error type” features that encode different types of errors the writer made that are related to prompt adherence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In sum, our contributions in this paper are two-fold. First, we develop a scoring model for the prompt adherence dimension on student essays using a feature-rich approach.
+Second, in order to stimulate further research on this task, we make our data set consisting of prompt adherence annotations of 830 essays publicly available.
+Since progress in prompt adherence modeling is hindered in part by the lack of a publicly annotated corpus, we believe that our data set will be a valuable resource to the NLP community.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Corpus Information
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We use as our corpus the 4.5 million word
+International Corpus of Learner English (ICLE)
+        [5]
+        ,
+which consists of more than 6000 essays
+written by university undergraduates from 16 countries
+and 16 native languages
+who are learners of English as a Foreign Language.
+91% of the ICLE texts are argumentative.
+We select a subset consisting of 830 argumentative essays from the ICLE to annotate
+for training and testing of our essay prompt adherence scoring system.
+Table
+        1
+        shows three of the 13
+topics selected for annotation.
+Fifteen native languages are represented in the set of
+annotated essays.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Corpus Annotation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We ask human annotators to score each of the 830
+argumentative essays along the prompt adherence dimension.
+Our
+annotators were selected from over 30 applicants
+who were familiarized with the scoring rubric
+and given sample essays to score.
+The six who were most consistent with the expected scores
+were given
+additional essays to annotate.
+Annotators evaluated how well each essay adheres to
+its prompt
+using a numerical score from one to four at half-point increments
+(see Table
+        2
+        for a description of each score).
+This contrasts with previous work on prompt adherence essay scoring,
+where the corpus is annotated with a binary decision
+(i.e.,
+        good
+        or
+        bad
+        )
+(e.g., Higgins et al.
+        [7, 6]
+        ,
+        Louis and Higgins (2010)
+        ).
+Hence, our annotation scheme not only provides a finer-grained
+distinction of prompt adherence (which can be important in practice),
+but also makes the prediction task more challenging.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        To ensure consistency in annotation, we randomly select
+707 essays to have graded by multiple annotators.
+Analysis
+reveals that the Pearson’s correlation coefficient computed over these
+doubly annotated essays is 0.243.
+Though annotators exactly agree on the prompt adherence score
+of an essay only 38% of the time, the scores they apply fall within
+0.5 points in 66% of essays and within 1.0 point in 89% of
+essays.
+For the sake of our experiments, whenever annotators
+disagree on an essay’s prompt adherence score,
+we assign the essay the average of all annotations
+rounded to the nearest half point.
+Table
+        3
+        shows the number of essays
+that receive each of the seven scores for prompt adherence.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Score Prediction
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In this section, we describe in detail our system for
+predicting essays’ prompt adherence scores.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Model Training and Application
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We cast the problem of predicting an essay’s prompt adherence score
+as 13 regression problems, one for each prompt.
+Each essay is represented as an instance whose label
+is the essay’s true score (one of the values shown in Table
+         3
+         )
+with up to seven types of features including baseline
+(Section 4.2) and
+six other feature types proposed by us (Section 4.3).
+Our regressors may assign an essay any score in the range
+of 1.0
+         -
+         4.0.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Using regression captures the fact that some
+pairs of scores are more similar than others (e.g.,
+an essay with a prompt adherence score of 3.5 is more similar to an
+essay with a score of 4.0 than it is to one with a
+score of 1.0). A classification
+system, by contrast, may sometimes believe that the
+scores 1.0 and 4.0 are most likely for a particular essay,
+even though these scores are at opposite ends of the score range.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Using a different regressor for
+each prompt captures the fact that it may be easier for
+an essay to adhere to some prompts than to others, and common
+problems students have writing essays for one prompt may not apply
+to essays written in response to another prompt. For
+example, in essays written in response to the prompt
+“Marx once said that religion was the opium of the masses.
+If he was alive at the end of the 20th century, he would
+replace religion with television,”
+students sometimes write essays about all the evils of television,
+forgetting that their essay is only supposed to be about whether
+it is “the opium of the masses”. Students are less
+likely to make an analogous mistake when writing for the
+prompt “Crime does not pay.”
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         After creating training instances for prompt
+         pi
+         , we train a linear regressor,
+         ri
+         , with
+regularization parameter
+         ci
+         for
+scoring test essays written in response to
+         pi
+         using
+the linear SVM regressor implemented in the LIBSVM software
+package
+         [3]
+         .
+All SVM-specific
+learning parameters are set to their default values except
+         ci
+         , which
+we tune to maximize performance on held-out validation data.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         After training the classifiers, we use them to classify the test
+set essays. The test instances are created in the same way
+as the training instances.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Baseline Features
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Our baseline system for score prediction employs various
+features based on Random Indexing.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS2.SSS0.P1">
+        <h5 class="ltx_title ltx_title_paragraph">
+         1. Random Indexing
+        </h5>
+        <div class="ltx_para" id="S4.SS2.SSS0.P1.p1">
+         <p class="ltx_p">
+          Random Indexing (RI) is
+“an efficient, scalable and incremental alternative”
+          [20]
+          to Latent Semantic Indexing
+          [4, 12]
+          which allows us to
+automatically generate a semantic similarity measure between any two words.
+We train our RI model on over 30 million words of the English Gigaword corpus
+          [17]
+          using the S-Space package
+          [9]
+          .
+We expect that features based on RI will be useful
+for prompt adherence scoring because they may help us find
+text related to the prompt even if some of its concepts have
+have been rephrased
+(e.g., an essay
+may talk about “jail” rather than “prison”, which is mentioned in one
+of the prompts), and because they have already proven useful for the related
+task of determining which sentences in an essay are related to the prompt
+          [7]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS0.P1.p2">
+         <p class="ltx_p">
+          For each essay, we therefore attempt to adapt the RI features used by
+          Higgins et al. (2004)
+          to our problem of prompt adherence scoring. We do this by generating
+one feature encoding the entire essay’s similarity to the prompt, another
+encoding the essay’s highest individual sentence’s similarity to the
+prompt, a third encoding the highest entire essay similarity to one of the prompt
+sentences, another encoding the highest individual sentence similarity
+to an individual prompt sentence, and finally one encoding the entire essay’s similarity
+to a manually rewritten version of the prompt that excludes extraneous
+material (such as “In his novel Animal Farm,
+George Orwell wrote,” which is introductory material
+from the third prompt in Table
+          1
+          ).
+Our RI feature set necessarily excludes those features from Higgins et al. that are not easily translatable to our problem
+since we are concerned with an entire essay’s adherence to its prompt
+rather than with each of its sentences’ relatedness to the prompt.
+Since RI does not provide
+a straightforward way to measure similarity between groups of words such
+as sentences or essays, we use Higgins and Burstein’s
+          [8]
+          method
+to generate these features.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Novel Features
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Next, we introduce six types of novel features.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P1">
+        <h5 class="ltx_title ltx_title_paragraph">
+         2. N-grams
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P1.p1">
+         <p class="ltx_p">
+          As our first novel feature, we use the 10,000 most important lemmatized
+unigram, bigram, and trigram features that occur in the essay.
+N-grams can be useful for prompt adherence scoring because
+they can capture useful words and phrases related to a prompt.
+For example, words and phrases like
+“university degree”, “student”, and “real world”
+are relevant to the first prompt in Table
+          1
+          ,
+so it is more likely that an essay adheres to the prompt
+if they appear in the essay.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P1.p2">
+         <p class="ltx_p">
+          We determine the “most important” n-gram features using
+information gain computed over the
+training data
+          [23]
+          .
+Since the essays vary greatly in length, we
+normalize each essay’s set of n-gram features to unit length.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P2">
+        <h5 class="ltx_title ltx_title_paragraph">
+         3. Thesis Clarity Keywords
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P2.p1">
+         <p class="ltx_p">
+          Our next set of features consists of the keyword features we
+introduced in our previous work on essay thesis clarity scoring
+          [19]
+          . Below we give an overview of
+these keyword features
+and motivate why they are potentially
+useful for prompt adherence scoring.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P2.p2">
+         <p class="ltx_p">
+          The keyword features were formed by first examining
+the 13 essay prompts, splitting each into its component pieces.
+As an example of what is meant by a “component piece”, consider the
+first prompt in Table 1.
+The components
+of this prompt would be “Most university degrees are theoretical”,
+“Most university degrees do not prepare students for the real world”,
+and “Most university degrees are of very little value.”
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P2.p3">
+         <p class="ltx_p">
+          Then the most important (primary) and second most
+important (secondary) words were selected from each prompt component,
+where a word was considered “important” if it would be a good word
+for a student to use when stating her thesis about the prompt.
+So since the lemmatized version of the third component of the second
+prompt in Table
+          1
+          is “it should rehabilitate they”,
+“rehabilitate” was selected as a primary keyword and “society”
+as a secondary keyword.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P2.p4">
+         <p class="ltx_p">
+          Features are then computed based on these keywords.
+For instance, one thesis clarity keyword feature is computed as follows.
+The RI similarity measure is first taken between the
+essay and each group of the prompt’s primary keywords.
+The feature then
+gets assigned the lowest of these values.
+If this feature has a low value, that suggests that the student
+ignored the prompt component from which the value came
+when writing the essay.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P2.p5">
+         <p class="ltx_p">
+          To compute another of the thesis clarity keyword features, the
+numbers of combined primary and secondary keywords the essay contains from each component
+of its prompt are counted.
+These numbers are then divided by the total count of primary and secondary features
+in their respective components. The greatest of the fractions generated in this way
+is encoded as a feature because if it
+has a low value, that indicates
+the essay’s thesis may not be very relevant to the prompt.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P3">
+        <h5 class="ltx_title ltx_title_paragraph">
+         4. Prompt Adherence Keywords
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P3.p1">
+         <p class="ltx_p">
+          The thesis clarity keyword features described above were intended for
+the task of determining how clear an essay’s thesis is,
+but since our goal is instead to determine how well
+an essay adheres to its prompt, it makes sense
+to adapt keyword features to our
+task rather than to adopt keyword features exactly as they
+have been used before. For this reason, we construct
+a new list of keywords for each prompt component, though
+since prompt adherence is more concerned with what the
+student says about the topics than it is with whether
+or not what she says about them is stated clearly, our
+keyword lists look a little different
+than the ones discussed above. For an example,
+we earlier alluded to the problem of students
+merely discussing all the evils of television for the
+prompt “Marx once said that religion was the opium
+of the masses. If he was alive at the end of the 20th
+century, he would replace religion with television.”
+Since the question suggests that students discuss
+whether television is analogous to religion in
+this way, our set of prompt adherence keywords for
+this prompt contains
+the word “religion” while the previously discussed
+keyword sets do not.
+This is because a thesis like “Television is bad”
+can be stated very clearly without making any
+reference to religion at all, and so an essay with
+a thesis like this can potentially have a very
+high thesis clarity score. It should not, however,
+have a very high prompt adherence score, as the prompt
+asked the student to discuss whether television is
+like religion in a particular way, so religion
+should be at least briefly addressed for an essay
+to be awarded a high prompt adherence score.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P3.p2">
+         <p class="ltx_p">
+          Additionally, our prompt adherence
+keyword sets do not adopt the notions of primary and
+secondary groups of keywords for each prompt component,
+instead collecting all the keywords for a component into
+one set because “secondary” keywords tend to be things
+that are important when we are concerned with what a
+student is saying about the topic rather than just
+how clearly she said it.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P3.p3">
+         <p class="ltx_p">
+          We form two types of features from prompt adherence keywords.
+While both types of features measure how much each prompt component was
+discussed in an essay, they differ in how they
+encode the information.
+To obtain feature values of the first type,
+we take the RI similarities between the
+whole essay and each set of prompt adherence keywords
+from the prompt’s components.
+This results
+in one to three features,
+as some prompts have
+one component while others have up to three.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P3.p4">
+         <p class="ltx_p">
+          We obtain feature values of the second type as follows.
+For each component, we count the number of prompt adherence keywords
+the essay contains. We divide this number by the number of prompt adherence keywords
+we identified from the component. This
+results in one
+to three features since a prompt has one to three components.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P4">
+        <h5 class="ltx_title ltx_title_paragraph">
+         5. LDA Topics
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P4.p1">
+         <p class="ltx_p">
+          A problem with the features we have introduced up to this point
+is that they have trouble identifying topics
+that are not mentioned in the prompt, but are nevertheless
+related to the prompt.
+These topics should not
+diminish the essay’s prompt adherence score
+because they are at least related to prompt concepts.
+For example, consider the prompt
+“All armies should consist entirely of professional soldiers:
+there is no value in a system of military service.”
+An essay containing words like “peace”, “patriotism”,
+or “training”
+are probably not
+digressions from the prompt, and therefore
+should not be penalized for discussing these topics. But
+the various measures of keyword similarities described
+above will at best not notice that anything related to
+the prompt is being discussed, and at worst, this
+might have effects like lowering some of the RI
+similarity scores, thereby probably lowering the prompt
+adherence score the regressor assigns to the essay.
+While n-gram features do not have exactly
+the same problem,
+they would still only notice that these example words
+are related to the prompt if multiple essays use
+the same words to discuss these concepts. For this reason,
+we introduce Latent Dirichlet Allocation (LDA)
+          [2]
+          features.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P4.p2">
+         <p class="ltx_p">
+          In order to construct our LDA features,
+we first collect all essays written in response
+to each prompt into its own set. Note that this feature type exploits
+unlabeled data: it includes all essays
+in the ICLE responding to our prompts, not just those
+in our smaller annotated 830 essay dataset. We then
+use the MALLET
+          [15]
+          implementation
+of LDA to build a topic model of 1,000 topics around
+each of these sets of essays. This results in what
+we can think of as a soft clustering of words into
+1,000 sets for each prompt, where each set of words
+represents one of the topics LDA identified being
+discussed in the essays for that prompt. So for
+example, the five most important words in the most
+frequently discussed topic for the military prompt
+we mentioned above are “man”, “military”,
+“service”, “pay”, and “war”.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P4.p3">
+         <p class="ltx_p">
+          We also use the MALLET-generated topic model to tell us
+how much of each essay is spent discussing each
+of the 1,000 topics. The model might tell us,
+for example, that a particular essay written on the
+military prompt spends 35% of the time discussing
+the “man”, “military”, “service”, “pay”, and “war” topic
+and 65% of the time discussing a topic whose
+most important words are “fully”, “count”,
+“ordinary”, “czech”, and “day”. Since the
+latter topic is discussed so much in the essay
+and does not appear to have much to do
+with the military prompt, this essay should probably
+get a bad prompt adherence score. We construct
+1,000 features from this topic model, one for each topic.
+Each feature’s value is obtained by using the topic model
+to tell us how much of the essay was spent discussing
+the feature’s corresponding topic. From these features,
+our regressor should be able to learn which topics are
+important to a good prompt adherent essay.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P5">
+        <h5 class="ltx_title ltx_title_paragraph">
+         6. Manually Annotated LDA Topics
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P5.p1">
+         <p class="ltx_p">
+          A weakness of the LDA topics feature type is that
+it may result in a regressor that has trouble
+distinguishing between an infrequent topic that is adherent to
+the prompt and one that just represents an irrelevant
+digression. This is because an infrequent topic
+may not appear in the training set often enough
+for the regressor to make this judgment. We
+introduce the manually annotated LDA topics feature
+type to address this problem.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P5.p2">
+         <p class="ltx_p">
+          In order to construct manually annotated LDA topic
+features, we first build 13 topic models, one for
+each prompt, just as described in the section on
+LDA topic features.
+Rather than requesting
+models of 1,000 topics,
+however,
+we request models
+of only 100 topics
+          . We then go through
+all 13 lists of 100 topics as represented by
+their top ten words, manually annotating
+each topic with a number from 0 to 5 representing
+how likely it is that the topic is adherent to
+the prompt. A topic labeled 5 is very likely
+to be related to the prompt, where a topic labeled 0
+appears totally unrelated.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P5.p3">
+         <p class="ltx_p">
+          Using these annotations alongside
+the topic distribution for each essay that the
+topic models provide us, we construct ten features.
+The first five features encode the sum
+of the contributions to an essay of topics annotated
+with a number
+          ≥1
+          , the sum of the
+contributions to an essay of topics annotated with a
+number
+          ≥2
+          , and so on up to 5.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P5.p4">
+         <p class="ltx_p">
+          The next five features are similar to the last,
+with one feature taking on the sum of the
+contributions to an essay of topics annotated with
+the number 0, another feature taking on the sum
+of the contributions to an essay of topics annotated
+with the number 1, and so on up to 4. We do not
+include a feature for topics annotated with
+the number 5 because it would always have the same
+value as the feature for topics
+          ≥5
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P5.p5">
+         <p class="ltx_p">
+          Features like these should give the regressor a better
+idea how much of an essay is composed of prompt-related
+arguments and discussion and how much of it is
+irrelevant to the prompt, even if some of the topics
+occurring in it are too infrequent to judge just from
+training data.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS3.SSS0.P6">
+        <h5 class="ltx_title ltx_title_paragraph">
+         7. Predicted Thesis Clarity Errors
+        </h5>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p1">
+         <p class="ltx_p">
+          In our previous work on essay thesis clarity scoring
+          [19]
+          ,
+we identified five classes of
+errors that detract from the clarity of an essay’s thesis:
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p2">
+         <p class="ltx_p">
+          Confusing Phrasing.
+          The thesis is phrased oddly, making it hard to understand the writer’s point.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p3">
+         <p class="ltx_p">
+          Incomplete Prompt Response.
+          The thesis leaves some part of a multi-part prompt unaddressed.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p4">
+         <p class="ltx_p">
+          Relevance to Prompt.
+          The apparent thesis’s weak relation to the prompt causes confusion.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p5">
+         <p class="ltx_p">
+          Missing Details.
+          The thesis leaves out an important detail needed to understand the writer’s point.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p6">
+         <p class="ltx_p">
+          Writer Position.
+          The thesis describes a position on the topic without making it clear that this is the position the writer supports.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p7">
+         <p class="ltx_p">
+          We hypothesize that these errors, though originally intended for thesis
+clarity scoring, could be useful for prompt adherence scoring as well.
+For instance, an essay that has a Relevance to Prompt error or an
+Incomplete Prompt Response error should intuitively receive
+a low prompt adherence score.
+For this reason, we introduce features based on these errors to our
+feature set for prompt adherence scoring
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p8">
+         <p class="ltx_p">
+          While each of the essays in our data set was previously
+annotated with these thesis clarity errors,
+in a realistic setting a prompt
+adherence scoring system will not have access to
+these manual error labels.
+As a result,
+we first need to predict
+which of these errors is present in each essay.
+To do this,
+we train five
+maximum entropy classifiers for each prompt,
+one for each of the five thesis clarity errors, using
+MALLET’s
+          [15]
+          implementation of
+maximum entropy classification. Instances are
+presented to classifier for prompt
+          p
+          for
+error
+          e
+          in the following way. If a training essay
+is written in response to
+          p
+          , it will be
+used to generate a training instance
+whose label is 1 if
+          e
+          was annotated for it
+or 0 otherwise.
+Since error prediction and prompt
+adherence scoring are related problems, the features
+we associate with this instance are features 1
+          -
+          6 which
+we have described earlier in this section.
+The classifier is then used to generate probabilities
+telling us how likely it is that each test essay has error
+          e
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS0.P6.p9">
+         <p class="ltx_p">
+          Then, when training our
+regressor for prompt adherence scoring, we add the
+following features to our instances. We add a binary feature
+indicating the presence or absence of each error. Or
+in the case of test essays, the feature takes on a
+real value from 0 to 1 indicating how likely the
+classifier thought it was that the essay had
+each of the errors. This results in five additional
+features, one for each error.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this section, we evaluate our system for prompt adherence scoring.
+All the results we report are obtained via five-fold cross-validation
+experiments. In each experiment, we use
+        35
+        of our labeled essays
+for model training, another
+        15
+        for
+parameter tuning, and the final
+        15
+        for testing.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Experimental Setup
+       </h3>
+       <div class="ltx_subsubsection" id="S5.SS1.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.1.1
+         </span>
+         Scoring Metrics
+        </h4>
+        <div class="ltx_para" id="S5.SS1.SSS1.p1">
+         <p class="ltx_p">
+          We employ four
+evaluation metrics.
+As we will see below,
+          S⁢1
+          ,
+          S⁢2
+          , and
+          S⁢3
+          are
+          error
+          metrics, so lower scores
+imply better performance. In contrast,
+          P⁢C
+          is a
+          correlation
+          metric, so higher correlation implies better performance.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p2">
+         <p class="ltx_p">
+          The simplest metric,
+          S⁢1
+          ,
+measures the frequency at which a system predicts the wrong score
+out of the seven possible scores.
+Hence, a system that predicts the right score only 25% of the time
+would receive an
+          S⁢1
+          score of 0.75.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p3">
+         <p class="ltx_p">
+          The
+          S⁢2
+          metric measures the average distance between a system’s score and the actual score.
+This metric reflects the idea that a system that predicts
+scores close to the annotator-assigned scores should be preferred over a system
+whose predictions are further off, even if both systems estimate the correct score
+at the same frequency.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p4">
+         <p class="ltx_p">
+          The
+          S⁢3
+          metric
+measures the average square of the distance
+between a system’s score predictions and the annotator-assigned
+scores. The intuition behind this system is that not only should we prefer
+a system whose predictions are close to the annotator scores, but we should
+also prefer one whose predictions are not too frequently very far away
+from the annotator scores. These three scores are given by:
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p5">
+         1N⁢∑Aj≠Ej′1, 1N⁢∑i=1N|Aj-Ej|, 1N⁢∑i=1N(Aj-Ej)2
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p6">
+         <p class="ltx_p">
+          where
+          Aj
+          ,
+          Ej
+          , and
+          Ej′
+          are the annotator assigned,
+system predicted, and rounded system predicted scores
+          respectively for essay
+          j
+          ,
+and
+          N
+          is the number of essays.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p7">
+         <p class="ltx_p">
+          The last metric,
+          P⁢C
+          , computes Pearson’s correlation coefficient between
+a system’s predicted scores and the annotator-assigned scores.
+          P⁢C
+          ranges from
+          -1
+          to 1. A positive (negative)
+          P⁢C
+          implies that the
+two sets of predictions are positively (negatively) correlated.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS1.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.1.2
+         </span>
+         Parameter Tuning
+        </h4>
+        <div class="ltx_para" id="S5.SS1.SSS2.p1">
+         <p class="ltx_p">
+          As mentioned earlier, for each prompt
+          pi
+          , we train a linear regressor
+          ri
+          using LIBSVM with regularization parameter
+          ci
+          .
+To optimize
+our system’s performance on the three error measures described previously,
+we use held-out validation data to independently
+tune each of the
+          ci
+          values
+          .
+Note that each of the
+          ci
+          values can be tuned independently because
+a
+          ci
+          value that is optimal for predicting scores for
+          pi
+          essays
+with respect
+to any of the error performance measures is necessarily also the optimal
+          ci
+          when measuring that error on essays from all prompts.
+However,
+this is not case with Pearson’s correlation coefficient, as the
+          P⁢C
+          value for essays
+from all 13 prompts cannot be simplified as a weighted sum of the
+          P⁢C
+          values obtained
+on each individual prompt.
+In order to obtain an
+optimal result as measured by
+          P⁢C
+          ,
+we jointly tune the
+          ci
+          parameters to optimize the
+          P⁢C
+          value
+achieved by our system on the same held-out validation data.
+However, an exact solution to this optimization problem is computationally
+expensive, as there are too many (
+          713
+          ) possible combinations of
+          c
+          values to exhaustively search.
+Consequently, we find a local maximum by employing the simulated annealing
+algorithm
+          [11]
+          ,
+altering one
+          ci
+          value at a time to optimize
+          P⁢C
+          while holding the
+remaining parameters fixed.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Results and Discussion
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Five-fold cross-validation results on prompt adherence score prediction are shown in Table
+         4
+         .
+On the first line, this table shows that our baseline
+system, which recall uses only various RI features,
+predicts the wrong score 51.7% of the time. Its predictions are off by an
+average of .368 points, and the average squared distance between its predicted
+score and the actual score is .234.
+In addition, its predicted scores and the actual scores have a
+Pearson correlation coefficient of 0.233.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         The results from our system, which uses all seven feature types
+described in Section 4, are shown in row 2 of the table.
+Our system obtains
+         S⁢1
+         ,
+         S⁢2
+         ,
+         S⁢3
+         , and
+         P⁢C
+         scores of
+.488, .348, .197, and .360 respectively, yielding
+a significant improvement over the baseline
+with respect to
+         S⁢2
+         ,
+         S⁢3
+         , and
+         P⁢C
+         with
+         p
+         &lt;
+         0.05,
+         p
+         &lt;
+         0.01, and
+         p
+         &lt;
+         0.06
+respectively
+         .
+While our system yields improvements by all four measures,
+its improvement over the baseline
+         S⁢1
+         score is not significant.
+These results mean that the greatest improvements our system makes
+are that it ensures that our score predictions are not too
+often very far away from an essay’s actual score, as making
+such predictions would tend to drive up
+         S⁢3
+         , yielding a
+relative error reduction in
+         S⁢3
+         of 15.8%, and it also ensures a better correlation
+between predicted and actual scores, thus yielding the 16.6% improvement in
+         P⁢C
+         .
+         It also gives
+more modest improvements in how frequently exactly the
+right score is predicted (
+         S⁢1
+         ) and is better at predicting scores
+closer to the actual scores (
+         S⁢2
+         ).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Feature Ablation
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         To gain insight into how much impact each of the feature types
+has on our system,
+we perform feature ablation
+experiments in which we remove the feature types
+from our system
+one-by-one.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         Results of the ablation experiments
+when performed using the four
+scoring metrics are shown in Table
+         d
+         .
+The top line
+of each subtable shows what our system’s score
+would be if we removed just one of the
+feature types from our system. So to see how
+our system performs by the
+         S⁢1
+         metric if
+we remove only predicted thesis clarity error features,
+we would look at the first row of results of
+Table
+         d
+         (a)
+under the column
+headed by the number 7 since predicted thesis clarity errors are the seventh feature type
+introduced in Section 4. The number here
+tells us that our system’s
+         S⁢1
+         score
+without this feature type is .502. Since
+Table
+         4
+         shows that when our system
+includes this feature type (along with all the other feature types),
+it obtains an
+         S⁢1
+         score of
+.488, this feature type’s removal costs our system
+.014
+         S⁢1
+         points, and thus its inclusion
+has a beneficial effect on the
+         S⁢1
+         score.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         From row 1 of
+Table
+         d
+         (a),
+we can see that removing feature 4
+yields a system with the best
+         S⁢1
+         score
+in the presence of the other feature types in this row. For this reason,
+we permanently remove feature 4 from the system
+before we generate the results on line 2. Thus,
+we can see what happens when we remove both feature 4
+and feature 5 by looking at the second entry in
+row 2. And since removing feature 6 harms
+performance least in the presence of row 2’s other feature types, we permanently
+remove both 4 and 6 from our feature set when we
+generate the third row of results. We iteratively
+remove the feature type that yields a system with the best performance
+in this way until we get to
+the last line, where only one feature type is used to generate each result.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p4">
+        <p class="ltx_p">
+         Since the feature type
+whose removal
+yields the best system
+is always the rightmost entry in a line, the
+order of column headings indicates the relative
+importance of the feature types, with the leftmost
+feature types being most important to performance
+and the rightmost feature types being least important in the presence of the other feature types.
+This being the case, it is interesting to
+note that while the relative importance of different
+feature types does not remain exactly the same if
+we measure performance in different ways, we can see
+that some feature types tend to be more important than others
+in a majority of the four scoring metrics. Features 2 (n-grams), 3 (thesis clarity keywords),
+and 6 (manually annotated LDA topics) tend to be the most important feature types,
+as they tend to be the last feature types removed in the ablation subtables.
+Features 1 (RI) and 5 (LDA topics)
+are of middling importance, with neither ever being removed first or last, and
+each tending to have a moderate effect on performance.
+Finally, while features 4 (prompt adherence keywords)
+and 7 (predicted thesis clarity errors) may by themselves
+provide useful information to our system, in the
+presence of the other feature types they tend to be the
+least important to performance
+as they are often the first feature types removed.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p5">
+        <p class="ltx_p">
+         While there is a tendency for some feature types to always be important (or unimportant) regardless of
+which scoring metric is used to measure performance,
+the relative importance of different
+feature types does not always remain consistent if
+we measure performance in different ways.
+For example, while we identified feature 3 (thesis clarity keywords)
+as one of the most important feature types generally
+due to its tendency to have a large beneficial impact on performance,
+when we are measuring
+performance using
+         S⁢3
+         , it is the least useful feature type.
+Furthermore, its removal increases the
+         S⁢3
+         score by a small amount,
+meaning that its
+inclusion actually makes our system perform worse with respect to
+         S⁢3
+         .
+Though feature 3 is an extreme example, all feature types fluctuate in
+importance, as we see when we compare their orders of removal among
+the four ablation subtables.
+Hence, it is important to know how performance is measured when
+building a system for scoring prompt adherence.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p6">
+        <p class="ltx_p">
+         Feature 3 is not the only feature type whose removal
+sometimes has a beneficial impact on performance.
+As we can see in Table
+         d
+         (b), the removal of
+features 4, 5, and 7 improves our system’s
+         S⁢2
+         score
+by .001 points. The same effect occurs in Table
+         d
+         (c)
+when we remove features 4, 7, and 3. These examples illustrate that
+under some scoring metrics, the inclusion of some feature types
+is actively harmful to performance. Fortunately,
+this effect does not occur in any other cases than the
+two listed above, as most feature types usually have
+a beneficial or at least neutral impact on our system’s
+performance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p7">
+        <p class="ltx_p">
+         For those feature types whose effect
+on performance is neutral in the first lines of ablation results (feature 4 in
+         S⁢1
+         ,
+features 3, 5, and 7 in
+         S⁢2
+         , and features 1, 4, 5, and 7 in
+         S⁢3
+         ),
+it is important to note that their neutrality does not mean
+that they are unimportant. It merely means that they
+do not improve performance in the presence of other feature types.
+We can see this is the case by noting that they are not
+all the least important feature types in their respective subtables
+as indicated by column order. For example, by the time
+feature 1 gets permanently removed in Table
+         d
+         (c),
+its removal harms performance by .002
+         S⁢3
+         points.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Analysis of Predicted Scores
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         To more closely examine the behavior of our system, in
+Table
+         6
+         we chart the distributions of scores it predicts
+for essays having each gold standard score. As an example of how to read this table,
+consider the number 3.06 appearing in row 2.0 in the .25 column of the
+         S⁢3
+         region. This means that 25% of the time, when our system with
+parameters tuned for optimizing
+         S⁢3
+         is presented with a test essay having
+a gold standard score of 2.0, it predicts that the essay has a score
+less than or equal to 3.06.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         From this table, we see that our system has a strong bias
+toward predicting more frequent scores as there are no numbers less
+than 3.0 in the table, and about 93.7% of all essays have gold standard
+scores of 3.0 or above.
+Nevertheless, our system does not rely entirely on
+bias, as evidenced by the fact that each column in the table has a
+tendency for its scores to ascend as the gold standard score increases,
+implying that our system has some success at predicting lower scores
+for essays with lower gold standard prompt adherence scores.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p3">
+        <p class="ltx_p">
+         Another interesting point to note about this table is that the difference in error weighting between the
+         S⁢2
+         and
+         S⁢3
+         scoring metrics appears to be having its desired effect,
+as every entry in the
+         S⁢3
+         subtable is
+less than its corresponding entry in the
+         S⁢2
+         subtable due to the
+greater penalty the
+         S⁢3
+         metric imposes for predictions that are very
+far away from the gold standard scores.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

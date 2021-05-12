@@ -1,0 +1,741 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    The deterministic part of the seventh International Planning Competition.
+   </title>
+   <abstract>
+    The International Planning Competition is organized in the context of the International Conference on Automated Planning and Scheduling (ICAPS) and it is considered a reference source for the planning and scheduling community. The competition is typically organized every two years and deals with relevant issues for the community such as the definition of evaluation standards, the publication of benchmarks and the collection and dissemination of data about state-of-the-art planners. This paper focuses on the deterministic part, the longest-running part of the International Planning Competition. The paper describes its format, the participants, the selection of benchmarks and the generated results accompanied with analysis from different perspectives. The paper also examines the results of a brand new track created to explore the potential of planners that exploit the power of multi-core processors. Overall, the results of the competition indicate significant progress with respect to previous competitions, but they also reveal that some issues remain open and need further research, such as the coverage of temporal planners when concurrency is required and the performance in the multi-core track. As a novelty, all the data and the software generated for running the competition have been made publicly available allowing researchers to reproduce the competition and to carry out different analysis of the results.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The International Planning Competition (IPC) has typically been held every 2 years in the context of the International Conference on Automated Planning and Scheduling (ICAPS). The main activity in the competition is evaluation of state-of-the-art planners by running them on a set of planning problems and comparing their performance with some specific metrics. Although the IPC is competitive and awards planners for their performance, the main goals of the competition are collection and dissemination of data and definition of evaluation methodologies. In fact, the IPC is used as a reference source when building a planner, and most new planning techniques are evaluated by considering languages, benchmarks, and metrics defined in the IPC series.
+     </paragraph>
+     <paragraph>
+      Currently the IPC comprises three parts: (1) a deterministic part for evaluation of domain-independent planners in deterministic and fully observable environments; (2) a learning part for planners able to learn and exploit domain-specific knowledge in deterministic planning; and (3) an uncertainty part for domain-independent planners able to plan under uncertainty. The deterministic part has been the main focus of the IPC over the years and is the part addressed in this paper. Details on the other two parts can be found in a survey paper [1] and on the IPC website.{sup:1}
+     </paragraph>
+     <paragraph>
+      After a 3-year gap, the seventh edition of the deterministic part intentionally provided continuity with the previous competition, IPC-2008, for easier comparisons and to build iteratively on previous work that could benefit the community. For example, IPC-2011 was structured using the same tracks as for IPC-2008 and preserved the same input language and evaluation scores. Likewise, the competition reused domains and problems to better quantify progress in the field. However, IPC-2011 also introduced several new planning domains and a large collection of problems over these domains that can serve as a reference for future research. There was special emphasis on the temporal track, and planning problems that require concurrency (i.e., that at least two different actions have to be performed at the same time) were intentionally included. With the aim of exploring new directions for planning research, the seventh edition introduced a multi-core track that evaluates the performance of planners with algorithms able to exploit multi-processor machines.
+     </paragraph>
+     <paragraph>
+      There were also similarities and differences with regard to the software used to run the competition. Continuing the work achieved in IPC-2008, there were explicit efforts to highlight the transparency and reproducibility of the results of IPC-2011. This involved the creation of a public repository of all the software, benchmarks, and source codes for the participant planners, along with short papers describing them and all the data generated. This public resource allows researchers to validate the competition results using their own means for further analysis from different perspectives.
+     </paragraph>
+     <paragraph>
+      The seventh edition of the deterministic part attracted a record number of 55 participants grouped in 31 teams from 11 different countries: Australia, Canada, China, France, Germany, India, Israel, Italy, Spain, UK, and USA. This is almost eight times the number of participants in the first competition, IPC-1998, and double the number in the previous one, IPC-2008. The competition results were presented at a special ICAPS session in July 2011. After the competition, a more detailed analysis was performed to gain more insight into the results and possible causes and consequences. In summary, the main contributions of the deterministic part of IPC-2011 are:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A collection of new domains and their corresponding problem generators.
+      </list-item>
+      <list-item label="•">
+       A detailed evaluation of the relative performance of the IPC-2011 planners with respect to new and previously used benchmarks.
+      </list-item>
+      <list-item label="•">
+       A new track for evaluation of multi-core planners.
+      </list-item>
+      <list-item label="•">
+       A public repository containing all the data produced during the competition and open-source tools for running the experiments and analyzing the results.
+      </list-item>
+      <list-item label="•">
+       A detailed analysis of the competition results that provides insights into the performance of state-of-the-art planners from different perspectives such as coverage, quality, CPU time, and memory usage.
+      </list-item>
+     </list>
+     <paragraph>
+      The overall aim of this paper is to provide accurate answers to the following questions:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       What is being measured? The definition of the scoring schema and how it is affected by the particular goal of every track is discussed in Section 2.3. The characterization of every track is described in Section 2.1. The scoring schema adopted is critically analyzed in Section 6 and various alternatives are examined.
+      </list-item>
+      <list-item label="•">
+       What are the benchmarks? Selection of the benchmark suite is a difficult problem that is addressed in Section 3. The difficulty mainly arises from the need to select challenging yet solvable problems and the fact that it might introduce bias, as discussed in Section 3.2 and Appendix C.1.
+      </list-item>
+      <list-item label="•">
+       What are the results? The main results are presented in Section 4 and are compared with the results from IPC-2008 and closely related tracks in Section 5.
+      </list-item>
+      <list-item label="•">
+       General questions and trends are summarized in Section 7.
+      </list-item>
+     </list>
+     <paragraph>
+      The remainder of the paper is organized as follows. Section 2 describes the deterministic part of IPC-2011 in terms of its format, the participants, and the evaluation schema. Section 3 reviews the benchmarks used and details the mechanisms followed in the domain and problem selection. Section 4 analyzes the competition results with respect to coverage, quality, raw speed, and memory usage. Section 5 presents a scalability analysis. The performance of the top planners in IPC-2011 is compared with that of the top planners in IPC-2008, and the performance of parallel solvers is compared with their sequential counterparts. The scoring schema used is critically analyzed in Section 6 and a number of alternatives are discussed. Section 7 summarizes with a number of conclusions. A series of appendices are available online as Supplementary material for further reference. Appendix A describes the participants for all the tracks. Appendix B provides additional details about the selected domains. Appendix C presents results for additional experiments performed once the competition was over. Appendix D shows a novel approach used to select problems that were reused from previous IPCs. Appendix E provides additional details on the way in which various statistical tests were conducted.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      The deterministic part of the seventh International Planning Competition
+     </section-title>
+     <paragraph>
+      One of the main aims in designing the deterministic part of IPC-2011 was to make the competition as inclusive as possible. The benchmarks were set up to have low PDDL requirements, mostly strips plus simple use of numeric fluents. This fact, in conjunction with the public availability of the source code for the Fast Downward planning system,{sup:2} made the deterministic part of IPC-2011 extremely popular with a record number of entrants.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Format
+      </section-title>
+      <paragraph>
+       The deterministic part of the IPC currently comprises three different planning models that differ in expressiveness. In all cases the evaluation of planners is carried out by comparing their performance with respect to the quality of the plans found. There are, however, different definitions for quality according to the purpose of each model.
+      </paragraph>
+      <paragraph>
+       Sequential planning pursues the generation of a sequence of actions in deterministic and fully observable environments. In sequential planning, quality is evaluated inversely to the total cost of the solution, which is defined as the sum of the individual costs for all actions included in the solution. Thus, maximization of quality corresponds to minimization of the total cost of the solution plans. Planning with preferences involves the generation of plans when goals have different strength requirements, for example, motivated by soft goals or trajectory constraints [2]. The objective of planners in this task is to maximize the total net benefit, that is, the difference in penalties for not achieving some goals or not observing a number of constraints and the total action cost. Finally, temporal planning involves the generation of solution plans when actions have a duration and may temporarily overlap. In this case, plan quality is inversely related to the makespan of the plan, that is, the temporal duration from when the first action is initiated to when the last action is completed.
+      </paragraph>
+      <paragraph>
+       Similar to the 2011 sat competition [3], IPC-2011 explicitly distinguished between the ability to use resources as efficiently as possible and the ability to provide fast solutions when using all available resources. The first case corresponds to the case of sequential solvers, whereas the second is explicitly designed for parallel solvers. Traditionally, all tracks of the IPC series were sequential, but in 2011 a brand new track was created for evaluation of parallel solvers: the multi-core track. In this track, all planners were given 30 min of wall-clock time regardless of the number of processes and/or threads launched, whereas in the sequential tracks, planners were given 30 min of CPU time in total. Nevertheless, parallel solvers were allowed to enter sequential tracks since CPU time was accumulated across all processes and threads launched by the solver, which resulted in reduced real times for parallel solvers.
+      </paragraph>
+      <paragraph>
+       Each planner was run on a single node of the cluster and no planner was allowed to use more than a single dual core, except in the multi-core track, in which four dual cores were readily available to speed up the processing. In all tracks, each planner was allotted 30 min per planning task (either CPU time or wall-clock time) and a memory limit of 6 GB of RAM and 750 GB of hard disk space.
+      </paragraph>
+      <paragraph>
+       All competitors were required to adhere to the syntax of Val[4], which was used to retrieve various statistics (e.g., the total cost of each solution, the number of valid solutions, the step length of the plan) and to facilitate automated validation. In this regard, two criteria were set:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If a planner generated any invalid solution, it was disqualified for that particular problem even if other valid solutions were generated.
+       </list-item>
+       <list-item label="2.">
+        For the sequential optimal track, if a planner generated any suboptimal solution, it was assigned a null score for the whole domain.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Participants
+      </section-title>
+      <paragraph>
+       The deterministic part of IPC-2011 received 55 submissions distributed among four different tracks. Table 1 summarizes the number of planners covering different PDDL fragments for each track. Different entries are counted separately even if they implemented different versions of the same planner (e.g., fdss-1 and fdss-2).
+      </paragraph>
+      <paragraph>
+       Although PDDL3.1 was the input language for IPC-2011, none of the 55 entrants fully implemented it. The vast majority of participants only supported the strips subset besides typing, simple numeric fluents, and the equality predicate. Less than half of the planners implemented the full PDDL1.2 set, including the adl requirements. None of the planners implemented PDDL2.2 in full, with only 14 supporting derived predicates and only three supporting timed-initial literals. Finally, only three planners from the temporal satisficing track implemented some limited support of PDDL3.1, in particular numeric state variables.
+      </paragraph>
+      <paragraph>
+       As in IPC-2008, a preferences track for IPC-2011 was announced and later canceled because four planners were registered for the satisficing track but only one was submitted. Likewise, six planners were registered for the optimal track but only one was submitted.This may be not a coincidence since effective compilations for planning with preferences have recently appeared that transform some preference planning tasks into classical planning tasks [11], with better results than those of planners tailored for this track, at least in the optimal setting. Participation in the preferences track requires handling of complex parts of PDDL (e.g., full support for fluents or disjunctive goals). In addition, many of the participants who registered for this track were also participating in the sequential tracks, so they may have eventually decided to concentrate on the latter.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Evaluation
+      </section-title>
+      <paragraph>
+       Since its conception, the IPC has aimed to provide the planning community with standard mechanisms that objectively and reliably evaluate the performance of different planning techniques for easier comparability. Throughout the IPC series, different evaluation schemes have been proposed to score and rank planners and after seven editions this ideal has proved to be a difficult challenge. The difficulty lies in the nature of planning, which lends itself to a number of very diverse and often conflicting evaluation criteria from straightforward binary success measures (such as finding a solution or proving that there is none) to optimization along many different dimensions. Furthermore, the evaluation has to measure the domain independence of planners, quantifying their versatility for different classes of problems across different domains. Therefore, planner performance can be analyzed from different perspectives, such as the number of problems solved, CPU time, plan length, total cost, makespan, or other features such as the diversity or flexibility of the solutions. For this reason, selection of the best planner necessarily depends on the context in which it will be used.
+      </paragraph>
+      <paragraph>
+       An important consideration in IPC-2008 was that quality, defined inversely to the total cost of a plan, is widely regarded as a useful measure in most contexts. From a theoretical point of view, finding a solution is not the only interesting challenge, and improving over previous solutions has received much attention in the literature [12], [13]. From a practical point of view, although faster identification of solutions is a primary concern in some real-world applications, finding good solutions is also relevant, especially if the cost of the plans is directly related to important features such as time or economic costs so that large time horizons are allowed for planning. The deterministic part of IPC-2011 continued with the same evaluation scheme defined for the previous edition. This focuses on good plan quality, with less emphasis on the number of problems solved or the CPU time used. Accordingly, if two planners find solutions within the same time and memory bounds, the plan with the lower cost is awarded a better score. This is not applicable to the optimization track, for which all solutions are expected to have the same cost and thus only the number of solutions found (or coverage) is relevant for the final score.
+      </paragraph>
+      <paragraph>
+       For IPC-2011, all planners were given the same time and memory cutoffs (1800 s and 6 GB of main memory) and were required to find valid solutions with the best quality. For a particular planner with regard to a given planning task, quality is defined as the ratio of the lowest total cost (computed as the sum of the costs of all individual actions included in a solution plan) to the total cost of the best solution found. Thus, each planner p gets a score per planning task i, {a mathematical formula}Sip, expressed as{a mathematical formula} where {a mathematical formula}Cip is the total cost of the best solution found by planner p for instance i, and {a mathematical formula}Ci⁎ is the lowest total cost found so far by any planner for the same problem, that is, {a mathematical formula}Ci⁎=minp⁡{Cip}. The final score for each planner, {a mathematical formula}Sp, is computed as the sum of the scores obtained in every planning instance, aggregating scores among domains of the same track, {a mathematical formula}Sp=∑iSip. Obviously, scores were not aggregated among tracks since they were considered as separate competitions.
+      </paragraph>
+      <paragraph>
+       No optimal solver was built for any domain and thus all the scores computed in this way rely solely on the total cost of the plans found by the different competitors. Although the final scores might change in the light of the true optimal scores (even resulting in different rankings for planners), the results and conclusions drawn here are expected to be robust. Section 6 discusses the current scoring schema and analyzes alternatives.
+      </paragraph>
+      <paragraph>
+       Planners in this track were scored using the same schema as for the sequential satisficing track.Temporal track.In this track there is no notion of total cost, although costs can of course be defined in general for temporal planning. Instead, quality is defined inversely to the makespan of every solution: {a mathematical formula}Sip=Mi⁎Mip, where {a mathematical formula}Mip denotes the makespan of the best solution found by planner p for instance i, and {a mathematical formula}Mi⁎ is the shortest makespan found so far by any temporal planner for the same problem.
+      </paragraph>
+      <paragraph>
+       The first and second best-ranked planners were picked as the winner and runner-up, respectively, although additional considerations were scored according to a judgment call, in particular in the sequential satisficing and temporal satisficing tracks (Sections 4.3.4 and 4.5.4).
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Benchmarks
+     </section-title>
+     <paragraph>
+      Researchers are increasingly evaluating their results with regard to the benchmark selection of the IPC series. Therefore, this selection is an important issue not only for the competition itself but also for the planning community. Ideally, the IPC benchmarks should cover different ranges for the structure and difficulty of problems. However, guaranteeing this coverage is complex because of the lack of domain-independent techniques for assessing the diversity and difficulty of planning problems.
+     </paragraph>
+     <paragraph>
+      Similar problem-solving competitions, such as the SAT competition, address this issue for random track-generating benchmarks using random synthetic problems of varying difficulty. The phase transition of such SAT instances is well known [14] and progress is then often measured in this particular track in terms of the size (number of variables and clauses) of the formulas that can be tackled. Unfortunately, this is not true for other tracks of the same competition, such as the structured/application tracks. Similarly, the case of automated planning is complex because the branching factor and the depth of the planning problems are not easily bounded with the number of state variables. Although a phase transition has already been demonstrated in automated planning [15], [16], [17], it is relative only to random graphs that have never been used in previous IPCs. In general, not much is known about what makes some problems particularly harder than others, although some research has been carried out [18], [19].{sup:4}
+     </paragraph>
+     <paragraph>
+      In other competitions, such as the Answer Set Programming competition, the organizers aim to provide a balance between problem categories such as search, query, and optimization covering different computational complexity classes such as polynomial, NP, and Beyond NP[20]. This classification is very difficult in automated planning, for which a better known result is that classical planning is PSPACE-complete [21] (even in very restricted cases), so that the complexity analysis falls in a case-by-case analysis [22], [23]. Other studies have analyzed the structure of planning domains regarding a particular search configuration with promising results, such as creating taxonomies of domain classes under the heuristic function {a mathematical formula}h+[24], [25] or others [26]. Finally, in other cases, such as the CSP competition, the organizers only select problems that can be solved by at least one of the participants in a sensible time frame, and a somewhat related approach was followed in IPC-2011 (Section 3.2 and Appendix D).
+     </paragraph>
+     <paragraph>
+      Another consideration when building the IPC benchmarks is the inclusion of real-world problems [18]. The difficulty here arises from the shortage of applications that use standard PDDL.
+     </paragraph>
+     <paragraph>
+      With all this in mind, the final design of the IPC-2011 benchmarks was motivated by three goals: (i) to evaluate the domain independence of planners; (ii) to assess the evolution of planners since IPC-2008; and (iii) to provide interesting domains for the planning community. In accordance with these objectives, there was special emphasis on evaluation of planners over a large number of different domains instead of over a large number of planning tasks from a reduced number of domains. In addition, a good number of domains and problems were reused from the deterministic and learning tracks of IPC-2008, but new domains were also included in response to a public call for domains. Finally, challenging test sets for state-of-the-art planners of increasing difficulty were designed. The remainder of this section surveys the domains and problems selected. Further details on the particular domains and problems generated for each domain are in Appendix B.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Selection of domains
+      </section-title>
+      <paragraph>
+       The benchmarks of IPC-2011 comprised 19 different domains: 14 domains in the sequential optimal, satisficing, and multi-core tracks, and 12 domains in the temporal satisficing track. Eleven domains were reused from previous competitions, and eight new domains were introduced for the first time. Among the new domains, six were collected in response to a public call for domains, and two, barman and turnandopen, were created by the organizers. In contrast to the practice in previous competitions, there was a single PDDL definition per domain because most of the planners submitted only supported basic PDDL requirements (Table 1, page 85). The IPC-2011 organizers believed that efforts to make different versions would not be worthwhile because few planners would have benefited.
+      </paragraph>
+      <paragraph>
+       Table 2, Table 3 show the domains used in IPC-2011 for the sequential and temporal tracks, respectively, along with their PDDL requirements. Domains shown in bold font were used in all tracks. All the domains use at most strips plus actions costs and action durations in the temporal track. In the sequential tracks, eight domains were reused from the deterministic track of IPC-2008. Another domain (parking) was from the learning track of IPC-2008 and five domains were new. Four of the 14 domains are inspired by real applications (elevators, parcprinter, scanalyzer and transport), while the remaining 10 explore different structures of planning problems.
+      </paragraph>
+      <paragraph>
+       The new domains were especially created to challenge specific planning techniques. In the sequential track we introduced nomystery, barman, parking, floortile and visitall to challenge diverse weaknesses of the delete-relaxation heuristics. The management of limited resources is a key issue in automated planning however the delete-relaxation ignores resource consumption producing optimistic estimations of limited benefit in resource-constrained problems. More precisely delete effects in the nomystery domain encode the fuel consumptions of shippings; they encode the fact that robot hands can only grasp one object at a time and that glasses need to be clean before being filled in the barman domain and, in the parking domain, delete effects encode when curbs are available for parking. In addition the floortile domain was introduced because its dead-ends are difficult to recognize with a delete-relaxation heuristic and the visitall domain was introduced because of its conflicting goals where progressing towards one goal means moving away from the others so that large plateaux are produced when using delete-relaxation heuristics.
+      </paragraph>
+      <paragraph>
+       The tidybot domain was introduced with a different motivation, the increasing interest in re-approaching the fields of AI planning and autonomous robotics. State-of-the art planners fail to address problems with large state spaces, like the motion planning problems typically addressed in robotics. The tidybot domain models a household cleaning task that involves motion planning and task planning in which one or more robots must pick up a set of objects and put them into goal locations.
+      </paragraph>
+      <paragraph>
+       In the temporal track there were four new domains and eight domains from previous IPCs (six from IPC-2008, one from IPC-2006, and one from the learning track of IPC-2008), although some of them had to be adapted to the requirements supported by the competing planners. In this case, four domains are also inspired by real-world applications (crewplanning, elevators, parcprinter, and tms). The IPC-2008 domains modeltrain, transport, and woodworking were not reused as they require :numeric-fluents, which is not supported by five out of the eight temporal planners.
+      </paragraph>
+      <paragraph>
+       Most temporal domains in previous competitions were temporally simple, in the sense that they did not require concurrency and problems could be solved by a pure sequential planner [27].{sup:5} The IPC-2011 benchmarks intentionally included three new domains, matchcellar, tms, and turnandopen, in which all possible solutions require concurrency of actions. In particular, in the matchcellar domain, a set of fuses have to be mended in the light of a match. In the turnandopen domain a robot must turn the doorknob and push the door at the same time to navigate through rooms and in the tms domain diverse pieces of ceramic have to be baked and treated while a kiln is on fire. These domains present a greater challenge to temporal planners, and the organizers recognized this by giving a runner-up award to the planner with the best performance in these domains (Section 4.5.4).
+      </paragraph>
+      <paragraph>
+       Other people contributed with additional domains that were not included in the final version. The main reason for discarding them was that they required fragments of PDDL that only a few competing planners (if any) were able to support. Although these domains were not used in the final version of the competition, they are available on the competition website{sup:6} with a detailed description and the specific reasons why they were discarded.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Selection of problems
+      </section-title>
+      <paragraph>
+       The IPC-2011 benchmarks consists of 20 problems per domain. This number is smaller than in previous competitions, but the total number of problems is compensated by including a larger number of domains. For example, IPC-2008 had six, eight, or nine domains per track with 30 problems each, resulting in an overall number of planning tasks ranging from 180 to 270. However, IPC-2011 had 20 planning tasks in 12 or 14 different domains per track, resulting in an overall number of instances ranging from 240 to 280. In all, the IPC-2011 benchmarks comprised 800 problems distributed as follows: 280 problems for the sequential optimal track, 280 for the sequential satisficing and multi-core tracks, and 240 for the temporal satisficing track.
+      </paragraph>
+      <paragraph>
+       From a general point of view, every track poses different challenges that should be taken into account. For example, although there is no difference in theoretical complexity in the general case, optimal planning is harder than satisficing sequential planning in practice [22], [28]. Therefore, planners in both tracks were evaluated over the same collection of domains, but problems for the optimal track were carefully selected to be easier to solve. In addition, to facilitate direct comparisons, planners in the multi-core track were faced with exactly the same planning tasks used in the sequential satisficing track (Section 5.2).
+      </paragraph>
+      <paragraph>
+       In each track, problems with increasing difficulty were selected so that they would be challenging (but not impossible) for state-of-the-art planners. This criterion requires identification of the transition between solvable and non-solvable problems (from a practical point of view and not whether they can be actually solved or not) for each domain and track for current state-of-the-art planners. Although the number of objects in a planning problem has been widely used as a weak measure of difficulty, there is currently no effective domain-independent procedure for characterizing the difficulty of problems for a given set of planners, other than attempting to solve them and to look at the results, as in the CSP competition. This approach would require a preliminary IPC to select problems for the official IPC, which, given the large number of participants, was intractable.
+      </paragraph>
+      <paragraph>
+       Therefore, two different methods were adopted for selection of problems, depending on whether data on their difficulty were available (e.g., when using problems from previous IPCs). Arguably, both approaches assume that the transition from solvable to non-solvable for IPC-2011 competitors would be close to the transition experienced by a different set of planners.
+      </paragraph>
+      <paragraph>
+       For the new domains introduced in IPC-2011 we developed (or asked domain creators to develop) a problem generator for each domain. The parameters of these generators tune the structure and size of the problems. Typically, the parameters vary the number and type of world objects and the number of goals to achieve. It should be noted that the parameters of the generators are domain-specific, so they cause variations in complexity that differ across domains. Using these generators, reduced test sets of problems were created for solving by planners that were state of the art at recent IPCs: lama-2008[29], lpg[30], and ff[31]. Problems with an increasing number of objects and goals were generated for solving within a 300-s time limit. As a general rule, the easiest problems of IPC-2011 had similar characteristics to those that were solved in tens of seconds in these limited runs. The most difficult problems were similar to those that were not solved in 300 s by lama-2008, lpg, and ff. Therefore, tuning of parameters to generate the competition problems was mainly a trial-and-error procedure. In fact, in some domains (such as floortile and visitall), the entire set of problems had to be regenerated several times as they were either too easy or too difficult for the IPC-2011 planners. This approach heuristically avoided a blind search in the parameter space for the problem generators.
+      </paragraph>
+      <paragraph>
+       Unavoidably, the selection of planners cited above introduces a bias towards those instances that are solvable by precisely those planners, which favors entrants that implement similar approaches, such as heuristic planning. However, there is no guarantee that they will be equally hard for planners that implement different techniques, such as SAT. Specifically, if planner y solves a domain d much more effectively than planner x, then the performance delta between y and x will appear small if most instances from d are selected such that x can still solve them; by contrast, if x is much better in d and most instances from d are selected such that x can still solve them, then the delta to y will appear very large. Therefore, if other planner types had been used to test the problems, the particular planning tasks chosen would have been different. An illustrative example is the case of madagascar-p, which does not implement heuristic search and solves all instances in the pegsol domain in less than 4 s, far faster than its competitors. Once the competition was over, its author fixed a couple of bugs that improved its performance dramatically, so that all instances in the floortile domain could be solved in less than 1 s, whereas other planners such as lama-2011 and probe solved only six and five instances, respectively. Other domains for which the corrected version of madagascar-p excelled are parcprinter and woodworking. As additional evidence of the bias introduced by our selection mechanism, lama-2011 and probe solved either 19 or 20 planning tasks in the domains barman, parking, and visitall, whereas neither madagascar nor madagascar-p succeeded in solving a single instance. Summarizing, if harder instances would have been selected from the domains pegsol, floortile, parcprinter or woodworking the delta performance of madagascar-p would have been more noticeable. On the opposite side, the selection of problems from the domains barman, parking and visitall clearly harmed the assessment of the performance of madagascar-p. Appendix C.1 provides further details.
+      </paragraph>
+      <paragraph>
+       For domains used in the previous competition, we used publicly available data to rank planning tasks in ascending order of expected difficulty. Again, the resulting ordering should be expected to be significantly biased towards the planners used in IPC-2008, although the bias should be expected to be smaller because the number of planners used is greater and there is more heterogeneity. There are many ways to rank the expected difficulty of planning tasks, the most evident one being the number of planners that solved them. We tried to use a more informative measure that took into account which specific planners solved which problems based on the Glicko rating system [32]. Appendix D gives more information about the procedure followed.
+      </paragraph>
+      <paragraph>
+       Fig. 1 shows the number of planners that solved a particular number of problems considering the whole benchmark, that is, those that were reused according to the procedure described in Appendix D and the new problems. As a result of the methodology used, we expected the results to fit a normal distribution. In other words, we expected many problems to be solved by several planners and fewer problems to be solvable by only a few planners or all of them, corresponding to the two tails of a normal distribution. These desirable properties were observed for all the IPC-2011 tracks except the sequential optimal track. In this case, many problems were not solved by any competing planner, and many problems were solved by many entrants. In our experience, selecting problems for this track seems to be very challenging, mainly because planners scale worse in this track, which reduces the maximum level of problem complexity they can handle. Thus, selection of structurally different problems becomes harder and problems tend in general to be more similar in terms of difficulty than in the other tracks: either they are not solved at all or a large number of planners solve them, as evidenced, for example, by the results for the barman domain.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Results
+     </section-title>
+     <paragraph>
+      Apart from the quality of the solutions, typical parameters used to compare planner performance in previous IPCs include the number of instances solved (or, alternatively, the overall problem solving success rate, defined as the percentage of problems solved{sup:7}), and the raw speed at which solutions were generated. In this section we consider all these parameters and an additional one, memory management. Examining memory usage is important. Most planners go through a preprocessing step that instantiates all operators and predicates and incurs memory overheads, which can worsen significantly when taking into account that best-first search strategies are widely used. In addition, some planners can create particular structures to guide the search, such as BDDs [34], or abstractions that have high memory demands [35]. Finally, since a planner can return invalid solutions, Val[4] was used and the percentage of invalid solutions is also reported for all tracks.
+     </paragraph>
+     <paragraph>
+      As well as figures showing results for coverage, quality, raw speed, memory usage, and the percentage of invalid plans, the analysis involved a number of statistical tests. A detailed description of these tests is in Appendix E. We tried to avoid the phenomenon known as p-hacking by explicitly reporting how we determined our sample size, all data exclusions, all manipulations, and all measures in the study [36]. Sample selection is explained in Section 3 and Appendix B; data exclusions and manipulations are discussed below; and measures are detailed in the subsection for each track.{sup:8} The results for the statistical tests should be interpreted as a measure of effort with regard to the benchmarking and parameter selection, and thus they cannot necessarily be easily generalized to other problems or parameters. For this, further studies should be conducted such as reporting effect sizes, confidence intervals or looking at the variance of performance using bootstrap resampling. In other words, they are used solely to support the final conclusions for particular benchmark and parameter selections.
+     </paragraph>
+     <paragraph>
+      An important observation is that all statistical tests involve pairwise comparisons of two samples. This raises the question of how to deal with cases in which an entry has an unknown value. Although this is not the case when comparing the number of instances solved (since each planning instance is assigned a value per planner: it is either solved or not) or memory usage (even if a planner does not succeed in solving a problem, memory consumption can still be monitored), this situation arises when observing quality and raw speed, since one planner might not solve a particular planning instance whereas the other does. This issue has been managed in a variety of ways in the past and in the following we refer to the analysis conducted for the third and fifth IPCs.{sup:9}
+     </paragraph>
+     <paragraph>
+      One solution consists of assigning an arbitrarily bad quality score or runtime to instances that were not solved. Another solution involves conducting alternative statistical tests but considering only double hits, or pairwise associations for which both values of the same variable (either quality or runtime) refer to solved instances. In the third IPC, double hits were used in addition to ordinary analysis when studying plan quality; when observing runtime, the organizers assigned an infinitely bad speed to the planner that did not solve a particular case [37]. The organizers of the fifth IPC adopted a different, but similar, methodology: when comparing runtime they assigned twice the time limit to cases for which no solution was generated, observing that this was the minimum value for which the performance gap for a problem solved by one planner and not solved by the other is greater than the performance gap for any problem solved by both. In their statistical analysis of plan quality, they partly adhered to the same recommendations made earlier and considered only double hits [38].
+     </paragraph>
+     <paragraph>
+      In our analysis of the IPC-2011 results, we tried to encompass both approaches, although there are some differences. When analyzing raw speed we conservatively assigned 1800 s (the maximum time allotted for solving each instance) to cases that were unsolved. This amounts to assuming that every planner eventually solves every instance. This diminishes the effect of coverage and reduces the chance of obtaining a significant difference, which is a desired effect since the study refers only to raw speed. However, when examining plan quality we considered only double hits. The reason is that in preliminary analysis conducted over all pairs of problems (and assigning infinitely bad quality to cases that were unsolved), we observed a significant influence of coverage, which dramatically favored participants that solved more problems. Indeed, we observed a nearly perfect correlation between coverage and the ordering suggested by the results of that analysis.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Format of the results presentation
+      </section-title>
+      <paragraph>
+       The following subsections introduce the main analysis findings for the results in each track. Each subsection starts by analyzing coverage and the official IPC metric. When examining the number of instances solved, the evolution over time is plotted to provide empirical evidence of the influence of the time bound. These data provide an overall assessment of the ability of planners to produce fast responses if plan quality is ignored. The profile of these curves increases every time a new solution is found. Therefore, they provide an indication of whether a planner solves more problems at any particular time instant, although they give no information about the particular instances been solved. In addition, a steep slope indicates that a planner is able to solve plans at a fast pace in a short time.
+      </paragraph>
+      <paragraph>
+       Raw speed and memory usage are then examined in detail. Typical memory management strategies are discussed and exemplified for selected cases. The distribution of (peak) memory usage is also plotted as a function of the number of planning instances. These plots were generated considering only instances that were successfully solved. This curve is more informative because the last point on the x-axis represents the coverage of every planner and it provides a better view of the number of problems that each planner can be expected to solve for a given amount of memory. It should be noted, however, that measuring memory usage is not straightforward and a number of subtleties should be taken into account. On one hand, Linux implements a lazy allocation/deallocation policy that might produce false results from time to time, and this observation applies to all tracks. For planners that start various processes (and the sequential multi-core in particular), the IPC-2011 software computed the memory used by one particular planner as the sum of the memory used by all of its subprocesses, even if they are sharing data, such as libraries or private data. In addition, the limit imposed on memory usage for one process is inherited by its subprocesses, along with all the descriptors used by the parent, but the operating system allows the newly generated process to allocate space on a different segment provided that no process exceeds its own limit. However, the overall memory usage can exceed the original limit. These observations are particularly important, as shown in Sections 4.3.3 and 4.4.3 when analyzing data generated in the sequential satisficing and multi-core tracks, respectively.
+      </paragraph>
+      <paragraph>
+       The results for different statistical analyses are presented in digraphs that show partial orders of dominance between planners. In these graphs, each vertex is a planner and there is an edge between planner a and b if and only if a statistically dominates the performance of b with regard to the random variable under study for a given confidence level. When dominance is detected at confidence level {a mathematical formula}α=0.001, a solid edge is drawn. Alternatively, if dominance is found at a less restrictive confidence level of {a mathematical formula}α=0.005, the edge is dashed. The absence of a simple path from a to b indicates that no statistically significant relationship was found between them and therefore that no transitive ordering can depend on such a relationship. When considering all instances, the resulting dominance graphs are necessarily acyclic since all edges refer to pairwise comparisons over the same benchmarking set. However, this is not true when using only double hits, and acyclicity cannot be enforced. All these statistical tests are described in Appendix E.
+      </paragraph>
+      <paragraph>
+       Finally, each subsection ends with a justification of the winner and runner-up selected in each track.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Performance of the sequential optimal planners
+      </section-title>
+      <paragraph>
+       As mentioned in Section 2.3, no optimal specific solver was developed for any domain and thus there is no assurance that the solutions provided were always optimal. However, it was noted that the solutions for each instance always had the same total cost, and this was true for all planners that successfully solved the instances. Therefore, it is reasonable to assume that all planners behaved as expected and found optimal solutions.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Number of problems solved and quality
+       </section-title>
+       <paragraph>
+        Table 4 lists the number of problems solved and the success rate for each planner in descending order. Since we checked that all correct solution plans had the same quality, the score assigned to each planner and planning task can only take a value of 0 (unsolved or invalid) or 1 (optimally solved). Hence, the final score for each planner equals the number of problems it solved. Therefore, Table 4 also shows the final score for every entry. In this track, invalid solutions were almost never generated apart from a couple of exceptions: cpt4 generated three invalid solutions in the pegsol domain and one in the sokoban domain.
+       </paragraph>
+       <paragraph>
+        Fig. 2 shows results for the statistical test on coverage. The results differentiate four groups. The first group comprises the two top-ranked planners, which solved 185 and 182 problems, respectively. The second group consists of planners that were able to solve between 158 and 169 problems, and gamer, which solved 148 instances. The third group contains planners that solved between 144 and 151 tasks, except for gamer. The last group comprises only the cpt4 planner, which solved 44 problems. The results are not surprising and endorse the idea that optimal planners that solve more problems are superior; however, some insights are obtained. There are no significant differences (at the highest confidence level) in the performance of planners in the same group; this is attributed to chance when using a high confidence level. In fact, when comparing the number of problems simultaneously solved by two planners in the same group, it was found that either the difference is too small to be significant (e.g., fdss-1 solves the same problems as fdss-2 and only three additional ones) or is slightly larger but the intersection is rather low (e.g., gamer and forkinit solve 148 and 158 problems, respectively, of which 119 are solved by both). This is not the case when comparing planners in different groups. The usual case is that one planner dominates the other and solves a high percentage of the problems solved by the other; for example, selmax solved 169 problems, of which 167 were solved by fdss-2, while fdss-1 solved them all.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Analysis of CPU time
+       </section-title>
+       <paragraph>
+        Fig. 3 shows the evolution of the number of problems solved by all entrants in the time interval {a mathematical formula}(0,1800]s. Although selmax performs worse than a number of planners at the start, it performs as well as merge-and-shrink at the end of the interval and moderately better than lmcut and fd-autotune. However, all these planners, along with iforkinit, perform more or less equivalently between 20 and 200 s, with the latter showing a comparative decrease in performance after the first 100 s. In particular, it falls below the two variants of fdss at {a mathematical formula}t=122s and clearly below the group of leading planners in performance at {a mathematical formula}t=251s. The case of gamer is untypical. It shows a spectacular improvement in score in the middle of the time range considered. The reason is that this planner spends half of the available time in non-unit cost domains building a pattern database (PDB) (with abstraction in some cases and without in others) with a symbolic backwards breadth-first search. If the start state is found while building the PDB and no abstraction was used (i.e., a perfect mapping is used instead) the optimal solution is displayed immediately. Otherwise, more searching is needed and when the 15-min period is over, the planner starts a symbolic forward search from the initial state using the information in the PDB. Hence, it is very tempting to regard all problems solved by gamer during the first 900 s as relatively easy. At {a mathematical formula}t=896, gamer had solved 81 problems, and then it solves 59 additional tasks in just 163 s, performing equally well as lmfork from this timepoint onwards.
+       </paragraph>
+       <paragraph>
+        Fig. 4 shows the results of the Wilcoxon signed-rank test for run time. The two variants of fast-downward stone-soup are considered to be the fastest, followed by merge-and-shrink. A plausible explanation is that this is an effect of the coverage of these planners since the statistical test considers all instances. An alternative statistical test conducted using only double hits concluded that fdss-1 is faster than merge-and-shrink, which is faster than fdss-2. This is a counterintuitive result, since these planners are portfolios that consist of a collection of solvers that are invoked in succession. However, although selmax was able to solve problems at faster pace than other planners, especially in the second half of the allotted time, lmcut and fd-autotune (which solved roughly the same number of problems) were faster than it at a confidence level of {a mathematical formula}α=0.001. The reason is that during the first 30 s, lmcut and fd-autotune solve problems faster than selmax does, and the number of problems solved in this interval amounts to 66.3% of the problems solved by the end. From this point on, selmax solves slightly more problems than fd-autotune does, but it is not until {a mathematical formula}t=80 that selmax catches lmcut, with more than 75% of the problems solved. The case of gamer, as anticipated above, is particularly interesting and the Wilcoxon signed-rank test indicates that it is slower than all the other entrants except for cpt4.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Analysis of memory performance
+       </section-title>
+       <paragraph>
+        Typically, planners use memory incrementally according to a monotonically increasing profile. However, other strategies for memory management have been identified. With the advent of portfolios (such as the fast-downward-stone-soup family and merge-and-shrink), memory can be used and released according to the replacement policy implemented. In addition, some planners implement particular strategies to create heuristics that are used later to guide the search. This is the case for gamer and for merge-and-shrink, which augments the size of a table with admissible estimates until it reaches a particular limit. At this point, the table is shrunk and the search proceeds. This strategy results in a memory profile that shows some decreases at the points at which shrinking is performed.
+       </paragraph>
+       <paragraph>
+        For illustration purposes, Fig. 5 shows the memory profile for four different planners in solving problem 018 of the woodworking domain. The planners considered are fdss-1, merge-and-shrink, gamer, and selmax. Their selection is justified because they all implement the three different strategies identified above. From the preceding figure, another diagnosis can easily be inferred: merge-and-shrink performs a number of shrinking operations, the most prominent one at {a mathematical formula}t=370.59s, at which the memory decreased from 5277.31 MB to 91.70 MB in just 5 s. fdss-1 shows the typical memory profile of a portfolio whereby memory is used and released as the solvers implemented in it are successively invoked. It is notable that the second solver used by fdss-1 in this particular case shows a memory profile much like that of merge-and-shrink. Inspection of the code for fdss-1 revealed that this is exactly the second planner that is automatically invoked by it. selmax uses memory incrementally, as most planners do, and always keeps within the limits. Indeed, it has been observed that selmax incurs a very low percentage of memory failures. Finally, gamer, the only planner that succeeded in solving this particular planning task, shows a monotonically increasing profile while building the PDB up to {a mathematical formula}t=900s. At this point, the memory usage falls abruptly. This is because the PDB creation process is killed and the memory allocated is freed. From here, another search is conducted forward until the solution is found at {a mathematical formula}t=1237.86s with memory consumption of 3303.72 MB, slightly greater than half of the available memory.
+       </paragraph>
+       <paragraph>
+        Fig. 6 shows the memory required to solve a particular number of tasks.
+       </paragraph>
+       <paragraph>
+        The Wilcoxon signed-rank results for memory usage are shown in Fig. 7. Surprisingly, in spite of all the available memory (up to 6 GB of RAM), there are four planners (cpt4, lmcut, fd-autotune and selmax) that take, on average, less than 1 GB. Planners that are known to use massive memory are ranked last according to this metric: gamer, which creates BDDs, and merge-and-shrink, which creates abstractions. Finally, fdss-1 uses much more memory, on average, than the other planners, and this observation is supported by the statistical test results, yet it never fails on memory. The reason is that it monitors its own memory usage. When it exceeds a given limit, the solver is aborted and the next one is invoked.
+       </paragraph>
+      </section>
+      <section label="4.2.4">
+       <section-title>
+        Distinguished performers in the sequential optimal track
+       </section-title>
+       <paragraph>
+        The results in Table 4 (page 92) reveal the following:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         fdss-1 and fdss-2 were the top performers among all entries in the sequential optimal track, as evidenced by the statistical test results summarized in Fig. 2, page 93.
+        </list-item>
+        <list-item label="•">
+         Among all entries shown in the second level of Fig. 2, selmax and merge-and-shrink solved more problems.
+        </list-item>
+       </list>
+       <paragraph>
+        Therefore, the following planners were distinguished by their performance in the sequential optimal track of IPC-2011:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Winner: instead of nominating two variants of the same planner as winners, the one that solved more problems was chosen as the winner. The planner selected was fdss-1, which solved 185 problems in total.
+        </list-item>
+        <list-item label="•">
+         Runner-up: although there is no statistical evidence (at a confidence level of 99.5%) of differences between selmax, merge-and-shrink, fd-autotune, lm-cut, and forkinit, the first two were chosen as joint runners-up because they solved more problems, 169 each in total.
+        </list-item>
+       </list>
+       <paragraph>
+        An interesting observation is that two of the three winning planners (fdss-1 and merge-and-shrink) are portfolios. Moreover, the three portfolios in the competition (including fdss-2) showed the best performance among all entries, tying only with selmax.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Performance of the sequential satisficing planners
+      </section-title>
+      <paragraph>
+       For the sequential satisficing track there were 27 competing planners. The following subsections examine their performance under different parameters.
+      </paragraph>
+      <section label="4.3.1">
+       <section-title>
+        Number of problems solved and quality
+       </section-title>
+       <paragraph>
+        According to the expression given in Section 2.3, each planner is assigned a score in the interval {a mathematical formula}[0,1], with 0 if no solution is found and 1 if no planner found any solution with better quality or, alternatively, with a lower total cost. Therefore, coverage (or the number of problems solved) does not necessarily equal the final score. Table 5 shows the final score, the number of problems solved, and the success rate in descending order for the first parameter. This table considers only solutions validated by Val. For this track, 13.6% of the solutions were deemed invalid by Val. It should be noted that this happened a number of times just because the output was not compliant with the format recognized by Val.{sup:10}
+       </paragraph>
+       <paragraph>
+        It is evident that lama-2011 ranked first in terms of both the number of problems solved and the scoring function used. fdss-1 solved just one fewer problem than probe and the fdss-2 variant. Although the correlation between coverage and score in this track is as high as 0.98, a few planners would have been ranked differently if coverage had been chosen instead. Remarkably, probe ranks third for the number of problems solved (tied with fdss-2) instead of eighth, whereas fd-autotune-2 ranks ninth for the number of problems solved instead of sixth. These differences are due solely to the quality of the solutions found. The explanation is that although probe has excellent coverage, its plans tend to be worse than those generated by other entrants. Similarly, fd-autotune-1 does not solve as many problems as its final position might suggest, but its plans are usually better.
+       </paragraph>
+       <paragraph>
+        Fig. 8 shows the partial order according to the binomial test results for coverage. Likewise, Fig. 9 (page 98) shows the partial order according to the Wilcoxon signed-rank test for plan quality. Recall from the beginning of this section that only double hits are considered in the second case. It should be noted that some results suggest a significant difference in favor of a planner that solves far fewer problems. This is reasonable since use of only double hits completely ignores the overall performance of each planner. A plausible interpretation of this observation is that some planners might solve problems with higher quality solutions but that the price they pay in searching to find these solutions is so high that they solve a much smaller set of problems.
+       </paragraph>
+       <paragraph>
+        In terms of quality, cpt4, dae_yahsp, fdss-1, and arvand dominate all the other planners at a confidence level of 99.9%, and cpt4 and fdss-1 are the only non-dominated planners at a confidence level of 99.5%. Importantly, probe is dominated by a good number of planners, including lama-2011, both variants of fast-downward stone-soup, and fd-autotune. This endorses the intuition that the quality of plans generated by probe is low. Interestingly, when coverage is fully ignored, lama-2011 appears to be dominated by a number of planners: cpt4, fd-autotune-2, and fdss-1 at a confidence level of 99.9%, and additionally by arvand at a confidence level of 99.5%. Undoubtedly, the difference in score between lama-2011 and these planners should mainly be attributed to coverage, since for every successful planning instance the score necessarily increases. With regard to the winner of the previous edition, lama-2008 still shows competitive performance as it is dominated by only a few planners.
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        Analysis of CPU time
+       </section-title>
+       <paragraph>
+        In this section, we first show how the number of problems solved evolved over time in the range {a mathematical formula}(0,1800]s. Owing to the large number of participants in this track, Fig. 10 (page 99) has been split into four parts.
+       </paragraph>
+       <paragraph>
+        lama-2011 is the fastest planner in solving problems. It is only dominated by probe in the first 2 s, and is ranked first over all other entrants immediately thereafter. Interestingly, probe, fdss-1, fdss-2, and fd-autotune-1 show a profile that is still increasing close to the end of the time span, that is, the planners shown in Fig. 10(a) suffer no stagnation in terms of their performance. This is not the case for yahsp2-mt, as shown in Fig. 10(c), which stagnates severely after the first 199 s. A good example of a planner that solves plans at a very fast pace in some intervals is brt (as shown in Fig. 10(c)), whose runtime distribution is typical of a system that performs a lot of preprocessing before starting to search for a solution plan.
+       </paragraph>
+       <paragraph>
+        To confirm all these observations, a statistical test was performed for the time taken until a first solution is found. Fig. 11 (page 100) shows the resulting dominance graph. As anticipated by our preliminary analysis, lama-2011 significantly outperforms all other entrants in the sequential satisficing track in terms of running time. In addition, as suggested by the preliminary analysis derived from Fig. 10(a), probe, fdss-1, and fd-autotune-1 are very fast, and are dominated only by the winner, whereas fdss-2 is dominated by the previous entries, the last two at {a mathematical formula}α=0.001 and the first at {a mathematical formula}α=0.005. Finally, it is worth noting that lama-2008 dominates half the competitors with regard to raw speed.
+       </paragraph>
+      </section>
+      <section label="4.3.3">
+       <section-title>
+        Analysis of memory performance
+       </section-title>
+       <paragraph>
+        Since the evaluation schema of the competition emphasized quality by fixing the allotted time to 30 min, many planners followed one of two strategies: (i) most of them implemented anytime approaches that try to find a solution quickly and then refine it during the remaining time; and (ii) a few implemented portfolios or collections of different solvers that were invoked successively. In the first case, memory is usually consumed incrementally. In the second case, planners exhibit a memory usage profile that increases while one solver is trying to solve a particular problem, and then abruptly decreases (by releasing all the memory used) if a solution is not found before the next solver is started. This behavior is then repeated as many times as solvers are used.
+       </paragraph>
+       <paragraph>
+        For illustration purposes, Fig. 12 (page 100) shows an example of these strategies. It shows the memory profile for lama-2011 and the portfolios fdss-1 and fdss-2 in the 11th problem of the openstacks domain. All the planners successfully solved this case, with lama-2011 generating up to 18 different solutions and the portfolios generating seven solutions each. Whereas lama-2011 uses memory incrementally, fdss-1 and fdss-2 exhibit a number of cycles in which memory is used and then released.
+       </paragraph>
+       <paragraph>
+        Fig. 13 (page 101) shows the maximum memory required by all entrants in this track as a function of the number of problems solved by each of them. In particular, brt takes less than 6 GB to solve 127 planning tasks, but it exceeds this limit to solve 30 additional tasks. brt uses only a few hundreds of MB most of the time, but it can take a few GB when loading the results of a SAT compilation into memory. It has been observed that this task consistently lasts for less than 5 s and is performed by a subprocess that never uses 6 GB on its own.
+       </paragraph>
+       <paragraph>
+        Fig. 14 (page 102) shows the Wilcoxon signed-rank results for the maximum memory ever used. Not surprisingly, the worst-performing planners in terms of memory usage are among those that failed more often on memory: popf2, lamar, lama-2008, randward, and roamer. By contrast, a few planners showed impressive management of available memory: probe never failed on memory and dae_yahsp failed only once, although they are among the planners that use more memory. Finally, the portfolios fdss-1 and fdss-2 also managed to keep within the available memory and show good usage.
+       </paragraph>
+      </section>
+      <section label="4.3.4">
+       <section-title>
+        Distinguished performers in the sequential satisficing track
+       </section-title>
+       <paragraph>
+        The results in Table 5 (page 96) reveal the following:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         lama-2011 ranked first according to the official score. It also showed outstanding performance in terms of both plan quality and raw speed, as evidenced by the statistical tests summarized in Figs. 9 (page 98) and 11 (page 100).
+        </list-item>
+        <list-item label="•">
+         fdss-1 ranked second according to the official IPC score. When considering plan quality, fdss-2 has a similar performance and cpt4 and fd-autotune-2 are better, as suggested by Fig. 9. However, the second variant of fast-downward stone-soup is dominated by the first one when observing raw speed, as shown in Fig. 11 (page 100), and cpt4 and fd-autotune-2 rank far behind fdss-1, as shown in Table 5.
+        </list-item>
+       </list>
+       <paragraph>
+        Thus, the following planners were distinguished by their performance in the sequential track of IPC-2011:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Winner: lama-2011, with an overall score of 216.33 and 250 problems solved.
+        </list-item>
+        <list-item label="•">
+         Runner-up: fdss-1, with a final score of 202.08 and 232 problems solved.
+        </list-item>
+       </list>
+       <paragraph>
+        Finally, it is worth noting that the analysis performed in Section 6 under alternative metrics shows that probe also exhibited outstanding performance. However, since the IPC emphasized plan quality, probe was not selected as a winner as quality was its major drawback.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Performance of the sequential multi-core planners
+      </section-title>
+      <paragraph>
+       A sequential multi-core track was introduced in the IPC series for the first time in 2011 to acknowledge this planning architecture trend. Section 2.1 provides a description of its rules.
+      </paragraph>
+      <paragraph>
+       To facilitate comparisons among tracks, entrants in the sequential multi-core track were faced with exactly the same problems chosen for the sequential satisficing track; the results of this comparison can be found in Section 5.2.
+      </paragraph>
+      <section label="4.4.1">
+       <section-title>
+        Number of problems solved and quality
+       </section-title>
+       <paragraph>
+        In this track, 16.5% of the plans issued were not valid according to Val. Table 6 shows the final score for each planner, along with the number of problems solved and the success rate.
+       </paragraph>
+       <paragraph>
+        Remarkably, the winner of this track, arvandherd, did not outperform the winner of the sequential satisficing track and it solved 14 fewer problems than lama-2011 did, despite being allowed more computational resources. A number of planners that entered this track also participated in the sequential satisficing track: yahsp2-mt, madagascar-p, madagascar, and acoplan. yahsp2-mt was able to solve more problems when allowed to run the subprocesses for longer, solving 18 additional problems. madagascar and madagascar-p solved exactly the same number of problems, 88 and 67, respectively, and acoplan, surprisingly, solved two fewer problems. The performance of madagascar and madagascar-p was as expected, since these are the same planners as entered in the sequential satisficing track. However, the case of acoplan seems more difficult to account for. A plausible explanation is that this planner uses a stochastic algorithm so that small differences in coverage can easily be attributed to chance, even if more computational resources are allowed.
+       </paragraph>
+       <paragraph>
+        As noted in Section 2.1, the IPC was run in a very strict mode. Among other considerations, if a planner ever produced an invalid solution, the problem was considered unsolved even if some valid plans were first generated. While this did not affect most planners across all tracks, two planners in the sequential multi-core track were affected by this decision. The first, yahsp2-mt, created invalid solutions (along with valid solutions) in two different problems of the pegsol domain and thus these problems did not contribute to improving its score. By contrast, this decision severely hampered roamer-p, which created invalid plans in 39 different problems in the following domains (number of problems affected shown in parentheses): nomystery (1), barman (7), parking (6), scanalyzer (1), sokoban (7), tidybot (3), transport (1), visitall (4), and woodworking (9). roamer-p was equipped with a technique to avoiding plateaus based on random walks. After the competition, its authors discovered a bug in constructing new states that caused this undesired behavior, which decreased the number of problems effectively used for computing its score from 179 to 140. If no invalid problem had been issued in any of these cases, its final score would have been 165.01, ranking second in the end. For the sake of completeness, these values are shown in Table 6 in italics. In the following, we discuss the results for which generation of an invalid plan resulted in an invalid problem (even if there were some valid solutions also) unless stated otherwise.
+       </paragraph>
+       <paragraph>
+        From the preceding table it also follows that sorting the performance of the multi-core planners according to their score successfully ranks them with respect to coverage. There is only one exception: roamer-p solved 140 problems, whereas yahsp2-mt solved 155, yet the former obtained a better score; in fact, the coefficient for correlation between coverage and the score was 0.986. A plausible explanation for this phenomenon lies in the quality of the plans found by each planner. The results in Table 6 suggest that the quality of the plans found by roamer-p are significantly better than those found by yahsp2-mt. To test this conjecture and to provide additional information about the significance of the differences, various statistical tests were performed.
+       </paragraph>
+       <paragraph>
+        The first test analyzes the number of problems effectively solved by each planner. Fig. 15 shows the acyclic graph resulting from the binomial test for {a mathematical formula}p=0.5. If the cases for which roamer-p and yahsp2-mt produced invalid solutions along with valid solutions are used favorably, the scenario changes significantly. The main differences are that the performance of ayalsoplan, phsff, roamer-p, and yahsp2-mt is indistinguishable at a confidence level of 99.9%. At a confidence level of 99.5%, ayalsoplan dominates yahsp2-mt, but not roamer-p or phsff.
+       </paragraph>
+       <paragraph>
+        Fig. 16 shows the dominance relationships between entrants in the sequential multi-core track with regard to plan quality as computed by the Wilcoxon signed-rank test. In this figure, acoplan was removed because the set of problems solved was not considered to be statistically significant. As shown, arvandherd finds plans with the best quality among all participants. The ability of roamer-p to find good plans as conjectured above is confirmed. Finally, there is no clear dominance among the other entries. Since the number of double hits between them is often just barely below 65% over the total number of problems solved (thus producing sample populations of reasonable size), this is attributed to the fact that they excel in disjoint sets of domains. Indeed, madagascar and madagascar-p are better in parcprinter, whereas phsff clearly outperforms the other planners in elevators, scanalyzer, sokoban, and tidybot; finally, yahsp2-mt excels in barman, floortile, transport, and visitall. In other domains, either the performance is very similar (as in nomystery), or none of the planners can find solutions (especially in openstacks), so that no statistically relevant observations can be made.
+       </paragraph>
+      </section>
+      <section label="4.4.2">
+       <section-title>
+        Analysis of CPU time
+       </section-title>
+       <paragraph>
+        Fig. 17 shows the evolution of the number of problems solved in the interval {a mathematical formula}(0,1800]s. phsff and yahsp2-mt are the fastest algorithms in the short term, with phsff always solving more problems than yahsp2-mt up to the end of the interval. phsff solved 120 problems in the first 13 s (and yahsp2-mt solved 109), whereas arvandherd solved 119 problems. From this point on, the winner of this track progressed much faster and had already solved 123 problems at {a mathematical formula}t=14s, and yahsp2-mt solved only one additional problem. However, these planners are still among the fastest up to {a mathematical formula}t=58s, at which point ayalsoplan catches yahsp2-mt, with both planners solving 123 problems by this time. A couple of minutes later, at {a mathematical formula}t=219s, the coverage of ayalsoplan equals that of phsff, with 153 problems solved, and it finally solves more problems, as shown in Table 6 (page 101).
+       </paragraph>
+       <paragraph>
+        Fig. 18 shows Wilcoxon signed-rank results for raw speed. The ability of phsff to find solutions promptly is much the same as for ayalsoplan and yahsp2-mt at the most restrictive confidence level. At a confidence level of 99.5% the situation changes and phsff is faster than yahsp2-mt, but not ayalsoplan. Other relationships shown in Fig. 18 are supported by the curves shown in Fig. 17. In particular, madagascar-p is faster than madagascar, which in turn is faster than acoplan. There is, however, an interesting observation: Fig. 17 shows that roamer-p is clearly dominated by the two variants of madagascar up to {a mathematical formula}t=1254s. By this point, roamer-p had solved 67 problems, the same number of problems solved by madagascar. A few minutes later, at {a mathematical formula}t=1501s, roamer-p had solved as many problems as madagascar-p (88), and dominated madagascar and madagascar-p from this point on both. Indeed, at this time point it started to solve new problems very rapidly, reaching 140 problems, presumably as a result of the technique used to avoid plateaus (Section 4.4.1) since the planner is started once a preliminary search fails. This steep increment in performance is reflected in the Wilcoxon signed-rank test, which determines that roamer-p dominates both madagascar and madagascar-p.
+       </paragraph>
+      </section>
+      <section label="4.4.3">
+       <section-title>
+        Analysis of memory performance
+       </section-title>
+       <paragraph>
+        In the sequential multi-core track, all entrants launched a number of processes, each one consuming its own memory requirement. Since these processes can be started and terminated according to different policies, it is rather difficult to outline a general behavior of the sequential multi-core planners with regard to memory usage. For example, while most planners start a reduced number of processes and then launch threads when needed (e.g., phsff varies the number of threads from two and six for the same process), others (such as ayalsoplan) vary the number of both processes and threads during the whole processing time.
+       </paragraph>
+       <paragraph>
+        For illustration purposes, Fig. 19 shows the memory profile for arvandherd, ayalsoplan, phsff, and roamer-p in solving problem 012 of the transport domain. This figure differs slightly from Figs. 5 (page 94), 12 (page 100), and 27 (page 109). In this case, the x-axis shows wall-clock time instead of CPU time. In general, it was observed that planners in this track showed a monotonically increasing profile even if memory decreases from time to time.
+       </paragraph>
+       <paragraph>
+        Fig. 20 shows the maximum memory needed to solve a specific number of problems for all entrants in this track. The maximum memory reported by ayalsoplan results from various observations already made in Section 4.1. This planner starts a good number of processes, each of which stores a different hash table that is used as a pruning device. Although the memory required to store this table is tiny, every process consumes memory in storing the states that are encountered. Thus, every process takes additional memory without ever exceeding the maximum allotted, but in different segments, so that the overall memory goes well beyond the limit of 6 GB. To conclude, it is worth noting that yahsp2-mt solves 81 problems and consumes more than 6000 MB in each execution, but always below 6 GB.
+       </paragraph>
+       <paragraph>
+        The Wilcoxon signed-rank results for the maximum memory ever used are shown in Fig. 21. Remarkably, arvandherd almost never exceeded the available memory, even considering that it might take a significant amount of memory in cases that were not solved. This is because it implements specific rather conservative limits on memory usage. If any thread exceeds the allotted memory, arvandherd either returns immediately or is restarted with a less greedy search, depending on the solver and the number of failures that occurred. At the other extreme, phsff tends to use less memory but also fails more often on memory; it failed on memory in the example shown in Fig. 19. This is because it does not implement any memory policies and relies only on its low memory consumption.
+       </paragraph>
+      </section>
+      <section label="4.4.4">
+       <section-title>
+        Distinguished performers in the sequential multi-core track
+       </section-title>
+       <paragraph>
+        According to the results in Table 6 (page 101), arvandherd and ayalsoplan solved more problems with the highest score. In particular, the difference between arvandherd and all the other entrants, as evidenced by the statistical test performed in Section 4.4.1 for which results are summarized in Fig. 16 (page 103), is deemed statistically significant. ayalsoplan appears to be dominated by roamer-p and has indistinguishable performance from phsff. However, these two planners were ranked far behind ayalsoplan. Thus, the following planners were distinguished by their performance in the sequential multi-core track of IPC-2011:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Winner: arvandherd, with an overall score of 227.07 and 236 problems solved.
+        </list-item>
+        <list-item label="•">
+         Runner-up: ayalsoplan, with a final score of 159.95 and 184 problems solved.
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Performance of the temporal satisficing planners
+      </section-title>
+      <paragraph>
+       The following subsections examine the performance of entrants in the temporal satisficing track under the usual parameters: number of problems solved, quality, CPU time, and memory management.
+      </paragraph>
+      <section label="4.5.1">
+       <section-title>
+        Number of problems solved and quality
+       </section-title>
+       <paragraph>
+        In this track, planners were required to find a valid solution to a planning task that involves durative actions that might temporarily overlap or interfere. A key difference for this track is that planners were not required to minimize the total cost of the actions in the plan, but the makespan. In fact, there is no notion of cost other than the duration of each action for the purpose of the competition, but of course costs can be defined in general for temporal planning.
+       </paragraph>
+       <paragraph>
+        It has already been noted that temporal planning can be computationally more complex than classical planning [10]. In fact, it was found that concurrency differentiates expressive temporal action languages from simple ones [27]. Nevertheless and despite the availability of a temporal extension to PDDL since 2003 [39], most domains in previous IPCs were inherently sequential so that concurrency was not required to solve the problems [40].{sup:11}
+       </paragraph>
+       <paragraph>
+        In IPC-2011, three of 12 domains required concurrency explicitly: matchcellar (Appendix B.2.4), tms (Appendix B.2.11) and turnandopen (Appendix B.2.12). Planners were allowed to produce multiple solutions and all of them were verified with Val, which found that up to 40.1% of the plans issued were invalid, most of them produced by dae_yahsp, yahsp2, and yahsp2-mt in the domains that explicitly required concurrency.
+       </paragraph>
+       <paragraph>
+        Table 7 shows the final score, the number of problems solved, and the success rate for the temporal satisficing planners. In this case, the coefficient for correlation between the number of problems solved and the score is 0.981. The most remarkable observations are that yahsp2-mt and yahsp2 are the first- and second-ranked planners according to the number of problems solved, yet their score ranks them second and fourth, respectively. In this regard, almost no statistical dominance was found among the top-ranked planners, as discussed next. Remarkably, two planners did not solve a single problem: sharaabi and tlp-gp. In particular, sharaabi[41] actually solved 63 instances, but all the plan solutions were found to be invalid according to val. The problem was that sharaabi did not shift the start time of actions consuming a resource immediately after the preceding action produced it; instead, one ended precisely at the same time as the other started. This is invalid according to val. For tlp-gp, the authors reported a bug in the parser that prevented it from ever solving a single instance.
+       </paragraph>
+       <paragraph>
+        Planners sharaabi and tlp-gp were removed from the following statistical tests as they were not able to solve any problem. Fig. 22 shows the binomial test results for coverage. As anticipated, the statistical test distinguishes the performance of all planners with regard to coverage in just two levels, placing the four top-ranked planners in the first and the other two in the second. On one hand, while yahsp2-mt is the planner providing the best coverage, its performance is very close to that of both dae_yahsp and yahsp2. On the other hand, in spite of its differences in coverage from popf2, both planners solve rather different sets of problems: dae_yahsp, yahsp2-mt, and yahsp2 are epoch-based planners, which gives them a remarkable advantage when solving simple temporal domains, but they are incomplete, as witnessed by their poor performance in concurrent domains, for which they solved no problem at all. popf2 and lmtd were the only planners able to find solutions to domains that required concurrency. Indeed, popf2 solved all the problems in the matchcellar domain, nine in turnandopen, and five in tms. Its performance in these domains is only rivaled by lmtd, which solved 15 problems in matchcellar, 13 in turnandopen, and none in tms. It seems reasonable to assume that if more domains requiring concurrency had been selected, the final scores would have changed substantially.
+       </paragraph>
+       <paragraph>
+        The situation becomes even more apparent when considering differences in quality or makespan for the solutions found by each planner. The Wilcoxon signed-rank results are shown in Fig. 23. cpt4 stands out, as expected, since it is an optimal planner. However, lmtd dominates cpt4 in terms of makespan, with medians for the total time distribution of 7 and 7.17, respectively. This is a counterintuitive result since lmtd is a satisficing temporal planning system, whereas cpt4 is an optimal planner, so this observation deserves an explanation. cpt4 is indeed an optimal planner (and this explains its low coverage) for both makespan and total cost (the latter was not tested in IPC-2011). However, when optimizing total time it actually produces optimal plans with regard to the conservative semantics [42] and not to PDDL 2.1 semantics, although the latter allow more concurrency and thus shorter makespans. Obviously, cpt4 could have easily performed a post-processing step to compress the plans, switching from conservative to PDDL 2.1 semantics, but cpt4 was never designed to produce such plans according to its author (Vincent Vidal, personal communication). lmtd uses a heuristic called temporal precedence constraints contexts, {a mathematical formula}htpcc[43], whose efficiency strongly depends on the selection of preference constraints among preconditions. Although it is unclear whether this heuristic works in the general case or not, lmtd performed exceptionally well according to the Wilcoxon signed-rank test,{sup:12} and this is attributed mainly to the accuracy of its estimates in those cases. To conclude, the median of the total time distribution for the plans generated by lmtd is very close to the medians of the same distributions generated by popf2 and dae_yahsp, but is greater than those of yahsp2-mt (9 versus 10.14) and yahsp2 (9 versus 11.66). The latter differences are deemed statistically significant, even at a restrictive confidence level of 0.001.
+       </paragraph>
+      </section>
+      <section label="4.5.2">
+       <section-title>
+        Analysis of CPU time
+       </section-title>
+       <paragraph>
+        Fig. 24 shows an overall view of the number of problems solved by each planner and how quickly they provided responses; the makespan of the plans generated by each planner is ignored. The raw speed performance of the planners falls into four different categories: (i) yahsp2-mt dominates all the other entries; (ii) yahsp2 dominates dae_yahsp and popf2 most of the time, except at the end, where dae_yahsp solves one fewer problem than yahsp2 does; (iii) cpt4 and lmtd perform similarly and are dominated throughout the interval by the previously mentioned planners; and (iv) sharaabi and tlp-gp are included only for the sake of completeness, but their curve is hidden because they did not solve any problem. Interestingly, dae_yahsp progresses by solving problems throughout the interval, whereas all the other planners stagnate relatively soon. For example, yahsp2-mt, the winner of the track, had solved 144 problems at {a mathematical formula}t=196s and only solved one additional problem in the remaining 1604 s.
+       </paragraph>
+       <paragraph>
+        The Wilcoxon signed-rank results for raw speed are shown in Fig. 25. Again, sharaabi and tlp-gp have been excluded from this analysis because they did not solve any problem. As noted above, yahsp2-mt was the fastest algorithm providing responses, followed by yahsp2. This observation is supported by Fig. 24, which indicates that these planners were the fastest throughout the interval. As expected, yahsp2 was faster than the other planners in the second group: the winner of the track, dae_yahsp, and one of the joint runners-up, popf2. The performance of these planners in terms of raw speed is significantly superior to that of planners in the third group: cpt4 and lmtd.
+       </paragraph>
+      </section>
+      <section label="4.5.3">
+       <section-title>
+        Analysis of memory performance
+       </section-title>
+       <paragraph>
+        In the temporal satisficing track there were no portfolios or planners that use memory-based heuristics. Thus, the most usual policy for handling memory consisted of incremental use. Closer inspection of the memory consumption by all entrants in this track revealed that this was precisely the case. As an example, Fig. 27 (page 109) shows how much memory was used over time in solving problem 003 of the elevators domain, which was solved by all the planners except cpt4, sharaabi, and tlp-gp. It is evident that memory was used linearly and increased over the whole period. Note, however, the flat profile for popf2 from {a mathematical formula}t=240s up to {a mathematical formula}t=1000s. This results from the particular choice of algorithms by popf2. From {a mathematical formula}t=0s to {a mathematical formula}t=240s, popf2 uses the enforced hill-climbing search algorithm (EHC) [31], retaining the set of visited states to avoid visiting duplicate states. This set grows, as shown in Fig. 27. At {a mathematical formula}t=240s, EHC stops searching and the set of visited states is cleared, although popf2 retained the memory internally. From {a mathematical formula}t=240s to {a mathematical formula}t=1000s, a {a mathematical formula}weighted-A⁎ ({a mathematical formula}WA⁎) search is used and a set of visited states is retained, which grows, filling the memory retained by popf2. At {a mathematical formula}t=1000s, the set of visited states from {a mathematical formula}WA⁎ has filled the memory retained, so memory usage starts to increase again from this point onwards.
+       </paragraph>
+       <paragraph>
+        In general, it was observed that popf2 was very memory-demanding, using all of the available memory in most cases.{sup:13} By contrast, cpt4 was very conservative, using less than 1 GB most of the time. Fig. 26 shows the maximum memory needed to solve a different number of problems.
+       </paragraph>
+       <paragraph>
+        Fig. 28 shows the acyclic graph representing the statistical dominance among all entrants in terms of memory consumption according to the Wilcoxon signed-rank test. The results are not surprising and the only remarkable observations seem to be that tlp-gp uses even less memory than cpt4 and that popf2, as anticipated, uses more memory than all the other planners.
+       </paragraph>
+      </section>
+      <section label="4.5.4">
+       <section-title>
+        Distinguished performers in the temporal satisficing track
+       </section-title>
+       <paragraph>
+        According to the results in Table 7 (page 106), the planners dae_yahsp and yahsp2-mt have the highest score. However, the following points are noted:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The difference in score between yahsp2-mt and popf2 is very small (about half a point), with the former awarded more points than the latter. However, the statistical test conducted in Section 4.5.1 (Fig. 23, page 107) concluded that the latter tends to produce plans with better quality than the former does.
+        </list-item>
+        <list-item label="•">
+         Table 7 (page 106) reports that yahsp2 solved an additional problem over dae_yahsp. However when considering quality, this planner is statistically dominated by both dae_yahsp and yahsp2-mt. Since the IPC scoring schema emphasizes quality, this planner was discarded among the list of top performers.
+        </list-item>
+       </list>
+       <paragraph>
+        Thus, the following planners were distinguished by their performance in the temporal satisficing track of IPC-2011:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Winner: dae_yahsp, with a total score of 126.16 and 136 problems solved.
+        </list-item>
+        <list-item label="•">
+         Runner-up: In view of the preceding considerations, the following planners were named joint runners-up:
+        </list-item>
+       </list>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Scalability analysis
+     </section-title>
+     <paragraph>
+      In this section, two different questions related to scalability are analyzed separately. In the first subsection, we follow the fifth IPC practice [38] and compare the performance of the winners of IPC-2011 and IPC-2008 for the same benchmarking domains. In the second subsection, we compare the performance of the winners of the sequential satisficing and multi-core tracks to determine whether the availability of more computational resources resulted in either more coverage or better plan quality.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       How good is the performance of the IPC-2011 planners?
+      </section-title>
+      <paragraph>
+       We now compare the performance of the winners of IPC-2011 with the winners of IPC-2008 for the same planning tasks: the problems selected for IPC-2011. If refined versions of the winners of IPC-2008 were available, these were preferred over the versions submitted at the time, which gives an additional advantage to those entrants. This happened in the sequential satisficing and optimal tracks, for which the versions entered in IPC-2011 were used instead of the old versions. This analysis was not possible for the sequential multi-core track since it was run for the first time in IPC-2011.
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        Sequential optimal track
+       </section-title>
+       <paragraph>
+        The winner of the sequential optimal track in IPC-2008 was gamer. A new version of this planner was entered in IPC-2011 and therefore it was selected for comparison with the winner of IPC-2011, fdss-1. The comparisons are performed with regard to coverage and raw speed. According to the analysis in this section, overall, the optimal planner that won IPC-2011 improved on the performance of the optimal planner that won IPC-2008 with regard to the problems chosen for IPC-2011 in terms of both coverage and raw speed.
+       </paragraph>
+       <paragraph>
+        Table 4 (page 92) shows that fdss-1 solved 185 problems and gamer solved 37 fewer. The difference in coverage is 13.22% over the whole set of planning tasks, but an improvement of 20% for the number of problems solved by the IPC-2008 winner. In addition, 136 problems were solved by both the planners. This leaves 12 problems that were solved by gamer but not by fdss-1, and about four times more problems solved by the latter that could not be solved by the former. These data, in conjunction with the observation that gamer ranked third from the bottom, suggest a significant improvement over the current state of the art before the competition.
+       </paragraph>
+       <paragraph>
+        Fig. 3 (page 93) shows that the evolution of coverage over time for gamer is dominated by almost every participant in IPC-2011. Again, this suggests a significant improvement over the previous state of the art.
+       </paragraph>
+       <paragraph>
+        Finally, the organizers of IPC-2008 reported that gamer was marginally surpassed at that time by the baseline planner, a best-first search with a blind heuristic denoted as blind. While gamer solved 115 problems in 2008, blind managed to solve an additional instance. Therefore, the same baseline planner was compared with the performance of the newest version of gamer and the winner of IPC-2011, fdss-1. The differences in coverage are deemed as definitive: blind solved 119 instances from the benchmarking set of IPC-2011, while the newest version of gamer and fdss-1 solved 148 and 185, respectively, as mentioned above. Again, this result suggests a significant improvement in the current state of the art, in optimal planning at least, with regard to the benchmarking set chosen in both IPC-2008 and IPC-2011.
+       </paragraph>
+      </section>
+      <section label="5.1.2">
+       <section-title>
+        Sequential satisficing track
+       </section-title>
+       <paragraph>
+        In 2008 the winner of the sequential satisficing track was lama-2008 and a refined version of this planner was entered in IPC-2011. Thus, this version was compared with the current winner, lama-2011, instead of the version submitted in 2008. Again, the analysis in this section shows that, overall, the planner that won IPC-2011 improves on the performance of the IPC-2008 winner for the problems chosen for IPC-2011 in terms of coverage, quality, and raw speed.
+       </paragraph>
+       <paragraph>
+        As shown in Table 5 (page 96), lama-2008 solved 188 problems and lama-2011 solved 250. This represents an improvement of almost 25% in coverage. Not surprisingly, lama-2011 solved all the problems solved by lama-2008 apart from just five. Interestingly, other planners not directly based on the same techniques used by lama-2008, such as forkuniform and probe, solved significantly more problems.
+       </paragraph>
+       <paragraph>
+        Regarding CPU time, Figs. 10(a) and 10(b) (page 99) show the evolution of coverage over time for the 12 top-ranked planners. Clearly, lama-2008 is dominated by a number of participants, including lama-2011, as evidenced by the Wilcoxon signed-rank test (Fig. 11, page 100).
+       </paragraph>
+      </section>
+      <section label="5.1.3">
+       <section-title>
+        Temporal satisficing track
+       </section-title>
+       <paragraph>
+        The winner of the temporal satisficing track in 2008 was sgplan6. Since it was not entered in IPC-2011, the same version submitted in 2008 was used. Strikingly, sgplan6 was surpassed by the baseline solver used in IPC-2008, which consisted of the ff planner [31] after dropping the temporal definitions and scheduling the resulting plan using the critical path algorithm. Therefore, the baseline planner (denoted here as base) was also used for comparison with the IPC-2011 winners. The analysis in this section shows that, overall, the temporal planner that won IPC-2011 improves on the performance of the temporal planner that won IPC-2008 for the problems chosen for IPC-2011 in terms of quality, but not necessarily coverage, and that it performs worse in terms of raw speed. The analysis also highlights the importance of benchmarking domain selection, and we report here that, contrary to the conclusions reached for IPC-2008, base is not necessarily better than sgplan6.
+       </paragraph>
+       <paragraph>
+        Regarding coverage, sgplan6 effectively solved 142 problems, six more than the winner of IPC-2011, dae_yahsp, and only three fewer than the planner with the best coverage, yahsp2-mt (Table 7, page 106). However, contrary to the observations made for IPC-2008, base solved 116 problems, which represents a decrease of almost 20%. To confirm these observations, a binomial test on coverage was conducted in a separate track for which the only participants were dae_yahsp, popf2, yahsp2, yahsp2-mt, sgplan6, and base. The resulting p-values (shown in parentheses) indicate that base performed significantly worse in terms of coverage than yahsp2-mt ({a mathematical formula}2.85×10−5) at a restricted confidence level of {a mathematical formula}α=0.001. The same hypothesis is accepted at a confidence level of {a mathematical formula}α=0.005 with respect to yahsp2 ({a mathematical formula}1.2×10−3) and sgplan6 ({a mathematical formula}1.4×10−3). However, the differences in coverage compared to dae_yahsp ({a mathematical formula}7.5×10−3) and popf2 (0.41) were not statistically significant. Comparison of coverage against sgplan6 revealed no statistically significant dominance.
+       </paragraph>
+       <paragraph>
+        The scenario is more illustrative if the official metric of the competition is applied to this separate track (planner score shown in parentheses): the winner and two runners-up for IPC-2011, dae_yahsp (122.32), yahsp2-mt (110.52), and popf2 (110.51), are still ranked first, second, and third, respectively, with sgplan6 (101.23) ranked fourth and base ranked last with a significantly lower score of 92.07 after yahsp2, which was awarded 98.66 points. On combining these results with the observation that sgplan6 showed remarkable coverage, it is easy to conclude that sgplan6 generates plans of lower quality than the distinguished planners in IPC-2011. To test this conjecture, the Wilcoxon signed-rank test was performed for quality, which revealed that sgplan6 does generate worse plans (i.e., with larger makespan) than dae_yahsp and popf2 at a confidence level of {a mathematical formula}α=0.001, with p-values of {a mathematical formula}1.22×10−9 and {a mathematical formula}1.11×10−16, respectively. There is significant evidence that sgplan6 generates plans worse than those of yahsp2-mt at a confidence level of {a mathematical formula}α=0.005, with {a mathematical formula}p=3.29×10−3.
+       </paragraph>
+       <paragraph>
+        This difference in performance between base and sgplan6 for a different set of planning tasks deserves an explanation. In IPC-2011, six domains were reused from IPC-2008: CrewPlanning, Elevators, Openstacks, ParcPrinter, PegSolitaire, and Sokoban. For this set of planning tasks, base solved 93 problems and sgplan6 solved 82. For the new domains introduced in IPC-2011, both planners failed to solve any of the planning tasks requiring concurrency (in MatchCellar, tms, and turnandopen). Both planners solved all problems in the Parking domain. However, sgplan6 exhibited far superior performance to base in the last two domains, Storage (reused from IPC-2006) and Floortile (introduced for the first time in 2011), for which it solved all the problems, whereas base solved only three problems in the Storage domain and none in the Floortile domain. The overall difference between the planners when comparing their performance in 2008 and 2011 is attributed solely to the selection of benchmarking problems.
+       </paragraph>
+       <paragraph>
+        Finally, a Wilcoxon signed-rank test was conducted for CPU time required to find the first solution (p-values in parentheses): sgplan6 was much faster than dae_yahsp ({a mathematical formula}8.23×10−9) and popf2 ({a mathematical formula}3.68×10−5), but was not significantly faster than yahsp2 (0.16) or yahsp2-mt (0.19).
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       How good is the performance of the sequential multi-core planners?
+      </section-title>
+      <paragraph>
+       Multiple cores have been a standard CPU feature for at least 5 years at the time of writing. Although this availability might have fostered the development of multi-core planning systems, participation in the sequential multi-core track was much lower than in its single-core counterpart, the sequential satisficing track. However, “the relation between a […] multi-core track and the corresponding single-core track requires special attention, and the results of the tracks cannot really be considered in separation from each other” (Jussi Rintanen by e-mail, March 14, 2013).
+      </paragraph>
+      <paragraph>
+       As mentioned in Section 3.2, the entrants in both tracks were intentionally given the same planning tasks for ease of comparison. Here we compare the performance of the winners of both tracks with regard to coverage and plan quality. Tables 5 (page 96) and 6 (page 101) show that lama-2011 and arvandherd solved 250 and 236 problems, respectively. Thus, the winner of the sequential satisficing track showed better coverage despite using only a single dual core instead of four dual cores.
+      </paragraph>
+      <paragraph>
+       Unfortunately, it is not as straightforward to compare the plan quality for these two planners because the scoring schema used in IPC-2011 may assign a planner a better score simply because the other planners in the same track were worse (Sections 2.3 and 6). Thus, to provide a better assessment of differences in plan quality between lama-2011 and arvandherd, an alternative competition was simulated with all entrants in both the sequential multi-core and satisficing tracks, yielding a total number of 35 entrants. In this way, both planners were compared with regard to the solutions provided by the same set of planners. The results indicate that the score for lama-2011 slightly decreased from 216.33 to 215.51, while the score for arvandherd decreased even more, from 227.07 to 210.41. The most prominent differences were observed for the nomystery and parking domains; arvandherd showed superior performance in the former but worse performance in the latter. Overall, lama-2011 would have been declared the winner and arvandherd would have been selected as the best runner-up; its difference from the third-ranked planner, fdss-1, in this simulated competition is even greater, since fdss-1 was assigned 201.47 points. In the final ranking, up to 10 classical planners obtain a better score than the second-ranked multi-core planner, which shows clear superiority of single-core over multi-core planners at the time of writing.
+      </paragraph>
+      <paragraph>
+       Note that these analyses were performed using the same time bounds. This observation is definitely relevant: “Assuming you have a good handle on how to distribute the workload […], multi-core planning essentially means increasing the runtime […] bound. So the question is if, e.g., you can find significantly better plans in 4 h vs. 30 min if you compare an 8-core planner to a 1-core planner with a timeout of 30 min” (Malte Helmert by e-mail, March 14, 2013). Despite some differences in how time is treated in both tracks (planners in the sequential multi-core track were given 30 min of wall-clock time, while the sequential satisficing planners were given 30 min of CPU time), the observation is valid even if it seems unrealistic that sequential multi-core planners could achieve linear increases in speed. From the results outlined above, it is clear that state-of-the-art multi-core planners perform worse than single-core satisficing planners for the same time bounds, needless to mention they do if the satisficing planners are given more time proportionally to the number of available cores.
+      </paragraph>
+      <paragraph>
+       The fact that the winner of the sequential satisficing track surpassed the performance of the winner of the sequential multi-core track (at least in terms of both coverage and the official IPC score, and in terms of plan quality when considering the tasks solved by both planners) is not of great concern. The history of the IPC shows that classical planners are highly engineered in terms of data structures and are difficult to beat in the first editions of new tracks.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Discussion of the scoring schema
+     </section-title>
+     <paragraph>
+      This section critically analyzes the scoring schema used at IPC-2011, considers a number of alternatives, and discusses whether the results might have been different. However, it should be noted that the participants were aware of the scoring schema well ahead of the submission deadline, so it is reasonable to assume that their strategies were somehow tailored towards it. The following discussion pursues two goals: (i) a study of the robustness of the official results; and (ii) the provision of additional data on the impact of different metrics that might serve as a criticism of the results of IPC-2011 and an inspiration for new measures in future competitions. A preliminary discussion of the scoring schema has been already presented [44]. This section reviews the concepts presented there but the most important contribution is how they lead to the definition of alternative criteria and the comparison in practice with those alternatives.
+     </paragraph>
+     <paragraph>
+      Although the scoring schema (Section 2.3) primarily serves to declare a winner and a runner-up, it should faithfully reflect the performance of all planners to be effective. We make the following observations.
+     </paragraph>
+     <paragraph label="Observation I">
+      The official scoring schema is not linear and tends to favor planners that effectively solve instances with low optimal cost, provided that other planners deviate from it, even if only slightly [44]. Consider two planners a and b for four planning tasks. Planner a finds solutions with a total cost equal to 1, 2, 10, and 11, whereas planner b generates plans of quality 2, 4, 6, and 8. The second planner tends to create plans that are shorter and, indeed, the median and mean of its cost distribution equal 5, while the mean and median of the first planner equal 6. Assuming that the optimal costs are 1, 2, 6, and 8, respectively, planner a would be awarded {a mathematical formula}11+22+610+811=3.32, whereas planner b would get {a mathematical formula}12+24+66+88=3, which is less than 3.32, in contrast to the expected outcome. From this example it is clear that the scoring schema is more sensitive to differences when the optimal solutions are shorter than when they are larger.
+     </paragraph>
+     <paragraph label="Observation II">
+      The official score regards all problems as being equally important, but this is not necessarily true. A clear example of this inefficiency is given in Section 4.5.1, in which planning tasks requiring concurrency were finally taken into account to provide an additional award beyond the ranking computed according to the official score.
+     </paragraph>
+     <paragraph label="Observation III">
+      The official score requires that the optimal solutions are known beforehand, and these can be difficult to derive in some cases. It is straightforward to prove that the error produced when not using the optimal solutions as a reference is equal to the quotient {a mathematical formula}Cbest/C⁎, where {a mathematical formula}Cbest is the cost of the best plan found and {a mathematical formula}C⁎ is the optimal cost. To prove this, observe that the score for planner p when using the best solution found as a reference for a specific planning task i is{a mathematical formula} where {a mathematical formula}δip is the excess committed by planner p over the best solution found (and necessarily equal to zero for at least one planner) when solving instance i. That is, {a mathematical formula}(Cbest+δip) denotes the cost of the plan generated by planner p for planning instance i. The theoretical score for planner p should be computed as{a mathematical formula} From the preceding expressions, we have{a mathematical formula} so that planner p is assigned a score that is affected by a factor equal to the ratio of the cost of the shorter plan found to the cost of the optimal solution. Since {a mathematical formula}Cbest≥C⁎ by definition, not using the optimal solutions as a reference increases the score for all planners. This observation has two immediate consequences.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Although all planners see their score affected by the same constant, this value can be different for different planning tasks and can induce a final ranking that differs from the theoretical one.For clarity, assume that two planners, a and b, solve two different tasks. Assume further that a solves both tasks with total costs of 100 and 110, respectively, and b finds solutions with total costs 120 and 100. The best solution found is 100 for both planning tasks, so that the score for a is {a mathematical formula}sa=100100+100110=1.909. Likewise, b is awarded {a mathematical formula}sb=100120+100100=1.8333 points, so the first planner would be declared the winner. Assume, however, that both tasks can be optimally solved with action costs equal to 20 and 50, respectively. In this case, the score for each planner for each planning task decreases by a factor equal to 100/20 and 100/50, respectively. Thus, the theoretical score for the first planner is {a mathematical formula}sa⁎=20100+50110=0.6545 and the second planner should be awarded {a mathematical formula}sb⁎=20120+50100=0.6666 points. The second planner performs better (although marginally in this example) than the first when considering the cost of the optimal solutions. From a fair evaluation perspective, this is problematic, since it can violate the decision-theoretic axiom of the independence of irrelevant alternatives[44].Assume that the outcome of a planning competition is such that {a mathematical formula}P1 wins by narrowly outscoring {a mathematical formula}P2. Assume further that the same competition is repeated, but this time with an additional planner {a mathematical formula}P3 that is clearly worse overall compared to {a mathematical formula}P1 or {a mathematical formula}P2, but improves over the best known solutions for a few problems. This can affect the balance between {a mathematical formula}P1 and {a mathematical formula}P2 in such a way that {a mathematical formula}P2 becomes the winner. In other words, the additional participant {a mathematical formula}P3 influences which of {a mathematical formula}P1 and {a mathematical formula}P2 is considered the best planner. This type of situation is highly undesirable since it can introduce strategic considerations into the competition that run counter to its scientific goals. For example, a team of researchers might refrain from entering planner P into the competition because this might adversely affect the performance of another planner Q entered by the same team of researchers.A good way to avoid or reduce such quandaries is to use strong domain-dependent solvers to find high-quality (or even optimal) reference plans, so that the best known solutions will not be ones (uniquely) found by the participating planners. Many such specially developed domain-dependent solvers, and in some cases human-generated solutions, were used at IPC-2008 for this reason. However, no optimal solver was developed for IPC-2011 [44].
+      </list-item>
+      <list-item label="•">
+       An unwanted effect of not using optimal solutions as a reference baseline is that the final score is not properly scaled over the optimal performance, but instead over the best performance observed.In the preceding example, the scores {a mathematical formula}sa=1.909 and {a mathematical formula}sb=1.8333 are too close to the maximum achievable score of 2, which suggests that both planners perform very well but we can only say that they perform similarly. However, the scores obtained according to the optimal solutions, {a mathematical formula}sa⁎=0.6545 and {a mathematical formula}sb⁎=0.6666, have a more meaningful interpretation: both planners, with similar performance, are far from the optimal solutions.
+      </list-item>
+     </list>
+     <paragraph>
+      In the following analysis, planners are ranked according to an additional number of metrics. To justify the various alternatives, we note that while IPC-2011 had an emphasis on plan quality, other metrics can be considered for different needs.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Coverage: this function awards one point to each planner that solves the current task and zero otherwise.This metric is not affected by Observation I since all planners are awarded either one point or none per planning task regardless of their computation effort or that of competitors. Likewise, the metric is not affected by Observation III: even if we assume that all planning tasks are solvable, the ratio {a mathematical formula}Cbest/C⁎{sup:14} equals either one (if at least one planner finds a solution) or zero (if a planning task is not solved by any entrant), so that the score for all planners is never affected. However, it does not address Observation II, since all planning tasks are considered to be equal.
+      </list-item>
+      <list-item label="•">
+       Time: this function computes the score for a planner for a given task as the quotient{a mathematical formula} where T is the time taken by the planner to solve a particular planning task and {a mathematical formula}T⁎ is the minimum time required by any planner to solve the same task. Since time differences can become arbitrarily large, logarithms are used for scaling time scores properly. In this metric, times of less than 1 s are considered to be negligible and are normalized to be equal to 1. This was the official metric for evaluating time performance in the learning track in IPC-2008.This metric makes an explicit effort to address Observation I by taking a logarithm of the ratio that represents the speed of each planner in relation to the fastest one. However, with regard to Observation II it considers all planning instances to be equally important, neglecting the importance of solving the tasks that were found to be particularly hard by other planners. Finally, Observation III is irrelevant since there is no notion of an optimal solution here and comparison with the best observed performance makes sense.
+      </list-item>
+      <list-item label="•">
+       QT: this function computes for each planner and task a tuple {a mathematical formula}(Q,T), where Q denotes the quality of the best solution found by a given planner and T is the time taken by that planner to find it. If no solution is found, constant values that represent infinitely bad quality and time are assigned. Next, this metric awards each planner a score that equals the quotient of the number of distinct tuples a planner Pareto-dominates and the maximum number of distinct tuples Pareto-dominated by any planner with regard to the same planning task. In the current context, {a mathematical formula}(Q,T) is said to Pareto-dominate {a mathematical formula}(Q′,T′) if and only if {a mathematical formula}Q≥Q′ and {a mathematical formula}T&lt;T′.The normalization for this metric results in a relatively small penalty for planners that Pareto-dominate only a few tuples if the maximum number of dominances is small. This is why only the number of distinct tuples is considered when computing the Pareto dominance, so that the effect of Observation I is diminished. However, the metric explicitly addresses Observation II by making comparisons with the performance of all the other planners one by one, instead of comparison with the best performer per instance. However, it does not address Observation III, since it uses the best observed quality instead of the optimal quality.{sup:15}
+      </list-item>
+     </list>
+     <paragraph>
+      Recall from the different subsections devoted to each track in Section 4 that the coefficient for correlation between the official competition metric and Coverage was very close to 1. To provide additional evidence of the correlation between these metrics, the Spearman rank-order correlation test was used (Appendix E). Detailed data on the results for these metrics for all planners and domains are available in the Results section of the competition website{sup:16} for all tracks. The following analysis provide just an overview of the main findings.
+     </paragraph>
+     <paragraph>
+      Table 8 lists the score for all entrants in the sequential optimal track according to the metrics Coverage, Time and QT; Score has been omitted because it is equal to Coverage. The first observation is that the QT score is perfectly correlated with the Coverage score: in this track, all plans have strictly the same quality and therefore Pareto dominance is not feasible unless one planner effectively solves a problem and at least another one does not. In spite of the number of planners that did not solve a particular task, the tuple that represents their performance is unique and is symbolized by arbitrarily large constants. Thus, the number of distinct Pareto-dominated tuples is always equal to 1. The score given by the metric QT equals the Coverage minus the number of instances simultaneously solved by all entrants, for which no Pareto dominance is then possible. From Table 8 it is evident that the difference between Coverage and QT is always 29. Indeed, precisely 29 problems were solved by all entrants in this track (the particular problems are indicated in parentheses with ranges shown by an en dash): nomystery (000–003, 010–014), parcprinter (000–004, 007–008), pegsol (004), scanalyzer (000), visitall (002–007, 009, 011) and woodworking (000–002).
+     </paragraph>
+     <paragraph>
+      The Spearman rank-order correlation coefficient for Coverage and Time is 0.912, which is statistically significant at {a mathematical formula}α=0.01, so that the alternative hypothesis that the metrics are correlated is accepted. Owing to the perfect correlation between Coverage and QT, comparison of QT and Time yielded exactly the same results. As a consequence of the strong (and sometimes even perfect) correlation among all the metrics, it can be concluded that the planners distinguished in this track perform equally well under the different metrics.
+     </paragraph>
+     <paragraph>
+      Table 9 lists the final scores for all entrants in the sequential satisficing track. The Spearman rank-order correlation results indicate that all the metrics are very strongly correlated at a confidence level of greater than or equal to 99.0%.
+     </paragraph>
+     <paragraph>
+      Table 10 shows the score for all entrants in the sequential multi-core track for all the metrics considered. According to the Spearman rank-order correlation test, the correlation between Coverage and QT is perfect, and these metrics rank the planners in precisely the same order. Owing to this perfect matching, the correlation between Score and Coverage is exactly the same as that between Score and QT, which is almost perfect (or even perfect in the Cohen classification [45]) with a correlation coefficient of 0.976, which is significant at {a mathematical formula}α=0.01. Almost the same observation holds for the relationship between Time and either Coverage or QT, which are strongly correlated at {a mathematical formula}α=0.01 (since {a mathematical formula}p=0.007&lt;0.01) with a correlation coefficient equal of 0.857. However, as anticipated by the previous observations, the ranking according to Time is not the same as the official ranking. Nevertheless, the two-tailed significance for this statistical test regards them as being strongly correlated at {a mathematical formula}α=0.05.
+     </paragraph>
+     <paragraph>
+      Table 11 (page 115) summarizes the final scores for all entries in the temporal satisficing track for the metrics considered in this section. This is the only case for which the track winner, dae_yahsp, greatly benefited from the metric selection. In fact, it ranked first only for the official metric, Score, and ranked second for the metrics Coverage and QT, and fourth for Time. By contrast, one of the two joint runners-up, yahsp2-mt, was disadvantaged by this selection: although it was ranked second for Score, it was ranked first according to all the other metrics. The case of the other runner-up, popf2, is untypical in the sense that although it was ranked either third or fourth for the different metrics, it was awarded runner-up position for its exceptional performance in domains that required concurrency, which is not necessarily reflected in the metric selection unless there is a significant number of domains of this type (in IPC-2011, only three out of 12 domains required concurrency).
+     </paragraph>
+     <paragraph>
+      Assessment of these metrics in the sequential multi-core track revealed perfect correlation between Coverage and QT according to the Spearman rank-order correlation test. From this equivalence, it follows that Score and Time are equally correlated with Coverage and QT. All these correlations were statistically significant at a confidence level of {a mathematical formula}α=0.01, but the correlation between Score and Time is accepted at a less restrictive confidence level of {a mathematical formula}α=0.05.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix">
+     <section-title>
+      Supplementary material
+     </section-title>
+     <paragraph>
+      The following is the Supplementary material related to this article.{a mathematical formula}
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

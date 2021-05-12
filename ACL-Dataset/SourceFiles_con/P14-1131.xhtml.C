@@ -1,0 +1,1797 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We present
+       CoSimRank
+       , a graph-theoretic similarity measure
+that is efficient because it can compute a single node
+similarity without having
+to compute the similarities of the entire graph. We present
+equivalent formalizations that
+show CoSimRank’s close relationship to Personalized PageRank
+and SimRank and also show
+how we can take advantage of fast matrix
+multiplication algorithms to compute CoSimRank.
+Another advantage of CoSimRank is that it can be flexibly
+extended from
+basic node-node similarity to several other
+graph-theoretic similarity measures.
+In an experimental evaluation
+on the tasks of synonym extraction and bilingual lexicon extraction, CoSimRank
+is faster or more
+accurate than previous approaches.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Graph-theoretic algorithms have been successfully applied to
+many problems in NLP
+        [23]
+        . These algorithms are often
+based on PageRank
+        [2]
+        and other centrality
+measures (e.g.,
+        [7]
+        ). An alternative for
+tasks involving similarity is SimRank
+        [15]
+        .
+SimRank is based on the simple intuition that nodes in a graph
+should be considered as similar to the extent that
+their neighbors are similar. Unfortunately,
+SimRank has time complexity
+        𝒪⁢(n3)
+        (where
+        n
+        is the
+number of nodes in the graph) and therefore does not scale
+to the large graphs that are typical of NLP.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        This paper introduces CoSimRank,
+        a new graph-theoretic
+algorithm for computing node similarity that combines
+features of SimRank and PageRank. Our key observation is
+that to compute the similarity of two nodes, we need not
+consider all other nodes in the graph as SimRank does;
+instead, CoSimRank starts random walks from the two nodes
+and computes their similarity at each time step. This
+offers large savings in computation time if we only need the
+similarities of a small subset of all
+        n2
+        node
+similarities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        These two cases – computing a few
+similarities and computing many similarities – correspond
+to two different representations we can compute CoSimRank
+on: a vector representation, which is fast for only a few
+similarities, and a matrix representation, which can take
+advantage of fast matrix multiplication algorithms.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        CoSimRank can be used to compute many
+variations of basic node similarity – including similarity
+for graphs with weighted and typed edges
+and similarity for sets of nodes. Thus, CoSimRank
+has the added advantage of being a flexible tool for
+different types of applications.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The extension of CoSimRank to
+        similarity across graphs
+        is important for the application of bilingual
+lexicon extraction: given a set of correspondences between
+nodes in two graphs
+        A
+        and
+        B
+        (corresponding to two
+different languages), a pair of nodes
+        (a∈A,b∈B)
+        is
+a good candidate for a translation pair if their node
+similarity is high. In an experimental evaluation, we show
+that CoSimRank is more efficient and more accurate than both
+SimRank and PageRank-based algorithms.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        This paper is structured as follows.
+Section
+        2
+        discusses related work.
+Section
+        3
+        introduces CoSimRank.
+In Section
+        4
+        , we compare
+CoSimRank and SimRank.
+By providing some useful
+extensions, we demonstrate the great flexibility of
+CoSimRank (Section
+        5
+        ).
+We perform an experimental evaluation of
+CoSimRank in Section
+        6
+        .
+Section
+        7
+        summarizes the paper.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Our work is unsupervised. We therefore do not review
+graph-based methods that make extensive use of supervised
+learning (e.g.,
+        de Melo and Weikum (2012)
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Since the original version of
+        SimRank
+        [15]
+        has complexity
+        𝒪⁢(n4)
+        ,
+many extensions have been proposed to speed up its
+calculation. A Monte Carlo algorithm, which
+is scalable to the whole web, was suggested by
+        Fogaras and Rácz (2005)
+        . However, in an evaluation of this
+algorithm we found that it does not give competitive results
+(see Section
+        6
+        ). A matrix representation of
+SimRank called
+        SimFusion
+        [33]
+        improves the computational
+complexity from
+        𝒪⁢(n4)
+        to
+        𝒪⁢(n3)
+        .
+        Lizorkin et al. (2010)
+        also reduce
+complexity to
+        𝒪⁢(n3)
+        by selecting essential
+node pairs and using partial sums. They also give a useful
+overview of SimRank, SimFusion and the Monte Carlo methods
+of
+        Fogaras and Rácz (2005)
+        . A non-iterative computation for
+SimRank was introduced by
+        Li et al. (2010)
+        . This is
+especially useful for dynamic graphs. However, all of these
+methods have to run SimRank on the entire graph
+and are not efficient enough for very large graphs.
+We are interested in
+applications that only need a fraction of all
+        𝒪⁢(n2)
+        pairwise similarities. The algorithm we
+propose below is an order of magnitude faster in such
+applications because it is based on a local formulation of
+the similarity measure.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Apart from SimRank, many other similarity measures have been proposed.
+        Leicht et al. (2006)
+        introduce a
+similarity measure that is also based on the idea that nodes
+are similar when their neighbors are, but that is designed for
+bipartite
+graphs. However, most graphs in NLP
+are not bipartite and
+        Jeh and Widom (2002)
+        also proposed a SimRank variant for bipartite graphs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Another important similarity measure is cosine similarity of
+        Personalized PageRank
+        (PPR) vectors. We will refer
+to this measure as
+        PPR+cos
+        .
+        Hughes and Ramage (2007)
+        find
+that PPR+cos has high correlation with human similarity
+judgments on WordNet-based graphs.
+        Agirre et al. (2009)
+        use
+PPR+cos for WordNet and for cross-lingual studies. Like
+CoSimRank, PPR+cos is efficient when computing single node
+pair similarities; we therefore use it as one of our
+baselines below. This method is also used by
+        Chang et al. (2013)
+        for semantic relatedness. They
+also experimented with Euclidean distance and
+KL-divergence. Interestingly, a simpler method performed
+best when comparing with human similarity judgments. In this
+method only the entries corresponding to the compared nodes
+are used for a similarity score.
+        Rao et al. (2008)
+        compared PPR+cos to other graph based similarity measures
+like shortest-path and bounded-length random walks. PPR+cos
+performed best except for a new similarity measure based on
+commute time. We do not compare against this new measure as
+it uses the graph Laplacian and so cannot be computed for a
+single node pair.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        One reason CoSimRank is efficient is that we need only
+compute a few iterations of the random walk.
+This is often true of this type of
+algorithm; cf.
+        [32]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        LexRank
+        [7]
+        is
+similar to PPR+cos in that it combines
+PageRank and cosine; it
+initializes the sentence similarity matrix of a
+document using cosine and then applies PageRank to compute
+lexical centrality. Despite this superficial relatedness,
+applications like lexicon extraction that look for
+        similar
+entities
+        and applications that look for
+        central entities
+        are
+quite different.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        In addition to faster versions of SimRank, there has also
+been work on extensions of SimRank.
+        Dorow et al. (2009)
+        and
+        Laws et al. (2010)
+        extend SimRank to
+edge weights, edge labels and multiple graphs.
+We use their Multi-Edge Extraction (MEE) algorithm
+as one of our baselines below.
+A similar graph of dependency structures was built by
+        Minkov and Cohen (2008)
+        . They applied different similarity
+measures, e.g., cosine of dependency vectors or a new
+algorithm called
+        path-constrained
+        graph walk, on
+synonym extraction
+        [26]
+        . We compare CoSimRank
+with their results in our experiments (see Section
+        6
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        Some other applications of SimRank or other graph based
+similarity measures in NLP include work on document
+similarity
+        [21]
+        , the transfer of sentiment
+information between languages
+        [31]
+        and named entity disambiguation
+        [9]
+        .
+        Hoang and Kan (2010)
+        use SimRank
+for related work
+summarization.
+        Muthukrishnan et al. (2010)
+        combine link
+based similarity and content
+based similarity for
+document clustering and classification.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p9">
+       <p class="ltx_p">
+        These approaches use at least one of cosine
+similarity, PageRank and SimRank. CoSimRank can
+either be interpreted as an efficient version of SimRank or
+as a version of Personalized PageRank for similarity
+measurement. The novelty is that we compute similarity for
+vectors that are induced using a new algorithm, so that the
+similarity measurement is much more efficient when
+an application
+only needs a
+fraction of all
+        𝒪⁢(n2)
+        pairwise similarities.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       CoSimRank
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We first first give an intuitive introduction of CoSimRank
+as a Personalized PageRank (PPR) derivative. Later on, we will give a matrix formulation to compare CoSimRank with SimRank.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Personalized PageRank
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Haveliwala (2002)
+         introduced Personalized PageRank – or
+topic-sensitive PageRank – based on the idea that the
+uniform damping vector
+         p(0)
+         can be replaced by a
+personalized vector, which depends on node
+         i
+         . We usually
+set
+         p(0)⁢(i)=ei
+         , with
+         ei
+         being a vector of the
+standard basis, i.e., the
+         ith
+         entry is 1 and all
+other entries are 0. The PPR vector of node
+         i
+         is given by:
+        </p>
+        p(k)⁢(i)=d⁢A⁢p(k-1)⁢(i)+(1-d)⁢p(0)⁢(i)
+
+(1)
+        <p class="ltx_p">
+         where
+         A
+         is
+the stochastic matrix of the Markov chain, i.e.,
+the row normalized adjacency matrix.
+The damping
+factor
+         d∈(0,1)
+         ensures that the computation
+converges. The PPR vector after
+         k
+         iterations is given by
+         p(k)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         To visualize this formula, one can imagine a random surfer
+starting at node
+         i
+         and following one of the links with
+probability
+         d
+         or jumping back to the starting node
+         i
+         with probability
+         (1-d)
+         .
+Entry
+         i
+         of
+the converged PPR vector
+represents the probability that the random surfer is on
+node
+         i
+         after an unlimited number of steps.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         To simulate the behavior of SimRank we will simplify this equation and set the damping factor
+         d=1
+         . We will re-add a damping factor later in the calculation.
+        </p>
+        p(k)=A⁢p(k-1)
+
+(2)
+        <p class="ltx_p">
+         Note that the personalization vector
+         p(0)
+         was eliminated, but is still present as the starting vector of the iteration.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Similarity of vectors
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Let
+         p⁢(i)
+         be the PPR vector of node
+         i
+         .
+The cosine of two vectors
+         u
+         and
+         v
+         is computed by
+dividing the inner product
+         ⟨u,v⟩
+         by the
+lengths of
+the vectors.
+The cosine of two PPR vectors can be used as
+a similarity measure for the corresponding nodes
+         [12, 1]
+         :
+        </p>
+        s⁢(i,j)=⟨p⁢(i),p⁢(j)⟩|p⁢(i)|⁢|p⁢(j)|
+
+(3)
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         This measure
+         s⁢(i,j)
+         looks at the probability that a random walker
+is on a certain edge after an
+         unlimited number of
+steps
+         . This is potentially problematic as the
+example in
+Figure
+         1
+         shows. The PPR vectors of
+         suit
+         and
+         dress
+         will have some weight on
+         tailor
+         , which is good. However, the PPR vector of
+         law
+         will also have a non-zero weight for
+         tailor
+         . So
+         law
+         and
+         dress
+         are
+similar because of the node
+         tailor
+         . This
+is undesirable.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         We can prevent this type of spurious
+similarity by
+         taking into account the path the random
+surfer took to get to a particular node
+         . We formalize
+this by defining CoSimRank
+         s⁢(i,j)
+         as follows:
+        </p>
+        s⁢(i,j)=∑k=0∞ck⁢⟨p(k)⁢(i),p(k)⁢(j)⟩
+
+(4)
+        <p class="ltx_p">
+         where
+         p(k)⁢(i)
+         is the PPR vector of node
+         i
+         from
+Eq.
+         2
+         after
+         k
+         iterations.
+We
+compare the PPR vectors at each time step
+         k
+         .
+The sum of all similarities is the value of
+CoSimRank, i.e., the final similarity.
+We
+add a damping factor
+         c
+         , so that early meetings are
+more valuable than later meetings.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         To compute the similarity
+of two vectors
+         u
+         and
+         v
+         we use the inner product
+         ⟨⋅,⋅⟩
+         in Eq.
+         4
+         for two reasons:
+        </p>
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            This is similar to cosine similarity
+except that the 1-norm is used instead of the 2-norm. Since our
+vectors are probability vectors, we have
+           </p>
+           ⟨p⁢(i),p⁢(j)⟩|p⁢(i)|⁢|p⁢(j)|=⟨p⁢(i),p⁢(j)⟩
+           <p class="ltx_p">
+            for the 1-norm.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            Without expensive normalization, we can
+give a simple matrix
+formalization of CoSimRank and compute it efficiently using
+fast matrix multiplication
+algorithms.
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         Later on,
+the following iterative
+computation of
+CoSimRank will prove useful:
+        </p>
+        s(k)⁢(i,j)=ck⁢⟨p(k)⁢(i),p(k)⁢(j)⟩+s(k-1)⁢(i,j)
+
+(5)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Matrix formulation
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The matrix formulation of CoSimRank is:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(0)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =E
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(1)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =c⁢A⁢AT+S(0)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(2)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =c2⁢A2⁢(AT)2+S(1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           …
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(k)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =ck⁢Ak⁢(AT)k+S(k-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         We will see in Section
+         5
+         that this formulation
+is the basis for a very efficient version of CoSimRank.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Convergence properties
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         As the PPR vectors have only
+positive values, we can easily see in Eq.
+         4
+         that the CoSimRank of one node pair is monotonically
+non-decreasing.
+For the dot product of two vectors,
+the Cauchy-Schwarz inequality gives the upper bound:
+        </p>
+        ⟨u,v⟩≤∥u∥⁢∥v∥
+        <p class="ltx_p">
+         where
+         ∥x∥
+         is the norm of
+         x
+         . From
+Eq.
+         2
+         we get
+         ∥p(k)∥1=1
+         ,
+where
+         ∥⋅∥1
+         is the 1-norm. We also know
+from elementary functional analysis that the 1-norm is the
+biggest of all p-norms and so one has
+         ∥p(k)∥≤1
+         . It follows that CoSimRank
+grows more slowly than a geometric series and
+converges if
+         |c|&lt;1
+         :
+        </p>
+        s⁢(i,j)≤∑k=0∞ck=11-c
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         If an upper bound of
+         1
+         is desired for
+         s⁢(i,j)
+         (instead of
+         1/(1-c)
+         ), then we can use
+         s′
+         :
+        </p>
+        s′⁢(i,j)=(1-c)⁢s⁢(i,j)
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Comparison to SimRank
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The original SimRank equation can be written as follows
+        [15]
+        :
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx2">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          r⁢(i,j)={1,if i=jc|N⁢(i)|⁢|N⁢(j)|⁢∑k∈N⁢(i)l∈N⁢(j)r⁢(k,l),else
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        N⁢(i)
+        denotes the nodes connected to
+        i
+        . SimRank is computed iteratively. With
+        A
+        being the normalized adjacency matrix we can write SimRank in matrix formulation:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx3">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          R(0)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =E
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          R(k)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =max⁡{c⁢A⁢R(k-1)⁢AT,R(0)}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (7)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where the maximum of two matrices refers to the element-wise
+maximum. We will now prove by induction that the matrix formulation of CoSimRank
+(Eq.
+        6
+        )
+is equivalent to:
+       </p>
+       S′⁣(k)=c⁢A⁢S′⁣(k-1)⁢AT+S(0)
+
+(8)
+       <p class="ltx_p">
+        and thus very similar to SimRank (Eq.
+        7
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        The base case
+        S(1)=S′⁣(1)
+        is trivial. Inductive step:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx4">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex11">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          S′⁣(k)=(8)c⁢A⁢S′⁣(k-1)⁢AT+S(0)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex12">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =c⁢A⁢(ck-1⁢Ak-1⁢(AT)k-1+S(k-2))⁢AT+S(0)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex13">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =ck⁢Ak⁢(AT)k+c⁢A⁢S(k-2)⁢AT+S(0)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex14">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =ckAk(AT)k+S(k-1)=(6)S(k)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           \qed
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Comparing Eqs.
+        7
+        and
+        8
+        , we see that SimRank and
+CoSimRank are very similar except that
+they initialize the similarities on the
+diagonal differently. Whereas SimRank sets each of these entries back to
+one at each iteration, CoSimRank adds one. Thus, when
+computing the two similarity measures iteratively, the
+diagonal element
+        (i,i)
+        will be set to 1 by both methods
+for those initial iterations for which this entry is 0 for
+        c⁢A⁢S(k-1)⁢AT
+        (i.e., before applying either max or
+add). The methods diverge when the
+entry is
+        ≠0
+        for the first time.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        Complexity of computing all n2 similarities.
+        The matrix formulas of both
+SimRank (Eq.
+        7
+        )
+and CoSimRank (Eq.
+        8
+        )
+have time complexity
+        𝒪⁢(n3)
+        or
+– if we want to take the higher efficiency
+of computation for sparse graphs into account –
+        𝒪⁢(d⁢n2)
+        where
+        n
+        is the number
+of nodes and
+        d
+        the average degree.
+Space complexity is
+        𝒪⁢(n2)
+        for both algorithms.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        Complexity of computing k2≪n2 similarities.
+        In most cases, we only want to compute
+        k2
+        similarities
+for
+        k
+        nodes. For CoSimRank, we compute the
+        k
+        PPR
+vectors in
+        𝒪⁢(k⁢d⁢n)
+        (Eq.
+        2
+        ) and
+compute the
+        k2
+        similarities in
+        𝒪⁢(k2⁢n)
+        (Eq.
+        5
+        ).
+If
+        d&lt;k
+        , then the time
+complexity of CoSimRank is
+        𝒪⁢(k2⁢n)
+        . If we only
+compute a single similarity, then
+the complexity is
+        𝒪⁢(d⁢n)
+        . In contrast, the
+complexity of SimRank is the same as in the all-similarities
+case:
+        𝒪⁢(d⁢n2)
+        . It is not obvious how to design
+a lower-complexity version of SimRank for this case. Thus,
+we have reduced SimRank’s cubic time complexity to a
+quadratic time complexity for CoSimRank or – assuming that the
+average degree
+        d
+        does not depend on
+        n
+        –
+SimRank’s quadratic time complexity to linear time
+complexity for the case of computing few similarities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        Space complexity for computing
+        k2
+        similarities is
+        𝒪⁢(k⁢n)
+        since we need only store
+        k
+        vectors, not
+the complete similarity matrix.
+This complexity can be exploited even for the all
+similarities application: If the
+matrix formulation cannot be used because the
+        𝒪⁢(n2)
+        similarity matrix is too big for available memory, then we
+can compute all similarities in batches – and if desired in
+parallel –
+whose size is chosen such that the vectors of each batch still fit in memory.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        In summary, CoSimRank and SimRank have similar space and
+time complexities for computing all
+        n2
+        similarities.
+For the more typical case that we only want to compute a fraction of all
+similarities, we have recast the global SimRank formulation as a local
+CoSimRank formulation. As a result, time and space complexities
+are much improved. In Section
+        6
+        , we
+will show that this is also true in practice.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Extensions
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We will show now that the basic CoSimRank
+algorithm can be extended in a number of ways and is thus a
+flexible tool for different NLP applications.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Weighted edges
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         The use of weighted edges was first
+proposed in
+the PageRank patent. It is straightforward and easy to implement by
+replacing the row normalized adjacency matrix
+         A
+         with an
+arbitrary stochastic matrix
+         P
+         . We can use this edge
+weighted PageRank for CoSimRank.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        CoSimRank across graphs
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         We often want to compute the
+similarity of nodes in
+         two different graphs
+         with a
+known node-node correspondence; this is the scenario we are
+faced with in the lexicon extraction task (see Section
+         6
+         ).
+A variant of SimRank for this task was
+presented by
+         Dorow et al. (2009)
+         . We will now present an
+equivalent method for CoSimRank. We denote the number of
+nodes in the two graphs
+         U
+         and
+         V
+         by
+         |U|
+         and
+         |V|
+         , respectively. We
+compute PPR
+vectors
+         p∈ℝ|U|
+         and
+         q∈ℝ|V|
+         for each graph. Let
+         S(0)∈ℝ|U|×|V|
+         be the known
+node-node correspondences. The analog of CoSimRank (Eq.
+         4
+         ) for two graphs is then:
+        </p>
+        s⁢(i,j)=∑k=0∞ck⁢∑(u,v)∈S(0)pu(k)⁢(i)⁢qv(k)⁢(j)
+
+(9)
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         The matrix formulation (cf. Eq.
+         6
+         ) is:
+        </p>
+        S(k)=ck⁢Ak⁢S(0)⁢(BT)k+S(k-1)
+
+(10)
+        <p class="ltx_p">
+         where
+         A
+         and
+         B
+         are row-normalized adjacency matrices. We
+can interpret
+         S(0)
+         as a change of basis. A similar
+approach for word embeddings was published by
+         Mikolov et al. (2013)
+         . They call
+         S(0)
+         the translation matrix.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Typed edges
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         To be able to directly compare to prior work in our experiments,
+we also present a method to integrate a set of typed edges
+         𝒯
+         in the CoSimRank calculation. For this we will compute a similarity
+matrix for each edge type
+         τ
+         and merge them into one matrix for
+the next iteration:
+        </p>
+        S(k)=(c|𝒯|⁢∑τ∈𝒯Aτ⁢S(k-1)⁢BτT)+S(0)
+
+(11)
+        <p class="ltx_p">
+         This formula is identical to the random surfer
+model where two surfers only meet iff they are on the same
+node and used the same edge type to get there. A more strict
+claim would be to use the same edge type at any time of
+their journey:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx5">
+         <tr class="ltx_equation ltx_align_baseline" id="S5.Ex15">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(k)=
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ck|𝒯|k⁢∑τ∈𝒯k(∏i=1kAτi)⁢S(0)⁢(∏i=0k-1Bτk-iT)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S5.E12">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +S(k-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (12)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         We will not use Eq.
+         5.3
+         due
+to its space complexity.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Similarity of sets of nodes
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         CoSimRank can also be used to compute the similarity
+         s⁢(V,W)
+         of two
+sets
+         V
+         and
+         W
+         of nodes, e.g., short text snippets. We are not including this method in our experiments, but we will give the equation here, as traditional document
+similarity measures (e.g., cosine similarity)
+perform poorly on this task although there also are known
+alternatives with good results
+         [30]
+         .
+For a set
+         V
+         , the initial PPR vector is given by:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx6">
+         <tr class="ltx_equation ltx_align_baseline" id="S5.Ex16">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           pi(0)⁢(V)={1|V|,if ⁢i∈V0,else
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         We then reuse Eq.
+         4
+         to compute
+         s⁢(V,W)
+         :
+        </p>
+        s⁢(V,W)=∑k=0∞ck⁢⟨p(k)⁢(V),p(k)⁢(W)⟩
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         In summary, modifications proposed for SimRank (weighted and
+typed edges, similarity across graphs) as well as
+modifications proposed for PageRank (sets
+of nodes) can also be applied to CoSimRank. This makes CoSimRank a very flexible similarity
+measure.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p3">
+        <p class="ltx_p">
+         We will test the first three extensions experimentally in
+the next section and leave similarity of node sets for
+future work.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We evaluate CoSimRank for the tasks
+of synonym extraction and bilingual lexicon extraction. We
+use the basic version of CoSimRank (Eq.
+        4
+        )
+for synonym extraction and the two-graph version (Eq.
+        9
+        ) for
+lexicon extraction, both with weighted edges. Our motivation for this application is
+that two words that are synonyms of each other should have
+similar lexical neighbors and that two words that are
+translations of each other should have neighbors that
+correspond to each other; thus, in each case the nodes
+should be similar in the graph-theoretic sense and CoSimRank
+should be able to identify this similarity.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        We use the English and German graphs published by
+        Laws et al. (2010)
+        ,
+including edge weighting and normalization.
+Nodes are nouns, adjectives and verbs
+occurring in Wikipedia. There are three types of edges,
+corresponding to three types of syntactic configurations
+extracted from the parsed Wikipedias:
+adjective-noun, verb-object and noun-noun coordination.
+Table
+        1
+        gives
+examples
+and number of nodes and
+edges.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Baselines
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         We propose CoSimRank as an efficient algorithm for computing
+the similarity of nodes in a graph. Consequently, we compare
+against the two main methods
+for this task in NLP: SimRank and extensions of PageRank.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         We also compare against
+the MEE (Multi-Edge Extraction) variant of SimRank
+         [6]
+         , which handles labeled edges more
+efficiently than SimRank:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S7.EGx7">
+         <tr class="ltx_equation ltx_align_baseline" id="S6.Ex18">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S′⁣(k)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =c|𝒯|⁢∑τ∈𝒯Aτ⁢S(k-1)⁢BτT
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S6.Ex19">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           S(k)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =max⁡{S′⁣(k),S(0)}
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         Aτ
+         is the row-normalized adjacency matrix for
+edge type
+         τ
+         (see edge types in Table
+         1
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p3">
+        <p class="ltx_p">
+         Apart from SimRank, extensions of PageRank are the
+main methods for computing the similarity of nodes in graphs
+in NLP (e.g.,
+         Hughes and Ramage (2007)
+         ,
+         Agirre et al. (2009)
+         and other papers discussed in related
+work). Generally, these methods compute the Personalized
+PageRank for each node (see Eq.
+         1
+         ). When the
+computation has converged, the similarity of two nodes is
+given by the cosine similarity of the Personalized PageRank
+vectors. We implemented this method for our experiments and
+call it PPR+cos.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Synonym Extraction
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         We use
+         TS68
+         , a test set of 68 synonym pairs published
+by
+         Minkov and Cohen (2012)
+         for evaluation.
+This gold standard lists a single word as the correct
+synonym even if there are several equally acceptable near-synonyms
+(see Table
+         3
+         for examples). We call this the
+one-synonym evaluation.
+Three native English speakers were asked to mark synonyms, that were proposed by a baseline or by
+CoSimRank, i.e. ranked in the top 10. If all three of them
+agreed on one word as being a synonym in at least one
+meaning, we added this as a correct answer to the test
+set. We call this the “extended” evaluation (see Table
+         2
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p2">
+        <p class="ltx_p">
+         Synonym extraction is run on the English
+graph. To calculate PPR+cos, we computed
+         20
+         iterations
+with a decay factor of
+         0.8
+         and used the cosine similarity
+with the 2-norm in the denominator to compare two
+vectors. For the other three methods, we also used a decay
+factor of
+         0.8
+         and computed
+         5
+         iterations. Recall that
+CoSimRank uses the simple inner product
+         ⟨⋅,⋅⟩
+         to compare vectors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p3">
+        <p class="ltx_p">
+         Our evaluation measures are proportion of words correctly
+translated by word
+in the top position (P@1),
+proportion of words correctly
+translated by a word
+in one of the top 10 positions
+(P@10) and Mean
+Reciprocal Rank (MRR). CoSimRank’s MRR scores of 0.37
+(one-synonym) and 0.59 (extended) are the same or better
+than all baselines (see Table
+         2
+         ). CoSimRank and SimRank
+have the same P@1 and P@10 accuracy (although they
+differed on some decisions). CoSimRank is better
+than PPR+cos on both evaluations, but as this test set is
+very small, the results are not
+significant. Table
+         3
+         shows a sample of synonyms
+proposed by CoSimRank.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p4">
+        <p class="ltx_p">
+         Minkov and Cohen (2012)
+         tested
+cosine and random-walk measures on grammatical relationships
+(similar to our setup) as well as on cooccurrence
+statistics. The MRR scores for these methods
+range from 0.29 to 0.59.
+(MRR is equivalent to MAP as reported by
+         Minkov and Cohen (2012)
+         when there is only one correct
+answer.) Their best number (0.59) is better than our
+one-synonym result; however,
+they performed manual postprocessing of results –
+e.g., discarding words
+that are morphologically or semantically related to other
+words in the list – so our fully automatic results cannot be directly
+compared.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.3
+        </span>
+        Lexicon Extraction
+       </h3>
+       <div class="ltx_para" id="S6.SS3.p1">
+        <p class="ltx_p">
+         We evaluate lexicon extraction on TS1000, a test set of 1000
+items,
+         [17]
+         each consisting of an English word
+and its German translations. For lexicon extraction, we use the same parameters as
+in the synonym extraction task for all four similarity
+measures. We use a seed dictionary of 12,630 word pairs to
+establish node-node correspondences between the two graphs.
+We remove a search keyword from the seed dictionary before
+calculating similarities for it, something that the
+architecture of CoSimRank makes easy because we can use a
+different seed dictionary
+         S(0)
+         for every keyword.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p2">
+        <p class="ltx_p">
+         Both CoSimRank methods outperform SimRank
+significantly (see Table
+         4
+         ). The difference between CoSimRank
+with and without typed edges is not
+significant. (This observation was also made
+for SimRank on a smaller graph and test set
+         [17]
+         .)
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p3">
+        <p class="ltx_p">
+         PPR+cos’s performance at
+         14.8⁢%
+         correct
+translations is much lower than SimRank and CoSimRank. The disadvantage of this similarity measure is
+significant and even more visible on
+bilingual lexicon extraction than on synonym extraction
+(see Table
+         2
+         ). The reason might be that we are not
+comparing the whole PPR vector anymore, but only entries which
+occur in the seed dictionary (see
+Eq.
+         9
+         ). As the seed dictionary contains
+12,630 word pairs, this means that only
+every fourth entry of the PPR vector (the German graph has 47,439
+nodes) is used for similarity calculation. This is also true
+for CoSimRank, but it seems that CoSimRank is more stable
+because we compare more than one vector.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p4">
+        <p class="ltx_p">
+         We also experimented with the method of
+         Fogaras and Rácz (2005)
+         . We tried a number of different ways
+of modifying it for weighted graphs: (i) running the random
+walks with the weighted adjacency matrix as Markov matrix,
+(ii) storing the weight (product of each edge weight) of a
+random walk and using it as a factor if two walks meet and
+(iii) a combination of both. We
+needed about 10,000 random walks in all three
+conditions. As a result, the computational time
+was
+approximately 30 minutes per test word, so this method
+is even slower than SimRank for our application. The
+accuracies P@1 and P@10 were worse in all experiments than
+those of CoSimRank.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.4
+        </span>
+        Run time performance
+       </h3>
+       <div class="ltx_para" id="S6.SS4.p1">
+        <p class="ltx_p">
+         Table
+         5
+         compares the run time
+performance of CoSimRank with the baselines.
+We ran all experiments on a 64-bit
+Linux machine with 64 Intel Xenon X7560 2.27Ghz CPUs and
+1TB RAM. The calculated time is the sum of the time spent
+in user mode and the time spent in kernel mode. The actual
+wall clock time was significantly lower as we used up to
+64 CPUs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS4.p2">
+        <p class="ltx_p">
+         Compared to SimRank, CoSimRank is more than 40 times faster
+on synonym extraction and six times faster on lexicon
+extraction. SimRank is at a disadvantage because it
+computes all similarities in the graph regardless of the
+size of the test set; it is particularly inefficient on
+synonym extraction because the English graph contains a
+large number of edges (see Table
+         1
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS4.p3">
+        <p class="ltx_p">
+         Compared to PPR+cos, CoSimRank is roughly four times faster on synonym extraction and
+has comparable performance on lexicon extraction.
+We compute 20 iterations of PPR+cos to reach convergence and
+then calculate a single cosine similarity. For CoSimRank,
+we need only compute five iterations to reach convergence,
+but we have to compute a vector similarity in each
+iteration. The counteracting effects of fewer
+iterations and more vector similarity computations can give
+either CoSimRank or PPR+cos an advantage, as is the case for
+synonym extraction and lexicon extraction, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS4.p4">
+        <p class="ltx_p">
+         CoSimRank should generally be three times faster than typed CoSimRank
+since the typed version has to repeat the
+computation for each of the three types.
+This effect is only visible on the larger test set (lexicon extraction) because
+the general computation overhead is about the same on a
+smaller test set.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.5
+        </span>
+        Comparison with WINTIAN
+       </h3>
+       <div class="ltx_para" id="S6.SS5.p1">
+        <p class="ltx_p">
+         Here we address inducing a
+bilingual lexicon from a seed set based on grammatical
+relations found by a parser. An alternative approach is to
+induce a bilingual lexicon from Wikipedia’s interwiki
+links
+         [29]
+         . These two approaches have
+different strengths and weaknesses; e.g.,
+the interwiki-link-based approach does not require a seed set,
+but it can only be applied to comparable corpora
+that consist of corresponding – although not necessarily
+“parallel” – documents.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS5.p2">
+        <p class="ltx_p">
+         Despite these differences
+it is still interesting to compare the
+two algorithms.
+         Rapp et al. (2012)
+         kindly provided their test
+set to us. It contains 1000 English words and a single
+correct German translation for each. We evaluate on a
+subset we call TS774 that consists of the 774 test word pairs
+that are in the intersection of words covered by the WINTIAN
+Wikipedia data
+         [29]
+         and
+words covered by our data.
+Most of the 226 missing word pairs are
+adverbs, prepositions and plural forms that are not
+covered by our graphs due to the construction algorithm we
+use: lemmatization, restriction to adjectives, nouns and
+verbs etc.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS5.p3">
+        <p class="ltx_p">
+         Table
+         6
+         shows that CoSimRank is slightly, but not
+significantly worse than WINTIAN
+on P@1 (43.0 vs 43.8), but significantly better on P@10
+(73.6 vs 55.4).
+         The reason could be that CoSimRank is a
+more effective algorithm than WINTIAN; but the different
+initializations (seed set vs interwiki links) or the
+different linguistic representations (grammatical relations
+vs bag-of-words) could also be responsible.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS6">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.6
+        </span>
+        Error Analysis
+       </h3>
+       <div class="ltx_para" id="S6.SS6.p1">
+        <p class="ltx_p">
+         The results on TS774 can be considered
+conservative since only one translation is accepted as
+being correct. In reality other translations might also be
+acceptable (e.g., both
+         street
+         and
+         road
+         for
+         Straße
+         ). In contrast, TS1000
+accepts more than one correct translation. Additionally, TS774 was created by
+translating English words into German (using Google translate). We
+are now testing the reverse direction. So we are doomed to
+fail if the original English word is a less common
+translation of an ambiguous German word. For example, the
+English word
+         gulf
+         was translated by Google to
+         Golf
+         , but the most common sense of
+         Golf
+         is
+the sport. Hence our algorithm will incorrectly translate it back to
+         golf
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS6.p2">
+        <p class="ltx_p">
+         As we can
+see in Table
+         7
+         ,
+we also
+face the problems discussed by
+         Laws et al. (2010)
+         : the algorithm sometimes
+picks cohyponyms (which can still be seen as reasonable)
+and
+antonyms (which are clear errors).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS6.p3">
+        <p class="ltx_p">
+         Contrary to our intuition, the edge-typed variant of CoSimRank
+did not perform significantly better than the non-edge-typed
+version. Looking at
+Table
+         1
+         , we see that there is only one edge type
+connecting adjectives. The same is true for verbs. The
+random surfer only has a real choice between different
+edge
+types when she is on a noun node. Combined with the fact that
+only the last edge type is important this has absolutely no
+effect for a random surfer meeting at adjectives or verbs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS6.p4">
+        <p class="ltx_p">
+         Two
+possible solutions would be (i) to use more fine-grained
+edge types,
+(ii)
+to apply Eq.
+         5.3
+         , in
+which the edge type of each step is important. However, this
+will increase the memory needed for calculation.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

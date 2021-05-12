@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Computational protein design as an optimization problem.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A protein is a sequence of basic building blocks called amino acids. Proteins are involved in nearly all structural, catalytic, sensory, and regulatory functions of living systems [26]. Performing these functions generally requires that proteins are assembled into well-defined three-dimensional structures specified by their amino acid sequence. Over millions of years, natural evolutionary processes have shaped and created proteins with novel structures and functions by means of sequence variations, including mutations, recombinations and duplications. Protein engineering techniques coupled with high-throughput automated procedures make it possible to mimic the evolutionary process on a greatly accelerated time-scale, and thus increase the odds to identify the proteins of interest for technological uses [71]. This holds great interest for medicine, synthetic biology, nanotechnologies and biotechnologies [67], [75], [39]. In particular, protein engineering has become a key technology to generate tailored enzymes able to perform novel specific transformations under specific conditions. Such biochemical transformations enable to access a large repertoire of small molecules for various applications such as biofuels, chemical feedstocks and therapeutics [45], [11]. The development of enzymes with required substrate selectivity, specificity and stability can also be profitable to overcome some of the difficulties encountered in synthetic chemistry. In this field, the in vitro use of artificial enzymes in combination with organic chemistry has led to innovative and efficient routes for the production of high value molecules while meeting the increasing demand for ecofriendly processes [61], [13]. Nowadays, protein engineering is also being explored to create non-natural enzymes that can be combined in vivo with existing biosynthetic pathways, or be used to create entirely new synthetic metabolic pathways not found in nature to access novel biochemical products [28]. These latest approaches are central to the development of synthetic biology. One significant example in this field is the full-scale production of the antimalarial drug (artemisinin) from the engineered bacteria Escherichia coli[66].
+     </paragraph>
+     <paragraph>
+      With a choice among 20 naturally occurring amino acids at every position, the size of the combinatorial sequence space is out of reach for current experimental methods, even for short sequences. Computational protein design (CPD) methods therefore try to intelligently guide the protein design process by producing a collection of proteins, that is rich in functional proteins, but small enough to be experimentally evaluated. The challenge of choosing a sequence of amino acids to perform a given task is formulated as an optimization problem, solvable computationally. It is often described as the inverse problem of protein folding [70]: the three-dimensional structure is known and we have to find amino acid sequences that fold into it. It can also be considered as a highly combinatorial variant of side-chain positioning [82] because of possible amino acid mutations.
+     </paragraph>
+     <paragraph>
+      Various computational methods have been proposed over the years to solve this problem and several success stories have demonstrated the outstanding potential of CPD methods to engineer proteins with improved or novel properties. CPD has been successfully applied to increase protein thermostability and solubility; to alter specificity towards some other molecules; and to design various binding sites and construct de novo enzymes (see for example [46]).
+     </paragraph>
+     <paragraph>
+      Despite these significant advances, CPD methods must still mature in order to better guide and accelerate the construction of tailored proteins. In particular, more efficient computational optimization techniques are needed to explore the vast combinatorial space, and to facilitate the incorporation of more realistic, flexible protein models. These methods need to be capable of not only identifying the optimal model, but also of enumerating solutions close to the optimum.
+     </paragraph>
+     <paragraph>
+      We begin by defining the CPD problem with rigid backbone, and then introduce the approach commonly used in structural biology to exactly solve CPD. This approach relies on dead-end elimination (DEE), a specific form of dominance analysis that was introduced in [24], and later strengthened in [37]. If this polynomial-time analysis does not solve the problem, an {a mathematical formula}A⁎ algorithm is used to identify an optimal protein design.
+     </paragraph>
+     <paragraph>
+      We observe that the rigid backbone CPD problem can be naturally expressed as a Cost Function Network (aka Weighted Constraint Satisfaction Problem). In this context, DEE is similar to neighborhood substitutability [27]. We show how DEE can be suitably modified so as to be maintained during search at reasonable computational cost, in collaboration with the usual soft local consistencies.
+     </paragraph>
+     <paragraph>
+      To evaluate the efficiency of the CFN approach, we model the CPD problem using several combinatorial optimization formalisms. We compare the performance of the 0/1 linear programming and 0/1 quadratic programming solver cplex, the semidefinite programming based Boolean quadratic optimization tool biqmac, several weighted partial MaxSAT solvers, the Markov random field optimization solvers daoopt and mplp[80], and the CFN solver toulbar2, against that of a well-established CPD approach implementing {a mathematical formula}DEE/A⁎, on various realistic protein design problems. We observe drastic differences in the difficulty that these instances represent for different solvers, despite often closely related models and solving techniques.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      The computational protein design approach
+     </section-title>
+     <paragraph>
+      A protein is a sequence of organic compounds called amino acids. All amino acids consist of a common peptidic core and a side chain with varying chemical properties (see Fig. 1). In a protein, amino acid cores are linked together in sequence to form the backbone of the protein. A given protein folds into a 3D shape that is determined from the sequence of amino acids. Depending upon the amino acid considered, the side chain of each individual amino acid can be rotated along up to 4 dihedral angles relative to the backbone. After Anfinsen's work [3], the 3D structure of a protein can be considered to be defined by the backbone and the set of side-chain rotations. This is called the conformation of the protein and it determines its chemical reactivity and biological function.
+     </paragraph>
+     <paragraph>
+      Computational Protein Design is faced with several challenges. The first lies in the exponential size of the conformational and protein sequence space that has to be explored, which rapidly grows out of reach of computational approaches. Another obstacle to overcome is the accurate structure prediction for a given sequence [47], [38]. Therefore, the design problem is usually approached as an inverse folding problem [70], in order to reduce the problem to the identification of an amino acid sequence that can fold into a target 3D-scaffold that matches the design objective [9]. In structural biology, the stability of a conformation can be directly evaluated through the energy of the conformation, a stable fold being of minimum energy [3].
+     </paragraph>
+     <paragraph>
+      In CPD, two approximations are common. First, it is assumed that the resulting designed protein retains the overall folding of the chosen scaffold: the protein backbone is considered fixed. At specific positions chosen by the computational biologist (or automatic selection), the amino acid can be modified by changing the side chain as shown in Fig. 2. Second, the domain of conformations available to each amino acid side chain is actually continuous. This continuous domain is approximated using a set of discrete conformations defined by the value of their inner dihedral angles. These conformations, or rotamers[44], are derived from the most frequent conformations in the experimental repository of known protein structures, PDB (Protein Data Bank, www.wwpdb.org). Different discretizations have been used in constraint-based approaches to protein structure prediction [10].
+     </paragraph>
+     <paragraph>
+      The CPD is then formulated as the problem of identifying a conformation of minimum energy via the mutation of a specific subset of amino acid residues, i.e. by affecting their identity and their 3D orientations (rotamers). The conformation that minimizes the energy is called the GMEC (Global Minimum Energy Conformation).
+     </paragraph>
+     <paragraph>
+      In order to solve this problem, we need a computationally tractable energetic model to evaluate the energy of any combination of rotamers. We also require computational optimization techniques that can efficiently explore the sequence-conformation space to find the sequence-conformation model of global minimum energy.
+     </paragraph>
+     <paragraph>
+      Energy functions
+     </paragraph>
+     <paragraph>
+      Various energy functions have been defined to make the energy computation manageable [7]. These energy functions include non-bonded terms such as van der Waals and electrostatics terms, often in conjunction with empirical contributions describing hydrogen bonds. The surrounding solvent effect is generally treated implicitly as a continuum. Statistical terms may be added in order to approximate the effect of mutations on the unfolded state or the contribution of conformational entropy. Finally, collisions between atoms (steric clashes) are also taken into account. In this work, we used the state-of-the-art energy functions implemented in the CPD dedicated tool osprey 2.0 [30].
+     </paragraph>
+     <paragraph>
+      These energy functions can be reformulated in such a way that the terms are locally decomposable. Then, the energy of a given protein conformation, defined by a choice of one specific amino acid with an associated conformation (rotamer) for each residue, can be written as:{a mathematical formula} where E is the potential energy of the protein, {a mathematical formula}E∅ is a constant energy contribution capturing interactions between fixed parts of the model, {a mathematical formula}E(ir) is the energy contribution of rotamer r at position i capturing internal interactions (and a reference energy for the associated amino acid) or interactions with fixed regions, and {a mathematical formula}E(ir,js) is the pairwise interaction energy between rotamer r at position i and rotamer s at position j[24]. This decomposition brings two properties:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Each term in the energy can be computed for each amino acid/rotamer (or pair for {a mathematical formula}E(ir,js)) independently.
+      </list-item>
+      <list-item label="•">
+       These energy terms, in kcal/mol, can be precomputed and cached, allowing to quickly compute the energy of a design once a specific rotamer (an amino acid-conformation pairing) has been chosen at each non-rigid position.
+      </list-item>
+     </list>
+     <paragraph>
+      The rigid backbone discrete rotamer Computational Protein Design problem is therefore defined by a fixed backbone with a corresponding set of positions (residues), a rotamer library and a set of energy functions. Each position i of the backbone is associated with a subset {a mathematical formula}Di of all (amino-acid, rotamer) pairs in the library. The problem is to identify at each position i a pair from {a mathematical formula}Di such that the overall energy E is minimized. In practice, based on expert knowledge or on specific design protocols, each position can be fixed ({a mathematical formula}Di is a singleton), flexible (all pairs in {a mathematical formula}Di have the same amino-acid) or mutable (the general situation).
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Exact CPD methods
+      </section-title>
+      <paragraph>
+       The protein design problem as defined above, with a rigid backbone, a discrete set of rotamers, and pairwise energy functions has been proven to be NP-hard [74]. Hence, a variety of meta-heuristics have been applied to it, including Monte Carlo simulated annealing [53], genetic algorithms [77], and other algorithms [25]. The main weakness of these approaches is that they may remain stuck in local minima and miss the GMEC without notice.
+      </paragraph>
+      <paragraph>
+       However, there are several important motivations for solving the CPD problem exactly. First, because they know when an optimum is reached, exact methods may stop before meta-heuristics. Voigt et al. [84] reported that the accuracy of meta-heuristics also degrades as problem size increases. More importantly, the use of exact search algorithms becomes crucial in the usual experimental design cycle, that goes through modeling, solving, protein synthesis and experimental evaluation: when unexpected experimental results are obtained, the only possible culprit lies in the CPD model and not in the algorithm.
+      </paragraph>
+      <paragraph>
+       Current exact methods for CPD mainly rely on the dead-end elimination (DEE) theorem [24], [19] and the {a mathematical formula}A⁎ algorithm [58], [33]. DEE is used as a pre-processing technique and removes rotamers that are locally dominated by other rotamers, until a fixpoint is reached. The rotamer r at position i (denoted by {a mathematical formula}ir) is removed if there exists another rotamer u at the same position such that [24]:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This condition guarantees that for any conformation with this r, we get a conformation with lower energy if we substitute u for r. Then, r can be removed from the list of possible rotamers at position i. This local dominance criterion was later improved by Goldstein [37] by directly comparing energies of each rotamer in the same conformation:{a mathematical formula} where the best and worst-cases are replaced by the worst difference in energy. It is easy to see that this condition is always weaker than the previous one, and therefore applicable to more cases. These two properties define polynomial time algorithms that prune dominated values.
+      </paragraph>
+      <paragraph>
+       Since its introduction in 1992 by Desmet, DEE has become the fundamental tool of exact CPD, and various extensions have been proposed [73], [63], [32]. All these DEE criteria preserve the optimum but may remove suboptimal solutions. However CPD is NP-hard, and DEE cannot solve all CPD instances. Therefore, DEE pre-processing is usually followed by an {a mathematical formula}A⁎ search. After DEE pruning, the {a mathematical formula}A⁎ algorithm allows to expand a sequence-conformation tree, so that sequence-conformations are extracted and sorted on the basis of their energy values. The admissible heuristic used by {a mathematical formula}A⁎ is described in [33].
+      </paragraph>
+      <paragraph>
+       When the DEE algorithm does not significantly reduce the search space, the {a mathematical formula}A⁎ search tree can be too slow or memory demanding and the problem cannot be solved. Therefore, to circumvent these limitations and increase the ability of CPD to tackle problems with larger sequence-conformation spaces, novel alternative methods are needed. We now describe alternative state-of-the-art methods for solving the GMEC problem that offer attractive alternatives to {a mathematical formula}DEE/A⁎.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      From CPD to CFN
+     </section-title>
+     <paragraph>
+      CPD instances can be directly represented as Cost Function Networks.
+     </paragraph>
+     <paragraph label="Definition 1">
+      A Cost Function Network (CFN) is a pair {a mathematical formula}(X,W) where {a mathematical formula}X={1,…,n} is a set of n variables and W is a set of cost functions. Each variable {a mathematical formula}i∈X has a finite domain {a mathematical formula}Di of values that can be assigned to it. A value {a mathematical formula}r∈Di is denoted {a mathematical formula}ir. For a set of variables {a mathematical formula}S⊆X, {a mathematical formula}DS denotes the Cartesian product of the domains of the variables in S. For a given tuple of values t, {a mathematical formula}t[S] denotes the projection of t over S. A cost function {a mathematical formula}wS∈W, with scope {a mathematical formula}S⊆X, is a function {a mathematical formula}wS:DS↦[0,k] where k is a maximum integer cost used for forbidden assignments.
+     </paragraph>
+     <paragraph>
+      We assume, without loss of generality, that every CFN includes at least one unary cost function {a mathematical formula}wi per variable {a mathematical formula}i∈X and a nullary cost function {a mathematical formula}w∅. All costs being non-negative, the value of this constant function, {a mathematical formula}w∅, provides a lower bound on the cost of any assignment.
+     </paragraph>
+     <paragraph>
+      The Weighted Constraint Satisfaction Problem (WCSP) is to find a complete assignment t minimizing the combined cost function {a mathematical formula}⨁wS∈WwS(t[S]), where {a mathematical formula}a⊕b=min(k,a+b) is the k-bounded addition. This optimization problem has an associated NP-complete decision problem. Notice that if {a mathematical formula}k=1, then the WCSP is nothing but the classical CSP (and not the Max-CSP).
+     </paragraph>
+     <paragraph>
+      Modeling the CPD problem as a CFN is straightforward. The set of variables X has one variable i per residue i. The domain of each variable is the set of (amino acid,conformation) pairs in the rotamer library used. The global energy function can be represented by 0-ary, unary and binary cost functions, capturing the constant energy term {a mathematical formula}w∅=E∅, the unary energy terms {a mathematical formula}wi(r)=E(ir), and the binary energy terms {a mathematical formula}wij(r,s)=E(ir,js), respectively. In the rest of the paper, for simplicity and consistency, we use notations {a mathematical formula}E∅, {a mathematical formula}E(⋅) and {a mathematical formula}E(⋅,⋅) to denote cost functions and restrict ourselves to binary CFN (extensions to higher orders are well-known).
+     </paragraph>
+     <paragraph>
+      Notice that there is one discrepancy between the original formulation and the CFN model: energies are represented as arbitrary floating point numbers while CFN uses positive costs. This can simply be fixed by first subtracting the minimum energy from all energies. These positive costs can then be multiplied by a large integer constant M and rounded to the nearest integer if integer costs are required.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Local consistency in CFN
+      </section-title>
+      <paragraph>
+       The usual exact approach to solve a CFN is to use a depth-first branch-and-bound algorithm (DFBB). A family of efficient and incrementally computed lower bounds is defined by local consistency properties.
+      </paragraph>
+      <paragraph>
+       Node consistency [54] (NC) requires that the domain of every variable i contains a value r that has a zero unary cost ({a mathematical formula}E(ir)=0). This value is called the unary support for i. Furthermore, in the scope of the variable i, all values should have a cost below k ({a mathematical formula}∀r∈Di,E∅+E(ir)&lt;k).
+      </paragraph>
+      <paragraph>
+       Soft arc consistency ({a mathematical formula}AC⁎) [79], [54] requires NC and also that every value r of every variable i has a support on every cost function {a mathematical formula}E(ir,js) involving i. A support of {a mathematical formula}ir is a value {a mathematical formula}js∈Dj such that {a mathematical formula}E(ir,js)=0.
+      </paragraph>
+      <paragraph>
+       Stronger local consistencies such as Existential Directional Arc Consistency (EDAC) have also been introduced [55]. See [14] for a review of existing local consistencies.
+      </paragraph>
+      <paragraph>
+       As in classical CSP, enforcing a local consistency property on a problem P involves transforming {a mathematical formula}P=(X,W) into a problem {a mathematical formula}P′=(X,W′) that is equivalent to P (all complete assignments keep the same cost) and that satisfies the considered local consistency property. Enforcing a local consistency may increase {a mathematical formula}E∅ and thus improve the lower bound on the optimal cost. This bound is used to prune the search tree during DFBB.
+      </paragraph>
+      <paragraph>
+       Local consistency is enforced using Equivalence Preserving Transformations (EPTs) that move costs between different cost functions [79], [54], [57], [18], [55], [15], [17], [16], [14]. For example, a variable i violating the NC property because all its values {a mathematical formula}ir have a non-zero {a mathematical formula}E(ir) cost, can be made NC by subtracting the minimum cost from all {a mathematical formula}E(ir) and adding this cost to {a mathematical formula}E∅. The resulting network is equivalent to the original network, but it has an increased lower bound {a mathematical formula}E∅.
+      </paragraph>
+      <paragraph>
+       Interestingly, in CPD, the admissible heuristic used in the DEE/{a mathematical formula}A⁎ algorithm at depth d of the search tree is [33]:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       From a WCSP perspective, interpreting energies as cost functions, this heuristic is exactly the PFC-DAC lower bound [85], [56] used in WCSP. In WCSP, this lower bound is considered obsolete, and indeed it is proven to be weaker than soft arc consistency [79].
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Maintaining dead-end elimination
+      </section-title>
+      <paragraph>
+       Dead-end elimination is the key algorithmic tool of exact CPD solvers. From an AI perspective, in the context of CSP (if {a mathematical formula}k=1), the DEE equation (3) is equivalent to neighborhood substitutability [27]. For MaxSAT, it is equivalent to the Dominating 1-clause rule[68]. In the context of CFN, the authors of [59] introduced partial soft neighborhood substitutability with a definition that is equivalent to Eq. (3) for pairwise decomposed energies.
+      </paragraph>
+      <paragraph>
+       The DEE equation (3) (cf. Section 2.1) can be strengthened and adapted to the CFN context as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This new condition differs from Eq. (3) by the fact that some values have been discarded from the min operation. These values correspond to forbidden assignments because the sum of the corresponding binary term plus the two unary costs plus the current lower bound {a mathematical formula}E∅ (produced by soft arc consistency) is greater than or equal to the current upper bound k. Such values s do not need to be considered by the min operation because {a mathematical formula}{ir,js} does not belong to any optimal solution, whereas {a mathematical formula}{iu,js} may.{sup:1}
+      </paragraph>
+      <paragraph label="Example 1">
+       Let {a mathematical formula}X={1,2,3} be a set of three variables with domains {a mathematical formula}D1={a,b,c}, {a mathematical formula}D2={e,f}, and {a mathematical formula}D3={g,h}. Suppose there are three cost functions, where {a mathematical formula}E(1b)=2, {a mathematical formula}E(1a,2e)=2, {a mathematical formula}E(1b,2e)=E(1c,2f)=1, {a mathematical formula}E(1a,3g)=E(1c,3h)=2, and all other costs are null. Let {a mathematical formula}k=3. The problem is EDAC. Then, {a mathematical formula}1a dominates {a mathematical formula}1b as shown by the new rule of Eq. (4) that is satisfied: {a mathematical formula}E(1b)−E(1a)+E(1b,2f)−E(1a,2f)+min(E(1b,3g)−E(1a,3g),E(1b,3h)−E(1a,3h))=2−0+0−2⩾0, discarding tuple {a mathematical formula}{2e} because {a mathematical formula}E(1b,2e)+E(1b)+E(2e)+E∅=1+2+0+0⩾k, whereas the old rule of Eq. (3) is unsatisfied: {a mathematical formula}E(1b)−E(1a)+min(E(1b,2e)−E(1a,2e),E(1b,2f)−E(1a,2f))+min(E(1b,3g)−E(1a,3g),E(1b,3h)−E(1a,3h))=2−0−1−2&lt;0.
+      </paragraph>
+      <paragraph>
+       In the following, we recall how to enforce Eq. (4) by an immediate adaptation of the original algorithm in [59]. Then, we present a modified version to partially enforce a novel combination of Eq. (4) and Eq. (2) with a much lower time complexity.
+      </paragraph>
+      <section label="3.2.1">
+       <section-title>
+        Enforcing DEE
+       </section-title>
+       <paragraph>
+        Assuming a soft arc consistent WCSP (see e.g., W-{a mathematical formula}AC⁎2001 algorithm in [57]), enforcing DEE is described by Algorithm 1. For each variable i, all the pairs of values {a mathematical formula}(u,r)∈Di×Di with {a mathematical formula}u&lt;r are checked by the function DominanceCheck to see if r is dominated by u or, if not, vice versa (line 3). At most one dominated value is added to the value removal queue Δ at each inner loop iteration (line 2). Removing dominated values (line 4) can make the problem arc inconsistent, requiring us to enforce soft arc consistency again. Procedure {a mathematical formula}AC⁎-DEE successively enforces {a mathematical formula}AC⁎ and DEE until no value removal is made by the enforcing algorithms.
+       </paragraph>
+       <paragraph>
+        Function {a mathematical formula}DominanceCheck(i,u,r) computes the sum of worst-cost differences as defined by Eq. (4) and returns a non-empty set containing value r if Eq. (4) is true, meaning that r is dominated by value u. It exploits early breaks as soon as Eq. (4) can be falsified (lines 5 and 6). Worst-cost differences are computed by the function {a mathematical formula}getDifference(j,i,u,r) applied to every binary cost function related to i, discarding forbidden assignments with {a mathematical formula}{ir,js} (line 8), as suggested by Eq. (4). Worst-cost differences are always negative or zero (line 7) due to {a mathematical formula}AC⁎.
+       </paragraph>
+       <paragraph>
+        The worst-case time complexity of getDifference is {a mathematical formula}O(d) for binary WCSPs. DominanceCheck is {a mathematical formula}O(nd) assuming a complete graph. Thus, the time complexity of one iteration of Algorithm 1 (DEE) is {a mathematical formula}O(nd2nd+nd)=O(n2d3). Interleaving DEE and {a mathematical formula}AC⁎ until a fixed point is reached is done at most nd times, resulting in a worst-case time complexity in {a mathematical formula}O(n3d4). Its space complexity is {a mathematical formula}O(nd2) when using the residues structure [59].
+       </paragraph>
+       <paragraph>
+        Note that using the new Eq. (4) (line 8) or Eq. (3) (without line 8) does not change the complexities.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       Enforcing {a mathematical formula}DEE1
+       <paragraph>
+        In order to reduce the time (and space) complexity of pruning by dominance, we test only one pair of values per variable. Hence the name, {a mathematical formula}DEE1, for the new algorithm described in Algorithm 2. We select the pair {a mathematical formula}(u,r)∈Di×Di in an optimistic way such that u is associated with the minimum unary cost and r to the maximum unary cost (lines 9 and 10). Because arc consistency also implies node consistency, we always have {a mathematical formula}E(iu)=0.{sup:2} If all the unary costs (including the maximum) are equal to zero (line 11), we select as r the maximum domain value (or its minimum if this value is already used by u). By doing so, we should favor more pruning on max-closed or submodular subproblems.{sup:3}
+       </paragraph>
+       <paragraph>
+        Instead of just checking the new Eq. (4) for the pair {a mathematical formula}(u,r) alone, we use the opportunity to also check the original DEE rule of Eq. (2) for all the pairs {a mathematical formula}(u,v) such that {a mathematical formula}v∈Di∖{u}. This is done in the function MultipleDominanceCheck (lines 15 and 16). Notice that Eq. (2) simplifies to {a mathematical formula}E(iv)⩾ubu (line 16) due to {a mathematical formula}AC⁎. This function computes at the same time the sum of maximum costs {a mathematical formula}ubu for value u (lines 12 and 13) and the sum of worst-cost differences {a mathematical formula}δur for the pair {a mathematical formula}(u,r). The new function {a mathematical formula}getDifference-Maximum(j,i,u,r) now returns the worst-cost difference, as suggested by Eq. (4), and also the maximum cost in {a mathematical formula}E(i,j) for i assigned u. When the maximum cost of a value is null for all its cost functions, we can directly remove all the other values in the domain avoiding any extra work (line 14). Finally, if the selected pair {a mathematical formula}(u,r) for the variable i satisfies Eq. (4), removing the value r of {a mathematical formula}Di, then a new pair for i will be checked at the next iteration of DEE{sup:1} in the modified procedure {a mathematical formula}AC⁎-DEE1 (replacing DEE by DEE{sup:1} in {a mathematical formula}AC⁎-DEE).
+       </paragraph>
+       <paragraph>
+        Notice that {a mathematical formula}DEE1 is equivalent to DEE on problems with Boolean variables, such as MaxSAT. For problems with non-Boolean domains, {a mathematical formula}DEE1 is still able to detect and prune several values per variable. Clearly, its time (resp. space) complexity is {a mathematical formula}O(n3d2) (resp. {a mathematical formula}O(n) using only one residue per variable), reducing by a factor {a mathematical formula}d2 the time and space complexity compared to DEE.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Computational protein design instances
+     </section-title>
+     <paragraph>
+      In our initial experiments with CPD in [2], we built 12 designs using the CPD dedicated tool osprey 1.0. A new version of osprey being available since, we used this new 2.0 version [30] for all computations. Among different changes, this new version uses a modified energy field that includes a new definition of the “reference energy” and a different rotamer library. We therefore rebuilt the 12 instances from [2] and additionally created 35 extra instances from existing published designs, as described in [83]. We must insist on the fact that the 12 rebuilt instances do not define the same energy landscape or search space as the initial [2]'s instances (due to changes in rotamers set).
+     </paragraph>
+     <paragraph>
+      These designs include protein structures derived from the PDB that were chosen for the high resolution of their 3D-structures, their use in the literature, and their distribution of sizes and types. Diverse sizes of sequence-conformation combinatorial spaces are represented, varying by the number of mutable residues, the number of alternative amino acid types at each position and the number of conformations for each amino acid. The Penultimate rotamer library was used [64]. Over these 47 designs, we only report results on the 40 designs for which a GMEC could be identified and proven by one of the tested solvers. All 47 designs are available for download both in native and WCSP formats at http://genotoul.toulouse.inra.fr/~tschiex/CPD-AIJ.
+     </paragraph>
+     <paragraph>
+      Preparation of CPD instances
+     </paragraph>
+     <paragraph>
+      Missing heavy atoms in crystal structures and hydrogen atoms were added with the tleap module of the AMBER9 software package [12]. Each molecular system was then minimized in implicit solvent (Generalized Born model [42]) using the Sander program and the all-atom ff99 force field of AMBER9. All {a mathematical formula}E∅, {a mathematical formula}E(ir), and {a mathematical formula}E(ir,js) energies of rotamers (see Eq. (1)) were pre-computed using osprey 2.0. The energy function consisted of the Amber electrostatic, van der Waals and the solvent terms. Rotamers and rotamer pairs leading to sterical clashes between molecules are associated with huge energies (10{sup:38}) representing forbidden combinations. For n residues to optimize with d possible (amino acid, conformation) pairs, there are n unary and {a mathematical formula}n.(n−1)2 binary cost functions that can be computed independently.
+     </paragraph>
+     <paragraph>
+      Translation to WCSP format
+     </paragraph>
+     <paragraph>
+      The native CPD problems were translated to the WCSP format before any pre-processing. To convert the floating point energies of a given instance to non-negative integer costs, we subtracted the minimum energy to all energies and then multiplied energies by an integer constant M and rounded to the nearest integer. The initial upper bound k is set to the sum, over all cost functions, of the maximum energies (excluding forbidden sterical clashes). High energies corresponding to sterical clashes are represented as costs equal to the upper bound k (the forbidden cost). The resulting WCSP model was used as the basis for all other solvers (except osprey). To keep a cost magnitude compatible with all the compared solvers, we used {a mathematical formula}M=102. Experiments with a finer discretization ({a mathematical formula}M=108) were used in previous experiments [83] with no significant difference in computing efforts.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       A new cost-based variable ordering heuristics
+      </section-title>
+      <paragraph>
+       We analyzed the distribution of costs for the CPD problem in order to infer a new variable ordering heuristics. Fig. 3-left shows the histogram of a typical binary cost function for one of the CPD instances (1ENH, one of the open instances). Although the distribution has several modes, we chose to collect as an important feature of a cost function its median cost, which is less sensitive to extrema than the mean cost.
+      </paragraph>
+      <paragraph>
+       Fig. 3-right shows the histogram of median costs for this instance. The problem has 666 binary cost functions and we collected the median cost in every cost function. The distribution of median costs has a heavy right tail. This feature can be exploited during search to focus on the most important variables first. For that, we define a new dynamic variable ordering heuristics selecting at each node of the search tree the variable minimizing the ratio of its current domain size divided by the sum of the median costs of all its current cost functions (including its unary cost function). The sum of the median costs gives a rough estimate of the average lower bound increase if we select that variable, relating this heuristics to strong branching in Operations Research [62], [1]. In order to save computation time, median costs of binary cost functions are computed only once, just after enforcing EDAC (and DEE), before the search.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Alternative models for the CPD
+     </section-title>
+     <paragraph>
+      The rigid backbone CPD problem has a simple formulation and can be easily written in a variety of combinatorial optimization frameworks. To evaluate CFN algorithms, the new {a mathematical formula}DEE1 algorithm and our domain specific heuristics, we compared these different variants with a variety of other solvers, coming from different fields. We present now the different models used in the comparison.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       CPD as a probabilistic graphical model
+      </section-title>
+      <paragraph>
+       The notion of graphical model has been mostly associated with probabilistic graphical models, the most famous examples of these are Markov random fields and Bayesian networks [49]. In those formalisms, a concise description of a joint distribution of probabilities over a set of variables is obtained through a factorization in local terms, involving only few variables. For terms involving at most two variables, if vertices represent variables and edges represent terms, a factorization can be represented as a graph, hence the name of graphical models. The same idea is used for concisely describing set of solutions (relations) in CSP or cost distributions in CFN.
+      </paragraph>
+      <paragraph label="Definition 2">
+       A discrete Markov random field (MRF) is a pair {a mathematical formula}(X,Φ) where {a mathematical formula}X={1,…,n} is a set of n random variables and Φ is a set of potential functions. Each variable {a mathematical formula}i∈X has a finite domain {a mathematical formula}Di of values that can be assigned to it. A potential function {a mathematical formula}ϕS∈Φ, with scope {a mathematical formula}S⊆X, is a function {a mathematical formula}ϕS:DS↦R.
+      </paragraph>
+      <paragraph>
+       A discrete Markov random field (MRF) implicitly defines a non-normalized probability distribution over X. For a given tuple t, the probability of t is defined as:{a mathematical formula} where Z is a normalizing constant.
+      </paragraph>
+      <paragraph>
+       From the sole point of view of optimization, the problem of finding an assignment of maximum probability, also known as the maximum a posteriori (MAP) assignment in an MRF or a minimum cost solution of a CFN (the Weighted CSP) are equivalent by monotonicity of the {a mathematical formula}exp() function. Some technical differences remain: CFN are restricted to non-negative costs (and some tools are restricted to integer costs). Being focused on optimization, CFN also emphasizes the possible existence of a finite upper bound k that leads to the use of bounded addition to combine costs instead of plain addition of potentials in MRFs.
+      </paragraph>
+      <paragraph>
+       The CPD problem can therefore directly be modeled as the MAP problem in an MRF exactly as we have described for CFN before, additive using potentials to capture energies (see for example [86]). Combinations of values with cost k (forbidden) are mapped to an infinite additive potential or a 0 value if multiplicative (exponential) potentials are used.
+      </paragraph>
+      <paragraph>
+       These models can be solved using MAP-MRF solvers such as daoopt[69] (winner of the Pascal Inference Challenge in 2011{sup:4}) or the recent version of the mplp[80] solver.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Integer linear programming model
+      </section-title>
+      <paragraph>
+       A 0/1 linear programming (01LP) problem is defined by a linear criterion to optimize over a set of Boolean variables under a conjunction of linear equalities and inequalities. The previous optimization problem over a graphical model can also be represented as a 01LP problem using the encoding proposed in [51].
+      </paragraph>
+      <paragraph>
+       For every assignment {a mathematical formula}ir of every variable i, there is a Boolean variable {a mathematical formula}dir that is equal to 1 iff {a mathematical formula}i=r. Additional constraints enforce that exactly one value is selected for each variable. For every pair of values of different variables {a mathematical formula}(ir,js) involved in a binary energy term, there is a Boolean variable {a mathematical formula}pirjs that is equal to 1 iff the pair {a mathematical formula}(ir,js) is used. Constraints enforce that a pair is used iff the corresponding values are used. Then, finding a GMEC reduces to the following ILP:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This model is also the ILP model IP1 proposed in [48] for side-chain positioning. It has a quadratic number of Boolean variables. Constraints (7) and (8) explicitly forbid values and pairs with cost k (sterical clashes).
+      </paragraph>
+      <paragraph>
+       This model can be simplified by relaxing the integrality constraint on the {a mathematical formula}pirjs: indeed, if all {a mathematical formula}dir are set to 0 or 1, the constraints (5) and (6) enforce that the {a mathematical formula}pirjs are set to 0 or 1. The same observation has been previously done for in the context of the linearization of a quadratic optimization model for wind farm design in [87]. In the rest of the paper, except where it is otherwise mentioned, we relax constraint (10). This type of ILP model can be handled by various ILP solvers such as IBM ILOG cplex.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       0/1 quadratic programming model
+      </section-title>
+      <paragraph>
+       A 01QP problem is defined by a quadratic criterion to optimize over a set of Boolean variables under a conjunction of linear equality and inequality constraints. A compact encoding of the problem can be obtained using the ability of expressing the product of Boolean variables, getting rid of a quadratic number of {a mathematical formula}pirjs variables of the 01LP model.
+      </paragraph>
+      <paragraph>
+       For every value {a mathematical formula}ir, there is again a Boolean variable {a mathematical formula}dir that is equal to 1 iff {a mathematical formula}i=r. Additional linear constraints enforce that exactly one value is selected for each variable. The use of a given pair of rotamers at positions {a mathematical formula}(ir,js) can then be simply captured by the product {a mathematical formula}dir.djs. Then, finding a GMEC reduces to the following compact QP:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Values and pairs generating sterical clashes are explicitly forbidden by constraints (11) and (12). This model can be handled by the QP solver of IBM ILOG CPLEX.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       0/1 quadratic optimization model
+      </section-title>
+      <paragraph>
+       Another compact model can be obtained in the more restricted case of pure Boolean Quadratic Optimization (BQO), where a quadratic criterion is optimized but no linear constraints can be expressed.
+      </paragraph>
+      <paragraph>
+       For every value {a mathematical formula}ir, there is again a Boolean variable {a mathematical formula}dir that is equal to 1 iff {a mathematical formula}i=r. We must integrate the fact that exactly one value must be selected in each domain in the criterion itself. To capture the fact that there is at most one value selected per domain, we penalize the simultaneous selection of every pair {a mathematical formula}ir,is of rotamers of the same variable i with a sufficiently large penalty M. To guarantee that at least one value will be selected in each domain, we shift all finite energies by a constant negative term N such that all shifted finite energies are strictly negative. If an assignment selects no value in a given domain, then selecting one value can only result in an assignment with a lower cost, by introducing new negative terms in the global energy. An optimal solution must therefore contain exactly one value per domain.
+      </paragraph>
+      <paragraph>
+       The corresponding model can be written as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For N we just use the largest negative integer that is strictly below the opposite of the largest finite energy in a given instance. M must be chosen in such a way that no combination of energy can compensate for the cost M. The selection of one additional value {a mathematical formula}ir can just contribute to the criterion by the addition of the energy {a mathematical formula}E(ir) and the energies {a mathematical formula}E(ir,js) for all other variables j and their rotamers {a mathematical formula}js. M is therefore set to the opposite of the largest negative integer below the most negative sum of these energies, overall all variables i and rotamers {a mathematical formula}ir.
+      </paragraph>
+      <paragraph>
+       The corresponding Boolean quadratic optimization problem can be solved using the semidefinite programming based exact best-first branch-and-bound solver biqmac[78].
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Weighted partial MaxSAT
+      </section-title>
+      <paragraph label="Definition 3">
+       A weighted partial MaxSAT (WPMS) instance is a set of pair {a mathematical formula}〈C,w〉, where C is a clause and w is a number in {a mathematical formula}N∪{∞}, which is called the weight of that clause. A clause is a disjunction of literals. A literal is a Boolean variable or its negation.
+      </paragraph>
+      <paragraph>
+       If the weight of a clause is ∞, it is called a hard clause, otherwise it is a soft clause. The objective is to find an assignment to the variables appearing in the clauses such that all hard clauses are satisfied and the weight of all falsified soft clauses is minimized.
+      </paragraph>
+      <paragraph>
+       The CPD problem can be encoded into a WPMS instance. We present two encodings, which are based on existing translations of CSP into SAT: the direct encoding [5], which is closer to the CFN model, and the tuple encoding, which was presented but not named by Bacchus [6] and is quite similar to the ILP model.
+      </paragraph>
+      <section>
+       <section-title>
+        Direct encoding
+       </section-title>
+       <paragraph>
+        In the direct encoding, we have one proposition {a mathematical formula}dir for each variable/value pair {a mathematical formula}(i,r), which is true if variable i is assigned the value r. We have hard clauses {a mathematical formula}(¬dir∨¬dis) for all {a mathematical formula}i∈[1,n] and all {a mathematical formula}r&lt;s, {a mathematical formula}r,s∈Di, as well as a hard clause {a mathematical formula}(⋁rdir) for all i. These clauses ensure that the propositional encoding of the CFN allows exactly one value for each variable. The cost functions are represented respectively by an empty clause with weight {a mathematical formula}E∅, unit clauses {a mathematical formula}¬dir with weight {a mathematical formula}E(ir) and binary clauses {a mathematical formula}¬dir∨¬djs with weight {a mathematical formula}E(ir,js).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Tuple encoding
+       </section-title>
+       <paragraph>
+        The tuple encoding encodes variable domains the same way as the direct encoding, therefore we have a proposition {a mathematical formula}dir for each variable/value pair {a mathematical formula}i=r, along with clauses that enforce that each variable is assigned exactly one value. The constant and unary energy terms are also respectively represented as an empty soft clause with weight {a mathematical formula}E∅ and soft unit clauses {a mathematical formula}¬dir with weight {a mathematical formula}E(ir).
+       </paragraph>
+       <paragraph>
+        For all non-zero pairwise energy term {a mathematical formula}E(ir,js), we have a proposition {a mathematical formula}pirjs as well as the soft clause {a mathematical formula}(¬pirjs) with weight {a mathematical formula}E(ir,js). This represents the cost to pay if the corresponding pair (energy term) is used. We also have the hard clauses {a mathematical formula}(dir∨¬pirjs) and {a mathematical formula}(djs∨¬pirjs). These enforce that if a pair is used, the corresponding values must be used. Finally, for all the pairs of variables {a mathematical formula}(i,j) and all the values {a mathematical formula}ir, hard clauses {a mathematical formula}(¬dir∨⋁s∈Djpirjs) enforce that if a value {a mathematical formula}ir is used, one of the pair {a mathematical formula}pirj⋅ must be used.
+       </paragraph>
+       <paragraph>
+        This encoding is similar to the 01LP encoding and was originally proposed in the context of SAT encodings for classical CSP [6]. Unit Propagation (UP) on the tuple encoding enforces arc consistency in the original CSP (the set of values that are deleted by enforcing AC have their corresponding literal set to false by UP).
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.6">
+      <section-title>
+       Constraint programming model
+      </section-title>
+      <paragraph>
+       In [72], a generic translation of WCSPs into crisp CSPs with extra cost variables has been proposed. In this transformation, the decision variables remain the same as in the original WCSP and every cost function is reified into a constraint, which applies on the original cost function scope augmented by one extra variable representing the assignment cost. This reification of costs into domain variables transforms a WCSP in a crisp CSP with more variables and augmented arities. Typically, unary and binary cost functions are converted into table constraints of arity two and three respectively. Another extra cost variable encodes the global GMEC criterion, related by a sum constraint to all the unary and binary cost variables. All the cost variables are positive integer bounded by the same initial upper bound k as in the WCSP format.
+      </paragraph>
+      <paragraph>
+       The resulting CSP model has been expressed in the minizinc[65] constraint programming (CP) language. It can be solved using any CP solvers such as gecode, mistral, or Opturion/CPX, the recent winner of the MiniZinc Challenge 2013.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      For computing the GMEC, all computations were performed on a single core of an AMD Operon 6176 at 2.3 GHz, 128 GB of RAM, and a 9000-second time-out. These computations were performed on the GenoToul cluster.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Solvers tested
+      </section-title>
+      <paragraph>
+       The solvers tested have different configurability in terms of parameters. Solvers such as mplp offer essentially no tuning, while others offer a large number of options. SAT solvers that participate routinely in the SAT competition have excellent default settings and those settings were kept unmodified. For one solver that explicitly requires tuning, we contacted the author for some advice. There is always a question whether dramatically different results could be obtained by different settings. The situation here corresponds to the situation of a non-naive user faced with several optimization tools.
+      </paragraph>
+      <section>
+       <section-title>
+        DEE/A* optimization
+       </section-title>
+       <paragraph>
+        The underlying principles of {a mathematical formula}DEE/A⁎ have been described in Section 2.1. To solve the different protein design cases, we used osprey version 2.0 (cs.duke.edu/donaldlab/osprey.php). The procedure starts by extensive DEE pre-processing ({a mathematical formula}algOption=3, includes simple Goldstein, Magic bullet pairs, 1- and 2-split positions, Bounds and pairs pruning) followed by {a mathematical formula}A⁎ search. Only the GMEC conformation is generated by {a mathematical formula}A⁎ ({a mathematical formula}initEw=0).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        CFN solver
+       </section-title>
+       <paragraph>
+        toulbar2 is a depth-first branch-and-bound solver using soft local consistencies for bounding and specific variable and value ordering heuristics for efficiency. The default EDAC [55] consistency may simultaneously reformulate all the cost functions involving one variable (a star subgraph). The default variable ordering strategy is based on the Weighted Degree heuristics [8] with Last Conflict [60], while the default value ordering consists in choosing for each variable its fully supported value as defined by EDAC.
+       </paragraph>
+       <paragraph>
+        We used toulbar2 version 0.9.6 (mulcyber.toulouse.inra.fr/projects/toulbar2/) using binary branching and an initial limited discrepancy search phase [41] with discrepancy less than or equal to 1. We tested this vanilla version (options -d: -l=1 -dee=0) and incrementally introduced our new cost-based variable ordering heuristics (option -m) and different levels of DEE processing: maintaining {a mathematical formula}DEE1 during search (-dee=1), pre-processing with DEE (-dee=4), both together (-dee=2), or maintaining DEE during search (-dee=3).
+       </paragraph>
+      </section>
+      <section>
+       daoopt solver
+       <paragraph>
+        We decided to include daoopt as the winning solver of the 2011 PASCAL probabilistic inference challenge in the “MAP” category. We downloaded daoopt version 1.1.2 from its repository (https://github.com/lotten/daoopt) and contacted the author for some advice. The distributed version of daoopt is not the same as the PIC challenge version. It lacks the Dual Decomposition bound strengthening component [69] that relies on private code.
+       </paragraph>
+       <paragraph>
+        This solver relies on Stochastic Local Search for finding initial solutions followed by depth-first AND/OR search [22] and mini-bucket lower bounds [23] for pruning. Mini-bucket lower bounds require space and time in {a mathematical formula}O(di) (where i is a user controlled parameter). CPD is certainly not an ideal domain for daoopt: the complete graph makes AND/OR search useless and the large maximum domain size d makes mini-buckets space and time intensive. We used the “1 hour” settings for the PIC challenge from [69], modified to account for the complete graph that makes optimization of the AND/OR decomposition useless. This leads to the parameters -i 35 –slsX 10 –slsT 6 -lds 1 and tried to allocate different amounts of memory to mini-buckets (option -m with 500 MB, 5 GB or 50 GB), the i parameter being then automatically set by the solver to use a maximum amount of memory. We kept only the results for the best tuning (5 GB, the worst results being obtained with 50 GB). Note that because of large domain sizes, and the {a mathematical formula}O(di) space complexity of mini-buckets, a fine tuning of this parameter should have limited influence on the results.
+       </paragraph>
+       <paragraph>
+        The WCSP instances were transformed into the UAI “MARKOV” format through the application of an exponential transformation of costs into multiplicative potentials. Costs above the upper bound were translated to zero potentials to preserve pruning. The exponential basis was chosen so that the largest multiplicative potentials are equal to 1.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        MPLP MAP-MRF solver
+       </section-title>
+       <paragraph>
+        We downloaded the sources for the recent version 2 of the mplp (Message Passing Linear Programming) implementation [80], [81] available at http://cs.nyu.edu/~dsontag/.
+       </paragraph>
+       <paragraph>
+        This solver uses a Message Passing based bound and duality theory to identify optimal solutions of an MAP-MRF problem through successive tightening of subsets of variables. The message passing used in mplp defines reparametrizations of the underlying MRF. These reparametrizations are similar to the reformulations done by local consistencies in CFN [79], [18]. The solver is unique in all the solvers considered in that it does not use branching but only increasingly strong inference by applying reparametrizations to set of variables that initially contain only pairwise potentials, reasoning on stars [35], and are incrementally enlarged to include several potentials and strengthen the corresponding bound [81], [80].
+       </paragraph>
+       <paragraph>
+        All costs were divided by 1000 and the optimality gap threshold kept to the default of {a mathematical formula}2⋅10−4. The solver does not have any parameter.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        ILP and QP optimization
+       </section-title>
+       <paragraph>
+        We used cplex version 12.2 with parameters EPAGAP, EPGAP, and EPINT set to zero to avoid premature stop. No other tuning was done.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Boolean quadratic optimization
+       </section-title>
+       <paragraph>
+        We used the biqmac[78] solver (http://biqmac.uni-klu.ac.at/biqmaclib.html) from sources provided by Angelika Wiegele. biqmac is a branch-and-bound solver relying on a strong Semidefinite Programming (SDP) bound for Boolean quadratic optimization. The SDP framework is known to provide strong bounds for a variety of combinatorial optimization problems among which MaxCut and Max2SAT, with guaranteed approximation ratios [36]. Two solver settings (with branching rule set to 2 or 3, as advised by the author) were tried with no significant difference in the performances.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Weighted partial MaxSAT optimization
+       </section-title>
+       <paragraph>
+        The same problems have been translated to WPMS using the two previously described encodings. There are two categories of complete WPMS solvers that we consider here: branch-and-bound (B&amp;B) solvers and sequence-of-SAT solvers.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Sequence-of-SAT solvers reformulate the WPMS problem as a series of SAT instances that allow us to successively increase the lower bound or decrease the upper bound for the optimal solution of the WPMS instance. A particular technique used by several sequence-of-SAT solvers, such as WPM1[4] and maxhs[20], is identifying unsatisfiable cores of the WPMS instance. An unsatisfiable core is a subset of the soft clauses of the instances which, taken together with the hard clauses of the instances, cannot all be satisfied by any assignment. The sequence of SAT instances then builds a collection of cores. The last SAT instance produces an assignment that violates at least one clause from each core but satisfies all other clauses. This assignment can be shown to be optimal.
+        </list-item>
+        <list-item label="•">
+         B&amp;B solvers explore a backtracking search tree. At each node of the tree, they compute a lower bound on the cost of the best solution that can be found in the subtree rooted at that node. If that lower bound is higher than the cost of the best solution found so far, the solver backtracks. The solver minimaxsat[43] employs a method that is typically used in B&amp;B solvers. In its case, the lower bound computation consists in performing unit propagation over the entire formula, including soft clauses. Unit propagation is able to detect some but not all unsatisfiable cores of the reduced formula at the current node. These cores are collected and used to transform the formula into an equivalent formula with a higher lower bound.
+        </list-item>
+       </list>
+       <paragraph>
+        As B&amp;B solvers, we have used akmaxsat[52] as it was among the best B&amp;B performers in the latest MaxSAT evaluation and minimaxsat[43], which was shown to be one of the best solvers over all the instances of all MaxSAT evaluations in [21]. Among sequence-of-SAT solvers, we have used bin-c-d, wpm1 and wpm2, which are among the best performers in recent evaluations, as well as maxhs, which was shown to be the best solver for the entire ensemble of instances of MaxSAT evaluations [21].
+       </paragraph>
+       <paragraph>
+        We can observe that there exists a bijection between cores of the direct encoding of an instance and cores of the tuple encoding. However, there exist cores in the tuple encoding that can be detected just by unit propagation, but require a longer refutation in the direct encoding. On the other hand, the tuple encoding is larger and hence unit propagation is slower. Since both B&amp;B and sequence-of-SAT solvers essentially rely on collecting cores of the formula, both types of solver can benefit from the tuple encoding by detecting more cores with less search. However, the overhead of performing unit propagation on a larger formula may not pay off in runtime.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        CP solvers
+       </section-title>
+       <paragraph>
+        We used gecode version 4.2.0 (http://www.gecode.org/), mistral version 1.3.40 (using its Python interface numberjack at http://numberjack.ucc.ie/ and http://github.com/eomahony/Numberjack/tree/fzn), and Opturion/CPX version 1.0.2 (http://www.opturion.com/cpx.html). mistral uses a Weighted Degree heuristics [8] and a restart strategy with geometric factor 1.3 and base 256. Opturion/CPX combines CP and SAT solving techniques, learning clauses from failures. By default, it uses a Luby restart policy. No tuning was done for gecode nor Opturion/CPX (both using free search mode).
+       </paragraph>
+       <paragraph>
+        All the Python and C translating scripts used are available together with the CPD instances at http://genotoul.toulouse.inra.fr/~tschiex/CPD-AIJ.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Results
+      </section-title>
+      <paragraph>
+       Several solvers were unable to solve any of the instances in the 9000 s allocated globally per problem for each approach (including any pre-processing used in the method such as DEE in the {a mathematical formula}DEE/A⁎ approach). Despite the compact associated models, neither cplex for the quadratic programming model, nor biqmac for the quadratic Boolean optimization model could solve any single instance in less than 9000 s. Similarly, most of the WPMS solvers failed to solve any instance, in either of the two encoding tested. The only exception to this is the maxhs solver when applied to the tuple encoding. Finally, neither Opturion/CPX nor gecode nor mistral could solve any single instance. In Table 1, we therefore only report the results obtained by the WPMS solver maxhs, the CPD solver osprey, the ILP solver cplex, the MAP-MRF solvers daoopt and mplp, and the CFN solver toulbar2 in its vanilla version (using the default variable ordering heuristics and no DEE).
+      </paragraph>
+      <paragraph>
+       A cactus plot giving a global view of the overall results is available in Fig. 4 and more detailed results are given in Table 1. The table shows that the CPU-times are very well correlated across different models and solvers, and show a clear ordering in terms of difficulty of these problems for all solvers, from WPMS/maxhs, MAP-MRF/daoopt, {a mathematical formula}DEE/A⁎/osprey, ILP/cplex, MAP-MRF/mplp, and CFN/toulbar2.
+      </paragraph>
+      <paragraph>
+       The variant of the ILP model originally proposed by [51], where the {a mathematical formula}pirjs variables are constrained to be 0/1 variables was also tested. It was overall less efficient than the relaxed model we used. The ratio in terms of speedup was never very important (between 0.2 and 3.4 with a mean of 1.4 over all the solved instances) showing the robustness of cplex. It is often claimed, following [86], that LP technology is not able to deal with large instances of MRF. This experiment, on realistically designed instances of CPD, using state-of-the-art energy functions, including sterical clashes, shows that the recent 12.2 version of cplex gives reasonably good results on these problems.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      Non-vanilla toulbar2
+      <paragraph>
+       The results obtained on the same 40 CPD instances using the vanilla toulbar2, enhanced with our new variable ordering heuristics and increasingly stronger DEE processing are given in Table 2. None of the 7 open unreported instances could be solved by these new variants.
+      </paragraph>
+      <paragraph>
+       The new variable ordering heuristics consistently offer improved results. The effect of additional DEE processing is mostly visible on the difficult instances, the most visible and persistent improvements being obtained when using DEE in pre-processing, and for some instances (e.g., 1BRS, 1RIS) also maintaining {a mathematical formula}DEE1 during search. They offer speedups up to 6 (on 1GVP). Further tests on a variety of CFN benchmarks (http://costfunction.org) are reported in [34]. They show that {a mathematical formula}DEE1 allows to solve more problems and {a mathematical formula}DEE1 is now a default option of toulbar2.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Analysis of results
+      </section-title>
+      <paragraph>
+       It is unusual to apply such a wide range of NP-complete solving methods on a common set of benchmarks. Most comparisons are usually performed on a closely related family of solvers, sharing a common modeling language (SAT, CSP, MRF…).
+      </paragraph>
+      <paragraph>
+       Solvers are complex systems involving various mechanisms. The effect of their interactions during solving is hard to predict. Therefore, explaining the differences in efficiency observed between the different approaches is not straightforward. However, given the simplicity of our encodings, the fact that these instances are challenging for some approaches while at the same time being simpler to solve for other approaches should provide a source of inspiration for solver designers.
+      </paragraph>
+      <section>
+       <section-title>
+        Quadratic programming and quadratic optimization
+       </section-title>
+       <paragraph>
+        One of the first surprising results is the difficulty of these instances for quadratic programming with cplex. The quadratic model is very dense with nd Boolean variables only. cplex is a totally closed-source black box but the behavior of the solver provides some information on its weak spot here. On the simplest problems, QP/cplex consumes memory very quickly and grows a very large node file. On the simple 2TRX problem ({a mathematical formula}n=11, first line of Table 1), QP/cplex solver explored 51,003,970 nodes and was interrupted by the time-out with an optimality gap of 774%. This indicates a poor lower bound that leads to memory intensive best first search. On bigger problems, the number of nodes is never large because each node takes quite a time to explore. On the 1UBI problem ({a mathematical formula}n=13,d=148), it explored only 5233 nodes with an unbounded gap. It is therefore reasonable to assume that the lower bound used by cplex is too slow to compute on these problems and does not provide the additional strength that would compensate for the computing cost.
+       </paragraph>
+       <paragraph>
+        The model we devised for BQO using biqmac is compact, with the same {a mathematical formula}n.d 0/1 variables. biqmac uses a semidefinite programming lower bound that is known to provide among the strongest polynomial time lower bounds for a variety of optimization problems [76]. Despite this, even the smallest CPD instances could not be solved. We tried to extend the 9000-second deadline for the simplest instance. After several hours of computing, biqmac stopped and reported that only a few nodes had been explored. The SDP technology used in biqmac may provide excellent bounds, but the time needed to compute them is currently too large to offer a viable alternative for CPD. The biqmac library at http://biqmac.uni-klu.ac.at/biqmaclib.html contains a variety of QP and (closely related) MaxCut problems that can be used for benchmarking. We tested toulbar2 on the 10 beasley instances of size {a mathematical formula}n=100. They are solved in less than 1 second each by toulbar2, whereas biqmac took around 1 minute each, as reported in [78].
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Integer linear programming
+       </section-title>
+       <paragraph>
+        Considering 01LP, it is known that the continuous LP relaxation of the 0/1 linear programming model we used in Section 5.2 is the dual of the LP problem encoded by Optimal Soft Arc Consistency (OSAC) [17], [14] when the upper bound k used in CFN is infinite. OSAC is known to be stronger than any other soft arc consistency level, including EDAC and Virtual Arc Consistency (VAC) [16]. However, as soon as the upper bound k used for pruning in CFN decreases to a finite value, soft local consistencies may prune values and EDAC becomes incomparable with the dual of these relaxed LPs. To better evaluate the pruning power of cplex, we compared the number of nodes it explored with those explored by toulbar2 in its vanilla mode or with the new heuristics and DEE pre-processing. Table 3 shows that among the 28 instances solved, 18 are solved by cplex before search starts, 7 are solved by the non-vanilla version of toulbar2 w/o backtracks. For the remaining less trivial problems, the number of nodes explored by cplex and toulbar2 are often similar with no clear winner. Overall, these results show comparable pruning power. It also shows that the problems solved by cplex are relatively simple problems but the computation of the lower bound is quite expensive in cplex. It typically develops from 1 to 50 nodes per minute while toulbar2 develops from 1 to 40 thousand nodes per minute. Note that the problems that are not solved by cplex are much harder, requiring more than 120,000 nodes to explore for the hardest solved problem (not shown in the table).
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Markov random field MAP
+       </section-title>
+       <paragraph>
+        The relaxed LP is also equivalent, in the pairwise case, to the LP relaxation of MRFs in the so-called local polytope[81]. In its original version [35], mplp is only guaranteed to produce this LP bound if domains are Boolean. It is therefore weaker than OSAC for CFN and comparable to Virtual AC [14]. With the recent additions described in [81], [80], mplp has the ability to incrementally tighten its bound by performing local inference on several potentials (or cost functions) organized in cyclic structures. The strength of this lower bound is such that mplp version 2 is often able to prove optimality based just on this bound and the cost of the assignment that optimizes unary reparameterized potentials. Still, weaker but faster CFN lower bounds combined with search apparently offer a better solution on these realistic CPD instances.
+       </paragraph>
+       <paragraph>
+        In the MRF community, the inefficiency of pure LP on large MRF instances is well-known [86]. These experiments show that, combined with branching, the incrementality of the LP bound allows 01LP to get very decent results on these problems. However, the quadratic size of the 01LP model probably explains the better efficiency of mplp.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        MaxSAT
+       </section-title>
+       <paragraph>
+        The most surprising result is probably the difficulty of these problems for MaxSAT solvers, either branch-and-bound based or core-based. To analyze branch and bound based algorithm behavior, we instrumented the two solvers MiniMaxSat and akmaxsat to report the best upper bound found and the number of nodes explored. Additionally, akmaxsat reports the lower bound computed at the root node of the search tree. In the direct encoding, MiniMaxSat is fast and may explore up to 36 thousand nodes per second (two orders of magnitude faster than toulbar2). In 15 problems, it was able to identify sub-optimal solutions ending up with a non-trivial upper bound (within 3.2% to 0.26% of the optimum) but never started the final optimality proof, showing a weak lower bound. Indeed, the lower bound computed by akmaxsat at the root of the search tree is never higher than 27% of the optimum. In contrast, the lower bound computed by toulbar2 at the root was often 99% of the optimum and never less than 97%. We conclude that the direct encoding does not allow for strong propagation and lower bounds.
+       </paragraph>
+       <paragraph>
+        The tuple encoding was chosen to put WPMS solvers in a situation where UP applied to a hardened version of the formula would be able to detect more unsatisfiable cores. Since this operation is at the heart of the lower bounding procedures of such solvers, it should allow the derivation of a stronger lower bound. Additionally, unit propagation on the hardened version of the tuple encoding is equivalent to enforcing arc consistency on the hardened CFN. In CFN, VAC precisely identifies subproblems whose hardened version is arc inconsistent (and therefore define inconsistent cores) to increase the lower bound. VAC is known to be capable of producing stronger lower bounds than the default local consistency EDAC [55] used in toulbar2. Hence, the tuple encoding provides enough information to give better lower bounds than what EDAC computes. The empirical results verify that the lower bound computed at the root is much stronger with the tuple encoding than with the direct encoding. For several instances akmaxsat computes a lower bound that is 92% of the optimum. However, this is still far from the lower bound computed by toulbar2. But the more important problem with this encoding is that with a quadratic number of extra variables, both minimaxsat and akmaxsat were extremely slow, exploring at most 2 nodes before the 9000-second time-out and in several instances timed out before even finishing the lower bound computation at the root node. They never produced a single incumbent assignment.
+       </paragraph>
+       <paragraph>
+        On the other hand, the maxhs core-based solver is able to exploit the stronger tuple encoding, being able to solve 4 problems to optimality. Analyzing the behavior of maxhs on these instances reveals that the solver spends almost all of its time trying to reduce the size of the cores it finds, using a greedy minimization algorithm. This is because these protein design instances contain some very large cores (tens of thousands of clauses) which cannot be significantly reduced in size. Such cores arise, for example, from the binary cost functions in the CFN model. In this case, the core expresses the condition that the cost of at least one tuple in the cost function will be incurred, and the core therefore contains as many clauses as there are tuples in the originating cost function. We observed that as a result, maxhs is usually unable to complete its initial disjoint core phase within the timeout. Given this observation, we also experimented with running maxhs with the core minimization option turned off, on the set of 12 instances which update those in [2], using the tuple encoding. With core minimization turned off, maxhs was able to complete the disjoint core phase on all 12 instances. This allowed us to compare the lower bound produced by the disjoint core phase of maxhs with the lower bound produced at the root node by toulbar2. Over the 12 instances, the lower bound produced by maxhs was between 84% and 98% of the lower bound produced by toulbar2, and it was calculated within only 35 s except for two cases. Note that this bound calculated by maxhs differs from that of toulbar2 in that maxhs uses a complete SAT solver to find the cores, and the cores are strictly disjoint. Based on these observations, we believe the potential to improve the performance of the maxhs approach on these instances is very promising.
+       </paragraph>
+       <paragraph>
+        For other core-based solvers, either because of the quadratic number of variables or because of a different exploitation of non-AC/UP cores, these CPD instances remain very hard. Whether it is a fundamental, technical, or implementation difference, identifying the cause of this difference should allow to improve the existing WPMS technology.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Constraint programming
+       </section-title>
+       <paragraph>
+        The generic translation of WCSPs into crisp CSPs suffers from the large magnitude of costs, resulting in large domains for the extra cost variables with very slow arc consistency propagation of table constraints for mistral, developing approx. 215 nodes per minute. In comparison, Opturion/CPX develops 721 nd/min. It also requires huge memory space for expressing the table constraints. Only 22 instances among the 42 could fit into 128 GB during minizinc to flatzinc translation. By dividing all costs by 100 (i.e., {a mathematical formula}M=1), mistral was able to solve 4 instances: 1CSK in 964 s and 90,562 nodes, 1HZ5 ({a mathematical formula}d=45) in (759 s&amp; 179,319 nd), 1PGB ({a mathematical formula}d=45) in (76 s&amp; 29,939 nd), and 2TRX ({a mathematical formula}n=11) in (47.3 s&amp; 28,057 nd). gecode (resp. Opturion/CPX) solved only one: 2TRX in (2234 s&amp; 213,423 nd) (resp. 1PGB in (6916 s&amp; 204,597 nd)). For the unsolved instances, Opturion/CPX found better solutions than mistral on average. The difference in performances between the three solvers might come from the different search strategies, mistral used geometric restarts, whereas Opturion/CPX used Luby restarts, and gecode no restarts.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        DEE/A*
+       </section-title>
+       <paragraph>
+        The {a mathematical formula}DEE/A⁎ combination uses strong polynomial time dominance analysis using several variants of dead-end elimination. This pre-processing is followed by best-first search relying on an obsolete lower bound instead of the stronger lower bounds offered by soft local consistencies such as EDAC [55], or the LP relaxation bound. To confirm this, we computed the number of nodes explored by osprey during {a mathematical formula}A⁎ search. Except for simple problems where DEE alone could solve the problem, osprey explored trees larger than those explored by ILP or CFN by several orders of magnitude. On problem 1DKT, it explored more than 10{sup:7} nodes while ILP/cplex solved the problem without search and toulbar2 explored 134 nodes. This confirms the weakness of current bounds in exact CPD algorithms. Otherwise, osprey is quite fast and can develop more than 110,000 nodes per minute. Despite the exploration of huge trees, no {a mathematical formula}DEE/A⁎ execution led to memory exhaustion before time-out. With an extended time-out of 100 hours [83], only 2 instances ultimately led to memory exhaustion. The replacement of {a mathematical formula}A⁎ by iterative alternatives to {a mathematical formula}A⁎ such as {a mathematical formula}IDA⁎[50] would therefore probably have little influence on the results of {a mathematical formula}DEE/A⁎.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      The simplest formal optimization problem underlying CPD looks for a Global Minimum Energy Conformation (GMEC) over a rigid backbone and altered side-chains (identity and conformation). In computational biology, exact methods for solving the CPD problem combine dominance analysis (DEE) and an {a mathematical formula}A⁎ search.
+     </paragraph>
+     <paragraph>
+      The CPD problem can also be directly formulated as a Cost Function Network, with a very dense graph and relatively large domains. We have shown how DEE can be integrated with local consistency with a reasonable time complexity.
+     </paragraph>
+     <paragraph>
+      The CPD can also be easily reduced to optimization in MRF, 01LP, 01QP, weighted partial MaxSAT, and Boolean quadratic optimization, offering an ideal benchmark for a large cross-technology comparison.
+     </paragraph>
+     <paragraph>
+      On a variety of real instances, we have shown that state-of-the-art optimization algorithms on graphical models exploiting bounds based on the reformulation (or reparametrization) of the graphical model, but also 01LP algorithms, give important speedups compared to usual CPD algorithms combining dead-end elimination with {a mathematical formula}A⁎. Among all the tested solvers, toulbar2 was the most efficient solver and its efficiency was further improved by the use of DEE during search.
+     </paragraph>
+     <paragraph>
+      We also showed that these CPD problems define challenging benchmarks for a variety of solvers, including weighted partial MaxSAT solvers, either branch-and-bound or core-based, and quadratic programming or quadratic optimization solvers, including semidefinite programming based solvers.
+     </paragraph>
+     <paragraph>
+      In practice, it must be stressed that just finding the GMEC is not a final answer to real CPD problems. CPD energies functions represent an approximation of the real physics of proteins and optimizing a target score based on them (such as stability, affinity, …) is not a guarantee of finding a successful design. Indeed, some designs may be so stable that they are unable to accomplish the intended biological function. The usual approach is therefore to design a large library of proteins whose sequences are extracted from all solutions within a small threshold of energy of the GMEC. This problem is also efficiently solved by toulbar2[83].
+     </paragraph>
+     <paragraph>
+      Although it is easy to formulate as a discrete optimization problem, another important limitation of the rigid backbone/rotamer CPD problem lies in the restrictions generated by these two assumptions. In practice, rotamers offer a continuous range of rotations along dihedral angles and backbones also have degrees of flexibility. Several approaches have been proposed and introduced in osprey in the last few years that relax either or both of these two assumptions while still offering a guarantee of optimality [40], [29], [31]. When flexibility counts, osprey is therefore a reference tool. All these approaches ultimately require to solve the very same type of optimization problems involving a sum of precomputed pairwise lower bounds on energy terms. In this context, it becomes crucial to be able to enumerate all the solutions within a threshold of the optimum. These approaches should therefore ultimately also benefit from algorithmic improvements in GMEC optimization, as far as exhaustively enumerating all the solutions within a threshold of the optimum is feasible.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

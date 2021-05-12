@@ -1,0 +1,876 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Reasoning about discrete and continuous noisy sensors and effectors in dynamical systems.
+   </title>
+   <abstract>
+    Among the many approaches for reasoning about degrees of belief in the presence of noisy sensing and acting, the logical account proposed by Bacchus, Halpern, and Levesque is perhaps the most expressive. While their formalism is quite general, it is restricted to fluents whose values are drawn from discrete finite domains, as opposed to the continuous domains seen in many robotic applications. In this work, we show how this limitation in that approach can be lifted. By dealing seamlessly with both discrete distributions and continuous densities within a rich theory of action, we provide a very general logical specification of how belief should change after acting and sensing in complex noisy domains.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      On numerous occasions it has been suggested that the formalism [the situation calculus] take uncertainty into account by attaching probabilities to its sentences. We agree that the formalism will eventually have to allow statements about the probabilities of events, but attaching probabilities to all statements has the following objections:
+     </paragraph>
+     <list>
+      It is not clear how to attach probabilities to statements containing quantifiers in a way that corresponds to the amount of conviction people have.The information necessary to assign numerical probabilities is not ordinarily available. Therefore, a formalism that required numerical probabilities would be epistemologically inadequate. − McCarthy and Hayes[1].
+     </list>
+     <paragraph>
+      Much of high-level AI research is concerned with the behavior of some putative agent, such as an autonomous robot, operating in an environment. Broadly speaking, an intelligent agent interacting with a dynamic and incompletely known world grapples with two special sorts of reasoning problems. First, because the world is dynamic, it will need to reason about change: how its actions affect the state of the world. Pushing an object on a table, for example, may cause it to fall on the floor, where it will remain unless picked up. Second, because the world is incompletely known, the agent will need to make do with partial specifications about what is true. As a result, the agent will often need to augment what it believes about the world by performing perceptual actions, using sensors of one form or another.
+     </paragraph>
+     <paragraph>
+      For many AI applications, and robotics in particular, these reasoning problems are more involved. Here, it is not enough to deal with incomplete knowledge, where some formula ϕ might be unknown. One must also know which of ϕ or ¬ϕ is the more likely, and by how much. In addition, both the sensors and the effectors that the agent uses to modify its world are often subject to uncertainty in that they are noisy.
+     </paragraph>
+     <paragraph>
+      To see a very simple example, imagine a robot moving towards a wall as shown in Fig. 1, and a certain distance h from it. Suppose the robot can move towards and away from the wall, and it is equipped with a distance sensor aimed at the wall. Here, the robot may not know the true value of h but may believe that it takes values from some set, say {a mathematical formula}{2,…,11}. If the sensor is noisy, a reading of, say, 5 units, does not guarantee that the agent is actually 5 units from the wall, although it should serve to increase the agent's degree of belief in that fact. Analogously, if the robot intends to move by 1 unit and the effector is noisy, it may end up moving by 0.9 units, which the agent does not get to observe. Be that as it may, the robot's degree of belief that it is closer to the wall should increase.
+     </paragraph>
+     <paragraph>
+      While many proposals have appeared in the literature to address such concerns (cf. penultimate section), very few are embedded in a general theory of action whilst supporting features like disjunction and quantification. For example, graphical models such as Bayesian networks can represent and reason about the probabilistic dependencies between random variables, and how that might change over time. However, it lacks first-order features and a rich account of actions. Relational graphical models, including Markov logic networks [2], borrow devices from first-order logic to allow the succinct modeling of relational dependencies, but ultimately they are purely syntactic extensions to graphical models, and do not attempt to address the deeper issues pertaining to the specification of probabilities in the presence of logical connectives and quantifiers. Building on first-order accounts of probabilistic reasoning [3], [4], perhaps the most general formalism for dealing with degrees of belief in formulas, and in particular, with how degrees of belief should evolve in the presence of noisy sensing and acting is the account proposed by Bacchus, Halpern, and Levesque [5], henceforth BHL. Among its many properties, the BHL model shows precisely how beliefs can be made less certain by acting with noisy effectors, but made more certain by sensing (even when the sensors themselves are noisy).
+     </paragraph>
+     <paragraph>
+      The main advantage of a logical account like BHL is that it allows a specification of belief that can be partial or incomplete, in keeping with whatever information is available about the application domain. It does not require specifying a prior distribution over some random variables from which posterior distributions are then calculated, as in Kalman filters, for example [6]. Nor does it require specifying the conditional independences among random variables and how these dependencies change as the result of actions, as in the temporal extensions to Bayesian networks [7]. In the BHL model, some logical constraints are imposed on the initial state of belief. These constraints may be compatible with one or very many initial distributions and sets of independence assumptions. All the properties of belief will then follow at a corresponding level of specificity.
+     </paragraph>
+     <paragraph>
+      Subjective uncertainty is captured in the BHL account using a possible-world model of belief [8], [9], [10]. In classical possible-world semantics, a formula ϕ is believed to be true when ϕ holds in all possible worlds that are deemed accessible. In BHL, the degree of belief in ϕ is defined as a normalized sum over the possible worlds where ϕ is true of some nonnegative weights associated with those worlds. (Inaccessible worlds are assigned a weight of zero.) To reason about belief change, the BHL model is then embedded in a rich theory of action and sensing provided by the situation calculus [1], [11], [12]. The BHL account provides axioms in the situation calculus regarding how the weight associated with a possible world changes as the result of acting and sensing. The properties of belief and belief change then emerge as a direct logical consequence of the initial constraints and these changes in weights.
+     </paragraph>
+     <paragraph>
+      For example, suppose h is a fluent representing the robot's horizontal distance to the wall in Fig. 1. The fluent h would have different values in different possible worlds. In a BHL specification, each of these worlds might be given an initial weight. For example, a uniform distribution might give an equal weight of .1 to ten possible worlds where {a mathematical formula}h∈{2,3,…,11}. The degree of belief in a formula like {a mathematical formula}(h&lt;9) is then defined as a sum of the weights, and would lead here to a value of .7. The theory of action would then specify how these weights change as the result of acting (such as moving away or towards the wall) and sensing (such as obtaining a reading from a sonar aimed at the wall). Naturally, the logical language permits weaker specifications, involving disjunctions and quantifiers, and the appropriate behavior would still emerge.
+     </paragraph>
+     <paragraph>
+      While this model of belief is widely applicable, it does have one serious drawback: it is ultimately based on the addition of weights and is therefore restricted to fluents having discrete finite values. This is in stark contrast to robotics and machine learning applications [13], [14], [15], where event and observation variables are characterized by continuous distributions, or perhaps combinations of discrete and continuous ones. There is no way to say in BHL that the initial value of h is any real number drawn from a uniform distribution on the interval {a mathematical formula}[2,12]. One would again expect the belief in {a mathematical formula}(h&lt;9) to be .7, but instead of being the result of summing weights, it must now be the result of integrating densities over a suitable space of values, something quite beyond the BHL approach.
+     </paragraph>
+     <paragraph>
+      So, on the one hand, the BHL account and others like it can be seen as general formal theories that attempt to address important philosophical problems such as those raised by McCarthy and Hayes above. But on the other, a serious criticism leveled at this line of work, and indeed at much of the work in reasoning about action, is that the theory is far removed from the kind of probabilistic uncertainty and noise seen in typical robotic applications.
+     </paragraph>
+     <paragraph>
+      The goal of this work is to show how with minimal additional assumptions this serious limitation of BHL can be lifted.{sup:1} By lifting this limitation, one obtains, for the first time, a logical language for representing real-world robotic specifications without any modifications, but also extend beyond it by means of the logical features of the underlying framework. In particular, we present a formal specification of the degrees of belief in formulas with real-valued fluents (and other fluents too), and how belief changes as the result of acting and sensing. Our account will retain the advantages of BHL but work seamlessly with discrete probability distributions, probability densities, and perhaps most significantly, with difficult combinations of the two. More broadly, we believe the model of belief proposed in this work provides the necessary bridge between logic-based reasoning modules, on the one hand, and probabilistic specifications as seen in real-world data-intensive applications, on the other.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. We first review the formal preliminaries, the BHL model in particular, and introduce definitions for modeling continuous probability distributions. We then show how the definition of belief in BHL can be reformulated as a different summation, which then provides sufficient foundation for our extension to continuous domains. We then discuss how this model can be extended for noisy acting, and combinations of discrete and continuous properties. We conclude after discussing related work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      A theory of action
+     </section-title>
+     <paragraph>
+      Our account is formulated in the language of the situation calculus [1], as developed in [11]. The situation calculus is a special-purpose knowledge representation formalism for reasoning about dynamical systems. Informally, the formalism is best understood by arranging the world in terms of three kinds of things: situations, actions and objects. Situations represent “snapshots,” and can be viewed as possible histories. A set of initial situations correspond to the ways the world can be prior to the occurrence of actions. The result of doing an action, then, leads to a successor (non-initial) situation. Naturally, dynamic worlds change the properties of objects, which are captured using predicates and functions whose last argument is always a situation, called fluents.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       The logical language
+      </section-title>
+      <paragraph>
+       Formally, the language {a mathematical formula}L of the situation calculus is a many-sorted dialect of predicate calculus, with sorts for actions, situations and objects (for everything else). (We do not review standard predicate logic here; see, for example, [17], [18]. We further assume familiarity with the notions of models, structures, satisfaction and entailment.) In full length, let {a mathematical formula}L include:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        logical connectives {a mathematical formula}¬,∀,∧,=, with other connectives such as ⊃ understood for their usual abbreviations;
+       </list-item>
+       <list-item label="•">
+        an infinite supply of variables of each sort;
+       </list-item>
+       <list-item label="•">
+        an infinite supply of constant symbols of the sort object;
+       </list-item>
+       <list-item label="•">
+        for each {a mathematical formula}k≥1, object function symbols {a mathematical formula}g1,g2,… of type {a mathematical formula}(action∪object)k→object;
+       </list-item>
+       <list-item label="•">
+        for each {a mathematical formula}k≥0, action function symbols {a mathematical formula}A1,A2,… of type {a mathematical formula}(action∪object)k→action;
+       </list-item>
+       <list-item label="•">
+        a special situation function symbol do: {a mathematical formula}action×situation→situation;
+       </list-item>
+       <list-item label="•">
+        a special predicate symbol Poss: {a mathematical formula}action×situation{sup:2};
+       </list-item>
+       <list-item label="•">
+        for each {a mathematical formula}k≥0, fluent function symbols {a mathematical formula}f1,f2,… of type {a mathematical formula}(action∪object)k×situation→object;
+       </list-item>
+       <list-item label="•">
+        a special constant {a mathematical formula}S0 to represent the actual initial situation.
+       </list-item>
+      </list>
+      <paragraph>
+       To reiterate, apart from some syntactic particulars, the logical basis for the situation calculus is the regular (many-sorted) predicate calculus.{sup:3} So, terms and well-formed formulas are defined inductively, as usual, respecting sorts. See, for example, [11] for an exposition.
+      </paragraph>
+      <paragraph>
+       We follow some conventions in the ways we use Latin and Greek alphabets: a for both terms and variables of the action sort (the context would make this clear); s for terms and variables of the situation sort (the context would make this clear); and finally{a mathematical formula},x,u,v,z,n, and y to range over variables of the object sort. We let ϕ and ψ range over formulas, and Σ over sets of formulas. (These may be further decorated using superscripts or subscripts.)
+      </paragraph>
+      <paragraph>
+       We sometimes suppress the situation term in a formula ϕ, or use a distinguished variable now, to denote the current situation. Either way, we let {a mathematical formula}ϕ[t] denote the formula with the restored situation term t.
+      </paragraph>
+      <paragraph>
+       We will often use the usual “case” notation with curly braces as a convenient abbreviation for a logical formula:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Finally, for convenience, we often introduce formula and term abbreviations that are meant to expand as {a mathematical formula}L-formulas. For example, we might introduce a new formula A by {a mathematical formula}A≐ϕ, where {a mathematical formula}ϕ∈L. Then any expression {a mathematical formula}E(A) containing A is assumed to mean {a mathematical formula}E(ϕ). Analogously, if we introduce a new term t by {a mathematical formula}t=u≐ϕ(u) then any expression {a mathematical formula}E(t) is assumed to mean {a mathematical formula}∃u(E(u)∧ϕ(u)).
+      </paragraph>
+      <paragraph>
+       Dynamic worlds are enabled by performing actions, and in the language, this is realized using the do operator. That is, the result of doing an action a at situation s is the situation {a mathematical formula}do(a,s). Functional fluents, which take situations as arguments, may then have different values at different situations, thereby capturing changing properties of the world. As noted, the constant {a mathematical formula}S0 is assumed to give the actual initial state of the domain, but the agent may consider others possible that capture the beliefs and ignorance of the agent. In general, we say a situation is an initial one when it is a situation without a predecessor:{a mathematical formula} The picture that emerges is that situations can be structured as a set of trees, each rooted at an initial situation and whose edges are actions. More conventions: we use ι to range over such initial situations only, and let α denote sequences of action terms or variables, and freely use this with do, that is, if {a mathematical formula}α=[a1,…,an] then {a mathematical formula}do(α,s) stands for {a mathematical formula}do(an,do(…,do(a1,s)…)).
+      </paragraph>
+      <paragraph>
+       Domains are modeled in the situation calculus as axioms. A set of {a mathematical formula}L-sentences specify the actions available, what they depend on, and the ways they affect the world. Specifically, these axioms are given in the form of a basic action theory[11], reviewed below.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Basic action theories
+      </section-title>
+      <paragraph>
+       In general, a basic action theory {a mathematical formula}D is a set of sentences consisting of (free variables understood as universally quantified from the outside):
+      </paragraph>
+      <list>
+       <list-item label="•">
+        an initial theory{a mathematical formula}D0 that describes what is true initially;
+       </list-item>
+       <list-item label="•">
+        precondition axioms, of the form {a mathematical formula}Poss(A(x→,s))≡β(x→,s) that describe the conditions under which actions are executable;
+       </list-item>
+       <list-item label="•">
+        successor state axioms, of the form {a mathematical formula}f(x→,do(a,s))=u≡γf(u,x→,s), that describe the changes to fluent values after doing actions;
+       </list-item>
+       <list-item label="•">
+        domain-agnostic foundational axioms, such as a second-order induction axiom for the space of situations and unique name axioms for actions, the details of which need not concern us here [11].
+       </list-item>
+      </list>
+      <paragraph>
+       The formulation of successor state axioms, in particular, incorporates Reiter's monotonic solution to the frame problem [19].
+      </paragraph>
+      <paragraph>
+       An agent reasons about actions by means of entailments of a basic action theory {a mathematical formula}D, for which standard first-order (Tarskian) models suffice (although see below). A fundamental task in reasoning about action is that of projection[11], where we test which properties hold after actions. Formally, suppose ϕ is a situation-suppressed formula or uses the special symbol now. Given a sequence of actions {a mathematical formula}a1 through {a mathematical formula}an, we are often interested in asking whether ϕ holds after these:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This concludes our review of the basic features of the language. In the subsequent sections, we will discuss how the formalism is first extended for knowledge, and then, degrees of belief against discrete probability distributions and beyond. To prepare for that, the rest of the section will introduce three logical constructions that will be used in our work. First, we will define a class of Tarskian structures. Second, we define a logical term standing for summation in the usual mathematical sense, that is to be understood as an abbreviation for a formula involving second-order quantification. Third, we analogously define a logical term standing for integration in the usual mathematical sense.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      {a mathematical formula}R-interpretations
+      <paragraph>
+       For our purposes, the notion of entailment will be assumed wrt a class of Tarskian structures that we call {a mathematical formula}R-interpretations. See [17] for a review of Tarskian structures; we assume some familiarity with the underlying notions. Below, for any {a mathematical formula}L-term t and {a mathematical formula}L-interpretation M, we use {a mathematical formula}tM to mean the domain element that t references. If t has a free variable x and y is any {a mathematical formula}L-term, then we write {a mathematical formula}tyx to mean the {a mathematical formula}L-term obtained by replacing x in t with y. Finally, for any variable map μ and variable X, we use {a mathematical formula}μYX to mean a variable map that is exactly like μ except that for the variable X it takes the value Y.
+      </paragraph>
+      <paragraph label="Definition 1">
+       By an {a mathematical formula}R-interpretation we mean any {a mathematical formula}L-structure where {a mathematical formula}=,&lt;,&gt;,0,1,+,×,/,−,e,π, exponentiation and logarithms have their usual interpretations.
+      </paragraph>
+      <paragraph>
+       (That is, “{a mathematical formula}1+0=1” is true in all {a mathematical formula}R-interpretations, if “{a mathematical formula}x&gt;y” is true then “{a mathematical formula}¬(y&gt;x)” is true, and so on.) So, henceforth, when we write {a mathematical formula}Σ⊨ϕ, we mean that in all {a mathematical formula}R-interpretations where Σ is true, so is ϕ.{sup:4}
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Natural numbers can be defined in terms of a predicate by appealing to {a mathematical formula}R-interpretations. Let{a mathematical formula} Then: Let M be any{a mathematical formula}R-interpretation, and c a constant symbol of{a mathematical formula}L. Then,{a mathematical formula}M⊨Natural(c)iff{a mathematical formula}cM∈N.
+      </paragraph>
+      <paragraph>
+       The proof relies on two lemmas. First, we argue that the set of natural numbers satisfies the antecedent {a mathematical formula}A≐P(0)∧∀x(P(x)⊃P(x+1)):
+      </paragraph>
+      <paragraph label="Lemma 3">
+       For every{a mathematical formula}R-interpretation M and map μ,{a mathematical formula}M,μNP⊨A.
+      </paragraph>
+      <paragraph label="Proof">
+       Since “0” and “+” have their usual interpretations, and {a mathematical formula}0∈N, {a mathematical formula}M,μNP⊨P(0). Suppose {a mathematical formula}k∈N, and so, {a mathematical formula}M,μNkPx⊨P(x). Since {a mathematical formula}N includes the successors of all its elements, {a mathematical formula}M,μNkPx⊨P(x+1).  □
+      </paragraph>
+      <paragraph>
+       Next, we argue that every set satisfying the antecedent includes the set of natural numbers:
+      </paragraph>
+      <paragraph label="Lemma 4">
+       For every M and μ as above, and for any set Q, if{a mathematical formula}M,μQP⊨Athen{a mathematical formula}Nis a subset of Q.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}M,μQP⊨A. We prove the claim by induction on natural numbers. For the base case, we consider {a mathematical formula}0∈N, and by assumption {a mathematical formula}M,μQP⊨P(0), and so 0 is in the set Q. For the hypothesis, assume for any {a mathematical formula}k∈N,k is also in Q. That is, {a mathematical formula}M,μQkPx⊨P(x). Of course, the successor of k is a natural number and by assumption, {a mathematical formula}M,μQkPx⊨P(x+1). Thus, starting from 0, every natural number and its successor is in Q, and so Q must include {a mathematical formula}N.  □
+      </paragraph>
+      <paragraph>
+       So, the main claim is as follows:
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}M⊨Natural(c), that is, {a mathematical formula}M⊨∀P(A⊃P(c)). Since {a mathematical formula}N is a subset of the domain by assumption, for any map μ, {a mathematical formula}M,μNP⊨A⊃P(c). By Lemma 3, {a mathematical formula}M,μNP⊨A, and so {a mathematical formula}M,μNP⊨P(c). Hence {a mathematical formula}cM∈N.Suppose instead {a mathematical formula}cM∈N. Suppose for any set Q and any map μ, {a mathematical formula}M,μQP⊨A. By Lemma 4, {a mathematical formula}N is a subset of Q and so {a mathematical formula}cM is in Q, that is, {a mathematical formula}M,μQP⊨P(c). Therefore, {a mathematical formula}M,μNP⊨A⊃P(c). Since this holds for any set Q, {a mathematical formula}M⊨∀P[A⊃P(c)], that is, {a mathematical formula}M⊨Natural(c).  □
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Summation
+      </section-title>
+      <paragraph>
+       Here we show how finite summations can be characterized as an abbreviation for an {a mathematical formula}L-term using second-order quantification.
+      </paragraph>
+      <paragraph>
+       Let f be any {a mathematical formula}L-function from {a mathematical formula}N to {a mathematical formula}R. Let {an inline-figure}, standing for the sum of the values of f for the argument 1 through n, be defined as an abbreviation:{a mathematical formula} The variable i is understood to be chosen here not to conflict with any of the variables in n and z. The function g from {a mathematical formula}N to {a mathematical formula}R is assumed to not conflict with f. (That is, the logical terms are distinct.)
+      </paragraph>
+      <paragraph>
+       This can then be argued to correspond to summations in the usual mathematical sense as follows:
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Let f be a function symbol of{a mathematical formula}Lfrom{a mathematical formula}Nto{a mathematical formula}R, c be a term, and n be a constant symbol of{a mathematical formula}L. Let M be any{a mathematical formula}R-interpretation. Then,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       We prove by induction on {a mathematical formula}nM. For the base case, suppose {a mathematical formula}nM=1. Then, the antecedent would give us {a mathematical formula}fM(1). As for the consequent, clearly {an inline-figure}, and so the base case holds.Assume the hypothesis holds for {a mathematical formula}nM, and we prove the case for {a mathematical formula}(nM+1). (Note that owing to “1” and “+” having their usual interpretations, {a mathematical formula}(n+1)M=nM+1.) So suppose{a mathematical formula} On expanding the summation expression, we obtain:{a mathematical formula} By induction hypothesis{an inline-figure}, and so, by definition, {an inline-figure}.  □
+      </paragraph>
+      <paragraph>
+       Henceforth, we write:{a mathematical formula} to mean the logical formula {an inline-figure} for a logical term t. Here, i is assumed to not conflict with any of the variables in n and t.{sup:5}
+      </paragraph>
+      <paragraph>
+       It is worth noting that this logical formula can be applied to summation expressions where the arguments to the terms are not restricted to natural numbers, but taken from any finite set. For example, suppose H is any finite set of terms {a mathematical formula}{h1,…,hn}. We can then use terms such as:{a mathematical formula} standing for an abbreviation, similar to {an inline-figure}: let g be a function, and let {a mathematical formula}g(i)=t(hi). Then clearly the above sum defines the same number as {a mathematical formula}∑i=1ng. In the sequel, we sometimes sum over a finite set of situations, or a finite vector of values, which is then understood as an abbreviation in this sense.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Integration
+      </section-title>
+      <paragraph>
+       Finally, we characterize integrals as logical terms.{sup:6} We present this first for a continuous real-valued function of one variable, and then discuss its (straightforward) extension to the many-variable case.
+      </paragraph>
+      <paragraph>
+       We begin by introducing a notation for limits to positive infinity. For any logical term t and variable x, we introduce a term characterized as follows:{a mathematical formula} The variables u, m, and n are understood to be chosen here not to conflict with any of the variables in x, t, and z. The abbreviation can be argued to correspond to the limit of a function at infinity in the usual sense:
+      </paragraph>
+      <paragraph label="Lemma 6">
+       Let g be a function symbol of{a mathematical formula}Lstanding for a function from{a mathematical formula}Rto{a mathematical formula}R, and let c be a constant symbol of{a mathematical formula}L. Let M be any{a mathematical formula}R-interpretation of{a mathematical formula}L. Then we have the following:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose the limit holds. Then, by the standard notion of limits [23], for every real number {a mathematical formula}ϵ&gt;0, there is a natural number j such that for all natural numbers {a mathematical formula}k&gt;j:{a mathematical formula} Suppose {an inline-figure}. Then there is some {a mathematical formula}r&gt;0 such that {a mathematical formula}M,μru⊭∃m∀n(n&gt;m⊃|c−g(n)|&lt;u). By Theorem 2, the domain of M includes {a mathematical formula}N, and so let m and n be variables that are mapped to j and k respectively. Then, given that M interprets arithmetic symbols in the usual way, the claim {a mathematical formula}M,μrjkumn⊭(n&gt;m)⊃(|c−g(n)|&lt;u) is a contradiction.  □
+      </paragraph>
+      <paragraph>
+       Henceforth, we write:{a mathematical formula} to mean the logical formula {an inline-figure}.
+      </paragraph>
+      <paragraph>
+       Next, for any variable x and terms a, b, and t, we introduce a term {an inline-figure} denoting the definite integral of t over x from a to b:{a mathematical formula} where h stands for {a mathematical formula}(b−a)/n. The variables are chosen not to conflict with any of the other variables. We now show:
+      </paragraph>
+      <paragraph label="Lemma 7">
+       Let g be a function symbol of{a mathematical formula}Lstanding for a function from{a mathematical formula}Rto{a mathematical formula}R, and let{a mathematical formula}a,b,cbe constant symbols of{a mathematical formula}L. Let M be any{a mathematical formula}R-interpretation of{a mathematical formula}L. Then we have the following:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}∫aMbMgM(x)dx=cM, that is, {a mathematical formula}gM is integrable. By definition, then:{a mathematical formula} where {a mathematical formula}h=(bM−aM)/k. By Lemma 6, we have{a mathematical formula} where {a mathematical formula}h=(b−a)/n, that is, {an inline-figure}.  □
+      </paragraph>
+      <paragraph>
+       Finally, we define the definite integral of t over all real values of x by the following:{a mathematical formula} The main result for this logical abbreviation is the following:
+      </paragraph>
+      <paragraph label="Theorem 8">
+       Let g be a function symbol of{a mathematical formula}Lstanding for a function from{a mathematical formula}Rto{a mathematical formula}R, and let c be a constant symbol of{a mathematical formula}L. Let M be any{a mathematical formula}R-interpretation of{a mathematical formula}L. Then we have the following:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}∫−∞∞gM(x)dx=cM, that is, {a mathematical formula}gM is integrable. By definition,{a mathematical formula} By Lemma 6 and Lemma 7, we obtain:{a mathematical formula} That is, {a mathematical formula}M⊨∫xg(x)=c.  □
+      </paragraph>
+      <paragraph>
+       The characterization of integrals for a many-variable function f, from {a mathematical formula}Rk to {a mathematical formula}R, is then an easy exercise. For variables {a mathematical formula}x1,…,xk and terms {a mathematical formula}a1,…,ak, {a mathematical formula}b1,…,bk, and t, we introduce a term {a mathematical formula}MINT[x1,…,xk,a1,…,ak,b1,…,bk,t] denoting the definite integral of t from {a mathematical formula}(a1,…,ak)∈Rk to {a mathematical formula}(b1,…,bk)∈Rk:{a mathematical formula} where {a mathematical formula}hj stands for {a mathematical formula}(bj−aj)/nj. The variables are chosen not to conflict with any of the other variables. Finally, we define the definite integral of t over all real values of {a mathematical formula}x1,…,xk by the following:{a mathematical formula} From this we get, as a corollary to Theorem 8:
+      </paragraph>
+      <paragraph label="Corollary 9">
+       Let g be a function symbol of{a mathematical formula}Lstanding for a function from{a mathematical formula}Rkto{a mathematical formula}R, and let c be a constant symbol of{a mathematical formula}L. Let M be any{a mathematical formula}R-interpretation of{a mathematical formula}L. Then we have the following:{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A theory of knowledge
+     </section-title>
+     <section label="3.1">
+      <section-title>
+       Knowledge
+      </section-title>
+      <paragraph>
+       An early treatment of knowledge in the situation calculus is due to Moore [24]. The classical possible-world interpretation for knowledge [8], [9] is based on the notion that there many different ways the world can be, where each world stands for a complete state of affairs. Some of these are considered possible by a putative agent, and they determine what the agent knows and does not know. Moore's observation was that situations can be viewed as possible worlds. (Different from standard modal logics [10], however, worlds are reified as part of the syntax, but this is a minor technicality.) A special binary fluent K, taking two situation arguments, determines the accessibility relation between worlds: {a mathematical formula}K(s′,s) says that when the agent is at s, he considers {a mathematical formula}s′ possible. (Also different from standard modal logics, we note that the order of the terms in the accessibility relation is reversed.) Knowledge, then, is simply truth at accessible worlds:
+      </paragraph>
+      <paragraph label="Definition 10">
+       (Knowledge) Let ϕ be any situation-suppressed formula. The agent knowingϕ at situation s, written {a mathematical formula}Knows(ϕ,s), is the following abbreviation:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In English: if in every situation {a mathematical formula}s′ that is considered possible at s the formula ϕ holds, then the agent knows ϕ at s.{sup:7}
+      </paragraph>
+      <paragraph>
+       Moore's account has been adapted to the arrangement of dynamic laws via basic action theories by Scherl and Levesque [12]. In this scheme, the initial theory is assumed to specify the agent's initial beliefs. For example, {a mathematical formula}Knows(velocity(obj5)=50,S0) expands to {a mathematical formula}∀s′.K(s′,S0)⊃velocity(obj5,s′)=50; that is, every accessible world initially agrees that the velocity of object 5 is 50, which means that the agent knows that the velocity of object 5 is 50. In addition, {a mathematical formula}¬Knows(velocity(obj6)=60,S0) and {a mathematical formula}Knows(f=0∨f=1,S0) say that initially, the agent does not know that the velocity of object 6 is 60, and knows that the functional fluent f takes a value of either 0 or 1. Equivalently, one specifies an initial constraint on K; for example:{a mathematical formula} characterizes the agent's knowledge about the fluent f taking a value of either 0 or 1.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Sensing
+      </section-title>
+      <paragraph>
+       To specify the behavior of K at non-initial situations, Scherl and Levesque provide a successor state axiom for K. This axiom, intuitively, tests whether situations are to remain accessible as actions occur. Without going into full details, assume the provision of domain-specific sensing axioms, also part of the basic action theory {a mathematical formula}D. For example,{a mathematical formula} formalizes the sensing outcome for an action to check whether f has value 1 in situation s. Here SF is a special {a mathematical formula}L-predicate, similar to Poss. Then, for {a mathematical formula}s′ to be accessible from s, we need the following successor state axiom to be included in {a mathematical formula}D:{a mathematical formula} This says that if {a mathematical formula}s″ is the predecessor of {a mathematical formula}s′, such that {a mathematical formula}s″ was considered possible at s, then {a mathematical formula}s′ would be considered possible from {a mathematical formula}do(a,s) contingent on sensing outcomes.
+      </paragraph>
+      <paragraph>
+       To appreciate how this axiom works in dynamical domains, assume that for actions without any sensing aspect, such as an action that toggles the value of f, one simply lets SF be vacuously true:{a mathematical formula} The idea, then, is that the accessibility between situations would not change as physical actions occur. However, as the agent operates in an environment where it senses various properties, those situations that are incompatible with the real world regarding the sensed value will be deemed impossible after such sensing actions. This leads to a notion of knowledge expansion,{sup:8} as the agent becomes more certain about the true nature of the world. See Fig. 2 for an illustration of the axiom: we imagine three situations {a mathematical formula}s,s′ and {a mathematical formula}s″ that are epistemically related prior to any sensing (that is, {a mathematical formula}s′ and {a mathematical formula}s″ are possible worlds when the agent is at s). These situations disagree on the value of f, and consequently, the agent does not know f's value. After executing a sensing action for the truth of f, however, {a mathematical formula}do(sensetrue-f,s″) is not epistemically related to {a mathematical formula}do(sensetrue-f,s). The upshot is that the agent knows the value of f at {a mathematical formula}do(sensetrue-f,s) and believes that this value is 1.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Degrees of belief and likelihood
+      </section-title>
+      <paragraph>
+       The Scherl and Levesque scheme, however, lacks constructs to quantify the agent's uncertainty. One measure to quantify uncertainty is with degrees of belief. What is also lacking in their scheme is the ability to formalize the probabilistic noise in effectors and sensors, as seen in many real-world robotics applications [13]. These limitations, to discrete approximations, were addressed by BHL [5].
+      </paragraph>
+      <paragraph>
+       The BHL scheme builds on Scherl and Levesque's ideas, especially regarding how accessibility relations between worlds vary as a result of actions. In fact, the reader may observe many parallels between the two extensions. BHL's remarkably simple proposal consists of introducing two new distinguished fluents, p and l, in addition to K. We present a simpler alternative involving only p and l. As a simple running example, imagine a robot moving towards a wall, as shown in Fig. 1. Its distance to the wall is given by a functional fluent h, and it is assumed to be equipped with a sonar sensor that measures how far the robot is from the wall. In other words, ideally, the sensor's reading would correspond to the actual value of h. The p fluent determines a probability distribution on situations, by associating situations with weights. More precisely, the term {a mathematical formula}p(s′,s) denotes the relative weight accorded to situation {a mathematical formula}s′ when the agent happens to be in situation s. Of course, p can be seen as a companion to K. As one would for K, the properties of p in initial states, which vary from domain to domain, are specified with axioms as part of {a mathematical formula}D0. For example,{a mathematical formula} says that those initial situations where h has the integer values 2 or 3 obtain a weight of .5. All other situations, then, obtain 0 weight. We expect, of course, that weights are nonnegative, and that non-initial situations are given a weight of 0 initially. The following nonnegative constraint, also part of {a mathematical formula}D0, ensures this:{a mathematical formula} Note that this is a stipulation about initial situations ι only. But BHL provide a successor state axiom for p, to be listed shortly, that ensures that this constraint holds in all situations.
+      </paragraph>
+      <paragraph>
+       Next, the term {a mathematical formula}l(a,s) is intended to denote the likelihood of action a occurring in situation s. Among other things, l can be used to model noisy sensors. This is perhaps best demonstrated using an example. Imagine a sonar aimed at the wall, which gives a reading for the true value of h. Supposing the sonar's readings are subject to additive Gaussian noise.{sup:9} If now a reading of z were observed on the sonar, intuitively, those situations where {a mathematical formula}h=z should be considered more probable than those where {a mathematical formula}h≠z.{sup:10} This occurrence is captured using likelihoods in the formalism. Basically, if {a mathematical formula}sonar(z) is the sonar sensing action with z being the value read, we specify a likelihood axiom describing its error profile as follows:{a mathematical formula} This stipulates that the difference between a nonnegative reading of z and the true value h is normally distributed with a variance of {a mathematical formula}σ2 and mean of μ.{sup:11}
+      </paragraph>
+      <paragraph>
+       Clearly, the error profile of various hardware devices is application dependent, and it is this profile that is modeled as shown above using l. Notice, for example, when {a mathematical formula}μ=0, which indicates that the sensor has no systematic bias, then {a mathematical formula}l(sonar(5),s) will be higher when {a mathematical formula}h(s)=5 than when {a mathematical formula}h(s)=25. Roughly, then, the idea is that after an observation, the weights on situations would get redistributed based on their compatibility with the observed value.
+      </paragraph>
+      <paragraph>
+       One may contrast such likelihood specifications to (trivial) ones for deterministic physical actions,{sup:12} such as an action move(z) of moving towards the wall by precisely z units. For such actions, we simply write{a mathematical formula} in which case the p value of s is the same as that for {a mathematical formula}do(move(3),s). Thus, this is a form of imaging[27], where the weights of worlds are simply “transferred” to their successors.
+      </paragraph>
+      <paragraph>
+       Formally, we add action likelihood axioms to {a mathematical formula}D:
+      </paragraph>
+      <paragraph label="Definition 11">
+       Action likelihood axioms for each action type A are sentences of the form:{a mathematical formula} Here {a mathematical formula}ψA(x→,u,s) is any formula characterizing the conditions under which action {a mathematical formula}A(x→) has likelihood u in s.
+      </paragraph>
+      <paragraph>
+       In general, likelihood axioms can depend on any number of features of the world besides the fluent that the sensor is measuring. For example, imagine that the sonar's accuracy depends on the room temperature. We could then specify an error profile as follows:{a mathematical formula} That is, the sonar's accuracy worsens severely when the temperature drops below 0, as seen by the larger variance.
+      </paragraph>
+      <paragraph>
+       Having introduced the new fluents, we are now ready to provide the successor state axiom for p, which is analogous to the one for K:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This says that the weight of situations {a mathematical formula}s′ relative to {a mathematical formula}do(a,s) is the weight of their predecessors {a mathematical formula}s″ times the likelihood of a contingent on the successful execution of a at {a mathematical formula}s″.
+      </paragraph>
+      <paragraph>
+       To see an application of this axiom using the specifications (2) and (3), consider two situations s and {a mathematical formula}s′ associated with the same weight initially, as shown in Fig. 3. These situations have h values 2 and 3 respectively. Suppose the robot obtains a reading of 2 on the sensor. Given a sensor with mean {a mathematical formula}μ=0 and variance {a mathematical formula}σ2=1, the likelihood axiom is such that the weight of the successor of s is higher than that of {a mathematical formula}s′ because the h value at s coincides with the sensor reading. More precisely, the weight for the successor of s is given by the prior weight .5 multiplied by the likelihood factor {a mathematical formula}N(z−h(s);μ,σ2)=N(2−2;0,1)=N(0,0,1). The weight for the successor of {a mathematical formula}s′ is obtained analogously.
+      </paragraph>
+      <paragraph>
+       Interestingly, by means of the above axiom, if predecessors are not epistemically related, which is another way of saying that {a mathematical formula}p(s″,s) is 0, then their successors will also not be. Similarly, when a is not executable at {a mathematical formula}s″, its successor is no longer accessible from {a mathematical formula}do(a,s). One other consequence of (P1) and (P2) is that {a mathematical formula}(p(s′,s)&gt;0) will be true only when {a mathematical formula}s′ and s share the same history of actions. This is because (P1) insists that initial situations are only epistemically related to other initial ones, and (P2) respects this relation over actions.
+      </paragraph>
+      <paragraph>
+       We are now prepared to define the degree of belief in a formula ϕ at a situation s, written {a mathematical formula}Bel(ϕ,s). (Henceforth, whenever a formula ϕ appears in the context of Bel, we assume that it is either situation-suppressed, or it only mentions the situation term now.) Intuitively, this is simply the weight of accessible situations. Formally:
+      </paragraph>
+      <paragraph label="Definition 12">
+       (Degrees of belief) Suppose ϕ is any situation-suppressed {a mathematical formula}L-formula. Then the degree of belief in ϕ is an abbreviation for:{a mathematical formula} where γ, the normalization factor, is understood (throughout) as the same expression as the numerator but with ϕ replaced by true. So, here, γ is {a mathematical formula}∑s′p(s′,s).
+      </paragraph>
+      <paragraph>
+       Note that we do not have to insist that {a mathematical formula}s′ and s share histories since {a mathematical formula}p(s′,s) will be 0 otherwise, as discussed above. The summation term in this logical formula is not a new logical symbol, but simply an abbreviation for a second-order formula, by way of Section 2.4.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       Let us conclude this section by remarking that since p is a fluent, the syntax of basic action theories allows us to express probabilistic knowledge in a very general way, quite beyond standard probabilistic formalisms [28], [7]. For example, to represent categorical uncertainty like (1), we would do:{a mathematical formula} In English: all initial situations where the value of h is either 2 or 3 are considered epistemically possible, and accorded a weight of 1. All other initial situations are accorded a weight of 0. Observe, however, that this p-specification does not say which value of h is more likely. Thus, unlike standard probabilistic frameworks, we do not assume that it is always possible to find a single probability distribution for the robot to use.
+      </paragraph>
+      <paragraph>
+       It is also possible to handle partial specifications. Let us contrast (2) with the following initial axiom for p:{a mathematical formula} Then, letting a basic action theory include the sentence:{a mathematical formula} means that the robot believes h is uniformly distributed on {a mathematical formula}{2,3} or on {a mathematical formula}{1,…,10} without being able to say which. To reiterate, we do not assume that it is always possible to find a single probability distribution for the robot to use.
+      </paragraph>
+      <paragraph>
+       Of course, a much weaker specification is possible by replacing one of these probabilistic alternatives with categorical ones. For example, suppose the basic action theory were to instead include:{a mathematical formula} In this case, the agent believes that h may take a value from {a mathematical formula}{2,3} or is uniformly distributed on {a mathematical formula}{1,2,…,10} without being able to say which.
+      </paragraph>
+      <paragraph>
+       In sum, the framework allows one to freely combine categorical and probabilistic specifications, leading to a very general model of belief. For simplicity of presentation, we consider a fairly simple set of specifications in this article, and refer readers to [29] for more involved ones.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Belief reformulated
+     </section-title>
+     <paragraph>
+      The definition for degrees of belief, as given by BHL, is intuitive and simple. It is closely fashioned after the semantics for belief in modal probability logics [30], where the probabilities of formulas is calculated from the weights of possible worlds satisfying the formula. Unfortunately, this definition is not easily amenable to generalizations. Notice, for example, that Bel is well-defined only when the sum over all those situations {a mathematical formula}s′ such that {a mathematical formula}ϕ[s′] holds is finite. This immediately precludes domains that involve an infinite set of situations agreeing on a formula. Moreover, the definition does not have an obvious analogue for continuous probability distributions. Observe that such an analogue would involve integrating over the space of situations, which makes little sense. Indeed, it is not certain what the space of situations would look like in general, but even if this was fixed, how such a thing can be tinkered with so as to obtain an appropriate notion of integration is far from obvious.
+     </paragraph>
+     <paragraph>
+      Therefore, what we propose is to shift the calculating of probabilities from situations to fluent values, that is, to the well-understood domain of numbers. The current section is an exploration of this idea. What we will show in this section is that Definition 12 can be reformulated as a summation over numeric indices. That will allow, among other things, a seamless generalization from summation to integration, which is to be the topic of the next section.
+     </paragraph>
+     <paragraph>
+      To prepare for that, in addition to the usual case notation used, for example, in (6), we will introduce another kind of conditional term for convenience. This involves a quantifier and a default value of 0, like in formula (P2). If z is a variable,ψ is a formula and t is a term, we use {a mathematical formula}〈z.ψ→t〉 as a logical term characterized as follows:{a mathematical formula} The notation says that when {a mathematical formula}∃zψ is true, the value of the term is t; otherwise, the value is 0. When t uses z (the usual case), this will be most useful if there is a uniquez that satisfies ψ.
+     </paragraph>
+     <paragraph>
+      Returning to the task at hand, we will now need a way to enumerate the primitive fluent terms of the language. Intuitively, these correspond to the probabilistic variables in the language. Perhaps the simplest way is to assume there are n fluents {a mathematical formula}f1,f2,…,fn in {a mathematical formula}L which take no arguments other than the situation argument,{sup:13} and that they take their values from some finite sets. We can then rephrase Definition 12 as follows:
+     </paragraph>
+     <paragraph label="Definition 13">
+      Suppose ϕ is as before. Let {a mathematical formula}Bel(ϕ,s) be an abbreviation for:{a mathematical formula} where γ is the numerator but with ϕ replaced by true, as usual.
+     </paragraph>
+     <paragraph>
+      (For readability, we often drop the index variables in sums and connectives when the context makes it clear: in this case, i ranges over the set {a mathematical formula}{1,…,n}, that is, the indices of the fluents in {a mathematical formula}L.) Definition 13 suggests that for each possible value of the fluents, we are to sum over all possible situations and for each one, if the fluents have those values and ϕ holds, then the p value is to be used, and 0 otherwise. Roughly speaking, if one were to group situations satisfying {a mathematical formula}⋀fi(s)=xi into sets for every possible vector {a mathematical formula}x→, the union of these sets would give the space of situations. Our claim about the relationship between the two abbreviations can be made precise as follows:
+     </paragraph>
+     <paragraph label="Theorem 14">
+      Let{a mathematical formula}Dbe any basic action theory and ϕ any{a mathematical formula}L-formula. Then the abbreviations for{a mathematical formula}Bel(ϕ,s)fromDefinition 12, Definition 13define the same number.
+     </paragraph>
+     <paragraph label="Proof">
+      For the proof, we focus solely on the numerators of the two abbreviations. That is,{a mathematical formula} on the one hand, and{a mathematical formula} on the other. We show that these expressions define the same number. With this, the case for the denominators follows trivially, since true is a special case of ϕ. Then, the claim is proven.Let S be a set such that {a mathematical formula}s′∈S iff {a mathematical formula}p(s′,s)&gt;0. (That is, for any ground situation term s, this is the set of all ground situation terms {a mathematical formula}s′ such that {a mathematical formula}p(s′,s)&gt;0.) Then, let {a mathematical formula}T⊆S be the set such that {a mathematical formula}s′∈T iff {a mathematical formula}ϕ[s′]. Intuitively, T is the set of all situations that are epistemically related to s, but where ϕ holds. It is easy to see that{a mathematical formula} Suppose now {a mathematical formula}fi ranges over {a mathematical formula}{c1i,…,cki}, and so by extension, suppose {a mathematical formula}f→=〈f1,…,fn〉 ranges over {a mathematical formula}{c1→,c2→,…,ck→}. For any {a mathematical formula}cj→ in that set, let {a mathematical formula}Tj⊆T be a set such that {a mathematical formula}s′∈Tj iff {a mathematical formula}⋀fi(s′)=cji. That is, {a mathematical formula}Tj identifies those situations from T where fluents satisfy the vector of values {a mathematical formula}cj→. Observe that{a mathematical formula} But, of course, {a mathematical formula}T=⋃Tj. Therefore,{a mathematical formula} Therefore, (†) and (‡) define the same number.  □
+     </paragraph>
+     <paragraph>
+      Be that as it may, Definition 13 still involves summations over situations. To arrive at a definition that eschews the summing of situations, we start with the case of initial situations. In this matter, we will be insisting on a precise space of initial situations. For this, let us recall the axiomatization of the situation calculus presented in [34] for multiple initial situations, which includes a sentence saying there is precisely one initial situation for any possible vector of fluent values. This can be written as follows:{a mathematical formula} (Recall that i ranges over the indices of the fluents in {a mathematical formula}L, that is, {a mathematical formula}{1,…,n}.) Under the assumption (P3), we can rewrite Definition 12 for {a mathematical formula}s=S0 as{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The two abbreviations, in fact, are equivalent:
+     </paragraph>
+     <paragraph label="Theorem 15">
+      Let{a mathematical formula}Dbe any basic action theory, ϕ any{a mathematical formula}L-formula, and suppose{a mathematical formula}D0includes(P3). Then the abbreviations for{a mathematical formula}Bel(ϕ,S0)inDefinition 12and(B0)define the same number.
+     </paragraph>
+     <paragraph label="Proof">
+      As in Theorem 14, we focus on the numerators for the two abbreviations. That is,{a mathematical formula} on the one hand, and{a mathematical formula} on the other. We show that these expressions define the same number. The denominators represent a special case, and so the claim will follow.Let S be the set of initial situations. Suppose {a mathematical formula}fi ranges over {a mathematical formula}{ci,ci′,…,ci″}. By way of (P3), for any vector of values {a mathematical formula}〈c1,…,cn〉 for the vector of fluents {a mathematical formula}〈f1,…,fn〉, there exists a (unique) situation {a mathematical formula}s∈S such that {a mathematical formula}⋀fi(s)=ci. Let {a mathematical formula}T⊆S be such that {a mathematical formula}s∈T iff {a mathematical formula}ϕ[s]. It is easy to see that{a mathematical formula} Since (P1) ensures that {a mathematical formula}p(s′,S0)&gt;0 only if {a mathematical formula}s′ is an initial situation, we get that{a mathematical formula} Therefore (†) and (‡) define the same number.  □
+     </paragraph>
+     <paragraph>
+      This shows that for {a mathematical formula}S0, summing over possible worlds can be replaced by summing over fluent values.
+     </paragraph>
+     <paragraph>
+      Unfortunately, (B0) is only geared for initial situations. For non-initial situations, the assumption that no two agree on all fluent values is untenable. To see why, imagine an action {a mathematical formula}move(z) that moves the robot z units to the left (towards the wall) but that the motion stops if the robot hits the wall. The successor state axiom for fluent h, then, might be like this:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In this case, if we have two initial situations that are identical except that {a mathematical formula}h=3 in one and {a mathematical formula}h=4 in the other, then the two distinct successor situations that result from doing {a mathematical formula}move(4) would agree on all fluents (since both would have {a mathematical formula}h=0). Ergo, we cannot sum over fluent values for non-initial situations unless we are prepared to count some fluent values more than once.
+     </paragraph>
+     <paragraph>
+      It turns out there is a simple way to circumvent this issue by appealing to Reiter's solution to the frame problem. Indeed, Reiter's solution gives us a way of computing what holds in non-initial situations in terms of what holds in initial ones, which can be used for computing belief at arbitrary successors of {a mathematical formula}S0. More precisely,
+     </paragraph>
+     <paragraph label="Definition 16">
+      (Degrees of belief (reformulated)) Let ϕ be any {a mathematical formula}L-formula. Given any sequence of ground action terms {a mathematical formula}α=[a1,…,ak], let{a mathematical formula} where if {a mathematical formula}s=do(α,S0) then{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      (As before, i ranges over the indices of the fluents in {a mathematical formula}L.) To say more about how (and why) this definition works, we first note that by (P1) and (P2), p will be 0 unless its two arguments share the same history. So the {a mathematical formula}s′ argument of p in Definition 12 is expanded and written as {a mathematical formula}do(α,ι) in Definition 16. By ranging over all fluent values, we range over all initial ι as before, but without ever having to deal with fluent values in non-initial situations. Of course, we test that the ϕ holds and use the p weight in the appropriate non-initial situation. In particular, owing to p's successor state axiom (P2), the weight for non-initial situations accounts for the likelihood of actions executed in the history. We now establish the following result:
+     </paragraph>
+     <paragraph label="Theorem 17">
+      Let{a mathematical formula}Dbe any basic action theory with(P3)initially, ϕ any{a mathematical formula}L-formula, and α any sequence of ground actions terms. Then the abbreviations for{a mathematical formula}Bel(ϕ,do(α,S0))inDefinition 12andDefinition 16define the same number.
+     </paragraph>
+     <paragraph label="Proof">
+      As in Theorem 14, we will focus on the numerators of the two abbreviations. That is,{a mathematical formula} on the one hand, and{a mathematical formula} on the other. We show that these expressions define the same number. The denominators represent a special case, and so the claim will follow.Let S be the set of initial situations, as determined by (P3). Let {a mathematical formula}S⁎={do(α,s′):s′∈S}. Let {a mathematical formula}T⊆S⁎ such that {a mathematical formula}s″∈T iff {a mathematical formula}ϕ[s″]. It is easy to see that{a mathematical formula} On the other hand, by (P1) and (P2), {a mathematical formula}p(s,do(α,S0))=0 for all {a mathematical formula}s∉S⁎. This means that{a mathematical formula} Therefore (†) and (‡) define the same number.  □
+     </paragraph>
+     <paragraph>
+      Thus, by incorporating a simple constraint on initial situations, we now have a notion of belief that does not require summing over situations.
+     </paragraph>
+     <paragraph>
+      Readers may notice that our reformulation only applies when we are given an explicit sequence α of actions, including the sensing ones. But this is just what we would expect to be given for the projection problem[11], where we are interested in inferring whether a formula holds after an action sequence. In fact, we can use regression on the ϕ and the p to reduce the belief formula from Definition 16 to a formula involving initial situations only. See [35] for work in this direction.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      From weights to densities
+     </section-title>
+     <paragraph>
+      The framework presented so far is fully discrete, which is to say that fluents, sensors and effectors are characterized by finite values and finite outcomes. Belief in ϕ, in particular, is the summing over a finite set of situations where ϕ holds. We now generalize this framework. We structure our work by first focusing on fully continuous domains, which is to say that fluents, sensors and effectors are characterized by values and outcomes ranging over {a mathematical formula}R. This section, in particular, explores the very first installment: effectors are assumed to be deterministic, but sensors have continuous noisy error profiles. The next section, then, allows both effectors and sensors to have continuous noisy profiles. Further generalizations are deferred to Section 7.
+     </paragraph>
+     <paragraph>
+      Let us begin by observing that the uncountable nature of continuous domains precludes summing over possible situations. In this section, we present a new formalization of belief in terms of integrating over fluent values. This, in particular, is made possible by the developments in the preceding section.
+     </paragraph>
+     <paragraph>
+      Allowing real-valued fluents implies that there will be uncountably many initial situations. Imagine, for example, the scenario from Fig. 1, and that the fluent h can now be any nonnegative real number. Then for any nonnegative real x there will be an initial situation where {a mathematical formula}(h=x) is true. Suppose further that {a mathematical formula}D0 includes:{a mathematical formula} which says that the true value of h initially is drawn from a uniform distribution on the interval {a mathematical formula}[2,12]. Then there are uncountably many situations where p is non-zero initially. So the p fluent now needs to be understood as a density, not as a weight. (That is, we now interpret {a mathematical formula}p(s′,s) as the density of {a mathematical formula}s′ when the agent is in s.) In particular, for any x, we would expect the initial degree of belief in the formula {a mathematical formula}(h=x) to be 0, but in {a mathematical formula}(h≤12) to be 1.
+     </paragraph>
+     <paragraph>
+      When actions enter the picture, even if deterministic, there is more to be said. Numerous subtleties arise with p in non-initial situations. For example, if the robot were to do a {a mathematical formula}move(4) there would be an uncountable number of situations agreeing on {a mathematical formula}h=0: namely, those where {a mathematical formula}2≤h≤4 was true initially. In a sense, the point {a mathematical formula}h=0 now has weight, and the degree of belief in {a mathematical formula}h=0 should be .2. On the other hand, the other points {a mathematical formula}h∈(0,8] should retain their densities. That is, belief in {a mathematical formula}h≤2 should be .4 but belief in {a mathematical formula}h=2 should still be 0. In effect, we have moved from a continuous to a mixed distribution on h. Of course, a subsequent rightward motion will retain this mixed density. For example, if the robot were to now move away by 4 units, the belief in {a mathematical formula}h=4 would then be .2.
+     </paragraph>
+     <paragraph>
+      To address the concern of belief change in continuous domains, we now present a generalization to BHL. One of the advantages of our approach is that we will not need to specify how to handle changing densities and distributions like the ones above. These will emerge as side-effects, that is, shifting density changes will be entailed by the action theory.
+     </paragraph>
+     <paragraph>
+      For our formulation of belief, we first observe that we have fluents {a mathematical formula}f1,…,fn in {a mathematical formula}L as before, that take no argument other than the situation term but which now take their values from {a mathematical formula}R. Then:
+     </paragraph>
+     <paragraph label="Definition 18">
+      (Degrees of belief (continuous noisy sensors)) Let ϕ be any situation-suppressed {a mathematical formula}L-formula, and {a mathematical formula}α=[a1,…,ak] any ground sequence of action terms. The degree of belief in ϕ at s is an abbreviation:{a mathematical formula} where, as in Definition 16, if {a mathematical formula}s=do(α,S0) then{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      That is, the belief in ϕ is obtained by ranging over all possible fluent values, and integrating the densities of situations where ϕ holds. If we were to compare the above definition to Definition 16, we see that we have simply shifted from summing over finite domains to integrating over reals. In fact, we could read P as the (unnormalized) density associated with a situation satisfying ϕ. As discussed, by insisting on an explicit world history, the ι need only range over initial situations, giving us the exact correspondence with fluent values.
+     </paragraph>
+     <paragraph>
+      This completes our new definition of belief. To summarize, our extension to the BHL scheme is defined using a few convenient abbreviations, such as for Bel and mathematical integration, and where an action theory consists of:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}D0 (with (P1)) as usual, but now also including (P3);
+      </list-item>
+      <list-item label="2.">
+       precondition axioms as usual;
+      </list-item>
+      <list-item label="3.">
+       successor state axioms, including one for p, namely (P2), as usual;
+      </list-item>
+      <list-item label="4.">
+       foundational domain-independent axioms as usual; and
+      </list-item>
+      <list-item label="5.">
+       action likelihood axioms, one for each action type.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that, apart from (P3) and Bel's new abbreviation, we carry over precisely the same components as would BHL. By and large, the extension, thus, retains the simplicity of their proposal, and comes with minor additions. We will show that it has reasonable properties using an example and its connection to Bayesian conditioning below.
+     </paragraph>
+     <paragraph>
+      In the sequel, we assume, without explicitly mentioning so, that basic action theories include the sentences (P1), (P2) and (P3).
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Bayesian conditioning
+      </section-title>
+      <paragraph>
+       We now explicate the relationship between our definition for Bel and Bayesian conditioning[7]. Bayesian conditioning is a standard model for belief change wrt noisy sensing [13] and it rests on two significant assumptions. First, sensors do not physically change the world, and second, conditioning on a random variable f is the same as conditioning on the event of observing f.
+      </paragraph>
+      <paragraph>
+       In general, in the language of the situation calculus, there need not be a distinction between sensing actions and physical actions. In that case, the agent's beliefs are affected by the sensed value as well as any other physical changes that the action might enable to adequately capture the “total evidence” requirement of Bayesian conditioning.
+      </paragraph>
+      <paragraph>
+       The second assumption expects that sensors only depend on the true value for the fluent. For example, in the formulation of (3) the sonar's error profile is determined solely by h. But to suggest that the error profile might depend on other factors about the environment, as formulated by (4) for example, goes beyond this simplified view. In fact, here, the agent also learns about the room temperature, apart from sensing the value of h.
+      </paragraph>
+      <paragraph>
+       Thus, our theory of action admits a view of dynamical systems far richer than the standard setting where Bayesian conditioning is applied. Be that as it may, when a similar set of assumptions are imposed as axioms in an action theory, we obtain a sensor fusion model identical to Bayesian conditioning. This connection was demonstrated in BHL for the discrete case. We prove the property formally for continuous variables below.
+      </paragraph>
+      <paragraph>
+       We begin by stipulating that actions are either of the physical type or of the sensing type [12], the latter being the kind that do not change the value of any fluent, that is, such actions do not appear in the successor state axioms for any fluent. Now, if {a mathematical formula}obs(z) senses the true value of fluent f, then assume the sensor error model to be:{a mathematical formula} where {a mathematical formula}Err(u1,u2) is some expression with only two free variables, both numeric. This captures the notion established above: the error model of a sensor measuring f depends only on the true value of f, and is independent of other factors. Finally, for simplicity, assume obs(z) is always executable:{a mathematical formula} Then we obtain:
+      </paragraph>
+      <paragraph label="Theorem 19">
+       Suppose{a mathematical formula}Dis any basic action theory with likelihood and precondition axioms for{a mathematical formula}obs(z)as above, ϕ is any{a mathematical formula}L-formula mentioning only f, and{a mathematical formula}u∈{x1,…,xn}that f takes a value from. Then we obtain:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       That is, the posterior belief in ϕ is obtained from the prior density and the error likelihoods for all points where ϕ holds given that z is observed, normalized over all points. The proof for the theorem is as follows.
+      </paragraph>
+      <paragraph label="Proof">
+       Without loss of generality, assume f takes the value x, and the remaining fluents are {a mathematical formula}f1,…fn that take values from {a mathematical formula}x1,…,xn. Let a denote {a mathematical formula}obs(z). From Definition 18, {a mathematical formula}Bel(ϕ,do(obs(z),S0)) is an abbreviation for:{a mathematical formula} The arguments underline those parts of the sentences that are being reduced. Step (a) expands P. In step (b), owing to the fact that sensing actions do not change fluent values (by our first assumption tailored to Bayesian conditioning), {a mathematical formula}ϕ[do(a,ι)] is equivalent to {a mathematical formula}ϕ[ι]. In step (c), we observe that what appears to the left of the right-arrow in step (b) is equivalent to one where {a mathematical formula}ϕ[ι] is replaced by {a mathematical formula}(ϕ∧f=x)[ι]. (The main reason for introducing the formula {a mathematical formula}f=x is to allow us to identify those situations where f takes the value x which are all to be multiplied by the error likelihood for observing z when the true value is x.) In step (d), we use (P2) and the fact that a is always executable to replace {a mathematical formula}p(do(a,ι),do(a,S0)) by {a mathematical formula}p(ι,S0)×l(a,ι)=p(ι,S0)×Err(z,x). Now note that the term appearing in the context of an integral is suggesting that if there is an initial situation where a particular condition holds, then a certain value is returned, and otherwise 0 is returned. This allows us to place the term {a mathematical formula}Err(z,x) on the outside in step (f), giving us the required numerator that appears in the claim. The expansion of the denominator is analogous with true being a special case for ϕ, and so we are done.  □
+      </paragraph>
+      <paragraph>
+       The usual case for posteriors are formulas such as {a mathematical formula}b≤f≤c, which is estimated from the prior and error likelihoods for all points in the range {a mathematical formula}[b,c], as demonstrated by the following consequence:
+      </paragraph>
+      <paragraph label="Corollary 20">
+       Suppose D is any basic action theory with likelihood and precondition axioms for{a mathematical formula}obs(z)as above, f is any{a mathematical formula}L-fluent, and u is a variable from{a mathematical formula}x→=〈x1,…,xm〉that f takes a value from. Then we obtain:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       More generally however, and unlike many probabilistic formalisms, we are able to reason about any logical property ϕ of the random variable f being measured.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Example
+      </section-title>
+      <paragraph>
+       Using an example, we demonstrate the formalism and Theorem 19 in particular. To reason about the beliefs of our robot, let us build a simple basic action theory {a mathematical formula}D. We extend the setting from Fig. 1 to a 2-dimensional grid, as shown in Fig. 4. As before, let h be the fluent denoting its horizontal position (that is, its distance to the wall), and let the robot's vertical position be given by a fluent v. The components of {a mathematical formula}D are as below.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Imagine a p of the form:{a mathematical formula} This says that the value of v is normally distributed about the horizontal axis with variance 16, and independently, that the value of h is uniformly distributed between 2 and 12.Note also that initial beliefs can be specified for {a mathematical formula}D0 using Bel directly. For example, to express that the true value of h is believed to be uniformly distributed on the interval {a mathematical formula}[2,12] we might equivalently include the following theory in {a mathematical formula}D0:{a mathematical formula} and analogously for the fluent v.For this example, a simple distribution has been chosen for illustrative purposes. In general, recall from Section 3.4 that the p-specification does not require the variables to be independent, nor does it have to mention all variables.
+       </list-item>
+       <list-item label="•">
+        For simplicity, let us assume that actions are always executable, i.e., that {a mathematical formula}D includes{a mathematical formula} for all actions a. For this example, we assume three action types: action {a mathematical formula}move(z) that moves the robot z units towards the wall, action {a mathematical formula}up(z) that moves the robot z units away from the horizontal axis, and action {a mathematical formula}sonar(z) that gives a reading of z for the distance between the robot and the wall.
+       </list-item>
+       <list-item label="•">
+        The successor state axiom for h is as in (7), and the one for v is as follows:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        For the sensor device, suppose its error model is given as follows:{a mathematical formula}The error model says that for nonnegative z readings, the difference between the reading and the true value is normally distributed with mean 0 (which indicates that there is no systematic bias) and variance 4.{sup:14}For the remaining (physical) actions, we let{a mathematical formula} since they are assumed to be deterministic for this section.
+       </list-item>
+      </list>
+      <paragraph label="Theorem 21">
+       Then we obtain: Let{a mathematical formula}Dbe a basic action theory that is the union of {(9),(10),(7),(11),(12),(13)}. Then the following are logical entailments of{a mathematical formula}D:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Bel([h=3∨h=4∨h=7],S0)=0.To see how this follows, let us begin by expanding {a mathematical formula}Bel([h=3∨h=4∨h=7],S0):{a mathematical formula} For the rest of the section, let h take its value from {a mathematical formula}x1 and v take its value from {a mathematical formula}x2. By means of (P3), there is exactly one situation for any set of values for {a mathematical formula}x1 and {a mathematical formula}x2. The P term for any such situation, however, is 0 unless {a mathematical formula}h=3∨h=4∨h=5 holds at the situation. Thus, (a) basically simplifies to:{a mathematical formula}In effect, although we are integrating a function {a mathematical formula}δ(x1,x2) over all real values, {a mathematical formula}δ(x1,x2)=0 unless {a mathematical formula}x1∈{3,4,7}.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Bel(h≤9,S0)=.7.We might contrast this with the previous property in that for any given value for {a mathematical formula}x1 and {a mathematical formula}x2, the P term is 0 when {a mathematical formula}x1&gt;9. When {a mathematical formula}x1≤9, however, the p value for the situation is obtained from the specification given by (9). That is, we have:{a mathematical formula} The numerator evaluates to .7, and the denominator to 1.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Bel(h&gt;7v,S0)≈.6.Beliefs about any mathematical expression involving the random variables, even when that does not correspond to well known density functions, are entailed. To evaluate this one, for example, observe that we have{a mathematical formula}
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}Bel(h=0,do(move(4),S0))=.2.Here a continuous distribution evolves into a mixed distribution. This results from {a mathematical formula}Bel(h=0,do(move(4),S0)) first expanding as:{a mathematical formula} The P term, then, simplifies to:{a mathematical formula} That is, since {a mathematical formula}move(z) has no error component, {a mathematical formula}l(move(z),s)=1 for any s in accordance with {a mathematical formula}D. Therefore, {a mathematical formula}p(do(a,ι),do(a,S0))=p(ι,S0). Now (b) says that for every possible value for h and v, if there is an initial situation where {a mathematical formula}h=0 holds after moving leftwards, then its p value is to be considered. Note that for any initial situation s where {a mathematical formula}h(s)∈[2,4], we get {a mathematical formula}h(do(move(4),s))=0 by (7). This leaves us with:{a mathematical formula} We can show that {a mathematical formula}γ=1, which means (c) = .2. This change in beliefs is shown in Fig. 5.
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}Bel(h≤3,do(move(4),S0))=.5.Bel's definition is amenable to a set of h values, where one value has a weight of .2, and all the other real values have a uniformly distributed density of .1.
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}Bel([∃a,s.now=do(a,s)∧h(s)&gt;1],do(move(4),S0))=1.It is possible to refer to earlier or later situations using now as the current situation. This says that after moving, there is full belief that {a mathematical formula}(h&gt;1) held before the action.
+       </list-item>
+       <list-item label="7.">
+        {a mathematical formula}Bel(h=4,do([move(4),move(−4)],S0))=.2{a mathematical formula}Bel(h=4,do([move(−4),move(4)],S0))=0.The point {a mathematical formula}h=4 has 0 weight initially, as shown in item 1. Roughly, if the agent were to move leftwards first then many points would “collapse”, as shown in item 4. The point would then obtain a h value of 0, and have a weight of .2. The weight is then retained on moving away by 4 units, where the point once again gets h value 4. On the other hand, if this entire phenomena were reversed then none of these features are observed because the collapsing does not occur and the entire space remains fully continuous.
+       </list-item>
+       <list-item label="8.">
+        {a mathematical formula}Bel(−1≤v≤1,do(move(4),S0))=Bel(−1≤v≤1,S0)=∫−11N(x2;0,16)dx2.Owing to Reiter's solution to the frame problem, belief in v is unaffected by a lateral motion. That is, a leftwards motion does not change v in accordance with (11). As per (9), the initial belief in {a mathematical formula}v∈[−1,1] is the area between {a mathematical formula}[−1,1] bounded by the specified Gaussian.
+       </list-item>
+       <list-item label="9.">
+        {a mathematical formula}Bel(v≤7,do(up(2.5),S0))=Bel(v≤4.5,S0).After the action {a mathematical formula}up(2.5), the Gaussian for v's value has its mean “shifted” by 2.5 because the density associated with {a mathematical formula}v=x2 initially is now associated with {a mathematical formula}v=x2+2.5. Intuitively, we have:{a mathematical formula}
+       </list-item>
+       <list-item label="10.">
+        {a mathematical formula}Bel(h≤9,do(sonar(5),S0))≈.97.{a mathematical formula}Bel(h≤9,do([sonar(5),sonar(5)],S0)≈.99.Compared to item 2, belief in {a mathematical formula}h≤9 is sharpened by obtaining a reading of 5 on the sonar, and sharpened to almost certainty on a second reading of 5. This is because the p function, according to (P2), incorporates the likelihood of each {a mathematical formula}sonar(5) action. More precisely, the belief term in the first entailment simplifies to:{a mathematical formula} Note that we have replaced {a mathematical formula}(h≤9)[do(sonar(5),S0)] by {a mathematical formula}(h≤9)[ι] since {a mathematical formula}sonar(z) does not affect h. From (a), we get{a mathematical formula} We know from (9) that those initial situations where {a mathematical formula}h≤2 have p values 0. Therefore, from (b), we get:{a mathematical formula} After a second reading of 5 from the sonar, the expansion for belief is analogous, except that the function to be integrated gets multiplied by a second {a mathematical formula}N(5−x1;0,4) term. It is then not hard to see that belief sharpens significantly with this multiplicand. The agent's changing densities are shown in Fig. 6.
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Noisy acting
+     </section-title>
+     <paragraph>
+      In the presentation so far, we assumed physical actions to be deterministic. By this we mean that when a physical action a occurs, it is clear to us (as modelers) but also the agent how the world has changed on a. Of course, in realistic domains, especially robotic applications, this is not the usual case. In this section, in a domain that has continuous fluents, we show how our current account of belief can be extended to reason with sensors as well as effectors that are noisy.
+     </paragraph>
+     <paragraph>
+      In line with the rest of this work, effector noise is given a quantitative account. Let us first reflect on what is expected with noisy acting. When an agent senses, as in the case of {a mathematical formula}sonar(z), the argument for this action is not chosen by the agent. That is, the world decides what z should be, and based on this reading of z, the agent comes to certain conclusions about its own state. The noise factor, then, simply addresses the phenomena that the number z returned may differ from the true value of whatever fluent the sensor is measuring.
+     </paragraph>
+     <paragraph>
+      Noisy acting diverges from that picture in the following sense. The agent intends to do action a, but what actually occurs is {a mathematical formula}a′ that is possibly different from a. For example, the agent may want to move 3 units, but, unbeknownst to the agent, it may move by 3.042 units. The agent, of course, does not observe this outcome. Nevertheless, provided the agent has an account of its effector's inaccuracies, it is reasonable for the agent to believe that it is in fact closer to the wall, even if it may not be able to precisely tell by how much. Intuitively, the result of a nondeterministic action is that any number of successor situations might be obtained, which are all indistinguishable in the agent's perspective (until sensing is performed). Depending on the likelihoods of the action's potential outcomes, some of these successor situations are considered more probable than others. The agent's belief about what holds then must incorporate these relative likelihoods. So, in our view, nondeterminism is really an epistemic notion.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Noisy action types
+      </section-title>
+      <paragraph>
+       Following [5], perhaps the simplest extension to make all this precise is to assume that deterministic actions such as {a mathematical formula}move(x) now have companion action types {a mathematical formula}move(x,y) in {a mathematical formula}L. The intuition is that x represents the nominal value, which is the number of units that the agent intends to move, while y represents the actual distance moved. The actual value of y in any ground action, of course, is not observable for the agent. This simple idea will need three adjustments to our account:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        successor state axioms need to be built using these new action types;
+       </list-item>
+       <list-item label="2.">
+        the formalism must allow the modeler to formalize that certain outcomes are more likely than others, that is, noisy actions may be associated with a probabilistic account of the various outcomes; and
+       </list-item>
+       <list-item label="3.">
+        the notion of belief must incorporate the nominal value, the range of possible outcomes and their likelihoods.
+       </list-item>
+      </list>
+      <paragraph>
+       First, we address successor state axioms. These are now specified as usual, but using the second argument, which is the actual outcome, rather than the nominal value, which is ignored. For example, for the fluent h, instead of (7), we will now have:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The reason for this modification is obvious. If y is the actual outcome then the fluent change should be contingent on this value rather than what was intended. It is important to note that no adjustment to the existing (Reiter's) solution to the frame problem is necessary.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      The Golog approach
+      <paragraph>
+       The foremost issue now is to use the above idea to allow for more than one possible successor situation. Clearly, we do not want the agent to control the actual outcome in general. So the approach taken by BHL is to think of picking the second argument as a nondeterministic Golog program [11]. Briefly, Golog is an agent programming proposal where one is allowed to formulate complex actions that denote sequential and nondeterministic executions of actions, among others, and is essentially a basic action theory. Given the action {a mathematical formula}move(x,y), for example, the Golog program {an inline-figure} might stand for the abbreviation {a mathematical formula}πy.move(x,y), which corresponds to a ground action {a mathematical formula}move(x,n) where n is chosen nondeterministically. For our purposes, we would then imagine that the agent executes Golog programs.
+      </paragraph>
+      <paragraph>
+       There are some advantages to this approach: namely, we only have to look at the logical entailments, including ones mentioning Bel, of such Golog programs. Since traces of these programs account for many potential outcomes, Bel does the right thing and accommodates all of these when considering knowledge. But the disadvantage is that the resulting formal specification turns out be unnecessarily complex, at least as far as projection is concerned.
+      </paragraph>
+      <paragraph>
+       For projection tasks, we show that we can settle on a simpler alternative, one that does not appeal to Golog. Like BHL, we assume that the world is deterministic, where the result of doing a ground action leads to a distinct successor. Roughly, the intuition then is that when a noisy action is performed, the various outcomes of the action as well as the potential successor situations that are obtained wrt these are treated at the level of belief.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Alternate action axioms
+      </section-title>
+      <paragraph>
+       Inspired by [37], our approach is based on the introduction of a distinguished predicate Alt. The idea is this: if {a mathematical formula}Alt(a,a′,z→) holds for ground action {a mathematical formula}a=A(c→) then we understand this to mean that the agent believes that any instance of {a mathematical formula}a′=A(z→) might have been executed instead of a. Here, {a mathematical formula}z→ denotes the range of the arguments for potential outcomes.
+      </paragraph>
+      <paragraph>
+       To see how that gets used with the new action types such as {a mathematical formula}move(x,y), consider the ground action {a mathematical formula}move(3,3.1). So, the agent intends to move by 3 units but what has actually occurred is a move by 3.1 units. Since the agent does not observe the latter argument, from its perspective, what occurred could have been a move by 2.9 units, but also perhaps (although less likely) a move by 9 units. Thus, the ground actions {a mathematical formula}move(3,2.9) and {a mathematical formula}move(3,9) are Alt-related to {a mathematical formula}move(3,3.1). (The likelihoods for these may vary, of course.) In logical terms, we might have an axiom of the following form in the background theory:{a mathematical formula} This to be read as saying that {a mathematical formula}move(3,z) for every {a mathematical formula}z∈R are alternatives to {a mathematical formula}move(3,3.1). If we required that z is only a certain range from 3, for example, we might have:{a mathematical formula} where c bounds the magnitude of the maximal possible error. On the other hand, for actions such as {a mathematical formula}sonar(z), which do not have any alternatives, we simply write:{a mathematical formula} This says that {a mathematical formula}sonar(x) is only Alt-related to itself.
+      </paragraph>
+      <paragraph>
+       With this simple technical device, one can now additionally constrain the likelihood of various outcomes using l. For example:{a mathematical formula} says that the difference between nominal value and the actual value is normally distributed with mean μ and variance {a mathematical formula}σ2. This essentially corresponds to the standard additive Gaussian noise model in robotics [13].
+      </paragraph>
+      <paragraph>
+       To see an example of how, say, (15) and (17) work together with the successor state axiom (P2) for p, consider three situations {a mathematical formula}s,s′ and {a mathematical formula}s″ associated with the same density, as shown in Fig. 7. Suppose their h values are {a mathematical formula}6,6.1 and 5.9 respectively. After attempting to move 3 units, the action {a mathematical formula}move(3,z) for any {a mathematical formula}z∈R may have occurred. So, for each of the three situations, we explore successors from different values for z. Assume the motion effector is defined by a mean {a mathematical formula}μ=0 and variance {a mathematical formula}σ2=1. Then, the p-value of the situation {a mathematical formula}do(move(3,5.7),s′), for example, is obtained from the p-value for {a mathematical formula}s′ multiplied by the likelihood of {a mathematical formula}move(3,5.7), which is {a mathematical formula}N(5.7−3;0,1)=N(2.7;0,1). Thus, the successor situation {a mathematical formula}do(move(3,5.7),s′) is much less likely than the successor situation {a mathematical formula}do(move(3,3),s), as should be the case.
+      </paragraph>
+      <paragraph>
+       In general, we define alternate actions axioms that are to be a part of the basic action theory henceforth:
+      </paragraph>
+      <paragraph label="Definition 22">
+       Let {a mathematical formula}A(x→,y→) be any action. Alternate actions axioms are sentences of the form:{a mathematical formula} where ψ is a formula that characterizes the relationship between the nominal and true values.
+      </paragraph>
+      <paragraph>
+       The one limitation with this definition is that only actions of the same type, i.e., built from the same function symbol, are alternatives to each other. This does not allow, for example, situations where the agent intends a physical move, but instead unlocks the door. Nevertheless, this definition is not unreasonable because noisy actions in robotic applications typically involve additive noise [13]. Moreover, this limitation only assists us in arriving at a simple and familiar definition for belief. A more involved definition would allow for other variants.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       A definition for belief
+      </section-title>
+      <paragraph>
+       We have thus far successfully augmented successor state axioms and extended the formalism for modeling noisy actions. The final question, then, is how can the outcomes of a noisy action, and their likelihoods, be accounted for? Indeed, a formula might not only be true as a result of the actions intended, but also as a result of those that were not.
+      </paragraph>
+      <paragraph>
+       Consider the simple case of deterministic actions, where the density associated with s is simply transferred to {a mathematical formula}do(a,s). This is an instance of Lewis's imaging[27]. In contrast, if a and {a mathematical formula}a′ are Alt-related, then the result of doing a at s would lead to successor situations {a mathematical formula}do(a,s) and {a mathematical formula}do(a′,s). Moreover, unlike noisy sensors, a and {a mathematical formula}a′ may affect fluent values in different ways, which is certainly the case with {a mathematical formula}move(3,3.074) and {a mathematical formula}move(3,3) on the fluent h. Thus, the idea then is that when reasoning about the agent's beliefs about ϕ, one would need to integrate over the densities of all those potential successors where ϕ would hold.
+      </paragraph>
+      <paragraph>
+       To make this precise, let us first consider the result of doing a single action a at {a mathematical formula}S0. The degree of belief in ϕ after doing a is now an abbreviation for:{a mathematical formula} where{a mathematical formula} (As before, the i ranges over the indices of the fluents in {a mathematical formula}L, that is, {a mathematical formula}{1,…,n}.) The intuition is this. Recall that by integrating over {a mathematical formula}x→, all possible initial situations are considered by {a mathematical formula}fi(ι)=xi. Analogously, by integrating over z, all possible action outcomes are considered by {a mathematical formula}Alt(a,b,z). Supposing {a mathematical formula}a=A(x,y), for each outcome {a mathematical formula}b=A(x,z),{sup:15} we test whether ϕ holds at the resulting situation {a mathematical formula}do(b,ι) as before, and use its p-value. Here, this p-value is given by {a mathematical formula}p(do(b,ι),do(a,S0)), where the first argument is the successor of interest {a mathematical formula}do(b,ι) and the second is the real world {a mathematical formula}do(a,S0).
+      </paragraph>
+      <paragraph>
+       The generalization, then, for a sequence of actions is as follows:
+      </paragraph>
+      <paragraph label="Definition 23">
+       (Degrees of belief (continuous noisy effectors and sensors)) Suppose ϕ is any {a mathematical formula}L-formula. Then the degree of belief in ϕ at s, written {a mathematical formula}Bel(ϕ,s), is defined as an abbreviation:{a mathematical formula} where, if {a mathematical formula}s=do([a1,…,ak],S0), then{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       (Here, i ranges over {a mathematical formula}{1,…,n} as before, and j ranges over the indices of the ground actions {a mathematical formula}{1,…,k}.) That is, given any sequence, for all possible {a mathematical formula}z→ values, we consider alternate sequences of ground action terms and integrate the densities of successor situations that satisfy ϕ, using the appropriate p-value.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Example
+      </section-title>
+      <paragraph>
+       Let us now build a simple example with noisy actions. Consider the robot scenario in Fig. 1. Suppose the basic action theory {a mathematical formula}D includes the foundational axioms, and the following components.
+      </paragraph>
+      <paragraph>
+       The initial theory {a mathematical formula}D0 includes the following p specification:{a mathematical formula} For simplicity, let h be the only fluent in the domain, and assume that actions are always executable. The successor state axiom for the fluent h is (14). For p, it is the usual one, viz.(P2).
+      </paragraph>
+      <paragraph>
+       We imagine two actions in this domain, one of which is the noisy move {a mathematical formula}move(x,y) and a sonar sensing action {a mathematical formula}sonar(z). For the alternate actions axioms, let us use (15) and (16).
+      </paragraph>
+      <paragraph label="Theorem 24">
+       Finally, we specify the likelihood axioms. Let the sonar's error profile be{a mathematical formula} Readers may note that this sonar is more accurate than the one characterized by (12), as it has a smaller variance. Regarding the likelihood axiom for {a mathematical formula}move(x,y), let that be:{a mathematical formula} This completes the specification of {a mathematical formula}D. The following are entailments of{a mathematical formula}D.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Bel(h≥11,do(move(−2,−2.01),S0))≈.95We first observe that for calculating the degrees of belief, we have to consider all those successors of initial situations wrt {a mathematical formula}move(−2,z) for every z, where ϕ holds. By (P2), the p value for such situations is the initial p value times the likelihood of {a mathematical formula}move(−2,z), which is {a mathematical formula}N(z+2;0,1) by (20). Therefore, we get{a mathematical formula} It is not hard to see that had the action been deterministic, the degree of belief in {a mathematical formula}h≥11 after moving away by 2 units should have been precisely 1. In Fig. 8, we see the effect of this move, where the range of h values with non-zero densities extends considerably more than 2 units.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Bel(h≥10,do([move(−2,−2.01),move(2,2.9)],S0))≈.74The argument proceeds in a manner identical to the previous demonstration. The density function is further multiplied by a factor of {a mathematical formula}N(u−2;0,1), from (20) and (P2). More precisely, we have{a mathematical formula} If the action were deterministic, yet again the degree of belief about {a mathematical formula}h≥10 would be 1 after the intended actions. That is, the robot moved away by 2 units and then moved towards the wall by another 2 units, which means that h's current value should have been precisely what the initial value was.See Fig. 8 for the resulting density change. Intuitively, the resulting density changes as effectuated by the moves degrades the agent's confidence considerably. In Fig. 8, for example, we see that in contrast to a single noisy move, the range of h values considered possible has extended further, leading to a wide curve.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Bel(h≥11,do([move(−2,−2.01),sonar(11.5)],S0)≈.94This demonstrates the result of a sensing action after a noisy move. Using arguments analogous to those in the previous item, it is not hard to see that we have:{a mathematical formula}
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}Bel(h≥11,do([move(−2,−2.01),sonar(11.5),sonar(12.6)],S0)≈.99In this case, two successive readings around 12 strengthens the agent's belief about {a mathematical formula}h≥11. The density function is multiplied by {a mathematical formula}N(x−z−12.6;0,.25) because of (P2) and (12) as follows:{a mathematical formula} where {a mathematical formula}δ=.5×N(z+2;0,1), and γ is{a mathematical formula} In Fig. 9, the agent's increasing confidence is shown as a result of these sensing actions. Note that even though the sensors are noisy, the agent's belief about h's true value sharpens because the sensor is a fairly accurate one.
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Generalization
+     </section-title>
+     <paragraph>
+      Many real-world problems have both continuous and discrete components (sensors, fluents, and/or effectors). Not surprisingly, discrete sensors can be easily modeled in the current scheme, as they only affect the p-values. Regarding fluents and effectors, it turns out that accommodating the more general case is an easy exercise, where an integration symbol in Bel corresponding to a continuous fluent or action argument is replaced by a summation symbol.
+     </paragraph>
+     <paragraph>
+      To clarify, we proceed as follows. We begin with an example for discrete sensors, introduce a general definition for Bel in the above sense, and finally conclude with an example that demonstrates this general setting.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Example
+      </section-title>
+      <paragraph>
+       We understand a discrete sensor to mean a sensing action that is characterized by a finite number of possible observations. Thus, these observations would be associated with a probability rather than a density. Imagine the robot scenario from Fig. 1. Suppose that instead of a sensor that returns a number indicating the distance to the wall, the robot is equipped with a crude binary version. This latter sensor simply indicates whether the robot is close or far from the wall.
+      </paragraph>
+      <paragraph>
+       Formally, suppose there is a sensing action {a mathematical formula}sensewall(z) where {a mathematical formula}z∈{close,far}. A noise-free model for the closeness sensor might be as follows:{a mathematical formula} For the more interesting case of a noisy sensor, assume the following error profile:{a mathematical formula} Notice that the behavior of the sensor differs for the two values. So, for {a mathematical formula}z=close the sensor considers {a mathematical formula}h≤3 as a measure of closeness, and has an accuracy of 2/3. For {a mathematical formula}z=far, however, the sensor takes {a mathematical formula}h≥4 to be a measure of being far, and has an accuracy 4/5.
+      </paragraph>
+      <paragraph label="Theorem 25">
+       We now build a simple action theory using this sensor. For simplicity, assume noise-free physical actions and a single fluent, h. Let {a mathematical formula}D be the union of the p specification (8), the successor state axiom (7), the above likelihood model (21), in addition to (P1), (P2) and (P3). For the actions {a mathematical formula}A(z) in {a mathematical formula}D, including the sensor, let{a mathematical formula} We now analyze belief change on the application of this sensor. The following are entailments of{a mathematical formula}D:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Bel(h≤4,do(sensewall(close),S0))=3/11By (P2), after {a mathematical formula}a=sensewall(close) the term {a mathematical formula}p(do(a,s′),do(a,s)) is obtained from {a mathematical formula}p(s′,s)×Err(close,h(s′)), where {a mathematical formula}Err(u1,u2) denotes the error profile (21) of the closeness sensor. To compute the belief term, let us first resolve the normalization factor γ. It is not hard to see that γ evaluates to{a mathematical formula} Since {a mathematical formula}D0 assigns a non-zero density to only those situations where {a mathematical formula}h∈[2,12] one obtains the above normalization factor. Moreover, after doing {a mathematical formula}sensewall(close), the density of those situations where {a mathematical formula}h≤3 is multiplied by a factor of 2/3, while the density of the remaining situations is multiplied by a factor of 1/3.Formulating the numerator is analogous, except that only those situations where {a mathematical formula}h≤4 are to be considered. To be precise, the degree of belief in {a mathematical formula}h≤4 after the sensing action is:{a mathematical formula} This then amounts to 3/11.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Bel(h≤4,do([move(1),sensewall(close)]))=5/12We proceed in a manner analogous to the previous item. Using (P2) and (21), we obtain:{a mathematical formula} The numerator amounts to 5/3 and the normalization factor γ is 4, leading to a degree of belief of 5/12.
+       </list-item>
+      </list>
+     </section>
+     <section label="7.2">
+      <section-title>
+       A general definition for belief
+      </section-title>
+      <paragraph>
+       The main idea is to simply allow the range of some fluents to be taken from finite sets. So, reconsider Definition 18, where the fluents and the action arguments were assumed to take values from {a mathematical formula}R. Then, suppose fluents {a mathematical formula}f1,…,fn takes values from {a mathematical formula}R, and fluents {a mathematical formula}g1,…,gm take values from finite sets. Intuitively, {a mathematical formula}fi is to be seen as a continuous probabilistic variable, and {a mathematical formula}gi¯ as a discrete probabilistic variable.{sup:16} Analogously, suppose {a mathematical formula}a1,…,ao are action types such that {a mathematical formula}Alt(aj,b,z) holds for {a mathematical formula}z∈R, and suppose {a mathematical formula}d1,…,dl are action types such that {a mathematical formula}Alt(dj¯,r,u) holds for u taken from a finite set. Intuitively, {a mathematical formula}aj is to be seen as a noisy action characterized by a continuous probability distribution, and {a mathematical formula}dj¯ as a noisy action characterized by a discrete probability distribution. Then:
+      </paragraph>
+      <paragraph label="Definition 26">
+       (Degrees of belief (discrete and continuous fluents, sensors and effectors)) Suppose ϕ is any {a mathematical formula}L-formula. The degree of belief in ϕ at s, written {a mathematical formula}Bel(ϕ,s), is an abbreviation:{a mathematical formula} where if {a mathematical formula}s=do(α,S0) for {a mathematical formula}α=[a1,…,d1,…,ao,…,dl], then{a mathematical formula} Here, ⋅ is for the concatenation of variables, i ranges over the indices of the continuous fluents, {a mathematical formula}i¯ over the indices of the discrete fluents, j over the indices of the continuous actions, and {a mathematical formula}j¯ over the indices of the discrete actions.
+      </paragraph>
+      <paragraph>
+       Naturally, by means of (P3), there is an initial situation for every possible real number for {a mathematical formula}f1,…,fn and for every possible vector of values for {a mathematical formula}g1,…,gm. The intuition is as before. That is, owing to a bijection between situations and the vector of fluent values, for any given value for {a mathematical formula}x1,…,xn,y1,…,ym, there is a unique initial situation where {a mathematical formula}fi has the value {a mathematical formula}xi and {a mathematical formula}gi¯ has the value {a mathematical formula}yi¯. The only difference to what we had earlier is that instead of just integrating over possible values for {a mathematical formula}x→, of course, we integrate over values for {a mathematical formula}x→ and sum over possible values for {a mathematical formula}y→ while using the p-values of successor situations where ϕ holds. When a noisy action occurs, the space of possible successor situations is determined by {a mathematical formula}Alt(aj,b,z) for a noisy action with a continuous probabilistic model, and the space is determined by {a mathematical formula}Alt(dj¯,r,u) otherwise.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Example
+      </section-title>
+      <paragraph>
+       To demonstrate the more intricate case of discrete and continuous fluents, and discrete and continuous action arguments, we consider an example of a robot moving towards the wall with a window, as shown in Fig. 10. Like with Fig. 1, let a fluent h denote the distance to the wall. Let w be a fluent that captures the status of the window in the sense of whether it is opened or closed, with {a mathematical formula}w=1 meaning that it is open and {a mathematical formula}w=0 meaning that it is closed.
+      </paragraph>
+      <paragraph>
+       To change the status of the window, we imagine a noisy effector {a mathematical formula}setwin(x,y) where the agent intends on setting w to x, but it is, in fact, set to y. We formally account for this effector using:{a mathematical formula}{a mathematical formula} This can be seen as saying that {a mathematical formula}{x,y} take values {a mathematical formula}{0,1}, and the likelihood of x and y agreeing is .75, and that of disagreeing is .25. So, it is very likely that the action succeeds.
+      </paragraph>
+      <paragraph>
+       From this, we then provide the following successor state axiom for w:{a mathematical formula} For simplicity, assume that the action {a mathematical formula}move(z) moves the robot towards the wall by z units (that is, it is deterministic), for which we use the successor state axiom (7).
+      </paragraph>
+      <paragraph>
+       Analogously, imagine a noisy sensor {a mathematical formula}seewin(z) that provides a reading of x for the status of the window, but with the following error profile:{a mathematical formula} That is, when returning 1, the sensor gives the correct reading with a probability of .8, but when returning 0, the sensor gives the correct reading with a probability of .7. Alternate action axioms are specified as usual for sensors:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To finalize the example, let {a mathematical formula}D be a union of (7), (22), (23), (24), (26), (25), together with (P1), (P2), (P3), and the following initial axiom for p:{a mathematical formula} That is, h and w are independent, h is uniformly distributed on {a mathematical formula}[10,12] and the window being open has a probability of .6.
+      </paragraph>
+      <paragraph label="Theorem 27">
+       The following are entailed by{a mathematical formula}D:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Bel(w=0,S0)=.4We are to compute the following term, which is easily shown to be equal to .4:{a mathematical formula}
+       </list-item>
+       <list-item label="2.">
+        Owing to Reiter's solution to the frame problem, belief in the closed window does not change on moving laterally. If we were to expand the belief term, we could get a logical term equivalent to the one in the previous item.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Bel(w=0,do(setwin(0,1),S0))=.75After attempting to close the window, the agent's belief about the window being closed is .75. Not surprisingly, since the action sets the final value of w (as opposed to toggle its value), the degree of belief precisely corresponds to the probability of the action getting successfully executed in (23). Expanding the belief term, we first obtain:{a mathematical formula} Here {a mathematical formula}δ(0,z) is the probability assigned to the substitution of z in {a mathematical formula}setwin(0,z) via (23). Simplifying the above, we get:{a mathematical formula} Essentially, there are only two ways that the window can be closed after doing {a mathematical formula}setwin(0,z). Either the window is closed initially and {a mathematical formula}z=0, or the window is open and again {a mathematical formula}z=0. This leads to .75.
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}Bel(w=0,do([setwin(0,1),seewin(0)],S0))=.875After observing that the window is closed from its sensor, the robot's belief about the window being closed increases. Proceeding in a manner analogous to above, after simplifications, we get:{a mathematical formula} where {a mathematical formula}α=[setwin(0,z),seewin(0)]. The numerator simplifies to {a mathematical formula}.75×.7. It can be shown that γ is:{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       which leads to {a mathematical formula}.75×.7+.25×.3. Thus, the belief in the window being closed is .875.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Summary
+      </section-title>
+      <paragraph>
+       This completes the specification for reasoning about beliefs with discrete and continuous fluents against noisy effectors and sensors. To summarize, the generalization of the BHL scheme to arbitrary domains is defined using convenient abbreviations for Bel, sums and integrals, and where an action theory consists of:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}D0 describing the initial state, which also includes (P1) and (P3);
+       </list-item>
+       <list-item label="•">
+        successor state axioms as before, including a fixed one for p, namely (P2);
+       </list-item>
+       <list-item label="•">
+        alternate actions axioms for noisy effectors;
+       </list-item>
+       <list-item label="•">
+        likelihood axioms for noisy sensors and noisy effectors; and
+       </list-item>
+       <list-item label="•">
+        precondition axioms and foundational axioms as before.
+       </list-item>
+      </list>
+      <paragraph>
+       It is perhaps also worth noting that our specification extends BHL in a minimal way. They do not need a fixed space of situations, which we do by (P3), but this is very reasonable [34]. Likelihood axioms are specified for us in much the same manner as they would. Their treatment of noisy actions and sensors is slightly different in expecting the modeler to provide indistinguishability axioms. Briefly, these axioms speculate the set of actions that are observationally indistinguishable to the agent. Roughly, then, this serves the same purpose as our alternate actions axioms. However, their approach requires the successor state axiom for p to include notions of indistinguishability. But perhaps most significantly, as we mentioned earlier, their approach needs to appeal to Golog to reason about belief change after noisy effectors, which we do not.
+      </paragraph>
+      <paragraph>
+       To conclude our technical treatment, let us attempt to simplify Definition 26. We will first abuse notation and use a single symbol to denote either sums or integrals, with the understanding that they expand appropriately for a given term t. For the sake of the discussion, let us use {a mathematical formula}∫xt to mean the integration of the function {a mathematical formula}t(x) from negative to positive infinity when the function takes values from {a mathematical formula}R, and the sum of terms otherwise. Under this notational convention, let us suppose {a mathematical formula}f1,…,fn are all the fluents in the language, some of which take values from {a mathematical formula}R and others take values from finite sets. Suppose {a mathematical formula}a1,…,al are all the action types in the language such that for some action types {a mathematical formula}Alt(a,b,z) holds for {a mathematical formula}z∈R, and for the remaining action types, {a mathematical formula}Alt(a,b,z) holds for z taking values from finite sets. Then, we obtain a proposal like Definition 18:
+      </paragraph>
+      <paragraph label="Definition 28">
+       (Degrees of belief (simplified and general)) Suppose ϕ is any {a mathematical formula}L-formula, and let {a mathematical formula}∫xt denote integration or summation over term t as appropriate. Then the degree of belief in ϕ at s, written {a mathematical formula}Bel(ϕ,s), is defined as an abbreviation:{a mathematical formula} where, if {a mathematical formula}s=do(α,S0) for {a mathematical formula}α=[a1,…,ak] and suppose {a mathematical formula}β=[b1,…,bk], then{a mathematical formula} That is, i ranges over the indices of the fluents, and j over the indices of the ground action terms.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      This article focused on degrees of belief in a first-order dynamic setting. In particular, the existing scheme of BHL was generalized to handle both discrete and continuous probability distributions while retaining all the advantages. Related efforts on belief update via sensor information can be broadly classified into two camps: the literature on probabilistic formalisms, and those that extend logical languages. We discuss them in turn. At the outset, we remark that the focus of our work is on developing a general framework, and not on computational considerations, efficiency or otherwise.
+     </paragraph>
+     <paragraph>
+      From the perspective of probabilistic modeling, graphical models [28], such as Bayesian networks [7], are important formalisms for dealing with probabilistic uncertainty in general, and the uncertainty that would arise from noisy sensors in particular. Mainly, when random variables are defined by a set of dependencies, the density function can be compactly factorized using these formalisms. The significance of such formalisms is computational, with reasoning methods, such as filtering, being a fundamental component of contemporary robotics and machine learning technologies [6], [38], [13]. On the representation side, however, these formalisms have difficulties handling strict uncertainty, as would arise from connectives such as disjunctions. (Proposals such as credal networks [39] allow for certain types of partial specifications, but still do not offer the generality of arbitrary logical constraints.) Moreover, since rich models of actions are rarely incorporated, shifting conditional dependencies and distributions are hard to address in a general way. While there are graphical model frameworks with an account of actions, such as [40], [41], they too have difficulties handling strict uncertainty and quantification. To the best of our knowledge, no existing probabilistic formalism handles changes in state variables like those considered here.
+     </paragraph>
+     <paragraph>
+      This inherent limitation of probabilistic formalisms led to a number of influential proposals on combining logical and probabilistic specifications [42]. (The synthesis of deductive reasoning and the probability calculus has a long and distinguished history [43], [44] that we do not review here; see [45] and references therein.) The works of Bacchus and Halpern [30], [3], for example, provide the means to specify properties about the domain together with probabilities about propositions; see [46] for a recent list on first-order accounts of probability. But these do not explicitly address reasoning about actions. As we noted, treating actions in a general way requires, among other things, addressing the frame problem, reasoning about what happened in the past and projecting the future, handling contextual effects, as well as appropriate semantical machinery. We piggybacked on the powerful situation calculus framework, and extended that theory for reasoning about continuous uncertainty.
+     </paragraph>
+     <paragraph>
+      In a similar vein, from a modal logical perspective, the interaction between categorical knowledge, on the one hand, and degrees of belief, on the other, is further discussed in [30], [47], [48]. While these are essentially propositional, there are first-order variants [49]. Actions are not explicitly addressed, however.
+     </paragraph>
+     <paragraph>
+      Recently in AI, limited versions of probabilistic logics have been discussed, in the form of relational graphical models, Markov logic networks, probabilistic databases and probabilistic programming [50], [51], [52], [53], [54], [55], [56], [33], [57]. Some have been further extended for continuous probability distributions and temporal reasoning [58], [59], [60], [61]. Overall, these limit the first-order expressiveness of the language, do not treat actions in a general way, and do not handle strict uncertainty. Admittedly, syntactical restrictions in these frameworks are by design, in the interest of tractability (or at least decidability) wrt inference, as they have origins in the richer probabilistic logical languages mentioned above [30], [3]. From the point of view of a general-purpose representation language, however, they are lacking in the kinds of features that we emphasize here.
+     </paragraph>
+     <paragraph>
+      From the perspective of dynamical systems, closest in spirit to our work here are knowledge representation languages for reasoning about action and knowledge, which we refer to as action logics. The situation calculus [1], [11], which has been the sole focus of this paper, is one such language. There are others, of course, such as the event calculus [62], dynamic logic [63], [64], the fluent calculus [65], and formalisms based on the stable model semantics [66].
+     </paragraph>
+     <paragraph>
+      In the situation calculus, a monotonic solution to the frame problem was provided by Reiter [19]. The situation calculus was extended to reason about knowledge whilst incorporating this solution in [12], and to reason about noisy effectors and sensors by BHL.{sup:17} Other action logics have enjoyed similar extensions. For example, [68] proposes an extension to dynamic logic for reasoning about degrees of belief and noisy actions, and [69] provides a computational framework for probabilistic reasoning using the stable model semantics, but they are propositional. In [70], [71], the fluent calculus was extended for probabilistic beliefs and noisy actions. None of these admit continuous probability distributions.
+     </paragraph>
+     <paragraph>
+      The situation calculus has also been extended for uncertainty modeling in other directions. For example, [72] consider discrete noisy actions over complete knowledge, that is, no degrees of belief. In later work, [73] treat continuous random variables as meta-linguistic functions, and so their semantics is not provided in the language of the situation calculus. This seems sufficient for representing things like products of probabilistic densities, but it is not an epistemic account in a logical or probabilistic sense. A final prominent extension to the situation calculus for uncertainty is the embedding of decision-theoretic planning in Golog[74], [75]. Here, actions are allowed to be nondeterministic, but the assumption is that the actual state of the world is fully observable. (It essentially corresponds to a fully observable Markov decision process [76].) In this sense, the picture is a special case of the BHL framework. It is also not developed as a model of belief. While this line of work has been extended to a partially observable setting [77], the latter extension is also not developed as a model of belief. Perhaps most significantly, neither of these support continuous probability distributions, nor strict uncertainty at the level of probabilistic beliefs.
+     </paragraph>
+     <paragraph>
+      It is worth noting that real-valued fluents in action logics turn out to be useful for modeling resources and time. See, for example, [78], [79], [80]. These are, in a sense, complementary to an account of belief.
+     </paragraph>
+     <paragraph>
+      Outside the logical literature, there are a variety of formalisms for modeling noisy dynamical systems. Of these, partially observable Markov decision processes (over discrete and continuous random variables) are perhaps the most dominant [13]. They can be seen as belonging to the literature on probabilistic planning languages [81], [82]. Recent probabilistic planning languages [83], moreover, combine continuous Bayesian networks and classical planning languages. Planning languages, generally speaking, only admit a limited set of logical connectives, constrain the language for specifying dynamic laws (that is, they limit the syntax of the successor state axioms), and do not handle strict uncertainty.
+     </paragraph>
+     <paragraph>
+      In sum, to our knowledge, our proposal is the first of its kind to handle degrees of belief, noisy sensors and effectors over discrete and continuous probability distributions in a general way. The proposal allows for partial and incomplete specifications, and the properties of belief will then follow at a corresponding level of specificity. Moreover, to our knowledge, no other logical formalism for uncertainty deals with the integration of continuous variables within the language.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

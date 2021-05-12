@@ -1,0 +1,1105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Abstractive Summarization of Spoken and Written ConversationsBased on Phrasal Queries</title>
+<!--Generated on Tue Jun 10 18:47:35 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Abstractive Summarization of Spoken and Written Conversations
+<br class="ltx_break"/>Based on Phrasal Queries</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yashar Mehdad   Giuseppe Carenini   Raymond T. Ng
+<br class="ltx_break"/>Department of Computer Science, University of British Columbia 
+<br class="ltx_break"/>Vancouver, BC, V6T 1Z4, Canada 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">mehdad, carenini, rng</span>}<span class="ltx_text ltx_font_typewriter">@cs.ubc.ca</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We propose a novel abstractive query-based summarization system for conversations, where queries are defined as phrases reflecting a user information needs.
+We rank and extract the utterances in a conversation based on the overall content and the phrasal query information.
+We cluster the selected sentences based on their lexical similarity and aggregate the sentences in each cluster by means of a word graph model. We propose a ranking strategy to select the best path in the constructed graph as a query-based abstract sentence for each cluster. A resulting summary consists of abstractive sentences representing the phrasal query information and the overall content of the conversation. Automatic and manual evaluation results over meeting, chat and email conversations show that our approach significantly outperforms baselines and previous extractive models.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Our lives are increasingly reliant on multimodal conversations with others. We email for business and personal purposes, attend meetings in person, chat online, and participate in blog or forum discussions.
+While this growing amount of personal and public conversations represent a valuable source of information, going through such overwhelming amount of data, to satisfy a particular information need, often leads to an information overload problem <cite class="ltx_cite">[<a href="#bib.bib89" title="Information overload and the message dynamics of online interaction spaces: a theoretical model and empirical exploration" class="ltx_ref">14</a>]</cite>.
+Automatic summarization has been proposed in the past as a way to address this problem (e.g., <cite class="ltx_cite">[<a href="#bib.bib90" title="Generic summaries for indexing in information retrieval" class="ltx_ref">25</a>]</cite>). However, often a good summary cannot be generic and should be a brief and well-organized paragraph that answer a user’s information need.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The Document Understanding Conference (DUC)<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://www-nlpir.nist.gov/projects/duc/index.html</span></span></span> has launched query-focused multidocument summarization as its main task since 2004, by focusing on complex queries with very specific answers. For example, “<span class="ltx_text ltx_font_italic">How were the bombings of the US embassies in Kenya and Tanzania conducted? How and where were the attacks planned?</span>”.
+Such complex queries are appropriate for a user who has specific information needs and can formulate the questions precisely.
+However, especially when dealing with conversational data that tend to be less structured and less topically focused, a user is often initially only exploring the source documents, with less specific information needs.
+Moreover, following the common practice in search engines, users are trained to form simpler and shorter queries <cite class="ltx_cite">[<a href="#bib.bib91" title="Advanced metasearch engine technology" class="ltx_ref">21</a>]</cite>. For example, when a user is interested in certain characteristics of an entity in online reviews (e.g., “<span class="ltx_text ltx_font_italic">location</span>” or “<span class="ltx_text ltx_font_italic">screen</span>”) or a specific entity in a blog discussion (e.g., “<span class="ltx_text ltx_font_italic">new model of iphone</span>”), she would not initially compose a complex query.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">To address these issues, in this work, we tackle the task of conversation summarization based on <span class="ltx_text ltx_font_italic">phrasal</span> queries. We define a phrasal query as
+a concatenation of two or more keywords, which is a more realistic representation of a user’s information needs. For conversational data, this definition is more similar to the concept of search queries in information retrieval systems as well as to the concept of topic labels in the task of topic modeling. Example 1 shows two queries and their associated human written summaries based on a single chat log. We can observe that the two summaries, although generated from the same chat log, are totally distinct. This further demonstrates the importance of phrasal query-based summarization systems for long conversations.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">To date, most systems in the area of summarization focus on news or other well-written documents, while research on summarizing multiparty written conversations (e.g., chats, emails) has been limited. This is because traditional NLP approaches developed for formal texts often are not satisfactory when dealing with multiparty written conversations, which are typically in a casual style and do not display a clear syntactic structure with proper grammar and spelling. Even though some works try to address the problem of summarizing multiparty written conversions (e.g., <cite class="ltx_cite">[<a href="#bib.bib93" title="Abstractive meeting summarization with entailment and fusion" class="ltx_ref">20</a>, <a href="#bib.bib88" title="Domain-independent abstract generation for focused meeting summarization" class="ltx_ref">29</a>, <a href="#bib.bib15" title="Generating and validating abstracts of meeting conversations: a user study" class="ltx_ref">23</a>, <a href="#bib.bib81" title="Digesting virtual “geek” culture: the summarization of technical internet relay chats" class="ltx_ref">32</a>, <a href="#bib.bib19" title="A global optimization framework for meeting summarization" class="ltx_ref">9</a>]</cite>), they do so in a generic way (not query-based) and focus on only one conversational domain (e.g., meetings). Moreover, most of the proposed systems for conversation summarization are extractive.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">To address such limitations, we propose a fully automatic <span class="ltx_text ltx_font_italic">unsupervised</span> abstract generation framework based on phrasal queries for multimodal conversation summarization.
+Our key contributions in this work are as follows:</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Query-1</span><span class="ltx_text ltx_font_script">: Test/Sample database for GNUe</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Abstract-1</span><span class="ltx_text ltx_font_script">: James Thompson asked Reinhard: I was going to work on the sample tonight. You mentioned wanting a fishhook and all data types. Any other things you want to see in there? Reinhard said that master/detail would be good, as there have been bugs only appearing in 3-level case. James said he already included that and I know I need to add a boolean. Did you want date as well as date-time? Reinhard said yes - we also have time values (time without date). They are especially interesting. James had not ever had use for something like that so I’m not sure where I would graft that in.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_tt" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Query-2</span><span class="ltx_text ltx_font_script">: Passing parameters to Forms</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Abstract-2</span><span class="ltx_text ltx_font_script">: James Thompson (jamest) asked how did parameter support in forms change recently? He reported the trigger namespace function referencesGFForm.parameters - which no longer exists. Reinhard said every GFForm should have a parameters. James said he was using parameters in on-startup. Reinhard said that’s probably the only place where they don’t work. James said that I’m thinking about moving that to on-activation instead of on-startup anyway as it should still work for a main form - but i still wonder if the on-startup parameter issue should be considered a bug - as it shouldn’t choke. Reinhard was sure it should be considered a bug but I have no idea how to fix it. We haven’t found a way to deal with parameters that works for every case. I don’t know if there is any chance to pass the parameters to the form before it is activated. James asked how are parameters handled now? Reinhard replied that they are passed to activateForm so they are available from activation for the –main– form, the command line parameters are passed and for dialogs, the parameters are passed that were given in runDialog.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_table">Table 1: </span>Sample queries and associated human-written query-based summaries for a chat log.</div>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">1)
+To the best of our knowledge, our framework is the first abstractive system that generates summaries based on usersâ phrasal queries, instead of well-formed questions. As a by-product of our approach, we also propose an extractive summarization model based on phrasal queries to select the summary-worthy sentences in the conversation based on query terms and signature terms <cite class="ltx_cite">[<a href="#bib.bib80" title="The automated acquisition of topic signatures for text summarization" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">2) We propose a novel ranking strategy to select the best path in the constructed word graph by taking the query content, overall information content and grammaticality (i.e., fluency) of the sentence into consideration.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">3) Although most of the current summarization approaches use supervised algorithms as a part of their system (e.g., <cite class="ltx_cite">[<a href="#bib.bib78" title="A sentence compression based framework to query-focused multi-document summarization" class="ltx_ref">30</a>]</cite>), our method can be totally unsupervised and does not depend on human annotation.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">4) Although different conversational modalities (e.g., email vs. chat vs. meeting) underline domain-specific characteristics, in this work, we take advantage of their underlying similarities to generalize away from specific modalities and determine effective method for query-based summarization of multimodal conversations.</p>
+</div>
+<div id="S1.p10" class="ltx_para">
+<p class="ltx_p">We evaluate our system over GNUe Traffic archive<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://kt.earth.li/GNUe/index.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://kt.earth.li/GNUe/index.html</span></a></span></span></span> Internet Relay Chat (IRC) logs, AMI meetings corpus <cite class="ltx_cite">[<a href="#bib.bib86" title="The AMI meeting corpus: A pre-announcement" class="ltx_ref">4</a>]</cite> and BC3 emails dataset <cite class="ltx_cite">[<a href="#bib.bib87" title="A publicly available annotated corpus for supervised email summarization" class="ltx_ref">26</a>]</cite>.
+Automatic evaluation on the chat dataset and manual evaluation over the meetings and emails show that our system uniformly and statistically significantly outperforms baseline systems, as well as a state-of-the-art query-based extractive summarization system.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\includegraphics</span>
+<p class="ltx_p ltx_align_center">[scale=0.55]framework-small.pdf</p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Phrasal query abstraction framework. The steps (arrows) influenced by the query are highlighted.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Phrasal Query Abstraction Framework</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our phrasal query abstraction framework generates a grammatical abstract from a conversation following three steps, as shown in Figure 1.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Utterance Extraction</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Abstractive summary sentences can be created by aggregating and merging multiple sentences into an abstract sentence. In order to generate such a sentence, we
+need to identify which sentences from the original
+document should be extracted and combined to generate abstract sentences. In other words, we want to identify the summary-worthy sentences in the text that can be combined into an abstract sentence. This task can be considered as content selection.
+Moreover, this step, stand alone, corresponds to an extractive summarization system.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">In order to select and extract the informative summary-worthy utterances, based on the phrasal query and the original text, we consider two criteria:
+<span class="ltx_text ltx_font_italic">i)</span> utterances should carry the essence of the original text; and <span class="ltx_text ltx_font_italic">ii)</span> utterances should be relevant to the query. To fulfill such requirements we define the concepts of signature terms and query terms.</p>
+</div>
+<div id="S2.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.1 </span>Signature Terms</h4>
+
+<div id="S2.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Signature terms are generally indicative of the content of a document or collection of documents. To identify such terms, we can use frequency, word probability, standard statistic tests, information-theoretic measures or log-likelihood ratio. In this work, we use log-likelihood ratio to extract the signature terms from chat logs, since log-likelihood ratio leads to better results <cite class="ltx_cite">[<a href="#bib.bib82" title="Measuring importance and query relevance in topic-focused multi-document summarization" class="ltx_ref">12</a>]</cite>. We use a method described in <cite class="ltx_cite">[<a href="#bib.bib80" title="The automated acquisition of topic signatures for text summarization" class="ltx_ref">17</a>]</cite> in order to identify such terms and their associated weight. Example 2 demonstrates a chat log and associated signature terms.</p>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Signature terms</span><span class="ltx_text ltx_font_script">: navigator, functionality, reports, UI, schema, gnu</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_tt" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Chat log</span><span class="ltx_text ltx_font_script">:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- but watching them build a UI in the flash demo’s is pretty damn impressive… and have started moving my sales app to all UI being built via …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- i’ll be expanding the technotes in navigator for a while …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- … in terms of functionality of the underlying databases …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- you mean if I start GNU again I have to read bug reports too?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- no, just in case you want to enter bug report</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- …I expand the schema before populating with test data …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">- i’m willing to scrap it if there is a better schema hidden in gnue somewhere :)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_table">Table 2: </span>Sample signature terms for a part of a chat log.</div>
+</div>
+</div>
+<div id="S2.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.2 </span>Query Terms</h4>
+
+<div id="S2.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Query terms are indicative of the content in a phrasal query. In order to identify such terms, we first extract all content terms from the query. Then, following previous studies (e.g., <cite class="ltx_cite">[<a href="#bib.bib92" title="Indexing with wordnet synsets can improve text retrieval" class="ltx_ref">10</a>]</cite>), we use the synsets relations in WordNet for query expansion. We extract all concepts that are synonyms to the query terms and add them to the original set of query terms. Note that we limit our synsets to the nouns since verb synonyms do not prove to be effective in query expansion <cite class="ltx_cite">[<a href="#bib.bib1" title="Query expansion using search logs and WordNet" class="ltx_ref">13</a>]</cite>. While signature terms are weighted, we assume that all query terms are equally important and they all have wight equal to 1.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.3 </span>Utterance Scoring</h4>
+
+<div id="S2.SS1.SSS3.p1" class="ltx_para">
+<p class="ltx_p">To estimate the utterance score, we view both the query terms and the signature terms as the terms that should appear in a human query-based summary. To achieve this, the most relevant (summary-worthy)
+utterances that we select are the ones that maximize the coverage of such terms.
+Given the query terms and signature terms, we can estimate the utterance score as follows:</p>
+</div>
+<div id="S2.SS1.SSS3.p2" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\displaystyle Score_{Q}" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>Q</mi></msub></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{n}\sum\limits_{i=1}^{n}t(q)_{i}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>n</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mrow><mi>t</mi><mo>⁢</mo><msub><mrow><mo>(</mo><mi>q</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\displaystyle Score_{S}" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>S</mi></msub></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{n}\sum\limits_{i=1}^{n}t(s)_{i}\times w(s)_{i}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>n</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mrow><mrow><mrow><mi>t</mi><mo>⁢</mo><msub><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow><mo>×</mo><mi>w</mi></mrow><mo>⁢</mo><msub><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S2.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\displaystyle Score" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m2" class="ltx_Math" alttext="\displaystyle=\alpha\cdot Score_{Q}+\beta\cdot Score_{S}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mi>α</mi><mo>⋅</mo><mi>S</mi></mrow><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>Q</mi></msub></mrow><mo>+</mo><mrow><mrow><mi>β</mi><mo>⋅</mo><mi>S</mi></mrow><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>S</mi></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.SSS3.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is number of content words in the utterance, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m2" class="ltx_Math" alttext="t(q)_{i}=1" display="inline"><mrow><mrow><mi>t</mi><mo>⁢</mo><msub><mrow><mo>(</mo><mi>q</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow><mo>=</mo><mn>1</mn></mrow></math> if the term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m3" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> is a query term and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m4" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> otherwise, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m5" class="ltx_Math" alttext="t(s)_{i}=1" display="inline"><mrow><mrow><mi>t</mi><mo>⁢</mo><msub><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow><mo>=</mo><mn>1</mn></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m6" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> is a signature term and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m7" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> otherwise, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m8" class="ltx_Math" alttext="w(s)_{i}" display="inline"><mrow><mi>w</mi><mo>⁢</mo><msub><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow><mi>i</mi></msub></mrow></math> is the normalized associated weight for signature terms. The parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m9" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m10" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> are tuned on a development set and sum up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS3.p3.m11" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>.</p>
+</div>
+<div id="S2.SS1.SSS3.p4" class="ltx_para">
+<p class="ltx_p">After all the utterances are scored, the
+top scored utterances are selected to be sent to the next step. We estimate the percentage of the retrieved utterances based on the development set.</p>
+</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Redundancy Removal</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Utterances selected in previous step often include redundant information, which is semantically equivalent but may vary in lexical choices. By identifying the semantic relations between the sentences, we can discover what information in one sentence is semantically equivalent, novel, or
+more/less informative with respect to the content of the other sentences.
+Similar to earlier work <cite class="ltx_cite">[<a href="#bib.bib28" title="Global Learning of Typed Entailment Rules" class="ltx_ref">3</a>, <a href="#bib.bib68" title="Entailment-based text exploration with application to the health-care domain" class="ltx_ref">1</a>]</cite>, we set this problem as a variant of the Textual Entailment (TE) recognition task <cite class="ltx_cite">[<a href="#bib.bib75" title="Probabilistic textual entailment: Generic applied modeling of language variability" class="ltx_ref">5</a>]</cite>. Using entailment in this phase is motivated by taking advantage of semantic relations instead of pure statistical methods (e.g., Maximal Marginal Relevance) and shown to be more effective <cite class="ltx_cite">[<a href="#bib.bib74" title="Towards Topic Labeling with Phrase Entailment and Aggregation" class="ltx_ref">19</a>]</cite>.
+We follow the same practice as <cite class="ltx_cite">[<a href="#bib.bib74" title="Towards Topic Labeling with Phrase Entailment and Aggregation" class="ltx_ref">19</a>]</cite> to build an entailment graph for all selected sentences to identify relevant sentences and eliminate the redundant (in terms of meaning) and less informative ones.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Abstract Generation</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this phase, our goal is to generate understandable informative abstract sentences that capture the content of the source sentences and represents the information needs defined by queries. There are several ways of generating abstract sentences (e.g. <cite class="ltx_cite">[<a href="#bib.bib13" title="Sentence Fusion for Multidocument News Summarization" class="ltx_ref">2</a>, <a href="#bib.bib16" title="From extractive to abstractive meeting summaries: can it be done by sentence compression?" class="ltx_ref">18</a>, <a href="#bib.bib14" title="Opinosis: a graph-based approach to abstractive summarization of highly redundant opinions" class="ltx_ref">8</a>, <a href="#bib.bib15" title="Generating and validating abstracts of meeting conversations: a user study" class="ltx_ref">23</a>]</cite>); however, most of them rely heavily on the sentence structure. We believe that such approaches are suboptimal, especially in dealing with conversational data, because multiparty written conversations are often poorly structured. Instead, we apply an approach that does not rely on syntax, nor on a standard NLG architecture. Moreover, since dealing with user queries efficiency is an important aspect, we aim for an approach that is also motivated by the speed with which the abstracts are obtained. We perform the task of abstract generation in three steps, as follows:</p>
+</div>
+<div id="S2.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.3.1 </span>Clustering</h4>
+
+<div id="S2.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">In order to generate an abstract summary, we need to identify which sentences from the previous step (i.e., redundancy removal) can be clustered and combined in generated abstract sentences. This task can be viewed as sentence clustering, where
+each sentence cluster can provide the content for an abstract sentence.</p>
+</div>
+<div id="S2.SS3.SSS1.p2" class="ltx_para">
+<p class="ltx_p">We use the K-mean clustering algorithm by
+cosine similarity as a distance function between sentence vectors composed of <span class="ltx_text ltx_font_italic">tf.idf</span> scores.
+Also notice that the lexical similarity between sentences in one cluster facilitates both the construction of the word graph and finding the best path in the word graph, as described next.</p>
+</div>
+</div>
+<div id="S2.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.3.2 </span>Word Graph</h4>
+
+<div id="S2.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">In order to construct a word graph, we adopt the method recently proposed by <cite class="ltx_cite">[<a href="#bib.bib74" title="Towards Topic Labeling with Phrase Entailment and Aggregation" class="ltx_ref">19</a>, <a href="#bib.bib4" title="Multi-sentence compression: finding shortest paths in word graphs" class="ltx_ref">7</a>]</cite> with some optimizations. Below, we show how the word graph is applied to generate the abstract sentences.</p>
+</div>
+<div id="S2.SS3.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p2.m1" class="ltx_Math" alttext="G=(W,L)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>,</mo><mi>L</mi></mrow><mo>)</mo></mrow></mrow></math> be a directed graph with the set of nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p2.m2" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> representing words and a set of directed edges <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> representing the links between words. Given a cluster of related sentences <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p2.m4" class="ltx_Math" alttext="S=\{s_{1},s_{2},...,s_{n}\}" display="inline"><mrow><mi>S</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>s</mi><mi>n</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, a word graph is constructed by iteratively adding sentences to it.
+In the first step, the graph represents one sentence plus the start and end symbols. A node is added to the graph for each word in the sentence, and words adjacent are linked with directed edges. When adding a new sentence, a word from the sentence is merged in an existing node in the graph providing that they have the same POS tag and they satisfy one of the following conditions:</p>
+</div>
+<div id="S2.SS3.SSS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">i)</span> They have the same word form;</p>
+</div>
+<div id="S2.SS3.SSS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">ii)</span> They are connected in WordNet by the synonymy relation. In this case the lexical choice for the node is selected based on the <span class="ltx_text ltx_font_italic">tf.idf</span> score of each node;</p>
+</div>
+<div id="S2.SS3.SSS2.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">iii)</span> They are from a hypernym/hyponym pair or share a common direct hypernym. In this case, both words are replaced by the hypernym;</p>
+</div>
+<div id="S2.SS3.SSS2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">iv)</span> They are in an entailment relation. In this case, the entailing word is replaced by the entailed one.</p>
+</div>
+<div id="S2.SS3.SSS2.p7" class="ltx_para">
+<p class="ltx_p">The motivation behind merging non-identical words is to enrich the common terms between the phrases to increase the chance that they could merge into a single phrase. This also helps to move beyond the limitation of original lexical choices.
+In case the merging is not possible a new node is created in the graph. When a node can be merged with multiple nodes (i.e., merging is ambiguous), either the preceding and following words in the sentence and the neighboring nodes in
+the graph or the frequency is used to select the candidate node.</p>
+</div>
+<div id="S2.SS3.SSS2.p8" class="ltx_para">
+<p class="ltx_p">We connect adjacent words with directed edges. For the new nodes or unconnected nodes, we draw an edge with a weight of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p8.m1" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>. In contrast, when two already connected nodes are added (merged), the weight of their connection is increased by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS2.p8.m2" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>.</p>
+</div>
+</div>
+<div id="S2.SS3.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.3.3 </span>Path Ranking</h4>
+
+<div id="S2.SS3.SSS3.p1" class="ltx_para">
+<p class="ltx_p">A word graph, as described above, may contain many sequences connecting start
+and end. However, it is likely that most of the paths are not readable. We are aiming at generating an informative abstractive sentence for each cluster based on a user query.
+Moreover, the abstract sentence should be grammatically correct.</p>
+</div>
+<div id="S2.SS3.SSS3.p2" class="ltx_para">
+<p class="ltx_p">In order to satisfy both requirements, we have devised the following ranking strategy. First, we prune the paths in which a verb does not exist, to filter ungrammatical sentences. Then we rank other paths as follows:</p>
+</div>
+<div id="S2.SS3.SSS3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Query focus:</span>
+to identify the summary sentence with the highest coverage of query content, we propose a score that counts the number of query terms that appear in the path. In order to reward the ranking score to cover more salient terms in the query content, we also consider the <span class="ltx_text ltx_font_italic">tf.idf</span> score of query terms in the coverage formulation.</p>
+</div>
+<div id="S2.SS3.SSS3.p4" class="ltx_para">
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle{\mathit{Q}}(P)=\frac{\sum_{q_{i}\in P}{\mathit{tfidf}}(q_{i})}{%&#10;\sum_{q_{i}\in G}{\mathit{tfidf}}(q_{i})}" display="inline"><mrow><mrow><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>q</mi><mi>i</mi></msub><mo>∈</mo><mi>P</mi></mrow></msub><mrow><mi>𝑡𝑓𝑖𝑑𝑓</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>q</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>q</mi><mi>i</mi></msub><mo>∈</mo><mi>G</mi></mrow></msub><mrow><mi>𝑡𝑓𝑖𝑑𝑓</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>q</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS3.SSS3.p5" class="ltx_para">
+<p class="ltx_p">where the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p5.m1" class="ltx_Math" alttext="q_{i}" display="inline"><msub><mi>q</mi><mi>i</mi></msub></math> are the query terms.</p>
+</div>
+<div id="S2.SS3.SSS3.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Fluency:</span>
+in order to improve the grammaticality of the generated sentence, we coach our ranking model to select more fluent (i.e., grammatically correct) paths in the graph.
+We estimate the grammaticality of generated paths (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p6.m1" class="ltx_Math" alttext="Pr(P)" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow></math>) using a language model.</p>
+</div>
+<div id="S2.SS3.SSS3.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Path weight:</span>
+The purpose of this function is two-fold: i) to generate a grammatical sentence by favoring the links between nodes (words) which appear often; and ii) to generate an informative sentence by increasing the weight of edges connecting salient nodes. For a path <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m1" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> with m nodes, we define the edge weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m2" class="ltx_Math" alttext="w(n_{i},n_{j})" display="inline"><mrow><mi>w</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> and the path weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m3" class="ltx_Math" alttext="W(P)" display="inline"><mrow><mi>W</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow></math> as below:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle w(n_{i},n_{j})=\frac{\mathit{freq}(n_{i})+\mathit{freq}(n_{j})}{%&#10;\sum_{\substack{P^{\prime}\in G\\&#10;n_{i},n_{j}\in P^{\prime}}}{\mathit{diff}}(P^{\prime},n_{i},n_{j})^{-1}}" display="inline"><mrow><mrow><mi>w</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mrow><mi>𝑓𝑟𝑒𝑞</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>n</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>𝑓𝑟𝑒𝑞</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>n</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>∈</mo><mi>G</mi></mrow></mtd></mtr><mtr><mtd><mrow><mrow><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>∈</mo><msup><mi>P</mi><mo>′</mo></msup></mrow></mtd></mtr></mtable></mstyle></msub><mrow><mi>𝑑𝑖𝑓𝑓</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>,</mo><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\displaystyle W(P)=\frac{\sum_{i=1}^{m-1}w(n_{i},n_{i+1})}{m-1}" display="inline"><mrow><mrow><mi>W</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>m</mi><mo>-</mo><mn>1</mn></mrow></msubsup><mrow><mi>w</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>)</mo></mrow></mrow></mrow><mrow><mi>m</mi><mo>-</mo><mn>1</mn></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m4" class="ltx_Math" alttext="\textit{diff}(P^{\prime},n_{i},n_{j})" display="inline"><mrow><mtext>𝑑𝑖𝑓𝑓</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>,</mo><msub><mi>n</mi><mi>i</mi></msub><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> refers to the distance between the offset positions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m5" class="ltx_Math" alttext="pos(P^{\prime},n_{i})" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>,</mo><msub><mi>n</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></math> of
+nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m6" class="ltx_Math" alttext="n_{i}" display="inline"><msub><mi>n</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m7" class="ltx_Math" alttext="n_{j}" display="inline"><msub><mi>n</mi><mi>j</mi></msub></math> in path <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m8" class="ltx_Math" alttext="P^{\prime}" display="inline"><msup><mi>P</mi><mo>′</mo></msup></math> (any path in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m9" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m10" class="ltx_Math" alttext="n_{i}" display="inline"><msub><mi>n</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m11" class="ltx_Math" alttext="n_{j}" display="inline"><msub><mi>n</mi><mi>j</mi></msub></math>) and is defined as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p7.m12" class="ltx_Math" alttext="|pos(P^{\prime},n_{j})-pos(P^{\prime},n_{i})|" display="inline"><mrow><mo fence="true">|</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>,</mo><msub><mi>n</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>P</mi><mo>′</mo></msup><mo>,</mo><msub><mi>n</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo fence="true">|</mo></mrow></math>.</p>
+</div>
+<div id="S2.SS3.SSS3.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Overal ranking score:</span> In order to generate a query-based abstract sentence that combines the scores above, we employ a ranking model. The purpose of such a model is three-fold: i) to cover the content of query information optimally; ii) to generate a more readable and grammatical sentence; and iii) to favor strong connections between the concepts. Therefore, the final ranking score of path <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p8.m1" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> is calculated over the normalized scores as:
+<br class="ltx_break"/></p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\displaystyle Score(P)=\alpha\cdot Q(P)+\beta\cdot Pr(P)-\gamma\cdot W(P)" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mrow><mi>α</mi><mo>⋅</mo><mi>Q</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mi>β</mi><mo>⋅</mo><mi>P</mi></mrow><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mi>γ</mi><mo>⋅</mo><mi>W</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS3.SSS3.p9" class="ltx_para">
+<p class="ltx_p">Where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p9.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p9.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p9.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> are the coefficient factors to tune the ranking score and they sum up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS3.p9.m4" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>. In order to rank the graph paths, we select all the paths that contain at least one verb and rerank them using our proposed ranking function to find the best path as the summary of the original sentences in each cluster.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Setup</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section,
+we show the evaluation results of our proposed framework and its comparison to the baselines and a state-of-the-art query-focused extractive summarization system.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Datasets</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">One of the challenges of this work is to find suitable conversational datasets that can be used for evaluating our query-based summarization system. Most available conversational corpora do not contain any human written summaries, or the gold standard human written summaries are generic <cite class="ltx_cite">[<a href="#bib.bib86" title="The AMI meeting corpus: A pre-announcement" class="ltx_ref">4</a>, <a href="#bib.bib85" title="Topic segmentation and labeling in asynchronous conversations" class="ltx_ref">16</a>]</cite>. In this work, we use available corpora for emails and chats for written conversations, while for spoken conversation, we employ an available corpus in multiparty meeting conversations.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Chat</span>: to the best of our knowledge, the only publicly available chat logs with human written summaries can be downloaded from the GNUe Traffic archive <cite class="ltx_cite">[<a href="#bib.bib81" title="Digesting virtual “geek” culture: the summarization of technical internet relay chats" class="ltx_ref">32</a>, <a href="#bib.bib83" title="Plans toward automated chat summarization" class="ltx_ref">27</a>, <a href="#bib.bib94" title="The ubuntu chat corpus for multiparticipant chat analysis" class="ltx_ref">28</a>]</cite>.
+Each chat log has a human created summary in the form of a digest. Each digest summarizes IRC logs for a period and consists of few summaries over each chat log with a unique title for the associated human written summary.
+In this way, the title of each summary can be counted as a phrasal query and the corresponding summary is considered as the query-based abstract of the associated chat log including only the information most relevant to the title. Therefore, we can use the human-written query-based abstract as gold standards and evaluate our system automatically.
+Our chat dataset consists of 66 query-based (title-based) human written summaries with their associated queries (titles) and chat logs, created from 40 original chat logs. The average number of tokens are 1840, 325 and 6 for chat logs, query-based summaries and queries, respectively.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Meeting</span>: we use the AMI meeting corpus <cite class="ltx_cite">[<a href="#bib.bib86" title="The AMI meeting corpus: A pre-announcement" class="ltx_ref">4</a>]</cite> that consists of 140 multiparty meetings with a wide range of annotations, including generic abstractive summaries for each meeting. In order to create queries, we extract three key-phrases from generic abstractive summaries using TextRank algorithm <cite class="ltx_cite">[<a href="#bib.bib73" title="TextRank: Bringing Order into Texts" class="ltx_ref">22</a>]</cite>. We use the extracted key-phrases as queries to generate query-based abstracts. Since there is no human-written query-based summary for AMI corpus, we randomly select 10 meetings and evaluate our system manually.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Email</span>: we use BC3 <cite class="ltx_cite">[<a href="#bib.bib87" title="A publicly available annotated corpus for supervised email summarization" class="ltx_ref">26</a>]</cite>, which contains 40 threads from the W3C corpus. BC3 corpus is annotated with generic human-written abstractive summaries, and it has been used in several previous works (e.g., <cite class="ltx_cite">[<a href="#bib.bib57" title="Supervised topic segmentation of email conversations" class="ltx_ref">15</a>]</cite>). In order to adapt this corpus to our framework, we followed the same query generation process as for the meeting dataset. Finally, we randomly select 10 emails threads and evaluate the results manually.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Baselines</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We compare our approach with the following baselines:</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">1) Cosine-1st: we rank the utterances in the chat log based on the cosine similarity between the utterance and query. Then, we select the first uttrance as the summary;</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">2) Cosine-all: we rank the utterances in the chat log based on the cosine similarity between the utterance and query and then select the utterances with a cosine similarity greater than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math>;</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">3) TextRank: a widely used graph-based ranking model for single-document sentence extraction that works by building a graph of all sentences in a document and use similarity as edges to compute the salience of sentences in the graph <cite class="ltx_cite">[<a href="#bib.bib73" title="TextRank: Bringing Order into Texts" class="ltx_ref">22</a>]</cite>;</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">4) LexRank: another popular graph-based content selection algorithm for multi-document summarization <cite class="ltx_cite">[<a href="#bib.bib3" title="LexRank: graph-based lexical centrality as salience in text summarization" class="ltx_ref">6</a>]</cite>;</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">5) Biased LexRank: is a state-of-the-art query-focused summarization that uses LexRank algorithm in order to recursively retrieve additional passages that are similar to the query, as well as to the other nodes in the graph <cite class="ltx_cite">[<a href="#bib.bib2" title="Biased lexrank: passage retrieval using random walks with question-based priors." class="ltx_ref">24</a>]</cite>.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Models</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">ROUGE-1 (%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">ROUGE-2 (%)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Prc</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rec</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F-1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Prc</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rec</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F-1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">Cosine-1st</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Cosine-all</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">68</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">22</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">TextRank</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LexRank</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">37</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Biased LexRank</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">Utterance extraction (our extractive system)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">66</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">40<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">20</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>†</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">40</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">24<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m5" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Utterance extraction (our pipeline extractive system)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">73</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m6" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m7" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>†</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">24<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m9" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Our abstractive system (without tuning)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">38</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m10" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">59</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m11" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">41<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m12" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">18</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m13" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m14" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m15" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Our abstractive system (with tuning)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">40</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m16" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>†</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">56</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m17" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">42<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m18" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m19" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo>*</mo><mo>⁣</mo><mo>†</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">25</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m20" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">22<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m21" class="ltx_Math" alttext="{}^{*\dagger}" display="inline"><msup><mi/><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo><mo mathsize="small" mathvariant="bold" stretchy="false">⁣</mo><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></mrow></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Performance of different summarization algorithms on chat logs for query-based chat summarization. Statistically significant improvements (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m25" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.01</mn></mrow></math>) over the biased LexRank system are marked with *. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m26" class="ltx_Math" alttext="\dagger" display="inline"><mo mathsize="normal" stretchy="false">†</mo></math> indicates statistical significance (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m27" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.01</mn></mrow></math>) over extractive approaches (TextRank and LexRank). Systems in italics use the query in generating the summary.</div>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">Moreover, we compare our abstractive system with the first part of our framework (utterance extraction in Figure 1), which can be presented as an extractive query-based summarization system (our extractive system). We also show the results of the version we use in our pipeline (our pipeline extractive system). The only difference between the two versions is the length of the generated summaries. In our pipeline we aim at higher recall, since we later filter sentences and aggregate them to generate new abstract sentences. In contrast, in the stand alone version (extractive system) we limit the number of retrieved sentences to the desired length of the summary. We also compare the results of our full system (i.e., with tuning) with a non-optimized version when the ranking coefficients are distributed equally (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m1" class="ltx_Math" alttext="\alpha=\beta=\gamma=0.33" display="inline"><mrow><mi>α</mi><mo>=</mo><mi>β</mi><mo>=</mo><mi>γ</mi><mo>=</mo><mn>0.33</mn></mrow></math>). For parameters estimation, we tune all parameters (utterance selection and path ranking) exhaustively with 0.1 intervals using our development set.</p>
+</div>
+<div id="S3.SS2.p8" class="ltx_para">
+<p class="ltx_p">For manual evaluation of query-based abstracts (meeting and email datasets), we perform a simple user study assessing the following aspects: <span class="ltx_text ltx_font_italic">i) Overall quality</span> given a query (5-point scale)?; and <span class="ltx_text ltx_font_italic">ii) Responsiveness</span>: how responsive is the generated summary to the query (5-point scale)? Each query-based abstract was rated by two annotators (native English speaker). Evaluators are presented with the original conversation, query and generated summary. For the manual evaluation, we only compare our full system with LexRank (LR) and Biased LexRank (Biased LR). We also ask the evaluators to select the best summary for each query and conversation, given our system generated summary and the two baselines.</p>
+</div>
+<div id="S3.SS2.p9" class="ltx_para">
+<p class="ltx_p">To evaluate the grammaticality of our generated summaries, following common practice <cite class="ltx_cite">[<a href="#bib.bib13" title="Sentence Fusion for Multidocument News Summarization" class="ltx_ref">2</a>]</cite>, we randomly selected 50 sentences from original conversations and system generated abstracts, for each dataset. Then, we asked annotators to give one of three possible ratings for each sentence based on grammaticality: perfect (2 pts), only one mistake (1 pt) and not acceptable (0 pts), ignoring capitalization or punctuation. Each sentence was rated by two annotators. Note that each sentence was evaluated individually, so the human judges were not affected by intra-sentential problems posed by coreference and topic shifts.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Experimental Settings</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">For preprocessing our dataset we use OpenNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://opennlp.apache.org/</span></span></span> for tokenization, stemming and part-of-speech tagging. We use six randomly selected query-logs from our chat dataset (about 10% of the dataset) for tuning the coefficient parameters.
+We set the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> parameter in our clustering phase to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> based on the average number of sentences in the human written summaries. For our language model, we use a tri-gram smoothed language model trained using the newswire text provided in the English Gigaword corpus <cite class="ltx_cite">[<a href="#bib.bib12" title="English Gigaword Corpus" class="ltx_ref">11</a>]</cite>. For the automatic evaluation we use the official ROUGE software with standard options and report ROUGE-1 and ROUGE-2 precision, recall and F-1 scores.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Results</h3>
+
+<div id="S3.T4" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Query</span><span class="ltx_text ltx_font_script">: Trigger namespace and the self property</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Chat log</span><span class="ltx_text ltx_font_script">:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">A: good morning</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">B: good morning</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">C: good morning everyone</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">D: good morning</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">D: good night all</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: New GNUe Traffic online</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: loadsa deep metaphyisical stuff this week</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: D &amp; E discuss the meaning of ’self’ ;-)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: yes, and he took the more metaphysical route, where I took the more scientific route</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: I say self’s meaning is derived from one’s ancestry</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: self’s meaning is derived from how others use you</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: okay, analogy extended too far, I guess :)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: is this a friends vs family debate?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: also noted that the cool part about that is if you have code that needs to happen both on a pre-insert and a pre-update - but only a few lines of the code is different</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: you could have one block of trigger code that used self.action to find out why it had been called and branch accordingly.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: there was a big jump from the previous paragraph to that</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: that took that out of context</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: iirc, I was saying an alternative was that ”self” could refer to neither the trigger’s owner nor to the trigger’s caller</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: but to the event itself</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: so self.action could be what action is being performed</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: self.parent could be the trigger’s owner</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: and self.context could be the caller</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: and self.name could be the name of the trigger</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: umm, I’m afraid apparant non-sequiturs are always a hazard of doing summaries ;-)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: iow, I was presenting a 3rd alternative where self referred to something specific to the trigger</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: I normally try to write around them, but not 100% successful</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: I’m just convulsing my thoughts to the irc log</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: for an errata next week :)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">E: I think convulsing is a good description</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">F: heh</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">TexRank</span><span class="ltx_text ltx_font_script">: There was a big jump from the previous paragraph to that. that took that out of context
+iirc, I was saying an alternative was that ”self” could refer to neither the trigger’s owner nor to the trigger’s caller. but to the event itself. so self.action could be what action is being performed, self.parent could be the trigger’s owner, and self.context could be the caller and self.name could be the name of the trigger. umm, I’m afraid apparant non-sequiturs are always a hazard of doing summaries ;-)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">LexRank</span><span class="ltx_text ltx_font_script">: good morning everyone. heh. I’m just convulsing my thoughts to the irc log
+good morning. Jason also noted that the cool part about that is if you have code that needs to happen both on a pre-insert and a pre-update - but only a few lines of the code is different - you could have one block of trigger code that used self.action to find out why it had been called and branch accordingly. for an errata next week :) self’s meaning is derived from how others use you. I think convulsing is a good description
+reinhard &amp; jcater discuss the meaning of ’self’ ;-)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Biased-LexRank</span><span class="ltx_text ltx_font_script">: good morning everyone. heh. I’m just convulsing my thoughts to the irc log. Jason also noted that the cool part about that is if you have code that needs to happen both on a pre-insert and a pre-update - but only a few lines of the code is different - you could have one block of trigger code that used self.action to find out why it had been called and branch accordingly. yes, and he took the more metaphysical route, where I took the more scientific route there was a big jump from the previous paragraph to that but to the event itself. iow, I was presenting a 3rd alternative where self referred to something specific to the trigger.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Our system</span><span class="ltx_text ltx_font_script">: self could refer to neither the triggers owner nor caller.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">I was saying an alternative where self referred to something specific to the trigger. and self.name could be the name.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_script">so self.action could be what action is being performed, self.parent the triggers owner and self.context caller.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_script">Gold</span><span class="ltx_text ltx_font_script">: Further to, E clarified that he had suggested that ”self” could refer to neither the trigger’s owner nor to the trigger’s caller - but to the event itself. So self.action could be what action is being performed, self.parent could be the trigger’s owner, and self.context could be the caller. In other words, I was presenting a 3rd alternative where self referred to something specific to the trigger.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>*</div>
+<p class="ltx_p">Example 3. Summaries generated by our system and other baselines in comparison with the human-written summary for a short chat log. Speaker information have been anonymized.</p>
+</div>
+<div id="S3.SS4.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.4.1 </span>Automatic Evaluation (Chat dataset)</h4>
+
+<div id="S3.SS4.SSS1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Abstractive vs. Extractive</span>: our full query-based abstractive summariztion system show statistically significant improvements over baselines and other pure extractive summarization systems for ROUGE-1<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The statistical significance tests was calculated by approximate randomization, as described in <cite class="ltx_cite">[<a href="#bib.bib61" title="More accurate tests for the statistical significance of result differences" class="ltx_ref">31</a>]</cite>.</span></span></span>.
+This means our systems can effectively aggregate the extracted sentences and generate abstract sentences based on the query content. We can also observe that our full system produces the highest ROUGE-1 precision score among all models, which further confirms the success of this model in meeting the user information needs imposed by queries. The absolute improvement of 10% in precision for ROUGE-1 in our abstractive model over our extractive model (our pipeline) further confirms the effectiveness of our ranking method in generating the abstract sentences considering the query related information.</p>
+</div>
+<div id="S3.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Dataset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">Overal Quality</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">Responsiveness</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">Preference</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Our Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Biased LR</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">LR</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Our Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Biased LR</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">LR</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Our Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Biased LR</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">LR</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Meeting</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">2.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">2.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">2.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">3.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">3.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">1.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">70%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">30%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Email</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">2.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">1.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">3.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">3.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">60%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">30%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10%</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Manual evaluation scores for our phrasal query abstraction system in comparison with Biased LexRank and LexRank (LR).</div>
+</div>
+<div id="S3.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Dataset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Grammar</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">G=2</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">G=1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">G=0</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Orig</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Orig</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Orig</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Sys</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Orig</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Sys</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Chat</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">1.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">1.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">84%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">73%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">16%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">24%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">3%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Meeting</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">50%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">40%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">50%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">55%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Email</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">1.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">85%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">60%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">15%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">0%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5%</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Average rating and distribution over grammaticality scores for phrasal query abstraction system in comparison with original sentences.</div>
+</div>
+<div id="S3.SS4.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Our extractive query-based method beats all other extractive systems with a higher ROUGE-1 and ROUGE-2 which shows the effectiveness of our utterance extraction model in comparison with other extractive models. In other words, using our extractive model described in section 2.1, as a stand alone system, is an effective query-based extractive summarization model.
+We also observe that our extractive model outperforms our abstractive model for ROUGE-2 score. This can be due to word merging
+and word replacement choices in the word graph
+construction, which sometimes change or remove a word in a bigram and consequently may decrease the bigram overlap score.</p>
+</div>
+<div id="S3.SS4.SSS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Query Relevance</span>: another interesting observation is that relying only on the cosine similarity (i.e., <span class="ltx_text ltx_font_italic">cosine-all</span>) to measure the query relevance presents a quite strong baseline. This proves the importance of query content in our dataset and further supports the main claim of our work that a good summary should express a brief and well-organized abstract that answers the user’s query. Moreover, a precision of 71% for ROUGE-1 from the simple <span class="ltx_text ltx_font_italic">cosine-1st</span> baseline confirms that some utterances contain more query relevant information in conversational discussions.</p>
+</div>
+<div id="S3.SS4.SSS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Query-based vs. Generic</span>: the high recall and low precision in <span class="ltx_text ltx_font_italic">TextRank</span> baseline, both for the ROUGE-1 and ROUGE-2 scores, shows the strength of the model in extracting the generic information from chat conversations while missing the query-relevant content. The <span class="ltx_text ltx_font_italic">LexRank</span> baseline improves the results of the <span class="ltx_text ltx_font_italic">TextRank</span> system by increasing the precision and balancing the precision and recall scores for ROUGE-1 score. We believe that this is due to the robustness of the <span class="ltx_text ltx_font_italic">LexRank</span> method in dealing with noisy texts (chat conversations) <cite class="ltx_cite">[<a href="#bib.bib3" title="LexRank: graph-based lexical centrality as salience in text summarization" class="ltx_ref">6</a>]</cite>. In addition, the <span class="ltx_text ltx_font_italic">Biased LexRank</span> model slightly improves the generic <span class="ltx_text ltx_font_italic">LexRank</span> system. Considering this marginal improvement and relatively high results of pure extractive systems, we can infer that the <span class="ltx_text ltx_font_italic">Biased LexRank</span> extracted summaries do not carry much query relevant content. In contrast, the significant improvement of our model over the extractive methods demonstrates the success of our approach in presenting the query related content in generated abstracts.</p>
+</div>
+<div id="S3.SS4.SSS1.p5" class="ltx_para">
+<p class="ltx_p">An example of a short chat log, its related query and corresponding manual and automatic summaries are shown in Example 3.</p>
+</div>
+</div>
+<div id="S3.SS4.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.4.2 </span>Manual Evaluation</h4>
+
+<div id="S3.SS4.SSS2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Content and User Preference</span>: Table 2 demonstrates overall quality, responsiveness (query relatedness) and user preference scores for the abstracts generated by our system and two baselines.
+Results indicate that our system significantly outperforms baselines in overall quality and responsiveness, for both meeting and email datasets. This confirms the validity of the results we obtained by conducting automatic evaluation over the chat dataset. We also can observe that the absolute improvements in overall quality and responsiveness for emails (0.9 and 0.7) is greater than for meetings (0.4 and 0.6). This is expected since dealing with spoken conversations is more challenging than written ones. Note that the responsiveness scores are greater than overall scores. This further proves the effectiveness of our approach in dealing with phrasal queries.
+We also evaluate the users’ summary preferences. For both datasets (meeting and email), in majority of cases (70% and 60% respectively), the users prefer the query-based abstractive summary generated by our system.</p>
+</div>
+<div id="S3.SS4.SSS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Grammaticality</span>: Table 3 shows grammaticality scores and distributions over the three possible scores for all datasets. The chat dataset results demonstrate the highest scores: 73% of the sentences generated by our phrasal query abstraction model are grammatically correct and 24% of the generated sentences are almost correct with only one grammatical error, while only 3% of the abstract sentences are grammatically incorrect. However, the results varies moving to other datasets. For meeting dataset, the percentage of completely grammatical sentences drops dramatically. This is due to the nature of spoken conversations which is more error prone and ungrammatical.
+The grammaticality score of the original sentences also proves that the sentences from meeting transcripts, although generated by humans, are not fully grammatical.
+In comparison with the original sentences, for all datasets, our model reports slightly lower results for the grammaticality score. Considering the fact that the abstract sentences are automatically generated and the original sentences are human-written, the grammaticality score and the percentage of fully grammatical sentences generated by our system, with higher ROUGE or quality scores in comparison with other methods, demonstrates that our system is an effective phrasal query abstraction framework for both spoken and written conversations.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Conclusion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We have presented an unsupervised framework for abstractive summarization of spoken and written conversations based on phrasal queries. For content selection, we propose a sentence extraction model that incorporates query relevance and content importance into the extraction process. For the generation phase, we propose a ranking strategy which selects the best path in the constructed word graph based on fluency, query relevance and content. Both automatic and manual evaluation of our model show substantial improvement over extraction-based methods, including Biased LexRank, which is considered a state-of-the-art system. Moreover, our system also yields good grammaticality score for human evaluation and achieves comparable scores with the original sentences.
+Our future work is four-fold. First, we are trying to improve our model by incorporating conversational features (e.g., speech acts). Second, we aim at implementing a strategy to order the clusters for generating more coherent abstracts. Third, we try to improve our generated summary by resolving coreferences and incorporating speaker information (e.g., names) in the clustering and sentence generation phases. Finally, we plan to take advantage of topic shifts to better segment the relevant parts of conversations in relation to phrasal queries.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank the anonymous reviewers for their valuable comments and
+suggestions to improve the paper, and the NSERC Business Intelligence Network for financial support.
+We also would like to acknowledge the early discussions on the related topics with Frank Tompa.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Adler, J. Berant and I. Dagan</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entailment-based text exploration with application to the health-care domain</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 79–84</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390470.2390484" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Redundancy Removal ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Barzilay and K. R. McKeown</span><span class="ltx_text ltx_bib_year">(2005-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence Fusion for Multidocument News Summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Comput. Linguist.</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 297–328</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/089120105774321091" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/089120105774321091" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S3.SS2.p9" title="3.2 Baselines ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Berant, I. Dagan and J. Goldberger</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Global Learning of Typed Entailment Rules</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, OR</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Redundancy Removal ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Carletta, S. Ashby, S. Bourban, M. Flynn, T. Hain, J. Kadlec, V. Karaiskos, W. Kraaij, M. Kronenthal, G. Lathoud, M. Lincoln, A. Lisowska and M. W. P. D. Reidsma</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The AMI meeting corpus: A pre-announcement</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 28–39</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p10" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS1.p3" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib75" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Dagan and O. Glickman</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic textual entailment: Generic applied modeling of language variability</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Redundancy Removal ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Erkan and D. R. Radev</span><span class="ltx_text ltx_bib_year">(2004-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LexRank: graph-based lexical centrality as salience in text summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Artif. Int. Res.</span> <span class="ltx_text ltx_bib_volume">22</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 457–479</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1076-9757</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1622487.1622501" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p5" title="3.2 Baselines ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS4.SSS1.p4" title="3.4.1 Automatic Evaluation (Chat dataset) ‣ 3.4 Results ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Filippova</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-sentence compression: finding shortest paths in word graphs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 322–330</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1873781.1873818" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.SSS2.p1" title="2.3.2 Word Graph ‣ 2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3.2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Ganesan, C. Zhai and J. Han</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Opinosis: a graph-based approach to abstractive summarization of highly redundant opinions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 340–348</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1873781.1873820" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gillick, K. Riedhammer, B. Favre and D. Hakkani-Tur</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A global optimization framework for meeting summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICASSP ’09</span>, <span class="ltx_text ltx_bib_place">Washington, DC, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 4769–4772</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4244-2353-8</span>,
+<a href="http://dx.doi.org/10.1109/ICASSP.2009.4960697" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1109/ICASSP.2009.4960697" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gonzalo, F. Verdejo, I. Chugur and J. M. CigarrÃ¡n</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Indexing with wordnet synsets can improve text retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoRR</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS2.p1" title="2.1.2 Query Terms ‣ 2.1 Utterance Extraction ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Graff and C. Cieri</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">English Gigaword Corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Linguistic Data Consortium</span>,  <span class="ltx_text ltx_bib_place">Philadelphia</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Experimental Settings ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Gupta, A. Nenkova and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measuring importance and query relevance in topic-focused multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’07</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 193–196</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1557769.1557825" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS1.p1" title="2.1.1 Signature Terms ‣ 2.1 Utterance Extraction ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Hunemark</span><span class="ltx_text ltx_bib_year">(2010-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Query expansion using search logs and WordNet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Uppsala University</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Masterâs thesis in Computational Linguistics</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS2.p1" title="2.1.2 Query Terms ‣ 2.1 Utterance Extraction ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.2</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Jones, G. Ravid and S. Rafaeli</span><span class="ltx_text ltx_bib_year">(2004-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Information overload and the message dynamics of online interaction spaces: a theoretical model and empirical exploration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Info. Sys. Research</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 194–210</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1526-5536</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Joty, G. Murray and R. T. Ng</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supervised topic segmentation of email conversations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p4" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. R. Joty, G. Carenini and R. T. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic segmentation and labeling in asynchronous conversations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Artif. Intell. Res. (JAIR)</span> <span class="ltx_text ltx_bib_volume">47</span>, <span class="ltx_text ltx_bib_pages"> pp. 521–573</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib80" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin and E. Hovy</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The automated acquisition of topic signatures for text summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 495–501</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS1.p1" title="2.1.1 Signature Terms ‣ 2.1 Utterance Extraction ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Liu and Y. Liu</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From extractive to abstractive meeting summaries: can it be done by sentence compression?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACLShort ’09</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 261–264</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1667583.1667664" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib74" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Mehdad, G. Carenini and R. NG T.</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards Topic Labeling with Phrase Entailment and Aggregation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 179–189</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Redundancy Removal ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS3.SSS2.p1" title="2.3.2 Word Graph ‣ 2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3.2</span></a>.
+</span></li>
+<li id="bib.bib93" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Mehdad, G. Carenini, F. Tompa and R. T. NG</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Abstractive meeting summarization with entailment and fusion</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 136–146</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-2117" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib91" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Meng and C. T. Yu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Advanced metasearch engine technology</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Synthesis Lectures on Data Management</span>,  <span class="ltx_text ltx_bib_publisher">Morgan and Claypool Publishers</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.2200/S00307ED1V01Y201011DTM011" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib73" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea and P. Tarau</span><span class="ltx_text ltx_bib_year">(2004-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TextRank: Bringing Order into Texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 404–411</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p4" title="3.2 Baselines ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Murray, G. Carenini and R. Ng</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating and validating abstracts of meeting conversations: a user study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">INLG ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 105–113</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1873738.1873753" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Abstract Generation ‣ 2 Phrasal Query Abstraction Framework ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Otterbacher, G. Erkan and D. R. Radev</span><span class="ltx_text ltx_bib_year">(2009-01-15)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biased lexrank: passage retrieval using random walks with question-based priors.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Inf. Process. Manage.</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 42–54</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dblp.uni-trier.de/db/journals/ipm/ipm45.html#OtterbacherER09" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p6" title="3.2 Baselines ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Sakai and K. Sparck-Jones</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generic summaries for indexing in information retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’01</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 190–198</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-58113-331-6</span>,
+<a href="http://doi.acm.org/10.1145/383952.383987" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/383952.383987" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib87" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ulrich, G. Murray and G. Carenini</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A publicly available annotated corpus for supervised email summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Chicago, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p10" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p4" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. C. Uthus and D. W. Aha</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Plans toward automated chat summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WASDGML ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–7</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-94-7</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2018987.2018988" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib94" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. C. Uthus and D. W. Aha</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The ubuntu chat corpus for multiparticipant chat analysis</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib88" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Wang and C. Cardie</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain-independent abstract generation for focused meeting summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1395–1405</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1137" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib78" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Wang, H. Raghavan, V. Castelli, R. Florian and C. Cardie</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A sentence compression based framework to query-focused multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1384–1394</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1136" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yeh</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">More accurate tests for the statistical significance of result differences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’00</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 947–953</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/992730.992783" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/992730.992783" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.SSS1.p1" title="3.4.1 Automatic Evaluation (Chat dataset) ‣ 3.4 Results ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4.1</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Zhou and E. Hovy</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Digesting virtual “geek” culture: the summarization of technical internet relay chats</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 298–305</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P05-1037" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1219840.1219877" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Datasets ‣ 3 Experimental Setup ‣ Abstractive Summarization of Spoken and Written Conversations Based on Phrasal Queries" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:47:35 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Rational deployment of multiple heuristics in optimal state-space search.
+   </title>
+   <abstract>
+    The obvious way to use several admissible heuristics in searching for an optimal solution is to take their maximum. In this paper, we aim to reduce the time spent on computing heuristics within the context of A⁎ and IDA⁎. We discuss Lazy A⁎ and Lazy IDA⁎, variants of A⁎ and IDA⁎, respectively, where heuristics are evaluated lazily: only when they are essential to a decision to be made in the search process. While these lazy algorithms outperform naive maximization, we can do even better by intelligently deciding when to compute the more expensive heuristic. We present a new rational metareasoning based scheme which decides whether to compute the more expensive heuristics at all, based on a myopic regret estimate. This scheme is used to create rational lazy A⁎ and rational lazy IDA⁎. We also present different methods for estimating the parameters necessary for making such decisions. An empirical evaluation in several domains supports the theoretical results, and shows that the rational variants, rational lazy A⁎ and rational lazy IDA⁎, are better than their non-rational counterparts.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Introducing rational metareasoning techniques [1] into search is a research direction that has recently proved worthwhile. All search algorithms have decision points about which search actions to perform. Traditionally, tailored rules are hard-coded into the algorithms. However, applying metareasoning techniques based on value of information or other ideas can significantly speed up the search. This was shown for depth-first search in CSPs [2] as well as for Monte-Carlo tree search [3]. In the heuristic search literature, the greatest speedups using metareasoning techniques have been achieved when they were used to trade off solution quality for search time [4], [5], [6], where the search algorithm attempts to choose a node which will also minimize expected search effort, rather than just expected solution cost.
+     </paragraph>
+     <paragraph>
+      Taking advantage of metareasoning when the search is for an optimal solution is different than in satisficing planning, as the time vs. quality tradeoff is not available. Nevertheless, optimal search algorithms use heuristics, and when more than one such heuristic is available, metareasoning can be used to speed up search, trading off different aspects of search time, such as time spent for computing heuristics vs. time spent in node expansion, to achieve an overall speedup without jeopardizing optimality. In this paper, we examine how this can be done for {a mathematical formula}A⁎ and {a mathematical formula}IDA⁎.
+     </paragraph>
+     <paragraph>
+      The {a mathematical formula}A⁎ algorithm [7] and its derivatives, such as {a mathematical formula}IDA⁎[8] and RBFS [9] are best-first heuristic search algorithms guided by the cost function {a mathematical formula}f(n)=g(n)+h(n). {a mathematical formula}A⁎ is often described as being ‘optimal’, in that it expands the minimum number of unique nodes. If the heuristic {a mathematical formula}h(n) is consistent{sup:1} then the set of nodes expanded by {a mathematical formula}A⁎ is both necessary and sufficient to find the optimal path to the goal with a unidirectional search [11].{sup:2}
+     </paragraph>
+     <paragraph>
+      This paper examines the case where we have several available admissible heuristics. Clearly, we can evaluate all these heuristics, and use their maximum as an admissible heuristic. The problem with naive maximization is that all the heuristics are computed for all the generated nodes. In order to reduce the time spent on heuristic computations, Lazy {a mathematical formula}A⁎ (or {a mathematical formula}LA⁎, for short) evaluates the heuristics one at a time, lazily. When a node n is generated, {a mathematical formula}LA⁎ only computes one heuristic, {a mathematical formula}h1(n), and adds n to Open. Only when n re-emerges as the top of Open is another heuristic, {a mathematical formula}h2(n), evaluated; if this results in an increased heuristic estimate, n is re-inserted into Open. This scheme can be repeated as needed if we have more than two heuristics. {a mathematical formula}LA⁎ expands no more nodes than {a mathematical formula}A⁎ using the maximum. While {a mathematical formula}LA⁎ may have the extra overhead of inserting a node into Open more than once, it has the potential to significantly reduce search time, as we may bypass computation of {a mathematical formula}h2 for many nodes. {a mathematical formula}LA⁎ was briefly mentioned in the context of the MAXSAT heuristic for planning domains [12].
+     </paragraph>
+     <paragraph>
+      One major drawback for using {a mathematical formula}A⁎ is that its memory consumption is linear in the number of generated nodes, which is typically exponential in the problem description size, and that may be unacceptable. In contrast to {a mathematical formula}A⁎, {a mathematical formula}IDA⁎ is a linear-space algorithm which emulates {a mathematical formula}A⁎ by performing a series of depth-first searches from the root, each with increasing costs, thus re-expanding nodes multiple times. {a mathematical formula}IDA⁎ is typically used in domains and problem instances where {a mathematical formula}A⁎ requires more than the available memory and thus cannot be run to completion. Similarly to {a mathematical formula}A⁎, the first thing to consider for {a mathematical formula}IDA⁎ is lazy evaluation of the heuristics. In order to reduce the time spent on heuristic computations, Lazy {a mathematical formula}IDA⁎ evaluates the heuristics one at a time, lazily. When {a mathematical formula}h1 causes a cutoff there is no need to evaluate {a mathematical formula}h2. Unlike Lazy {a mathematical formula}A⁎, where lazy evaluation must pay an overhead (re-inserting into the OPEN list), Lazy {a mathematical formula}IDA⁎ ({a mathematical formula}LIDA⁎) is straightforward and has no immediate overhead.
+     </paragraph>
+     <paragraph>
+      As our goal is to reduce search time, it may be better to compute a fast heuristic on several nodes, rather than to compute a slow but informed heuristic on only one node. Selective max (Sel-MAX), an online learning scheme which chooses one heuristic to compute at each node, is based on this idea [13]. Sel-MAX chooses to compute the more expensive heuristic {a mathematical formula}h2 for node n when its classifier predicts that {a mathematical formula}h2(n)−h1(n) is greater than some threshold, which is a function of the computation times of the heuristics and of the average branching factor.
+     </paragraph>
+     <paragraph>
+      Similarly, previous work showed that randomizing a heuristic and applying bidirectional pathmax (BPMX) might sometimes be faster than evaluating all heuristics and taking the maximum [10]. This technique is only useful in undirected search spaces, and is therefore not applicable to some of the domains we examine in this paper. Both Selective max and Random compute the resulting heuristic once, before each node is added to Open, while {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎ compute the heuristic lazily, in different steps of the search. In addition, both randomization and Sel-MAX save heuristic computations and thus reduce search time in many cases. However, they might be less informed than pure maximization and as a result expand a larger number of nodes.
+     </paragraph>
+     <paragraph>
+      In this paper, we combine the ideas of lazy heuristic evaluation and of trading off more node expansions for less heuristic computation time. We introduce a new variant of {a mathematical formula}LA⁎ called Rational Lazy{a mathematical formula}A⁎ ({a mathematical formula}RLA⁎), as well as a new variant of {a mathematical formula}LIDA⁎ called Rational Lazy{a mathematical formula}IDA⁎ ({a mathematical formula}RLIDA⁎). These new rational algorithms are based on rational metareasoning in the sense of [1], and use a myopic regret criterion to decide whether to compute {a mathematical formula}h2(n) or to bypass the computation of {a mathematical formula}h2 and expand n instead. They aim to reduce search time, even at the expense of more node expansions than {a mathematical formula}A⁎ or {a mathematical formula}IDA⁎ with the maximum of the heuristics. Empirical results on several heuristic search problems, as well as on numerous planning domains demonstrate that {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ lead to better performance than their non-rational versions in many cases.
+     </paragraph>
+     <paragraph>
+      Perhaps the most closely related work, the {a mathematical formula}RA⁎[14] and GHS [15] algorithms, have a similar objective — minimizing search time when given access to multiple heuristics. However they approach this problem in a different way, by choosing a subset of the heuristics to maximize over during search. On the other hand, we assume there are exactly two heuristics given, and attempt to minimize search time using these heuristics. An interesting direction for future work would be choosing a set of heuristics to combine using {a mathematical formula}RLA⁎ or {a mathematical formula}RLIDA⁎.
+     </paragraph>
+     <paragraph>
+      Preliminary papers appeared on these ideas, introducing the A* variants [16] and the IDA* variants [17]. This paper unifies the presentation of {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ into one coherent whole, while providing more experimental results. In addition, this paper further describes several technical optimizations for {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎. Finally, we extend the previous versions of {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ by relaxing one of the assumptions originally made, as well as describing new techniques for estimating the parameters used in deciding when to compute the more expensive heuristic.
+     </paragraph>
+     <paragraph>
+      This paper is organized as follows. We begin (Section 2) by reintroducing {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎, and analyze the potential savings of {a mathematical formula}LA⁎ over {a mathematical formula}A⁎ and of {a mathematical formula}LIDA⁎ over {a mathematical formula}IDA⁎. We then consider the effects of some common additional enhancements to {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎ (Section 3). The main contribution of the paper is Section 4, which introduces the principles behind the decisions made by Rational {a mathematical formula}LA⁎ and Rational {a mathematical formula}LIDA⁎, and Section 5, which presents different methods of using these principles in practice. Our approach is then extensively evaluated empirically in Section 6, in several puzzle domains as well as in numerous domains from past planning competitions. We then discuss possible directions for future work in section 7, and conclude in section 8.
+     </paragraph>
+    </section>
+    <section label="2">
+     Lazy {a mathematical formula}A⁎ and {a mathematical formula}IDA⁎
+     <paragraph>
+      In this section we study {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎. The idea behind these algorithms is simple and was probably used by others. In fact, it was specifically mentioned in work on using the MAXSAT heuristic for planning [12]. Nevertheless, we study this technique in more depth in the context of A* and IDA*, and point out its strengths and weaknesses. Additionally, {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎ serve as a basis for our enhanced algorithms, {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎, which add metareasoning to the lazy technique.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Definitions and assumptions
+      </section-title>
+      <paragraph>
+       Throughout this paper we assume for clarity that we have two available admissible heuristics, {a mathematical formula}h1 and {a mathematical formula}h2.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Unless stated otherwise, we assume that {a mathematical formula}h1 is faster to compute than {a mathematical formula}h2 but that {a mathematical formula}h2 is weakly more informed, i.e., {a mathematical formula}h1(n)≤h2(n) for the majority of the nodes n, although counter cases where {a mathematical formula}h1(n)&gt;h2(n) are possible. We say that {a mathematical formula}h2dominates{a mathematical formula}h1, if such counter cases do not exist and {a mathematical formula}h2(n)≥h1(n) for all nodes n.
+       </list-item>
+       <list-item label="•">
+        We use {a mathematical formula}f1(n) to denote {a mathematical formula}g(n)+h1(n). Likewise, {a mathematical formula}f2(n) denotes {a mathematical formula}g(n)+h2(n), and {a mathematical formula}fmax(n) denotes {a mathematical formula}g(n)+max⁡(h1(n),h2(n)). We denote the cost of the optimal solution by {a mathematical formula}C⁎.
+       </list-item>
+       <list-item label="•">
+        We denote the computation time of {a mathematical formula}h1 and of {a mathematical formula}h2 by {a mathematical formula}t1 and {a mathematical formula}t2, respectively, and denote the overhead of an insert/pop operation in Open by {a mathematical formula}to. Unless stated otherwise we assume that {a mathematical formula}t2 is much greater than {a mathematical formula}t1+to. Thus, our main objective is to reduce computations of {a mathematical formula}h2. Note that {a mathematical formula}t1, {a mathematical formula}t2, and {a mathematical formula}to are not necessarily constants, as heuristic computation times could vary between different nodes, and {a mathematical formula}to could depend on the size of Open. Nevertheless, treating them as constants is sometimes a useful approximation, and has been done before [13].
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      Lazy {a mathematical formula}A⁎
+      <paragraph>
+       We begin with a formal treatment of {a mathematical formula}LA⁎. The pseudo-code for {a mathematical formula}LA⁎ is depicted as Algorithm 1, and is very similar to {a mathematical formula}A⁎. In fact, without lines 7–10, {a mathematical formula}LA⁎ would be identical to {a mathematical formula}A⁎ using the {a mathematical formula}h1 heuristic. When a node n is generated we only compute {a mathematical formula}h1(n) and n is added to Open (Lines 11–14), without computing {a mathematical formula}h2(n) yet. When n is first removed from Open (Lines 7–10), we compute {a mathematical formula}h2(n) and reinsert it into Open, this time with {a mathematical formula}fmax(n). The optional condition, opt-cond in Line 7, as well as the statistics collected by update statistics in Lines 4, 8, and 13, are used by the Rational variant of {a mathematical formula}LA⁎ which is introduced in Section 4. For the basic variant of {a mathematical formula}LA⁎ discussed in this section opt-cond is simply assumed to be always TRUE, and thus ignored.
+      </paragraph>
+      <paragraph>
+       We use {a mathematical formula}A⁎MAX to denote the variant of A* which evaluates both heuristics and uses their maximum. It is easy to see that {a mathematical formula}LA⁎ is as informed as {a mathematical formula}A⁎MAX, in the sense that a node n is expanded both by {a mathematical formula}A⁎MAX and by {a mathematical formula}LA⁎ only if {a mathematical formula}fmax(n) is the best f-value in Open. Therefore, {a mathematical formula}LA⁎ and {a mathematical formula}A⁎MAX generate and expand the same set of nodes, up to differences caused by tie-breaking.
+      </paragraph>
+      <paragraph>
+       In its general form {a mathematical formula}A⁎ generates many nodes that it does not expand. These nodes, called surplus nodes [18], [19], are in Open when we expand the goal node with {a mathematical formula}f=C⁎. All nodes in Open with {a mathematical formula}f&gt;C⁎ are surely surplus but some nodes with {a mathematical formula}f=C⁎ may also be surplus. The number of surplus nodes in OPEN can grow exponentially in the size of the domain, resulting in significant costs.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}LA⁎ avoids {a mathematical formula}h2 computations for many of these surplus nodes. Consider a node n that is generated with {a mathematical formula}f1(n)&gt;C⁎. This node is inserted into Open but will never reach the top of Open, as the goal node will be found with {a mathematical formula}f=C⁎. In fact, if ties are broken in Open in favor of small h-values, the goal node with {a mathematical formula}f=C⁎ could be expanded as soon as it is generated, and such savings of {a mathematical formula}h2 will be obtained for some nodes with {a mathematical formula}f1=C⁎ too. We refer to such nodes where we saved the computation of {a mathematical formula}h2 as good nodes (from the view point of saving computation time). Other nodes, those with {a mathematical formula}f1(n)&lt;C⁎ (and some with {a mathematical formula}f1(n)=C⁎) are called regular nodes, as we need to compute both heuristics for them.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}A⁎MAX computes both {a mathematical formula}h1 and {a mathematical formula}h2 for all generated nodes, spending time {a mathematical formula}t1+t2 on all generated nodes, as well as the time spent on inserting all nodes into the open list ({a mathematical formula}to), and an extra {a mathematical formula}to spent on removing the nodes that were expanded from the open list. In contrast, for good nodes {a mathematical formula}LA⁎ only spends {a mathematical formula}t1 time computing heuristic estimates (saving {a mathematical formula}t2 time), as well as extra overhead on open list operations. In the basic implementation of {a mathematical formula}LA⁎ (as in Algorithm 1) regular nodes are inserted into OPEN twice, first for {a mathematical formula}h1 (Line 13) and then for {a mathematical formula}h2 (Line 9) while good nodes only enter Open once (Line 13). Thus, {a mathematical formula}LA⁎ has some extra overhead of Open operations for regular nodes. We distinguish between 3 classes of nodes:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        (1)expanded regular (ER) — nodes that were expanded after both heuristics were computed. Both {a mathematical formula}A⁎MAX and {a mathematical formula}LA⁎ spend {a mathematical formula}t1+t2 time computing heuristic estimates for each of these nodes. {a mathematical formula}A⁎MAX inserts and removes each of these nodes from the open list, for an extra {a mathematical formula}2to time, while {a mathematical formula}LA⁎ inserts and removes each of these nodes from the open list twice, for an extra {a mathematical formula}4to time.
+       </list-item>
+       <list-item label="•">
+        (2)surplus regular (SR) — nodes for which {a mathematical formula}h2 was computed but are still in Open when the goal was found. Both {a mathematical formula}A⁎MAX and {a mathematical formula}LA⁎ spend {a mathematical formula}t1+t2 time computing heuristic estimates for each of these nodes. {a mathematical formula}A⁎MAX inserts each of these nodes to the open list, for an extra {a mathematical formula}to time, while {a mathematical formula}LA⁎ inserts each of these nodes into the open list twice, and removes them once, for an extra {a mathematical formula}3to time.
+       </list-item>
+       <list-item label="•">
+        (3)surplus good (SG) — nodes for which only {a mathematical formula}h1 was computed when the goal was found. {a mathematical formula}A⁎MAX spends {a mathematical formula}t1+t2 time computing heuristic estimates for each of these nodes, and {a mathematical formula}to time inserting each of them into the open list. On the other hand, {a mathematical formula}LA⁎ only spends {a mathematical formula}t1 time computing heuristic estimates for each of these nodes, as well as an extra {a mathematical formula}to time inserting each of them into the open list.
+       </list-item>
+      </list>
+      <paragraph>
+       The time overhead of {a mathematical formula}A⁎MAX and {a mathematical formula}LA⁎ is summarized in Table 1.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}LA⁎ incurs more Open operations overhead, but saves {a mathematical formula}h2 computations for the SG nodes. When {a mathematical formula}t2 (boldface in Table 1) is significantly greater than both {a mathematical formula}t1 and {a mathematical formula}to then, as seen in the SG column, there is a clear advantage for {a mathematical formula}LA⁎. This advantage grows when the number of SG nodes increases.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      Lazy {a mathematical formula}IDA⁎
+      <paragraph>
+       We now present {a mathematical formula}LIDA⁎, the lazy variant of {a mathematical formula}IDA⁎. Recall that {a mathematical formula}IDA⁎ works in iterations, with an increasing cutoff threshold T at each iteration. After {a mathematical formula}h(n) is evaluated, if {a mathematical formula}f(n)=g(n)+h(n)&gt;T, then n is pruned and {a mathematical formula}IDA⁎ backtracks to n's parent. Given both {a mathematical formula}h1 and {a mathematical formula}h2, a naive implementation of {a mathematical formula}IDA⁎, denoted as {a mathematical formula}IDA⁎MAX, will evaluate them both and use their maximum in comparing against T. Lazy {a mathematical formula}IDA⁎ ({a mathematical formula}LIDA⁎) is based on the simple fact that when you have an or condition in the form of {a mathematical formula}cond1orcond2 then if {a mathematical formula}cond1=True then {a mathematical formula}cond2 becomes irrelevant (“don't-care”) and does not need to be computed, as the entire or condition is surely true. In the context of {a mathematical formula}IDA⁎, if {a mathematical formula}f1(n)&gt;T then the search can backtrack without the need to compute {a mathematical formula}h2. This simple observation is probably recognized by most implementers of {a mathematical formula}IDA⁎. Thus, it is likely that {a mathematical formula}LIDA⁎ is already a popular way to implement {a mathematical formula}IDA⁎ when more than one heuristic is present.
+      </paragraph>
+      <paragraph>
+       The pseudo-code for {a mathematical formula}LIDA⁎ (and its enhanced version, Rational {a mathematical formula}LIDA⁎, which is discussed in Section 4), is depicted as Algorithm 2. In Lines 8–10 we check whether {a mathematical formula}f1 is already above the threshold, in which case search backtracks. {a mathematical formula}h2 is only calculated (in Lines 13–14) if {a mathematical formula}f1(n)≤T. The “optional condition” in Line 13, as well as the updating of statistics in Lines 8 and 14, are needed for the Rational Lazy {a mathematical formula}IDA⁎ algorithm, and will be explained in Section 4. In the standard version of Lazy {a mathematical formula}IDA⁎, the “optional condition” in line 13 is always true, and the respective heuristics are always evaluated at this juncture.
+      </paragraph>
+      <paragraph>
+       While Lazy {a mathematical formula}A⁎ was always as informed as {a mathematical formula}A⁎ using the maximum of the heuristics, this is not the case for Lazy {a mathematical formula}IDA⁎. This is because, in rare cases, {a mathematical formula}LIDA⁎ can cause extra iterations of the algorithm compared to {a mathematical formula}IDA⁎. Suppose that the current threshold is T and the current value of the next threshold (NT) is {a mathematical formula}T+3 as some node m seen in the current iteration has {a mathematical formula}f(m)=T+3. Now we generate node n with {a mathematical formula}f1(n)=T+1 and thus set {a mathematical formula}NT=T+1 and bypass {a mathematical formula}h2. However, if {a mathematical formula}f2(n)=T+2 then consulting {a mathematical formula}h2 would have caused {a mathematical formula}NT=T+2. With {a mathematical formula}LIDA⁎, we may now start a new and redundant iteration with threshold {a mathematical formula}T+1, rather than with {a mathematical formula}T+2 — which would have been the case with {a mathematical formula}IDA⁎MAX.
+      </paragraph>
+      <paragraph>
+       However, in order for an extra iteration #i with value v to happen, all nodes that have an {a mathematical formula}h2 value of v in iteration {a mathematical formula}#i−1 have to be pruned by their {a mathematical formula}h1 value. As the number of nodes grows between iterations (potentially exponentially), this case becomes less likely in later iterations. Our empirical evaluation (Section 6.2.4 in particular), where Lazy {a mathematical formula}IDA⁎ outperforms regular {a mathematical formula}IDA⁎, corroborates this. Furthermore, experiments on various domains where a random heuristic was selected (out of several heuristics) showed that such cases are very rare [10].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     Enhancements to Lazy {a mathematical formula}A⁎ and Lazy {a mathematical formula}IDA⁎
+     <paragraph>
+      Having described the basic lazy algorithms ({a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎), we now describe two enhancements of these algorithms. These enhancements are effective especially if {a mathematical formula}t1 and {a mathematical formula}to are not negligible.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Heuristic bypassing
+      </section-title>
+      <paragraph>
+       Heuristic bypassing (HBP) is a technique that allows us to compute the maximum, {a mathematical formula}max⁡(h1(n),h2(n)), without evaluating one of the two heuristics for some nodes. HBP is probably used by many implementers of {a mathematical formula}A⁎MAX, although to the best of our knowledge, it never appeared in the literature. HBP works for a node n under the following two conditions: (1) the operator between n and its parent p is bidirectional, and (2) both heuristics are consistent.
+      </paragraph>
+      <paragraph>
+       Let C be the cost of the operator. Since the heuristic is consistent we know that {a mathematical formula}|h(p)−h(n)|≤C. Therefore, {a mathematical formula}h(p) provides the following upper- and lower-bounds on {a mathematical formula}h(n): {a mathematical formula}h(p)−C≤h(n)≤h(p)+C. We thus denote {a mathematical formula}h(n)_=h(p)−C and {a mathematical formula}h(n)‾=h(p)+C.
+      </paragraph>
+      <paragraph>
+       To exploit HBP in {a mathematical formula}A⁎MAX, we simply skip the computation of {a mathematical formula}h1(n) if {a mathematical formula}h1(n)‾≤h2(n)_, or similarly, we skip the computation of {a mathematical formula}h2 if {a mathematical formula}h2(n)‾≤h1(n)_. For example, consider node a in Fig. 1, where all operators cost 1, {a mathematical formula}h1(a)=6, and {a mathematical formula}h2(a)=10. Based on our bounds {a mathematical formula}h1(b)≤7 and {a mathematical formula}h2(b)≥9. Thus, there is no need to compute {a mathematical formula}h1(b) as {a mathematical formula}h2(b) will surely be the maximum. We can propagate these bounds further to node c. {a mathematical formula}h2(c)=8 while {a mathematical formula}h1(c)≤8 and again there is no need to evaluate {a mathematical formula}h1(c). Only in the last node d we get that {a mathematical formula}h2(d)=8 but since {a mathematical formula}h1(d)≤9 then {a mathematical formula}h1(d) can potentially return the maximum and should thus be evaluated.
+      </paragraph>
+      <paragraph>
+       HBP can be applied in {a mathematical formula}LA⁎ in a number of ways. We describe the variant we used. {a mathematical formula}LA⁎ aims to avoid needless computations of {a mathematical formula}h2. Thus, when {a mathematical formula}h1(n)‾&lt;h2(n)_, we add n to Open with {a mathematical formula}f(n)=g(n)+h2(n)_ and continue as in {a mathematical formula}LA⁎. In this case, we saved {a mathematical formula}t1 time by not computing {a mathematical formula}h1, used {a mathematical formula}h2(n)_ which is more informative than {a mathematical formula}h1(n), while still having the option to compute {a mathematical formula}h2 later, if needed. If, however, {a mathematical formula}h1(n)‾≥h2(n)_, then we compute {a mathematical formula}h1(n) and continue regularly.
+      </paragraph>
+      <paragraph>
+       HBP can also be applied in {a mathematical formula}LIDA⁎, where one only needs to know whether the f-value is below or above the threshold T. Again, assume that node n was generated, that p is the parent of n, and that the cost of the edge is C. If it happens to be the case that {a mathematical formula}f1(p)+C≤f2(p), then we can deduce that {a mathematical formula}f1(p)+C≤T. This is because p was expanded, and thus {a mathematical formula}f2(p)≤T. Since the heuristics are consistent, we know that {a mathematical formula}f1(n)≤f1(p)+C≤T. Thus, in such cases, one can skip the computation of {a mathematical formula}h1(n) and go directly to {a mathematical formula}h2.
+      </paragraph>
+      <paragraph>
+       While HBP can save some computation of {a mathematical formula}h1, note that HBP incurs the time and memory overheads of computing and storing four bounds and should only be applied if there is enough memory and if {a mathematical formula}t1 and especially {a mathematical formula}t2 are very large. Finally, we remark that when the heuristic is inconsistent then a mechanism called bidirectional pathmax (BPMX) [10] can be used to propagate heuristic values from parents to children and vice versa. Using exhaustive evaluations of all heuristics, even if {a mathematical formula}h1(n) already exceeded the threshold, can potentially help in propagating larger heuristic values to the neighborhood of n. Nevertheless, experiments showed that even in this context, lazy evaluation of heuristics is faster than exhaustive evaluation [10].
+      </paragraph>
+     </section>
+     <section label="3.2">
+      Open bypassing
+      <paragraph>
+       Another optimization, which is relevant only for {a mathematical formula}LA⁎, is called Open bypassing (OB). Suppose that node n was just generated, and let {a mathematical formula}fbest denote the best f-value currently in Open. {a mathematical formula}LA⁎ evaluates {a mathematical formula}h1(n) and then inserts n into Open. However, if {a mathematical formula}f1(n)&lt;fbest, then n can immediately reach the top of Open and {a mathematical formula}h2 will be computed. In such cases where {a mathematical formula}f1(n)&lt;fbest we can choose to compute {a mathematical formula}h2(n) right away (after Line 13 in Algorithm 1), thus saving the overhead of inserting n into Open and popping it again at the next step ({a mathematical formula}=2×to).{sup:3} For such nodes, {a mathematical formula}LA⁎ is identical to {a mathematical formula}A⁎MAX, as both heuristics are computed before the node is added to Open. This enhancement is reminiscent of the immediate expand technique applied to a generated node [20], [21]. The same technique can be applied when n again reaches the top of Open when evaluating {a mathematical formula}h2(n); if {a mathematical formula}f2(n)&lt;fbest, expand n right away and bypass open. When applying OB, {a mathematical formula}LA⁎ will incur the extra overhead of two Open cycles only for nodes n where both {a mathematical formula}f1(n)&gt;fbest and then later {a mathematical formula}f2(n)&gt;fbest. As {a mathematical formula}LIDA⁎ does not keep an open list, this enhancement is only applicable to {a mathematical formula}LA⁎.
+      </paragraph>
+      <paragraph>
+       In our earlier paper [16] we showed that on some unit-edge cost domains such as the 15-puzzle, if {a mathematical formula}t1 and {a mathematical formula}t2 are very similar then HBP and OB are particularly useful, and they save heuristic computation for many of the nodes. For example, the number of good nodes dropped from 38% to 11% when adding HBP on top of {a mathematical formula}LA⁎. This leaves little room for further improvement for {a mathematical formula}LA⁎. Thus, timing results did not show a significant difference between the different versions.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      Extending lazy {a mathematical formula}A⁎ and {a mathematical formula}IDA⁎ to multiple heuristics
+      <paragraph>
+       Given a set {a mathematical formula}{h1,h2,...,hn} of heuristics, it is straightforward to extend either Lazy {a mathematical formula}A⁎ or Lazy {a mathematical formula}IDA⁎ to handle multiple heuristics. Simply repeat the code snippet used for {a mathematical formula}h2 in either algorithm, and apply it to each {a mathematical formula}hi, for all {a mathematical formula}3≤i≤n. This assumes that we have already ordered the heuristics in some reasonable way, although this ordering itself is far from trivial, as discussed in Section 7.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     Rational lazy {a mathematical formula}A⁎ and {a mathematical formula}IDA⁎
+     <paragraph>
+      {a mathematical formula}LA⁎ provides a very strong guarantee, of expanding the same set of nodes as {a mathematical formula}A⁎MAX. While {a mathematical formula}LIDA⁎ can potentially result in extra iterations, it is also guaranteed to expand the same set of nodes as {a mathematical formula}IDA⁎ with the maximum of the two heuristics. However, often we would prefer to expand more nodes, if it means reducing search time [13]. This will be possible, for example, if we skip the computation of {a mathematical formula}h2 for a given node n and expand it whenever we believe that expanding it and generating its children will consume less CPU time than calculating {a mathematical formula}h2(n). We now present Rational Lazy{a mathematical formula}A⁎ ({a mathematical formula}RLA⁎) as well as Rational Lazy{a mathematical formula}IDA⁎ ({a mathematical formula}RLIDA⁎) — two algorithms which attempt to optimally manage this tradeoff, based on the principle of rational metareasoning.
+     </paragraph>
+     <paragraph>
+      We begin by reviewing rational metareasoning in the context of optimal search in Section 4.1. We then discuss how we can compute the regret of our possible meta-level decisions in Section 4.2. Using these regret values, we derive a rational meta-level policy in Section 4.3. Finally, in Section 5 we describe some techniques for implementing this policy in practice.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Rational metareasoning for optimal search
+      </section-title>
+      <paragraph>
+       Previous work has presented a general theory of rational metareasoning in search [1]. In rational metareasoning, theoretically every computational action (heuristic function evaluation, node expansion, open list operation) should be treated as an action in a sequential decision-making meta-level problem: actions should be chosen so as to achieve the greatest expected utility (hence the term “rational”). For algorithms guaranteed to deliver an optimal solution, maximizing expected utility translates into minimizing the expected search time. However, the appropriate general metareasoning problem is extremely hard to parametrize precisely, and when fully parametrized, results in an intractable metareasoning problem. Therefore, typically simplifying assumptions of two types are made in order to allow for a practical approximation to rational metareasoning: myopic assumptions and independence assumptions [1].
+      </paragraph>
+      <paragraph>
+       In this paper we focus on just one decision type, made in the context of {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎— that of deciding whether to evaluate or to bypass the computation of {a mathematical formula}h2 for some node n. We have two options: (1) Evaluate the second heuristic {a mathematical formula}h2(n), and proceed using the value {a mathematical formula}fmax(n), or (2) bypass the computation of {a mathematical formula}h2(n) and use {a mathematical formula}f1(n), thereby saving time by not computing {a mathematical formula}h2, at the risk of additional expansions and evaluations of {a mathematical formula}h1.
+      </paragraph>
+      <paragraph>
+       In the context of {a mathematical formula}LA⁎, we must make this decision when n first emerges from Open (Line 7 in Algorithm 1). This is done by the optional condition opt-cond. If we choose to bypass the computation of {a mathematical formula}h2(n) (opt-cond=FALSE), n is expanded right away. Otherwise (opt-cond=TRUE) {a mathematical formula}h2(n) is computed, and n is enqueued back in Open with {a mathematical formula}fmax(n).
+      </paragraph>
+      <paragraph>
+       In the context of {a mathematical formula}LIDA⁎, we must make this decision when we evaluate a node n and {a mathematical formula}f1(n) was within the current {a mathematical formula}IDA⁎ threshold T (Line 13 in Algorithm 2). If we choose to bypass the computation of {a mathematical formula}h2(n) (opt-cond=FALSE), n is expanded right away. Otherwise (opt-cond=TRUE), {a mathematical formula}h2(n) is evaluated and {a mathematical formula}IDA⁎ proceeds with {a mathematical formula}fmax(n), that is, the search backtracks if {a mathematical formula}fmax(n)&gt;T.
+      </paragraph>
+      <paragraph>
+       We would like the algorithm to make the decision on whether to evaluate {a mathematical formula}h2 rationally. Therefore, we define a criterion based on the regret for bypassing {a mathematical formula}h2(n) in this context. We define regret here as the value lost (in terms of expected increased run time) due to bypassing the computation of {a mathematical formula}h2(n), i.e., how much runtime is increased due to bypassing the computation. We wish to compute {a mathematical formula}h2(n) only if this regret is positive. Next, we estimate the regret for each of these possible decisions.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Computing the regret
+      </section-title>
+      <paragraph>
+       Let us now consider our two possible decisions (compute {a mathematical formula}h2 or bypass {a mathematical formula}h2). Suppose that we choose to compute {a mathematical formula}h2 — this results in one of the following outcomes: {a mathematical formula}h2helpful:That is, the computation of {a mathematical formula}h2(n) will prevent the expansion of n. For {a mathematical formula}LA⁎, this means that n is re-inserted into Open, and the goal is found without ever expanding n, which is only possible if {a mathematical formula}fmax(n)≥C⁎. For {a mathematical formula}LIDA⁎, since we already know that {a mathematical formula}g(n)+h1(n)≤T, “helpful” means {a mathematical formula}g(n)+h2(n)&gt;T, and therefore n is not expanded in the current {a mathematical formula}IDA⁎ iteration.{a mathematical formula}h2not helpful:n is still expanded despite the computation of {a mathematical formula}h2(n). For {a mathematical formula}LA⁎, this means either now or eventually, while for {a mathematical formula}LIDA⁎ this means n is expanded in the current iteration.
+      </paragraph>
+      <paragraph>
+       In estimating the gain due to the computation of {a mathematical formula}h2, we rely on the subtree independence assumption [1] — that a computation in one node contributes information only to itself or one of its ancestors, which is tantamount to assuming that the search space is a tree, and that there is no dependency between nodes at different branches of the tree. Thus, we assume that the information gathered by computing {a mathematical formula}h2 for node n is used solely for pruning n.
+      </paragraph>
+      <paragraph>
+       Under these assumptions, computing {a mathematical formula}h2 could be beneficial only in the first outcome, where the potential time savings due to computing {a mathematical formula}h2 are due to pruning a search subtree, at the expense of time {a mathematical formula}t2. However, for a given node n, which outcome will take place after evaluating {a mathematical formula}h2(n) is not known to the algorithm when it makes that decision, and thus it must decide whether to evaluate {a mathematical formula}h2(n) according to what it believes to be the probability of each of the outcomes.
+      </paragraph>
+      <paragraph>
+       In order to estimate the regret, we make the following additional simplifying assumptions:
+      </paragraph>
+      <list>
+       <list-item label="I">
+        The decision is made myopically: we work under the assumption that the algorithm continues to behave like Lazy {a mathematical formula}A⁎ or Lazy {a mathematical formula}IDA⁎ starting with the children of n, and will never bypass another {a mathematical formula}h2 computation after the current decision is made (i.e., opt-cond=TRUE for all future decisions).
+       </list-item>
+       <list-item label="II">
+        {a mathematical formula}h2 is consistent. Thus, if evaluating {a mathematical formula}h2 is helpful on n, it is also helpful on any successor of n, due to the fact that f (specifically, {a mathematical formula}f2) increases monotonically for consistent heuristics.
+       </list-item>
+       <list-item label="III">
+        As a first approximation (relaxed later on), we also assume that all successors of n would be expanded if we used only {a mathematical formula}h1 for them.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that these metareasoning assumptions are made in order to derive decisions, and as is common in research on metareasoning, the assumptions do not actually hold in practice [1]. Nevertheless, if the violation of the assumptions is not “too severe”, the resulting algorithms still show significant improvements over their non-rational counterparts. Without such assumptions the model becomes far too complicated and one cannot move ahead at all. Nevertheless, the assumptions make sense: if our rational algorithms ({a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎) are better than their lazy (non-rational) counterparts ({a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎, respectively), the first assumption results in an upper bound on the regret, because regret considers future runtime, and the rational algorithm should be faster than its non-rational version. Unfortunately, we can not provide such a statement regarding the two other assumptions, and in fact Assumption III is clearly off the mark in certain domains and we attempt to relax it later on.
+      </paragraph>
+      <paragraph>
+       In order to derive a rational policy, we begin by analyzing our two possible decisions: to compute {a mathematical formula}h2 or to bypass {a mathematical formula}h2, under the two (unknown) possible future outcomes: {a mathematical formula}h2 is helpful or not. Table 2 summarizes the regret of each possible decision, for each possible future outcome; each column in the table represents a decision, while each row represents a future outcome.
+      </paragraph>
+      <paragraph>
+       In the table, {a mathematical formula}td is the time to compute {a mathematical formula}h2 and re-insert n into Open for {a mathematical formula}RLA⁎, thus delaying the expansion of n. Note that if we use the Open bypassing optimization described in Section 3.2, {a mathematical formula}td could be lower. For the sake of simplicity we assume this does not happen, although our analysis could be easily extended if the fraction of nodes for which this optimization applies is known (or estimated). {a mathematical formula}te is the time to expand n, and evaluate {a mathematical formula}h1 on each of its successors (as well as the time to remove n from Open and insert the successors into the open list for {a mathematical formula}RLA⁎). {a mathematical formula}b(n) denotes the “local branching factor”, i.e., the number of successors of n, and {a mathematical formula}tc the time to generate the children of n (i.e., to have a copy of the states representing the children at hand). We thus have:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Computing {a mathematical formula}h2 needlessly wastes time {a mathematical formula}td. Bypassing {a mathematical formula}h2 computation when {a mathematical formula}h2 would have been helpful means generating all successors of n, and computing {a mathematical formula}h2 for them (assumption I). From assumption III, {a mathematical formula}h1 is not going to be enough to prune any of these successors, but because {a mathematical formula}h2 is consistent (assumption II) {a mathematical formula}h2 will be helpful on the successors and prune them. Therefore, we have expanded one “extra” level of the search tree, and computed {a mathematical formula}h1 and {a mathematical formula}h2 on {a mathematical formula}b(n) successors, instead of computing {a mathematical formula}h2 for n only. This wastes {a mathematical formula}te+b(n)td time, but because computing {a mathematical formula}h2 would have cost {a mathematical formula}td we need to subtract {a mathematical formula}td and thus the regret is {a mathematical formula}te+(b(n)−1)td. Using Table 2, we can now derive a rational policy for deciding whether to compute or bypass {a mathematical formula}h2. Finally, for simplicity, we will assume {a mathematical formula}to=0 for {a mathematical formula}RLIDA⁎.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Deriving a rational policy
+      </section-title>
+      <paragraph>
+       Now that we have the regret of each possible action under each possible future outcome, we can derive a rational policy, which will tell us which decision we should make. Let us denote the probability that {a mathematical formula}h2 is helpful by {a mathematical formula}ph2.{sup:4} The expected regret of computing {a mathematical formula}h2 is thus {a mathematical formula}(1−ph2)td. On the other hand, the expected regret of bypassing {a mathematical formula}h2 is {a mathematical formula}ph2(te+(b(n)−1)td). As we wish to minimize the expected regret, we should thus evaluate {a mathematical formula}h2 (i.e., opt-cond = TRUE) just when:{a mathematical formula} or equivalently when:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If {a mathematical formula}b(n)ph2≥1, then the expected regret is minimized by always evaluating {a mathematical formula}h2, regardless of the values of {a mathematical formula}td and {a mathematical formula}te. In these cases, the rational algorithms cannot be expected to do better than their lazy counterparts. For example, in the 15-puzzle and its variants, the effective branching factor is ≈2. Therefore, if {a mathematical formula}h2 is expected to be helpful for more than half of the nodes n on which the search algorithm evaluates {a mathematical formula}h2(n), then one should simply use {a mathematical formula}LA⁎ or {a mathematical formula}LIDA⁎.
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}ph2b(n)&lt;1, the decision of whether to evaluate {a mathematical formula}h2 (i.e., opt-cond) depends on the values of {a mathematical formula}td and {a mathematical formula}te:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       By substituting (1) into (4) we obtain the following opt-cond: evaluate{a mathematical formula}h2(n)if:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The factor {a mathematical formula}ph21−ph2b(n) depends on the potentially unknown probability {a mathematical formula}ph2, making it difficult to reach the optimum decision. However, if our goal is just to do better than {a mathematical formula}LA⁎ or {a mathematical formula}LIDA⁎, then it is safe to replace {a mathematical formula}ph2 by an upper bound on {a mathematical formula}ph2. In Section 5, we describe practical methods for estimating {a mathematical formula}ph2. However, we first describe a variant of our decision rule, which relaxes our third assumption.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      Relaxing Assumption III
+      <paragraph>
+       Our third assumption, that all successors of n would not be pruned solely by {a mathematical formula}h1, is obviously frequently violated, especially in the context of {a mathematical formula}IDA⁎. A relaxation we use here is that there is some probability {a mathematical formula}ph1(n) that such pruning occurs, i.e., {a mathematical formula}ph1(n) is the probability that {a mathematical formula}h1 will prune each of n's successors, thereby also making the simplifying assumption that these probabilities are i.i.d.
+      </paragraph>
+      <paragraph>
+       Under this relaxed assumption, the regret values are the same as in Table 2, except for that of bypassing {a mathematical formula}h2 when it is helpful. In this case instead of “wasting” {a mathematical formula}b(n) calculations of {a mathematical formula}h2 in each successor of n, we only waste it with a probability of {a mathematical formula}1−ph1(n). Thus, the regret accounts for expanding the node, computing {a mathematical formula}h1 on all {a mathematical formula}b(n) children and then {a mathematical formula}h2 on the {a mathematical formula}b(n)(1−ph1(n)) children which were not pruned by {a mathematical formula}h1, less the time spent computing {a mathematical formula}h2 on the parent node — yielding a regret of {a mathematical formula}te+(b(n)−1)(1−ph1(n))td. Note that if {a mathematical formula}ph1(n)=0, i.e., calculation of {a mathematical formula}h1 in n's successors is never helpful, we get the same regret as in Table 2. Finally, we remark that using this more fine grained equation requires estimating both {a mathematical formula}ph2 and {a mathematical formula}ph1. The next section describes several techniques for estimating {a mathematical formula}ph2, and one technique which can also estimate {a mathematical formula}ph1.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Using the rational policy in practice
+     </section-title>
+     <paragraph>
+      Despite the simplicity of equation (5), it is still not clear how to use it in practice. This is because all of the quantities {a mathematical formula}b(n), {a mathematical formula}t1, {a mathematical formula}t2, {a mathematical formula}tc, {a mathematical formula}to and especially {a mathematical formula}ph1(n) and {a mathematical formula}ph2(n) may actually be unknown. Furthermore, these quantities might change between different nodes, or as search progresses. Estimating the times {a mathematical formula}t1, {a mathematical formula}t2, {a mathematical formula}tc, {a mathematical formula}to is usually easy, as we can measure these during search and take the average measurement as the estimate. The number of successors, {a mathematical formula}b(n), is also often readily available to the search algorithm. However, we must still also estimate {a mathematical formula}ph2 and {a mathematical formula}ph1.
+     </paragraph>
+     <paragraph>
+      Note that {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ are meant to improve upon their non-rational counterparts, so we would like to be highly confident that we will not be worse than {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎, respectively. Since {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎ always choose to compute {a mathematical formula}h2, we can guarantee being no worse than them by always computing {a mathematical formula}h2. Thus, we should only decide to skip {a mathematical formula}h2 computation when we are highly confident it is the right decision. Using an upper bound on {a mathematical formula}ph2 would mean we err on the side of caution, and might compute {a mathematical formula}h2 in some cases where the right decision might be to skip {a mathematical formula}h2. However, this achieves our purpose of not doing any worse than {a mathematical formula}LA⁎ and {a mathematical formula}LIDA⁎ with high probability.
+     </paragraph>
+     <paragraph>
+      One possible approach is to use concentration measures to derive such a probabilistic upper bound on {a mathematical formula}ph2[17], [22]. However, in practice this bound is too loose, and our decision rule almost always chooses to compute {a mathematical formula}h2. In the remainder of this section, we describe other approaches for estimating {a mathematical formula}ph2, which perform better in practice.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Domain-specific parameter settings
+      </section-title>
+      <paragraph>
+       If we expect to only solve problems from one specific domain, we can treat {a mathematical formula}ph2 and {a mathematical formula}ph1 as setting-specific constants (that is, hyper-parameters), and tune them on a given set of benchmarks. Plugging those into the very crude model above is sufficient to achieve improved performance in some cases, as shown in our experimental evaluation in Section 6. Furthermore, if we know something about the times {a mathematical formula}t1, {a mathematical formula}t2, and {a mathematical formula}to, we can simplify the decision rule in Equation (5).
+      </paragraph>
+      <paragraph>
+       For example, if we are using {a mathematical formula}RLA⁎ in domains where evaluating {a mathematical formula}h1 is cheap, (e.g., the Manhattan distance heuristic), {a mathematical formula}to is the most significant part of {a mathematical formula}te. Open in {a mathematical formula}A⁎ is frequently implemented as a priority queue, and thus we have, approximately, {a mathematical formula}to=τlog⁡No for some constant τ, where the size of Open is {a mathematical formula}No. For such domains rule (5) can be approximated as:{a mathematical formula} Rule (6) recommends to evaluate {a mathematical formula}h2 mostly at late stages of the search, when the open list is large, and in nodes with a higher branching factor.
+      </paragraph>
+      <paragraph>
+       In other domains, such as PDDL planning, both {a mathematical formula}t1 and {a mathematical formula}t2 are significantly greater than both {a mathematical formula}to and {a mathematical formula}tc, and terms not involving {a mathematical formula}t1 or {a mathematical formula}t2 can be dropped from (5), resulting in:{a mathematical formula} Note that the right hand side of (7) grows with {a mathematical formula}b(n), and thus it is beneficial to evaluate {a mathematical formula}h2 only for nodes with a sufficiently large branching factor. Also recall that if {a mathematical formula}ph2b(n)≥1, then the expected regret is minimized by always evaluating {a mathematical formula}h2 (as mentioned in Section 4.3), which is consistent with this conclusion.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Empirical frequencies
+      </section-title>
+      <paragraph>
+       The above approach relies on a set of benchmarks on which we can tune {a mathematical formula}ph2 and {a mathematical formula}ph1. However, such a set of benchmarks is not always available. Furthermore, often search problems are very different from each other, and even problem instances in the same domain are of varying size. Thus getting a single set of values for {a mathematical formula}ph2 and {a mathematical formula}ph1 which works well across many problems is difficult. Instead, we would like to adaptively estimate these parameters during search.
+      </paragraph>
+      <paragraph>
+       The first adaptive method we present focuses on estimating {a mathematical formula}ph2 from empirical frequencies (it is safe to assume {a mathematical formula}ph1=0, as this will also result in an upper bound on regret). One important distinction between {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ is the immediacy of the feedback about whether {a mathematical formula}h2 was helpful. {a mathematical formula}RLIDA⁎ can tell whether {a mathematical formula}h2 was helpful immediately after evaluating it — {a mathematical formula}h2 is helpful iff {a mathematical formula}g(n)+h2(n)&gt;T, thereby causing a cutoff. Thus, we simply estimate {a mathematical formula}ph2 by the frequency of observed helpful evaluations of {a mathematical formula}h2 so far.
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}RLA⁎, things are a bit more complicated, as we do not have immediate feedback about whether {a mathematical formula}h2 was helpful. Once a node for which we computed {a mathematical formula}h2 is expanded, we know that {a mathematical formula}h2 was not helpful on that node, which is why in the pseudo-code for {a mathematical formula}RLA⁎, we call update statistics whenever a node is removed from Open (Line 4 in Algorithm 1). However, we can only be certain that {a mathematical formula}h2 was helpful after search terminates.
+      </paragraph>
+      <paragraph>
+       Nevertheless, we can still estimate{a mathematical formula}ph2. First note that if n is a node at which {a mathematical formula}h2 was helpful, then we computed {a mathematical formula}h2 for n, but did not expand n. After the search completes, this is the exact definition of {a mathematical formula}h2 being helpful, but during the search, this is a necessary condition for n to be potentially helpful. Let us denote by A the number of nodes for which we computed {a mathematical formula}h2 that were not yet expanded, and are thus still in Open. Let us denote by B the number of nodes for which we computed {a mathematical formula}h2. Then {a mathematical formula}AB can be used as an estimate of {a mathematical formula}ph2. In fact, this method will tend to overestimate {a mathematical formula}ph2, which is consistent with our goal of trying to use an upper bound to ensure we are no worse than {a mathematical formula}LA⁎ or {a mathematical formula}LIDA⁎.
+      </paragraph>
+      <paragraph>
+       One minor issue is that using the empirical frequency is not likely to be a stable estimate at the beginning of the search, such as after seeing only 1 example. If we use this estimate directly, then we could get an estimate of {a mathematical formula}ph2=0, which means we would never evaluate {a mathematical formula}h2 again, and never learn that it might be helpful. To overcome this problem, we “imagine” we have observed k examples, which give us an estimate of {a mathematical formula}ph2=pinit, and use a weighted average between these k examples, and the observed examples — that is, we estimate {a mathematical formula}ph2 by {a mathematical formula}(AB⋅B+pinit⋅k)/(B+k). In our empirical evaluation, we used {a mathematical formula}k=1000 and {a mathematical formula}pinit=0.5.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Type systems
+      </section-title>
+      <paragraph>
+       The approaches we used above only estimate {a mathematical formula}ph2, the probability that {a mathematical formula}h2 is helpful. The final approach we present can estimate both {a mathematical formula}ph2 and {a mathematical formula}ph1, and is based on the use of type systems [23]. A type system partitions the state-space nodes into “similar valued” classes of nodes, called types, according to some features of each node. Thus, each type system is defined by a set of features. Although type systems were originally used to predict the number of nodes generated by search algorithms, we use them in order to estimate {a mathematical formula}ph2 and {a mathematical formula}ph1. In other words, we use a set of features to define a type system, and use that type system to compute conditional probabilities corresponding to {a mathematical formula}ph2 and {a mathematical formula}ph1, as described below.
+      </paragraph>
+      <section label="5.3.1">
+       Estimating {a mathematical formula}ph2
+       <paragraph>
+        In order to estimate {a mathematical formula}ph2 we learn a distribution of {a mathematical formula}h2 values for each type. In every call to update statistics in Algorithm 1, Algorithm 2, we compute the type of the current node, and update the distribution of {a mathematical formula}h2 values for nodes of that type. We consider two type systems here: Type System 1: (TS1)TS1 consists of one feature only, the value of {a mathematical formula}h1.Type System 2: (TS2)TS2 includes not just the value of {a mathematical formula}h1, but also the value of {a mathematical formula}h2 in the closest ancestor for which {a mathematical formula}h2 was computed, and the distance to that ancestor.
+       </paragraph>
+       <paragraph>
+        In other words, TS1 simply learns the conditional distribution table of {a mathematical formula}h2 as a function of {a mathematical formula}h1. However, TS1 ignores important information, by assuming that the distribution of {a mathematical formula}h2 given {a mathematical formula}h1 is constant in the entire search tree, which is unlikely to be true. TS2 attempts to remedy that by also looking at the “closest” source of information regarding {a mathematical formula}h2.
+       </paragraph>
+       <paragraph>
+        Both of the above type systems give us a distribution on the value of {a mathematical formula}h2(n), conditioned on the values of the features of the type system. This distribution is learned online, and is updated as the search progresses. In {a mathematical formula}RLIDA⁎, this distribution can be used with the threshold T to directly estimate {a mathematical formula}ph2, the probability that {a mathematical formula}h2 will be helpful for the current node. Since we want {a mathematical formula}g(n)+h2(n)&gt;T, we simply want to estimate the probability that {a mathematical formula}h2(n)&gt;T−g(n), which is given by:{a mathematical formula} where {a mathematical formula}Pr⁡(h2(n)=i) is obtained from our type system.
+       </paragraph>
+       <paragraph>
+        Note that the threshold T plays a very important role here — it tells us exactly how high the value of {a mathematical formula}h2(n) needs to be in order for {a mathematical formula}h2 to be helpful. However, for {a mathematical formula}RLA⁎, the threshold is not available. In order to apply this estimation method with {a mathematical formula}RLA⁎, we must use some other quantity instead of T. We use the highest f-value expanded so far during search, which, like the current threshold T, serves as a lower-bound on the cost of an optimal solution. If {a mathematical formula}f2(n) is less than the highest f-value expanded so far, then {a mathematical formula}h2 is definitely not helpful. On the other hand, it could be the case that {a mathematical formula}f2(n) is greater than the highest f-value expanded so far, and {a mathematical formula}h2 still turns out not to be helpful. This is a conservative estimate, which is again consistent with trying to guarantee we do not do worse than {a mathematical formula}LA⁎ or {a mathematical formula}LIDA⁎. Nevertheless, the empirical results show that is useful.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       Estimating {a mathematical formula}ph1
+       <paragraph>
+        We have come up with only one viable technique to estimate {a mathematical formula}ph1. This technique is also based on a type system, which we call Type System 3 (TS3). Recall that {a mathematical formula}ph1(n) is the probability that {a mathematical formula}h1 will be helpful for n's successors. Thus, TS3 keeps a distribution of the {a mathematical formula}h1 values of a node's successors, as a function of the node's {a mathematical formula}h1 value and distance to the last {a mathematical formula}h2 computation.
+       </paragraph>
+       <paragraph>
+        In order to use TS3, whenever we compute {a mathematical formula}h1 for some node n with parent p, we update the distribution of {a mathematical formula}h1 values of p's successors. We estimate the probability that {a mathematical formula}h1 is helpful on the successors of n, using an equation similar to Equation (8), except that the g value of the successors is {a mathematical formula}g(n)+1{sup:5}:{a mathematical formula} Where {a mathematical formula}Pr⁡(h1(succn)=i) is the probability that the successors of n will have an {a mathematical formula}h1 value of i, which is obtained from the statistics table we keep. We remark that we tried several other type systems for estimating {a mathematical formula}ph1 that yielded similar results.
+       </paragraph>
+       <paragraph>
+        Finally, note that TS3 is only used to estimate {a mathematical formula}ph1. In order to use {a mathematical formula}RLA⁎ or {a mathematical formula}RLIDA⁎, we must also estimate {a mathematical formula}ph2. Thus, we combine TS3 with either TS1 or TS2, and refer to these combinations as TS1+TS3 or TS2+TS3, respectively. For example, in TS1+TS3, TS1 is used to estimate {a mathematical formula}ph2 and TS3 is used to estimate {a mathematical formula}ph1.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Empirical evaluation
+     </section-title>
+     <paragraph>
+      We have described two new algorithms, {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎, which are based on rational metareasoning. These algorithms have a decision rule based on some parameters, most importantly {a mathematical formula}ph2 (the probability that {a mathematical formula}h2 is helpful) and {a mathematical formula}ph1 (the probability that {a mathematical formula}h1 is helpful). We have also described different ways of estimating these parameters in practice:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Domain-specific parameter estimation (Section 5.1)
+      </list-item>
+      <list-item label="•">
+       Estimation from empirical frequencies (Section 5.2)
+      </list-item>
+      <list-item label="•">
+       Estimation using type systems (Section 5.3). We presented three different type systems (TS1, TS2, and TS3), and four different ways to combine them: TS1, TS2, TS1+TS3, and TS2+TS3.
+      </list-item>
+     </list>
+     <paragraph>
+      We now examine these algorithms and their different parameter estimation methods empirically. As these two algorithms are very different from each other (for example, in their memory requirements), we divide our empirical evaluation into two parts: one comparing {a mathematical formula}RLA⁎ to {a mathematical formula}A⁎ and its variants, and the other comparing {a mathematical formula}RLIDA⁎ to {a mathematical formula}IDA⁎ and its variants. We evaluate all of our algorithms on a large set of pddl planning domains from all previous International Planning Competitions (IPC), as well as on some combinatorial puzzles.
+     </paragraph>
+     <section label="6.1">
+      Evaluation of {a mathematical formula}RLA⁎
+      <paragraph>
+       We begin with an empirical evaluation of {a mathematical formula}RLA⁎, which we compare to {a mathematical formula}A⁎-based search algorithms. Results are for a set of planning domains, as well as for two variants of the 15-puzzle.
+      </paragraph>
+      <section label="6.1.1">
+       <section-title>
+        Planning domains
+       </section-title>
+       <paragraph>
+        We implemented {a mathematical formula}LA⁎ and {a mathematical formula}RLA⁎ on top of the Fast Downward planning system [24], and used two state-of-the-art heuristics: the admissible landmarks heuristic {a mathematical formula}hLA (as {a mathematical formula}h1) [25], and the landmark cut heuristic {a mathematical formula}hLMCUT[26] (as {a mathematical formula}h2). On average, {a mathematical formula}hLMCUT computation is about 8 times more expensive than that of {a mathematical formula}hLA. We did not implement HBP in the planning domains as the heuristics we use are not consistent and in general the operators are not invertible. We also did not implement OB, as the cost of Open operations in planning is negligible compared to the cost of heuristic evaluations, especially with the heuristics we used.
+       </paragraph>
+       <paragraph>
+        We experimented with 57 planning domains: the optimal versions of all IPC planning domains in the Fast Downward repository, as well some of those from IPC 2014. We had to exclude the CityCar domain and most (17 out of 20) instances of the CaveDiving domain, because they included conditional effects, and the heuristics we used did not support conditional effects in the version of Fast Downward we used.{sup:6} We compare the performance of {a mathematical formula}A⁎ using each of the heuristics individually (where lm denotes {a mathematical formula}hLA and lmcut denotes {a mathematical formula}hLMCUT), as well as with their maximum (denoted by max). We also evaluate selective max (selmax) [13], {a mathematical formula}LA⁎ (denoted lazy), and {a mathematical formula}RLA⁎ using two different methods of estimating {a mathematical formula}ph2: empirical frequencies (emp), and the TS1 type system (T1).
+       </paragraph>
+       <paragraph>
+        We did not implement the TS2 and TS3 type systems, as they require the value of {a mathematical formula}h2 in the closest ancestor for which {a mathematical formula}h2 was computed, and the distance to it. There are two ways to obtain this information for each node: either follow the parent pointers until you find a node for which {a mathematical formula}h2 was computed (requiring time overhead), or store this extra information for each node (requiring memory overhead). Using the first approach would hinder our objective of speeding up the search, while using the second approach would increase the memory overhead. We also did not use domain-specific parameter settings, because we believe the other approaches are better equipped to handle the diversity of IPC domains we used. The search was limited to 3GB memory, and 30 minutes of CPU time on a single core of an Intel E5-2680 CPU with 64-bit Linux OS.
+       </paragraph>
+       <paragraph>
+        Table 3 summarizes the results of our empirical evaluation across all domains. Detailed tables including the results for each domain are relegated to the appendix, but references to these tables are provided here.
+       </paragraph>
+       <paragraph>
+        We will first examine the coverage — the number of problems solved by each search algorithm in 30 minutes (Table A.14 provides detailed, per-domain, coverage results). First, note that all of the intelligent combination methods (selective max, {a mathematical formula}LA⁎, and the 2 variants of {a mathematical formula}RLA⁎) solve over 870 problems, while each heuristic alone solves less than 830, and {a mathematical formula}A⁎MAX solves less than 860. This indicates that selectively choosing which heuristic to compute has demonstrable benefits. {a mathematical formula}LA⁎ solves one more problem than {a mathematical formula}RLA⁎ with empirical frequencies, which is due to the extra overhead required by {a mathematical formula}RLA⁎.
+       </paragraph>
+       <paragraph>
+        Furthermore, looking at search time, we see the benefits of using {a mathematical formula}RLA⁎. We compare time score (Table A.15 provides per-domain results), which is computed from the time it took an algorithm to solve a problem. If the search time is less than 1 second, then the score is the maximum possible score — 100. The score then decreases logarithmically, until it reaches 0 at 1800 seconds. Note that the time score is a standard measure computed by downward-lab[27], Fast Downward's experiment running tool. Thus, the time score rewards fast solutions, and does not distinguish between solving a problem in 1800 seconds and a timeout. As the results show, {a mathematical formula}RLA⁎ with empirical frequencies achieves a better (higher) time score than all other algorithms.
+       </paragraph>
+       <paragraph>
+        Fig. 2 shows the anytime performance of the different algorithms — the number of instances solved under different time limits. Note that both axes are in logscale. As the figure shows, the advantage of the {a mathematical formula}RLA⁎ variants is even more evident for shorter timeouts, and {a mathematical formula}LA⁎ only becomes the better algorithm for longer planning times (at 1773 seconds, to be exact).
+       </paragraph>
+       <paragraph>
+        To further understand the differences between the search algorithms, we compare the geometric mean of the number of expanded nodes in each search algorithm (Table A.16 shows per-domain results). As expected, {a mathematical formula}A⁎MAX has the fewest expanded nodes, and {a mathematical formula}LA⁎ is very close (the differences are due to tie-breaking). The two variants of {a mathematical formula}RLA⁎ have more expanded nodes, while selective max expands more nodes than all of the {a mathematical formula}RLA⁎ variants. This shows that these algorithms do behave differently.
+       </paragraph>
+       <paragraph>
+        We also compare peak memory usage for these algorithms (Table A.17 shows per-domain results). The results show that using only {a mathematical formula}hLMCUT is the most memory efficient. This is due to the extra memory overhead involved with using the {a mathematical formula}hLA heuristic, which is necessary to keep track of the achieved landmarks at each state. However, when looking at the different ways of combining both of these heuristics, the results are very similar to those in Table A.16 — {a mathematical formula}A⁎MAX uses the least memory, {a mathematical formula}LA⁎ is very close, the variants of {a mathematical formula}RLA⁎ use more memory, and selective max uses almost twice the memory as {a mathematical formula}A⁎MAX.
+       </paragraph>
+       <paragraph>
+        Fig. 3 shows the speedup vs. memory overhead for {a mathematical formula}RLA⁎ vs. {a mathematical formula}LA⁎. Each point in the plots represents an instance, solved by {a mathematical formula}RLA⁎ and {a mathematical formula}LA⁎. The x-coordinate of the instance is the relative speedup of {a mathematical formula}RLA⁎ vs. {a mathematical formula}LA⁎, and the y-coordinate is the ratio of expanded states of {a mathematical formula}RLA⁎ vs. {a mathematical formula}LA⁎, i.e., the extra memory. Points to the right of the dotted line at {a mathematical formula}x=1 are the instances where {a mathematical formula}RLA⁎ is faster. Fig. 3a compares {a mathematical formula}RLA⁎(emp) to {a mathematical formula}LA⁎, while Fig. 3b compares {a mathematical formula}RLA⁎(T1) to {a mathematical formula}LA⁎. As these plots show, {a mathematical formula}RLA⁎ is typically faster (more points to the right of the dotted line), but comes at the price of an increased number of expanded nodes (except for 4 instances in Fig. 3b, which are due to tie-breaking). The plots also show that {a mathematical formula}RLA⁎(T1) differs more from {a mathematical formula}LA⁎ than {a mathematical formula}RLA⁎(emp). Finally, we can see that an increase in speedup does not necessarily correlate to an increase in the number of expanded nodes.
+       </paragraph>
+       <paragraph>
+        To complete the picture, we look at the fraction of nodes for which {a mathematical formula}h2 ({a mathematical formula}hLMCUT in this case) was computed for {a mathematical formula}LA⁎ and {a mathematical formula}RLA⁎ (per-domain results are in Table A.18). We do not include selective max here, as selective max can choose not to compute {a mathematical formula}h1 for some nodes, while the algorithms we compare all do. Unsurprisingly, {a mathematical formula}LA⁎ has the highest numbers here. Finally, note the correlation between a high proportion of {a mathematical formula}h2 computations with decreasing number of expanded nodes.
+       </paragraph>
+       <paragraph>
+        Another important conclusion of this empirical evaluation is that {a mathematical formula}RLA⁎ with empirical frequency estimation beats using type system TS1. Recall that TS1 relies on a threshold in the decision rule, which is only available in {a mathematical formula}RLIDA⁎. In {a mathematical formula}RLA⁎ we use the highest f-value expanded so far instead of the threshold, while empirical frequency estimation does not rely on a threshold. One possible explanation for these results is that our estimate of the threshold is too conservative. In future work we will examine a better proxy for the threshold.
+       </paragraph>
+      </section>
+      <section label="6.1.2">
+       <section-title>
+        Weighted 15 puzzle
+       </section-title>
+       <paragraph>
+        We now provide an empirical evaluation on the weighted 15-puzzle [4], a variant of the 15-puzzle where the cost of moving each tile is equal to the number on the tile. For consistency of comparison, we used a subset of 36 problem instances out of the set of 100 instances by [8], keeping the problems which could be solved with 2Gb of RAM and 15 minutes timeout using the Weighted Manhattan Distance heuristic (WMD) for {a mathematical formula}h1. As the expensive and informative heuristic {a mathematical formula}h2 we use a heuristic based on lookaheads [20]. Given a bound d we applied a bounded depth-first search from a node n and backtracked when we reached leaf nodes l for which {a mathematical formula}g(l)+WMD(l)&gt;g(n)+WMD(n)+d. f-values from leaves were propagated to n.
+       </paragraph>
+       <paragraph>
+        Table 4 presents the results averaged on all instances solved. The runtimes are reported relative to the time of {a mathematical formula}A⁎ with WMD (with no lookahead), which generated 1,886,397 nodes (not reported in the table). The first 3 columns of Table 4 show the results for {a mathematical formula}A⁎ with the lookahead heuristic for different lookahead depths. The best time is achieved for lookahead 6 (0.588 compared to {a mathematical formula}A⁎ with WMD). The fact that the time does not continue to decrease with deeper lookaheads is clearly due to the fact that although the resulting heuristic improves as a function of lookahead depth (expanding and generating fewer nodes), the increasing overhead of computing the heuristic eventually outweighs the savings achieved by fewer expansions.
+       </paragraph>
+       <paragraph>
+        The next 4 columns show the results for {a mathematical formula}LA⁎ with WMD as {a mathematical formula}h1, lookahead as {a mathematical formula}h2, for different lookahead depths. The Good1 column presents the number of nodes where {a mathematical formula}LA⁎ saved the computation of {a mathematical formula}h2 while the {a mathematical formula}h2 column presents the number of nodes where {a mathematical formula}h2 was computed. Roughly 28% of nodes were Good1 and since {a mathematical formula}t2 was the most dominant time cost, most of this saving is reflected in the timing results. The best results are achieved for lookahead 8, with a runtime of 0.527 compared to {a mathematical formula}A⁎ with WMD.
+       </paragraph>
+       <paragraph>
+        The final columns show the results of {a mathematical formula}RLA⁎. We used domain-specific parameter estimation to set good values for {a mathematical formula}τ,ph2,t2 for each lookahead depth.
+       </paragraph>
+       <paragraph>
+        The parameters were tuned manually on a small subset of problem instances. The Good2 column counts the number of times that {a mathematical formula}RLA⁎ decided to bypass the {a mathematical formula}h2 computation. Observe that {a mathematical formula}RLA⁎ outperforms {a mathematical formula}LA⁎, which in turn outperforms {a mathematical formula}A⁎, for most lookahead depths. The lowest time with {a mathematical formula}RLA⁎ (0.371 of {a mathematical formula}A⁎ with WMD) was obtained for lookahead 10. That is achieved as the more expensive {a mathematical formula}h2 heuristic is computed less often, reducing its effective computational overhead, with some adverse effect in the number of expanded nodes. Although {a mathematical formula}LA⁎ expanded fewer nodes, {a mathematical formula}RLA⁎ performed much fewer {a mathematical formula}h2 computations, as can be seen in the table, resulting in decreased overall runtimes.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.2">
+      Evaluation of {a mathematical formula}RLIDA⁎
+      <paragraph>
+       We now turn to {a mathematical formula}RLIDA⁎, which we compare to {a mathematical formula}IDA⁎ based search algorithms. We provide results for a set of planning domains, as well as for sliding tile puzzles (including the 15-puzzle) and for a container relocation problem.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Planning domains
+       </section-title>
+       <paragraph>
+        As in the evaluation for {a mathematical formula}RLA⁎, we implemented {a mathematical formula}LIDA⁎ and {a mathematical formula}RLIDA⁎ on top of the Fast Downward planning system [24], and experimented with the admissible landmarks heuristic {a mathematical formula}hLA (used as {a mathematical formula}h1) [25], and the landmark cut heuristic {a mathematical formula}hLMCUT[26] (used as {a mathematical formula}h2). We also used the same set of domains.
+       </paragraph>
+       <paragraph>
+        We compare the performance of {a mathematical formula}IDA⁎ using each of the heuristics individually (where lm denotes {a mathematical formula}hLA and lmcut denoted {a mathematical formula}hLMCUT), as well as with their maximum (denoted by max). We also evaluate selective max (selmax) [13], {a mathematical formula}LIDA⁎ (denoted lazy), and {a mathematical formula}RLIDA⁎ using the same methods of estimating {a mathematical formula}ph2: empirical frequencies (emp), and the TS1 type system (T1). The search was limited to 3GB memory, and 30 minutes of CPU time on a single core of an Intel E5-2680 CPU with 64-bit Linux OS.
+       </paragraph>
+       <paragraph>
+        Table 5 provides a summary of the results, while per-domain results appear in the appendix, and are referenced here. We begin by looking at coverage — the number of planning problems solved by each algorithm in 30 minutes (per-domain results in Table A.19). These results show that {a mathematical formula}RLIDA⁎ using the TS1 type system solves more problems than any other search algorithm. Furthermore, {a mathematical formula}LIDA⁎ as well as {a mathematical formula}RLIDA⁎ using both parameter estimation methods solve more problems than any other approach. Note that selmax does extremely poorly here. As the decision rule that selmax uses was built for {a mathematical formula}A⁎, it is not surprising that it does not perform well in {a mathematical formula}IDA⁎.{sup:7} Finally, it is worth mentioning that {a mathematical formula}IDA⁎ and its variants are ill suited for the IPC benchmark domains, solving around 500 problems compared to over 800 solved by {a mathematical formula}A⁎ and its variants. This is due to the large number of paths which reach the same state, which make {a mathematical formula}IDA⁎ explore the same subtree repeatedly.
+       </paragraph>
+       <paragraph>
+        Next, we look at the time score for each search algorithm (per-domain results are available in Table A.20). Recall that the time score is computed from the time it took an algorithm to solve a problem. If the search time is less than 1 second, then the score is the maximum possible score — 100. The score then decreases logarithmically, until it reaches 0 at 1800 seconds. As the results show, {a mathematical formula}RLA⁎ with the TS1 type system achieves a better (higher) time score than all other algorithms.
+       </paragraph>
+       <paragraph>
+        Fig. 4 shows the anytime performance of the different algorithms — the number of instances solved under different time limits. Note that both axes are in logscale. As the figure shows, the advantage of the {a mathematical formula}RLIDA⁎ variants is even more evident for shorter timeouts.
+       </paragraph>
+       <paragraph>
+        Examining the geometric mean of the number of expanded nodes in each search algorithm (Table A.21 provides per-domain results), we can see that, {a mathematical formula}IDA⁎MAX has the fewest expanded nodes, and {a mathematical formula}LIDA⁎ is very close. The two variants of {a mathematical formula}RLIDA⁎ have more expanded nodes.
+       </paragraph>
+       <paragraph>
+        Finally, we look at the fraction of nodes for which {a mathematical formula}h2 ({a mathematical formula}hLMCUT in this case) was computed for {a mathematical formula}LIDA⁎ and {a mathematical formula}RLIDA⁎ (Table A.22 shows the per-domain results). Unsurprisingly, {a mathematical formula}LIDA⁎ has the highest numbers here.
+       </paragraph>
+       <paragraph>
+        Note that, unlike with {a mathematical formula}RLA⁎, the more informative parameter estimation method — using the TS1 type system — does better than the others. This is likely because with {a mathematical formula}IDA⁎ we do have the exact threshold needed, and can exploit this information better.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Sliding-tile puzzles
+       </section-title>
+       <paragraph>
+        We now examine the results on the 15-puzzle. We used as test instances the 98 out of Korf's 100 instances [8] that were solved in less than 20 minutes with standard {a mathematical formula}IDA⁎ using the Manhattan Distance (MD) heuristic. As using the lookahead heuristic saves time only on OPEN list insertions and deletions, using it in {a mathematical formula}IDA⁎ won't reduce runtime at all (as there is no OPEN list and nodes are expanded in a DFS manner). Thus the {a mathematical formula}h2 heuristic was the linear-conflict heuristic (LC) [28] which adds a value of 2 to MD for pairs of tiles that are in the same row (or the same column) as their respective goals but in a reversed order. One of these tiles will need to move away from the row (or column) to let the other pass.
+       </paragraph>
+       <paragraph>
+        Results for this problem set are shown in Table 6, listing average runtime in seconds, number of generated nodes, number of {a mathematical formula}h2 evaluations, number of helpful{a mathematical formula}h2 evaluations and the prediction accuracy (PA), which is the percentage of times calculating {a mathematical formula}h2 was indeed helpful. For {a mathematical formula}RLIDA⁎ we found the domain-specific parameter setting of {a mathematical formula}ph2=0.3 by manually testing different values for {a mathematical formula}ph2 on a set of problems and choosing the best one. Indeed, {a mathematical formula}RLIDA⁎ ({a mathematical formula}ph2=0.3) outperforms all other algorithms, an exception being the unrealizable “Clairvoyant” algorithm, which (using hindsight) evaluates {a mathematical formula}h2 only if it turned out to be helpful (the results for this “algorithm” are obtained by subtracting the time spent on non-helpful {a mathematical formula}h2 evaluations from the total time). The reason for presenting the clairvoyant algorithm is methodological: it is meant as a yardstick for measuring performance of {a mathematical formula}RLIDA⁎ variants; once performance approaches that of an algorithm with perfect foreknowledge, there is presumably little room for further improvement.
+       </paragraph>
+       <paragraph>
+        Using type systems in {a mathematical formula}RLIDA⁎ increases the fraction of helpful evaluations of {a mathematical formula}h2 (Table 6), but the overhead and the added number of generated nodes results in an overall worse runtime performance. The additional improvements are therefore contra-indicated for the sliding tile problem. The rule used by {a mathematical formula}RLIDA⁎ with {a mathematical formula}ph2=0.3 was tantamount to having opt-cond being true only for nodes with {a mathematical formula}b(n)=4, which is in essence a very simple type system based on the branching factor. A more complicated type system is not justified here.
+       </paragraph>
+       <paragraph>
+        We have also experimented with the weighted version of the 15-puzzle, where the cost of moving each tile is equal to the number on the tile [4]. Table 7 shows similar results for 82 of the previous problem instances of the weighted 15 puzzle that were solved in 20 minutes by {a mathematical formula}IDA⁎ (the weighted 15 puzzle is harder). In this domain, Rational Lazy {a mathematical formula}IDA⁎ also achieves a significant speedup of a factor of 2 and is much closer to Clairvoyant than to {a mathematical formula}LIDA⁎. Attempts to improve upon this by adding a more complicated type system and relaxing Assumption III did not achieve any improvement, as shown in [29]. A complication in this variant compared to the unweighted version is that there are too many types, as the number of possible values of {a mathematical formula}h1 and {a mathematical formula}h2 is very large, but even limiting this number by binning did not achieve good results.
+       </paragraph>
+       <paragraph>
+        Finally, we ran the same algorithms on sliding tile puzzles with a different fraction of {a mathematical formula}b(n)=4 nodes, by “flattening” the 15-puzzle into a 3 by 5 puzzle (a “14-puzzle”), and into a 3 by 6 puzzle (a “17-puzzle”). Results for these variants of the weighted 15-puzzle (Table 8, Table 9) show similar improvements for {a mathematical formula}RLIDA⁎.
+       </paragraph>
+      </section>
+      <section label="6.2.3">
+       <section-title>
+        Container relocation problem
+       </section-title>
+       <paragraph>
+        The container relocation problem is an abstraction of a planning problem encountered in retrieving stacked containers for loading onto a ship in sea-ports [30]. We are given S stacks of containers, where each stack consists of up to T containers. The initial state has {a mathematical formula}N≤S×T containers, arbitrarily numbered from 1 to N. The rules of stacking and of moving containers are the same as for blocks in the blocks-world domain. The goal is to “retrieve” all containers in order of number, from 1 to N, i.e., to place them on a freight truck that takes the container away to be loaded onto a ship. The objective function to minimize is the number of container moves until all containers are gone. The complication comes from the fact that we can only “retrieve” a container if it is at the top of one of the stacks. Optimally solving this problem is NP-hard [30]. We use the version of the problem where each container (“block” in blocks-world terminology) is uniquely numbered, that a stack s that currently has T containers is “full” and no additional containers can be placed on s until some container is moved away from the top of s.
+       </paragraph>
+       <paragraph>
+        We used the {a mathematical formula}LB1 and {a mathematical formula}LB3 heuristics [30] as {a mathematical formula}h1 and {a mathematical formula}h2, respectively. For the sake of completeness, we review these heuristics here: Every container numbered X which is above at least one container Y with a number smaller than X must be moved from its stack in order to allow Y to be retrieved. The number of such containers in a state can be computed quickly, and forms an admissible heuristic called {a mathematical formula}LB1. {a mathematical formula}LB3 adds one relocation for each container that must be relocated a second time as any place to which it is moved will block some other container. Computing {a mathematical formula}LB3 requires much more computation time (at least quadratic in the number of containers) than {a mathematical formula}LB1 (roughly linear time), and additionally its runtime depends heavily on the state.
+       </paragraph>
+       <paragraph>
+        In the experiments, we used the hardest tests out of those that were solved in less than 20 minutes with the {a mathematical formula}LB1 heuristic, from the CVS test suite described in [31], [32].{sup:8} Results are shown in Table 10. In this domain Rational Lazy {a mathematical formula}IDA⁎ shows some performance improvement over Lazy {a mathematical formula}IDA⁎, even when {a mathematical formula}ph2 was assumed to be constant with {a mathematical formula}ph2=0.3. Furthermore, as these results show, using type systems to estimate {a mathematical formula}ph2 and {a mathematical formula}ph1 yields even better results. Specifically, the most significant improvement in this domain results from estimating {a mathematical formula}ph1, which is only possible due to relaxing Assumption III.
+       </paragraph>
+       <paragraph>
+        We then conjectured that the timing differences should increase when we include harder problem instances, and added an additional 14 instances with a runtime greater than 20 minutes in {a mathematical formula}IDA⁎. The results (Table 11), including both the smaller and larger instances, were quite surprising, in some respects. First, {a mathematical formula}RLIDA⁎ was better than {a mathematical formula}LIDA⁎ as before, but now was actually substantially worse than just using {a mathematical formula}IDA⁎ with only {a mathematical formula}h1. The reason is evident from examining the line “{a mathematical formula}IDA⁎(LB3)”.{sup:9} Although {a mathematical formula}h2 drastically reduces generated node numbers, its runtime with these larger problem instances outweighed its usefulness to such an extent that {a mathematical formula}RLIDA⁎ can at best approach {a mathematical formula}IDA⁎ by evaluating {a mathematical formula}h2 very rarely.
+       </paragraph>
+       <paragraph>
+        But lifting Assumption III, that {a mathematical formula}h1 does not cause a cutoff in the children, achieves further speedup and the best performance of all. The difference between TS1 and TS2 does not appear significant: TS2 achieves better accuracy, but has higher overhead for metareasoning, so in the overall runtime performance TS2 is usually only slightly better than TS1, and sometimes slightly worse. An important thing to notice is that the PA also increases from 41% for {a mathematical formula}LIDA⁎ to 65% for TS2 and to 77% for TS2+TS3. That means that {a mathematical formula}RLIDA⁎ indeed makes “better” decisions than {a mathematical formula}LIDA⁎ and that relaxing Assumption III leads to even better decisions.
+       </paragraph>
+       <paragraph>
+        Note that in both container relocation results {a mathematical formula}RLIDA⁎ with the TS3 type system performs better than the clairvoyant scheme, which seems surprising. However, upon deeper examination, it turns out that even if {a mathematical formula}h2 cuts off a node n after {a mathematical formula}h1 fails to do so, it does not follow that one should evaluate {a mathematical formula}h2. For example, consider a node n with {a mathematical formula}b(n) children, where {a mathematical formula}h2 cuts off the search at node n, where {a mathematical formula}h1 would cut off the search at all of its {a mathematical formula}b(n) children. Then, if evaluating {a mathematical formula}h2(n) is more expensive than computing {a mathematical formula}h1 for all {a mathematical formula}b(n) children, then bypassing {a mathematical formula}h2 may be better than evaluating it. {a mathematical formula}RLIDA⁎ takes such cases into account, whereas the clairvoyant scheme does not. In other words, knowing the future alone is insufficient if you do not use the information to reduce search time (rather than only to evaluate {a mathematical formula}h2 iff it is helpful), and this version of the clairvoyant algorithm fails to provide the needed yardstick.
+       </paragraph>
+       <paragraph>
+        We thus implemented an enhanced clairvoyant algorithm, which computes {a mathematical formula}h2 if it is helpful and if it is faster than computing {a mathematical formula}h1 for all of n's successors and {a mathematical formula}h1 will prune the successors. In other words, the enhanced clairvoyant applies the rational decision rule given perfect knowledge of not just node n but also its successors, that is, a 1-step lookahead. This new clairvoyant algorithm is a better yardstick for measuring performance of {a mathematical formula}RLIDA⁎.
+       </paragraph>
+      </section>
+      <section label="6.2.4">
+       Extra iterations for {a mathematical formula}LIDA⁎
+       <paragraph>
+        In Section 2.3, we mentioned that {a mathematical formula}LIDA⁎ can lead to performing more iterations than {a mathematical formula}IDA⁎MAX, although we expect this to happen rarely and have little impact. We now examine this claim empirically. We compared the number of iterations and threshold values between a problem solved by {a mathematical formula}LIDA⁎ and a problem solved by {a mathematical formula}IDA⁎MAX. For the 15-puzzle and the container relocation problems, the number of iterations was equal, and the iteration thresholds were identical between the solvers (if a solver timed out we only compared threshold values up to that point). This is not surprising, as the threshold values in these problems are all relatively small integers, and therefore “gaps” resulting in potential additional iterations are unlikely to occur.
+       </paragraph>
+       <paragraph>
+        However, for the weighted 15-puzzle the number of iterations was different, as expected, due to the much larger number of possible threshold values. Table 12 shows the difference in the number of iterations between the two algorithms. As one can see in most of the instances there were no extra iterations, yet in a significant number of instances, there was at least one extra iteration.
+       </paragraph>
+       <paragraph>
+        It is important to know in which part of the search such extra iterations took place, as this tends to have a major impact on the runtime. We analyzed all the extra iterations – iterations with thresholds that did not exist in {a mathematical formula}IDA⁎ but did exist in {a mathematical formula}LIDA⁎. It is worth mentioning that other than these iterations, all other threshold values were identical, i.e., there were no threshold values that existed in {a mathematical formula}LIDA⁎ but did not exist in {a mathematical formula}IDA⁎. Table 13 shows the extra iteration locations. 31% of the extra iterations were in the first 1/16 of the search (if a search process has 96 iterations, the first 1/16 of the search is the first 6 iterations), almost all of the extra iterations were in the first 1/8 of the search (76%), and all the extra iterations were in the first 1/4 of the search.
+       </paragraph>
+       <paragraph>
+        As previously mentioned in Section 2.3, in order for an extra iteration #i with value v to happen, all nodes that have an {a mathematical formula}h2 value of v in iteration {a mathematical formula}#i−1 have to be pruned by their {a mathematical formula}h1 value. The extra iterations did not appear to result in significant additional runtime, likely because the number of nodes grows exponentially between iterations in the problem we considered here.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Future work
+     </section-title>
+     <paragraph>
+      A natural direction to extend the work done in this paper is to handle more than two heuristics, as done for the Lazy algorithms in Section 3.3. Non trivial issues arise, and multiple heuristics deserve a study beyond the scope of this paper.
+     </paragraph>
+     <paragraph>
+      Consider the simple setting, where we are actually committed to doing {a mathematical formula}LA⁎, but are free to choose the order of evaluating the heuristics. Suppose further that we know the exact runtime {a mathematical formula}ti of each heuristic, and the probability {a mathematical formula}phi that it will be helpful, given the current state of the search (including, possibly, results obtained by previous evaluations of heuristics). Suppose furthermore that the time to insert and remove a node from the open list is negligible. Under all these simplifying assumptions, the problem of optimally ordering the heuristics is equivalent to optimal test ordering, which is NP-hard [33], [34]. However, if we additionally restrict the distribution over helpfulness of heuristics to be independent, only then is there a simple optimal ordering, which is to compute the heuristics in non-increasing order of {a mathematical formula}phiti. This latter scheme is what we recommend when running {a mathematical formula}LA⁎ with multiple heuristics.
+     </paragraph>
+     <paragraph>
+      The above discussion on ordering heuristics is relevant in two ways. First, trying to define a meta-level optimized {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ in such settings will result in metareasoning problems harder than the optimal test ordering problem, which is already NP-hard. Thus, ad-hoc schemes such as the naive one just suggested may be the only practical way to proceed. Second, note how the optimal ordering argument may affect even the case of two heuristics. We assumed that {a mathematical formula}t1&lt;t2, and that {a mathematical formula}ph1&lt;ph2. Then we stated that it makes sense to start off with {a mathematical formula}h1. However, it is still possible that {a mathematical formula}ph2t2&gt;ph1t1, in which case it is better to start with {a mathematical formula}h2 if they are independent, as well as in cases where {a mathematical formula}h2 dominates {a mathematical formula}h1.
+     </paragraph>
+     <paragraph>
+      One naive way of generalizing {a mathematical formula}RLA⁎ and {a mathematical formula}RLIDA⁎ to multiple heuristics is to use the same rational decision rule on pairs of consecutive heuristics, where heuristics are ordered according to their runtime. Once one of the heuristics is bypassed, we automatically bypass all the more expensive heuristics. It is important to note that in such a simple setting our decision rule must now consider that bypassing a heuristic could lead to potential losses from bypassing an even more expensive (and, most likely, informative) heuristic down the line.
+     </paragraph>
+     <paragraph>
+      Furthermore, even if we were able to define a rational decision rule, other practical issues arise when trying to estimate parameters when there are n heuristics. For example, a naive generalization of our type systems based approach to n heuristics would require {a mathematical formula}n2 type systems. This could be alleviated by defining the type systems differently, for example by only using the value of {a mathematical formula}h1 as a feature to predict whether {a mathematical formula}h2…hn are helpful, or using only {a mathematical formula}hi−1 to predict whether {a mathematical formula}hi will be helpful. However, it is not clear what the best solution would be, and whether there is significant benefit in allowing type systems to use multiple heuristics as features.
+     </paragraph>
+     <paragraph>
+      Another question is whether our methods can be effective if only one nontrivial admissible heuristic h is available. It seems possible, by using 0 as the value of {a mathematical formula}h1, and h as {a mathematical formula}h2, running {a mathematical formula}RLA⁎ this way would make it behave like uniform cost search (AKA Dijkstra's algorithm) at some points in the search. This is actually in agreement with the known observation [35] that sometimes it is more efficient to start out with uniform cost search when using {a mathematical formula}A⁎, thereby saving time needed to compute h in many nodes that would be expanded anyway, especially at the beginning of the search.
+     </paragraph>
+     <paragraph>
+      Some questions regarding possible improvements to {a mathematical formula}RLA⁎ include incorporating information about the memory limit into the decision rule, obtaining a better proxy for the threshold, incorporating cost predictors (e.g., [36], [37]) into the decision rule, and looking at the problem of predicting whether {a mathematical formula}h2 will be helpful as online learning with delayed feedback (e.g., [38]). Other interesting problems include using rational metareasoning to control decisions in other variants of {a mathematical formula}A⁎, and adapting {a mathematical formula}RA⁎[14] and GHS [15] to choose a set of heuristics to combine using {a mathematical formula}RLA⁎ or {a mathematical formula}RLIDA⁎, instead of {a mathematical formula}A⁎MAX.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Detailed empirical results for planning domains
+     </section-title>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

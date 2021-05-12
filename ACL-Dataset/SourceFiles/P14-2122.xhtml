@@ -1,0 +1,806 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora</title>
+<!--Generated on Wed Jun 11 18:26:06 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xiaolin Wang    Masao Utiyama    Andrew Finch    Eiichiro Sumita 
+<br class="ltx_break"/>National Institute of Information and Communications Technology 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">xiaolin.wang,mutiyama,andrew.finch,eiichiro.sumita</span>}<span class="ltx_text ltx_font_typewriter">@nict.go.jp </span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Unsupervised word segmentation (UWS) can provide domain-adaptive segmentation for statistical machine translation (SMT) without annotated data, and bilingual UWS can even optimize segmentation for alignment. Monolingual UWS approaches of explicitly modeling the probabilities of words through Dirichlet process (DP) models or Pitman-Yor process (PYP) models have achieved high accuracy, but their bilingual counterparts have only been carried out on small corpora such as basic travel expression corpus (BTEC) due to the computational complexity. This paper proposes an efficient unified PYP-based monolingual and bilingual UWS method. Experimental results show that the proposed method is comparable to supervised segmenters on the in-domain NIST OpenMT corpus, and yields a 0.96 BLEU relative increase on NTCIR PatentMT corpus which is out-of-domain.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Many languages, especially Asian languages such as Chinese, Japanese and
+Myanmar, have no explicit word boundaries, thus word segmentation (WS),
+that is, segmenting the continuous texts of these languages into
+isolated words, is a prerequisite for many natural language processing
+applications including SMT.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Though supervised-learning approaches which involve training segmenters on manually segmented corpora are widely used <cite class="ltx_cite">[]</cite>, yet the criteria for manually annotating words are arbitrary, and the available annotated corpora are limited in both quantity and genre variety. For example, in machine translation, there
+are various parallel corpora such as BTEC for tourism-related
+dialogues <cite class="ltx_cite">[]</cite> and PatentMT in the patent
+domain <cite class="ltx_cite">[]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://ntcir.nii.ac.jp/PatentMT" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://ntcir.nii.ac.jp/PatentMT</span></a></span></span></span>,
+but researchers working on Chinese-related tasks often use the Stanford Chinese
+segmenter <cite class="ltx_cite">[]</cite> which is
+trained on a small amount of annotated news text.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In contrast, UWS, spurred by the findings that infants are able to use
+statistical cues to determine word
+boundaries <cite class="ltx_cite">[]</cite>, relies on statistical criteria
+instead of manually crafted standards. UWS learns from unsegmented raw
+text, which are available in large quantities, and thus it has the potential
+to provide more accurate and adaptive segmentation than supervised
+approaches with less development effort being required.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The approaches of explicitly modeling the probability of
+words<cite class="ltx_cite">[]</cite>
+significantly outperformed a heuristic approach <cite class="ltx_cite">[]</cite>
+on the monolingual Chinese SIGHAN-MSR corpus <cite class="ltx_cite">[]</cite>,
+which inspired the work of this paper.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">However, bilingual approaches that model word probabilities suffer from
+computational complexity. Xu et al. <cite class="ltx_cite">[]</cite> proposed
+a bilingual method by adding alignment into the generative model, but
+was only able to test it on small-scale BTEC data. Nguyen et al. <cite class="ltx_cite">[]</cite>
+used the local best alignment to increase the speed of the Gibbs sampling in training but the impact
+on accuracy was not explored.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This paper is dedicated to bilingual UWS on large-scale corpora to
+support SMT. To this end, we model bilingual UWS under a similar framework
+with monolingual UWS in order to improve efficiency,
+and replace Gibbs sampling with expectation maximization (EM) in training.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">We aware that variational bayes (VB) may be used for speeding up the
+training of DP-based or PYP-based bilingual UWS. However, VB requires
+formulating the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p7.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> expectations of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p7.m2" class="ltx_Math" alttext="(m-1)" display="inline"><mrow><mo>(</mo><mrow><mi>m</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></math>-dimensional marginal
+distributions, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p7.m3" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> is the number of hidden variables. For UWS, the
+hidden variables are indicators that identify substrings of sentences in
+the corpus as words. These variables are large in number and it is not
+clear how to apply VB to UWS, and as far the authors aware there is
+no previous work related to the application of VB to monolingual UWS.
+Therefore, we have not explored VB methods in this paper, but we do show
+that our method is superior to the existing methods.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">The contributions of this paper include,</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">state-of-the-art accuracy in monolingual UWS;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">the first bilingual UWS method practical for large corpora;</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">improvement of BLEU scores compared to supervised Stanford Chinese word segmenter.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methods</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">This section describes our unified monolingual and bilingual UWS scheme.
+Table <a href="#S2.T1" title="Table 1 ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> lists the main notation. The set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math> is
+chosen to represent an unsegmented foreign language sentence (a
+sequence of characters), because an unsegmented sentence can be seen as the
+set of all possible segmentations of the sentence denoted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="F\in\mathcal{F}" display="inline"><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></math>.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Notation</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Meaning</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">an unsegmented foreign sentence</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="\mathcal{F}_{k}^{k^{\prime}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">unsegmented substring of the un-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">derlying string of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">a segmented foreign sentence</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th foreign word</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m9" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">monolingual segmentation model</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m10" class="ltx_Math" alttext="P_{\small\mathcal{M}}(x)" display="inline"><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">ℳ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m11" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> being a word ac-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r">cording to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m12" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m13" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">a tokenized English sentence</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m14" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m15" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th English word</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m16" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math>,<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m17" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>)</th>
+<td class="ltx_td ltx_align_left ltx_border_r">a bilingual sentence pair</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m18" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">bilingual segmentation model</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m19" class="ltx_Math" alttext="P_{\small\mathcal{B}}(x|e_{i})" display="inline"><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">ℬ</mi></msub><mrow><mo>(</mo><mi>x</mi><mo>|</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_left ltx_border_r">probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m20" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> being a word ac-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">cording to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m21" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m22" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Main Notation. </div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Monolingual and bilingual WS can be formulated as follows, respectively,</p>
+<table id="S5.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m2" class="ltx_Math" alttext="\displaystyle\hat{F}(\mathcal{F})=\mathop{argmax}_{F\in\mathcal{F}}P(F|%&#10;\mathcal{F},\mathcal{M})," display="inline"><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>)</mo></mrow><mo>=</mo><msub><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></msub><mi>P</mi><mrow><mo>(</mo><mi>F</mi><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m2" class="ltx_Math" alttext="\displaystyle\hat{F}(\mathcal{F},E)=\mathop{argmax}_{F\in\mathcal{F}}\sum_{a}P%&#10;(F,a|\mathcal{F},E,\mathcal{B})," display="inline"><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>)</mo></mrow><mo>=</mo><msub><mrow><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></msub><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mi>P</mi><mrow><mo>(</mo><mi>F</mi><mo>,</mo><mi>a</mi><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is an alignment between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>. The English sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>
+is used in the generation of a segmented sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">UWS learns models by maximizing the likelihood of the unsegmented corpus, formulated as,</p>
+<table id="S5.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m2" class="ltx_Math" alttext="\displaystyle\hat{\mathcal{M}}=\mathop{\mathrm{argmax}}_{\mathcal{M}}\prod_{%&#10;\mathcal{F}\in\mathbb{F}}\Big(\sum_{F\in\mathcal{F}}P(F|\mathcal{M})\Big)," display="inline"><mrow><mover accent="true"><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo stretchy="false">^</mo></mover><mo>=</mo><msub><mo>argmax</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>∈</mo><mi>𝔽</mi></mrow></munder></mstyle><mrow><mo mathsize="1.5em" stretchy="false">(</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></munder></mstyle><mi>P</mi><mrow><mo>(</mo><mi>F</mi><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow><mo mathsize="1.5em" stretchy="false">)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr id="S2.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m2" class="ltx_Math" alttext="\displaystyle\hat{\mathcal{B}}=\mathop{\mathrm{argmax}}_{\mathcal{B}}\prod_{(%&#10;\mathcal{F},E)\in\mathbb{B}}\Big(\sum_{F\in\mathcal{F}}\sum_{a}P(F,a|\mathcal{%&#10;F},E,\mathcal{B})\Big)." display="inline"><mrow><mover accent="true"><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo stretchy="false">^</mo></mover><mo>=</mo><msub><mo>argmax</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>𝔹</mi></mrow></munder></mstyle><mrow><mo mathsize="1.5em" stretchy="false">(</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></munder></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mi>P</mi><mrow><mo>(</mo><mi>F</mi><mo>,</mo><mi>a</mi><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow><mo mathsize="1.5em" stretchy="false">)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Our method of learning <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math> proceeds in a similar manner to the
+EM algorithm. The following two operations are performed iteratively for
+each sentence (pair).</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Exclude the previous expected counts of the current sentence (pair) from the model, and then derive the current sentence in all possible ways, calculating the new expected counts for the words (see Section <a href="#S2.SS1" title="2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>), that is, we calculate the expected probabilities of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="\mathcal{F}_{k}^{k^{\prime}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></math> being words given the data excluding <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math>, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="\mathbf{E}_{\mathbb{F}/\{\mathcal{F}\}}(P(\mathcal{F}_{k}^{k^{\prime}}|%&#10;\mathcal{F}))=P(\mathcal{F}_{k}^{k^{\prime}}|\mathcal{F},\mathcal{M})" display="inline"><mrow><msub><mi>𝐄</mi><mrow><mi>𝔽</mi><mo>/</mo><mrow><mo>{</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>}</mo></mrow></mrow></msub><mrow><mo>(</mo><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>)</mo></mrow><mo>)</mo></mrow><mo>=</mo><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow></mrow></math> in a similar manner
+to the marginalization in the Gibbs sampling process which we are replacing;</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Update the respective model <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math> according to these expectations (see Section<a href="#S2.SS2" title="2.2 Maximization ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>).</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Expectation</h3>
+
+<div id="S2.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.1 </span>Monolingual Expectation</h4>
+
+<div id="S2.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m1" class="ltx_Math" alttext="P(\mathcal{F}_{k}^{k^{\prime}}|\mathcal{F},\mathcal{M})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow></mrow></math> is the marginal probability of all the possible <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m2" class="ltx_Math" alttext="F\in\mathcal{F}" display="inline"><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></math> that contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m3" class="ltx_Math" alttext="\mathcal{F}_{k}^{k^{\prime}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></math> as a word,
+which can be calculated efficiently through dynamic programming (the process is similar to the foreward-backward algorithm in training a hidden Markov model (HMM) <cite class="ltx_cite">[]</cite>):</p>
+<table id="S5.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle\quad P_{a}(k)=\sum_{u=1}^{U}P_{a}(k-u)P_{\mathcal{M}}(\mathcal{F%&#10;}_{k-u}^{k})" display="inline"><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><msub><mi>P</mi><mi>a</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>u</mi><mo>=</mo><mn>1</mn></mrow><mi>U</mi></munderover></mstyle><mrow><msub><mi>P</mi><mi>a</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mi>u</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>k</mi><mo>-</mo><mi>u</mi></mrow><mi>k</mi></msubsup><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle\quad P_{b}(k^{\prime})=\sum_{u=1}^{U}P_{b}(k^{\prime}+u)P_{%&#10;\mathcal{M}}(\mathcal{F}_{k^{\prime}}^{k^{\prime}+u})" display="inline"><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><msub><mi>P</mi><mi>b</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>u</mi><mo>=</mo><mn>1</mn></mrow><mi>U</mi></munderover></mstyle><mrow><msub><mi>P</mi><mi>b</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>k</mi><mo>′</mo></msup><mo>+</mo><mi>u</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><msup><mi>k</mi><mo>′</mo></msup><mrow><msup><mi>k</mi><mo>′</mo></msup><mo>+</mo><mi>u</mi></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m2" class="ltx_Math" alttext="\displaystyle P(\mathcal{F}_{k}^{k^{\prime}}|\mathcal{F},\mathcal{M})=P_{a}(k)%&#10;P_{\mathcal{M}}(\mathcal{F}_{k}^{k^{\prime}})P_{b}(k^{\prime})," display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>P</mi><mi>a</mi></msub><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>)</mo></mrow><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m4" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> is the predefined maximum length of foreign language words, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m5" class="ltx_Math" alttext="P_{a}(k)" display="inline"><mrow><msub><mi>P</mi><mi>a</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m6" class="ltx_Math" alttext="P_{b}(k^{\prime})" display="inline"><mrow><msub><mi>P</mi><mi>b</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></math> are the forward and backward probabilities, respectively.
+This section uses a unigram model for description convenience, but the method can be extended to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS1.p1.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram models.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.1.2 </span>Bilingual Expectation</h4>
+
+<div id="S2.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m1" class="ltx_Math" alttext="P(\mathcal{F}_{k}^{k^{\prime}}|\mathcal{F},E,\mathcal{B})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow></mrow></math> is the marginal probability of all the possible <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m2" class="ltx_Math" alttext="F\in\mathcal{F}" display="inline"><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></math> that contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m3" class="ltx_Math" alttext="\mathcal{F}_{k}^{k^{\prime}}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></math> as a word and are aligned with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m4" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>, formulated as:</p>
+<table id="S5.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m2" class="ltx_Math" alttext="\displaystyle P(\mathcal{F}_{k}^{k^{\prime}}|\mathcal{F},E,\mathcal{B})=\sum_{%&#10;\substack{F\in\mathcal{F}\\&#10;\mathcal{F}_{k}^{k^{\prime}}\in F}}\sum_{a}P(F,a|E,\mathcal{B})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></mtd></mtr><mtr><mtd><mrow><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>∈</mo><mi>F</mi></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mi>P</mi><mrow><mo>(</mo><mi>F</mi><mo>,</mo><mi>a</mi><mo>|</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m2" class="ltx_Math" alttext="\displaystyle\quad\approx\sum_{\substack{F\in\mathcal{F}\\&#10;F_{j_{k}}=\mathcal{F}_{k}^{k^{\prime}}}}\sum_{a}\prod_{j=1}^{J}P(a_{j}|j,I,J)P%&#10;_{\mathcal{B}}(f_{j}|e_{a_{j}})" display="inline"><mrow><mi mathvariant="normal"> </mi><mo>≈</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></mtd></mtr><mtr><mtd><mrow><msub><mi>F</mi><msub><mi>j</mi><mi>k</mi></msub></msub><mo>=</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>J</mi></munderover></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>a</mi><mi>j</mi></msub><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><msub><mi>a</mi><mi>j</mi></msub></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E6.m2" class="ltx_Math" alttext="\displaystyle\quad=\sum_{\substack{F\in\mathcal{F}\\&#10;f_{j_{k}}=\mathcal{F}_{k}^{k^{\prime}}}}\prod_{j=1}^{J}\sum_{a}P(a_{j}|j,I,J)P%&#10;_{\mathcal{B}}(f_{j}|e_{a_{j}})," display="inline"><mrow><mi mathvariant="normal"> </mi><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mi>F</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi></mrow></mtd></mtr><mtr><mtd><mrow><msub><mi>f</mi><msub><mi>j</mi><mi>k</mi></msub></msub><mo>=</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>J</mi></munderover></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>a</mi><mi>j</mi></msub><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><msub><mi>a</mi><mi>j</mi></msub></msub><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m5" class="ltx_Math" alttext="J" display="inline"><mi>J</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m6" class="ltx_Math" alttext="I" display="inline"><mi>I</mi></math> are the number of foreign and English words, respectively, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m7" class="ltx_Math" alttext="a_{j}" display="inline"><msub><mi>a</mi><mi>j</mi></msub></math> is the position of the English word that is aligned to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m8" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math> in the alignment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p1.m9" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>. For the alignment we employ an approximation to IBM model 2 <cite class="ltx_cite">[]</cite> described below.</p>
+</div>
+<div id="S2.SS1.SSS2.p2" class="ltx_para">
+<p class="ltx_p">We define the conditional probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m1" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math> given the corresponding English sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m2" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> and the model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p2.m3" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math> as:</p>
+<table id="S5.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E7.m1" class="ltx_Math" alttext="\displaystyle P_{\mathcal{B}}(f_{j}|E)" display="inline"><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><mi>E</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E7.m2" class="ltx_Math" alttext="\displaystyle=\sum_{a}P(a_{j}|j,I,J)P_{\mathcal{B}}(f_{j}|e_{a_{j}})" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>a</mi></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>a</mi><mi>j</mi></msub><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><msub><mi>a</mi><mi>j</mi></msub></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.SSS2.p3" class="ltx_para">
+<p class="ltx_p">Then, the previous dynamic programming method can be extended to the bilingual expectation</p>
+<table id="S5.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m2" class="ltx_Math" alttext="\displaystyle P_{a}(k|E)=\sum_{u=1}^{U}P_{a}(k-u|E)P_{\mathcal{B}}(\mathcal{F}%&#10;_{k-u}^{k}|E)" display="inline"><mrow><msub><mi>P</mi><mi>a</mi></msub><mrow><mo>(</mo><mi>k</mi><mo>|</mo><mi>E</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>u</mi><mo>=</mo><mn>1</mn></mrow><mi>U</mi></munderover></mstyle><msub><mi>P</mi><mi>a</mi></msub><mrow><mo>(</mo><mi>k</mi><mo>-</mo><mi>u</mi><mo>|</mo><mi>E</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>k</mi><mo>-</mo><mi>u</mi></mrow><mi>k</mi></msubsup><mo>|</mo><mi>E</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m2" class="ltx_Math" alttext="\displaystyle P_{b}(k^{\prime}|E)=\sum_{u=1}^{U}P_{b}(k^{\prime}+u|E)P_{%&#10;\mathcal{B}}(\mathcal{F}_{k^{\prime}}^{k^{\prime}+u}|E)" display="inline"><mrow><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>|</mo><mi>E</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>u</mi><mo>=</mo><mn>1</mn></mrow><mi>U</mi></munderover></mstyle><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>+</mo><mi>u</mi><mo>|</mo><mi>E</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><msup><mi>k</mi><mo>′</mo></msup><mrow><msup><mi>k</mi><mo>′</mo></msup><mo>+</mo><mi>u</mi></mrow></msubsup><mo>|</mo><mi>E</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E8.m2" class="ltx_Math" alttext="\displaystyle P(F_{k}^{k^{\prime}}|\mathcal{F},E,\mathcal{B})=P_{a}(k|E)P_{%&#10;\mathcal{B}}(\mathcal{F}_{k}^{k^{\prime}}|E)P_{b}(k^{\prime}|E)." display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msubsup><mi>F</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>P</mi><mi>a</mi></msub><mrow><mo>(</mo><mi>k</mi><mo>|</mo><mi>E</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">ℱ</mi><mi>k</mi><msup><mi>k</mi><mo>′</mo></msup></msubsup><mo>|</mo><mi>E</mi><mo>)</mo></mrow><msub><mi>P</mi><mi>b</mi></msub><mrow><mo>(</mo><msup><mi>k</mi><mo>′</mo></msup><mo>|</mo><mi>E</mi><mo>)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.SSS2.p4" class="ltx_para">
+<p class="ltx_p">Eq. <a href="#S2.E7" title="(7) ‣ 2.1.2 Bilingual Expectation ‣ 2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> can be rewritten (as in IBM model 2):</p>
+<table id="S5.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E9.m1" class="ltx_Math" alttext="\displaystyle P_{\mathcal{B}}(f_{j}|E)" display="inline"><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><mi>E</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E9.m2" class="ltx_Math" alttext="\displaystyle=\sum_{i=1}^{I}P^{*}(i|j,I,J)P_{\mathcal{B}}(f_{j}|e_{i})" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>I</mi></munderover></mstyle><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><mi>i</mi><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+<tr id="S2.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex7.m1" class="ltx_Math" alttext="\displaystyle P^{*}(i|j,I,J)" display="inline"><mrow><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><mi>i</mi><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex7.m2" class="ltx_Math" alttext="\displaystyle=\sum_{a:a_{j}=i}P(a_{j}|,j,I,J)" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>a</mi><mo>:</mo><mrow><msub><mi>a</mi><mi>j</mi></msub><mo>=</mo><mi>i</mi></mrow></mrow></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>a</mi><mi>j</mi></msub><mo>|</mo><mo>,</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">In order to maintain both speed and accuracy, the following window function is adopted</p>
+<table id="S5.EGx8" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex8.m2" class="ltx_Math" alttext="\displaystyle P^{*}(i|j,I,J)\approx P^{*}(i|k,I,K)=" display="inline"><mrow><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><mi>i</mi><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><mo>≈</mo><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><mi>i</mi><mo>|</mo><mi>k</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>K</mi><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E10.m2" class="ltx_Math" alttext="\displaystyle\,\left\{\begin{array}[]{ll}e^{-|i-kI/K|}/\sigma&amp;|i-kI/K|%&#10;\leqslant\delta_{b}/2\\&#10;\lambda_{\phi}&amp;e_{i}\textrm{ is empty word}\\&#10;0&amp;\textrm{otherwise}\\&#10;\end{array}\right." display="inline"><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><msup><mi>e</mi><mrow><mo>-</mo><mrow><mo fence="true">|</mo><mrow><mi>i</mi><mo>-</mo><mrow><mrow><mi>k</mi><mo>⁢</mo><mi>I</mi></mrow><mo>/</mo><mi>K</mi></mrow></mrow><mo fence="true">|</mo></mrow></mrow></msup><mo>/</mo><mi>σ</mi></mrow></mtd><mtd columnalign="left"><mrow><mrow><mo fence="true">|</mo><mrow><mi>i</mi><mo>-</mo><mrow><mrow><mi>k</mi><mo>⁢</mo><mi>I</mi></mrow><mo>/</mo><mi>K</mi></mrow></mrow><mo fence="true">|</mo></mrow><mo>⩽</mo><mrow><msub><mi>δ</mi><mi>b</mi></msub><mo>/</mo><mn>2</mn></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><msub><mi>λ</mi><mi>ϕ</mi></msub></mtd><mtd columnalign="left"><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>⁢</mo><mtext> is empty word</mtext></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> is the number of characters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m2" class="ltx_Math" alttext="\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math>, and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-th character
+is the start of the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m4" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math>, since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m6" class="ltx_Math" alttext="J" display="inline"><mi>J</mi></math> are unknown during
+the computation of dynamic programming. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m7" class="ltx_Math" alttext="\delta_{b}" display="inline"><msub><mi>δ</mi><mi>b</mi></msub></math> is the window size,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m8" class="ltx_Math" alttext="\lambda_{\phi}" display="inline"><msub><mi>λ</mi><mi>ϕ</mi></msub></math> is the prior probability of an empty English word, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS2.p4.m9" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> ensures all the items sum to 1.</p>
+</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Maximization</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Inspired by <cite class="ltx_cite">[]</cite>, we employ a Pitman-Yor process model to build
+the segmentation model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math>. The monolingual
+model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="\mathcal{M}" display="inline"><mi class="ltx_font_mathcaligraphic">ℳ</mi></math> is</p>
+<table id="S5.EGx9" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex9.m2" class="ltx_Math" alttext="\displaystyle P_{\mathcal{M}}(f_{j})=" display="inline"><mrow><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex10.m2" class="ltx_Math" alttext="\displaystyle\quad\quad\frac{\mathrm{max}\big(n\small(f_{j}\small)-d,0\big)+(%&#10;\theta+d\cdot n_{\mathcal{M}})G_{0}\small(f_{j}\small)}{\sum_{f_{j}^{\prime}}n%&#10;\small(f_{j}^{\prime}\small)+\theta}" display="inline"><mrow><mi mathvariant="normal"> </mi><mo separator="true"> </mo><mstyle displaystyle="true"><mfrac><mrow><mrow><mi>max</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi></msub><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">-</mo><mi mathsize="small" stretchy="false">d</mi></mrow><mo>,</mo><mn mathsize="small" stretchy="false">0</mn></mrow><mo>)</mo></mrow></mrow><mo mathsize="small" stretchy="false">+</mo><mrow><mrow><mo>(</mo><mrow><mi mathsize="small" stretchy="false">θ</mi><mo mathsize="small" stretchy="false">+</mo><mrow><mi mathsize="small" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⋅</mo><msub><mi mathsize="small" stretchy="false">n</mi><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">ℳ</mi></msub></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi mathsize="small" stretchy="false">G</mi><mn mathsize="small" stretchy="false">0</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi></msub><mo>)</mo></mrow></mrow></mrow><mrow><mrow><msub><mo largeop="true" mathsize="small" stretchy="false" symmetric="true">∑</mo><msubsup><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi><mo mathsize="small" stretchy="false">′</mo></msubsup></msub><mrow><mi mathsize="small" stretchy="false">n</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi><mo mathsize="small" stretchy="false">′</mo></msubsup><mo>)</mo></mrow></mrow></mrow><mo mathsize="small" stretchy="false">+</mo><mi mathsize="small" stretchy="false">θ</mi></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E11.m2" class="ltx_Math" alttext="\displaystyle\quad n_{\mathcal{M}}=\big|\{f_{j}\,|\,n(f_{j})\geqslant d\}\big|," display="inline"><mrow><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><msub><mi>n</mi><mi class="ltx_font_mathcaligraphic">ℳ</mi></msub></mrow><mo>=</mo><mrow><mo fence="true">|</mo><mrow><mo>{</mo><mrow><mpadded width="+1.7pt"><msub><mi>f</mi><mi>j</mi></msub></mpadded><mo separator="true">| </mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>⩾</mo><mi>d</mi></mrow></mrow><mo>}</mo></mrow><mo fence="true">|</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math> is a foreign language word, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="n(f_{j})" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is the observed counts of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m7" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> is named the strength parameter, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m8" class="ltx_Math" alttext="G_{0}(f_{j})" display="inline"><mrow><msub><mi>G</mi><mn>0</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> is named the base distribution of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m9" class="ltx_Math" alttext="f_{j}" display="inline"><msub><mi>f</mi><mi>j</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m10" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the discount.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The bilingual model is</p>
+<table id="S5.EGx10" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex11.m2" class="ltx_Math" alttext="\displaystyle P_{\mathcal{B}}(f_{j}|e_{i})=" display="inline"><mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex12.m2" class="ltx_Math" alttext="\displaystyle\quad\frac{\mathrm{max}\big(n\small(f_{j},e_{i}\small)-d,0\big)+(%&#10;\theta+d\cdot n_{e_{i}})G_{0}\small(f_{j}|e_{i}\small)}{\sum_{f_{j}^{\prime}}n%&#10;\small(f_{j}^{\prime},e_{i}\small)+\theta}" display="inline"><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><mstyle displaystyle="true"><mfrac><mrow><mi>max</mi><mrow><mo mathsize="1.1em" stretchy="false">(</mo><mi>n</mi><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">-</mo><mi mathsize="small" stretchy="false">d</mi><mo mathsize="small" stretchy="false">,</mo><mn mathsize="small" stretchy="false">0</mn><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">+</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="small" stretchy="false">θ</mi><mo mathsize="small" stretchy="false">+</mo><mi mathsize="small" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⋅</mo><msub><mi mathsize="small" stretchy="false">n</mi><msub><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">i</mi></msub></msub><mo mathsize="small" stretchy="false">)</mo></mrow><msub><mi mathsize="small" stretchy="false">G</mi><mn mathsize="small" stretchy="false">0</mn></msub><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi></msub><mo mathsize="small" stretchy="false">|</mo><msub><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mrow><mrow><msub><mo largeop="true" mathsize="small" stretchy="false" symmetric="true">∑</mo><msubsup><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi><mo mathsize="small" stretchy="false">′</mo></msubsup></msub><mrow><mi mathsize="small" stretchy="false">n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi mathsize="small" stretchy="false">f</mi><mi mathsize="small" stretchy="false">j</mi><mo mathsize="small" stretchy="false">′</mo></msubsup><mo>,</mo><msub><mi mathsize="small" stretchy="false">e</mi><mi mathsize="small" stretchy="false">i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo mathsize="small" stretchy="false">+</mo><mi mathsize="small" stretchy="false">θ</mi></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E12.m2" class="ltx_Math" alttext="\displaystyle\qquad\quad n_{e_{i}}=\big|\{x\,|\,n(x,e_{i})\geqslant d\}\big|." display="inline"><mrow><mrow><mrow><mi>  </mi><mo separator="true"> </mo><msub><mi>n</mi><msub><mi>e</mi><mi>i</mi></msub></msub></mrow><mo>=</mo><mrow><mo fence="true">|</mo><mrow><mo>{</mo><mrow><mpadded width="+1.7pt"><mi>x</mi></mpadded><mo separator="true">| </mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>⩾</mo><mi>d</mi></mrow></mrow><mo>}</mo></mrow><mo fence="true">|</mo></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">In Eqs. <a href="#S2.E11" title="(11) ‣ 2.2 Maximization ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">11</span></a> and <a href="#S2.E12" title="(12) ‣ 2.2 Maximization ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">12</span></a>,</p>
+<table id="S5.EGx11" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E13.m2" class="ltx_Math" alttext="\displaystyle\quad\,n(f_{j})=\sum_{\substack{\mathcal{F}\in\mathbb{F}}}P(f_{j}%&#10;|\mathcal{F},\mathcal{M})" display="inline"><mrow><mpadded width="+1.7pt"><mi mathvariant="normal"> </mi></mpadded><mi>n</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>∈</mo><mi>𝔽</mi></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+<tr id="S2.Ex13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex13.m2" class="ltx_Math" alttext="\displaystyle n(f_{j},e_{i})=" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>j</mi></msub><mo>,</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E14.m2" class="ltx_Math" alttext="\displaystyle\sum_{\substack{(\mathcal{F},E)\in\mathbb{B}}}P(f_{j}|\mathcal{F}%&#10;,E,\mathcal{B})\frac{P^{*}(i|j,I,J)P_{\mathcal{B}}(f_{j}|e_{i})}{\sum_{i^{%&#10;\prime}=1}^{I}P^{*}(i^{\prime}|j,I,J)P_{\mathcal{B}}(f_{j}|e_{i^{\prime}})}." display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>𝔹</mi></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mi>P</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">ℬ</mi><mo>)</mo></mrow><mstyle displaystyle="true"><mfrac><mrow><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><mi>i</mi><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mi>I</mi></msubsup><msup><mi>P</mi><mo>*</mo></msup><mrow><mo>(</mo><msup><mi>i</mi><mo>′</mo></msup><mo>|</mo><mi>j</mi><mo>,</mo><mi>I</mi><mo>,</mo><mi>J</mi><mo>)</mo></mrow><msub><mi>P</mi><mi class="ltx_font_mathcaligraphic">ℬ</mi></msub><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>e</mi><msup><mi>i</mi><mo>′</mo></msup></msub><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Complexity Analysis</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The computational complexity of our method is linear in the number of
+iterations, the size of the corpus, and the complexity of calculating
+the expectations on each sentence or sentence pair. In practical
+applications, the size of the corpus is fixed, and we found empirically that the number of
+iterations required by the proposed method for convergence is usually small (less than five
+iterations). We now look in more detail at the complexity of the expectation calculation in
+monolingual and bilingual models.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The monolingual expectation is calculated according to Eq. <a href="#S2.E5" title="(5) ‣ 2.1.1 Monolingual Expectation ‣ 2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>; the
+complexity is linear in the length of sentences and the square of the
+predefined maximum length of words. Thus its overall complexity is</p>
+<table id="S3.E15" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E15.m1" class="ltx_Math" alttext="O_{\textrm{monoling}}^{\textrm{unigram}}=O(N_{\textrm{i}}|\mathbb{F}|KU^{2})," display="block"><mrow><mrow><msubsup><mi>O</mi><mtext>monoling</mtext><mtext>unigram</mtext></msubsup><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>N</mi><mtext>i</mtext></msub><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>𝔽</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mi>K</mi><mo>⁢</mo><msup><mi>U</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(15)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="N_{\textrm{i}}" display="inline"><msub><mi>N</mi><mtext>i</mtext></msub></math> is the number of iterations, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> is the average number of characters per sentence, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> is the predefined maximum length of words.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">For the monolingual bigram model, the number of states in the HMM is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> times more than that of the monolingual unigram model, as the
+states at specific position of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> are not only related to the length of
+the current word, but also related to the length of the word before it.
+Thus its complexity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="U^{2}" display="inline"><msup><mi>U</mi><mn>2</mn></msup></math> times the unigram model’s complexity:</p>
+<table id="S3.E16" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E16.m1" class="ltx_Math" alttext="O_{\textrm{monoling}}^{\textrm{bigram}}=O(N_{\textrm{i}}|\mathbb{F}|KU^{4})." display="block"><mrow><mrow><msubsup><mi>O</mi><mtext>monoling</mtext><mtext>bigram</mtext></msubsup><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>N</mi><mtext>i</mtext></msub><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>𝔽</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mi>K</mi><mo>⁢</mo><msup><mi>U</mi><mn>4</mn></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(16)</span></td></tr>
+</table>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The bilingual expectation is given by Eq. <a href="#S2.E8" title="(8) ‣ 2.1.2 Bilingual Expectation ‣ 2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>, whose
+complexity is the same as the monolingual case. However, the
+complexity of calculating the transition probability, in
+Eqs. <a href="#S2.E9" title="(9) ‣ 2.1.2 Bilingual Expectation ‣ 2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> and <a href="#S2.E10" title="(10) ‣ 2.1.2 Bilingual Expectation ‣ 2.1 Expectation ‣ 2 Methods ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>, is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="O(\delta_{b})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>δ</mi><mi>b</mi></msub><mo>)</mo></mrow></mrow></math>.
+Thus its overall complexity is:</p>
+<table id="S3.E17" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E17.m1" class="ltx_Math" alttext="O_{\textrm{biling}}^{\textrm{unigram}}=O(N_{\textrm{i}}|\mathbb{F}|KU^{2}%&#10;\delta_{b})." display="block"><mrow><mrow><msubsup><mi>O</mi><mtext>biling</mtext><mtext>unigram</mtext></msubsup><mo>=</mo><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>N</mi><mtext>i</mtext></msub><mo>⁢</mo><mrow><mo fence="true">|</mo><mi>𝔽</mi><mo fence="true">|</mo></mrow><mo>⁢</mo><mi>K</mi><mo>⁢</mo><msup><mi>U</mi><mn>2</mn></msup><mo>⁢</mo><msub><mi>δ</mi><mi>b</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(17)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, the proposed method is first validated on
+monolingual segmentation tasks, and then evaluated in the context of SMT to study whether
+the translation quality, measured by BLEU, can be improved.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experimental Settings</h3>
+
+<div id="S4.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.1.1 </span>Experimental Corpora</h4>
+
+<div id="S4.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Two monolingual corpora and two bilingual corpora are
+used (Table <a href="#S4.T2" title="Table 2 ‣ 4.1.1 Experimental Corpora ‣ 4.1 Experimental Settings ‣ 4 Experiments ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). CHILDES <cite class="ltx_cite">[]</cite>
+is the most common test corpus for UWS methods.
+The SIGHAN-MSR corpus <cite class="ltx_cite">[]</cite>
+consists of manually segmented simplified Chinese news text, released in the SIGHAN bakeoff
+2005 shared tasks.</p>
+</div>
+<div id="S4.SS1.SSS1.p2" class="ltx_para">
+<p class="ltx_p">The first bilingual corpus: OpenMT06 was used in the NIST open machine translation 2006
+Evaluation <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.itl.nist.gov/iad/mig//tests/mt/2006/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.itl.nist.gov/iad/mig//tests/mt/2006/</span></a></span></span></span>.
+We removed the United Nations corpus and the traditional Chinese
+data sets from the constraint training resources. The data sets of NIST
+Eval 2002 to 2005 were used as the development for MERT
+tuning <cite class="ltx_cite">[]</cite>. This data set mainly consists of news
+text <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>It also contains a small number of web blogs</span></span></span>. PatentMT9
+is from the shared task of NTCIR-9 patent machine translation
+. The training set consists of 1 million parallel sentences extracted from
+patent documents, and the development set and test set both consist of
+2000 sentences.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Corpus</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Type</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small"># Sentences</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small"># Characters</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">CHILDES</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Mono.</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">9,790</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">95,809</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">SIGHAN-MSR</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Mono.</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">90,903</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">4,234,824</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">OpenMT06</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Biling.</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">437,004</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19,692,605</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_small">PatentMT9</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">Biling.</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">1,004,000</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">63,130,757</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Experimental Corpora</div>
+</div>
+</div>
+<div id="S4.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.1.2 </span>Performance Measurement and Baseline Methods</h4>
+
+<div id="S4.SS1.SSS2.p1" class="ltx_para">
+<p class="ltx_p">For the monolingual tasks, the F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS2.p1.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> score against the gold annotation
+is adopted to measure the accuracy. The results reported in related
+papers are listed for comparison.</p>
+</div>
+<div id="S4.SS1.SSS2.p2" class="ltx_para">
+<p class="ltx_p">For the bilingual tasks, the publicly available system of
+Moses <cite class="ltx_cite">[]</cite> with default settings is employed to perform
+machine translation, and BLEU <cite class="ltx_cite">[]</cite> was used to
+evaluate the quality. Character-based segmentation, LDC segmenter and
+Stanford Chinese segmenters were used as the baseline methods.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.1.3 </span>Parameter settings</h4>
+
+<div id="S4.SS1.SSS3.p1" class="ltx_para">
+<p class="ltx_p">The parameters are tuned on held-out data sets. The maximum length of foreign language words is set to 4. For the PYP model, the base distribution adopts the formula in <cite class="ltx_cite">[]</cite>, and the strength parameter is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS3.p1.m1" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math>, and the discount is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS3.p1.m2" class="ltx_Math" alttext="1.0\times 10^{-6}" display="inline"><mrow><mn>1.0</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>6</mn></mrow></msup></mrow></math>.</p>
+</div>
+<div id="S4.SS1.SSS3.p2" class="ltx_para">
+<p class="ltx_p">For bilingual segmentation,the
+size of the alignment window is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS3.p2.m1" class="ltx_Math" alttext="6" display="inline"><mn>6</mn></math>; the
+probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS3.p2.m2" class="ltx_Math" alttext="\lambda_{\phi}" display="inline"><msub><mi>λ</mi><mi>ϕ</mi></msub></math> of foreign language words being generated by an empty
+English word, was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS3.p2.m3" class="ltx_Math" alttext="0.3" display="inline"><mn>0.3</mn></math>.</p>
+</div>
+<div id="S4.SS1.SSS3.p3" class="ltx_para">
+<p class="ltx_p">The training was started from assuming that there was no previous segmentations on each sentence (pair), and the number of iterations was fixed. It was set to 3 for the monolingual unigram model, and 2 for the bilingual unigram model, which provided slightly higher BLEU scores on the development set than the other settings. The monolingual bigram model, however, was slower to converge, so we started it from the segmentations of the unigram model, and using 10 iterations.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Monolingual Segmentation Results</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">In monolingual segmentation, the proposed methods with both unigram and
+bigram models were tested. Experimental results show that they are
+competitive to state-of-the-art baselines in both accuracy and speed
+(Table <span class="ltx_ref ltx_ref_self">LABEL:tab:mono:acc</span>). Note that the comparison of speed is only
+for reference because the times are obtained
+from their respective papers.</p>
+</div>
+<div id="S4.T3" class="ltx_table"><span class="ltx_ERROR undefined ltx_centering">{threeparttable}</span>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Accuracy</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Time</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">CHILD.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">MSR</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">CHILD.</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">MSR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">NPY(bigram)</span><span class="ltx_ERROR undefined">\tnote</span><span class="ltx_text ltx_font_small">a</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.750</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.802</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">17 m</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">NPY(trigram)</span><span class="ltx_ERROR undefined">\tnote</span><span class="ltx_text ltx_font_small">a</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.757</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.807</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">HDP(bigram)</span><span class="ltx_ERROR undefined">\tnote</span><span class="ltx_text ltx_font_small">b</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.723</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">10 h</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Fitness</span><span class="ltx_ERROR undefined">\tnote</span><span class="ltx_text ltx_font_small">c</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.667</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Prop.(unigram)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.729</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.804</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">3 s</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">50 s</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Prop.(bigram)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">0.774</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.806</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">15 s</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">2530 s</span></td></tr>
+</tbody>
+</table><span class="ltx_ERROR undefined ltx_centering">{tablenotes}</span>
+<li class="ltx_item ltx_centering" style="list-style-type:none;"><span class="ltx_tag ltx_tag_table"><span class="ltx_text ltx_font_small">a</span></span> 
+<div id="S4.T3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">by (Mochihashi et al.,2009);
+</span>
+<li class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_p"><span class="ltx_text ltx_font_small">b</span></span> 
+<div id="S4.T3.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">by (Goldwater et al.,2009);
+</span>
+<li class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_p"><span class="ltx_text ltx_font_small">c</span></span> 
+<div id="S4.T3.p1.p1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">by (Zhao and Kit, 2008).</span></p>
+</div></li></p>
+</div></li></p>
+</div></li>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span> Results on Monolingual Corpora.</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Bilingual Segmentation Results</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T4" title="Table 4 ‣ 4.3 Bilingual Segmentation Results ‣ 4 Experiments ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> presents the BLEU scores for Moses using
+different segmentation methods. Each experiment was performed three
+times. The proposed method with monolingual bigram model performed poorly on the
+Chinese monolingual segmentation task; thus, it was not tested. We intended to test <cite class="ltx_cite">[]</cite>, but found it impracticable on large-scale corpora.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">The experimental results show that the proposed UWS methods are comparable to the Stanford segmenters on the OpenMT06 corpus, while achieves a 0.96 BLEU increase on the PatentMT9 corpus. This is because this corpus is out-of-domain for the supervised segmenters. The CTB and PKU Stanford segmenter were both trained on annotated news text, which was the major domain of OpenMT06.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">BLEU</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">OpenMT06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">PatentMT9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Character</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">29.50 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.36 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.09</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">LDC</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.33 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m3" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">30.22 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m4" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.14</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Stanford(CTB)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">31.68 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m5" class="ltx_Math" alttext="\pm" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">±</mo></math> 0.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">30.77 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.13</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Stanford(PKU)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31.54 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m7" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">30.86 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m8" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.04</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Prop.(mono.)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">31.47 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m9" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">31.62 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m10" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.06</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Prop.(biling.)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">31.61 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m11" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_small"> 0.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">31.73 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m12" class="ltx_Math" alttext="\pm" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">±</mo></math> 0.05</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span> Results on Bilingual Corpora.</div>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T5" title="Table 5 ‣ 4.3 Bilingual Segmentation Results ‣ 4 Experiments ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents the run times of the proposed methods on
+the bilingual corpora. The program is single threaded and implemented in C++. The time cost of the bilingual models is about
+5 times that of the monolingual model, which is consistent with
+the complexity analysis in Section <a href="#S3" title="3 Complexity Analysis ‣ Empirical Study of Unsupervised Chinese Word Segmentation Methods for SMT on Large-scale Corpora" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Time</span></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">OpenMT06</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">PatentMT9</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Prop.(mono.)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">28 m</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1 h 01 m</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Prop.(biling.)</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">2 h 25 m</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">5 h 02 m</span></td>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span> Time Costs on Bilingual Corpora.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">This paper is devoted to large-scale Chinese UWS for SMT. An efficient
+unified monolingual and bilingual UWS method is proposed and applied to
+large-scale bilingual corpora.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Complexity analysis shows that
+our method is capable of scaling to large-scale corpora.
+This was verified by experiments on a corpus of 1-million sentence pairs on
+which traditional MCMC approaches would struggle <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">The proposed method does not require any annotated data, but the SMT system
+with it can achieve comparable performance compared to
+state-of-the-art supervised word segmenters trained on precious annotated
+data. Moreover, the proposed method yields 0.96 BLEU improvement relative to
+supervised word segmenters on an out-of-domain corpus. Thus, we believe that the
+proposed method would benefit SMT related to low-resource languages where annotated
+data are scare, and would also find application in domains that differ too greatly
+from the domains on which supervised word segmenters were trained.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">In future research, we plan to improve the bilingual UWS through applying VB and integrating more accurate alignment models such as HMM models and IBM model 4.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:26:06 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

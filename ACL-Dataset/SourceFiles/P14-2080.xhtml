@@ -1,0 +1,898 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Translational and Knowledge-based Similaritiesfrom Relevance Rankings for Cross-Language Retrieval</title>
+<!--Generated on Wed Jun 11 17:57:53 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Translational and Knowledge-based Similarities
+<br class="ltx_break"/>from Relevance Rankings for Cross-Language Retrieval</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Shigehiko Schamoni 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Felix Hieber 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Artem Sokolov 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Stefan Riezler 
+<br class="ltx_break"/>Department of Computational Linguistics 
+<br class="ltx_break"/>Heidelberg University, 69120 Heidelberg, Germany 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">schamoni,hieber,sokolov,riezler</span>}<span class="ltx_text ltx_font_typewriter">@cl.uni-heidelberg.de</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present an approach to cross-language retrieval that combines dense
+knowledge-based features and sparse word translations. Both feature types
+are learned directly from relevance rankings of bilingual documents in a
+pairwise ranking framework. In large-scale experiments for
+patent prior art search and cross-lingual retrieval in Wikipedia,
+our approach yields considerable improvements over learning-to-rank
+with either only dense or only sparse features, and over very competitive
+baselines that combine state-of-the-art machine translation and retrieval.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Cross-Language Information Retrieval (CLIR) for the domain of web search successfully leverages state-of-the-art Statistical Machine Translation (SMT) to either produce a single most probable translation, or a weighted list of alternatives, that is used as search query to a standard search engine <cite class="ltx_cite">[<a href="#bib.bib9" title="Cross-language information retrieval" class="ltx_ref">5</a>, <a href="#bib.bib55" title="Combining statistical translation techniques for cross-language information retrieval" class="ltx_ref">25</a>]</cite>. This approach is advantageous if large amounts of in-domain sentence-parallel data are available to train SMT systems, but relevance rankings to train retrieval models are not.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The situation is different for CLIR in special domains such as patents or Wikipedia. Parallel data for translation have to be extracted with some effort from comparable or noisy parallel data <cite class="ltx_cite">[<a href="#bib.bib56" title="A Japanese-English patent parallel corpus" class="ltx_ref">26</a>, <a href="#bib.bib52" title="Extracting parallel sentences from comparable corpora using document level alignment" class="ltx_ref">22</a>]</cite>, however, relevance judgments are often straightforwardly encoded in special domains. For example, in patent prior art search, patents granted at any patent office worldwide are considered relevant if they constitute prior art with respect to the invention claimed in the query patent. Since patent applicants and lawyers are required to list relevant prior work explicitly in the patent application, patent citations can be used to automatically extract large amounts of relevance judgments across languages <cite class="ltx_cite">[<a href="#bib.bib25" title="A methodology for building a patent test collection for prior art search" class="ltx_ref">12</a>]</cite>. In Wikipedia search, one can imagine a Wikipedia author trying to investigate whether a Wikipedia article covering the subject the author intends to write about already exists in another language. Since authors are encouraged to avoid orphan articles and to cite their sources, Wikipedia has a rich linking structure between related articles, which can be exploited to create relevance links between articles across languages <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Besides a rich citation structure, patent documents and Wikipedia articles contain a number of further cues on relatedness that can be exploited as features in learning-to-rank approaches. For monolingual patent retrieval, <cite class="ltx_cite">Guo and Gomes (<a href="#bib.bib27" title="Ranking structured documents: a large margin based approach for patent prior art search" class="ltx_ref">2009</a>)</cite> and <cite class="ltx_cite">Oh<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib42" title="CV-PCR: a context-guided value-driven framework for patent citation recommendation" class="ltx_ref">2013</a>)</cite> advocate the use of dense features encoding domain knowledge on inventors, assignees, location and date, together with dense similarity scores based on bag-of-word representations of patents. <cite class="ltx_cite">Bai<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2010</a>)</cite> show that for the domain of Wikipedia, learning a sparse matrix of word associations between the query and document vocabularies from relevance rankings is useful in monolingual and cross-lingual retrieval. <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite> apply the idea of learning a sparse matrix of bilingual phrase associations from relevance rankings to cross-lingual retrieval in the patent domain. Both show improvements of learning-to-rank on relevance data over SMT-based approaches on their respective domains.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The main contribution of this paper is a thorough evaluation of dense and
+sparse features for learning-to-rank that have so far been used only
+monolingually or only on either patents or Wikipedia. We show that for both
+domains, patents and Wikipedia, jointly learning bilingual sparse word associations
+and dense knowledge-based similarities directly on relevance ranked data improves
+significantly over approaches that use either only sparse or only dense features, and over approaches that combine query translation by SMT with standard retrieval in the
+target language. Furthermore, we show that our approach can be seen as supervised model combination that allows to combine SMT-based and ranking-based
+approaches for further substantial
+improvements. We conjecture that the gains are due to orthogonal information
+contributed by domain-knowledge, ranking-based word associations, and
+translation-based information.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">CLIR addresses the problem of translating or projecting a query into the language of the document repository across which retrieval is performed. In a <em class="ltx_emph">direct translation</em> approach (DT), a state-of-the-art SMT system is used to produce a single best translation that is used as search query in the target language. For example, Google’s CLIR approach combines their state-of-the-art SMT system with their proprietary search engine <cite class="ltx_cite">[<a href="#bib.bib9" title="Cross-language information retrieval" class="ltx_ref">5</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Alternative approaches avoid to solve the hard problem of word reordering, and
+instead rely on token-to-token translations that are used to project the query
+terms into the target language with a probabilistic weighting of the standard
+term tf-idf scheme. <cite class="ltx_cite">Darwish and Oard (<a href="#bib.bib12" title="Probabilistic structured query methods" class="ltx_ref">2003</a>)</cite> termed this method the
+<em class="ltx_emph">probabilistic structured query</em> approach (PSQ).
+The advantage of this technique is an implicit query expansion effect due to the use of probability distributions over term translations <cite class="ltx_cite">[<a href="#bib.bib58" title="Evaluating a probabilistic model for cross-lingual information retrieval" class="ltx_ref">27</a>]</cite>.
+<cite class="ltx_cite">Ture<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib55" title="Combining statistical translation techniques for cross-language information retrieval" class="ltx_ref">2012</a>)</cite> brought SMT back into this paradigm
+by projecting terms from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best translations from synchronous context-free
+grammars.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Ranking approaches</em> have been presented by <cite class="ltx_cite">Guo and Gomes (<a href="#bib.bib27" title="Ranking structured documents: a large margin based approach for patent prior art search" class="ltx_ref">2009</a>)</cite> and <cite class="ltx_cite">Oh<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib42" title="CV-PCR: a context-guided value-driven framework for patent citation recommendation" class="ltx_ref">2013</a>)</cite>. Their method is a classical learning-to-rank setup where pairwise ranking is applied to a few hundred dense features. Methods to learn sparse word-based translation correspondences from supervised ranking signals have been presented by <cite class="ltx_cite">Bai<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2010</a>)</cite> and <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite>. Both approaches work in a cross-lingual setting, the former on Wikipedia data, the latter on patents.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Our approach extends the work of <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite> by presenting an alternative learning-to-rank approach that can be used for supervised model combination to integrate dense and sparse features, and by evaluating both approaches on cross-lingual retrieval for patents and Wikipedia. This relates our work to supervised model merging approaches <cite class="ltx_cite">[<a href="#bib.bib50" title="LambdaMerge: merging the results of query reformulations" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Translation and Ranking for CLIR</h2>
+
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">SMT-based Models.</h3>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We will refer to DT and PSQ as SMT-based models that translate a query, and
+then perform monolingual retrieval using BM25.
+Translation is agnostic of the retrieval task.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Linear Ranking for Word-Based Models.</h3>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{q}\in\{0,1\}^{Q}" display="inline"><mrow><mi>𝐪</mi><mo>∈</mo><msup><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow><mi>Q</mi></msup></mrow></math> be a query and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathbf{d}\in\{0,1\}^{D}" display="inline"><mrow><mi>𝐝</mi><mo>∈</mo><msup><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow><mi>D</mi></msup></mrow></math> be a document where the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m3" class="ltx_Math" alttext="j^{\textrm{th}}" display="inline"><msup><mi>j</mi><mtext>th</mtext></msup></math> vector dimension
+indicates the occurrence of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m4" class="ltx_Math" alttext="j^{\textrm{th}}" display="inline"><msup><mi>j</mi><mtext>th</mtext></msup></math> word for dictionaries of size
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m5" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m6" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>. A linear ranking model is defined as</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="f(\mathbf{q},\mathbf{d})=\mathbf{q}^{\top}W\mathbf{d}=\sum_{i=1}^{Q}\sum_{j=1}%&#10;^{D}q_{i}W_{ij}d_{j}," display="block"><mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msup><mi>𝐪</mi><mo>⊤</mo></msup><mo>⁢</mo><mi>W</mi><mo>⁢</mo><mi>𝐝</mi></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>Q</mi></munderover><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>D</mi></munderover><mrow><msub><mi>q</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>W</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><msub><mi>d</mi><mi>j</mi></msub></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m7" class="ltx_Math" alttext="W\in\mathrm{I}\!\mathrm{R}^{Q\times D}" display="inline"><mrow><mi>W</mi><mo>∈</mo><mrow><mpadded width="-1.7pt"><mi mathvariant="normal">I</mi></mpadded><mo>⁢</mo><msup><mi mathvariant="normal">R</mi><mrow><mi>Q</mi><mo>×</mo><mi>D</mi></mrow></msup></mrow></mrow></math> encodes a matrix of ranking-specific word associations <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2</a>]</cite> .
+We optimize this model by pairwise ranking, which assumes labeled data in the form
+of a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m8" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math> of tuples <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m9" class="ltx_Math" alttext="(\mathbf{q},\mathbf{d}^{+},\mathbf{d}^{-})" display="inline"><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m10" class="ltx_Math" alttext="\mathbf{d}^{+}" display="inline"><msup><mi>𝐝</mi><mo>+</mo></msup></math> is a relevant
+(or higher ranked) document and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m11" class="ltx_Math" alttext="\mathbf{d}^{-}" display="inline"><msup><mi>𝐝</mi><mo>-</mo></msup></math> an irrelevant (or lower ranked) document
+for query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m12" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math>. The goal is to find a weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m13" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>
+such that an inequality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m14" class="ltx_Math" alttext="f(\mathbf{q},\mathbf{d}^{+})&gt;f(\mathbf{q},\mathbf{d}^{-})" display="inline"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></math> is violated for the fewest number of tuples from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m15" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math>. We present two methods for optimizing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m16" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> in the following.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Pairwise Ranking using Boosting (BM).</h3>
+
+<div id="S3.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The Boosting-based Ranking baseline <cite class="ltx_cite">[<a href="#bib.bib17" title="An efficient boosting algorithm for combining preferences" class="ltx_ref">9</a>]</cite> optimizes an exponential loss:</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\mathcal{L}_{exp}=\sum_{(\mathbf{q},\mathbf{d}^{+},\mathbf{d}^{-})\in\mathcal{%&#10;R}}\hskip{-10.0pt}\mathcal{D}(\mathbf{q},\mathbf{d}^{+},\mathbf{d}^{-})e^{f(%&#10;\mathbf{q},\mathbf{d}^{-})-f(\mathbf{q},\mathbf{d}^{+})}," display="block"><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>=</mo><mrow><mpadded width="-10.0pt"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℛ</mi></mrow></munder></mpadded><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>e</mi><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></msup></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="\mathcal{D}(\mathbf{q},\mathbf{d}^{+},\mathbf{d}^{-})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></mrow></math> is a non-negative importance function on
+tuples. The algorithm of <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite> combines batch boosting with bagging over a number of independently drawn bootstrap data samples from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m2" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math>. In each step, the single word pair feature is
+selected that provides the largest decrease of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m3" class="ltx_Math" alttext="\mathcal{L}_{exp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math>.
+The found corresponding models are averaged.
+To reduce memory requirements we used random feature hashing
+with the size of the hash of 30 bits <cite class="ltx_cite">[<a href="#bib.bib51" title="Hash Kernels" class="ltx_ref">21</a>]</cite>.
+For regularization we rely on early stopping.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Pairwise Ranking with SGD (VW).</h3>
+
+<div id="S3.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">The second objective is an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m1" class="ltx_Math" alttext="\ell_{1}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>1</mn></msub></math>-regularized hinge loss:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\displaystyle\mathcal{L}_{hng}=\hskip{-16.0pt}\sum_{(\mathbf{q},\mathbf{d}^{+}%&#10;,\mathbf{d}^{-})\in\mathcal{R}}\hskip{-16.0pt}\big(f(\mathbf{q},\mathbf{d}^{+}%&#10;)-f(\mathbf{q},\mathbf{d}^{-})\big)_{+}+\lambda\lvert\lvert W\rvert\rvert_{1}," display="inline"><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mi>h</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow></msub><mo rspace="0pt">=</mo><mrow><mrow><mpadded width="-16.0pt"><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℛ</mi></mrow></munder></mstyle></mpadded><msub><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>+</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><msup><mi>𝐝</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow><mo>+</mo></msub></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><msub><mrow><mo fence="true">|</mo><mrow><mo fence="true">|</mo><mi>W</mi><mo fence="true">|</mo></mrow><mo fence="true">|</mo></mrow><mn>1</mn></msub></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m2" class="ltx_Math" alttext="(x)_{+}=\max(0,1-x)" display="inline"><mrow><msub><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow><mo>+</mo></msub><mo>=</mo><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>-</mo><mi>x</mi></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is the regularization parameter. This newly added model utilizes the standard implementation of online SGD from the Vowpal Wabbit (VW)
+toolkit <cite class="ltx_cite">[<a href="#bib.bib23" title="Predictive indexing for fast search" class="ltx_ref">11</a>]</cite> and was run on a data sample of 5M to 10M tuples from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m4" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math>.
+On each step, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m5" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> is updated with a scaled gradient vector
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m6" class="ltx_Math" alttext="\nabla_{W}\mathcal{L}_{hng}" display="inline"><mrow><msub><mo>∇</mo><mi>W</mi></msub><mo>⁡</mo><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mi>h</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow></msub></mrow></math> and clipped to account for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m7" class="ltx_Math" alttext="\ell_{1}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>1</mn></msub></math>-regularization.
+Memory usage was reduced using the same hashing technique as for boosting.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P5" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Domain Knowledge Models.</h3>
+
+<div id="S3.SS0.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">Domain knowledge features for patents were inspired by <cite class="ltx_cite">Guo and Gomes (<a href="#bib.bib27" title="Ranking structured documents: a large margin based approach for patent prior art search" class="ltx_ref">2009</a>)</cite>: a
+feature fires if two patents share similar aspects, e.g. a common inventor.
+As we do not have access to address data, we omit geolocation features
+and instead add features that evaluate similarity
+w.r.t. patent classes extracted from IPC codes. Documents within a patent
+section, i.e. the topmost hierarchy, are too diverse to provide useful
+information but more detailed classes and the count of matching classes do.</p>
+</div>
+<div id="S3.SS0.SSS0.P5.p2" class="ltx_para">
+<p class="ltx_p">For Wikipedia, we implemented features that compare the relative length of
+documents, number of links and images, the number of common links and
+common images, and Wikipedia categories: Given the
+categories associated with a foreign query, we use the language
+links on the Wikipedia category pages to generate a set of “translated”
+English categories <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p2.m1" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>. The English-side category graph is used to
+construct sets of super- and subcategories related to the candidate document’s
+categories. This expansion is done in both directions for two levels
+resulting in 5 category sets. The intersection between
+target set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p2.m2" class="ltx_Math" alttext="T_{n}" display="inline"><msub><mi>T</mi><mi>n</mi></msub></math> and the source category set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p2.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> reflects the category level similarity
+between query and document, which we calculate as a mutual
+containment score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p2.m4" class="ltx_Math" alttext="\text{s}_{n}=\frac{1}{2}(\lvert{}S\cap T_{n}\rvert/\lvert S\rvert+\lvert{}S%&#10;\cap T_{n}\rvert/\lvert T_{n}\rvert)" display="inline"><mrow><msub><mtext>s</mtext><mi>n</mi></msub><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mrow><mo fence="true">|</mo><mrow><mi>S</mi><mo>∩</mo><msub><mi>T</mi><mi>n</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>/</mo><mrow><mo fence="true">|</mo><mi>S</mi><mo fence="true">|</mo></mrow></mrow><mo>+</mo><mrow><mrow><mo fence="true">|</mo><mrow><mi>S</mi><mo>∩</mo><msub><mi>T</mi><mi>n</mi></msub></mrow><mo fence="true">|</mo></mrow><mo>/</mo><mrow><mo fence="true">|</mo><msub><mi>T</mi><mi>n</mi></msub><mo fence="true">|</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p2.m5" class="ltx_Math" alttext="n\in\{-2,-1,0,+1,+2\}" display="inline"><mrow><mi>n</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mrow><mo>-</mo><mn>2</mn></mrow><mo>,</mo><mrow><mo>-</mo><mn>1</mn></mrow><mo>,</mo><mn>0</mn><mo>,</mo><mrow><mo>+</mo><mn>1</mn></mrow><mo>,</mo><mrow><mo>+</mo><mn>2</mn></mrow></mrow><mo>}</mo></mrow></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib60" title="On the resemblance and containment of documents" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S3.SS0.SSS0.P5.p3" class="ltx_para">
+<p class="ltx_p">Optimization for these additional models including domain knowledge features was done by overloading the vector representation of queries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p3.m1" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math> and documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p3.m2" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> in the VW linear learner: Instead of sparse word-based features, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p3.m3" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p3.m4" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> are represented by real-valued vectors of dense domain-knowledge features. Optimization for the overloaded vectors is done as described above for VW.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model Combination</h2>
+
+<div id="S4.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Combination by Borda Counts.</h3>
+
+<div id="S4.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The baseline consensus-based voting Borda Count
+procedure endows each voter with a fixed amount of voting points which he is
+free to distribute among the scored documents <cite class="ltx_cite">[<a href="#bib.bib1" title="Models for metasearch" class="ltx_ref">1</a>, <a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">24</a>]</cite>. The aggregate score for two rankings <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="f_{1}(\mathbf{q},\mathbf{d})" display="inline"><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="f_{2}(\mathbf{q},\mathbf{d})" display="inline"><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="(\mathbf{q},\mathbf{d})" display="inline"><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></math> in the test set is then a simple linear interpolation:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="f_{agg}(\mathbf{q},\mathbf{d})=\kappa\frac{f_{1}(\mathbf{q},\mathbf{d})}{\sum_%&#10;{\mathbf{d}}f_{1}(\mathbf{q},\mathbf{d})}+(1-\kappa)\frac{f_{2}(\mathbf{q},%&#10;\mathbf{d})}{\sum_{\mathbf{d}}f_{2}(\mathbf{q},\mathbf{d})}." display="inline"><mrow><mrow><mrow><msub><mi>f</mi><mrow><mi>a</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>g</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>κ</mi><mo>⁢</mo><mfrac><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>𝐝</mi></msub><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>κ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>𝐝</mi></msub><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐪</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></mrow></mrow><mo>.</mo></mrow></math> Parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m5" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> was adjusted on the dev set.</p>
+</div>
+</div>
+<div id="S4.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Combination by Linear Learning.</h3>
+
+<div id="S4.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">In order to acquire the best combination of more than two models, we created vectors of model scores along with domain knowledge features and reused the VW pairwise ranking
+approach. This means that the vector representation of queries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math> and documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> in the VW linear learner is overloaded once more: In addition to dense domain-knowledge features, we incorporate arbitrary ranking models as dense features whose value is the score of the ranking model. Training data was sampled from the dev set and processed with VW.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Data</h2>
+
+<div id="S5.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Patent Prior Art Search (JP-EN).</h3>
+
+<div id="S5.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We use BoostCLIR<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="www.cl.uni-heidelberg.de/boostclir" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.cl.uni-heidelberg.de/boostclir</span></a></span></span></span>, a Japanese-English (JP-EN)
+corpus of patent abstracts from the MAREC and NTCIR data <cite class="ltx_cite">[<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">24</a>]</cite>.
+It contains automatically induced relevance judgments for patent abstracts
+<cite class="ltx_cite">[<a href="#bib.bib25" title="A methodology for building a patent test collection for prior art search" class="ltx_ref">12</a>]</cite>: EN patents are regarded as relevant with level (3) to
+a JP query patent, if they are in a family relationship (e.g., same invention),
+cited by the patent examiner (2), or cited by the applicant (1).
+Statistics on the ranking data are given in Table <a href="#S5.T1" title="Table 1 ‣ Wikipedia Article Retrieval (DE-EN). ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. On
+average, queries and documents contain about 5 sentences.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Wikipedia Article Retrieval (DE-EN).</h3>
+
+<div id="S5.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The intuition behind our Wikipedia retrieval setup is as follows: Consider the situation where the German (DE) Wikipedia article on geological sea
+<em class="ltx_emph">stacks</em> does not yet exist. A native speaker of German with profound
+knowledge in geology intends to write it, naming it
+“<em class="ltx_emph">Brandungspfeiler</em>”, while seeking to align its structure with
+the EN counterpart. The task of a CLIR engine is to return relevant EN
+Wikipedia articles that may describe the very same concept (<em class="ltx_emph">Stack
+(geology)</em>), or relevant instances of it (<em class="ltx_emph">Bako National Park</em>,
+<em class="ltx_emph">Lange Anna</em>). The information need may be paraphrased as a high-level
+definition of the topic. Since typically the first sentence of any
+Wikipedia article is such a well-formed definition, this allows us to extract a large set of one sentence queries from Wikipedia articles. For example:
+“<em class="ltx_emph">Brandungspfeiler sind vor einer Kliffküste aufragende Felsentürme
+und vergleichbare Formationen, die durch Brandungserosion gebildet
+werden.</em>”<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="de.wikipedia.org/wiki/Brandungspfeiler" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">de.wikipedia.org/wiki/Brandungspfeiler</span></a></span></span></span>
+Similar to <cite class="ltx_cite">Bai<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2010</a>)</cite> we induce relevance
+judgments by aligning DE queries with their EN counterparts (“mates”) via the
+graph of inter-language links available in articles and
+Wikidata<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="www.wikidata.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.wikidata.org/</span></a></span></span></span>. We assign relevance level (3) to
+the EN mate and level (2) to all other EN articles that link to the mate,
+<em class="ltx_emph">and</em> are linked by the mate. Instead of using all outgoing links from
+the mate, we only use articles with bidirectional
+links.</p>
+</div>
+<div id="S5.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">To create this data<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="www.cl.uni-heidelberg.de/wikiclir" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.cl.uni-heidelberg.de/wikiclir</span></a></span></span></span> we downloaded XML and SQL dumps of the DE and EN Wikipedia from,
+resp., 22<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P2.p2.m1" class="ltx_Math" alttext="{}^{\text{nd}}" display="inline"><msup><mi/><mtext>nd</mtext></msup></math> and 4<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P2.p2.m2" class="ltx_Math" alttext="{}^{\text{th}}" display="inline"><msup><mi/><mtext>th</mtext></msup></math> of November 2013. Wikipedia markup removal and link
+extraction was carried out using the Cloud9
+toolkit<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="lintool.github.io/Cloud9/index.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">lintool.github.io/Cloud9/index.html</span></a></span></span></span>. Sentence
+extraction was done with NLTK<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><a href="www.nltk.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.nltk.org/</span></a></span></span></span>. Since Wikipedia
+articles vary greatly in length, we restricted EN documents to the first 200
+words after extracting the link graph to reduce the number of features for
+BM and VW models. To avoid rendering the task too easy for literal keyword
+matching of queries about named entities, we removed title words from the German
+queries.
+Statistics are given in Table <a href="#S5.T1" title="Table 1 ‣ Wikipedia Article Retrieval (DE-EN). ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="\#\mathbf{q}" display="inline"><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>𝐪</mi></mrow></math></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="\#\mathbf{d}" display="inline"><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>𝐝</mi></mrow></math></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="\#\mathbf{d}^{+}/\mathbf{q}" display="inline"><mrow><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><msup><mi>𝐝</mi><mo>+</mo></msup></mrow><mo>/</mo><mi>𝐪</mi></mrow></math></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m4" class="ltx_Math" alttext="\#words/\mathbf{q}" display="inline"><mrow><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi></mrow><mo>/</mo><mi>𝐪</mi></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Patents (JP-EN)</span></th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">train</th>
+<td class="ltx_td ltx_align_right">107,061</td>
+<td class="ltx_td ltx_align_right">888,127</td>
+<td class="ltx_td ltx_align_right">13.28</td>
+<td class="ltx_td ltx_align_right">178.74</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">dev</th>
+<td class="ltx_td ltx_align_right">2,000</td>
+<td class="ltx_td ltx_align_right">100,000</td>
+<td class="ltx_td ltx_align_right">13.24</td>
+<td class="ltx_td ltx_align_right">181.70</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">test</th>
+<td class="ltx_td ltx_align_right">2,000</td>
+<td class="ltx_td ltx_align_right">100,000</td>
+<td class="ltx_td ltx_align_right">12.59</td>
+<td class="ltx_td ltx_align_right">182.39</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_bold">Wikipedia (DE-EN)</span></th>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">train</th>
+<td class="ltx_td ltx_align_right">225,294</td>
+<td class="ltx_td ltx_align_right">1,226,741</td>
+<td class="ltx_td ltx_align_right">13.04</td>
+<td class="ltx_td ltx_align_right">25.80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">dev</th>
+<td class="ltx_td ltx_align_right">10,000</td>
+<td class="ltx_td ltx_align_right">113,553</td>
+<td class="ltx_td ltx_align_right">12.97</td>
+<td class="ltx_td ltx_align_right">25.75</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">test</th>
+<td class="ltx_td ltx_align_right ltx_border_bb">10,000</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">115,131</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">13.22</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">25.73</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Ranking data statistics: number of queries and documents, avg. number of
+relevant documents per query, avg. number of words per query.</div>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Preprocessing Ranking Data.</h3>
+
+<div id="S5.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">In addition to lowercasing and punctuation removal,
+we applied Correlated Feature Hashing (CFH), that makes collisions more likely
+for words with close meaning <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning to rank with (a lot of) word features" class="ltx_ref">2</a>]</cite>.
+For patents, vocabularies contained 60k and 365k words for JP and EN.
+Filtering special symbols and stopwords reduced the JP vocabulary
+size to 50k (small enough not to resort to CFH). To reduce the EN vocabulary to
+a comparable size, we applied similar preprocessing <em class="ltx_emph">and</em> CFH with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>=30k
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>=5.
+Since for Wikipedia data, the DE and EN vocabularies were both large (6.7M and 6M),
+we used the same filtering and preprocessing
+as for the patent data before applying CFH with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m3" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>=40k and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P3.p1.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>=5 on both sides.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Parallel Data for SMT-based CLIR.</h3>
+
+<div id="S5.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">For both
+tasks, DT and PSQ require an SMT baseline system trained on parallel corpora
+that are disjunct from the ranking data. A JP-EN system was trained on data
+described and preprocessed by <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite>, consisting of 1.8M
+parallel sentences from the NTCIR-7 JP-EN PatentMT subtask <cite class="ltx_cite">[<a href="#bib.bib19" title="Overview of the patent translation task at the NTCIR-7 workshop" class="ltx_ref">10</a>]</cite>
+and 2k parallel sentences for parameter development from the NTCIR-8 test
+collection.
+For Wikipedia, we trained a DE-EN system on 4.1M parallel sentences from
+Europarl, Common Crawl, and News-Commentary. Parameter tuning was done on 3k
+parallel sentences from the WMT’11 test set.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Experiment Settings.</h3>
+
+<div id="S6.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">The SMT-based models use <span class="ltx_text ltx_font_typewriter">cdec</span>
+<cite class="ltx_cite">[<a href="#bib.bib13" title="Cdec: a decoder, alignment, and learning framework for finite-state and context-free translation models" class="ltx_ref">8</a>]</cite>. Word alignments were created with <span class="ltx_text ltx_font_typewriter">mgiza</span>
+(JP-EN) and <span class="ltx_text ltx_font_typewriter">fast_align</span> <cite class="ltx_cite">[<a href="#bib.bib14" title="A simple, fast, and effective reparameterization of IBM Model 2." class="ltx_ref">7</a>]</cite> (DE-EN). Language models
+were trained with the KenLM toolkit <cite class="ltx_cite">[<a href="#bib.bib29" title="KenLM: faster and smaller language model queries" class="ltx_ref">14</a>]</cite>. The JP-EN system uses a
+5-gram language model from the EN side of the training data. For the DE-EN
+system, a 4-gram model was built on the EN side of the training data and the EN
+Wikipedia documents. Weights for the standard feature set were optimized using
+<span class="ltx_text ltx_font_typewriter">cdec</span>’s MERT (JP-EN) and MIRA (DE-EN) implementations <cite class="ltx_cite">[<a href="#bib.bib40" title="Minimum error rate training in statistical machine translation" class="ltx_ref">18</a>, <a href="#bib.bib8" title="Online large-margin training of syntactic and structural translation features" class="ltx_ref">4</a>]</cite>.
+PSQ on patents reuses settings found by <cite class="ltx_cite">Sokolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings" class="ltx_ref">2013</a>)</cite>;
+settings for Wikipedia were adjusted on its dev set (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="0.4" display="inline"><mn>0.4</mn></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m5" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m6" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m7" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p1.m8" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math>).</p>
+</div>
+<div id="S6.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Patent retrieval for DT was done by sentence-wise translation and subsequent
+re-joining to form one query per patent, which was ranked against the documents
+using BM25. For PSQ, BM25 is computed on expected term and document frequencies.</p>
+</div>
+<div id="S6.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">For ranking-based retrieval, we compare several combinations of learners and
+features (Table <a href="#S6.T2" title="Table 2 ‣ Test Results. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). VW denotes a sparse model using word-based features trained with SGD.
+BM denotes a similar model trained using Boosting. DK denotes VW training of a
+model that represents queries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p3.m1" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math> and documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p3.m2" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> by dense domain-knowledge
+features instead of by sparse word-based vectors.
+In order to simulate pass-through behavior
+of out-of-vocabulary terms in SMT systems, additional features accounting for source and target term identity were added to DK and BM models.
+The parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p3.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> for VW was found on dev set. Statistical significance testing was performed using the paired randomization test <cite class="ltx_cite">[<a href="#bib.bib65" title="A comparison of statistical significance tests for information retrieval evaluation" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S6.SS0.SSS0.P1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Borda</span> denotes model combination by Borda Count voting where the linear
+interpolation parameter is adjusted for MAP on the respective development sets with grid search. This
+type of model combination only allows to combine pairs of rankings. We present
+a combination of SMT-based CLIR, DT+PSQ, a combination of dense and sparse
+features, DK+VW, and a combination of both combinations, (DT+PSQ)+(DK+VW).</p>
+</div>
+<div id="S6.SS0.SSS0.P1.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">LinLearn</span> denotes model combination by overloading the vector
+representation of queries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p5.m1" class="ltx_Math" alttext="\mathbf{q}" display="inline"><mi>𝐪</mi></math> and documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS0.SSS0.P1.p5.m2" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> in the VW linear learner by incorporating arbitrary ranking models as dense features. In difference to grid search for <span class="ltx_text ltx_font_italic">Borda</span>, optimal
+weights for the linear combination of incorporated ranking models can be
+learned automatically. We investigate the same
+combinations of ranking models as described for <span class="ltx_text ltx_font_italic">Borda</span> above. We do not
+report combination results including the sparse BM model since they were
+consistently lower than the ones with the sparse VW model.</p>
+</div>
+</div>
+<div id="S6.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Test Results.</h3>
+
+<div id="S6.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Experimental results on test data are given in
+Table <a href="#S6.T2" title="Table 2 ‣ Test Results. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Results are reported with respect to MAP
+<cite class="ltx_cite">[<a href="#bib.bib36" title="Introduction to information retrieval" class="ltx_ref">17</a>]</cite>, NDCG <cite class="ltx_cite">[<a href="#bib.bib30" title="Cumulated gain-based evaluation of IR techniques" class="ltx_ref">15</a>]</cite>, and PRES
+<cite class="ltx_cite">[<a href="#bib.bib64" title="PRES: a score metric for evaluating recall-oriented information retrieval applications" class="ltx_ref">16</a>]</cite>. Scores were computed on the top 1,000 retrieved documents.</p>
+</div>
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">combination</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">models</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">   MAP</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">   NDCG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">   PRES</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" rowspan="11">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:156.25px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:112.5pt;transform:translate(-51.75pt,51.75pt) rotate(-90deg) ;-webkit-transform:translate(-51.75pt,51.75pt) rotate(-90deg) ;-ms-transform:translate(-51.75pt,51.75pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Patents (JP-EN)</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t" rowspan="5">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:104.166666666667px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:75.0pt;transform:translate(-33pt,33pt) rotate(-90deg) ;-webkit-transform:translate(-33pt,33pt) rotate(-90deg) ;-ms-transform:translate(-33pt,33pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">standalone</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">DT</th>
+<td class="ltx_td ltx_align_right ltx_border_t">0.2554</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.5397</td>
+<td class="ltx_td ltx_align_right ltx_border_t">0.5680</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">PSQ</th>
+<td class="ltx_td ltx_align_right">0.2659</td>
+<td class="ltx_td ltx_align_right">0.5508</td>
+<td class="ltx_td ltx_align_right">0.5851</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK</th>
+<td class="ltx_td ltx_align_right">0.2203</td>
+<td class="ltx_td ltx_align_right">0.4874</td>
+<td class="ltx_td ltx_align_right">0.5171</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">VW</th>
+<td class="ltx_td ltx_align_right">0.2205</td>
+<td class="ltx_td ltx_align_right">0.4989</td>
+<td class="ltx_td ltx_align_right">0.4911</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">BM</th>
+<td class="ltx_td ltx_align_right">0.1669</td>
+<td class="ltx_td ltx_align_right">0.4167</td>
+<td class="ltx_td ltx_align_right">0.4665</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center" rowspan="3">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:52.0833333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:37.5pt;transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;-webkit-transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;-ms-transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Borda</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">DT+PSQ</th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m1" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.2747</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m2" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.5618</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m3" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.5988</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK+VW</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m4" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.3023</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m5" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.5980</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m6" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.6137</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">(DT+PSQ)+(DK+VW)</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m7" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.3465</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m8" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.6420</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m9" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.6858</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center" rowspan="3">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:83.3333333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:60.0pt;transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;-webkit-transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;-ms-transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">LinLearn</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">DT+PSQ</th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m10" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.2707</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m11" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.5578</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m12" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.5941</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK+VW</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m13" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.3283</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m14" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.6366</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m15" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.7104</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DT+PSQ+DK+VW</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m16" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math><span class="ltx_text ltx_font_bold">0.3739</span></td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m17" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math><span class="ltx_text ltx_font_bold">0.6755</span></td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m18" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math><span class="ltx_text ltx_font_bold">0.7599</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_tt" rowspan="11">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:177.083333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:127.5pt;transform:translate(-59.25pt,59.25pt) rotate(-90deg) ;-webkit-transform:translate(-59.25pt,59.25pt) rotate(-90deg) ;-ms-transform:translate(-59.25pt,59.25pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Wikipedia (DE-EN)</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" rowspan="5">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:104.166666666667px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:75.0pt;transform:translate(-33pt,33pt) rotate(-90deg) ;-webkit-transform:translate(-33pt,33pt) rotate(-90deg) ;-ms-transform:translate(-33pt,33pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">standalone</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt">DT</th>
+<td class="ltx_td ltx_align_right ltx_border_tt">0.3678</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">0.5691</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">0.7219</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">PSQ</th>
+<td class="ltx_td ltx_align_right">0.3642</td>
+<td class="ltx_td ltx_align_right">0.5671</td>
+<td class="ltx_td ltx_align_right">0.7165</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK</th>
+<td class="ltx_td ltx_align_right">0.2661</td>
+<td class="ltx_td ltx_align_right">0.4584</td>
+<td class="ltx_td ltx_align_right">0.6717</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">VW</th>
+<td class="ltx_td ltx_align_right">0.1249</td>
+<td class="ltx_td ltx_align_right">0.3389</td>
+<td class="ltx_td ltx_align_right">0.6466</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">BM</th>
+<td class="ltx_td ltx_align_right">0.1386</td>
+<td class="ltx_td ltx_align_right">0.3418</td>
+<td class="ltx_td ltx_align_right">0.6145</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center" rowspan="3">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:52.0833333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:37.5pt;transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;-webkit-transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;-ms-transform:translate(-14.25pt,14.25pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Borda</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">DT+PSQ</th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m19" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.3742</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m20" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.5777</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m21" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.7306</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK+VW</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m22" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.3238</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m23" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.5484</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m24" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.7736</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">(DT+PSQ)+(DK+VW)</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m25" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math><span class="ltx_text ltx_font_bold">0.4173</span></td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m26" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.6333</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m27" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.8031</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb" rowspan="3">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:83.3333333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:60.0pt;transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;-webkit-transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;-ms-transform:translate(-25.5pt,25.5pt) rotate(-90deg) ;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">LinLearn</span></p>
+</span></span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">DT+PSQ</th>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m28" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.3718</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m29" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.5751</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m30" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.7251</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">DK+VW</th>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m31" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.3436</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m32" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.5686</td>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m33" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math>0.7914</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb">DT+PSQ+DK+VW</th>
+<td class="ltx_td ltx_align_right ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m34" class="ltx_Math" alttext="{}^{\ast}" display="inline"><msup><mi/><mo>∗</mo></msup></math>0.4137</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m35" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math><span class="ltx_text ltx_font_bold">0.6435</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m36" class="ltx_Math" alttext="{}^{\dagger\ast}" display="inline"><msup><mi/><mrow><mo>†</mo><mo>⁣</mo><mo>∗</mo></mrow></msup></math><span class="ltx_text ltx_font_bold">0.8233</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Test results for <span class="ltx_text ltx_font_italic">standalone</span> CLIR models using direct
+translation (DT), probabilistic structured queries (PSQ), sparse model with
+CFH (VW), sparse boosting model (BM), dense domain
+knowledge features (DK), and model combinations using Borda Count voting
+(<span class="ltx_text ltx_font_italic">Borda</span>) or linear supervised model combination
+(<span class="ltx_text ltx_font_italic">LinLearn</span>). Significant differences (at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m41" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m42" class="ltx_Math" alttext="0.01" display="inline"><mn>0.01</mn></math>)
+between aggregated systems and all its components are indicated by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m43" class="ltx_Math" alttext="\ast" display="inline"><mo>∗</mo></math>,
+between LinLearn and the respective Borda system by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m44" class="ltx_Math" alttext="\dagger" display="inline"><mo>†</mo></math>.</div>
+</div>
+<div id="S6.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">As can be seen from inspecting the two blocks of results, one for patents, one for Wikipedia, we find the same system rankings on both datasets. In both cases, as <span class="ltx_text ltx_font_italic">standalone</span> systems, DT and PSQ are very close and far better than any ranking approach, irrespective of the objective function or the choice of sparse or dense features. Model combination of similar models, e.g., DT and PSQ, gives minimal gains, compared to combining orthogonal models, e.g. DK and VW. The best result is achieved by combining DT and PSQ with DK and VW. This is due to the already high scores of the combined models, but also to the combination of yet other types of orthogonal information. <span class="ltx_text ltx_font_italic">Borda</span> voting gives the best result under MAP which is probably due to the adjustment of the interpolation parameter for MAP on the development set. Under NDCG and PRES, <span class="ltx_text ltx_font_italic">LinLearn</span> achieves the best results, showing the advantage of automatically learning combination weights that leads to stable results across various metrics.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Special domains such as patents or Wikipedia offer the possibility to extract cross-lingual relevance data from citation and link graphs. These data can be used to directly optimizing cross-lingual ranking models. We showed on two different large-scale ranking scenarios that a supervised combination of orthogonal information sources such as domain-knowledge, translation knowledge, and ranking-specific word associations by far outperforms a pipeline of query translation and retrieval. We conjecture that if these types of information sources are available, a supervised ranking approach will yield superior results in other retrieval scenarios as well.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was supported in part by DFG grant RI-2221/1-1 “Cross-language Learning-to-Rank for Patent Retrieval”.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. A. Aslam and M. Montague</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Models for metasearch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New Orleans, LA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS0.SSS0.P1.p1" title="Combination by Borda Counts. ‣ 4 Model Combination ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Bai, J. Weston, D. Grangier, R. Collobert, K. Sadamasa, Y. Qi, O. Chapelle and K. Weinberger</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to rank with (a lot of) word features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Information Retrieval Journal</span> <span class="ltx_text ltx_bib_volume">13</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 291–314</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS0.SSS0.P2.p1" title="Linear Ranking for Word-Based Models. ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS0.SSS0.P2.p1" title="Wikipedia Article Retrieval (DE-EN). ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS0.SSS0.P3.p1" title="Preprocessing Ranking Data. ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Z. Broder</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the resemblance and containment of documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 21–29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P5.p2" title="Domain Knowledge Models. ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang, Y. Marton and P. Resnik</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of syntactic and structural translation features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Waikiki, Hawaii</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Chin, M. Heymans, A. Kojoukhov, J. Lin and H. Tan</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-language information retrieval</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">US 2008/0288474 A1Patent Application</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.patentlens.net/patentlens/patent/US_2008_0288474_A1/en/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Darwish and D. W. Oard</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic structured query methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Toronto, Canada</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Dyer, V. Chahuneau and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A simple, fast, and effective reparameterization of IBM Model 2.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, GA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Dyer, A. Lopez, J. Ganitkevitch, J. Weese, F. Ture, P. Blunsom, H. Setiawan, V. Eidelman and P. Resnik</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cdec: a decoder, alignment, and learning framework for finite-state and context-free translation models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Freund, R. Iyer, R. E. Schapire and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient boosting algorithm for combining preferences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">4</span>, <span class="ltx_text ltx_bib_pages"> pp. 933–969</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p1" title="Pairwise Ranking using Boosting (BM). ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fujii, M. Utiyama, M. Yamamoto and T. Utsuro</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the patent translation task at the NTCIR-7 workshop</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Tokyo, Japan</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P4.p1" title="Parallel Data for SMT-based CLIR. ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Goel, J. Langford and A. L. Strehl</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predictive indexing for fast search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Vancouver, Canada</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P4.p1" title="Pairwise Ranking with SGD (VW). ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Graf and L. Azzopardi</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A methodology for building a patent test collection for prior art search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Tokyo, Japan</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS0.SSS0.P1.p1" title="Patent Prior Art Search (JP-EN). ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Guo and C. Gomes</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ranking structured documents: a large margin based approach for patent prior art search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Pasadena, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS0.SSS0.P5.p1" title="Domain Knowledge Models. ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Heafield</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">KenLM: faster and smaller language model queries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, UK</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Järvelin and J. Kekäläinen</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cumulated gain-based evaluation of IR techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions in Information Systems</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 422–446</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P2.p1" title="Test Results. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Magdy and G. J.F. Jones</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PRES: a score metric for evaluating recall-oriented information retrieval applications</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York, NY</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P2.p1" title="Test Results. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. Manning, P. Raghavan and H. Schütze</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P2.p1" title="Test Results. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimum error rate training in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sapporo, Japan</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Oh, Z. Lei, W. Lee, P. Mitra and J. Yen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CV-PCR: a context-guided value-driven framework for patent citation recommendation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Francisco, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sheldon, M. Shokouhi, M. Szummer and N. Craswell</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LambdaMerge: merging the results of query reformulations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Hong Kong, China</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Shi, J. Petterson, G. Dror, J. Langford, A. J. Smola, A. L. Strehl and V. Vishwanathan</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hash Kernels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Irvine, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p1" title="Pairwise Ranking using Boosting (BM). ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib52" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Smith, C. Quirk and K. Toutanova</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting parallel sentences from comparable corpora using document level alignment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Los Angeles, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Smucker, J. Allan and B. Carterette</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comparison of statistical significance tests for information retrieval evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York, NY</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS0.SSS0.P1.p3" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Sokolov, L. Jehl, F. Hieber and S. Riezler</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Boosting cross-language retrieval by learning bilingual phrase associations from relevance rankings</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS0.SSS0.P3.p1" title="Pairwise Ranking using Boosting (BM). ‣ 3 Translation and Ranking for CLIR ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS0.SSS0.P1.p1" title="Combination by Borda Counts. ‣ 4 Model Combination ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS0.SSS0.P1.p1" title="Patent Prior Art Search (JP-EN). ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS0.SSS0.P4.p1" title="Parallel Data for SMT-based CLIR. ‣ 5 Data ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.SS0.SSS0.P1.p1" title="Experiment Settings. ‣ 6 Experiments ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Ture, J. Lin and D. W. Oard</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining statistical translation techniques for cross-language information retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Bombay, India</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Utiyama and H. Isahara</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Japanese-English patent parallel corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Copenhagen, Denmark</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Xu, R. Weischedel and C. Nguyen</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating a probabilistic model for cross-lingual information retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York, NY</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Learning Translational and Knowledge-based Similarities from Relevance Rankings for Cross-Language Retrieval" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:57:53 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

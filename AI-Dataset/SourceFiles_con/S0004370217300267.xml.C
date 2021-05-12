@@ -1,0 +1,860 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Lakatos-style collaborative mathematics through dialectical, structured and abstract argumentation.
+   </title>
+   <abstract>
+    The simulation of mathematical reasoning has been a driving force throughout the history of Artificial Intelligence research. However, despite significant successes in computer mathematics, computers are not widely used by mathematicians apart from their quotidian applications. An oft-cited reason for this is that current computational systems cannot do mathematics in the way that humans do. We draw on two areas in which Automated Theorem Proving (ATP) is currently unlike human mathematics: firstly in a focus on soundness, rather than understandability of proof, and secondly in social aspects. Employing techniques and tools from argumentation to build a framework for mixed-initiative collaboration, we develop three complementary arcs. In the first arc – our theoretical model – we interpret the informal logic of mathematical discovery proposed by Lakatos, a philosopher of mathematics, through the lens of dialogue game theory and in particular as a dialogue game ranging over structures of argumentation. In our second arc – our abstraction level – we develop structured arguments, from which we induce abstract argumentation systems and compute the argumentation semantics to provide labelings of the acceptability status of each argument. The output from this stage corresponds to a final, or currently accepted proof artefact, which can be viewed alongside its historical development. Finally, in the third arc – our computational model – we show how each of these formal steps is available in implementation. In an appendix, we demonstrate our approach with a formal, implemented example of real-world mathematical collaboration. We conclude the paper with reflections on our mixed-initiative collaborative approach.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The simulation of mathematical reasoning has been a driving force throughout the history of Artificial Intelligence research [58], [86], [87], [98]. However, despite significant successes in ‘computer mathematics’ (e.g., [18], [40], [42], [45]) computers are not widely used by mathematicians apart from their quotidian applications like running word processing tools, email programs, web servers and web browsers, and (sometimes) computer algebra systems. An oft-cited reason for this is that current computational systems cannot do mathematics in the way that humans do. Despite – or perhaps because of [69] – their profound rigour, machine proofs are often thought to be unclear, uninspiring and untrustworthy, as opposed to human proofs which can be deep, elegant and explanatory [21], [41]. In order to help to close the gap between machine-constructed proofs and human-constructed ones, we consider two key areas of focus: informal and social aspects of proof discovery in the human context. We propose that theories and tools from the field of argumentation can be used to more closely align AI systems with the human context in these two areas.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Informal aspects of proof
+      </section-title>
+      <paragraph>
+       Evaluation metrics in the Automated Theorem Proving (ATP) community are focused on soundness, and the power of a solver to prove a wide selection of difficult problems with specific resource limits.{sup:1} Qualities of the resulting proof other than soundness are rarely considered. This stands at variance with the practices of the mathematical community, in which a lack of soundness might be forgiven if a proof is interesting or complex. Indeed, an error in a proof may be neither “perturbing,” nor “surprising,” if it is judged to be the right sort of error (one which is not critical to the integrity of the proof) [20].{sup:2} Instead, one of the main criteria by which a proof is judged in the human context is its understandability. A well-written proof can provide insight as to why a theorem may be true, point to new conjectures, form connections between different fields and suggest solutions to open problems [44], [75], [106]. Fields medal winners Gowers and Thurston, respectively, have said: “We like our proofs to be explanations rather than just formal guarantees of truth” [41, p. 3], and “reliability does not primarily come from mathematicians formally checking formal arguments; it comes from mathematicians thinking carefully and critically about mathematical ideas” [94, p. 10]. Thurston emphasises that informal conversations between mathematicians can often convey ideas more quickly and comprehensibly than a written proof [94, p. 6]. Hersch has suggested that “The standard style of expounding mathematics purges it of the personal, the controversial, and the tentative, producing a work that acknowledges little trace of humanity, either in the creators or the consumers” [47, p. 131].
+      </paragraph>
+      <paragraph>
+       Lakatos offered similar insight into proof-understanding [55]. Building on Pólya's distinction between informal, unfinished mathematics-in-the-making and formal, finished mathematics [76], he argued that a theorem and proof which are presented in isolation from their development are “artificial and mystifyingly complicated”, analogous to a “conjuring act” [55, p. 142]. In order to make results understandable, they should be presented alongside the “struggle” and “adventure” involved in the story of their development. This insight is echoed by Ernest, who criticises the practice of presenting mathematics learners with the “sanitized outcomes of mathematical enquiry”: “The outcome may be elegant texts meant for public consumption, but they also generate learning obstacles through this reformulation and inversion” [67, p. 67]. Bundy points out that this practice also obscures understandability for research mathematicians: “Mathematicians find informal proofs more accessible and understandable [than formal proofs]” [21, p. 2].
+      </paragraph>
+      <paragraph>
+       In contrast to the concerns about understandability voiced by mathematicians and philosophers of mathematics, understandability is not traditionally a concern for ATP. A handful of exceptions have focused on making an existing machine proof more comprehensible [29], [30], [36]. MacKenzie [60] has argued that rather than treating machines as oracles and giving them responsibility for verifying the reliability of hardware and software, there needs to be a continued interaction between computer systems and our collective human judgement: “The finished product of formal verification – the ‘proof object’ – may thus be less important than the process of constructing it.” [61, p. 2348]. Constructing or verifying proofs which are written in a classical logical formalism does not align with mainstream mathematical activity, since proofs are typically neither constructed nor presented in this way.
+      </paragraph>
+      <paragraph>
+       Accordingly, our objective to model mathematical dialogues connects closely with the theory of defeasible argument (reasoning that is rationally compelling but not deductively valid [52]). The structure of classical proof theoretic systems and formal theorisations of defeasible argument differ [99]. Defeasible argument is used during the initial construction of a proof, and as the proof is refined or changed over time to reflect conceptual changes in the underlying theory, or to rectify deductive errors discovered after a proof is commonly accepted – all themes that Lakatos emphasised [55]. In practice, we may have an argument whose conclusion states that for all x, {a mathematical formula}P(x)→Q(x), whose logical validity rests on a particular interpretation of P and Q. In some cases P or Q might not be clearly defined, and can be subsequently defined in different ways by different people, sometimes rendering the initial argument invalid. Whether a consensus ever occurs and whether we could be sure that the consensus is final, is an open and somewhat contentious question.
+      </paragraph>
+      <paragraph>
+       We propose that applied argumentation theory can improve the understandability of output from, and input to, ATP systems, and other computer-mediated, -moderated, or -motivated proof systems. Doing this will help to close the cultural gap between human and machine mathematics. One way to go about this is to keep track of informal proof development, presenting the errors, conflicts and deadends involved, alongside a finished or current proof artefact.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       The social dimension of human mathematics
+      </section-title>
+      <paragraph>
+       The social dimension is typically neglected in automated reasoning, which usually consists of two approaches: autonomous theorem proving, in which a single system proves theorems, or interactive theorem proving, in which there is one system and one user interacting with it. New models of working in a social context have gained traction with the notion of the social machine – a new paradigm identified by Berners-Lee and Fischetti [13] for viewing a combination of people and computers as a single problem-solving entity. Martin and Pease propose a research agenda for mathematics social machines as “a combination of people, computers, and mathematical archives to create and apply mathematics, with the potential to change the way people do mathematics, and to transform the reach, pace, and impact of mathematics research” [63, p. 1]. Epstein outlines a more general vision of collaborative intelligence, in which she revisits original goals in AI in the light of its history, successes and failures, and recommends a new form of synergy between people and computers [34].
+      </paragraph>
+      <paragraph>
+       These ideas suggest a third approach in automated reasoning – mixed-initiative proving – in which proof discovery occurs via interaction of multiple participants (both human and computer) working together towards a common goal. In this paper we build on these ideas and use techniques from argumentation to provide a way of formalising social aspects of mixed-initiative proof via dialogue theory.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Argumentation
+      </section-title>
+      <paragraph>
+       The relationship between the study of mathematical practice and argumentation theory is not well-explored, though it has already borne some fruit. Toulmin applied his argumentation structure to Theaetetus's proof that there are exactly five platonic solids [95]; Aberdein showed that Toulmin's structure can represent more complex mathematical proofs [2], [3]; and Alcolea has shown that it can also be used to represent meta-level mathematical argument, such as axiom adoption or rejection [8].
+      </paragraph>
+      <paragraph>
+       Krabbe [53], Aberdein [4], [5], [6] and Aberdein and Pease [72] further demonstrate the application of various theories of argumentation to mathematical argument. Further related issues are explored in a recent edited volume [7].
+      </paragraph>
+      <paragraph>
+       Although theories of argument have been applied within the philosophy of mathematical practice (as above), mathematics presents a largely novel domain of discourse within the argumentation research community, perhaps due to the misconception that it represents a deductive style of reasoning, more appropriate to formal proof than argumentation.
+      </paragraph>
+     </section>
+     <section label="1.4">
+      <section-title>
+       Aims and contributions
+      </section-title>
+      <paragraph>
+       Our main aim is to develop a new approach in which tools and theories from the argumentation community can be deployed to build a bridge between interactive proof tools and human mathematicians.
+      </paragraph>
+      <paragraph>
+       Our main contribution is to identify two areas in which ATP is currently unlike human mathematics – informal and social aspects – and to employ techniques and tools from argumentation to build a framework which opens the door to mixed-initiative collaborative reasoning in mathematics. Specifically, we:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Propose and demonstrate a way to make proofs more understandable by drawing on philosophical, sociological and educational literature on mathematics which highlights the importance of presenting the development of a proof attempt alongside a final, or currently accepted, proof artefact. We develop a framework in which this aspect is possible. A grounded extension of a dialogue can be produced, representing a currently accepted, collaboratively constructed, proof or theory. Since the record of the dialogue can be presented alongside this proof, the framework delivers the history of a proof attempt as well as the proof artefact.
+       </list-item>
+       <list-item label="2.">
+        Propose and demonstrate a way to make collaboration more social by opening the door to a mixed initiative collaborative mathematics. Social aspects in human mathematics have been shown to be integral to the human context, therefore technologies which are able to support mathematicians in the collective construction of mathematical knowledge, in a variety of ways are essential. In addition to being able to show the current state of discussion (as discussed above), this includes highlighting conflicting commitments or unresolved moves, finding similarities and conflicts across different discussions going on in parallel among otherwise independent groups of arguers, storing past discussions and making them searchable, and so on.
+       </list-item>
+       <list-item label="3.">
+        Develop three complementary arcs:
+       </list-item>
+       <list-item label="4.">
+        Demonstrate our approach and the interaction of our three arcs via an implemented example of human mathematical collaboration. This shows how off-the-shelf technologies can produce a pipeline system, running from natural language dialogue about the construction of a mathematical proof, to philosophical theory, to the formal expression of natural language reasoning in dialogue games, and from there to abstract argumentation and argumentation semantics, and finally, coming full circle, to show that implementations of these systems can then provide value back to the mathematical community from which the philosophical theory was derived.
+       </list-item>
+       <list-item label="5.">
+        Demonstrate the applicability of argumentation techniques to mathematical reasoning.
+       </list-item>
+      </list>
+      <paragraph>
+       We further show how the model can be retrospectively applied to examples of extant mathematical discussion in Appendix A. In so doing, it is not only possible to demonstrate the depth of Lakatos's original insight, but also to show that the formal characterisation here remains both honest to the original and of practical utility to mathematicians. By making this connection back to the community of mathematical practice, we show that the door is opened to mixed-initiative, collaborative mathematics [89], [35].
+      </paragraph>
+      <paragraph>
+       Prior work on argumentation in artificial intelligence is surveyed in [12] and [11]. Several ‘pipeline’ systems for argument analysis have previously been developed [107], [88], “breaking down argumentation tools into small components, deploying these components as web services, then constructing UNIX-style pipelines to link them together as one large system” [88, p. 1]. The specific ‘pipeline’ detailed in the later sections of this paper is outlined in Fig. 1c. We emphasise logic rather than linguistics, and thus do not solve the problem of the “knowledge acquisition bottleneck” highlighted by Wyner, van Engers, and Hunter [107, p. 21]. Section 8 points to some related recent work on the linguistics of mathematics that could be useful in widening this bottleneck. Indeed, there are at least two narrow places in the bottleneck – and the corresponding research challenges are roughly analogous to the steps “first from the established facts to intermediate predicates, and then from these intermediate predicates to legal consequences” in legal case-based reasoning [81, p. 17]. The present work is unique in that it is formal, implemented, and descriptive of real-world mathematical collaboration.
+      </paragraph>
+      <paragraph>
+       The remainder of the paper is structured as follows: in Sections 2–3 we outline our theoretical model, in which we introduce theoretical foundations and develop a formal dialogue system from Lakatos's model of mathematical discourse. In Sections 4–5 we present our abstract level, showing how we progress from a formal dialogue system to Argument Interchange Format structures and then to abstract argumentation frameworks. In Sections 6–7 we present our computational model and example of collective proof as argumentation. Finally, we present our conclusions in Section 8. A diagrammatic representation of the paper can be found in Fig. 1.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Theoretical foundations
+     </section-title>
+     <paragraph>
+      In this section we lay down the theoretical foundations necessary for understanding the rest of the paper. Section 2.1 contains a high-level description of Lakatos's patterns of dialogue: this, alongside material in Section 2.3 on specifying dialectical interactions as a set of rules governing the interaction, will be needed to understand our development of a formal dialogue game in Section 3. Section 2.2 shows the application of Lakatos's patterns to real-world natural language discourse in mathematics, demonstrating their applicability to at least some human mathematical reasoning (more detailed applicability is demonstrated in Appendix A). Section 2.4 contains background on the Argument Interchange Format, and we review structured argumentation in Section 2.5: we draw on both of these in Section 4. Finally, in Section 2.6 we describe abstract argumentation, which we use in Section 5. All sections will be relevant for understanding our implementation work and the execution of the implemented system described in Sections 6 and 7.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Lakatos's patterns of dialogue
+      </section-title>
+      <paragraph>
+       Lakatos has contributed to the field of AI both methodologically in his philosophy of science [54] and via his ideas on the growth of informal mathematics [55]. Against the traditional view that mathematical progress comes down lucky guess work or simple intuition, Lakatos proposed that there are logical mechanisms – albeit only informally specified in his work – which underly the mathematical thought process. He challenged Popper's view [77] that philosophers can form theories about how to evaluate conjectures, but not theories about how to generate them. He did this in two ways:
+      </paragraph>
+      <paragraph>
+       arguing that (i) there is a logic of discovery, i.e., the process of generating conjectures and proof ideas is subject to rational laws; and, (ii) a sharp distinction between discovery and justification is misleading as each affects the other.
+      </paragraph>
+      <paragraph>
+       We know of two systematic implementations of Lakatos's philosophy of mathematics. Pease [71] constructed a multi-agent system in which agents formed and communicated theories in both mathematical and non-mathematical domains, and responded by following Lakatos's patterns of dialogue. Hayes-Roth [46] developed heuristics for repairing flawed plans, modelled on [55] and developed in the context of a card game.
+      </paragraph>
+      <paragraph>
+       At a higher level, Sloman [87] highlights the relevance of Lakatos's notions to AI, via his analysis of the capabilities that would be necessary for an intelligent robot (or young child, or other human) to think mathematically. Sloman argues that, since such thinking is not infallible in humans, the capacity to discover and repair flaws in arguments and conclusions is essential. Lakatos's fallibilist picture of mathematics provides a detailed account of how this can be done, by outlining various methods by which discovery of mathematical claims and their justification in the form of an argument can occur. These methods suggest ways in which concepts, conjectures and proofs gradually evolve via interaction between mathematicians. In Lakatos's account – which he presented as a classroom discussion between (very advanced) students – proofs, conjectures and concepts are fluid and open to negotiation.
+      </paragraph>
+      <paragraph>
+       Lakatos demonstrated his argument by presenting case studies in dialogue form of the development of Euler's conjecture that for any polyhedron, the number of vertices (V) minus the number of edges (E) plus the number of faces (F) is equal to two, and Cauchy's proof of the conjecture that the limit of any convergent series of continuous functions is itself continuous. The dialogue highlights various moves that can be taken at different times, and the consequences of these moves on the resulting theory. We outline these dialogue moves below and represent the flow in Fig. 2 This figure serves as a visual key to the formalisation developed in Section 3. The example in Section 7 is a portion of Lakatos's fictional debate of Euler's conjecture.
+      </paragraph>
+      <paragraph>
+       The first step in a Lakatosian dialogue is for someone to propose a conjecture. This is optionally followed by a proof, consisting of a list of lemmas and a statement that the conjecture is now proved. To emphasise: for Lakatos, the basic structure of a mathematical proof is nothing other than a list of lemmas together with a conclusion that they support.
+      </paragraph>
+      <paragraph>
+       After this, participants might accept the conjecture, which will terminate the dialogue. Alternatively, they might perform strategic withdrawal, which weakens the conjecture itself, but (ideally) strengthens confidence in it. If this move is used, then the subsequent options for dialogue moves are those which are available after the proposal of the initial conjecture. Strategic withdrawal consists of using positive examples of the conjecture and generalising from these to a class of object, and then limiting the domain of the conjecture to this class. For instance, the students generalise from regular polyhedra to convex polyhedra, and then modify Euler's conjecture to ‘for any convex polyhedron, {a mathematical formula}V−E+F=2’. A third alternative at this stage is for a participant (opponent) to challenge the conjecture by raising a counterexample. When a counterexample has been raised, participants (specifically, proponents) have five moves available to them.
+      </paragraph>
+      <paragraph>
+       Firstly, they can surrender the conjecture, which will terminate the dialogue.
+      </paragraph>
+      <paragraph>
+       Secondly, they can deal with exceptions via piecemeal exclusion and thereby exclude a whole class of counterexamples. Piecemeal exclusion amounts to generalising from a counterexample to a class of counterexamples which have certain properties and then excluding the entire class. Again, in terms of dialogue moves, this is a form of propose a conjecture (which will be a weakened version of the original conjecture), and subsequent dialogue moves will follow the same pattern as for this move. An example of piecemeal exclusion is that the students generalise from the hollow cube to polyhedra with cavities, and then modify Euler's conjecture to ‘for any polyhedron without cavities, {a mathematical formula}V−E+F=2’.
+      </paragraph>
+      <paragraph>
+       Thirdly, participants can perform monster-barring. This is a way of excluding an unwanted counterexample, and consists of the argument that the proposed ‘counterexample’ is not valid, as it is not within the claimed concept definition (this may then be expanded). Thus, it does not conflict with the conjecture, because it is not a counterexample. For instance, one of the students suggests that the hollow cube (a cube with a cube-shaped hole in it) is a counterexample to Euler's conjecture, since {a mathematical formula}V−E+F=16−24+12=4. Another student uses monster-barring to argue that the hollow cube does not threaten the conjecture as it is not in fact a polyhedron. The concept polyhedron then becomes the focus of the discussion, with the definition possibly being formulated explicitly for the first time. Thus, subsequent moves here must either propose an alternative definition, or express a preference to participants as to which definition should be adopted. Using this method, the original conjecture is unchanged, but the meaning of the terms in it may change.
+      </paragraph>
+      <paragraph>
+       Fourthly, participants can perform monster-adjusting, which is similar to monster-barring. Here, one reinterprets an object in such a way that it is no longer a counterexample, not by (re)defining the domain of the conjecture (so in this case the object is still seen as belonging to this domain), but by (re)defining subconcepts in the conjecture. Subsequent moves here are analogous to those following monster-barring, for appropriate concept definitions. The example in [55] concerns the star polyhedron. This entity is raised as a counterexample since, it is claimed, it has 12 faces, 12 vertices and 30 edges (where a single face is seen as a star polygon), and thus {a mathematical formula}V−E+F is −6. This is contested, and it is argued that it has 60 faces, 32 vertices and 90 edges (where a single face is seen as a triangle), and thus {a mathematical formula}V−E+F is 2. The argument then turns to the definition of ‘face’: again, using this method, the original conjecture is unchanged, but the meaning of the terms in it may change.
+      </paragraph>
+      <paragraph>
+       Finally, a fifth dialogue move when faced with a counterexample is to perform lemma incorporation. This works by considering the counterexample and determining whether it is global (a counterexample to the main conjecture) and/or local counterexamples (a counterexample to one of the lemmas). If it is both global and local, i.e., there is a problem both with the argument and the conclusion, then the move consists in modifying the conjecture by incorporating the problematic proof step as a condition. If it is local but not global, i.e., the conclusion may still be correct but the reasons for believing it are flawed, then the move consists in modifying the problematic proof step but leaving the conjecture unchanged. If it is global but not local, i.e., there is a problem with the conclusion but no obvious flaw in the reasoning which led to the conclusion, then the move consists in looking for a hidden assumption in the proof step, then modifying the proof and the conjecture by making the assumption an explicit condition. For example, in the portion of the Euler conjecture discussion treated in Section 7, the Teacher remarks with respect to a local counterexample: “I no longer contend that the removal of any triangle follows one of the two patterns mentioned, but merely that at each stage of the removing operation the removal of any boundary triangle follows one of these patterns…I can easily improve the proof, by replacing the false lemma by a slightly modified one, which your counterexample will not refute.” The discussion can then continue in the same fashion as when the initial problem and proof were proposed.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Analysing natural language dialogues
+      </section-title>
+      <paragraph>
+       Dialogue has been a topic of interest for computer scientists for over three decades [50], [48]. Dialogue is, fittingly, approached through NLP and linguistic analysis [37], but it also falls within the scope of pragmatics [22], which “arises as soon as we move beyond the linguistic analysis of an utterance and ask what the speaker meant by it” [91]. Searle's theory of speech acts [85] is a classic in this genre. Pragmatic analysis is relevant to both human–computer and multi-agent collaboration [51], [74]. Dialogue game protocols have previously been applied, for example, to multi-agent planning problems [10], [17]. Dialogue games are “more expressive than auction and game-theoretic mechanisms, typically allowing participants to question and contest assertions, to advance supporting arguments and counter-arguments, and to retract prior assertions” [65]. Given their formality, it is not surprising that, at least by default, “there is no direct connection between formal dialogue games or a theory of sentence meaning and natural language use” [104, p. 81]. Thus, alongside application areas like collaborative planning and proof construction, research on natural language dialogues is associated with a distinct collection of fundamental communication issues, such as modelling the ways in which mutual belief is established between discussants [97]. For example, the contribution model of Clark and Schaefer [26] is centred on building common understanding through iterated phases of presentation and acceptance. However, Lakatos's informal logic outlined in Fig. 2 assumes that discussants are able to understand each other satisfactorily at the linguistic level, by and large, and focuses instead on building a shared mathematical theory. The Lakatos Game developed in Section 3 expands the schematic sketched in Fig. 2 in detail. In Appendix A, we use the full range of this model to mark up a real-world example of a collaboratively-constructed proof. This shows the applicability of Lakatos's theory via our interpretation of his work as a dialogue game, and, more broadly, the relevance of our overall approach, which we outline in further detail below.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Formal dialogue systems
+      </section-title>
+      <paragraph>
+       The pipeline of collaborative mathematics starts with the expressing the Lakatos model as a formal dialogue system. The approach of specifying dialectical interaction as a game or a set of rules governing the interaction has started with the work of Lorenzen [59] and Hamblin [43]. Lorenzen aimed to translate a system of logic (such as intuitionistic logic or classical logic) into a system of dialectical rules, the dialogical logic, in which the proponent and the opponent aim to collectively prove that a formula is the tautology of this logic (intuitively, that it is true in this logic). Hamblin, on the other hand, tried to show that at least some fallacies (flaw argumentation patterns) have a dialectical nature even though they have inferential structure. He designed a formal dialogue system, called formal dialectics, and demonstrated that it is possible to formulate rules which will prohibit the players to commit the fallacy of circular reasoning of the form “p because p”. This work led to a variety of similar systems which improved the original ones, responded to other philosophical problems, or model the communication amongst agents in multi-agents systems (see e.g. [102], [64], [68], [105]). In this paper we will treat these systems as a template for the development of formal dialogue systems.
+      </paragraph>
+      <paragraph>
+       In the literature, many different types of dialogues were identified (see e.g. [103] for the first and widely used attempt of classification of dialogues). Lakatos describes the interactions of mathematicians, when aiming to prove the conjecture, in the way that is the most closely related to the concept of persuasion dialogue, and in particular – its “conflict resolution” subtype [19]. Persuasion dialogue is triggered by a difference of opinion between participants, each of them aims to persuade each other and the main goal of the conversation is to achieve the resolution of the conflict.
+      </paragraph>
+      <paragraph>
+       An excellent survey of systems for persuasion is given in [79]. A dialogue systems has a dialogue purpose, a set A of participants and a set R of roles which participants can adopt during a game. Contents of utterances used by the players in the dialogue are expressed in a topic language {a mathematical formula}Lt. At the beginning of a dialogue every player s has assigned a (possible empty) set of commitments {a mathematical formula}Cs⊆Lt which changes during a dialogue. Every dialogue system includes a logic L consisting of a topic language {a mathematical formula}Lt and a set R of inference rules over {a mathematical formula}Lt. The dialogue system consists of several sets of rules, amongst which the most typically used there are: (1) locution rules which describe what type of utterances players can execute during a dialogue; (2) structural rules or protocol which determine the interaction between locutions (i.e., it specifies which locution can be performed as a reply to another locution){sup:3}; (3) commitment or effect rules which specify for each utterance φ the effects which this locution makes on a set of commitments of the participant i (a commitment of i is a sentence that i publicly declared as his belief){sup:4}; (4) termination rules which determine the cases where no move is legal, i.e. they should specify the conditions under which the protocol returns the empty set; and (5) outcome rules which define the outcome of a dialogue, i.e. provide a criterion to decide which player wins and which player loses the dialogue.
+      </paragraph>
+      <paragraph>
+       The typical set of locutions and the reply structure identified in [79] is presented in Table 1. There are six legal moves that formal dialogue systems for persuasion often permit the players to perform: claim φ; why φ; concede φ; retract φ; φ since S; and question φ. The structural rules typically allows the players to interact in the following way: for example, after the agent claims a proposition φ his respondent can challenge this proposition, claim it's negation or agree with the speaker; when the agent challenges φ his respondent can justify this statement with a set of propositions S or withdraw the statement; and so on.
+      </paragraph>
+      <paragraph>
+       This standard of formal representation of dialogical interaction will be used in Section 3 for expressing Lakatos model as a set of rules for mathematicians to follow, if they aim to collectively prove a conjecture.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Argument Interchange Format
+      </section-title>
+      <paragraph>
+       The Argument Interchange Format [25] is an attempt to bring together a wide variety of argumentation technologies so that they can work together. [82] reviews some of the more recent applications of the AIF. Descriptions of the AIF are given in a number of places, as are reifications in languages such as RDF and OWL [25], [83], [82]. AIF uses a graph-theoretic basis for defining an “upper” ontology of the main components (or nodes) of arguments. Nodes are distinguished into those that capture information (loosely, these correspond to propositions), and those that capture relations between items of information, including relations of inference (which correspond to the application of inference rules to particular sets of propositions), relations of conflict (which represent forms of incompatibility between propositions) and relations of preference (which represent value orderings applied to particular sets of propositions). The instantiated nature of these relations is emphasised in the nomenclature, so whilst information is captured in Information (I-) nodes, relations between them are captured as Rule Application (RA-) nodes, Conflict Application (CA-) nodes and Preference Application (PA-) nodes. The general forms or patterns that these applications instantiate are given in a second part of the AIF ontology, the Forms ontology. The approach follows in the philosophical tradition of Walton [100], [101] of stigmatising stereotypical patterns of reasoning – and then extending the tradition into conflict and preference. It is this schematic underpinning which gives the collective name for RA-, CA- and PA-nodes: Scheme (S-) nodes. The AIF upper ontology is designed to allow specialisation and extension to particular domains and projects, in an attempt to balance the needs of interchange against the needs of idiosyncratic development.
+      </paragraph>
+      <paragraph>
+       The AIF standard will be used in Section 4 for showing how the execution of rules of Lakatos dialogue game is creating argument maps which represent a collective proof as a directed graph.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Structured argumentation
+      </section-title>
+      <paragraph>
+       Structured argumentation aims to “give a general structured account of argumentation that is intermediate in its level of abstraction between concrete logics and the fully abstract level, providing guidance on the structure of arguments, the nature of attacks, and the use of preferences, while at the same time accommodating a broad range of instantiating logics and allowing for the study of conditions under which the various desirable properties are satisfied by these instantiations” [66, p. 31]. One of the foremost and most flexible accounts of structured argumentation is available in {a mathematical formula}ASPIC+[80], [66] which is not only flexible about the logic used to instantiate arguments within it, but also provides a straightforward mechanism for inducing abstract argumentation frameworks, described in the next section.
+      </paragraph>
+      <paragraph>
+       We simplify the definition in [80] in three ways:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        skipping preference ordering over rules, i.e. constraining {a mathematical formula}≤=⪯=∅;
+       </list-item>
+       <list-item label="(ii)">
+        ignoring strict rules (of which there are none permitted in Lakatos' theory), i.e. constraining {a mathematical formula}Rs=∅ and thereby {a mathematical formula}R=Rd; and
+       </list-item>
+       <list-item label="(iii)">
+        ignoring non-ordinary types of premises, i.e. constraining {a mathematical formula}Ka=Ki=Kn=∅ and thereby {a mathematical formula}K=Kp.
+       </list-item>
+      </list>
+      <paragraph>
+       Whilst these are important features of {a mathematical formula}ASPIC+ in general, they are not exploited here, and so dropped for clarity. An {a mathematical formula}ASPIC+argumentation system is thus a triple {a mathematical formula}AS=(L,−,R), where {a mathematical formula}L is a logical language, {sup:−} is a contrariness function from {a mathematical formula}L to 2L, and {a mathematical formula}R is a set of rules of the form {a mathematical formula}ϕ1,…,ϕn⇒ϕ. An {a mathematical formula}ASPIC+argumentation theory is then a pair {a mathematical formula}AT=(AS,K) where {a mathematical formula}K is a knowledge base in AS.
+      </paragraph>
+      <paragraph>
+       An {a mathematical formula}ASPIC+ argumentation theory yields an argument, A, in two cases:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        A is ϕ iff {a mathematical formula}ϕ∈K, and in this case, {a mathematical formula}Prem(A)={ϕ}, {a mathematical formula}Conc(A)=ϕ, {a mathematical formula}Sub(A)={ϕ}, {a mathematical formula}DefRules(A)=∅ and {a mathematical formula}TopRule(A)=undefined;
+       </list-item>
+       <list-item label="(ii)">
+        A is {a mathematical formula}A1,…,An⇒ψ iff {a mathematical formula}A1,…,An are arguments and there exists a rule{a mathematical formula} in {a mathematical formula}R, and in this case,{a mathematical formula} and {a mathematical formula}TopRule(A)=Conc(A1),…,Conc(An)⇒ψ.
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, an {a mathematical formula}ASPIC+ argumentation theory yields an attack{a mathematical formula}(A,B) in three cases:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        argument A undercuts argument B (on {a mathematical formula}B′) iff {a mathematical formula}Conc(A)∈B′‾ for some {a mathematical formula}B′∈Sub(B) of the form {a mathematical formula}B1″,…Bn″⇒ψ;
+       </list-item>
+       <list-item label="(ii)">
+        argument A rebuts argument B (on {a mathematical formula}B′) iff {a mathematical formula}Conc(A)∈ψ‾ for some {a mathematical formula}B′∈Sub(B) of the form {a mathematical formula}B1″,…Bn″⇒ψ;
+       </list-item>
+       <list-item label="(iii)">
+        argument A undermines argument B (on ψ) iff {a mathematical formula}Conc(A)∈ψ‾ for some {a mathematical formula}ψ∈Prem(B).
+       </list-item>
+      </list>
+      <paragraph>
+       An {a mathematical formula}ASPIC+ argumentation theory thus yields a set of arguments and a set of attacks, which can be considered as an abstract argumentation framework.
+      </paragraph>
+     </section>
+     <section label="2.6">
+      <section-title>
+       Abstract argumentation
+      </section-title>
+      <paragraph>
+       Abstract argumentation provides a mechanism for reasoning over directed graphs in which vertices are propositional labels corresponding to arguments, and edges between them are relationships of conflict or attack. Dung's original paper [32] rests upon a notion of acceptability of arguments which in turn is used to define (amongst others) a set of arguments which might be sceptically believed: the grounded extension. We adapt here the definition from [66] which is particularly concise.
+      </paragraph>
+      <paragraph>
+       An abstract argumentation framework, AF is a pair {a mathematical formula}(AR,Att) where AR is a set of arguments and {a mathematical formula}Att⊆AR×AR is a binary relation of attack. A semantics for AFs returns sets of arguments called extensions, which are internally coherent and defend themselves against attack. For an AF{a mathematical formula}(AR,Att), for any {a mathematical formula}X∈AR, X is acceptable with respect to some {a mathematical formula}S⊆AR iff {a mathematical formula}∃Y s.t. (Y,X)∈Att implies {a mathematical formula}∃Z∈S s.t. (Z,Y)∈Att. Let {a mathematical formula}S⊆A be conflict free, i.e., there are no {a mathematical formula}A,B in S such that {a mathematical formula}(A,B)∈Att. Then, S is a complete extension iff {a mathematical formula}X∈S whenever S is acceptable with respect to S and S is a grounded extension, GE, iff it is a complete extension that is minimal with respect to set inclusion.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Formalisation of dialectical interaction: from the Lakatosian model of mathematical discourse to a formal dialogue system
+     </section-title>
+     <paragraph>
+      In this section we express the Lakatos model of collective proof as a formal dialogue system, the Lakatos Game (LG), understood in a way of standard representation for persuasion dialogues introduced in [79] and described in Section 2.3. We assume that this type of dialectical interaction is in fact the type of persuasion, since the initial situation of conflicting opinions on whether the conjecture is true or not is sought to be resolved by the players through communication [103]. However, the nature of the interaction is not “selfish” (as in the most radical type of persuasion where a player is interested only in the situation in which s/he is winning the game), because both parties ultimately aim to collaboratively test whether the conjecture is true and whether it can be proved, no matter who of them will win (such a type of persuasion is called collaborative conflict resolution in [19]).
+     </paragraph>
+     <paragraph>
+      LG determines rules for playing a game of collaborative mathematics and in this sense it is a formal representation of informal theory introduced by Lakatos. The rules of the LG system are designed as a bridge between the spirit of the loosely defined techniques in [55] and the formality required for expressing dialogues as complete specifications that, ultimately, can be implemented. According to the standard introduced in Section 2.3, LG is specified through five types of rules: (1) locution rules which determine what types of moves players are allowed to perform during the dialogue (i.e. what are legal locutions), and, uniquely for LG, how these moves update the current mathematical theory in which the co-constructed proof is sited; (2) structural rules which regulate what types of responses are allowed to be given (i.e. what are legal responses); (3) commitment rules which specify a set of propositions to which players will be committed as a result of performing a given locution during the dialogue{sup:5}; (4) termination rules which describe when the dialogue will end; and (5) outcome rules which determine what the result of a dialogue is.
+     </paragraph>
+     <paragraph>
+      The “players” in our Lakatos Games are a Proponent and an Opponent. These roles are defined relative to a given conjecture. Multiple speakers may contribute to these roles, and both the Proponent and Opponent role can be voiced by the same speaker. This allows a speaker to avoid contradictory commitments, as long as s/he does not take on both roles simultaneously. A player who takes the same role as the other speaker has to commit to the same commitments and the same strategy of proof as his predecessor(s) as the proof is done collaboratively. In other words, the game does not distinguish between participant and roles.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       LG system: overview
+      </section-title>
+      <paragraph>
+       The overall goal of the Lakatosian dialogue is to explore a mathematical theory and construct new examples, concepts, definitions, conjectures and proofs. The analysis of a fledgling proof and conjecture, via the patterns of discourse that Lakatos identified, provides a mechanism by which such a theory can grow. The Lakatos Game fulfils the definition of persuasion dialogue specified in [103], [79],
+      </paragraph>
+      <paragraph>
+       since the dialogue starts with a conflict of opinion about a conjecture, and aims at resolution of the conflict. In this type of dialogue, Opponent, O, of a proof disagrees with Proponent, P, and they argue about elements of the theory from which the proof is constructable. The parties aim to collaboratively solve the problem rather than winning the game at any cost, thus this type of persuasive interaction is called collaborative conflict resolution [19].
+      </paragraph>
+      <paragraph>
+       Notation. Let {a mathematical formula}b,c,d,e,f,g,k,l,m,n,r,s be propositional variables. For clarity in description, we consistently use specific variables to describe specific objects in Lakatos's model{sup:6}:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}c,b: conjecture (c – current conjecture, b – new conjecture)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}l,k: lemma (l – current lemma, k – new lemma)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}m,n: counterexamples which may become monsters, if they turn out to be invalid
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}d,e,f,g: definitions
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}r,s: propositions used to support or contradict counterexamples
+       </list-item>
+      </list>
+      <paragraph>
+       The syntax of the system allows for high level (abstract) description of the legal moves and interactions that the players can execute during the LG dialogue. In the actual game of collaborative proof creation, the variables are then instantiated by the specific statements in natural language such as in Example (1) in Section 7 and examples in Appendix A.
+      </paragraph>
+      <paragraph>
+       In the following sections we describe the locution rules (Section 3.2), structural rules (Section 3.3), and commitment, termination and outcome rules (Section 3.4) which define our formalisation of the LG System.{sup:7}
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       LG system: locution rules
+      </section-title>
+      <paragraph>
+       We specify all of the legal locutions in the LG system by the rules below, describing informally how the mathematical theory that is being co-constructed by the participants is updated by each of them; a more formal account showing how these updates are characterised in AIF and abstract argumentation frameworks then occupies much of the remainder of the paper.
+      </paragraph>
+      <paragraph>
+       Proponent and Opponent's behaviour during a collaborative proof is regulated by the LG locution rules (see below for their formal specification). In general, they allow the Proponent to create a proof (see locution rule L1); defend it against Opponent's attacks (counterexample, critique; see the rules L2–L5); or surrender the current conjecture (L7.2). Conversely, the LG locution rules allow O to: attack the proof, i.e. attack the conjecture or a lemma (L2); participate in the modification of a concept (see L5.4–L5.5); decide whether the counterexample is a monster or not (L6); or accept the current conjecture and the current lemmas (L7.1).
+      </paragraph>
+      <paragraph>
+       L1 Creation of proof. For creating the proof, the player P introduces a conjecture (L1.1) and lemma(s) (L1.2), and then announces the end of the informal proof by saying ProofDone which plays a role analogous to “■” in typeset mathematics (L1.3).
+      </paragraph>
+      <paragraph>
+       L2 Attack on conjecture or lemmas. For attacking the proof, Opponent has three strategies available: he can attack locally by introducing a counter m to the lemma l (LocalCounter(m, l), L2.1); attack globally by introducing a counterexample m to the conjecture c (GlobalCounter(m, c), L2.3); or attack in a hybrid way by introducing m which counters both c and l (HybridCounter(m, l, c), L2.2).
+      </paragraph>
+      <paragraph>
+       L3–L5 Defending a proof. For defending the proof against Opponent's attacks, Proponent has available three strategies: he can modify the conjecture (L3); manipulate lemmas (L4); or modify the definition of a concept in the conjecture or lemmas (L5). In the first case, P has two alternative options of how to change the current conjecture c to a new conjecture b – he can either perform PiecemealExclusion(b) and directly introduce a new conjecture b (L3.1); or perform StrategicWithdrawal(r, c) and introduce r which contradicts with the current conjecture c (see L3.2). In the second case, Proponent acts in some sense as Opponent, i.e. he doubts that his conjecture c actually holds and uses r to demonstrate it (and then replaces it with a new conjecture b, see the structural rule S9).
+      </paragraph>
+      <paragraph>
+       The second strategy of defending against a counter is the manipulation of lemmas in three different ways. First, P can introduce a new lemma k to replace the current lemma l which was successfully countered by m (LocalLemmaInc(m, l, k), L4.1). Second, Proponent can retract a lemma l which was countered by m (HybridLemmaInc(m, l), L4.2). Third, he can add a new lemma k which will be countered by m (GlobalLemmaInc(m, k), L4.3). The reason for proponent introducing a problematic lemma will become clear when we look at the next move that this player will perform, i.e. when we will discuss the structural rules below (see S17 and S18).
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Finally, P can defend the proof by modifying the definition of a concept in the conjecture and, as a result, demonstrating that m is not a valid counterexample, i.e. that m is in fact a monster. According to this strategy Proponent introduces the proposition r which contradicts with: either the inference from counterexample m to the counter-conjecture not-c (MonsterBar(m, c, r), see L5.1); or directly the counter m (MonsterAdjust(m, r), L5.2). In other words, in the first case Proponent does not claim that m does not hold, but he points out that m cannot be used to infer not-c. In order to justify that r holds, P introduces a definition of a concept in the conjecture (PDefinition(m, r, d), L5.3). If Opponent provides his alternative definition (ODefinition(m, r, d, s, e), L5.4), then the players have to decide which definition (f or g) they prefer (Prefer(m, r, f, g), L5.5). Opponent's definition move takes more variables as a content than Proponent's definition move, because O not only attacks P's definition, but also defends his move of rejecting that the counterexample is a monster MonsterReject(m, r, d, s, c) (see L6.2 described below). More specifically, O introduces his own definition e which contradicts P's definition d and at the same time e supports a proposition s which contradicts with Proponent's attack r from the move MonsterBar(m, c, r) or MonsterAdjust(m, r). Note that the main difference between the strategy of modifying the conjecture and the strategy of modifying a concept in this conjecture lies in the consequences of these moves for a theory in which the proof is conducted. The modification of the conjecture influences only the conjecture itself, while the modification of the concept influences all the conjectures in the theory which contain this concept.
+      </paragraph>
+      <paragraph>
+       L6 Decision about monster. For deciding whether the counterexample is a monster, O can assert r which P previously introduced to demonstrate that m is a monster. In other words, Opponent agrees with Proponent by repeating what Proponent said to attack the counter (MonsterAccept(m, r), L6.1). Alternatively, O can reject that m is a monster by asserting s which contradicts Proponent's attack r and is included as a linked premise into his argument that m supports the counter-conjecture not-c (MonsterReject(m, r, d, s, c), L6.2).
+      </paragraph>
+      <paragraph>
+       L7 Decision about proof. For deciding about the acceptance of the proof, Proponent can only surrender the conjecture (Surrender, L7.2). For deciding about the acceptance of the proof, Opponent can only accept the proof (Accept, L7.1).
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       LG System: structural rules
+      </section-title>
+      <paragraph>
+       The dynamics of the LG System are determined by the structural rules which describe how the players can navigate through the space of the legal locutions (see below for their formal specification). Notice that each rule determines a set of possible reposes to this move, and the players have to choose one and only one of alternatives. A different response can be chosen once the players will return to a given state. Fig. 3 is a behaviour tree that summarises the permitted follow-up structure that is detailed below. In the figure, items with one greater level of indenting are potential follow-up moves. Terms that are not terminating and that have no descendants should be understood as links that redirect the flow to nodes that appear higher up in the tree.{sup:8}
+      </paragraph>
+      <paragraph>
+       S1–S4 Creation of proof. At the beginning of the game Proponent creates an initial, draft proof. His first move is to introduce a conjecture c (rule S1). At that point no lemma has been introduced yet, so he has to propose at least one lemma l according to S2.2. This rule is also used to prohibit Proponent from removing all lemmas and ending the proof by saying ProofDone (this is allowed by the rule S2.1). Then, Proponent can end the proof (S3.2); or continue adding further lemmas (S3.1) and then end the proof (S3.2). If Proponent is not introducing the initial version of the proof, but is introducing changes to the conjecture by performing Conjecture(c) and there is still at least one lemma in the proof, then he can either continue introducing additional lemmas (S2.1b), or end the proof (S2.1a).
+      </paragraph>
+      <paragraph>
+       After the initial version of the proof is ended, there are three possible ways of continuing the game: either Opponent attacks the proof by introducing a counterexample m to the conjecture, a lemma, or both the conjecture and a lemma (S4.1–S4.3) together; or Proponent changes his mind and introduces a new conjecture in order to prevent the proof from a potential future attack from opponent (i.e. a potential counterexample for which the old conjecture might not hold, S4.4); or Opponent accepts the proof (S4.5).
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       S5–S7 Attack on conjecture or lemmas. Opponent's attack on the conjecture, via GlobalCounter(m, c), generates the largest number of possible alternative paths through the Lakatos game (S5, see also Fig. 3). First, P can immediately give up, i.e., he can become convinced of Opponent's critique and decide to surrender the proof (S5.6). Another way to respond is to only partly agree with O and modify the conjecture so that the attack fails (S5.1–S5.2). Proponent can introduce the changes directly either by piecemeal exclusion, i.e., introducing a new conjecture b (S5.1), or by strategically withdrawing (S5.2), i.e., expressing doubts about the current conjecture c first.
+      </paragraph>
+      <paragraph>
+       Opponent's attack on a lemma, LocalCounter(m, l), and an attack on both a lemma and the conjecture, HybridCounter(m, c, l), generate much simpler histories for LG dialogue games. In the first case, Proponent can either replace a lemma with a new one which incorporates Opponent's critique (LocalLemmaInc(m, l, k), S6.1) and then he announces that the new proof (with the new lemma) for the old conjecture is completed by saying ProofDone (S19); or P can agree with the critique and surrender the proof (S6.2). In the case of HybridCounter attack, P can either retract a lemma which was countered by m (HybridLemmaInc(m, l), S7.1) and then incorporate the critique into a new conjecture b (Conjecture(b), S18); or P agrees with the critique and surrenders the proof (S7.2).
+      </paragraph>
+      <paragraph>
+       S8–S9 Defence by modifying conjecture. The difference between these piecemeal exclusion and strategic withdrawal is that PiecemealExclusion(b) has to be always triggered by Opponent's attack, while StrategicWithdrawal(r, c) can be performed at any point of the game when Proponent changes his mind about the acceptance of the conjecture, even immediately after ending the initial proof (see S4.4). After StrategicWithdrawal(r, c), P introduces a new conjecture b (S9).{sup:9} In both cases, after introducing the new conjecture b, P can propose some additional lemmas or end the new proof in the same way as he did at the beginning of the game (see S8 for excluding piecemeal and S2 for strategically withdrawing).
+      </paragraph>
+      <paragraph>
+       S10–S16 Defence by modifying concept and decision about monster. The final type of response to GlobalCounter(m, c) is for Proponent to entirely disagree with Opponent's global counter. In other words, P tries to show that m is not a valid counterexample (i.e. that m is a monster) either indirectly by introducing r which attacks the inference between m and the counter-conjecture not-c (MonsterBar(m, c, r), see S5.3); or by introducing r which directly attacks the counter m itself (MonsterAdjust(m, r), see S5.4). Both of these moves require Proponent to formulate a new definition d for a concept in the current conjecture which justifies the attack r (S10 and S11). Next, Opponent can accept the definition and as a result agree that m is the monster (MonsterAccept(m, r), S12.1); or reject it and assert s which contradicts with r (MonsterReject(m, r, d, s, c), S12.2). If O accepts that m is a monster, then he can try to attack using a different counterexample to the conjecture, a lemma or both (S13.1–S13.3); or he can become convinced and decide to accept the proof (S13.5); alternatively Proponent can modify the conjecture (S13.4). If O rejects that m is a monster, then he has to propose his own definition e of this concept which supports his claim s which is in contradiction to Proponent's claim r (S14). Then, one of the players has to decide which definition is preferred: either Opponent prefers Proponent's definition over his own (S15.1), or Proponent prefers Opponent's definition (S15.2).{sup:10} If Proponent expresses the preference, then P can next: change the conjecture through piecemeal exclusion (S16.1.a and S16.2.a) or strategic withdrawal (S16.1.b and S16.2.b); try to show again that m is not a valid counterexample by monster-adjusting (if previously he did monster-barring (S16.1.c)), or by monster-barring (if previously he did monster-adjusting (S16.2.c)); introduce a new lemma that contradicts m (S16.1.d and S16.2.d); or surrender the proof (S16.1.e and S16.2.e). If Opponent expresses the preference, then: O can attack again by introducing another counter to the conjecture (S16.3.a), or a lemma (S16.3.b), or to both (S16.3.c); P can change the conjecture by strategically withdrawing (S16.3.d); or, finally, O can become convinced and decide to accept the proof (S16.3.e).
+      </paragraph>
+      <paragraph>
+       S17–S19 Defence by manipulating lemmas. Proponent can also introduce the changes to the conjecture indirectly, i.e., by firstly modifying a lemma and then modifying the conjecture. More specifically, first P performs GlobalLemmaInc(m, k) which introduces a new lemma k contradicting the counter m (S5.5). This lemma reveals the hidden assumption that needs to hold in order for the conjecture to hold too. Then, P continues with hybrid lemma incorporation which retracts the recently introduced lemma k (S17) and then incorporates the hidden assumption into a new conjecture b (S18).
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       LG System: commitment rules, termination rules and outcome rules
+      </section-title>
+      <paragraph>
+       The effects of the players' interactions are determined by three final types of rules: the commitment rules determine the effects that these interactions have on commitment stores of the players; termination rules define when the dialogue ends; and outcome rules describe who won the dialogue. See below for their formal specification for the LG System.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In the LG system for collaborative mathematics, there are two types of commitment stores: the store for the conjecture (see C1) and the store for lemmas (C2). These stores keep track of the currently posited lemmas and conjecture. Most commitment updates are forced by Opponent's attacks (i.e., when Proponent is not able to defend against an attack, then he is forced to change the current proof). Similarly, the information about the other propositions used by players in counterexamples, definitions and so on, is not stored at all, since they do not contribute directly to the proof – they only influence its shape during the game.
+      </paragraph>
+      <paragraph>
+       Proponent can add a conjecture b into the conjecture commitment store by performing either Conjecture(b) or PiecemealExclusion(b) (C1). This type of store has to consist of only one proposition at any time of the game (i.e., it has to consist of the current conjecture), therefore both of these moves first empty the store to remove the old conjecture (if there is one), and then adds a new conjecture b. Further, P can add lemmas to, and remove them from, the lemma commitment store in three different ways: (i) adding a new lemma k either by performing Lemma(k) or GlobalLemmaInc(m, k) (C2.1); (ii) replacing lemma l with a new lemma k by performing LocalLemmaInc(m, l, k) (C2.2); or (iii) removing lemma l from the store by performing HybridLemmaInc(m, l) (C2.3).
+      </paragraph>
+      <paragraph>
+       The dialogue terminates when Opponent performs Accept, or when Proponent performs Surrender (see (T1)). Proponent wins if Opponent accepts the proof (O1); and Opponent wins if Proponent surrenders the proof (O2).{sup:11} Note that the phrase “win” is not used here to suggest that there is a competitive character to LG dialogues, since we assume, like Lakatos, that they are modelling a collaborative process. Our aim is just to stay also close to the standard terminology used in formal dialogue systems. As a result, Proponent's “winning” should be interpreted as the acceptance of the current conjecture and the current lemmas, and Opponent's “winning” should be interpreted as surrender of the current conjecture.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Graph-based representation: from a formal dialogue system to Argument Interchange Format structures
+     </section-title>
+     <paragraph>
+      The majority of research in the philosophy of dialogue focuses on normative, idealised models of interaction; only quite recently has there been an empirical turn that aims to connect such models with discursive practice. Normative games like DC [62] aim to make explicit features of dialogues which are latent in natural interactions (in the case of DC, cumulativity, whereby retraction is prohibited). Descriptive games such as PPD [103] aim to express natural interaction with more formal apparatus, thereby allowing dialogues to be assessed and guided (for comparative analysis of DC, PPD and many other games, see [105]). The Lakatos Game is designed with both normative and descriptive flavours, providing scaffolding and guidance for practical interactions, as well as tools that can be used to interpret and assess discourse. Crucially though, Lakatos games are not aimed, like DC and PPD, at establishing a common understanding, or a maieutic exploration of a space; they are instead aimed quite specifically at generating a proof, or, more specifically, at yielding a theory from which a proof can be extracted.
+     </paragraph>
+     <paragraph>
+      As a consequence of this normative-descriptive balance, the Lakatos Game provides a good test case for AIF, which similarly aims to handle both analysis of linguistic material as well as representation and evaluation of the norms of discourse context [25]. For although AIF structures are designed to handle structures of argument, their closest counterparts in formal logical systems are not formal theories or sets of propositions, but proofs. If the description of LG is adequate, therefore, it should yield AIF structures which can automatically be mapped to such proofs.
+     </paragraph>
+     <paragraph>
+      There is, however, a challenge. AIF is used as infrastructure for an interconnected web of debates and arguments that allows navigation through different modes, domains, types of argument, with the ability to extend, critique and adumbrate them via a range of systems and tools. This infrastructure – collectively referred to as the Argument Web [16] – is founded upon several assumptions. One cornerstone is the assumption of cumulativity: once an argument has been committed to the Argument Web, it is there in perpetuity. Although individual arguers may change their position or retract their arguments, the arguments themselves must remain available so that others can refer to them, build upon them and revise them.
+     </paragraph>
+     <paragraph>
+      But if the Argument Web [16] is to capture the emerging proofs as they are developed, extended, redefined and reframed by a Lakatos game, how can the intrinsic nonmonotonicity be reflected by cumulative infrastructure? Our goal is to ensure that the semantics of the moves in the game, as they are defined in terms of AIF updates, should yield argument structures with a specific set of properties. These argument structures should be submittable to a simple, algorithmic procedure which will yield precisely the theory that represents the current shared understanding at any point in the game. To deliver this, the effects that each move has on AIF structures need to be carefully defined, then the argumentation semantics computation can be shown to yield exactly the correct subset corresponding to proof structures.
+     </paragraph>
+     <section label="4.1">
+      AIF structure update: AIF operations of LG locutions
+      <paragraph>
+       For Proponent's {a mathematical formula}Conjecture(c) and {a mathematical formula}Lemma(li) moves, all that needs to be done is to add c and the {a mathematical formula}li to the AIF graph. The {a mathematical formula}ProofDone move is used to establish the inferential connection between them (in AIF terms, it adds an RA-node with incoming edges from each of the {a mathematical formula}li and an outgoing edge to the c). In other words, the Lakatosian concept of a proof is being modelled as the inference or argument from lemmas to conjecture. The inference is established by using proponent's commitment stores, connecting all those propositions in the Lemma Commitment Store to that in the Conjecture Commitment Store. Fig. 4 visualises the AIF structure available after proponent has offered a putative proof for a conjecture, c, based on lemmas {a mathematical formula}L1, {a mathematical formula}L2 and {a mathematical formula}L3. The visualisation adopts a common convention of AIF, with both propositions and relations between them (of inference, conflict, and later, preference and restatement) expressed in boxes, and with directionality (e.g. of inference), as defined in [25], indicated by directed edges. For convenience, each proposition is also indicated as belonging to either proponent (P) or opponent (O).
+      </paragraph>
+      <paragraph>
+       There are three types of counter that Opponent can offer in response to such an argument: countering the conjecture, countering one of the lemmas, or countering both conjecture and lemma simultaneously. These are referred to as {a mathematical formula}GlobalCounter, {a mathematical formula}LocalCounter and {a mathematical formula}HybridCounter, respectively. All three types of counter introduce conflict into the AIF structure:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Opponent's {a mathematical formula}GlobalCounter(m,c) performs a total of four updates to the AIF structure. First, it adds m to the graph and uses it as a premise in a new argument. The conclusion of that argument is the negation of the conjecture, c. The negation is glossed as “It is not the case that c”, and the second step is to add the new element to the AIF. The relationship between c and not-c is clearly one of (symmetrical) conflict, so the third step is to add new CA nodes between c and not-c. Finally, the AIF is also updated to reflect the argument from m to not-c with a new RA between them.
+       </list-item>
+       <list-item label="•">
+        Opponent's {a mathematical formula}LocalCounter(m,l) simply introduces the counterexample, m and the symmetrical conflict (i.e. a pair of CA nodes) between that and the lemma, l.
+       </list-item>
+       <list-item label="•">
+        Opponent's {a mathematical formula}HybridCounter(m,l,c) performs the same update as {a mathematical formula}LocalCounter, with additional conflict added between m and c. We might expect {a mathematical formula}HybridCounter to cause updates that constitute the union of the effects of {a mathematical formula}GlobalCounter and {a mathematical formula}LocalCounter, introducing an attack with the lemma and a support for a counter-conjecture. Instead though, {a mathematical formula}HybridCounter uses a simpler characterisation of attack between m and c, introducing a CA directly, rather than adding an argument for the negation of the conjecture. The reason for this discrepancy is that the negation is required for the action of future moves permitted by LG after {a mathematical formula}GlobalCounter (viz.{a mathematical formula}MonsterBar and {a mathematical formula}MonsterAdjust), whilst these moves are not legal following {a mathematical formula}HybridCounter, so the characterisation can be simpler.
+       </list-item>
+      </list>
+      <paragraph>
+       These three updates for handling opponent counters are visualised in Fig. 5. Proponent's eight possible substantive responses (excluding {a mathematical formula}Surrender) to a counter then update the AIF graph further:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}PiecemealExclusion allows for a revised conjecture, b, to be asserted, and demands a new {a mathematical formula}ProofDone move to create the inference from all of the current lemmas to the new conjecture. Note that this creates a new inference (i.e. a new RA-node) – the old one remains in the AIF graph.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}StrategicWithdrawal allows Proponent to alter the conjecture, first through introducing a reason, r, for rejecting the current conjecture, then, through the obligatory subsequent {a mathematical formula}Conjecture move, proposing a new conjecture. The AIF is updated to reflect the addition of the new piece of information, r, plus the symmetrical conflict between that and the old conjecture, c.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MonsterBar allows Proponent to challenge the counterexample offered by Opponent by changing the definition of terms upon which it depends. The {a mathematical formula}MonsterBar move itself updates the AIF in two steps. First, it adds a reason, r, for rejecting the counterexample and treating it as a monster. Then a conflict is established from r to the RA-node constituting Opponent's extant argument from counterexample, m, to counter-conjecture, not-c. That is, r is treated as an undercutter. These results are visualised in Fig. 9.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MonsterReject-ing allows Opponent the same freedom as Proponent in offering a reason for thinking the counterexample does, indeed hold. This reason s is naturally in conflict with Proponent's reason that the counterexample does not hold, so the AIF updates are first to add s and to link it as a further premise in the argument from the example, m, to the counter-conjecture, not-c (that is, to connect s to the RA-node between m and not-c). Then the symmetrical conflict between s and r is also added. These updates are also visualised in Fig. 9.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MonsterAdjust-ing follows the same pattern as {a mathematical formula}MonsterBar-ing, except that the counterexample is attacked directly by redefinition. That is, {a mathematical formula}MonsterAdjust introduces a counter, r, and the symmetrical conflict between r and m. An intuition remains, however, for {a mathematical formula}MonsterAdjust: that the counter to r somehow trumps the monster. To capture this intuition, we further add a preference(PA) that allows r to defeat m. Both {a mathematical formula}MonsterBar and {a mathematical formula}MonsterAdjust then open a phase of the dialogue in which definitions are introduced (see below). The results of this move are visualised in Fig. 10.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}HybridLemmaInc-orporation, following a {a mathematical formula}HybridCounter paves the way for the introduction of a revised conjecture, {a mathematical formula}c′ which incorporates one lemma, {a mathematical formula}li. The update, however is performed by a subsequent {a mathematical formula}Conjecture move.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}GlobalLemmaInc-orporation makes explicit a hidden assumption by adding it as a new lemma, k. It is also responsible for introducing the conflict between the counterexample, m (identified in the preceding {a mathematical formula}GlobalCounter) and this new lemma. It then forces a {a mathematical formula}HybridLemmaInc-orporation so that k is incorporated into a new conjecture and thence proof.
+       </list-item>
+       <list-item label="•">
+        Finally, {a mathematical formula}LocalLemmaInc-orporation works in a similar way to {a mathematical formula}GlobalLemmaInc-orporation, except that it introduces a revised lemma k before adding a new inference connecting all lemmas and (unchanged) conjecture through a mandatory {a mathematical formula}ProofDone move. In addition, AIF provides the ability to represent non-inferential relations between propositions, including paraphrastic relationships such as restatement. We can capture the ‘incorporates’ relationship in this way as an MA node, but this has no impact on the argument frameworks – structured and abstract – that are created, functioning currently only to make the linguistic relationship. The AIF updates effected by the three types of lemma incorporation are visualised in Fig. 6, Fig. 7, Fig. 8.
+       </list-item>
+      </list>
+      <paragraph>
+       The moves of {a mathematical formula}MonsterBar and {a mathematical formula}MonsterReject can lead to further exchanges regarding the definitions upon which the counterexample depends, each of which provides further updates to the AIF structure:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}PDefinition allows Proponent to offer a definition, d captured as a proposition in the AIF structure, which is then linked through an inference to the reason, r for barring or adjusting a monster (from a {a mathematical formula}MonsterBar or {a mathematical formula}MonsterAdjust move). So {a mathematical formula}PDefinition adds both the proposition d and the RA from that to r. Proponent's definition can be {a mathematical formula}MonsterAccept-ed or {a mathematical formula}MonsterReject-ed. (The idea of definitions being used as the bases for arguments is one that is familiar in the philosophy of argument – see, e.g., [1].)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MonsterAccept. In the former case, there is no further AIF update because Opponent is simply reiterating Proponent's position. In the latter case, Opponent can {a mathematical formula}MonsterReject, which has already been treated, above.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ODefinition allows Opponent to offer an alternative definition, which requires update to the AIF structure not only to include the new definition, e, but also (i) the conflict with Proponent's definition and (ii) the inference from e to Opponent's reason, s, for thinking the counterexample holds.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Prefer allows resolution between competing definition by introducing a relation of preference between two definitions. The move thus introduces a PA node between definitions f and g (the variables are thus named to emphasise that either Proponent's definition d or Opponent's definition e may be preferred).
+       </list-item>
+      </list>
+      <paragraph>
+       The effects of all of these moves are shown in Fig. 9, Fig. 10, which show the structures built up through the monster barring and monster adjusting pathways, respectively. Other moves described in the previous section impact the dialogical dynamics of the game (i.e. of what can be said, and of what commitments exist in stores) but do not update AIF structures beyond that.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Evaluation using structured and abstract argumentation frameworks: from AIF structures to abstract argumentation frameworks
+     </section-title>
+     <paragraph>
+      AIF structures are one way to handle ‘structured argumentation.’ Other approaches, such as that provided by {a mathematical formula}ASPIC+[80], have been shown to be compatible, in that it is possible (under certain assumptions{sup:12}) to translate from AIF to {a mathematical formula}ASPIC+[16]. Prakken has further shown (ibid.) that {a mathematical formula}ASPIC+ structures can be used to induce abstract argumentation frameworks which can make use of the wide range of existing argumentation semantics for computing acceptability.
+     </paragraph>
+     <paragraph>
+      The approach described in this section shows how as a Lakatos Game is executed, AIF structures are created which, when translated to {a mathematical formula}ASPIC+, produce abstract argumentation frameworks which under grounded semantics have as acceptable arguments all and only those elements which correspond to the mathematical theory accepted by the participants at a given stage of the game. Though other single extension semantics could be employed, it turns out that the strong, sceptical interpretation provided by grounded semantics deliver precisely the results required,as will be shown in this and the following sections. Our strategy is inductive, so we aim to show that each move updates the AIF graph in such a way that the grounded extension of the induced framework corresponds to the definitions of how the mathematical theory is evolving given by the LG locution rules in Section 3.2.
+     </paragraph>
+     <paragraph>
+      We describe updates in three steps. First, showing how an {a mathematical formula}ASPIC+ argumentation theory for the Lakatos Game, {a mathematical formula}ATLG=((LLG,RLG,n),K), is updated by virtue of the relationship between AIF and {a mathematical formula}ASPIC+[16] (we adopt a convention whereby the new, post-locution argumentation theory and its constituents are referred to with a prime (′), whilst the original, pre-locution version is unadorned). Second, by virtue of the relationship between {a mathematical formula}ASPIC+ and abstract argumentation, we show updates to an abstract framework for the Lakatos Game LG, {a mathematical formula}AFLG=〈ARLG,attacksLG〉, comprising a set of abstract arguments {a mathematical formula}ARLG and a relation of attacks {a mathematical formula}attacksLG over them following Dung [32]. Finally, the updates to the grounded extension of the argumentation framework, {a mathematical formula}GELG, are computed and compared with the status of the theory defined by the locution rules of LG. Where abstract arguments correspond to single propositions in the structured argumentation, they are labelled the same for convenience (i.e. a proposition p in the structured argumentation will correspond to an abstract argument also labelled p). Where we are interested in abstract arguments that correspond to a complex in the structured argumentation, we name them uniquely and explicitly describe their composition (so, for example, a structured argument [p so q] might correspond to an abstract argument α).
+     </paragraph>
+     <paragraph>
+      For clarity in presentation, the locutions are divided into three categories: those that add material to the theory (constructive locutions), those that attack material already in the theory (critical locutions) and those that make no explicit update to the material in the theory (neutral locutions).
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Constructive locutions
+      </section-title>
+      <paragraph>
+       For Conjecture(c) and Lemma(l), the update to {a mathematical formula}ATLG is straightforward in that {a mathematical formula}K is updated to include them (i.e. {a mathematical formula}K′=K∪{c} and {a mathematical formula}K′=K∪{l}, respectively{sup:13}).
+      </paragraph>
+      <paragraph>
+       Next, we must exploit the fact that the system is constrained to prohibit repetition of identical moves (i.e. moves of identical type with identical variable instantiations, but irrespective of speaker). So long as these moves have not come before,{sup:14} and therefore the contents, c and l, have not previously been introduced, the AIF will be updated to include c or l, and there are guaranteed to be no extant conflicts with either c or l (since conflicts can only be introduced by the GlobalCounter, LocalCounter, HybridCounter or {a mathematical formula}StrategicWithdrawal moves which can only follow earlier Conjecture or Lemma moves). Thus the new abstract framework after a Conjecture(c) move, {a mathematical formula}AFLG′, is expanded from the old thus: {a mathematical formula}ARLG′=ARLG∪{c} and {a mathematical formula}attacksLG′=attacksLG (and similarly for Lemma(l)). With no conflicts, abstract arguments corresponding to c and l are guaranteed to have no attacking arguments, and therefore to be in the grounded extension. That is, {a mathematical formula}∄xs.t.(x,c)∈attacks′or(x,l)∈attacks′.
+      </paragraph>
+      <paragraph>
+       For PiecemealExclusion(b), the revised conjecture, b is added to the AIF, and consequently {a mathematical formula}K′=K∪{b}. Under the same restrictions and assumptions as for Conjecture(c), above, the corresponding abstract argument b is guaranteed to be in the grounded extension. The old conjecture that has been replaced is guaranteed to be excluded from the grounded extension because of the conflict introduced by the GlobalCounter or Prefer, the only moves that can legally precede PiecemealExclusion. Thus, {a mathematical formula}ARLG′=ARLG∪{b} and {a mathematical formula}attacksLG′=attacksLG (since the necessary update to {a mathematical formula}attacksLG has been carried out by other moves).
+      </paragraph>
+      <paragraph>
+       For StrategicWithdrawal(r, c), the revised conjecture is added to the AIF along with its conflict with the old conjecture c. (Although from a protocol perspective this is a seemingly counter-strategic move for Proponent to make, it is in fact quite common in real exchanges – see, for example, Section A.1, turn 1.) In the {a mathematical formula}ASPIC+ argumentation theory, {a mathematical formula}K′=K∪{r} and {a mathematical formula}c‾′=c‾∪{r}. In the induced abstract framework, the conflict results in new attacks between r and the abstract argument representing the proof, ω, i.e. [{a mathematical formula}li so c]. This does not remove the previous conjecture or the extant proof in its support, but suspends it, knocking it out of the grounded extension, whilst focus shifts to the revised, narrower conjecture. For StrategicWithdrawal(r, c), the update is thus {a mathematical formula}ARLG′=ARLG∪{r} and {a mathematical formula}attacksLG′=attacksLG∪{(r,ω),(c,ω)}.
+      </paragraph>
+      <paragraph>
+       For MonsterBar, the AIF is updated with a reason, r, which is used as an undercutter in the argument from counterexample to counter-conjecture. Clearly, {a mathematical formula}K′=K∪{r} and in addition, {a mathematical formula}m⇒not-c‾′=m⇒not-c‾∪{r}. The reason, r, is guaranteed to be in the grounded extension since there could be no attackers; as a result, the status of the abstract argument corresponding to the inference from counterexample, m, to counterconjecture, not-c, is guaranteed to be out (since it is attacked by the abstract argument corresponding to r). With this argument out, if there are no other pending counterexamples (and the dialogue protocol constrains the discussion to handle just one at a time), the conjecture will be in the grounded extension. Thus, MonsterBar(m, c, r) updates {a mathematical formula}ARLG′=ARLG∪{r} and {a mathematical formula}attacksLG′=attacksLG∪{(r,α)} where α is the abstract argument corresponding to the structured argumentation complex [m so not-c].
+      </paragraph>
+      <paragraph>
+       For MonsterAdjust, a direct counter, r, to the counterexample m, is introduced along with the symmetrical conflict between them, but also a preference to ensure r defeats m. For {a mathematical formula}ASPIC+, this means that {a mathematical formula}K′=K∪{r}, {a mathematical formula}m‾′=m‾∪{r} and {a mathematical formula}r‾′=r‾∖{m} (this latter is the result of the AIF PA node). As with MonsterBar-ing, if there are no other pending counterexamples (and the dialogue protocol constrains the discussion to handle just one at a time), the conjecture will be in the grounded extension. Thus, for MonsterAdjust(m, r), the associated update is {a mathematical formula}ARLG′=ARLG∪{r} and {a mathematical formula}attacksLG′=attacksLG∪{(r,m),(r,α)}, where α is the abstract argument corresponding to the structured argumentation complex [m so not-c].
+      </paragraph>
+      <paragraph>
+       GlobalLemmaInc, makes explicit the hidden assumption (as described by Lakatos) as a lemma (the subsequent incorporation of the lemma into the conjecture is handled by HybridLemmaInc). The new lemma is introduced and added in to AIF and thence the {a mathematical formula}ASPIC+ argumentation theory thus: {a mathematical formula}K′=K∪{k}, {a mathematical formula}m‾′=m‾∪{k} and {a mathematical formula}k‾′=k‾∪{m}. At the abstract level, the argument corresponding to this lemma is guaranteed to be in the grounded extension. That is, for GlobalLemmaInc(m, k), the update is {a mathematical formula}ARLG′=ARLG∪{k} and {a mathematical formula}attacksLG′=attacksLG∪{(k,α),(m,k),(k,m)}, where α is the abstract argument corresponding to the structured argumentation complex [m so not-c].
+      </paragraph>
+      <paragraph>
+       For LocalLemmaInc(m, l, k), the new lemma k is added and guaranteed to be in the grounded extension, and the old is guaranteed to be out as a result of the preceding LocalCounter move. So, for LocalLemmaInc(m, l, k), the resulting update to {a mathematical formula}ASPIC+ is just {a mathematical formula}K′=K∪{k}, with the corresponding update at the abstract level: {a mathematical formula}ARLG′=ARLG∪{k} and {a mathematical formula}attacksLG′=attacksLG.
+      </paragraph>
+      <paragraph>
+       For PDefinition, Proponent's definition, d in support of the reason for treating the counterexample as a monster is added to the AIF. The {a mathematical formula}ASPIC+ theory is updated not only with {a mathematical formula}K′=K∪{d} but also {a mathematical formula}RLG′=RLG∪{d⇒r}. The reason d is guaranteed to be in the grounded extension (again, under a constraint of non-repetition). The abstract argument corresponding to the reason alone is no longer induceable, instead being replaced by the abstract argument representing the complex [d so r]. The extant attack between r and the argument α (from m to not-c) is thus replaced by one from δ to α, and likewise that from r to m by one from δ to m. Thus {a mathematical formula}ARLG′=(ARLG∪{d,δ})∖{r} and {a mathematical formula}attacksLG′=(attacksLG∪{(δ,α),(δ,m)})∖{(r,α),(r,m)} where δ is the abstract argument corresponding to the structure argumentation complex [d so r] and α is that for [m so not-c].
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Critical locutions
+      </section-title>
+      <paragraph>
+       Next we move on to moves that reduce the size of the extant theory by introducing conflict into the AIF structure and thence the abstract framework. All are moves of Opponent, as is to be expected. First, GlobalCounter(m, c) updates the AIF to introduce not-c in conflict with the conjecture c (as well as introducing m, of course). This conflict introduces attacks between the abstract arguments involving c on the one hand and those involving not-c on the other [16]. The {a mathematical formula}ASPIC+ theory is updated such that {a mathematical formula}K′=K∪{m,not−c} and {a mathematical formula}RLG′=RLG∪{m⇒not-c} plus {a mathematical formula}c‾′=c‾∪{not-c} and {a mathematical formula}not-c‾′=not-c‾∪{c}. This ensures that c is no longer in the grounded extension. Because the conflict is symmetrical in the AIF, there are bidirectional attacks in the abstract framework so not only is c out of the grounded extension, so too is not-c. This accurately reflects not only that c is knocked out of the current proof, but also that the counterposition is not added to the theory. Instead the proof is temporarily suspended – if the dialogue were to stop at this point, there would be no proof: which is exactly the status delivered by the grounded extension of the abstract framework. For GlobalCounter(m, c), we have that {a mathematical formula}ARLG′=ARLG∪{m,α} and {a mathematical formula}attacksLG′=attacksLG∪{(ω,α),(α,ω)}, where α is the abstract argument corresponding to the structured argumentation complex [m so not-c] and ω corresponds to the argument [{a mathematical formula}li so c] (i.e. that connects all of the lemmas {a mathematical formula}li to the conjecture, c).
+      </paragraph>
+      <paragraph>
+       The LocalCounter(m, l) and HybridCounter(m, l, c) moves similarly add conflicts, and have similar effects on the abstract framework and thence the grounded extension. For LocalCounter(m, l), {a mathematical formula}K′=K∪{m} and {a mathematical formula}m‾′=m‾∪{l} and {a mathematical formula}l‾′=l‾∪{m}. At the abstract level, this yields {a mathematical formula}ARLG′=ARLG∪{m} and {a mathematical formula}attacksLG′=attacksLG∪{(l,m),(m,l),(m,ω)}, where ω corresponds to the argument [{a mathematical formula}li so c]. The update associated with {a mathematical formula}HybridCounter(m,l,c) is the union of those for LocalCounter and GlobalCounter, except that the monster, m is itself the counter to the conjecture, viz., {a mathematical formula}K′=K∪{m} and {a mathematical formula}m‾′=m‾∪{l,c} and {a mathematical formula}l‾′=l‾∪{m} and {a mathematical formula}c‾′=c‾∪{m}. Thus at the abstract level, {a mathematical formula}ARLG′=ARLG∪{m} and {a mathematical formula}attacksLG′=attacksLG∪{(m,l),(l,m),(m,ω),(ω,m),(m,c),(c,m)}, where ω corresponds to the argument [{a mathematical formula}li so c].
+      </paragraph>
+      <paragraph>
+       For MonsterReject, the situation rather mirrors MonsterBar in that a reason, s, along with the symmetrical conflict between s and r are added to the AIF. With no resolution between these two, neither s nor r will be in the grounded extension; as a result the abstract argument corresponding to the argument from counterexample to counter-conjecture will be attacked by nothing other than the conjecture, so both will be excluded from the grounded extension. Finally, the new reason, s is adduced as an additional premise in the argument from m to not-c. Thus for {a mathematical formula}MonsterReject(m,r,d,s,c), the {a mathematical formula}ASPIC+ framework is updated so that {a mathematical formula}K′=K∪{s} and {a mathematical formula}RLG′=RLG∪{s,m⇒not-c} plus {a mathematical formula}s‾′=s‾∪{r} and {a mathematical formula}r‾′=r‾∪{s}. In the resulting abstract framework, {a mathematical formula}ARLG′=ARLG∪{s,σ} and {a mathematical formula}attacksLG′=attacksLG∪{(δ,s),(s,δ),(δ,σ),(σ,ω),(ω,σ)}, where δ is the abstract argument corresponding to the structured argumentation complex [d so r], σ is [{a mathematical formula}{s,m} so not-c] and ω is [{a mathematical formula}li so c].
+      </paragraph>
+      <paragraph>
+       Lastly, ODefinition, which is only used as Opponent's substantiation of their MonsterReject, introduces a new definition, e and symmetrical conflict between that and d. Again, with no resolution between d and e, neither are in the grounded extension. The update introduced by {a mathematical formula}ODefinition(m,r,d,s,e) on {a mathematical formula}ASPIC+ is thus {a mathematical formula}K′=K∪{e} and {a mathematical formula}RLG′=RLG∪{e⇒s} plus {a mathematical formula}d‾′=d‾∪{e} and {a mathematical formula}e‾′=e‾∪{d}. In the resulting abstract framework, {a mathematical formula}ARLG′=(ARLG∪{e,ε})∖{s} and {a mathematical formula}attacksLG′=(attacksLG∪{(d,e),(e,d),(δ,ε),(ε,δ)})∖{(s,δ),(δ,s)}, where δ is the abstract argument corresponding to the structured argumentation complex [d so r] and ε is [e so s].
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Neutral locutions
+      </section-title>
+      <paragraph>
+       Two further moves have important updates to the abstract argumentation framework despite not updating the theory structure directly (that is to say, they are important in terms of the dialogical dynamics of LG but have only indirect impact on the theory and its update (indirect inasmuch as constraining the subsequent application of moves that do have direct impact on the theory).
+      </paragraph>
+      <paragraph>
+       The Prefer move, is unique in that it will either expand or contract the grounded extension depending on which player executes it. The protocol demands that {a mathematical formula}Prefer can only be executed after both Proponent and Opponent have offered definitions, which in turn can only occur in a MonsterBar-PDefinition-MonsterReject-ODefinition series. First, we consider Opponent's use of Prefer, in which Opponent's definition, e, is preferred to Proponent's, d. This ensures that the abstract argument corresponding to e defeats that corresponding to d, and further that the abstract argument ε (corresponding to the structured argumentation complex [e so s]) defeats the abstract argument δ (corresponding to the structured argumentation complex [d so r]). With δ out of the grounded extension, the argument α (the abstract argument corresponding to the argument [m so not-c]) is no longer undercut, thereby ensuring that c is out of the grounded extension. For Proponent's use of the Prefer move, the situation is reversed, so that d is preferred to e, and thence that δ is preferred to ε. This in turn ensures that α is out of the grounded extension and with nothing else to attack it, c is in. So after Proponent's {a mathematical formula}Prefer move, {a mathematical formula}c,r,d∈GELG′, whilst not-{a mathematical formula}c,m,s,e∉GEL′G. The definition of {a mathematical formula}Prefer(m,r,f,g) allows us to capture these abstract consequences independently of the speaker, expressing that f is preferred to g (and in the abstract, that η founded on f is preferred to γ founded on g), regardless of which of f and g are instantiated with d or e. The effect of adding a preference into the structured argumentation is to remove one of the pair of symmetrical attacks in the abstract framework. The {a mathematical formula}ASPIC+ update is thus just {a mathematical formula}f‾′=f‾∪{g} which results at the abstract level, in {a mathematical formula}ARLG′=ARLG and {a mathematical formula}attacksLG′=attacksLG∖{(g,f),(γ,η)}.
+      </paragraph>
+      <paragraph>
+       The ProofDone move adds a new abstract argument, ω corresponding to the argument from all of the current lemmas, {a mathematical formula}li, to the conjecture, c, and uses it to replace the atomic abstract argument corresponding to c. Finally, everything that previously attacked c will now be attacking ω. For {a mathematical formula}ASPIC+, the update is thus simply {a mathematical formula}RLG′=RLG∪{li⇒c}. The ramifications at the abstract level are more complex: {a mathematical formula}ARLG′=(ARLG∪ω)∖{c} and {a mathematical formula}attacksLG′=attacksLG∪(βi,ω),∀βis.t.(βi,c)∈attacksLG, where ω is the abstract argument corresponding to the structured argumentation complex [{a mathematical formula}li so c].
+      </paragraph>
+      <paragraph>
+       To complete the assessment of semantic update, it is also useful to explain why the remaining four moves have no direct effect at all.
+      </paragraph>
+      <paragraph>
+       The purpose of HybridLemmaInc is to introduce a new conjecture, {a mathematical formula}c′, but it is not HybridLemmaInc itself that does this, but rather the Conjecture move which is required to follow it. Similarly, the abstract argument corresponding to the inference from the new set of lemmas to the new conjecture is handled later by ProofDone whilst the exclusion of the lemma that has been incorporated and of the conjecture which has been revised are both handled earlier by the HybridCounter or GlobalLemmaInc which must have preceded it. The update associated with HybridLemmaInc itself, therefore, is null (i.e. {a mathematical formula}ARLG′=ARLG and {a mathematical formula}attacksLG′=attacksLG).
+      </paragraph>
+      <paragraph>
+       The MonsterAccept move allows Opponent to reiterate what has already been said, and so does not update the semantics any more than it updates the underlying AIF structure.
+      </paragraph>
+      <paragraph>
+       In addition there are the two terminating moves, Accept and Surrender neither of which effect material update on the AIF structure. Instead, they mark the conclusion of the dialogical process.
+      </paragraph>
+      <paragraph>
+       In short, HybridLemmaInc, MonsterAccept, Accept and Surrender all play a role in the dialogical structure, but their place in the dialogical exchange ensures that any appropriate updates with resulting semantic changes are executed by other moves in the dialogical sequence.
+      </paragraph>
+      <paragraph>
+       The complete set of updates, both syntactic and resultant semantic, for all moves in LG is summarised in Table 1, which also shows, in the final column, the direct impact on the resulting grounded extension – though this omits potential reinstatements and other indirect effects of the updates described in columns three and four.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Implementation: from the theoretical model to computational model
+     </section-title>
+     <paragraph>
+      We have shown how argumentation semantics can, in theory, furnish us with the most up-to-date status of a theory in a Lakatos Game. All the components of this pipeline [88] are also implemented – so, execution of Lakatos Games requires no new development other than the creation of a Dialogue Game Description Language (DGDL) [105] specification to capture the rules described in Section 3 and the updates described in Section 4.
+     </paragraph>
+     <paragraph>
+      A DGDL specification consists of three main parts; composition, rules and interactions. The composition describes the general features of the dialogue game, and, in the case of LG, the composition is as shown in Listing 1.
+     </paragraph>
+     <paragraph>
+      Firstly, we specify that a turn can consist of multiple moves and that the ordering is liberal, i.e. that there are not single alternating moves made by each participant. The roles of Participant and Opponent are then given with a limitation that only these two players are possible. Finally, we specify the commitment stores that will be used to store the conjecture and the lemmas that will comprise the proof.
+     </paragraph>
+     <paragraph>
+      The LG specification contains only one rule, a starting rule that is triggered when the dialogue begins and specifies that the dialogue starts with Proponent making a ‘Conjecture’ move.
+     </paragraph>
+     <paragraph>
+      The remainder of the LG DGDL specification then consists of the interactions available and the effects which they have on the dialogue. A simple example of an interaction description is Proponent's first move, ‘Conjecture’ (Listing 2).
+     </paragraph>
+     <paragraph>
+      In this example, the name of the move is given first, followed by its content and the fact that Proponent is asserting the conjecture. The string “$c is the conjecture” is a description of what the move is doing, used to allow users to identify it. The body of the interaction looks at whether the Lemmas commitment store is empty, and if not, allows Proponent to perform a ProofDone move next. Regardless of the state of the Lemmas store, Proponent also has the option to perform the Lemma move at this point. Finally, in both cases, any existing conjecture is removed from the Conjecture store and the new conjecture is added.
+     </paragraph>
+     <paragraph>
+      Another example of a more complex interaction, ‘GlobalCounter’, is given in Listing 3.
+     </paragraph>
+     <paragraph>
+      Here Opponent is giving a counterexample, ‘m’, to the conjecture, ‘c’. This counterexample is arguing in support of the negation of the conjecture, ‘!c’.
+     </paragraph>
+     <paragraph>
+      Having specified the LG system in DGDL, this specification can then be processed by the Dialogue Game Execution Platform (DGEP) [14]. DGEP allows participants to take part in dialogues following the rules specified by a DGDL protocol. When a new dialogue is initiated, DGEP allows users to join in the roles available, and any initial rules are processed. From this point on, DGEP maintains the legal move list for each participant, based on the rules and interactions: a rule is executed when it is in scope, and an interaction when it is moved by a player during the game.
+     </paragraph>
+     <paragraph>
+      DGEP provides a range of web service interfaces, allowing a user to both perform interactions and get information about the current dialogue state (for example, their list of available moves). These web services can then be used by either software agents playing the roles of specific participants, or by graphical interfaces allowing human users to take part in the discussion. Arvina [56] is one such graphical interface, and a screenshot of a LG protocol dialogue taking place in Arvina can be seen in Fig. 11.
+     </paragraph>
+     <paragraph>
+      One of the advantages of using DGEP is that it not only provides a robust platform for the execution of a dialogue protocol, but also creates argument structures as a side effect. AIF infrastructure for querying and updating is available in the webservices of AIFdb{sup:15}[57]; conversion to {a mathematical formula}ASPIC+ and induction of abstract frameworks is handled by TOAST [90]; and calculation of acceptability semantics is performed by Dung-O-Matic [31]. (We use these tools for convenience because they work directly with AIF and {a mathematical formula}ASPIC+ data structures, though many other systems perform comparable computation using various alternative approach – Tweety [93] using defeasible logic programming, ASPARTIX [33] using answer set programming and ArgSemSAT [24] using SAT solving.)
+     </paragraph>
+     <paragraph>
+      Arvina has been demonstrated to provide a practical stepping stone towards mixed-initiative argumentation [89], a type of collaborative intelligence [35] or human–agent collective [49]. Where agents have knowledge bases populated by pre-existing arguments, they can contribute to an evolving Lakatos game on a level playing field with human participants. Indeed, DGEP makes no distinction between types of clients, whether human or artificial. The Arvina system, the Lakatos game, and agents containing several small suitable knowledge bases are available online at http://arvina.arg-tech.org.
+     </paragraph>
+     <paragraph>
+      Finally, the AIF structures created as a side-effect of executing the DGDL specification for LG using Arvina can be submitted to the TOAST system [90] which implements (i) the translation from AIF to {a mathematical formula}ASPIC+; (ii) the induction of abstract frameworks according to the {a mathematical formula}ASPIC+ definitions; and (iii) the computation of semantics over those structures, including grounded, by calling DungOMatic [31]. Sample results from TOAST running over structures created by Arvina and DGEP executing the Lakatos Game DGDL specification are shown in Fig. 12.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Execution: collective proof as argumentation
+     </section-title>
+     <paragraph>
+      In this section we look at a fully worked example dialogue, considering strategies of global counter and monster-barring (see Section 7.2), and then local counter and local lemma incorporation (see Section 7.3) in greater depth. A proof idea for Euler's conjecture is presented by the Teacher on the second page Proofs and Refutations[55]. The proof outline comes from [23], and consists of three steps (for a diagrammatic representation of these steps, carried out on the cube, see Fig. 13, taken from [55, p. 8]). Note that in (1-i), GAMMA's reference to “my counterexample” is made on behalf of both ALPHA and GAMMA who speak in the role of Opponent throughout, whereas TEACHER and DELTA speak in the role of Proponent.
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       <list>
+        <list-item label="a.">
+         TEACHER: We arrived at a conjecture concerning polyhedra, namely that for all polyhedra, {a mathematical formula}V−E+F=2, where V is the number of vertices, E the number of edges and F the number of faces. ... ... I have one [a proof]. It consists of the following thought experiment.
+        </list-item>
+        <list-item label="b.">
+         TEACHER: Step 1 [described above, as lemmas].
+        </list-item>
+        <list-item label="c.">
+         TEACHER: Step 2.
+        </list-item>
+        <list-item label="d.">
+         TEACHER: Step 3.
+        </list-item>
+        <list-item label="e.">
+         TEACHER: Thus we have proved our conjecture.
+        </list-item>
+        <list-item label="f.">
+         ALPHA: I have a counterexample … Imagine a solid bounded by a pair of nested cubes – a pair of cubes, one of which is inside, but does not touch the other. … for each cube {a mathematical formula}V−E+F=2, so that for the hollow cube {a mathematical formula}V−E+F=4.
+        </list-item>
+        <list-item label="g.">
+         DELTA: This pair of nested cubes is not a polyhedron at all. … It is a monster, … not a counterexample.
+        </list-item>
+        <list-item label="h.">
+         DELTA: A polyhedron is a surface consisting of a system of polygons.
+        </list-item>
+        <list-item label="i.">
+         GAMMA: My counterexample is a solid bounded by polygonal faces.
+        </list-item>
+        <list-item label="j.">
+         GAMMA: A polyhedron is a solid whose surface consists of polygonal faces.
+        </list-item>
+        <list-item label="k.">
+         TEACHER: …For the moment let us accept Delta's definition. Can you refute our conjecture now if by polyhedron we mean a surface?
+        </list-item>
+        <list-item label="l.">
+         GAMMA: I propose a trivial counterexample. Take the triangular network which results from performing the first two operations on a cube. Now if I remove a triangle from the inside of this network, as one might take a piece of the jigsaw puzzle, I remove one triangle without removing a single edge or vertex. So the third lemma is false – and not only in the case of the cube, but for all polyhedra except the tetrahedron, in the flat network of which all the triangles are boundary triangles. …
+        </list-item>
+        <list-item label="m.">
+         TEACHER: I no longer contend that the removal of any triangle follows one of the two patterns mentioned, but merely that at each stage of the removing operation the removal of any boundary triangle follows one of these patterns. … All that I have to do is to insert a single word in my third step, to wit, that ‘from the triangulated network we now remove the boundary triangles one by one’.
+        </list-item>
+        <list-item label="n.">
+         TEACHER: … I can easily (…) improve the proof, by replacing the false lemma by a slightly modified one, which your counterexample will not refute.
+        </list-item>
+       </list>
+      </list-item>
+     </list>
+     <paragraph>
+      In the remainder of this section, we work step by step through this dialogue and show how our protocol both, covers all of the moves made, and, at the same time, produces updates to the generated the Argument Interchange Format structure and argumentation structure which capture the status of the proof after each turn of the dialogue.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Introducing the proof
+      </section-title>
+      <paragraph>
+       The first five moves in the above dialogue transcript, (1-a) to (1-e), correspond to the introduction of the initial proof by Proponent. Table 2 shows how the execution of these steps using the LG dialogue system (column 1 of the table) updates a shared theory, understood by the participants as the current state of the proof (according to the definitions in Section 3.2) (in column 2). The AIF structures added by these moves are shown in column 3.{sup:16} The current {a mathematical formula}ASPIC+ framework caused by mapping the complete new AIF structures according to [16] are shown in column 4. The abstract argumentation framework caused by inducing from the new {a mathematical formula}ASPIC+ framework a new AF are shown in column 5, and finally the grounded extension computed over that AF is shown in the last column.
+      </paragraph>
+      <paragraph>
+       In (1-a), Proponent presents their conjecture: “For all polyhedra, {a mathematical formula}V−E+F=2”, this corresponds to the Conjecture(C) move in the LG protocol governed by the locution rule L1.1 and structural rule S1. The current state of proof consists now of the conjecture C which adds {a mathematical formula}I1, a first node, to the AIF structure depicted on the left hand side in Fig. 14. This also adds C as an argument to the {a mathematical formula}ASPIC+ framework, and to the abstract argumentation framework. As there are no conflicts at this stage, C is in the grounded extension.
+      </paragraph>
+      <paragraph>
+       The next three moves (1-b), (1-c), and (1-d), present the three lemmas that the Proponent is using to support their conjecture (the full text of these lemmas can be seen in Table 2). This introduces three lemmas {a mathematical formula}L1, {a mathematical formula}L2, {a mathematical formula}L3 into dialogue theory, and three new nodes {a mathematical formula}I2, {a mathematical formula}I3, {a mathematical formula}I4 into AIF structure and argumentation framework in Fig. 14.
+      </paragraph>
+      <paragraph>
+       Finally, in (1-e), the Proponent announces that they have completed constructing their proof, making the ProofDone move. Performing ProofDone not only shows that the proof is complete allowing the Opponent to raise any challenges, but also creates a new rule of inference ({a mathematical formula}RA1) whereby representing that the given lemmas support the conjecture. This creates a new abstract argument, ω, corresponding to the proof structure, and, as there are no attacks at this stage, ω and the three given lemmas are all in the grounded extension (Fig. 14). The updates performed during these moves are shown in Table 2.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       First strategy of testing the proof: countering the conjecture
+      </section-title>
+      <paragraph>
+       Once the Proponent has presented the initial proof, the Opponent makes their first attack. Here, the Opponent provides a counter to the conjecture, which the Proponent rejects as not fitting the definition of a polyhedron. The updates carried out in this section of the dialogue are summarised in Table 3.
+      </paragraph>
+      <paragraph>
+       The counter begins in (1-f), following the rules L2.3 and S4.1, the Opponent uses GlobalCounter to introduce the counterexample of a hollow cube (i.e. {a mathematical formula}M1 or {a mathematical formula}I5): “For the hollow cube {a mathematical formula}V−E+F=4”, to the conjecture “For all polyhedra, {a mathematical formula}V−E+F=2” (thus new conflict nodes {a mathematical formula}CA1 and {a mathematical formula}CA2 in the updated AIF structure in Fig. 15). More specifically, they use this counterexample as a premise to justify ({a mathematical formula}RA2) the counter-conjecture (not-C, {a mathematical formula}I6): “It is not the case that for all polyhedra, {a mathematical formula}V−E+F=2”. This results in the creation of a new abstract argument in Fig. 15, α, which is in mutual conflict with the abstract argument, ω, representing the proposed proof, and hence ω is no longer in the grounded extension.
+      </paragraph>
+      <paragraph>
+       The Proponent defends this challenge in (1-g), using MonsterBar, to show that this is not a valid counterexample, claiming that, whilst the hollow cube does indeed have the property “{a mathematical formula}V−E+F=4”, it is not a polyhedron (R or {a mathematical formula}I7). Following rule S10, the Proponent must then support this statement ({a mathematical formula}RA3), using the PDefinition move. As such, the Proponent provides a definition of a polyhedron: “A polyhedron is a surface consisting of a system of polygons”, which excludes the hollow cube (D or {a mathematical formula}I8). The resulting abstract argument, δ, conflicts with α, returning ω, to the grounded extension (see Fig. 16).
+      </paragraph>
+      <paragraph>
+       At this stage in the dialogue, Opponent could choose to agree with Proponent that this is not a valid counterexample (rule S12.1). However, in this example Opponent decides to continue the attack (rule S12.2), first making the move MonsterReject, to reject Proponent's defence by using {a mathematical formula}I9 (S), and {a mathematical formula}CA4 and {a mathematical formula}CA5, and then providing an alternative definition of a polyhedron ({a mathematical formula}I10 or E), which supports {a mathematical formula}I9, using ODefinition. As we now have two conflicting definitions, the Proponents reason is no-longer sufficient to mean that the counter is rejected, and, as such, ω is once again out of the grounded extension (Fig. 17).
+      </paragraph>
+      <paragraph>
+       Progress in the dialogue reaches an impasse until one of the party excepts the definition proposed by the other. In the case of our example, the Proponent's definition is preferred, and the Opponent makes the Prefer move to indicate this. In the AIF structure, this results in a preference (PA1 node) showing that D is preferred to E, and, as such, the conflict from E to D in the abstract argument structure is removed. This impacts the grounded extension, by re-instating all of the Proponents arguments, meaning that the proponent has successfully defended against the counter (Fig. 18).
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Second strategy of testing the proof: countering a lemma
+      </section-title>
+      <paragraph>
+       With Proponent having successfully defended against the first attack of the proof, Opponent now makes a further attack. This time Opponent raises a counterexample to one of the lemmas. Proponent accepts that this counter is valid and replaces the attacked lemma with a revised version incorporating the counterexample. The updates carried out in this section of the dialogue are summarised in Table 4. (As this section follows on from the previous counter, the definitions introduced there remain a part of the structure, but are omitted here as they have no impact on the remainder of the dialogue.)
+      </paragraph>
+      <paragraph>
+       The second counter begins in (1-l), following the rules L2.1 and S16.3b (as this counter follows directly from the previous Prefer move), the Opponent uses LocalCounter to introduce the counterexample of a cube, explaining that, if a triangle is removed from inside the triangular network produced by performing the first two steps on this polyhedron, then no edges on vertices are removed ({a mathematical formula}I11 in the updated AIF structure in Fig. 19). This is in conflict ({a mathematical formula}CA8 and {a mathematical formula}CA9) with the lemma, {a mathematical formula}L3, one of the premises of the abstract argument, ω, representing the proposed proof, and hence ω is no longer in the grounded extension (Fig. 19).
+      </paragraph>
+      <paragraph>
+       In (1-m) the Proponent accepts the validity of the counterexample raised by the Opponent, and revises the attacked lemma, {a mathematical formula}L3, via LocalLemmaInc to take this into account (a node MA1 represents the rephrase relation between the new lemma and the old lemma). This new lemma, K or {a mathematical formula}I12 in the AIF structure, adapts {a mathematical formula}L3 by insisting that triangles may only be removed from the boundary of the network. At this stage in the defence, ω is still out of the grounded extension, and the only change is the addition of K (Fig. 20).
+      </paragraph>
+      <paragraph>
+       Having introduced the revised lemma, K, the Proponent now performs the ProofDone move to incorporate this new lemma into the proof structure. The result of this move is to create a new rule of inference, {a mathematical formula}RA6, between the current lemmas ({a mathematical formula}L1, {a mathematical formula}L2, K) and the conjecture (C), this produces a new abstract argument {a mathematical formula}ω′, which replaces ω as the current proof (Fig. 21). The final grounded extension along with the text of each argument, can be seen in Table 5.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      In this paper we propose a way to narrow the gap between human and machine proof-construction, in order to promote mainstream acceptance and use of automated theorem provers by mathematicians. Philosophical, sociological and educational literature on mathematics highlights the importance of presenting the development of a proof attempt alongside a final, or currently accepted, proof artefact. We have developed an argumentation-based framework in which this is possible. A grounded extension of a dialogue can be produced, representing a currently accepted, collaboratively constructed, proof or theory. Since the record of the dialogue can be presented alongside this proof, the framework delivers the history of a proof attempt as well as the proof artefact. Similarly, social aspects in human mathematics have been shown to be integral to the human context. Technologies which are able to support mathematicians in the collective construction of mathematical knowledge, in a variety of ways, such as highlighting conflicting commitments or unresolved moves, finding similarities and conflicts across different discussions going on in parallel among otherwise independent groups of arguers, storing past discussions and making them searchable, and so on, are essential.
+     </paragraph>
+     <paragraph>
+      Our work develops across three arcs – a theoretical model, an abstraction level and a computational model – in order to take into account studies of human mathematical reasoning. In particular, we have:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       taken Lakatos's informally specified technique for conducting dialogue in mathematics,
+      </list-item>
+      <list-item label="2.">
+       modeled it as a formal dialogue system,
+      </list-item>
+      <list-item label="3.">
+       expressed this model in a domain specific language for dialogue game specification, DGDL,
+      </list-item>
+      <list-item label="4.">
+       defined operational semantics for the specification in terms of updates to argumentation structures expressed in a natural language dialogue for argumentation, AIF,
+      </list-item>
+      <list-item label="5.">
+       induced abstract argumentation frameworks from AIF via the structured argumentation system {a mathematical formula}ASPIC+
+      </list-item>
+      <list-item label="6.">
+       shown the consequences of AIF updates at the abstract layer
+      </list-item>
+      <list-item label="7.">
+       demonstrated how those abstract semantics yield a grounded extension that provably always corresponds to the theory that has been collaboratively created by the dialogue participants
+      </list-item>
+      <list-item label="8.">
+       shown how the entire pipeline can be implemented and then skinned with the Arvina interface (using TOAST, DungOMatic, AIFdb and DGEP)
+      </list-item>
+      <list-item label="9.">
+       and, finally, shown how an example of Lakatos's informal logic of mathematical discovery can be formalised.
+      </list-item>
+     </list>
+     <paragraph>
+      This is the first time that formally specified and fully implemented argumentation tools right through the abstraction hierarchy from natural language dialogue through structured argumentation to instantiated abstract argumentation have been brought together and applied to a specific, demanding domain of human reasoning. The foundation that has been laid here allows new explorations into mixed-initiative, collaborative reasoning between human and software participants in interactions which are both naturalistic but formally constrained and well-defined, with the potential to impact both the pedagogy and the professional practice of mathematics.
+     </paragraph>
+     <paragraph>
+      We emphasise that no formal linguistic analysis or NLP has been incorporated into the current effort. Such an effort must be reserved for future work, and it would play a crucial role in an automated mathematical dialogue system. Contemporary strategies from natural language processing, including the field of argument mining [73] have gained traction within the broader field of discourse mining and could help inform future NLP-based efforts in this direction. Progress has made in understanding the language that mathematicians use [38], [28], integrating this with reasoning systems, and generating human-like output [39].
+     </paragraph>
+     <paragraph>
+      Representation and reasoning are two important and intertwined branches of AI. Our paper has primarily focused on representation of reasoning. Moreover, this is not reasoning by way of standard deductive logic that is often used in logical foundations of mathematics, but is rather, per Lakatos, a closer approximation of the kind of reasoning used in everyday mathematics. Appendix A illustrates that our system models, with reasonable fidelity, the key processes that take place in mathematical dialogues leading to proofs. This can also be taken as a proof-of-concept that implies that the theoretical and technical achievements of the paper are on the right track.
+     </paragraph>
+     <paragraph>
+      Each of the major arcs mentioned in Section 1 could be continued in future work.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       On the theory side, expanding the range of mathematical dialogues that can be modeled would in some cases require moving beyond Lakatos's informal logic, e.g., to include problem solving and problem specification in the spirit of Pólya [76], [84].
+      </list-item>
+      <list-item label="•">
+       The abstraction layer could usefully be upgraded with a richer instantiation layer: per [11], in contrast to abstract argumentation, instantiated argumentation makes “the internal structure and content of the arguments, the relationships between the arguments in virtue of their content, and the application of argumentation” available to reasoning. This would be relevant for modelling, e.g., the lemmas or sequences of lemmas might be attacked in terms of their structure. This work would go hand-in-hand with the introduction of Pólya-style planning and heuristics.
+      </list-item>
+      <list-item label="•">
+       On the technical side, another major challenge for future work will be the design of agents that can participate in Lakatosian reasoning. This has been piloted in [70] (see [71] for a summary), but the formality and precision of the current offering motivate a new approach to this challenge, and provide groundwork for further advances. For example, following [78], it would be useful if interlocutors were able to identify the relevant moves among the permitted ones.
+      </list-item>
+     </list>
+     <paragraph>
+      The research described here presents a solid basis for such a programme of work, because it represents the kind of reasoning that people actually use in practice. The extent to which human reasoning will jibe with “human-oriented theorem proving” systems (as used and surveyed briefly in [39]) remains to be seen. The inferential construction of the grounded extension in our system automates some basic reasoning tasks. Extensions, restrictions, or other modifications to the Lakatosian model – to represent richer or simply different forms of reasoning – along with corresponding extensions to the backend are reasonable projects for follow-up work. For example, we recently presented work with a limited Lakatosian framework for discussions about design artefacts [27]. More broadly, representing practical reasoning bears on several of the challenges about which AI researchers had been initially optimistic [86]. The systems we work with make available inherently explicable patterns of reasoning, which stands at a contrast to some of the impressive successes in the connectionist tradition. Pragmatics are essential for realising AI that can work in dialogue with humans.
+     </paragraph>
+     <paragraph>
+      Our long term goal is to build a seamless interaction between automatic, semi-automatic and manual processes in shaping the dynamics and the outcome of argumentative interactions among multiple parties, possibly including both human users and artificial agents. Here we have developed a new approach in which tools and theories from the argumentation community can be deployed to build a bridge between interactive proof tools and human mathematicians, thus helping to close the gap between the two disparate styles of reasoning. We have focused on two key interrelated areas of human mathematics: informal proof together with corresponding representations of proofs-in-progress; and the social aspects of proof development. Our treatment of these issues here opens the door to mixed-initiative collaboration in mathematics. This will be a step towards our vision of a mathematics social machine, in which mathematicians view software systems as valued collaborators and respected fellow mathematicians.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Lakatos in the wild
+     </section-title>
+     <paragraph>
+      While acknowledging Lakatos's contribution to the field, fellow philosophers of mathematical practice have criticised him for over-reliance on a few case studies, historical inaccuracy and narrowness of application of his theory [112], [111], [113]. This provides an impetus for a wider search for empirical examples. Here, we illustrate the feasibility of using our formalisation of Lakatosian informal mathematics to model a real-world example of mathematical dialogue.
+     </paragraph>
+     <paragraph>
+      Until recently, naturalistic observation of mathematical discussions would typically only be possible for the direct participants in those discussions. However, archives of online discussions usefully make most of the same information that participants share available to researchers [118]. Such discussions are very different from the more formal presentations typical of research papers, which present polished proofs but lack transparency about how those proofs were obtained [114], [119].
+     </paragraph>
+     <paragraph>
+      In 2009, Timothy Gowers initiated the Polymath series of experiments in online collaborative mathematics, in which problems are posted online, and an open invitation issued for people to try to solve them collaboratively, documenting every step of the ensuing discussion [110]. The result is an unusual example of a public record of several episodes of mathematical activity that lead to a proof. Martin and Pease [115], [117] discuss the implications of such crowdsourced mathematical activity for the production of mathematics. They describe preliminary investigations of the community question answering system MathOverflow [108], and the Polymath collaborations [110], and develop a detailed analysis of one ‘Mini-Polymath’ project for students [109], noting aspects of the discussion which followed the conversational patterns which Lakatos identified. We build on this work below.
+     </paragraph>
+     <paragraph>
+      The problem in [109], taken from the International Mathematical Olympiad, asks about a certain geometrical construction involving lines rotating around a set of points in the plane; it refers to an example from this class as a “windmill process.”{sup:17} Between the problem proposal and Terrence Tao's certification of the answer in thread 27, approximately seventy four minutes passed [117].
+     </paragraph>
+     <paragraph>
+      The following set of hand-selected excerpts are hand-coded using the formalism introduced in Section 3 to show explicitly how Lakatosian reasoning contributes to the core steps in the development of the proof. Sometimes near-repetitions appear, when two or more comments are posted simultaneously (we mark these as “Repetition of previous move” below); similarly, we expand some simple statements sometimes into a sequence of several moves in the Lakatos Game. With these clarifications in mind, the following excerpts trace the highlights of the proof, and their corresponding mapping into the dialogue system introduced in Section 3.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       Thread 3: what is a line?
+      </section-title>
+      <paragraph>
+       At the beginning of this thread early on in the discussion, Anonymous decides to simplify things, moving from the running Conjecture(‘problem statement holds’) to a related game dealing with a similar conjecture in the safe domain of convex polygons. The discussants readily agree that the proposed Conjecture(‘statement holds in the convex polygon case’) is true. Variations on this case are then considered as potential counterexamples to the original conjecture. These are rejected after the basic concepts in the problem statement have been clarified.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Thread 11: hitting all the points
+      </section-title>
+      <paragraph>
+       In this thread, Anonymous offers a potential characterisation of generality. We again retain Conjecture(‘problem statement holds’), and Anonymous first proposes Lemma(‘we can start with any point’). This is refined into the claim Lemma(‘the line does not matter‘). However, counterexamples to this claim are produced, and Anonymous must refine the claim again.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Thread 14 (first part): splitting in two sets, conclusion
+      </section-title>
+      <paragraph>
+       This thread, which contains the final solution to the problem, begins with Anonymous advancing Lemma(‘we can separate the points in two parts of roughly equal size’). This draws some initial interest, but the discussants aren't sure how it will be useful. A considerable amount of time passes before Garf is able to make something more concrete from the earlier remarks, in the form of a sequence of lemmas that, he claims, secure the desired result. Garf's chain of reasoning will be certified as a solution to the problem only after the claims have been thoroughly vetted. Further minor criticisms and a recap of the solution are elided here.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

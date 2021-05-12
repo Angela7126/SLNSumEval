@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parser Evaluation Using Derivation Trees: A Complement to evalb</title>
+<!--Generated on Wed Jun 11 18:19:21 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Parser Evaluation Using Derivation Trees: 
+<br class="ltx_break"/>A Complement to evalb</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Seth Kulick 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ann Bies 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Justin Mott 
+<br class="ltx_break"/>Linguistic Data Consortium, University of Pennsylvania, Philadelphia, PA 19104 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">skulick,bies,jmott</span>}<span class="ltx_text ltx_font_typewriter">@ldc.upenn.edu</span>
+
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Anthony Kroch 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mark Liberman 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Beatrice Santorini 
+<br class="ltx_break"/>Department of Linguistics, University of Pennsylvania, Philadelphia, PA 19104 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">kroch,myl,beatrice</span>}<span class="ltx_text ltx_font_typewriter">@ling.upenn.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper introduces a new technique for phrase-structure
+parser analysis, categorizing possible treebank structures by
+integrating regular expressions
+into
+derivation trees.
+We analyze the performance of the Berkeley parser on OntoNotes WSJ
+and the English Web Treebank. This provides some insight into the
+evalb scores, and the problem of domain adaptation
+with the web data. We also analyze a “test-on-train” dataset,
+showing a wide variance in how the parser is generalizing from
+different structures in the training material.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Phrase-structure parsing is usually evaluated using evalb <cite class="ltx_cite">[]</cite>, which
+provides a score based on matching brackets. While this metric serves a valuable
+purpose in pushing parser research forward, it has limited utility for understanding
+what sorts of errors a parser is making. This is the case even if the score is broken down
+by brackets (NP, VP, etc.), because the
+brackets can represent different types of structures. We would also like to have answers
+to such questions as
+“How does the parser do on non-recursive NPs, separate from NPs resulting from modification? On PP attachment?” etc.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Answering such questions is the goal of this work, which
+combines two strands of research. First, inspired by the tradition of
+Tree Adjoining Grammar-based research <cite class="ltx_cite">[]</cite>, we use a
+decomposition of the full trees into “elementary trees” (henceforth “etrees”), with
+a derivation tree that records how the etrees relate to each other, as in <cite class="ltx_cite"/>.
+In particular, we
+use the “spinal” structure approach of <cite class="ltx_cite">[]</cite>, where etrees are
+constrained to be unary-branching.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Second, we use a set of regular expressions (henceforth “regexes”) that categorize the possible structures in the treebank.
+These are best thought of as an extension of head-finding rules, which not only find a head but
+simultaneously
+identify each parent/children relation as one of a limited number of types of structures
+(right-modification, etc.).</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The crucial step is that we integrate these regexes into the spinal etrees. The
+derivation trees provide elements of a
+dependency analysis, which allow us to calculate scores for head identification and
+attachment for different projections (e.g., PP). The
+regexes allow us to also provide scores based on spans of different construction types.
+Together these two aspects break down the evalb brackets into more meaningful categories,
+and the simultaneous head and span scoring allows us to separate these aspects in the analysis.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">After describing in more detail the basic framework, we show some aspects of the
+resulting analysis of the performance of the Berkeley parser <cite class="ltx_cite">[]</cite> on three
+datasets: (a) OntoNotes WSJ sections 2-21 <cite class="ltx_cite">[]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We refer only to the
+WSJ treebank portion of OntoNotes, which is roughly a subset of the
+Penn Treebank <cite class="ltx_cite">[]</cite> with annotation revisions including the addition of NML nodes.</span></span></span>, (b) OntoNotes WSJ
+section 22, and (c) the “Answers” section of the English Web Treebank <cite class="ltx_cite">[]</cite>. We trained
+the parser on sections 2-21, and so (a) is “test-on-train”.
+These three results together show how the parser is generalizing from the training
+data, and what aspects of the “domain adaptation” problem to the web material are particularly
+important.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We parse (c) while training on (a) to follow the procedure in
+<cite class="ltx_cite"/></span></span></span></p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Framework for analyzing parsing performance</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We first describe the use of the regexes in tree decomposition, and then give some examples
+of incorporating these regexes into the derivation trees.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Use of regular expressions</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Decomposing the original phrase-structure tree into the smaller
+components requires some method of determining the “head” of a nonterminal, from among its
+children nodes, similar to parsing
+work such as <cite class="ltx_cite"/>. As described above, we are also interested
+in the type of linguistic construction represented by that one-level structure, each of which instantiates one of
+a few types - recursive coordination,
+simple head-and-sister, etc.
+We address both tasks together with the regexes.
+In contrast to the sort of head rules in <cite class="ltx_cite">[]</cite>, these refer as little as possible to specific POS tags.
+Instead of explicitly listing the POS tags of possible heads, the heads are in most cases
+determined by their location in the structure.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Sample regexes are shown in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. There are 49 regexes
+used.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Some among the
+49 are duplicates, used for different nonterminals, as with (a) and (b) in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. We derived
+the regexes via an iterative process of inspection of tree decomposition on dataset (a), together with
+taking advantage of the treebanking experience from some of the co-authors.</span></span></span>
+Regexes ADJP-t and ADVP-t in (a) identify their terminal head to be the rightmost terminal, possibly
+preceded by some number of terminals or nonterminals, relying on a mapping that
+maps all terminals (except CC, which is mapped to CONJ) to TAG and all nonterminals (except CONJP and NML)
+to NT.
+Structures
+with a CONJ/CONJP/NML child do not match this rule and are handled by different regexes,
+which are all mutually exclusive. In some cases, we need to search for particular nonterminal
+heads, such as with the (b) regexes S-vp and SQ-vp, which identify the rightmost VP among the children
+of a S or SQ as the head.
+(c) NP-modr is a regex for a recursive NP
+with a right modifier. In this case, the NP on the left is identified as the
+head.
+(d) VP-crd is also a regex for a recursive structure, in this case for VP coordination, picking out
+the leftmost conjunct as the head of the structure. The regex names
+roughly describe their purpose - “mod” for right-modification, “crd” for coordination, etc. The suffix
+“-t” is for the simple non-recursive case in which the head is a terminal.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Regexes in the derivation trees</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">The names of these regexes are incorporated into the etrees themselves, as labels of
+the nonterminals. This allows an etree to contain information such as “this node represents
+right modification”.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">For example, Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the derivation tree
+resulting from the decomposition of the tree in Figure <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Each structure within a circle is one
+etree, and the derivation as a whole indicates how these etrees are
+combined. Here we indicate with arrows that point to the relevant regex. For example, the
+PP-t etree #a6 points to the NP-modr regex, which consists of the NP-t together with the
+PP-t. The nonterminals of the spinal etrees are the names of the
+regexes, with the simpler nonterminal labels trivially derivable from the regex
+names.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We do not have space here to discuss the data structure in complete detail, but multiple
+regex names at a node, such a VP-aux and VP-t at tree a3 in Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, indicate
+multiple VP nonterminals.</span></span></span></p>
+</div>
+<div id="S2.F1" class="ltx_figure">
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">(a)ADJP-t,ADVP-t: 
+<br class="ltx_break"/><code class="ltx_verbatim ltx_font_typewriter">^(TAG|NT|NML)*(head:TAG) (NT)*$</code> 
+<br class="ltx_break"/>(b)S-vp, SQ-vp: <code class="ltx_verbatim ltx_font_typewriter">^([^ ]+)*(head:VP)$</code> 
+<br class="ltx_break"/>(c)NP-modr: 
+<br class="ltx_break"/><code class="ltx_verbatim ltx_font_typewriter">^(head:NP)(SBAR|S|VP|ADJP|PP|ADVP|NP)+$</code>
+(d)VP-crd: <code class="ltx_verbatim ltx_font_typewriter">^(head:VP) (VP)* CONJ VP$</code>
+</span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Some sample regexes</div>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The tree in Figure <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> is the parser output corresponding to the gold tree in Figure <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, and in this
+case gets the PP-t attachment wrong, while everything else is the same as the gold.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>We leave function tags
+aside for future work. The gold tree is shown without the SBJ function tag.</span></span></span> This is reflected in the derivation tree in Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+in which the NP-modr regex is absent, with the NP-t and PP-t etrees #b5 and #b6 both pointing to the VP-t regex in
+#b3. We show in Section <a href="#S2.SS3" title="2.3 Scoring ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a> how this derivation tree representation is used to
+score this attachment error directly, rather than obscuring it as an NP bracket error as evalb would
+do.</p>
+</div>
+<div id="S2.F3" class="ltx_figure">
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:195.1pt;"><img src="P14-2109/image001.png" id="S2.F3.g1" class="ltx_graphics ltx_centering" width="236" height="133" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Derivation Tree for Figure <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></div>
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:195.1pt;"><img src="P14-2109/image002.png" id="S2.F3.g2" class="ltx_graphics ltx_centering" width="235" height="135" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Derivation Tree for Figure <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>)</div>
+</div>
+<div id="S2.F5" class="ltx_figure">
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:195.1pt;"><img src="P14-2109/image003.png" id="S2.F5.g1" class="ltx_graphics ltx_centering" width="574" height="743" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Gold tree</div>
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:195.1pt;"><img src="P14-2109/image004.png" id="S2.F5.g2" class="ltx_graphics ltx_centering" width="574" height="743" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Parser output tree</div>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Scoring</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">We decompose both the gold and parser output trees into derivation trees with spinal etrees,
+and score based on the regexes projected by each word. There is a match for
+a regex if the corresponding words in gold/parser files project to that regex, a precision error if the
+parser file does but the gold does not, and a recall error if the gold does but the parser file does
+not.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">For example, comparing the trees in Figures <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> and <a href="#S2.F5" title="Figure 5 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> via their derivation
+trees in Figures <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and Figures <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the word “trip” has
+a match for the regex NP-t, but a recall error for NP-modr. The word “make” has a match for the
+regexes VP-t, VP-aux, and S-vp, and so on. Summing such scores over the corresponding gold/parser
+trees gives us F-scores for each regex.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Corpus</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">tokens</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">brackets</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">coverage</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">%</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">evalb</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">2-21 g</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">650877</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">578597</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">571243</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">98.7</span></td>
+<td class="ltx_td ltx_border_r ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">p</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">575744</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">569480</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">98.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">93.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">22 g</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">32092</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">24819</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">24532</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">98.8</span></td>
+<td class="ltx_td ltx_border_r ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">p</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24801</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24528</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">98.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">90.1</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Ans g</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">53960</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">48492</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">47348</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">97.6</span></td>
+<td class="ltx_td ltx_border_r ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">p</span></td>
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">48750</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">47423</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">97.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">80.8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Corpus information for gold(g) and parsed(p) sections of each corpus</div>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="5"><span class="ltx_text ltx_font_footnote">Sections 2-21 (Ontonotes)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="5"><span class="ltx_text ltx_font_footnote">Section 22 (Ontonotes)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="5"><span class="ltx_text ltx_font_footnote">Answers (English Web Treebank)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">regex</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">%gold</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-h</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-s</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">att</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">spanR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">%gold</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-h</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-s</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">att</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">spanR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">%gold</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-h</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">F-s</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">att</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">spanR</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">NP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">30.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">31.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">28.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">90.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">99.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">VP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">13.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">95.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">13.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">93.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">16.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">85.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">PP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">12.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">99.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">90.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">92.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">12.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">86.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">86.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">88.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">8.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">S-vp</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">12.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">92.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">96.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">11.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">89.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">95.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">14.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">72.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">NP-modr</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">8.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">91.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">8.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">82.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">71.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">87.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">4.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">69.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">54.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">VP-aux</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">5.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">96.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">5.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">6.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">86.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">SBAR-s</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">3.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">95.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">3.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">87.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">86.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">93.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">4.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">68.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">ADVP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">98.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">3.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">89.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">95.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">4.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">78.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">NML-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">90.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">85.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">82.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">42.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">37.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">ADJP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">86.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">77.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">90.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">67.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">QP-t</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">98.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">1.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">91.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">89.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">97.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">57.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">57.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">NP-crd</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">73.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">92.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">68.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">58.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">86.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">55.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">47.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">VP-crd</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">82.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">98.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">75.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">73.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">97.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">65.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">58.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">89.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">S-crd</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">83.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">83.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">99.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">70.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">68.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">96.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">68.5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">63.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">SQ-v</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">82.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">97.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">66.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">66.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">81.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">72.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">93.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">FRAG-nt</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">49.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">48.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">97.9</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">28.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">28.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">100.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">22.7</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">21.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.3</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.3</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 2: </span>Scores for the most frequent categories of brackets in the three datasets of corpora, as determined by the regexes. % gold is the frequency of this regex type compared to all the brackets in the gold. F-h is the score based on matching heads, F-s also incorporates the span information, att is the
+attachment accuracy for words that match in F-h, and spanR is the span-right accuracy for words that match in F-h.</div>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">There are two modifications/extensions to these F-scores that we also use: 
+<br class="ltx_break"/>(1) For each regex match, we score whether it matches based on the span as well. For example, “make”
+is a match for VP-t in Figures <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, and is also
+a match for the span as well, since in both derivation trees it includes the words “make<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m1" class="ltx_Math" alttext="\ldots" display="inline"><mi mathvariant="normal">…</mi></math>Florida”.
+It is
+this matching for span as well as head that allows us to compare our results to evalb.
+We call the match
+just for the head the “F-h” score and the match that also includes the span information the “F-s” score.
+The F-s score roughly corresponds to the evalb score. However, the F-s score is for separate syntactic constructions (including also head identification), although we can also sum it over all the structures, as done later in Figure <a href="#S3.F6" title="Figure 6 ‣ 3 Analysis of parsing results ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. The simultaneous F-h and F-s scores let us identify constructions
+where the parser has the head projection correct, but gets the span wrong.
+<br class="ltx_break"/>(2) Since the derivation tree is really a dependency tree with more complex nodes <cite class="ltx_cite">[]</cite>, we can also score each regex
+for attachment.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>A regex intermediate in a etree, such as VP-t above,
+is considered to have a default null attachment. Also, the attachment score is not relevant for
+regexes that already express a
+recursive structure, such as NP-modr. In Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, NP-t in etree #a5 is considered as having
+the attachment to #a3.</span></span></span> For example, while “to” is a match for PP-t, its attachment
+is not, since in Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> it is a child of the “trip” etree (#a5) and
+in Figure <a href="#S2.F3" title="Figure 3 ‣ 2.2 Regexes in the derivation trees ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> it is a child of the “make” etree (#b3). Therefore our analysis
+results in an attachment score for every regex.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Comparison with previous work</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">This work is in the same basic line of research as the inter-annotator agreement analysis work in
+<cite class="ltx_cite"/>. However, that work did not utilize regexes, and focused on
+comparing sequences of identical strings. The current work scores on general categories of structures,
+without the reliance on sequences of individual strings.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>In future work we will compare our approach to that of
+<cite class="ltx_cite"/>, who also move beyond evalb
+scores in an effort to provide more meaningful error analysis.</span></span></span></p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Analysis of parsing results</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We worked with the three datasets as described in the introduction. We trained
+the parser on sections 2-21 of OntoNotes WSJ, and parsed the three datasets with the
+gold tags, since at present we wish to analyze the parser
+performance in isolation from Part-of-Speech tagging errors.
+Table <a href="#S2.T1" title="Table 1 ‣ 2.3 Scoring ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+shows the sizes of the three corpora in terms of tokens and brackets,
+for both the gold and parsed versions, with the evalb scores for the parsed versions.
+The score is lower for Answers, as also found by <cite class="ltx_cite"/>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">To facilitate comparison of our analysis with evalb, we used
+corpora versions with the same bracket deletion (empty yields and most punctuation)
+as evalb.
+We ran the gold and parsed versions
+through our regex decomposition and derivation tree creation. Table <a href="#S2.T1" title="Table 1 ‣ 2.3 Scoring ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the number
+and percentage of brackets handled by our regexes. The high coverage (%)
+reinforces the point that there is a limited number of core structures in the treebank.
+In the results below in Table <a href="#S2.T2" title="Table 2 ‣ 2.3 Scoring ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> and Figure <a href="#S3.F6" title="Figure 6 ‣ 3 Analysis of parsing results ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we combine the nonterminals that
+are not covered by one of the regexes with the simple non-recursive regex case for that
+nonterminal.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>We also combine a few other non-recursive regexes together with NP-t, such
+as the special one for possessives.</span></span></span></p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We present the results in two ways. Table <a href="#S2.T2" title="Table 2 ‣ 2.3 Scoring ‣ 2 Framework for analyzing parsing performance ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> lists the most frequent categories
+in the three datasets, with their percentage of the overall number of brackets (%gold), their score
+based just on the head identification (F-h), their score based on head identification and (left and
+right) span (F-s),
+and the
+attachment (att) and span-right (spanR) scores for those that match based on the head.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>The score for the
+left edge is almost always very high for every category, and we just list here the right edge
+score. The attachment score does not apply to the recursive categories, as mentioned above.</span></span></span></p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The two graphs in Figure <a href="#S3.F6" title="Figure 6 ‣ 3 Analysis of parsing results ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> show the cumulative results based on F-h and F-s,
+respectively. These show the cumulative score in order of the frequency of categories. For example,
+for sections 2-21, the score for NP-t is shown first, with 30.7% of the brackets, and then together
+with the VP-t category, they cover 45.2% of the brackets,
+etc.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>The final F-s value is lower
+than the evalb score - e.g. 92.5 for sections 2-21 (the rightmost point in the graph for sections 2-21
+in the F-s graph in Figure <a href="#S3.F6" title="Figure 6 ‣ 3 Analysis of parsing results ‣ Parser Evaluation Using Derivation Trees:  A Complement to evalb" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>) compared to the 93.8 evalb score. Space prevents full
+explanation, but there are two reasons for this. One is that there are cases in which bracket spans
+match, but the head, as found by our regexes, is different in the gold and parser trees. The other
+cases is when brackets match, and may even have the same head, but their regex is different.
+In future work we will provide a full accounting of such cases, but they do
+not affect the main aspects of the analysis.</span></span></span>
+The benefit of the approach described here is that now we can see the contribution to the
+evalb score of the particular types of constructions, and within those constructions, how well the parser
+is doing at getting the same head projection, but failing or not on the spans.</p>
+</div>
+<div id="S3.F6" class="ltx_figure">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:195.1pt;"><img src="P14-2109/image005.png" id="S3.F6.g1" class="ltx_graphics" width="315" height="315" alt=""/>
+</span>
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:195.1pt;"><img src="P14-2109/image006.png" id="S3.F6.g2" class="ltx_graphics" width="315" height="315" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Cumulative scores based on F-h (left) and F-s (right). These graphs are both cumulative in exactly the same way, in that each point
+represents the total percentage of brackets accounted for so far. So for the 2-21 line, point 1, meaning
+the NP non-recursive regex, accounts for 30.7% of the brackets, point 2, meaning the VP non-recursive
+regex, accounts for another 13.5%, so 44.2% cumulatively, etc.</div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Analysis and future work</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">As this is work-in-progress, the analysis is not yet complete. We highlight a few points here. 
+<br class="ltx_break"/>(1) The high performance on the OntoNotes WSJ material is in large part
+due to the score on the non-recursive regexes of NP-t, VP-t, S-vp, and the auxiliaries (points 1, 2, 4, 6 in the graphs). Critical to this is the fact that
+the parser does well on determining the right edge of verbal structures, which affects the F-s score for
+VP-t (non-recursive), VP-aux, and S-vp.
+The spanR score for VP-t is 95.8 for Sections 2-21 and 93.7 for Section 22.
+
+<br class="ltx_break"/>(2) We wouldn’t expect the
+test-on-training evalb score to be 100%, since it has to back off from the training data,
+but the results for the different categories vary widely, with e.g., the NP-modr F-h score
+much lower than other frequent regexes. This variance from the test-on-training dataset carries
+over almost exactly to Section 22. 
+<br class="ltx_break"/>(3) The different distribution of structures in Answers hurts performance.
+For example, the mediocre performance of the parser on SQ-vp barely affects the score with OntoNotes, but
+has a larger negative effect with Answers, due to its increased frequency in the latter. 
+<br class="ltx_break"/>(4) While the different distribution of constructions is a problem for
+Answers, more critical is the poor
+performance of the parser on determining the right edge of verbal constructions. This is only 85.4 for
+VP-t in Answers, compared to the OntoNotes results mentioned in (1). Since this affects
+the F-s scores for VP-t, VP-aux, and S-vp, the negative effect is large. Preliminary investigation shows that
+this is due in part to incorrect PP and SBAR placement
+(the PP-t and SBAR-s attachment scores (80.7 and 81.9) are worse for Answers compared
+to Section 22 (86.1 and 86.4)), and coordinated S-clauses with no
+conjunction.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">In sum, there is a wealth of information from this new type of analysis that we will use in
+our on-going work to better understand what the parser is learning and how it works on different genres.</p>
+</div>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This material is based upon work supported by
+National Science Foundation Grant # BCS-114749
+(first, fourth, and sixth authors) and by
+the Defense Advanced
+Research Projects Agency (DARPA) under Contract No. HR0011-11-C-0145 (first, second, and third authors).
+The content does not necessarily reflect the position or the policy of
+the Government, and no official endorsement should be inferred.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+<div class="ltx_pagination ltx_role_newpage"/>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:19:21 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

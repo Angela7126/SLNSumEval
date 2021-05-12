@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Most frugal explanations in Bayesian networks.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Abduction or inference to the best explanation refers to the process of finding a suitable explanation (the explanans) of observed data or phenomena (the explananda). In the last decades, Bayesian notions of abduction have emerged due to the widespread popularity of Bayesian or probabilistic techniques for representing and reasoning with knowledge [5], [26], [30], [47], [52]. They are used in decision support systems in a wide range of problem domains (e.g., [7], [11], [21], [23], [32], [45], [64]) and as computational models of economic, social, or cognitive processes [10], [25], [33], [48], [58], [60]. The natural interpretation of ‘best’ in such models is ‘most probable’: the explanation that is the most probable one given the evidence, i.e., that has maximum posterior probability, is seen as the hypothesis that best explains the available evidence; this explanation is traditionally referred to as the MAP explanation and the computational problem of inferring this explanation as the MAP problem.{sup:1}
+     </paragraph>
+     <paragraph>
+      However, computing or even approximating the MAP explanation is computationally costly (i.e., {a mathematical formula}NP-hard), especially when there are many intermediate (neither observed nor to be explained) variables that may influence the explanation [1], [4], [51], [56]. To compute the posterior probability distribution of the explanation variables, all these intermediate variables need to be marginalized over. One way of dealing with this intractability might be by assuming modularity of knowledge representations, i.e., by assuming that these representations are informationally encapsulated and do not have access to background knowledge. However, this is problematic as we cannot know beforehand which elements of background knowledge or observations may be relevant for determining the best explanation [17], [19].
+     </paragraph>
+     <paragraph>
+      Fortunately, even when a full Bayesian computation may not be feasible in large networks, we need not constrain inferences only to small or disconnected knowledge structures. It is known that in general the posterior probability distribution of a (discrete) Bayesian network is skewed, i.e., few joint value assignments together cover most of the probability space [13], and that typically only a few of the variables in a network are relevant for a particular inference query [14]. We propose to utilize this property of Bayesian networks in order to make tractable (approximate) inferences to the best explanation over large and unencapsulated knowledge structures. We introduce a heuristic formulation of MAP, denoted as Inference to the Most Frugal Explanation (MFE), that is explicitly designed to reflect that only a few intermediate variables are typically relevant in real-world situations. In this formulation we partition the set of intermediate variables in the network into a set of ‘relevant’ intermediate variables that are marginalized over, and a set of ‘irrelevant’ intermediate variables that we sample from in order to estimate an explanation.
+     </paragraph>
+     <paragraph>
+      Note that in the MFE formalism there is marginalization over some of the intermediate variables (the variables that are considered to be relevant), but not over those intermediate variables that are not considered to be relevant. Thus, MFE can be seen as a ‘compromise’ between computing the explanation with maximum posterior probability, where one marginalizes over all intermediate variables, and the previously proposed Most Simple Explanation (MSE) formalism [35] where there is no marginalization at all, i.e., all intermediate variables are seen as irrelevant. We want to emphasize that the notions ‘relevant’ and ‘irrelevant’ in the problem definition denote subjective partitions of the intermediate variables; we will revisit this issue in Section 3.1.
+     </paragraph>
+     <paragraph>
+      We claim that this heuristic formalism of the MAP problem exhibits the following desirable properties:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       The knowledge structures are isotropic, i.e., they are such that, potentially, everything can be relevant to the outcome of an inference process. They are also Quinean: candidate explanations are sensitive to the entire belief system [17], [18].
+      </list-item>
+      <list-item label="2.">
+       The inferences are provably computationally tractable (either to compute exactly or to approximate) under realistic assumptions with respect to situational constraints [43], [53].
+      </list-item>
+      <list-item label="3.">
+       The resulting explanations have an optimal or close-to-optimal posterior probability in many cases, i.e., MFE actually ‘tracks truth’ in the terms of Glass [28].
+      </list-item>
+     </list>
+     <paragraph>
+      In the remainder of this paper, we will discuss some needed preliminaries in Section 2. In Section 3 we discuss MFE in more detail. We give a more formal definition, including a formal definition of relevance in the context of Bayesian networks, and show how MFE can be tractably approximated under realistic assumptions despite computational intractability of the problem in general. In Section 4 we show that MFE typically gives an explanation that has a close-to-optimal posterior probability, even if only a subset of the relevant variables is considered. We discuss how MFE performs under various scenarios (e.g., when there are few or many relevant variables, when there are many hypotheses that are almost equally likely, or when there is a misalignment between the actual relevant variables and the variables that are mistakenly presumed to be relevant). We conclude our paper in Section 5.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section we will introduce some preliminaries from Bayesian networks, in particular the MAP problem as standard formalization of Bayesian abduction. We will discuss the ALARM network which we will use as a running example throughout this paper. Lastly, we introduce some needed concepts from complexity theory, in particular the complexity class {a mathematical formula}PP, oracles, and fixed parameter tractability.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Bayesian networks and Bayesian abduction
+      </section-title>
+      <paragraph>
+       A Bayesian or probabilistic network {a mathematical formula}B is a graphical structure that models a set of stochastic variables, the conditional independences among these variables, and a joint probability distribution over these variables [52]. {a mathematical formula}B includes a directed acyclic graph {a mathematical formula}GB=(V,A), modeling the variables and conditional independences in the network, and a set of parameter probabilities Pr in the form of conditional probability tables (CPTs), capturing the strengths of the relationships between the variables. The network models a joint probability distribution {a mathematical formula}Pr(V)=∏i=1nPr(Vi|π(Vi)) over its variables, where {a mathematical formula}π(Vi) denotes the parents of {a mathematical formula}Vi in {a mathematical formula}GB. We will use upper case letters to denote individual nodes in the network, upper case bold letters to denote sets of nodes, lower case letters to denote value assignments to nodes, and lower case bold letters to denote joint value assignments to sets of nodes. We will sometimes write {a mathematical formula}Pr(x|y) as a shorthand for {a mathematical formula}Pr(X=x|Y=y) if no ambiguity can occur.
+      </paragraph>
+      <paragraph>
+       In a Bayesian abduction task there are three types of variables: the evidence variables, the explanation variables, and a set of variables called intermediate variables that are neither evidence nor explanation variables. The evidence variables are instantiated, i.e., have been assigned a value; the joint value assignment constitutes the explananda (what is to be explained, viz., the observations, data, or evidence). The explanation variables together form the hypothesis space: a set of possible explanations for the observations; a particular joint value assignment to these variables constitutes an explanans (the actual explanation of the observations). When determining what is the best explanation, typically we also need to consider other variables that are not directly observed, nor are to be explained: the intermediate variables. By convention, we will use E, H, and I, to denote the sets of evidence variables, explanation variables, and intermediate variables, respectively. We will use e to denote the evidence, viz., the (observed) joint value assignment to the evidence variables.
+      </paragraph>
+      <paragraph>
+       The problem of inferring the most probable explanation, i.e., the joint value assignment for the explanation set that has maximum posterior probability given the evidence, is defined as MAP, or also Partial MAP or Marginal MAP to emphasize that the probability of any such joint value assignment is computed by marginalization over the intermediate variables. MAP is formally defined as follows.
+      </paragraph>
+      <list>
+       Maximum A Posteriori Probability (MAP)
+       <list-item>
+        Instance: A Bayesian network {a mathematical formula}B=(GB,Pr), where V is partitioned into evidence variables E with joint value assignment e, explanation variables H, and intermediate variables I.
+       </list-item>
+       <list-item>
+        Output: The joint value assignment h to the nodes in H that has maximum posterior probability given the evidence e.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      <section-title>
+       The ALARM network
+      </section-title>
+      <paragraph>
+       The ALARM network (Fig. 1) will be used throughout this paper as a running example. This network is constructed as a part of the ALARM monitoring system, providing users with text messages denoting possible problems in anesthesia monitoring [2]. It consists of thirty-seven discrete random variables. Eight of these variables are designed as diagnostic variables that are to be explained, indicating problems like pulmonary embolism or a kinked tube; another sixteen variables indicate measurable or observable findings. The remaining thirteen variables are intermediate variables, i.e., they are neither diagnostic variables, nor can be observed (in principle or in practice). Apart from its practical use in the system described above, the ALARM network is one of the most prominent benchmark networks in the Bayesian network community.{sup:2}
+      </paragraph>
+      <paragraph>
+       As an example, consider that a high breathing pressure was detected (PRSS = high) and that minute ventilation was low (MINV = low); all other observable variables take their default (i.e., non-alarming) value. From these findings a probability of 0.92 for the diagnosis ‘kinked tube’ (KINK = true) can be computed. Likewise, we can compute that the most probable joint explanation for the diagnostic variables, given that PCWP (pulmonary capillary wedge pressure) and BP (blood pressure) are high, is that HYP = true (hypovolemia, viz., loss of blood volume) and all other diagnostic variables are negative. This joint value assignment has probability 0.58. The second-best explanation (all diagnostic variables are negative, despite the two alarming conditions) has probability 0.11.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Complexity theory
+      </section-title>
+      <paragraph>
+       In the remainder, we assume that the reader is familiar with basic concepts of computational complexity theory, such as Turing Machines, the complexity classes {a mathematical formula}P and {a mathematical formula}NP, and intractability proofs. For more background we refer to classical textbooks like [22] and [50]. In addition to these basic concepts we will introduce concepts that are in particular relevant to Bayesian computations, in particular Probabilistic Turing Machines, Oracle Turing Machines, the complexity class {a mathematical formula}PP and the Counting Hierarchy; the interested reader will find more background in [34] or [8]. Finally, we will briefly, and somewhat informally, introduce parameterized complexity theory. A more thorough introduction can be found in [12] or [16].
+      </paragraph>
+      <paragraph>
+       A Probabilistic Turing Machine (PTM) augments the more traditional Non-deterministic Turing Machine (NTM) with a probability distribution associated with each state transition. Without loss of generality we may assume that state transitions are binary and that the probability distribution at each transition is uniform. A PTM accepts a language L if the probability of ending in an accepting state when given some input x is strictly larger than {a mathematical formula}12 if and only if {a mathematical formula}x∈L. Given uniformly distributed binary state transitions this is exactly the case if the majority of computation paths accepts. The complexity class {a mathematical formula}PP is defined as the class of languages accepted by some PTM in polynomial time. Observe that {a mathematical formula}NP⊆PP; the inclusion is thought to be strict. {a mathematical formula}PP contains complete problems, the canonical one being Majsat: given a Boolean formula ϕ, does the majority of truth assignments to the variables satisfy it?
+      </paragraph>
+      <paragraph>
+       An Oracle Turing Machine (OTM) is a Turing Machine enhanced with a so-called oracle tape and an oracle O for deciding membership queries for a particular language {a mathematical formula}LO. Apart from its usual operations, the OTM can write a string y on the oracle tape and ‘summon the oracle’. In the next state, the OTM will have either replaced the string with 1 if {a mathematical formula}y∈LO, or 0 if {a mathematical formula}y∉LO. The oracle can thus be seen as a ‘black box’ that answers membership queries in constant time. Note that both accepting and rejecting answers of the oracle can be used. Various complexity classes are defined using oracles; for example, the class {a mathematical formula}NPPP includes exactly those languages that can be decided on an NTM with an oracle for {a mathematical formula}PP-complete languages. Using the class {a mathematical formula}PP and hierarchies of oracles the Counting Hierarchy[61] can be defined as a generalization of the Polynomial Hierarchy [59], including classes as {a mathematical formula}NPPP, {a mathematical formula}PNPPP, or {a mathematical formula}NPPPPP. Canonical complete problems for such classes include various Satisfiability variants, using the quantifiers ∀, ∃, and Maj to bind subsets of variables [61], [63].
+      </paragraph>
+      <paragraph>
+       Sometimes problems are intractable (i.e., {a mathematical formula}NP-hard) in general, but become tractable if some parameters of the problem can be assumed to be small. Informally, a problem is called fixed-parameter tractable for a parameter k (or a set of parameters {a mathematical formula}{k1,…,km}) if it can be solved in time, exponential (or even worse) only in k and polynomial in the input size {a mathematical formula}|x|. In practice, this means that problem instances can be solved efficiently, even when the problem is {a mathematical formula}NP-hard in general, if k is known to be small. If an {a mathematical formula}NP-hard problem Π is fixed-parameter tractable for a particular parameter set k then k is denoted a source of complexity[53] of Π: bounding k renders the problem tractable, whereas leaving k unbounded ensures intractability under usual complexity-theoretic assumptions like {a mathematical formula}P≠NP. On the other hand, if Π remains {a mathematical formula}NP-hard independent of the value of parameter k, then Π is para-{a mathematical formula}NP-hard with respect to k: bounding k does not render the problem tractable. The notion of fixed-parameter tractability can be extended to deal with rational, rather than integer, parameters [36]. Informally, if a problem is fixed-rational tractable for a (rational) parameter k, then the problem can be solved tractably if k is close to 0 (or, depending on the definition, to 1). For readability, we will liberally mix integer and rational parameters in the remainder.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Most frugal explanations
+     </section-title>
+     <paragraph>
+      In real-world applications there are many intermediate variables that are neither observed nor to be explained, yet may influence the explanation. Some of these variables can considerably affect the outcome of the abduction process. Most of these variables, however, are irrelevant as they are not expected to influence the outcome of the abduction process in all but maybe the very rarest of cases [14]. To compute the most probable explanation of the evidence, however, one needs to marginalize over all these variables, that is, take their prior or conditional probability distribution into account. This seems like a waste of computing resources in cases where we might as well have assigned an arbitrary value to these variables and still arrive at the same explanation.
+     </paragraph>
+     <paragraph>
+      One way of ensuring tractability of inference may be by ‘weeding out’ the irrelevant aspects in the knowledge structure prior to inference, reducing the network to a simplified version. For example, one might try to identify intermediate variables in the network that are conditionally independent of the explanation variables, given the evidence. While this can be done tractably in principle [24], it may still leave us with many variables that are conditionally dependent, yet do not influence the most probable explanation of the evidence. These variables are still in a sense redundant for finding explanations, as illustrated in the following example.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider in the ALARM network the observations that PCWP and BP are high and the other observable variables take their non-alarming states. The actual value of ACO2 does not influence the most probable value of the observable variables in the network, i.e., {a mathematical formula}argmaxhPr(h,e,i,ACO2=high)=argmaxhPr(h,e,i,ACO2=mid)=argmaxhPr(h,e,i,ACO2=low) for every joint value assignment i to the intermediate variables other than ACO2. However, ACO2 is not conditionally independent of (e.g.) KINK given the observed evidence variables.
+     </paragraph>
+     <paragraph>
+      An alternative to only selecting those intermediate variables that are conditionally dependent on the explanation variables is to apply a stronger criterion for relevance, e.g., selecting only those variables whose value may potentially change the most probable explanation. However, finding these variables itself would require potentially intractable computations as we will illustrate in Section 3.1 and formally prove in Appendix A. Furthermore, we might want to even constrain the number of variables to select even more by demanding not only that their value might change the most probable explanation (e.g., in some extraordinary combination of values for the other variables), but in fact actually does change the most probable explanation in a non-trivial number of situations. In addition, it is preferable to have a means of trading off the quality of a solution and the time needed to obtain a solution.
+     </paragraph>
+     <paragraph label="Example 2">
+      (Adapted from [35].) Mr. Jones typically comes to work by train. Today Mr. Jones is late while he has been seen to leave his house at the usual time. One explanation can be that the train is delayed. However, it might also be the case that Mr. Jones was the unlucky individual who walked through 11th Street at 8.03 AM and was shot during an armed bank robbery, while mistakenly taken for a police constable. When trying to explain why Mr. Jones is not at his desk on 8.30 AM, there is a number of variables we might take into account, for example whether he has to change trains. A whole lot of variables are typically not taken into account because they are normally not relevant in most of the cases, for example the color of Mr. Jones's coat, or whether walked on the left or right pavement in 11th Street. Only in the awkward coincidence that Mr. Jones was in the wrong place at the wrong time they become relevant to explain why he is not at work.
+     </paragraph>
+     <paragraph>
+      Our approach is not to reduce the network to only include those intermediate variables we consider to be relevant and do inference on the resulting pruned network. In contrast, we propose that (the computationally costly) marginalization is done only on a subset of the intermediate variables (the variables that are considered to be relevant), and that a sampling strategy is used for the remaining intermediate variables that are not considered to be relevant. Such a sampling strategy may be very simple (‘decide using a singleton sample’) or more complex (‘compute the best explanation on N samples and take a majority vote’). This allows for a trade-off between time to compute a solution and the quality of the result obtained, by having both a degree of freedom on which variables to include in the set of relevant intermediate variables and a degree of freedom on how many samples to take on the remaining intermediate variables. In Section 4 we will discuss the effects of such choices using computer simulations on random networks.
+     </paragraph>
+     <paragraph>
+      We now formally define the Most Frugal Explanation problem as follows{sup:3}:
+     </paragraph>
+     <list>
+      Most Frugal Explanation (MFE)
+      <list-item>
+       Instance: A Bayesian network {a mathematical formula}B, partitioned into a set of observed evidence variables E, a set of explanation variables H, a set of ‘relevant’ intermediate variables {a mathematical formula}I+ that are marginalized over, and a set of ‘irrelevant’ intermediate variables {a mathematical formula}I− that are not marginalized over.
+      </list-item>
+      <list-item>
+       Output: The joint value assignment to the variables in the explanation set that is most probable for the maximum number of joint value assignments to the irrelevant intermediate variables.
+      </list-item>
+     </list>
+     <paragraph>
+      The approach sketched above guarantees that, as in the MAP problem, the knowledge structures remain both isotropic and Quinean, i.e., everything still can be relevant to the outcome of the inference process and the candidate explanations remain sensitive to the entire belief system, as claimed in Section 1. For example, when new evidence arises (say, that we learn of a bank robbery where an innocent passerby was shot), the color of Mr. Jones's coat suddenly may become relevant to explaining his absence. We will elaborate on the tractability claim in Section 3.2 and on the tracking truth claim in Section 4.2.
+     </paragraph>
+     <paragraph label="Example 3">
+      As in the previous example, we assume that in the ALARM network PCWP and BP have been observed to be high and the other observable variables take their non-alarming states. Furthermore, let us assume that we consider VTUB, SHNT, VLNG, VALV and LVV to be relevant intermediate variables, and VMCH, PVS, ACO2, CCHL, ERLO, STKV, HR, and ERCA to be irrelevant variables. The most frugal joint explanation for the diagnostic variables is still that HYP = true while all other diagnostic variables are negative: in 31% of the joint value assignments to these irrelevant intermediate variables, this is the most probable explanation. In 16% of the assignments ‘all negative’ is the most probable explanation, and in 24% of the assignments HYP = true and INT = one sided (one sided intubation, rather than normal) is the most probable explanation of the observations. If, in addition, we also consider VMCH, PVS, and STKV to be relevant, then every joint value assignment to ACO2, CCHL, ERLO, HR, and ERCA will have HYP = true as the most probable explanation for the observations. In other words, rather than marginalizing over these variables, we might have assigned just an arbitrary joint value assignment to these variables, decreasing the computational burden. If we had considered less intermediate variables to be relevant, this strategy may still often work, but has a chance of error, if we pick a sample for which a different explanation is the most probable one. We can decrease this error by taking more samples and take a majority vote.
+     </paragraph>
+     <paragraph>
+      Note that MFE is not guaranteed to give the MAP explanation, unless we marginalize over all intermediate variables (i.e., consider all variables to be relevant). When the set of irrelevant variables is non-empty, the most frugal explanation may differ from the MAP explanation, even when using a voting strategy based on all joint value assignments to the irrelevant intermediate variables, since both explanations are computed differently. Take for example the small network with two ternary variables H with values {a mathematical formula}{h1,h2,h3} and I with values {a mathematical formula}{i1,i2,i3}, with I uniformly distributed and H conditioned on I as follows:{a mathematical formula} Now, the most probable explanation of H, marginalized on I, would be {a mathematical formula}H=h2, but the most frugal explanation of H with irrelevant variable I would be {a mathematical formula}H=h1 as this is the most probable explanation for two out of three value assignments to I. Only in borderline cases MAP and MFE are guaranteed to give the same results independent of the number of samples taken and the partition in relevant and irrelevant intermediate variables. This will, for example, be the case when the MAP explanation has a probability of 1 and all the intermediate variables are uniformly distributed. In this case, every joint value assignment to any subset of the intermediate variables gives the MAP explanation as most frugal explanation.{sup:4}
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Relevance
+      </section-title>
+      <paragraph>
+       Until now, we have quite liberally used the notion ‘relevance’. It is important here to note that we consider the relevance of intermediate variables. This is in contrast with Shimony's well-known account [55] where relevance is a property of explanation variables, i.e., the relevance criterion partitions the non-observed variables in MAP variables—that are to be explained—and intermediate variables that do not need to be assigned a value in the explanation. In this paper we assume that the partition between the explanation variables H and the intermediate variables I is already made. However, in our model we again partition the intermediate variables I and perform full inference only on the relevant intermediate variables {a mathematical formula}I+.
+      </paragraph>
+      <paragraph>
+       It will be clear that the formal notion of (conditional) independence is too strong to capture relevance as we understand it: even if an intermediate variable is formally not independent of all the explanation variables, conditioned on the observed evidence variables, its influence may still be too small to have an impact on which explanation to select as the most probable as we saw in the previous sub-section. In contrast, we define relevance as a statistical property of an intermediate variable that is partly based on Druzdzel and Suermondt's [14] definition of relevance of variables in a Bayesian model, and partly on Wilson and Sperber's [65] relevance theory, and is related to the definition in [37]. According to Druzdzel and Suermondt a variable in a Bayesian model is relevant for a set T of variables, given an observation E, if it is “needed to reason about the impact of observing E on T” ([14], p. 60). Our operationalization of “needed to reason” is inspired by Wilson and Sperber, who state that “an input is relevant to an individual when its processing in a context of available assumptions yields (…) a worthwhile difference to the individual's representation of the world” ([65], p. 608). The term ‘worthwhile difference’ in this quote refers to the balance between the actual effects of processing that particular input and the effort required to do so. We therefore define the relevance of an intermediate variable as a measure, indicating how sensitive explanations are to changes in its value assignment. Informally, an intermediate variable I has a low relevance when there are only a few possible worlds in which the most probable explanation changes when the value of I changes.{sup:5}
+      </paragraph>
+      <paragraph label="Definition 4">
+       Let {a mathematical formula}B=(GB,Pr) be a Bayesian network partitioned into evidence nodes E with joint value assignment e, intermediate nodes I, and an explanation set H. Let {a mathematical formula}I∈I, and let {a mathematical formula}Ω(I∖{I}) denote the set of joint value assignments to the intermediate variables other than I. The relevance of I, denoted as {a mathematical formula}R(I), is the fraction of joint value assignments i in {a mathematical formula}Ω(I∖{I}) for which {a mathematical formula}argmaxhPr(h,e,i,i) is not identical for all {a mathematical formula}i∈Ω(I).
+      </paragraph>
+      <paragraph>
+       As computing the relevance of a variable I is {a mathematical formula}NP-hard, i.e., intractable in general (see Appendix A for a formal proof), we introduce the notion estimated relevance of I as a subjective assessment of {a mathematical formula}R(I) which may or may not correspond to the actual value. Such a subjective assessment might be based on heuristics, previous knowledge, or by approximating the relevance, e.g., by sampling some instances of {a mathematical formula}Ω(I∖{I}). Where confusion may arise, we will use the term intrinsic relevance to refer to the actual statistical property ‘relevance’ of I, in contrast to the subjective assessment thereof. Note that both intrinsic and estimated relevance of a variable are relative to a particular set of candidate explanations H, and conditional on a particular observation, i.e., a value assignment e to the evidence nodes E.
+      </paragraph>
+      <paragraph label="Example 5">
+       Let, in the ALARM network, pulmonary capillary wedge pressure and blood pressure be high, and let all other observable variables take their non-alarming default values. The intrinsic relevance of the intermediate variables for the diagnosis is given in Fig. 2.
+      </paragraph>
+      <paragraph>
+       When solving an MFE problem, we marginalize over the ‘relevant intermediate variables’. This assumes some (subjective) threshold on the (estimated or intrinsic) relevance of the intermediate variables that determine which variables are considered to be relevant and which are considered to be irrelevant. For example, if the threshold would be 0.85 then only SHNT and LVV would be relevant intermediate variables in the ALARM network, but if the threshold would be 0.40 then also VMCH, VTUB, VLNG, VALV, and STKV would be relevant variables. That influences the results, as the distribution of MFE explanations tends to be flatter when less variables are marginalized over. With a threshold of 0.85 there are 24 explanations that are sometimes the most probable explanation, with the actual MAP explanation occurring most often (26%). With a threshold of 0.40 there are just three such explanations, with the MAP explanation occurring in 75% of the cases. Thus, the distribution of MFE explanations is typically more ‘skewed’ towards one explanation when more variables are considered to be relevant.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Complexity analysis
+      </section-title>
+      <paragraph>
+       To assess the computational complexity of MFE, we first define a decision variant.
+      </paragraph>
+      <list>
+       Most Frugal Explanation (MFE)
+       <list-item>
+        Instance: A Bayesian network {a mathematical formula}B=(GB,Pr), where V is partitioned into a set of evidence nodes E with a joint value assign-ment e, an explanation set H, a set of relevant intermediate variables {a mathematical formula}I+, and a set of irrelevant intermediate variables {a mathematical formula}I−; a rational number {a mathematical formula}0≤q&lt;1 and an integer {a mathematical formula}0≤k&lt;|Ω(I−)|.
+       </list-item>
+       <list-item>
+        Question: Is there a joint value assignment h to the nodes in H such that for more than k disjoint joint value assignments i to {a mathematical formula}I−, {a mathematical formula}Pr(h,i,e)&gt;q?
+       </list-item>
+      </list>
+      <paragraph>
+       It will be immediately clear that MFE is intractable, as it has the {a mathematical formula}NPPP-complete MAP [51] and MSE [35] problems as special cases for {a mathematical formula}I−=∅, respectively {a mathematical formula}I+=∅. In this section we show that MFE happens to be even harder, viz., that it is {a mathematical formula}NPPPPP-complete, making it one of few real world-problems that are complete for that class.{sup:6} The canonical Satisfiability-variant that is complete for this class is E-MajMajsat, defined as follows [61].
+      </paragraph>
+      <list>
+       EMajMajsat
+       <list-item>
+        Instance: A Boolean formula ϕ whose n variables {a mathematical formula}x1…xn are partitioned into three sets {a mathematical formula}E=x1…xk, {a mathematical formula}M1=xk+1…xl, and {a mathematical formula}M2=xl+1…xn for some numbers k, l with {a mathematical formula}1≤k≤l≤n.
+       </list-item>
+       <list-item>
+        Question: Is there a truth assignment to the variables in E such that for the majority of truth assignments to the variables in {a mathematical formula}M1 it holds, that the majority of truth assignments to the variables in {a mathematical formula}M2 yield a satisfying truth instantiation to {a mathematical formula}E∪M1∪M2?
+       </list-item>
+      </list>
+      <paragraph>
+       As an example, consider the formula {a mathematical formula}ϕex=x1∧(x2∨x3)∧(x4∨x5) with {a mathematical formula}E={x1}, {a mathematical formula}M1={x2,x3} and {a mathematical formula}M2={x4,x5}. This is a yes example of E-MajMajsat: for {a mathematical formula}x1=true, three out of four truth assignments to {a mathematical formula}{x2,x3} (all but {a mathematical formula}x2=x3=false) are such that the majority of truth assignments to {a mathematical formula}{x4,x5} satisfy {a mathematical formula}ϕex.
+      </paragraph>
+      <paragraph>
+       To prove {a mathematical formula}NPPPPP-completeness of the MFE problem, we construct a Bayesian network {a mathematical formula}Bϕ from an E-MajMajsat instance {a mathematical formula}(ϕ,E,M1,M2). For each propositional variable {a mathematical formula}xi in ϕ, a binary stochastic variable {a mathematical formula}Xi is added to {a mathematical formula}Bϕ, with uniformly distributed values true and false. These stochastic variables in {a mathematical formula}Bϕ are three-partitioned into sets {a mathematical formula}XE, {a mathematical formula}XM1, and {a mathematical formula}XM2 according to the partition of ϕ. For each logical operator in ϕ an additional binary variable in {a mathematical formula}Bϕ is introduced, whose parents are the variables that correspond to the input of the operator, and whose conditional probability table is equal to the truth table of that operator. The variable associated with the top-level operator in ϕ is denoted as {a mathematical formula}Vϕ, the set of variables associated with the remaining operators is denoted as {a mathematical formula}Opϕ. Fig. 3 shows the graphical structure of the Bayesian network constructed for the example E-MajMajsat instance given above.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       MFEis{a mathematical formula}NPPPPP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership in {a mathematical formula}NPPPPP follows from the following algorithm: non-deterministically guess a value assignment h, and test whether there are at least k joint value assignments {a mathematical formula}i− to {a mathematical formula}I− such that {a mathematical formula}Pr(h,i−,e)&gt;q. This inference problem can be decided (for given value assignment h and {a mathematical formula}i−) using a PTM capable of deciding Inference (marginalizing over the variables in {a mathematical formula}I+). We can decide whether there are at least k such joint value assignments {a mathematical formula}i− using a PTM capable of threshold counting. Thus, as both deciding Inference and threshold counting are {a mathematical formula}PP-complete problems, we can solve this problem by augmenting an NTM with an oracle for {a mathematical formula}PPPP-complete problems; note that we cannot ‘merge’ both oracles as the ‘threshold’ oracle machine must accept inputs for which the Inference oracle answers ‘no’ as well as inputs for which the oracle answers ‘yes’.To prove {a mathematical formula}NPPPPP-hardness, we reduce MFE from E-MajMajsat. We fix {a mathematical formula}q=12 and {a mathematical formula}k=|Ω(I−)|2. Let {a mathematical formula}(ϕ,E,M1,M2) be an instance of E-MajMajsat and let {a mathematical formula}Bϕ be the network constructed from that instance as shown above. We claim the following: If and only if there exists a satisfying solution to {a mathematical formula}(ϕ,E,M1,M2), there is a joint value assignment to {a mathematical formula}xE such that {a mathematical formula}Pr(Vϕ=true,xE,xM2)&gt;12 for the majority of joint value assignments {a mathematical formula}xM2 to {a mathematical formula}XM2. ⇒Let {a mathematical formula}(ϕ,E,M1,M2) denote the satisfiable E-MajMajsat instance. Note that in {a mathematical formula}Bϕ any particular joint value assignment {a mathematical formula}xE∪xM1∪xM2 to {a mathematical formula}XE∪XM1∪XM2 yields {a mathematical formula}Pr(Vϕ=true,xE,xM1,xM2)=1, if and only if the corresponding truth assignment to {a mathematical formula}E∪M1∪M2 satisfies ϕ, and 0 otherwise. When marginalizing over {a mathematical formula}xM1 (and {a mathematical formula}Opϕ) we thus have that a joint value assignment {a mathematical formula}xE∪xM2 to {a mathematical formula}XE∪XM2 yields {a mathematical formula}Pr(Vϕ=true,xE,xM2)&gt;12 if and only if the majority of truth assignments to {a mathematical formula}M1, together with the given truth assignment to {a mathematical formula}E∪M2, satisfy ϕ. Thus, given that this is the case for the majority of truth assignments to {a mathematical formula}M2, we have that {a mathematical formula}Pr(Vϕ=true,xE,xM2)&gt;12 for the majority of joint value assignments {a mathematical formula}xM2 to {a mathematical formula}XM2. We conclude that the corresponding instance {a mathematical formula}(Bϕ,Vϕ=true,XE,XM1∪Opϕ,XM2,12,|Ω(XM2)|2) of MFE is satisfiable.⇐Let {a mathematical formula}(Bϕ,Vϕ=true,XE,XM1∪Opϕ,XM2,12,|Ω(XM2)|2) be a satisfiable instance of MFE, i.e., there exists a joint value assignment {a mathematical formula}xE to {a mathematical formula}XE such that for the majority of joint value assignments {a mathematical formula}xM2 to {a mathematical formula}XM2, {a mathematical formula}Pr(Vϕ=true,xE,xM2)&gt;12. For each of these assignments {a mathematical formula}xM2 to {a mathematical formula}XM2, {a mathematical formula}Pr(Vϕ=true,xE,xM2)&gt;12 if and only if the majority of joint value assignments {a mathematical formula}xM1 to {a mathematical formula}XM1 satisfy ϕ. Since the reduction can be done in polynomial time, this proves that MFE is {a mathematical formula}NPPPPP-complete. □
+      </paragraph>
+      <paragraph>
+       Given the intractability of MFE for unconstrained domains, it may not be clear how MFE as a heuristic mechanism for Bayesian abduction can scale up to task situations of real-world complexity. One approach may be to seek to approximate MFE, rather than to compute it exactly. Unfortunately, approximating MFE is {a mathematical formula}NP-hard as well. Given that MFE has both MAP and MSE as special cases (for {a mathematical formula}I−=∅, respectively {a mathematical formula}I+=∅), it is intractable to infer an explanation that has a probability that is close to optimal [51], that is similar to the most frugal explanation [40], or that is likely to be the most frugal explanation with a bounded margin of error [42]. By and of itself, for unconstrained domains, approximation of MFE does not buy tractability [43].
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Parameterized complexity
+      </section-title>
+      <paragraph>
+       An alternative approach to ensure computational tractability is to study how the complexity of MFE depends on situational constraints. This approach has firm roots in the theory of parameterized complexity as described in Section 2. Building on known fixed parameter tractability results for MAP [36] and MSE [42], we will consider the parameters treewidth and cardinality of the Bayesian network, the size of {a mathematical formula}I+, and a decisiveness measure on the probability distribution. An overview is given in Table 1.
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}I+=∅, MAP can be solved in {a mathematical formula}O(ct⋅n) for a network with n variables, and since {a mathematical formula}Pr(X=x)=∑y∈Ω(Y)Pr(X=x,Y=y), we have that MAP can be solved in {a mathematical formula}O(ct⋅c|I+|⋅n). Note that even when we can tractably decide upon the most probable explanation for a given joint value assignment i to {a mathematical formula}I− (i.e., when c, t, and {a mathematical formula}|I+| are bounded) we still need to test at least {a mathematical formula}⌊c|I−|2⌋+1 joint value assignments to {a mathematical formula}|I−| to decide MFE exactly, even when {a mathematical formula}d=1. However, in that case we can tractably find an explanation that is very likely to be the MFE if d is close to 1. Consider the following algorithm for MFE (adapted from [35]):
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This randomized algorithm repeatedly picks a joint value assignment {a mathematical formula}i∈I− at random, determines the most probable explanation, and at the end decides upon which explanation was found most often. Due to its stochastic nature, this algorithm is not guaranteed to give correct answers all the time. However, the error margin ϵ can be made sufficiently low by choosing N large enough. If there are only two competing most probable explanations, the threshold value of N can be computed using the Chernoff bound: {a mathematical formula}N≥1(p−12)2ln⁡1ϵ (more sophisticated methods are to be used to compute or approximate N when there are more than two competing explanations). Assume we require an error margin of less than 0.1, then the number of repeats depends on the probability p of picking a joint value assignment i for which {a mathematical formula}hmaj is the most probable explanation. This probability corresponds to the decisiveness parameter d that was introduced in Table 1. If decisiveness is high (say {a mathematical formula}d=0.85), then N can be fairly low ({a mathematical formula}N≥10), however, if the distribution of explanations is very flat, and consequently, decisiveness is low, then an exponential number of repetitions is needed.
+      </paragraph>
+      <paragraph>
+       If d is bounded (i.e., larger than a particular fixed threshold) we thus need only polynomially many repetitions to obtain any constant error rate. When in addition determining the most probable explanation is easy—in particular, when the treewidth and cardinality of {a mathematical formula}B are low and there are few relevant variables in the set {a mathematical formula}I+—the algorithm thus runs in polynomial time, and thus MFE can be decided in polynomial time, with a small possibility of error.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       In the previous subsections we showed that MFE is intractable in general, both to compute exactly and to approximate, yet can be tractably approximated (with a so-called expectation–approximation [42]) when the treewidth of the network is low, the cardinality of the variables is small, the number of relevant intermediate variables is low, and the probability distribution for a given explanation set H, evidence e and relevant intermediate variables {a mathematical formula}I+ is fairly decisive, i.e., skewed towards a single MFE explanation. We also know that MAP can be tractably computed exactly{sup:7} when the treewidth of the network is low, the cardinality of the variables is small, and either the MAP explanation has a high probability, or the total number of intermediate variables is low [36]. How do these constraints compare to each other?
+      </paragraph>
+      <paragraph>
+       For MAP, the constraint on the total number of intermediate variables seems implausible. In real-world knowledge structures there are many intermediate variables, and while only some of them may contribute to the MAP explanation, we still need to marginalize over all of them to compute MAP. Likewise, when there are many candidate hypotheses, it is not obvious that the most probable one has a high (i.e., close to 1) probability. Note that the actual fixed-parameter tractable algorithm [4], [36] has a running time with {a mathematical formula}log⁡plog⁡1−p in the exponent, where p denotes the probability of the MAP explanation. This exponent quickly grows with decreasing p. Furthermore, treewidth and cardinality actually refer to the treewidth of the reduced junction tree, where observed variables are absorbed in the cliques. Given that we sample over the set {a mathematical formula}I− in MFE, but not in MAP, both parameters (treewidth and cardinality) will typically have much lower values in MFE as compared to MAP. That is, it is more plausible that these constraints are met in MFE than that they are met in MAP.
+      </paragraph>
+      <paragraph>
+       Given the theoretical considerations in [14] it seems plausible that the decisiveness constraint is met in many practical situations. Surely, one could argue that the fixed parameter tractability of MFE is misguided, as the set of candidate hypotheses and the observations are given in the input of the formal problem, and it is known beforehand what the relevant variables are. Thus, the problem of finding candidate hypotheses, the problem of deciding what counts as evidence, and the problem of deciding which variables are relevant are left out of the problem definition. We acknowledge that this is indeed the case, and that the problem of non-demonstrative inference is much broader than ‘merely’ inferring the best explanation out of a set of candidate explanations [39]; yet, this is no different for MAP, at least when it comes to deciding upon the candidate hypotheses and the observations. With respect to the partition between irrelevant and relevant intermediate variables we will show in Section 4 that MFE is fairly robust: including even few variables with a high intrinsic relevance will suffice to find relatively good MFE explanations.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Simulations
+     </section-title>
+     <paragraph>
+      In Section 3 we illustrated, using the ALARM example, that computing MFE can give similar results as when MAP is computed, while requiring less variables to be marginalized over. In this section, we will simulate MFE on random graphs to obtain empirical results to support that claim. We will also illustrate that, in order to obtain a good explanation using only a few samples, the decisiveness of the probability distribution indeed must be high. Finally we show how MFE behaves under various scenarios where the intrinsic and estimated relevance of the intermediate variables (i.e., the actual relevance and the subjective assessment thereof) do not match. As the goal of these simulations is to explore how MFE behaves under scenarios that can be considered either natural (occurring in real-world networks) or artificial, we use randomly generated networks, rather than an existing set of benchmark networks, like the ALARM network, in our simulations.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Method
+      </section-title>
+      <paragraph>
+       We generated 100 random Bayesian networks, each consisting of 40 variables, using the (second) method described in [51]. Each variable had either two, three, or four possible values, and the in-degree of the nodes was limited to five. With each variable, a random conditional probability distribution was associated. We randomly selected five explanation variables and five evidence variables, and set a random joint value assignment to the evidence variables. Given the variation on the cardinality of the variables, the number of candidate joint value assignments to the explanation variables could vary from 2{sup:5} to 4{sup:5}; in practice, it ranged from 48 to 576 (mean 208.5, standard deviation 107.4). See also the on-line supplementary materials: http://www.dcc.ru.nl/~johank/MFE/.
+      </paragraph>
+      <paragraph>
+       Using the Bayes Net Toolbox for MATLAB [46] we computed, for each network, the posterior distribution over the explanation variables, approximated the relevance of each intermediate variable, and approximated the MFE distribution under various conditions. The results presented below are based on 91 random networks. The MATLAB software was unable to compute the MAP of seven networks due to memory limitations, and the results of two networks were lost due to hardware failure. In Fig. 4, Fig. 5 some typical results are given for illustrative purposes.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Tracking truth
+      </section-title>
+      <paragraph>
+       We compared the MAP explanation with the MFE explanation using 100 samples of the irrelevant variables, varying the {a mathematical formula}I+/I− partition. In particular we compared the explanations where all variables are deemed irrelevant ({a mathematical formula}I+=∅), where {a mathematical formula}I+ consisted of the five intermediate variables with the highest relevance, and where {a mathematical formula}I+ consisted of the intermediate variables that have a relevance of more than 0.00, 0.05, 0.10, 0.25, respectively 0.50. To assess how similar the most frugal explanations are to the MAP results, we used three different error measures: (1) the structural deviation from MAP (how many variables have different values, i.e., the Hamming distance between the MFE and MAP explanations), (2) the rank k of the MFE explanation, indicating that the MFE explanation is the k-th MAP instead of the most probable explanation, and (3) the ratio of the MFE probability and the MAP probability, indicating the proportion of probability mass that was allocated to the MFE explanation.
+      </paragraph>
+      <paragraph>
+       Furthermore, we estimated how often the MFE was picked relative to other explanations, indicating how likely it is that a singleton sample over the irrelevant variables would yield this particular explanation. This yields a measure on how many samples are needed to arrive at a confident decision. Lastly, we estimated the likelihood of picking the MAP explanation and one of the five most probable explanations using a single sample. This indicates how likely it is that an arbitrary singleton sample will yield an explanation with the maximum, respectively a relatively high, posterior probability.
+      </paragraph>
+      <paragraph>
+       The results are summarized in Table 2 and Fig. 6. The scatter plots in Fig. 6 illustrate the spread of the errors along different networks. In general one can conclude that MFE explanations are reasonably close to the MAP explanations, when there is marginalization over those variables that are ‘sufficiently relevant’. From the results it follows that including the five most relevant variables gives fairly good results, and that including variables that have a relevance of less than 0.25 does not significantly improve the average MFE results. Including no relevant variables at all (i.e., computing the Most Simple Explanation [35]) gives considerably worse results, however.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Number of samples
+      </section-title>
+      <paragraph>
+       As shown in Section 3.3, approximating the MFE (i.e., finding the explanation which is very likely the MFE) can be done by sampling, where the number of samples needed to guarantee a particular confidence level is related to the decisiveness of the network. When decisiveness is low, and consequently the MFE distribution is flat (many competing explanations, none of which has a high probability of being the most probable explanation for a random joint value assignment to the irrelevant intermediate variables), we need much more samples to make confident decisions. This is illustrated by the following figures. In Fig. 7 we see a typical result for a random network which is highly skewed towards a singleton explanation, and in Fig. 8 the results of a random network with a low decisiveness are shown.
+      </paragraph>
+      <paragraph>
+       However, even when there is no explanation which stands out, the sampling algorithm can still give good results. In Fig. 9 we show a typical result when there are few competing explanations that all have a relatively high probability. While it may take many samples to decide on which of them is the MFE, we still can be quite sure that a singleton sample of the irrelevant intermediate variables would yield one of them as the most probable explanation; here, sampling seems like a reasonable strategy to obtain an explanation that is likely to have a reasonably high probability.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Other parameters
+      </section-title>
+      <paragraph>
+       Obviously, the {a mathematical formula}I+/I− partition influences the quality of the MFE solution in terms of the three error measures introduced in Section 4.2. We also investigated whether the size of the hypothesis space, the number of relevant variables, or the probability of the most probable explanation influences this quality. First we observe that these parameters are not independent. There is a strong negative correlation (−0.65) between the size of the explanation set and the probability of the most probable explanation. This can be explained by the random nature of the networks and the probability distribution they capture: on average, if there are more candidate explanations in the explanation set, the average probability of each of them is lower, and so it is expected that the average probability of the most probable explanation is also lower. The results of the correlation analysis are shown in Table 3, and can be summarized as follows. Neither explanation set size, intrinsic relevance, or probability of the most probable explanation (MPE) correlates with the ratio between probability of MPE and probability of MFE. There is a weak correlation between explanation set size and rank, and a weak negative correlation between probability of MPE and rank: the bigger the explanation size, the larger the average rank k. Neither explanation set size, intrinsic relevance, or probability of MPE correlates (or correlates only very weakly) with distance errors.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Wrong judgments
+      </section-title>
+      <paragraph>
+       Obviously, taking more intermediate variables into account (i.e., considering more variables to be relevant) helps to obtain better results; still, we can make reasonable good inferences using only the five most relevant intermediate variables. But what if ones subjective assessment of what is relevant does not match the intrinsic relevance of these variables? Fig. 10 illustrates what typically happens when there is a mismatch between intrinsic and estimated relevance. Here we plotted the results of the &gt;0.00 (top left) and Best 5 (bottom right) conditions, as well as some conditions in which there is a mismatch between intrinsic and expected relevance. In particular, we omitted the two (top right), five (middle left), ten (middle right), respectively fifteen (bottom left) most relevant variables.
+      </paragraph>
+      <paragraph>
+       This example illustrates a graceful degradation of the results, especially when the cumulative results of the five most probable joint value assignments are compared. Observe that including the twenty-five least relevant variables leads to comparable results as including the five most relevant variables. Clearly, it helps to know what is relevant, yet there is margin for error.
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       The simulation results, as illustrated by Table 2 and Fig. 6, clearly show that MFE ‘tracks truth’ quite well, even when only part of the relevant intermediate variables are taken into account. However, when more intermediate variables are marginalized over, we can be more confident of the results. In these cases the distribution of explanations typically is narrower and it is more likely that a majority vote using few samples, or even a singleton sample, results in an explanation that is close to the most probable explanation. The simulations also indicate that indeed the probability distribution must be skewed towards one (or few) explanations for obtaining acceptable results with few samples—and that indeed many distributions are skewed, even in completely random networks.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      In this paper we proposed Most Frugal Explanation (MFE) as a tractable heuristic alternative to (approximate) MAP for deciding upon the best explanation in Bayesian networks. While the MFE problem is intractable in general—its decision variant is {a mathematical formula}NPPPPP-complete, and thus even harder than the {a mathematical formula}NPPP-complete MAP problem [51], the {a mathematical formula}PPPP-complete Same-Decision Probability problem [9], or the {a mathematical formula}PPPPP-complete k-th MAP problem [41]—it can be tractably approximated under situational constraints that are arguably more realistic in large real-world applications than the constraints that are needed to render MAP (fixed-parameter) tractable. Notably, the {a mathematical formula}{c,tw,1−p}-fixed-parameter tractable algorithm for MAP [4] has a running time with {a mathematical formula}log⁡plog⁡1−p in the exponent. In the random networks used in the simulations, the average probability of the most probable explanation was 0.0245, which would yield an unpractical exponent of {a mathematical formula}log⁡0.0245log⁡0.9755≈150. In contrast, even when only half of the total set of intermediate variables are considered as relevant, for an arbitrary sample over the rest of the intermediate variables we will find the MFE in about 40% of the cases, and an explanation that is one of the five best in about 60% of the cases.
+     </paragraph>
+     <paragraph>
+      In future work we wish to investigate the possible explanatory power of MFE in cognitive science. In recent years it has been proposed that human cognizers make decisions using (Bayesian) sampling [31], [57], [62] and approximate Bayesian inferences using exemplars [54]; studies show that we have a hard time solving problems with many relevant aspects [20]. The parameterized complexity results of the MFE framework may theoretically explain why such approaches work fine in practice and under what conditions the limits of our cognitive capacities are reached.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Computing relevance is NP-hard
+     </section-title>
+     <paragraph>
+      In Definition 4 we formally defined the intrinsic relevance of an intermediate variable as a measure indicating the sensitivity of explanations to its value. We here show that computing the intrinsic relevance of such a variable is {a mathematical formula}NP-hard. The decision problem used in this proof is defined as follows:
+     </paragraph>
+     <list>
+      Intrinsic Relevance
+      <list-item>
+       Instance: A Bayesian network {a mathematical formula}B=(GB,Pr), where V is partitioned into evidence variables E with joint value assignment e, explanation variables H, and intermediate variables I, and a designated variable {a mathematical formula}I∈I.
+      </list-item>
+      <list-item>
+       Question: Is the intrinsic relevance{a mathematical formula}R(I)&gt;0?
+      </list-item>
+     </list>
+     <paragraph>
+      We reduce from the following {a mathematical formula}NP-complete decision problem [37]:
+     </paragraph>
+     <list>
+      IsA-Relevant Variable
+      <list-item>
+       Instance: A Boolean formula ϕ with n variables, describing the characteristic function {a mathematical formula}1ϕ:{false,true}n→{1,0}, and a designated variable {a mathematical formula}xr∈ϕ.
+      </list-item>
+      <list-item>
+       Question: Is {a mathematical formula}xr a relevant variable in ϕ, that is, is {a mathematical formula}1ϕ(xr=true)≠1ϕ(xr=false)?
+      </list-item>
+     </list>
+     <paragraph>
+      Here, the characteristic function {a mathematical formula}1ϕ of a Boolean formula ϕ maps truth assignments to ϕ to {a mathematical formula}{0,1}, such that {a mathematical formula}1ϕ(x)=1 if and only if x denotes a satisfying truth assignment to ϕ, and {a mathematical formula}1ϕ(x)=0 otherwise. We will use the formula {a mathematical formula}ϕex=¬(x1∨x2)∧x3 as a running example, where {a mathematical formula}x3 is the variable of interest. Note that {a mathematical formula}x3 is relevant, since for {a mathematical formula}x1=x2=false, {a mathematical formula}1ϕ(x3=true)≠1ϕ(x3=false).
+     </paragraph>
+     <paragraph>
+      We construct a Bayesian network {a mathematical formula}Bϕ from ϕ as follows. For each propositional variable {a mathematical formula}xi∈ϕ we add a binary stochastic variable {a mathematical formula}Xi∈Bϕ with uniformly distributed values true and false. We add an additional binary variable {a mathematical formula}XrT with observed value true. For each logical operator {a mathematical formula}oj in ϕ, we add two binary stochastic variables {a mathematical formula}Oj and {a mathematical formula}OjT in {a mathematical formula}Bϕ. The parents of the variables {a mathematical formula}Oj are the variables {a mathematical formula}Ok that represent the sub-formulas bound by {a mathematical formula}Oj; in case such a sub-formula is a literal, the corresponding parent is a variable {a mathematical formula}Xi. In contrast, the parents of the variables {a mathematical formula}OjT are the variables {a mathematical formula}OkT (for sub-formula), {a mathematical formula}Xi (for literals except{a mathematical formula}xr), respectively {a mathematical formula}XrT (for the literal {a mathematical formula}xr). The variables corresponding with the top-level operator in ϕ are denoted with {a mathematical formula}Vϕ, respectively {a mathematical formula}VϕT.
+     </paragraph>
+     <paragraph>
+      Furthermore, an additional binary variable C is introduced in {a mathematical formula}Bϕ, acting as ‘comparator’ variable. C has both {a mathematical formula}Vϕ and {a mathematical formula}VϕT as parents and conditional probability {a mathematical formula}Pr(C=true|Vϕ,VϕT)=1 if {a mathematical formula}Vϕ≠VϕT and {a mathematical formula}Pr(C=true|Vϕ,VϕT)=0 if {a mathematical formula}Vϕ=VϕT. An example of this construction is given in Fig. 11 for the formula {a mathematical formula}ϕex. We set {a mathematical formula}H=C, {a mathematical formula}E=XrT, and {a mathematical formula}I=Xr.
+     </paragraph>
+     <paragraph label="Theorem 7">
+      Intrinsic Relevanceis{a mathematical formula}NP-complete.
+     </paragraph>
+     <paragraph label="Proof">
+      Membership in {a mathematical formula}NP follows from the following polynomial-time verifying algorithm for yes-instances: given a suitable joint value assignment i to {a mathematical formula}I∖{I} and assignments {a mathematical formula}i1, {a mathematical formula}i2 to I, we can easily check that {a mathematical formula}argmaxhPr(h,e,i,I=i1)≠argmaxhPr(h,e,i,I=i2), and thus that {a mathematical formula}R(I)&gt;0.To prove {a mathematical formula}NP-hardness, we reduce IsA-Relevant Variable to Intrinsic Relevance. Let {a mathematical formula}(ϕ,xr) be an instance of IsA-Relevant Variable. From {a mathematical formula}(ϕ,xr), we construct {a mathematical formula}(Bϕ,I) as described above. If {a mathematical formula}(ϕ,xr) is a yes-instance of IsA-Relevant Variable, then the characteristic function {a mathematical formula}1ϕ is not identical for {a mathematical formula}xr=false and {a mathematical formula}xr=true. In other words, there is at least one truth assignment t to the variables in {a mathematical formula}ϕ∖{xr} such that either {a mathematical formula}t∪{xr=true} is satisfying ϕ and {a mathematical formula}t∪{xr=false} is not satisfying ϕ, or vice versa. Let i be the joint value assignment to {a mathematical formula}I∖{Xr} that corresponds to the truth assignment t, and in addition fixes the values of the operator variables {a mathematical formula}OjT and {a mathematical formula}Oj according to their (deterministic) conditional probability tables. Now, we have that for the truth assignment {a mathematical formula}Xr=true, {a mathematical formula}Pr(C=true|i,XrT=true)=1 and thus {a mathematical formula}argmaxcPr(C=c,i,Xr=false)=true. By definition, we have that for the truth assignment {a mathematical formula}Xr=false that {a mathematical formula}Pr(C=true|i,XrT=false)=0 and thus {a mathematical formula}argmaxcPr(C=c,i,Xr=false)=false. Hence, the intrinsic relevance {a mathematical formula}R(Xr)&gt;0 and thus {a mathematical formula}(Bϕ,I) is a yes-instance of Intrinsic Relevance.Now we assume that {a mathematical formula}R(I)&gt;0, implying that there is at least one truth assignment i to {a mathematical formula}I{∖Xr} such that {a mathematical formula}Pr(C=true|i,XrT=false)≠argmaxcPr(C=c,i,Xr=false) where the joint value assignment to the operator variables {a mathematical formula}OjT and {a mathematical formula}Oj matches the deterministic conditional probabilities imposed by the joint value assignment to the variables {a mathematical formula}Xi. This implies that the characteristic function {a mathematical formula}1ϕ is not identical for {a mathematical formula}xr=false and {a mathematical formula}xr=true, hence, that {a mathematical formula}(ϕ,xr) is a yes-instance of IsA-Relevant Variable.As the reduction can be done in polynomial time, this proves that Intrinsic Relevance is {a mathematical formula}NP-complete. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

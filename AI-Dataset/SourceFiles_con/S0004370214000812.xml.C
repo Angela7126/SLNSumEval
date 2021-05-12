@@ -1,0 +1,991 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On influence, stable behavior, and the most influential individuals in networks: A game-theoretic approach.
+   </title>
+   <abstract>
+    We introduce a new approach to the study of influence in strategic settings where the action of an individual depends on that of others in a network-structured way. We propose network influence games as a game-theoretic model of the behavior of a large but finite networked population. In particular, we study an instance we call linear-influence games that allows both positive and negative influence factors, permitting reversals in behavioral choices. We embrace pure-strategy Nash equilibrium, an important solution concept in non-cooperative game theory, to formally define the stable outcomes of a network influence game and to predict potential outcomes without explicitly considering intricate dynamics. We address an important problem in network influence, the identification of the most influential individuals, and approach it algorithmically using pure-strategy Nash-equilibria computation. Computationally, we provide (a) complexity characterizations of various problems on linear-influence games; (b) efficient algorithms for several special cases and heuristics for hard cases; and (c) approximation algorithms, with provable guarantees, for the problem of identifying the most influential individuals. Experimentally, we evaluate our approach using both synthetic network influence games and real-world settings of general interest, each corresponding to a separate branch of the U.S. Government. Mathematically, we connect linear-influence games to important models in game theory: potential and polymatrix games.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The influence of an entity on its peers is a commonly noted phenomenon in both online and real-life social networks. In fact, there is growing scientific evidence that suggests that influence can induce behavioral changes among the entities in a network. For example, recent work in medical social sciences posits the intriguing hypothesis that much of our behavior such as smoking [16], obesity [15], and even happiness [24] is contagious within a social network.
+     </paragraph>
+     <paragraph>
+      Regardless of the specific problem addressed, the underlying system studied by Christakis and Fowler exhibits several core features. First, it is often very large and complex, with the entities exhibiting different behaviors and interactions. Second, the network structure of complex interactions is central to the emergence of collective (global) behavior from individual (local) behavior. For example, in their work on obesity, individuals locally interact with their friends and relatives within their social network. These local interactions appear to give rise to a global phenomenon, namely, the clustering of medically obese individuals [15]. Third, the directions and strengths of local influences are highlighted as very relevant to the global behavior of the system as a whole. Fourth, given that one's behavioral choice depends on others, the individuals potentially act in a strategic way.
+     </paragraph>
+     <paragraph>
+      The prevalence of systems and problems like the ones just described, combined with the obvious issue of often-limited control over individuals, raises immediate, broad, difficult, and longstanding policy questions: e.g., Can we achieve a desired goal, such as reducing the level of smoking or controlling obesity via targeted, minimal interventions in a system? How do we optimally allocate our often limited resources to achieve the largest impact in such systems?
+     </paragraph>
+     <paragraph>
+      Clearly, these issues are not exclusive to obesity, smoking or happiness; similar issues arise in a large variety of settings: drug use, vaccination, crime networks, security, marketing, markets, the economy, public policy-making and regulations, and even congressional voting!{sup:2} The work reported in this paper is in large part motivated by such questions/settings and their broader implication.
+     </paragraph>
+     <paragraph>
+      We begin by providing a brief and informal description of our approach to influence in networks. In the next section, we place our approach within the context of the existing literature.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Overview of our model of influence
+      </section-title>
+      <paragraph>
+       Consider a social network where each individual has a binary choice of action or behavior, denoted by −1 and 1. Let us represent this network as a directed graph, where each node represents an individual. Each node of this graph has a threshold level, which can be positive, negative, or zero; and the threshold levels of all the nodes are not required to be the same. Each arc of this graph is weighted by an influence factor, which signifies the level of direct influence the tail node of that arc has on the head node. Again, the influence factors can be positive, negative, or zero and are not required to be the same (i.e., symmetric) between two nodes.
+      </paragraph>
+      <paragraph>
+       Given such a network, our model specifies the best response of a node (i.e., what action it should choose) with respect to the actions chosen by the other nodes. The best response of a node is to adopt the action 1 if the total influence on it exceeds its threshold and −1 if the opposite happens. In case of a tie, the node is indifferent between choosing 1 and −1; i.e., either would be its best response. Here, we calculate the total influence on a node as follows. First, sum up the incoming influence factors on the node from the ones who have adopted the action 1. Second, sum up those influence factors that are coming in from the ones who have adopted −1. Finally, subtract the second sum from the first to get the total influence on that node.
+      </paragraph>
+      <paragraph>
+       Clearly, in a network with n nodes, there are {a mathematical formula}2n possible joint actions, resulting from the action choice of each individual node. Among all these joint actions, we call the ones where every node has chosen its best response to everyone else a pure-strategy Nash equilibria (PSNE). We use PSNE to mathematically model the stable outcomes that such a networked system could support.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Overview of the most-influential-nodes problem
+      </section-title>
+      <paragraph>
+       We formulate the most-influential-nodes problem with respect to a goal of interest. The goal of interest indirectly determines what we call the desired stable outcome(s). Unlike the mainstream literature on the most-influential-nodes problem [49], maximizing the spread of a particular behavior is not our objective. Rather, the desired stable outcome(s) resulting from the goal of interest is what determines our computational objective. In addition, our solution concept abstracts away the dynamics and does not rely on the “diffusion” process by which such a “spread of behavior” happens.
+      </paragraph>
+      <paragraph>
+       Roughly speaking, in our approach, we consider a set of individuals S in a network to be a most influential set, with respect to a particular goal of interest, if S is the most preferred subset among all those that satisfy the following condition: were the individuals in S to choose the behavior {a mathematical formula}xS prescribed to them by a desired stable outcome {a mathematical formula}x≡(xS,x−S) which achieves the goal of interest, then the only stable outcome of the system that remains consistent with their choices {a mathematical formula}xS is x itself.
+      </paragraph>
+      <paragraph>
+       Said more intuitively, once the nodes in the most influential set S follow the behavior {a mathematical formula}xS prescribed to them by a desired stable outcome x achieving the goal of interest, they become collectively “so influential” that their behavior “forces” every other individual to a unique choice of behavior! Our proposed concept of the most influential individuals is illustrated in Fig. 1 with a very simple example.
+      </paragraph>
+      <paragraph>
+       Now, there could be many different sets S that satisfy the above condition. For example, S could consist of all the individuals, which might not be what we want. To account for this, we also specify a preference function over all subsets of individuals. While this preference function could in principle be arbitrary, a natural example would be the one that prefers a set S of minimum cardinality.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Our contributions
+      </section-title>
+      <paragraph>
+       Our major contributions include
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        a new approach, grounded in non-cooperative game theory, to the study of influence in networks where individuals exhibit strategic behavior;
+       </list-item>
+       <list-item label="2.">
+        general-influence games as a new class of games to model the behavior of individuals, which we call network influence games when the individuals are embedded in a (possibly fully-connected, directed) network and the resulting games are (possibly fully-connected, directed) graphical games;
+       </list-item>
+       <list-item label="3.">
+        linear-influence games as a special class of network influence games, including establishing connections to potential games and polymatrix games;
+       </list-item>
+       <list-item label="4.">
+        a theoretical and empirical study of various computational aspects of linear-influence games, including an algorithm for identifying the most influential individuals; and
+       </list-item>
+       <list-item label="5.">
+        the application of our approach to two real-world settings: the U.S. Supreme Court and the U.S. Senate.
+       </list-item>
+      </list>
+      <paragraph>
+       The next section introduces the necessary background material to put our work and contributions in a broader context. After that, in Section 3, we define our model of network influence games and the related problems on it. In Sections 4 and 5, we present our computational results. We apply these results to several real-world as well as synthetic datasets in Section 6. We conclude this paper and suggest several future directions in Section 7.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      “Influence” in social networks, however defined, has been a subject of both theoretical and empirical studies for decades (see, e.g., Wasserman and Faust [86] and the references therein). Although our focus is primarily on computation, the roots of our model go back to the early literature in sociology on collective behavior as well as the more recent literature on collective action. In this section, we will place our model in the context of the relevant literature from sociology, economics, and computer science.{sup:3}
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Connection to collective action in sociology
+      </section-title>
+      <paragraph>
+       Although our approach may seem close to the rational calculus models of collective action (see Appendix A for a detailed description), particularly to Granovetter's [31] threshold models, our objective is very much different from that of collective action theory. The focus of the collective-action theory in sociology is to explain how individual behavior in a group leads to a collective outcome. For example, Schelling's [77], [76] models explain how different distributions of the level of tolerances of individuals lead to residential segregations of different properties. Berk [9] explains how a compromise (such as placing a barricade) evolves within a mixture of rational individuals of different predispositions (militants vs. moderates). Granovetter [31] shows how a little perturbation in the distribution of thresholds can possibly lead a system to a completely different collective outcome. In short, explaining collective social phenomena is at the heart of all these studies.
+      </paragraph>
+      <paragraph>
+       While such an explanation is a scientific pursuit of utmost importance, our focus is rather on an engineering approach to predicting stable behavior in a networked population setting. Our approach is not to go through the fine-grained details of a process, such as forward recursion [31, p. 1426], which is often plagued with problems when the sociomatrix [31, p. 1429] contains negative elements. Instead, we adopt the notion of PSNE to define stable outcomes. Said differently, the path to an equilibrium is not what we focus on; rather, it is the prediction of the equilibrium itself that we focus on.
+      </paragraph>
+      <paragraph>
+       We next justify our approach in the context of rational calculus models.
+      </paragraph>
+      <section label="2.1.1">
+       <section-title>
+        PSNE as the solution concept
+       </section-title>
+       <paragraph>
+        Nash equilibrium is the most central solution concept in non-cooperative game theory. The fundamental aspect of a Nash equilibrium is stability–no “player” has any incentive to unilaterally deviate from a Nash equilibrium. As a result, Nash equilibrium is very often a natural choice to mathematically model stable outcomes of a complex system.
+       </paragraph>
+       <paragraph>
+        In this work, we adopt PSNE, one particular form of Nash equilibrium, to model the stable behavioral outcomes of a networked system of influence.{sup:4}
+       </paragraph>
+      </section>
+      <section label="2.1.2">
+       <section-title>
+        Abstraction of the fine-grained details
+       </section-title>
+       <paragraph>
+        Sociologists have recorded minute details of various collective action scenarios in order to substantiate their theories with empirical accounts [57, Ch. 5, 6]. However, in the application scenarios that we are interested in, such as the strategic interaction in the U.S. Congress and the U.S. Supreme Court, very little details can be obtained about how a collective outcome emerges.
+       </paragraph>
+       <paragraph>
+        For example, the Budget Control Act of 2011 was passed by 74–26 votes in the U.S. Senate on August 2, 2011, ending a much debated debt-ceiling crisis. Despite intense media coverage, it would be difficult, if not impossible, to give an accurate account of how this agreement on debt-ceiling was reached. Even if there were an exact account of every conversation and every negotiation that had taken place, it would be extremely challenging to translate such a subjective account into a mathematically defined process, let alone learning the parameters and computing stable outcomes of such a complex model. Therefore, one of our goals is to abstract the fine-grained details using the notion of PSNE.
+       </paragraph>
+      </section>
+      <section label="2.1.3">
+       <section-title>
+        Network influence games as a less-restrictive model
+       </section-title>
+       <paragraph>
+        Typical models of dynamics used in the existing literature almost always impose restrictions or assumptions to keep the model simple enough to permit analytical solutions or to facilitate algorithmic analysis. For example, as mentioned above, the forward recursion process implicitly assumes that the sociomatrix does not have negative elements. The hope is that the essence of the general phenomena that one wants to capture with the model remains even after imposing such restrictions.
+       </paragraph>
+       <paragraph>
+        In our case, by using the concept of PSNE to abstract dynamical processes, we can deal with rich models without having to impose some of the same restrictions, and at the same time, we can capture equilibria beyond the ones captured by a simple model of dynamics. In particular, our model captures any equilibrium that the process of forward recursion converges to (with any initial configuration); but in addition, our model can also capture equilibria that the forward recursion process cannot.
+       </paragraph>
+      </section>
+      <section label="2.1.4">
+       <section-title>
+        Focus on practical applications
+       </section-title>
+       <paragraph>
+        Although our model of network influence games is grounded in non-cooperative game theory, the way we apply it to real-world settings such as the U.S. Congress is deeply rooted in modern AI [75]. One of the distinctive features of the field of AI is that it is able to build useful tools, often without gaining the full scientific knowledge of how a system works. For example, even though we do not have a model of exactly how humans perform inferences while doing tasks as simple as playing different types of parlor games, modern AI has been able to devise systems that perform better than humans on the same tasks, often by a considerable margin [75].
+       </paragraph>
+       <paragraph>
+        The scientific question of how humans reason or perform inferences is of course very important, but, in our view, which may be the prevailing view, the modern focus of AI in general is to engineer solutions that would serve our purpose without necessarily having to explain the specific and intricate details of the complex physical phenomena often found in the real world [75]. Of course, under the right conditions, AI does sometimes help experts understand physical phenomena too, although not necessarily purposefully, by suggesting effective insights and potentially useful directions.
+       </paragraph>
+       <paragraph>
+        In short, we propose an AI-based approach, including AI-inspired models and algorithms, to build a computational tool for predicting the behavior of large, networked populations. Our approach does not model the complex behavioral dynamics in the network, but abstracts it via PSNE. This allows us to deal with a rich set of models and concentrate our efforts on the prediction of stable outcomes.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Connection to literature on most-influential nodes
+      </section-title>
+      <paragraph>
+       To date, the study of influence in a network, by both economists [66], [17] and computer scientists [49], [22], has been rooted in rational calculus models of behavior. Their approach to connecting individual behavior to collective outcome is mostly by adopting the process of forward recursion [31, p. 1426], which is often employed in studying the diffusion of innovations [32, p. 168]. As a result, the term “contagion” in these settings has a rational connotation contrary to the early sociology literature on collective behavior, where “contagion” or “social contagion” alludes to irrational and often hysteric nature of the individuals in a crowd [72], [10]. The computational question of identifying the most influential nodes in a network [49], originally posed by Domingos and Richardson [20], has also been studied using forward recursion within rational calculus models.
+      </paragraph>
+      <paragraph>
+       In the traditional setting of cascade or diffusion models, as described by Kleinberg [49], each node behaves in one of these two ways—it either adopts a new behavior or it does not. Given a number k, their formulation of the most-influential-nodes problem within the diffusion setting asks one to select a set of k nodes such that the spread of the new behavior is maximized by the selected nodes being the initial adopters of the new behavior.{sup:5} The most-influential-nodes question in the cascade or diffusion settings typically concerns infinite graphs [49, p. 615], such as Morris's local interaction games [66, p. 59]. In contrast, we concern ourselves with large but finite graphs here.
+      </paragraph>
+      <paragraph>
+       The notion of “most-influential nodes” used in this paper is very much different from the one traditionally used within the diffusion setting, mainly because ours seeks to address problems in a different setting (i.e., fully/strictly strategic) and achieves generally different objectives (i.e., desired stable outcomes relative to whatever the goal of interest happens to be, instead of maximizing the number of adopters of the new behavior). If anything, our approach, by taking a strictly game-theoretic perspective, may complement the traditional line of work based on diffusion, although even that is not really our main intent. In our view, these are clearly disparate, non-competing approaches. Despite these fundamental differences in objectives, settings, models, problem formulations, and solution concepts, one cannot escape the high level of interest in diffusion models within the computer science community. Therefore, in the remaining of this subsection, we still attempt to briefly mention some possible points of contrast between the typical approach to identifying the most influential nodes in the diffusion setting, as described by Kleinberg [49], and ours.
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        Stability of outcomes
+       </section-title>
+       <paragraph>
+        A subtle aspect of diffusion models is that each node in the network behaves as an independent agent. Any observed influence that a node's neighbors impose on the node is the result of the same node's “rational” or “natural” response to the neighbors' behavior. Thus, in many cases, it would be desirable that the solution to the most-influential-nodes problem leads us to a stable outcome of the system, in which each node's behavior is a best response to the neighbors' behavior. However, if we select a set of nodes with the goal of maximizing the spread of the new behavior, then some of the selected nodes may end up “unhappy” being the initial adopters of the new behavior, with respect to their neighbors' final behavior at the end of forward recursion. For example, a selected node's best behavioral response could be not adopting the new behavior after all.
+       </paragraph>
+       <paragraph>
+        We believe that in some cases it is more natural to require that the desired final state of the system, e.g., the state in which the maximum possible number of individuals adopt a particular behavior, be stable (i.e., everyone must be “happy” with their behavioral response).
+       </paragraph>
+      </section>
+      <section label="2.2.2">
+       <section-title>
+        Arbitrary influence factors: positive and negative
+       </section-title>
+       <paragraph>
+        In general, to address the question of finding the most influential nodes, the forward recursion process has been modeled as “monotonic.” (Here, a monotonic process refers to the setting where once an agent adopts the new behavior, it cannot go back.) Even in more recent work on influence maximization and minimization [12], [14], [34], the influence factors (or weights on the edges) are defined to be non-negative.{sup:6} If we think of an application such as reducing the incidence of smoking or obesity, then a model that allows a “change of mind” based on the response of the immediate neighborhood may make more sense. Thus, a notable contrast between the traditional treatment of the most-influential-nodes problem and ours is that we do not restrict the influence among the nodes of the network to non-negative numbers.
+       </paragraph>
+       <paragraph>
+        In fact, in many applications, both positive and negative influence factors may exist in the same problem instance. Take the U.S. Congress as an example: senators belonging to the same party may have non-negative influence factors on each other (as usually perceived from voting instances on legislation issues), but one senator may (and often does) have a negative influence on another belonging to a different party. While generalized versions of threshold models that allow “reversals” have been derived in the social science literature, to the best of our knowledge, there is no substantive work on the most-influential-nodes problem in that context.{sup:7}
+       </paragraph>
+      </section>
+      <section label="2.2.3">
+       <section-title>
+        Abstraction of intricate dynamics
+       </section-title>
+       <paragraph>
+        The traditional approach to the most-influential-nodes problem emphasizes modeling the complex dynamics of interactions among nodes as a way to a final answer: a set of the most influential nodes. In fact, our model is inspired by the same threshold models used in the traditional approach. However, as mentioned earlier, our emphasis is not on the dynamics of interactions, but on the stable outcomes in a game-theoretic setting. By doing this, we seek to capture significant, basic, and core strategic aspects of complex interactions in networks that naturally appear in many real-world problems (e.g., identifying the most influential senators in the U.S. Congress). Of course, we recognize the importance of the dynamics of interactions for problems requiring a fine level of detail. Yet, we believe that our approach can still capture significant aspects of the problem even at the coarser level of “steady-state” or stable outcomes.
+       </paragraph>
+      </section>
+      <section label="2.2.4">
+       <section-title>
+        A brief note on submodularity
+       </section-title>
+       <paragraph>
+        Let Ω be a set. A set function {a mathematical formula}f:2Ω→R is submodular if for all pairs of subsets {a mathematical formula}S,T⊂Ω with {a mathematical formula}S⊂T and for any element {a mathematical formula}x∈Ω∖T, we have {a mathematical formula}f(S∪{x})−f(S)≥f(T∪{x})−f(T). Submodular functions show the well-known diminishing marginal return property. It means that if we add one more element x to the input set S of a submodular function, the increase in the function's output is at least the increase in its output when we add the same element to a superset T of S. See Schrijver [78] for details.
+       </paragraph>
+       <paragraph>
+        The submodularity of the “influence spread function” plays a central role in the algorithmic analysis of the traditional diffusion models. Given the initial adopters as the input, the influence spread function outputs the number of nodes that would ultimately adopt the new behavior in a diffusion setting. See, e.g., Kleinberg [49] and the references therein for more details.
+       </paragraph>
+       <paragraph>
+        As we mentioned earlier, we allow negative influence factors in our model. If we allow the same in the traditional diffusion models, the influence spread function will no longer remain submodular. This would void the highly heralded theoretical guarantee of a simple, greedy approximation algorithm commonly used for identifying the most influential nodes in a diffusion setting.
+       </paragraph>
+       <paragraph>
+        In general, it is not evident what role submodularity plays in our approach, if any. In fact, it is unclear what the equivalent or analogous concept of the “influence spread function” is in our setting, given that we do not explicitly consider the dynamics by which stable outcomes may arise. We present a more substantive discussion on this matter in Appendix D.
+       </paragraph>
+      </section>
+      <section label="2.2.5">
+       <section-title>
+        Cooperative vs. non-cooperative games
+       </section-title>
+       <paragraph>
+        Departing from the setting of non-cooperative games, there is a completely different approach to computing the most influential nodes [67]. In that approach, a cooperative game [71, Ch. 8] is defined on the underlying social network, and the most influential nodes are computed based on the nodes' (approximate) Shapley values. The Shapley value of a node quantifies the node's marginal importance to a coalition [79]. The underlying model of Narayanam and Narahari [67] is very similar to the ones described by Kleinberg [49]. For example, the normalized influence weights are assumed to be non-negative [67, pp. 2, 15]. It should be noted here that the computation of the exact Shapley value is intractable in general, and it is estimated using a sampling-based method [67, pp. 2, 15]. The efficient computation of Shapley value has also received some attention recently [59].
+       </paragraph>
+       <paragraph>
+        In contrast to the above studies, the behavior of the nodes in our setting is governed by a non-cooperative game. See, e.g., [71, Ch. 1] for the difference between cooperative and non-cooperative games.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Related work in game theory
+      </section-title>
+      <paragraph>
+       Other researchers have used similar game-theoretic notions of “influential individuals” in specific contexts. Particularly close to ours is the work of Heal and Kunreuther [35], [36], [37], [38], Kunreuther and Heal [50], Kunreuther and Michel-Kerjan [51], Ballester et al. [5], [6], and Kearns and Ortiz [47].
+      </paragraph>
+      <paragraph>
+       Also, our interest is on identifying an “optimal” set of influential nodes for a variety of optimality criteria, depending on the particular context of interest. For instance, we may prefer the set of influential individuals of minimal size. Such a preference is similar to the concept of “minimal critical coalitions” in the work of Heal and Kunreuther [35], [36], [37], [38] and Kunreuther and Michel-Kerjan [51].
+      </paragraph>
+      <paragraph>
+       Mechanism design is a core area in game theory whose main focus is to “engineer” games, by changing the existing underlaying game or by creating a new one, whose stable outcomes (i.e., equilibria) achieve a desired objective [69]. Although our notion of the most influential individuals is also defined with respect to a desired objective, our approach is conceptually very different. We are not interested in changing, defining, or engineering a new system—the system is what it is. Rather, our interest is in altering the behavior within the same system so as to “lead” or “tip” the system to achieve a desired stable outcome.
+      </paragraph>
+      <paragraph>
+       In the next section, we will formally define our model and our notion of “most influential nodes” in a network. We will also establish connections to several well-studied classes of game models in game theory: polymatrix and potential games.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Network influence games
+     </section-title>
+     <paragraph>
+      Inspired by threshold models [31], we first introduce general-influence games and network influence games as our models of influence in a large, networked population. In Section 3.3, we will introduce linear-influence games (LIGs) as a special case of network influence games and will eventually restrict our attention to LIGs.{sup:8} The distinction among these models will be clear over the next few sections.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Our game-theoretic model of behavior
+      </section-title>
+      <paragraph>
+       We first formalize general-influence games as a model of behavior.{sup:9} We will use the following notation throughout this paper.
+      </paragraph>
+      <paragraph>
+       Let n be the number of individuals in a population. For simplicity, we restrict our attention to the case of binary behavior, a common assumption in most of the work in this area. Thus, {a mathematical formula}xi∈{−1,1} denotes the behavior of individual i, where {a mathematical formula}xi=1 indicates that i “adopts” a particular behavior and {a mathematical formula}xi=−1 indicates i “does not adopt” the behavior. Some examples of behavior of this kind are supporting a particular political measure, candidate or party; holding a particular view or belief; vaccinating against a particular disease; installing and maintaining antivirus software;acquiring fire/home insurance; eating healthy; taking up smoking; participating in criminal activities; among many others.
+      </paragraph>
+      <paragraph>
+       We denote by {a mathematical formula}fi:{−1,1}n−1→R the function that quantifies the influence of other individuals on i.
+      </paragraph>
+      <paragraph label="Definition 3.1">
+       Payoff FunctionIn general-influence games, we define the payoff function {a mathematical formula}ui:{−1,1}n→R quantifying the preferences of each player i as {a mathematical formula}ui(xi,x−i)≡xifi(x−i), where {a mathematical formula}x−i denotes the vector of a joint-action of all players except i.
+      </paragraph>
+      <paragraph label="Definition 3.2">
+       Using the above definition and notation, we define a general-influence game as follows. General-Influence GameA general-influence game{a mathematical formula}G is defined by a set of n players and for each player i, a set of actions {a mathematical formula}{−1,1} and a payoff function {a mathematical formula}ui given in Definition 3.1.
+      </paragraph>
+      <paragraph>
+       Next, we characterize the stable outcomes of general-influence games. We start with the definition of the best-response correspondence.
+      </paragraph>
+      <paragraph label="Definition 3.3">
+       Best-Response CorrespondenceGiven {a mathematical formula}x−i∈{−1,1}n−1, the best-response correspondence{a mathematical formula}BRiG:{−1,1}n−1→2{−1,1} of a player i of a general-influence game {a mathematical formula}G is defined as follows.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Therefore, for all individuals i and any possible behavior {a mathematical formula}x−i∈{−1,1}n−1 of the other individuals in the population, the best-response behavior{a mathematical formula}xi⁎ of individual i to the behavior {a mathematical formula}x−i⁎ of others satisfies{a mathematical formula}{a mathematical formula}{a mathematical formula} Informally, “positive influences” lead an individual to adopt the behavior, while “negative influences” lead the individual to “reject” the behavior; the individual is indifferent if there is “no influence.” We formally characterize the stable outcomes of the system by the following notion of pure-strategy Nash equilibria (PSNE) of the corresponding general-influence game.
+      </paragraph>
+      <paragraph label="Definition 3.4">
+       Pure-Strategy Nash EquilibriumA pure-strategy Nash equilibrium (PSNE) of a general-influence game {a mathematical formula}G is a behavior assignment {a mathematical formula}x⁎∈{−1,1}n that satisfies the following condition. Each player i's behavior {a mathematical formula}xi⁎ is a (simultaneous) best-response to the behavior {a mathematical formula}x−i⁎ of the rest.
+      </paragraph>
+      <paragraph>
+       We denote the set of all PSNE of the game {a mathematical formula}G by{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Most influential individuals/nodes: problem formulation
+      </section-title>
+      <paragraph label="Definition 3.5">
+       We adopt general-influence games as the model of strategic behavior among the individuals. If, in particular, the individuals are nodes in a network, then we define a graphical-game version of the general-influence game as follows. Network Influence GamesA network influence game with directed graph {a mathematical formula}G=(V,E) is a general-influence game with players represented by the nodes V and the influence function {a mathematical formula}fi of each player/node {a mathematical formula}i∈V represented by a local potential function{a mathematical formula}filocal:{−1,+1}|Pa(i)|→R, such that {a mathematical formula}fi(x−i)≡filocal(xPa(i)), where {a mathematical formula}Pa(i)≡{j∈V|(j,i)∈E} are the parents of i in G, and {a mathematical formula}xPa(i) is the joint-action of the parents of i consistent with {a mathematical formula}x−i.
+      </paragraph>
+      <paragraph>
+       If we are dealing with a network influence game, we refer to the most-influential-individuals problem as the most-influential-nodes problem. Note that, in this case, by adopting network influence games as the model of strategic behavior among the individuals/nodes in the network, we are departing from the traditional model of diffusion in networks.
+      </paragraph>
+      <paragraph label="Definition 3.6">
+       We introduce two functions in our definition that we discuss in more detail immediately after the problem formulation. One is what we call the “goal” or “objective function,” denoted by g, which we introduce as a way to formally express that, in our approach, the notion of “most influential” is relative to a specific goal or objective of interest. The other, which we call the “set-preference function” and denote by h, is a way to choose among all sets of nodes that achieve our goal of interest. Most Influential NodesLet {a mathematical formula}G be a general-influence game, {a mathematical formula}g:{−1,1}n×2[n]→R be the goal or objective function mapping a joint-action and a subset of the individuals/nodes/players in {a mathematical formula}G to a real number quantifying the general preferences over the space of joint-actions and players' subsets, and {a mathematical formula}h:2[n]→R be the set-preference function mapping a subset of the players to a real number quantifying the a priori preference over the space of players' subsets. Denote by {a mathematical formula}Xg⁎(S)≡arg⁡maxx∈NE(G)⁡g(x,S) the optimal set of PSNE of {a mathematical formula}G, with respect to g and a fixed subset of players {a mathematical formula}S⊂[n]. We say that a set of players {a mathematical formula}S⁎⊂[n] in {a mathematical formula}G is most influential with respect to g and h, if{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As mentioned earlier, we can interpret the players in {a mathematical formula}S⁎ to be collectively so influential that they are able to restrict every other player's choice of action to a unique one: the action prescribed by some desired stable outcome {a mathematical formula}x⁎.
+      </paragraph>
+      <paragraph>
+       An example of a goal function g that captures the objective of achieving a specific stable outcome {a mathematical formula}x⁎∈NE(G) is {a mathematical formula}g(x,S)≡1[x=x⁎]. Another example that captures the objective of achieving a stable outcome with the largest number of individuals adopting the behavior 1 is {a mathematical formula}g(x,S)≡∑i=1nxi+12, or equivalently, {a mathematical formula}g(x,S)≡∑i=1nxi. Note that both of the functions just presented ignore the set S. One alternative that does not is {a mathematical formula}g(x,S)≡∑i∈Stixi−∑i∉Stixi, where the {a mathematical formula}ti's reflect a weighted preference over individual nodes, thus capturing our interest in some “weighted maximum set of adopters.”
+      </paragraph>
+      <paragraph>
+       A common example of the set-preference function h that captures the preference for sets of small cardinality is to simply define h such that {a mathematical formula}h(S)&gt;h(S′) iff {a mathematical formula}|S|&lt;|S′|. Similar to the last objective function described in the previous paragraph, an alternative is {a mathematical formula}h(S)≡∑i∈Svi−∑i∉Svi, where the {a mathematical formula}vi's reflect a weighted preference over individual players in any set S that achieves the objective of interest.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Linear-influence games
+      </section-title>
+      <paragraph>
+       A simple instantiation of the general-influence-game model just described is the case of linear influences. We call this a linear-influence game (LIG). Even though this model falls within the general class of graphical games [46], a distinctive feature of LIGs is a very compact, parametric representation. In addition, it is important to recall that our emphasis here is on the problem of computing stable outcomes of systems of influence and identifying influential agents relative to a particular objective.
+      </paragraph>
+      <paragraph label="Definition 3.7">
+       Linear-Influence GameIn a linear-influence game (LIG), the influence function of each individual i is defined as {a mathematical formula}fi(x−i)≡∑j≠iwjixj−bi where for any other individual j, {a mathematical formula}wji∈R is a weight parameter quantifying the “influence factor” that j has on i, and {a mathematical formula}bi∈R is a threshold parameter for i's level of “tolerance” for negative effects.
+      </paragraph>
+      <paragraph>
+       It follows from Definition 3.1 that although the influence function of an LIG is linear, its payoff function is quadratic. Furthermore, the following argument shows that an LIG is a special type of graphical game in parametric form. In general, the influence factors {a mathematical formula}wji induce a (potentially completely-connected) directed graph, where nodes represent individuals/players, and therefore, we obtain a graphical game having a linear (in the number of edges) representation size, as opposed to the exponential (in the maximum degree of a node) representation size of general graphical games in normal form [46]. In particular, there is a directed edge (or arc) from individual j to i iff {a mathematical formula}wji≠0. Viewed from this perspective, LIGs form a subclass of network influence games.
+      </paragraph>
+      <paragraph>
+       Example.Fig. 1 shows an example of an LIG with binary behavior. Here, for each edge {a mathematical formula}(i,j), {a mathematical formula}wji=1 and {a mathematical formula}wij=1. That is, the game is a special type of LIG with symmetric influence factors. Furthermore, for each node i, its threshold {a mathematical formula}bi is defined to be 0. Therefore, at any PSNE of this game, each node wants to adopt the behavior of the majority of its neighbors and it is indifferent in the case of a tie.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Connection to polymatrix games
+       </section-title>
+       <paragraph>
+        Polymatrix games [42] are n-player non-cooperative games where a player's total payoff is the sum of partial, individual payoffs defined relative to each other individual player's action. Formally, for any joint action x, player i's payoff is given by {a mathematical formula}Mi(xi,x−i)≡∑j≠iαji(xj,xi), where {a mathematical formula}αji(xj,xi) is the partial payoff that i receives when i plays {a mathematical formula}xi and j plays {a mathematical formula}xj. Note that this partial payoff is local in nature and is not affected by any other node's action. We will consider polymatrix games with only binary actions {a mathematical formula}{1,−1} here.
+       </paragraph>
+       <paragraph>
+        The following property shows an equivalence between LIGs and 2-action polymatrix games. Thus, our computational study of LIGs directly carries over to 2-action polymatrix games.
+       </paragraph>
+       <paragraph label="Proposition 3.8">
+        LIGs are equivalent to 2-action polymatrix games, modulo the set of PSNE.{sup:10}
+       </paragraph>
+       <paragraph label="Proof">
+        Assume that the number of players {a mathematical formula}n&gt;1; otherwise, the statement holds trivially. We first show that given any instance of an LIG, we can design a polymatrix game that has the same set of PSNE. In an LIG instance, player i's payoff is given by{a mathematical formula} Thus, constructing a polymatrix game instance by defining {a mathematical formula}αji(xj,xi)≡xiwjixj−xibin−1, we have the same set of PSNE in both instances.Next, we show the reverse direction. Player i's payoff in a 2-action polymatrix game is given by{a mathematical formula} Note that the second term above does not have any effect on i's choice of action. Thus, we can re-define the payoff of player i, without making any change to the set of PSNE of the original polymatrix game, as follows.{a mathematical formula} Therefore, we can construct an LIG that has exactly the same set of PSNE as the polymatrix game, in the following way. For any player i, define {a mathematical formula}bi≡−∑j≠i14(αji(1,1)+αji(−1,1)−αji(1,−1)−αji(−1,−1)), and for any player i and any other player j, define {a mathematical formula}wji≡14(αji(1,1)−αji(−1,1)−αji(1,−1)+αji(−1,−1)). (Note that the factor 1/4 is not necessary to define the LIG parameters because it does not affect the best response of the players.)  □
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Equilibria computation in linear-influence games
+     </section-title>
+     <paragraph>
+      We first study the problem of computing and counting PSNE in LIGs. We show that several special cases of LIGs present us with attractive computational advantages, while the general problem is intractable unless P = NP. We present several heuristics to compute PSNE in LIGs.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Nonnegative influence factors
+      </section-title>
+      <paragraph>
+       When all the influence factors are non-negative, an LIG is supermodular [60], [82]. In particular, the game exhibits what is called strategic complementarity (see Appendix C.1 for a definition and brief discussion) [13], [60], [82], [81]. Hence, the best-response dynamics converges in at most n rounds. From this, we obtain the following result.
+      </paragraph>
+      <paragraph label="Proposition 4.1">
+       The problem of computing a PSNE is in P for LIGs on general graphs with only non-negative influence factors.
+      </paragraph>
+      <paragraph>
+       This property implies certain monotonicity of the best-response correspondences. More specifically, for each player i, if any subset of the other players “increases his/her strategy” by adopting the behavior 1, then player i's best-response cannot be to abandon adoption (i.e., move from 1 to −1). In other words, once a player adopts the behavior 1, it has no incentive to go back. This monotonicity property also follows directly from the linear threshold model. Strategic complementarity implies other interesting characterizations of the structure of PSNE in LIGs and the behavior of best-response dynamics. For example, such games always have a PSNE: If we start with the complete assignment in which either everyone is playing 1, or everyone is playing −1, parallel/synchronous best-response dynamics converges after at most n rounds [60]. If both best-response processes starting with all −1's and all 1's converge to the same PSNE, then that PSNE is unique. Otherwise, any other PSNE of the game must be “contained” between the two different PSNE. We can also view this from the perspective of constraint propagation with monotonic constraints [74].
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Special influence structures and potential games
+      </section-title>
+      <paragraph label="Proposition 4.2">
+       Several special subclasses of LIGs are potential games [63]. (See Appendix C.3 for more information.) This connection guarantees the existence of PSNE in such games. If the influence factors of an LIG{a mathematical formula}Gare symmetric (i.e.,{a mathematical formula}wji=wij, for all{a mathematical formula}i,j), then{a mathematical formula}Gis an (exact) potential game.
+      </paragraph>
+      <paragraph label="Proof">
+       We show that the game has an exact potential function,{a mathematical formula} Consider any player j. The difference in j's payoff for {a mathematical formula}xj=1 and {a mathematical formula}xj=−1 (assuming all other players play {a mathematical formula}x−j in both cases) is{a mathematical formula} Next, the difference in the potential function when j plays 1 and −1 is{a mathematical formula}The last line follows by the symmetry of the weights (i.e., {a mathematical formula}wij=wji).  □
+      </paragraph>
+      <paragraph>
+       If, in addition, the threshold {a mathematical formula}bi=0 for all i, the game is a party-affiliation game, and computing a PSNE in such games is PLS-complete [23].
+      </paragraph>
+      <paragraph label="Proposition 4.3">
+       The following result is on a large class of games that we call indiscriminate LIGs, where for every player i, the influence weight, {a mathematical formula}wij≡δi≠0, that i imposes on every other player j is the same. The interesting aspect of this result is that these LIGs are potential games despite being possibly asymmetric and exhibiting strategic substitutability, due to negative influence factors (see Appendix C.2). Let{a mathematical formula}Gbe an indiscriminate LIG in which all{a mathematical formula}δifor all i, have the same sign, denoted by{a mathematical formula}ρ∈{−1,+1}. Then{a mathematical formula}Gis an ordinal potential game with potential function{a mathematical formula}Φ(x)=ρ[(∑i=1nδixi)2−2∑i=1nbiδixi].
+      </paragraph>
+      <paragraph label="Proof">
+       It is sufficient to show that the sign of the difference in the individual utilities of any player due to changing her action unilaterally, is the same as the sign of the difference in the corresponding potential functions. For any player j, the first difference is{a mathematical formula} The potential function when j plays 1,{a mathematical formula} The potential function when j plays −1,{a mathematical formula} Thus, the difference in the potential functions,{a mathematical formula} Since {a mathematical formula}ρδj&gt;0, the quantities given in (3) and (4) have the same sign.  □
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Tree-structured influence graphs
+      </section-title>
+      <paragraph label="Theorem 4.4">
+       The following result follows from a careful, non-trivial modification of the TreeNash algorithm [46]. Note that the running time of the TreeNash algorithm is exponential in the degree of a node and thus also exponential in the representation size of an LIG! In contrast, our algorithm is linear in the maximum degree and thereby linear in the representation size of an LIG. The complete proof follows a proof sketch. There exists an{a mathematical formula}O(nd)time algorithm to find a PSNE, or to decide that there exists none, in LIGs with tree structures, where d is the maximum degree of a node.
+      </paragraph>
+      <paragraph label="Proof sketch">
+       We borrow the notation of Kearns et al. [46]. The modification of the TreeNash algorithm involves efficiently (in {a mathematical formula}O(d) time, not {a mathematical formula}O(2d)) determining the existence of a witness vector and constructing one, if it exists, at each node during the downstream pass, in the following way.Suppose that an internal node i receives tables {a mathematical formula}Tki(xk,xi) from its parents k, and that i wants to send a table {a mathematical formula}Tij(xi,xj) to its unique child j. If for some parent k of i, {a mathematical formula}Tki(−1,xi)=0 and {a mathematical formula}Tki(1,xi)=0, then i sends the following table entries to j: {a mathematical formula}Tij(xi,−1)=0 and {a mathematical formula}Tij(xi,1)=0. Otherwise, we first partition i's set of parents into two sets in {a mathematical formula}O(d) time: {a mathematical formula}Pa1(i,xi) consisting of the parents k of i that have a unique best response {a mathematical formula}xˆk to i's playing {a mathematical formula}xi and {a mathematical formula}Pa2(i,xi) consisting of the remaining parents of i. We show that {a mathematical formula}Tij(xi,xj)=1 iff{a mathematical formula} from which we get a witness vector, if it exists. □
+      </paragraph>
+      <paragraph>
+       Following is the complete proof of Theorem 4.4.
+      </paragraph>
+      <paragraph label="Proof">
+       We denote any node i's action by {a mathematical formula}xi∈{−1,1}, its threshold by {a mathematical formula}bi, and the influence of any node i on another node j by {a mathematical formula}wij. Furthermore, denote the set of parents of a node i by {a mathematical formula}Pa(i). We now describe the two phases of the modified TreeNash algorithm.
+       <list>
+        There are two cases.Case I:{a mathematical formula}Pa0(i,xi)≠∅. In this case, there exists some parent k of i for which both {a mathematical formula}Tki(−1,xi)=0 and {a mathematical formula}Tki(1,xi)=0. Therefore, there exists no witness vector that satisfies Condition 1, and i sends the following table entries to j: {a mathematical formula}Tij(xi,xj)=0, for {a mathematical formula}xj=−1,1.Case II:{a mathematical formula}Pa0(i,xi)=∅. In this case, we will show that there exists a witness vector for {a mathematical formula}Tij(xi,xj)=1 satisfying Conditions 1 and 2 if and only if the following inequality holds (which can be verified in {a mathematical formula}O(d) time). Below, we will use the sign function σ: {a mathematical formula}σ(x)=1 if {a mathematical formula}x&gt;0, and {a mathematical formula}σ(x)=−1 otherwise.{a mathematical formula}In fact, if Inequality (5) holds then we can construct a witness vector in the following way: If {a mathematical formula}k∈Pa1(i,xi), then let {a mathematical formula}xk=BRk(i,xi), otherwise, let {a mathematical formula}xk=σ(xiwki). Since each parent k of i is playing its conditional best-response {a mathematical formula}xk to i's choice of action {a mathematical formula}xi, we obtain, {a mathematical formula}Tki(xk,xi)=1 for all {a mathematical formula}k∈Pa(i). Furthermore, Inequality (5) says that i is playing its best-response {a mathematical formula}xi to each of its parents k playing {a mathematical formula}xk and its child j playing {a mathematical formula}xj.To prove the reverse direction, we start with a witness vector {a mathematical formula}(xk)k∈Pa(i) such that Conditions 1 and 2 specified above hold. In particular, we can write Condition 2 as{a mathematical formula} The following line of arguments shows that Inequality (5) holds.{a mathematical formula} In addition to computing the table {a mathematical formula}Tij, node i stores the following witness vector {a mathematical formula}(xk)k∈Pa(i) for each table entry {a mathematical formula}Tij(xi,xj) that is 1: if {a mathematical formula}k∈Pa1(i,xi), then {a mathematical formula}xk=BRk(i,xi), otherwise, {a mathematical formula}xk=σ(xiwki). The downstream phase ends at the root node z, and z computes a unary table {a mathematical formula}Tz(xz) such that {a mathematical formula}Tz(xz)=1 if and only if there exists a witness vector {a mathematical formula}(xk)k∈Pa(z) such that {a mathematical formula}Tkz(xk,xz)=1 for all {a mathematical formula}k∈Pa(z) and {a mathematical formula}xz is a best-response of z to {a mathematical formula}(xk)k∈Pa(z).The computation of the table at each node, which runs in {a mathematical formula}O(d) time, dominates the time complexity of the downstream phase. We visit every node exactly once. So, the total running time of the downstream phase is {a mathematical formula}O(nd). Note that if there does not exist any PSNE in the game then all the table entries computed by some node will be 0.Upstream phase. In the upstream phase, each node sends instructions to its parents about which actions to play, along with the action that the node itself is playing. The upstream phase begins at the root node z. For any table entry {a mathematical formula}Tz(xz)=1, z decides to play {a mathematical formula}xz itself and instructs each of its parents to play the action in the witness vector associated with {a mathematical formula}Tz(xz)=1. At an intermediate node i, suppose that its child j is playing {a mathematical formula}xj and instruct i to play {a mathematical formula}xi. The node i looks up the witness vector {a mathematical formula}(xk)k∈Pa(i) associated with {a mathematical formula}Tij(xi,xj)=1 and instructs its parents to play according to that witness vector. This process propagates upward, and when we reach all the leaf nodes, we obtain a PSNE for the game. Note that we can find a PSNE in this phase if and only if there exists one.In the upstream phase, each node sends
+       </list>
+       <paragraph>
+        {a mathematical formula}O(d) instructions to its parents. Thus, the upstream phase takes {a mathematical formula}O(nd) time, and the whole algorithm takes {a mathematical formula}O(nd) time.  □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Hardness results
+      </section-title>
+      <paragraph>
+       Computational problems are often classified into complexity classes according to their hardness. Some of the hardest classes of problems are NP-complete problems, co-NP-complete problems, and #P-complete problems [27]. In this section, we show that many of the computational problems related to LIGs belong to these hard classes.
+      </paragraph>
+      <paragraph>
+       First, computing a PSNE in a general graphical game is known to be computationally hard [29]. However, that result does not imply intractability of our problem, nor do the proofs seem easily adaptable to our case. LIGs are a special type of graphical game with quadratic payoffs, or in other words a graphical, parametric polymatrix game [42], and thus have a more succinct representation than general graphical games ({a mathematical formula}O(nd) in contrast to {a mathematical formula}O(n2d), where d is the maximum degree of a node). Next, we show that various interesting computational questions on LIGs are intractable, unless {a mathematical formula}P=NP.
+      </paragraph>
+      <paragraph>
+       We settle the central hardness question on LIGs (and also on 2-action polymatrix games) in 1(a) below. Related to the most-influential-nodes problem formulation, 1(b) states that given a subset of players, it is NP-complete to decide whether there exists a PSNE in which these players adopt the new behavior. We present a similar result in 1(c).
+      </paragraph>
+      <paragraph>
+       A prime feature of our formulation of the most-influential-nodes problem is the uniqueness of the desired stable outcome when the most influential nodes adopt their behavior according to the desired stable outcome. We show in (2) that deciding whether a given set of players fulfills this criterion is co-NP-complete.
+      </paragraph>
+      <paragraph>
+       As we will see later, in order to compute a set of the most influential nodes, it suffices to be able to count the number of PSNE of an LIG (to be more specific, it suffices to count the number of PSNE extensions for a given partial assignment to the players' actions). We show in (3) that this problem is #P-complete. Note that the #P-completeness result for LIGs even with star structure is in contrast to the polynomial-time counterpart for general graphical games with tree graphs, for which not only deciding the existence of a PSNE is in P, but also counting PSNE on general graphical games with tree graphs is in P [46], [85]. To better appreciate this result, consider the representation sizes of LIGs and tree-structured graphical games, which are linear and exponential in the maximum degree, respectively.
+      </paragraph>
+      <paragraph>
+       Below, we first summarize the hardness results, followed by an informal outline of the proofs. We then present each individual statement as a separate theorem (or corollary of a more general theorem) and provide the complete formal proofs.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        It is NP-complete to decide the following questions in LIGs.
+       </list-item>
+       <list-item label="2.">
+        Given an LIG and a designated non-empty set of players, it is co-NP-complete to decide if there exists a unique PSNE with those players playing 1.
+       </list-item>
+       <list-item label="3.">
+        It is #P-complete to count the number of PSNE, even for special classes of the underlying graph, such as a bipartite or a star graph.
+       </list-item>
+      </list>
+      <paragraph label="Proof sketch">
+       The proof of 3 uses reductions from the 3-SAT and the #KNAPSACK problem. The reduction from the 3-SAT problem is the same as that used in 1(a), and the proof of the #P-hardness of the bipartite case is by showing that the number of solutions to the 3-SAT instance is the same as the number of PSNE of the LIG instance. On the other hand, to prove the claim of #P-completeness of counting PSNEs of LIGs having star graphs, we give a reduction from the #KNAPSACK problem. Given a #KNAPSACK instance, we create an LIG instance with a star structure among the players and with specifically designed influence factors such that the number of PSNE of the LIG instance is the same as the number of solutions to the #KNAPSACK instance.  □
+      </paragraph>
+      <paragraph>
+       Complete proofs of hardness results
+      </paragraph>
+      <paragraph>
+       To enhance the clarity of the proofs, we reduced existing NP-complete problems to LIGs with binary actions {a mathematical formula}{0,1}, instead of {a mathematical formula}{−1,1}. We next show, via a linear transformation, that one can reduce any LIG with actions {a mathematical formula}{0,1} to an LIG with the same underlying graph, but with actions {a mathematical formula}{−1,1}.
+      </paragraph>
+      <paragraph>
+       Reduction from{a mathematical formula}{0,1}-action LIG to{a mathematical formula}{−1,1}-action LIG. Consider any {a mathematical formula}{0,1}-action LIG instance I, where w and b denote the influence factors and the thresholds, respectively (see Definition 3.7). We next construct a {a mathematical formula}{−1,1}-action LIG instance J with the same players that are in I and with influence factors {a mathematical formula}wji′≡wji2 (for any i and any {a mathematical formula}j≠i), thresholds {a mathematical formula}bi′≡bi−∑j≠iwji2 (for any i). We show that x is a PSNE of I if and only if {a mathematical formula}x′ is a PSNE of J, where {a mathematical formula}xi′=2xi−1 for any i.
+      </paragraph>
+      <paragraph>
+       By definition, x is a PSNE of I if and only if for any player i,{a mathematical formula} which is the equivalent statement of {a mathematical formula}x′ being a PSNE of J.  □
+      </paragraph>
+      <paragraph label="Theorem 4.5">
+       It is NP-complete to decide if there exists a PSNE in an LIG.
+      </paragraph>
+      <paragraph label="Proof">
+       Since we can verify whether a joint action is a PSNE or not in polynomial time, the problem is in NP. We use a reduction from the 3-SAT problem to show that the problem is NP-hard.Let I be an instance of the 3-SAT problem. Suppose that I has m clauses and n variables. For any variable i, we define {a mathematical formula}Ci to be the set of clauses in which i appears, and for any clause k, we define {a mathematical formula}Vk to be the set of variables appearing in clause k. For any clause k and any variable {a mathematical formula}i∈Vk, let {a mathematical formula}lk,i be 1 if i appears in k in non-negated form and 0 otherwise. We now build an LIG instance J from I. In this game, every clause as well as every variable is a player. Each clause k has arcs to variables in {a mathematical formula}Vk, and each variable i has arcs to clauses in {a mathematical formula}Ci. The structure of the graph is illustrated in Fig. 2. We next define the thresholds of the players and the influence factors on the arcs. For any clause k, let its threshold be {a mathematical formula}1−ϵ−∑i∈Vk(1−lk,i). Here, ϵ is a constant, and {a mathematical formula}0&lt;ϵ&lt;1. For any variable i let its threshold be {a mathematical formula}∑k∈Ci(1−2lk,i). The weight on the arc from any clause k to any variable {a mathematical formula}i∈Vk is defined to be {a mathematical formula}1−2lk,i, and that from any variable i to any clause {a mathematical formula}k∈Ci is {a mathematical formula}2lk,i−1. We denote the action of any clause k by {a mathematical formula}zk∈{0,1} and that of any variable i by {a mathematical formula}xi∈{0,1}.First, we prove that if there exists a satisfying truth assignment in I then there exists a PSNE in J. Consider any satisfying truth assignment S in I. Let the players in J choose their actions according to their truth values in S, that is, 1 for true and 0 for false. Clearly, every clause player is playing 1. Next, we show that every player in J is playing its best response under this choice of actions.We now show that no clause has incentive to play 0, given that the other players do not change their actions. In the solution S to I, every clause has a literal that is true. Therefore, in J every clause k has some variable {a mathematical formula}i∈Vk such that {a mathematical formula}xi=lk,i. We have to show that the total influence on k is at least the threshold of k:{a mathematical formula} Since for some {a mathematical formula}i∈Vk, {a mathematical formula}xi=lk,i, the above inequality holds strictly, that is,{a mathematical formula} Therefore, every clause k must play 1.We need to show that no variable player has incentive to deviate, given that the other players do not change their actions. The total influence on any variable player i is {a mathematical formula}∑k∈Cizk(1−2lk,i)=∑k∈Ci(1−2lk,i) (since {a mathematical formula}zr=1 for every clause r). The threshold of i is {a mathematical formula}∑k∈Ci(1−2lk,i). Thus, every variable player i is indifferent between choosing actions 1 and 0 and has no incentive to deviate.We now consider the reverse direction, that is, given a PSNE in J we show that there exists a satisfying assignment in I. We first show that at any PSNE, every clause must play 1. If this is not the case, suppose, for a contradiction, that for some clause r, {a mathematical formula}zr=0. Since r's best response is 0 (this is a PSNE), we obtain{a mathematical formula}Therefore, for every variable player {a mathematical formula}j∈Vr, {a mathematical formula}xj≠lr,j. Furthermore, for any {a mathematical formula}j∈Vr, j does not have any incentive to deviate. Using these properties of a PSNE we will arrive at a contradiction, and thereby prove that {a mathematical formula}zr must be 1.Consider any variable player {a mathematical formula}j∈Vr, and let the difference between j's total incoming influence and its threshold be {a mathematical formula}Uj. We get{a mathematical formula}At any PSNE, if {a mathematical formula}xj=1 then {a mathematical formula}Uj≥0; otherwise, {a mathematical formula}Uj≤0. Thus, the best response condition for variable j gives us{a mathematical formula}The above inequality cannot be true, because the left hand side is always 0 (if {a mathematical formula}lk,j=xj then {a mathematical formula}zk must be 1 at any PSNE), and the right hand side is ≥1. Thus, we obtained a contradiction, and {a mathematical formula}zr cannot be 0.So far, we showed that at any PSNE {a mathematical formula}zk=1 for any clause player k. To complete the proof, we now show that for every clause player k, there exists a variable player {a mathematical formula}i∈Vk such that {a mathematical formula}xi=lk,i. If we can show this then we can translate the semantics of the actions in J to the truth values in I and thereby obtain a satisfying truth assignment for I.Suppose, for the sake of a contradiction, that for some clause k and for all variable {a mathematical formula}i∈Vk, {a mathematical formula}xi≠lk,i. Since {a mathematical formula}zk=1, we find that{a mathematical formula}  □
+      </paragraph>
+      <paragraph label="Corollary 4.6">
+       The proof of Theorem 4.5 reduces the 3-SAT problem to an LIG where the underlying graph is bipartite. Thus, we obtain the following corollary. It is NP-complete to decide if there exists a PSNE in an LIG on a bipartite graph.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof of Theorem 4.5 directly leads us to the following result that the counting version of the problem is #P-complete. It is #P-complete to count the number of PSNE of an LIG.The proof follows from the proof of Theorem 4.5. Membership of this counting problem in #P is easy to see. Using the same reduction as in the proof of Theorem 4.5, we find that each satisfying truth assignment (among the {a mathematical formula}2n possibilities) to the variables of the 3-SAT instance I can be mapped to a distinct PSNE of the LIG instance J. Furthermore, we saw that at each PSNE in J, every clause player must play 1. Thus, for each of the {a mathematical formula}2n joint strategies of the variable players (while having the clause players play 1), if the joint strategy is a PSNE then we can map it to a distinct satisfying assignment in I. Moreover, each of these two mappings are the inverse of the other. Therefore, the number of satisfying assignments of I is the same as the number of PSNE in J. Since counting the number of satisfying assignments of a 3-SAT instance is #P-complete, counting the number of PSNE of an LIG, even on a bipartite graph, is also #P-complete.  □
+      </paragraph>
+      <paragraph label="Proof">
+       While Corollary 4.7 shows the hardness of counting the number of PSNE of an LIG on a general graph, we can show the same hardness result even on special classes of graphs, such as star graphs: Counting the number of PSNE of an LIG on a star graph is #P-complete.Since we can verify whether a joint strategy is a PSNE in polynomial time, the problem is in #P. We will show the #P-hardness using a reduction from #KNAPSACK, which is the problem of counting the number of feasible solutions in a 0-1 Knapsack problem: Given n items, the weight {a mathematical formula}ai∈Z+ of each item i, and the maximum capacity of the sack {a mathematical formula}W∈Z+, #KNAPSACK asks how many ways we can pick the items to satisfy {a mathematical formula}∑i=1naixi≤W, where {a mathematical formula}xi=1 if the i-th item has been picked, and {a mathematical formula}xi=0 otherwise. Given an instance I of the #KNAPSACK problem with n items, we construct an LIG instance J on a star graph with {a mathematical formula}n+1 nodes. Let us label the nodes {a mathematical formula}v0,...,vn, where {a mathematical formula}v0 is connected to all other nodes. We define the influence factors among the nodes as follows: the influence of {a mathematical formula}v0 to any other node {a mathematical formula}vi, {a mathematical formula}wv0vi=1, and the influence in the reverse direction, {a mathematical formula}wviv0=−ai. The threshold of {a mathematical formula}v0 is defined as {a mathematical formula}bv0=−W, and the threshold of every other node {a mathematical formula}vi, {a mathematical formula}bvi=1. We denote the action of any node {a mathematical formula}vi by {a mathematical formula}xi∈{0,1}. Note that at any PSNE of J, {a mathematical formula}v0 must play 1. Otherwise, if {a mathematical formula}v0 plays 0 then all other nodes must also play 0, and this implies that {a mathematical formula}v0 must play 1, giving us a contradiction.We prove that the number of feasible solutions in I is the same as the number of PSNE in J. For any {a mathematical formula}(x1,...,xn)∈{0,1}n in I, we map each {a mathematical formula}xi to the action selected by {a mathematical formula}vi in J, for {a mathematical formula}1≤i≤n. As proved earlier, the action of {a mathematical formula}v0 must be 1 at any PSNE. Furthermore, when {a mathematical formula}v0 plays 1, all other nodes become indifferent between playing 0 and 1. Thus, the number of PSNE in J is the number of ways of satisfying the inequality {a mathematical formula}∑i=1nwviv0xi≥bv0, which is equivalent to {a mathematical formula}∑i=1naixi≤W. Thus the number of PSNE in J is equal to the number of feasible solutions in I.  □
+      </paragraph>
+      <paragraph>
+       The following three theorems show the hardness of several other variants of the problem of computing a PSNE of an LIG.
+      </paragraph>
+      <paragraph label="Proof">
+       It is easy to see that the problem is in NP, since a succinct yes certificate can be specified by a joint action of the players, where the designated players play 1, and it can be verified in polynomial time whether this is a PSNE or not.We show a reduction from the monotone one-in-three SAT problem, a known NP-complete problem, to prove that the problem is NP-hard. An instance of the monotone one-in-three SAT problem consists of a set of m clauses and a set of n variables, where each clause has exactly three variables. The problem asks whether there exists a truth assignment to the variables such that each clause has exactly one variable with the truth value of true. Given an instance of the monotone one-in-three SAT problem, we construct an instance of LIG as follows (please refer to Fig. 3 for an illustration). For each variable we have a variable player in the game, and for each clause we have a clause player. Each variable player has a threshold of 0, and each clause player has a threshold of ϵ, where {a mathematical formula}0&lt;ϵ&lt;1. We now define the connectivity among the players of the game. There is an arc with weight (or influence) −1 from a variable player u to another variable player v if and only if, in the monotone one-in-three SAT instance, both of the corresponding variables appear together in at least one clause. Also, for each clause t and each variable w appearing in t, there is an arc from the variable player (corresponding to w) to the clause player (corresponding to t) with weight 1. Furthermore, we assign {a mathematical formula}k=m, and assume that the designated set of players is the set of clause players. We also assume that the action 1 in the LIG corresponds to the truth value of true in the monotone one-in-three SAT problem and 0 to false.Note that the way we constructed the LIG, at most one variable player per clause can play the action 1 at any PSNE. To see this, assume, for contradiction, that at some PSNE two variable players u and v, both connected to the same clause t, are playing the action 1. Then the influence on either of these two variable players is ≤−1, which is less than its threshold 0, and this contradicts the PSNE assumption. Also, note that at any PSNE, each clause player will play the action 1 if and only if at least one of the variable players connected to it plays 1.First, we show that if there exists a solution to the monotone one-in-three SAT instance then there exists a PSNE in the LIG where the set of clause players play 1. A solution to the monotone one-in-three SAT problem implies that each clause has the truth value of true with exactly one of its variables having the truth value of true. We claim that in the LIG, every player playing according to its truth assignment, is a PSNE. First, observe that the variable players do not have any incentive to change their actions, since the ones playing 1 are indifferent between playing 0 and 1 (because the total influence = 0 = threshold) and the remaining must play 0 (because the total influence is {a mathematical formula}≤−1&lt; threshold). Since each clause has one of its variables playing 1, each clause player must play 1 (because {a mathematical formula}1&gt;ϵ). This concludes the first part of the proof.We next show that if there exists a PSNE with the clause players playing 1 then there exists a solution to the monotone one-in-three SAT instance. Consider any PSNE where the clause players are playing 1. Since each clause player is playing 1, at least one of the three variable players connected to the clause player is playing 1. Furthermore, as we showed earlier, no two variables belonging to the same clause can play 1 at any PSNE. Thus, for each clause player, at most one variable player connected to it is playing 1. Therefore, for every clause player, exactly one variable player connected to it is playing 1. Translating the semantics of the actions to the truth values of the variables and the clauses, we obtain a solution to the monotone one-in-three SAT instance.  □
+      </paragraph>
+      <paragraph label="Theorem 4.10">
+       Given an LIG and a number{a mathematical formula}k≥1, it is NP-complete to decide if there exists a PSNE with at least k players playing the action 1.
+      </paragraph>
+      <paragraph label="Proof">
+       Clearly, the problem is in NP, since we can verify whether a joint action is a PSNE or not in polynomial time.For the proof of NP-hardness, once again we show a reduction from the monotone one-in-three SAT problem. Please see Fig. 4 for an illustration. Given an instance I of the monotone one-in-three SAT problem, we first build an LIG as shown in the proof of Theorem 4.9. We then add {a mathematical formula}m(m−1) additional players, named extra players, to the game, where m is the number of clauses in I. Each of these extra players is assigned a threshold of ϵ, where {a mathematical formula}0&lt;ϵ&lt;1. The way we connect the extra players to the other players is as follows: From each clause player we introduce {a mathematical formula}m−1 arcs, each weighted by 1, to {a mathematical formula}m−1 distinct extra players. That is, no two clause players have arcs to the same extra player. Finally, we set {a mathematical formula}k=m2. We denote this instance of LIG by J.We prove that for any solution to I there exists a PSNE with k players playing 1 in J. Suppose that each of the variable and clause players is playing according to their corresponding truth value in the solution to I. None of the variable players has any incentive to change its action, because exactly one variable player connected to each clause player is playing 1. For the same reason, the clause players, each playing 1, also do not have any incentive to deviate. Considering the extra players, each of these players must play 1, because each of the clause players is playing 1. The total number of clause and extra players is k. Therefore, we have a Nash equilibrium where at least k players are playing 1.On the other direction, consider any PSNE in J with at least k players playing 1. We claim that all the clause and extra players are playing 1 at this PSNE. If this is not true then at least one of these players is playing 0. This implies that at least one clause player is playing 0, because conditioned on a PSNE, whenever a clause player plays 1, all the extra players connected to it also play 1. Furthermore, by our construction at most one of the variable players connected to each clause player can play 1. So, the total number of players playing 1 is {a mathematical formula}≤(m−1)(m+1)&lt;m2 (at most {a mathematical formula}m−1 clause players are playing 1, and for each of these clause players, {a mathematical formula}m−1 extra players, 1 variable player, and the clause player itself are playing 1), which contradicts our assumption that {a mathematical formula}m2 players are playing 1. Thus, at any PSNE with k players playing 1, it must be the case that every clause player is playing 1. This leads us to a solution for I.  □
+      </paragraph>
+      <paragraph label="Theorem 4.11">
+       Given an LIG and a designated set of{a mathematical formula}k≥1players, it is co-NP-complete to decide if there exists a unique PSNE with those players playing the action 1.
+      </paragraph>
+      <paragraph label="Proof">
+       Two distinct joint actions (PSNE), each having the same k players playing 1, can serve as a succinct no certificate, and we can check in polynomial time if these two joint actions are indeed PSNE or not.Suppose that I is an instance of the monotone one-in-three SAT problem. We reduce I to an instance J of our problem in polynomial time and show that J has a “no” answer if and only if I has a “yes” answer.Given I, we start constructing an LIG in the same way as in Theorem 4.9 (see Fig. 5, Fig. 3). Assign {a mathematical formula}k=m2. Now, add two new players, named the all-satisfied-verification player and the none-satisfied-verification player, which have threshold values of {a mathematical formula}m−ϵ and −ϵ, respectively. We add arcs from every clause player to these two new players, and the arcs to the all-satisfied-verification player are weighted by 1, and the ones to the none-satisfied-verification player are weighted by −1.In addition, add {a mathematical formula}k=m2 new players, named extra players, and let these players constitute the set of designated players. Assign a threshold value of ϵ to each of these extra players, and introduce new arcs, each with weight 1, from the all-satisfied-verification player and the none-satisfied-verification player to every extra player. The resulting LIG is the instance J of the problem in question.Note that at any PSNE the all-satisfied-verification player plays 1 if and only if every clause player plays 1, and the none-satisfied-verification player plays 1 if and only if no clause player plays 1. Furthermore, at any PSNE, each extra player plays 1 if and only if either every clause player plays 1 or no clause player plays 1. Therefore, we find that every extra player playing 1, the none-satisfied-verification player playing 1, and every other player playing 0 is a PSNE, and we denote this equilibrium by {a mathematical formula}E0. We claim that there exists a different PSNE where every extra player plays 1 if and only if I has a solution.Suppose that there exists a solution {a mathematical formula}SI to I. It can be verified that making the all-satisfied-verification player play 1, none-satisfied-verification player play 0, every extra player play 1, and choosing the actions of the clause and the variable players according to the corresponding truth values in {a mathematical formula}SI gives us a PSNE that we call {a mathematical formula}E1. Thus J has two PSNE {a mathematical formula}E0 and {a mathematical formula}E1, where the k extra players play 1 in both cases.Considering the reverse direction, suppose that there exists no solution to I. This implies that at any PSNE in J all clause players can never play 1, otherwise we could have translated the PSNE to a satisfying truth assignment for I. This further implies that the all-satisfied-verification player always plays 0. The none-satisfied-verification player plays 1 if and only if none of the clause players plays 1. Thus, every extra player plays 1 if and only if no clause player plays 1, if and only if no variable player plays 1. Therefore, {a mathematical formula}E0 is the only PSNE in J with the k extra players playing 1.  □
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Heuristics for computing and counting equilibria
+      </section-title>
+      <paragraph>
+       The fundamental computational problem at hand is that of computing PSNE in LIGs. We just saw that various computational questions pertaining to LIGs on general graphs, sometimes even on bipartite graphs, are NP-hard. We now present a heuristic to compute the PSNE of an LIG on a general graph.
+      </paragraph>
+      <paragraph>
+       A natural approach to finding all the PSNE in an LIG would be to perform a backtracking search. However, a standard instantiation of the backtracking search method [74, Ch. 5] that ignores the structure of the graph would be destined to failure in practice. Thus, we need to order the node selections in a way that would facilitate pruning the search space.
+      </paragraph>
+      <paragraph>
+       An outline of the backtracking search procedure that we used is given below. Here, the two main additions to the standard backtracking search method are exploiting the graph, including the influence factors, for node selection and implementing constraint propagation by adapting the NashProp algorithm [70] to run in polynomial time.
+      </paragraph>
+      <paragraph>
+       The first node selected by the procedure is a node with the maximum outdegree. Afterwards, we do not select nodes by their degrees. We rather select a node i that will most likely show that the current partial joint action cannot lead to a PSNE and explore the two actions of i, {a mathematical formula}xi∈{−1,1} in a suitable order. A good node selection heuristic that has worked well in our experiments is to select the one that has the maximum influence on any of the already selected nodes.
+      </paragraph>
+      <paragraph>
+       Suppose that the nodes are selected in the order {a mathematical formula}1,2,...,n (wlog). After selecting node {a mathematical formula}i+1 and assigning it an action {a mathematical formula}xi+1, we determine if the partial joint action {a mathematical formula}x1:(i+1)≡(x1,…,xi+1) can possibly lead to a PSNE and prune the corresponding search space if not. Note that a “no” answer to this requires a proof that one of the players j, {a mathematical formula}1≤j≤i+1, can never play {a mathematical formula}xj according to the partial joint action {a mathematical formula}x1:(i+1). A straightforward way of doing this is to consider each player j, {a mathematical formula}1≤j≤i+1, and compute the quantities {a mathematical formula}γj+≡∑k=1,k≠ji+1xkwkj+∑k=i+2n|xkwkj| and {a mathematical formula}γj−≡∑k=1,k≠ji+1xkwkj−∑k=i+2n|xkwkj|, and then test if the logical expression {a mathematical formula}((γj−&gt;bj)∧xj=−1)∨((γj+&lt;bj)∧xj=1) holds, in which case we can discard the partial joint action {a mathematical formula}x1:(i+1) and prune the corresponding search space. Furthermore, it may happen that due to {a mathematical formula}x1:(i+1), the choices of some of the not-yet-selected players became restricted. To this end, we apply NashProp[70] with {a mathematical formula}x1:(i+1) as the starting configuration, and see if the choices of the other players became restricted because of {a mathematical formula}x1:(i+1). Although each round of updating the table messages in NashProp takes exponential time in the maximum degree in general graphical games, we can show in a way similar to Theorem 4.4 that we can adapt the table updates to the case of LIGs so that it takes polynomial time.
+      </paragraph>
+      <paragraph>
+       A divide-and-conquer approach
+      </paragraph>
+      <paragraph>
+       To further exploit the structure of the graph in computing the PSNE, we propose a divide-and-conquer approach that relies on the following separation property of LIGs.
+      </paragraph>
+      <paragraph label="Property 4.12">
+       Let{a mathematical formula}G=(V,E)be the underlying graph of an LIG and S be a vertex separator of G such that removing S from G results in{a mathematical formula}k≥2disconnected components:{a mathematical formula}G1=(V1,E1), ...,{a mathematical formula}Gk=(Vk,Ek). Let{a mathematical formula}Gi′be the subgraph of G induced by{a mathematical formula}Vi∪S, for{a mathematical formula}1≤i≤k. Consider the LIGs on these (smaller) graphs{a mathematical formula}Gi′'s, where we retain all the weights of the original graph, except that we treat the nodes in S to be indifferent (that is, we remove all the incoming arcs to these nodes and set their thresholds to 0). Computing the set of PSNE on{a mathematical formula}Gi′'s and then merging the PSNE (by performing outer-joins of joint actions and testing for PSNE in the original LIG), we obtain the set of all PSNE of the original game.
+      </paragraph>
+      <paragraph label="Proof sketch">
+       First, since the joint actions are tested for PSNE in the original LIG, the output will never contain a joint action that is not a PSNE. Second, since the nodes in S are made indifferent in the LIGs on {a mathematical formula}Gi′, {a mathematical formula}1≤i≤k, no PSNE of the original LIG can get omitted from the result of the outer-join operation. □
+      </paragraph>
+      <paragraph>
+       To obtain a vertex separator, we first find an edge separator (using well-known tools such as METIS [45]), and then convert the edge separator to a vertex separator (by computing a maximum matching on the bipartite graph spanned by the edge separator). We then use this vertex separator to compute PSNE of the game in the way outlined in Property 4.12. The benefits of this approach are two-fold: (1) for graphs that have good separation properties (such as preferential-attachment graphs), we found this approach to be computationally effective in practice; and (2) this approach leads to an anytime algorithm for enumerating or counting PSNE: Observe that ignoring some edges from the edge separator may result in a smaller vertex separator, which greatly reduces the computation time of the divide-and-conquer algorithm at the expense of producing only a subset of all PSNE. (The reason we obtain a subset of all PSNE is that the edges that are ignored from the edge separator are not permanently removed from the original graph, and that after merging, every resulting joint action is tested for PSNE in the original game, not in the game where some of the edges were temporarily removed. As a result, some of the original PSNE may not be included in the final output. At the same time, we can never have a joint action in the final output that is not a PSNE.) We can obtain progressively better results as we ignore less number of edges from the edge separator.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Computing the most influential nodes
+     </section-title>
+     <paragraph>
+      We now focus on the problem of computing the most influential set of nodes with respect to a specified desired PSNE and a preference for sets of minimal size. In the discussion below, we also assume, only for the purpose of establishing and describing the equivalence to the minimum hitting set problem[44], that we are given the set of all PSNE. (As we will see, a counting routine is all that our algorithm requires, not a complete list of PSNE.) We give a hypergraph representation of this problem that would lead us to a logarithmic-factor approximation by a natural greedy algorithm.
+     </paragraph>
+     <paragraph>
+      Let us start by building a hypergraph that can represent the PSNE of a binary-action game. The nodes of this hypergraph are the player-action tuples of the game. Thus, for an n-player, binary-action game, we have 2n nodes in the hypergraph. That is, for each player i of the game, there are two nodes in the hypergraph: one in which i plays −1 (tuple {a mathematical formula}(i,−1), colored red in Fig. 6) and the other in which i plays 1 (tuple {a mathematical formula}(i,1), colored black). For every PSNE x we construct a hyperedge {a mathematical formula}{(i,xi)|1≤i≤n}. Let us call the resulting hypergraph the game hypergraph. By construction, a set of players S play the same joint-action {a mathematical formula}aS∈{−1,1}|S| in two distinct PSNE x and y of the LIG if and only if both of the corresponding hyperedges {a mathematical formula}ex and {a mathematical formula}ey (resp.) of the game hypergraph contains {a mathematical formula}T={(i,ai)|i∈S}.
+     </paragraph>
+     <paragraph>
+      We can use the above property to translate the most-influential-nodes selection problem, given all PSNE, to an equivalent combinatorial problem on the corresponding game hypergraph H. Let {a mathematical formula}ex⁎ be the hyperedge in H corresponding to the desired PSNE {a mathematical formula}x⁎. Let us call {a mathematical formula}ex⁎ the goal hyperedge. Then the most-influential-nodes selection problem is the problem of selecting a minimum-cardinality set of nodes {a mathematical formula}T⊆ex⁎ such that T is contained in no other hyperedge of H (recall that we are dealing with a set-preference function that captures the preference for sets of minimal cardinality). Let us call the latter problem the unique hyperedge problem. Using the notation above, the equivalence relationship between the influential nodes selection problem (given the set of all PSNE) and the unique hyperedge problem can be stated as follows. The set {a mathematical formula}S⊆{1,...,n} is a (feasible) solution to the most-influential-nodes selection problem if and only if {a mathematical formula}T={(i,xi⁎)|i∈S} is a (feasible) solution to the unique hyperedge problem.
+     </paragraph>
+     <paragraph>
+      We now show that the unique hyperedge problem is equivalent to the minimum hitting set problem. Immediate consequences of this result are that the unique hyperedge problem is not approximable within a factor of {a mathematical formula}clog⁡h for some constant {a mathematical formula}c&gt;0, and that it admits a {a mathematical formula}(1+log⁡h)-factor approximation [73], [43], where h is the total number of PSNE.
+     </paragraph>
+     <paragraph label="Proof">
+      The unique hyperedge problem having 2n players and h hyperedges is equivalent to the minimum hitting set problem having n nodes and h hyperedges.Let us consider an instance I of the unique hyperedge problem, given by a game hypergraph {a mathematical formula}G=(V,E), where V is the set of 2n nodes and E is the set of h hyperedges, along with a specification of the goal hyperedge {a mathematical formula}ex⁎. Given I, we now construct an instance J of the minimum hitting set problem, specified by the hypergraph {a mathematical formula}G′=(ex⁎,{ex⁎}∪{e¯∩ex⁎|e∈E and e≠ex⁎}), where {a mathematical formula}e¯ indicates the complement set of the hyperedge e. Thus, the nodes of {a mathematical formula}G′ are exactly the n nodes of {a mathematical formula}ex⁎ and the hyperedges of it are constructed from the complement hyperedges of G except {a mathematical formula}ex⁎, which is present in both G and {a mathematical formula}G′. We show that a set S of nodes is a feasible solution to I if and only if it is a feasible solution to J.If S is a feasible solution to I then {a mathematical formula}S⊆ex⁎ (because in the unique hyperedge problem, we are only allowed to select nodes from the goal hyperedge) and {a mathematical formula}S⊈e for any hyperedge {a mathematical formula}e≠ex⁎ of G (otherwise, the uniqueness property is violated). This implies that for any hyperedge {a mathematical formula}e≠ex⁎ of G, there exists a node {a mathematical formula}v∈S such that {a mathematical formula}v∉e, which further implies that {a mathematical formula}v∈e¯∩ex⁎. Thus, every hyperedge of {a mathematical formula}G′, including {a mathematical formula}ex⁎, of course, has at least one of its nodes selected in S, and therefore, S is a feasible solution to J. On the other hand, if S is a feasible solution to J then for any hyperedge of {a mathematical formula}G′, at least one of its nodes has been selected in S. That is, for any hyperedge {a mathematical formula}e≠ex⁎ of G, we have {a mathematical formula}e′≡e¯∩ex⁎ as the corresponding complementary hyperedge in {a mathematical formula}G′, and there exists a node {a mathematical formula}v∈S such that {a mathematical formula}v∈e′, which implies that {a mathematical formula}v∉e. Thus, {a mathematical formula}S⊈e for any hyperedge {a mathematical formula}e≠ex⁎ of G. Furthermore, we have selected all the nodes of S from {a mathematical formula}ex⁎ of G. Thus, {a mathematical formula}ex⁎ is the unique hyperedge of G containing the nodes of S.To prove the reverse direction, we start with an instance J of the minimum hitting set problem, specified by a hypergraph {a mathematical formula}G′=(V,E), where V is a set of n nodes and E is a set of h hyperedges. Without the loss of generality, we assume that E contains the hyperedge {a mathematical formula}e⁎ consisting of all the nodes of V. We now construct an instance I of the unique hyperedge problem that has a hypergraph G with 2n nodes and h hyperedges. The node set of G literally consists of two copies of the nodes of V, denoted by {a mathematical formula}V×{1,−1}. We now construct the hyperedges of G. For each hyperedge {a mathematical formula}e≠e⁎ of the minimum hitting set instance, we include a hyperedge {a mathematical formula}e′≡e¯×{1}∪e×{−1} in G, and for the hyperedge {a mathematical formula}e⁎ of J, we include the hyperedge {a mathematical formula}e⁎×{1} in G. Thus, the game hypergraph can be defined as {a mathematical formula}G=(V×{1,−1},{e⁎×{1}}∪{e¯×{1}∪e×{−1}|e∈E and e≠e⁎}). Finally, we designate {a mathematical formula}e⁎×{1} as the goal hyperedge of I. We will show that {a mathematical formula}S⊆V is a feasible solution to J if and only if {a mathematical formula}S×{1} is a feasible solution to the unique hyperedge problem instance I. The set S is a feasible solution to J if and only if for every hyperedge {a mathematical formula}e≠e⁎ of {a mathematical formula}G′, there exists a node {a mathematical formula}v∈S such that {a mathematical formula}v∈e (note that {a mathematical formula}S⊆e⁎). This is equivalent to saying that for every hyperedge {a mathematical formula}e×{1}≠e⁎×{1} of G, there exists a node {a mathematical formula}v∈S×{1} such that {a mathematical formula}v∉e×{1}. Using the fact that {a mathematical formula}S×{1}⊆e⁎×{1}, {a mathematical formula}S×{1} is a feasible solution to I.  □
+     </paragraph>
+     <paragraph>
+      The adaptation of the well-known hitting set approximation algorithm [4] for our problem can be outlined as follows: At each step, select the least-degree node v of the goal hyperedge, remove the hyperedges that do not contain v, remove v from the game hypergraph, and include v in the solution set, until the goal hyperedge becomes the last remaining hyperedge in the hypergraph. In the context of the original LIG, at every round, this algorithm is essentially picking the node whose assignment would reduce the set of PSNE consistent with the current partial assignment the most. Hence, the algorithm only requires a subroutine to count the PSNE extensions for some given partial assignment to the players' actions, not an a priori full list or enumeration of all the PSNE. Of course, it may require a complete list of PSNE in the worst case.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      We performed empirical studies on several types of LIGs, namely, (1) random LIGs (Erdös–Rényi and uniformly random), (2) preferential-attachment LIGs, and (3) LIGs created to model potential interactions in two different real-world scenarios: interactions among U.S. Supreme Court justices and those among U.S. senators. While the first two types of LIGs are synthetic/artificial, the latter two are the result of inferring the LIGs from real-world data using machine learning techniques [39].
+     </paragraph>
+     <paragraph>
+      The reason for experimenting with synthetic LIGs using Erdös–Rényi [21] and uniformly random graphs is that those types of network-generation techniques are the most basic available. They serve as precursors to the more sophisticated preferential-attachment graphs, which capture the heavy-tailed degree distribution often observed in real-world networks [1].
+     </paragraph>
+     <paragraph>
+      Here is our overall plan for this section. For the synthetic games (random LIGs and preferential-attachment LIGs), we generate game instances by varying the appropriate parameters, such as the size of the game, and evaluate both the number of PSNE of these games and the computation time of our algorithm. We also compute the most influential nodes in these games using our approximation algorithm and compare it to the optimal (i.e., minimum-cardinality) set of most-influential nodes. For the real-world games on Supreme Court rulings and congressional voting, we discuss how we learn these games from data [39], and how we compute the set of PSNE and identify the most influential nodes. For the congressional voting case, we also adapt the simple, greedy selection approximation algorithm to identify most-influential individuals using the cascade model in the diffusion setting, as described by Kleinberg [49], to use as a heuristic to solve specific instances of the most-influential-nodes problem formulation in our context. We compare and contrast the output of our approximation algorithm and that of the diffusion-based heuristic resulting from the adaptation.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Random influence games
+      </section-title>
+      <paragraph>
+       We began our experiments by generating instances of random graphs using the Erdös–Rényi model [21]. We varied the number of nodes, from 10 to 30, and the probability of including an edge. Assuming binary actions, 1 and −1, we chose the threshold {a mathematical formula}bi and the influence factors {a mathematical formula}wji of the incoming arcs of each node i uniformly at random from a unit hyperball. That is, for each node i, {a mathematical formula}bi2+∑j∈N(i)wji2=1, where {a mathematical formula}N(i) is the set of nodes having arcs toward i. Then, we chose the sign of each threshold, as well as each weight, to be either + or − with 0.5 probability. We applied the heuristic given earlier to find the set of all PSNE in these random graphs. Our experimental results show that in all of these random LIGs, the number of PSNE is almost always very small—usually one or two, and sometimes none.
+      </paragraph>
+      <paragraph>
+       We also studied LIGs on uniformly random directed graphs. While constructing the random graphs, we have independently chosen each arc with probability 0.50, and assigned it a weight of −1 with probability p (named flip probability) and 1 with probability {a mathematical formula}1−p. Several interesting findings emerged from our study of this parameterized family of LIGs on uniformly random graphs. Appendix E summarizes the results in tabular form. For various flip probabilities, we independently generated 100 uniformly random graphs of 25 nodes each. For each of these random graphs, we first computed all PSNE using our heuristic. We then applied the greedy approximation algorithm to obtain a set of the most influential nodes in each graph and compared the approximation results to the optimal set.
+      </paragraph>
+      <paragraph>
+       Unless p is either 0 or 1, one cannot guarantee the existence of a PSNE. In our experiments, we found that, in fact, for {a mathematical formula}p=0.50, the probability of not having a PSNE is highest (around {a mathematical formula}5%), and as we go toward the two extremes of p, the probability of not having a PSNE decreases. We report only the games with at least one equilibrium in this experimental study, because it is these games we care about for computing the most influential nodes. Another interesting finding about the number of PSNE is that it is very small when {a mathematical formula}p=0, that is when all the arcs have weight 1, and it is large when {a mathematical formula}p=1, although quite small (on average, a fraction {a mathematical formula}5.81×10−6≈2−17.29) relative to the total number of 2{sup:25} possible joint actions. Also, the average number of nodes of the search tree that the backtracking method visits per equilibrium computation is relatively small on the two extremes of p, compared with p around 0.5. Note that the backtracking method does a very good job with respect to the number of search-tree nodes visited in searching the 2{sup:25} space. In fact, our experiments show that the addition of the NashProp-based heuristic on top of the node selection heuristic considerably speeds up the search. Finally, we found that although the approximation algorithm has a logarithmic factor worst-case bound, the results of the approximation algorithm are most often very close to the optimal solution.
+      </paragraph>
+      <paragraph>
+       Fig. 7 shows that the number of PSNE usually increases if we have more negative-weighted arcs than positive ones; although the number of PSNE is still very small relative to the maximum potential number, as remarked earlier. We also found once again that although the approximation algorithm for the influential-nodes selection problem has a logarithmic factor worst-case bound, the result of the approximation algorithm is most often very close to the optimal solution. For example, for the random games having all negative influence factors, in 87% of the trials the approximate solution size ≤ optimal size +1, and in 99% of the trials the approximate solution size ≤ optimal size +2 (see Appendix E for more details in a tabular form).
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Preferential-attachment LIGs
+      </section-title>
+      <paragraph>
+       We also experimented with LIGs based on preferential-attachment graphs primarily because of its power to explain the structure of many real-world social networks in a generative fashion [1]. In order to construct these graphs, we started with three nodes in a triangle and then progressively added each node to the graph, connecting it with three existing nodes with probabilities proportionate to the degrees. We made each connection bidirectional and imposed the same weighting scheme as above: with flip probability p, the weight of an arc is −1 and with probability {a mathematical formula}1−p it is 1. We set the threshold of each node to 0. We observe that for {a mathematical formula}0&lt;p&lt;1, these games have very few PSNE, while for {a mathematical formula}p=0 and {a mathematical formula}p=1 the number of PSNE is considerably larger than that. Furthermore, these games show very good separation properties, making the computation amenable to the divide-and-conquer approach. We show the average number of PSNE and the average computation time for graphs of sizes 20 to 50 nodes in Fig. 8 for {a mathematical formula}p=1 (each average is over 20 trials). Note that in contrast to uniformly random LIGs, preferential-attachment graphs show an exponential increase in the number of PSNE as the number of nodes increase, although the number of PSNE is still a very small fraction of the maximum potential number.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Illustration: supreme court rulings
+      </section-title>
+      <paragraph>
+       We used our model to analyze the influence among the justices of the U.S. Supreme Court. The Supreme Court of the United States (SCOTUS),{sup:11} is the highest federal court of the judicial branch of the government. (The other branches of government are the executive branch, lead by the President, and the legislative branch, represented by Congress.) The SCOTUS is the main interpreter of the Constitution and has final say on the constitutionality of any federal law created by the legislative branch or any action taken by the executive branch. It consists of nine justices—a chief justice and eight associate justices. We chose to study the SCOTUS in the context of influence games because this is an application domain where the strategic aspects of influence seem of prime importance.
+      </paragraph>
+      <paragraph>
+       There are two distinctive features that make our approach particularly suitable to the SCOTUS domain. First, we can model the individual outcomes (in this case, the decisions of the justices on each case) as outcomes of a one-shot non-cooperative game (an LIG in our case). Second, the physical interpretation of the diffusion process is not as clear in this setting as it is in applications like viral marketing.
+      </paragraph>
+      <section label="6.3.1">
+       <section-title>
+        Data
+       </section-title>
+       <paragraph>
+        We obtained data from the Supreme Court Database.{sup:12} Although the database captures fine-grained details of the cases, we only focused on the variable varVote. Again, the votes of the justices are not simple yes/no instances. Instead, each vote can have eight distinct values. However, for practical purposes, we can attach a simple yes/no interpretation to the values of the votes, as shown in Table 1.
+       </paragraph>
+       <paragraph>
+        In Table 1, “majority” in the third column signifies that we interpreted the corresponding justice's vote as yes or no, whichever occurs most among the other justices. Also, among the natural courts we studied, we did not encounter voting instances where varVote has a value of 8.
+       </paragraph>
+       <paragraph>
+        We now present our study of the natural court (with timeline 1994–2004) comprising of Justices WH Rehnquist, JP Stevens, SD O'Connor, A Scalia, AM Kennedy, DH Souter, C Thomas, RB Ginsburg, and SG Breyer.
+       </paragraph>
+      </section>
+      <section label="6.3.2">
+       <section-title>
+        Learning LIG
+       </section-title>
+       <paragraph>
+        The data for the above natural court consists of 971 voting instances (each voting instance consists of the votes of all nine justices). Many instances (i.e., voting patterns) appear repeatedly in the data set, of course. For example, the most repeated instance consists of all the justices voting yes, occurring 438 times. The second most repeated instance, occurring 85 times, consists of five of the justices, namely, Justices Scalia, Thomas, Rehnquist, O'Connor, and Kennedy voting yes, and the remaining justices voting no. We used {a mathematical formula}L2-regularized logistic regression (simultaneous classification) to learn an LIG from this data. The influence factors and the biases of the learned LIG appear in tabular form in Appendix E. Fig. 9 shows a pictorial representation of the same LIG.
+       </paragraph>
+       <paragraph>
+        The learned LIG represents 589 of the 971 voting instances as PSNE. As expected, it represents the frequently repeated voting instances (such as the ones mentioned above). Fig. 10 shows a graphical representation of the LIG. We clustered the nodes based on the traditional perception that Justices Scalia, Thomas, Rehnquist, and O'Connor are “conservative;” Justices Breyer, Souter, Ginsburg, and Stevens are “liberal;” and Justice Kennedy is a “moderate.” As illustrated in Fig. 10, negative influence factors occur only between players of two different clusters.
+       </paragraph>
+      </section>
+      <section label="6.3.3">
+       <section-title>
+        Most influential nodes
+       </section-title>
+       <paragraph>
+        Analysis of the PSNE of this LIG shows that there is a set of two nodes that is “most influential” with respect to achieving the objective of every justice voting yes. This most-influential set consists of one node from the set {Scalia, Thomas} and another one from the set {Breyer, Souter, Ginsburg, Stevens}. Furthermore, any one node from the set {Breyer, Souter, Ginsburg, Stevens} is alone most-influential with respect to achieving the objective of a 5-4 vote mentioned above (i.e., the second most repeated instance in the data).
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Illustration: congressional voting
+      </section-title>
+      <paragraph>
+       We further illustrate our computational scheme in another real-world scenario—the U.S. Congress—where the strategic aspects of the agents' behavior are also of prime importance. We particularly focus on the U.S. Senate, which consists of 100 senators; two senators for each of the 50 U.S. states. Together, they form the most important unit of the legislative branch of the U.S. Federal Government.
+      </paragraph>
+      <paragraph>
+       We first learned the LIGs among the senators of the 101st and the 110th U.S. Congress [39]. The 101st Congress LIG consists of 100 nodes, each representing a senator, and 936 weighted arcs among these nodes. On the other hand, the 110th Congress LIG has the same number of nodes, but it is a little sparser than the 101st one, having 762 arcs. In these LIGs, each node can play one of the two actions: 1 (yes vote) and −1 (no vote). Fig. 11 shows a bird's eye view of the 110th Congress LIG, while Fig. 12 shows a magnified part of it.
+      </paragraph>
+      <paragraph>
+       First, we applied the divide-and-conquer algorithm that exploits the nice separation properties of these LIGs, to find the set of all PSNE (we precompute the whole set of PSNE for convenience; as discussed earlier, counting alone is sufficient). We obtained a total of 143,601 PSNE for the 101st Congress graph and 310,608 PSNE for the 110th. Note that the number of PSNE in these games is extremely small (e.g., a fraction {a mathematical formula}2.45×10−25≈2−81.76 for the 110th Congress) relative to the maximum possible 2{sup:100} joint actions. Regarding computation time, solving the 110th Congress using the divide-and-conquer approach takes about seven hours, whereas solving the same without this approach, simply relying on the backtracking search, takes about 15 hours on a modern quad-core desktop computer.
+      </paragraph>
+      <paragraph>
+       Next, we computed the most influential senators using the approximation algorithm outlined at the end of Section 5. We obtained a solution of size five for the 101st Congress graph, which we verified as an optimal solution. This solution consists of Senators Rockefeller (Democrat, WV), Sarbanes (Democrat, MD), Thurmond (Republican, SC), Symms (Republican, ID), and Dole (Republican, KS). Interestingly, none of the maximum-degree nodes were selected. Similarly, the six most influential senators of the more recent 110th Congress (January 2007–January 2009) are Kerry (Democrat, MA), Bennett (Republican, UT), Sessions (Republican, AL), Enzi (Republican, WY), Rockefeller (Democrat, WV), and Lautenberg (Democrat, NJ).
+      </paragraph>
+      <paragraph>
+       We also applied our technique to the more recent 112th Congress, using voting data from May 9, 2011 to August 23, 2012. A set of the most influential senators with respect to the outcome of everyone voting “yes” consists of Senators Reid (Democrat, NV), Inouye (Democrat, HI), Johnson (Republican, WI), Sanders (Independent, VT), Hagan (Democrat, NC), Collins (Republican, ME), Crapo (Republican, ID), DeMint (Republican, SC), Reed (Democrat, RI), and Barrasso (Republican, WY). Note that the set of most-influential senators in the 112th Congress consists of 10 senators, whereas it consists of only six senators in the earlier Congresses that we studied. This implies that, according to our model, for the 112th Congress, we now need a broader group of “influencing” senators to lead everyone to a consensus. This is consistent with the contemporary perception of polarization in Congress, which has been highlighted both in the mainstream media and formal research studies in recent times [65].
+      </paragraph>
+      <paragraph>
+       Besides identifying the most influential senators with respect to passing a bill (e.g., the outcome of everyone voting “yes”), we can also apply our model to study the other extreme of not passing a bill (e.g., the outcome of everyone voting “no”). According to our model, we can achieve the latter outcome in the 112th Congress if the following 10 senators choose to vote “no”: Senators Nelson (Democrat, FL), Cardin (Democrat, MD), Klobuchar (Democrat, MN), Reed (Democrat, RI), Murkowski (Republican, AK), Moran (Republican, KS), Vitter (Republican, LA), Enzi (Republican, WY), Crapo (Republican, ID), and DeMint (Republican, SC).
+      </paragraph>
+      <paragraph>
+       Later on, we will show that besides the desired outcomes of everyone voting “yes” or everyone voting “no,” our model and approach extend to studying even more general outcomes, such as breaking filibusters or preventing clotures.
+      </paragraph>
+      <section label="6.4.1">
+       <section-title>
+        Adapting a popular diffusion-based algorithm as a heuristic for the most-influential-nodes problem instance in LIGs
+       </section-title>
+       <paragraph>
+        Our one-shot non-cooperative game-theoretic approach is fundamentally different from the diffusion approach, both syntactically (i.e., mathematical foundations) and semantically (e.g., interpretation of objectives, nature of problem formulations, and applicable domains and contexts). Of course, the most obvious key difference is that our solution concept does not consider dynamics. We concentrate on “end-state” behavior and characterize stable outcomes using the notion of PSNE, which is “static” by nature.{sup:13} As we reviewed in Section 2.2, many of the diffusion-based approaches lead to the outcomes that are not stable.{sup:14}
+       </paragraph>
+       <paragraph>
+        Yet, out of purely scientific curiosity and suggestions/feedback about our work, we present preliminary results based on a heuristic for the problem of most influential nodes in our context (i.e., LIGs) that we designed by adapting what is arguably the most popular and simple greedy-selection algorithm for identifying “most influential” nodes developed specifically for the cascade model of diffusion [49]. The simplicity of the original algorithm in the diffusion context facilitates the adaptation to our context. Note however that this adaptation is exclusive to a very specific instance of our general problem formulation: identifying “most influential nodes” with respect to the goal being maximizing the number of +1's in the PSNE (see Definition 3.6 in Section 3.2 for a definition and discussion of our problem formulation and the role that the “objective function” {a mathematical formula}g(.) plays in the formulation).
+       </paragraph>
+       <paragraph>
+        We realize that, inspired mostly by the cascade model described in Kleinberg [49], the literature on diffusion models for and approaches to problems related to “influence maximization” and “minimization” has increased considerably since the early groundbreaking work of Kempe et al. [48] and particularly over the last few years.{sup:15} We reemphasize that all that work uses a diffusion-based approach and thus fundamentally differs from the work presented here, both in terms of the problem definition and the solution approach. As a result, comparing the result of such disparate approaches is not scientifically meaningful, in our view. Furthermore, it would be nontrivial and out-of-scope for this paper to adapt the techniques used or proposed to solve their specific variations of the “influence maximization” or “minimization” problem in a diffusion-based setting, to employ as heuristics to solve our problem; just as we would not expect adaptations of our techniques as heuristics to solve their problems.
+       </paragraph>
+       <paragraph>
+        Therefore, in this paper, we only adapt the popular, greedy algorithm used to find the “most influential individuals” in the cascade model, as described in Kleinberg[49], to use as a heuristic to solve what would be the equivalent/analogous instance of that problem in the more general problem formulation in our setting presented in Section 3.2. We remind the reader that that greedy algorithm, originally meant for the particular cascade model of diffusion, is arguably the most simple and fundamental of the work in that area. The resulting heuristic corresponds to a very “controlled” version of (possibly networked) best-response dynamics on the influence game of interest starting from specific initial conditions.
+       </paragraph>
+       <section label="6.4.1.1">
+        <section-title>
+         Diffusion-based heuristic
+        </section-title>
+        <paragraph>
+         We first note that we use the same influence factors and thresholds of the previously learned LIGs to perform both of these analyses. In particular, for the diffusion-based heuristic, at each iteration, we select a node u that achieves the “maximum spread” of action 1, by which we mean the node u that leads to the largest (marginal difference in the) number of other players in the network with action 1 after performing best-response dynamics in the LIG; force u to adopt action 1; and let all but the previously selected nodes modify their actions as best responses to u's adoption of action 1. We repeat this process until every node adopts action 1.{sup:16}
+        </paragraph>
+        <paragraph>
+         Note that because of negative influence factors, cycling may occur and this procedure may never come to a stop. However, in our case, even in the presence of negative influence factors, we did not encounter such cycling.
+        </paragraph>
+        <paragraph>
+         Furthermore, it is well known that the general greedy-selection recipe just described produces a provable approximation algorithm in the cascade model with submodular spread function [49]. But given the presence of negative influence factors in our LIG and, more importantly, the fact that we do not even know what the corresponding “submodular spread function” is or means in our setting, this claim of approximation guarantee essentially vanishes or is irrelevant in our setting.
+        </paragraph>
+       </section>
+       <section label="6.4.1.2">
+        <section-title>
+         Results using diffusion-based heuristic
+        </section-title>
+        <paragraph>
+         We can visualize all possible choices of the most influential nodes that an algorithm can make as a directed acyclic graph, as shown in Fig. 13, Fig. 14.
+        </paragraph>
+        <paragraph>
+         Although Fig. 13 looks more complicated than Fig. 14 (due to the appearance of the same node in different source-sink paths of the dag at different levels), comparing them we find that, not only a set of six nodes are most-influential in both cases, but also most of the nodes are common between these two distinct algorithms. More remarkably, some of these common nodes are selected at the same iteration in both algorithms. The obvious question arises, is a set of most-influential nodes in the LIG setting, as output by our approximation algorithm, also a possible output of the diffusion-based heuristic? We have exhaustively tested all possible sets of the most influential nodes (Fig. 13) and settled the answer in the negative for each set. Interestingly, if we add the “Alexander R TN” node to any of the most influential sets in the LIG setting, the resulting set can be the output of the diffusion-based heuristic. The apparent similarity in results between the output of our approximation algorithm and the diffusion-based heuristic gives rise to an intriguing open question as to the characterization of the exact connection between these two seemingly different algorithms for identifying this particular instance (i.e., all players play 1) of the most-influential problem in our setting. This open question is beyond the scope of this paper.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Filibuster
+      </section-title>
+      <paragraph>
+       Beyond predicting stable behavior and identifying the most influential nodes in a network, we can also use our model to study other interesting aspects of a networked population. One example is the filibuster phenomenon in the U.S. Congress, where a senator uses his or her right to hold floor for an indefinite time in an effort to delay the passing of a bill. The procedure of “cloture,” which refers to gathering a majority of at least 60 votes among the current 100 senators, can break a filibuster. However, not every possible cloture scenario of 60 or more “yes” votes may be a stable outcome due to influence among the senators. We call the set of such outcomes that are indeed stable in the sense of PSNE a stable cloture set.
+      </paragraph>
+      <paragraph>
+       An interesting general question is whether there exists a small coalition of senators that can break filibusters. We can think of preventing a filibuster from the democratic or the republican perspective (i.e., favoring the respective party). Similarly, we can also ask what in some sense is the opposite question: is there a small coalition of senators that can prevent clotures by voting “no?” First, let us formally define the problem for breaking filibusters; the formulation of the problem for preventing clotures is similar.
+      </paragraph>
+      <section label="6.5.1">
+       <section-title>
+        Problem formulation
+       </section-title>
+       <paragraph>
+        Given the set {a mathematical formula}S of all stable outcomes (i.e., PSNE) and a subset of {a mathematical formula}C of these stable outcomes, find a minimal set T of players such that{a mathematical formula} where {a mathematical formula}PS(V) is the set of PSNE-extensions of the nodes in V playing action 1, i.e.,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        In words, {a mathematical formula}C is the stable cloture set, consisting of stable outcomes that can prevent a filibuster (i.e., every PSNE in {a mathematical formula}C contains at least 60 “yes” votes and thus, can induce a cloture). When we consider the notion of preventing a filibuster in favor of a specific party, we define {a mathematical formula}C consisting of exactly those PSNE that contain 60 or more “yes” votes (thereby representing cloture scenarios) and in addition, are supported (through “yes” votes) by the majority of the senators affiliated with that party. Other definitions are possible, as long as the stable cloture set {a mathematical formula}C is well-defined.
+       </paragraph>
+       <paragraph>
+        Now, we would like to select a minimal set of senators such that {a mathematical formula}C contains the set {a mathematical formula}PS(V) of the PSNE-extensions of these senators' voting “yes” (i.e., their voting “yes” can only lead to a stable cloture scenario, thereby preventing a filibuster). In addition, we would also like to achieve a maximum stable-cloture cover; that is, we wish to achieve the maximum possible set {a mathematical formula}PS(V) so that we are able to capture as many of the stable cloture scenarios as possible. In this formulation, we set up as the objective to select a minimal, not minimum, set of senators; this keeps the formulation simple by avoiding bicriteria optimization (minimum set of senators vs. maximum stable-cloture cover). Further note that adding an extra senator to the set of selected senators can only reduce the stable-cloture cover because of additional constraints.
+       </paragraph>
+       <paragraph>
+        The problem formulation above guarantees a nonempty solution T if there exists some PSNE in {a mathematical formula}C that is not “dominated” by any PSNE in {a mathematical formula}S∖C. Here, a PSNE x dominates another PSNE y if for every i, {a mathematical formula}yi=1⟹xi=1.
+       </paragraph>
+      </section>
+      <section label="6.5.2">
+       <section-title>
+        A heuristic
+       </section-title>
+       <paragraph>
+        We can modify the approximation algorithm for identifying the most influential nodes, presented at the end of Section 5, to design a heuristic for the problem formulated above in the following way. At each iteration, we select a node such that adding it to the set of already selected nodes minimizes the number of PSNE-extensions of the selected nodes playing 1 that are in {a mathematical formula}S∖C. If there is a tie among several nodes in this step, then we can store these nodes in order to explore all solutions that this heuristic can produce. We stop when the above number of PSNE-extensions within {a mathematical formula}S∖C goes to 0. We then perform a minimality test by excluding nodes from the selected set of nodes and testing whether the resulting set can be a solution. Note that although we can select the “best” solution (in terms of the coverage of {a mathematical formula}C) among the ones found due to ties, this heuristic does not guarantee an approximation of the maximum coverage of {a mathematical formula}C.
+       </paragraph>
+      </section>
+      <section label="6.5.3">
+       <section-title>
+        Experimental results on the 110th Congress
+       </section-title>
+       <paragraph>
+        For the 110th Congress, {a mathematical formula}C consists of 15,288 and 10,029 stable cloture scenarios (i.e., PSNE) with respect to the democratic and republican parties, respectively. Overall, the total number of stable cloture scenarios is 15,595, and most of these are common in both democratic and republican cases.
+       </paragraph>
+       <paragraph>
+        Regarding breaking filibusters with respect to the democratic party, the best solutions found by the above heuristic are Senators {Brown (D, OH), Roberts (R, KS), and Graham (R, SC)} and {Kerry (D, MA), Roberts (R, KS), and Graham (R, SC)}, both of which cover 1500 of the 15,288 stable cloture scenarios. The optimal solutions found by a brute-force procedure are Senators {Brown (D, OH), Craig (R, ID), and Dole (R, NC)} and {Kerry (D, MA), Craig (R, ID), and Dole (R, NC)}, both covering 1728 stable cloture scenarios. With respect to the republican party, the heuristic gives the following two solutions as the best, each covering 40 of 10,029 stable cloture scenarios: Senators {Brown (D, OH), Bennett (R, UT), and Gregg (R, NH)} and Senators {Kerry (D, MA), Bennett (R, UT), and Gregg (R, NH)}. The optimal solution for this case is Senators {Bennett (R, UT), Conrad (D, ND), and Sessions (R, AL)}, which covers 138 stable cloture scenarios.
+       </paragraph>
+       <paragraph>
+        We now consider the case of preventing cloture scenarios with respect to the democratic party; that is, the majority of the senators belonging to the democratic party want to pass a bill, but cannot gather 60 votes due to some senators voting “no.” To find a small set of senators whose voting choice of “no” prevents cloture scenarios and potentially leads to filibusters, we adapt the above heuristic. With respect to the democratic party, there are 295,320 non-cloture stable outcomes (where a majority of the democratic senators voted “yes,” yet there are fewer than 60 “yes” votes in total). The output of our heuristic matches the optimal set in this case, which covers 9681 non-cloture scenarios. If Senators McCain (R, AZ), McConnell (R, KY), Coburn (R, OK), and Hutchison (R, TX) vote “no” then the set of PSNE is exactly the set of these 9681 non-cloture scenarios. In that case, according to our model, a cloture can never take place in the event of a filibuster.
+       </paragraph>
+      </section>
+      <section label="6.5.4">
+       <section-title>
+        Application of another diffusion-based heuristic
+       </section-title>
+       <paragraph>
+        We can once again try to adapt the popular greedy-selection algorithm for identifying most-influential nodes in the cascade model in the diffusion setting to work as another heuristic for the filibuster problem in our setting. In doing so, we encounter two notable obstacles that highlight another difference between our approach and that based on diffusion.
+       </paragraph>
+       <paragraph>
+        First, the notion of stable-cloture cover is not well-defined in the diffusion setting. The forward recursion mechanism central to diffusion models begins with a set of initial adopters (those senators selected to vote “yes” in our case) and propagates the effects of behavioral changes throughout the network until it reaches a steady state (i.e., no change occurs). However, this mechanism focuses on how the dynamics of behavioral changes evolves, not on the count of steady states that are consistent with a given set of players being among the adopters (not necessary early adopters), which is required for stable-cloture covers. In contrast, the stable-cloture cover is well-defined in our approach.
+       </paragraph>
+       <paragraph>
+        Second, and most important, even if we allow reversals of actions due to negative influence factors, forward recursion may produce an unstable outcome (i.e., not a PSNE). Although Granovetter's original model precludes this by requiring the initial adopters to have a threshold of 0 [31], subsequent development allows forward recursion to start with a set of initial adopters whose thresholds are not necessarily 0 [49]. Next, we illustrate this point using our experimental results.
+       </paragraph>
+       <paragraph>
+        Per the discussion in the last two paragraphs, in our experimental setting regarding the diffusion-based heuristic, which, once again, result from our adaptation of the popular greedy-selection approximation algorithm used for the cascade model in diffusion settings, we omit the notion of maximum stable-cloture cover and thereby forgo the measure of goodness of a solution. We only concentrate on finding a set of initial adopters that can drive the forward recursion process to some stable cloture scenario (i.e., a PSNE in {a mathematical formula}C).
+       </paragraph>
+       <paragraph>
+        In the following paragraph, we outline our diffusion-based heuristic specifically adapted for the filibuster problem.
+       </paragraph>
+       <paragraph>
+        For {a mathematical formula}k=1,2,… , do the following. For all possible sets of k senators, start forward recursion with these k senators forced to play 1 all the time and other senators initially playing −1 (but are permitted to switch between 1 and −1 later on). When a steady state is reached, verify if there are at least 60 senators who are playing 1 in this state. If this is the case, then further verify if the k senators who are forced to play 1 are indeed playing their best response with respect to others' actions, which is the condition for the cloture scenario being stable. Stop iterating over k once you find stable cloture scenarios.
+       </paragraph>
+       <paragraph>
+        In our problem instances, which contain both positive and negative influence factors, it is very much possible that forward recursion oscillates indefinitely. However, that did not happen in our experiments. We tried all possible sets of {a mathematical formula}k≤3 initial adopters, but failed to reach any cloture scenario (stable or unstable). We then tried all possible quadruplets of initial adopters. With respect to the democratic party, 1189 different quadruplets led the forward recursion process to a cloture scenario, but nearly half of these quadruplets (536 to be exact) led to unstable outcomes. Essentially, those unstable outcomes were due to some of the initial adopters not playing their best response in voting “yes”—all other nodes were indeed playing their best response (otherwise, the process would not terminate).
+       </paragraph>
+       <paragraph>
+        Therefore, beyond just emphasizing the stability of an outcome, the approximation algorithm based on our approach also captures certain phenomena that the heuristic based on the traditional approach seems unable to do. As stated earlier, of course, we would need more research to better understand this discrepancy, and the degree to which it could be reduced, as well as the effectiveness and potential for improvement of the diffusion-based heuristic. Such research is beyond the scope of this paper and remains open for future work.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      On the connection to rational calculus models of collective action
+     </section-title>
+     <paragraph>
+      The formal study of individual behavior in a collective setting originally began under the umbrella of “collective behavior” in sociology and social psychology. The classical treatment of collective behavior views individuals in a “crowd” as irrational beings with a lowered intellectual and reasoning ability. The proposition is that an increased level of suggestibility among the individuals facilitates the rapid spread of the homogeneous “mind of the crowd” [52], [72], [10]. Herbert Blumer's work, in particular, popularized the classical theory of collective behavior well beyond academia and into such domains as police and the armed forces [57, p. 9]. However, this theory was subjected to much criticism primarily because it did not study empirical accounts systematically.{sup:18}
+     </paragraph>
+     <paragraph>
+      In response to that, Clark McPhail undertook a massive effort, spanning three decades, to record the behavior of individuals in collective settings that he calls “gatherings” in order to distinguish it from (homogeneous) “crowds” in collective behavior (see McPhail [57, Ch. 5, 6] for a summary of his two-decade study). His empirical accounts, stored in a range of media formats as technology improved, reveal one common thing—that a gathering consists of individuals with diverse objectives, who nevertheless behave rationally and purposefully. To distinguish this purposive nature of individuals from irrationality in the classical treatment, he calls his study “collective action” and broadly defines it as “any activity that two or more individuals take with or in relation to one another” [58, p. 881]. In short, collective action can be seen as the modern approach, as opposed to the “old” (but not unimportant) approach of collective behavior [61, pp. 14–15].{sup:19}
+     </paragraph>
+     <paragraph>
+      Many of the rational calculus or economic choice models that were originally proposed for collective behavior, are now discussed under collective action due to the purposive nature of the individuals. Here, we conduct a very narrow and focused review of the relevant literature in order to place our model in its proper context. Our review focuses on Mark Granovetter's threshold models [31], one of the most influential models of collective action to date. Before that, we will briefly review two prominent precursors to Granovetter's models—Schelling's models of segregation and Berk's “gaming” approach.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       Schelling's models of segregation
+      </section-title>
+      <paragraph>
+       A notable precursor to Granovetter's threshold models is Nobel-laureate economist Thomas Schelling's models of segregation [77], [76]. Schelling's models account for segregations that take place as a result of discriminatory individual behavior as opposed to organized processes (e.g., separation of on-campus residence between graduate and undergraduate students due to a university's housing policy) or economic reasons (e.g., segregation between the poor and the rich in many contexts). An example of a segregation due to individual choice, or “individually motivated segregation” as Schelling puts it [77, p. 145], is the residential segregation by color in the U.S. Although Schelling's models expressly focus on this case, these can be applied to many other scenarios as well.
+      </paragraph>
+      <paragraph>
+       In Schelling's spatial proximity model, if an individual's level of tolerance for population of the opposing type is exceeded in his neighborhood, he moves to another spatial location where he can be “happy.” Schelling studied the dynamics of segregation in this model using a rule of movement for the “unhappy” individuals. The bounded-neighborhood model is concerned with one global neighborhood. An individual enters it if it satisfies its level of tolerance constraint and leaves it otherwise. Schelling studies the stability of equilibria and the tipping phenomenon in this model when the distribution of tolerances and the population ratio of the two types are varied. An important finding is that in the cases studied, the modal level of tolerance does not correspond to a tipping point.{sup:20}
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Berk's “gaming” approach
+      </section-title>
+      <paragraph>
+       Another notable precursor to Granovetter's models is Berk's rational calculus approach [9]. Berk strongly criticizes the assumption of individual irrationality which became prevalent in collective behavior literature. He formulates his approach by first giving a detailed empirical account of an anti-war protest at Northwestern University that originated in a town-hall meeting addressing dormitory rent hike.{sup:21} He explains individual decision making through Raiffa's decision theory principles.
+      </paragraph>
+      <paragraph>
+       To motivate his approach, he first notes that participating individuals in that protest were diverse in their disposition and that they exercised their reasoning power. He then broadly classifies the participants into two types—militants (with the desired action of trashing properties) and moderates (with the desired action of an anti-war activity, but not trashing). Each participant, militant or moderate, estimates the support in favor of his disposition, and with enough support, he will “act” (e.g., trash properties if he is militant).
+      </paragraph>
+      <paragraph>
+       Clearly, an individual's estimate of support directly affects his “payoff.” If an individual estimates that there is not enough support to act in favor of his disposition, he can try to persuade others to support his disposition so that he can receive a higher payoff by being able to act. This can be translated as an attempt to change others' payoff matrices, which is facilitated by the milling phase when they communicate and negotiate with each other. The milling phase ends when a consensus or a compromise is reached and becomes common knowledge. In this way, a concerted action takes place according to Berk's model.
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Granovetter's threshold models
+      </section-title>
+      <paragraph>
+       Granovetter [31] presented his threshold models in the setting of a crowd, where each individual is deciding whether to riot or not. In the simplest setting, each individual has a threshold and his decision is influenced by the decisions of others—if the number (or the proportion) of individuals already rioting is below his threshold, then he remains inactive, otherwise he engages in rioting. The emphasis is on investigating equilibrium outcomes due to the process of forward recursion [31, p. 1426], given a distribution of the thresholds of the population. It may be mentioned here that forward recursion starts only if there is an individual with a threshold of 0.
+      </paragraph>
+      <paragraph>
+       Granovetter's models are inspired by Schelling's models of segregation. In fact, one can draw a parallel between Schelling's level of tolerance and Granovetter's threshold in the following way. In Schelling's models, an individual leaves a neighborhood if his level of tolerance is exceeded, whereas in Granovetter's models, an individual becomes active in rioting if his threshold is exceeded. Furthermore, in both models, dynamics is of utmost importance and serves the purpose of explaining how an equilibrium collective outcome emerges from individual behavior. However, apart from these similarities, these two models are semantically different and also focus on completely different outlooks. First, Granovetter ascribes a deeper meaning to the concept of threshold. Threshold of an individual is not just “a number that he carries with him” from one situation to another [31, p. 1436]. It rather depends on the situation in question and can even vary within the same situation due to changes occurring in it. Second, in Granovetter's models, a very small perturbation in the distribution of population threshold may lead to sharply different equilibrium outcomes. Granovetter highlights this property of his models as an explanation of seemingly paradoxical outcomes that goes against the predispositions of the individuals.
+      </paragraph>
+      <paragraph>
+       Two features of Granovetter's models make it stand out among the rational calculus models. First, the models are capable of capturing scenarios beyond the classical realm of collective behavior. Granovetter begins by setting up his model to complement the emergent norm theory (see Appendix B) by providing an explicit model of how “individual preferences interact and aggregate” to form a new norm [31, p. 1421]. Not only does such an explicit model eliminates the need for implicit assumptions (such as a new norm emerges when the majority of the population align themselves with that norm), it can also capture paradoxical outcomes alluded above that cannot be captured by the implicit assumption on the majority. Beyond the emergent norm theory, Granovetter's models can capture a wide range of phenomena that do not fall within the classical realm of collective behavior, such as diffusion of innovation, voting, public opinion, and residential segregation, to name a few. The second prominent feature of Granovetter's models is its ease of adaptation when dealing with a networked population. The same mechanism of forward recursion is applicable when the underlying influence structure is specified by a “sociomatrix,” which accounts for how much an individual influences another [31, p. 1429]. This is particularly useful for studying collective action in the setting of a social network.
+      </paragraph>
+     </section>
+     <section label="A.4">
+      <section-title>
+       Criticism of rational calculus models
+      </section-title>
+      <paragraph>
+       An implicit assumption regarding Granovetter's sociomatrix is that the elements of the matrix are non-negative. Otherwise, the process of forward recursion may never terminate, even on the simplest of examples. However, many real world scenarios do exhibit co-existence of both positive and negative influences. For the most part, democrat senators in the U.S. Congress influence their republicans colleagues negatively, while they influence colleagues of their own party positively. In residential segregation involving more than two types of individuals, an individual is negatively influenced, in different magnitudes, by individuals belonging to other types. Clearly, such a situation cannot be modeled using a non-negative sociomatrix. Furthermore, if we take a second look at Berk's account, militant individuals positively reinforce each other in their decision to engage in trashing properties, whereas their decision is negatively affected by the moderates (that is, the presence of too many moderates makes it risky for militants to engage in violent action).
+      </paragraph>
+      <paragraph>
+       Critiques of rational calculus models point out the lack of behavioral adjustment in a “negative feedback” fashion [58, p. 883]. Here, negative feedback is defined in the context of the perceptual control theory that lays the foundation of McPhail's sociocybernetics theory of collective action (see Appendix B). In a negative feedback system, an individual can adjust his behavior depending on the discrepancy between the input signal and the desired signal (the sign of this discrepancy has no correlation to negative feedback). In contrast, in a positive feedback system, such control of behavior is not possible. A typical example of a positive feedback system is a chemical chain reaction. An analogue to this is the “domino effect” cited often in rational calculus models [31, p. 1424]. It is true that rational calculus models neither account for “errors” as desired by the proponents of the sociocybernetics theory, nor is the concept of “errors” well-defined in the context of rational calculus. But it is not the case that “reversal” of behavior, which can be thought of as a crude form of behavioral adjustment, is precluded in rational calculus models. Such a form of behavioral adjustment can certainly be incorporated by allowing negative elements in the sociomatrix, but the challenge lies in the forward recursion process which may oscillate indefinitely because of those negative elements.
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Brief review of collective behavior and collective action in sociology
+     </section-title>
+     <paragraph>
+      In sociology, the umbrella of collective behavior is very broad and encompasses an incredibly rich set of models explaining various aspects of a wide range of social phenomena such as revolutions, movements, riots, strikes, disaster, panic, and diffusion of innovations (e.g., fashion, adopting contraceptives, electronic gadgets, or even religion), just to name a few.{sup:22} Sociologists Marx and McAdam, in their concise introductory book on collective behavior [56], contend that unlike many other fields of sociology, the field of collective behavior is not easy to define, partly because of the varied opinion of scholars: from very narrow perspectives, to such wide, all-encompassing perspectives (e.g., Robert Park and Herbert Blumer's) that virtually eliminates the need to have collective behavior as an individual field in sociology.{sup:23} Yet, Marx and McAdam point out the traditional disposition to categorize collective behavior as a “residual field” in sociology; that is, the study of collective behavior consists of those elements of behavior (e.g., fads, fashion, crazes), organization (e.g., social movement), group (e.g., crowd), individual (e.g., psychological states such as panic), etc., that do not readily fit into well-established and commonly observed social structures. Similarly, collective behavior is defined in Goode's textbook [28, p. 17] as the “relatively spontaneous, unstructured, extrainstitutional behavior of a fairly large number of individuals.”
+     </paragraph>
+     <section label="B.1">
+      <section-title>
+       Classical treatment of collective behavior: mass hysteria
+      </section-title>
+      <paragraph>
+       The classical treatment of collective behavior views individuals in a crowd as non-rational, transformed into hysteria by the collective environment. The central tenet of the early work of Gustave Le Bon's is that individuals in a crowd share a “mind of the crowd,” and that the “psychological law of the mental unity of crowds” guides their psychological state and behavior in the collective setting [52, p. 5]. In Le Bon's account, an individual in a crowd may retain some of the ordinary characteristics he shows in isolation; but the emphasis is on the extraordinary characteristics that emerge only in a crowd because of “a sentiment of invincible power,” contagion, and most importantly, the susceptibility of individuals to take suggestions as if they were hypnotic subjects. Examples of such extraordinary characteristics of a crowd are “impulsiveness,” “incapacity to reason,” and “the absence of judgment,” to name a few [52, p. 16]. In sum, individuals in a crowd are depleted of their intellectual capacity and become uniform in their psychological state. This leads the crowd to an identical direction of collective behavior that may be heroic or criminal, depending on the type of “hypnotic suggestion” alluded above (although Le Bon gives examples of heroic crowds [52, p. 14], for the most part, he tends to give “crowds” a negative connotation).
+      </paragraph>
+      <paragraph>
+       Le Bon's work influenced around half-a-century of subsequent developments. Park and Burgess upheld his proposition on the transformation of individuals in a crowd. They put forward the concept of circular reaction[72], later refined by Herbert Blumer [10]. Circular reaction refers to a reciprocal process of social interaction that explains how crowd members become uniform in their behavior, something that Le Bon could not really explain. In this process, an individual's behavior stimulates another individual to behave alike; and when the latter individual does so, it reinforces the stimulation that the former individual acted upon. In circular reaction, individuals do not act rationally or intellectually; that is, they do not reason about the action of others, but instead, they only align themselves with the behavior of others. This is different from interpretative interaction, another mechanism that Blumer defined to explain routine group behavior (e.g., a group of individuals shopping in a mall), as opposed to collective behavior (e.g., social movement). In interpretative interaction, individuals react (perhaps differently) to their interpretation of others' action, not the action itself. Therefore, in interpretative interaction, one can treat individuals as rational beings.{sup:24}
+      </paragraph>
+      <paragraph>
+       In Blumer's account, a crowd goes through several well-defined stages before a collective behavior finally emerges. The three underlying mechanisms that facilitate transitions among these stages are circular reaction, collective excitement, and social contagion; one can roughly think of collective excitement as a more intense form of circular reaction, and of social contagion as an even more intense form of circular reaction [57, p. 11].{sup:25}
+      </paragraph>
+     </section>
+     <section label="B.2">
+      <section-title>
+       Emergent norm theory
+      </section-title>
+      <paragraph>
+       Although Blumer's account of collective behavior received wide-spread acceptance, even beyond academia [57, p. 9], others deemed many of the underlying assumptions in it, as well as in the general mass-hysteria theory, unrealistic. Arguably, individuals with different objectives in mind participate in a collective behavior, and one can observe changes in their individual behavior throughout the process of a collective behavior too.{sup:26} Therefore, the assumption of complete uniformity behavior in the classical mass-hysteria treatment is very much a stretch. Furthermore, the assumption of hysteric crowd in the classical approach has also been called into question. One notable critique of the mass-hysteria theory comes from Ralph Turner and Lewis Killian [83]. They view individuals in a crowd as behaving under normative constraints and showing “differential expression.” However, a new norm emerges when the established norms of the society cannot adequately guide a crowd facing an extraordinary situation. They call this the emergent norm and contend that it is the emergent norm that gives the “illusion of unanimity.”
+      </paragraph>
+     </section>
+     <section label="B.3">
+      <section-title>
+       Collective action
+      </section-title>
+      <paragraph>
+       The goal-oriented nature of collective behavior was further highlighted by sociologists studying social movements during the 1970s and 80s. In order to distinguish their approach from the traditional approach to collective behavior, dominated by the assumption of irrational and aimless nature of crowds, they used the term collective action to mean “people acting together in pursuit of common interests” [80]. Strikingly, based on a series of systematic observations, Clark McPhail's contends that the goal-oriented nature of crowds is not limited to social movements and revolutions alone, but is a feature of various other types of crowds. In his book the Myth of the Madding Crowd, he uses two decades of empirical observations pertaining to a multitude of crowd settings to formulate a theory of collective behavior now recognized as a significant paradigm shift [57, Ch. 5, 6]. To distance himself from the term “crowds,” which has already gained several meanings depending on whose theory is being considered, he gives his formulation in the setting of “gatherings.” But first, he places a justifiably strong emphasis on the definition of collective behavior. His “working definition of collective behavior” is the study of “two or more persons engaged in one or more behaviors (e.g., locomotion, ...) judged common or concerted on one or more dimensions (e.g., direction, velocity, ...)”{sup:27}[57, p. 159].
+      </paragraph>
+      <paragraph>
+       The broad nature of McPhail's definition of collective behavior, although based on extensive empirical evidence, did not receive immediate acceptance. Even modern textbooks on collective behavior try to conserve the classical appeal of collective behavior.{sup:28} Perhaps to further distance himself from the traditional viewpoint, McPhail later began to use the term collective action instead of collective behavior (for example, in a recent encyclopedia article, McPhail refers to the above mentioned definition as that of collective action [58]). According to David Miller, the modern view on the distinction between collective action and collective behavior is beyond simply terminological. Collective action is given the status of a “new” theory in sociology, while collective behavior is marked as “old,” but not unimportant [61, pp. 14–15].{sup:29}
+      </paragraph>
+      <paragraph>
+       McPhail's approach to collective action is known as the social behavioral interactionist (SBI) approach. As much as it agrees with the emergent-norm theory, in terms of the diversity of individual objectives in a collective setting, it does not agree with the concept of an emergent norm suppressing this diversity. The SBI approach studies gatherings in three phases of its life cycle: the assembling process, collective action within the assembled gathering, and the dispersal process [57, p. 153]. Although each of these three phases is rich and interdependent, the goal is to manage the complexity of collective action as a whole by focusing on the recognizable parts of it. Interestingly, the underlying mechanism to explain collective action is drawn from the perceptual control theory[57, Ch. 6]. McPhail adapts this theory to formulate his sociocybernetics theory of collective action. In brief, an individual receives sensory inputs, compares the input signal to its desired signal,{sup:30} and adjusts its behavior in response to the discrepancy. The behavior of individuals affects the “environment,” which in turn affects the input signal, thereby completing a loop. An important aspect of this theory is that various external factors (or “disturbances”) may drive an individual to make different behavioral adjustments at different points in time even if the discrepancy between the input signal and the desired signal remains the same.
+      </paragraph>
+      <section label="B.3.1">
+       <section-title>
+        Additional notes on Schelling's models
+       </section-title>
+       <paragraph>
+        Schelling's models assume that individuals behave in a discriminatory way. For example, individuals are aware, consciously or unconsciously, about the types of other individuals in their neighborhood and behave (i.e., stay in the neighborhood or leave) according to their preference. This is different from organized processes (e.g., separation of on-campus residence between graduate and undergraduate students due to a university's housing policy) or economic reasons (e.g., segregation between the poor and the rich in many contexts) [77], [76]. An example of a segregation due to individual choice, or “individually motivated segregation” as Schelling puts it [77, p. 145], is the residential segregation by color in the United States. In fact, Schelling's models and their analyses expressly focus on this case. Yet, we can apply Schelling's theory to many other scenarios as well. This is because it explains, at an abstract level, how collective outcomes are shaped from individual choice. We note here that connecting individual actions to collective outcomes is a mainstream theme of research in collective action.
+       </paragraph>
+       <paragraph>
+        Schelling introduces two basic models to study the dynamics of segregation among individuals of two different types [77]. In the first model, the spatial proximity model, individuals are initially positioned in a spatial configuration (such as a line or a stylized two-dimensional area) and individuals of the same type share a common “level of tolerance.” This level of tolerance quantifies the upper limit on the percentage of an individual's opposite type in his local neighborhood that he can put up with. Here, we define an individual's local neighborhood with respect to the individual's position in the specified spatial configuration. In this model, we use a rule of movement for the “unhappy” individuals to study the dynamics of segregation. For example, an individual whose level of tolerance has been exceeded, moves to the closest location where the tolerance constraint can be satisfied. Assuming an equal number of individuals of each type and a fixed local neighborhood size, Schelling first studies how clusters evolve from the initial configuration of a random placement of the individuals on a straight line. He then generalizes the experimentation by varying different model parameters such as neighborhood size, level of tolerance, and the ratio of individuals of the two types. Notable findings are that decreasing the local neighborhood size leads to a decrease in the average cluster size and that for an unequal number of individuals of the two types, decreasing the relative size of the minority leads to an increase in the average minority cluster size.
+       </paragraph>
+       <paragraph>
+        Schelling extends this experimentation to a different setting of a two-dimensional checkerboard. The individuals are randomly distributed on the squares of the checkerboard, leaving some of the squares unoccupied. An individual's local neighborhood is defined by the squares around it and an unhappy individual moves to the “closest” unoccupied square (leaving its original square unoccupied) that can satisfy its tolerance constraint. In addition to studying clustering properties by varying different model parameters, two new classes of individual preferences have been studied: congregationist and integrationist. In a congregationist preference, an individual only wants to have at least a certain percentage of neighbors of its own type and does not care about the presence of individuals of the opposite type in its neighborhood. Experiments show that even when each individual is happy being a minority in its neighborhood (e.g., having three neighbors of its own type out of eight), the dynamics of segregation leads to a configuration as if the individuals wished to be majority in their neighborhoods. In an integrationist preference, individuals have both an upper and a lower limit on the level of tolerance. The dynamics is much more complex in this case and leads to clusters of unoccupied squares.
+       </paragraph>
+       <paragraph>
+        Schelling's second model, the bounded-neighborhood model, concerns one global neighborhood. An individual enters it if it satisfies its level of tolerance constraint and leaves it otherwise. The level of tolerance is no longer fixed for each type and the distribution of tolerances among individuals of each type is given. The emphasis is on the stability of equilibria as the distribution of tolerances and the population ratio of the two types vary. For example, under a certain linear distribution of tolerances and a population ratio of {a mathematical formula}2:1, there exist only two stable equilibria, each consisting of individuals of one type only; whereas a mixture of individuals of both types can arise as a stable equilibrium under a different setting. This model has been adapted to study tipping phenomenon, with one notable constraint; that is, the capacity of the neighborhood is fixed. An example of a tipping phenomenon is when a neighborhood consisting of only one type of individuals is later inhabited by some individuals of the opposite type and as a result, the entire population of the original type evacuates the neighborhood. An important finding is that in the cases studied, the modal level of tolerance does not correspond to a tipping point.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Some basic concepts in game theory
+     </section-title>
+     <section label="C.1">
+      <section-title>
+       Strategic complementarity
+      </section-title>
+      <paragraph>
+       A formal, general definition of strategic complementarity is beyond the scope of this paper. Instead, we present a definition in the context of this paper and refer the reader to standard references for a general definition. We say that player i in a general-influence game {a mathematical formula}G exhibits strategic complementarity if for every pair of the joint-actions {a mathematical formula}x−i and {a mathematical formula}x−i′, if {a mathematical formula}x−i≥x−i′, element-wise, implies {a mathematical formula}ui(1,x−i)≥ui(−1,x−i′). We then say the influence game {a mathematical formula}G, as a whole, exhibits strategic complementarity if every player in the game does. Intuitively, it says that the action/behavior in the best-response correspondence of any player cannot “decrease” (i.e., move “down” from {a mathematical formula}{+1} to {a mathematical formula}{−1}, or to {a mathematical formula}{−1,+1} for that matter) if the actions/behavior of the other players “increase” (i.e., at least one other player moves “up” from −1 to +1); and vice versa. Thus, roughly speaking, we can say that the players' actions “complement” each other “strategically;” or said differently, in general, each player prefers to “play along” by choosing an action “consistent” with that chosen by the other players: if the other players “move up” or “move down” then the player would like to “follow along” with the other players by choosing the respective action, or “stay put.”
+      </paragraph>
+     </section>
+     <section label="C.2">
+      <section-title>
+       Strategic substitutability
+      </section-title>
+      <paragraph>
+       Strategic substitutability is essentially the opposite of strategic complementarity, as presented in the previous paragraph, except that one replaces the ≥ sign with a ≤ sign in the hypothesis condition in the definition (i.e., {a mathematical formula}x−i≤x−i′). Once again a formal, general definition is beyond the scope of this paper. Intuitively, it says that the action/behavior in the best-response correspondence of any player cannot “decrease” (i.e., move “down” from {a mathematical formula}{+1} to {a mathematical formula}{−1}, or to {a mathematical formula}{−1,+1} for that matter) if the actions/behavior of the other players also “decrease” (i.e., at least one other player moves “down” from +1 to −1); and vice versa. Thus, roughly speaking, we can say that the players' actions are “substitutes” of each other “strategically;” or said differently, in general, each player prefers to play an action that is opposite to/different than that chosen by the other players: if the other players “move up” or “move down” then the player would like to “go against the crowd” by choosing an opposite action, or “stay put.”
+      </paragraph>
+     </section>
+     <section label="C.3">
+      <section-title>
+       Potential games
+      </section-title>
+      <paragraph>
+       A formal, general definition of potential games is beyond the scope of this paper. Instead, we present a definition in the context of this paper and refer the reader to the standard reference for a more general definition [63].
+      </paragraph>
+      <paragraph>
+       We say an influence game {a mathematical formula}G is a ordinal potential game if there exists a function {a mathematical formula}Φ:{−1,+1}n→R, called the ordinal potential function, independent of any specific player, such that for every joint-action x, for every player i, and for every possible action/pure-strategy {a mathematical formula}xi′ that player i can take, we have that {a mathematical formula}ui(xi′,x−i)−ui(xi,x−i)&gt;0 if and only if {a mathematical formula}Φ(xi′,x−i)−Φ(xi,x−i)&gt;0.{sup:31}
+      </paragraph>
+      <paragraph>
+       When the overall condition above is the stricter condition {a mathematical formula}ui(xi′,x−i)−ui(xi,x−i)=Φ(xi′,x−i)−Φ(xi,x−i), then we call {a mathematical formula}G and Φ an exact potential game and function, respectively. For simplicity, we refer to such {a mathematical formula}G and Φ simply as a potential game and function, when clear from context.
+      </paragraph>
+      <paragraph>
+       Intuitively, the potential function, a global quantity independent of any specific player, defines the best-response correspondence of each player in the potential game. Also, the PSNE of a potential game are essentially the local minima (or stationary points) of the potential function. Hence, one could view the players as trying to optimize the potential function as a “global group” but via “individual, local best-responses.” By performing asynchronous/non-simultaneous best-response dynamics, the players are implicitly performing an axis-parallel optimization of the potential function. Because the domain of the potential function (i.e., the space of joint-actions) is finite, this process will always converge to a local maxima or stable point of the potential function, or equivalently, to a PSNE of the potential game. Hence, every potential game always has a PSNE.
+      </paragraph>
+     </section>
+     <section label="C.4">
+      <section-title>
+       Invariance of equilibrium concepts to affine/linear transformations
+      </section-title>
+      <paragraph>
+       The reason the result in Proposition 3.8 generalizes beyond PSNE is that, as is well-known, two games with the same number of players and the same set of actions for each player have the same CE set if the set of payoff functions {a mathematical formula}{ui1} and {a mathematical formula}{ui2} of the games 1 and 2, respectively, satisfy the following condition: for all players i, there exist a positive constant {a mathematical formula}ci&gt;0 and an arbitrary real-valued function {a mathematical formula}di of the actions of all the players except i, such that, {a mathematical formula}ui1(x1,x−i)=ciui2(xi,x−i)+di(x−i).
+      </paragraph>
+      <paragraph>
+       It is known that the computation of MSNE of 2-action polymatrix games is PPAD-hard. (It follows from the result of Daskalakis et al. [19], although it is not explicitly mentioned there.) An implication of this is that the computation of MSNE of LIGs is also PPAD-hard.
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix D">
+     <section-title>
+      On submodularity
+     </section-title>
+     <paragraph>
+      As briefly discussed in Section 2.2.4, the computer-science community is enthusiastic about the submodularity of the so called “influence spread function.” One reason for the intense interest is the important role submodularity plays in the algorithmic design and analysis of methods to solve the “most influential nodes” problem as formulated within the diffusion setting using the cascade model [49]. Because our approach abstracts away the dynamics, it is not even clear what such “influence spread function” is in our context, or even whether it could be meaningfully defined.
+     </paragraph>
+     <paragraph>
+      In this paragraph, we will consider a potential definition and discuss its meaning or implications, if any. We first introduce some additional notation to simplify the presentation. We denote the set involved in the uniqueness condition given in Definition 3.6 by {a mathematical formula}Cg,G(S)≡{x∈NE(G)|xS=xS⁎,x⁎∈Xg⁎(S)}. Perhaps the most direct attempt at defining a notion analogous to the “influence spread function” in the diffusion setting, which in our context we will denote by {a mathematical formula}fg,h,G, may be to let {a mathematical formula}fg,h,G(S)≡h(S)−λ|Cg,G(S)|, for some constant {a mathematical formula}λ&gt;0. We can interpret such an {a mathematical formula}fg,h,G as trying to minimize the PSNE consistent with assigning the nodes in S according to some goal PSNE, while maximizing a general preference over subsets as captured by h, modulo a “penalization constant” λ. Yet, we cannot say anything meaningful about such an “influence spread function” in general, even for the most common instantiations of g and h; except perhaps that it is at best unclear to us that the question of whether that function is submodular makes sense, or whether it could even have a reasonable answer. To start, one major reason for our inability to say anything meaningful at this moment is that we are unaware of any PSNE characterization result that would apply to our setting. It seems to us that such characterizations would be key in any study of the potential submodularity properties of that “influence spread function” {a mathematical formula}fg,h,G as we have just defined.
+     </paragraph>
+     <paragraph>
+      The study of other potential definitions of an “influence spread function” in our setting, as well as their properties, is beyond the scope of this paper. (In fact, we do not know of any other reasonable alternative, beyond simple variations of the function defined above.) More importantly, we leave open for future work the study of the potential relevance that submodularity may have within our approach, beyond the indirect connection through the characteristics of certain classes of network influence games discussed in Section 4 (i.e., strategic complementarity and substitutability).
+     </paragraph>
+    </section>
+    <section label="Appendix E">
+     <section-title>
+      Experimental results in tabular form
+     </section-title>
+     <paragraph>
+      Table 2 shows experimental data of PSNE computation on uniform random directed graphs. Of particular interest is the result that the number of PSNE usually increases when the flip probability p is increased, i.e., when the number of arcs with negative influence factors is increased.
+     </paragraph>
+     <paragraph>
+      Table 3 illustrates the experimental result that the logarithmic-factor approximation algorithm for identifying the most influential individuals performs very well in practice.
+     </paragraph>
+     <paragraph>
+      Finally, Table 4 shows the influence factors and thresholds of the LIG among the U.S. Supreme Court justices, which are learned using the U.S. Supreme Court dataset.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On the complexity of solving polytree-shaped limited memory influence diagrams with binary variables.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Planning with influence diagrams in partially observable domains suffers from the so-called curse of history: the size of an optimal strategy grows exponentially large with the number of look-ahead steps considered. Lauritzen and Nilsson proposed using limited-memory strategies to avoid the complexity blow up, coining the term limited memory influence diagrams (limids) [1]. Limids relax the no-forgetting requirement of traditional influence diagrams, and require (implicitly) that the maximum size of an optimal strategy be given as part of the input. In fact, the use of finite-state controllers, which in the influence diagram formalism corresponds to limited memory, has long been seen as a viable alternative in probabilistic planning for long- or infinite-horizon problems, especially when teams are considered [2], [3], [4], [5], [6].
+     </paragraph>
+     <paragraph>
+      In many cases, however, limiting the agentʼs memory resources does not make the problem tractable, and computing optimal strategies even for structurally very simple limids can be hard. We have shown in a previous work that finding an optimal strategy for polytree-shaped limids is NP-hard even if variables are ternary and there is only a single value node [7]. Also finding a strategy whose expected utility is within a factor of {a mathematical formula}2p of the maximum expected utility, where p denotes the number of numerical parameters in the model, is NP-hard, even in polytree-shaped diagrams (with variables taking on arbitrarily many values). On the other hand, we have shown that when the variable cardinalities and the treewidth of the diagram are bounded, a fully polynomial-time approximation scheme exists [8], and that optimal strategies can often be obtained in feasible time [9]. For the remaining cases, efficiency can be achieved at the expense of provably good accuracy by local search methods [1], [4] and message-passing algorithms [10], [11], while branch-and-bound procedures can be used for guaranteed accuracy [12], [13]. Table 1 summarizes the fixed-parameter computational complexity of the decision version of finding optimal strategies in limids of bounded treewidth with respect to topology, number of value nodes and maximum variable cardinality.{sup:1} The first two rows contain novel results presented here. The results in the remaining rows appeared in Refs. [7] and [8].
+     </paragraph>
+     <paragraph>
+      De Campos and Ji showed that the problem of selecting an optimal strategy in limids with a single value node can be reduced to that of computing a (tight) marginal probability bound in a credal network, and subsequently addressed by credal network inference algorithms [12]. The reduction preserves the topology of the graph and the cardinality of the variables; in particular, the reduction maps polytree-shaped diagrams with binary variables into credal polytrees with binary variables [14].
+     </paragraph>
+     <paragraph>
+      Credal networks are generalizations of Bayesian networks designed to cope with set-valued specifications of the numerical parameters of the model [15]. Computing tight bounds on the marginal probability of some variable in a credal network is NP-hard even when the network is polytree-shaped and variables are ternary [16]. However, Fagiuoli and Zaffalonʼs 2U algorithm [17] is able to obtain tight marginal bounds in polynomial time in polytree-shaped credal networks with binary variables. Therefore, we can find optimal strategies in polytree-shaped limids with binary chance variables and a single value node by running 2U in the corresponding credal network obtained by de Campos and Jiʼs reduction. This immediate and important result, which we discuss in Section 3, has apparently not been noticed before in the literature.
+     </paragraph>
+     <paragraph>
+      When the diagram has multiple value nodes, the transformation of de Campos and Ji reduces the selection of an optimal strategy to the computation of a tight bound for a sum of marginals of variables in a credal network, which cannot be solved in polynomial time by standard inference algorithms for credal networks and more specifically by 2U. A possible workaround is to apply a preprocessing step that transforms any diagram into an equivalent diagram that contains a single value node. However, known techniques to map a limid with multiple value nodes into an equivalent limid containing a single value node do not preserve the topology [8]. In particular, they map polytrees into multiply connected graphs. Thus, while the mapping from limids into credal networks enlarges the available toolset of algorithms for solving limids with that of credal network inference, it does not help us in answering the question of whether polytree-shaped diagrams with binary variables and multiple value nodes are in fact NP-hard to solve.
+     </paragraph>
+     <paragraph>
+      In Section 4, we answer that question affirmatively by a reduction from the partition problem. This result closes the fixed-parameter complexity analysis of the optimal strategy selection problem in limids in what regards the topology of the diagram, the number of values nodes, and the cardinality of the variables: polytree-shaped limids with binary variables and a single value node can be solved in polynomial time, and relaxing any of these assumptions leads to NP-hard problems.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Limited memory influence diagrams
+     </section-title>
+     <paragraph>
+      To help introduce the concepts and motivate the use of limited memory influence diagrams, consider the following illustrative example of a decision problem under uncertainty.
+     </paragraph>
+     <paragraph>
+      Consider a system whose failure depends on statistically independent events {a mathematical formula}e1,…,en, which occur with known probabilities {a mathematical formula}p1,…,pn, respectively. Let {a mathematical formula}Ei ({a mathematical formula}i=1,…,n) be a binary variable denoting whether {a mathematical formula}ei occurs ({a mathematical formula}Ei=1 if {a mathematical formula}ei occurs), and assume that the system failure is determined by a logical function {a mathematical formula}F(Ei,…,En) of the causing events ({a mathematical formula}F=1 if the system fails). Suppose that at a given time, the system administrator can intervene to prevent any event {a mathematical formula}ei from occurring at a cost {a mathematical formula}vi. Let {a mathematical formula}Di denote the decision of intervening on event {a mathematical formula}ei. The conditional probability of the event {a mathematical formula}ei given an intervention policy for the ith event is given by {a mathematical formula}P(Ei=1|Di=1)=0 and {a mathematical formula}P(Ei=1|Di=0)=pi. The cost of a system failure is represented by a variable C. Thus, the expected cost of a combination of intervention policies {a mathematical formula}δ1,…,δn is given by{a mathematical formula} The goal is to select the combination of policies that minimizes the expression above. Fig. 1 shows the influence diagram representation of the intervention problem where system failure is determined by {a mathematical formula}F=(E1∧E2)∧(E3∨E4).
+     </paragraph>
+     <paragraph>
+      As in the example above, the quantities in a decision problem can be partitioned into state (or chance) variables {a mathematical formula}S={S1,…,Sn}, action (or decision) variables {a mathematical formula}A={A1,…,Am}, and value variables {a mathematical formula}V={V1,…,Vℓ}. The state variables represent the unknown quantities over which the agent has no control. The action variables enumerate the alternative courses of action. The value variables assess the quality of decisions for a given state of the world. We assume that variables take on finitely many values.
+     </paragraph>
+     <paragraph>
+      Influence diagrams are graph-based representations of structured decision problems [18]. An influence diagram represents both the agentʼs architecture (i.e., what information is available to the agent at each decision stage of the problem) and the environment by means of a directed acyclic graph where each node is associated with exactly one variable of the problem. The nodes in the graph are also partitioned into sets of state, action and value nodes, according to the type of variable with which they are associated, and we refer to nodes and their associated variables interchangeably. An arc from a node X into an action node A in the graph indicates that a different action {a mathematical formula}A=a can be taken for each possible value of X.
+     </paragraph>
+     <paragraph>
+      A strategy {a mathematical formula}δ=(δ1,…,δm) is a vector of local decision rules, or policies, one for each action variable in the problem. Each policy {a mathematical formula}δj is a mapping from the configurations of the values of the parents {a mathematical formula}Pa(Aj) of {a mathematical formula}Aj to values of {a mathematical formula}Aj. A policy for an action variable with no parents is simply an assignment of a value to that variable. We assume that policies are encoded as tables. Hence, the size of a policy is exponential in the number of parents of the corresponding action variable, which in real scenarios force us to constraint the maximum number of parents of an action node lest the implementation of a policy be not practicable.
+     </paragraph>
+     <paragraph>
+      The no-forgetting condition (a.k.a. perfect recall) assumes that all decisions and observations are “remembered”. Graphically, it entails that if A and {a mathematical formula}A′ are two action nodes such that A is a parent of {a mathematical formula}A′, then all parents of A are also parents of {a mathematical formula}A′.{sup:2} An influence diagram is said to have limited memory if the no-forgetting condition is not met. The least memory-intensive strategy is the one in which actions are taken unconditionally. It is graphically represented by a limid whose action nodes have no parents.
+     </paragraph>
+     <paragraph>
+      An arc from a node X into a state node S indicates that S is (potentially) stochastically dependent on X. State variables satisfy the Markov condition, which states that any (state) variable is independent of its non-descendant non-parents conditional on its parents. An arc entering a value node V from a node X indicates that the variable V is a (deterministic) function of X. The value variables are assumed to be associated to leaf nodes in the graph, and the overall utility U is assumed to decompose additively in terms of the value variables [19], that is, {a mathematical formula}U(S,A)=V1(Pa(V1))+⋯+Vℓ(Pa(Vℓ)).
+     </paragraph>
+     <paragraph>
+      An influence diagram specification consists of its graph, the tabular specification of each value variable as a function {a mathematical formula}Vk(Pa(Vk)) of the values of its parents, and the tabular specification of the conditional probability distributions {a mathematical formula}P(Si|Pa(Si)) of each state variable {a mathematical formula}Si. We assume that any numerical parameter is given as a rational number.
+     </paragraph>
+     <paragraph>
+      Given an action variable {a mathematical formula}Aj and a policy {a mathematical formula}δj, we let {a mathematical formula}P(Aj|Pa(Aj),δj) be the collection of degenerate conditional probability distributions that assign all mass to {a mathematical formula}aj=δj(Pa(Aj)) (or the degenerate marginal distribution {a mathematical formula}P(Aj|δj) that places all mass on {a mathematical formula}δj in case {a mathematical formula}Aj has no parents). With this correspondence between policies and (conditional) probability distributions, we can define a joint probability distribution over the state and action variables for any given strategy δ as{a mathematical formula} The expected utility of a strategy δ is then{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The optimal strategy selection problem consists in finding a strategy {a mathematical formula}δ⁎ such that {a mathematical formula}E[U|δ⁎]⩾E[U|δ] for all δ, and to compute {a mathematical formula}E[U|δ⁎].
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Polytrees, treewidth and minimality
+      </section-title>
+      <paragraph>
+       The complexity of finding optimal strategies is greatly affected by the shape of the diagram. We say that a limid is polytree-shaped if the undirected graph obtained by dropping arc directions is a tree. For example, the limid in Fig. 1 is polytree-shaped. A limid that is not polytree-shaped is said to be loopy. An important graph-theoretic measure of the complexity of a limid is its treewidth, which measures its resemblance to a(n undirected) tree. Polytree-shaped limids have treewidth given by the maximum in-degree of a node in the graph.
+      </paragraph>
+      <paragraph>
+       Not all the information in a limid is necessarily relevant to the computation of optimal strategies, and the complexity of the problem can be drastically reduced by removing nodes and arcs that do not affect the expected utility of any strategy. A state or action node is called barren if it either has no children or all of its children are barren. Barren nodes have no influence on any value node and thus no impact on the selection of an optimal strategy [20]. Further irrelevances can be found by applying the concept of nonrequisiteness. A parent X of an action node A is nonrequisite to A if X is d-separated from all the value nodes that descend from A given {a mathematical formula}Pa(A)∪{A}∖{X}. The arc from X to A is then said to be a nonrequisite arc. Nonrequisite arcs indicate that variable X is irrelevant to selecting an optimal policy for A, and its removal leaves the expected utility of the optimal strategy unchanged. A variable that is nonrequisite to all its children can be safely removed from the diagram without affecting the expected utility of an optimal strategy.{sup:3} Thus, the exponential growth of policies can be avoided if all memory arcs (that is, arcs from parents of a parent action node into an action node) are nonrequisite. This is the case, for instance, when state variables form a chain of observable variables in the graph.
+      </paragraph>
+      <paragraph>
+       We say that a limid is minimal if it contains no nonrequisite arcs or barren nodes. Given a limid we can obtain its corresponding minimal form in polynomial time by repeatedly removing nonrequisite arcs and barren nodes [1].
+      </paragraph>
+      <paragraph>
+       In polytree-shaped diagrams, all arcs entering action nodes are by definition nonrequisite. Hence, minimal polytree-shaped limids are the least memory-intensive architecture, since in this case a strategy simply prescribes a value for every action variable.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      The 2U algorithm
+     </section-title>
+     <paragraph>
+      A credal network is a concise representation of a set of Bayesian networks, all sharing the same set of variables and graph structure. Formally, a credal network is a directed acyclic graph over a set of state variables, where for each variable and each configuration of its parents there is an associated set of conditional probability distributions. Marginal inference in credal networks consists in computing the upper and lower marginal probabilities of a target variable on the set of Bayesian networks represented by the credal network. The 2U algorithm performs marginal inference in polynomial time in credal polytrees with binary variables.
+     </paragraph>
+     <paragraph>
+      A limid can be interpreted as a concise description of the set of Bayesian networks that represent the joint distributions {a mathematical formula}P(S,A|δ) induced by strategies δ. Additionally, as noted by Cooper [25], the expected utility of any strategy δ in a limid with a single value variable V can be reduced to the computation of the marginal probability {a mathematical formula}P(V′=1) in the Bayesian network that represents {a mathematical formula}P(V′,S,A|δ)=P(V′|Pa(V))P(S,A|δ), where {a mathematical formula}V′ is a binary state variable with the same parent set of V, and {a mathematical formula}P(V′=1|Pa(V))∝V(Pa(V)). De Campos and Jiʼs reduction makes use of these two facts to reduce the computation of the maximum expected utility in limids with single value nodes into a marginal inference in a credal network. The reduction leaves state nodes unchanged, converts the value variable V into a state variable {a mathematical formula}V′, and turns each action node into a state node associated with the set of policies of the corresponding action variable. The maximum expected utility of a limid is equal to the upper marginal probability of {a mathematical formula}V′ according to the corresponding credal network. Hence, we can transform any polytree-shaped limid with binary variables and a single value node into a credal polytree over binary variables, and solve the optimal strategy problem by running 2U in such a credal network.
+     </paragraph>
+     <paragraph>
+      Instead of performing this two-step procedure, we can adapt 2U to work directly on the limid formalism. The pseudo-code in Algorithm 1 implements 2U in the language of limids. The function {a mathematical formula}b(y,r) in the algorithm is defined for binary y and real r as {a mathematical formula}b(0,r)=1−r and {a mathematical formula}b(1,r)=r. Given a polytree-shaped limid with binary variables and a single value node, the algorithm returns the maximum expected utility of a strategy. An optimal strategy can be obtained by a small modification to the algorithm that retrieves the arguments of each optimization performed. The algorithm operates only on ancestors of the value variable, as the non-ancestor nodes are barren. The numbers {a mathematical formula}pX and {a mathematical formula}qX for state and value nodes can be computed each by enumerating the {a mathematical formula}2|Pa(X)| combinations of values of {a mathematical formula}rY, {a mathematical formula}Y∈Pa(X), followed by {a mathematical formula}|Pa(X)|2|Pa(X)| arithmetic operations, taking a total time of {a mathematical formula}O(|Pa(X)|22|Pa(X)|) per state or value node. Since the limid in the input contains the specification of {a mathematical formula}P(X|Pa(X)), which requires at least {a mathematical formula}2|Pa(X)| numbers, computing each {a mathematical formula}pX and {a mathematical formula}qX takes time polynomial in the input size. The total running time of algorithm for a limid with n variables and treewidth w is {a mathematical formula}O(nw22w), which is polynomial in the input size.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Strategy selection in polytree-shaped limids with binary variables is NP-hard
+     </section-title>
+     <paragraph>
+      In this section we show that the optimal strategy selection problem is NP-hard in polytree-shaped limids with binary variables (and multiple value nodes) by a many-one reduction from the partition problem, which can be stated as follows. Given positive even integer numbers {a mathematical formula}z1,…,zn, is it possible to partition them into two sets of equal sum? The problem is well-known to be NP-complete [26].{sup:4} As usual, we assume that the instances of the partition problem are “reasonably” and “concisely” encoded as bit-strings of length {a mathematical formula}b=2(∑i=1n⌈log2zi⌉+n−1).{sup:5} Any partition of the numbers into two sets can be represented as an n-dimensional binary vector {a mathematical formula}(δ1,…,δn)∈{0,1}n. Let {a mathematical formula}z=def12∑i=1nzi. The partition problem is equivalent to deciding whether there is a binary vector {a mathematical formula}(δ1,…,δn) such that {a mathematical formula}∑i=1nziδi=∑i=1nzi(1−δi)=z. A binary vector satisfying that equality is said to be a yes-solution of the problem, otherwise it is called a no-solution. In either case, the vector is called a solution and the quantity {a mathematical formula}∑i=1nziδi is called its value. Since the input numbers are even, also the value of a solution is an even number. Moreover, since only yes-solutions have value z, and z is an integer number, the value of any no-solution {a mathematical formula}(δ1,…,δn) satisfies {a mathematical formula}|z−∑i=1nziδi|⩾1.
+     </paragraph>
+     <paragraph>
+      To show that the optimal strategy selection problem is NP-hard, we shall design a family of polytree-shaped limids over binary variables such that for each instance {a mathematical formula}z1,…,zn of the partition problem there is a limid in the family whose size is polynomial in b (the size of the partition problem) and satisfies {a mathematical formula}maxδE[U|δ]⩾0 if and only if {a mathematical formula}∑i=1nziδi/z=1 for some solution δ.
+     </paragraph>
+     <paragraph>
+      Given an instance of the partition problem we build a limid whose graph structure is shown in Fig. 2. For {a mathematical formula}i=1,…,n, the action variable {a mathematical formula}Di is binary and denotes in which of two sets the number {a mathematical formula}zi is inserted. Thus, a strategy {a mathematical formula}δ=(δ1,…,δn)∈{0,1}n represents a partition of the input numbers into two sets. The value variables {a mathematical formula}V1,…,Vn are set so that {a mathematical formula}Vi=def−ziDi/z. Hence, {a mathematical formula}∑iE[Vi|δ]=−∑i=1nziδi/z, which equals minus one if and only if the strategy δ is a yes-solution to the partition problem. The state variables are binary and take values in {a mathematical formula}{0,1}. For {a mathematical formula}i=1,…,n, the conditional probabilities of {a mathematical formula}Si given its parent {a mathematical formula}Di are specified such that {a mathematical formula}P(Si=1|Di=0)=def1 and{a mathematical formula} The second argument in the minimization above is, by Lemma 4 in Appendix A, always positive, and can be computed by {a mathematical formula}O(12b) arithmetic operations (used to obtain the terms {a mathematical formula}[zi/z]k), plus {a mathematical formula}O(12b) operations that compute the factorials k!, {a mathematical formula}k=0,…,12b. Hence, the right-hand side of the identity above is a number between zero and one computed in time polynomial in b. The variables {a mathematical formula}S1′,…,Sn′ are deterministic, and satisfy {a mathematical formula}S1′=defS1 and {a mathematical formula}Si′=defSi−1′Si, {a mathematical formula}i=2,…,n. A simple inductive argument on {a mathematical formula}i=1,…,n shows that {a mathematical formula}Sn′=S1S2⋯Sn, so that for any strategy δ we have that{a mathematical formula} Finally, we specify the value variable R as{a mathematical formula} An argument similar to that of the numbers {a mathematical formula}P(Si=1|Di=1) shows that R is computed in time polynomial in b. The expected utility of any strategy δ is{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      To understand the rationale of the reduction, consider the asymptotic expected utility of a strategy as the size of the partition problem goes to infinity:{a mathematical formula} which, since {a mathematical formula}limb→∞∑k=012b(−1)k[zi/z]k/k!=e−zi/z and {a mathematical formula}limb→∞∑k=012b1/k!=e,{a mathematical formula} The last expression can be regarded as a function of {a mathematical formula}sδ=def∑i=1nziδi/z, which is a variable that takes values in {a mathematical formula}[0,2] and equals the value of strategy δ up to the factor z. The graph of that expression as a function of a continuous variable s in the range {a mathematical formula}[0,2] is depicted in Fig. 3. As we can see from its graph (and more rigorously by analyzing its derivatives), the function is concave, and achieves a maximum value of zero uniquely at {a mathematical formula}s=1. Since {a mathematical formula}sδ=1 if and only if the partition problem admits a yes-solution, we can decide a hypothetical instance of the partition problem of infinite size by verifying the sign of the maximum expected utility of a strategy in the corresponding limid. For any finite b, the expected utility of a strategy (given by (4)) differs from (5), and the value of the expected utility of yes-solution depends on the numbers in the partition problem in the input. We shall show that this difference is bounded by a sufficiently small function of the size b of the partition problem, so that yes- and no-solutions can be distinguished in the finite case (i.e., {a mathematical formula}b&lt;∞) by the sign of their corresponding expected utility.
+     </paragraph>
+     <paragraph>
+      The next lemma shows that for any partition problem the expected utility of a strategy differs from (5) by at most {a mathematical formula}2−9b.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      Consider the continuous function{a mathematical formula}It follows for any strategy δ that{a mathematical formula}0&lt;f(∑i=1nziδi/z)−E[U|δ]&lt;2−9b.
+     </paragraph>
+     <paragraph label="Proof">
+      It follows immediately from (4) and (6) that {a mathematical formula}f(∑i=1nziδi/z)−E[U|δ]=qE[Sn′|δ]−exp(1−∑i=1nziδi/z). According to Lemma 4 in Appendix A (with {a mathematical formula}x=zi/z and {a mathematical formula}M=12b), we have for {a mathematical formula}i=1,…,n that {a mathematical formula}P(Si=1|Di=1)=e−zi/z+ϵi, where {a mathematical formula}0&lt;ϵi&lt;2−12b&lt;2−2−10b. It follows that {a mathematical formula}E[Sn′|δ]=∏i=1n(e−zi/z+ϵi)δi&gt;∏i=1n(e−zi/z)δi=exp(−∑i=1nziδi/z). By an argument similar to Lemma 4, we have that {a mathematical formula}e&lt;q&lt;e+2−2−9b, from which it follows that {a mathematical formula}qE[Sn′|δ]&gt;eE[Sn′|δ]&gt;exp(1−∑i=1nziδi/z), and therefore {a mathematical formula}qE[Sn′|δ]−exp(1−∑i=1nziδi/z)&gt;0.It remains to show that the upper bound holds. According to the Multivariate Binomial Theorem, we have that{a mathematical formula} where {a mathematical formula}C={(k1,…,kn)∈{0,1}n:ki⩽δi,i=1,…,n}. Each term inside the sum on the right-hand side of the equation above contains at least one factor equal to {a mathematical formula}ϵi for some {a mathematical formula}i=1,…,n. Since the sum contains at most {a mathematical formula}2n terms, {a mathematical formula}n⩽b, {a mathematical formula}0&lt;e−ziki/z⩽1, and {a mathematical formula}ϵi&lt;2−2−10b&lt;1, it follows that{a mathematical formula} Consequently, we have that{a mathematical formula} which, since {a mathematical formula}q&lt;3, is strictly smaller than {a mathematical formula}2−9b.  □
+     </paragraph>
+     <paragraph>
+      According to the lemma above, the absolute difference between the expected utility of a strategy δ and the value of the function f evaluated at the point {a mathematical formula}∑iziδi/z is less than {a mathematical formula}2−9b. Moreover, {a mathematical formula}f(∑iziδi/z) is an upper bound on the expected value of any strategy δ. The next result builds on these two facts to show that yes- and no-solutions can be distinguished by the sign of their expected utilities.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      The partition problem admits a yes-solution if and only if the maximum expected utility of a strategy is non-negative.
+     </paragraph>
+     <paragraph label="Proof">
+      According to Lemma 1, for any strategy δ we have that {a mathematical formula}E[U|δ]&gt;f(∑i=1nziδi/z)−2−9b. Thus, if a yes-solution exists then {a mathematical formula}maxδE[U|δ]&gt;f(1)−2−9b=0. To show that any no-solution has non-positive expected utility, consider the function f in Eq. (6), whose graph is the curve in Fig. 3 up to the small additive constant {a mathematical formula}2−9b. Its first and second derivatives are, respectively, {a mathematical formula}f′(s)=exp(1−s)−1 and {a mathematical formula}f″(s)=−exp(1−s). Thus, the function is strictly concave, increases for {a mathematical formula}s&lt;1, decreases for {a mathematical formula}s&gt;1, and has a maximum at {a mathematical formula}s=1. This implies that f is maximized by a strategy whose scaled value {a mathematical formula}sδ=∑i=1nziδi/z is the closest to one (over all values {a mathematical formula}sδ induced by strategies). If a yes-solution δ exists, then its scaled value {a mathematical formula}sδ maximizes f.Recall that if the partition problem has no yes-solution then any strategy δ satisfies {a mathematical formula}|z−∑iziδi|⩾1, from which it follows that either {a mathematical formula}sδ=∑iziδi/z⩾1+1/z or {a mathematical formula}sδ=∑iziδi/z⩽1−1/z. Thus, the maximum value of f over scaled values of no-solutions is either at {a mathematical formula}1−1/z (the scaled value closest to and smaller than one) or at {a mathematical formula}1+1/z (the closest to and bigger than one). Since, by Lemma 1, {a mathematical formula}f(sδ) is an upper bound on the expected utility of any strategy δ, if a yes-solution does not exist then {a mathematical formula}maxδE[U|δ]&lt;max{f(1+1/z),f(1−1/z)}. Consider the difference {a mathematical formula}f(1+1/z)−f(1−1/z)=−exp(−1/z)+exp(1/z)−2/z. By analyzing its first and second derivatives, one can show that the difference is a strictly convex function of z whose infimum is zero. Hence, the difference is positive (i.e., {a mathematical formula}f(1+1/z)&gt;f(1−1/z)), and it suffices for the result to show that {a mathematical formula}f(1+1/z) is negative for any positive integer z. For any instance of the partition problem, we have that {a mathematical formula}2z⩽2b, from which it follows that {a mathematical formula}2−9b&lt;z−3/8. By definition, {a mathematical formula}f(1+1/z)=1−e−1/z−z−1+2−9b&lt;1−e−1/z−z−1−z−3/8, which according to Lemma 5 in Appendix A is negative for any instance.  □
+     </paragraph>
+     <paragraph>
+      We finally get to the desired hardness result.
+     </paragraph>
+     <paragraph label="Theorem 3">
+      Given a polytree-shaped limid of bounded treewidth over binary variables, deciding whether there is a strategy whose expected utility exceeds a given rational number is NP-complete.
+     </paragraph>
+     <paragraph label="Proof">
+      Since the diagram is polytree-shaped, we can compute the expected utility of any strategy in polynomial time by e.g. variable elimination, which shows membership in NP. According to Proposition 2, for any instance of the partition problem we can build in polynomial time a polytree-shaped influence diagram of bounded treewidth with only binary variables and such that the partition problem has a yes-solution if and only the optimum strategy has non-negative expected utility. Hence, deciding whether the maximum expected utility of a strategy exceeds any given threshold solves the partition problem, and is thus NP-hard.  □
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      Finding an optimal strategy for limited memory influence diagrams is known to be NP-hard even for polytree-shaped diagrams with ternary variables and a single value node [7]. When the diagram has a single value node, the problem can be mapped into one of computing marginal probability bounds in a properly designed credal polytree [12]. We showed here that this correspondence between influence diagrams and credal networks allows us to solve polytree-shaped diagrams with binary variables and a single value node in polynomial time, as this is the case for computing marginal probability bounds in credal polytrees [17]. The mapping however does not work on diagrams that contain multiple value nodes (even if variables are binary), and the theoretical complexity of the strategy selection problem in polytree-shaped diagrams with binary variables and multiple value nodes was until now unknown.
+     </paragraph>
+     <paragraph>
+      In this paper, we showed by a reduction of the partition problem that selecting optimal strategies in polytree-shaped influence diagrams with binary variables and multiple value nodes is NP-hard. This result closes the fixed-parameter complexity analysis of planning with limited memory influence diagrams in what concerns the topology of the underlying graph and the cardinality of the variables. In summary, selecting optimal strategies in polytree-shaped limids with binary variables and a single value node is polynomial-time solvable, and relaxing any of these conditions leads to NP-hard problems.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Supplementary results
+     </section-title>
+     <paragraph>
+      The following lemma is used to prove Lemma 1.
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Let{a mathematical formula}0&lt;x⩽2be a real number,{a mathematical formula}M⩾12be an even integer, and{a mathematical formula}r=∑k=0M(−1)kxk/k!. It follows that{a mathematical formula}e−x&lt;r&lt;e−x+2−M.
+     </paragraph>
+     <paragraph label="Proof">
+      According to Taylorʼs theorem, the number {a mathematical formula}e−x can be approximated by M-th order Taylor expansion of the exponential function around zero, that is,{a mathematical formula} where the term {a mathematical formula}RM(x) denotes the approximation error and is called the residual. Note that the first term on the right is by definition the number r. The residual {a mathematical formula}RM(x) is well-known to satisfy{a mathematical formula} for some {a mathematical formula}0&lt;ξ&lt;x. Since M is even, the factor {a mathematical formula}(−1)M+1=−1 and {a mathematical formula}RM(x)&lt;0, whence {a mathematical formula}r&gt;exp(−x). Using the inequality {a mathematical formula}e−ξ&lt;1 (valid for any {a mathematical formula}ξ&gt;0), we find that{a mathematical formula} Since {a mathematical formula}x⩽2, and {a mathematical formula}(k/3)k&lt;k! (for any positive integer k), the right-hand side of the inequality above satisfies{a mathematical formula} and because {a mathematical formula}M⩾12=22⋅3, we have that{a mathematical formula} The result follows from {a mathematical formula}r=e−x−RM(x).  □
+     </paragraph>
+     <paragraph>
+      The following result is used to prove Proposition 2.
+     </paragraph>
+     <paragraph label="Lemma 5">
+      For any positive integer z and real{a mathematical formula}r&lt;1/3, it follows that{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the second-order Taylor expansion of {a mathematical formula}e−x around zero given by {a mathematical formula}T2(x)=def1−x+x2/2, whose residual satisfies{a mathematical formula} for some number ξ between 0 and x. Hence, {a mathematical formula}−e−x&lt;x3/6−T2(x), from which it follows that{a mathematical formula} which equals {a mathematical formula}r/z3−1/(2z2)+1/(6z3)=(2r−z+1/3)/(2z3)&lt;0.  □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

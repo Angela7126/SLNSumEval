@@ -1,0 +1,554 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Recognizing Implied Predicate-Argument Relationshipsin Textual Inference.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Motivation and Task
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        This paper addresses a typical sub-task in textual inference scenarios, of recognizing implied predicate-argument relationships which are not expressed explicitly through syntactic structure.
+Consider the following example:
+        (i)
+        <span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+         <p class="ltx_p">
+          The crucial role Vioxx plays in Merck’s portfolio was apparent last week when Merck’s shares plunged 27 percent to 33 dollars after the withdrawal announcement.
+         </p>
+        </span>
+        While a human reader understands that the withdrawal refers to Vioxx, and hence an implied predicate-argument relationship holds between them, this relationship is not expressed in the syntactic structure,
+and will be missed by syntactic parsers or standard semantic role labelers.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        This paper targets such types of implied relationships in textual inference scenarios.
+Particularly, we investigate the setting of
+        Recognizing Textual Entailment (RTE)
+        as a typical scenario of textual inference.
+We suggest, however, that the same challenge, as well as the solutions proposed in our work, are applicable, with proper adaptations, to other textual-inference scenarios, like
+        Question Answering
+        , and
+        Information Extraction
+        (see Section
+        6
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        An RTE problem instance is composed of two text fragments, termed
+        Text
+        and
+        Hypothesis
+        , as input. The task is to recognize whether a human reading the Text would infer that the Hypothesis is most likely true
+        [3]
+        .
+For our problem, consider a positive Text Hypothesis pair, where the Text is example (
+        1
+        ) above and the Hypothesis is:
+        (ii)
+        <span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+         <p class="ltx_p">
+          Merck withdrew Vioxx.
+         </p>
+        </span>
+        A common approach for recognizing textual entailment
+is to verify that all the textual elements of the Hypothesis are
+        covered
+        , or
+        aligned
+        , by elements of the Text.
+These elements typically include lexical terms as well as relationships between them.
+In our example, the Hypothesis lexical terms (“Merck”, “withdrew” and “Vioxx”) are indeed covered by the Text.
+Yet, the predicate-argument relationships (e.g., “withdrawal-Vioxx”) are not expressed in the text explicitly.
+In such a case, an RTE system has to verify that the predicate-argument relationships which are explicitly expressed in the Hypothesis, are
+        implied
+        from the Text discourse.
+Such cases are quite frequent (
+        ∼17⁢%
+        ) in the settings of our dataset, described in Section
+        3
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Consequently, we define the task of recognizing implied predicate-argument relationships, with illustrating examples in Table
+        1
+        , as follows.
+The input includes a
+        Text
+        and a
+        Hypothesis
+        . Two terms in the Hypothesis,
+        predicate
+        and
+        argument
+        , are marked, where a predicate-argument relationship between them is explicit in the Hypothesis syntactic structure.
+Two terms in the Text,
+        candidate-predicate
+        and
+        candidate-argument
+        , aligned to the Hypothesis predicate and argument, are marked as well. However, no predicate-argument relationship between them is expressed syntactically.
+The task is to recognize whether the predicate-argument relationship, as expressed in the Hypothesis, holds implicitly also in the Text.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        To address this task, we provide a large and freely available annotated dataset,
+and propose methods for coping with it.
+A related task, described in the next section, deals with such implied predicate-argument relationships as an extension to
+        Semantic Role Labeling
+        .
+While the results reported so far on that annotation task were relatively low,
+we suggest that the task itself may be more complicated than what is actually required in textual inference scenarios.
+On the other hand, the results obtained for our task, which does fit textual inference scenarios, are promising, and encourage utilizing algorithms for this task in actual inference systems.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Prior Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The most notable work targeting implied predicate-argument relationships is the 2010 SemEval task of
+        Linking Events and Their Participants in Discourse
+        [15]
+        .
+        This task extends
+        Semantic Role Labeling
+        to cases in which a core argument of a predicate is missing in the syntactic structure but a filler for the corresponding semantic role appears elsewhere and can be inferred from discourse.
+For example, in the following sentence the semantic role
+        goal
+        is unfilled:
+        (iii)
+        <span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:182.1pt;">
+         <p class="ltx_p">
+          He arrived (0Goal) at 8pm.
+         </p>
+        </span>
+        Yet, we can expect to find an implied filler for
+        goal
+        elsewhere in the document.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The SemEval task, termed henceforth as
+        Implied SRL
+        , involves three major sub-tasks.
+First, for each predicate, the unfilled roles, termed
+        Null Instantiations (NI)
+        , should be detected. Second, each NI should be classified as
+        Definite NI (DNI)
+        , meaning that the role filler must exist in the discourse, or
+        Indefinite NI
+        otherwise.
+Third, the DNI fillers should be found (DNI linking).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Later works that followed the SemEval challenge include
+        [17]
+        and
+        [14]
+        , which proposed automatic dataset generation methods and features which capture discourse phenomena. Their highest result was 12% F1-score.
+Another work is the probabilistic model of
+        Laparra and Rigau (2012)
+        ,
+which is trained by properties captured not only from implicit arguments but also from explicit ones, resulting in 19% F1-score.
+Another notable work is
+        [6]
+        ,
+which was limited to
+ten carefully selected nominal predicates.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Annotations vs. Recognition
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Comparing to the implied SRL task,
+our task may better fit the needs of textual inference.
+First,
+some relatively complex steps of the implied SRL task are avoided in our setting, while on the other hand it
+covers more relevant cases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         More concretely,
+in textual inference
+the candidate predicate and argument are typically identified, as they are aligned by the RTE system to a predicate and an argument of the Hypothesis.
+Thus, the only remaining challenge is to verify that the sought relationship is implied in the text.
+Therefore,
+the sub-tasks of identifying and classifying DNIs can be avoided.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         On the other hand,
+in some cases the candidate argument is not a DNI,
+but is still required in textual inference.
+One type of such cases are non-core arguments, which cannot be
+         Definite NIs
+         . However, textual inference deals with non-core arguments as well (see example
+         1
+         in Table
+         1
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p4">
+        <p class="ltx_p">
+         Another case is
+when an implied predicate-argument relationship holds even though the corresponding role is already filled by another argument, hence not an NI. Consider example
+         1
+         of Table
+         1
+         .
+While the object of “threatened” is filled (in the Text) by “southeastern United States”, a human reader also infers the “threatened-New Orleans” relationship.
+Such cases might follow a meronymy relation between the filler (“southeastern United States”) and the candidate argument (“New Orleans”), or certain types of discourse (co-)references (e.g., example
+         1
+         in Table
+         1
+         ), or some other linguistic phenomena. Either way, they are crucial for textual inference, while not being NIs.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Dataset
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        This section describes a semi-automatic method for extracting candidate instances of implied predicate-argument relationship from an RTE dataset.
+This extraction process
+directly follows our task formalization.
+Given a Text Hypothesis pair, we locate a predicate-argument relationship in the Hypothesis, where both the predicate and the argument appear also in the Text, while the relationship between them is not expressed in its syntactic structure.
+This process is performed automatically, based on syntactic parsing (see below).
+Then, a human reader annotates each instance as “Yes” – meaning that the implied relationship indeed holds in the Text, or “No” otherwise.
+Example instances, constructed by this process, are shown in Table
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        In this work we used lemma-level lexical matching, as well as nominalization matching, to align the Text predicates and arguments to the Hypothesis.
+We note that more advanced matching, e.g., by utilizing knowledge resources (like WordNet), can be performed as well.
+To identify
+        explicit
+        predicate-argument relationships
+we utilized dependency parsing by the Easy-First parser
+        [7]
+        .
+        Nominalization matching (e.g., example
+        1
+        of Table
+        1
+        ) was performed with Nomlex
+        [13]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        By applying this method on the RTE-6 dataset
+        [1]
+        ,
+we constructed a dataset of
+4022 instances,
+where 2271 (56%) are annotated as positive instances, and 1751 as negative ones.
+This dataset is significantly larger than prior datasets for the implied SRL task.
+To calculate inter-annotator agreement, the first author also annotated 185 randomly-selected instances. We have reached high agreement
+score of 0.80 Kappa.
+The dataset is freely available at
+        www.cs.biu.ac.il/~nlp/resources/downloads/implied-relationships
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Recognition Algorithm
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We defined 15 features, summarized in Table
+        2
+        , which capture local and discourse phenomena.
+These features do not depend on manually built resources, and hence are portable to resource-poor languages.
+Some features were proposed in prior works, and are marked by
+G&amp;C
+        [6]
+        or S&amp;F
+        [17]
+        .
+Our best results were obtained with the
+        Random Forests
+        learning algorithm
+        [2]
+        .
+        The first two features are described in the next subsection, while the others are explained in the table itself.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Statistical discourse features
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Statistical features in prior works mostly capture general properties of the predicate and the argument, like selectional preferences, lexical similarities, etc.
+On the contrary,
+our statistical features follow the intuition that
+         explicit
+         predicate-argument relationships in the discourse provide plausible indication that an
+         implied
+         relationship holds as well.
+In our experiments we collected the statistics from Reuters corpus RCV1 (
+         trec.nist.gov/data/reuters/reuters.html
+         ), which contains more than 806,000 documents.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We defined
+two features:
+         Co-occurring predicate
+         and
+         Co-occurring argument
+         .
+Let
+         p
+         and
+         a
+         be the candidate predicate and the argument in the text. While they are not connected syntactically, each of them often has an explicit relationships with
+         other
+         terms in the text,
+that might support the sought (implied) relationship between
+         a
+         and
+         p
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         More concretely,
+         a
+         is often an
+         explicit
+         argument of another predicate
+         p′
+         .
+For example, example
+         1
+         in Table
+         1
+         includes the explicit relationship “derailment of train”, which might indicate the implied relationship “crash of train”. Hence
+         p
+         =“crash”,
+         a
+         =“train” and
+         p′
+         =“derailment”.
+The
+         Co-occurring predicate
+         feature estimates
+the probability that a document would contain
+         a
+         as an argument of
+         p
+         , given that
+         a
+         appears elsewhere in that document as an argument of
+         p′
+         , based on explicit predicate-argument relationships
+in a large corpus.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         Similarly, the
+         Co-occurring argument
+         feature captures cases where
+         p
+         has another
+         explicit
+         argument,
+         a′
+         . This is exemplified in example
+         1
+         of Table
+         1
+         , where
+         p
+         =“renew”,
+         a
+         =“Patriot Act” and
+         a′
+         =“law”.
+Accordingly, the feature quantifies the probability that a document including the relationship
+         p
+         -
+         a′
+         would also include the relationship
+         p
+         -
+         a
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         More details about these features can be found in the first author’s Ph.D. thesis at
+         www.cs.biu.ac.il/~nlp/publications/theses/
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Results
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We tested our method in a cross-validation setting,
+and obtained high result as shown in the first row of Table
+        3
+        .
+Since our task and dataset are novel, there is no direct baseline with which we can compare this result. As a reference point we mention the majority class proportion, and also report a configuration in which only features adopted from prior works (G&amp;C and S&amp;F) are utilized. This comparison shows that the contribution of our new features (3%) is meaningful, which is also statistically significant with
+        p&lt;0.01
+        using
+        Bootstrap Resampling
+        test
+        [11]
+        .
+The high results show that this task is feasible, and its solutions can be adopted as a component in textual inference systems.
+The positive contribution of each feature category is shown in ablation tests.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        An additional experiment tests the contribution of recognizing implied predicate-argument relationships for overall RTE, specifically on the RTE-6 dataset.
+For the scope of this experiment we developed a simple RTE system, which uses the F1 optimized logistic regression classifier of
+        Jansche (2005)
+        with two features:
+lexical coverage and predicate-argument relationships coverage.
+We ran three configurations for the second feature, where in the first only syntactically expressed relationships are used, in the second all the implied relationships, as detected by a human annotator, are added, and in the third only the implied relationships detected by our
+algorithm are added.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        The results,
+presented in Table
+        4
+        , first demonstrate the full potential of the implied relationship recognition task to improve textual entailment recognition (Human annotation vs. Explicit only).
+One third of this potential improvement is achieved by our algorithm
+        .
+Note that
+all these results are higher than the median result in the RTE-6 challenge (36.14%).
+While the delta in the F1 score is small in absolute terms, such magnitudes are typical in RTE for most resources and tools (see
+        [1]
+        ).
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Discussion and Conclusions
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We formulated the task of recognizing implied predicate-argument relationships
+within
+textual inference scenarios.
+We compared this task to the labeling task of SemEval 2010, where no prior information about candidate arguments in the text is available.
+We point out that in textual inference scenarios the candidate predicate and argument are given by the Hypothesis, while the challenge is only to verify that a predicate-argument relationship between these candidates is implied from the given Text.
+Accordingly,
+some complex steps
+necessitated in the SemEval task can be avoided,
+while additional relevant cases are covered.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        Moreover, we have shown that this simpler task is more feasibly solvable, where our 15 features achieved more than 80% accuracy.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        While our dataset and algorithm were presented in the context of RTE, the same challenge and methods are applicable to other textual inference tasks as well.
+Consider, for example, the
+        Question Answering (QA)
+        task. Typically QA systems detect a candidate predicate that matches the question’s predicate. Similarly, candidate arguments, which match either the expected answer type or other arguments in the question are detected too.
+Consequently, our methods which exploit the availability of the candidate predicate and argument can be adapted to this scenario as well.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        Similarly, a typical approach for
+        Event Extraction
+        (a sub task of
+        Information Extraction
+        )
+is to start by applying an entity extractor, which identifies argument candidates.
+Accordingly, candidate predicate and arguments are detected in this scenario too, while the remaining challenge is to assess the likelihood that a predicate-argument relationship holds between them.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        Following this observation, we propose future work of applying our methods to other tasks.
+An additional direction for future work is to further develop new methods for our task, possibly by incorporating
+SRL resources and/or linguistically oriented rules, in order to improve the results we achieved so far.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

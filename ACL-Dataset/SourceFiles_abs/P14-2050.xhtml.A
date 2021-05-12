@@ -1,0 +1,835 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Dependency-Based Word Embeddings.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Word representation is central to natural language processing.
+The default approach of representing words as discrete and distinct symbols is insufficient
+for many tasks, and suffers from poor generalization. For example, the
+symbolic representation of the words “pizza” and “hamburger” are completely
+unrelated: even if we know that the word “pizza” is a good argument for
+the verb “eat”, we cannot infer that “hamburger” is also a good argument.
+We thus seek a representation that captures semantic and syntactic
+similarities between words. A very common paradigm for acquiring such
+representations is based on the distributional hypothesis of Harris
+        [16]
+        , stating that words in similar contexts have similar
+meanings.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Based on the distributional hypothesis, many methods of deriving word
+representations were explored in the NLP community. On one end of the spectrum,
+words are grouped into clusters based on their contexts
+        [5, 32]
+        . On the other end, words are represented as
+a very high dimensional but sparse vectors in which each entry is a measure of the association between
+the word and a particular context (see
+        [30, 3]
+        for
+a comprehensive survey).
+In some works, the dimensionality of the sparse word-context vectors is reduced,
+using techniques such as SVD
+        [6]
+        or LDA
+        [25, 27, 8]
+        .
+Most recently, it has been proposed to represent words as dense vectors that are
+derived by various training methods inspired from neural-network language modeling
+        [4, 10, 23, 20, 21]
+        .
+These representations, referred to as “neural embeddings” or “word
+embeddings”,
+have been shown to perform well across a variety of tasks
+        [29, 9, 26, 2]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Word embeddings are easy to work with because they enable efficient computation of
+word similarities through low-dimensional matrix operations.
+Among the state-of-the-art word-embedding methods is the
+        skip-gram with negative sampling
+        model (
+        SkipGram
+        ), introduced by Mikolov et al.
+        [21]
+        and
+implemented in the
+        word2vec
+        software.
+        Not only does it produce
+useful word representations, but it is also very efficient
+to train, works in an online fashion, and scales well to huge copora
+(billions of words) as well as very large word and context vocabularies.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Previous work on neural word embeddings take the
+contexts of a word to be its
+        linear context
+        – words that precede and
+follow the target word, typically in a window of
+        k
+        tokens to each side.
+However, other types of contexts can be explored too.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        In this work, we generalize the
+        SkipGram
+        model, and move from linear bag-of-words
+contexts to arbitrary word contexts. Specifically,
+following work in sparse
+vector-space models
+        [18, 24, 3]
+        ,
+we experiment with
+        syntactic contexts
+        that are
+derived from automatically produced dependency parse-trees.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        The different kinds of contexts produce noticeably different embeddings, and
+induce different word similarities. In particular, the bag-of-words nature of
+the contexts in the “original”
+        SkipGram
+        model yield
+        broad topical
+similarities
+        , while the dependency-based contexts
+yield more
+        functional
+        similarities of a
+        cohyponym
+        nature.
+This effect is demonstrated using both qualitative and quantitative analysis
+(Section
+        4
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        The neural word-embeddings are considered opaque, in the sense that it is hard
+to assign meanings to the dimensions of the induced representation.
+In Section
+        5
+        we show that
+the
+        SkipGram
+        model does allow for some introspection by querying it for contexts that
+are “activated by” a target word. This allows us to peek into the learned
+representation and explore the contexts that are found by the learning process
+to be most discriminative of particular words (or groups of words).
+To the best of our knowledge, this is the first work to suggest such an analysis
+of discriminatively-trained word-embedding models.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       The Skip-Gram Model
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Our departure point is the skip-gram neural embedding model introduced in
+        [19]
+        trained using the negative-sampling procedure
+presented in
+        [21]
+        . In this section we summarize
+the model and training objective following the derivation presented by Goldberg and Levy
+        [13]
+        , and highlight the ease of
+incorporating arbitrary contexts in the model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        In the skip-gram model, each word
+        w∈W
+        is associated with a vector
+        vw∈Rd
+        and
+similarly each context
+        c∈C
+        is represented as a vector
+        vc∈Rd
+        , where
+        W
+        is the words vocabulary,
+        C
+        is the contexts vocabulary, and
+        d
+        is the
+embedding dimensionality. The entries in the vectors are latent, and treated as
+parameters to be learned. Loosely speaking, we seek parameter values
+(that is, vector representations for both words and contexts) such
+that the dot product
+        vw⋅vc
+        associated with “good” word-context pairs
+is maximized.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        More specifically, the negative-sampling objective assumes a
+dataset
+        D
+        of observed
+        (w,c)
+        pairs of words
+        w
+        and the contexts
+        c
+        , which
+appeared in a large body of text.
+Consider a word-context pair
+        (w,c)
+        . Did this pair come from the
+data? We denote by
+        p(D=1|w,c)
+        the probability that
+        (w,c)
+        came from
+the data, and by
+        p(D=0|w,c)=1-p(D=1|w,c)
+        the probability that
+        (w,c)
+        did not.
+The distribution is modeled as:
+       </p>
+       p(D=1|w,c)=11+e-vw⋅vc
+       <p class="ltx_p">
+        where
+        vw
+        and
+        vc
+        (each a
+        d
+        -dimensional vector) are the model parameters
+to be learned. We seek to maximize the log-probability of the
+observed pairs belonging to the data, leading to the objective:
+       </p>
+       arg⁢maxvw,vc⁡∑(w,c)∈Dlog⁡11+e-vc⋅vw
+       <p class="ltx_p">
+        This objective admits a trivial solution in which
+        p(D=1|w,c)=1
+        for every pair
+        (w,c)
+        . This can be easily achieved by setting
+        vc=vw
+        and
+        vc⋅vw=K
+        for all
+        c,w
+        , where
+        K
+        is large enough number.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        In order to prevent the trivial solution, the objective is extended with
+        (w,c)
+        pairs for which
+        p(D=1|w,c)
+        must be low, i.e. pairs which are not in the data,
+by generating the set
+        D′
+        of random
+        (w,c)
+        pairs (assuming they
+are all incorrect), yielding the negative-sampling training objective:
+       </p>
+       argmaxvw,vc(∏(w,c)∈Dp(D=1|c,w)∏(w,c)∈D′p(D=0|c,w))
+       <p class="ltx_p">
+        which can be rewritten as:
+       </p>
+       arg⁢maxvw,vc⁡(∑(w,c)∈Dlog⁡σ⁢(vc⋅vw)+∑(w,c)∈D′log⁡σ⁢(-vc⋅vw))
+       <p class="ltx_p">
+        where
+        σ⁢(x)=1/(1+ex)
+        .
+The objective is trained in an online fashion using stochastic-gradient updates over
+the corpus
+        D∪D′
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        The negative samples
+        D′
+        can be constructed in various ways.
+We follow the method proposed by Mikolov et al.:
+for each
+        (w,c)∈D
+        we construct
+        n
+        samples
+        (w,c1),…,(w,cn)
+        ,
+where
+        n
+        is a hyperparameter and each
+        cj
+        is drawn according to its unigram distribution raised to the
+        3/4
+        power.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        Optimizing this objective makes observed word-context pairs have similar
+embeddings, while scattering unobserved pairs. Intuitively, words that appear in
+similar contexts should have similar embeddings, though we have not yet found a formal proof that
+        SkipGram
+        does indeed maximize the dot product of similar words.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Embedding with Arbitrary Contexts
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In the
+        SkipGram
+        embedding algorithm, the contexts of a word
+        w
+        are the words
+surrounding it in the text. The context vocabulary
+        C
+        is thus identical
+to the word vocabulary
+        W
+        .
+However, this restriction is not required by the model; contexts need not
+correspond to words, and the number of context-types can be substantially larger
+than the number of word-types.
+We generalize
+        SkipGram
+        by replacing the bag-of-words
+contexts with arbitrary contexts.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        In this paper we experiment with dependency-based
+        syntactic contexts
+        .
+Syntactic contexts capture different information than bag-of-word
+contexts, as we demonstrate using the sentence
+“
+        Australian scientist discovers star with telescope”.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Linear Bag-of-Words Contexts
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         This is the context used by
+         word2vec
+         and many other neural embeddings.
+Using a window of size
+         k
+         around the target word
+         w
+         ,
+         2⁢k
+         contexts are produced:
+the
+         k
+         words before and the
+         k
+         words after
+         w
+         . For
+         k=2
+         , the contexts of the
+target word
+         w
+         are
+         w-2,w-1,w+1,w+2
+         .
+In our example, the contexts of
+         discovers
+         are
+         Australian
+         ,
+         scientist
+         ,
+         star
+         ,
+         with
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p2">
+        <p class="ltx_p">
+         Note that a context window of size
+         2
+         may miss some important
+contexts (
+         telescope
+         is not a context of
+         discovers
+         ), while
+including some accidental ones (
+         Australian
+         is a context
+         discovers
+         ). Moreover, the contexts are unmarked, resulting in
+         discovers
+         being a context of both
+         stars
+         and
+         scientist
+         , which may result in
+         stars
+         and
+         scientists
+         ending up as neighbours in the embedded
+space.
+A window size of
+         5
+         is commonly used to capture broad topical content, whereas smaller windows contain more focused information about the target word.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Dependency-Based Contexts
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         An alternative to the bag-of-words approach is to derive contexts based on the
+syntactic relations the word participates in. This is facilitated by
+recent advances in parsing technology
+         [14, 15]
+         that
+allow parsing to syntactic dependencies with very high speed and
+near state-of-the-art accuracy.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p2">
+        <p class="ltx_p">
+         After parsing each sentence, we derive
+word contexts as follows:
+for a target word
+         w
+         with modifiers
+         m1,…,mk
+         and a head
+         h
+         , we consider
+the contexts
+         (m1,l⁢b⁢l1),…,(mk,l⁢b⁢lk),(h,l⁢b⁢lh-1)
+         , where
+         l⁢b⁢l
+         is
+the type of the dependency relation between the head and the modifier (e.g.
+         nsubj
+         ,
+         dobj
+         ,
+         prep_with
+         ,
+         amod
+         ) and
+         l⁢b⁢l-1
+         is used to mark the inverse-relation.
+Relations that include a preposition are “collapsed” prior to context
+extraction, by directly connecting the head and the object of the preposition, and
+subsuming the preposition itself into the dependency label. An example of the dependency
+context extraction is given in Figure
+         1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p3">
+        <p class="ltx_p">
+         Notice that syntactic dependencies are both more inclusive and more focused than
+bag-of-words. They capture relations to words that are far apart and thus
+“out-of-reach” with small window bag-of-words (e.g. the instrument of
+         discover
+         is
+         telescope/prep_with
+         ), and also filter out “coincidental” contexts
+which are within the window but not directly related to the target word (e.g.
+         Australian
+         is not used as the context for
+         discovers
+         ).
+In addition, the contexts are typed, indicating, for example, that
+         stars
+         are objects of discovery and
+         scientist
+         s are subjects.
+We thus expect the syntactic contexts to yield more focused embeddings,
+capturing more functional and less topical similarity.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments and Evaluation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We experiment with 3 training conditions:
+        BoW5
+        (bag-of-words
+contexts with
+        k=5
+        ),
+        BoW2
+        (same, with
+        k=2
+        ) and
+        Deps
+        (dependency-based syntactic contexts).
+We modified
+        word2vec
+        to support arbitrary contexts, and
+to output the context embeddings in addition to the word embeddings.
+For bag-of-words contexts we used the original
+        word2vec
+        implementation, and for
+syntactic contexts, we used our modified version. The negative-sampling
+parameter (how many negative contexts to sample for every correct one) was 15.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        All embeddings were trained on English Wikipedia.
+For
+        Deps
+        ,
+the corpus was tagged with parts-of-speech using the Stanford tagger
+        [28]
+        and parsed into labeled Stanford dependencies
+        [11]
+        using an
+implementation of the parser described in
+        [14]
+        .
+All tokens were converted to lowercase, and
+words and contexts that appeared less than 100
+times were filtered. This resulted in a vocabulary of about 175,000 words, with over 900,000 distinct syntactic contexts.
+We report results for 300 dimension embeddings, though
+similar trends were also observed with 600 dimensions.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Qualitative Evaluation
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Our first evaluation is qualitative: we manually inspect the 5 most similar words
+(by cosine similarity) to a given set of target words (Table
+         1
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         The first target word,
+         Batman
+         , results in similar sets across the different setups. This is
+the case for many target words. However, other target words show clear
+differences between embeddings.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         In
+         Hogwarts
+         - the school of magic from the fictional Harry Potter series - it
+is evident that
+         BoW
+         contexts reflect the
+         domain
+         aspect, whereas
+         Deps
+         yield a list of famous schools, capturing the
+         semantic type
+         of the target word. This observation holds for
+         Turing
+         and many other nouns as well;
+         BoW
+         find words that
+         associate
+         with
+         w
+         , while
+         Deps
+         find words that
+         behave
+         like
+         w
+         . Turney
+         [31]
+         described this
+distinction as
+         domain similarity
+         versus
+         functional similarity
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         The
+         Florida
+         example presents an ontological difference; bag-of-words
+contexts generate meronyms (counties or cities within Florida), while
+dependency-based contexts provide cohyponyms (other US states).
+We observed the same behavior with other geographical locations, particularly
+with countries (though not all of them).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         The next two examples demonstrate that similarities induced from
+         Deps
+         share a syntactic function (adjectives and gerunds), while similarities based on
+         BoW
+         are more diverse.
+Finally, we observe that while both
+         BoW5
+         and
+         BoW2
+         yield
+topical similarities, the larger window size result in more topicality, as
+expected.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p6">
+        <p class="ltx_p">
+         We also tried using the subsampling option
+         [21]
+         with
+         BoW
+         contexts (not shown). Since
+         word2vec
+         removes the subsampled words from the corpus
+         before
+         creating the window contexts, this option effectively increases the window size, resulting in greater topicality.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Quantitative Evaluation
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We supplement the examples in Table
+         1
+         with quantitative evaluation
+to show that the qualitative differences pointed out in the previous section
+are indeed widespread. To that end, we use the WordSim353 dataset
+         [12, 1]
+         .
+This dataset contains pairs of similar words that reflect either
+         relatedness
+         (topical similarity) or
+         similarity
+         (functional similarity)
+relations.
+         We use the embeddings in a retrieval/ranking setup, where
+the task is to rank the
+         similar
+         pairs in the dataset above
+the
+         related
+         ones.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         The pairs are ranked according to cosine similarities between the embedded
+words. We then draw a recall-precision curve that describes the embedding’s affinity
+towards one subset (“similarity”) over another (“relatedness”). We expect
+         Deps
+         ’s curve to be higher than
+         BoW2
+         ’s curve, which
+in turn is expected to be higher than
+         BoW5
+         ’s. The graph
+in Figure
+         2
+         a shows this is indeed the case.
+We repeated the experiment with a different dataset
+         [7]
+         that was used by Turney
+         [31]
+         to distinguish between
+domain and functional similarities. The results show a similar trend
+(Figure
+         2
+         b). When reversing the task such that the goal is to
+rank the
+         related
+         terms above the
+         similar
+         ones, the results are
+reversed, as expected (not shown).
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Model Introspection
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Neural word embeddings are often considered opaque and
+uninterpretable, unlike sparse vector space representations in which each
+dimension corresponds to a particular known context, or LDA models where
+dimensions correspond to latent topics. While this is true to a large extent,
+we observe that
+        SkipGram
+        does allow a non-trivial amount of
+introspection. Although we cannot assign a meaning to any particular dimension, we
+can indeed get a glimpse at the kind of information being captured by the
+model, by examining which contexts are “activated” by a target word.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Recall that the learning procedure is attempting to maximize the dot product
+        vc⋅vw
+        for good
+        (w,c)
+        pairs and minimize it for bad ones. If we keep
+the context embeddings, we can query the model for the contexts that
+are most activated by (have the highest dot product with) a given target word. By doing so, we can see what the model
+learned to be a good discriminative context for the word.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        To demonstrate, we list the 5 most activated contexts for our example
+words with
+        Deps
+        embeddings in
+Table
+        2
+        .
+Interestingly, the most discriminative syntactic contexts in
+these cases are
+not associated with subjects or objects of verbs (or their inverse), but rather
+with conjunctions, appositions, noun-compounds and adjectivial modifiers. Additionally,
+the collapsed preposition relation is very
+useful (e.g. for capturing the
+        school
+        aspect of
+        hogwarts
+        ).
+The presence of many conjunction contexts, such as
+        superman/conj
+        for
+        batman
+        and
+        singing/conj
+        for
+        dancing
+        , may explain the functional similarity observed in
+Section
+        4
+        ; conjunctions in natural language tend to
+enforce their conjuncts to share the same semantic types and inflections.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        In the future, we hope that insights from such model
+introspection will allow us to develop better contexts, by
+focusing on conjunctions and prepositions for example, or by trying to figure out why the
+subject and object relations are absent and finding ways of increasing their
+contributions.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We presented a generalization of the
+        SkipGram
+        embedding model in which
+the linear bag-of-words contexts are replaced with arbitrary ones, and
+experimented with dependency-based contexts, showing that they produce markedly
+different kinds of similarities. These results are expected, and follow similar
+findings in the distributional semantics literature. We also demonstrated how the resulting
+embedding model can be queried for the discriminative contexts for a given word,
+and observed that the learning procedure seems to favor relatively local
+syntactic contexts, as well as conjunctions and objects of preposition. We hope
+these insights will facilitate further research into improved context modeling
+and better, possibly task-specific, embedded representations.
+Our software, allowing for experimentation with arbitrary contexts, together
+with the embeddings described in this
+paper, are available for download at the authors’ websites.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

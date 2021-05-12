@@ -1,0 +1,964 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data</title>
+<!--Generated on Tue Jun 10 18:02:51 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Avneesh Saluja 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15213, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">avneesh@cs.cmu.edu</span> 
+<br class="ltx_break"/>&amp;Hany Hassan, Kristina Toutanova, Chris Quirk 
+<br class="ltx_break"/>Microsoft Research 
+<br class="ltx_break"/>Redmond, WA 98502, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">hanyh,kristout,chrisq@microsoft.com</span> 
+<br class="ltx_break"/>
+</span><span class="ltx_author_notes"><span>This work was done while the first author was interning at Microsoft Research</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Statistical phrase-based translation learns translation rules from bilingual corpora, and has traditionally only used monolingual evidence to construct features that rescore existing translation candidates.
+In this work, we present a semi-supervised graph-based approach for generating new translation rules that leverages bilingual and monolingual data.
+The proposed technique first constructs phrase graphs using both source and target language monolingual corpora.
+Next, graph propagation identifies translations of phrases that were not observed in the bilingual corpus, assuming that similar phrases have similar translations.
+We report results on a large Arabic-English system and a medium-sized Urdu-English system.
+Our proposed approach significantly improves the performance of competitive phrase-based systems, leading to consistent improvements between 1 and 4 BLEU points on standard evaluation sets.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Statistical approaches to machine translation (SMT) use sentence-aligned, parallel corpora to learn translation rules along with their probabilities.
+With large amounts of data, phrase-based translation systems <cite class="ltx_cite">[<a href="#bib.bib6" title="Statistical phrase-based translation" class="ltx_ref">14</a>, <a href="#bib.bib10" title="Hierarchical phrase-based translation" class="ltx_ref">5</a>]</cite> achieve state-of-the-art results in many typologically diverse language pairs <cite class="ltx_cite">[<a href="#bib.bib27" title="Findings of the 2013 Workshop on Statistical Machine Translation" class="ltx_ref">2</a>]</cite>.
+However, the limiting factor in the success of these techniques is parallel data availability.
+Even in resource-rich languages, learning reliable translations of multiword phrases is a challenge, and an adequate phrasal inventory is crucial for effective translation.
+This problem is exacerbated in the many language pairs for which parallel resources are either limited or nonexistent.
+While parallel data is generally scarce, monolingual resources exist in abundance and are being created at accelerating rates.
+Can we use monolingual data to augment the phrasal translations acquired from parallel data?</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The challenge of learning translations from monolingual data is of long standing interest, and has been approached in several ways <cite class="ltx_cite">[<a href="#bib.bib1" title="Identifying word translations in non-parallel texts" class="ltx_ref">20</a>, <a href="#bib.bib9" title="Improved statistical machine translation using paraphrases" class="ltx_ref">3</a>, <a href="#bib.bib11" title="Learning bilingual lexicons from monolingual corpora" class="ltx_ref">9</a>, <a href="#bib.bib17" title="Deciphering foreign language" class="ltx_ref">21</a>]</cite>.
+Our work introduces a new take on the problem using graph-based semi-supervised learning to acquire translation rules and probabilities by leveraging both monolingual and parallel data resources.
+On the source side, labeled phrases (those with known translations) are extracted from bilingual corpora, and unlabeled phrases are extracted from monolingual corpora; together they are embedded as nodes in a graph, with the monolingual data determining edge strengths between nodes (§<a href="#S2.SS2" title="2.2 Graph Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>).
+Unlike previous work <cite class="ltx_cite">[<a href="#bib.bib24" title="Combining bilingual and comparable corpora for low resource machine translation" class="ltx_ref">11</a>, <a href="#bib.bib26" title="Graph propagation for paraphrasing out-of-vocabulary words in statistical machine translation" class="ltx_ref">22</a>]</cite>, we use higher order <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams instead of restricting to unigrams, since our approach goes beyond OOV mitigation and can enrich the entire translation model by using evidence from monolingual text.
+This enhancement alone results in an improvement of almost 1.4 BLEU points.
+On the target side, phrases initially consisting of translations from the parallel data are selectively expanded with generated candidates (§<a href="#S2.SS1" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>), and are embedded in a target graph.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1064/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="606" height="258" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example source and target graphs used in our approach. Labeled phrases on the source side are black (with their corresponding translations on the target side also black); unlabeled and generated (§<a href="#S2.SS1" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>) phrases on the source and target sides respectively are white. Labeled phrases also have conditional probability distributions defined over target phrases, which are extracted from the parallel corpora.</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We then limit the set of translation options for each unlabeled source phrase (§<a href="#S2.SS3" title="2.3 Candidate Translation List Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>), and using a structured graph propagation algorithm, where translation information is propagated from labeled to unlabeled phrases proportional to <em class="ltx_emph">both</em> source and target phrase similarities, we estimate probability distributions over translations for the unlabeled source phrases (§<a href="#S2.SS4" title="2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>).
+The additional phrases are incorporated in the SMT system through a secondary phrase table (§<a href="#S2.SS5" title="2.5  Phrase-based SMT Expansion ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.5</span></a>).
+We evaluated the proposed approach on both Arabic-English and Urdu-English under a range of scenarios (§<a href="#S3" title="3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), varying the amount and type of monolingual corpora used, and obtained improvements between 1 and 4 BLEU points, even when using very large language models.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Generation &amp; Propagation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our goal is to obtain translation distributions for source phrases that are not present in the phrase table extracted from the parallel corpus.
+Both parallel and monolingual corpora are used to obtain these probability distributions over target phrases.
+We assume that sufficient parallel resources exist to learn a basic translation model using standard techniques, and also assume the availability of larger monolingual corpora in both the source and target languages.
+Although our technique applies to phrases of any length, in this work we concentrate on unigram and bigram phrases, which provides substantial computational cost savings.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Monolingual data is used to construct <em class="ltx_emph">separate</em> similarity graphs over phrases (word sequences), as illustrated in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+The source similarity graph consists of phrase nodes representing sequences of words in the source language.
+If a source phrase is found in the baseline phrase table it is called a <span class="ltx_text ltx_font_bold">labeled</span> phrase: its conditional empirical probability distribution over target phrases (estimated from the parallel data) is used as the label, and is subsequently never changed.
+Otherwise it is called an <span class="ltx_text ltx_font_bold">unlabeled</span> phrase, and our algorithm finds labels (translations) for these unlabeled phrases, with the help of the graph-based representation.
+The label space is thus the phrasal translation inventory, and like the source side it can also be represented in terms of a graph, initially consisting of target phrase nodes from the parallel corpus.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">For the unlabeled phrases, the set of possible target translations could be extremely large (e.g., all target language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams).
+Therefore, we first <span class="ltx_text ltx_font_bold">generate</span> and fix a list of possible target translations for each unlabeled source phrase.
+We then <span class="ltx_text ltx_font_bold">propagate</span> by deriving a probability distribution over these target phrases using graph propagation techniques.
+Next, we will describe the generation, graph construction and propagation steps.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Generation</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The objective of the generation step is to populate the target graph with <em class="ltx_emph">additional</em> target phrases for all unlabeled source phrases, yielding the full set of possible translations for the phrase.
+Prior to generation, one phrase node for each target phrase occurring in the baseline phrase table is added to the target graph (black nodes in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>’s target graph).
+We only consider target phrases whose source phrase is a bigram, but it is worth noting that the target phrases are of variable length.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The generation component is based on the observation that for structured label spaces, such as translation candidates for source phrases in SMT, even similar phrases have slightly different labels (target translations).
+The exponential dependence of the sizes of these spaces on the length of instances is to blame.
+Thus, the target phrase inventory from the parallel corpus may be inadequate for unlabeled instances.
+We therefore need to enrich the target or label space for unknown phrases.
+A naïve way to achieve this goal would be to extract all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams, from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="n=1" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow></math> to a maximum <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram order, from the monolingual data, but this strategy would lead to a combinatorial explosion in the number of target phrases.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">Instead, by intelligently expanding the target space using linguistic information such as morphology <cite class="ltx_cite">[<a href="#bib.bib12" title="Applying morphology generation models to machine translation" class="ltx_ref">25</a>, <a href="#bib.bib22" title="Translating into morphologically rich languages with synthetic phrases" class="ltx_ref">4</a>]</cite>, or relying on the baseline system to generate candidates similar to self-training <cite class="ltx_cite">[<a href="#bib.bib8" title="Effective self-training for parsing" class="ltx_ref">17</a>]</cite>, we can tractably propose novel translation candidates (white nodes in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>’s target graph) whose probabilities are then estimated during propagation.
+We refer to these additional candidates as “generated” candidates.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">To generate new translation candidates using the baseline system, we decode each unlabeled source bigram to generate its <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>-best translations.
+This set of candidate phrases is filtered to include only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams occurring in the target monolingual corpus, and helps to prune passed-through OOV words and invalid translations.
+To generate new translation candidates using morphological information, we morphologically segment words into prefixes, stem, and suffixes using linguistic resources.
+We assume that a morphological analyzer which provides context-independent analysis of word types exists, and implements the functions <span class="ltx_text ltx_font_smallcaps">stem</span>(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m3" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>) and <span class="ltx_text ltx_font_smallcaps">stem</span>(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m4" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>) for source and target word types.
+Based on these functions, source and target sequences of words can be mapped to sequences of stems.
+The morphological generation step adds to the target graph all target word sequences from the monolingual data that map to the same stem sequence as one of the target phrases occurring in the baseline phrase table.
+In other words, this step adds phrases that are morphological variants of existing phrases, differing only in their affixes.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Graph Construction</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">At this stage, there exists a list of source bigram phrases, both labeled and unlabeled, as well as a list of target language phrases of variable length, originating from both the phrase table and the generation step.
+To determine pairwise phrase similarities in order to embed these nodes in their graphs, we utilize the monolingual corpora on both the source and target sides to extract distributional features based on the context surrounding each phrase.
+For a phrase, we look at the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> words before and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> words after the phrase, explicitly distinguishing between the two sides, but not distance (i.e., bag of words on each side).
+Co-occurrence counts for each feature (context word) are accumulated over the monolingual corpus, and these counts are converted to pointwise mutual information (PMI) values, as is standard practice when computing distributional similarities.
+Cosine similarity between two phrases’ PMI vectors is used for similarity, and we take only the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> most similar phrases for each phrase, to create a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest neighbor similarity matrix for both source and target language phrases.
+These graphs are distinct, in that propagation happens within the two graphs but not between them.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">While accumulating co-occurrence counts for each phrase, we also maintain an inverted index data structure, which is a mapping from features (context words) to phrases that co-occur with that feature within a window of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> most frequent words in the monolingual corpus were removed as keys from this mapping, as these high entropy features do not provide much information.</span></span></span>
+The inverted index structure reduces the graph construction cost from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="\theta(n^{2})" display="inline"><mrow><mi>θ</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math>, by only computing similarities for a subset of all possible pairs of phrases, namely other phrases that have at least one feature in common.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Candidate Translation List Construction</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">As mentioned previously, we construct and fix a set of translation candidates, i.e., the label set for each unlabeled source phrase.
+The probability distribution over these translations is estimated through graph propagation, and the probabilities of items outside the list are assumed to be zero.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">We obtain these candidates from two sources:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We also obtained the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest neighbors of the translation candidates generated through these methods by utilizing the target graph, but this had minimal impact.</span></span></span></p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">The union of each unlabeled phrase’s labeled neighbors’ labels, which represents the set of target phrases that occur as translations of source phrases that are similar to the unlabeled source phrase. For <em class="ltx_emph">un gato</em> in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, this source would yield <em class="ltx_emph">the cat</em> and <em class="ltx_emph">cat</em>, among others, as candidates.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">The generated candidates for the unlabeled phrase – the ones from the baseline
+system’s decoder output, or from a morphological generator (e.g., <em class="ltx_emph">a cat</em> and <em class="ltx_emph">catlike</em> in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div></li>
+</ol>
+<p class="ltx_p">The morphologically-generated candidates for a given source unlabeled phrase are initially defined as the target word sequences in the monolingual data that have the same stem sequence as one of the baseline’s target translations for a source phrase which has the same stem sequence as the unlabeled source phrase.
+These candidates are scored using stem-level translation probabilities, morpheme-level lexical weighting probabilities, and a language model, and only the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m2" class="ltx_Math" alttext="30" display="inline"><mn>30</mn></math> candidates are included.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">After obtaining candidates from these two possible sources, the list is sorted by forward lexical score, using the lexical models of the baseline system. The top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> candidates are then chosen for each phrase’s translation candidate list.</p>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Large Language Model Effect ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> we provide example outputs of our system for a handful of unlabeled source phrases, and explicitly note the source of the translation candidate (‘G’ for generated, ‘N’ for labeled neighbor’s label).</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Graph Propagation</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">A graph propagation algorithm transfers label information from labeled nodes to unlabeled nodes by following the graph’s structure.
+In some applications, a label may consist of class membership information, e.g., each node can belong to one of a certain number of classes.
+In our problem, the “label” for each node is actually a probability distribution over a set of translation candidates (target phrases).
+For a given node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> refer to a candidate in the label set for node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m3" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>; then in graph propagation, the probability of candidate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m4" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> given source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m5" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> in iteration <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m6" class="ltx_Math" alttext="t+1" display="inline"><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></math> is:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\displaystyle\mathbb{P}^{t+1}(e|f)" display="inline"><mrow><msup><mi>ℙ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msup><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m2" class="ltx_Math" alttext="\displaystyle=\sum_{j\in\mathcal{N}(f)}T_{s}(j|f)\mathbb{P}^{t}(e|j)" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><msub><mi>T</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>j</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><msup><mi>ℙ</mi><mi>t</mi></msup><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>j</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m7" class="ltx_Math" alttext="\mathcal{N}(f)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> contains the (labeled and unlabeled) neighbors of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m8" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m9" class="ltx_Math" alttext="T_{s}(j|f)" display="inline"><mrow><msub><mi>T</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>j</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> is a term that captures how similar nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m10" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m11" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> are.
+This quantity is also known as the propagation probability, and its exact form will depend on the type of graph propagation algorithm used.
+For our purposes, node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m12" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> is a source phrasal node, the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m13" class="ltx_Math" alttext="\mathcal{N}(f)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> refers to other source phrases that are neighbors of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m14" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> (restricted to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m15" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest neighbors as in §<a href="#S2.SS2" title="2.2 Graph Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>), and the aim is to estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m16" class="ltx_Math" alttext="P(e|f)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math>, the probability of target phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m17" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> being a phrasal translation of source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m18" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>.</p>
+</div>
+<div id="S2.SS4.p2" class="ltx_para">
+<p class="ltx_p">A classic propagation algorithm that has been suitably modified for use in bilingual lexicon induction <cite class="ltx_cite">[<a href="#bib.bib20" title="Bilingual lexicon extraction from comparable corpora using label propagation" class="ltx_ref">24</a>, <a href="#bib.bib26" title="Graph propagation for paraphrasing out-of-vocabulary words in statistical machine translation" class="ltx_ref">22</a>]</cite> is the <span class="ltx_text ltx_font_bold">label propagation</span> (LP) algorithm of <cite class="ltx_cite">Zhu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Semi-supervised learning using gaussian fields and harmonic functions" class="ltx_ref">2003</a>)</cite>.
+In this case, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m1" class="ltx_Math" alttext="T_{s}(f,j)" display="inline"><mrow><msub><mi>T</mi><mi>s</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> is chosen to be:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\displaystyle T_{s}(j|f)" display="inline"><mrow><msub><mi>T</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>j</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m2" class="ltx_Math" alttext="\displaystyle=\frac{w^{s}_{f,j}}{\sum_{j^{\prime}\in\mathcal{N}(f)}w^{s}_{f,j^%&#10;{\prime}}}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><msubsup><mi>w</mi><mrow><mi>f</mi><mo>,</mo><mi>j</mi></mrow><mi>s</mi></msubsup><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>j</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></msub><msubsup><mi>w</mi><mrow><mi>f</mi><mo>,</mo><msup><mi>j</mi><mo>′</mo></msup></mrow><mi>s</mi></msubsup></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m2" class="ltx_Math" alttext="w^{s}_{f,j}" display="inline"><msubsup><mi>w</mi><mrow><mi>f</mi><mo>,</mo><mi>j</mi></mrow><mi>s</mi></msubsup></math> is the cosine similarity (as computed in §<a href="#S2.SS2" title="2.2 Graph Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>) between phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m3" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> and phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m4" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> on side <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p2.m5" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> (the source side).</p>
+</div>
+<div id="S2.SS4.p3" class="ltx_para">
+<p class="ltx_p">As evident in Eq. <a href="#S2.E2" title="(2) ‣ 2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, LP only takes into account source language similarity of phrases.
+To see this observation more clearly, let us reformulate Eq. <a href="#S2.E1" title="(1) ‣ 2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> more generally as:</p>
+</div>
+<div id="S2.SS4.p4" class="ltx_para">
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\displaystyle\mathbb{P}^{t+1}(e|f)" display="inline"><mrow><msup><mi>ℙ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msup><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m2" class="ltx_Math" alttext="\displaystyle=\sum_{j\in\mathcal{N}(f)}T_{s}(j|f)\sum_{e^{\prime}\in\mathcal{H%&#10;}(j)}T_{t}(e^{\prime}|e)\mathbb{P}^{t}(e^{\prime}|j)" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><msub><mi>T</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>j</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow><msup><mi>ℙ</mi><mi>t</mi></msup><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>j</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m1" class="ltx_Math" alttext="\mathcal{H}(j)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></math> is the translation candidate set for source phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m3" class="ltx_Math" alttext="T_{t}(e^{\prime}|e)" display="inline"><mrow><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> is the propagation probability between nodes or phrases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m4" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m5" class="ltx_Math" alttext="e^{\prime}" display="inline"><msup><mi>e</mi><mo>′</mo></msup></math> on the <em class="ltx_emph">target</em> side.
+We have simply replaced <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m6" class="ltx_Math" alttext="\mathbb{P}^{t}(e|j)" display="inline"><mrow><msup><mi>ℙ</mi><mi>t</mi></msup><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>j</mi><mo>)</mo></mrow></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m7" class="ltx_Math" alttext="\sum_{e^{\prime}\in\mathcal{H}(j)}T_{t}(e^{\prime}|e)\mathbb{P}^{t}(e^{\prime}%&#10;|j)" display="inline"><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></msub><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow><msup><mi>ℙ</mi><mi>t</mi></msup><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>j</mi><mo>)</mo></mrow></mrow></math>, defining it in terms of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m8" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>’s translation candidate list.</p>
+</div>
+<div id="S2.SS4.p5" class="ltx_para">
+<p class="ltx_p">Note that in the original LP formulation the target side information is disregarded, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p5.m1" class="ltx_Math" alttext="T_{t}(e^{\prime}|e)=1" display="inline"><mrow><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow><mo>=</mo><mn>1</mn></mrow></math> if and only if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p5.m2" class="ltx_Math" alttext="e=e^{\prime}" display="inline"><mrow><mi>e</mi><mo>=</mo><msup><mi>e</mi><mo>′</mo></msup></mrow></math> and 0 otherwise.
+As a result, LP is suboptimal for our needs, since it is unable to appropriately handle generated translation candidates for the unlabeled phrases.
+These translation candidates are usually not present as translations for the labeled phrases (or for the labeled phrases that neighbor the unlabeled one in question).
+When propagating information from the labeled phrases, such candidates will obtain no probability mass since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p5.m3" class="ltx_Math" alttext="e\neq e^{\prime}" display="inline"><mrow><mi>e</mi><mo>≠</mo><msup><mi>e</mi><mo>′</mo></msup></mrow></math>.
+Thus, due to the setup of the problem, LP naturally biases away from translation candidates produced during the generation step (§<a href="#S2.SS1" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>).</p>
+</div>
+<div id="S2.SS4.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">2.4.1 </span>Structured Label Propagation</h4>
+
+<div id="S2.SS4.SSS1.p1" class="ltx_para">
+<p class="ltx_p">The label set we are considering has a similarity structure encoded by the target graph.
+How can we exploit this structure in graph propagation on the source graph?
+In Liu <em class="ltx_emph">et al.</em> <cite class="ltx_cite">[<a href="#bib.bib19" title="Learning translation consensus with structured label propagation" class="ltx_ref">15</a>]</cite>, the authors generalize label propagation to <span class="ltx_text ltx_font_bold">structured label propagation</span> (SLP) in an effort to work more elegantly with structured labels.
+In particular, the definition of target similarity is similar to that of source similarity:</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\displaystyle T_{t}(e^{\prime}|e)" display="inline"><mrow><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m2" class="ltx_Math" alttext="\displaystyle=\frac{w^{t}_{e,e^{\prime}}}{\sum_{e^{\prime\prime}\in\mathcal{H}%&#10;(j)}w^{t}_{e,e^{\prime\prime}}}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><msubsup><mi>w</mi><mrow><mi>e</mi><mo>,</mo><msup><mi>e</mi><mo>′</mo></msup></mrow><mi>t</mi></msubsup><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mi>′′</mi></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></msub><msubsup><mi>w</mi><mrow><mi>e</mi><mo>,</mo><msup><mi>e</mi><mi>′′</mi></msup></mrow><mi>t</mi></msubsup></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">Therefore, the final update equation in SLP is:</p>
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m1" class="ltx_Math" alttext="\displaystyle\mathbb{P}^{t+1}(e|f)" display="inline"><mrow><msup><mi>ℙ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msup><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m2" class="ltx_Math" alttext="\displaystyle=\sum_{j\in\mathcal{N}(f)}T_{s}(j|f)\sum_{e^{\prime}\in\mathcal{H%&#10;}(j)}T_{t}(e^{\prime}|e)\mathbb{P}^{t}(e^{\prime}|j)" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒩</mi><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><msub><mi>T</mi><mi>s</mi></msub><mrow><mo>(</mo><mi>j</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>e</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></munder></mstyle><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow><msup><mi>ℙ</mi><mi>t</mi></msup><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>j</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">With this formulation, even if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.SSS1.p1.m1" class="ltx_Math" alttext="e\neq e^{\prime}" display="inline"><mrow><mi>e</mi><mo>≠</mo><msup><mi>e</mi><mo>′</mo></msup></mrow></math>, the similarity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.SSS1.p1.m2" class="ltx_Math" alttext="T_{t}(e^{\prime}|e)" display="inline"><mrow><msub><mi>T</mi><mi>t</mi></msub><mrow><mo>(</mo><msup><mi>e</mi><mo>′</mo></msup><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math> as determined by the target phrase graph will dictate propagation probability.
+We re-normalize the probability distributions after each propagation step to sum to one over the fixed list of translation candidates, and run the SLP algorithm to convergence.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Empirically within a few iterations and a wall-clock time of less than 10 minutes in total.</span></span></span></p>
+</div>
+</div>
+</div>
+<div id="S2.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.5 </span> Phrase-based SMT Expansion</h3>
+
+<div id="S2.SS5.p1" class="ltx_para">
+<p class="ltx_p">After graph propagation, each unlabeled phrase is labeled with a categorical distribution over the set of translation candidates defined in §<a href="#S2.SS3" title="2.3 Candidate Translation List Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+In order to utilize these newly acquired phrase pairs, we need to compute their relevant features.
+The phrase pairs have four log-probability features with two likelihood features and two lexical weighting features.
+In addition, we use a sophisticated lexicalized hierarchical reordering model (HRM) <cite class="ltx_cite">[<a href="#bib.bib28" title="A simple and effective hierarchical phrase reordering model" class="ltx_ref">8</a>]</cite> with five features for each phrase pair.</p>
+</div>
+<div id="S2.SS5.p2" class="ltx_para">
+<p class="ltx_p">We utilize the graph propagation-estimated forward phrasal probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS5.p2.m1" class="ltx_Math" alttext="\mathbb{P}(e|f)" display="inline"><mrow><mi>ℙ</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> as the forward likelihood probabilities for the acquired phrases; to obtain the backward phrasal probability for a given phrase pair, we make use of Bayes’ Theorem:</p>
+<table id="Sx1.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle\mathbb{P}(f|e)" display="inline"><mrow><mi>ℙ</mi><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle=\frac{\mathbb{P}(e|f)\mathbb{P}(f)}{\mathbb{P}(e)}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi>ℙ</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><mi>ℙ</mi><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow><mrow><mi>ℙ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the marginal probabilities of source and target phrases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS5.p2.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS5.p2.m3" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> are obtained from the counts extracted from the monolingual data.
+The baseline system’s lexical models are used for the forward and backward lexical scores.
+The HRM probabilities for the new phrase pairs are estimated from the baseline system by backing-off to the average values for phrases with similar length.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Evaluation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We performed an extensive evaluation to examine various aspects of the approach along with overall system performance.
+Two language pairs were used: Arabic-English and Urdu-English.
+The Arabic-English evaluation was used to validate the decisions made during the development of our method and also to highlight properties of the technique.
+With it, in §<a href="#S3.SS2" title="3.2 Experimental Variations ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> we first analyzed the impact of utilizing phrases instead of words and SLP instead of LP; the latter experiment underscores the importance of generated candidates.
+We also look at how adding morphological knowledge to the generation process can further enrich performance.
+In §<a href="#S3.SS3" title="3.3 Large Language Model Effect ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>, we then examined the effect of using a very large 5-gram language model training on 7.5 billion English tokens to understand the nature of the improvements in §<a href="#S3.SS2" title="3.2 Experimental Variations ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+The Urdu to English evaluation in §<a href="#S3.SS4" title="3.4 Urdu-English ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a> focuses on how noisy parallel data and completely monolingual (i.e., not even comparable) text can be used for a realistic low-resource language pair, and is evaluated with the larger language model only.
+We also examine how our approach can learn from noisy parallel data compared to the traditional SMT system.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Baseline phrasal systems are used both for comparison and for generating translation candidates for unlabeled phrases as described in §<a href="#S2.SS1" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+The baseline is a state-of-the-art phrase-based system; we perform word alignment using a lexicalized hidden Markov model, and then the phrase table is extracted using the <span class="ltx_text ltx_font_typewriter">grow-diag-final</span> heuristic <cite class="ltx_cite">[<a href="#bib.bib6" title="Statistical phrase-based translation" class="ltx_ref">14</a>]</cite>.
+The 13 baseline features (2 lexical, 2 phrasal, 5 HRM, and 1 language model, word penalty, phrase length feature and distortion penalty feature) were tuned using MERT <cite class="ltx_cite">[<a href="#bib.bib5" title="Minimum error rate training in statistical machine translation" class="ltx_ref">18</a>]</cite>, which is also used to tune the 4 feature weights introduced by the secondary phrase table (2 lexical and 2 phrasal, other features being shared between the two tables).
+For all systems, we use a distortion limit of 4.
+We use case-insensitive BLEU <cite class="ltx_cite">[<a href="#bib.bib29" title="BLEU: a method for automatic evaluation of machine translation" class="ltx_ref">19</a>]</cite> to evaluate translation quality.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Datasets</h3>
+
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Parameter</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:346.9pt;" width="346.9pt"><span class="ltx_text ltx_font_bold ltx_font_small">Description</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Value</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">m</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:346.9pt;" width="346.9pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math><span class="ltx_text ltx_font_small">-best candidate list size when bootstrapping
+candidates in generation stage.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">100</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic ltx_font_small">p</span></td>
+<td class="ltx_td ltx_align_justify" style="width:346.9pt;" width="346.9pt"><span class="ltx_text ltx_font_small">Window size on each side when extracting features for
+phrases.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic ltx_font_small">q</span></td>
+<td class="ltx_td ltx_align_justify" style="width:346.9pt;" width="346.9pt"><span class="ltx_text ltx_font_small">Filter the </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math><span class="ltx_text ltx_font_small"> most frequent words when storing the
+inverted index data structure for graph construction. Both
+source and target sides share the same value.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">25</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic ltx_font_small">k</span></td>
+<td class="ltx_td ltx_align_justify" style="width:346.9pt;" width="346.9pt"><span class="ltx_text ltx_font_small">Number of neighbors stored for each phrase for both
+source and target graphs. This parameter controls the sparsity
+of the graph.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">500</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_italic ltx_font_small">r</span></td>
+<td class="ltx_td ltx_align_justify" style="width:346.9pt;" width="346.9pt"><span class="ltx_text ltx_font_small">Maximum size of translation candidate list for
+unlabeled phrases.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">20</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_footnote">Parameters, explanation of their function,
+and value chosen.</span></div>
+</div>
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Bilingual corpus statistics for both language pairs are presented in Table <a href="#S3.T2" title="Table 2 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+For Arabic-English, our training corpus consisted of 685k sentence pairs from standard LDC corpora<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>LDC2007T08 and LDC2008T09</span></span></span>. The NIST MT06 and MT08 Arabic-English evaluation sets (combining the newswire and weblog domains for both sets), with four references each, were used as tuning and testing sets respectively.
+For Urdu-English, the training corpus was provided by the LDC for the NIST Urdu-English MT evaluation, and most of the data was automatically acquired from the web, making it quite noisy.
+After filtering, there are approximately 65k parallel sentences; these were supplemented by an additional 100k dictionary entries.
+Tuning and test data consisted of the MT08 and MT09 evaluation corpora, once again a mixture of news and web text.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center" style="width:433.6pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_bold ltx_font_small">Corpus</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Sentences</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Words (Src)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ar-En Train</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">685,502</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">17,055,168</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ar-En Tune (MT06)</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,664</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">33,739</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ar-En Test (MT08)</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,360</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">42,472</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ur-En Train</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">165,159</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,169,367</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ur-En Tune (MT08)</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,864</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">39,925</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:182.1pt;" width="182.1pt"><span class="ltx_text ltx_font_small">Ur-En Test (MT09)</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,792</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">39,922</span></td></tr>
+</tbody>
+</table>
+</span>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Bilingual corpus statistics for the Arabic-English and Urdu-English datasets used.</div>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T3" title="Table 3 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> contains statistics for the monolingual corpora used in our experiments.
+From these corpora, we extracted all sentences that contained at least one source or target phrase match to compute features for graph construction.
+For the Arabic to English experiments, the monolingual corpora are taken from the AFP Arabic and English Gigaword corpora and are of a similar date range to each other (1994-2010), rendering them comparable but not sentence-aligned or parallel.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center" style="width:433.6pt;height:0px;vertical-align:-0.0pt;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_bold ltx_font_small">Corpus</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Sentences</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Words</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">Ar Comparable</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">10.2m</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">290m</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">En I Comparable</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">29.8m</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">900m</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">Ur Noisy Parallel</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">470k</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">5m</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">En II Noisy Parallel</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">470k</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">4.7m</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">Ur Non-Comparable</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">7m</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">119m</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:173.4pt;" width="173.4pt"><span class="ltx_text ltx_font_small">En II Non-Comparable</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">17m</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">510m</span></td></tr>
+</tbody>
+</table>
+</span>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_footnote">Monolingual corpus statistics for the Arabic-English and Urdu-English evaluations. The monolingual corpora can be sub-divided into comparable, noisy parallel, and non-comparable components. En I refers to the English side of the Arabic-English corpora, and En II to the English side of the Urdu-English corpora.</span></div>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">For the Urdu-English experiments, completely non-comparable monolingual text was used for graph construction; we obtained the Urdu side through a web-crawler, and a subset of the AFP Gigaword English corpus was used for English.
+In addition, we obtained a corpus from the ELRA<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>ELRA-W0038</span></span></span>, which contains a mix of parallel and monolingual data; based on timestamps, we extracted a comparable English corpus for the ELRA Urdu monolingual data to form a roughly 470k-sentence “noisy parallel” set. We used this set in two ways: either to augment the parallel data presented in Table <a href="#S3.T2" title="Table 2 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, or to augment the non-comparable monolingual data in Table <a href="#S3.T3" title="Table 3 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> for graph construction.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">For the parameters introduced throughout the text, we present in Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> a reminder of their interpretation as well as the values used in this work.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Experimental Variations</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In our first set of experiments, we looked at the impact of choosing bigrams over unigrams as our basic unit of representation, along with performance of LP (Eq. <a href="#S2.E2" title="(2) ‣ 2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) compared to SLP (Eq. <a href="#S2.E4" title="(4) ‣ 2.4.1 Structured Label Propagation ‣ 2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+Recall that LP only takes into account source similarity; since the vast majority of generated candidates do not occur as labeled neighbors’ labels, restricting propagation to the source graph drastically reduces the usage of generated candidates as labels, but does not completely eliminate it.
+In these experiments, we utilize a reasonably-sized 4-gram language model trained on 900m English tokens, i.e., the English monolingual corpus.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T4" title="Table 4 ‣ 3.2 Experimental Variations ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> presents the results of these variations; overall, by taking into account generated candidates appropriately and using bigrams (“SLP 2-gram”), we obtained a 1.13 BLEU gain on the test set.
+Using unigrams (“SLP 1-gram”) actually does worse than the baseline, indicating the importance of focusing on translations for sparser bigrams.
+While LP (“LP 2-gram”) does reasonably well, its underperformance compared to SLP underlines the importance of enriching the translation space with generated candidates and handling these candidates appropriately.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>It is relatively straightforward to combine both unigrams and bigrams in one source graph, but for experimental clarity we did not mix these phrase lengths.</span></span></span>
+In “SLP-HalfMono”, we use only half of the monolingual comparable corpora, and still obtain an improvement of 0.56 BLEU points, indicating that adding more monolingual data is likely to improve the system further. Interestingly, biasing away from generated candidates using all the monolingual data (“LP 2-gram”) performs similarly to using half the monolingual corpora and handling generated candidates properly (“SLP-HalfMono”).</p>
+</div>
+<div id="S3.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"/>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">BLEU</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_bold ltx_font_small">Setup</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Tune</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">39.33</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">38.09</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP 1-gram</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">39.47</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">37.85</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">LP 2-gram</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">40.75</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">38.68</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP 2-gram</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">41.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">39.22</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP-HalfMono 2-gram</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">40.82</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">38.65</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP+Morph 2-gram</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">41.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">39.35</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span><span class="ltx_text ltx_font_footnote">Results for the Arabic-English evaluation. The LP vs. SLP comparison highlights the importance of target side enrichment via translation candidate generation, 1-gram vs. 2-gram comparisons highlight the importance of emphasizing phrases, utilizing half the monolingual data shows sensitivity to monolingual corpus size, and adding morphological information results in additional improvement.</span></div>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Additional morphologically generated candidates were added in this experiment as detailed in §<a href="#S2.SS3" title="2.3 Candidate Translation List Construction ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+We used a simple hand-built Arabic morphological analyzer that segments word types based on regular expressions, and an English lexicon-based morphological analyzer.
+The morphological candidates add a small amount of improvement, primarily by targeting genuine OOVs.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Large Language Model Effect</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this set of experiments, we examined if the improvements in §<a href="#S3.SS2" title="3.2 Experimental Variations ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> can be explained primarily through the extraction of language model characteristics during the semi-supervised learning phase, or through orthogonal pieces of evidence.
+Would the improvement be less substantial had we used a very large language model?</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">To answer this question we trained a 5-gram language model on 570M sentences (7.6B tokens), with data from various sources including the Gigaword corpus<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>LDC2011T07</span></span></span>, WMT and European Parliamentary Proceedings<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>http://www.statmt.org/wmt13/</span></span></span>, and web-crawled data from Wikipedia and the web.
+Only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>-best generated candidates from the baseline were considered during generation, along with labeled neighbors’ labels.</p>
+</div>
+<div id="S3.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"/>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">BLEU</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_bold ltx_font_small">Setup</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Tune</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">Baseline+LargeLM</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">41.48</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">39.86</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP+LargeLM</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">42.82</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">41.29</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>Results with the large language model scenario. The gains are even better than with the smaller language model.</div>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T5" title="Table 5 ‣ 3.3 Large Language Model Effect ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents the results of using this language model.
+We obtained a robust, 1.43-BLEU point gain, indicating that the addition of the newly induced phrases provided genuine translation improvements that cannot be compensated by the language model effect.
+Further examination of the differences between the two systems yielded that most of the improvements are due to better bigrams and trigrams, as indicated by the breakdown of the BLEU score precision per <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram, and primarily leverages higher quality generated candidates from the baseline system.
+We analyze the output of these systems further in the output analysis section below (§<a href="#S3.SS5" title="3.5 Analysis of Output ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.5</span></a>).</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1064/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="597" height="773" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Nine example outputs of our system vs. the baseline highlighting the properties of our approach. Each example is labeled (Ar) for Arabic source or (Ur) for Urdu source, and system candidates are labeled with (N) if the candidate unlabeled phrase’s labeled neighbor’s label, or (G) if the candidate was generated.</div>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Urdu-English</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">In order to evaluate the robustness of these results beyond one language pair, we looked at Urdu-English, a low resource pair likely to benefit from this approach.
+In this set of experiments, we used the large language model in §<a href="#S3.SS3" title="3.3 Large Language Model Effect ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>, and only used baseline-generated candidates.
+We experimented with two extreme setups that differed in the data assumed parallel, from which we built our baseline system, and the data treated as monolingual, from which we built our source and target graphs.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">In the first setup, we use the noisy parallel data for graph construction and augment the non-comparable corpora with it:</p>
+<ul id="I2" class="ltx_itemize">[noitemsep]
+
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">parallel: “Ur-En Train”</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Urdu monolingual: “Ur Noisy Parallel”+“Ur Non-Comparable”</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">English monolingual: “En II Noisy Parallel”+“En II Non-Comparable”</p>
+</div></li>
+</ul>
+<p class="ltx_p">The results from this setup are presented as “Baseline” and “SLP+Noisy” in Table <a href="#S3.T6" title="Table 6 ‣ 3.4 Urdu-English ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+In the second setup, we train a baseline system using the data in Table <a href="#S3.T2" title="Table 2 ‣ 3.1 Datasets ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, augmented with the noisy parallel text:</p>
+<ul id="I3" class="ltx_itemize">[noitemsep]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">parallel: “Ur-En Train”+“Ur Noisy Parallel”+“En II Noisy Parallel”</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Urdu monolingual: “Ur Non-Comparable”</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">English monolingual: “En II Non-Comparable”</p>
+</div></li>
+</ul>
+<p class="ltx_p">The results from this setup are presented as “Baseline+Noisy” and “SLP” in Table <a href="#S3.T6" title="Table 6 ‣ 3.4 Urdu-English ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+The two setups allow us to examine how effectively our method can learn from the noisy parallel data by treating it as monolingual (i.e., for graph construction), compared to treating this data as parallel, and also examines the realistic scenario of using completely non-comparable monolingual text for graph construction as in the second setup.</p>
+</div>
+<div id="S3.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"/>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">BLEU</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_bold ltx_font_small">Setup</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Tune</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Test</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">21.87</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">21.17</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP+Noisy</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">26.42</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">25.38</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">Baseline+Noisy</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">27.59</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">27.24</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:216.8pt;" width="216.8pt"><span class="ltx_text ltx_font_small">SLP</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">28.53</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">28.43</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span><span class="ltx_text ltx_font_footnote">Results for the Urdu-English evaluation evaluated with BLEU. All experiments were conducted with the larger language model, and generation only considered the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T6.m2" class="ltx_Math" alttext="m" display="inline"><mi mathsize="normal" stretchy="false">m</mi></math>-best candidates from the baseline system.</span></div>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">In the first setup, we get a huge improvement of 4.2 BLEU points (“SLP+Noisy”) when using the monolingual data and the noisy parallel data for graph construction.
+Our method obtained much of the gains achieved by the supervised baseline approach that utilizes the noisy parallel data in conjunction with the NIST-provided parallel data (“Baseline+Noisy”), but with fewer assumptions on the nature of the corpora (monolingual vs. parallel).
+Furthermore, despite completely un-aligned, non-comparable monolingual text on the Urdu and English sides, and a very large language model, we can still achieve gains in excess of 1.2 BLEU points (“SLP”) in a difficult evaluation scenario, which shows that the technique adds a genuine translation improvement over and above naïve memorization of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram sequences.</p>
+</div>
+</div>
+<div id="S3.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.5 </span>Analysis of Output</h3>
+
+<div id="S3.SS5.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Large Language Model Effect ‣ 3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> looks at some of the sample hypotheses produced by our system and the baseline, along with reference translations. The outputs produced by our system are additionally annotated with the origin of the candidate, i.e., labeled neighbor’s label (N) or generated (G).</p>
+</div>
+<div id="S3.SS5.p2" class="ltx_para">
+<p class="ltx_p">The Arabic-English examples are numbered 1 to 5.
+The first example shows a source bigram unknown to the baseline system, resulting in a suboptimal translation, while our system proposes the correct translation of “sending reinforcements”.
+The second example shows a word that was an OOV for the baseline system, while our system got a perfect translation.
+The third and fourth examples represent bigram phrases with much better translations compared to backing off to the lexical translations as in the baseline.
+The fifth Arabic-English example demonstrates the pitfalls of over-reliance on the distributional hypothesis: the source bigram corresponding to the name “abd almahmood” is distributional similar to another named entity “mahmood” and the English equivalent is offered as a translation.
+The distributional hypothesis can sometimes be misleading.
+The sixth example shows how morphological information can propose novel candidates: an OOV word is broken down to its stem via the analyzer and candidates are generated based on the stem.</p>
+</div>
+<div id="S3.SS5.p3" class="ltx_para">
+<p class="ltx_p">The Urdu-English examples are numbered 7 to 9.
+In example 7, the bigram “par umeed” (corresponding to “hopeful”) is never seen in the baseline system, which has only seen “umeed” (“hope”).
+By leveraging the monolingual corpus to understand the context of this unlabeled bigram, we can utilize the graph structure to propose a syntactically correct form, also resulting in a more fluent and correct sentence as determined by the language model.
+Examples 8 &amp; 9 show cases where the baseline deletes words or translates them into more common words e.g., “conversation” to “the”, while our system proposes reasonable candidates.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Related Work</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The idea presented in this paper is similar in spirit to bilingual lexicon induction (BLI), where a seed lexicon in two different languages is expanded with the help of monolingual corpora, primarily by extracting distributional similarities from the data using word context.
+This line of work, initiated by <cite class="ltx_cite">Rapp (<a href="#bib.bib1" title="Identifying word translations in non-parallel texts" class="ltx_ref">1995</a>)</cite> and continued by others <cite class="ltx_cite">[<a href="#bib.bib2" title="An ir approach for translating new words from nonparallel, comparable texts" class="ltx_ref">7</a>, <a href="#bib.bib4" title="Learning a translation lexicon from monolingual corpora" class="ltx_ref">13</a>]</cite> (<em class="ltx_emph">inter alia</em>) is limited from a downstream perspective, as translations for only a small number of words are induced and oftentimes for common or frequently occurring ones only.
+Recent improvements to BLI <cite class="ltx_cite">[<a href="#bib.bib20" title="Bilingual lexicon extraction from comparable corpora using label propagation" class="ltx_ref">24</a>, <a href="#bib.bib23" title="Supervised bilingual lexicon induction with multiple monolingual signals" class="ltx_ref">10</a>]</cite> have contained a graph-based flavor by presenting label propagation-based approaches using a seed lexicon, but evaluation is once again done on top-1 or top-3 accuracy, and the focus is on unigrams.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Razmara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib26" title="Graph propagation for paraphrasing out-of-vocabulary words in statistical machine translation" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Irvine and Callison-Burch (<a href="#bib.bib24" title="Combining bilingual and comparable corpora for low resource machine translation" class="ltx_ref">2013</a>)</cite> conduct a more extensive evaluation of their graph-based BLI techniques, where the emphasis and end-to-end BLEU evaluations concentrated on OOVs, i.e., unigrams, and not on enriching the entire translation model.
+As with previous BLI work, these approaches only take into account source-side similarity of words; only moderate gains (and in the latter work, on a subset of language pairs evaluated) are obtained.
+Additionally, because of our structured propagation algorithm, our approach is better at handling multiple translation candidates and does not need to restrict itself to the top translation.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Klementiev<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib18" title="Toward statistical machine translation without parallel corpora" class="ltx_ref">2012</a>)</cite> propose a method that utilizes a pre-existing phrase table and a small bilingual lexicon, and performs BLI using monolingual corpora.
+The operational scope of their approach is limited in that they assume a scenario where unknown phrase pairs are provided (thereby sidestepping the issue of translation candidate generation for completely unknown phrases), and what remains is the estimation of phrasal
+probabilities.
+In our case, we obtain the phrase pairs from the graph structure (and therefore indirectly from the monolingual data) and a separate generation step, which plays an important role in good performance of the method. Similarly, <cite class="ltx_cite">Zhang and Zong (<a href="#bib.bib25" title="Learning a phrase-based translation model from monolingual data with application to domain adaptation" class="ltx_ref">2013</a>)</cite> present a series of heuristics that are applicable in a fairly narrow setting.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">The notion of translation consensus, wherein similar sentences on the source side are encouraged to have similar target language translations, has also been explored via a graph-based approach <cite class="ltx_cite">[<a href="#bib.bib14" title="Graph-based learning for statistical machine translation" class="ltx_ref">1</a>]</cite>.
+<cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Learning translation consensus with structured label propagation" class="ltx_ref">2012</a>)</cite> extend this method by proposing a novel structured label propagation algorithm to deal with the generalization of propagating <em class="ltx_emph">sets</em> of labels instead of single labels, and also integrated information from the graph into the decoder.
+In fact, we utilize this algorithm in our propagation step (§<a href="#S2.SS4" title="2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>).
+However, the former work operates only at the level of sentences, and while the latter does extend the framework to sub-spans of sentences, they do not discover new translation pairs or phrasal probabilities for new pairs at all, but instead re-estimate phrasal probabilities using the graph structure and add this score as an additional feature during decoding.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">The goal of leveraging non-parallel data in machine translation has been explored from several different angles.
+Paraphrases extracted by “pivoting” via a third language <cite class="ltx_cite">[<a href="#bib.bib9" title="Improved statistical machine translation using paraphrases" class="ltx_ref">3</a>]</cite> can be derived solely from monolingual corpora using distributional similarity <cite class="ltx_cite">[<a href="#bib.bib15" title="Improved statistical machine translation using monolingually-derived paraphrases" class="ltx_ref">16</a>]</cite>.
+<cite class="ltx_cite">Snover<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="Language and translation model adaptation using comparable corpora" class="ltx_ref">2008</a>)</cite> use cross-lingual information retrieval techniques to find potential sentence-level translation candidates among comparable corpora.
+In this case, the goal is to try and construct a corpus as close to parallel as possible from comparable corpora, and is a fairly different take on the problem we are looking at.
+Decipherment-based approaches <cite class="ltx_cite">[<a href="#bib.bib17" title="Deciphering foreign language" class="ltx_ref">21</a>, <a href="#bib.bib21" title="Large scale decipherment for out-of-domain machine translation" class="ltx_ref">6</a>]</cite> have generally taken a monolingual view to the problem and combine phrase tables through the log-linear model during feature weight training.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this work, we presented an approach that can expand a translation model extracted from a sentence-aligned, bilingual corpus using a large amount of unstructured, monolingual data in both source and target languages, which leads to improvements of 1.4 and 1.2 BLEU points over strong baselines on evaluation sets, and in some scenarios gains in excess of 4 BLEU points.
+In the future, we plan to estimate the graph structure through other learned, distributed representations.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The authors would like to thank Chris Dyer, Arul Menezes, and the anonymous reviewers for their helpful comments and suggestions.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Alexandrescu and K. Kirchhoff</span><span class="ltx_text ltx_bib_year">(2009-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Graph-based learning for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL-HLT ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 119–127</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p4" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Bojar, C. Buck, C. Callison-Burch, C. Federmann, B. Haddow, P. Koehn, C. Monz, M. Post, R. Soricut and L. Specia</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Findings of the 2013 Workshop on Statistical Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch, P. Koehn and M. Osborne</span><span class="ltx_text ltx_bib_year">(2006-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved statistical machine translation using paraphrases</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York City, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 17–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p5" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Chahuneau, E. Schlinger, N. A. Smith and C. Dyer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Translating into morphologically rich languages with synthetic phrases</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p3" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 201–228</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Dou and K. Knight</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large scale decipherment for out-of-domain machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 266–275</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p5" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Fung and L. Y. Yee</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An ir approach for translating new words from nonparallel, comparable texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’98</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 414–420</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Galley and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A simple and effective hierarchical phrase reordering model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 848–856</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS5.p1" title="2.5  Phrase-based SMT Expansion ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.5</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi, P. Liang, T. Berg-Kirkpatrick and D. Klein</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning bilingual lexicons from monolingual corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 771–779</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Irvine and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Supervised bilingual lexicon induction with multiple monolingual signals</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 518–523</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Irvine and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining bilingual and comparable corpora for low resource machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 262–270</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p2" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Klementiev, A. Irvine, C. Callison-Burch and D. Yarowsky</span><span class="ltx_text ltx_bib_year">(2012-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Toward statistical machine translation without parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Avignon, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 130–140</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn and K. Knight</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning a translation lexicon from monolingual corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 9–16</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, F. J. Och and D. Marcu</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL ’03</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 48–54</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Liu, C. Li, M. Li and M. Zhou</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning translation consensus with structured label propagation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 302–310</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS4.SSS1.p1" title="2.4.1 Structured Label Propagation ‣ 2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4.1</span></a>,
+<a href="#S4.p4" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Marton, C. Callison-Burch and P. Resnik</span><span class="ltx_text ltx_bib_year">(2009-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved statistical machine translation using monolingually-derived paraphrases</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’09</span>, <span class="ltx_text ltx_bib_place">Singapore</span>, <span class="ltx_text ltx_bib_pages"> pp. 381–390</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p5" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. McClosky, E. Charniak and M. Johnson</span><span class="ltx_text ltx_bib_year">(2006-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effective self-training for parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New York City, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 152–159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p3" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimum error rate training in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’03</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLEU: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 311–318</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Evaluation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rapp</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying word translations in non-parallel texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’95</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Ravi and K. Knight</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deciphering foreign language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 12–21</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p5" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Razmara, M. Siahbani, G. Haffari and A. Sarkar</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Graph propagation for paraphrasing out-of-vocabulary words in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL-51</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS4.p2" title="2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>,
+<a href="#S4.p2" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Snover, B. Dorr and R. Schwartz</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language and translation model adaptation using comparable corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 857–866</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p5" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Tamura, T. Watanabe and E. Sumita</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual lexicon extraction from comparable corpora using label propagation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP-CoNLL ’12</span>, <span class="ltx_text ltx_bib_pages"> pp. 24–36</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS4.p2" title="2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>,
+<a href="#S4.p1" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, H. Suzuki and A. Ruopp</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Applying morphology generation models to machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 514–522</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p3" title="2.1 Generation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Zhang and C. Zong</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning a phrase-based translation model from monolingual data with application to domain adaptation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1425–1434</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Related Work ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhu, Z. Ghahramani and J. D. Lafferty</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised learning using gaussian fields and harmonic functions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’03</span>, <span class="ltx_text ltx_bib_pages"> pp. 912–919</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS4.p2" title="2.4 Graph Propagation ‣ 2 Generation &amp; Propagation ‣ Graph-based Semi-Supervised Learning of Translation Models from Monolingual Data" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:02:51 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

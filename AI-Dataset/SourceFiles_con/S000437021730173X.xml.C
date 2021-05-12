@@ -1,0 +1,1120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Star-topology decoupled state space search.
+   </title>
+   <abstract>
+    State space search is a basic method for analyzing reachability in discrete transition systems. To tackle large compactly described transition systems – the state space explosion – a wealth of techniques (e.g., partial-order reduction) have been developed that reduce the search space without affecting the existence of (optimal) solution paths. Focusing on classical AI planning, where the compact description is in terms of a vector of state variables, an initial state, a goal condition, and a set of actions, we add another technique, that we baptize star-topology decoupling, into this arsenal. A star topology partitions the state variables into components so that a single center component directly interacts with several leaf components, but the leaves interact only via the center. Many applications explicitly come with such structure; any classical planning task can be viewed in this way by selecting the center as a subset of state variables separating connected leaf components. Our key observation is that, given such a star topology, the leaves are conditionally independent given the center, in the sense that, given a fixed path of transitions by the center, the possible center-compliant paths are independent across the leaves. Our decoupled search hence branches over center transitions only, and maintains the center-compliant paths for each leaf separately. As we show, this method has exponential separations to all previous search reduction techniques, i.e., examples where it results in exponentially less effort. One can, in principle, prune duplicates in a way so that the decoupled state space can never be larger than the original one. Standard search algorithms remain applicable using simple transformations. Our experiments exhibit large improvements on standard AI planning benchmarks with a pronounced star topology.1
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Reachability analysis in large discrete state transition systems arises in several areas of computer science. Examples are AI planning [4] and diagnosis [5], model checking [6], and multiple sequence alignment [7]. The question is whether, starting from a given state s, the system can reach a given state t, or can reach some state satisfying a given property, like a planning goal in AI, or the negation of a safety property in model checking. Answering this question is hard due to the state explosion problem [8]. The transition system is compactly described, in terms of state variables and transition rules, a network of synchronized automata, or a bounded Petri net. The size of the system itself – the compact description's state space – is exponential in the size of that description.
+     </paragraph>
+     <paragraph>
+      Forward state space search is one basic method for reachability analysis. A wealth of techniques have been developed that reduce the search space while preserving completeness (finding a solution if one exists) and, ideally, optimality (finding a solution with minimum summed-up transition cost). Partial-order reduction exploits permutable parts of the state space [8], [9], [10], [11], [12], [13], [14], [15], [16]. Symmetry reduction exploits symmetric parts of the state space [17], [18], [19], [20], [21]. In Petri-net unfolding, the search space is an acyclic Petri net (a DAG) over conditions (vertices annotated with state-variable values) and events (vertices annotated with transitions), where events are added based on which markings (combinations of state-variable values) are reachable [22], [23], [24], [25], [26], [27], [28].
+     </paragraph>
+     <paragraph>
+      Our contribution consists in a new search reduction method, star-topology decoupling, which is complementary to all previous methods, and can be configured to either preserve completeness and optimality, or to only preserve completeness (allowing stronger reductions). We introduce the method in AI planning, where a planning task is given in terms of finite-domain state variables, an initial state, a goal condition, and a set of actions describing the possible transitions.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Star-topology decoupling
+      </section-title>
+      <paragraph>
+       The distinguishing feature of star-topology decoupling is the assumption of a particular structural profile, a star topology. Viewing disjoint subsets of state variables as components, in a star topology a single center component interacts with multiple leaf components, but the leaves interact with each other only via the center. Many applications explicitly come with such structure. For example, distributed systems are often synchronized via a central component (client–server architectures, shared-memory computing systems), and cooperative agents are synchronized via their shared (commonly affected/queried) state variables. Arbitrary AI planning tasks can be viewed in this way by selecting the center as some subset of state variables breaking the dependencies between connected (leaf) components of the remaining state variables.
+      </paragraph>
+      <paragraph>
+       The key to star-topology decoupling is a particular form of “conditional independence”: given a fixed path of transitions by the center, the possible center-compliant paths are independent across the leaves. For example, say the center C is a state variable encoding the position of a vehicle v, and each leaf L is a state variable encoding the position of a transportable object o. Given a fixed path {a mathematical formula}πC of vehicle moves, the compliant moves for any object o, alongside {a mathematical formula}πC, are those which load/unload o at those points on {a mathematical formula}πC where v is currently at the required location. Any sequence of such load/unload actions for o – any {a mathematical formula}πC-compliant path for o – can be committed to for o, independently of what any other transportable object {a mathematical formula}o′ is committed to. Decoupled search exploits this property by searching over center paths {a mathematical formula}πC only; it maintains, alongside each {a mathematical formula}πC, the leaf states reachable on {a mathematical formula}πC-compliant paths. This way, the component (local) state spaces are searched separately, avoiding the enumeration of combined (global) states across leaves. In catchy (though imprecise) analogy to conditional independence in graphical models, star-topology decoupling “instantiates” the center to break the dependencies between the leaves.
+      </paragraph>
+      <paragraph>
+       The search is least-commitment in the sense that leaf moves are committed to only at the end, when the goal is reached. During the search, the leaf states reachable on {a mathematical formula}πC-compliant paths are maintained exhaustively. Namely, the end point of each center path {a mathematical formula}πC in the search is associated with a decoupled states, which for every leaf component L stores those leaf states {a mathematical formula}sL of L reached by {a mathematical formula}πC-compliant paths. One can view s as a compact representation of a set of global states, its hypercube{a mathematical formula}[s]: all states formed from the center state reached by {a mathematical formula}πC, and any combination of {a mathematical formula}πC-compliant {a mathematical formula}sL. These are exactly those global states that can be reached on a transition path whose center sub-path is {a mathematical formula}πC.
+      </paragraph>
+      <paragraph>
+       Optionally, each {a mathematical formula}sL is annotated with the cost of a cheapest {a mathematical formula}πC-compliant path achieving {a mathematical formula}sL. We refer to that cost as {a mathematical formula}sL's price: it is not a cost we have already committed to paying, but a cost we will pay if, at the end, we commit to using {a mathematical formula}sL. Maintaining leaf state prices allows to preserve optimality; maintaining only leaf state reachability suffices to preserve completeness.
+      </paragraph>
+      <paragraph>
+       In the example above, for any transportable object o, the object's initial location {a mathematical formula}l0 is reachable on a {a mathematical formula}πC-compliant path, namely the empty path, at cost 0. Every other location l for o is reachable on a {a mathematical formula}πC-compliant path of length 2 – load at {a mathematical formula}l0, unload at l – iff {a mathematical formula}πC visits {a mathematical formula}l0 and afterwards visits l. Once the goal location of o is reachable, we can commit to a compliant path, i.e., a suitable load/unload pair, moving o to its goal location. In case different loads/unloads have different cost, distinguishing leaf state prices allows to select a cheapest such pair for each o. Searching over center paths enabling different-cost pairs allows to guarantee global optimality.
+      </paragraph>
+      <paragraph>
+       Star-topology decoupling has been inspired by factored planning methods, which also partition the state variables into components [29], [30], [31], [32], [33], [34], [35], [36], [37], [38], [39], [40], [41]. Hierarchical factored planning is remotely related; the search for a plan proceeds top-down in a hierarchy of increasingly more detailed levels identified by the factors. Localized factored planning is more closely related; the search for a plan proceeds by first planning locally on individual components, followed by global cross-component constraint resolution. In comparison to both, the key feature of star-topology decoupling is the focus on star topologies, which limits the possible interactions across factors, facilitating specialized search algorithms (as outlined above).
+      </paragraph>
+      <paragraph>
+       Star-topology decoupling also relates to Petri net unfolding, specifically to contextual unfolding[27] as planning actions typically have non-consumed preconditions (typically called prevail conditions). For example, a load action requires, but does not consume, a particular vehicle position. One can view star-topology decoupling as a new form of unfolding where the “conditions” are component states, and the star topology is exploited (a) to avoid the enumeration of exponentially many event “histories”, keeping track of which prevail conditions may have been consumed in the past; as well as (b) to get rid of the NP-hard problem of testing the reachability of a marking in an unfolding prefix (for decoupled search, this is testable in linear time). As we shall see, these theoretical advantages often translate into empirical ones.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Experiments preview
+      </section-title>
+      <paragraph>
+       Fig. 1 gives a preview of empirical results. Details will be provided later. We use the standard benchmarks from the international planning competition (IPC), which are all solvable; and we use an established collection of unsolvable benchmarks including those of the unsolvability IPC'16. Star topologies are found automatically using a simple factoring strategy, identifying an X-shape over the input task's variable dependencies; the factoring strategy abstains if no non-trivial star topology (≥2 leaves) is found this way.{sup:2}
+      </paragraph>
+      <paragraph>
+       We build (the respective representations of) the entire reachable state spaces, as a canonical measure of reduction power: How much can a reduction method achieve on its own? We compare our method to partial-order reduction and Petri net unfolding, the most competitive related methods (a comparison to the most competitive localized factored planning method will be included later). The Petri net unfolding tools are provided with straightforward encodings of planning tasks into Petri nets, following Hickmott et al. [24].
+      </paragraph>
+      <paragraph>
+       Decoupled states are more complex structures than standard states, so we show not only the number of states, but also the amount of memory – the number of integer variables in our C++ implementation – used to represent them. For the standard state space, this is simply the number of states times the number of state variables. For decoupled states, we compute the state space of each leaf once up front, give IDs to its leaf states, and use these IDs for reference later on. As the unfolding tools often lag far behind in the number of state spaces successfully built, their state space representation size data is omitted from this preview (but will be discussed later).
+      </paragraph>
+      <paragraph>
+       The data clearly attest to the power of star-topology decoupling. Its completeness-only (COM) variant successfully builds more than twice as many state spaces as standard state space search, and more than three times as many as Petri net unfolding. On commonly solved instances, average state space size is typically reduced by at least one order of magnitude, and often by several orders of magnitude. In most cases, these improvements apply even when preserving optimality (OPT), and even relative to the state space pruned by strong stubborn sets.
+      </paragraph>
+      <paragraph>
+       That said, Fig. 1 also exhibits two weaknesses. First, decoupled states are more costly to maintain, incurring a runtime overhead. In some cases, the overhead outweighs the reduction gain, and fewer state spaces are successfully built. Second, Fig. 1 shows only a selection of domains, namely those where the X-shape factoring strategy does (sometimes) not abstain. On the majority of the 49 IPC benchmark domains, the strategy abstains on every instance.
+      </paragraph>
+      <paragraph>
+       Summing up both observations, star-topology decoupling requires a particular form of structure to work well, namely a pronounced star topology, with many leaf components. Not all applications, nor all IPC benchmark domains, have that structure.
+      </paragraph>
+      <paragraph>
+       However, this weakness – requiring particular structure to work well – is shared by all known search reduction techniques. The distinguishing feature of star-topology decoupling is that the required structure is explicit, and easily testable. This is valuable in practice, as it allows to avoid wasting runtime on unsuitable cases. The factoring strategy takes negligible runtime, and if it abstains, one can run an alternate technique instead. This is perfect for the design of solver portfolios, combining the strengths of different approaches (e.g. [45], [46]).
+      </paragraph>
+      <paragraph>
+       An issue not visible in Fig. 1 is that, in practice, the objective is not to exhaust the entire state space, but to find a solution path, or prove that none exists. Search techniques orthogonal to ours are available to do so without having to exhaust the state space. Using such techniques reduces the advantage of star-topology decoupling over standard state space search. Nevertheless, as we shall see, star-topology decoupling often improves over the state of the art on IPC benchmarks.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Properties
+      </section-title>
+      <paragraph>
+       Star-topology decoupling has exponential separations relative to all previous search reduction methods: example families whose decoupled state space has size polynomial in the size of the input, while the previous method's state space representation is exponential in that size.
+      </paragraph>
+      <paragraph>
+       Yet the technique is not without risks. The decoupled state space may be exponentially larger than the standard state space, and may even be infinite. As we show, however, (a) finiteness can be guaranteed with a simple dominance pruning technique, and (b) a more expensive hypercube pruning technique (involving a co-NP-complete sub-problem) guarantees that the number of reachable decoupled states is bounded by the number of reachable standard states. Empirically on the IPC benchmarks, (b) incurs a prohibitive computational overhead, and even without (b) the number of decoupled states never exceeds the number of standard states. So our implementation uses (a) only.
+      </paragraph>
+      <paragraph>
+       Star-topology decoupling combines gracefully with standard search methods, in particular with heuristic search algorithms, guiding state space exploration through heuristic functions mapping states to estimated goal distance [47]. Heuristic search has been extremely successful in AI planning (e.g. [48], [49], [50], [51], [52], [53], [54], [55]). As we show, heuristic search methods can be applied unmodified to decoupled search, via simple transformations, preserving their optimality and completeness guarantees.
+      </paragraph>
+      <paragraph>
+       The paper is structured as follows. Section 2 introduces the planning framework and basic notations. In Section 3, we define star topologies, as factorings (state-variable partitions) inducing a star structure. Section 4 specifies the decoupled state space. Section 5 shows that blow-ups can occur, and identifies the dominance/hypercube pruning methods avoiding these. Section 6 discusses the relation to previous methods, including the exponential separations. Section 7 explains how to plug-in standard heuristic search techniques, and Section 8 presents our experiments. Section 9 concludes with a discussion of future research directions. Some proofs are moved out of the main text, into Appendix A.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      AI Planning is concerned with the design of mechanisms taking decision about action, finding plans that lead from an initial state to a goal. Here we consider classical planning, which assumes discrete state variables, complete knowledge about the initial state, and deterministic actions. The planning problem then consists of checking reachability in a large, discrete and deterministic, labeled transition system. We give our notation for such transition systems first, then give the syntax and semantics of our planning model.
+     </paragraph>
+     <paragraph>
+      A labeled transition system in our terminology is a tuple {a mathematical formula}Θ=(S,L,c,T,I,SG) consisting of a finite set of statesS, a finite set of transition labelsL, a function {a mathematical formula}c:L↦R0+ associating each label with its non-negative cost, a set of transitions{a mathematical formula}T⊆S×L×S, an initial state{a mathematical formula}I∈S, and a set of goal states{a mathematical formula}SG⊆S. We assume that Θ is deterministic, i.e., for every s and l there exists at most one {a mathematical formula}s′ such that {a mathematical formula}(s,l,s′)∈T. We will often write {a mathematical formula}s→ls′ for {a mathematical formula}(s,l,s′)∈T, or {a mathematical formula}s→s′ if the label does not matter. A solution for {a mathematical formula}s∈S is a path π in Θ from s to a goal state. A solution for I is called a solution for Θ. We consider additive cost, i.e., the cost of a path π, denoted {a mathematical formula}cost(π), is the summed-up cost of its labels. A solution for s (respectively Θ) is optimal if its cost is minimal among all solutions for s (respectively Θ).
+     </paragraph>
+     <paragraph>
+      Our planning syntax follows the finite-domain variables model (e.g., [56], [52]). A planning task is a tuple {a mathematical formula}Π=(V,A,c,I,G). V is a finite set of state variablesv, variables for short, each associated with a finite domain {a mathematical formula}D(v). A complete assignment to V is a state. I is the initial state, and the goalG is a partial assignment to V. A is a finite set of actions, where each action {a mathematical formula}a∈A is associated with its precondition{a mathematical formula}pre(a), and its effect{a mathematical formula}eff(a), each a partial assignment to V. The function {a mathematical formula}c:L↦R0+ associates each action with its cost. We will often write variable/value pairs {a mathematical formula}(v,d) as {a mathematical formula}v=d.
+     </paragraph>
+     <paragraph>
+      The semantics of planning tasks are defined via their state spaces, deterministic labeled transition systems as above. The state space of a planning task is straightforwardly defined given the task's syntax; we do so via introducing a number of notations that will be useful. Our convention will be to denote states (as well as partial assignments) by {a mathematical formula}p,q, reserving the more usual {a mathematical formula}s,t for the decoupled states introduced later on. For a partial assignment p, {a mathematical formula}V(p)⊆V denotes the subset of state variables on which p is defined. Given {a mathematical formula}V⊆V(p), it will be convenient to denote by {a mathematical formula}p[V]:=p|V the restriction of p to V. An action a is applicable in a state p if {a mathematical formula}p[V(pre(a))]=pre(a). The outcome of applying a in p is {a mathematical formula}p〚a〛:=p[V(p)∖V(eff(a))]∪eff(a), i.e., we overwrite p with a's effect where defined. We will also use the notation {a mathematical formula}p〚a〛 for arbitrary partial assignments p.
+     </paragraph>
+     <paragraph>
+      Given a planning task {a mathematical formula}Π=(V,A,c,I,G), its state space, denoted {a mathematical formula}ΘΠ, is the labeled transition system {a mathematical formula}ΘΠ=(S,L,c,T,I,SG) whose states S are all states of Π; whose labels L are the actions A; whose cost function c is that of Π; whose transitions {a mathematical formula}p→aq are those were a is applicable in p and {a mathematical formula}q=p〚a〛; whose initial state I is that of Π; and whose goal states {a mathematical formula}SG are those p where {a mathematical formula}p[V(G)]=G. A solution π for {a mathematical formula}ΘΠ is a plan for Π. We will identify π with the sequence of actions labeling its transitions.
+     </paragraph>
+     <paragraph>
+      Given a planning task Π, deciding whether a plan exists is PSPACE-complete [57]. At an algorithmic level, AI planning distinguishes three different problems: optimal planning, where the objective is to find an optimal plan; satisficing planning, where it suffices to find any plan; and proving unsolvability, where the objective is to prove that the goal is unreachable.
+     </paragraph>
+     <paragraph label="Example 1">
+      We use three running examples, named the Vanilla, NoEmpty, and Scaling example respectively. The latter will be used for illustration as well as scalability arguments. All examples are based on simple transportation scenarios.In both the Vanilla and the NoEmpty example, there are two trucks {a mathematical formula}tA,tB moving along three locations {a mathematical formula}l1,l2,l3 arranged in a line, and there is one transportable object o. The planning task {a mathematical formula}Π=(V,A,c,I,G) has variables {a mathematical formula}V={o,tA,tB} where {a mathematical formula}D(tA)=D(tB)={l1,l2,l3} and {a mathematical formula}D(o)={l1,l2,l3,tA,tB}. The initial state is {a mathematical formula}I={tA=l1,tB=l3,o=l1,}, i.e., {a mathematical formula}tA and o start at {a mathematical formula}l1, and {a mathematical formula}tB starts at {a mathematical formula}l3. The goal is {a mathematical formula}G={o=l3}. The actions are truck moves and load/unload. All actions have cost 1, and the only difference between the two examples is the precondition of truck moves. Namely, A consists of the actions:
+      <list>
+       move{a mathematical formula}(t,x,y) for {a mathematical formula}t∈{tA,tB} and {a mathematical formula}{x,y}∈{{l1,l2},{l2,l3}}: precondition {a mathematical formula}{t=x} in the vanilla example; precondition {a mathematical formula}{t=x,o=t} in the no-empty example; effect {a mathematical formula}{t=y}.load{a mathematical formula}(t,x) for {a mathematical formula}t∈{tA,tB} and {a mathematical formula}x∈{l1,l2,l3}: precondition {a mathematical formula}{t=x,o=x}; effect {a mathematical formula}{o=t}.unload{a mathematical formula}(t,x) for {a mathematical formula}t∈{tA,tB} and {a mathematical formula}x∈{l1,l2,l3}: precondition {a mathematical formula}{t=x,o=t}; effect {a mathematical formula}{o=x}.The Scaling example is like the Vanilla example except that there is only one truck and we scale the number of objects as well as the length of the line. The planning task
+      </list>
+      <paragraph>
+       {a mathematical formula}Π=(V,A,c,I,G) has variables {a mathematical formula}V={t,o1,…,on} where {a mathematical formula}D(t)={l1,…,lm} and {a mathematical formula}D(oi)={l1,…,lm,t}. The initial state is {a mathematical formula}I={t=l1,o1=l1,…,on=l1}, i.e., the truck and all objects start at {a mathematical formula}l1. The goal is {a mathematical formula}G={o1=lm,…,on=lm}, i.e., all objects must be transported to the other end of the line. The actions are as before, adapted to suit the modified example structure:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        move{a mathematical formula}(x,y) for {a mathematical formula}x=li,y=lj such that {a mathematical formula}|i−j|=1: precondition {a mathematical formula}{t=x}; effect {a mathematical formula}{t=y}.
+       </list-item>
+       <list-item label="2.">
+        load{a mathematical formula}(o,x) for {a mathematical formula}o∈{o1,…,on} and {a mathematical formula}x∈{l1,…,lm}: precondition {a mathematical formula}{t=x,o=x}; effect {a mathematical formula}{o=t}.
+       </list-item>
+       <list-item label="3.">
+        unload{a mathematical formula}(x,y) for {a mathematical formula}o∈{o1,…,on} and {a mathematical formula}x∈{l1,…,lm}: precondition {a mathematical formula}{t=x,o=t}; effect {a mathematical formula}{o=x}.
+       </list-item>
+      </list>
+      <paragraph>
+       An optimal plan for this example loads all objects, drives to the other end of the line, and unloads all objects.
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      We require some additional notations and concepts. When we say that an action aaffects a variable v, we mean that {a mathematical formula}v∈V(eff(a)). Non-affected action preconditions, i.e., {a mathematical formula}pre(a)[V(pre(a))∖V(eff(a))], are referred to as prevail conditions. To characterize and identify star topologies, we will use the input task's causal graph, which captures direct state variable dependencies (e.g. [30], [58], [59], [52]). Given a planning task {a mathematical formula}Π=(V,A,c,I,G), the causal graph {a mathematical formula}CGΠ is a directed graph whose vertices are the variables V, and that has an arc from u to v, denoted {a mathematical formula}u→v, if {a mathematical formula}u≠v and there exists an action {a mathematical formula}a∈A such that either (i) {a mathematical formula}u∈V(pre(a)) and {a mathematical formula}v∈V(eff(a)), or (ii) {a mathematical formula}u∈V(eff(a)) and {a mathematical formula}v∈V(eff(a)). This captures (i) precondition-effect dependencies, as well as (ii) effect–effect dependencies. Intuitively, given a causal graph arc {a mathematical formula}u→v, changing the value of v may involve changing that of u as well, because either (i) u may need to provide a precondition, or (ii) u may be affected as a side effect of changing the value of v.
+     </paragraph>
+     <paragraph>
+      We assume for simplicity that {a mathematical formula}CGΠ is weakly connected. This is without loss of generality because, otherwise, the task can be equivalently split into several independent tasks.
+     </paragraph>
+     <paragraph label="Example 2">
+      The causal graphs of our running examples are shown in Fig. 2.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Star-topology factorings
+     </section-title>
+     <paragraph>
+      We decompose planning tasks into components identified by disjoint sets of state variables. Following the factored planning literature (e.g. [33]), we refer to such decompositions, i.e., to partitions of the state variables, as factorings, and to the components as factors. A factoring identifies a star topology if its cross-component interactions take a star shape. Section 3.1 introduces the relevant variants of this concept. Section 3.2 characterizes the space of star-topology factorings, with a view on maximizing the number of leaf factors.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Concepts
+      </section-title>
+      <paragraph>
+       We start with some special cases that are instructive due to their simplicity, and that are useful in practice as they are easy to identify (in particular, they underlie our current factoring strategies).
+      </paragraph>
+      <paragraph label="Definition 1">
+       Strict-Star FactoringLet Π be a planning task with variables V. A factoring{a mathematical formula}F is a partition of V into disjoint non-empty subsets F, called factors.Let {a mathematical formula}F be a factoring. The interaction graph{a mathematical formula}IGΠ(F) is the quotient graph of {a mathematical formula}CGΠ given {a mathematical formula}F, i.e., the directed graph whose vertices are the factors, with an arc {a mathematical formula}F→F′ if {a mathematical formula}F≠F′ and there exist {a mathematical formula}v∈F and {a mathematical formula}v′∈F′ such that {a mathematical formula}v→v′ is an arc in {a mathematical formula}CGΠ.{a mathematical formula}F is a strict-star factoring if {a mathematical formula}|F|&gt;1 and there exists {a mathematical formula}FC∈F s.t. all arcs in {a mathematical formula}IGΠ(F) are incident to {a mathematical formula}FC. {a mathematical formula}FC is the center of {a mathematical formula}F, and each other factor {a mathematical formula}FL∈FL:=F∖{FC} is a leaf.{a mathematical formula}F is a fork factoring if the arcs in {a mathematical formula}IGΠ(F) are exactly {a mathematical formula}{FC→FL|FL∈F∖{FC}}; it is an inverted-fork factoring if the arcs in {a mathematical formula}IGΠ(F) are exactly {a mathematical formula}{FL→FC|FL∈F∖{FC}}.
+      </paragraph>
+      <paragraph>
+       In a fork factoring, the only cross-factor interactions consist in the center factor establishing prevail conditions for actions affecting a leaf factor. In an inverted-fork factoring, the only cross-factor interactions consist in leaf factors establishing prevail conditions for actions affecting the center.{sup:3} In a strict-star factoring, both directions of precondition-effect interactions are admitted, plus there may be actions simultaneously affecting the center and a leaf, i.e., whose effect variables intersect both {a mathematical formula}FC and one {a mathematical formula}FL∈FL.
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider again the causal graphs of our running examples, Fig. 2. In the Vanilla example (a), we obtain a fork factoring when grouping {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}}, and we obtain an inverted-fork factoring when grouping {a mathematical formula}FC={o} and {a mathematical formula}FL={{tA},{tB}}. In the NoEmpty example (b), each of these groupings yields a strict-star factoring (but neither is a fork nor inverted fork as the dependencies go both ways). In the Scaling example (c), the most sensible grouping is the fork factoring with {a mathematical formula}FC={t} and {a mathematical formula}FL={{o1},…,{on}}: the truck is connected to every other variable so should be in the center.As a more practical illustration, Fig. 3 shows fork factorings on examples similar to AI planning competition (IPC) benchmarks. On the left we consider a transportation domain with fuel consumption (as in the IPC NoMystery benchmark domain). A truck t with fuel supply f transports objects {a mathematical formula}o1,…,on; t and f form the center factor, each {a mathematical formula}oi is a leaf factor on its own.On the right, we consider a scheduling domain requiring to process a set of objects with a set of machines (similar to the IPC Woodworking benchmark domain). Individual objects {a mathematical formula}oi are mutually independent except for sharing the machines, so that the machines are grouped into the center and each leaf factor groups together the properties pertaining to one {a mathematical formula}oi.
+      </paragraph>
+      <paragraph>
+       We use strict-star factorings, and the forks and inverted forks sub-cases, in practice, and we will use them throughout the paper in illustrations and practical discussions. This notwithstanding, our techniques are defined for, and work correctly on, more general structures.
+      </paragraph>
+      <paragraph>
+       Decoupled search branches on all actions affecting the center, i.e., these are included into the center paths being searched over. Therefore, these actions can be arbitrary. In particular, they can affect and/or rely on multiple leaves. The only restriction we require, thus, is that the other actions – those that do not affect the center – are limited to a single leaf factor each:
+      </paragraph>
+      <paragraph label="Definition 2">
+       General Star FactoringLet Π be a planning task, and let {a mathematical formula}F be a factoring. {a mathematical formula}F is a star factoring if {a mathematical formula}|F|&gt;1 and there exists {a mathematical formula}FC∈F such that, for every action a where {a mathematical formula}V(eff(a))∩FC=∅, there exists {a mathematical formula}F∈F with {a mathematical formula}V(eff(a))⊆F and {a mathematical formula}V(pre(a))⊆F∪FC. {a mathematical formula}FC is the center of {a mathematical formula}F, and all other factors {a mathematical formula}FL∈FL:=F∖{FC} are leaves.
+      </paragraph>
+      <paragraph>
+       This restriction on non-center-affecting actions obviously holds in a strict-star factoring. However, a center-affecting action in a star factoring may affect multiple leaves. In other words, strict-star factorings are a special case of star factorings:
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Let Π be a planning task. Then every strict-star factoring is a star factoring, but not vice versa.
+      </paragraph>
+      <paragraph>
+       Observe that Definition 2 can always be enforced without loss of generality, simply by introducing redundant effects on {a mathematical formula}FC. However, the actions affecting {a mathematical formula}FC are those the decoupled search branches over, so this transformation is just another way of saying that “cross-leaf preconditions/effects can be tackled by centrally branching over the respective actions”.
+      </paragraph>
+      <paragraph>
+       General star factorings as per Definition 2 cannot be characterized in terms of just the causal graph. If there is a causal-graph arc between two leaves, we cannot distinguish whether or not all responsible actions also affect the center. In contrast, strict-star factorings can be characterized in terms of just the causal graph, making them easier to identify. Also, as we shall see next, they already are quite powerful, motivating their use in practice.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       The space of strict-star factorings
+      </section-title>
+      <paragraph>
+       To design an automatic factoring strategy, we need to know under which conditions a strict-star factoring exists, and if so, how to find one with a maximal number of leaves.
+      </paragraph>
+      <paragraph>
+       If a factoring {a mathematical formula}F has K leaves, we say it is a K-leaves factoring. By the maximum number of strict-star (fork/inverted-fork) leaves, we refer to the number of leaves in a strict-star (fork/inverted-fork) factoring which maximizes that number.
+      </paragraph>
+      <paragraph>
+       Let us first consider the simple fork and inverted fork special cases. Denote by {a mathematical formula}FΠSCC the factoring whose factors are the strongly connected components (SCC) of the causal graph {a mathematical formula}CGΠ. Clearly, any fork or inverted-fork factoring {a mathematical formula}F must be coarser than {a mathematical formula}FΠSCC, i.e., for every {a mathematical formula}F∈FΠSCC we must have {a mathematical formula}F′∈F with {a mathematical formula}F⊆F′. As an immediate consequence, if the causal graph is strongly connected, {a mathematical formula}|FΠSCC|=1, then we cannot obtain a factoring with more than one component, so no fork or inverted-fork factoring exists.
+      </paragraph>
+      <paragraph>
+       The opposite is also true: if {a mathematical formula}|FΠSCC|&gt;1, then fork and inverted-fork factorings exist. To see this, consider the interaction graph {a mathematical formula}IGΠ(FΠSCC) over causal graph SCCs. This is a directed acyclic graph (DAG), and we can directly read off the maximum number of fork/inverted-fork leaves:
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Fork &amp; Inverted-Fork FactoringsLet Π be a planning task. Then fork and inverted-fork factorings exist if and only if{a mathematical formula}|FΠSCC|&gt;1. In that case, the maximum number of fork leaves equals the number of leaf vertices in{a mathematical formula}IGΠ(FΠSCC), and the maximum number of inverted-fork leaves equals the number of root vertices in{a mathematical formula}IGΠ(FΠSCC).
+      </paragraph>
+      <paragraph label="Proof Sketch">
+       The “only if” in the first part of the claim has already been argued. The “if” direction follows from the second part of the claim. To see why that latter part holds true for fork factorings (the argument for inverted forks is symmetric), observe that, as illustrated in Fig. 4, any fork factoring {a mathematical formula}F can be viewed as “drawing a horizontal line” through {a mathematical formula}IGΠ(FΠSCC) where the roots are at the top and the leaves are at the bottom. Denote by T the top part above the line, and by B the bottom part. A fork factoring is then obtained by taking T to be the center, and taking the set {a mathematical formula}W of weakly connected components of {a mathematical formula}IGΠ(FΠSCC) within B to be the leaves. Clearly, {a mathematical formula}|W| is at most the number of leaf vertices in {a mathematical formula}IGΠ(FΠSCC). Vice versa, drawing the line just above the leaf vertices, we obtain a fork factoring with exactly that number of leaf factors.  □
+      </paragraph>
+      <paragraph>
+       Consider now the more general strict-star factorings. Observe first that these do not need to respect causal graph SCCs. The NoEmpty example, cf. Fig. 2, has a single-SCC causal graph, but we can factorize it as pointed out in Example 3. Indeed, for any planning task, any partition of the variables into two non-empty subsets yields a strict-star factoring (where we are free to choose which factor is the center respectively the single leaf). So, for a task with variables V, there are at least {a mathematical formula}2|V|−2 strict-star factorings. That wealth of factorings is, however, of unclear practical value, as they have only a single leaf.
+      </paragraph>
+      <paragraph>
+       It turns out that the number of strict-star leaves is characterized exactly by independent sets in the causal graph, i.e., subsets of variables with no {a mathematical formula}CGΠ arcs between them:
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let Π be a planning task. Then from any size-K independent set in{a mathematical formula}CGΠone can construct a K-leaves strict-star factoring, and vice versa.
+      </paragraph>
+      <paragraph label="Proof">
+       Say Π has variables V. From left to right, let {a mathematical formula}I={v1,…,vK}⊆V be an independent set in {a mathematical formula}CGΠ. Consider the factoring {a mathematical formula}F={V∖I,{v1},…,{vK}}. Designating {a mathematical formula}V∖I as the center, {a mathematical formula}F is a strict-star factoring because the {a mathematical formula}IGΠ(F) arcs over pairs of leaf factors coincide with those of {a mathematical formula}CGΠ over pairs of variables from I, of which by prerequisite there are none.From right to left, let {a mathematical formula}F={FC,F1L,…,FKL} be a strict-star factoring. Design the variable subset I by picking, from every {a mathematical formula}FiL, an arbitrary variable {a mathematical formula}vi∈FiL. Then I is an independent set in {a mathematical formula}CGΠ because an arc {a mathematical formula}vi→vj in {a mathematical formula}CGΠ would imply an arc {a mathematical formula}FiL→FjL in {a mathematical formula}IGΠ(F).  □
+      </paragraph>
+      <paragraph>
+       Intuitively, to obtain a strict-star topology, we can select the center as an arbitrary borderline separating the leaves. Given this, parts A vs. B of the causal graph can be turned into separate leaves iff they have no direct connection, i.e., there is no arc incident to both A and B. The only case where the maximum number of strict-star leaves is 1 is that where the causal graph is completely connected (every pair of variables has a direct dependency), an extremely rare case in practice.
+      </paragraph>
+      <paragraph>
+       On the downside, leaf-number maximization is now intractable:
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Strict-Star FactoringsLet Π be a planning task. Then the maximum number of strict-star leaves equals the size of a maximum independent set in{a mathematical formula}CGΠ. Given{a mathematical formula}K∈N, it is NP-complete to decide whether the maximum number of strict-star leaves is ≥K.
+      </paragraph>
+      <paragraph label="Proof">
+       Immediate from Lemma 1 and NP-completeness of Maximum Independent Set [61].  □
+      </paragraph>
+      <paragraph>
+       One may use Theorem 2 for the design of factoring strategies based on approximations of Maximum Independent Set. For now, we employ the more straightforward approach, using Theorem 1 to efficiently find forks, inverted forks, and an “X-shape” combination thereof.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      The decoupled state space
+     </section-title>
+     <paragraph>
+      We next introduce our search reduction method. We assume an input planning task Π and a (general) star factoring {a mathematical formula}F with center {a mathematical formula}FC and leaves {a mathematical formula}FL. To make the exposition accessible, we begin in Section 4.1 by introducing the basic concepts and terminology illustrated with an example, and we provide two example walkthroughs in Section 4.2. Section 4.3 specifies the decoupled state space, as an alternative labeled transition system to search in. Section 4.4 proves correctness, i.e., soundness, completeness, and optimality, relative to the input planning task.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Concepts and notations
+      </section-title>
+      <paragraph>
+       Consider the Vanilla example (an object o and two trucks {a mathematical formula}tA,tB moving along a line of three locations {a mathematical formula}l1,l2,l3), and consider the fork factoring given by {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}}. We refer to actions affecting the center – in the example, the truck moves – as center actions, notation convention {a mathematical formula}aC; we denote the set of all center actions by {a mathematical formula}AC. The search is over center paths, sequences {a mathematical formula}πC of center actions applicable to I when ignoring preconditions on the leaves (in the example there are no such preconditions, so center paths are simply applicable sequences of truck moves). The search begins with the empty center path, {a mathematical formula}πC=〈〉.
+      </paragraph>
+      <paragraph>
+       Each center path in the search ends in a decoupled states. The decoupled state contains a center state{a mathematical formula}center[s], a value assignment to {a mathematical formula}FC; for {a mathematical formula}πC=〈〉, we have {a mathematical formula}center[s]={tA=l1,tB=l3}. The decoupled state furthermore contains a pricing function, a mapping {a mathematical formula}prices[s]:SL↦R0+∪{∞} from leaf states to non-negative numbers, or ∞ to indicate unreachable leaf states. A leaf state{a mathematical formula}sL is a value assignment to any one leaf {a mathematical formula}FL∈FL. {a mathematical formula}SL[FL] denotes the set of leaf states of a specific leaf {a mathematical formula}FL, and {a mathematical formula}SL=⋃FL∈FLSL[FL] denotes the set of all leaf states across leaves.
+      </paragraph>
+      <paragraph>
+       In the example, {a mathematical formula}SL=SL|{o}={{o=l1}, {a mathematical formula}{o=l2}, {a mathematical formula}{o=l3}, {a mathematical formula}{o=tA}, {a mathematical formula}{o=tB}} is the set of all value assignments to the object-position variable o. The prices in the initial decoupled state s are: {a mathematical formula}prices[s]({o=l1})=0, {a mathematical formula}prices[s]({o=tA})=1, and {a mathematical formula}prices[s](sL)=∞ for all other leaf states {a mathematical formula}sL. The price of {a mathematical formula}{o=l1} is 0 as this is already true in the original initial state. The other prices correspond to the costs of cheapest {a mathematical formula}πC-compliant leaf paths, as will be defined shortly.
+      </paragraph>
+      <paragraph>
+       A leaf action{a mathematical formula}aL is an action affecting a leaf {a mathematical formula}FL∈FL. The set of all leaf actions is denoted {a mathematical formula}AL, and for the set of actions affecting a specific {a mathematical formula}FL we write {a mathematical formula}AL[FL]. A leaf path{a mathematical formula}πL of {a mathematical formula}FL is a sequence of {a mathematical formula}AL[FL] actions applicable to I when ignoring preconditions on the center. In our case, {a mathematical formula}FL={o} and a leaf path is any sequence of loads/unloads applicable when ignoring the truck-position preconditions. Note that, in general (though not in our example), the center actions {a mathematical formula}AC are not disjoint from the leaf actions {a mathematical formula}AL[FL]. In fact, for general star factorings, a center action {a mathematical formula}aC may affect multiple leaves. All center actions will be handled as part of the center search. Therefore, we define center path cost as the summed-up cost of the path's actions, while we define leaf path cost as the summed-up cost of only the path's non-center, {a mathematical formula}AL[FL]∖AC, actions.
+      </paragraph>
+      <paragraph>
+       A leaf path {a mathematical formula}πL of leaf {a mathematical formula}FLcomplies with a center path {a mathematical formula}πC, {a mathematical formula}πL is {a mathematical formula}πC-compliant, if: (1) the subsequences of {a mathematical formula}AL[FL]∩AC actions in {a mathematical formula}πL and {a mathematical formula}πC coincide; and (2) the {a mathematical formula}AL[FL]∖AC actions in {a mathematical formula}πL can be scheduled alongside {a mathematical formula}πC so that (a) for the actions in {a mathematical formula}πL all preconditions on {a mathematical formula}FC are satisfied, and (b) for the actions in {a mathematical formula}πC all preconditions on {a mathematical formula}FL are satisfied. In our present example, (1) is moot because {a mathematical formula}AL[FL]∩AC is empty, and (2b) is moot because center actions do not have leaf preconditions. But (2a) matters because the object moves (load/unload) rely on center preconditions. As we show in Section 4.3, the leaf paths complying with a given center path {a mathematical formula}πC can be easily maintained in the form of a layered compliant-path graph (with layers corresponding to the steps along {a mathematical formula}πC).
+      </paragraph>
+      <paragraph>
+       Coming back to our pricing function {a mathematical formula}prices[s], the price of {a mathematical formula}{o=l1} is 0 because the empty leaf path {a mathematical formula}πL=〈〉 complies with {a mathematical formula}πC. The price of {a mathematical formula}{o=tA} is 1 because the leaf path {a mathematical formula}πL=〈load{a mathematical formula}(tA,l1)〉 complies with {a mathematical formula}πC: the only center precondition of {a mathematical formula}πL, {a mathematical formula}tA=l1, is satisfied in the center state {a mathematical formula}center[s]={tA=l1,tB=l3}. For the leaf state {a mathematical formula}{o=tB}, however, there is no {a mathematical formula}πC-compliant leaf path because we would need the center precondition {a mathematical formula}tB=l1, which is not true anywhere along {a mathematical formula}πC. In particular, the path 〈load{a mathematical formula}(tB,l1)〉 is not {a mathematical formula}πC-compliant for that reason. The path 〈load{a mathematical formula}(tB,l3)〉 is {a mathematical formula}πC-compliant, but is not actually a leaf path because it is not applicable to I: its precondition {a mathematical formula}o=l3 on the leaf itself is not satisfied. Similarly for the leaf states {a mathematical formula}{o=l2} and {a mathematical formula}{o=l3}. These leaf states are not reachable given {a mathematical formula}πC, so their price in s is ∞.
+      </paragraph>
+      <paragraph>
+       Keep in mind that a pricing function does not represent a commitment, but a set of options, one of which will be committed to later on. In the example, if we later on choose to load o into {a mathematical formula}tA, the cost for doing so will be 1. The commitments will only be made once we reach the goal. Namely, a decoupled goal state is one whose center state is center goal state, and where every leaf has a finite-price leaf goal state. Given a center path {a mathematical formula}πC leading to a decoupled goal state, we can extract a (global) plan π for the input task by augmenting {a mathematical formula}πC with {a mathematical formula}πC-compliant leaf goal paths. In fact, pricing functions allow to extract a plan πoptimal subject to using exactly the center action subsequence{a mathematical formula}πC. This is so because every global plan decomposes into a center path augmented with compliant leaf paths, and the pricing functions keep track of the cheapest compliant leaf paths.
+      </paragraph>
+      <paragraph>
+       A variant of decoupled search is obtained by replacing the pricing functions with reachability functions, that distinguish only whether a leaf state is reachable ({a mathematical formula}prices[s](sL)&lt;∞), or not ({a mathematical formula}prices[s](sL)=∞). This allows to preserve completeness, but does not allow to preserve optimality. It is of advantage in practice because reachability functions can be computed more efficiently, and as they make less distinctions so reduce the size of the decoupled state space. Reachability functions are equivalent to pricing functions in the modified task where all leaf action costs are set to 0, so we will specify the more general pricing functions only.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Example walkthroughs
+      </section-title>
+      <paragraph>
+       We illustrate the workings of decoupled search with two examples, the first continuing our example above, the second pointing out how state space size may be exponentially reduced. Both examples use fork factorings. Two additional examples, illustrating inverted-fork and strict-star factorings, are available in Appendix A.2.
+      </paragraph>
+      <paragraph label="Example 4">
+       Consider again the Vanilla example with {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}}. Denote the empty center path by {a mathematical formula}π0C, and the corresponding decoupled state (as above) by {a mathematical formula}s0. The outgoing transitions of a decoupled state are given by those center actions whose center precondition is satisfied, and whose precondition on each leaf has a finite price. In {a mathematical formula}s0, these actions are move{a mathematical formula}(tA,l1,l2) and move{a mathematical formula}(tB,l3,l2).Say we choose move{a mathematical formula}(tA,l1,l2). Denote the extended center path by {a mathematical formula}π1C, and the outcome decoupled state by {a mathematical formula}s1. Then {a mathematical formula}center[s1]={tA=l2,tB=l3}. The prices {a mathematical formula}prices[s1] are 0 for {a mathematical formula}{o=l1} and 1 for {a mathematical formula}{o=tA}, as these were the prices in {a mathematical formula}s0, and no cheaper compliant paths become available in {a mathematical formula}s1: in forks, prices can only decrease along a center path (this is not so for non-forks). The only change in {a mathematical formula}prices[s1] is that {a mathematical formula}{o=l2} gets price 2, accounting for the leaf path 〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l2)〉, which is {a mathematical formula}π1C-compliant because it can be scheduled alongside {a mathematical formula}π1C in the form 〈load{a mathematical formula}(tA,l1), move{a mathematical formula}(tA,l1,l2), unload{a mathematical formula}(tA,l2)〉.Now say we obtain {a mathematical formula}π2C and {a mathematical formula}s2 from {a mathematical formula}π1C and {a mathematical formula}s1 by moving {a mathematical formula}tB to {a mathematical formula}l2. Then {a mathematical formula}center[s2]={tA=l2,tB=l2}, and we have the new finite price {a mathematical formula}prices[s2]({o=tB})=3 thanks to the {a mathematical formula}π2C-compliant path {a mathematical formula}π2L:=〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l2), load{a mathematical formula}(tB,l2)〉. Say further that we obtain {a mathematical formula}π3C and {a mathematical formula}s3 from {a mathematical formula}π2C and {a mathematical formula}s2 by moving {a mathematical formula}tB back to {a mathematical formula}l3. Then {a mathematical formula}prices[s3]({o=l3})=4 thanks to the {a mathematical formula}π3C-compliant path {a mathematical formula}π3L extending {a mathematical formula}π2L with unload{a mathematical formula}(tB,l3). We have now reached a decoupled goal state. We obtain a global plan by scheduling {a mathematical formula}π3L alongside {a mathematical formula}π3C, yielding the 7-step global plan that loads o onto {a mathematical formula}tA, moves {a mathematical formula}tA to {a mathematical formula}l2, unloads o, moves {a mathematical formula}tB to {a mathematical formula}l2, loads o onto {a mathematical formula}t2, moves {a mathematical formula}tB to {a mathematical formula}l3, and unloads o.Say finally that we continue on from this decoupled goal state, obtaining {a mathematical formula}π4C and {a mathematical formula}s4 from {a mathematical formula}π3C and {a mathematical formula}s3 by moving {a mathematical formula}tA to {a mathematical formula}l3. Then {a mathematical formula}center[s4]={tA=l3,tB=l3}. The compliant leaf path {a mathematical formula}π3L supporting {a mathematical formula}{o=l3} in {a mathematical formula}s3, to yield the price tag 4, is superseded by the new {a mathematical formula}π4C-compliant (but not {a mathematical formula}π3C-compliant) path {a mathematical formula}π4L:=〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l3)〉. This decreases the price tag to {a mathematical formula}prices[s4]({o=l3})=2. Observe that we now get a 6-step global plan, i.e., a plan better than that of the decoupled goal state {a mathematical formula}s3 we passed through on the way to {a mathematical formula}s4. Intuitively, decoupled goal states have leaf-goal price tags, the cost of “buying” compliant leaf goal paths. The center paths account only for the center, not for the leaves, so the larger path costs of decoupled-goal-state descendants may be counteracted by a cheaper leaf-goal price tag, as in this example. We will show in Section 7 how optimal search algorithms can deal with this via a simple transformation.
+      </paragraph>
+      <paragraph label="Example 5">
+       Consider the Scaling example, where one truck t and n objects {a mathematical formula}oi move along a line {a mathematical formula}l1,…,lm of length m, the truck and all objects starting in {a mathematical formula}l1, the goal being to transport all objects to {a mathematical formula}lm. The standard state space has {a mathematical formula}m(m+1)n reachable states. By contrast, using the fork factoring with {a mathematical formula}FC={t} and {a mathematical formula}FL={{o1},…,{on}}, the decoupled state space has only {a mathematical formula}m(m+1)2 reachable decoupled states. This does not even depend on the number of objects.Intuitively, the reason is that pricing function changes happen synchronously across all leaves, as a function of truck moves, to the effect that we need to keep track only of the subsequence of locations visited by the truck. In detail: The initial decoupled state allows each object to be loaded, so each has the price tags 0 for {a mathematical formula}{oi=l1} and 1 for {a mathematical formula}{oi=tA}. After moving to {a mathematical formula}l2, each object gets the additional price tag 2 for {a mathematical formula}{oi=l2}. Now there are two choices, moving back to {a mathematical formula}l1 which yields the same center state as before but with the additional {a mathematical formula}{oi=l2} price tags, or moving ahead to {a mathematical formula}l3 which yields the new price tags 2 for {a mathematical formula}{oi=l3}. In this manner, for each location {a mathematical formula}li, the new decoupled states are the single one where the truck reaches {a mathematical formula}li for the first time, plus the {a mathematical formula}i−1 ones reached by going back to {a mathematical formula}li−1,…,l1. This yields the overall count {a mathematical formula}∑i=1mi=m(m+1)2.Each decoupled state has size {a mathematical formula}1+n(m+1) (truck position; n objects, each with {a mathematical formula}m+1 leaf states), so the overall state-space representation size is {a mathematical formula}O(nm3).
+      </paragraph>
+      <paragraph>
+       Remarkably, while the Scaling example is trivial, as we will detail in Section 6 it exponentially separates star-topology decoupling from most previous search reduction methods.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Specifying the transition system
+      </section-title>
+      <paragraph>
+       The decoupled state space is a labeled transition system over decoupled states. To compute the pricing functions, we maintain a compliant-path graph for each leaf. That graph represents exactly the compliant leaf paths. Namely, given a center path {a mathematical formula}πC, the {a mathematical formula}πC-compliant-path graph for a leaf {a mathematical formula}FL is a layered graph over time-stamped {a mathematical formula}FL leaf states, where the time steps t correspond to the center states along {a mathematical formula}πC, as follows:
+      </paragraph>
+      <paragraph label="Definition 3">
+       Compliant-Path GraphLet Π be a planning task, {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL, and {a mathematical formula}πC=〈a1C,…,anC〉 a center path traversing center states {a mathematical formula}〈s0C,…,snC〉. The {a mathematical formula}πC-compliant-path graph for a leaf {a mathematical formula}FL∈FL, denoted {a mathematical formula}CompGΠ[πC,FL], is the arc-labeled weighted directed graph whose vertices are {a mathematical formula}{stL|sL∈SL[FL],0≤t≤n}, and whose arcs are:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}stL→aLs′tL with weight {a mathematical formula}c(aL) whenever {a mathematical formula}sL,s′L∈SL[FL] and {a mathematical formula}aL∈AL[FL]∖AC are such that {a mathematical formula}stC[V(pre(aL))∩FC]=pre(aL)[FC], {a mathematical formula}sL[V(pre(aL))∩FL]=pre(aL)[FL], and {a mathematical formula}sL〚aL〛=s′L.
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}stL→0s′t+1L with weight 0 whenever {a mathematical formula}sL,s′L∈SL[FL] are such that {a mathematical formula}sL[V(pre(atC))∩FL]=pre(atC)[FL] and {a mathematical formula}sL〚atC〛=s′L.
+       </list-item>
+      </list>
+      <paragraph>
+       Item (i) concerns transitions within each time step t, i.e., the graph captures how {a mathematical formula}FL – only{a mathematical formula}FL, not the center or anything else – can be moved given the center preconditions provided by {a mathematical formula}stC. Recall here that the center actions {a mathematical formula}AC are not disjoint from the leaf actions {a mathematical formula}AL[FL]. Within time steps, we consider the leaf-only actions, {a mathematical formula}AL[FL]∖AC.
+      </paragraph>
+      <paragraph>
+       Item (ii) concerns transitions across time steps, from t to {a mathematical formula}t+1, compliant with the center action {a mathematical formula}atC. Leaf states {a mathematical formula}stL at step t survive (have a transition to {a mathematical formula}t+1) only if they comply with the leaf precondition required by {a mathematical formula}atC, and they get transformed to leaf states {a mathematical formula}s′t+1L at step {a mathematical formula}t+1 through the effect of {a mathematical formula}atC on {a mathematical formula}FL. Note that, if {a mathematical formula}atC has no precondition on {a mathematical formula}FL (e.g., in a fork), then all leaf states {a mathematical formula}stL survive. If {a mathematical formula}atC has no effect on {a mathematical formula}FL (e.g., in a fork or inverted fork), then the surviving leaf states remain the same at {a mathematical formula}t+1, i.e., the item (ii) transitions have the form {a mathematical formula}stL→0st+1L.
+      </paragraph>
+      <paragraph>
+       The arc weights capture the cost incurred for {a mathematical formula}FL, i.e., the cost of the {a mathematical formula}πC-compliant leaf paths of {a mathematical formula}FL. Within time steps, for the actions moving only {a mathematical formula}FL, these are just the action costs. Across time steps, where the center moves (which may or may not move {a mathematical formula}FL as a side effect), the arc weight is 0 because these costs are accounted for on the center path itself.
+      </paragraph>
+      <paragraph>
+       In short, {a mathematical formula}CompGΠ[πC,FL] captures all ways in which leaf paths for {a mathematical formula}FL can be scheduled alongside {a mathematical formula}ΠC. The {a mathematical formula}πC-compliant paths correspond exactly to the paths from {a mathematical formula}I[FL]0, i.e., from the vertex representing {a mathematical formula}FL's initial state in {a mathematical formula}CompGΠ[πC,FL], to the vertices of the last layer n, where n is the length of {a mathematical formula}πC. Consequently, we will define the pricing function for {a mathematical formula}πC and {a mathematical formula}FL through the cheapest such paths in {a mathematical formula}CompGΠ[πC,FL].
+      </paragraph>
+      <paragraph label="Example 6">
+       Consider the Vanilla example with fork factoring {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}}, and the center path {a mathematical formula}πC=〈move{a mathematical formula}(tA,l1,l2)〉. The {a mathematical formula}πC-compliant-path graph for the leaf {a mathematical formula}FL={o} is shown in Fig. 5.The {a mathematical formula}πC-compliant leaf path 〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l2)〉 in this graph starts at {a mathematical formula}I[FL]0, i.e., the vertex {a mathematical formula}(o=l1)0. It follows the arc labeled {a mathematical formula}load(tA,l1) to {a mathematical formula}(o=tA)0, follows the 0-arc to {a mathematical formula}(o=tA)1, and follows the arc labeled {a mathematical formula}unload(tA,l2) to {a mathematical formula}(o=l2)1. The non-compliant leaf path 〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l2), load{a mathematical formula}(tA,l2), unload{a mathematical formula}(tA,l1)〉 is not present in the graph as the arc (un)load{a mathematical formula}(tA,l2) appears only at {a mathematical formula}t=1, while unload{a mathematical formula}(tA,l1) is not available anymore at {a mathematical formula}t=1.The pricing function, corresponding to the distances of the {a mathematical formula}t=1 vertices from the initial-state vertex {a mathematical formula}(o=l1)0, is 1 for {a mathematical formula}{o=tA}, 0 for {a mathematical formula}{o=l1}, 2 for {a mathematical formula}{o=l2}, and ∞ elsewhere.Note that {a mathematical formula}CompGΠ[πC,FL] contains redundant parts, not reachable from the initial-state vertex {a mathematical formula}(o=l1)0. This is just to keep Definition 3 simple. In practice, it suffices to maintain the reachable part of {a mathematical formula}CompGΠ[πC,FL].Consider now the NoEmpty example with the same factoring {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}} (now a strict-star factoring). Say again that {a mathematical formula}πC=〈move{a mathematical formula}(tA,l1,l2)〉. The {a mathematical formula}πC-compliant-path graph for {a mathematical formula}FL={o} is shown in Fig. 6.Note the (only) difference to Fig. 5: From time 0 to time 1, the only arc we have now is that from {a mathematical formula}(o=tA)0 to {a mathematical formula}(o=tA)1. This is because move{a mathematical formula}(tA,l1,l2) now has the precondition {a mathematical formula}o=tA. All other values of o do not comply with the center action being applied at this time step, and are excluded from the compliant paths. Consequently, the pricing function now is ∞ for {a mathematical formula}{o=l1}.
+      </paragraph>
+      <paragraph>
+       We are now ready to define the decoupled state space:
+      </paragraph>
+      <paragraph label="Definition 4">
+       Decoupled State SpaceLet {a mathematical formula}Π=(V,A,c,I,G) be a planning task, and {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL. A decoupled states is a triple ({a mathematical formula}πC[s], {a mathematical formula}center[s], {a mathematical formula}prices[s]) where {a mathematical formula}πC[s] is a center path, {a mathematical formula}center[s] is a center state, and {a mathematical formula}prices[s] is a pricing function, {a mathematical formula}prices[s]:SL↦R0+∪{∞}, mapping each leaf state to a non-negative price. The decoupled state space is a labeled transition system {a mathematical formula}ΘΠF=(SF,AC,c|AC,TF,IF,SGF) as follows:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}SF is the set of all decoupled states.
+       </list-item>
+       <list-item label="(ii)">
+        The transition labels are the center actions {a mathematical formula}AC.
+       </list-item>
+       <list-item label="(iii)">
+        The cost function is that of Π, restricted to {a mathematical formula}AC.
+       </list-item>
+       <list-item label="(iv)">
+        {a mathematical formula}TF contains a transition {a mathematical formula}(s→aCt)∈TF whenever {a mathematical formula}aC∈AC and {a mathematical formula}s,t are such that:
+       </list-item>
+       <list-item label="(v)">
+        {a mathematical formula}IF is the decoupled initial state, where {a mathematical formula}center[IF]:=I[FC], {a mathematical formula}πC[IF]:=〈〉, and, for every leaf {a mathematical formula}FL∈FL and leaf state {a mathematical formula}sL∈SL[FL], {a mathematical formula}prices[IF](sL) is the cost of a cheapest path from {a mathematical formula}I[FL]0 to {a mathematical formula}s0L in {a mathematical formula}CompGΠ[〈〉,FL].
+       </list-item>
+       <list-item label="(vi)">
+        {a mathematical formula}SGF are the decoupled goal states{a mathematical formula}sG, where {a mathematical formula}center[sG] is a center goal state and, for every {a mathematical formula}FL∈FL, there exists a leaf goal state {a mathematical formula}sL∈SL[FL] s.t. {a mathematical formula}prices[sG](sL)&lt;∞.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that {a mathematical formula}ΘΠF is infinite, for two reasons: (1) decoupled states contain center paths, of which there are infinitely many unless the center cannot move in circles; (2) there are infinitely many pricing functions. We show in the next section that this finiteness can be attained by a simple dominance pruning method.
+      </paragraph>
+      <paragraph>
+       We refer to paths {a mathematical formula}πF in {a mathematical formula}ΘΠF as decoupled paths. The notions of path cost and solutions, for decoupled states as well as for {a mathematical formula}ΘΠF, are inherited from labeled transition systems. However, we also require a specialized notion of cost and optimality, augmented cost/optimality, different from the standard additive-cost notion. This is because, when applied to {a mathematical formula}ΘΠF, the standard notion accounts only for the center-action costs. Augmented cost/optimality accounts also for the leaf-goal price tag, and as we shall see corresponds exactly to optimality in the input planning task.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Augmented Cost &amp; OptimalityLet Π be a planning task, and {a mathematical formula}F a star factoring. For a decoupled goal state {a mathematical formula}sG, its leaf-goal price tag, denoted {a mathematical formula}LGPrice(sG), is the sum over its minimal leaf goal state prices:{a mathematical formula}For a decoupled path {a mathematical formula}πF ending in {a mathematical formula}sG, its augmented cost is:{a mathematical formula}A solution for a decoupled state s is augmented-optimal if its augmented cost is minimal among all solutions for s.
+      </paragraph>
+      <paragraph>
+       In the definition of leaf-goal price tags, recall that each leaf factor may contain several state variables, and hence may have more than one leaf goal state. So we need to minimize over these.
+      </paragraph>
+      <paragraph>
+       When referring to optimality in decoupled search, from now on we will always mean augmented optimality. To avoid clumsy wording, we will sometimes drop the word “augmented” and simply talk about optimality.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Correctness
+      </section-title>
+      <paragraph>
+       We now prove soundness, completeness, and optimality of {a mathematical formula}ΘΠF relative to the input planning task Π. We do so via a characterization of decoupled states in terms of their hypercubes:
+      </paragraph>
+      <paragraph label="Definition 6">
+       HypercubeLet Π be a planning task, and {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL. For a decoupled state s in {a mathematical formula}ΘΠF, a state p in Π is a member state of s if {a mathematical formula}p[FC]=center[s] and, for all {a mathematical formula}FL∈FL, {a mathematical formula}prices[s](p[FL])&lt;∞. The set of all member states of s is the hypercube of s, denoted {a mathematical formula}[s].
+      </paragraph>
+      <paragraph>
+       In other words, {a mathematical formula}[s] is the product of the reached leaf states across leaf factors. This is naturally viewed as a hypercube whose dimensions are the leaf factors {a mathematical formula}FL.
+      </paragraph>
+      <paragraph>
+       Observe that s is a decoupled goal state if and only if its hypercube {a mathematical formula}[s] contains a goal state of {a mathematical formula}ΘΠ. Furthermore, it is not difficult to prove that {a mathematical formula}[s] captures exactly those states of {a mathematical formula}ΘΠ reachable using the center path {a mathematical formula}πC[s]:
+      </paragraph>
+      <paragraph label="Lemma 2">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let s be a reachable decoupled state in{a mathematical formula}ΘΠF. Then:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}[s]is exactly the set of states p for which there exists a path π, from I to p in{a mathematical formula}ΘΠ, whose center-action subsequence is{a mathematical formula}πC[s].
+       </list-item>
+       <list-item label="(ii)">
+        For every{a mathematical formula}p∈[s], the cost of a cheapest such path π is{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       Our proof, given in Appendix A.3, is via notions of embedded states, and embedded transitions, linking member states, and member-state transitions, to decoupled states. Embedded states {a mathematical formula}pˆ are in one-to-one correspondence with member states p, but replace the value assignment to each {a mathematical formula}FL with the respective vertex in the compliant-path graph for {a mathematical formula}FL. Embedded transitions {a mathematical formula}pˆ→aqˆ capture member state transitions {a mathematical formula}p→aq in the compliant-path graphs, and hence in the decoupled state space. One can think about this as capturing the decoupled state space in terms of atomic transition-addition steps.
+      </paragraph>
+      <paragraph>
+       Lemma 2 follows directly from the correspondence between member state transitions, embedded state transitions, and the decoupled state space. The same correspondence also shows that:
+      </paragraph>
+      <paragraph label="Lemma 3">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let p be a reachable state in Π, and let π be a path reaching p. Then there exists a reachable decoupled state s in{a mathematical formula}ΘΠFso that{a mathematical formula}p∈[s], and{a mathematical formula}πC[s]is the center action subsequence of π.
+      </paragraph>
+      <paragraph>
+       The reader familiar with state-space abstractions, i.e., state-space quotients relative to a state partition, might find hypercubes reminiscent of that method. But these two concepts actually are very different. State-space quotients over-approximate reachability, whereas the hypercubes in {a mathematical formula}ΘΠF capture reachability exactly, in the sense stated by Lemma 2, Lemma 3. Also, the hypercubes of distinct decoupled states may overlap. We will get back to this in Section 6.4.
+      </paragraph>
+      <paragraph>
+       Correctness relative to the input planning task Π now follows directly:
+      </paragraph>
+      <paragraph label="Theorem 3">
+       Soundness, Optimality Subject to Center PathLet Π be a planning task,{a mathematical formula}Fa star factoring, and{a mathematical formula}πFa solution for{a mathematical formula}ΘΠFending in s. Then there is a plan π for Π where{a mathematical formula}cost(π)=AugCost(πF), where the center-action subsequence of π is{a mathematical formula}πC[s], and where π is cheapest among all plans for Π sharing that same center-action subsequence.
+      </paragraph>
+      <paragraph label="Proof">
+       As s is a decoupled goal state, there exists a member goal state in {a mathematical formula}[s]. Let p be a cheapest such state, i.e., one that minimizes {a mathematical formula}∑FL∈FLprices[s](p[FL]). Using Lemma 2, we can obtain a plan π ending in p, where {a mathematical formula}cost(π)=cost(πC[s])+∑FL∈FLprices[s](p[FL]). By construction, this cost is equal to {a mathematical formula}AugCost(πF).Let now {a mathematical formula}π′ be any plan using {a mathematical formula}πC[s], ending in goal state q. By Lemma 2 (i), {a mathematical formula}q∈[s]. So, by construction, {a mathematical formula}∑FL∈FLprices[s](q[FL]){a mathematical formula}≥∑FL∈FLprices[s](p[FL]). By Lemma 2 (ii) applied to q, {a mathematical formula}cost(π′)≥cost(πC[s])+∑FL∈FLprices[s](q[FL]). Hence {a mathematical formula}cost(π′)≥cost(π), concluding the argument. □
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Completeness, Global OptimalityLet Π be a planning task, and{a mathematical formula}Fa star factoring. If Π is solvable, then so is{a mathematical formula}ΘΠF. If{a mathematical formula}πFis an augmented-optimal solution to{a mathematical formula}ΘΠF, then{a mathematical formula}AugCost(πF)equals the cost of an optimal plan for Π.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that Π is solvable. Let π be an optimal plan for Π, ending in goal state p. With Lemma 3, there exists a reachable decoupled state s s.t. {a mathematical formula}p∈[s]. Let {a mathematical formula}πF be the decoupled path reaching s from {a mathematical formula}IF. As p is a goal state, s is a decoupled goal state, so {a mathematical formula}πF is a solution for {a mathematical formula}ΘΠF.With Lemma 2 (ii), we have that {a mathematical formula}cost(π)≥cost(πC[s])+∑FL∈FLprices[s](p[FL]). By definition, {a mathematical formula}cost(πC[s])+∑FL∈FLprices[s](p[FL])≥AugCost(πF). Thus {a mathematical formula}cost(π)≥AugCost(πF), i.e., {a mathematical formula}ΘΠF has a solution whose augmented cost is at most that of π. The second part of the claim now follows directly with Theorem 3.  □
+      </paragraph>
+      <paragraph>
+       Together, Theorem 3, Theorem 4 show that (augmented-optimal) search in {a mathematical formula}ΘΠF is a form of (optimal) planning for Π. Furthermore, given a solution {a mathematical formula}πF for {a mathematical formula}ΘΠF, the corresponding plan π for Π as per Theorem 3 can be constructed by selecting, for every leaf factor, a cheapest leaf goal state {a mathematical formula}sL, and a cheapest path to {a mathematical formula}sL in the respective compliant-path graph. This construction is low-order polynomial-time in the size of Π and the size of the compliant path graphs along {a mathematical formula}πF.
+      </paragraph>
+      <paragraph>
+       We have already seen, in our Scaling example (Example 5), that the decoupled state space can be exponentially smaller than the standard state space. We next examine possible blow-ups; then we show that our method is exponentially separated from all previous search reduction techniques; then we show how to design (augmented-optimal) search algorithms for {a mathematical formula}ΘΠF.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Decoupled state space size and pruning
+     </section-title>
+     <paragraph>
+      As we pointed out, the decoupled state space is, in general, infinite due to (1) different center paths, and due to (2) different pricing functions. Of these, (1) would be easy to tackle by considering decoupled states to be equivalent if they disagree only on the center path. However, as we now show, due to (2) there can be infinitely many reachable non-equivalent decoupled states. Furthermore, even in finite cases, the number of reachable non-equivalent decoupled states can blow up exponentially relative to the standard state space.
+     </paragraph>
+     <paragraph>
+      Fortunately, both can be tackled using pruning techniques. Finiteness can be achieved through a simple dominance pruning technique that we introduce in Section 5.1. Blow-ups can be avoided through a more powerful hypercube pruning technique that we introduce in Section 5.2. The latter guarantees that there can never be more reachable decoupled states than reachable standard states. The downside of hypercube pruning is that it incurs a co-NP-complete subproblem. Our implementation uses dominance pruning only as, empirically on the standard IPC benchmarks, hypercube pruning incurs a large computational overhead; reduces search space size only marginally relative to dominance pruning; and even without hypercube pruning, the number of decoupled states never exceeds that of standard states. We introduce hypercube pruning for its theoretical merit.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Finiteness and dominance pruning
+      </section-title>
+      <paragraph>
+       Non-reachable states are not of interest in practice, so we focus on reachable states only. We denote by {a mathematical formula}ΘΠRF the subsystem of {a mathematical formula}ΘΠF containing only those decoupled states reachable from {a mathematical formula}IF.
+      </paragraph>
+      <paragraph>
+       For reachability functions, as their number is finite, so is the number of non-equivalent decoupled states in {a mathematical formula}ΘΠRF (and even in {a mathematical formula}ΘΠF). For fork factorings, the number of reachable pricing functions is finite because prices can only decrease as cheaper leaf paths become compliant. In non-fork factorings with pricing functions, however, the center may commit the leaves to provide preconditions, causing the leaf state prices to increase. Repeated commitments can cause the prices to diverge:
+      </paragraph>
+      <paragraph label="Example 7">
+       Consider the Vanilla example with inverted-fork factoring {a mathematical formula}FC={o} and {a mathematical formula}FL={{tA},{tB}}. Say we continue the decoupled path {a mathematical formula}s0→load(tB,l1)s1 with the center action unload{a mathematical formula}(tB,l1). Then the outcome decoupled state {a mathematical formula}s2 has the same center state as {a mathematical formula}s0, {a mathematical formula}o=l1. But the pricing function is different. The price tags for {a mathematical formula}tB in {a mathematical formula}s0 are 0 for {a mathematical formula}{tB=l3}, 1 for {a mathematical formula}{tB=l2}, and 2 for {a mathematical formula}{tB=l1}. In {a mathematical formula}s2, they are 2 for {a mathematical formula}{tB=l1}, 3 for {a mathematical formula}{tB=l2}, and 4 for {a mathematical formula}{tB=l3}. If we continue loading/unloading the object in alternating locations on the map, then the prices for truck positions will keep increasing ad infinitum.
+      </paragraph>
+      <paragraph>
+       Intuitively, the decoupled states along load/unload sequences as outlined get worse, as the prices get higher. This leads to the following simple definition of dominance:
+      </paragraph>
+      <paragraph label="Definition 7">
+       DominanceLet Π be a planning task, {a mathematical formula}F a star factoring, and {a mathematical formula}s,t decoupled states. We say that tdominatess if {a mathematical formula}center[t]=center[s] and, for every leaf state {a mathematical formula}sL, {a mathematical formula}prices[t](sL)≤prices[s](sL).
+      </paragraph>
+      <paragraph>
+       Note that equivalence is a special case of dominance, in that equivalent s and t dominate each other.
+      </paragraph>
+      <paragraph>
+       Informally, if t dominates s, then anything one can do in s, one can do at least as well in t. Formally, dominance is a simulation relation (e.g. [62]):
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Correctness of Dominance PruningLet Π be a planning task,{a mathematical formula}Fa star factoring, and{a mathematical formula}s,tdecoupled states, where t dominates s. Then, for every transition{a mathematical formula}s→aCs′in{a mathematical formula}ΘΠF,{a mathematical formula}t→aCt′also is a transition in{a mathematical formula}ΘΠF, and{a mathematical formula}t′dominates{a mathematical formula}s′.
+      </paragraph>
+      <paragraph label="Proof">
+       The center precondition of {a mathematical formula}aC is trivially true in t, and its leaf preconditions have finite prices in t because that is so already in s. Hence {a mathematical formula}t→aCt′ is a transition in {a mathematical formula}ΘΠF. To see that {a mathematical formula}t′ dominates {a mathematical formula}s′, just note that the compliant-path graph is extended with the same last time-step on both sides, so the cheaper prices in t can only lead to cheaper prices in {a mathematical formula}t′.  □
+      </paragraph>
+      <paragraph>
+       Simulation relations have previously been used for dominance pruning in standard state space search (e.g. [63], [64]). In particular, they can be used for optimality-preserving pruning when used only against previously visited states with equal or smaller path costs, i.e., reached with action sequences of equal or smaller cost. For the purpose of our discussion in this paper, we distinguish the following three forms of pruning:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Ancestor: Compare any new state s to its ancestor states t.
+       </list-item>
+       <list-item label="2.">
+        Cheaper-Visited: Compare any new state s to all previously visited states t whose path cost is at most that of s.
+       </list-item>
+       <list-item label="3.">
+        All-Visited: Compare any new state s to all previously visited states t.
+       </list-item>
+      </list>
+      <paragraph>
+       In all cases, if s is dominated by one of the states t it is compared to, then s is pruned. As dominance generalizes equivalence, such pruning generalizes duplicate pruning over equivalent states.
+      </paragraph>
+      <paragraph>
+       Ancestor states are a special case of cheaper visited states, and cheaper visited states are a special case of visited states. Hence the pruning methods become stronger in the order listed. Cheaper-visited pruning preserves optimality [64]; all-visited pruning does not, because the search might first visit a dominating but more costly state, pruning the optimal solutions.
+      </paragraph>
+      <paragraph>
+       It turns out that, to avoid infinite reachable decoupled state spaces {a mathematical formula}ΘΠRF, the weakest form of pruning considered herein – ancestor dominance pruning – already suffices.
+      </paragraph>
+      <paragraph>
+       For inverted-fork factorings, this is trivial: As the prices increase monotonically, with ancestor dominance pruning every search path must stop as soon as the same center state is visited a second time. For example, the search path {a mathematical formula}s0→load(tB,l1)s1→unload(tB,l1)s2 in Example 7 is pruned, because {a mathematical formula}s2 is dominated by {a mathematical formula}s0.
+      </paragraph>
+      <paragraph>
+       For more general factorings, with bidirectional dependencies between leaves and center, where the prices neither increase nor decrease monotonically, the proof is more involved:
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Finiteness under Dominance PruningLet Π be a planning task, and{a mathematical formula}Fa star factoring. Under ancestor dominance pruning,{a mathematical formula}ΘΠRFis finite.
+      </paragraph>
+      <paragraph label="Proof Sketch">
+       Consider the non-pruned paths {a mathematical formula}πF in {a mathematical formula}ΘΠRF. We prove that, under ancestor dominance pruning, every {a mathematical formula}πF is finite. As the branching factor is finite, this proves the claim.Observe that the non-pruned paths necessarily are descending: Intuitively, some prices along {a mathematical formula}πF must descend in each step as otherwise the new state would be dominated by some previous state. Formally, consider the pricing functions along {a mathematical formula}πF as vectors v over {a mathematical formula}R0+∪{∞}. Define a relation ≻ over such vectors by {a mathematical formula}v≻v′ iff there exists a vector position k so that {a mathematical formula}v[k]&gt;v′[k]. Say that a vector sequence {a mathematical formula}v→=v0,v1,v2,… is descending if, whenever v precedes {a mathematical formula}v′ in the sequence, {a mathematical formula}v≻v′.Assume to the contrary that there is an infinite descending path {a mathematical formula}πF. Then from an infinite sub-path with identical center states we can extract an infinite descending vector sequence {a mathematical formula}p→ over {a mathematical formula}R0+∪{∞}. More precisely, {a mathematical formula}p→ is over {a mathematical formula}R∪{∞} where R contains all possible finite action-cost sums in Π.It is easy to see (Proposition 5 in Appendix A.4) that R has no infinite descending sequence of 1-vectors (within each finite cost value, only a finite number of non-0 cost actions can be used). But what about N-vectors? Observe that, for {a mathematical formula}N&gt;1, the relation ≻ is not a partial order. It is neither transitive, e.g. {a mathematical formula}(5,5)≻(4,10) and {a mathematical formula}(4,10)≻(5,9), but {a mathematical formula}(5,5)⊁(5,9); nor asymmetric, e.g. {a mathematical formula}(4,5)≻(5,4) and {a mathematical formula}(5,4)≻(4,5). Furthermore, {a mathematical formula}v≻v′ as soon as {a mathematical formula}v′ is strictly smaller anywhere; all other positions can increase by arbitrary amounts, e.g. {a mathematical formula}v≻v′ for {a mathematical formula}v=(5,5) and {a mathematical formula}v′=(4,1000). Nonetheless (Lemma 8 in Appendix A.4), if there is no infinite descending sequence of 1-vectors over some set {a mathematical formula}R⊆R, then there is no infinite descending sequence of N-vectors over {a mathematical formula}R∪{∞}. Hence {a mathematical formula}p→ must be finite, in contradiction, showing the claim. □
+      </paragraph>
+      <paragraph>
+       On fork factorings, in practice we employ an optimization of dominance pruning, that we refer to as frontier pruning. Given a decoupled state s and leaf factor {a mathematical formula}FL, a leaf state {a mathematical formula}sL is a frontier state if either (a) {a mathematical formula}sL is a leaf goal state; or (b) {a mathematical formula}sL can still contribute to improving the price of one of its neighbors, i.e., there exist a and {a mathematical formula}tL so that {a mathematical formula}sL→atL and {a mathematical formula}prices[s](sL)+c(a)&lt;prices[s](tL). Intuitively, as prices in a fork factoring can only decrease, frontier states are the only ones that may still have a role in obtaining the cheapest goal price. Hence one can test dominance on frontier states only: t frontier-dominates s if {a mathematical formula}center[t]=center[s] and, for every frontier leaf state {a mathematical formula}sL, {a mathematical formula}prices[t](sL)≤prices[s](sL). This still preserves optimality. (The easy proof can be looked up in the work by Torralba et al. [3], who introduce frontier pruning as their most basic method.)
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Size blow-up and hypercube pruning
+      </section-title>
+      <paragraph>
+       Even in finite cases, the number of non-equivalent decoupled states can blow-up relative to the size of the standard state space. This is because the maintenance of pricing functions can result in a form of “memory of the center path taken”: different paths may have provided center preconditions enabling different leaf moves, thus resulting in different pricing functions. This happens, indeed, even in very simple examples akin to the transportation examples we have been using all along:
+      </paragraph>
+      <paragraph label="Example 8">
+       Consider the following BlowUp example, with one truck t, one object o, and n locations {a mathematical formula}l1,…,ln, where the truck can move between any pair of locations; both t and o are initially at {a mathematical formula}l1, the goal is for o to be at {a mathematical formula}ln. In short, this is like the Scaling example except with only a single object, and with locations arranged as a fully-connected road map instead of a line. We consider the fork factoring {a mathematical formula}FC={t}, {a mathematical formula}FL={{o}}.Obviously, the standard state space in this example is small ({a mathematical formula}n(n+1) reachable states). But the decoupled state space has size exponential in n. Through the pricing functions, the decoupled states “remember” the locations visited by t in the past. For example, the decoupled state reached through 〈drive{a mathematical formula}(l1,l2), drive{a mathematical formula}(l2,l3)〉 has finite prices for {a mathematical formula}{o=l1}, {a mathematical formula}{o=t}, {a mathematical formula}{o=l2}, and {a mathematical formula}{o=l3}; while the decoupled state reached through 〈drive{a mathematical formula}(l1,l4), drive{a mathematical formula}(l4,l5)〉 has finite prices for {a mathematical formula}{o=l1}, {a mathematical formula}{o=t}, {a mathematical formula}{o=l4}, and {a mathematical formula}{o=l5}. Hence the decoupled state space enumerates pricing functions corresponding to every subset of visited locations from {a mathematical formula}{l2,…,ln}.
+      </paragraph>
+      <paragraph>
+       Note the simplicity of this example. Blow-ups may occur even for fork factorings, and even when maintaining reachability functions only (as the pricing functions here disagree even on reachability). The latter also implies that dominance pruning does not prevent the blow-up.{sup:4}
+      </paragraph>
+      <paragraph>
+       It turns out that blow-ups can be avoided based on the previously introduced hypercube characterization. The core observation in this context is that solvability of a decoupled state is equivalent to solvability of at least one member state:
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Let Π be a planning task,{a mathematical formula}Fa star factoring, and s a decoupled state. Then s is solvable if and only if at least one{a mathematical formula}p∈[s]is solvable.
+      </paragraph>
+      <paragraph>
+       This follows from the same correspondence between member state transitions, embedded state transitions, and the decoupled state space, as used to prove correctness in Section 4.4.
+      </paragraph>
+      <paragraph>
+       The idea now simply is to prune a decoupled state s when its hypercube does not contribute any new member states, i.e., if s is covered by previously visited decoupled states:
+      </paragraph>
+      <paragraph label="Definition 8">
+       Hypercube CoveringLet Π be a planning task, {a mathematical formula}F a star factoring, and {a mathematical formula}s,t1,…,tn decoupled states. We say that {a mathematical formula}t1,…,tncovers if {a mathematical formula}center[ti]=center[s] for all i, and {a mathematical formula}⋃i=1n[ti]⊇[s].
+      </paragraph>
+      <paragraph>
+       From Lemma 4, we immediately get:
+      </paragraph>
+      <paragraph label="Theorem 6">
+       Correctness of Hypercube PruningLet Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let{a mathematical formula}s,t1,…,tnbe decoupled states, where{a mathematical formula}t1,…,tncover s. If s is solvable, then so is at least one{a mathematical formula}ti.
+      </paragraph>
+      <paragraph>
+       Therefore, hypercube pruning is correct: if s is covered by previously visited decoupled states {a mathematical formula}t1,…,tn, then pruning s does not forego completeness. This applies to the same three forms of pruning as above, i.e., ancestor pruning, cheaper-visited pruning, and all-visited pruning. In each case, the respective collection of t becomes the set {a mathematical formula}t1,…,tn in the hypercube-covering check.
+      </paragraph>
+      <paragraph>
+       On the other hand, hypercube pruning does, as stated, not preserve optimality. The hypercube disregards leaf state prices, and so does the notion of hypercube covering.
+      </paragraph>
+      <paragraph>
+       Given this, cheaper-visited pruning does not make much sense. Ancestor pruning is not enough to prevent exponential blow-ups. However, all-visited pruning provides the desired guarantee:
+      </paragraph>
+      <paragraph label="Theorem 7">
+       Size Guarantee under Hypercube PruningLet Π be a planning task, and{a mathematical formula}Fa star factoring. Under all-visited hypercube pruning, the number of decoupled states in{a mathematical formula}ΘΠRFis bounded by the number of reachable states in{a mathematical formula}ΘΠ.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider the non-pruned visited decoupled states s under all-visited hypercube pruning. With {a mathematical formula}t1,…,tn being the decoupled states visited prior to s and sharing the same center state, denote by {a mathematical formula}[s]‾:=[s]∖⋃i=1n[ti] the hypercube remaining of s when eliminating {a mathematical formula}t1,…,tn. Clearly, {a mathematical formula}[s]‾≠∅ as otherwise s would be pruned. Furthermore, for any other non-pruned visited decoupled state {a mathematical formula}s′, {a mathematical formula}[s]‾∩[s′]‾=∅: if {a mathematical formula}s′ was visited before s, this is because {a mathematical formula}[s′] was eliminated from {a mathematical formula}[s]‾; if {a mathematical formula}s′ was visited after s, this is because {a mathematical formula}[s] was eliminated from {a mathematical formula}[s′]‾. So the non-pruned decoupled states are associated with non-empty and disjoint sets {a mathematical formula}[s]‾ of states in {a mathematical formula}ΘΠ. The claim now follows together with Lemma 2, which implies that, if s is reachable in {a mathematical formula}ΘΠF, then every {a mathematical formula}p∈[s] is reachable in {a mathematical formula}ΘΠ.  □
+      </paragraph>
+      <paragraph>
+       The bad news is that testing Definition 8 is, in general, hard, even for the hypercubes that may actually occur during decoupled search:
+      </paragraph>
+      <paragraph label="Proposition 3">
+       Given a planning task Π and a star factoring{a mathematical formula}F, it is co-NP-complete to decide whether reachable decoupled states{a mathematical formula}t1,…,tncover a reachable decoupled state s.
+      </paragraph>
+      <paragraph label="Proof Sketch">
+       Membership follows directly from the results by Hoffmann and Kupferschmid [65] for general hypercube covering problems. Hardness follows by reduction from the complement of SAT, extending Hoffmann and Kupferschmid's argument by a simple construction of Π and {a mathematical formula}F. Given any CNF formula ϕ with clauses {a mathematical formula}C1,…,Cm, the construction includes, for each clause {a mathematical formula}Cj, a center action {a mathematical formula}ajC which is applicable to the initial state, and which allows to generate a hypercube {a mathematical formula}tj corresponding to the truth-value assignments disallowed by {a mathematical formula}Cj. Another center action {a mathematical formula}a0C allows to generate the hypercube s corresponding to the space of all truth-value assignments. Consider the time point in search where search has explored each of the alternatives {a mathematical formula}a1C,…,amC (applied each of these actions to the initial state separately), and now explores the alternative {a mathematical formula}a0C. Then all-visited hypercube pruning checks whether {a mathematical formula}t1,…,tm cover s. The latter is the case iff ϕ is unsatisfiable.  □
+      </paragraph>
+      <paragraph>
+       We remark that {a mathematical formula}F in the proof construction is a fork factoring, so co-NP-completeness holds for this restricted case already.
+      </paragraph>
+      <paragraph>
+       Hoffmann and Kupferschmid [65] devise an algorithm, “cube elimination”, to solve hypercube covering problems. We implemented this algorithm, but found it to be ineffective in decoupled search, where it consumes prohibitive amounts of memory. We also experimented with an encoding into SAT, and a SAT solver API (Z3 [66]), but that was ineffective too, consuming prohibitive amounts of runtime. It remains an open question whether hypercube pruning can be made effective in practice. In particular, this pertains to optimality-preserving variants. (A simple such variant results from reducing each {a mathematical formula}ti to only those leaf states whose price is at most that in s.)
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Related techniques and exponential separations
+     </section-title>
+     <paragraph>
+      Several previous methods relate to star-topology decoupling in that they may sometimes exploit similar structure. All these methods are complementary to star-topology decoupling, i.e., they do not dominate star-topology decoupling, nor vice versa. In particular, there are exponential separations: examples where star-topology decoupling results in exponentially less effort.
+     </paragraph>
+     <paragraph>
+      We discuss partial-order reduction (POR) methods in Section 6.1, unfolding methods in Section 6.2, and factored planning methods in Section 6.3. We summarize the relation to other methods in Section 6.4.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Partial-order reduction
+      </section-title>
+      <paragraph>
+       POR methods prune applicable transitions, preserving completeness while avoiding unnecessary permutations. POR originates in Verification (e.g. [8], [9], [10], [11], [12], [13]), and has more recently also been successfully applied in classical planning, specifically in the form of strong stubborn sets[15], [16].
+      </paragraph>
+      <paragraph>
+       Star topologies relate to POR in that they can also be directly exploited for POR. In a fork topology, where the only cross-factor interactions consist of leaf actions requiring preconditions on the center, one can fix an ordering of leaves, and schedule transitions in round-robin blocks “center – first leaf – … – last leaf”, where each factor may choose to move or stand still, but if leaf {a mathematical formula}FL chooses to stand still then it has to remain so until the center moves in a way that enables a different transition for {a mathematical formula}FL.
+      </paragraph>
+      <paragraph>
+       Nevertheless, star-topology decoupling is exponentially separated from POR methods. Specifically, here and in the discussions below, by an exponential separation from X, where X is an alternate search reduction method, we mean a family {a mathematical formula}{Πn|n∈N+} of planning tasks, of size (number of state variables and actions) polynomially related to n, so that (i) the number of reachable decoupled states is bounded by a polynomial in n, while (ii) the state space size under X is exponential in n. In most cases, the exponential separation will be our Scaling example, fixing, for simplicity, the number of locations to be the same as the number n of objects {a mathematical formula}oi to transport. Recall from Example 5 that condition (i) is satisfied (there are {a mathematical formula}n(n+1)2 reachable decoupled states), while the standard state space has {a mathematical formula}n(n+1)n reachable states.
+      </paragraph>
+      <paragraph>
+       The Scaling example is an exponential separation from strong stubborn sets. These collect a subset of actions branching over which suffices to preserve optimality in a given state; applicable actions outside the strong stubborn set are pruned. A strong stubborn set must (a) contain actions that make “progress to the goal”, as well as (b) contain all actions that interfere (that are not concurrent) with applicable actions already included into the stubborn set. Now, consider the initial state I in our Scaling example, where the truck and all objects are at {a mathematical formula}l1. To satisfy (a), it suffices to include a single load{a mathematical formula}(oi,l1) action. However, we also need to include move{a mathematical formula}(l1,l2), as this (b) interferes with load{a mathematical formula}(oi,l1). But then, we must include all applicable load actions, {load{a mathematical formula}(oi,l1)|1≤i≤n}, because these (b) interfere with move{a mathematical formula}(l1,l2). The same argument applies, in the outcome state of applying any load{a mathematical formula}(oj,l1) in I, to all other load actions {load{a mathematical formula}(oi,l1)|1≤i≤n,i≠j}. Hence the state space under strong stubborn set pruning enumerates all subsets of objects that may be loaded in the initial state, resulting in a number of states {a mathematical formula}≥2n.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Petri net unfolding
+      </section-title>
+      <paragraph>
+       Instead of pruning permutations in the standard state space, unfoldings represent the reachable state space as an acyclic Petri net, capturing concurrency explicitly (e.g. [22], [23], [24], [25], [26]). This relates to star-topology decoupling in that both approaches build structures over partial (component) states, without necessarily enumerating their combinations. One can view star-topology decoupling as a form of unfolding exploiting star topologies to get rid of two major sources of complexity, namely (1) testing whether a conjunctive condition is reached and (2) dealing with prevail conditions. Exponential separations are easy to construct given these complexity reductions; e.g., our Scaling example is one.
+      </paragraph>
+      <paragraph>
+       Petri net unfolding constructs a DAG, an unfolding prefix{a mathematical formula}P, whose vertices are conditions, annotated with state-variable values in our context; and events, annotated with actions in our context. Starting from {a mathematical formula}P containing only the initial state conditions, the unfolding process adds possible events, and adds their effects as new conditions.
+      </paragraph>
+      <paragraph>
+       A possible event is one whose precondition is reachable within {a mathematical formula}P. Complexity source (1) arises because deciding whether that is so, i.e., whether a (partial) value assignment (a marking) has non-conflicting support within {a mathematical formula}P, is NP-complete given {a mathematical formula}P. Testing this property requires to find a jointly reachable combination of conditions annotated with the required values. This needs to be done every time a new event should be added, and, once the prefix is completed, when testing whether the goal is reachable. In contrast, such reachability testing is linear-time in the decoupled state space, whose organization via center paths avoids cross-leaf conflicts.
+      </paragraph>
+      <paragraph>
+       Regarding complexity source (2), prevail conditions are an important feature in our setting, specifically leaf actions with prevail conditions on the center. Consider for example the load actions in our examples, which require, but do not consume, a truck position {a mathematical formula}t=l. The decoupled state space does not have to branch over such actions.
+      </paragraph>
+      <paragraph>
+       In Petri nets, prevail conditions correspond to read arcs, that do not consume their input. Standard Petri nets do not support read arcs. They can be encoded via the plain method, where {a mathematical formula}t=l is both an input and an output of every load/unload; or via the place-replication method, where the same is done but each load/unload gets its own copy of {a mathematical formula}t=l, and a truck move away from l requires all these copies as inputs. Both encodings are quite different from the native treatment of prevail conditions in planning. In particular, in our Scaling example, both encodings result in unfoldings enumerating all subsets of objects that may be loaded at {a mathematical formula}l1. For the plain encoding, this is because the concurrency between the load{a mathematical formula}(oi,l1) events is lost. In the place-replication encoding, adding move{a mathematical formula}(l1,l2) to the prefix enumerates the object subsets because, for every copy of {a mathematical formula}t=l1, we can choose whether to use the condition from before, or after, the respective object-load event.
+      </paragraph>
+      <paragraph>
+       There is a Petri net variant, contextual Petri nets (c-nets), that natively supports read arcs [27]. The unfolding process for c-nets is like that sketched above, except that, instead of a prefix {a mathematical formula}P, c-net unfolding builds an enriched prefix{a mathematical formula}E=(P,H), where {a mathematical formula}H maps the events in {a mathematical formula}P to sets of histories: the event history needs to distinguish the subset of prevail conditions consumed in the past, so that the unfolding process can determine which new events are still possible in the future. Any one event may have exponentially many different histories. Indeed, the number of event histories in {a mathematical formula}E is asymptotically identical with the size of the place-replication unfolding [27]. In our Scaling example, the histories for move{a mathematical formula}(l1,l2) are exactly the subsets of loaded objects.
+      </paragraph>
+      <paragraph>
+       Of course, unfolding has advantages too. Any example family whose unfolding is small, but that has no useful star topology, is an exponential separation from star-topology decoupling. Such cases do occur also in the IPC benchmarks. In the Airport IPC domain (an abstract version of airport ground traffic control [67]), unfolding yields strong state space reductions [24]. Yet all airplanes interact directly with each other, so there is no useful star topology. An interesting direction for future work are hybrids between decoupled search and unfolding, trying to combine advantages from both sides.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Factored planning
+      </section-title>
+      <paragraph>
+       As stated, star-topology decoupling has been inspired by factored planning, which also partitions the state variables into factors [29], [30], [31], [32], [33], [34], [35], [36], [37], [38], [39], [40], [41].
+      </paragraph>
+      <paragraph>
+       In localized factored planning, the planning process is formulated as local planning on individual components, followed by global cross-component constraint resolution. The latter is done in terms of constraint satisfaction or message-passing methods over exhaustive sets of local plans. Several works have analyzed in depth the worst-case complexity of such planning processes, with major sources of exponential complexity being the length of local plans, and the treewidth of the global constraint graph (the interaction graph, in our terminology). Star-topology decoupling eliminates both of these complexity sources by restricting the form of global interactions allowed.
+      </paragraph>
+      <paragraph>
+       The most recent, and empirically the most successful, localized factored planning method is partition-based pruning[40], which originates from multi-agent planning. The local planning here takes place as part of a state space search, where a local component state space – an agent's “private” part of the search – is pursued exclusively, until “public” state changes (relevant to other components) are encountered. This can be viewed as a form of partial-order reduction, exploiting permutability of local plans across components.
+      </paragraph>
+      <paragraph>
+       In hierarchical factored planning, the factors are used within a hierarchy of increasingly more detailed levels, accumulating the factors processed so far as search proceeds down the hierarchy. As a high-level plan may not be realizable at lower levels, one needs to allow backtracking across levels. In star-topology decoupling, the maintenance of compliant paths (low-level plans in a 2-level hierarchy with bidirectional dependencies) eliminates that need.
+      </paragraph>
+      <paragraph>
+       Almost all factored planning approaches cannot guarantee global plan optimality; sometimes, it is a hypothetical but impractical possibility involving exhaustive search over all local plan lengths. The single exception is the work by Fabre et al. [36], which uses finite automata to represent the local-plan languages (the sets of local plans) at any point in the search.
+      </paragraph>
+      <paragraph>
+       Algorithmically, star-topology decoupling is quite different from both, localized and hierarchical factored planning. At the core of the differences is the assumption of a particular structural profile, a star topology, in our method; vs. the handling of arbitrary cross-factor interactions in previous methods. Consequently, whereas previous works concentrate on the resolution of complex interactions – via constraint satisfaction, tree decomposition, message passing, backtracking – our work concentrates on algorithms specialized to star topologies, which facilitate a much different direct handling of the simple interactions between center and leaves. In particular, thanks to the latter, our algorithms end up being like state space search, only on a more complex state structure; this is not the case of any previous factored planning method (save partition-based pruning which is a partial-order reduction technique). The only strong conceptual commonality between star-topology decoupling and factored planning thus remains the use of a state variable partition.
+      </paragraph>
+      <paragraph>
+       Turning our attention to exponential separations, consider first localized factored planning. It is easy to see that our Scaling example is an exponential separation from partition-based pruning, as the only private actions are those of the truck, which does not affect the exponential behavior in the number n of packages. For most other localized factored planning approaches, exponential separations result from their scaling exponentially in local plan length [32], [33], [35], [39]. For example, one can modify our Scaling example so that objects have to traverse a more complex internal state space in addition to being loaded/unloaded (leaf state spaces can be made arbitrarily complex, without increasing the number of decoupled states, so long as the additional transitions do not have preconditions on the center). Similarly, Fabre et al.'s [36] framework scales exponentially on leaf factors whose sets of local plans have no compact finite-automata representation.
+      </paragraph>
+      <paragraph>
+       Regarding hierarchical factored planning, in our Scaling example such approaches will start with high levels containing only the objects (planning “from the leaves to the root”). So the example becomes an exponential separation when each object may choose between several goal paths. For example, this happens when introducing several trucks which serve different parts of the map.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Other methods
+      </section-title>
+      <paragraph>
+       Other methods are more remotely related. Symmetry reduction (e.g. [17], [18], [19], [68], [21]) is complementary to star-topology decoupling as leaf factors do not need to be symmetric at all. What is more, even if leaf factors are symmetric, decoupling may have a stronger effect than symmetry reduction. Our Scaling example is an exponential separation because even perfect symmetry breaking still keeps track of the number of objects at every location.
+      </paragraph>
+      <paragraph>
+       Star-topology decoupling relates to search with compact state-set representations, in particular with binary decision diagrams (BDD) (e.g., [69], [70], [71]), to the extent that a decoupled state s is a compact representation of a state set, namely its hypercube {a mathematical formula}[s]. This connection is weak, of course, as hypercubes are very particular state sets, pertaining to particular points in the search, whereas BDDs are used to represent large parts of the search space. Hypercubes always have a small representation by definition; whereas BDDs can represent arbitrary state sets and, consequently, may become large. Exponential separations are easy to construct, e.g., from a BDD-based breadth-first search. An example is a task encoding the adjacency in a {a mathematical formula}k×k grid [72], which is known to lead to an exponential blow-up in a BDD representation. This task can be formulated with leaves {a mathematical formula}F{i,j} encoding whether cells i and j are adjacent, resulting in a decoupled state space with polynomial size.
+      </paragraph>
+      <paragraph>
+       Decoupled states, specifically their hypercubes, may be reminiscent of abstractions (state-space quotients relative to a state partition), extensively used in AI to design lower-bounding heuristic functions (e.g. [73], [74], [75], [76], [77], [78]) Like for BDDs, the connection is weak though. The hypercubes in star-topology decoupling are not a partition (the hypercubes of different decoupled states may overlap). More importantly, they capture the original transition system paths exactly, merely representing and exploring them in a different manner.
+      </paragraph>
+      <paragraph>
+       Fork/inverted-fork factorings may be somewhat reminiscent of safe abstraction for automatic planning-task specification. This method is rooted in early works on hierarchical factored planning with the downward refinement property [79], [30], where all abstract plans are realizable at lower levels. Helmert [80] introduced this as an optimization in (an early version of) the Fast Downward system [52], removing inverted-leaf variables with strongly connected state spaces. Haslum [81] generalized this method to consider only the relevant variable values, Tozicka et al. [82] introduced a related reduction technique merging mutually reachable variable values. All these methods work at the level of single state variables, not factors; none of them can guarantee global optimality; downward refinement is only possible in case of single-directional dependencies, unable to handle more general star topologies. Furthermore, all these techniques rely on mutual reachability between variable values, so that exponential separations are trivial to construct by removing “backwards-actions” not needed in the plan (e.g., in our Scaling example, truck moves towards {a mathematical formula}l1 and unloading actions at locations other than {a mathematical formula}lm).
+      </paragraph>
+      <paragraph>
+       Analyzing task structure has a long tradition in planning. The causal graph, which we use for factorization, has been extensively explored for complexity analysis, in particular the identification of tractable fragments [58], [83], [59], [84], [85], [86], [87], [88], [89], [90]. Recent research has extended this to the consideration of fixed-parameter tractability, with “backdoors” to planning encapsulating the exponential part of the search [91], [92]. While many structural aspects considered in such research relate to our factoring types, star-topology decoupling is directed not at tractable parts of the task, but at worst-case exponential parts that interact in a limited manner. That said, work on the identification of backdoors might inspire new factoring methods in the future.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Heuristic search
+     </section-title>
+     <paragraph>
+      Heuristic search has been highly successful in AI Planning since the end of the 90s (e.g. [48], [49], [50], [51], [52], [53], [54], [55]). State space search here is guided by a heuristic function, heuristic for short, a function h that maps states s to estimates of remaining cost, i.e., of the cost of an optimal solution for s. We denote that latter cost as the perfect heuristic{a mathematical formula}h⁎. If h is a lower bound on {a mathematical formula}h⁎ – if h is admissible – then it can be used for optimal searches like {a mathematical formula}A⁎[93], [47].
+     </paragraph>
+     <paragraph>
+      We show in this section that star-topology decoupling combines gracefully with standard heuristic search methods. Section 7.1 discusses heuristic functions, Section 7.2 discusses search algorithms.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Heuristic functions
+      </section-title>
+      <paragraph>
+       Our definition of heuristic functions for decoupled search follows the standard concepts, instantiated for augmented optimality:
+      </paragraph>
+      <paragraph label="Definition 9">
+       Heuristic FunctionLet Π be a planning task, and {a mathematical formula}F a star factoring. A heuristic function, heuristic for short, is a function {a mathematical formula}hF:SF↦R0+∪{∞}.The augmented-perfect heuristic, {a mathematical formula}hF⁎, assigns each {a mathematical formula}s∈SF the augmented cost of an augmented-optimal solution for s. We say that a heuristic h is augmented-admissible if {a mathematical formula}hF≤hF⁎.
+      </paragraph>
+      <paragraph>
+       The possibility to return ∞, instead of a numeric estimate, is intended to allow {a mathematical formula}hF to identify unsolvable states, a capability many classical-planning heuristic functions have (e.g. [94], [78], [42]).
+      </paragraph>
+      <paragraph>
+       Per the definition of augmented optimality (Definition 5, page 35), the augmented-perfect heuristic {a mathematical formula}hF⁎ accounts, not only for standard path cost from a decoupled state s, but also for the cost of compliant leaf goal paths that a solution for s needs to be augmented with. A subtlety here is that, given the least-commitment strategy for leaf factors, selecting the entire leaf path only at the end, part of the associated price lies “in the past”, before s. Specifically, let {a mathematical formula}πF be a solution for s, ending in {a mathematical formula}sG. {a mathematical formula}hF⁎ accounts for (1) the cost of {a mathematical formula}πF, i.e., of the center action sequence {a mathematical formula}πC underlying {a mathematical formula}πF; plus (2) the cost of {a mathematical formula}πC[sG]-compliant leaf goal paths {a mathematical formula}πLi. In (2), {a mathematical formula}πC[sG]=πC[s]∘πC, so part of the paths {a mathematical formula}πLi will be scheduled alongside the path {a mathematical formula}πC[s] leading to s. In particular, while heuristic functions usually return 0 on goal states, that is not so for {a mathematical formula}hF⁎: we still have to pay the leaf-goal price tag, moving the leaves into place.
+      </paragraph>
+      <paragraph>
+       Pricing functions, however, capture everything relevant about the past, so that it suffices to consider the possible futures starting from the current pricing function. We formulate this in terms of a compilation into classical planning, allowing to estimate {a mathematical formula}hF⁎ through standard classical-planning heuristics. The idea is to force the plan to “buy” exactly one leaf state from each leaf factor:
+      </paragraph>
+      <paragraph label="Definition 10">
+       {a mathematical formula}hF⁎ as Classical PlanningLet {a mathematical formula}Π=(V,A,c,I,G) be a planning task, {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL, and s a decoupled state. The buy-leaves compilation is the planning task {a mathematical formula}ΠL$=(VL$,AL$,cL$,sL$,GL$), obtained from Π and s as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The variables {a mathematical formula}VL$ add a new Boolean variable {a mathematical formula}bought[FL] for every leaf {a mathematical formula}FL, {a mathematical formula}VL$:=V∪{bought[FL]|FL∈FL}. For all variables {a mathematical formula}v∉FC, we add the new value {a mathematical formula}none into {a mathematical formula}D(v).
+       </list-item>
+       <list-item label="2.">
+        The initial state is {a mathematical formula}sL$:=center[s]∪{v=none|v∉FC}∪{bought[FL]=0|FL∈FL}.
+       </list-item>
+       <list-item label="3.">
+        The goal is {a mathematical formula}GL$:=G∪{bought[FL]=1|FL∈FL}.
+       </list-item>
+       <list-item label="4.">
+        The actions {a mathematical formula}AL$ are the previous ones A, adding precondition {a mathematical formula}bought[FL]=1 to a whenever {a mathematical formula}V(pre(a))∩FL≠∅. We furthermore add, for every leaf {a mathematical formula}FL, and for every leaf state {a mathematical formula}sL∈SL[FL] where {a mathematical formula}prices[s](sL)&lt;∞, a new action {a mathematical formula}a[sL] with precondition {a mathematical formula}pre(a[sL]):={bought[FL]=0} and effect {a mathematical formula}eff(a[sL]):=sL∪{bought[FL]=1}.
+       </list-item>
+       <list-item label="5.">
+        The cost function {a mathematical formula}cL$ extends the previous one c by setting {a mathematical formula}cL$(a[sL]):=prices[s](sL) for each new action {a mathematical formula}a[sL].
+       </list-item>
+      </list>
+      <paragraph>
+       We will use the buy-leaves compilation to design heuristic functions for decoupled search.{sup:5} We explain this below; let us first explain the compilation. The leaf factors are assigned the value {a mathematical formula}none initially to indicate that they “do not have a state yet”. Before we can do anything relying on a leaf factor {a mathematical formula}FL, we have to buy (exactly) one of its states, at the price specified in the decoupled state s at hand. The price we pay in doing so accounts for {a mathematical formula}FL's compliant path before s; the classical plan obtained afterwards accounts for {a mathematical formula}FL's compliant path behind s.
+      </paragraph>
+      <paragraph>
+       Note that the goal in {a mathematical formula}ΠL$ forces the plan to buy a leaf state from every{a mathematical formula}FL, even if {a mathematical formula}FL has no goal and would otherwise not be touched by any actions in the plan for {a mathematical formula}ΠL$. This is necessary because {a mathematical formula}FL may have had to move befores: we need to account for any costs incurred in {a mathematical formula}FL in order to enable (to comply with) the decoupled path {a mathematical formula}πC[s] leading to s in the first place.
+      </paragraph>
+      <paragraph label="Example 9">
+       Consider the Vanilla example, with object o and two trucks moving along the line {a mathematical formula}l1,l2,l3. Initially, {a mathematical formula}tA=l1, {a mathematical formula}tB=l3, and {a mathematical formula}o=l1. The goal is {a mathematical formula}o=l3. Consider the strict-star factoring {a mathematical formula}FC={tA,tB} and {a mathematical formula}FL={{o}}, and consider the decoupled state s reached by applying move{a mathematical formula}(tA,l1,l2). We have {a mathematical formula}hF⁎(s)=3 due to the optimal solution induced by the center path 〈move{a mathematical formula}(tA,l2,l3)〉, augmented with the leaf goal path 〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l3)〉. Observe that load{a mathematical formula}(tA,l1) is scheduled before s, while unload{a mathematical formula}(tA,l3) is scheduled behind s.The finite prices in s are 0 for {a mathematical formula}{o=l1}, 1 for {a mathematical formula}{o=tA}, and 2 for {a mathematical formula}{o=l2}. In the buy-leaves compilation {a mathematical formula}ΠL$, we can pay one of these prices to obtain a leaf state other than {a mathematical formula}none. The cheapest plan for {a mathematical formula}ΠL$ results from buying {a mathematical formula}{o=tA}, yielding the plan {a mathematical formula}〈a[{o=tA}], move{a mathematical formula}(tA,l2,l3), unload{a mathematical formula}(tA,l3)〉 which corresponds to the part behind s in the optimal solution above.Consider now the NoEmpty example, which is the same except that truck moves require o to be in the truck. Say, however, that the goal is {a mathematical formula}tA=l3. Consider again the decoupled state s reached by applying move{a mathematical formula}(tA,l1,l2). The finite prices in s now are 1 for {a mathematical formula}{o=tA} and 2 for {a mathematical formula}{o=l2}; {a mathematical formula}{o=l1} is no longer reachable as the truck move committed o to {a mathematical formula}{o=tA}. Observe that {a mathematical formula}hF⁎(s)=2 because the optimal solution is 〈move{a mathematical formula}(tA,l2,l3)〉 augmented with the compliant leaf goal path 〈load{a mathematical formula}(tA,l1)〉. Now, if {a mathematical formula}ΠL$ did not have the goal {a mathematical formula}bought[{o}]=1, then 〈move{a mathematical formula}(tA,l2,l3)〉 would be a plan for {a mathematical formula}ΠL$, of cost {a mathematical formula}1&lt;hF⁎(s). The goal {a mathematical formula}bought[{o}]=1 forces the plan to pay for any services o may have needed to provide before s.
+      </paragraph>
+      <paragraph>
+       Given a classical-planning heuristic function h, we obtain the buy-leaves heuristic function{a mathematical formula}hL$F by setting, given a decoupled state s, the value of {a mathematical formula}hL$F on s to the value of h on {a mathematical formula}sL$ in {a mathematical formula}ΠL$. In other words, {a mathematical formula}hL$F results from h's estimate of initial-state remaining cost in the buy-leaves compilation for s. This construction guarantees two very desirable properties: if h is admissible, then so is{a mathematical formula}hL$F; and if h is perfect, then so is{a mathematical formula}hL$F. The former is of course crucial for optimal planning. The latter curbs information loss: if the heuristic information given by h is perfect, then no loss is incurred. Both properties follow directly from the fact that {a mathematical formula}ΠL$ indeed captures {a mathematical formula}hF⁎:
+      </paragraph>
+      <paragraph label="Lemma 5">
+       Let Π be a planning task,{a mathematical formula}Fa star factoring, and s a decoupled state. Let{a mathematical formula}ΠL$=(VL$,AL$,cL$,sL$,GL$)be the buy-leaves compilation. Then{a mathematical formula}h⁎(sL$)=hF⁎(s).
+      </paragraph>
+      <paragraph label="Proof">
+       “≤”: Say {a mathematical formula}πF is any solution for s, ending in decoupled state {a mathematical formula}sG. Let {a mathematical formula}πC be the sequence of center actions underlying {a mathematical formula}πF. We can construct a plan π for {a mathematical formula}ΠL$ by augmenting {a mathematical formula}πC with a cheapest {a mathematical formula}πC-compliant sequence of leaf actions for each leaf factor {a mathematical formula}FL, starting from a finite-price leaf state {a mathematical formula}sL in {a mathematical formula}s∈SL[FL]; and buying that leaf state via the action {a mathematical formula}a[sL]. By construction, the cost of π in {a mathematical formula}ΠL$ is {a mathematical formula}cost(πC)+LGPrice(sG)=AugCost(πF). Hence {a mathematical formula}h⁎(sL$)≤hF⁎(s).“≥”: Say π is any plan for {a mathematical formula}ΠL$. Let {a mathematical formula}πC be the subsequence of center actions. As the construction of {a mathematical formula}ΠL$ forces the plan to buy, for each leaf factor, exactly one leaf state {a mathematical formula}sL∈SL[FL], {a mathematical formula}πC must be augmentable with {a mathematical formula}πC-compliant leaf paths achieving the leaf goals starting from these {a mathematical formula}sL. So {a mathematical formula}πC induces a solution for s, ending in some {a mathematical formula}sG. If the leaf paths used by π are the cheapest ones, then {a mathematical formula}cost(π)=cost(πC)+LGPrice(sG)=AugCost(πF). For arbitrary leaf paths, we have that {a mathematical formula}cost(π)≥AugCost(πF), and hence that {a mathematical formula}h⁎(sL$)≥hF⁎(s) as desired.  □
+      </paragraph>
+      <paragraph label="Theorem 8">
+       Let Π a planning task, and{a mathematical formula}Fa star factoring. Let h be a classical-planning heuristic function. If h is admissible, then{a mathematical formula}hL$Fis augmented-admissible. If{a mathematical formula}h=h⁎, then{a mathematical formula}hL$F=hF⁎.
+      </paragraph>
+      <paragraph label="Proof">
+       Direct from Lemma 5.  □
+      </paragraph>
+      <paragraph>
+       It should be noted that, while our construction can in principle be used with any heuristic function h, doing so efficiently may be challenging. In particular, the subset of artificial actions {a mathematical formula}a[sL] present, as well as their cost, depend on the decoupled state s. This is problematic for heuristic functions relying crucially on precomputations prior to search, like the aforementioned abstraction heuristics. We have so far realized the buy-leaves compilation for a number of canonical heuristic functions not relying on precomputation. (Namely for {a mathematical formula}hmax, {a mathematical formula}hLM-cut, and {a mathematical formula}hFF; see more details in Section 8.)
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Heuristic search algorithms
+      </section-title>
+      <paragraph>
+       Disregarding solution quality, one can run any search algorithm on the decoupled state space {a mathematical formula}ΘΠF, treating it like an arbitrary transition system. When taking solution quality into account, in particular for optimality, matters are a little more subtle as we need to tackle augmented-optimality in {a mathematical formula}ΘΠF, in difference to the standard additive-cost notion for which heuristic search algorithms are defined. In particular, as we illustrated in Example 4, a solution for {a mathematical formula}ΘΠF may have a worse solution as a prefix. The issue is easy to resolve though, by making the leaf-goal price tags explicit, encoding them as additional transitions to a fresh goal state:
+      </paragraph>
+      <paragraph label="Definition 11">
+       Explicit Leaf-Goal PriceLet {a mathematical formula}Π=(V,A,c,I,G) be a planning task, {a mathematical formula}F a star factoring, and {a mathematical formula}ΘΠF=(SF,AC,c|AC,TF,IF,SGF) the decoupled state space. The explicit leaf-goal price state space {a mathematical formula}ΘΠLGF is like {a mathematical formula}ΘΠF, but with a new state {a mathematical formula}s⁎ set to be the only goal state; and adding, for every {a mathematical formula}sG∈SGF, a new transition {a mathematical formula}sG→s⁎ with a new label whose cost is {a mathematical formula}LGPrice(sG).
+      </paragraph>
+      <paragraph>
+       In other words, {a mathematical formula}ΘΠLGF requires to pay the leaf-goal price tag at the end of any solution, in the form of a transition having that cost. Obviously, the solutions for {a mathematical formula}ΘΠLGF are in one-to-one correspondence with those for {a mathematical formula}ΘΠF, where additive cost in the former corresponds to augmented cost in the latter.
+      </paragraph>
+      <paragraph>
+       Consider now any optimal search algorithm X for additive cost in labeled transition systems, and consider a heuristic function {a mathematical formula}hF defined on {a mathematical formula}SF. Define a heuristic function {a mathematical formula}hLGF for {a mathematical formula}ΘΠLGF simply by extending {a mathematical formula}hF with {a mathematical formula}hLGF(s⁎):=0. Define the algorithm Decoupled-X (D-X) as running X with {a mathematical formula}hLGF on {a mathematical formula}ΘΠLGF, returning {a mathematical formula}πF when X returns {a mathematical formula}πF∘〈sG→s⁎〉. With the above, we have:
+      </paragraph>
+      <paragraph label="Proposition 4">
+       If X is complete, then D-X is complete. If X is optimal for admissible heuristic functions, then D-X is augmented-optimal for augmented-admissible heuristic functions.
+      </paragraph>
+      <paragraph>
+       With Theorem 8 and Proposition 4 together, we can (in principle) take any complete/optimal heuristic search algorithm X, and any classical-planning heuristic function h, and turn them into a complete/augmented-optimal search algorithm for {a mathematical formula}ΘΠF, searching with {a mathematical formula}hL$LGF on {a mathematical formula}ΘΠLGF. By Theorem 3, Theorem 4, this yields a complete/optimal planning algorithm.
+      </paragraph>
+      <paragraph>
+       We remark that, while this construction is simple and canonical, there also are heuristic search algorithms specialized to star-topology decoupling. One can define heuristic functions estimating only the remaining cost for the center. This enables search algorithms exploring decoupled states by estimated center cost, pruning against the best known global solution so far. We described and tested such an algorithm in our prior work [1]. We omit this here for brevity, as the empirical benefits over the simpler approach are limited on standard benchmarks.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We consider all three algorithmic planning problems, i.e., optimal planning, satisficing planning, and proving unsolvability. For each of these, we use star-topology decoupling together with canonical baseline heuristic search planning algorithms, comparing its performance to the state of the art.
+     </paragraph>
+     <paragraph>
+      We begin in Section 8.1 by briefly describing important aspects of our implementation, and explaining the experiments setup. Section 8.2 discusses state space size reductions, filling in some data not covered by our preview in Fig. 1. The three algorithmic planning problems are covered, in turn, by Sections 8.3, 8.4, and 8.5.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Implementation &amp; experiments setup
+      </section-title>
+      <paragraph>
+       Our implementation of star-topology decoupling is in C++, within the Fast Downward (FD) framework [52]. FD is the most commonly used framework in classical planning, and it in particular contains the state-of-the-art heuristic search planning algorithms. Our implementation is modular in that it affects only FD's representation of states, and the computation of state transitions. All of FD's search algorithms can be run via Proposition 4. All of FD's heuristic functions can be run (in principle) via Theorem 8. In our experiments, we instantiate these connections with canonical baseline algorithms. These algorithms are orthogonal to ours, and their details are not needed to understand our results. Hence we only give a brief overview. The search algorithms we use are:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}A⁎, which is used in all state-of-the-art heuristic search optimal-planning systems.
+       </list-item>
+       <list-item label="2.">
+        Greedy best-first search (GBFS), specifically FD's lazy greedy best-first search with a dual open queue for preferred operators. This algorithm is canonical for satisficing heuristic search planning, in that its performance is close to the state of the art, and it is commonly used as a baseline. Preferred operators are applicable actions used in the abstract plan internally generated by a heuristic function. One of the two open queues uses only these actions; the other open queue retains the states generated by other actions, preserving completeness.
+       </list-item>
+      </list>
+      <paragraph>
+       The heuristic functions we use are:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}hmax[49], a basic admissible heuristic function mainly useful for detecting unsolvable states during search. {a mathematical formula}hmax estimates remaining cost by assuming that, from each subgoal conjunction, it suffices to achieve the single most costly variable value.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}hLM-cut[53], a canonical admissible heuristic function, among the state of the art in optimal planning and widely used as a baseline in that context. {a mathematical formula}hLM-cut estimates remaining cost through identifying landmarks[95], action sets that must be hit by every plan.
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}hFF[50], a canonical inadmissible heuristic function, widely used in satisficing-planning systems. {a mathematical formula}hFF estimates remaining cost through the cost of an abstract plan pretending that state variables accumulate, rather than switch between, their values (this is commonly known as the delete relaxation[48], [49]).
+       </list-item>
+       <list-item label="4.">
+        A blind heuristic, which returns 0 on goal states and the cost of the cheapest action otherwise. Using this in {a mathematical formula}A⁎ is the most common design of a cost-optimal blind search in FD.
+       </list-item>
+      </list>
+      <paragraph>
+       The key aspect of decoupled search implementation is the representation, and computation, of decoupled states. As earlier hinted, to avoid the repetition of leaf states across decoupled states, we precompute the state space of each leaf factor just once before search begins, giving IDs to its leaf states and storing these in an array. In the decoupled states, we represent reachability functions as sets of IDs (the reached leaf states), and we represent pricing functions as sets of (ID, price) pairs (the prices of the reached leaf states). Instead of compliant path graphs, we merely store for each reached leaf state {a mathematical formula}sL the last action in a cheapest compliant path to {a mathematical formula}sL. This information is maintained incrementally across decoupled-state transitions {a mathematical formula}s→t.
+      </paragraph>
+      <paragraph>
+       To automatically identify a star factoring for an input task Π, we use one of three simple strategies:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Fork (F): Compute the interaction graph {a mathematical formula}IGΠ(FΠSCC) of the factoring into causal graph SCCs. Let {a mathematical formula}I be the set of leaf vertices F in {a mathematical formula}IGΠ(FΠSCC) that, as a simple sanity criterion, satisfy the size bound {a mathematical formula}∏v∈F|D(v)|&lt;232. Abstain if {a mathematical formula}|I|&lt;2. Otherwise, take {a mathematical formula}I as the leaf factors, {a mathematical formula}FL:=I, and collect all remaining variables into the center {a mathematical formula}FC:=V∖⋃F∈IF.
+       </list-item>
+       <list-item label="2.">
+        Inverted-Fork (IF): As above, but defining {a mathematical formula}I to contain the root vertices in {a mathematical formula}IGΠ(FΠSCC).
+       </list-item>
+       <list-item label="3.">
+        X-Shape (X): As above, but defining {a mathematical formula}I to contain the leaf vertices in {a mathematical formula}IGΠ(FΠSCC), plus those root vertices in {a mathematical formula}IGΠ(FΠSCC) that do not have an arc to a leaf vertex.
+       </list-item>
+      </list>
+      <paragraph>
+       As the benefit of decoupled search lies in avoiding the multiplication of states across leaves, we abstain from single-leaf factorings. As decoupled states explicitly enumerate leaf-factor state spaces, these should not be excessively large, so we apply the simple sanity criterion stated. By Theorem 1, unless the sanity criterion applies, the F (IF) strategy yields a fork (inverted-fork) factoring with maximal possible number of leaves. The X strategy is just a simple way of combining the two. As {a mathematical formula}IGΠ(FΠSCC) typically is very small, all three strategies take negligible runtime (rounded to 0.00 seconds in most cases).
+      </paragraph>
+      <paragraph>
+       Fig. 7 shows statistics regarding the number of instances factorized using each strategy, the number of leaf factors, and the state space size of those leaf factors (the set of domains, slightly larger than that in Fig. 1, will be explained below). As the data shows, leaf factor state spaces are typically small, with notable exceptions in Mystery, Pathways, and TPP. The X strategy subsumes the F and IF ones in terms of the number of factorizable instances (this is not necessarily so as there could be cases with a single {a mathematical formula}IGΠ(FΠSCC) leaf SCC and several root SCCs all of which have an arc to the leaf). Moreover, in almost all cases, X yields exactly the outcome of either F or IF, behaving like a switch choosing whichever of the two structures is present (the only exceptions to this are Pathways and Woodworking). Given this, search performance with X almost always subsumes that of both F and IF, and in the below we consider X only. We will include data for the rare cases where either F or IF results in substantially better performance.
+      </paragraph>
+      <paragraph>
+       We also experimented with more complex factoring strategies, in particular, attempting to greedily maximize not only the number of leaves, but also leaf mobility, the number of actions affecting only a leaf (possibly with a prevail condition on the center), which the search need not branch over. The results were not convincing. Another reason to prefer simple factoring strategies is to avoid overfitting to the benchmarks, by fine-tuning factoring outcomes, and in particular by fine-tuning the set of benchmarks abstained upon: If we can already see (after less than 0.01 seconds) that decoupled search does not make sense on an input task, then the natural thing to do is to abstain. But this limits the view of the benchmark set, and fine-tuning factoring strategies runs the risk of fine-tuning that view. We hence stick to the simplest possible form of that view, to evaluate the basic properties of star-topology decoupling, rather than the possibilities for system tuning. Nevertheless, throughout the following results, the reader should keep in mind that they are taken over the subset of benchmarks with an obvious star topology. The results must be qualified against that selection.{sup:6}
+      </paragraph>
+      <paragraph>
+       The collection of benchmarks we start from is that of the IPC, more specifically, of the classical-planning tracks of the IPC, and of these tracks only those benchmarks that fit our planning task syntax. The major part of the IPC – 100 test suites in total – does fit that profile, so this is not limiting. Of the 100 test suites, the X strategy selects (does not abstain on at least one instance from) 34. The IPC benchmarks are organized in terms of domains, sets of related planning tasks. Each domain may be associated with several test suites. Our IPC benchmark collection contains 49 domains in total, and 17 of those are selected by the X strategy. As there is not much interest in distinguishing the different test suites per domain (they differ mainly in instance size), we accumulate these, presenting results per-domain rather than per-test-suite, as already done in Fig. 1, Fig. 7 above. The IPC benchmarks are publicly available from the IPC web pages.{sup:7}
+      </paragraph>
+      <paragraph>
+       All IPC benchmarks, save 11 instances of the Mystery domain, are solvable. For proving unsolvability, we use the benchmarks used in the unsolvability IPC'16, as well as the well-established benchmark collection by Hoffmann et al. [42]. The former benchmark collection contains 15 domains, of which our strategy can detect an X factoring in 3. The latter contains 8 domains (one test suite each), of which the X strategy selects 3. In 2 of these 3 domains, NoMystery and Rovers, both of which are concerned with resource-constrained planning, we introduce additional easier instances in order to get some performance data for all algorithms tested. Specifically, we extend the range of the constrainedness levelsC – the ratio between available and minimum-needed amount of fuel/energy [96] – from {a mathematical formula}{0.5,0.6,…,0.9} in the original benchmarks, to {a mathematical formula}{0.2,0.3,…,0.9}. Instances with smaller constrainedness level are easier to prove unsolvable as they are more tightly constrained.
+      </paragraph>
+      <paragraph>
+       All experiments were run on a cluster of machines with Intel Xeon E5-2660 processors running at 2.2 GHz. As is customary in the IPC, the runtime/memory limit was set to 30 minutes/4 GB.
+      </paragraph>
+      <paragraph>
+       The state of the art algorithms differ considerably depending on the purpose, i.e., optimal planning vs. satisficing planning vs. proving unsolvability. We will therefore introduce these algorithms, which we compare to empirically, in the subsections below. A few words are in order up front though, regarding factored planning, and regarding Petri net unfolding.
+      </paragraph>
+      <paragraph>
+       Localized factored planning [32], [33], [35], [36], [37], [39], [40] has inspired star-topology decoupling, so is a natural approach to compare to empirically. Yet, all but one of these approaches (that by Fabre et al. [36]) cannot guarantee global optimality; many works are purely theoretical; and good results on standard IPC benchmarks are scarce. Some works run proof-of-concept experiments on a few custom-designed (non-IPC) toy benchmarks only. Some approaches (e.g., that by Fabre et al.) are explicitly reported by their authors to not work well on IPC benchmarks. The empirically most successful approach is the aforementioned partition-based pruning [40], which exploits permutability of intra-factor plans. Hence we compare to that approach here.
+      </paragraph>
+      <paragraph>
+       Petri net unfolding methods are not defined on planning tasks, so given a task Π we need to translate it into a Petri net first. Such translations are easy and known [24]. To maximize comparability with our FD-based tools, we implemented translations starting from FD's internal planning task representation (and hence relying on the same relevance and invariance analysis preprocesses as used by FD [97]). Each variable value {a mathematical formula}v=d becomes a place {a mathematical formula}pv=d in the Petri net, and each action a becomes a transition {a mathematical formula}ta in the Petri net. If {a mathematical formula}v=d is a precondition of a, then {a mathematical formula}pv=d becomes an input of {a mathematical formula}ta, and if {a mathematical formula}v=d is an effect of a, it becomes an output of {a mathematical formula}ta. In case {a mathematical formula}v=d is not consumed, i.e., is a prevail condition, we need to encode a read arc from {a mathematical formula}pv=d to {a mathematical formula}ta. Contextual Petri nets support this natively. For translation into a standard Petri net, we use the aforementioned plain method, making {a mathematical formula}pv=d both, an input and an output, of {a mathematical formula}ta. We compare to standard respectively contextual unfolding tools, Punf [43] respectively Cunf [44], regarding state space/unfolding size. Regarding planning performance, we compare to Bonet et al.'s [28] heuristic-search-planning Petri net unfolding tool, which realizes {a mathematical formula}hmax and {a mathematical formula}hFF (but not {a mathematical formula}hLM-cut, nor preferred operators) in this context.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       State space size
+      </section-title>
+      <paragraph>
+       Fig. 8 shows data supplementary to the preview given in Fig. 1. We show also those 3 domains where no state space was successfully built by any method; and we include the Petri net unfolding methods into the representation size comparison. The representation size for Punf is the number of events generated, that for Cunf is the number of event histories generated.
+      </paragraph>
+      <paragraph>
+       The partial-order reduction technique we use is strong stubborn sets pruning as per Wehrle and Helmert [16]. We remark that this approach (in difference to the other approaches compared here) depends on the goal condition. Naturally, we use the original goal conditions supplied with the instances. On goal states (in solvable instances), we allow POR to prune all actions.
+      </paragraph>
+      <paragraph>
+       Petri net unfolding sometimes is superior at building small state-space representations. This pertains, foremost, to the Woodworking benchmark where Cunf excels. But it also pertains to some other domains, where the representation size advantage does not translate into an advantage in the number of state spaces built. This is due to the runtime overhead of building the unfolding: in the respective smallest unsuccessful benchmark instances, the unfolding methods run out of time.
+      </paragraph>
+      <paragraph>
+       Observe that, to a large extent, the data for factorings in Fig. 7 explains that for decoupled search in Fig. 8. The state-space reduction tends to be large if (a) there is a sufficient number of leaf factors, and each leaf factor is neither (b) too small (not allowing a substantial reduction), nor (c) too large (incurring substantial overhead). Prime examples satisfying all of (a)–(c) are Driverlog, Elevators, Logistics, Miconic, NoMystery, TPP, Transport, Woodworking, and Zenotravel – a very good match with those domains where star-topology decoupling works well. Examples not satisfying (a) are Floortile and PSR; examples not satisfying (b) are these same two domains, plus Rovers and Satellite; examples not satisfying (c) are Mystery and Pathways. Note that, given this strong connection between simple factoring-structure features and state-space reduction performance, one could easily design factoring strategies filtering out the bad cases in Fig. 8. We do not do that here for the sake of clarity, cf. the discussion of fine-tuning above.
+      </paragraph>
+      <paragraph>
+       Even with the bad cases, Fig. 8 certainly shows that star-topology decoupling can yield huge advantages compared to related methods. We examine next to what extent these advantages are preserved when supplying the search with the orthogonal search techniques – heuristic functions, preferred operators pruning, etc. – intensively developed in the AI planning community, geared at optimal planning, at satisficing planning, respectively at proving unsolvability.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Optimal planning
+      </section-title>
+      <paragraph>
+       Optimal planning is a separate track in the international planning competitions. In this subsection, we use the test suites of the IPC optimal tracks only. We consider additive-cost optimality, used in the IPC since 2008.{sup:8} For this form of planning, the most competitive algorithms are based on heuristic state space search, on BDDs, and on optimality-preserving state-space reduction techniques. We hence compare against the leading representatives of these techniques in AI planning: Symba [101], the winner of the IPC'14 optimal track, which runs a BDD-based heuristic search; {a mathematical formula}A⁎ with strong stubborn sets pruning as used previously already [16]; {a mathematical formula}A⁎ with symmetry reduction [21]; and {a mathematical formula}A⁎ with a combination of symmetry reduction and strong stubborn sets [102]. We furthermore compare to partition-based pruning and heuristic-search Petri net unfolding, as discussed above. Fig. 9 shows the data.
+      </paragraph>
+      <paragraph>
+       Consider first the coverage data, i.e., the number of benchmark instances solved, in part (A) of the table. For blind state space search, star-topology decoupling is the most effective technique, somewhat more so when using fork factorings only, due to a performance loss in Elevators when using X-shape factorings. For both, blind search and search with {a mathematical formula}hLM-cut, the combination of strong stubborn sets with symmetry reduction, Psy in the figure, outperforms each of its component techniques, and outperforms partition-based pruning. It is complementary to star-topology decoupling in that it works well on different domains. The strongest domains of Psy are Childsnack, Floortile, Rovers, Satellite, and Woodworking, whereas those of star-topology decoupling are Driverlog, Logistics, NoMystery, TPP, Woodworking, and Zenotravel. In cross-domain overall coverage, both methods lead to substantial gains (differing somewhat basically due to benchmark scaling). Petri net unfolding generally is not competitive; BDD-based search is, yielding the strongest performance in several domains largely complementary to those listed above.
+      </paragraph>
+      <paragraph>
+       Parts (B) and (C) show search space size and runtime data. In (B), we include only Psy as that provably dominates each of stubborn sets and symmetry reduction; and as it empirically dominates partition-based pruning, with minor exceptions. BD and HP are not included in (B) as the number of search nodes cannot be directly compared, HP is not included in (C) as it is not competitive.
+      </paragraph>
+      <paragraph>
+       In both (B) and (C), the advantages over the baseline are reflected in substantial improvement factors, and the complementarity of star-topology decoupling vs. other methods is again reflected in per-domain strengths and weaknesses. The most significant reductions are obtained in Floortile by BDDs; in Satellite and Woodworking by Psy; and in Logistics, NoMystery, and TPP by star-topology decoupling. Fig. 10 provides a per-instance view. (a) shows that D-{a mathematical formula}A⁎(decoupled {a mathematical formula}A⁎) incurs hardly any risk vs. {a mathematical formula}A⁎ (cases with larger runtime are rare). (b) and (c) exhibit again the complementarity of the methods (which is especially strong vs. BDDs, expectedly, as the two methods are unrelated).
+      </paragraph>
+      <paragraph>
+       Coming back to the question whether the state space reductions in Fig. 8, for OPT (pricing functions) in this case, are preserved under advanced search techniques: The superiority of star-topology decoupling does disappear or reduce sometimes, where heuristic search already achieves similar reductions. This is especially pronounced in Driverlog, where OPT was able to build more state spaces than standard search, yet loses this advantage completely when {a mathematical formula}hLM-cut is in use. However, star-topology decoupling still yields additional reductions, to varying extents, and up to several orders of magnitude. In 3 domains, it outperforms all competing techniques. (This is without partial-order and symmetry reduction techniques. Our recent work shows that strong stubborn sets can be extended to decoupled search, inheriting, and sometimes surpassing, the best performance from both sides [103]. Presumably, this is possible for symmetry reduction as well.)
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Satisficing planning
+      </section-title>
+      <paragraph>
+       In this subsection, we use the test suites of the IPC satisficing tracks only. For this form of planning, the most competitive algorithms are based on heuristic state space search. We use FD's lazy greedy best-first search with {a mathematical formula}hFF as the competitive baseline, cf. above; and we compare to the recent winners of the IPC satisficing tracks, LAMA [54] (winner IPC'08 and IPC'11) and Mercury [55] (highest scorer among non-portfolios, IPC'14). LAMA is designed for anytime plan-quality improvement, running an iteration of searches with different parameters; we focus on runtime performance here, so we run only LAMA's first search iteration, which is geared at that performance parameter. Specifically, LAMA's first search iteration runs FD's lazy greedy best-first search, with {a mathematical formula}hFF and an additional inadmissible heuristic function based on landmarks. Mercury runs FD's lazy greedy best-first search with an improved version of {a mathematical formula}hFF, based on more informed – partially delete-relaxed instead of fully delete-relaxed – abstract plans.
+      </paragraph>
+      <paragraph>
+       Consider first the coverage data without preferred operators in Fig. 11 part (A). Star-topology decoupling yields huge advantages, especially with inverted-fork factorings which are much more effective than X-shape factorings in Rovers, Satellite, and TPP. Preferred operators, however, are extremely effective in these benchmarks. Switching them on, much of the coverage advantage disappears. Improvements remain in Childsnack, Depots, NoMystery, and Transport, where the state space reduction counter-acts weaknesses of the delete relaxation. In Transport, GBFS trivializes under star-topology decoupling: the search merely expands the states along a path to the goal.
+      </paragraph>
+      <paragraph>
+       LAMA and Mercury share the prowess in Transport, especially Mercury which does not need to search at all as the abstract plan identified by its heuristic function on the initial state is an actual plan for the input task. All three techniques also behave similarly in Depots. The complementarity across techniques is exhibited in Childsnack, NoMystery, and Pathways.
+      </paragraph>
+      <paragraph>
+       Coverage on the IPC satisficing benchmarks carries limited information as many benchmarks are solved already by the baseline (559 out of 657, compared to 332 out of 648 for optimal planning). So it is especially important here to consider the more fine-grained performance measures in (B) and (C) (we do not include PP and HP here as they are not competitive).
+      </paragraph>
+      <paragraph>
+       For search space size (B), without preferred operators star-topology decoupling yields reductions in every domain, of a factor &gt;10 in 7 cases, of 3 orders of magnitude in TPP. With preferred operators, the reductions tend to be weaker but still present, the most striking exceptions being TPP which is easily solved by the baseline now, and NoMystery where the improvement factor grows as the commonly solved instances are larger. The large improvement factors for Mercury in Elevators, Logistics, Transport, and Zenotravel are all due to the phenomenon discussed above: the abstract plan for the initial state solves the input task. Mercury subsumes LAMA except in Woodworking. Star-topology decoupling is superior in NoMystery, where {a mathematical formula}hFF is not informative due to the fuel constraints, and state space reduction is essential for success (we get back to this below).
+      </paragraph>
+      <paragraph>
+       For runtime (C), the improvement factors of all three methods are smaller, as all three incur a runtime overhead. Without preferred operators, star-topology decoupling still yields large improvements in many cases; with preferred operators, the improvements pertain mainly to Depots, Elevators, Logistics, NoMystery, and Transport. Interestingly, Mercury's search-space-size superiority, relative to star-topology decoupling, does not pay off in Elevators, Transport, and Zenotravel, as the runtime for even a single call to Mercury's heuristic function exceeds that of decoupled search.
+      </paragraph>
+      <paragraph>
+       Fig. 12 provides a per-instance view. In all three comparisons, D-GBFS is more often in the advantage than not. The risk vs. the baseline (a) is relatively small, though not as small as in optimal planning. Similarly for the strength of the complementarity (b) and (c) vs. the state of the art.
+      </paragraph>
+      <paragraph>
+       Coming back to the question whether the state space reductions in Fig. 8, for COM (reachability functions), are preserved under advanced search techniques: The reductions get lost in many cases as greedy search with delete-relaxation heuristics is extremely effective on these benchmarks. This is especially pronounced in TPP, where the gigantic advantage of COM disappears completely when employing preferred operators (though not without them). That said, star-topology decoupling does yield reductions in half of the domains. In NoMystery, the reduction is by 5 orders of magnitude, and star-topology decoupling outperforms all competing techniques. (This is without relying on the additional heuristic functions used in LAMA and Mercury. Using these in decoupled search is straightforwardly possible via Theorem 8.)
+      </paragraph>
+      <paragraph>
+       Let us briefly extend on NoMystery, which captures an interesting kind of structure pertaining to satisficing planning in critically constrained situations. Consider Fig. 13.
+      </paragraph>
+      <paragraph>
+       The test suites underlying Fig. 13 differ from those used in the IPC. They were created by Nakhost et al. [96] specifically to test planner performance as a function of the constrainedness level C. They created a set of base instances, and made copies of these differing only in the amount of fuel available, i.e., in the value of C. The closer C is to 1.0, the harder it becomes for greedy techniques to find a plan, as many action sequences – making sub-optimal use of fuel – will lead into unsolvable states (dead-ends) where insufficient fuel is left to solve the task. For {a mathematical formula}C=1.0, only the optimal use of fuel will succeed. Delete-relaxation heuristic functions are unable to recognize this, as the underlying abstract plans pretend that fuel is not being consumed. Nakhost et al. proposed to combat this with random walk techniques. Yet even the most competitive planners from their comprehensive experiments fail to solve many instances for {a mathematical formula}C=1.0. With star-topology decoupling, all instances are solved. In short: on critically constrained problems with a pronounced star topology, decoupled search is superior to the state of the art. This kind of structure is infrequent in the IPC, but is certainly practically relevant (e.g., cooperative agents with shared resources).
+      </paragraph>
+     </section>
+     <section label="8.5">
+      <section-title>
+       Proving unsolvability
+      </section-title>
+      <paragraph>
+       As before, we use heuristic search as the baseline. This is useful – it avoids exhausting the entire state space, which we already considered above – provided the heuristic function can identify dead-ends, returning ∞ (cf. Section 7.1). Most AI planning heuristic functions do have that capability. In particular, this is so for the three heuristic functions {a mathematical formula}hmax, {a mathematical formula}hLM-cut, and {a mathematical formula}hFF considered here. We use {a mathematical formula}hmax as the baseline, because all three heuristic functions return ∞ in exactly the same cases, and {a mathematical formula}hmax is the fastest among the three.
+      </paragraph>
+      <paragraph>
+       Among the state of the art in proving unsolvability, in AI planning, are merge-and-shrink (M&amp;S) abstractions [78], specifically those designed by Hoffmann et al. [42] to either preserve goal reachability exactly (and thus prove unsolvability without search), or to approximate and serve as heuristic functions for identifying dead-ends during search. On our selection of (X-shape) benchmarks, most successful runs of M&amp;S were ones proving unsolvability without search, so we include that variant (“Own+A” in Hoffmann et al.'s paper) here. The only exception is the BagTransport domain, where the “N100k M100k” variant of Hoffmann et al. – combining the M&amp;S heuristic with {a mathematical formula}hmax in the search – proves to be better. Therefore, we include data for the former in all domains except BagTransport, where we show “N100k M100k”.
+      </paragraph>
+      <paragraph>
+       Additionally, we include the winner and runner-up of the Unsolve IPC'16 (UIPC), Aidos, respectively SymPA. Aidos is a portfolio consisting of many techniques designed to prove planning tasks unsolvable [106]. SymPA uses symbolic perimeter abstraction heuristics [107]. We furthermore include all planners tested for optimal planning above, as these techniques are often suitable also for proving unsolvability. In particular, the most competitive non-M&amp;S planner in Hoffmann et al.'s [42] experiments was the BDD-based planner Symba.
+      </paragraph>
+      <paragraph>
+       Consider Fig. 14. Star-topology decoupling excels in NoMystery as before (recall that in both the UIPC, and Hoffmann et al.'s version, these are the instances originally by Nakhost et al. [96], but with constrainedness levels &lt;0). In the UIPC'16 version of the domain, it is even able to outperform advanced systems like Aidos and SymPA, particularly designed to prove planning tasks unsolvable. Except in Rovers and Mystery, decoupled search performs better than all competitors excluding Aidos. In Rovers, BD, M&amp;S, and SymPA are better, in Mystery, it's only M&amp;S and the combination of partial-order and symmetry reduction (Psy).
+      </paragraph>
+      <paragraph>
+       Coming back to the question whether the state space reductions in Fig. 8, for COM (reachability functions), are preserved under advanced search techniques: From the limited collection of unsolvable planning benchmarks, only NoMystery has strong state space reductions. These are preserved when using {a mathematical formula}hmax. M&amp;S abstractions are equally effective in NoMystery, by very different means. (We remark that, as one would expect, there are natural cases where M&amp;S abstractions are much inferior to star-topology decoupling; for example, a simple unsolvable variant of TPP has this property.)
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs and additional examples
+     </section-title>
+     <section label="A.1">
+      <section-title>
+       Factorings
+      </section-title>
+      <paragraph label="Proposition 1">
+       Let Π be a planning task. Then every strict-star factoring is a star factoring, but not vice versa.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that {a mathematical formula}F is a strict-star factoring, and let a be an action where {a mathematical formula}V(eff(a))∩FC=∅. If there were two different leaf factors {a mathematical formula}F1L≠F2L both affected by a, then {a mathematical formula}IGΠ(F) would contain the arc {a mathematical formula}F1L→F2L, in contradiction. So there exists a leaf factor {a mathematical formula}F1L with {a mathematical formula}V(eff(a))⊆F1L. But then, {a mathematical formula}V(pre(a))⊆F1L∪FC, because again, otherwise, if a was also preconditioned on {a mathematical formula}F2L≠F1L, {a mathematical formula}IGΠ(F) would contain the arc {a mathematical formula}F1L→F2L in contradiction.Not every star factoring is a strict-star factoring because star factorings, but not strict-star factorings, allow action effects to touch multiple leaf factors. For example, if we add to the Scaling example an action that loads all objects, as well as moves the truck, simultaneously, then the grouping {a mathematical formula}FC={t} and {a mathematical formula}FL={{o1},…,{on}} is a star factoring but not a strict-star factoring.  □
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Fork &amp; Inverted-Fork FactoringsLet Π be a planning task. Then fork and inverted-fork factorings exist if and only if{a mathematical formula}|FΠSCC|&gt;1. In that case, the maximum number of fork leaves equals the number of leaf vertices in{a mathematical formula}IGΠ(FΠSCC), and the maximum number of inverted-fork leaves equals the number of root vertices in{a mathematical formula}IGΠ(FΠSCC).
+      </paragraph>
+      <paragraph label="Proof">
+       Say Π has variables V. The “only if” direction in the first part of the claim holds because any fork or inverted-fork factoring must be coarser than {a mathematical formula}FΠSCC. The “if” direction follows from the second part of the claim.We prove the second part of the claim for fork factorings; the argument for inverted forks is symmetric because those are equivalent to forks in the modification of {a mathematical formula}IGΠ(FΠSCC) where the direction of each arc is inverted.Denote by K the maximum number of fork leaves. Denote by {a mathematical formula}K′ the number of leaves in {a mathematical formula}IGΠ(FΠSCC).{a mathematical formula}K≥K′ holds simply because we obtain a fork factoring by setting the leaves in {a mathematical formula}IGΠ(FΠSCC) to be the leaf factors, and taking the remaining state variables to form the center.{a mathematical formula}K≤K′ holds because any fork leaf must be closed under following arcs in the causal graph, and hence every fork leaf must contain at least one leaf in {a mathematical formula}IGΠ(FΠSCC). Precisely, let {a mathematical formula}F be any fork factoring, and let {a mathematical formula}FL be any leaf factor of {a mathematical formula}F. Let {a mathematical formula}F,F′ be factors in {a mathematical formula}FΠSCC such that {a mathematical formula}F→F′ is an arc in {a mathematical formula}IGΠ(FΠSCC). If {a mathematical formula}F⊆FL, then we must have {a mathematical formula}F′⊆FL: otherwise, either {a mathematical formula}F′⊆FC in contradiction, or {a mathematical formula}F′⊆F2L for some other leaf factor {a mathematical formula}F2L in contradiction. As {a mathematical formula}F is coarser than {a mathematical formula}FΠSCC, there exists at least one F where {a mathematical formula}F⊆FL. Applying the argument transitively starting from F, we obtain a leaf {a mathematical formula}F″ in {a mathematical formula}IGΠ(FΠSCC) so that {a mathematical formula}F″⊆FL. But then, as the leaf factors in {a mathematical formula}F are disjoint, there cannot be more leaf factors than leaves in {a mathematical formula}IGΠ(FΠSCC), concluding the argument.  □
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       Additional example walkthroughs
+      </section-title>
+      <paragraph label="Example 10">
+       Observe that the pricing functions here are extremely volatile. Every center action commits some leaf to a unique leaf state, completely changing its pricing function in the next state. This is typical of inverted-fork factorings. The reachability functions, on the other hand, remain constant throughout our example here, and for any inverted fork with strongly connected leaf state spaces: from whatever leaf state a leaf is committed to, all other leaf states are reachable so the prices are always &lt;∞.
+      </paragraph>
+      <paragraph label="Example 11">
+       Consider the NoEmpty example, where truck moves have the additional precondition {a mathematical formula}o=t (no empty-truck moves). Say we use the strict-star factoring {a mathematical formula}FC={tA,tB}, {a mathematical formula}FL={{o}}, which has bidirectional dependencies (compare Fig. 2 (b), page 28).The initial decoupled state {a mathematical formula}s0 is {a mathematical formula}center[s0]={tA=l1,tB=l3}, with prices 0 for {a mathematical formula}{o=l0}, 1 for {a mathematical formula}{o=tA}, ∞ elsewhere. Whereas in the Vanilla example we could apply either of move{a mathematical formula}(tA,l1,l2) or move{a mathematical formula}(tB,l3,l2), now only the first choice is possible because move{a mathematical formula}(tB,l3,l2) has the leaf precondition {a mathematical formula}o=tB whose price is infinite. Applying move{a mathematical formula}(tA,l1,l2) to obtain {a mathematical formula}s1, we get {a mathematical formula}center[s1]={tA=l2,tB=l3}. The price is 1 for {a mathematical formula}{o=tA}, keeping its previous price because this is the leaf state the center action choice committed o to. The price of {a mathematical formula}{o=l1}, however, is now ∞. Through the commitment to {a mathematical formula}{o=tA}, we lost the previous price 0, and given the new center state there is no compliant path re-achieving {a mathematical formula}{o=l1}. For {a mathematical formula}{o=l2} on the other hand, we now get price 2 due to the leaf path 〈load{a mathematical formula}(tA,l1), unload{a mathematical formula}(tA,l2)〉, which is now compliant thanks to the new center precondition {a mathematical formula}tA=l2 provided in {a mathematical formula}s1. All other prices remain infinite.Note how this combines fork behavior with inverted-fork behavior: the price for {a mathematical formula}{o=l2} has decreased while that for {a mathematical formula}{o=l1} has increased. Due to the now bidirectional dependency, the prices are neither monotonically decreasing nor monotonically increasing.
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Decoupled state space correctness
+      </section-title>
+      <paragraph>
+       To capture decoupled-state reachability, we introduce an intermediate concept, embedded states, exhibiting the link between member states and decoupled states. Instead of an explicit leaf-state assignment, embedded states contain a link to the respective compliant-path graph vertex:
+      </paragraph>
+      <paragraph label="Definition 12">
+       Embedded StateLet Π be a planning task, and {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL. For a decoupled state s in {a mathematical formula}ΘΠF, an embedded state in s is a function {a mathematical formula}pˆ on {a mathematical formula}F, mapping {a mathematical formula}FC to {a mathematical formula}center[s], and mapping each {a mathematical formula}FL∈FL to a vertex {a mathematical formula}snL in {a mathematical formula}CompGΠ[πC[s],FL] with {a mathematical formula}prices[s](sL)&lt;∞, where {a mathematical formula}n:=|πC[s]|. The set of all embedded states of s is the embedded hypercube of s, denoted {a mathematical formula}[sˆ].The initial embedded state, {a mathematical formula}Iˆ, maps {a mathematical formula}FC to {a mathematical formula}center[IF]=I[FC] and, for each {a mathematical formula}FL∈FL, maps {a mathematical formula}FL to the vertex {a mathematical formula}I[FL]0 in {a mathematical formula}CompGΠ[〈〉,FL].
+      </paragraph>
+      <paragraph>
+       Given a decoupled state s, as {a mathematical formula}CompGΠ[πC[s],FL] contains exactly one vertex {a mathematical formula}snL for every {a mathematical formula}sL∈SL[FL], the member states and embedded states of s are in one-to-one correspondence. Given a decoupled state s and member state {a mathematical formula}p∈[s], we denote the unique corresponding embedded state by {a mathematical formula}pˆ, and vice versa.
+      </paragraph>
+      <paragraph>
+       Intuitively, embedded states {a mathematical formula}pˆ serve to “track the progress of the corresponding states p through the decoupled state space”. We formalize this through a notion of embedded transitions:
+      </paragraph>
+      <paragraph label="Definition 13">
+       Embedded TransitionsLet Π be a planning task, and {a mathematical formula}F a star factoring with center {a mathematical formula}FC and leaves {a mathematical formula}FL. Let s be a decoupled state in {a mathematical formula}ΘΠF, and {a mathematical formula}pˆ∈[sˆ] an embedded state. Then {a mathematical formula}pˆ→aqˆ is an embedded transition
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        on {a mathematical formula}FL in {a mathematical formula}ΘΠF, if {a mathematical formula}a∈AL[FL]∖AC, {a mathematical formula}CompGΠ[πC[s],FL] contains an arc {a mathematical formula}pˆ(FL)→aqˆ(FL), and for all {a mathematical formula}FL≠F∈F we have {a mathematical formula}pˆ(F)=qˆ(F);
+       </list-item>
+       <list-item label="(ii)">
+        on {a mathematical formula}FC in {a mathematical formula}ΘΠF, if {a mathematical formula}a∈AC, {a mathematical formula}s→at is a transition in {a mathematical formula}ΘΠF, and for all {a mathematical formula}FL∈FL we have that {a mathematical formula}CompGΠ[πC[t],FL] contains an arc {a mathematical formula}pˆ(FL)→0qˆ(FL).
+       </list-item>
+      </list>
+      <paragraph>
+       Note here that, necessarily by the construction of {a mathematical formula}qˆ and compliant path graphs, {a mathematical formula}qˆ∈[sˆ] in (i), and {a mathematical formula}qˆ∈[tˆ] in (ii). Decoupled-state reachability is captured in the following form:
+      </paragraph>
+      <paragraph label="Lemma 6">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring. Let{a mathematical formula}SFbe the decoupled states in{a mathematical formula}ΘΠF. For any{a mathematical formula}s∈SF,{a mathematical formula}pˆ∈[sˆ], and{a mathematical formula}qˆreachable from{a mathematical formula}pˆin{a mathematical formula}ΘΠF, there exists{a mathematical formula}t∈SFsuch that{a mathematical formula}qˆ∈[tˆ]and t is reachable from s in{a mathematical formula}ΘΠF. Vice versa, for any{a mathematical formula}s,t∈SFwhere t is reachable from s in{a mathematical formula}ΘΠF, and for any{a mathematical formula}qˆ∈[tˆ], there exists{a mathematical formula}pˆ∈[s]such that{a mathematical formula}qˆis reachable from{a mathematical formula}pˆin{a mathematical formula}ΘΠF.
+      </paragraph>
+      <paragraph label="Proof">
+       For the first part of the claim, t and {a mathematical formula}qˆ as specified must exist simply because the individual transitions on an embedded path from {a mathematical formula}pˆ to {a mathematical formula}qˆ all follow decoupled transitions ({a mathematical formula}FC) respectively compliant-path graph arcs ({a mathematical formula}FL) present in {a mathematical formula}ΘΠF. For the second part of the claim, if {a mathematical formula}πF is a decoupled path from s to t, then we can backchain from {a mathematical formula}qˆ through the compliant-path graphs along {a mathematical formula}πF to obtain the desired embedded state {a mathematical formula}pˆ in s.  □
+      </paragraph>
+      <paragraph>
+       Having clarified the basics of embedded states and how they capture reachability, let us get back to the link with member states. The core observation is that, like the member states and embedded states themselves, their transitions also are in one-to-one correspondence:
+      </paragraph>
+      <paragraph label="Lemma 7">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let s be a decoupled state in{a mathematical formula}ΘΠF. Then, for any member state{a mathematical formula}p∈[s]and action a,{a mathematical formula}p→aqis a transition in Π if and only if{a mathematical formula}pˆ→aqˆis an embedded transition in{a mathematical formula}ΘΠF.
+      </paragraph>
+      <paragraph label="Proof">
+       From left to right, say a is applicable to p and {a mathematical formula}q=p〚a〛. We distinguish two cases. First, a is a non-center action, {a mathematical formula}a∉AC. Then, as {a mathematical formula}F is a star factoring, a affects a single leaf factor {a mathematical formula}FL, {a mathematical formula}aL∈AL[FL]∖AC. As a is applicable to p, we have {a mathematical formula}pre(a)[FC]=center[s][V(pre(a))∩FC] and {a mathematical formula}pre(a)[FL]=p[V(pre(a))∩FL]. Therefore, by Definition 3 (i), the compliant path graph {a mathematical formula}CompGΠ[πC[s],FL] layer at time n corresponding to s contains the arc {a mathematical formula}p[FL]n→aq[FL]n, which establishes the desired embedded transition.Second, say a is a center action, {a mathematical formula}a∈AC. As a is applicable to p, for every {a mathematical formula}FL∈FL where {a mathematical formula}pre(a)[FL]≠∅, there exists a finite-price leaf state in s, namely {a mathematical formula}p[FL]. Hence there exists a transition {a mathematical formula}s→at in {a mathematical formula}ΘΠF. Furthermore, for each {a mathematical formula}FL, by Definition 3 (ii) the compliant path graph {a mathematical formula}CompGΠ[πC[t],FL] contains the arc {a mathematical formula}p[FL]n→0q[FL]n+1. Together, these establish the desired embedded transition.From right to left, say {a mathematical formula}pˆ→aqˆ is an embedded transition in {a mathematical formula}ΘΠF. Distinguishing the same two cases, if {a mathematical formula}aL∈AL[FL]∖AC then {a mathematical formula}pˆ→aqˆ is an {a mathematical formula}FL transition. By Definition 13 (i), {a mathematical formula}pˆ and {a mathematical formula}qˆ differ only in terms of taking a single arc on {a mathematical formula}FL, so p and q differ only on {a mathematical formula}FL. By Definition 3 (i), {a mathematical formula}pre(a)[FC]=center[s][V(pre(a))∩FC], {a mathematical formula}pre(a)[FL]=p[V(pre(a))∩FL], and {a mathematical formula}p[FL]〚a〛=q[FL]. But this immediately implies that a is applicable to p and {a mathematical formula}q=p〚a〛, as desired.Say finally that {a mathematical formula}a∈AC so {a mathematical formula}pˆ→aqˆ is an {a mathematical formula}FC transition. By Definition 13 (ii), {a mathematical formula}qˆ results from {a mathematical formula}pˆ by updating the center state according to a, and taking the arc {a mathematical formula}pˆ(FL)→0qˆ(FL) for every {a mathematical formula}FL. By Definition 3 (ii) for every {a mathematical formula}FL we have {a mathematical formula}pre(a)[FL]⊆p[V(pre(a))∩FL] and {a mathematical formula}p[FL]〚a〛=q[FL]. But then, again a is applicable to p and {a mathematical formula}q=p〚a〛, concluding the proof.  □
+      </paragraph>
+      <paragraph>
+       We are now ready to prove the two core lemmas:
+      </paragraph>
+      <paragraph label="Lemma 2">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let s be a reachable decoupled state in{a mathematical formula}ΘΠF. Then:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}[s]is exactly the set of states p for which there exists a path π, from I to p in{a mathematical formula}ΘΠ, whose center-action subsequence is{a mathematical formula}πC[s].
+       </list-item>
+       <list-item label="(ii)">
+        For every{a mathematical formula}p∈[s], the cost of a cheapest such path π is{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       To prove (i), say first that {a mathematical formula}p∈[s]. Consider the corresponding embedded state {a mathematical formula}pˆ. As all compliant path graph vertices in {a mathematical formula}pˆ are reached at s, for every {a mathematical formula}FL there must exist a path {a mathematical formula}π[FL] from {a mathematical formula}I[FL]0 to {a mathematical formula}pˆ(FL) in {a mathematical formula}CompGΠ[πC[s],FL]. From the collection of these paths, along with {a mathematical formula}πC[s], we obtain an embedded path {a mathematical formula}πˆ from {a mathematical formula}Iˆ to {a mathematical formula}pˆ: simply interleave the embedded {a mathematical formula}FC transitions induced by {a mathematical formula}πC[s] with the embedded {a mathematical formula}FL transitions induced by the {a mathematical formula}π[FL]. With Lemma 7, from {a mathematical formula}πˆ we obtain a path π as desired.Say now that π is a path in Π from I to some p, where the center action subsequence of π is {a mathematical formula}πC[s]. With Lemma 7, we obtain an embedded path {a mathematical formula}πˆ from {a mathematical formula}Iˆ to {a mathematical formula}pˆ. Collecting the {a mathematical formula}FL transitions from {a mathematical formula}πˆ for each {a mathematical formula}FL, clearly we get paths {a mathematical formula}π[FL] from {a mathematical formula}I[FL]0 to {a mathematical formula}pˆ(FL) in {a mathematical formula}CompGΠ[πC[s],FL]. Therefore, {a mathematical formula}p∈[s] as desired.Claim (ii) now follows directly, because the above shows that, for every {a mathematical formula}p∈[s], the paths π as specified are in one-to-one correspondence with {a mathematical formula}πC[s] augmented with the possible selections of {a mathematical formula}CompGΠ[πC[s],FL] paths from {a mathematical formula}I[FL]0 to {a mathematical formula}p[FL]n, where {a mathematical formula}n:=|πC[s]|. Thus, by the definition of pricing functions, the cheapest such π has exactly the specified cost.  □
+      </paragraph>
+      <paragraph label="Lemma 3">
+       Let Π be a planning task, and{a mathematical formula}Fa star factoring with center{a mathematical formula}FCand leaves{a mathematical formula}FL. Let p be a reachable state in Π, and let π be a path reaching p. Then there exists a reachable decoupled state s in{a mathematical formula}ΘΠFso that{a mathematical formula}p∈[s], and{a mathematical formula}πC[s]is the center action subsequence of π.
+      </paragraph>
+      <paragraph label="Proof">
+       With Lemma 7, π corresponds to an embedded path {a mathematical formula}πˆ from {a mathematical formula}Iˆ to {a mathematical formula}pˆ. By Lemma 6, there exists a decoupled state s such that {a mathematical formula}pˆ∈[sˆ], and s is reachable from {a mathematical formula}IF in {a mathematical formula}ΘΠF. Clearly, the decoupled transitions taken in reaching s, according to the proof of Lemma 6, correspond exactly to the center action subsequence of π.  □
+      </paragraph>
+     </section>
+     <section label="A.4">
+      <section-title>
+       Decoupled state space size
+      </section-title>
+      <paragraph>
+       In what follows, we consider N-vectors {a mathematical formula}v∈RN over some subset {a mathematical formula}R⊆R0+ of non-negative reals. For the special case of {a mathematical formula}N=1, we identify v with {a mathematical formula}v[1]. We consider (possibly infinite) sequences {a mathematical formula}v→=v0,v1,v2,… of vectors. We define the relation ≻ over vectors by saying that {a mathematical formula}v≻v′ iff there exists a vector position {a mathematical formula}1≤k≤N so that {a mathematical formula}v[k]&gt;v′[k]. We say that a vector sequence {a mathematical formula}v→ is descending if, whenever v precedes {a mathematical formula}v′ in the sequence, {a mathematical formula}v≻v′. We say that Rhas an infinite descending N-sequence if there exists an infinite descending sequence of N-vectors.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Finiteness under Dominance PruningLet Π be a planning task, and{a mathematical formula}Fa star factoring. Under ancestor dominance pruning,{a mathematical formula}ΘΠRFis finite.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider the non-pruned paths {a mathematical formula}πF in {a mathematical formula}ΘΠRF. Observe that such paths necessarily are descending: some prices along {a mathematical formula}πF must descend each time we encounter the same center state, as otherwise the new state would be dominated by some previous state. We prove that there is no infinite descending path, i.e., every {a mathematical formula}πF has finite length. As every {a mathematical formula}s∈SRF must be the endpoint of such a path, and as the branching factor is finite, this proves the claim.Assume to the contrary that there is an infinite descending path {a mathematical formula}πF. As the number of different center states is finite, there must exist a center state {a mathematical formula}sC visited infinitely often on {a mathematical formula}πF. Denote by {a mathematical formula}s→=s0,s1,… the sub-sequence of decoupled states along {a mathematical formula}πF where {a mathematical formula}center[si]=sC.Collect, from each {a mathematical formula}si, the vector {a mathematical formula}pi of leaf state prices (using some arbitrary order of leaf states to fix the ordering of vector positions). Denoting by N the number of leaf states, {a mathematical formula}p→:=p0,p1,… is a sequence of N-vectors over {a mathematical formula}R0+∪{∞}. More precisely, {a mathematical formula}p→ is a sequence of N-vectors over possible plan cost values, i.e., over {a mathematical formula}R∪{∞} where R contains {a mathematical formula}∑i=1nc(ai) for any finite sequence {a mathematical formula}〈a1,…,an〉 of actions in Π.Proposition 5 below shows that R has no infinite descending 1-sequence. Lemma 8 below shows that, given this, {a mathematical formula}R∪{∞} has no infinite descending N-sequence for any N.However, by construction, whenever p precedes {a mathematical formula}p′ on {a mathematical formula}p→ then there exists a vector position k so that {a mathematical formula}p[k]&gt;p′[k]. That is, {a mathematical formula}p→ is descending, in contradiction, showing the claim.  □
+      </paragraph>
+      <paragraph label="Proposition 5">
+       Let Π be a planning task. Let{a mathematical formula}R⊆R0+be the set of numbers that contains{a mathematical formula}∑i=1nc(ai)for any finite sequence{a mathematical formula}〈a1,…,an〉of actions in Π. Then R does not have an infinite descending 1-sequence.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider any sequence {a mathematical formula}v→=v0,v1,v2,… of 1-vectors over R. Then, in particular, {a mathematical formula}vi&lt;v0 for all {a mathematical formula}i&gt;0. But, for any {a mathematical formula}C∈R0+, there is only a finite number of values {a mathematical formula}∑i=1nc(ai)&lt;C. This is because any non-0 cost action a can occur at most {a mathematical formula}⌊C/c(a)⌋ times on {a mathematical formula}〈a1,…,an〉.  □
+      </paragraph>
+      <paragraph label="Lemma 8">
+       Let{a mathematical formula}R⊆Rbe a set of numbers that has no infinite descending 1-sequence. Let{a mathematical formula}v→be a descending sequence of N-vectors over{a mathematical formula}R∪{∞}. Then{a mathematical formula}v→is finite.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}K⊆{1,…,N} be an arbitrary subset of vector positions. Denote by {a mathematical formula}v→[K,∞] the subsequence of vectors v on {a mathematical formula}v→ where {a mathematical formula}v[k]≠∞ iff {a mathematical formula}k∈K. In words, consider the subsequence of vectors that fits the “∞-profile” given by K. We show that {a mathematical formula}v→[K,∞] is finite, which proves the claim as there is only a finite number of profiles.Construct the vector sequence {a mathematical formula}v→[K,∞]|K by projecting each element of {a mathematical formula}v→[K,∞] onto the position subset K. Then {a mathematical formula}v→[K,∞]|K is a sequence of vectors over {a mathematical formula}R∪{∞}. By construction, as {a mathematical formula}v→[K,∞] is a descending sequence, and because the elements of {a mathematical formula}v→[K,∞] all agree on the positions outside K, we have that {a mathematical formula}v→[K,∞]|K is a descending sequence. It thus remains to show that every descending sequence of finite vectors over R is finite. We prove this by induction over N.The induction base case, {a mathematical formula}N=1, holds by prerequisite as R has no infinite descending 1-sequence.For the inductive case, assume that there is no infinite descending sequence of N-position vectors over R. We show that there is no infinite descending sequence of {a mathematical formula}N+1-position vectors over R.Let {a mathematical formula}w→=w0,w1,w2,… be any descending sequence of {a mathematical formula}N+1-position vectors over R. Denote {a mathematical formula}w0=(c1,…,cN+1), where each {a mathematical formula}cj is a constant, i.e., {a mathematical formula}cj∈R.Let {a mathematical formula}j∈{1,…,N+1} be arbitrary. Denote {a mathematical formula}Cj:={c′∈R|c′&lt;cj}. Then {a mathematical formula}Cj is finite because otherwise we could sequence its elements into an infinite descending 1-sequence over R. Let {a mathematical formula}c′∈Cj be arbitrary. Denote by {a mathematical formula}w→[j,c′] the subsequence of vectors w on {a mathematical formula}w→ where the j-th position has value {a mathematical formula}c′. Obviously, every {a mathematical formula}wi for {a mathematical formula}i&gt;0 must be contained in at least one {a mathematical formula}w→[j,c′]. We show that each {a mathematical formula}w→[j,c′] is finite. As there is a finite number of choices of {a mathematical formula}j′ and {a mathematical formula}c′, this proves the claim.Denote {a mathematical formula}K:={1,…,N+1}∖{j}. Construct the vector sequence {a mathematical formula}w→[j,c′]|K by projecting each element of {a mathematical formula}w→[j,c′] onto the position subset K. By construction, as {a mathematical formula}w→[j,c′] is a descending sequence, and because the elements of {a mathematical formula}w→[j,c′] all agree on the single position j that is outside K, we have that {a mathematical formula}w→[j,c′]|K is a descending sequence. As {a mathematical formula}w→[j,c′]|K is a sequence of vectors with N positions, by induction assumption, {a mathematical formula}w→[j,c′]|K is finite. Hence {a mathematical formula}w→[j,c′] is finite as desired, concluding the argument. □
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Let Π be a planning task,{a mathematical formula}Fa star factoring, and s a decoupled state. Then s is solvable if and only if at least one{a mathematical formula}p∈[s]is solvable.
+      </paragraph>
+      <paragraph label="Proof">
+       From left to right, say the decoupled goal state t is reachable from s in {a mathematical formula}ΘΠF. Clearly, there exists a goal state {a mathematical formula}q∈[t]. By Lemma 6, there exists an embedded state {a mathematical formula}pˆ∈[sˆ] such that {a mathematical formula}qˆ is reachable from {a mathematical formula}pˆ in {a mathematical formula}ΘΠF. By Lemma 7, q is reachable from p in Π. Hence the state p is solvable as desired.From right to left, say the goal state q is reachable from p in Π. By Lemma 7, {a mathematical formula}qˆ is reachable from {a mathematical formula}pˆ in {a mathematical formula}ΘΠF. By Lemma 6, there exists a decoupled state t such that {a mathematical formula}qˆ∈[tˆ] and t is reachable from s in {a mathematical formula}ΘΠF. As q is a goal state, t is a decoupled goal state, as desired.  □
+      </paragraph>
+      <paragraph label="Proposition 3">
+       Given a planning task Π and a star factoring{a mathematical formula}F, it is co-NP-complete to decide whether reachable decoupled states{a mathematical formula}t1,…,tncover a reachable decoupled state s.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership follows directly from the results by Hoffmann and Kupferschmid [65] for general hypercube covering problems.Hardness follows by reduction from the complement of SAT, extending Hoffmann and Kupferschmid's argument by a simple construction of Π and {a mathematical formula}F. Assume a CNF formula ϕ with propositional variables {a mathematical formula}P1,…,Pn and clauses {a mathematical formula}C1,…,Cm. The construction of Π includes state variables {a mathematical formula}p1,…,pn, each with domain {a mathematical formula}{u,0,1} where u is the initial value; there furthermore is a variable c with domain {a mathematical formula}{u,0,1,…,m}. The goal does not matter for our purposes. The factoring {a mathematical formula}F has center {a mathematical formula}{c} and leaves {a mathematical formula}{{p1},…,{pn}}.The actions are as follows. For each clause {a mathematical formula}Cj there is a center action {a mathematical formula}ajC which is applicable to the initial state, and which allows to generate a hypercube corresponding to the truth-value assignments disallowed by {a mathematical formula}cj. Specifically, we set {a mathematical formula}pre(ajC)={c=u}, and {a mathematical formula}eff(ajC)={c=j}. Furthermore, we include leaf actions {a mathematical formula}alL, one for each literal {a mathematical formula}l∈Cj, with {a mathematical formula}pre(alC)={c=j}, and {a mathematical formula}eff(alC)={l‾} where {a mathematical formula}l‾ is the opposite of l, i.e., {a mathematical formula}pi=1 if {a mathematical formula}l=¬Pi, and {a mathematical formula}pi=0 if {a mathematical formula}l=Pi. Finally, we include leaf actions {a mathematical formula}aij0L and {a mathematical formula}aij1L for each variable {a mathematical formula}Pi that does not occur in {a mathematical formula}Cj, with {a mathematical formula}pre(aij0L)=pre(aij1L)={c=j}, {a mathematical formula}eff(aij0L)={pi=0}, and {a mathematical formula}eff(aij1L)={pi=1}. Observe that, once {a mathematical formula}ajC has been applied, the hypercube {a mathematical formula}tj of reached leaf states over the variables {a mathematical formula}pi corresponds exactly to those assignments over {a mathematical formula}Pi which do not satisfy {a mathematical formula}Cj.We finally include a center action {a mathematical formula}a0C which is applicable to the initial state, and allows to generate a hypercube corresponding to all truth-value assignments. Specifically, we set {a mathematical formula}pre(a0C)={c=u}, and {a mathematical formula}eff(a0C)={c=0}, and we include leaf actions {a mathematical formula}ai00L and {a mathematical formula}ai01L for each {a mathematical formula}1≤i≤n, with {a mathematical formula}pre(ai00L)=pre(ai01L)={c=0}, {a mathematical formula}eff(ai00L)={pi=0}, and {a mathematical formula}eff(ai01L)={pi=1}. Observe that, once {a mathematical formula}a0C has been applied, the hypercube s of reached leaf states over the variables {a mathematical formula}pi corresponds exactly to the space of all assignments over {a mathematical formula}Pi.Consider the time point in search where search has explored each of the alternatives {a mathematical formula}a1C,…,amC (applied each of these actions to the initial state separately), and now explores the alternative {a mathematical formula}a0C. Then all-visited hypercube pruning checks whether {a mathematical formula}t1,…,tm cover s. The latter is the case iff ϕ is unsatisfiable.  □
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

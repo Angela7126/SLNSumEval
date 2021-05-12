@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Recursive Recurrent Neural Networkfor Statistical Machine Translation</title>
+<!--Generated on Tue Jun 10 19:29:57 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Recursive Recurrent Neural Network
+<br class="ltx_break"/>for Statistical Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Shujie Liu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>, Nan Yang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>, Mu Li<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math> and Ming Zhou<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>Microsoft Research Asia, Beijing, China
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>University of Science and Technology of China, Hefei, China 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">shujliu, v-nayang, muli, mingzhou@microsoft.com</span>
+
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper, we propose a novel recursive recurrent neural network (R<sup class="ltx_sup">2</sup>NN) to model the end-to-end decoding process for statistical machine translation. R<sup class="ltx_sup">2</sup>NN is a combination of recursive neural network and recurrent neural network, and in turn integrates their respective capabilities: (1) new information can be used to generate the next hidden state, like recurrent neural networks, so that language model and translation model can be integrated naturally; (2) a tree structure can be built, as recursive neural networks, so as to generate the translation candidates in a bottom up manner. A semi-supervised training approach is proposed to train the parameters, and the phrase pair embedding is explored to model translation confidence directly. Experiments on a Chinese to English translation task show that our proposed R<sup class="ltx_sup">2</sup>NN can outperform the state-of-the-art baseline by about 1.5 points in BLEU.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Deep Neural Network (DNN), which essentially is a multi-layer neural network, has re-gained more and more attentions these years. With the efficient training methods, such as <cite class="ltx_cite">[<a href="#bib.bib32" title="A fast learning algorithm for deep belief nets" class="ltx_ref">5</a>]</cite>, DNN is widely applied to speech and image processing, and has achieved breakthrough results <cite class="ltx_cite">[<a href="#bib.bib34" title="Learning convolutional feature hierarchies for visual recognition" class="ltx_ref">6</a>, <a href="#bib.bib33" title="ImageNet classification with deep convolutional neural networks" class="ltx_ref">8</a>, <a href="#bib.bib22" title="Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition" class="ltx_ref">4</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Applying DNN to natural language processing (NLP), representation or embedding of words is usually learnt first. Word embedding is a dense, low dimensional, real-valued vector. Each dimension of the vector represents a latent aspect of the word, and captures its syntactic and semantic properties <cite class="ltx_cite">[<a href="#bib.bib1" title="Neural probabilistic language models" class="ltx_ref">2</a>]</cite>. Word embedding is usually learnt from large amount of monolingual corpus at first, and then fine tuned for special distinct tasks. <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite> propose a multi-task learning framework with DNN for various NLP tasks, including part-of-speech tagging, chunking, named entity recognition, and semantic role labelling. Recurrent neural networks are leveraged to learn language model, and they keep the history information circularly inside the network for arbitrarily long time <cite class="ltx_cite">[<a href="#bib.bib55" title="Recurrent neural network based language model." class="ltx_ref">12</a>]</cite>. Recursive neural networks, which have the ability to generate a tree structured output, are applied to natural language parsing <cite class="ltx_cite">[<a href="#bib.bib56" title="Parsing natural scenes and natural language with recursive neural networks" class="ltx_ref">16</a>]</cite>, and they are extended to recursive neural tensor networks to explore the compositional aspect of semantics <cite class="ltx_cite">[<a href="#bib.bib3" title="Parsing with compositional vector grammars" class="ltx_ref">15</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">DNN is also introduced to Statistical Machine Translation (SMT) to learn several components or features of conventional framework, including word alignment, language modelling, translation modelling and distortion modelling. <cite class="ltx_cite">Yang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">2013</a>)</cite> adapt and extend the CD-DNN-HMM <cite class="ltx_cite">[<a href="#bib.bib22" title="Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition" class="ltx_ref">4</a>]</cite> method to HMM-based word alignment model. In their work, bilingual word embedding is trained to capture lexical translation information, and surrounding words are utilized to model context information. <cite class="ltx_cite">Auli<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib51" title="Joint language and translation modeling with recurrent neural networks" class="ltx_ref">2013</a>)</cite> propose a joint language and translation model, based on a recurrent neural network. Their model predicts a target word, with an unbounded history of both source and target words. <cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib52" title="Additive neural networks for statistical machine translation" class="ltx_ref">2013</a>)</cite> propose an additive neural network for SMT decoding. Word embedding is used as the input to learn translation confidence score, which is combined with commonly used features in the conventional log-linear model. For distortion modeling, <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib54" title="Recursive autoencoders for ITG-based translation" class="ltx_ref">2013</a>)</cite> use recursive auto encoders to make full use of the entire merging phrase pairs, going beyond the boundary words with a maximum entropy classifier <cite class="ltx_cite">[<a href="#bib.bib53" title="Maximum entropy based phrase reordering model for statistical machine translation" class="ltx_ref">19</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Different from the work mentioned above, which applies DNN to components of conventional SMT framework, in this paper, we propose a novel R<sup class="ltx_sup">2</sup>NN to model the end-to-end decoding process. R<sup class="ltx_sup">2</sup>NN is a combination of recursive neural network and recurrent neural network. In R<sup class="ltx_sup">2</sup>NN, new information can be used to generate the next hidden state, like recurrent neural networks, and a tree structure can be built, as recursive neural networks. To generate the translation candidates in a commonly used bottom-up manner, recursive neural networks are naturally adopted to build the tree structure. In recursive neural networks, all the representations of nodes are generated based on their child nodes, and it is difficult to integrate additional global information, such as language model and distortion model. In order to integrate these crucial information for better translation prediction, we combine recurrent neural networks into the recursive neural networks, so that we can use global information to generate the next hidden state, and select the better translation candidate.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We propose a three-step semi-supervised training approach to optimizing the parameters of R<sup class="ltx_sup">2</sup>NN, which includes recursive auto-encoding for unsupervised pre-training, supervised local training based on the derivation trees of forced decoding, and supervised global training using early update strategy. So as to model the translation confidence for a translation phrase pair, we initialize the phrase pair embedding by leveraging the sparse features and recurrent neural network. The sparse features are phrase pairs in translation table, and recurrent neural network is utilized to learn a smoothed translation score with the source and target side information. We conduct experiments on a Chinese-to-English translation task to test our proposed methods, and we get about 1.5 BLEU points improvement, compared with a state-of-the-art baseline system.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">The rest of this paper is organized as follows: Section 2 introduces related work on applying DNN to SMT. Our R<sup class="ltx_sup">2</sup>NN framework is introduced in detail in Section 3, followed by our three-step semi-supervised training approach in Section 4. Phrase pair embedding method using translation confidence is elaborated in Section 5. We introduce our conducted experiments in Section 6, and conclude our work in Section 7.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Yang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">2013</a>)</cite> adapt and extend CD-DNN-HMM <cite class="ltx_cite">[<a href="#bib.bib22" title="Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition" class="ltx_ref">4</a>]</cite> to word alignment. In their work, initial word embedding is firstly trained with a huge mono-lingual corpus, then the word embedding is adapted and fine tuned bilingually in a context-depended DNN HMM framework. Word embeddings capturing lexical translation information and surrounding words modeling context information are leveraged to improve the word alignment performance. Unfortunately, the better word alignment result generated by this model, cannot bring significant performance improvement on a end-to-end SMT evaluation task.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">To improve the SMT performance directly, <cite class="ltx_cite">Auli<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib51" title="Joint language and translation modeling with recurrent neural networks" class="ltx_ref">2013</a>)</cite> extend the recurrent neural network language model, in order to use both the source and target side information to scoring translation candidates. In their work, not only the target word embedding is used as the input of the network, but also the embedding of the source word, which is aligned to the current target word. To tackle the large search space due to the weak independence assumption, a lattice algorithm is proposed to re-rank the n-best translation candidates, generated by a given SMT decoder.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib52" title="Additive neural networks for statistical machine translation" class="ltx_ref">2013</a>)</cite> propose an additive neural network for SMT decoding. RNNLM <cite class="ltx_cite">[<a href="#bib.bib55" title="Recurrent neural network based language model." class="ltx_ref">12</a>]</cite> is firstly used to generate the source and target word embeddings, which are fed into a one-hidden-layer neural network to get a translation confidence score. Together with other commonly used features, the translation confidence score is integrated into a conventional log-linear model. The parameters are optimized with development data set using mini-batch conjugate sub-gradient method and a regularized ranking loss.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">DNN is also brought into the distortion modeling. Going beyond the previous work using boundary words for distortion modeling in BTG-based SMT decoder, <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib54" title="Recursive autoencoders for ITG-based translation" class="ltx_ref">2013</a>)</cite> propose to apply recursive auto-encoder to make full use of the entire merged blocks. The recursive auto-encoder is trained with reordering examples extracted from word-aligned bilingual sentences. Given the representations of the smaller phrase pairs, recursive auto-encoder can generate the representation of the parent phrase pair with a re-ordering confidence score. The combination of reconstruction error and re-ordering error is used to be the objective function for the model training.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Our Model</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we leverage DNN to model the end-to-end SMT decoding process, using a novel recursive recurrent neural network (R<sup class="ltx_sup">2</sup>NN), which is different from the above mentioned work applying DNN to components of conventional SMT framework. R<sup class="ltx_sup">2</sup>NN is a combination of recursive neural network and recurrent neural network, which not only integrates the conventional global features as input information for each combination, but also generates the representation of the parent node for the future candidate generation.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In this section, we briefly recall the recurrent neural network and recursive neural network in Section 3.1 and 3.2, and then we elaborate our R<sup class="ltx_sup">2</sup>NN in detail in Section 3.3.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Recurrent Neural Network</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Recurrent neural network is usually used for sequence processing, such as language model <cite class="ltx_cite">[<a href="#bib.bib55" title="Recurrent neural network based language model." class="ltx_ref">12</a>]</cite>. Commonly used sequence processing methods, such as Hidden Markov Model (HMM) and n-gram language model, only use a limited history for the prediction. In HMM, the previous state is used as the history, and for n-gram language model (for example  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>  equals to 3), the history is the previous two words. Recurrent neural network is proposed to use unbounded history information, and it has recurrent connections on hidden states, so that history information can be used circularly inside the network for arbitrarily long time.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1140/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Recurrent neural network</div>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the network contains three layers, an input layer, a hidden layer, and an output layer. The input layer is a concatenation of  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="h_{t-1}" display="inline"><msub><mi>h</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></math>  and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math>, where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="h_{t-1}" display="inline"><msub><mi>h</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></math>  is a real-valued vector, which is the history information from time 0 to  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math> is the embedding of the input word at time  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> . Word embedding  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math>  is integrated with previous history  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="h_{t-1}" display="inline"><msub><mi>h</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></math>  to generate the current hidden layer, which is a new history vector  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="h_{t}" display="inline"><msub><mi>h</mi><mi>t</mi></msub></math> . Based on  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="h_{t}" display="inline"><msub><mi>h</mi><mi>t</mi></msub></math> , we can predict the probability of the next word, which forms the output layer  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m11" class="ltx_Math" alttext="y_{t}" display="inline"><msub><mi>y</mi><mi>t</mi></msub></math> . The new history  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m12" class="ltx_Math" alttext="h_{t}" display="inline"><msub><mi>h</mi><mi>t</mi></msub></math>  is used for the future prediction, and updated with new information from word embedding  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m13" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math>  recurrently.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Recursive Neural Network</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In addition to the sequential structure above, tree structure is also usually constructed in various NLP tasks, such as parsing and SMT decoding. To generate a tree structure, recursive neural networks are introduced for natural language parsing <cite class="ltx_cite">[<a href="#bib.bib56" title="Parsing natural scenes and natural language with recursive neural networks" class="ltx_ref">16</a>]</cite>. Similar with recurrent neural networks, recursive neural networks can also use unbounded history information from the sub-tree rooted at the current node. The commonly used binary recursive neural networks generate the representation of the parent node, with the representations of two child nodes as the input.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1140/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Recursive neural network</div>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Recursive Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="s^{[l,m]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="s^{[m,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  are the representations of the child nodes, and they are concatenated into one vector to be the input of the network.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="s^{[l,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  is the generated representation of the parent node.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="y_{[l,n]}" display="inline"><msub><mi>y</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msub></math>  is the confidence score of how plausible the parent node should be created. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="l,m,n" display="inline"><mrow><mi>l</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>n</mi></mrow></math>  are the indexes of the string. For example, for nature language parsing,  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="s^{[l,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  is the representation of the parent node, which could be a  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="NP" display="inline"><mrow><mi>N</mi><mo>⁢</mo><mi>P</mi></mrow></math>  or  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="VP" display="inline"><mrow><mi>V</mi><mo>⁢</mo><mi>P</mi></mrow></math>  node, and it is also the representation of the whole sub-tree covering from  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>  to  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> .</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Recursive Recurrent Neural Network</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Word embedding  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math>  is integrated as new input information in recurrent neural networks for each prediction, but in recursive neural networks, no additional input information is used except the two representation vectors of the child nodes. However, some global information , which cannot be generated by the child representations, is crucial for SMT performance, such as language model score and distortion model score. So as to integrate such global information, and also keep the ability to generate tree structure, we combine the recurrent neural network and the recursive neural network to be a recursive recurrent neural network (R<sup class="ltx_sup">2</sup>NN).</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1140/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Recursive recurrent neural network</div>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F3" title="Figure 3 ‣ 3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, based on the recursive network, we add three input vectors  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="x^{[l,m]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  for child node  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="[l,m]" display="inline"><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></math> ,  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="x^{[m,n]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  for child node  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="[m,n]" display="inline"><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></math> , and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="x^{[l,n]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  for parent node  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m6" class="ltx_Math" alttext="[l,n]" display="inline"><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></math> . We call them recurrent input vectors, since they are borrowed from recurrent neural networks. The two recurrent input vectors  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m7" class="ltx_Math" alttext="x^{[l,m]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m8" class="ltx_Math" alttext="x^{[m,n]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  are concatenated as the input of the network, with the original child node representations  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m9" class="ltx_Math" alttext="s^{[l,m]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m10" class="ltx_Math" alttext="s^{[m,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math> . The recurrent input vector  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m11" class="ltx_Math" alttext="x^{[l,n]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  is concatenated with parent node representation  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m12" class="ltx_Math" alttext="s^{[l,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  to compute the confidence score  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m13" class="ltx_Math" alttext="y^{[l,n]}" display="inline"><msup><mi>y</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math> .</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">The input, hidden and output layers are calculated as follows:</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\hat{x}^{[l,n]}=x^{[l,m]}\bowtie s^{[l,m]}\bowtie x^{[m,n]}\bowtie s^{[m,n]}" display="block"><mrow><msup><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup><mo>=</mo><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup><mo>⋈</mo><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup><mo>⋈</mo><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup><mo>⋈</mo><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>m</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="s^{[l,n]}_{j}=f(\sum_{i}\hat{x}^{[l,n]}_{i}w_{ji})" display="block"><mrow><msubsup><mi>s</mi><mi>j</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><msubsup><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup><mo>⁢</mo><msub><mi>w</mi><mrow><mi>j</mi><mo>⁢</mo><mi>i</mi></mrow></msub></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="y^{[l,n]}=\sum_{j}(s^{[l,n]}\bowtie x^{[l,n]})_{j}v_{j}" display="block"><mrow><msup><mi>y</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><msub><mrow><mo>(</mo><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup><mo>⋈</mo><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup><mo>)</mo></mrow><mi>j</mi></msub><msub><mi>v</mi><mi>j</mi></msub></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p6.m1" class="ltx_Math" alttext="\bowtie" display="inline"><mo>⋈</mo></math>  is a concatenation operator in Equation <a href="#S3.E1" title="(1) ‣ 3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and Equation <a href="#S3.E3" title="(3) ‣ 3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p6.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>  is a non-linear function, here we use  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p6.m3" class="ltx_Math" alttext="HTanh" display="inline"><mrow><mi>H</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi></mrow></math>  function, which is defined as:</p>
+</div>
+<div id="S3.SS3.p7" class="ltx_para">
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="HTanh(x)=\left\{\begin{array}[]{lc}-1,&amp;x&lt;-1\\&#10;x,&amp;-1\leq x\geq 1\\&#10;1,&amp;x&gt;1\end{array}\right." display="block"><mrow><mrow><mi>H</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mo>-</mo><mn>1</mn></mrow><mo>,</mo></mrow></mtd><mtd columnalign="center"><mrow><mi>x</mi><mo>&lt;</mo><mrow><mo>-</mo><mn>1</mn></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mi>x</mi><mo>,</mo></mrow></mtd><mtd columnalign="center"><mrow><mrow><mo>-</mo><mn>1</mn></mrow><mo>≤</mo><mi>x</mi><mo>≥</mo><mn>1</mn></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mn>1</mn><mo>,</mo></mrow></mtd><mtd columnalign="center"><mrow><mi>x</mi><mo>&gt;</mo><mn>1</mn></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS3.p8" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F4" title="Figure 4 ‣ 3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> illustrates the R<sup class="ltx_sup">2</sup>NN architecture for SMT decoding. For a source sentence “laizi faguo he eluosi de”, we first split it into phrases “laizi”, “faguo he eluosi” and “de”. We then check whether translation candidates can be found in the translation table for each span, together with the phrase pair embedding and recurrent input vector (global features). We call it the rule matching phase. For a translation candidate of the span node  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m1" class="ltx_Math" alttext="[l,m]" display="inline"><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></math> , the black dots stand for the node representation  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m2" class="ltx_Math" alttext="s^{[l,m]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math> , while the grey dots for recurrent input vector  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m3" class="ltx_Math" alttext="x^{[l,m]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math> . Given  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m4" class="ltx_Math" alttext="s^{[l,m]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m5" class="ltx_Math" alttext="x^{[l,m]}" display="inline"><msup><mi>x</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>m</mi></mrow><mo>]</mo></mrow></msup></math>  for matched translation candidates, conventional CKY decoding process is performed using R<sup class="ltx_sup">2</sup>NN. R<sup class="ltx_sup">2</sup>NN can combine the translation pairs of child nodes, and generate the translation candidates for parent nodes with their representations and plausible scores. Only the n-best translation candidates are kept for upper combination, according to their plausible scores.</p>
+</div>
+<div id="S3.F4" class="ltx_figure"><img src="P14-1140/image004.png" id="S3.F4.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>R<sup class="ltx_sup">2</sup>NN for SMT decoding</div>
+</div>
+<div id="S3.SS3.p9" class="ltx_para">
+<p class="ltx_p">We extract phrase pairs using the conventional method <cite class="ltx_cite">[<a href="#bib.bib63" title="The alignment template approach to statistical machine translation" class="ltx_ref">13</a>]</cite>. The commonly used features, such as translation score, language model score and distortion score, are used as the recurrent input vector  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p9.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> . During decoding, recurrent input vectors  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p9.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>  for internal nodes are calculated accordingly. The difference between our model and the conventional log-linear model includes:</p>
+</div>
+<div id="S3.SS3.p10" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">R<sup class="ltx_sup">2</sup>NN is not linear, while the conventional model is a linear combination.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Representations of phrase pairs are automatically learnt to optimize the translation performance, while features used in conventional model are hand-crafted.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">History information of the derivation can be recorded in the representation of internal nodes, while conventional model cannot.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS3.p11" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Liu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib52" title="Additive neural networks for statistical machine translation" class="ltx_ref">2013</a>)</cite> apply DNN to SMT decoding, but not in a recursive manner. A feature is learnt via a one-hidden-layer neural network, and the embedding of words in the phrase pairs are used as the input vector. Our model generates the representation of a translation pair based on its child nodes. <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib54" title="Recursive autoencoders for ITG-based translation" class="ltx_ref">2013</a>)</cite> also generate the representation of phrase pairs in a recursive way. In their work, the representation is optimized to learn a distortion model using recursive neural network, only based on the representation of the child nodes. Our R<sup class="ltx_sup">2</sup>NN is used to model the end-to-end translation process, with recurrent global information added. We also explore phrase pair embedding method to model translation confidence directly, which is introduced in Section 5.</p>
+</div>
+<div id="S3.SS3.p12" class="ltx_para">
+<p class="ltx_p">In the next two sections, we will answer the following questions: (a) how to train the model, and (b) how to generate the initial representations of translation pairs.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model Training</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we propose a three-step training method to train the parameters of our proposed R<sup class="ltx_sup">2</sup>NN, which includes unsupervised pre-training using recursive auto-encoding, supervised local training on the derivation tree of forced decoding, and supervised global training using early update training strategy.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Unsupervised Pre-training</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We adopt the Recursive Auto Encoding (RAE) <cite class="ltx_cite">[<a href="#bib.bib56" title="Parsing natural scenes and natural language with recursive neural networks" class="ltx_ref">16</a>]</cite> for our unsupervised pre-training. The main idea of auto encoding is to initialize the parameters of the neural network, by minimizing the information lost, which means, capturing as much information as possible in the hidden states from the input vector.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S4.F5" title="Figure 5 ‣ 4.1 Unsupervised Pre-training ‣ 4 Model Training ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, RAE contains two parts, an encoder with parameter  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> , and a decoder with parameter  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="W^{\prime}" display="inline"><msup><mi>W</mi><mo>′</mo></msup></math> . Given the representations of child nodes  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math> , the encoder generates the representation of parent node  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> . With the parent node representation  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>  as the input vector, the decoder reconstructs the representation of two child nodes  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="s_{1}^{\prime}" display="inline"><msubsup><mi>s</mi><mn>1</mn><mo>′</mo></msubsup></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="s_{2}^{\prime}" display="inline"><msubsup><mi>s</mi><mn>2</mn><mo>′</mo></msubsup></math> . The loss function is defined as following so as to minimize the information lost:</p>
+<table id="S4.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="L_{RAE}(s_{1},s_{2})=\frac{1}{2}(\left\|s_{1}-s_{1}^{\prime}\right\|^{2}+\left%&#10;\|s_{2}-s_{2}^{\prime}\right\|^{2})" display="block"><mrow><mrow><msub><mi>L</mi><mrow><mi>R</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>E</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mrow><mo fence="true">∥</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>-</mo><msubsup><mi>s</mi><mn>1</mn><mo>′</mo></msubsup></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo fence="true">∥</mo><mrow><msub><mi>s</mi><mn>2</mn></msub><mo>-</mo><msubsup><mi>s</mi><mn>2</mn><mo>′</mo></msubsup></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m9" class="ltx_Math" alttext="\left\|\cdot\right\|" display="inline"><mrow><mo>∥</mo><mo>⋅</mo><mo>∥</mo></mrow></math>  is the Euclidean norm.</p>
+</div>
+<div id="S4.F5" class="ltx_figure"><img src="P14-1140/image005.png" id="S4.F5.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Recursive auto encoding for unsupervised pre-training</div>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">The training samples for RAE are phrase pairs  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="\{s_{1},s_{2}\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><mo>}</mo></mrow></math>  in translation table, where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="s_{1}" display="inline"><msub><mi>s</mi><mn>1</mn></msub></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="s_{2}" display="inline"><msub><mi>s</mi><mn>2</mn></msub></math>  can form a continuous partial sentence pair in the training data. When RAE training is done, only the encoding model  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m4" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>  will be fine tuned in the future training phases.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Supervised Local Training</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We use contrastive divergence method to fine tune the parameters  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> . The loss function is the commonly used ranking loss with a margin, and it is defined as follows:</p>
+<table id="S4.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="L_{SLT}(W,V,s^{[l,n]})=max(0,1-y_{oracle}^{[l,n]}+y_{t}^{[l,n]})" display="block"><mrow><mrow><msub><mi>L</mi><mrow><mi>S</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mi>T</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>,</mo><mi>V</mi><mo>,</mo><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>-</mo><msubsup><mi>y</mi><mrow><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi></mrow><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup><mo>+</mo><msubsup><mi>y</mi><mi>t</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="s^{[l,n]}" display="inline"><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></math>  is the source span.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="y_{oracle}^{[l,n]}" display="inline"><msubsup><mi>y</mi><mrow><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi></mrow><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup></math>  is the plausible score of a oracle translation result.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="y_{t}^{[l,n]}" display="inline"><msubsup><mi>y</mi><mi>t</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup></math>  is the plausible score for the best translation candidate given the model parameters  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m6" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m7" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> . The loss function aims to learn a model which assigns the good translation candidate (the oracle candidate) higher score than the bad ones, with a margin 1.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Translation candidates generated by forced decoding <cite class="ltx_cite">[<a href="#bib.bib57" title="Training phrase translation models with leaving-one-out" class="ltx_ref">18</a>]</cite> are used as oracle translations, which are the positive samples. Forced decoding performs sentence pair segmentation using the same translation system as decoding. For each sentence pair in the training data, SMT decoder is applied to the source side, and any candidate which is not the partial sub-string of the target sentence is removed from the n-best list during decoding. From the forced decoding result, we can get the ideal derivation tree in the decoder’s search space, and extract positive/oracle translation candidates.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Supervised Global Training</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">The supervised local training uses the nodes/samples in the derivation tree of forced decoding to update the model, and the trained model tends to over-fit to local decisions. In this subsection, a supervised global training is proposed to tune the model according to the final translation performance of the whole source sentence.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">Actually, we can update the model from the root of the decoding tree and perform back propagation along the tree structure. Due to the inexact search nature of SMT decoding, search errors may inevitably break theoretical properties, and the final translation results may be not suitable for model training. To handle this problem, we use early update strategy for the supervised global training. Early update is testified to be useful for SMT training with large scale features <cite class="ltx_cite">[<a href="#bib.bib64" title="Max-violation perceptron and forced decoding for scalable MT training" class="ltx_ref">21</a>]</cite>. Instead of updating the model using the final translation results, early update approach optimizes the model, when the oracle translation candidate is pruned from the n-best list, meaning that, the model is updated once it performs a unrecoverable mistake. Back propagation is performed along the tree structure, and the phrase pair embeddings of the leaf nodess are updated.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">The loss function for supervised global training is defined as follows:</p>
+<table id="S4.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="L_{SGT}(W,V,s^{[l,n]})=-\log(\frac{\sum_{y_{oracle}^{[l,n]}}\exp{(y_{oracle}^{%&#10;[l,n]}})}{\sum_{t\in nbest}{\exp{(y_{t}^{[l,n]})}}})" display="block"><mrow><mrow><msub><mi>L</mi><mrow><mi>S</mi><mo>⁢</mo><mi>G</mi><mo>⁢</mo><mi>T</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>,</mo><mi>V</mi><mo>,</mo><msup><mi>s</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><msubsup><mi>y</mi><mrow><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi></mrow><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><msubsup><mi>y</mi><mrow><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi></mrow><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup><mo>)</mo></mrow></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>t</mi><mo>∈</mo><mrow><mi>n</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></mrow></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><msubsup><mi>y</mi><mi>t</mi><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup><mo>)</mo></mrow></mrow></mrow></mfrac><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="y_{oracle}^{[l,n]}" display="inline"><msubsup><mi>y</mi><mrow><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi></mrow><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></msubsup></math>  is the model score of a oracle translation candidate for the span  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="[l,n]" display="inline"><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></math> . Oracle translation candidates are candidates get from forced decoding. If the span  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="[l,n]" display="inline"><mrow><mo>[</mo><mrow><mi>l</mi><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow></math>  is not the whole source sentence, there may be several oracle translation candidates, otherwise, there is only one, which is exactly the target sentence. There are much fewer training samples than those for supervised local training, and it is not suitable to use ranking loss for global training any longer. We use negative log-likelihood to penalize all the other translation candidates except the oracle ones, so as to leverage all the translation candidates as training samples.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Phrase Pair Embedding</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The next question is how to initialize the phrase pair embedding in the translation table, so as to generate the leaf nodes of the derivation tree. There are more phrase pairs than mono-lingual words, but bilingual corpus is much more difficult to acquire, compared with monolingual corpus.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Embedding</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">#Data</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">#Entry</th>
+<th class="ltx_td ltx_align_center ltx_border_t">#Parameter</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1G</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">500K</td>
+<td class="ltx_td ltx_align_center ltx_border_t">20 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> 500K</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Word Pair</td>
+<td class="ltx_td ltx_align_center ltx_border_r">7M</td>
+<td class="ltx_td ltx_align_center ltx_border_r">(500K)<sup class="ltx_sup">2</sup></td>
+<td class="ltx_td ltx_align_center">20 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> (500K)<sup class="ltx_sup">2</sup></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">Phrase Pair</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">7M</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">(500K)<sup class="ltx_sup">4</sup></td>
+<td class="ltx_td ltx_align_center ltx_border_b">20 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> (500K)<sup class="ltx_sup">4</sup></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>The relationship between the size of training data and the number of model parameters. The numbers for word embedding is calculated on English Giga-Word corpus version 3. For word pair and phrase pair embedding, the numbers are calculated on IWSLT 2009 dialog training set. The word count of each side of phrase pairs is limited to be 2.</div>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the relationship between the size of training data and the number of model parameters. For word embedding, the training size is 1G bits, and we may have 500K terms. For each term, we have a vector with length 20 as parameters, so there are 20 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> 500K parameters totally. But for source-target word pair, we may only have 7M bilingual corpus for training (taking IWSLT data set as an example), and there are 20 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math>(500K)<sup class="ltx_sup">2</sup> parameters to be tuned. For phrase pairs, the situation becomes even worse, especially when the limitation of word count in phrase pairs is relaxed. It is very difficult to learn the phrase pair embedding brute-forcedly as word embedding is learnt <cite class="ltx_cite">[<a href="#bib.bib55" title="Recurrent neural network based language model." class="ltx_ref">12</a>, <a href="#bib.bib5" title="Natural language processing (almost) from scratch" class="ltx_ref">3</a>]</cite>, since we may not have enough training data.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">A simple approach to construct phrase pair embedding is to use the average of the embeddings of the words in the phrase pair. One problem is that, word embedding may not be able to model the translation relationship between source and target phrases at phrase level, since some phrases cannot be decomposed. For example, the meaning of ”hot dog” is not the composition of the meanings of the words ”hot” and ”dog”. In this section, we split the phrase pair embedding into two parts to model the translation confidence directly: translation confidence with sparse features and translation confidence with recurrent neural network. We first get two translation confidence vectors separately using sparse features and recurrent neural network, and then concatenate them to be the phrase pair embedding. We call it translation confidence based phrase pair embedding (TCBPPE).</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Translation Confidence with Sparse Features</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Large scale feature training has drawn more attentions these years <cite class="ltx_cite">[<a href="#bib.bib58" title="An end-to-end discriminative approach to machine translation" class="ltx_ref">10</a>, <a href="#bib.bib64" title="Max-violation perceptron and forced decoding for scalable MT training" class="ltx_ref">21</a>]</cite>. Instead of integrating the sparse features directly into the log-linear model, we use them as the input to learn a phrase pair embedding. For the top 200,000 frequent translation pairs, each of them is a feature in itself, and a special feature is added for all the infrequent ones.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">The one-hot representation vector is used as the input, and a one-hidden-layer network generates a confidence score. To train the neural network, we add the confidence scores to the conventional log-linear model as features. Forced decoding is utilized to get positive samples, and contrastive divergence is used for model training. The neural network is used to reduce the space dimension of sparse features, and the hidden layer of the network is used as the phrase pair embedding. The length of the hidden layer is empirically set to 20.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Translation Confidence with Recurrent Neural Network</h3>
+
+<div id="S5.F6" class="ltx_figure"><img src="P14-1140/image006.png" id="S5.F6.g1" class="ltx_graphics ltx_centering" width="319" height="319" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Recurrent neural network for translation confidence</div>
+</div>
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We use recurrent neural network to generate two smoothed translation confidence scores based on source and target word embeddings. One is source to target translation confidence score and the other is target to source. These two confidence scores are defined as:</p>
+<table id="S5.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E8.m1" class="ltx_Math" alttext="T_{S2T}(s,t)=\sum_{i}{\log{p(e_{i}|e_{i-1},f_{a_{i}},h_{i})}}" display="block"><mrow><msub><mi>T</mi><mrow><mi>S</mi><mo>⁢</mo><mn>2</mn><mo>⁢</mo><mi>T</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>,</mo><mi>t</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>|</mo><msub><mi>e</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>f</mi><msub><mi>a</mi><mi>i</mi></msub></msub><mo>,</mo><msub><mi>h</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<table id="S5.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E9.m1" class="ltx_Math" alttext="T_{T2S}(s,t)=\sum_{j}{\log{p(f_{j}|f_{j-1},e_{\hat{a}_{j}},h_{j})}}" display="block"><mrow><msub><mi>T</mi><mrow><mi>T</mi><mo>⁢</mo><mn>2</mn><mo>⁢</mo><mi>S</mi></mrow></msub><mrow><mo>(</mo><mi>s</mi><mo>,</mo><mi>t</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>f</mi><mi>j</mi></msub><mo>|</mo><msub><mi>f</mi><mrow><mi>j</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>e</mi><msub><mover accent="true"><mi>a</mi><mo stretchy="false">^</mo></mover><mi>j</mi></msub></msub><mo>,</mo><msub><mi>h</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p">where,  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="f_{a_{i}}" display="inline"><msub><mi>f</mi><msub><mi>a</mi><mi>i</mi></msub></msub></math>  is the corresponding target word aligned to  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math> , and it is similar for  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="e_{\hat{a}_{j}}" display="inline"><msub><mi>e</mi><msub><mover accent="true"><mi>a</mi><mo stretchy="false">^</mo></mover><mi>j</mi></msub></msub></math> .  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="p(e_{i}|e_{i-1},f_{a_{i}},h_{i})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>|</mo><msub><mi>e</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>f</mi><msub><mi>a</mi><mi>i</mi></msub></msub><mo>,</mo><msub><mi>h</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>  is produced by a recurrent network as shown in Figure <a href="#S5.F6" title="Figure 6 ‣ 5.2 Translation Confidence with Recurrent Neural Network ‣ 5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. The recurrent neural network is trained with word aligned bilingual corpus, similar as <cite class="ltx_cite">[<a href="#bib.bib51" title="Joint language and translation modeling with recurrent neural networks" class="ltx_ref">1</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments and Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this section, we conduct experiments to test our method on a Chinese-to-English translation task. The evaluation method is the case insensitive IBM BLEU-4 <cite class="ltx_cite">[<a href="#bib.bib61" title="BLEU: a method for automatic evaluation of machine translation" class="ltx_ref">14</a>]</cite>. Significant testing is carried out using bootstrap re-sampling method proposed by <cite class="ltx_cite">[<a href="#bib.bib62" title="Statistical significance tests for machine translation evaluation." class="ltx_ref">7</a>]</cite> with a 95% confidence level.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Data Setting and Baseline</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">The data is from the IWSLT 2009 dialog task. The training data includes the BTEC and SLDB training data. The training data contains 81k sentence pairs, 655K Chinese words and 806K English words. The language model is a 5-gram language model trained with the target sentences in the training data. The test set is development set 9, and the development set comprises both development set 8 and the Chinese DIALOG set.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">The training data for monolingual word embedding is Giga-Word corpus version 3 for both Chinese and English. Chinese training corpus contains 32M sentences and 1.1G words. English training data contains 8M sentences and 247M terms. We only train the embedding for the top 100,000 frequent words following <cite class="ltx_cite">[<a href="#bib.bib5" title="Natural language processing (almost) from scratch" class="ltx_ref">3</a>]</cite>. With the trained monolingual word embedding, we follow <cite class="ltx_cite">[<a href="#bib.bib46" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">20</a>]</cite> to get the bilingual word embedding using the IWSLT bilingual training data.</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">Our baseline decoder is an in-house implementation of Bracketing Transduction Grammar (BTG) <cite class="ltx_cite">[<a href="#bib.bib60" title="Stochastic inversion transduction grammars and bilingual parsing of parallel corpora" class="ltx_ref">17</a>]</cite> in CKY-style decoding with a lexical reordering model trained with maximum entropy <cite class="ltx_cite">[<a href="#bib.bib53" title="Maximum entropy based phrase reordering model for statistical machine translation" class="ltx_ref">19</a>]</cite>. The features of the baseline are commonly used features as standard BTG decoder, such as translation probabilities, lexical weights, language model, word penalty and distortion probabilities. All these commonly used features are used as recurrent input vector  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>  in our R<sup class="ltx_sup">2</sup>NN.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Translation Results</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">As we mentioned in Section 5, constructing phrase pair embeddings from word embeddings may be not suitable. Here we conduct experiments to verify it.
+We first train the source and target word embeddings separately using large monolingual data, following <cite class="ltx_cite">[<a href="#bib.bib5" title="Natural language processing (almost) from scratch" class="ltx_ref">3</a>]</cite>. Using monolingual word embedding as the initialization, we fine tune them to get bilingual word embedding <cite class="ltx_cite">[<a href="#bib.bib46" title="Word alignment modeling with context dependent deep neural network" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">The word embedding based phrase pair embedding (WEPPE) is defined as:</p>
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S6.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.Ex1.m1" class="ltx_Math" alttext="\displaystyle Epp_{web}(s,t)=\sum_{i}{E_{wms}(s_{i})}\bowtie\sum_{j}{E_{wbs}(s%&#10;_{j})}" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><msub><mi>p</mi><mrow><mi>w</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>b</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>⋈</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder></mstyle><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>s</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S6.E10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.E10.m1" class="ltx_Math" alttext="\displaystyle\bowtie\sum_{k}{E_{wmt}(t_{k})}\bowtie\sum_{l}{E_{wbt}(t_{l})}" display="inline"><mrow><mo>⋈</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>k</mi></munder></mstyle><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow><mo>⋈</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>l</mi></munder></mstyle><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>l</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="\bowtie" display="inline"><mo>⋈</mo></math>  is a concatenation operator.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m2" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>  are the source and target phrases.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m4" class="ltx_Math" alttext="E_{wms}(s_{i})" display="inline"><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m5" class="ltx_Math" alttext="E_{wmt}(t_{k})" display="inline"><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math>  are the monolingual word embeddings, and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m6" class="ltx_Math" alttext="E_{wbs}(s_{i})" display="inline"><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>  and  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m7" class="ltx_Math" alttext="E_{wbt}(t_{k})" display="inline"><mrow><msub><mi>E</mi><mrow><mi>w</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>t</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math>  are the bilingual word embeddings. Here the length of the word embedding is also set to 20. Therefore, the length of the phrase pair embedding is  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m8" class="ltx_Math" alttext="20\times 4=80" display="inline"><mrow><mrow><mn>20</mn><mo>×</mo><mn>4</mn></mrow><mo>=</mo><mn>80</mn></mrow></math> .</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">We compare our phrase pair embedding methods and our proposed R<sup class="ltx_sup">2</sup>NN with baseline system, in Table <a href="#S6.T2" title="Table 2 ‣ 6.2 Translation Results ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. We can see that, our R<sup class="ltx_sup">2</sup>NN models with WEPPE and TCBPPE are both better than the baseline system. WEPPE cannot get significant improvement, while TCBPPE does, compared with the baseline result. TCBPPE is much better than WEPPE.</p>
+</div>
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Setting</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Development</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Test</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">46.81</td>
+<td class="ltx_td ltx_align_center ltx_border_t">39.29</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">WEPPE+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r">47.23</td>
+<td class="ltx_td ltx_align_center">39.92</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r">TCBPPE+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">48.70 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m1" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b">40.81 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m2" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Translation results of our proposed R<sup class="ltx_sup">2</sup>NN Model with two phrase embedding methods, compared with the baseline. Setting ”WEPPE+R<sup class="ltx_sup">2</sup>NN” is the result with word embedding based phrase pair embedding and our R<sup class="ltx_sup">2</sup>NN Model, and ”TCBPPE+R<sup class="ltx_sup">2</sup>NN” is the result of translation confidence based phrase pair embedding and our R<sup class="ltx_sup">2</sup>NN Model. The results with  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m4" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math>  are significantly better than the baseline.</div>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">Word embedding can model translation relationship at word level, but it may not be powerful to model the phrase pair respondents at phrasal level, since the meaning of some phrases cannot be decomposed into the meaning of words. And also, translation task is difference from other NLP tasks, that, it is more important to model the translation confidence directly (the confidence of one target phrase as a translation of the source phrase), and our TCBPPE is designed for such purpose.</p>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Effects of Global Recurrent Input Vector</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">In order to compare R<sup class="ltx_sup">2</sup>NN with recursive network for SMT decoding, we remove the recurrent input vector in R<sup class="ltx_sup">2</sup>NN to test its effect, and the results are shown in Table <a href="#S6.T3" title="Table 3 ‣ 6.3 Effects of Global Recurrent Input Vector ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Without the recurrent input vectors, R<sup class="ltx_sup">2</sup>NN degenerates into recursive neural network (RNN).</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Setting</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Development</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Test</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">WEPPE+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">47.23</td>
+<td class="ltx_td ltx_align_center ltx_border_t">40.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">WEPPE+RNN</th>
+<td class="ltx_td ltx_align_center ltx_border_r">37.62</td>
+<td class="ltx_td ltx_align_center">33.29</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">TCBPPE+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r">48.70</td>
+<td class="ltx_td ltx_align_center">40.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r">TCBPPE+RNN</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">45.11</td>
+<td class="ltx_td ltx_align_center ltx_border_b">37.33</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Experimental results to test the effects of recurrent input vector. WEPPE /TCBPPE+RNN are the results removing recurrent input vectors with WEPPE /TCBPPE.</div>
+</div>
+<div id="S6.SS3.p2" class="ltx_para">
+<p class="ltx_p">From Table <a href="#S6.T3" title="Table 3 ‣ 6.3 Effects of Global Recurrent Input Vector ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> we can find that, the recurrent input vector is essential to SMT performance. When we remove it from R<sup class="ltx_sup">2</sup>NN, WEPPE based method drops about 10 BLEU points on development data and more than 6 BLEU points on test data. TCBPPE based method drops about 3 BLEU points on both development and test data sets. When we remove the recurrent input vectors, the representations of recursive network are generated with the child nodes, and it does not integrate global information, such as language model and distortion model, which are crucial to the performance of SMT.</p>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Sparse Features and Recurrent Network Features</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">To test the contributions of sparse features and recurrent network features, we first remove all the recurrent network features to train and test our R<sup class="ltx_sup">2</sup>NN model, and then remove all the sparse features to test the contribution of recurrent network features.</p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Setting</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Development</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Test</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">TCBPPE+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">48.70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">40.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">SF+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_r">48.23</td>
+<td class="ltx_td ltx_align_center">40.19</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r">RNN+R<sup class="ltx_sup">2</sup>NN</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">47.89</td>
+<td class="ltx_td ltx_align_center ltx_border_b">40.01</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Experimental results to test the effects of sparse features and recurrent network features.</div>
+</div>
+<div id="S6.SS4.p2" class="ltx_para">
+<p class="ltx_p">The results are shown in Table <a href="#S6.SS4" title="6.4 Sparse Features and Recurrent Network Features ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.4</span></a>. From the results, we can find that, sparse features are more effective than the recurrent network features a little bit. The sparse features can directly model the translation correspondence, and they may be more effective to rank the translation candidates, while recurrent neural network features are smoothed lexical translation confidence.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion and Future Work</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a Recursive Recurrent Neural Network(R<sup class="ltx_sup">2</sup>NN) to combine the recurrent neural network and recursive neural network. Our proposed R<sup class="ltx_sup">2</sup>NN cannot only integrate global input information during each combination, but also can generate the tree structure in a recursive way. We apply our model to SMT decoding, and propose a three-step semi-supervised training method. In addition, we explore phrase pair embedding method, which models translation confidence directly. We conduct experiments on a Chinese-to-English translation task, and our method outperforms a state-of-the-art baseline about 1.5 points BLEU.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">From the experiments, we find that, phrase pair embedding is crucial to the performance of SMT. In the future, we will explore better methods for phrase pair embedding to model the translation equivalent between source and target phrases. We will apply our proposed R<sup class="ltx_sup">2</sup>NN to other tree structure learning tasks, such as natural language parsing.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Auli, M. Galley, C. Quirk and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint language and translation modeling with recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1044–1054</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1106" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Translation Confidence with Recurrent Neural Network ‣ 5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, H. Schwenk, J. Senécal, F. Morin and J. Gauvain</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Neural probabilistic language models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Innovations in Machine Learning</span>, <span class="ltx_text ltx_bib_pages"> pp. 137–186</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p2" title="5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.SS1.p2" title="6.1 Data Setting and Baseline ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Translation Results ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Dahl, D. Yu, L. Deng and A. Acero</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Audio, Speech, and Language Processing, IEEE Transactions on</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 30–42</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton, S. Osindero and Y. Teh</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A fast learning algorithm for deep belief nets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural computation</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">7</span>), <span class="ltx_text ltx_bib_pages"> pp. 1527–1554</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Kavukcuoglu, P. Sermanet, Y. Boureau, K. Gregor, M. Mathieu and Y. LeCun</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning convolutional feature hierarchies for visual recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in Neural Information Processing Systems</span>, <span class="ltx_text ltx_bib_pages"> pp. 1090–1098</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical significance tests for machine translation evaluation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 388–395</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky, I. Sutskever and G. Hinton</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ImageNet classification with deep convolutional neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1106–1114</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Li, Y. Liu and M. Sun</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive autoencoders for ITG-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 567–577</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1054" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p11" title="3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Liang, A. Bouchard-Côté, D. Klein and B. Taskar</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An end-to-end discriminative approach to machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 761–768</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 Translation Confidence with Sparse Features ‣ 5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib52" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Liu, T. Watanabe, E. Sumita and T. Zhao</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Additive neural networks for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 791–801</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1078" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p11" title="3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, M. Karafiát, L. Burget, J. Cernockỳ and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network based language model.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1045–1048</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.p2" title="5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och and H. Ney</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The alignment template approach to statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">30</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 417–449</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p9" title="3.3 Recursive Recurrent Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLEU: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 311–318</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 455–465</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, C. C. Lin, A. Ng and C. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing natural scenes and natural language with recursive neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 129–136</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Recursive Neural Network ‣ 3 Our Model ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Unsupervised Pre-training ‣ 4 Model Training ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Wu</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stochastic inversion transduction grammars and bilingual parsing of parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">23</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 377–403</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Data Setting and Baseline ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wuebker, A. Mauser and H. Ney</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training phrase translation models with leaving-one-out</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 475–484</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Supervised Local Training ‣ 4 Model Training ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Xiong, Q. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum entropy based phrase reordering model for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">44</span>, <span class="ltx_text ltx_bib_pages"> pp. 521</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS1.p3" title="6.1 Data Setting and Baseline ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Yang, S. Liu, M. Li, M. Zhou and N. Yu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word alignment modeling with context dependent deep neural network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.p2" title="6.1 Data Setting and Baseline ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Translation Results ‣ 6 Experiments and Results ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Yu, L. Huang, H. Mi and K. Zhao</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Max-violation perceptron and forced decoding for scalable MT training</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1112–1123</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1112" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 Supervised Global Training ‣ 4 Model Training ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Translation Confidence with Sparse Features ‣ 5 Phrase Pair Embedding ‣ A Recursive Recurrent Neural Network for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:29:57 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

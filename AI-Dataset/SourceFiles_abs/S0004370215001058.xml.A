@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Confidence-based reasoning in stochastic constraint programming.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The stochastic constraint satisfaction/optimisation framework introduced in [2], [3] constitutes an expressive declarative formalism for modelling problems of decision making under uncertainty. A stochastic constraint satisfaction problem (SCSP), alongside decision variables, features random variables, which follow some probability distribution and can be used to model uncertainty. Relationships over subsets of random and decision variables can be expressed in a declarative manner via stochastic constraints. The fact that a given relationship over subsets of random and decision variables should be satisfied according to a prescribed probability can be expressed by means of chance constraints. Finally, since problems of decision making under uncertainly are sequential in nature, the modeller can define a stage structure, that is a sequence of decision stages, in each of which a subset of all possible decisions are taken and a subset of all possible random variables are observed. A solution to an SCSP can be represented in general by means of a policy tree, which records feasible or optimal decisions associated with each possible set of random variable realisations.
+     </paragraph>
+     <paragraph>
+      As shown in [3, Theorem 1], solving SCSPs is a computationally hard task. Even trivial instances with a dozen of decision and random variables require a computational effort out of reach even for the most advanced hardware/software combination. This is due to the fact that the size of the policy tree grows exponentially in the number of random variables in the model and in the size of their support. Furthermore, a major limitation of all existing complete SCSPs solution methods, such as [3] and [4], is the fact that they assume the support of random variables is finite, otherwise a solution cannot be expressed as a finite policy tree. In practice, however, it is often the case that random variables either range over continuous supports or have a very large number (possibly infinite) of values in their domain. To date, no general purpose method exists for solving large-scale SCSPs, or SCSPs featuring random variables with continuous or discrete infinite support; for the sake of brevity we shall name this latter class of SCSPs “infinite SCSPs.”
+     </paragraph>
+     <paragraph>
+      The main contribution of this paper is to propose a framework for solving large-scale or infinite SCSPs. More specifically, we argue that in solving large-scale or infinite SCSPs, one should not consider the ultimate feasible/optimal solution, which in some cases may even be impossible to represent; rather, the decision maker should aim for a solution that she “sufficiently trusts,” which she may claim to be optimal or feasible with a given confidence level, and for which a certain degree of error may be tolerated. In order to obtain such a solution, the decision maker should only look at a possibly limited number of samples drawn from the random variables in the model. In other words, she should try to “estimate” the quality of this solution.
+     </paragraph>
+     <paragraph>
+      Our approach has several analogies with established techniques in statistics. When a survey is conducted on a sample population — e.g. an electoral poll — a statistician typically associates a certain confidence level with the results obtained from the chosen sample population. For instance, one may claim that there is a 90% chance that the actual mean being estimated is within a given interval. We argue that the very same approach may be adopted in stochastic decision making. If the infinite or large-scale m-stage SCSP does not admit any closed form solution and is complex enough to rule out any chance of obtaining an exact solution, we suggest that — as is done in statistics — one may introduce a confidence level α and a tolerated estimation error ±ϑ. The decision maker, instead of looking for an exact solution, may then aim to “estimate” — according to the chosen α and ϑ — whether the actual satisfaction probability guaranteed by an assignment is greater than or equal to the given target value for each of the chance constraints in the model. By choosing given values for α and ϑ the set of solutions may vary. For this reason we will introduce a new notion of solution that is parameterised by these two parameters and that we call an {a mathematical formula}(α,ϑ)-solution. Intuitively, as α tends to 1 and ϑ tends to 0 the set of {a mathematical formula}(α,ϑ)-solutions will converge to the set of actual solutions to the original stochastic constraint satisfaction problem, which we therefore rename {a mathematical formula}(1,0)-solutions. One should note that an approach of this kind has been recently advocated in [5, Chap. 4].
+     </paragraph>
+     <paragraph>
+      In this work, we make the following contributions to the stochastic constraint programming literature:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       we discuss how to obtain compact instances of infinite or large-scale stochastic constraint programs via sampling: we call these instances “sampled SCSPs;”
+      </list-item>
+      <list-item label="•">
+       we introduce the concepts of {a mathematical formula}(α,ϑ)-solution and of {a mathematical formula}(α,ϑ)-solution set; and show how to compute a priori the minimum sample size that guarantees the attainment of such classes of solutions;
+      </list-item>
+      <list-item label="•">
+       we show how the above tools can be employed in order to find approximate solutions to infinite or large-scale stochastic constraint satisfaction/optimisation problems that cannot be solved by existing exact approaches in the stochastic constraint programming literature;
+      </list-item>
+      <list-item label="•">
+       we conduct a thorough computational study on three well-known stochastic combinatorial problems to validate our theoretical framework and assess its effectiveness, efficiency, and scalability.
+      </list-item>
+     </list>
+     <paragraph>
+      This work is structured as follows: in Section 2 we introduce the relevant formal background in constraint programming, stochastic constraint programming, and confidence interval analysis; in Section 3 we introduce sampled SCSPs; in Section 4 we discuss properties of the solutions of sampled SCSPs and formally introduce {a mathematical formula}(α,ϑ)-solutions; in Section 5 we introduce {a mathematical formula}(α,ϑ)-solution sets; in Section 6 we extend our discussion to stochastic constraint optimisation problems; in Section 7 we discuss connections with established techniques in statistics; in Section 8 we present our computational study; in Section 9 we discuss related works; finally, in Section 10 we draw conclusions and discuss future research directions.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Formal background
+     </section-title>
+     <paragraph>
+      We now introduce the relevant background in constraint programming, stochastic constraint programming, and confidence interval analysis.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Constraint programming
+      </section-title>
+      <paragraph>
+       A Constraint Satisfaction Problem (CSP) [6] consists of a set of decision variables, each with a finite domain of values, and a set of constraints specifying allowed combinations of values for some variables. A solution to a CSP is an assignment of variables to values in their respective domains such that all of the constraints are satisfied. Constraint solvers typically explore partial assignments enforcing a local consistency property. A constraint c is generalised arc consistent (GAC) if and only if when a variable is assigned any of the values in its domain, there exist compatible values in the domains of all the other variables of c. In order to enforce a local consistency property on a constraint c during search, we employ filtering algorithms that remove inconsistent values from the domains of the variables of c. These filtering algorithms are repeatedly called until no more values are pruned. This process is called constraint propagation.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Stochastic constraint programming
+      </section-title>
+      <paragraph>
+       The following definitions are based on [4], [7]. An m-stage stochastic constraint satisfaction problem (SCSP) [2] is a 7-tuple {a mathematical formula}〈V,S,D,P,C,β,L〉, where V is a set of decision variables and S is a set of random variables, D is a function mapping each element of V (respectively, S) to a domain (respectively, support) of potential values. In classical SCSPs both decision variable domains and random variable supports are assumed to be finite. P is a function mapping each element of S to a probability distribution for its associated support. To keep the discussion focused, without loss of generality, we assume that this probability distribution is not influenced by the decisions made; extensions to the SCP framework that deal with decision-dependent probabilities are discussed in [8]. C is a set of constraints over a non-empty subset of decision variables and a subset of random variables. If a constraint constrains only decision variables, then we call it a deterministic constraint; if it constrains both decision and random variables, then we call it a stochastic constraint. β is a function mapping each stochastic constraint {a mathematical formula}h∈C to {a mathematical formula}βh, which is a threshold value in the interval {a mathematical formula}(0,1]. If this threshold is strictly less than 1, then the stochastic constraint is a chance constraint. {a mathematical formula}L=[〈V1,S1〉,…,〈Vi,Si〉,…,〈Vm,Sm〉] is a list of decision stages such that each {a mathematical formula}Vi⊆V, each {a mathematical formula}Si⊆S, the {a mathematical formula}Vi form a partition of V, and the {a mathematical formula}Si form a partition of S.
+      </paragraph>
+      <paragraph>
+       To solve an m-stage SCSP an assignment to the variables in {a mathematical formula}V1 must be found such that, given random values for {a mathematical formula}S1, assignments can be found for {a mathematical formula}V2 such that, given random values for {a mathematical formula}S2, …, assignments can be found for {a mathematical formula}Vm so that, given random values for {a mathematical formula}Sm, the deterministic constraints are satisfied and the stochastic constraints are satisfied in the fraction of all possible scenarios specified by function β. Under the assumption that random variable supports are finite, the solution of an m-stage SCSP is, in general, represented by means of a policy tree[3]. The arcs in such a policy tree represent values observed for random variables whereas nodes at each level represent the decisions associated with the different stages. We call the policy tree of an m-stage SCSP that is a solution a satisfying policy tree.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}S denote the space of policy trees that are solutions to an SCSP. We may be interested in finding a policy tree {a mathematical formula}s∈S that maximises the value of a given objective function {a mathematical formula}f(⋅) over a subset of stochastic variables and a non-empty subset of decision variables. A stochastic constraint optimisation problem (SCOP) is then defined in general as {a mathematical formula}maxs∈S⁡f(s).
+      </paragraph>
+      <paragraph>
+       In order to simplify the presentation, we assume without loss of generality, that each {a mathematical formula}Vi={xi} and each {a mathematical formula}Si={si} are singleton sets. All the results can be easily extended in order to consider {a mathematical formula}|Vi|&gt;1 and {a mathematical formula}|Si|&gt;1 (see [4]). Intuitively, if {a mathematical formula}Si comprises more than one random variable, it is always possible to aggregate these variables into a single multivariate random variable [9] by convolving them. If {a mathematical formula}Vi comprises more than one decision variable, in the following discussion the term decision variable should be interpreted as a set of decision variables. Let {a mathematical formula}S={s1,s2,…,sm} be the set of all random variables and {a mathematical formula}V={x1,x2,…,xm} be the set of all decision variables.
+      </paragraph>
+      <paragraph>
+       Let p be a path from the root node of the policy tree to a leaf. Let Ψ denote the set of all distinct paths of a policy tree. For each {a mathematical formula}p∈Ψ, we denote by {a mathematical formula}arcs(p) the sequence of all the arcs in p whereas {a mathematical formula}nodes(p) denotes the sequence of all nodes in p. We denote by {a mathematical formula}Ω={arcs(p)|p∈Ψ} the set of all scenarios of the policy tree. The probability of {a mathematical formula}ω∈Ω is given by {a mathematical formula}Pr⁡{ω}=∏i=1mPr⁡{si=s¯i|si−1=s¯i−1,…,s1=s¯1}, where {a mathematical formula}Pr⁡{si=s¯i|si−1=s¯i−1,…,s1=s¯1} is the probability that random variable {a mathematical formula}si takes value {a mathematical formula}s¯i, given a set of realisations for random variables {a mathematical formula}si−1,…,s1 already observed.
+      </paragraph>
+      <paragraph>
+       Now consider a constraint {a mathematical formula}h∈C with a specified threshold level {a mathematical formula}βh. Consider a policy tree {a mathematical formula}T for the SCSP and a path {a mathematical formula}p∈T. Let {a mathematical formula}h↓p be the deterministic constraint obtained by substituting the random variables in h with the corresponding values ({a mathematical formula}s¯i) assigned to these random variables in {a mathematical formula}arcs(p). Let {a mathematical formula}h¯↓p be the resulting tuple obtained by substituting the decision variables in {a mathematical formula}h↓p by the values ({a mathematical formula}x¯i) assigned to the corresponding decision variables in {a mathematical formula}nodes(p). We say that h is satisfied wrt to a given policy tree{a mathematical formula}T iff{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 1">
+       Given an m-stage SCSP {a mathematical formula}P and a policy tree {a mathematical formula}T, {a mathematical formula}T is a satisfying policy tree to {a mathematical formula}P iff every constraint of {a mathematical formula}P is satisfied wrt {a mathematical formula}T.
+      </paragraph>
+      <paragraph label="Example 1">
+       Let us consider the two-stage SCSP in Fig. 2, whose stage structure is {a mathematical formula}L=[〈V1,S1〉,〈V2,S2〉]; {a mathematical formula}V1={x1} and {a mathematical formula}S1={s1}, {a mathematical formula}V2={x2} and {a mathematical formula}S2={s2}. Random variable {a mathematical formula}s1 may take two possible values, 5 and 4, each with probability 0.5; random variable {a mathematical formula}s2 may also take two possible values, 3 and 4, each with probability 0.5. The domain of {a mathematical formula}x1 is {a mathematical formula}{1,…,4}, the domain of {a mathematical formula}x2 is {a mathematical formula}{3,…,6}. There are two chance constraints{sup:2} in C, {a mathematical formula}Pr⁡{c1:s1x1+s2x2≥30}≥0.75 and {a mathematical formula}Pr⁡{c2:s2x1=12}≥0.5. In this case, the decision variable {a mathematical formula}x1 must be set to a unique value before random variables are observed, while decision variable {a mathematical formula}x2 takes a value that depends on the observed value of the random variable {a mathematical formula}s1. A possible solution to this SCSP is the satisfying policy tree shown in Fig. 1 in which {a mathematical formula}x1=3,x21=4 and {a mathematical formula}x22=6, where {a mathematical formula}x21 is the value assigned to decision variable {a mathematical formula}x2, if random variable {a mathematical formula}s1 takes value 5, and {a mathematical formula}x22 is the value assigned to decision variable {a mathematical formula}x2, if random variable {a mathematical formula}s1 takes value 4.
+      </paragraph>
+      <paragraph>
+       As Example 1 shows, a solution to an SCSP is not simply an assignment of the decision variables to values, but it is instead a satisfying policy tree.
+      </paragraph>
+      <paragraph>
+       It is worth noting that asking individual constraints to be satisfied according to their probability thresholds is different from asking a conjunction of constraints to be satisfied according to a prescribed probability threshold. Informally speaking, in Example 1 we simply state that {a mathematical formula}c1:s1x1+s2x2≥30 should hold true with probability {a mathematical formula}β1=0.75, i.e. in at least 75% of the scenarios. If {a mathematical formula}c2:s2x1=12 holds true or not in those very same scenarios is not a matter of concern, as long as {a mathematical formula}c2 holds true in at least 50% of the scenarios — not necessarily the same as those in which {a mathematical formula}c1 holds true. Essentially, in Example 1 we do not state anything about the conjunction {a mathematical formula}c3:(s1x1+s2x2≥30)∧(s2x1=12). If we want to state something about this conjunction, we need to post a specific chance constraint {a mathematical formula}c3 with its own satisfaction threshold {a mathematical formula}β3. Assuming {a mathematical formula}β3=0.5, we may for instance require the conjunction {a mathematical formula}c3 to hold true in at least 50% of the scenarios, i.e. {a mathematical formula}Pr⁡{c3:(s1x1+s2x2≥30)∧(s2x1=12)}≥0.5. Incidentally, the policy tree presented in Fig. 1 also satisfies this constraint.
+      </paragraph>
+      <paragraph>
+       A practical example that further clarifies this discussion is found in inventory control. It is customary in inventory control problems to enforce service level constraints such as{a mathematical formula} where N represents the length of the planning horizon and {a mathematical formula}It is the inventory level at the end of period t. The above set of constraints means that the probability of stocking out in a given period should be less than {a mathematical formula}1−α; regardless what happens in other periods. A more restrictive service level requirement would be{a mathematical formula} This latter restriction means that the probability of stocking out in at least one of the N periods should be less than {a mathematical formula}1−α.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Confidence interval analysis
+      </section-title>
+      <paragraph>
+       Confidence interval analysis is a well established technique in statistics. Informally, confidence intervals are a useful tool for computing, from a given set of experimental results, a range of values that, with a certain confidence level (or confidence probability), will cover the actual value of a parameter that is being estimated. Consider a discrete random variable that follows a Bernoulli distribution. Accordingly, such a variable may produce only two outcomes, i.e. “yes” and “no”, with probability q and {a mathematical formula}1−q, respectively. Let us assume that the value q — the “yes” probability — is unknown. Obviously, if we observe the outcome of a Bernoulli trial once, the data collected will not reveal much about the value of q. Nevertheless, in practice, we may be interested in “estimating” q, by repeatedly observing the behaviour of the random variable in a sequence of Bernoulli trials. This problem is well-known in statistics and both exact and approximate techniques are available for performing this estimation [10], [11]. The estimation produced by the methods available in the literature typically does not come as a point estimate, rather it consists of an interval of values computed from a set of representative samples for the quantity being estimated. This interval is known as “confidence interval” and consists of a range of values that, with a certain confidence probability α, covers the actual value of the parameter that is being estimated.
+      </paragraph>
+      <paragraph>
+       A method that is commonly classified as the “exact confidence intervals” for the Binomial distribution has been introduced by Clopper and Pearson in [10]. This method uses the Binomial cumulative distribution function (CDF) in order to build the interval from the data observed. The Clopper–Pearson interval is a symmetric two-sided confidence interval. It can be however also expressed as a single-sided interval. Clopper–Pearson single-sided intervals can be written as {a mathematical formula}(plb,1) and {a mathematical formula}(0,pub) where{a mathematical formula}{a mathematical formula}X is the number of successes (or “yes” events) observed in the sample, {a mathematical formula}bin(N;q) is a binomial random variable with N trials and probability of success q and α is the confidence probability. Note that we assume {a mathematical formula}plb=0 when {a mathematical formula}X=0 and that {a mathematical formula}pub=1 when {a mathematical formula}X=N.
+      </paragraph>
+      <paragraph>
+       Because of the close relationship between Binomial distribution and the Beta distribution, the Clopper–Pearson interval is sometimes presented in an alternative format that uses percentiles from the beta distribution [12]:{a mathematical formula}{a mathematical formula} where {a mathematical formula}beta−1 denotes the inverse Beta distribution. This form can be efficiently evaluated by existing algorithms.
+      </paragraph>
+      <paragraph>
+       An interesting property of confidence intervals related to the estimation of the “success” probability associated with a Bernoulli trial consists in the fact that, given a confidence probability, it is possible to derive mathematically, by performing a worst case analysis, the minimum number of samples that should be observed in order to produce a confidence interval of a given size.
+      </paragraph>
+      <paragraph>
+       Therefore, for a given confidence probability α, it is possible to determine the minimum number of samples that should be considered in order to achieve a margin of error of ±ϑ in the estimation of the “success” probability of a Bernoulli trial. This computation plays a central role in our novel approach. In fact, intuitively estimating the satisfaction probability of a chance constraint is equivalent to estimating the “success” probability of the associated Bernoulli trial.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Sampled SCSPs
+     </section-title>
+     <paragraph>
+      Consider an SCSP {a mathematical formula}P over a set S of stochastic variables. Assume that stochastic variables are defined on continuous supports or discrete supports comprising a large or infinite number of values. Solving the original SCSP clearly poses a hard combinatorial challenge, in fact the policy tree comprises a number of scenarios that is exponential in the size of stochastic variable domains. Since the policy tree may comprise an infinite number of scenarios, the computational problem may even be undecidable in general.
+     </paragraph>
+     <paragraph>
+      In this section we discuss how to sample a more compact SCSP, which comprises at most N scenarios, out of the original problem. We shall call this new problem {a mathematical formula}PˆN or “sampled SCSP” over N scenarios. Intuitively, a sampled SCSP is a reduced version of the original problem the solution of which is a policy tree that comprises a bounded number of paths sampled out of the original policy tree. In the following sections we will discuss under which conditions the solution to a sampled SCSP {a mathematical formula}PˆN is, according to a certain confidence probability and within prescribed error tolerance thresholds, likely to be also a solution to the original SCSP {a mathematical formula}P.
+     </paragraph>
+     <paragraph>
+      We shall here discuss how to employ Simple Random Sampling [13] to obtain a sampled SCSP from the original problem. Of course, more advanced stratified sampling techniques may be used in order to reduce variance and improve the effectiveness of the approach. Nevertheless, due to the large number of topics already covered in this work, we leave this discussion as future work.
+     </paragraph>
+     <paragraph>
+      Consider a complete realisation, {a mathematical formula}s¯1,…,s¯m, for the stochastic variables in S obtained by sampling a value from the support {a mathematical formula}D(si) of each of the stochastic variables {a mathematical formula}si∈S according to its probability distribution {a mathematical formula}P(si). From the definition of policy tree it is clear that there always exists a path associated with this realisation. In other words, this realisation corresponds to one of the scenarios comprised in the policy tree.
+     </paragraph>
+     <paragraph>
+      Generate N independent sets of random variable realisations{a mathematical formula} where {a mathematical formula}s¯ji is the realised value for random variable j observed in the i-th set of realisations. Recall that {a mathematical formula}T denotes the complete, and possibly infinite, policy tree for {a mathematical formula}P. Let a reduced policy tree {a mathematical formula}Tˆ for {a mathematical formula}P be a policy tree that comprises only arc labellings observed in the former N complete realisations (without repetitions).
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}Ψˆ denote the reduced set of distinct paths in {a mathematical formula}Tˆ. The probability associated with each path {a mathematical formula}p∈Ψˆ, i.e. {a mathematical formula}Pr⁡{arcs(p)}, is simply set equal to the frequency of occurrence of such a path in the above N realisations. Of course, {a mathematical formula}Tˆ represents a policy tree for a different SCSP than the one we started with. We call this new problem the sampled SCSP {a mathematical formula}PˆN.
+     </paragraph>
+     <paragraph label="Example 2">
+      Now consider a chance constraint {a mathematical formula}h∈C with a specified threshold level {a mathematical formula}βh, a policy tree {a mathematical formula}Tˆ for the sampled SCSP {a mathematical formula}PˆN and a path {a mathematical formula}p∈T. We say that h is satisfied wrt to a given policy tree{a mathematical formula}Tˆ iff{a mathematical formula}Let us consider the two-stage SCSP {a mathematical formula}P discussed in Example 1. We set {a mathematical formula}N=3 and we derive a sampled SCSP {a mathematical formula}PˆN. By using simple random sampling we draw the following three complete realisations for random variables in {a mathematical formula}P:{a mathematical formula} A possible solution to the sampled SCSP {a mathematical formula}PˆN is the satisfying policy tree shown in Fig. 3, in which {a mathematical formula}x1=3,x21=4 and {a mathematical formula}x22=6, where {a mathematical formula}x21 is the value assigned to decision variable {a mathematical formula}x2, if stochastic variable {a mathematical formula}s1 takes value 5, and {a mathematical formula}x22 is the value assigned to decision variable {a mathematical formula}x2, if stochastic variable {a mathematical formula}s1 takes value 4. The above policy tree has two paths sampled out of the original tree: {a mathematical formula}p1 has an associated probability of 2/3, since we observed two occurrences of the scenario associated with this path over the 3 complete realisations sampled for the random variables; {a mathematical formula}p2 has an associated probability of 1/3, since we observed a single occurrence of the scenario associated with this path over the 3 complete realisations sampled for the random variables. Paths that were not observed in the sampled realisations have an associated probability equal to zero and are not considered.
+     </paragraph>
+     <paragraph>
+      It should be noted that every policy tree {a mathematical formula}Tˆ for a sampled SCSP {a mathematical formula}Pˆ can be employed as a (partial) policy tree for the original SCSP {a mathematical formula}P. Nevertheless, by sampling we lose completeness. If at stage i in {a mathematical formula}P we observe, for a given random variable, a realised value that is not comprised in {a mathematical formula}Tˆ, it will be of course impossible to determine the correct decisions for subsequent stages. By taking a conservative point of view, this means that all paths in the corresponding subtree will never be satisfied. In multi-stage SCSPs, and especially in those including random variables with continuous support, this prevents the direct use of the approach that will be discussed in this work. In fact, if random variable supports are continuous, there is only an infinitesimal probability of observing a given set of realisations. In this case, it is therefore essential to adopt a “rolling horizon” approach [14] in order to reduce the original multi-stage SCSPs to a sequence of multi-stage sampled SCSPs. Under this strategy, our aim is to fix decisions at stage one, and make sure that compatible values exist for decision variables that appear, for subsequent stages, in {a mathematical formula}Tˆ. Future decisions are not fixed because, after observing the realised values for random variables at stage one, the problem is solved again by taking into account new available information; decision variables that were previously associated with stage two become stage one decisions. The original problem is thus reduced to a sequence of multi-stage sampled SCSPs. We will apply this technique to handle the two-stage problem discussed in Section 8.2: the stochastic multiprocessor scheduling problem with release time and deadlines.
+     </paragraph>
+    </section>
+    <section label="4">
+     ({a mathematical formula}α,ϑ)-solutions
+     <paragraph>
+      We will now characterise the probability that the solution of a sampled SCSPs {a mathematical formula}PˆN over N scenarios, which may be computed by using any of the existing approaches discussed in [3], [4], is a solution to the original single-stage SCSP {a mathematical formula}P.
+     </paragraph>
+     <paragraph>
+      These results are also applicable to multi-stage problems, provided that a rolling horizon approach is adopted and that the aim is to characterise the probability that stage one decisions of a sampled SCSPs {a mathematical formula}PˆN over N scenarios are consistent with respect to the original SCSP {a mathematical formula}P.
+     </paragraph>
+     <paragraph>
+      We will firstly discuss how to compute N such that, if a given policy tree {a mathematical formula}T satisfies a chance constraint h in the sampled SCSPs {a mathematical formula}PˆN, it also satisfies the same chance constraint in the original SCSP {a mathematical formula}P with probability α. Since a policy tree {a mathematical formula}T in {a mathematical formula}PˆN by definition only comprises a subset {a mathematical formula}Ψˆ of all the paths that constitute a policy tree for the original SCSP {a mathematical formula}P, this policy tree, in order to satisfy h in the original SCSP {a mathematical formula}P, must clearly provide a sufficient satisfaction probability regardless of the scenarios that have been ignored by the sampling process.
+     </paragraph>
+     <paragraph>
+      Consider a confidence probability α and a margin of error of ±ϑ; The number of scenarios N for the sampled SCSP depends on ϑ, α and also β, which we recall is the target satisfaction probability of chance constraint h.
+     </paragraph>
+     <paragraph label="Definition 2">
+      N is computed as the minimum value for which{a mathematical formula} where {a mathematical formula}plbβ and {a mathematical formula}pubβ are the single-sided Clopper–Pearson confidence interval bounds for a confidence probability α, and {a mathematical formula}round(βN) “successes” in N trials; {a mathematical formula}round() approximates the value to the nearest integer.{sup:3}
+     </paragraph>
+     <paragraph label="Definition 3">
+      Any policy tree {a mathematical formula}T, which can be proved to satisfy h in {a mathematical formula}P with probability α, satisfies h in {a mathematical formula}P with probability α if it satisfies h in {a mathematical formula}PˆN. Conversely, any policy tree {a mathematical formula}T, which can be proved not to satisfy h in {a mathematical formula}P with probability α, does not satisfy h in {a mathematical formula}P with probability α, if it does not satisfy h in {a mathematical formula}PˆN.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      A policy tree{a mathematical formula}Tcan be proved to satisfy h in{a mathematical formula}Pwith probability α if the actual satisfaction probability{a mathematical formula}δ&gt;βprovided by{a mathematical formula}Twrt h is such that{a mathematical formula}δ≥pubβ. Conversely, if the actual satisfaction probability{a mathematical formula}δ&lt;βprovided by{a mathematical formula}Twrt h is such that{a mathematical formula}δ≤plbβTcan be proved to not satisfy h in{a mathematical formula}Pwith probability α.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}δ≥pubβ. Since {a mathematical formula}pubβ=max⁡{q|Pr⁡{bin(N;q)≤round(βN)}≥1−α, it is clear that {a mathematical formula}Pr⁡{bin(N;δ)≤round(βN)}&lt;1−α. This means that{a mathematical formula} where we recall that {a mathematical formula}Ψˆ is the set of paths in the sampled SCSP {a mathematical formula}PˆN. This implies{a mathematical formula} Therefore, by using the test{a mathematical formula} a policy tree {a mathematical formula}T can be proved to satisfy h in {a mathematical formula}P with probability α.Conversely, let {a mathematical formula}δ≤plbβ. Since {a mathematical formula}plbβ=min⁡{q|Pr⁡{bin(N;q)≥round(βN)}≥1−α, it is clear that{a mathematical formula} This means that{a mathematical formula} which implies{a mathematical formula} Therefore, by using the test{a mathematical formula} a policy tree {a mathematical formula}T can be proved to not satisfy h in {a mathematical formula}P with probability α.  □
+     </paragraph>
+     <paragraph label="Proposition 2">
+      Any policy tree{a mathematical formula}Twhich provides a satisfaction probability{a mathematical formula}δ≥β+ϑwrt h in{a mathematical formula}Pcan be proved to satisfy h in{a mathematical formula}Pwith probability α. Any policy tree{a mathematical formula}Twhich provides a satisfaction probability{a mathematical formula}δ≤β−ϑwrt h in{a mathematical formula}Pcan be proved to not satisfy h in{a mathematical formula}Pwith probability α.
+     </paragraph>
+     <paragraph label="Proof">
+      This directly follows from Definition 2 and Proposition 1.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Any policy tree{a mathematical formula}Twhich cannot be proved to satisfy or not to satisfy h in{a mathematical formula}Pwith probability α, can be either proved to satisfy h in{a mathematical formula}Pwith probability γ, where γ is a probability ranging in{a mathematical formula}[0.5,α), if it satisfies h in{a mathematical formula}PˆN, or not to satisfy h in{a mathematical formula}Pwith probability γ, where γ is a probability ranging in{a mathematical formula}[0.5,α), if it does not satisfies h in{a mathematical formula}PˆN.Consider the two limiting cases. (i) The actual satisfaction probability δ provided by {a mathematical formula}T wrt h in {a mathematical formula}P is exactly equal to β. Since the sample mean, used to estimate the satisfaction probability out of the N samples considered, is an unbiased estimator of δ, it will overestimate β with probability 0.5 and, similarly, it will underestimate β with probability 0.5; this sets the lower bound for γ. (ii) The actual satisfaction probability δ provided by {a mathematical formula}T wrt h in {a mathematical formula}P is exactly equal to {a mathematical formula}β+ϑ. From the proof of Proposition 1 it immediately follows that, in this case, {a mathematical formula}γ=α, and also that, if {a mathematical formula}δ&lt;β+ϑ then {a mathematical formula}γ&lt;α; this sets the upper bound for γ.  □
+     </paragraph>
+     <paragraph label="Definition 4">
+      An {a mathematical formula}(α,ϑ)-solution to an SCSP {a mathematical formula}P is a policy tree {a mathematical formula}Tˆ that at least with probability α provides for every chance constraint {a mathematical formula}hi in {a mathematical formula}P with satisfaction threshold {a mathematical formula}βi a satisfaction probability greater than or equal to {a mathematical formula}βi−ϑ.
+     </paragraph>
+     <paragraph>
+      It is apparent that ϑ may be interpreted as a parameter that the user can set in order to define a “region of indifference”, i.e. {a mathematical formula}β±ϑ, for the satisfaction probability. In such a region, we assume that assignments can be safely misclassified with probability greater than α and that satisfaction probabilities remain in an acceptable range.
+     </paragraph>
+     <paragraph label="Example 3">
+      Consider the single-stage SCSP {a mathematical formula}P=〈V,S,D,P,C,β,L〉, where {a mathematical formula}V={X1,X2}, {a mathematical formula}S={r1,r2}, {a mathematical formula}D(X1)=D(X2)={0,1}, {a mathematical formula}D(r1)=(0,100), {a mathematical formula}P(r1)=uniform(0,100), {a mathematical formula}D(r2)=(0,300), {a mathematical formula}P(r2)=uniform(0,300), {a mathematical formula}C={c:C1≥X1r1+X2r2}, {a mathematical formula}βc=0.5, and {a mathematical formula}L=[〈V,S〉]. {a mathematical formula}C1=185 is a constant. This problem comprises random variables defined on a continuous support and it cannot be solved by existing complete approaches to SCSPs. If we set {a mathematical formula}α=0.95 and {a mathematical formula}ϑ=0.05, from Definition 2 we compute the number of samples {a mathematical formula}N=290 required to guarantee that any solution to the sampled SCSP {a mathematical formula}Pˆ over N samples is an {a mathematical formula}(α,ϑ)-solution for {a mathematical formula}P.Furthermore, the simple structure of the constraint c considered in {a mathematical formula}P allows us to perform some further analysis. Consider the assignment {a mathematical formula}X1=1 and {a mathematical formula}X2=1. A simple reasoning on the convolution of two independently non-identically distributed uniform random variables (see [15]) immediately suggests that this assignment is indeed inconsistent. {a mathematical formula}r1 and {a mathematical formula}r2 are two independently non-identically distributed uniform random variables. The distribution that results from their convolution is shown in Fig. 4. This distribution is shaped like a trapezoid. Clearly, since the area for the whole figure must be equal to 1, the area of each of the two rectangle triangles at the side of the trapezoid must be equal to 1/6. Consequently, the area of the internal rectangle must be equal to 2/3. It is easy to see that the cumulative distribution function for value 200 returns a probability of 0.5. Then, since {a mathematical formula}1/3⁎(15/100)=0.05, the 0.45 quantile of the inverse cumulative distribution function which results from convolving {a mathematical formula}r1 and {a mathematical formula}r2 is exactly equal to {a mathematical formula}C1=185. Therefore, since the satisfaction probability provided by the assignment {a mathematical formula}X1=1 and {a mathematical formula}X2=1 is equal to {a mathematical formula}βc−ϑ=0.45 (Fig. 5), this assignment will be correctly classified as inconsistent with probability α, when the sample size is set to {a mathematical formula}N=290.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}h1,…,hk be k chance constraints in an SCSP {a mathematical formula}P. Let {a mathematical formula}Pˆ be a sampled SCSP over N samples, where N is the number of samples required to guarantee a confidence level α and an error tolerance threshold ϑ for each constraint {a mathematical formula}hi considered independently, according to Definition 2.
+     </paragraph>
+     <paragraph label="Proposition 4">
+      Let{a mathematical formula}Tˆbe a policy tree that is a solution to{a mathematical formula}Pˆ. Then{a mathematical formula}Tˆis an{a mathematical formula}(α,ϑ)-solution for{a mathematical formula}P.
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a chance constraint {a mathematical formula}hi. Let {a mathematical formula}βi be the respective satisfaction threshold. By definition, the probability that a solution {a mathematical formula}Tˆ to {a mathematical formula}Pˆ provides a service level less or equal to {a mathematical formula}βi−ϑ for {a mathematical formula}hi in {a mathematical formula}P is less than or equal to {a mathematical formula}1−α. Therefore {a mathematical formula}Tˆ is an {a mathematical formula}(α,ϑ)-solution. Now consider a pair of chance constraints {a mathematical formula}〈hi,hj〉 with satisfaction thresholds {a mathematical formula}βi, {a mathematical formula}βj, respectively. The probability {a mathematical formula}pij that a solution {a mathematical formula}Tˆ to {a mathematical formula}Pˆ provides a service level less or equal to {a mathematical formula}βi−ϑ for {a mathematical formula}hi and to {a mathematical formula}βj−ϑ for {a mathematical formula}hj in {a mathematical formula}P is less than or equal to {a mathematical formula}(1−α)2, in fact we must misclassify both the constraints in order to accept such a solution. Even a single constraint correctly classified will make {a mathematical formula}Tˆ inconsistent w.r.t. {a mathematical formula}Pˆ. The case in which constraints are misclassified independently from each other represents a worst-case reasoning. If constraints are perfectly positively correlated, i.e. if one is misclassified then all other constraints are also misclassified, then {a mathematical formula}pij is {a mathematical formula}(1−α); if constraints are perfectly negatively correlated, i.e. if one is misclassified then no other constraint is misclassified, {a mathematical formula}pij becomes 0. This reasoning can be generalised to k chance constraints, for which the probability becomes {a mathematical formula}(1−α)k. Noting that {a mathematical formula}(1−α)k&lt;…&lt;(1−α)2&lt;(1−α) and that {a mathematical formula}1−(1−α)k≥α the probability {a mathematical formula}1−α that a solution is misclassified in a model comprising a single constraint represents an upper bound for the probability that a solution {a mathematical formula}Tˆ to {a mathematical formula}Pˆ does not provide a satisfaction probability within the required tolerance threshold for one or more constraints in a generic model {a mathematical formula}P. By rephrasing, the probability that a solution {a mathematical formula}Tˆ provides a satisfaction probability greater than or equal to {a mathematical formula}βi−ϑ for each constraint {a mathematical formula}hi is greater than or equal to α. Hence, by Definition 4, {a mathematical formula}Tˆ is an {a mathematical formula}(α,ϑ)-solution for {a mathematical formula}P.  □
+     </paragraph>
+    </section>
+    <section label="5">
+     ({a mathematical formula}α,ϑ)-solution set
+     <paragraph>
+      Consider policy tree {a mathematical formula}T, chance constraint h, and the indicator random variable{a mathematical formula} representing the test discussed in Definition 3. If the actual satisfaction probability δ provided by a policy tree {a mathematical formula}T with respect to constraint h in {a mathematical formula}P is exactly equal to {a mathematical formula}β−ϑ, τ takes value 1 with probability {a mathematical formula}1−α.
+     </paragraph>
+     <paragraph label="Example 4">
+      To motivate the following discussion, we introduce the following example. Consider once more Example 3 and assume that {a mathematical formula}D(X1)=D(X2)=(0,5); i.e. decision variables are defined on continuous domains spanning from 0 to 5. Assignments {a mathematical formula}(X1=4.1,X2=0) and {a mathematical formula}(X1=0,X2=1.37) lie on the upper solid line shown in Fig. 5. Each of these two assignments provides a satisfaction probability of exactly {a mathematical formula}β−ϑ with respect to constraint c in the original problem {a mathematical formula}P. From the discussion in Section 4 it follows that each of these two assignments is recognised as infeasible with probability α if {a mathematical formula}N=290. However, since {a mathematical formula}r1 and {a mathematical formula}r1 are independent the probability that these two assignments are both recognised as infeasible is only {a mathematical formula}α2. We next discuss how to address the issue of correctly classifying multiple policy trees according to a prescribed confidence level α.
+     </paragraph>
+     <paragraph label="Definition 5">
+      We introduce the following definition. An {a mathematical formula}(α,ϑ)-solution set to an SCSP {a mathematical formula}P is a set of policy trees. All policy trees in this set simultaneously provide, with probability at least α, a satisfaction probability greater than or equal to {a mathematical formula}βi−ϑ for every chance constraint {a mathematical formula}hi in {a mathematical formula}P with satisfaction threshold {a mathematical formula}βi.
+     </paragraph>
+     <paragraph>
+      Consider an SCSP and T policy trees {a mathematical formula}T1,…,TT for which the actual satisfaction probability δ with respect to h in {a mathematical formula}P is less than or equal to {a mathematical formula}β−ϑ. Let {a mathematical formula}τ1…,τT be the associated random variables, each of which according to Proposition 4 takes value 1 with probability less than or equal to {a mathematical formula}1−α. Although we have fully characterised the marginal probability distribution of a test {a mathematical formula}τi involving a single policy tree {a mathematical formula}Ti, we have not characterised yet the joint probability among tests carried out on a set of T policy trees.
+     </paragraph>
+     <paragraph label="Proposition 5">
+      The probability that{a mathematical formula}τ1,…,τTare all equal to 0 is at least{a mathematical formula}1−T(1−α).
+     </paragraph>
+     <paragraph label="Proof">
+      A worst-case reasoning can be carried out by considering the case in which events {a mathematical formula}τi=1 and {a mathematical formula}τj=1 are mutually exclusive for all {a mathematical formula}i,j=1,…,T, {a mathematical formula}i≠j; of course it is still true that {a mathematical formula}Pr⁡{τi=1}=Pr⁡{τj=1}≤1−α. The probability that {a mathematical formula}τ1,…,τT are all equal to 0 is then easily seen to be {a mathematical formula}1−T(1−α). If events are not mutually exclusive, this probability is greater than or equal to {a mathematical formula}1−T(1−α), e.g. in the case of T independent tests it would be {a mathematical formula}1−(1−α)T≥1−T(1−α).  □
+     </paragraph>
+     <paragraph>
+      Of course, it is not possible to know the value of T a priori, as this would require solving the SCSP. However, for a given chance constraint h, T is clearly less than or equal to the cardinality {a mathematical formula}Ah of the assignment space constrained by h. {a mathematical formula}Ah can be computed as the cartesian product of the domains of the decision variables in the policy tree that are constrained by h. Since the property discussed in Proposition 5 applies to each chance constraint {a mathematical formula}h∈C, to compute an {a mathematical formula}(α,ϑ)-solution set we may introduce the following Bonferroni's correction [16], which is free of correlation and distribution assumptions, while computing N.
+     </paragraph>
+     <paragraph label="Definition 6">
+      N is computed as the minimum value for which{a mathematical formula} where {a mathematical formula}plbβ and {a mathematical formula}pubβ are the single-sided Clopper–Pearson confidence interval bounds for a confidence probability {a mathematical formula}αˆ, where{a mathematical formula} and {a mathematical formula}round(βN) “successes” in N trials.
+     </paragraph>
+     <paragraph label="Proposition 6">
+      A set of policy trees that are solutions to{a mathematical formula}Pˆfor a sample size N computed as discussed inDefinition 6is an{a mathematical formula}(α,ϑ)-solution set for{a mathematical formula}P.
+     </paragraph>
+     <paragraph label="Proof">
+      Bonferroni's correction, introduced in Definition 6, ensures that, for every chance constraint h in C, the probability {a mathematical formula}τ1,…,τT are all equal to 0 simultaneously is at least α.  □
+     </paragraph>
+     <paragraph label="Example 5">
+      Consider the following SCSP {a mathematical formula}P=〈V,S,D,P,C,βc,L〉, where {a mathematical formula}V={X1,X2}, {a mathematical formula}S={r1,r2}, {a mathematical formula}D(X1)=D(X2)={0,0.01,0.02,…,24.99,25}, {a mathematical formula}D(r1)=(0,10), {a mathematical formula}P(r1)=uniform(0,10), {a mathematical formula}D(r2)=(0,30), {a mathematical formula}P(r2)=uniform(0,30), {a mathematical formula}D(r3)=(0,15), {a mathematical formula}P(r3)=uniform(0,15), {a mathematical formula}D(r4)=(0,20), {a mathematical formula}P(r2)=uniform(0,20), {a mathematical formula}C={c1:C1≥X1r1+X2r2,c2:C2≥X1r3+X2r4}, {a mathematical formula}βc1=βc2=0.7, and {a mathematical formula}L=[〈V,S〉]. {a mathematical formula}C1=245 and {a mathematical formula}C2=215 are constants. We set {a mathematical formula}α=0.9 and {a mathematical formula}ϑ=0.05. We computed analytically the true boundaries of {a mathematical formula}c1 and {a mathematical formula}c2 (see [15], [17]), each of which is denoted by a dashed line in Fig. 6, Fig. 7. We also computed confidence bands around these two dashed lines. The upper confidence band is the set of solutions that provide a satisfaction probability of exactly {a mathematical formula}βi−ϑ; the lower confidence band is the set of solutions that provide a satisfaction probability of exactly {a mathematical formula}βi+ϑ. We apply Definition 6 to compute the number of samples {a mathematical formula}N=2848 required to obtain an {a mathematical formula}(α,ϑ)-solution set to {a mathematical formula}P, which is shown in Fig. 6.
+     </paragraph>
+     <section label="5.1">
+      Approximating ({a mathematical formula}α,ϑ)-solution sets
+      <paragraph>
+       Bonferroni's correction is known to be conservative. In particular, as we have seen, this correction assumes events {a mathematical formula}τi=1 and {a mathematical formula}τj=1 are mutually exclusive for all {a mathematical formula}i,j=1,…,T, {a mathematical formula}i≠j. In other words, we are assuming that assignment misclassifications are mutually exclusive. In practice, in an SCSP sets of assignments are often misclassified together depending on random variables realisations. For this reason a correction such as the one introduced in Definition 6 will generally be too conservative and will lead to a sample size much larger than the one strictly needed to obtain an {a mathematical formula}(α,ϑ)-solution set. This fact is well known in statistics and a number of adjusted corrections have been proposed to account for correlated errors [see e.g. [18], [19]].
+      </paragraph>
+      <paragraph>
+       In what follows, we shall therefore adopt a less conservative approximate correction strategy. To the best of our knowledge no similar correction has been discussed in the literature. In our computational study (Section 8) we will demonstrate the effectiveness of this technique. Of course, the investigation of other less conservative and possibly exact correction strategies, ideally borrowed from established results in statistics, is an interesting direction for future research.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Consider the general case in which constraint h constrains all m random variables in S. Given realisations{a mathematical formula}{s¯11,…,s¯m1},{a mathematical formula}{s¯12,…,s¯m2}, …,{a mathematical formula}{s¯1N,…,s¯mN}, where{a mathematical formula}s¯jkis the realised value for random variable j observed in the k-th set of realisations,{a mathematical formula}τiis a deterministic test.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       {a mathematical formula}τiis a function of random variables{a mathematical formula}s1,…,smand of N.
+      </paragraph>
+      <paragraph label="Proof">
+       Immediately follows from Lemma 1 and from the fact that {a mathematical formula}sj1,…,sjN are N i.i.d. random variables.  □
+      </paragraph>
+      <paragraph label="Proposition 8">
+       The probability that at least one of{a mathematical formula}τ1,…,τTtakes value 1 is uniquely determined by the probability distributions of{a mathematical formula}s1,…,smand the number of samples N.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows from the definition of τ, Lemma 1 and Proposition 7.  □
+      </paragraph>
+      <paragraph>
+       In practice, this means that assignment misclassifications in a sampled SCSP, e.g. events {a mathematical formula}τi=1 and {a mathematical formula}τj=1, depend on realisations of one or more random variables {a mathematical formula}s1,…,sm; note that m is generally much smaller than T. Since the multivariate random variable {a mathematical formula}{τ1,…,τT} is a (deterministic) function of the multivariate random variable {a mathematical formula}{s1,…,sm} and of N (Proposition 7), and since in the previous section we have fully characterised the marginal probability distribution of a test {a mathematical formula}τi, the probability that {a mathematical formula}τ1,…,τT are all equal to 0 is approximately bounded from below by {a mathematical formula}1−m(1−α); i.e. we correct for at most m mutually exclusive misclassifications induced by random variables {a mathematical formula}s1,…,sm and we assume that all remaining misclassifications depend on one or more of these. Once more we introduce a correction for each chance constraint {a mathematical formula}h∈C. Let {a mathematical formula}mh be the number of random variables constrained by h, to compute an approximate {a mathematical formula}(α,ϑ)-solution set we introduce the following correction while computing N.
+      </paragraph>
+      <paragraph label="Definition 7">
+       N is computed as the minimum value for which{a mathematical formula} where {a mathematical formula}plbβ and {a mathematical formula}pubβ are the single-sided Clopper–Pearson confidence interval bounds for a confidence probability {a mathematical formula}αˆ, where{a mathematical formula} and {a mathematical formula}round(βN) “successes” in N trials.
+      </paragraph>
+      <paragraph>
+       A set of policy trees that are solutions to {a mathematical formula}Pˆ for a sample size N computed as discussed in Definition 7 is an approximate {a mathematical formula}(α,ϑ)-solution set for {a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Example 6">
+       Consider once more the SCSP in Example 5. We apply Definition 7 to compute the number of samples {a mathematical formula}N=348 required to obtain an approximate {a mathematical formula}(α,ϑ)-solution set to {a mathematical formula}P, which is shown in Fig. 7; note that there are two constraints each of which constrains two random variables. To assess the quality of this approximation, we generated 1000 different instances and analytically inspected, for each of them, if the {a mathematical formula}(α,ϑ)-solution set generated was fully contained within the upper confidence band in Fig. 7; the result of this simulation study revealed that the {a mathematical formula}(α,ϑ)-solution set was not fully contained within the upper confidence band with probability 0.894, 0.95 confidence interval {a mathematical formula}(0.873,0.912); this misclassification rate is in line with the prescribed α. Finally, it is worth noting that the random boundary of an {a mathematical formula}(α,ϑ)-solution set remains within the channel identified by the two solid confidence bands with probability at least {a mathematical formula}1−2(1−α).
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Stochastic constraint optimisation problems
+     </section-title>
+     <paragraph label="Proof">
+      The concepts introduced in Sections 4 and 5 can be employed to approximate optimal solutions to sampled SCOPs. In this setting, we must distinguish two possible cases: the case in which the objective function is deterministic and that in which the objective function is stochastic. If the objective function is deterministic, it is possible to exploit the results in Section 5 to obtain a confidence interval for the cost/profit of an optimal plan. Without loss of generality, we discuss the case in which our aim is to maximise a deterministic objective function f of the decision variables in V. Consider an SCOP {a mathematical formula}P=〈V,S,D,P,C,βc,L,f〉. Choose α and ϑ and construct two new SCOPs: {a mathematical formula}Plb=〈V,S,D,P,C,βc1,L,f〉, where for all {a mathematical formula}c∈C, {a mathematical formula}βc1=βc+ϑ; and {a mathematical formula}Pub=〈V,S,D,P,C,βc2,L,f〉, where for all {a mathematical formula}c∈C, {a mathematical formula}βc2=βc−ϑ. An{a mathematical formula}(α,ϑ)-solution set to{a mathematical formula}Plbunderestimates the true optimal profit with probability greater or equal to α; an{a mathematical formula}(α,ϑ)-solution set to{a mathematical formula}Puboverestimates the true optimal profit with probability greater or equal to α.The proof follows from Definition 5.  □Proposition 9 can be exploited to generate a confidence interval for the true optimal profit via a binomial reasoning. We solve M independently generated instances of {a mathematical formula}Plb and store the optimal profit obtained for each of these instances into an array {a mathematical formula}Klb sorted in ascending order; we solve M independently generated instances of {a mathematical formula}Pub and store the optimal profit obtained for each of these instances into an array {a mathematical formula}Kub sorted in ascending order. Let {a mathematical formula}bin−1(M,α) be the inverse cumulative distribution of a binomial distribution with M trials and a success probability α; let {a mathematical formula}klb be the {a mathematical formula}(1−α)/2-quantile of this distribution; finally, let {a mathematical formula}kub be the {a mathematical formula}1−(1−α)/2-quantile of {a mathematical formula}bin−1(M,1−α). With confidence α element at position {a mathematical formula}klb of {a mathematical formula}Klb is a lower bound and element at position {a mathematical formula}kub+1 of {a mathematical formula}Kub is an upper bound to the true optimal cost.{sup:4}
+     </paragraph>
+     <paragraph label="Example 7">
+      We transform the SCSP in Example 5 into two SCOPs {a mathematical formula}Plb and {a mathematical formula}Pub that maximise the objective function {a mathematical formula}f(X1,X2)=X1+2X2. In other words, we assume the profit per unit of {a mathematical formula}X1 is 1 and the profit per unit of {a mathematical formula}X2 is 2. By choosing {a mathematical formula}M=20 we obtain the α confidence interval {a mathematical formula}(282,304) for the true optimal profit 293; if we reduce ϑ to 0.01 the interval shrinks considerably to {a mathematical formula}(290,295).
+     </paragraph>
+     <paragraph>
+      If the objective function is stochastic there is no unique way to proceed. For instance, based on the available samples one may derive standard confidence intervals for the expected value of a stochastic expression based on the Student's t distribution and then compare solutions or partial assignments by comparing upper or lower limits of these intervals. The decision maker must of course choose a suitable confidence level α associated with this estimation. An example of a filtering algorithm that may be employed in such context is discussed in Appendix A. This algorithm is designed to handle the situation in which the objective is to minimise/maximise the expected value of some expression involving decision and random variables. Different algorithms must be designed if the objective involves a different operator, e.g. variance. Our algorithm distinguishes the case in which we are trying to determine an upper or a lower bound for the expected cost of an optimal solution. It then exploits the sampling distribution (i.e. Student's t distribution) of the expected total profit/cost and filters values based on upper/lower confidence limits obtained via this distribution. For instance, if our aim is to determine an upper bound for the optimal profit (problem type {a mathematical formula}Pub), our algorithm will simply compare the upper confidence limits of the expected profit of two assignments and retain the assignment with the highest upper confidence limit. We will make use of this propagator to solve the models discussed in Section 8.
+     </paragraph>
+     <paragraph>
+      Finally, one should note that an alternative strategy may instead compare not only the upper confidence limits, but the whole intervals. An assignment would then provide a lower/higher profit than another if and only if their profit confidence intervals do not overlap. However, due to the complexity of the filtering logic that would be required in this case, we prefer to leave this discussion as future work.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Connections with statistics
+     </section-title>
+     <paragraph>
+      To better understand the concepts just introduced, it is worth discussing the connection between the approach introduced and hypothesis testing in statistical analysis. Let us assume that our null hypothesis ({a mathematical formula}H0), in statistical sense, is that an assignment is feasible. According to classical hypothesis testing we may have four cases, as illustrated in Table 1. We may have a feasible assignment at hand ({a mathematical formula}H0 true) and we may incorrectly filter it (Type I error); or we may be operating on an infeasible assignment ({a mathematical formula}H0 false) and we may fail to reject it (Type II error).
+     </paragraph>
+     <paragraph>
+      In clinical trials or quality control, it is key to control the rate of Type I errors. It is undesirable to put under treatment a healthy a patient or to discard a functioning expensive machine. However, there are cases in which controlling Type II errors is essential. For example, aerospace engineers would prefer to scrap a functioning electronic circuit than to use one that is actually broken on a spacecraft; in such a situation a Type I error raises the budget, but a Type II error would put at risk the entire mission. In general, minimising Type I and Type II errors is not a simple matter. If one tries to reduce the rate of occurrence for Type I errors, the direct consequence is typically an increase in the observed rate for Type II errors and vice-versa. So in practice, one tries to control either Type I or Type II errors and, if the rate of the type that is not controlled is too high, then one increases the sample size.
+     </paragraph>
+     <paragraph>
+      In our specific case it is clearly essential to control the rate of Type II errors, which are more delicate than Type I errors. Making a Type II error means retaining an infeasible assignment, which is what we want to avoid as much as possible. Making a Type I error means discarding a feasible solution, which may impact optimality for an optimisation problem, or may lead to an empty solution space. Since our approach is essentially a heuristic, it is clear that both these issues — a poor solution quality or an empty solution space — are acceptable and should be dealt with by increasing the number of samples.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Computational experience
+     </section-title>
+     <paragraph>
+      The aim of this section is to provide numerical insights on the theoretical framework introduced and particularly on the concept of ({a mathematical formula}α,ϑ)-solution set and on its applications to find approximate solution to SCSPs and SCOPs. In our numerical study we will consider three well-known problems: the static stochastic knapsack (Section 8.1), the stochastic multiprocessor scheduling problem with release time and deadlines (Section 8.2), and the static stochastic lot-sizing problem (Section 8.3). The first and the third problems are single-stage, while the second is two-stage. In Section 8.4 we will generate approximate ({a mathematical formula}α,ϑ)-solution sets using Definition 7 for the first two problems and show numerically that, with probability greater than or equal to α, the approach we discussed generates solution sets that satisfy chance constraints in the model with a margin of error ϑ. In Section 8.5 we will numerically illustrate that the upper and lower profit/cost bounds obtained with the approach outlined in Section 6 comply with the prescribed confidence level α. We will also show the behaviour of the optimality gap as a function of the chosen error threshold ϑ and number M of independently generated instances of {a mathematical formula}Plb and {a mathematical formula}Pub. Finally, in Section 8.6 we will investigate computational efficiency and scalability. All our experiments were performed by using Choco [21] on an Intel Xeon(r) CPU @ 3.50 Ghz with 16 GB of RAM.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Static stochastic knapsack
+      </section-title>
+      <paragraph>
+       The knapsack problem [22] is a well-known combinatorial optimisation problem. The decision maker is given a set of objects each of which is associated with a weight and a profit. The aim is then to select a subset of these objects that fit into a given capacity and bring the maximum profit. There are several possible stochastic variants of the knapsack problem. Stochastic versions of the knapsack problem can be classified into static or dynamic. In the static stochastic knapsack problem, see e.g. [23], object weights and/or profits are random and the decision maker must choose, before observing any of their weights/profits, a subset of these objects that maximises a given objective, e.g. the expected profit, while meeting a restriction, e.g. a chance constraint, on the given capacity. Conversely, in the dynamic stochastic knapsack, see e.g. [24], the decision maker selects an object and immediately observes its weight and/or profit; based on this information she can then decide whether to select or not other objects.
+      </paragraph>
+      <paragraph>
+       In our computational study we will consider the SCSP presented in Fig. 8, i.e. a static stochastic multiple knapsack (SSMKP). In this problem we have a set of N types of objects; there are D objects of type i available. Each object of type i is associated random “coefficients” {a mathematical formula}sik that appear in the context of G chance constraints — this set of coefficients is generally denoted as stochastic technology matrix[25]; without loss of generality, these coefficients follow a Poisson distribution with mean {a mathematical formula}λik.{sup:5} The first L of these chance constraints are of type (1), i.e. they can be seen as “capacity restrictions” with respect to a target capacity {a mathematical formula}Ck, and they should be satisfied with probability β. In the context of the first L chance constraints {a mathematical formula}sik represents the “weight” of item i in chance constraint k. The remaining {a mathematical formula}G–L chance constraints are of type (2), i.e. they can be seen as “minimum production requirements” with respect to a target level {a mathematical formula}Ck, and again they should be satisfied with probability β. In the context of the remaining {a mathematical formula}G–L chance constraints {a mathematical formula}sik represents the “production contribution” of item i in chance constraint k.
+      </paragraph>
+      <paragraph>
+       Our aim is to determine the feasible region of the problem, i.e. the set of assignments that satisfy constraints (1) and (2).
+      </paragraph>
+      <paragraph>
+       We will also consider an optimisation version of the problem (Fig. 9) in which our aim is to determine what subset of the N objects in the problem maximises the expected total profit while satisfying all chance constraints. For each object i, we therefore introduce a random “profit” {a mathematical formula}pi, which follows a Poisson distribution with mean {a mathematical formula}πi; once more the choice of the distribution is made without loss of generality.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Stochastic multiprocessor scheduling problem with release time and deadlines
+      </section-title>
+      <paragraph>
+       We consider a multiprocessor scheduling problem (MPSP, see [27], p. 238). The problem consists in finding a feasible schedule to process a set of K orders (or jobs) using m processors, where {a mathematical formula}m≤P. Processing an order k can only begin after the release date {a mathematical formula}rk and must be completed at the latest by the due date {a mathematical formula}dk. Order k requires a certain capacity {a mathematical formula}ck — expressed in terms of the number of processors — to be processed. The processing time of order k is {a mathematical formula}tk. The problem just described is well known in scheduling and it is fully deterministic and can easily and compactly be modelled using the cumulative constraint [28]. Let the height of a task k be {a mathematical formula}ck. This constraint considers a set of tasks and enforces that at each point in time the total height of the set of tasks that overlap that point does not exceed a given limit m. A task k overlaps a point i if and only if its origin {a mathematical formula}sk is less than or equal to i, and its end {a mathematical formula}ek is strictly greater than i. This constraint also imposes, for each task k, the constraint {a mathematical formula}sk+{a mathematical formula}tk={a mathematical formula}ek.
+      </paragraph>
+      <paragraph>
+       However, in reality, some parameters of this problem are uncertain in nature. Jobs may take longer than expected, some processors may break down and become unavailable, the release and due dates may be delayed, etc. In order to better model this problem a number of stochastic generalisations may be considered such as uncertain release date {a mathematical formula}rk; uncertain due date {a mathematical formula}dk; uncertain processing capacity {a mathematical formula}ck; uncertain processing time {a mathematical formula}tk; and uncertain number m of available processors; and every possible combination stemming from these cases.
+      </paragraph>
+      <paragraph>
+       We will consider the following stochastic constraint programming formulation of the stochastic multiprocessor scheduling problem (SMPSP), in which only processing time {a mathematical formula}tk for order k is uncertain; this is shown in Fig. 10. In this model, decision variables {a mathematical formula}sk and {a mathematical formula}ek denote the start time and the completion time of each job k, respectively. The processing time {a mathematical formula}tk of each job k is modelled as a Poisson distributed random variable with mean {a mathematical formula}λk. In contrast to the problem presented in Section 8.1, this model is a two-stage SCSP. In the first stage, we decide on the start time of each job then we observe the realisation of the processing time. In the second stage the completion times are decided. Under this stage structure, constraint (1) enforces that the probability of not exceeding the given deadline for each job and the number of available processors m stays above the specified threshold β. More specifically, this constraint is a global chance constraint embedding a well-known global constraint: the cumulative constraint [28]. This constraint can be filtered using the general purpose method discussed in [4].
+      </paragraph>
+      <paragraph>
+       In our computational study we will also consider an optimisation version of the above problem in which we aim to minimise the latest start time.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Static stochastic lot-sizing
+      </section-title>
+      <paragraph>
+       The last problem we will consider in our computational study is the single-item stochastic lot-sizing problem introduced in [29]. A SCOP for this problem is shown in Fig. 11. The decision maker faces a finite horizon of T periods and a random demand {a mathematical formula}dt in each period; which, without loss of generality, we will consider Poisson distributed with mean {a mathematical formula}λt. There is a fixed cost a for placing an order of size {a mathematical formula}0&lt;Qt≤C in period t. An order placed in period t is delivered immediately at the beginning of the period, before demand occurs. Binary decision variable {a mathematical formula}δt is set to zero if no order is placed (3). There is a holding cost h charged on items that are carried over from one period to the next. Finally, the decision maker must comply with a service level restriction (2) stating that the net inventory at the end of each period should be nonnegative with probability at least β. The aim is to meet these service level restrictions while minimising the expected total cost (1).
+      </paragraph>
+      <paragraph>
+       The authors in [29] describe a range of control policies that can be used to control such a system. In our study, we will adopt the static uncertainty policy, which fixes all {a mathematical formula}Qt and {a mathematical formula}δt at the beginning of the planning horizon, before demand is observed. Note that other strategies discussed in [29], i.e. dynamic uncertainty and static-dynamic uncertainty, can be easily captured by modifying the stage structure of the SCOP. In what follows, we shall refer to this problem as the static stochastic lot-sizing problem (SSLSP).
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Feasibility
+      </section-title>
+      <paragraph>
+       In Section 5 we introduced the notion of approximate ({a mathematical formula}α,ϑ)-solution set. We will now present a computational analysis for the SCSPs presented in Sections 8.1 and 8.2 demonstrating that, with probability α, our approach generates solution sets that satisfy chance constraints in the model with a margin of error ϑ.
+      </paragraph>
+      <paragraph>
+       We considered thirty randomly generated small instances of the single stage problem in Fig. 8 in which {a mathematical formula}N=2, {a mathematical formula}L=2, {a mathematical formula}G=3, {a mathematical formula}D=250 and {a mathematical formula}β=0.7. Means {a mathematical formula}λik of random variables in the model were integer numbers uniformly distributed between 10 and 20 for constraints (1) and between 20 and 30 for constraints (2). Right hand side constants {a mathematical formula}Ck were integer numbers uniformly distributed between 1500 and 2000 for constraints (1) and between 2500 and 3000 for constraints (2). We fixed {a mathematical formula}α=0.9 and {a mathematical formula}ϑ=0.2; according to Definition 7 this choice led to a sample size of 31.
+      </paragraph>
+      <paragraph>
+       We also considered thirty randomly generated small instances of the two stage problem in Fig. 10 in which {a mathematical formula}K=2 and {a mathematical formula}β=0.6; {a mathematical formula}rk and {a mathematical formula}dk, which represent job k release time and deadline, were set to 0 and 4, respectively. Capacity requirements {a mathematical formula}ck were generated as integer numbers uniformly distributed between 1 and 2. Finally, expected task durations {a mathematical formula}λk were generated as uniformly distributed numbers between 1 and 3; the maximum number of processors P was set to 3. We fixed {a mathematical formula}α=0.9 and {a mathematical formula}ϑ=0.35, this choice led to a sample size of 6.
+      </paragraph>
+      <paragraph>
+       Instances were small since in our analysis we generated the complete set of feasible assignments of the respective sampled SCSP, i.e. an {a mathematical formula}(α,ϑ)-solution set, which for the two-stage problem in Fig. 10 was generally extremely large, in the order of tens of thousands of solutions. Feasibility of each of these assignment with respect to the original SCSP was then assessed via Monte Carlo simulation; the number of simulation runs was set in such a way as to guarantee a margin of error of {a mathematical formula}ϑ/10 with a confidence level of 0.9 — so that the Monte Carlo simulation error is an order of magnitude smaller than the approximation error associated with the ({a mathematical formula}α,ϑ)-solution set obtained.
+      </paragraph>
+      <paragraph>
+       To numerically investigate if those computed are effectively {a mathematical formula}(α,ϑ)-solution sets, for each of the above sixty instances, we repeatedly solved 1000 sampled SCSPs and computed the frequency of event e: “all feasible assignments of the sampled SCSP are feasible with respect to the original SCSP within the given tolerance threshold ϑ.” In Fig. 12, for both problems and for each instance, we report the frequency of event e and the associated confidence intervals (confidence level of 0.95). These frequencies, are in line with the claim that those computed are {a mathematical formula}(α,ϑ)-solution sets, for the given {a mathematical formula}α=0.9. Note that our aim is to control Type-II errors (an infeasible assignment regarded as feasible), and not Type-I errors (a discarded and yet feasible assignment); for this reason if the sampled SCSP admitted no solution, this was regarded as a degenerate case in which all feasible assignments (i.e. none) of the sampled SCSP were feasible with respect to the original SCSP within the given tolerance threshold ϑ. Finally, it is worth observing that some of the frequencies observed in Fig. 12 are strictly greater than the prescribed value α. This is due to the fact that only assignments providing a satisfaction probability of exactly {a mathematical formula}β−ϑ are correctly classified as infeasible with probability α. However, given the discrete nature of the assignment space, it is likely that instances may not feature any such assignment. Assignments providing a satisfaction probability strictly less than {a mathematical formula}β−ϑ are correctly classified as infeasible with probability strictly greater than α. In addition to this, when a model features multiple chance constraints, Bonferroni's correction, which is free of correlation and distribution assumptions, might generate a conservative — i.e. strictly larger than needed — sample size.
+      </paragraph>
+     </section>
+     <section label="8.5">
+      <section-title>
+       Optimality
+      </section-title>
+      <paragraph>
+       We considered fifty randomly generated small instances of the problem in Fig. 9 (SSMKP) in which {a mathematical formula}N=10, {a mathematical formula}L=2, {a mathematical formula}D=1 and {a mathematical formula}β=0.9. Means {a mathematical formula}λik of random variables in the model were integer numbers uniformly distributed between 10 and 20 for constraints (1). Right hand side constants {a mathematical formula}Ck were integer numbers uniformly distributed between 100 and 200 for constraints (1). Means {a mathematical formula}πi were all set to 10.
+      </paragraph>
+      <paragraph>
+       We also considered fifty randomly generated small instances of the problem in Fig. 11 (SSLSP) in which {a mathematical formula}T=5, {a mathematical formula}h=1, {a mathematical formula}a=10, {a mathematical formula}C=100, and {a mathematical formula}β=0.9. Means {a mathematical formula}λit of Poisson demand in each period {a mathematical formula}t=1,…,T were integer numbers uniformly distributed between 5 and 10.
+      </paragraph>
+      <paragraph>
+       We fixed {a mathematical formula}α=0.9, {a mathematical formula}ϑ=0.05 and {a mathematical formula}M=10; recall that M is the number of independently generated instances of {a mathematical formula}Plb and {a mathematical formula}Pub used for computing profit/cost upper and lower bounds as illustrated in Section 6. This led to a sample size of 209 for the SSMKP and of 370 for the SSLSP (Definition 7).
+      </paragraph>
+      <paragraph>
+       Due to the small size of the SSMKP instances, we managed to obtain optimal solutions by exhaustive enumeration, i.e. we generated all possible assignment and then checked feasibility and expected total profit of each of them via Monte Carlo simulation. The number of Monte Carlo runs was set to guarantee a margin of error of {a mathematical formula}ϑ/10 with a confidence level of 0.9, in such a way as to ensure an approximation error negligible with respect to the chosen ϑ. SSLSP instances can be solved to optimality by using a deterministic equivalent mixed integer linear programming model [30]. In our analysis, we can therefore compare results obtained with our approach against the true optimal solutions.
+      </paragraph>
+      <paragraph>
+       In Fig. 13, for each instance, we plotted upper and lower bound obtained for its optimal profit (SSMKP) or cost (SSLSP). For clarity, the interval has been normalised by using the profit/cost of the true optimal solution as a normalisation factor, so that value one in the graph denotes the true optimal profit/cost. The confidence level achieved by using our approach is generally higher than the prescribed α. In fact, despite α being set to 0.9, over the hundred instances analysed, the cost confidence interval did not cover the true optimal cost only in one case (SSMKP, instance 21). This is due to the conservative nature of our approach, as already discussed in Section 8.4.
+      </paragraph>
+      <paragraph>
+       We believe the fluctuations in the size of optimality gaps observed in Fig. 13 for the SSMKP may be related to the fact that this problem features 0–1 integer variables. Depending on the specific instance being solved, different sets of samples may lead to assignments in which “high value” objects belonging to the true optimal solution of the problem are not selected. This may lead to larger optimality gaps than those observed for other instances in which the optimal solution is less sensitive to random fluctuations produced by the sampling process.
+      </paragraph>
+      <paragraph>
+       Finally, we included in the analysis randomly generated instances of the SMPSP formulated as an SCOP in which the objective is to minimise the latest start time. In these instances {a mathematical formula}K=5 and {a mathematical formula}β=0.6; {a mathematical formula}rk and {a mathematical formula}dk, which represent job k release time and deadline, were all set to 0 and 20, respectively. Capacity requirements {a mathematical formula}ck where generated as integer numbers uniformly distributed between 1 and 3. Expected task durations {a mathematical formula}λk were generated as uniformly distributed numbers between 1 and 5; the maximum number of processors P was set to 5.
+      </paragraph>
+      <paragraph>
+       In Fig. 14 we analysed the behaviour of the optimality gap when {a mathematical formula}α=0.9, {a mathematical formula}M=10 and ϑ varies. The sample size ranges as follows: from 209 ({a mathematical formula}ϑ=0.05) to 5838 ({a mathematical formula}ϑ=0.01) for the SSMKP; from 370 ({a mathematical formula}ϑ=0.05) to 6350 ({a mathematical formula}ϑ=0.01) for the SSLSP; and from 14 ({a mathematical formula}ϑ=0.3) to 114 ({a mathematical formula}ϑ=0.1) for the SMPSP. For each value of ϑ considered, we solved 50 different instances of the SSMKP, SSLSP and SMPSP, and we computed the average optimality gap over this pool of instances. The average optimality gap for the SSMKP and the SSLSP is reported in percentage of the true optimal solution. For the case of the SMPSP unfortunately we were not able to compute the true optimal plan, therefore we reported the optimality gap in absolute terms; since we are minimising the latest start time, we expressed the optimality gap in expected number of periods. Note that since α and ϑ are linked to the number of samples generated by the relation in Definition 7, similar plots may be obtained by varying α and keeping ϑ fixed.
+      </paragraph>
+      <paragraph>
+       In Fig. 15 we carried out a similar analysis by keeping ϑ fixed to 0.05 (SSMKP, SSLSP) and to 0.3 (SSMKP) and by varying M.
+      </paragraph>
+     </section>
+     <section label="8.6">
+      <section-title>
+       Computational efficiency
+      </section-title>
+      <paragraph>
+       In this section we reflect on the computational complexity and on the scalability of our approach.
+      </paragraph>
+      <section label="8.6.1">
+       <section-title>
+        Computational complexity
+       </section-title>
+       <paragraph>
+        The computational complexity of SCSPs has been discussed in several works [2], [3], [4]; in particular we direct the interested reader to [31], [32], which provide comprehensive overviews on the complexity of stochastic programs.
+       </paragraph>
+       <paragraph>
+        Multi-stage stochastic programming with discretely distributed decision-dependent random variables is PSPACE-hard [32]; the result follows from the PSPACE-hardness of the problem “decision-making under uncertainty” in [33]. SCSPs are PSPACE-complete in general if random variables are defined on discrete supports [3]. However, as pointed out in [32], the complexity of the “standard” multi-stage stochastic programming problem, in which distributions are independent of decisions taken in earlier stages, remains open; the authors in [32] conjecture that this is also PSPACE-hard.
+       </paragraph>
+       <paragraph>
+        The advantage of sampled SCSPs over generic SCSPs is that sampled SCSPs always comprise a finite number of scenarios whose number is determined by Definition 7, which establishes a relationship among α, ϑ, and N. A decision maker is then free to fix a pair of these values and to derive the remaining one. In principle, one may fix a priori the number of samples N — rather than the confidence level α or the error threshold ϑ — and sacrifice precision for efficiency. This will not make the sampled SCSP fixed-parameter tractable in general — in [4] the authors proved that maintaining GAC on a global chance constraint can be intractable even when maintaining GAC on the corresponding deterministic version of that constraint is tractable — but it may reduce its complexity from PSPACE to NP-hard.
+       </paragraph>
+      </section>
+      <section label="8.6.2">
+       <section-title>
+        Scalability
+       </section-title>
+       <paragraph>
+        To illustrate the scalability of our approach with respect to other state-of-the-art approaches to SCSPs we employ, once more, the SSMKP. Note that this problem is similar to the one discussed in [4, Section 8.3]. In Section 9.4 of the same work, it was discussed that — for this class of problems — even when profits and weights of the objects are defined on a support that comprises only two values, a scenario-based formulation would end up comprising 2{sup:20} scenarios and a solver such as Choco would run out of memory. It was then shown that the complete approach discussed in that work could solve an instance comprising 10 objects in about an hour on average.
+       </paragraph>
+       <paragraph>
+        We fixed {a mathematical formula}α=0.9, {a mathematical formula}ϑ=0.01 and {a mathematical formula}M=10. We solved ten instances of the SSMKP randomly generated as discussed in Section 8.5, but now comprising {a mathematical formula}N=20 rather than ten objects; this led to a sample size of 6916. In Table 2 we report the optimality gap and the runtime for each of these instances as well as the runtime in hours.
+       </paragraph>
+       <paragraph>
+        Finally, we fixed {a mathematical formula}α=0.9, {a mathematical formula}ϑ=0.1 and {a mathematical formula}M=10, and we solved larger instances of the SMPSP formulated as an SCOP. These instances comprise ten jobs (i.e. {a mathematical formula}K=10). {a mathematical formula}rk and {a mathematical formula}dk were now set to 0 and 30, respectively; this led to a sample size of 142. In Table 3 we report upper and lower bound for the latest start time associated with each of these instances, as well as and the runtime in hours.
+       </paragraph>
+       <paragraph>
+        It is clear that it would be impossible to directly use the approach in [4] to model these SSMKP instances, as random variables follow a Poisson distribution and therefore have infinite values in their support. Even if one discretises these supports, e.g. by reducing them to only two values, the resulting SCSP would feature millions of scenarios.
+       </paragraph>
+       <paragraph>
+        However, one may argue that, in the case of the SSMKP, we are analysing a problem that could be analysed by brute force. In other words, one may as well generate all 2{sup:20} possible assignments for the decision variables and then analytically check the feasibility of each. Unfortunately, it is clear that this is not possible for the two-stage SMPSP just analysed, which features a much larger search space.
+       </paragraph>
+       <paragraph>
+        These results therefore demonstrate that the discussion in this work provides a viable means for scaling up the approach in [4].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Related works
+     </section-title>
+     <paragraph>
+      Confidence-based optimisation was originally introduced in [34]. In this work, the authors discuss an application of this methodology in the context of a well-known stochastic inventory control problem. Our work extends the discussion presented there to generic SCSPs and SCOPs by introducing a more general notion of confidence-based reasoning based on two novel concepts: ({a mathematical formula}α,ϑ)-solutions and ({a mathematical formula}α,ϑ)-solution sets. In the context of stochastic modelling and optimisation, as discussed, these tools can be employed to find approximate solutions that possess given statistical properties.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Related works in stochastic programming
+      </section-title>
+      <paragraph>
+       In operations research, and particularly in stochastic programming, the state-of-the-art technique that applies sampling in combinatorial optimisation is the sample average approximation (SAA) method [23]. This is a Monte Carlo simulation-based approach to stochastic discrete optimisation problem. This method replaces the actual distribution of random variables in the combinatorial problem of interest by an empirical distribution obtained via sampling. The obtained “sample average optimisation problem” is then solved and the procedure is repeated multiple times until a given termination criterion is satisfied. The authors in [23] focus on stochastic programs with expected value objectives and discuss convergence rate and stopping rules. In [35] the authors extend their analysis to two-stage stochastic programs with integer recourse; for this latter class of problems [36] carry out a post-hoc computationally intensive analysis of the quality of solutions obtained via SAA. Extensions to problems with expected value constraints, e.g. conditional value-at-risk constraints, were discussed in [37]. However, none of these works investigated the case in which the problem of interest include chance constraints. As [38] remarks, there are formulations of stochastic programming problems that incorporate expectations of penalised constraints in the objective function as a penalty terms. These problems can be solved efficiently since they simply require continuous variables for modelling penalties and they do not require any additional binary variable. However, this modelling approach does not address the issue of finding or approximating feasible or optimal solutions to a chance constrained problem [39, p. 950].
+      </paragraph>
+      <paragraph>
+       SAA methods for problems comprising a single chance constraint were discussed in [40], [41], [42]. In [40] the authors summarise convergence properties (Section 2.1) and post-hoc solution validation strategies (Section 2.2). They remark that “based on this [convergence] analysis, we can compute a priori the sample size required in the SAA problem so that it produces a feasible solution to the true problem with high probability (typically such estimates of a required sample size are quite conservative).” The convergence analysis the authors refer to was originally conducted in [41] and it shows asymptotical convergence properties based on inequalities such as Chernoff's [43] or Hoeffding's [44], which are known to be conservative bounds. Their analysis is conducted under the assumption that the feasible region is finite, since the sample size determined via the aforementioned convergence properties grows linearly in the size of the feasible region [41, p. 683]. Extensions of the analysis in [41] to the case of multiple chance constraints were illustrated in [38]. This latter work is similar to those just discussed, since once more the analysis is based on the above inequalities and the sample size depends on the size of the feasible region. More recently, [45] investigated the relations between chance constrained and penalty function problems under discrete distributions. This analysis extended a number of previous works that analysed this relation under continuous distribution. However, the authors explicitly remark that “our goal is not to show that the penalty problems are able to generate optimal values and solutions of chance constrained problems.” Instead they compare the problems with focus on asymptotic equivalence of optimal values and corresponding convergence of optimal solutions.
+      </paragraph>
+      <paragraph>
+       After surveying the existing literature on SAA, the first important remark is that in none of the above works can we find concepts that resemble those of ({a mathematical formula}α,ϑ)-solution and ({a mathematical formula}α,ϑ)-solution set, which are unique to confidence-based reasoning [34]. This is a subtle conceptual difference that should not be overlooked. The aim of SAA is to find an assignment that, with prescribed confidence probability α, is a solution to the original problem; see e.g. [42, Section 3.1]. In other words, in SAA the decision maker does not fix any a priori tolerated estimation error ϑ. To ensure that the solution of the sampled problem is feasible with respect to the original problem with sufficiently high probability, in SAA the threshold β associated with chance constraints in the sampled problem is increased by a factor ϑ, which however is not explicitly interpreted as an error tolerance threshold in a statistical sense, although in practice it is used as such. In [42, p. 407], the authors point out that, for a fixed α and for a given threshold β, “it is not clear what the best choices for the sample size and ϑ are,” since they believe this is a problem-dependent issue that should be addressed numerically. This statement demonstrates the aforementioned fundamental difference. By introducing the two concepts of ({a mathematical formula}α,ϑ)-solution and ({a mathematical formula}α,ϑ)-solution set, we suggest that a decision maker may — in line with established practices in statistics — interpret ϑ as an error tolerance threshold and fix a priori, together with the confidence level α, either the sample size (on the basis of the available observations) or ϑ (on the basis of the estimation error that can be tolerated); finally, the parameter that has not been fixed should be derived via the analysis we presented. In summary, the difference lies in the interpretation. Confidence-based reasoning aims to find a solution that, with confidence α, satisfies the chance constraints in the original problem within the given error tolerance ϑ. In addition to this important semantic difference, we should mention that our analysis is based on the exact Clopper–Pearson confidence interval, and not on conservative bounds such as Chernoff's or Hoeffding's inequalities. Finally, our approximation strategy for ({a mathematical formula}α,ϑ)-solution sets leads to a sample size (Definition 7) that is independent of the number of assignments in the feasible region; a major difference from all other methods surveyed so far.
+      </paragraph>
+      <paragraph>
+       To contrast our approach with respect to other existing state-of-the-art approaches, one may consider the stochastic vehicle routing problem with time windows discussed in [38, Section 4]. It is possible to apply our analysis to the instances discussed in [38, Table 1], by converting the parameters used in SAA and setting the confidence level {a mathematical formula}α=0.99, the error threshold {a mathematical formula}ϑ=0.05 and the chance constraint thresholds {a mathematical formula}β=0.95. For the instances with 10 customer orders, the sample size prescribed by our approach is 429 for the model with a single chance constraint and 490 for the model with three chance constraints. For the instances with 50 customer orders, the sample size prescribed by our approach is 608 for the model with a single chance constraint and 669 for the model with three chance constraints. Not only are these sample sizes orders of magnitude smaller than the ones suggested in [38], which range from 200 thousand up to 32 million; but most importantly they do not depend on the number of vessels used or the size of the time windows; in fact, according to Definition 7, they only depend on the number of random variables and chance constraints in the model. Of course, as the authors in [38] remark, finding an exact solution to a scenario-based model with 32 million scenarios is unrealistic. For this reason, they suggest to adopt heuristic solution methods, e.g. tabu search. As demonstrated in our computational study, our approximate ({a mathematical formula}α,ϑ)-solution sets represent a viable alternative to the use of heuristics on instances featuring very large sample sizes.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Related works in constraint programming
+      </section-title>
+      <paragraph>
+       A detailed discussion on hybrid CP/AI/OR approaches for decision making under uncertainty can be found in [46], [47]. We direct the reader to these two references for further details on existing works in this research area. We next briefly survey key relevant references. Efforts that try to extend classical CSP framework to incorporate uncertainty have been influenced by works that originated in different fields, namely chance-constrained programming[48] and stochastic programming[49]. To the best of our knowledge the first work that tries to create a bridge between Stochastic Programming and Constraint Programming is by Benoist et al. [50]. Search and consistency strategies, namely a backtracking algorithm, a forward checking procedure [2] and an arc-consistency [51] algorithm have been proposed for SCSPs. A scenario-based approach for building up constraint programming models of SCSPs was proposed by Tarim et al. [3]. In the same work a fully featured language — Stochastic OPL — for modelling SCSPs was also proposed. In [52] the authors introduce new algorithms for solving multi-objective stochastic problems are proposed. Global chance constraints were introduced first in [53], and bring together the reasoning power of global constraints from CP and the expressive power of chance constraints from SP. A general purpose approach for filtering global chance constraints is proposed in [4], [7]. This approach is able to reuse existing propagators available for the respective deterministic global constraint which corresponds to a given global chance constraint when all the random variables are replaced by constant parameters. In [54] the authors discuss some possible strategies to perform cost-based filtering for certain classes of SCOPs. These strategies exploit well-known inequalities borrowed from SP and used to compute valid bounds for any given SCOP that respects some mild assumptions. Unfortunately, the above approaches operate under the assumption that the number of scenarios must be finite, otherwise a solution cannot be expressed as a finite number of possible decisions. Furthermore, these approaches do not scale well. Even problems having a limited number of stochastic variables with large support immediately produce policy trees whose size makes impractical the use of a complete method. In [3] the authors employed sampling in order to reduce the number of scenarios considered for a given stochastic constraint program and produce a solution in reasonable time. Nevertheless, this approach does not provide any optimality/feasibility guarantee for the solution produced. Heuristic approaches such as the one in [55], in which a neural network is employed in order to encode a policy function, suffer from the same limitation and from lack of modularity. Stochastic sampling in the context of Stochastic Boolean Satisfiability was discussed in [56]; forward sampling [50] and sample aggregation [57] are two other techniques that have been employed to solve SCSPs. Nevertheless, none of these approaches introduce a concept that resembles that of ({a mathematical formula}α,ϑ)-solution. Probably, the work discussed in [58] represents the closest attempt to provide some sort of guarantees for a stochastic constraint satisfaction problem. Nevertheless, this work is focused on a specific problem — a two-stage stochastic matching problem — and it does not propose a generic approach for solving SCSPs. Finally, another closely related work is [59], which discusses sample-based approaches to job shop scheduling with probabilistic durations; however, like in the previous case, the approach proposed is focused on a specific problem and not on solving generic SCSPs.
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      We proposed a framework for exploiting sampling in order to solve SCSPs that include random variables over a continuous or very large discrete support. Our framework is based on a number of novel concepts: sampled SCSPs, {a mathematical formula}(α,ϑ)-solutions and {a mathematical formula}(α,ϑ)-solution sets. We employed statistical estimation to determine if a given assignment is consistent with respect to a given set of chance constraints. As in statistical estimation, the quality of our estimate is determined via confidence interval analysis.
+     </paragraph>
+     <paragraph>
+      In contrast to existing approaches based on sampling, we provide likelihood guarantees for the quality of the solutions found. In fact, we explicitly state a confidence probability α that bounds the probability of exceeding a given error tolerance threshold ϑ in our estimation. By properly choosing the estimation error ϑ and the confidence probability α it is possible to generate compact sampled SCSPs that can be effectively solved by existing solution methods. We also extended the reasoning to SCOPs and demonstrated how to produce statistical upper and lower bounds for the value of the optimal solution.
+     </paragraph>
+     <paragraph>
+      We demonstrated our approach on a number of SCSPs and SCOPs: the static stochastic knapsack problem, a stochastic multiprocessor scheduling problem, and a stochastic lot-sizing problem. Our computational study demonstrates the effectiveness of our approach.
+     </paragraph>
+     <paragraph>
+      We conclude by briefly discussing a number of suggestions for future work.
+     </paragraph>
+    </section>
+    <section>
+     <section>
+      <section>
+       <section>
+        <section-title>
+         Online stochastic optimisation
+        </section-title>
+        <paragraph>
+         A promising direction is that of exploring synergies with online stochastic optimisation [50]. In particular, we suspect that our approach may be used to enhance the results in [57], [60], [61], [62] by ensuring a better control of the solution quality obtained at each step of the online process.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Sampling strategies
+        </section-title>
+        <paragraph>
+         A key open issue is related to the fact that simple random sampling [63] is a relatively naive strategy for selecting samples. The use of more refined sampling strategies — for instance a stratified sampling technique such as Latin Hypercube Sampling [64] — may of course reduce the number of samples required to produce an ({a mathematical formula}α,ϑ)-solution. Nevertheless, further research is required in order to clarify how stratified sampling can be effectively employed in this context.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Confidence intervals
+        </section-title>
+        <paragraph>
+         The Clopper–Pearson interval is an exact interval since it is based directly on the binomial distribution rather than any approximation to the binomial distribution. This interval, however, can be conservative because of the discrete nature of the binomial distribution, as pointed out by Neyman [65]. For example, the true coverage rate of a 95% Clopper–Pearson interval may be well above 95%, depending on n and q. Thus the interval may be wider than it needs to be to achieve 95% confidence. In contrast, it is worth noting that other approximate confidence bounds may be narrower than their nominal confidence width, i.e., the “normal approximation interval,” also known as Wald confidence interval, the Wilson Interval, the Agresti–Coull Interval, etc, may in fact achieve a confidence level that is lower than the nominal one [11]. Future research may investigate the application of approximate intervals in the context of sample-based constraint solving. The performance of each of these approximate intervals have been thoroughly analysed in the existing body of literature. The advantage is that approximate intervals may lead to smaller sample sets and therefore to more compact sampled SCSPs.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Computational complexity
+        </section-title>
+        <paragraph>
+         Finally, an interesting computational complexity questions remains open about the complexity of the standard multi-stage stochastic constraint programs.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section-title>
+      Acknowledgements
+     </section-title>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Filtering strategy for constraint expressions involving expected values
+     </section-title>
+     <paragraph>
+      We discuss a filtering strategy for handling constraint expressions involving expected values in sampled SCSPs. This filtering strategy can be employed, in concert with the approach discussed in Section 6, to deal with the case in which the objective function is stochastic. Consider a constraint {a mathematical formula}x=E[〈exp〉], where {a mathematical formula}E[] denotes the expectation operator and x is a real valued decision variable, whose domain is stored as an interval with real valued upper and lower bounds. Techniques for handling propagation and search involving real valued decision variables are discussed in [66]. A filtering algorithm that enforces bounds consistency on this constraint is shown in Algorithm 1. It should be noted that the approach discussed in Section 6 distinguishes two cases: the one in which our aim is to underestimates the true optimal profit (SCOP {a mathematical formula}Plb) and that in which our aim is to overestimates the true optimal profit (SCOP {a mathematical formula}Pub). The type of problem ({a mathematical formula}Plb or {a mathematical formula}Pub) which the propagator belongs to must be specified as an input parameter “type” that influences propagation. The algorithm constructs two arrays: U and L. U lists, for each scenario, an upper bound for the expected value of {a mathematical formula}〈exp〉, L lists, for each scenario, a lower bound for the expected value of {a mathematical formula}〈exp〉. Then it exploits the Student's t distribution with {a mathematical formula}|Ψ|−1 degrees of freedom ({a mathematical formula}StudentT(|Ψ|−1)) to determine upper and lower confidence limits for the expected value of {a mathematical formula}〈exp〉 at the prescribed confidence level α. Note that {a mathematical formula}CDFt−1(α) denotes the inverse cumulative distribution function of t; {a mathematical formula}mean(X) and {a mathematical formula}std(X) denote the mean and the standard deviation of the elements in X, respectively. The algorithm operates by exploiting the structure Ψ of the policy tree; therefore it takes implicitly into account the stage structure of the problem while computing the expected value of a given expression and it will correctly evaluate expected values both in a single or multi-stage case. Finally, it is worth remarking that this constraint is closely related to the Student's t test constraint discussed in [67].
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,1327 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Generalized Language Model as the Combination of Skipped n-grams and Modified Kneser-Ney Smoothing.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We introduce a novel approach for building language models based on a systematic, recursive exploration of skip
+       n
+       -gram models which are interpolated using modified Kneser-Ney smoothing.
+Our approach generalizes language models as it contains the classical interpolation with lower order models as a special case.
+In this paper we motivate, formalize and present our approach.
+In an extensive empirical experiment over English text corpora we demonstrate that our generalized language models lead to a substantial reduction of perplexity between
+       3.1⁢%
+       and
+       12.7⁢%
+       in comparison to traditional language models using modified Kneser-Ney smoothing.
+Furthermore, we investigate the behaviour over three other languages and a domain specific corpus where we observed consistent improvements.
+Finally, we also show that the strength of our approach lies in its ability to cope in particular with sparse training data.
+Using a very small training data set of only
+       736
+       KB text we yield improvements of even
+       25.7⁢%
+       reduction of perplexity.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction motivation
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Language Models are a probabilistic approach for predicting the occurrence of a sequence of words.
+They are used in many applications, e.g. word prediction
+        []
+        , speech recognition
+        []
+        , machine translation
+        []
+        , or spelling correction
+        []
+        .
+The task language models attempt to solve is the estimation of a probability of a given sequence of words
+        w1l=w1,…,wl
+        .
+The probability
+        P⁢(w1l)
+        of this sequence can be broken down into a product of conditional probabilities:
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx1">
+        <tr class="ltx_equation ltx_align_baseline" id="S1.Ex1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          P⁢(w1l)=
+         </td>
+         <td class="ltx_td ltx_align_left">
+          P(w1)⋅P(w2|w1)⋅…⋅P(wl|w1⋯wl-1)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S1.E1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∏i=1lP(wi|w1⋯wi-1)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (1)
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Because of combinatorial explosion and data sparsity, it is very difficult to reliably estimate the probabilities that are conditioned on a longer subsequence.
+Therefore, by making a Markov assumption the true probability of a word sequence is only approximated by restricting conditional probabilities to depend only on a local context
+        wi-n+1i-1
+        of
+        n-1
+        preceding words rather than the full sequence
+        w1i-1
+        .
+The challenge in the construction of language models is to provide reliable estimators for the conditional probabilities.
+While the estimators can be learnt—using, e.g., a maximum likelihood estimator over
+        n
+        -grams obtained from training data—the obtained values are not very reliable for events which may have been observed only a few times or not at all in the training data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Smoothing is a standard technique to overcome this data sparsity problem.
+Various smoothing approaches have been developed and applied in the context of language models.
+Chen and Goodman
+        []
+        introduced modified Kneser-Ney Smoothing, which up to now has been considered the state-of-the-art method for language modelling over the last 15 years.
+Modified Kneser-Ney Smoothing is an interpolating method which combines the estimated conditional probabilities
+        P(wi|wi-n+1i-1)
+        recursively with lower order models involving a shorter local context
+        wi-n+2i-1
+        and their estimate for
+        P(wi|wi-n+2i-1)
+        .
+The motivation for using lower order models is that shorter contexts may be observed more often and, thus, suffer less from data sparsity.
+However, a single rare word towards the end of the local context will always cause the context to be observed rarely in the training data and hence will lead to an unreliable estimation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Because of Zipfian word distributions, most words occur very rarely and hence their true probability of occurrence may be estimated only very poorly.
+One word that appears at the end of a local context
+        wi-n+1i-1
+        and for which only a poor approximation exists may adversely affect the conditional probabilities in language models of all lengths — leading to severe errors even for smoothed language models.
+Thus, the idea motivating our approach is to involve several lower order models which systematically leave out one position in the context (one may think of replacing the affected word in the context with a wildcard) instead of shortening the sequence only by one word at the beginning.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        This concept of introducing gaps in
+        n
+        -grams is referred to as skip
+        n
+        -grams
+        []
+        .
+Among other techniques, skip
+        n
+        -grams have also been considered as an approach to overcome problems of data sparsity
+        []
+        .
+However, to best of our knowledge, language models making use of skip
+        n
+        -grams models have never been investigated to their full extent and over different levels of lower order models.
+Our approach differs as we consider all possible combinations of gaps in a local context and interpolate the higher order model with all possible lower order models derived from adding gaps in all different ways.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        In this paper we make the following contributions:
+       </p>
+       <ol class="ltx_enumerate" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We provide a framework for using modified Kneser-Ney smoothing in combination with a systematic exploration of lower order models based on skip
+           n
+           -grams.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We show how our novel approach can indeed easily be interpreted as a generalized version of the current state-of-the-art language models.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           We present a large scale empirical analysis of our generalized language models on eight data sets spanning four different languages, namely, a wikipedia-based text corpus and the JRC-Acquis corpus of legislative texts.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          4.
+         </span>
+         <div class="ltx_para" id="I1.i4.p1">
+          <p class="ltx_p">
+           We empirically observe that introducing skip
+           n
+           -gram models may reduce perplexity by
+           12.7⁢%
+           compared to the current state-of-the-art using modified Kneser-Ney models on large data sets.
+Using small training data sets we observe even higher reductions of perplexity of up to
+           25.6⁢%
+           .
+          </p>
+         </div>
+        </li>
+       </ol>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        The rest of the paper is organized as follows.
+We start with reviewing related work in Section
+        2
+        .
+We will then introduce our generalized language models in Section
+        3
+        .
+After explaining the evaluation methodology and introducing the data sets in Section
+        4
+        we will present the results of our evaluation in Section
+        5
+        .
+In Section
+        6
+        we discuss why a generalized language model performs better than a standard language model.
+Finally, in Section
+        7
+        we summarize our findings and conclude with an overview of further interesting research challenges in the field of generalized language models.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Work related to our generalized language model approach can be divided in two categories: various smoothing techniques for language models and approaches making use of skip
+        n
+        -grams.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Smoothing techniques for language models have a long history.
+Their aim is to overcome data sparsity and provide more reliable estimators—in particular for rare events.
+The Good Turing estimator
+        []
+        , deleted interpolation
+        []
+        , Katz backoff
+        []
+        and Kneser-Ney smoothing
+        []
+        are just some of the approaches to be mentioned.
+Common strategies of these approaches are to either backoff to lower order models when a higher order model lacks sufficient training data for good estimation, to interpolate between higher and lower order models or to interpolate with a prior distribution.
+Furthermore, the estimation of the amount of unseen events from rare events aims to find the right weights for interpolation as well as for discounting probability mass from unreliable estimators and to retain it for unseen events.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        The state of the art is a modified version of Kneser-Ney smoothing introduced in
+        []
+        .
+The modified version implements a recursive interpolation with lower order models, making use of different discount values for more or less frequently observed events.
+This variation has been compared to other smoothing techniques on various corpora and has shown to outperform competing approaches.
+We will review modified Kneser-Ney smoothing in Section
+        2.1
+        in more detail as we reuse some ideas to define our generalized language model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Smoothing techniques which do not rely on using lower order models involve clustering
+        []
+        , i.e. grouping together similar words to form classes of words, as well as skip
+        n
+        -grams
+        []
+        .
+Yet other approaches make use of permutations of the word order in
+        n
+        -grams
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Skip
+        n
+        -grams are typically used to incorporate long distance relations between words.
+Introducing the possibility of gaps between the words in an
+        n
+        -gram allows for capturing word relations beyond the level of
+        n
+        consecutive words without an exponential increase in the parameter space.
+However, with their restriction on a subsequence of words, skip
+        n
+        -grams are also used as a technique to overcome data sparsity
+        []
+        .
+In related work different terminology and different definitions have been used to describe skip
+        n
+        -grams.
+Variations modify the number of words which can be skipped between elements in an
+        n
+        -gram as well as the manner in which the skipped words are determined (e.g. fixed patterns
+        []
+        or functional words
+        []
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        The impact of various extensions and smoothing techniques for language models is investigated in
+        []
+        .
+In particular, the authors compared Kneser-Ney smoothing, Katz backoff smoothing, caching, clustering, inclusion of higher order
+        n
+        -grams, sentence mixture and skip
+        n
+        -grams.
+They also evaluated combinations of techniques, for instance, using skip
+        n
+        -gram models in combination with Kneser-Ney smoothing.
+The experiments in this case followed two paths: (1) interpolating a
+        5
+        -gram model with lower order distribution introducing a single gap and (2) interpolating higher order models with skip
+        n
+        -grams which retained only combinations of two words.
+Goodman reported on small data sets and in the best case a moderate improvement of cross entropy in the range of
+        0.02
+        to
+        0.04
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        In
+        []
+        , the authors investigated the increase of observed word combinations when including skips in
+        n
+        -grams.
+The conclusion was that using skip
+        n
+        -grams is often more effective for increasing the number of observations than increasing the corpus size.
+This observation aligns well with our experiments.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Review of Modified Kneser-Ney Smoothing
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         We briefly recall modified Kneser-Ney Smoothing as presented in
+         []
+         .
+Modified Kneser-Ney implements smoothing by interpolating between higher and lower order
+         n
+         -gram language models.
+The highest order distribution is interpolated with lower order distribution as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           PMKN
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (wi|wi-n+1i-1)=
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           max⁢{c⁢(wi-n+1i)-D⁢(c⁢(wi-n+1i)),0}c⁢(wi-n+1i-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +γh⁢i⁢g⁢h(wi-n+1i-1)P^MKN(wi|wi-n+2i-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (2)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         where
+         c⁢(wi-n+1i)
+         provides the frequency count that sequence
+         wi-n+1i
+         occurs in training data,
+         D
+         is a discount value (which depends on the frequency of the sequence) and
+         γh⁢i⁢g⁢h
+         depends on
+         D
+         and is the interpolation factor to mix in the lower order distribution
+         .
+Essentially, interpolation with a lower order model corresponds to leaving out the first word in the considered sequence.
+The lower order models are computed differently using the notion of continuation counts rather than absolute counts:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p4">
+        <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P^MKN
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (wi|(wi-n+1i-1))=
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           max{N1+(∙wi-n+1i)-D(c(wi-n+1i)),0}N1+(∙wi-n+1i-1∙)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +γm⁢i⁢d(wi-n+1i-1)P^MKN(wi|wi-n+2i-1))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p5">
+        <p class="ltx_p">
+         where the continuation counts are defined as
+         N1+(∙wi-n+1i)=|{wi-n:c(wi-ni)&gt;0}|
+         , i.e. the number of different words which precede the sequence
+         wi-n+1i
+         .
+The term
+         γm⁢i⁢d
+         is again an interpolation factor which depends on the discounted probability mass
+         D
+         in the first term of the formula.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Generalized Language Models
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Notation for Skip
+        n
+        -gram with
+        k
+        Skips
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We express skip
+         n
+         -grams using an operator notation.
+The operator
+         ∂i
+         applied to an
+         n
+         -gram removes the word at the
+         i
+         -th position.
+For instance:
+         ∂3⁡w1⁢w2⁢w3⁢w4=w1⁢w2⁢_⁢w4
+         , where
+         _
+         is used as wildcard placeholder to indicate a removed word.
+The wildcard operator allows for larger number of matches. For instance, when
+         c⁢(w1⁢w2⁢w3⁢a⁢w4)=x
+         and
+         c⁢(w1⁢w2⁢w3⁢b⁢w4)=y
+         then
+         c⁢(w1⁢w2⁢_⁢w⁢4)≥x+y
+         since at least the two sequences
+         w1⁢w2⁢w3⁢a⁢w4
+         and
+         w1⁢w2⁢w3⁢b⁢w4
+         match the sequence
+         w1⁢w2⁢_⁢w4
+         .
+In order to align with standard language models the skip operator applied to the first word of a sequence will remove the word instead of introducing a wildcard.
+In particular the equation
+         ∂1⁡wi-n+1i=wi-n+2i
+         holds where the right hand side is the subsequence of
+         wi-n+1i
+         omitting the first word.
+We can thus formulate the interpolation step of modified Kneser-Ney smoothing using our notation as
+         P^MKN(wi|wi-n+2i-1)=P^MKN(wi|∂1wi-n+1i-1)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Thus, our skip
+         n
+         -grams correspond to
+         n
+         -grams of which we only use
+         k
+         words, after having applied
+the skip operators
+         ∂i1⁡…⁢∂in-k
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Generalized Language Model
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Interpolation with lower order models is motivated by the problem of data sparsity in higher order models.
+However, lower order models omit only the first word in the local context, which might not necessarily be the cause for the overall
+         n
+         -gram to be rare.
+This is the motivation for our generalized language models to not only interpolate with one lower order model, where the first word in a sequence is omitted, but also with all other skip
+         n
+         -gram models, where one word is left out.
+Combining this idea with modified Kneser-Ney smoothing leads to a formula similar to (
+         2.1
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx4">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           PGLM
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (wi|wi-n+1i-1)=
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           max⁢{c⁢(wi-n+1i)-D⁢(c⁢(wi-n+1i)),0}c⁢(wi-n+1i-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +γh⁢i⁢g⁢h(wi-n+1i-1)∑j=1n-11n-1P^GLM(wi|∂jwi-n+1i-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (4)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         The difference between formula (
+         2.1
+         ) and formula (
+         3.2
+         ) is the way in which lower order models are interpolated.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         Note, the sum over all possible positions in the context
+         wi-n+1i-1
+         for which we can skip a word and the according lower order models
+         PGLM(wi|∂j(wi-n+1i-1))
+         .
+We give all lower order models the same weight
+         1n-1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         The same principle is recursively applied in the lower order models in which some words of the full
+         n
+         -gram are already skipped.
+As in modified Kneser-Ney smoothing we use continuation counts for the lower order models, incorporating the skip operator also for these counts.
+Incorporating this directly into modified Kneser-Ney smoothing leads in the second highest model to:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p6">
+        <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx5">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P^GLM
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (wi|∂j(wi-n+1i-1))=
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex8">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           max⁢{N1+⁢(∂j⁡(wi-ni))-D⁢(c⁢(∂j⁡(wi-n+1i))),0}N1+(∂j(wi-n+1i-1)∙)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex9">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +γm⁢i⁢d(∂j(wi-n+1i-1))∑k=1k≠jn-11n-2P^GLM(wi|∂j∂k(wi-n+1i-1))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p7">
+        <p class="ltx_p">
+         Given that we skip words at different positions, we have to extend the notion of the count function and the continuation counts.
+The count function applied to a skip
+         n
+         -gram is given by
+         c⁢(∂j⁡(wi-ni))=∑wjc⁢(wi-ni)
+         , i.e. we aggregate the count information over all words which fill the gap in the
+         n
+         -gram.
+Regarding the continuation counts we define:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p8">
+        <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx6">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           N1+⁢(∂j⁡(wi-ni))
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =
+          </td>
+          <td class="ltx_td ltx_align_right">
+           |{wi-n+j-1:c⁢(wi-ni)&gt;0}|
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           N1+(∂j(wi-ni-1)∙)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =
+          </td>
+          <td class="ltx_td ltx_align_right">
+           |{(wi-n+j-1,wi):c⁢(wi-ni)&gt;0}|
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (7)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p9">
+        <p class="ltx_p">
+         As lowest order model we use—just as done for traditional modified Kneser-Ney
+         []
+         —a unigram model interpolated with a uniform distribution for unseen words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p10">
+        <p class="ltx_p">
+         The overall process is depicted in Figure
+         1
+         , illustrating how the higher level models are recursively smoothed with several lower order ones.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experimental Setup and Data Sets
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        To evaluate the quality of our generalized language models we empirically compare their ability to explain sequences of words.
+To this end we use text corpora, split them into test and training data, build language models as well as generalized language models over the training data and apply them on the test data.
+We employ established metrics, such as cross entropy and perplexity.
+In the following we explain the details of our experimental setup.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Data Sets
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         For evaluation purposes we employed eight different data sets.
+The data sets cover different domains and languages.
+As languages we considered English (
+         en
+         ), German (
+         de
+         ), French (
+         fr
+         ), and Italian (
+         it
+         ).
+As general domain data set we used the full collection of articles from Wikipedia (
+         wiki
+         ) in the corresponding languages.
+The download dates of the dumps are displayed in Table
+         1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Special purpose domain data are provided by the multi-lingual JRC-Acquis corpus of legislative texts (
+         JRC
+         )
+         []
+         .
+Table
+         2
+         gives an overview of the data sets and provides some simple statistics of the covered languages and the size of the collections.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         The data sets come in the form of structured text corpora which we cleaned from markup and tokenized to generate word sequences.
+We filtered the word tokens by removing all character sequences which did not contain any letter, digit or common punctuation marks.
+Eventually, the word token sequences were split into word sequences of length
+         n
+         which provided the basis for the training and test sets for all algorithms.
+Note that we did not perform case-folding nor did we apply stemming algorithms to normalize the word forms.
+Also, we did our evaluation using case sensitive training and test data.
+Additionally, we kept all tokens for named entities such as names of persons or places.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Evaluation Methodology
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         All data sets have been randomly split into a training and a test set on a sentence level.
+The training sets consist of 80% of the sentences, which have been used to derive
+         n
+         -grams, skip
+         n
+         -grams and corresponding continuation counts for values of
+         n
+         between 1 and 5.
+Note that we have trained a prediction model for each data set individually.
+From the remaining 20% of the sequences we have randomly sampled a separate set of
+         100,000
+         sequences of
+         5
+         words each.
+These test sequences have also been shortened to sequences of length
+         3
+         , and
+         4
+         and provide a basis to conduct our final experiments to evaluate the performance of the different algorithms.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         We learnt the generalized language models on the same split of the training corpus as the standard language model using modified Kneser-Ney smoothing and we also used the same set of test sequences for a direct comparison.
+To ensure rigour and openness of research the data set for training as well as the test sequences and the entire source code is open source.
+         We compared the probabilities of our language model implementation (which is a subset of the generalized language model) using KN as well as MKN smoothing with the Kyoto Language Model Toolkit
+         . Since we got the same results for small
+         n
+         and small data sets we believe that our implementation is correct.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         In a second experiment we have investigated the impact of the size of the training data set.
+The wikipedia corpus consists of
+         1.7
+         bn. words.
+Thus, the
+         80⁢%
+         split for training consists of
+         1.3
+         bn. words.
+We have iteratively created smaller training sets by decreasing the split factor by an order of magnitude.
+So we created
+         8⁢%
+         /
+         92⁢%
+         and
+         0.8⁢%
+         /
+         99.2⁢%
+         split, and so on.
+We have stopped at the
+         0.008⁢%/99.992⁢%
+         split as the training data set in this case consisted of less words than our 100k test sequences which we still randomly sampled from the test data of each split.
+Then we trained a generalized language model as well as a standard language model with modified Kneser-Ney smoothing on each of these samples of the training data.
+Again we have evaluated these language models on the same random sample of
+         100,000
+         sequences as mentioned above.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Evaluation Metrics
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         As evaluation metric we use
+         perplexity
+         : a standard measure in the field of language models
+         []
+         .
+First we calculate the
+         cross entropy
+         of a trained language model given a test set using
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        H⁢(P𝚊𝚕𝚐)=-∑s∈TP𝙼𝙻𝙴⁢(s)⋅log2⁡P𝚊𝚕𝚐⁢(s)
+
+(8)
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         Where
+         P𝚊𝚕𝚐
+         will be replaced by the probability estimates provided by our generalized language models and the estimates of a language model using modified Kneser-Ney smoothing.
+         P𝙼𝙻𝙴
+         , instead, is a maximum likelihood estimator of the test sequence to occur in the test corpus.
+Finally,
+         T
+         is the set of test sequences.
+The perplexity is defined as:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p4">
+        𝑃𝑒𝑟𝑝𝑙𝑒𝑥𝑖𝑡𝑦⁢(P𝚊𝚕𝚐)=2H⁢(P𝚊𝚕𝚐)
+
+(9)
+       </div>
+       <div class="ltx_para" id="S4.SS3.p5">
+        <p class="ltx_p">
+         Lower perplexity values indicate better results.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Results
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Baseline
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         As a baseline for our generalized language model (GLM) we have trained standard language models using modified Kneser-Ney Smoothing (MKN).
+These models have been trained for model lengths
+         3
+         to
+         5
+         .
+For unigram and bigram models MKN and GLM are identical.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Evaluation Experiments
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         The perplexity values for all data sets and various model orders can be seen in Table
+         3
+         .
+In this table we also present the relative reduction of perplexity in comparison to the baseline.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         As we can see, the GLM clearly outperforms the baseline for all model lengths and data sets.
+In general we see a larger improvement in performance for models of higher orders (
+         n=5
+         ).
+The gain for 3-gram models, instead, is negligible.
+For German texts the increase in performance is the highest (
+         12.7⁢%
+         ) for a model of order
+         5
+         .
+We also note that GLMs seem to work better on broad domain text rather than special purpose text as the reduction on the wiki corpora is constantly higher than the reduction of perplexity on the JRC corpora.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         We made consistent observations in our second experiment where we iteratively shrank the size of the training data set.
+We calculated the relative reduction in perplexity from MKN to GLM for various model lengths and the different sizes of the training data.
+The results for the English Wikipedia data set are illustrated in Figure
+         2
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         We see that the GLM performs particularly well on small training data.
+As the size of the training data set becomes smaller (even smaller than the evaluation data), the GLM achieves a reduction of perplexity of up to
+         25.7⁢%
+         compared to language models with modified Kneser-Ney smoothing on the same data set.
+The absolute perplexity values for this experiment are presented in Table
+         4
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p5">
+        <p class="ltx_p">
+         Our theory as well as the results so far suggest that the GLM performs particularly well on sparse training data.
+This conjecture has been investigated in a last experiment.
+For each model length we have split the test data of the largest English Wikipedia corpus into two disjoint evaluation data sets.
+The data set
+         unseen
+         consists of all test sequences which have never been observed in the training data.
+The set
+         observed
+         consists only of test sequences which have been observed at least once in the training data.
+Again we have calculated the perplexity of each set.
+For reference, also the values of the complete test data set are shown in Table
+         5
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p6">
+        <p class="ltx_p">
+         As expected we see the overall perplexity values rise for the
+         unseen
+         test case and decline for the
+         observed
+         test case.
+More interestingly we see that the relative reduction of perplexity of the GLM over MKN increases from
+         10.5⁢%
+         to
+         15.6⁢%
+         on the
+         unseen
+         test case.
+This indicates that the superior performance of the GLM on small training corpora and for higher order models indeed comes from its good performance properties with regard to sparse training data.
+It also confirms that our motivation to produce lower order
+         n
+         -grams by omitting not only the first word of the local context but systematically all words has been fruitful.
+However, we also see that for the
+         observed
+         sequences the GLM performs slightly worse than MKN.
+For the observed cases we find the relative change to be negligible.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Discussion
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        In our experiments we have observed an improvement of our generalized language models over classical language models using Kneser-Ney smoothing.
+The improvements have been observed for different languages, different domains as well as different sizes of the training data.
+In the experiments we have also seen that the GLM performs well in particular for small training data sets and sparse data, encouraging our initial motivation.
+This feature of the GLM is of particular value, as data sparsity becomes a more and more immanent problem for higher values of
+        n
+        .
+This known fact is underlined also by the statistics shown in Table
+        6
+        .
+The fraction of total
+        n
+        -grams which appear only once in our Wikipedia corpus increases for higher values of
+        n
+        .
+However, for the same value of
+        n
+        the skip
+        n
+        -grams are less rare.
+Our generalized language models leverage this additional information to obtain more reliable estimates for the probability of word sequences.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        Beyond the general improvements there is an additional path for benefitting from generalized language models.
+As it is possible to better leverage the information in smaller and sparse data sets, we can build smaller models of competitive performance.
+For instance, when looking at Table
+        4
+        we observe the
+        3
+        -gram MKN approach on the full training data set to achieve a perplexity of
+        586.9
+        .
+This model has been trained on
+        7
+        GB of text and the resulting model has a size of
+        15
+        GB and
+        742
+        Mio. entries for the count and continuation count values.
+Looking for a GLM with comparable but better performance we see that the
+        5
+        -gram model trained on
+        1⁢%
+        of the training data has a perplexity of
+        528.7
+        .
+This GLM model has a size of
+        9.5
+        GB and contains only
+        427
+        Mio. entries.
+So, using a far smaller set of training data we can build a smaller model which still demonstrates a competitive performance.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_appendix" id="A1">
+      <h2 class="ltx_title ltx_title_appendix">
+       <span class="ltx_tag ltx_tag_appendix">
+        Appendix A
+       </span>
+       Discount Values and Weights in Modified Kneser Ney
+      </h2>
+      <div class="ltx_para" id="A1.p1">
+       <p class="ltx_p">
+        The discount value
+        D⁢(c)
+        used in formula (
+        2.1
+        ) is defined as
+        []
+        :
+       </p>
+       D⁢(c)={ 0if⁢c=0D1if⁢c=1D2if⁢c=2D3+if⁢c&gt;2
+
+(10)
+       <p class="ltx_p">
+        The discounting values
+        D1
+        ,
+        D2
+        , and
+        D3+
+        are defined as
+        []
+       </p>
+       <table class="ltx_equationgroup" id="A1.E11">
+        <tbody id="A1.EGx7">
+         <tr class="ltx_equation ltx_align_baseline" id="A1.E11.1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           D1=1-2⁢Y⁢n2n1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (11a)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="A1.E11.2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           D2=2-3⁢Y⁢n3n2
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (11b)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="A1.E11.3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           D3+=3-4⁢Y⁢n4n3
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (11c)
+           </span>
+          </td>
+         </tr>
+        </tbody>
+       </table>
+       <p class="ltx_p">
+        with
+        Y=n1n1+n2
+        and
+        ni
+        is the total number of
+        n
+        -grams which appear exactly
+        i
+        times in the training data.
+The weight
+        γh⁢i⁢g⁢h⁢(wi-n+1i-1)
+        is defined as:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx8">
+        <tr class="ltx_equation ltx_align_baseline" id="A1.E12">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          γh⁢i⁢g⁢h
+         </td>
+         <td class="ltx_td ltx_align_left">
+          (wi-n+1i-1)=
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (12)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="A1.Ex10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          D1N1(wi-n+1i-1∙)+D2N2(wi-n+1i-1∙)+D3+N3+(wi-n+1i-1∙)c⁢(wi-n+1i-1)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        And the weight
+        γm⁢i⁢d⁢(wi-n+1i-1)
+        is defined as:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx9">
+        <tr class="ltx_equation ltx_align_baseline" id="A1.E13">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          γm⁢i⁢d
+         </td>
+         <td class="ltx_td ltx_align_left">
+          (wi-n+1i-1)=
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (13)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="A1.Ex11">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          D1N1(wi-n+1i-1∙)+D2N2(wi-n+1i-1∙)+D3+N3+(wi-n+1i-1∙)N1+(∙wi-n+1i-1∙)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        N1(wi-n+1i-1∙)
+        ,
+        N2(wi-n+1i-1∙)
+        , and
+        N3+(wi-n+1i-1∙)
+        are analogously defined to
+        N1+(wi-n+1i-1∙)
+        .
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

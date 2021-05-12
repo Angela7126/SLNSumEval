@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Entropy-based pruning for learning Bayesian networks using BIC.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A Bayesian network [1] is a well-known probabilistic graphical model with applications in a variety of fields. It is composed of (i) an acyclic directed graph (DAG) where each node is associated to a random variable and arcs represent dependencies between the variables entailing the Markov condition: every variable is conditionally independent of its non-descendant variables given its parents; and (ii) a set of conditional probability mass functions defined for each variable given its parents in the graph. Their graphical nature makes Bayesian networks excellent models for representing the complex probabilistic relationships existing in many real problems ranging from bioinformatics to law, from image processing to economic risk analysis.
+     </paragraph>
+     <paragraph>
+      Learning the structure (that is, the graph) of a Bayesian network from complete data is an NP-hard task [2]. We are interested in score-based learning, namely finding the structure which maximizes a score that depends on the data [3]. A typical first step of methods for this purpose is to build a list of suitable candidate parent sets for each one of the n variables of the domain. Later an optimization is run to find one element from each such list in a way that maximizes the total score and does not create directed cycles. This work concerns pruning ideas in order to build those lists. The problem is unlikely to admit a polynomial-time (in n) algorithm, since it is proven to be LOGSNP-hard [4]. Because of that, usually one forces a maximum in-degree (number of parents per node) k and then simply computes the score of all parent sets that contain up to k parents. A worth-mention exception is the greedy search of the K2 algorithm [5].
+     </paragraph>
+     <paragraph>
+      A high in-degree implies a large search space for the optimization and thus increases the possibility of finding better structures. On the other hand, it requires higher computational time, since there are {a mathematical formula}Θ(nk) candidate parent sets for a bound of k if an exhaustive search is performed. Our contribution is to provide new rules for pruning sub-optimal parent sets when dealing with the Bayesian Information Criterion score [6], one of the most used score functions in the literature. We devise new theoretical bounds that can be used in conjunction with currently published ones [7]. The new results provide tighter bounds on the maximum number of parents of each variable in the optimal graph, as well as new pruning techniques that can be used to skip large portions of the search space without any loss of optimality. Moreover, the bounds can be efficiently computed and are easy to implement, so they can be promptly integrated into existing software for learning Bayesian networks and imply immediate computational gains.
+     </paragraph>
+     <paragraph>
+      The paper is divided as follows. Section 2 presents the problem, some background and notation. Section 3 describes the existing results in the literature, and Section 4 contains the theoretical developments for the new bounds and pruning rules. Section 5 shows empirical results comparing the new results against previous ones, and finally some conclusions are given in Section 6.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Structure learning of Bayesian networks
+     </section-title>
+     <paragraph>
+      Consider the problem of learning the structure of a Bayesian Network from a complete data set of {a mathematical formula}N≥2 instances {a mathematical formula}D={D1,...,DN}. The set of {a mathematical formula}n≥2 categorical random variables is denoted by {a mathematical formula}X={X1,...,Xn} (each variable has at least two categories). The state space of {a mathematical formula}Xi is denoted {a mathematical formula}ΩXi and a joint space for {a mathematical formula}X1⊆X is denoted by {a mathematical formula}ΩX1=×X∈X1ΩX (and with a slight abuse {a mathematical formula}|Ω∅|=1 containing a null element). The goal is to find the best DAG {a mathematical formula}G=(V,E), where V is the collection of nodes (associated one-to-one with the variables in {a mathematical formula}X) and E is the collection of arcs. E can be represented by the (possibly empty) set of parents {a mathematical formula}Π1,...,Πn of each node/variable.
+     </paragraph>
+     <paragraph>
+      Different score functions can be used to assess the quality of a DAG. This paper regards the Bayesian Information Criterion (or simply BIC) [6], which asymptotically approximates the posterior probability of the DAG. The BIC score is decomposable, that is, it can be written as a sum of the scores of each variable and its parent set:{a mathematical formula} where {a mathematical formula}LL(Xi|Πi) denotes the log-likelihood of {a mathematical formula}Xi and its parent set:{a mathematical formula} where the base {a mathematical formula}b≥2 is usually taken as natural or 2. We will make it clear when the result depends on such base. Moreover, {a mathematical formula}θˆx|π is the maximum likelihood estimate of the conditional probability {a mathematical formula}P(Xi=x|Πi=π), that is, {a mathematical formula}Nx,π/Nπ; {a mathematical formula}Nπ and {a mathematical formula}Nx,π represents, respectively, the number of times {a mathematical formula}(Πi=π) and {a mathematical formula}(Xi=x∧Πi=π) appear in the data set (if π is null, then {a mathematical formula}Nπ=N and {a mathematical formula}Nx,π=Nx). In the case with no parents, we use the notation {a mathematical formula}LL(Xi)=LL(Xi|∅). {a mathematical formula}Pen(Xi|Πi) is the complexity penalization for {a mathematical formula}Xi and its parent set:{a mathematical formula} again with the notation {a mathematical formula}Pen(Xi)=Pen(Xi|∅).
+     </paragraph>
+     <paragraph>
+      For completeness, we present the definition of (conditional) mutual information. Let {a mathematical formula}X1, {a mathematical formula}X2, {a mathematical formula}X3 be pairwise disjoint subsets of {a mathematical formula}X. Then{a mathematical formula} (unconditional version is obtained with {a mathematical formula}X3=∅), and (the sample estimate of) entropy is defined as usual: {a mathematical formula}H(X1|X2)=H(X1∪X2)−H(X2) and{a mathematical formula} (x runs over the configurations of {a mathematical formula}X1.) Since {a mathematical formula}θˆx=Nx/N, it is clear that {a mathematical formula}N⋅H(X1|X2)=−LL(X1|X2) for any disjoint subsets {a mathematical formula}X1,X2⊆X.
+     </paragraph>
+     <paragraph>
+      The ultimate goal is to find {a mathematical formula}G⁎∈argmaxGBIC(G) (we avoid equality because there might be multiple optima). We assume that if two DAGs {a mathematical formula}G1 and {a mathematical formula}G2 have the same score, then we prefer the graph with fewer arcs. The usual first step to achieve such goal is the task of finding the candidate parent sets for a given variable {a mathematical formula}Xi (obviously a candidate parent set cannot contain {a mathematical formula}Xi itself). This task regards constructing the list {a mathematical formula}Li of parent sets {a mathematical formula}Πi for {a mathematical formula}Xi alongside their scores {a mathematical formula}BIC(Xi|Πi). Without any restriction, there are {a mathematical formula}2n−1 possible parent sets, since every subset of {a mathematical formula}X∖{Xi} is a candidate. Each score computation costs {a mathematical formula}Θ(N⋅(1+|Πi|)), and the number of score computations becomes quickly prohibitive with the increase of n. In order to avoid losing global optimality, we must guarantee that {a mathematical formula}Li contains candidate parent sets that cover those in an optimal DAG. For instance, if we apply a bound k on the number of parents that a variable can have, then the size of{a mathematical formula} is {a mathematical formula}Θ(nk), but we might lose global optimality (this is the case if any optimal DAG would have more than k parents for {a mathematical formula}Xi). Irrespective of that, this pruning is not enough if n is large. Bounds greater than 2 can already become prohibitive. For instance, a bound of {a mathematical formula}k=2 is adopted in [8] when dealing with its largest data set (diabetes), which contains 413 variables. One way of circumventing the problem is to apply pruning rules which allow us to discard/ignore elements of {a mathematical formula}Li in such a way that an optimal parent set is never discarded/ignored.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Pruning rules
+     </section-title>
+     <paragraph>
+      The simplest pruning rule one finds in the literature states that if a candidate subset has better score than a candidate set, then such candidate set can be safely ignored, since the candidate subset will never yield directed cycles if the candidate set itself does not yield cycles [9], [10]. By safely ignoring/discarding a candidate set we mean that we are still able to find an optimal DAG (so no accuracy is lost) even if such parent set is never used. This is formalized as follows.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      (Theorem 1 in[7], but also found elsewhere[9].) Let{a mathematical formula}Π⁎be a candidate parent set for the node{a mathematical formula}X∈X. Suppose there exists a parent set Π such that{a mathematical formula}Π⊂Π⁎and{a mathematical formula}BIC(X|Π)≥BIC(X|Π⁎). Then{a mathematical formula}Π⁎can be safely discarded from the list of candidate parent sets of X.
+     </paragraph>
+     <paragraph>
+      This result can be also written in terms of the list of candidate parent sets. In order to find an optimal DAG for the structure learning problem, it is sufficient to work with{a mathematical formula} Unfortunately there is no way of applying Lemma 1 without computing the scores of all candidate sets, and hence it provides no speed up for building the list (it is nevertheless useful for later optimizations, but that is not the focus of this work).
+     </paragraph>
+     <paragraph>
+      There are however pruning rules that can reduce the computation time for finding {a mathematical formula}Li and that are still safe.
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Let{a mathematical formula}Π⊂Π′be candidate parent sets for{a mathematical formula}X∈X. Then{a mathematical formula}LL(X|Π)≤LL(X|Π′),{a mathematical formula}H(X|Π)≥H(X|Π′)and{a mathematical formula}Pen(X|Π)&gt;Pen(X|Π′).
+     </paragraph>
+     <paragraph label="Proof">
+      The inequalities follow directly from the definitions of log-likelihood, entropy and penalization. □
+     </paragraph>
+     <paragraph label="Lemma 3">
+      (Theorem 4 in[7].{sup:1}) Let{a mathematical formula}X∈Xbe a node with{a mathematical formula}Π⊂Π⁎two candidate parent sets, such that{a mathematical formula}BIC(X|Π)≥Pen(X|Π⁎). Then{a mathematical formula}Π⁎and all its supersets can be safely ignored when building the list of candidate parent sets for X.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}Π′⊇Π⁎. By Lemma 2, we have {a mathematical formula}Pen(X|Π⁎)≥Pen(X|Π′) (equality only if {a mathematical formula}Π⁎=Π′). Then {a mathematical formula}BIC(X|Π)≥Pen(X|Π⁎)⇒BIC(X|Π)≥Pen(X|Π′)⇒BIC(X|Π)−BIC(X|Π′)≥−LL(X|Π′), and we have {a mathematical formula}−LL(X|Π′)≥0, so Lemma 1 suffices to conclude the proof. □
+     </paragraph>
+     <paragraph>
+      Note that {a mathematical formula}BIC(X|Π)≥Pen(X|Π⁎) can as well be written as {a mathematical formula}LL(X|Π)≥Pen(X|Π⁎)−Pen(X|Π), and if {a mathematical formula}Π⁎=Π∪{Y} for some {a mathematical formula}Y∉Π, then it can be written also as {a mathematical formula}LL(X|Π)≥(|ΩY|−1)Pen(X|Π). The reasoning behind Lemma 3 is that the maximum improvement that we can have in BIC score by inserting new parents into Π would be achieved if {a mathematical formula}LL(X|Π), which is a non-positive value, grew all the way to zero, since the penalization only gets worse with more parents. If {a mathematical formula}LL(X|Π) is already close enough to zero, then the loss in the penalty part cannot be compensated by the gain of likelihood. The result holds for every superset because both likelihood and penalty are monotone with respect to increasing the number of parents.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Novel pruning rules
+     </section-title>
+     <paragraph>
+      In this section we devise novel pruning rules by exploiting the empirical entropy of variables. We later demonstrate that such rules are useful to ignore elements while building the list {a mathematical formula}Li that cannot be ignored by Lemma 3, hence tightening the pruning results available in the literature. In order to achieve our main theorem, we need some intermediate results.
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Let{a mathematical formula}Π=Π′∪{Y}for{a mathematical formula}Y∉Π′, with{a mathematical formula}Π,Π′candidate parent sets for{a mathematical formula}X∈X. Then{a mathematical formula}LL(X|Π)−LL(X|Π′)≤N⋅min⁡{H(X|Π′);H(Y|Π′)}.
+     </paragraph>
+     <paragraph label="Proof">
+      This comes from simple manipulations and known bounds to the value of conditional mutual information.{a mathematical formula} □
+     </paragraph>
+     <paragraph label="Theorem 1">
+      Let{a mathematical formula}X∈X, and{a mathematical formula}Π⁎be a parent set for X. Let{a mathematical formula}Y∈X∖Π⁎such that{a mathematical formula}N⋅min⁡{H(X|Π⁎);H(Y|Π⁎)}≤(1−|ΩY|)Pen(X|Π⁎). Then the parent set{a mathematical formula}Π=Π⁎∪{Y}and all its supersets can be safely ignored when building the list of candidate parents sets for X.
+     </paragraph>
+     <paragraph label="Proof">
+      We have that{a mathematical formula} First step is the definition of BIC, second step uses Lemma 4 and third step uses the assumption of this theorem. Therefore, Π can be safely ignored (Lemma 1). Now take any {a mathematical formula}Π′⊃Π. Let {a mathematical formula}Π″=Π′∖{Y}. It is immediate that {a mathematical formula}N⋅min⁡{H(X|Π⁎);H(Y|Π⁎)}≤(1−|ΩY|)Pen(X|Π⁎)⇒N⋅min⁡{H(X|Π″);H(Y|Π″)}≤(1−|ΩY|)Pen(X|Π″), since {a mathematical formula}Π⁎⊂Π″ and hence {a mathematical formula}−Pen(X|Π″)&gt;−Pen(X|Π⁎). The theorem follows by the same arguments as before, applied to {a mathematical formula}Π′ and {a mathematical formula}Π″. □
+     </paragraph>
+     <paragraph>
+      The rationale behind Theorem 1 is that if the data do not have entropy in amount enough to beat the penalty function, then there is no reason to continue expanding the parent set candidates. Theorem 1 can be used for pruning the search space of candidate parent sets without having to compute their BIC scores. However, we must have available the conditional entropies {a mathematical formula}H(X|Π⁎) and {a mathematical formula}H(Y|Π⁎). The former is usually available, since {a mathematical formula}−N⋅H(X|Π⁎)=LL(X|Π⁎), which is used to compute {a mathematical formula}BIC(X|Π⁎) (and it is natural to assume that such score has been already computed at the moment Theorem 1 is checked). Actually, this bound amounts exactly to the previous result in the literature (see for example [7]):{a mathematical formula} By Theorem 1 we know that {a mathematical formula}Π⁎∪{Y} and any superset can be safely ignored, which is the very same condition as in Lemma 3. The novelty in Theorem 1 comes from the term {a mathematical formula}H(Y|Π⁎). If such term is already computed (or if it needs to be computed irrespective of this bound computation, and thus we do not lose time computing it for this purpose only), then we get (almost) for free a new manner to prune parent sets. In case this computation of {a mathematical formula}H(Y|Π⁎) is not considered worthwhile, or if we simply want a faster approach to prune parent sets, we can resort to a more general version of Theorem 1, as given by Theorem 2.
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}X∈X, and{a mathematical formula}Π⁎,Π′be parent sets for X with{a mathematical formula}Π′⊆Π⁎. Let{a mathematical formula}Y∈X∖Π⁎such that{a mathematical formula}N⋅min⁡{H(X|Π′);H(Y|Π′)}≤(1−|ΩY|)Pen(X|Π⁎). Then the parent set{a mathematical formula}Π=Π⁎∪{Y}and all its supersets can be safely ignored when building the list of candidate parents sets for X.It is well-known (see Lemma 2) that {a mathematical formula}H(X|Π⁎)≤H(X|Π′) and {a mathematical formula}H(Y|Π⁎)≤H(Y|Π′) for any {a mathematical formula}X,Y,Π′⊆Π⁎ as defined in this theorem, so the result follows from Theorem 1. □
+     </paragraph>
+     <paragraph>
+      An important property of Theorem 2 when compared to Theorem 1 is that all entropy values regard subsets of the current parent set at our own choice. For instance, we can choose {a mathematical formula}Π′=∅ and so they become entropies of single variables, which can be precomputed efficiently in total time {a mathematical formula}O(N⋅n). Another option at this point, if we do not want to compute {a mathematical formula}H(Y|Π⁎) and assuming the cache of Y has been already created, would be to quickly inspect the cache of Y to find the most suitable subset of {a mathematical formula}Π⁎ to plug into Theorem 2. Moreover, with Theorem 2, we can prune the search space of a variable X without evaluating the likelihood of parent sets for X (just by using the entropies), and so it could be used to guide the search even before any heavy computation is done. The main novelty in Theorem 1, Theorem 2 is to make use of the (conditional) entropy of Y.
+     </paragraph>
+     <paragraph>
+      This new pruning approach is not trivially achievable by previous existing bounds for BIC. It is worth noting the relation with previous work. The restriction of Theorem 2 can be rewritten as:{a mathematical formula} Note that the condition for Lemma 3 (known from literature) is exactly {a mathematical formula}−Pen(X|Π⁎∪{Y})+BIC(X|Π⁎)≥0. Hence, Theorem 2 will be effective (while the previous rule in Lemma 3 will not) when {a mathematical formula}−Pen(X|Π⁎∪{Y})+BIC(X|Π⁎)&lt;0, and so when {a mathematical formula}N⋅min⁡{H(X|Π′);H(Y|Π′)}+LL(X|Π⁎)&lt;0. Intuitively, the new bound of Theorem 2 might be more useful when the parent set being evaluated is poor (hence {a mathematical formula}LL(X|Π⁎) is low) while the result in Lemma 3 plays an important role when the parent set being evaluated is good (and so {a mathematical formula}LL(X|Π⁎) is high).
+     </paragraph>
+     <paragraph>
+      The result of Theorem 2 can also be used to bound the maximum number of parents in any given candidate parent set. While the asymptotic result is already implied by previous work [7], [12], we obtain the finer and interesting result of Theorem 3.
+     </paragraph>
+     <paragraph label="Proof">
+      There is an optimal structure such that variable{a mathematical formula}X∈Xhas at most{a mathematical formula}parents, where{a mathematical formula}⌈⋅⌉+denotes the smallest natural number greater than or equal to its argument.If {a mathematical formula}Π=∅ is the optimal parent for X, then the result trivially follows since {a mathematical formula}|Π|=0. Now take Π such that {a mathematical formula}Y∈Π and {a mathematical formula}Π⁎=Π∖{Y}. Since {a mathematical formula}|Π|=|Π⁎|+1 and {a mathematical formula}|ΩΠ⁎|≥2|Π⁎|, we have {a mathematical formula}|Π|≤log2⁡|ΩΠ⁎|+1. Now, if{a mathematical formula} then by Theorem 2 (used with {a mathematical formula}Π′=∅) every superset of {a mathematical formula}Π⁎ containing Y can be safely ignored, and so it would be Π. Therefore,{a mathematical formula} and since {a mathematical formula}|Π| is a natural number, the result follows by applying the same reasoning for every {a mathematical formula}Y∈X∖{X}. □
+     </paragraph>
+     <paragraph>
+      Corollary 1 is demonstrated for completeness, since it is implied by previous work (see for instance [7]; a similar result is implied in [12], but the last passage is flawed there and the presented bound is slightly better than it should be). The result is presented here in more detailed terms.
+     </paragraph>
+     <paragraph label="Proof">
+      There is an optimal structure such that each variable has at most{a mathematical formula}⌈1+log2⁡N−log2⁡logb⁡N⌉parents.By Theorem 3, we have that Π can be a parent of a node X only if{a mathematical formula} since it is assumed that {a mathematical formula}N≥2 and {a mathematical formula}b≥2. □
+     </paragraph>
+     <paragraph>
+      Theorem 3 can be used to bound the number of parent sets per variable, even before computing parent sets for them, with the low computation cost of computing the empirical entropy of each variable once (hence overall cost of {a mathematical formula}O(n⋅N) time). We point out that Theorem 3 can provide effective bounds (considerably smaller than {a mathematical formula}⌈1+log2⁡N−log2⁡logb⁡N⌉) on the number of parents for specific variables, particularly when number of states is high and entropies are low, as we will see in the next section.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We run experiments using a collection of data sets from the UCI repository [11]. Table 1 shows the data set names, number of variables n and number of data points N. In the same table, we show the maximum number of parents that a node can have, according to the new result of Theorem 3, as well as the old result from the literature (which we present in Corollary 1). The old bound is global, so a single number is given in column 5, while the new result of Theorem 3 implies a different maximum number of parents per node. We use the notation bound (number of times), with the bound followed by the number of nodes for which the new bound reached that value, in parentheses (so all numbers in parentheses in a row should sum to n of that row). We see that the gains with the new bounds are quite significant and can prune great parts of the search space further than previous results.
+     </paragraph>
+     <paragraph>
+      Our second set of experiments compares the activation of Theorem 1, Theorem 2, Theorem 3 in pruning the search space for the construction of the list of candidate parent sets. Table 2, Table 3, Table 4 (in the end of this document) present the results as follows. Columns one to four contain, respectively, the data set name, number of variables, number of data points and maximum in-degree (in-d) that we impose (a maximum in-degree is imposed so as we can compare the obtained results among different approaches). The fifth column, named {a mathematical formula}|S|, presents the total number of parent sets that need to be evaluated by the brute-force procedure (taking into consideration the imposed maximum in-degree). Column 6 has the average time to run the algorithms (there is actually no significant difference between the algorithms' times in our experiments). Columns 7 to 13 present the number of times that different pruning results are activated when exploring the whole search space. Larger numbers means that more parent sets are ignored (even without being evaluated). The naming convention for the pruning algorithms as used on those columns is:
+     </paragraph>
+     <list>
+      <list-item label="Alg1">
+       Application of Theorem 1 using {a mathematical formula}H(X|Π⁎) in the expression of the rule (instead of the minimization), where X is the variable for which we are building the list and Π is the current parent set being explored. This is equivalent to the previous rule in the literature, as presented in this paper in Lemma 3.
+      </list-item>
+      <list-item label="Alg2">
+       Application of Theorem 1 using {a mathematical formula}H(Y|Π⁎) in the expression of the rule (instead of the minimization), where X is the variable for which we are building the list and Y is the variable just to be inserted in the parent set {a mathematical formula}Π⁎ that is being explored. This is the new pruning rule which makes most use of entropy, but it may be slower than the others (since conditional entropies might need to be evaluated, if they were not yet).
+      </list-item>
+      <list-item label="Alg3">
+       Application of Theorem 2 using {a mathematical formula}H(X) in the formula, that is, with {a mathematical formula}Π′=∅ (and instead of the minimization). This is a slight improvement to the known rule in the literature regarding the maximum number of parents of a variable and is very fast, since it does not depend on evaluating any parent sets.
+      </list-item>
+      <list-item label="Alg4">
+       Application of Theorem 2 using {a mathematical formula}H(Y) in the formula, that is, with {a mathematical formula}Π′=∅ (and instead of the minimization). This is a different improvement to the known rule in the literature regarding the maximum number of parents of a variable and is very fast, since it does not depend on evaluating any parent sets.
+      </list-item>
+     </list>
+     <paragraph>
+      We also present the combined number of pruning obtained by some of these ideas when they are applied together. Of particular interest is column 8 with {a mathematical formula}Alg1+Alg2, as it shows the largest amount of pruning that is possible, albeit more computationally costly because of the (possibly required) computations for Alg2 (even though we have observed no significant computational time difference within our experiments). This is also presented graphically in the boxplot of Fig. 1, where the values for the 18 data sets are summarized and the amount of pruning is divided by the pruning of Alg1, and so a ratio above one shows (proportional) gain with respect to the previous literature pruning rule.
+     </paragraph>
+     <paragraph>
+      Column 13 of Table 2, Table 3, Table 4 have the pruning results (number of ignored candidates) for Alg1 and Alg4 together, since this represents the pruning obtained by the old rule plus the new rule given by Theorem 2 in such a way that absolutely no extra computational cost takes place (and moreover it subsumes approach Alg3, since Alg1 is theoretically superior to Alg3). Again, this is summarized in the boxplot of Fig. 2 over the 18 data sets and the values are divided by the amount of pruning of Alg1 alone, so values above one show the (proportional) gain with respect to the previous literature rule.
+     </paragraph>
+     <paragraph>
+      As we can see in more detail in Table 2, Table 3, Table 4, the gains with the new pruning ideas are significant in many circumstances. Moreover, there is no extra computational cost for applying Alg3 and Alg4, so one should always apply those rules while deciding selectively whether to employ prune Alg2 or not (we recall that one can tune that rule by exploiting the flexibility of Theorem 2 and searching for a subset that is already available in the computed lists, so a more sophisticated pruning scheme is also possible – we experiment here with a simple idea that does not bring extra computational time, and leave for future work the design of other strategies).
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      This paper presents new non-trivial pruning rules to be used with the Bayesian Information Criterion (BIC) score for learning the structure of Bayesian networks. The derived theoretical bounds extend previous results in the literature and can be promptly integrated into existing solvers with minimal effort and computational costs. They imply faster computations without losing optimality. The very computationally efficient version of the new rules imply gains of around 20% with respect to previous work, according to our experiments, while the most computationally demanding pruning achieves around 50% more pruning than before. Pruning rules for other widely used scores such as the Bayesian Dirichlet equivalent uniform (BDeu) have been devised [13] and some researchers conjecture that they cannot be improved. Similarly, we conjecture that further bounds for the BIC score are unlikely to exist unless for some particular cases and situations. This can be studied in a future work, as well as means to devise smart strategies to tune the theorem parameters and improve their pruning capabilities.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,934 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html prefix="dcterms: http://purl.org/dc/terms/" xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Hierarchical MT Training using Max-Violation Perceptron.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \exampleindent
+     </span>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       1.5em
+      </p>
+     </div>
+     <span class="ltx_ERROR undefined">
+      \algorithmicindent
+     </span>
+     <div class="ltx_para" id="p2">
+      <p class="ltx_p">
+       1em
+      </p>
+     </div>
+     <div class="ltx_para" id="p3">
+      <p class="ltx_p">
+       algorithmAlgorithm
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Many natural language processing problems
+including part-of-speech tagging
+        [7]
+        ,
+parsing
+        [18]
+        , and event extraction
+        [16]
+        have enjoyed great success using large-scale discriminative training algorithms. However, a similar success on machine translation
+has been elusive, where the mainstream methods still tune on small datasets.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        What makes large-scale MT training so hard then?
+After numerous attempts by various researchers
+        [17, 20, 1, 2, 5, 9, 10]
+        ,
+the recent work of
+        yu+:2013 finally reveals a major reason: it is the vast amount of (inevitable) search errors in MT decoding that astray learning.
+To alleviate this problem, their work adopts
+the theoretically-motivated framework of
+violation-fixing perceptron
+        [12]
+        tailed for inexact search, yielding great results on phrase-based MT
+(outperforming small-scale
+        Mert
+        /
+        Pro
+        by a large margin for the first time).
+However, the underlying phrase-based model suffers
+from limited distortion
+and thus can only employ a small portion (about 1/3 in their Ch-En experiments)
+of the bitext in training.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        To better utilize the large training set,
+we propose to generalize from phrase-based MT to syntax-based MT,
+in particular the hierarchical phrase-based translation model (
+        Hiero
+        )
+        [6]
+        ,
+in order to exploit sentence pairs beyond the expressive capacity of phrase-based MT.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The key challenge here is to extend the latent variable violation-fixing perceptron of
+        yu+:2013
+to handle tree-structured derivations and translation hypergraphs.
+Luckily,
+        zhang+:2013 have recently generalized
+the underlying violation-fixing perceptron of
+        huang+:2012
+from graphs to hypergraphs for bottom-up parsing, which resembles syntax-based decoding.
+We just need to further extend it to handle latent variables.
+We make the following contributions:
+       </p>
+       <ol class="ltx_enumerate" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We generalize the
+latent variable violation-fixing perceptron
+framework to inexact search over hypergraphs,
+which subsumes previous algorithms for PBMT and bottom-up parsing
+as special cases (see Fig.
+           1
+           ).
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We show that syntax-based MT,
+with its better handling of long-distance reordering,
+can exploit a larger portion of the training set, which facilitates sparse lexicalized features.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           Experiments show that our training algorithm
+outperforms mainstream tuning methods (which optimize on small devsets)
+by +1.2
+           Bleu
+           over
+           Mert
+           and
+           Pro
+           on FBIS.
+          </p>
+         </div>
+        </li>
+       </ol>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Review: Syntax-based MT Decoding
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        For clarity reasons we will describe
+        Hiero
+        decoding as a two-pass process,
+first without a language model, and then integrating the LM.
+This section mostly follows
+        huang+chiang:2007.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        In the first,
+        -⁢LM
+        phase, the decoder parses the source sentence using the source projection
+of the synchronous grammar (see Fig.
+        2
+        (a) for an example),
+producing a
+        -⁢LM
+        hypergraph where
+each node has a signature
+        N[i:j]
+        ,
+where
+        N
+        is the nonterminal type (either X or S in
+        Hiero
+        ) and
+        [i:j]
+        is the span,
+and each hyperedge
+        e
+        is an application of the translation rule
+        r⁢(e)
+        (see Figure
+        3
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        To incorporate the language model,
+each node also needs to remember its target side boundary words.
+Thus a
+        -⁢LM
+        node
+        N[i:j]
+        is split into
+multiple
+        +⁢LM
+        nodes of signature
+        N[i:j]a⋆b
+        ,
+where
+        a
+        and
+        b
+        are the boundary words.
+For example, with a bigram LM,
+        X[1:5]held⋆Sharon
+        is a node whose translation starts with “held” and ends with “Sharon”.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        More formally, the whole decoding process can be cast as a deductive system.
+Take the partial translation of “held talks with Sharon” in
+Figure
+        2
+        (b) for example, the deduction is
+       </p>
+       \inferruleX[2:3]Sharon⋆Sharon:s1X[4:5]talks⋆talks:s2X[1:5]held⋆Sharon:s1+s2+s⁢(r5)+λr5,
+       <p class="ltx_p">
+        where
+        s⁢(r5)
+        is the score of rule
+        r5
+        ,
+and the LM combo score
+        λ
+        is
+        logPlm(talks∣held)Plm(with∣talks)Plm(Sharon∣with)
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Violation-Fixing Perceptron for
+       Hiero
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        As mentioned in Section 1,
+the key to the success of
+        yu+:2013
+is the adoption of violation-fixing perceptron of
+        huang+:2012
+which is tailored for vastly inexact search.
+The general idea is to update somewhere in the middle of the search (where search error happens)
+rather than at the very end (standard update is often invalid).
+To adapt it to MT where many derivations can output the same translation (i.e., spurious ambiguity),
+        yu+:2013 extends it to handle latent variables which correspond to phrase-based derivations.
+On the other hand,
+        zhang+:2013 has generalized
+        huang+:2012
+from graphs to hypergraphs for bottom-up parsing, which resembles
+        Hiero
+        decoding.
+So we just need to combine the two generalizing directions (latent variable and hypergraph,
+see Fig.
+        1
+        ).
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Latent Variable Hypergraph Search
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         The key difference between bottom-up parsing and MT decoding is that
+in parsing the gold tree for each input sentence is unique,
+while in MT many derivations can generate the same reference translation.
+In other words, the gold derivation to update towards is a latent variable.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Here we formally define the latent variable “max-violation” perceptron over a hypergraph for MT training.
+For a given sentence pair
+         ⟨x,y⟩
+         ,
+we denote
+         H⁢(x)
+         as the decoding hypergraph of
+         Hiero
+         without any pruning.
+We say
+         D∈H⁢(x)
+         if
+         D
+         is a full derivation of decoding
+         x
+         ,
+and
+         D
+         can be derived from the hypergraph.
+Let
+         𝑔𝑜𝑜𝑑⁢(x,y)
+         be the set of
+         y-good
+         derivations for
+         ⟨x,y⟩
+         :
+        </p>
+        𝑔𝑜𝑜𝑑⁢(x,y)=Δ{D∈H⁢(x)∣e⁢(D)=y},
+        <p class="ltx_p">
+         where
+         e⁢(D)
+         is the translation from derivation
+         D
+         .
+We then define the set of
+         y-good
+         partial derivations that cover
+         x[i:j]
+         with root
+         N[i:j]
+         as
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝑔𝑜𝑜𝑑N[i:j](x,y)=Δ{
+          </td>
+          <td class="ltx_td ltx_align_left">
+           d∈D∣D∈𝑔𝑜𝑜𝑑(x,y),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           𝑟𝑜𝑜𝑡(d)=N[i:j]}
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         We further denote the real decoding hypergraph with beam-pruning and cube-pruning as
+         H′⁢(x)
+         .
+The set of
+         y-bad
+         derivations is defined as
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝑏𝑎𝑑N[i:j](x,y)=Δ{
+          </td>
+          <td class="ltx_td ltx_align_left">
+           d∈D∣D∈H′(x,y),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝑟𝑜𝑜𝑡⁢(d)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =N[i:j],d∉𝑔𝑜𝑜𝑑N[i:j](x,y)}.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         Note that the
+         y-good
+         derivations are defined over the
+         unpruned
+         whole decoding hypergraph,
+while the
+         y-bad
+         derivations are defined over the real decoding hypergraph with pruning.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         The max-violation method performs the update where the model score difference between
+the incorrect Viterbi partial derivation and the best
+         y-good
+         partial derivation is maximal,
+by penalizing the incorrect Viterbi partial derivation
+and rewarding the
+         y-good
+         partial derivation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         More formally, we first find the Viterbi partial derivation
+         d-
+         and the best
+         y-good
+         partial derivation
+         d+
+         for each
+         N[i:j]
+         group in the pruned
+         +⁢LM
+         hypergraph:
+        </p>
+        dN[i:j]+⁢(x,y)=Δ𝐚𝐫𝐠𝐦𝐚𝐱d∈𝑔𝑜𝑜𝑑N[i:j]⁢(x,y)⁡𝐰⋅𝚽⁢(x,d),
+        dN[i:j]-⁢(x,y)=Δ𝐚𝐫𝐠𝐦𝐚𝐱d∈𝑏𝑎𝑑N[i:j]⁢(x,y)⁡𝐰⋅𝚽⁢(x,d),
+        <p class="ltx_p">
+         where
+         𝚽⁢(x,d)
+         is the feature vector for derivation
+         d
+         .
+Then it finds the group
+         N[i*:j*]*
+         with the maximal score difference between the Viterbi derivation
+and the best
+         y-good
+         derivation:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex9">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           N[i*:j*]*=Δ
+          </td>
+          <td class="ltx_td ltx_align_left">
+           𝐚𝐫𝐠𝐦𝐚𝐱N[i:j]
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex10">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           𝐰⋅Δ⁢𝚽⁢(x,dN[i:j]+⁢(x,y),dN[i:j]-⁢(x,y)),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         and update as follows:
+        </p>
+        𝐰←𝐰+Δ⁢𝚽⁢(x,dN[i*:j*]*+⁢(x,y),dN[i*:j*]*-⁢(x,y)),
+        <p class="ltx_p">
+         where
+         Δ⁢𝚽⁢(x,d,d′)=Δ𝚽⁢(x,d)-𝚽⁢(x,d′)
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Forced Decoding for
+        Hiero
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We now describe how to find the gold derivations.
+         Such derivations can be generated in way similar to
+         yu+:2013
+by using a language model tailored for forced decoding:
+        </p>
+        P𝑓𝑜𝑟𝑐𝑒𝑑(q∣p)={1if q=p+10otherwise,
+        <p class="ltx_p">
+         where
+         p
+         and
+         q
+         are the indices of the boundary words in the reference translation.
+The
+         +⁢LM
+         node now has signature
+         N[i:j]p⋆q
+         ,
+where
+         p
+         and
+         q
+         are the indexes of the boundary words.
+If a boundary word does not occur in the reference, its index is set to
+         ∞
+         so that its language model score will always be
+         -∞
+         ;
+if a boundary word occurs more than once in the reference,
+its
+         -⁢LM
+         node is split into multiple
+         +⁢LM
+         nodes, one for each such index.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         We have a similar deductive system for forced decoding.
+For the previous example, rule
+         r5
+         in Figure
+         2
+         (a) is rewritten as
+        </p>
+        X→⟨yǔ⁢X1⁢jǔxíng⁢X2,1⁢X2⁢ 4⁢X1⟩,
+        <p class="ltx_p">
+         where
+         1
+         and
+         4
+         are the indexes for reference words “held” and “with” respectively.
+The deduction for
+         X[1:5]
+         in Figure
+         2
+         (b) is
+        </p>
+        \inferruleX[2:3]5⋆5:s1X[4:5]2⋆3:s2X[1:5]1⋆5:s⁢(r5)+λ+s1+s2r5,
+        <p class="ltx_p">
+         where
+         λ=log∏i∈{1,3,4}P𝑓𝑜𝑟𝑐𝑒𝑑(i+1∣i)=0
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Following
+        yu+:2013, we call our max-violation method
+        MaxForce
+        .
+Our implementation is mostly in Python on top of the
+        cdec
+        system
+        [8]
+        via the
+        pycdec
+        interface
+        [3]
+        .
+In addition, we use minibatch parallelization of
+        [22]
+        to speedup perceptron training.
+We evaluate
+        MaxForce
+        for
+        Hiero
+        over two
+        Ch-En
+        corpora, IWSLT09 and FBIS,
+and compare the performance with vanilla
+        n
+        -best
+        Mert[19]
+        from Moses
+        [14]
+        ,
+Hypergraph
+        Mert[15]
+        , and
+        Pro[11]
+        from
+        cdec
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Features Design
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We use all the 18
+         dense
+         features from
+         cdec
+         ,
+including language model, direct translation probability
+         p(e|f)
+         ,
+lexical translation probabilities
+         pl(e|f)
+         and
+         pl(f|e)
+         ,
+length penalty, counts for the source and target sides in the training corpus,
+and flags for the glue rules and pass-through rules.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         For
+         sparse
+         features we use Word-Edges features
+         [4, 13]
+         which are shown to be extremely effective in both parsing and
+phrase-based MT
+         [21]
+         .
+We find that even simple Word-Edges features boost the performance significantly,
+and adding complex Word-Edges features from
+         yu+:2013 brings limited improvement and slows down the decoding.
+So in the following experiments we only use Word-Edges features consisting of combinations of
+English and Chinese words,
+and Chinese characters, and do not use word clusters nor word types.
+For simplicity and efficiency reasons, we also exclude all non-local features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Datasets and Preprocessing
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Our first corpus, IWSLT09, contains
+         ∼
+         30k short sentences collected from spoken language.
+IWSLT04 is used as development set in
+         MaxForce
+         training,
+and as tuning set for
+         n
+         -best
+         Mert
+         , Hypergraph
+         Mert
+         , and
+         Pro
+         .
+IWSLT05 is used as test set.
+Both IWSLT04 and IWSLT05 contain 16 references.We mainly use this corpus to investigate the properties of
+         MaxForce
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         The second corpus, FBIS, contains
+         ∼
+         240k sentences.
+NIST06 newswire is used as development set for
+         MaxForce
+         training,
+and as tuning set for all other tuning methods.
+NIST08 newswire is used as test set.
+Both NIST06 newswire and NIST08 newswire contain 4 references.
+We mainly use this corpus to demonstrate the performance of
+         MaxForce
+         in large-scale training.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         For both corpora, we do standard tokenization, alignment and rule extraction using the
+         cdec
+         tools.
+In rule extraction, we remove all 1-count rules
+but keep the rules mapping from one Chinese word to one English word to help balancing between overfitting and coverage.
+We use a trigram language model trained from the target sides of the two corpora respectively.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Forced Decoding Reachability
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We first report the forced decoding reachability for
+         Hiero
+         on FBIS in Table
+         1
+         .
+With the full rule set,
+65% sentences and 55% words of the whole corpus are forced decodable in
+         Hiero
+         .
+After pruning 1-count rules,
+our forced decoding covers significantly more words
+than phrase-based MT in
+         yu+:2013.
+Furthermore, in phrase-based MT, most decodable sentences are very short,
+while in
+         Hiero
+         the lengths of decodable sentences are more evenly distributed.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         However, in the following experiments, due to efficiency considerations,
+we use the “tight” rule extraction in
+         cdec
+         that is more strict than the standard “loose” rule extraction,
+which generates a reduced rule set and, thus, a reduced reachability.
+We show the reachability distributions of both tight and loose rule extraction in Figure
+         4
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Evaluation on IWSLT
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         For IWSLT, we first compare the performance from various update methods
+in Figure
+         5
+         .
+The max-violation method is more than 15
+         Bleu
+         points better than
+the standard perceptron (also known as “bold-update” in
+         liang+:2006)
+which updates at the root of the derivation tree.
+         <math alttext="{}^{,}" class="ltx_Math" display="inline" id="S4.SS4.p1.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+          <msup>
+           <mi>
+           </mi>
+           <mo>
+            ,
+           </mo>
+          </msup>
+         </math>
+         This can be explained by the fact that in training
+         ∼
+         58% of the standard
+updates are invalid (i.e., they do not fix any violation).
+We also use the “skip” strategy of
+         zhang+:2013
+which updates at the root of the derivation
+only when it fixes a search error, avoiding all invalid updates. This achieves
+         ∼
+         10
+         Bleu
+         better than the standard update,
+but is still more than
+         ∼
+         5
+         Bleu
+         worse than Max-Violation update.
+Finally we also try the “local-update” method from
+         liang+:2006
+which updates towards the derivation with the best
+         Bleu+1
+         in the root group
+         S[0:|x|]
+         .
+This method
+is about 2
+         Bleu
+         points worse than max-violation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         We further investigate the contribution of sparse features in Figure
+         6
+         .
+On the development set, max-violation update without Word-Edges features achieves
+         Bleu
+         similar to
+         n
+         -best
+         Mert
+         and
+         Pro
+         , but lower than Hypergraph
+         Mert
+         .
+Adding simple Word-Edges features improves
+         Bleu
+         by
+         ∼
+         2 points,
+outperforming the very strong Hypergraph
+         Mert
+         baseline by
+         ∼
+         1 point.
+See Table
+         2
+         for details.
+The results of
+         n
+         -best
+         Mert
+         , Hypergraph
+         Mert
+         , and
+         Pro
+         are
+averages from 3 runs.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.5
+        </span>
+        Evaluation on FBIS
+       </h3>
+       <div class="ltx_para" id="S4.SS5.p1">
+        <p class="ltx_p">
+         Table
+         3
+         shows
+         Bleu
+         scores of Hypergraph
+         Mert
+         ,
+         Pro
+         ,
+and
+         MaxForce
+         on FBIS.
+         MaxForce
+         actives 4.5M features, and achieves
++1.2
+         Bleu
+         over
+         Pro
+         and +0.9
+         Bleu
+         over Hypergraph
+         Mert
+         .
+The training time (on 32 cores) for Hypergraph
+         Mert
+         and
+         Pro
+         is about 30 min. on the dev set,
+and is about 5 hours for
+         MaxForce
+         on the training set.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We have presented a latent-variable violation-fixing framework
+for general structured prediction problems with
+inexact search over hypergraphs.
+Its application on
+        Hiero
+        brings significant improvement in
+        Bleu
+        ,
+compared to algorithms that are specially designed for MT tuning such as
+        Mert
+        and
+        Pro
+        .
+       </p>
+      </div>
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:creator">
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:subject">
+     </div>
+     <div about="" class="ltx_rdf" property="dcterms:title">
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

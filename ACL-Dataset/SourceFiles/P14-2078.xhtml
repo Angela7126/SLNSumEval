@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Mutual Disambiguation for Entity Linking</title>
+<!--Generated on Wed Jun 11 17:57:39 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Mutual Disambiguation for Entity Linking</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname"> Eric Charton
+<br class="ltx_break"/>Polytechnique Montréal
+<br class="ltx_break"/>Montréal, QC, Canada
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">eric.charton@polymtl.ca
+<br class="ltx_break"/>&amp;</span>Marie-Jean Meurs
+<br class="ltx_break"/>Concordia University
+<br class="ltx_break"/>Montréal, QC, Canada
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">marie-jean.meurs@concordia.ca</span>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ludovic Jean-Louis
+<br class="ltx_break"/>Polytechnique Montréal
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">ludovic.jean-louis@polymtl.ca
+<br class="ltx_break"/>&amp;</span>Michel Gagnon 
+<br class="ltx_break"/>Polytechnique Montréal
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">michel.gagnon@polymtl.ca</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">The disambiguation algorithm presented in this paper is implemented in SemLinker, an entity linking system.
+First, named entities are linked to candidate Wikipedia pages by a generic annotation engine.
+Then, the algorithm re-ranks candidate links according to mutual relations between all the named entities found in the document.
+The evaluation is based on experiments conducted on the test corpus of the TAC-KBP 2012 entity linking task.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The Entity Linking (EL) task consists in linking name <span class="ltx_text ltx_font_italic">mentions</span> of named entities (NEs) found in a document to their corresponding entities in a reference Knowledge Base (KB).
+These NEs can be of type person (PER), organization (ORG), etc., and they are usually represented in the KB by a Uniform Resource Identifier (URI).
+Dealing with ambiguity is one of the key difficulties in this task, since mentions are often highly polysemous, and potentially related to many different KB entries.
+Various approaches have been proposed to solve the named entity disambiguation (NED) problem.
+Most of them involve the use of surface forms extracted from Wikipedia.
+Surface forms consist of a word or a group of words that match lexical units like <span class="ltx_text ltx_font_italic">Paris</span> or <span class="ltx_text ltx_font_italic">New York City</span>.
+They are used as matching sequences to locate corresponding candidate entries in the KB, and then to disambiguate those candidates using similarity measures.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The NED problem is related to the <span class="ltx_text ltx_font_italic">Word Sense Disambiguation (WSD)</span> problem <cite class="ltx_cite">[<a href="#bib.bib10" title="Word sense disambiguation: a survey" class="ltx_ref">16</a>]</cite>, and is often more challenging since mentions of NEs can be highly ambiguous.
+For instance, names of places can be very common as is Paris, which refers to 26 different places in Wikipedia.
+Hence, systems that attempt to address the NED problem must include disambiguation resources.
+In the context of the Named Entity Recognition (NER) task, such resources can be generic and generative.
+This generative approach does not apply to the EL task where each entity to be linked to a semantic description has a specific word context, marker of its exact identity.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">One of the classical approach to conduct the disambiguation process in NED applications is to consider the context of the mention to be mapped, and compare this context with contextual information about the potential target entities (see for instance the KIM system <cite class="ltx_cite">[<a href="#bib.bib4" title="KIM – Semantic annotation platform" class="ltx_ref">18</a>]</cite>).
+This is usually done using similarity measures (such as cosine similarity, weighted Jaccard distance, KL divergence…)
+that evaluate the distance between a bag of words related to a candidate annotation, and the words surrounding the entity to annotate in the text.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In more recent approaches, it is suggested that annotation processes based on similarity distance measures can be improved by making use of other annotations present in the same document.
+Such techniques are referred to as <span class="ltx_text ltx_font_italic">semantic relatedness</span> <cite class="ltx_cite">[<a href="#bib.bib17" title="WikiRelate! Computing Semantic Relatedness Using Wikipedia" class="ltx_ref">19</a>]</cite>, <span class="ltx_text ltx_font_italic">collective disambiguation</span> <cite class="ltx_cite">[<a href="#bib.bib7" title="Robust disambiguation of named entities in text" class="ltx_ref">12</a>]</cite>, or <span class="ltx_text ltx_font_italic">joint disambiguation</span> <cite class="ltx_cite">[<a href="#bib.bib21" title="HITSâmonolingual and cross-lingual entity linking system at tac 2012: a joint approach" class="ltx_ref">8</a>]</cite>.
+The idea is to evaluate in a set of candidate links which one is the most likely to be correct by taking the other links contained in the document into account.
+For example, if a NE describes a city name like <span class="ltx_text ltx_font_italic">Paris</span>,
+it is more probable that the correct link for this city name designates <span class="ltx_text ltx_font_italic">Paris (France)</span> rather than <span class="ltx_text ltx_font_italic">Paris (Texas)</span> if a neighbor entity offers candidate links semantically related to <span class="ltx_text ltx_font_italic">Paris (France)</span> like the <span class="ltx_text ltx_font_italic">Seine river</span> or
+the <span class="ltx_text ltx_font_italic">Champs-Elysées</span>.
+Such techniques mostly involve exploration of graphs resulting of all the candidate annotations proposed for a given document, and try to rank the best candidates for each annotation using an ontology.
+The ontology (like YAGO or DBPedia) provides a pre-existing set of potential relations between the entities to link (like for instance, in our previous example, <span class="ltx_text ltx_font_italic">Paris (France)</span> <span class="ltx_text ltx_font_typewriter">has_river</span> <span class="ltx_text ltx_font_italic">Seine</span>) that will be used to rank the best candidates according to their mutual presence in the document.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In this paper we explore the capabilities of a disambiguation algorithm using all the available annotation layers of NEs to improve their links.
+The paper makes the following novel propositions:
+1) the ontology used to evaluate the relatedness of candidates is replaced by internal links and categories from the Wikipedia corpus;
+2) the coherence of entities is improved prior to the calculation of semantic relatedness using a co-reference resolution algorithm, and a NE label correction method;
+3) the proposed method is robust enough to improve the performance of existing entity linking annotation engines, which are capable of providing a set of ranked candidates for each annotation in a document.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This paper is organized as follows.
+Section <a href="#S2" title="2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> describes related works.
+The proposed method is presented in Section <a href="#S3" title="3 Proposed Algorithm ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> where we explain how our SemLinker system prepares documents that contain mentions to disambiguate,
+then we detail the disambiguation algorithm.
+The evaluation of the complete system is provided in Section <a href="#S4" title="4 Experiments and Results ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+Finally, we discuss the obtained results, and conclude.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Entity annotation and linking in natural language text has been extensively studied in NLP research.
+A strong effort has been conducted recently by the TAC-KBP evaluation task <cite class="ltx_cite">[<a href="#bib.bib18" title="Overview of the TAC 2010 knowledge base population track" class="ltx_ref">13</a>]</cite> to create standardized corpus, and annotation standards based on Wikipedia for evaluation and comparison of EL systems.
+In this paper, we consider the TAC-KBP framework.
+We describe below some recent approaches proposed for solving the EL task.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Wikipedia-based Disambiguation Methods</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The use of Wikipedia for explicit disambiguation dates back to <cite class="ltx_cite">[<a href="#bib.bib12" title="Using encyclopedic knowledge for named entity disambiguation" class="ltx_ref">2</a>]</cite> who built a system that compared the context of a mention to the Wikipedia categories of an entity candidate.
+Lately, <cite class="ltx_cite">[<a href="#bib.bib11" title="Large-scale named entity disambiguation based on wikipedia data." class="ltx_ref">6</a>, <a href="#bib.bib14" title="Named entity disambiguation by leveraging wikipedia semantic knowledge" class="ltx_ref">15</a>, <a href="#bib.bib15" title="Named entity disambiguation on an ontology enriched by wikipedia" class="ltx_ref">17</a>]</cite> extended this framework by using richer features for similarity comparison.
+Some authors like Milne and Witten (2008) utilized machine learning methods rather than a similarity function to map mentions to entities.
+They also introduced the notion of semantic relatedness.
+Alternative propositions were suggested in other works like <cite class="ltx_cite">[<a href="#bib.bib13" title="Named entity disambiguation by leveraging wikipedia semantic knowledge" class="ltx_ref">10</a>]</cite> that considered the relatedness of common noun phrases in a mention context with Wikipedia article names.
+While all these approaches focus on semantic relation between entities, their potential is limited by the separate mapping of candidate links for each mention.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Semantic Web Compliant Methods</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">More recently, several systems have been launched as web services dedicated to EL tasks.
+Most of them are compliant with new emergent semantic web standards like LinkedData network.
+DBPedia Spotlight <cite class="ltx_cite">[<a href="#bib.bib5" title="DBpedia Spotlight: Shedding Light on the Web of Documents" class="ltx_ref">14</a>]</cite> is a system that finds mentions of DBpedia <cite class="ltx_cite">[<a href="#bib.bib9" title="Dbpedia: a nucleus for a web of open data" class="ltx_ref">1</a>]</cite> resources in a textual document.
+Wikimeta <cite class="ltx_cite">[<a href="#bib.bib1" title="A disambiguation resource extracted from Wikipedia for semantic annotation" class="ltx_ref">3</a>]</cite> is another system relying on DBpedia.
+It uses bags of words to disambiguate semantic entities according to a cosine similarity algorithm.
+Those systems have been compared with commercial ones like AlchemyAPI, Zemanta, or Open Calais in <cite class="ltx_cite">[<a href="#bib.bib6" title="A Comparison of Knowledge Extraction Tools for the Semantic Web" class="ltx_ref">9</a>]</cite>.
+The study showed that they perform differently on various essential aspects of EL tasks (mention detection, linking, disambiguation).
+This suggests a wide range of potential improvements on many aspects of the EL task.
+Only some of these systems introduce the semantic relatedness in their methods like the AIDA <cite class="ltx_cite">[<a href="#bib.bib7" title="Robust disambiguation of named entities in text" class="ltx_ref">12</a>]</cite> system.
+It proposes a disambiguation method that combines popularity-based priors, similarity measures, and coherence. It relies on the Wikipedia-derived YAGO2 <cite class="ltx_cite">[<a href="#bib.bib8" title="Yago2: exploring and querying world knowledge in time, space, context, and many languages" class="ltx_ref">11</a>]</cite> knowledge base.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Proposed Algorithm</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We propose a mutual disambiguation algorithm that improves the accuracy of entity links in a document by using successive corrections applied to an <span class="ltx_text ltx_font_italic">annotation object</span> representing this document.
+The annotation object is composed of information extracted from the document along with linguistic and semantic annotations as described hereafter.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Annotation Object</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Documents are processed by an annotator capable of producing POS tags for each word,
+as well as spans, NE surface forms, NE labels and ranked candidate Wikipedia URIs for each candidate NE.
+For each document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math>, this knowledge is gathered in an array called <span class="ltx_text ltx_font_italic">annotation object</span>, which has initially one row per document lexical unit.
+Since the system focuses on NEs, rows with lexical units that do not belong to a NE SF are dropped from the annotation object, and NE SF are refined as described in <cite class="ltx_cite">[<a href="#bib.bib24" title="Improving Entity Linking using Surface Form Refinement" class="ltx_ref">5</a>]</cite>.
+When NE SF are spanned over several rows, these rows are merged into a single one.
+Thus, we consider an annotation object <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math>, which is an array with a row for each NE, and columns storing related knowledge.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> NEs were annotated in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> has <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> rows.
+If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> candidate URIs are provided for each NE, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> has <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="(l+4)" display="inline"><mrow><mo>(</mo><mrow><mi>l</mi><mo>+</mo><mn>4</mn></mrow><mo>)</mo></mrow></math> columns <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8" class="ltx_Math" alttext="c_{u,u\in\{1,l+4\}}" display="inline"><msub><mi>c</mi><mrow><mrow><mi>u</mi><mo>,</mo><mi>u</mi></mrow><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mrow><mi>l</mi><mo>+</mo><mn>4</mn></mrow></mrow><mo>}</mo></mrow></mrow></msub></math>.
+Columns <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="c_{l}" display="inline"><msub><mi>c</mi><mi>l</mi></msub></math> store Wikipedia URIs associated with NEs, ordered by decreasing values of likelihood.
+Column <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m11" class="ltx_Math" alttext="c_{l+1}" display="inline"><msub><mi>c</mi><mrow><mi>l</mi><mo>+</mo><mn>1</mn></mrow></msub></math> stores the offset of the NEs,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m12" class="ltx_Math" alttext="c_{l+2}" display="inline"><msub><mi>c</mi><mrow><mi>l</mi><mo>+</mo><mn>2</mn></mrow></msub></math> stores their surface forms,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m13" class="ltx_Math" alttext="c_{l+3}" display="inline"><msub><mi>c</mi><mrow><mi>l</mi><mo>+</mo><mn>3</mn></mrow></msub></math> stores the NE labels (PER, ORG, …), and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m14" class="ltx_Math" alttext="c_{l+4}" display="inline"><msub><mi>c</mi><mrow><mi>l</mi><mo>+</mo><mn>4</mn></mrow></msub></math> stores the (vectors of) POS tags associated with the NE surface forms.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m15" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> contains all the available knowledge about the NEs found in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m16" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math>.
+Before being processed by the disambiguation module, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m17" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> is dynamically updated by correction processes.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Named Entity Label Correction</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">To support the correction process based on co-reference chains, the system tries to correct NE labels for all the NEs listed in the <span class="ltx_text ltx_font_italic">annotation object</span>.
+The NE label correction process assigns the same NE label to all the NEs associated with the same first rank URI.
+For all the rows in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math>, sets of rows with identical first rank URIs are considered.
+Then, for each set, NE labels are counted per type, and all the rows in a same set are updated with the most frequent NE label found in the set, i.e. all the NEs in this set are tagged with this label.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Correction Based on Co-reference Chains</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">First rank candidate URIs are corrected by a process that relies on co-reference chains found in the document.
+The co-reference detection is conducted using the information recorded in the annotation object.
+Among the NEs present in the document, the ones that co-refer are identified and clustered by logical rules
+applied to the content of the annotation object.
+When a co-reference chain of NEs is detected, the system assigns the same URI to all the members of the chain.
+This URI is selected through a decision process that gives more weight to longer surface forms and frequent URIs.
+The following example illustrates an application of this correction process:
+<br class="ltx_break"/>Three sentences are extracted from a document about Paris, the French capital.
+NEs are indicated in brackets, first rank URIs and surface forms are added below the content of each sentence. 
+<br class="ltx_break"/>- [Paris] is famous around the world. 
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn mathsize="normal" stretchy="false">1</mn></msub></math>: <span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org/wiki<span class="ltx_text ltx_font_small">/Paris_Hilton
+<br class="ltx_break"/></span></span></span>NE surface form: <span class="ltx_text ltx_font_typewriter ltx_font_small">Paris
+<br class="ltx_break"/></span>- The [city of Paris] attracts millions of tourists.
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn mathsize="normal" stretchy="false">1</mn></msub></math>: <span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org/wiki<span class="ltx_text ltx_font_small">/Paris
+<br class="ltx_break"/></span></span></span>NE surface form: <span class="ltx_text ltx_font_typewriter ltx_font_small">city of Paris
+<br class="ltx_break"/></span>- The [capital of France] is easy to reach by train.
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn mathsize="normal" stretchy="false">1</mn></msub></math>: <span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org/wiki<span class="ltx_text ltx_font_small">/Paris
+<br class="ltx_break"/></span></span></span>NE surface form: <span class="ltx_text ltx_font_typewriter ltx_font_small">capital of France</span></p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The three NEs found in these sentences compose a co-reference chain.
+The second NE has a longer surface form than the first one, and its associated first rank URI is the most frequent.
+Hence, the co-reference correction process will assign the right URI to the first NE (<span class="ltx_text ltx_font_small">URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn mathsize="normal" stretchy="false">1</mn></msub></math>: <span class="ltx_text ltx_font_typewriter ltx_font_script">http://en.wikipedia.org/wiki<span class="ltx_text ltx_font_small">/Paris</span></span></span>), which was wrongly linked to the actress Paris Hilton.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Mutual Disambiguation Process</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">The extraction of an accurate link is a process occurring after the URI annotation of NEs in the whole document. The system makes use of all the semantic content stored in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math>
+to locally improve the precision of each URI annotation in the document.
+The Mutual Disambiguation Process (MDP) relies on the graph of all the relations (internal links, categories) between Wikipedia content related to the document annotations.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">A basic example of semantic relatedness that should be captured is explained hereafter.
+Let us consider the mention <span class="ltx_text ltx_font_italic">IBM</span> in a given document.
+Candidate NE annotations for this mention can be <span class="ltx_text ltx_font_italic">International Business Machine</span> or <span class="ltx_text ltx_font_italic">International Brotherhood of Magicians</span>.
+But if the <span class="ltx_text ltx_font_italic">IBM</span> mention co-occurs with a <span class="ltx_text ltx_font_italic">Thomas Watson, Jr</span> mention in the document, there will probably be more links between the <span class="ltx_text ltx_font_italic">International Business Machine</span> and <span class="ltx_text ltx_font_italic">Thomas Watson, Jr</span> related Wikipedia pages than between the <span class="ltx_text ltx_font_italic">International Brotherhood of Magicians</span> and <span class="ltx_text ltx_font_italic">Thomas Watson, Jr</span> related Wikipedia pages.
+The purpose of the MDP is to capture this semantic relatedness information contained in the graph of links extracted from Wikipedia pages related to each candidate annotation.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">In MDP, for each Wikipedia URI candidate annotation, all the internal links and categories contained in the source Wikipedia document related to this URI are collected.
+This information will be used to calculate a weight for each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m1" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> candidate URI annotations of each mention.
+For a given NE, this weight is expected to measure the mutual relations of a candidate annotation with all the other candidate annotations of NEs in the document.
+The input of the MDP is an annotation object <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m2" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math>
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> rows, obtained as explained in Section <a href="#S3.SS1" title="3.1 Annotation Object ‣ 3 Proposed Algorithm ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+For all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m4" class="ltx_Math" alttext="i\in[\![1,n]\!]" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m5" class="ltx_Math" alttext="k\in[\![1,l]\!]" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, we build the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m6" class="ltx_Math" alttext="S_{i}^{k}" display="inline"><msubsup><mi>S</mi><mi>i</mi><mi>k</mi></msubsup></math>, composed of the Wikipedia URIs and categories contained in the source Wikipedia document related to the URI stored in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m7" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m8" class="ltx_Math" alttext="[i][k]" display="inline"><mrow><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>k</mi><mo>]</mo></mrow></mrow></math> that we will refer to as URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m9" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math> to ease the reading. 
+<br class="ltx_break"/><span class="ltx_text ltx_font_bold">Scoring</span>:
+<br class="ltx_break"/>For all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m10" class="ltx_Math" alttext="i,~{}j\in[\![1,n]\!]" display="inline"><mrow><mrow><mi>i</mi><mo separator="true">, </mo><mi>j</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m11" class="ltx_Math" alttext="k\in[\![1,l]\!]" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, we want to calculate the weight of mutual relations between the candidate URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m12" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math> and all the first rank candidates URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m13" class="ltx_Math" alttext="{}_{j}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mi>j</mi><none/></mmultiscripts></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m14" class="ltx_Math" alttext="j\neq i" display="inline"><mrow><mi>j</mi><mo>≠</mo><mi>i</mi></mrow></math>.
+The calculation combines two scores that we called <span class="ltx_text ltx_font_italic">direct semantic relation</span> score (dsr_score) and <span class="ltx_text ltx_font_italic">common semantic relation</span> score (csr_score):</p>
+</div>
+<div id="S3.SS4.p4" class="ltx_para">
+<p class="ltx_p">- the dsr_score for
+URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m1" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>
+sums up the number of occurrences of
+URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m2" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>
+in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m3" class="ltx_Math" alttext="S_{j}^{1}" display="inline"><msubsup><mi>S</mi><mi>j</mi><mn>1</mn></msubsup></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m4" class="ltx_Math" alttext="j\in[\![1,n]\!]-\{i\}" display="inline"><mrow><mi>j</mi><mo>∈</mo><mrow><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow><mo>-</mo><mrow><mo>{</mo><mi>i</mi><mo>}</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS4.p5" class="ltx_para">
+<p class="ltx_p">- the csr_score for
+URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m1" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>
+sums up the number of common URIs and categories between
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m2" class="ltx_Math" alttext="S_{i}^{k}" display="inline"><msubsup><mi>S</mi><mi>i</mi><mi>k</mi></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m3" class="ltx_Math" alttext="S_{j}^{1}" display="inline"><msubsup><mi>S</mi><mi>j</mi><mn>1</mn></msubsup></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m4" class="ltx_Math" alttext="j\in[\![1,n]\!]-\{i\}" display="inline"><mrow><mi>j</mi><mo>∈</mo><mrow><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow><mo>-</mo><mrow><mo>{</mo><mi>i</mi><mo>}</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:506.2pt;height:219.722222222222px;vertical-align:-9.9pt;"><span class="ltx_transformed_inner" style="transform:translate(-28.1pt,-8.8pt) scale(.9,.9) ;-webkit-transform:translate(-28.1pt,-8.8pt) scale(.9,.9) ;-ms-transform:translate(-28.1pt,-8.8pt) scale(.9,.9) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_rr" colspan="10">SemLinker</td>
+<td class="ltx_td ltx_align_center" colspan="4">TAC-KBP2012 systems</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">modules</td>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="3">no disambiguation</td>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="3">MDP only</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="3">all modules</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="1^{st}" display="inline"><msup><mn>1</mn><mrow><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="2^{nd}" display="inline"><msup><mn>2</mn><mrow><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="3^{rd}" display="inline"><msup><mn>3</mn><mrow><mi>r</mi><mo>⁢</mo><mi>d</mi></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t">median</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Category</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="B^{3+}P" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>P</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="B^{3+}R" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>R</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m7" class="ltx_Math" alttext="B^{3+}P" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>P</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m8" class="ltx_Math" alttext="B^{3+}R" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>R</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m9" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m10" class="ltx_Math" alttext="B^{3+}P" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>P</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m11" class="ltx_Math" alttext="B^{3+}R" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>R</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m12" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m13" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m14" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m15" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m16" class="ltx_Math" alttext="B^{3+}F1" display="inline"><mrow><msup><mi>B</mi><mrow><mn>3</mn><mo>+</mo></mrow></msup><mo>⁢</mo><mi>F</mi><mo>⁢</mo><mn>1</mn></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Overall</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.620</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.633</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold">0.626</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.675</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.681</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">0.678</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.694</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.695</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold">0.695</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.730</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.699</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.689</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.536</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">PER</td>
+<td class="ltx_td ltx_align_center">0.771</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.791</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.781</td>
+<td class="ltx_td ltx_align_center">0.785</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.795</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.790</td>
+<td class="ltx_td ltx_align_center">0.828</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.838</td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold">0.833</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.809</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.840</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.714</td>
+<td class="ltx_td ltx_align_center">0.645</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">ORG</td>
+<td class="ltx_td ltx_align_center">0.600</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.571</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.585</td>
+<td class="ltx_td ltx_align_center">0.622</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.578</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.599</td>
+<td class="ltx_td ltx_align_center">0.621</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.569</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.594</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.715</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.615</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.717</td>
+<td class="ltx_td ltx_align_center">0.485</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">GPE</td>
+<td class="ltx_td ltx_align_center">0.412</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.465</td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold">0.437</span></td>
+<td class="ltx_td ltx_align_center">0.570</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.628</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.598</td>
+<td class="ltx_td ltx_align_center">0.574</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.626</td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold">0.599</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.627</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.579</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.614</td>
+<td class="ltx_td ltx_align_center">0.428</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">News</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.663</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.691</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">0.677</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.728</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.748</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">0.738</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.750</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.767</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">0.758</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.782</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.759</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.710</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.574</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">Web</td>
+<td class="ltx_td ltx_align_center">0.536</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.520</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.528</td>
+<td class="ltx_td ltx_align_center">0.572</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.550</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.561</td>
+<td class="ltx_td ltx_align_center">0.585</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.556</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">0.570</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.630</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.580</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.508</td>
+<td class="ltx_td ltx_align_center">0.491</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>SemLinker results on the TAC-KBP 2012 test corpus with/out disambiguation modules, and three best results and median from TAC-KBP 2012 systems.</div>
+</div>
+<div id="S3.SS4.p6" class="ltx_para">
+<p class="ltx_p">We assumed the dsr_score was much more semantically significant than the csr_score, and translated this assumption in the weight calculation by introducing two correction parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p6.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p6.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> used in the final scoring calculation.</p>
+</div>
+<div id="S3.SS4.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Re-ranking</span>:
+<br class="ltx_break"/>For all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m1" class="ltx_Math" alttext="i\in[\![1,n]\!]" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, for each set of URIs
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m2" class="ltx_Math" alttext="\{\text{URI}_{i}^{k},~{}k\in[\![1,l]\!]\}" display="inline"><mrow><mo>{</mo><mrow><mrow><msubsup><mtext>URI</mtext><mi>i</mi><mi>k</mi></msubsup><mo separator="true">, </mo><mi>k</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow><mo>}</mo></mrow></math>,
+the re-ranking process is conducted according to the following steps:
+<br class="ltx_break"/>For all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m3" class="ltx_Math" alttext="i\in I" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>I</mi></mrow></math>,</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="\forall k\in[\![1,l]\!]" display="inline"><mrow><mrow><mo>∀</mo><mi>k</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, calculate dsr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>)</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="\forall k\in[\![1,l]\!]" display="inline"><mrow><mrow><mo>∀</mo><mi>k</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, calculate csr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>)</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="\forall k\in[\![1,l]\!]" display="inline"><mrow><mrow><mo>∀</mo><mi>k</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math>, calculate
+<br class="ltx_break"/>mutual_relation_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m2" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>) = 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m3" class="ltx_Math" alttext="\alpha." display="inline"><mrow><mi>α</mi><mo>.</mo></mrow></math>dsr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m4" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>)+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m5" class="ltx_Math" alttext="\beta." display="inline"><mrow><mi>β</mi><mo>.</mo></mrow></math>csr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m6" class="ltx_Math" alttext="{}_{i}^{k}" display="inline"><mmultiscripts><msup><mi/><mi>k</mi></msup><mprescripts/><mi>i</mi><none/></mmultiscripts></math>)</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">re-order <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i4.p1.m1" class="ltx_Math" alttext="\{\text{URI}_{i}^{k},~{}k\in[\![1,l]\!]\}" display="inline"><mrow><mo>{</mo><mrow><mrow><msubsup><mtext>URI</mtext><mi>i</mi><mi>k</mi></msubsup><mo separator="true">, </mo><mi>k</mi></mrow><mo>∈</mo><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>l</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow></mrow><mo>}</mo></mrow></math>, by 
+<br class="ltx_break"/>decreasing order of mutual relation score.</p>
+</div></li>
+</ol>
+<p class="ltx_p">In the following, we detail the MDP in the context of a toy example to illustrate how it works.
+The document contains two sentences, NE mentions are in bold:</p>
+<p class="ltx_p" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">IBM<span class="ltx_text ltx_font_medium"> has 12 research laboratories worldwide. </span>Thomas J. Watson, Jr.<span class="ltx_text ltx_font_medium"> became president of the company.<span class="ltx_text ltx_font_serif">
+</span></span></span></p>
+<p class="ltx_p">For the first NE mention [<span class="ltx_text ltx_font_typewriter ltx_font_bold">IBM</span>], <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m4" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> contains two candidate URIs identifying two different resources:</p>
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_script">[<span class="ltx_text ltx_font_typewriter ltx_font_bold">IBM</span>]
+URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m5" class="ltx_Math" alttext="{}_{1}^{1}\equiv\text{{International Brotherhood of Magicians}}" display="inline"><mrow><mmultiscripts><msup><mi/><mn mathsize="normal" stretchy="false">1</mn></msup><mprescripts/><mn mathsize="normal" stretchy="false">1</mn><none/></mmultiscripts><mo mathsize="normal" stretchy="false">≡</mo><mtext mathsize="small" mathvariant="monospace" stretchy="false">International Brotherhood of Magicians</mtext></mrow></math></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_script">URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m6" class="ltx_Math" alttext="{}_{1}^{2}\equiv\text{{International Business Machines Corporation}}" display="inline"><mrow><mmultiscripts><msup><mi/><mn mathsize="normal" stretchy="false">2</mn></msup><mprescripts/><mn mathsize="normal" stretchy="false">1</mn><none/></mmultiscripts><mo mathsize="normal" stretchy="false">≡</mo><mtext mathsize="small" mathvariant="monospace" stretchy="false">International Business Machines Corporation</mtext></mrow></math>
+</span></p>
+</span>
+<p class="ltx_p">For the second NE mention [<span class="ltx_text ltx_font_typewriter ltx_font_bold">Thomas J. Watson, Jr.</span>], <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m7" class="ltx_Math" alttext="\mathcal{A_{D}}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi class="ltx_font_mathcaligraphic">𝒟</mi></msub></math> contains the following candidate URI, which is ranked first:</p>
+<p class="ltx_p" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;"><span class="ltx_text ltx_font_script">[<span class="ltx_text ltx_font_typewriter ltx_font_bold">Thomas J. Watson, Jr.</span>]
+URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m8" class="ltx_Math" alttext="{}_{2}^{1}\equiv\text{{Thomas Watson, Jr.}}" display="inline"><mrow><mmultiscripts><msup><mi/><mn mathsize="normal" stretchy="false">1</mn></msup><mprescripts/><mn mathsize="normal" stretchy="false">2</mn><none/></mmultiscripts><mo mathsize="normal" stretchy="false">≡</mo><mtext mathsize="small" mathvariant="monospace" stretchy="false">Thomas Watson, Jr.</mtext></mrow></math>
+</span></p>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m9" class="ltx_Math" alttext="S_{1}^{1}" display="inline"><msubsup><mi>S</mi><mn>1</mn><mn>1</mn></msubsup></math> gathers URIs and categories contained in the <span class="ltx_text ltx_font_typewriter ltx_font_script">International Brotherhood of Magicians</span> Wikipedia page.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m10" class="ltx_Math" alttext="S_{1}^{2}" display="inline"><msubsup><mi>S</mi><mn>1</mn><mn>2</mn></msubsup></math> is associated to the <span class="ltx_text ltx_font_typewriter ltx_font_script">International Business Machines Corporation</span>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m11" class="ltx_Math" alttext="S_{2}^{1}" display="inline"><msubsup><mi>S</mi><mn>2</mn><mn>1</mn></msubsup></math> to the <span class="ltx_text ltx_font_typewriter ltx_font_script">Thomas Watson, Jr.</span> page. dsr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m12" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math>) sums up the number of occurrences of URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m13" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m14" class="ltx_Math" alttext="S_{j}^{1}" display="inline"><msubsup><mi>S</mi><mi>j</mi><mn>1</mn></msubsup></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m15" class="ltx_Math" alttext="j\in[\![1,n]\!]-\{1\}" display="inline"><mrow><mi>j</mi><mo>∈</mo><mrow><mrow><mo>[</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow><mo>]</mo></mrow><mo>]</mo></mrow><mo>-</mo><mrow><mo>{</mo><mn>1</mn><mo>}</mo></mrow></mrow></mrow></math>.
+Hence, in the current example, dsr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m16" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math>) is the number of occurrences of URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m17" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m18" class="ltx_Math" alttext="S_{2}^{1}" display="inline"><msubsup><mi>S</mi><mn>2</mn><mn>1</mn></msubsup></math>,
+namely the number of times the <span class="ltx_text ltx_font_typewriter ltx_font_script">International Brotherhood of Magicians</span> are cited in the <span class="ltx_text ltx_font_typewriter ltx_font_script">Thomas Watson, Jr.</span> page.
+Similarly, dsr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m19" class="ltx_Math" alttext="{}_{1}^{2}" display="inline"><mmultiscripts><msup><mi/><mn>2</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math>) is equal to the number of times the <span class="ltx_text ltx_font_typewriter ltx_font_script">International Business Machines Corporation</span> is cited in the <span class="ltx_text ltx_font_typewriter ltx_font_script">Thomas Watson, Jr.</span> page. 
+<br class="ltx_break"/>csr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m20" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn>1</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math>) sums up the number of common URIs and categories between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m21" class="ltx_Math" alttext="S_{1}^{1}" display="inline"><msubsup><mi>S</mi><mn>1</mn><mn>1</mn></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m22" class="ltx_Math" alttext="S_{2}^{1}" display="inline"><msubsup><mi>S</mi><mn>2</mn><mn>1</mn></msubsup></math>,
+i.e. the number of URIs and categories appearing in both <span class="ltx_text ltx_font_typewriter ltx_font_script">International Brotherhood of Magicians</span> and <span class="ltx_text ltx_font_typewriter ltx_font_script">Thomas Watson, Jr.</span> pages.
+csr_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m23" class="ltx_Math" alttext="{}_{1}^{2}" display="inline"><mmultiscripts><msup><mi/><mn>2</mn></msup><mprescripts/><mn>1</mn><none/></mmultiscripts></math>) counts the number of URIs and categories appearing in both <span class="ltx_text ltx_font_typewriter ltx_font_script">International Business Machines Corporation</span> and <span class="ltx_text ltx_font_typewriter ltx_font_script">Thomas Watson, Jr.</span> pages.
+<br class="ltx_break"/>After calculation, we have:
+<br class="ltx_break"/><span class="ltx_text ltx_font_small">
+mutual_relation_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m24" class="ltx_Math" alttext="{}_{1}^{1}" display="inline"><mmultiscripts><msup><mi/><mn mathsize="normal" stretchy="false">1</mn></msup><mprescripts/><mn mathsize="normal" stretchy="false">1</mn><none/></mmultiscripts></math>) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m25" class="ltx_Math" alttext="&lt;" display="inline"><mo mathsize="normal" stretchy="false">&lt;</mo></math> mutual_relation_score(URI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m26" class="ltx_Math" alttext="{}_{1}^{2}" display="inline"><mmultiscripts><msup><mi/><mn mathsize="normal" stretchy="false">2</mn></msup><mprescripts/><mn mathsize="normal" stretchy="false">1</mn><none/></mmultiscripts></math>)
+</span>
+The candidate URIs for [<span class="ltx_text ltx_font_typewriter ltx_font_bold">IBM</span>] are re-ranked accordingly, and <span class="ltx_text ltx_font_typewriter ltx_font_script">International Business Machines Corporation</span> becomes its first rank candidate.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments and Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">SemLinker has been evaluated on the TAC-KBP 2012 EL task <cite class="ltx_cite">[<a href="#bib.bib23" title="SemLinker system for KBP2013: A disambiguation algorithm based on mutual relations of semantic annotations inside a document." class="ltx_ref">4</a>]</cite>.
+In this task, mentions of entities found in a document collection must be linked to entities in a reference KB, or to new named entities discovered in the collection.
+The document collection built for KBP 2012 contains a combination of newswire articles (News), posts to blogs and newsgroups (Web).
+Given a query that consists of a document with a specified name mention of an entity, the task is to determine the correct node in the reference KB for the entity, adding a new node for the entity if it is not already in the reference KB.
+Entities can be of type person (PER), organization (ORG), or geopolitical entity (GPE).
+The reference knowledge base is derived from an October 2008 dump of English Wikipedia, which includes 818,741 nodes.
+Table <a href="#S4.T2" title="Table 2 ‣ 4 Experiments and Results ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> provides a breakdown of the queries per categories of entities, and per type of documents.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:209.2pt;height:47.5px;vertical-align:-1.8pt;"><span class="ltx_transformed_inner" style="transform:translate(-11.6pt,-1.9pt) scale(0.9,0.9) ;-webkit-transform:translate(-11.6pt,-1.9pt) scale(0.9,0.9) ;-ms-transform:translate(-11.6pt,-1.9pt) scale(0.9,0.9) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Category</th>
+<th class="ltx_td ltx_align_center">All</th>
+<th class="ltx_td ltx_align_center">PER</th>
+<th class="ltx_td ltx_align_center">ORG</th>
+<th class="ltx_td ltx_align_center">GPE</th>
+<th class="ltx_td ltx_align_center">News</th>
+<th class="ltx_td ltx_align_center">Web</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"># queries</th>
+<td class="ltx_td ltx_align_center ltx_border_t">2226</td>
+<td class="ltx_td ltx_align_center ltx_border_t">918</td>
+<td class="ltx_td ltx_align_center ltx_border_t">706</td>
+<td class="ltx_td ltx_align_center ltx_border_t">602</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1471</td>
+<td class="ltx_td ltx_align_center ltx_border_t">755</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Breakdown of the TAC-KBP 2012 test corpus queries according to entity types, and document categories.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">A complete description of these linguistic resources can be found in <cite class="ltx_cite">[<a href="#bib.bib19" title="Linguistic resources for 2012 knowledge base population evaluations" class="ltx_ref">7</a>]</cite>.
+For the sake of reproducibility, we applied the KBP scoring metric (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="B^{3}+F" display="inline"><mrow><msup><mi>B</mi><mn>3</mn></msup><mo>+</mo><mi>F</mi></mrow></math>) described in <cite class="ltx_cite">[<a href="#bib.bib20" title="Proposed Task Description for Knowledge-Base Population at TAC 2012" class="ltx_ref">20</a>]</cite>,
+and we used the KBP scorer<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://www.nist.gov/tac/2013/KBP/EntityLinking/tools.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.nist.gov/tac/2013/KBP/EntityLinking/tools.html</span></a></span></span></span>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">The evaluated system makes use of the Wikimeta annotation engine.
+The maximum number of candidate URIs is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="l=15" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>15</mn></mrow></math>.
+The MDP correction parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> described in Section <a href="#S3.SS4" title="3.4 Mutual Disambiguation Process ‣ 3 Proposed Algorithm ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a> have been experimentally set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="\alpha=10" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>10</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m5" class="ltx_Math" alttext="\beta=2" display="inline"><mrow><mi>β</mi><mo>=</mo><mn>2</mn></mrow></math>.
+Table <a href="#S3.T1" title="Table 1 ‣ 3.4 Mutual Disambiguation Process ‣ 3 Proposed Algorithm ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents the results obtained by the system in three configurations.
+In the first column, the system is evaluated without the disambiguation module.
+In the second column, we applied the MDP without correction processes.
+The system with the complete disambiguation module obtained the results provided in the third column.
+The three best results and the median from TAC-KBP 2012 systems are shown in the remaining columns for the sake of comparison.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">We observe that the complete algorithm (co-references, named entity labels and MDP) provides the best results on PER NE links.
+On GPE and ORG entities, the simple application of MDP without prior corrections obtains the best results.
+A slight loss of accuracy is observed on ORG NEs when the MDP is applied with corrections.
+For those three categories of entities, we show that the complete system improves the performance of a simple algorithm using distance measures.
+Results on categories News and Web show that the best performance on the whole KBP corpus (without distinction of NE categories) is obtained with the complete algorithm.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The presented system provides a robust semantic disambiguation method, based on mutual relation of entities inside a document, using a standard annotation engine.
+It uses co-reference, NE normalization methods, and Wikipedia internal links as mutual disambiguation resource to improve the annotations.
+We show that our proposition improves the performance of a standard annotation engine applied to the TAC-KBP evaluation framework.
+SemLinker is fully implemented, and publicly released as an open source toolkit (<span class="ltx_text ltx_font_typewriter ltx_font_footnote">http://code.google.com/p/semlinker</span>).
+It has been deployed in the TAC-KBP 2013 evaluation campaign.
+Our future work will integrate other annotation engines in the system architecture in a collaborative approach.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was supported as part of Dr Eric Charton’s Mitacs Elevate Grant sponsored by 3CE.
+Participation of Dr Marie-Jean Meurs was supported by the Genozymes Project funded by Genome Canada &amp; Génome Québec.
+The Concordia Tsang Lab provided computing resources.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Auer, C. Bizer, G. Kobilarov, J. Lehmann, R. Cyganiak and Z. Ives</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dbpedia: a nucleus for a web of open data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">The semantic web</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 722–735</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. C. Bunescu and M. Pasca</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using encyclopedic knowledge for named entity disambiguation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Wikipedia-based Disambiguation Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charton and M. Gagnon</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A disambiguation resource extracted from Wikipedia for semantic annotation</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.lrec-conf.org/lrec2012/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charton, M. Meurs, L. Jean-Louis and M. Gagnon</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemLinker system for KBP2013: A disambiguation algorithm based on mutual relations of semantic annotations inside a document.</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.nist.gov/tac/2013/KBP/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments and Results ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charton, M. Meurs, L. Jean-Louis and M. Gagnon</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving Entity Linking using Surface Form Refinement</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.lrec-conf.org/lrec2012/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Annotation Object ‣ 3 Proposed Algorithm ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Cucerzan</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale named entity disambiguation based on wikipedia data.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Wikipedia-based Disambiguation Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Ellis, X. Li, K. Griffitt, S. M. Strassel and J. Wright</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic resources for 2012 knowledge base population evaluations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experiments and Results ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fahrni, T. Göckel and M. Strube</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">HITSâmonolingual and cross-lingual entity linking system at tac 2012: a joint approach</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Gangemi</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Comparison of Knowledge Extraction Tools for the Semantic Web</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://link.springer.com/chapter/10.1007/978-3-642-38288-8_24" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Han and J. Zhao</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Named entity disambiguation by leveraging wikipedia semantic knowledge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Wikipedia-based Disambiguation Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hoffart, F. M. Suchanek, K. Berberich, E. Lewis-Kelham, G. De Melo and G. Weikum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Yago2: exploring and querying world knowledge in time, space, context, and many languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 229–232</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hoffart, M. A. Yosef, I. Bordino, H. Fürstenau, M. Pinkal, M. Spaniol, B. Taneva, S. Thater and G. Weikum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Robust disambiguation of named entities in text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 782–792</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Ji, R. Grishman, H. Dang and K. Griffitt</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the TAC 2010 knowledge base population track</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of TAC 2010</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1117458812938</span>,
+<a href="http://nlp.cs.qc.cuny.edu/kbp2011.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. N. Mendes, M. Jakob, A. García-Silva and C. Bizer</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DBpedia Spotlight: Shedding Light on the Web of Documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://oa.upm.es/8923/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Semantic Web Compliant Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. N. Milne and I. H. Witten</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Named entity disambiguation by leveraging wikipedia semantic knowledge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Wikipedia-based Disambiguation Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Navigli</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word sense disambiguation: a survey</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Computing Surveys (CSUR)</span> <span class="ltx_text ltx_bib_volume">41</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. T. Nguyen and T. H. Cao</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Named entity disambiguation on an ontology enriched by wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 247–254</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Wikipedia-based Disambiguation Methods ‣ 2 Related Work ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Popov, A. Kiryakov, A. Kirilov, D. Manov, D. Ognyanoff and M. Goranov</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">KIM – Semantic annotation platform</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Lecture Notes in Computer Science</span>, <span class="ltx_text ltx_bib_pages"> pp. 834–849</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.springerlink.com/index/31L2TK95LCDV76PY.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Strube and S. P. Ponzetto</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WikiRelate! Computing Semantic Relatedness Using Wikipedia</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 1419–1424</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">TAC-KBP</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Proposed Task Description for Knowledge-Base Population at TAC 2012</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.nist.gov/tac/2012/KBP/task_guidelines/KBP2012_TaskDefinition_1.1.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experiments and Results ‣ Mutual Disambiguation for Entity Linking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:57:39 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

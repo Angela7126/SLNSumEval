@@ -1,0 +1,621 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Optimal cost almost-sure reachability in POMDPs.
+   </title>
+   <abstract>
+    We consider partially observable Markov decision processes (POMDPs) with a set of target states and an integer cost associated with every transition. The optimization objective we study asks to minimize the expected total cost of reaching a state in the target set, while ensuring that the target set is reached almost surely (with probability 1). We show that for integer costs approximating the optimal cost is undecidable. For positive costs, our results are as follows: (i) we establish matching lower and upper bounds for the optimal cost, both double exponential in the POMDP state space size; (ii) we show that the problem of approximating the optimal cost is decidable and present approximation algorithms developing on the existing algorithms for POMDPs with finite-horizon objectives. While the worst-case running time of our algorithm is double exponential, we also present efficient stopping criteria for the algorithm and show experimentally that it performs well in many examples of interest.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Partially observable Markov decision processes (POMDPs).Markov decision processes (MDPs) are standard models for probabilistic systems that exhibit both probabilistic as well as nondeterministic behavior [21]. MDPs are widely used to model and solve control problems for stochastic systems [17], [42]: nondeterminism represents the freedom of the controller to choose a control action, while the probabilistic component of the behavior describes the system response to control actions. In perfect-observation (or perfect-information) MDPs the controller observes the current state of the system precisely to choose the next control actions, whereas in partially observable MDPs (POMDPs) the state space is partitioned according to observations that the controller can receive, i.e., given the current state, the controller can only view an observation of the state (the partition the state belongs to), but not the precise state [37]. POMDPs provide the appropriate model to study a wide variety of applications such as in computational biology [15], speech processing [36], image processing [14], robot planning [27], [22], reinforcement learning [23], to name a few. POMDPs also subsume many other powerful computational models such as probabilistic finite automata (PFA) [43], [40] (since probabilistic finite automata (a.k.a. blind POMDPs) are a special case of POMDPs with a single observation).
+     </paragraph>
+     <paragraph>
+      Classical optimization objectives. In stochastic optimization problems related to POMDPs, the transitions in the POMDPs are associated with integer costs, and the two classical objectives that have been widely studied are finite-horizon and discounted-sum objectives [17], [42], [37]. For finite-horizon objectives, a finite positive integer k is given and the goal is to minimize the expected total cost for k steps. In the discounted-sum objective, the cost at the j-th step is multiplied by {a mathematical formula}γj, for {a mathematical formula}0&lt;γ&lt;1, and the goal is to minimize the expected total discounted cost over the infinite horizon.
+     </paragraph>
+     <paragraph>
+      Reachability and total-cost. In this work we consider a different optimization objective for POMDPs. We consider POMDPs with a set of target states, and the optimization objective is to minimize the expected total cost of reaching a state in the target set. First, note that the objective is not the discounted sum, but the total sum without discounting. Second, the objective is not a finite-horizon objective, as there is no apriori horizon by which the target set needs to be reached, and along different paths the target set can be reached at different time points. The objective we consider (a.k.a. indefinite-horizon objectives) is very relevant in many control applications such as robot planning: for example, the robot has a target or goal, and the objective is to minimize the number of steps to reach the target; or, every transition is associated with energy consumption and the objective is to reach the target with minimal energy consumption.
+     </paragraph>
+     <paragraph>
+      Our contributions. In this work we study POMDPs with a set of target states, and costs in every transition, and the goal is to minimize the expected total cost of reaching a state in the target set, while ensuring that the target set is reached almost surely (with probability 1). Our results are as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       (Integer costs). We first show that if the transition costs are integers, then approximating the optimal cost is undecidable.
+      </list-item>
+      <list-item label="2.">
+       (Positive integer costs). Since the problem is undecidable for integer costs, we next consider that costs are positive integers. We first remark that if the costs are positive, and there is a positive probability not to reach the target set, then the expected total cost is infinite. Hence the expected total cost is not infinite only by ensuring that the target is reached almost surely. First we establish a double exponential lower and upper bound for the expected optimal cost: (a) for all POMDPs with positive costs, when the expected optimal cost is finite, we establish an upper bound on the optimal cost that is double exponential in the number of states times the maximal cost; and (b) we present a family of POMDPs with costs only 1 (and 0 after the target is reached), where the expected optimal cost is finite but double exponential in the number of states. We show that the approximation problem is decidable, and present approximation algorithms using the well-known algorithms for finite-horizon objectives. The length of the finite horizon depends on the expected optimal cost, and is at most double exponential given our upper bound.
+      </list-item>
+      <list-item label="3.">
+       (Implementation). Though we establish that in the worst-case the algorithm requires time double exponential in the number of states, we also present efficient stopping criteria for the algorithm, and experimentally show that the algorithm is efficient in several practical examples. Our implementation of the proposed approximation algorithms is based on the existing POMDP solvers for finite-horizon objectives, and we present experimental results on a number of well-known examples of POMDPs.
+      </list-item>
+     </list>
+     <paragraph>
+      Discussions about the implication of the results and detailed description of the POMDP benchmarks are presented in the appendix.
+     </paragraph>
+     <paragraph>
+      Comparison with Goal-POMDPs. While there are several pieces of work for discounted POMDPs [28], [45], [41], as mentioned above the problem we consider is different from discounted POMDPs. The most closely related work are Goal-MDPs and POMDPs [4], [26]. The key differences are as follows: (a) our results for approximation apply to all POMDPs with positive integer costs, whereas the solution for Goal-POMDPs applies to a strict subclass of POMDPs (see Remark 7); and (b) we present asymptotically tight (double exponential) theoretical bounds on the expected optimal costs.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Definitions
+     </section-title>
+     <paragraph>
+      We present the definitions of POMDPs, strategies, objectives, and other basic notions required for our results. Throughout this work, we follow standard notations from [42], [30].
+     </paragraph>
+     <paragraph>
+      Notations. Given a finite set X, we denote by {a mathematical formula}P(X) the set of subsets of X, i.e., {a mathematical formula}P(X) is the power set of X. A probability distribution f on X is a function {a mathematical formula}f:X→[0,1] such that {a mathematical formula}∑x∈Xf(x)=1, and we denote by {a mathematical formula}D(X) the set of all probability distributions on X. For {a mathematical formula}f∈D(X) we denote by {a mathematical formula}Supp(f)={x∈X|f(x)&gt;0} the support of f.
+     </paragraph>
+     <paragraph>
+      POMDPs. A Partially Observable Markov Decision Process (POMDP) is a tuple {a mathematical formula}G=(S,A,δ,Z,O,λ0) where:
+     </paragraph>
+     <list>
+      <list-item label="–">
+       S is a finite set of states;
+      </list-item>
+      <list-item label="–">
+       {a mathematical formula}A is a finite alphabet of actions;
+      </list-item>
+      <list-item label="–">
+       {a mathematical formula}δ:S×A→D(S) is a probabilistic transition function that given a state s and an action {a mathematical formula}a∈A gives the probability distribution over the successor states, i.e., {a mathematical formula}δ(s,a)(s′) denotes the transition probability from s to {a mathematical formula}s′ given action a (i.e., the Markov property of the model prescribes that the successor state depends only on the current state and the action played);
+      </list-item>
+      <list-item label="–">
+       {a mathematical formula}Z is a finite set of observations;
+      </list-item>
+      <list-item label="–">
+       {a mathematical formula}O:S×A→D(Z) is an observation function that maps every state–action pair to a distribution over the set of observations {a mathematical formula}Z; and
+      </list-item>
+      <list-item label="–">
+       {a mathematical formula}λ0 is the initial state probability distribution. For all {a mathematical formula}s,s′∈Supp(λ0) we require that {a mathematical formula}O(s)=O(s′). If the initial distribution is Dirac, we often write {a mathematical formula}λ0 as {a mathematical formula}s0 where {a mathematical formula}s0 is the unique starting (or initial) state.
+      </list-item>
+     </list>
+     <paragraph>
+      Given {a mathematical formula}s,s′∈S and {a mathematical formula}a∈A, we also write {a mathematical formula}δ(s′|s,a) for {a mathematical formula}δ(s,a)(s′). A state s is absorbing if for all actions a we have {a mathematical formula}δ(s,a)(s)=1 (i.e., s is never left from s).
+     </paragraph>
+     <paragraph label="Remark 1">
+      Deterministic observation functionWe remark that deterministic observation functions of type {a mathematical formula}O:S→Z are sufficient in POMDPs. Given a POMDP {a mathematical formula}G=(S,A,δ,Z,O,λ0), the most general type of the observation function {a mathematical formula}O considered in the literature is of type {a mathematical formula}O:S×A→D(Z), i.e., the state and the action gives a probability distribution over the set of observations {a mathematical formula}Z. We show how to transform the POMDP G into one where the observation function is deterministic and defined on states, i.e., of type {a mathematical formula}O′:S→Z. We construct an equivalent polynomially larger POMDP {a mathematical formula}G′=(S′,A,δ′,Z,O′,λ0′) as follows: (i) the new state space is {a mathematical formula}S′=S×Z; (ii) the transition function {a mathematical formula}δ′ given a state {a mathematical formula}(s,z)∈S′ and an action a is as follows {a mathematical formula}δ′((s,z),a)(s′,z′)=δ(s,a)(s′)⋅O(s′,a)(z′); and (iii) the deterministic observation function for a state {a mathematical formula}(s,z)∈S′ is defined as {a mathematical formula}O′((s,z))=z. Informally, the probabilistic aspect of the observation function is captured in the transition function, and by enlarging the state space with the product with the observations, we obtain an observation function only on states. Thus in the sequel without loss of generality we will always consider observation function of type {a mathematical formula}O′:S→Z which greatly simplifies the notation.
+     </paragraph>
+     <paragraph>
+      Observation notation and perfect-information MDPs. Since we consider deterministic observation function (Remark 1) several notations become simpler. For an observation z, we denote by {a mathematical formula}O−1(z)={s∈S|O(s)=z} the set of states with observation z. For a set {a mathematical formula}U⊆S of states and {a mathematical formula}Z⊆Z of observations we denote {a mathematical formula}O(U)={z∈Z|∃s∈U.O(s)=z} and {a mathematical formula}O−1(Z)=⋃z∈ZO−1(z). A POMDP is a perfect-observation (or perfect-information) MDP if each state has a unique observation.
+     </paragraph>
+     <paragraph>
+      Plays and cones. A play (or a path) in a POMDP is an infinite sequence {a mathematical formula}(s0,a0,s1,a1,s2,a2,…) of states and actions such that for all {a mathematical formula}i≥0 we have {a mathematical formula}δ(si,ai)(si+1)&gt;0 and {a mathematical formula}s0∈Supp(λ0). We write Ω for the set of all plays. For a finite prefix {a mathematical formula}w∈(S⋅A)⁎⋅S of a play, we denote by {a mathematical formula}Cone(w) the set of plays with w as the prefix (i.e., the cone or cylinder of the prefix w), and denote by {a mathematical formula}Last(w) the last state of w.
+     </paragraph>
+     <paragraph>
+      Belief support and belief-support updates. For a finite prefix {a mathematical formula}w=(s0,a0,s1,a1,…,sn) we denote by {a mathematical formula}O(w)=(O(s0),a0,O(s1),a1,…,O(sn)) the observation and action sequence associated with w. Note that without loss of generality we already assume that the POMDP is equipped with a deterministic observation function as discussed in Remark 1 and thus for all {a mathematical formula}si we have that {a mathematical formula}O(si) is the corresponding observation. Given a finite prefix {a mathematical formula}w=(s0,a0,s1,a1,…,sn) let {a mathematical formula}ρ=O(w)=(z0,a0,z1,a1,…,zn) be the sequence of observations and actions, the belief support{a mathematical formula}B(ρ) after the prefix ρ is the set of states in which a finite prefix of a play can be after the sequence ρ of observations and actions, i.e.,{a mathematical formula} The belief-support updates associated with finite-prefixes are as follows: for prefixes w and {a mathematical formula}w′=w⋅a⋅s the belief-support update is defined inductively as {a mathematical formula}B(O(w′))=(⋃s1∈B(O(w))Supp(δ(s1,a)))∩O−1(O(s)), i.e., the set {a mathematical formula}(⋃s1∈B(O(w))Supp(δ(s1,a))) denotes the possible successors given the belief-support {a mathematical formula}B(O(w)) and action a, and then the intersection with the set of states with the current observation {a mathematical formula}O(s) gives the new belief-support set.
+     </paragraph>
+     <paragraph>
+      Strategies (or policies). A strategy (or a policy) is a recipe to extend finite sequences of observations and actions and is a function {a mathematical formula}σ:(Z⋅A)⁎⋅Z→D(A) that given a finite history (i.e., a finite prefix of observations and actions) selects a probability distribution over the actions. We denote by Σ the set of all strategies. A strategy σ is belief-support-based stationary if it depends only on the current belief support, i.e., whenever for two histories of observations and actions ρ and {a mathematical formula}ρ′, we have {a mathematical formula}B(ρ)=B(ρ′), then {a mathematical formula}σ(ρ)=σ(ρ′).
+     </paragraph>
+     <paragraph>
+      Strategies with memory and finite-memory strategies. A strategy with memory is a tuple {a mathematical formula}σ=(σu,σn,M,m0) where: (i) (Memory set). M is a denumerable set (finite or infinite) of memory elements (or memory states). (ii) (Action selection function). The function {a mathematical formula}σn:M→D(A) is the action selection function that given the current memory state gives the probability distribution over actions. (iii) (Memory update function). The function {a mathematical formula}σu:M×Z×A→D(M) is the memory update function that given the current memory state, the current observation and action, updates the memory state probabilistically. (iv) (Initial memory). The memory state {a mathematical formula}m0∈M is the initial memory state. A strategy is a finite-memory strategy if the set M of memory elements is finite. A strategy is pure (or deterministic) if the memory update function and the action selection function are deterministic, i.e., {a mathematical formula}σu:M×Z×A→M and {a mathematical formula}σn:M→A. The general class of strategies is sometimes referred to as the class of randomized infinite-memory strategies.
+     </paragraph>
+     <paragraph>
+      Probability and expectation measures. Given a strategy σ and a starting state s, the unique probability measure obtained given σ is denoted as {a mathematical formula}Psσ(⋅). Let {a mathematical formula}K:(S⋅A)⁎⋅S→D((Z⋅A)⁎⋅Z) be the probability distribution that given a finite prefix w of a play gives a probability distribution over the observation and action history ρ received by the strategy. We first define the measure {a mathematical formula}μsσ(⋅) on cones. For {a mathematical formula}w=s we have {a mathematical formula}μsσ(Cone(w))=1, and for {a mathematical formula}w=s′ where {a mathematical formula}s≠s′ we have {a mathematical formula}μsσ(Cone(w))=0; and for {a mathematical formula}w′=w⋅a⋅s we have{a mathematical formula} By Carathéodory's extension theorem, the function {a mathematical formula}μsσ(⋅) can be uniquely extended to a probability measure {a mathematical formula}Psσ(⋅) over Borel sets of infinite plays [3]. We denote by {a mathematical formula}Esσ[⋅] the expectation measure associated with the strategy σ. For an initial distribution {a mathematical formula}λ0 we have {a mathematical formula}Pλ0σ(⋅)=∑s∈Sλ0(s)⋅Psσ(⋅) and {a mathematical formula}Eλ0σ[⋅]=∑s∈Sλ0(s)⋅Esσ[⋅].
+     </paragraph>
+     <paragraph>
+      Objectives. We consider reachability and total-cost objectives.
+     </paragraph>
+     <list>
+      <list-item label="–">
+       Reachability objectives. A reachability objective in a POMDP G is a measurable set {a mathematical formula}φ⊆Ω of plays and is defined as follows: given a set {a mathematical formula}T⊆S of target states, the reachability objective {a mathematical formula}Reach(T)={(s0,a0,s1,a1,s2…)∈Ω|∃i≥0:si∈T} is the set of plays where a target state in T is visited at least once.
+      </list-item>
+      <list-item label="–">
+       Total-cost and finite-length total-cost objectives. A total-cost objective is defined as in [39], [19] as follows: Let G be a POMDP with a set of absorbing target states T and a cost function {a mathematical formula}c:S×A→Z that assigns integer-valued weights to all states and actions such that for all states {a mathematical formula}t∈T and all actions {a mathematical formula}a∈A we have {a mathematical formula}c(t,a)=0. The total cost of a play {a mathematical formula}ρ=(s0,a0,s1,a1,s2,a2,…) is {a mathematical formula}Total(ρ)=∑i=0∞c(si,ai) the sum of the costs of the play. To analyze total-cost objectives we will also require finite-length total-cost objectives, that for a given length k sum the total costs upto length k; i.e., {a mathematical formula}Totalk(ρ)=∑i=0kc(si,ai).
+      </list-item>
+     </list>
+     <paragraph>
+      Values of strategies. The value of a strategy {a mathematical formula}σ∈Σ, denoted {a mathematical formula}Val(σ), is the expected total cost, i.e., {a mathematical formula}Val(σ)=Eλ0σ[Total].
+     </paragraph>
+     <paragraph>
+      Almost-sure winning. Given a POMDP G with a reachability objective {a mathematical formula}Reach(T), a strategy {a mathematical formula}σ∈Σ is almost-sure winning iff {a mathematical formula}Pλ0σ(Reach(T))=1. We will denote by {a mathematical formula}AlmostG(T) the set of almost-sure winning strategies in POMDP G for the objective {a mathematical formula}Reach(T). Given a set U such that all states in U have the same observation, a strategy is almost-sure winning from U, if given the uniform probability distribution {a mathematical formula}λU over U we have {a mathematical formula}PλUσ(Reach(T))=1; i.e., the strategy ensures almost-sure winning if the starting belief support is U.
+     </paragraph>
+     <paragraph>
+      Optimal cost, and optimal cost under almost-sure winning. Given a POMDP G with a cost function {a mathematical formula}c and a reachability objective {a mathematical formula}Reach(T), we consider the problem of minimizing the expected total cost, as well as minimizing the expected total cost while ensuring that the target set is reached almost surely. Formally, the optimal cost (resp., optimal cost under almost-sure winning) is defined as the infimum of the expected total costs among all strategies (resp., all almost-sure winning strategies):{a mathematical formula}Approximating optimal costs. The problem of approximating {a mathematical formula}optCost (resp., {a mathematical formula}optAsCost) asks for strategies {a mathematical formula}σ∈Σ (resp., {a mathematical formula}σ∈AlmostG(T)) such that the value {a mathematical formula}Val(σ) approximates the optimal cost {a mathematical formula}optCost (resp., {a mathematical formula}optAsCost). Formally, given {a mathematical formula}ϵ&gt;0, the additive approximation asks for a strategy {a mathematical formula}σ∈Σ (resp., {a mathematical formula}σ∈AlmostG(T)) such that {a mathematical formula}Val(σ)≤optCost+ϵ (resp., {a mathematical formula}Val(σ)≤optAsCost+ϵ); and the multiplicative approximation asks for a strategy {a mathematical formula}σ∈Σ (resp., {a mathematical formula}σ∈AlmostG(T)) such that {a mathematical formula}Val(σ)≤optCost⋅(1+ϵ) (resp., {a mathematical formula}Val(σ)≤optAsCost⋅(1+ϵ)).
+     </paragraph>
+     <paragraph>
+      Computational problems for integer costs. Given a POMDP G with a reachability objective {a mathematical formula}Reach(T), a threshold λ, and an approximation value ϵ, if the cost function assigns integer costs, i.e., is of type {a mathematical formula}c:S×A→Z, then we consider the following problems:
+     </paragraph>
+     <list>
+      <list-item label="–">
+       Exact optimal cost problems: The problem {a mathematical formula}ExOptCost (resp., {a mathematical formula}ExOptAsCost) asks whether there exists a strategy {a mathematical formula}σ∈Σ (resp., {a mathematical formula}σ∈AlmostG(T)) such that {a mathematical formula}Val(σ)≤λ.
+      </list-item>
+      <list-item label="–">
+       Approximate optimal cost problems: The problem {a mathematical formula}AppOptCost (resp., {a mathematical formula}AppOptAsCost) asks for a strategy {a mathematical formula}σ∈Σ such that {a mathematical formula}Val(σ)≤optCost(G)+ϵ for additive approximation; and {a mathematical formula}Val(σ)≤optCost(G)⋅(1+ϵ) for multiplicative approximation; (resp., {a mathematical formula}σ∈AlmostG(T) such that {a mathematical formula}Val(σ)≤optAsCost(G)+ϵ for additive approximation; and {a mathematical formula}Val(σ)≤optAsCost(G)⋅(1+ϵ) for multiplicative approximation).
+      </list-item>
+     </list>
+     <paragraph>
+      Computational problems for positive costs. If the cost function assigns positive costs, i.e., is of type {a mathematical formula}c:S×A→N, then along with the above problems we also consider the following problem:
+     </paragraph>
+     <list>
+      <list-item label="–">
+       Qualitative optimal cost problem: The problem {a mathematical formula}QualOptAsCost asks whether {a mathematical formula}optAsCost(G)&lt;∞.
+      </list-item>
+     </list>
+     <paragraph label="Remark 2">
+      Without loss of generality, we consider POMDPs with integer costs. Given a POMDP with rational costs one can obtain a POMDP with integer costs by multiplying the costs with the least common multiple of the denominators. The transformation is polynomial given binary representation of numbers.
+     </paragraph>
+     <paragraph>
+      Note that by Remark 2 it follows that though we consider integer costs, our results apply to all cost functions, where the costs are rationals. The results of our work are summarized in Table 1.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      POMDPs with general integer costs
+     </section-title>
+     <paragraph>
+      In this section, we establish undecidability of approximation for POMDPs with integer costs. We first start with the exact problems, and the results for the exact problems follow from existing results in the literature.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Exact problems for integer costs
+      </section-title>
+      <paragraph>
+       It follows from [33] that both exact problems {a mathematical formula}ExOptCost and {a mathematical formula}ExOptAsCost are undecidable. The undecidability of {a mathematical formula}ExOptCost follows from [33]; and the undecidability of {a mathematical formula}ExOptAsCost can be established by a straightforward modification of the construction of [33] (also see Theorem 3 where undecidability is explicitly shown for positive costs using the results of [33]).
+      </paragraph>
+      <paragraph label="Theorem 1">
+       (See[33].) The problems{a mathematical formula}ExOptCostand{a mathematical formula}ExOptAsCostare undecidable in POMDPs with integer costs.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Approximate problems for integer costs
+      </section-title>
+      <paragraph>
+       In this part we will show that both the approximate problems {a mathematical formula}AppOptCost and {a mathematical formula}AppOptAsCost are undecidable. While the undecidability proof is not theoretically novel, it needs to be formally established, as we will later contrast it with the results for positive costs. We will show that deciding whether the optimal cost {a mathematical formula}optAsCost is −∞ or not is undecidable in POMDPs with integer costs. We present a reduction from the standard undecidable problem for probabilistic finite automata (PFA). A PFA {a mathematical formula}P=(S,A,δ,F,s0) is a special case of a POMDP {a mathematical formula}G=(S,A,δ,Z,O,s0) with a single observation {a mathematical formula}Z={z} such that for all states {a mathematical formula}s∈S we have {a mathematical formula}O(s)=z. Moreover, the PFA proceeds for only finitely many steps, and has a set F of desired final states. The strict emptiness problem asks for the existence of a strategy w (a finite word over the alphabet {a mathematical formula}A) such that the measure of the runs ending in the desired final states F is strictly greater than {a mathematical formula}12; and the strict emptiness problem for PFA is undecidable [40].
+      </paragraph>
+      <paragraph>
+       Reduction. Given a PFA {a mathematical formula}P=(S,A,δ,F,s0) we construct a POMDP {a mathematical formula}G=(S′,A′,δ′,Z,O,s0′) with a cost function {a mathematical formula}c and a target set T such that there exists a word {a mathematical formula}w∈A⁎ accepted with probability strictly greater than {a mathematical formula}12 in PFA {a mathematical formula}P iff the optimal cost in the POMDP G is −∞. Intuitively, the construction of the POMDP G is as follows: for every state {a mathematical formula}s∈S of {a mathematical formula}P we construct a pair of states {a mathematical formula}(s,1) and {a mathematical formula}(s,−1) in {a mathematical formula}S′ with the property that {a mathematical formula}(s,−1) can only be reached with a new action $ (not in {a mathematical formula}A) played in state {a mathematical formula}(s,1). The transition function {a mathematical formula}δ′ from the state {a mathematical formula}(s,−1) mimics the transition function δ, i.e., {a mathematical formula}δ′((s,−1),a)((s′,1))=δ(s,a)(s′). The cost {a mathematical formula}c of {a mathematical formula}(s,1) (resp. {a mathematical formula}(s,−1)) is 1 (resp. −1), ensuring the sum of the pair to be 0. We add a new available action # that, when played in a final state reaches a newly added state {a mathematical formula}good∈S′, and when played in a non-final state reaches a newly added state {a mathematical formula}bad∈S′. For states {a mathematical formula}good and {a mathematical formula}bad given action # the next state is the initial state; with negative cost −1 for {a mathematical formula}good and positive cost 1 for {a mathematical formula}bad. We introduce a single absorbing target state {a mathematical formula}T={target} and give full power to the player to decide when to reach the target state from the initial state, i.e., we introduce a new action √ that when played in the initial state deterministically reaches the target state {a mathematical formula}target.
+      </paragraph>
+      <paragraph>
+       An illustration of the construction on an example is depicted in Fig. 1. Whenever an action is played in a state where it is not available, the POMDP reaches a losing absorbing state, i.e., an absorbing state with cost 1 on all actions, and for brevity we omit transitions to the losing absorbing state. The formal construction of the POMDP G is as follows:
+      </paragraph>
+      <list>
+       <list-item label="–">
+        {a mathematical formula}S′=(S×{−1,1})∪{good,bad,target},
+       </list-item>
+       <list-item label="–">
+        {a mathematical formula}s0′=(s0,1),
+       </list-item>
+       <list-item label="–">
+        {a mathematical formula}A′=A∪{#,$,√},
+       </list-item>
+       <list-item label="–">
+        The actions {a mathematical formula}a∈A∪{#} in states {a mathematical formula}(s,1) (for {a mathematical formula}s∈S) lead to the losing absorbing state; the action $ in states {a mathematical formula}(s,−1) (for {a mathematical formula}s∈S) leads to the losing absorbing state; and the actions {a mathematical formula}a∈A∪{$} in states {a mathematical formula}good and {a mathematical formula}bad lead to the losing absorbing state. The action √ played in any state other than the initial state {a mathematical formula}s0′ also leads to the losing absorbing state. The other transitions are as follows: For all {a mathematical formula}s∈S: (i) {a mathematical formula}δ′((s,1),$)((s,−1))=1, (ii) for all {a mathematical formula}a∈A we have {a mathematical formula}δ′((s,−1),a)((s′,1))=δ(s,a)(s′), and (iii) for action # and √ we have{a mathematical formula}{a mathematical formula}
+       </list-item>
+       <list-item label="–">
+        there is a single observation {a mathematical formula}Z={o}, and all the states {a mathematical formula}s∈S′ have {a mathematical formula}O(s)=o.
+       </list-item>
+      </list>
+      <paragraph>
+       We define the cost function {a mathematical formula}c assigning only two different costs and only as a function of the state, i.e., {a mathematical formula}c:S′→{−1,1} and show the undecidability even for this special case of cost functions. For all {a mathematical formula}s∈S the cost is {a mathematical formula}c((s,−1))=−1, and similarly {a mathematical formula}c((s,1))=1, and the remaining states have costs {a mathematical formula}c(good)=−1 and {a mathematical formula}c(bad)=1. The absorbing target state has cost 0; i.e., {a mathematical formula}c(target)=0. Note that though the costs are assigned as function of states, the costs appear on the out-going transitions of the respective states.
+      </paragraph>
+      <paragraph>
+       Intuitive proof idea. The basic idea of the proof is as follows: Consider a word w accepted by the PFA with probability at least {a mathematical formula}ν&gt;12. Let the length of the word be {a mathematical formula}|w|=n, and {a mathematical formula}w[i] denote the ith letter in w. Consider a strategy in the POMDP {a mathematical formula}u=($w[1]$w[2]…$w[n]##)k√ for some constant {a mathematical formula}k≥0; that plays alternately the letters in w and $, then two #'s, repeat the above k times, and finally plays √. For any {a mathematical formula}τ&lt;0, for {a mathematical formula}k≥τ−11−2⋅ν, the expected total cost is below τ. Hence if the answer to the strict emptiness problem is yes, then the optimal cost is −∞. Conversely, if there is no word accepted with probability strictly greater than {a mathematical formula}12, then the expected total cost between consecutive visits to the starting state is positive, and hence the optimal cost is at least 1. We now formalize the intuitive proof idea.
+      </paragraph>
+      <paragraph label="Proof">
+       If there exists a word{a mathematical formula}w∈A⁎that is accepted with probability strictly greater than{a mathematical formula}12in{a mathematical formula}P, then the optimal cost{a mathematical formula}optAsCostin the POMDP G is −∞.Let {a mathematical formula}w∈A⁎ be a word that is accepted in {a mathematical formula}P with probability {a mathematical formula}ν&gt;12 and let {a mathematical formula}τ∈R be any negative real-number threshold. We will construct a strategy in POMDP G ensuring that the target state {a mathematical formula}target is reached almost surely and the value of the strategy is below τ. As this will be true for every {a mathematical formula}τ&lt;0 it will follow that the optimal cost {a mathematical formula}optAsCost is −∞.Let the length of the word be {a mathematical formula}|w|=n. We construct a pure finite-memory strategy in the POMDP G as follows: We denote by {a mathematical formula}w[i] the ith action in the word w. The finite-memory strategy we construct is specified as a word {a mathematical formula}u=($w[1]$w[2]…$w[n]##)k√ for some constant {a mathematical formula}k≥0, i.e., the strategy plays alternately the letters in w and $, then two #'s, repeat the above k times, and finally plays √. Observe that by the construction of the POMDP G, the sequence of costs (that appear on the transitions) is {a mathematical formula}(1,−1)n followed by (i) −1 with probability ν (when F is reached), and (ii) +1 otherwise; and the whole sequence is repeated k times.Let {a mathematical formula}r1,r2,r3,…rm be the finite sequence of costs and {a mathematical formula}sj=∑i=1jri. The sequence of costs can be partitioned into blocks of length {a mathematical formula}2⋅n+1, intuitively corresponding to the transitions of a single run on the word {a mathematical formula}($w[1]$w[2]…$w[n]##). We define a random variable {a mathematical formula}Xi denoting the sum of costs of the ith block in the sequence, i.e., with probability ν for all i the value of {a mathematical formula}Xi is −1 and with probability {a mathematical formula}1−ν the value is 1. The expected value of {a mathematical formula}Xi is therefore equal to {a mathematical formula}E[Xi]=1−2⋅ν, and as we have that {a mathematical formula}ν&gt;12 it follows that {a mathematical formula}E[Xi]&lt;0. The fact that after the ## the initial state is reached implies that the random variable sequence {a mathematical formula}(Xi)0≤i≤k is a finite sequence of i.i.d's. By linearity of expectation the expected total cost of the word u is {a mathematical formula}k⋅E[Xi] plus an additional 1 for the last √ action. Therefore, by choosing an appropriately large k (in particular for {a mathematical formula}k≥τ−11−2⋅ν) we have the expected total cost is below τ. As playing the √ action from the initial state reaches the target state {a mathematical formula}target almost surely, and after ## the initial state is reached almost surely, we have that by playing according to the strategy u the target state {a mathematical formula}target is reached almost surely. The desired result follows.  □
+      </paragraph>
+      <paragraph>
+       We now show that pure finite-memory strategies are sufficient for the POMDP we constructed from the probabilistic automata, and then prove a lemma that proves the converse of Lemma 1.
+      </paragraph>
+      <paragraph label="Proof">
+       Given the POMDP G of our reduction from the PFA, if there is a randomized (possibly infinite-memory) strategy σ with{a mathematical formula}Val(σ)&lt;1, then there exists a pure finite-memory strategy{a mathematical formula}σ′with{a mathematical formula}Val(σ′)&lt;1.Let σ be a randomized (possibly infinite-memory) strategy where the expected total cost is strictly less than 1. As there is a single observation in the POMDP G constructed in our reduction, the strategy does not receive any useful feedback from the play, i.e., the memory update function {a mathematical formula}σu always receives as one of the parameters the unique observation. Note that with probability 1 the resolving of the probabilities in the strategy σ leads to finite words of the form {a mathematical formula}ρ=w1##w2##…##wn##√, as otherwise the target state {a mathematical formula}target is not reached with probability 1. From each such word ρ we extract the finite words {a mathematical formula}w1,w2,…,wn that occur in ρ, and consider the union of all such words as {a mathematical formula}W(ρ), and then consider the union W over all such words ρ. We consider two cases:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If there exists a word v in W such that the expected total cost after playing the word v## is strictly less than 0, then the pure finite-memory strategy {a mathematical formula}v##√ ensures that the expected total cost is strictly less than 1.
+       </list-item>
+       <list-item label="2.">
+        Assume for contradiction that for all the words v in W the expected total cost of v## is at least 0. Then with probability 1 resolving the probabilities in the strategy σ leads to finite words of the form {a mathematical formula}w‾=w1##w2##…wn##√, where each word {a mathematical formula}wi belongs to W, that is played on the POMDP G. Let us define a random variable {a mathematical formula}Xi denoting the sum between i and {a mathematical formula}(i+1)-th occurrence of ##. The expected total cost of {a mathematical formula}wi## is {a mathematical formula}E[Xi] and is at least 0 for all i. Therefore the expected cost of the sequence {a mathematical formula}w‾ (which has √ in the end with cost 1) is at least 1. Thus we arrive at a contradiction. Hence, there must exist a word v in W such that v## has an expected total cost strictly less than 0.
+       </list-item>
+      </list>
+      <paragraph label="Lemma 3">
+       If there exists no word{a mathematical formula}w∈A⁎that is accepted with probability strictly greater than{a mathematical formula}12in{a mathematical formula}P, then the optimal cost{a mathematical formula}optAsCost=1.
+      </paragraph>
+      <paragraph label="Proof">
+       We will show that playing √ is an optimal strategy. It reaches the target state {a mathematical formula}target almost surely with an expected total cost of 1. Assume towards contradiction that there exists a strategy (and by Lemma 2, a pure finite-memory strategy) σ with the expected total cost strictly less than 1. Observe that as there is only a single observation in the POMDP G the pure finite-memory strategy σ can be viewed as a finite word of the form {a mathematical formula}w1##w2##…wn##√. We extract the set of words {a mathematical formula}W={w1,w2,…,wn} from the strategy σ. By the condition of the lemma, there exists no word accepted in the PFA {a mathematical formula}P with probability strictly greater that {a mathematical formula}12. As in Lemma 1 we define a random variable {a mathematical formula}Xi denoting the sum of costs after reading {a mathematical formula}wi##. It follows that the expected value of {a mathematical formula}E[Xi]≥0 for all {a mathematical formula}0≤i≤n. By using the linearity of expectation we have the expected total cost of {a mathematical formula}w1##w2##…wn## is at least 0, and hence the expected total cost of the strategy is at least 1 due to the cost of the last √ action. Thus we have a contradiction to the assumption that the expected total cost of strategy σ is strictly less than 1.  □
+      </paragraph>
+      <paragraph>
+       The above lemmas establish that if the answer to the strict emptiness problem for PFA is yes, then the optimal cost in the POMDP is −∞; and otherwise the optimal cost is 1. Hence in POMDPs with integer costs determining whether the optimal cost {a mathematical formula}optAsCost is −∞ or 1 is undecidable, and thus the problem of approximation (both additive and multiplicative for all {a mathematical formula}ϵ&gt;0) is also undecidable.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       The problem{a mathematical formula}AppOptAsCostin POMDPs with integer costs is undecidable for all{a mathematical formula}ϵ&gt;0both for additive and multiplicative approximation.
+      </paragraph>
+      <paragraph>
+       In the above theorem we establish the result for {a mathematical formula}AppOptAsCost, and a similar proof also holds for {a mathematical formula}AppOptCost. Also for a discussion and implications of Theorem 2 see Remark 10 in Appendix A.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      POMDPs with positive integer costs
+     </section-title>
+     <paragraph>
+      In this section we consider POMDPs with positive cost functions, i.e., {a mathematical formula}c:S×A→N instead of {a mathematical formula}c:S×A→Z.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Exact problems for positive costs
+      </section-title>
+      <paragraph>
+       We first show that the exact problems {a mathematical formula}ExOptCost and {a mathematical formula}ExOptAsCost remain undecidable even if the cost function {a mathematical formula}c is restricted to assign only positive costs.
+      </paragraph>
+      <paragraph label="Proof">
+       The problems{a mathematical formula}ExOptCostand{a mathematical formula}ExOptAsCostare undecidable in POMDPs with positive costs.We present a straightforward reduction from the strategy-existence problem [33, Theorem 4.4] that is analogous to the leaky PFA construction of [33] and was also presented earlier in [2]. More precisely, given a POMDP with an infinite-horizon discounted criterion with discount factor {a mathematical formula}0&lt;γ&lt;1, and a threshold η, the following problem is undecidable: decide whether there exists a strategy {a mathematical formula}σ∈Σ such that expected discounted sum is at least η. First, observe that [33] considers the maximization problem, but the undecidability also holds for the minimization problem (i.e., whether the expected discounted sum is at most the threshold η, by simply considering the reversed signed costs). Second, observe that adding any constant α to all costs changes the expected discounted value by {a mathematical formula}α1−γ. Hence without loss of generality all costs are positive, and the undecidability holds for the minimization problem of the strategy existence question for discounted sum objective. We now present our reduction, and the key intuition is as follows: intuitively the discount factor represents that in every step there is a halting probability of γ, and this can be modeled as going to a goal state with probability γ.Construction. Given a POMDP {a mathematical formula}G=(S,A,δ,Z,O,λ0) with a positive cost function {a mathematical formula}c and a discount factor {a mathematical formula}0&lt;γ&lt;1 we construct a POMDP {a mathematical formula}G′=(S′,A′,δ′,Z′,O′,λ0′) as follows: (i) we add a new goal state g to the state space {a mathematical formula}S′=S∪{g}; (ii) the set of actions remains unchanged, i.e., {a mathematical formula}A=A′; (iii) for every state {a mathematical formula}s∈S and action {a mathematical formula}a∈A we have {a mathematical formula}δ′(s,a)(g)=1−γ, and for every state {a mathematical formula}s′∈S we have {a mathematical formula}δ′(s,a)(s′)=γ⋅δ(s,a)(s′); and the goal state is absorbing, i.e., for every action {a mathematical formula}a∈A we have {a mathematical formula}δ′(g,a)(g)=1; (iv) we add a new observation {a mathematical formula}zg for the goal state, i.e., {a mathematical formula}Z′=Z∪{zg}. The new cost function {a mathematical formula}c′ mimics {a mathematical formula}c and assigns cost 0 to all actions in the goal state g. For every strategy σ in the POMDPs, the expected discounted cost in G coincides with the expected total cost in {a mathematical formula}G′ as the discount factor (or the halting probability) is captured by the transition to the new goal state. Hence there exists a strategy {a mathematical formula}σ∈Σ in POMDP G such that the expected discounted sum is at most λ if and only if in {a mathematical formula}G′ we have {a mathematical formula}Val(σ)≤λ. Finally, note that since in every step there is a positive probability γ to reach the goal state g, it follows that every strategy in {a mathematical formula}G′ is almost-sure winning. The desired result follows.  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Approximate and qualitative problems for positive costs
+      </section-title>
+      <paragraph>
+       In this section we consider the approximate and qualitative problems for POMDPs with positive costs. Note that the transitions from the absorbing target states have cost 0 as the goal is to minimize the cost of reaching a state in the target set, and also note that all other transitions have cost at least 1. For the exact problems, for both POMDPs with integer costs or POMDPs with positive costs, we have undecidability (Theorem 1 and Theorem 3, respectively). We have established (in Theorem 2) that for integer costs the problem of approximating the optimal cost is undecidable, however, in contrast, in this section we show that for positive cost functions the approximation problems are decidable. In particular we will establish the following result.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       In POMDPs with positive costs, the following assertions hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The qualitative problem{a mathematical formula}QualOptAsCostcan be solved in exponential time.
+       </list-item>
+       <list-item label="2.">
+        The additive and multiplicative approximation problems ({a mathematical formula}AppOptCostand{a mathematical formula}AppOptAsCost) are decidable, for every{a mathematical formula}ϵ&gt;0.
+       </list-item>
+       <list-item label="3.">
+        There exists an algorithm that computes the approximations by optimally solving a sequence of finite-horizon POMDPs, and requires a number of iterations that is at most double exponential in the state space size of the POMDPs.
+       </list-item>
+       <list-item label="4.">
+        There exist a family of POMDPs where double exponentially many iterations are required.
+       </list-item>
+      </list>
+      <paragraph>
+       We start with an upper bound on the optimal cost and the qualitative problem.
+      </paragraph>
+      <section label="4.2.1">
+       Upper bound on {a mathematical formula}optAsCost and solution to {a mathematical formula}QualOptAsCost
+       <paragraph>
+        In this section we will present a double-exponential upper bound on {a mathematical formula}optAsCost.
+       </paragraph>
+       <paragraph>
+        Almost-sure winning belief supports. Let {a mathematical formula}Belief(G) denote the set of all belief supports in a POMDP G, i.e., {a mathematical formula}Belief(G)={U⊆S|∃z∈Z:U⊆O−1(z)}. Let {a mathematical formula}BeliefWin(G,T) denote the set of almost-sure winning belief supports, i.e., {a mathematical formula}BeliefWin(G,T)={U∈Belief(G)| there exists an almost-sure winning strategy from U}, i.e., there exists an almost-sure winning strategy with initial distribution {a mathematical formula}λU that is the uniform distribution over U.
+       </paragraph>
+       <paragraph>
+        Restricting to{a mathematical formula}BeliefWin(G,T). In what follows without loss of generality we will restrict ourselves to belief supports in {a mathematical formula}BeliefWin(G,T): since from belief supports outside {a mathematical formula}BeliefWin(G,T) there exists no almost-sure winning strategy, all almost-sure winning strategies with starting belief support in {a mathematical formula}BeliefWin(G,T) will ensure that belief supports not in {a mathematical formula}BeliefWin(G,T) are never reached.
+       </paragraph>
+       <paragraph>
+        Belief updates. Given a belief support {a mathematical formula}U∈Belief(G), an action {a mathematical formula}a∈A, and an observation {a mathematical formula}z∈Z we denote by {a mathematical formula}Update(U,z,a) the updated belief support. Formally, the set {a mathematical formula}Update(U,z,a) is defined as follows: {a mathematical formula}Update(U,z,a)=⋃s′∈USupp(δ(s′,a))∩O−1(z). The set of belief supports reachable from U by playing an action {a mathematical formula}a∈A is denoted by {a mathematical formula}Update(U,a). Formally, {a mathematical formula}Update(U,a)={U′⊆S|∃z∈Z:U′=Update(U,z,a))∧U′≠∅}.
+       </paragraph>
+       <paragraph>
+        Allowed actions. Given a POMDP G and a belief support {a mathematical formula}U∈BeliefWin(G,T), we consider the set of actions that are guaranteed to keep the next belief support {a mathematical formula}U′ in {a mathematical formula}BeliefWin(G,T) and refer to these actions as allowed or safe. The framework that restricts playable actions was also considered in [5]. Formally we consider the set of allowed actions as follows: Given a belief support {a mathematical formula}U∈BeliefWin(G,T) we define {a mathematical formula}Allow(U)={a∈A|∀U′∈Update(U,a):U′∈BeliefWin(G,T)}.
+       </paragraph>
+       <paragraph>
+        We now show that almost-sure winning strategies must only play allowed actions. An easy consequence of the lemma is that for all belief supports U in {a mathematical formula}BeliefWin(G,T), there is always an allowed action.
+       </paragraph>
+       <paragraph label="Proof">
+        Given a POMDP with a reachability objective{a mathematical formula}Reach(T), consider a strategy σ and a starting belief support in{a mathematical formula}BeliefWin(G,T). Given σ, if for a reachable belief support{a mathematical formula}U∈BeliefWin(G,T)the strategy σ plays an action a not in{a mathematical formula}Allow(U)with positive probability, then σ is not almost-sure winning for the reachability objective.Assume that the strategy σ reaches the belief support U and plays an action {a mathematical formula}a∉Allow(U). It follows from the definition of {a mathematical formula}Allow that there exists a belief support {a mathematical formula}U′∈Update(U,a) that is not in {a mathematical formula}BeliefWin(G,T). By the definition of {a mathematical formula}Update there exists an observation {a mathematical formula}z∈Z such that {a mathematical formula}U′=Update(U,z,a) and {a mathematical formula}U′≠∅. It follows that by playing a in belief support U, there is a positive probability of receiving observation z and reaching belief support {a mathematical formula}U′ that does not belong to {a mathematical formula}BeliefWin(G,T). By definition, for all belief supports {a mathematical formula}U′ that does not belong to {a mathematical formula}BeliefWin(G,T), if the starting belief support is {a mathematical formula}U′, then for all strategies the probability to reach T is strictly less than 1. Hence if {a mathematical formula}U′ is reached with positive probability from U under action a, then σ is not almost-sure winning. The desired result follows.  □
+       </paragraph>
+       <paragraph label="Corollary 1">
+        For all{a mathematical formula}U∈BeliefWin(G,T)we have{a mathematical formula}Allow(U)≠∅.
+       </paragraph>
+       <paragraph label="Example 1">
+        Consider POMDP G depicted in Fig. 2 with three states: the initial state {a mathematical formula}s0, and two absorbing states (the target state T, and the losing state B). There are two actions a and b available in the initial state, the first action a leads to both the target state and the losing state, each with probability 1/2, while the second action b leads to the initial state and the target state with probability 1/2 each. This POMDP is not a goal-POMDP [4], as the target state T is not reachable from the losing state B. Note that belief {a mathematical formula}{s0} belongs to the set {a mathematical formula}BeliefWin(G,T), as the strategy that plays only action b reaches the target state T almost surely. The set of allowed actions {a mathematical formula}Allow({s0}) does not contain action a, as any belief that contains the losing state B does not belong to the set {a mathematical formula}BeliefWin(G,T).
+       </paragraph>
+       <paragraph>
+        Markov chains and reachability. A Markov chain {a mathematical formula}G‾=(S‾,δ‾) consists of a finite set {a mathematical formula}S‾ of states and a probabilistic transition function {a mathematical formula}δ‾:S‾→D(S‾). Given the Markov chain, we consider the directed graph {a mathematical formula}(S‾,E‾) where {a mathematical formula}E‾={(s‾,s‾′)|δ(s‾′|s‾)&gt;0}. The following standard properties of reachability in Markov chains will be used in our proofs [24]:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Property 1 of Markov chains. For a set {a mathematical formula}T‾⊆S‾, if for all states {a mathematical formula}s‾∈S‾ there is a path to {a mathematical formula}T‾ (i.e., for all states there is a positive probability of reaching {a mathematical formula}T‾), then from all states the set {a mathematical formula}T‾ is reached with probability 1.
+        </list-item>
+        <list-item label="2.">
+         Property 2 of Markov chains. In a Markov chain if a set {a mathematical formula}T‾ is reached almost surely from {a mathematical formula}s‾, then the expected hitting time from {a mathematical formula}s‾ to {a mathematical formula}T‾ is at most exponential in the number of the states of the Markov chain.
+        </list-item>
+       </list>
+       <paragraph>
+        The strategy{a mathematical formula}σAllow. We consider a belief-support-based stationary (for brevity belief-based){sup:1} strategy {a mathematical formula}σAllow as follows: for all belief supports U in {a mathematical formula}BeliefWin(G,T), the strategy plays uniformly at random all actions from {a mathematical formula}Allow(U). Note that as the strategy {a mathematical formula}σAllow is belief-based, it can be viewed as a finite-memory strategy {a mathematical formula}σAllow=(σu,σn,BeliefWin(G,T),m0), where the components are defined as follows: (i) The set of memory elements is the set of winning belief supports {a mathematical formula}BeliefWin(G,T); (ii) the belief support {a mathematical formula}m0∈BeliefWin(G,T) is the initial belief (i.e., {a mathematical formula}Supp(λ0)); (iii) the action selection function given memory {a mathematical formula}U∈BeliefWin(G,T) is a uniform distribution over the set {a mathematical formula}Allow(U) of actions, i.e., {a mathematical formula}σn(U)=unif(Allow(U)) where {a mathematical formula}unif denotes the uniform distribution; and (iv) the memory update function given memory {a mathematical formula}U∈BeliefWin(G,T), observation {a mathematical formula}z∈Z, and action {a mathematical formula}a∈Allow(U) is defined as the belief-support update {a mathematical formula}U′ from belief support U under action a and observation z, i.e., {a mathematical formula}σu(U,z,a)=Update(U,z,a).
+       </paragraph>
+       <paragraph>
+        The Markov chain{a mathematical formula}G↾σAllow. Given a POMDP {a mathematical formula}G=(S,A,δ,Z,O,s0) and the strategy {a mathematical formula}σAllow=(σu,σn,BeliefWin(G,T),m0) the Markov chain {a mathematical formula}G↾σAllow=(S‾,δ‾) obtained by playing strategy {a mathematical formula}σAllow in G is defined as follows:
+       </paragraph>
+       <list>
+        <list-item label="–">
+         The set of states {a mathematical formula}S‾ is defined as follows: {a mathematical formula}S‾={(s,U)|U∈BeliefWin(G,T),s∈U}, i.e., the second components are the almost-sure winning belief supports and the first component is a state in the belief support.
+        </list-item>
+        <list-item label="–">
+         The probability that the next state is {a mathematical formula}(s′,U′) from a state {a mathematical formula}(s,U) is {a mathematical formula}δ‾((s,U))((s′,U′))=∑a∈Aσn(U)(a)⋅δ(s,a)(s′)⋅σu(U,O(s′),a)(U′).
+        </list-item>
+       </list>
+       <paragraph>
+        The probability of transition can be decomposed as follows: (i) First an action {a mathematical formula}a∈A is sampled according to the distribution {a mathematical formula}σn(U); (ii) then the next state {a mathematical formula}s′ is sampled according to the distribution {a mathematical formula}δ(s,a); and (iii) finally the new memory {a mathematical formula}U′ is sampled according to the distribution {a mathematical formula}σu(U,O(s′),a).
+       </paragraph>
+       <paragraph label="Remark 3">
+        Note that due to the definition of the strategy {a mathematical formula}σAllow (that only plays allowed actions) all states {a mathematical formula}(s′,U′) of the Markov chain {a mathematical formula}G↾σAllow that are reachable from a state {a mathematical formula}(s,U) where {a mathematical formula}s∈U and {a mathematical formula}U∈BeliefWin(G,T) satisfy that {a mathematical formula}s′∈U′ and {a mathematical formula}U′∈BeliefWin(G,T).
+       </paragraph>
+       <paragraph label="Proof">
+        The belief-based strategy{a mathematical formula}σAllowis an almost-sure winning strategy for all belief supports{a mathematical formula}U∈BeliefWin(G,T)for the objective{a mathematical formula}Reach(T).Consider the Markov chain {a mathematical formula}G↾σAllow and a state {a mathematical formula}(s,U) of the Markov chain. As {a mathematical formula}U∈BeliefWin(G,T) by the definition of almost-sure winning belief supports, there exists a strategy σ that is almost-sure winning for the reachability objective {a mathematical formula}Reach(T) starting with belief support U.Reachability under σ. Note that by Lemma 4 the strategy must only play allowed actions. The strategy must ensure that from s a target state t is reached with positive probability by playing according to σ (given the initial belief support is U). It follows that there exists a finite prefix of a play {a mathematical formula}(s1,a1,s2,a2,…,an−1,sn) induced by σ where {a mathematical formula}s1=s and {a mathematical formula}sn=t and for all {a mathematical formula}1≤i&lt;n we have that {a mathematical formula}ai∈Supp(σ(O((s1,a1,s2,a2,…,si)))). We define a sequence of belief supports {a mathematical formula}U1,U2,…,Un, where {a mathematical formula}U1=U and {a mathematical formula}Ui+1=Update(Ui,O(si+1),ai). As σ is an almost-sure winning strategy, it follows from Lemma 4 that {a mathematical formula}ai∈Allow(Ui) for all {a mathematical formula}1≤i&lt;n.Reachability in the Markov chain. Recall that the strategy {a mathematical formula}σAllow plays all the allowed actions uniformly at random. Hence it follows from the definition of the Markov chain {a mathematical formula}G↾σAllow that for all {a mathematical formula}0≤i&lt;n we have {a mathematical formula}δ‾((si,Ui))((si+1,Ui+1))&gt;0, i.e., there is a positive probability to reach {a mathematical formula}(t,Un) from {a mathematical formula}(s,U) in the Markov chain {a mathematical formula}G↾σAllow. It follows that for an arbitrary state {a mathematical formula}(s,U) of the Markov chain {a mathematical formula}G↾σAllow there exists a state {a mathematical formula}(t′,U′) with {a mathematical formula}t′∈T that is reached with positive probability. In other words, in the graph of the Markov chain, there is a path from all states {a mathematical formula}(s,U) to a state {a mathematical formula}(t′,U′) where {a mathematical formula}t′∈T. Thus by Property 1 of Markov chains it follows that the target set T is reached with probability 1. It follows that {a mathematical formula}σAllow is an almost-sure winning strategy for all belief supports in {a mathematical formula}BeliefWin(G,T). The desired result follows.  □
+       </paragraph>
+       <paragraph label="Remark 4">
+        Computation of {a mathematical formula}σAllowIt follows from Lemma 5 that the strategy {a mathematical formula}σAllow can be computed by computing the set of almost-sure winning states in the belief-support MDP. The belief-support MDP is a perfect-observation MDP where each state is a belief support of the original POMDP, and given an action, the next state is obtained according to the belief-support updates. The strategy {a mathematical formula}σAllow can be obtained by computing the set of almost-sure winning states in the belief-support MDP. For discrete graph-based algorithms as well as symbolic algorithms that compute almost-sure winning states in perfect-observation MDPs in polynomial time see [13], [9], [10], [11], [12].
+       </paragraph>
+       <paragraph>
+        Upper bound. We now establish a double-exponential upper bound on {a mathematical formula}optAsCost, and we will present a matching lower bound in Lemma 15. We have that {a mathematical formula}σAllow∈AlmostG(T). Hence we have {a mathematical formula}Val(σAllow)≥infσ∈AlmostG(T)⁡Val(σ)=optAsCost. Once {a mathematical formula}σAllow is fixed, since the strategy is belief-based (i.e., depends on the subset of states) we obtain an exponential size Markov chain. It follows from Property 2 of Markov chains that given {a mathematical formula}σAllow the expected hitting time to the target set is at most double exponential. If {a mathematical formula}cmax denotes the maximal cost of transitions, then {a mathematical formula}Val(σAllow) is bounded by {a mathematical formula}cmax times the expected hitting time of {a mathematical formula}σAllow. Thus we obtain the following lemma.
+       </paragraph>
+       <paragraph label="Lemma 6">
+        Given a POMDP G with n states, let{a mathematical formula}cmaxdenote the maximal value of the cost of all transitions. There is a polynomial function q such that{a mathematical formula}optAsCost≤Val(σAllow)≤22q(n)⋅cmax.
+       </paragraph>
+       <paragraph>
+        We now present a lemma that shows that in POMDPs with positive costs the value of a strategy that is not almost-sure winning is infinite.
+       </paragraph>
+       <paragraph label="Proof">
+        Given a POMDP G with positive costs, for every strategy σ such that{a mathematical formula}σ∉AlmostG(T)we have{a mathematical formula}Val(σ)=∞.Consider {a mathematical formula}σ∉AlmostG(T). Since the target set is not reached almost-surely, then there is a positive probability {a mathematical formula}p&gt;0 that the target is never reached. Hence with probability at least p all the costs are positive. Therefore, the expected cost is infinite.  □
+       </paragraph>
+       <paragraph label="Corollary 2">
+        For POMDPs G with positive costs, the following assertions hold:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         We have{a mathematical formula}optAsCost(G)=optCost(G).
+        </list-item>
+        <list-item label="2.">
+         The answer to{a mathematical formula}QualOptAsCostis YES iff there exists an almost-sure winning strategy, and hence{a mathematical formula}QualOptAsCostcan be decided in exponential time.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        The first item follows from Lemma 6 and Lemma 7; and the second item follows also from Lemma 6 and Lemma 7 along with Remark 4.  □
+       </paragraph>
+       <paragraph>
+        In view of the above corollary in the sequel of this section we will only consider the computation of {a mathematical formula}optAsCost (as it coincides with {a mathematical formula}optCost). Also note that the second item of the corollary gives the first item of Theorem 4. We first describe the computation of optimal finite-horizon strategies, and then use it for our approximation algorithm.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Optimal finite-horizon strategies
+       </section-title>
+       <paragraph>
+        Our algorithm for approximation of {a mathematical formula}optAsCost will use algorithms for optimizing the finite-horizon costs. We first recall the well-known construction of the optimal finite-horizon strategies that minimizes the expected total cost in POMDPs for length k.
+       </paragraph>
+       <paragraph>
+        Beliefs. For minimizing the expected total cost, strategies based on beliefs are sufficient [46]. A belief b is defined as a probability distribution over the set of states, where for {a mathematical formula}s∈S the value {a mathematical formula}b(s) denotes the probability of being in state s. We will denote by {a mathematical formula}H the set of all beliefs. Given a belief b, an action a, and an observation z, computing the resulting belief {a mathematical formula}b′ can be done in a straight forward way, see [7].
+       </paragraph>
+       <paragraph>
+        Value iteration algorithm. The standard finite-horizon value iteration algorithm for expected total cost in the setting of perfect-information MDPs can be formulated by the following equation:{a mathematical formula} where {a mathematical formula}Vn⁎(s) represents the value of an optimal policy, when the starting state is s and there are n decision steps remaining. For a POMDP the finite-horizon value iteration algorithm works on the beliefs. Let {a mathematical formula}ψ(b,a) denote the probability distribution over the beliefs given that action a was played in the belief b. The cost function {a mathematical formula}c′:H×A→N that maps every pair of a belief and an action to a positive real-valued cost is defined as follows: {a mathematical formula}c′(b,a)=∑s∈Sb(s)⋅c(s,a). The resulting equation for finite-horizon value iteration algorithm for POMDPs is as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The optimal strategy{a mathematical formula}σkFOand{a mathematical formula}σk⁎. In our setting we modify the standard finite-horizon value iteration algorithm by restricting the optimal strategy to play only allowed actions and restrict it only to belief supports in the set {a mathematical formula}BeliefWin(G,T). The equation for the value iteration algorithm is defined as follows:{a mathematical formula} As demonstrated below, we obtain a strategy {a mathematical formula}σkFO=(σu,σn,M,m0) that is finite-horizon optimal for length k (here FO stands for finite-horizon optimal) from the above equation as follows: (i) the set of memory elements M is defined as {a mathematical formula}H×N; (ii) the initial memory state is {a mathematical formula}(λ0,k); (iii) for all {a mathematical formula}1≤n≤k, the action selection function {a mathematical formula}σn((b,n)) selects an arbitrary action a such that {a mathematical formula}a=arg⁡mina∈Allow(Supp(b))⁡[c′(b,a)+∑b′∈Hψ(b,a)(b′)Vn−1⁎(b′)]; and (iv) the memory update function given a memory state {a mathematical formula}(b,n), action a, and an observation o updates to a memory state {a mathematical formula}(b′,n−1), where {a mathematical formula}b′ is the unique belief update from belief b under action a and observation z. As the target states T in the POMDP G are absorbing and the costs on all outgoing edges from the target states are the only edges with cost 0, it follows that for increasing values of k the strategies {a mathematical formula}σFOk converge to the expected total cost to reach the target set T. Given {a mathematical formula}σkFO, we define a strategy {a mathematical formula}σk⁎ as follows: for the first k steps, the strategy {a mathematical formula}σk⁎ plays as the strategy {a mathematical formula}σkFO, and after the first k steps the strategy plays as the strategy {a mathematical formula}σAllow.
+       </paragraph>
+       <paragraph label="Proof">
+        For all{a mathematical formula}k∈Nthe strategy{a mathematical formula}σk⁎is almost-sure winning for the reachability objective{a mathematical formula}Reach(T).By definition the strategy {a mathematical formula}σkFO (and hence the strategy {a mathematical formula}σk⁎) plays only allowed actions in the first k steps. Hence it follows that every reachable belief support in the first k steps belongs to {a mathematical formula}BeliefWin(G,T). After the first k steps, the strategy plays as {a mathematical formula}σAllow, and by Lemma 5, the strategy {a mathematical formula}σAllow is almost-sure winning for the reachability objective {a mathematical formula}Reach(T) from every belief support in {a mathematical formula}BeliefWin(G,T). The result follows.  □
+       </paragraph>
+       <paragraph>
+        Note that since in the first k steps {a mathematical formula}σk⁎ plays as {a mathematical formula}σkFO we have the following proposition.
+       </paragraph>
+       <paragraph label="Proposition 1">
+        For all{a mathematical formula}k∈Nwe have{a mathematical formula}Eλ0σk⁎[Totalk]=Eλ0σkFO[Totalk].
+       </paragraph>
+       <paragraph>
+        Note that the only restriction in the construction of the strategy {a mathematical formula}σkFO is that it must play only allowed actions, and since almost-sure winning strategies only play allowed actions (by Lemma 4) it follows that {a mathematical formula}σkFO (and hence {a mathematical formula}σk⁎) is optimal for the finite-horizon of length k (i.e., for the objective {a mathematical formula}Totalk) among all almost-sure winning strategies.
+       </paragraph>
+       <paragraph label="Lemma 9">
+        For all{a mathematical formula}k∈Nwe have{a mathematical formula}Eλ0σk⁎[Totalk]=infσ∈AlmostG(T)⁡Eλ0σ[Totalk].
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Approximation algorithm
+       </section-title>
+       <paragraph>
+        In this section we will show that for all {a mathematical formula}ϵ&gt;0 there exists a bound k such that the strategy {a mathematical formula}σk⁎ approximates {a mathematical formula}optAsCost within ϵ. First we consider an upper bound on {a mathematical formula}optAsCost.
+       </paragraph>
+       <paragraph>
+        Bound{a mathematical formula}UAllow. We consider an upper bound {a mathematical formula}UAllow on the expected total cost of the strategy {a mathematical formula}σAllow starting in an arbitrary state {a mathematical formula}s∈U with the initial belief support {a mathematical formula}U∈BeliefWin(G,T). Given a belief support {a mathematical formula}U∈BeliefWin(G,T) and a state {a mathematical formula}s∈U let {a mathematical formula}TAllow(s,U) denote the expected total cost of the strategy {a mathematical formula}σAllow starting in the state s with the initial belief support U. Then the upper bound is defined as {a mathematical formula}UAllow=maxU∈BeliefWin(G,T),s∈U⁡TAllow(s,U). As the strategy {a mathematical formula}σAllow is in {a mathematical formula}AlmostG(T) it follows that the value {a mathematical formula}UAllow is also an upper bound for the optimal cost {a mathematical formula}optAsCost.
+       </paragraph>
+       <paragraph label="Lemma 10">
+        We have{a mathematical formula}optAsCost≤UAllow.
+       </paragraph>
+       <paragraph>
+        Observe that by arguments similar to those in Lemma 6 (which presents a double exponential bound on {a mathematical formula}Val(σAllow)) it follows that {a mathematical formula}UAllow is also at most double exponential in the size of the POMDP.
+       </paragraph>
+       <paragraph label="Lemma 11">
+        Given a POMDP G with n states, let{a mathematical formula}cmaxdenote the maximal value of the cost of all transitions. There is a polynomial function q such that{a mathematical formula}UAllow≤22q(n)⋅cmax.
+       </paragraph>
+       <paragraph>
+        Key lemma. We will now present our key lemma to obtain the bound on k depending on ϵ. We start with a few notations. Given {a mathematical formula}k∈N, let {a mathematical formula}Ek denote the event of reaching the target set within k steps, i.e., {a mathematical formula}Ek={(s0,a0,s1,a1,s2,…)∈Ω|∃i≤k:si∈T}. Let {a mathematical formula}E‾k be the complement of the event {a mathematical formula}Ek that denotes the target set is not reached within the first k steps. Recall that for plays {a mathematical formula}ρ=(s0,a0,s1,a1,s2,a2,…) we have {a mathematical formula}Totalk=∑i=0kc(si,ai) and we consider {a mathematical formula}Total‾k=∑i=k+1∞c(si,ai) the sum of the costs after k steps. Note that we have {a mathematical formula}Total=Totalk+Total‾k.
+       </paragraph>
+       <paragraph label="Proof">
+        For{a mathematical formula}k∈Nconsider the strategy{a mathematical formula}σk⁎that is obtained by playing an optimal finite-horizon strategy{a mathematical formula}σkFOfor k steps, followed by strategy{a mathematical formula}σAllow. Let{a mathematical formula}αk=Pλ0σk⁎(E‾k)denote the probability that the target set is not reached within the first k steps. We have{a mathematical formula}We have{a mathematical formula} The first equality is obtained by splitting with respect to the complementary events {a mathematical formula}Ek and {a mathematical formula}E‾k; the second equality is obtained by writing {a mathematical formula}Total=Totalk+Total‾k; and the third equality is by linearity of expectation. The fourth equality is obtained as follows: since all outgoing transitions from target states have cost zero, it follows that given the event {a mathematical formula}Ek we have {a mathematical formula}Total=Totalk. The fifth equality is obtained by combining the first two terms. The final inequality is obtained as follows: from the {a mathematical formula}(k+1)-th step the strategy plays as {a mathematical formula}σAllow and the expected total cost given {a mathematical formula}σAllow is bounded by {a mathematical formula}UAllow. The result follows.  □
+       </paragraph>
+       <paragraph label="Proof">
+        For{a mathematical formula}k∈Nconsider the strategy{a mathematical formula}σk⁎and{a mathematical formula}αk(as defined inLemma 12). The following assertions hold:{a mathematical formula}We prove both inequalities below.
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         For {a mathematical formula}k∈N we have that{a mathematical formula} The first equality is due to Lemma 9 and the second inequality follows from the fact that {a mathematical formula}Totalk≤Total for non-negative weights.
+        </list-item>
+        <list-item label="2.">
+         Note that {a mathematical formula}αk denotes the probability that the target state is not reached within the first k steps. Since the costs are positive integers (for all transitions other than the target state transitions), given the event {a mathematical formula}E‾k the total cost for k steps is at least k. It follows that {a mathematical formula}Eλ0σk⁎[Totalk]≥Pλ0σk⁎(E‾k)⋅Eλ0σk⁎[Totalk|E‾k]. Since {a mathematical formula}αk=Pλ0σk⁎(E‾k) and {a mathematical formula}Eλ0σk⁎[Totalk|E‾k]≥k, we have that {a mathematical formula}Eλ0σk⁎[Totalk]≥k⋅αk. Thus it follows from the first inequality that we have {a mathematical formula}αk≤optAsCostk.
+        </list-item>
+       </list>
+       <paragraph>
+        Approximation algorithms. Our approximation algorithm is presented as Algorithm 1.
+       </paragraph>
+       <paragraph>
+        Correctness and bound on iterations. Observe that by Proposition 1 we have {a mathematical formula}Tk=Eλ0σkFO[Totalk]=Eλ0σk⁎[Totalk]. Thus by Lemma 12 and Lemma 13 (first inequality) we have {a mathematical formula}Eλ0σk⁎[Total]≤Tk+αk⋅UAllow≤optAsCost+αk⋅UAllow (since {a mathematical formula}Tk≤optAsCost). Thus if {a mathematical formula}αk⋅UAllow≤ϵ we obtain an additive approximation. If {a mathematical formula}αk⋅UAllow≤Tk⋅ϵ, then we have {a mathematical formula}Eλ0σ⁎[Total]≤Tk+αk⋅UAllow≤Tk⋅(1+ϵ)≤optAsCost⋅(1+ϵ); and we obtain a multiplicative approximation. This establishes the correctness of Algorithm 1. Finally, we present the theoretical upper bound on k that ensures stopping for the algorithm. By Lemma 13 (second inequality) we have {a mathematical formula}αk≤optAsCostk≤UAllowk. Thus {a mathematical formula}k≥UAllow2ϵ ensures that {a mathematical formula}αk⋅UAllow≤ϵ, and the algorithm stops both for additive and multiplicative approximation. We now summarize the main results of this section, which gives us the second and third items of Theorem 4.
+       </paragraph>
+       <paragraph label="Lemma 14">
+        For POMDPs with positive costs,Algorithm 1correctly computes the approximations of{a mathematical formula}optAsCostby optimally solving a sequence of finite-horizon POMDPs, and requires a number of iterations that is at most double exponential in the POMDP's state space size.
+       </paragraph>
+       <paragraph>
+        In the following remarks we comment on some aspects of the computation.
+       </paragraph>
+       <paragraph label="Remark 5">
+        {a mathematical formula}Computation of UAllow and αkIn our algorithm the values {a mathematical formula}UAllow and {a mathematical formula}αk are computed exactly using the PRISM model checker [29]. The PRISM model checker is a tool that allows exact computation for perfect-information MDPs.
+       </paragraph>
+       <list>
+        <list-item label="–">
+         For the computation of {a mathematical formula}UAllow we construct a perfect-information MDP intuitively as follows. In the first step we fix the {a mathematical formula}σAllow strategy in the POMDP, this results in Markov chain with states {a mathematical formula}(s,U) where s is the current state and U is the current belief support. The costs in the Markov chain mimic the costs in the POMDP. The nondeterminism in the transition function is resolved by the {a mathematical formula}σAllow strategy. In the next step we add a unique initial state from which the player can decide which state of the Markov chain to deterministically reach. The value {a mathematical formula}UAllow corresponds to a strategy that maximizes the total undiscounted sum of costs in the constructed perfect-information MDP.
+        </list-item>
+        <list-item label="–">
+         The computation of {a mathematical formula}αk is performed similarly to {a mathematical formula}UAllow by the PRISM model checker. Intuitively, we fix the strategy in the POMDP and evaluate the probability {a mathematical formula}αk of not reaching the goal state within k steps.
+        </list-item>
+       </list>
+       <paragraph label="Remark 6">
+        Bound on horizon lengthWe remark on two aspects of the theoretical upper bound on the horizon length k:
+       </paragraph>
+       <list>
+        <list-item label="–">
+         Note that though the theoretical upper bound k on the number of iterations {a mathematical formula}UAllow2ϵ is double exponential in the worst case, in practical examples of interest the stopping criteria are expected to be satisfied after many fewer iterations.
+        </list-item>
+        <list-item label="–">
+         For specific examples it may be possible to obtain an upper bound {a mathematical formula}UZ on the value of an almost-sure winning strategy such that {a mathematical formula}UZ≤UAllow. This bound may be used instead of {a mathematical formula}UAllow yielding a new and better bound {a mathematical formula}UZ2ϵ on the horizon length.
+        </list-item>
+       </list>
+       <paragraph label="Remark 7">
+        optAsCost and optCost coincideWe remark that if we consider POMDPs with positive costs, then considering almost-sure strategies is not a restriction, since we have established in Corollary 2 that for POMDPs with positive costs {a mathematical formula}optAsCost and {a mathematical formula}optCost coincide. Thus our result is applicable to all POMDPs with positive costs. A closely related work to ours is Goal-POMDPs, and the solution of Goal-POMDPs applies to the class of POMDPs where the target state is reachable from every state (see [4, line-3, right column page 1] for the restriction of Goal-MDPs and the solution of Goal-POMDPs is reduced to Goal-MDPs). For example, in the following Section 5, the first five examples for experimental results do not satisfy the restriction of Goal-POMDPs.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      Lower bound on {a mathematical formula}optAsCost
+      <paragraph>
+       We present a double-exponential lower bound on {a mathematical formula}optAsCost with respect to the number of states of the POMDP. We define a family of POMDPs {a mathematical formula}F(n), for every n, with a single target state, such that there exists an almost-sure winning strategy, and for every almost-sure winning strategy the expected number of steps to reach the target state is double-exponential in the number of states of the POMDP. Thus assigning cost 1 to every transition we obtain the double-exponential lower bound.
+      </paragraph>
+      <paragraph>
+       Preliminaries. The action set we consider consists of two symbols {a mathematical formula}A={a,#}. The state space consists of an initial state {a mathematical formula}s0, a target state {a mathematical formula}target, a losing absorbing state {a mathematical formula}bad and a set of n sub-POMDPs {a mathematical formula}Li for {a mathematical formula}1≤i≤n. Every sub-POMDP {a mathematical formula}Li consists of states {a mathematical formula}Qi that form a loop of {a mathematical formula}p(i) states {a mathematical formula}q1i,q2i,…,qp(i)i, where {a mathematical formula}p(i) denotes the i-th prime number (the first prime number {a mathematical formula}p(1) is 2) and {a mathematical formula}q1i is the initial state of the sub-POMDP. For every state {a mathematical formula}qji (for {a mathematical formula}1≤j≤p(i)) the transition function under action a moves the POMDP to the state {a mathematical formula}q(jmodp(i))+1i with probability {a mathematical formula}12 and to the initial state {a mathematical formula}s0 with the remaining probability {a mathematical formula}12. The action # played in the state {a mathematical formula}qp(i)i moves the POMDP to the target state {a mathematical formula}target with probability {a mathematical formula}12 and to the initial state {a mathematical formula}s0 with the remaining probability {a mathematical formula}12. For every other state in the loop {a mathematical formula}qji such that {a mathematical formula}1≤j&lt;p(i) the POMDP moves under action # to the losing absorbing state {a mathematical formula}bad with probability 1. The losing state {a mathematical formula}bad and the target state {a mathematical formula}target are absorbing and have a self-loop under both actions with probability 1.
+      </paragraph>
+      <paragraph>
+       POMDP family{a mathematical formula}F(n). Given an {a mathematical formula}n∈N we define the POMDP {a mathematical formula}F(n) as follows:
+      </paragraph>
+      <list>
+       <list-item label="–">
+        The state space is {a mathematical formula}S=Q1∪Q2∪…Qn∪{s0,bad,target}.
+       </list-item>
+       <list-item label="–">
+        There are two available actions {a mathematical formula}A={a,#}.
+       </list-item>
+       <list-item label="–">
+        The transition function is defined as follows: action a in the initial state leads to {a mathematical formula}bad with probability 1 and action # in the initial state leads with probability {a mathematical formula}1n to the initial state of the sub-POMDP {a mathematical formula}Li for every {a mathematical formula}1≤i≤n. The transitions for the states in the sub-POMDPs are described in the previous paragraph.
+       </list-item>
+       <list-item label="–">
+        All the states in the sub-POMDPs {a mathematical formula}Li have the same observation z. The remaining states {a mathematical formula}s0, {a mathematical formula}bad, and {a mathematical formula}target are visible, i.e., each of these three states has its own observation.
+       </list-item>
+       <list-item label="–">
+        The initial state is {a mathematical formula}s0.
+       </list-item>
+      </list>
+      <paragraph>
+       The cost function {a mathematical formula}c is defined as follows: the self-loop transitions at {a mathematical formula}target have cost 0 and all other transitions have cost 1. An example of the construction for {a mathematical formula}n=2 is depicted in Fig. 3, where we omit the losing absorbing state {a mathematical formula}bad and the transitions leading to {a mathematical formula}bad for simplicity.
+      </paragraph>
+      <paragraph>
+       Intuitive proof idea. For a given {a mathematical formula}n∈N let {a mathematical formula}pn⁎=∏i=1np(i) and {a mathematical formula}pn+=∑i=1np(i) denote the product and the sum of the first n prime numbers, respectively. Note that {a mathematical formula}pn⁎ is exponential in {a mathematical formula}pn+. An almost-sure winning strategy must play as follows: in the initial state {a mathematical formula}s0 it plays #, and then if it observes the observation z for at least {a mathematical formula}pn⁎ consecutive steps, then for each step it must play action a, and at the {a mathematical formula}pn⁎ step it can play action #. Hence the probability to reach the target state in {a mathematical formula}pn⁎ steps is at most {a mathematical formula}(12⋅(12)pn⁎); and hence the expected number of steps to reach the target state is at least {a mathematical formula}pn⁎⋅2⋅2pn⁎. The size of the POMDP is polynomial in {a mathematical formula}pn+ and thus the expected total cost is double exponential.
+      </paragraph>
+      <paragraph label="Proof">
+       There exists a family{a mathematical formula}(F(n))n∈Nof POMDPs of size{a mathematical formula}O(p(n))for a polynomial p with a reachability objective, such that the following assertion holds: There exists a polynomial q such that for every almost-sure winning strategy the expected total cost to reach the target state is at least{a mathematical formula}22q(n).For {a mathematical formula}n∈N, consider the POMDP {a mathematical formula}F(n), and an almost-sure winning strategy in the POMDP. In the first step the strategy needs to play the # action from {a mathematical formula}s0, as otherwise the losing absorbing state is reached. The POMDP reaches the initial state of the sub-POMDPs {a mathematical formula}Li, for all i, with positive probability. As all the states in the sub-POMDPs have the same observation z, the strategy cannot base its decision on the current sub-POMDP. The strategy has to play the action a until the observation z is observed for {a mathematical formula}pn⁎ steps in a row before playing action #. If the strategy plays the action # before observing the sequence of z observations {a mathematical formula}pn⁎ times, then it reaches the losing absorbing state with positive probability (and would not have been an almost-sure winning strategy). This follows from the fact that there is a positive probability of being in a sub-POMDP, where the current state is not the last one of the loop. Hence an almost-sure winning strategy must play a as long as the length of the sequence of the observation z is less than {a mathematical formula}pn⁎ consecutive steps. Note that while playing the a action in the POMDP it can move to the initial state {a mathematical formula}s0, and the strategy restarts. Note that the initial state {a mathematical formula}s0 is perfectly observable. In every step of the sub-POMDPs, with probability {a mathematical formula}12 the initial state is reached, and the next state is in the sub-POMDP with probability {a mathematical formula}12. After observing the z observation for {a mathematical formula}pn⁎ consecutive steps, the strategy can play the action # that moves the POMDP to the target state {a mathematical formula}target with probability {a mathematical formula}12 and restarts the POMDP with the remaining probability {a mathematical formula}12. Therefore the probability of reaching the target state within {a mathematical formula}pn⁎ steps is at most {a mathematical formula}(12⋅(12)pn⁎), i.e., the probability of staying in the sub-POMDPs for {a mathematical formula}pn⁎ steps and finally reaching the target state with the # action. Note that {a mathematical formula}pn⁎ is exponential in the size of the POMDP.Formal argument about the expected number of steps. We now formally argue about the expected number of steps required to reach the target state in the POMDP {a mathematical formula}F(n) using the described strategy σ. The expected number of steps is by definition equivalent to the expected hitting time in the Markov chain {a mathematical formula}F(n)↾σ. Which is in turn equivalent to the expected hitting time in the Markov chain M depicted in Fig. 4.Relation between Markov chains{a mathematical formula}F(n)↾σand M. The Markov chain {a mathematical formula}F(n)↾σ starts in the initial state {a mathematical formula}s0, in the next step with uniform probability states corresponding to one of the sub-POMDPs {a mathematical formula}Li are reached. As these sub-POMDPs cannot be distinguished the behavior is the same in all branches. In the Markov chain M we merge all the parallel branches that correspond to individual sub-POMDPs of {a mathematical formula}F(n)↾σ into a single branch, i.e., we do not distinguish states that differ only in the sub-POMDPs state component.In the Markov chain M, from the initial state {a mathematical formula}s0 with probability 1 the state {a mathematical formula}q0 is reached. For every {a mathematical formula}0≤i&lt;pn⁎ if the current state is {a mathematical formula}qi, then with probability {a mathematical formula}12 state {a mathematical formula}qi+1 is reached and with probability {a mathematical formula}12 the next state is the initial state {a mathematical formula}s0. From state {a mathematical formula}qpn⁎ with probability {a mathematical formula}12 the target state T is reached and with the remaining probability {a mathematical formula}12 the initial state {a mathematical formula}s0 is reached. In other words, M is a Markov chain on a line, that at each step moves forward one step towards the target with probability {a mathematical formula}12, and with probability {a mathematical formula}12 goes back to the start state. It follows from the standard properties of Markov chain that the expected hitting in Markov chain M is exponential in the number of states {a mathematical formula}pn⁎+2 (i.e., the length of the chain in this case). Note that {a mathematical formula}pn⁎ is already exponential in the number of states of the POMDP {a mathematical formula}F(n) (the size of the POMDP is polynomial in {a mathematical formula}pn+). It follows that the expected number of steps to reach the target state T in POMDP {a mathematical formula}F(n) using strategy σ is double exponential in the number of states of the POMDP. As every transition has a cost of 1, it follows that the expected number of steps corresponds to the expected cost. Note that all almost-sure winning strategies {a mathematical formula}σ′ have an expected cost that is at least the expected cost of σ. It follows that the optimal expected total cost to reach the target state is at least double exponential in the size of the POMDP.  □
+      </paragraph>
+      <paragraph>
+       Discussion onLemma 15. We discuss some important aspects of Lemma 15. First it establishes the last item of Theorem 4, and presents a matching lower bound to the upper bound of Lemma 6. Moreover, in the lower bound example, we do not use general integer weights, and our weights are only 0 and 1. Hence our weights are not only expressed in unary, but in constantly many bits. Thus our lower bound shows a strongly double exponential lower bound (which does not depend on the representation of the costs) on the number of steps.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      Implementation. We have implemented Algorithm 1. In principle our algorithm suggests the following: First, compute the almost-sure winning belief supports, the set of allowed actions, and {a mathematical formula}σAllow; and then compute finite-horizon value iteration restricted to allowed actions. An important feature of our algorithm is its flexibility that any finite-horizon value iteration algorithm can be used for our purpose. We have implemented our approach where we first implement the computation of almost-sure winning belief supports, allowed actions, and {a mathematical formula}σAllow. For the finite-horizon value iteration (Step 3 of Algorithm 1) we implement two approaches. The first approach is the exact finite-horizon value iteration using a modified version of POMDP-Solve [6]; and the second approach is an approximate finite-horizon value iteration using a modified version of RTDP-Bel [4]. In both cases our straightforward modification is that the computation of the finite-horizon value iteration is restricted to allowed actions and almost-sure winning belief supports.
+     </paragraph>
+     <paragraph label="Remark 8">
+      Due to the belief discretization used in RTDP-Bel, the RTDP-Bel algorithm is approximate and may not converge [4].
+     </paragraph>
+     <paragraph>
+      Heuristics. Many of the examples from the literature fall into the category where from every state the goal state is reachable in a finite number of steps with positive probability. We have implemented a simple heuristic that checks whether this is the case and skips the computation of {a mathematical formula}BeliefWin(G,T). In this case all actions are allowed in all beliefs and {a mathematical formula}σAllow can play all available actions uniformly at random in all beliefs.
+     </paragraph>
+     <paragraph label="Remark 9">
+      We remark that we do not present a specific algorithm, rather a flexible approach, such that after the computation of {a mathematical formula}σAllow can be integrated with any algorithm for finite-horizon POMDPs.
+     </paragraph>
+     <paragraph>
+      Examples for experimental results. We experiment on several well-known examples of POMDPs. The POMDP examples we consider are as follows: (A) We experiment with the Cheese maze POMDP example which was introduced in [34] and also studied in [16], [31], [35]. Along with the standard example, we also consider a larger maze version. We consider two cost functions: one that assign cost 1 to all transitions and the other where the cost of movement on the baseline (states 0–4 in Cheese maze small and 0–6 in Cheese maze large) is assigned cost 2. (B) We consider the Grid POMDP introduced in [44] and also studied in [31], [38], [35]. We consider two cost functions: one where all costs are 1 and the other where transitions in narrow areas are assigned cost 2. (C) We experiment with the robot navigation problem POMDP introduced in [31], for which we consider both deterministic transition and a randomized version. We also consider two cost functions: one where all costs are assigned 1 and the other where costs of turning are 2. (D) We consider the Hallway example from [31], [47], [45], [4]. (E) We consider the RockSample example from [4], [45]. Further details about the examples are presented in Appendix B.
+     </paragraph>
+     <paragraph>
+      Details of the POMDP examples. We now present the details of the POMDP examples.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Cheese maze: The example models a simple maze, where there are four actions n, e, s, w that correspond to the movement in the four compass directions. Actions that attempt to move outside of the maze have no effect on the position; otherwise the change of position is deterministic given the action in all four directions. The initial state is chosen probabilistically and is the source of uncertainty in these problems. In the first setting all the costs are 1, and this represents the number of steps to the target state; and in the second setting the cost of any movement on some areas of the maze is 2 to model a higher cost of exploration in certain areas.
+      </list-item>
+      <list-item label="2.">
+       Grid{a mathematical formula}4×3: The POMDP was described for the first time in [44] and then also used in the work of [31], [38], [35]. It models a maze with 11 states and four actions n, e, s, w that correspond to the movement in the four compass directions. The movement succeeds only with probability 0.96 and with probability 0.02 moves perpendicular to the intended direction. We again consider the setting where all the costs before reaching the target state are 1. In the second setting we assign the cost of 2 to movements in the narrow areas of the maze.
+      </list-item>
+      <list-item label="3.">
+       For both variants we consider two different cost settings. In the first setting all the costs before reaching the target state are 1. In the second setting we assign cost 1 to the move-forward action, and cost 2 to the turn-left and turn-right action (i.e., turning is more costly than moving forward).
+      </list-item>
+      <list-item label="4.">
+       Hallway. We consider two versions of the Hallway example introduced in [31] and used later in [47], [45], [4]. The basic idea behind both of the Hallway problems, is that there is an agent wandering around some office building. It is assumed that the locations have been discretized so there are a finite number of locations where the agent could be. The agent has a small finite set of actions it can take, but these only succeed with some probability. Additionally, the agent is equipped with very short range sensors to provide it only with information about whether it is adjacent to a wall. These sensors also have the property that they are somewhat unreliable and will sometimes miss a wall or see a wall when there is none. It can “see” in four directions: forward, left, right, and backward.
+      </list-item>
+      <list-item label="5.">
+       RockSample. The RockSample problem introduced in [45] and used later in [4] is a scalable problem that models rover science exploration. The rover can incur various costs by sampling rocks in the immediate area, and by continuing its traverse (reaching the exit at the right side of the map). The positions of the rover and the rocks are known, but only some of the rocks have scientific value; we will call these rocks “good”. Sampling a rock is expensive, so the rover is equipped with a noisy long-range sensor that it can use to help determine whether a rock is good before choosing whether to approach and sample it. An instance of RockSample with map size {a mathematical formula}n×n and k rocks is described as RockSample[n,k].
+      </list-item>
+     </list>
+     <paragraph>
+      Discussion of experimental results. Our experimental results are shown in Table 2, where we compare our approach to RTDP-Bel [4]. Other approaches such as SARSOP [28], anytime POMDP [41], ZMDP [45] are only for discounted setting, and hence are different from our approach. However, for running time comparison we also present results obtained with the SARSOP algorithm [28] with discount factor {a mathematical formula}γ=0.999 and the corresponding lower and upper bounds obtained in a 20 min timeout. The RTDP-Bel approach works only for Goal-POMDPs where from every state the goal states are reachable, and our first five examples do not fall into this category. For the first three examples, both of our exact and approximate implementation work very efficiently. For the other two larger examples, the exact method does not work since POMDP-Solve cannot handle large POMDPs, whereas our approximate method gives comparable result to RTDP-Bel. For the exact computation, we consider multiplicative approximation with {a mathematical formula}ϵ=0.6 and report the number of iterations and the time required by the exact computation. For the approximate computation, we report the time required by the number of trials specified for the computation of the finite-horizon value iteration. We also report the time for {a mathematical formula}σAllow computation that is not included in the latter running times.
+     </paragraph>
+     <paragraph>
+      For the Cheese maze and Robot movement examples, the obtained values of the strategies of the Approx. algorithm closely match the value of the strategy from the Exact algorithm. RTDP-Bel fails to run on these examples. The situation is more interesting for the grid examples. The example exhibits the following feature: for every almost-sure winning strategy there is a very small positive probability of receiving a high sum of costs. The exact computation reports value 7.93 in the setting of uniform costs. The Approx. version of the algorithm reports value 4.00, which is likely caused by imprecisions induced by the simulations. The SARSOP algorithm converges to value 3.59. The reason for such a low value is the discount factor {a mathematical formula}γ=0.999. Changing the discount factor γ to 0.99999 for the grid-uniform example increases the computed upper bound to 57.19. The increase of values illustrate the crucial differences between the discounted and undiscounted setting. For the latter examples the Exact algorithm does not terminate in the 20 min timeout. The results also show that the Approx. algorithm closely matches RTDP-Bel in terms of running time and computed values.
+     </paragraph>
+     <paragraph>
+      Comparison of undiscounted-sum and discounted-sum strategies. We discuss the key differences of strategies that optimize the undiscounted-sum and discounted-sum on the grid example depicted in Fig. 8 in Appendix B. Further discussion and details are also provided in [48]. We consider the situation when the probability of being in state 5 of the grid is positive. Note, that there are four actions with a noisy movement in the four compass directions. If the losing absorbing state 6 is to be avoided the only safe action to play is e. In the undiscounted setting reaching the state 6 must be avoided at all costs, as once the state is reached it is never left and induces a cost of 1 in every turn. Hence the undiscounted sum would be infinite. For the discounted-sum objective if the probability of being in state 5 is low it may be worth to play a different action. In the unlucky case, where the absorbing state 6 is reached the received costs will be discounted and hence even though state 6 is never left and induces a cost of 1 in every turn the infinite discounted sum will be only finite. It is therefore possible that the gain from the lucky outcome may be beneficial. This behavior is also illustrated in Table 2 where the value obtained by the SARSOP algorithm with discount {a mathematical formula}γ=0.999 for the grid-uniform examples is lower than the value obtained by the undiscounted-sum algorithms.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      We have already compared with the most closely related work on Goal-POMDPs in Section 1. In this section we compare our work with other related work in the literature.
+     </paragraph>
+     <paragraph>
+      For probabilistic automata and POMDPs, several important undecidability results have been established in [33]. From the results of [33], the undecidability of the exact decision problems that we consider can be obtained, whereas we also establish undecidability of the approximation problem. In particular, the undecidability of the additive approximation problem for integer costs does not follow immediately from the results of [33], and also our decidability of approximation for positive costs does not follow from [33]. Many hardness results have been established in [32]. However, these results consider hardness for special class of strategies like stationary strategies and Markov (time-dependent) strategies. Finally, there are several pieces of work on stochastic shortest path (SSP) problems. First, the SSP problem in the perfect-information setting has been considered in [1]. An extension of the algorithms to handle dead-ends in perfect-information setting was studied in [25], [48]. A model of indefinite horizon POMDPs that terminate by a specified action instead of reaching a goal state was proposed in [18]. Efficient heuristic and error bounds have been proved in [20] in the perfect-information setting, and the problem has also been solved using dual optimization problem in [48], but again also in the perfect-information setting. In contrast, we consider the problem in the partial-information setting, i.e., for POMDPs. The SSP problem has also been considered in the POMDP setting in [39]. First, [39] shows that if proper policy exists, then policy iteration converges, and if from every state there is a path to a goal state (the same restriction as the RTDP-Bel approach [4]), then value iteration converges. The work of [39] has been generalized in [19], where a stronger convergence (geometric convergence) has been established, under the assumption of existence of proper policies. In contrast, our approach does not consider any restriction on policies, and establish both convergence, and optimal bounds for convergence (double exponential upper bound, and double exponential lower bound in the worst case). Note that our double exponential lower bound implies a geometric convergence cannot be proved for the problem we consider.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Details of Section 3
+     <paragraph label="Remark 10">
+      Discussion about the implications of Theorem 2We discuss the result of Theorem 2. While an undeciability result is not surprising, we clarify few relevant aspects of the result. First, as mentioned in Section 3.1 (Theorem 1), for the exact problems the undecidability already follows from [33]. Theorem 2 establishes undecidability for the approximation problems. First we discuss a naive construction that is not sufficient to establish the undecidability claim of Theorem 2. The naive construction does not establish undecidability for the additive approximation for all {a mathematical formula}ϵ&gt;0, whereas the result of Theorem 2 establishes undecidability for both additive and multiplicative approximation for all {a mathematical formula}ϵ&gt;0.Naive construction. Given a POMDP G with a goal state g, consider a new POMDP {a mathematical formula}G′ obtained from G with a new goal state {a mathematical formula}g′ and an additional action ✓. The transition function in {a mathematical formula}G′ remains unchanged for the old actions. The new action ✓ leads with probability 1 from any state to the new goal state {a mathematical formula}g′. All the costs in the POMDP {a mathematical formula}G′ are changed to 0 with exception of the action ✓ played in the original goal state g that has cost −1. An example of the proposed reduction is depicted in Fig. 5.For the constructed POMDP {a mathematical formula}G′ the optimal cost will be −p, where p is the maximal probability of reaching the target set in G. Therefore, the optimal cost of {a mathematical formula}G′ is between 0 and −1. However, since the optimal cost for this transformation is always between 0 and −1, in this case an additive approximation with {a mathematical formula}ϵ=1 is possible (since the value 0 will always satisfy additive approximation with {a mathematical formula}ϵ=1).Note that in the setting of Madani et al. [33] since probabilities are considered, they consider approximation factor between {a mathematical formula}(0,1). Since we consider expected optimal cost which can range from −∞ to +∞, for additive approximation we must also consider ϵ to be positive integers greater than 1.Implications ofTheorem 2. The reduction shows that even the additive approximation is not possible for any {a mathematical formula}ϵ&gt;0. In our reduction we show that either the optimal value is −∞ (if the answer to the instance of the undecidable problem is YES) or else 1 (if the answer to the instance of the undecidable problem is NO). The undecidability proof rules out all {a mathematical formula}ϵ&gt;0 approximations (even with additive approximation and a positive integer ϵ), and the reduction is also a reduction from the acceptance problem of PFA. Finally, for POMDPs with integer costs, one can also ask a qualitative question that whether {a mathematical formula}optCost (resp., {a mathematical formula}optAsCost) is −∞, and Theorem 2 shows that even this qualitative problem is undecidable (which does not follow from the existing results in the literature).
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     Details of Section 5
+     <paragraph>
+      Details of the POMDP examples. We now present the details of the POMDP examples.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Cheese maze: The example models a simple maze, where there are four actions n, e, s, w that correspond to the movement in the four compass directions. The POMDP examples are shown in Fig. 6 and Fig. 7. Actions that attempt to move outside of the maze have no effect on the position; otherwise the change of position is deterministic given the action in all four directions. In the small version, there are 12 states and 8 observations, which correspond to what walls would be seen in all four directions that are immediately adjacent to the current location, i.e., states {a mathematical formula}5,6, and 7 have the same observation. The game starts in a unique initial state that is not depicted in the figure, where all actions lead to the baseline states 0, 1, 2, 3, or 4 with uniform probability. The target state is depicted with a star, and there are also two absorbing trap states depicted with a skull. The initial state, the trap states, and the goal state have their own unique observations. In the larger variant of the POMDP there are four more states and intuitively they add a new leftmost branch to the POMDP with a third absorbing trap state at the end. The new baseline is formed out of states {a mathematical formula}0,1,2,…,6. In the first setting all the costs are 1, and this represents the number of steps to the target state; and in the second setting the cost of any movement on the baseline is 2 and the movement in the branches costs 1 (which models that baseline exploration is more costly).
+      </list-item>
+      <list-item label="2.">
+       Grid{a mathematical formula}4×3: The Grid POMDP is shown in Fig. 8 and models a maze with 11 states: the starting state 0, one target state depicted with a star, and an absorbing trap state that is depicted with a skull. There are four actions n, e, s, w that correspond to the movement in the four compass directions. The movement succeeds only with probability 0.96 and with probability 0.02 moves perpendicular to the intended direction. Attempts to move outside of the grid have no effect on the position, i.e., playing action s from state 0 will move with probability 0.96 to state 4; with probability 0.02 to state 1, and with probability 0.02 to state 0. There are 6 observations that correspond to the information from detectors that can detect whether there are walls immediately adjacent to the east and to the west of the current state. The goal and the absorbing trap state have their own observations. We again consider the setting where all the costs before reaching the target state are 1. In the second setting we assign the cost of 2 to movements in the narrow areas of the maze (states {a mathematical formula}0,1,4,7, and 8). Intuitively, the higher costs compensate for the wall bumps that can make the movement in the narrow areas of the maze more predictable.
+      </list-item>
+      <list-item label="3.">
+       Robot navigation: The robot navigation POMDP models the movement of a robot in an environment was introduced in [31] and is shown in Fig. 9. The robot can be in four possible states: facing north, east, south, and west. The environment has states 1, 2, 3, and a final state depicted with a star. The robot has three available actions: move forward f, turn left l, and turn right r. The original setting of the problem is that all actions are deterministic – Robot movement – det. We also consider a variant Robot movement – ran., where the attempt to take an action may fail and with probability 0.04 has no effect, i.e., the action does not change the state. The POMDP starts in a unique initial state that is not depicted in the figure and under all actions reaches the state 1 with the robot facing north, east, south or west with uniform probability. Any bump against the wall results in a damaged immobile robot, modeled by an absorbing state not depicted in the figure. There are 11 observations that correspond to what would be seen in all four directions that are adjacent to the current location. The initial state, the damaged state, and the target state have their own observations. For both variants we consider two different cost settings. In the first setting all the costs before reaching the target state are 1. In the second setting we assign cost 1 to the move-forward action, and cost 2 to the turn-left and turn-right action (i.e., turning is more costly than moving forward).
+      </list-item>
+      <list-item label="4.">
+       Hallway. We consider two versions of the Hallway example introduced in [31] and used later in [47], [45], [4]. The basic idea behind both of the Hallway problems, is that there is an agent wandering around some office building. The smaller Hallway examples is shown in Fig. 10 and the larger one in Fig. 11. It is assumed that the locations have been discretized so there are a finite number of locations where the agent could be. The agent has a small finite set of actions it can take, but these only succeed with some probability. Additionally, the agent is equipped with very short range sensors to provide it only with information about whether it is adjacent to a wall. These sensors also have the property that they are somewhat unreliable and will sometimes miss a wall or see a wall when there is none. It can ”see” in four directions: forward, left, right, and backward. It is important to note that these observations are relative to the current orientation of the agent (N, E, S, W). In these problems the location in the building and the agent's current orientation comprise the states. There is a single goal location, denoted by the star. The agent can choose one of several moves: forward, turn-left, turn-right, turn-around, and no-op (stay in place). Action forward succeeds with probability 0.8, leaves the state unchanged with probability 0.05, moves the agent to the left and rotates the agent to the left with probability 0.05, similarly with probability 0.05 the agent moves to the right and is rotated to the right, with probability 0.025 the agent is moved back without changing its orientation, and with probability 0.025 the agent is moved back and is rotated backwards. The action move-left and move-right succeeds with probability 0.7, and with probability 0.1 leads to any of the three remaining orientations. Action turn-around succeeds with probability 0.6, leaves the state unchanged with probability 0.1, turns the agent to left or right, each with probability 0.15. The last action no-op leaves the state unchanged with probability 1. In states where moving forward is impossible the probability mass for the impossible next state is collapsed into the probability of not changing the state. Every move of the agent has a cost of 1 and the agent starts with uniform probability in all non-goal states. In the smaller Hallway problem there are 61 states and 22 observations. In the Hallway2 POMDP there are 94 states and 17 observations.
+      </list-item>
+      <list-item label="5.">
+       RockSample. The RockSample problem introduced in [45] and used later in [4] is a scalable problem that models rover science exploration (Fig. 12). The rover can incur various costs by sampling rocks in the immediate area, and by continuing its traverse (reaching the exit at the right side of the map). The positions of the rover and the rocks are known, but only some of the rocks have scientific value; we will call these rocks “good”. Sampling a rock is expensive, so the rover is equipped with a noisy long-range sensor that it can use to help determine whether a rock is good before choosing whether to approach and sample it. An instance of RockSample with map size {a mathematical formula}n×n and k rocks is described as RockSample[n,k]. The POMDP model of RockSample[n,k] is as follows. The state space is the cross product of {a mathematical formula}k+1 features: {a mathematical formula}Position={(1,1),(1,2),…,(n,n)}, and k binary features {a mathematical formula}RockTypei={Good,Bad} that indicate which of the rocks are good. There is an additional terminal state, reached when the rover moves off the right-hand edge of the map. The rover can select from {a mathematical formula}k+5 actions: {a mathematical formula}{N,S,E,W,sample,check1,…,checkk}. The first four are deterministic single-step motion actions. The sample action samples the rock at the rover's current location. If the rock is good, the rover receives a small cost and the rock becomes bad (indicating that nothing more can be gained by sampling it). If the rock is bad, it receives a higher cost. Every move and measure action receives a cost. Each {a mathematical formula}checki action applies the rover's long-range sensor to rock i, returning a noisy observation from {a mathematical formula}Good,Bad. The noise in the long-range sensor reading is determined by the efficiency ν, which decreases exponentially as a function of Euclidean distance from the target. At {a mathematical formula}ν=1, the sensor always returns the correct value. At {a mathematical formula}ν=0, it has a 50/50 chance of returning Good or Bad. At intermediate values, these behaviors are combined linearly. When the rover reaches the exit location it receives a cost proportional to the number of good rocks that remain unsampled. The initial belief is that every rock has equal probability of being Good or Bad. All the problems have 2 observations, and RockSample[4,4] has 257 states, RockSample[5,5] has 801 states, RockSample[5,7] has 3201 states, and RockSample[7,8] has 12545 states.
+      </list-item>
+     </list>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

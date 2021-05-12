@@ -1,0 +1,635 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Semantic sensitive tensor factorization.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The ability to analyze relationships involving three or more objects is critical for accurately predicting human activities. An example of a typical relationship involving three or more objects in a content providing service is one between a user, an item on a webpage, and a user-assigned tag of that item. Another example is the relationship between a user, his or her tweet on Twitter, and the locations at which he or she tweeted. The ability to predict such relationships can be used to improve recommendation systems and social network analysis. For example, suppose that a user assigns a thriller movie the tag “romance” and another user tags it with “car action”. Here, methods that only handle bi-relational objects ignore tags and find these users to be similar because they mentioned the same item. In contrast, multi-relational methods conclude that such users are slightly different because they have different opinions about the item. The quality of recommendations would be higher if they reflected these small differences [1].
+     </paragraph>
+     <paragraph>
+      Tensors are useful ways of representing relationships involving three or more objects, and tensor factorization is seen as a means of predicting possible future relationships [2]. Bayesian probabilistic tensor factorization (BPTF) [3] is especially promising because of its efficient sampling of large-scale datasets and simple parameter settings. However, this and other tensor factorization schemes have had poor accuracy because they fail to utilize the semantics underlying the objects and have trouble handling ambiguous and/or sparsely observed objects.
+     </paragraph>
+     <paragraph>
+      Semantic ambiguity is a fundamental problem in text clustering. Several studies have used Wikipedia or WordNet taxonomies [4] to resolve semantic ambiguities and improve the performance of text clustering [5] and to compute the semantic relatedness of documents [6]. We show in this paper that taxonomy-based disambiguation can improve the prediction accuracy of tensor factorization.
+     </paragraph>
+     <paragraph>
+      The sparsity problem affects accuracy if the dataset used for learning latent features in tensor factorizations is not sufficient [7]. In an attempt to improve prediction accuracy, generalized coupled tensor factorization (GCTF) [8], [9] uses social relationships among users as auxiliary information in addition to user–item–tag relationships during the tensor factorization. Recently, GCTF was used for link prediction [10], and it was found to be the most accurate of the current tensor factorization methods that use auxiliary information [7], [11], [12]. However, so far, no tensor methods have used semantics expressed as taxonomies to resolve ambiguity/sparsity problems even though taxonomies are present in real applications as a result of the spread of the Linked Open Data (LOD) vision [13] and the growing knowledge graphs used in search.{sup:1}
+     </paragraph>
+     <paragraph>
+      In this paper, we propose semantic sensitive tensor factorization (SSTF), which uses semantics expressed by vocabularies and taxonomies to overcome the above problems in the BPTF framework. Vocabularies and taxonomies, sometimes called “simple ontologies” [14], are collections of human-defined classes with a hierarchical structure and classification instances (i.e., items or words). We will disambiguate the objects (items or tags) by using “vocabularies” for graph structures and “taxonomies” for tree structures. Fig. 1 overviews SSTF. The factorization has two components, semantic grounding and tensor factorization with semantic augmentation, which respectively resolve the semantic ambiguity and sparsity problems.
+     </paragraph>
+     <paragraph>
+      Semantic grounding resolves semantic ambiguities by linking objects to vocabularies or taxonomies. It first measures the similarity between objects and instances in the vocabularies (taxonomies). It then links each object to vocabulary (taxonomy) classes via the instance that is most similar to the object. Consequently, it can construct a tensor whose objects are linked to classes. For example, in Fig. 1, the tag “Breathless” can be linked to the class CT1, which includes word instances such as “Breathtaking” and “Breathless” or CT2, which includes the word instances such as “Dyspneic” and “Breathless”. CT1 and CT2 have different meanings, and a tensor factorization trained on observed relationships that include such ambiguous tags can degrade prediction accuracy. SSTF extracts the properties that are assigned to item entry {a mathematical formula}v1 in LOD sources and those assigned to instances in WordNet. Then, it links the tag “Breathless” to CT1 if the properties of “Breathless” in CT1 are more similar to the properties of {a mathematical formula}v1 than to those of “Breathless” in CT2. We describe this process in detail in Section 4.2.
+     </paragraph>
+     <paragraph>
+      Tensor factorization with semantic augmentation solves the sparsity problem by incorporating semantic biases based on vocabulary (taxonomy) classes into tensor factorization. The key point of this idea is that it lets sparse objects share semantic knowledge with regard to their classes during the factorization process. It lifts sparse objects to their classes to create augmented tensors. To do this, it determines multiple sets of sparse objects according to the degree of sparsity to create multiple augmented tensors. It then factorizes the original tensor and the augmented tensors simultaneously to compute feature vectors for objects and for classes. By factorizing multiple augmented tensors, it creates feature vectors for classes according to the degree of sparsity. As a result, through these feature vectors, relationships between sparse objects can include detailed semantic knowledge with regard to their classes. This aims to solve the sparsity problem. For example, in Fig. 1, items {a mathematical formula}v1 and {a mathematical formula}v2 are linked to classes CV1 and CV2, and items {a mathematical formula}v3 and {a mathematical formula}v4 are linked to class CV2. Suppose that items {a mathematical formula}v1 and {a mathematical formula}v2 are in a set that includes the most sparse items. Item {a mathematical formula}v3 is in a set that includes the second-most sparse items. In this case, {a mathematical formula}v1 and {a mathematical formula}v2 can share the semantic knowledge in CV1 and CV2 with each other. Moreover, {a mathematical formula}v3 can share the semantic knowledge with {a mathematical formula}v1 and {a mathematical formula}v2 in CV2. This semantic knowledge ameliorates the sparsity problem in tensor factorization. Furthermore, SSTF can combine heterogeneous and unbalanced datasets though it factorizes the original tensor and augmented tensors, which are created from different data sources, simultaneously. This is because, in creating the augmented tensors, SSTF inserts relationships composed of semantic classes of sparsely observed objects (i.e. rating relationships composed of users, item classes, and tags) into the original tensor. Those augmented relationships are of the same type present in the original tensor. This semantic augmentation is described in detail in Section 4.3.
+     </paragraph>
+     <paragraph>
+      Thus, our approach leverages semantics to incorporate expert knowledge into a sophisticated machine learning scheme, tensor factorization. SSTF resolves object ambiguities by linking objects to vocabulary and taxonomy classes. It also incorporates semantic biases into tensor factorization by sensitively tracking the degree of sparsity of objects while factorizing original tensor and augmented tensors simultaneously; the sparsity problem is solved by sharing the semantic knowledge among sparse objects. As a result, SSTF achieves much higher accuracy than the current best methods. We implemented SSTF in the BPTF framework. Thus, it inherits the benefits of a Bayesian treatment of tensor factorization, i.e., easy parameter settings and fast computation by parallel computation of feature vectors.
+     </paragraph>
+     <paragraph>
+      We evaluated our method on three datasets: (1) MovieLens ratings/tags{sup:2} with FreeBase{sup:3}/WordNet, (2) Yelp ratings/reviews{sup:4} with DBPedia [15]/WordNet, and (3) Last.fm listening counts/tags{sup:5} with FreeBase and WordNet. We put the datasets and Matlab code of our proposal online, so readers can use them to easily confirm our results and proceed with their own studies.{sup:6} The results show that SSTF has 6–12% higher accuracy in comparison with state-of-the-art methods including GCTF. It suits many applications (i.e. movie rating/tagging systems, restaurant rating/review systems, and music listening/tagging systems) that manage various items since the growing knowledge graph means that applications increasingly have semantic knowledge underlying objects.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows: Section 2 describes related work, and Section 3 introduces the background of this paper. Section 4 explains our method, and Section 5 evaluates it. Section 6 concludes the paper.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Tensor factorization methods are used in various applications such as recommendation systems [2], [16], semantic web analytics [17], [18], and social network analysis [11], [19], [20]. For example, [2] models observation data as a user–item–context tensor to provide context-aware recommendations. TripleRank [17] analyzes Linked Open Data (LOD) triples by using tensor factorization and ranks authoritative sources with semantically coherent predicates. [20], [21] provide personal tag recommendations by factorizing tensors composed of users, items, and social tags.
+     </paragraph>
+     <paragraph>
+      This section first details the tensor factorization studies that utilize the side information in their factorization process to solve the sparsity problem. It next describes efficient tensor factorization schemes and then introduces tensor studies that use semantic data including linked open data to analyze or enhance factorized results. Other than the tensor-based methods, it finally explains methods that use a tripartite graph to compute the link or rating predictions.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Coupled tensor factorization
+      </section-title>
+      <paragraph>
+       One major problem with tensor factorization is that its prediction accuracy tends to be poor because observations made in real datasets are typically sparse [7]. Several matrix factorization studies have tried to incorporate side information such as social connections among users to improve factorization accuracy [22]. However, their focus is on predicting paired-object relationships. As a result, they differ in purpose from ours, i.e., predicting possible future relationships between three or more objects.
+      </paragraph>
+      <paragraph>
+       Coupled tensor factorization algorithms [7], [8], [11], [12], [16], [23], [24], [25], [26] have recently gained attention. They represent relationships composed of three or more objects (e.g. rating relationships involving users, items, and tags) as a tensor and side information (e.g. link relationships composed by items and their properties) as matrices or tensors. They associate objects (e.g. items) with tensors and matrices, each of which treats different types of information (e.g. tensors represent rating relationships whereas matrices represent link relationship); this often triggers a balance problem when handling heterogeneous datasets [27]. Then, they simultaneously factorize the tensors and matrices to make predictions. Among them, generalized coupled tensor factorization (GCTF) [8] utilizes the well-established theory of generalized linear models to factorize multiple observed tensors simultaneously. It can compute arbitrary factorizations in a message passing framework derived for a broad class of exponential family distributions. GCTF has been applied to social network analysis [9], musical source separation [28], and image annotation [29] and it has been proven useful in joint analysis of data from multiple sources. Acar et al. have formulated a coupled matrix and tensor factorization (CMTF) problem, where heterogeneous datasets are modeled by fitting outer-product models to higher-order tensors and matrices in a coupled manner. They proposed an all-at-once optimization approach called CMTF-OPT (CMTF-OPTimization), which is a gradient-based optimization approach for joint analysis of matrices and higher-order tensors [12]. They used their method to analyze metabolomics datasets and found that they can capture the underlying sparse patterns in data [30]. Furthermore, on a real data set of blood samples collected from a group of rats, They used CMTF-OPT to jointly analyze metabolomics datasets and identify potential biomarkers for apple intake. They also reported the limitations of coupled tensor factorization analysis, not only its advantages [31]. For instance, coupled analysis performs worse than the analysis of a single dataset when the underlying common factors constitute only a small part of the data under inspection or when the shared factors only contribute a little to each dataset. To solve the sparsity problem affecting tensor completion, [23] proposed non-negative multiple tensor factorization (NMTF), which factorizes the target tensor and auxiliary tensors simultaneously, where auxiliary data tensors compensate for the sparseness of the target data tensor. More recently, [32] proposed a method that uses common structures in datasets to improve the prediction performance. Instead of common latent factors in factorization, it assumes that datasets share a common adjacency graph (CAG) structure, which is more able to deal with heterogeneous and unbalanced datasets.
+      </paragraph>
+      <paragraph>
+       SSTF differs from the above studies mainly in the following four senses: (1) it presents the way of incorporating semantic information, which is now available in the format of linked open data, into tensor factorization. The evaluations show that our ideas, semantic grounding and tensor factorization with semantic augmentation, are very useful in improving prediction results in tensor factorization. (2) From the viewpoint of coupled tensor factorization, SSTF is more robust to deal with heterogeneous and unbalanced datasets, as demonstrated in the evaluation section. This is because it augments a tensor by inserting relationships composed of semantic classes of sparsely observed objects (i.e. rating relationships composed of users, item classes, and tags) into the original tensor. These augmented relationships are of the same type present in the original tensor, so SSTF can naturally combine and simultaneously factorize the original tensor and augmented tensors. Thus, its approach is suitable for combining heterogeneous datasets in factorization such as ratings datasets and link relationships datasets. (3) It focuses on multi-object relationships including sparse objects. Thus, it can effectively solve the sparsity problem while avoiding the useless semantic information from objects that are observed a lot. (4) It exploits the Bayesian approach in factorizing multiple tensors simultaneously. Thus, it can avoid over-fitting in the optimization with easy parameter settings. The Bayesian approaches have reported to be more accurate than non-Bayesian ones in rating prediction applications [3].
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Efficient tensor factorization
+      </section-title>
+      <paragraph>
+       Recently, an efficient tensor factorization method based on a probabilistic framework has emerged [3], [33]. By introducing priors on the parameters, BPTF [3] can effectively average over various models and lower the cost of tuning the parameters (see Section 3). As for scalability, it offers an efficient Markov chain Monte Carlo (MCMC) procedure for the learning process, so it can be applied to large-scale datasets like Netflix.{sup:7}
+      </paragraph>
+      <paragraph>
+       Several studies have tried to compute predictions efficiently by using coupled tensor factorization. [34] presented a distributed, scalable method for decomposing matrices, tensors, and coupled data sets through stochastic gradient decent on a variety of objective functions. [35] introduced a parallel and distributed algorithmic framework for coupled tensor factorization to simultaneously estimate latent factors, specific divergences for each dataset, as well as the relative weights in an overall additive cost function. [36] proposed Turbo-SMT, which boosts the performance of coupled tensor factorization algorithms while maintaining their accuracy.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Tensor factorization using semantic data
+      </section-title>
+      <paragraph>
+       As ways of handling linked open data, [18], [37] proposed methods that analyze a huge volume of LOD datasets by tensor factorization in a reasonable amount of time. They, however, did not use a coupled tensor factorization approach and thus could not explicitly incorporate the semantic relationships behind multi-object relationships into the tensor factorization; in particular, they could not use taxonomical relationships behind multi-object relationships such as “subClassOf” and “subGenreOf”, which are often seen in LOD datasets.
+      </paragraph>
+      <paragraph>
+       Taxonomies have been used to solve the sparsity problem affecting memory-based collaborative filtering [1], [38], [39], [40], [41], [42]. Model-based methods such as matrix and tensor factorization, however, usually achieve higher accuracy than memory-based methods do [43]. Taxonomies are also used in genome science for clustering genomes with functional annotations [44]. Thus, their use is promising for analyzing such datasets as well as user activity datasets. There are, however, no tensor factorization studies that use vocabularies/taxonomies to improve prediction accuracy.
+      </paragraph>
+      <paragraph>
+       We previously proposed Semantic data Representation for Tensor Factorization (SRTF) [16] that incorporates semantic biases into tensor factorization to solve the sparsity problem. SRTF is the first method that incorporates semantics behind multi-object relationships into tensor factorization. Furthermore, SRTF can be considered the first coupled tensor factorization as that uses the Bayesian approach to simultaneously factorize several tensors for rating predictions. Khan and Kaski [45] presented a Bayesian extension of the tensor factorization of multiple coupled tensors after our publication [16]. This paper extends SRTF by introducing the degrees of sparsity of objects and adjusting how much the semantic biases should be incorporated into tensor factorization by sensitively tracking those degrees. This paper gives a much more detailed explanation of the Markov chain Monte Carlo (MCMC) procedure for SSTF than the one for SRTF in [16]. It also describes detailed evaluations that used a dataset on user listening frequencies as well as datasets on user rating activities. These evaluations show that SSTF is much more accurate than SRTF because it sensitively gives semantic biases to sparsely observed objects in tensor factorization according to the degree of sparsity of the objects.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Methods that use a tripartite graph
+      </section-title>
+      <paragraph>
+       Besides tensor-based methods, there are methods that create a tripartite graph composed of user nodes, item nodes, and tag nodes, for predicting rating values [46], [47]. We could extend these methods so that they can compute predictions by combining several tripartite graphs (e.g. by combining a user–item–tag graph with an item–class graph and tag–class graph). The tensors can, however, more naturally handle users' activities that are usually represented as multi-object relationships. We can plot the multi-object relationships composed of users, items, and tags as well as rating values in the tensor. For example, as depicted in Fig. 1, we can plot the relationship wherein user {a mathematical formula}u2 assigns tag “Breathtaking” to item {a mathematical formula}v2 with a certain rating value as well as the relationship that user {a mathematical formula}u3 assigns tag “Breathtaking” to item {a mathematical formula}v3 with another rating value independently in the tensor. On the other hand, a model based on tripartite graphs has the following two drawbacks: (1) It cannot handle each relationship independently. We can explain why this is so by using the example in Fig. 1. The model based on the tripartite graph can handle the relationship wherein user node {a mathematical formula}u2 is connected to item node {a mathematical formula}v2 that connects to the tag node “Breathtaking”. It, however, also links user node {a mathematical formula}u2 to node {a mathematical formula}u3 through item node {a mathematical formula}v2; this model mixes different types of relationships (user–item–tag relationships and user–item–user relationships) in a graph and thus cannot handle users' activities in the graph so well. (2) It cannot handle the ratings explicitly. Instead, it assigns the weights to edges (edges between user nodes and item nodes as well as edges between item nodes and tag nodes) to represent the rating values in the graph. This, however, is unnatural since the rating value should be assigned to each multi-object relationship (i.e. instance of user activity). Thus, a method based on a tripartite graph is not suitable for computing rating predictions of users' activities.
+      </paragraph>
+      <paragraph>
+       In detail, the major differences between tensor and tripartite graph is that a triplet is captured by a grid in a 3-D matrices (tensor) using tensor representation; while a triplet is represented as three two-way relations in a tripartite graph. Actually, tensor factorization process makes use of three two-way relations in a tripartite graph. It usually unfolds the tensor across a certain dimension, which intuitively matches the three two-way relations. In addition, with the graph embedding for tripartite graphs, the link prediction can be easily obtained by the inner product of objects' latent vectors.
+      </paragraph>
+      <paragraph>
+       Furthermore, [27] compares the performance of the matrix-factorization-based method with those of other link prediction methods such as feature-based methods [48], [49], graph regularization methods [50], [51], and latent class methods [52] when predicting links in the target graph (e.g. user–item graph) by using graphs from other sources (i.e. side information from other sources such as user–user social graph). They concluded that the factorization methods predict links more accurately by solving the imbalance problem in merging heterogeneous graphs (though we pointed out above that the present factorization methods still suffer from the imbalance problem). This paper thus focuses on applying our ideas to the factorization method to improve prediction results for multi-object relationships.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <section>
+      <section>
+       <section>
+        <section-title>
+         Vocabularies and taxonomies
+        </section-title>
+        <paragraph>
+         Vocabularies and taxonomies, sometimes called “simple ontologies” [14], are collections of human-defined classes and usually have a hierarchical structure as a graph (vocabulary) or a tree (taxonomy). They are becoming available on the Web as a result of their use in search engines and social networking sites. In particular, the LOD approach aims to link common data structures across the Web. It publishes open data sets using the Resource Description Framework (RDF){sup:8} and sets links between data entries from different data sources. As a result, it enables one to search and utilize those RDF links across data sources. This paper uses the vocabularies of DBPedia and Freebase and the taxonomy of WordNet to improve the quality of tensor factorization. DBPedia and Freebase have detailed information about content items such as music, movies, food, and many others. As an example, the music genre “Electronic dance music” in FreeBase is identified by a unique resource identifier (URI){sup:9} and is available in RDF format. By referring to this URI, the computer can acquire the information that “electronic_dance_music” has “electronic_music” as its parent_genre and “pizzicato_five” as one of its artists, and furthermore, it has the owl:sameAs relationship with the URI for “Electronic_Dance_Music” in DBPedia.{sup:10} Objects like the above artists in DBPedia/Freebase can have multiple classes. Because of their graph-based structures, they are defined to be vocabularies.
+        </paragraph>
+        <paragraph>
+         WordNet is a lexical database for the English language and is often used to support automatic analysis of texts such as user-assigned tags and reviews. In WordNet, each word is classified into one or more synsets, each of which represents a concept and contains a set of words. Thus, we can consider synset as a class and words classified in that synset as instances. An instance can be included in a class. Thus, WordNet's tree structure defines it to be a taxonomy.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Bayesian probabilistic tensor factorization
+        </section-title>
+        <paragraph>
+         This paper deals with the relationships formed by user {a mathematical formula}um, item {a mathematical formula}vn, and tag {a mathematical formula}tk. A third-order tensor {a mathematical formula}R (definition of main symbols is described in Table 1) is used to model the relationships among objects from sets of users, items, and tags. Here, the {a mathematical formula}(m,n,k)-th element {a mathematical formula}rm,n,k indicates the m-th user's rating of the n-th item with the k-th tag. This paper assumes that there is at most one observation for each {a mathematical formula}(m,n,k)-th element. This assumption is natural for many applications (i.e. it is rare that a user assigns multiple ratings to the same item using the same tag. Even if the user rates the same item using the same tag several times, we can use the latest rating for such relationships). Tensor factorization assigns a D-dimensional latent feature vector to each user, item, and tag, denoted as {a mathematical formula}um, {a mathematical formula}vn, and {a mathematical formula}tk, respectively. Here, {a mathematical formula}um is an M-length, {a mathematical formula}vn is an N-length, and {a mathematical formula}tk is a K-length column vector. Accordingly, each element {a mathematical formula}rm,n,k in {a mathematical formula}R can be approximated as the inner-product of the three vectors as follows:{a mathematical formula} where the index d represents the d-th element of each vector.
+        </paragraph>
+        <paragraph>
+         BPTF [3] provides a Bayesian treatment for Probabilistic Tensor Factorization (PTF) as the same way the Bayesian Probabilistic Matrix Factorization (BPMF) [53] provides a Bayesian treatment for Probabilistic Matrix Factorization (PMF) [54]. Actually, in [3], the authors provide to use the specific type of third-order tensor (e.g. user–item–time tensor) that has an additional factor for time added to the matrix (e.g. user–item matrix). We, however, consider that BPTF in this paper is an instance of the CANDECOMP/PARAFAC (CP) decomposition [55] and a simple extension of BPMF by adding one more object type (e.g. tag) to the pairs (e.g. user–item matrix) handled by BPMF. BPTF models tensor factorization over a generative probabilistic model for ratings with Gaussian/Wishart priors [56] over parameters. The Wishart distribution is most commonly used as the conjugate prior for the precision matrix in a Gaussian distribution.
+        </paragraph>
+        <paragraph>
+         We denote the matrix representations of {a mathematical formula}um, {a mathematical formula}vn, and {a mathematical formula}tk as {a mathematical formula}U≡[u1,u2,⋅⋅,uM], {a mathematical formula}V≡[v1,v2,⋅⋅,vN], and {a mathematical formula}T≡[t1,t2,⋅⋅,tK]. To account for randomness in ratings, BPTF uses a probabilistic model for generating ratings:{a mathematical formula}
+        </paragraph>
+        <paragraph>
+         This equation represents the conditional distribution of {a mathematical formula}R given U, V, and T in terms of Gaussian distributions, each having means {a mathematical formula}〈um,vn,tk〉 and precision α.
+        </paragraph>
+        <paragraph>
+         The generative process of BPTF requires parameters {a mathematical formula}μ0, {a mathematical formula}β0, {a mathematical formula}W0, {a mathematical formula}ν0, {a mathematical formula}W˜0, {a mathematical formula}Λ˜, and {a mathematical formula}ν˜0 in the hyper-priors that should reflect prior knowledge about a specific problem and are treated as constants during training. The process is as follows:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          Generate {a mathematical formula}ΛU, {a mathematical formula}ΛV, and {a mathematical formula}ΛT∼W(Λ|W0,ν0), where {a mathematical formula}ΛU, {a mathematical formula}ΛV, and {a mathematical formula}ΛT are the precision matrices (a precision matrix is the inverse of a covariance matrix) for Gaussians. {a mathematical formula}W(Λ|W0,ν0) is the Wishart distribution of a {a mathematical formula}D×D random matrix Λ with {a mathematical formula}ν0 degrees of freedom and a {a mathematical formula}D×D scale matrix {a mathematical formula}W0:W(Λ|W0,ν0)=|Λ|(ν0−D−1)/2cexp⁡(−Tr(W0−1Λ)2), where C is a constant.
+         </list-item>
+         <list-item label="2.">
+          Generate {a mathematical formula}μU∼N(μ0,(β0ΛU)−1), where {a mathematical formula}μU is used as the mean vector for a Gaussian. In the same way, generate {a mathematical formula}μV∼N(μ0,(β0ΛV)−1) and {a mathematical formula}μT∼N(μ0,(β0ΛT)−1), where {a mathematical formula}μV and {a mathematical formula}μT are used as the mean vectors for Gaussians.
+         </list-item>
+         <list-item label="3.">
+          Generate {a mathematical formula}α∼W(Λ˜|W˜0,ν˜0).
+         </list-item>
+         <list-item label="4.">
+          For each {a mathematical formula}m∈(1…M), generate {a mathematical formula}um∼N(μU,ΛU−1).
+         </list-item>
+         <list-item label="5.">
+          For each {a mathematical formula}n∈(1…N), generate {a mathematical formula}vn∼N(μV,ΛV−1).
+         </list-item>
+         <list-item label="6.">
+          For each {a mathematical formula}k∈(1…K), generate {a mathematical formula}tk∼N(μT,ΛT−1).
+         </list-item>
+         <list-item label="7.">
+          For each non-missing entry {a mathematical formula}(m,n,k), generate {a mathematical formula}rm,n,k∼N(〈um,vn,tk〉,α−1).
+         </list-item>
+        </list>
+        <paragraph>
+         Parameters {a mathematical formula}μ0, {a mathematical formula}β0, {a mathematical formula}W0, {a mathematical formula}ν0, {a mathematical formula}W˜0, {a mathematical formula}Λ˜, and {a mathematical formula}ν˜0 should be set properly according to the objective dataset; varying their values, however, has little impact on the final prediction [3].
+        </paragraph>
+        <paragraph>
+         BPTF views the hyper-parameters α, {a mathematical formula}ΘU≡{μU,ΛU}, {a mathematical formula}ΘV≡{μV,ΛV}, and {a mathematical formula}ΘT≡{μT,ΛT} as random variables, yielding a predictive distribution for unobserved ratings {a mathematical formula}Rˆ, which, given an observable tensor {a mathematical formula}R, is:{a mathematical formula}
+        </paragraph>
+        <paragraph>
+         BPTF computes the expectation of {a mathematical formula}p(Rˆ|U,V,T,α) over the posterior distribution {a mathematical formula}p(U,V,T,α,ΘU,ΘV,ΘT|R); it approximates the expectation by averaging samples drawn from the posterior distribution. Since the posterior is too complex to directly sample from, it applies the Markov Chain Monte Carlo (MCMC) indirect sampling technique of to infer the predictive distribution for unobserved ratings {a mathematical formula}Rˆ (see [3] for the details on the inference algorithm of BPTF).
+        </paragraph>
+        <paragraph>
+         The time and space complexity of BPTF is {a mathematical formula}O(#nz×D2+(M+N+K)×D3) and is lower than that of typical tensor methods (i.e. GCTF requires {a mathematical formula}O(M×N×K×D)[9]). #nz is the number of observation entries, and M, N, or K is much greater than D. BPTF can also compute feature vectors in parallel while avoiding fine parameter tuning during the factorization. To initialize the sampling, it creates two-object relationships composed of users and items and takes the maximum a posteriori (MAP) results from probabilistic matrix factorization (PMF) [54]; this lets MCMC converge quickly.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Method
+     </section-title>
+     <paragraph>
+      Here, we briefly describe the two main ideas behind SSTF and develop these in more detail in successive sections.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Overview of SSTF
+      </section-title>
+      <section>
+       <section>
+        <section-title>
+         Semantic grounding
+        </section-title>
+        <paragraph>
+         SSTF resolves ambiguities by linking objects (i.e. items and tags) to semantic classes before conducting tensor factorization. For items (Section 4.2.1), it resolves ambiguities by computing the similarities between the metadata for the items and the properties given to instances in FreeBase/DBPedia. Then, it links items (e.g. {a mathematical formula}v1 in Fig. 1) to classes (e.g. CV1). For tags (Section 4.2.2), it first classifies tags into those expressing the content of items or users' subjective evaluations about items since they reflect their interests in items. Next, it computes the similarities of the content (subjective) tags and WordNet instances to link tags (e.g. “Breathless”) to classes (e.g. CT1). SSTF is also applied to relationships among users, items, and user-assigned reviews (Section 4.2.3). In this case, we replace user-assigned reviews with aspect or subjective phrases from the reviews, treat those phrases as tags, and input the replaced relationships to the semantic grounding part of SSTF. This is because aspect and subjective tags reflect users' opinions of items. SSTF links those tags to DBPedia and WordNet classes for disambiguation. As a result, it outputs a tensor whose objects are linked to semantic classes.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Tensor factorization with semantic augmentation
+        </section-title>
+        <paragraph>
+         SSTF applies biases from semantic classes to item (or tag) feature vectors in tensor factorization to solve the sparsity problem. First, it creates augmented tensors by incorporating relationships composed of classes of sparse objects (e.g. multi-object relationships composed of “users”, “classes of sparse items”, and “tags” or relationships composed of “users”, “items”, and “classes of sparse tags”) into the original tensor (Section 4.3.1). As an illustration of how this is done, suppose that items {a mathematical formula}v1 and {a mathematical formula}v2 in Fig. 1 are sparse items. SSTF creates an augmented tensor by incorporating the relationships composed of {a mathematical formula}u1 (or {a mathematical formula}u2), CV1 (or CV2), and “Breathless” into the original tensor. Furthermore, it determines multiple sets of sparse objects according to their degree of sparsity and creates multiple augmented tensors; this gives semantic biases to sparse objects according to the degree of sparsity. Next, it factorizes the original tensor and augmented tensors simultaneously to compute feature vectors for objects and classes (Section 4.3.2). SSTF incorporates semantic biases into the tensor factorization by updating the feature vectors for objects using those for classes. For example, it creates feature vectors for classes, CV1 and CV2, which share semantic knowledge on sparse items, {a mathematical formula}v1 and {a mathematical formula}v2. It then uses the feature vectors for classes, CV1 and CV2, as semantic biases and incorporates them into feature vectors for sparse items, {a mathematical formula}v1 and {a mathematical formula}v2. This procedure aims to solve the sparsity problem.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Semantic grounding
+      </section-title>
+      <paragraph>
+       We now explain semantic grounding by disambiguation.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Linking items to the classes
+       </section-title>
+       <paragraph>
+        Content providers often use specific vocabularies to manage items. Each item in the provider usually has several properties (e.g. items in the MovieLens dataset have properties such as the movie's name and year of release; items in the Last.fm dataset have properties such as the artist's name and published album name). The vocabularies at the providers are often quite simple; thus, they degrade the tensor factorization with semantic augmentation (explained in next section) after the disambiguation process because such simple vocabularies express only rough-grained semantics for items. Thus, our solution is to link items to instances in the Freebase or the DBPedia vocabularies and resolve the ambiguous items. For example, in our evaluation, the MovieLens original item vocabulary has only 19 classes, while that of Freebase has 360 classes. These additional terms are critical to the success of our method.
+       </paragraph>
+       <paragraph>
+        We now explain the procedure of the disambiguation: (i) SSTF creates a property vector for item {a mathematical formula}vn, {a mathematical formula}pvn, whose elements are the values of the corresponding properties. It also creates a property vector for instance {a mathematical formula}ej in Freebase or DBPedia, {a mathematical formula}pej, which has the same properties as {a mathematical formula}pvn; (ii) it computes the cosine similarity of the property vectors and identifies the instance that has the highest similarity to {a mathematical formula}vn. For item disambiguation, this simple strategy works quite well, and SSTF can use the Freebase or DBPedia vocabulary (i.e. genre vocabulary) to classify the item; it links the item object to the values (e.g. Downtempo) of the instances' property (i.e. Genre).
+       </paragraph>
+       <paragraph>
+        For example, suppose that music item {a mathematical formula}vn has the properties “name” and “published album name”; {a mathematical formula}pvn is {“AIR”, {“Moon Safari”, “Talkie Walkie”, …, “The Virgin Suicides”}}. There are several music instances whose names are “AIR” in Freebase; however, there are only individual instances {a mathematical formula}ej among the published albums named “Moon Safari”, “Talkie Walkie”, and “The Virgin Suicides”. Thus, our method computes that {a mathematical formula}ej has the highest similarity to {a mathematical formula}vn, takes the genre property values “Electronica”, “Downtempo”, “Space rock”, “Psychedelic pop”, and “Progressive rock”, and assigns them as {a mathematical formula}vn's classes.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Linking tags to the classes
+       </section-title>
+       <paragraph>
+        SSTF classifies tags into those representing the content of items or those indicating the subjectivity of users regarding the items, because [1], [46] indicates that such tags are useful in improving prediction accuracy. When determining content tags, noun phrases are extracted from tags because the content tags are usually nouns [46]. Here, SSTF removes stop-words (e.g., conjunctions), transforms the remaining phrases into Parts of Speech (PoS) tuples, and compares the resulting set with the following set of POS-tuple patterns defined for classifying content tags: [&lt;noun&gt;], [&lt;adjective&gt;&lt;noun&gt;], and [&lt;determiner&gt;&lt;noun&gt;]. In a similar way, we can compare the resulting set with the following set of POS-tuple patterns defined for classifying subjective tags [46]: [&lt;adjective&gt;], [&lt;adjective&gt;&lt;noun&gt;], [&lt;adverb&gt;], [&lt;adverb&gt;&lt;adjective&gt;], and [*&lt;pronoun&gt;*&lt;adjective&gt;*]. For example, “Bloody dracula” matches the [&lt;adjective&gt;&lt;noun&gt;] pattern. SSTF also uses the Stanford-parser [57] to examine negative forms of patterns and identify tags like “Not good”.
+       </paragraph>
+       <paragraph>
+        We link those extracted tags to vocabulary classes. Because tags are assigned against items, they often reflect the item's characteristics. Thus, we analyze the properties assigned to the items when linking tags to the classes. Our method takes the following two approaches:
+       </paragraph>
+       <paragraph>
+        (1) it compares tag {a mathematical formula}tk and names of Freebase entries indicated by properties of item entry {a mathematical formula}vn assigned by {a mathematical formula}tk. If one of the entry names includes {a mathematical formula}tk, it links {a mathematical formula}tk to that entry and considers this entry as {a mathematical formula}tk's class. For example, tag “Hanks is great” assigned to movie item “Terminal”, and “Terminal” is related to the “Tom Hanks” entry through the “hasActor” property in Freebase. In this case, it links this tag to the “Tom Hanks” entry.
+       </paragraph>
+       <paragraph>
+        (2) As for tags that cannot be linked to LOD entries, our method classifies those into WordNet classes. As explained in Section 3, each word in WordNet is classified into one or more concepts. Thus, we should select the most suitable concept for {a mathematical formula}tk for disambiguation. We use a semantic similarity measurement method [58] based on the vector space model (VSM) method [59] for disambiguation. A tag {a mathematical formula}tk assigned to item {a mathematical formula}vn often reflects the item's characteristics. Accordingly, we use the properties assigned to the items for tag disambiguation. This works as follows: (i) SSTF first crawls the descriptions of WordNet instances associated with word w in tag {a mathematical formula}tk. Each WordNet instance {a mathematical formula}wj has a description {a mathematical formula}dj. Here, w is a noun if {a mathematical formula}tk is a content tag and is an adjective or adverb if {a mathematical formula}tk is a subjective tag. (ii) It next removes some stop-words from the crawled description {a mathematical formula}dj and constructs a vector {a mathematical formula}wj whose elements are words in {a mathematical formula}dj and whose values are the observed counts of the corresponding words. (iii) It also crawls the item description of {a mathematical formula}vn and descriptions of {a mathematical formula}vn's genres in Freebase/DBPedia. It constructs a vector {a mathematical formula}in whose elements are words in those descriptions and whose values are the observed counts of the corresponding words. Thus, {a mathematical formula}in represents the characteristics of {a mathematical formula}vn as well as those of {a mathematical formula}vn's genres. (iv) After that, it computes the cosine similarity of {a mathematical formula}in and {a mathematical formula}wj, and finally, it links {a mathematical formula}tk to the WordNet class that has the instance with the highest similarity value.
+       </paragraph>
+       <paragraph>
+        SSTF also uses non-content (subjective) tags, though it does not apply semantics to their feature vectors.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Linking reviews to the classes
+       </section-title>
+       <paragraph>
+        We use aspect and subjective phrases in the reviews as tags because they reflect the users' opinions of the items [39], [60]. Methods of extracting aspect and subjective phrases are described in [39], [60]. Of particular note, we use the aspect tags extracted in a semantics-based mining study [39]. This study analyzed reviews in specific objective domains (i.e. music and foods) and extracted aspect tags from review texts that match the instances (i.e. artists and foods) in the vocabulary for that domain. Thus, in the current study, the extracted tags were already linked to the vocabulary. As for subjective tags, we need to disambiguate them. For example, we should analyze how the tag “sweet” is to be understood with regard to “Apple sauce” in the sentence “The apple sauce tasted sweet.” SSTF works as follows: (i) it extracts sentences that include aspect tag {a mathematical formula}aa and subjective tag {a mathematical formula}ss. It constructs a vector {a mathematical formula}sa,s whose elements are words in sentences and whose values are the observed counts of the corresponding words. (ii) It crawls the descriptions of WordNet instances associated with word w in {a mathematical formula}ss. Because {a mathematical formula}ss is a subjective tag, w is an adjective or adverb. (iii) It constructs a vector {a mathematical formula}wj for the crawled description {a mathematical formula}dj of the WordNet instance {a mathematical formula}wj and computes the similarity of {a mathematical formula}sa,s and {a mathematical formula}wj in the same way as with tag disambiguation. (iv) It links {a mathematical formula}ss to the WordNet class that has the WordNet instance with the highest similarity.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Tensor factorization with semantic augmentation
+      </section-title>
+      <section label="4.3.1">
+       <section-title>
+        Semantic augmentation
+       </section-title>
+       <paragraph>
+        SSTF lifts sparsely observed objects to their classes and utilizes those classes to augment relationships in a tensor. This allows us to analyze the shared knowledge that has lifted into those classes during the tensor factorization and thereby solve the sparsity problem (see Fig. 2-(i)).
+       </paragraph>
+       <paragraph>
+        First, we define a set of sparse items, denoted as {a mathematical formula}Vs(i), for constructing the i-th augmented tensor {a mathematical formula}Rv(i). The set is defined as the group of i-th most sparsely observed items, {a mathematical formula}vss, among all items. Here, {a mathematical formula}1≤i≤X. X is the number of kinds of sets. By investigating X sets in the semantic augmentation process, SSTF can apply a semantic bias to each item feature vector according to its degree of sparsity. We set a 0/1 flag to indicate the existence of relationships composed of user {a mathematical formula}um, item {a mathematical formula}vn, and tag {a mathematical formula}tk as {a mathematical formula}om,n,k; {a mathematical formula}Vs(i) is computed as follows:
+       </paragraph>
+       <paragraph>
+        (1) SSTF first sorts the items from the rarest to the most common and creates a list of items: {a mathematical formula}{vs(1),vs(2),…,vs(n−1),vs(n)}. For example, {a mathematical formula}vs(2) is not less sparsely observed than {a mathematical formula}vs(1).
+       </paragraph>
+       <paragraph>
+        (2) It iterates the following step (3) from {a mathematical formula}j=1 to {a mathematical formula}j=N.
+       </paragraph>
+       <paragraph>
+        (3) If it satisfies the following equation, SSTF adds the j-th sparse item {a mathematical formula}vs(j) to set {a mathematical formula}Vs(i): {a mathematical formula}(|Vs(i)|/∑m,n,kom,n,k)&lt;δ(i) where {a mathematical formula}Vs(i) initially does not have any items and {a mathematical formula}|Vs(i)| is the number of items in set {a mathematical formula}Vs(i). If not, it stops the iterations and returns the set {a mathematical formula}Vs(i) as the group of the i-th most sparsely observed items.
+       </paragraph>
+       <paragraph>
+        In the above procedure, {a mathematical formula}δ(i) is a parameter used to determine the number of sparse items in {a mathematical formula}Vs(i). We also assume that if i is smaller, {a mathematical formula}δi will also be smaller, e.g., {a mathematical formula}δ(1)&lt;δ(2). A smaller {a mathematical formula}δi is used to generate sparser items. Typically, we set {a mathematical formula}δ(i) to range from 0.05 to 0.20 in accordance with the long-tail characteristic [61] that sparse items account for 5–20% of all observations.
+       </paragraph>
+       <paragraph>
+        Second, SSTF constructs the i-th augmented tensor {a mathematical formula}Rv(i) by inserting entries for relationships composed of users, classes of sparse items in {a mathematical formula}Vs(i), and tags into the original tensor {a mathematical formula}R as follows:{a mathematical formula} where {a mathematical formula}f(vs) is a function that returns the classes of item {a mathematical formula}vs, {a mathematical formula}Sv(i)=|⋃Vs(i)f(vs)| is the number of classes that have the i-th most sparse items, and {a mathematical formula}s(j−N)v is a class of sparse item {a mathematical formula}vs where {a mathematical formula}(j−N) represents the identifier of the class ({a mathematical formula}1≤(j−N)≤Sv(i)). The first line in the above equation indicates that SSTF uses the multi-object relationships composed of user {a mathematical formula}um, item {a mathematical formula}vn, and tag {a mathematical formula}tk, observed in the original tensor, in creating the augmented tensor if j does not exceed N and j equals n. The second line indicates that SSTF also uses the multi-object relationships composed of user {a mathematical formula}um, class {a mathematical formula}s(j−N)v of sparse item {a mathematical formula}vs, and tag {a mathematical formula}tk if j is greater than N and {a mathematical formula}s(j−N)v is a class of sparse item {a mathematical formula}vs. There are typically very few observations that have the same user {a mathematical formula}um and tag {a mathematical formula}tk as well as sparse items {a mathematical formula}vss that belong to the same class {a mathematical formula}s(j−N)v. Thus, in such cases, we randomly set the rating value for an observation composed of user {a mathematical formula}um, class {a mathematical formula}s(j−N)v, and tag {a mathematical formula}tk among those for observations composed of {a mathematical formula}um, {a mathematical formula}vs, and {a mathematical formula}tk.
+       </paragraph>
+       <paragraph>
+        In Fig. 2-(i), SSTF lifts items in the most sparse item set {a mathematical formula}Vs(1) to their classes (the size is {a mathematical formula}Sv(1)) and creates an augmented tensor {a mathematical formula}Rv(1) from the original tensor {a mathematical formula}R. It also lifts items in the second-most sparse item set {a mathematical formula}Vs(2) to their classes (the size is {a mathematical formula}Sv(2)) and creates an augmented tensor {a mathematical formula}Rv(2) from {a mathematical formula}R.
+       </paragraph>
+       <paragraph>
+        The set of sparse tags {a mathematical formula}Ts(i) is defined as the group of most sparsely observed tags among all tags and is computed using the same procedure as the set of sparse items {a mathematical formula}Vs(i). So we omit the explanation of the procedure for creating {a mathematical formula}Ts(i). We denote the number of classes that have the i-th most sparse tags as {a mathematical formula}St(i)=|⋃Ts(i)f(ts)| and the class of sparse tags as {a mathematical formula}sst(i). SSTF constructs the i-th augmented tensor {a mathematical formula}Rt(i) in the same way as it creates {a mathematical formula}Rv(i):{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        Factorization incorporating semantic biases
+       </section-title>
+       <paragraph>
+        SSTF incorporates semantic biases into tensor factorization in the BPTF framework.
+       </paragraph>
+       <section>
+        <section-title>
+         Factorization approach
+        </section-title>
+        <paragraph>
+         We will explain the ideas underlying our factorization method with the help of Fig. 2. For ease of understanding, this figure shows tensors factorized into D-dimensional row vectors, which are contained in matrices U, V, and T and denoted as {a mathematical formula}u:,d, {a mathematical formula}v:,d, and {a mathematical formula}t:,d respectively, where {a mathematical formula}1≤d≤D. The ideas are as follows:
+        </paragraph>
+        <list>
+         <list-item label="(1)">
+          SSTF simultaneously factorizes tensors {a mathematical formula}R, {a mathematical formula}Rv(i) ({a mathematical formula}1≤i≤X), and {a mathematical formula}Rt(i) ({a mathematical formula}1≤i≤X). In particular, it creates feature vectors {a mathematical formula}cjv(i) and {a mathematical formula}cjt(i) by factorizing {a mathematical formula}Rv(i) and {a mathematical formula}Rt(i) and feature vectors {a mathematical formula}vn and {a mathematical formula}tk by factorizing {a mathematical formula}R. This enables the semantic biases to be shared during the factorization. In the example shown in Fig. 2-(ii), {a mathematical formula}R, {a mathematical formula}Rv(1), and {a mathematical formula}Rv(2), are simultaneously factorized into D-dimensional feature vectors.
+         </list-item>
+         <list-item label="(2)">
+          SSTF uses the same precision α, feature vectors {a mathematical formula}um, {a mathematical formula}vn, and {a mathematical formula}tk, and their hyper-parameters when factorizing the original tensor and augmented tensors. Thus, the factorization of the original tensor is influenced by those of the augmented tensors through these shared parameters. It lets the factorization of the original tensor be biased by the semantic knowledge in the augmented tensors. In Fig. 2-(ii), {a mathematical formula}um and {a mathematical formula}tk are shared among the factorizations of {a mathematical formula}R, {a mathematical formula}Rv(1), and {a mathematical formula}Rv(2).
+         </list-item>
+         <list-item label="(3)">
+          SSTF updates the feature vector for item {a mathematical formula}vn, {a mathematical formula}vn, to an updated one, {a mathematical formula}vn′, by incorporating the set of semantically biased feature vectors for {a mathematical formula}vn's classes, {a mathematical formula}{c(N+j)v(i)}j, as semantic biases into {a mathematical formula}vn. This is done by iterating the following equation from {a mathematical formula}i=1 to {a mathematical formula}i=X:{a mathematical formula} Here, {a mathematical formula}ϵ(i)(0≤ϵ(i)≤1) is a parameter that determines how strongly the semantic biases are to be applied to {a mathematical formula}vn. Thus, equation (2) returns a vector {a mathematical formula}vn′ that combines feature vector {a mathematical formula}vn and the set of semantically biased feature vectors for {a mathematical formula}vn's classes, {a mathematical formula}{c(N+j)v(i)}j, according to the degree of sparsity of item {a mathematical formula}vn if {a mathematical formula}vn is a sparse item. Otherwise (if item {a mathematical formula}vn is a non-sparse item), it returns {a mathematical formula}vn. {a mathematical formula}tk is updated in a similar way by incorporating semantic biases into the feature vectors of the sparse tags.In Fig. 2-(iii), each row vector {a mathematical formula}c:,dv(i) has latent features for N items and those for {a mathematical formula}Sv(i) classes. The features for the classes share semantic knowledge on sparse items and so are useful for solving the sparsity problem. SSTF incorporates these features into item-feature vectors according to the degree of sparsity; the features for the most sparse items in {a mathematical formula}Vs(1) are updated by using {a mathematical formula}Sv(1) features. The features for the second-most sparse items in {a mathematical formula}Vs(2)−Vs(1) are updated by using {a mathematical formula}Sv(2)−Sv(1) features.
+         </list-item>
+        </list>
+        <paragraph>
+         In this way, SSTF solves the sparsity problem by sharing parameters and updating feature vectors with semantic biases while factorizing tensors.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Generative process
+        </section-title>
+        <paragraph>
+         The generative process is as follows:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          Generate {a mathematical formula}ΛU, {a mathematical formula}ΛV, {a mathematical formula}ΛTΛCv(i), and {a mathematical formula}ΛCt(i)∼W(Λ|W0,ν0), where {a mathematical formula}ΛU, {a mathematical formula}ΛV, {a mathematical formula}ΛT, {a mathematical formula}Λcv(i), and {a mathematical formula}Λct(i) are the precision matrices for Gaussians. {a mathematical formula}W(Λ|W0,ν0) is the Wishart distribution of a {a mathematical formula}D×D random matrix Λ with {a mathematical formula}ν0 degrees of freedom and a {a mathematical formula}D×D scale matrix {a mathematical formula}W0.
+         </list-item>
+         <list-item label="2.">
+          Generate {a mathematical formula}μU∼N(μ0,(β0ΛU)−1) where {a mathematical formula}μU is the mean vector for a Gaussian. In the same way, generate {a mathematical formula}μV∼N(μ0,(β0ΛV)−1), {a mathematical formula}μT∼N(μ0,(β0ΛT)−1), {a mathematical formula}μCv(i)∼N(μ0,(β0ΛCv(i))−1), and {a mathematical formula}μCt(i)∼N(μ0,(β0ΛCt(i))−1), where {a mathematical formula}μV, {a mathematical formula}μT, {a mathematical formula}μCv(i), and {a mathematical formula}μCt(i) are the mean vectors for Gaussians.
+         </list-item>
+         <list-item label="3.">
+          Generate {a mathematical formula}α∼W(Λ˜|W˜0,ν˜0).
+         </list-item>
+         <list-item label="4.">
+          For each {a mathematical formula}m∈(1…M), generate {a mathematical formula}um from {a mathematical formula}um∼N(μU,ΛU−1).
+         </list-item>
+         <list-item label="5.">
+          For each {a mathematical formula}n∈(1…N), generate {a mathematical formula}vn from {a mathematical formula}vn∼N(μV,ΛV−1).
+         </list-item>
+         <list-item label="6.">
+          For each {a mathematical formula}k∈(1…K), generate {a mathematical formula}tk from {a mathematical formula}tk∼N(μT,ΛT−1).
+         </list-item>
+         <list-item label="7.">
+          For each {a mathematical formula}i∈(1,…,X) and {a mathematical formula}j∈(1,…,(N+Sv(i))), generate {a mathematical formula}cjv(i) from {a mathematical formula}cjv(i)∼N(μCv(i),ΛCv(i)−1).
+         </list-item>
+         <list-item label="8.">
+          For each {a mathematical formula}i∈(1,…,X) and {a mathematical formula}j∈(1,…,(K+St(i))), generate {a mathematical formula}cjt(i) from {a mathematical formula}cjt(i)∼N(μCt(i),ΛCt(i)−1).
+         </list-item>
+         <list-item label="9.">
+          For each {a mathematical formula}n∈(1…N), generate an updated feature vector for item {a mathematical formula}vn, {a mathematical formula}vn′, by combining {a mathematical formula}vn with semantically biased feature vectors for {a mathematical formula}vn's classes, {a mathematical formula}c(N+j)v(i)s, by using Eq. (2).
+         </list-item>
+         <list-item label="10.">
+          For each {a mathematical formula}k∈(1…K), generate an updated feature vector for tag {a mathematical formula}tk, {a mathematical formula}tk′, by combining {a mathematical formula}tk with a set of semantically biased feature vectors for {a mathematical formula}tk's classes, {a mathematical formula}{c(K+j)t(i)}j, as follows ({a mathematical formula}(0≤ϵ(i)≤1) and {a mathematical formula}(1≤i≤X)):{a mathematical formula} This equation indicates that if {a mathematical formula}tk is a sparse tag, {a mathematical formula}tk′ includes semantic biases from a set of semantically biased feature vectors for {a mathematical formula}tk's classes, {a mathematical formula}{c(K+j)t(i)}j, according to {a mathematical formula}tk's degree of sparsity. Otherwise, {a mathematical formula}tk′ does not include semantic biases.
+         </list-item>
+         <list-item label="11.">
+          For each non-missing entry {a mathematical formula}(m,n,k), generate {a mathematical formula}rm,n,k as follows:{a mathematical formula}
+         </list-item>
+        </list>
+       </section>
+       <section>
+        <section-title>
+         Inferring with Markov Chain Monte Carlo
+        </section-title>
+        <paragraph>
+         Here, we explain how to compute the predictive distribution for unobserved ratings. Differently from the BPTF model (see Eq. (1)), SSTF should consider the augmented tensors and the degree of sparsity observed for items and tags in order to compute the predictive distribution. Thus, the predictive distribution is computed as follows:{a mathematical formula} where {a mathematical formula}Rv≡{Rv(i)}i=1X, {a mathematical formula}Rt≡{Rt(i)}i=1X, {a mathematical formula}zv≡{zv(i)}i=1X, {a mathematical formula}zt≡{zt(i)}i=1X, {a mathematical formula}cv≡{cv(i)}i=1X, {a mathematical formula}ct≡{ct(i)}i=1X, {a mathematical formula}ΘCv≡{ΘCv(i)}i=1X, and {a mathematical formula}ΘCt≡{ΘCt(i)}i=1X.
+        </paragraph>
+        <paragraph>
+         Eq. (4) involves a multi-dimensional integral that cannot be computed analytically. Thus, SSTF views Eq. (4) as the expectation of {a mathematical formula}p(Rˆ|R,Rv,Rt,zv,zt) over the posterior distribution {a mathematical formula}p(U,V,T,Cv,Ct,ΘU,ΘV,ΘCv,ΘCt,zv,zt,α|R,Rv,Rt,zv,zt), and it approximates the expectation by using MCMC with the Gibbs sampling paradigm.
+        </paragraph>
+        <paragraph>
+         MCMC collects a number of samples, L, to approximate the integral in Eq. (4) as follows:{a mathematical formula} where l represents the l-th sample.
+        </paragraph>
+        <paragraph>
+         It initializes the elements of {a mathematical formula}U[1], {a mathematical formula}V[1], {a mathematical formula}T[1], {a mathematical formula}Cv(i)[1], and {a mathematical formula}Ct(i)[1] by drawing them from a Gaussian distribution. {a mathematical formula}Cv(i) and {a mathematical formula}Ct(i) are matrix representations of {a mathematical formula}cjv(i) and {a mathematical formula}cjt(i), respectively, and {a mathematical formula}U[1], {a mathematical formula}V[1], {a mathematical formula}T[1], {a mathematical formula}Cv(i)[1], and {a mathematical formula}Ct(i)[1] are the initial states of the matrices U, V, T, {a mathematical formula}Cv(i), and {a mathematical formula}Ct(i), respectively.
+        </paragraph>
+        <paragraph>
+         Below are the steps in each iteration of the MCMC procedure (Appendix A describes the procedure in more detail):
+        </paragraph>
+        <list>
+         <list-item label="(1)">
+          Initialize {a mathematical formula}U[1] and {a mathematical formula}V[1] by using the MAP results of PMF as per BPTF. Initialize {a mathematical formula}T[1], {a mathematical formula}Cv(i)[1], and {a mathematical formula}Ct(i)[1] to a Gaussian distribution. Here, {a mathematical formula}1≤i≤X.Next, repeat steps (2) to (6) L times.
+         </list-item>
+         <list-item label="(2)">
+          Sample the hyper-parameters in the same way as is done in BPTF, i.e.:
+         </list-item>
+         <list-item label="(3)">
+          Sample the feature vectors in the same way as in BPTF:
+         </list-item>
+         <list-item label="(4)">
+          Sample the semantically biased feature vectors by using {a mathematical formula}α[l], {a mathematical formula}U[l+1], {a mathematical formula}V[l+1], and {a mathematical formula}T[l+1] as follows:
+         </list-item>
+         <list-item label="(5)">
+          Sample the unobserved ratings {a mathematical formula}Rˆ[l] by applying {a mathematical formula}U[l+1], {a mathematical formula}V[l+1], {a mathematical formula}T[l+1], {a mathematical formula}Cv(i)[l+1], {a mathematical formula}Ct(i)[l+1], {a mathematical formula}α[l] to equation (5).
+         </list-item>
+         <list-item label="(6)">
+          Calculate {a mathematical formula}vn′[l+1] by using Eq. (2) and then set {a mathematical formula}vn′[l+1] to {a mathematical formula}vn[l+1] in the next iteration. Calculate {a mathematical formula}tk′[l+1] by using Eq. (3) and set {a mathematical formula}tk′[l+1] to {a mathematical formula}tk[l+1] in the next iteration.
+         </list-item>
+        </list>
+        <paragraph>
+         In the sixth process, Eqs. (2) and (3) enable us to implement the computation of updates of features of objects (V, T) easily by using the BPTF framework. This is because the features of objects (V, T) can be computed by applying the BPTF to the disambiguated tensor as well as the features of the classes of the objects ({a mathematical formula}Cv and {a mathematical formula}Ct) can also be computed by applying the BPTF to the augmented tensors. Thus, readers can easily investigate our ideas by using the BPTF's sophisticated implementation. After computing the above features, Eqs. (2) and (3) can merge the features of objects (V, T) and features of their classes ({a mathematical formula}Cv and {a mathematical formula}Ct) to compute updated features of objects ({a mathematical formula}V′, {a mathematical formula}T′). Besides an easy implementation, this lets us enjoy the fast computation and high scalability of the BPTF framework. This is important since our method uses semantic biases from many features in the classes factorized from multiple kinds of augmented tensors in computing updated features {a mathematical formula}V′ and {a mathematical formula}T′.
+        </paragraph>
+       </section>
+      </section>
+      <section label="4.3.3">
+       <section-title>
+        Computational complexity and practical issues
+       </section-title>
+       <paragraph>
+        The complexity of the original BPTF is {a mathematical formula}O(#nz×D2+(M+N+K)×D3) for each iteration of the MCMC procedure while that of SSTF is {a mathematical formula}O(#nz×2X×D2+(M+N+K+XN+XK)×D3). Because the first term is much larger than the rest, the computation time is almost the same as that of BPTF. Furthermore, X is small (less than five). This is because there are many sparse objects and the changes in the observation frequencies among those objects are small (see Fig. 3, Fig. 4, which plot log10-scale distributions of the frequencies of objects in MovieLens.). As a result, SSTF can capture the changes in the observation frequencies of sparse objects by using small X values. Moreover, it can compute the feature vectors in parallel (see Section 4.3.2); their computation is not an onerous burden on modern computers with multi-core CPUs.
+       </paragraph>
+       <paragraph>
+        The parameter settings are easy. The number of Xs is determined by the parameter {a mathematical formula}δ(i). Accuracy will be much improved simply by setting {a mathematical formula}δ(1) to 0.05, {a mathematical formula}δ(2) to 0.10, {a mathematical formula}δ(3) to 0.15, and {a mathematical formula}δ(4) to 0.20 to determine sparse sets having long-tail characteristics (see Section 5.4). {a mathematical formula}ϵ(i) is also easy to set. Here, we initially set {a mathematical formula}ϵ(i) to 0, where {a mathematical formula}i≤X−1; only {a mathematical formula}ϵ(X) needs to be adjusted in order to get very accurate results. This is because it is better to make maximal use of semantic biases in computing predictions for very sparse objects, while it is better to combine the object's feature vector and its semantically biased feature vector when the object is sparse but not very sparse. For example, if X is set to three, SSTF makes maximal use of the semantic biases, which are from the features of classes of objects in the most sparse set {a mathematical formula}Vs(1) (or {a mathematical formula}Ts(1)) and the second-most sparse set {a mathematical formula}Vs(2) (or {a mathematical formula}Ts(2)) into features in objects in ({a mathematical formula}Vs(1) and {a mathematical formula}Vs(2) (or {a mathematical formula}Ts(1) and {a mathematical formula}Ts(2)). Thus, {a mathematical formula}ϵ(1) and {a mathematical formula}ϵ(2) are set to zero. On the other hand, we adjust {a mathematical formula}ϵ(3) from 0.1 to 1.0 to combine the object's features and its semantically biased features in detail if the objects are in the third-most sparse set {a mathematical formula}Vs(3) (or {a mathematical formula}Ts(3)).
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Evaluation
+     </section-title>
+     <section label="5.1">
+      <section-title>
+       Dataset
+      </section-title>
+      <paragraph>
+       Our evaluation used the following large-scale datasets:
+      </paragraph>
+      <paragraph>
+       MovieLens contains user-made ratings of movie items, some of which have user-assigned tags. Ratings range from 0.5 to 5. We extracted a genre vocabulary from Freebase and a tag taxonomy from WordNet. The vocabulary has 360 classes. The taxonomy has 4284 classes. Consequently, it contains 24,565 ratings with 44,595 tag assignments; 33,547 tags have tag classes. The size of the user–item–tag tensor is {a mathematical formula}2026×5088×9160. Table 2 shows a taxonomy example.
+      </paragraph>
+      <paragraph>
+       Yelp contains user-made ratings of restaurants and user reviews of restaurants. Ratings range from 1 to 5. We used the genre vocabulary provided by Yelp as the item vocabulary. It has 179 classes. We extracted aspect/subjective tags from the reviews as follows: (i) food phrases as aspect tags that match the instances in a DBPedia food vocabulary as was done in [39] and (ii) subjective phrases that have relationships with aspect tags (extracted by using the Stanford-parser [60] and the subjective phrases are assumed to be subjective tags if they match the phrases in subjective lexicons [62]). Consequently, we extracted 168,586 subjective and 2,038,560 aspect tags. The aspect and subjective vocabulary contains 4990 distinct tags in 3662 classes. This dataset contains 158,424 ratings with reviews. Among those, 33,863 entries do not contain tags; thus, we assigned dummy tag ids to those entries. In doing so, we could use all reviews in this dataset. The size of the user–item–tag tensor was {a mathematical formula}36,472×4503×4990.
+      </paragraph>
+      <paragraph>
+       Last.fm contains listening counts and tags given by users about artists (items). We computed implicit ratings{sup:11} by a user for items by linearly scaling item listening counts such that the maximum value corresponded to 5 and the minimum to 1. This evaluation setting is natural since how strongly users become interested in the artists in the future is very important information for music recommendation services. We extracted a genre vocabulary from Freebase and a tag taxonomy from WordNet. The vocabulary had 38 classes. Each item could have multiple genres. The taxonomy had 2544 classes. We also used items and tags that did not have any classes. As a result, the dataset contained 20,665 ratings and 73,358 tag assignments; 53,964 tags had tag classes. The size of the user–item–tag tensor was {a mathematical formula}1824×6854×8922. Table 3 shows an example of the taxonomy.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Compared methods
+      </section-title>
+      <paragraph>
+       We compared SSTF with the following methods.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        BPMF, Bayesian probabilistic matrix factorization [53], analyzes ratings by users of items without tags; it cannot predict tags, although the predicted personalized tags can assist users in understanding the predicted items [21].
+       </list-item>
+       <list-item label="2.">
+        BPMFI applies an item vocabulary to BPMF as per our approach.
+       </list-item>
+       <list-item label="3.">
+        NTF, Non-negative tensor factorization [65], is a generalization of Non-negative matrix factorization (NMF) [66] and imposes non-negative constraints on tensor and factor matrices. We selected this method since it is a well-known tensor factorization approach and the baseline of the other tensor factorization methods (VNTF [67] and NMTF [23]) selected for comparison.
+       </list-item>
+       <list-item label="4.">
+        BPTF proposed by [3].
+       </list-item>
+       <list-item label="5.">
+        VNTF, Variational Non-negative Tensor Factorization, is another Bayesian-based tensor factorization method and is a generalization of Variational Non-negative Matrix Factorization (VNMF) [67]. Since we used the BPTF, which is the Bayesian-based method, we selected the VNTF for comparison.
+       </list-item>
+       <list-item label="6.">
+        BPTFT, which utilizes only tag taxonomy.
+       </list-item>
+       <list-item label="7.">
+        BPTFI, which utilizes only item vocabulary.
+       </list-item>
+       <list-item label="8.">
+        SSTFR, Semantic Sensitive Tensor Factorization with Random disambiguation, f links sparse objects (items and tags) to one of their classes randomly (we call this process as random disambiguation). Then it augments the tensors and factorizes the original tensor and augmented tensors simultaneously by using the process explained in Section 4.3.
+       </list-item>
+       <list-item label="9.">
+        SRTF[16] is our previous method that incorporates semantic biases into tensor factorization without sensitively considering the degree of sparsity of objects (here, we set parameter δ used in SRTF to 0.2 because it achieved the highest accuracy if we changed δ from 0.0 to 0.2).
+       </list-item>
+       <list-item label="10.">
+        GCTF is the most popular method that factorizes several tensors/matrices simultaneously [8], [9].
+       </list-item>
+       <list-item label="11.">
+        NMTF[23] is an another state-of-the-art method that utilizes the auxiliary information like GCTF. It factorizes the target and auxiliary tensors simultaneously. The auxiliary data tensors compensate for the sparseness of the target data tensor. Thus, this method is related to our approach and should be compared with SSTF.
+       </list-item>
+      </list>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Methodology and parameter setup
+      </section-title>
+      <paragraph>
+       Following the methodology used in the BPTF paper [3], we used root mean square error (RMSE) as the performance metric. It is computed as {a mathematical formula}(∑i=1n(Pi−Ri)2)/n, where n is the number of entries in the test dataset, and {a mathematical formula}Pi and {a mathematical formula}Ri are the predicted and actual ratings of the i-th entry, respectively. Smaller RMSE values indicate higher accuracy. We divided each dataset into three and performed three-fold cross validation. The results below are the average values of the three evaluations. Following [3], the parameters are {a mathematical formula}μ0=O, {a mathematical formula}ν0=D, {a mathematical formula}β0=1, {a mathematical formula}W0=I, {a mathematical formula}ν˜0=1, {a mathematical formula}Λ˜=1, and {a mathematical formula}W˜0=1. L is 500. D was set from 25 to 100. We used the Itakura–Saito (IS) divergence [68] for the optimization function of GCTF rather than the IS divergence, Kullback–Leibler (KL) divergence, or Euclidean distance [56] because it achieved the highest accuracy when using ID distance for our datasets. For VNTF, we used 200 iterations for learning the target distribution in variational Bayes, since it converges with this number for all datasets. To run NMTF, we combined the user–item–tag tensor with item–class and tag–class matrices. We set the weights on the auxiliary matrices used by NMTF as 0.01 for MovieLens, 0.1 for Last.fm, and 0.1 for the Yelp dataset since NMTF outputs the best RMSE values with the above parameter settings. This weighting parameter determines how strongly the biases from the auxiliary matrices are incorporated in the user–item–tag tensor.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Results
+      </section-title>
+      <section>
+       <section>
+        <section-title>
+         Sparsity vs. semantic biases
+        </section-title>
+        <paragraph>
+         First, we investigated the sparseness of the observed objects. Fig. 3, Fig. 4 plot the log10-scale distribution of the item and tag frequencies observed in the MovieLens dataset. From these figures, we can confirm that the item and tag observation frequencies exhibit long-tail characteristics. Thus, the observations are very sparse relative to all possible combinations of observed objects. The distributions of the Yelp dataset had the same tendency.
+        </paragraph>
+        <paragraph>
+         Next, we investigated the impact of varying X. We changed X from one to four by setting {a mathematical formula}δ(1) to 0.05, {a mathematical formula}δ(2) to 0.10, {a mathematical formula}δ(3) to 0.15, and {a mathematical formula}δ(4) to 0.20 in determining the sparse set {a mathematical formula}Vs(i) and {a mathematical formula}Ts(i). In particular, when X equals one, we set {a mathematical formula}δ(1) to 0.05. When X equals two, we set {a mathematical formula}δ(1) to 0.05 and {a mathematical formula}δ(2) to 0.10. When X equals three, we set {a mathematical formula}δ(1) to 0.05, {a mathematical formula}δ(2) to 0.10, and {a mathematical formula}δ(3) to 0.15. When X equals four, we set {a mathematical formula}δ(1) to 0.05, {a mathematical formula}δ(2) to 0.10, {a mathematical formula}δ(3) to 0.15, and {a mathematical formula}δ(4) to 0.20.
+        </paragraph>
+        <paragraph>
+         Table 4 summarizes the average numbers of sparse objects in sparse set {a mathematical formula}Vs(i) (or {a mathematical formula}Ts(i)). From this table, we can see that there are many sparse objects in the real datasets.
+        </paragraph>
+        <paragraph>
+         We set {a mathematical formula}ϵ(i) to 0 except when i was X and only adjusted {a mathematical formula}ϵ(X), as explained in Section 4.3.3. Table 5, Table 6, Table 7 list the RMSE results. The results for MovieLens and Last.fm gradually increased as X and {a mathematical formula}ϵ(X) increased until they reached a maximum (at {a mathematical formula}ϵ(X)=0.9 in {a mathematical formula}X=4 for MovieLens and at {a mathematical formula}ϵ(X)=0.6 in {a mathematical formula}X=4 for Last.fm) and gradually decreased afterwards. These results validate our idea; semantic biases are very useful for dealing with the sparsity problem in tensor factorization. The results for Yelp also showed a gradual improvement as X and {a mathematical formula}ϵ(X) increased. This tendency can be seen up to a point, {a mathematical formula}ϵ(X)=0.0 in {a mathematical formula}X=4; however, their accuracy drops after that point. We investigated this effect by setting {a mathematical formula}ϵ(i) in Eq. (2) and {a mathematical formula}ϵ(i) in Eq. (3) to different values. As a result, we confirmed that using semantic biases from tag classes gradually improves the accuracy up to the point of {a mathematical formula}ϵ(X)=0.0 in {a mathematical formula}X=4 and decreases thereafter. On the other hand, semantic biases from item classes improve the results after that point. This indicates that performance can be improved by setting {a mathematical formula}ϵ(i) for item classes and {a mathematical formula}ϵ(i) for tag classes independently. In later evaluations, we set {a mathematical formula}ϵ(X)=0.9 and {a mathematical formula}X=4 for MovieLens, {a mathematical formula}ϵ(X)=0.6 and {a mathematical formula}X=4 for Last.fm, and {a mathematical formula}ϵ(X)=0.9 and {a mathematical formula}X=4 for Yelp (for SSTF).
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Accuracy
+        </section-title>
+        <paragraph>
+         Next, we compared the accuracies of the methods. The RMSE values are shown in Table 8, Table 9, Table 10. We will start by describing the results comparing BPTF with BPMF. Note that we did not evaluate BPMF and BPMFI on the Last.fm dataset because the metrics for the listening frequencies for the user–item–tag (triple) relationships and those for the user–item (double) relationships are completely different. On the other hand, the ratings were assigned manually by users to those relationships, so the BPMF results may help readers to understand our results. BPTF is less accurate than BPMF. This indicates that BPTF does not utilize the additional information (tags/reviews) for prediction so well because the observations in the tensors are much sparser than those in the matrices. Note that the evaluations in the original BPTF paper [3] analyzed multi-object relationships composed of users, items, and time stamps. It achieved slightly higher accuracy than BPMF. This is because the number of time stamps in their evaluations was only about 30; thus, the tensors evaluated in [3] are much more dense than ours. On the other hand, the tensors we analyze in our evaluation is very sparse; the ratio of observations to all possible elements in the tensor for MovieLens is {a mathematical formula}4.7⋅10−7, that for YELP is {a mathematical formula}1.9⋅10−7, and that for LastFM is {a mathematical formula}6.6⋅10−7. BPMFI is also less accurate than BPMF on the MovieLens and Yelp datasets because the observations in the user–item matrices are not so sparse in these cases. Conversely, BPTFI, BPTFT, and of course, SSTF are much more accurate than BPTF on all datasets. That is, semantic biases are especially useful in solving the sparsity problem.
+        </paragraph>
+        <paragraph>
+         Interestingly, SSTFR was more accurate than BPTF even though its disambiguation strategy was simple. We investigated the disambiguation results and found the following reasons: (1) WordNet synsets with the same names often share similar meanings. So, if we use a well-defined taxonomy like WordNet, the random disambiguation process and semantic biases after disambiguation improve accuracy; the improvement resulting from semantic biases exceeds the decrease created by mistakes due to random disambiguation. (2) Most item objects are not ambiguous. Moreover, semantic biases derived from item classes improve accuracy more than those from tag classes, as indicated by the results of BPTFI and BPTFT. To summarize, SSTFR can achieve high accuracy if a well-defined tag taxonomy like WordNet is available and there are few ambiguous items, as in our dataset.
+        </paragraph>
+        <paragraph>
+         SSTF was more accurate than SSTFR. To assess those results in detail, we compared the accuracy of our disambiguation algorithm with that of random disambiguation. We focused on the linkage results from the objects (items/tags) that have multiple Freebase or Wordnet candidate instances and randomly picked 100 linkage results from those candidates for MovieLens and those for LastFM. We compared the accuracies of our disambiguation method with those of random disambiguation. The expert judges the correct answers of the linkage results and there is a correct answer for each linkage result in our evaluation. The results of our method are about 72% for MovieLens and 64% for Last.fm, while the results of random disambiguation are 31% for MovieLens and 41% for Last.fm. Thus, we can understand that a higher quality disambiguation can improve the overall prediction accuracy when incorporating semantic information into tensor factorization.
+        </paragraph>
+        <paragraph>
+         SSTF also outperformed SRTF. This means that the results are improved by factorizing multiple augmented tensors and computing semantic biases carefully according to the degree of sparsity of objects.
+        </paragraph>
+        <paragraph>
+         Next, we investigated the results of NTF and found that they are much worse than other methods for all datasets. The pure NTF cannot handle sparse tensors like in our evaluation datasets though the real datasets typically contain such sparse relationships. The results of VNTF are mostly better than those of NTF; however, they are worse than those of BPTF. This is mainly because the non-negative constraints in factorizations have a limitation in predicting the rating values as [69] reported in their evaluation; they cannot distinguish positive ratings (represented as non-negative values) from negative ones (represented as negative values). VNTF is better than NTF since the Bayesian-based factorization approach typically outputs better predictions than do non-Bayesian-based methods [3], [53].
+        </paragraph>
+        <paragraph>
+         The RMSEs of NMTF are mostly better than those of NTF, but much worse than those of BPTF and those of SSTF. This is mainly because non-negative constraints of NMTF have a limitation in predicting the rating values. Other reasons are: (1) NMTF straightforwardly combines different relationships, i.e., rating relationships among users, items, and tags, link relationships among items and their classes, and link relationships among tags and their classes. Thus, it suffers from the balance problem. (2) NMTF gives biases derived from auxiliary information to all relationships involving three objects. It cannot deal with the sparsity problem in a satisfactory way. (3) NMTF uses the KL divergence for optimizing the predictions since its authors are interested in “discrete value observations such as stars in product reviews”, as described in [23]. Our datasets, especially MovieLens and YELP, are those they are interested in; however, exponential family distributions like Poisson distribution do not fit our rating datasets so well, as explained in the above paragraph. As for the Last.fm dataset, the implicit ratings used in the dataset are generated from the listening counts and follow a power law distribution. NMTF, however, has worse accuracy than SSTF. Surprisingly, the RMSEs of NMTF are much worse than those of VNTF for the YELP dataset. We investigated the non-sparse tags in the Yelp dataset and found that there are a few tags that have too many observations such as rice and bread. NMTF shares the biases from such popular tags with other tags via their food categories. The biases from such non-sparse tags, however, become noise in prediction, and thus, the accuracy of NMTF for the Yelp dataset was poor.
+        </paragraph>
+        <paragraph>
+         On the other hand, SSTF naturally incorporates semantic classes into tensors after fitting them to user–item–tag tensors. SSTF also carefully selects sparse objects and gives semantic biases to them. Moreover, the Gaussian prior used by SSTF naturally fits prediction tasks of rating values including implicit ratings in the Last.fm dataset. Thus, SSTF is superior to NMTF for rating prediction task. We should also note that NMTF needs complicated parameters, i.e., the weights on the auxiliary matrices, to effectively utilize the auxiliary information in tensor factorization. This is because it associates objects (items) with tensors and matrices, each of which treats different types of information; the balance problem in handling heterogeneous datasets from different sources arises; thus, setting the parameters of NMTF is more difficult than that of SSTF.
+        </paragraph>
+        <paragraph>
+         Next, we compared the accuracies of BPTF, SSTF, and GCTF. Because GCTF required much more memory than BPTF and SSTF (see [9]), we could not apply it to the whole evaluation dataset on our computer. Accordingly, we randomly picked five sets of 200 users in each dataset and evaluated the accuracy for each set. Table 11 shows the average RMSE values of those evaluations. SSTF was more accurate than GCTF. This is because, for the same reasons as its superiority to NMTF, SSTF naturally incorporates semantic classes into tensors after fitting them to user–item–tag tensors; GCTF straightforwardly combines different types of relationships, rating relationships among users, items, and tags, link relationships among items and their classes, and link relationships among tags and their classes. SSTF also carefully selects sparse objects and gives semantic biases to them while GCTF gives biases derived from side information to all relationships involving three objects. Different from NMTF, GCTF can use the KL divergence, IS divergence, and Euclidean distance for optimization model (the Euclidean distance is usually used for rating prediction, as is the Gaussian distribution), however, it is worse than SSTF (as described in Section 5.3, GCTF achieves the highest accuracy when it uses the IS distance). Thus, the above results indicate that our ideas are superior to those of other state-of-the-art tensor-based methods, regardless of the distributions of priors used by these methods.
+        </paragraph>
+        <paragraph>
+         The improvement in accuracy had by SSTF over the other methods was statistically significant: {a mathematical formula}α&lt;0.05. SSTF was up to 12% more accurate than BPTF for MovieLens (SSTF was 0.8509, while BPTF was 0.9649).
+        </paragraph>
+        <paragraph>
+         We also evaluated the accuracy of MovieLens while varying the number of iterations in the MCMC procedure (see Fig. 5). The results indicated that the accuracy of SSTF converged quickly. The results for Yelp showed the same tendency.
+        </paragraph>
+        <paragraph>
+         To summarize, SSTF achieved much higher accuracy than state-of-the-art methods like GCTF, NMTF, VNTF and BPTF in evaluations using large-scale datasets in real applications; SSTF can thus be considered one of the best tensor methods for the rating prediction task.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Impact of prediction results
+        </section-title>
+        <paragraph>
+         Table 12 shows examples of the differences between the predictions output by BPTF and those by SSTF for Yelp. The “Prediction” column presents values predicted by BPTF and by SSTF, while the “Actual” column presents actual ratings given by users as found in the test dataset.
+        </paragraph>
+        <paragraph>
+         User “1” highly rated the food tag “udon” at restaurant “A” and rated “falafel” in restaurant “B” as fair. In the test dataset, he highly rated “ramen” at restaurant “C” and “sangaki” in restaurant “D”. The tags “udon” and “ramen” as well as the restaurants “B” and “D” are sparsely observed in the training dataset. SSTF accurately predicted those selections because it uses the semantic knowledge that “udon” and “ramen” are both in the tag class “Japanese noodles”; user “1” likes this type of food. Note that restaurant “C” is not a Japanese restaurant. Thus, this selection was accurately predicted with the tag class, but not the item class. SSTF also uses the semantic knowledge that user “1” often rated restaurants in the “Greek” class in the training dataset and restaurant “D” tended to be highly rated by users who like the “Greek” class.
+        </paragraph>
+        <paragraph>
+         User “2” highly rated the food tag “shawarma” at restaurant “E”. In the test dataset, he highly rated “tabbouleh” at restaurant “G”. The tags “shawarma” and “tabbouleh” are sparsely observed in the training dataset. SSTF predicted this selection accurately because it used the semantic knowledge that they are in the same tag class “Arab cuisine”. User “2” also rated as fair the “red curry” at restaurant “F” in the test dataset. The training dataset had users who rated restaurant “F” fairly or highly with sparse food tags “red curry”, “green curry”, and “yellow curry” in the class “thai curry”. There are also users who did not highly rate “non-curry dishes” at restaurant “F” (see an example review by user “3”). SSTF can use all observations for “thai curry” at restaurant “F” while excluding those for “non-curry dishes” in computing the predictions. Thus, it predicted the selection accurately. The predictions of BPTF were inaccurate because it could not use any semantics underlying objects.
+        </paragraph>
+        <paragraph>
+         Our disambiguation process is pre-computed before the tensor factorization, and our augmentation process is quite simple; they can be easily applied to other tensor factorization schemes. For example, we confirmed that our approach works well with VNTF. Thus, we believe our ideas can enhance the prediction accuracy for various applications.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Computation time
+        </section-title>
+        <paragraph>
+         Table 13 presents the computation times of BPTF and SSTF when {a mathematical formula}L=500. All experiments were conducted on a Linux 3.33 GHz Intel Xeon (24 cores) server with 192 GB of main memory. All methods were implemented with Matlab and GCC. We can see that the computation time of SSTF is shorter than the case that increases linearly in proportion to 2X (the number of different kinds of sparse item sets and sparse tag sets.). Furthermore, we can set L smaller than 500 (see Fig. 5) and computation time is linear in L. Thus, we can conclude that SSTF can compute more accurate predictions quickly; it works better than BPTF on real applications.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      This is the first study to use the semantics underlying objects to enhance tensor factorization accuracy. Semantic sensitive tensor factorization (SSTF) is critical to using semantics to analyze human activities in detail, a key AI goal. It creates semantically enhanced tensors by assessing sparsely observed objects and factorizes the tensors simultaneously in the BPTF framework. Experiments showed that SSTF is up to 12% more accurate than current methods and can support many applications.
+     </paragraph>
+     <paragraph>
+      We are now applying SSTF to link prediction in social networks (e.g. predicting the frequency of future communications among users). Accordingly, we are applying our idea to VNTF, as described in the evaluation section, because the frequency of communications among users often follows an exponential family distribution. Another interesting direction for future work is predicting user activities among cross-domain applications such as music and movie rating services. We think our ideas have potential for cross-domain analysis because they can use semantic knowledge in the format of LOD shared among several service domains. A third interesting direction is development of methods that handle more detailed semantic knowledge than simple vocabularies/taxonomies. In the current study which follows the previous paper [1], we think the “genre” relationships seemed to be useful for solving the sparsity problem caused by the sparse item set. Thus, we used this type of semantic relationship as a first step to solving the sparsity problem in tensor factorization. However, that there are many other useful relationships between different classes in the ontologies. Actually, some of those were heuristically selected in our conference paper [16] (e.g. values of instance properties such as “directedBy” and “actedBy” in the movie ontology). They improved the prediction accuracy, because they reflected users' interests in the item objects. We also think that there are many useless relationships (e.g. “&lt;http://dbpedia.org/ontology/timeZone&gt;” and “&lt;http://dbpedia.org/ontology/spouse&gt;”) that usually do not reflect users' interests in the item objects. Developing a method that automatically selects useful relationships and incorporates semantics from them would improve the prediction accuracy and be an interesting direction of future work. Furthermore, we are interested in improving the model design that reflects the merge strategy of object features and the features of its classes in Eq. (2) more naturally in the way that samples features updated with semantic biases from the posteriors.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Learning parameters using MCMC
+     </section-title>
+     <paragraph>
+      This section explains how to learn feature vectors and their hyperparameters in the MCMC procedure of SSTF. The following notations and item numbers are the same as those used in Section 4.3.2.
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       Initialize {a mathematical formula}U[1], {a mathematical formula}V[1] by using the MAP results of PMF as per BPTF. Initialize {a mathematical formula}T[1], {a mathematical formula}Cv(i)[1], and {a mathematical formula}Ct(i)[1] by using a Gaussian distribution. {a mathematical formula}Cv(i) and {a mathematical formula}Ct(i) are matrix representations of {a mathematical formula}cjv(i) and {a mathematical formula}cjt(i), respectively. Repeat steps (2) to (6) L times and sample feature vectors and their hyperparameters. Each sample in the MCMC procedure depends only on the previous one.
+      </list-item>
+      <list-item label="(2)">
+       Sample the conditional distribution of α given {a mathematical formula}R, U, V, and T (as per BPTF) as follows:{a mathematical formula}Sample hyperparameters {a mathematical formula}ΘU, {a mathematical formula}ΘV, and {a mathematical formula}ΘT as per BPTF. They are all computed in the same way. For example, {a mathematical formula}ΘV is conditionally independent of all other parameters given V:{a mathematical formula}The MCMC procedure also samples the hyperparameters of {a mathematical formula}Cv(i), {a mathematical formula}ΘCv(i), in order to generate ratings for {a mathematical formula}Rv(i). The generative process of {a mathematical formula}Rv(i) is almost the same as that of {a mathematical formula}R except for sharing α, {a mathematical formula}um, and {a mathematical formula}tk, which are also used in sampling {a mathematical formula}vn when sampling {a mathematical formula}cjv(i) (see steps (3) and (4)). Thus, {a mathematical formula}ΘCv(i) can be computed in the same way as {a mathematical formula}ΘV as follows:{a mathematical formula}
+      </list-item>
+      <list-item label="(3)">
+       Sample model parameters U, V, T as per BPTF. They are all computed in the same way. For example, V can be factorized into individual items. If {a mathematical formula}Pm,k≡um⋅tk, each item feature vector is computed in parallel as follows:{a mathematical formula}
+      </list-item>
+      <list-item label="(4)">
+       Sample model parameters {a mathematical formula}cv(i) and {a mathematical formula}ct(i). The conditional distribution of {a mathematical formula}cv(i) can be factorized into individual items and individual augmented item classes. Thus, each feature vector for items and item classes can be computed in parallel. The computation is as follows:{a mathematical formula} Here, {a mathematical formula}om,j,kv(i) is a 0/1 flag to indicate the existence of a relationship composed of user {a mathematical formula}um, the j-th item/class that corresponds to {a mathematical formula}cjv(i), and a tag {a mathematical formula}tk in {a mathematical formula}Rv(i).Steps (3) and (4) share precision α and feature vectors {a mathematical formula}um and {a mathematical formula}tk (in {a mathematical formula}Pm,k). This means SSTF shares those parameters in the factorization of tensors {a mathematical formula}R and {a mathematical formula}Rv(i). Thus, semantic biases can be shared among the above tensors via the shared parameters. The conditional distribution of {a mathematical formula}ct(i) can be computed in the same way.
+      </list-item>
+      <list-item label="(5)">
+       In each iteration, samples the unobserved ratings {a mathematical formula}Rˆ[l] by applying {a mathematical formula}U[l+1], {a mathematical formula}V[l+1], {a mathematical formula}T[l+1], {a mathematical formula}Cv(i)[l+1], {a mathematical formula}Ct(i)[l+1], {a mathematical formula}α[l] to equation (5).
+      </list-item>
+      <list-item label="(6)">
+       Calculate {a mathematical formula}vn′[l+1] by using Eq. (2) and then set {a mathematical formula}vn′[l+1] to {a mathematical formula}vn[l+1] in the next iteration. Calculate {a mathematical formula}tk′[l+1] by using Eq. (3) and then set {a mathematical formula}tk′[l+1] to {a mathematical formula}tk[l+1] in the next iteration.
+      </list-item>
+     </list>
+     <paragraph>
+      In this way, SSTF effectively incorporates semantic biases into the feature vectors of sparse objects in each iteration of the MCMC procedure.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

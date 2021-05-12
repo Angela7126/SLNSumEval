@@ -1,0 +1,895 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Resolving distributed knowledge.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      A key formal theory for reasoning about knowledge in AI and other fields is epistemic logic based on modal logic [15], [22], [34]. When epistemic logic is used to reason about multi-agent systems, different notions of group knowledge describe different ways in which knowledge can be associated with a group of agents. Common knowledge is stronger than individual knowledge: that something is common knowledge requires not only that everybody in the group knows it, but that everybody knows that everybody knows it, and so on. Distributed knowledge, on the other hand, is weaker than individual knowledge: distributed knowledge is knowledge that is distributed throughout the group even if no individual knows it. Common and distributed knowledge have been characterized as “what every fool knows” and “what a wise man knows”, respectively [15]. Given the important role of common knowledge for coordination and in social interactions in general, it is not strange that this type of group knowledge has received considerable attention from researchers. Distributed knowledge has received somewhat less attention, but should also be of great interest in AI and computer science as it is also closely related to several key problems, such as communication and aggregation of information. In this paper we make an attempt to rectify this, to better understand the theory of distributed knowledge.
+     </paragraph>
+     <paragraph>
+      Multi-agent epistemic logic contains unary operators {a mathematical formula}Ki and {a mathematical formula}DG for each agent i and group of agents G, where a formula of the form {a mathematical formula}Kiφ is intended to mean that agent i knows φ and {a mathematical formula}DGφ that φ is distributed knowledge in G. As an illustration, if we have that {a mathematical formula}K1(p→q) (agent 1 knows that p implies q) and that {a mathematical formula}K2p (agent 2 knows that p), then it would follow that {a mathematical formula}D{1,2}q (it is distributed knowledge in group {a mathematical formula}{1,2} that q). The formal semantics of this language is based on Kripke (possible worlds) models where each agent considers a number of states possible, among which the actual state of the world is always included. The formula {a mathematical formula}Kiφ is true if φ is true in all the states agent i considers possible. Distributed knowledge {a mathematical formula}DGφ is then defined as holding whenever φ is true in each state that every agent in G considers possible. The intuition behind this definition, henceforth called the standard semantics of distributed knowledge, is that if at least one agent in the group knows that a state is not the actual state of the world, the group as a whole knows it. For example, in state t in the model M in Fig. 1, neither {a mathematical formula}K1p nor {a mathematical formula}K2p is true, but {a mathematical formula}D{1,2}p is true. Intuitively, in this example, if the agents have unlimited means of communication then in state t agent 2 can tell agent 1 that s is not the actual state of the world and agent 1 can tell agent 2 that u us not the actual state of the world, so together they know that the actual state must be t. This information is distributed among them.
+     </paragraph>
+     <paragraph>
+      However, we should be careful about our intuitions here, because it turns out that there are many misconceptions about what the standard semantics of distributed knowledge actually entails, and many descriptions of what distributed knowledge actually is are inaccurate or even wrong. A particular misconception is that something is distributed knowledge in a group if and only if the agents in the group could get to know it after some (perhaps unlimited) communications between them,{sup:1} as just illustrated in the example. To see that this interpretation must be incorrect, consider the formula {a mathematical formula}D{1,2}(p∧¬K1p). This formula says that it is distributed knowledge among agents 1 and 2 that p is true and that agent 1 does not know p. The formula is consistent: it is true in state t in model M in Fig. 1 ({a mathematical formula}p∧¬K1p is true in states t and v). However, it is not possible that agents 1 and 2 both can get to know that p is true and that agent 1 does not know that p is true, no matter how much they communicate or “pool” their knowledge together. The “problem” here is that in a formula {a mathematical formula}DGψ, ψ describes the possible states of the world as they were before any communication or other events took place, so a more accurate reading of {a mathematical formula}D{1,2}(p∧¬K1p) is that it follows from the combination of 1 and 2's knowledge that {a mathematical formula}p∧¬K1pwere true before any communication or other events took place. More technically, the “problem” is due to the compositional semantics of modal logic: in the evaluation of {a mathematical formula}DGφ, the {a mathematical formula}DG operator picks out a number of states considered possible by the group G (the states considered possible by all members of the group), and then φ is evaluated in each of these states in the original model, without any effect of the{a mathematical formula}DGoperator.
+     </paragraph>
+     <paragraph>
+      However, we do not really consider this a problem. There are other interpretations of distributed knowledge where the consistency of the mentioned formula makes perfect sense, such that when distributed knowledge is the knowledge of a third party, someone “outside the system” who somehow has access to the epistemic states of all the group members. It shows, however, that it does not make sense to interpret distributed knowledge (with the standard semantics) as something that is true after the agents in the group have communicated with each other.
+     </paragraph>
+     <paragraph>
+      In this paper we introduce and study an alternative group modality {a mathematical formula}RG, where {a mathematical formula}RGφ means (roughly speaking) that φ is true after the agents in the group have shared all their information with each other (and that it is common knowledge among the other agents in the system that they have). We call that resolving distributed knowledge, and the {a mathematical formula}RG operators are called resolution operators.
+     </paragraph>
+     <paragraph>
+      Semantically, we say that the expression {a mathematical formula}RGφ is true iff φ is true in the model update obtained by removing links to states for members of G that are not linked by all members of G. This updated model is called G's communication core in [30, p. 249]. See Fig. 1 for an illustration. For example, the formula {a mathematical formula}R{1,2}(p∧K1p) is true in state t in the model in Fig. 1, because {a mathematical formula}p∧K1p is true in state t of the model's communication core. In this paper we capture that model transformation by the new resolution operators, and study resulting logics.
+     </paragraph>
+     <paragraph>
+      This model transformation abstracts away from the issue of how the agents share their information; whether they communicate directly with each other and if so in which language, whether they are informed by some outsider about the information other agents have and if so how, and so on. As noted by van Benthem [30, p. 249], the communication core cannot always be obtained by public announcements using the epistemic language. Similarly, as noted by several researchers [33], [16], [28], standard distributed knowledge does not always follow logically from the knowledge of the individual agents expressible in the epistemic language. Our model, like that of standard distributed knowledge, is purely semantic: we assume that if an agent can discern between two different worlds, then there exists some mechanism that results in other members of the group being able to make the same distinction. This is further discussed Section 6.
+     </paragraph>
+     <paragraph>
+      The model transformation models a particular kind of internal group information sharing event. Exactly which kind depends on what we assume about what other agents, i.e., agents that are not in the group G that resolve their knowledge, know about the fact that this event is taking place. In this paper we will assume that it is common knowledge among the other agents that G resolve their knowledge, but not what the agents in G actually learn. This corresponds to a natural class of events: publicly observable private resolution of distributed knowledge. An example is a meeting in a closed room, where it is observed that a certain group meets in the room to share information.
+     </paragraph>
+     <paragraph>
+      We want to make it clear that we do not consider distributed knowledge with standard semantics to be “wrong”; the important thing is to be clear about its meaning. In particular, the resolution operators are not intended as a “replacement” of distributed knowledge operators, but as a complement: they express different things. The logics we study contains both types of operators, as well as common knowledge. These logics let us reason about internal group information sharing events. The main results are characterizations of expressive power, and sound and complete axiomatizations.
+     </paragraph>
+     <paragraph>
+      Technically, the model transformation, which amounts to removing certain states or edges, is similar to those found in the simplest dynamic epistemic logics [34] such as public announcement logics [27]. It has also been pointed out in [30] that there is a close connection between the communication core and sequences of public announcements. Public announcement logics with distributed knowledge have been studied recently [38]. In the absence of common knowledge, we get reduction axioms for public announcement logic with distributed knowledge. This turns out to be the case for resolution operators as well. It is not the case in the presence of common knowledge, however. A natural question is whether the combination of public announcement operators (which eliminate states) and distributed knowledge operators (which pick out states considered possible by everyone) always can be used to “simulate” resolution operators (which eliminate states considered possible by everyone). We show that the answer is no, in the general case (it depends on the number of agents).
+     </paragraph>
+     <paragraph>
+      There is also a close connection between the communication core and common knowledge [30]. By studying complete axiomatizations of logics with the resolution operators we make some aspects of that connection precise and (under certain assumptions) give an answer to the question “when can distributed knowledge become common knowledge?”.
+     </paragraph>
+     <paragraph>
+      In a broader perspective, resolution is about a specific kind of (group) ability under incomplete information: {a mathematical formula}RGφ means that G has the joint ability to make φ come true (by resolving their distributed knowledge). Reasoning about ability has a long history in AI, going back to the McCarthy and Hayes' seminal paper [21]. Several formalisms for reasoning about group ability have since been proposed, including seeing-to-it-that (STiT) logics [11], coalition logic (CL)[26], alternating-time temporal logic (ATL)[4], and approaches based on situation calculus [20], [17], [13]. Reasoning about ability under incomplete information, i.e., reasoning about knowledge and ability, has also received considerable attention in AI, with Moore's work [23], [24] being enormously influential – see [3] for an overview. In particular, Moore pointed out many of the subtle issues involved, such as the difference between knowing that and knowing how (linguistically corresponding to the de dicto/de re distinction). However, what it means that a group knows how to achieve something is still not very well understood [3]. Modern approaches to reasoning about ability in AI and multi-agent systems, such as STiT, CL or ATL, are based more directly on modal logic and possible worlds semantics, most of them having some variant of a group modality {a mathematical formula}〈G〉 such that {a mathematical formula}〈G〉φ means that group G has the joint ability to make φ come true – not far from the intuitive meaning of {a mathematical formula}RGφ. The modal approach is, of course, closely related to other knowledge representation formalisms. For example, it can be “imported” into situation calculus by treating situations as possible worlds [24], [29]. While traditional approaches to epistemic planning, planning under incomplete information, have been based on translations to classical planning [25], the emerging area of multi-agent epistemic planning [5] is based directly on the modal approach. We discuss these relations further in Section 6.
+     </paragraph>
+     <paragraph>
+      In an even broader AI perspective, distributed knowledge in general, and resolution in particular, fall into a big family of approaches to information aggregation, that includes, e.g., belief merging [9], [10], judgment aggregation [18], distributed election protocols [1] and distributed knowledge-based coordination [19]. Most of these approaches do not consider aggregation of higher order (nested) knowledge explicitly, which is what makes resolution of distributed knowledge interesting.
+     </paragraph>
+     <paragraph>
+      The rest of the paper is organized as follows. In the next section we review some background definitions and results from the literature, before we introduce logics with the new resolution operators in Section 3, where we also look at some properties of the operators. In Section 4 we study the relative expressivity of epistemic logics with and without the resolution operators (in general, the resolution operators add expressive power when common knowledge is present). In Section 5 we prove completeness of resulting logics; the most interesting case being epistemic logic with common and distributed knowledge and resolution operators. The completeness proofs are relatively straightforward adaptions of techniques developed in [38] for the combination of public announcements and distributed knowledge (also used in [39] to deal with the combination of distributed knowledge and generalized relativized common knowledge). We discuss related and future work and conclude in Section 6.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      In this section we briefly review main background concepts from the literature. We refer to [15], [22], [34] for more detail, context and discussion.
+     </paragraph>
+     <paragraph>
+      We henceforth assume a countable set of propositional variables {an inline-figure} and a finite set of agents {an inline-figure}. We let gr be the set of all (non-empty) groups, i.e., {an inline-figure}.
+     </paragraph>
+     <paragraph>
+      An epistemic model over prop and ag (or just a model) is a tuple {a mathematical formula}M=(S,∼,V) where S is a set of states (or worlds), {an inline-figure} associates a set of states {a mathematical formula}V(p) with each propositional variable p, and ∼ is a function that maps each agent to a binary equivalence relation on S. We write {a mathematical formula}∼i for {a mathematical formula}∼(i).
+     </paragraph>
+     <paragraph>
+      That {a mathematical formula}s∼it is the case means that agent i cannot discern between states s and t: if we are in s she does not know whether we are in t, and vice versa. Considering the distributed knowledge of a group G – a key concept in the following – we define a derived relation {a mathematical formula}∼G=⋂i∈G∼i (it is easy to see that {a mathematical formula}∼G is an equivalence relation). Intuitively, someone who has all the knowledge of all the members of G can discern between two states if and only if at least one member of G can discern between them. We will also consider common knowledge. A similar relation modeling the common knowledge of a group is obtained by taking the transitive closure of the union of the individual relations: {a mathematical formula}∼CG=(⋃i∈G∼i)⁎.
+     </paragraph>
+     <paragraph label="Definition 1">
+      Below are several languages considered in the literature.{a mathematical formula} where {an inline-figure}, {an inline-figure} and {an inline-figure}. We use the usual propositional derived operators, as well as {a mathematical formula}EGφ for {a mathematical formula}⋀i∈GKiφ.
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}ELD and {a mathematical formula}ELCD are static epistemic languages with distributed knowledge, and with distributed and common knowledge, respectively. These are the languages we will extend with resolution operators in the next section. We will also be interested in {a mathematical formula}PACD, the language for public announcement logic with both common knowledge and distributed knowledge, in later sections, when we compare relative expressive power. We include the language {a mathematical formula}PAD as well, for completion.
+     </paragraph>
+     <paragraph>
+      Satisfaction of a formula φ of any of these languages in a state m of a model {a mathematical formula}M, denoted {a mathematical formula}M,m⊨φ, is defined recursively by the following clauses:{a mathematical formula} where {a mathematical formula}M|ψ is the submodel of {a mathematical formula}M restricted to {a mathematical formula}{m∈M|M,m⊨ψ}. Validity is defined as usual: ⊨φ means that {a mathematical formula}M,m⊨φ for all {a mathematical formula}M and m.
+     </paragraph>
+     <paragraph>
+      We now define some axiom schemata and rules. The classical “S5” proof system for multi-agent epistemic logic, denoted (S5), consists of the following axioms and rules:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Axioms for distributed knowledge, denoted (DK):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Axioms and rules for common knowledge, denoted (CK):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The system that consists of (S5) and (DK) over the language {a mathematical formula}ELD, denoted S5D, is a sound and complete axiomatization of all {a mathematical formula}ELD validities. The system that consists of (S5), (DK) and (CK) over the language {a mathematical formula}ELCD is a sound and complete axiomatization of all {a mathematical formula}ELCD validities.
+     </paragraph>
+     <paragraph>
+      Finally, we revisit the concept of bisimulation, frequently used in multi-agent epistemic logic (cf., e.g., [34]). Given two models {a mathematical formula}M=(S,∼,V) and {a mathematical formula}M′=(S′,∼′,V′), a non-empty relation {a mathematical formula}Z⊆S×S′ is called an (individual) bisimulation between {a mathematical formula}M and {a mathematical formula}M′, if for all agents i, all {a mathematical formula}s∈S and {a mathematical formula}s′∈S′ such that {a mathematical formula}sZs′, the following hold.
+     </paragraph>
+     <list>
+      <list-item>
+       For all {an inline-figure}, {a mathematical formula}s∈V(p) iff {a mathematical formula}s′∈V′(p);
+      </list-item>
+      <list-item label="(zig)">
+       For all {a mathematical formula}t∈S, if {a mathematical formula}s∼it, there is a {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼i′t′ and {a mathematical formula}tZt′;
+      </list-item>
+      <list-item label="(zag)">
+       For all {a mathematical formula}t′∈S′, if {a mathematical formula}s′∼i′t′, there is a {a mathematical formula}t∈S such that {a mathematical formula}s∼it and {a mathematical formula}tZt′.
+      </list-item>
+     </list>
+     <paragraph>
+      We say pointed models {a mathematical formula}(M,s) and {a mathematical formula}(M′,s′) are (individually) bisimilar, denoted {a mathematical formula}(M,s)⇄(M′,s′), if there is an individual bisimulation Z between {a mathematical formula}M and {a mathematical formula}M′ linking s and {a mathematical formula}s′.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Resolving distributed knowledge
+     </section-title>
+     <paragraph>
+      We want to model the event that G resolves their knowledge. An immediate question is: whenever the group G is a proper subset of the set of all agents, what do the other agents know about the fact that this event takes place? Here we will model situations where it is common knowledge among the other agents that the event takes place, but not what the members of the group learn. As discussed in the introduction, this corresponds to a natural class of information sharing events, namely publicly observable private communication, such as a meeting in a closed room that is observed to be taking place. This is captured by a global model update: in every state, remove a link to another state for any member of G whenever it is not the case that there is a link to that state for all members of G.
+     </paragraph>
+     <paragraph>
+      Formally, given a model {a mathematical formula}M=(S,∼,V) and a group of agents G, the (global) G-resolved update of{a mathematical formula}M is the model {a mathematical formula}M|G where {a mathematical formula}M|G=(S,∼|G,V) and{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Let us illustrate resolution with an example. The model {a mathematical formula}M in Fig. 2 models five possible outcomes of an election. In some of the outcomes “Hillary wins Florida” is true, this is the proposition r; in some outcomes “Hillary wins the presidency” is true – this is the proposition d. There are two agents, Alice (a) and Bob (b), who have some inside information about the outcomes (and about each other's knowledge about the outcomes), as shown in the model. Observe that, no matter which state is the actual state of affairs, Alice knows whether Hillary wins Florida (i.e., she either knows r or ¬r). Similarly, in all states it is true that Bob knows whether it is the case that Hillary wins the presidency if she wins Florida (i.e., he knows whether {a mathematical formula}r→d is true or not).
+     </paragraph>
+     <paragraph>
+      The effect of resolving all information between Alice and Bob is modeled by removing all the non-ab links from the model; the resulting model {a mathematical formula}M|{a,b} is also shown in Fig. 2. We can immediately see that if the actual situation is the unique state where Hillary wins both Florida and the presidency (i.e., {a mathematical formula}r∧d), they would together have distributed knowledge that this is true. Intuitively, in this case Bob indeed knows that if Hillary wins Florida she will win the presidency, and he could pass this information to Alice, making her discard the possibility that {a mathematical formula}r∧¬d might be true. If the actual situation is the unique state where Hillary does not win Florida but still wins the presidency (i.e., {a mathematical formula}¬r∧d), Alice and Bob still cannot distinguish this from the situations in which Hillary neither wins Florida nor the presidency (i.e., {a mathematical formula}¬r∧¬d).
+     </paragraph>
+     <paragraph>
+      As a further illustration, Fig. 3 shows the same model where we have added a third agent Cath (c) who knows whether Hillary will win the presidency (but not necessarily whether she will win Florida). Now, if all the three agents resolve their information, we get the model {a mathematical formula}N|{a,b,c} where all of the agents know the truth of both propositions. If, however, only two of them resolve their information, the third agent's knowledge of propositional facts are unchanged. The third agent's higher order knowledge can change, even though she does not exactly know what the other two have learned from each other. For example, suppose the actual situation is the bottom-left state where Hillary does not win Florida but wins the presidency (i.e., {a mathematical formula}¬r∧d), and that Alice and Bob resolves their information. In this case Cath does not gain any propositional knowledge, e.g., Cath still would not know whether Hillary wins Florida after the resolution (check the model {a mathematical formula}N|{a,b}). Moreover, before the resolution she considers it possible that Alice does not know whether it is the case that if Hillary wins Florida then she wins the presidency, but this is not the case after the resolution. This is because she knows that Alice has learned this from Bob. Yet, as already mentioned, Cath does not know exactly what Alice and Bob have learned from each other. For example, Bob learned the fact that it is not the case that Hillary wins Florida and the presidency (i.e., not the {a mathematical formula}r∧d state), but Cath still considers it possible that Bob is uncertain of that.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Formally, we consider the following new languages with resolution operators. Languages{a mathematical formula} where {an inline-figure}, {an inline-figure} and {an inline-figure}.
+     </paragraph>
+     <paragraph>
+      The interpretation of these languages in a pointed model is defined as usual, with the following additional clause for the resolution operator:{a mathematical formula} where the definition of {a mathematical formula}M|G is given at the beginning this section.
+     </paragraph>
+     <paragraph>
+      For some examples, consider again the models {a mathematical formula}M and {a mathematical formula}N in Fig. 2, Fig. 3. The reader can easily check that, for example:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Inspecting these and other examples probably makes the reader aware of certain logical connections between the knowledge operators and the resolution operators. We will discuss those in more details shortly, after a brief discussion about some model-theoretic properties.
+     </paragraph>
+     <paragraph>
+      An observation that will come in handy is the following. Recall that we write {a mathematical formula}∼H for {a mathematical formula}⋂i∈H∼i. Thus,{a mathematical formula} Also note that {a mathematical formula}(∼|G)i=(∼|G){i}.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Bisimulations
+      </section-title>
+      <paragraph label="Fact 3">
+       We say that two pointed models are (logically) equivalent if they satisfy exactly the same formulas. For the languages with resolution, individual bisimulation does not imply equivalence, for resolution does not preserve bisimilarity. The following hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Resolution does not preserve individual bisimilarity. Namely, there exist pointed models{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′)such that{a mathematical formula}(M,s)⇄(M′,s′)and{a mathematical formula}(M|G,s)⇄̸(M′|G,s′).
+       </list-item>
+       <list-item label="2.">
+        Individual bisimulation does not imply equivalence w.r.t.{a mathematical formula}RDformulas.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The second clause follows directly from the first. Consider the following models:{a mathematical formula} It is easy to observe that {a mathematical formula}(M,s) and {a mathematical formula}(M′,s′) are bisimilar. The resolved models by the group {a mathematical formula}{i,j} are as follows:{a mathematical formula} Clearly {a mathematical formula}(M|{i,j},s) is not bisimilar to {a mathematical formula}(M′|{i,j},s′). Moreover, it is easy to see that {a mathematical formula}M,s⊨R{i,j}Kip but {a mathematical formula}M′,s′⊭R{i,j}Kip.  □
+      </paragraph>
+      <paragraph>
+       Roelofsen [28] defines what he calls collective bisimulation as an invariance relation for epistemic logic with distributed knowledge, and shows that collective bisimulation implies equivalence. In what follows we show that it also works for our logics with resolution. The following definition of collective bisimulation is simply a strengthening of individual bisimulation requiring that every relation between two states in the first model can be simulated in the second model, not only for individual agents but also for groups of agents.{sup:2}
+      </paragraph>
+      <paragraph label="Definition 4">
+       Collective bisimulationLet models {a mathematical formula}M=(S,∼,V) and {a mathematical formula}M′=(S′,∼′,V′) be given. A non-empty relation {a mathematical formula}Z⊆S×S′ is called a collective bisimulation between {a mathematical formula}M and {a mathematical formula}M′, denoted by {an inline-figure}, if for all groups G, all {a mathematical formula}s∈S and {a mathematical formula}s′∈S′ such that {a mathematical formula}sZs′, the following hold.
+      </paragraph>
+      <list>
+       <list-item>
+        For all {an inline-figure}, {a mathematical formula}s∈V(p) iff {a mathematical formula}s′∈V′(p);
+       </list-item>
+       <list-item label="(zig)">
+        For all {a mathematical formula}t∈S, if {a mathematical formula}s∼Gt, there is a {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼G′t′ and {a mathematical formula}tZt′;
+       </list-item>
+       <list-item label="(zag)">
+        For all {a mathematical formula}t′∈S′, if {a mathematical formula}s′∼G′t′, there is a {a mathematical formula}t∈S such that {a mathematical formula}s∼Gt and {a mathematical formula}tZt′.
+       </list-item>
+      </list>
+      <paragraph>
+       This stronger form of bisimulation ensures equivalence, and will be useful for, e.g., analyzing the expressive power of the language.
+      </paragraph>
+      <paragraph label="Proposition 5">
+       The following hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Resolution preserves collective bisimilarity, i.e., for all pointed models{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′),{an inline-figure}implies{an inline-figure}.
+       </list-item>
+       <list-item label="2.">
+        Collective bisimulation implies{a mathematical formula}RCDequivalence.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The second clause follows from the first clause and existing results on collective bisimulation [28]. To show the first clause, let {a mathematical formula}M=(S,∼,V) and {a mathematical formula}M′=(S′,∼′,V′). Thus {a mathematical formula}M|G=(S,∼|G,V) and {a mathematical formula}M′|G=(S′,∼′|G,V′). Suppose {an inline-figure}, and we show {an inline-figure}:
+      </paragraph>
+      <list>
+       <list-item label="(at)">
+        This clearly follows from the (at) clause of {an inline-figure}.
+       </list-item>
+       <list-item label="(zig)">
+        For all {a mathematical formula}t∈S and all groups H, if {a mathematical formula}s(∼|G)Ht, then
+       </list-item>
+       <list-item label="(zag)">
+        Can be shown analogously to the case for (zig). □
+       </list-item>
+      </list>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Some validities
+      </section-title>
+      <paragraph label="Proposition 6">
+       Let us start with a trivial validity: resolution has no effect for a singleton coalition. For any agent i and any{a mathematical formula}RCDformula φ,{a mathematical formula}R{i}φ↔φis valid.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       More interesting are the following properties (proof is straightforward from the semantic definitions). Reduction principlesThe following are valid, where{an inline-figure},{an inline-figure}and{a mathematical formula}φ∈RCD:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}RGp↔p
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}RG(φ∧ψ)↔RGφ∧RGψ
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}RG¬φ↔¬RGφ
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}RGKiφ↔DGRGφ, when{a mathematical formula}i∈G
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}RGKiφ↔KiRGφ, when{a mathematical formula}i∉G
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}RGDHφ↔DG∪HRGφ, when{a mathematical formula}G∩H≠∅; in particular,{a mathematical formula}RGDGφ↔DGRGφ
+       </list-item>
+       <list-item label="7.">
+        {a mathematical formula}RGDHφ↔DHRGφ, when{a mathematical formula}G∩H=∅.
+       </list-item>
+      </list>
+      <paragraph>
+       These properties are reduction principles, of the type known from public announcement logic: they allow us to simplify expressions involving resolution operators. If we have such principles for the combination of resolution with all other operators we can eliminate resolution operators altogether. There are two cases missing above: {a mathematical formula}RGCH and {a mathematical formula}RGRH. We consider them next.
+      </paragraph>
+      <section label="3.2.1">
+       <section-title>
+        Common knowledge
+       </section-title>
+       <paragraph>
+        First, after the grand coalition have resolved their knowledge, then all the distributed information in the system is common knowledge:
+       </paragraph>
+       <paragraph label="Proposition 8">
+        For any{a mathematical formula}RCDformula φ,{an inline-figure}is valid.
+       </paragraph>
+       <paragraph label="Proof">
+        Given a model {a mathematical formula}M=(S,∼,V) and {a mathematical formula}s∈S,{a mathematical formula} where for {a mathematical formula}(†) we show that {an inline-figure}. This is easy: by definition we can verify that for all {an inline-figure}, {an inline-figure}; hence {an inline-figure}.  □
+       </paragraph>
+       <paragraph>
+        For the general case, as in the case of distributed knowledge, we have that the resolution operators and common knowledge operators commute when the groups are disjoint:
+       </paragraph>
+       <paragraph label="Proposition 9">
+        Let i be an agent, G and H groups of agents and φ an{a mathematical formula}RCDformula. The following hold:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         If{a mathematical formula}G∩H=∅, then{a mathematical formula}⊨RGCHφ↔CHRGφ
+        </list-item>
+        <list-item label="2.">
+         If{a mathematical formula}G⊇Hand{a mathematical formula}i∈G, then{a mathematical formula}⊨RGCHφ↔RGKiφ↔DGRGφ.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        1. {a mathematical formula}M,s⊨RGCHφ iff {a mathematical formula}M|G,s⊨CHφ iff {a mathematical formula}M|G,t⊨φ for any {a mathematical formula}(s,t)∈∼H⁎′, where {a mathematical formula}∼H⁎′=(⋃i∈H∼i′)⁎ and {a mathematical formula}∼i′=⋂j∈G∼j for {a mathematical formula}i∈G and {a mathematical formula}∼i′=∼i for {a mathematical formula}i∉G. Thus, when {a mathematical formula}G∩H=∅, we get that {a mathematical formula}∼H⁎′=(⋃i∈H∼i)⁎. {a mathematical formula}M|G,t⊨φ for any {a mathematical formula}(s,t)∈(⋃i∈H∼i)⁎ holds iff {a mathematical formula}M,t⊨RGφ for any {a mathematical formula}(s,t)∈(⋃i∈H∼i)⁎ iff {a mathematical formula}M,t⊨CHRGφ.2.{a mathematical formula}For the † step, note that when {a mathematical formula}i∈G, {a mathematical formula}(∼|G)i=(∼|G)j for any {a mathematical formula}j∈G (and actually also equal to {a mathematical formula}∼G). Therefore,{a mathematical formula}That {a mathematical formula}RGKiφ↔DGRGφ is valid is already given in Proposition 7.  □
+       </paragraph>
+       <paragraph>
+        However, this does not hold for overlapping groups G and H. In general, we have that (see the proof of the proposition above) {a mathematical formula}M,s⊨RGCHφ iff {a mathematical formula}M|G,t⊨φ for any {a mathematical formula}(s,t)∈∼H⁎′, where {a mathematical formula}∼H⁎′=(⋂i∈G∼i∪⋃i∈H∖G∼i)⁎. This does not seem to be reducible, and we will show in Section 4 that it indeed is not.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       <section-title>
+        Iterated resolution
+       </section-title>
+       <paragraph>
+        Resolution can happen consecutively among the same or different groups of agents. Consider the example illustrated by Fig. 3 where Alice, Bob and Cath are involved. After Alice and Bob share their information, they could do it again, or perhaps Bob and Cath can start a new conversion in which they get their knowledge resolved. Consecutive actions of sharing information are modeled by iterated resolution. We shall study the logical properties of formulas such as {a mathematical formula}RGRHφ where G and H can be the same, different, or having some other relationships.
+       </paragraph>
+       <paragraph>
+        It is not difficult to verify that Alice and Bob sharing their information twice leads to the same outcome as if they share only once; the resulting models {a mathematical formula}N|{a,b}|{a,b} and {a mathematical formula}N|{a,b} are the same. How about Bob and Cath sharing their information after Alice and Bob have done so? The resulting model is illustrated in Fig. 4.
+       </paragraph>
+       <paragraph label="Proposition 10">
+        In the extreme cases, we have (proof immediate from semantic definitions): The following are valid, where{an inline-figure}and{a mathematical formula}φ∈RCD:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}RGRHφ↔RHRGφ, if{a mathematical formula}G∩H=∅
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}RGRGφ↔RGφ.
+        </list-item>
+       </list>
+       <paragraph>
+        However, in the general case there does not seem to be a reduction axiom for iterated resolution. In particular, {a mathematical formula}RGRHφ is not equivalent to {a mathematical formula}RG∪Hφ. While iterated resolution in general does not seem to be reducible to single resolution, how can it be characterized? In particular, what is the accessibility relation for an agent after iterated resolution? For double update, we have the following. Let {a mathematical formula}M|G|H=(S,∼|G|H,V). Then,{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proposition 11">
+        In general we get the following (can be shown inductively by the semantic definition). Consecutive update in generalLet{a mathematical formula}〈G1,…,Gn〉({a mathematical formula}1≤n) be a sequence of groups. Let{a mathematical formula}M=(S,∼,V)and{a mathematical formula}M|G1|⋯|Gn=(S,∼|G1|⋯|Gn,V). Then,{a mathematical formula}where Θ is the union of all{a mathematical formula}Gxsuch that{a mathematical formula}i∈Gx, i.e.,{a mathematical formula}Θ=⋃{Gx|i∈Gx}.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Reduction normal form for individual and distributed knowledge
+      </section-title>
+      <paragraph>
+       As we see from the previous section, the reduction axioms for individual knowledge and distributed knowledge both contain two distinct cases, and the principles of iterated resolution become more complicated. In this section we give a unique form for such reductions, which will be of use later when we prove completeness. We shall call it reduction normal form for individual and distributed knowledge.
+      </paragraph>
+      <paragraph label="Definition 12">
+       δ functionGiven a sequence of groups {a mathematical formula}G→=〈G1,…,Gn〉 and a group H, we define a function δ as follows:{a mathematical formula}Clearly {a mathematical formula}δ(H,G→)⊆H∪G1∪⋯∪Gn. We simply write δ instead of {a mathematical formula}δ(H,G→) when its parameters are clear in the context.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       Let{an inline-figure},{an inline-figure}and{a mathematical formula}G→=〈G1,…,Gn〉be a sequence of members ofgr. Let{a mathematical formula}M=(S,∼,V)and{a mathematical formula}M|G1|⋯|Gn=(S,∼|G1|⋯|Gn,V). Then,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}⊨RG1⋯RGnKiφ↔Dδ({i},G→)RG1⋯RGnφ;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}⊨RG1⋯RGnDHφ↔Dδ(H,G→)RG1⋯RGnφ;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}(∼|G1|⋯|Gn)i=∼δ({i},G→);
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}(∼|G1|⋯|Gn)H=∼δ(H,G→).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Straightforward: the recursive steps in the definition of the δ function exactly match the reduction axioms. Note that clauses 1 and 3 can be treated as special cases of clauses 2 and 4 respectively.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Expressivity
+     </section-title>
+     <paragraph>
+      In this section we compare the relative expressivity, or expressive power, of the various languages we have discussed (six languages in total, which are all interpreted over the same class of models). We say that a language {a mathematical formula}L2 is at least as expressive as {a mathematical formula}L1 if for any {a mathematical formula}L1 formula {a mathematical formula}φ1 there exists a {a mathematical formula}L2 formula {a mathematical formula}φ2 such that for any {a mathematical formula}M,s it is the case that {a mathematical formula}M,s⊨φ1 iff {a mathematical formula}M,s⊨φ2. We say that {a mathematical formula}L2 is strictly more expressive than {a mathematical formula}L1 if {a mathematical formula}L2 is at least as expressive as {a mathematical formula}L1 but not the other way around. Languages {a mathematical formula}L1 and {a mathematical formula}L2 are equally expressive if {a mathematical formula}L1 is at least as expressive as {a mathematical formula}L2 and the other way around. Two languages are not comparable if neither is at least as expressive as the other.
+     </paragraph>
+     <paragraph>
+      Our results are summarized in Fig. 5.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Basic expressivity results
+      </section-title>
+      <paragraph>
+       First of all, it is known that {a mathematical formula}ELCD is more expressive than {a mathematical formula}ELD when there are at least two agents [38].
+      </paragraph>
+      <paragraph label="Theorem 14">
+       From the discussion in the previous section we immediately get that any formula in the {a mathematical formula}RD language is equivalent to a formula without resolution operators: even though we do not have a reduction axiom for iterated resolution operators, we can do the reduction “inside-out”, starting with the innermost {a mathematical formula}RG operator, working outwards, eventually getting rid of all the resolution operators. It is known that {a mathematical formula}ELD and {a mathematical formula}PAD are equally expressive [38], so we get the following: {a mathematical formula}RD,{a mathematical formula}ELDand{a mathematical formula}PADare equally expressive.
+      </paragraph>
+      <paragraph>
+       The relative expressivity of {a mathematical formula}RCD and {a mathematical formula}ELCD is not as simple to settle: that we did not find a reduction axiom for the {a mathematical formula}RGCH case in the previous section does not imply that one does not exist. Another natural question involving the expressive power of {a mathematical formula}RCD is whether the combination of public announcement operators (which eliminate states) and distributed knowledge operators (which pick out states considered possible by everyone) always can be used to “simulate” the resolution operators (which eliminate states considered possible by everyone) when we also have common knowledge in the language. In the next two subsections we study the relative expressive power of {a mathematical formula}RCD and {a mathematical formula}ELCD, and of {a mathematical formula}RCD and {a mathematical formula}PACD, respectively.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      Relative expressivity of {a mathematical formula}RCD and {a mathematical formula}ELCD
+      <paragraph>
+       We compare the relative expressivity of {a mathematical formula}RCD and {a mathematical formula}ELCD. The results are that {a mathematical formula}RCD and {a mathematical formula}ELCD are equally expressive when {an inline-figure} or {an inline-figure}. If there are at least three agents, {a mathematical formula}RCD is strictly more expressive than {a mathematical formula}ELCD.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        The single-agent case
+       </section-title>
+       <paragraph label="Theorem 15">
+        When{an inline-figure},{a mathematical formula}RCDis equally expressive as{a mathematical formula}ELCD.
+       </paragraph>
+       <paragraph label="Proof">
+        Straightforward from Proposition 6.  □
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        The double-agent case
+       </section-title>
+       <paragraph label="Theorem 16">
+        When{an inline-figure},{a mathematical formula}RCDis equally expressive as{a mathematical formula}ELCD.
+       </paragraph>
+       <paragraph label="Proof">
+        The language {a mathematical formula}RCD contains only two more types of formulas than {a mathematical formula}ELCD: {a mathematical formula}R{i}φ and {a mathematical formula}R{i,j}φ. By Proposition 6, {a mathematical formula}R{i}φ is reducible to φ. As for {a mathematical formula}R{i,j}φ, by Proposition 8 and the reduction principles (Lemma 7), it is always possible to push the {a mathematical formula}R{i,j}-operator further outwards and finally remove it, which gives an equivalent {a mathematical formula}ELCD-formula.  □
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        More than two agents
+       </section-title>
+       <paragraph>
+        For the case of three or more agents we will define and prove some properties of a class of models, before we can state the result in Theorem 23.
+       </paragraph>
+       <paragraph label="Definition 17">
+        Modal degreeLet φ be a {a mathematical formula}PACD formula. The modal degree (or simply degree) of φ, denoted {a mathematical formula}md(φ), is defined inductively as follows:{a mathematical formula} Given a sublanguage {a mathematical formula}L and a natural number n, we write {a mathematical formula}Ln for all {a mathematical formula}L-formulas of degree up to and including n.
+       </paragraph>
+       <paragraph>
+        Below we introduce the notion of {a mathematical formula}ELCDP game which was originally introduced in [38] (where it is called “{a mathematical formula}S5CDP game”).
+       </paragraph>
+       <paragraph label="Definition 18">
+        {a mathematical formula}ELCDP game [38]Fix a set {a mathematical formula}P of atomic propositions. For any two pointed models {a mathematical formula}(M,s)=(S,∼,V,s) and {a mathematical formula}(M′,s′)=(S′,∼′,V′,s′), the r-round{a mathematical formula}ELCDPgame between spoiler and duplicator on {a mathematical formula}(M,s) and {a mathematical formula}(M′,s′) is the following.If {a mathematical formula}r=0, spoiler wins iff there is {a mathematical formula}p∈P such that {a mathematical formula}s∈V(p)⇎s′∈V′(p).If {a mathematical formula}r&gt;0, spoiler can initiate one of the following scenarios:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         C-forth Spoiler chooses a group G and an {a mathematical formula}t∈S such that {a mathematical formula}s∼CGt. Duplicator responds by choosing a {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼CG′t′.
+        </list-item>
+        <list-item label="•">
+         C-back Spoiler chooses a group G and an {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼CG′t′. Duplicator responds by choosing a {a mathematical formula}t∈S such that {a mathematical formula}s∼CGt.
+        </list-item>
+        <list-item label="•">
+         D-forth Spoiler chooses a group G and a {a mathematical formula}t∈S such that {a mathematical formula}s∼Gt. Duplicator responds by choosing a {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼G′t′.
+        </list-item>
+        <list-item label="•">
+         D-back Spoiler chooses a group G and a {a mathematical formula}t′∈S′ such that {a mathematical formula}s′∼G′t′. Duplicator responds by choosing a {a mathematical formula}t∈S such that {a mathematical formula}s∼Gt.
+        </list-item>
+       </list>
+       <paragraph label="Lemma 19">
+        [38, Lemma 43]Let{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′)be two pointed models and{a mathematical formula}Pbe a finite set of propositional variables. Let{a mathematical formula}ELCDPbe the sublanguage of{a mathematical formula}ELCDwhich uses only propositional variables in{a mathematical formula}P. Then the following are equivalent for all{a mathematical formula}r∈N:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Duplicator has a winning strategy for the r-round{a mathematical formula}ELCDPgame on{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′).
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}(M,s)and{a mathematical formula}(M′,s′)satisfy exactly the same{a mathematical formula}ELCDP-formulas of degree at most r.
+        </list-item>
+       </list>
+       <paragraph>
+        We now introduce a special class of models that we are going to use together with Lemma 19 to prove the main result.
+       </paragraph>
+       <paragraph label="Definition 20">
+        Teepee modelsGiven natural numbers m and n, let {a mathematical formula}f(n)=n+(nmod2)+1, and let {an inline-figure}. A teepee model of degree n, denoted {a mathematical formula}Teepee(n), is a tuple {a mathematical formula}(S,∼,V) such that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}S={sm,tm|m≤f(n)}∪{rm|m≤f(n) and m is odd}∪{u,v}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼i={(sm,sm+1),(tm,tm+1),(tm,rm+1)|m is even}⁎∪{(u,v)}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼j={(sm,sm+1),(rm,tm+1)|m is odd}⁎∪{(sf(n),u),(rf(n),v)}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼k={(sm,sm+1),(tm,tm+1)|m is odd}⁎∪{(sf(n),u),(tf(n),v)}
+        </list-item>
+        <list-item label="•">
+         for all {an inline-figure}, {a mathematical formula}∼x={(s,s)|s∈S}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}V(p)={u,v} and {a mathematical formula}V(q)=∅ for all {an inline-figure},
+        </list-item>
+       </list>
+       <paragraph>
+        Teepee models are illustrated in Fig. 6.
+       </paragraph>
+       <paragraph label="Lemma 21">
+        Let{a mathematical formula}Teepee(n)=(S,∼,V)and{a mathematical formula}α,β∈S∖{u,v}. Let σ return the subscript of any non-{a mathematical formula}{u,v}-state, e.g., if{a mathematical formula}α=r3then{a mathematical formula}σ(α)=3. For all{a mathematical formula}φ∈ELCDf(n)−max⁡(σ(α),σ(β)),{a mathematical formula}Teepee(n),α⊨φiff{a mathematical formula}Teepee(n),β⊨φ.
+       </paragraph>
+       <paragraph label="Proof">
+        We show the lemma by making use of {a mathematical formula}ELCDP games. I.e., we show that: For all {a mathematical formula}n,α,β as defined, for all finite set of propositional variables {a mathematical formula}P, duplicator has a winning strategy for the {a mathematical formula}(f(n)−max⁡(σ(α),σ(β)))-round {a mathematical formula}ELCDP game on {a mathematical formula}(Teepee(n),α) and {a mathematical formula}(Teepee(n),β), and then the lemma follows from Lemma 19.We show the above by induction on the round. Duplicator clearly wins for the 0-round game. Consider the {a mathematical formula}(m+1)-round game on {a mathematical formula}(Teepee(n),α) and {a mathematical formula}(Teepee(n),β). Note that {a mathematical formula}m+1≤f(n)−max⁡(σ(α),σ(β)).
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If spoiler initiates a D-forth move, he chooses a group G and a state {a mathematical formula}α′ such that {a mathematical formula}α∼Gα′. The state {a mathematical formula}α′ is near to α in the sense that {a mathematical formula}α′ can only be α itself or a state that is one-step away. Now the teepee models are made such that no matter what G is, duplicator can find a nearby state {a mathematical formula}β′ such that {a mathematical formula}β∼Gβ′ and {a mathematical formula}f(n)−max⁡(σ(α′),σ(β′))≥m. We can easy verify that {a mathematical formula}β′ exists as long as we see that every state connects to itself by a {an inline-figure}-link. By the induction hypothesis, duplicator will win the m-round game on {a mathematical formula}(Teepee(n),α′) and {a mathematical formula}(Teepee(n),β′).
+        </list-item>
+        <list-item label="•">
+         D-back move: similar to the case for a D-forth move.
+        </list-item>
+        <list-item label="•">
+         If spoiler initiates a C-forth move, he chooses a group G and a state {a mathematical formula}α′ such that {a mathematical formula}α∼CGα′. Now observe that if G has {a mathematical formula}{i,j} or {a mathematical formula}{i,k} as a subset, {a mathematical formula}α′ can be any state of S, otherwise {a mathematical formula}α′ can only be a state near to α. In the former case, duplicator can set {a mathematical formula}β′=α′, and she will win the m-round game on {a mathematical formula}(Teepee(n),α′) and {a mathematical formula}(Teepee(n),α′) by the induction hypothesis. In the latter case duplicator finds a {a mathematical formula}β′ in a way similar to that for a D-forth move.
+        </list-item>
+        <list-item label="•">
+         C-back move: similar to the case for a C-forth move.
+        </list-item>
+       </list>
+       <paragraph label="Lemma 22">
+        For all natural numbers n,{a mathematical formula}(Teepee(n),s0)and{a mathematical formula}(Teepee(n),t0)satisfy the same{a mathematical formula}ELCDnformulas.
+       </paragraph>
+       <paragraph label="Proof">
+        Note that {a mathematical formula}(f(n)−max(σ(s0),σ(t0)))=f(n)&gt;n, and this lemma follows immediately from Lemma 21.  □
+       </paragraph>
+       <paragraph label="Theorem 23">
+        When{an inline-figure},{a mathematical formula}RCDis strictly more expressive than{a mathematical formula}ELCD.
+       </paragraph>
+       <paragraph label="Proof">
+        The {a mathematical formula}RCD -formula {a mathematical formula}Rjk¬Cijk¬p is true at state {a mathematical formula}s0 but false at {a mathematical formula}t0 for all {a mathematical formula}Teepee(n) with {a mathematical formula}n∈N. Assume towards a contradiction that there is an {a mathematical formula}ELCD formula φ that is equivalent to {a mathematical formula}Rjk¬Cijk¬p. Let n be such that {a mathematical formula}φ∈ELCDn. Lemma 22 contradicts the assumption that φ is equivalent to {a mathematical formula}Rjk¬Cijk¬p.  □
+       </paragraph>
+       <paragraph>
+        The fact that satisfaction in both languages are invariant under the same notion of bisimulation, i.e., collective bisimulation, perhaps makes this result extra interesting (although this is of course not an uncommon situation).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      Relative expressivity of {a mathematical formula}RCD and {a mathematical formula}PACD
+      <paragraph>
+       Turning to {a mathematical formula}RCD versus {a mathematical formula}PACD, again we have to reason by cases. The results are that they are equally expressive for the one-agent case, incomparable if there are three or more agents, but that {a mathematical formula}PACD is more expressive in the two-agent case.
+      </paragraph>
+      <section label="4.3.1">
+       <section-title>
+        The single-agent case
+       </section-title>
+       <paragraph label="Theorem 24">
+        When{an inline-figure},{a mathematical formula}PACDis equally expressive as{a mathematical formula}RCD.
+       </paragraph>
+       <paragraph label="Proof">
+        Both languages are reducible to {a mathematical formula}ELCD.  □
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        The double-agent case
+       </section-title>
+       <paragraph label="Theorem 25">
+        When{an inline-figure},{a mathematical formula}PACDis strictly more expressive than{a mathematical formula}RCD.
+       </paragraph>
+       <paragraph label="Proof">
+        {a mathematical formula}RCD is reducible to {a mathematical formula}ELCD, and the latter is known to be less expressive than {a mathematical formula}PACD[38]. Therefore, {a mathematical formula}PACD is strictly more expressive.  □
+       </paragraph>
+      </section>
+      <section label="4.3.3">
+       <section-title>
+        More than two agents
+       </section-title>
+       <paragraph>
+        For the case of three or more agents we will state the result in Theorem 33 after first showing some lemmas.
+       </paragraph>
+       <paragraph label="Lemma 26">
+        {a mathematical formula}PACDis not strictly less expressive than{a mathematical formula}RCD.
+       </paragraph>
+       <paragraph label="Proof">
+        In [34, Definition 8.45] a class of models called “hairpin models” is defined. These models have two states {a mathematical formula}s0 and {a mathematical formula}t0 which are discernible by {a mathematical formula}PACD. However, no {a mathematical formula}RCD-formulas can discern between {a mathematical formula}s0 and {a mathematical formula}t0, because the hairpin models do not have links labeled by more than one agent (except for reflexive links), and in this case {a mathematical formula}RCD cannot discern between {a mathematical formula}s0 and {a mathematical formula}t0. Therefore, {a mathematical formula}PACD is not less expressive.  □
+       </paragraph>
+       <paragraph>
+        Is {a mathematical formula}PACD at least as expressive, then, or even more expressive? To answer that question we extend the teepee models from the previous section and prove some intermediate results. The main result is found in Theorem 33.
+       </paragraph>
+       <paragraph label="Definition 27">
+        Extended teepee modelsLet {a mathematical formula}m,n∈N and {a mathematical formula}f(n)=n+(nmod2)+1, and let {an inline-figure}. An extended teepee model for n is a tuple {a mathematical formula}Teepee+(n)=(S,∼,V) such that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}S={sm,tm,sm′,tm′|m≤f(n)}∪{u,v}∪{rm,rm′|m≤f(n) and m is odd}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼i={(sm,sm+1),(tm,tm+1),(tm,rm+1),(sm′,sm+1′),(tm′,tm+1′),(tm′,rm+1′)|{a mathematical formula}m is even}⁎{a mathematical formula}∪{(u,v)}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼j={(sm,sm+1),(rm,tm+1),(sm′,sm+1′),(rm′,tm+1′)|m is odd}⁎∪{a mathematical formula}{(sf(n),u),(rf(n),v),(sf(n)′,v),(rf(n)′,u)}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}∼k={(sm,sm+1),(tm,tm+1),(sm′,sm+1′),(tm′,tm+1′)|m is odd}⁎∪{a mathematical formula}{(sf(n),u),(tf(n),v),(sf(n)′,v),(tf(n)′,u)}
+        </list-item>
+        <list-item label="•">
+         for all {an inline-figure}, {a mathematical formula}∼x={(s,s)|s∈S}
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}V(p)={u,v} and {a mathematical formula}V(q)=∅ for all {an inline-figure},
+        </list-item>
+       </list>
+       <paragraph>
+        Extended teepee models are illustrated in Fig. 7.
+       </paragraph>
+       <paragraph>
+        The extended teepee models are designed so that {a mathematical formula}s0 and {a mathematical formula}t0 will satisfy the same {a mathematical formula}ELCD formulas. To prove that that is indeed the case, we extend the notion of a {a mathematical formula}PACD game to {a mathematical formula}PACD games, by adding an additional clause.
+       </paragraph>
+       <paragraph label="Definition 28">
+        {a mathematical formula}PACDP gameFix a set {a mathematical formula}P of propositions. For any two pointed models {a mathematical formula}(M,s)=(S,∼,V,s) and {a mathematical formula}(M′,s′)=(S′,∼′,V′,s′), the r-round{a mathematical formula}PACDPgame between spoiler and duplicator on {a mathematical formula}(M,s) and {a mathematical formula}(M′,s′) is the following.If {a mathematical formula}r=0, spoiler wins iff there is {a mathematical formula}p∈P such that {a mathematical formula}s∈V(p)⇎s′∈V′(p).If {a mathematical formula}r&gt;0, spoiler can initiate one of the following scenarios: C-forth, C-back, D-forth, D-back, or a {a mathematical formula}[φ]-move. While the first four moves are defined the same as in Definition 18, the last is defined as follows: {a mathematical formula}[φ]-moveSpoiler chooses a number {a mathematical formula}r′&lt;r, and sets {a mathematical formula}N⊆M and {a mathematical formula}N′⊆M′ such that {a mathematical formula}s∈N and {a mathematical formula}s′∈N′.
+       </paragraph>
+       <list>
+        <list-item label="(Stage 1)">
+         Duplicator chooses states {a mathematical formula}x∈N∪N′ and {a mathematical formula}y∈(M∖N)∪(M′∖N′). Then the players play the {a mathematical formula}r′-round {a mathematical formula}PACDP-game on x and y. Duplicator wins the r-round game if she wins this subgame.
+        </list-item>
+        <list-item label="(Stage 2)">
+         Otherwise, the players continue with the {a mathematical formula}(r−r′−1)-round {a mathematical formula}PACDP game on {a mathematical formula}(M|N,s) and {a mathematical formula}(M′|N′,s′).
+        </list-item>
+       </list>
+       <paragraph>
+        The following two Lemmas can be proved in the same way as Lemma 19, Lemma 21, respectively.
+       </paragraph>
+       <paragraph label="Lemma 29">
+        Let{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′)be two pointed models and{a mathematical formula}Pbe a finite set of propositional variables. Let{a mathematical formula}PACDPbe the sublanguage of{a mathematical formula}PACDwhich uses only propositional variables in{a mathematical formula}P. Then the following are equivalent for all{a mathematical formula}r∈N:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Duplicator has a winning strategy for the r-round{a mathematical formula}PACDPgame on{a mathematical formula}(M,s)and{a mathematical formula}(M′,s′).
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}(M,s)and{a mathematical formula}(M′,s′)satisfy exactly the same{a mathematical formula}PACDP-formulas of modal degree at most r.
+        </list-item>
+       </list>
+       <paragraph label="Lemma 30">
+        Let{a mathematical formula}Teepee+(n)=(S,∼,V), and{a mathematical formula}α,β∈S∖{u,v}. Let a function σ return the subscript of any non-{a mathematical formula}{u,v}-state, e.g., if{a mathematical formula}α=r3then{a mathematical formula}σ(α)=3. Then,
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         for all{a mathematical formula}φ∈PACDf(n), it holds that{a mathematical formula}Teepee+(n),u⊨φiff{a mathematical formula}Teepee+(n),v⊨φ;
+        </list-item>
+        <list-item label="2.">
+         for all{a mathematical formula}φ∈PACDf(n)−max⁡(σ(α),σ(β)), it holds that{a mathematical formula}Teepee+(n),α⊨φiff{a mathematical formula}Teepee+(n),β⊨φ.
+        </list-item>
+       </list>
+       <paragraph label="Lemma 31">
+        For all natural numbers n, it holds that{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proof">
+        Immediately by Lemma 30.  □
+       </paragraph>
+       <paragraph label="Proof">
+        {a mathematical formula}RCDis not strict less expressive than{a mathematical formula}PACD.The {a mathematical formula}RCD -formula {a mathematical formula}Rjk¬Cijk¬p is true at state {a mathematical formula}s0 but false at {a mathematical formula}t0 for all {a mathematical formula}Teepee+(n) with {a mathematical formula}n∈N. Assume towards a contradiction that there is a {a mathematical formula}PACD formula φ that is equivalent to {a mathematical formula}Rjk¬Cijk¬p. Let n be such that {a mathematical formula}φ∈PACDn. Lemma 31 contradicts the assumption that φ is equivalent to {a mathematical formula}Rjk¬Cijk¬p.  □
+       </paragraph>
+       <paragraph label="Theorem 33">
+        When{an inline-figure},{a mathematical formula}RCDand{a mathematical formula}PACDare not comparable.
+       </paragraph>
+       <paragraph label="Proof">
+        Immediately by Lemma 26, Lemma 32.  □
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Axiomatizations
+     </section-title>
+     <paragraph>
+      We construct sound and complete axiomatizations of the logics of the two languages {a mathematical formula}RD and {a mathematical formula}RCD.
+     </paragraph>
+     <section label="5.1">
+      Resolution and distributed knowledge RD
+      <paragraph>
+       Consider the language {a mathematical formula}RD. Let RD be the system defined in Fig. 8, where (S5) and (DK) are found in Section 2 and (RR) stands for the following reduction axioms for resolution:{a mathematical formula} Note that (RR) contains most of the validities in Proposition 7, except for the reduction principles for individual knowledge which are provable with RD1, RD2 and D1.
+      </paragraph>
+      <paragraph>
+       The soundness part of the following theorem follows immediately from Proposition 7 and soundness of well known sub-logics. Completeness follows from the fact that every formula can be reduced to an S5D formula: it can easily be shown by using the NR rule that the rule of Replacement of Equivalents (RoE) is admissible in RD, which allows us to carry out a reduction even without having a reduction axiom for iterated resolution operators.
+      </paragraph>
+      <paragraph label="Theorem 34">
+       Any{a mathematical formula}RDformula is valid if and only if it is provable in RD.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      Resolution, distributed and common knowledge RCD
+      <paragraph>
+       Consider the language {a mathematical formula}RCD. Let RCD be the system defined in Fig. 9, which extends RD with (CK), found in Section 2, and an induction rule for resolved common knowledge (RRC).
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        Soundness
+       </section-title>
+       <paragraph label="Lemma 35">
+        For soundness it suffices to show that the rule RRC preserves validity (again we know that the other axioms/rules are valid/validity preserving from soundness results for the logics based on the sublanguages of {a mathematical formula}RCD ). RRC-validity preservationFor all{a mathematical formula}RCDformulas φ and ψ, all{an inline-figure}, if{a mathematical formula}⊨φ→(EHφ∧RG1⋯RGnψ), then{a mathematical formula}⊨φ→RG1⋯RGnCHψ.
+       </paragraph>
+       <paragraph label="Proof">
+        Suppose {a mathematical formula}⊨φ→(EHφ∧RG1⋯RGnψ). Given a model {a mathematical formula}M and a state s, suppose {a mathematical formula}M,s⊨φ, we must show that {a mathematical formula}M,s⊨RG1⋯RGnCHψ, i.e., {a mathematical formula}M|G1|⋯|Gn,s⊨CHψ. Thus, for all paths {a mathematical formula}s0(∼|G1|⋯|Gn)i0⋯(∼|G1|⋯|Gn)ix−1sx such that {a mathematical formula}i0,…,ix−1∈H, where {a mathematical formula}s=s0, we need to show that {a mathematical formula}M|G1|⋯|Gn,sx⊨ψ.From {a mathematical formula}⊨φ→(EHφ∧RG1⋯RGnψ) and {a mathematical formula}M,s0⊨φ we get {a mathematical formula}M,s0⊨(EHφ∧RG1⋯RGnψ), which entails:{a mathematical formula} From {a mathematical formula}M,s1⊨φ we get {a mathematical formula}M,s1⊨(EHφ∧RG1⋯RGnψ), which entails:{a mathematical formula} By similar reasoning, for all {a mathematical formula}y=0,…,x, we have{a mathematical formula} which entails {a mathematical formula}M|G1|⋯|Gn,sx⊨ψ as we wanted to show.  □
+       </paragraph>
+       <paragraph label="Corollary 36">
+        SoundnessFor any{a mathematical formula}RCDformula φ, if φ is provable in RCD, then it is valid.
+       </paragraph>
+      </section>
+      <section label="5.2.2">
+       <section-title>
+        Completeness
+       </section-title>
+       <paragraph>
+        As already discussed, RCD is similar to PACD (public announcement logic with common and distributed knowledge; see [38]): both logics extend epistemic logic with common and distributed knowledge, with dynamic operators with update semantics that remove states. There does not seem, however, to be a trivial relationship between the two types of dynamic operators. We are nevertheless able to make heavy use of the completeness proof of PACD in [38] when proving completeness of RCD. That proof is again based on the completeness proof for public announcement logic with (only) common knowledge found in [7], [34], extended to deal with the distributed knowledge operators (which is non-trivial since intersection is not modally definable). In the following completeness proof we tweak the PACD proof to deal with resolution operators instead of public announcement operators. The general proof strategy is as follows: define a finite canonical pseudo model, where distributed knowledge operators are taken as primitive, and then transform it to a proper model while preserving truth. For the last step we can use a transformation based on unraveling and folding from [38] directly.
+       </paragraph>
+       <paragraph>
+        The most important difference to the PACD completeness proof in [38], and indeed the crux of the proof, is the use of the induction rule for resolved common knowledge (RRC). No corresponding rule is needed in the PACD completeness proof. The rule is used in the proof of Lemma 40(9).
+       </paragraph>
+       <paragraph>
+        We now, first, formally define pseudo models as a slight generalization of (proper) models, and their interpretation of the language, before we define the finite canonical pseudo model. The central result is a truth lemma for the canonical pseudo model (Lemma 41), from which we can get the completeness result relatively easily.
+       </paragraph>
+       <paragraph label="Definition 37">
+        Pseudo models [38]A pseudo model is a tuple {a mathematical formula}M=(S,∽,V) such that:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         S is a non-empty set of states;
+        </list-item>
+        <list-item label="•">
+         ∽ is a function which maps every agent and every non-empty group of agents to an equivalence relation such that for any agent i and any groups G and H,
+        </list-item>
+        <list-item label="•">
+         {an inline-figure} is a valuation.
+        </list-item>
+       </list>
+       <paragraph>
+        The satisfaction of a formula φ in a pointed pseudo model {a mathematical formula}(M,s), {a mathematical formula}(M,s)⊨φ, is defined exactly as for (proper) models, with two exceptions. First, for the interpretation of the {a mathematical formula}DG operators,{a mathematical formula}{a mathematical formula}∼G is given directly by the model rather than being defined as the intersection of individual equivalence relations. Second, for the interpretation of the {a mathematical formula}RG operators,{a mathematical formula} the updated pseudo model {a mathematical formula}M|G=(S,∽|G,V) is defined as follows:{a mathematical formula} It is easy to see that the updated pseudo model {a mathematical formula}M|G is indeed a pseudo model.
+       </paragraph>
+       <paragraph>
+        The finite canonical pseudo model is defined by using the standard technique based on the closure of a formula, which we now go on to define for our language. There are some complications. Due to the lack of general reduction principles for iterated resolution, it turns out that we have to use an arbitrary length of iterated resolution operators as a prefix in our version of the truth lemma (Lemma 41), and thus that we have to extend the closure accordingly.
+       </paragraph>
+       <paragraph>
+        Given a sequence {a mathematical formula}G→=〈G1,…,Gn〉 of groups, we write {a mathematical formula}RG→ for the iterated resolution operators {a mathematical formula}RG1⋯RGn. Moreover, for any model {a mathematical formula}M we write {a mathematical formula}M|G→ for {a mathematical formula}M|G1|⋯|Gn, and for the second element ∼ of a model, we write {a mathematical formula}∼|G→ for {a mathematical formula}∼|G1|⋯|Gn.
+       </paragraph>
+       <paragraph>
+        The closure is then defined as follows.
+       </paragraph>
+       <paragraph label="Definition 38">
+        ClosureGiven a formula φ, the closure of φ is given by the function {a mathematical formula}cl:RCD→℘(RCD) which is defined as follows:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}φ∈cl(φ), and if {a mathematical formula}ψ∈cl(φ), so are all of its subformulas;
+        </list-item>
+        <list-item label="2.">
+         If φ is not a negation, then {a mathematical formula}φ∈cl(φ) implies {a mathematical formula}¬φ∈cl(φ);
+        </list-item>
+        <list-item label="3.">
+         {a mathematical formula}Kiψ∈cl(φ) iff {a mathematical formula}D{i}ψ∈cl(φ);
+        </list-item>
+        <list-item label="4.">
+         {a mathematical formula}CGψ∈cl(φ) implies {a mathematical formula}{KiCGψ|a∈A}⊆cl(φ);
+        </list-item>
+        <list-item label="5.">
+         {a mathematical formula}RG→¬ψ∈cl(φ) implies {a mathematical formula}RG→ψ∈cl(φ);
+        </list-item>
+        <list-item label="6.">
+         {a mathematical formula}RG→(ψ∧χ)∈cl(φ) implies {a mathematical formula}{RG→ψ,RG→χ}⊆cl(φ);
+        </list-item>
+        <list-item label="7.">
+         {a mathematical formula}RG→Kiψ∈cl(φ) implies {a mathematical formula}Dδ({i},G→)RG→ψ∈cl(φ);
+        </list-item>
+        <list-item label="8.">
+         {a mathematical formula}RG→DHψ∈cl(φ) implies {a mathematical formula}Dδ(H,G→)RG→ψ∈cl(φ);
+        </list-item>
+        <list-item label="9.">
+         {a mathematical formula}RG→CHψ∈cl(φ) implies (i) {a mathematical formula}RG→ψ∈cl(φ), (ii) {a mathematical formula}Dδ(H,G→)RG→CHψ∈cl(φ), and (ii) {a mathematical formula}{Dδ({i},G→)RG→CHψ|i∈H}⊆cl(φ).
+        </list-item>
+       </list>
+       <paragraph>
+        We use {a mathematical formula}Γ_ as shorthand for {a mathematical formula}⋀φ∈Γφ when Γ is a finite set of formulas.
+       </paragraph>
+       <paragraph>
+        The following definition of the canonical pseudo model is standard, in particular it is used in [38].{sup:3}
+       </paragraph>
+       <paragraph label="Definition 39">
+        Canonical pseudo modelLet α be a formula. The canonical pseudo model{a mathematical formula}Mc=(S,∽,V) for {a mathematical formula}cl(α) is defined as follows (where the standard definition of maximal consistency in a finite set of formulas is used):
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}S={Γ|Γ is maximal consistent in cl(α)};
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Γ∽iΔ iff {a mathematical formula}{Kiφ|Kiφ∈Γ}={Kiφ|Kiφ∈Δ};
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Γ∽GΔ iff {a mathematical formula}{DHφ|DHφ∈Γ}={DHφ|DHφ∈Δ} whenever {a mathematical formula}H⊆G;
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}V(p)={Γ∈S|p∈Γ}.
+        </list-item>
+       </list>
+       <paragraph>
+        It is easy to verify that the canonical pseudo model for any {a mathematical formula}cl(α) is indeed a pseudo model.
+       </paragraph>
+       <paragraph>
+        Below we show a lemma which will be used in the proof of the Pseudo Truth Lemma. We first define some terminology. Let {a mathematical formula}G→ be sequence of groups, and let {a mathematical formula}Mc=(S,∽,V) be the canonical pseudo model for {a mathematical formula}cl(α) for some α. Let {a mathematical formula}P=〈Φ0≍τ0⋯≍τn−1Φn〉 where {a mathematical formula}M|G→=(S,≍,V) (i.e., {a mathematical formula}≍=∽|G→), every {a mathematical formula}τi ({a mathematical formula}0≤i≤n−1) is an agent or a group, and every {a mathematical formula}Φi∈S ({a mathematical formula}0≤i≤n). If all agents {a mathematical formula}τ0,…,τn−1 are members of H for some group H, we call {a mathematical formula}P a {a mathematical formula}G→-resolved H-path (from{a mathematical formula}Φ0, in{a mathematical formula}Mc); if a formula φ is such that {a mathematical formula}φ∈Φi for all {a mathematical formula}0≤i≤n, we call {a mathematical formula}P a canonical φ-path.
+       </paragraph>
+       <paragraph label="Lemma 40">
+        Let{a mathematical formula}Mc=(S,∽,V)be the canonical pseudo model for{a mathematical formula}cl(α)for some α. If Γ and Δ are maximal consistent in{a mathematical formula}cl(α), then
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Let{a mathematical formula}S={Γ|Γis maximal consistent incl(α)}with α a formula. It holds that{a mathematical formula}⊢⋁Γ∈SΓ_and{a mathematical formula}⊢φ↔⋁φ∈Γ∈SΓ_for all{a mathematical formula}φ∈cl(α);
+        </list-item>
+        <list-item label="2.">
+         Γ is deductively closed in{a mathematical formula}cl(α), i.e.,{a mathematical formula}Γ⊢φ⇔φ∈Γfor any{a mathematical formula}φ∈cl(α);
+        </list-item>
+        <list-item label="3.">
+         If{a mathematical formula}¬φ∈cl(α), then{a mathematical formula}φ∈Γ⇔¬φ∉Γ;
+        </list-item>
+        <list-item label="4.">
+         If{a mathematical formula}φ∧ψ∈cl(α), then{a mathematical formula}φ∧ψ∈Γ⇔φ∈Γ&amp;ψ∈Γ;
+        </list-item>
+        <list-item label="5.">
+         If{a mathematical formula}Γ_∧KˆiΔ_is consistent,{a mathematical formula}Γ∽iΔ; if{a mathematical formula}Γ_∧DˆGΔ_is consistent,{a mathematical formula}Γ∽GΔ;
+        </list-item>
+        <list-item label="6.">
+         If{a mathematical formula}Kiφ∈cl(α), then{a mathematical formula}KiΓ⊢φ⇔KiΓ⊢Kiφ;
+        </list-item>
+        <list-item label="7.">
+         If{a mathematical formula}DGφ∈cl(α), then{a mathematical formula}DGΓ⊢φ⇔DGΓ⊢DGφ;
+        </list-item>
+        <list-item label="8.">
+         If{a mathematical formula}CGφ∈cl(α), then{a mathematical formula}CGφ∈Γ⇔∀Δ(Γ∽CGΔ⇒φ∈Δ);
+        </list-item>
+        <list-item label="9.">
+         If{a mathematical formula}RG→CHφ∈cl(α), then{a mathematical formula}RG→CHφ∈Γiff every{a mathematical formula}G→-resolved H-path from Γ in{a mathematical formula}Mcis a canonical{a mathematical formula}RG→φ-path.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        We only give the proof of clause 9 here. The other clauses can be shown as in [38, Lemma 49], which again can be traced back to [34, Chapter 7].Let {a mathematical formula}RG→CHφ∈cl(α) where {a mathematical formula}G→=〈G1,…,Gn〉 is a sequence of groups. It follows from the definition of closure (Definition 38) that the formulas {a mathematical formula}RG→φ, {a mathematical formula}¬RG→φ, {a mathematical formula}Dδ(H,G→)RG→CHφ and {a mathematical formula}Dδ({i},G→)RG→CHφ (where {a mathematical formula}i∈H) are all in {a mathematical formula}cl(α).From left to right. Suppose {a mathematical formula}RG→CHφ∈Γ, we continue by induction on the length of the path that every {a mathematical formula}G→ -resolved H-path from Γ is a canonical {a mathematical formula}RG→CHφ-path. Then the left-to-right direction follows: by {a mathematical formula}⊢CHφ→φ, NR and {a mathematical formula}RG-distribution (which follows from the RR axioms) we get {a mathematical formula}⊢RG→CHφ→RG→φ, and by {a mathematical formula}RG→φ∈cl(α) we have {a mathematical formula}RG→φ∈Γ.Suppose the length of the {a mathematical formula}G→ -resolved H-path is 0, i.e., the path is {a mathematical formula}〈Γ〉, we must show that {a mathematical formula}RG→CHφ∈Γ. This is guaranteed by the supposition.Suppose the length of the {a mathematical formula}G→ -resolved H-path is {a mathematical formula}n+1, i.e., the path is {a mathematical formula}〈Γ0≍τ0⋯≍τn−1Γn≍τnΓn+1〉 with {a mathematical formula}Γ0=Γ and every {a mathematical formula}τx is either in H or a subset of H. By the induction hypothesis we may assume that {a mathematical formula}RG→CHφ∈Γn.
+        <list>
+         Suppose {a mathematical formula}τn is an agent i ({a mathematical formula}i∈H). By Axiom C1 we have {a mathematical formula}⊢CHφ→KiCHφ. It follows that {a mathematical formula}⊢RG→CHφ→RG→KiCHφ by the rules NR and {a mathematical formula}RG-distribution. Let {a mathematical formula}δ=δ({i},G→). By the reduction axioms we move {a mathematical formula}Ki left, i.e., {a mathematical formula}⊢RG→KiCHφ→DδRG→CHφ, so we get {a mathematical formula}⊢RG→CHφ→DδRG→CHφ. Hence {a mathematical formula}Γn⊢DδRG→CHφ. As {a mathematical formula}DδRG→CHφ∈cl(α), we have {a mathematical formula}DδRG→CHφ∈Γn. Moreover, {a mathematical formula}≍i=∽δ by Proposition 13(3), which can be shown to hold for pseudo semantics as for the normal semantics, and so {a mathematical formula}DδRG→CHφ∈Γn+1 by the definition of {a mathematical formula}∽δ. Thus {a mathematical formula}RG→CHφ∈Γn+1.Suppose {a mathematical formula}τn is a group I ({a mathematical formula}I⊆H). By Axioms C1, D1 and D2 we have {a mathematical formula}⊢CHφ→DICHφ. By NR and {a mathematical formula}RG-distribution, {a mathematical formula}⊢RG→CHφ→RG→DICHφ. By similar reasoning to the case above, we get the result {a mathematical formula}RG→CHφ∈Γn+1 (in this case we use {a mathematical formula}δ(H,G→) instead of {a mathematical formula}δ({i},G→)).From right to left. Suppose that every
+        </list>
+        <paragraph>
+         {a mathematical formula}G→ -resolved H-path from Γ is a canonical {a mathematical formula}RG→φ-path. Let {a mathematical formula}S0 be the set of all maximal consistent sets Δ in {a mathematical formula}cl(α) such that every {a mathematical formula}G→ -resolved H-path from Δ is a canonical {a mathematical formula}RG→φ-path. Now consider the formula {a mathematical formula}λ=⋁Δ∈S0Δ_. We will show the following:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          {a mathematical formula}⊢Γ_→λ
+         </list-item>
+         <list-item label="2.">
+          {a mathematical formula}⊢λ→(EHλ∧RG→φ).
+         </list-item>
+        </list>
+        <paragraph>
+         From the above and the reduction rule for resolved common knowledge we get {a mathematical formula}⊢Γ_→RG→CHφ which furthermore entails {a mathematical formula}RG→CHφ∈Γ. We now continue with the proof of the two clauses.
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          This is trivial, as {a mathematical formula}Γ_ is one of the disjuncts of λ.
+         </list-item>
+         <list-item label="2.">
+          Suppose towards a contradiction that {a mathematical formula}λ∧¬(EHλ∧RG→φ) is consistent, i.e., {a mathematical formula}λ∧(¬EHλ∨¬RG→φ) is consistent. Because λ is a disjunction there must be a disjunct {a mathematical formula}Ξ_ of λ such that {a mathematical formula}Ξ_∧(¬EHλ∨¬RG→φ) is consistent. It follows that either {a mathematical formula}Ξ_∧¬EHλ or {a mathematical formula}Ξ_∧¬RG→φ is consistent.If the former is consistent, then there must be an agent {a mathematical formula}i∈H such that {a mathematical formula}Ξ_∧¬Kiλ is consistent, i.e., {a mathematical formula}Ξ_∧Kˆi¬⋁Δ∈S0Δ_ is consistent. Since {a mathematical formula}⊢⋁Δ∈SΔ_ by clause 1, we have {a mathematical formula}⊢¬⋁Δ∈S0Δ_→⋁Δ′∈S∖S0Δ′_, and so there must be a Θ in {a mathematical formula}S∖S0 such that {a mathematical formula}Ξ_∧KˆiΘ_ is consistent. By item 5 of this lemma {a mathematical formula}Ξ∽iΘ (where ∽ is the relation in the canonical pseudo model for {a mathematical formula}cl(α)). But then Ξ cannot be in {a mathematical formula}S0 for {a mathematical formula}Θ∉S0. A contradiction.If the latter is consistent, since {a mathematical formula}¬RG→φ∈cl(α) and Ξ is maximal, {a mathematical formula}¬RG→φ∈Ξ. But {a mathematical formula}RG→φ∈Ξ since {a mathematical formula}Ξ∽HΞ and every {a mathematical formula}G→ -resolved H-path from Ξ is a canonical {a mathematical formula}RG→φ-path. We reach a contradiction. □
+         </list-item>
+        </list>
+       </paragraph>
+       <paragraph label="Lemma 41">
+        Pseudo truthLet{a mathematical formula}Mc=(S,∽,V)be the canonical pseudo model for{a mathematical formula}cl(α). Let φ be an{a mathematical formula}RCDformula. Then for all sequences{a mathematical formula}G→of groups with{a mathematical formula}RG→φ∈cl(α), and for all{a mathematical formula}Γ∈S, it holds that{a mathematical formula}RG→φ∈Γiff{a mathematical formula}Mc|G→,Γ⊨φ.
+       </paragraph>
+       <paragraph label="Proof">
+        We show this lemma by induction on φ.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The base case. {a mathematical formula}RG→p∈Γ iff {a mathematical formula}p∈Γ (Proposition 7(1)) iff {a mathematical formula}Mc,Γ⊨p iff {a mathematical formula}Mc,Γ⊨RG→p iff {a mathematical formula}Mc|G→,Γ⊨p.
+        </list-item>
+        <list-item label="•">
+         The case for negation. {a mathematical formula}RG→¬ψ∈Γ iff {a mathematical formula}¬RG→ψ∈Γ (note that {a mathematical formula}¬RG→ψ∈cl(α) by Definition 38(2, 5)) iff {a mathematical formula}RG→ψ∉Γ iff {a mathematical formula}Mc|G→,Γ⊭ψ iff {a mathematical formula}Mc|G→,Γ⊨¬ψ.
+        </list-item>
+        <list-item label="•">
+         The case for conjunction. {a mathematical formula}RG→(ψ∧χ)∈Γ iff {a mathematical formula}RG→ψ∧RG→χ∈Γ iff {a mathematical formula}{RG→ψ,RG→χ}⊆Γ ({a mathematical formula}RG→ψ and {a mathematical formula}RG→χ are in {a mathematical formula}cl(α)) iff {a mathematical formula}Mc|G→,Γ⊨ψ and {a mathematical formula}Mc|G→,Γ⊨χ iff {a mathematical formula}Mc|G→,Γ⊨ψ∧χ.
+        </list-item>
+        <list-item label="•">
+         The case for individual knowledge. From left to right. {a mathematical formula}RG→Kiψ∈Γ iff {a mathematical formula}DδRG→ψ∈Γ where {a mathematical formula}δ=δ({i},G→) by the reduction axioms, iff {a mathematical formula}∀Δ.(Γ∽δΔ⇒DδRG→ψ∈Δ). This implies {a mathematical formula}∀Δ.(Γ∽δΔ⇒RG→ψ∈Δ) by the axiom TD, and thus, by the induction hypothesis, that {a mathematical formula}∀Δ.(Γ∽δΔ⇒Mc|G→,Δ⊨ψ). This again implies that {a mathematical formula}Mc,Γ⊨DδRG→ψ, which holds iff (*) {a mathematical formula}Mc,Γ⊨RG→Kiψ, iff {a mathematical formula}Mc|G→,Γ⊨Kiψ. (*) holds by Proposition 13(1), which can be shown to hold for pseudo semantics as for the normal semantics.From right to left. Suppose {a mathematical formula}Mc|G→,Γ⊨Kiψ. We show that {a mathematical formula}RG→Kiψ∈Γ. Suppose not, then {a mathematical formula}¬RG→Kiψ∈Γ. Hence {a mathematical formula}Γ_∧¬RG→Kiψ is consistent, and so is {a mathematical formula}Γ_∧Dˆδ¬RG→ψ, where {a mathematical formula}δ=δ({i},G→). Let {a mathematical formula}S be the set of all maximal consistent sets in {a mathematical formula}cl(α). By Lemma 40(1), {a mathematical formula}Γ_∧Dˆδ⋁¬RG→ψ∈Θ∈SΘ_ is consistent. Since conjunction, resolution and the {a mathematical formula}Dˆδ-operator all distribute over disjunction, {a mathematical formula}⋁¬RG→ψ∈Θ∈S(Γ_∧DˆδΘ_) is consistent. Therefore there must be a {a mathematical formula}Θ∈S such that {a mathematical formula}¬RG→ψ∈Θ and {a mathematical formula}Γ_∧DˆδΘ_ is consistent. From {a mathematical formula}¬RG→ψ∈Θ we get {a mathematical formula}RG→ψ∉Θ. By the induction hypothesis {a mathematical formula}Mc|G→,Θ⊭ψ, and so {a mathematical formula}Mc,Θ⊭RG→ψ. By Lemma 40(5) and the fact that {a mathematical formula}Γ_∧DˆδΘ_ is consistent, {a mathematical formula}Γ∽δΘ. But this contradicts the supposition that {a mathematical formula}Mc|G→,Γ⊨Kiψ, since by the same reasoning as in the proof of the other direction (see above), {a mathematical formula}Mc,Δ⊨RG→ψ for all Δ such that {a mathematical formula}Γ∽δΔ.
+        </list-item>
+        <list-item label="•">
+         The case for distributed knowledge: similar to the case for individual knowledge, and in the proof we use {a mathematical formula}δ(H,G→) instead of {a mathematical formula}δ({i},G→).
+        </list-item>
+        <list-item label="•">
+         The case for common knowledge. {a mathematical formula}RG→CHψ∈Γ iff all {a mathematical formula}G→ -resolved H-paths from Γ are also canonical {a mathematical formula}RG→ψ-paths, by Lemma 40(9), which means that for all Δ such that {a mathematical formula}(Γ,Δ)∈(∽|G1|⋯|Gn)CH, {a mathematical formula}RG→ψ∈Δ, iff for all Δ such that {a mathematical formula}(Γ,Δ)∈(∽|G1|⋯|Gn)CH, {a mathematical formula}Mc|G→,Δ⊨ψ (IH) iff {a mathematical formula}Mc|G→,Γ⊨CHψ.
+        </list-item>
+        <list-item label="•">
+         The case for resolution. {a mathematical formula}RG→RHψ∈Γ iff {a mathematical formula}Mc|G→|H,Γ⊨ψ (IH applies to ψ) iff {a mathematical formula}Mc|G→,Γ⊨RHψ. □
+        </list-item>
+       </list>
+       <paragraph>
+        From the pseudo truth lemma we get that any consistent formula is satisfied in a pseudo model. For the completeness result, it remains to be shown that there is a truth-preserving transformation of canonical pseudo models to (proper) models. This can be done in exactly the same way as in [38], using the methods of unraveling and folding[38, pp. 9–15]. These methods have to be slightly modified to deal with our language instead of {a mathematical formula}PACD, in particular showing that a suitable notion of bisimulation between pseudo models and proper models (called trans-bisimulation in [38]) preserves truth of the {a mathematical formula}RCD language, but this is straightforward and we omit the details here.
+       </paragraph>
+       <paragraph label="Theorem 42">
+        CompletenessAll valid{a mathematical formula}RCDformulas are provable in RCD.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this paper we captured the dynamics of publicly observable private resolution of distributed knowledge. Resolution operators (based on update semantics) are both an alternative and a complement to the standard distributed knowledge operators (which are based on standard modal semantics).
+     </paragraph>
+     <paragraph>
+      Resolution operators let us reason about the relationship between common knowledge and distributed knowledge in general, and in particular about distributed knowledge as potential common knowledge. When can distributed knowledge become common knowledge? A naive idea would be that {a mathematical formula}DGφ should imply that {a mathematical formula}RGCGφ, that any information that is distributed can become common knowledge through resolution. This does not hold in general, however, φ might even become false after resolution (an example is the formula {a mathematical formula}D{1,2}(p∧¬K1p) discussed in the introduction). We do, however, have the following (Proposition 9(2) with {a mathematical formula}G=H):{a mathematical formula} – a fact can become common knowledge after the group have shared their information if and only if it was distributed knowledge before the event that the fact would be true after the event. This is exactly the distributed knowledge that can become common knowledge (in our special case of publicly observable private resolution of distributed knowledge). If the grand coalition resolves its distributed knowledge, there is no distinction between distributed and common knowledge any more: {an inline-figure} (Proposition 8).
+     </paragraph>
+     <paragraph>
+      Although the model transformation expressed by the resolution operators is similar to those found in the simplest dynamic epistemic logics [34] such as public announcement logics [27], as we have seen it cannot be expressed in those logics. Resolution is not a public announcement, rather it bears a resemblance to semi-private announcements (sometimes called semi-public announcements) [6], [37], [8], [36], such as the action of showing a card to another player while the remaining players look on (without seeing what the card is), which have been modeled in more general dynamic epistemic logic frameworks such as action model logic [7], [6] and epistemic action logic [35], [36], [37]. However, although resolution has the flavor of a semi-private announcement, there clearly are important differences (for example, resolution requires no preconditions), and indeed it is easy to see that resolution operators cannot be expressed as either action models nor epistemic actions (see Fact 3). The full relationship between resolution and semi-private announcements is not completely clear, and we leave that for future work.
+     </paragraph>
+     <paragraph>
+      As discussed in the introduction, it has been argued that distributed knowledge in general does not comply with the following principle of full communication[33]: if {a mathematical formula}DGφ is true, then φ should follow logically from the set of all formulas known by the individual agents in the group. This can be seen as a problem: that agents can have distributed knowledge without being able to establish it “through communication” [33]. Several works [33], [16], [28] have tried to characterize classes of models on which the principle of full communication does hold; the class of all such models is called full communication models[28]. This may seem related to the distinction between distributed knowledge and resolution operators: the latter is intuitively related to internal “full” communication in the group. However, this similarity is superficial: the notion of full communication in the sense of [33] is about expressive power of the communication language and the limits that puts on the resulting possible epistemic states under certain assumptions about how information is shared. The key point of the resolution operators, on the other hand, compared with the standard distributed knowledge operators, is to make a distinction between before and after the information sharing event. That distinction is not made in standard distributed knowledge, even when restricted to full communication models: it is easy to see that, e.g., {a mathematical formula}D{1,2}(p∧¬K1p) is satisfiable also on full communication models. The two ideas, of limiting models to full communication models and of modeling group information sharing events using model updates, are orthogonal, and we could very well restrict our logics with resolution operators to full communication models. We leave that for future work. Furthermore, it would be interesting to look at a combined variant: “update by full communication”, which takes the communication language into account when defining the updated model.
+     </paragraph>
+     <paragraph>
+      Also of interest for future work is to look at other assumptions about the other agents' knowledge about the group communication event taking place. In this paper we only studied the case that it is common knowledge that the event takes place (but not what the agents in the group learn). That was naturally modeled using a “global” model update: in every state, replace accessibility for each agent in the group with the group accessibility (intersection). An interesting and also natural alternative is doing only a “local” model update: change accessibility in the same way, but only in the current state. That would correspond to it being common knowledge that if this is the current state, then the group resolves their knowledge.
+     </paragraph>
+     <paragraph>
+      When looking at the interaction of the resolution and common knowledge operators one might be reminded of relativized common knowledge[31], [32]. Languages with a (generalized variant of) relativized common knowledge and distributed knowledge were recently studied [39]. Here is an open question: can {a mathematical formula}RGCHφ be expressed using relativized common knowledge, in combination with other operators?
+     </paragraph>
+     <paragraph>
+      We mentioned related work on the interaction of knowledge and ability in the introduction, and the fact that {a mathematical formula}RGφ can be read as G having the joint ability to make φ come about. The conceptually probably closest work in this area is group announcement logic[2], where formulas of the form {a mathematical formula}〈G〉φ say that G can make a joint public announcement such that φ will become true. A significant difference to the resolution operators in this paper is that the latter model private communication. Yet, the exact relationship between these operators is interesting for future work. Considering knowledge and ability more generally, in our formalization of resolution there is indeed a distinction between ability to achieve something (by resolving distributed knowledge), and knowledge of that ability. It might be that {a mathematical formula}RGφ holds without either {a mathematical formula}KiRGφ ({a mathematical formula}i∈G), {a mathematical formula}DGRGφ, or {a mathematical formula}CGRGφ holds. For distributed knowledge of ability we have observed an exact principle: {a mathematical formula}DGRGφ holds if and only if {a mathematical formula}RGDGφ holds. However, for resolution there is no distinction between knowing that and knowing how: there is only one way to resolve. That distinction may be relevant for possible future formalizations of non-public resolution.
+     </paragraph>
+     <paragraph>
+      Knowledge, ability, knowing-how and coordination have also been considered in situation calculus, with several approaches formalizing notions of joint ability under incomplete information in a multi-agent setting [20], [17]. These notions of joint ability are, however, very different from resolution-as-ability. The former is based on implicit coordination through individual knowledge, where each agent chooses a strategy based only on her own knowledge and beliefs about what the other agents will do, without any communication or other kinds of information sharing or explicit coordination. Resolution-as-ability, on the other hand, is about the group's ability to obtain certain individual epistemic states, states from which the first type of ability can be considered, through some kind of communication. Combining these two types of ability, which individual knowledge states a group can achieve and what a group can achieve with no (or only implicit) coordination based on individual knowledge states, is an interesting opportunity for future work. In fact, we are not aware of any formalization of distributed knowledge in situation calculus, and importing distributed knowledge and resolution into situation calculus frameworks could be a starting point for formalizing a more sophisticated notion of joint ability in these frameworks.
+     </paragraph>
+     <paragraph>
+      On a related note, we believe that the work on resolution in this article could be particularly useful in the area of multi-agent epistemic planning [5] mentioned in the introduction, which is based on modal logic and on the same type of update semantics used to model resolution in this paper. There has been some work on group coordination in this framework [14], but also here only on implicit coordination. Implementing resolution operators in this framework could be both natural and useful for reasoning about group plans.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

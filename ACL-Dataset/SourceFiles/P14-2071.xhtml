@@ -1,0 +1,838 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training</title>
+<!--Generated on Wed Jun 11 17:56:14 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Bing Xiang *
+<br class="ltx_break"/>IBM Watson 
+<br class="ltx_break"/>1101 Kitchawan Rd 
+<br class="ltx_break"/>Yorktown Heights, NY 10598, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">bingxia@us.ibm.com</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Liang Zhou 
+<br class="ltx_break"/>Thomson Reuters 
+<br class="ltx_break"/>3 Times Square 
+<br class="ltx_break"/>New York, NY 10036, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">l.zhou@thomsonreuters.com</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper, we present multiple approaches to improve sentiment analysis on Twitter data.
+We first establish a state-of-the-art baseline with a rich feature set. Then we build a topic-based sentiment
+mixture model with topic-specific data in a semi-supervised training framework. The topic information
+is generated through topic modeling based on an efficient implementation of Latent Dirichlet Allocation (LDA).
+The proposed sentiment model outperforms the top system in the task of
+<span class="ltx_text ltx_font_italic">Sentiment Analysis in Twitter</span> in SemEval-2013 in terms of averaged F scores.
+<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup>* This work was done when the author was with Thomson Reuters.</span></span></span></p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Social media, such as Twitter and Facebook, has attracted significant attention in recent years.
+The vast amount of data available online provides a unique opportunity to the people working on natural
+language processing (NLP) and related fields. Sentiment analysis is one of the areas that has large potential
+in real-world applications. For example, monitoring the trend of sentiment
+for a specific company or product mentioned in social media can be useful in stock prediction and product marketing.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we focus on sentiment analysis of Twitter data (tweets). It is one of the
+challenging tasks in NLP given the length limit on each tweet (up to 140 characters) and also
+the informal conversation. Many approaches have been proposed previously to improve sentiment
+analysis on Twitter data. For example, Nakov et al. (2013) provide an overview on the systems
+submitted to one of the SemEval-2013 tasks, <span class="ltx_text ltx_font_italic">Sentiment Analysis in Twitter</span>. A variety of
+features have been utilized for sentiment classification on tweets. They include lexical features (e.g. word lexicon),
+syntactic features (e.g. Part-of-Speech), Twitter-specific features (e.g. emoticons), etc.
+However, all of these features only capture local information in the data and do not take into
+account of the global higher-level information, such as topic information.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Two example tweets are given below, with the word “<span class="ltx_text ltx_font_italic">offensive</span>” appearing in both of them.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Im gonna post something that might be </span><span class="ltx_text ltx_font_bold">offensive</span><span class="ltx_text ltx_font_italic"> to people in Singapore.</span></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">#FSU </span><span class="ltx_text ltx_font_bold">offensive</span><span class="ltx_text ltx_font_italic"> coordinator Randy Sanders coached for Tennessee in 1st #BCS title game.</span></p>
+</div></li>
+</ul>
+<p class="ltx_p">Generally “<span class="ltx_text ltx_font_italic">offensive</span>” is used as a negative word (as in the first tweet), but it bears no sentiment
+in the second tweet when people are talking about a football game.
+Even though some local contextual features could be helpful to distinguish the two cases above,
+they still may not be enough to get the sentiment on the whole message correct.
+Also, the local features often suffer from the sparsity problem.
+This motivates us to explore topic information explicitly in the task of sentiment analysis on Twitter data.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">There exists some work on applying topic information in sentiment analysis,
+such as <cite class="ltx_cite">[<a href="#bib.bibx9" title="" class="ltx_ref">Mei et al.2007</a>]</cite>, <cite class="ltx_cite">[<a href="#bib.bibx2" title="" class="ltx_ref">Branavan et al.2008</a>]</cite>, <cite class="ltx_cite">[<a href="#bib.bibx8" title="" class="ltx_ref">Jo and Oh2011</a>]</cite> and <cite class="ltx_cite">[<a href="#bib.bibx6" title="" class="ltx_ref">He et al.2012</a>]</cite>.
+All these work are significantly different from what we propose in this work. Also they are
+conducted in a domain other than Twitter. Most recently, Si et al. (2013) propose a continuous Dirichlet Process
+Mixture model for Twitter sentiment, for the purpose of stock prediction. Unfortunately there is no evaluation on the
+accuracy of sentiment classification alone in that work. Furthermore, no standard
+training or test corpus is used, which makes comparison with other approaches difficult.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Our work is organized in the following way:</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">We first propose a universal sentiment model that utilizes various features and resources. The universal
+model outperforms the top system submitted to the SemEval-2013 task <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Mohammad et al.2013</a>]</cite>,
+which was trained and tested
+on the same data. The universal model serves as a strong baseline and also provides an option for smoothing later.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">We introduce a topic-based mixture model for Twitter sentiment. The model is integrated in the framework of
+semi-supervised training that takes advantage of large amount of un-annotated Twitter data. Such a mixture model
+results in further improvement on the sentiment classification accuracy.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">We propose a smoothing technique through interpolation between universal model and topic-based mixture model.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">We also compare different approaches for topic modeling, such as cross-domain topic identification by
+utilizing data from newswire domain.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Universal Sentiment Classifier</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section we present a universal topic-independent sentiment classifier to establish a state-of-the-art baseline.
+The sentiment labels are either positive, neutral or negative.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>SVM Classifier</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Support Vector Machine (SVM) is an effective classifier that can achieve good performance in high-dimensional
+feature space. An SVM model represents the examples as points in space, mapped so that the examples of the
+different categories are separated by a clear margin as wide as possible. In this work an SVM classifier is trained
+with LibSVM <cite class="ltx_cite">[<a href="#bib.bibx3" title="" class="ltx_ref">Chang and Lin2011</a>]</cite>, a widely used toolkit. The linear kernel is found to achieve higher accuracy than other
+kernels in our initial experiments. The option of probability estimation in LibSVM is turned on so that it can produce the
+probability of sentiment class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> given tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> at the classification time, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="P(c|x)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Features</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">The training and testing data are run through tweet-specific tokenization, similar to that used in the CMU Twitter NLP
+tool <cite class="ltx_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">Gimpel et al.2011</a>]</cite>. It is shown in Section 5 that such customized tokenization is helpful.
+Here are the features that we use for classification:</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Word N-grams: if certain N-gram (unigram, bigram, trigram or 4-gram) appears in the tweet, the corresponding
+feature is set to 1, otherwise 0. These features are collected from training data, with a count cutoff to
+avoid overtraining.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Manual lexicons: it has been shown in other work <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Nakov et al.2013</a>]</cite> that lexicons with positive and negative words
+are important to sentiment classification. In this work, we adopt the lexicon from Bing Liu <cite class="ltx_cite">[<a href="#bib.bibx7" title="" class="ltx_ref">Hu and Liu2004</a>]</cite> which includes
+about 2000 positive words and 4700 negative words. We also experimented with the popular MPQA <cite class="ltx_cite">[<a href="#bib.bibx13" title="" class="ltx_ref">Wilson et al.2005</a>]</cite> lexicon but
+found no extra improvement on accuracies. A short list of Twitter-specific positive/negative words are also added to enhance
+the lexicons. We generate two features based on the lexicons: total number of positive words or
+negative words found in each tweet.</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">Emoticons: it is known that people use emoticons in social media data to express their
+emotions. A set of popular emoticons are collected from the Twitter data we have. Two features are created to
+represent the presence or absence of any positive/negative emoticons.</p>
+</div></li>
+<li id="I3.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i4.p1" class="ltx_para">
+<p class="ltx_p">Last sentiment word: a “sentiment word” is any word in the positive/negative lexicons mentioned
+above. If the last sentiment word found in the tweet is positive (or negative), this feature is set to 1 (or -1). If
+none of the words in the tweet is sentiment word, it is set to 0 by default.</p>
+</div></li>
+<li id="I3.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i5.p1" class="ltx_para">
+<p class="ltx_p">PMI unigram lexicons: in <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Mohammad et al.2013</a>]</cite> two lexicons were automatically generated based on pointwise mutual
+information (PMI). One is <span class="ltx_text ltx_font_italic">NRC Hashtag Sentiment Lexicon</span> with 54K unigrams, and the other is
+<span class="ltx_text ltx_font_italic">Sentiment140 Lexicon</span> with 62K unigrams. Each word in the lexicon has an associated sentiment score.
+We compute 7 features based on each of the two lexicons: (1) sum of sentiment score;
+(2) total number of positive words (with score <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i5.p1.m1" class="ltx_Math" alttext="s&gt;1" display="inline"><mrow><mi>s</mi><mo>&gt;</mo><mn>1</mn></mrow></math>); (3) total number of negative words (<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i5.p1.m2" class="ltx_Math" alttext="s&lt;-1" display="inline"><mrow><mi>s</mi><mo>&lt;</mo><mrow><mo>-</mo><mn>1</mn></mrow></mrow></math>);
+(4) maximal positive score; (5) minimal negative score; (6) score of the last positive words;
+(7) score of the last negative words.
+Note that for the second and third features, we ignore those
+with sentiment scores between -1 and 1, since we found that inclusion of those weak subjective words results in
+unstable performance.</p>
+</div></li>
+<li id="I3.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i6.p1" class="ltx_para">
+<p class="ltx_p">PMI bigram lexicon: there are also 316K bigrams in the <span class="ltx_text ltx_font_italic">NRC Hashtag Sentiment Lexicon</span>. For bigrams,
+we did not find the sentiment scores useful. Instead, we only compute two features based on counts only:
+total number of positive bigrams; total number of negative bigrams.</p>
+</div></li>
+<li id="I3.i7" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i7.p1" class="ltx_para">
+<p class="ltx_p">Punctuations: if there exists exclamation mark or question mark in the tweet, the feature is set to 1, otherwise
+set to 0.</p>
+</div></li>
+<li id="I3.i8" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i8.p1" class="ltx_para">
+<p class="ltx_p">Hashtag count: the number of hashtags in each tweet.</p>
+</div></li>
+<li id="I3.i9" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i9.p1" class="ltx_para">
+<p class="ltx_p">Negation: we collect a list of negation words, including some informal words frequently observed in
+online conversations, such as “<span class="ltx_text ltx_font_italic">dunno</span>” (“don’t know”), “<span class="ltx_text ltx_font_italic">nvr</span>” (“never”), etc. For any sentiment words
+within a window following a negation word and not after punctuations ‘.’, ‘,’, ‘;’, ‘?’, or ‘!’, we reverse
+its sentiment from positive to negative, or vice versa, before computing the lexicon-based features
+mentioned earlier. The window size was set to 4 in this work.</p>
+</div></li>
+<li id="I3.i10" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i10.p1" class="ltx_para">
+<p class="ltx_p">Elongated words: the number of words in the tweet that have letters repeated by at least 3 times in a row, e.g.
+the word “<span class="ltx_text ltx_font_italic">gooood</span>”.</p>
+</div></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Topic-Based Sentiment Mixture</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Topic Modeling</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Latent Dirichlet Allocation (LDA) <cite class="ltx_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Blei et al.2003</a>]</cite> is one of the widely adopted generative models for topic modeling.
+The fundamental idea is that a document is a mixture of topics. For each document there is a multinomial
+distribution over topics, and a Dirichlet prior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="Dir({\bf\alpha})" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></math> is introduced on such distribution.
+For each topic, there is
+another multinomial distribution over words. One of the popular algorithms for LDA model parameter
+estimation and inference is Gibbs sampling <cite class="ltx_cite">[<a href="#bib.bibx5" title="" class="ltx_ref">Griffiths and Steyvers2004</a>]</cite>, a form of Markov Chain Monte Carlo.
+We adopt the efficient implementation of Gibbs sampling as proposed in <cite class="ltx_cite">[<a href="#bib.bibx14" title="" class="ltx_ref">Yao et al.2009</a>]</cite> in this work.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Each tweet is regarded as one document. We conduct pre-processing by removing stop words and some of the frequent words
+found in Twitter data. Suppose that there are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> topics in total in the training data,
+i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="t_{1}" display="inline"><msub><mi>t</mi><mn>1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math>, …, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="t_{T}" display="inline"><msub><mi>t</mi><mi>T</mi></msub></math>. The posterior probability of each topic given tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is computed as in Eq. <a href="#S3.E1" title="(1) ‣ 3.1 Topic Modeling ‣ 3 Topic-Based Sentiment Mixture ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>:</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="P_{t}(t_{j}|x_{i})=\frac{C_{ij}+\alpha_{j}}{\sum^{T}_{k=1}C_{ik}+T\alpha_{j}}" display="block"><mrow><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><msub><mi>C</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>+</mo><msub><mi>α</mi><mi>j</mi></msub></mrow><mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></msubsup><msub><mi>C</mi><mrow><mi>i</mi><mo>⁢</mo><mi>k</mi></mrow></msub></mrow><mo>+</mo><mrow><mi>T</mi><mo>⁢</mo><msub><mi>α</mi><mi>j</mi></msub></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="C_{ij}" display="inline"><msub><mi>C</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the number of times that topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> is assigned to some word in tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>, usually
+averaged over multiple iterations of Gibbs sampling. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="\alpha_{j}" display="inline"><msub><mi>α</mi><mi>j</mi></msub></math> is the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th dimension of the hyperparameter of Dirichlet distribution that can be optimized during model estimation.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Sentiment Mixture Model</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Once we identify the topics for tweets in the training data, we can split the data into multiple subsets
+based on topic distributions. For each subset, a separate sentiment model can be trained. There are many
+ways of splitting the data. For example, K-means clustering can be conducted based on the similarity between
+the topic distribution vectors or their transformed versions. In this work, we assign tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> to cluster <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>
+if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="P_{t}(t_{j}|x_{i})&gt;\tau" display="inline"><mrow><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>&gt;</mo><mi>τ</mi></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="P_{t}(t_{j}|x_{i})=\max_{k}P_{t}(t_{k}|x_{i})" display="inline"><mrow><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><msub><mo>max</mo><mi>k</mi></msub><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>k</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>. Note that this is a soft clustering, with some
+tweets possibily assigned to multiple topic-specific clusters. Similar to the universal model, we train <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>
+topic-specific sentiment models with LibSVM.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">During classification on test tweets, we run topic inference
+and sentiment classification with multiple sentiment models. They jointly determine the final probability
+of sentiment class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> given tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> as the following in a sentiment mixture model:</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="P(c|x_{i})=\sum_{j=1}^{T}P_{m}(c|t_{j},x_{i})P_{t}(t_{j}|x_{i})" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></munderover><msub><mi>P</mi><mi>m</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="P_{m}(c|t_{j},x_{i})" display="inline"><mrow><msub><mi>P</mi><mi>m</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is the probability of sentiment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> from topic-specific sentiment model trained on topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Smoothing</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Additionally, we also experiment with a smoothing technique through linear interpolation between the universal
+sentiment model and topic-based sentiment mixture model.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<table id="A0.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle P(c|x_{i})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m3" class="ltx_Math" alttext="\displaystyle\theta\times P_{U}(c|x_{i})+(1-\theta)" display="inline"><mrow><mi>θ</mi><mo>×</mo><msub><mi>P</mi><mi>U</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>+</mo><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m2" class="ltx_Math" alttext="\displaystyle\times" display="inline"><mo>×</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m3" class="ltx_Math" alttext="\displaystyle\sum_{j=1}^{T}P_{m}(c|t_{j},x_{i})P_{t}(t_{j}|x_{i})" display="inline"><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></munderover></mstyle><msub><mi>P</mi><mi>m</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><msub><mi>P</mi><mi>t</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> is the interpolation parameter and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="P_{U}(c|x_{i})" display="inline"><mrow><msub><mi>P</mi><mi>U</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> is the probability of sentiment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> given tweet <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>
+from the universal sentiment model.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Semi-supervised Training</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section we propose an integrated framework of semi-supervised training that contains both topic modeling
+and sentiment classification. The idea of semi-supervised training is to take advantage of large amount low-cost
+un-annotated data (tweets in this case) to further improve the accuracy of sentiment classification. The algorithm
+is as follows:</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<ol id="I4" class="ltx_enumerate">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">Set training corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> for sentiment classification to be the annotated training data <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m2" class="ltx_Math" alttext="D_{a}" display="inline"><msub><mi>D</mi><mi>a</mi></msub></math>;</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">Train a sentiment model with current training corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>;</p>
+</div></li>
+<li id="I4.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I4.i3.p1" class="ltx_para">
+<p class="ltx_p">Run sentiment classification on the un-annotated data <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i3.p1.m1" class="ltx_Math" alttext="D_{u}" display="inline"><msub><mi>D</mi><mi>u</mi></msub></math> with the current sentiment model and
+generate probabilities of sentiment classes for each tweet, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i3.p1.m2" class="ltx_Math" alttext="P(c|x_{i})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>;</p>
+</div></li>
+<li id="I4.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I4.i4.p1" class="ltx_para">
+<p class="ltx_p">Perform data selection. For those tweets with <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i4.p1.m1" class="ltx_Math" alttext="P(c|x_{i})&gt;p" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>&gt;</mo><mi>p</mi></mrow></math>, add them to current training corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i4.p1.m2" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>. The rest
+is used to replace the un-annotated corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i4.p1.m3" class="ltx_Math" alttext="D_{u}" display="inline"><msub><mi>D</mi><mi>u</mi></msub></math>;</p>
+</div></li>
+<li id="I4.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">5.</span> 
+<div id="I4.i5.p1" class="ltx_para">
+<p class="ltx_p">Train a topic model on <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i5.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>, and store the topic inference model and topic distributions of each tweet;</p>
+</div></li>
+<li id="I4.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">6.</span> 
+<div id="I4.i6.p1" class="ltx_para">
+<p class="ltx_p">Cluster data in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i6.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> based on the topic distributions from Step 5 and train a separate sentiment model for
+each cluster. Replace current sentiment model with the new sentiment mixture model;</p>
+</div></li>
+<li id="I4.i7" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">7.</span> 
+<div id="I4.i7.p1" class="ltx_para">
+<p class="ltx_p">Repeat from Step 3 until finishing a pre-determined number of iterations or no more data is added to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i7.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> in Step 4.</p>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Results</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Data and Evaluation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments on the data from the task B of <span class="ltx_text ltx_font_italic">Sentiment Analysis in Twitter</span>
+in SemEval-2013. The distribution of positive, neutral and negative data is shown in Table <a href="#S5.T1" title="Table 1 ‣ 5.1 Data and Evaluation ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+The development set is used to tune parameters and features. The test set is for the blind evaluation.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Set</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Pos</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Neu</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Neg</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Total</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">Training</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt">3640</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt">4586</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt">1458</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt">9684</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Dev</th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">575</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">739</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">340</td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t">1654</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Test</th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">1572</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">1640</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">601</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t">3813</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Data from SemEval-2013. Pos: positive; Neu: neutral; Neg: negative.</div>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">For semi-supervised training experiments, we
+explored two sets of additional data. The first one contains 2M tweets randomly sampled from the collection in January
+and February 2014. The other
+contains 74K news documents with 50M words collected during the first half year of 2013 from online newswire.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">For evaluation, we use macro averaged F score as in <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Nakov et al.2013</a>]</cite>, i.e. average of the F scores computed on
+positive and negative classes only. Note that this does not make the task a binary classification problem.
+Any errors related to neutral class (false positives or false negatives) will negatively impact the F scores.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Universal Model</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Universal Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we show the incremental improvement in adding various features described in Section 2,
+measured on the test set.
+In addition to the features, we also find SVM weighting on the training samples is helpful. Due to the
+skewness in class distribution in the training set, it is observed during error analysis on the development
+set that subjective (positive/negative) tweets are more likely to be classified as neutral tweets. The
+weights for positive, neutral and negative samples are set to be (1, 0.4, 1) based on the
+results on the development set. As shown in Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Universal Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, weighting adds a 2% improvement.
+With all features combined, the universal sentiment model achieves 69.7 on average F score.
+The F score from the best system in SemEval-2013 <cite class="ltx_cite">[<a href="#bib.bibx10" title="" class="ltx_ref">Mohammad et al.2013</a>]</cite> is also listed in the last row of
+Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Universal Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for a comparison.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Avg. F score</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">Baseline with word N-grams</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">55.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ tweet tokenization</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">56.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ manual lexicon features</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">62.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ emoticons</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">62.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ last sentiment word</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">63.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ PMI unigram lexicons</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">64.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ hashtag counts</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">65.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ SVM weighting</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">67.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ PMI bigram lexicons</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">68.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ negations</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">69.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ elongated words</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">69.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_tt">Mohammad et al., 2013</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_tt">69.0</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Results on the test set with universal sentiment model.</div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Topic-Based Mixture Model</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">For the topic-based mixture model and semi-supervised training, based on the experiments on the development set,
+we set the parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> used in soft clustering to 0.4, the data selection parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> to 0.96, and the
+interpolation parameter for smoothing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> to 0.3. We found no more noticeable benefits after two iterations
+of semi-supervised training. The number of topics is set to 100.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">The results on the test set are shown Table <a href="#S5.T3" title="Table 3 ‣ 5.3 Topic-Based Mixture Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, with the topic information
+inferred from either Twitter data (second column) or newswire data (third column).
+The first row shows the performance of the universal sentiment model as a baseline.
+The second row shows the results from re-training the universal model by simply adding tweets
+selected from two iterations of semi-supervised training (about 100K). It serves as another
+baseline with more training data, for a fair comparison with the topic-based mixture modeling that uses
+the same amount of training data.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">We also conduct an experiment by only considering the most likely topic for each tweet when computing the sentiment
+probabilities. The results show that the topic-based mixture model outperforms both the baseline and the one
+that considers the top topics only. Smoothing with the universal model adds further improvement in addition to
+the un-smoothed mixture model. With the topic information inferred from Twitter data, the F score is 2 points
+higher than the baseline without semi-supervised training and 1.4 higher than the baseline with semi-supervised data.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Tweet-topic</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">News-topic</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">69.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">69.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">+ semi-supervised</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">70.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">70.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt">top topic only</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">70.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">70.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">mixture</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">71.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">70.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">+ smoothing</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">71.7</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">71.1</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> Results of topic-based sentiment mixture model on SemEval test set.</div>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">As shown in the third column in Table <a href="#S5.T3" title="Table 3 ‣ 5.3 Topic-Based Mixture Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, surprisingly, the model with topic information inferred from the newswire
+data works well on the Twitter domain. A 1.4 points of improvement can be obtained compared to the baseline.
+This provides an opportunity for cross-domain topic identification when data from certain domain is more difficult
+to obtain than others.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S5.T4" title="Table 4 ‣ 5.3 Topic-Based Mixture Model ‣ 5 Experimental Results ‣ Improving Twitter Sentiment Analysis with Topic-Based Mixture Modeling and Semi-Supervised Training" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we provide some examples from the topics identified in tweets as well as the newswire
+data. The most frequent words in each topic are listed in the table. We can clearly see that the topics are about
+phones, sports, sales and politics, respectively.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Tweet-1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Tweet-2</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">News-1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">News-2</span></th>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt">phone</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">game</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">sales</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">party</td>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">call</td>
+<td class="ltx_td ltx_align_center ltx_border_r">great</td>
+<td class="ltx_td ltx_align_center ltx_border_r">stores</td>
+<td class="ltx_td ltx_align_center ltx_border_r">government</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">answer</td>
+<td class="ltx_td ltx_align_center ltx_border_r">play</td>
+<td class="ltx_td ltx_align_center ltx_border_r">online</td>
+<td class="ltx_td ltx_align_center ltx_border_r">election</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">question</td>
+<td class="ltx_td ltx_align_center ltx_border_r">team</td>
+<td class="ltx_td ltx_align_center ltx_border_r">retail</td>
+<td class="ltx_td ltx_align_center ltx_border_r">minister</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">service</td>
+<td class="ltx_td ltx_align_center ltx_border_r">win</td>
+<td class="ltx_td ltx_align_center ltx_border_r">store</td>
+<td class="ltx_td ltx_align_center ltx_border_r">political</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">text</td>
+<td class="ltx_td ltx_align_center ltx_border_r">tonight</td>
+<td class="ltx_td ltx_align_center ltx_border_r">retailer</td>
+<td class="ltx_td ltx_align_center ltx_border_r">prime</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">texting</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">super</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">business</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">state</td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> The most frequent words in example topics from tweets and newswire data.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we presented multiple approaches for advanced Twitter sentiment
+analysis. We established a state-of-the-art baseline that utilizes a variety of features,
+and built a topic-based sentiment mixture model with topic-specific Twitter data, all
+integrated in a semi-supervised training framework.
+The proposed model outperforms the top system in SemEval-2013.
+Further research is needed to continue to improve the accuracy in this difficult domain.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bibx1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Blei et al.2003</span>
+<span class="ltx_bibblock">
+David Blei, Andrew Y. Ng, and Michael I. Jordan.
+
+</span>
+<span class="ltx_bibblock">2003.
+
+</span>
+<span class="ltx_bibblock">Latent Dirichlet allocation.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Journal of Machine Learning Research.</span>
+3(2003), 993–1022.
+
+</span></li>
+<li id="bib.bibx2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Branavan et al.2008</span>
+<span class="ltx_bibblock">
+S. R. K. Branavan, Harr Chen, Jacob Eisenstein, and Regina Barzilay.
+
+</span>
+<span class="ltx_bibblock">2008.
+
+</span>
+<span class="ltx_bibblock">Learning document-level semantic properties from free-text annotations.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL-2008).</span>
+
+</span></li>
+<li id="bib.bibx3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Chang and Lin2011</span>
+<span class="ltx_bibblock">
+Chih-Chung Chang and Chih-Jen Lin.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">LIBSVM: A library for support vector machines.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In ACM Transactions on Intelligent Systems and Technology.</span>
+
+</span></li>
+<li id="bib.bibx4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Gimpel et al.2011</span>
+<span class="ltx_bibblock">
+Kevin Gimpel, Nathan Schneider, Brendan O’Connor, Dipanjan Das, Daniel Mills, Jacob Eisenstein, Michael Heilman, Dani Yogatama, Jeffrey Flanigan, and Noah A. Smith.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Part-of-speech tagging for Twitter: annotation, features, and experiments.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Annual Meeting of the Association for Computational Linguistics.</span>
+
+</span></li>
+<li id="bib.bibx5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Griffiths and Steyvers2004</span>
+<span class="ltx_bibblock">
+Thomas L. Griffiths and Mark Steyvers.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">Finding scientific topics.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the National Academy of Science.</span>
+101, 5228–5235.
+
+</span></li>
+<li id="bib.bibx6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">He et al.2012</span>
+<span class="ltx_bibblock">
+Yulan He, Chenghua Lin, Wei Gao, and Kam-Fai Wong.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Tracking sentiment and topic dynamics from social media.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the 6th International AAAI Conference on Weblogs and Social Media (ICWSM-2012).</span>
+
+</span></li>
+<li id="bib.bibx7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hu and Liu2004</span>
+<span class="ltx_bibblock">
+Mingqing Hu and Bing Liu.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">Mining and summarizing customer reviews.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Tenth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining.</span>
+
+</span></li>
+<li id="bib.bibx8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Jo and Oh2011</span>
+<span class="ltx_bibblock">
+Yohan Jo and Alice Oh.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Aspect and sentiment unification model for online review analysis.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of ACM Conference in Web Search and Data Mining (WSDM-2011).</span>
+
+</span></li>
+<li id="bib.bibx9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mei et al.2007</span>
+<span class="ltx_bibblock">
+Qiaozhu Mei, Xu Ling, Matthew Wondra, Hang Su, and ChengXiang Zhai.
+
+</span>
+<span class="ltx_bibblock">2007.
+
+</span>
+<span class="ltx_bibblock">Topic sentiment mixture: modeling facets and opinions in weblogs.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of International Conference on World Wide Web (WWW-2007).</span>
+
+</span></li>
+<li id="bib.bibx10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mohammad et al.2013</span>
+<span class="ltx_bibblock">
+Saif M. Mohammad, Svetlana Kiritchenko, and Xiaodan Zhu.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">NRC-Canada: Building the state-of-the-art in sentiment analysis of tweets.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Seventh International Workshop on Semantic Evaluation (SemEval 2013).</span>
+312-â320, Atlanta, Georgia, June 14-15, 2013.
+
+</span></li>
+<li id="bib.bibx11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Nakov et al.2013</span>
+<span class="ltx_bibblock">
+Preslav Nakov, Zornitsa Kozareva, Alan Ritter, Sara Rosenthal, Veselin Stoyanov, and Theresa Wilson.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">SemEval-2013 Task 2: Sentiment Analysis in Twitter.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Seventh International Workshop on Semantic Evaluation (SemEval 2013).</span>
+312-â320, Atlanta, Georgia, June 14-15, 2013.
+
+</span></li>
+<li id="bib.bibx12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Si et al.2013</span>
+<span class="ltx_bibblock">
+Jianfeng Si, Arjun Mukherjee, Bing Liu, Qing Li, Huayi Li, and Xiaotie Deng.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Exploiting topic based Twitter sentiment for stock prediction.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics.</span>
+24-29, Sofia, Bulgaria, August 4-9,2013.
+
+</span></li>
+<li id="bib.bibx13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Wilson et al.2005</span>
+<span class="ltx_bibblock">
+Theresa Wilson, Janyce Wiebe, and Paul Hoffmann.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock">Recognizing contextual polarity in phrase-level sentiment analysis.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">In Proceedings of the Conference on Human Language Technology and Empirical Methods in Natural Language Processing, HLT â05.</span>
+
+</span></li>
+<li id="bib.bibx14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Yao et al.2009</span>
+<span class="ltx_bibblock">
+Limin Yao, David Mimno, and Andrew McCallum.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Efficient methods for topic model inference on streaming document collections.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">KDD’09</span>.
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:56:14 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

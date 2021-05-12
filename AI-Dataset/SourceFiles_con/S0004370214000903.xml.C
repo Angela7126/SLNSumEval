@@ -1,0 +1,842 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Plan aggregation for strong cyclic planning in nondeterministic domains.
+   </title>
+   <abstract>
+    We describe a planning algorithm, NDP2, that finds strong-cyclic solutions to nondeterministic planning problems by using a classical planner to solve a sequence of classical planning problems. NDP2 is provably correct, and fixes several problems with prior work. We also describe two preprocessing algorithms that can provide a restricted version of the symbolic abstraction capabilities of the well-known MBP planner. The preprocessing algorithms accomplish this by rewriting the planning problems, hence do not require any modifications to NDP2 or its classical planner. In our experimental comparisons of NDP2 (using FF as the classical planner) to MBP in six different planning domains, each planner outperformed the other in some domains but not others. Which planner did better depended on three things: the amount of nondeterminism in the planning domain, domain characteristics that affected how well the abstraction techniques worked, and whether the domain contained unsolvable states.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      This paper is about a way to use classical planners to solve nondeterministic planning problems. Given a nondeterministic planning problem P and any classical planner CP, our NDP2 algorithm calls CP on a sequence of classical planning problems derived from P, and uses CP's solutions to construct a strong-cyclic solution for P. NDP2 is based on the NDP algorithm [30], but overcomes several problems with that prior work. Our contributions are as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       NDP2 corrects two problems that NDP had with unsolvable states. Although NDP's pseudocode included a way to deal with unsolvable states by making modifications to the planning domain, its authors did not implement this part of NDP, and did not realize that it has two significant problems: (1) when it encounters unsolvable states, NDP modifies the domain model in a way that can make it exponentially larger, and (2) there are cases in which unsolvable states will cause NDP to generate incorrect solutions.NDP2 overcomes both of these problems. If NDP2 is used with a classical planner CP that is sound, complete, and guaranteed to terminate on classical planning problems, then NDP2 will be sound, complete, and guaranteed to terminate on nondeterministic planning problems.
+      </list-item>
+      <list-item label="•">
+       We provide preprocessing algorithms to make two kinds of planning-domain modifications similar to conjunctive abstraction. When used as preprocessors to NDP2, these algorithms can sometimes provide state-abstraction abilities analogous to MBP's, and they preserve NDP2's ability to be used with any classical planner.
+      </list-item>
+      <list-item label="•">
+       Our experiments showed NDP2 outperforming MBP in some planning domains, and MBP outperforming NDP2 in others. Which algorithm performed better depended mainly on (1) the amount of nondeterminism in the search space, (2) how well the nondeterminism could be abstracted out (either by using our abstraction algorithms with NDP2, or by MBP using its BDDs), and (3) whether some of the nondeterministic outcomes could lead to unsolvable states.
+      </list-item>
+     </list>
+     <paragraph>
+      This paper is organized as follows. Section 2 provides definitions and notation. Section 3 gives an algorithm for the case where all states are solvable, Section 4 extends the algorithm to deal with unsolvable states, and Section 5 motivates and describes our abstraction formalisms and algorithms. Section 6 provides the results of the experimental evaluations, Section 7 is a discussion of related work, and Section 8 is the conclusion. Appendix A contains the correctness proofs for NDP2, Appendix B describes techniques for translating solution policies from abstract to non-abstract domains, and Appendix C describes a case where NDP [30] is unsound.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Basic definitions and notation
+     </section-title>
+     <paragraph>
+      Below, Sections 2.1 and 2.2 give definitions and notation for nondeterministic planning domains and classical planning, and Section 2.3 defines determinizations of nondeterministic domains.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Nondeterministic planning domains
+      </section-title>
+      <paragraph>
+       A nondeterministic planning domain is one in which each action may have more than one possible outcome. Formally, it is a pair {a mathematical formula}D=(L,O), where {a mathematical formula}L is a function-free first-order language with finitely many constant symbols (hence finitely many ground atoms), and O is a finite set of nondeterministic planning operators as defined below.
+      </paragraph>
+      <paragraph>
+       We will represent states in the usual classical fashion: if {a mathematical formula}F={all ground atoms of L}, then a state is a subset of F, and the set of all possible states is {a mathematical formula}S=2F. A literal l is true in s if l is a non-negated atom and {a mathematical formula}l∈s, or if l is a negated atom ¬α and {a mathematical formula}α∉s; otherwise l is false in s.
+      </paragraph>
+      <paragraph>
+       Each operator {a mathematical formula}o∈O is a pair{a mathematical formula} where {a mathematical formula}pre(o) is a conjunction of literals called o's preconditions, and {a mathematical formula}effects(o) is a set of conjunctions of literals called o's possible effects. Intuitively, {a mathematical formula}pre(o) describes what must be true in order to use o, and each conjunction in {a mathematical formula}effects(o) describes one of the possible outcomes of using o. We sometimes will refer to o as {a mathematical formula}o(x1,…,xn), where {a mathematical formula}x1,…,xn are the variable symbols in o in some canonical order.
+      </paragraph>
+      <paragraph>
+       An action a is a ground instance of an operator o, and {a mathematical formula}pre(a) and {a mathematical formula}effects(a) are the corresponding ground instances of {a mathematical formula}pre(o) and {a mathematical formula}effects(o). If a is the action produced by replacing the variables in {a mathematical formula}o(x1,…,xn) with constants {a mathematical formula}c1,…,cn, then we will sometimes refer to a as {a mathematical formula}o(c1,…,cn). We will use {a mathematical formula}A to denote the finite set of all possible actions, i.e., all possible ground instances of the operators in O. An action a is executable in any state that satisfies {a mathematical formula}pre(a). For each state s, {a mathematical formula}A(s)⊆A is the set of all actions that are executable in s.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}a∈A(s), and let {a mathematical formula}e1,…,en be the conjunctions in {a mathematical formula}effects(a). For {a mathematical formula}i=1,…,n, let {a mathematical formula}γ(s,ei)=(s−ei−)∪ei+, where {a mathematical formula}ei+ and {a mathematical formula}ei− are the sets of atoms that appear positively and negatively in {a mathematical formula}ei. Then the result of executing a in s is the following set of states{sup:1}:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A policy is a function π that maps some of the states into actions, i.e., {a mathematical formula}π:S→A for some set of states {a mathematical formula}S⊆S. For each state-action pair {a mathematical formula}(s,a)∈π, the intended meaning is that a is the action to perform in s. A hyperpolicy is a function {a mathematical formula}π⁎ that maps sets of states into actions, i.e., {a mathematical formula}π⁎:S→A, for some set {a mathematical formula}S⊆2S. For each pair {a mathematical formula}(S,a)∈π⁎, the intended meaning is that a is the action to perform in every state {a mathematical formula}s∈S (hence there is ambiguity about what action to perform if s is in more than one {a mathematical formula}S∈S). In the published literature on planning in nondeterministic environments, the solutions to planning problems are defined to be policies—but for purposes of computational efficiency, most of the better-known planning algorithms (e.g., [37], [9], [28], [7]) reason instead about hyperpolicies, using Binary Decision Diagrams (BDDs) to represent the sets in S.
+      </paragraph>
+      <paragraph>
+       The π-descendants of a state s are defined recursively as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        s is a π-descendant of itself.
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}s′ is a π-descendant of s and {a mathematical formula}π(s′) is defined, then every {a mathematical formula}s″∈γ(s′,π(s′)) is also a π-descendant of s.
+       </list-item>
+      </list>
+      <paragraph>
+       A π-result of s is any π-descendant {a mathematical formula}s′ of s for which {a mathematical formula}π(s′) is not defined (the intuition is that if we execute π starting at s and end up at {a mathematical formula}s′, then execution will cease). Thus we can define {a mathematical formula}γ(s,π)={s′|s′ is a π-result of s}. Note that as a special case, if {a mathematical formula}π=∅ then {a mathematical formula}γ(s,π)={s}. By extension, a π-result of a set of states S is any state that is a π-result of at least one of the states in S.
+      </paragraph>
+      <paragraph>
+       A nondeterministic planning problem is a triple {a mathematical formula}P=(D,S0,G), where {a mathematical formula}D=(L,O) is a nondeterministic planning domain. {a mathematical formula}S0⊆S is a set of initial states, and {a mathematical formula}G⊆S is a set of goal states. P may have different kinds of solutions [9], [16]:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A weak solution must provide a possibility of reaching a goal state, but doesn't need to guarantee that a goal state will always be reached. More specifically, a policy π is a weak solution if for every {a mathematical formula}s∈S0, some goal state {a mathematical formula}sg∈G is a π-result of s.
+       </list-item>
+       <list-item label="•">
+        A strong cyclic solution is a policy π that has the following property: for every state s that is a π-descendant of {a mathematical formula}S0, there is a goal state {a mathematical formula}sg∈G that is a π-result of s. Such a policy is guaranteed to reach a goal state in every fair execution, i.e., every execution that doesn't remain in a cycle forever if there's a possibility of leaving the cycle.
+       </list-item>
+       <list-item label="•">
+        P may also have strong solutions [9], [16], but we will not need that definition in this paper.
+       </list-item>
+      </list>
+      <paragraph>
+       A state {a mathematical formula}s∈S is weakly solvable if the planning problem {a mathematical formula}(D,{s},G) has at least one weak solution, and strong cyclically solvable if {a mathematical formula}(D,{s},G) has at least one strong cyclic solution. Otherwise s is unsolvable.
+      </paragraph>
+      <paragraph>
+       If every state that is reachable from {a mathematical formula}S0 is weakly solvable, then P is everywhere weakly solvable. Similarly, if every state that is reachable from {a mathematical formula}S0 is strong-cyclically solvable, then P is everywhere strong-cyclically solvable. The following lemma (the proof is in Appendix A) shows that the two terms are equivalent, so we will just say everywhere solvable instead.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       A nondeterministic planning problem{a mathematical formula}P=(D,S0,G)is everywhere weakly solvable iff it is everywhere strong cyclically solvable.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Classical planning domains
+      </section-title>
+      <paragraph>
+       An operator or action o is classical (or deterministic) if {a mathematical formula}effects(o) contains just one conjunction of literals. A planning domain {a mathematical formula}D=(L,O) is classical if every operator in O is classical. A planning problem {a mathematical formula}P=(D,S0,G) is classical if D is classical and there is just one initial state, i.e., {a mathematical formula}S0={s0} for some {a mathematical formula}s0∈S. In this case we will dispense with {a mathematical formula}S0 and write {a mathematical formula}P=(D,s0,G).
+      </paragraph>
+      <paragraph>
+       For classical planning problems, solutions are conventionally defined to be sequential plans rather than policies. Formally, a plan is a sequence {a mathematical formula}p=〈a1,…,ak〉 of classical actions. Given a state {a mathematical formula}s0, if there are states {a mathematical formula}s1,…,sk, such that for {a mathematical formula}1≤i≤k, {a mathematical formula}γ(si−1,ai)={si}, then p is executable in {a mathematical formula}s0 and {a mathematical formula}γ(s0,p)=sk. Given a planning problem {a mathematical formula}P=(D,s0,G), a state s is solvable if there is a plan p such that {a mathematical formula}γ(s,p)∈G. If {a mathematical formula}s0 is solvable then we say that P itself is solvable. If every state that is reachable from {a mathematical formula}s0 is solvable, then P is everywhere-solvable.
+      </paragraph>
+      <paragraph>
+       If a plan {a mathematical formula}p=〈a1,…,ak〉 is executable at a state {a mathematical formula}s0, then p is acyclic at {a mathematical formula}s0 if each state {a mathematical formula}s0,…,sk produced by executing p is unique (the plan does not traverse the same state twice). In this case, p corresponds to a unique policy {a mathematical formula}π={(s0,a1),(s1,a2),…,(sk−1,ak)} that we will call p's policy image at {a mathematical formula}s0.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Determinizations of nondeterministic domains
+      </section-title>
+      <paragraph>
+       If {a mathematical formula}o=(pre(o),effects(o)) is a nondeterministic operator and {a mathematical formula}effects(o)={e1,…,en}, then the determinization of o is a set {a mathematical formula}o¯ of deterministic operators, one for each of o's possible effects:{a mathematical formula} If an action a is a ground instance of o, then its determinization {a mathematical formula}a¯={a1,…,an} is defined similarly. The determinization of a nondeterministic planning domain {a mathematical formula}D=(L,O) is a classical planning domain {a mathematical formula}D¯=(L,O¯), where {a mathematical formula}O¯=⋃o∈Oo¯. The determinization of a nondeterministic planning problem {a mathematical formula}P=(D,{s0},G) is a classical planning problem {a mathematical formula}P¯=(D¯,s0,G).
+      </paragraph>
+      <paragraph label="Lemma 2">
+       For every state s in a nondeterministic planning problem P, s is weakly solvable in P if and only if it is solvable in{a mathematical formula}P¯.
+      </paragraph>
+      <paragraph>
+       The lemma is proved in Appendix A. From the lemma, it follows immediately that if a nondeterministic planning problem {a mathematical formula}P=(D,s0,G) is everywhere-solvable, then its determinization {a mathematical formula}P¯=(D¯,{s0},G) also is everywhere-solvable.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Algorithm for everywhere-solvable planning problems
+     </section-title>
+     <paragraph>
+      The clearest way to describe NDP2 is to start with an algorithm for a special case: planning problems that are everywhere-solvable. This section presents that algorithm; and in Section 4 we will extend the algorithm to deal correctly with unsolvable states.
+     </paragraph>
+     <paragraph>
+      Algorithm 1, NDPR, takes as input a nondeterministic planning problem {a mathematical formula}P=(D,S0,G) and a classical planner CP. NDPR works by calling CP on problems of the form {a mathematical formula}(D¯,s,G), and combining CP's solutions into a solution for P. It is nearly identical to the NDP algorithm in [30], except that it omits NDP's faulty pseudocode for unsolvable states and it specifies exactly how to incorporate a plan into the policy (NDP left it unstated).
+     </paragraph>
+     <paragraph>
+      NDPR first initializes π to be the empty policy, and generates the determinization {a mathematical formula}D¯ of D (Line 2). Line 3 begins the main planning loop. If every π-result of {a mathematical formula}S0 is a goal state, then π is a strong cyclic solution, so NDPR returns it (Line 6). Otherwise, NDPR selects a π-result s of {a mathematical formula}S0 that is not a goal state, and uses CP to search for a plan that solves s in {a mathematical formula}D¯. If CP is incomplete or if P is not everywhere-solvable, then CP may fail to find a solution plan for {a mathematical formula}(D¯,s,G); and in this case NDPR returns failure (Line 16). But if CP returns a solution plan p, then NDPR incorporates the actions of p into π (Lines 10–14) one at a time, stopping if it finds a state that π already weakly solves. Note that if CP is guaranteed to return acyclic solutions, then Line 11 can be omitted and the condition in Line 14 can be replaced with a check to see if {a mathematical formula}π(s) is defined.
+     </paragraph>
+     <paragraph label="Example">
+      To illustrate how NDPR works, let D and {a mathematical formula}D¯ be the nondeterministic domain and its determinization as shown in Fig. 1 and Fig. 2. Consider the nondeterministic planning problem {a mathematical formula}P=(D,{s0},{s2}), in which the set of initial states is {a mathematical formula}{s0} and there is a single goal state, {a mathematical formula}s2. In NDPR's first iteration, NDPR calls the classical planner on the problem {a mathematical formula}(D¯,s0,{s2}). Suppose that the classical planner returns the plan {a mathematical formula}〈a12〉. NDPR will incorporate this plan into the currently empty policy π (Lines 10–14). As a result, {a mathematical formula}s1 is now a non-goal π-result of {a mathematical formula}{s0}.In NDPR's second iteration, it will call the classical planner on {a mathematical formula}(D¯,s1,{s2}). Suppose the planner returns the plan {a mathematical formula}〈a2,a12〉. NDPR will incorporate the first action {a mathematical formula}a2, but then stop incorporating the plan at Line 14 since {a mathematical formula}s0 already has a weak solution. There are now no non-goal π-result of {a mathematical formula}{s0} (the intuition is that all of the π-results of {a mathematical formula}{s0} are goal states), and NDPR will exit on the next iteration (Line 6).  □
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Dealing with unsolvable states
+     </section-title>
+     <paragraph>
+      Kuter et al. [30] described a way for NDP to deal with unsolvable states by removing state-action pairs from the domain. If CP returned failure on a state s, the idea was to take every state {a mathematical formula}s′ and action a such that {a mathematical formula}π(s′)=a and {a mathematical formula}s∈γ(s′,a) and modify the definition of a to make it inapplicable in {a mathematical formula}s′. This requires modifying a's precondition to exclude {a mathematical formula}s′ without excluding any other states. Such a precondition will be a large disjunction that includes a positive or negative literal for every ground atom in the planning domain, and the number of ground atoms is often exponential in the size of the domain description. Thus NDP's way of dealing with unsolvable states often increases the size of the domain description—and the computational overhead of evaluating action preconditions—by an exponential amount.
+     </paragraph>
+     <paragraph>
+      In Section 4.1 we present ConstrainProblem, a procedure for modifying a classical planning problem {a mathematical formula}P=(D¯,s,G) to make some of the actions inapplicable at the first step of any solution to P. Unlike removing state-action pairs, ConstrainProblem only incurs a quadratic increase in the size of the domain description per constrained action. In Section 4.2 we present Find-Acceptable-Plan, a procedure that uses ConstrainProblem to search for an acyclic plan whose policy image avoids known unsolvable states. In Section 4.3 we present NDP2, a modified version of NDPR (see Section 3) that uses Find-Acceptable-Plan to avoid with known unsolvable states.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Restricting which actions are available
+      </section-title>
+      <paragraph>
+       Algorithm 2 is the ConstrainProblem procedure, which takes a classical planning problem {a mathematical formula}(D¯,s,G) and a set A of actions, and returns a new planning problem {a mathematical formula}(D¯′,s′,G) for which a solution is any solution to {a mathematical formula}(D¯,s,G) that does not start with an action in A.
+      </paragraph>
+      <paragraph>
+       For each operator {a mathematical formula}o(x1,…,xn)∈O, we introduce a new predicate {a mathematical formula}disallowedo(t1,…,tn). ConstrainProblem begins by creating a new state {a mathematical formula}s′ that is identical to s except that for each action {a mathematical formula}o(c1,…,cn)∈A, {a mathematical formula}s′ contains a new atom of the form {a mathematical formula}disallowedo(c1,…,cn). Then, for each operator {a mathematical formula}oD¯′ with variables {a mathematical formula}x1,…,xn, ConstrainProblem adds {a mathematical formula}¬disallowedo(x1,…,xn) to o's preconditions (Line 6). This prevents any grounding of o with the constants {a mathematical formula}c1,…,cn from being applicable whenever {a mathematical formula}disallowedo(c1,…,cn) is true.
+      </paragraph>
+      <paragraph>
+       Finally, to the effects of each action, ConstrainProblem adds the negation of the disallowed predicates that it added to the initial state (Line 8). This ensures that {a mathematical formula}¬disalloweda(…) always holds after applying any action to the initial state.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Avoiding known-unsolvable states
+      </section-title>
+      <paragraph>
+       We use ConstrainProblem in Find-Acceptable-Plan (Algorithm 3), which is used to construct acyclic plans whose nondeterministic images avoid known unsolvable states. Find-Acceptable-Plan's parameters consist of a nondeterministic planning domain D, its determinization {a mathematical formula}D¯, an initial state {a mathematical formula}s0, a set of goal states G, a classical planner CP, and a set U of states to avoid.
+      </paragraph>
+      <paragraph>
+       In Line 2, Find-Acceptable-Plan initializes five variables that it will maintain throughout its search: p is the current plan, S is a list of states associated with p, s is the last state in S, and B is a mapping from states to sets of actions known to lead to cycles or unsolvable states, and K is a set of states which can't be part of any solution.
+      </paragraph>
+      <paragraph>
+       In Lines 3–22, Find-Acceptable-Plan repeatedly calls CP to try and extend p towards a goal state without causing a cycle or choosing an action whose nondeterministic version leads to a state in U. In Line 4, Find-Acceptable-Plan checks if s, the last state of p, is a goal state and returns p if it is.
+      </paragraph>
+      <paragraph>
+       Otherwise, Find-Acceptable-Plan calls CP to generate a plan from s to a goal state. This requires overcoming two potential problems: (1) if the plan p generated by CP contains a cycle, then p cannot be translated into a policy because it will require two different actions at one of its states, and (2) if p goes through a state in U, then it cannot be translated into a policy that solves the nondeterministic problem {a mathematical formula}(D,{s},G), since the states in U are known to be unsolvable. Find-Acceptable-Plan makes progress by ensuring that CP never returns a plan that starts with an action it has seen before. First, it finds the set of actions in B associated with the current state that are known to cause loops or lead to states in U (Line 5). Find-Acceptable-Plan then takes the classical problem {a mathematical formula}P=(D¯,s,G), and uses ConstrainProblem to create a new planning problem {a mathematical formula}P′ for which these actions cannot appear in the first step of a solution (Line 6). Find-Acceptable-Plan then calls the classical planner CP on this modified problem (Line 7). If CP is sound and complete, there are two cases:
+      </paragraph>
+      <list>
+       <list-item>
+        CP returns a plan {a mathematical formula}q=〈a1¯,…,ak¯〉 that leads to a goal state. Then in Lines 9 through 15, Find-Acceptable-Plan iterates over the actions, adding them to the current plan p and updating the current state s. If {a mathematical formula}ai¯ leads to a state already seen in p or to a known-unsolvable state in K, or if its nondeterministic counterpart {a mathematical formula}ai leads to a state in U, then Find-Acceptable-Plan inserts {a mathematical formula}(s,ai¯) into B and stops integrating q (without removing already integrated actions). Planning will restart at the state just before {a mathematical formula}ai. If the plan is fully integrated, then, assuming CP is sound, s is a goal state, and Find-Acceptable-Plan will return p on the next iteration of the main loop.
+       </list-item>
+       <list-item>
+        CP cannot find a plan, and returns failure. Then Find-Acceptable-Plan backtracks to the previous state {a mathematical formula}s′ in S and adds the state-action {a mathematical formula}(s′,a) pair leading to s to B, and adds s to the set of known-unsolvable states K (Line 21). If there is no previous state, then this means that there is no plan starting from {a mathematical formula}s0 and reaching a goal state whose policy image doesn't lead to U, so Find-Acceptable-Plan returns Failure (Line 19).
+       </list-item>
+      </list>
+      <paragraph label="Example">
+       Let D and {a mathematical formula}D¯ be as in Fig. 1 and Fig. 2, and consider the call to {a mathematical formula}Find-Acceptable-Plan(D,D¯,s0,{s1},CP,{s2}). The current state s will be set to {a mathematical formula}s0, the list of states S set to {a mathematical formula}〈s0〉.With B initially empty, the call to {a mathematical formula}ConstrainProblem(D¯,s0,{s1}) will return an identical classical problem {a mathematical formula}P′=(D¯,s0,{s1}) (Fig. 3). When Find-Acceptable-Plan calls CP on {a mathematical formula}P′, it will return the plan: {a mathematical formula}〈a11〉. Since the nondeterministic action corresponding to {a mathematical formula}a11 leads to {a mathematical formula}s2 (which is in U), Find-Acceptable-Plan will break before incorporating the first action of the plan, and add the pair {a mathematical formula}(s0,a11) to B.On the next iteration of Find-Acceptable-Plan, {a mathematical formula}a11 will be in the set A of actions to constrain. {a mathematical formula}ConstrainProblem(D¯,s0,{s1},{a11}) will return a classical problem {a mathematical formula}(D¯′,s0′,{s1}), with a new initial state {a mathematical formula}s0′ that has the same set of applicable actions as {a mathematical formula}s0, except for {a mathematical formula}a11 (Fig. 4). Since this problem is unsolvable, CP returns failure. Hence Find-Acceptable-Plan also returns failure.  □
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Let CP be a sound and complete classical planner, U be a set of states, D be a nondeterministic planning domain, and{a mathematical formula}D¯=(L,O¯)be the determinization of D. Let S be the set of all states in{a mathematical formula}L(i.e.,{a mathematical formula}S=2F),{a mathematical formula}F={all ground atoms overL}, and{a mathematical formula}Abe the set of all possible actions (i.e., all possible ground instantiations of the planning operators in O).Then{a mathematical formula}Find-Acceptable-Plan(D,D¯,s0,G,CP,U)makes at most{a mathematical formula}|S|⋅|A|+1calls to CP, and returns an acyclic plan, if such a plan exists, whose policy image in D avoids the states in U.
+      </paragraph>
+      <paragraph>
+       For the proof, see Appendix A.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       NDP2 planning algorithm
+      </section-title>
+      <paragraph>
+       Algorithm 4 is the NDP2 algorithm, a modified version of NDPR that can deal with unsolvable states. The key differences between NDP2 and NDPR are:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        When NDP2 encounters an unsolvable state, it removes all actions that lead to it from the policy and adds the state to a set of known-unsolvable states U (Line 18).
+       </list-item>
+       <list-item label="•">
+        NDP2 does not call the classical planner directly, but instead calls Find-Acceptable-Plan, which generates solutions that avoid the states in U.
+       </list-item>
+      </list>
+      <paragraph>
+       There are also two key differences between NDP2 and NDP:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        NDP removed state-action pairs directly from the domain instead of using Find-Acceptable-Plan. There are potentially doubly-exponentially many states in the size of the domain [12], meaning possibly doubly-exponential increase in the size of the determinization of the nondeterministic planning domain. Even in the case that a single state is removed from the domain, identifying a state out of a set S must take on average {a mathematical formula}log⁡|S| space, increasing the size of the determinized domain by an exponential amount in the size of the domain.
+       </list-item>
+       <list-item label="•">
+        As discussed in Appendix C, NDP used a plan integration routine which is unsound on problems with unsolvable states. NDP2 does not have this problem.
+       </list-item>
+      </list>
+      <paragraph label="Theorem 2">
+       Let CP be a sound and complete classical planner and{a mathematical formula}P=(D,S0,G)be a nondeterministic planning problem with{a mathematical formula}D=(L,O). Let S be the set of all states in{a mathematical formula}L(i.e.,{a mathematical formula}S=2F),{a mathematical formula}F={all ground atoms overL}, and{a mathematical formula}Abe the set of all possible actions (i.e., all possible ground instantiations of the planning operators in O).Then{a mathematical formula}NDP2(D,S0,G,CP)is sound and complete, and returns at most in{a mathematical formula}|S|2calls to Find-Acceptable-Plan.
+      </paragraph>
+      <paragraph>
+       For the proof, see Appendix A.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Abstractions and compound abstractions
+     </section-title>
+     <paragraph>
+      In nondeterministic planning domains, some major representation and reasoning problems can occur if each action has a very large number of possible outcomes. Probably the best-known example of this is the Robot Navigation domain [25], [37], [9], [28], [29], which is illustrated in Fig. 5. In this domain, there is a building with several rooms, and a robot that needs to go among these rooms to deliver packages. To go into or out of a room, the robot may need to open a door, and there is a child (the “kid”) who can interfere with this by running around very quickly, nondeterministically opening and closing some of the doors. This problem can be translated into a single-agent nondeterministic planning problem by representing the kid's actions as nondeterministic outcomes of the robot's actions [25], [9].
+     </paragraph>
+     <paragraph>
+      In a Robot Navigation domain with k “kid doors” (i.e., doors that the kid can open and close), each of the robot's actions can have {a mathematical formula}2k possible outcomes: one for each possible combination of open and closed kid doors. If a planner has to plan for each of these outcomes separately, then this causes an exponential blowup in the amount of space needed to represent the plan, and the amount of time needed to compute it.
+     </paragraph>
+     <paragraph>
+      Planners such as MBP [9], POND [7], and Yoyo [28] tackle this problem by using BDDs [8] to represent and reason about sets of states rather than individual states. For example, consider the problem of finding a policy π that will move the robot through door d1 in Fig. 5, regardless of which kid doors are open and which ones are closed. This policy will need to contain {a mathematical formula}2k state-action pairs: one for each possible combination of open and closed kid doors. But in each of the {a mathematical formula}2k states, the only thing that matters is whether d1 is open or closed. A planner that uses a BDD-based state representation can generate a much smaller hyperpolicy (see Section 2) such as{a mathematical formula} where {a mathematical formula}S1={all states in which the robot is in r1 and the door is open}, {a mathematical formula}S2={all states in which the robot is in r1 and thedoor is closed}, {a mathematical formula}a1 is the action of moving the robot from r1 to the corridor, and {a mathematical formula}a2 is the action of opening the door.
+     </paragraph>
+     <paragraph>
+      It is not feasible for NDP2 to use a similar BDD representation. That would require extensive modifications to NDP2's classical planner CP, which conflicts with the objective of allowing CP to be any classical planner. However, we sometimes can get some of the same benefits, without having to modify CP at all, by preprocessing the planning domain D to produce an abstracted planning domain {a mathematical formula}D⁎ in which some of the states represent sets of states in D. Once this has been done, NDP2 can be called on {a mathematical formula}D⁎ rather than D.
+     </paragraph>
+     <paragraph>
+      For example, if {a mathematical formula}D⁎ contains two “abstract states” that represent the sets {a mathematical formula}S1 and {a mathematical formula}S2 above, then in {a mathematical formula}D⁎, NDP2 can plan how to go through d1 with only two calls to CP. In this case, the solution to the planning problem is the same hyperpolicy {a mathematical formula}π⁎ as in Eq. (1), but with {a mathematical formula}S1 and {a mathematical formula}S2 represented by abstract states rather than BDDs.
+     </paragraph>
+     <paragraph>
+      The conjunctive abstraction techniques in [30] were an initial version of that approach. However, that work did not include a formal definition of conjunctive abstraction, and all of the modifications to the states and planning operators were done manually. This left it unclear how or whether the approach could be generalized, and whether it could be done automatically. In the following subsections, we develop an approach similar to conjunctive abstraction; but we define it formally and provide pseudocode for the translations.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Language and states
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}D=(L,O) be a nondeterministic planning domain, and let {a mathematical formula}L⁎ be an augmented version of {a mathematical formula}L such that for every predicate symbol p of {a mathematical formula}L, {a mathematical formula}L⁎ includes both p and a new predicate symbol {a mathematical formula}p⁎ of the same arity as p. If {a mathematical formula}α=p(c1,…,cn) is any ground atom of {a mathematical formula}L, then {a mathematical formula}α⁎=p⁎(c1,…,cn) is the atom produced from α by replacing p with {a mathematical formula}p⁎. We will call {a mathematical formula}α⁎ an abstraction of α and ¬α, because its purpose is for use in representing states in which α may be either true or false.
+      </paragraph>
+      <paragraph>
+       If s is a state and {a mathematical formula}α∉s, then according to the usual classical planning semantics, α is false in s and α is true in the state {a mathematical formula}s∪{α}. If we let {a mathematical formula}s′=s∪{α⁎}, then {a mathematical formula}s′ is an abstract state that is intended to represent both of the states s and {a mathematical formula}s∪{α}. More generally:
+      </paragraph>
+      <paragraph label="Definition 1">
+       If is a state and {a mathematical formula}A={α1,…,αk} is a set of ground atoms that are not in s, then {a mathematical formula}s′∪{α1⁎,…,αk⁎} is an abstract state, and the set of states that are represented by {a mathematical formula}s′ is {a mathematical formula}{s∪A′|A′⊆A}. We let {a mathematical formula}[s′] denote this set of states.
+      </paragraph>
+      <paragraph>
+       There is an important difference between abstract states and the belief states used in partially observable planning problems. If an abstract state {a mathematical formula}s′ contains the atom {a mathematical formula}α⁎, it does not mean that α's truth value will be unknown at execution time. Instead, {a mathematical formula}s′ represents a set of fully observable states in which α may be either true or false, so that we can plan for these states simultaneously.
+      </paragraph>
+      <paragraph label="Example">
+       In the Robot Navigation domain, consider all states in which the robot and the packages are at the locations shown in Fig. 5, and all doors are closed except that d6 and d7 may each be either open or closed. There are four such states:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Let{a mathematical formula} Then the set of all states represented by {a mathematical formula}s⁎ is {a mathematical formula}{s1,s2,s3,s4}.  □
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Operators with abstract effects
+      </section-title>
+      <paragraph>
+       We now will describe a way to rewrite planning operators to produce abstract states.
+      </paragraph>
+      <paragraph>
+       Let o be any operator in D, and let {a mathematical formula}E=effects(o). Suppose that two of the conjunctions in E are {a mathematical formula}e1=e∧α and {a mathematical formula}e2=e∧¬α, where e is a (possibly empty) conjunction of literals and α is a literal not in e. In other words, one possible effect of o is to make both e and α true, and another possible effect of o is to make e true and α false. Then we can define the abstraction of E over{a mathematical formula}{e1,e2} to be the set of conjunctions{a mathematical formula} The reason for including ¬α in this equation is because we will want to use {a mathematical formula}E′ for the effects of an abstract operator, and we need to ensure that such an operator will work correctly when executed in a state s that contains α. Recall that the intended meaning of {a mathematical formula}α⁎ is to assert that we are in an abstract state in which α may be either true or false, hence it would be inconsistent for the abstract state to also contain an assertion that α is true.
+      </paragraph>
+      <paragraph>
+       We can perform the abstraction process iteratively, abstracting {a mathematical formula}E′ over a pair of conjunctions to get {a mathematical formula}E″, abstracting {a mathematical formula}E″ over another pair of conjunctions to get {a mathematical formula}E‴, and so forth until we get an abstraction {a mathematical formula}E⁎ of E that is maximal (i.e., {a mathematical formula}E⁎ cannot be abstracted any further).
+      </paragraph>
+      <paragraph>
+       In general, there may be more than one maximal abstraction of E. Algorithm 5 is a simple greedy algorithm to compute one of them (we do not care which one). After the following example, we will define an abstract operator whose effects are {a mathematical formula}E⁎.
+      </paragraph>
+      <paragraph label="Example">
+       Consider a Robot Navigation problem in which there are two kid doors, d6 and d7. Here is a nondeterministic action a to open d1 when the robot is in room r1:{a mathematical formula}{a mathematical formula} where{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} If we let {a mathematical formula}E=effects(a), then E can be abstracted three times. The first abstraction is to replace {a mathematical formula}e1 and {a mathematical formula}e2 with{a mathematical formula} the second one is to replace {a mathematical formula}e3 and {a mathematical formula}e4 with{a mathematical formula} and the third one is to replace {a mathematical formula}e5 and {a mathematical formula}e6 with{a mathematical formula} This produces the maximal abstraction{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 2">
+       If is a planning operator (or an action), then an abstraction of o is an operator (or action) {a mathematical formula}o⁎ such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}pre(o⁎) is the result of modifying {a mathematical formula}pre(o) by replacing each negative literal ¬α with the conjunction {a mathematical formula}¬α∧¬α⁎;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}effects(o⁎) is a maximal abstraction of {a mathematical formula}effects(o).
+       </list-item>
+      </list>
+      <paragraph>
+       The reason for replacing negative literals with conjunctions in {a mathematical formula}pre(o⁎) is to prevent {a mathematical formula}o⁎ from being applied in cases where applying it would be unsound. It is not necessary to replace positive literals with conjunctions, because no state will ever contain both α and {a mathematical formula}α⁎.
+      </paragraph>
+      <paragraph label="Example">
+       Let {a mathematical formula}s1,s2,s3,s4,s⁎ be as in Eqs. (2), (3), (4), (5), (6), and a be as in Eqs. (7), (8). Then the following action {a mathematical formula}a⁎ is an abstraction of a:{a mathematical formula} Thus {a mathematical formula}γ(s1,a⁎)={s⁎}.In {a mathematical formula}a⁎'s precondition, the literal {a mathematical formula}¬open⁎(d1) prevents {a mathematical formula}a⁎ from being applied to abstract states where applying it would be unsound, such as the following state:{a mathematical formula} Before {a mathematical formula}a⁎ can be applied, {a mathematical formula}[s⁎⁎] must first be split into two subsets: the states that satisfy open(d1) and the states that don't. {a mathematical formula}a⁎ will be applicable to the second subset but not the first one.  □
+      </paragraph>
+      <paragraph>
+       To provide a means for splitting abstract states into subsets, we will define, for each predicate symbol p of D, a splitting operator split-p such that{a mathematical formula}{a mathematical formula} where n is the arity of p.
+      </paragraph>
+      <paragraph label="Example">
+       Continuing the previous example, the operator {a mathematical formula}split-open(x) has{a mathematical formula} Thus, split-open(d1) will split {a mathematical formula}s⁎⁎ into a pair of abstract states: one in which d1 is open, and one in which it is closed:{a mathematical formula}{a mathematical formula}  □
+      </paragraph>
+      <paragraph>
+       Note that although splitting operators resemble nondeterministic planning operators syntactically, their semantics are quite different: they do not correspond to actions in D, and their possible outcomes do not model nondeterminism in D. Instead, they simply perform bookkeeping operations for the purpose of translating sets of states (represented as abstract states) back into ordinary states, and they do not appear in the solution policies returned by NDP2.
+      </paragraph>
+      <paragraph label="Definition 3">
+       An abstraction of a nondeterministic planning domain D is a planning domain {a mathematical formula}D⁎ in which the set of operators is {a mathematical formula}O⁎∪Σ, where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}O⁎ contains an abstraction of each planning operator o in D;
+       </list-item>
+       <list-item label="•">
+        Σ contains a splitting operator split-p for every predicate p in {a mathematical formula}L such that {a mathematical formula}p⁎ appears in the effects of at least one operator {a mathematical formula}o∈O⁎.
+       </list-item>
+      </list>
+      <paragraph>
+       Since a solution {a mathematical formula}π⁎ to an abstracted problem represents a hyperpolicy, it is possible to extract an ordinary policy π from it. Algorithm 7 in Appendix B is an algorithm for doing this. The basic idea is quite similar to a policy-extraction algorithm that is provided with the MBP planner—and just as with MBP's policy-extraction algorithm, which is almost never used, there is no real need for Algorithm 7. Given any state s, finding the action to perform in s is no harder to do with {a mathematical formula}π⁎ than with π, and in domains such as the Robot Navigation domain, {a mathematical formula}π⁎ is much easier to use since π is exponentially larger.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Compound abstractions
+      </section-title>
+      <paragraph>
+       In order to create abstract planning problems, we modified the planning operators' effects to produce abstractions of pairs of literals. But the preconditions of each planning operator still referred to the original literals rather than the abstract ones, making it necessary to use splitting operators to map some of the abstract literals back to the original literals before applying the planning operator. When certain conditions are satisfied, it is possible to modify some of the planning operators' preconditions to refer directly to the abstract literals, removing the need for the splitting operators. We provide an algorithm to do this.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}P⁎=(D⁎,S0,G) be an abstraction of a planning problem {a mathematical formula}P=(D,S0,G). Let Σ and {a mathematical formula}O⁎ be the sets of splitting operators and planning operators in {a mathematical formula}P⁎. A splitting operator {a mathematical formula}split-p∈Σ is compoundable with a planning operator {a mathematical formula}o∈O⁎ if the following conditions hold:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        p occurs exactly once in {a mathematical formula}pre(o), in a non-negated atom α;
+       </list-item>
+       <list-item label="•">
+        Each conjunction {a mathematical formula}e∈effects(o) contains at most one of α, ¬α, and {a mathematical formula}α⁎, and no other atom in {a mathematical formula}effects(o) is unifiable with α or {a mathematical formula}α⁎;
+       </list-item>
+       <list-item label="•">
+        p does not appear in G.
+       </list-item>
+      </list>
+      <paragraph>
+       For each {a mathematical formula}o∈O⁎, we let {a mathematical formula}Σo be the set of all splitting operators that are compoundable with o. For each splitting operator {a mathematical formula}split-p∈Σo, we let the compound operator {a mathematical formula}split-p⋅o be an operator whose precondition is {a mathematical formula}pre(o) with α replaced by {a mathematical formula}α⁎, and whose effects are {a mathematical formula}effects(o) with the following modifications:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for each effect {a mathematical formula}e∈effects(o) that does not contain {a mathematical formula}α⁎ or ¬α, replace e with {a mathematical formula}e∧¬α⁎∧α;
+       </list-item>
+       <list-item label="•">
+        for each effect {a mathematical formula}e∈effects(o) that contains ¬α, replace ¬α with {a mathematical formula}¬α⁎;
+       </list-item>
+       <list-item label="•">
+        add an additional effect {a mathematical formula}¬α∧¬α⁎, to represent the case where split-p's nondeterministic outcome is {a mathematical formula}¬α∧¬α⁎ (whence o is inapplicable).
+       </list-item>
+      </list>
+      <paragraph label="Example">
+       Let {a mathematical formula}a⁎ be as in (10), and split-open be as in (11). Then {a mathematical formula}split-open(d1) and {a mathematical formula}a⁎ are not compoundable, because {a mathematical formula}pre(a⁎) contains {a mathematical formula}¬open(d1) rather than {a mathematical formula}open(d1). But consider the following action {a mathematical formula}b⁎, which is an abstraction of an action for exiting room r1 through door d1:{a mathematical formula}{a mathematical formula} In most Robot Navigation problems, the goal G consists entirely of package locations, so that the open predicate does not occur in G, whence {a mathematical formula}split-open(d1) is compoundable with {a mathematical formula}b⁎. The compound operator {a mathematical formula}split-open(d1)⋅b⁎ has{a mathematical formula}{a mathematical formula}  □
+      </paragraph>
+      <paragraph>
+       If two splitting operators split-p and {a mathematical formula}split-q are both compoundable with o, then it is not hard to show that split-p is compoundable with {a mathematical formula}split-q⋅o.
+      </paragraph>
+      <paragraph>
+       If {a mathematical formula}o∈O⁎, and if {a mathematical formula}Σ′={split-p1,…,split-pk} is an ordered set of splitting operators that are compoundable with o, then we will define{a mathematical formula} We will define{a mathematical formula} where {a mathematical formula}Σo={all splitting operators in Σ that are compoundable with o}, and where we assume an arbitrary sequential order on the operators in each subset {a mathematical formula}Σ′ of {a mathematical formula}Σo. Thus {a mathematical formula}O⁎⁎ includes all of the compound operators and all of the operators in {a mathematical formula}O⁎. Let {a mathematical formula}ΣNC be the set of all splitting operators that are non-compoundable, i.e., each {a mathematical formula}split-p∈ΣNC either p appears in the goal G or p is in the precondition of some operator o but is not compoundable with o. Then the planning problem {a mathematical formula}P⁎⁎=(L,O⁎⁎∪ΣNC,G) is a compound-abstract version of {a mathematical formula}P⁎.
+      </paragraph>
+      <paragraph>
+       Algorithm 6 is a high-level description of our procedure to automatically create compound abstractions of planning operators given a set of abstract predicates and the splitting operators for those predicates in the planning domain. For each planning operator o in the planning domain, Algorithm 6 first generates all of the abstract predicates that appear in the preconditions of o in the set B (Line 4). For each subset {a mathematical formula}B′ of B, the algorithm then creates a compound operator {a mathematical formula}o⁎⁎ from the predicates in that subset and the planning operator o. The rationale behind considering every subset is for the sake of completeness: the compound abstraction must create a planning operator for each possible case where some of the literals in o's precondition are abstracted and the rest are not.
+      </paragraph>
+      <paragraph>
+       For each abstract predicate p in {a mathematical formula}B′, Algorithm 6 first finds the splitting operator for p and then creates a compound abstraction of o with that splitting operator (Line 6). The compound operator {a mathematical formula}o⁎⁎ is then inserted into the set of operators to be returned by the algorithm (Line 7).
+      </paragraph>
+      <paragraph>
+       Algorithm 8 in Appendix B is an algorithm to translate a compound-abstract solution {a mathematical formula}π⁎⁎ for {a mathematical formula}P⁎⁎ into an abstract policy {a mathematical formula}π⁎. The basic idea is quite simple; for each action in {a mathematical formula}π⁎⁎ that is compound, the algorithm separates it into its two component pieces (a splitting action and an ordinary abstract action). By first running Algorithm 8 and then running Algorithm 7, one could extract an ordinary policy π. However, as we pointed out at the end of Section 5.2, there is no real need to do this since the abstract policy {a mathematical formula}π⁎ is easier to work with.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      We implemented NDP2 in Common Lisp, and compared it experimentally with MBP [9] in six fully-observable nondeterministic planning domains that were chosen to present a variety of different issues for the planners to deal with. As NDP2's classical planner in these experiments, we used FF [21], since it was the classical planner that had worked best with NDP [30].
+     </paragraph>
+     <paragraph>
+      For each planning domain, we tested the planners on a large suite of randomly-generated test problems of multiple sizes, for a total of about 4500 planning problems. We ran both NDP2 and MBP on Intel Xeon 2.33 GHz processors running Red Hat Enterprise Linux 5.5. We gave both planners 2 hours and 2 GB of RAM to complete each planning problem.
+     </paragraph>
+     <paragraph>
+      We attempted to broaden our comparison to include POND [7] and GAMER [11], but were unable to do so. POND does not support planning problems that require cyclic solutions. In GAMER  we ran into several implementation issues that prevented it from creating proper ground versions of our problems. Thus, despite very helpful discussions with the authors of these planners, we were not able to run them on the problems in our test suite.
+     </paragraph>
+     <paragraph>
+      Three of the planning domains are everywhere-solvable, and all three of them are well-known from previous experimental studies:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       In the Robot Navigation domain with 7 kid doors (see Section 5), each action has 2{sup:7} possible outcomes. Thus in order to avoid a huge combinatorial explosion in the search space, it is essential for the planner to partition the states into a small number of classes and plan over those classes, rather than reason about each state individually. MBP's BDD representation enables it do such reasoning quite well in this domain [37], [27], and we wanted to see whether our abstraction techniques would work well enough to make NDP2 competitive with MBP.
+      </list-item>
+      <list-item label="•">
+       In the Hunter–Prey domain [2], [10], each action has roughly {a mathematical formula}5n outcomes, where n is the number of prey. Thus, although the number of locations are polynomial, the amount of nondeterminism for the hunter after each of its move increases combinatorially with the number of prey in the domain. Our abstraction techniques do not work in this domain, and we wanted to see how this would affect NDP2's performance.
+      </list-item>
+      <list-item label="•">
+       In the Nondeterministic Blocks World [26], reasoning over sets of states is not particularly useful, but there is a large number of goal interactions (e.g., deleted-condition interactions) to deal with. Many classical planners are good at reasoning about such interactions, and we wanted to see if NDP2 could take advantage of this.
+      </list-item>
+     </list>
+     <paragraph>
+      In everywhere-solvable planning domains, NDP2 calls its classical planner at most once per reachable state, because the classical planner (assuming it is complete) will never return failure. But in planning domains that contain unsolvable states, NDP2 may need to call the classical planner many times per state. To see how this would affect NDP2's performance, we compared NDP2 with MBP on three planning domains that contained many unsolvable states:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The Exploding Blocks World has been used in several of the International Planning Competitions, e.g., [44], [6]. For most planning problems in this domain, the solution must include actions that would be redundant in any solution to the determinized version of the problem; and since the classical planner is unlikely to generate plans that include those redundant actions, the classical planner will usually return plans that lead to unsolvable states in the original problem P. But this difficulty is mitigated by the small branching factor of the nondeterminism: unlike the competition version of this domain, we only had one explosive block.
+      </list-item>
+      <list-item label="•">
+       The Tire World has also been used in several of the International Planning Competitions, e.g., [44], [6]. Like the Exploding Blocks World, it requires solutions whose actions are redundant in the determinization. On one hand, Tire World has fewer available actions per state than the Exploding Blocks World; but on the other hand, the size of the smallest solution to Tire World problems grows exponentially with the number of locations in the domain.
+      </list-item>
+      <list-item label="•">
+       Lost in Space is a new domain that we developed to test NDP2's subroutines for avoiding unsolvable states. For planning problems in this domain, the shortest solution for the determinized planning problem almost always leads to unsolvable states in nondeterministic planning problem. Thus NDP2 must repeatedly modify its determinization of the planning domain, in order to force the classical planner to avoid using any of the problematic actions.
+      </list-item>
+     </list>
+     <paragraph>
+      In the Robot Navigation domain, we tested the planners on the problems in our test suite, and also on abstract and compound-abstract versions of the same problems. We used the translation algorithms (Algorithm 5, Algorithm 6) to generate these versions of the problems. We did not bother to develop computer implementations of those algorithms, but instead ran them by hand.
+     </paragraph>
+     <paragraph>
+      For the other planning domains in our experiments, we did not run separate experiments on abstract and compound-abstract versions of the problems, because those versions of the problems are identical to the original versions. The abstraction and compound-abstraction techniques modify a planning operator only when some of the operator's nondeterministic outcomes differ by a single literal—and in those domains, every pair of nondeterministic outcomes differ by more than one literal.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Experiments with everywhere-solvable domains
+      </section-title>
+      <section>
+       <section>
+        Robot Navigation [9]
+        <paragraph>
+         The first set of experiments were in the Robot Navigation domain described previously, with {a mathematical formula}k=7 (i.e., all 7 doors were kid doors). We varied the number of packages n from 1 to 10. For each value of n, we measured each planner's average CPU time on 100 randomly-generated problems. As in [38], MBP's CPU times include both its preprocessing and search times. Omitting the former would not have significantly affected the results, because the preprocessing times were never more than a few seconds, and usually below one second.
+        </paragraph>
+        <paragraph>
+         In addition to testing the algorithms on Robot Navigation problems, we also tested them on abstract and compound-abstract versions of the problems. We used the translation algorithms (Algorithm 5, Algorithm 6) to generate these versions, performing these algorithms manually rather than running them on the computer. Those algorithms are easy to perform by hand; and furthermore, the Robot Navigation domain was the only one of our experimental domains in which we needed to use them. In all of the other planning domains in our experiments, the abstract and compound-abstract versions are identical to the original domain.
+        </paragraph>
+        <paragraph>
+         Fig. 6 shows the average CPU times for all cases where a planner solved all 100 problems (a meaningful average is impossible if the planner solves some of the problems but not all of them). The labels MBP and NDP2 are for the original planning problems, MBP-A and NDP2-A are for the abstract versions of the problems, and MBP-CA and NDP2-CA are for the compound-abstract versions of the problems. We discuss the results below.
+        </paragraph>
+        <paragraph>
+         MBP did worse on the abstract versions of the problems than on the original problems, because the splitting operators increased the branching factor of MBP's search space by creating branches in MBP's BDD structure in places where MBP would not ordinarily have created branches. MBP did better on the compound-abstract problems than the abstract ones, because the compound operators alleviated the search-space blowup caused by the splitting operators.
+        </paragraph>
+        <paragraph>
+         Surprisingly, MBP did better on the compound-abstract versions of problems with 5 or more packages than on the original versions of those problems. This puzzles us, but we suspect the compound-abstraction helped MBP to focus its search on parts of the search space that were relevant for finding a solution.
+        </paragraph>
+        <paragraph>
+         On the original planning problems, where NDP2 had to reason about each of the 2{sup:7} outcomes of each action, its performance was quite poor. It solved all of the 1-package problems, and some of the 2- and 3-package problems, but no problems larger than that. As we had hoped, NDP2 did better on the abstracted versions of the problems: it solved all of the problems with 3 or fewer packages, and some problems with 4 to 7 packages. But this was still much worse than MBP's performance, and we believe it is because FF's hill-climbing algorithm returned plans with extraneous split actions that produced needless branches in the policy.
+        </paragraph>
+        <paragraph>
+         In the compound-abstract planning problems, NDP2 did dramatically better: it completed problems with up to 10 packages, and it outperformed MBP on problems with 7 or more packages. In the original problems, NDP2 had to call FF roughly 2{sup:7} times for every step of the initial weak solution—but in the compound-abstract problems, NDP2's number of calls to FF was less than twice the number of steps in the initial weak solution.
+        </paragraph>
+       </section>
+       <section>
+        Hunter–Prey [2,10]
+        <paragraph>
+         In this domain, the world is an {a mathematical formula}n×n grid in which a hunter wants to catch one or more prey. The hunter has five possible actions; move north, south, east, or west, and catch (the latter is applicable only when the hunter and prey are in the same location). Each prey has also five actions: the four movement actions plus a stay-still action. Like the kid in the Robot Navigation domain, the prey are not represented as separate agents: instead, their possible actions are encoded as nondeterministic outcomes of the hunter's actions.
+        </paragraph>
+        <paragraph>
+         Fig. 7 shows running times when there is just one prey and the grid size varies from {a mathematical formula}2×2 to {a mathematical formula}8×8, and Fig. 8 shows running times when the grid size is fixed at {a mathematical formula}5×5 and the number of prey varies from 1 to 5. Each data point is the average of 100 randomly generated problems.
+        </paragraph>
+        <paragraph>
+         MBP's running times were quite good, because MBP's BDDs did quite well at compressing the search space.{sup:2} By the nature of the domain, any strong cyclic policy must cover most of the problem's reachable states, yet MBP could use a single BDD to represent the set of all states in which the hunter needed to move in a particular direction.
+        </paragraph>
+        <paragraph>
+         In contrast, NDP2 had to reason about each of those states separately. When there was just one prey, the number of states, and thus NDP2's running time, grew polynomially with the number of locations. But the number of states grew exponentially with the number of prey, so NDP2 did not solve any problems with more than one prey.
+        </paragraph>
+       </section>
+       <section>
+        Nondeterministic Blocks World [26]
+        <paragraph>
+         The nondeterministic Blocks World is like the classical Blocks World, except that an action may have three possible outcomes: (1) the same outcome as in the classical case, (2) the block slips out of the gripper and drops on the table, and (3) the action fails completely and the state does not change. Neither of the abstraction techniques can be used in this domain, for the same reason as in the Hunter–Prey domain.
+        </paragraph>
+        <paragraph>
+         Fig. 9 shows the planners' average CPU times in this domain, as a function of the number of blocks. Each data point represents the average running time on 100 random problems. NDP2 outperformed MBP for three reasons:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          There were no large sets of states that could be clustered together; hence MBP's BDD-based representation could not make much difference.
+         </list-item>
+         <list-item label="2.">
+          MBP did not exploit the heuristics used in the classical planners, hence MBP searched most of the state space in most planning problems.
+         </list-item>
+         <list-item label="3.">
+          Every action has three outcomes, but they are structured so that at least one of them (and often two) lead to a state already seen by the planner. Thus the number of calls NDP2 must make to FF scales linearly with the number of blocks in the problem.
+         </list-item>
+        </list>
+       </section>
+      </section>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Planning domains with unsolvable states
+      </section-title>
+      <section>
+       <section>
+        Exploding Blocks World [6]
+        <paragraph>
+         The nondeterministic Exploding Blocks World is much like the classical Blocks World except that there may be one or more exploding blocks, which may or may not destroy the table or block underneath them when they are put down. In order for a problem to have a solution, there must be enough accessible spare blocks to defuse the exploding blocks. In any solution, a spare block must be uncovered and placed on the table before an exploding block is moved. Then the exploding blocks must be repeatedly placed on the spare until it explodes, making it safe to move the exploding block elsewhere.
+        </paragraph>
+        <paragraph>
+         Fig. 10 shows the completion times for each planner when there is a single exploding block and a single spare block, with a total of {a mathematical formula}n+1 blocks in the initial state, and n blocks in the goal state. There were 100 planning problems for each number of blocks between 3 and 8. As with the previous blocks world variant, NDP2 outperformed MBP for all but the smallest problems. Most likely, MBP performed poorly in the exploding blocks domain for much the same reasons it performed poorly with nondeterministic blocks world problems, that is the lack of a heuristic function and lack of clusterable states.
+        </paragraph>
+        <paragraph>
+         In the exploding blocks world, the only nondeterministic actions are actions that move unexploded blocks. Thus the amount of nondeterminism is lower than in the nondeterministic blocks world, so we might expect NDP2 to perform much better than it did on the nondeterministic blocks world problems. However, moving an exploding block before defusing it with the spare block leads to an unsolvable state, and there is no reason for FF to avoid this sequence of events. Even when an exploding block is in hand and a spare block is clear and on the table, there are as many actions available in the initial state which lead to unsolvable states as there are clear blocks, and NDP2 may need to rule out each action in turn. Somewhat surprisingly, the relative lack of nondeterminism balances out with the propensity to find unsolvable states, and NDP2 performs similarly in both the exploding and nondeterministic blocks world variants, despite vastly different structures in their nondeterminism.
+        </paragraph>
+       </section>
+       <section>
+        Tire World [6]
+        <paragraph>
+         Our Tire World variant consists of a triangular grid of connected places with tires interspersed between them, and the goal is to move the car from the initial location to a goal location. The car may get a flat tire after every move, meaning the car must carry a spare tire, and replace it once it is consumed. In our experiments, we added tires at random to the initial state until the problem was solvable.
+        </paragraph>
+        <paragraph>
+         A before, we tested the planners on 100 problems of each size. Fig. 11 shows how many problems of each size the planners solved, and Fig. 12 shows the average CPU times on the problem sizes in cases where the planners solved all problems of that size. MBP solved every problem with 3 to 21 locations, and generally solved these problems faster than NDP2; but did not solve any problem with more than 21 locations. NDP2 solved all problems with 3 to 10 locations, most of the problems with 15 to 45 locations, and some problems with up to 66 locations.
+        </paragraph>
+        <paragraph>
+         In each Tire World problem, the number of states in the smallest strong cyclic solution is exponential in the length of the shortest solution to the determinized problem. Furthermore, many times the shortest determinized solution leads through an area where there would not be enough spare tires if any flats occur, hence the nondeterministic domain contains an exponential number of unsolvable states (not all of which are immediately apparent).
+        </paragraph>
+        <paragraph>
+         This means NDP2's running time is potentially doubly-exponential due to the number of calls it must make to CP: exponential in the length of the shortest determinized solution, and exponential in the difference in length between the shortest successful path to the goal if no flat tires occur, and the length of the shortest successful path to the goal if a flat tire occurs at every move. Consequently, for the problems of sizes 15 and 21, there were few problems that NDP2 did not solve within the time limit, even though MBP solved all 100 problems of each size. This is why Fig. 12 contains data points for MBP but not NDP2 at those sizes.
+        </paragraph>
+        <paragraph>
+         On the other hand, many of the problems have solutions that differ only slightly from the shortest path, and NDP2's performance is “only” exponential in the length of that path, and so NDP2's indirect use of FF's heuristic function enabled it to solve some of the planning problems all the way up to size 66, even though MBP could not solve any problems larger than size 21.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Lost in space
+        </section-title>
+        <paragraph>
+         As we mentioned earlier, our original purpose in developing the Lost in Space (LiS) domain was to test NDP2's subroutines for avoiding unsolvable states. But the domain has another property that made it useful for our experiments: the domain is simple enough that we can use it to gauge the worst case performance of the Find-Acceptable-Plan subroutine.
+        </paragraph>
+        <paragraph>
+         A planning problem instance in the LiS planning domain is a simple line of locations, with the agent at one end and the goal at the other. The solution to an LiS planning problem is a policy that moves the agent from its initial location to the goal. The agent can move between locations by using one of two actions: walking between connected locations; and teleporting between any two locations, which can succeed or leave the agent lost and unable to move. This means that for a problem with n locations, there are {a mathematical formula}n+1 states, {a mathematical formula}n2+2n−2 actions, and a single correct policy. Since the teleport action in our determinization of LiS always leads to the goal, FF will almost always return plans that use it. Thus NDP2 should have to make {a mathematical formula}O(n3) calls to the classical planner to develop a policy for an LiS planning problem.
+        </paragraph>
+        <paragraph>
+         We ran both NDP2 and MBP 20 times on each of 20 problem instances with 5 to 100 locations. There is only one problem instance for each problem size in the LiS planning domain, but we ran the algorithms 20 times on each instance in order to reduce statistical variations in the running times—especially the running times of NDP2's calls to FF, which makes some random choices that cause its running time to vary.
+        </paragraph>
+        <paragraph>
+         NDP2 was able to solve all problems. MBP did not solve problems with more than 80 locations. In addition to the results above, we also report the average CPU times of the planners in our experiments. Fig. 13 shows the average CPU time for each planner per size of problem. As expected, FF consistently used the determinized version of teleport for every state until ConstrainProblem removed that option. Both NDP2 and MBP showed sub-exponential growth of CPU time in the number of locations, though NDP2 has a slower growth rate, overcoming its initial disadvantage for problems with 70 or more locations.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Summary and discussion of the experimental results
+      </section-title>
+      <paragraph>
+       Here is a quick summary of the results in each domain, along with our understanding of the reasons for those results:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        In the Robot Navigation domain, the amount of nondeterminism was extremely high. Here, NDP2's performance against MBP depended on how good a way we gave it to deal with the nondeterminism. Without abstraction, it did quite badly. With ordinary abstraction it did a little better, and with compound abstraction it did much better.
+       </list-item>
+       <list-item label="•">
+        In the Hunter–Prey domain, our abstraction techniques weren't applicable, so we couldn't give NDP2 a way to deal with the nondeterminism in this domain. Consequently, NDP2 did badly.
+       </list-item>
+       <list-item label="•">
+        In the Nondeterministic Blocks World and the Exploding Blocks World domains, the amount of nondeterminism was relatively small, and FF's search heuristics worked well. Thus NDP2 did much better than MBP.
+       </list-item>
+       <list-item label="•">
+        In the Triangle Tire World domain, NDP2's performance on each problem depended on whether the plans returned by FF contained “bad” actions (i.e., actions that looked good in the determinized domain but led to unsolvable states in the nondeterminized domain). Consequently, NDP2's performance is in some ways better than MBP's (e.g., how many problems it could solve), and in some ways worse than MBP's (e.g., the amount of CPU time it used).
+       </list-item>
+       <list-item label="•">
+        What happened in the Lost in Space domain was similar to what happened in the Triangle Tire World domain. But in this case, the number of bad actions in this domain is much smaller, so NDP2 did much better overall.
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <section label="7.1">
+      <section-title>
+       Using a classical planner as a “black box”
+      </section-title>
+      <paragraph>
+       There have been several other works that proposed to use classical planning algorithms as a “black box” to generate solutions for non-classical planning problems. The most notable one is FF-Replan [42], which uses the FF planner [21] to first generate a plan (i.e., a weak policy) for a determinization of a Markov Decision Process (MDP). Markov Decision Processes (MDPs) are like nondeterministic planning domains in the sense that each action can have more than one possible outcome, but they differ from the latter in that each possible outcome of an action has a probability attached to it; costs and rewards are attached to the actions and states, respectively.
+      </paragraph>
+      <paragraph>
+       FF-Replan introduced several determinization strategies for probabilistic PDDL actions; among which, all-effects determinization is the basis for our determinization mechanism in NDP2. While FF-Replan is an on-line replanning algorithm that ensures a single execution to be realized and only works for everywhere solvable planning problems, NDP2 generates, offline, a solution for all possible outcomes of the nondeterminism in the execution and it can deal with planning problems that are not everywhere solvable. Both approaches have different advantages and disadvantages as discussed in the literature several times previously. NDP2 differs from FF-Replan in several ways: NDP2 can use any classical planning algorithm, unmodified; it does offline generation of a complete solution policy rather than online generation of a single execution trace; and it finds strong cyclic solutions in nondeterministic domains.
+      </paragraph>
+      <paragraph>
+       There are several relatively recent MDP planners that use a classical planner (typically FF) as a black-box. An example for this class of MDP planners include RFF [41]. Like FF-Replan, RFF uses FF to generate weak plans. It then runs several Monte-Carlo simulations to determine the probability of the execution of a policy π ending in a non-goal π-result of an initial state. RFF then uses FF to generate weak plans from those states, integrates them into the policy, and reruns the Monte-Carlo simulations. RFF repeats this process until the probability of an execution failing falls below a fixed parameter. Although both RFF and NDP2 can handle dead-ends in planning domains and incrementally build the policy, NDP2 does so by explicitly and symbolically reasoning about them; RFF does so by reasoning about failure probabilities. Thus, each planner has access to different kinds of knowledge and models.
+      </paragraph>
+      <paragraph>
+       FF-Hindsight [43] is also an MDP planner inspired by FF-Replan which uses FF as part of its heuristic and generates weak solutions to a planning problem. For each state evaluated, FF-Hindsight creates sets of time-varying classical planning problems and uses FF to find which portions are solvable. This is an optimistic measure of how likely it is that the agent can reach the goal from this state. FF-Hindsight then uses the solvability estimate to pick which action is most likely to lead to the goal. Although the idea of using heuristics to generate execution paths in FF-Hindsight is similar to that of FF-Replan and NDP2, FF-Hindsight differs from NDP2 in that it does not generate strong cyclic solution policies.
+      </paragraph>
+      <paragraph>
+       There are also other approaches for planning with nondeterministic actions based on the idea of classical planners. The work described in [1] is also for non-probabilistic settings, but it's aimed for contingency planning in partial-observable domains. The work of [34] uses determinizations of probabilistic actions and use classical planners to generate sequences of actions for execution.
+      </paragraph>
+      <paragraph>
+       FIP [14] is a recent NDP-inspired planner which shows a number optimizations that can be done if the classical planner is treated not as a black box, but as a glass box, directly incorporated into the planner. Optimizations include directly removing state-action pairs from the domain (eliminating the need for Find-Acceptable-Plan), preferring deterministic operators, and stopping the search for a weak plan when a solved state is found. An additional optimization, the goal-alternative search, would be easy to implement in NDP2, but it requires an additional call to Find-Acceptable-Plan, which is already the bottleneck in most of our experiments. Since FIP is based on NDP, it has NDP's plan incorporation bug described in Appendix C, but it should be straightforward to incorporate our fix for this bug into FIP.
+      </paragraph>
+      <paragraph>
+       Another recent work, described in [33], has made incremental extensions to some of the ideas in NDP. This work introduces a definition of solution quality, and PrP looks for policies that are optimal according to that definition. Another difference is that PrP's implementation is based on the SAS+ formalism, whereas NDP2's implementation uses a non-probabilistic version of PPDDL.
+      </paragraph>
+      <paragraph>
+       The planner described in [22] generates cyclic solutions to partially observable planning problems by successively producing linear plans (i.e., weak policies) and combining those plans into a conditional and cyclic plan, in a way similar to our work, However, this work cannot use classical planners as NDP2 does; instead, it requires substantially rewriting those planners for bookkeeping for policy generation.
+      </paragraph>
+      <paragraph>
+       The GAMER planner [11] translates nondeterministic problems into a PDDL-like language for describing two-player games and uses a game solver to find a solution. GAMER performed well in ICAPS-08 planning competition, but a bug in its grounding process prevented us from running it in our experiments.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Other planning techniques for nondeterministic planning domains
+      </section-title>
+      <paragraph>
+       Probably the first work on planning in fully-observable nondeterministic domains is described in [15], which is a breadth-first search algorithm over an AND–OR tree. Other early works on fully-observable nondeterministic domains include the Cassandra planning system [39], CNLP [36], Plinth [18], and UCPOP [35], and QBFPlan [40]. However, all these works describe a special-purpose planning algorithm for nondeterministic planning domains, and thus, do not focus on using classical planners as a black box.
+      </paragraph>
+      <paragraph>
+       One of the earliest attempts to use model-checking techniques for planning under nondeterminism was first introduced in the SimPlan planner of [25]. SimPlan is based on model checking techniques that work over explicit representations of states in the state space; i.e., the planner represents and reasons explicitly about every state visited during the search. Symbolic model-checking approaches to planning in nondeterministic domains were first introduced in [17], [9]. MBP is one of the best planners that uses Binary Decision Diagrams (BDDs) for this purpose.
+      </paragraph>
+      <paragraph>
+       UMOP [23], [24] exploits some of the ideas from the MBP planner, as a starting point for multi-agent planning, and combines BDDs with a heuristic-search algorithm for strong and strong cyclic planning [24]. Heuristic search provides some performance improvements over unguided BDD-based planning, such as in MBP  on some simpler examples than MBP was tested on. We have not compared UMOP to NDP2 in this paper because of this reason; the authors of UMOP discussed and suggested some possibilities for scaling their approach to larger problems.
+      </paragraph>
+      <paragraph>
+       ND-SHOP2 [26] uses HTN planning techniques to control the search space in nondeterministic planning. ND-SHOP2 showed how HTN knowledge could improve nondeterministic planning performance, and performed competitively with MBP. Yoyo [29] extended this line of work by combining HTN planning with a compact BDD state representation to get several orders of magnitutde in performance gains over ND-SHOP2 and MBP. Both of these planners use domain-specific planning knowledge to organize the search space while generating solution policies. Unlike them, NDP2 relies solely on the classical planner's domain-independent heuristic search capabilities.
+      </paragraph>
+      <paragraph>
+       Planners such as MBP [4], POND [7] and Contingent-FF [20] can generate solution policies for partially observable planning problems. Most of them cannot generate cyclic solutions, except for an extended version of MBP [3], which can generate strong cyclic solutions to a class of partially observable problems. We believe the ideas in NDP2 could also be generalized to partial observability.
+      </paragraph>
+      <paragraph>
+       Finally, [13] reports an approach for analyzing deterministic planning domains and identifying structural features and dependencies among those features using model-checking techniques. Although this approach has some similarities to our pairwise effect abstraction technique, their approach focusses on using the results of a domain analysis to prune the search space whereas we use pairwise effect abstractions for state-space compression. It would be interesting to investigate as a future work if the domain analysis method can be used for identifying more general and effective features for state compression.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       A final note on MDPs
+      </section-title>
+      <paragraph>
+       MDP problems for control theory and operations research do not usually include a notion of goal states; when they do, they are usually formulated as stochastic shortest-path (SSP) problems. See [32] for an excellent survey of MDP planning and planning techniques from an AI perspective.
+      </paragraph>
+      <paragraph>
+       In SSPs, every action has nonzero probabilities for all of its outcomes, whence the probability that we'll never leave the cycle is zero. Algorithms for solving SSP problems attempt to compute a policy that will achieve the goals with probability 1 [31]. Note also that this property is analogous to the “fairness” assumption in strong-cyclic solutions in nondeterministics planning domains [9] (and as also defined in Section 2.1 in this paper).
+      </paragraph>
+      <paragraph>
+       SSPs can be solved either by MDPs or by nondeterministic planning models, and the planners using the latter have been shown empirically to be more efficient on such problems [5]. The primary reason is that planners that use nondeterministic models do less search than MDP planners because they are not looking for optimal solutions.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Theoretical properties
+     </section-title>
+     <paragraph>
+      This appendix provides the theoretical properties of the NDP2 planning procedure, its subroutines Find-Acceptable-Plan and ConstrainProblem, and the abstraction and compound abstraction techniques. Most of the lemmas in this appendix are not mentioned in the body of the paper, but they are used in the proofs of the theorems.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      A nondeterministic planning problem{a mathematical formula}P=(D,S0,G)is everywhere weakly solvable iff it is everywhere strong cyclically solvable.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}(⇒): Let {a mathematical formula}s0,…,sk be the set of states reachable from {a mathematical formula}s0. Since P is everywhere weakly solvable, let {a mathematical formula}p0,p1,…,pk be a set of weak solutions for each {a mathematical formula}si.Let {a mathematical formula}π0 be the policy formed by setting {a mathematical formula}π0(s)=a for every {a mathematical formula}(s,a)∈p0. By construction, if {a mathematical formula}π0(s) is defined, there is a goal {a mathematical formula}π0-descendant of s.Let {a mathematical formula}πi+1 be the policy formed by setting {a mathematical formula}πi+1(s)=πi(s) for every state s such that {a mathematical formula}πi is defined, and {a mathematical formula}πi+1(s)=a for every state such that {a mathematical formula}πi(s) is not defined and {a mathematical formula}(s,a)∈pi+1. Again, by construction, every state for which {a mathematical formula}πi+1 is defined has a goal {a mathematical formula}πi+1-descendant.Since {a mathematical formula}πk-descendants of {a mathematical formula}s0 are a subset of the states reachable from {a mathematical formula}s0, every {a mathematical formula}πk descendant of {a mathematical formula}s0 has a path to the goal, and {a mathematical formula}πk is a strong cyclic solution to P.{a mathematical formula}(⇐): Suppose P is everywhere strong cyclicly solvable and let s be a state in P reachable from {a mathematical formula}S0. If P were not everywhere weakly solvable, then there would exist at least one state s that is reachable from s but there is no path from s to a goal. But this is a contradiction by definition of strong cyclic solutions.  □
+     </paragraph>
+     <paragraph label="Lemma 2">
+      For every state s in a nondeterministic planning problem P, s is weakly solvable in P if and only if it is solvable in{a mathematical formula}P¯.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}P=(D,{s0},G) be a nondeterministic planning problem, and {a mathematical formula}P¯ be a determinization of P.{a mathematical formula}(⇒): Let s be a state in D and suppose {a mathematical formula}(D,{s},G) has a weak solution {a mathematical formula}π={(si−1,ai)}i=1n where {a mathematical formula}s0,…,sn is the sequence of states produced by π in D. Let {a mathematical formula}p=〈a1′,…,an+1′〉 be a plan such that each {a mathematical formula}ai′ is a determinization of {a mathematical formula}ai and {a mathematical formula}γ(si−1,ai′)={si} since π is a weak solution for {a mathematical formula}(D,{s},G). By construction, the plan p is a solution for the classical planning problem {a mathematical formula}(D¯,s,G).{a mathematical formula}(⇐): Suppose {a mathematical formula}P¯ has a solution plan {a mathematical formula}p=〈a1,…,an〉. It follows that from the way determinizations are constructed, π is a weak solution for P: if {a mathematical formula}ai is applied in the state {a mathematical formula}si−1 in p, then {a mathematical formula}(si−1,ai′)∈π such that {a mathematical formula}ai∈ai′¯.  □
+     </paragraph>
+     <paragraph label="Lemma 3">
+      Let CP be a sound classical planner that is guaranteed to terminate. Then Find-Acceptable-Plan returns in at most{a mathematical formula}|S|⋅|A|+1calls to CP, where S and A are the set of states and actions in the classical domain, respectively.
+     </paragraph>
+     <paragraph label="Proof">
+      To prove the bounds in the lemma, we need to show that after every call to CP, if Find-Acceptable-Plan did not exit then it adds a new state-action pair to B. From this it follows that since there is only a finite number of states and actions, Find-Acceptable-Plan must eventually return.Note that the only time a state is removed from S is when CP returns failure, after which Find-Acceptable-Plan adds the state to K (Line 21). This means that once NDP2 adds a state to S, it either stays in S or is moved to K. Since Line 12 forbids adding a state to S which is already in either S or K, every state in S is unique, and we never add a state to S more than once.Now we need to show that after every call to CP, Find-Acceptable-Plan either returns success or failure, or adds a new state-action pair to B. Look at what happens when CP returns a plan {a mathematical formula}〈a0,…,an〉 from the current state s to the goal, going through states {a mathematical formula}〈s1,…,sn+1〉. Since CP is sound, {a mathematical formula}sn+1 is a goal state. If Find-Acceptable-Plan accepts the whole plan, Find-Acceptable-Plan will return success on the next iteration.Suppose Find-Acceptable-Plan rejects the first action {a mathematical formula}a0. We know {a mathematical formula}(s,a0)∉B, since ConstrainProblem prevents those actions from being applicable as the first action in the plan. So if Line 12 rejects {a mathematical formula}a0, then {a mathematical formula}(s,a0) is a new pair added to B. Otherwise, {a mathematical formula}a0 is added to the current plan, and the current state is set to {a mathematical formula}s1.Note that everywhere Find-Acceptable-Plan adds state-action pairs to B, the state part of the pair is the last state in S. So suppose Find-Acceptable-Plan accepts actions {a mathematical formula}a0…ai, and rejects action {a mathematical formula}ai+1. Since Find-Acceptable-Plan only accepts actions that lead to states never before in S, the state-action pairs {a mathematical formula}(s1,a1),…,(si,ai),(si+1,ai+1)∉B. And so {a mathematical formula}(si+1,ai+1) is a new state-action pair added to B.Now look at what happens when CP returns failure. Find-Acceptable-Plan removes the last action from the plan ({a mathematical formula}a′), and, if it does not return failure, adds the pair {a mathematical formula}(s′,a′) to B, where {a mathematical formula}s′ is the previous state in the current plan. From above, we know that when we added {a mathematical formula}a′ to the plan that {a mathematical formula}(s′,a′)∉B. Furthermore, since Find-Acceptable-Plan added {a mathematical formula}a′ to p, {a mathematical formula}s′ hasn't been the last state in S until now, so {a mathematical formula}(s′,a′) is still not in B. So {a mathematical formula}(s′,a′) is a new pair added to B.  □
+     </paragraph>
+     <paragraph>
+      Having shown termination, we can now show that Find-Acceptable-Plan returns failure or returns an acyclic plan whose policy image avoids the states in U. As shorthand, we call these plans U-acceptable. More formally, a plan p is U-acceptable in a state s with respect to a nondeterministic domain D, its determinization {a mathematical formula}D¯, a classical planning problem {a mathematical formula}(D¯,s,G) and a set of states U if:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       p is applicable in the state s in the classical planning domain {a mathematical formula}D¯.
+      </list-item>
+      <list-item label="•">
+       It is acyclic (no repeated states).
+      </list-item>
+      <list-item label="•">
+       For every state-action pair {a mathematical formula}(si,ai¯) in the image of p on {a mathematical formula}(D¯,s,G), let {a mathematical formula}ai be the corresponding nondeterministic action in D. Then {a mathematical formula}γD(si,ai)∩U=∅.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 4">
+      If CP is sound and guaranteed to terminate, then Find-Acceptable-Plan is sound and it returns either a failure or a U-acceptable plan that ends in a goal state.
+     </paragraph>
+     <paragraph label="Proof">
+      Since Find-Acceptable-Plan checks if the last state in its partial plan p reaches the goal before returning a plan, it is enough to show that the partial plan p in the procedure is always a U-acceptable plan.Since any prefix of a U-acceptable plan is still U-acceptable, we can do induction on the size of p in Find-Acceptable-Plan, looking only at additions to p. In the base case, p is empty, meeting the U-acceptable requirements trivially.By the inductive hypothesis, assume p is U-acceptable and Find-Acceptable-Plan is adding an action a to p. Since the only location for this is in Line 12, Find-Acceptable-Plan has already checked in Line 12 that it does not form a loop in p, and that its corresponding action in D does not lead to any state in U. If CP is sound, then a is applicable in s. So a appended to p is a U-acceptable plan.  □
+     </paragraph>
+     <paragraph>
+      Before we can show the completeness of Find-Acceptable-Plan, we need a utility lemma that says we can take a U-acceptable plans from states a to b and b to c to produce a U-acceptable plan from a to c. Note that the concatenation of any two U-acceptable plans may not be U-acceptable, since the resultant plan may visit some states twice.
+     </paragraph>
+     <paragraph label="Lemma 5">
+      With a nondeterministic domain D, its determinization{a mathematical formula}D¯, a classical planning problem{a mathematical formula}(D¯,s0,G)and a set of states U, let p be a U-acceptable plan from{a mathematical formula}s0to some state{a mathematical formula}s1and{a mathematical formula}p′be a U-acceptable plan from{a mathematical formula}s1to some state{a mathematical formula}s2. Let S be a directed graph where the nodes are the states associated with p and{a mathematical formula}p′and the edges are the actions from p and{a mathematical formula}p′.Then any acyclic path from{a mathematical formula}s0to{a mathematical formula}s2in S corresponds to a U-acceptable plan from{a mathematical formula}s0to{a mathematical formula}s2.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}p″ be any acyclic path through S. Then {a mathematical formula}p″ is U-acceptable since {a mathematical formula}p″ only goes through state transitions appearing in p applied at {a mathematical formula}s0 or {a mathematical formula}p′ applied at {a mathematical formula}s1, {a mathematical formula}p″ is by definition acyclic, and no action in S leads to a state in U.  □
+     </paragraph>
+     <paragraph>
+      Now we can show that Find-Acceptable-Plan is not only sound and guaranteed to terminate, but also complete:
+     </paragraph>
+     <paragraph label="Lemma 6">
+      If CP is sound and complete, Find-Acceptable-Plan is complete.
+     </paragraph>
+     <paragraph label="Proof">
+      To show that Find-Acceptable-Plan is complete, it is enough to show that Find-Acceptable-Plan never backtracks from a state along a U-acceptable path to a goal. We show this by contradiction.Suppose Find-Acceptable-Plan is backtracking for the first time from a partial plan p with associated sates {a mathematical formula}s0,…,s from which there is a U-acceptable plan to the goal. Since p is U-acceptable, there is an action a applicable in s, the last state of p, which is along U-acceptable path to the goal. Since CP is complete, Find-Acceptable-Plan added the transition {a mathematical formula}(s,a) to B sometime before hitting Line 21.Now we reason about how and when {a mathematical formula}(s,a) appeared in B. There are two locations in Find-Acceptable-Plan where B is modified. Either {a mathematical formula}(s,a) must have been added via Line 13 or Line 21. We now show contradictions in four cases:
+      <list>
+       {a mathematical formula}(s,a) was added to B with a partial plan that was a strict prefix of p.{a mathematical formula}(s,a) was added to B with the partial plan p.{a mathematical formula}(s,a) was added to B with a partial plan {a mathematical formula}p′ where p is a strict prefix of {a mathematical formula}p′.{a mathematical formula}(s,a) was added to B with a partial plan {a mathematical formula}p′ where neither p nor {a mathematical formula}p′ is a prefix of the other.Therefore, since any backtracking along a
+      </list>
+      <paragraph>
+       U-acceptable path to the goal causes a contradiction, Find-Acceptable-Plan is complete.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Theorem 1">
+      Let CP be a sound and complete classical planner, U be a set of states, D be a nondeterministic planning domain, and{a mathematical formula}D¯=(L,O¯)be the determinization of D. Let S be the set of all states in{a mathematical formula}L(i.e.,{a mathematical formula}S=2F),{a mathematical formula}F={all ground atoms overL}, and{a mathematical formula}Abe the set of all possible actions (i.e., all possible ground instantiations of the planning operators in O).Then{a mathematical formula}Find-Acceptable-Plan(D,D¯,s0,G,CP,U)makes at most{a mathematical formula}|S|⋅|A|+1calls to CP, and returns an acyclic plan, if such a plan exists, whose policy image in D avoids the states in U.
+     </paragraph>
+     <paragraph label="Proof">
+      Immediately follows from Lemma 3, Lemma 4, Lemma 6.  □
+     </paragraph>
+     <paragraph label="Lemma 7">
+      If CP is sound and guaranteed to terminate, then NDP2 returns in at most{a mathematical formula}|S|2calls to Find-Acceptable-Plan, where S is the set of states in the domain.
+     </paragraph>
+     <paragraph label="Proof">
+      By Lemma 4, we have that Find-Acceptable-Plan is sound and terminates. Every iteration of NDP2 selects s, a non-goal π-result of {a mathematical formula}S0, and either produces a weak plan from that state to a goal state, or fails to find a plan, and adds s to U.If NDP2 found a plan for s, it will not be a non-goal π-result of {a mathematical formula}S0 again unless NDP2 adds a child of s to U. Since there are finitely many states, there can be at most {a mathematical formula}|S| many iterations of the main planning loop before NDP2 either returns or adds a state to U.Once a state is in U, since Find-Acceptable-Plan is sound, no action added to the policy will lead to that state. So again, NDP2 can only add at most {a mathematical formula}|S| states to U before there is no path from any leaf state to a goal that does not lead to a state in U.With at most {a mathematical formula}|S| iterations between adding a state to U and at most {a mathematical formula}|S| additions to U, NDP2 must return in at most {a mathematical formula}|S|2 calls to Find-Acceptable-Plan.  □
+     </paragraph>
+     <paragraph>
+      As written, this means that NDP2 will make {a mathematical formula}O(|S|3⋅|A|) calls to CP. Notice, however, that we only add states to U. This means that in Find-Acceptable-Plan, we can cache B and K per starting state (caching p will not be helpful). This means that Find-Acceptable-Plan will only call CP{a mathematical formula}O(|S|⋅|A|) times per starting state, which reduces NDP2's number of calls to CP to {a mathematical formula}O(|S|2⋅|A|).
+     </paragraph>
+     <paragraph label="Lemma 8">
+      If CP is sound, then after each iteration of NDP2, there are no inescapable cycles in π. That is, every π-descendant state of the initial state has a path to a π-result of the initial state.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is by induction on the changes to π.When π is empty, the initial state is a π-result of itself, so the lemma is trivially true. For the induction step, there are two ways NDP2 can change π:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Merging a plan from Find-Acceptable-Plan to π (Line 11).
+      </list-item>
+      <list-item label="2.">
+       Find-Acceptable-Plan returns failure (Line 19).
+      </list-item>
+     </list>
+     <paragraph label="Lemma 9">
+      If CP is sound, NDP2 is sound.
+     </paragraph>
+     <paragraph label="Proof">
+      If NDP2 returns a policy, by the previous lemma all π-descendants of the initial state have a path to a non-goal π-result or a goal state. Since NDP2 terminated without failure, there are no more non-goal π-results in the policy, so all states have a path to a goal state, and π is a valid strong cyclic plan.  □
+     </paragraph>
+     <paragraph label="Lemma 10">
+      If CP is sound and complete, at every point in the execution of NDP2 on a nondeterministic problem{a mathematical formula}P=(D,S0,G), the set U is a subset of all unsolvable states. Thus any state in U cannot appear in any strong-cyclic solution policy for P.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof is by induction on the size of U.Let s be the first state added to U, which means Find-Acceptable-Plan returned failure when planning from s. Since U is empty and by Lemma 6 Find-Acceptable-Plan is complete, there is no path to a goal state from s, and so s would not be a π-descendant of {a mathematical formula}s0 in any valid strong cyclic policy.Induct. Assume U contains only states which may not appear in any strong cyclic policy. Let s be the next state added to U, which means Find-Acceptable-Plan returned failure when planning from that state. Since Find-Acceptable-Plan is complete, all possible paths from s to a goal state also lead to a state in U, and thus s must also not appear in any valid policy.  □
+     </paragraph>
+     <paragraph label="Lemma 11">
+      If CP is sound and complete, NDP2 is complete.
+     </paragraph>
+     <paragraph label="Proof">
+      Proof by contradiction. Assume NDP2 is not complete. Then there is a domain D, initial states {a mathematical formula}S0, goal set G, and strong cyclic policy π such that {a mathematical formula}NDP2(D,S0,G,CP) returns failure, even though π is a valid strong cyclic policy.This means Find-Acceptable-Plan returned failure from an initial state, and so there is no path to the goal which also doesn't lead to a state in U. However, π has paths from each of the initial states to the goal, and so some action along each of those paths must lead to a state in U. This is a contradiction with the above lemma, that U will never contain states that appear in any strong-cyclic solution.  □
+     </paragraph>
+     <paragraph label="Theorem 2">
+      Let CP be a sound and complete classical planner and{a mathematical formula}P=(D,S0,G)be a nondeterministic planning problem with{a mathematical formula}D=(L,O). Let S be the set of all states in{a mathematical formula}L(i.e.,{a mathematical formula}S=2F),{a mathematical formula}F={all ground atoms overL}, and{a mathematical formula}Abe the set of all possible actions (i.e., all possible ground instantiations of the planning operators in O).Then{a mathematical formula}NDP2(D,S0,G,CP)is sound and complete, and returns at most in{a mathematical formula}|S|2calls to Find-Acceptable-Plan.
+     </paragraph>
+     <paragraph label="Proof">
+      Immediately follows from Lemma 7, Lemma 9, Lemma 11.  □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Extracting solutions from abstract and compound-abstract problems
+     </section-title>
+     <paragraph>
+      Given a problem P and it's abstraction {a mathematical formula}P⁎, let {a mathematical formula}s⁎ be an abstraction of a state s, let {a mathematical formula}a⁎ from {a mathematical formula}P⁎ be an action such that {a mathematical formula}γP⁎(s⁎,a⁎)={s1⁎,…,sn⁎,s1′,…,sj′}, where states {a mathematical formula}s1′,…,sj′ are non-abstract, and let a be the action in P whose abstraction is {a mathematical formula}a⁎ where {a mathematical formula}γP(s,a)={s1,…,sm,s1′,…,sj′} ({a mathematical formula}n&lt;m). Then for each {a mathematical formula}si{a mathematical formula}(i=1,…,m), there is a merge action {a mathematical formula}merge({…})i such that the policy {a mathematical formula}{(s,a),(s1,merge({…})1),…,(sm,merge({…})m)} has exactly the same π results as the policy {a mathematical formula}{(s⁎,a⁎)}. We call this policy the unabstracted image of {a mathematical formula}(s⁎,a⁎) in s. We skip the details of how to find {a mathematical formula}merge({…})i from {a mathematical formula}si, since this is just a variant of the maximal abstraction algorithm.
+     </paragraph>
+     <paragraph>
+      For any non-goal non-abstract state s, we define the π-path corresponding to state s recursively as a sequence of states, starting with s. If {a mathematical formula}s′ is on the π-path corresponding to s, then:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}π(s′) is not a split-p or {a mathematical formula}merge({}) action, then {a mathematical formula}s′ is the last state on the π-path corresponding to s.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}π(s′) is the action {a mathematical formula}merge({…}), then {a mathematical formula}γ(s′,merge({…})) is the next state in the π-path corresponding to s.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}π(s′) is the action {a mathematical formula}split-p(…) and {a mathematical formula}γ(s′,split-p(…))={s1,s2}, then only one of {a mathematical formula}s1 or {a mathematical formula}s2 is consistent with s, and that state is on the π-path corresponding to s.
+      </list-item>
+     </list>
+     <paragraph>
+      If the π-path corresponding to s is finite (it does not loop forever), then the last state {a mathematical formula}s′ is the π-corresponding state to s, and the action {a mathematical formula}π(s′) is executable in state s.
+     </paragraph>
+     <paragraph>
+      Given a solution {a mathematical formula}π⁎ for {a mathematical formula}P⁎, Algorithm 7 can extract a solution for P. It loops over the solution, picking a non-abstract state s where π assigns an action with abstract effects. After the first iteration, this may include states where the current policy assigns a {a mathematical formula}merge({…}) action.
+     </paragraph>
+     <paragraph>
+      Algorithm 7 then finds the π-corresponding state {a mathematical formula}s⁎ (which is potentially equal to s) and replaces {a mathematical formula}π(s) with {a mathematical formula}π(s⁎). Algorithm 7 then, for every child {a mathematical formula}si of s for which {a mathematical formula}π(si) is undefined, adds the corresponding action from the unabstracted image of {a mathematical formula}(s⁎,a⁎).
+     </paragraph>
+     <paragraph>
+      The policy π should be a strong cyclic solution to a partially unabstracted {a mathematical formula}P⁎ after every iteration of the main loop. So if after merging the unabstracted image of {a mathematical formula}(s⁎,a⁎), s no longer has a path to the goal, then Algorithm 7 picks a state in the children of s replaces the policy for it with a {a mathematical formula}merge({…}) action pointing to one of the former children of s (one in {a mathematical formula}γ(s,a⁎)). Algorithm 7 terminates when no abstracted actions are left in the solution.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}P⁎⁎ be a compound-abstract version of {a mathematical formula}P⁎, and {a mathematical formula}π⁎⁎ be a solution for {a mathematical formula}P⁎⁎. Algorithm 8 is an algorithm to extract an abstract plan {a mathematical formula}π⁎ from {a mathematical formula}π⁎⁎. It works by iterating over the state-action pairs in {a mathematical formula}π⁎⁎, modifying them to translate each compound action {a mathematical formula}split-p(…)⋅o⁎⁎(…) into its components {a mathematical formula}split-p(…) and {a mathematical formula}o⁎⁎(…). With each pass of the main loop, Algorithm 8 reduces the maximum amount of compounding. It terminates when none of the actions in {a mathematical formula}π⁎⁎ is compound.
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Unsoundness of NDP
+     </section-title>
+     <paragraph>
+      Algorithm 9 is the NDP algorithm from [30]. Unlike NDP2, NDP incorporates a plan by first converting it to a policy (presumably by first removing any cycles from the from the plan), and then incorporating any state-action pairs for any state where the current policy is undefined. Here we show by example that this is unsound. NDP, if used in the presence of unsolvable states, may return policies which are not strong cyclic solutions.
+     </paragraph>
+     <paragraph label="Example">
+      Consider the nondeterministic planning problem {a mathematical formula}P=(D,S0,G) where {a mathematical formula}S0={s0} and {a mathematical formula}G={sg}. Fig. C.14 illustrates the nondeterministic planning problem P. In the figure, {a mathematical formula}D¯ is the determinization of D.In NDP's first iteration, let CP return the shortest classical solution: {a mathematical formula}〈a0,a31〉 (Fig. C.15). After NDP incorporates the plan into the current policy π, there will be one non-goal π-result of {a mathematical formula}S0, {a mathematical formula}s3. On the next iteration, NDP will select {a mathematical formula}s3, and call CP on the problem {a mathematical formula}(D¯,s3,G). Since there are no solutions to that problem, NDP will remove {a mathematical formula}(s1,a3) from π and will make {a mathematical formula}a31 and {a mathematical formula}a32 inapplicable at {a mathematical formula}s1 in {a mathematical formula}D¯.Now {a mathematical formula}s1 is the only non-goal π-result of {a mathematical formula}S0. NDP will now call CP on the classical planning problem {a mathematical formula}(D¯,s1,G). CP will return the plan {a mathematical formula}〈a1,a2,a4,a5,a6〉. NDP will incorporate just the first two actions from the plan, but it will not incorporate {a mathematical formula}a4, since {a mathematical formula}s0 already has an action, i.e., {a mathematical formula}a0, in the current policy. This leaves us with the policy shown on the right in Fig. C.16, where there is an inescapable loop between {a mathematical formula}s0, {a mathematical formula}s1, and {a mathematical formula}s2. There are now no non-goal π-results of {a mathematical formula}S0, and so NDP will exit on the next iteration of the loop, returning the policy found in Fig. C.16 which is not a solution to the original problem.  □
+     </paragraph>
+     <paragraph>
+      So by never changing the action already associated with a state, NDP can create loops where states have no path to the goal. This violates one of the invariants that makes NDP2 work, which is that after every iteration, every state in the execution structure has a path to a goal or leaf state. This invariant is made explicit and proven in Lemma 8 in Appendix A.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

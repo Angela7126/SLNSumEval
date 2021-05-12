@@ -1,0 +1,685 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Understanding the complexity of axiom pinpointing in lightweight description logics.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The success of description logics (DLs) [1] as knowledge representation languages has been witnessed by the development of more, and usually larger, ontologies based on these formalisms. In these languages, the knowledge of a domain is represented via a set of axioms that express the relationships between the different notions being modelled. With the help of advanced ontology editing and versioning tools [2], [3], [4], it is becoming increasingly easier for domain experts who may not be versed in the underlying logics to model part of their knowledge, and collaborate with other experts to represent large domains.
+     </paragraph>
+     <paragraph>
+      It is well known that ontology development is an error-prone task, where minor variations may lead to unwanted or erroneous consequences. Moreover, even when the ontology is correct and no errors are detected, some of its (implicit) consequences can be surprising to the knowledge engineers and domain experts. In order to understand the reason for a consequence, it is helpful to extract only those axioms that are responsible for it [5], [6]. This task is commonly known as axiom pinpointing in the DL literature. Briefly, axiom pinpointing refers to the task of finding minimal sets of axioms that are responsible for a given entailment. These sets are sometimes called justifications in the literature [7], [8], [9], as they clarify the causes for the consequence to appear. To avoid confusion with other uses of the term, we use the more technical term MinA, which stands for “minimal axiom set.”
+     </paragraph>
+     <paragraph>
+      Two subfamilies of DLs, namely the DL-Lite [10] and {a mathematical formula}EL[11] families, have attracted special interest due to their polynomial-time standard reasoning problems. Thus, they are typically referred to as “lightweight” DLs. Due to their low computational complexity, these logics have been successfully used to model large ontologies, in particular in the bio-medical domain [12]. In fact, we see more and often larger ontologies being used in practical applications within this domain. The most well-known of these ontologies is the Snomed CT medical ontology [13] that contains over half a million axioms from a slight extension of {a mathematical formula}EL.
+     </paragraph>
+     <paragraph>
+      Due to their size and practical use, it is important to provide automated axiom pinpointing tools that can handle these ontologies efficiently. As a first step towards this aim, it is important to understand the theoretical limits of axiom pinpointing for lightweight DLs. In particular, it is interesting to detect the cases in which finding some or all MinAs with certain properties remains tractable. For that reason, in this paper we extensively study the complexity of many decision, counting, and enumeration problems related to axiom pinpointing and its applications for ontology debugging and consequence understanding. More precisely, we study the complexity of enumerating all MinAs with and without a specific order, of counting the total number of MinAs, and of deciding whether some given axioms belong or not to some or all MinAs, among other problems (see Table 5 in page 101 for a full summary of the results).
+     </paragraph>
+     <paragraph>
+      One important thing to notice is that standard reasoning is a sub-task of axiom pinpointing. Thus, the latter necessarily has a higher (or equal) complexity than the former. By focusing on lightweight DLs, whose standard reasoning problems are polynomial, we also gain insights in the intrinsic complexity that is added by axiom pinpointing, as opposed to mere reasoning. For instance, we observe that deciding whether an axiom belongs to at least one MinA is intrinsically a hard problem, becoming np-hard even for the most basic kind of axioms studied.
+     </paragraph>
+     <paragraph>
+      We emphasise that axiom pinpointing is relevant beyond the context of description logics and consequence understanding and repair. MinAs have also been studied, under the name of minimal unsatisfiable subsets (MUS) [14] in the context of propositional logic and maximal satisfiability of formulas (or MaxSAT) [15], [16]. As for description logics, computing, counting, and enumerating MinAs has been shown to be fundamental for other non-standard extensions and reasoning tasks. These include, among many others, dealing with trust, provenance, and preferences [17], [18], error-tolerant [19], [20], [21] and context-based reasoning [22], as well as some variants of probabilistic [23], [24], [25] and fuzzy logic [26]. Studying the complexity of axiom pinpointing and methods for proving their lower bounds has a direct impact on our understanding of those non-standard reasoning problems.
+     </paragraph>
+     <paragraph>
+      Some of the results presented in this paper appeared previously in preliminary versions. Specifically, in [27], [28] we investigated the complexity of axiom pinpointing in the propositional Horn fragment, and in {a mathematical formula}EL, and in [29], [30] we studied this complexity for the DL-Lite family, which has been very popular due to its success in efficiently accessing large data and answering complex queries on this data [10], [31]. For this family various aspects of finding explanations have already been considered in [32], [33]. The main focus of those papers is on the problem of explaining query answering and ABox reasoning, which are the most standard types of reasoning problems considered in the DL-Lite family. In particular the authors investigate in detail the problem of determining why a value is returned as an answer to a conjunctive query posed to a DL-Lite ABox, why a conjunctive query is unsatisfiable, and why a particular value is not returned as answer to a conjunctive query. Complementary to the work in [32], [33] we consider only TBox reasoning. Here, we extend the previous results by considering also inverse roles in DL-Lite. In addition, we filled several gaps regarding the enumeration of MinAs in {a mathematical formula}DL-Litecore and {a mathematical formula}DL-Litekrom TBoxes, studied in more detail the {a mathematical formula}DL-Litebool case, and added a new case of ordered enumeration that takes into account the size of the MinAs.
+     </paragraph>
+     <paragraph>
+      The paper is structured as follows. After briefly recalling the basic notions from lightweight DLs, axiom pinpointing, and enumerating and counting complexity classes, we study the complexity of decision problems associated with axiom pinpointing (Section 3). In Sections 4 and 5 we analyse the complexity of enumerating and counting MinAs, respectively. All these results are summarised in Section 6, before giving conclusions and directions for future research.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We briefly recall basic notions from propositional logic, the {a mathematical formula}EL and DL-Lite families of description logics (DLs), axiom pinpointing, and non-standard complexity measures that deal with enumeration and counting problems.
+     </paragraph>
+     <paragraph>
+      In propositional logic we build formulae using a set of propositional variables and the Boolean connectives ¬ (negation), ∨ (disjunction) and ∧ (conjunction). A variable or its negation is called a literal, and a disjunction of literals, for example {a mathematical formula}¬p1∨¬p2∨p3, is called a clause. Clauses like the previous one are often written as implications of the form {a mathematical formula}p1∧p2→p3. A clause is called a Horn (respectively dual-Horn) clause if it contains at most one positive (negative) literal, and a definite Horn (definite dual-Horn ) clause if it contains exactly one positive (respectively negative) literal. Throughout the text we will call definite Horn (definite dual-Horn ) clauses just Horn (dual-Horn ) clauses for short. In other words, Horn clauses are of the form {a mathematical formula}p1∧…∧pn→p and dual-Horn clauses are of the form {a mathematical formula}p→p1∧…∧pn. We will call clauses with exactly one positive and one negative literal, like {a mathematical formula}p1→p2, core clauses.
+     </paragraph>
+     <paragraph>
+      In DLs one formalizes the relevant notions of an application domain through concepts. Concepts are inductively built from a set of concept names, role names, and concept constructors that are allowed by the particular DL language in use. The knowledge of the domain is then described through a set of axioms that restrict the way in which these concepts can be interpreted.
+     </paragraph>
+     <section label="2.1">
+      The {a mathematical formula}EL family
+      <paragraph>
+       Concepts of the DL {a mathematical formula}EL are formed from a set of concept names {a mathematical formula}NC and a set of role names {a mathematical formula}NR using the three constructors ⊓ (conjunction), ∃ (existential restrictions) and ⊤ (top). More formally, if A is a concept name and r is a role name, then concepts are built using the syntactic rule:{a mathematical formula} The semantics of {a mathematical formula}EL is defined in terms of interpretations{a mathematical formula}I=(ΔI,⋅I), where the domain{a mathematical formula}ΔI is a non-empty set of individuals, and the interpretation function {a mathematical formula}⋅I maps each concept name {a mathematical formula}A∈NC to a subset {a mathematical formula}AI of {a mathematical formula}ΔI and each role name {a mathematical formula}r∈NR to a binary relation {a mathematical formula}rI on {a mathematical formula}ΔI. The mapping {a mathematical formula}⋅I can be extended to arbitrary {a mathematical formula}EL concepts as shown in the second column of Table 1.
+      </paragraph>
+      <paragraph>
+       An {a mathematical formula}ELTBox is a finite set of general concept inclusion axioms (GCIs) of the form {a mathematical formula}C⊑D, where {a mathematical formula}C,D are two {a mathematical formula}EL concepts. The interpretation {a mathematical formula}I is a model of the TBox {a mathematical formula}T if, for every GCI {a mathematical formula}C⊑D in {a mathematical formula}T it holds that {a mathematical formula}CI⊆DI (see the last row of Table 1). The main inference problem for {a mathematical formula}EL is the subsumption problem [34], [35], which is defined as follows: given two {a mathematical formula}EL concepts {a mathematical formula}C,D and an {a mathematical formula}EL TBox {a mathematical formula}T, check if C is subsumed by D w.r.t. {a mathematical formula}T (written {a mathematical formula}T⊨C⊑D); that is, decide whether {a mathematical formula}CI⊆DI holds in every model {a mathematical formula}I of {a mathematical formula}T.
+      </paragraph>
+      <paragraph>
+       We will call a concept description simple if it is of the form A or {a mathematical formula}∃r.A for {a mathematical formula}A∈NC,r∈NR, and a GCI a Horn-{a mathematical formula}ELGCI if it is of the form {a mathematical formula}C1⊓…⊓Cn⊑D, where {a mathematical formula}Ci,D are simple concept descriptions, {a mathematical formula}1≤i≤n.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       The DL-Lite family
+      </section-title>
+      <paragraph>
+       DL-Lite concepts are constructed and interpreted in a similar way to {a mathematical formula}EL concepts. We briefly introduce the syntax of the DL-Lite family following the notation in [10], restricting our attention to the members of DL-Lite that we use in this paper only. For a full overview on DL-Lite, we refer the reader to [10].
+      </paragraph>
+      <paragraph>
+       Let A be a concept name, r a role name, and q a natural number. Then DL-Lite concepts and roles are constructed as follows:{a mathematical formula} Concepts of the form B are called basic, and those of form C are called general concepts. The semantics of this constructors are presented in the second column of Table 1.
+      </paragraph>
+      <paragraph>
+       A {a mathematical formula}DL-LiteboolN TBox is a set of GCIs of the form {a mathematical formula}C1⊑C2, where {a mathematical formula}C1,C2 are general concepts. A TBox is a {a mathematical formula}DL-LitecoreN TBox if its axioms are of the form {a mathematical formula}B1⊑B2, or {a mathematical formula}B1⊑¬B2, where {a mathematical formula}B1,B2 are basic concepts. {a mathematical formula}DL-LitekromN TBoxes generalize core ones by allowing also axioms of the form {a mathematical formula}¬B1⊑B2. Finally, a {a mathematical formula}DL-LitehornN TBox is composed only of axioms of the form {a mathematical formula}⨅kBk⊑B with {a mathematical formula}B,Bi basic concepts.
+      </paragraph>
+      <paragraph>
+       We can drop the superscript {a mathematical formula}N from the name of the languages by allowing only number restrictions of the form {a mathematical formula}≥1s for constructing basic concepts. In this case, we will sometimes use the expression ∃s to represent {a mathematical formula}≥1s with the intuition that {a mathematical formula}≥1s requires the existence of at least one s-successor. To any of the previously defined TBoxes, we can also add role inclusion axioms of the form {a mathematical formula}s1⊑s2, with {a mathematical formula}s1,s2 roles. This will be denoted using the superscript {a mathematical formula}H in the name; e.g. {a mathematical formula}DL-LiteboolHN. Since we are not dealing with so-called individuals in the present work, role inclusion axioms do not add any expressivity to {a mathematical formula}DL-LiteαH TBoxes for any {a mathematical formula}α∈{core,horn,krom}. Indeed, a basic concept B will only make use of a role s if B is an existential restriction ∃s. As we are only interested in concept subsumption, we can then represent the role inclusion axiom {a mathematical formula}s1⊑s2 through the concept inclusion {a mathematical formula}∃s1⊑∃s2. Thus, the complexity results we present here for {a mathematical formula}DL-Liteα TBoxes immediately hold also for {a mathematical formula}DL-LiteαH TBoxes. Note that this may not be true if number restrictions are allowed; that is, the complexity results for {a mathematical formula}DL-LiteαN may not transfer directly to {a mathematical formula}DL-LiteαHN. One interesting observation is that, despite increasing the expressivity of DL-Lite, inverse roles do not seem to affect the complexity of axiom-pinpointing as will become apparent in the following sections.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Knowledge bases
+      </section-title>
+      <paragraph>
+       We refer to both propositional clauses and GCIs, either from {a mathematical formula}EL or DL-Lite, as axioms, and a set of axioms as a knowledge base (KB). We say that a KB is of type Horn (core, dual-Horn, Horn- {a mathematical formula}EL, {a mathematical formula}EL, {a mathematical formula}DL-Litecore, {a mathematical formula}DL-Litehorn, {a mathematical formula}DL-Litekrom, {a mathematical formula}DL-Litebool, respectively) if it contains only Horn (core, dual-Horn, Horn- {a mathematical formula}EL, {a mathematical formula}EL, {a mathematical formula}DL-Litecore, {a mathematical formula}DL-Litehorn, {a mathematical formula}DL-Litekrom, or {a mathematical formula}DL-Litebool, respectively) axioms. Throughout this paper, we formulate our problems in a generic way without referring to a specific type of KB, but show the results for each KB type separately. To minimize repetitions, we first show some basic relationships between the different types of KBs presented.
+      </paragraph>
+      <paragraph>
+       Core axioms are a special case of all the other types of axioms introduced above. According to the semantics of these axioms, it is easy to see that dual-Horn KBs are not more expressive than core ones: a dual-Horn axiom {a mathematical formula}p→q1∧…∧qn can be expressed by the core axioms {a mathematical formula}p→q1,…,p→qn. Hence, any dual-Horn KB can be transformed into an equivalent core KB in linear time. However, as we show in this paper, the complexity of pinpointing-related problems is in general higher for dual-Horn KBs than for core ones. The main reason for this disparity is that in axiom pinpointing, all axioms in a KB are considered independently (see Definition 1 below). Hence, despite being logically equivalent, the dual-Horn axiom {a mathematical formula}p→q1∧…∧qn and the set of core axioms {a mathematical formula}p→q1,…,p→qn yield different pinpointing results.
+      </paragraph>
+      <paragraph>
+       Horn axioms are a special kind of Horn-{a mathematical formula}EL ones, which are themselves a (strict) subclass of {a mathematical formula}EL axioms; for example, the {a mathematical formula}EL axiom {a mathematical formula}A⊑B⊓C is not a Horn-{a mathematical formula}EL axiom. Likewise, Horn axioms are a special case of {a mathematical formula}DL-Litehorn ones, but these are not instances of {a mathematical formula}EL axioms, as the bottom concept ⊥ cannot be expressed with the {a mathematical formula}EL constructors. All these relations are depicted in Fig. 1. Notice that the figure shows the relationship between the classes of KBs that are expressible in each language, and not their logical expressivity. For example, every core KB is also a dual-Horn KB but the converse is not true—even though every dual-Horn KB can be rewritten into a logically equivalent core one.
+      </paragraph>
+      <paragraph>
+       We will make use of these relationships to transfer complexity results between the different classes of axioms in the following sections. The complexity of reasoning in the DL-Lite family has been investigated in detail in [10] and the complexity of reasoning in {a mathematical formula}EL has been investigated in [35].
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Axiom pinpointing
+      </section-title>
+      <paragraph label="Definition 1">
+       Axiom pinpointing refers to the task of finding the specific axioms that are responsible for a given consequence to follow from a KB. When dealing with monotonic consequences, as in the case of DLs and propositional logic, this task equivalently corresponds to finding the minimal subsets (w.r.t. set inclusion) of the KB that entail the consequence. We call such a set a MinA.{sup:1}MinALet {a mathematical formula}K be a set of axioms and φ be a logical consequence of it, i.e., {a mathematical formula}K⊨φ. We call a set {a mathematical formula}M⊆K a minimal axiom set or MinA for φ in {a mathematical formula}K if {a mathematical formula}M⊨φ and for every {a mathematical formula}M′⊂M, it holds that {a mathematical formula}M′⊭φ.
+      </paragraph>
+      <paragraph>
+       It has been shown that a single MinA for a consequence can be computed by calling a reasoner as many times as there are axioms in the KB [37], [38]. The idea is to systematically remove one axiom at a time from the KB, while the consequence is preserved. In particular this means that in every logic with polynomial-time reasoning, a MinA can be computed in polynomial time, with the degree of the polynomial increasing by one.
+      </paragraph>
+      <paragraph>
+       However, a single consequence from a KB may have several, potentially exponentially many, MinAs, and in many cases computing only one of them does not suffice. For instance, if the consequence is unwanted, then correcting one of the ways in which it can be derived does not ensure that the consequence will not follow from some other combination of axioms in the KB. It is thus important to analyse the complexity of finding all the MinAs or deciding some of their properties.
+      </paragraph>
+      <paragraph>
+       We notice that some previous work on axiom pinpointing has focused on the computation of a so-called pinpointing formula [39], [40], [41], that provides a compact encoding of all MinAs. However, extracting the specific MinAs and other information from this formula is already a hard problem. For that reason, in this paper we focus only on the computation of MinAs as subsets of the KB, and not in the construction of an alternative characterization.
+      </paragraph>
+      <paragraph>
+       In order to analyze the complexity of enumerating and counting the (potentially exponentially many) solutions to a problem, it is necessary to consider some special complexity classes. Before presenting our results, we briefly recall some of the basic enumeration and counting complexity classes and their properties.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Complexity of enumeration
+      </section-title>
+      <paragraph>
+       In complexity theory, we are sometimes interested not only in deciding whether a problem has a solution or not, but also in enumerating all solutions of the problem. We call such problems enumeration problems. For analyzing the complexity of enumeration problems where the number of solutions can be exponential in the size of the input, one needs appropriate measures. One such measure is the notion of polynomial delay. We say that an algorithm runs with polynomial delay[42] if the time until the first solution is generated, and thereafter the time between any two consecutive solutions, is bounded by a polynomial in the size of the input. An example of such an algorithm is the one given in [43] that enumerates all maximal independent sets of a graph with polynomial delay.
+      </paragraph>
+      <paragraph>
+       Another measure of performance is to take into account not only the size of the input, but also the size of the output. We say that an enumeration algorithm runs in output polynomial time (or polynomial total time) [42] if it outputs all solutions in time polynomial in the size of the input and the output. Clearly, every polynomial delay algorithm is also an output polynomial algorithm, i.e., the notion of polynomial delay is stronger than the notion of output polynomial. One advantage of an output polynomial algorithm is that it runs in polynomial time whenever the problem has polynomially many solutions. However, an output polynomial algorithm may for instance first compute all solutions and then output them all together. With polynomial delay algorithm on the other hand, a user needs to wait only polynomial time between each retrieved solution, regardless of how many solutions there are in total. Such an algorithm is especially good if one wants to enumerate the solutions one at a time and maybe stop the execution before all of them have been found; for instance after k solutions have been output.
+      </paragraph>
+      <paragraph>
+       An intermediate notion between polynomial delay and output polynomial is that of incremental polynomial. An enumeration algorithm is incremental polynomial if the time required for generating each new solution is polynomial in the size of the input and the output generated so far. Clearly, every polynomial delay algorithm is incremental polynomial, and every incremental polynomial algorithm is also output polynomial.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       A more complicated situation is when the solutions are required to be output in some pre-specified order such as a lexicographic order (see Definition 11). In general, the complexity of enumerating solutions in a specified order is of interest only if polynomial delay or incremental polynomial algorithms exist. Indeed, if all solutions can be enumerated in output polynomial time, then they can be enumerated in output polynomial time in any desired order: one needs only to generate all solutions, sort them and output them in the new order. If an enumeration problem can be solved in output polynomial time, then it can be solved in any polynomially-computable order in output polynomial time.
+      </paragraph>
+      <paragraph>
+       A good example of an algorithm that provides ordered solutions with polynomial delay is the one introduced in [42] that generates maximal independent sets of a graph in lexicographic order with polynomial delay.
+      </paragraph>
+     </section>
+     <section label="2.6">
+      <section-title>
+       Counting complexity
+      </section-title>
+      <paragraph>
+       In applications where one is interested in computing all solutions, it might be useful to know in advance how many of them exist. In complexity theory, problems that ask “how many solutions exist” for a given problem instance are called counting problems. For instance the counting version of sat, called #sat asks how many satisfying truth assignments exist for a Boolean formula given in cnf. Obviously, a counting problem is at least as hard as its underlying decision problem. For instance, if we could solve #sat, then we would also be able to solve sat: an expression is satisfiable if and only if the number of truth assignments that satisfy it is non-zero.
+      </paragraph>
+      <paragraph>
+       Complexity of counting problems was first investigated by Valiant [44]. For systematically studying and classifying counting problems, he introduced the counting complexity class #p, which is the class of functions that count the number of accepting paths of nondeterministic polynomial-time Turing machines (TMs). Typical members of this class are the problems of counting the number of solutions of np-complete problems. Valiant showed in [45] however, that there are also #p-complete problems whose underlying decision problem can be solved in polynomial time. It is well known that given a bipartite graph, whether it has a perfect matching can be decided in polynomial time. However, Valiant has shown in [45] that counting the perfect matchings of a given bipartite graph is #p-complete.
+      </paragraph>
+      <paragraph>
+       A related complexity class is #np, which is the class of functions that count the number of solutions of nondeterministic polynomial-time TMs with an nporacle. Intuitively, this class corresponds to counting the number of solutions of {a mathematical formula}Σ2p problems. In order to prove hardness for counting complexity classes, reductions between problems must also preserve the number of solutions. In general, it suffices to consider weakly parsimonious reductions[46], [47]. Intuitively, these reductions transform in polynomial time an instance of the original problem to an instance of the reduced problem such that the number of solutions of the original instance is a polynomially-computable function of the number of solutions of the reduced instance.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Preferred and unwanted axioms
+     </section-title>
+     <paragraph>
+      In this section, we analyze the complexity of the main decision problems that occur in axiom pinpointing, with a focus on the tractable DLs introduced before. Specifically, we study the problems of deciding whether a KB is a MinA (is-mina ), whether there exists a MinA that does not contain any of a given set of KBs (mina-irrelevance ), and whether there exists a MinA containing a given axiom (mina-relevance ). These results are summarized in Table 2. As it can be seen, the complexity of these problems is governed by that of standard reasoning in the logic. In Section 4 we analyze the complexity of enumerating MinAs, and in Section 5 we study the complexity of counting MinAs.
+     </paragraph>
+     <section label="3.1">
+      Deciding is-mina
+      <paragraph>
+       We start by formalizing a result that was already hinted in Section 2.4 regarding the problem of deciding whether a given set of axioms is already a MinA.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:is-mina
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K, an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and {a mathematical formula}M⊆K.
+       </list-item>
+       <list-item>
+        Question: Is {a mathematical formula}M a MinA for φ in {a mathematical formula}K?
+       </list-item>
+      </list>
+      <paragraph label="Proposition 3">
+       A simple approach for computing one MinA is presented in Algorithm 1. The algorithm simply tries to remove axioms from the KB while preserving the consequence. Overall, this algorithm performs {a mathematical formula}|K|+1 entailment tests to output a MinA [37], [38]. This algorithm can also be used to decide is-mina: {a mathematical formula}M is a MinA for φ in {a mathematical formula}K iff find-mina({a mathematical formula}M,φ) returns {a mathematical formula}M as output. Notice that Algorithm 1 is agnostic to the type of axioms or the entailment relation used; it requires only an oracle that decides the entailment tests within the for-loop. Overall, this yields the following result. Consider an arbitrary logic such that deciding a logical consequence is in the complexity class{a mathematical formula}C; then,is-minais in{a mathematical formula}pC.
+      </paragraph>
+      <paragraph label="Proof">
+       A direct consequence of this proposition is that is-mina is polynomial in all the logics defined in the previous section, except for {a mathematical formula}DL-Litebool where this approach yields a {a mathematical formula}Δ2p upper bound. This last complexity bound can be further improved. In fact, we show that is-mina is {a mathematical formula}Dp-complete for {a mathematical formula}DL-LiteboolN KBs, where {a mathematical formula}Dp is the class of problems that can be solved by one npand one conptest [48]. Notice that {a mathematical formula}Dp contains npand conp, and is contained in {a mathematical formula}Δ2p. is-minais{a mathematical formula}Dp-complete for{a mathematical formula}DL-LiteboolNKBs.To show that the problem is in {a mathematical formula}Dp one only needs to observe that {a mathematical formula}M is a MinA for ϕ if (i) {a mathematical formula}M⊨ϕ and (ii) for all {a mathematical formula}N⊊M, {a mathematical formula}N⊭ϕ. The task (i) is in conp[10] while (ii) is equivalent to deciding for a polynomial number of TBoxes {a mathematical formula}{N1,…,Nn} (where {a mathematical formula}n=|M|) that none of these TBoxes entails ϕ. This can be verified by guessing a model for each {a mathematical formula}Ni and verifying in polynomial time that none of these models satisfies ϕ. Thus, task (ii) is in np, and is-mina is hence in {a mathematical formula}Dp.To prove hardness, we provide a reduction from the is-mus problem, which is known to be {a mathematical formula}Dp-hard [49]. Given an inconsistent set of propositional clauses {a mathematical formula}F, a MUS is a minimal subset of {a mathematical formula}F that preserves inconsistency.
+       <list>
+        Problem:is-musInput: An inconsistent set of propositional clauses {a mathematical formula}F, and {a mathematical formula}E⊆F.Question: Is {a mathematical formula}E a MUS for {a mathematical formula}F?Given an instance of
+       </list>
+       <paragraph>
+        is-mus, construct a {a mathematical formula}DL-Litebool TBox as follows. For each variable x appearing in {a mathematical formula}F, introduce a concept name {a mathematical formula}Bx, and define the function {a mathematical formula}ncon mapping literals to concepts as: {a mathematical formula}ncon(x)=¬Bx; {a mathematical formula}ncon(¬x)=Bx. For a clause {a mathematical formula}ϕ=(ℓ1∨…∨ℓk), let {a mathematical formula}tϕ=A⊑¬(ncon(ℓ1)⊓…⊓ncon(ℓk)) where A is a fresh concept name. Given a set of clauses {a mathematical formula}G, then define {a mathematical formula}TG={tϕ|ϕ∈G}. It is easy to see that {a mathematical formula}TE is a MinA for {a mathematical formula}A⊑⊥ in {a mathematical formula}TF iff {a mathematical formula}E is a MUS for {a mathematical formula}F.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We now consider two problems that try to identify the axioms that are relevant for a consequence. The first problem, called mina-irrelevance, corresponds to checking the existence of a MinA that does not contain any of the given sets of axioms. The second one, called mina-relevance, is its dual problem, i.e., the problem of checking the existence of a MinA that contains a given axiom. mina-relevance is of interest in a setting where the knowledge engineer suspects an axiom for being the reason of the unwanted consequence and wants to verify whether this axiom appears in any of the MinAs. On the other hand, mina-irrelevance is of interest if one wants to avoid certain combinations of axioms in MinAs. This might be the case, for instance, if the knowledge engineer has already identified responsible axioms for an unwanted consequence and she wants to check whether an additional MinA that does not contain these axioms exist or not.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       The existence of new MinAs
+      </section-title>
+      <paragraph>
+       In this section, we focus on mina-irrelevance, which is formally defined next.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:mina-irrelevance
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and a set {a mathematical formula}K⊆P(K).
+       </list-item>
+       <list-item>
+        Question: Is there a MinA {a mathematical formula}M for φ in {a mathematical formula}K such that {a mathematical formula}S⊈M for every {a mathematical formula}S∈K?
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       mina-irrelevance refers to the problem of deciding whether there is a MinA that does not contain any of the sets in {a mathematical formula}K. Intuitively, one can consider {a mathematical formula}K as a collection of sets of axioms that are already known to be faulty. Hence, any MinA that is a superset of any element of {a mathematical formula}K will give no further information about the causes of an erroneous consequence. In order to decide mina-irrelevance, it does not suffice to remove the axioms that appear in one or all the sets that form {a mathematical formula}K. There can still be a MinA that has a non-empty intersection with each element of {a mathematical formula}K, but is not a superset of any of them. The most direct approach for solving mina-irrelevance is to test for each (minimal) hitting set {a mathematical formula}S of {a mathematical formula}K, whether there is a MinA that does not contain any of the axioms in {a mathematical formula}S.{sup:2} However, there can be exponentially many such hitting sets in the size of {a mathematical formula}K, which means that this simple approach cannot avoid an exponential execution time in the worst case. We now show that the problem is in fact np-complete already for core KBs. mina-irrelevanceisnp-complete for core KBs.The problem is clearly in np: a nondeterministic algorithm for solving it first guesses a set {a mathematical formula}M⊆K, and then tests in polynomial time whether it is a MinA that does not contain any of the {a mathematical formula}S in {a mathematical formula}K. For showing hardness we give a reduction from the np-hard path with forbidden pairs problem [50].
+       <list>
+        Problem:path with forbidden pairsInput: A graph {a mathematical formula}G=(V,E), two vertices {a mathematical formula}s,t∈V and a set {a mathematical formula}F⊆E×E.Question: Is there a simple path P from s to t in {a mathematical formula}G such that for every {a mathematical formula}(e,e′)∈F, {a mathematical formula}{e,e′}⊈P?{sup:3}Let an instance of
+       </list>
+       <paragraph>
+        path with forbidden pairs be given through the graph {a mathematical formula}G=(V,E), {a mathematical formula}s,t∈V and {a mathematical formula}F⊆E×E. We use a propositional variable {a mathematical formula}pv for every {a mathematical formula}v∈V, and define the core KB{a mathematical formula} Additionally we set {a mathematical formula}φ:=ps→pt, and define{a mathematical formula}It is easy to see that {a mathematical formula}K,φ, and {a mathematical formula}K form an instance of mina-irrelevance, and are built in polynomial time. We now prove that there is a MinA {a mathematical formula}M for φ in {a mathematical formula}K not containing any set in {a mathematical formula}K iff there is a simple path in {a mathematical formula}G from s to t not using any pair of edges appearing in {a mathematical formula}F.{a mathematical formula}(⇒) Let {a mathematical formula}M be such a MinA, and set {a mathematical formula}PM:={(v,w)|pv→pw∈M}. It is a simple induction argument to show that {a mathematical formula}PM is a path from s to t in {a mathematical formula}G, and hence contains a simple sub-path. Moreover, as {a mathematical formula}M does not contain any pair of axioms in {a mathematical formula}K, it follows that for every pair of edges {a mathematical formula}(e,e′)∈F, {a mathematical formula}{e,e′}∉PM.{a mathematical formula}(⇐) Let P be a path avoiding the forbidden pairs, and define the set of axioms {a mathematical formula}MP:={pv→pw|(v,w)∈P}. By construction, we have {a mathematical formula}MP⊨ps→pt. Thus, {a mathematical formula}MP contains a MinA for φ. Moreover, if there is {a mathematical formula}{pv→pw,pv′→pw′}∈K such that {a mathematical formula}{pv→pw,pv′→pw′}⊆MP, then it follows that {a mathematical formula}{(v,w),(v′,w′)}⊆P. This is a contradiction from the fact that {a mathematical formula}((v,w),(v′,w′))∈F.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Recall that core KBs are special cases of all the other kinds of {a mathematical formula}K that we have introduced. This yields the following corollary.
+      </paragraph>
+      <paragraph label="Proof">
+       For all kinds of KBs introduced in Section2,mina-irrelevanceisnp-hard. Moreover, for all of them, except for{a mathematical formula}DL-Litebool, the problem isnp-complete.np-hardness was shown in Theorem 5. For proving that the problem is in np, we use the same argument as in the proof of that theorem: a nondeterministic algorithm for solving it first guesses a set {a mathematical formula}M⊆K, then tests in polynomial time whether it is a MinA that does not contain any of the {a mathematical formula}S in {a mathematical formula}K.  □
+      </paragraph>
+      <paragraph>
+       Notice that the “in np” argument used in this corollary does not hold for {a mathematical formula}DL-Litebool KBs since testing whether a consequence follows from a {a mathematical formula}DL-Litebool KB is already np-hard [10]. Thus, the argument from the proof yields a {a mathematical formula}Σ2p algorithm for deciding mina-irrelevance in this logic.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      The case of mina-relevance
+      <paragraph>
+       We now consider the dual problem of mina-irrelevance, which corresponds to checking the existence of a MinA that contains a given axiom.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:mina-relevance
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and an axiom {a mathematical formula}ψ∈K.
+       </list-item>
+       <list-item>
+        Question: Is there a MinA {a mathematical formula}M for φ in {a mathematical formula}K such that {a mathematical formula}ψ∈M?
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       If we identify a specific axiom ψ as a possible culprit for an erroneous consequence φ from a KB, mina-relevance would allow us to decide whether ψ indeed appears in at least one MinA, and hence influences the deduction of the consequence φ from the KB. We now show that this problem is np-complete already for core KBs. mina-relevanceisnp-complete for core KBs.The problem is clearly in np: a nondeterministic algorithm for solving it first guesses a subset of {a mathematical formula}K, and then tests in polynomial time whether it is a MinA containing ψ. For showing hardness we provide a reduction from the following np-complete problem [52]:
+       <list>
+        Problem:path-via-nodeInput: A directed graph {a mathematical formula}G=(V,E) and three vertices {a mathematical formula}s,t,m∈V.Question: Is there a simple path from s to t in {a mathematical formula}G that passes through m?Let
+       </list>
+       <paragraph>
+        {a mathematical formula}G,s,t,m be an instance of path-via-node. We build an instance of mina-relevance as follows. We introduce a propositional variable {a mathematical formula}pv for every node {a mathematical formula}v∈(V∖{m})∪{m1,m2}, build the KB{a mathematical formula} and set {a mathematical formula}φ:=ps→pt,ψ:=pm1→pm2. We now show that there is a MinA for φ in {a mathematical formula}K containing ψ iff there is a simple path in {a mathematical formula}G from s to t that crosses through m.(⇒) Let {a mathematical formula}M be a MinA for φ containing ψ. Construct the path{a mathematical formula} Since {a mathematical formula}M⊨φ, it follows that {a mathematical formula}PM contains a simple path P from s to t. Suppose that {a mathematical formula}P≠PM; that is, there is an edge {a mathematical formula}(v,w) in {a mathematical formula}PM that does not appear in P. As P is a path from s to t, this implies that {a mathematical formula}M∖{pv→pw}⊨φ, which contradicts the assumption that {a mathematical formula}M is a MinA for φ. Thus, {a mathematical formula}PM is a simple path from s to t. Moreover, as {a mathematical formula}M contains the axiom ψ, there must be an edge in {a mathematical formula}PM of the form {a mathematical formula}(v,m) or {a mathematical formula}(m,v). This implies that {a mathematical formula}PM passes through m.(⇐) Assume that there is such a simple path P. We construct the sub-KBs{a mathematical formula} and {a mathematical formula}M:=MP∪ψ. As P is a path from s to t crossing through m, it follows that {a mathematical formula}MP⊨ps→pm1 and {a mathematical formula}MP⊨pm2→pt, and hence {a mathematical formula}M⊨φ. Since P is a simple path, {a mathematical formula}MP⊭φ. This in particular means that every MinA for φ in {a mathematical formula}M must contain ψ.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       As was the case for mina-irrelevance, hardness of the core case implies hardness for all the other types of KBs we are interested in.
+      </paragraph>
+      <paragraph label="Proof">
+       For all kinds of KBs introduced in Section2,mina-relevanceisnp-hard. Moreover, for all of them, except for{a mathematical formula}DL-Litebool, the problem isnp-complete.np-hardness is a consequence of Theorem 7. For proving that the problem is in np, we use the same argument as in the proof of that theorem: a nondeterministic algorithm for solving it first guesses a set {a mathematical formula}M⊆K, then tests in polynomial time whether it is a MinA containing ψ.  □
+      </paragraph>
+      <paragraph>
+       Once again, the algorithm proposed in the proof of this corollary yields a {a mathematical formula}Σ2p upper bound for the case of {a mathematical formula}DL-Litebool KBs. A matching lower bound for this logic can be obtained through a reduction from the {a mathematical formula}Σ2p-complete problem mus-membership[53].
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:mus-membership
+       </list-item>
+       <list-item>
+        Input: An inconsistent set of propositional clauses {a mathematical formula}F and a clause {a mathematical formula}ϕ∈F.
+       </list-item>
+       <list-item>
+        Question: Is there a MUS {a mathematical formula}M for {a mathematical formula}F such that {a mathematical formula}ϕ∈M?
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       mina-relevanceis{a mathematical formula}Σ2p-complete for{a mathematical formula}DL-LiteboolNKBs.The upper bound was argued before. To show hardness, let {a mathematical formula}F,ϕ be an instance of mus-membership, and {a mathematical formula}TF,tϕ be constructed as in the proof of Theorem 4. Then, there is a MinA for {a mathematical formula}A⊑⊥ in {a mathematical formula}TF that contains {a mathematical formula}tϕ iff there is a MUS for {a mathematical formula}F that contains ϕ.  □
+      </paragraph>
+      <paragraph>
+       We now change our attention to the problem of computing all the MinAs for a given consequence, and analyse the complexity of enumerating them with or without a specific ordering.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Complexity of enumerating all MinAs
+     </section-title>
+     <paragraph>
+      In the previous section, we considered three decision problems related to the computation of one MinA satisfying some additional properties. To fully understand the axioms responsible for a consequence, however, it is important to find all possible MinAs. The main problem we consider in this section is thus, given a KB {a mathematical formula}K and a consequence φ of {a mathematical formula}K, to compute all MinAs for φ in {a mathematical formula}K. This MinA enumeration problem is formally defined as follows.
+     </paragraph>
+     <list>
+      <list-item>
+       Problem:mina-enum
+      </list-item>
+      <list-item>
+       Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ.
+      </list-item>
+      <list-item>
+       Output: The set of all MinAs for φ in {a mathematical formula}K.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that for core KBs, which, as we have shown in the previous section, are essentially directed graphs, a MinA is a simple path between two given vertices, and enumerating all MinAs corresponds to enumerating all simple paths between two given vertices, which can easily be done with polynomial delay [54]. However, the situation is not so clear for Horn or other more expressive types of KBs. To the best of our knowledge, only [55] considers a problem related to ours on directed hypergraphs, but it is not exactly the one considered here. We analyse first the case where the MinAs can be enumerated in any arbitrary order, and then see how the complexity is affected if a specific ordering is required, by considering lexicographic and cardinality orderings. These enumeration complexity results are summarized in Table 3.
+     </paragraph>
+     <paragraph>
+      The negative results stating that MinAs cannot be enumerated in incremental polynomial or in output polynomial time are obtained by showing hardness of some associated decision problems. Most notably, inability to enumerate all MinAs without order in output polynomial time arises from the hardness of the problem all-minas, which decides whether a given set of KBs is exactly the set of all MinAs for a given consequence (see Proposition 25). We also check whether a set of axioms is the smallest or largest MinA (w.r.t. their cardinality), or the first or last w.r.t. a lexicographic order. The complexity of these decision problems, which are also of interest on their own, is summarized in Table 4. In the table, results lacking a reference to where they can be found are consequences of previous results, and explained in the text.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Enumeration without a specific order
+      </section-title>
+      <paragraph>
+       We first consider the {a mathematical formula}DL-LitehornN setting, and show that for this kind of KBs MinAs can be efficiently enumerated through a polynomial delay algorithm. To achieve this goal, we start by constructing for every {a mathematical formula}DL-LitehornN TBox {a mathematical formula}T a propositional Horn KB {a mathematical formula}GT as follows: for every basic concept B create a propositional variable {a mathematical formula}pB; for every axiom {a mathematical formula}⨅i=1nBi⊑B add the Horn clause {a mathematical formula}⋀i=1npBi→pB; and for each pair of number restrictions {a mathematical formula}≥q1r,≥q2r with {a mathematical formula}q1&gt;q2 appearing in {a mathematical formula}T, add the Horn clause {a mathematical formula}p≥q1r→p≥q2r. We will call these latter clauses implicit axioms. For simplicity, in the following we will assume that ⊥ does not appear in {a mathematical formula}T. For handling the case where ⊥ appears in {a mathematical formula}T, one only needs to add the implicit axiom {a mathematical formula}p⊥→pC to {a mathematical formula}GT whenever we are interested in deciding a subsumption of the form {a mathematical formula}⨅i=1nAi⊑C.
+      </paragraph>
+      <paragraph>
+       It is not difficult to see that {a mathematical formula}T⊨⨅i=1nAi⊑C iff {a mathematical formula}GT⊨⋀i=1npAi→pC. Furthermore, every MinA {a mathematical formula}M in {a mathematical formula}GT gives rise to a MinA in {a mathematical formula}T consisting of all axioms representing non-implicit axioms in {a mathematical formula}M. However, different MinAs in {a mathematical formula}GT can give rise to the same MinA in {a mathematical formula}T, as shown in the following example.
+      </paragraph>
+      <paragraph label="Example 10">
+       Let {a mathematical formula}T={A⊑≥2r,A⊑≥3r,≥1r⊑B}. Using the construction described above, we obtain{a mathematical formula} where the implicit axioms are those appearing in the second row. It is easy to see that there are two MinAs for {a mathematical formula}A⊑B in {a mathematical formula}T, namely {a mathematical formula}{A⊑≥3r,≥1r⊑B} and {a mathematical formula}{A⊑≥2r,≥1r⊑B}. However, {a mathematical formula}GT contains three MinAs for {a mathematical formula}pA→pB. The reason for this superfluous MinA is that the implicit subsumption {a mathematical formula}≥3r⊑≥1r is represented twice in {a mathematical formula}GT: one through the direct edge {a mathematical formula}p≥3r→p≥1r, and another with a path travelling along {a mathematical formula}p≥2r. This yields two different MinAs in {a mathematical formula}GT for the MinA {a mathematical formula}{A⊑≥3r,≥1r⊑B} in {a mathematical formula}T.
+      </paragraph>
+      <paragraph label="Definition 11">
+       As this example shows, the transformation to Horn clauses may introduce some artificial MinAs in the constructed Horn KB {a mathematical formula}GT that must not be confused with MinAs of the original KB {a mathematical formula}T. To solve this problem, we choose a representative for all the MinAs in {a mathematical formula}GT that correspond to the same MinA in {a mathematical formula}T. We define this representative with the help of a lexicographic ordering. Lexicographic OrderLet the elements of a set S be linearly ordered. This order induces a linear strict order on {a mathematical formula}P(S), called the lexicographic order, as follows. A set {a mathematical formula}R⊆S is lexicographically smaller than a set {a mathematical formula}T⊆S if {a mathematical formula}R=T or the first element at which they disagree is in R.
+      </paragraph>
+      <paragraph label="Definition 12">
+       For example, if {a mathematical formula}S={x,y,z} with {a mathematical formula}x&lt;y&lt;z, then {a mathematical formula}{x,y} is lexicographically smaller than {a mathematical formula}{x,z}, which is itself lexicographically smaller than {a mathematical formula}{y}. Consider now an arbitrary but fixed total ordering on the set of implicit axioms {a mathematical formula}IT appearing in {a mathematical formula}GT. When two or more MinAs in {a mathematical formula}GT agree on all non-implicit axioms, then we choose only that one that is the lexicographically largest. This is what we call an immediate MinA. Immediate MinALet {a mathematical formula}T be a {a mathematical formula}DL-LitehornN TBox and {a mathematical formula}IT be the set of implicit axioms obtained from {a mathematical formula}T using the construction described above. A MinA {a mathematical formula}M in {a mathematical formula}GT is called immediate if for every {a mathematical formula}J⊆IT the following holds: if {a mathematical formula}(M∖IT)∪J is a MinA in {a mathematical formula}GT, then {a mathematical formula}J is lexicographically smaller than {a mathematical formula}M∩IT.
+      </paragraph>
+      <paragraph>
+       For the TBox {a mathematical formula}T from Example 10, suppose that the implicit axioms are ordered as follows:{a mathematical formula} The MinA {a mathematical formula}M={pA→p≥3r,p≥3r→p≥2r,p≥2r→p≥1r,p≥1r→pB} is not immediate, since the set of implicit axioms {a mathematical formula}J={p≥3r→p≥1r} is lexicographically larger than {a mathematical formula}M∩IT={p≥3r→p≥2r,p≥2r→p≥1r} according to this ordering, and {a mathematical formula}(M∖IT)∪J={pA→p≥3r,p≥3r→p≥1r,p≥1r→pB} is also a MinA.
+      </paragraph>
+      <paragraph>
+       In fact, there exists a bijection between MinAs for {a mathematical formula}⨅i=1nAi⊑C in {a mathematical formula}T and immediate MinAs for {a mathematical formula}⋀i=1npAi→pC in {a mathematical formula}GT: from an immediate MinA in {a mathematical formula}GT we obtain a MinA in {a mathematical formula}T by removing all implicit axioms; dually, from a MinA in {a mathematical formula}T we can build an immediate MinA in {a mathematical formula}GT by adding the lexicographically largest set of implicit axioms that forms a MinA. Thus, if we can enumerate all immediate MinAs in {a mathematical formula}GT in output polynomial time, we will also be able to enumerate all MinAs in {a mathematical formula}T within the same complexity bound. We now show how to compute all immediate MinAs using the notion of a valid ordering on the axioms in a Horn KB.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Valid OrderingLet {a mathematical formula}T be a propositional Horn KB. Given a Horn axiom {a mathematical formula}ϕ=⋀i=1nai→b, we denote the left-handside (lhs ) of ϕ with {a mathematical formula}T(ϕ), and its right-handside (rhs ) with {a mathematical formula}h(ϕ), i.e., {a mathematical formula}T(ϕ):={a1,…,an} and {a mathematical formula}h(ϕ):=b. With {a mathematical formula}h−1(b) we denote the set of axioms in {a mathematical formula}T whose rhs are b.Let {a mathematical formula}M={t1,…,tm} be a MinA for {a mathematical formula}⋀a∈Aa→c. An ordering {a mathematical formula}t1&lt;…&lt;tm is called valid on {a mathematical formula}M if for every {a mathematical formula}1≤i≤m, {a mathematical formula}T(ti)⊆A∪{h(t1),…,h(ti−1)} holds.{sup:4}
+      </paragraph>
+      <paragraph>
+       Intuitively, a valid ordering describes the steps that need to be made to deduce the atom b from the set of atoms A using only the clauses in the MinA. It is easy to see that for every immediate MinA there is always at least one such valid ordering. In the following, we use this fact to construct a set of sub-KBs that contain all and only the remaining immediate MinAs. Our approach is based on the ideas originally presented in [56].
+      </paragraph>
+      <paragraph label="Definition 14">
+       {a mathematical formula}TiLet {a mathematical formula}M be an immediate MinA in {a mathematical formula}GT with {a mathematical formula}|M|=m, and &lt; be a valid ordering on {a mathematical formula}M. For each {a mathematical formula}1≤i≤m we obtain a KB {a mathematical formula}Ti from {a mathematical formula}GT as follows: if {a mathematical formula}ti is an implicit axiom, then {a mathematical formula}Ti=∅; otherwise, (i) for each j s.t. {a mathematical formula}i&lt;j≤m and {a mathematical formula}tj is not an implicit axiom, remove all axioms in {a mathematical formula}h−1(h(tj)) except for {a mathematical formula}tj, i.e., remove all axioms with the same rhs as {a mathematical formula}tj except for {a mathematical formula}tj itself, (ii) remove {a mathematical formula}ti, and (iii) add all implicit axioms.
+      </paragraph>
+      <paragraph label="Example 15">
+       Consider again the KBs {a mathematical formula}T and {a mathematical formula}GT from Example 10, where the implicit axioms {a mathematical formula}IT are ordered as{a mathematical formula} Then, {a mathematical formula}M={pA→p≥3r,p≥3r→p≥1r,p≥1r→pB} is an immediate MinA with three elements. The only possible valid ordering for this MinA is{a mathematical formula} Notice that {a mathematical formula}t2 is in fact an implicit axiom. Thus, the construction from Definition 14 yields the three Horn KBs{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The naïve method for computing one MinA sketched in Section 2.4 (see Algorithm 1) can be easily adapted to the computation of an immediate MinA in polynomial time by specifying an ordering in which the axioms are selected for the execution of the for-loop: first considering all non-implicit axioms, and afterwards the {a mathematical formula}IT, i.e. the implicit axioms, according to the fixed ordering. By first testing all non-implicit axioms, one minimizes the set of axioms of this kind that will remain in the computed MinA. At that point, one needs only to remove the superfluous implicit axioms to reach a MinA. Analyzing these axioms in order guarantees that the set of implicit axioms kept is the lexicographically largest such set. Hence, the computation yields an immediate MinA.
+      </paragraph>
+      <paragraph>
+       Once that we have found an immediate MinA, Definition 14 introduces a class of sub-KBs {a mathematical formula}Ti,1≤i≤m of {a mathematical formula}GT. We show that this class induces a partition on the set of all other MinAs in {a mathematical formula}GT.
+      </paragraph>
+      <paragraph label="Lemma 16">
+       Let{a mathematical formula}Mbe an immediate MinA for ϕ in{a mathematical formula}T, and let{a mathematical formula}T1,…,Tmbe constructed from{a mathematical formula}Tand{a mathematical formula}Mas inDefinition 14. Then, for every immediate MinA{a mathematical formula}Nfor ϕ in{a mathematical formula}T, if{a mathematical formula}N≠M, then there exists exactly one i,{a mathematical formula}1≤i≤m, such that{a mathematical formula}Nis a MinA for ϕ in{a mathematical formula}Ti.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}t1&lt;…&lt;tm be a valid ordering on {a mathematical formula}M, and {a mathematical formula}N an immediate MinA for ϕ in {a mathematical formula}T such that {a mathematical formula}N≠M. Then, {a mathematical formula}M∖N≠∅. Let {a mathematical formula}tk be the largest non-implicit axiom in {a mathematical formula}M∖N w.r.t. the valid ordering &lt;. We show that {a mathematical formula}N⊆Tk and {a mathematical formula}N⊈Ti for all {a mathematical formula}i≠k, {a mathematical formula}1≤i≤m.Assume first that there is an axiom {a mathematical formula}t∈N s.t. {a mathematical formula}t∉Tk. Since {a mathematical formula}Tk contains all implicit axioms, t should be one of the non-implicit axioms removed from {a mathematical formula}T either in step (i) or in step (ii) of Definition 14. If it was in step (ii), then {a mathematical formula}t=tk, but by construction, {a mathematical formula}tk∈M∖N and hence {a mathematical formula}t=tk∉N, which is a contradiction. Thus, it should have been removed by step (i). This implies that there exists a j, {a mathematical formula}k&lt;j≤m, such that {a mathematical formula}tj satisfies {a mathematical formula}h(t)=h(tj). Recall that we chose k to be the largest axiom in {a mathematical formula}M∖N w.r.t. the valid ordering &lt; on {a mathematical formula}M. Then this {a mathematical formula}tj should be in {a mathematical formula}N. But then {a mathematical formula}N contains two axioms with the rhs {a mathematical formula}h(t), which contradicts the fact that {a mathematical formula}N is a MinA, and thus it is minimal. Hence, {a mathematical formula}N⊆Tk.Now take an i s.t. {a mathematical formula}i≠k. If {a mathematical formula}i&gt;k, then {a mathematical formula}ti∈N but {a mathematical formula}ti∉Ti, and hence {a mathematical formula}N⊈Ti. If {a mathematical formula}i&lt;k, then there is an axiom {a mathematical formula}t∈N such that {a mathematical formula}h(t)=h(tk) since otherwise {a mathematical formula}M and {a mathematical formula}N would not be MinAs. By construction, {a mathematical formula}t∉Ti, hence {a mathematical formula}N⊈Ti.  □ Returning to Example 15, the only remaining immediate MinA for {a mathematical formula}pA→pB is contained in {a mathematical formula}T3. Lemma 16 provides a strategy for computing all the remaining MinAs, starting from a known one, in the {a mathematical formula}DL-LitehornN setting. Algorithm 2 describes how we can use this lemma to enumerate all MinAs in a {a mathematical formula}DL-LitehornN TBox {a mathematical formula}T by enumerating all immediate MinAs in {a mathematical formula}GT.
+      </paragraph>
+      <paragraph label="Proof">
+       Algorithm 2solvesmina-enumfor{a mathematical formula}DL-LitehornNTBoxes with polynomial delay.The algorithm terminates since {a mathematical formula}T is finite. It is sound since its outputs are all MinAs for ϕ in {a mathematical formula}T. By Lemma 16, every MinA that has not been computed is contained in exactly one of the KBs {a mathematical formula}Ti constructed, and will hence be computed in the recursive call using {a mathematical formula}Ti as input. This implies that the algorithm is complete.We now analyse the time required to output each successive answer. Every time the procedure all-MinAs is called, it either concludes that the consequence does not follow from the KB (in polynomial time) and stops, or computes one immediate MinA, also in polynomial time. In the latter case, it makes linearly many recursive calls to all-MinAs via the sub-KBs {a mathematical formula}Ti. By Lemma 16, any other immediate MinA appears in exactly one of these {a mathematical formula}Tis. Thus, after linearly many calls, the algorithm either finds out that no more MinAs exist, or outputs a new MinA. More precisely, in each recursive call of the algorithm there is one consequence check (line 1), and one MinA computation (line 3). The consequence check can be done in polynomial time [10]. One MinA is computed in polynomial time using Algorithm 1. Thus the algorithm spends at most polynomial time between each output, i.e., it is polynomial delay.  □
+      </paragraph>
+      <paragraph label="Corollary 18">
+       This theorem shows that MinAs can be enumerated in polynomial delay for several classes of KBs considered in this paper. All MinAs can be enumerated with polynomial delay for core, Horn,{a mathematical formula}DL-Litehornand{a mathematical formula}DL-LitehornNKBs.
+      </paragraph>
+      <paragraph>
+       However, this corollary does not apply to {a mathematical formula}DL-Litecore and {a mathematical formula}DL-Litekrom KBs. The main reason for this is the presence of negation in the axioms. We will adapt the previous reduction to Horn KBs by abstracting away from the negations and considering each concept ¬B as atomic. However, this requires some technical modifications in the construction of the Horn KB. Observe first that the axiom {a mathematical formula}B1⊑¬B2 is in fact equivalent to {a mathematical formula}B2⊑¬B1. In addition, notice that a subsumption {a mathematical formula}B1⊑B2 may follow from {a mathematical formula}B1 being unsatisfiable (i.e., {a mathematical formula}B1I=∅ for all models of the KB), which is the case iff {a mathematical formula}K⊨B1⊑¬B1.
+      </paragraph>
+      <paragraph label="Example 19">
+       Given a {a mathematical formula}DL-LitekromN TBox {a mathematical formula}T, we construct a core KB as follows: for every basic concept B create two propositional variables {a mathematical formula}pB and {a mathematical formula}p¬B; for every axiom {a mathematical formula}t∈T define a pair of core clauses {a mathematical formula}Ct as follows:{a mathematical formula} and for each pair of number restrictions {a mathematical formula}≥q1r,≥q2r with {a mathematical formula}q1&gt;q2 appearing in the TBox {a mathematical formula}T, define the pair of clauses {a mathematical formula}Cq1,q2:={p≥q1r→p≥q2r,p≥¬q2r→p≥¬q1r}. As before, the latter clauses are called implicit, and {a mathematical formula}IT denotes the set of all implicit axioms. Given a {a mathematical formula}DL-LitekromN axiom {a mathematical formula}ϕ=B1⊑B2, define the core KBs{a mathematical formula} One can see that {a mathematical formula}T⊨ϕ iff {a mathematical formula}HTϕ⊨pB1→p¬B1. However, contrary to the case of {a mathematical formula}DL-LitehornN TBoxes, the MinAs in {a mathematical formula}HTϕ do not necessarily correspond to MinAs in {a mathematical formula}T. Let {a mathematical formula}T={A⊑B1,A⊑B2,B1⊑C,B2⊑C,C⊑¬C} and {a mathematical formula}ϕ=A⊑D. Using the previous construction, we obtain{a mathematical formula} Clearly, {a mathematical formula}M={pA→pB1,pB1→pC,pC→p¬C,p¬C→p¬B2,p¬B2→p¬A} is a MinA for {a mathematical formula}pA→p¬A in {a mathematical formula}HTϕ. However, this set represents all the axioms in {a mathematical formula}T and thus, contains superfluous axioms for the consequence.
+      </paragraph>
+      <paragraph label="Definition 20">
+       In order to avoid this behaviour, we consider a different kind of MinA, in which the two clauses corresponding to the same axiom are always required to appear together. Paired MinAConsider a {a mathematical formula}DL-LitekromN TBox {a mathematical formula}T and an axiom {a mathematical formula}ϕ=B1⊑B2. We call a subset {a mathematical formula}M⊆HTϕ a dualized set if for every {a mathematical formula}t∈T either (i) {a mathematical formula}Ct⊆M, or (ii) {a mathematical formula}Ct∩M=∅ holds. The dualized set {a mathematical formula}M is a paired MinA if {a mathematical formula}M⊨pB1→p¬B1 and for every {a mathematical formula}t∈T, if {a mathematical formula}Ct⊆M, then {a mathematical formula}M∖Ct⊭pB1→p¬B1.
+      </paragraph>
+      <paragraph>
+       Notice that a paired MinA is not a MinA in the strict sense since it is not necessarily minimal. For instance for the TBox in Example 19 and {a mathematical formula}ϕ=A⊑B1, {a mathematical formula}{pA→pB1,p¬B1→p¬A,pB1→p¬A} is a paired MinA, even though the second axiom is superfluous for the consequence. However, every paired MinA {a mathematical formula}M in {a mathematical formula}HTϕ corresponds to a MinA in {a mathematical formula}T, defined by the set of axioms t such that {a mathematical formula}Ct⊆M. To improve readability, in the following we will often disregard the implicit axioms in {a mathematical formula}HTϕ. They can be treated analogously as in the {a mathematical formula}DL-LitehornN case, by fixing an ordering on them and considering only the lexicographically largest subset of {a mathematical formula}IT needed.
+      </paragraph>
+      <paragraph label="Definition 21">
+       One paired MinA can be computed in polynomial time through a slight variant of Algorithm 1. To ensure that the resulting set of axioms is paired, the for loop is changed to try to remove a set {a mathematical formula}Ct in a single iteration, rather than one axiom at a time. As before, we will use one paired MinA to build a set of sub-KBs that partitions the class of all remaining paired MinAs in {a mathematical formula}HTϕ. Given a paired MinA {a mathematical formula}M, it is always possible to choose a representative {a mathematical formula}α‾ of each {a mathematical formula}Cα, where α can either be a {a mathematical formula}t∈T or denote an implicit axiom, and order these representatives as {a mathematical formula}t1‾&lt;…&lt;tm‾ such that {a mathematical formula}T(t1‾)=pB1 and for all {a mathematical formula}i,1&lt;i≤m{a mathematical formula}T(ti‾)=h(ti−1‾). Abusing the terminology, we will call this a valid ordering. The construction of the KBs {a mathematical formula}Ti is very similar to Definition 14, but considering this new notion of valid ordering, and the axiom derived from ϕ. {a mathematical formula}TiLet {a mathematical formula}M be a paired MinA in {a mathematical formula}HTϕ and &lt; be a valid ordering on {a mathematical formula}M of length m. For each {a mathematical formula}1≤i≤m we obtain a KB {a mathematical formula}Ti from {a mathematical formula}HTϕ as follows: if {a mathematical formula}ti is an implicit axiom or {a mathematical formula}pB2→p¬B1, then {a mathematical formula}Ti=∅; otherwise, (i) for each j s.t. {a mathematical formula}i&lt;j≤m and {a mathematical formula}tj is not an implicit axiom or {a mathematical formula}pB2→p¬B1, remove all axioms in {a mathematical formula}h−1(h(tj)) except for {a mathematical formula}tj, i.e., remove all axioms with the same rhs as {a mathematical formula}tj except for {a mathematical formula}tj itself, (ii) remove {a mathematical formula}ti, and (iii) add all implicit axioms and {a mathematical formula}pB2→p¬B1.
+      </paragraph>
+      <paragraph label="Example 22">
+       Consider again the KBs {a mathematical formula}T and {a mathematical formula}HTϕ from Example 19. Then{a mathematical formula} is a paired MinA, where the last two elements are the duals for the first two. The only possible valid ordering for this paired MinA is{a mathematical formula} The construction from Definition 21 yields the following three KBs:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       The proof of the following lemma is very similar to that of Lemma 16. Let{a mathematical formula}Mbe a paired MinA for{a mathematical formula}pB2→p¬B1in{a mathematical formula}HTϕ, and let{a mathematical formula}T1,…,Tmbe constructed from{a mathematical formula}HTϕand{a mathematical formula}Mas inDefinition 21. Then, for every paired MinA{a mathematical formula}Nfor{a mathematical formula}pB2→p¬B1in{a mathematical formula}HTϕ, if{a mathematical formula}N≠M, then there exists exactly one i,{a mathematical formula}1≤i≤m, such that{a mathematical formula}Nis a paired MinA for{a mathematical formula}pB2→p¬B1in{a mathematical formula}Ti.Let {a mathematical formula}t1&lt;…&lt;tm be a valid ordering on {a mathematical formula}M, and {a mathematical formula}N a paired MinA for {a mathematical formula}pB2→p¬B1 in {a mathematical formula}HTϕ such that {a mathematical formula}N≠M. Then, {a mathematical formula}M∖N≠∅. Let {a mathematical formula}tk be the largest non-implicit axiom in {a mathematical formula}M∖N w.r.t. the valid ordering &lt;. We show that {a mathematical formula}N⊆Tk and {a mathematical formula}N⊈Ti for all {a mathematical formula}i≠k, {a mathematical formula}1≤i≤m.Assume first that there is an axiom {a mathematical formula}t∈N s.t. {a mathematical formula}t∉Tk. Since {a mathematical formula}Tk contains all implicit axioms, t should be one of the non-implicit axioms removed from {a mathematical formula}T either in step (i) or in step (ii) of Definition 21. If it was in step (ii), then {a mathematical formula}t=tk, but by construction, {a mathematical formula}tk∈M∖N and hence {a mathematical formula}t=tk∉N, which is a contradiction. Thus, it should have been removed by step (i). This implies that there exists a j, {a mathematical formula}k&lt;j≤m, such that {a mathematical formula}tj satisfies {a mathematical formula}h(t)=h(tj). Recall that we chose k to be the largest axiom in {a mathematical formula}M∖N w.r.t. the valid ordering &lt; on {a mathematical formula}M. Then this {a mathematical formula}tj should be in {a mathematical formula}N. But then {a mathematical formula}N contains two different axioms with the rhs {a mathematical formula}h(t). These two axioms cannot belong to the same set {a mathematical formula}Cα. But then, {a mathematical formula}N cannot be a paired MinA, as it contradicts the minimality criterion. Hence, {a mathematical formula}N⊆Tk.Now take an i s.t. {a mathematical formula}i≠k. If {a mathematical formula}i&gt;k, then {a mathematical formula}ti∈N but {a mathematical formula}ti∉Ti, and hence {a mathematical formula}N⊈Ti. If {a mathematical formula}i&lt;k, then there is an axiom {a mathematical formula}t∈N such that {a mathematical formula}h(t)=h(tk) since otherwise {a mathematical formula}M and {a mathematical formula}N would not be paired MinAs. By construction, {a mathematical formula}t∉Ti, hence {a mathematical formula}N⊈Ti.  □
+      </paragraph>
+      <paragraph label="Corollary 24">
+       Using this result, and Algorithm 2 it follows directly that all the paired MinAs in {a mathematical formula}HTϕ can be enumerated with polynomial delay. In particular, this means that MinAs for {a mathematical formula}DL-LitekromN and {a mathematical formula}DL-LitecoreN KBs are also polynomial delay enumerable. All MinAs can be enumerated with polynomial delay for KBs in{a mathematical formula}DL-Litecore,{a mathematical formula}DL-LitecoreN,{a mathematical formula}DL-Litekromand{a mathematical formula}DL-LitekromN.
+      </paragraph>
+      <paragraph>
+       We now consider mina-enum for dual-Horn KBs. For this, we first investigate the following decision problem which is closely related to mina-enum. As we will see, determining its complexity is important for determining the complexity of mina-enum.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:all-minas
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and a set of KBs {a mathematical formula}K⊆P(K).
+       </list-item>
+       <list-item>
+        Question: Is {a mathematical formula}K precisely the set of all MinAs for φ in {a mathematical formula}K?
+       </list-item>
+      </list>
+      <paragraph label="Proposition 25">
+       As Proposition 25 below shows, if all-minas cannot be decided in polynomial time, then mina-enum cannot be solved in output polynomial time. The proof of this fact is based on a generic argument, which can also be found in Theorem 4.5 of [57], but for the sake of completeness and clarity we present it here once more. Ifall-minascannot be decided in polynomial time, then unlessp= np,mina-enumcannot be solved in output-polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume we have an algorithm A that solves mina-enum in output-polynomial time. Let its runtime be bounded by a polynomial {a mathematical formula}p(IS,OS) where IS denotes the size of the input KB and OS denotes the size of the output, i.e., the set of all MinAs.In order to decide all-minas for an instance given by {a mathematical formula}K, φ, and {a mathematical formula}K⊆P(K), we construct another algorithm {a mathematical formula}A′ that works as follows: it runs A on {a mathematical formula}K and φ for at most {a mathematical formula}p(|K|,|K|)-many steps. If A terminates within this many steps, then {a mathematical formula}A′ compares the output of A with {a mathematical formula}K and returns yes if and only if they are equal. If they are not equal, {a mathematical formula}A′ returns no. If A has not yet terminated after {a mathematical formula}p(|K|,|K|)-many steps, this implies that there is at least one MinA that is not contained in {a mathematical formula}K, so {a mathematical formula}A′ returns no. It is easy to see that the runtime of {a mathematical formula}A′ is bounded by a polynomial in {a mathematical formula}|K| and {a mathematical formula}|K|, that is {a mathematical formula}A′ decides all-minas in polynomial time.  □
+      </paragraph>
+      <paragraph>
+       This proposition shows that the complexity of all-minas is indeed closely related to the complexity of mina-enum. We now present some hardness results for enumerating MinAs when other types of KBs different from {a mathematical formula}DL-Litehorn or {a mathematical formula}DL-Litekrom are used. It is not difficult to see that, for all types of axioms considered in this paper except for the {a mathematical formula}DL-Litebool family, all-minas is in conp: given an instance of all-minas, a nondeterministic algorithm can guess a subset of {a mathematical formula}K that is not in {a mathematical formula}K, and in polynomial time verify that this is a MinA, thus proving that {a mathematical formula}K is not the set of all MinAs. In the following we show that for dual-Horn KBs all-minas is at least as hard as recognizing the set of all minimal transversals of a given hypergraph. Whether the problem is conp-hard remains unfortunately open. We later show that all-minas is conp-complete if Horn-{a mathematical formula}EL axioms are considered and {a mathematical formula}Dp-hard for {a mathematical formula}DL-Litebool TBoxes.
+      </paragraph>
+      <paragraph>
+       First we briefly recall some basic notions on hypergraphs. A hypergraph{a mathematical formula}H=(V,E) is composed by a set of vertices{a mathematical formula}V={vi|1≤i≤n}, and a set of (hyper)edges{a mathematical formula}E={Ej|1≤j≤m} where {a mathematical formula}Ej⊆V. We assume w.l.o.g. that the set of edges as well as the set of vertices is nonempty, and the union of all edges yields the vertex set. A set {a mathematical formula}W⊆V is called a transversal of {a mathematical formula}H if it intersects all edges of {a mathematical formula}H, i.e., {a mathematical formula}∀E∈E.E∩W≠∅. A transversal is called minimal if no proper subset of it is a transversal. The set of all minimal transversals of {a mathematical formula}H constitutes another hypergraph on V called the transversal hypergraph of {a mathematical formula}H, which is denoted by {a mathematical formula}Tr(H). Generating {a mathematical formula}Tr(H) is an important problem which has applications in many fields of computer science [58]. The well-known decision problem associated to this computation problem is defined as follows:
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:transversal hypergraph (trans-hyp)
+       </list-item>
+       <list-item>
+        Input: Two hypergraphs {a mathematical formula}H=(V,EH) and {a mathematical formula}G=(V,EG).
+       </list-item>
+       <list-item>
+        Question: Is {a mathematical formula}G the transversal hypergraph of {a mathematical formula}H, i.e., does {a mathematical formula}Tr(H)=G hold?
+       </list-item>
+      </list>
+      <paragraph>
+       trans-hyp is known to be in conp, but its lower bound is a prominent open problem. More precisely, so far neither a polynomial time algorithm has been found, nor has it been proved to be conp-hard. In a landmark paper [59] Fredman and Khachiyan proved that trans-hyp can be solved in {a mathematical formula}no(logn) time, which implies that this problem is most likely not conp-hard. More recently, Gottlob and Malizia have further improved this upper bound [60]. It is conjectured that this problem, together with several computationally equivalent problems, forms a class properly contained between pand conp[59].
+      </paragraph>
+      <paragraph label="Proof">
+       all-minasistrans-hyp-hard for dual-Horn KBs.Let an instance of trans-hyp be given by the hypergraphs {a mathematical formula}H=(V,EH) and {a mathematical formula}G=(V,EG). From {a mathematical formula}H and {a mathematical formula}G we construct an instance of all-minas as follows: for every vertex {a mathematical formula}v∈V we introduce a propositional variable {a mathematical formula}pv, for every edge {a mathematical formula}E∈EH a propositional variable {a mathematical formula}pE, and finally one additional propositional variable a. For constructing a dual-Horn KB from {a mathematical formula}H and a set of vertices {a mathematical formula}W⊆V, we define the following operator, which is also going to be used in later proofs:{a mathematical formula} Using these sets, we can then construct the KB {a mathematical formula}K:=KV,H, a set of KBs {a mathematical formula}K:={KE,H|E∈EG}⊆P(K), and the axiom {a mathematical formula}φ:=a→⋀E∈EHpE that follows from {a mathematical formula}K. Obviously this construction creates an instance of all-minas for dual-Horn KBs and it can be done in time polynomial in the sizes of {a mathematical formula}H and {a mathematical formula}G.We claim that {a mathematical formula}G is the transversal hypergraph of {a mathematical formula}H if and only if {a mathematical formula}K is precisely the set of all MinAs for φ in {a mathematical formula}K. Note that {a mathematical formula}a→⋀v∈Vpv is the only axiom in {a mathematical formula}K such that a appears on the lhs, which implies that every MinA must contain this axiom. Hence, every MinA is of the form {a mathematical formula}KW,H for some {a mathematical formula}W⊆V. To prove our claim, it suffices to show that a set of vertices {a mathematical formula}W⊆V is a minimal transversal of {a mathematical formula}H if and only if the set of axioms {a mathematical formula}KW,H is a MinA.{a mathematical formula}(⇒) Assume that W is a minimal transversal of {a mathematical formula}H. By definition W satisfies {a mathematical formula}W∩E≠∅ for every {a mathematical formula}E∈EH. This implies that {a mathematical formula}KW,H⊨φ holds. Moreover, {a mathematical formula}KW,H is minimal since W is minimal, i.e., {a mathematical formula}KW,H is a MinA.{a mathematical formula}(⇐) Now assume that {a mathematical formula}KW,H is a MinA. Then every {a mathematical formula}pE where {a mathematical formula}E∈EH appears on the rhs of at least one of the axioms in {a mathematical formula}KW,H. This implies that W intersects every E, i.e., it is a transversal of {a mathematical formula}H. Moreover it is minimal since {a mathematical formula}KW,H is minimal.  □
+      </paragraph>
+      <paragraph label="Corollary 27">
+       A direct consequence of this theorem is that the enumeration of all MinAs in a dual-Horn KB is at least as hard as the enumeration of the transversals of a hypergraph.{sup:5}mina-enumfor dual-Horn KBs is at least as hard as enumerating hypergraph transversals.
+      </paragraph>
+      <paragraph label="Proof">
+       Up to now we have investigated the complexity of mina-enum for the propositional and the simple DL-Lite cases. In particular, we have presented a polynomial delay algorithm for enumerating all MinAs in a Horn KB. However, whether such an algorithm exists for dual-Horn KBs remained open. We now turn our attention to {a mathematical formula}EL KBs, and show that there is no output polynomial algorithm that enumerates all MinAs in a Horn-{a mathematical formula}EL KB, unless {a mathematical formula}p=np. As a first step to this result, we show that all-minas is intractable for Horn-{a mathematical formula}EL KBs. all-minasis conp-complete for Horn-{a mathematical formula}ELand{a mathematical formula}ELTBoxes.We have already shown that it is in conpfor {a mathematical formula}EL TBoxes. It then suffices to show conp-hardness for Horn-{a mathematical formula}EL. We present a reduction from the following conp-hard problem [37], [61].
+       <list>
+        Problem:all-mvInput: A monotone Boolean formula ϕ and a set {a mathematical formula}V of minimal valuations satisfying ϕ.Question: Is {a mathematical formula}V precisely the set of all minimal valuations satisfying ϕ?Let
+       </list>
+       <paragraph>
+        {a mathematical formula}ϕ,V be an instance of all-mv; we denote as {a mathematical formula}sub(ϕ) the set of all subformulas of ϕ, and define the set of relevant variables {a mathematical formula}csub(ϕ):=sub(ϕ)∖{p∈sub(ϕ)|p is a propositional variable}. We introduce three concept names {a mathematical formula}Bψ,Cψ,Dψ, and two role names {a mathematical formula}rψ,sψ for every subformula ψ of ϕ and two additional concept names A and E. For each {a mathematical formula}ψ∈sub(ϕ) we define a TBox {a mathematical formula}Tψ as follows: if ψ is the propositional variable p, then {a mathematical formula}Tψ:={A⊑Bp}; if {a mathematical formula}ψ=ψ1∧ψ2, then{a mathematical formula} and if {a mathematical formula}ψ=ψ1∨ψ2, then{a mathematical formula} Finally, we set{a mathematical formula} Notice that for every {a mathematical formula}T′⊆T, if {a mathematical formula}T′⊨A⊑E, then also {a mathematical formula}A⊑Dψ for every {a mathematical formula}ψ∈csub(ϕ). But in order to have {a mathematical formula}A⊑Dψ, all the axioms in {a mathematical formula}Tψ are necessary, and thus {a mathematical formula}Tψ⊆T′. In particular, if {a mathematical formula}ψ=ψ1∧ψ2, then {a mathematical formula}Bψ1⊓Bψ2⊑Bψ∈T′, and if {a mathematical formula}ψ=ψ1∨ψ2, then {a mathematical formula}{Bψ1⊑Bψ,Bψ2⊑Bψ}⊆T′. Thus, a valuation {a mathematical formula}V satisfies ϕ iff the KB{a mathematical formula} entails {a mathematical formula}A⊑E. This in particular shows that {a mathematical formula}V is the set of all minimal valuations satisfying ϕ iff {a mathematical formula}{TV|V∈V} is the set of all MinAs for {a mathematical formula}A⊑E in {a mathematical formula}T.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 29">
+       The following is an immediate consequence of Theorem 28 and Proposition 25. For Horn-{a mathematical formula}ELand{a mathematical formula}ELTBoxesmina-enumcannot be solved in output polynomial time, unlessp= np.
+      </paragraph>
+      <paragraph>
+       Having shown intractability results for Horn-{a mathematical formula}EL and {a mathematical formula}EL, we now turn our attention again to the DL-Lite -family. The only case remaining here is the complexity of enumerating MinAs if general DL-Lite concepts are allowed when forming axioms. As shown in [10], deciding whether an axiom follows from a {a mathematical formula}DL-Litebool TBox is already conp-hard. Since computing a MinA is at least as hard as doing a consequence check, we cannot expect to find a single MinA in polynomial time. This in particular implies that MinAs cannot be enumerated with polynomial delay, or even in incremental polynomial time, in the {a mathematical formula}DL-Litebool setting. However, it could still be the case that all MinAs can be computed in output polynomial time, e.g. if all cases where finding a MinA is hard happen to contain exponentially many MinAs. We show now that, unfortunately, this is not the case.
+      </paragraph>
+      <paragraph label="Proof">
+       all-minasis{a mathematical formula}Dp-hard for{a mathematical formula}DL-LiteboolKBs. This already holds if the axioms in{a mathematical formula}Tare of the form{a mathematical formula}A⊑Cwhere A is a concept name and C a general concept.This result is a simple consequence of the construction from Theorem 4 together with the fact that {a mathematical formula}M is a MinA for φ in {a mathematical formula}K iff {a mathematical formula}{M} is the set of all MinAs for φ in {a mathematical formula}M.  □
+      </paragraph>
+      <paragraph label="Corollary 31">
+       It is easy to show that all-minas w.r.t. {a mathematical formula}DL-LiteboolN TBoxes is in {a mathematical formula}Π2p: if {a mathematical formula}K is not the set of all MinAs, one just needs to guess a {a mathematical formula}M⊆K and verify with a conporacle that {a mathematical formula}M⊨ϕ and for all {a mathematical formula}N∈K, {a mathematical formula}N⊈M. The following is an immediate consequence of Proposition 25 and Lemma 30. For{a mathematical formula}DL-LiteboolTBoxes all MinAs cannot be computed in output-polynomial time if{a mathematical formula}p≠np.
+      </paragraph>
+      <paragraph>
+       Notice that Proposition 25 can also be used in the converse direction; that is, if mina-enum can be solved in output polynomial time, then all-minas is in p. We thus have that, for all types of KBs studied in this paper, for which mina-enum is output-polynomial, the decision problem all-minas is decidable in polynomial time.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Enumeration in a specified order
+      </section-title>
+      <paragraph>
+       We now consider the case when MinAs are required to be output in a specified order. First recall that if an enumeration problem can be solved without ordering in output polynomial time, then it can also be solved with any ordering in output polynomial time: one needs only compute all the solutions of the problem, which takes polynomial time in the size of the output, and then display them in the desired order. In particular, this means that enumerating all MinAs for {a mathematical formula}DL-LitehornN and {a mathematical formula}DL-LitekromN KBs (and their sublogics) in any arbitrary ordering can be done in output polynomial time. Obviously, this also means that for Horn-{a mathematical formula}EL and {a mathematical formula}DL-Litebool KBs the ordered enumeration problem is not output polynomial.
+      </paragraph>
+      <paragraph>
+       In this section we study whether the upper bounds can be improved for some orders. We first consider enumerations based on the lexicographical ordering, and afterwards look at the case where MinAs are ordered according to their size.
+      </paragraph>
+      <paragraph>
+       If we want to enumerate MinAs in some given order using an incremental polynomial algorithm, a necessary condition is that the first MinA, according to that ordering, can be computed in polynomial time. In particular, if we consider the lexicographical order, one would need to compute the lexicographical first MinA in polynomial time. For that reason, we look first at the complexity of this problem and its decision variant.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:first-mina
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, a MinA {a mathematical formula}M for φ in {a mathematical formula}K, and a linear order on {a mathematical formula}K.
+       </list-item>
+       <list-item>
+        Question: Is {a mathematical formula}M the first MinA w.r.t. the lexicographic order induced by the given linear order?
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       This problem is of particular interest when, for instance, one can assign a degree of trust to the axioms in the KB. In this setting if we order the axioms in such a way that less trusted axioms appear before the more trusted ones, the first lexicographical MinA will be the one that has the most distrusted axioms, and hence the most likely cause of an error. As we show now, finding the first lexicographical MinA is conp-complete already for core KBs. first-minais conp-complete for core KBs.The problem is in conp. If {a mathematical formula}M is not the first MinA, a proof of this can be given by guessing a subset of {a mathematical formula}K and verifying in polynomial time that it is a MinA, and it is lexicographically smaller than {a mathematical formula}M. To show conp-hardness, we present a reduction from the np-hard mina-relevance problem of core KBs (see Theorem 7) to the negation of first-mina.Let {a mathematical formula}K,φ,ψ be an instance of mina-relevance, and let {a mathematical formula}M be an arbitrary but fixed MinA for φ in {a mathematical formula}K. {a mathematical formula}M can be computed time polynomial on the size of {a mathematical formula}K as described in the proof of Theorem 17. We can assume w.l.o.g. that {a mathematical formula}ψ∉M since otherwise, we would already know that this is a positive instance of the problem. Consider an ordering of the axioms in {a mathematical formula}K such that:
+       <list>
+        {a mathematical formula}ψ&lt;χ for every {a mathematical formula}χ≠ψ, andfor every {a mathematical formula}χ∈M and every {a mathematical formula}χ′∈K∖(M∪{ψ}), {a mathematical formula}χ&lt;χ′.(⇒) Suppose that there is a MinA
+       </list>
+       <paragraph>
+        {a mathematical formula}M′ for φ that is lexicographically before {a mathematical formula}M. Then, there must exist an axiom {a mathematical formula}χ∈M′∖M that is smaller than any axiom in {a mathematical formula}M according to the ordering provided. By construction, ψ is the only axiom that is smaller than any axiom in {a mathematical formula}M. Thus, {a mathematical formula}ψ∈M′.(⇐) If there is a MinA {a mathematical formula}M′ such that {a mathematical formula}ψ∈M′, then by definition {a mathematical formula}M′ is lexicographically smaller than {a mathematical formula}M.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 33">
+       Since generating the first lexicographical MinA is already intractable, Theorem 32 has the following consequence: Unless{a mathematical formula}p=np, MinAs cannot be enumerated for core KBs in lexicographic order in incremental polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       Notice that the construction provided in the proof of Theorem 32 cannot be used to polynomially reduce mina-relevance to the negation of first-mina in {a mathematical formula}DL-LiteboolN KBs. Indeed, the first step in this construction requires the computation of a MinA, which cannot be done in polynomial time for this logic. On the other hand, first-mina is at least as hard as is-mina, thus yielding the following bounds. first-minafor{a mathematical formula}DL-LiteboolNKBs is{a mathematical formula}Dp-hard and in{a mathematical formula}Π2p.For the upper bound, if {a mathematical formula}M is not the first MinA, then one can guess a subset {a mathematical formula}N of {a mathematical formula}K and verify with polynomially many calls to an nporacle that {a mathematical formula}N is a MinA, and lexicographically smaller than {a mathematical formula}M. For the lower bound, we reduce is-mina to first-mina as follows: {a mathematical formula}M is a MinA for φ in {a mathematical formula}K iff {a mathematical formula}M is the first lexicographic MinA for φ in {a mathematical formula}M.  □
+      </paragraph>
+      <paragraph>
+       Although computing the first MinA is conp-hard for core KBs, interestingly computing the last MinA is polynomial for all types of KBs we consider here where reasoning is polynomial. To see this, notice that Algorithm 1 can be modified such that the for loop selects the axioms according to the specified linear order on {a mathematical formula}K increasingly. It is easy to see that the MinA obtained through this strategy is necessarily the last according to the induced lexicographical ordering. It is also easy to see that deciding whether a subset of a {a mathematical formula}DL-LitekromN TBox is the last lexicographical MinA remains in {a mathematical formula}Dp. More interestingly, it is also possible to modify Algorithm 2 to enumerate all MinAs from a {a mathematical formula}DL-LitehornN or {a mathematical formula}DL-LitekromN KB in reverse lexicographical order with polynomial delay.
+      </paragraph>
+      <paragraph label="Proof">
+       The modified algorithm keeps a set of KBs in a priority queue {a mathematical formula}Q. These KBs are the candidates from which the remaining MinAs are going to be computed. Each KB can contain zero or more MinAs. They are inserted into {a mathematical formula}Q by the algorithm at a cost of {a mathematical formula}O(n⋅log(M)) per insertion, where n is the size of the original KB and M is the total number of such KBs inserted. Note that M can be exponentially larger than n since there can be exponentially many MinAs. That is, the algorithm potentially uses exponential space. The other operation that the algorithm performs on {a mathematical formula}Q is to find and delete the maximum element of {a mathematical formula}Q. The maximum element of {a mathematical formula}Q is the KB in {a mathematical formula}Q that contains the lexicographically largest MinA among the MinAs contained in all other KBs in {a mathematical formula}Q. This operation can also be performed within {a mathematical formula}O(n⋅log(M)) time bound. The time bounds for insertion and deletion depend also on n since they require a computation of the last MinA. This approach is presented in Algorithm 3. In line 9 of this algorithm the computation of the KB {a mathematical formula}Ki depends on the type of the input KB. That is, if the input {a mathematical formula}K is a {a mathematical formula}DL-LitehornN KB, then use Definition 14; if it is a {a mathematical formula}DL-LitekromN KB, then use Definition 21. Algorithm 3enumerates all the MinAs for{a mathematical formula}DL-LitehornNand{a mathematical formula}DL-LitekromNKBs in reverse lexicographic order with polynomial delay.The algorithm terminates since {a mathematical formula}K is finite. Soundness is shown as follows: {a mathematical formula}Q contains initially only the original KB {a mathematical formula}K . Thus the first output is lexicographically the last MinA in {a mathematical formula}K. By Lemma 16 the MinA that comes just before the last one is contained in exactly one of the {a mathematical formula}Kis that are computed and inserted into {a mathematical formula}Q in lines 9 and 10. In line 4 {a mathematical formula}J is assigned the KB that contains this MinA. Thus the next output will be the MinA that comes just before lexicographically the last one. It is not difficult to see that in this way the MinAs will be enumerated in reverse lexicographic order. By Lemma 16 it is guaranteed that the algorithm enumerates all MinAs.In one iteration, the algorithm performs one find operation and one delete operation on {a mathematical formula}Q, which both take time {a mathematical formula}O(n⋅log(M)), and a MinA computation that takes {a mathematical formula}O(n) time. In addition it performs at most n{a mathematical formula}Ki computations, and at most n insertions into {a mathematical formula}Q. Each {a mathematical formula}Ki computation takes {a mathematical formula}O(n2) time, and each insertion takes {a mathematical formula}O(n⋅log(M)) time. The total delay between outputs is thus {a mathematical formula}O(2⋅(n⋅log(M))+n+n⋅(n2+n⋅log(M)))=O(n3).  □
+      </paragraph>
+      <paragraph>
+       Notice that the polynomial delay running time of Algorithm 3 does not depend on our use of the reverse lexicographical ordering. In fact, this algorithm can be modified to enumerate MinAs in any order with polynomial delay, as long as the first MinA according to this ordering is computable in polynomial time. We will use this fact next, as we study enumeration by size.
+      </paragraph>
+      <paragraph>
+       We start by showing that is not possible to enumerate all the MinAs in decreasing size order in incremental polynomial time (unless {a mathematical formula}p=np). As it was the case for the enumeration in lexicographical order, this claim is a direct consequence of the hardness of the following decision problem.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:largest-mina
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and {a mathematical formula}n≥1.
+       </list-item>
+       <list-item>
+        Question: Is there a MinA {a mathematical formula}M such that {a mathematical formula}|M|≥n?
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       largest-minaisnp-complete for core KBs.An algorithm that shows npmembership simply guesses a subset {a mathematical formula}M of the KB and verifies in polynomial time that {a mathematical formula}M is a MinA and {a mathematical formula}|M|≥n. Hardness is shown through a reduction from the well known np-hard Hamiltonian path decision problem [50].Let {a mathematical formula}G=(V,E) be a directed graph, and {a mathematical formula}m=|V|. For each {a mathematical formula}v∈V, consider a concept name {a mathematical formula}Av and construct the core KB{a mathematical formula} where {a mathematical formula}A,B are two additional (new) concept names. Then, there is a Hamiltonian path in {a mathematical formula}G (that is, a simple path that visits all nodes in V) if and only if there is a MinA for {a mathematical formula}A⊑B in {a mathematical formula}KG of length {a mathematical formula}m+1.  □
+      </paragraph>
+      <paragraph label="Corollary 37">
+       This theorem in particular means that the largest MinA, which would be the first MinA to be returned in decreasing size order, cannot be computed in polynomial time. Thus, no incremental polynomial algorithm exists for any of the languages considered here. Unless{a mathematical formula}p=np, MinAs cannot be enumerated for core KBs in decreasing size order in incremental polynomial time.
+      </paragraph>
+      <paragraph>
+       Clearly, for {a mathematical formula}DL-Litebool KBs largest-mina is {a mathematical formula}Dp-hard since it can be used to decide whether a set {a mathematical formula}M is a MinA: {a mathematical formula}M is a MinA iff there is a MinA in {a mathematical formula}M of size at least {a mathematical formula}|M|. Moreover, the non-deterministic algorithm sketched in the proof of Theorem 36 also provides a {a mathematical formula}Σ2p upper bound for the problem in {a mathematical formula}DL-LiteboolN KBs.
+      </paragraph>
+      <paragraph>
+       We have thus shown that it is hard to enumerate all MinAs in decreasing size. Conversely, we can consider the enumeration by increasing size. Such a case is important since smaller MinAs are typically easier to understand by users, thus providing more informative explanations for the causes of the consequence to follow.{sup:6} For this case, it will be important to consider the following decision problem.
+      </paragraph>
+      <list>
+       <list-item>
+        Problem:smallest-mina
+       </list-item>
+       <list-item>
+        Input: A KB {a mathematical formula}K and an axiom φ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨φ, and {a mathematical formula}n≥1.
+       </list-item>
+       <list-item>
+        Question: Is there a MinA {a mathematical formula}M such that {a mathematical formula}|M|≤n?
+       </list-item>
+      </list>
+      <paragraph label="Proposition 38">
+       It was previously shown in [37] that smallest-mina is np-hard already for Horn KBs. This immediately yields a negative result for enumerating in increasing size for this class of KBs. Unless{a mathematical formula}p=np, MinAs cannot be enumerated for Horn KBs in increasing size order in incremental polynomial time.
+      </paragraph>
+      <paragraph>
+       In addition, Corollary 27 shows that enumerating MinAs in dual-Horn KBs in increasing size is likely not to be incremental polynomial, since it must be at least as hard as enumerating the transversals of a hypergraph. This negative result arises despite the fact that for this class of KBs, smallest-mina is decidable in polynomial time, slightly generalizing the ideas of computing shortest paths in directed graphs. We now focus on the remaining cases, between core and {a mathematical formula}DL-LitekromN KBs. In this context, we first show that smallest-mina is decidable in polynomial time for these logics.
+      </paragraph>
+      <paragraph label="Theorem 39">
+       Following the idea of computing the shortest path in a graph, Algorithm 4 computes the least number of (non-implicit) axioms that are used in the construction of a paired MinA in {a mathematical formula}HTϕ (recall Definition 20). The algorithm follows a layered approach in computing all the consequences from the input TBox {a mathematical formula}T through the core KB {a mathematical formula}HTϕ. {a mathematical formula}M0 contains all the consequences of {a mathematical formula}HTϕ that can be derived from implicit axioms only, and hence correspond to a MinA without any original axiom. {a mathematical formula}M1 then includes all the consequences that are derivable from one axiom in {a mathematical formula}T. It can be shown through a simple induction argument that for every {a mathematical formula}k≥0, {a mathematical formula}ϕ∈Mk iff there is a paired MinA for ϕ in {a mathematical formula}HTϕ that uses at most k axioms from {a mathematical formula}T. To avoid an infinite computation, all the sets {a mathematical formula}Mk are restricted to the relevant core clauses, using only the variables obtained from the transformation. It is easy to see that all the sets {a mathematical formula}Mk have polynomial size, and can be computed in polynomial time. Algorithm 4decidessmallest-minain polynomial time.
+      </paragraph>
+      <paragraph label="Theorem 40">
+       Clearly, this algorithm can be modified to provide one smallest MinA for the desired consequence. Moreover, Algorithm 3 can be modified to consider the smallest MinA in place of the lexicographical largest one without affecting its performance. This means that all MinAs for a {a mathematical formula}DL-LitekromN KBs can be enumerated in increasing size order with polynomial delay. All MinAs for a{a mathematical formula}DL-LitekromNKB can be enumerated in increasing size with polynomial delay.
+      </paragraph>
+      <paragraph label="Proof">
+       This finishes our analysis of the complexity of enumerating MinAs in different tractable DLs. Before turning our attention to the problem of counting the MinAs of a consequence that follows from a KB, we analyse the complexity of smallest-mina for {a mathematical formula}DL-LiteboolN KBs. smallest-minais{a mathematical formula}Σ2p-complete for{a mathematical formula}DL-LiteboolKBs.The problem can be decided by guessing a subset {a mathematical formula}M of the KB {a mathematical formula}K and verifying with an nporacle that {a mathematical formula}M entails the consequence φ. Thus, it is in {a mathematical formula}Σ2p. The lower bound can be obtained by a reduction from the following {a mathematical formula}Σ2p-complete problem [64].
+       <list>
+        Problem:smallest-musInput: An inconsistent set of propositional clauses {a mathematical formula}F and {a mathematical formula}n≥1.Question: Is there a MUS {a mathematical formula}M for {a mathematical formula}F such that {a mathematical formula}|M|≤n?Given an instance of
+       </list>
+       <paragraph>
+        smallest-mus, we construct {a mathematical formula}TF and {a mathematical formula}tϕ as in the proof of Theorem 4. Then, there is a MUS of size at most n iff there is a MinA for {a mathematical formula}A⊑⊥ in {a mathematical formula}TF of size at most n.  □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Complexity of counting MinAs
+     </section-title>
+     <paragraph>
+      In applications where one is interested in computing all MinAs, it might also be useful to know in advance how many of them exist. For that reason, we consider the following counting problem.
+     </paragraph>
+     <list>
+      <list-item>
+       Problem:#mina
+      </list-item>
+      <list-item>
+       Input: A KB {a mathematical formula}K and an axiom ϕ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨ϕ.
+      </list-item>
+      <list-item>
+       Output: The number of all MinAs for ϕ in {a mathematical formula}K.
+      </list-item>
+     </list>
+     <paragraph>
+      As already described in the previous sections, if {a mathematical formula}K is a core KB, the problem #mina boils down to the problem of counting simple paths between two vertices of a given directed graph. This problem called s-t connectedness was one of the first counting problems considered in [45].
+     </paragraph>
+     <list>
+      <list-item>
+       Problem:s-t paths
+      </list-item>
+      <list-item>
+       Input: A directed graph {a mathematical formula}G=(V,E), and two vertices {a mathematical formula}s,t∈V.
+      </list-item>
+      <list-item>
+       Output: The number of simple paths from s to t in G.
+      </list-item>
+     </list>
+     <paragraph>
+      In [45] it was shown that this problem is #p-complete. Recall that #pis defined [44] as the class of functions counting the accepting paths of nondeterministic Turing machines. Typical members of this class are the problems of counting the number of solutions of np-complete problems. Among them, the most well-known one is #sat, which is the problem of counting the distinct truth assignments that satisfy a given Boolean formula in CNF. Intuitively, #pis the counting-complexity analogous of the class npfor decision problems.
+     </paragraph>
+     <paragraph>
+      Since core KBs are the simplest type of KB, the hardness result applies to the other KB types we consider here. Moreover for most of the types of axioms considered in this paper, the problem of deciding whether a given set of axioms is a MinA is polynomial. This implies that for these fragments #mina is in #p, thus it is #p-complete.
+     </paragraph>
+     <paragraph label="Corollary 42">
+      #minais #p-complete for core, Horn, dual-Horn, Horn-{a mathematical formula}EL,{a mathematical formula}EL,{a mathematical formula}DL-LitecoreNand{a mathematical formula}DL-LitehornNKBs.
+     </paragraph>
+     <paragraph>
+      Next we consider a variant of this counting problem. Instead of the number of all MinAs, one can also be interested in the number of MinAs that contain a specific axiom. We call this problem #mina-relevance.
+     </paragraph>
+     <list>
+      <list-item>
+       Problem:#mina-relevance
+      </list-item>
+      <list-item>
+       Input: A KB {a mathematical formula}K and an axiom ϕ of the same type as {a mathematical formula}K such that {a mathematical formula}K⊨ϕ, and an axiom {a mathematical formula}ψ∈K.
+      </list-item>
+      <list-item>
+       Output: The number of all MinAs for ϕ in {a mathematical formula}K that contain ψ.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      If we are trying to explain an unwanted consequence, the solution of this counting problem will allow us to detect axioms that are most likely to be faulty, i.e. those that appear in the most MinAs. This idea has been proposed in [65] as a heuristic for correcting an error while minimizing the changes in the set of axioms. However, this heuristic requires the solution of a #p-complete problem. #mina-relevanceis #p-complete for core KBs.The problem is in #psince given a core KB {a mathematical formula}K, an axiom ϕ that follows from {a mathematical formula}K, an axiom {a mathematical formula}ψ∈K, and a candidate solution {a mathematical formula}K′⊆K, we can in polynomial time verify that {a mathematical formula}K′ is a MinA and it contains ψ.For showing #p-hardness we give a parsimonious reduction from #mina for core KBs, which has been shown to be #p-hard above. Given an instance of #mina with the core KB {a mathematical formula}K and the axiom {a mathematical formula}p→q we construct the core KB {a mathematical formula}K′:=K∪S, where {a mathematical formula}S={q→x}, and x is a fresh propositional variable not occurring in {a mathematical formula}K. It is not difficult to see that a set {a mathematical formula}M⊆K is a MinA for {a mathematical formula}p→q in {a mathematical formula}K if and only if {a mathematical formula}M∪S is a MinA for {a mathematical formula}p→x in {a mathematical formula}K′. Moreover, every MinA for {a mathematical formula}p→x in {a mathematical formula}K′ must contain the only axiom in {a mathematical formula}S. Thus, there are exactly as many MinAs for {a mathematical formula}p→q in {a mathematical formula}K as there are for {a mathematical formula}p→x in {a mathematical formula}K′ containing the axiom {a mathematical formula}q→x.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Obviously, Theorem 43 implies that #mina-relevance is #p-complete also for {a mathematical formula}DL-LitehornN, {a mathematical formula}DL-LitekromN, and {a mathematical formula}EL KBs, as well as all the classes in between. The only remaining case is that of {a mathematical formula}DL-Litebool KBs. For this logic, both counting problems are #np-complete. #minaand#mina-relevanceare #np-complete for KBs in{a mathematical formula}DL-Litebooland{a mathematical formula}DL-LiteboolN.Both problems are in #npsince all candidate solutions can be checked with an nporacle. We show only #np-hardness for #mina. The hardness of #mina-relevance follows from this result using the same arguments from the proof of Theorem 43.The prove that #mina is #np-hard, we provide a weakly parsimonious reduction from the canonical #np-complete problem #{a mathematical formula}Π1sat[66], [67].
+      <list>
+       Problem:#{a mathematical formula}Π1satInput: A formula {a mathematical formula}ψ=∀x.ϕ(x,y), with {a mathematical formula}x,y sets of variables and ϕ a Boolean formula.Output: The number of truth assignments of y that satisfy ψ.For every variable
+      </list>
+      <paragraph>
+       z appearing in ϕ, build a concept name {a mathematical formula}Bz; in addition, for every {a mathematical formula}y∈y build the variables {a mathematical formula}Ay and {a mathematical formula}Ay′. Using these variables, for each subformula {a mathematical formula}ϕ′ of ϕ, construct a concept {a mathematical formula}Cϕ′ by induction as follows.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for all {a mathematical formula}x∈x, {a mathematical formula}Cx:=Bx;
+       </list-item>
+       <list-item label="•">
+        for all {a mathematical formula}y∈y, {a mathematical formula}Cy:=Ay;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C¬ϕ1:=¬Cϕ1;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Cϕ1∧ϕ2:=Cϕ1⊓Cϕ2; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Cϕ1∨ϕ2:=Cϕ1⊔Cϕ2.
+       </list-item>
+      </list>
+      <paragraph>
+       Consider now the TBox {a mathematical formula}Tψ:={Ay⊑By⊓Ay′,Ay⊑¬By⊓Ay′|y∈y}. Recall that valuations are represented as the set of variables they make true. Given a valuation {a mathematical formula}V of y, let {a mathematical formula}MV:={Ay⊑By⊓Ay′|y∈V}∪{Ay⊑¬By⊓Ay′|y∉V}. We first show that for every such {a mathematical formula}V that satisfies ψ, {a mathematical formula}MV is a MinA for{a mathematical formula} in {a mathematical formula}Tψ. Since {a mathematical formula}V satisfies ψ, {a mathematical formula}Cϕ is a tautology. Moreover, by construction {a mathematical formula}MV entails {a mathematical formula}Ay⊑Ay′ for all {a mathematical formula}y∈y, and hence {a mathematical formula}MV entails the GCI (1). In every strict subset {a mathematical formula}N of {a mathematical formula}MV there is a variable {a mathematical formula}y∈y such that {a mathematical formula}N does not entail {a mathematical formula}Ay⊑Ay′, and hence does not entail (1). Thus, {a mathematical formula}MV is a MinA.Conversely, if {a mathematical formula}M is a MinA for (1) in {a mathematical formula}Tψ, then {a mathematical formula}M=MV for some valuation {a mathematical formula}V satisfying ψ, or {a mathematical formula}M is of the form {a mathematical formula}{Ay⊑By⊓Ay′,Ay⊑¬By⊓Ay′} for some {a mathematical formula}y∈y. Notice that there are exactly {a mathematical formula}|y| MinAs of the latter form. Thus, the number of MinAs of (1) in {a mathematical formula}Tψ is exactly the number of truth assignments of y satisfying ψ plus {a mathematical formula}|y|.  □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Summary of results
+     </section-title>
+     <paragraph>
+      All the complexity results obtained are summarized in Table 5. In the table, all decision and counting problems are complete for the given class, except when prefixed with “in,” or suffixed with “-h” (-hard). For the complexity of enumeration, pd, nop, and nip stand for polynomial delay, not output polynomial, and not incremental polynomial, respectively. The cells marked with op denote problems that can be enumerated in output polynomial time, but not in incremental polynomial time.
+     </paragraph>
+     <paragraph>
+      As it can be seen from the table, we have obtained an almost complete picture of the complexity of axiom pinpointing in the prominent families of lightweight DLs. The most relevant open problems remaining correspond to the dual-Horn case, where hardness w.r.t. hypergraph transversal decision and enumeration has been shown, but no matching upper bound has been provided. We conjecture that all these problems are in fact harder; i.e., that all-minas is conp-complete, and none of the enumeration problems can be solved in output polynomial time.
+     </paragraph>
+     <paragraph>
+      The remaining open problems refer to the precise complexity of some problems w.r.t. {a mathematical formula}DL-Litebool. Notably, to the best of our efforts, we were unable to prove any relevant lower bound for mina-irrelevance in this case, beyond the obvious np-hardness that follows from its sublogics. Notice that to solve any of the problems where no tight complexity bounds have been found, it is necessary to find a MinA with some additional properties; in particular, one would need to prove that the set constructed is indeed a MinA. This leads us to believe that all those problems are hard for the second level of the polynomial hierarchy. These cases are of less interest in the context of lightweight DLs, as the basic reasoning problem is already np-hard. However, we intend to work on closing those gaps.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      We have studied the complexity of axiom pinpointing and several related decision, counting and enumeration problems for lightweight description logics. Using different reductions and novel algorithms, we were able to find tight complexity bounds for most of the problems and languages considered. All these results are summarised in Table 5.
+     </paragraph>
+     <paragraph>
+      One important thing to consider is that our focus here is on the computational complexity classes, and not on the specific resource consumption needed to solve the problem. For instance, for most of our logics, we have proven a polynomial upper bound for is-mina using the black-box method described in Algorithm 1. Since entailment of Horn formulas is decidable in linear time, it is easy to see that our algorithm yields a quadratic decision procedure in this setting. However, it was recently shown, using specialised techniques, that this problem is in fact decidable in linear time [68]. Similarly, a more fine-grained run-time analysis might be required to achieve efficient algorithms even in the tractable cases. A promising approach in this direction is to exploit the ideas already developed for efficient MUS enumeration [14], [69].
+     </paragraph>
+     <paragraph>
+      Similarly, one should keep in mind that all the hardness results presented correspond to the worst-case behaviour of the problems. Indeed, different tools have been implemented for enumerating MinAs in Horn [68], {a mathematical formula}EL[70], [71], [72], [73], [74], and even more expressive logics [7], [9], [38], [75]. Empirical evaluations over such systems have shown that axiom pinpointing and other related tasks are feasible in practice, for realistic ontologies.
+     </paragraph>
+     <paragraph>
+      As future work, we intend to close the few remaining gaps in the complexity table. We are also interested in dealing with other enumeration orderings and preference relationships between the MinAs. Another important path of research is to understand how the panorama changes in the presence of knowledge about individuals (known as ABoxes in the DL community) or data, and with more complex entailments such as queries. In such cases, a parameterised study of the complexity may become relevant.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

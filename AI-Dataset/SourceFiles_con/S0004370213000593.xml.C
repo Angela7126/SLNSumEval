@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Parametric properties of ideal semantics.
+   </title>
+   <abstract>
+    The concept of “ideal semantics” has been promoted as an alternative basis for skeptical reasoning within abstract argumentation settings. Informally, ideal acceptance not only requires an argument to be skeptically accepted in the traditional sense but further insists that the argument is in an admissible set all of whose arguments are also skeptically accepted. The original proposal was couched in terms of the so-called preferred semantics for abstract argumentation. We argue, in this paper, that the notion of “ideal acceptability” is applicable to arbitrary semantics and justify this claim by showing that standard properties of classical ideal semantics, e.g. unique status, continue to hold in any “reasonable” extension-based semantics. We categorise the relationship between the divers concepts of “ideal extension w.r.t. semantics σ” that arise and we present a comprehensive analysis of algorithmic and complexity-theoretic issues. In addition we offer further support for the view that “ideal semantics” ought to be seen as a generic property by presenting and analysing the forms that these might take within value-based argumentation frameworks.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Argumentation has evolved as an important field in AI with abstract argumentation frameworks (AFs, for short) as introduced by Dung [20] being its most studied formalism. Meanwhile, a wide range of semantics for AFs has been proposed; for an overview see [2]. One of the most interesting recent approaches is the ideal semantics which have been introduced as an alternative basis for skeptical argumentation by Dung, Mancarella and Toni in [21], [22]. These define the concept of ideal sets as admissible sets, S, with the property that S is contained in all preferred extensions (i.e. subset-maximal admissible sets) of an AF{a mathematical formula}〈X,A〉, with the (unique) ideal extension of {a mathematical formula}〈X,A〉 being its maximal (again, w.r.t. ⊆) ideal set. In total the analyses of ideal semantics as evinced in [21], [22], [25] present a number of important properties. Ideal semantics offer a rigorous basis for the informal notion of “justifiably accepted skeptical belief”: an argument must not only be skeptically accepted (as in the standard sense) but also must belong to a set of “internally consistent” and self-defending collection of skeptically accepted arguments. In this way one has a rational basis for skeptically accepting arguments via ideal acceptance: standard skeptical acceptability requires only membership in the intersection of all preferred sets, but gives no information concerning the capability of such arguments to defend themselves; ideal acceptance, in addition, emphasises that such a defensive capability be possible.
+     </paragraph>
+     <paragraph>
+      Although [21], [22] present ideal semantics using preferred extensions as the basis, we argue that the approach is appropriately handled as a parametric model of acceptance, applicable to multiple status semantics in general, with the specific example of preferred semantics being one instance. In fact, another instance of this schema has been proposed by Caminada [13], who used semi-stable [12] instead of preferred extensions for the base semantics, and called this approach eager semantics. In our terms, we would talk about ideal semantics for semi-stable extensions.
+     </paragraph>
+     <paragraph>
+      What we call ideal semantics, is also known as prudent reasoning in the world of non-monotonic reasoning (this should not to be confused with prudent semantics for AFs as proposed in [17]). Typically, prudent reasoning is considered as an additional reasoning mode besides credulous and skeptical reasoning, and in case of default logic can be defined as follows, see e.g. [10]: a formula φ follows from a default theory {a mathematical formula}(W,D) by prudent reasoning if φ follows from W plus those defaults from D which are generating defaults for all extensions of {a mathematical formula}(W,D). The prudent reasoning principle is even more common in approaches for inconsistency-tolerant formalisms. For instance, the concept of free consequence[9] is defined as a formula which is entailed by the intersection of all maximal consistent subsets of a (potentially inconsistent) knowledge base.
+     </paragraph>
+     <paragraph>
+      This motivates our view of understanding ideal acceptance as a third reasoning mode for abstract argumentation, different from credulous and skeptical acceptance and, in principle, applicable to any semantics. We recall that here the difference to skeptical acceptance is due to the fact that the intersection of the extensions given by the chosen base semantics is not necessarily an admissible set. A well-known example is the AF{a mathematical formula}({a,b,c,d},{(a,b),(b,a),(a,c),(b,c),(c,d)}) where the preferred extensions are {a mathematical formula}{a,d} and {a mathematical formula}{b,d}, thus d is skeptically accepted, but the only ideal set is ∅ (since {a mathematical formula}{d} is not admissible). For prudent reasoning in default logic, the difference to skeptical reasoning is a bit more subtle. As an example, consider, {a mathematical formula}Δ=({α∨β→δ},{:¬αβ,:¬βα}). Here, we also have two extensions, one containing α the other containing β. Hence, δ follows skeptically from Δ but not via prudent reasoning, since none of the defaults is a generating one for all extensions. Let us finally mention that such a situation is also possible in the argumentation setting as soon as arguments are not fully abstract anymore. As an example, consider the AF above with additional attack {a mathematical formula}(d,c). Then {a mathematical formula}{d} is the ideal extension coinciding with the intersection of preferred extensions. In other words, d is the only skeptically accepted argument. Suppose now that, for instance, aʼs claim is {a mathematical formula}α∧¬β, bʼs claim is {a mathematical formula}β∧¬α, cʼs claim is some γ, and dʼs claim is {a mathematical formula}α∨β→δ (for the sake of the example, let us neglect here the question, how such a framework is obtained in instantiation-based argumentation). Then the formula δ follows skeptically (being a consequence of both {a mathematical formula}{α∧¬β,α∨β→δ} and {a mathematical formula}{β∧¬α,α∨β→δ}) from the AF, but it is not derivable from the ideal extension, i.e. from dʼs claim {a mathematical formula}α∨β→δ alone. Note that this is the case although the arguments in the ideal extension are exactly all skeptically accepted ones.
+     </paragraph>
+     <paragraph>
+      A natural question of interest concerns to what extent general properties of ideal semantics can be established, particularly in the light of known results for the preferred and eager case. Our aim in this paper is to focus on complexity theoretic properties. In particular, we are interested in the question whether the complexity of ideal reasoning can be derived from known complexity results for the respective base semantics in terms of credulous or skeptical acceptance. As a basis we shall use the characterisations proven by Dunne [25]. However, as it turns out, the standard ideal semantics (having preferred extensions for the base semantics) plays a rather special role in terms of complexity. We recall that [25] showed that the main reasoning problems here are located between NP resp. coNP and {a mathematical formula}Θ2P, but exact bounds seem to be very hard to establish.{sup:1} As we will see these results are due to the fact that the problems of credulous and skeptical acceptance for the base semantics are located on different levels of the polynomial hierarchy (in NP for credulous acceptance, but {a mathematical formula}Π2P-hard for skeptical acceptance [27]). For many other base semantics, we show that complexity of ideal reasoning coincides with the complexity of skeptical acceptance of the base semantics.
+     </paragraph>
+     <paragraph>
+      Our main contributions can be summarised as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We show general results concerning the properties ideal semantics for abstract argumentation satisfy. Most notably, that whenever the base semantics is based on conflict-free sets (which is true for any reasonable argumentation semantics) there exists a unique ideal extension. Moreover, it holds that for each base semantics satisfying the reinstatement property [4], the ideal extension is also complete (in the sense of Dungʼs complete semantics).
+      </list-item>
+      <list-item label="•">
+       We provide two alternative algorithms how to compute such an ideal extension. One is a generalisation of concepts introduced in [25] and relies on credulous acceptance for the base semantics. A novel characterisation uses the skeptically accepted arguments instead.
+      </list-item>
+      <list-item label="•">
+       We provide a thorough complexity analysis. We are able to provide general results for ideal reasoning which can be derived from complexity results for the base semantics. Moreover, we give novel exact bounds for the following realisations of ideal semantics: semi-stable (we note that complexity has not been analysed in [13]), resolution-based grounded [5], stage [35], and naive semantics. For naive semantics, reasoning in the ideal extension remains tractable.
+      </list-item>
+      <list-item label="•">
+       Finally we analyse analogues of ideal semantics within one widely studied development of AFs: the value-based argumentation frameworks (vafs) of Bench-Capon [6]. For this we show uniqueness as well as some characterisation properties continue to hold.
+      </list-item>
+     </list>
+     <paragraph>
+      Regarding this last contribution it may be useful to expand on some further points. We note that the value-based model of [6] has, arguably, received more extensive formal treatment and analysis of its properties by comparison with other proposals, see e.g. [7], [8], [23], [26], [34]. In this light the established significance of value-based argumentation in both theoretical and applicative contexts suggests that it is a natural choice in which to consider notions of “ideal semantics” outside Dungʼs abstraction.
+     </paragraph>
+     <paragraph>
+      While there have been many developments of Dungʼs proposal in addition to those of Bench-Capon [6], among which we note in particular the extended argumentation frameworks of Modgil [33], we would argue that VAFs raise particular questions of interest. For example, approaches to capturing semantics in (standard) AFs are, often, presented in set-theoretic terms: a collection of justified arguments being a subset of arguments in an AF that satisfy some criteria. As a consequence the basis for the concept of ideal acceptance starts from objects described in set-theoretic terms. For VAFs, however, the semantics underpinning acceptance of arguments is in terms of orderings (of the set of values). The distinction between “acceptability through subset membership” and “acceptability via (value) ordering” is, already, known to have significant computational implications: graph structures for which deciding an argumentʼs status can be performed efficiently with AFs proving to be intractable in the case of VAFs, cf. [23]. We explore further issues arising from this subset/ordering contrast in Section 7.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      Throughout {a mathematical formula}〈X,A〉 is a (finite) Argumentation Framework (AF for short) with argument set {a mathematical formula}X={x1,x2,…,xn} and binary attack relation {a mathematical formula}A⊆X×X. For {a mathematical formula}S⊆X, {a mathematical formula}S− is the set of arguments {a mathematical formula}{x:∃y∈S s.t. (x,y)∈A} and, similarly, {a mathematical formula}S+ contains {a mathematical formula}{x:∃y∈S s.t. (y,x)∈A}.
+     </paragraph>
+     <paragraph>
+      We focus on so-called extension-based semantics these being described by some predicate {a mathematical formula}σ:2X→〈⊤,⊥〉 prescribing criteria under which a set of arguments is considered collectively “justified”.
+     </paragraph>
+     <paragraph>
+      We distinguish extension-based semantics which embody a maximality requirement, i.e. require that for all {a mathematical formula}S⊆X: if {a mathematical formula}σ(S) then {a mathematical formula}¬σ(T) for all {a mathematical formula}T⊃S. We denote by {a mathematical formula}Eσ(〈X,A〉) the set {a mathematical formula}{S⊆X:σ(S)} referring to members of {a mathematical formula}Eσ as σ-solutions. In cases where σ imposes a maximality condition we shall refer to the member(s) of {a mathematical formula}Eσ(〈X,A〉) as σ-extensions. An (extension-based) semantics, σ, is said to be unique status if for every AF{a mathematical formula}〈X,A〉 it holds that {a mathematical formula}|Eσ(〈X,A〉)|=1, otherwise the semantics is said to be multiple status. For σ a unique status semantics, {a mathematical formula}Eσ(〈X,A〉) denotes the unique set of arguments in {a mathematical formula}Eσ(〈X,A〉), i.e {a mathematical formula}Eσ(〈X,A〉)={Eσ(〈X,A〉)} for unique status semantics.
+     </paragraph>
+     <paragraph>
+      An argument, {a mathematical formula}x∈X is acceptable w.r.t. {a mathematical formula}S⊆X if for any {a mathematical formula}y∈X for which {a mathematical formula}(y,x)∈A there is some {a mathematical formula}z∈S such that {a mathematical formula}(z,y)∈A. The characteristic function, {a mathematical formula}F:2X→2X, reports the set of arguments that are acceptable to a given set. It is shown by Dung [20] that the function {a mathematical formula}F has a least fixed point which is called the grounded extension.
+     </paragraph>
+     <paragraph>
+      We require the following concepts:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Elements of {a mathematical formula}Ecf(〈X,A〉) are called the conflict-free sets of {a mathematical formula}〈X,A〉; similarly those of {a mathematical formula}Eadm(〈X,A〉) and {a mathematical formula}Ecomp(〈X,A〉) are the admissible, and respectively, complete sets. The remaining cases define extension-based semantics, and with the exception of the grounded semantics gr, these are all multiple status. In fact, we have defined here naive extensions ({a mathematical formula}Enaive(〈X,A〉)), preferred extensions ({a mathematical formula}Epr(〈X,A〉)), semi-stable extensions ({a mathematical formula}Esst(〈X,A〉)), and stage extensions ({a mathematical formula}Estage(〈X,A〉)).
+     </paragraph>
+     <paragraph label="Definition 1">
+      Let σ and θ be semantics. If for all AFs {a mathematical formula}〈X,A〉, it holds that {a mathematical formula}Eσ(〈X,A〉)⊆Eθ(〈X,A〉), we call σ a θ-preserving semantics.
+     </paragraph>
+     <paragraph>
+      For instance, all of the above semantics are cf-preserving, but the naive and the stage semantics are, for instance, not adm-preserving. Moreover, sst is pr-preserving, and stage is naive-preserving.
+     </paragraph>
+     <paragraph>
+      The resolution-based semantics, introduced by Baroni and Giacomin [5] are a parametric approach defined in the following way: given {a mathematical formula}〈X,A〉, let {a mathematical formula}μ(〈X,A〉) be the set of (unordered) pairs of arguments {a mathematical formula}{{x,y}:x≠y,{(x,y),(y,x)}⊆A}. A (full) resolution, β, of {a mathematical formula}〈X,A〉 contains exactly one of each of the attacks {a mathematical formula}(x,y), {a mathematical formula}(y,x) for each {a mathematical formula}{x,y}∈μ(〈X,A〉). We denote the set of all resolutions of an AF {a mathematical formula}〈X,A〉 by {a mathematical formula}γ(〈X,A〉). The resolvedAF w.r.t. a resolution β is {a mathematical formula}〈X,A∖β〉. If σ is an extension-based semantics the resolution-based σ semantics, σ⁎, is given through{a mathematical formula} where min is with respect to ⊆ so that, for example, if {a mathematical formula}Eσ(〈X,A∖β〉={∅}) for some β then {a mathematical formula}Eσ⁎(〈X,A〉)={∅} also. We note that gr⁎ – the resolution-based grounded semantics – is multiple status. As discussed in [5], gr⁎ satisfies many desirable properties, thus we will focus on this instantiation here. In fact, the semantics for which we will consider ideal extensions in this paper, are pr, sst, stage, gr⁎, and naive.
+     </paragraph>
+     <paragraph>
+      We assume the reader has knowledge about standard complexity classes, i.e. p, NP and logspace (l). Nevertheless we briefly recapitulate the concept of oracle machines and some related complexity classes. Thus let {a mathematical formula}C notate some complexity class. By a {a mathematical formula}C-oracle machine we mean a (polynomial time) Turing machine which can access an oracle that decides a given (sub)-problem in {a mathematical formula}C within one step. We denote such machines as {a mathematical formula}PC if the underlying Turing machine is deterministic; {a mathematical formula}NPC if the underlying Turing machine is nondeterministic; and {a mathematical formula}fpC if we consider functional problems. Moreover we consider oracle machines where the queries asked to the oracle are non-adaptive, i.e. the exact formulation of a query does not depend on the answers of the previous queries. That is one can compute the answers to all queries in parallel. We denote the corresponding complexity classes as {a mathematical formula}P||C for decision problems and {a mathematical formula}fp||C for functional problems.
+     </paragraph>
+     <paragraph>
+      We are now ready to define specific complexity classes using NP-oracles. First {a mathematical formula}Θ2P=P||NP denotes the class of decision problems that can be solved by a deterministic algorithm which is allowed to make {a mathematical formula}O(n) non-adaptive calls to the NP-oracle. Next the class {a mathematical formula}Σ2P=NPNP, denotes the problems which can be decided by a nondeterministic polynomial time algorithm that has (unrestricted) access to an NP-oracle. The class {a mathematical formula}Π2P=coNPNP is defined as the complementary class of {a mathematical formula}Σ2P, i.e. {a mathematical formula}Π2P=coΣ2P. Finally we define the classes {a mathematical formula}DP and {a mathematical formula}D2P. A decision problem L is in the class {a mathematical formula}DP iff L can be characterised as {a mathematical formula}L1∩L2 for decision problems {a mathematical formula}L1∈NP and {a mathematical formula}L2∈coNP. Similarly {a mathematical formula}L∈D2P iff L can be characterised as {a mathematical formula}L1∩L2 for {a mathematical formula}L1∈Σ2P and {a mathematical formula}L2∈Π2P.
+     </paragraph>
+     <paragraph>
+      Typical computational problems of interest in terms of argumentation frameworks are:
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       Credulous acceptance – {a mathematical formula}caσ(〈X,A〉,x) ({a mathematical formula}x∈X). Is there any{a mathematical formula}S∈Eσ(〈X,A〉) for which {a mathematical formula}x∈S?
+      </list-item>
+      <list-item label="(b)">
+       Skeptical acceptance – {a mathematical formula}saσ(〈X,A〉,x) ({a mathematical formula}x∈X). Is {a mathematical formula}x∈S for every{a mathematical formula}S∈Eσ(〈X,A〉)?
+      </list-item>
+      <list-item label="(c)">
+       Verification – {a mathematical formula}verσ(〈X,A〉,S) ({a mathematical formula}S⊆X). Is it the case that {a mathematical formula}S∈Eσ(〈X,A〉)?
+      </list-item>
+      <list-item label="(d)">
+       Non-emptiness – {a mathematical formula}neσ(〈X,A〉). Is there any {a mathematical formula}S∈Eσ(〈X,A〉) for which {a mathematical formula}S≠∅?
+      </list-item>
+     </list>
+     <paragraph>
+      For the above mentioned semantics the complexity of these decision problems is well explored [3], [18], [19], [27], [29], [31], [32]. We summarise these results in Table 1.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Parameterised ideal semantics
+     </section-title>
+     <paragraph>
+      We now give the general definition of ideal semantics, abstracting from the approaches in [13], [21].
+     </paragraph>
+     <paragraph label="Definition 2">
+      Let {a mathematical formula}〈X,A〉 be an AF and σ a semantics that promises at least one solution.{sup:2} The ideal sets w.r.t. base semantics σ of {a mathematical formula}〈X,A〉 are those that satisfy the following constraints.{a mathematical formula}{a mathematical formula} We say that S is an ideal extension of {a mathematical formula}〈X,A〉 w.r.t. σ, if S is a ⊆-maximal ideal set (of {a mathematical formula}〈X,A〉) w.r.t. σ. We use {a mathematical formula}Eσidl to denote the collection of ideal sets w.r.t. σ and {a mathematical formula}Eσie to denote the set of ideal extensions w.r.t. σ. Likewise, {a mathematical formula}σidl and {a mathematical formula}σie denote the corresponding semantics.
+     </paragraph>
+     <paragraph>
+      First of all, we show that for all reasonable base semantics σ, there is a unique ideal extension w.r.t. σ.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      If a semantics σ is cf-preserving, then{a mathematical formula}σieis a unique status semantics.
+     </paragraph>
+     <paragraph label="Proof">
+      It suffices to show that if {a mathematical formula}S∈Eσidl(〈X,A〉) and {a mathematical formula}T∈Eσidl(〈X,A〉) then {a mathematical formula}S∪T∈Eσidl(〈X,A〉), i.e. ideal sets w.r.t. σ are closed under set union. First note that {a mathematical formula}S∪T∈Ecf(〈X,A〉) since, by the definition of {a mathematical formula}Eσidl, {a mathematical formula}S⊆⋂V∈Eσ(〈X,A〉)V and {a mathematical formula}T⊆⋂V∈Eσ(〈X,A〉)V; hence {a mathematical formula}S∪T⊆V for every {a mathematical formula}V∈Eσ(〈X,A〉). As by assumption σ promises at least one solution {a mathematical formula}V∈Eσ(〈X,A〉) we then have that {a mathematical formula}S∪T is a subset of a conflict-free set and thus is itself conflict-free. It must, however, further hold that {a mathematical formula}S∪T∈Eadm(〈X,A〉): both S and T are in {a mathematical formula}Eadm(〈X,A〉) (since they are ideal sets w.r.t. σ), hence any {a mathematical formula}y∈(S∪T)− either belongs to {a mathematical formula}S− (and so is counterattacked by some {a mathematical formula}z∈S) or is in {a mathematical formula}T− (and, in the same way, counterattacked by some argument in T). It follows that {a mathematical formula}S∪T is an admissible set forming a subset of every set in {a mathematical formula}Eσ(〈X,A〉), i.e. {a mathematical formula}S∪T∈Eσidl(〈X,A〉).  □
+     </paragraph>
+     <paragraph>
+      According to the introduced notation for unique status semantics we will denote the unique ideal extension w.r.t. base semantics σ as {a mathematical formula}Eσie(〈X,A〉).
+     </paragraph>
+     <paragraph>
+      Let us now discuss a few further aspects of Definition 2. Indeed, one might ask why the notion of base semantics is parameterised, but the required properties of ideal sets and ideal extensions are to some extent fixed in the following sense:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Each ideal set is admissible;
+      </list-item>
+      <list-item label="2.">
+       The ideal extensions are defined w.r.t. subset maximality.
+      </list-item>
+     </list>
+     <paragraph>
+      Proposition 1 gives an answer to the second issue already. In fact, using this result one can observe that considering admissible sets {a mathematical formula}S⊆⋂T∈Eσ(〈X,A〉)T which are maximal with respect to the cardinality {a mathematical formula}|S|, the range {a mathematical formula}S∪S+ or the cardinality of the range {a mathematical formula}|S∪S+| would always yield the ideal extension (defined via ⊆-maximality), as well. This is by the fact that each of these maximality criteria implies that the set S is ⊆-maximal.
+     </paragraph>
+     <paragraph>
+      Let us thus turn to first issue. Two directions are possible: on the one hand, we could weaken the restriction for being an ideal set; on the other hand, we could strengthen the properties ideal sets have to satisfy.
+     </paragraph>
+     <paragraph>
+      Let us start with the former scenario. The only natural such relaxation would be to consider conflict-free (instead of admissible) sets as ideal ones. However, as long as we assume that any reasonable base semantics promises conflict-free extensions, we get that the set of skeptical accepted arguments is already conflict-free. Hence we would end up with the problem of skeptical acceptance. That is:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      For the other scenario, i.e. sharpening the conditions for ideal sets, one can argue that a restriction to complete sets is the closest reasonable such sharpening. To this end, let us first recall the concept of reinstatement as introduced in [4] which separates complete from admissible sets:
+     </paragraph>
+     <paragraph>
+      A semantics σ satisfies the reinstatement property iff it holds that for every AF{a mathematical formula}〈X,A〉 and {a mathematical formula}E∈Eσ(〈X,A〉):F(E)⊆E.
+     </paragraph>
+     <paragraph>
+      We can give the following result.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      If σ satisfies the reinstatement property, then{a mathematical formula}σieis comp-preserving.
+     </paragraph>
+     <paragraph label="Proof">
+      Let be {a mathematical formula}E∈Eσie(〈X,A〉). By definition E is admissible and it remains to show that every argument defended by E belongs to E. Thus let {a mathematical formula}a∈X be an arbitrary argument which is defended by E. As E is part of every σ-extension we have that every σ-extension defends a and as σ satisfies the reinstatement property, a is contained in every σ-extension. By the facts that a is skeptically accepted and defended by E we have that {a mathematical formula}E∪{a} is an ideal set. But as E is already a maximal ideal set we get that {a mathematical formula}a∈E, which completes our proof.  □
+     </paragraph>
+     <paragraph>
+      Thus, if the base-semantics satisfies the reinstatement property then the ideal extension is already a complete set and thus considering complete sets (instead of admissible sets in Condition (I1)) would not change anything. On the other hand, if the base-semantics σ does not satisfy the reinstatement property, the existence of a complete set S which is also ideal w.r.t. σ is not guaranteed. For example, consider {a mathematical formula}σ=naive and an AF over two arguments {a mathematical formula}a,b such that a attacks b. This AF has two naive extensions {a mathematical formula}{a} and {a mathematical formula}{b}, and thus there are no skeptically accepted arguments. But the empty set is not a complete extension, since {a mathematical formula}F(∅)={a}. Hence there would not exist an ideal set for this framework; in other words there would then exist AFs {a mathematical formula}〈X,A〉, such that {a mathematical formula}Eσidl(〈X,A〉)=∅, a property which is not desirable.
+     </paragraph>
+     <paragraph>
+      This shows that the conditions used in Definition 2 are the best suited ones to get a wide range of reasonable parameterisations of ideal semantics.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Algorithms for parameterised ideal reasoning
+     </section-title>
+     <paragraph>
+      In this section, we will discuss two types of algorithms for computing the ideal extension w.r.t. a given base semantics σ. The first is a generalisation of an algorithm presented in [25] and relies on the credulous acceptance problem for σ. We will show that such an algorithm can be used for any base semantics σ, as long as each extension {a mathematical formula}S∈Eσ(〈X,A〉) is preferred or naive. Thus, this algorithm applies also to {a mathematical formula}σ=sst and {a mathematical formula}σ=stage. Our second algorithm is closer to the original definition of ideal sets and thus makes use of skeptical acceptance in σ. This second algorithm is applicable to any cf-preserving base semantics σ. Having these two algorithms at hand clearly is also of practical value. In fact, whenever both algorithms are applicable, then one can use the relative computational complexities of credulous acceptance and skeptical acceptance in the base semantics to choose the most suitable.
+     </paragraph>
+     <paragraph>
+      Before stating Algorithm 1, we need a few technical results.
+     </paragraph>
+     <paragraph label="Proposition 3">
+      If σ is pr-preserving, then for eachAF{a mathematical formula}〈X,A〉the following relations hold:{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      For (C1), suppose first that {a mathematical formula}S∈Eσidl(〈X,A〉). Certainly {a mathematical formula}S∈Eadm(〈X,A〉) (by definition), so consider any {a mathematical formula}y∈S−. If, in contradiction to the claim, we have {a mathematical formula}caσ(〈X,A〉,y) then there is some set {a mathematical formula}T∈Eσ(〈X,A〉) for which {a mathematical formula}y∈T. We must, however, have {a mathematical formula}S⊆T (since S is an ideal set w.r.t. σ), leading to {a mathematical formula}S∪{y}⊆T which contradicts {a mathematical formula}T∈Epr(〈X,A〉) (since T would fail to be conflict-free). On the other hand, suppose S is such that {a mathematical formula}S∈Eadm(〈X,A〉) and every {a mathematical formula}y∈S− satisfies {a mathematical formula}¬caσ(〈X,A〉,y). We show that this leads to {a mathematical formula}S∈Eσidl(〈X,A〉). If this failed to be the case we can find {a mathematical formula}T∈Eσ(〈X,A〉) for which {a mathematical formula}S∖T≠∅. Consider the set {a mathematical formula}S∪T: this must be conflict-free since {a mathematical formula}S∈Eadm(〈X,A〉), {a mathematical formula}T∈Epr(〈X,A〉) so that {a mathematical formula}S∪T∉Ecf(〈X,A〉) would imply the presence of arguments {a mathematical formula}s∈S, {a mathematical formula}t∈T with {a mathematical formula}(s,t)∈A or {a mathematical formula}(t,s)∈A. From the premises the latter is ruled out since it would lead to the contradiction {a mathematical formula}¬caσ(〈X,A〉,t); the former possibility, however, is also ruled out since from {a mathematical formula}T∈Epr(〈X,A〉), {a mathematical formula}(s,t)∈A yields {a mathematical formula}u∈T with {a mathematical formula}(u,s)∈A and, again, we obtain a contradiction. It follows that {a mathematical formula}S∪T∈Ecf(〈X,A〉) and also {a mathematical formula}S∪T∈Eadm(〈X,A〉). The set T, however, is also in {a mathematical formula}Epr(〈X,A〉) so that {a mathematical formula}S∪T=T, i.e. {a mathematical formula}S⊆T as required.For (C2), if {a mathematical formula}x∈Eσie(〈X,A〉) then no {a mathematical formula}y∈{x}− can have {a mathematical formula}caσ(〈X,A〉,y) (from (C1)) and, trivially from the fact {a mathematical formula}Eσie(〈X,A〉)∈Eadm(〈X,A〉) we obtain, for each {a mathematical formula}y∈{x}−, that {a mathematical formula}{y}−∩Eσie(〈X,A〉)≠∅. For the converse direction consider any {a mathematical formula}x∈X for which each {a mathematical formula}y∈{x}− has {a mathematical formula}¬caσ(〈X,A〉,y) and {a mathematical formula}{y}−∩Eσie(〈X,A〉)≠∅. The set {a mathematical formula}T={x}∪Eσie(〈X,A〉) is admissible as a consequence of Dungʼs Fundamental Lemma [20, Lemma 10, p. 327], since {a mathematical formula}Eσie(〈X,A〉) is admissible. Furthermore, any {a mathematical formula}y∈T− is such that {a mathematical formula}¬caσ(〈X,A〉,y) (that this is the case for {a mathematical formula}{x} holds via the premise, and that it holds for {a mathematical formula}Eσie(〈X,A〉) is immediate from (C1)). We deduce, by (C1), that {a mathematical formula}T={x}∪Eσie(〈X,A〉)∈Eσidl(〈X,A〉) and, since {a mathematical formula}Eσie(〈X,A〉) is maximal obtain {a mathematical formula}x∈Eσie(〈X,A〉) as required.  □
+     </paragraph>
+     <paragraph>
+      In the case of ideal sets w.r.t. preferred extensions the characterisation of Proposition 3 has previously been shown in [22], [25]. In addition, we now see that it holds also for the case when semi-stable semantics are employed as base semantics for ideal reasoning.
+     </paragraph>
+     <paragraph>
+      However, the above characterisation does not apply to semantics which are not based on admissibility, for instance if stage semantics are considered. Thus our next step is to give a similar characterisation for semantics which are naive-preserving. The only subtle difference is due to the fact that naive semantics do not take the orientation of attacks into account. Thus, we have to add {a mathematical formula}S+ (resp. {a mathematical formula}{x}+) to the conditions from Proposition 3. The proof then proceeds quite similar to the one of Proposition 3.
+     </paragraph>
+     <paragraph label="Proposition 4">
+      If σ is naive-preserving, then for eachAF{a mathematical formula}〈X,A〉the following relations hold:{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      For (C1′), suppose first that {a mathematical formula}S∈Eσidl(〈X,A〉). Certainly {a mathematical formula}S∈Eadm(〈X,A〉) (by definition), so consider any {a mathematical formula}y∈S−∪S+. If, in contradiction to the claim, we have {a mathematical formula}caσ(〈X,A〉,y) then there is some set {a mathematical formula}T∈Eσ(〈X,A〉) for which {a mathematical formula}y∈T. We must, however, have {a mathematical formula}S⊆T (since S is an ideal set w.r.t. σ), leading to {a mathematical formula}S∪{y}⊆T which contradicts {a mathematical formula}T∈Enaive(〈X,A〉) (since T would fail to be conflict-free). On the other hand, suppose S is such that {a mathematical formula}S∈Eadm(〈X,A〉) and every {a mathematical formula}y∈S−∪S+ satisfies {a mathematical formula}¬caσ(〈X,A〉,y). We show that this leads to {a mathematical formula}S∈Eσidl(〈X,A〉). If this failed to be the case we can find {a mathematical formula}T∈Eσ(〈X,A〉) and {a mathematical formula}x∈S such that {a mathematical formula}x∉T. By assumption we have that {a mathematical formula}{x}−∪{x}+∩T=∅ and thus that the set {a mathematical formula}T∪{x} is a conflict-free set. As T is defined as ⊆-maximal conflict-free set this leads to the desired contradiction.For (C2′), if {a mathematical formula}x∈Eσie(〈X,A〉) then no {a mathematical formula}y∈{x}−∪{x}+ can be credulously accepted. From the fact {a mathematical formula}Eσie(〈X,A〉)∈Eadm(〈X,A〉) we obtain, for each {a mathematical formula}y∈{x}−, that {a mathematical formula}{y}−∩Eσie(〈X,A〉)≠∅. Further as by assumption {a mathematical formula}x∈Eσie(〈X,A〉) we have that {a mathematical formula}∀y∈{x}+, {a mathematical formula}{y}−∩Eσie(〈X,A〉)≠∅. For the converse direction consider any {a mathematical formula}x∈X for which each {a mathematical formula}y∈{x}−∪{x}+ has {a mathematical formula}¬caσ(〈X,A〉,y) and {a mathematical formula}{y}−∩Eσie(〈X,A〉)≠∅. The set {a mathematical formula}T={x}∪Eσie(〈X,A〉) is conflict free and defends x, i.e. the set is admissible. Furthermore, any {a mathematical formula}y∈T−∪T+ is such that {a mathematical formula}¬caσ(〈X,A〉,y). We deduce, via (C1′), that {a mathematical formula}T={x}∪Eσie(〈X,A〉)∈Eσidl(〈X,A〉) and, since {a mathematical formula}Eσie(〈X,A〉) is maximal, obtain {a mathematical formula}x∈Eσie(〈X,A〉) as required.  □
+     </paragraph>
+     <paragraph>
+      The characterisations (C2) and (C2′) from above results suggest how to compute the ideal extension w.r.t. a semantics σ, in case we have given a function that decides credulous acceptance for σ. Algorithm 1 describes this idea.
+     </paragraph>
+     <paragraph>
+      The correctness of this algorithm (for appropriate base semantics as outlined above) is an immediate consequence of Proposition 3 (for pr-preserving semantics) and Proposition 4 (for naive-preserving semantics). As well there exist simple algorithms for handling bipartite AFs. We refer the interested reader to [23].
+     </paragraph>
+     <paragraph label="Theorem 1">
+      For any semantics σ which is pr-preserving or naive-preserving,Algorithm 1constructs{a mathematical formula}Eσie.
+     </paragraph>
+     <paragraph>
+      We mention that by combining the proofs of Proposition 3 and Proposition 4, one can show that if {a mathematical formula}S∈Eσ(〈X,A〉) implies {a mathematical formula}S∈Epr(〈X,A〉)∪Enaive(〈X,A〉) then (C1′) and (C2′) also hold. In other words, σ does not need to be purely pr-preserving or naive-preserving, but it is sufficient that each σ-extension is at least a preferred or naive extensions.
+     </paragraph>
+     <paragraph>
+      Although Algorithm 1 is already applicable to a wide range of base semantics, it does not work for resolution-based grounded semantics. Consider the example in Fig. 1. In this we have {a mathematical formula}Egr⁎={{P,F},{Q,B}} so that {a mathematical formula}EGR⁎ie=∅. However, the set {a mathematical formula}{B,F} is admissible and none of its attackers credulously accepted w.r.t. gr⁎, thus the conditions from above propositions apply for this set. In fact, {a mathematical formula}{B,F} is the standard ideal extension (w.r.t. preferred semantics), since the preferred extensions of the framework are {a mathematical formula}{B,F,P} and {a mathematical formula}{B,F,Q} and as already observed {a mathematical formula}{B,F} is admissible. Interestingly, even for resolution-based preferred extensions (which we do not explicitly consider in this paper), {a mathematical formula}Epr⁎={{P,F},{Q,B}}=Egr⁎, so that, again, {a mathematical formula}Epr⁎ie=∅ but {a mathematical formula}{F,B} is both admissible with no attacking argument satisfying {a mathematical formula}capr⁎.
+     </paragraph>
+     <paragraph>
+      Hence Proposition 3 and Proposition 4 fail to hold for base semantics which are resolution based. Thus, Algorithm 1 is not fully satisfying, as it cannot capture all interesting base semantics. This motivates Algorithm 2 which follows the definition of ideal semantics more closely: it first computes the set of all skeptically accepted arguments and then iteratively computes the maximal admissible subset.
+     </paragraph>
+     <paragraph>
+      We next show that this algorithm is correct for every reasonable base semantics, i.e. for base semantics that are cf-preserving. The following lemma captures the correctness of the fixed-point iteration in the algorithm.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      Let{a mathematical formula}(X,A)be an AF and{a mathematical formula}S⊆Xa conflict-free set. For the ⊆-maximal set{a mathematical formula}A⊆Sadmissible in{a mathematical formula}(X,A), it holds that{a mathematical formula}A=Fˆ|S|(S).
+     </paragraph>
+     <paragraph label="Proof">
+      Obviously {a mathematical formula}Fˆ is a monotone operator and the series {a mathematical formula}(Fˆi(S))i⩾0 is non-increasing. Further, the empty set is a lower bound and thus a fixed-point is reached after at most {a mathematical formula}|S| steps. We claim that this fixed point is also the desired ⊆-maximal admissible set A, i.e. {a mathematical formula}A=Fˆ|S|(S).By definition, the fixed point {a mathematical formula}Fˆ|S|(S) defends all its arguments and is conflict-free (since {a mathematical formula}Fˆ|S|(S)⊆S and by assumption that S is conflict-free). Hence it holds that {a mathematical formula}Fˆ|S|(S) is an admissible set. To complete the proof we consider maximality and show that {a mathematical formula}A⊆Fˆi(S) for {a mathematical formula}i⩾0. As A is admissible we have that {a mathematical formula}Fˆ(A)=A and further for each set B with {a mathematical formula}A⊆B that {a mathematical formula}A⊆Fˆ(B). Moreover {a mathematical formula}A⊆S and thus for {a mathematical formula}i⩾0 it holds that {a mathematical formula}A⊆Fˆi(S). Hence we have that {a mathematical formula}A=Fˆ|S|(S).  □
+     </paragraph>
+     <paragraph label="Proof">
+      For any semantics σ which is cf-preserving,Algorithm 2constructs{a mathematical formula}Eσie.Since σ is cf-preserving, the set {a mathematical formula}Xsa is also conflict-free. Thus by Lemma 1, {a mathematical formula}Eσie=Fˆ|Xsa|(Xsa).  □
+     </paragraph>
+     <paragraph>
+      Theorem 2 is more general than Theorem 1 in the sense that whenever a base semantics σ satisfies the conditions to apply Algorithm 1 one can also apply Algorithm 2. However, Algorithm 1 becomes valuable if deciding credulous acceptance is easier than deciding skeptical acceptance (a situation which holds for standard ideal semantics, as already mentioned earlier).
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Instantiations
+     </section-title>
+     <paragraph>
+      We now consider relationships between ideal extensions w.r.t. different base semantics. However, let us first mention that in case the base semantics is given by complete sets, our schema yields that the ideal extension w.r.t. complete sets matches the grounded extension.
+     </paragraph>
+     <paragraph label="Proof">
+      It is known that the set of skeptically accepted arguments w.r.t. complete semantics coincides with the grounded extension. Further as the grounded extension is also an admissible set, the assertion follows.  □
+     </paragraph>
+     <paragraph>
+      The other base semantics, we are interested here are gr⁎, pr, sst, naive, and stage. Since all these semantics σ are cf-preserving, we know that {a mathematical formula}σie is a unique status semantics by Proposition 1. Moreover, for {a mathematical formula}σ∈{pr,sst,gr⁎}, σ has the reinstatement property, and thus by Proposition 2, we know that for these base semantics, {a mathematical formula}Eσie(〈X,A〉) is a complete set for any AF{a mathematical formula}〈X,A〉. In general, this does not hold for {a mathematical formula}σ∈{naive,stage}. For instance, consider the following AF:{a mathematical formula} We have {a mathematical formula}Enaive(〈X,A〉)=Estage(〈X,A〉)={{a},{b}}, and thus {a mathematical formula}Enaiveie(〈X,A〉)=Estageie(〈X,A〉)=∅. But as the argument a is defended by the empty set the ideal extension is not a complete one.
+     </paragraph>
+     <paragraph>
+      Let us next have a closer look on the ideal extension w.r.t. naive semantics.
+     </paragraph>
+     <paragraph label="Proof">
+      For anyAF{a mathematical formula}〈X,A〉,{a mathematical formula}with{a mathematical formula}Xsa={x:(x,x)∉A,{x}−∪{x}+⊆{y:(y,y)∈A}}.It suffices to show that {a mathematical formula}Xsa=⋂T∈Enaive(〈X,A〉)T. To this end, first observe that {a mathematical formula}x∈T for some {a mathematical formula}T∈Enaive(〈X,A〉) if and only if {a mathematical formula}(x,x)∉A. On the other hand, there exists a {a mathematical formula}T∈Enaive(〈X,A〉) with {a mathematical formula}x∉T, if and only if either {a mathematical formula}(x,x)∈A, or (by conflict-freeness) {a mathematical formula}(y,y)∉A for some “neighbour” y of x, i.e. {a mathematical formula}y∈{x}−∪{x}+. It follows therefore that only those arguments can belong to every set in {a mathematical formula}Enaive(〈X,A〉), which are not self-attacking and neither are attacked by nor attack an y with {a mathematical formula}(y,y)∉A.  □
+     </paragraph>
+     <paragraph>
+      For AFs without self-attacking arguments this characterisation simplifies as follows.
+     </paragraph>
+     <paragraph label="Corollary 1">
+      For anyAFs{a mathematical formula}〈X,A〉without self-attacking arguments, it holds that{a mathematical formula}Enaiveie(〈X,A〉)={x:{x}−∪{x}+=∅}.
+     </paragraph>
+     <paragraph label="Proof">
+      Follows from Proposition 6 when {a mathematical formula}{y:(y,y)∈A}=∅ is assumed. Then {a mathematical formula}Xsa={x:(x,x)∉A,{x}−∪{x}+=∅}={x:{x}−∪{x}+=∅} itself is admissible, since it is clearly conflict-free and moreover, {a mathematical formula}(Xsa)−=∅, i.e. {a mathematical formula}Xsa is not attacked.  □
+     </paragraph>
+     <paragraph>
+      So we have that for naive semantics, the usage of self-attacking arguments gives us additional expressive power, in particular for ideal reasoning. This is in contrast to admissibility-based semantics where self-attacking arguments can always be replaced by odd length cycles without changing the extensions of the framework.
+     </paragraph>
+     <paragraph>
+      Recall that the base semantics we consider here yield that there is always a unique ideal extension. Thus we investigate now how these ideal extensions are related to each other. Caminada [13] has already shown that {a mathematical formula}Eprie(〈X,A〉)⊆Esstie(〈X,A〉) holds and that there exist frameworks {a mathematical formula}〈X,A〉 with {a mathematical formula}Eprie(〈X,A〉)⊂Esstie(〈X,A〉). With the following results we give a full analysis of the ⊆ relations between the ideal extensions w.r.t. the base semantics considered in this paper.
+     </paragraph>
+     <paragraph label="Theorem 3">
+      For arbitraryAFs{a mathematical formula}〈X,A〉the following ⊆-relations hold:{a mathematical formula}{a mathematical formula}Furthermore, all these ⊆-relations are proper ones.
+     </paragraph>
+     <paragraph label="Proof">
+      Most of these ⊆-relations can be proven by considering the ⊆-relation of the corresponding sets of skeptically accepted arguments w.r.t. the base-semantics. The relation {a mathematical formula}Eprie(〈X,A〉)⊆Esstie(〈X,A〉) is an immediate consequence of the fact that each extension {a mathematical formula}E∈Esst(〈X,A〉) is also contained in {a mathematical formula}Epr(〈X,A〉); thus each argument skeptically accepted w.r.t. pr-semantics is also skeptically accepted w.r.t. sst-semantics. Similarly, we have that each stage-extension is also a naive-extension and thus {a mathematical formula}Enaiveie(〈X,A〉)⊆Estageie(〈X,A〉).To show, {a mathematical formula}Egr⁎ie(〈X,A〉)⊆Eprie(〈X,A〉), we use the fact that for each {a mathematical formula}E∈Epr(〈X,A〉) there exists a full resolution β such that {a mathematical formula}E∈Epr(〈X,A∖β〉). Further the grounded extension of {a mathematical formula}〈X,A∖β〉 is contained in each {a mathematical formula}S∈Epr(〈X,A∖β〉). Hence if an argument is skeptically accepted w.r.t. gr⁎-semantics, then it is also skeptically accepted w.r.t. pr-semantics. By the observation that the grounded extension is contained in every resolution-based grounded extension [5], we get that {a mathematical formula}Egr(〈X,A〉)=Ecompie(〈X,A〉)⊆Egr⁎ie(〈X,A〉).It remains to show {a mathematical formula}Enaiveie(〈X,A〉)⊆Eprie(〈X,A〉). Let {a mathematical formula}A∈Enaiveidl(〈X,A〉). Using the characterisation of skeptical acceptance (Proposition 6) for naive semantics we get that all arguments {a mathematical formula}x∈A− are self-attacking. Self-attacking arguments are not credulously accepted w.r.t. pr-semantics; hence by Proposition 3(C1){a mathematical formula}A∈Epridl(〈X,A〉). Now as each ideal set w.r.t. naive-semantics is also an ideal set w.r.t. pr-semantics, we get that desired ⊆-relation for the ideal extensions.It remains to show that there are no further ⊆-relations between the ideal extensions of the considered base semantics. In what follows, we use the frameworks as given in Fig. 2, to show that these relations do not hold.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Thus all ⊆-relations in the theorem are proper ones.  □
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Computational complexity
+     </section-title>
+     <paragraph>
+      In this section we provide two kinds of complexity results for ideal reasoning. First we present generic complexity bounds for ideal reasoning problems, i.e. complexity bounds which depend on the complexity of reasoning problems for the base semantics. In the entire section, we always assume base semantics to be at least cf-preserving thus guaranteeing a unique ideal extensions, cf. Proposition 1. Then we use these results to draw the complexity landscape for the concrete base-semantics mentioned in Section 5. The computational problems we are interested here, are the following:
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       Credulous acceptance – {a mathematical formula}caσidl(〈X,A〉,x) ({a mathematical formula}x∈X). Is there any{a mathematical formula}S∈Eσidl(〈X,A〉) for which {a mathematical formula}x∈S?
+      </list-item>
+      <list-item label="(b)">
+       Verification for ideal sets – {a mathematical formula}verσidl(〈X,A〉,S) ({a mathematical formula}S⊆X). Is it the case that {a mathematical formula}S∈Eσidl(〈X,A〉)?
+      </list-item>
+      <list-item label="(c)">
+       Non-emptiness – {a mathematical formula}neσidl(〈X,A〉). Is there any {a mathematical formula}S∈Eσidl(〈X,A〉) for which {a mathematical formula}S≠∅?
+      </list-item>
+      <list-item label="(d)">
+       Verification for ideal extension – {a mathematical formula}verσie(〈X,A〉,S) ({a mathematical formula}S⊆X). Is it the case that {a mathematical formula}S=Eσie(〈X,A〉)?
+      </list-item>
+      <list-item label="(e)">
+       Construction – {a mathematical formula}consσie(〈X,A〉). Reports the ideal extension {a mathematical formula}Eσie(〈X,A〉).
+      </list-item>
+     </list>
+     <paragraph>
+      Credulous acceptance could be equivalently defined by checking whether {a mathematical formula}x∈Eσie(〈X,A〉) (since the ideal extension is the maximal ideal set). Note that we have not defined variants of skeptical acceptance. On the one hand, since ideal extensions are unique for all reasonable semantics, there is no need to distinguish between credulous and skeptical acceptance in terms of the ideal extensions. On the other hand, skeptical acceptance in terms of ideal sets is a trivial problem, since the empty set is always an ideal set.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Generic complexity results
+      </section-title>
+      <paragraph>
+       We first consider the problem of constructing the ideal extension. We use the algorithms given in Section 4 to get upper bounds.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       For any semantics σ which is pr-preserving or naive-preserving,{a mathematical formula}Eσiecan be constructed in{a mathematical formula}fp||C, where{a mathematical formula}caσ∈C.
+      </paragraph>
+      <paragraph label="Proof">
+       By Theorem 1 we can use Algorithm 1 to compute {a mathematical formula}Eσie. Moreover the partition {a mathematical formula}(XOUT,XPSA,XREM) is directly constructed in {a mathematical formula}fp||C and further the maximal admissible set in a component of a bipartite graph can be found in polynomial time [23]. Hence Algorithm 1 is an {a mathematical formula}fp||C algorithm.  □
+      </paragraph>
+      <paragraph label="Proof">
+       For any semantics σ which is cf-preserving,{a mathematical formula}Eσiecan be constructed in{a mathematical formula}fp||C, where{a mathematical formula}saσ∈C.By Theorem 2, we can use Algorithm 2 to compute {a mathematical formula}Eσie. The set {a mathematical formula}Xsa can be directly constructed in {a mathematical formula}fp||C. Further as the characteristic function {a mathematical formula}F can be computed in polynomial time also the function {a mathematical formula}Fˆ is polynomial time computable. Thus one can compute the fixed point of {a mathematical formula}Fˆ(.) in polynomial time. Hence Algorithm 2 is an {a mathematical formula}fp||C algorithm.  □
+      </paragraph>
+      <paragraph>
+       The next theorem gives us a strong connection between the decision problem {a mathematical formula}caσidl and the function problem {a mathematical formula}consσie, such that we can extend a hardness result for {a mathematical formula}caσidl to a hardness result for {a mathematical formula}consσie
+      </paragraph>
+      <paragraph label="Proof">
+       Let σ be a semantics where unconnected (via attack paths) arguments do not affect each others acceptance status. If{a mathematical formula}caσidlis{a mathematical formula}C-hard then{a mathematical formula}consσie(〈X,A〉)is{a mathematical formula}fp||C-hard under metric reductions.The following function problem is easily seen to be hard for {a mathematical formula}fp||C (under metric reductions).{a mathematical formula}caσidl-Collection: sc{a mathematical formula}σInstance:{a mathematical formula}Ξ=〈(〈X1,A1〉,a1),…,(〈Xn,An〉,an)〉Problem: Compute the n-bit value {a mathematical formula}χ(Ξ)=c1c2c3…cr in which {a mathematical formula}cj=1 if and only if {a mathematical formula}(〈Xj,Aj〉,aj) is a positive instance of {a mathematical formula}caσidl.Given an instance {a mathematical formula}Ξ=〈(〈X1,A1〉,a1),…,(〈Xn,An〉,an)〉 of {a mathematical formula}scσ, one can build the AF{a mathematical formula}〈XΞ,AΞ〉=〈X1∪˙⋯∪˙Xn,A1∪˙⋯∪˙An〉 ({a mathematical formula}∪˙ denotes the disjoint union). Now we have that {a mathematical formula}(〈Xj,Aj〉,aj) is a positive instance of {a mathematical formula}caσidl iff {a mathematical formula}aj∈Eσie(〈XΞ,AΞ〉). It follows that {a mathematical formula}χ(Ξ) can be computed in P given the ideal extension, and thus {a mathematical formula}consσie(〈X,A〉) is {a mathematical formula}fp||C-hard.  □
+      </paragraph>
+      <paragraph>
+       Note that upper bounds for the problem {a mathematical formula}consσie immediately lead to upper bounds for decision problems. One can simply compute the ideal extension and then easily decide the respective property for the chosen decision problem. In general this is however not the most efficient way. The following theorem provides more sophisticated upper bounds for the complexity of the decision problems we are interested in. To this end, we make use of the complexity of the verification problem for the base semantics.
+      </paragraph>
+      <paragraph label="Theorem 7">
+       Let σ be a cf-preserving semantics and let{a mathematical formula}Vbe the complexity of the problem{a mathematical formula}verσ. Then the following holds:
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}caσidl∈coNPV;
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}verσidl∈coNPV;
+       </list-item>
+       <list-item label="(iii)">
+        {a mathematical formula}neσidl∈coNPV;
+       </list-item>
+       <list-item label="(iv)">
+        {a mathematical formula}verσie∈NPV∧coNPV.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Given a framework {a mathematical formula}〈X,A〉, a base semantics σ, an argument {a mathematical formula}x∈X and a set {a mathematical formula}S⊆X.We prove (i) by providing an {a mathematical formula}NPV algorithm for disproving x to be in the ideal extension.
+       <list>
+        Guess extensions {a mathematical formula}E1,…,En (for {a mathematical formula}n=|X|).Verify extensions using the {a mathematical formula}V-oracle.Compute {a mathematical formula}Ssa:=⋂i=1nEi.Compute the ⊆-maximal admissible set {a mathematical formula}A⊆Ssa.Accept iff {a mathematical formula}x∉A.A few words about the correctness of the above algorithm: First we have that the extensions
+       </list>
+       <paragraph>
+        {a mathematical formula}E1,…,En are not necessarily different (there may not exist n different extensions). However, for at least one guess the set {a mathematical formula}Ssa coincides with the set of skeptical accepted arguments, i.e. {a mathematical formula}⋂i=1nEi=⋂E∈Eσ(〈X,A〉)E. This is by the fact that the number of guessed extensions is equal to the number of arguments in the framework. Moreover, for every guess it holds that {a mathematical formula}⋂E∈Eσ(〈X,A〉)E⊆Ssa. If {a mathematical formula}x∈Eσie(〈X,A〉), i.e. there is an admissible set {a mathematical formula}S′⊆⋂E∈Eσ(〈X,A〉)E with {a mathematical formula}x∈S′, then for every such guess, we have {a mathematical formula}S′⊆Ssa and thus {a mathematical formula}x∈A. Hence the algorithm does not accept such an instance. Let us now consider the case that {a mathematical formula}x∉Eσie(〈X,A〉), i.e. for {a mathematical formula}S′ being the maximal admissible set of {a mathematical formula}⋂E∈Eσ(〈X,A〉)E we have {a mathematical formula}x∉S′. Then x is accepted by the computation where {a mathematical formula}Ssa=⋂E∈Eσ(〈X,A〉)E. This thus solves the complementary problem to {a mathematical formula}caσidl as desired.We get (ii) by a simple adaptation of the above algorithm: instead of testing {a mathematical formula}x∉A one tests whether {a mathematical formula}S⊈A, which disproves the set S to be an ideal set.For (iii) we use another adaptation of the above algorithm, now one tests for {a mathematical formula}A=∅, which proves that {a mathematical formula}Eσie=∅.(iv): To verify that {a mathematical formula}Eσie=S one can first use the {a mathematical formula}coNPV-algorithm to verify that {a mathematical formula}S∈Eσidl(〈X,A〉). Then one can use the above {a mathematical formula}NPV-algorithm to disprove the ideal acceptance for all arguments {a mathematical formula}A∖S. As {a mathematical formula}Eσie=S iff both of these algorithms accept S we have that {a mathematical formula}verσie∈NPV∧coNPV.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       In the following we give generic lower bounds, i.e. generic hardness results, for the problems {a mathematical formula}verσidl and {a mathematical formula}caσie depending on the complexity of the problem {a mathematical formula}caσ.
+      </paragraph>
+      <paragraph>
+       To this end, we introduce the following property:
+      </paragraph>
+      <paragraph label="Definition 3">
+       A pair {a mathematical formula}(〈X,A〉,x) of an AF{a mathematical formula}〈X,A〉 and an argument {a mathematical formula}x∈X satisfies the mutual attack property w.r.t. a semantics σ iff{a mathematical formula} (where {a mathematical formula}y∉X).{sup:3} Further we say that a semantics σ satisfies the mutual attack property iff each {a mathematical formula}(〈X,A〉,x) has the mutual attack property w.r.t. σ.
+      </paragraph>
+      <paragraph label="Proof">
+       Semantics adm, comp, pr, gr⁎, and naive all have the mutual attack property.Consider {a mathematical formula}E∈Eadm(〈X,A〉) and an argument {a mathematical formula}x∈E. If we extend the AF with a new argument y and attacks {a mathematical formula}(x,y),(y,x) then y attacks E and also E attacks y. Thus E is still an admissible set, i.e. {a mathematical formula}E∈Eadm(〈X∪{y},A∪{(x,y),(y,x)}〉). Next as {a mathematical formula}x∈E we have that adding y would cause a conflict and thus that {a mathematical formula}E∈Eσ(〈X,A〉)⇒E∈Eσ(〈X∪{y},A∪{(x,y),(y,x)}〉) for {a mathematical formula}σ∈{comp,pr}. Now consider the reverse direction for {a mathematical formula}σ∈{adm,comp,pr} and a {a mathematical formula}E∈Eσ(〈X∪{y},A∪{(x,y),(y,x)}〉) with {a mathematical formula}x∈E. As y attacks x, {a mathematical formula}y∉E and thus the set E must be admissible in {a mathematical formula}〈X,A〉. Hence {a mathematical formula}E∈Eσ(〈X,A〉). For the naive semantics, we have that {a mathematical formula}canaive(〈X,A〉,x) holds iff {a mathematical formula}(x,x)∉A. Thus adding the argument y does not change anything, as well.Finally let us consider gr⁎ semantics. For each full resolution we either keep the attack {a mathematical formula}(x,y) or {a mathematical formula}(y,x). First it is easy to see that if the argument x is not credulously accepted in {a mathematical formula}〈X,A〉, the additional argument does not help and also it is not credulously accepted in {a mathematical formula}〈X∪{y},A∪{(x,y),(y,x)}〉. Let us assume there exists {a mathematical formula}E∈Egr⁎(〈X,A〉), and further let β be such that {a mathematical formula}E=Egr(〈X,A∖β〉). First if we keep {a mathematical formula}(x,y) we have that {a mathematical formula}E=Egr(〈X∪{y},A∖β∪{(x,y)}〉) and thus that E is still a candidate for a gr⁎-extension. What remains to show is that E is still ⊆-minimal. But as {a mathematical formula}y∉E and {a mathematical formula}y∈Egr(〈X∪{y},A∖β′∪{(y,x)}〉) for arbitrary {a mathematical formula}β′ this is also satisfied.  □
+      </paragraph>
+      <paragraph>
+       To see that sst and stage semantics do not have the mutual attack property let us again consider the AF {a mathematical formula}〈X,A〉 of the form (7) used in Section 5: {a mathematical formula}caσ(〈X,A〉,a) holds for both {a mathematical formula}σ=sst and {a mathematical formula}σ=stage. But when adding an argument y together with a mutual attack to a, then a is no longer credulously accepted, neither for sst nor for stage semantics.
+      </paragraph>
+      <paragraph>
+       The value of the mutual attack property is given in the next theorem, which follows from a more general observation which we give below in Proposition 8.
+      </paragraph>
+      <paragraph label="Theorem 8">
+       If σ satisfies the mutual attack property and moreover is pr-preserving or naive-preserving, and{a mathematical formula}caσis{a mathematical formula}C-complete for some complexity class{a mathematical formula}Cwhich is closed under ∪ then:
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}verσidlis{a mathematical formula}coC-complete.
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}caσidlis{a mathematical formula}coC-hard.
+       </list-item>
+      </list>
+      <paragraph>
+       As mentioned above, some semantics σ in general do not satisfy the mutual attack property (e.g. sst-semantics) and thus the above theorem does not directly apply to them. But there may exist an infinite class of pairs {a mathematical formula}(〈X,A〉,a) satisfying the mutual attack property w.r.t. σ. Such a class of pairs is in particular interesting if credulous reasoning for these pairs has the same complexity as for arbitrary instances. We will exploit this fact – which is proven in the forthcoming result – in the next subsection.
+      </paragraph>
+      <paragraph label="Proposition 8">
+       If σ is pr-preserving or naive-preserving,{a mathematical formula}caσ∈Cfor some complexity class{a mathematical formula}Cwhich is closed under ∪, and there exist a family of{a mathematical formula}C-hard instances of the{a mathematical formula}caσproblem that satisfy the mutual attack property then:
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}verσidlis{a mathematical formula}coC-complete.
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}caσidlis{a mathematical formula}coC-hard.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We show (a). The proof for part (b) uses an identical reduction. The complementary problem {a mathematical formula}¬verσidl is in {a mathematical formula}C: using Proposition 3 (resp. Proposition 4) {a mathematical formula}S∉Eσidl if it is either not admissible or some {a mathematical formula}y∈S− (resp. {a mathematical formula}y∈S−∪S+) is credulously accepted w.r.t. σ. From {a mathematical formula}caσ∈C and {a mathematical formula}C closed under ∪ the latter condition can be tested in {a mathematical formula}C. For the lower bound given an instance {a mathematical formula}(〈X,A〉,x) of {a mathematical formula}caσ form the instance {a mathematical formula}(〈X∪{y},A∪{(x,y),(y,x)}〉,{y}) of {a mathematical formula}verσidl. This is accepted if and only if {a mathematical formula}(〈X,A〉,x) fails to be accepted as an instance of {a mathematical formula}caσ.  □
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Exact complexity for instantiations
+      </section-title>
+      <paragraph>
+       We finally provide novel exact bounds for computational problems of ideal reasoning w.r.t. base semantics stage, sst, gr⁎, and naive, partly exploiting the generic results from the previous subsection.
+      </paragraph>
+      <paragraph label="Theorem 9">
+       <list>
+        <list-item label="(i)">
+         {a mathematical formula}versstidl,{a mathematical formula}verstageidlare{a mathematical formula}Π2P-complete.
+        </list-item>
+        <list-item label="(ii)">
+         {a mathematical formula}casstidl,{a mathematical formula}castageidlare{a mathematical formula}Π2P-complete.
+        </list-item>
+        <list-item label="(iii)">
+         {a mathematical formula}nesstidl,{a mathematical formula}nestageidlare{a mathematical formula}Π2P-complete.
+        </list-item>
+        <list-item label="(iv)">
+         {a mathematical formula}versstie,{a mathematical formula}verstageieare{a mathematical formula}D2P-complete.
+        </list-item>
+        <list-item label="(v)">
+         {a mathematical formula}conssstie,{a mathematical formula}consstageieare{a mathematical formula}fp||Σ2P-complete (under metric reductions).
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph label="Proof">
+       The membership part for (i)–(iv) follows directly by Theorem 7 and the fact that {a mathematical formula}versst, {a mathematical formula}verstage are in coNP. The hardness part in (v) will follow directly from (ii) and Theorem 6, while the membership is an immediate consequence of Theorem 5.To prove the desired hardness results we use the reduction in [31] from the {a mathematical formula}Π2P-hard problem {a mathematical formula}QBF2∀ to the problems {a mathematical formula}sasst, {a mathematical formula}sastage, {a mathematical formula}co-casst and {a mathematical formula}co-castage. Given a QBF formula in CNF {a mathematical formula}Φ=∀Y∃Z⋀c∈Cc, where C is the set of clauses, we define the AF{a mathematical formula}KΦ=(X,A), where{a mathematical formula}{a mathematical formula} For illustration of the reduction, we depict an example in Fig. 3 (for the moment ignore the dotted addition with argument y). In [31] it was shown that the argument Φ is skeptically accepted (for stage and sst) iff Ψ is not credulously accepted (for stage and sst) iff Φ is valid. One can see that the pairs {a mathematical formula}(KΦ,Ψ) are {a mathematical formula}Σ2P-hard instance for {a mathematical formula}casst and {a mathematical formula}castage and we next show that they also satisfy the mutual attack property (for the argument Ψ).To this end we extend {a mathematical formula}KΦ by a “mutual attack” argument y, i.e. {a mathematical formula}K′Φ=〈XKΦ∪{y},AKΦ∪{(y,Ψ),(Ψ,y)}〉 (see Fig. 3 again). We show that the extensions of {a mathematical formula}KΦ and {a mathematical formula}K′Φ are essentially the same, the only difference being that an extension E of {a mathematical formula}K′Φ also contains the new argument y iff {a mathematical formula}Φ∈E, i.e.{a mathematical formula} for {a mathematical formula}σ∈{sst,stage}. This indeed implies the mutual attack property for Ψ and allows us to reuse results from [31]. First observe that in both frameworks each extension either contains Φ or Ψ (otherwise it is not maximal). Let us first consider an arbitrary semi-stable (stage) extension {a mathematical formula}E′ of {a mathematical formula}KΦ′. Then either {a mathematical formula}{Φ,y}⊂E′ or {a mathematical formula}{Ψ}⊂E′. In both cases {a mathematical formula}E′=E∖{y} is admissible (resp. conflict-free) and {a mathematical formula}E′∪(E′)+=E∪E+∪{y}. Hence we are only interested in sets E with maximal range in {a mathematical formula}KΦ, i.e. the semi-stable (resp. stage) extensions of {a mathematical formula}KΦ. Now consider such an extension {a mathematical formula}E∈Eσ(KΦ). We define {a mathematical formula}E′=E∪{y} if {a mathematical formula}Φ∈E and {a mathematical formula}E′=E otherwise. Notice that {a mathematical formula}E′ is admissible/conflict-free iff E is so. Next consider the range of {a mathematical formula}E′. As no attacks are removed and either {a mathematical formula}y∈E′ or {a mathematical formula}Ψ∈E′ we have that {a mathematical formula}E′∪(E′)+=E∪E+∪{y}. So all these {a mathematical formula}E′ extension still have pairwise incomparable range and thus for each semi-stable (stage) extension E of {a mathematical formula}KΦ the set {a mathematical formula}E′ is a semi-stable (stage) extension of {a mathematical formula}KΦ′.(i) &amp; (ii) By the mutual attack property of {a mathematical formula}(KΦ,Ψ) and Proposition 8 we immediately get the desired {a mathematical formula}Π2P lower bounds for {a mathematical formula}versstidl, {a mathematical formula}verstageidl{a mathematical formula}casstidl, and {a mathematical formula}castageidl.To show (iii), we consider a restricted class of QBFs, namely those QBFs Φ where {a mathematical formula}⋀c∈Cc has a model M, with {a mathematical formula}M∩Z=∅ and a model {a mathematical formula}M′, with {a mathematical formula}Z⊆M′. The {a mathematical formula}QBF2∀ problem remains {a mathematical formula}Σ2P-hard for those formulas. To show this we give a reduction from an arbitrary {a mathematical formula}QBF2∀ to a restricted one. Given a QBF formula {a mathematical formula}Φ=∀Y∃Z⋀c∈Cc, one can build the restricted QBF{a mathematical formula}Φ′=∀Y∪{u}∃Z⋀c∈C′c, with {a mathematical formula}C′={c∪{u}:c∈C}. One can see that Φ is valid iff {a mathematical formula}Φ′ is valid. Further {a mathematical formula}{u} is a partial model of {a mathematical formula}⋀c∈C′c and thus one can find both a model M, with {a mathematical formula}M∩Z=∅ and a model {a mathematical formula}M′, with {a mathematical formula}Z⊆M′.Again consider {a mathematical formula}K′Φ. By Proposition 3, Proposition 4 we have that y is in the ideal extension iff Ψ is not credulously accepted iff Φ is skeptically accepted. In the next step we identify the arguments of {a mathematical formula}KΦ, which are possible members of the ideal extension. Obviously the self-attacking arguments {a mathematical formula}Y′∪Y¯′∪{b} cannot belong to the ideal extension. Further in [31] it was shown that for every argument {a mathematical formula}y∈Y∪Y¯ there exists a semi-stable (resp. stage) extensions E such that {a mathematical formula}y¯∈E and thus {a mathematical formula}y∉E. Hence none of the arguments {a mathematical formula}y∈Y∪Y¯ is skeptically accepted. Moreover it was shown that each model of {a mathematical formula}⋀c∈Cc corresponds to a semi-stable (resp. stage) extension and thus by the existence of the models M, {a mathematical formula}M′ we conclude that none of the arguments {a mathematical formula}z∈Z∪Z¯ is skeptically accepted. The arguments {a mathematical formula}c∈C, Φ are not defended by arguments in the ideal extension and thus do not belong to it (the ideal extension is admissible). Further as the CNF is satisfiable we have that Φ is always in at least one semi-stable (resp. stage) extension and thus Ψ is not a member of the ideal extension. Thus the only argument that can be in the ideal extension is y. Hence for {a mathematical formula}K′Φ, it holds that {a mathematical formula}Esstie≠∅ iff {a mathematical formula}y∈Esstie (resp. {a mathematical formula}Estageie≠∅ iff {a mathematical formula}y∈Estageie) that is iff Φ is a valid QBF.To show (iv), we reduce an instance {a mathematical formula}〈¬Φ1,Φ2〉 of the restricted {a mathematical formula}QBF2∃–{a mathematical formula}QBF2∀ problem to an AF {a mathematical formula}〈X,A〉 and a set {a mathematical formula}S⊆X such that {a mathematical formula}S=Eσie(〈X,A〉) ({a mathematical formula}σ∈{sst,stage}) iff {a mathematical formula}〈¬Φ1,Φ2〉 is a yes-instance of the restricted {a mathematical formula}QBF2∃–{a mathematical formula}QBF2∀ problem. By the observations in (iii) that the ideal extension of {a mathematical formula}K′Φ is either empty or {a mathematical formula}{y}, we get that for the AF {a mathematical formula}K′Φ1∪˙K′Φ2 it holds that {a mathematical formula}{y2} is the ideal extension iff {a mathematical formula}〈¬Φ1,Φ2〉 is a positive instance of the {a mathematical formula}QBF2∃–{a mathematical formula}QBF2∀ problem.  □
+      </paragraph>
+      <paragraph>
+       We continue with ideal semantics w.r.t. resolution-based grounded semantics, gr⁎. Since gr⁎ does neither preserve pr nor naive we cannot make direct use of Proposition 8. However, the main ideas of the proofs are similar as for the previous result.
+      </paragraph>
+      <paragraph label="Theorem 10">
+       <list>
+        <list-item label="(i)">
+         {a mathematical formula}vergr⁎idlis coNP-complete.
+        </list-item>
+        <list-item label="(ii)">
+         {a mathematical formula}cagr⁎idlis coNP-complete.
+        </list-item>
+        <list-item label="(iii)">
+         {a mathematical formula}negr⁎idlis coNP-complete.
+        </list-item>
+        <list-item label="(iv)">
+         {a mathematical formula}vergr⁎ieis{a mathematical formula}DP-complete.
+        </list-item>
+        <list-item label="(v)">
+         {a mathematical formula}consgr⁎ieis{a mathematical formula}fp||NP-complete (under metric reductions).
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        The membership part for (i)–(iv) follows by Theorem 7 and the fact that {a mathematical formula}vergr⁎ can be decided in polynomial time [3] (we recall that {a mathematical formula}coNPP=coNP). Again, (v) will follow directly from (ii), Theorem 6 and Theorem 5.(i) To prove the coNP hardness we reduce the UNSAT-problem to {a mathematical formula}vergr⁎idl. To do so we construct the AF {a mathematical formula}GΦ=(X,A) as follows: given a CNF formula {a mathematical formula}Φ(Z)=⋀c∈Cc with each clause {a mathematical formula}c∈C a disjunction of literals from Z,
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}X={Φ,Ψ}∪C∪Z∪Z¯.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}A={(c,Φ)|c∈C}∪{(z,z¯),(z¯,z)|z∈Z}∪{(z,c)|z occurs in c}∪{(z¯,c)|¬z occurs in c}∪{(Ψ,Φ),(Φ,Ψ)}.
+        </list-item>
+       </list>
+       <paragraph>
+        See Fig. 4 for an illustration of the construction on a concrete example formula Φ. We claim that {a mathematical formula}{Ψ} is an ideal extension w.r.t. gr⁎ semantics iff Φ is unsatisfiable. Thus first let us assume that Φ is satisfiable and thus there exists a truth assignment τ such that {a mathematical formula}τ(Φ)=true. Now consider the full resolution β and the resolved AF {a mathematical formula}(X,Aβ) (where {a mathematical formula}Aβ=A∖β) with {a mathematical formula}(zi,z¯i)∈Aβ⇔τ(zi)=true and {a mathematical formula}(Φ,Ψ)∈Aβ. The grounded extension of this resolution is given by the set {a mathematical formula}{z∈Z:τ(z)=true}∪{z¯∈Z:τ(z)=false}∪{Φ}. Hence Ψ is not skeptically accepted and thus not in the ideal extension.Now let us assume that Φ is unsatisfiable. As the set {a mathematical formula}{Ψ} defends itself it suffices to show that {a mathematical formula}{Ψ} is skeptical accepted, i.e. for every full resolution β the argument Ψ is in the grounded extension of the resolved AF {a mathematical formula}(X,Aβ). First if {a mathematical formula}(Ψ,Φ)∈Aβ then Ψ is unattacked and thus clearly in the grounded extension. Now let us consider a full resolution β such that {a mathematical formula}(Φ,Ψ)∈Aβ and towards a contradiction {a mathematical formula}Ψ∉gr(X,Aβ). As β is a full resolution we have for each {a mathematical formula}z∈Z that either {a mathematical formula}(z,z¯)∈Aβ or {a mathematical formula}(z¯,z)∈Aβ holds but not both of them. Thus each argument z, {a mathematical formula}z¯ is either in the grounded extension or attacked by the grounded extension. The arguments {a mathematical formula}ci are only attacked from arguments z, {a mathematical formula}z¯ and therefore each argument {a mathematical formula}ci is either part of the grounded extension or attacked by the grounded extension. Further if there is an {a mathematical formula}ci such that {a mathematical formula}ci∈gr(X,Aβ) then {a mathematical formula}gr(X,Aβ) attacks Φ and thus {a mathematical formula}Ψ∈gr(X,Aβ), a contradiction. If there is no such {a mathematical formula}ci we have that {a mathematical formula}gr(X,Aβ) defends Φ and thus {a mathematical formula}Φ∈gr(X,Aβ). But then the truth assignment τ defined by {a mathematical formula}τ(z)=true⇔z∈gr(X,Aβ) satisfies Φ, which is in contradiction to the unsatisfiability of Φ.(ii) Immediate by the fact that Φ is a member of the ideal extension iff {a mathematical formula}{Φ} is an ideal set.(iii) We have that for each argument z (resp. {a mathematical formula}z¯) there is a full resolution β such that {a mathematical formula}z∉gr(X,Aβ) (resp. {a mathematical formula}z¯∉gr(X,Aβ)) and thus none of them is skeptical accepted. Hence none of the arguments {a mathematical formula}ci as well as the argument Φ can be in an ideal set. So we have that there is a non-empty ideal set iff Ψ is contained in the ideal extension which is coNP-hard.(iv) By the observations in (iii) we get that for the AF {a mathematical formula}GΦ1∪˙GΦ2 it holds that {a mathematical formula}{Φ2} is the ideal extension iff {a mathematical formula}〈Φ1,Φ2〉 is a positive instance of the SAT-UNSAT problem.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We conclude our results with the naive semantics, where all problems remain tractable. We note that hardness for P only holds in case of frameworks where self-loops are allowed. If this is not the case, by Corollary 1, the ideal extension coincides with the set of skeptical accepted arguments (we recall that {a mathematical formula}sanaive is in LOGSPACE, see Table 1).
+      </paragraph>
+      <paragraph label="Theorem 11">
+       <list>
+        <list-item label="(i)">
+         {a mathematical formula}vernaiveidlis in L.
+        </list-item>
+        <list-item label="(ii)">
+         {a mathematical formula}canaiveidlis P-complete.
+        </list-item>
+        <list-item label="(iii)">
+         {a mathematical formula}nenaiveidlis P-complete.
+        </list-item>
+        <list-item label="(iv)">
+         {a mathematical formula}vernaiveieis P-complete.
+        </list-item>
+        <list-item label="(v)">
+         {a mathematical formula}consnaiveieis infp
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        By Theorem 5 and the fact that {a mathematical formula}sanaive∈L we have that computing the ideal extension is in fp. Hence the mentioned reasoning tasks can be decided in P. Using the characterisation from Proposition 6 we get a better upper bound for the problem {a mathematical formula}vernaiveidl. To verify that a set {a mathematical formula}S⊆X is an ideal set, one has to check if {a mathematical formula}S∈Eadm(〈X,A〉) and further if for each argument {a mathematical formula}x∈S−∪S+ it holds that {a mathematical formula}(x,x)∈A. Clearly both can be done in logarithmic space.To show P-hardness we use a reduction from the P-hard problem to decide, given a propositional definite Horn theory T and an atom x, whether x is true in the minimal model of T. Let, for a definite Horn theory {a mathematical formula}T={rl:bl,1∧⋯∧bl,ml→hl|1⩽l⩽n} over atoms X and an atom {a mathematical formula}z∈X, {a mathematical formula}(XT,z,AT,z) be an AF with{a mathematical formula}{a mathematical formula} where the sets {a mathematical formula}Xi are disjoint copies of the atom set X, the sets {a mathematical formula}Ti are disjoint copies of the theory T, and t is a fresh argument. Moreover for each {a mathematical formula}x∈X we write {a mathematical formula}xi to denote the copy of x in the set {a mathematical formula}Xi and for each rule {a mathematical formula}rl∈T we write {a mathematical formula}rl,i to denote the copy of {a mathematical formula}rl in the set {a mathematical formula}Ti. An example for this construction is given in Fig. 5.Clearly the AF {a mathematical formula}(XT,z,AT,z) can be constructed using only logarithmic space in the size of T. One can show that z is in the minimal model of T iff z is in the ideal extension of {a mathematical formula}(XT,z,AT,z) iff the ideal extension of {a mathematical formula}(XT,z,AT,z) contains at least one argument.We start with proving the first equivalence. First we mention that for the set of skeptical accepted arguments {a mathematical formula}Xsa it holds that {a mathematical formula}Xsa=T1∪⋯∪T|T|∪X. This is by the fact that these arguments are conflict-free and all the other arguments attack themselves. Notice that the argument z is in the minimal model of a Horn theory T iff there exists a sequence of rules {a mathematical formula}rk1,…,rkn such that {a mathematical formula}hkn=z and for {a mathematical formula}1⩽i⩽n it holds that the rule body {a mathematical formula}{bki,1,…,bki,mki}⊆{hk1,…,hki−1}. Given such a proof for z we can define the set {a mathematical formula}E={z}∪{rki,j|1⩽i⩽j⩽n}. Clearly E is conflict-free hence it remains to show that it is also admissible. Hence consider an arbitrary argument {a mathematical formula}rki,j∈E∖{z}. By definition {a mathematical formula}rki,j is attacked by t and all {a mathematical formula}x∈{bl,1,…,bl,ml}. The first is attacked by {a mathematical formula}z∈E and the latter are attacked by {a mathematical formula}{rk1,j−1,…,rki−1,j−1} because of the assumption {a mathematical formula}{bki,1,…,bki,mki}⊆{hk1,…,hki−1}. Next consider {a mathematical formula}z∈E, which is only attacked by {a mathematical formula}z|T|+1. By the assumption {a mathematical formula}hkn=z we have that {a mathematical formula}rk1,|T|∈E attacks z. Hence E defends all its arguments and thus is admissible as well as an ideal set. Hence z is in the ideal extension.To show the “only if” part let E be the ideal extension and {a mathematical formula}z∈E. To construct a proof for z we start with the following sequence {a mathematical formula}R1={rl:rl,1∈E},R2={rl:rl,2∈E},…,Rn={rl:rl,n∈E∧hl=z}. First all arguments in E are defended against t as z attacks t. In the following we consider the remaining attacks. By the structure of {a mathematical formula}(XT,z,AT,z) we have that the set {a mathematical formula}Ri+1 is defended by the set {a mathematical formula}Ri. Now by construction we have that for every rule {a mathematical formula}(b1∧⋯∧bm→h)∈Ri+1 there exists rules {a mathematical formula}rk1,…,rkm∈Ri such that {a mathematical formula}hki=bi for {a mathematical formula}1⩽i⩽m. Thus we get a proof for z by using an arbitrary ordering ≺ over the horn rules and concatenating the sequences {a mathematical formula}R1≺,…,Rn≺ ({a mathematical formula}Ri≺ denotes the sequence corresponding to the set {a mathematical formula}Ri ordered by ≺). Hence z is in the minimal model of T iff z belongs to the ideal extension of {a mathematical formula}(XT,z,AT,z). From the P-hardness of the former we obtain that {a mathematical formula}canaiveidl is P-hard.Next, as the argument t attacks all arguments {a mathematical formula}y∈Xsa and is only attacked by the argument z we have that the ideal extension is non-empty iff z is a member of the ideal extension. Hence {a mathematical formula}nenaiveidl is P-hard.To show P-hardness of {a mathematical formula}vernaiveie, we consider the AF {a mathematical formula}(XT,z∪{u},AT,z) where u is a fresh argument. Now we have that {a mathematical formula}{u} is the ideal extension iff the ideal extension of {a mathematical formula}(XT,z,AT,z) is empty. Thus we have a reduction from {a mathematical formula}conenaiveidl to {a mathematical formula}vernaiveie and thus {a mathematical formula}vernaiveie is P-hard.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       This concludes our complexity analysis. Our results are collected in Table 2. There the lower part shows new results.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     Ideal semantics in developments of AFs
+     <paragraph>
+      Following the formulation of abstract argumentation frameworks by Dung [20], a number of researchers have proposed developments of its structural specification, e.g. Value-based argumentation frameworks (VAFs) in Bench-Capon [6]; the extended argumentation frameworks (EAFs) of Modgil [33]; as well as a number of proposals developing the concept of weighted AFs such as Dunne et al. [30].
+     </paragraph>
+     <paragraph>
+      In view of such cases, a number of natural questions arise in the context of the analyses given in the main body of this article. For example, to what extent can meaningful analogous concepts of “ideal semantics” be defined for such models? For such formulations what characteristics do these share with the cases reviewed earlier? What complexity and algorithmic properties can be established for decision and function problems associated with these models? The aim of this section is to consider such questions.
+     </paragraph>
+     <paragraph>
+      To this end we consider the extent to which the concept of ideal semantics can be sensibly applied to one such proposal: the value-based argumentation frameworks of Bench-Capon [6]. We focus on this particular approach for the following reason. Of the many developments of Dung that have been presented, vafs have attracted a significant degree of subsequent study, arguably more than any other comparable mechanism. Such studies have covered concerns such as dialogue-based reasoning approaches in Bench-Capon et al. [7] as well as algorithmic and complexity-theoretic properties, e.g. [28], [23], [26], [34].
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Value-based frameworks: Basic concepts
+      </section-title>
+      <paragraph label="Definition 4">
+       We begin by briefly reviewing the basic elements of VAF structure and its semantics from [6]. A value-based argumentation framework (VAF), is defined by a tuple {a mathematical formula}H(V)=〈X,A,V,η〉, where {a mathematical formula}〈X,A〉 is an AF, {a mathematical formula}V={v1,v2,…,vk} a set of k values, and {a mathematical formula}η:X→V a mapping that associates a value {a mathematical formula}η(x)∈V with each argument {a mathematical formula}x∈X.An audience for a VAF{a mathematical formula}〈X,A,V,η〉, is a binary relation {a mathematical formula}R⊆V×V whose (irreflexive) transitive closure, {a mathematical formula}R⁎, is asymmetric, i.e. at most one of {a mathematical formula}〈v,v′〉, {a mathematical formula}〈v′,v〉 are members of {a mathematical formula}R⁎ for any distinct v, {a mathematical formula}v′∈V. We say that {a mathematical formula}viis preferred to{a mathematical formula}vjin the audience{a mathematical formula}R, denoted {a mathematical formula}vi≻Rvj, if {a mathematical formula}〈vi,vj〉∈R⁎. We say that α is a specific audience if α yields a total ordering of {a mathematical formula}V.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Using VAFs, ideas analogous to those introduced in Section 2 are given by relativising the concept of “attack” using that of successful attack with respect to an audience. Thus, Let {a mathematical formula}〈X,A,V,η〉 be a VAF and {a mathematical formula}R an audience. For arguments x, y in {a mathematical formula}X, x is a successful attack on y (or x defeats y) with respect to the audience{a mathematical formula}R if: {a mathematical formula}(x,y)∈Aand it is not the case that {a mathematical formula}η(y)≻Rη(x).
+      </paragraph>
+      <paragraph>
+       Replacing “attack” by “successful attack w.r.t. the audience {a mathematical formula}R”, yields definitions of “conflict-free”, “admissible set” etc. relating to value-based systems, e.g. S is conflict-free w.r.t. the audience {a mathematical formula}R if for each x, y in S it is not the case that x successfully attacks y w.r.t. {a mathematical formula}R. It may be noted that a conflict-free set in this sense is not necessarily a conflict-free set in the sense we have used before: for x and y in S we may have {a mathematical formula}(x,y)∈A, provided that {a mathematical formula}η(y)≻Rη(x), i.e. the value promoted by y is preferred to that promoted by x for the audience {a mathematical formula}R.
+      </paragraph>
+      <paragraph>
+       A standard assumption from [6] which we retain in our subsequent development is the following:
+      </paragraph>
+      <paragraph>
+       Multivalued Cycles Assumption (mca)
+      </paragraph>
+      <paragraph>
+       For any simple cycle of arguments in a VAF, {a mathematical formula}〈X,A,V,η〉, i.e. a finite sequence of arguments {a mathematical formula}y1y2…yiyi+1…yr with {a mathematical formula}y1=yr, {a mathematical formula}|{y1,…,yr−1}|=r−1, and {a mathematical formula}(yj,yj+1)∈A for each {a mathematical formula}1⩽j&lt;r – there are arguments {a mathematical formula}yi and {a mathematical formula}yj for which {a mathematical formula}η(yi)≠η(yj).
+      </paragraph>
+      <paragraph>
+       In less formal terms, this assumption states that every simple cycle in {a mathematical formula}H(V) uses at least two distinct values.
+      </paragraph>
+      <paragraph label="Proof">
+       Bench-Capon [6] proves that every specific audience, α, induces a unique preferred extension within its underlying VAF: for a given VAF, {a mathematical formula}H(V), we use {a mathematical formula}P(H(V),α) to denote this extension: that {a mathematical formula}P(H(V),α)is unique and can be constructed efficiently, is an easy consequence of the following fact, implicit in [6]. For any VAF, {a mathematical formula}H(V)=〈X,A,V,η〉 (satisfying mca) and specific audience α, the framework induced by including only attacks in the set{a mathematical formula} is acyclic.Suppose the contrary and let {a mathematical formula}y1y2…yr (with {a mathematical formula}yr=y1) be any simple cycle in the VAF{a mathematical formula}〈X,B,V,η〉 defined from {a mathematical formula}H(V) via the specific audience α. Since each of the attacks {a mathematical formula}(yi,yi+1) for {a mathematical formula}1⩽i⩽r−1 occurs in {a mathematical formula}A∩B from the definition of {a mathematical formula}B we must have{a mathematical formula} That is,{a mathematical formula} With some minor abuse of notation, we write {a mathematical formula}v≽αw if {a mathematical formula}(v=w)∨v≻αw, so that the expression above implies{a mathematical formula} Since α is a specific audience so that {a mathematical formula}≽α is a total ordering, the only possible choice of values for which this behaviour could arise is{a mathematical formula} This, however, contradicts the assumption that {a mathematical formula}H(V) satisfies mca.  □
+      </paragraph>
+      <paragraph>
+       Analogous to the concepts of credulous and skeptical acceptance w.r.t. preferred extensions in standard AFs, for VAFs the ideas of subjective acceptance (sba) and objective acceptance (oba) arise. We summarise known complexity results [28], [7] in Table 3.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Ideal semantics within VAFs
+      </section-title>
+      <paragraph>
+       We now wish to consider a VAF-based semantics that captures elements of the ideal semantics. Noting the form of Definition 2(I2), we first need to define the basic subsets of {a mathematical formula}X that will be considered.{sup:4}
+      </paragraph>
+      <paragraph label="Definition 6">
+       The collection of subsets of {a mathematical formula}X of interest for {a mathematical formula}H(V)=〈X,A,V,η〉 are given by {a mathematical formula}Epr-vaf(H(V)) where{a mathematical formula} Note that with this form {a mathematical formula}capr-vaf is equivalent to sba and {a mathematical formula}sapr-vaf to oba, which leads to the following definition.{sup:5}{a mathematical formula}Epr-vafidl(H(V)) is given by sets {a mathematical formula}S⊆X satisfying {a mathematical formula}S∈Eadm(〈X,A〉) and{a mathematical formula} with {a mathematical formula}Epr-vafie(H(V)) the maximal sets of {a mathematical formula}Epr-vafidl.
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}S∈Eadm(〈X,A〉) is the standard notion of admissibility in the supporting AF, {a mathematical formula}〈X,A〉 of {a mathematical formula}H(V)=〈X,A,V,η〉: in principle we could define forms where membership in {a mathematical formula}Eadm is replaced by its VAF form, however, there are some problematic aspects that arise with such an approach. Firstly the concept of VAF admissibility of a subset S is with respect to some specific audience, i.e. {a mathematical formula}S∈Eadm-vaf(H(V)) if there is a specific audience, α, with which S is conflict-free w.r.t. α and for any y that successfully attacks S there is some {a mathematical formula}z∈S that successfully attacks y. This form suggests two possibilities for a VAF-based admissibility condition in addition to S being a subset of objectively accepted arguments: either that S is VAF-admissible (in the sense just given) or that S is VAF-admissible w.r.t. all specific audiences. While clearly the latter implies the former, as regards (standard) Dung-admissibility it is not hard to show that {a mathematical formula}S∈Eadm implies {a mathematical formula}S∈Eadm-vaf∃α but the converse is false; similarly {a mathematical formula}S∈Eadm-vaf∀α implies {a mathematical formula}S∈Eadm but again the converse fails to hold. While the precise relationship between the three alternatives is of some interest, for reasons of space and relevance we do not consider the behaviour of the VAF-based notions of admissibility in more detail here.
+      </paragraph>
+      <paragraph>
+       We make two observations concerning the semantics {a mathematical formula}pr-vaf just defined. Firstly {a mathematical formula}pr-vaf is not cf-preserving (for conflict-freeness in the standard sense): as observed above, we may have {a mathematical formula}S=P(H(V),α) for some α – hence {a mathematical formula}S∈Epr-vaf(H(V)) – and {a mathematical formula}(x,y)∈A for {a mathematical formula}{x,y}⊆S. In this case {a mathematical formula}η(y)≻αη(x) must hold. Secondly, perhaps less obviously, {a mathematical formula}pr-vaf does not define an extension-based semantics in the sense we have been using, i.e. the maximality criterion is not satisfied by {a mathematical formula}pr-vaf. A simple example is {a mathematical formula}X={x,y,z}, {a mathematical formula}A={(y,x),(z,x),(z,y)}, {a mathematical formula}V={A,B} and {a mathematical formula}η(x)=η(z)=B. {a mathematical formula}η(y)=A (see Fig. 6): in this case {a mathematical formula}P(H(V),A≻B)={y,z} and {a mathematical formula}P(H(V),B≻A)={z} so that {a mathematical formula}Epr-vaf(H(V))={{z},{y,z}}.{sup:6}
+      </paragraph>
+      <paragraph label="Proof">
+       Despite {a mathematical formula}pr-VAF failing to be cf-preserving, {a mathematical formula}pr-VAFie continues to be a unique status semantics. {a mathematical formula}pr-VAFie(H(V))is a unique status semantics.To prove the assertion, it is sufficient to show the following relation: Let {a mathematical formula}H(V)=〈X,A,V,η〉 be a VAF and {a mathematical formula}H=〈X,A〉 its supporting (value free) AF. We show:{a mathematical formula} Suppose that {a mathematical formula}U1 and {a mathematical formula}U2 are both in {a mathematical formula}Epr-vafidl(H(V)). Since{a mathematical formula} it is certainly the case that {a mathematical formula}U1∪U2 is also a subset contained in every set of {a mathematical formula}Epr-vaf(H(V)). It, therefore, suffices to show that {a mathematical formula}U1∪U2∈Eadm(H). Noting that both {a mathematical formula}U1∈Eadm(H) and {a mathematical formula}U2∈Eadm(H) by definition of {a mathematical formula}Epr-vafidl(H(V)), the set {a mathematical formula}U1∪U2 could only fail to be admissible if some attack in {a mathematical formula}A involved an argument in {a mathematical formula}U1 and an argument in {a mathematical formula}U2. Without loss of generality suppose {a mathematical formula}(p,q)∈A with {a mathematical formula}p∈U1 and {a mathematical formula}q∈U2. Consider any specific audience α for which{a mathematical formula} For such audiences the attack {a mathematical formula}(p,q) is always successful. From Fact 1, the VAF, {a mathematical formula}Hα(V) induced by this is both acyclic and contains the attack {a mathematical formula}(p,q). In this case, however, {a mathematical formula}{p,q}⊈P(H(V),α) contradicting the assumption that both p and q are contained in every member of {a mathematical formula}Epr-vaf(H(V)).In total the set {a mathematical formula}U1∪U2 is admissible and every argument within it is skeptically accepted with respect to {a mathematical formula}pr-VAF. i.e. {a mathematical formula}U1∪U2∈Epr-vafidl(H(V)).  □
+      </paragraph>
+      <paragraph label="Theorem 13">
+       In keeping uniform with the notational convention introduced earlier we use {a mathematical formula}Epr-vafie(H(V)) to denote the unique subset of {a mathematical formula}X forming {a mathematical formula}Epr-vafie(H(V)). There areVAFs for which
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}x∈Eprie(〈X,A〉)but{a mathematical formula}x∉Epr-vafie(〈X,A,V,η〉).
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}x∈Epr-vafie(〈X,A,V,η〉)but{a mathematical formula}x∉Eprie(〈X,A〉).
+       </list-item>
+       <list-item label="(c)">
+        {a mathematical formula}Epr-vafie(〈X,A,V,η〉)⊂{x:sapr-vaf(〈X,A,V,η〉,x)}.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Consider the three systems of Fig. 7.For (a), the VAF of Fig. 7(a) has {a mathematical formula}Eprie={x,z} however {a mathematical formula}Epr-vafie={z} since {a mathematical formula}x∉P(H(V),B≻A).For (b), the VAF of Fig. 7(b) has {a mathematical formula}Epr-vafie={x,z}: both specific audiences yielding the preferred extension {a mathematical formula}{x,z}. In contrast {a mathematical formula}Eprie=∅ in the underlying AF: both {a mathematical formula}{x,z} and {a mathematical formula}{y,w} being preferred extensions of this.Finally, for the VAF of Fig. 7(c), we have {a mathematical formula}Epr-vafie=∅ (since every non-empty subset of {a mathematical formula}{x,y,z} fails to be admissible) whereas the argument z is objectively accepted, so establishing (c).  □
+      </paragraph>
+      <paragraph>
+       We have further indications that {a mathematical formula}Epr-vafie and {a mathematical formula}Eprie describe radically different structures, in the failure of the property given in Proposition 3 to have an analogue for acceptance with respect to {a mathematical formula}Epr-vafidl. A natural reformulation of Proposition 3 in terms of VAFs is “no attacker of S (resp. x) is subjectively accepted”. That is to say, credulously accepted with respect to {a mathematical formula}pr-VAF. The following result demonstrates, however, that this is not a necessary condition for a set to be in {a mathematical formula}Epr-vafidl or the maximal such set.
+      </paragraph>
+      <paragraph label="Proof">
+       There areVAFs,{a mathematical formula}H(V)for which an attacker of{a mathematical formula}Epr-vafie(H(V))is subjectively accepted.Consider the VAF, {a mathematical formula}H(V) of Fig. 8.For this {a mathematical formula}Epr-vafie={x,y,w}: this is easily seen to be admissible since {a mathematical formula}{y,w}−=∅ and the sole attacker, z, of x is counterattacked by y. Each argument in {a mathematical formula}{x,y,w} is also objectively accepted: that {a mathematical formula}{y,w}⊆P(H(V),α) for any specific audience α, is immediate from {a mathematical formula}{y,w}−=∅. The argument x is in {a mathematical formula}P(H(V),α) for all specific audiences in which {a mathematical formula}A≻αC (since the attack {a mathematical formula}(z,x) does not succeed); the remaining specific audiences (in which {a mathematical formula}C≻αA) satisfy {a mathematical formula}u∈P(H(V),α), so that {a mathematical formula}(u,z) is an attack in the acyclic AF induced by these, thereby providing u as a defence to the attack by z on x.The argument {a mathematical formula}z∈{x,y,w}− is, however, subjectively accepted using the specific audience {a mathematical formula}A≻C≻B: {a mathematical formula}(y,z) does not succeed with respect to this audience; the (successful) attack {a mathematical formula}(w,u) provides w as a defence to the attack by u on z so that {a mathematical formula}P(H(V),A≻C≻B)={x,y,w,z}.  □
+      </paragraph>
+      <paragraph label="Theorem 14">
+       We can, however, recover the characterisation for a restricted class of VAFs. For {a mathematical formula}k∈N, the VAF, {a mathematical formula}H(V)=〈X,A,V,η〉 is k-terse if every simple directed path of length k involves at most k different values from V. Formally:For all {a mathematical formula}x1x2x3⋯xk+1∈Xk+1 with {a mathematical formula}〈xi,xi+1〉∈A{a mathematical formula}(1⩽i⩽k) and {a mathematical formula}|{x1,x2,…,xk+1}|=k+1, we have {a mathematical formula}|{η(xi):1⩽i⩽k+1}|⩽k.Let{a mathematical formula}〈X,A,V,η〉be any 2-terseVAF, and{a mathematical formula}x∈X. Then{a mathematical formula}x∈Epr-vafie(〈X,A,V,η〉)if and only if both of the following hold:
+      </paragraph>
+      <list>
+       <list-item label="(U1)">
+        No attacker, y, of x is subjectively accepted w.r.t.{a mathematical formula}H(V).
+       </list-item>
+       <list-item label="(U2)">
+        For every attacker, y, of x, at least one attacker, z of y, is contained in{a mathematical formula}Epr-vafie(〈X,A,V,η〉).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       {a mathematical formula}(⇒) Suppose that {a mathematical formula}x∈Epr-vafie(H(V)) for the 2-terse VAF, {a mathematical formula}H(V). We show that x satisfies both (U1) and (U2). To see that (U2) holds it suffices to observe that, since {a mathematical formula}Epr-vafie(H(V)) is an admissible set in {a mathematical formula}H any attacker y of x must be counterattacked by some {a mathematical formula}z∈Epr-vafie(H(V)). Thus for each {a mathematical formula}y∈{x}− we have {a mathematical formula}{y}−∩Epr-vafie(H(V))≠∅. To see that x must satisfy (U1), suppose for the sake of contradiction that this were not the case, i.e. there is a 2-terse VAF, {a mathematical formula}H(V), with {a mathematical formula}x∈Epr-vafie(H(V))and with some argument {a mathematical formula}y∈{x}− subjectively accepted. Since {a mathematical formula}Epr-vafie(H(V)) is an admissible set it must contain an argument z that attacks y; see, e.g. Fig. 9 where {a mathematical formula}η(x)=Vx, {a mathematical formula}η(y)=Vy and {a mathematical formula}η(z)=Vz.Consider any specific audience under which {a mathematical formula}y∈P(H(V),α): since {a mathematical formula}{x,z}⊆Epr-vaf(H(V)) it holds that both are objectively accepted and thus, {a mathematical formula}{x,y,z}⊆P(H(V),α). It follows, therefore, that neither {a mathematical formula}(y,x) nor {a mathematical formula}(z,y) can be attacks in the AF arising from {a mathematical formula}H(V) with respect to the specific audience α.{sup:7} This, however, is only possible when {a mathematical formula}η(x), {a mathematical formula}η(y), and {a mathematical formula}η(z) are all distinct values. This contradicts the assumption that {a mathematical formula}H(V) is 2-terse since the path {a mathematical formula}z→y→x involves three distinct values. As a result we deduce that y is not subjectively accepted in {a mathematical formula}H(V) for every {a mathematical formula}y∈{x}−, i.e. that {a mathematical formula}x∈Epr-vaf(H(V)) implies that x satisfies (U1).{a mathematical formula}(⇐) Suppose that x satisfies both (U1) and (U2). Moreover, consider the set {a mathematical formula}Epr-vafie(H(V))∪{x}. Certainly this is conflict-free. In addition to being conflict-free, it is also admissible: any y that attacks it either attacks {a mathematical formula}Epr-vafie(H(V)) (and so is counterattacked by some {a mathematical formula}z∈Epr-vafie(H(V))) or attacks x so that {a mathematical formula}y∈{x}− and since x satisfies (U2) we find {a mathematical formula}z∈Epr-vafie(H(V))∩{y}− as a defence. It must, however, also be the case that x is objectively accepted: suppose this were not so and for some specific audience, {a mathematical formula}x∉P(H(V),α). By the multivalued cycles assumption we have that the relation of successful attacks w.r.t. α is acyclic and as {a mathematical formula}x∉P(H(V),α) we must have {a mathematical formula}{x}−∩P(H(V),α)≠∅: this, however, would contradict x satisfying (U1). In summary, from x satisfying (U1) and (U2), the set {a mathematical formula}Epr-vafie(H(V))∪{x} is both admissible in {a mathematical formula}H and each of its arguments is objectively accepted, i.e. {a mathematical formula}Epr-vafie(H(V))∪{x}∈Epr-vafidl. From the fact that {a mathematical formula}Epr-vafie(H(V)) is maximal we deduce {a mathematical formula}Epr-vafie(H(V))∪{x}=Epr-vafie(H(V)), i.e. {a mathematical formula}x∈Epr-vafie(H(V)) as required.  □
+      </paragraph>
+      <paragraph>
+       The property 2-terseness may seem rather too restrictive in order for the characterisation of Theorem 14 to be widely applicable. As the following result shows, this in fact is not necessarily the case.
+      </paragraph>
+      <paragraph label="Lemma 3">
+       Path Dilation Lemma – pdlLet{a mathematical formula}〈X,A,V,η〉be anyVAF. There is aVAF,{a mathematical formula}〈X∪Y,B,V,ε〉such that
+       <list>
+        {a mathematical formula}∀x∈X, ∀α:{a mathematical formula}x∈P(〈X,A,V,η〉,α)⇔x∈P(〈X∪Y,B,V,ε〉,α).{a mathematical formula}〈X∪Y,B,V,ε〉is 2-terse.Furthermore
+       </list>
+       <paragraph label="Proof">
+        {a mathematical formula}〈X∪Y,B,V,ε〉is constructible in polynomial time from{a mathematical formula}〈X,A,V,η〉.Given {a mathematical formula}〈X,A,V,η〉 as input, consider the result {a mathematical formula}〈X∪Y,B,V,ε〉 of applying Algorithm 3.The typical transformation enacted by Algorithm 3 is illustrated in Fig. 10. Notice that we do not assume {a mathematical formula}{x}−∩{x}+=∅.Observing that the effect of replacing a single {a mathematical formula}xi∈X by the structure described in Algorithm 3 reduces the total number of arguments contributing to paths which fail to be 2-terse, it is easily seen that the final VAF, {a mathematical formula}〈X∪Y,B,V,ε〉 is 2-terse. To complete the proof we need to show that {a mathematical formula}x∈P(〈X,A,V,η〉,α) if and only if {a mathematical formula}x∈P(〈X∪Y,B,V,ε〉,α). Here it is only necessary to argue that the effect of replacing a single x preserves acceptability with respect to specific audiences. So suppose {a mathematical formula}x∈X and let {a mathematical formula}〈X∪Y,B,V,ε〉 be the VAF formed after a single iteration of the main loop in Algorithm 3. If no changes have occurred (that is, every length 2 path with middle argument x is 2-terse), then it is certainly the case that for all x, {a mathematical formula}x∈P(〈X,A,V,η〉,α) if and only if {a mathematical formula}x∈P(〈X∪Y,B,V,ε〉,α). So assume that without loss of generality {a mathematical formula}x1 has resulted in changes to the structure of {a mathematical formula}〈X,A,V,η〉. Let {a mathematical formula}S=P(〈X,A,V,η〉,α). We claim that{a mathematical formula} To see this, let {a mathematical formula}〈X,Aα〉 be the af induced from {a mathematical formula}〈X,A,V,η〉 by the specific audience α, and {a mathematical formula}〈X∪Y,Bα〉 that induced from {a mathematical formula}〈X∪Y,B,V,ε〉 by α so that{a mathematical formula}{a mathematical formula} Observing that {a mathematical formula}Y={x1,1in,x1,2in,x1,1out,x1,2out}, it is easily seen that {a mathematical formula}Bα contains every attack in {a mathematical formula}Aα with the exception of{a mathematical formula} and that the only attacks in {a mathematical formula}Bα that do not occur in {a mathematical formula}Aα are{a mathematical formula} Recalling that S is the preferred extension of the AF, {a mathematical formula}〈X,Aα〉, first suppose that {a mathematical formula}x1∈S. In this case {a mathematical formula}S∪{x1,1in,x1,2out} is certainly an admissible set in {a mathematical formula}〈X∪Y,Bα〉: any attacker y of {a mathematical formula}x1 in {a mathematical formula}〈X,Aα〉 attacks {a mathematical formula}x1,1in in {a mathematical formula}〈X∪Y,Bα〉 and y is countered by some {a mathematical formula}z∈S. If {a mathematical formula}z∈S∖{x} then {a mathematical formula}z∈S∪{x1,1in,x1,2out} so that z defends {a mathematical formula}x1,1in against the attack by y. If {a mathematical formula}z=x1, then {a mathematical formula}(x1,2out,y)∈Bα so that the attack {a mathematical formula}(y,x1,1in) is countered by the attack {a mathematical formula}(x1,2out,y). In consequence {a mathematical formula}S∪{x1,1in,x1,2out} is an admissible set in {a mathematical formula}〈X∪Y,Bα〉 if {a mathematical formula}x1∈S, i.e. {a mathematical formula}S∪{x1,1in,x1,2out}⊆T. It must, however, also be a maximal such set. For that suppose, {a mathematical formula}S∪{x1,1in,x1,2out}⊂T so that T contains some argument, y say, not among {a mathematical formula}S∪{x1,1in,x1,2out}. It cannot be the case that {a mathematical formula}y∈{x1,2in,x1,1out} since {a mathematical formula}x1∈T and T is conflict-free. Thus {a mathematical formula}y∈X but {a mathematical formula}y∉S. Since {a mathematical formula}〈X,Aα〉 is acyclic, there must be some attacker, z, of y in S. If {a mathematical formula}z∈S∖{x1} then {a mathematical formula}z∈S∪{x1,1in,x1,2out} so that y could not belong to T. If {a mathematical formula}z=x1 then {a mathematical formula}(x1,2out,y)∈Bα and, again, we cannot have {a mathematical formula}y∈T. We deduce that if S is the unique preferred extension of {a mathematical formula}〈X,Aα〉 and {a mathematical formula}x1∈S then {a mathematical formula}S∪{x1,1in,x1,2out} is the unique preferred extension of {a mathematical formula}〈X∪Y,Bα〉.For the remaining possibility, suppose that {a mathematical formula}x1∉S and consider {a mathematical formula}S∪{x1,2in,x1,1out}. Again this latter set is admissible: {a mathematical formula}x1∉S requires some attacker, y, to be in S so that the attack by {a mathematical formula}x1,1in on {a mathematical formula}x1,2in is countered by the attack {a mathematical formula}(y,x1,1in)∈Bα (it is immediate that {a mathematical formula}x1,2in defends {a mathematical formula}x1,1out from the attack {a mathematical formula}(x,x1,1out)). We thus have, {a mathematical formula}S∪{x1,2in,x1,2out}⊆T with T the unique preferred extension of {a mathematical formula}〈X∪Y,Bα〉. The set {a mathematical formula}S∪{x1,2in,x1,1out} must, however, also be maximal. Were there some {a mathematical formula}y∈T not contained in it, it cannot be the case that {a mathematical formula}y∈{x1,1in,x,x1,2out} (recall that T is the unique preferred extension so that {a mathematical formula}S∪{x1,2in,x1,1out} is a subset of T ). Thus {a mathematical formula}y∉Y, i.e. {a mathematical formula}y∈X∖{x1}. As before, since {a mathematical formula}y∉S, it must be attacked by some {a mathematical formula}z∈S (since {a mathematical formula}〈X,Aα〉 is acyclic) which suffices to guarantee that {a mathematical formula}y∉T, i.e. {a mathematical formula}T=S∪{x1,2in,x1,1out} forms the unique preferred extension of {a mathematical formula}〈X∪Y,Bα〉 whenever {a mathematical formula}x1∉S.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Although Lemma 3 allows any VAF, {a mathematical formula}H(V), to be translated to a 2-terse VAF, {a mathematical formula}H(V,2) that preserves objective and subjective acceptability properties, unfortunately this translation does not extend to allow inferences about {a mathematical formula}Epr-vafie(H(V)) to be made from {a mathematical formula}Epr-vafie(H(V,2)). To see that this is the case, consider the 2-terse VAF in Fig. 11, that results by applying Algorithm 3 to the VAF of Fig. 8. The translation introduces 4 arguments – {a mathematical formula}{z1in,z2in,z1out,z2out} all with value C. The attacks {a mathematical formula}{(z,x),(u,z),(y,z)} being replaced by{a mathematical formula} Finally the chain of attacks {a mathematical formula}{(z1in,z2in),(z2in,z),(z,z1out),(z1out,z2out)} is added. We have earlier seen that, prior to the translation being effected ideal extension contained the arguments {a mathematical formula}{x,y,w}. After translating to a 2-terse VAF, however, although all of these arguments remain objectively accepted, it is not hard to see that the ideal extension is {a mathematical formula}{y,w}: the argument x cannot be included in an admissible subset of (objectively accepted) arguments since {a mathematical formula}z1out (the only defender of x against the attack by {a mathematical formula}z2out) is not objectively accepted: it fails to belong to the preferred extension resulting from the value ordering {a mathematical formula}A≻C≻B.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Computational complexity
+      </section-title>
+      <paragraph label="Proof">
+       We conclude this section by briefly considering the computational complexity of the main decision questions. {a mathematical formula}verpr-vafidlis co-NP-complete.To see that {a mathematical formula}verpr-vafidl∈co-NP it suffices to note that given {a mathematical formula}〈H(V),S〉 as an instance of {a mathematical formula}verpr-vafidl, S is accepted if and only if it is admissible and every argument of S is objectively accepted. This can be testing by checking{a mathematical formula} which can be carried out in co-NP.To establish co-NP-hardness we use a reduction from unsat without loss of generality restricted to instances in 3-cnf. We will actually prove a stronger result: that {a mathematical formula}verpr-vafidl is co-NP-hard even when instances are restricted to vafs whose supporting AF is a tree and having every value in {a mathematical formula}V associated with at most 3 arguments.We start from the VAF, {a mathematical formula}TΦ, described in Dunne [23, Theorem 25], which is formed from a 3-cnf formula, {a mathematical formula}Φ(z1,…,zn), the argument, Φ, of which is subjectively accepted if and only if {a mathematical formula}Φ(z1,…,zn) is satisfiable: {a mathematical formula}TΦ is a tree and no value is associated with more than 3 arguments.{sup:8} The instance, {a mathematical formula}FΦ is formed by adding two arguments – {a mathematical formula}f1 and {a mathematical formula}f2 – to {a mathematical formula}TΦ; attacks {a mathematical formula}{(f1,Φ),(Φ,f2)}; a new value, {a mathematical formula}vf to {a mathematical formula}VΦ (the value set of {a mathematical formula}TΦ); and defining {a mathematical formula}η(f1)=vf, {a mathematical formula}η(f2)=vf. The instance is completed by setting {a mathematical formula}S={f1,f2}. The construction is illustrated in Fig. 12.{sup:9} We now claim that {a mathematical formula}〈FΦ,{f1,f2}〉 is accepted as an instance of {a mathematical formula}verpr-vafidl if and only if {a mathematical formula}Φ(z1,…,zn) is unsatisfiable.Suppose that Φ is unsatisfiable. The set {a mathematical formula}{f1,f2} is admissible, so it suffices to show that each of its constituent arguments is objectively accepted. Certainly {a mathematical formula}{f1,f2}⊆P(FΦ,α) for any specific audience in which {a mathematical formula}vf≻αvΦ: {a mathematical formula}{f1}−=∅ and the attack {a mathematical formula}(Φ,f2) is unsuccessful. For any specific audience in which {a mathematical formula}vΦ≻αvf, {a mathematical formula}f1 is objectively acceptable (irrespective of whether Φ is satisfiable). When Φ is unsatisfiable and {a mathematical formula}vΦ≻αvf it is again the case that {a mathematical formula}f2∈P(FΦ,α): recalling that the value {a mathematical formula}vf does not occur amongst the values used in {a mathematical formula}TΦ, since Φ is unsatisfiable, there is no specific audience, β, for which {a mathematical formula}Φ∈P(TΦ,β) and thus the successful attack {a mathematical formula}(Φ,f2) can always be countered using a suitable argument of {a mathematical formula}TΦ. We deduce that if Φ is unsatisfiable then {a mathematical formula}{f1,f2}∈Epr-vafidl(FΦ).Conversely suppose that {a mathematical formula}{f1,f2}∈Epr-vafidl(FΦ). In this case {a mathematical formula}f2 is objectively accepted, thus a member of {a mathematical formula}P(FΦ,α) for any specific audience. In particular, {a mathematical formula}f2∈P(FΦ,α) for all specific audiences in which {a mathematical formula}vΦ≻αvf. We deduce that {a mathematical formula}Φ∉P(FΦ,α) and thus {a mathematical formula}Φ∉P(TΦ,α), i.e. {a mathematical formula}¬capr-vaf(TΦ,Φ) from which it follows that {a mathematical formula}Φ(z1,…,zn) is unsatisfiable.  □
+      </paragraph>
+      <paragraph>
+       We note that following the methods of [23, Corollary 7], this construction can be further developed to show that {a mathematical formula}verpr-vafidl is co-NP-hard for instances {a mathematical formula}〈X,A,V,η〉 in which {a mathematical formula}〈X,A〉 is a binary tree with every {a mathematical formula}v∈V associated with at most three arguments of {a mathematical formula}X.
+      </paragraph>
+      <paragraph label="Corollary 2">
+       <list>
+        <list-item label="(a)">
+         {a mathematical formula}capr-vafidlis co-NP-hard.
+        </list-item>
+        <list-item label="(b)">
+         {a mathematical formula}nepr-vafieis co-NP-hard.
+        </list-item>
+        <list-item label="(c)">
+         {a mathematical formula}verpr-vafieis{a mathematical formula}dp-hard.
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        (a) For the VAF, {a mathematical formula}FΦ, described in the proof of Theorem 15, the argument {a mathematical formula}f2 belongs to {a mathematical formula}Epr-vafie(FΦ) (and is, thereby, a member of at least one ideal set) if and only if Φ is unsatisfiable.(b) We employ a similar reduction to that given in the proof of Theorem 15, but using the VAF, {a mathematical formula}WΦ, described in [7, Theorem 8, pp. 65–66]: unlike the construction of {a mathematical formula}TΦ from Dunne [23, Theorem 25], {a mathematical formula}Epr-vafie(WΦ)={∅}.{sup:10} Modify {a mathematical formula}WΦ as shown in Fig. 13 to give a new VAF, {a mathematical formula}DΦ. Then {a mathematical formula}nepr-vafie(DΦ) if and only if {a mathematical formula}Φ(z1,…,zn) is unsatisfiable (in which event {a mathematical formula}f∈Epr-vafie).(c) We show that the decision problem sat-unsat whose instances are pairs of cnf-formulae, {a mathematical formula}〈F,G〉 accepted if and only if {a mathematical formula}F(z1,…,zn) is satisfiable and {a mathematical formula}G(y1,…,yn) is unsatisfiable, is polynomially reducible to {a mathematical formula}verpr-vafie. Given an instance {a mathematical formula}〈F,G〉 of sat-unsat, form the vaf shown in Fig. 14. This consists of distinct copies of {a mathematical formula}DF and {a mathematical formula}DG as in the proof of part (b). Complete the instance of {a mathematical formula}verpr-vafie by fixing {a mathematical formula}S={g}. Then {a mathematical formula}S=Epr-vafie if and only if F is satisfiable (so that {a mathematical formula}Epr-vafie(DF) is empty) and G is unsatisfiable (so that {a mathematical formula}Epr-vafie(DG)={g}).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Upper bounds for the problems {a mathematical formula}capr-vafie, {a mathematical formula}nepr-vafie and {a mathematical formula}verpr-vafie are immediate from the following result which proves that constructing{a mathematical formula}U∈Epr-vafie can be performed in the complexity class {a mathematical formula}fp||NP.
+      </paragraph>
+      <paragraph label="Proof">
+       Letfmuebe the (single-valued) function, defined as{a mathematical formula}Then,{a mathematical formula}fmue∈fp||NP.Given a VAF, {a mathematical formula}H(V)=〈X,A,V,η〉, with argument set {a mathematical formula}X={x1,…,xn}, the sequence of binary values {a mathematical formula}χ1χ2χ3⋯χn such that {a mathematical formula}χj=1 if and only if {a mathematical formula}¬oba(H(V),xj) can be determined with a single (length n) parallel query to an (np) oracle for {a mathematical formula}¬oba. We can thus compute the set, {a mathematical formula}Xoba, of all objectively accepted acceptable arguments in {a mathematical formula}H(V) via an {a mathematical formula}fp||NP algorithm: {a mathematical formula}Xoba={xi:χi=0}. Now consider the bipartiteAF, {a mathematical formula}B(Xoba,X∖Xoba,F) in which the set of attacks, {a mathematical formula}F, is{a mathematical formula} Note that the set of attacks {a mathematical formula}F does indeed induce a bipartite graph on {a mathematical formula}(Xoba,X∖Xoba) since {a mathematical formula}Xoba must be a conflict-free set within the AF{a mathematical formula}H(X,A) underlying the VAF, {a mathematical formula}H(V), by virtue of the fact that each argument in {a mathematical formula}Xoba is objectively accepted.The set {a mathematical formula}Epr-vafie(H(V)) is the maximal admissible set of {a mathematical formula}Xoba within the AF, {a mathematical formula}H(X,A). In determining this subset, however, attacks involving only arguments outside {a mathematical formula}Xoba are not relevant and thus the maximal admissible subset of {a mathematical formula}Xoba considered with respect to the AF, {a mathematical formula}H(X,A) is identical to the maximal admissible subset of {a mathematical formula}Xoba with respect to the bipartite framework {a mathematical formula}B(Xoba,X∖Xoba,F). Applying the algorithm of Dunne [23, Theorem 6], given {a mathematical formula}B(Xoba,X∖Xoba,F) this set can be identified by a (deterministic) polynomial time computation. It remains only to observe that {a mathematical formula}B(Xoba,X∖Xoba,F) can be constructed in polynomial time from {a mathematical formula}H(V) given the set {a mathematical formula}Xoba.  □
+      </paragraph>
+      <paragraph label="Proof">
+       The problems{a mathematical formula}capr-vafie,{a mathematical formula}nepr-vafieand{a mathematical formula}verpr-vafieare in{a mathematical formula}p||np.Given {a mathematical formula}H(V), {a mathematical formula}Epr-vafie(H(V)) can be computed as described in Theorem 16. An instance {a mathematical formula}〈H(V),x〉 of {a mathematical formula}capr-vafie can be decided simply by checking {a mathematical formula}x∈Epr-vafie(H(V)); deciding an instance {a mathematical formula}H(V) of {a mathematical formula}nepr-vafie involves testing {a mathematical formula}Epr-vafie(H(V))=∅ and, similarly, checking the instance {a mathematical formula}〈H(V),S〉 of {a mathematical formula}verpr-vafie is carried out by testing {a mathematical formula}Epr-vafie(H(V))=S.  □
+      </paragraph>
+      <paragraph>
+       To conclude this overview of complexity properties in {a mathematical formula}Epr-vafie we observe that the lower bound can be amplified if{a mathematical formula}capr-vafie can be shown to be NP-hard.
+      </paragraph>
+      <paragraph label="Proof">
+       If{a mathematical formula}capr-vafieisnp-hard then{a mathematical formula}capr-vafieis{a mathematical formula}p||np-complete.We use the characterisation of {a mathematical formula}p||np-complete languages established by Chang and Kadin in [16, Theorem 9, p. 182], by which the result follows by showing {a mathematical formula}capr-vafie to have the properties {a mathematical formula}orω and {a mathematical formula}andω, i.e. the languages {a mathematical formula}andω(capr-vafie) and {a mathematical formula}orω(capr-vafie) defined over m-tuples (for arbitrary {a mathematical formula}m⩾1) of distinct instances of {a mathematical formula}capr-vafie by{a mathematical formula} and{a mathematical formula} are both polynomially reducible to {a mathematical formula}capr-vafie.Problem {a mathematical formula}andω(capr-vafie)⩽mpcapr-vafie:Given {a mathematical formula}〈〈H1(V),x1〉,…,〈Hm(V),xm〉〉 an instance of {a mathematical formula}andω(ua) construct the instance {a mathematical formula}〈H(V),z〉 of ua shown in Fig. 15. In Fig. 15, {a mathematical formula}{y1,…,ym} are new arguments, the value, {a mathematical formula}η(yi) associated with {a mathematical formula}yi being that of its sole attacker {a mathematical formula}xi. The argument z has {a mathematical formula}η(z)=Vz with {a mathematical formula}Vz∉⋃i=1mV(i) ({a mathematical formula}V(i) being the value set for the VAF{a mathematical formula}Hi(V)). We claim that {a mathematical formula}capr-vafie(H(V),z) if and only if {a mathematical formula}capr-vafie(Hi(V),xi) for all{a mathematical formula}1⩽i⩽m, defining {a mathematical formula}U(i)=U∩X(i). Suppose first that {a mathematical formula}capr-vafie(H(V),z) and consider {a mathematical formula}Epr-vafie(H(V)). In this case {a mathematical formula}z∈P(H(V),α) for every specific audience, in particular for those specific audiences in which {a mathematical formula}Vi≻αVz for each {a mathematical formula}Vi. It follows for each such audience, α, {a mathematical formula}{x1,…,xm}⊆P(H(V),α) (otherwise for some i, no defence to the attack {a mathematical formula}(yi,z) would be present). We deduce that {a mathematical formula}{z,x1,…,xm}⊆U. In addition, however we see that and {a mathematical formula}xi∈Epr-vafie(Hi(V)), i.e. {a mathematical formula}capr-vafie(Hi(V),xi) holds for each {a mathematical formula}1⩽i⩽m as required.Conversely, suppose that {a mathematical formula}⋀i=1mcapr-vafie(Hi(V),xi) holds. Let {a mathematical formula}xi be contained in {a mathematical formula}Epr-vafie(Hi(V)). Consider the set {a mathematical formula}S={z}∪⋃i=1mEpr-vafie(Hi(V)). Certainly {a mathematical formula}S is admissible (with respect to the supporting AF of {a mathematical formula}H(V)). Thus, to establish {a mathematical formula}capr-vafie(H(V),z) it suffices to show {a mathematical formula}sapr-vaf(H(V),z) given that {a mathematical formula}sapr-vaf(H(V),xi) for each {a mathematical formula}1⩽i⩽m. It is certainly the case that {a mathematical formula}z∈P(H(V),α) for any audience satisfying {a mathematical formula}Vz≻αVi for each i. For the remaining audiences, should {a mathematical formula}Vi≻αVz, then since {a mathematical formula}xi∈P(Hi(V),α) (recall that {a mathematical formula}Vz∉V(i)), the attack {a mathematical formula}(yi,z) is countered by the attack {a mathematical formula}(xi,yi). Thus {a mathematical formula}oba(H(V),z) holds and we deduce that {a mathematical formula}S∈Epr-vafie(H(V)), i.e. {a mathematical formula}capr-vafie(H(V),z) holds as claimed.Problem {a mathematical formula}orω(capr-vafie)⩽mpcapr-vafie:Given an m-tuple {a mathematical formula}〈〈H1(V),x1〉,…,〈Hm(V),xm〉〉 construct the instance {a mathematical formula}〈H(V),z〉 of {a mathematical formula}capr-vafie shown in Fig. 16. In this construction, {a mathematical formula}{yi,zi:1⩽i⩽m} together with {a mathematical formula}{y,z} are new arguments for which {a mathematical formula}η(yi)=η(xi)=Vi and the remaining new arguments are associated with a new value {a mathematical formula}Vz. We claim that {a mathematical formula}capr-vafie(H(V),z) if and only if at least one of {a mathematical formula}capr-vafie(Hi(V),xi) holds. Suppose first that {a mathematical formula}capr-vafie(H(V),z) witnessed by {a mathematical formula}Epr-vafie(H(V)) so that {a mathematical formula}z∈Epr-vafie(H(V)). Since this set is admissible and has z as a member, at least one of the arguments {a mathematical formula}zi is in {a mathematical formula}Epr-vafie(H(V)) (in order to deal with the attack {a mathematical formula}(y,zi)).Similarly if {a mathematical formula}zi∈Epr-vafie(H(V)) then so is {a mathematical formula}xi for otherwise the attack {a mathematical formula}(yi,zi) is undefended. Hence from {a mathematical formula}capr-vafie(H(V),z) we infer {a mathematical formula}capr-vafie(Hi(V),xi) (for some {a mathematical formula}xi).Conversely, without loss of generality, suppose that {a mathematical formula}capr-vafie(H1(V),x1) holds. The subset {a mathematical formula}Epr-vafie(H1(V))∪{z1,z} is clearly admissible, so it suffices to show that {a mathematical formula}sapr-vaf(H(V),z1) since {a mathematical formula}sapr-vaf(H(V),z) will follow from this. Certainly {a mathematical formula}z1∈P(H(V),α) for all audiences in which {a mathematical formula}Vz≻αV1. For the remaining audiences from {a mathematical formula}sapr-vaf(H(V)1,x1) we have {a mathematical formula}sapr-vaf(H(V),x1) and thus the attack {a mathematical formula}(y1,z1) is countered by {a mathematical formula}(x1,y1). Thus, {a mathematical formula}sapr-vaf(H(V),z1) so that {a mathematical formula}x1∈Epr-vafie(H1(V)) yields {a mathematical formula}{z1,z}⊂Epr-vafie(H(V)), i.e. {a mathematical formula}capr-vafie(H(V),z) as claimed.  □
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

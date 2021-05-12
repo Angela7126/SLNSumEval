@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Exploiting local and repeated structure in Dynamic Bayesian Networks.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Bayesian Networks (BNs) are powerful and popular tools for reasoning about uncertainty [1]. Although BNs where originally developed for static domains, they have been extended towards dynamic domains to cope with time-related or sequential data [2], [3]. These Dynamic Bayesian Networks (DBNs) generalize hidden Markov models and Kalman filters, and are widely used in applications such as speech recognition, bio-sequence analysis, health monitoring, machine monitoring, robotics and games.
+     </paragraph>
+     <paragraph>
+      Inference methods for static BNs, including junction trees and variable elimination, exploit conditional independencies (CI) by using a factorized representation of the probability distribution. More recent techniques, including knowledge compilation [4], also exploit local structure (LS) in the network. This type of structure can induce additional independencies, and is present when the conditional probability tables contain deterministic dependencies or equal parameters. It is well-known that, in the presence of LS, knowledge compilation often outperforms traditional methods [4].
+     </paragraph>
+     <paragraph>
+      Inference in dynamic models can be performed by unrolling the network and using static inference techniques on the resulting network. This approach, however, performs poorly when the number of time steps increases. Therefore, special purpose algorithms have been devised, such as the interface algorithm[3], which extends the forward-backward algorithm for hidden Markov models towards general DBNs. In addition to CI, these algorithms exploit the repeated structure (RS) obtained from duplicating the network along the time dimension.
+     </paragraph>
+     <paragraph>
+      The key contribution of the present paper is that we show how to use knowledge compilation techniques for efficient exact inference in DBNs. The resulting structural interface algorithm speeds up inference by exploiting CI, RS as well as LS (see Table 1). We investigate the trade-offs of compiling the complex transition model of a DBN into a circuit representation. We evaluate our algorithm on three classes of benchmark DBNs, and show that the structural interface algorithm outperforms the classical interface algorithm in the presence of LS. As a result, we can tackle dynamic models that are considerably more complex than what is currently possible with exact solvers.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. Sections 2 and 3 provide the necessary background, on inference for dynamic networks, and static networks with local structure. Next, in Section 4 we describe the structural interface algorithm. Finally, Section 5 compares the different DBN inference techniques empirically.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Inference in Dynamic Bayesian Networks
+     </section-title>
+     <paragraph>
+      We first review Dynamic Bayesian Networks and existing work on exact probabilistic inference with these representations. Upper-case letters (Y) denote random variables and lower case letters (y) denote their instantiations. Bold letters represent sets of variables (Y) and their instantiations (y).
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Representation and tasks
+      </section-title>
+      <paragraph>
+       A Dynamic Bayesian Network (DBN) [2], [3] is a directed acyclic graphical model that represents a stochastic process. It models a probability distribution over a semi-infinite collection of random variables {a mathematical formula}Z1,Z2,Z3,…, where {a mathematical formula}Zt are the variables at time t and {a mathematical formula}Z1:T denotes all variables up until time T. A Dynamic Bayesian Network is defined by two networks: {a mathematical formula}B1, which specifies the prior or initial state distribution {a mathematical formula}Pr⁡(Z1), and {a mathematical formula}B→, a two-slice temporal BN (2TBN) that specifies the transition model {a mathematical formula}Pr⁡(Zt|Zt−1). Together, they represent the distribution{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The initial network {a mathematical formula}B1 is a regular Bayesian network, which factorizes the distribution over its N variables as {a mathematical formula}Pr⁡(Z1)=∏i=1NPr⁡(Z1i|Pa(Z1i)), where {a mathematical formula}Zti is the ith variable at time t and {a mathematical formula}Pa(Zti) are the parents of {a mathematical formula}Zti in the network. The transition model {a mathematical formula}B→ is not a regular Bayesian network as only the nodes in the second slice (for time t) of the 2TBN{sup:1} have an associated conditional probability distribution. Thus, the transition model factorizes as {a mathematical formula}Pr⁡(Zt|Zt−1)=∏i=1NPr⁡(Zti|Pa(Zti)), where {a mathematical formula}Pa(Zti) can contain variables from either {a mathematical formula}Zt or {a mathematical formula}Zt−1.
+      </paragraph>
+      <paragraph>
+       We use as running example the task of finding failing components in digital electronic circuits (see Fig. 1a). This problem can be easily modeled as a DBN, where each of the variables in {a mathematical formula}Zt either represents the state of a wire (e.g. high or low) or the state of a logical component (e.g. healthy or faulty) (see Fig. 1b) [5]. The transition model (Fig. 1c) defines the dynamics of the components' state over time.
+      </paragraph>
+      <paragraph>
+       The goal of (marginal) inference in a DBN is to compute {a mathematical formula}Pr⁡(Xti|e1:τ), the probability of a hidden variable {a mathematical formula}Xi at time t, given a sequence of observations {a mathematical formula}e1:τ up until time τ. If ({a mathematical formula}t=τ) this is called filtering, if ({a mathematical formula}t&gt;τ) prediction, and if ({a mathematical formula}t&lt;τ) smoothing. For our example, one is typically interested in the health states {a mathematical formula}HAt (for the AND-gate) and {a mathematical formula}HNt (for the NOT-gate) at time t, given a sequence of observed electrical inputs and outputs up to and including t, i.e. the task of filtering. This corresponds to computing {a mathematical formula}Pr⁡(HAt|w11:t,w21:t,w41:t) and {a mathematical formula}Pr⁡(HNt|w11:t,w21:t,w41:t).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Unrolling the network
+      </section-title>
+      <paragraph>
+       The semantics of a DBN, for a finite number of time steps T, is defined by unrolling the transition model (2TBN) for all time slices (Equation (1)). Such an unrolled network (see Fig. 2) is equivalent to a static Bayesian network and allows one to perform inference with any standard algorithm for BNs [6], [5].
+      </paragraph>
+      <paragraph>
+       Despite the wide range of existing algorithms for BNs, naively unrolling the network for T time slices has multiple drawbacks: (1) the time complexity of inference depends on heuristics and is not guaranteed to scale linearly with T, (2) it requires {a mathematical formula}O(T) memory, and (3) the number T is often unknown which implies that adding a new time step requires inference in the complete network. While a standard BN algorithm in combination with a sensible heuristic allows one to overcome (1), e.g. heuristics based on a “slice-by-slice” ordering [7], more specific algorithms are required to overcome (2) and (3).
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Exploiting repeated structure
+      </section-title>
+      <paragraph>
+       Explicitly unrolling the 2TBN introduces a repeated structure in the network. This structure is exploited by specific inference algorithms for DBNs to overcome all the above limitations of unrolling.
+      </paragraph>
+      <paragraph>
+       A key property of DBNs is that the hidden variables {a mathematical formula}Xt d-separate the past from the future, that is, knowing their values makes the future independent of the past. Often, a subset {a mathematical formula}It of {a mathematical formula}Xt also suffices to d-separate the past from the future. This set {a mathematical formula}It, referred to as the interface{sup:2}[3], consists of the nodes from time slice t that have an outgoing arc to nodes in time slice {a mathematical formula}t+1 (see Fig. 2). The interface allows one to define the transition model by means of a 1.5TBN rather than a 2TBN. This 1.5TBN is obtained by removing all non-interface variables and all arcs in the first time slice of the 2TBN (see Fig. 1c) [3].
+      </paragraph>
+      <paragraph>
+       Exploiting the repeated structure in a DBN reduces the inference task in DBNs to repeatedly performing inference in the 1.5TBN. This is achieved by means of a forward (and backward) pass, similar to the forward-backward algorithm for hidden Markov models [8]. The forward pass involves computing the joint probability distributions {a mathematical formula}Pr⁡(It|e1:t) for every time step t. These distributions, referred to as the forward messages, can be computed recursively as follows [3]:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The factor {a mathematical formula}Pr⁡(It|It−1,et) can be computed as {a mathematical formula}∑Zt∖ItPr⁡(Zt|It−1,et) on the 1.5TBN without the need to unroll the network. The standard implementation of the interface algorithm{sup:3}[3] computes this factor using junction trees where it is enforced that all nodes in {a mathematical formula}It−1 and in {a mathematical formula}It each form a clique. Based on the forward messages, one can compute marginal probabilities as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Although the size of the joint distribution in the forward message grows exponentially with the size of the interface {a mathematical formula}It, the interface algorithm overcomes all drawbacks of naively unrolling the network. It scales linearly with the number of time slices, only needs to keep in memory the last forward message and the 1.5TBN, and it allows for a time step to be added without the need to recompute the forward messages for previous time steps.
+      </paragraph>
+      <paragraph>
+       The forward message allows one to correctly compute {a mathematical formula}Pr⁡(Zti|e1:τ) with {a mathematical formula}t≥τ, but not when {a mathematical formula}t&lt;τ (i.e., the smoothing task). Then, one also defines a backward interface to compute backward messages. For the sake of simplicity, we omit the backward pass, as it is similar to the forward pass [3].
+      </paragraph>
+      <paragraph>
+       Another approach, known as constant-space algorithms [7], extend the variable elimination algorithm for Bayesian networks to efficiently perform inference in dynamic networks. Concretely, these algorithms utilize “slice-by-slice” elimination orders and dynamically generate the conditional probability tables of the network. Hence, inference scales linearly with the number of time-slices T while the required memory is constant and independent of T.
+      </paragraph>
+      <paragraph>
+       For notational convenience, we omit the observations {a mathematical formula}e1:t in the remainder of this text and refer to the forward message as {a mathematical formula}Pr⁡(It). Its different entries (possible variable instantiations) are denoted by ({a mathematical formula}it1,it2,…itM). In case all variables are binary, we have {a mathematical formula}M=2|I|.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Local structure in static Bayesian networks
+     </section-title>
+     <paragraph>
+      Most inference algorithms for BNs, such as junction trees, only exploit conditional independences and have time complexities that are exponential in the treewidth of the BN. Algorithms based on knowledge compilation, however, are also capable of exploiting local structure, allowing one to conduct inference more efficiently. We first introduce different types of local structure and show how these can be exploited.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Local structure
+      </section-title>
+      <paragraph>
+       Bayesian networks often exhibit abundant local structure in the form of determinism and context-specific independence (CSI) [9]. Determinism is introduced by 0 and 1 parameters in the network while CSI is often the result of equal parameters. Exploiting local structure can lead to exponential speed gains and allows one to perform inference in networks of high treewidth, where this is otherwise impossible [4].
+      </paragraph>
+      <paragraph>
+       The Conditional Probability Table (CPT) for wire 4 in our running example (see Fig. 1d) contains the different types of local structure. When the logical component is healthy ({a mathematical formula}HAt=⊤), the 1 parameter indicates that {a mathematical formula}W4t is deterministically true (high) if all wires at the input of the component are true (high). The 0 parameters indicate that {a mathematical formula}W4t is deterministically false (low) in all other cases. When the logical component is faulty ({a mathematical formula}HAt=⊥), the equal parameters (0.5) give rise to context-specific independence since the state of {a mathematical formula}W4t does not depend anymore on the state of the wires at the input of the component, i.e. {a mathematical formula}Pr⁡(W4t|W2t,W3t,HAt=⊥)=Pr⁡(W4t|HAt=⊥).
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Knowledge compilation
+      </section-title>
+      <paragraph>
+       Knowledge compilation is a technique capable of exploiting different types of local structure [4]. The approach we take can be summarized as performing three steps: (1) conversion of the BN into a logical knowledge base and weighted model counting problem, (2) compiling the knowledge base into a more tractable target representation, and (3) performing inference in the target representation.
+      </paragraph>
+      <section label="3.2.1">
+       <section-title>
+        Conversion to weighted model counting
+       </section-title>
+       <paragraph>
+        In the first step, the BN is encoded into a knowledge base (KB) (i.e., a sentence in propositional Boolean logic) whose satisfying assignments are called models. An associated weight function w, which maps each propositional variable to a real number, allows one to reduce the task of probabilistic inference to weighted model counting[10]. The weight of a model is given by the product of the weights of all variables consistent with the model. The sum of all models then corresponds to the probability of evidence in the BN. Computing the marginal probability of a variable instantiation comes down to summing and normalizing the weights of all models consistent with the instantiation.
+       </paragraph>
+       <paragraph>
+        We illustrate the conversion step on our running example by means of the encoding proposed by Fierens et al. [11]. The propositional formula for the CPT shown in Fig. 1d contains one parameter variable ({a mathematical formula}w(PFaulty|¬HA,t)=0.5) and six indicator variables ({a mathematical formula}w(⋅)=1):{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The first formula encodes the last entry of the CPT, associated with the indicator variable {a mathematical formula}Normalt. We can safely omit the corresponding parameter variable since it represents a probability of 1 and does not change the weighted model count. All entries in the CPT that have an equal probability of 0.5 are compactly encoded into the second formula. With these entries we associate the indicator variable {a mathematical formula}Faultyt. The third formula expresses when {a mathematical formula}W4t is true. All entries in the CPT with a 0 parameter can be dropped as they give rise to models with a weight of 0. A model for this formula is, for example, given by ({a mathematical formula}W4t,¬Normalt,Faultyt,¬HAt,PFaulty|¬HA,t,¬W2t,W3t) which has a corresponding weight of {a mathematical formula}1⋅1⋅1⋅1⋅0.5⋅1⋅1=0.5.
+       </paragraph>
+       <paragraph>
+        In general, the knowledge base KB for a BN can be obtained by encoding each row of each CPT as a propositional formula and conjoining these formulas. This requires an indicator variable for each value z of a random variable Z and a parameter variable for each CPT parameter {a mathematical formula}θz|u. The encoding of Fierens et al. [11] assumes that all variables are Boolean. In the general case, any other encoding can be used. For details, we refer to Darwiche [5].
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       <section-title>
+        Compilation and inference
+       </section-title>
+       <paragraph>
+        Once the network is encoded, the knowledge base KB is transformed into a more tractable representation which allows for efficient marginal inference. The language often used as target representation is d-DNNF (deterministic Decomposable Negation Normal Form). It is known to support weighted model counting in polynomial time [12] and generalizes other well-known languages such as OBDD and FBDD. The procedure consists of three steps:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Compile the knowledge base KB into a d-DNNF Δ [13].{a mathematical formula}
+        </list-item>
+        <list-item label="2.">
+         Incorporate evidence e by setting to zero the weight of any indicator variable that is not compatible with the evidence.{a mathematical formula}
+        </list-item>
+        <list-item label="3.">
+         Traverse the obtained d-DNNF to either:(a) compute the weighted model count, which corresponds to the probability of the evidence in the BN, with an upward pass only:{a mathematical formula} (b) compute the marginal probability {a mathematical formula}Pr⁡(Z|e), for all variables Z in parallel, with one upward and downward pass [5, Algorithm 34]:{a mathematical formula}
+        </list-item>
+       </list>
+       <paragraph>
+        In the literature, one often converts the obtained target representation (d-DNNF) into an Arithmetic Circuit (AC) and traverses this circuit. Since this step is not strictly necessary, we omit it and use both terms interchangeably.
+       </paragraph>
+       <paragraph>
+        Compiling a knowledge base into a d-DNNF is computationally hard but has several advantages. Firstly, the size of the obtained circuit is not necessarily exponential in the treewidth. Secondly, the circuit can be reused in the presence of new evidence to compute marginal probabilities in polytime, without the need to recompile it. Thirdly, a d-DNNF allows a set of polytime transformations of which one is conditioning. This transformation, denoted {a mathematical formula}(Δ|v), replaces the variables V in Δ by their assignment in v and propagates these values while preserving the properties of the target representation [12].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      The structural interface algorithm
+     </section-title>
+     <paragraph>
+      We propose the structural interface algorithm for efficient inference in DBNs. It exploits conditional independence and repeated structure in the network in a way similar to the interface algorithm [3]. The use of knowledge compilation, however, allows us to additionally exploit local structure in the transition model.
+     </paragraph>
+     <paragraph>
+      We explore several approaches of integrating the interface algorithm with knowledge compilation. They have different memory requirements and trade-offs between putting the burden on the compiler, a post-compilation (conditioning) step or the inference step. Table 2 summarizes the complexity of the different steps for each of the different interface encodings we present below.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Exploiting local structure in the transition model
+      </section-title>
+      <paragraph>
+       Our approach performs inference in a DBN by recursively computing the forward message (see Equation (2)) but uses knowledge compilation, rather than junction trees, to compute the factor {a mathematical formula}Pr⁡(It|It−1,et) on the 1.5TBN. This does not only involve encoding, then compiling, the 1.5TBN, but also requires to represent the joint distributions {a mathematical formula}Pr⁡(It−1) and {a mathematical formula}Pr⁡(It) in the compiled circuit. The 1.5TBN is encoded by means of a knowledge base {a mathematical formula}KB1.5 (cf. Section 3.2.1). Each CPT (for variables in the second slice) is turned into a corresponding set of formulas. Now, we identify several approaches to represent {a mathematical formula}Pr⁡(It−1) and {a mathematical formula}Pr⁡(It) and to compute the forward message on a circuit representation.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Compiling the interface into the circuit (ENC1)
+       </section-title>
+       <paragraph>
+        A joint distribution {a mathematical formula}Pr⁡(I) can be naturally encoded into a knowledge base {a mathematical formula}KBI as discussed in Section 3.2.1. This requires {a mathematical formula}2|I| formulas and indicator variables to be added, all in one-to-one correspondence to the rows of {a mathematical formula}Pr⁡(I). For our running example, with variables {a mathematical formula}HNt and {a mathematical formula}HAt in the interface, {a mathematical formula}KBIt is given by the following 4 formulas (and similar for {a mathematical formula}KBIt−1):{a mathematical formula} This allow us to compute the forward message as follows:{a mathematical formula} where w is updated with {a mathematical formula}w(Statet−1j)=Pr⁡(it−1j). The advantage of this encoding is that, for each time step, only two passes trough the circuit are needed to compute the forward message (i.e., one call to {a mathematical formula}Eval⇅). The disadvantage is that the number of required formulas to encode {a mathematical formula}Pr⁡(I) scales exponentially in {a mathematical formula}|I| (i.e. the number of interface variables).
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Conditioning the interface into the circuit (ENC2)
+       </section-title>
+       <paragraph>
+        The exponential aspect of {a mathematical formula}KBI has an adverse effect on the heuristics used by general-purpose compilation tools as it not only dwarfs {a mathematical formula}KB1.5 in size, but also represents a joint distribution without any local structure. A d-DNNF that is logically equivalent with the one obtained by {a mathematical formula}Compile(KB1.5∧KBI) can be obtained by only compiling {a mathematical formula}KB1.5 with a general-purpose tool and adding {a mathematical formula}Pr⁡(I) to the resulting circuit by means of conditioning. Concretely, a joint distribution over all variables in I can be added to a compiled circuit Δ in the following way:{a mathematical formula} The result of {a mathematical formula}Addi(Δ,I) is a d-DNNF which allows us to compute the forward message as follows:{a mathematical formula} where w is updated with {a mathematical formula}w(Statet−1j)=Pr⁡(it−1j). The advantage of incorporating {a mathematical formula}Pr⁡(I) directly into the d-DNNF is that the heuristic of the compiler does not have to deal with {a mathematical formula}KBI and can focus on better compiling the much smaller and more structured sentence {a mathematical formula}KB1.5. Furthermore, this approach allows one to share identical subcircuits, leading to an efficient computation of the forward message with only two passes trough the obtained circuit. The disadvantage is that the number of conditioning operations scales exponentially with {a mathematical formula}|I|.
+       </paragraph>
+      </section>
+      <section label="4.1.3">
+       <section-title>
+        Introducing the interface as evidence (ENC3)
+       </section-title>
+       <paragraph>
+        We can compute the forward message using only {a mathematical formula}Δ1.5, i.e. the circuit obtained by {a mathematical formula}Compile(KB1.5), without the need to explicitly encode {a mathematical formula}Pr⁡(It−1) and {a mathematical formula}Pr⁡(It). This is done by repeatedly updating the weight function to incorporate each of the combinations of instantiations of {a mathematical formula}Pr⁡(It−1) and {a mathematical formula}Pr⁡(It) as evidence (see Step 2, section 3.2.2). Concretely, the probability of the j-th instantiation in the forward message can be computed in the following way:{a mathematical formula} where {a mathematical formula}wk→j incorporates the instantiations {a mathematical formula}it−1k and {a mathematical formula}itj and M = {a mathematical formula}2|I| in case all interface variables are binary. Note that {a mathematical formula}Compile(KB1.5) only needs to be performed once. The advantage of bypassing an explicit encoding of the interfaces is that it lowers the memory requirements as the forward message is directly computed on the circuit {a mathematical formula}Δ1.5. The disadvantage is that computing the forward message requires {a mathematical formula}22⋅|I| passes trough the circuit. Moreover, {a mathematical formula}22⋅|I|⋅|Δ1.5| will be larger than {a mathematical formula}2⋅|Δ| (the evaluation step of the previous two encodings) because identical subcircuits are not shared.
+       </paragraph>
+      </section>
+      <section label="4.1.4">
+       <section-title>
+        Encoding for the structural interface algorithm (ENC4)
+       </section-title>
+       <paragraph>
+        The approach of compiling {a mathematical formula}KBIt−1∧KB1.5∧KBIt (ENC1) is similar to the interface algorithm where one adds edges to the moral graph between all nodes in {a mathematical formula}It−1 and {a mathematical formula}It[3]. Since the compilation step is the most complex step in the weighted model counting pipeline, and this approach potentially has to deal with a more complex knowledge base, we do not prefer this encoding.
+       </paragraph>
+       <paragraph>
+        For the structural interface algorithm, we propose a hybrid encoding that employs ENC2 as well as ENC3. Concretely, we explicitly introduce {a mathematical formula}Pr⁡(It−1) by conditioning while {a mathematical formula}Pr⁡(It) is implicitly introduced as evidence. This allows us to compute the probability of the j-th instantiation in the forward message as follows:{a mathematical formula} where {a mathematical formula}w→j is updated with {a mathematical formula}w(Statet−1j)=Pr⁡(it−1j) and incorporates the instantiation {a mathematical formula}itj. For each time slice, {a mathematical formula}2|I| passes trough the circuit are required to compute the forward message. The advantage of this encoding is that it combines the advantages of ENC2 and ENC3. More precisely, the benefit of evaluating the circuit multiple times (ENC3) is that the cost of compilation is amortized over all queries. The benefit of conditioning (ENC2) is that subcircuits and computations are shared. By using the hybrid approach, we get some of both advantages, which we will empirically show to be a good trade-off.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Exploiting repeated structure in the network
+      </section-title>
+      <paragraph>
+       The use of knowledge compilation to compute the forward message does not only allow us to exploit the local, but also the repeated structure in the network. Since the structure of the transition model is time-invariant, there is no need to repeat the process of encoding and compiling the 1.5TBN and introducing {a mathematical formula}Pr⁡(It−1). This allows us to split Equation (4) in two parts:{a mathematical formula} which is performed only once, and{a mathematical formula} which is performed for each {a mathematical formula}itj∈It and for each {a mathematical formula}t&lt;T. Hence, the one-time cost of Equation (5) is amortized over {a mathematical formula}2|I|⋅T queries. Note that for the standard interface algorithm, the one-time cost of compiling the transition model into a junction tree is amortized over T queries. This approach, however, does not exploit any of the local structure in the transition model.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Simplifying the circuit
+      </section-title>
+      <paragraph>
+       Computing the forward message by means of Equation (6) requires an update of the weight-function w before any new evaluation pass trough {a mathematical formula}ΔR. Some variables in the d-DNNF, however, are mapped to time-invariant weights that never change. They can be combined and replaced by a smaller set of new variables in case the following two conditions are met: (1) the variable is not observed and, (2) not queried.
+      </paragraph>
+      <paragraph>
+       In general, all of the parameter variables and a subset of the indicator variables meet these two conditions. For example, variable {a mathematical formula}W3t, which models the state of wire 3 in our running example, is a purely internal variable and never queried or observed. Assume we have a d-DNNF which contains the following sub-formula and weight function:{a mathematical formula} This can be replaced by:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The effect of this transformation is that it reduces the number of unnecessary computations in each pass trough the circuit. If we would not employ this transformation, the multiplication {a mathematical formula}a⋅b will be performed {a mathematical formula}T⋅2|I| times although the result will always be the same. This transformation can be performed in a deterministic manner by means of one bottom–up pass trough the d-DNNF. As it only needs to be computed once, i.e. before the evaluation step, the cost is amortized over {a mathematical formula}T⋅2|I| queries.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      Our experiments address the following four questions:
+     </paragraph>
+     <list>
+      <list-item>
+       How do different algorithms scale with an increasing number of time steps?
+      </list-item>
+      <list-item>
+       How do both of the interface algorithms scale in the presence of local structure in the transition model?
+      </list-item>
+      <list-item>
+       How does the structural interface algorithm scale in case local structure is not fully exploited?
+      </list-item>
+      <list-item>
+       How do the different interface encodings compare?
+      </list-item>
+     </list>
+     <paragraph>
+      We implemented our algorithm in ProbLog.{sup:4} For compilation, we use both the c2d{sup:5} and dsharp{sup:6} compilers, and retain the smallest circuit. Experiments are run with a working memory of 8 GB and a timeout of 1 hour.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Models
+      </section-title>
+      <paragraph>
+       We generate networks for the following three domains:
+      </paragraph>
+      <paragraph>
+       Digital Circuit 1. These networks model electronic digital circuits similar to the one used as running example in this text (and adopted from Darwiche [5]). A circuit contains logical AND-gates and OR-gates which all are randomly connected to each other (without forming loops). For a subset of logical gates, the input or output is observed and not connected to another gate. The interface contains all variables that model the health state of the component. Gates can share a health variable when, for example, they share a power line. We refer to the networks as DC1-G-H, with G the number of gates and H the number of health (interface) variables. The number of gates for which the input or output is observed is {a mathematical formula}2⋅GH. Observations are generated randomly. For each domain size, we randomly generate 3 networks and report average results.
+      </paragraph>
+      <paragraph>
+       Digital Circuit 2. These networks are a variant of the networks in DC1 but now we have a separate health variable for each of the gates and the interface consists of one multi-valued variable. This variable aggregates all health variables and encodes, in an ordered way, which gate is most likely to be part of the failing gates. The introduction of the multi-valued variable facilitates the encoding of the interface, as compared to DC1, but offers an additional challenge for inference as it directly depends on each of the health variables. We refer to the networks as DC2-G with G the number of gates. For each domain size, we randomly generate 3 networks and report average results.
+      </paragraph>
+      <paragraph>
+       Mastermind. We model the mastermind game, similar to the BNs used in Chavira et al. [4]. Instead of modeling the game for a fixed number of rounds, however, we represent the game as a DBN with one time slice per round. The interface contains a variable for each of the pegs the game is played with. The interface thus models the belief of the colors set by the opponent for each of the pegs. We refer to the networks as MM-C-P, with C the number colors and P the number of pegs (interface variables).
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Algorithms
+      </section-title>
+      <paragraph>
+       We make use of the following four algorithms:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        unrolled_JT: The junction tree algorithm on the unrolled network for which we used SMILE.{sup:7}
+       </list-item>
+       <list-item label="•">
+        unrolled_COMP: Compiling the unrolled network, using the encoding introduced in section 3.2.1.
+       </list-item>
+       <list-item label="•">
+        standard_IA: The standard interface algorithm{sup:8} where we experimented with the jtree_dbn_inf_engine as well as with the smoother_engine but did not observe any significant difference.
+       </list-item>
+       <list-item label="•">
+        structural_IA: The structural interface algorithm where the interface is encoded using ENC4.
+       </list-item>
+      </list>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Results
+      </section-title>
+      <paragraph>
+       We compare the four algorithms introduced above for an increasing number of time-slices. The results are depicted in Fig. 3 and allow us to answers (Q1). On each of the three domains, both of the interface algorithms scale linear with the number of time steps while this is not the case for inference in the unrolled network. This shows that, especially for a large number of time-slices, the general-purpose heuristics fail to find a good variable ordering. We do observe, however, that unrolled_JT is more efficient, compared to standard_IA, when the number of time-slices is rather small. The reason for this is that standard_IA has to deal with an extra constraint, being that all variables in the interface have to be in the same clique, which initially causes some overhead. Furthermore, unrolled_JT outperforms unrolled_COMP on each of the three domains despite the local structure present in the networks. Hence, no guarantees can be provided when a general-purpose implementation is used to perform inference in the unrolled network.
+      </paragraph>
+      <paragraph>
+       We compare standard_IA and structural_IA for the task of computing the forward message for 10 time-slices. The results are depicted in Table 3 and serve as an answer to Q2. The structural interface algorithm, which exploits local structure, successfully performs inference on all of the networks while this is not the case for the standard interface algorithm. Furthermore, this table indicates that structural_IA works well in case the transition model is complex while the number of variables in the interface is rather limited. For example, DC1-90-9 requires more compilation and evaluation time than DC1-112-7, although the latter contains more variables. This is explained by the exponential behavior of the interface.
+      </paragraph>
+      <paragraph>
+       We explore the effect of exploiting local structure by the CNF encoding when compiling the network. The results are depicted in Table 4 and serve as an answer to Q3. Concretely, we consider a CNF encoding that does not exploit any local structure, a CNF encoding that only exploits determinism and a CNF encoding that exploits determinism as well as equal parameters. We observe that, in case no local structure is exploited, the transition model is much harder to compile and results in very large circuits. Moreover, standard_IA clearly outperforms structural_IA in case the latter does not exploit local structure. Only exploiting determinism significantly simplifies the compilation process but, for most networks, we can still benefit from also exploiting equal parameters.
+      </paragraph>
+      <paragraph>
+       We compare the four different interface encodings proposed in Section 4. The results are shown in Table 5 and let us answer Q4. We first observe that ENC4, i.e. the encoding we propose for the structural interface algorithm, is the only encoding that successfully performs inference in each of the networks. Second, the mastermind experiment illustrates that compiling the knowledge base is harder when using ENC1, as was suggested by the complexity indicated in Table 2. Third, the compilation step for ENC3 is the most efficient one, as it does not compile the interface. Computing the forward message, however, is in general much slower compared to the other encodings, as also indicated in Table 2. Fourth, although the d-DNNF for ENC3 does not encode the interface, its size is in general not smaller compared to the other encodings. The reason for this is that by explicitly encoding the interface we actually do not increase the number of models in the d-DNNF but rather add extra constraints on the models already present. Hence, explicitly encoding the interface might increase the total compilation time but significantly reduces the evaluation time.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      In this paper, we proposed a new inference algorithm, the structural interface algorithm, for Dynamic Bayesian Networks based on knowledge compilation. This algorithm improves on the state-of-the-art because it (1) uses the repeated nature of the model, (2) exploits local structure, and (3) reduces the size of the resulting circuit. This approach can tackle dynamic models that are considerably more complex than what can currently be dealt with by exact inference techniques. We have experimentally shown this on two classes of problems, namely finding failures in an electronic circuit and performing filtering in the mastermind game.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

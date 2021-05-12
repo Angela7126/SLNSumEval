@@ -1,0 +1,1131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Grounded Meaning Representations with Autoencoders</title>
+<!--Generated on Tue Jun 10 18:05:53 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Grounded Meaning Representations with Autoencoders</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Carina Silberer and Mirella Lapata
+<br class="ltx_break"/>Institute for Language, Cognition and Computation
+<br class="ltx_break"/>School of Informatics, University of Edinburgh 
+<br class="ltx_break"/>10 Crichton Street, Edinburgh EH8 9AB 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">c.silberer@ed.ac.uk</span>, <span class="ltx_text ltx_font_typewriter">mlap@inf.ed.ac.uk</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper we address the problem of grounding distributional
+representations of lexical meaning. We introduce a new model which
+uses stacked autoencoders to learn higher-level embeddings from
+textual and visual input. The two modalities are encoded as vectors
+of attributes and are obtained automatically from text and images,
+respectively. We evaluate our model on its ability to simulate
+similarity judgments and concept categorization. On both tasks, our
+approach outperforms baselines and related models.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Recent years have seen a surge of interest in single word vector
+spaces
+<cite class="ltx_cite">()</cite>
+and their successful use in many natural language
+applications. Examples include information retrieval
+<cite class="ltx_cite">()</cite>, search query expansions
+<cite class="ltx_cite">()</cite>, document classification
+<cite class="ltx_cite">()</cite>, and question answering
+<cite class="ltx_cite">()</cite>. Vector spaces have been also popular in
+cognitive science figuring prominently in simulations of human
+behavior involving semantic priming, deep dyslexia, text
+comprehension, synonym selection, and similarity judgments
+<cite class="ltx_cite">(see )</cite>. In general, these models specify
+mechanisms for constructing semantic representations from text corpora
+based on the <em class="ltx_emph">distributional hypothesis</em> <cite class="ltx_cite">()</cite>:
+words that appear in similar linguistic contexts are likely to have
+related meanings.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Word meaning, however, is also tied to the physical world. Words are
+<em class="ltx_emph">grounded</em> in the external environment and relate to sensorimotor
+experience <cite class="ltx_cite">()</cite>. To account for
+this, new types of perceptually grounded distributional models have
+emerged. These models learn the meaning of words based on textual and
+perceptual input. The latter is approximated by feature norms elicited
+from humans
+<cite class="ltx_cite">()</cite>,
+visual information extracted automatically from images,
+<cite class="ltx_cite">()</cite>
+or a combination of both
+<cite class="ltx_cite">()</cite>. Despite differences in
+formulation, most existing models conceptualize the problem of meaning
+representation as one of learning from multiple views corresponding to
+different modalities. These models still represent words as vectors
+resulting from the combination of representations with different
+statistical properties that do not necessarily have a natural
+correspondence (e.g., text and images).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this work, we introduce a model, illustrated in
+Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, which learns grounded meaning representations
+by mapping words and images into a common embedding space. Our model
+uses stacked autoencoders <cite class="ltx_cite">()</cite> to induce semantic
+representations integrating visual and textual information. The
+literature describes several successful approaches to multimodal
+learning using different variants of deep networks
+<cite class="ltx_cite">()</cite> and data sources
+including text, images, audio, and video. Unlike most previous work, our
+model is defined at a finer level of granularity — it computes
+meaning representations for <em class="ltx_emph">individual</em> words and is unique in
+its use of <em class="ltx_emph">attributes</em> as a means of representing the textual
+and visual modalities. We follow
+<cite class="ltx_cite"/> in arguing that an
+attribute-centric representation is expedient for several reasons.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Firstly, attributes provide a natural way of expressing salient
+properties of word meaning as demonstrated in norming studies
+<cite class="ltx_cite">(e.g., )</cite> where humans often employ
+attributes when asked to describe a concept. Secondly, from a
+modeling perspective, attributes allow for easier integration of
+different modalities, since these are rendered in the same medium,
+namely, language. Thirdly, attributes are well-suited to describing
+visual phenomena (e.g., objects, scenes, actions). They allow to
+generalize to new instances for which there are no training examples
+available and to transcend category and task boundaries whilst
+offering a generic description of visual data
+<cite class="ltx_cite">()</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Our model learns multimodal representations from attributes which are
+automatically inferred from text and images. We evaluate the
+embeddings it produces on two tasks, namely word similarity and
+categorization. In the first task, model estimates of word similarity
+(e.g., <span class="ltx_text ltx_font_slanted">gem</span>–<span class="ltx_text ltx_font_slanted">jewel</span> are similar but
+<span class="ltx_text ltx_font_slanted">glass</span>–<span class="ltx_text ltx_font_slanted">magician</span> are not) are compared against elicited
+similarity ratings. We performed a large-scale evaluation on a new
+dataset consisting of human similarity judgments for 7,576 word
+pairs. Unlike previous efforts such as the widely used WordSim353
+collection <cite class="ltx_cite">()</cite>, our dataset contains ratings
+for visual and textual similarity, thus allowing to study the two
+modalities (and their contribution to meaning representation) together
+and in isolation. We also assess whether the learnt representations
+are appropriate for categorization, i.e., grouping a set of objects
+into meaningful semantic categories (e.g., <span class="ltx_text ltx_font_slanted">peach</span> and
+<span class="ltx_text ltx_font_slanted">apple</span> are members of <span class="ltx_text ltx_font_smallcaps">fruit</span>, whereas <span class="ltx_text ltx_font_slanted">chair</span> and
+<span class="ltx_text ltx_font_slanted">table</span> are <span class="ltx_text ltx_font_smallcaps">furniture</span>). On both tasks, our model
+outperforms baselines and related models.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The presented model has connections to several lines of work in NLP,
+computer vision research, and more generally multimodal learning. We
+review related work in these areas below.</p>
+</div>
+<div id="S2.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Grounded Semantic Spaces</h4>
+
+<div id="S2.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Grounded semantic spaces are essentially distributional models
+augmented with perceptual information. A model akin to Latent Semantic
+Analysis <cite class="ltx_cite">()</cite> is proposed in
+<cite class="ltx_cite"/> who concatenate two independently constructed
+textual and visual spaces and subsequently project them onto a
+lower-dimensional space using Singular Value Decomposition.</p>
+</div>
+<div id="S2.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Several other models have been extensions of Latent Dirichlet
+Allocation <cite class="ltx_cite">()</cite> where topic distributions are learned
+from words <em class="ltx_emph">and</em> other perceptual
+units. <cite class="ltx_cite"/> use visual words which
+they extract from a corpus of multimodal documents (i.e., BBC news
+articles and their associated images), whereas others
+<cite class="ltx_cite">()</cite>
+use feature norms obtained in longitudinal elicitation studies (see
+<cite class="ltx_cite"/> for an example) as an approximation of the
+visual environment. More recently, topic models which combine both feature
+norms and visual words have also been introduced
+<cite class="ltx_cite">()</cite>. Drawing inspiration from the
+successful application of attribute classifiers in object recognition,
+<cite class="ltx_cite"/> show that automatically
+predicted visual attributes act as substitutes for feature norms
+without any critical information loss.</p>
+</div>
+<div id="S2.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">The visual and textual modalities on which our model is trained are
+decoupled in that they are not derived from the same corpus (we would
+expect co-occurring images and text to correlate to some extent) but
+unified in their representation by natural language attributes. The
+use of stacked autoencoders to extract a shared lexical meaning representation
+is new to our knowledge, although, as we explain below related to a
+large body of work on deep learning.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Multimodal Deep Learning</h4>
+
+<div id="S2.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our work employs deep learning (a.k.a deep networks) to project
+linguistic and visual information onto a unified representation that
+fuses the two modalities together. The goal of deep learning is to
+learn multiple levels of representations through a hierarchy of network architectures, where higher-level representations are expected
+to help define higher-level concepts.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">A large body of work has focused on projecting words and images into a
+common space using a variety of deep learning methods ranging from
+deep and restricted Boltzman machines
+<cite class="ltx_cite">()</cite>, to autoencoders
+<cite class="ltx_cite">()</cite>, and recursive neural networks
+<cite class="ltx_cite">()</cite>. Similar methods have been employed to
+combine other modalities such as speech and video
+<cite class="ltx_cite">()</cite> or images <cite class="ltx_cite">()</cite>.
+Although our model is conceptually similar to these studies
+(especially those applying stacked autoencoders), it differs
+considerably from them in at least two aspects. Firstly, most of these
+approaches aim to learn a shared representation between modalities so
+as to infer some missing modality from others (e.g., to infer text
+from images and vice versa); in contrast, we aim to learn an optimal
+representation for each modality and their optimal
+combination. Secondly, our problem setting is different from the
+former studies, which usually deal with classification tasks and
+fine-tune the deep neural networks using training data with explicit
+class labels; in contrast we fine-tune our autoencoders using a
+semi-supervised criterion. That is, we use indirect supervision in the
+form of object classification in addition to the objective of
+reconstructing the attribute-centric input representation.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Autoencoders for Grounded Semantics</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Background</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our model learns higher-level meaning representations for single words
+from textual and visual input in a joint fashion. We first briefly
+review autoencoders in Section <a href="#S3.SS1" title="3.1 Background ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a> with emphasis on
+aspects relevant to our model which we then describe in
+Section <a href="#S3.SS2" title="3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.</p>
+</div>
+<div id="S3.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Autoencoders</h4>
+
+<div id="S3.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">An autoencoder is an unsupervised neural
+network which is trained to reconstruct a given input from its latent
+representation <cite class="ltx_cite">()</cite>. It consists of an encoder <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="f_{\theta}" display="inline"><msub><mi>f</mi><mi>θ</mi></msub></math> which maps an
+input vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> to a latent representation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m3" class="ltx_Math" alttext="\mathbf{y^{(i)}}=f_{\theta}(\mathbf{x^{(i)}})=s(\mathbf{W}\mathbf{x^{(i)}}+%&#10;\mathbf{b})" display="inline"><mrow><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><msub><mi>f</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐖𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>+</mo><mi>𝐛</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>, with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>
+being a non-linear activation function, such as a sigmoid function. A
+decoder <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m5" class="ltx_Math" alttext="g_{\theta^{\prime}}" display="inline"><msub><mi>g</mi><msup><mi>θ</mi><mo>′</mo></msup></msub></math> then aims to reconstruct input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m6" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math>
+from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m7" class="ltx_Math" alttext="\mathbf{y^{(i)}}" display="inline"><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math>, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m8" class="ltx_Math" alttext="\mathbf{\hat{x}^{(i)}}=g_{\theta^{\prime}}(\mathbf{y^{(i)}})=s(\mathbf{W^{%&#10;\prime}}\mathbf{y^{(i)}}+\mathbf{b^{\prime}})" display="inline"><mrow><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><msub><mi>g</mi><msup><mi>θ</mi><mo>′</mo></msup></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>𝐖</mi><mo>′</mo></msup><mo>⁢</mo><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><msup><mi>𝐛</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></math>. The training objective is the
+determination of parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m9" class="ltx_Math" alttext="\hat{\theta}=\{\mathbf{W},\mathbf{b}\}" display="inline"><mrow><mover accent="true"><mi>θ</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mrow><mo>{</mo><mrow><mi>𝐖</mi><mo>,</mo><mi>𝐛</mi></mrow><mo>}</mo></mrow></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m10" class="ltx_Math" alttext="\hat{\theta}^{\prime}=\{\mathbf{W^{\prime}},\mathbf{b^{\prime}}\}" display="inline"><mrow><msup><mover accent="true"><mi>θ</mi><mo stretchy="false">^</mo></mover><mo>′</mo></msup><mo>=</mo><mrow><mo>{</mo><mrow><msup><mi>𝐖</mi><mo>′</mo></msup><mo>,</mo><msup><mi>𝐛</mi><mo>′</mo></msup></mrow><mo>}</mo></mrow></mrow></math> that minimize the average
+reconstruction error over a set of input vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m11" class="ltx_Math" alttext="\{\mathbf{x^{(1)}},...,\mathbf{x^{(n)}}\}" display="inline"><mrow><mo>{</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mn>𝟏</mn><mo>)</mo></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐧</mi><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></math>:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\hat{\theta},\hat{\theta}^{\prime}=\operatorname*{arg\,min}_{\theta,\theta^{%&#10;\prime}}\frac{1}{n}\sum_{i=1}^{n}L(\mathbf{x^{(i)}},g_{\theta^{\prime}}(f_{%&#10;\theta}(\mathbf{x^{(i)}})))\text{,}" display="block"><mrow><mrow><mover accent="true"><mi>θ</mi><mo stretchy="false">^</mo></mover><mo>,</mo><msup><mover accent="true"><mi>θ</mi><mo stretchy="false">^</mo></mover><mo>′</mo></msup></mrow><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mrow><mi>θ</mi><mo>,</mo><msup><mi>θ</mi><mo>′</mo></msup></mrow></msub><mo>⁡</mo><mfrac><mn>1</mn><mi>n</mi></mfrac></mrow><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>,</mo><mrow><msub><mi>g</mi><msup><mi>θ</mi><mo>′</mo></msup></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mtext>,</mtext></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m12" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is a loss function, such as cross-entropy.
+Parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m13" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P1.p1.m14" class="ltx_Math" alttext="\theta^{\prime}" display="inline"><msup><mi>θ</mi><mo>′</mo></msup></math> can be optimized by gradient
+descent methods.</p>
+</div>
+<div id="S3.SS1.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Autoencoders are a means to learn representations of some input by
+retaining useful features in the encoding phase which help to
+reconstruct the input, whilst discarding useless or noisy ones. To
+this end, different strategies have been employed to guide parameter
+learning and constrain the hidden representation. Examples include
+imposing a bottleneck to produce an under-complete representation of
+the input, using sparse representations, or <span class="ltx_text ltx_font_italic">denoising</span>.</p>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Denoising Autoencoders</h4>
+
+<div id="S3.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The training criterion with denoising autoencoders is the
+reconstruction of clean input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> given a corrupted version
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathbf{\tilde{x}^{(i)}}" display="inline"><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> <cite class="ltx_cite">()</cite>. The underlying idea is
+that the learned latent representation is good if the autoencoder is
+capable of reconstructing the actual input from its corruption. The
+reconstruction error for an input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m3" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> with loss function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>
+then is:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="L(\mathbf{x^{(i)}},g_{\theta^{\prime}}(f_{\theta}(\mathbf{\tilde{x}^{(i)}})))" display="block"><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>,</mo><mrow><msub><mi>g</mi><msup><mi>θ</mi><mo>′</mo></msup></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>f</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">One possible corruption process is <span class="ltx_text ltx_font_italic">masking noise</span>, where the
+corrupted version <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m5" class="ltx_Math" alttext="\mathbf{\tilde{x}^{(i)}}" display="inline"><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> results from randomly setting a
+fraction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m6" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m7" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> to 0.</p>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Stacked Autoencoders</h4>
+
+<div id="S3.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Several (denoising) autoencoders can be used as building blocks to
+form a deep neural network
+<cite class="ltx_cite">()</cite>. For that purpose, the
+autoencoders are pre-trained layer by layer, with the current layer
+being fed the latent representation of the previous autoencoder as
+input. Using this unsupervised pre-training procedure, initial
+parameters are found which approximate a good solution. Subsequently,
+the original input layer and hidden representations of all the
+autoencoders are stacked and all network parameters are fine-tuned
+with backpropagation.</p>
+</div>
+<div id="S3.SS1.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">To further optimize the parameters of the network, a supervised
+criterion can be imposed on top of the last hidden layer such as the
+minimization of a prediction error on a supervised task
+<cite class="ltx_cite">()</cite>. Another approach is to unfold the stacked
+autoencoders and fine-tune them with respect to the minimization of
+the global reconstruction error
+<cite class="ltx_cite">()</cite>. Alternatively, a semi-supervised criterion
+can be used <cite class="ltx_cite">()</cite>
+through combination of the unsupervised training criterion (global
+reconstruction) with a supervised criterion (prediction of some target
+given the latent representation).</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Semantic Representations</h3>
+
+<div id="S3.F1" class="ltx_figure"><img src="P14-1068/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="450" height="252" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Stacked autoencoder
+trained with semi-supervised objective. Input to the model are
+single-word vector representations obtained from text and
+images. Vector dimensions correspond to textual and visual
+attributes, respectively (see
+Figure <a href="#S3.F2" title="Figure 2 ‣ Stacked Bimodal Autoencoder ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</div>
+</div>
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">To learn meaning representations of single words from textual and
+visual input, we employ stacked (denoising) autoencoders (SAEs). Both
+input modalities are vector-based representations of words, or, more
+precisely, the objects they refer to (e.g., <span class="ltx_text ltx_font_slanted">canary</span>,
+<span class="ltx_text ltx_font_slanted">trolley</span>). The vector dimensions correspond to textual and
+visual attributes, examples of which are shown in
+Figure <a href="#S3.F2" title="Figure 2 ‣ Stacked Bimodal Autoencoder ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We explain how these representations
+are obtained in more detail in Section <a href="#S4.SS1" title="4.1 Data ‣ 4 Experimental Setup ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>. We first train
+SAEs with two hidden layers (codings) for each modality
+separately. Then, we join these two SAEs by feeding their respective
+second coding simultaneously to another autoencoder, whose hidden
+layer thus yields the fused meaning representation. Finally, we stack
+all layers and unfold them in order to fine-tune
+the SAE. Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> illustrates the model.</p>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Unimodal Autoencoders</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">For both modalities, we use the hyperbolic tangent function as
+activation function for encoder <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="f_{\theta}" display="inline"><msub><mi>f</mi><mi>θ</mi></msub></math> and decoder <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="g_{\theta^{\prime}}" display="inline"><msub><mi>g</mi><msup><mi>θ</mi><mo>′</mo></msup></msub></math>
+and an entropic loss function for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. The weights of each autoencoder
+are tied, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m4" class="ltx_Math" alttext="\mathbf{W}^{\prime}=\mathbf{W}^{T}" display="inline"><mrow><msup><mi>𝐖</mi><mo>′</mo></msup><mo>=</mo><msup><mi>𝐖</mi><mi>T</mi></msup></mrow></math>. We employ denoising
+autoencoders (DAEs) for pre-training the textual modality. Regarding
+the visual autoencoder, we derive a new (‘denoised’) target vector to
+be reconstructed for each input vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m5" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math>, and
+treat <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m6" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> itself as corrupted input. The unimodal
+autoencoder is thus trained to denoise a given input. The target
+vector is derived as follows: each object <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m7" class="ltx_Math" alttext="o" display="inline"><mi>o</mi></math> in our data is
+represented by multiple images, and each image is in turn represented
+by a visual attribute vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m8" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math>. The target vector is the
+sum of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m9" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> and the centroid <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m10" class="ltx_Math" alttext="\mathbf{x^{(j)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐣</mi><mo>)</mo></mrow></msup></math> of the remaining
+attribute vectors representing object <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m11" class="ltx_Math" alttext="o" display="inline"><mi>o</mi></math>.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Bimodal Autoencoder</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The bimodal autoencoder is fed with the concatenated final hidden
+codings of the visual and textual modalities as input and maps these
+inputs to a joint hidden layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{\breve{y}}" display="inline"><mover accent="true"><mi>𝐲</mi><mo>˘</mo></mover></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> units. We
+normalize both unimodal input codings to unit length. Again, we use
+tied weights for the bimodal autoencoder. We also encourage the
+autoencoder to detect dependencies between the two modalities while
+learning the mapping to the bimodal hidden layer. We therefore apply
+masking noise to one modality with a masking factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> (see
+Section <a href="#S3.SS1.SSS0.P2" title="Denoising Autoencoders ‣ 3.1 Background ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>), so that the corrupted modality optimally has to
+rely on the other modality in order to reconstruct its missing input
+features.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Stacked Bimodal Autoencoder</h4>
+
+<div id="S3.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We finally build a stacked bimodal autoencoder (SAE) with all pre-trained
+layers and fine-tune them with respect to a semi-supervised
+criterion. That is, we unfold the stacked autoencoder and furthermore
+add a softmax output layer on top of the bimodal
+layer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="\mathbf{\breve{y}}" display="inline"><mover accent="true"><mi>𝐲</mi><mo>˘</mo></mover></math> that outputs predictions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="\mathbf{\hat{t}}" display="inline"><mover accent="true"><mi>𝐭</mi><mo stretchy="false">^</mo></mover></math>
+with respect to the inputs’ object labels (e.g., <span class="ltx_text ltx_font_slanted">boat</span>):</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\mathbf{\hat{t}^{(i)}}=\frac{\exp(\mathbf{W^{(6)}}\mathbf{\breve{y}^{(i)}}+%&#10;\mathbf{b^{(6)}})}{\sum_{k=1}^{O}\exp(\mathbf{W_{k.}^{(6)}}\mathbf{\breve{y}^{%&#10;(i)}}+\mathbf{b_{k}^{(6)}})}\text{,}" display="block"><mrow><msup><mover accent="true"><mi>𝐭</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>𝐖</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mover accent="true"><mi>𝐲</mi><mo>˘</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><msup><mi>𝐛</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>O</mi></msubsup><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><msubsup><mi>𝐖</mi><mrow><mi>𝐤</mi><mo>.</mo></mrow><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msubsup><mo>⁢</mo><msup><mover accent="true"><mi>𝐲</mi><mo>˘</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></mrow><mo>+</mo><msubsup><mi>𝐛</mi><mi>𝐤</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></mfrac><mo>⁢</mo><mtext>,</mtext></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">with weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="\mathbf{W^{(6)}}\in\mathbb{R}^{O\times B}" display="inline"><mrow><msup><mi>𝐖</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>O</mi><mo>×</mo><mi>B</mi></mrow></msup></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="\mathbf{b^{(6)}}\in\mathbb{R}^{O\times 1}" display="inline"><mrow><msup><mi>𝐛</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>O</mi><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m5" class="ltx_Math" alttext="O" display="inline"><mi>O</mi></math> is the
+number of unique object labels. The overall objective to be minimized
+is therefore the weighted sum of the reconstruction error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m6" class="ltx_Math" alttext="L_{r}" display="inline"><msub><mi>L</mi><mi>r</mi></msub></math> and
+the classification error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m7" class="ltx_Math" alttext="L_{c}" display="inline"><msub><mi>L</mi><mi>c</mi></msub></math>:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\hskip{-8.6pt}L=\frac{1}{n}\sum_{i=1}^{n}\left(\hskip{-2.15pt}\delta_{r}L_{r}(%&#10;\mathbf{x^{(i)}},\mathbf{\hat{x}^{(i)}})\hskip{-2.15pt}+\hskip{-2.15pt}\delta_%&#10;{c}L_{c}(\mathbf{t^{(i)}},\mathbf{\hat{t}^{(i)}})\hskip{-2.15pt}\right)\hskip{%&#10;-2.15pt}+\hskip{-2.15pt}\lambda R" display="block"><mrow><mpadded lspace="-8.6pt" width="-8.6pt"><mi>L</mi></mpadded><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mi>n</mi></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mpadded width="-2.1pt"><mrow><mo>(</mo><mrow><mrow><msub><mi>δ</mi><mi>r</mi></msub><mo>⁢</mo><msub><mi>L</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo rspace="0.4pt">+</mo><mrow><msub><mi>δ</mi><mi>c</mi></msub><mo>⁢</mo><msub><mi>L</mi><mi>c</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐭</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mover accent="true"><mi>𝐭</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mpadded></mrow></mrow><mo rspace="0.4pt">+</mo><mrow><mi>λ</mi><mo>⁢</mo><mi>R</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m8" class="ltx_Math" alttext="\delta_{r}" display="inline"><msub><mi>δ</mi><mi>r</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m9" class="ltx_Math" alttext="\delta_{c}" display="inline"><msub><mi>δ</mi><mi>c</mi></msub></math> are weighting parameters that give
+different importance to the partial objectives, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m10" class="ltx_Math" alttext="L_{c}" display="inline"><msub><mi>L</mi><mi>c</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m11" class="ltx_Math" alttext="L_{r}" display="inline"><msub><mi>L</mi><mi>r</mi></msub></math> are
+entropic loss functions, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m12" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> is a regularization term with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m13" class="ltx_Math" alttext="R=\sum_{j=1}^{5}2||\mathbf{W^{(j)}}||^{2}+||\mathbf{W^{(6)}}||^{2}" display="inline"><mrow><mi>R</mi><mo>=</mo><mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mn>5</mn></msubsup><mrow><mn>2</mn><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mi>𝐣</mi><mo>)</mo></mrow></msup><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow><mo>+</mo><msup><mrow><mo fence="true">||</mo><msup><mi>𝐖</mi><mrow><mo>(</mo><mn>𝟔</mn><mo>)</mo></mrow></msup><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></math>. Finally, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m14" class="ltx_Math" alttext="\mathbf{\hat{t}^{(i)}}" display="inline"><msup><mover accent="true"><mi>𝐭</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> is the object
+label vector predicted by the softmax layer for input
+vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m15" class="ltx_Math" alttext="\mathbf{x^{(i)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m16" class="ltx_Math" alttext="\mathbf{t^{(i)}}" display="inline"><msup><mi>𝐭</mi><mrow><mo>(</mo><mi>𝐢</mi><mo>)</mo></mrow></msup></math> is the correct
+object label, represented as a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p1.m17" class="ltx_Math" alttext="O" display="inline"><mi>O</mi></math>-dimensional one-hot
+vector<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In a one-hot vector, the element corresponding to the
+object label is one and the others are zero.</span></span></span>.</p>
+</div>
+<div id="S3.SS2.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">The additional supervised criterion drives the learning towards a
+representation capable of discriminating between different
+objects. Furthermore, the semi-supervised setting affords flexibility,
+allowing to adapt the architecture to specific tasks. For example, by
+setting the corruption parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m1" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> for the textual modality to one
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m2" class="ltx_Math" alttext="\delta_{r}" display="inline"><msub><mi>δ</mi><mi>r</mi></msub></math> to zero, a standard object classification model for
+images can be trained. Setting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P3.p2.m3" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> close to one for either modality
+enables the model to infer the other (missing) modality. As our input
+consists of natural language attributes, the model would infer textual
+attributes given visual attributes and vice versa.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1068/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="510" height="114" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Examples of attribute-based representations provided as input to our autoencoders.</div>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Setup</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section we present our experimental setup for assessing the
+performance of our model. We give details on the tasks and datasets
+used for evaluation, we explain how the textual and visual inputs were
+constructed, how the SAE model was trained, and describe the
+approaches used for comparison with our own work.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Data</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We learn meaning representations for the nouns contained in McRae et
+al.’s (<cite class="ltx_cite"/>) feature norms. These are 541
+concrete animate and inanimate objects (e.g., animals, clothing,
+vehicles, utensils, fruits, and vegetables). The norms were elicited
+by asking participants to list properties (e.g., <span class="ltx_text ltx_font_sansserif">barks</span>,
+<span class="ltx_text ltx_font_sansserif">an_animal</span>, <span class="ltx_text ltx_font_sansserif">has_legs</span>) describing the nouns
+they were presented with.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, our model takes as input two
+(real-valued) vectors representing the visual and textual modalities.
+Vector dimensions correspond to textual and visual attributes,
+respectively. Textual attributes were extracted by running Strudel
+<cite class="ltx_cite">()</cite> on a 2009 dump of the English
+Wikipedia.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The corpus is downloadable from
+<a href="http://wacky.sslmit.unibo.it/doku.php?id=corpora" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://wacky.sslmit.unibo.it/doku.php?id=corpora</span></a>.</span></span></span> Strudel is
+a fully automatic method for extracting weighted word-attribute pairs
+(e.g., <span class="ltx_text ltx_font_slanted">bat</span>–<span class="ltx_text ltx_font_sansserif ltx_font_italic">species:n</span>,
+<span class="ltx_text ltx_font_slanted">bat</span>–<span class="ltx_text ltx_font_sansserif ltx_font_italic">bite:v</span>) from a lemmatized and POS-tagged
+corpus. Weights are log-likelihood ratio scores expressing how
+strongly an attribute and a word are associated. We only retained the
+ten highest scored attributes for each target word. This returned a
+total of 2,362 dimensions for the textual vectors. Association scores
+were scaled to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="[-1,1]" display="inline"><mrow><mo>[</mo><mrow><mrow><mo>-</mo><mn>1</mn></mrow><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></math> range.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">To obtain visual vectors, we followed the methodology put forward in
+<cite class="ltx_cite"/>. Specifically, we used an
+updated version of their dataset to train SVM-based attribute
+classifiers that predict visual attributes for images
+<cite class="ltx_cite">()</cite>. The dataset is a taxonomy of
+636 visual attributes (e.g., <span class="ltx_text ltx_font_sansserif">has_wings</span>,
+<span class="ltx_text ltx_font_sansserif">made_of_wood</span>) and nearly 700K images from ImageNet
+<cite class="ltx_cite">()</cite> describing more than 500 of McRae et al.’s
+(<cite class="ltx_cite"/>) nouns.
+The classifiers perform reasonably well with an interpolated average
+precision of 0.52. We only considered attributes
+assigned to at least two nouns in the dataset, obtaining a
+414 dimensional vector for each noun. Analogously to the textual
+representations, visual vectors were scaled to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="[-1,1]" display="inline"><mrow><mo>[</mo><mrow><mrow><mo>-</mo><mn>1</mn></mrow><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></math> range.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We follow Silberer et al.’s
+(<cite class="ltx_cite"/>) partition of the
+dataset into training, validation, and test set and acquire visual
+vectors for each of the sets. We use the visual vectors of the
+training and development set for training the autoencoders, and the
+vectors for the test set for evaluation.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Model Architecture</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Model parameters were optimized on a subset of the word association
+norms collected by
+<cite class="ltx_cite"/>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://w3.usf.edu/Freeassociation" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://w3.usf.edu/Freeassociation</span></a>.</span></span></span>
+These were established by presenting participants with a cue word
+(e.g., <span class="ltx_text ltx_font_slanted">canary</span>) and asking them to name an associate word in
+response (e.g., <span class="ltx_text ltx_font_slanted">bird, sing, yellow</span>). For each cue, the norms
+provide a set of associates and the frequencies with which they were
+named. The dataset contains a very large number of cue-associate pairs
+(63,619 in total) some of which luckily are covered in
+<cite class="ltx_cite"/>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>435 word pairs constitute the
+overlap between Nelson et al.’s norms (<cite class="ltx_cite"/>)
+and McRae et al.’s (<cite class="ltx_cite"/>) nouns.</span></span></span> During
+training we used correlation analysis (Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math>) to monitor
+the degree of linear relationship between model cue-associate (cosine)
+similarities and human probabilities.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The best autoencoder on the word association task obtained a
+correlation coefficient of 0.33. This performance is superior to the
+results reported in <cite class="ltx_cite"/>
+(their correlation coefficients range from 0.16 to 0.28). This model
+has the following architecture: the textual autoencoder (see
+Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, left-hand side) consists of 700 hidden units
+which are then mapped to the second hidden layer with 500 units (the
+corruption parameter was set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="v=0.1" display="inline"><mrow><mi>v</mi><mo>=</mo><mn>0.1</mn></mrow></math>); the visual autoencoder (see
+Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, right-hand side) has 170 and 100 hidden units,
+in the first and second layer, respectively. The 500 textual and 100 visual hidden units were fed
+to a bimodal autoencoder containing 500 latent units, and masking
+noise was applied to the textual modality with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="v=0.2" display="inline"><mrow><mi>v</mi><mo>=</mo><mn>0.2</mn></mrow></math>. The weighting
+parameters for the joint training objective of the stacked autoencoder
+were set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\delta_{r}=0.8" display="inline"><mrow><msub><mi>δ</mi><mi>r</mi></msub><mo>=</mo><mn>0.8</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="\delta_{c}=1" display="inline"><mrow><msub><mi>δ</mi><mi>c</mi></msub><mo>=</mo><mn>1</mn></mrow></math> (see
+Equation (<a href="#S3.E4" title="(4) ‣ Stacked Bimodal Autoencoder ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>)).</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We used the model described above and the meaning representations
+obtained from the output of the bimodal latent layer for all the
+evaluation tasks detailed below. Some performance gains could be
+expected if parameter optimization took place separately for each
+task. However, we wanted to avoid overfitting, and show that our
+parameters are robust across tasks and datasets.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Evaluation Tasks</h3>
+
+<div id="S4.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Word Similarity</h4>
+
+<div id="S4.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We first evaluated how well our model predicts word similarity
+ratings. Although several relevant datasets exist, such as the widely
+used WordSim353 <cite class="ltx_cite">()</cite> or the more recent
+Rel-122 norms <cite class="ltx_cite">()</cite>, they contain many abstract
+words, (e.g., <span class="ltx_text ltx_font_slanted">love</span>–<span class="ltx_text ltx_font_slanted">sex</span> or
+<span class="ltx_text ltx_font_slanted">arrest</span>–<span class="ltx_text ltx_font_slanted">detention</span>) which are not covered in
+<cite class="ltx_cite"/>. This is for a good reason, as most abstract
+words do not have discernible attributes, or at least attributes that
+participants would agree upon. We thus created a new dataset
+consisting exclusively of <cite class="ltx_cite"/> nouns which we
+hope will be useful for the development and evaluation of grounded
+semantic space models.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Available from
+<a href="http://homepages.inf.ed.ac.uk/mlap/index.php?page=resources" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://homepages.inf.ed.ac.uk/mlap/index.php?page=resources</span></a>.</span></span></span></p>
+</div>
+<div id="S4.SS3.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Initially, we created all possible pairings over McRae et al.’s
+(<cite class="ltx_cite"/>) nouns and computed their semantic
+relatedness using <cite class="ltx_cite"/>’s WordNet-based
+measure. We opted for this specific measure as it achieves high
+correlation with human ratings and has a high coverage on our
+nouns. Next, for each word we randomly selected 30 pairs under the
+assumption that they are representative of the full variation of
+semantic similarity. This resulted in 7,576 word pairs for which we
+obtained similarity ratings using Amazon Mechanical Turk
+(AMT). Participants were asked to rate a pair on two dimensions,
+visual and semantic similarity using a Likert scale of 1 (highly
+dissimilar) to 5 (highly similar). Each task consisted of 32 pairs
+covering examples of weak to very strong semantic relatedness.
+Two control pairs from <cite class="ltx_cite"/> were included
+in each task to potentially help identify and eliminate data from participants who
+assigned random scores. Examples of the stimuli and mean ratings are
+shown in Table <a href="#S4.T1" title="Table 1 ‣ Word Similarity ‣ 4.3 Evaluation Tasks ‣ 4 Experimental Setup ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Word Pairs</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Semantic</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Visual</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_slanted">football–pillow</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt">1.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">1.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">dagger–pencil</span></th>
+<td class="ltx_td ltx_align_center">1.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">motorcycle–wheel</span></th>
+<td class="ltx_td ltx_align_center">2.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">orange–pumpkin</span></th>
+<td class="ltx_td ltx_align_center">2.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">3.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">cherry–pineapple</span></th>
+<td class="ltx_td ltx_align_center">3.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">pickle–zucchini</span></th>
+<td class="ltx_td ltx_align_center">3.6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">canary–owl</span></th>
+<td class="ltx_td ltx_align_center">4.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">jeans–sweater</span></th>
+<td class="ltx_td ltx_align_center">4.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">pan–pot</span></th>
+<td class="ltx_td ltx_align_center">4.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">hornet</span>–<span class="ltx_text ltx_font_slanted">wasp</span></th>
+<td class="ltx_td ltx_align_center">4.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_slanted">airplane–jet</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b">5.0</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">5.0</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Mean semantic and visual similarity ratings for the
+<cite class="ltx_cite"/> nouns using a scale of 1 (highly dissimilar)
+to 5 (highly similar). </div>
+</div>
+<div id="S4.SS3.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">The elicitation study comprised overall 255 tasks, each task
+was completed by five volunteers.
+The similarity data was post-processed so as to identify and remove
+outliers. We considered an outlier to be any individual whose
+mean pairwise correlation fell outside two standard deviations from
+the mean correlation. 11.5% of the annotations were detected as outliers and removed. After outlier removal, we further examined how well the participants
+agreed in their similarity judgments. We measured inter-subject
+agreement as the average pairwise correlation coefficient (Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m1" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math>)
+between the ratings of all annotators for each task. For semantic
+similarity, the mean correlation was 0.76 (Min <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m2" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.34, Max <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m3" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.97, StD <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m4" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.11)
+and for visual similarity 0.63 (Min <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m5" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.19, Max <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m6" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.90, SD <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m7" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math>0.14). These
+results indicate that the participants found the task relatively
+straightforward and produced similarity ratings with a reasonable
+level of consistency. For comparison, Patwardhan and Pedersen’s
+(<cite class="ltx_cite"/>) measure achieved a coefficient
+of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m8" class="ltx_Math" alttext="0.56" display="inline"><mn>0.56</mn></math> on the dataset for semantic similarity and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m9" class="ltx_Math" alttext="0.48" display="inline"><mn>0.48</mn></math> for visual
+similarity. The correlation between the average ratings of the AMT
+annotators and the Miller and Charles (1991) dataset was <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m10" class="ltx_Math" alttext="\rho=0.91" display="inline"><mrow><mi>ρ</mi><mo>=</mo><mn>0.91</mn></mrow></math>.
+In our experiments (see Section <a href="#S5" title="5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), we correlate
+model-based cosine similarities with mean similarity ratings (again
+using Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS0.P1.p3.m11" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math>).</p>
+</div>
+</div>
+<div id="S4.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Categorization</h4>
+
+<div id="S4.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The task of categorization (i.e., grouping objects into meaningful
+categories) is a classic problem in the field of cognitive science,
+central to perception, learning, and the use of language. We evaluated
+model output against a gold standard set of categories created by
+<cite class="ltx_cite"/>. The dataset contains a classification,
+produced by human participants, of McRae et al.’s
+(<cite class="ltx_cite"/>) nouns into (possibly multiple) semantic
+categories (40 in total).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>The dataset can be downloaded
+from <a href="http://homepages.inf.ed.ac.uk/s0897549/data/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://homepages.inf.ed.ac.uk/s0897549/data/</span></a>.</span></span></span></p>
+</div>
+<div id="S4.SS3.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">To obtain a clustering of nouns, we used Chinese Whispers
+<cite class="ltx_cite">()</cite>, a randomized graph-clustering algorithm. In the
+categorization setting, Chinese Whispers (CW) produces a hard
+clustering over a weighted graph whose nodes correspond to words and
+edges to cosine similarity scores between vectors representing their
+meaning. CW is a non-parametric model, it induces the number of
+clusters (i.e., categories) from the data as well as which nouns
+belong to these clusters. In our experiments, we initialized Chinese
+Whispers with different graphs resulting from different vector-based
+representations of the <cite class="ltx_cite"/> nouns. We also
+transformed the dataset into hard categorizations by assigning each
+noun to its most typical category as extrapolated from human
+typicality ratings <cite class="ltx_cite">(for details see )</cite>.
+CW can optionally apply a minimum weight threshold which we optimized
+using the categorization dataset from <cite class="ltx_cite"/>. The
+latter contains a classification of 82 <cite class="ltx_cite"/>
+nouns into 10 categories. These nouns were excluded from the gold
+standard <cite class="ltx_cite">()</cite> in our final evaluation.</p>
+</div>
+<div id="S4.SS3.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">We evaluated the clusters produced by CW using the F-score measure
+introduced in the SemEval 2007 task <cite class="ltx_cite">()</cite>; it is the
+harmonic mean of precision and recall defined as the number of correct
+members of a cluster divided by the number of items in the cluster and
+the number of items in the gold-standard class, respectively.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Comparison with Other Models</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Throughout our experiments we compare a bimodal stacked autoencoder
+against unimodal autoencoders based solely on textual and visual input
+(left- and right-hand sides in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Semantic Representations ‣ 3 Autoencoders for Grounded Semantics ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, respectively).
+We also compare our model against two approaches that differ in their
+fusion mechanisms. The first one is based on kernelized canonical
+correlation <cite class="ltx_cite">(kCCA, )</cite> with a linear kernel which
+was the best performing model in
+<cite class="ltx_cite"/>. The second one emulates
+Bruni et al.’s (<cite class="ltx_cite"/>) fusion mechanism.
+Specifically, we concatenate the textual and visual vectors and
+project them onto a lower dimensional latent space using SVD
+<cite class="ltx_cite">()</cite>. All these models run on the same
+datasets/items and are given input identical to our model, namely
+attribute-based textual and visual representations.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">We furthermore report results obtained with Bruni et al.’s
+(<cite class="ltx_cite"/>) bimodal distributional model, which
+employs SVD to integrate co-occurrence-based textual representations
+with visual representations constructed from low-level image features.
+In their model, the textual modality is represented by the
+30K-dimensional vectors extracted from UKWaC and
+WaCkypedia.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We thank Elia Bruni for providing us with their
+data.</span></span></span> The visual modality is represented by bag-of-visual-words
+histograms built on the basis of clustered SIFT features
+<cite class="ltx_cite">()</cite>. We rebuilt their model on the ESP image dataset <cite class="ltx_cite">()</cite>
+using Bruni et al.’s (<cite class="ltx_cite"/>) publicly
+available system.</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<p class="ltx_p">Finally, we also compare to the word embeddings obtained using Mikolov
+et al.’s (<cite class="ltx_cite"/>) recurrent neural network
+based language model. These were pre-trained on Broadcast news data
+(400M words) using the word2vec tool.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>Available from
+<a href="http://www.rnnlm.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.rnnlm.org/</span></a>.</span></span></span> We report results with the
+640-dimensional embeddings as they performed best.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_t"></th>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="3">Semantic</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"> Visual</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> Models</th>
+<th class="ltx_td ltx_align_center ltx_border_l">T</th>
+<th class="ltx_td ltx_align_center">V</th>
+<th class="ltx_td ltx_align_center ltx_border_r">T+V</th>
+<th class="ltx_td ltx_align_center">T</th>
+<th class="ltx_td ltx_align_center">V</th>
+<th class="ltx_td ltx_align_center ltx_border_r">T+V</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_tt"> McRae</th>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_tt">0.71</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.49</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.68</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.58</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.52</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> Attributes</th>
+<td class="ltx_td ltx_align_center ltx_border_l">0.58</td>
+<td class="ltx_td ltx_align_center">0.61</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.68</td>
+<td class="ltx_td ltx_align_center">0.46</td>
+<td class="ltx_td ltx_align_center">0.56</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.58</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> SAE</th>
+<td class="ltx_td ltx_align_center ltx_border_l">0.65</td>
+<td class="ltx_td ltx_align_center">0.60</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.70</td>
+<td class="ltx_td ltx_align_center">0.52</td>
+<td class="ltx_td ltx_align_center">0.60</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.64</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> SVD</th>
+<td class="ltx_td ltx_align_center ltx_border_l">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.67</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.57</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> kCCA</th>
+<td class="ltx_td ltx_align_center ltx_border_l">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.57</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.55</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> Bruni</th>
+<td class="ltx_td ltx_align_center ltx_border_l">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.52</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.46</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"> RNN-640</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l">0.41</td>
+<td class="ltx_td ltx_align_center ltx_border_b">—</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">—</td>
+<td class="ltx_td ltx_align_center ltx_border_b">0.34</td>
+<td class="ltx_td ltx_align_center ltx_border_b">—</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">—</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Correlation of model predictions against similarity ratings
+for <cite class="ltx_cite"/> noun pairs (using Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math>).</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> presents our results on the word similarity
+task. We report correlation coefficients of model predictions against
+similarity ratings. As an indicator to how well automatically
+extracted attributes can approach the performance of clean human
+generated attributes, we also report results of a distributional model
+induced from McRae et al.’s (<cite class="ltx_cite"/>) norms (see
+the row labeled McRae in the table). Each noun is represented as a
+vector with dimensions corresponding to attributes elicited by
+participants of the norming study. Vector components are set to the
+(normalized) frequency with which participants generated the
+corresponding attribute. We show results for three models, using all
+attributes except those classified as visual (T), only visual
+attributes (V), and all available attributes
+(V+T).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Classification of attributes into categories is
+provided by <cite class="ltx_cite"/> in their dataset.</span></span></span> As
+baselines, we also report the performance of a model based solely on
+textual attributes (which we obtain from Strudel), visual attributes
+(obtained from our classifiers), and their concatenation (see row
+Attributes in Table <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, and columns T, V, and T+V,
+respectively). The automatically obtained textual and visual attribute
+vectors serve as input to SVD, kCCA, and our stacked autoencoder
+(SAE). The third row in the table presents three variants of our
+model trained on textual and visual attributes only (T and V,
+respectively) and on both modalities jointly (T+V).</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Recall that participants were asked to provide ratings on two
+dimensions, namely semantic and visual similarity. We would expect the
+textual modality to be more dominant when modeling semantic similarity
+and conversely the perceptual modality to be stronger with respect to
+visual similarity. This is borne out in our unimodal SAEs. The textual
+SAE correlates better with semantic similarity judgments (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> =
+0.65) than its visual equivalent (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> = 0.60). And the
+visual SAE correlates better with visual similarity judgments
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> = 0.60) compared to the textual SAE (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m4" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> =
+0.52). Interestingly, the bimodal SAE is better than the unimodal
+variants on both types of similarity judgments, semantic and
+visual. This suggests that both modalities contribute complementary
+information and that the SAE model is able to extract a shared
+representation which improves generalization performance across tasks
+by learning them jointly. The bimodal autoencoder (SAE, T+V)
+outperforms all other bimodal models on both similarity tasks. It
+yields a correlation coefficient of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m5" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> = 0.70 on semantic
+similarity and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m6" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> = 0.64 on visual similarity. Human
+agreement on the former task is 0.76 and 0.63 on the
+latter. Table <a href="#S5.T3" title="Table 3 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows examples of word pairs with
+highest semantic and visual similarity according to the SAE model.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"> #</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Pair</th>
+<th class="ltx_td ltx_align_left ltx_border_t">#</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Pair</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_tt"> 1</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_slanted">pliers–tongs</span></td>
+<th class="ltx_td ltx_align_left ltx_border_tt">11</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_slanted">cello–violin</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 2</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">cathedral–church</span></td>
+<th class="ltx_td ltx_align_left">12</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">cottage–house</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 3</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">cathedral–chapel</span></td>
+<th class="ltx_td ltx_align_left">13</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">horse–pony</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 4</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">pistol–revolver</span></td>
+<th class="ltx_td ltx_align_left">14</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">gun–rifle</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 5</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">chapel–church</span></td>
+<th class="ltx_td ltx_align_left">15</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">cedar–oak</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 6</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">airplane–helicopter</span></td>
+<th class="ltx_td ltx_align_left">16</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">bull–ox</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 7</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">dagger–sword</span></td>
+<th class="ltx_td ltx_align_left">17</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">dress–gown</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 8</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">pistol–rifle</span></td>
+<th class="ltx_td ltx_align_left">18</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">bolts–screws</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"> 9</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">cloak–robe</span></td>
+<th class="ltx_td ltx_align_left">19</th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">salmon–trout</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"> 10</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">nylons–trousers</span></td>
+<th class="ltx_td ltx_align_left ltx_border_b">20</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">oven–stove</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Word pairs with highest semantic and visual similarity
+according to SAE model. Pairs are ranked from highest to lowest similarity.</div>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">We also observe that simply concatenating textual and visual
+attributes (Attributes, T+V) performs competitively with SVD and
+better than kCCA. This indicates that the attribute-based
+representation is a powerful predictor on its own. Interestingly, both
+<cite class="ltx_cite">()</cite> and <cite class="ltx_cite">()</cite>
+which do not make use of attributes are out-performed by all other
+attribute-based systems (see columns T and T+V in
+Table <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t">Models</th>
+<th class="ltx_td ltx_align_center ltx_border_t">T</th>
+<th class="ltx_td ltx_align_center ltx_border_t">V</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">T+V</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_tt">McRae</th>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.52</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.31</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.42</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l">Attributes</th>
+<td class="ltx_td ltx_align_center">0.35</td>
+<td class="ltx_td ltx_align_center">0.37</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.33</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l">SAE</th>
+<td class="ltx_td ltx_align_center">0.36</td>
+<td class="ltx_td ltx_align_center">0.35</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.43</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l">SVD</th>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.39</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l">kCCA</th>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.37</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l">Bruni</th>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center">—</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.34</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l">RNN-640</th>
+<td class="ltx_td ltx_align_center ltx_border_b">0.32</td>
+<td class="ltx_td ltx_align_center ltx_border_b">—</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">—</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>F-score results on concept categorization.</div>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Our results on the categorization task are given in
+Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. In this task, simple concatenation of
+visual and textual attributes does not yield improved performance over
+the individual modalities (see row Attributes in
+Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). In contrast, all bimodal models (SVD,
+kCCA, and SAE) are better than their unimodal equivalents and
+RNN-640. The SAE outperforms both kCCA and SVD by a large margin
+delivering clustering performance similar to the McRae et al.’s
+(<cite class="ltx_cite"/>) norms. Table <a href="#S5.T5" title="Table 5 ‣ 5 Results ‣ Learning Grounded Meaning Representations with Autoencoders" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows
+examples of clusters produced by Chinese Whispers when using vector
+representations provided by the SAE model.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">stick-like utensils</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">baton, ladle, peg, spatula, spoon</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">religious buildings</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">cathedral, chapel, church</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">wind instruments</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">clarinet, flute, saxophone, trombone, trumpet, tuba</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">axes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">axe, hatchet, machete, tomahawk</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">furniture w/ legs</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">bed, bench, chair, couch, desk, rocker, sofa, stool, table</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">furniture w/o legs</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">bookcase, bureau, cabinet, closet, cupboard, dishwasher, dresser</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">lightings</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">candle, chandelier, lamp, lantern</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">entry points</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">door, elevator, gate</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">ungulates</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">bison, buffalo, bull, calf, camel, cow, donkey,
+elephant, goat, horse,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_slanted">lamb, ox, pig, pony, sheep</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">birds</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_slanted">crow, dove, eagle, falcon, hawk, ostrich, owl, penguin, pigeon,</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_slanted">raven, stork, vulture, woodpecker</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Examples of clusters produced by CW using the representations
+obtained from the SAE model.</div>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">In sum, our experiments show that the bimodal SAE model delivers
+superior performance across the board when compared against
+competitive baselines and related models. It is interesting to note
+that the unimodal SAEs are in most cases better than the raw textual
+or visual attributes. This indicates that higher level embeddings may
+be beneficial to NLP tasks in general, not only to those requiring
+multimodal information.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we presented a model that uses stacked
+autoencoders to learn grounded meaning representations by
+simultaneously combining textual and visual modalities. The two
+modalities are encoded as vectors of <span class="ltx_text ltx_font_italic">natural language
+attributes</span> and are obtained automatically from <span class="ltx_text ltx_font_italic">decoupled</span>
+text and image data. To the best of our knowledge, our model is novel
+in its use of attribute-based input in a deep neural
+network. Experimental results in two tasks, namely simulation of
+word similarity and word categorization, show that our model
+outperforms competitive baselines and related models trained on the
+same attribute-based input. Our evaluation also reveals that the
+bimodal models are superior to their unimodal counterparts and that
+higher-level unimodal representations are better than the raw input.
+In the future, we would like to apply our model to other tasks, such
+as image and text retrieval
+<cite class="ltx_cite">()</cite>, zero-shot learning
+<cite class="ltx_cite">()</cite>, and word learning <cite class="ltx_cite">()</cite>.</p>
+</div>
+<div id="S6.SS4.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Acknowledgment</h4>
+
+<div id="S6.SS4.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank Vittorio Ferrari,
+Iain Murray and members of the ILCC at the School of Informatics for
+their valuable feedback. We acknowledge the support of EPSRC through
+project grant EP/I037415/1.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:05:53 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

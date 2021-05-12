@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    POPPONENT: Highly accurate, individually and socially efficient opponent preference model in bilateral multi issue negotiations.
+   </title>
+   <abstract>
+    In automated bilateral multi issue negotiations, two intelligent automated agents negotiate on behalf of their owners regarding many issues in order to reach an agreement. Modeling the opponent can excessively boost the performance of the agents and increase the quality of the negotiation outcome. State of the art models accomplish this by considering some assumptions about the opponent which restricts the applicability of the models in real scenarios. In this study, a less restricted technique where perceptron units (POPPONENT) are applied in modeling the preferences of the opponent is proposed. This model adopts the Multi Bipartite version of the Standard Gradient Descent search algorithm (MBGD) to find the best hypothesis, which is the best preference profile. In order to evaluate the accuracy and performance of this proposed opponent model, it is compared with the state of the art models available in the Genius repository. This results in the devised setting which approves the higher accuracy of POPPONENT compared to the most accurate state of the art model. Evaluating the model in the real world negotiation scenarios in the Genius framework also confirms its high accuracy in relation to the state of the art models in estimating the utility of offers. The findings here indicate that this proposed model is individually and socially efficient. This proposed MBGD method could also be adopted in other practical areas of Artificial Intelligence.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Negotiation is the science and art of resolving any kind of disputes and reaching consensus among human parties. In an automated bilateral multi-issue version of negotiations, intelligent computer agents engage in a cooperative process on behalf of their beneficiaries with different and sometimes contradicting interests, with the objective of achieving an agreement on one or more issues. Recently, with the emergence of ANAC (an annual international Automated Negotiating Agents Competition) [2], [3], many new negotiation strategies have been developed. Most of the existing sophisticated negotiation strategies typically consist of a set of fixed modules. In general, as observed in Fig. 1, three main components are distinguished in a negotiating agent which work together within a BOA framework to accomplish the whole negotiation task in a collaborative manner [1]:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Bidding Strategy: this module may interact with the opponent model component by sending one or more candidate offers to the opponent model, and receive the estimated utility of those offers in the utility space of the opponent. Next, the bidding strategy component decides on one of those offers, as the selected candidate offer, to be sent to the opponent as the next proposal.
+      </list-item>
+      <list-item label="2.">
+       Opponent Model: this module constructs a model of the preference profile of the opponent through a learning technique. This model takes a number of offers and generates their estimated utilities.
+      </list-item>
+      <list-item label="3.">
+       Acceptance Strategy: this component receives the incoming offer from the opponent and the outgoing offer chosen by the bidding strategy component, and then determines whether the incoming offer is acceptable for the agent. If the received offer from the opponent is good enough to be accepted, then an accept message is provided and sent to the opponent in response. Otherwise, the outgoing offer, previously chosen by the bidding strategy component, is forwarded to the opponent as the response.{sup:1}
+      </list-item>
+     </list>
+     <paragraph>
+      According to the BOA framework, a negotiation strategy functions as follows: as soon as the agent receives a new offer{sup:2} from the opponent, the bidding history and the opponent model are immediately updated (steps 1 and 2). This process assures that the agent has the most updated information regarding its opponent. Then in turn, the bidding strategy module generates a number of candidate bids with similar utilities for the agent and sends them to the opponent model. The opponent model then calculates the estimated utilities of the received bids and renders them to the bidding strategy component in response (steps 3 and 4). Next, the bidding strategy component chooses one of the candidate bids according to an opponent model strategy (for example, the best bid is chosen) and forwards this bid to the acceptance strategy module (step 5). Finally, the acceptance strategy decides on whether to accept this newly received bid from the opponent (in step 1) or to send the bid recently received from the bidding strategy component (in step 5).
+     </paragraph>
+     <paragraph>
+      Identifying offers that are mutually beneficial, avoiding non-agreement offers, and earlier agreements are the benefits of applying an opponent modeling [7]. Despite the variety in opponent modeling techniques, most of the current models rely on a small and common set of learning techniques [7]. It is believed that this is due to the restricting nature of the negotiation problem. The core of the opponent modeling is a learning technique. Moreover, traditional learning techniques are mainly comprised of two non-overlapping learning and classification or prediction phases. Since in a single negotiation session all bids (i.e., training examples) are not available at the same time in advance, traditional learning techniques are not easily applied. An opponent model that is able to learn incrementally and update itself once the new training examples (i.e., offers) arrive during a negotiation session is of necessity. These learning techniques are collectively referred to as adaptive models [8], where both of the aforementioned phases are performed in parallel. Another problem in the negotiation setting is that the training instances lack the output variable (i.e., the variable which contains the utility values of the received bids in the opponent's view). That is, since the agent is not aware of the preference profile of the opponent, it cannot calculate the values of that output variable. Therefore, specific opponent models are required that are capable of modeling the preferences of the opponent with no need for the value of the output variable. Strictly speaking, the model must either use an unsupervised learning technique or somehow pre-estimate the utility values of the received bids from the opponent and use the estimated values as the output label for the training examples. In order to overcome this limitation, all the existing opponent models use a subset of the following 13 assumptions to extract the preferences of the opponent [9]:
+     </paragraph>
+     <paragraph label="Assumption 1">
+      The bidding strategy of the opponent follows a concession based pattern. That is, the bidding strategy of the agent generates a sequence of bids in the order of the agent's preference over those bids. This assumption reduces the opponent modeling problem to the problem of estimating the utility of all the bids in the outcome space, so that the estimated utilities are as close to the real utilities as possible.
+     </paragraph>
+     <paragraph label="Assumption 2">
+      The first bid sent by the opponent has the highest possible utility in the opponent's utility space. That is, the opponent sends its most preferable bid at the beginning of the negotiation session. The first bid embodies the best possible values for each of the negotiable issues. As all rational agents try to maximize their own utilities, it is not surprising that this assumption holds true for most of the rational agents.
+     </paragraph>
+     <paragraph label="Assumption 3">
+      There is an inverse relation between the importance of an issue and the number of times its value changes throughout the negotiation session. In other words, agents rarely change the value of issues of great importance; the more important the issue, the lower the tendency of the agents to change its value [10], [11]. Obviously, the validity of this assumption depends on the agent's bidding strategy and domain.
+     </paragraph>
+     <paragraph label="Assumption 4">
+      There is a direct relation between the importance of an issue value and the number of times it is offered. Here, the agents seek to offer an issue value of greater importance (greater evaluation value) in the successive offers they send in a negotiation session.
+     </paragraph>
+     <paragraph>
+      Here, too, the validity of this assumption depends on the agent's bidding strategy and domain.
+     </paragraph>
+     <paragraph label="Assumption 5">
+      The evaluation functions of the negotiation issues are defined by a number of functions with pre-defined shapes (e.g., as in the model proposed by Hinkriks and Tykhonov [12]). Clearly, the objective of applying this assumption is to limit the number of hypotheses in the opponent's hypothesis space.
+     </paragraph>
+     <paragraph label="Assumption 6">
+      The negotiation issue weight values are simply calculated according to their rankings among all negotiation issue weights (e.g., as in the model proposed by Hinkriks and Tykhonov [12]). Obviously, like Assumption 5, the objective here is to reduce the opponent's hypothesis space size.
+     </paragraph>
+     <paragraph label="Assumption 7">
+      The utility values of the bids offered by the opponent throughout a negotiation session are distributed around a constant and specific number (such as 1). Since the rational agents' objective is to maximize their utilities, this assumption is assumed to be valid for rational agents.
+     </paragraph>
+     <paragraph label="Assumption 8">
+      All negotiation issues have equal importance for the opponent. In other words, all the negotiation issues are of equal weight values [13]. Obviously, the purpose of making this assumption is to limit the size of the opponent's hypothesis space.
+     </paragraph>
+     <paragraph label="Assumption 9">
+      The negotiation issues are conflicting between the two agents. Here, the evaluation of a negotiation issue value for the opponent is given by 1 minus the evaluation of that negotiation issue value for the agent (e.g., the models proposed by Jazayeriy et al. [14] and Zhang et al. [15]). Obviously, the objective of this assumption is to limit the space size of the opponent's hypothesis.
+     </paragraph>
+     <paragraph label="Assumption 10">
+      The utility values of the offers received from the opponent are known for the agent (e.g., the models proposed by Hinkriks and Tykhonov [12] and Williams et al. [16]).
+     </paragraph>
+     <paragraph label="Assumption 11">
+      The utility function of the opponent is completely known for the agent. In other words, the agent has perfect information regarding the preference profile of the opponent.
+     </paragraph>
+     <paragraph label="Assumption 12">
+      The utility value of an offer received from the opponent equals one minus the utility of that offer for the agent. In other words, the preference profile of the opponent is the opposite of the agent's preference profile.
+     </paragraph>
+     <paragraph label="Assumption 13">
+      The utility value of an offer for the opponent equals the utility of that offer for the agent. In other words, the preference profile of the opponent is the same as that of the agent.
+     </paragraph>
+     <paragraph>
+      Another difficulty with modeling an opponent's preferences in bilateral negotiations is related to the time factor. In discounted negotiations [2], [3], [17], where the utility of an offer is decreased as the negotiation time passes, reaching an agreement as early as possible is of extreme importance. Since constructing an opponent model is costly in the computational sense, the agent should make a trade-off between “non-application of an opponent model, hence saving time” and “applying one and increasing its utility gained by using the opponent model”. In other words, by non-application the agent would save more time to better explore the outcome space, by looking for an agreement which would result in a gain in his utility. On the other hand, applying an opponent model would assist the agent to make more appropriate agreements. This trade-off is referred to as the time/exploration trade-off [9]. The post event analysis of ANAC tournaments [2], [3], [17] also confirms that the computational complexity of the opponent models and the poor accuracy are the two main factors that degrade the performance of the agents applying these models [9]. In particular, the time factor is of paramount importance in online opponent models. In these models, the participating agents usually exchange a limited number of offers before the negotiation deadline is met, therefore, they do not contain enough information to accurately train an opponent model [12], [18]. Consequently, the ability of the model to extract the most information possible from the training bids it receives is highly essential. Due to the time restriction and the limited number of offers the agents exchange in their negotiations, a proper opponent model is one with the following features:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Functionality based on the least assumptions, which would make it more robust against the opponents not following these assumptions.
+      </list-item>
+      <list-item label="2.">
+       Having the lowest possible computational cost (time/exploration trade-off).
+      </list-item>
+      <list-item label="3.">
+       Extracting the most information from the least bids (especially important in online opponent models).
+      </list-item>
+      <list-item label="4.">
+       Incremental training capability.
+      </list-item>
+     </list>
+     <paragraph>
+      To learn the issue weight values and individual utility function, a two layered architecture would be essential. Thus, in order to overcome the aforementioned difficulties and to justify the features outlined above, a new model based on perceptron units is proposed here for an agent with incomplete information, in order to model the preference profile of the opponent in bilateral multi issue negotiations. Moreover, to be more applicable in real world negotiations, fewer and more realistic assumptions than that of the state of the art models are applied in this study. This is obtained by proposing an opponent model named POPPONENT, based on an adapted version of the standard gradient decent search (named the Multi Bipartite Gradient Decent Search), which applies fewer assumptions. The model shows success in the practical AI area of modeling the user's preferences in bilateral multi issue negotiations with incomplete information.
+     </paragraph>
+     <paragraph>
+      The remainder of this paper is organized as follows: Section 2 contains the literature review; in Section 3, the general negotiation setting is described; in Section 4, the mathematical concepts underlying perceptron based learning, and the proposed opponent model based on perceptron units are introduced; in Section 5, the experimental setup used in evaluating the proposed model, the carried-out examination, is discussed and the accuracy of this is compared proposed model with some of both the classic and the state of the art opponent models. Next, the efficiency of this model in practice (with real examples) is presented. Finally, in Section 6, the paper is concluded.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Literature review
+     </section-title>
+     <paragraph>
+      In this section, the opponent models from the general and technical perspectives are reviewed in Sections 2.1 and 2.2, respectively. State of the art opponent models currently available in the Genius{sup:3} Repository will be discussed in Section 2.3.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       General classification of opponent models
+      </section-title>
+      <paragraph>
+       There are many aspects related to the opponent which could be learnt in a negotiation session. Actually, an opponent considers several attributes, based on which they try to learn the existing opponent modeling techniques. These are generally categorized into the following [7]:
+      </paragraph>
+      <paragraph label="Category 1">
+       Models that try to estimate the reservation value of the opponent [19], [20].
+      </paragraph>
+      <paragraph label="Category 2">
+       Models that try to estimate the deadline of the opponent [19], [20].
+      </paragraph>
+      <paragraph label="Category 3">
+       Models that try to estimate the order of the opponent's preferences over different negotiation issues (the exact value or at least the order of issue weights) [14], [15], [21], [22].
+      </paragraph>
+      <paragraph label="Category 4">
+       Models that try to estimate the order of the opponent's preferences over different negotiation outcomes (the exact value or at least the order of the utilities of the offers) [12], [16], [23], [24], [25], [26].
+      </paragraph>
+      <paragraph label="Category 5">
+       Models that try to learn the opponent's bidding strategy[20], [27], [28], [29].
+      </paragraph>
+      <paragraph label="Category 6">
+       Models that try to learn the opponent's acceptance strategy[30], [31].
+      </paragraph>
+      <paragraph>
+       The function of the models in the first category is based on the assumption that the agents usually stop conceding close to their reservation values (i.e., the minimum acceptable utility for the agent) and that they exhibit this behavior when approaching negotiation deadline. This means that in the beginning of the negotiation, the agents will offer bids with far greater utilities than their reservation values [7]. For example, in the model proposed by Gwak and Sim [19] where a simple single issue negotiation is only based on price, the Bayesian method is adopted to estimate the reservation price of the opponent. They assume reservation prices and negotiation deadlines of the agents to be private knowledge. In their model, a number of hypotheses (in the form of {a mathematical formula}rv=vi) are considered as possible values ({a mathematical formula}vi) for the reservation price (rv) of the opponent. Next, the Bayesian learning process is applied to update the probability values of the hypotheses in the hypothesis space{sup:3} using the offers received from the opponent during the negotiation session. Then, the weighted average of all hypotheses is calculated and considered as the estimated reservation value of the opponent. In this model, the bidding strategy of the opponent is assumed to follow some kind of a concession function. Using the opponent's estimated reservation price (reservation value), the buyer/seller bidding prices are generated in ascending/descending order. Assuming that the opponent uses a pre-known bidding strategy, it is illustrated that the agent could easily compute the opponent's reservation price given its deadline, and vice versa. Given these two value estimations, the agent would then be able to determine the optimal bidding strategy. In their model, the opponent is assumed to have discrete reservation prices, among which each one is a fraction of the difference between the maximum and minimum possible prices considered in that negotiation. This model cannot be adopted in the real world, because real world negotiations are more complex, and often contain more issues than just one price issue. Furthermore, the agents in more complex domains may exhibit more complicated behavior than just simply following a typical concession strategy; accordingly, we need to design a model to operate in more complex and realistic scenarios. As another example, in the model proposed by Yu et al. [20] (similar to the model by Gwak and Sim [19]) the opponent model is used for learning the reservation value and deadline of the opponent (which is assumed to be private information) in a single issue bilateral negotiation. In their article, a model is proposed based on Bayesian learning and regression analysis. This shows how the method is adopted in adapting the agent's strategy to the opponent. Similar to the previous model, this model assumes that the opponent follows a pre-known concession based strategy with unknown parameters; that is, this model is not applicable in realistic scenarios where multiple issues are subject to negotiation and the opponent follows more complex bidding strategies.
+      </paragraph>
+      <paragraph>
+       The second category is run on models that try to estimate the deadline of the opponent. Obviously these models are specifically adopted in scenarios where the opponent has a private deadline. However, in the famous settings like ANAC, it is assumed that the negotiating parties have a common deadline to reach an agreement. For example, both the models proposed by Gwak and Sim [19] and Yu et al. [20] are of this category.
+      </paragraph>
+      <paragraph>
+       The third category includes the models that try to learn the order of the opponent's preferences over different negotiation issues. In other words, they try to estimate the weights of the issues according to the opponent's view. Faratin et al. [21] believe that obtaining information about the preference order of the negotiation issues from the opponent's perspective would be sufficient to improve the outcome in a negotiation session. Therefore, the problem of learning the opponent's utility function is simply reduced to learning the order of issue weights in the opponent's context. In these models, each possible permutation of the issue weight order is considered as a hypothesis in the hypothesis space, and then the Bayesian formula is applied to update the probability of each hypothesis once a new bid is received from the opponent. For example, the models devised by Niemann and Lang [22], Jazayeriy et al. [14], and Zhang et al. [15] fall into this category. These models also assume restricted types of bidding behaviors for the opponent. For example, the model proposed by Jazayeriy et al. assumes that the opponent follows one of the three following concession strategies: (1) Boulware, (2) Fixed Concession, and (3) Conceder. Moreover, they assume that the agent knows which one of the three aforementioned strategies its opponent follows. Here it is assumed that all of the negotiation issues are monotonic and conflicting, meaning that increasing the utility value of the agent for an issue would cause the opponent's utility for that issue to decline. Obviously, these assumptions do not generally hold true in the real world of negotiations. Contrary to the model presented by Jazayeriy et al. [14], which assumes all the issues are conflicting, in the model by Gwak and Sim [19], it is rather assumed that the agents announce their preference direction as well as the acceptable value ranges for each issue before starting the negotiation session. In other words, the agents' preference directions are considered as common knowledge information in the negotiation. For example, the buyer agent announces that the range of its acceptable prices is from $100 to $200. It also declares that there is an inverse relation between the price and its utility. In other words, higher price values will have lower utility values, and vice versa; consequently, both negotiating parties would know the conflicting issues, and would only negotiate on these issues. That is, the agents would be able to easily pick the values with maximum utilities for non-conflicting issues. Thus, there would be no need to negotiate on the values of such issues. It is also assumed that there is an opposite correlation between the weight of an issue and the number of times its value is changed. In the model proposed by Zhang et al. [15], the agent analyzes the history containing the offers received from the opponent and applies Bayesian Learning to learn the opponent's preferences over negotiation issues. The learnt orders of the issue weights are then incorporated into a counter-offer proposition algorithm to enable the agent to propose the offers which are mutually beneficial for both the agent and the opponent. Similar to the model proposed by Jazayeriy et al. [14], in this model it is also assumed that all issues are conflicting. With this assumption, the hypothesis space of possible utility functions will be limited to the possible orders of negotiation issue weights. It is also assumed that the opponent follows a time-dependent concession strategy [33] with known parameters. The counter-offer proposition mechanism used by the agent compensates for the issues of high importance for the opponent. By using this trade-off mechanism, the agent tries to find bids with greater utilities than both the agent and the opponent's target utilities. In other words, the agent will try to propose offers that are mutually acceptable for both the agent and the opponent. It is obvious that these assumptions do not necessarily hold true in the real world, so when the opponent does not follow these assumptions, these models are prone to failure.
+      </paragraph>
+      <paragraph>
+       The models in the fourth category estimate the preference order of the existing bids from the outcome space in the opponent's view. In fact, the models in this category try to estimate the utility function of the opponent and then use this function to calculate the utility of a given bid in the opponent's utility space. Some of the models (e.g. [12], [16], [23], [24], [25], [26]) that are based on the Bayesian formula [34] are classified in this category. These models consider the hypothesis space as the preference order of the negotiation issues as well as evaluation values of each negotiation issue. They update the probability of each hypothesis using the Bayesian formula in a consecutive manner as each offer is received from the opponent through the negotiation session. For example, the model proposed by Hindriks et al. [12] that in fact is the basic model underlying some other Bayesian models (e.g. [16], [24], [26]) estimates the utility function of the opponent (which includes the estimated values for the weights of negotiation issues and estimated evaluation values for each negotiation issue value) through a Bayesian formula. This model is extremely similar to the model proposed by Zhang et al. [15] but it is different in two ways: first, the hypothesis space contains both the evaluation functions and orders of issue weights. However, in the model proposed by Zhang et al. [15] the hypothesis space is reduced by assuming that all negotiation issues are conflicting, so only the possible ranking of issue weights is assumed as the hypothesis space. Second, in the model proposed by Hindriks et al. [12], a normal distribution is used to calculate the probability of observing a bid given the condition that a hypothesis holds (or {a mathematical formula}P(D|h)), but in the model proposed by Zhang et al. [15], upon receipt of a new offer, the best hypothesis which most accurately estimates the utility of this new offer is calculated, and the resultant value is used to estimate the value of {a mathematical formula}P(D|h) for each of the hypotheses.
+      </paragraph>
+      <paragraph>
+       The fifth category comprises the models that try to learn the bidding strategy of the opponent. The bidding strategy is defined as a specific function which maps a negotiation state to a bid [7]. In other words, a bidding strategy generates a sequence of successive bids, which are going to be presented to the opponent in every round of the negotiation. This function could be either a time dependent or behavior dependent (or imitative) function [33]. The strategy proposed by Krimpen et al. [10] is an example of a time dependent function in the bidding strategy presented by Fatima et al. [35]. Moreover, the bidding strategy used by Baarslag et al. [24] is of the behavioral function types that compensates every nice move from the opponent. The models in this category are classified in two classes: (1) Regression analysis models, and (2) Time series forecasting models [7]. Regression analysis models assume that the bidding strategy of the opponent could be defined by a formula with unknown parameters; that is, the problem of estimating the bidding strategy of the opponent could be easily reduced to the regression analysis on the utility values of the received offers from the opponent in the agent's own utility space. The model proposed by Yu et al. [20] falls into this category. On the other hand, in time series forecasting models, the bidding strategy of the opponent is totally unknown; that is, the agent does not even have any information on the bidding strategy formula. Therefore, the agent uses a time series in order to forecast the utility values of the upcoming received offers in the agent's own utility space. In other words, these models receive a list of timely ordered utility values as the input and generate as the output the probable next utility values. For example, the models devised by Williams et al. [27], [29] and Carbonneau et al. [28] fall in this category.
+      </paragraph>
+      <paragraph>
+       The models in the sixth category try to estimate the acceptance strategy of the opponent. The acceptance strategy of an agent is defined as a Boolean function, which receives a typical bid as the input and produces a Boolean value showing whether the bid would be acceptable by that agent or not. It is important for the agent to learn this function for improving the negotiation outcome, since it could determine the best bid for the agent which is still acceptable for the opponent [7]. One of the works that deals with proposing an acceptance strategy learning method is the article by Lau et al. [30]. In this model, the offers sent by the agent to the opponent are considered as unacceptable bids and the offers received from the opponent are considered as acceptable ones. These bids are then fed into a Bayesian learning model as training examples through which the probability of accepting a candidate bid by the opponent would be determined. The model proposed by Aydogan and Yolum [31] also falls in this category. This model estimates the acceptability of a model through inductive learning. In their model, the sent offers are considered as the negative instances and the received offers are considered as the positive instances, and both are applied in learning the target function.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Technical classification of opponent models
+      </section-title>
+      <paragraph>
+       In the general classification, the models are classified based on the aspects of the opponent which are to be learnt. However, according to the underlying scheme in which they are applied to extract the opponent's preferences, the existing state of the art opponent models (which use a common negotiation setting for estimating the preference order of the negotiation outcomes and are designed and implemented in the Genius framework [36], [37] in the ANAC tournaments) could be categorized into the following [38]:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The Bayesian models: estimate the preference profile of the opponent by generating a set of candidate profiles (hypotheses) and then using Bayesian learning to update the probabilities of each hypothesis. The models here make some assumptions on the bidding strategy of the opponent.
+       </list-item>
+       <list-item label="2.">
+        The Frequency models: estimate the issue weights and evaluation values by considering the changing frequency of the value of each issue between successive bids and the frequency at which each issue value is offered, respectively. Unlike the Bayesian models, which make strong assumptions about the bidding strategy of the opponent, the models of this group make assumptions on the value distribution of the issues in the opponent's preference profile and impose weak restrictions on the bidding strategy of the opponent [9].
+       </list-item>
+       <list-item label="3.">
+        The Value models: are the same as frequency models except that they assume equal and constant values for issue weights and focus on estimating the evaluation values of each issue value instead. Though assuming constant and equal values for issue weights would degrade the model's accuracy, it would also make the agent free of the need for estimating the issue weights.
+       </list-item>
+      </list>
+      <paragraph>
+       Bayesian opponent modeling techniques, allegedly the most prominent and popular probabilistic approaches in opponent modeling [7], generate hypotheses on the opponent's preferences. Upon receiving a new offer from the opponent, they update the probabilities associated with each one of these hypotheses [9], [12]. These models are mostly based on the first assumption, that is, these models make strong assumptions on the bidding strategy of the opponent.
+      </paragraph>
+      <paragraph>
+       On the other hand, frequency models (and value models) are mostly reliant on the third and fourth assumptions (and in some cases on the second assumption), and rely less on the first assumption. That is, these models usually make assumptions on the value distribution of the issues in the opponent's preference profile and depend less on the opponent's bidding strategy. However, it is not clear whether the opponent would stick to the underlying assumptions of these models. Therefore, due to the uncertainty about the validity of these assumptions through negotiations with different opponents, these modeling techniques are potentially subject to failure, since they strongly count on the opponent to somehow follow a subset of these assumptions [9].
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       State of the art opponent models
+      </section-title>
+      <paragraph>
+       All three classes in the technical classification try to estimate the utility function of the opponent and correspond to the fourth category in the general classification (see Section 2.1). In this article, the frequency models and value models are not differentiated, and the value models are considered as a part of the frequency models. In fact, frequency models are value models which also extract the issue weight values from the opponent's behavioral and verbal reflection. In Section 5, the accuracy of this newly proposed model is compared with the state of the art frequency (and value) models together with Bayesian and classic models, which are available in the Genius repository. These models are briefly explained below:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        AgentLG Freq. Model: each evaluation value is simply estimated based on the frequency at which that value is offered. Issue weights are simply assumed to be uniform [36], [37].
+       </list-item>
+       <list-item label="2.">
+        AgentX Freq. Model: a more complex variant of HardHeaded Freq. model, where the tendency of the opponent to repeat bids is of concern. The weight of an issue is computed based on the number of times its value changes [36], [37].
+       </list-item>
+       <list-item label="3.">
+        CUHKAgent Freq. Model: the evaluation values are computed based on the frequency at which they are offered. The utility value of a bid is estimated by calculating the sum of the evaluation values for all issues of that bid and dividing it by the best possible score to normalize it into a utility value. Only the first 100 unique bids are used in this model for its estimation. Issue weights are simply assumed to be uniform [39].
+       </list-item>
+       <list-item label="4.">
+        HardHeaded Freq. Model: the evaluation values are calculated based on the frequency at which they are offered. The weight of an issue is calculated based on the number of times its value changes [10].
+       </list-item>
+       <list-item label="5.">
+        InoxAgent Freq. Model: the evaluation values are calculated based on the frequency at which they are offered. The more important an issue value is, the more it is repeated in successive bids. The weight of an issue is calculated based on the number of times its value changes. The higher the importance of an issue, the more unchanged its value remained [36], [37].
+       </list-item>
+       <list-item label="6.">
+        Nash Freq. Model: computes the evaluation values based on the frequency at which they are offered. The weight of an issue is calculated based on the number of times the best assumed value of the issue is changed [36], [37].
+       </list-item>
+       <list-item label="7.">
+        Smith Freq. Model: the evaluation values are computed based on the frequency at which they are offered. The weight of an issue is calculated based on the distribution of the values of that issue [11].
+       </list-item>
+       <list-item label="8.">
+        The Fawkes Freq. Model: the evaluation values are determined based on their frequency through successive bids. The issue weights are determined based on the number of times their value changes. This model is very similar to InoxAgent Freq. Model with a slight difference: the unchanged issue values are determined by comparing the values of the last and first bids received from the opponent [40].
+       </list-item>
+       <list-item label="9.">
+        IAMHaggler Bayes. Model: is an efficient implementation of the Bayesian Scalable model, and is similar to the Scalable Bayesian model; here, it is also assumed that the opponent uses a particular time-dependent concession function [16].
+       </list-item>
+       <list-item label="10.">
+        TheNegotiatorReloaded Bayes. Model: is very similar to the IAMHaggler Bayes. Model with a slight difference: it uses different parameters for the supposed concession function of the opponent [40].
+       </list-item>
+       <list-item label="11.">
+        Scalable Bayes. Model: the issue weights and evaluation values are estimated using Bayesian learning. First, it initializes the hypothesis space of all possible preference profiles of the opponent. Next, it repeatedly updates each probability value based on the assumption that the opponent concedes according to a linear function [12].
+       </list-item>
+       <list-item label="12.">
+        Perfect IAMHaggler Bayes. Model: the same as the IAMHaggler Bayes. Model except that it is equipped with perfect information [16].
+       </list-item>
+       <list-item label="13.">
+        Perfect Scalable Bayes. Model: the same as the Scalable Bayes. Model except that it is equipped with perfect information [12].
+       </list-item>
+       <list-item label="14.">
+        Perfect Model: The agent has perfect knowledge regarding the preferences of the opponent. In other words, the opponent's utility function is known to the agent [36], [37].
+       </list-item>
+       <list-item label="15.">
+        No Model: the agent is without any model, hence the estimated utility of a given bid equals the utility of that bid in the opponent's utility space [36], [37].
+       </list-item>
+       <list-item label="16.">
+        Worst Model: This model is the opposite of the Perfect Model, that is, the utility of a given bid using the Worst Model equals 1 minus the real utility of the same bid obtained through the Perfect Model [36], [37].
+       </list-item>
+       <list-item label="17.">
+        Opposite Model: it is assumed that the estimated utility of a given bid equals 1 minus the utility of the same bid in the agent's own utility space [36], [37].
+       </list-item>
+      </list>
+      <paragraph>
+       All the models in the Genius repository, together with the assumptions that each adopts in modeling the opponent's preferences, are tabulated in Table 1 (see Section 1). As observed, eight out of the seventeen opponent models are Frequency based. Moreover, except AgentLG and CHUKAgent which only estimate evaluation values and not issue weights, all others estimate both the issue weights and evaluation values.
+      </paragraph>
+      <paragraph>
+       With respect to the technical classification (Section 2.2), this newly proposed model does not fit into any of the three categories. Hence, a new class is defined, named Perceptron-Based Models, where this proposed model could fit in. Moreover, this proposed model fits best into the fourth category described in the general classification (Section 2.1). Nonetheless, to the best of our knowledge, there is no proposed model in the fourth category which specifically uses neural networks (or neuron units) as the underlying learning technique. Our model is the first proposed model in the fourth category that uses perceptron units as the underlying mathematical basis for opponent modeling.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Negotiation setting
+     </section-title>
+     <paragraph>
+      The negotiation setting here corresponds to the state of the art models' setting in the field of automated negotiations (e.g., [1], [2], [3], [17], [36], [38]) and that of the ANAC 2010–2013.{sup:4} Automated agents alternatively exchange offers and compete against each other to reach a joint agreement on a set of issues in bilateral negotiations. The issues and possible values for each issue constitute a domain. For each domain there could be two preference profiles (one for each side of the negotiation) which together with the domain construct a negotiation scenario.
+     </paragraph>
+     <paragraph>
+      The interaction between negotiating parties is regulated by a negotiation protocol that defines the rules of how and when proposals can be exchanged [17]. In this setting, the alternating offers protocol is applied [42]. Negotiation is bilateral, that is, exactly two parties are negotiating over one or a set of issues. Each issue is associated with a set of possible values. The agents repeatedly exchange offers in successive rounds, so as to reach a mutually acceptable outcome. The negotiation deadline is reached after a specified number of rounds N are passed. This type of negotiation setting is commonly referred to as a round based setting. Each agent tries to take advantage of the other party for gaining a maximum utility for its own. A negotiation break-off causes both negotiating parties to obtain their reservation values. Therefore, the agents try to reach an agreement before the deadline. A negotiation session takes place in a negotiation scenario, which consists of a negotiation domain (or, alternatively, an outcome space) and two preference profiles (or, alternatively, utility space) one for each negotiating agent.
+     </paragraph>
+     <paragraph>
+      The negotiation domain Ω specifies all possible offers {a mathematical formula}ω→ that the agents can send or receive. Each offer or possible outcome is a vector {a mathematical formula}〈ω1,⋯,ωn〉, where each component is the mapping of every issue i to a value {a mathematical formula}ωi∈{vi1,⋯,vimi}, where, {a mathematical formula}mi is the number of possible values for issue i, {a mathematical formula}i=1,…,n[17]. A preference profile {a mathematical formula}{〈ω→,U(ω→)〉|ω→∈Ω}, on the other hand, consists of a utility function {a mathematical formula}U(ω→) which maps each possible offer {a mathematical formula}ω→∈Ω to a value in the {a mathematical formula}[0,1] range based on the overall relative value of that offer for the agent. In multi-issue negotiations, the common assumption is that the utility of an offer can be computed as a weighted sum of the utilities associated with the values for each issue [12], [43], [44], [45], [46], [47]. Accordingly, in the negotiation setting here, the agents use the linear additive utility function shown in Equation (1),{sup:5} defined by a set of weights {a mathematical formula}wi, and the corresponding evaluation functions or evaluation values {a mathematical formula}evali(ωi), {a mathematical formula}i=1,…,n, for the issue value {a mathematical formula}ωi of a given offer {a mathematical formula}ω→:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In other words, the preference profile of an agent is modeled as a linear combination of a set of weights (which measures the relative importance of the negotiation issues) and a number of individual utility functions (or evaluation functions) which calculate the utility of a possible value for a negotiation issue. Unlike the negotiation domain which is publicly known for both the negotiating parties, the preference profile is private for each agent, so the agents are not aware of the weights and evaluation values associated with the preference profile of one another. Without losing the applicability of this newly proposed model, for the sake of simplicity in the negotiation setting here it is assumed that each issue value {a mathematical formula}ωi in an offer only takes a finite set of discrete values.
+     </paragraph>
+     <paragraph>
+      This negotiation setting is online, that is, the agent is only allowed to use the offers exchanged during a single negotiation session to model the preferences of the opponent, so that learning between sessions is not authorized. Unlike offline opponent models where negotiation information from different negotiation sessions with similar opponents is applied in modeling the preferences of an opponent, in online models (e.g., [10], [12]) no history of the previous negotiations is provided for the opponent model [7], [9].
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      POPPONENT: perceptron-based opponent model
+     </section-title>
+     <paragraph>
+      As explained in Section 2, state of the art models fall into the categories of either Frequency-based or Bayesian models, and they suffer from the dependency on the category-based restricting set of assumptions to model the opponent. In this study, an efficient model is designed based on perceptron units which are less dependent on the assumptions of the opponent. In fact, unlike non-classic state of the art models (Table 1) which depend on a number of restricting assumptions, this model relies only on one assumption, either 1 or 10. In real negotiation problems, all of the training examples (i.e., bids) are not always given in advance, but are gradually acquired one at a time. Therefore, a model is required which is updated right after each bid is encountered. For this purpose, the proposed perceptron-based opponent model (POPPONENT) adopts an incremental gradient descent or stochastic gradient descent algorithm to efficiently learn the preference profile of the opponent in linear scenarios. The mathematical details behind this approach are presented in Section 4.1. The algorithm of the perceptron-based opponent model is proposed in Section 4.2.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Mathematical justifications
+      </section-title>
+      <section label="4.1.1">
+       <section-title>
+        Perceptron-based learning
+       </section-title>
+       <paragraph>
+        In order to enable the agent to learn the preference (issue weight values and individual utility functions) of an opponent during a negotiation session in bilateral multi-issue negotiations, the standard simple perceptron units are adopted, which are used as the basic units that construct the ANN [32], [48], [49], [50], Fig. 2.
+       </paragraph>
+       <paragraph>
+        A simple perceptron unit takes a vector of real valued inputs ({a mathematical formula}x1,…,xn) and calculates a linear combination of their values through a linear additive function as Equation (3),{a mathematical formula} where edge weights {a mathematical formula}wi are the real valued parameters that determine the contribution of inputs {a mathematical formula}xi to the perceptron output O, and the quantity {a mathematical formula}−w0 is a specific threshold (such as 0). When all the inputs are received in a perceptron unit, if the weighted inputs' combination exceeds the threshold, the perceptron produces 1 as an output; otherwise, it produces −1. The weights are not known in advance, so they have to be somehow adjusted through some training instances, a specific learning algorithm (like gradient descent) and a specific training rule (like the delta rule) [32]. The error between the real output and the output produced by perceptron unit is minimized by giving each training example in the training set into the perceptron unit, and adjusting the edge weights according to a training rule (like the delta rule) in a successive manner.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Multi bipartite incremental gradient descent search
+       </section-title>
+       <paragraph>
+        As mentioned in Section 3, in bilateral multi-issue negotiations, the preference profile of an opponent is private to the agent. Therefore, the agent has to learn it through offers as training instances received from the opponent and through a specific learning algorithm. In linear scenarios, a preference profile is comprised of a number of negotiation issue weights {a mathematical formula}wiOP or priorities as well as the evaluations {a mathematical formula}evaliOP(ωi) corresponding to each possible value {a mathematical formula}ωi∈{vi1,⋯,vimi}, where, {a mathematical formula}mi is the number of possible values for issue i ({a mathematical formula}i=1,…,n). Since both the issue weights and evaluations of the opponent's preference profile are unknown to the agent, this proposed model applies two types of perceptron units[32] for learning the opponent's preferences through a multi bipartite incremental gradient descent search. The two constituting parts of this algorithm execute two separate overlapping steps: in the first step, Fig. 3(a), the evaluation values and the issue weights are assumed to have become the inputs to the perceptron unit and the weight vector elements of the perceptron, respectively. Next, the gradient descent is applied to adjust the issue weights (perceptron type 1); in the second step shown in Fig. 3(b), the issue weights and the evaluation values are assumed to have become the inputs to multiple copies of the perceptron unit and the weight vector of the perceptron units, respectively. Next, the evaluation values are adjusted by feeding the issue weight values as the input into the perceptron units (perceptron type 2). In other words, the objective of these perceptron units is to efficiently learn both the issue weight values {a mathematical formula}w1OP through {a mathematical formula}wnOP and the evaluation values {a mathematical formula}eval1OP(ω1) through {a mathematical formula}evalnOP(ωn) for all possible values {a mathematical formula}ωi∈{vi1,⋯,vimi} of each issue i in a given negotiation domain, since for each issue i, {a mathematical formula}ωi∈{vi1,⋯,vimi}, there are {a mathematical formula}mi possible evaluation values for issue i. This means that the total number of perceptron units (of type 2) for learning the evaluation values is calculated through Equation (4):{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Moreover, in order to learn the negotiation weight values, only one perceptron unit (of type 1) would suffice, that is, in total, {a mathematical formula}n2+1 perceptron units are needed to learn the preference profile of the opponent. Here, two types of perceptrons work next to one another in a manner in which at any given time the perceptron type 1 works together with one single perceptron from type 2.
+       </paragraph>
+       <paragraph>
+        Upon receipt of a new offer {a mathematical formula}〈ω1,⋯,ωn〉 from the opponent, the perceptron unit calculates the utility of that offer, and the perceptron learning algorithm is used to learn the preference profile of the opponent. By inserting each training example into the perceptron, the algorithm tries to estimate the real preference profile of the opponent by minimizing the error between the produced and real output, by adjusting the weight vector values of the perceptron unit in an iterative manner.
+       </paragraph>
+       <paragraph>
+        The learning problem in Fig. 3(a) determines the weights {a mathematical formula}w1OP through {a mathematical formula}wnOP, in the sense that the training error of the learnt hypothesis (which is a vector of weight values) is minimized. The learning problem in Fig. 3(b) determines the evaluation values {a mathematical formula}evaliOP(ωi) in the sense that the training error of the learnt hypothesis (which is a vector of evaluation values) is minimized.
+       </paragraph>
+       <paragraph>
+        The hypothesis space of possible weights ({a mathematical formula}w1 and {a mathematical formula}w2 in a sample 2-issue domain) and the associated error values are presented in Fig. 4. To find a minimum point, first, the incremental gradient descent or stochastic gradient descent optimization algorithm begins with an initial point on the error surface, and next, it repeatedly updates the weight values in the weight vector so that the search is directed towards the steepest descent along the error surface. In this algorithm, the weight values are updated right after each single training example is encountered in an incremental manner. This process continues until the global (or local) minimum is achieved.
+       </paragraph>
+       <paragraph>
+        The error in modeling the opponent's preference profile is formulated as follows:{a mathematical formula} where {a mathematical formula}Ed(k→) is the individual error for the training instance {a mathematical formula}d(ω)→, the value of which is calculated by Equation (6):{a mathematical formula} where {a mathematical formula}k→=〈wOP→,evalOP→〉 is the opponent preference profile, {a mathematical formula}wOP→=〈w1OP,…,wnOP〉 is the issue weights vector, {a mathematical formula}D={d(ω)→|d(ω)→=〈eval1OP(ω1),⋯,evalnOP(ωn)〉,ωi∈{vi1,⋯,vimi},i=1,…,n} is the set of training examples, {a mathematical formula}td is the target output (real output value) for the training example {a mathematical formula}d(ω)→, and {a mathematical formula}od is the output of the linear unit for the training example {a mathematical formula}d(ω)→. The vector {a mathematical formula}evalOP→=〈eval1OP(v11),⋯,eval1OP(v1m1),…,evalnOP(vn1),⋯,evalnOP(vnmn)〉 contains all the evaluation values for all the possible values for all issues. The set of training examples or D includes the evaluation values for all possible offers in the outcome space, its cardinality is calculated through Equation (4).
+       </paragraph>
+       <paragraph>
+        According to the function which delivers the utility value of a bid (Equation (1)), the utility value of a given training instance {a mathematical formula}d(ω)→ is calculated through Equation (7):{a mathematical formula} By inserting Equation (7) into (6) and (6) into (5), Equation (8) is yielded:{a mathematical formula} which represents the training error of all training examples. In Equation (8), {a mathematical formula}ωi is the value of issue i in the training instance {a mathematical formula}d(ω)→.
+       </paragraph>
+       <paragraph>
+        The objective here is to minimize the error E by searching for the best preference profile which yields the minimum error between the estimated offer utility values, according to the bidding behavior of the opponent ({a mathematical formula}td) and the estimated offer utility values according to the current values of the preference profile of the opponent ({a mathematical formula}∑i=1nevaliOP(ωi).wiOP) for all the training examples in D. The direction of steepest descent along the error surface can be determined by computing the gradient or derivative of E with respect to each component of the opponent profile vector {a mathematical formula}k→. This derivative vector, with respect to the vector {a mathematical formula}k→, can be calculated through Equation (9):{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Since the gradient calculated based on Equation (9) specifies the direction that yields the steepest increase in E, the negative of this value yields the direction of steepest decrease. The training rule for gradient descent search is expressed through Equation (10):{a mathematical formula} where the positive constant η is the learning rate which determines the step size in the gradient descent search. Writing Equation (10) in the componential form would yield:{a mathematical formula} where i is between 1 and {a mathematical formula}∑i=1nmi+n, {a mathematical formula}mi is the number of possible values for the issue i, and n is the number of negotiation issues, that is, the total number of the components in vector {a mathematical formula}k→ equals the total number of negotiation issues (n) plus the total possible values of all issues ({a mathematical formula}∑i=1nmi). The vector {a mathematical formula}k→ in Equation (11) contains both the issue weights vector ({a mathematical formula}wOP→) and the evaluation values vector ({a mathematical formula}evalOP→). Provided that component {a mathematical formula}ki is a weight value, the following equations are yielded.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        In order to achieve the steepest descent each component {a mathematical formula}wiOP of the weight vector {a mathematical formula}wOP→ in proportion to {a mathematical formula}∂E∂wiOP should be altered. Applying Equation (8), the gradient of E with respect to {a mathematical formula}wiOP in Equation (12) is calculated through Equation (13).{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Now, by combining Equations (12) and (13), the training rule for updating the weight values is obtained as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Once more, provided that component {a mathematical formula}ki is an evaluation value, Equation (11) will be modified into:{a mathematical formula} where j is between 1 and {a mathematical formula}mi ({a mathematical formula}mi is the number of possible values for issue i), and i is between 1 and n (n is the number of issues).
+       </paragraph>
+       <paragraph>
+        Similar to Equation (13), the training rule applied in learning the evaluation values is expressed as Equation (16).{a mathematical formula} If there exists {a mathematical formula}d(ω)∈D, that {a mathematical formula}ωi=vij, then Equation (17) is yielded:{a mathematical formula} If not, Equation (18) is yielded:{a mathematical formula} Combining Equations (15), (17), and (18) would yield:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Equation (19) means that the evaluation value for the value {a mathematical formula}vij (i.e., {a mathematical formula}evaliOP(vij)) remains unchanged as long as it is not met in a training example.
+       </paragraph>
+       <paragraph>
+        At this point, it could be deduced that in order to make a movement in the steepest descent direction in the error surface of different preference profiles, calculating the {a mathematical formula}evaliOP(vij) and {a mathematical formula}wiOP values according to Equations (14) and (19), respectively, would suffice, hence the updating of the opponent preference profile.
+       </paragraph>
+       <paragraph>
+        When a sufficiently small learning rate η is used, the gradient descent search assures convergence into a vector with minimum error, regardless of whether the training examples are linearly separable or not. If η is too large, this search approach is at risk of exceeding the vector with minimum error in the error surface. Therefore, using an appropriate learning rate is of the essence [32].
+       </paragraph>
+       <paragraph>
+        This gradient descent-based opponent modeling algorithm could be subject to two major drawbacks, namely: (1) converging to a local minimum can sometimes be quite slow, and (2) if there are multiple local minima in the error surface, then there is no guarantee that the procedure will find the global minimum [32]. Besides this, in real world negotiation problems, all of the offers (training examples) are not always provided in advance. If all training examples were available in advance, reaching one of the global minimums would mean obtaining 100 percent accuracy (or zero error) in predicting the output values through the input values for the set of available training instances.
+       </paragraph>
+       <paragraph>
+        These difficulties are alleviated by the incremental or stochastic version of the gradient descent. As mentioned, non-incremental gradient descent first calculates {a mathematical formula}ΔwiOP and {a mathematical formula}ΔevaliOP(vij) values separately for all training instances through the target values provided by the current evaluation values, vector {a mathematical formula}evalOP→, and the weight vector, {a mathematical formula}wOP→, and then applies them in calculating the {a mathematical formula}wiOP and {a mathematical formula}evaliOP(vij) values, respectively (through Equations (14) and (19)). However, in incremental or stochastic gradient descent, {a mathematical formula}evaliOP(vij) and {a mathematical formula}wiOP values are updated right after each offer is received, according to the following delta equations:{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Equation (20) reveals that in the incremental gradient descent, not all the evaluation values are updated, but only those that have been met in the training instance {a mathematical formula}d(ω)→, hence, Equation (20) can be rewritten as Equation (22).{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Now, in order to find the best preference profile, in the incremental gradient descent algorithm, after each training instance {a mathematical formula}d(ω)→ is met, Equations (21) and (22) are applied, and the evaluation values for the values that have been observed in the bid ({a mathematical formula}〈ω1,⋯,ωn〉) and their weight values are updated.
+       </paragraph>
+       <paragraph>
+        Having introduced the mathematical basics of this algorithm, in Section 4.2 we present the algorithm based on the incremental gradient descent learning to extract the preference profile of the opponent.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       POPPONENT algorithm
+      </section-title>
+      <paragraph>
+       The newly introduced multi bipartite incremental gradient descent or stochastic gradient descent search (Section 4.1.2) is applied here to learn the preference profile of the opponent in linear scenarios. To serve the purpose, it learns the issue priorities or weight values {a mathematical formula}w1OP through {a mathematical formula}wnOP and the evaluation values {a mathematical formula}evaliOP(ωi) for all possible values {a mathematical formula}ωi∈{vi1,⋯,vimi} (where, {a mathematical formula}mi is the number of possible values for issue i) and all negotiation issues i ({a mathematical formula}i=1,…,n) in that negotiation domain.
+      </paragraph>
+      <paragraph>
+       This proposed algorithm is an incremental version of the perceptron-based learning method (Section 4.1) and applies two parameters of η and N as the input. Parameter η represents the learning rate which determines the step size in the gradient descent search. Parameter N represents the number of training repeats for each training instance. This algorithm includes two separate functions of initializer and updater.
+      </paragraph>
+      <paragraph>
+       The first function is invoked just once when the model is generated and the essential parameters of the proposed model, most importantly the preference profile of the opponent (that is, the issue weights {a mathematical formula}wiOP and evaluations {a mathematical formula}evaliOP(ωi) for issue values) is initialized. By trying different initial points, it is realized that 0.5, the midpoint in the hypothesis space, is the best point for initializing {a mathematical formula}evaliOP(ωi) values for each {a mathematical formula}ωi∈{vi1,⋯,vimi}, {a mathematical formula}i=1,…,n (Algorithm: line 13). Similarly, for the weight values {a mathematical formula}wi, equal weights {a mathematical formula}1n are chosen for all issues (Algorithm: line 14).
+      </paragraph>
+      <paragraph>
+       The second function receives an offer vector {a mathematical formula}ω→ which specifies the issue values for all the negotiation issues of a new offer recently received from the opponent. That is, as soon as a new offer is received from the opponent, this function is invoked to update the model based on this newly received bid. It updates the estimated preference profile of the opponent by adjusting {a mathematical formula}evaliOP(ωi) and {a mathematical formula}wi values (Algorithm: lines 18 and 21). Whenever a new offer is received from the opponent, the perceptron learning delta rules (Algorithm: lines 18 and 21) are repeated N times. The {a mathematical formula}EstimatedUtilityOP(ω→) is a function which receives an offer as the input and returns the estimated utility value of that offer in the opponent's utility space as the output.
+      </paragraph>
+      <paragraph>
+       In this algorithm, instead of updating each {a mathematical formula}evaliOP(ωi) and {a mathematical formula}wiOP value after calculating all {a mathematical formula}Δwi and {a mathematical formula}ΔevaliOP values when all training examples are met, each {a mathematical formula}evaliOP(ωi) and {a mathematical formula}wiOP value is modified using training delta rules right after each single training instance is met in an incremental manner (Algorithm: lines 18, 21). Therefore, this algorithm can easily be applied in more realistic negotiation scenarios in which training examples (opponent offers) are gradually met one at a time.
+      </paragraph>
+      <paragraph>
+       The algorithm:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This proposed model is a supervised algorithm, thus it needs output labels for training instances. The problem of preference modeling in bilateral multi issue negotiations through supervised learning methods can be separated in two sub-problems: 1) estimating the utility values of the opponent's offer history (the history of the offers received from the opponent through the negotiation session) and 2) extracting the estimated utility function (or the preference profile) of the opponent from the opponent's offer history. By solving the first problem, now the opponent's offer history contains all the estimated offer utilities for each offer in the opponent's offer history. The {a mathematical formula}EstimatedUtilityOP(ω→) function which deals with the first sub-problem, can be estimated according to the perceived bidding behavior of the opponent.
+      </paragraph>
+      <paragraph>
+       In this article, four different values – three constant (0.6, 0.8, and 1) and one adaptive – are applied in order to estimate the utilities of the offers proposed by the opponent. Applying the constant values for estimating the utility value of the bids received from the opponent may seem simplistic at first, but actually it is not. As explained in Section 1, the opponent modeling problem in negotiation is a specific type of a learning problem, where all of the training examples are not provided in advance, but are provided throughout the negotiation session in an incremental manner. In fact, designing a preference model which is able to update in an incremental manner is one of the important challenges in modeling the user preferences in bilateral multi issue negotiations. More importantly, in such models the number of bids that the agents exchange before reaching deadline is limited [2], and this is another important challenge that an opponent model should overcome. Although estimating the utilities of the bids received by the opponent through a constant function may not be the best choice, it could at least be a reasonable assumption, whereas the rational agents try to reach the highest utility by following a concession-based bidding strategy [2]. For example, 1) assuming “most of the bids that the opponent sends throughout the negotiation session have utilities around a value such as 1” would not be an unreasonable assumption, and 2) in the Scalable Bayesian Model proposed by Hindriks et al. [2], they assume that the utility of the bids sent by the opponent follow the {a mathematical formula}1−0.05t ({a mathematical formula}0≤t≤1) function which places the utility of the bids received from the opponent into the {a mathematical formula}[0.95,1] interval. Obviously, this assumption would not be very different from assuming that the opponent mostly sends the bids with the utility value 1.
+      </paragraph>
+      <paragraph>
+       For the fourth value, we use the adaptive method where the agent estimates the bids that the opponent will offer in future, based on the opponent's bid history [51], [52], [53], [54], [55]. At time t, the opponent will offer a bid with the utility target(t) the value of which is calculated based on Equations (23) and (24):{a mathematical formula}{a mathematical formula} where, {a mathematical formula}emax(t) estimates the maximum utility of the bid that the opponent will offer in the future, {a mathematical formula}μ(t) is the average utility of the bids proposed by the opponent in the agent's own utility space, and {a mathematical formula}d(t) determines the width of the bids received from the opponent and is calculated based on deviation.
+      </paragraph>
+      <paragraph>
+       Similar to the approach applied by CHUKAgent (see Section 2) [39], this adaptive model applies only the first 1000 (instead of all 5000) unique bids in a negotiation session for its estimation in order to prevent its accuracy decline (see Section 5.3.1).
+      </paragraph>
+      <paragraph>
+       The computational complexity of POPPONENT Algorithm is linear ({a mathematical formula}O(n)), and is analyzed in Appendix A.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      To evaluate the proposed POPPONENT model, two separate experimental settings are applied for assessing its accuracy and performance (in real world negotiation examples) compared to the available opponent models.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Experimental setting
+      </section-title>
+      <paragraph>
+       As reviewed in Section 2, different settings and measures are applied by the researchers for evaluating their proposed models. The Genius framework, provided by ANAC, considers all the measures available in this field (see Appendix B) and presents the most extensive and comprehensive settings. The Genius framework facilitates development and evaluation of negotiation agents and their constituting components through a repository of the largest comparable set of models consistent with ANAC settings{sup:6}[38]. Accordingly, a similar experimental setting is adopted here to assess the accuracy and performance of this POPPONENT model.
+      </paragraph>
+      <paragraph>
+       The first setting, introduced in Section 5.1.1, evaluates the accuracy of POPPONENT through the Pearson Correlation measure. The second setting, introduced in Section 5.1.2, evaluates this proposed model by measuring the real performance of the agents applying this model in real world experimental negotiation scenarios.
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        Experiment I: evaluating the accuracy of POPPONENT
+       </section-title>
+       <paragraph>
+        The experimental setting applied by Baarslag et al. for automated bilateral multi issue negotiations [38] is also applied here to evaluate the accuracy of this proposed POPPONENT model versus the state of the art opponent models.
+       </paragraph>
+       <paragraph>
+        According to this setting, 5 variations of POPPONENT (Section 4.2) are compared with a total of 15 opponent models including 8 Frequency-based opponent models, 5 Bayesian opponent models and 1 classic model (Opposite model{sup:7}) together with a No Model. These models are tabulated in Table 1.
+       </paragraph>
+       <paragraph>
+        Each one of these 20 {a mathematical formula}(=8+5+1+1+5)opponent models is equipped with a bidding strategy to compete with an opponent agent. The bidding behavior of an opponent could be influenced by the opponent model of the agent in two manners: first, as the opponent model helps the agent to make better offers, it may cause the negotiation to end earlier with a high quality agreement, hence a shorter agreement, and second, since applying an opponent model would change the bidding sequence of the agent, it may also cause the opponent to change its bidding behavior. For example, if the opponent applies some kind of an imitative bidding strategy [33], different bidding sequences for the agent will definitely result in different bidding sequences from the opponent. Therefore, to be able to compare the different opponent models, all the models being trained under the same circumstances should be confirmed to allow the non-adaptive opponents to be applied for training this proposed opponent model as well as the other models.
+       </paragraph>
+       <paragraph>
+        Here the acceptance capability from the negotiation strategy of the opponent is removed, that is, because an equal number of bids are to be exchanged through all the sessions. This ensures that all the opponent modeling techniques are actually being executed under the same conditions.
+       </paragraph>
+       <section label="5.1.1.1">
+        <section-title>
+         Bidding behaviors of the agents
+        </section-title>
+        <paragraph>
+         Once more, in accordance with the setting suggested by Baarslag et al. [38], we use four classes of different opponents, with different bidding behaviors applied here as follows:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          Conceding agents apply a time dependent concession strategy [33] to make the bids during the negotiation session, that is, the target utility is calculated through Equation (25):{a mathematical formula} where, for concession rate e, four different values of 0.1, 0.2, 1, and 2 are applied with a fixed starting bid utility {a mathematical formula}Pmax=1.
+         </list-item>
+         <list-item label="2.">
+          Random agents generate a bid with a utility above a fixed threshold m in a random manner. Four different values 0, 0.25, 0.5, and 0.75 are selected for the threshold.
+         </list-item>
+         <list-item label="3.">
+          Conceding agents with an offset are time-dependent agents which do not start the negotiation with their best bids. For this purpose, a linear concession rate ({a mathematical formula}e=1), with different values of 0.7, 0.8, and 0.9 is applied in the starting bid utility {a mathematical formula}Pmax.
+         </list-item>
+         <list-item label="4.">
+          Non-conceding agents, which begin with a minimum target utility that increases to its maximum utility over time. The target utility is calculated through Equation (26):{a mathematical formula} where four different values of 0, 0.25, 0.5, and 0.75 are applied in the minimum acceptable utility {a mathematical formula}Pmin for the agent.
+         </list-item>
+        </list>
+        <paragraph>
+         In accordance with these values, 4 types of conceding agents, 4 types of random agents, 3 types of conceding agents with an offset, and 4 types of non-conceding agents are obtained. Moreover, it is worth noting that the first class reveals a predictable bidding behavior, since it always begins with its best offer, always concedes, and makes a unique trace, while the other three classes are all considered to be unpredictable, since they make random offers or do not concede or begin with their best offers. From the four classes above, the second contains opponents with random or non-deterministic behavior, while the others comprise deterministic opponents. Consequently, the experiment involves a total of 15 opponents, among which 4 opponents (in the first class) are predictable, and the remaining 11 are unpredictable.
+        </paragraph>
+        <paragraph>
+         As mentioned in Section 1, all of the existing models apply a subset of assumptions on the bidding strategy or on the value distribution of the issues of the opponent's preference profile. Here, different opponents with different bidding strategies are applied in training the opponent model and to see how accurate each opponent model actually would be, when these assumptions would not hold true in the real world.
+        </paragraph>
+       </section>
+       <section label="5.1.1.2">
+        <section-title>
+         Negotiation scenarios
+        </section-title>
+        <paragraph>
+         According to Baarslag et al. [38], there exist the following three features of a negotiation scenario that significantly influence the ability of the opponent model in estimating the opponent's preferences in an accurate manner [38]:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          The Domain size can be small, medium, or large based on its total number of possible offers and depending on the amount of parameters of the preference profile.
+         </list-item>
+         <list-item label="2.">
+          The Bid distribution relates to the average distance of outcomes of a scenario to the nearest Pareto optimal offers. In a high bid distribution domain, a high percentage of outcomes are distanced far from the Pareto frontier.{sup:8}
+         </list-item>
+         <list-item label="3.">
+          The Opposition defines the competitiveness of the domain and is determined by the minimum of distances of all points (i.e., the distance of Kalai–Smorodinsky point, a unique point on Pareto Frontier with equal utilities for both parties) in the outcome space to the point of perfect mutual satisfaction (i.e., maximum utility for both parties).
+         </list-item>
+        </list>
+        <paragraph>
+         Now, in order to evaluate the proposed model in a complete setting, all the possible combinations of these three features should be tested. Due to the considerable computational limitations of testing all domains available in the literature and the Genius, Baarslag et al. [38] have carefully selected 5 domains and have considered all levels of those three domain features. The same domains are adopted here for all the aspects affecting the performance of opponent models to be considered. For this purpose, 45 scenarios containing 3 opposition levels and 3 bid distributions levels in 5 domains are applied. The summary of this setting including 15 bidding strategies over 5 negotiation domains applied in interactions among the agents are tabulated in Table 2.
+        </paragraph>
+       </section>
+       <section label="5.1.1.3">
+        <section-title>
+         Interactions
+        </section-title>
+        <paragraph>
+         This proposed opponent model is trained to perform against all deterministic opponent agents in 45 aforementioned scenarios, a total of 495 {a mathematical formula}(=11×45) negotiation sessions. As for random agents, each negotiation session is repeated 5 times to eliminate the randomness in the results and to ensure that the results are reliable. Consequently, a total of 900 {a mathematical formula}(=5×4×45) negotiation sessions are run against 4 types of random opponents, making a total of 1395 negotiation sessions to be executed. All negotiation sessions are executed in the round-based setting for an equal number of 5000 rounds, where each round contains exactly two bids: an offer sent by the agent and the associated counter offer received from the opponent, a total of 6975000 {a mathematical formula}(=1395×5000) training bids which can be fed into each one of the 20 {a mathematical formula}(=8+5+1+1+5) opponent models for training purposes.
+        </paragraph>
+        <paragraph>
+         The interaction among agents in the first experiment, in which the BOA framework is applied (Section 1), is presented in Fig. 5. Agents in Side B include a bidding strategy, no opponent model, and do not follow an acceptance strategy. In each interaction, an opponent model (equipped with an arbitrary bidding strategy and without an acceptance strategy) embedded in an agent in Side A will be trained by competing against opponent agents in Side B in 45 scenarios. Both sides actually have an acceptance module, but that module never accepts. This is because it is accepted for each opponent model in order to be trained by the same amount of training instances or bids (i.e., 6975000), in order to preserve equal conditions.
+        </paragraph>
+        <paragraph>
+         In each one of the negotiation sessions, the agent in Side B applies one of 15 bidding strategies in Table 2, while the bidding strategy for the agent in Side A is not important; therefore it applies an arbitrary bidding strategy from Table 2. The strategies chosen in this setting are non-adaptive, because it is required that all the models apply the same bid sequences. If the bidding strategy in Side B were to be adaptive, it would change according to the bidding strategies in Side A. When the models apply different training instances or bids, they will not be compared in equal conditions. Since the bidding strategy in Side B (Opponent Side) is non-adaptive, it is not affected by the bidding strategy in Side A (the side which uses those 20 opponent models including POPPONENT variations). Therefore, it is actually not important which bidding strategy is applied on Side A, because it will not have any effect on the opponent model applied on Side A. This serves the objective of this experiment, which is to train the opponent models in Side A.
+        </paragraph>
+       </section>
+      </section>
+      <section label="5.1.2">
+       <section-title>
+        Experiment II: evaluating performance of POPPONENT
+       </section-title>
+       <paragraph>
+        To evaluate the real world performance of this proposed model in a realistic setting, a similar setting to that applied by the ANAC organizers [38] is designed here. To accomplish this, a BOA framework is applied (Section 1) to embed each opponent model into an agent framework, the bidding strategy of which (together with its associated acceptance strategy) is chosen from the state of the art agents. Next, the average performance of each constructed agent is assessed through different types of components in competition with each other.
+       </paragraph>
+       <section label="5.1.2.1">
+        <section-title>
+         Agents
+        </section-title>
+        <paragraph>
+         When the settings where each model would be trained are determined, the POPPONENT is compared with the following 6 state of the art opponent models together with the Perfect Model, Worst Model, and No Model (see Section 2.3) applied in the Automated Negotiating Agents Competitions (ANAC):
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Agent X Freq. Model
+         </list-item>
+         <list-item label="•">
+          Agent LG Freq. Model
+         </list-item>
+         <list-item label="•">
+          CUHK Freq. Model
+         </list-item>
+         <list-item label="•">
+          Smith Freq. Model
+         </list-item>
+         <list-item label="•">
+          HardHeaded Freq. Model
+         </list-item>
+         <list-item label="•">
+          InoxAgent Freq. Model
+         </list-item>
+         <list-item label="•">
+          Perfect Model
+         </list-item>
+         <list-item label="•">
+          Worst Model
+         </list-item>
+         <list-item label="•">
+          No Model
+         </list-item>
+        </list>
+        <paragraph>
+         Regarding other components, the top bidding strategies together with their associated acceptance strategies from ANAC 2010, ANAC 2011, ANAC 2012, and ANAC 2013, and the four time-dependent bidding strategies together with a simple acceptance strategy are collected here. The agents equipped with these strategies are: AgentK [51], Yushu [60], Nozomi [2], HardHeaded [10], Gahbonio [61], IAMHaggler2011 [27], TheNegotiatorReloaded [40], BRAMAgent2 [40], and InoxAgent [62], and the four Time Dependent Conceding Agents from Experiment I (Table 2).
+        </paragraph>
+       </section>
+       <section label="5.1.2.2">
+        <section-title>
+         Negotiation scenarios
+        </section-title>
+        <paragraph>
+         Each agent competed 5 times, against all opponents on seven scenarios: Grocery [17], Thompson Employment [63], Travel [2], Small Energy, Supermarket (from ANAC 2012){sup:9}[40], Camera [62], and ItexVsCypress [2]. The size, opposition, and bid distribution values (Section 5.1.1.2) of these scenarios are tabulated in the Table 3, sorted by bid distribution.
+        </paragraph>
+       </section>
+       <section label="5.1.2.3">
+        <section-title>
+         Interactions
+        </section-title>
+        <paragraph>
+         This newly proposed model of opponents (AP and P1) together with other 9 opponent models (6 state of the art, Perfect Model, Worst Model and No Model), is evaluated according to the model in Fig. 5 by competing in both sides of A and B (except that in Side A agents have all three BOA modules while agents in Side B have no opponent model). In both sides, the agents apply 13 bidding and acceptance strategies, consisting of 9 agents from ANAC competitions and 4 time-dependent agents. In Side A, there exist 7 opponent models combined with the same 13 bidding and acceptance strategies. Each agent competes 5 times over 7 negotiation scenarios for both preference profiles (i.e., each agent acts in both sides of a scenario); hence, for each model 11830 {a mathematical formula}(=7×5×2×13×13) sessions are executed. In other words, a total number of 82810 {a mathematical formula}(=11830×7) sessions are executed in the second experiment to evaluate this newly proposed model together with the state of the art opponent models in a fair realistic competition. All of the sessions are executed in Genius 4.2 [36], [37] using the round-based protocol for an equal number of 1000 rounds. The interaction among agents in the second experiment is expressed in Fig. 6, using the BOA framework (Section 1).
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Examples
+      </section-title>
+      <paragraph>
+       Before evaluating the overall results of experiment settings I and II, in this section an example of negotiations in course between agents including POPPONENT or No Model is presented. The performance of this proposed POPPONENT model applied by a Linear Time Dependent Agent (Section 5.1.1.1) against another Liner Time Dependent with No Model, Fig. 5, Fig. 6, in 50 rounds (as the negotiation deadline) is presented in Fig. 7. In this figure, (a) especially shows how the agent applying POPPONENT performs in a negotiation session against another agent with no model. How the same agent with No Model performs against another agent of its kind is shown in Fig. 7(b). Finally, the utility of the bids that agent A sends to itself (side A) and to the opponent (side B), 1) when applying POPPONENT, and 2) when applying No Model are shown Fig. 7(c). When the agent A applies POPPONENT, a rapid agreement is achieved with a higher utility for both sides.
+      </paragraph>
+      <paragraph>
+       In Fig. 8, we show how the MBGD search method seeks to minimize Standard Error (Equation (5)) by converging towards zero, while this proposed POPPONENT model is being trained against a simple Time-Dependent Agent in a total of 5000 rounds. As the first 1000 rounds indicate, in this proposed model the algorithm moves towards the minimum point in the error surface, Fig. 4.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Experimental results
+      </section-title>
+      <paragraph>
+       The detailed experimental results comparing the accuracy and performance of POPPONENT against state of the art models are presented in Sections 5.3.1 and 5.3.2. The major findings are summarized in Section 5.3.3.
+      </paragraph>
+      <section label="5.3.1">
+       <section-title>
+        Experiment results I: accuracy of POPPONENT
+       </section-title>
+       <paragraph>
+        Based on the setting designed for Experiment I (Section 5.1.1), the accuracy of POPPONENT is compared with state of the art opponent models using the Pearson Correlation between the estimated and real bid utilities (Section B.1). For each model, the Pearson Correlation is in 11 points in time with equal distances (i.e., 10 time slots). The accuracies of all 20 models including 5 variations of POPPONENT (Section 4.2) together with one classic and 13 state of the art models (Section 5.1.1) and No Model{sup:10} are assessed here. The abbreviations of these models are listed in Table 4.
+       </paragraph>
+       <paragraph>
+        The average accuracy and respective standard deviations of all the opponent models against all opponent agents (predictable and unpredictable opponents) are expressed in Fig. 9, where at the perfect information state (PP), this proposed model outperforms the state of the art models by a large average accuracy. As observed, the other three variations of POPPONENT (i.e., P6, P8, and P1 except PP) outperform all state of the art models with respect to the average accuracy over all opponents. Here, unlike most state of the art models, the accuracy of this model in its four variations increases over time in a monotonic manner. The accuracies of POPPONENT variations and CKF (which have the highest and the closest accuracy compared with POPPONENT variations) are compared in Fig. 10. This figure shows that all POPPONENT variations (except AP) exceed CKF (and all the other models) in terms of average accuracy.
+       </paragraph>
+       <paragraph>
+        As observed in Fig. 9, most of the state of the art models lose their accuracy over time, since they handle the later bids in an incorrect manner. This is unique to the Bayesian models, since these models make some assumptions on the bidding behavior of the opponent, which become invalid as time passes. Most of the frequency models (and value models) are subject to this phenomenon as well, since they make some assumptions on the opponent's preference profile, which do not necessarily hold true. However, this is not true for the CUHKAgent frequency model, since it only uses 100 initial unique bids received from the opponent in order to update it. The accuracy of this model does not change after a few initial rounds [38].
+       </paragraph>
+       <paragraph>
+        It is obvious that the POPPONENT in its perfect information state (PP) is not affected by the later bids, since it does not make any assumption on the opponent at all. However, in the other three constant-value variations of POPPONENT, one assumption is made on the opponent's bidding behavior, which is why the accuracy of this proposed model in these three variations is low compared to the PP state. However, even in these three states, the accuracy of POPPONENT increases gradually. This could be attributed to the fact that compared to the other models, this model works based on a lower number of assumptions on the opponent or on the value distribution of the issues of the opponent's preference profile.
+       </paragraph>
+       <paragraph>
+        At first, it may not look surprising if PP reaches a great overall accuracy, because it uses Perfect Information to estimate the utility values of the bids received from the opponent; in fact it is, for several reasons. First, as observed in Fig. 9, it is evident that the accuracy that the two other Perfect Information models of PSB and PIHB achieve is nothing in comparison with that of the PP. In fact, PP doubles the accuracy values of PSB and PIHB. Second, adding perfect information to these models (PP, PSB, PIHB) would mean that an unsupervised learning problem is converted into a supervised learning problem. Obviously, supervised learning problems are still one of the most challenging problems in data mining and machine learning. Finally, as mentioned in Section 1, in automated negotiations, the agents usually exchange only a limited number of bids before they reach the deadline. However, as observed in this figure, this challenge does not prevent PP from achieving high accuracies. By the time only 10 percent of the negotiation time has passed, the accuracy of PP exceeds 60 percent.
+       </paragraph>
+       <paragraph>
+        By comparing the accuracy of AP with CKF in Fig. 10, it is revealed that AP outperforms CKF. It is noticed that the accuracy of AP when it is trained using all the bids it receives in a negotiation session reaches its maximum at {a mathematical formula}t=0.2 (round 1000) and then it begins to decrease. Similar to the approach applied by CKF in preventing a decline in its accuracy, 1000 initial bids are used here to train AP (instead of all 5000 bids).
+       </paragraph>
+       <paragraph>
+        The accuracy of the models in Experiment I in terms of different features of the domains (Size, Opposition, and Distribution) is presented in Fig. 11, where the following properties are induced:
+       </paragraph>
+       <paragraph label="Property 1">
+        POPPONENT model works better in medium to large negotiation domains. □
+       </paragraph>
+       <paragraph label="Property 2">
+        Accuracy of POPPONENT model improves with an increase in the distribution level of the negotiation scenario. □
+       </paragraph>
+       <paragraph label="Property 3">
+        Most models (including the POPPONENT variations) generally perform better in scenarios with a medium size, high level of opposition, and high level of distribution. □
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       <section-title>
+        Experiment results II: performance of POPPONENT
+       </section-title>
+       <paragraph>
+        The performance of each model is measured and revealed in Experiment II according to the setting explained in Section 5.1.2. Six performance measures of Avg. Utility, Avg. Time of Agreement, Avg. Pareto Distance of Agreement, Avg. Kalai Distance of Agreement, Avg. Nash Distance of Agreement and Avg. Percentage of Pareto Bids are applied for this purpose (see details in Table B.1).
+       </paragraph>
+       <paragraph>
+        The values of the aforementioned performance measures and the final accuracy (accuracy at the final round of the negotiation) of this proposed POPPONENT model, together with the state of the art models in Experiment II are tabulated in Table C.1, Table C.2, Table C.3, Table C.4, Table C.5, Table C.6, Table C.7 (Appendix C); all the results are presented in Fig. 12.
+       </paragraph>
+       <paragraph>
+        The content of Table C.1, Table C.2, Table C.3, Table C.4, Table C.5, Table C.6, Table C.7 and Fig. 12 indicate that POPPONENT is the most accurate model compared with other models available. This is consistent with the results of the first experiment, where it is found that the accuracy of POPPONENT exceeds state of the art models. By considering the content of Table C.1, Table C.2, Table C.3, Table C.4, Table C.5, Table C.6, Table C.7, it is found that POPPONENT (AP) and IXF models are the only two models which can outperform all other models in at least one domain with respect to all performance/accuracy measures; the proposed model's properties consist of:
+       </paragraph>
+       <paragraph label="Property 4">
+        In terms of the Pearson Correlation measure, on average, POPPONENT is the most accurate opponent model in linear bilateral multi-issue negotiations against all types of opponents. □
+       </paragraph>
+       <paragraph label="Property 5">
+        Among the models in Experiment II, POPPONENT is the most efficient model in at least one domain, with respect to all the measures. □
+       </paragraph>
+      </section>
+      <section label="5.3.3">
+       <section-title>
+        Key findings
+       </section-title>
+       <paragraph>
+        The results of Experiment I (Section 5.3.1) are tabulated in Table 5, Table 6. These results show the accuracies of all POPPONENT variations, the nearest opponent models (in accuracy) to the POPPONENT accuracy, and the opponent models applied by the winners of ANAC 2012 and 2013. As observed in these tables, this proposed POPPONENT model in the perfect information state (PP column) reaches higher accuracy levels than the state of the art models, as well as the models from top ANAC agents. Besides this, as Table 5 shows, this proposed model in the P1 variation (the fourth column) is ranked second (after the PP variation) among all the state of the art models. This includes the models applied by top ANAC 2012 and 2013 agents against all opponents, predictable or conceding opponents, and conceding-opponents-with-an-offset (with accuracies of 0.3899, 0.8077, and 0.8010, respectively). However, the state of the art models of PSB, LGF, and OM with accuracies of 0.3317, 0.5406, and 0.2158 are ranked second against unpredictable opponents, random opponents, and non-conceding opponents, respectively. The opponent model applied by Agent Fawkes (FF) is weak in accuracy, meaning that as the winner of ANAC 2013, this agent must have been applying a very efficient bidding strategy or acceptance strategy or both, to compensate for the very poor accuracy of its opponent model.
+       </paragraph>
+       <paragraph>
+        That this proposed POPPONENT model in PP variation has the highest accuracy in terms of different levels of scenario features is observed in Table 6. Moreover, when the scenario size is medium and high, this proposed model in P6 and P8 variations, respectively, has ranked second among all the models from the state of the art. Another intriguing observation in Table 6 is the fact that for all levels of scenario features, CUHKAgent Freq. Model has an excellent accuracy compared with the other state of the art models. Since the agent applied here is the winner of ANAC 2012, it could be deduced that part of this success must have been due to the high accuracy of the opponent models' module of this agent.
+       </paragraph>
+       <paragraph>
+        As tabulated in Table 7, in average the POPPONENT (P1 variation) is the most accurate model vs. all opponents. Moreover, here, it is observed that for five levels of scenario features out of a total of nine, POPPONENT exhibited an excellent accuracy in comparison with all other top models, thus recommending the application of POPPONENT as the most accurate model in scenarios with medium or large size, medium distribution, and low or medium level of opposition.
+       </paragraph>
+       <paragraph>
+        Both Experiments I and II reveal that POPPONENT is undoubtedly the most accurate model among all its counterparts. Besides this, as expressed in Table C.1, Table C.2, Table C.3, Table C.4, Table C.5, Table C.6, Table C.7, POPPONENT achieves the highest performance in the Grocery domain for the average utility measure (through AP), the highest performance in the Travel and ItexVsCypress domains for the average time of agreements measure (through AP), the highest performance in the ItexVsCypress for the Nash and Kalai distance measures (through AP), the highest performance in the Grocery domain for the Pareto distance measure (through AP), the best performance in the Supermarket, Travel, Thompson, Energy, Camera, and ItexVsCypress, for the Pearson Correlation measures (through P1), and the best performing model in the Thompson domain for the percentage of Pareto bids measure (through P1). These results are tabulated in Table 8.
+       </paragraph>
+       <paragraph>
+        According to Table C.1, Table C.2, Table C.3, Table C.4, Table C.5, Table C.6, Table C.7 and Table 8, it is observed that P1 has not performed well in terms of the measures, except for a rather intriguing performance value in the Pearson Correlation and a very high performance value in the Percentage of Pareto Bids. Although it is the most accurate model (high Pearson Correlation value) and is successful in making Pareto Bids (high Percentage of Pareto Bids value), it is not successful in obtaining favorable outcomes. This phenomenon can be observed for XF as well. However, AP (with lower Pearson Correlation and Percentage of Pareto Bids values) has been more successful in getting favorable utilities; thus, it could be concluded that making more Pareto Bids does not necessarily make an opponent model successful. Rather, it seems that there is an optimal point in the Percentage of Pareto Bids measure, which guides the agent to achieve the highest performance.
+       </paragraph>
+      </section>
+      <section label="5.3.4">
+       <section-title>
+        Summary
+       </section-title>
+       <paragraph>
+        In brief, by considering PP, POPPONENT is the most accurate model against predictable, unpredictable, random, conceding opponents with an offset, non-conceding, and all types of opponents, and also in terms of different levels of scenario features (size, opposition, distribution). Excluding PP, POPPONENT variations are the top performing models against all opponents, predictable opponents, and conceding opponents with an offset. POPPONENT variations rank first in the scenarios with medium opposition, medium distribution, and medium to large size. The results of Experiment II reveal that for all the measures, POPPONENT reaches the highest performance in at least one of the domains.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Complexity of the POPPONENT algorithm
+     </section-title>
+     <paragraph>
+      Complexity analysis of this proposed POPPONENT algorithm is run easily. According to Equations (21) and (22), upon receiving a new bid from the opponent, POPPONENT applies delta rules to update the current estimated preference profile of the opponent. Let n represent the number of negotiation issues, and N represent the number of training repeats for each training example; next, for each training instance, the delta rule in Equation (22) (Algorithm: line 18) repeats n times, the delta rule in Equation (21) (Algorithm: line 21) repeats n times, and the whole process is repeated N times for each training instance (Algorithm: line 15), hence, the total number of executions for the delta rule:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Accordingly, the computational complexity of the algorithm only depends on the number of negotiation issues, therefore the computational complexity of the algorithm is linear {a mathematical formula}(O(n)).
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Measures
+     </section-title>
+     <paragraph>
+      This section explains different measures provided by ANAC in the Genius framework [38], applied here to assess the accuracy and performance of POPPONENT in both of the aforementioned experiments. These measures are tabulated in Table B.1 and explained in Sections B.1 and B.2.
+     </paragraph>
+     <section label="B.1">
+      <section-title>
+       The measures applied in Experiment I
+      </section-title>
+      <paragraph>
+       In the setting adopted in Experiment I (Section 5.1.1), the accuracy of this proposed model is evaluated together with other opponent models through a Pearson Correlation between the estimated and real bid utilities [38]:{a mathematical formula} where, {a mathematical formula}uOP is the real utility space or preference profile of the opponent, {a mathematical formula}uOP′ is the estimated utility space or preference profile of the opponent, {a mathematical formula}uOP(ω→) is the real utility of the negotiation outcome {a mathematical formula}ω→ in the opponent's utility space, and {a mathematical formula}uOP′(ω→) is the estimated utility of the negotiation outcome {a mathematical formula}ω→ in the opponent's utility space.
+      </paragraph>
+      <paragraph>
+       Since this measure evaluates the extent to which a model can accurately predict the ranking of the bids in outcome space and not their exact utilities, it best fits our purpose. Awareness regarding the rankings of the bids in the outcome space is sufficient to make bids on the Pareto Frontier{sup:11} (or at least as close to Pareto Frontier as possible). It is worth noting that in order to make conceding moves in further approaching the Pareto Frontier, knowing the exact utility values of bids is non-essential. Instead, we only need to know the best bid among a number of bids with equal utilities for the agent (i.e., Iso-curve bids). If the best bid is known, a move can happen in a negotiation round, which would get us as close to the Pareto Frontier as possible.
+      </paragraph>
+     </section>
+     <section label="B.2">
+      <section-title>
+       The measures applied in Experiment II
+      </section-title>
+      <paragraph>
+       In Experiment II (Section 5.1.2), the performance of this proposed model is evaluated by measuring the real performance of agents applying opponent models in real world experimental negotiation scenarios. For this purpose, the six performance measures [9], which are explained below are applied here:
+      </paragraph>
+      <paragraph>
+       Average utility[12], [17], [64], [65] of the agents in this designed setting is computed through Equation (B.1):{a mathematical formula} where N is the total number of sessions, {a mathematical formula}AvgUtilityA is the average utility of agent A in those N sessions, and {a mathematical formula}utilityAi is the utility of agent A in the ith session.
+      </paragraph>
+      <paragraph>
+       Average Nash distance of agreements[65], [66] specifies the average distance to the Nash point{sup:12}:{a mathematical formula} thus{a mathematical formula} where N is the total number of sessions, {a mathematical formula}AvgNashDistA,B is the average Nash distance of agreements for agents A and B in those N negotiation sessions, {a mathematical formula}NashDistA,Bi is the Nash distance of the agreement in the ith session, {a mathematical formula}NashUtilityAi is the utility of the Nash point for agent A in the ith session, and {a mathematical formula}NashUtilityBi is the utility of the Nash point for agent B in the ith session.
+      </paragraph>
+      <paragraph>
+       The Average Kalai distance of agreements[65], [66] specifies the average distance to the Kalai point{sup:13}:{a mathematical formula} so that,{a mathematical formula} where N is the total number of sessions, {a mathematical formula}AvgKalaiDistA,B is the average Kalai distance of agreements for agents A and B in those N negotiation sessions, {a mathematical formula}KalaiDistA,Bi is the Kalai distance of the agreement in the ith session, {a mathematical formula}KalaiUtilityAi is the utility of the Kalai point for agent A in the ith session, and {a mathematical formula}KalaiUtilityBi is the utility of the Kalai point for agent B in the ith session.
+      </paragraph>
+      <paragraph>
+       Average Pareto distance of agreements[17], [65], [66] specifies the average minimal distance of agreements from the Pareto Frontier:{a mathematical formula} here,{a mathematical formula} where N is the total number of sessions, {a mathematical formula}AvgParetoDistA,B is the average Pareto distance of agreements for agents A and B in the N negotiation sessions, {a mathematical formula}ParetoDistA,Bi is the Pareto distance of the agreement in the ith session, {a mathematical formula}ParetoUtilityAi is the utility of the Pareto point for agent A in the ith session, and {a mathematical formula}ParetoUtilityBi is the utility of the Pareto point for agent B in the ith session.
+      </paragraph>
+      <paragraph>
+       The Average time of agreement[1], [65] specifies the average amount of time to reach an agreement:{a mathematical formula} where N is the total number of sessions, AvgTime is the average time of agreements in those N sessions, and {a mathematical formula}TimeOfAgreementi is amount of time elapsed before reaching an agreement in the i-th session.
+      </paragraph>
+      <paragraph>
+       Average Percentage of Pareto Bids[36], [62], specifies the average percentage of bids offered in a negotiation, which reside on the Pareto Frontier as Equation (B.7):{a mathematical formula} where N is the total number of sessions, {a mathematical formula}TotalParetoBidsi and {a mathematical formula}TotalBidsOfferedi are the total number of Pareto bids and the total number of bids that the agent has offered in the ith session.
+      </paragraph>
+      <paragraph>
+       The Nash Distance, Kalai Distance, and Pareto Distance measures determine the social efficiency of the model; the lower these numbers, the more socially efficient the model in terms of these performance measures.
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Tabulated Experiment results II
+     </section-title>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

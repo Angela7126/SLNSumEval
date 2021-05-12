@@ -1,0 +1,1844 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure</title>
+<!--Generated on Tue Jun 10 19:17:08 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Sascha Rothe and Hinrich Schütze
+<br class="ltx_break"/>Center for Information &amp; Language Processing
+<br class="ltx_break"/>University of Munich
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">sascha@cis.lmu.de</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present <span class="ltx_text ltx_font_italic">CoSimRank</span>, a graph-theoretic similarity measure
+that is efficient because it can compute a single node
+similarity without having
+to compute the similarities of the entire graph. We present
+equivalent formalizations that
+show CoSimRank’s close relationship to Personalized PageRank
+and SimRank and also show
+how we can take advantage of fast matrix
+multiplication algorithms to compute CoSimRank.
+Another advantage of CoSimRank is that it can be flexibly
+extended from
+basic node-node similarity to several other
+graph-theoretic similarity measures.
+In an experimental evaluation
+on the tasks of synonym extraction and bilingual lexicon extraction, CoSimRank
+is faster or more
+accurate than previous approaches.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Graph-theoretic algorithms have been successfully applied to
+many problems in NLP
+<cite class="ltx_cite">[<a href="#bib.bib5" title="Graph-based natural language processing and information retrieval" class="ltx_ref">23</a>]</cite>. These algorithms are often
+based on PageRank <cite class="ltx_cite">[<a href="#bib.bib3" title="The anatomy of a large-scale hypertextual web search engine" class="ltx_ref">2</a>]</cite> and other centrality
+measures (e.g., <cite class="ltx_cite">[<a href="#bib.bib4" title="LexRank: graph-based lexical centrality as salience in text summarization" class="ltx_ref">7</a>]</cite>). An alternative for
+tasks involving similarity is SimRank <cite class="ltx_cite">[<a href="#bib.bib9" title="SimRank: a measure of structural-context similarity" class="ltx_ref">15</a>]</cite>.
+SimRank is based on the simple intuition that nodes in a graph
+should be considered as similar to the extent that
+their neighbors are similar. Unfortunately,
+SimRank has time complexity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="\mathcal{O}(n^{3})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> (where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the
+number of nodes in the graph) and therefore does not scale
+to the large graphs that are typical of NLP.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">This paper introduces CoSimRank,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Code available
+at
+<a href="code.google.com/p/cistern" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">code.google.com/p/cistern</span></a></span></span></span> a new graph-theoretic
+algorithm for computing node similarity that combines
+features of SimRank and PageRank. Our key observation is
+that to compute the similarity of two nodes, we need not
+consider all other nodes in the graph as SimRank does;
+instead, CoSimRank starts random walks from the two nodes
+and computes their similarity at each time step. This
+offers large savings in computation time if we only need the
+similarities of a small subset of all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="n^{2}" display="inline"><msup><mi>n</mi><mn>2</mn></msup></math> node
+similarities.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">These two cases – computing a few
+similarities and computing many similarities – correspond
+to two different representations we can compute CoSimRank
+on: a vector representation, which is fast for only a few
+similarities, and a matrix representation, which can take
+advantage of fast matrix multiplication algorithms.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">CoSimRank can be used to compute many
+variations of basic node similarity – including similarity
+for graphs with weighted and typed edges
+and similarity for sets of nodes. Thus, CoSimRank
+has the added advantage of being a flexible tool for
+different types of applications.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The extension of CoSimRank to <em class="ltx_emph">similarity across graphs</em>
+is important for the application of bilingual
+lexicon extraction: given a set of correspondences between
+nodes in two graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m2" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> (corresponding to two
+different languages), a pair of nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m3" class="ltx_Math" alttext="(a\in A,b\in B)" display="inline"><mrow><mo>(</mo><mrow><mrow><mi>a</mi><mo>∈</mo><mi>A</mi></mrow><mo>,</mo><mrow><mi>b</mi><mo>∈</mo><mi>B</mi></mrow></mrow><mo>)</mo></mrow></math> is
+a good candidate for a translation pair if their node
+similarity is high. In an experimental evaluation, we show
+that CoSimRank is more efficient and more accurate than both
+SimRank and PageRank-based algorithms.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This paper is structured as follows.
+Section <a href="#S2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> discusses related work.
+Section <a href="#S3" title="3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> introduces CoSimRank.
+In Section <a href="#S4" title="4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we compare
+CoSimRank and SimRank.
+By providing some useful
+extensions, we demonstrate the great flexibility of
+CoSimRank (Section <a href="#S5" title="5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).
+We perform an experimental evaluation of
+CoSimRank in Section <a href="#S6" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+Section <a href="#S7" title="7 Summary ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> summarizes the paper.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our work is unsupervised. We therefore do not review
+graph-based methods that make extensive use of supervised
+learning (e.g., <cite class="ltx_cite">de Melo and Weikum (<a href="#bib.bib1" title="UWN: a large multilingual lexical knowledge base" class="ltx_ref">2012</a>)</cite>).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Since the original version of <span class="ltx_text ltx_font_italic">SimRank</span>
+<cite class="ltx_cite">[<a href="#bib.bib9" title="SimRank: a measure of structural-context similarity" class="ltx_ref">15</a>]</cite> has complexity
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\mathcal{O}(n^{4})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>4</mn></msup><mo>)</mo></mrow></mrow></math>,
+many extensions have been proposed to speed up its
+calculation. A Monte Carlo algorithm, which
+is scalable to the whole web, was suggested by
+<cite class="ltx_cite">Fogaras and Rácz (<a href="#bib.bib13" title="Scaling link-based similarity search" class="ltx_ref">2005</a>)</cite>. However, in an evaluation of this
+algorithm we found that it does not give competitive results
+(see Section <a href="#S6" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>). A matrix representation of
+SimRank called <span class="ltx_text ltx_font_italic">SimFusion</span>
+<cite class="ltx_cite">[<a href="#bib.bib14" title="SimFusion: measuring similarity using unified relationship matrix" class="ltx_ref">33</a>]</cite> improves the computational
+complexity from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\mathcal{O}(n^{4})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>4</mn></msup><mo>)</mo></mrow></mrow></math> to
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="\mathcal{O}(n^{3})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math>.
+<cite class="ltx_cite">Lizorkin<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib15" title="Accuracy estimate and optimization techniques for simrank computation" class="ltx_ref">2010</a>)</cite> also reduce
+complexity to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="\mathcal{O}(n^{3})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> by selecting essential
+node pairs and using partial sums. They also give a useful
+overview of SimRank, SimFusion and the Monte Carlo methods
+of <cite class="ltx_cite">Fogaras and Rácz (<a href="#bib.bib13" title="Scaling link-based similarity search" class="ltx_ref">2005</a>)</cite>. A non-iterative computation for
+SimRank was introduced by <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib38" title="Fast computation of simrank for static and dynamic information networks" class="ltx_ref">2010</a>)</cite>. This is
+especially useful for dynamic graphs. However, all of these
+methods have to run SimRank on the entire graph
+and are not efficient enough for very large graphs.
+We are interested in
+applications that only need a fraction of all
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="\mathcal{O}(n^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math> pairwise similarities. The algorithm we
+propose below is an order of magnitude faster in such
+applications because it is based on a local formulation of
+the similarity measure.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>A reviewer suggests that
+CoSimRank is an efficient version
+of SimRank in a way analogous to SALSA’s
+<cite class="ltx_cite">[<a href="#bib.bib37" title="The stochastic approach for link-structure analysis (salsa) and the tkc effect" class="ltx_ref">19</a>]</cite>
+relationship to HITS <cite class="ltx_cite">[<a href="#bib.bib2" title="Authoritative sources in a hyperlinked environment" class="ltx_ref">16</a>]</cite> in that different aspects of
+similarity are decoupled.</span></span></span></p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Apart from SimRank, many other similarity measures have been proposed.
+<cite class="ltx_cite">Leicht<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Vertex similarity in networks" class="ltx_ref">2006</a>)</cite> introduce a
+similarity measure that is also based on the idea that nodes
+are similar when their neighbors are, but that is designed for
+bipartite
+graphs. However, most graphs in NLP
+are not bipartite and <cite class="ltx_cite">Jeh and Widom (<a href="#bib.bib9" title="SimRank: a measure of structural-context similarity" class="ltx_ref">2002</a>)</cite>
+also proposed a SimRank variant for bipartite graphs.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Another important similarity measure is cosine similarity of
+<span class="ltx_text ltx_font_italic">Personalized PageRank</span> (PPR) vectors. We will refer
+to this measure as <em class="ltx_emph">PPR+cos</em>. <cite class="ltx_cite">Hughes and Ramage (<a href="#bib.bib16" title="Lexical semantic relatedness with random graph walks" class="ltx_ref">2007</a>)</cite> find
+that PPR+cos has high correlation with human similarity
+judgments on WordNet-based graphs. <cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">2009</a>)</cite> use
+PPR+cos for WordNet and for cross-lingual studies. Like
+CoSimRank, PPR+cos is efficient when computing single node
+pair similarities; we therefore use it as one of our
+baselines below. This method is also used by
+<cite class="ltx_cite">Chang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib39" title="Getting creative with semantic similarity" class="ltx_ref">2013</a>)</cite> for semantic relatedness. They
+also experimented with Euclidean distance and
+KL-divergence. Interestingly, a simpler method performed
+best when comparing with human similarity judgments. In this
+method only the entries corresponding to the compared nodes
+are used for a similarity score. <cite class="ltx_cite">Rao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Affinity measures based on the graph Laplacian" class="ltx_ref">2008</a>)</cite>
+compared PPR+cos to other graph based similarity measures
+like shortest-path and bounded-length random walks. PPR+cos
+performed best except for a new similarity measure based on
+commute time. We do not compare against this new measure as
+it uses the graph Laplacian and so cannot be computed for a
+single node pair.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">One reason CoSimRank is efficient is that we need only
+compute a few iterations of the random walk.
+This is often true of this type of
+algorithm; cf. <cite class="ltx_cite">[<a href="#bib.bib7" title="A graph-theoretic model of lexical syntactic acquisition" class="ltx_ref">32</a>]</cite>.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">LexRank</em> <cite class="ltx_cite">[<a href="#bib.bib4" title="LexRank: graph-based lexical centrality as salience in text summarization" class="ltx_ref">7</a>]</cite> is
+similar to PPR+cos in that it combines
+PageRank and cosine; it
+initializes the sentence similarity matrix of a
+document using cosine and then applies PageRank to compute
+lexical centrality. Despite this superficial relatedness,
+applications like lexicon extraction that look for <em class="ltx_emph">similar
+entities</em> and applications that look for <em class="ltx_emph">central entities</em> are
+quite different.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">In addition to faster versions of SimRank, there has also
+been work on extensions of SimRank.
+<cite class="ltx_cite">Dorow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="A graph-theoretic algorithm for automatic extension of translation lexicons" class="ltx_ref">2009</a>)</cite> and <cite class="ltx_cite">Laws<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="A linguistically grounded graph model for bilingual lexicon extraction" class="ltx_ref">2010</a>)</cite> extend SimRank to
+edge weights, edge labels and multiple graphs.
+We use their Multi-Edge Extraction (MEE) algorithm
+as one of our baselines below.
+A similar graph of dependency structures was built by
+<cite class="ltx_cite">Minkov and Cohen (<a href="#bib.bib30" title="Learning graph walk based similarity measures for parsed text" class="ltx_ref">2008</a>)</cite>. They applied different similarity
+measures, e.g., cosine of dependency vectors or a new
+algorithm called <span class="ltx_text ltx_font_italic">path-constrained</span> graph walk, on
+synonym extraction <cite class="ltx_cite">[<a href="#bib.bib29" title="Graph based similarity measures for synonym extraction from parsed text" class="ltx_ref">26</a>]</cite>. We compare CoSimRank
+with their results in our experiments (see Section <a href="#S6" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">Some other applications of SimRank or other graph based
+similarity measures in NLP include work on document
+similarity <cite class="ltx_cite">[<a href="#bib.bib24" title="Using link-based content analysis to measure document similarity effectively" class="ltx_ref">21</a>]</cite>, the transfer of sentiment
+information between languages
+<cite class="ltx_cite">[<a href="#bib.bib25" title="Sentiment translation through multi-edge graphs" class="ltx_ref">31</a>]</cite> and named entity disambiguation
+<cite class="ltx_cite">[<a href="#bib.bib26" title="Structural semantic relatedness: a knowledge-based method to named entity disambiguation" class="ltx_ref">9</a>]</cite>. <cite class="ltx_cite">Hoang and Kan (<a href="#bib.bib6" title="Towards automated related work summarization" class="ltx_ref">2010</a>)</cite> use SimRank
+for related work
+summarization. <cite class="ltx_cite">Muthukrishnan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib28" title="Edge weight regularization over multiple graphs for similarity learning" class="ltx_ref">2010</a>)</cite> combine link
+based similarity and content
+based similarity for
+document clustering and classification.</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p">These approaches use at least one of cosine
+similarity, PageRank and SimRank. CoSimRank can
+either be interpreted as an efficient version of SimRank or
+as a version of Personalized PageRank for similarity
+measurement. The novelty is that we compute similarity for
+vectors that are induced using a new algorithm, so that the
+similarity measurement is much more efficient when
+an application
+only needs a
+fraction of all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p9.m1" class="ltx_Math" alttext="\mathcal{O}(n^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math> pairwise similarities.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>CoSimRank</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We first first give an intuitive introduction of CoSimRank
+as a Personalized PageRank (PPR) derivative. Later on, we will give a matrix formulation to compare CoSimRank with SimRank.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Personalized PageRank</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Haveliwala (<a href="#bib.bib21" title="Topic-sensitive pagerank" class="ltx_ref">2002</a>)</cite> introduced Personalized PageRank – or
+topic-sensitive PageRank – based on the idea that the
+uniform damping vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="p^{(0)}" display="inline"><msup><mi>p</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math> can be replaced by a
+personalized vector, which depends on node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>. We usually
+set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="p^{(0)}(i)=e_{i}" display="inline"><mrow><mrow><msup><mi>p</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>=</mo><msub><mi>e</mi><mi>i</mi></msub></mrow></math>, with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="e_{i}" display="inline"><msub><mi>e</mi><mi>i</mi></msub></math> being a vector of the
+standard basis, i.e., the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="i\mbox{${}^{\hbox{\scriptsize th}}$}" display="inline"><mrow><mi>i</mi><msup><mi/><mtext>th</mtext></msup></mrow></math> entry is 1 and all
+other entries are 0. The PPR vector of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is given by:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="p^{(k)}(i)=dAp^{(k-1)}(i)+(1-d)p^{(0)}(i)" display="block"><mrow><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>d</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>p</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>p</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is
+the stochastic matrix of the Markov chain, i.e.,
+the row normalized adjacency matrix.
+The damping
+factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="d\in(0,1)" display="inline"><mrow><mi>d</mi><mo>∈</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></math> ensures that the computation
+converges. The PPR vector after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> iterations is given by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="p^{(k)}" display="inline"><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">To visualize this formula, one can imagine a random surfer
+starting at node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and following one of the links with
+probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> or jumping back to the starting node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>
+with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="(1-d)" display="inline"><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>d</mi></mrow><mo>)</mo></mrow></math>.
+Entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> of
+the converged PPR vector
+represents the probability that the random surfer is on
+node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> after an unlimited number of steps.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">To simulate the behavior of SimRank we will simplify this equation and set the damping factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="d=1" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>1</mn></mrow></math>. We will re-add a damping factor later in the calculation.</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="p^{(k)}=Ap^{(k-1)}" display="block"><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mi>A</mi><mo>⁢</mo><msup><mi>p</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">Note that the personalization vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="p^{(0)}" display="inline"><msup><mi>p</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math> was eliminated, but is still present as the starting vector of the iteration.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Similarity of vectors</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="p(i)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> be the PPR vector of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>.
+The cosine of two vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> is computed by
+dividing the inner product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="\langle u,v\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><mo>⟩</mo></mrow></math> by the
+lengths of
+the vectors.
+The cosine of two PPR vectors can be used as
+a similarity measure for the corresponding nodes
+<cite class="ltx_cite">[<a href="#bib.bib16" title="Lexical semantic relatedness with random graph walks" class="ltx_ref">12</a>, <a href="#bib.bib20" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">1</a>]</cite>:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="s(i,j)=\frac{\langle p(i),p(j)\rangle}{|p(i)||p(j)|}" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mo>⟨</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo fence="true">|</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">This measure <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="s(i,j)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> looks at the probability that a random walker
+is on a certain edge after an <em class="ltx_emph">unlimited number of
+steps</em>. This is potentially problematic as the
+example in
+Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows. The PPR vectors of
+<span class="ltx_text ltx_font_italic">suit</span> and <span class="ltx_text ltx_font_italic">dress</span> will have some weight on
+<span class="ltx_text ltx_font_italic">tailor</span>, which is good. However, the PPR vector of
+<span class="ltx_text ltx_font_italic">law</span> will also have a non-zero weight for
+<span class="ltx_text ltx_font_italic">tailor</span>. So <span class="ltx_text ltx_font_italic">law</span> and <span class="ltx_text ltx_font_italic">dress</span> are
+similar because of the node <span class="ltx_text ltx_font_italic">tailor</span>. This
+is undesirable.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1131/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="269" height="71" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Graph motivating CoSimRank algorithm. Whereas PPR
+gives relatively high similarity to the pair (law,suit),
+CoSimRank assigns the pair similarity 0.</div>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">We can prevent this type of spurious
+similarity by <em class="ltx_emph">taking into account the path the random
+surfer took to get to a particular node</em>. We formalize
+this by defining CoSimRank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="s(i,j)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> as follows:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="s(i,j)=\sum_{k=0}^{\infty}c^{k}\langle p^{(k)}(i),p^{(k)}(j)\rangle" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mi mathvariant="normal">∞</mi></munderover><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><mrow><mo>⟨</mo><mrow><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="p^{(k)}(i)" display="inline"><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> is the PPR vector of node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> from
+Eq. <a href="#S3.E2" title="(2) ‣ 3.1 Personalized PageRank ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> iterations.
+We
+compare the PPR vectors at each time step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>.
+The sum of all similarities is the value of
+CoSimRank, i.e., the final similarity.
+We
+add a damping factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>, so that early meetings are
+more valuable than later meetings.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">To compute the similarity
+of two vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> we use the inner product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="\langle\cdot,\cdot\rangle" display="inline"><mrow><mo>⟨</mo><mo>⋅</mo><mo>,</mo><mo>⋅</mo><mo>⟩</mo></mrow></math> in Eq. <a href="#S3.E4" title="(4) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+for two reasons:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">This is similar to cosine similarity
+except that the 1-norm is used instead of the 2-norm. Since our
+vectors are probability vectors, we have</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\frac{\langle p(i),p(j)\rangle}{|p(i)||p(j)|}=\langle p(i),p(j)\rangle" display="block"><mrow><mfrac><mrow><mo>⟨</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow><mrow><mrow><mo fence="true">|</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo fence="true">|</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></mrow></mfrac><mo>=</mo><mrow><mo>⟨</mo><mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">for the 1-norm.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>This
+type of similarity measure has also been used and
+investigated by
+<cite class="ltx_cite">Ó Séaghdha and Copestake (<a href="#bib.bib33" title="Semantic classification with distributional kernels" class="ltx_ref">2008</a>)</cite>,
+<cite class="ltx_cite">Cha (<a href="#bib.bib32" title="Comprehensive survey on distance/similarity measures between probability density functions" class="ltx_ref">2007</a>)</cite>,
+<cite class="ltx_cite">Jebara<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib34" title="Probability product kernels" class="ltx_ref">2004</a>)</cite>
+(probability product kernel) and
+<cite class="ltx_cite">[<a href="#bib.bib35" title="Exploiting generative models in discriminative classifiers" class="ltx_ref">13</a>]</cite> (Fisher kernel) among others.</span></span></span></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Without expensive normalization, we can
+give a simple matrix
+formalization of CoSimRank and compute it efficiently using
+fast matrix multiplication
+algorithms.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">Later on,
+the following iterative
+computation of
+CoSimRank will prove useful:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="s^{(k)}(i,j)=c^{k}\langle p^{(k)}(i),p^{(k)}(j)\rangle+s^{(k-1)}(i,j)" display="block"><mrow><mrow><msup><mi>s</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><mrow><mo>⟨</mo><mrow><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow></mrow><mo>+</mo><mrow><msup><mi>s</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Matrix formulation</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">The matrix formulation of CoSimRank is:</p>
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\displaystyle S^{(0)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m2" class="ltx_Math" alttext="\displaystyle=E" display="inline"><mrow><mi/><mo>=</mo><mi>E</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\displaystyle S^{(1)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m2" class="ltx_Math" alttext="\displaystyle=cAA^{T}+S^{(0)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\displaystyle S^{(2)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m2" class="ltx_Math" alttext="\displaystyle=c^{2}A^{2}(A^{T})^{2}+S^{(1)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><msup><mi>c</mi><mn>2</mn></msup><mo>⁢</mo><msup><mi>A</mi><mn>2</mn></msup><mo>⁢</mo><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m2" class="ltx_Math" alttext="\displaystyle\ldots" display="inline"><mi mathvariant="normal">…</mi></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\displaystyle S^{(k)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m2" class="ltx_Math" alttext="\displaystyle=c^{k}A^{k}(A^{T})^{k}+S^{(k-1)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><msup><mi>A</mi><mi>k</mi></msup><mo>⁢</mo><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mi>k</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">We will see in Section <a href="#S5" title="5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> that this formulation
+is the basis for a very efficient version of CoSimRank.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Convergence properties</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">As the PPR vectors have only
+positive values, we can easily see in Eq. <a href="#S3.E4" title="(4) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+that the CoSimRank of one node pair is monotonically
+non-decreasing.
+For the dot product of two vectors,
+the Cauchy-Schwarz inequality gives the upper bound:</p>
+<table id="S3.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\langle u,v\rangle\leq\left\|u\right\|\left\|v\right\|" display="block"><mrow><mrow><mo>⟨</mo><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><mo>⟩</mo></mrow><mo>≤</mo><mrow><mrow><mo fence="true">∥</mo><mi>u</mi><mo fence="true">∥</mo></mrow><mo>⁢</mo><mrow><mo fence="true">∥</mo><mi>v</mi><mo fence="true">∥</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="\left\|x\right\|" display="inline"><mrow><mo fence="true">∥</mo><mi>x</mi><mo fence="true">∥</mo></mrow></math> is the norm of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. From
+Eq. <a href="#S3.E2" title="(2) ‣ 3.1 Personalized PageRank ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> we get <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m3" class="ltx_Math" alttext="\left\|p^{(k)}\right\|_{1}=1" display="inline"><mrow><msub><mrow><mo fence="true">∥</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo fence="true">∥</mo></mrow><mn>1</mn></msub><mo>=</mo><mn>1</mn></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m4" class="ltx_Math" alttext="\left\|\cdot\right\|_{1}" display="inline"><mrow><mo>∥</mo><mo>⋅</mo><msub><mo>∥</mo><mn>1</mn></msub></mrow></math> is the 1-norm. We also know
+from elementary functional analysis that the 1-norm is the
+biggest of all p-norms and so one has
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m5" class="ltx_Math" alttext="\left\|p^{(k)}\right\|\leq 1" display="inline"><mrow><mrow><mo fence="true">∥</mo><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo fence="true">∥</mo></mrow><mo>≤</mo><mn>1</mn></mrow></math>. It follows that CoSimRank
+grows more slowly than a geometric series and
+converges if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m6" class="ltx_Math" alttext="|c|&lt;1" display="inline"><mrow><mrow><mo fence="true">|</mo><mi>c</mi><mo fence="true">|</mo></mrow><mo>&lt;</mo><mn>1</mn></mrow></math>:</p>
+<table id="S3.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="s(i,j)\leq\sum_{k=0}^{\infty}c^{k}=\frac{1}{1-c}" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>≤</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mi mathvariant="normal">∞</mi></munderover><msup><mi>c</mi><mi>k</mi></msup></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>-</mo><mi>c</mi></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">If an upper bound of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> is desired for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="s(i,j)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> (instead of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="1/(1-c)" display="inline"><mrow><mn>1</mn><mo>/</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow></math>), then we can use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="s^{\prime}" display="inline"><msup><mi>s</mi><mo>′</mo></msup></math>:</p>
+<table id="S3.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex8.m1" class="ltx_Math" alttext="s^{\prime}(i,j)=(1-c)s(i,j)" display="block"><mrow><mrow><msup><mi>s</mi><mo>′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Comparison to SimRank</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The original SimRank equation can be written as follows <cite class="ltx_cite">[<a href="#bib.bib9" title="SimRank: a measure of structural-context similarity" class="ltx_ref">15</a>]</cite>:</p>
+<table id="S7.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m1" class="ltx_Math" alttext="\displaystyle r(i,j)=\begin{cases}1,&amp;\text{if $i=j$}\\&#10;\frac{c}{|N(i)||N(j)|}\sum\limits_{\substack{k\in N(i)\\&#10;l\in N(j)}}r(k,l),&amp;\text{else}\end{cases}" display="inline"><mrow><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mn>1</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mtext>if </mtext><mrow><mi>i</mi><mo>=</mo><mi>j</mi></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mstyle displaystyle="true"><mfrac><mi>c</mi><mrow><mrow><mo fence="true">|</mo><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo fence="true">|</mo><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><mi>k</mi><mo>∈</mo><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd><mrow><mi>l</mi><mo>∈</mo><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr></mtable></mstyle></munder></mstyle><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>,</mo><mi>l</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></mtd><mtd columnalign="left"><mtext>else</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="N(i)" display="inline"><mrow><mi>N</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> denotes the nodes connected to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>. SimRank is computed iteratively. With <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> being the normalized adjacency matrix we can write SimRank in matrix formulation:</p>
+<table id="S7.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m1" class="ltx_Math" alttext="\displaystyle R^{(0)}" display="inline"><msup><mi>R</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m2" class="ltx_Math" alttext="\displaystyle=E" display="inline"><mrow><mi/><mo>=</mo><mi>E</mi></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\displaystyle R^{(k)}" display="inline"><msup><mi>R</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m2" class="ltx_Math" alttext="\displaystyle=\max\{cAR^{(k-1)}A^{T},R^{(0)}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mo>{</mo><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>R</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>,</mo><msup><mi>R</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">where the maximum of two matrices refers to the element-wise
+maximum. We will now prove by induction that the matrix formulation of CoSimRank
+(Eq. <a href="#S3.E6" title="(6) ‣ 3.3 Matrix formulation ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>)
+is equivalent to:</p>
+<table id="S4.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8.m1" class="ltx_Math" alttext="S^{\prime(k)}=cAS^{\prime(k-1)}A^{T}+S^{(0)}" display="block"><mrow><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msup><mo>=</mo><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">and thus very similar to SimRank (Eq. <a href="#S4.E7" title="(7) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>).</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The base case <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="S^{(1)}=S^{\prime(1)}" display="inline"><mrow><msup><mi>S</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>=</mo><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow></msup></mrow></math> is trivial. Inductive step:</p>
+<table id="S7.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex11.m2" class="ltx_Math" alttext="\displaystyle S^{\prime(k)}\stackrel{(\ref{eqn:cosimrank_matrix2})}{=}cAS^{%&#10;\prime(k-1)}A^{T}+S^{(0)}" display="inline"><mrow><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msup><mover><mo movablelimits="false">=</mo><mrow><mo>(</mo><mtext href="#S4.E8"><a xmlns="http://www.w3.org/1999/xhtml" href="#S4.E8" title="(8) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a></mtext><mo>)</mo></mrow></mover><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex12.m2" class="ltx_Math" alttext="\displaystyle=cA(c^{k-1}A^{k-1}(A^{T})^{k-1}+S^{(k-2)})A^{T}+S^{(0)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>c</mi><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>2</mn></mrow><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex13.m2" class="ltx_Math" alttext="\displaystyle=c^{k}A^{k}(A^{T})^{k}+cAS^{(k-2)}A^{T}+S^{(0)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><msup><mi>A</mi><mi>k</mi></msup><mo>⁢</mo><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mi>k</mi></msup></mrow><mo>+</mo><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>2</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m2" class="ltx_Math" alttext="\displaystyle=c^{k}A^{k}(A^{T})^{k}+S^{(k-1)}\stackrel{(\ref{eqn:cosimrank_%&#10;matrix})}{=}S^{(k)}\tag*{\qed}" display="inline"><mrow><mo>=</mo><msup><mi>c</mi><mi>k</mi></msup><msup><mi>A</mi><mi>k</mi></msup><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mi>k</mi></msup><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mover><mo movablelimits="false">=</mo><mrow><mo>(</mo><mtext href="#S3.E6"><a xmlns="http://www.w3.org/1999/xhtml" href="#S3.E6" title="(6) ‣ 3.3 Matrix formulation ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a></mtext><mo>)</mo></mrow></mover><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">\qed</span></td></tr>
+</table>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Comparing Eqs. <a href="#S4.E7" title="(7) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> and
+<a href="#S4.E8" title="(8) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>, we see that SimRank and
+CoSimRank are very similar except that
+they initialize the similarities on the
+diagonal differently. Whereas SimRank sets each of these entries back to
+one at each iteration, CoSimRank adds one. Thus, when
+computing the two similarity measures iteratively, the
+diagonal element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="(i,i)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></math> will be set to 1 by both methods
+for those initial iterations for which this entry is 0 for
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="cAS^{(k-1)}A^{T}" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mi>A</mi><mi>T</mi></msup></mrow></math> (i.e., before applying either max or
+add). The methods diverge when the
+entry is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="\neq 0" display="inline"><mrow><mi/><mo>≠</mo><mn>0</mn></mrow></math> for the first time.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Complexity of computing all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="n^{2}" display="inline"><msup><mi>n</mi><mn mathvariant="normal">2</mn></msup></math> similarities.</span>
+The matrix formulas of both
+SimRank (Eq. <a href="#S4.E7" title="(7) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>)
+and CoSimRank (Eq. <a href="#S4.E8" title="(8) ‣ 4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>)
+have time complexity
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="\mathcal{O}(n^{3})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> or
+– if we want to take the higher efficiency
+of computation for sparse graphs into account –
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m3" class="ltx_Math" alttext="\mathcal{O}(dn^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><msup><mi>n</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></math> where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the number
+of nodes and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m5" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> the average degree.
+Space complexity is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m6" class="ltx_Math" alttext="\mathcal{O}(n^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math> for both algorithms.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Complexity of computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m1" class="ltx_Math" alttext="k^{2}\ll n^{2}" display="inline"><mrow><msup><mi>k</mi><mn mathvariant="normal">2</mn></msup><mo mathvariant="normal">≪</mo><msup><mi>n</mi><mn mathvariant="normal">2</mn></msup></mrow></math> similarities.</span>
+In most cases, we only want to compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m2" class="ltx_Math" alttext="k^{2}" display="inline"><msup><mi>k</mi><mn>2</mn></msup></math> similarities
+for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> nodes. For CoSimRank, we compute the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> PPR
+vectors in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m5" class="ltx_Math" alttext="\mathcal{O}(kdn)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math> (Eq. <a href="#S3.E2" title="(2) ‣ 3.1 Personalized PageRank ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) and
+compute the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m6" class="ltx_Math" alttext="k^{2}" display="inline"><msup><mi>k</mi><mn>2</mn></msup></math> similarities in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m7" class="ltx_Math" alttext="\mathcal{O}(k^{2}n)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>k</mi><mn>2</mn></msup><mo>⁢</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math>
+(Eq. <a href="#S3.E5" title="(5) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).
+If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m8" class="ltx_Math" alttext="d&lt;k" display="inline"><mrow><mi>d</mi><mo>&lt;</mo><mi>k</mi></mrow></math>, then the time
+complexity of CoSimRank is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m9" class="ltx_Math" alttext="\mathcal{O}(k^{2}n)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>k</mi><mn>2</mn></msup><mo>⁢</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math>. If we only
+compute a single similarity, then
+the complexity is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m10" class="ltx_Math" alttext="\mathcal{O}(dn)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math>. In contrast, the
+complexity of SimRank is the same as in the all-similarities
+case: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m11" class="ltx_Math" alttext="\mathcal{O}(dn^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><msup><mi>n</mi><mn>2</mn></msup></mrow><mo>)</mo></mrow></mrow></math>. It is not obvious how to design
+a lower-complexity version of SimRank for this case. Thus,
+we have reduced SimRank’s cubic time complexity to a
+quadratic time complexity for CoSimRank or – assuming that the
+average degree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m12" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> does not depend on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m13" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> –
+SimRank’s quadratic time complexity to linear time
+complexity for the case of computing few similarities.</p>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">Space complexity for computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="k^{2}" display="inline"><msup><mi>k</mi><mn>2</mn></msup></math> similarities is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="\mathcal{O}(kn)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>⁢</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math> since we need only store <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> vectors, not
+the complete similarity matrix.
+This complexity can be exploited even for the all
+similarities application: If the
+matrix formulation cannot be used because the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m4" class="ltx_Math" alttext="\mathcal{O}(n^{2})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></math>
+similarity matrix is too big for available memory, then we
+can compute all similarities in batches – and if desired in
+parallel –
+whose size is chosen such that the vectors of each batch still fit in memory.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">In summary, CoSimRank and SimRank have similar space and
+time complexities for computing all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m1" class="ltx_Math" alttext="n^{2}" display="inline"><msup><mi>n</mi><mn>2</mn></msup></math> similarities.
+For the more typical case that we only want to compute a fraction of all
+similarities, we have recast the global SimRank formulation as a local
+CoSimRank formulation. As a result, time and space complexities
+are much improved. In Section <a href="#S6" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, we
+will show that this is also true in practice.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Extensions</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We will show now that the basic CoSimRank
+algorithm can be extended in a number of ways and is thus a
+flexible tool for different NLP applications.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Weighted edges</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The use of weighted edges was first
+proposed in
+the PageRank patent. It is straightforward and easy to implement by
+replacing the row normalized adjacency matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> with an
+arbitrary stochastic matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math>. We can use this edge
+weighted PageRank for CoSimRank.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>CoSimRank across graphs</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We often want to compute the
+similarity of nodes in <em class="ltx_emph">two different graphs</em> with a
+known node-node correspondence; this is the scenario we are
+faced with in the lexicon extraction task (see Section <a href="#S6" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).
+A variant of SimRank for this task was
+presented by <cite class="ltx_cite">Dorow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="A graph-theoretic algorithm for automatic extension of translation lexicons" class="ltx_ref">2009</a>)</cite>. We will now present an
+equivalent method for CoSimRank. We denote the number of
+nodes in the two graphs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="|U|" display="inline"><mrow><mo fence="true">|</mo><mi>U</mi><mo fence="true">|</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="|V|" display="inline"><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></math>, respectively. We
+compute PPR
+vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m5" class="ltx_Math" alttext="p\in\mathbb{R}^{|U|}" display="inline"><mrow><mi>p</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mo fence="true">|</mo><mi>U</mi><mo fence="true">|</mo></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m6" class="ltx_Math" alttext="q\in\mathbb{R}^{|V|}" display="inline"><mrow><mi>q</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></msup></mrow></math> for each graph. Let
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m7" class="ltx_Math" alttext="S^{(0)}\in\mathbb{R}^{|U|\times|V|}" display="inline"><mrow><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo fence="true">|</mo><mi>U</mi><mo fence="true">|</mo></mrow><mo>×</mo><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></mrow></msup></mrow></math> be the known
+node-node correspondences. The analog of CoSimRank (Eq. <a href="#S3.E4" title="(4) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) for two graphs is then:</p>
+<table id="S5.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E9.m1" class="ltx_Math" alttext="s(i,j)=\sum_{k=0}^{\infty}c^{k}\sum_{(u,v)\in S^{(0)}}p^{(k)}_{u}(i)q^{(k)}_{v%&#10;}(j)" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mi mathvariant="normal">∞</mi></munderover><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>u</mi><mo>,</mo><mi>v</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></munder><mrow><msubsup><mi>p</mi><mi>u</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>q</mi><mi>v</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>j</mi><mo>)</mo></mrow></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">The matrix formulation (cf. Eq. <a href="#S3.E6" title="(6) ‣ 3.3 Matrix formulation ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>) is:</p>
+<table id="S5.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E10.m1" class="ltx_Math" alttext="S^{(k)}=c^{k}A^{k}S^{(0)}(B^{T})^{k}+S^{(k-1)}" display="block"><mrow><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><msup><mi>A</mi><mi>k</mi></msup><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup><mo>⁢</mo><msup><mrow><mo>(</mo><msup><mi>B</mi><mi>T</mi></msup><mo>)</mo></mrow><mi>k</mi></msup></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> are row-normalized adjacency matrices. We
+can interpret <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="S^{(0)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math> as a change of basis. A similar
+approach for word embeddings was published by
+<cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib36" title="Exploiting similarities among languages for machine translation" class="ltx_ref">2013</a>)</cite>. They call <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="S^{(0)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math> the translation matrix.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Typed edges</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">To be able to directly compare to prior work in our experiments,
+we also present a method to integrate a set of typed edges
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> in the CoSimRank calculation. For this we will compute a similarity
+matrix for each edge type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> and merge them into one matrix for
+the next iteration:</p>
+<table id="S5.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E11.m1" class="ltx_Math" alttext="S^{(k)}=\left(\frac{c}{|\mathcal{T}|}\sum_{\tau\in\mathcal{T}}A_{\tau}S^{(k-1)%&#10;}B_{\tau}^{T}\right)+S^{(0)}" display="block"><mrow><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi>c</mi><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>τ</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></munder><mrow><msub><mi>A</mi><mi>τ</mi></msub><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><msubsup><mi>B</mi><mi>τ</mi><mi>T</mi></msubsup></mrow></mrow></mrow><mo>)</mo></mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">This formula is identical to the random surfer
+model where two surfers only meet iff they are on the same
+node and used the same edge type to get there. A more strict
+claim would be to use the same edge type at any time of
+their journey:</p>
+<table id="S7.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.Ex15" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex15.m1" class="ltx_Math" alttext="\displaystyle S^{(k)}=" display="inline"><mrow><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex15.m2" class="ltx_Math" alttext="\displaystyle\frac{c^{k}}{|\mathcal{T}|^{k}}\sum\limits_{\tau\in\mathcal{T}^{k%&#10;}}\left(\prod\limits_{i=1}^{k}A_{\tau_{i}}\right)S^{(0)}\left(\prod\limits_{i=%&#10;0}^{k-1}B_{\tau_{k-i}}^{T}\right)" display="inline"><mrow><mstyle displaystyle="true"><mfrac><msup><mi>c</mi><mi>k</mi></msup><msup><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi><mo fence="true">|</mo></mrow><mi>k</mi></msup></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>τ</mi><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>k</mi></msup></mrow></munder></mstyle><mrow><mrow><mo>(</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>k</mi></munderover></mstyle><msub><mi>A</mi><msub><mi>τ</mi><mi>i</mi></msub></msub></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></munderover></mstyle><msubsup><mi>B</mi><msub><mi>τ</mi><mrow><mi>k</mi><mo>-</mo><mi>i</mi></mrow></msub><mi>T</mi></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S5.E12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E12.m2" class="ltx_Math" alttext="\displaystyle+S^{(k-1)}" display="inline"><mrow><mo>+</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+<p class="ltx_p">We will not use Eq. <a href="#S5.Ex15" title="5.3 Typed edges ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a> due
+to its space complexity.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Similarity of sets of nodes</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">CoSimRank can also be used to compute the similarity
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m1" class="ltx_Math" alttext="s(V,W)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>W</mi></mrow><mo>)</mo></mrow></mrow></math> of two
+sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>
+of nodes, e.g., short text snippets. We are not including this method in our experiments, but we will give the equation here, as traditional document
+similarity measures (e.g., cosine similarity)
+perform poorly on this task although there also are known
+alternatives with good results <cite class="ltx_cite">[<a href="#bib.bib22" title="A web-based kernel function for measuring the similarity of short text snippets" class="ltx_ref">30</a>]</cite>.
+For a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, the initial PPR vector is given by:</p>
+<table id="S7.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.Ex16" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex16.m1" class="ltx_Math" alttext="\displaystyle p^{(0)}_{i}(V)=\begin{cases}\frac{1}{\left|V\right|},&amp;\text{if }%&#10;i\in V\\&#10;0,&amp;\text{else}\end{cases}" display="inline"><mrow><mrow><msubsup><mi>p</mi><mi>i</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>V</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></mfrac></mstyle><mo>,</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>i</mi></mrow><mo>∈</mo><mi>V</mi></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mn>0</mn><mo>,</mo></mrow></mtd><mtd columnalign="left"><mtext>else</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">We then reuse Eq. <a href="#S3.E4" title="(4) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> to compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m5" class="ltx_Math" alttext="s(V,W)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>W</mi></mrow><mo>)</mo></mrow></mrow></math>:</p>
+<table id="S5.Ex17" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex17.m1" class="ltx_Math" alttext="s(V,W)=\sum_{k=0}^{\infty}c^{k}\langle p^{(k)}(V),p^{(k)}(W)\rangle" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>W</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mi mathvariant="normal">∞</mi></munderover><mrow><msup><mi>c</mi><mi>k</mi></msup><mo>⁢</mo><mrow><mo>⟨</mo><mrow><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>V</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msup><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mi>W</mi><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">In summary, modifications proposed for SimRank (weighted and
+typed edges, similarity across graphs) as well as
+modifications proposed for PageRank (sets
+of nodes) can also be applied to CoSimRank. This makes CoSimRank a very flexible similarity
+measure.</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">We will test the first three extensions experimentally in
+the next section and leave similarity of node sets for
+future work.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We evaluate CoSimRank for the tasks
+of synonym extraction and bilingual lexicon extraction. We
+use the basic version of CoSimRank (Eq. <a href="#S3.E4" title="(4) ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>)
+for synonym extraction and the two-graph version (Eq. <a href="#S5.E9" title="(9) ‣ 5.2 CoSimRank across graphs ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>) for
+lexicon extraction, both with weighted edges. Our motivation for this application is
+that two words that are synonyms of each other should have
+similar lexical neighbors and that two words that are
+translations of each other should have neighbors that
+correspond to each other; thus, in each case the nodes
+should be similar in the graph-theoretic sense and CoSimRank
+should be able to identify this similarity.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">We use the English and German graphs published by
+<cite class="ltx_cite">Laws<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="A linguistically grounded graph model for bilingual lexicon extraction" class="ltx_ref">2010</a>)</cite>,
+including edge weighting and normalization.
+Nodes are nouns, adjectives and verbs
+occurring in Wikipedia. There are three types of edges,
+corresponding to three types of syntactic configurations
+extracted from the parsed Wikipedias:
+adjective-noun, verb-object and noun-noun coordination.
+Table <a href="#S6.T1" title="Table 1 ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> gives
+examples
+and number of nodes and
+edges.</p>
+</div>
+<div id="S6.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">Edge types</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt">relation</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">entities</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">description</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">example</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">amod</td>
+<td class="ltx_td ltx_align_left ltx_border_t">a, v</td>
+<td class="ltx_td ltx_align_left ltx_border_t">adjective-noun</td>
+<td class="ltx_td ltx_align_left ltx_border_t">a fast car</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">dobj</td>
+<td class="ltx_td ltx_align_left">v, n</td>
+<td class="ltx_td ltx_align_left">verb-object</td>
+<td class="ltx_td ltx_align_left">drive a car</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb">ncrd</td>
+<td class="ltx_td ltx_align_left ltx_border_bb">n, n</td>
+<td class="ltx_td ltx_align_left ltx_border_bb">noun-noun</td>
+<td class="ltx_td ltx_align_left ltx_border_bb">cars and busses</td></tr>
+</table></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">Graph statistics</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">
+<table class="ltx_tabular ltx_align_middle" style="width:433.62pt;">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt">nodes</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt"/>
+<td class="ltx_td ltx_align_right ltx_border_tt">nouns</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">adjectives</td>
+<td class="ltx_td ltx_align_right ltx_border_tt">verbs</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t"/>
+<td class="ltx_td ltx_align_justify ltx_border_t">de</td>
+<td class="ltx_td ltx_align_right ltx_border_t">34,544</td>
+<td class="ltx_td ltx_align_right ltx_border_t">10,067</td>
+<td class="ltx_td ltx_align_right ltx_border_t">2,828</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify"/>
+<td class="ltx_td ltx_align_justify">en</td>
+<td class="ltx_td ltx_align_right">22,258</td>
+<td class="ltx_td ltx_align_right">12,878</td>
+<td class="ltx_td ltx_align_right">4,866</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t">edges</td>
+<td class="ltx_td ltx_align_justify ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t">ncrd</td>
+<td class="ltx_td ltx_align_right ltx_border_t">amod</td>
+<td class="ltx_td ltx_align_right ltx_border_t">dobj</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t"/>
+<td class="ltx_td ltx_align_justify ltx_border_t">de</td>
+<td class="ltx_td ltx_align_right ltx_border_t">65,299</td>
+<td class="ltx_td ltx_align_right ltx_border_t">417,151</td>
+<td class="ltx_td ltx_align_right ltx_border_t">143,905</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb"/>
+<td class="ltx_td ltx_align_justify ltx_border_bb">en</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">288,878</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">686,069</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">510,351</td></tr>
+</table></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Edge types (above) and
+number of nodes and edges (below)</div>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Baselines</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">We propose CoSimRank as an efficient algorithm for computing
+the similarity of nodes in a graph. Consequently, we compare
+against the two main methods
+for this task in NLP: SimRank and extensions of PageRank.</p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">We also compare against
+the MEE (Multi-Edge Extraction) variant of SimRank
+<cite class="ltx_cite">[<a href="#bib.bib12" title="A graph-theoretic algorithm for automatic extension of translation lexicons" class="ltx_ref">6</a>]</cite>, which handles labeled edges more
+efficiently than SimRank:</p>
+<table id="S7.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S6.Ex18" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.Ex18.m1" class="ltx_Math" alttext="\displaystyle S^{\prime(k)}" display="inline"><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.Ex18.m2" class="ltx_Math" alttext="\displaystyle=\frac{c}{|\mathcal{T}|}\sum\limits_{\tau\in\mathcal{T}}A_{\tau}S%&#10;^{(k-1)}B_{\tau}^{T}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mi>c</mi><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi><mo fence="true">|</mo></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>τ</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></munder></mstyle><mrow><msub><mi>A</mi><mi>τ</mi></msub><mo>⁢</mo><msup><mi>S</mi><mrow><mo>(</mo><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup><mo>⁢</mo><msubsup><mi>B</mi><mi>τ</mi><mi>T</mi></msubsup></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S6.Ex19" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.Ex19.m1" class="ltx_Math" alttext="\displaystyle S^{(k)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.Ex19.m2" class="ltx_Math" alttext="\displaystyle=\max\{S^{\prime(k)},S^{(0)}\}" display="inline"><mrow><mi/><mo>=</mo><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mo>{</mo><mrow><msup><mi>S</mi><mrow><mi mathvariant="normal">′</mi><mo>⁣</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></msup><mo>,</mo><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m1" class="ltx_Math" alttext="A_{\tau}" display="inline"><msub><mi>A</mi><mi>τ</mi></msub></math> is the row-normalized adjacency matrix for
+edge type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p2.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> (see edge types in Table <a href="#S6.T1" title="Table 1 ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">Apart from SimRank, extensions of PageRank are the
+main methods for computing the similarity of nodes in graphs
+in NLP (e.g., <cite class="ltx_cite">Hughes and Ramage (<a href="#bib.bib16" title="Lexical semantic relatedness with random graph walks" class="ltx_ref">2007</a>)</cite>,
+<cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">2009</a>)</cite> and other papers discussed in related
+work). Generally, these methods compute the Personalized
+PageRank for each node (see Eq. <a href="#S3.E1" title="(1) ‣ 3.1 Personalized PageRank ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). When the
+computation has converged, the similarity of two nodes is
+given by the cosine similarity of the Personalized PageRank
+vectors. We implemented this method for our experiments and
+call it PPR+cos.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Synonym Extraction</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">We use <em class="ltx_emph">TS68</em>, a test set of 68 synonym pairs published
+by <cite class="ltx_cite">Minkov and Cohen (<a href="#bib.bib29" title="Graph based similarity measures for synonym extraction from parsed text" class="ltx_ref">2012</a>)</cite> for evaluation.
+This gold standard lists a single word as the correct
+synonym even if there are several equally acceptable near-synonyms
+(see Table <a href="#S6.T3" title="Table 3 ‣ 6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> for examples). We call this the
+one-synonym evaluation.
+Three native English speakers were asked to mark synonyms, that were proposed by a baseline or by
+CoSimRank, i.e. ranked in the top 10. If all three of them
+agreed on one word as being a synonym in at least one
+meaning, we added this as a correct answer to the test
+set. We call this the “extended” evaluation (see Table <a href="#S6.T2" title="Table 2 ‣ 6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">Synonym extraction is run on the English
+graph. To calculate PPR+cos, we computed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="20" display="inline"><mn>20</mn></math> iterations
+with a decay factor of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m2" class="ltx_Math" alttext="0.8" display="inline"><mn>0.8</mn></math> and used the cosine similarity
+with the 2-norm in the denominator to compare two
+vectors. For the other three methods, we also used a decay
+factor of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m3" class="ltx_Math" alttext="0.8" display="inline"><mn>0.8</mn></math> and computed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m4" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math> iterations. Recall that
+CoSimRank uses the simple inner product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m5" class="ltx_Math" alttext="\langle\cdot,\cdot\rangle" display="inline"><mrow><mo>⟨</mo><mo>⋅</mo><mo>,</mo><mo>⋅</mo><mo>⟩</mo></mrow></math> to compare vectors.</p>
+</div>
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_tt">P@1</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">P@10</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">MRR</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="4">one-synonym</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t">PPR+cos</th>
+<td class="ltx_td ltx_align_left ltx_border_t">20.6%</td>
+<td class="ltx_td ltx_align_left ltx_border_t">52.9%</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.32</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">SimRank</th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">25.0</span>%</td>
+<td class="ltx_td ltx_align_left">61.8%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">0.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">CoSimRank</th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">25.0</span>%</td>
+<td class="ltx_td ltx_align_left">61.8%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">0.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">Typed CoSimRank</th>
+<td class="ltx_td ltx_align_left">23.5%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">63.2</span>%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">0.37</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="4">extended</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t">PPR+cos</th>
+<td class="ltx_td ltx_align_left ltx_border_t">32.6%</td>
+<td class="ltx_td ltx_align_left ltx_border_t">73.5%</td>
+<td class="ltx_td ltx_align_left ltx_border_t">0.48</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">SimRank</th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">45.6</span>%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">83.8</span>%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">0.59</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">CoSimRank</th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">45.6</span>%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">83.8</span>%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">0.59</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_bb">Typed CoSimRank</th>
+<td class="ltx_td ltx_align_left ltx_border_bb">44.1%</td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold">83.8</span>%</td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold">0.59</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results for synonym extraction on TS68. Best result
+in each column in bold.</div>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">Our evaluation measures are proportion of words correctly
+translated by word
+in the top position (P@1),
+proportion of words correctly
+translated by a word
+in one of the top 10 positions
+(P@10) and Mean
+Reciprocal Rank (MRR). CoSimRank’s MRR scores of 0.37
+(one-synonym) and 0.59 (extended) are the same or better
+than all baselines (see Table <a href="#S6.T2" title="Table 2 ‣ 6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). CoSimRank and SimRank
+have the same P@1 and P@10 accuracy (although they
+differed on some decisions). CoSimRank is better
+than PPR+cos on both evaluations, but as this test set is
+very small, the results are not
+significant. Table <a href="#S6.T3" title="Table 3 ‣ 6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows a sample of synonyms
+proposed by CoSimRank.</p>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Minkov and Cohen (<a href="#bib.bib29" title="Graph based similarity measures for synonym extraction from parsed text" class="ltx_ref">2012</a>)</cite> tested
+cosine and random-walk measures on grammatical relationships
+(similar to our setup) as well as on cooccurrence
+statistics. The MRR scores for these methods
+range from 0.29 to 0.59.
+(MRR is equivalent to MAP as reported by <cite class="ltx_cite">Minkov and Cohen (<a href="#bib.bib29" title="Graph based similarity measures for synonym extraction from parsed text" class="ltx_ref">2012</a>)</cite> when there is only one correct
+answer.) Their best number (0.59) is better than our
+one-synonym result; however,
+they performed manual postprocessing of results –
+e.g., discarding words
+that are morphologically or semantically related to other
+words in the list – so our fully automatic results cannot be directly
+compared.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt">keyword</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt">expected</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt">extracted</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t">movie</td>
+<td class="ltx_td ltx_align_justify ltx_border_t">film</td>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_bold">film</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">modern</td>
+<td class="ltx_td ltx_align_justify">contemporary</td>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_bold">contemporary</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">demonstrate</td>
+<td class="ltx_td ltx_align_justify">protest</td>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_bold">show</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">attractive</td>
+<td class="ltx_td ltx_align_justify">appealing</td>
+<td class="ltx_td ltx_align_justify">beautiful</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">economic</td>
+<td class="ltx_td ltx_align_justify">profitable</td>
+<td class="ltx_td ltx_align_justify">financial</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb">close</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb">shut</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb">open</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Examples for extracted synonyms. Correct synonyms according to extended evaluation in bold.</div>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Lexicon Extraction</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">We evaluate lexicon extraction on TS1000, a test set of 1000
+items, <cite class="ltx_cite">[<a href="#bib.bib11" title="A linguistically grounded graph model for bilingual lexicon extraction" class="ltx_ref">17</a>]</cite> each consisting of an English word
+and its German translations. For lexicon extraction, we use the same parameters as
+in the synonym extraction task for all four similarity
+measures. We use a seed dictionary of 12,630 word pairs to
+establish node-node correspondences between the two graphs.
+We remove a search keyword from the seed dictionary before
+calculating similarities for it, something that the
+architecture of CoSimRank makes easy because we can use a
+different seed dictionary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p1.m1" class="ltx_Math" alttext="S^{(0)}" display="inline"><msup><mi>S</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msup></math> for every keyword.</p>
+</div>
+<div id="S6.SS3.p2" class="ltx_para">
+<p class="ltx_p">Both CoSimRank methods outperform SimRank
+significantly (see Table <a href="#S6.T4" title="Table 4 ‣ 6.3 Lexicon Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). The difference between CoSimRank
+with and without typed edges is not
+significant. (This observation was also made
+for SimRank on a smaller graph and test set
+<cite class="ltx_cite">[<a href="#bib.bib11" title="A linguistically grounded graph model for bilingual lexicon extraction" class="ltx_ref">17</a>]</cite>.)</p>
+</div>
+<div id="S6.SS3.p3" class="ltx_para">
+<p class="ltx_p">PPR+cos’s performance at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p3.m1" class="ltx_Math" alttext="14.8\%" display="inline"><mrow><mn>14.8</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> correct
+translations is much lower than SimRank and CoSimRank. The disadvantage of this similarity measure is
+significant and even more visible on
+bilingual lexicon extraction than on synonym extraction
+(see Table <a href="#S6.T2" title="Table 2 ‣ 6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). The reason might be that we are not
+comparing the whole PPR vector anymore, but only entries which
+occur in the seed dictionary (see
+Eq. <a href="#S5.E9" title="(9) ‣ 5.2 CoSimRank across graphs ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>). As the seed dictionary contains
+12,630 word pairs, this means that only
+every fourth entry of the PPR vector (the German graph has 47,439
+nodes) is used for similarity calculation. This is also true
+for CoSimRank, but it seems that CoSimRank is more stable
+because we compare more than one vector.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><span class="ltx_text" style="color:#FFFFFF;">significantly worse than CoSimRank (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p3.m2" class="ltx_Math" alttext="\alpha=0.05" display="inline"><mrow><mi mathcolor="#FFFFFF">α</mi><mo mathcolor="#FFFFFF">=</mo><mn mathcolor="#FFFFFF">0.05</mn></mrow></math><span class="ltx_text" style="color:#FFFFFF;">, one-tailed Z-Test)</span></span></span></span></p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_tt">P@1</td>
+<td class="ltx_td ltx_align_left ltx_border_tt">P@10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t">PPR+cos</th>
+<td class="ltx_td ltx_align_left ltx_border_t">14.8%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t">45.7%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m2" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">SimRank MEE</th>
+<td class="ltx_td ltx_align_left">48.0%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math></td>
+<td class="ltx_td ltx_align_left">76.0%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify">CoSimRank</th>
+<td class="ltx_td ltx_align_left">61.1%</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">84.0</span>%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_bb">Typed CoSimRank</th>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold">61.4</span>%</td>
+<td class="ltx_td ltx_align_left ltx_border_bb">83.9%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Results for bilingual lexicon extraction (TS1000 EN
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m6" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> DE).
+Best result
+in each column in bold.</div>
+</div>
+<div id="S6.SS3.p4" class="ltx_para">
+<p class="ltx_p">We also experimented with the method of
+<cite class="ltx_cite">Fogaras and Rácz (<a href="#bib.bib13" title="Scaling link-based similarity search" class="ltx_ref">2005</a>)</cite>. We tried a number of different ways
+of modifying it for weighted graphs: (i) running the random
+walks with the weighted adjacency matrix as Markov matrix,
+(ii) storing the weight (product of each edge weight) of a
+random walk and using it as a factor if two walks meet and
+(iii) a combination of both. We
+needed about 10,000 random walks in all three
+conditions. As a result, the computational time
+was
+approximately 30 minutes per test word, so this method
+is even slower than SimRank for our application. The
+accuracies P@1 and P@10 were worse in all experiments than
+those of CoSimRank.</p>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Run time performance</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6.4 Run time performance ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> compares the run time
+performance of CoSimRank with the baselines.
+We ran all experiments on a 64-bit
+Linux machine with 64 Intel Xenon X7560 2.27Ghz CPUs and
+1TB RAM. The calculated time is the sum of the time spent
+in user mode and the time spent in kernel mode. The actual
+wall clock time was significantly lower as we used up to
+64 CPUs.</p>
+</div>
+<div id="S6.SS4.p2" class="ltx_para">
+<p class="ltx_p">Compared to SimRank, CoSimRank is more than 40 times faster
+on synonym extraction and six times faster on lexicon
+extraction. SimRank is at a disadvantage because it
+computes all similarities in the graph regardless of the
+size of the test set; it is particularly inefficient on
+synonym extraction because the English graph contains a
+large number of edges (see Table <a href="#S6.T1" title="Table 1 ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S6.SS4.p3" class="ltx_para">
+<p class="ltx_p">Compared to PPR+cos, CoSimRank is roughly four times faster on synonym extraction and
+has comparable performance on lexicon extraction.
+We compute 20 iterations of PPR+cos to reach convergence and
+then calculate a single cosine similarity. For CoSimRank,
+we need only compute five iterations to reach convergence,
+but we have to compute a vector similarity in each
+iteration. The counteracting effects of fewer
+iterations and more vector similarity computations can give
+either CoSimRank or PPR+cos an advantage, as is the case for
+synonym extraction and lexicon extraction, respectively.</p>
+</div>
+<div id="S6.SS4.p4" class="ltx_para">
+<p class="ltx_p">CoSimRank should generally be three times faster than typed CoSimRank
+since the typed version has to repeat the
+computation for each of the three types.
+This effect is only visible on the larger test set (lexicon extraction) because
+the general computation overhead is about the same on a
+smaller test set.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_tt" colspan="2">synonym extraction</th>
+<td class="ltx_td ltx_align_right ltx_border_tt">lexicon extraction</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right" colspan="2">(68 word pairs)</th>
+<td class="ltx_td ltx_align_right">(1000 word pairs)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">PPR+cos</th>
+<td class="ltx_td ltx_align_right ltx_border_t">2,228</td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">2,195</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">SimRank</th>
+<td class="ltx_td ltx_align_right">23,423</td>
+<td class="ltx_td ltx_align_right">14,418</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">CoSimRank</th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">524</span></td>
+<td class="ltx_td ltx_align_right">2,342</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">Typed CoSimRank</th>
+<td class="ltx_td ltx_align_right ltx_border_bb">615</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">6,108</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Execution times in minutes for CoSimRank and the baselines.
+Best result
+in each column in bold.</div>
+</div>
+</div>
+<div id="S6.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.5 </span>Comparison with WINTIAN</h3>
+
+<div id="S6.SS5.p1" class="ltx_para">
+<p class="ltx_p">Here we address inducing a
+bilingual lexicon from a seed set based on grammatical
+relations found by a parser. An alternative approach is to
+induce a bilingual lexicon from Wikipedia’s interwiki
+links <cite class="ltx_cite">[<a href="#bib.bib10" title="Identifying word translations from comparable documents without a seed lexicon." class="ltx_ref">29</a>]</cite>. These two approaches have
+different strengths and weaknesses; e.g.,
+the interwiki-link-based approach does not require a seed set,
+but it can only be applied to comparable corpora
+that consist of corresponding – although not necessarily
+“parallel” – documents.</p>
+</div>
+<div id="S6.SS5.p2" class="ltx_para">
+<p class="ltx_p">Despite these differences
+it is still interesting to compare the
+two algorithms. <cite class="ltx_cite">Rapp<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Identifying word translations from comparable documents without a seed lexicon." class="ltx_ref">2012</a>)</cite> kindly provided their test
+set to us. It contains 1000 English words and a single
+correct German translation for each. We evaluate on a
+subset we call TS774 that consists of the 774 test word pairs
+that are in the intersection of words covered by the WINTIAN
+Wikipedia data <cite class="ltx_cite">[<a href="#bib.bib10" title="Identifying word translations from comparable documents without a seed lexicon." class="ltx_ref">29</a>]</cite> and
+words covered by our data.
+Most of the 226 missing word pairs are
+adverbs, prepositions and plural forms that are not
+covered by our graphs due to the construction algorithm we
+use: lemmatization, restriction to adjectives, nouns and
+verbs etc.</p>
+</div>
+<div id="S6.SS5.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T6" title="Table 6 ‣ 6.5 Comparison with WINTIAN ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows that CoSimRank is slightly, but not
+significantly worse than WINTIAN
+on P@1 (43.0 vs 43.8), but significantly better on P@10
+(73.6 vs 55.4).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We
+achieved better results for CoSimRank by optimizing the
+damping factor, but in this paper, we only present results for a
+fixed damping factor of 0.8.</span></span></span>
+The reason could be that CoSimRank is a
+more effective algorithm than WINTIAN; but the different
+initializations (seed set vs interwiki links) or the
+different linguistic representations (grammatical relations
+vs bag-of-words) could also be responsible.</p>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt"/>
+<th class="ltx_td ltx_align_left ltx_border_tt">P@1</th>
+<th class="ltx_td ltx_align_left ltx_border_tt">P@10</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t">Wintian</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">43.8</span>%</td>
+<td class="ltx_td ltx_align_left ltx_border_t">55.4%<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_bb">CoSimRank</th>
+<td class="ltx_td ltx_align_left ltx_border_bb">43.0%</td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold">73.6</span>%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Results for bilingual lexicon extraction (TS774 DE
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> EN).
+Best result
+in each column in bold.</div>
+</div>
+</div>
+<div id="S6.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.6 </span>Error Analysis</h3>
+
+<div id="S6.SS6.p1" class="ltx_para">
+<p class="ltx_p">The results on TS774 can be considered
+conservative since only one translation is accepted as
+being correct. In reality other translations might also be
+acceptable (e.g., both <span class="ltx_text ltx_font_italic">street</span> and
+<span class="ltx_text ltx_font_italic">road</span> for <span class="ltx_text ltx_font_italic">Straße</span>). In contrast, TS1000
+accepts more than one correct translation. Additionally, TS774 was created by
+translating English words into German (using Google translate). We
+are now testing the reverse direction. So we are doomed to
+fail if the original English word is a less common
+translation of an ambiguous German word. For example, the
+English word <span class="ltx_text ltx_font_italic">gulf</span> was translated by Google to
+<span class="ltx_text ltx_font_italic">Golf</span>, but the most common sense of <span class="ltx_text ltx_font_italic">Golf</span> is
+the sport. Hence our algorithm will incorrectly translate it back to
+<span class="ltx_text ltx_font_italic">golf</span>.</p>
+</div>
+<div id="S6.SS6.p2" class="ltx_para">
+<p class="ltx_p">As we can
+see in Table <a href="#S6.T7" title="Table 7 ‣ 6.6 Error Analysis ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>,
+we also
+face the problems discussed by
+<cite class="ltx_cite">Laws<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="A linguistically grounded graph model for bilingual lexicon extraction" class="ltx_ref">2010</a>)</cite>: the algorithm sometimes
+picks cohyponyms (which can still be seen as reasonable)
+and
+antonyms (which are clear errors).</p>
+</div>
+<div id="S6.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_tt">keyword</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt">gold standard</th>
+<th class="ltx_td ltx_align_justify ltx_border_tt">CoSimRank</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t">arm</td>
+<td class="ltx_td ltx_align_justify ltx_border_t">poor</td>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_bold">impoverished</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">erreichen</td>
+<td class="ltx_td ltx_align_justify">reach</td>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_bold">achieve</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">gehen</td>
+<td class="ltx_td ltx_align_justify">go</td>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_bold">walk</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">direkt</td>
+<td class="ltx_td ltx_align_justify">directly</td>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_bold">direct</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">weit</td>
+<td class="ltx_td ltx_align_justify">far</td>
+<td class="ltx_td ltx_align_justify">further</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">breit</td>
+<td class="ltx_td ltx_align_justify">wide</td>
+<td class="ltx_td ltx_align_justify">narrow</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">reduzieren</td>
+<td class="ltx_td ltx_align_justify">reduce</td>
+<td class="ltx_td ltx_align_justify">increase</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">Stunde</td>
+<td class="ltx_td ltx_align_justify">hour</td>
+<td class="ltx_td ltx_align_justify">second</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify">Westen</td>
+<td class="ltx_td ltx_align_justify">west</td>
+<td class="ltx_td ltx_align_justify">southwest</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb">Junge</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb">boy</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb">child</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7: </span>Examples for CoSimRank translation errors on
+TS774.
+We counted translations as incorrect if they were not listed
+in the gold standard even if they were
+correct translations according to
+<span class="ltx_text ltx_font_italic">www.dict.cc</span> (in bold).</div>
+</div>
+<div id="S6.SS6.p3" class="ltx_para">
+<p class="ltx_p">Contrary to our intuition, the edge-typed variant of CoSimRank
+did not perform significantly better than the non-edge-typed
+version. Looking at
+Table <a href="#S6.T1" title="Table 1 ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, we see that there is only one edge type
+connecting adjectives. The same is true for verbs. The
+random surfer only has a real choice between different
+edge
+types when she is on a noun node. Combined with the fact that
+only the last edge type is important this has absolutely no
+effect for a random surfer meeting at adjectives or verbs.</p>
+</div>
+<div id="S6.SS6.p4" class="ltx_para">
+<p class="ltx_p">Two
+possible solutions would be (i) to use more fine-grained
+edge types,
+(ii)
+to apply Eq. <a href="#S5.Ex15" title="5.3 Typed edges ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>, in
+which the edge type of each step is important. However, this
+will increase the memory needed for calculation.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Summary</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We have presented <span class="ltx_text ltx_font_italic">CoSimRank</span>, a
+new similarity measure that can be computed for a single
+node pair without relying on the similarities in the whole
+graph. We gave two different formalizations of CoSimRank: (i) a
+derivation
+from Personalized
+PageRank and (ii) a matrix representation that can take
+advantage of fast matrix multiplication algorithms. We also
+presented extensions of CoSimRank for a number of
+applications, thus demonstrating the flexibility of CoSimRank as a similarity
+measure.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">We showed that CoSimRank is superior to SimRank in
+time and space complexity; and we demonstrated that
+CoSimRank performs better than PPR+cos on
+two similarity computation tasks.</p>
+</div>
+
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">This work was supported by DFG (SCHU 2246/2-2).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, E. Alfonseca, K. Hall, J. Kravalova, M. Paşca and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study on similarity and relatedness using distributional and wordnet-based approaches</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 19–27</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-41-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1620754.1620758" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S6.SS1.p3" title="6.1 Baselines ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Brin and L. Page</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The anatomy of a large-scale hypertextual web search engine</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 107–117</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Cha</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comprehensive survey on distance/similarity measures between probability density functions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Mathematical Models and Methods in Applied Sciences</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 300–307</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chang, S. Clark and B. Harrington</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Getting creative with semantic similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 330–333</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. de Melo and G. Weikum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">UWN: a large multilingual lexical knowledge base</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–156</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Dorow, F. Laws, L. Michelbacher, C. Scheible and J. Utt</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A graph-theoretic algorithm for automatic extension of translation lexicons</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">GEMS ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 91–95</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1705415.1705427" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.p1" title="5.2 CoSimRank across graphs ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.SS1.p2" title="6.1 Baselines ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Erkan and D. R. Radev</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LexRank: graph-based lexical centrality as salience in text summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Artif. Intell. Res. (JAIR)</span> <span class="ltx_text ltx_bib_volume">22</span>, <span class="ltx_text ltx_bib_pages"> pp. 457–479</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p6" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Fogaras and B. Rácz</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scaling link-based similarity search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WWW ’05</span>, <span class="ltx_text ltx_bib_pages"> pp. 641–650</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-59593-046-9</span>,
+<a href="http://doi.acm.org/10.1145/1060745.1060839" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1060745.1060839" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS3.p4" title="6.3 Lexicon Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Han and J. Zhao</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structural semantic relatedness: a knowledge-based method to named entity disambiguation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’10</span>, <span class="ltx_text ltx_bib_pages"> pp. 50–59</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1858681.1858687" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. H. Haveliwala</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic-sensitive pagerank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WWW ’02</span>, <span class="ltx_text ltx_bib_pages"> pp. 517–526</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-58113-449-5</span>,
+<a href="http://doi.acm.org/10.1145/511446.511513" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/511446.511513" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Personalized PageRank ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. V. Hoang and M. Kan</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards automated related work summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’10</span>, <span class="ltx_text ltx_bib_pages"> pp. 427–435</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1944566.1944615" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Hughes and D. Ramage</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical semantic relatedness with random graph walks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 581–589</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S6.SS1.p3" title="6.1 Baselines ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Jaakkola and D. Haussler</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting generative models in discriminative classifiers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in neural information processing systems</span>, <span class="ltx_text ltx_bib_pages"> pp. 487–493</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Jebara, R. Kondor and A. Howard</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probability product kernels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">5</span>, <span class="ltx_text ltx_bib_pages"> pp. 819–844</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Jeh and J. Widom</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SimRank: a measure of structural-context similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">KDD ’02</span>, <span class="ltx_text ltx_bib_pages"> pp. 538–543</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-58113-567-X</span>,
+<a href="http://doi.acm.org/10.1145/775047.775126" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/775047.775126" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p1" title="4 Comparison to SimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. M. Kleinberg</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Authoritative sources in a hyperlinked environment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the ACM</span> <span class="ltx_text ltx_bib_volume">46</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 604–632</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Laws, L. ichelbacher, B. Dorow, C. Scheible, U. Heid and H. Schütze</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A linguistically grounded graph model for bilingual lexicon extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 614–622</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C10-2070" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS3.p1" title="6.3 Lexicon Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.3</span></a>,
+<a href="#S6.SS3.p2" title="6.3 Lexicon Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.3</span></a>,
+<a href="#S6.SS6.p2" title="6.6 Error Analysis ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.6</span></a>,
+<a href="#S6.p2" title="6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Leicht, P. Holme and M. Newman</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vertex similarity in networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Physical Review E</span> <span class="ltx_text ltx_bib_volume">73</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 026120</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Lempel and S. Moran</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The stochastic approach for link-structure analysis (salsa) and the tkc effect</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Networks</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 387–401</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Li, J. Han, G. He, X. Jin, Y. Sun, Y. Yu and T. Wu</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast computation of simrank for static and dynamic information networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EDBT ’10</span>, <span class="ltx_text ltx_bib_pages"> pp. 465–476</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://doi.acm.org/10.1145/1739041.1739098" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1739041.1739098" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Li, Z. Li, H. Liu, J. He and X. Du</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using link-based content analysis to measure document similarity effectively</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">APWeb/WAIM ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 455–467</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-3-642-00671-5</span>,
+<a href="http://dx.doi.org/10.1007/978-3-642-00672-2_40" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/978-3-642-00672-2_40" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lizorkin, P. Velikhov, M. Grinev and D. Turdakov</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accuracy estimate and optimization techniques for simrank computation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The VLDB JournalâThe International Journal on Very Large Data Bases</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 45–66</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea and D. Radev</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Graph-based natural language processing and information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, Q. V. Le and I. Sutskever</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting similarities among languages for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1309.4168</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 CoSimRank across graphs ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Minkov and W. W. Cohen</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning graph walk based similarity measures for parsed text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_pages"> pp. 907–916</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1613715.1613832" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Minkov and W. W. Cohen</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Graph based similarity measures for synonym extraction from parsed text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">TextGraphs-7 ’12</span>, <span class="ltx_text ltx_bib_pages"> pp. 20–24</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2392954.2392958" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>,
+<a href="#S6.SS2.p4" title="6.2 Synonym Extraction ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Muthukrishnan, D. Radev and Q. Mei</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Edge weight regularization over multiple graphs for similarity learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 374–383</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Rao, D. Yarowsky and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Affinity measures based on the graph Laplacian</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">TextGraphs-3</span>, <span class="ltx_text ltx_bib_pages"> pp. 41–48</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-905593-57-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1627328.1627334" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rapp, S. Sharoff and B. Babych</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying word translations from comparable documents without a seed lexicon.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 460–466</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS5.p1" title="6.5 Comparison with WINTIAN ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.5</span></a>,
+<a href="#S6.SS5.p2" title="6.5 Comparison with WINTIAN ‣ 6 Experiments ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.5</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Sahami and T. D. Heilman</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A web-based kernel function for measuring the similarity of short text snippets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WWW ’06</span>, <span class="ltx_text ltx_bib_pages"> pp. 377–386</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-59593-323-9</span>,
+<a href="http://doi.acm.org/10.1145/1135777.1135834" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1135777.1135834" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS4.p1" title="5.4 Similarity of sets of nodes ‣ 5 Extensions ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Scheible, F. Laws, L. Michelbacher and H. Schütze</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentiment translation through multi-edge graphs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’10</span>, <span class="ltx_text ltx_bib_pages"> pp. 1104–1112</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1944566.1944693" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schütze and M. Walsh</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A graph-theoretic model of lexical syntactic acquisition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 917–926</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Xi, E. A. Fox, W. Fan, B. Zhang, Z. Chen, J. Yan and D. Zhuang</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SimFusion: measuring similarity using unified relationship matrix</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’05</span>, <span class="ltx_text ltx_bib_pages"> pp. 130–137</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-59593-034-5</span>,
+<a href="http://doi.acm.org/10.1145/1076034.1076059" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1076034.1076059" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Ó Séaghdha and A. Copestake</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic classification with distributional kernels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 649–656</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 3.2 Similarity of vectors ‣ 3 CoSimRank ‣ CoSimRank: A Flexible &amp; Efficient Graph-Theoretic Similarity Measure" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:17:08 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

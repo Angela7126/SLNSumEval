@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Optimal defense against election control by deleting voter groups.
+   </title>
+   <abstract>
+    Election control encompasses attempts from an external agent to alter the structure of an election in order to change its outcome. This problem is both a fundamental theoretical problem in social choice, and a major practical concern for democratic institutions. Consequently, this issue has received considerable attention, particularly as it pertains to different voting rules. In contrast, the problem of how election control can be prevented or deterred has been largely ignored. We introduce the problem of optimal defense against election control, including destructive and constructive control, where manipulation is allowed at the granularity of groups of voters (e.g., voting locations) through a denial-of-service attack, and the defender allocates limited protection resources to prevent control. We consider plurality voting, and show that it is computationally hard to prevent both types of control, though destructive control itself can be performed in polynomial time. For defense against destructive control, we present a double-oracle framework for computing an optimal prevention strategy. We show that both defender and attacker best response subproblems are NP-complete, and develop exact mixed-integer linear programming approaches for solving these, as well as fast heuristic methods. We then extend this general approach to develop effective algorithmic solutions for defense against constructive control. Finally, we generalize the model and algorithmic approaches to consider uncertainty about voter preferences. Experiments conducted on both synthetic and real data demonstrate that the proposed computational framework can scale to realistic problem instances.1
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Democratic institutions rely on the integrity of the voting process. A major threat to this integrity is the possibility that the process can be subverted by malicious parties for their own ends. Indeed, actual incidents of demonstrated and real attempts at vote manipulation and control bear out this concern. For example, the 2013 election in Pakistan was marred by a series of election-day bombings and shootings, resulting in over 150 people dead or injured, in an attempt to subvert the voting process [57], and the 2010 Sri Lanka election exhibited 84 major and 202 minor incidents of poll-related violence [7]. With the dawn of electronic and Internet voting, the additional threat of election control and manipulation through cyber attacks on electronic and Internet voting systems has emerged, with a number of documented demonstration attacks [3], [62]. While recent allegations in the U.S. of deliberate cyber attacks aimed at influencing election outcomes have not been specifically against electronic voting systems [61], the collective evidence suggests that these are vulnerable, and may well become targets in the near future. Consequently, cyber security experts have repeatedly urged deployment of better auditing systems for electronic voting systems used in the U.S. elections, arguing that elections can be successfully manipulated through targeted attacks at voting machines and polling places, for example, in battleground states [56]. However, auditing all such systems is laborious and expensive, and few systematic methods for selective auditing have been deployed to date [33].
+     </paragraph>
+     <paragraph>
+      We consider the general problem of protecting elections against malicious subversion, for example, through deployment of enhanced physical security at voting locations, or strategies for choosing which electronic voting machines or voting districts to audit. We model attacks on elections as targeting voter groups, such as voting machines or precincts, in order to change the identity of the election winner, a problem commonly known in prior literature as election control.
+     </paragraph>
+     <paragraph>
+      The study of the computational complexity of election control was initiated by Bartholdi et al. [4], who considered the problem from the perspective of computational complexity. Since then it has received considerable attention in prior literature (see Section 2). In this literature, a voting rule is viewed as resistant if control is NP-hard, and vulnerable otherwise. Many voting rules were shown to be resistant to several types of control, while plurality—which is widely used—can be controlled through voter deletion in polynomial time [4], [27]. However, control is usually studied at the granularity of individual voters, and protection, when considered, is about designing voting rules which are NP-hard to control [19], [28]. While these considerations are crucial if one is to understand vulnerability of elections, they are also limited in several respects. First, as the incidents of control described above attest, control can be exercised for groups of voters through a single attack, such as a denial-of-service attack on a voting station or a polling center (of which bombing is an extreme example). Second, NP-hardness of control is insufficient evidence for resistance: it is often possible to solve large instances of NP-hard problems in practice (see, e.g., [64] in the case of SAT). Resistance to election control in the broader sense, such as through allocation of limited protection resources to prevent attacks on specific voter groups, has, to our knowledge, neither been modeled nor investigated to date.
+     </paragraph>
+     <paragraph>
+      To address these limitations, we consider the problem of optimally protecting elections against control. We model control as a denial-of-service (deletion) attack on a subset of voter groups, which may represent polling places or electronic voting stations, with the goal of preventing the original winner from winning (destructive control) or making another candidate win (constructive control). We focus on plurality voting. Erdélyi et al. [18] show that constructive control by adding, deleting, and partitioning voters in this model is NP-hard, and recently Maushagen and Rothe [45] have shown NP-completeness of constructive and destructive control by partitioning voter groups for each non-trivial pure scoring rule. In contrast, we show that destructive control can be decided in polynomial time. We then consider the problem of defense against both types of control, modeling it as a Stackelberg game in which an outside party deploys limited protection resources to protect a collection of voter groups, allowing for randomization, and the adversary responds by attempting to subvert (control) the election. Specifically, defense against destructive control is modeled as a zero-sum game, while defense against constructive control is modeled as a nonzero-sum game. Protection resources may represent actual physical security for polling centers or voting stations, or resources devoted to auditing of specific electronic voting systems or electoral districts. We assume that the defender's goal is to ensure that the same candidate wins with or without an election control attack. We show that the problem of choosing the minimal set of resources to guarantee that an election cannot be controlled is computationally hard for both destructive and constructive control. For general cases of defense against destructive control, we propose a double-oracle framework to compute an optimal protection. We prove that both the defender and attacker oracles are NP-complete when randomized strategies are allowed. On the positive side, we develop novel mixed-integer linear programming formulations for both oracles that enable us to compute a provably optimal solution for protecting elections from destructive control. Moreover, we develop heuristic defender and attacker oracles which significantly speed up computation in the framework. Our experiments demonstrate the effectiveness and scalability of our algorithmic approach.
+     </paragraph>
+     <paragraph>
+      For defense against constructive control, we first introduce a heuristic algorithm which can compute the optimal defender strategies in polynomial time for certain cases. We then show that though the problem is modeled as a nonzero-sum game, we can achieve an approximately optimal solution by solving two zero-sum games. Indeed, experiments show that this approach computes an optimal solution to the original non-zero-sum game in nearly all cases.
+     </paragraph>
+     <paragraph>
+      In summary, we make the following contributions:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A new model for protecting elections from group-level election control attacks.
+      </list-item>
+      <list-item label="•">
+       A polynomial-time algorithm for group-level destructive control.
+      </list-item>
+      <list-item label="•">
+       Complexity analysis of guaranteeing that an election cannot be controlled, including destructive and constructive control.
+      </list-item>
+      <list-item label="•">
+       A scalable double-oracle framework for choosing an optimal allocation of protection resources to prevent destructive control.
+      </list-item>
+      <list-item label="•">
+       Heuristic and approximate algorithms for computing defender strategies to prevent constructive control.
+      </list-item>
+     </list>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The study of the computational complexity of election control was initiated by Bartholdi et al. [4], who analyzed plurality and Condorcet voting with several types of control. While Bartholdi et al. studied only the constructive variant of the control problem, where the goal is to ensure a given candidate's victory, we also study the destructive variant of control, where the goal is to prevent the current winner from winning. The destructive variant of control was introduced by Hemaspaandra et al. [27], who also analyzed the approval voting rule. The study of election control was further extended to a number of other models and voting rules [6], [39], [40], [21], [51], [22], [42], [30], [29], [50], [67], [65], [45], [20], [32], [49], [44], [41], [15], [16], [53], [8], [66], [31], [17], [43], [25], [24], [23], [9], [55]. However, all of these consider the election control problem at the granularity of individual voters. Menton [48] considered range voting in which a voter can assign certain scores to each candidate. Consequently, a voter in this model is similar to a “group” in our setting. Unlike our model, this work imposes an external upper bound (range) on the score that a voter can assign to any candidate.
+     </paragraph>
+     <paragraph>
+      Bulteau et al. [10] were the first to consider group-level election control, which they termed combinatorial voter control. They consider control when bundles of voters need to be added and the voters are grouped according to a given bundling function, which allows for overlapping groups. In our setting the voters are grouped with no overlap, and the election control is by deleting groups of voters. Recently, Erdélyi et al. [18] studied election control of plurality by adding or deleting groups of voters, but they only consider constructive control. Finally, Chen et al. [11] studied constructive and destructive control by adding or deleting groups of candidates (but not voters). We note that from a broader perspective, the control in voting is similar to notion of control used in other related fields as well, such as judgment aggregation [5], weighted voting games [69], [54] and fair division [2].
+     </paragraph>
+     <paragraph>
+      Work by Elkind and Lipmaa [14] is closely related in spirit to our endeavor in trying to induce hardness of manipulation of voting protocols through design. However, their focus is on manipulation, rather than control, and on designing rules which are NP-hard to manipulate, rather than using limited resources to reduce the likelihood of successful subversion of an election.
+     </paragraph>
+     <paragraph>
+      There has been extensive research on modeling physical security problems using Stackelberg games [58], [63], [13]. Much of prior work has focused on attackers who can only attack a single target [26], [1]. Exceptions to this involved either simultaneous-move scenarios [36] or heuristic approaches [59]. In contrast, we consider adversaries attacking multiple targets (by deleting subsets of voter groups), solving the problem to optimality. In addition, the payoff structure in prior work is typically tied to the assumption of single-target attacks, whereas payoffs in our setting depend on whether deleted voter groups can affect voting outcomes. Double-oracle methods have been previously proposed for solving large Stackelberg security games [47], [34], [60]. However, as oracles are model dependent, the special structure of our problem requires novel scalable algorithms for solving oracles.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Background: Stackelberg security games
+     </section-title>
+     <paragraph>
+      A generic Stackelberg game has two players, a {a mathematical formula}leader and a {a mathematical formula}follower. The leader plays first. The follower then plays based on the leader's action [12]. The two players in a Stackelberg game need not represent individuals, but could also be groups that cooperate to execute a joint strategy, such as a police force or a terrorist organization. Each player has a set of possible {a mathematical formula}pure{a mathematical formula}strategies, representing the actions that they can execute. Payoffs for each player are defined over all possible joint pure-strategy outcomes. A mixed strategy is a probability distribution over pure strategies. The payoff functions can be extended to mixed strategies by taking the expectation over pure-strategy outcomes. Playing a mixed strategy allows a player to randomize his actions, and in most cases increase his payoffs. By playing later, the follower has a knowledge of the leader's strategy (specifically, knowledge of the distribution over pure strategies chosen by the defender if the defender plays a mixed strategy), and can act accordingly to optimize his own payoffs.
+     </paragraph>
+     <paragraph>
+      Stackelberg games are used to model the defender-attacker strategic interaction in security domains and this class of Stackelberg games (with certain restrictions on payoffs) is called Stackelberg security games [58]. In the Stackelberg security game framework, the defender (e.g., security force) is modeled as the leader and the attacker (e.g., adversaries) is in the role of the follower. In this scenario, there is usually a set {a mathematical formula}I of n targets. A pure strategy of the defender, defined as s, is to protect some of the targets; while a pure strategy of the attacker, defined as a, is to attack some of the targets. Given a strategy pair {a mathematical formula}(s,a), the payoff of the defender can be represented as {a mathematical formula}uD(s,a), while the payoff of the attacker can be represented as {a mathematical formula}uA(s,a). Let {a mathematical formula}S and {a mathematical formula}A represent the strategy space of the defender and the attacker respectively. Each player has a payoff matrix based on each other's strategies.
+     </paragraph>
+     <paragraph>
+      A mixed strategy of the defender is defined as {a mathematical formula}x={xs:s∈S}, with {a mathematical formula}xs representing the probability that pure strategy s is played. For the follower in the Stackelberg game, the optimal response to the defender's action is always a pure strategy, thus only pure strategies of the attacker are considered. Given a strategy pair {a mathematical formula}(x,a), the payoff of the defender can be defined as {a mathematical formula}uD(x,a)=∑s∈SxsUD(s,a); while the payoff of the attacker can be defined as {a mathematical formula}uA(x,a)=∑s∈SxsUA(x,a).
+     </paragraph>
+     <paragraph label="Definition 1">
+      The Strong Stackelberg Equilibrium (SSE) is usually adopted as the solution concept in Stackelberg security games [1]. In this concept, the attacker responds the best to the defender's strategy, while breaking ties in favor of the defender.{sup:2} The defender chooses a strategy to optimize her utility given the attacker's best response. Formally, the Strong Stackelberg Equilibrium is defined as follows. Let {a mathematical formula}g(x):x→a be the attacker's response function. A strategy pair {a mathematical formula}(x⁎,g(x⁎)) forms SSE if it satisfies that
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       The defender plays a best response: {a mathematical formula}uD(x⁎,g(x⁎))≥uD(x,g(x)) for any other x.
+      </list-item>
+      <list-item label="2.">
+       The attacker plays a best response: {a mathematical formula}g(x⁎)∈f(x⁎) where {a mathematical formula}f(x⁎)=arg⁡maxa∈A⁡uA(x⁎,a) is the set of attacker's best responses.
+      </list-item>
+      <list-item label="3.">
+       The attacker breaks ties in favor of the defender: {a mathematical formula}uD(x⁎,g(x⁎))≥uD(x⁎,a), {a mathematical formula}∀a∈f(x⁎).
+      </list-item>
+     </list>
+     <paragraph>
+      Many in the literature also use an extension to the generic Stackelberg games, i.e., Bayesian Stackelberg games, to model the defender-attacker strategic interaction [35], [52]. Such games allow multiple ‘types’ of attackers. Each type of attacker has his own strategy space, hence payoff matrix. A type has a prior probability representing the likelihood of its occurrence. The defender commits to a mixed strategy, knowing only the prior distribution but not the exact type of the attacker she faces. The Strong Stackelberg Equilibrium in Bayesian Stackelberg games is similar with Definition 1, where the leader maximizes her expected utility over all types of attackers, assuming the attacker of each type chooses the best response and breaks ties in favor of the defender.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Model
+     </section-title>
+     <paragraph>
+      Our model of attacks on elections is based on the prior literature investigating election control. In our model, control occurs at the granularity of voter groups. To begin, we assume that both the attacker and defender know the net voting tallies (but not necessarily individual votes) for each voter group. We relax this assumption in Section 7. Formally, suppose that there is a set I of n non-overlapping groups of voters and a set of candidates C over which voters have preferences. For each group {a mathematical formula}i∈I, let {a mathematical formula}tic be the tally of votes for candidate c in this group. Let {a mathematical formula}tc=∑itic be the total vote tally for {a mathematical formula}c∈C. Let {a mathematical formula}ω∈C be the candidate who would have won with the original set of voters: {a mathematical formula}ω=arg⁡maxc⁡tc. The attacker can delete a subset of at most k voter groups to disenfranchise voters in these groups (for example, attacking k polling stations).
+     </paragraph>
+     <paragraph>
+      We study both destructive control, in which the attacker's goal is to prevent the original winner from winning the election, and constructive control, in which the attacker wants to let a specific candidate other than the original winner win the election. Our investigation is focused on plurality voting, in which only a single candidate is selected by each voter, and the candidate with the most votes wins (we assume that the tie-breaking rule is adversarial to the defender). Once a group is attacked and deleted, all votes from members of this group are removed, and the total tally achieved by each candidate changes correspondingly. In the case of destructive control, the attacker's goal is to prevent ω from winning. In constructive control, the attacker's goal is to make a candidate of their choice {a mathematical formula}υ∈C{a mathematical formula}(υ≠ω) win. The defender's goal is to defend against each type of control, i.e., to ensure that the original winner still wins the election despite the control. Formally, the problems are defined as follows.
+     </paragraph>
+     <paragraph label="Definition 2">
+      Group-level destructive controlGiven a set C of candidates, a set V of voters represented by their preference order, a set I of non-overlapping groups of voters, and a non-negative integer k. Let ω be the candidate that wins under plurality rule when all the voters of V vote. We are asked whether there exists a set of voters groups {a mathematical formula}Sa⊆I, {a mathematical formula}|Sa|≤k, such that if we remove from V all the voters in {a mathematical formula}Sa then the plurality winner is not ω.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Group-level constructive controlGiven a set C of candidates, a set V of voters represented by their preference order, a set I of non-overlapping groups of voters, and a non-negative integer k. Let c be a certain candidate that does not win under plurality rule when all the voters of V vote. We are asked whether there exists a set of voters groups {a mathematical formula}Sa⊆I, {a mathematical formula}|Sa|≤k, such that if we remove from V all the voters in {a mathematical formula}Sa then the plurality winner is c.
+     </paragraph>
+     <paragraph label="Definition 4">
+      Defense against group-level election controlGiven a set C of candidates, a set V of voters represented by their preference order, a set I of non-overlapping groups of voters, and non-negative integers k and m. Let ω be the candidate that wins under plurality rule when all the voters of V vote. We are asked whether there exists a set of voters groups {a mathematical formula}Sd⊆I, {a mathematical formula}|Sd|≤m, such that for any selection of voters groups {a mathematical formula}Sa⊆I, {a mathematical formula}Sa∩Sd=∅ and {a mathematical formula}|Sa|≤k, if we remove from V all the voters in {a mathematical formula}Sa then the plurality winner is still ω.
+     </paragraph>
+     <paragraph>
+      We model protection decisions as a Stackelberg game in which the defender (of the elections), acting as a leader, allocates m protection resources among voter groups (e.g., patrols at polling stations or voting districts to be audited), and the attacker, who is a follower, subsequently decides which k groups to attack. Formally, let {a mathematical formula}s=〈si:i∈{1,⋯,n}〉 denote a pure strategy of the defender, where {a mathematical formula}si∈{0,1} indicates whether a voter group i is protected. Similarly, we encode the attacker's pure strategy by a vector a where binary {a mathematical formula}ai indicates whether group i is attacked. A group i is deleted if and only if it is attacked ({a mathematical formula}ai=1) and it is not protected ({a mathematical formula}si=0). We use {a mathematical formula}S and {a mathematical formula}A to represent the (pure) strategy space of the defender and the attacker respectively. Given a pair of strategies {a mathematical formula}(s,a), let {a mathematical formula}Wc(s,a)∈{0,1} be an indicator denoting whether a candidate c wins the election. Notice that the value of {a mathematical formula}Wc(s,a) is easy to compute for a given {a mathematical formula}(s,a): we need only to count the votes in the remaining groups. The defender's utility is then {a mathematical formula}Wω(s,a), whereas the utility of the attacker is {a mathematical formula}−Wω(s,a) in destructive control, and {a mathematical formula}Wυ(s,a) in constructive control where the attacker wishes that candidate υ wins.
+     </paragraph>
+     <paragraph>
+      We allow the defender to commit to a randomized strategy, while the attacker observes the randomization, rather than actual realizations of which voter groups are protected. This is motivated by the fact that attacks typically require significant preparation, and would be based on many empirical observations of protection decisions through reconnaissance activities, such as observing allocation of defensive resources (e.g., audits) from past elections, or just replicating the algorithmic tools used by defenders to compute randomized defense strategies (as much information about these is likely publicly available due to the transparency standards for democratic institutions) [58]. Since the attacker chooses a best response to the defender's strategy, it suffices to consider only pure strategy attacks. Let x denote the defender's randomized (mixed) strategy, with {a mathematical formula}xs the probability that a pure strategy {a mathematical formula}s∈S is used. Given a mixed strategy x of the defender and a pure strategy a of the attacker, the probability that a particular candidate c wins is {a mathematical formula}Pc(x,a)=∑s∈SxsWc(s,a). Thus, the expected utility of the defender is always {a mathematical formula}Pω(x,a), while the attacker's expected utility is {a mathematical formula}−Pω(x,a) for destructive control and {a mathematical formula}Pυ(x,a) for constructive control. In the case of destructive control, the players are engaged in a zero-sum game, where the Stackelberg equilibrium strategy for the defender is equivalent to its Nash equilibrium [37]. In constructive control, however, the game is non-zero-sum. The distinction between destructive and constructive control, therefore, has significant algorithmic ramifications in our setting, as will be seen below.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Complexity of control and protection
+     </section-title>
+     <paragraph>
+      Our first task is to consider the computational complexity of group-level election control, which has been only partially addressed in prior literature, and the complexity of protecting elections from control. Our results are summarized in Table 1.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Complexity of group-level destructive control
+      </section-title>
+      <paragraph>
+       It is well known that constructive and destructive control of plurality by deleting individual voters can be computed in polynomial time [4], [27]. Allowing the attacker to select specific groups may appear to significantly complicate the problem. Indeed, Erdélyi et al. [18] showed that group-level constructive control (i.e., making candidate υ win by deleting voter groups) is NP-complete even with plurality. Surprisingly, we now show that the destructive variant of group-level control can still be computed in polynomial time, significantly generalizing the previous result of Hemaspaandra et al. [27]. Intuitively, control succeeds as long as there exists a candidate {a mathematical formula}c∈C who has at least as many votes as ω after k groups are removed. Consequently, the attacker can consider one candidate c at a time, checking if k groups can be deleted so that c has a higher vote count than ω. Moreover, if we fix {a mathematical formula}c∈C, it is easy to check whether it is possible to get more votes for c than ω: we would just delete the k groups in which ω is most favored over c.
+      </paragraph>
+      <paragraph>
+       Formally, let {a mathematical formula}tc−ω=〈tic−ω:i∈I〉 be a vector with {a mathematical formula}tic−ω=tic−tiω, that is, the vote advantage of c over ω in group {a mathematical formula}i∈I. For a vector {a mathematical formula}tc−ω, define {a mathematical formula}sum(tc−ω)=∑itic−ω. Then, {a mathematical formula}sum(tc−ω) is the total difference of votes between c and ω. For example, suppose that {a mathematical formula}tc−ω is {a mathematical formula}〈−3,−2,1〉. This means that ω has more votes than c in the first two groups, but fewer (by 1) in the third. If the attacker can attack 2 groups, he will succeed by attacking the first two, leading c to have 1 more vote left than ω. The following proposition shows that it is, in fact, sufficient to delete k groups with smallest {a mathematical formula}tic−ω to verify whether it is possible to make c have a larger vote count than ω. For convenience, define {a mathematical formula}tc−ω∖k to be the portion of the vector {a mathematical formula}tc−ω remaining after the k groups with smallest {a mathematical formula}tic−ω have been deleted.
+      </paragraph>
+      <paragraph label="Proof">
+       For a given candidate{a mathematical formula}c∈C, it is possible to delete k groups to ensure that{a mathematical formula}tc&gt;tωif and only if{a mathematical formula}sum(tc−ω∖k)&gt;0.The ⇐ direction is straightforward: if {a mathematical formula}sum(tc−ω∖k)&gt;0, then by definition of {a mathematical formula}tc−ω∖k we have accomplished our goal and {a mathematical formula}tc&gt;tω. For the ⇒ direction, if deleting the smallest k elements in {a mathematical formula}tc−ω still leaves {a mathematical formula}sum(tc−ω∖k)&lt;0, then it is impossible to find any other subset of k groups {a mathematical formula}G⊆I to delete and have {a mathematical formula}tc&gt;tω, since we chose the k groups with the largest {a mathematical formula}tiω−tic, and, consequently, added the largest possible {a mathematical formula}∑itiω−tic to {a mathematical formula}sum(tc−ω). Since the remaining tally difference is still negative, it is not possible to make c have more votes than ω.  □
+      </paragraph>
+      <paragraph label="Theorem 1">
+       The complete approach for computing a group-level election control is given in Algorithm 1. For each candidate {a mathematical formula}c∈C∖{ω}, denoted by {a mathematical formula}C−ω, Lines 1–4 check whether there exists an attack where c beats ω (based on Proposition 1). If no such attack exists for all candidates in {a mathematical formula}C−ω, election control is not possible. The complexity of Algorithm 1 is O({a mathematical formula}|C|nlog⁡n), which yields the following result: Destructive election control by deleting k voter groups can be accomplished in O({a mathematical formula}|C|nlog⁡n) time.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Complexity of preventing destructive control
+      </section-title>
+      <paragraph>
+       To show the complexity of preventing destructive control, we use a reduction from a known NP-complete problem, the hitting set problem, which is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Hitting set problemGiven: A set G and a set U consisting of subsets {a mathematical formula}Gˆ of G. Question: Does there exist a ‘hitting set’ {a mathematical formula}G′⊆G with {a mathematical formula}|G′|=m, so that {a mathematical formula}∀Gˆ∈U,G′∩Gˆ≠∅.
+      </paragraph>
+      <paragraph label="Proof">
+       Checking whether m protection resources are sufficient to prevent destructive control is NP-complete.Based on Theorem 1, our problem is in NP. To show that it is NP-hard, we reduce from the hitting set problem. Specifically, we show that for any instance of the hitting set problem, we can construct an election with n voter groups, so that there exists a hitting set {a mathematical formula}G′ if and only if it is possible to prevent any control with m resources, i.e., the attacker cannot make ω lose by attacking any subset of the {a mathematical formula}n−m unprotected groups.Given an instance of the hitting set problem, we construct an election as follows. There are {a mathematical formula}n=|G| voter groups and {a mathematical formula}|U|+1 candidates. Each {a mathematical formula}i∈G corresponds to a voter group. Each {a mathematical formula}Gˆ∈U can be considered as a label of a specific candidate other than ω. For candidate c with label {a mathematical formula}Gˆ, for any voter group i, if {a mathematical formula}i∈Gˆ, then let {a mathematical formula}tic−ω=−1, i.e., c has 1 fewer vote than ω in group i; otherwise let {a mathematical formula}tic−ω=0, i.e., c and ω are tied in group i. Assume that up to {a mathematical formula}k=n−m groups are attacked. For example, let {a mathematical formula}G={1,2,3} and {a mathematical formula}U={{1,2},{2,3},{2}}. Then the vote states of the candidates are shown in Table 2.The ⇐ direction: If there exists a defender strategy which protects m voter groups, i.e., {a mathematical formula}G′⊂G with {a mathematical formula}|G′|=m, so that the attacker has no way to control the election, it indicates that for each candidate c, i.e., an element {a mathematical formula}Gˆ∈U, at least one voter group i in which {a mathematical formula}tic−ω=−1 is protected, i.e., {a mathematical formula}G′∩Gˆ≠∅. This is because if there exists a candidate c, all voter groups with {a mathematical formula}tic−ω=−1 are unprotected, then the attacker can successfully attack all such groups and c will be tied with ω among the remaining votes. Thus the protected voter groups satisfy {a mathematical formula}∀Gˆ∈U,G′∩Gˆ≠∅, which is the required hitting set.The ⇒ direction: Given a hitting set {a mathematical formula}G′⊂G, the defender can protect all voter groups {a mathematical formula}i∈G′. Thus, even if the attacker attacks all the unprotected voter groups, each candidate {a mathematical formula}c∈C−ω still has at least 1 vote fewer than ω. Therefore, no attacker strategy can control the election.  □
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Complexity of preventing constructive control
+      </section-title>
+      <paragraph>
+       To show the complexity of preventing constructive control, we use a reduction from a known NP-complete problem, the set cover problem, which is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Set cover problemGiven: A set G and a set U consisting of subsets {a mathematical formula}Gˆ of G. Question: Does there exist a ‘set cover’ {a mathematical formula}U′⊆U with {a mathematical formula}|U′|=r, so that the union of {a mathematical formula}U′ is G.
+      </paragraph>
+      <paragraph label="Theorem 3">
+       Checking whether m protection resources are sufficient to prevent constructive control is co-NP-hard.
+      </paragraph>
+      <paragraph label="Proof">
+       Next, we prove the theorem from both directions.The ⇒ direction: If there exists an r set cover {a mathematical formula}U′, then m resources are not sufficient to protect the election.Indeed, if there exists an r set cover {a mathematical formula}U′, then one attacker strategy which can make υ win is to attack the {a mathematical formula}n−r groups labeled with {a mathematical formula}i∈U∖U′ (plus the extra group if it is added; in the example above, the attacker can attack groups 2 and 10). In the remaining {a mathematical formula}2r+2m groups, υ will have more votes than any other candidate. This indicates that if the defender wants to completely block the attacker, at least one group labeled with {a mathematical formula}i∈U∖U′ or the extra group, e.g., group i, should be protected. Thus at least one of the m groups in which there is one vote for each candidate in G, e.g., group j, cannot be protected. In this case, the attacker can keep his strategy, except for attacking target j instead of i, and still let υ win. In the above example, to completely block the attacker, the defender needs to protect group 2. This indicates that one of groups 4 and 5 cannot be protected. Thus the attacker can turn to attack the unprotected group and let υ win. Therefore, if there exists an r set cover then m resources are not sufficient to protect the election.The ⇐ direction: If there does not exist an r set cover, then m resources are sufficient to protect the election.This is because the defender can protect the m groups in which there is one vote for each candidate in G (groups 4 and 5 in the example). The attacker will not attack the groups in which only υ has votes, and he will attack the {a mathematical formula}n−r groups labeled with {a mathematical formula}i∈U (plus the extra group if it is added). Since there does not exist an r set cover, in the remaining r groups labeled with {a mathematical formula}i∈U, at least one candidate will have r votes, and thus this candidate will at least tie with υ, and the attacker cannot succeed. Therefore, if there does not exist an r set cover, then m resources are sufficient to protect the election. Equivalently, if m resources are not sufficient to protect the election, then there exists an r set cover.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Optimal defense against election control
+     </section-title>
+     <paragraph>
+      The results thus far appear rather negative from the defender's perspective: group-level control is computationally hard to prevent. However, these were worst-case results. Next, we turn to the more pragmatic question of developing practical algorithmic approaches for protection against election control. We do so by modeling the problem as a Stackelberg security game between the defender and the attacker, as is introduced in Section 3. In our scenario, given a pair of the defender's mixed strategy and the attacker's pure strategy, i.e., {a mathematical formula}(x,a), the defender's utility is {a mathematical formula}uD(x,a)=Pω(x,a). The attacker's utility, on the other hand, depends on the form of control they wish to exercise. In destructive control settings, {a mathematical formula}uA(x,a)=−Pω(x,a), whereas for constructive control, {a mathematical formula}uA(x,a)=Pυ(x,a). We adopt the Strong Stackelberg Equilibrium (SSE) as the solution concept, which is formally defined by Definition 1. Next, we consider defending each type of election control respectively.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Defense against destructive control
+      </section-title>
+      <paragraph>
+       If the attacker's goal is to perform destructive control, the defender and the attacker have exactly opposing objectives, and the game is therefore zero-sum. Since SSE and Nash equilibria are equivalent in zero-sum games [37], we can use a well-known linear programming formulation for solving zero-sum normal-form games [12]. We call this formulation Core-LP.{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As introduced in previous sections, {a mathematical formula}x={xs:s∈S} denotes a mixed strategy of the defender, with {a mathematical formula}xs representing the probability that strategy s is played. Core-LP results in a mixed strategy of the defender which maximizes the defender utility given that the attacker responds the best. The central challenge with this approach is that it requires one to explicitly enumerate all pure strategies for both the defender and attacker. Since in our case the strategy space for both players is exponential, this is a non-starter. We therefore develop a Double Oracle approach for addressing this scalability issue.
+      </paragraph>
+      <paragraph>
+       The double oracle framework is a common approach for solving zero-sum games in which both players have exponential strategy spaces [47], [34]. The idea is to start with a small set of strategies for both players, compute equilibrium in this restricted game using Core-LP, and check whether either player has a best response in the full strategy space that improves their payoff. If such a strategy exists for either player, it is added to the Core-LP, which is solved again. Otherwise, we have proven that the resulting restricted equilibrium is a Stackelberg/Nash equilibrium of the full game.
+      </paragraph>
+      <paragraph>
+       The Double-Oracle approach is not itself an algorithm, as it does not specify how to compute a best response for each player in the full strategy space. Indeed, in general this would require full enumeration of player strategies. The key is to develop effective approaches to compute such best responses—that is, effective oracles for both players—which is problem specific. For example, none of the prior approaches (e.g., [34]) are applicable in our case, because of modeling differences. Our central contributions in this section are therefore: 1) novel mixed-integer linear programming (MILP) formulations for both oracles, and 2) heuristic algorithms to speed up the computation of the oracles.
+      </paragraph>
+      <paragraph>
+       Our full double-oracle method is shown in Algorithm 2. Line 3 computes the mixed strategy equilibrium of the restricted game, {a mathematical formula}(x,y), where y is the dual solution of Core-LP representing attacker's mixed strategy. We then make use of two types of oracles: heuristic oracles, which allow us to quickly check the existence of better responses (AO-Better and DO-Better, for attacker and defender, respectively), and exact oracles (AO-MILP and DO-MILP), which are optimal.
+      </paragraph>
+      <paragraph>
+       Next, we describe both the exact and heuristic oracles for the attacker and defender, observing in the process that both best response problems are NP-complete.
+      </paragraph>
+      <section label="6.1.1">
+       <section-title>
+        Attacker oracle
+       </section-title>
+       <section>
+        <section-title>
+         Complexity.
+        </section-title>
+        <paragraph>
+         In Theorem 1 we had already shown that destructive control in our model can be performed in polynomial time. However, this result assumed that no protection is deployed, or, equivalently, that protection is deterministic. Surprisingly, when protection is randomized, destructive control, which we also refer to as the attacker's best response or oracle, is NP-complete, as the following result attests (in this result, {a mathematical formula}S′ represents the support of the defender's mixed strategy).
+        </paragraph>
+        <paragraph label="Proof">
+         Let{a mathematical formula}S′be a set of defender strategies. Checking whether there exist k groups an attack on which would control an election no matter which{a mathematical formula}s∈S′is played by the defender is NP-complete, even with only two candidates.Clearly, given k groups that will be attacked, it is easy to verify that the defender will not be able to prevent the control by playing any {a mathematical formula}s∈S′, and thus the problem is in NP. We prove hardness by a reduction from the hitting set problem given in Definition 5. Specifically, we show that for any instance of the hitting set problem, we can construct an election with n voter groups, 2 candidates, and a set {a mathematical formula}S′ of defender strategies, so that there exists a hitting set {a mathematical formula}G′ if and only if there exists an attacker strategy which can control the election no matter which defender strategy {a mathematical formula}s∈S′ is played.Given an instance of a hitting set problem, we construct an election with {a mathematical formula}|G|+1 voter groups and two candidates, ω and some other candidate c, and assume that the attacker can attack m groups. Each {a mathematical formula}i∈G corresponds to a voter group, in which we assume that {a mathematical formula}tic−ω=−1, i.e., c has one fewer vote than ω in voter group i. In the extra voter group j which does not correspond to any element in G, we assume that {a mathematical formula}tjc−ω=|G|−1. Thus c has 1 less vote than ω in total. Each {a mathematical formula}Gˆ∈U can be considered as a label of a defender's pure strategy, in which voter group j and voter groups {a mathematical formula}i∈G∖Gˆ are protected.For example, assume that {a mathematical formula}G={1,2,3} and {a mathematical formula}U={{1,2},{3}}. This indicates that there are 4 voter groups, i.e., 3 correspond to items in G and one extra voter group; the defender has two pure strategies in the support set, each is labeled by one item in U. In the first three voter groups c has 1 fewer vote than ω, while in the last group c has 2 more votes than ω. In the defender strategy labeled by {a mathematical formula}{1,2}∈U, groups 3 and 4 are protected. In the defender strategy labeled by {a mathematical formula}{3}∈U, groups 1, 2 and 4 are protected.The ⇐ direction: If there exists an attacker strategy which attacks m voter groups i.e., {a mathematical formula}G′⊂G with {a mathematical formula}|G′|=m, so that he can control the election no matter which defender strategy {a mathematical formula}s∈S′ is played, it indicates that given the defender strategy s labeled by {a mathematical formula}Gˆ∈U, at least one voter group i with {a mathematical formula}i∈Gˆ and {a mathematical formula}tic−ω=−1 is attacked. Thus for each {a mathematical formula}Gˆ∈U,G′∩Gˆ≠∅. Otherwise the attacker cannot control the election if s is played. Therefore, {a mathematical formula}G′ is a required hitting set.Still consider the previous example. If {a mathematical formula}|m|=2, the attacker can attack voter groups {a mathematical formula}G′={2,3}, thus he can control the election no matter which pure strategy the defender plays. Correspondingly, {a mathematical formula}G′ is a required hitting set.The ⇒ direction: Given a hitting set {a mathematical formula}G′⊂G with {a mathematical formula}|G′|=m, the attacker can attack all voter groups {a mathematical formula}i∈G′. Thus no matter which {a mathematical formula}s∈S′ is played by the defender, at least one unprotected voter group with {a mathematical formula}tic−ω=−1 is attacked. Since ω only has 1 more vote than c in the original voting, the attacker can prevent ω from winning no matter which {a mathematical formula}s∈S′ is played.  □
+        </paragraph>
+        <paragraph>
+         Hardness of destructive control when the defender randomizes has an interesting theoretical implication in the context of the traditional approach where resistance of elections to control is identified with computational hardness of the latter [14]. The fact that plurality is easy to control for a deterministic (or no) defense, but hard when protection is randomized would itself be considered a significant reduction in the vulnerability of the election to control. Below, we go a step further.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Exact solution.
+        </section-title>
+        <paragraph>
+         Although computing the attacker's best response (oracle) is NP-complete, we now develop an exact compact mixed-integer linear program (MILP) for it, which we term AO-MILP. Formally, the attacker's best response involves minimizing the probability that ω wins, i.e., solving {a mathematical formula}mina∈A⁡∑s∈S′xsWω(x,a) for a given mixed strategy x with the support set {a mathematical formula}S′. Our first step is to formulate the attacker oracle as a mathematical (non-linear) program. The main technical challenge involved is representing {a mathematical formula}Wω(s,a), which is a non-trivial function of s and a. We do this implicitly in AO-MILP by using an auxiliary binary variable {a mathematical formula}zs.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Constraint (2b) enforces feasibility of the attacker's strategy vector a. Next we explain Constraints (2c)–(2d). Given a strategy pair {a mathematical formula}(s,a), votes in group i are deleted only if {a mathematical formula}si=0 and {a mathematical formula}ai=1. Thus for each candidate {a mathematical formula}c∈C−ω, the vote difference between c and ω is {a mathematical formula}sum(tc−ω∖k)=∑itic−ω−∑i(1−si)aitic−ω. Note that {a mathematical formula}zs=1, i.e., ω loses given strategy pair {a mathematical formula}(s,a), as long as there exists one candidate who has no fewer votes left than ω given {a mathematical formula}(s,a), i.e., {a mathematical formula}sum(tc−ω∖k)≥0. Variables {a mathematical formula}esc are thus introduced to check whether there exists such a candidate. Constraints (2c), (2d), and the objective together ensure that if there exists such a candidate {a mathematical formula}c⁎ for some s, the corresponding {a mathematical formula}esc⁎ will be set as 1 and {a mathematical formula}esc for all other candidates will be set as 0. Thus, {a mathematical formula}∑c∈C−ωesc(∑itic−ω(1−(1−si)ai))≥0, and the associated {a mathematical formula}zs=1, yielding, in combination with Constraint (2b) a pure strategy for the attacker that minimizes the probability that ω wins given x. While AO-MP includes non-linear constraint (2d), because all variables involved are binary, this constraint can be linearized in a standard way using McCormick inequalities [46], yielding an MILP for computing the attacker's best response. Specifically, we introduce two new variables {a mathematical formula}wsc=zsesc and {a mathematical formula}vs,ic=wscai, so that constraint (2d) becomes linear related to {a mathematical formula}wc and {a mathematical formula}vs,ic. We then add the following constraints, so that the resulted linear program is equivalent to the original program.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Heuristic “better” response.
+        </section-title>
+        <paragraph>
+         The main issue with AO-MILP is poor scalability. However, we need only compute a better response for the attacker in each iteration of the Double-Oracle method to make progress; by doing so quickly, even if heuristically, we can considerably speed up equilibrium computation. As long as we ultimately fall back on the MILP to check optimality, we can still guarantee that the final double-oracle solution is an SSE.
+        </paragraph>
+        <paragraph>
+         We take two steps to find a better response for the attacker. First, we look for a subset {a mathematical formula}S″⊂S′ with {a mathematical formula}∑s∈S″xs&gt;1−p, where p is the objective value of Core-LP restricted to a small subset of attacker strategies {a mathematical formula}A′ in the previous iteration, i.e., the probability that ω still wins the game given the current best attacker strategy. Second, we look for an attacker pure strategy a which can make ω lose no matter which pure strategy {a mathematical formula}s∈S″ is played by the defender, i.e., {a mathematical formula}Wω(s,a)=0 for each {a mathematical formula}s∈S″. If we can successfully find such a set {a mathematical formula}S″ and a pure strategy a, the attacker will make ω lose with probability at least {a mathematical formula}∑s∈S″xs (win with a probability less than p) if he plays pure strategy a. Thus, a is a better strategy than any {a mathematical formula}a′∈A′.
+        </paragraph>
+        <paragraph>
+         The full heuristic approach, AO-Better, is shown in Algorithm 3. We first sort the defender strategies in {a mathematical formula}S′ in decreasing order of {a mathematical formula}xs, obtaining a sorted vector {a mathematical formula}S¯ with {a mathematical formula}sρ the ρth largest element (Line 3). We then look for set {a mathematical formula}S″ consisting of adjacent strategies in {a mathematical formula}S¯ (Lines 5–6). For each {a mathematical formula}S″, we check if there exists a candidate c, such that if the attacker attacks k areas which are not protected by any strategy {a mathematical formula}s∈S″, c will have more votes remaining than ω. If there exists such a candidate, then the corresponding attacker strategy leads ω to lose no matter which {a mathematical formula}s∈S″ is played by the defender, and is better than any in {a mathematical formula}A′ (Lines 8–11). If no better strategy is found, then AO-Better returns an empty set.
+        </paragraph>
+       </section>
+      </section>
+      <section label="6.1.2">
+       <section-title>
+        Defender oracle
+       </section-title>
+       <paragraph>
+        Hardness of the defender oracle follows from Theorem 2. We now proceed to develop a mathematical programming approach for solving it in practice.
+       </paragraph>
+       <section>
+        <section-title>
+         Exact solution.
+        </section-title>
+        <paragraph>
+         The defender's oracle, or best response, is to maximize the probability that ω wins given a mixed strategy of the attacker {a mathematical formula}y=〈ya:a∈A′〉, i.e., to solve {a mathematical formula}maxs∈S⁡∑a∈A′Wω(s,a)ya. Just as in the attacker oracle formulation, we proceed to develop the (non-linear) mathematical integer program to compute the defender's best response.{a mathematical formula}{a mathematical formula}{a mathematical formula} There is an important difference in this formulation from the attacker oracle: in particular, {a mathematical formula}za=1 (that is, the defender successfully blocks an attack strategy {a mathematical formula}a∈A′, so that {a mathematical formula}Wω(s,a)=1, where {a mathematical formula}A′ is the attacker strategy from the previous iteration of Double-Oracle) only if all candidates {a mathematical formula}c∈C−ω have fewer votes remaining than ω. Constraint (4c) ensures that {a mathematical formula}za=1 only when {a mathematical formula}∀c∈C−ω, {a mathematical formula}∑itic−ω−∑i(1−si)aitic−ω&lt;0, while Constraint (4b) enforces feasibility of the defender's strategy. The resulting DO-MILP thereby chooses the defender strategy which maximizes the probability that ω wins given a fixed attacker mixed strategy y. We can then linearize the nonlinear constraint (4c) as before by using McCormick inequalities [46], obtaining an MILP formulation of the defender oracle.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Heuristic “better” response.
+        </section-title>
+        <paragraph>
+         We first look for a subset {a mathematical formula}A″⊂A′ with {a mathematical formula}∑a∈A″ya&gt;p (similar to how we look for {a mathematical formula}S″ in the attacker oracle). Then we look for a defender pure strategy s which can “block” all attacker strategies {a mathematical formula}a∈A″, ensuring that ω will win with probability higher than p. If such a strategy is found, then it is a better response for the defender. Algorithm 4 presents the full heuristic procedure.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Defense against constructive control
+      </section-title>
+      <paragraph>
+       Having addressed defense against destructive control, we now turn to the issue of constructive control.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Heuristic algorithm
+       </section-title>
+       <paragraph>
+        Before addressing equilibrium strategies in the Stackelberg security game, we first introduce a heuristic algorithm which computes a pure strategy to prevent constructive control in certain cases. While such strategies are generally hard to compute (as is investigated by Theorem 3), we now show that it can be done in polynomial time in an important restricted setting. Assume that the attacker's goal is to let candidate υ win the game. One defender strategy which can prevent the attacker is to protect m voter groups, so that a certain candidate {a mathematical formula}c∈C has more votes than υ despite how the unprotected groups are deleted. We call such a strategy c-dominant-strategy. A c-dominant-strategy makes the attacker fail and she would be possibly deterred from attacking. Since it is computationally hard for the defender to ensure that ω wins, she can at least find a c-dominant-strategy efficiently, if one exists. Later experiments will show that such strategies exist in a considerable proportion of the games, especially the ones with higher (defense resource/voter group) ratio.
+       </paragraph>
+       <paragraph>
+        Now, if we fix {a mathematical formula}c∈C, it is easy to check whether there exists a c-dominant-strategy: we can protect the m groups in which c is most favored over υ, and check whether the attacker can have υ beat c by deleting k of the unprotected groups which favor c more than υ. Similar as previous definition of {a mathematical formula}tc−ω, let {a mathematical formula}tc−υ=〈tic−υ:i∈I〉 be a vector with {a mathematical formula}tic−υ=tic−tiυ, that is, the vote advantage of c over υ in group {a mathematical formula}i∈I. For a vector {a mathematical formula}tc−υ, define {a mathematical formula}sum(tc−υ)=∑itic−υ. Then, {a mathematical formula}sum(tc−υ) is the total difference of votes between c and υ. The following proposition gives the condition for determining the existence of a c-dominant-strategy. For convenience, let {a mathematical formula}ec be the set of groups corresponding to the {a mathematical formula}(m+1)st largest to the {a mathematical formula}(m+k)th largest {a mathematical formula}tic−υ with {a mathematical formula}tic−υ&gt;0. {a mathematical formula}ec is an empty set if the group with the {a mathematical formula}(m+1)st largest {a mathematical formula}tic−υ has {a mathematical formula}tic−υ&lt;0. Let {a mathematical formula}tc−υ∖ec be the portion of the vector {a mathematical formula}tc−υ remaining after elements corresponding to groups in {a mathematical formula}ec are deleted. For example, assume that there exists a candidate c with {a mathematical formula}tc−υ=〈10,5,−5,−3〉, and that {a mathematical formula}m=1 and {a mathematical formula}k=2, then {a mathematical formula}ec includes only the group corresponding to 5 (since the group with the 3rd largest {a mathematical formula}tic−υ has {a mathematical formula}tic−υ=−3&lt;0) and {a mathematical formula}tc−υ∖ec=〈10,−5,−3〉.
+       </paragraph>
+       <paragraph label="Proposition 2">
+        For candidate{a mathematical formula}c∈C, there exists a c-dominant-strategy if and only if{a mathematical formula}sum(tc−υ∖ec)&gt;0.
+       </paragraph>
+       <paragraph label="Proof">
+        First, given an allocation of security resources which protects a set ψ of m groups, to let υ beat c, the attacker's best response is to attack unprotected groups to suppress the advantage of c over υ the most, i.e., a group {a mathematical formula}e⁎=arg⁡maxe,e⊂I∖ψ,|e|≤k⁡sum(e) (without loss of generality, here {a mathematical formula}sum(e)=sum({tic−υ:i∈e})).For the ⇐ direction, if {a mathematical formula}sum(tc−υ∖ec)&gt;0, a c-dominant strategy is to protect m groups with the m largest {a mathematical formula}tic−υ. Thus {a mathematical formula}e⁎=ec and no attacker strategy can let υ beat c.For the ⇒ direction, if there exists a c-dominant-strategy which protects groups in ψ, then {a mathematical formula}sum(e⁎)≥sum(ec). Thus protecting the m groups with the m largest {a mathematical formula}tic−υ is also a c-dominant-strategy and {a mathematical formula}sum(tc−υ∖ec)&gt;0.  □
+       </paragraph>
+       <paragraph>
+        Based on Proposition 2, we propose Algorithm 5, which returns a c-dominant strategy in polynomial time if one exists.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        SSE
+       </section-title>
+       <paragraph>
+        The key new challenge in the constructive control setting is that the resulting Stackelberg game is no longer zero-sum, and we therefore cannot use the double-oracle approach directly. The SSE strategies can be computed through a mixed integer linear program. We first introduce a variable {a mathematical formula}qa∈{0,1}(∀a∈A) to indicate whether the attacker plays pure strategy a{a mathematical formula}(qa=1) or not {a mathematical formula}(qa=0). Let M be a large number. The program can be formulated as is shown by the following SSE-MILP. Constraint (5b) places an upper bound of {a mathematical formula}uD(x,a) on {a mathematical formula}pD, but only for the played attacker strategies. Since the objective maximizes {a mathematical formula}pD, it implies that the defender plays a best response. Similarly, Constraint (5c) forces the attacker to select the best response given x. The first part, {a mathematical formula}pA−uA(x,a)≥0, implies that {a mathematical formula}pA must be at least as large as the maximal payoff of playing any other attacker strategy. The second part forces {a mathematical formula}pA−uA(x,a)≤0 for the played strategies, which will be violated if the attacker does not play a best response. Taken together, the program results in SSE strategies for both players.{a mathematical formula}{a mathematical formula}{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="6.2.3">
+       <section-title>
+        Zero-sum approximation
+       </section-title>
+       <paragraph>
+        The MILP above requires us to explicitly enumerate all pure strategies to solve the game, which makes it inefficient for solving large games. While a double-oracle approach cannot be applied here to compute the optimal solution for the defender because the game is not zero-sum, we now show that we can use it to obtain an approximate solution to the problem.
+       </paragraph>
+       <paragraph>
+        First, consider the zero-sum game of defense against destructive control. We call it ω-{a mathematical formula}zero-sum game for convenience. Let {a mathematical formula}(xω,aω) be the equilibrium strategies for the defender and the attacker in this zero-sum game, and let {a mathematical formula}p0ω be probability that ω wins the game given {a mathematical formula}(xω,aω). Note that even when the attacker's goal is to let candidate υ win, if the defender plays {a mathematical formula}xω and the attacker responds optimally by choosing a strategy {a mathematical formula}aυω=g(xω), where {a mathematical formula}aυω=arg⁡maxa⁡Pυ(xω,a), the probability that ω wins given {a mathematical formula}(xω,aυω) will be no less than {a mathematical formula}p0ω. This is because playing {a mathematical formula}aυω indicates that the attacker deviates from the optimal strategy in the zero-sum game, which makes the defender better off. Consequently, the solution of this zero-sum game provides a lower bound on the defender's optimal utility against constructive control.
+       </paragraph>
+       <paragraph>
+        Though the solution to the ω-zero-sum game guarantees a lower bound, we still wish to know how much it differs from the optimal defender strategy. This can be achieved by solving another zero-sum game, which we term the υ-{a mathematical formula}zero-sum game. This game is identical to the ω-zero-sum game except that the defender's goal is to minimize the probability that υ wins. The Stackelberg equilibrium of the υ-zero-sum game (which is equivalent to its Nash equilibria) can be computed in the same way as for the ω-zero-sum game. Let {a mathematical formula}(xυ,aυ) be the equilibrium strategies for the defender and the attacker in the υ-zero-sum game, and let {a mathematical formula}p0υ be the probability that υ wins the game given {a mathematical formula}(xυ,aυ). The following proposition shows that {a mathematical formula}1−p0υ is the upper bound of the defender's SSE utility in the game of defense against constructive control.
+       </paragraph>
+       <paragraph label="Proposition 3">
+        Under the SSE strategies{a mathematical formula}(x⁎,a⁎)in the game of defense against constructive control, the defender utility is{a mathematical formula}uD(x⁎,a⁎)≤1−p0υ.
+       </paragraph>
+       <paragraph label="Proof">
+        We prove it by contradiction. If {a mathematical formula}uD(x⁎,a⁎)&gt;1−p0υ, it indicates that given {a mathematical formula}(x⁎,a⁎), ω succeeds with a probability higher than {a mathematical formula}1−p0υ, and thus υ succeeds with probability less than {a mathematical formula}p0υ. Since {a mathematical formula}a⁎ is the attacker's best response to {a mathematical formula}x⁎ which maximizes the probability that υ wins, this indicates that {a mathematical formula}(x⁎,a⁎) leads to a higher defender utility in the υ-zero-sum game than {a mathematical formula}(xυ,aυ). But in this case, {a mathematical formula}(xυ,aυ) cannot be the equilibrium strategies, which is a contradiction.  □
+       </paragraph>
+       <paragraph>
+        Given Proposition 3, we can further observe that the defender's equilibrium strategy {a mathematical formula}xv in the υ-zero-sum game is also her optimal strategy to defend against constructive control whenever the upper bound on the defender's utility is tight. Intuitively, if there exists a pair of equilibrium strategies {a mathematical formula}(xυ,aυ) in the υ-zero-sum game under which either υ or ω wins, i.e., υ wins with a probability of {a mathematical formula}p0υ while ω wins with a probability of {a mathematical formula}1−p0υ, then {a mathematical formula}xυ is the optimal defender strategy to defend against constructive control. Formally, we have the following theorem.
+       </paragraph>
+       <paragraph label="Theorem 5">
+        If there exists an attacker strategy a so that
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         a is the best response to{a mathematical formula}xυin the υ-zero-sum game,
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}Pω(xυ,a)=1−p0υ,
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Since the attacker's goal in the υ-zero-sum game is also to perform constructive control, i.e., to let υ win, a is also the attacker's best response to {a mathematical formula}xv in the game of defense against constructive control. Therefore, based on Proposition 3, {a mathematical formula}(xv,a) is a pair of SSE strategies in the game.  □
+       </paragraph>
+       <paragraph>
+        The process of computing an approximately optimal strategy for the defender to defend against constructive control then proceeds by solving the two zero-sum games above and choosing the better of the two defender strategies (Algorithm 6). In practice, this approach nearly always finds an optimal solution, as we show in the experiments below.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Uncertainty about voter preferences
+     </section-title>
+     <paragraph>
+      Our entire treatment of the problem so far assumed complete information about voter preferences for both the attacker and defender. We now show that this assumption is relatively straightforward to relax (from a technical perspective). Specifically, we retain the assumption that the attacker has complete information, but assume that the defender is uncertain about voter preferences. Formally, let V denote a particular voting preference outcome, with {a mathematical formula}RV being the defender's prior distribution over V. The defender's goal in this setting is to minimize the expected probability that the attacker can successfully control the election. We illustrate defense against destructive control in this section; defense against constructive control can be extended analogously.
+     </paragraph>
+     <paragraph>
+      Since the attacker knows V, this gives rise to a Bayesian Stackelberg game with V being the attacker's type. Let {a mathematical formula}WVω(s,a) be a binary indicator representing whether ω wins the game given voting preferences V and a strategy pair {a mathematical formula}(s,a). The optimal mixed strategy for the defender can then be computed by solving the following LP, which is a Bayesian extension of the Core-LP in Section 6.1:{a mathematical formula}{a mathematical formula} Note that this formulation is amenable to the same double oracle framework that was used to solve the complete information game. The primary difference is that now the attacker oracle must be run for each V, whereas the defender oracle requires a modified objective involving expected probability of the election being controlled with respect to {a mathematical formula}RV. In practice, since the space of relevant voting preferences V is extremely large, we can take a collection of samples from this distribution and solve the linear program Bayesian-LP solely using these samples to obtain an approximately optimal defense.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      We evaluate the proposed algorithms in terms of solution quality and scalability. Experiments were run on a Macbook Air computer with 1.7 GHz Intel Core i5, 4 GB memory. Linear and mixed integer programs were solved using CPLEX 12.6.1. We evaluated the algorithms on both synthetic and real data. For synthetic data, we randomly generate a tally for each candidate within each group uniformly in the {a mathematical formula}[0,100] interval. Each bar in the figures is an average over 101 samples unless otherwise specified, with error bars reflecting a 95% confidence interval. We evaluate solution quality as a function of the following problem parameters: the number of attack resources, the number of defense resources, the number of voter groups, and the number of candidates. Our evaluation on real data uses two datasets. First is the dataset from the 2002 French presidential election [38]. This dataset consists of 2597 votes for 16 candidates by voters in 6 districts (voter groups). The second is the dataset of the 12 largest districts in the state of Michigan in the 2016 U.S. presidential election. In this election, only two of the candidates received enough votes to be meaningfully involved in election control, and consequently constructive and destructive control are equivalent on this dataset.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Solution quality
+      </section-title>
+      <paragraph>
+       Solution quality of our approach is compared to two baselines. The first, termed Random, is a uniformly random defense, that is, the defender plays each pure strategy with the same probability. The second, termed Greedy, deterministically protects m groups in which ω has the greatest advantage over the next best candidate in that group. Solution quality is evaluated in terms of the probability that the defender succeeds. More precisely, we aim to maximize the probability that the original winner ω still wins the game under when the attacker plays a best response to the defender's strategy.
+      </paragraph>
+      <paragraph>
+       Our first evaluation is in the context of defense against destructive control. Figs. 1(a) and 1(b) show the results as a function of the number of attack and defense resources when the number of voter groups is fixed at 10 and the number of candidates is fixed at 4. In Fig. 1(a), the number of defense resources is fixed at 2, while in Fig. 1(b), the number of attack resources is fixed at 2. Figs. 1(c) and 1(d) show the results as a function of the number of voter groups and candidates respectively when the number of resources for both agents is fixed at 2, while in Fig. 1(c) the number of candidates is fixed at 4 and in Fig. 1(d) the number of groups is fixed at 10. ‘Stackelberg Equi’ refers to the Stackelberg equilibrium solution, i.e., the solution to Core-LP, which always significantly outperforms both baselines in all the experiment settings, in most cases quite dramatically.
+      </paragraph>
+      <paragraph>
+       Next we perform a similar evaluation in the context of defense against constructive control. For each sample we randomly choose a candidate other than the original winner and assume that the attacker's goal is to make this candidate win. The Stackelberg equilibrium solution is the solution to SSE-MILP. The settings for Figs. 2(a)–2(d) is the same as Figs. 1(a)–1(d). We can readily observe that in this setting as well the Stackelberg equilibrium solution still clearly outperforms the baselines in all test cases.
+      </paragraph>
+      <paragraph>
+       Having established the effectiveness of the proposed algorithmic approach on synthetic data, we now evaluate it on two real data sets: the real election data from the 2002 French presidential election and the real election data from 2016 American presidential election. We begin with the 2002 French presidential election data and start with defense against destructive control. Figs. 3(a) and 3(b) show the results as a function of the number of attacker/defender resources. The improvement achieved by the proposed algorithms is even more extreme here than when synthetic data is used.
+      </paragraph>
+      <paragraph>
+       We then evaluate solution quality on the French presidential election data for defense against constructive control. Since there are 16 candidates in total, we assume that the attacker wants each of the 15 candidates who lost the actual election to win in turn. We show the results averaged over these 15 cases as a function of the number of attacker/defender resources in Figs. 4(a) and 4(b) Given the small sample size, the error bars show the standard error rather than 95% confidence intervals in these plots. The Stackelberg equilibrium solution again significantly outperforms the baselines.
+      </paragraph>
+      <paragraph>
+       Finally, we evaluate solution quality on the 2016 American presidential election data. Since destructive and constructive control are equivalent for this dataset, we only show the solution quality results for destructive control as a function of the number of attacker/defender resources in Figs. 5(a) and 5(b). As in experiments in previous data sets, the Stackelberg equilibrium solution significantly outperforms the baselines.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Scalability
+      </section-title>
+      <paragraph>
+       Next we compare the scalability of the proposed algorithms. For solving games of defense against destructive control, we evaluate Core-LP algorithm with the two proposed double oracle approaches: 1) using only MILP oracles (DORA), and 2) using the heuristic methods as well (DORABE). For solving games of defense against constructive control, we evaluate SSE-MILP and the heuristic algorithm, which is labeled as ‘Heu-Apro-MILP’. In this algorithm, we first run the greedy heuristic algorithm. If it fails to return a defense strategy which can prevent constructive control, we run the zero-sum approximation. If the results of the zero-sum approximation are not optimal (which can be checked based on Theorem 5), then SSE-MILP is called to solve the game.
+      </paragraph>
+      <paragraph>
+       The results in Fig. 6 show that with increased problem size, either in terms of the number of voter groups or defender resources, the double-oracle approaches significantly outperform Core-LP. We also tested the effect of better oracles. Results show that DORABE usually takes more iterations than DORA to converge, but the runtime of each iteration in DORABE is far less. SSE-MILP is the least scalable, but Heu-Apro-MILP can solve large games quite efficiently. The runtime of Heu-Apro-MILP barely increases as the number of defense resources increases. This is mainly because the greedy heuristic algorithm can directly return the best defense strategy in most cases, especially when there are enough defense resources. As the number of voter groups increases, it shows an increasing trend similar to DORABE.
+      </paragraph>
+      <paragraph>
+       We further evaluate the effect of the greedy heuristic algorithm and the zero sum approximation algorithm for solving games of defense against constructive control. Fig. 7(a) shows the percentage of times the greedy heuristic algorithm succeeds in finding a defender strategy which can prevent constructive control as the number of defense resources increases. Naturally, more resources leads to higher percentage, and it almost always succeeds when there are 7 defense resources (the number of groups is fixed at 20). Fig. 7(b) shows the solution to the zero-sum approximation and the SSE, with each bar group averaged over 500 samples. Results show that solution to the zero-sum approximation is extremely close to the SSE solution in all cases. Indeed, of all 1500 samples, the zero-sum approximation failed to return the SSE solution only once (when the number of groups is 15).
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Uncertainty
+      </section-title>
+      <paragraph>
+       Finally, we compare solution quality of our approach extended to account for defender's uncertainty about voter preferences with the two baselines. The results were qualitatively the same: the Bayesian Stackelberg game approach significantly outperformed the alternatives. We consider the effect of the number of samples from the entire voter preference outcome space used in the Bayesian Stackelberg game to compute an approximate defense under uncertainty. We study two cases: low uncertainty, where the variance of Gaussian noise is 10, and high uncertainty, where tallies of candidates are drawn uniformly in {a mathematical formula}[1,400] and variance is 20. In both cases, we take 60 attacker types (drawn from this distribution) to be the ground truth. In Figs. 8(a) and 8(b), the x-axis is the number of samples taken by the defender to solve Bayesian-LP, while the y-axis indicates the optimal expected success probability of attackers. We observe that in both experiments very few samples (≤ 6) suffice to achieve a near-optimal solution.
+      </paragraph>
+      <paragraph>
+       Next, we perform several robustness experiments considering the impact of errors in problem parameters. We first consider that the defender's knowledge about the votes is not accurate, i.e., we sample a collection of tallies as the ground truth, then add a standard Gaussian noise to the votes in each group for each candidate. We assume that the defender strategies are computed based on the votes with noise, the attacker's best response is made based on the original votes, then compute the probability that the defender wins the game given the computed defender strategies, the attacker's best response, and the original votes. Given the defender strategies computed by the proposed algorithms and the baselines, the results in games addressing destructive control and constructive control are shown in Figs. 9(a) and 9(b) respectively. Even with such errors, the proposed algorithms still significantly outperform the baselines in most cases.
+      </paragraph>
+      <paragraph>
+       We also consider errors in the defender's knowledge about the probability distribution over types in Bayesian games. We first set a distribution as the ground truth, then add a Gaussian noise with {a mathematical formula}μ=0,σ2=0.1 to the probability that each type appears, then project the new distribution to ensure the sum to be 1. Fig. 10(a) shows the solution quality of the proposed algorithms and the baselines in defense against destructive control. Stackelberg equilibrium still clearly outperforms other solutions. Fig. 10(b) shows the difference between defender's utilities when she computes the Bayesian Stackelberg equilibrium with and without distribution noise, while the attacker's response is always based on the original distribution without noise. Results show that slight errors do not significantly affect solution quality.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

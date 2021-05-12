@@ -1,0 +1,1651 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Information Extraction over Structured Data:Question Answering with Freebase.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Answering natural language questions using the Freebase knowledge
+base has recently been explored as a platform for advancing the
+state of the art in open domain semantic parsing. Those efforts map
+questions to sophisticated meaning representations that are then
+attempted to be matched against viable answer candidates in the
+knowledge base. Here we show that relatively modest information
+extraction techniques, when paired with a web-scale corpus, can
+outperform these sophisticated approaches by roughly 34% relative
+gain.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       [0]leftmargin=*,itemindent=0em,itemsep=-2pt,topsep=0pt
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Question answering (QA) from a knowledge base (KB) has a long history
+within natural language processing, going back to the 1960s and 1970s,
+with systems such as
+        Baseball
+        [16]
+        and
+        Lunar
+        [38]
+        . These systems were limited to
+closed-domains due to a lack of knowledge resources, computing power,
+and ability to robustly understand natural language. With the recent
+growth in KBs such as
+        DBPedia
+        [1]
+        ,
+        Freebase
+        [4]
+        and
+        Yago2
+        [18]
+        , it has become more practical to
+consider answering questions across wider domains, with commercial
+systems including
+        Google Now
+        , based on Google’s
+        Knowledge
+Graph
+        , and
+        Facebook Graph Search
+        , based on social network
+connections.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The AI community has tended to approach this problem with a focus on
+first understanding the intent of the question, via shallow or deep
+forms of semantic parsing (c.f. §
+        3
+        for a
+discussion). Typically questions are converted into some meaning
+representation (e.g., the lambda calculus), then mapped to database
+queries. Performance is thus bounded by the accuracy of the original
+semantic parsing, and the well-formedness of resultant database
+queries.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The Information Extraction (IE) community approaches QA differently:
+first performing relatively coarse information retrieval as a way to
+triage the set of possible answer candidates, and only then attempting
+to perform deeper analysis.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Researchers in semantic parsing have recently explored QA over
+Freebase as a way of moving beyond closed domains such as GeoQuery
+        [35]
+        . While making semantic parsing more robust is a
+laudable goal, here we provide a more rigorous IE baseline against
+which those efforts should be compared: we show that “traditional”
+IE methodology can significantly outperform prior state-of-the-art as
+reported in the semantic parsing literature, with a relative gain of
+ 34%
+        F1
+        as compared to
+        Berant et al. (2013)
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Approach
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We will view a KB as an interlinked collection of “topics”. When
+given a question about one or several topics, we can select a “view”
+of the KB concerning only involved topics, then inspect every related
+node within a few hops of relations to the topic node in order to
+extract the answer. We call such a view a
+        topic graph
+        and assume answers can be found within the graph.
+We aim to maximally automate the answer extraction process,
+by massively combining discriminative features for both the question
+and the topic graph. With a high performance learner we have found
+that a system with millions of features can be trained within hours,
+leading to intuitive, human interpretable features. For example, we
+learn that given a question concerning
+        money
+        , such as:
+        what money is used in ukraine
+        , the expected answer type is
+likely
+        currency
+        . We formalize this approach in
+        §
+        4
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        One challenge for natural language querying against a KB is the
+relative informality of queries as compared to the grammar of a KB.
+For example, for the question:
+        who cheated on celebrity A
+        ,
+answers can be retrieved via the Freebase relation
+        celebrity.infidelity.participant
+        , but the
+connection between the phrase
+        cheated on
+        and the formal KB
+relation is not explicit. To alleviate this problem, the best attempt so far is to map
+from
+        ReVerb
+        [10]
+        predicate-argument triples to
+Freebase relation triples
+        [6, 2]
+        .
+Note that to boost precision,
+        ReVerb
+        has already pruned down less
+frequent or credible triples, yielding not as much coverage as its
+text source,
+        ClueWeb
+        . Here we instead directly mine relation mappings
+from
+        ClueWeb
+        and show that both direct relation mapping precision and
+indirect QA
+        F1
+        improve by a large margin. Details in
+        §
+        5
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Finally, we tested our system,
+        jacana-freebase
+        ,
+        on a realistic dataset generously
+contributed by
+        Berant et al. (2013)
+        , who collected thousands
+of commonly asked questions by crawling the
+        Google Suggest
+        service. Our method achieves state-of-the-art performance
+with
+        F1
+        at
+        42.0⁢%
+        , a
+        34⁢%
+        relative increase
+from the previous
+        F1
+        of
+        31.4⁢%
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Background
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        QA from a KB faces two prominent challenges: model and data. The model
+challenge involves finding the best meaning representation for the
+question, converting it into a query and executing the query on the
+KB. Most work approaches this via the bridge of various intermediate
+representations, including combinatory categorial grammar
+(Zettlemoyer and Collins, 2005, 2007, 2009; Kwiatkowski et al., 2010, 2011, 2013),
+synchronous context-free grammars
+        [37]
+        , dependency
+trees
+        [27, 2]
+        , string kernels
+        [20, 7]
+        , and tree transducers
+        [19]
+        . These works successfully showed their
+effectiveness in QA, despite the fact that most of them require
+hand-labeled logic annotations. More recent research started to
+minimize this direct supervision by using latent meaning
+representations
+        [2, 24]
+        or distant
+supervision
+        [23]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        We instead attack the problem of QA from a KB from an IE
+perspective: we learn directly the pattern of QA pairs, represented by
+the dependency parse of questions and the Freebase structure of answer
+candidates, without the use of intermediate, general purpose
+meaning representations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        The data challenge is more formally framed as ontology or (textual)
+schema matching
+        [17, 33, 9]
+        :
+matching structure of two ontologies/databases or (in extension)
+mapping between KB relations and NL text. In terms of the latter,
+        Cai and Yates (2013)
+        and
+        Berant et al. (2013)
+        applied
+pattern matching and relation intersection between Freebase relations
+and predicate-argument triples from the
+        ReVerb
+        OpenIE system
+        [10]
+        .
+        Kwiatkowski et al. (2013)
+        expanded their
+CCG lexicon with Wiktionary word tags towards more domain
+independence.
+        Fader et al. (2013)
+        learned question paraphrases from
+aligning multiple questions with the same answers generated by
+        WikiAnswers
+        . The key factor to their success is to have a huge text
+source. Our work pushes the data challenge to the limit by mining
+directly from
+        ClueWeb
+        , a 5TB collection of web data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        Finally, the KB community has developed other means for QA without
+semantic parsing
+        [29, 12, 36, 39, 34]
+        .
+Most of these work executed SPARQL queries on interlinked data represented
+by RDF (Resource Description Framework) triples, or simply performed
+triple matching. Heuristics and manual templates were also commonly
+used
+        [8]
+        . We propose instead to learn discriminative features from the
+data with shallow question analysis. The final system captures intuitive
+patterns of QA pairs automatically.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Graph Features
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Our model is inspired by an intuition on how everyday people search
+for answers. If you asked someone:
+        what is the name of justin
+bieber brother
+        ,
+        and gave them access to Freebase, that person might first determine
+that the question is about
+        Justin Bieber
+        (or his brother), go
+to Justin Bieber’s Freebase page, and search for his brother’s
+name. Unfortunately Freebase does not contain an exact relation called
+        brother
+        , but instead
+        sibling
+        . Thus further
+inference (i.e., brother
+        ↔
+        male sibling) has to be
+made. In the following we describe how we represent this process.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Question Graph
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         In answering our example query a person might take into consideration
+multiple constraints. With regards to the question, we know we are
+looking for the name of a person based on the following:
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            the dependency relation
+            nsubj(what, name)
+            and
+            prep_of(name, brother)
+            indicates that the question seeks
+the information of a name;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            the dependency relation
+            prep_of(name, brother)
+            indicates
+that the name is about a brother (but we do not know whether it is
+a person name yet);
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            the dependency relation
+            nn(brother, bieber)
+            and the facts
+that, (i) Bieber is a person and (ii) a person’s brother should also
+be a person, indicate that the name is about a person.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         This motivates the design of dependency-based features. We show one example in Figure
+         1
+         (a), left side.
+The following linguistic information is of interest:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            question word (
+            qword
+            ), such as
+            what/who/how many
+            . We
+use a list of 9 common qwords.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            question focus (
+            qfocus
+            ), a cue of expected answer types, such
+as
+            name/money/time
+            . We keep our analysis simple and do not
+use a question classifier, but simply extract the noun dependent of qword as qfocus.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            question verb (
+            qverb
+            ), such as
+            is/play/take
+            ,
+extracted from the main verb of the question. Question
+verbs are also good hints of answer types. For instance,
+            play
+            is likely to be followed by an instrument, a movie or a
+sports team.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            question topic (
+            qtopic
+            ). The topic of the question helps us
+find relevant Freebase pages. We simply apply a named entity recognizer
+to find the question topic. Note that there can be more than one topic in the question.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         Then we convert the dependency parse into a more generic question
+graph, in the following steps:
+        </p>
+        <ol class="ltx_enumerate" id="I3">
+         <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I3.i1.p1">
+           <p class="ltx_p">
+            if a node was tagged with a question feature, then replace this node
+with its question feature, e.g., what
+            →
+            qword=what;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I3.i2.p1">
+           <p class="ltx_p">
+            (special case) if a qtopic node was tagged as a named entity, then
+replace this node with its its named entity form, e.g., bieber
+            →
+            qtopic=person;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I3.i3.p1">
+           <p class="ltx_p">
+            drop any leaf node that is a determiner, preposition or punctuation.
+           </p>
+          </div>
+         </li>
+        </ol>
+        <p class="ltx_p">
+         The converted graph is shown in Figure
+         1
+         (a),
+right side. We call this a
+         question feature graph
+         , with every
+node and relation a potential feature for this question. Then features
+are extracted in the following form: with
+         s
+         the source and
+         t
+         the
+target node, for every edge
+         e⁢(s,t)
+         in the graph, extract
+         s
+         ,
+         t
+         ,
+         s∣t
+         and
+         s⁢∣e∣⁢t
+         as features. For the edge,
+         prep_of(qfocus=name, brother)
+         , this would mean the following
+features:
+         qfocus=name
+         ,
+         brother
+         ,
+         qfocus=name∣brother
+         , and
+         qfocus=name∣prep_of∣brother
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We show with examples why these features make sense later in
+         §
+         6
+         Table
+         6
+         . Furthermore,
+the reason that we have kept some lexical features, such as
+         brother
+         , is that we hope to learn from training a high
+correlation between
+         brother
+         and some Freebase relations and properties
+(such as
+         sibling
+         and
+         male
+         ) if we do not possess an
+external resource to help us identify such a correlation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Freebase Topic Graph
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Given a topic, we selectively roll out the Freebase graph by choosing
+those nodes within a few hops of relationship to the
+         topic
+node
+         , and form a
+         topic graph
+         . Besides incoming and/or outgoing relationships, nodes also
+have
+         properties
+         : a string that describes the attribute of a
+node, for instance, node type, gender or height (for a person). One
+major difference between relations and properties is that both
+arguments of a relation are nodes, while only one argument of a
+property is a node, the other a string. Arguments of relations are
+usually interconnected, e.g.,
+         London
+         can be the
+         place_of_birth
+         for
+         Justin Bieber
+         , or
+         capital_of
+         the
+         UK
+         . Arguments of properties are
+attributes that are only “attached” to certain nodes and have
+no outgoing edges. Figure
+         1
+         (b) shows an example.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Both relationship and property of a node are important to identifying
+the answer. They connect the nodes with the question and describe
+some unique characteristics. For instance, without the properties
+         type:person
+         and
+         gender:male
+         , we would not have known
+the node
+         Jaxon Bieber
+         represents a male person. These properties,
+along with the
+         sibling
+         relationship to the topic node, are
+important cues for answering the question. Thus for the Freebase graph,
+we use relations (with directions) and properties as features for
+each node.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Additionally, we have analyzed how Freebase relations map back to
+the question. Some of the mapping can be simply detected as paraphrasing
+or lexical overlap. For example, the
+         person.parents
+         relationship
+helps answering questions about parenthood. However, most Freebase
+relations are framed in a way that is not commonly addressed in natural
+language questions. For instance, for common celebrity gossip questions
+like
+         who cheated on celebrity A
+         , it is hard for a
+system to find the Freebase relation
+         celebrity.infidelity.participant
+         as the target relation if it had not observed this pattern in training.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         Thus assuming there is an alignment model that is able to tell how
+likely one relation maps to the original question, we add extra alignment-based
+features for the incoming and outgoing relation of each node. Specifically,
+for each relation
+         r⁢e⁢l
+         in a topic graph, we compute
+         P(rel∣question)
+         to rank the relations. Finally the ranking (e.g.,
+top 1/2/5/10/100 and beyond) of each relation is used as features
+instead of a pure probability. We describe such an alignment model
+in
+         §
+         5
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Feature Production
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We combine question features and Freebase features (per node) by doing
+a pairwise concatenation. In this way we hope to capture the association
+between question patterns and answer nodes. For instance, in a loglinear
+model setting, we expect to learn a high feature weight for features
+like:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         qfocus=money|node_type=currency
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         and a very low weight for:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p4">
+        <p class="ltx_p">
+         qfocus=money|node_type=person
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p5">
+        <p class="ltx_p">
+         This combination greatly enlarges the total number of features, but owing to
+progress in large-scale machine learning such feature spaces are
+less of a concern than they once were (concrete numbers in
+         §
+         6
+         Model Tuning).
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Relation Mapping
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this section we describe a “translation” table
+between Freebase relations and NL words was built.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Formula
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         The objective is to find the most likely relation a question prompts.
+For instance, for the question
+         who is the father of King George
+VI
+         , the most likely relation we look for is
+         people.person.parents
+         .
+To put it more formally, given a question
+         Q
+         of a word vector
+         𝐰
+         ,
+we want to find out the relation
+         R
+         that maximizes the probability
+         P(R∣Q)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         More interestingly, for the question
+         who is the father of
+the Periodic Table
+         , the actual relation that encodes its original
+meaning is
+         law.invention.inventor
+         , rather than
+         people.person.parents
+         .
+This simple example points out that
+         every
+         part of the question
+could change what the question inquires eventually. Thus we need to
+count for
+         each
+         word
+         w
+         in
+         Q
+         . Due to the bias and incompleteness
+of any data source, we approximate the true probability of
+         P
+         with
+         P~
+         under our specific model. For the simplicity of computation,
+we assume conditional independence between words and apply Naive Bayes:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S7.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S5.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P~(R∣Q)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ∝
+          </td>
+          <td class="ltx_td ltx_align_left">
+           P~(Q∣R)P~(R)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           P~(𝐰∣R)P~(R)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∏wP~(w∣R)P~(R)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p">
+         where
+         P~⁢(R)
+         is the prior probability of a relation
+         R
+         and
+         P~(w∣R)
+         is the conditional probability of word
+         w
+         given
+         R
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p5">
+        <p class="ltx_p">
+         It is possible that we do not observe a certain relation
+         R
+         when
+computing the above equation. In this case we back off to the “sub-relations”:
+a relation
+         R
+         is a concatenation of a series of sub-relations
+         R=𝐫=r1.r2.r3.…
+         .
+For instance, the sub-relations of
+         people.person.parents
+         are
+         people
+         ,
+         person
+         , and
+         parents
+         . Again,
+we assume conditional independence between sub-relations and apply
+Naive Bayes:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p6">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S7.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S5.Ex7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P~backoff(R∣Q)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           P~(𝐫∣Q)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∏rP~(r∣Q)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ∝
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∏rP~(Q∣r)P~(r)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∏r∏wP~(w∣r)P~(r)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p7">
+        <p class="ltx_p">
+         One other reason that we estimated
+         P~(w∣r)
+         and
+         P~⁢(r)
+         for sub-relations is that Freebase relations share some common structures in between
+them. For instance, both
+         people.person.parents
+         and
+         fictional_universe.fictional_character.parents
+         indicate the parent relationship but the latter is much less commonly
+annotated. We hope that the shared sub-relation,
+         parents
+         ,
+can help better estimate for the less annotated. Note that the
+backoff model would have a much smaller value than the original,
+due to double multiplication
+         ∏r∏w
+         . In practice we
+normalize it by the sub-relations size to keep it at the same scale
+with
+         P~(R∣Q)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p8">
+        <p class="ltx_p">
+         Finally, to estimate the prior and conditional probability, we need
+a massive data collection.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Steps
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         The ClueWeb09
+         dataset is a collection of 1 billion webpages (5TB compressed in
+raw
+         html
+         ) in 10 languages by Carnegie Mellon University in
+2009. FACC1, the Freebase Annotation of the ClueWeb Corpus version
+1
+         [15]
+         , contains index and offset of
+Freebase entities within the English portion of ClueWeb. Out of all
+500 million English documents, 340 million were automatically annotated
+with at least one entity, with an average of 15 entity mentions per
+document. The precision and recall of annotation were estimated at
+         80-85⁢%
+         and
+         70-85⁢%
+         [32]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Given these two resources, for each binary Freebase relation, we can
+find a collection of sentences each of which contains both of its
+arguments, then simply learn how words in these sentences are associated
+with this relation, i.e.,
+         P~(w∣R)
+         and
+         P~(w∣r)
+         .
+By counting how many times each relation
+         R
+         was annotated, we can
+estimate
+         P~⁢(R)
+         and
+         P~⁢(r)
+         . The learning task can
+be framed in the following short steps:
+        </p>
+        <ol class="ltx_enumerate" id="I4">
+         <li class="ltx_item" id="I4.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I4.i1.p1">
+           <p class="ltx_p">
+            We split each
+            html
+            document by sentences
+            [21]
+            using NLTK
+            [3]
+            and extracted those with
+at least two Freebase entities which has at least one direct established
+relation according to Freebase.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I4.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I4.i2.p1">
+           <p class="ltx_p">
+            The extraction formed two parallel corpora, one with
+“relation - sentence” pairs (for estimating
+            P~(w∣R)
+            and
+            P~⁢(R)
+            ) and the other with “subrelations - sentence” pairs
+(for
+            P~(w∣r)
+            and
+            P~⁢(r)
+            ). Each corpus
+has 1.2 billion pairs.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I4.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I4.i3.p1">
+           <p class="ltx_p">
+            The tricky part was to align these 1.2 billion pairs. Since the relations
+on one side of these pairs are not
+            natural
+            sentences, we ran
+the most simple IBM alignment Model 1
+            [5]
+            to estimate the translation probability with GIZA++
+            [30]
+            .
+To speed up, the 1.2 billion pairs were split into 100 even chunks.
+We ran 5 iterations of EM on each one and finally aligned the 1.2
+billion pairs from both directions. To symmetrize the alignment, common
+MT heuristics
+            intersection
+            ,
+            union
+            ,
+            grow-diag-final
+            ,
+and
+            grow-diag-final-and
+            [22]
+            were separately
+applied and evaluated later.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I4.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           4.
+          </span>
+          <div class="ltx_para" id="I4.i4.p1">
+           <p class="ltx_p">
+            Treating the aligned pairs as
+            observation
+            , the co-occurrence
+matrix between aligning relations and words was computed. There were
+10,484 relations and sub-relations in all, and we kept the top 20,000
+words.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I4.i5" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           5.
+          </span>
+          <div class="ltx_para" id="I4.i5.p1">
+           <p class="ltx_p">
+            From the co-occurrence matrix we computed
+            P~(w∣R)
+            ,
+            P~⁢(R)
+            ,
+            P~(w∣r)
+            and
+            P~⁢(r)
+            .
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         Hand-checking the learned probabilities shows both success, failure
+and some bias. For instance, for the
+         film.actor.film
+         relation
+(mapping from film names to actor names), the top words given by
+         P~(w∣R)
+         are
+         won
+         ,
+         star
+         ,
+         among
+         ,
+         show
+         . For the
+         film.film.directed_by
+         relation, some
+important stop words that could indicate this relation, such as
+         by
+         and
+         with
+         , rank directly after
+         director
+         and
+         direct
+         . However, due to significant popular interest in
+certain news categories, and the resultant catering by websites to
+those information desires, then for example we also learned a heavily
+correlated connection between
+         Jennifer Aniston
+         and
+         celebrity.infidelity.victim
+         , and between some other
+you-know-who names and
+         celebrity.infidelity.participant
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         We next formally evaluate how the learned mapping help predict relations
+from words.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Evaluation
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Both ClueWeb and its Freebase annotation has a bias. Thus we were
+firstly interested in the coverage of mined relation mappings. As
+a comparison, we used a dataset of relation mapping contributed by
+         Berant et al. (2013)
+         and
+         Lin and Etzioni (2012)
+         . The idea is
+very similar: they intersected Freebase relations with predicates
+in (arg1, predicate, arg2) triples extracted from
+         ReVerb
+         to learn
+the mapping between Freebase relations and triple predicates. Note
+the scale difference: although
+         ReVerb
+         was also extracted from ClueWeb09,
+there were only 15 million triples to intersect with the relations,
+while we had 1.2 billion alignment pairs. We call this dataset
+         ReverbMapping
+         and ours
+         CluewebMapping
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         The evaluation dataset, W
+         eb
+         Q
+         uestions
+         , was also contributed by
+         Berant et al. (2013)
+         .
+It contains 3778 training and 2032 test questions collected
+from the Google Suggest service. All questions were annotated with
+answers from Freebase. Some questions have more than one answer,
+such as
+         what to see near sedona arizona?
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         We evaluated on the training set in two aspects:
+coverage and prediction performance. We define
+         answer node
+         as
+the node that is the answer and
+         answer relation
+         as the relation
+from the answer node to its direct parent. Then we computed how much and
+how well the answer relation was triggered by ReverbMapping and CluewebMapping. Thus
+for the question,
+         who is the father of King George VI
+         , we ask
+two questions: does the mapping, 1. (coverage) contain the answer
+relation
+         people.person.parents
+         ? 2. (precision) predict the
+answer relation from the question?
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p4">
+        <p class="ltx_p">
+         Table
+         1
+         shows the coverage of CluewebMapping,
+which covers
+         93.0⁢%
+         of all answer relations. Among them, we were
+able to learn the rule mapping using more than 10 thousand relation-sentence
+pairs for
+         each
+         of the
+         89.5⁢%
+         of all answer relations. In
+contrast, ReverbMapping covers
+         89.7⁢%
+         of the answer relations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p5">
+        <p class="ltx_p">
+         Next we evaluated the prediction performance, using the evaluation
+metrics of information retrieval. For each question, we extracted
+all relations in its corresponding topic graph, and ranked each relation
+with whether it is the answer relation. For instance, for the
+previous example question, we want to rank the relation
+         people.person.parents
+         as number 1. We computed standard MAP (Mean Average Precision) and
+MRR (Mean Reciprocal Rank), shown in Table
+         2
+         (a).
+As a simple baseline, “word overlap” counts the overlap between
+relations and the question. CluewebMapping ranks each relation by
+         P~(R∣Q)
+         . ReverbMapping does the same, except that we
+took a uniform distribution on
+         P~(w∣R)
+         and
+         P~⁢(R)
+         since the contributed dataset did not include co-occurrence counts
+to estimate these probabilities.
+         Note that the median rank from CluewebMapping
+is only 12, indicating that half of all answer relations are ranked in the
+top 12.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p6">
+        <p class="ltx_p">
+         Table
+         2
+         (b) further shows the percentage of
+answer relations with respect to their ranking. CluewebMapping
+successfully ranked
+         19⁢%
+         of answer relations as top 1. A sample of
+these includes
+         person.place_of_birth
+         ,
+         location.containedby
+         ,
+         country.currency_used
+         ,
+         regular_tv_appearance.actor
+         , etc. These percentage numbers
+are good clue for feature design: for instance, we may be confident in
+a relation if it is ranked top 5 or 10 by CluewebMapping.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p7">
+        <p class="ltx_p">
+         To conclude, we found that CluewebMapping provides satisfying coverage
+on the 3778 training questions: only
+         7⁢%
+         were missing, despite the
+biased nature of web data. Also, CluewebMapping gives reasonably good
+precision on its prediction, despite the noisy nature of web data.
+We move on to fully evaluate the final QA
+         F1
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We evaluate the final
+        F1
+        in this section. The
+system of comparison is that of
+        Berant et al. (2013)
+        .
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS3.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Data
+       </h4>
+       <div class="ltx_para" id="S6.SS3.SSS0.P1.p1">
+        <p class="ltx_p">
+         We re-used W
+         eb
+         Q
+         uestions
+         , a dataset collected by
+         Berant et al. (2013)
+         .
+It contains
+         5810
+         questions crawled from the Google Suggest service,
+with answers annotated on Amazon Mechanical Turk. All questions contain
+at least one answer from Freebase. This dataset has been split by
+         65⁢%/35⁢%
+         into
+         train-all
+         and
+         test
+         . We further randomly
+divided
+         train-all
+         by
+         80⁢%/20⁢%
+         to a smaller
+         train
+         and development set
+         dev
+         . Note that our
+         dev
+         set is different
+from that of
+         Berant et al. (2013)
+         , but the final result on
+         test
+         is directly comparable. Results are reported in terms
+of macro
+         F1
+         with partial credit (following
+         Berant et al. (2013)
+         )
+if a predicted answer list does not have a perfect match with all
+gold answers, as a lot of questions in W
+         eb
+         Q
+         uestions
+         contain more than one answer.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS3.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Search
+       </h4>
+       <div class="ltx_para" id="S6.SS3.SSS0.P2.p1">
+        <p class="ltx_p">
+         With an Information Retrieval (IR) front-end, we need to locate the
+exact Freebase topic node a question is about. For this purpose we
+used the Freebase Search API
+         [13]
+         .All named entities
+         in a question were sent to this API, which returned
+a ranked list of relevant topics. We also evaluated how well the search
+API served the IR purpose. W
+         eb
+         Q
+         uestions
+         not only has
+answers annotated, but also which Freebase topic nodes the answers
+come from.
+Thus we evaluated the ranking of retrieval with the gold
+standard annotation on
+         train-all
+         , shown in Table
+         3
+         .
+The top 2 results of the Search API contain gold standard topics for
+more than
+         90⁢%
+         of the questions and the top 10 results contain
+more than
+         95⁢%
+         . We took this as a “good enough” IR front-end
+and used it on
+         test
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.SSS0.P2.p2">
+        <p class="ltx_p">
+         Once a topic is obtained we query the Freebase Topic API
+         [14]
+         to retrieve all relevant information, resulting in a topic graph.
+The API returns almost identical information as displayed via a
+web browser to a user viewing this topic. Given that turkers
+annotated answers based on the topic page via a browser, this supports
+the assumption that the same answer would be located in the topic
+graph, which is then passed to the QA engine for feature
+extraction and classification.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS3.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Model Tuning
+       </h4>
+       <div class="ltx_para" id="S6.SS3.SSS0.P3.p1">
+        <p class="ltx_p">
+         We treat QA on Freebase as a binary classification task: for each node
+in the topic graph, we extract features and judge whether it is the answer
+node. Every question was processed by the Stanford CoreNLP
+suite with the caseless model. Then the question features (§
+         4.1
+         )
+and node features (§
+         4.2
+         ) were combined
+(§
+         4.3
+         ) for each node. The learning
+problem is challenging: for about
+         3000
+         questions in
+         train
+         ,
+there are 3 million nodes (
+         1000
+         nodes per topic graph),
+and 7 million feature types. We employed a high-performance machine
+learning tool,
+         Classias
+         [31]
+         . Training usually took around
+4 hours. We experimented with various discriminative learners on
+         dev
+         ,
+including logistic regression, perceptron and SVM, and found L1 regularized
+logistic regression to give the best result. The L1 regularization encourages
+sparse features by driving feature weights towards zero, which was
+ideal for the over-generated feature space. After training, we had
+around
+         30
+         thousand features with non-zero weights, a
+         200
+         fold
+reduction from the original features.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.SSS0.P3.p2">
+        <p class="ltx_p">
+         Also, we did an ablation test on
+         dev
+         about how additional
+features on the mapping between Freebase relations and the original
+questions help, with three feature settings: 1) “basic” features
+include feature productions read off from the feature graph (Figure
+         1
+         ); 2) “+ word overlap” adds additional
+features on whether sub-relations have overlap with the question; and
+3) “+ CluewebMapping” adds the ranking of relation prediction given
+the question according to CluewebMapping. Table
+         4
+         shows that the additional CluewebMapping features improved overall
+         F1
+         by
+         5⁢%
+         , a
+         13⁢%
+         relative improvement: a remarkable gain
+given that the model already learned a strong correlation between
+question types and answer types (explained more in discussion and Table
+         6
+         later).
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.SSS0.P3.p3">
+        <p class="ltx_p">
+         Finally, the ratio of positive vs. negative examples affect final
+         F1
+         : the more positive examples, the lower the precision and
+the higher the recall. Under the original setting, this ratio was
+about
+         1:275
+         . This produced precision around
+         60⁢%
+         and recall
+around
+         35⁢%
+         (c.f. Table
+         4
+         ). To optimize for
+         F1
+         ,
+we down-sampled the negative examples to
+         20⁢%
+         , i.e., a new ratio
+of
+         1:55
+         . This boosted the final
+         F1
+         on
+         dev
+         to
+         48⁢%
+         .
+We report the final
+         test
+         result under this down-sampled training.
+In practice the precision/recall balance can be adjusted by the positive/negative
+ratio.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS3.SSS0.P4">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Test Results
+       </h4>
+       <div class="ltx_para" id="S6.SS3.SSS0.P4.p1">
+        <p class="ltx_p">
+         Table
+         5
+         gives the final
+         F1
+         on
+         test
+         .
+“Gold Retrieval” always ranked the correct topic node top 1, a
+perfect IR front-end assumption. In a more realistic scenario, we had
+already evaluated that the Freebase Search API returned the correct topic
+node
+         95⁢%
+         of the time in its top 10 results (c.f. Table
+         3
+         ), thus we also tested on the top 10
+results returned by the Search API. To keep things simple, we did not
+perform answer voting, but simply extracted answers from the first
+(ranked by the Search API) topic node with predicted answer(s)
+found. The final
+         F1
+         of
+         42.0⁢%
+         gives a relative improvement over
+previous best result
+         [2]
+         of
+         31.4⁢%
+         by one third.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.SSS0.P4.p2">
+        <p class="ltx_p">
+         One question of interest is whether our system, aided by the massive
+web data, can be fairly compared to the semantic parsing approaches
+(note that
+         Berant et al. (2013)
+         also used ClueWeb indirectly
+through
+         ReVerb
+         ). Thus we took out the word overlapping and CluewebMapping
+based features, and the new
+         F1
+         on
+         test
+         was
+         36.9⁢%
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.SSS0.P4.p3">
+        <p class="ltx_p">
+         The other question of interest is that whether our system has acquired
+some level of “machine intelligence”: how much does it know what the question
+inquires? We discuss it below through feature and error analysis.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS3.SSS0.P5">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Discussion
+       </h4>
+       <div class="ltx_para" id="S6.SS3.SSS0.P5.p1">
+        <p class="ltx_p">
+         The combination between questions and Freebase nodes captures some
+real gist of QA pattern typing, shown in Table
+         6
+         with sampled features and weights. Our system learned, for instance,
+when the question asks for geographic adjacency information
+(
+         qverb=border
+         ), the correct answer relation
+to look for is
+         location.adjoins
+         . Detailed comparison
+with the output from
+         Berant et al. (2013)
+         is a work in progress
+and will be presented in a follow-up report.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

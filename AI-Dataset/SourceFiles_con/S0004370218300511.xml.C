@@ -1,0 +1,771 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Symbolic perimeter abstraction heuristics for cost-optimal planning.
+   </title>
+   <abstract>
+    In the context of heuristic search within automated planning, abstraction heuristics map the problem into an abstract instance and use the optimal solution cost in the abstract state space as an estimate for the real solution cost. Their flexibility in choosing different abstract mappings makes abstractions a powerful tool to obtain domain-independent heuristics. Different types of abstraction heuristics exist depending on how the mapping is defined, like Pattern Databases (PDBs) or Merge-and-Shrink (M&amp;S). In this paper, we consider two variants of PDBs, symbolic and perimeter PDBs, combining them to take advantage of their synergy. Symbolic PDBs use decision diagrams in order to efficiently traverse the abstract state space. Perimeter PDBs derive more informed estimates by first constructing a perimeter around the goal and then using it to initialize the abstract search. We generalize this idea by considering a hierarchy of abstractions. Our algorithm starts by constructing a symbolic perimeter around the goal and, whenever continuing the search becomes unfeasible, it switches to a more abstracted state space. By delaying the use of an abstraction, the algorithm derives heuristics as informed as possible. Moreover, we prove that M&amp;S abstractions with a linear merge strategy can be efficiently represented as decision diagrams, enabling the use of symbolic search with M&amp;S abstractions as well as with PDBs. Our experimental evaluation shows that symbolic perimeter abstractions are competitive with other state-of-the-art heuristics.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Classical planning deals with the generation of plans, i.e., sequences of actions that an agent can execute to achieve a set of goals. A planning task consists of a set of variables that describe the current state of the world, a set of actions that the agent may perform to modify the value of such variables, the initial state, and the agent's goals. In cost-optimal planning, we are interested in finding a plan whose cost is minimal for any planning task given as input.
+     </paragraph>
+     <paragraph>
+      State-space search with {a mathematical formula}A⁎[1] is a prominent approach for cost-optimal planning [2]. {a mathematical formula}A⁎ enumerates states reachable from the initial state until a plan is found and proven to be optimal. The order in which {a mathematical formula}A⁎ considers the states depends on a heuristic function that estimates the cost from each state to the goal, helping to focus the search effort on those states that are closer to the goal. Even though in most cases the size of the reachable state space grows exponentially in the size of the planning task, this approach has been very successful thanks to a broad research on domain-independent admissible heuristics [3], [4], [5] and pruning methods [6], [7], [8] that help to reduce the number of states that must be visited by {a mathematical formula}A⁎.
+     </paragraph>
+     <paragraph>
+      Abstraction heuristics are a class of heuristics that map the state space to a smaller one, and use the cost of the optimal solution in the abstract state space as an admissible estimate of the cost in the original task. The cost from every abstract state to the goal is precomputed prior to the search by traversing the entire abstract state space with a backward uniform-cost search starting from the abstract goal. These costs are stored in a look-up table, so that the evaluation of the heuristic during the search is very efficient. However, this requires the abstract state space to be small enough so that the look-up table fits into memory.
+     </paragraph>
+     <paragraph>
+      The key is how to derive “good” abstractions so that the abstract instance can be solved efficiently while providing useful estimates. For that reason there exist different types of abstraction heuristics. Pattern Databases (PDBs) select a subset of variables of the problem and ignore the rest [9], [10]. This is a simple way of defining abstractions that is able to produce good heuristics across many domains. However, a limitation of PDBs is that they always completely ignore at least one variable, which may render the heuristic uninformative in some domains. As an alternative, Merge-and-Shrink [11], [12] (M&amp;S ) is an algorithm to derive abstractions that take into account all variables.
+     </paragraph>
+     <paragraph>
+      Perimeter heuristics aim to obtain more accurate heuristics by constructing a perimeter around the goal states in the original state space. The perimeter corresponds to the set of states from which the goals can be achieved with a given cost. Perimeter heuristics estimate the cost from a state to the goal as the cost from the state to any state in the perimeter, plus the cost from the perimeter to the goal. The main drawback is that computing the heuristic becomes more expensive, since it requires to estimate the minimum cost to any state in the perimeter. Abstraction heuristics are a good match for this task, because one can estimate such minimum cost directly without any overhead; it just suffices to initialize the abstract state space exploration that precomputes all costs with all the abstract states in the perimeter, instead of only with the abstract states representing the goals.
+     </paragraph>
+     <paragraph>
+      We generalize the idea of perimeter PDBs by considering a hierarchy of PDBs, instead of only one. This hierarchy contains abstractions of different sizes, ranging from trivial PDBs with only one variable to the original state space (with all variables). Instead of traversing all these abstract state spaces completely, they are only partially explored. Our algorithm starts constructing a perimeter in the original state space and, whenever the search becomes unfeasible (according to some predefined time and memory limits), it switches to a coarser abstraction by abstracting away a new variable. That way, the search is conducted in an abstract state space as close to the original task as possible, deriving more informative heuristics.
+     </paragraph>
+     <paragraph>
+      Applying perimeter PDBs in domain-independent planning poses some challenges due to the difficulties of regression in large state spaces with multiple goal states [13]. We show how such challenges can be successfully addressed by using symbolic PDBs, which use symbolic search to traverse the abstract state space [14]. Symbolic search uses Binary Decision Diagrams [15] (BDDs) to compactly represent sets of states, often with an exponential gain in memory with respect to their explicit enumeration. Thanks to this, symbolic search has been shown to be a very efficient method for exhaustive exploration of state spaces, especially after recent improvements [16], [17]. Another advantage of representing the heuristic function with decision diagrams is that, by avoiding a lookup table with an entry per abstract state, we can handle larger abstract state spaces. This is important for our algorithm, which considers arbitrarily large abstractions whose entire state space does not fit in memory. To exploit the synergy between symbolic and perimeter PDBs, we define the BDD operations that can be used to effectively generate the set of abstract states that correspond to states in the perimeter without explicitly enumerating all the states involved.
+     </paragraph>
+     <paragraph>
+      We define a hierarchy of M&amp;S abstractions, which we call Symbolic M&amp;S (SM&amp;S ) in which variables are abstracted one by one, as in the case of PDBs. The difference with respect to the PDB hierarchies is that abstracted variables can be partially considered instead of being completely ignored. We prove that, if a linear merge strategy (that considers variables one by one in a linear ordering) is used, sets of M&amp;S abstract states can be efficiently represented with BDDs. This bounds the size of any BDD involved in the abstract search with respect to the total number of abstract states, ensuring that the symbolic search will be tractable on small enough abstract state spaces. Therefore, we can use our algorithm in combination with hierarchies of PDB or M&amp;S abstractions. We call the algorithm and the resulting heuristics Symbolic Perimeter Abstractions (SPA ) in general or SPPDB /SPM&amp;S, if we want to restrict the type of abstractions used to PDBs or M&amp;S respectively.
+     </paragraph>
+     <paragraph>
+      We perform an in-depth experimental analysis comparing the performance of SPA when using different hierarchies of PDB and M&amp;S abstractions. Our results show that symbolic abstractions are very informative heuristics. Despite the fact that they have not been widely used by explicit-state search planners, symbolic PDBs or symbolic perimeters guiding {a mathematical formula}A⁎ are already very competitive and outperform the popular LM-cut heuristic [4] in many domains. SPA can further improve the results of the symbolic perimeter in a number of domains, especially when using PDB hierarchies. We provide insights into the types of domains, analyzing when a perimeter can be useful or detrimental to enhance symbolic PDBs.
+     </paragraph>
+     <paragraph>
+      A preliminary version of our work was presented in a conference paper [18].{sup:1} In this article, we provide a more general and detailed description of our technique, as well as a more thorough experimental evaluation. The rest of the article is structured as follows. Section 2 describes the basics and nomenclature that we will use in the rest of the paper. Section 3 reviews the state of the art in abstraction heuristics. In Section 4 we present our definition of perimeter abstraction heuristics. The details for using symbolic search to traverse M&amp;S abstractions are explained in Section 5. The overall SPA algorithm that puts together the different parts described in previous sections is presented in Section 6. Section 7 presents the evaluation of symbolic perimeter abstraction heuristics. The article concludes in Section 8 with a summary of the main contributions and conclusions.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      This section presents the basic definitions of classical planning, heuristic search, and symbolic search.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Classical planning
+      </section-title>
+      <paragraph>
+       A planning task in finite-domain representation (FDR) is a 4-tuple {a mathematical formula}Π=(V,A,I,G). V is a finite set of variablesv, each {a mathematical formula}v∈V being associated with a finite domain {a mathematical formula}Dv. A partial state over V is a function s on a subset {a mathematical formula}V(s) of V, so that {a mathematical formula}s(v)∈Dv for all {a mathematical formula}v∈V(s); s is a state if {a mathematical formula}V(s)=V. I is the initial state and the goalG is a partial state. A is a finite set of actions, each {a mathematical formula}a∈A being a pair {a mathematical formula}(prea,effa) of partial states, called its preconditions and effects. Each {a mathematical formula}a∈A is also associated with its non-negative cost denoted as {a mathematical formula}cost(a)∈R0+.
+      </paragraph>
+      <paragraph>
+       A labeled transition system (LTS) is a tuple {a mathematical formula}Θ=(S,L,T,s0,S⋆) where {a mathematical formula}S is a finite set of states, L is a finite set of labels each associated with a label cost{a mathematical formula}cost(l)∈R0+, {a mathematical formula}T⊆S×L×S is a set of transitions, {a mathematical formula}s0∈S is the start state, and {a mathematical formula}S⋆⊆S is the set of goal states.
+      </paragraph>
+      <paragraph>
+       The state space of a planning task Π is the LTS {a mathematical formula}ΘΠ where: {a mathematical formula}S is the set of all states; {a mathematical formula}s0 is the initial state I of Π; {a mathematical formula}s∈S⋆ if and only if {a mathematical formula}G⊆s; the labels L correspond to the actions A, and {a mathematical formula}s→as′ is a transition in T if {a mathematical formula}prea⊆s, and {a mathematical formula}s′(v)=effa(v) for {a mathematical formula}v∈V(effa) while {a mathematical formula}s′(v)=s(v) for {a mathematical formula}v∈V∖V(effa). A plan for a state s is a sequence of actions that defines a path from s to any {a mathematical formula}sG∈S⋆. The cost of a plan π is defined as the sum of the costs of its actions, {a mathematical formula}cost(π)=∑ai∈πcost(ai). The cost of a cheapest plan for s is denoted as {a mathematical formula}h⁎(s). A plan for {a mathematical formula}s0 is a plan for Π, and it is optimal if and only if its cost equals {a mathematical formula}h⁎(s0).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Planning as heuristic search
+      </section-title>
+      <paragraph>
+       Most state-of-the-art cost-optimal planners employ heuristic search [2]. A heuristic is a function {a mathematical formula}h:S→R0+∪{∞} which estimates the optimal cost to reach a goal state from each state (remaining cost), or returns +∞ if the goals are known to be unreachable from the state. A heuristic is perfect if it coincides with {a mathematical formula}h⁎. A heuristic is admissible if it never overestimates the remaining cost, that is, {a mathematical formula}∀s:h(s)≤h⁎(s). A heuristic is consistent if for every transition {a mathematical formula}(s,a,s′)∈T, {a mathematical formula}h(s)≤h(s′)+c(a).
+      </paragraph>
+      <paragraph>
+       The most popular algorithm for cost-optimal planning is {a mathematical formula}A⁎ with an admissible heuristic [1]. {a mathematical formula}A⁎ keeps an open list, initialized with the initial state, and a closed list, initialized empty. At each step, {a mathematical formula}A⁎ selects a node m from the open list with lowest {a mathematical formula}f(n)=g(n)+h(n). {a mathematical formula}g(n) is the current best cost from the root to node n and {a mathematical formula}h(n) is the heuristic estimation. Then, {a mathematical formula}A⁎ expands m, inserting m into the closed list, generating all its successors and inserting each successor {a mathematical formula}m′ generated by applying an action a to the state in m into the open list with {a mathematical formula}g(m′)=g(m)+c(a). The expansion order of {a mathematical formula}A⁎ guarantees that no node with {a mathematical formula}f(n)&gt;h⁎(I) is ever expanded. If the heuristic is consistent, {a mathematical formula}A⁎ will never re-expand a node because nodes are expanded with their optimal g-values.
+      </paragraph>
+      <paragraph>
+       A number of admissible heuristics for cost-optimal planning exist in the literature. They include critical-path heuristics ({a mathematical formula}hm) [3], landmark heuristics ({an inline-figure}) [4], flow-based heuristics [19], [20], and potential heuristics [5], among others. In this paper, we focus on abstraction heuristics which are reviewed in detail in Section 3. In practice, more than one heuristic may be used, either in a portfolio [21], [22] or other methods to combine multiple estimates in a single search [23], [24]. There also exist several search enhancements for {a mathematical formula}A⁎ that are orthogonal to the heuristics used. Some examples include partial-order pruning [7], symmetries [6], [25] or dominance pruning methods [26], [8].
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Symbolic search
+      </section-title>
+      <paragraph>
+       Symbolic search originated in the context of model checking and verification [27], [28], [29] where it has been widely used to determine reachability in transition systems [30]. It is also a successful technique for state space exploration both in classical [31] and non-deterministic planning [32], [33].
+      </paragraph>
+      <paragraph>
+       Symbolic search algorithms take advantage of succinct data-structures to efficiently represent sets of states. A set of states {a mathematical formula}S⊆S is represented by its characteristic function{a mathematical formula}fS(x1…xn):S→{1,0} that represents whether a given state in {a mathematical formula}S belongs to S (1) or not (0). The input of the function is the bit-vector description of a state represented by binary variables {a mathematical formula}xi, so that the function signature may be written as {a mathematical formula}fS:{0,1}n→{1,0}. Each finite-domain variable {a mathematical formula}υ∈V with domain {a mathematical formula}Dυ is represented with {a mathematical formula}⌈log2⁡|Dv|⌉ binary variables.{sup:2} To simplify the notation, we use the same symbol, S, to denote a set of states and its characteristic function.
+      </paragraph>
+      <paragraph>
+       Binary Decision Diagrams (BDDs) [15] are data structures that can be used to compactly represent Boolean functions, such as the characteristic functions of sets of states. A BDD is a rooted labeled directed acyclic graph with two types of terminal nodes or sinks: ⊤ and ⊥. Non-terminal or inner nodes are defined by a 3-tuple {a mathematical formula}p=〈xi,p0,p1〉, where {a mathematical formula}xi is a variable and {a mathematical formula}p0 and {a mathematical formula}p1 are either sink or inner nodes representing functions that do not depend on {a mathematical formula}xi. For a node {a mathematical formula}〈xi,p0,p1〉, {a mathematical formula}p0 corresponds to the case of assigning variable {a mathematical formula}xi the value false (⊥), thus giving the so-called low (or 0) successor; {a mathematical formula}p1 corresponds to the case of assigning variable {a mathematical formula}xi the value true (⊤), giving the high (or 1) successor. For any assignment of variables in a path from the root to a sink, the represented function will be evaluated to the value labeling the sink. We consider reduced ordered BDDs, which have the additional requirement that variables on any path from the root to the sinks always appear in the same order. This allows the application of reduction rules that remove unnecessary and redundant parts from the BDD. Algebraic Decision Diagrams (ADDs) [34] are a useful extension of BDDs, which can have any number of terminal nodes. ADDs can describe integer functions, {a mathematical formula}fS(x1…xn):S→Z, such as heuristic functions.
+      </paragraph>
+      <paragraph>
+       BDDs allow us not only to succinctly represent sets of states but also to operate with them through function transformations. For example, the union (∪) and intersection (∩) of sets of states are derived from the disjunction (∨) and conjunction (∧) of their characteristic functions, respectively. Also, the complement set ({a mathematical formula}S∖S) corresponds to the negation (¬) of the characteristic function. Quantification of variables is another type of function transformation commonly found in symbolic search. The existential quantification of a variable {a mathematical formula}υ∈V with respect to a function f removes the dependency of f on variable υ such that {a mathematical formula}∃υ:f=f|υ=1∨f|υ=0, where {a mathematical formula}f|υ=1 and {a mathematical formula}f|υ=0 are the sets of assignments to variables {a mathematical formula}V∖{υ} so that they make f true whenever {a mathematical formula}υ=1 and {a mathematical formula}υ=0, respectively. Thus, the result of the existential quantification corresponds to the projection of the set of states to the set of variables {a mathematical formula}V∖{υ}. Similarly, the universal quantification {a mathematical formula}∀υ:f removes the dependency of f on variable υ such that {a mathematical formula}∀υ:f=f|υ=1∧f|υ=0. This means that when a variable {a mathematical formula}υ∈V is universally quantified away, the resulting function {a mathematical formula}f′ is satisfied only by those cases in which f is true for every possible assignment of υ (i.e., {a mathematical formula}υ=1 and {a mathematical formula}υ=0).
+      </paragraph>
+      <paragraph>
+       In order to search the state space, the set of actions A is represented with one or more Transition Relations (TRs). A TR is a function {a mathematical formula}Tc(x,x′) that represents one or more actions with the same cost, c. TRs are defined using two sets of variables, the source-set and the target-set of variables, denoted as x and {a mathematical formula}x′, respectively. Both sets of variables have the same cardinality as the set of variables of the characteristic function, so that each variable in the source- and target-sets corresponds to a variable in the characteristic function: the variables of the source-set describe the states in which the action is applicable (the preconditions of the actions) and the variables of the target-set describe the states after the execution of the action (the effects of the actions). Given a set of states S and a TR {a mathematical formula}Ti, the image operation is used to compute the set of successor states that can be reached from any state in S by applying any action represented by the TR. The image corresponds to the operation {a mathematical formula}image(S(x),Ti(x,x′)):=(∃x(S(x)∧Ti(x,x′)))[x′/x]. The conjunction {a mathematical formula}S(x)∧Ti(x,x′) corresponds to all pairs of states {a mathematical formula}〈s,s′〉 such that {a mathematical formula}s∈S and {a mathematical formula}s′=a(s) for an action a represented by {a mathematical formula}Ti. Then, the existential quantification ignores predecessor states and the variable swapping, {a mathematical formula}[x′/x], represents the resulting states {a mathematical formula}s′ with the standard set of variables x.
+      </paragraph>
+      <paragraph>
+       Similarly, the pre-image operation computes the set of predecessor states, i.e., states that can reach some state in S through some action in the TR. Formally:{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Abstractions
+     </section-title>
+     <paragraph>
+      In this section, we describe previous work on abstraction heuristics, starting with the basic definitions that we adopt, as well as techniques to generate domain-independent abstraction heuristics, such as PDBs, Merge-and-Shrink, and Perimeter PDBs.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Preliminary definitions
+      </section-title>
+      <paragraph>
+       Abstractions are simplifications of the task that transform the state space into a smaller one, called abstract state space. The corresponding abstract planning task is optimally solved and the cost of its solution is used to guide the search in the original state space.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Abstraction [12]Let Π be a planning task with state space {a mathematical formula}ΘΠ=(S,L,T,s0,S⋆). An abstraction of Θ is a surjective function {a mathematical formula}α:S→Sα mapping {a mathematical formula}S to a set of abstract states, {a mathematical formula}Sα.
+      </paragraph>
+      <paragraph>
+       An abstraction α defines an abstract state space {a mathematical formula}Θα=〈Sα,L,Tα,s0α,S⋆α〉 where {a mathematical formula}Sα is the set of abstract states, L is the set of labels, {a mathematical formula}Tα={(α(s),l,α(t))|(s,l,t)∈T}, {a mathematical formula}s0α=α(s0) and {a mathematical formula}S⋆α={sα|∃s∈S⋆,sα=α(s)}. The size of α, denoted as {a mathematical formula}|α|, is the number of abstract states, {a mathematical formula}|Sα|. The transformation {a mathematical formula}Θ→Θα is a homomorphism, i.e., a structure-preserving mapping such that for all {a mathematical formula}s,t∈S and {a mathematical formula}l∈L, {a mathematical formula}(s,l,t)∈T, implies {a mathematical formula}(α(s),l,α(t))∈Tα.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Abstraction heuristic [12]Let α be an abstraction with an associated abstract state space {a mathematical formula}Θα. The induced abstraction heuristic{a mathematical formula}hα(s) is a heuristic function that returns the cost of the cheapest path from {a mathematical formula}α(s) to {a mathematical formula}S⋆α in {a mathematical formula}Θα.
+      </paragraph>
+      <paragraph>
+       Abstraction heuristics are admissible and consistent, since {a mathematical formula}Θα is a homomorphism and, thus, paths in the original state space are preserved in the abstract state space. Every abstraction α induces an equivalence relation on {a mathematical formula}S, {a mathematical formula}∼α, defined as {a mathematical formula}s∼αt if and only if {a mathematical formula}α(s)=α(t), i.e., any two states mapped to the same abstract state are considered to be equivalent by the abstract state space. Hence, each abstract state {a mathematical formula}siα may be interpreted as a set of states {a mathematical formula}Siα such that it contains every state mapped to {a mathematical formula}siα, i.e., {a mathematical formula}Siα={s|α(s)=siα}. Therefore, we will freely refer to an abstract state as an equivalence class or a set of states of the original state space.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Relevant variables of an abstraction [12], [35]Let α be an abstraction of a planning task with variable set V. We say that α depends on variable {a mathematical formula}v∈V if and only if there exist states s and t such that {a mathematical formula}α(s)≠α(t) and {a mathematical formula}s[v′]=t[v′] for all {a mathematical formula}v′∈V∖{v}. The set of relevant variables for α, written {a mathematical formula}Vα, is the set of variables in V on which α depends.
+      </paragraph>
+      <paragraph>
+       Note that abstractions are transitive: if α is an abstraction of a transition system, Θ, and {a mathematical formula}α′ is an abstraction of {a mathematical formula}Θα, then their composition, {a mathematical formula}α′∘α, is also an abstraction of Θ. Let {a mathematical formula}α1 and {a mathematical formula}α2 be two abstractions of a given state space Θ. We say that {a mathematical formula}α2 is a coarsening abstraction of {a mathematical formula}α1 if and only if for every pair of states {a mathematical formula}s,t∈S, {a mathematical formula}α1(s)=α1(t) implies {a mathematical formula}α2(s)=α2(t). In that case, {a mathematical formula}α1 is a refinement of {a mathematical formula}α2.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Pattern databases
+      </section-title>
+      <paragraph>
+       Pattern Databases (PDBs) are a kind of abstraction based on abstraction patterns. Patterns were originally defined as a selection of tiles in the sliding-tile puzzle [9] and later extended to other domains where more general definitions have been considered, shifting the focus from the mere selection of care variables to different state-space abstractions [36]. In planning, a pattern is usually defined as a selection of state variables, while the value of other variables is ignored [10].
+      </paragraph>
+      <paragraph label="Definition 4">
+       Projection [12], [35]A projectionα of a planning task over a subset of variables {a mathematical formula}W⊆V is defined by restricting the initial state, goals and preconditions/effects of the actions to W such that {a mathematical formula}s∼αt if and only if {a mathematical formula}s[v]=t[v] for all {a mathematical formula}v∈W.
+      </paragraph>
+      <paragraph>
+       The performance of PDBs greatly depends on the patterns chosen to create the abstractions. When PDBs are constructed using explicit search, few variables may be included in the pattern so that the size of the abstract state space is small enough to be enumerated. To compensate for the fact that each PDB only considers a few variables, multiple PDBs are generated and these are combined additively. A set of PDBs can be additively combined if they are disjoint [37] (i.e., if no operator is relevant for more than one of them) or if the cost of the operators is divided with a cost-partitioning schema [10], [38]. Several algorithms for pattern selection of explicit PDBs have been proposed in the context of automated planning:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        iPDB [39] starts considering the patterns consisting of a single goal variable and uses a hill-climbing search. At each iteration, it attempts all possible ways to add a new variable to an existing pattern, such that the variable is relevant for the pattern (i.e. either it is a goal or it provides a precondition for an operator that modifies another variable in the pattern). The algorithm stops when the improvement is marginal. All the resulting PDBs are combined using the canonical heuristic method, that takes the maximum over all additive subsets of PDBs.
+       </list-item>
+       <list-item label="•">
+        gaPDB [40] uses a genetic algorithm to derive multiple PDBs using a 0–1 cost-partitioning so that they are additive.
+       </list-item>
+       <list-item label="•">
+        CPC [41] runs multiple instances of gaPDB in order to generate a set of complementary PDBs.
+       </list-item>
+      </list>
+      <paragraph>
+       In symbolic search the abstract state space does not need to be explicitly enumerated, so an arbitrary number of variables may be considered in a single PDB. Symbolic PDBs have been mainly used by symbolic search planners, which use a BDD variant of {a mathematical formula}A⁎[42], as the planner Gamer[43]. Gamer uses an automatic pattern selection algorithm based on iPDB to construct a single PDB. It starts considering the pattern of all goal variables. Then, it conducts a hill-climbing search, attempting to add all relevant variables to the current best pattern and selecting the best variable. To speed-up the process, in case that several variables provide the same improvement, the pattern containing all such variables is constructed. Kissmann and Edelkamp [43] also considered the creation of a symbolic perimeter and mentioned the possibility of combining the perimeter with abstraction heuristics. In this paper we explore this idea in full detail.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Merge-and-shrink
+      </section-title>
+      <paragraph>
+       Merge-and-Shrink (M&amp;S ) is an algorithm that derives abstractions that take into account all variables, thus overcoming the major limitation of PDB abstractions. M&amp;S was originally proposed in the context of directed model checking [44], [11] and later applied to planning [35], [12]. Formally, M&amp;S abstractions are constructed using the following rules:
+      </paragraph>
+      <list>
+       <list-item label="(A)">
+        Atomic projections: For {a mathematical formula}v∈V, the atomic projection{a mathematical formula}πv of the task over a single variable v is an M&amp;S abstraction over {a mathematical formula}{v}.
+       </list-item>
+       <list-item label="(M)">
+        Merge: If {a mathematical formula}α1 and {a mathematical formula}α2 are M&amp;S abstractions over disjoint sets of variables {a mathematical formula}W1,W2⊂V,W1∩W2=∅, then {a mathematical formula}α1⊗α2 is an M&amp;S abstraction over {a mathematical formula}W1∪W2. The merged abstraction {a mathematical formula}α1⊗α2 is defined by {a mathematical formula}(α1⊗α2)(s):=(α1(s),α2(s)). In other words, the new abstraction has {a mathematical formula}|α1|×|α2| states, one for each pair {a mathematical formula}sα1∈Θα1, {a mathematical formula}sα2∈Θα2. The state space of the merged abstraction corresponds to the synchronized product of the state spaces of {a mathematical formula}α1 and {a mathematical formula}α2, {a mathematical formula}Θα1⊗α2=Θα1⊗Θα2=(S′,L,T′,s0′,S⋆′) where {a mathematical formula}S′=Sα1×Sα2, {a mathematical formula}T′={((s1,s2),l,(s1′,s2′))|(s1,l,s1′)∈Tα1∧(s2,l,s2′)∈Tα2}, {a mathematical formula}s0′=(Iα1,Iα2) and {a mathematical formula}S⋆′={(s1,s2)|s1∈S⋆α1∧s2∈S⋆α2}. The constraint {a mathematical formula}W1∩W2=∅ ensures that {a mathematical formula}Θα1⊗Θα2 is isomorphic to {a mathematical formula}Θα1⊗α2.
+       </list-item>
+       <list-item label="(S)">
+        Shrink: If the size of any new abstraction β resulting from merging two abstractions goes over a given memory limit, the Shrink operation generates a smaller abstraction by applying an abstraction γ over {a mathematical formula}Θβ. If β is a M&amp;S abstraction over a set of variables {a mathematical formula}W⊆V and γ is an abstraction from {a mathematical formula}Sβ to {a mathematical formula}Sγ, then {a mathematical formula}γ∘β is an M&amp;S abstraction over W. This further abstracts an abstraction β by aggregating an arbitrary number of abstract states into the same abstract state.
+       </list-item>
+      </list>
+      <paragraph>
+       Rule (A) allows the algorithm to start from atomic projections, one for each variable. Given that the size of the new abstraction can grow exponentially by repeatedly applying Rule (M), Rule (S) allows M&amp;S to reduce the size of abstractions.
+      </paragraph>
+      <paragraph>
+       Algorithm 1 shows the pseudocode of the M&amp;S algorithm. It takes as input a planning task and a parameter N that imposes a bound on the abstraction size, i.e., no abstraction in the process will have more than N abstract states. The algorithm initializes a pool of abstractions with the atomic projection with respect to every variable {a mathematical formula}v∈V. While there is more than one abstraction left in the pool, the algorithm selects two abstractions and merges them, replacing them by their combination. If necessary for the merged abstraction to satisfy the size bound N, a shrinking step is applied to both selected abstractions, prior to every merging step. To implement M&amp;S in practice, we need a merge strategy deciding which abstractions to merge by rule (M), and a shrink strategy deciding which (and how many) states to aggregate by rule (S). The performance of M&amp;S greatly depends on the policies chosen for these steps.
+      </paragraph>
+      <paragraph>
+       M&amp;S is a generalization of PDBs; for any PDB, we can construct an equivalent M&amp;S abstraction just by merging the atomic abstractions that correspond to variables in the pattern. Values of variables not in the pattern are shrunk to a single abstract state, so that the abstraction does not distinguish the value of those variables, just as in the case of PDBs. However, using different shrink strategies M&amp;S can derive abstract state spaces that PDBs cannot, e.g., considering all the variables of the task while keeping the abstract state space small.
+      </paragraph>
+      <paragraph>
+       We say that a merge strategy is linear if it always selects at least one atomic abstraction to be merged. Hence, linear merge strategies are characterized by the order in which variables are chosen, {a mathematical formula}v1,…,vn. Even though the original work of Dräger et al. in Model Checking used a non-linear strategy, in planning most works have considered linear merge strategies [12], [45], [46]. Non-linear merge strategies have recently been introduced in planning by Sievers et al. [47] and promising approaches have been proposed [48], [49]. A shrink strategy takes as input an abstract state space and decides which abstract states must be aggregated to keep the number of abstract states below N. Several shrink strategies have been defined, like fh-shrinking [35], or bisimulation-based shrinking [45], [46].
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Cascading-tables representation of M&amp;S
+      </section-title>
+      <paragraph>
+       To represent the mapping from states to abstract states, M&amp;S abstractions internally use the cascading-tables representation, first introduced by Dräger et al. [44] and discussed in detail by Helmert et al. [12]. This representation will be important for later describing our algorithm that transforms them to a symbolic ADD representation. The cascading-tables representation is built incrementally, representing every intermediate M&amp;S abstraction by means of a table, as shown in the example of Fig. 1. This example shows a logistics task in which a number of packages must be transported from a location L to another location R. The task has one variable per package to identify its position (at L, at R, or in the truck T) and one for the truck (at L or at R).
+      </paragraph>
+      <paragraph>
+       Each table represents an intermediate abstraction with relevant variables {a mathematical formula}W⊆V. These tables recursively define the mapping between states in {a mathematical formula}ΘW to abstract states. Each abstract state is identified with a number, from 0 to {a mathematical formula}|α|−1, where {a mathematical formula}|α| is the number of abstract states in the abstraction.
+      </paragraph>
+      <paragraph>
+       Atomic abstraction tables (rule A) associate every possible value of the variable with an abstract state. In our example, we consider two atomic abstractions describing the position of two packages: {a mathematical formula}π1 and {a mathematical formula}π2. They map each value (L, R, and T) to a different abstract state. For example, abstract state 1 of {a mathematical formula}π1 corresponds to having package 1 in the truck.
+      </paragraph>
+      <paragraph>
+       In each iteration, the M&amp;S algorithm merges two abstractions (rule M). The resulting abstraction has an abstract state for each pair of states of the input abstractions. This is represented with a two-dimensional table, in which rows and columns correspond to abstract states of the merged abstractions. In our example, table (M) shows the product of atomic abstractions {a mathematical formula}π1 and {a mathematical formula}π2, which associates each pair of abstract states in {a mathematical formula}π1 and {a mathematical formula}π2, {a mathematical formula}〈siπ1,sjπ2〉, to a different ID. For example, abstract state 1 of {a mathematical formula}π1⊗π2 represents states in which package 2 is in the truck and package 1 is at L. The abstraction in Fig. 1 can be merged again with a new atomic abstraction {a mathematical formula}π3. The result will be a new table with one column for each abstract state in {a mathematical formula}π3 and one row for each abstract state in {a mathematical formula}π1⊗π2, for a total of 27 cells.
+      </paragraph>
+      <paragraph>
+       The shrinking operation (rule S) applies a function γ that maps the abstract states to a new set of abstract states, producing a new abstraction {a mathematical formula}α1. To apply γ, the value of the cells in the cascading tables are changed accordingly. In our example, {a mathematical formula}γbisim corresponds to bisimulation shrinking, which in this case considers that all packages are interchangeable so {a mathematical formula}γbisim(2)=γbisim(6)=2 and abstract state {a mathematical formula}s2α1 corresponds to states in which {a mathematical formula}(v1=L∧v2=R)∨(v1=R∧v2=L).
+      </paragraph>
+      <paragraph>
+       An additional lookup table stores the precomputed optimal cost for each abstract state in the final M&amp;S abstraction α. During the search, the heuristic value of a particular state s is retrieved in two steps. The first step recursively traverses the tables returning the abstract state ID associated with the values of s to retrieve the ID of {a mathematical formula}α(s). The second step retrieves the heuristic value associated to such ID in the lookup table. For example, consider the partial state {a mathematical formula}〈L,R〉 in which package 1 is at L and package 2 is at R. The retrieval algorithm first checks the tables related to {a mathematical formula}π1 and {a mathematical formula}π2, obtaining abstract states 0 and 2, respectively. Then, these values are used to perform a lookup in table {a mathematical formula}α1, retrieving the value 2. An additional lookup, not shown in our example, is needed to retrieve the heuristic value of abstract state number 2.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Perimeter abstraction heuristics
+      </section-title>
+      <paragraph>
+       Perimeter PDBs (PPDBs) are another improvement of PDBs based on perimeter search to obtain more informed heuristics. Perimeter search is a form of bidirectional search independently devised by Manzini [50] and Dillenburg and Nelson [51] that operates in two phases: the backward phase and the forward phase, as represented in Fig. 2. The backward phase generates a perimeter P of radius r that contains all states that can reach the goal with a cost of exactly r. The perimeter is computed by a uniform-cost search that generates all states with that g-value or less. The perfect heuristic value of each state in the perimeter is known, whereas states outside the perimeter have a cost to the goal strictly greater than r. Then, the forward phase performs a forward search from the initial state to the perimeter using any algorithm like {a mathematical formula}A⁎ or {a mathematical formula}IDA⁎[52]. Since the goal of the forward search is any state in the perimeter P, the heuristic evaluation estimates the cost to the closest state in the perimeter{sup:3} so that {a mathematical formula}h(s)=mins′∈P⁡h(s,s′).
+      </paragraph>
+      <paragraph>
+       The major drawback of perimeter search is that the heuristic evaluation may become too expensive when the perimeter is large. In practice, some optimizations avoid to evaluate {a mathematical formula}h(s,s′) for every state in the perimeter [50], but it is often not enough to deal with large perimeters. In those cases, a model can be used to predict the optimal radius r beforehand in order to avoid large overheads with respect to unidirectional search without a perimeter [53]. There are also other ways to use the perimeter while avoiding a large number of heuristic evaluations, such as taking the estimate to the goal and correcting it by considering the error made in the perimeter nodes [54].
+      </paragraph>
+      <paragraph>
+       Abstraction heuristics are a candidate to overcome this problem, because they precompute the heuristic value of every abstract state. Perimeter Pattern Databases (PPDBs) were first studied by Felner and Ofek in [55]. PPDBs store for each abstract state the minimum cost to any abstract state in the perimeter. Then, a single PDB lookup suffices to perform the heuristic evaluation independently of the size of the perimeter.
+      </paragraph>
+      <paragraph>
+       A perimeter PDB is constructed in two phases:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        As in perimeter search, use a backward search to build a perimeter P of radius r around the goal states in the original search space.
+       </list-item>
+       <list-item label="2.">
+        Perform a second backward search in the abstract state space seeded with abstract states corresponding to states in the perimeter {a mathematical formula}{α(p):p∈P} with initial cost r. As noted by Felner and Ofek seeding the abstract search with cost r is equivalent to adding r to each heuristic value. This means that the heuristic value of a state is an admissible estimate to the closest state in the perimeter plus the perimeter radius.
+       </list-item>
+      </list>
+      <paragraph>
+       The PPDB is used then as a heuristic in a forward search. As the heuristic estimates the cost to the goal while going through one of the states in the perimeter, it is only admissible for nodes outside the perimeter. Nodes inside the perimeter have a path to the goal without going through any node in the perimeter. However, this is not a problem because the search halts whenever a state in the perimeter is chosen for expansion. PPDBs have great potential because states are easily evaluated during the search, avoiding the main drawback of perimeter search. Moreover, PPDBs produce heuristics at least as informed as standard PDBs. However, after performing a theoretical and empirical analysis, Felner and Ofek reported that PPDBs are not better than just taking the maximum between the PDB and the perimeter heuristic (correcting values in the PDB under {a mathematical formula}r+1 to {a mathematical formula}r+1). Alternatively, Linares López [56] proposed storing different PDBs for each state in the perimeter in order to enhance the heuristic whenever multiple patterns are used.
+      </paragraph>
+      <paragraph>
+       More recently, Eyerich and Helmert applied perimeter PDBs in the context of automated planning [13]. They show that perimeter search can enhance the performance of standard PDBs, contradicting the conclusions reached by Felner and Ofek and suggesting that perimeter PDBs should be revisited. Indeed, the analysis by Felner and Ofek only considered permutation domains with no spurious paths in the abstract state space, which is not a common case in planning domains. Eyerich and Helmert identified several challenges to extrapolate perimeter PDBs from the permutation puzzles commonly used to evaluate domain-dependent heuristic search solvers to planning, and addressed them with a explicit-state search approach. These challenges are useful to illustrate the synergy of perimeter PDBs and symbolic PDBs, since using symbolic search automatically addresses them:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Perimeter search has been previously applied to domains with one goal state and a state space where all transitions are invertible. In planning, one has to deal with the difficulties of regression caused by having up to an exponential number of goal states. However, symbolic search is an efficient method to perform regression that often outperforms partial-state based regression [57].
+       </list-item>
+       <list-item label="•">
+        Since the PDB is computed for each individual planning instance, the time spent in generating the abstraction heuristic has to be amortized. This applies to all kinds of abstraction heuristics, but here it is aggravated by the time spent in matching states in the perimeter to abstract states to seed the open list of abstract searches. In symbolic search, this is done through symbolic operations, as we will detail in Section 5.3.
+       </list-item>
+       <list-item label="•">
+        The perimeter radius must be automatically set by the planner, without instance-specific parameter tuning. As Eyerich and Helmert, we rely on parameters that bound the time and memory resources invested in constructing the PPDBs. In our case, we use the number of BDD nodes in the search frontier to limit the memory and to estimate the time needed for the next step.
+       </list-item>
+       <list-item label="•">
+        In order to terminate the forward search as soon as a state in the perimeter is expanded, membership in the perimeter must be efficiently tested. This can be challenging, especially for large perimeters. However, if the perimeter is encoded as a BDD, membership operations only take linear time in the number of variables of the task.
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Hierarchies of perimeter abstraction heuristics
+     </section-title>
+     <paragraph>
+      In this section, we generalize the definition of perimeter PDBs. Previous work on perimeter abstraction heuristics has considered only two different phases. In the first phase, a perimeter is constructed by a search on the original state space and in the second phase the search is completed in an abstract state space. Instead, we consider an arbitrary number of searches in a hierarchy of abstract state spaces.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Abstraction hierarchyAn abstraction hierarchy is a directed acyclic graph in which each node corresponds to an abstraction. There is an arc from node {a mathematical formula}αi to node {a mathematical formula}αj if and only if {a mathematical formula}αj is a coarsening abstraction of {a mathematical formula}αi.
+     </paragraph>
+     <paragraph>
+      We will mostly use hierarchies in which each node has only one child, i.e., lists of an arbitrary number of abstractions, {a mathematical formula}α0,α1,…,αk such that each {a mathematical formula}αi is an abstraction of {a mathematical formula}Θαi−1 for all {a mathematical formula}i&gt;0. Note that {a mathematical formula}α0 is usually defined as the identity abstraction, {a mathematical formula}α0(s)=s, so that the first search is performed on the original state space {a mathematical formula}Θα0≡Θ. All other abstractions can be defined either using M&amp;S or PDBs.
+     </paragraph>
+     <paragraph>
+      Fig. 3 illustrates the main idea of perimeter abstraction heuristics. For each abstraction {a mathematical formula}αi, we perform a backward uniform-cost search {a mathematical formula}UCSi on its abstract state space {a mathematical formula}Θαi. We characterize the current status of a uniform-cost search UCS as a tuple {a mathematical formula}〈open,closed〉 where open contains those states generated but not expanded and closed represents the states that have already been expanded. We assume that duplicate detection is enabled so that {a mathematical formula}closed∩open=∅. Both open and closed can be split into buckets {a mathematical formula}openg and {a mathematical formula}closedg that represent the open states generated with cost g and expanded states with cost g or less, respectively. We define the radius of a search {a mathematical formula}r(UCS) as the minimum g-value of any state in the open list, {a mathematical formula}r(UCS)=min⁡(g|openg≠∅) or ∞ if open is empty.
+     </paragraph>
+     <paragraph>
+      After constructing a perimeter around the goal, the search frontier is relaxed into an abstract state space {a mathematical formula}α1. Abstract searches are used to explore the state space outside the perimeter. However, the abstraction will typically consider states in the perimeter equivalent to other states, so the information is not perfect anymore. This is reflected in Fig. 3 by the irregular shape of the perimeters. The algorithm does not only build a single perimeter; whenever the abstract search in {a mathematical formula}αi becomes intractable, it is relaxed into a coarser abstract state space {a mathematical formula}αi+1. In the end, all the abstract perimeters are used as heuristics, to estimate the cost from states in the forward search to the perimeter.
+     </paragraph>
+     <paragraph>
+      Algorithm 2 shows the precomputation phases of a PA heuristic. The algorithm initializes the first search in {a mathematical formula}Θα0 with the set of goal states. Then, each phase i consists of a backward uniform-cost search in the abstract state space {a mathematical formula}Θαi initialized with the perimeter frontier of search {a mathematical formula}i−1. A search may be stopped at any point and then the get-h function generates an ADD that represents the corresponding heuristic, as specified in Definition 7. If there are more state spaces to explore, we re-seed (line 9) open and closed with abstract states relative to the next abstraction as specified in Definition 6. The algorithm terminates returning the heuristic when all phases have been completed or if at some point there are no states left in open.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Initialization of perimeter abstract searches
+      </section-title>
+      <paragraph>
+       Abstract searches are initialized with the open and closed lists of the preceding search—so that search {a mathematical formula}UCSi=〈open′,closed′〉 continues from the perimeter generated by search {a mathematical formula}UCSi−1=〈open,closed〉. To ensure that the resulting heuristics are consistent and admissible, states should not be removed from open or added into closed (see proof of Theorem 1 below). In other words, if we consider the sets of states associated with open, {a mathematical formula}open′, closed and {a mathematical formula}closed′ (by interpreting the abstract states as the set of states that are mapped into them), they must meet the following constraints in the initialization of {a mathematical formula}UCSi: {a mathematical formula}openi−1⊆openi and {a mathematical formula}closedi⊆closedi−1. The open list is then seeded with the abstract states of all the states in the perimeter, as in the case of common PPDBs. Basically, we iterate over all states in open and insert the corresponding abstract state in {a mathematical formula}open′ with the same g-value it had. For the closed list, we follow a similar procedure, but inserting an abstract state in {a mathematical formula}closed′ only if all the corresponding states are present in closed.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Perimeter search initializationLet {a mathematical formula}UCSi=〈open′,closed′〉 be a search on {a mathematical formula}Θαi initialized with the perimeter of another search {a mathematical formula}UCSi−1=〈open,closed〉 on {a mathematical formula}Θαi−1. For every abstract state on {a mathematical formula}αi, {a mathematical formula}sjαi, let {a mathematical formula}Sjαi−1 denote the set of all states mapped to {a mathematical formula}sjαi, i.e., {a mathematical formula}Sjαi−1={s∈Θαi−1|αi(s)=sjαi}. We initialize search {a mathematical formula}UCSi as:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Fig. 4 shows an example of the initialization of abstract searches. Consider the part of the original state space depicted in Fig. 4a. There are seven states, including the goal state G, three states that form a path to the goal, A, B and C, and another three states that are in another part of the state space D, E and F. From our figure, one can infer the cost to the goal of A, B, C and G. But, since the dotted node may be substituted by any arbitrary directed graph, nothing can be said about the cost to the goal from D, E and F: they are arbitrarily far from the goal state and may even be dead-end states. The abstraction maps states C and D to the same abstract state (CD) and all other states are mapped onto themselves.
+      </paragraph>
+      <paragraph>
+       A perimeter of radius 3 is constructed in the original state space, in which case states G, C and B are expanded—assuming unitary costs. At that point, the open list contains {a mathematical formula}{A} and the closed list contains {a mathematical formula}{G,B,C}. This frontier is used to initialize an abstract search in the abstract state space of Fig. 4b. In that case, the open list of the abstract search is initialized with {a mathematical formula}{α(A)}={A} and the closed list is initialized with {a mathematical formula}{G,B} (note that the abstract state CD is not inserted in closed since D has not been closed yet).
+      </paragraph>
+      <paragraph>
+       Previous definitions of PPDBs initialized the closed list to the empty list. While both approaches result in an admissible and consistent heuristic, the initialization proposed in Definition 6 includes more states into the closed list, which will be detected as duplicates. This may reduce the number of states expanded by the abstract search, hence reducing the search effort and pruning some spurious paths that do not exist in the original state space. Therefore, this initialization of the closed list helps to derive more informed heuristics while preserving admissibility. In our example, there is a path from A to CD of cost 2, passing by B. If the closed list of the search in the abstract state space is initialized to the empty list, the heuristic value of D will be {a mathematical formula}5=2+3, i.e., the distance from CD to A in the abstract state space plus the distance from A to the goal in the original state space. However, if the closed list is initialized with states expanded by the perimeter search, states B and G are detected as duplicates by the search in the abstract state space. This is sound because they were already expanded by the search in the original state space. As B is not expanded in the abstract search, the spurious path between A and D is pruned and the heuristic value of D, E, F and other states will be greater.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Perimeter abstraction heuristic
+      </section-title>
+      <paragraph>
+       Each uniform-cost search conducted by the algorithm produces an estimate {a mathematical formula}hUCSi. If the search {a mathematical formula}UCSi on {a mathematical formula}Θαi was initialized with the tuple {a mathematical formula}〈open,closed〉, the corresponding heuristic {a mathematical formula}hUCSi(s) estimates the cost of reaching the goal from a state s through the perimeter in open. Since the searches are not always completed, the heuristic estimates follow the definition of partial abstraction heuristics [58]. Previous definitions of partial abstractions assumed uniform costs, so that states expanded or generated by UCS with lower cost than {a mathematical formula}r(UCSi) take the value with which they were expanded/generated and all other states are assigned a value of {a mathematical formula}r(UCSi)+1. The non-uniform cost case is slightly more complicated because not all the nodes in the open list have the same g-value. In particular, with certain cost functions, it is possible to have states in open with cost c such that {a mathematical formula}r(UCSi)&lt;c&lt;r(UCSi)+mina∈A⁡c(a). For example, if actions have a cost of 2 and 3, there may be states in the open list with cost 2 and 3 so {a mathematical formula}r(UCSi)=2&lt;3&lt;r(UCSi)+2=4. In such an scenario, {a mathematical formula}r(UCSi)+mina∈A⁡c(a) is not an admissible estimate and, at the same time, {a mathematical formula}r(UCSi) is not the most informed estimate that could be given for unseen states.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Partial abstraction heuristicLet {a mathematical formula}UCS=〈open,closed〉 be a backward uniform-cost search over an abstract state space {a mathematical formula}Θα, then the partial abstraction heuristic of UCS is {a mathematical formula}hUCS(s)=min⁡(gUCS(α(s)),r(UCS)+mina∈A⁡c(a)), where:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As UCS is a backward search, the g-value of abstract states in UCS corresponds to their goal distance. Then, the g-values of abstract states built in this pre-processing step will be used to compute the heuristic to be used later in the actual forward search. The heuristic value of a state is computed as the minimum value between the g-value of its corresponding abstract state (applying abstraction α) and the minimum cost for any state not in the perimeter (the radius of the perimeter plus the minimum cost of any action). And, the g-value of the abstract state is infinite if it has not been generated during the backward search, or the minimum cost form the goals to generate it (minimum g when it was inserted in open or closed).
+      </paragraph>
+      <paragraph>
+       During the search, the perimeter abstraction heuristic, {a mathematical formula}hPA, combines the estimate of each search, {a mathematical formula}hUCSi.{sup:4} A common method to combine multiple heuristic estimates is to take the maximum of all of them. However, one must be careful to preserve admissibility when combining the heuristic estimates coming from searches initialized with different perimeters. Each {a mathematical formula}hUCSi estimates the cost from each state s to the goal by passing through some state in the perimeter with which {a mathematical formula}UCSi was initialized. This is admissible for states outside such perimeter, but it may be inadmissible for states that were expanded during the perimeter computation because they can reach the goal directly without leaving the perimeter.
+      </paragraph>
+      <paragraph>
+       Therefore, to compute the heuristic value of an state s, we take the maximum of all estimates {a mathematical formula}hUCS0(s),…,hUCSi until the search {a mathematical formula}UCSi where {a mathematical formula}αi(s) was first expanded. This is necessary to obtain an estimate as accurate as possible. Each search {a mathematical formula}UCSi is initialized with the perimeter of the previous one so the value of {a mathematical formula}r(UCSi) increases monotonically with i. However, the value of {a mathematical formula}hUCSi does not increase monotonically with i, because during the initialization of a new abstract search {a mathematical formula}UCSi+1, new states may be introduced into the open list (those that are mapped by the abstraction to the same abstract state as any node in the open list) with a g-value lower than {a mathematical formula}r(UCSi)+mina∈A⁡c(a). Therefore, adding the minimum action cost to the current radius is not admissible for those states anymore, since they are now considered equivalent to a state with lower cost to the goal. Consider again the example of Fig. 4, where the abstraction function maps states C and D to the same abstract state. If the initial perimeter search, {a mathematical formula}UCS0, has only expanded G, then C is the only node in open and the heuristic values of {a mathematical formula}hUCS0 are 0 for G, 1 for C, and 2 for the all other states. However, as C and D are mapped to the same abstract state, {a mathematical formula}hUCS1(D)=1&lt;hUCS0(D).
+      </paragraph>
+      <paragraph label="Definition 8">
+       Perimeter abstraction heuristicLet {a mathematical formula}UCS0,…,UCSk be the perimeter abstraction phases performed over an abstraction hierarchy {a mathematical formula}α0,…,αk. Let s be a state, and {a mathematical formula}UCSi be the first exploration in which {a mathematical formula}αi(s) was expanded, i.e., {a mathematical formula}i=min⁡{j|αj(s)∈closedUCSj}. Then, we define the perimeter abstraction heuristic as:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Perimeter abstraction heuristics are admissible and consistent.
+      </paragraph>
+      <paragraph label="Proof">
+       A heuristic h is consistent if and only if {a mathematical formula}h(s)≤h(s′)+c(l)∀(s,l,s′). Let {a mathematical formula}UCS0,…,UCSk be the searches that define the perimeter abstraction heuristic, {a mathematical formula}hPA. We divide the proof in two cases, depending on whether {a mathematical formula}s′ was expanded by any abstract search {a mathematical formula}UCSi, or not.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Let {a mathematical formula}UCSi be the first search in which {a mathematical formula}s′ was expanded and let C denote the cost with which {a mathematical formula}s′ was expanded. Then {a mathematical formula}hUCSi(s′)=C. As no previous search expanded {a mathematical formula}s′, {a mathematical formula}hPA(s′)=maxj=[0,…,i]⁡hUCSj(s′)≥C. Thus, it suffices to show that {a mathematical formula}hPA(s)≤C+c(l). Let j be the first index for which {a mathematical formula}hPA(s)=hUCSj(s). We consider two cases, depending on whether {a mathematical formula}j&lt;i, or {a mathematical formula}i≤j≤k.
+       </list-item>
+       <list-item label="2.">
+        In the second case, {a mathematical formula}s′ was not expanded by any search. Note that {a mathematical formula}hPA(s)≤r(UCSk)+mina∈A⁡c(a) for all states because for any given search {a mathematical formula}hUCSi≤r(UCSi)+mina∈A⁡c(a) and the values of {a mathematical formula}r(UCSi) monotonically increase with larger values of i. Therefore, to prove the inequality {a mathematical formula}hPA(s)≤hPA(s′)+c(l) it suffices to show that {a mathematical formula}hPA(s′)≥r(UCSk). There are two possibilities, depending on whether {a mathematical formula}s′ has been generated by any search or not. If it has been generated but not expanded, then it must remain in the open list of the last search, {a mathematical formula}UCSk.{sup:5} Since {a mathematical formula}s′ was not expanded, {a mathematical formula}r(UCSk)≤gUCSk(s) (recall that {a mathematical formula}r(UCSk) is the minimum possible g-value in its open list). Hence, {a mathematical formula}hPA(s′)≥hUCSk(s′)≥r(UCSk). Finally, if {a mathematical formula}s′ has not been generated, {a mathematical formula}hPA(s′)=r(UCSk)+mina∈A⁡c(a)≥r(UCSk).
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Symbolic abstraction heuristics
+     </section-title>
+     <paragraph>
+      Symbolic abstractions use symbolic search to precompute the heuristic values by traversing the abstract state space, and taking advantage of the efficiency of these techniques for exhaustive state space exploration. This has been previously done for symbolic PDBs [14], [43], but it can also be done for any other abstraction heuristics that can be efficiently represented as BDDs.
+     </paragraph>
+     <paragraph>
+      Symbolic search is very useful in the context of our hierarchy of perimeter abstractions because of its ability to perform partial searches on huge abstract state spaces that cannot be explicitly enumerated. In this section we focus on how to use symbolic search on linear M&amp;S abstractions, by representing them as BDDs, in order to be able to use symbolic search to explore perimeter abstractions with SM&amp;S hierarchies.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Symbolic representation of linear M&amp;S
+      </section-title>
+      <paragraph>
+       In order to use M&amp;S abstractions in symbolic search, they must be represented as BDDs. The observation that linear M&amp;S representations are essentially equivalent to BDDs was first made by Blai Bonet at ICAPS 2008 (Malte Helmert, personal communications). This connection was further studied for the purpose of using M&amp;S heuristics in symbolic {a mathematical formula}A⁎ search [59]. The main result is that, when using a linear merge strategy, there exists a polynomial time transformation from the M&amp;S representation to a BDD representation. Recently, it has been proved that this is not the case when using non-linear merge strategies [60].
+      </paragraph>
+      <paragraph>
+       Here, we describe in detail the algorithm that transforms the cascading-tables representation with linear merge strategies to ADDs or BDDs and provide precise bounds on the size of the resulting data structures. The cascading-tables representation involves two mappings, the abstraction function {a mathematical formula}α:S→Sα mapping states in {a mathematical formula}S to abstract states in {a mathematical formula}Sα and the precomputed cost for the abstract states {a mathematical formula}hα⁎:Sα→R0+∪{∞}. Combining both mappings results in the desired heuristic function, {a mathematical formula}hα:S→R0+∪{∞}.
+      </paragraph>
+      <paragraph>
+       The key observation is that, when a linear merge strategy is used, the cascading-tables representation of an M&amp;S abstraction can be cast as an ADD. We first develop the intuition behind this correspondence and then introduce an algorithm that computes the ADD representation of any given linear M&amp;S abstraction in polynomial time and space in the size of the cascading-tables.
+      </paragraph>
+      <paragraph>
+       Fig. 5 illustrates the correspondence between the cascading-tables representation of a linear M&amp;S heuristic and the ADD representation with a simple example with five independent Boolean variables, {a mathematical formula}υ1 to {a mathematical formula}υ5 that must be made true. There is one action {a mathematical formula}ai for each variable that makes variable {a mathematical formula}vi true. The initial state is not relevant for us, since the heuristic estimates the cost to the goal from any state in the state space. We run linear M&amp;S with bisimulation shrinking to derive the perfect heuristic, which in this case consists of counting the number of variables that remain false in the state.
+      </paragraph>
+      <paragraph>
+       Fig. 5a depicts the cascading-tables representation of the M&amp;S heuristic. As we are considering a linear merge ordering, at each step we add a new variable {a mathematical formula}vi. Each table corresponds to an abstraction {a mathematical formula}αi that considers i variables. Rows of the table directly correspond to different values of {a mathematical formula}vi, 1 and 0 (note that for simplicity we are omitting the tables related to atomic abstractions). Each column of a table corresponds to abstract states of previous abstractions. For example, the value 1 in the table that represents {a mathematical formula}α2 corresponds to the column {a mathematical formula}s1α2 of the table that represents the next abstraction, {a mathematical formula}α3.
+      </paragraph>
+      <paragraph>
+       The table that represents each {a mathematical formula}αi encodes equivalences between pairs {a mathematical formula}〈sjαi−1,vi〉. For example, in {a mathematical formula}α2, {a mathematical formula}〈s1α1,v2=⊥〉≡〈s0α1,v2=1〉≡s1α2, i.e., {a mathematical formula}s1α1 and {a mathematical formula}s0α1 are considered equivalent by {a mathematical formula}α2. In our example, each state {a mathematical formula}siαj corresponds to having i variables true and the remaining {a mathematical formula}(j−i) variables false. In the last layer, the heuristic values of each abstract state {a mathematical formula}siα5 correspond to counting the number of variables that remain false, {a mathematical formula}(5−i).
+      </paragraph>
+      <paragraph>
+       Fig. 5b depicts the corresponding ADD representing the heuristic {a mathematical formula}hα5. The figure is organized to highlight the similarity between both representations. Every level of the ADD corresponds to an intermediate abstraction {a mathematical formula}αi. Each abstract state of the intermediate abstraction is represented with an ADD node on the corresponding ADD level. To highlight this correspondence, ADD nodes are labeled in the figure with the abstract state they correspond to. In the last level, terminal ADD nodes correspond to the heuristic value of abstract states of the final M&amp;S abstraction, {a mathematical formula}siα5. The tables in the cascading-tables representation are just an alternative to represent the ADD edges, i.e., the mapping from ADD nodes in one layer to the next one. {a mathematical formula}s1α2 has two incoming edges: a 1-edge from {a mathematical formula}s0α1 and a 0-edge from {a mathematical formula}s1α1. These two edges correspond to the two cells with value 1 in the table representing {a mathematical formula}α2, since 0-edges correspond to {a mathematical formula}vi=0 and 1-edges to {a mathematical formula}vi=1.
+      </paragraph>
+      <paragraph>
+       To build the analogy between the M&amp;S construction process and an ADD, we can describe the two operations in M&amp;S (merge and shrink) in terms of the modifications they imply in the ADD representation. As reflected in Fig. 5, merging a new variable to a M&amp;S abstraction corresponds to adding a new layer to the ADD. The shrinking operation that aggregates several abstract states into one, corresponds to the application of ADD reduction rules. Fig. 6 shows an example where two abstract states, AB and BB, are shrunk. After applying shrinking, both AB and BB become equivalent in the abstract state space, so that they will be assigned the same heuristic value. In the corresponding ADD representation, this means that the nodes that represented AB and BB will become equivalent according to the reduction rules, because they represent exactly the same function. In Fig. 6b the assignments {a mathematical formula}TA∧PB and {a mathematical formula}¬TA∧PB point both to the same node.
+      </paragraph>
+      <paragraph>
+       The example of Fig. 5b is very convenient to highlight the correspondence between columns/cells of each cascading table and ADD nodes/edges, exploited by Theorem 2 to prove a bound on the number of ADD nodes required for representing the abstraction.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Let{a mathematical formula}α1,…,αnbe a list of M&amp;S abstractions generated with a linear merge strategy{a mathematical formula}v1,…,vnsuch that{a mathematical formula}αi+1=γ∘(αi⊗πi+1). Then, the symbolic ADD representation of the function{a mathematical formula}αn:S→Sαnunder variable ordering{a mathematical formula}v1,…,vnhas at most{a mathematical formula}∑i=0n−1|αi|(|Dvi+1|−1)nodes.
+      </paragraph>
+      <paragraph label="Proof">
+       Our bound comes from the sum of the nodes of each layer l, which is bounded by {a mathematical formula}|αl|(|Dvl+1|−1). Layer l has at most one node for each abstract state in {a mathematical formula}|αl|, plus intermediate nodes to connect with layer {a mathematical formula}l+1, if the variable {a mathematical formula}vl+1 has more than two values.To discern between all the values of a variable {a mathematical formula}vl, we need to build a binary tree with at most {a mathematical formula}|Dvl|−1 nodes, so in the worst case the number of nodes employed in layer l is {a mathematical formula}|αl|(|Dvl+1|−1). □
+      </paragraph>
+      <paragraph>
+       Given the one-to-one correspondence between M&amp;S abstract states and ADD nodes, the algorithm to obtain the ADD representation of an M&amp;S heuristic with a linear merge strategy is straightforward. Algorithm 3 computes the ADD from the cascading-tables representation of an M&amp;S heuristic. The algorithm computes an ADD node for each abstract state of all intermediate abstractions in a bottom-up approach (as decision diagrams are usually built). ADD nodes are built with two functions: ADD-constant and ADD-value. ADD-constant generates a terminal node associated with an integer constant. ADD-value receives a variable {a mathematical formula}υl and a value in the domain of the variable {a mathematical formula}d∈Dυl and returns an ADD that represents a function f such that {a mathematical formula}f(d)=1 and {a mathematical formula}f(d′)=0 for all {a mathematical formula}d′∈Dυl,d′≠d.
+      </paragraph>
+      <paragraph>
+       The algorithm maintains a matrix named ADD with one entry per abstract state in every intermediate abstraction. Let {a mathematical formula}ADDi,j denote the ADD node that corresponds to the abstract state {a mathematical formula}sjαi. Since several abstract states may be represented with the same node, the ADD matrix stores only a reference to the nodes.{sup:6}
+      </paragraph>
+      <paragraph>
+       First, the algorithm generates one terminal ADD node per abstract state in the last layer, with their heuristic value (line 2). Again, the same node will be used for states with the same heuristic value (their entries in the ADD matrix reference to the same ADD node).
+      </paragraph>
+      <paragraph>
+       Then, nodes in the previous layer can be constructed pointing to nodes in layers previously computed. A loop iterates over all layers in a bottom-up fashion (line 3). To construct the next layer of the ADD, the algorithm iterates over all abstract states in the corresponding abstraction (line 4). For every abstract state in the current layer, the cascading table is used to know which nodes must be pointed to from the newly generated node. Nodes corresponding to states pruned by M&amp;S are directly assigned a constant heuristic value of ∞. Otherwise, the node representing the state corresponds to the function {a mathematical formula}∑d∈υlADD-value(υl,d)×ADDl+1,Tl[i,d]. This function just returns a node that points to the node indicated by the cascading table ({a mathematical formula}Tl[i,d]) for every value d of the variable {a mathematical formula}vl.
+      </paragraph>
+      <paragraph>
+       In this expression, sum (+) and multiplication (×) operations over ADDs that represent 0–1 functions are equivalent to disjunction (∨) and conjunction (∧) over BDDs, respectively. Thus, the multiplication {a mathematical formula}ADD-value(υl,d)×ADDl+1,Tl[i,d] sets the node that represents the abstract state indicated by the cascading table {a mathematical formula}Tl[i,d] as the value assigned to value d. The sum can be interpreted as a disjunction over all values of the variable. The simpler example is when {a mathematical formula}υl is a binary variable, since the result of ADD-node is a node whose 1-edge points to {a mathematical formula}ADDl+1,Tl[i,1] and whose 0-edge points to {a mathematical formula}ADDl+1,Tl[i,0]. If {a mathematical formula}υl has more than two possible variables, intermediate auxiliary nodes are needed. When all layers have been constructed, the algorithm ends returning the reference to the root node of the ADD, {a mathematical formula}ADD0,0.
+      </paragraph>
+      <paragraph>
+       Algorithm 3 can be adapted to compute the ADD representation of the M&amp;S abstraction function (that maps states in S to abstract states in {a mathematical formula}Snα) by assigning to terminal nodes the id of each abstract state instead of their heuristic value.
+      </paragraph>
+      <paragraph label="Corollary 3">
+       Let{a mathematical formula}α1,…,αnbe a list of M&amp;S abstractions generated with a linear merge strategy{a mathematical formula}v1,…,vnsuch that{a mathematical formula}αi+1=γ∘(αi⊗πi+1). Let B be the bound on the number of ADD nodes established byTheorem 2,{a mathematical formula}B=∑i=0n−1|αi|(|Dvi+1|−1). ThenAlgorithm 3computes the ADD representation of the M&amp;S heuristic,{a mathematical formula}hαn, in time{a mathematical formula}O(Blog⁡(B)).
+      </paragraph>
+      <paragraph label="Proof">
+       Algorithm 3 computes the ADD representation of the M&amp;S heuristic by creating the nodes iteratively, so that it suffices to sum the time needed to generate each node. Every ADD node is constructed with a call to ADD-constant (which is performed in constant time) or with the standard ADD sum and product operations in the expression {a mathematical formula}∑d∈υl(ADD-value(υl,d)×ADDl+1,Tl[i,d]). Since the ADDs describing values d of a variable, {a mathematical formula}ADD-value(υl,d), are all disjoint, these operations can be performed in time proportional to the number of created nodes. Thus, a constant number of operations is needed for each node, plus a lookup in the table of nodes to ensure the ADD reduction rules. Therefore, at most B nodes have to be constructed and each node takes {a mathematical formula}O(log⁡(B)) time. □
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Symbolic Merge-and-Shrink hierarchies
+      </section-title>
+      <paragraph>
+       The objective of using symbolic search in M&amp;S is to derive more accurate heuristics by searching larger abstract state spaces that do not need to be explicitly represented. However, these larger state spaces cannot be directly obtained with the M&amp;S algorithm, because the size of M&amp;S abstract state spaces must remain small enough to explicitly represent them. Instead, we define SM&amp;S state spaces which are derived from M&amp;S abstractions without requiring their explicit representation. SM&amp;S abstractions result of merging several intermediate M&amp;S abstractions. In particular, we focus on linear merge strategies, where at any point during the M&amp;S procedure there is a single non-atomic M&amp;S abstraction plus the atomic-abstractions of the remaining variables.
+      </paragraph>
+      <paragraph label="Definition 9">
+       SM&amp;S abstractionLet Π be a planning task and let α be an abstraction with relevant variables {a mathematical formula}Vα⊆V. Let {a mathematical formula}ΠV∖Vα be the projection of Π over the non-relevant variables of α, {a mathematical formula}V∖Vα. The SM&amp;S abstraction {a mathematical formula}αSM&amp;S  associated to α is defined as the synchronized product of α and {a mathematical formula}ΠV∖Vα: {a mathematical formula}αSM&amp;S =α⊗ΠV∖Vα.
+      </paragraph>
+      <paragraph>
+       Intuitively, M&amp;S abstractions partially consider a subset of variables (the relevant variables) and completely ignore the rest. The SM&amp;S abstraction derived from an M&amp;S abstraction considers the same information about the relevant variables, but instead of ignoring all the other variables, they are fully considered (no abstraction is made over those variables). In other words, the SM&amp;S abstraction is a refinement of the M&amp;S abstraction. For example, consider a typical logistics task with several packages and trucks. An M&amp;S abstraction α that considers only two packages may reduce the abstraction size by considering some combinations to be equivalent. For example, {a mathematical formula}(p1=G∧p2=T)≡(p1=T∧p2=G) or {a mathematical formula}(p1=A≡p1=B). However, α completely ignores all the information regarding the location of the trucks or the other packages. {a mathematical formula}αSM&amp;S , on the other hand, fully considers the location of all the trucks, yet it is still an abstraction of the original task since it also applies the same equivalences than α for packages {a mathematical formula}p1 and {a mathematical formula}p2.
+      </paragraph>
+      <paragraph>
+       Definition 9 can be applied for any intermediate abstraction in the M&amp;S algorithm. Next, we consider the abstraction hierarchy that results from computing the SM&amp;S abstraction of every intermediate M&amp;S abstraction.
+      </paragraph>
+      <paragraph label="Definition 10">
+       SM&amp;S abstraction hierarchyLet {a mathematical formula}α0,…,αn be all the intermediate abstractions generated by the M&amp;S procedure, where {a mathematical formula}α0 is the empty abstraction without any variable and {a mathematical formula}αn is the final result of M&amp;S. We define the corresponding SM&amp;S hierarchy as the list of SM&amp;S abstractions: {a mathematical formula}αSM&amp;S 0,…,αSM&amp;S n.
+      </paragraph>
+      <paragraph>
+       Fig. 7 shows an example of how the SM&amp;S hierarchy is obtained from an M&amp;S procedure. The left part shows the intermediate abstractions generated during the M&amp;S algorithm. The M&amp;S algorithm is initialized with the atomic abstraction of each variable, {a mathematical formula}πi. In our example, there are five variables and, consequently, there are five atomic abstractions, {a mathematical formula}π1,…,π5. The M&amp;S algorithm iteratively merges two abstractions by computing their synchronized product and, if necessary, applies shrinking. In our example, a linear merge strategy is used, so that variables are iteratively merged into the main abstraction. It starts merging variables {a mathematical formula}π1 and {a mathematical formula}π2 into {a mathematical formula}α1 and iteratively includes more variables into each intermediate abstraction {a mathematical formula}αi. The induced SM&amp;S abstractions always consider all variables, as a result of merging all variables into each {a mathematical formula}αi without applying any additional shrinking. Whereas the {a mathematical formula}αi's usually become finer with increasing i, the {a mathematical formula}αSM&amp;S i's become coarser with increasing i.
+      </paragraph>
+      <paragraph>
+       The SM&amp;S hierarchy defines n state spaces, resulting in a trade-off between the size of the abstract state space and heuristic accuracy. {a mathematical formula}αSM&amp;S 0 corresponds to the original non-abstracted state space, which has exponential size and is intractable to represent, but produces the perfect heuristic. On the other hand, {a mathematical formula}αSM&amp;S n corresponds to the final M&amp;S abstract state space, {a mathematical formula}αSM&amp;S n≡αn, whose state space can be explicitly represented (assuming a suitable value of the maximum number of M&amp;S abstract states) possibly with a great loss of information. This is reflected in the example of Fig. 7 since {a mathematical formula}αSM&amp;S 0 is the merge of all the variables and {a mathematical formula}αSM&amp;S 4 is {a mathematical formula}α4. All the rest of SM&amp;S abstractions in the hierarchy, {a mathematical formula}αSM&amp;S i,0&lt;i≤n, enable the desired trade-off between {a mathematical formula}αSM&amp;S 0 and {a mathematical formula}αSM&amp;S n. Each {a mathematical formula}αSM&amp;S i is strictly more relaxed than the previous {a mathematical formula}αSM&amp;S i−1, so that the size of the abstract state spaces decreases at the expense of producing less informed heuristics {a mathematical formula}hαSM&amp;S i−1(s)≥hαSM&amp;S i(s).
+      </paragraph>
+      <paragraph>
+       Note that the size of SM&amp;S abstract state spaces may be of exponential size, so that they cannot be explicitly represented. This is not a problem, since we will directly traverse those state spaces using symbolic search. In order to perform symbolic search over the abstract state spaces, we need to represent sets of abstract states and to perform the successor generation efficiently. Below, we describe the encoding that we use and analyze its theoretical properties.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        SM&amp;S abstract state representation
+       </section-title>
+       <paragraph>
+        In this section we study the symbolic representation of SM&amp;S abstractions, i.e., how to represent sets of abstract states by means of BDDs. In the original state space, sets of states are represented as functions {a mathematical formula}f:S→{1,0}, in terms of binary variables {a mathematical formula}x=x1,…,xn. In the same way, sets of abstract states in {a mathematical formula}αSM&amp;S i=αi⊗Πυi+1,…,υn are represented as characteristic functions {a mathematical formula}f:SαSM&amp;S i→{1,0}. An important decision is what variables (and variable ordering) should be used to represent sets of abstract states in {a mathematical formula}SαSM&amp;S i. We decided to use the same set of variables that is used to represent the original state space. An alternative could be to design a new set of auxiliary variables y, optimized to represent abstract states, replacing variables {a mathematical formula}v1,…,vi by another set of variables {a mathematical formula}y1,…,yk specifically designed to represent the abstraction. While this alternative could help to perform the abstract search more efficiently, encoding abstract states with the same variables lets us use the same representation for searches in any state space. Thus, using the same set of variables for all the abstract states makes the conversion between original states and abstract states easier. Moreover, the same BDD can be interpreted as a set of abstract states or a set of concrete states; i.e., the set of all states mapped to some abstract state in the set.
+       </paragraph>
+       <paragraph>
+        Fig. 8 shows an example of the symbolic M&amp;S relaxation of a search and how a BDD can be interpreted both as a set of states and a set of abstract states. Given a set of states in the original state space, depicted in Fig. 8a, and an intermediate M&amp;S abstraction {a mathematical formula}α2, depicted in Fig. 8b, we derive the corresponding set of states {a mathematical formula}αSM&amp;S 2(S). S is a set of four states, namely 00000, 01100, 10110 and 11010. {a mathematical formula}α2 is an M&amp;S abstraction over variables {a mathematical formula}υ1 and {a mathematical formula}υ2 with two abstract states {a mathematical formula}e0 and {a mathematical formula}e1. In general, our M&amp;S abstractions will have a larger (but bounded) number of abstract states. The ADD depicted in Fig. 8b represents the mapping from partial states {a mathematical formula}〈v1,v2〉 to one of the abstract states, {a mathematical formula}e0 or {a mathematical formula}e1. Each abstract state corresponds to an equivalence relation over variables {a mathematical formula}υ1 and {a mathematical formula}υ2. {a mathematical formula}e0 makes starting with 00 been equivalent to start with 11, so that if a set of abstract states contains state {a mathematical formula}00abc, it automatically contains {a mathematical formula}11abc as well. Whenever any state starting with 00 is reached in the abstract search, the corresponding state starting with 11 will be automatically reached and vice versa. {a mathematical formula}e1 makes 10 and 01 equivalent in a similar way.
+       </paragraph>
+       <paragraph>
+        Fig. 8c shows the BDD that represents the set of abstract states {a mathematical formula}αSM&amp;S 2(S), containing four abstract states ({a mathematical formula}000x0, {a mathematical formula}011x0, {a mathematical formula}110x0, and {a mathematical formula}101x0) or eight concrete states (after substituting x by 0 or 1), depending on the interpretation. An important point is that BDD nodes pointed to by the paths 00 and 11 are equivalent. A similar reasoning can be made for every abstract state {a mathematical formula}ei making the top part of any BDD describing abstract states at most as large as the ADD representation of the M&amp;S abstraction.
+       </paragraph>
+       <paragraph>
+        The example shown in Fig. 8 is an ideal case, where not only the layers corresponding to {a mathematical formula}α2 are reduced, but also other layers get simplified. Opposite examples can be defined where the number of BDD nodes required to represent {a mathematical formula}αSM&amp;S i(S) is exponentially larger than the number of nodes to describe S. However, the correspondence between the ADD that describes the M&amp;S abstraction {a mathematical formula}α2 and the upper levels of any BDD describing a set of abstract states lets us prove some bounds on the size of BDDs describing any set of abstract states.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}αkbe an M&amp;S abstraction over relevant variables{a mathematical formula}v1,…,vkwith M abstract states. Let{a mathematical formula}SαSM&amp;Skbe a set of abstract states in{a mathematical formula}ΘαSM&amp;Sk. Then, the layer{a mathematical formula}k+1of the BDD representation of{a mathematical formula}SαSM&amp;Sk, under variable ordering starting by{a mathematical formula}υ1,υ2,…,υk, has at most M BDD nodes.Each node in layer {a mathematical formula}k+1 corresponds to one or more abstract states in {a mathematical formula}αk. Suppose there is a node {a mathematical formula}n′ that does not correspond to any abstract state. Let {a mathematical formula}d1,…dk be an assignment to variables {a mathematical formula}v1,…,vk that leads from the root of the BDD to {a mathematical formula}n′. By definition, all assignments are related to a unique abstract state, so we reach a contradiction.Let {a mathematical formula}sαSM&amp;S k be the abstract state corresponding to the partial state {a mathematical formula}d1,…dk. By definition of the abstract state space, {a mathematical formula}d1,…dk is indistinguishable of all the other assignments mapped to {a mathematical formula}sαSM&amp;S k, i.e., they all have the same goal distance in the abstract state space. Therefore, node {a mathematical formula}n′ represents not only {a mathematical formula}d1,…dk but also all the other assignments that are mapped to {a mathematical formula}sαSM&amp;S k by {a mathematical formula}αSM&amp;S k. Thus, the number of nodes in layer k is bounded by the number of abstract states, which is itself bounded by M. □
+       </paragraph>
+       <paragraph>
+        Proposition 4 bounds the size of a single layer of the BDD describing a set of abstract states in {a mathematical formula}ΘαSM&amp;S k. However, this result can easily be extended to all the upper layers in the BDD. As we are assuming a linear merge strategy, all the M&amp;S abstractions are built as the merge of an M&amp;S abstraction and the atomic abstraction of another variable. Therefore, the bound of Proposition 4 is valid for all the upper levels of the BDD.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}M1,…,Mkbe the number of abstract states of k intermediate abstractions{a mathematical formula}α1,…,αkof an M&amp;S algorithm with a linear merge strategy, such that{a mathematical formula}αi=γi∘(αi−1⊗πi). Let{a mathematical formula}SαSM&amp;Skbe a set of abstract states in{a mathematical formula}ΘαSM&amp;Sk. Then, the BDD representation of{a mathematical formula}SαSM&amp;Sk, under variable ordering starting by{a mathematical formula}υ1,υ2,…,υk+1, is represented with at most{a mathematical formula}(∑i∈[1,…,k]Mi)+Mk2n−k+1BDD nodes.The BDD that represents {a mathematical formula}SαSM&amp;S k may be divided in its top and bottom parts. The top part includes layers 1 to k and the bottom part the remaining {a mathematical formula}(n−k) layers. From Proposition 4, we can bound the size of each top layer to {a mathematical formula}Mi nodes, so that the top part of the BDD uses, at most, {a mathematical formula}∑i∈[1,…,k]Mi nodes. The bottom layers correspond to functions over the remaining {a mathematical formula}(n−k) variables. Each of these functions is described as a BDD with {a mathematical formula}(n−k) levels. In the worst case, they do not share any node, and thus each one has {a mathematical formula}2n−k+1 nodes. Since there are {a mathematical formula}Mk different functions, the size of the bottom part of {a mathematical formula}SB is bounded by {a mathematical formula}Mk2n−k+1. □
+       </paragraph>
+      </section>
+      <section label="5.2.2">
+       <section-title>
+        SM&amp;S transition representation
+       </section-title>
+       <paragraph>
+        Once we have defined the symbolic representation of sets of abstract states, in order to perform a symbolic search, we need a reliable way to perform successor generation. Planning actions are represented by means of one or more transition relations (TRs). As a brief recap, each TR is a function {a mathematical formula}f:S×S′→{1,0} that relates predecessor to successor states, i.e., {a mathematical formula}f(s,s′) is true if and only if there is a transition from s to {a mathematical formula}s′. Predecessor states are represented with the standard set of variables x, and an auxiliary set of variables {a mathematical formula}x′ represents the successor states. The variable ordering is also very important for the performance of image computation. Usually, variables in x and {a mathematical formula}x′ are interleaved in the following manner: {a mathematical formula}x1,x1′,x2,x2′,…xn,xn′. This variable ordering exploits the fact that actions usually affect a few variables so that most variables preserve their previous value.
+       </paragraph>
+       <paragraph>
+        In SM&amp;S abstract state spaces, however, the transitions are different than in the original state space. Moreover, in a given {a mathematical formula}αSM&amp;S i, variables {a mathematical formula}υ1,…,υi are highly related and the TR representation can be very complex. Therefore, contrary to our state representation, it is not possible to preserve the same variable ordering as for the TRs of the original state space.
+       </paragraph>
+       <paragraph>
+        We avoid the problem of representing SM&amp;S TRs by using the TRs of the original state space. This is possible since the set of abstract states may be interpreted as a set of non-abstracted states. Of course, the result of the image operation is a set of states of the original state space. Fortunately, we can apply the abstraction function to obtain the set of abstract states associated with them. The image and pre-image operations are applied as {a mathematical formula}image(SαSM&amp;S i,TαSM&amp;S i)=αSM&amp;S i(image(SαSM&amp;S i,T)). The details of this operation are described in the next section.
+       </paragraph>
+       <paragraph>
+        Thus, we do not need to compute a new set of TRs for every abstract state space we traverse. However, using the original TRs also has some drawbacks. In particular, the intermediate BDDs may induce a large overhead. Even in the case where the sets of abstract states are guaranteed to be efficiently representable, the intermediate set of original states does not have any guarantee with respect to its size.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Frontier shrinking
+      </section-title>
+      <paragraph>
+       One key aspect of perimeter abstraction heuristics is that, instead of restarting abstract searches from scratch, they restart the search from the current frontier by relaxing the open and closed lists. Thus, in order to initialize the abstract search, they have to perform the mapping from states in the original state space to abstract states, according to Definition 6. In this section, we consider how to initialize abstract searches efficiently when using a symbolic representation of the sets of states involved in the searches. We call this operation “shrinking the frontier” because we expect the frontier of the abstract state space to be more compact according to Theorem 5.
+      </paragraph>
+      <paragraph>
+       According to Definition 6, there are two different types of frontier shrinking operations. Existential shrinking is used to shrink the open list and universal shrinking is the operation applied to the closed list. Both take as input a set of states {a mathematical formula}SB and an abstraction function α and compute the set of abstract states that will be used to initialize the open and closed list, {a mathematical formula}SB∃α and {a mathematical formula}SB∀α, respectively. Next, we describe how to implement both shrinking operations when the sets of states are described with BDDs and our abstraction is a PDB or a SM&amp;S abstraction.
+      </paragraph>
+      <section label="5.3.1">
+       <section-title>
+        Frontier shrinking in PDBs
+       </section-title>
+       <paragraph>
+        PDB abstractions are characterized by a set of variables {a mathematical formula}Vα, so that the value of the remaining variables is completely ignored. Implementing the existential and universal shrinking operations in this setting, reduces to applying the standard existential/universal quantification over variables that are not in {a mathematical formula}Vα, as formulated in Equations (1) and (2).{a mathematical formula}{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       <section-title>
+        Frontier shrinking in SM&amp;S
+       </section-title>
+       <paragraph>
+        In SM&amp;S abstractions, like in PDBs, we can distinguish between relaxed and non-relaxed variables. However, instead of completely ignoring the relaxed variables, SM&amp;S uses an M&amp;S abstraction over the relaxed variables to keep some information about them. Therefore, we describe the SM&amp;S abstraction in terms of the set of relaxed variables {a mathematical formula}Vα (the relevant variables of the M&amp;S abstraction) and the set of equivalences induced by the M&amp;S abstraction, {a mathematical formula}∼α. Recall that each abstract state {a mathematical formula}sα is a set of states such that every pair of states {a mathematical formula}s1,s2∈sα are equivalent, {a mathematical formula}s1∼αs2. Equations (3) and (4) show how to compute the existential and universal shrinking of a set of states {a mathematical formula}SB given a BDD representation of {a mathematical formula}SB and each {a mathematical formula}sα:{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        As in the case of PDBs, both operations use the existential/universal BDD quantification of the abstracted variables. However, in this case, we must iterate over all the abstract states in {a mathematical formula}Sα to keep their information. For each abstract state, {a mathematical formula}sα, we compute its existential shrinking in three consecutive steps:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}SB∧sα is the subset of {a mathematical formula}SB which corresponds to any state in {a mathematical formula}sα. However, in our final result all partial states mapped to {a mathematical formula}sα must be indistinguishable.
+        </list-item>
+        <list-item label="2.">
+         Existential quantification of {a mathematical formula}Vα gets all the assignments to variables {a mathematical formula}V∖Vα that have been reached for any {a mathematical formula}s∈sα. That way, we keep the values of other variables while ignoring the relaxed variables, just like in the existential shrinking of PDB abstractions.
+        </list-item>
+        <list-item label="3.">
+         Finally, we compute the conjunction with {a mathematical formula}sα to reset the value of {a mathematical formula}Vα to only states in {a mathematical formula}sα.
+        </list-item>
+       </list>
+       <paragraph>
+        As an example, take Fig. 8 on page 16. Abstract state {a mathematical formula}e0 represents the partial states 00 and 11. Our first step, gets all the states in {a mathematical formula}SB that fit that description: 00000 and 11010. Then, the existential quantification forgets the value of the relaxed variables, obtaining the set of states {a mathematical formula}xx000 and {a mathematical formula}xx010. Finally, those assignments are valid for {a mathematical formula}e0, so we end with four states after our relaxation: 00000, 00010, 11000 and 11010.
+       </paragraph>
+       <paragraph>
+        The case of universal shrinking is similar, though in this case the second step uses universal quantification to get only those assignments to non-relaxed variables that are true for all partial assignments mapped to {a mathematical formula}sα. Moreover, a disjunction with {a mathematical formula}¬sα is necessary to ignore the values reached with other abstract states in the universal quantification.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      The SPA heuristic
+     </section-title>
+     <paragraph>
+      In the previous sections, we have presented an abstraction hierarchy based on M&amp;S abstractions and a new model of perimeter abstraction heuristics that can exploit it. In this section, we mix those ingredients up and propose the Symbolic Perimeter Abstraction heuristic, SPA. The main purpose of this section is to describe the design and implementation decisions that remain unsettled and are needed in order to have a practical implementation of the theoretical results of the previous sections.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       The SPA algorithm
+      </section-title>
+      <paragraph>
+       SPA performs symbolic regression and uses M&amp;S or PDB abstractions to progressively relax the search whenever it becomes unfeasible. Fig. 9 depicts a high level view of the interaction between symbolic search and abstractions, highlighting the differences between M&amp;S and PDBs.
+      </paragraph>
+      <paragraph>
+       Each diagram is divided into four parts: the upper part depicts the M&amp;S abstractions that are used to relax the search; the middle part depicts the BDDs involved in the search; the x-axis represents the search progress with different layers labeled with their g-value; and below the axis we show the resulting heuristics of each search.
+      </paragraph>
+      <paragraph>
+       SPA starts computing a symbolic perimeter, {a mathematical formula}Exp(α0). This perimeter corresponds to a regression search in the original state space, so that no abstraction is used to relax the search yet. The first BDD with {a mathematical formula}g=0 contains the goal states and by successive {a mathematical formula}pre-image operations SPA performs a standard symbolic regression search. As this search is intractable for general planning domains, the search will surpass in most instances the predetermined memory or time bounds given for the precomputation of the heuristic. Then, the search is truncated (at {a mathematical formula}g=2 in Fig. 9). The minimum cost to the goal of the expanded state sets is stored, transforming the list of BDDs representing the search to an ADD representing the heuristic, {a mathematical formula}hExp(α0). Up to this point, we have just generated a symbolic perimeter with symbolic regression search, and no abstractions have been used yet. Then, an abstraction is derived by using either M&amp;S or PDBS. SPA initializes {a mathematical formula}Exp(α1) by relaxing the open and closed lists of the previous search, using the existential and universal shrinking operations described in Section 5.3. The diagrams show the main differences between SPM&amp;S and SPPDB, as described below.
+      </paragraph>
+      <paragraph>
+       In Fig. 9a, M&amp;S merges variables, applying shrinking if needed to fit the maximum number of abstract states (with a limit of six abstract states, {a mathematical formula}α1 must have at most three abstract states before merging the next variable). The top levels of the BDDs in the open or closed list of the new relaxed search, {a mathematical formula}Exp(α1), are at most as large as the ADD that represents the M&amp;S abstraction, {a mathematical formula}α1, depicted in the upper part of the diagram. This is due to the fact that all partial states related to the same abstract state are considered equivalent, so that when one is reached, all of them are, as explained in Section 5.2.1. For example, in Fig. 9a, abstract state {a mathematical formula}e1 represents partial states 00 and 10. During the exploration, if state 10010… is reached, then state 00010… is also reached and vice versa. Hence, BDD nodes pointed to by 00 and 10 are equivalent, making the top part of any BDD in the exploration equal to the ADD representation of {a mathematical formula}α1. Also, M&amp;S abstractions are cumulative, so the top levels of {a mathematical formula}α2 coincide with those of {a mathematical formula}α1.
+      </paragraph>
+      <paragraph>
+       In Fig. 9b, {a mathematical formula}υ2 is removed from the pattern. As PDBs completely ignore variables outside the pattern, BDDs in the search of SPPDB will only contain nodes related to variables in the pattern, so BDDs in {a mathematical formula}Exp(α1) do not have any node related to {a mathematical formula}υ2. However, SPM&amp;S is forced to relax variables from the top of the PDBs one by one, whereas SPPDB may choose any variable to relax.
+      </paragraph>
+      <paragraph>
+       With the relaxation induced by the abstraction the search continues but, after a number of steps, it may become unfeasible again (according to the specified time/memory bounds). SPA continues then interleaving symbolic explorations and M&amp;S /PDB iterations until the exploration is completed or the time/memory bounds are reached again. When finished, it returns the list of ADDs representing the heuristic values computed so far. Once the heuristic is computed as a list of ADDs, it can be used in the search as stated in Definition 8 in order to solve the planning instance.
+      </paragraph>
+      <paragraph>
+       Algorithm 4 shows the SPM&amp;S algorithm, i.e., the version of SPA that uses M&amp;S abstractions to relax the search frontier. It receives as input a planning task Π and some parameters to bound the memory and time resources. The output is a heuristic H represented as a list of ADDs. Each ADD is the result of a backward symbolic exploration over an M&amp;S abstraction α. If SPM&amp;S exceeds the time limit {a mathematical formula}TSPM&amp;S  a last ADD is included (line 16). This last ADD is the standard M&amp;S heuristic, computed as usual with an explicit traversal of the abstract state space. SPM&amp;S starts initializing the symbolic backward search to {a mathematical formula}(open=S⋆,closed=∅,d=0) and α is empty. Symbolic search progresses following the relaxation imposed by α (line 7).
+      </paragraph>
+      <paragraph>
+       Several parameters bound the memory and time used by the algorithm. Memory is controlled by the maximum number of M&amp;S abstract states, N, and the maximum number of nodes, {a mathematical formula}NF, to represent the search frontier. Four different parameters bound the time allotted to the algorithm. {a mathematical formula}TM&amp;S  aborts the heuristic computation to guarantee termination. {a mathematical formula}TSym prevents SPA from performing more symbolic explorations to focus on completing the M&amp;S abstraction. {a mathematical formula}TExp fixes a maximum time for each individual exploration to avoid consuming all the time in one single exploration. Finally, {a mathematical formula}TI limits the maximum time employed in one {a mathematical formula}pre-image. If {a mathematical formula}TI is exceeded, not only the image but the whole exploration is halted. In order to avoid starting another image as hard as the halted one, the maximum number of nodes in the frontier search is reduced to {a mathematical formula}NF=|Se|2. All these parameters are set independently of the domain and only depend upon the memory and time resources available to the planner.
+      </paragraph>
+      <paragraph>
+       The BackwardUniformCostSearch procedure performs a symbolic backward uniform-cost search over {a mathematical formula}αSM&amp;S , stopping when open is empty, the search frontier is larger than {a mathematical formula}NF, an image takes longer than {a mathematical formula}TI, or the time limit of {a mathematical formula}TExp seconds has been exceeded. The heuristic derived from this search is stored in H as an ADD (line 8). When the search is truncated because one of the bounds was reached, the current abstraction is substituted, merging a new variable and shrinking if needed. After shrinking the abstraction, we also shrink the search frontier, open and closed, in order to continue the search. Note that, after shrinking the search frontier with the new abstraction, the search only continues if the relaxed frontier has an acceptable size. SPM&amp;S keeps including variables into the abstraction until the search is small enough, i.e., the relaxed frontier is smaller than the parameter {a mathematical formula}NF. The use of perimeter search prevents SPA from starting a new exploration per merged variable, which might lead to redundant work in case that most searches were truncated at the same frontier cost.
+      </paragraph>
+      <paragraph>
+       SPPDB follows the same pseudocode, except that variables are completely abstracted away in line 11 and they can be selected in any order in line 14.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Theoretical properties
+      </section-title>
+      <paragraph>
+       We conclude with a recapitulation of the theoretical results that apply to the {a mathematical formula}hSPA heuristic.
+      </paragraph>
+      <paragraph label="Proof sketch">
+       The{a mathematical formula}hSPAheuristic is admissible and consistent.It follows from Theorem 1, since {a mathematical formula}hSPA is a particular instance of perimeter abstraction heuristic. □
+      </paragraph>
+      <paragraph>
+       One of the advantages of M&amp;S and PDBs is that it is possible to control its time and memory usage by appropriately setting the maximum number of abstract states, M. Assuming that M is polynomially bounded, computing the abstraction has polynomial complexity [35]. SPA does not ensure that the full symbolic exploration over an abstraction has a more concise BDD representation than another over the original task. Even in the case of PDBs, relaxing the search frontier with existential shrinking could actually enlarge it. Fortunately, we can bound the number of BDD nodes needed to represent any set of states in the exploration. This is straightforward for the case of PDBs, since the size of the BDDs is bounded, if only a constant number of variables is selected.
+      </paragraph>
+      <paragraph label="Corollary 7">
+       Let α be an M&amp;S abstraction with relevant variables{a mathematical formula}Vα, generated with a maximum number of abstract states M. Let{a mathematical formula}SBbe a BDD describing a set of states on{a mathematical formula}Θα⊗ΠV∖Vαusing a variable order whose first/top variables correspond to{a mathematical formula}Vα. Then, the size of{a mathematical formula}SBis bounded by:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       It follows from Theorem 5, just assigning the bound M to the number of abstract states in every intermediate M&amp;S abstraction. □
+      </paragraph>
+      <paragraph>
+       Corollary 7 ensures that, as variables are merged into the abstraction, the complexity of its full symbolic exploration decreases. The bound on the top part of the BDD grows linearly with M, while the bound on its bottom part is exponentially reduced. Thus, the full symbolic exploration of the abstraction will be eventually tractable. In the limit, the exploration is performed over a linear sized state space that can be explicitly explored, just as the original M&amp;S algorithm does. Theorem 7 requires relevant variables for the abstraction to be placed in the top levels of exploration BDDs. For this to hold in every symbolic exploration, the symbolic search must use the same variable ordering as the M&amp;S merge strategy. Since changing the variable ordering of a BDD may cause an exponential blow-up, we use the same variable ordering in order to guarantee an efficient computation of SPM&amp;S.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      In this section, we evaluate the performance of SPA heuristics, and compare them against the two baseline methods: abstraction heuristics and a symbolic perimeter, as well as to other state-of-the-art heuristics for cost-optimal planning. We also evaluate the influence of different parameters of our heuristic. In particular, we analyze multiple types of abstraction strategies to relax the perimeter, including PDB and SM&amp;S abstraction hierarchies. We compare the performance of {a mathematical formula}A⁎ search with SPA against {a mathematical formula}SymBA⁎, the winner of the last IPC, and show that they obtain similar coverage to the state of the art. This is remarkable, especially given that our analysis does not include other possible orthogonal enhancements to search algorithms using SPA (e.g. partial-order pruning [7] or the combination with other heuristics), which are not directly applicable in {a mathematical formula}SymBA⁎. In the following we mostly focus on the convenience of using symbolic perimeter abstractions, discussing those cases where they are advantageous and providing explanations if other techniques improve over them in some domains.
+     </paragraph>
+     <paragraph>
+      SPA has been integrated in the Fast Downward planning system [62]. All configurations use the {a mathematical formula}h2 reachability analysis [3] in order to compute state invariants and remove actions from the planning task [63]. The state invariants are used to prune the abstract searches, like in constrained PDBs [64], [65]. All the symbolic searches, for the construction of the perimeter and the exploration of the abstract state spaces, use the enhancements for image computation [66].
+     </paragraph>
+     <paragraph>
+      In our experiments we measure the coverage, i.e., number of instances solved, on the optimal-track STRIPS planning instances from the International Planning Competitions from IPC'98 until IPC'11. Since some domains have been used in multiple IPCs and not all domains have the same number of instances, besides the total coverage we report a final score that gives the same weight to every domain. This score function normalizes the coverage of every planner by the number of instances in that domain, considering all versions of the same domain in different competitions as a single entry, giving a total of 36 different domains.
+     </paragraph>
+     <paragraph>
+      All experiments were conducted on a cluster of Intel E5-2660 machines running at 2.20 GHz, with time (memory) cut-offs of 30 minutes (4 GB).
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Parameterization of symbolic perimeter abstractions
+      </section-title>
+      <paragraph>
+       The SPA algorithm takes as input different parameters that can be classified into three categories:
+      </paragraph>
+      <paragraph>
+       Memory and time bounds. SPA heuristics, as other abstraction heuristics like PDBs or M&amp;S, rely on a heavy precomputation phase in order to efficiently compute the heuristic value for each state in the search. We defined parameters that limit the time and memory to invest in the preprocessing phase in order to guarantee that it successfully terminates. Larger bounds will likely result in more informed heuristics at the expense of devoting more preprocessing time. Of course, the optimal value of these parameters directly depends on the total resources allotted to the planner. SPA parameters were manually set to fit the International Planning Competition (IPC) setting: the maximum number of nodes to represent the state set to expand is {a mathematical formula}NF=10,000,000. A maximum time is set to each individual image ({a mathematical formula}TI=30s), exploration ({a mathematical formula}TExp=300s) and symbolic search ({a mathematical formula}TSym=900s). Finally, the heuristic preprocessing is interrupted after {a mathematical formula}TSPA=1200s to ensure that the search is always started.
+      </paragraph>
+      <paragraph>
+       Variable ordering. All the symbolic searches use a static variable ordering. We consider two different variable orderings: Gamer and Fast Downward orderings. The variable ordering used by Gamer is optimized for symbolic search and the one used in Fast Downward is suitable for the merge strategy of M&amp;S. However, we always use the same ordering for the symbolic search and merging variables in M&amp;S since otherwise there is no guarantee about the BDD sizes.
+      </paragraph>
+      <paragraph>
+       Abstraction hierarchy. SPA can be used in combination with different abstraction strategies that select which abstract state spaces will be traversed in order to compute the heuristic estimates. In our experiments we used two different types of abstraction hierarchies: the SM&amp;S hierarchies we presented in Section 5.2 and PDB hierarchies.
+      </paragraph>
+      <paragraph>
+       We define PDB hierarchies by starting with the pattern that contains all the variables (equivalent to the original task) and abstracting away one variable at a time. Thus, the PDB hierarchies are defined in terms of a variable ordering. In order to select variable orderings for the construction of the PDB hierarchies, we use the preexisting merge linear strategies for M&amp;S:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Level (lev ): Follows the BDD variable ordering, so that it results in the same abstraction layers than SM&amp;S.
+       </list-item>
+       <list-item label="•">
+        Reverse level (rev ): Reversed version of level, following the BDD variable ordering in reverse order.
+       </list-item>
+       <list-item label="•">
+        Cggoal-lev (cgl ): Always selects a variable related in the causal graph [67], [68], [69], [70] to an already selected variable. If there is none, it selects a goal variable. Ties are broken according to the level criterion.
+       </list-item>
+       <list-item label="•">
+        Cggoal-rnd (cgr ): As CGGoalLevel but breaking ties randomly.
+       </list-item>
+       <list-item label="•">
+        Goalcg-lev (gcl ): First it selects all goal variables and then variables related to them in the causal graph, breaking ties according to the level criterion.
+       </list-item>
+       <list-item label="•">
+        Random (rnd ): selects a random variable ordering. Useful as a baseline approach.
+       </list-item>
+      </list>
+      <paragraph>
+       SM&amp;S abstraction hierarchies are defined with the merge and shrink strategies. The merge strategy is always set to exactly the same linear ordering as the one used for the BDDs. Only this ordering guarantees that the resulting BDDs will eventually be tractable after abstracting away enough variables, as explained in Section 5.2.1. Regarding shrink strategies, we use the ones that have been previously defined in the literature [12], [35]: bisimulation (b ), greedy bisimulation (g ) and f-preserving shrinking (fh ). All the shrinking strategies reduce the abstract state space enough to ensure that no M&amp;S abstraction has more than 10,000 abstract states.
+      </paragraph>
+      <paragraph>
+       Table 1 shows the total coverage of all the combinations of configurations of three different parameters: the abstraction selection strategy, the variable ordering employed by the BDDs (Gamer or Fast Downward ordering) and whether the perimeter is used to initialize the abstract searches ({a mathematical formula}P ) or not ({a mathematical formula}¬P ). The virtual best solver configurations consider that the best configuration is selected for every instance, i.e., an instance is considered solved if it is solved by any of the configurations using PDBs, SM&amp;S, or both. These are not real planners and they cannot be interpreted as configurations of our technique. Their purpose is to give an idea of how different are the sets of instances solved by each configuration, as well as the maximum potential of SPA when the best abstraction hierarchy for each instance is known.
+      </paragraph>
+      <paragraph>
+       What is the impact of the abstraction hierarchy? The first observation is that most abstraction strategies help to improve the symbolic perimeter, SP. The only strategy that does not produce better results than a simple perimeter is the SM&amp;S abstractions with fh shrinking. Of course, the bad performance is not due to having a less informed heuristic, but because the M&amp;S heuristic exceeded the available memory in some domains.
+      </paragraph>
+      <paragraph>
+       Overall, the best strategy is PDBs with gcl, with a total coverage of 828. Other PDB strategies such as lev or rev have a similar performance and the difference is not deemed as statistically significant. Interestingly, the performance of PDBs with a random selection of variables is a very competitive approach, leading to better results than some M&amp;S approaches or other PDB strategies. This shows the lack of good abstraction strategies for our setting, where finding them is not straightforward.
+      </paragraph>
+      <paragraph>
+       The results of the virtual best configurations confirm that there is a lot of margin for improvement in the abstraction selection strategies. When selecting the best hierarchy for every instance, SPA solves up to 857 instances, 29 more than the best configuration with a single hierarchy and 16 more than the configuration using multiple abstraction hierarchies reported in Table 3. With current merge and shrink strategies, SM&amp;S strategies are helpful only in a few instances, solving 5-8 instances that PDB configurations cannot solve.
+      </paragraph>
+      <paragraph>
+       How useful is to use the perimeter to initialize the abstract searches? We ran an ablation analysis, running all the configurations of SPA but starting abstract searches from the abstract goal instead of doing it from the perimeter ({a mathematical formula}¬P ). Note, however, that even though {a mathematical formula}¬P ignores the perimeter for the initialization of abstract searches, it uses the perimeter for other purposes such as selecting one abstraction from the hierarchy (the one in which the perimeter is reduced enough) and to return the maximum between the heuristics derived from all the searches (including the perimeter and one or more abstract searches).
+      </paragraph>
+      <paragraph>
+       In general, using the perimeter is beneficial, though it may depend on the abstraction strategy. Interestingly, using the perimeter to initialize abstract searches is especially useful in combination with strategies that do not distinguish goal from non-goal variables such as lev or rev. In those cases, the perimeter derives information from the goal variables, so that they can be abstracted away without a significant information loss. Similarly, if all the goal variables are included in the abstraction (gcl ), using the perimeter is not that important.
+      </paragraph>
+      <paragraph>
+       In combination with SM&amp;S hierarchies, the results with and without perimeter are similar, so SPA is not taking advantage of the perimeter initialization in those cases. The shrink strategies in the literature are specifically focused on preserving the cost of states close to the goal, which may not be the best when using a perimeter that already provides information for such region of the state space.
+      </paragraph>
+      <paragraph>
+       What is the impact of variable ordering? The variable ordering is used in the BDD representation, as well as for the abstraction strategies underlying the PDB selection and merge strategy. As expected, M&amp;S results are better with the Fast Downward ordering while symbolic search (e.g., SP ) benefits from the Gamer ordering. In total, SPA performs better with the Gamer ordering, though it may vary depending on the domain. Apart from that, the conclusions obtained with Gamer ordering seem to be independent of the variable ordering chosen for the BDDs.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Removing spurious states
+      </section-title>
+      <paragraph>
+       The results shown in the previous section contradict previously published results, which reported SPA being better with SM&amp;S hierarchies than when using only PDBs [18]. One important difference in the experimental setting is that in this article we use constrained abstractions [64], encoding state-invariant constraints into the transition relations in order to avoid the generation of invalid states in the symbolic searches [65].
+      </paragraph>
+      <paragraph>
+       The use of mutexes greatly improves the performance of symbolic regression search. This is not different in SPA, where symbolic regression is used both in the original and the abstract state spaces.
+      </paragraph>
+      <paragraph>
+       Table 2 compares the performance of our approaches when disabling the removal of spurious states during the search. When spurious states are not removed from the search ({a mathematical formula}M∅ ), the performance of all our symbolic perimeter approaches decreases significantly. However, the benefits of removing spurious states are greater in the case of SP and SPPDB than for any SPM&amp;S version. Interestingly, M&amp;S abstractions obtain better results than PDBs when no state invariants are used. This can be partially explained by the ability of M&amp;S heuristics to prune spurious states, whose impact is heavily reduced when those states are being removed anyway thanks to the state invariants. Therefore, even though SPPDB with state-invariant pruning outperforms SPM&amp;S with the current M&amp;S strategies, further enhancements for M&amp;S like irrelevance pruning [71] or shrink strategies tailored for dead-end detection [72] or exploiting symmetries [73] are promising approaches to revert this trend.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      Coverage of {a mathematical formula}A⁎ search with symbolic perimeter abstraction heuristics
+      <paragraph>
+       In this section we compare the coverage of different configurations of SPA against the two combined approaches: symbolic perimeter (SP ) and abstraction heuristics, including M&amp;S, the symbolic PDBs of Gamer (our re-implementation using the same code as SPA, with the image computation and state-invariant pruning enhancements of cGamer[57]), and two additive PDB methods (iPDB and gaPDB ). Additionally, we report the coverage of LM-cut for comparison. Finally, we include the winner of the last IPC, {a mathematical formula}SymBA⁎, which also makes use of perimeter abstraction heuristics, but in a bidirectional symbolic search.
+      </paragraph>
+      <paragraph>
+       Table 3 shows the result of six different configurations of SPA, using PDB or SM&amp;S abstractions to relax the perimeter. The SPA algorithm, as presented in Section 6, uses a single abstraction hierarchy (either cgr, SM&amp;S -b, or SM&amp;S -g in Table 3) to relax the perimeter. Since our abstraction hierarchy strategies do not perform any search on the space of abstract state spaces, they are not competitive with Gamer 's abstraction selection, which uses an optimization procedure trying multiple PDBs before selecting the best one. Hence, we include two configurations that construct multiple abstraction heuristics (SP-multi), using multiple PDB hierarchies plus SM&amp;S -b. We also include a version of Gamer 's procedure that uses the perimeter to initialize all abstract searches.
+      </paragraph>
+      <paragraph>
+       The results of SPA show that it is a strong heuristic. The construction of a symbolic perimeter (SP ) suffices to generate a heuristic competitive with strong heuristics commonly used as baseline in cost-optimal planning, such as iPDB, gaPDB, M&amp;S, and LM-cut. This is especially true when considering the coverage score that gives Miconic the same weight as other domains. Using abstraction strategies on top of the symbolic perimeter further improves the results of SPA. Nevertheless, the heuristics are shown to be complementary since there are some domains were LM-cut clearly performs better, such as Airport, Miconic or Scanalyzer.
+      </paragraph>
+      <paragraph>
+       The dominance of SPM&amp;S over SP and M&amp;S is quite clear. Even though there are a few cases where the preprocessing phase of SPM&amp;S does not terminate causing it to be outperformed by the symbolic perimeter alone, this is compensated by combining the strengths of both algorithms in many other instances. Moreover, in some cases SPM&amp;S obtains better results than any of the two techniques (as in Grid or Rovers, for example). On the other hand, even though there are some domains where SPM&amp;S beats SPPDB (e.g., Tidybot ), the use of M&amp;S abstractions does not pay off in general over using simpler abstractions such as PDBs.
+      </paragraph>
+      <paragraph>
+       Another interesting result is the comparison with the winner of the optimal-track of the last IPC, {a mathematical formula}SymBA⁎. While {a mathematical formula}SymBA⁎ has higher coverage score, SPPDBs have similar score and even higher total coverage. This is remarkable, especially when taking into account that the performance of {a mathematical formula}A⁎ with SPA heuristics could easily be boosted by using other complementary heuristics or search-enhancements, such as partial-order pruning [7], symmetries [6], [25], or dominance pruning methods [8], [26].
+      </paragraph>
+      <paragraph>
+       The most surprising result is that Gamer 's procedure to generate symbolic PDBs produces remarkably strong heuristics, having the largest coverage among all the configurations, including SPA and {a mathematical formula}SymBA⁎. This is partially due to a big edge in Freecell so in the normalized score it has similar performance to SP-multi. These results confirm that finding a good pattern is important, so the versions trying multiple patterns perform better. In order to know whether the perimeter may be helpful in combination with the pattern selection of Gamer, we ran an additional version that generates a perimeter and uses it to initialize the abstract searches during Gamer 's procedure.
+      </paragraph>
+      <paragraph>
+       The use of a perimeter is beneficial in most settings (see Section 7.1). This is not surprising since using a perimeter to initialize any abstract search can only make the corresponding abstraction heuristic more informed. Also, the search is initialized with a subset of the states that are reachable in the abstract state space as well, so the size of the abstract state space that is explored can only decrease. However, there are several domains where it is harmful for Gamer 's PDB selection. A close inspection to those cases shows that, in symbolic search, the use of a perimeter makes the search exponentially harder in certain situations.
+      </paragraph>
+      <paragraph>
+       Consider the VisitAll domain, where a robot must traverse an entire grid. We have a variable, P, that defines the current position of the robot in the grid and a variable for each cell, {a mathematical formula}Vi,j, which represents whether the cell {a mathematical formula}(i,j) has been visited or not. The only action, move, as the name suggest moves the robot to an adjacent location, setting the corresponding visited variable to true. The causal graph is depicted in Fig. 10. The relevant property in this case is that, when abstracting the non-goal variables (P), all goal variables are completely independent. This is precisely the first pattern that is attempted by Gamer's abstraction strategy. This pattern produces a heuristic that counts the number of non-visited cells, which is a very informed estimate and coincides with the perfect heuristic for the initial state of most instances. A symbolic search on this abstract state space takes polynomial time in the size of the task [74], [75]. When using the perimeter, however, the variables are not independent anymore since we can only have visited a given location in the perimeter if we have visited one of its adjacent locations. Therefore, if we use the perimeter to initialize the abstract search, we get a more informed heuristic but the abstract search takes exponential time and memory to be completed.
+      </paragraph>
+      <paragraph>
+       The same causal graph structure appears in many other domains as well. In particular, those domains where there are a substantial ({a mathematical formula}&gt;20%) number of goal variables which are independent after relaxing the rest. These domains include many of the cases where the perimeter is detrimental like Logistics (≈60%), Trucks ({a mathematical formula}≈40%), and Transport ({a mathematical formula}≈30–65%). In ParcPrinter (≈25–50%) and Woodworking (≈30–50%) goal variables are not completely independent but they can be separated into several independent clusters. There are also other domains with this structure in which the perimeter is beneficial like Openstacks (≈50%), Elevators (≈30–50%), Blocksworld (≈30–50%), Miconic (≈30–50%), Rovers ({a mathematical formula}≈15–25%), or Gripper (≈90%). In these cases, either the search with all variables is efficient as well (Gripper and Miconic ), or the goal pattern does not produce a sufficiently well-informed heuristic (e.g., in Elevators all actions achieving the goals have zero cost, so the only-goals pattern produces a heuristic that always returns zero).
+      </paragraph>
+      <paragraph>
+       In the other domains, using the perimeter is not harmful, except in Driverlog, Grid, Freecell, or Mystery where either the search of the only-goals variables is still easy even if they are not completely independent (Driverlog ) or the use of the perimeter changes Gamer's pattern selection, showing that there is still room for improvement in studying pattern selection algorithms for symbolic PDBs.
+      </paragraph>
+      <paragraph>
+       Therefore, it is not by chance that the symbolic PDBs of Gamer beat our perimeter abstractions with the same abstraction strategy in some of these domains. Even though this may be read as a negative result against the use of a perimeter, two things must be noted. First, it is straightforward to check the causal graph of a planning task to quickly identify whether the perimeter should be used. In domains that do not exhibit the structure mentioned above, using the perimeter is recommended since it usually increases the performance. Second, when there is so much independence, additivity could be exploited. In fact, in most of these domains, the additive PDB configuration of iPDB is very strong as well. Finally, note that the SM&amp;S abstractions with a suitable shrink strategy (e.g., an abstraction like the one in Fig. 5 of Section 5.1) may simplify the perimeter making the symbolic search on the abstract state space tractable again.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Informativeness of SPA heuristics
+      </section-title>
+      <paragraph>
+       The coverage comparisons of Section 7.3 show that SPA is a state-of-the-art heuristic, outperforming other heuristics such as M&amp;S or additive PDBs and being competitive with LM-cut. However, there are two main factors that influence the performance of heuristics: informativeness and computational effort. In this subsection we analyze how well informed the SPA heuristics are with respect to the state of the art. From the heuristics in the literature, we chose iPDB because it also uses PDBs but in an additive setting, and LM-cut because it is known to be an expensive but very well-informed heuristic [4]. As representative of the SPA method, we chose the configuration using SM&amp;S -b and multiple PDBs that got the best coverage score among the versions using our abstraction hierarchies.
+      </paragraph>
+      <paragraph>
+       In order to compare the informativeness of the heuristics, we report two different metrics: expanded nodes and initial h-value. The initial h-value is a direct comparison of the value of each heuristic for particular states, while the number of expansions measures the ability of the heuristic to reduce the overall search effort. Fig. 11, Fig. 12 show the comparisons in both metrics against different competitors in all commonly solved instances. When comparing the heuristic values, we omit ParcPrinter because the large heuristic values of that domain hinder the visualization.
+      </paragraph>
+      <paragraph>
+       The comparison of SPA against SP and SPPDB reveals that the main strength of the heuristic is due to the perimeter search. Using abstraction heuristics to extend the information of the perimeter derives strictly more informed heuristics. Therefore, both SPPDB and SPA obtain more accurate heuristics than SP and, in some cases, significantly reduce the number of expanded nodes by several orders of magnitude. However, in most cases, SPA and SPPDB obtain the same heuristic value than SP, so the symbolic perimeter is already a strong heuristic.
+      </paragraph>
+      <paragraph>
+       Perhaps more surprisingly, the comparison with iPDB and LM-cut shows that SPA is a well-informed heuristic compared to the current state of the art in cost-optimal planning. It does not only derive the perfect heuristic for many instances (for most of those solved with less than 1,000 expansions), but also derives a heuristic competitive with LM-cut in the harder tasks. Differences in heuristic value of the initial state show that SPA is more precise in many tasks, being a well-informed heuristic across the entire state space and not only close to the goal.
+      </paragraph>
+      <paragraph>
+       The comparison against Gamer's symbolic PDBs in Fig. 11, Fig. 12 reveals that both methods are complementary, having strengths across different tasks. This is partially due to both configurations using different pattern selection strategies. In order to analyze the impact of using perimeter abstractions with a fixed pattern selection strategy, we compare symbolic PDBs with and without perimeter using Gamer's pattern selection strategy. Fig. 13 shows the number of expansions and initial h-value of both configurations distinguishing the two classes of domains described in Section 7.3. In general, using the perimeter shows good results except in the domains already identified (with causally independent goals) and Freecell. This confirms our hypothesis that the main reason that causes the perimeter to be harmful is when there are many causally independent goals.
+      </paragraph>
+      <paragraph>
+       Fig. 14 complements the data above with a comparison of the solving time of the four planners. As expected, the data is completely biased by the precomputation phase of abstraction heuristics. Since SP-multi and Gamer 's SPDBs have a limit of 1200 seconds for the precomputation of the heuristics, a huge amount of instances are solved around that time. Hence, configurations with strictly lower precomputation time such as SP generally beat configurations spending more time. On the other hand, the precomputation time pays off in coverage, as reflected by the results of Table 3.
+      </paragraph>
+      <paragraph>
+       SPA is generally faster than Gamer SPDBs. One reason is that many instances are solved directly during the construction of the perimeter. More importantly, Gamer is expending the 1200 seconds of precomputation time in more instances, which means that SPA could improve its results with better pattern selection strategies that explore more abstract state spaces.
+      </paragraph>
+      <paragraph>
+       The comparison with iPDB and LM-cut show that they have different strengths and weaknesses. SPA solves many instances quickly when constructing the perimeter that are not always easy for explicit-search planners. But, again, LM-cut and iPDB beat SPA in many cases where it spends 1200 s to precompute the heuristic.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

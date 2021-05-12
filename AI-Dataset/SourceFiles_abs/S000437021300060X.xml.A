@@ -1,0 +1,730 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On the conditional independence implication problem: A lattice-theoretic approach.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Conditional independence is an important concept in artificial intelligence and machine learning. It plays a fundamental role in working with probabilistic systems successfully employed in areas such as computer vision, speech recognition, computational biology, and robotics. Numerous real-world systems can be modeled by a probability distribution over a set of random variables. Unfortunately, reasoning over the full joint probability distribution is intractable for all but the smallest number of cases. It is the very notion of conditional independence that facilitates the decomposition of joint probability distributions into smaller parts which are then processed in sophisticated ways to compute a-posteriori probabilities. Bayesian and Markov networks are among the most commonly used probabilistic graphical models leveraging conditional independencies to answer probabilistic queries and to learn probabilistic parameters more efficiently [1]. A deeper theoretical investigation of the mathematical and algorithmic properties of conditional independence is therefore central to the understanding of probabilistic models [2], [3].
+     </paragraph>
+     <paragraph>
+      A deep theoretical understanding of conditional independence and the way it is leveraged in probabilistic graphical models, however, also allows us to understand the shortcomings of said models. Indeed, not every joint probability distribution can be decomposed according to a graphical structure without loss of information [4], [5]. Finding ways of assessing the suitability of graphical models for the representation of a given distribution is therefore crucial. In particular, Studený [6] has brought this issue to the forefront, leading to an impressive body of work on algebraic representations of conditional independence structures, providing deep links to algebraic geometry [6], [7], supermodular functions on sets, and novel algorithms for reasoning with conditional independencies [8], [9].
+     </paragraph>
+     <paragraph>
+      More motivation for this research is provided by the problem of knowledge elicitation in the field of reasoning under uncertainty [10], [11]. Consider the problem of eliciting knowledge from several domain experts to model a probabilistic system. The resulting incomplete expert feedback might be a combination of some specific subjective probabilities, (conditional) independency and dependency information for the random variables under consideration, and conditional probabilities. Statistical tests on different heterogeneous data sets may provide additional sources of evidence. Each piece of information can be interpreted as a constraint on the joint probability distribution to be modeled, and finding a suitable model as a constraint satisfaction problem (CSP), and the approach to harness CSP solvers for instances of this and related problems is well-known [12], [13]. However, (conditional) independence and dependence statements pose a special problem, because they often introduce non-linear constraints resulting in unfeasible CSP instances. Therefore, a remaining challenge is to test for consistency of the (conditional) independence and dependence information collected from different sources, which requires an algorithm deciding the implication problem for CI statements [14].
+     </paragraph>
+     <paragraph>
+      A central notion in the realm of reasoning about conditional independence is, therefore, the probabilistic conditional independence implication problem, that is, to decide whether a set of CI statements implies a single CI statement relative to some class of discrete probability measures. While it remains open whether the implication problem for the class of all discrete probability measures is decidable, it is known that there exists no finite, sound and complete inference system [15]. However, there exist finite sound inference systems that have attracted special interest. The most prominent one is the semi-graphoid axiom system (Pearl [3]), which we refer to as System {a mathematical formula}G in the present paper. One of the main contributions of this work is to extend the semi-graphoids to a finite inference system which we refer to as System {a mathematical formula}A which, although not sound, is complete for the general probabilistic implication problem. In the way that the semi-graphoid inference rules provide a lower bound on what can be inferred, System {a mathematical formula}A provides an upper bound. We demonstrate that, in the general case where the number of variables is not fixed and where no finite axiomatization exists, considering both lower and upper bounds provides deep insights into the implication problem and allows us to develop a novel algorithm for both validating and rejecting implication problem instances.
+     </paragraph>
+     <paragraph>
+      The techniques we use to obtain these results are made possible through the introduction of a lattice-theoretic framework. We associate semi-lattices of sets of variables with CI statements. Derivability of a single CI statement from a set of CI statements in System {a mathematical formula}A is then characterized by the inclusion of the semi-lattice of the former in the union of the semi-lattices of the latter. We also use this framework to show that derivability in System {a mathematical formula}A in the context of arbitrary CI statements can be reduced to derivability in the context of elementary CI statements, that is, CI statements that express independence between two single variables given a third set of variables. This result has important ramifications from a practical point of view because the use of elementary CI statements allows for a canonical representation of CI statements. We then introduce the additive implication problem for CI statements relative to certain classes of real-valued functions and specify properties of these classes that guarantee either soundness or completeness of {a mathematical formula}A. Through the concept of multi-information functions induced by probability measures [6], we finally link the additive implication problem for this class of functions to the multiplication-based probabilistic CI implication problem. This allows us to show, for instance, that System {a mathematical formula}A is sound and complete for the inference of arbitrary CI statements from sets of saturated CI statements relative to both the class of all binary probability measures and the class of all discrete probability measures. Saturated CI statements by definition involve all variables under consideration.
+     </paragraph>
+     <paragraph>
+      The combination of the lattice-inclusion techniques and the completeness of System {a mathematical formula}A for the general probabilistic conditional independence problem allows us to derive criteria that can be used to falsify or validate instances of this implication problem. We introduce an approximate logical implication algorithm which combines these falsification and validation criteria. The validation algorithm is based on our results regarding the reduction of derivability in System {a mathematical formula}A for general CI statements to derivability for elementary CI statements. It represents a set of such elementary CI statements as a sparse 0–1 matrix, and validates instances of the implication problem by solving linear programs with this matrix as constraint matrix. Thus, by only requiring the algorithm to decide the majority of the probabilistic conditional independence implication problems, we can leverage linear constraint solvers for our purposes. We present an experimental evaluation in which we investigate the fraction of instances of the implication problem that can be decided with the novel approach.
+     </paragraph>
+     <paragraph>
+      We report the results of extensive experiments designed to assess the viability of our approach. We relate the experimental results for our falsification criteria to those obtained earlier from a racing algorithm introduced by Bouckaert and Studený [8]. The linear programming techniques used in the validation criteria were subsequently also used by Bouckaert et al. [9]. We also compare the experimental results for our validation criteria with their results. The results of our experiments show that our approximation algorithm works very effectively and compares favorably to the related work, often outperforming it by several orders of magnitude.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Probabilistic conditional independence is an important notion in several disciplines [2], [3], forming the theoretical basis for probabilistic graphical models in particular and efficient probabilistic inference in general. Numerous lines of research have been devoted to the study of its mathematical, logical, and algorithmic properties. The first axiomatic approach to conditional independence was introduced by Dawid [2]. A closely related inference system for probabilistic CI was developed by Pearl and Paz [16]. In both lines of work, a three-place relation was characterized using similar axiom systems. While Dawid termed the relation a separoid (cf. Dawid [17]), Pearl and Paz termed it a graphoid. These relations were shown to surface in the context of probabilistic conditional independence and other notions in statistics and artificial intelligence. Shafer [18] provides a comprehensive survey of some of the advances in the use and investigation of probabilistic conditional independence up until the year 1996, published in a special issue of Annals of Mathematics and Artificial Intelligence[19], [20], [21], [22], [23]. A line of work that has stimulated considerable interest in probabilistic conditional independence is Pearlʼs book about probabilistic expert systems [3]. A more recent overview of the principles and practice of graphical models can be found in, e.g., Koller and Friedman [1].
+     </paragraph>
+     <paragraph>
+      A considerable amount of related work exists in the area of uncertainty in artificial intelligence. Studenýʼs work on structural representations of conditional independence [6], for instance, is highly related to the present work. In fact, there is a close connection between the lattice-theoretic representation and Studenýʼs theory of imsets [6], an algebraic framework for the study of supermodular functions on sets. Building upon Studenýʼs work, Hemmecke et al. [7] used, among other tools, integer programming to solve some open problems concerning imsets. Studený discussed the use of the maximization problem over the class of l-standardized supermodular functions which can be posed as a linear program [24]. A different but related linear programming formulation for a validation algorithm for the CI implication problem was introduced by Niepert et al. [25]. Independently, Bouckaert et al. [9] leveraged the theory of imsets [6] to assemble linear programs to verify various instances of the CI implication problem. Their approach is similar to ours, except that they do not use the several orders of magnitude more compact and, therefore, more efficient representation. We will compare the two linear programming formulations in the experimental section (Section 9).
+     </paragraph>
+     <paragraph>
+      Similarly influential to the present work is the work of Geiger and Pearl [14] and Malvestuto [26] about the algorithmic and logical properties of conditional independence. In their work, probabilistic conditional independence is approached from a purely logical point of view and syntactic inference systems and their properties with respect to various classes of probability measures are investigated. The authors also discuss possible algorithms for the probabilistic conditional independence implication problem and the computational complexity of some of the problems and also pose several open problems.
+     </paragraph>
+     <paragraph>
+      This article is a substantial extension, in terms of both theoretical and experimental results, of previous conference papers by the same authors [25], [27]. With this article we extend the theory to fully cover the case of elementary CI statements (Section 5) which serves as the basis for most of the results in Section 9. In addition to additional examples and a refinement of the theoretical results with respect to the additive implication problem (Section 6) and the significant generalization of the validation algorithm (Section 7), the experimental section (Section 9) was expanded with several additional experiments not included in previous publications. The construction of the constraint matrix of the validation algorithm is also a novel contribution increasing the efficiency of the validation algorithm. The lattice-theoretic framework that is developed is a continuation of previous work by three of the present authors and Purdom [28], [29], [30], [31], [32]. The theory is applicable in several different areas of computer science. Sayrafiʼs work, for instance, focused primarily on the class of frequency functions over finite relational databases [31]. The derived inference rules were used in frequent itemset mining algorithms as heuristics to prune the search space [33].
+     </paragraph>
+     <paragraph>
+      Matúš [34] and de Waal and van der Gaag [35], [36] introduce stable independence as a notion to more compactly represent information about conditional independence.{sup:1} To this end, conditional independence statements are partitioned in a stable and a non-stable part allowing for more efficient storage and retrieval of probabilistic conditional independencies. Stable independence was also studied in earlier work of some of the present authors [5]. Though not elaborated upon in this paper, the theory we develop is also applicable to stable sets of CI statements.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We define conditional independence (CI) statements as a syntactic notion. Finite inference systems are frequently used to decide logical entailment of such statements at the syntactic level. In the context of CI statements, we consider System {a mathematical formula}G, the semi-graphoid axioms of Pearl [3] and System {a mathematical formula}S of Malvestuto [26] and Geiger and Pearl [14]. We add to this a novel inference system, referred to as System {a mathematical formula}A, with which we compare the existing ones on a purely syntactic level.
+     </paragraph>
+     <paragraph>
+      With regard to set notation, we often write AB for the union {a mathematical formula}A∪B, ab for the set {a mathematical formula}{a,b}, and a for the singleton set {a mathematical formula}{a} if no confusion is possible. Throughout the paper, S denotes a finite universe containing all sets under consideration. For a set A, we write {a mathematical formula}A¯ for {a mathematical formula}S−A, the complement of A with respect to S.
+     </paragraph>
+     <paragraph>
+      We begin by defining conditional independence (CI) statements.
+     </paragraph>
+     <paragraph label="Definition 1">
+      A conditional independence (CI) statement is an expression {a mathematical formula}I(A,B|C) where A, B, and C are pairwise disjoint subsets of S. If {a mathematical formula}ABC=S, {a mathematical formula}I(A,B|C) is saturated. If {a mathematical formula}A=∅, or {a mathematical formula}B=∅, or both, {a mathematical formula}I(A,B|C) is trivial.
+     </paragraph>
+     <paragraph>
+      In this paper, we consider three inference systems for CI statements. If {a mathematical formula}I is such an inference system, {a mathematical formula}C a set of CI statements, and c a single CI statement, we denote by {a mathematical formula}C⊢Ic that c is derivable from {a mathematical formula}C under the inference rules of System {a mathematical formula}I. The closure{a mathematical formula}CI+ of {a mathematical formula}C under {a mathematical formula}I is the set {a mathematical formula}{c|C⊢Ic}.
+     </paragraph>
+     <paragraph>
+      We first consider the well-known semi-graphoid axiom system [3], denoted here as System {a mathematical formula}G and shown in Fig. 1, and System {a mathematical formula}S[14], [26], shown in Fig. 2. In contrast to System {a mathematical formula}G, the rules of System {a mathematical formula}S are only applicable to saturated CI statements and yield saturated CI statements only. In all rules, the sets are assumed pairwise disjoint. Clearly, we have the following.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      System{a mathematical formula}Scan be inferred from System{a mathematical formula}G; the weak contraction rule can be inferred from the symmetry, decomposition, and contraction inference rules.
+     </paragraph>
+     <paragraph>
+      Finally, we consider the set of inference rules in Fig. 3, denoted as System {a mathematical formula}A. Besides four rules of the semi-graphoid axiom system, it contains the strong union and strong contraction rules. Clearly, {a mathematical formula}G is subsumed by System {a mathematical formula}A.
+     </paragraph>
+     <paragraph label="Proposition 3">
+      System{a mathematical formula}Gcan be inferred from System{a mathematical formula}A; the weak union rule can be inferred from the decomposition and strong union rules.
+     </paragraph>
+     <paragraph>
+      From System {a mathematical formula}A, many other rules can be inferred, such as the composition rule shown in Fig. 4. As System {a mathematical formula}A plays a pivotal role in this work, we use the following abbreviations. If {a mathematical formula}C is a set of CI statements and c is a single CI statement, then {a mathematical formula}C⊢c is short for {a mathematical formula}C⊢Ac; similarly, {a mathematical formula}C+ is short for {a mathematical formula}CA+.
+     </paragraph>
+     <paragraph>
+      We emphasize that in this and the next section we take a purely syntactic viewpoint towards CI statements, inference rules, and inference systems. In particular, we do not imply that the rules exhibited in Fig. 1, Fig. 2, Fig. 3, Fig. 4 are necessarily sound and/or complete. Notice, for example, that strong union is not a sound rule for the inference of CI statements relative to the class of discrete probability measures, as is illustrated by Example 35, Example 38.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Lattice-theoretic framework
+     </section-title>
+     <paragraph>
+      We first introduce the lattice-theoretic framework which is at the basis of the theory developed in this work. We associate CI statements with so-called meet semi-lattices, i.e., partially ordered sets in which each pair of elements has an infimum (a meet) [37]. If the semi-lattice is a class of sets, the infimum of a pair of its elements is their set intersection. In the following, the term “semi-lattice” is used for a meet semi-lattice on a class of sets. Subsequently, we characterize derivability of CI statements in terms of their associated semi-lattices.
+     </paragraph>
+     <paragraph>
+      Given subsets A and B of S, we write {a mathematical formula}[A,B] for {a mathematical formula}{U|A⊆U⊆B}. We now associate semi-lattices with conditional independence statements as follows.
+     </paragraph>
+     <paragraph label="Definition 4">
+      Let {a mathematical formula}I(A,B|C) be a CI statement. The semi-lattice of {a mathematical formula}I(A,B|C), denoted {a mathematical formula}L(A,B|C), equals {a mathematical formula}[C,S]−([A,S]∪[B,S])={U⊆S|C⊆U,A−U≠∅,B−U≠∅}.
+     </paragraph>
+     <paragraph>
+      Notice that {a mathematical formula}L(A,B|C) is indeed closed under intersection.
+     </paragraph>
+     <paragraph label="Example 5">
+      First, let {a mathematical formula}S={a,b,c}. Then, {a mathematical formula}L(a,b|c)={c}, as illustrated in Fig. 5. Next, let {a mathematical formula}S={a,b,c,d}. Then,{a mathematical formula}{a mathematical formula}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      For a CI statement c, {a mathematical formula}L(c) denotes the semi-lattice of c, and, for a set of CI statements {a mathematical formula}C, {a mathematical formula}L(C)=⋃c′∈CL(c′).{sup:2}
+     </paragraph>
+     <paragraph label="Definition 6">
+      Let {a mathematical formula}I(A,B|C) be a CI statement. The set of witness sets of {a mathematical formula}I(A,B|C), denoted {a mathematical formula}W(A,B|C), equals {a mathematical formula}{{a,b}|a∈A&amp;b∈B}.
+     </paragraph>
+     <paragraph>
+      Note that, if {a mathematical formula}I(A,B|C) is trivial, then {a mathematical formula}W(A,B|C)=∅. Using the previously defined notion of witness sets of a CI statement, we can rewrite the associated semi-lattice as a union of lattices. This is crucial as it opens the door to proofs by induction on the lattice-elements. The following result is a straightforward consequence of Definition 4.
+     </paragraph>
+     <paragraph label="Proposition 7">
+      For a CI statement{a mathematical formula}c=I(A,B|C),{a mathematical formula}L(c)=⋃W∈W(c)[C,W¯].
+     </paragraph>
+     <paragraph label="Example 8">
+      Let {a mathematical formula}S={a,b,c,d} and consider the CI statement {a mathematical formula}I(bc,d|a). Then, {a mathematical formula}L(bc,d|a)=[a,S]−([bc,S]∪[d,S])={a,ab,ac}. Alternatively, we may apply Proposition 7 and deduce from {a mathematical formula}W(bc,d|a)={bd,cd} that {a mathematical formula}L(bc,d|a)=[a,bd¯]∪[a,cd¯]=[a,ac]∪[a,ab]={a,ab,ac}.
+     </paragraph>
+     <paragraph>
+      We now show that, given a set of CI statements {a mathematical formula}C and a single CI statement c, {a mathematical formula}C⊢c if and only if {a mathematical formula}L(c)⊆L(C). This characterization of derivability of CI statements under System {a mathematical formula}A in terms of their associated semi-lattices is at the basis of our work on the CI implication problem. The implication from left to right can be shown by a straightforward structural induction. Therefore, we focus on the implication from right to left, for which we need the notion of witness decomposition.
+     </paragraph>
+     <paragraph label="Definition 9">
+      The witness decomposition of the CI statement {a mathematical formula}I(A,B|C), denoted {a mathematical formula}wdec(A,B|C), equals {a mathematical formula}{I(a,b|C)|a∈A&amp;b∈B}. For a set of CI statements {a mathematical formula}C, {a mathematical formula}wdec(C)=⋃c′∈Cwdec(c′).
+     </paragraph>
+     <paragraph>
+      We now justify the name “decomposition” by showing that, for any CI statement c, we have that (a) the closure of the witness decomposition under {a mathematical formula}A is equal to the closure of c under {a mathematical formula}A, and (b) the union of semi-lattices associated with the elements of the witness decomposition is equal to the semi-lattice associated with c.
+     </paragraph>
+     <paragraph label="Proposition 10">
+      Let c be a CI statement. Then, (1) {a mathematical formula}{c}+=wdec(c)+; and (2) {a mathematical formula}L(c)=⋃c′∈wdec(c)L(c′).
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}c=I(A,B|C). For the first statement, the inclusion from right to left can be derived straightforwardly using the decomposition and symmetry rules. To see the reverse inclusion, let {a mathematical formula}a∈A. For all {a mathematical formula}b∈B, {a mathematical formula}I(a,b|C)∈wdec(c). By repeatedly applying the composition rule, we infer {a mathematical formula}I(a,B|C), and, by symmetry, {a mathematical formula}I(B,a|C). By another repeated application of the composition rule, we infer {a mathematical formula}I(B,A|C), and, by symmetry, {a mathematical formula}I(A,B|C). Hence, {a mathematical formula}{c}+⊆wdec(c)+. For the second statement, let {a mathematical formula}I(a,b|C)∈wdec(c), and let {a mathematical formula}W={a,b}. Clearly, {a mathematical formula}W(a,b|C)={W} and, by Proposition 7, {a mathematical formula}L(a,b|C)=[C,W¯]. The statement now follows from Proposition 7. □
+     </paragraph>
+     <paragraph>
+      We are now in the position to prove the fundamental equivalence between derivability under System {a mathematical formula}A and the inclusion relationship between the lattice decompositions of the consequent and the antecedents.
+     </paragraph>
+     <paragraph label="Theorem 11">
+      Let{a mathematical formula}Cbe a set of CI statements, and let c be a single CI statement. Then{a mathematical formula}C⊢cif and only if{a mathematical formula}L(c)⊆L(C).
+     </paragraph>
+     <paragraph label="Proof">
+      As said before, we focus on the “if”. Let {a mathematical formula}I(a,b|C)∈wdec(c), and let {a mathematical formula}W={a,b}. Since {a mathematical formula}L(c)=⋃c′∈wdec(c)L(c′), {a mathematical formula}L(a,b|C)⊆L(C) (1). By Proposition 10, it suffices to show that {a mathematical formula}I(a,b|C)∈wdec(C)+. Thereto, we prove the stronger statement {a mathematical formula}∀V∈[C,W¯]:I(a,b|V)∈wdec(C)+ by downward induction on {a mathematical formula}[C,W¯]. For the base case, we must show that {a mathematical formula}I(a,b|W¯)∈wdec(C)+. By statement (1), {a mathematical formula}W¯∈L(C). By Proposition 10, there exist {a mathematical formula}a′,b′ such that {a mathematical formula}I(a′,b′|C′)∈wdec(C) and such that {a mathematical formula}W¯∈L(a′,b′|C′). Hence, {a mathematical formula}{a′,b′}={a,b} and {a mathematical formula}C′⊆W¯, and we can derive {a mathematical formula}I(a,b|W¯) through strong union and symmetry. For the inductive step, let {a mathematical formula}C⊆V⊂W¯. The inductive hypothesis states that, for all {a mathematical formula}V′ with {a mathematical formula}V⊂V′⊆W¯, {a mathematical formula}I(a,b|V′)∈wdec(C)+ (2). As in the base case, we can show that there exist {a mathematical formula}a′ and {a mathematical formula}b′ such that {a mathematical formula}I(a′,b′|V)∈wdec(C)+ using strong union. Let {a mathematical formula}W′={a′,b′}. If {a mathematical formula}W′=W then {a mathematical formula}{a′,b′}={a,b} and we can use symmetry to infer {a mathematical formula}I(a,b|V). Otherwise, we distinguish two cases:
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       Exactly one of{a mathematical formula}a′and{a mathematical formula}b′is in W. Assume {a mathematical formula}a′=a∈W. Using contraction on {a mathematical formula}I(a,b′|V) and on {a mathematical formula}I(a,b|Vb′) (in {a mathematical formula}wdec(C)+ by (2)), we derive {a mathematical formula}I(a,b′b|V), and, using decomposition, we derive {a mathematical formula}I(a,b|V).
+      </list-item>
+      <list-item label="(ii)">
+       Neither{a mathematical formula}a′nor{a mathematical formula}b′is in W. Using strong contraction on {a mathematical formula}I(a′,b′|V) and on {a mathematical formula}I(a,b|Va′) and {a mathematical formula}I(a,b|Vb′) (both in {a mathematical formula}wdec(C)+ by (2)), we derive {a mathematical formula}I(a,b|V). □
+      </list-item>
+     </list>
+     <paragraph>
+      We conclude this section with an illustrative example.
+     </paragraph>
+     <paragraph label="Example 12">
+      Let {a mathematical formula}S={a,b,d,e}, let {a mathematical formula}C={I(a,b|∅),I(d,e|a),I(d,e|b)}, and let {a mathematical formula}c=I(d,e|∅). Each of these four CI statements has only one witness set, which is {a mathematical formula}{a,b} for the first and {a mathematical formula}{d,e} for the other three. On the one hand, by Proposition 7, we have that {a mathematical formula}L(C)=[∅,de]∪[a,ab]∪[b,ab]={∅,a,b,d,e,ab,de} and {a mathematical formula}L(c)=[∅,ab]={∅,a,b,ab}. Therefore, {a mathematical formula}L(c)⊆L(C). On the other hand, we can derive {a mathematical formula}I(d,e|∅) from {a mathematical formula}I(a,b|∅), {a mathematical formula}I(d,e|a), and {a mathematical formula}I(d,e|b) using the strong contraction rule. Therefore, {a mathematical formula}C⊢c, consistent with Theorem 11.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Elementary CI statements
+     </section-title>
+     <paragraph>
+      A witness decomposition of a CI statement (Definition 9) is equivalent to the original statement for derivations under System {a mathematical formula}A (Proposition 10). Therefore, the CI statements involved in witness decompositions deserve further study.
+     </paragraph>
+     <paragraph label="Definition 13">
+      A CI statement is elementary if it is of the form {a mathematical formula}I(a,b|C), with a and b distinct elements of S and C a subset of {a mathematical formula}S−{a,b}.
+     </paragraph>
+     <paragraph>
+      Elementary CI statements play an important role in Section 8 and following, where we apply the developed theory to obtain falsification and validation algorithms for the probabilistic implication problem. Here, we study some of their properties.
+     </paragraph>
+     <paragraph label="Definition 14">
+      Let {a mathematical formula}c=I(A,B|C) be an arbitrary CI statement. We define {a mathematical formula}Del(c)={I(a,b|V)|C⊆V⊆ABC−{a,b},a∈A,b∈B}. Moreover, {a mathematical formula}Del(C)=⋃c′∈CDel(c′).
+     </paragraph>
+     <paragraph>
+      Given a set of arbitrary CI statements {a mathematical formula}C and an arbitrary CI statement c, we consider the sets of elementary CI statements {a mathematical formula}Del(C) and {a mathematical formula}Del(c). In Theorem 15, we state that {a mathematical formula}CG+=Del(C)G+ and {a mathematical formula}{c}G+=Del(c)G+ (and hence also {a mathematical formula}C+=Del(C)+ and {a mathematical formula}{c}+=Del(c)+).{sup:3} We also present System {a mathematical formula}E, shown in Fig. 6, which involves elementary CI statements only. In Theorem 16, we show that {a mathematical formula}C⊢c if and only if, for all {a mathematical formula}cel∈Del(c), {a mathematical formula}Del(C)⊢Ecel.
+     </paragraph>
+     <paragraph>
+      These results yield a normal form for derivations under System {a mathematical formula}A: first, from the given set of CI statements, derive a set of elementary CI statements from the given set of CI statements under System {a mathematical formula}G; then, from this set, derive a new set of elementary CI statements under System {a mathematical formula}E; and, finally, from this last set, derive the targeted CI statement under inference System {a mathematical formula}G. (Notice that System {a mathematical formula}E can be inferred from System {a mathematical formula}A.)
+     </paragraph>
+     <paragraph>
+      We start with the first and last stage of this normalization, which is straightforward.
+     </paragraph>
+     <paragraph label="Theorem 15">
+      Let c be an arbitrary CI statement and let{a mathematical formula}Cbe a set of arbitrary CI statements. Then,{a mathematical formula}{c}G+=Del(c)G+and{a mathematical formula}CG+=Del(C)G+, and hence also{a mathematical formula}{c}+=Del(c)+and{a mathematical formula}C+=Del(C)+.
+     </paragraph>
+     <paragraph>
+      We now turn to the second stage of the normalization, which involves System {a mathematical formula}E, shown in Fig. 6. System {a mathematical formula}E is constructed in such a way that only elementary CI statements can be derived. In addition, it has the following property.
+     </paragraph>
+     <paragraph label="Theorem 16">
+      Let{a mathematical formula}Cbe a set of elementary CI statements, and let c be a single elementary CI statement. Then{a mathematical formula}C⊢Ecif and only if{a mathematical formula}L(c)⊆L(C).
+     </paragraph>
+     <paragraph label="Proof">
+      System {a mathematical formula}E can be inferred from System {a mathematical formula}A. The “only if” direction then follows from Theorem 11, Theorem 15. The proof of the “if” direction is a straightforward adaptation of the proof of the “if” direction of Theorem 11.  □
+     </paragraph>
+     <paragraph>
+      Theorem 11, Theorem 15, Theorem 16 yield the following corollary.
+     </paragraph>
+     <paragraph label="Corollary 17">
+      Let{a mathematical formula}Cbe an arbitrary set of CI statements, and let c be a single arbitrary CI statement. Then the following statements are equivalent:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}C⊢c;
+      </list-item>
+      <list-item label="•">
+       for all{a mathematical formula}cel∈Del(c),{a mathematical formula}Del(C)⊢cel; and
+      </list-item>
+      <list-item label="•">
+       for all{a mathematical formula}cel∈Del(c),{a mathematical formula}Del(C)⊢Ecel.
+      </list-item>
+     </list>
+    </section>
+    <section label="6">
+     <section-title>
+      The additive implication problem
+     </section-title>
+     <paragraph>
+      An important insight into the study of the probabilistic implication problem for CI statements was gained by Studenýʼs seminal work on conditional independence structures [6]. He showed that, for every CI statement {a mathematical formula}I(A,B|C), a discrete probability measure P satisfies{a mathematical formula}I(A,B|C), meaning that {a mathematical formula}P(C)P(ABC)=P(AC)P(BC) for all possible assignments to the variables in the sets A, B, and C, if and only if the multi-information function{a mathematical formula}MP induced by P, a function defined in Section 7, satisfies {a mathematical formula}MP(C)+MP(ABC)=MP(AC)+MP(BC). This relationship is non-trivial and remarkable because it relates a condition that is defined by numerous constraints (one per variable assignment) to a single constraint over an additive set function. Hence, he reduced the multiplication-based probabilistic CI implication problem to an addition-based implication problem. Therefore, we first develop the mathematical machinery for the additive implication problem in this section. This theory is then directly applicable to analyze the probabilistic implication problem via Studenýʼs transformation.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Preliminaries and problem statement
+      </section-title>
+      <paragraph>
+       We first introduce some terminology. In this work, a real-valued function is a function {a mathematical formula}F:2S→R, associating a real number to each subset of S.
+      </paragraph>
+      <paragraph label="Definition 18">
+       Let {a mathematical formula}I(A,B|C) be a CI statement, and F be a real-valued function. We say that F a-satisfies{a mathematical formula}I(A,B|C), denoted {a mathematical formula}⊨FaI(A,B|C), if {a mathematical formula}F(C)+F(ABC)=F(AC)+F(BC).
+      </paragraph>
+      <paragraph>
+       For a real-valued function F and a class of CI statements {a mathematical formula}C, we say that F a-satisfies {a mathematical formula}C, denoted {a mathematical formula}⊨FaC, if F a-satisfies each CI statement in {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Definition 19">
+       Let {a mathematical formula}C be a set of CI statements, c be a single CI statement, and {a mathematical formula}F be a class of real-valued functions. We say that {a mathematical formula}Ca-implies c relative to {a mathematical formula}F, denoted {a mathematical formula}C⊨Fac, if each function in {a mathematical formula}F that a-satisfies all the CI statements in {a mathematical formula}C also a-satisfies c.
+      </paragraph>
+      <paragraph>
+       Now, given a class of real-valued functions {a mathematical formula}F and classes of CI statements {a mathematical formula}C1 and {a mathematical formula}C2, the additive implication problem{a mathematical formula}(C1,C2)F is to decide whether {a mathematical formula}C⊨Fac, for {a mathematical formula}C⊆C1 and {a mathematical formula}c∈C2.
+      </paragraph>
+      <paragraph>
+       We proceed by defining the notion of density of a real-valued function.
+      </paragraph>
+      <paragraph label="Definition 20">
+       The density of the real-valued function F is the real-valued function ΔF defined by {a mathematical formula}ΔF(X)=∑U∈[X,S](−1)|U|−|X|F(U), for each {a mathematical formula}X⊆S.
+      </paragraph>
+      <paragraph>
+       The following well-known relationship between a real-valued function and its density, also known as its Möbius inversion, justifies the name (see, e.g., [38]).
+      </paragraph>
+      <paragraph label="Proposition 21">
+       Let F be a real-valued function. Then, for each{a mathematical formula}X⊆S,{a mathematical formula}F(X)=∑U∈[X,S]ΔF(U).
+      </paragraph>
+      <paragraph>
+       The a-satisfaction of a real-valued function for a CI statement can be characterized in terms of an equation involving its density function. This characterization is central in developing our results and follows from a more general result in [31].
+      </paragraph>
+      <paragraph label="Proposition 22">
+       Let{a mathematical formula}I(A,B|C)be a CI statement and F be a real-valued function. Then,{a mathematical formula}⊨FaI(A,B|C)if and only if{a mathematical formula}∑U∈L(A,B|C)ΔF(U)=0.
+      </paragraph>
+      <paragraph>
+       In the remainder of this section, we study properties of classes of real-valued functions that guarantee soundness and/or completeness of inference systems subsumed by System {a mathematical formula}A for additive implication. These results are related to probabilistic conditional independence implication in Section 7.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       General soundness properties
+      </section-title>
+      <paragraph>
+       We first define soundness, and then exhibit several characterizations.
+      </paragraph>
+      <paragraph label="Definition 23">
+       Let {a mathematical formula}I be an inference system for CI statements, {a mathematical formula}F be a class of real-valued functions, and {a mathematical formula}C1 and {a mathematical formula}C2 be classes of CI statements. Then, {a mathematical formula}I is sound for the additive implication problem {a mathematical formula}(C1,C2)F if, for each set of CI statements {a mathematical formula}C⊆C1, and for each single CI statement {a mathematical formula}c∈C2, {a mathematical formula}C⊢Ic implies {a mathematical formula}C⊨Fac.
+      </paragraph>
+      <paragraph>
+       In the remainder of Section 6, we shall consider {a mathematical formula}Call, the class of all CI statements over the universe S, and {a mathematical formula}Csat, the class of all saturated CI statements over S.
+      </paragraph>
+      <paragraph>
+       In order to characterize soundness for additive implication for several inference systems, we introduce the zero-density property.
+      </paragraph>
+      <paragraph label="Definition 24">
+       A class of real-valued functions {a mathematical formula}F has the zero-density property on a set of CI statements {a mathematical formula}C if, for each real-valued function {a mathematical formula}F∈F and for each CI statement {a mathematical formula}c∈C, {a mathematical formula}⊨Fac implies {a mathematical formula}ΔF(U)=0 for each {a mathematical formula}U∈L(c).
+      </paragraph>
+      <paragraph>
+       Example 30 lists several real-valued functions illustrating the zero-density property.
+      </paragraph>
+      <paragraph>
+       We now provide characterizations of soundness for System {a mathematical formula}A:
+      </paragraph>
+      <paragraph label="Theorem 25">
+       Let{a mathematical formula}Iconsist of the symmetry, weak union, and strong union rules. Let{a mathematical formula}Fbe a class of real-valued functions. The following statements are equivalent:
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        System{a mathematical formula}Iis sound for the additive implication problem{a mathematical formula}(Call,Call)F;
+       </list-item>
+       <list-item label="(2)">
+        {a mathematical formula}Fhas the zero-density property on{a mathematical formula}Call; and
+       </list-item>
+       <list-item label="(3)">
+        System{a mathematical formula}Ais sound for the additive implication problem{a mathematical formula}(Call,Call)F.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       {a mathematical formula}(1)⇒(2). Let {a mathematical formula}I(A,B|C) be a CI statement, and let {a mathematical formula}F∈F be a real-valued function such that {a mathematical formula}⊨FaI(A,B|C). We show that {a mathematical formula}ΔF(V)=0, for each {a mathematical formula}V∈L(A,B|C). The proof goes by downward induction on {a mathematical formula}L(A,B|C). By Proposition 7, we have {a mathematical formula}L(A,B|C)=⋃W∈W(I(A,B|C))[C,W¯]. Hence, for the base case, we must prove that {a mathematical formula}ΔF(W¯)=0, for each {a mathematical formula}W∈W(A,B|C). Let {a mathematical formula}W={a,b}∈W(I(A,B|C)), with {a mathematical formula}a∈A and {a mathematical formula}b∈B. Now, {a mathematical formula}I(a,b|C∪(A−{a})∪(B−{b})) is derivable from {a mathematical formula}I(A,B|C) using weak union and symmetry. Furthermore, {a mathematical formula}I(a,b|W¯) is derivable from {a mathematical formula}I(a,b|C∪(A−{a})∪(B−{b})) using strong union, since {a mathematical formula}C∪(A−{a})∪(B−{b})⊆W¯. Thus, {a mathematical formula}{I(A,B|C)}⊢II(a,b|W¯), and, hence, by the soundness of {a mathematical formula}I, {a mathematical formula}{I(A,B|C)}⊨FaI(a,b|W¯). Since {a mathematical formula}⊨FaI(A,B|C), it follows that {a mathematical formula}⊨FaI(a,b|W¯). Because {a mathematical formula}L(a,b|W¯)={W¯}, we can invoke Proposition 22 to conclude that {a mathematical formula}ΔF(W¯)=0. For the inductive step, let {a mathematical formula}V∈L(A,B|C). The inductive hypothesis states that {a mathematical formula}ΔF(U)=0 for all {a mathematical formula}U∈L(A,B|C) that are strict supersets of V. Similar to the base case, we can infer that {a mathematical formula}⊨FaI(A′,B′|V) with {a mathematical formula}A′=A−V,B′=B−V, and V pairwise disjoint. Hence, by Proposition 22, {a mathematical formula}∑U∈L(A′,B′|V)ΔF(U)=0 (1). Clearly, {a mathematical formula}L(A′,B′|V)⊆L(A,B|C). Also, all sets in {a mathematical formula}L(A′,B′|V) are supersets of V. Hence, by the inductive hypothesis, (1) reduces to {a mathematical formula}ΔF(V)=0.{a mathematical formula}(2)⇒(3). Let {a mathematical formula}C be a set of CI statements and c a single a CI statement for which {a mathematical formula}C⊢c. Let {a mathematical formula}F∈F for which {a mathematical formula}⊨FaC. Since {a mathematical formula}F has the zero-density property, we have that, for each {a mathematical formula}U∈L(C), {a mathematical formula}ΔF(U)=0. By Theorem 11, {a mathematical formula}C⊢c implies {a mathematical formula}L(c)⊆L(C). Hence, by Property 22, {a mathematical formula}⊨Fac.{a mathematical formula}(3)⇒(1). All rules of System {a mathematical formula}I belong to System {a mathematical formula}A, except for weak union, which can be inferred from it (Proposition 3).  □
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Soundness properties for saturated CI statements
+      </section-title>
+      <paragraph>
+       We now discuss the additive implication problem {a mathematical formula}(Csat,Call)F.
+      </paragraph>
+      <paragraph label="Theorem 26">
+       Let{a mathematical formula}Iconsist of the symmetry and weak union rules. Let{a mathematical formula}Fbe a class of real-valued functions. The following statements are equivalent:
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        System{a mathematical formula}Iis sound for the additive implication problem{a mathematical formula}(Csat,Call)F;
+       </list-item>
+       <list-item label="(2)">
+        {a mathematical formula}Fhas the zero-density property on{a mathematical formula}Csat;
+       </list-item>
+       <list-item label="(3)">
+        System{a mathematical formula}Ais sound for the additive implication problem{a mathematical formula}(Csat,Call)F; and
+       </list-item>
+       <list-item label="(4)">
+        System{a mathematical formula}Gis sound for the additive implication problem{a mathematical formula}(Csat,Call)F.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       {a mathematical formula}(1)⇒(2). Let {a mathematical formula}I(A,B|C) be a saturated CI statement, and let {a mathematical formula}F∈F be a real-valued function such that {a mathematical formula}⊨FaI(A,B|C). We show that {a mathematical formula}ΔF(V)=0, for each {a mathematical formula}V∈L(A,B|C). The proof is similar to the corresponding part of that of Theorem 25, except that we may not use strong union. In the base case of the downward induction, we argued that, for {a mathematical formula}W={a,b}∈W(I(A,B|C)), with {a mathematical formula}a∈A and {a mathematical formula}b∈B, the CI statement {a mathematical formula}I(a,b|C∪(A−{a})∪(B−{b})) can be inferred from {a mathematical formula}I(A,B|C) using weak union and symmetry. Since {a mathematical formula}S=ABC, that CI statement equals {a mathematical formula}I(a,b|W¯). A similar argument applies to the inductive step.{a mathematical formula}(2)⇒(3). Analogous to the corresponding part of the proof of Theorem 25.{a mathematical formula}(3)⇒(4). System {a mathematical formula}G can be inferred from System {a mathematical formula}A (Proposition 3).{a mathematical formula}(4)⇒(1). System {a mathematical formula}I is a subset of System {a mathematical formula}G.  □
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       General completeness properties
+      </section-title>
+      <paragraph>
+       We first define completeness, and then study it as in Section 6.2.
+      </paragraph>
+      <paragraph label="Definition 27">
+       Let {a mathematical formula}I be an inference system for CI statements, {a mathematical formula}F be a class of real-valued functions, and {a mathematical formula}C1 and {a mathematical formula}C2 be classes of CI statements. Then, {a mathematical formula}I is complete for the additive implication problem {a mathematical formula}(C1,C2)F if, for each set of CI statements {a mathematical formula}C⊆C1, and for each single CI statement {a mathematical formula}c∈C2, {a mathematical formula}C⊨Fac implies {a mathematical formula}C⊢Ic.
+      </paragraph>
+      <paragraph>
+       In order to characterize completeness for additive implication for System {a mathematical formula}A, we introduce the Kronecker property.
+      </paragraph>
+      <paragraph label="Definition 28">
+       A class of real-valued functions {a mathematical formula}F has the Kronecker property on {a mathematical formula}Ω⊆2S if, for each {a mathematical formula}U∈Ω, there exists {a mathematical formula}FU∈F such that {a mathematical formula}ΔFU(U)≠0 and, for all {a mathematical formula}X∈Ω, {a mathematical formula}X≠U, {a mathematical formula}ΔFU(X)=0.
+      </paragraph>
+      <paragraph>
+       The name Kronecker property is inspired by the observation that, on Ω, {a mathematical formula}ΔFU behaves as a Kronecker delta function, which is zero everywhere except in one point.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Ω(2)={V⊂S||V¯|⩾2}. Relative to a class of real-valued functions, the Kronecker property on {a mathematical formula}Ω(2) implies the completeness of System {a mathematical formula}A:
+      </paragraph>
+      <paragraph label="Theorem 29">
+       Let{a mathematical formula}Fbe a class of real-valued functions. If{a mathematical formula}Fhas the Kronecker property on{a mathematical formula}Ω(2), then System{a mathematical formula}Ais complete for the additive implication problem{a mathematical formula}(Call,Call)F.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}F have the Kronecker property on {a mathematical formula}Ω(2), and let {a mathematical formula}C⊨Fac. Let {a mathematical formula}C be a set of CI statements, and let c be a single CI statement. Assume {a mathematical formula}C⊬c, or, equivalently, {a mathematical formula}L(c)⊈L(C) (Theorem 11). By Proposition 7, all sets in {a mathematical formula}L(C) and {a mathematical formula}L(c) are in {a mathematical formula}Ω(2). Now, let {a mathematical formula}U∈L(c)−L(C). Since {a mathematical formula}F has the Kronecker property on {a mathematical formula}Ω(2), we know there exists {a mathematical formula}FU∈F such that {a mathematical formula}ΔFU(U)≠0 and, for all {a mathematical formula}X∈Ω(2), {a mathematical formula}X≠U, {a mathematical formula}ΔFU(X)=0. From Proposition 22, it readily follows that {a mathematical formula}⊨FaC, while {a mathematical formula}⊭Fac. Hence, {a mathematical formula}C⊭Fac. By contraposition, {a mathematical formula}C⊨Fac implies {a mathematical formula}C⊢c.  □
+      </paragraph>
+      <paragraph>
+       The following example illustrates the zero-density and Kronecker properties.
+      </paragraph>
+      <paragraph label="Example 30">
+       Let {a mathematical formula}S={a,b,c}. Let {a mathematical formula}F1={F10,F11,F12,F13} and {a mathematical formula}F2={F2} as defined by their densities given in Table 1. Now, {a mathematical formula}Ω(2)={∅,a,b,c}. {a mathematical formula}F1 has the Kronecker property on {a mathematical formula}Ω(2), as {a mathematical formula}F10, {a mathematical formula}F11, {a mathematical formula}F12, and {a mathematical formula}F13 satisfy Definition 28 for, respectively, ∅, a, b, and c. Hence, by Theorem 29, System {a mathematical formula}A is complete for the additive implication problem {a mathematical formula}(Call,Call)F1. We next investigate if {a mathematical formula}F1 satisfies the zero-density property. First, consider {a mathematical formula}F10. The zero-density property relative to {a mathematical formula}F10 can only be broken by a constraint {a mathematical formula}I(A,B|C) if {a mathematical formula}∅∈L(A,B|C), i.e., if {a mathematical formula}C=∅, {a mathematical formula}A≠∅, and {a mathematical formula}B≠∅. However, {a mathematical formula}F10 does not a-satisfy this constraint, as, in the defining condition, {a mathematical formula}F10(C)+F10(ABC)=F10(AC)+F10(BC), the first term is non-zero, while the others are zero. Similar arguments can be given for {a mathematical formula}F11, {a mathematical formula}F12 and {a mathematical formula}F13. Hence, {a mathematical formula}F1 also satisfies the zero-density property, and, by Theorem 25, Theorem 29, System {a mathematical formula}A is sound for the additive implication problem {a mathematical formula}(Call,Call)F1.Finally, consider {a mathematical formula}F2={F2}, which does not satisfy the Kronecker property, as it does not contain functions whose densities are non-zero on only one member of {a mathematical formula}Ω(2). It also does not have the zero-density property as {a mathematical formula}⊨F2aI(b,c|∅) but {a mathematical formula}ΔF2(∅)≠0. By Theorem 25, System {a mathematical formula}A is not sound for the additive implication problem {a mathematical formula}(Call,Call)F2. Theorem 29 does not allow us to make any statements about the completeness of System {a mathematical formula}A in this case.
+      </paragraph>
+      <paragraph>
+       Theorem 29 goes only in one direction, but has the following weak converse.
+      </paragraph>
+      <paragraph label="Theorem 31">
+       Let{a mathematical formula}Fbe a class of real-valued functions. If{a mathematical formula}Ais sound for the additive implication problem{a mathematical formula}(Csat,Call)Fand complete for the additive implication problem{a mathematical formula}(Csat,Csat)F, then{a mathematical formula}Fhas the Kronecker property on{a mathematical formula}Ω(2).
+      </paragraph>
+      <paragraph label="Proof">
+       If {a mathematical formula}|S|⩽1, then {a mathematical formula}Ω(2)=∅ and the statement is true. Thus, assume {a mathematical formula}|S|⩾2. For {a mathematical formula}U∈Ω(2), let {a mathematical formula}C be the set of non-trivial saturated CI statements {a mathematical formula}I(A,B|C) which satisfy either (1) {a mathematical formula}A⊆U or (2) {a mathematical formula}C−U≠∅. By Proposition 7, {a mathematical formula}L(C)⊆Ω(2). By construction, {a mathematical formula}U∉L(C). Now, let {a mathematical formula}X∈Ω(2), {a mathematical formula}X≠U. If {a mathematical formula}X¯ meets both U and {a mathematical formula}U¯, then let {a mathematical formula}X1=X¯∩U and {a mathematical formula}X2=X¯∩U¯. Otherwise, let {a mathematical formula}X1 and {a mathematical formula}X2 be any two nonempty disjoint sets such that {a mathematical formula}X1∪X2=X¯. It is easily verified that, in all cases, {a mathematical formula}I(X1,X2|X) is in {a mathematical formula}C, and, hence {a mathematical formula}X∈L(C). Thus, {a mathematical formula}L(C)=Ω(2)−{U}. Now, let {a mathematical formula}U1 and {a mathematical formula}U2 be any two nonempty disjoint sets such that {a mathematical formula}U1∪U2=U¯, and let c be {a mathematical formula}I(U1,U2|U). Since {a mathematical formula}U∈L(c), {a mathematical formula}L(c)−L(C)≠∅. By Theorem 11, {a mathematical formula}C⊬c, and, by the completeness of {a mathematical formula}A for the additive implication problem {a mathematical formula}(Csat,Csat)F, {a mathematical formula}C⊭Fac. Hence, there exists {a mathematical formula}FU∈F such that {a mathematical formula}⊨FUaC, but {a mathematical formula}⊭FUac. Since {a mathematical formula}A is also sound for the additive implication problem {a mathematical formula}(Csat,Call)F, {a mathematical formula}F has the zero-density property on {a mathematical formula}Csat by Theorem 26. Thus, for all {a mathematical formula}X∈L(C)=Ω(2)−{U}, {a mathematical formula}ΔFU(X)=0, but, by Proposition 22, {a mathematical formula}ΔFU(U)≠0, since {a mathematical formula}⊭FUac.  □
+      </paragraph>
+      <paragraph>
+       Theorem 31 and Theorem 29 immediately yield the following corollary.
+      </paragraph>
+      <paragraph label="Corollary 32">
+       Let{a mathematical formula}Fbe a class of real-valued functions. If{a mathematical formula}Ais sound for the additive implication problem{a mathematical formula}(Csat,Call)Fand complete for the additive implication problem{a mathematical formula}(Csat,Csat)F, then{a mathematical formula}Ais complete for the additive implication problem{a mathematical formula}(Call,Call)F.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      The probabilistic CI implication problem
+     </section-title>
+     <paragraph>
+      Although the theory developed in Section 6 concerns the additive implication problem for CI statements, it is also applicable to the probabilistic implication problem. The link between both is made with the notion of multi-information functions (Studený [6]) induced by probability measures.{sup:4}
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Preliminaries and problem statement
+      </section-title>
+      <paragraph>
+       We first introduce some notations and terminology for stating and studying the probabilistic implication problem. A probability model over {a mathematical formula}S={s1,…,sn} is a pair {a mathematical formula}(dom,P), where dom is a domain mapping associating {a mathematical formula}si to a finite domain {a mathematical formula}dom(si), for {a mathematical formula}i=1,…,n, and P is a probability measure having {a mathematical formula}dom(s1)×⋯×dom(sn) as its sample space. For {a mathematical formula}i1,…,ik a subsequence of {a mathematical formula}1,…,n and {a mathematical formula}A={si1,…,sik}⊆S, a is a domain vector of A if {a mathematical formula}a∈dom(si1)×⋯×dom(sik). In what follows, we focus on probability measures, leaving their probability models implicit. If all domains of the underlying probability model are binary, i.e., consisting of two values, we call the probability measure binary. We denote the class of all probability measures by {a mathematical formula}Pall and the class of all binary probability measures by {a mathematical formula}Pbin. For a probability measure P and {a mathematical formula}A⊆S, we denote by {a mathematical formula}PA the marginal probability measure of P over A, i.e., for a domain vector a of A, {a mathematical formula}PA(a)=∑bP(a,b), where b ranges over all domain vectors of {a mathematical formula}S−A.
+      </paragraph>
+      <paragraph>
+       We now define when a probability measure satisfies a CI statement.
+      </paragraph>
+      <paragraph label="Definition 33">
+       Let {a mathematical formula}I(A,B|C) be a CI statement, and P be a probability measure. Then, P m-satisfies{a mathematical formula}I(A,B|C), denoted {a mathematical formula}⊨PmI(A,B|C), if, for all domain vectors a, b, and c of A, B, and C, respectively, {a mathematical formula}PC(c)PABC(a,b,c)=PAC(a,c)PBC(b,c).
+      </paragraph>
+      <paragraph>
+       Relative to the multiplicative notion of m-satisfaction, we now define probabilistic implication for CI statements.
+      </paragraph>
+      <paragraph label="Definition 34">
+       Let {a mathematical formula}C be a set of CI statements, c be a single CI statement, and {a mathematical formula}P be a class of discrete probability measures. Then, {a mathematical formula}Cm-implies c relative to {a mathematical formula}P, denoted {a mathematical formula}C⊨Pmc, if each probability measure P in {a mathematical formula}P that m-satisfies all the CI statements in {a mathematical formula}C also m-satisfies c.
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}C, c, and {a mathematical formula}P as above, we denote by {a mathematical formula}CP⁎ the set {a mathematical formula}{c|C⊨Pmc}, or {a mathematical formula}C⁎, if the class of discrete probability measures involved is clear from the context.
+      </paragraph>
+      <paragraph>
+       Before continuing, we illustrate some of the concepts above by an example.
+      </paragraph>
+      <paragraph label="Example 35">
+       Let {a mathematical formula}S={A,B,C}, and P be the binary probability distribution shown in Table 2. Clearly, {a mathematical formula}PAB(0,0)=PAB(0,1)=PAB(1,0)=PAB(1,1)=0.25 and {a mathematical formula}PA(0)=PA(1)=PB(0)=PB(1)=0.50. Hence, for each domain vector u of S, {a mathematical formula}P∅(π∅(u))PAB(πAB(u))=PA(πA(u))PB(πB(u)), where “{a mathematical formula}πX” denotes projection onto X, always evaluates to true. We may therefore conclude that P m-satisfies {a mathematical formula}I(A,B|∅). However, {a mathematical formula}PC(0)PABC(0,0,0)=0.75×0.25, while {a mathematical formula}PAC(0,0)PBC(0,0)=0.50×0.50 yields a different result. Hence, P does not m-satisfy {a mathematical formula}I(A,B|C).
+      </paragraph>
+      <paragraph>
+       Given a class of discrete probability measures {a mathematical formula}P and classes of CI statements {a mathematical formula}C1 and {a mathematical formula}C2, the probabilistic implication problem{a mathematical formula}(C1,C2)P is to decide whether {a mathematical formula}C⊨Pmc, for {a mathematical formula}C⊆C1 and {a mathematical formula}c∈C2.
+      </paragraph>
+      <paragraph>
+       Next, we define the Kullback–Leibler divergence [39].
+      </paragraph>
+      <paragraph label="Definition 36">
+       Let P and Q be two probability measures satisfying {a mathematical formula}Q(s)&gt;0 whenever {a mathematical formula}P(s)&gt;0, for all domain vectors s of S. Then, the Kullback–Leibler divergence H is defined as{a mathematical formula} with s ranging over all domain vectors of S for which {a mathematical formula}P(s)&gt;0.
+      </paragraph>
+      <paragraph>
+       For P and Q as above, it is a well-know property [39] that {a mathematical formula}H(P|Q)⩾0, with {a mathematical formula}H(P|Q)=0 if and only if {a mathematical formula}P=Q.
+      </paragraph>
+      <paragraph>
+       We now define multi-information functions induced by a probability measures [6].
+      </paragraph>
+      <paragraph label="Definition 37">
+       Let P be a probability measure. The multi-information function induced by P is the real-valued function {a mathematical formula}MP:2S→R defined by{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       A real-valued function {a mathematical formula}F:2S→R is isotone if, for all disjoint subsets A and B of S, {a mathematical formula}F(AB)⩾F(A), and supermodular if, for all pairwise disjoint subsets A, B, and C of S, {a mathematical formula}F(A)+F(ABC)⩾F(AB)+F(AC). Studený [6] showed that multi-information functions are isotone and supermodular. By a previous remark, multi-information functions are also nonnegative. The class of multi-information functions induced by the class of discrete probability measures {a mathematical formula}P will be denoted by {a mathematical formula}MP.
+      </paragraph>
+      <paragraph>
+       Studený [6] showed, for a CI statement c, that {a mathematical formula}⊨MPac if and only if {a mathematical formula}⊨Pmc. With this result, we can reduce the (multiplicative) probabilistic implication problem for CI statements to the additive implication problem for CI statements, the advantage being that additive problems are usually easier to deal with than multiplicative problems. Moreover, we can then apply the machinery developed in Section 6.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Soundness and completeness properties
+      </section-title>
+      <paragraph>
+       Definition 23, Definition 27 for soundness and completeness of an inference system for the additive implication problem {a mathematical formula}(C1,C2)F ({a mathematical formula}C1 and {a mathematical formula}C2 are classes of CI statements and {a mathematical formula}F is a class of real-valued functions) can be adapted to the setting of probabilistic implication, provided {a mathematical formula}F is replaced by a class of discrete probability measures {a mathematical formula}P, and a-implication ({a mathematical formula}⊨a) is replaced by m-implication ({a mathematical formula}⊨m).
+      </paragraph>
+      <paragraph label="Example 38">
+       From Example 35, we may conclude that strong union is not sound for the probabilistic implication problem {a mathematical formula}(Call,Call)Pbin. Hence, it is also not sound for the probabilistic implication problem {a mathematical formula}(Call,Call)Pall.
+      </paragraph>
+      <paragraph>
+       It is known (e.g., [40]) that the semi-graphoid axioms are sound for the probabilistic implication problem {a mathematical formula}(Call,Call)Pall. However, System {a mathematical formula}G is not complete. Moreover, there cannot exist a finite set of inference rules that is sound and complete for the implication problem [6]. In addition, it is unknown whether the problem is decidable. For saturated CI statements, the situation is different. Malvestuto [26] and Geiger and Pearl [14] independently showed that System {a mathematical formula}S is sound and complete for the probabilistic implication problem {a mathematical formula}(Csat,Csat)Pall (see also [40]). Using the results of Section 6, we can bootstrap these results, as follows.
+      </paragraph>
+      <paragraph label="Theorem 39">
+       <list>
+        <list-item label="(1)">
+         The class of multi-information functions{a mathematical formula}MPallhas the zero-density property on{a mathematical formula}Csat.
+        </list-item>
+        <list-item label="(2)">
+         System{a mathematical formula}Ais sound for the probabilistic implication problem{a mathematical formula}(Csat,Call)Pall.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph label="Proof">
+       Since System {a mathematical formula}G is sound for the general probabilistic implication problem {a mathematical formula}(Call,Call)Pall, it is also sound for {a mathematical formula}(Csat,Call)Pall. The result now follows immediately from Theorem 26.  □
+      </paragraph>
+      <paragraph label="Theorem 40">
+       <list>
+        <list-item label="(1)">
+         The class of multi-information functions{a mathematical formula}MPallhas the Kronecker property on{a mathematical formula}Ω(2).
+        </list-item>
+        <list-item label="(2)">
+         System{a mathematical formula}Ais complete for the probabilistic implication problem{a mathematical formula}(Call,Call)Pall.
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph label="Proof">
+       By Theorem 39(2), System {a mathematical formula}A is sound for the probabilistic implication problem {a mathematical formula}(Csat,Call)Pall. Since System {a mathematical formula}S is already complete for the probabilistic implication problem {a mathematical formula}(Csat,Csat)Pall, it follows in particular that System {a mathematical formula}A is. The result now follows immediately from Theorem 31 and Corollary 32.  □
+      </paragraph>
+      <paragraph>
+       It can be shown by direct calculation that the class of multi-information functions induced by the class of binary probability measures has also the Kronecker property on {a mathematical formula}Ω(2). Therefore, System {a mathematical formula}A is also complete for the probabilistic implication problem {a mathematical formula}(Call,Call)Pbin. Please note that completeness of System {a mathematical formula}A with respect to a class of probability functions {a mathematical formula}P does not automatically imply completeness with respect to a subclass {a mathematical formula}P′⊆P.
+      </paragraph>
+      <paragraph>
+       We conclude this section by a sound-and-completeness result.
+      </paragraph>
+      <paragraph label="Theorem 41">
+       Both System{a mathematical formula}Aand System{a mathematical formula}Gare sound and complete for the probabilistic implication problems{a mathematical formula}(Csat,Call)Palland{a mathematical formula}(Csat,Call)Pbin.
+      </paragraph>
+      <paragraph label="Proof">
+       It only remains to show that System {a mathematical formula}G is complete for both probabilistic implication problems. This is because System {a mathematical formula}G is complete for the probabilistic implication problem {a mathematical formula}(Csat,Call)P, where {a mathematical formula}P is an arbitrary class of probability measures, if and only if System {a mathematical formula}A is [41].  □
+      </paragraph>
+      <paragraph>
+       Notice that, in Theorem 41, we do not assume that the CI statements to be derived are saturated.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Falsification and validation criteria
+     </section-title>
+     <paragraph>
+      Decidability of the CI implication problem over the class of discrete probability measures is open, but it is known it has no finite sound and complete inference system [15]. Nonetheless, Theorem 40 demonstrates it has a finite complete inference system, namely System {a mathematical formula}A, which is useful since it provides a falsification criterion to decide some non-valid instances (Section 8.2). Of course, for instances which cannot so be falsified, it would be desirable to have validation criteria to decide some valid ones among these. We develop such a validation criterion, based on linear programming techniques (Section 8.3). In preparation, we explore two simplifications (Section 8.1). First, we show that we can reduce the general probabilistic implication problem to the probabilistic implication problem for elementary CI statements only. Then, we demonstrate that it suffices to consider only those variables that occur in the CI statements under consideration. In Section 9, we will give experimental evidence that the combination of the falsification and validation criteria is useful for deciding a large set of instances of the probabilistic implication problem.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Simplifications
+      </section-title>
+      <paragraph>
+       To reduce the probabilistic CI implication problem to one on elementary CI statements only, we build upon the work in Section 5, where elementary CI statements were considered from a purely syntactical point of view.
+      </paragraph>
+      <paragraph label="Proposition 42">
+       Let{a mathematical formula}Cbe a set of CI statements, and c be a single CI statement. Then,
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        {a mathematical formula}C⁎=Del(C)⁎and{a mathematical formula}c⁎=Del(c)⁎;
+       </list-item>
+       <list-item label="(2)">
+        {a mathematical formula}C⊨Pallmcif and only if, for all{a mathematical formula}cel∈Del(c),{a mathematical formula}Del(C)⊨Pallmcel.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       It suffices to prove the first statement for a set of CI statements {a mathematical formula}C. By Theorem 15, {a mathematical formula}Del(C)⊆CG+. Since System {a mathematical formula}G is sound for the probabilistic implication problem {a mathematical formula}(Call,Call)Pall, we have that {a mathematical formula}Del(C)⊆C⁎, hence {a mathematical formula}Del(C)⁎⊆C⁎. Theorem 15 also yields that {a mathematical formula}C⊆Del(C)G+, from which we derive {a mathematical formula}C⁎⊆Del(C)⁎.  □
+      </paragraph>
+      <paragraph>
+       We now turn to the second simplification, namely that variables that do not occur in the given CI statements need not be considered for the implication problem. In particular, this is also the case for hidden variables. For a set of CI statements {a mathematical formula}C′ over a finite universe S (the set of variables), let {a mathematical formula}var(C′) be the set of variables occurring in at least one CI statement of {a mathematical formula}C′. Now consider an instance “{a mathematical formula}C⊨Pmc?” of the probabilistic implication problem relative to S. Intuitively, the variables of S outside {a mathematical formula}var(C∪{c}) play no role. Nevertheless, restricting this instance of the probabilistic implication problem to the relevant variables also means restricting the probability measures considered. Therefore, we need to prove formally that our intuition is correct.
+      </paragraph>
+      <paragraph label="Lemma 43">
+       Let U and V be disjoint sets of variables. Let{a mathematical formula}PUbe a probability measure over U. Then there exists a probability measure{a mathematical formula}PUVover UV such that, for each subset X of U,{a mathematical formula}PUVX=PUX.
+      </paragraph>
+      <paragraph label="Proof">
+       Designate by “0” one element in the domain of each variable in UV. Let u be a domain vector of U and v a domain vector of V. Let {a mathematical formula}0V be the domain vector of V of which each component is 0. We define{a mathematical formula} Clearly, {a mathematical formula}PUV is a probability measure over UV and, for {a mathematical formula}X⊆U, {a mathematical formula}PUVX=PUX.  □
+      </paragraph>
+      <paragraph>
+       For {a mathematical formula}U⊆S, {a mathematical formula}PU denotes class of all probability measures over U.
+      </paragraph>
+      <paragraph label="Proposition 44">
+       Let U and V be disjoint sets of variables,{a mathematical formula}Cbe a set of CI statements over U, and c be a single CI statement over U. Then,{a mathematical formula}C⊨PUmcif and only if{a mathematical formula}C⊨PUVmc.
+      </paragraph>
+      <paragraph label="Proof">
+       We first prove the “only if”. Thereto, let {a mathematical formula}PUV∈PUV be such that {a mathematical formula}PUV m-satisfies all CI statements in {a mathematical formula}C. Let {a mathematical formula}PU=PUVU. Obviously, {a mathematical formula}PU∈PU, and, for {a mathematical formula}X⊆U, {a mathematical formula}PUX=PUVX. Hence, {a mathematical formula}PU m-satisfies all CI statements in {a mathematical formula}C. From {a mathematical formula}C⊨PUmc, it now follows that {a mathematical formula}PU=PUVU m-satisfies c, and hence that {a mathematical formula}PUV m-satisfies c. We now turn to the “if.” Thereto, let {a mathematical formula}PU∈P be such that {a mathematical formula}PU m-satisfies all CI statements in {a mathematical formula}C. By Lemma 43, there exists a probability function {a mathematical formula}PUV∈PUV such that {a mathematical formula}PU=PUVU. The remainder of the proof now goes along the same lines as for the “only if.”  □
+      </paragraph>
+      <paragraph>
+       An immediate corollary to Proposition 44 is that, for a set of CI statements {a mathematical formula}C and a single CI statement c, both over S, {a mathematical formula}C⊨PSmc if and only if {a mathematical formula}C⊨Pvar(C∪{c})mc, i.e., the targeted simplification. We shall, therefore, disregard irrelevant variables.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Falsification criterion
+      </section-title>
+      <paragraph>
+       Theorem 11, Theorem 40 yield a falsification criterion, i.e., a sufficient condition which can falsify certain instances of the probabilistic CI implication problem:
+      </paragraph>
+      <paragraph label="Corollary 45">
+       Let{a mathematical formula}Cbe a set of CI statements. If{a mathematical formula}L(c)⊈L(C), then{a mathematical formula}C⊭Pallmc.
+      </paragraph>
+      <paragraph>
+       We recall from [5] that testing for lattice inclusion is coNP-complete, that there exists a linear-time reduction to SAT for this problem, and that one can leverage SAT solvers to decide semi-lattice inclusion effectively, even if several hundreds of variables are involved. Now, if the falsified implications were, on average, only a small fraction of all those that are falsifiable, the result would be disappointing from a practical point of view. Fortunately, we are not only able to show that a large number of implications can be falsified by the “lattice-exclusion” criterion identified in Corollary 45, but also that polynomial time heuristics exist that provide good approximations of said criterion. The falsification criterion and the two heuristics we consider are formally exhibited in Algorithms 1, 2, and 3 (Fig. 7).
+      </paragraph>
+      <paragraph>
+       It follows from Proposition 7 that, if one of the two heuristics returns false, then {a mathematical formula}L(c)⊈L(C), and hence, by Corollary 45, that {a mathematical formula}C⊭Pallmc.
+      </paragraph>
+      <paragraph label="Example 46">
+       The inference rule {a mathematical formula}I(A,B|DC)&amp;I(A,D|BC)→I(A,BD|C), is not sound relative to the class of discrete probability measures. Falsification Heuristic 1 can reject this instance of the probabilistic implication problem.
+      </paragraph>
+      <paragraph>
+       The Falsification Criterion actually leads to a family of polynomial time heuristics. While Falsification Heuristic 1 checks if the greatest lower bound of {a mathematical formula}L(c) is not in {a mathematical formula}L(C) and Falsification Heuristic 2 checks if the least upper bounds of {a mathematical formula}L(c) are not in {a mathematical formula}L(C), we may select additional elements in that semi-lattice located between these two extremes to derive more falsification heuristics. Finally, we observe that there is also an alternative falsification strategy. The principal idea is to construct a discrete probability measure which provides a counterexample using the decidable theory of the reals with addition. This is almost what Bouckaert and Studený have done with their racing algorithms [8]. Needless to say, this rather expensive approach can produce false positives in the sense that it may falsify instances of the probabilistic implication problem that are valid. This was not problematic for their application, as they had a different goal in mind.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Validation criterion
+      </section-title>
+      <paragraph>
+       A validation criterion for the probabilistic implication problem accepts an instance of the problem only if the implication is valid. If the criterion does not accept the instance, however, this does not imply that the instance is invalid. One of the most prominent validation criteria is the algorithm that computes the closure of the semi-graphoid axioms [2], [3], which, unfortunately, can only validate a small fraction of the set of verifiable instances. Here, we introduce a much more powerful validation criterion, based on the lattice-theoretic framework. We harness our results to represent a set of CI statements {a mathematical formula}C as a sparse 0–1 matrix {a mathematical formula}AC in which the rows correspond to elements of {a mathematical formula}L(C) and the columns correspond to certain CI statements of the form {a mathematical formula}I(a,b|C) that are induced from {a mathematical formula}C. Subsequently, for a given CI statement c, we will associate with the instance {a mathematical formula}C⊨Pallmc a linear program with equality constraints involving an encoding of c in terms of its associated semi-lattice {a mathematical formula}L(c) and the matrix {a mathematical formula}AC. We then show that {a mathematical formula}C⊨Pallmc is valid if this linear program has a solution. To achieve this, we introduce relevant elementary CI statements:
+      </paragraph>
+      <paragraph label="Definition 47">
+       An elementary CI statement c is relevant to a set of CI statements {a mathematical formula}C if {a mathematical formula}L(c)⊆L(C). The set of all such CI statements is denoted {a mathematical formula}R(C).
+      </paragraph>
+      <paragraph>
+       Since System {a mathematical formula}A is complete but not sound for the probabilistic implication problem (Theorem 40), {a mathematical formula}C⊢c or, equivalently, {a mathematical formula}L(c)⊆L(C) (Theorem 11) is necessary but not sufficient for {a mathematical formula}C⊨Pmc, not all relevant statements associated with {a mathematical formula}C need be probabilistically implied by {a mathematical formula}C. By Proposition 42, however, there is a subset of {a mathematical formula}R(C) that is probabilistically equivalent to {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       With a CI statement c over the universe S, we associate a vector {a mathematical formula}vc over {a mathematical formula}2S:{a mathematical formula} In other words, {a mathematical formula}vc is a representation of the characteristic function of {a mathematical formula}L(c).
+      </paragraph>
+      <paragraph>
+       Apart from being the set of all elementary CI statements equivalent to the given set of CI statements {a mathematical formula}C for derivations in System {a mathematical formula}A, {a mathematical formula}R(C) has the following attractive property which justifies calling {a mathematical formula}R(C) a “basis” for {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Proposition 48">
+       Let{a mathematical formula}Cbe a set of CI statements, and let c be a single CI statement such that{a mathematical formula}C⊢c. Then, for each CI statement{a mathematical formula}celin{a mathematical formula}R(C), there exists a nonnegative integer number{a mathematical formula}kcelsuch that{a mathematical formula}vc=∑cel∈R(C)kcelvcel.
+      </paragraph>
+      <paragraph label="Proof">
+       With the semi-graphoid inference rules decomposition and weak union, we can show that {a mathematical formula}L(A,bD|C)=L(A,b|CD)∪L(A,D|C). Moreover, {a mathematical formula}L(A,b|CD)∩L(A,D|C)=∅; indeed, the former set contains only supersets of CD, while the latter cannot contain supersets of C. Hence, {a mathematical formula}vI(A,bD|C)=vI(A,b|CD)+vI(A,D|C). By applying this repeatedly, it follows that, for each elementary CI statement {a mathematical formula}cel in {a mathematical formula}Del(c), there exists a nonnegative integer {a mathematical formula}kcel such that {a mathematical formula}vc=∑cel∈Del(c)kcelvcel. The final result follows from observing that, by Corollary 17 and Theorem 15, Theorem 11, {a mathematical formula}Del(c)⊆R(C).  □
+      </paragraph>
+      <paragraph>
+       Observe that {a mathematical formula}I(a,b|C)∈R(C) if and only if {a mathematical formula}I(b,a|C)∈R(C), as both have the same semi-lattice. They also have the same associated vector. To avoid such duplication, we define {a mathematical formula}R/2(C) to be {a mathematical formula}R(C) in which CI statements of the form {a mathematical formula}I(a,b|C) and {a mathematical formula}I(b,a|C) are no longer distinguished. Clearly, Proposition 48 still holds when {a mathematical formula}R(C) is replaced by {a mathematical formula}R/2(C).
+      </paragraph>
+      <paragraph>
+       We still need a couple of additional results before we can move on to the construction of the linear program. The first one involved the multi-information function {a mathematical formula}MP of a discrete probability measure P.
+      </paragraph>
+      <paragraph label="Proposition 49">
+       Let A, B, and C be pairwise disjoint subsets of S, and let P be a discrete probability distribution. Then,{a mathematical formula}∑U∈L(A,B|C)ΔMP(U)⩾0.
+      </paragraph>
+      <paragraph label="Proof">
+       For a real-valued function F, we have {a mathematical formula}F(C)−F(AC)−F(BC)+F(ABC)=∑U∈L(A,B|C)ΔF(U)[31]. If F is supermodular, the left-hand side is nonnegative. Since {a mathematical formula}MP is supermodular [6], Proposition 49 immediately follows.  □
+      </paragraph>
+      <paragraph>
+       We have already defined the vector associated with a single CI statement. We now define the vector associated with a set of CI statements {a mathematical formula}C as the sum of the vectors associated to the CI statements in {a mathematical formula}C: {a mathematical formula}vC=∑c∈Cvc.
+      </paragraph>
+      <paragraph label="Proposition 50">
+       Let{a mathematical formula}Cbe a set of CI statements, c be a single CI statement, and{a mathematical formula}kcbe a positive real number. If, for each CI statement{a mathematical formula}cel∈R/2(C), there exists a nonnegative real number{a mathematical formula}kcelsuch that{a mathematical formula}then{a mathematical formula}C⊨Pallmc. Moreover,{a mathematical formula}C⊨Pallmcelfor all{a mathematical formula}cel∈R/2(C)for which{a mathematical formula}kcel&gt;0.
+      </paragraph>
+      <paragraph label="Proof">
+       Let P be a discrete probability measure such that {a mathematical formula}⊨PmC. By Proposition 49, we have that, for each CI statement {a mathematical formula}cel in {a mathematical formula}R, {a mathematical formula}∑U∈L(cel)ΔMP(U)⩾0. Hence,{a mathematical formula} Again by Proposition 49, we have that {a mathematical formula}∑U∈L(c)ΔMP(U)⩾0. Now, since P satisfies all CI statements in {a mathematical formula}C, we also have that {a mathematical formula}∑c′∈C∑U∈L(c′)ΔMP(U)=0, by Proposition 22. Now, we have that{a mathematical formula} where the second equality follows from the precondition in the statement of Proposition 50. Since both terms in the right-hand side of the above equation are nonnegative, and since {a mathematical formula}kc&gt;0, necessarily {a mathematical formula}∑U∈L(c)ΔMP(U)=0. Thus, by Proposition 22, {a mathematical formula}⊨Pmc. By the same token, {a mathematical formula}⊨Pmcel for all {a mathematical formula}cel for which {a mathematical formula}kcel&gt;0.  □
+      </paragraph>
+      <paragraph>
+       Proposition 50 still holds if the sum ranges over all elementary CI statements. There is no point in considering those not relevant to {a mathematical formula}C, however, as a careful examination of the proof reveals that their coefficients in the sum are necessarily 0, and, therefore, they cannot contribute to the solutions of the above equation.
+      </paragraph>
+      <paragraph>
+       We write the equation in Proposition 50 as a linear program (Schrijver [42]){a mathematical formula} As we are only interested in satisfying the constraint, that is, we are only interested in the existence of a feasible solution, we set {a mathematical formula}c=0 (hence, the objective function {a mathematical formula}cTx is zero). As to the parameters of the condition, we put {a mathematical formula}A=AC, the matrix associated with {a mathematical formula}C, defined over {a mathematical formula}L(C)×R/2(C) by{a mathematical formula} and {a mathematical formula}b=vC−kcvc. Clearly, if x is a solution of {a mathematical formula}Ax=b, then x is a vector of values {a mathematical formula}kcel, {a mathematical formula}cel∈R/2(C), satisfying the equation in Proposition 50.
+      </paragraph>
+      <paragraph label="Example 51">
+       Let {a mathematical formula}S={a,b,d,e,f}, and{a mathematical formula} Based on the results from Section 8.1 concerning the set of relevant CI statements we can exclude the variable f. Then, {a mathematical formula}R/2(C) equals{a mathematical formula} We denote these eight relevant elementary CI statements by {a mathematical formula}c1,…,c8, respectively. Let {a mathematical formula}c=c5=I(d,e|∅). Hence, {a mathematical formula}var(C∪c)={a,b,d,e}.The 0–1 matrix {a mathematical formula}AC is shown in Fig. 8. The rows in {a mathematical formula}AC correspond to the elements in {a mathematical formula}L(C)={∅,a,b,d,e,ab,de} computed relative to {a mathematical formula}var(C∪c) rather than S. While the number of possible rows in the matrix is {a mathematical formula}2|S|−|S|−1, here 26, we have first reduced it to {a mathematical formula}2|var(C∪c)|−|var(C∪c)|−1, here 11, and then further to {a mathematical formula}|L(C)| as computed relative to {a mathematical formula}var(C∪c), here only 7. The columns correspond to the relevant elementary CI statements {a mathematical formula}c1,…,c8, respectively. Actually, these columns equal the vectors {a mathematical formula}vc1,…,vc8, respectively. Notice that, given S, the number of elementary CI statements up to symmetry is{a mathematical formula} here 80. We have first reduced this number to{a mathematical formula} here 24, and then further to the number of relevant elementary CI statements up to symmetry, here only 8. Compared to the maximum possible size of {a mathematical formula}26×80=2080, our matrix has a size of only {a mathematical formula}7×8=56.We have that {a mathematical formula}vCT=(1,1,1,1,1,2,2). Now, choose {a mathematical formula}kc=1. Then, {a mathematical formula}vCT−kcvcT=(0,0,0,1,1,1,2). This vector is the sum of the 2nd, 3rd, and 8th column of {a mathematical formula}AC. Hence, {a mathematical formula}ACx=vC−kcvc has a nonnegative solution {a mathematical formula}xT=(0,1,1,0,0,0,0,1). By Proposition 50, {a mathematical formula}C⊨Pallmc, and also {a mathematical formula}C⊨Pallmc2, {a mathematical formula}C⊨Pallmc3, and {a mathematical formula}C⊨Pallmc8.
+      </paragraph>
+      <paragraph>
+       It is well-known that a linear program (LP) is solvable in polynomial time in the number of its variables. As calculated in Example 51, we get in the worst case an LP with an exponential number of variables (matrix columns) and constraints (matrix rows), namely{a mathematical formula} respectively. As a rule of thumb, the more columns matrix {a mathematical formula}AC has, the more difficult the corresponding LP problem becomes. An advantage of our validation strategy over a naïve approach is that {a mathematical formula}AC only consists of the vectors representing the relevant elementary CI statements in {a mathematical formula}R/2(C). This means that the actual number of variables of the LP may be very small compared to the worst case. We also emphasize that matrix A is always a 0–1 matrix, leading to better numerical stability and the possibility to employ existing sparse matrix data structures.{sup:5} We will come back to algorithmic issues when we discuss the results of our experiments.
+      </paragraph>
+      <paragraph>
+       Finally, consider again Proposition 50. Unfortunately, we cannot express the condition {a mathematical formula}kc&gt;0 in a linear program.{sup:6} Therefore, we have to make a particular choice for {a mathematical formula}kc (e.g., {a mathematical formula}kc=1 in Example 51). In the remainder of this section, we shall relate different choices for {a mathematical formula}kc. Thereto, let {a mathematical formula}CI(kc) denote the set of all pairs {a mathematical formula}(C,c) such that, for each elementary CI statement {a mathematical formula}cel∈R/2(C), there exists a nonnegative real number {a mathematical formula}kcel for which {a mathematical formula}vC=kcvc+∑cel∈R/2(C)kcelvcel. We have the following monotonicity property.
+      </paragraph>
+      <paragraph label="Proposition 52">
+       If{a mathematical formula}k2⩾k1&gt;0, then{a mathematical formula}CI(k2)⊆CI(k1).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}(C,c)∈CI(k2). Then, for each {a mathematical formula}cel∈R/2(C), there exists {a mathematical formula}kcel⩾0 such that {a mathematical formula}vC=k2vc+∑cel∈R/2(C)kcelvcel. By Proposition 50, {a mathematical formula}C⊨Pallmc, and hence, by Theorem 40, {a mathematical formula}C⊢c. By Proposition 48, it follows that, for each {a mathematical formula}cel∈R/2(C), there exists {a mathematical formula}kcel′⩾0 such that {a mathematical formula}vc=∑cel∈R/2(C)kcel′vcel. Combining all of this, we obtain{a mathematical formula} Since {a mathematical formula}k2⩾k1, we have, for each {a mathematical formula}cel∈R/2(C), that {a mathematical formula}(k2−k1)kcel′+kcel⩾0. Consequently, {a mathematical formula}(C,c)∈CI(k1).  □
+      </paragraph>
+      <paragraph>
+       We can actually show that some of the inclusions in Proposition 52 are strict.
+      </paragraph>
+      <paragraph label="Example 53">
+       This is an adaptation of Example 6.3 in [6]. Let {a mathematical formula}S={a,b,d,e}, {a mathematical formula}C={I(a,d|∅),I(d,e|b),I(b,e|d),I(a,e|bd),I(b,d|ae)}, and {a mathematical formula}c=I(a,de|b). It can easily be verified that{a mathematical formula} and that the CI statements above are in {a mathematical formula}R/2(C). Hence, there is a solution to the equation in Proposition 50 with {a mathematical formula}kc=0.5. One can also verify that this equation has no solution for {a mathematical formula}kc&gt;0.5.
+      </paragraph>
+      <paragraph>
+       In Section 9, we shall further explore the actual impact of the choice of {a mathematical formula}kc.
+      </paragraph>
+      <paragraph>
+       We conclude this section with an example of an implication that holds and can neither be falsified nor validated by our algorithms.
+      </paragraph>
+      <paragraph label="Example 54">
+       This is an adaptation of Example 4.1 in [6]. Let {a mathematical formula}S={a,b,d,e}, {a mathematical formula}C={I(a,b|∅),I(a,b|d),I(a,b|e),I(d,e|ab)} and {a mathematical formula}c=I(a,b|de). Observe that {a mathematical formula}L(c)⊆L(C), so the lattice-exclusion criterion cannot be used to falsify this instance of the implication problem. Moreover, Studený [6] showed that {a mathematical formula}C⊨Pallmc although the equation in Proposition 50 has no solution for {a mathematical formula}kc&gt;0.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      The theory of the previous sections provides the formal foundation for implementations of practical falsification and validation algorithms for the probabilistic implication problem. With the experiments in the present section, we address the following empirical questions:
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       Effectiveness: What fraction of the instances of the probabilistic CI implication problem can we either falsify or validate, i.e., how close do we get to a decision procedure?
+      </list-item>
+      <list-item label="(2)">
+       Efficiency: How fast does the algorithm run? To how many variables does it scale? How much more efficient is the algorithm compared to the naïve approach{sup:7} both in terms of time and space complexity? How does the algorithm compare to other approaches in the literature?
+      </list-item>
+      <list-item label="(3)">
+       Structural and numerical properties: How large is the constraint matrix A for different instances? What are the numerical properties of the validation algorithm? To which extent does the parameter {a mathematical formula}kc of the validation algorithm influences the effectiveness and efficiency of the algorithm?
+      </list-item>
+     </list>
+     <paragraph>
+      Since we may restrict our attention to elementary CI statements, we investigate the probabilistic implication problem {a mathematical formula}(Cel,Cel)Pall, with {a mathematical formula}Cel the class of all elementary CI statements. For each experiment, we first generated instances of this implication problem by randomly selecting n different sets of elementary CI statements {a mathematical formula}C over S as antecedent, and, for each of these, m different elementary CI statements c over S as consequence, one at a time. We first applied the falsification algorithm to each of these instances “{a mathematical formula}C⊨Pallmc?”. When the falsification algorithm failed, we applied the validation algorithm and took advantage of the results to create the constraint matrix {a mathematical formula}AC and vector b from {a mathematical formula}C and c as described in Section 8. To solve the resulting linear programs we used Gurobi,{sup:8} a mixed integer linear programming solver that employs a version of the simplex algorithm [42], [43] and the branch-and-cut method for integer programs. We did not change the standard optimization settings of the solver. Furthermore, we only accepted a solution if its rational expansion solved the respective constraints. For our purposes, this is entirely unproblematic, because the objective is to validate as many instances of the implication problem as possible while ruling out false positives. All experiments were run on a dual-core 3.2 GHz Linux PC with 3 GB RAM.
+     </paragraph>
+     <paragraph>
+      For a set of elementary CI statements {a mathematical formula}C, we build the optimized constraint matrix {a mathematical formula}AC bottom-up using System {a mathematical formula}E. First, the closure under the strong union rule is computed. Thereafter, the closure under the elementary contraction and strong contraction rules is computed. Then, we again compute the closure under the strong union rule. Although this procedure might involve an exponential number of steps in the size of S, the naïve method of building the constraint matrix by using the set of all elementary CI statements over S is at least as complex.
+     </paragraph>
+     <paragraph>
+      Fig. 9 shows the number of instances of the probabilistic implication problem that could be falsified or validated by the algorithms for 5 variables. For each {a mathematical formula}ℓ=2,…,58 (the number of antecedents), we randomly created {a mathematical formula}n=4500 different sets of ℓ elementary CI statements, and, for each of those, randomly selected {a mathematical formula}m=20 different elementary CI statements as consequences, one at a time, resulting in {a mathematical formula}90000 instances for each value of ℓ. The results show that (1) only a small fraction of the instances could not be decided, and, (2) for larger values of ℓ (for 5 variables, {a mathematical formula}ℓ&gt;40), all instances could either be falsified or validated. The behavior of the algorithm was similar over all tested numbers of variables (see below).
+     </paragraph>
+     <paragraph>
+      Table 3 reveals the computational efficiency gained in optimizing the constraint matrix A by using only relevant elementary CI statements, compared to the naïve approach, where all elementary CI statements are used. The times provided are for 7–10 variables, averaged over {a mathematical formula}10000 trials, for {a mathematical formula}n=100 sets of {a mathematical formula}ℓ=10 antecedents, and {a mathematical formula}m=100 different consequences, one at a time. Table 4 shows the average time to construct and solve the linear program for sets of {a mathematical formula}ℓ=10 antecedents for 5–15 variables, averaged over {a mathematical formula}100000 trails ({a mathematical formula}n=1000, {a mathematical formula}m=100). The high standard deviations show that construction and solving times exhibit a high variance depending on the input. Table 5, finally, compares the size of the optimized constraint matrix to those of the constraint matrix resulting from the naïve approach.
+     </paragraph>
+     <paragraph>
+      To investigate the impact of the choice of {a mathematical formula}kc in Proposition 50, we conducted experiments for sets of {a mathematical formula}ℓ=10, 20, and 30 antecedents, for 5–10 variables, averaged over {a mathematical formula}1000000 trials ({a mathematical formula}m=1000, {a mathematical formula}n=1000). Each of these was run with {a mathematical formula}kc=1.0 and {a mathematical formula}kc=10−6. Despite the large difference between both values, at most 1176 additional instances out of a total of {a mathematical formula}1000000 (for 20 antecedents and 6 variables) could be validated. Hence, lowering {a mathematical formula}kc does not provide an added benefit, also because small values of {a mathematical formula}kc may lead to numerical instabilities.
+     </paragraph>
+     <paragraph>
+      We also want to empirically verify that (1) the lattice-exclusion criterion can falsify a large fraction of all falsifiable instances, and (2) Heuristics 1 and 2 are good approximations of the full-blown lattice-exclusion criterion. To make our results comparable to results from other approaches, we adopted the experimental setup for the racing algorithm of Bouckaert and Studený [8] (also using 5 attributes). One thousand sets of antecedents each were generated by randomly selecting 3 up to 10 elementary CI statements, resulting in a total of 8000 sets of antecedents. The falsification algorithm and the heuristics were run on these sets with each of the remaining elementary CI statements as a consequence, one at a time. This resulted in {a mathematical formula}77000 instances of the probabilistic implication problem for sets with 3 antecedents, down to {a mathematical formula}70000 instances for sets with 10 antecedents.
+     </paragraph>
+     <paragraph>
+      The rejection procedure of the racing algorithm is rooted in the theory of imsets: an instance is rejected if one of the constructed supermodular functions is a counter-model. It has double-exponential running time and may reject valid instances of the probabilistic CI implication problem. This is because the racing algorithm has the purpose of deciding the implication problem for imsets and, thus, the additive implication problem relative to the class of supermodular functions. The falsification algorithm based on Corollary 45 only rejects invalid instances of the CI implication problem. Fig. 10, left, shows the results. The falsification procedure of the racing algorithm rejects more instances than our approach, but among them are possibly also valid instances. Fig. 10, right, shows the rejection curves for the falsification algorithm, Heuristics 1 and 2, and the combination of both. The latter compares favorably with the falsification algorithm: 95% of the falsifications for 3 antecedents down to 77% for 10 antecedents are found. Also, Heuristic 2 is more effective than Heuristic 1.
+     </paragraph>
+     <paragraph>
+      Subsequent to the conference paper [25] in which we had first introduced the linear programming formulation of the validation algorithm based on Proposition 50, Bouckaert et al. [9] leveraged the theory of imsets [6] to also include the construction of linear programs to verify various instances of the CI implication problem. Their approach is almost identical to ours except that they do not optimize the constraint matrix A by considering only the relevant CI statements as columns and the elements in the semi-lattice of {a mathematical formula}C as rows. In addition, the earlier version of our LP formulation did not take into account the parameter {a mathematical formula}kc of Proposition 50.
+     </paragraph>
+     <paragraph>
+      We adopted the same experimental setup as Bouckaert et al. [9] for an empirical comparison of the two linear programming formulations. For {a mathematical formula}|S|=4–10, we randomly generated 1000 sets each consisting of 3 elementary CI statements, then constructed the set of relevant CI statements and the constraint matrix A for each set of antecedents, and finally ran the validation algorithm with each of the possibly implied elementary CI statements as a consequence. Because we restrict ourselves to relevant CI statements, the number of LPs/experiment in Table 6 is much smaller for our approach than for the approach of Bouckaert et al. The table lists also the other statistics for the two LP formulations. The average time to construct the constraint matrix A increases from 0.2 ms for 4 variables to 23 ms for 10 variables. Since the size of the constraint matrix A remains small (on average about {a mathematical formula}80×80 for 10 variables), the average time to solve a single LP is only 0.25 ms for 10 variables which is to be compared with the average time of {a mathematical formula}3862.1s/11520=300ms for the constraint matrix consisting of all elementary CI statements used in Bouckaert et al.ʼs LP formulation, which is several orders of magnitudes slower than ours. Our procedure needs only 43.01 ms for 10 variables compared to the 3862.1 s of Bouckaert et al.ʼs approach.
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Discussion and future work
+     </section-title>
+     <paragraph>
+      Logical inference algorithms for probabilistic conditional independence statements have several important applications from checking consistency during knowledge elicitation to constraint-based structure learning of graphical models [44]. As it is generally known that there does not exist a finite, sound and complete axiomatization for probabilistic conditional independence implication [6], we can try to do the next best thing, which is enclosing the problem between a “lower bound”, that is, a finite set of inference rules that is sound, and an “upper bound”, a finite set of inference rules that is complete. It is well-known that the semi-graphoid axiom system, referred to in this paper as System {a mathematical formula}G is sound (e,g., [40]). One of the main contributions of the present paper is introducing another finite set of inference rules, System {a mathematical formula}A, which is shown to be complete for the probabilistic implication problem. While a sound but not complete finite system of inference rules can always be transformed into a “tighter lower bound” by adding true logical implications that are not provable, an analogous strategy is not obvious for transforming a complete but not sound system of inference rules into a “tighter upper bound”. It is therefore justified to ask whether System {a mathematical formula}A is in some sense optimal as an “upper bound”. This is work for future research. Of course, the above question could in principle be asked about any complete but not sound axiomatization system. It is therefore important to observe the connection between System {a mathematical formula}A and the lattice-inclusion property, which plays a pivotal role in the present paper.
+     </paragraph>
+     <paragraph>
+      The theory underlying the present paper is based on a study of the additive implication problem, and, therefore, its scope of applications is much broader than only the probabilistic implication problem. Other application areas include database constraints, data mining, and reasoning about uncertainty [28], [29], [32], [33]. Within the context of the probabilistic implication problem, the theory is also applicable to other types of (sets of) CI statements, such as stable sets of CI statements [5].
+     </paragraph>
+     <paragraph>
+      An important contribution of this paper are the falsification and validation heuristics for the probabilistic implication problem. While these heuristics are rooted in the lattice-theoretical framework, the supermodularity of the multi-information function also played a pivotal role in the development of the validation criterion. Therefore, a more thorough study of additive implication with respect to the class of supermodular functions is called for.
+     </paragraph>
+     <paragraph>
+      Finally, the lattice-inclusion property and the heuristics developed in this paper can be utilized to store information about conditional independencies more efficiently, using non-redundant representations [5]. This is in line with previous work on more efficient maintenance of conditional independence information [35], [36]. Overall, we believe that we have convincingly argued that the lattice-theoretic framework for reasoning about conditional independence is a novel and powerful tool.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

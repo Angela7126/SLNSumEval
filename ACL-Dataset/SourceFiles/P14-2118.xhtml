@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Concreteness and Subjectivity as Dimensions of Lexical Meaning</title>
+<!--Generated on Wed Jun 11 18:23:52 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Concreteness and Subjectivity as Dimensions of Lexical Meaning</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Felix Hill 
+<br class="ltx_break"/>Computer Laboratory 
+<br class="ltx_break"/>Cambridge University 
+<br class="ltx_break"/>felix.hill@cl.cam.ac.uk 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Anna Korhonen 
+<br class="ltx_break"/>Computer Laboratory 
+<br class="ltx_break"/>Cambridge University 
+<br class="ltx_break"/>anna.korhonen@cl.cam.ac.uk 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We quantify the lexical subjectivity of adjectives using a corpus-based method, and show for the first time that it correlates with noun concreteness in large corpora. These cognitive dimensions together influence how word meanings combine, and we exploit this fact to achieve performance improvements on the semantic classification of adjective-noun pairs.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Concreteness</em>, the degree to which language has a perceptible physical referent, and <em class="ltx_emph">subjectivity</em>, the extent to which linguistic meaning depends on the perspective of the speaker, are well established cognitive and linguistic notions. Recent results suggest that they could also be useful knowledge for natural language processing systems that aim to extract and represent the meaning of language.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Insight into concreteness can help systems to classify adjective-noun pairs according to their semantics. In the non-literal expressions <em class="ltx_emph">kill the process</em> or <em class="ltx_emph">black comedy</em>, a verb or adjective that occurs with a concrete argument in literal phrases takes an abstract argument. <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> present a supervised model that exploits this effect to correctly classify 79% of adjective-noun pairs as having literal or non-literal meaning.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Subjectivity analysis has already proved highly applicable to a range of NLP applications, including sentiment analysis, information extraction and text categorization <cite class="ltx_cite">[<a href="#bib.bib25" title="A sentimental education: sentiment analysis using subjectivity summarization based on minimum cuts" class="ltx_ref">22</a>, <a href="#bib.bib24" title="Learning extraction patterns for subjective expressions" class="ltx_ref">24</a>]</cite>. For such applications, subjectivity is analyzed at the phrasal or document level. However, recent work has highlighted the application of subjectivity analysis to lexical semantics, for instance to the tasks of disambiguating words according to their usage or sense <cite class="ltx_cite">[<a href="#bib.bib26" title="Word sense and subjectivity" class="ltx_ref">28</a>, <a href="#bib.bib27" title="Sense-level subjectivity in a multilingual setting" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The importance of concreteness to NLP systems is likely to grow with the emergence of multi-modal semantic models <cite class="ltx_cite">[<a href="#bib.bib32" title="Distributional semantics in technicolor" class="ltx_ref">8</a>, <a href="#bib.bib31" title="A multimodal LDA model integrating textual, cognitive and visual modalities" class="ltx_ref">25</a>]</cite>. Such models, which learn representations from both linguistic and perceptual input, outperform text-only models on a range of evaluations. However, while multi-modal models acquire richer representations of concrete concepts, their ability to represent abstract concepts can be weaker than text-only models <cite class="ltx_cite">[<a href="#bib.bib77" title="Concreteness and corpora: a theoretical and practical analysis" class="ltx_ref">13</a>]</cite>. A principled treatment of concreteness is thus likely to be important if the multi-modal approach is to prove effective on a wider range of concepts. In a similar vein, interest in subjectivity analysis is set to grow with interest in extracting sentiment and opinion from the web and social media <cite class="ltx_cite">[<a href="#bib.bib28" title="Event discovery in social media feeds" class="ltx_ref">3</a>]</cite>. Moreover, given that humans seem to exploit both concreteness <cite class="ltx_cite">[<a href="#bib.bib3" title="Mental representations: a dual coding approach" class="ltx_ref">20</a>]</cite> and subjectivity <cite class="ltx_cite">[<a href="#bib.bib29" title="Causal connectives in discourse processing: how differences in subjectivity are reflected in eye movements" class="ltx_ref">10</a>]</cite> clues when processing language, it is likely that the same clues should benefit computational models aiming to replicate human-level performance in this area.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In this paper, we show how concreteness and subjectivity can be applied together to produce performance improvements on two classification problems: distinguishing literal and non-literal adjective-noun pairs <cite class="ltx_cite">[<a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">27</a>]</cite>, and classifying the modification type exhibited by such pairs <cite class="ltx_cite">[<a href="#bib.bib48" title="First-order vs. higher-order modification in distributional semantics" class="ltx_ref">5</a>]</cite>. We describe an unsupervised corpus-based method to quantify adjective subjectivity, and show that it effectively predicts the labels of a hand-coded subjectivity lexicon. Further, we show for the first time that adjective subjectivity correlates with noun concreteness in large corpora. In addition, we analyse the effect of noun concreteness and adjective subjectivity on meaning combination, illustrating how the interaction of these dimensions enables the accurate classification of adjective-noun pairs according to their semantics. We conclude by discussing other potential applications of concreteness and subjectivity to NLP.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Dimensions of meaning</h2>
+
+<div id="S2.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Concreteness</h4>
+
+<div id="S2.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">A large and growing body of empirical evidence indicates clear differences between concrete concepts, such as <em class="ltx_emph">donut</em> or <em class="ltx_emph">hotdog</em> and abstract concepts, such as <em class="ltx_emph">guilt</em> or <em class="ltx_emph">obesity</em>. Concrete words are more easily learned, remembered and processed than abstract words <cite class="ltx_cite">[<a href="#bib.bib50" title="Dual coding theory: retrospect and current status." class="ltx_ref">21</a>]</cite>, while differences in brain activity <cite class="ltx_cite">[<a href="#bib.bib53" title="Distinct brain systems for processing concrete and abstract concepts" class="ltx_ref">4</a>]</cite> and cognitive representation <cite class="ltx_cite">[<a href="#bib.bib77" title="Concreteness and corpora: a theoretical and practical analysis" class="ltx_ref">13</a>]</cite> have also been observed. In linguistic conctructions, concreteness appears to influence compound and phrasal semantics <cite class="ltx_cite">[<a href="#bib.bib51" title="On regularity in semantic change" class="ltx_ref">26</a>, <a href="#bib.bib44" title="The career of metaphor." class="ltx_ref">7</a>, <a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">27</a>]</cite>. Together with the practical applications outlined in Section 1, these facts indicate the potential value of concreteness for models aiming to replicate human performance in language processing tasks.</p>
+</div>
+<div id="S2.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">While automatic methods have been proposed for the quantification of lexical concreteness, they each rely on dictionaries or similar hand-coded resources <cite class="ltx_cite">[<a href="#bib.bib5" title="A preliminary study on the impact of lexical concreteness on word sense disambiguation." class="ltx_ref">15</a>, <a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">27</a>]</cite>. We instead extract scores from a recently released dataset of lexical concepts rated on a 1-5 scale for concreteness by 20 annotators in a crowdsourcing experiment <cite class="ltx_cite">[<a href="#bib.bib47" title="Concreteness ratings for 40 thousand generally known English word lemmas" class="ltx_ref">9</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Available at http://crr.ugent.be/archives/1330.</span></span></span></p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Subjectivity</h4>
+
+<div id="S2.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Subjectivity is the degree to which language is interpretable independently of the speaker’s perspective <cite class="ltx_cite">[<a href="#bib.bib45" title="Deixis and subjectivity" class="ltx_ref">17</a>]</cite>. For example, the utterance <em class="ltx_emph">he sits across the table</em> is more subjective than <em class="ltx_emph">he sits opposite Sam</em> as its truth depends on the speaker’s position. Language may also be subjective because it conveys evaluations or opinions <cite class="ltx_cite">[<a href="#bib.bib84" title="Learning multilingual subjective language via cross-lingual projections" class="ltx_ref">19</a>]</cite>.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Computational applications of subjectivity, including sentiment analysis and information extraction, have focused largely on phrase or document meaning.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>See e.g. <cite class="ltx_cite">[<a href="#bib.bib18" title="Finding mutual benefit between subjectivity analysis and information extraction" class="ltx_ref">29</a>]</cite>.</span></span></span> In contrast, here we present six corpus-based features designed to quantify the <em class="ltx_emph">lexical</em> subjectivity of adjectives. The features <em class="ltx_emph">Comparability</em> and <em class="ltx_emph">Modifiability</em> are identified as predictors of subjectivity by <cite class="ltx_cite">Wiebe (<a href="#bib.bib83" title="Learning subjective adjectives from corpora" class="ltx_ref">2000</a>)</cite>. The remainder are motivated by corpus studies and/or observations from the theoretical literature.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Several of the features here were applied by <cite class="ltx_cite">Hill (<a href="#bib.bib85" title="Beauty before age? Applying subjectivity to automatic english adjective ordering" class="ltx_ref">2012</a>)</cite>, to the task of ordering multiple-modifier strings.</span></span></span></p>
+</div>
+<div id="S2.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Adverbiability</em>: <cite class="ltx_cite">Quirk<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib82" title="A comprehensive grammar of the english language" class="ltx_ref">1985</a>)</cite> theorizes that subjective adjectives tend to develop derived adverbial forms, whereas more objective adjectives do not. We thus define adverbiability as the frequency of derived adverbial forms relative to the frequency of their base form, e.g.</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\frac{\sum hotly}{\sum hot+\sum hotly}" display="block"><mfrac><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>y</mi></mrow></mrow><mrow><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>y</mi></mrow></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS0.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Comparability</em>: <cite class="ltx_cite">Wiebe (<a href="#bib.bib83" title="Learning subjective adjectives from corpora" class="ltx_ref">2000</a>)</cite> oberve that <em class="ltx_emph">gradable</em> are more likely to be subjective. Following Wiebe, we note that the existence of comparative forms for an adjective are indicative of gradability. We thus define comparability as the frequency of comparative or superlative forms relative to the frequency of the base form, e.g.</p>
+<table id="S2.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\frac{\sum hotter+\sum hottest}{\sum hot+\sum hotter+\sum hottest}" display="block"><mfrac><mrow><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></mrow></mrow><mrow><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS0.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">LeftTendency</em>: <cite class="ltx_cite">Adamson (<a href="#bib.bib80" title="A lovely little example" class="ltx_ref">2000</a>)</cite> proposes that more subjective adjectives typically occur furthest from the noun in multiple-modifier strings such as (<em class="ltx_emph"><span class="ltx_text" style="text-decoration:underline;">hot</span> crossed buns</em>). We consequently extract the LeftTendency of our adjectives, defined as the frequency of occurrence as the leftmost of two adjectives as a proportion of the overall frequency of occurrence in multiple-modifier strings.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p6" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Modifiability</em>: Another characteristic of gradable adjectives noted by <cite class="ltx_cite">Wiebe (<a href="#bib.bib83" title="Learning subjective adjectives from corpora" class="ltx_ref">2000</a>)</cite> is that they admit degree modifiers (<em class="ltx_emph"><span class="ltx_text" style="text-decoration:underline;">very/quite</span> delicious</em>). We therefore extract the relative frequency of occurrence with one of a hand-coded list of English degree modifiers.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p7" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Predicativity</em>: <cite class="ltx_cite">Bolinger (<a href="#bib.bib79" title="Adjectives in english: attribution and predication" class="ltx_ref">1967</a>)</cite> proposed that subjective adjectives occur in predicative constructions (<em class="ltx_emph">the cake is sweet</em>), rather than attributive constructions (<em class="ltx_emph">the German capital</em>) more frequently than objective adjectives. We therefore extract the relative frequency of occurrence in such constructions.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p8" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Non-nominality</em>: Many adjectives also function as nouns (<em class="ltx_emph"><span class="ltx_text" style="text-decoration:underline;">sweet</span> cake</em> vs. (<em class="ltx_emph">boiled <span class="ltx_text" style="text-decoration:underline;">sweet</span></em>). Unlike nouns, many adjectives are inherently subjective, and the number of adjectives in texts correlates with human judgements of their subjectivity <cite class="ltx_cite">[<a href="#bib.bib81" title="Effects of adjective orientation and gradability on sentence subjectivity" class="ltx_ref">12</a>]</cite>. We therefore extract the frequency with which concepts are tagged as adjectives relative to as nouns, on the assumption that ‘pure’ adjectives are on average more subjective than nominal-style adjectives.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Concreteness meets Subjectivity</h4>
+
+<div id="S2.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Demonstrable commonalities in how different people perceive the physical world suggest that concrete language may be more objective than abstract language <cite class="ltx_cite">[<a href="#bib.bib46" title="Consciousness, construal and subjectivity" class="ltx_ref">16</a>]</cite>. Intuitively, adjectives ascribing physical properties (<em class="ltx_emph">wooden shed</em>) are more objective than those conveying abstract traits (<em class="ltx_emph">suspicious man</em>). Indeed, in certain cases the original, apparently objective, senses of polysemous adjectives are not modifiable (<em class="ltx_emph">very wooden shed</em>?), while their more abstract sense extensions are (<em class="ltx_emph">very wooden personality</em>).</p>
+</div>
+<div id="S2.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Motivated by these observations, in the following sections we test two hypotheses. (1) Subjective / objective adjectives are more likely to modify abstract / concrete nouns respectively. (2) Subjectivity and concreteness can predict aspects of how adjective and noun concepts combine.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Analysis</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In addressing (1), we extracted the 2,000 highest-frequency nouns from the <cite class="ltx_cite">Brysbaert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib47" title="Concreteness ratings for 40 thousand generally known English word lemmas" class="ltx_ref">2013</a>)</cite> concreteness dataset. We denote by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="CONC(n)" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> the mean concreteness rating for noun <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>. For the 24,908 adjectives that occur in some adjective-noun pair with one of these nouns in the British National Corpus (BNC) <cite class="ltx_cite">[<a href="#bib.bib56" title="CLAWS4: the tagging of the british national corpus" class="ltx_ref">18</a>]</cite>, we extracted subjectivity features from the Google Books Corpus <cite class="ltx_cite">[<a href="#bib.bib37" title="A dataset of syntactic-ngrams over time from a very large corpus of english books" class="ltx_ref">11</a>]</cite>. Since each of the six features takes values on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="[0,1]" display="inline"><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></math>, we define the overall subjectivity of an adjective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> with feature vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="{\bf s}^{a}=[s^{a}_{1}\dots s^{a}_{6}]" display="inline"><mrow><msup><mi>𝐬</mi><mi>a</mi></msup><mo>=</mo><mrow><mo>[</mo><mrow><msubsup><mi>s</mi><mn>1</mn><mi>a</mi></msubsup><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msubsup><mi>s</mi><mn>6</mn><mi>a</mi></msubsup></mrow><mo>]</mo></mrow></mrow></math> as</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="SUBJ(a)=\sum_{i=1}^{6}{s}^{a}_{i}." display="block"><mrow><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>U</mi><mo>⁢</mo><mi>B</mi><mo>⁢</mo><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>6</mn></munderover><msubsup><mi>s</mi><mi>i</mi><mi>a</mi></msubsup></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">To verify the quality of our subjectivity features, we measured their performance as predictors in a logistic regression classifying the 3,250 adjectives labelled as subjective or not in the <cite class="ltx_cite">Wilson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib49" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">2005</a>)</cite> lexicon.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Available at http://mpqa.cs.pitt.edu/</span></span></span> The combination of all features produced an overall classifiction accuracy of 79%. The performance of individual features as predictors in isolation is shown in Figure 1 (top).</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We first tested the relationship between concreteness and subjectivity with a correlation analysis over noun concepts. For each noun <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> we defined its <em class="ltx_emph">subjectivity profile</em> as the mean of the subjectivity vectors of its modifying adjectives</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="SUBJpfl(n)=\frac{1}{|A^{n}|}\sum_{a\in A^{n}}{\bf s}^{a}" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>U</mi><mo>⁢</mo><mi>B</mi><mo>⁢</mo><mi>J</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msup><mi>A</mi><mi>n</mi></msup><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>a</mi><mo>∈</mo><msup><mi>A</mi><mi>n</mi></msup></mrow></munder><msup><mi>𝐬</mi><mi>a</mi></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the bag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="A^{n}" display="inline"><msup><mi>A</mi><mi>n</mi></msup></math> contains an adjective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> for each occurrence of the pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="(a,n)" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></math> in the BNC. As hypothesized, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="CONC(n)" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> was a significant predictor of the magnitude of the subjectivity profile (Pearson <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="r=-0.421,p&lt;0.01" display="inline"><mrow><mrow><mi>r</mi><mo>=</mo><mrow><mo>-</mo><mn>0.421</mn></mrow></mrow><mo>,</mo><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></mrow></math>). This effect is illustrated in Figure 1 (bottom).</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2118/image001.png" id="S3.F1.g1" class="ltx_graphics" width="677" height="738" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Top: Performance of features in predicting subjectivity labels from the <cite class="ltx_cite">Wilson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib49" title="Recognizing contextual polarity in phrase-level sentiment analysis" class="ltx_ref">2005</a>)</cite> lexicon. Bottom: Concreteness-subjectivity correlation in adj-noun pairs.</div>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small"></span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="SUBJ(a)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>U</mi><mo>⁢</mo><mi>B</mi><mo>⁢</mo><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small"></span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="CONC(n)" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph ltx_font_small">flashy</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.98</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph ltx_font_small">umbrella</em></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">honest</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.63</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">flask</em></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">good</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.59</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">automobile</em></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_ERROR undefined">\hdashline</span><em class="ltx_emph ltx_font_small">Siberian</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="6.9\times 10^{-}4" display="inline"><mrow><mrow><mn>6.9</mn><mo>×</mo><msup><mn>10</mn><mo>-</mo></msup></mrow><mo>⁢</mo><mn>4</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">virtue</em></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.49</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">interglacial</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="6.3\times 10^{-}4" display="inline"><mrow><mrow><mn>6.3</mn><mo>×</mo><msup><mn>10</mn><mo>-</mo></msup></mrow><mo>⁢</mo><mn>4</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">pride</em></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.46</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">Soviet</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m7" class="ltx_Math" alttext="1.9\times 10^{-}4" display="inline"><mrow><mrow><mn>1.9</mn><mo>×</mo><msup><mn>10</mn><mo>-</mo></msup></mrow><mo>⁢</mo><mn>4</mn></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph ltx_font_small">hope</em></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.18</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span> The most and least subjective adjectives and most and least concrete nouns in our data.</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">To explore the relationship between concreteness, subjectivity and meaning, we plotted the 20,000 highest frequency <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="(a,n)" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></math> pairs in the BNC in the <em class="ltx_emph">CONC-SUBJ</em> semantic space (Figure 2, top). In addition, to examine the effect of concreteness alone on adjective-noun semantics, we defined a new adjective feature</p>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="ExpCONC(a)=\frac{1}{|N^{a}|}\sum_{n\in N^{a}}CONC(n)" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><msup><mi>N</mi><mi>a</mi></msup><mo fence="true">|</mo></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>n</mi><mo>∈</mo><msup><mi>N</mi><mi>a</mi></msup></mrow></munder><mrow><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the bag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="N^{a}" display="inline"><msup><mi>N</mi><mi>a</mi></msup></math> contains noun <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> for each occurrence of the pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="(a,n)" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></math> in the BNC. Figure 2 (bottom) illustrates the the <em class="ltx_emph">CONC-ExpCONC</em> space.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">In both spaces, the extremities reflect particular meaning combination types. Pairs in the bottom-left region of the <em class="ltx_emph">CONC-SUBJ</em> space (objective adjectives with abstract nouns, such as <em class="ltx_emph">green politics</em>) seem to exhibit a non-literal, or at least non prototypical modification type. In contrast, for pairs in the objective+concrete corner, the adjectives appear to perform a classifying or categorizing function (<em class="ltx_emph">baptist minister</em>).</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">In the <em class="ltx_emph">CONC-ExpCONC</em> space, on the diagonal, where noun-concreteness is ‘as expected’, pairings appear to combine literally. Away from the diagonal, meaning composition is less predictable. In the top-left, where <em class="ltx_emph">ExpCONC</em> is greater than <em class="ltx_emph">CONC</em>, the combinations are almost all non-literal, as shown in Table 2.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">In this section we have outlined a set of corpus features that, taken together, enable effective approximation of adjective subjectivity. The results of our analyses also demonstrate a clear interaction between subjectivity and concreteness scores for nouns attributed by human raters. Specifically, objective adjectives are more likely to modify concrete nouns and subjective adjectives are more likely to modify abstract nouns. Qualitative investigations further suggest the interaction between these dimensions to be useful in the semantic characterization of adjective-noun pairs, a proposition we test formally in the next section.</p>
+</div>
+<div id="S3.F2" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subgraphics"><img src="P14-2118/image002.png" id="S3.F2.g1" class="ltx_graphics" width="677" height="502" alt=""/></td>
+<td class="ltx_subgraphics"><img src="P14-2118/image003.png" id="S3.F2.g2" class="ltx_graphics" width="676" height="422" alt=""/></td></tr>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Adjective-noun pairs in two semantic spaces. Selected pairs are labelled for illustration, italics indicate non-literal meaning combinations.</div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="(a,n)" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="(a,n)" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph">white hope</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4.61</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph">mature attitude</em></td>
+<td class="ltx_td ltx_align_center ltx_border_t">4.05</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">fresh hope</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.34</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">injured pride</em></td>
+<td class="ltx_td ltx_align_center">4.03</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">male pride</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.28</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">black mood</em></td>
+<td class="ltx_td ltx_align_center">3.99</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">wild hope</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.06</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">white spirit</em></td>
+<td class="ltx_td ltx_align_center">3.93</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> The eight pairs with highest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="\Delta=ExpCONC(a)-CONC(n)" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>=</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>a</mi><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>C</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></mrow></mrow></math> in our data.</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We evaluate the potential of our adjective subjectivity features, together with noun concreteness, to predict adjective-noun semantics, based on two existing classification tasks.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Non-literal Composition Task</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">To evaluate their model of lexical concreteness, <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> developed a list of 100 common adjective-noun pairs classified as either <em class="ltx_emph">denotative</em> (used literally) or <em class="ltx_emph">connotative</em> (non-literal) by five annotators. Using an identical supervised learning procedure to Turney et al. (logistic regression with 10-fold cross-validation), we test whether our lexical representations based on subjectivity and concreteness convey sufficient information to perform the same classification.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Modification-type Classification</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Boleda<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib48" title="First-order vs. higher-order modification in distributional semantics" class="ltx_ref">2012</a>)</cite> introduce a set of 370 adjective-noun pairs grouped into modification types by human judges. Because a <em class="ltx_emph">red car</em> is both a car and red, the pair is classed as <em class="ltx_emph">intersective</em>, whereas <em class="ltx_emph">dark humour</em>, which is not literally dark, is classed as <em class="ltx_emph">subsective</em>. To create a distinct but analogous binary categorization problem to the composition task, we filtered out pairs not unanimously allocated to either class. We again aim to classify the remaining 211 intersective and 93 subsective pairs with a logistic regression.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Results </h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Models were trained with concreteness features (<em class="ltx_emph">CONC</em> and <em class="ltx_emph">ExpCONC</em>), subjectivity features (<em class="ltx_emph">SUBJ</em> and <em class="ltx_emph">SUBJpfl</em>) and the combination of both types (<em class="ltx_emph">Combined</em>). The performance of each model is presented in Table 3, along with a baseline score reflecting the strategy of allocating all pairs to the largest class.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">On the non-literal composition task, the concreteness (83.0) and combined (85.0) models outperform that of Turney et al. (79.0). The concreteness model performance represents further confirmation of the link between concreteness and composition. The improvement of this model over <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib61" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> is perhaps to be expected, since our model exploits the wide scope of the new <cite class="ltx_cite">Brysbaert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib47" title="Concreteness ratings for 40 thousand generally known English word lemmas" class="ltx_ref">2013</a>)</cite> crowdsourced data whereas Turney et al. infer concreteness scores from a smaller training set. Notably, our combined model improves on the concreteness-only model, confirming that the interaction of concreteness and subjectivity provides additional information pertinent to meaning composition.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">The modification-type task has no performance benchmark since <cite class="ltx_cite">Boleda<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib48" title="First-order vs. higher-order modification in distributional semantics" class="ltx_ref">2012</a>)</cite> do not use their data for classification. Although all models improve on the majority-class baseline, the combined model was again most effective. Additive improvement over the baseline in each case was lower than for the composition task, which may reflect the greater subtlety inherent in the subsective/intersective classification. Indeed, inter-annotator agreement for this goldstandard (Cohen’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="\kappa=0.87" display="inline"><mrow><mi>κ</mi><mo>=</mo><mn>0.87</mn></mrow></math>) was lower than for the composition task (0.95), implying a less cognitively salient distinction.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Feature type</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">Composition</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">Modification</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">55.0</td>
+<td class="ltx_td ltx_align_center ltx_border_t">69.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Concreteness</th>
+<td class="ltx_td ltx_align_center ltx_border_r">83.0</td>
+<td class="ltx_td ltx_align_center">72.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Subjectivity</th>
+<td class="ltx_td ltx_align_center ltx_border_r">64.0</td>
+<td class="ltx_td ltx_align_center">70.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Combined</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">85.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">75.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Turney et al.</th>
+<td class="ltx_td ltx_align_center ltx_border_r">79.0</td>
+<td class="ltx_td ltx_align_center">-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Prediction accuracy (%) of models with different features on the two tasks. The baseline method allocates all test pairs to the majority class.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have shown that objective adjectives are most likely to modify concrete nouns, and that non-literal combinations can emerge when this principle is violated (Section 3). Indeed, the occurrence of an adjective with a more abstract noun than those it typically modifies is a strikingly consistent indicator of metaphoricity (Table 2). In addition, we showed that both concreteness and subjectivity improve the automatic classification of adjective-noun pairs according to compositionality or modification type (Section 4). Importantly, a classifier with both subjectivity and concreteness features outperforms concreteness-only classifiers, including those proposed in previous work.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The results underline the relevance of both subjectivity and concreteness to lexical and phrasal semantics, and their application to language processing tasks. We hypothesize that concreteness and subjectivity are fundamental to human language processing because language is precisely the conveyance of information about the world from one party to another. In decoding this signal, it is clearly informative to understand to what extent the information refers directly to the world, and also to what extent it reports a fact versus an opinion. We believe these dimensions will ultimately prove essential for computational systems aiming to replicate human performance in interpreting language. As the results suggest, they may be particularly important for capturing the intricacies of semantic composition and thus extending representations beyond the lexeme.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Of course, two dimensions alone are not sufficient to reflect all of the subtleties of adjective and noun semantics. For instance, our model classifies <em class="ltx_emph">white spirit</em>, a transparent cleaning product, as non-literal, since the lexical concreteness score does not allow for strong noun polysemy. Further, it makes no allowance for wider sentential context, which can be an important clue to modification type in such cases.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">We aim to address these limitations in future work by integrating subjectivity and concreteness with conventially acquired semantic representations, and, ultimately, models that integrate input corresponding to the perceptual modalities.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Acknowledgements</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">The authors are supported by St John’s College, Cambridge and The Royal Society.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib80" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Adamson</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A lovely little example</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">O. Fischer, A. Rosenbach and D. Stein (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Pathways of change: Grammaticalization in English</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p5" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Banea, R. Mihalcea and J. Wiebe</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sense-level subjectivity in a multilingual setting</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech &amp; Language</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 7–19</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Benson, A. Haghighi and R. Barzilay</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Event discovery in social media feeds</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 389–398</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Binder, C. F. Westbury, K. A. McKiernan, E. T. Possing and D. A. Medler</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distinct brain systems for processing concrete and abstract concepts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Cognitive Neuroscience</span> <span class="ltx_text ltx_bib_volume">17</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 905–917</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Boleda, E. M. Vecchi, M. Cornudella and L. McNally</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">First-order vs. higher-order modification in distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1223–1233</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Modification-type Classification ‣ 4 Evaluation ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS3.p3" title="4.3 Results ‣ 4 Evaluation ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib79" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Bolinger</span><span class="ltx_text ltx_bib_year">(1967)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adjectives in english: attribution and predication</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Lingua</span> <span class="ltx_text ltx_bib_volume">18</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–34</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p7" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. F. Bowdle and D. Gentner</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The career of metaphor.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological review</span> <span class="ltx_text ltx_bib_volume">112</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 193</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, G. Boleda, M. Baroni and N. Tran</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional semantics in technicolor</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 136–145</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Brysbaert, A. B. Warriner and V. Kuperman</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Concreteness ratings for 40 thousand generally known English word lemmas</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior research methods</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p2" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p1" title="3 Analysis ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS3.p2" title="4.3 Results ‣ 4 Evaluation ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. R. Canestrelli, W. M. Mak and T. J. Sanders</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Causal connectives in discourse processing: how differences in subjectivity are reflected in eye movements</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language and Cognitive Processes</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">9</span>), <span class="ltx_text ltx_bib_pages"> pp. 1394–1413</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and J. Orwant</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A dataset of syntactic-ngrams over time from a very large corpus of english books</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 241–247</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Analysis ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Hatzivassiloglou and J. M. Wiebe</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effects of adjective orientation and gradability on sentence subjectivity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 299–305</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p8" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Hill, D. Kiela and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Concreteness and corpora: a theoretical and practical analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACL 2013 Workshop on Cognitive Modelling and Computational Linguistics, CMCL 2013</span>, <span class="ltx_text ltx_bib_pages"> pp. 75</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Hill</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Beauty before age? Applying subjectivity to automatic english adjective ordering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 11–16</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p2" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Y. Kwong</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A preliminary study on the impact of lexical concreteness on word sense disambiguation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 235–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p2" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. W. Langacker</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Consciousness, construal and subjectivity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language structure, discourse and the access to consciousness. Advances in Consciousness Research. John Benjamins</span>, <span class="ltx_text ltx_bib_pages"> pp. 49–57</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p1" title="Concreteness meets Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. W. Langacker</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deixis and subjectivity</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">F. Brisard (Ed.)</span>, <span class="ltx_text ltx_bib_inbook">Grounding: The epistemic footing of deixis and reference</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Leech, R. Garside and M. Bryant</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CLAWS4: the tagging of the british national corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 622–628</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Analysis ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea, C. Banea and J. Wiebe</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning multilingual subjective language via cross-lingual projections</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 976</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Paivio</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mental representations: a dual coding approach</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Oxford University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Paivio</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual coding theory: retrospect and current status.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Canadian Journal of Psychology/Revue canadienne de psychologie</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 255</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A sentimental education: sentiment analysis using subjectivity summarization based on minimum cuts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Quirk, D. Crystal and P. Education</span><span class="ltx_text ltx_bib_year">(1985)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comprehensive grammar of the english language</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">397</span>,  <span class="ltx_text ltx_bib_publisher">Cambridge Univ Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p3" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Riloff and J. Wiebe</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning extraction patterns for subjective expressions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 105–112</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Roller and S. Schulte im Walde</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A multimodal LDA model integrating textual, cognitive and visual modalities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1146–1157</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. C. Traugott</span><span class="ltx_text ltx_bib_year">(1985)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On regularity in semantic change</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of literary semantics</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 155–173</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney, Y. Neuman, D. Assaf and Y. Cohen</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Literal and metaphorical sense identification through concrete and abstract context</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 680–690</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P1.p1" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS0.SSS0.P1.p2" title="Concreteness ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Non-literal Composition Task ‣ 4 Evaluation ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS3.p2" title="4.3 Results ‣ 4 Evaluation ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word sense and subjectivity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1065–1072</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe and E. Riloff</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding mutual benefit between subjectivity analysis and information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Affective Computing, IEEE Transactions on</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 175–191</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p2" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wiebe</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning subjective adjectives from corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 735–740</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p2" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS0.SSS0.P2.p4" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS0.SSS0.P2.p6" title="Subjectivity ‣ 2 Dimensions of meaning ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Wilson, J. Wiebe and P. Hoffmann</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing contextual polarity in phrase-level sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 347–354</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.F1" title="Figure 1 ‣ 3 Analysis ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Analysis ‣ Concreteness and Subjectivity as Dimensions of Lexical Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:23:52 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,724 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Together we know how to achieve: An epistemic logic of know-how.
+   </title>
+   <abstract>
+    The existence of a coalition strategy to achieve a goal does not necessarily mean that the coalition has enough information to know how to follow the strategy. Neither does it mean that the coalition knows that such a strategy exists. The article studies an interplay between the distributed knowledge, coalition strategies, and coalition “know-how” strategies. The main technical result is a sound and complete trimodal logical system that describes the properties of this interplay.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      An agent a comes to a fork in a road. There is a sign that says that one of the two roads leads to prosperity, another to death. The agent must take the fork, but she does not know which road leads where. Does the agent have a strategy to get to prosperity? On one hand, since one of the roads leads to prosperity, such a strategy clearly exists. We denote this fact by modal formula {a mathematical formula}Sap, where statement p is a claim of future prosperity. Furthermore, agent a knows that such a strategy exists. We write this as {a mathematical formula}KaSap. Yet, the agent does not know what the strategy is and, thus, does not know how to use the strategy. We denote this by {a mathematical formula}¬Hap, where know-how modality {a mathematical formula}Ha expresses the fact that agent a knows how to achieve the goal based on the information available to her. In this article we study the interplay between modality {a mathematical formula}K, representing knowledge, modality {a mathematical formula}S, representing the existence of a strategy, and modality {a mathematical formula}H, representing the existence of a know-how strategy. Our main result is a complete trimodal axiomatic system capturing properties of this interplay.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Epistemic transition systems
+      </section-title>
+      <paragraph>
+       In this article we use epistemic transition systems to capture knowledge and strategic behavior. Informally, epistemic transition system is a directed labeled graph supplemented by an indistinguishability relation on vertices. For instance, our motivational example above can be captured by epistemic transition system {a mathematical formula}T1 depicted in Fig. 1. In this system state w represents the prosperity and state {a mathematical formula}w′ represents death. The original state is u, but it is indistinguishable by the agent a from state v. Arrows on the diagram represent possible transitions between the states. Labels on the arrows represent the choices that the agents make during the transition. For example, if in state u agent chooses left (L) road, she will transition to the prosperity state w and if she chooses right (R) road, she will transition to the death state {a mathematical formula}w′. In another epistemic state v, these roads lead the other way around. States u and v are not distinguishable by agent a, which is shown by the dashed line between these two states. In state u as well as state v the agent has a strategy to transition to the state of prosperity: {a mathematical formula}u⊩Sap and {a mathematical formula}v⊩Sap. In the case of state u this strategy is L, in the case of state v the strategy is R. Since the agent cannot distinguish states u and v, in both of these states she does not have a know-how strategy to reach prosperity: {a mathematical formula}u⊮Hap and {a mathematical formula}v⊮Hap. At the same time, since formula {a mathematical formula}Sap is satisfied in all states indistinguishable to agent a from state u, we can claim that {a mathematical formula}u⊩KaSap and, similarly, {a mathematical formula}v⊩KaSap.
+      </paragraph>
+      <paragraph>
+       As our second example, let us consider the epistemic transition system {a mathematical formula}T2 obtained from {a mathematical formula}T1 by swapping labels on transitions from v to w and from v to {a mathematical formula}w′, see Fig. 2. Although in system {a mathematical formula}T2 agent a still cannot distinguish states u and v, she has a know-how strategy from either of these states to reach state w. We write this as {a mathematical formula}u⊩Hap and {a mathematical formula}v⊩Hap. The strategy is to choose L. This strategy is know-how because it does not require to make different choices in the states that the agent cannot distinguish.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Imperfect recall
+      </section-title>
+      <paragraph>
+       For the next example, we consider a transition system {a mathematical formula}T3 obtained from system {a mathematical formula}T1 by adding a new epistemic state s. (See Fig. 3.) From state s, agent a can choose label L to reach state u or choose label R to reach state v. Since proposition q is satisfied in state u, agent a has a know-how strategy to transition from state s to a state (namely, state u) where q is satisfied. Therefore, {a mathematical formula}s⊩Haq.
+      </paragraph>
+      <paragraph>
+       A more interesting question is whether {a mathematical formula}s⊩HaHap is true. In other words, does agent a know how to transition from state s to a state in which she knows how to transition to another state in which p is satisfied? One might think that such a strategy indeed exists: in state s agent a chooses label L to transition to state u. Since there is no transition labeled by L that leads from state s to state v, upon ending the first transition the agent would know that she is in state u, where she needs to choose label L to transition to state w. This argument, however, is based on the assumption that agent a has a perfect recall. Namely, agent a in state u remembers the choice that she made in the previous state. We assume that the agents do not have a perfect recall and that an epistemic state description captures whatever memories the agent has in this state. In other words, in this article we assume that the only knowledge that an agent possesses is the knowledge captured by the indistinguishability relation on the epistemic states. Given this assumption, upon reaching the state u (indistinguishable from state v) agent a knows that there exists a choice that she can make to transition to state in which p is satisfied: {a mathematical formula}s⊩HaSap. However, she does not know which choice (L or R) it is: {a mathematical formula}s⊮HaHap.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Multiagent setting
+      </section-title>
+      <paragraph>
+       So far, we have assumed that only agent a has an influence on which transition the system takes. In transition system {a mathematical formula}T4 depicted in Fig. 4, we introduce another agent b and assume both agents a and b have influence on the transitions. In each state, the system takes the transition labeled D by default unless there is a consensus of agents a and b to take the transition labeled C. In such a setting, each agent has a strategy to transition system from state u into state w by voting D, but neither of them alone has a strategy to transition from state u to state {a mathematical formula}w′ because such a transition requires the consensus of both agents. Thus, {a mathematical formula}u⊩Sap∧Sbp∧¬Saq∧¬Sbq. Additionally, both agents know how to transition the system from state u into state w, they just need to vote D. Therefore, {a mathematical formula}u⊩Hap∧Hbp.
+      </paragraph>
+      <paragraph>
+       In Fig. 5, we show a more complicated transition system obtained from {a mathematical formula}T1 by renaming label L to D and renaming label R to C. Same as in transition system {a mathematical formula}T4, we assume that there are two agents a and b voting on the system transition. We also assume that agent a cannot distinguish states u and v while agent b can. By default, the system takes the transition labeled D unless there is a consensus to take transition labeled C. As a result, agent a has a strategy (namely, vote D) in state u to transition system to state w, but because agent a cannot distinguish state u from state v, not only does she not know how to do this, but she is not aware that such a strategy exists: {a mathematical formula}u⊩Sap∧¬Hap∧¬KaSap. Agent b, however, not only has a strategy to transition the system from state u to state w, but also knows how to achieve this: {a mathematical formula}u⊩Hbp.
+      </paragraph>
+     </section>
+     <section label="1.4">
+      <section-title>
+       Coalitions
+      </section-title>
+      <paragraph>
+       We have talked about strategies, know-hows, and knowledge of individual agents. In this article we consider knowledge, strategies, and know-how strategies of coalitions. There are several forms of group knowledge that have been studied before. The two most popular of them are common knowledge and distributed knowledge [1]. Different contexts call for different forms of group knowledge.
+      </paragraph>
+      <paragraph>
+       As illustrated in the famous Two Generals' Problem [2], [3] where communication channels between the agents are unreliable, establishing a common knowledge between agents might be essential for having a strategy.
+      </paragraph>
+      <paragraph>
+       In some settings, the distinction between common and distributed knowledge is insignificant. For example, if members of a political fraction get together to share all their information and to develop a common strategy, then the distributed knowledge of the members becomes the common knowledge of the fraction during the in-person meeting.
+      </paragraph>
+      <paragraph>
+       Finally, in some other situations the distributed knowledge makes more sense than the common knowledge. For example, if a panel of experts is formed to develop a strategy, then this panel achieves the best result if it relies on the combined knowledge of its members rather than on their common knowledge.
+      </paragraph>
+      <paragraph>
+       In this article we focus on distributed coalition knowledge and distributed-know-how strategies. We leave the common knowledge for the future research. Establishing distributed knowledge though communication between agents might affect what is known by individual agents [4], but the communication between agents is out of the scope of this paper.
+      </paragraph>
+      <paragraph>
+       To illustrate how distributed knowledge of coalitions interacts with strategies and know-hows, consider epistemic transition system {a mathematical formula}T6 depicted in Fig. 6. In this system, agents a and b cannot distinguish states u and v while agents b and c cannot distinguish states v and {a mathematical formula}u′. In every state, each of agents a, b and c votes either L or R, and the system transitions according to the majority vote. In such a setting, any coalition of two agents can fully control the transitions of the system.
+      </paragraph>
+      <paragraph>
+       For example, by both voting L, agents a and b form a coalition {a mathematical formula}{a,b} that forces the system to transition from state u to state w no matter how agent c votes. Since proposition p is satisfied in state w, we write {a mathematical formula}u⊩S{a,b}p, or simply {a mathematical formula}u⊩Sa,bp. Similarly, coalition {a mathematical formula}{a,b} can vote R to force the system to transition from state v to state w. Therefore, coalition {a mathematical formula}{a,b} has strategies to achieve p in states u and v, but the strategies are different. Since they cannot distinguish states u and v, agents a and b know that they have a strategy to achieve p, but they do not know how to achieve p. In our notations, {a mathematical formula}v⊩Sa,bp∧Ka,bSa,bp∧¬Ha,bp.
+      </paragraph>
+      <paragraph>
+       On the other hand, although agents b and c cannot distinguish states v and {a mathematical formula}u′, by both voting R in either of states v and {a mathematical formula}u′, they form a coalition {a mathematical formula}{b,c} that forces the system to transition to state w where p is satisfied. Therefore, in any of states v and {a mathematical formula}u′, they not only have a strategy to achieve p, but also know that they have such a strategy, and more importantly, they know how to achieve p, that is, {a mathematical formula}v⊩Hb,cp.
+      </paragraph>
+     </section>
+     <section label="1.5">
+      <section-title>
+       Nondeterministic transitions
+      </section-title>
+      <paragraph>
+       In all the examples that we have discussed so far, given any state in a system, agents' votes uniquely determine the transition of the system. Our framework also allows nondeterministic transitions. Consider transition system {a mathematical formula}T7 depicted in Fig. 7. In this system, there are two agents a and b who can vote either C or D. If both agents vote C, then the system takes one of the consensus transitions labeled with C. Otherwise, the system takes the transition labeled with D. Note that there are two consensus transitions starting from state u. Therefore, even if both agents vote C, they do not have a strategy to achieve p, i.e., {a mathematical formula}u⊮Sa,bp. However, they can achieve {a mathematical formula}p∨q. Moreover, since all agents can distinguish all states, we have {a mathematical formula}u⊩Ha,b(p∨q).
+      </paragraph>
+     </section>
+     <section label="1.6">
+      <section-title>
+       Universal principles
+      </section-title>
+      <paragraph>
+       In the examples above we focused on specific properties that were either satisfied or not satisfied in particular states of epistemic transition systems {a mathematical formula}T1 through {a mathematical formula}T7. In this article, we study properties that are satisfied in all states of all epistemic transition systems. Our main result is a sound and complete axiomatization of all such properties. We finish the introduction with an informal discussion of these properties.
+      </paragraph>
+      <paragraph>
+       Properties of single modalities  Knowledge modality {a mathematical formula}KC satisfies the axioms of epistemic logic S5 with distributed knowledge. Both strategic modality {a mathematical formula}SC and know-how modality {a mathematical formula}HC satisfy cooperation properties [5], [6]:{a mathematical formula}{a mathematical formula} They also satisfy monotonicity properties{a mathematical formula} The two monotonicity properties are not among the axioms of our logical system because, as we show in Lemma 5 and Lemma 3, they are derivable.
+      </paragraph>
+      <paragraph>
+       Properties of interplay  Note that {a mathematical formula}w⊩HCφ means that coalition C has the same strategy to achieve φ in all epistemic states indistinguishable by the coalition from state w. Hence, the following principle is universally true:{a mathematical formula} Similarly, {a mathematical formula}w⊩¬HCφ means that coalition C does not have the same strategy to achieve φ in all epistemic states indistinguishable by the coalition from state w. Thus,{a mathematical formula} We call properties (3) and (4)strategic positive introspection and strategic negative introspection, respectively. The strategic negative introspection is one of our axioms. Just as how the positive introspection principle follows from the rest of the axioms in S5 (see Lemma 14), the strategic positive introspection principle is also derivable (see Lemma 1).
+      </paragraph>
+      <paragraph>
+       Whenever a coalition knows how to achieve something, there should exist a strategy for the coalition to achieve. In our notation,{a mathematical formula} We call this formula strategic truth property and it is one of the axioms of our logical system.
+      </paragraph>
+      <paragraph>
+       The last two axioms of our logical system deal with empty coalitions. First of all, if formula {a mathematical formula}K∅φ is satisfied in an epistemic state of our transition system, then formula φ must be satisfied in every state of this system. Thus, even empty coalition has a trivial strategy to achieve φ:{a mathematical formula} We call this property empty coalition principle. In this article we assume that an epistemic transition system never halts. That is, in every state of the system no matter what the outcome of the vote is, there is always a next state for this vote. This restriction on the transition systems yields property{a mathematical formula} that we call nontermination principle.
+      </paragraph>
+      <paragraph>
+       Let us now turn to the most interesting and perhaps most unexpected property of interplay. Note that {a mathematical formula}S∅φ means that an empty coalition has a strategy to achieve φ. Since the empty coalition has no members, nobody has to vote in a particular way. Statement φ is guaranteed to happen anyway. Thus, statement {a mathematical formula}S∅φ simply means that statement φ is unavoidably satisfied after any single transition.
+      </paragraph>
+      <paragraph>
+       For example, consider an epistemic transition system depicted in Fig. 8. As in some of our earlier examples, this system has agents a and b who vote either C or D. If both agents vote C, then the system takes one of the consensus transitions labeled with C. Otherwise, the system takes the default transition labeled with D. Note that in state v it is guaranteed that statement p will happen after a single transition. Thus, {a mathematical formula}v⊩S∅p. At the same time, neither agent a nor agent b knows about this because they cannot distinguish state v from states u and {a mathematical formula}u′ respectively. Thus, {a mathematical formula}v⊩¬KaS∅p∧¬KbS∅p.
+      </paragraph>
+      <paragraph>
+       In the same transition system {a mathematical formula}T8, agents a and b together can distinguish state v from states u and {a mathematical formula}u′. Thus, {a mathematical formula}v⊩Ka,bS∅p. In general, statement {a mathematical formula}KCS∅φ means that not only φ is unavoidable, but coalition C knows about it. Thus, coalition C has a know-how strategy to achieve φ:{a mathematical formula} In fact, the coalition would achieve the result no matter which strategy it uses. Coalition C can even use a strategy that simultaneously achieves another result in addition to φ:{a mathematical formula} In our logical system we use an equivalent form of the above principle that is stated using only implication:{a mathematical formula} We call this property epistemic determinicity principle. Properties (1), (2), (4), (5), (6), (7), and (8), together with axioms of epistemic logic S5 with distributed knowledge and propositional tautologies constitute the axioms of our sound and complete logical system.
+      </paragraph>
+     </section>
+     <section label="1.7">
+      <section-title>
+       Literature review
+      </section-title>
+      <paragraph>
+       Logics of coalition power were developed by Marc Pauly [5], [6], who also proved the completeness of the basic logic of coalition power. Pauly's approach has been widely studied in the literature [7], [8], [9], [10], [11], [12], [13]. An alternative logical system was proposed by More and Naumov [14].
+      </paragraph>
+      <paragraph>
+       Alur, Henzinger, and Kupferman introduced Alternating-Time Temporal Logic (ATL) that combines temporal and coalition modalities [15]. Van der Hoek and Wooldridge proposed to combine ATL with epistemic modality to form Alternating-Time Temporal Epistemic Logic [16]. Goranko and van Drimmelen [17] gave a complete axiomatization of ATL. Decidability and model checking problems for ATL-like systems has also been widely studied [18], [19], [20].
+      </paragraph>
+      <paragraph>
+       Ågotnes and Alechina proposed a complete logical system that combines the coalition power and epistemic modalities [21]. Since this system does not have epistemic requirements on strategies, it does not contain any axioms describing the interplay of these modalities. In the extended version of this work they added a complete axiomatization of an interplay between knowledge and know-how modalities [22].
+      </paragraph>
+      <paragraph>
+       Know-how strategies were studied before under different names. While Jamroga and Ågotnes talked about “knowledge to identify and execute a strategy” [23], Jamroga and van der Hoek discussed “difference between an agent knowing that he has a suitable strategy and knowing the strategy itself” [24]. Van Benthem called such strategies “uniform” [25]. Wang gave a complete axiomatization of “knowing how” as a binary modality [26], [27], but his logical system does not include the knowledge modality.
+      </paragraph>
+      <paragraph>
+       In [28], we investigated coalition strategies to enforce a condition indefinitely. Such strategies are similar to “goal maintenance” strategies in Pauly's “extended coalition logic” [5, p. 80]. We focused on “executable” and “verifiable” strategies. Using the language of the current article, executability means that a coalition remains “in the know-how” throughout the execution of the strategy. Verifiability means that the coalition can verify that the enforced condition remains true. In the notations of the current article, the existence of a verifiable strategy could be expressed as {a mathematical formula}SCKCφ. In [28], we provided a complete logical system that describes the interplay between the modality representing the existence of an “executable” and “verifiable” coalition strategy to enforce and the modality representing knowledge. This system can prove principles similar to the strategic positive introspection (3) and the strategic negative introspection (4) mentioned above. A similar complete logical system in a single-agent setting for strategies to achieve a goal in multiple steps rather than to maintain a goal is developed by Fervari, Herzig, Li, and Wang [29]. In a more recent work, we described the interplay between modalities {a mathematical formula}K and {a mathematical formula}H in the perfect recall setting in [30]. Properties of second-order know-how, when a coalition knows how another coalition can do it, are discussed in [31].
+      </paragraph>
+      <paragraph>
+       In the current article, we combine know-how modality {a mathematical formula}H with strategic modality {a mathematical formula}S and epistemic modality {a mathematical formula}K. In other words, we combine two separate logical systems given in [22]: one for knowledge and coalition power modalities and the other for knowledge and know-how modalities, into a single logical system. While doing this, we generalize the setting from the individual knowledge to the distributive knowledge and discover a new axiom, epistemic determinicity principle, not present in [22]. The proof of the completeness theorem in the current article is significantly more challenging than those in [22], [28], [29]. It employs new techniques that construct pairs of maximal consistent sets in “harmony” and in “complete harmony”. See Section 6.3 and Section 6.4 for details. An extended abstract of this article, without proofs, appeared as [32].
+      </paragraph>
+     </section>
+     <section label="1.8">
+      <section-title>
+       Outline
+      </section-title>
+      <paragraph>
+       This article is organized as follows. In Section 2 we introduce formal syntax and semantics of our logical system. In Section 3 we list axioms and inference rules of the system. Section 4 provides examples of formal proofs in our logical systems. Proofs of the soundness and the completeness are given in Section 5 and Section 6 respectively. Section 7 concludes the article.
+      </paragraph>
+      <paragraph>
+       The key part of the proof of the completeness is the construction of a pair of sets in complete harmony. We discuss the intuition behind this construction and introduce the notion of harmony in Section 6.3. The notion of complete harmony is introduced in Section 6.4.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Syntax and semantics
+     </section-title>
+     <paragraph>
+      In this section we present the formal syntax and semantics of our logical system given a fixed finite set of agents {a mathematical formula}A. Epistemic transition system could be thought of as a Kripke model of modal logic S5 with distributed knowledge to which we add transitions controlled by a vote aggregation mechanism. Examples of vote aggregation mechanisms that we have considered in the introduction are the consensus/default mechanism and the majority vote mechanism. Unlike the introductory examples, in the general definition below we assume that at different states the mechanism might use different rules for vote aggregation. The only restriction on the mechanism that we introduce is that there should be at least one possible transition that the system can take no matter what the votes are. In other words, we assume that the system can never halt.
+     </paragraph>
+     <paragraph>
+      For any set of votes V, by {a mathematical formula}VA we mean the set of all functions from set {a mathematical formula}A to set V. Alternatively, the set {a mathematical formula}VA could be thought of as a set of tuples of elements of V indexed by elements of {a mathematical formula}A.
+     </paragraph>
+     <paragraph label="Definition 1">
+      A tuple {a mathematical formula}(W,{∼a}a∈A,V,M,π) is called an epistemic transition system, where
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       W is a set of epistemic states,
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}∼a is an indistinguishability equivalence relation on W for each {a mathematical formula}a∈A,
+      </list-item>
+      <list-item label="3.">
+       V is a nonempty set called “domain of choices”,
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}M⊆W×VA×W is an aggregation mechanism where for each {a mathematical formula}w∈W and each {a mathematical formula}s∈VA, there is {a mathematical formula}w′∈W such that {a mathematical formula}(w,s,w′)∈M,
+      </list-item>
+      <list-item label="5.">
+       π is a function that maps propositional variables into subsets of W.
+      </list-item>
+     </list>
+     <paragraph>
+      Epistemic transition systems are very similar to concurrent game structures, the semantics of ATL [15], with two notable differences. First, in concurrent game structures, the domain of choices depends on the state and on the agent. On the other hand, we assume a uniform domain of choices for all states and all agents. This difference is insignificant because all domains of choices in a concurrent game structure could be replaced with their union if the aggregation mechanism is modified to interpret the additional choices as alternative names for the original choices. Second, unlike the transition function in the concurrent game structures, our aggregation mechanism allows to capture nondeterministic transitions. This difference is significant because restricting semantics to only deterministic transitions would require additional axioms. For example, property {a mathematical formula}SAφ∨SA¬φ, where {a mathematical formula}A is the coalition of all agents, is universally true in deterministic epistemic transition systems, but is not true in some nondeterministic systems.
+     </paragraph>
+     <paragraph label="Definition 2">
+      A coalition is a subset of {a mathematical formula}A.
+     </paragraph>
+     <paragraph>
+      Note that a coalition is always finite due to our assumption that the set of all agents {a mathematical formula}A is finite. Informally, we say that two epistemic states are indistinguishable by a coalition C if they are indistinguishable by every member of the coalition. Formally, coalition indistinguishability is defined as follows:
+     </paragraph>
+     <paragraph label="Definition 3">
+      For any epistemic states {a mathematical formula}w1,w2∈W and any coalition C, let {a mathematical formula}w1∼Cw2 if {a mathematical formula}w1∼aw2 for each agent {a mathematical formula}a∈C.
+     </paragraph>
+     <paragraph label="Corollary 1">
+      Relation{a mathematical formula}∼Cis an equivalence relation on the set of states W for each coalition C.
+     </paragraph>
+     <paragraph>
+      By a strategy profile {a mathematical formula}{sa}a∈C of a coalition C we mean a tuple that specifies vote {a mathematical formula}sa∈V of each member {a mathematical formula}a∈C. Since such a tuple can also be viewed as a function from set C to set V, we denote the set of all strategy profiles of a coalition C by {a mathematical formula}VC:
+     </paragraph>
+     <paragraph label="Definition 4">
+      Any tuple {a mathematical formula}{sa}a∈C∈VC is called a strategy profile of coalition C.
+     </paragraph>
+     <paragraph>
+      In addition to a fixed finite set of agents {a mathematical formula}A we also assume a fixed countable set of propositional variables. We use the assumption that this set is countable in the proof of Lemma 21. The language Φ of our formal logical system is specified in the next definition.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Let Φ be the minimal set of formulae such that
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}p∈Φ for each propositional variable p,
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}¬φ,φ→ψ∈Φ for all formulae {a mathematical formula}φ,ψ∈Φ,
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}KCφ,SCφ,HCφ∈Φ for each coalition C and each {a mathematical formula}φ∈Φ.
+      </list-item>
+     </list>
+     <paragraph>
+      In other words, language Φ is defined by the following grammar:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      By ⊥ we denote the negation of a tautology. For example, we can assume that ⊥ is {a mathematical formula}¬(p→p) for some fixed propositional variable p.
+     </paragraph>
+     <paragraph>
+      According to Definition 1, a mechanism specifies the transition that a system might take for any strategy profile of the set of all agents {a mathematical formula}A. It is sometimes convenient to consider transitions that are consistent with a given strategy profile s of a given coalition {a mathematical formula}C⊆A. We write {a mathematical formula}w→su if a transition from state w to state u is consistent with strategy profile s. The formal definition is below.
+     </paragraph>
+     <paragraph label="Corollary 2">
+      For any epistemic states {a mathematical formula}w,u∈W, any coalition C, and any strategy profile {a mathematical formula}s={sa}a∈C∈VC, we write {a mathematical formula}w→su if {a mathematical formula}(w,s′,u)∈M for some strategy profile {a mathematical formula}s′={sa′}a∈A∈VA such that {a mathematical formula}sa′=sa for each {a mathematical formula}a∈C.Letsbe the unique strategy profile of the empty coalition ∅, if there are a coalition C and a strategy profile{a mathematical formula}s′of coalition C such that{a mathematical formula}w→s′u, then{a mathematical formula}w→su.
+     </paragraph>
+     <paragraph>
+      The next definition is the key definition of this article. It formally specifies the meaning of the three modalities in our logical system.
+     </paragraph>
+     <paragraph label="Definition 7">
+      For any epistemic state {a mathematical formula}w∈W of a transition system {a mathematical formula}(W,{∼a}a∈A,V,M,π) and any formula {a mathematical formula}φ∈Φ, let relation {a mathematical formula}w⊩φ be defined as follows
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}w⊩p if {a mathematical formula}w∈π(p) where p is a propositional variable,
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}w⊩¬φ if {a mathematical formula}w⊮φ,
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}w⊩φ→ψ if {a mathematical formula}w⊮φ or {a mathematical formula}w⊩ψ,
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}w⊩KCφ if {a mathematical formula}w′⊩φ for each {a mathematical formula}w′∈W such that {a mathematical formula}w∼Cw′,
+      </list-item>
+      <list-item label="5.">
+       {a mathematical formula}w⊩SCφ if there is a strategy profile {a mathematical formula}s∈VC such that {a mathematical formula}w→sw′ implies {a mathematical formula}w′⊩φ for every {a mathematical formula}w′∈W,
+      </list-item>
+      <list-item label="6.">
+       {a mathematical formula}w⊩HCφ if there is a strategy profile {a mathematical formula}s∈VC such that {a mathematical formula}w∼Cw′ and {a mathematical formula}w′→sw″ imply {a mathematical formula}w″⊩φ for all {a mathematical formula}w′,w″∈W.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that item 6 of this definition is requiring the strategy s to work in all states {a mathematical formula}w′ such that {a mathematical formula}w∼Cw′. That is, the strategy s should work in all states indistinguishable from the current state w by the whole coalition. Informally, it means that we require the whole coalition C to know distributively that strategy s will succeed. Alternatively, one might require this to be known to each individual member of this coalition C. In the latter case, item 6 of Definition 7 would be stated as
+     </paragraph>
+     <list>
+      <list-item label="6.′">
+       {a mathematical formula}w⊩HCφ when there is a strategy profile {a mathematical formula}s∈VC such that for each {a mathematical formula}a∈C, each {a mathematical formula}w′∈W and each {a mathematical formula}w″∈W, if {a mathematical formula}w∼aw′ and {a mathematical formula}w′→sw″, then {a mathematical formula}w″⊩φ.
+      </list-item>
+     </list>
+     <paragraph>
+      This alternative, individual knowledge-based, definition of coalition know-how is used in logic ATL{sup:⁎}[33]. Yet another alternative [28], [29] is to require that after execution of know-how strategy to achieve φ the coalition would know that φ is indeed true:
+     </paragraph>
+     <list>
+      <list-item label="6.″">
+       {a mathematical formula}w⊩HCφ if there is a strategy profile {a mathematical formula}s∈VC such that {a mathematical formula}w∼Cw′, {a mathematical formula}w′→sw″, and {a mathematical formula}w″∼Cw‴ imply {a mathematical formula}w‴⊩φ for all {a mathematical formula}w′,w″,w‴∈W.
+      </list-item>
+     </list>
+     <paragraph>
+      This definition yields axiom {a mathematical formula}HCφ→HCKCφ, which is present in [28], [29]. In our current setting, this axiom is not valid. However, it would be valid under the assumption of perfect recall by nonempty coalitions [30].
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Axioms
+     </section-title>
+     <paragraph>
+      In additional to propositional tautologies in language Φ, our logical system consists of the following axioms.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Truth: {a mathematical formula}KCφ→φ,
+      </list-item>
+      <list-item label="2.">
+       Negative Introspection: {a mathematical formula}¬KCφ→KC¬KCφ,
+      </list-item>
+      <list-item label="3.">
+       Distributivity: {a mathematical formula}KC(φ→ψ)→(KCφ→KCψ),
+      </list-item>
+      <list-item label="4.">
+       Monotonicity: {a mathematical formula}KCφ→KDφ, if {a mathematical formula}C⊆D,
+      </list-item>
+      <list-item label="5.">
+       Cooperation: {a mathematical formula}SC(φ→ψ)→(SDφ→SC∪Dψ), where {a mathematical formula}C∩D=∅.
+      </list-item>
+      <list-item label="6.">
+       Strategic Negative Introspection: {a mathematical formula}¬HCφ→KC¬HCφ,
+      </list-item>
+      <list-item label="7.">
+       Epistemic Cooperation: {a mathematical formula}HC(φ→ψ)→(HDφ→HC∪Dψ), where {a mathematical formula}C∩D=∅,
+      </list-item>
+      <list-item label="8.">
+       Strategic Truth: {a mathematical formula}HCφ→SCφ,
+      </list-item>
+      <list-item label="9.">
+       Epistemic Determinicity: {a mathematical formula}HC(φ→ψ)→(KCS∅φ→HCψ),
+      </list-item>
+      <list-item label="10.">
+       Empty Coalition: {a mathematical formula}K∅φ→H∅φ,
+      </list-item>
+      <list-item label="11.">
+       Nontermination: {a mathematical formula}¬SC⊥.
+      </list-item>
+     </list>
+     <paragraph>
+      We have discussed the informal meaning of these axioms in the introduction. In Section 5 we formally prove the soundness of these axioms with respect to the semantics from Definition 7.
+     </paragraph>
+     <paragraph>
+      We write ⊢φ if formula φ is provable from the axioms of our logical system using Necessitation, Strategic Necessitation, and Modus Ponens inference rules:{a mathematical formula} We write {a mathematical formula}X⊢φ if formula φ is provable from the theorems of our logical system and a set of additional axioms X using only Modus Ponens inference rule.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Derivation examples
+     </section-title>
+     <paragraph>
+      In this section we give examples of formal derivations in our logical system. In Lemma 1 we prove the strategic positive introspection principle (3) discussed in the introduction. The proof is similar to the proof of the epistemic positive introspection principle in Lemma 14.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}⊢HCφ→KCHCφ.Note that formula {a mathematical formula}¬HCφ→KC¬HCφ is an instance of Strategic Negative Introspection axiom. Thus, {a mathematical formula}⊢¬KC¬HCφ→HCφ by the law of contrapositive in the propositional logic. Hence, {a mathematical formula}⊢KC(¬KC¬HCφ→HCφ) by Necessitation inference rule. Thus, by Distributivity axiom and Modus Ponens inference rule,{a mathematical formula}At the same time, {a mathematical formula}KC¬HCφ→¬HCφ is an instance of Truth axiom. Thus, {a mathematical formula}⊢HCφ→¬KC¬HCφ by contraposition. Hence, taking into account the following instance of Negative Introspection axiom {a mathematical formula}¬KC¬HCφ→KC¬KC¬HCφ, one can conclude that {a mathematical formula}⊢HCφ→KC¬KC¬HCφ. The latter, together with statement (9), implies the statement of the lemma by the laws of propositional reasoning.  □
+     </paragraph>
+     <paragraph>
+      In the next example, we show that the existence of a know-how strategy by a coalition implies that the coalition has a distributed knowledge of the existence of a strategy.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}⊢HCφ→KCSCφ.By Strategic Truth axiom, {a mathematical formula}⊢HCφ→SCφ. Hence, {a mathematical formula}⊢KC(HCφ→SCφ) by Necessitation inference rule. Thus, {a mathematical formula}⊢KCHCφ→KCSCφ by Distributivity axiom and Modus Ponens inference rule. At the same time, {a mathematical formula}⊢HCφ→KCHCφ by Lemma 1. Therefore, {a mathematical formula}⊢HCφ→KCSCφ by the laws of propositional reasoning.  □
+     </paragraph>
+     <paragraph>
+      The next lemma shows that the existence of a know-how strategy by a sub-coalition implies the existence of a know-how strategy by the entire coalition.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}⊢HCφ→HDφ, where{a mathematical formula}C⊆D.Note that {a mathematical formula}φ→φ is a propositional tautology. Thus, {a mathematical formula}⊢φ→φ. Hence, {a mathematical formula}⊢HD∖C(φ→φ) by Strategic Necessitation inference rule. At the same time, by Epistemic Cooperation axiom, {a mathematical formula}⊢HD∖C(φ→φ)→(HCφ→HDφ) due to the assumption {a mathematical formula}C⊆D. Therefore, {a mathematical formula}⊢HCφ→HDφ by Modus Ponens inference rule.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Although our logical system has three modalities, the system contains necessitation inference rules only for two of them. The lemma below shows that the necessitation rule for the third modality is derivable. For each finite{a mathematical formula}C⊆A, inference rule{a mathematical formula}φSCφis derivable in our logical system.Assumption ⊢φ implies {a mathematical formula}⊢HCφ by Strategic Necessitation inference rule. Hence, {a mathematical formula}⊢SCφ by Strategic Truth axiom and Modus Ponens inference rule.  □
+     </paragraph>
+     <paragraph>
+      The next result is a counterpart of Lemma 3. It states that the existence of a strategy by a sub-coalition implies the existence of a strategy by the entire coalition.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}⊢SCφ→SDφ, where{a mathematical formula}C⊆D.Note that {a mathematical formula}φ→φ is a propositional tautology. Thus, {a mathematical formula}⊢φ→φ. Hence, {a mathematical formula}⊢SD∖C(φ→φ) by Lemma 4. At the same time, by Cooperation axiom, {a mathematical formula}⊢SD∖C(φ→φ)→(SCφ→SDφ) due to the assumption {a mathematical formula}C⊆D. Therefore, {a mathematical formula}⊢SCφ→SDφ by Modus Ponens inference rule.  □
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Soundness
+     </section-title>
+     <paragraph>
+      In this section we prove the soundness of our logical system. The proof of the soundness of multiagent S5 axioms and inference rules is standard. Below we show the soundness of each of the remaining axioms and the Strategic Necessitation inference rule as a separate lemma. The soundness theorem for the whole logical system is stated at the end of this section as Theorem 1.
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩SC(φ→ψ),{a mathematical formula}w⊩SDφ, and{a mathematical formula}C∩D=∅, then{a mathematical formula}w⊩SC∪Dψ.Suppose that {a mathematical formula}w⊩SC(φ→ψ). Then, by Definition 7, there is a strategy profile {a mathematical formula}s1={sa1}a∈C∈VC such that {a mathematical formula}w′⊩φ→ψ for each {a mathematical formula}w′∈W where {a mathematical formula}w→s1w′. Similarly, assumption {a mathematical formula}w⊩SDφ implies that there is a strategy {a mathematical formula}s2={sa2}a∈D∈VD such that {a mathematical formula}w′⊩φ for each {a mathematical formula}w′∈W where {a mathematical formula}w→s2w′. Let strategy profile {a mathematical formula}s={sa}a∈C∪D be defined as follows:{a mathematical formula} Strategy profile s is well-defined due to the assumption {a mathematical formula}C∩D=∅ of the lemma.Consider any epistemic state {a mathematical formula}w′∈W such that {a mathematical formula}w→sw′. By Definition 7, it suffices to show that {a mathematical formula}w′⊩ψ. Indeed, assumption {a mathematical formula}w→sw′, by Definition 6, implies that {a mathematical formula}w→s1w′ and {a mathematical formula}w→s2w′. Thus, {a mathematical formula}w′⊩φ→ψ and {a mathematical formula}w′⊩φ by the choice of strategies {a mathematical formula}s1 and {a mathematical formula}s2. Therefore, {a mathematical formula}w′⊩ψ by Definition 7.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩¬HCφ, then{a mathematical formula}w⊩KC¬HCφ.Consider any epistemic state {a mathematical formula}u∈W such that {a mathematical formula}w∼Cu. By Definition 7, it suffices to show that {a mathematical formula}u⊮HCφ. Assume the opposite. Thus, {a mathematical formula}u⊩HCφ. Then, again by Definition 7, there is a strategy profile {a mathematical formula}s∈VC where {a mathematical formula}u″⊩φ for all {a mathematical formula}u′,u″∈W such that {a mathematical formula}u∼Cu′ and {a mathematical formula}u′→su″. Recall that {a mathematical formula}w∼Cu. Thus, by Corollary 1, {a mathematical formula}u″⊩φ for all {a mathematical formula}u′,u″∈W such that {a mathematical formula}w∼Cu′ and {a mathematical formula}u′→su″. Therefore, {a mathematical formula}w⊩HCφ, by Definition 7. The latter contradicts the assumption of the lemma.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩HC(φ→ψ),{a mathematical formula}w⊩HDφ, and{a mathematical formula}C∩D=∅, then{a mathematical formula}w⊩HC∪Dψ.Suppose that {a mathematical formula}w⊩HC(φ→ψ). Thus, by Definition 7, there is a strategy profile {a mathematical formula}s1={sa1}a∈C∈VC such that {a mathematical formula}w″⊩φ→ψ for all epistemic states {a mathematical formula}w′,w″ where {a mathematical formula}w∼Cw′ and {a mathematical formula}w′→s1w″. Similarly, assumption {a mathematical formula}w⊩HDφ implies that there is a strategy {a mathematical formula}s2={sa2}a∈D∈VD such that {a mathematical formula}w″⊩φ for all {a mathematical formula}w′,w″ where {a mathematical formula}w∼Dw′ and {a mathematical formula}w′→s2w″. Let strategy profile {a mathematical formula}s={sa}a∈C∪D be defined as follows:{a mathematical formula} Strategy profile s is well-defined due to the assumption {a mathematical formula}C∩D=∅ of the lemma.Consider any epistemic states {a mathematical formula}w′,w″∈W such that {a mathematical formula}w∼C∪Dw′ and {a mathematical formula}w′→sw″. By Definition 7, it suffices to show that {a mathematical formula}w″⊩ψ. Indeed, by Definition 3 assumption {a mathematical formula}w∼C∪Dw′ implies that {a mathematical formula}w∼Cw′ and {a mathematical formula}w∼Dw′. At the same time, by Definition 6, assumption {a mathematical formula}w′→sw″ implies that {a mathematical formula}w′→s1w″ and {a mathematical formula}w′→s2w″. Thus, {a mathematical formula}w″⊩φ→ψ and {a mathematical formula}w″⊩φ by the choice of strategies {a mathematical formula}s1 and {a mathematical formula}s2. Therefore, {a mathematical formula}w″⊩ψ by Definition 7.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩HCφ, then{a mathematical formula}w⊩SCφ.Suppose that {a mathematical formula}w⊩HCφ. Thus, by Definition 7, there is a strategy profile {a mathematical formula}s∈VC such that {a mathematical formula}w″⊩φ for all epistemic states {a mathematical formula}w′,w″∈W, where {a mathematical formula}w∼Cw′ and {a mathematical formula}w′→sw″. By Corollary 1, {a mathematical formula}w∼Cw. Hence, {a mathematical formula}w″⊩φ for each epistemic state {a mathematical formula}w″∈W, where {a mathematical formula}w→sw″. Therefore, {a mathematical formula}w⊩SCφ by Definition 7.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩HC(φ→ψ)and{a mathematical formula}w⊩KCS∅φ, then{a mathematical formula}w⊩HCψ.Suppose that {a mathematical formula}w⊩HC(φ→ψ). Thus, by Definition 7, there is a strategy profile {a mathematical formula}s∈VC such that {a mathematical formula}w″⊩φ→ψ for all epistemic states {a mathematical formula}w′,w″∈W where {a mathematical formula}w∼Cw′ and {a mathematical formula}w′→sw″.Consider any epistemic states {a mathematical formula}w0′,w0″∈W such that {a mathematical formula}w∼Cw0′ and {a mathematical formula}w0′→sw0″. By Definition 7, it suffices to show that {a mathematical formula}w0″⊩ψ.Indeed, by Definition 7, the assumption {a mathematical formula}w⊩KCS∅φ together with {a mathematical formula}w∼Cw0′ imply that {a mathematical formula}w0′⊩S∅φ. Hence, by Definition 7, there is a strategy profile {a mathematical formula}s′ of empty coalition ∅ such that {a mathematical formula}w″⊩φ for each {a mathematical formula}w″ where {a mathematical formula}w0′→s′w″. Thus, {a mathematical formula}w0″⊩φ due to Corollary 2 and {a mathematical formula}w0′→sw0″. By the choice of strategy profile s, statements {a mathematical formula}w∼Cw0′ and {a mathematical formula}w0′→sw0″ imply {a mathematical formula}w0″⊩φ→ψ. Finally, by Definition 7, statements {a mathematical formula}w0″⊩φ→ψ and {a mathematical formula}w0″⊩φ imply that {a mathematical formula}w0″⊩ψ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩K∅φ, then{a mathematical formula}w⊩H∅φ.Let {a mathematical formula}s={sa}a∈∅ be the empty strategy profile. Consider any epistemic states {a mathematical formula}w′,w″∈W such that {a mathematical formula}w∼∅w′ and {a mathematical formula}w′→sw″. By Definition 7, it suffices to show that {a mathematical formula}w″⊩φ. Indeed {a mathematical formula}w∼∅w″ by Definition 3. Therefore, {a mathematical formula}w″⊩φ by assumption {a mathematical formula}w⊩K∅φ and Definition 7.  □
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}w⊮SC⊥.Suppose that {a mathematical formula}w⊩SC⊥. Thus, by Definition 7, there is a strategy profile {a mathematical formula}s={sa}a∈A∈VC such that {a mathematical formula}u⊩⊥ for each {a mathematical formula}u∈W where {a mathematical formula}w→su.Note that by Definition 1, the domain of choices V is not empty. Thus, strategy profile s can be extended to a strategy profile {a mathematical formula}s′={sa′}a∈A∈VA such that {a mathematical formula}sa′=sa for each {a mathematical formula}a∈C.By Definition 1, there must exist a state {a mathematical formula}w′∈W such that {a mathematical formula}(w,s′,w′)∈M. Hence, {a mathematical formula}w→sw′ by Definition 6. Therefore, {a mathematical formula}w′⊩⊥ by the choice of strategy s, which contradicts Definition 7.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}w⊩φfor any epistemic state{a mathematical formula}w∈Wof an epistemic transition system{a mathematical formula}(W,{∼a}a∈A,V,M,π), then{a mathematical formula}w⊩SCφfor every epistemic state{a mathematical formula}w∈W.By Definition 1, set V is not empty. Let {a mathematical formula}v∈V. Consider strategy profile {a mathematical formula}s={sa}a∈C of coalition C such that {a mathematical formula}sa=v for each {a mathematical formula}s∈C. Note that {a mathematical formula}w′⊩φ for each {a mathematical formula}w′∈W due to the assumption of the lemma. Therefore, {a mathematical formula}w⊩SCφ by Definition 7.  □
+     </paragraph>
+     <paragraph label="Theorem 1">
+      Taken together, the lemmas above imply the soundness theorem for our logical system stated below. If ⊢φ, then{a mathematical formula}w⊩φfor each epistemic state{a mathematical formula}w∈Wof each epistemic transition system{a mathematical formula}(W,{∼a}a∈A,V,M,π).  □
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Completeness
+     </section-title>
+     <paragraph>
+      This section is dedicated to the proof of the following completeness theorem for our logical system.
+     </paragraph>
+     <paragraph label="Theorem 2">
+      completenessIf{a mathematical formula}w⊩φfor each epistemic state w of each epistemic transition system, then ⊢φ.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Positive introspection
+      </section-title>
+      <paragraph>
+       The proof of Theorem 2 is divided into several parts. In this section we prove the positive introspection principle for distributed knowledge modality from the rest of modality {a mathematical formula}K axioms in our logical system. This is a well-known result that we reproduce to keep the presentation self-sufficient. The positive introspection principle is used later in the proof of the completeness.
+      </paragraph>
+      <paragraph label="Proof">
+       {a mathematical formula}⊢KCφ→KCKCφ.Formula {a mathematical formula}¬KCφ→KC¬KCφ is an instance of Negative Introspection axiom. Thus, {a mathematical formula}⊢¬KC¬KCφ→KCφ by the law of contrapositive in the propositional logic. Hence, {a mathematical formula}⊢KC(¬KC¬KCφ→KCφ) by Necessitation inference rule. Thus, by Distributivity axiom and Modus Ponens inference rule,{a mathematical formula}At the same time, {a mathematical formula}KC¬KCφ→¬KCφ is an instance of Truth axiom. Thus, {a mathematical formula}⊢KCφ→¬KC¬KCφ by contraposition. Hence, taking into account the following instance of Negative Introspection axiom {a mathematical formula}¬KC¬KCφ→KC¬KC¬KCφ, one can conclude that {a mathematical formula}⊢KCφ→KC¬KC¬KCφ. The latter, together with statement (10), implies the statement of the lemma by the laws of propositional reasoning.  □
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Consistent sets of formulae
+      </section-title>
+      <paragraph>
+       As usual, we call a set {a mathematical formula}X⊆Φconsistent if {a mathematical formula}X⊬⊥. We refer to set X as maximal consistent if it is maximal among consistent subsets of Φ. The proof of the completeness consists in constructing a canonical model in which states are maximal consistent sets. This is a standard technique in modal logic that we modified significantly to work in the setting of our logical system. The standard way to apply this technique to a modal operator □ is to create a “child” state {a mathematical formula}w′ such that {a mathematical formula}¬ψ∈w′ for each “parent” state w where {a mathematical formula}¬□ψ∈w. In the simplest case when □ is a distributed knowledge modality {a mathematical formula}KC, the standard technique requires no modification and the construction of a “child” state is based on the following lemma:
+      </paragraph>
+      <paragraph label="Proof">
+       For any consistent set of formulae X, any formula{a mathematical formula}¬KCψ∈X, and any formulae{a mathematical formula}KCφ1,…,KCφn∈X, the set of formulae{a mathematical formula}{¬ψ,φ1,…,φn}is consistent.Assume the opposite. Then, {a mathematical formula}φ1,…,φn⊢ψ. Thus, by the deduction theorem for propositional logic applied n times,{a mathematical formula} Hence, by Necessitation inference rule,{a mathematical formula} By Distributivity axiom and Modus Ponens inference rule,{a mathematical formula} By repeating the last step {a mathematical formula}(n−1) times,{a mathematical formula} Hence, {a mathematical formula}X⊢KCψ by the choice of formula {a mathematical formula}KCφ1,…,KCφn, which contradicts the consistency of the set X due to the assumption {a mathematical formula}¬KCψ∈X.  □
+      </paragraph>
+      <paragraph>
+       If □ is the modality {a mathematical formula}SC, then the standard technique needs to be modified. Namely, while {a mathematical formula}¬SCψ∈w means that coalition C can not achieve goal ψ, its pairwise disjoint sub-coalitions {a mathematical formula}D1,…,Dn⊆C might still achieve their own goals {a mathematical formula}φ1,…,φn. An equivalent of Lemma 15 for modality {a mathematical formula}SC is the following statement.
+      </paragraph>
+      <paragraph label="Proof">
+       For any consistent set of formulae X, and any subsets{a mathematical formula}D1,…,Dnof a coalition C, any formula{a mathematical formula}¬SCψ∈X, and any{a mathematical formula}SD1φ1,…,SDnφn∈X, if{a mathematical formula}Di∩Dj=∅for all integers{a mathematical formula}i,j≤nsuch that{a mathematical formula}i≠j, then the set of formulae{a mathematical formula}{¬ψ,φ1,…,φn}is consistent.Suppose that {a mathematical formula}φ1,φ2,…,φn⊢ψ. Hence, by the deduction theorem for propositional logic applied n times,{a mathematical formula} Then, {a mathematical formula}⊢S∅(φ1→(φ2→(…(φn→ψ)…))) by Lemma 4. Hence, by Cooperation axiom and Modus Ponens inference rule,{a mathematical formula} In other words,{a mathematical formula} Then, by Modus Ponens inference rule,{a mathematical formula} By Cooperation axiom and Modus Ponens inference rule,{a mathematical formula} Again, by Modus Ponens inference rule,{a mathematical formula} By repeating the previous steps {a mathematical formula}n−2 times,{a mathematical formula}Recall that {a mathematical formula}SD1φ1,SD2φ2,…,SDnφn∈X by the assumption of the lemma. Thus, {a mathematical formula}X⊢SD1∪D2∪…∪Dnψ. Therefore, {a mathematical formula}X⊢SCψ by Lemma 5. Since the set X is consistent, the latter contradicts the assumption {a mathematical formula}¬SCψ∈X of the lemma.  □
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Harmony
+      </section-title>
+      <paragraph>
+       If □ is the modality {a mathematical formula}HC, then the standard technique needs even more significant modification. Namely, as it follows from Definition 7, assumption {a mathematical formula}¬HCψ∈w requires us, for each strategy profile of coalition C, to create not a single child of parent w, but two different children referred in Definition 7 as states {a mathematical formula}w′ and {a mathematical formula}w″, see Fig. 9. Child {a mathematical formula}w′ is a state of the system indistinguishable from state w by coalition C. Child {a mathematical formula}w″ is a state such that {a mathematical formula}¬ψ∈w″ and coalition C cannot prevent the system to transition from {a mathematical formula}w′ to {a mathematical formula}w″.
+      </paragraph>
+      <paragraph>
+       One might think that states {a mathematical formula}w′ and {a mathematical formula}w″ could be constructed in order: first state {a mathematical formula}w′ and then state {a mathematical formula}w″. It appears, however, that such an approach does not work because it does not guarantee that {a mathematical formula}¬ψ∈w″. To solve the issue, we construct states {a mathematical formula}w′ and {a mathematical formula}w″ simultaneously. While constructing states {a mathematical formula}w′ and {a mathematical formula}w″ as maximal consistent sets of formulae, it is important to maintain two relations between sets {a mathematical formula}w′ and {a mathematical formula}w″ that we call “to be in harmony” and “to be in complete harmony”. In this section we define harmony relation and prove its basic properties. The next section is dedicated to the complete harmony relation.
+      </paragraph>
+      <paragraph>
+       Even though according to Definition 5 the language of our logical system only includes propositional connectives ¬ and →, other connectives, including conjunction ∧, can be defined in the standard way. By ∧Y we mean the conjunction of a finite set of formulae Y. If set Y is a singleton, then ∧Y represents the single element of set Y. If set Y is empty, then ∧Y is defined to be any propositional tautology.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Pair {a mathematical formula}(X,Y) of sets of formulae is in harmony if {a mathematical formula}X⊬S∅¬∧Y′ for each finite set {a mathematical formula}Y′⊆Y.
+      </paragraph>
+      <paragraph label="Proof">
+       If pair{a mathematical formula}(X,Y)is in harmony, then set X is consistent.If set X is not consistent, then any formula can be derived from it. In particular, {a mathematical formula}X⊢S∅¬∧∅. Therefore, pair {a mathematical formula}(X,Y) is not in harmony by Definition 8.  □
+      </paragraph>
+      <paragraph label="Proof">
+       If pair{a mathematical formula}(X,Y)is in harmony, then set Y is consistent.Suppose that Y is inconsistent. Then, there is a finite set {a mathematical formula}Y′⊆Y such that {a mathematical formula}⊢¬∧Y′. Hence, {a mathematical formula}⊢S∅¬∧Y′ by Lemma 4. Thus, {a mathematical formula}X⊢S∅¬∧Y′. Therefore, by Definition 8, pair {a mathematical formula}(X,Y) is not in harmony.  □
+      </paragraph>
+      <paragraph label="Lemma 19">
+       For any{a mathematical formula}φ∈Φ, if pair{a mathematical formula}(X,Y)is in harmony, then either pair{a mathematical formula}(X∪{¬S∅φ},Y)or pair{a mathematical formula}(X,Y∪{φ})is in harmony.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose that neither pair {a mathematical formula}(X∪{¬S∅φ},Y) nor pair {a mathematical formula}(X,Y∪{φ}) is in harmony. Then, by Definition 8, there are finite sets {a mathematical formula}Y1⊆Y and {a mathematical formula}Y2⊆Y∪{φ} such that{a mathematical formula} and{a mathematical formula}Formula {a mathematical formula}¬∧Y1→¬((∧Y1)∧(∧(Y2∖{φ}))) is a propositional tautology. Thus, {a mathematical formula}⊢S∅(¬∧Y1→¬((∧Y1)∧(∧(Y2∖{φ})))) by Lemma 4. Then, by Cooperation axiom, statement (11), and Modus Ponens inference rule, {a mathematical formula}X,¬S∅φ⊢S∅∪∅¬((∧Y1)∧(∧(Y2∖{φ}))). In other words,{a mathematical formula}Finally, formula {a mathematical formula}¬∧Y2→(φ→¬((∧Y1)∧(∧(Y2∖{φ})))) is also a propositional tautology. Thus, by Lemma 4,{a mathematical formula} Then, by Cooperation axiom, statement (12), and Modus Ponens inference rule, {a mathematical formula}X⊢S∅(φ→¬((∧Y1)∧(∧(Y2∖{φ})))). Thus, by Cooperation axiom and Modus Ponens inference rule,{a mathematical formula} By Modus Ponens inference rule,{a mathematical formula} Hence, {a mathematical formula}X⊢S∅¬((∧Y1)∧(∧(Y2∖{φ}))) by statement (13) and the laws of propositional reasoning. Recall that {a mathematical formula}Y1 and {a mathematical formula}Y2∖{φ} are subsets of Y. Therefore, pair {a mathematical formula}(X,Y) is not in harmony by Definition 8.  □
+      </paragraph>
+      <paragraph>
+       The next lemma is an equivalent of Lemma 15 and Lemma 16 for modality {a mathematical formula}HC. The lemma is stated in terms of an arbitrary function {a mathematical formula}f:C→Φ. This lemma will be used in the proof of Lemma 30 for a specific function definable only in the context of the proof of Lemma 30.
+      </paragraph>
+      <paragraph label="Proof">
+       For any consistent set of formulae X, any formula{a mathematical formula}¬HCψ∈X, and any function{a mathematical formula}f:C→Φ, pair{a mathematical formula}(Y,Z)is in harmony, where{a mathematical formula}Y={φ|KCφ∈X},and{a mathematical formula}Z={¬ψ}∪{χ|∃D⊆C(HDχ∈X∧∀a∈D(f(a)=χ))}.Suppose that pair {a mathematical formula}(Y,Z) is not in harmony. Thus, by Definition 8, there is a finite {a mathematical formula}Z′⊆Z such that {a mathematical formula}Y⊢S∅¬∧Z′. Since a derivation uses only finitely many assumptions, there are formulae {a mathematical formula}KCφ1,KCφ2…,KCφn∈X such that{a mathematical formula} Then, by the deduction theorem for propositional logic applied n times,{a mathematical formula} Hence, by Necessitation inference rule,{a mathematical formula} Then, by Distributivity axiom and Modus Ponens inference rule,{a mathematical formula} Thus, by Modus Ponens inference rule,{a mathematical formula} By repeating the previous two steps {a mathematical formula}(n−1) times,{a mathematical formula} Hence, by the choice of formulae {a mathematical formula}KCφ1,KCφ2,…,KCφn,{a mathematical formula} Since set {a mathematical formula}Z′ is a subset of set Z, by the choice of set Z, there must exist formulae {a mathematical formula}HD1χ1,…,HDnχn∈X such that {a mathematical formula}D1,…,Dn⊆C,{a mathematical formula} and the following formula is a tautology, even if {a mathematical formula}¬ψ∉Z′:{a mathematical formula} Without loss of generality, we can assume that formulae {a mathematical formula}χ1,…,χn are pairwise distinct.
+      </paragraph>
+      <paragraph label="Claim 1">
+       {a mathematical formula}Di∩Dj=∅for each{a mathematical formula}i,j≤nsuch that{a mathematical formula}i≠j.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Suppose the opposite. Then, there is {a mathematical formula}a∈Di∩Dj. Thus, {a mathematical formula}χi=f(a)=χj by statement (15). This contradicts the assumption that formulae {a mathematical formula}χ1,…,χn are pairwise distinct.  □
+      </paragraph>
+      <paragraph>
+       Since formula (16) is a propositional tautology, by the law of contrapositive, the following formula is also a propositional tautology:{a mathematical formula} Thus, by Strategic Necessitation inference rule,{a mathematical formula} Hence, by Epistemic Cooperation axiom and Modus Ponens inference rule,{a mathematical formula} Then, by Modus Ponens inference rule,{a mathematical formula} By Epistemic Cooperation axiom, Claim 1, and Modus Ponens inference rule,{a mathematical formula} By Modus Ponens inference rule,{a mathematical formula} By repeating the previous two steps {a mathematical formula}(n−2) times,{a mathematical formula} Recall that {a mathematical formula}HD1χ1,HD2χ2,…,HDnχn∈X by the choice of {a mathematical formula}HD1χ1, …, {a mathematical formula}HDnχn. Thus, {a mathematical formula}X⊢HD1∪D2∪…∪Dn(¬∧Z′→ψ). Hence, because {a mathematical formula}D1,…,Dn⊆C, by Lemma 3, {a mathematical formula}X⊢HC(¬∧Z′→ψ). Then, {a mathematical formula}X⊢HCψ by Epistemic Determinicity axiom and statement (14). Since the set X is consistent, this contradicts the assumption {a mathematical formula}¬HCψ∈X of the lemma.  □
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Complete harmony
+      </section-title>
+      <paragraph label="Proof">
+       A pair in harmony {a mathematical formula}(X,Y) is in complete harmony if for each {a mathematical formula}φ∈Φ either {a mathematical formula}¬S∅φ∈X or {a mathematical formula}φ∈Y.For each pair in harmony{a mathematical formula}(X,Y), there is a pair in complete harmony{a mathematical formula}(X′,Y′)such that{a mathematical formula}X⊆X′and{a mathematical formula}Y⊆Y′.Recall that the set of agent {a mathematical formula}A is finite and the set of propositional variables is countable. Thus, the set of all formulae Φ is also countable. Let {a mathematical formula}φ1,φ2,… be an enumeration of all formulae in Φ. We define two chains of sets {a mathematical formula}X1⊆X2⊆… and {a mathematical formula}Y1⊆Y2⊆… such that pair {a mathematical formula}(Xn,Yn) is in harmony for each {a mathematical formula}n≥1. These two chains are defined recursively as follows:
+       <list>
+        {a mathematical formula}X1=X and {a mathematical formula}Y1=Y,if pair {a mathematical formula}(Xn,Yn) is in harmony, then, by Lemma 19, either pair {a mathematical formula}(Xn∪{¬S∅φn},Yn) or pair {a mathematical formula}(Xn,Yn∪{φn}) is in harmony. Let {a mathematical formula}(Xn+1,Yn+1) be {a mathematical formula}(Xn∪{¬S∅φn},Yn) in the former case and {a mathematical formula}(Xn,Yn∪{φn}) in the latter case.We next show that pair
+       </list>
+       <paragraph>
+        {a mathematical formula}(X′,Y′) is in harmony. Suppose the opposite. Then, by Definition 8, there is a finite set {a mathematical formula}Y″⊆Y′ such that {a mathematical formula}X′⊢S∅¬∧Y″. Since a deduction uses only finitely many assumptions, there must exist {a mathematical formula}n1≥1 such that{a mathematical formula} At the same time, since set {a mathematical formula}Y″ is finite, there must exist {a mathematical formula}n2≥1 such that {a mathematical formula}Y″⊆Yn2. Let {a mathematical formula}n=max⁡{n1,n2}. Note that {a mathematical formula}¬∧Y″→¬∧Yn is a tautology because {a mathematical formula}Y″⊆Yn2⊆Yn. Thus, {a mathematical formula}⊢S∅(¬∧Y″→¬∧Yn) by Lemma 4. Then, {a mathematical formula}⊢S∅¬∧Y″→S∅¬∧Yn by Cooperation axiom and Modus Ponens inference rule. Hence, {a mathematical formula}Xn1⊢S∅¬∧Yn due to statement (17). Thus, {a mathematical formula}Xn⊢S∅¬∧Yn, because {a mathematical formula}Xn1⊆Xn. Then, pair {a mathematical formula}(Xn,Yn) is not in harmony, which contradicts the choice of pair {a mathematical formula}(Xn,Yn). Therefore, pair {a mathematical formula}(X′,Y′) is in harmony.We finally show that pair {a mathematical formula}(X′,Y′) is in complete harmony. Indeed, consider any {a mathematical formula}φ∈Φ. Since {a mathematical formula}φ1,φ2,… is an enumeration of all formulae in Φ, there must exist {a mathematical formula}k≥1 such that {a mathematical formula}φ=φk. Then, by the choice of pair {a mathematical formula}(Xk+1,Yk+1), either {a mathematical formula}¬S∅φ=¬S∅φk∈Xk+1⊆X′ or {a mathematical formula}φ=φk∈Yk+1⊆Y′. Therefore, pair {a mathematical formula}(X′,Y′) is in complete harmony.  □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Canonical epistemic transition system
+      </section-title>
+      <paragraph>
+       In this section we fix a maximal consistent set of formulae {a mathematical formula}X0 and define a canonical epistemic transition system {a mathematical formula}ETS(X0)=(W,{∼a}a∈A,V,M,π).
+      </paragraph>
+      <paragraph>
+       The standard technique for proving the completeness of S5 modal logic consists in defining states of a Kripke model as maximal consistent sets of formulae and specifying that relation {a mathematical formula}s1∼as2 holds if sets {a mathematical formula}s1 and {a mathematical formula}s2 have the same formulae of the form {a mathematical formula}Kaφ. This approach, however, does not work directly in the case of distributed knowledge version of S5. Indeed, in the latter case, if {a mathematical formula}s1∼as2 and {a mathematical formula}s1∼bs2, then we need sets {a mathematical formula}s1 and {a mathematical formula}s2 to share not only formulae of the form {a mathematical formula}Kaφ and of the form {a mathematical formula}Kbφ, but also of the form {a mathematical formula}K{a,b}φ. A naïve way to achieve this is to require states {a mathematical formula}s1 and {a mathematical formula}s2 to share formulae of form {a mathematical formula}K{a,b}φ each time when need {a mathematical formula}s1∼as2 and {a mathematical formula}s1∼bs2 both to be true. To achieve this, we define a canonical model, called the canonical epistemic transition system, as a graph whose nodes are labeled with maximal consistent sets and whose edges are labeled with coalitions. If nodes {a mathematical formula}s1 and {a mathematical formula}s2 are connected by an edge labeled with coalition C, then we require maximal consistent sets associated with nodes {a mathematical formula}s1 and {a mathematical formula}s2 to share all formulae of the form {a mathematical formula}KDφ, where {a mathematical formula}D⊆C. In fact, as we will see later, it suffices just to share formulae of the form {a mathematical formula}KCφ.
+      </paragraph>
+      <paragraph>
+       Note, however, that the graph construction does not solve our problems completely. Indeed, let us suppose that the graph, see Fig. 10, in addition to nodes {a mathematical formula}s1 and {a mathematical formula}s2, has nodes u and v such that edges {a mathematical formula}(s1,u) and {a mathematical formula}(u,s2) are labeled with single-element coalition {a mathematical formula}{a} and edges {a mathematical formula}(s1,v) and {a mathematical formula}(v,s2) are labeled with single-element coalition {a mathematical formula}{b}. Thus, on one hand sets {a mathematical formula}s1 and {a mathematical formula}s2 share {a mathematical formula}Kaφ formulae (through set u) and {a mathematical formula}Kbφ formulae (through state v), but they do not, generally speaking, share formulae of the form {a mathematical formula}K{a,b}φ. On the other hand, we need them to share formulae {a mathematical formula}K{a,b}φ because {a mathematical formula}s1∼as2 and {a mathematical formula}s1∼bs2. More generally, such a situation happens if the graph has two distinctive paths between nodes {a mathematical formula}s1 and {a mathematical formula}s2: edges along one path are labeled with coalitions containing agent a and edges along the other path are labeled with coalitions containing agent b. To avoid this situation, it suffices to guarantee that the canonical models use trees instead of arbitrary graphs. We achieve this by adopting the “unravelling” technique [34].
+      </paragraph>
+      <paragraph>
+       Although in the informal discussion above we talked about states as the nodes of the tree, in the “unravelling” construction it is mathematically more elegant to assume that states are paths that lead to the node from the root of the tree. For the sake of simplicity, we still like to informally think about states as the nodes. For example, see Fig. 11, we talk about state {a mathematical formula}X2 rather than state {a mathematical formula}X0,{a,c},X1,{a},X2.
+      </paragraph>
+      <paragraph label="Definition 10">
+       The set of epistemic states W consists of all finite sequences {a mathematical formula}X0,C1,X1,C2,…,Cn,Xn, such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}n≥0,
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Xi is a maximal consistent subset of Φ for each {a mathematical formula}i≥1,
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Ci is a coalition for each {a mathematical formula}i≥1,
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}{φ|KCiφ∈Xi−1}⊆Xi for each {a mathematical formula}i≥1.
+       </list-item>
+      </list>
+      <paragraph>
+       We say that two nodes of the tree are indistinguishable to an agent a if every edge along the unique path connecting these two nodes is labeled with a coalition containing agent a. For example, in Fig. 11, nodes {a mathematical formula}X3 (technically, state {a mathematical formula}X0,{a,b,c},X3) and node {a mathematical formula}X2 are indistinguishable to agent a because {a mathematical formula}a∈{a,b,c}. At the same time, nodes {a mathematical formula}X3 and {a mathematical formula}X4 are distinguishable to agent a because edge between nodes {a mathematical formula}X1 and {a mathematical formula}X4 is not labeled with a. However, nodes {a mathematical formula}X3 and {a mathematical formula}X4 are indistinguishable to agent c.
+      </paragraph>
+      <paragraph label="Definition 11">
+       For any state {a mathematical formula}w=X0,C1,X1,C2,…,Cn,Xn and any state {a mathematical formula}w′=X0,C1′,X1′,C2′,…,Cm′,Xm′, let {a mathematical formula}w∼aw′ if there is an integer k such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}0≤k≤min⁡{n,m},
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Xi=Xi′ for each i such that {a mathematical formula}1≤i≤k,
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}Ci=Ci′ for each i such that {a mathematical formula}1≤i≤k,
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}a∈Ci for each i such that {a mathematical formula}k&lt;i≤n,
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}a∈Ci′ for each i such that {a mathematical formula}k&lt;i≤m.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Relation{a mathematical formula}∼ais an equivalence relation on set W for each{a mathematical formula}a∈A.Relation “connected by a path labeled with agent a” is a reflexive, symmetric, and transitive relation on nodes of an arbitrary labeled graph.  □
+      </paragraph>
+      <paragraph>
+       For any state {a mathematical formula}w=X0,C1,X1,C2,…,Cn,Xn, by {a mathematical formula}hd(w) we denote the set {a mathematical formula}Xn. The abbreviation hd stands for “head”.
+      </paragraph>
+      <paragraph label="Proof">
+       For any{a mathematical formula}w=X0,C1,X1,C2,…,Cn,Xn∈Wand any integer{a mathematical formula}k≤n, if{a mathematical formula}KCφ∈Xnand{a mathematical formula}C⊆Cifor each integer i such that{a mathematical formula}k&lt;i≤n, then{a mathematical formula}KCφ∈Xk.Suppose that there is {a mathematical formula}k≤n such that {a mathematical formula}KCφ∉Xk. Let m be the maximal such k. Note that {a mathematical formula}m&lt;n due to the assumption {a mathematical formula}KCφ∈Xn of the lemma. Thus, {a mathematical formula}m&lt;m+1≤n.Assumption {a mathematical formula}KCφ∉Xm implies {a mathematical formula}¬KCφ∈Xm due to the maximality of the set {a mathematical formula}Xm. Hence, {a mathematical formula}Xm⊢KC¬KCφ by Negative Introspection axiom. Thus, {a mathematical formula}Xm⊢KCm+1¬KCφ by the Monotonicity axiom and the assumption {a mathematical formula}C⊆Cm+1 of the lemma (recall that {a mathematical formula}m+1≤n). Then, {a mathematical formula}KCm+1¬KCφ∈Xm due to the maximality of the set {a mathematical formula}Xm. Hence, {a mathematical formula}¬KCφ∈Xm+1 by Definition 10. Thus, {a mathematical formula}KCφ∉Xm+1 due to the consistency of the set {a mathematical formula}Xm+1, which is a contradiction with the choice of integer m.  □
+      </paragraph>
+      <paragraph label="Proof">
+       For any{a mathematical formula}w=X0,C1,X1,C2,…,Cn,Xn∈Wand any integer{a mathematical formula}k≤n, if{a mathematical formula}KCφ∈Xkand{a mathematical formula}C⊆Cifor each integer i such that{a mathematical formula}k&lt;i≤n, then{a mathematical formula}φ∈Xn.We prove the lemma by induction on the distance between n and k. In the base case {a mathematical formula}n=k. Then the assumption {a mathematical formula}KCφ∈Xn implies {a mathematical formula}Xn⊢φ by Truth axiom. Therefore, {a mathematical formula}φ∈Xn due to the maximality of set {a mathematical formula}Xn.Suppose that {a mathematical formula}k&lt;n. Assumption {a mathematical formula}KCφ∈Xk implies {a mathematical formula}Xk⊢KCKCφ by Lemma 14. Thus, {a mathematical formula}Xk⊢KCk+1KCφ by the Monotonicity axiom, the condition {a mathematical formula}k&lt;n of the inductive step, and the assumption {a mathematical formula}C⊆Ck+1 of the lemma. Then, {a mathematical formula}KCk+1KCφ∈Xk by the maximality of set {a mathematical formula}Xk. Hence, {a mathematical formula}KCφ∈Xk+1 by Definition 10. Therefore, {a mathematical formula}φ∈Xn by the induction hypothesis.  □
+      </paragraph>
+      <paragraph label="Proof">
+       If{a mathematical formula}KCφ∈hd(w)and{a mathematical formula}w∼Cw′, then{a mathematical formula}φ∈hd(w′).The statement follows from Lemma 23, Lemma 24, and Definition 11 because there is a unique path between any two nodes in a tree.  □
+      </paragraph>
+      <paragraph>
+       At the beginning of Section 6.2, we discussed that if a parent node contains a modal formula {a mathematical formula}¬□ψ, then it must have a child node containing formula ¬ψ. Lemma 15 in Section 6.2 provides a foundation for constructing such a child node for modality {a mathematical formula}KC. The proof of the next lemma describes the construction of the child node for this modality.
+      </paragraph>
+      <paragraph label="Proof">
+       If{a mathematical formula}KCφ∉hd(w), then there is an epistemic state{a mathematical formula}w′∈Wsuch that{a mathematical formula}w∼Cw′and{a mathematical formula}φ∉hd(w′).Assumption {a mathematical formula}KCφ∉hd(w) implies that {a mathematical formula}¬KCφ∈hd(w) due to the maximality of the set {a mathematical formula}hd(w). Thus, by Lemma 15, set {a mathematical formula}Y0={¬φ}∪{ψ|KCψ∈hd(w)} is consistent. Let Y be a maximal consistent extension of set {a mathematical formula}Y0 and {a mathematical formula}w′ be sequence {a mathematical formula}w,C,Y. In other words, sequence {a mathematical formula}w′ is an extension of sequence w by two additional elements: C and Y. Note that {a mathematical formula}w′∈W due to Definition 10 and the choice of set {a mathematical formula}Y0. Furthermore, {a mathematical formula}w∼Cw′ by Definition 11. To finish the proof, we need to show that {a mathematical formula}φ∉hd(w′). Indeed, {a mathematical formula}¬φ∈Y0⊆Y=hd(w′) by the choice of {a mathematical formula}Y0. Therefore, {a mathematical formula}φ∉hd(w′) due to the consistency of the set {a mathematical formula}hd(w′).  □
+      </paragraph>
+      <paragraph>
+       In the next two definitions we specify the domain of votes and the vote aggregation mechanism of the canonical transition system. Informally, a vote {a mathematical formula}(φ,w) of each agent consists of two components: the actual vote φ and a key w. The actual vote φ is a formula from Φ in support of what the agent votes. Recall that the agent does not know in which exact state the system is, she only knows the equivalence class of this state with respect to the indistinguishability relation. The key w is the agent's guess of the epistemic state where the system is. Informally, agent's vote has more power to force the formula to be satisfied in the next state if she guesses the current state correctly.
+      </paragraph>
+      <paragraph>
+       Although each agent is free to vote for any formula she likes, the vote aggregation mechanism would grant agent's wish only under certain circumstances. Namely, if the system is in state w and set {a mathematical formula}hd(w) contains formula {a mathematical formula}SCφ, then the mechanism guarantees that formula φ is satisfied in the next state as long as each member of coalition C votes for formula φ and correctly guesses the current epistemic state. In other words, in order for formula φ to be guaranteed in the next state all members of the coalition C must cast vote {a mathematical formula}(φ,w). This means that if {a mathematical formula}SCφ∈hd(w), then coalition C has a strategy to force φ in the next state. Since the strategy requires each member of the coalition to guess correctly the current state, such a strategy is not a know-how strategy.
+      </paragraph>
+      <paragraph>
+       The vote aggregation mechanism is more forgiving if the epistemic state w contains formula {a mathematical formula}HCφ. In this case the mechanism guarantees that formula φ is satisfied in the next state if all members of the coalition vote for formula φ; it does not matter if they guess the current state correctly or not. This means that if {a mathematical formula}HCφ∈hd(w), then coalition C has a know-how strategy to force φ in the next state. The strategy consists in each member of the coalition voting for formula φ and specifying an arbitrary epistemic state as the key.
+      </paragraph>
+      <paragraph>
+       Formal definitions of the domain of choices and of the vote aggregation mechanism in the canonical epistemic transition system are given below.
+      </paragraph>
+      <paragraph label="Definition 12">
+       The domain of choices V is {a mathematical formula}Φ×W.
+      </paragraph>
+      <paragraph>
+       For any pair {a mathematical formula}u=(x,y), let {a mathematical formula}pr1(u)=x and {a mathematical formula}pr2(u)=y.
+      </paragraph>
+      <paragraph label="Definition 13">
+       The mechanism M of the canonical model is the set of all tuples {a mathematical formula}(w,{sa}a∈A,w′) such that for each formula {a mathematical formula}φ∈Φ and each coalition C,
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        if {a mathematical formula}SCφ∈hd(w) and {a mathematical formula}sa=(φ,w) for each {a mathematical formula}a∈C, then {a mathematical formula}φ∈hd(w′), and
+       </list-item>
+       <list-item label="2.">
+        if {a mathematical formula}HCφ∈hd(w) and {a mathematical formula}pr1(sa)=φ for each {a mathematical formula}a∈C, then {a mathematical formula}φ∈hd(w′).
+       </list-item>
+      </list>
+      <paragraph>
+       The next two lemmas prove that the vote aggregation mechanism specified in Definition 13 acts as discussed in the informal description given earlier.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}w,w′∈Wbe epistemic states,{a mathematical formula}SCφ∈hd(w)be a formula, and{a mathematical formula}s={sa}a∈Cbe a strategy profile of coalition C. If{a mathematical formula}w→sw′and{a mathematical formula}sa=(φ,w)for each{a mathematical formula}a∈C, then{a mathematical formula}φ∈hd(w′).Suppose that {a mathematical formula}w→sw′. Thus, by Definition 6, there is a strategy profile {a mathematical formula}s′={sa′}a∈A∈VA such that {a mathematical formula}sa′=sa for each {a mathematical formula}a∈C and {a mathematical formula}(w,s′,w′)∈M. Therefore, {a mathematical formula}φ∈hd(w′) by Definition 13 and the assumption {a mathematical formula}sa=(φ,w) for each {a mathematical formula}a∈C.  □
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}w,w′,w″∈Wbe epistemic states,{a mathematical formula}HCφ∈hd(w)be a formula, and{a mathematical formula}s={sa}a∈Cbe a strategy profile of coalition C. If{a mathematical formula}w∼Cw′,{a mathematical formula}w′→sw″, and{a mathematical formula}pr1(sa)=φfor each{a mathematical formula}a∈C, then{a mathematical formula}φ∈hd(w″).Suppose that {a mathematical formula}HCφ∈hd(w). Thus, {a mathematical formula}hd(w)⊢KCHCφ by Lemma 1. Hence, {a mathematical formula}KCHCφ∈hd(w) due to the maximality of the set {a mathematical formula}hd(w). Thus, {a mathematical formula}HCφ∈hd(w′) by Lemma 25 and the assumption {a mathematical formula}w∼Cw′. By Definition 6, assumption {a mathematical formula}w′→sw″ implies that there is a strategy profile {a mathematical formula}s′={sa′}a∈A such that {a mathematical formula}sa′=sa for each {a mathematical formula}a∈C and {a mathematical formula}(w′,s′,w″)∈M. Since {a mathematical formula}HCφ∈hd(w′), {a mathematical formula}pr1(sa′)=pr1(sa)=φ for each {a mathematical formula}a∈C, and {a mathematical formula}(w′,s′,w″)∈M, we have {a mathematical formula}φ∈hd(w″) by Definition 13.  □
+      </paragraph>
+      <paragraph>
+       The lemma below provides a construction of a child node for modality {a mathematical formula}SC. Although the proof follows the outline of the proof of Lemma 26 for modality {a mathematical formula}KC, it is significantly more involved because of the need to show that a transition from a parent node to a child node satisfies the constraints of the vote aggregation mechanism from Definition 13.
+      </paragraph>
+      <paragraph label="Proof">
+       For any epistemic state{a mathematical formula}w∈W, any formula{a mathematical formula}¬SCψ∈hd(w), and any strategy profile{a mathematical formula}s={sa}a∈C∈VC, there is a state{a mathematical formula}w′∈Wsuch that{a mathematical formula}w→sw′and{a mathematical formula}ψ∉hd(w′).Let {a mathematical formula}Y0 be the following set of formulae{a mathematical formula} We first show that set {a mathematical formula}Y0 is consistent. Suppose the opposite. Thus, there must exist formulae {a mathematical formula}φ1,…,φn∈Y0 and subsets {a mathematical formula}D1,…,Dn⊆C such that (i) {a mathematical formula}SDiφi∈hd(w) for each integer {a mathematical formula}i≤n, (ii) {a mathematical formula}pr1(sa)=φi for each {a mathematical formula}i≤n and each {a mathematical formula}a∈Di, and (iii) set {a mathematical formula}{¬ψ,φ1,…,φn} is inconsistent. Without loss of generality we can assume that formulae {a mathematical formula}φ1,…,φn are pairwise distinct.
+      </paragraph>
+      <paragraph label="Claim 2">
+       Sets{a mathematical formula}Diand{a mathematical formula}Djare disjoint for each{a mathematical formula}i≠j.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Assume that {a mathematical formula}d∈Di∩Dj, then {a mathematical formula}pr1(sd)=φi and {a mathematical formula}pr1(sd)=φj. Hence, {a mathematical formula}φi=φj, which contradicts the assumption that formulae {a mathematical formula}φ1,…,φn are pairwise distinct. Therefore, sets {a mathematical formula}Di and {a mathematical formula}Dj are disjoint for each {a mathematical formula}i≠j.  □
+      </paragraph>
+      <paragraph>
+       By Lemma 16, it follows from Claim 2 that set {a mathematical formula}Y0 is consistent. Let Y be any maximal consistent extension of {a mathematical formula}Y0 and {a mathematical formula}w′ be the sequence {a mathematical formula}w,∅,Y. In other words, {a mathematical formula}w′ is an extension of sequence w by two additional elements: ∅ and Y.
+      </paragraph>
+      <paragraph label="Claim 3">
+       {a mathematical formula}w′∈W.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       By Definition 10, it suffices to show that, for each formula {a mathematical formula}φ∈Φ, if {a mathematical formula}K∅φ∈hd(w), then {a mathematical formula}φ∈Y. Indeed, suppose that {a mathematical formula}K∅φ∈hd(w). Thus, {a mathematical formula}hd(w)⊢H∅φ by Empty Coalition axiom. Hence, {a mathematical formula}hd(w)⊢S∅φ by Strategic Truth axiom. Then, {a mathematical formula}S∅φ∈hd(w) due to the maximality of set {a mathematical formula}hd(w). Therefore, {a mathematical formula}φ∈Y0⊆Y by the choice of sets {a mathematical formula}Y0 and Y.  □
+      </paragraph>
+      <paragraph>
+       Let ⊤ be any propositional tautology. For example, ⊤ could be formula {a mathematical formula}ψ→ψ. Define strategy profile {a mathematical formula}s′={sa′}a∈A as follows{a mathematical formula}
+      </paragraph>
+      <paragraph label="Claim 4">
+       For any formula{a mathematical formula}φ∈Φand any{a mathematical formula}D⊆A, if{a mathematical formula}SDφ∈hd(w)and{a mathematical formula}sa′=(φ,w)for each{a mathematical formula}a∈D, then{a mathematical formula}φ∈hd(w′).
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Consider any formula {a mathematical formula}φ∈Φ and any set {a mathematical formula}D⊆A such that {a mathematical formula}SDφ∈hd(w) and {a mathematical formula}sa′=(φ,w) for each agent {a mathematical formula}a∈D. We need to show that {a mathematical formula}φ∈hd(w′).Case 1:{a mathematical formula}D⊆C. In this case, {a mathematical formula}sa=sa′=(φ,w) for each {a mathematical formula}a∈D by definition (18). Thus, {a mathematical formula}φ∈Y0⊆Y=hd(w′) by the choice of set {a mathematical formula}Y0.Case 2: There is {a mathematical formula}a0∈D such that {a mathematical formula}a0∉C. Then, {a mathematical formula}sa0′=(⊤,w) by definition (18). Note that {a mathematical formula}sa0′=(φ,w) by the choice of the set D. Thus, {a mathematical formula}(⊤,w)=(φ,w). Hence, formula φ is the tautology ⊤. Therefore, {a mathematical formula}φ∈hd(w′) because set {a mathematical formula}hd(w′) is maximal.  □
+      </paragraph>
+      <paragraph label="Claim 5">
+       For any formula{a mathematical formula}φ∈Φand any{a mathematical formula}D⊆A, if{a mathematical formula}HDφ∈hd(w)and{a mathematical formula}pr1(sa′)=φfor each{a mathematical formula}a∈D, then{a mathematical formula}φ∈hd(w′).
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Consider any formula {a mathematical formula}φ∈Φ and any set {a mathematical formula}D⊆A such that {a mathematical formula}HDφ∈hd(w) and {a mathematical formula}pr1(sa′)=φ for each agent {a mathematical formula}a∈D. We need to show that {a mathematical formula}φ∈hd(w′).Case 1:{a mathematical formula}D⊆C. In this case, {a mathematical formula}pr1(sa)=pr1(sa′)=φ for each agent {a mathematical formula}a∈D by definition (18) and the choice of set D. Thus, {a mathematical formula}φ∈Y0⊆Y=hd(w′) by the choice of set {a mathematical formula}Y0.Case 2: There is agent {a mathematical formula}a0∈D such that {a mathematical formula}a0∉C. Then, {a mathematical formula}sa0′=(⊤,w) by definition (18). Note that {a mathematical formula}pr1(sa0′)=φ by the choice of set D. Thus, {a mathematical formula}⊤=φ. Hence, formula φ is the tautology ⊤. Therefore, {a mathematical formula}φ∈hd(w′) because set {a mathematical formula}hd(w′) is maximal.  □
+      </paragraph>
+      <paragraph>
+       By Definition 13, Claim 4 and Claim 5 together imply that {a mathematical formula}(w,s′,w′)∈M. Hence, {a mathematical formula}w→sw′ by Definition 6 and definition (18). To finish the proof of the lemma, note that {a mathematical formula}ψ∉hd(w′) because set {a mathematical formula}hd(w′) is consistent and {a mathematical formula}¬ψ∈Y0⊆Y=hd(w′).  □
+      </paragraph>
+      <paragraph>
+       The next lemma shows the construction of a child node for modality {a mathematical formula}HC. The proof is similar to the proof of Lemma 29 except that, instead of constructing a single child node, we construct two sibling nodes that are in complete harmony. The intuition was discussed at the beginning of Section 6.3.
+      </paragraph>
+      <paragraph label="Claim 6">
+       For any state{a mathematical formula}w∈W, any formula{a mathematical formula}¬HCψ∈hd(w), and any strategy profile{a mathematical formula}s={sa}a∈C∈VC, there are epistemic states{a mathematical formula}w′,w″∈Wsuch that{a mathematical formula}ψ∉hd(w″),{a mathematical formula}w∼Cw′, and{a mathematical formula}w′→sw″.By Definition 12, for each {a mathematical formula}a∈C, vote {a mathematical formula}sa is a pair. Let{a mathematical formula}Y={φ|KCφ∈hd(w)}, and{a mathematical formula}Z={¬ψ}∪{φ|∃D⊆C(HDφ∈hd(w)∧∀a∈D(pr1(sa)=φ))}.By Lemma 20 where {a mathematical formula}f(x)=pr1(sx), pair {a mathematical formula}(Y,Z) is in harmony. By Lemma 21, there is a pair {a mathematical formula}(Y′,Z′) in complete harmony such that {a mathematical formula}Y⊆Y′ and {a mathematical formula}Z⊆Z′. By Lemma 17 and Lemma 18, sets {a mathematical formula}Y′ and {a mathematical formula}Z′ are consistent. Let {a mathematical formula}Y″ and {a mathematical formula}Z″ be maximal consistent extensions of sets {a mathematical formula}Y′ and {a mathematical formula}Z′, respectively.Recall that set {a mathematical formula}A is finite. Thus, set {a mathematical formula}C⊆A is also finite. Let integer n be the cardinality of set C. Consider {a mathematical formula}(n+1) sequences {a mathematical formula}w1,w2,…,wn+1, where sequence {a mathematical formula}wk is an extension of sequence w that adds 2k additional elements:{a mathematical formula}{a mathematical formula}wk∈Wfor each{a mathematical formula}k≤n+1.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       We prove the claim by induction on integer k.Base Case: By Definition 10, it suffices to show that if {a mathematical formula}KCφ∈hd(w), then {a mathematical formula}φ∈hd(w1). Indeed, if {a mathematical formula}KCφ∈hd(w), then {a mathematical formula}φ∈Y by the choice of set Y. Therefore, {a mathematical formula}φ∈Y⊆Y′⊆Y″=hd(w1).Induction Step: By Definition 10, it suffices to show that if {a mathematical formula}KCφ∈hd(wk), then {a mathematical formula}φ∈hd(wk+1) for each {a mathematical formula}k≥1. In other words, we need to prove that if {a mathematical formula}KCφ∈Y″, then {a mathematical formula}φ∈Y″, which follows from Truth axiom and the maximality of set {a mathematical formula}Y″.  □
+      </paragraph>
+      <paragraph>
+       By the pigeonhole principle, there is {a mathematical formula}i0≤n such that {a mathematical formula}pr2(sa)≠wi0 for all {a mathematical formula}a∈C. Let {a mathematical formula}w′ be epistemic state {a mathematical formula}wi0. Thus,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}w″ be the sequence {a mathematical formula}w,∅,Z″. In other words, sequence {a mathematical formula}w″ is an extension of sequence w by two additional elements: ∅ and {a mathematical formula}Z″. Finally, let strategy profile {a mathematical formula}s′={sa′}a∈A be defined as follows{a mathematical formula}
+      </paragraph>
+      <paragraph label="Claim 7">
+       {a mathematical formula}w″∈W.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       By Definition 10, it suffices to show that if {a mathematical formula}K∅φ∈hd(w), then {a mathematical formula}φ∈hd(w″) for each formula {a mathematical formula}φ∈Φ. Indeed, by Empty Coalition axiom, assumption {a mathematical formula}K∅φ∈hd(w) implies that {a mathematical formula}hd(w)⊢H∅φ. Hence, {a mathematical formula}H∅φ∈hd(w) by the maximality of the set {a mathematical formula}hd(w). Thus, {a mathematical formula}φ∈Z by the choice of set Z. Therefore, {a mathematical formula}φ∈Z⊆Z′⊆Z″=hd(w″).  □
+      </paragraph>
+      <paragraph label="Claim 8">
+       {a mathematical formula}w∼Cw′.
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       By Definition 11, {a mathematical formula}w∼Cwi for each integer {a mathematical formula}i≤n+1. In particular, {a mathematical formula}w∼Cwi0=w′.  □
+      </paragraph>
+      <paragraph label="Claim 9">
+       {a mathematical formula}ψ∉hd(w″).
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Note that {a mathematical formula}¬ψ∈Z by the choice of set Z. Thus, {a mathematical formula}¬ψ∈Z⊆Z′⊆Z″=hd(w″). Therefore, {a mathematical formula}ψ∉hd(w″) due to the consistency of the set {a mathematical formula}hd(w″).  □
+      </paragraph>
+      <paragraph label="Claim 10">
+       Let φ be a formula in Φ and D be a subset of{a mathematical formula}A. If{a mathematical formula}SDφ∈hd(w′)and{a mathematical formula}sa′=(φ,w′)for each{a mathematical formula}a∈D, then{a mathematical formula}φ∈hd(w″).
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Note that either set D is empty or it contains an element {a mathematical formula}a0. In the latter case, element {a mathematical formula}a0 either belongs or does not belong to set C.Case I:{a mathematical formula}D=∅. Recall that pair {a mathematical formula}(Y′,Z′) is in complete harmony. Thus, by Definition 9, either {a mathematical formula}¬S∅φ∈Y′⊆Y″=hd(w′) or {a mathematical formula}φ∈Z′⊆Z″=hd(w″). Assumption {a mathematical formula}SDφ∈hd(w′) implies that {a mathematical formula}¬S∅φ∉hd(w′) due to the consistency of the set {a mathematical formula}hd(w′) and the assumption {a mathematical formula}D=∅ of the case. Therefore, {a mathematical formula}φ∈hd(w″).Case II: there is an element {a mathematical formula}a0∈C∩D. Thus, {a mathematical formula}a0∈C. Hence, {a mathematical formula}pr2(sa0)≠w′ by inequality (19). Then, {a mathematical formula}sa0≠(φ,w′). Thus, {a mathematical formula}sa0′≠(φ,w′) by definition (20). Recall that {a mathematical formula}a0∈C∩D⊆D. This contradicts the assumption that {a mathematical formula}sa′=(φ,w′) for each {a mathematical formula}a∈D.Case III: there is an element {a mathematical formula}a0∈D∖C. Thus, {a mathematical formula}sa0′=(⊤,w′) by definition (20). At the same time, {a mathematical formula}sa0′=(φ,w′) by the second assumption of the claim. Hence, formula φ is the propositional tautology ⊤. Therefore, {a mathematical formula}φ∈hd(w″) due to the maximality of the set {a mathematical formula}hd(w″).  □
+      </paragraph>
+      <paragraph label="Claim 11">
+       Let φ be a formula in Φ and D be a subset of{a mathematical formula}A. If{a mathematical formula}HDφ∈hd(w′)and{a mathematical formula}pr1(sa′)=φfor each{a mathematical formula}a∈D, then{a mathematical formula}φ∈hd(w″).
+      </paragraph>
+      <paragraph label="Proof of Claim">
+       Case I:{a mathematical formula}D⊆C. Suppose that {a mathematical formula}pr1(sa′)=φ for each {a mathematical formula}a∈D and {a mathematical formula}HDφ∈hd(w′). Thus, {a mathematical formula}φ∈Z by the choice of set Z. Therefore, {a mathematical formula}φ∈Z⊆Z′⊆Z″=hd(w″).Case II:{a mathematical formula}D⊈C. Consider any {a mathematical formula}a0∈D∖C. Note that {a mathematical formula}sa0′=(⊤,w′) by definition (20). At the same time, {a mathematical formula}pr1(saa′)=φ by the second assumption of the claim. Hence, formula φ is the propositional tautology ⊤. Therefore, {a mathematical formula}φ∈hd(w″) due to the maximality of the set {a mathematical formula}hd(w″).  □
+      </paragraph>
+      <paragraph>
+       Claim 10 and Claim 11, by Definition 13, imply that {a mathematical formula}(w′,{sa′}a∈A,w″)∈M. Thus, {a mathematical formula}w′→sw″ by Definition 6 and definition (20). This together with Claim 6, Claim 7, Claim 8, and Claim 9 completes the proof of the lemma.  □
+      </paragraph>
+      <paragraph label="Definition 14">
+       {a mathematical formula}π(p)={w∈W|p∈hd(w)}.
+      </paragraph>
+      <paragraph>
+       This concludes the definition of tuple {a mathematical formula}(W,{∼a}a∈A,V,M,π).
+      </paragraph>
+      <paragraph label="Proof">
+       Tuple{a mathematical formula}(W,{∼a}a∈A,V,M,π)is an epistemic transition system.By Definition 1, it suffices to show that for each {a mathematical formula}w∈W and each {a mathematical formula}s∈VA there is {a mathematical formula}w′∈W such that {a mathematical formula}(w,s,w′)∈M.Recall that set {a mathematical formula}A is finite. Thus, {a mathematical formula}⊢¬SA⊥ by Nontermination axiom. Hence, {a mathematical formula}¬SA⊥∈hd(w). By Lemma 29, there is {a mathematical formula}w′∈W such that {a mathematical formula}w→sw′. Therefore, {a mathematical formula}(w,s,w′)∈M by Definition 6.  □
+      </paragraph>
+      <paragraph label="Proof">
+       {a mathematical formula}w⊩φiff{a mathematical formula}φ∈hd(w)for each epistemic state{a mathematical formula}w∈Wand each formula{a mathematical formula}φ∈Φ.We prove the lemma by induction on the structural complexity of formula φ. If formula φ is a propositional variable, then the required follows from Definition 7 and Definition 14. The cases of formula φ being a negation or an implication follow from Definition 7, and the maximality and the consistency of the set {a mathematical formula}hd(w) in the standard way.Let formula φ have the form {a mathematical formula}KCψ.{a mathematical formula}(⇒) Suppose that {a mathematical formula}KCψ∉hd(w). Then, by Lemma 26, there is {a mathematical formula}w′∈W such that {a mathematical formula}w∼Cw′ and {a mathematical formula}ψ∉hd(w′). Hence, {a mathematical formula}w′⊮ψ by the induction hypothesis. Therefore, {a mathematical formula}w⊮KCψ by Definition 7.{a mathematical formula}(⇐) Assume that {a mathematical formula}KCψ∈hd(w). Consider any {a mathematical formula}w′∈W such that {a mathematical formula}w∼Cw′. By Definition 7, it suffices to show that {a mathematical formula}w′⊩ψ. Indeed, {a mathematical formula}ψ∈hd(w′) by Lemma 25. Therefore, by the induction hypothesis, {a mathematical formula}w′⊩ψ.Let formula φ have the form {a mathematical formula}SCψ.{a mathematical formula}(⇒) Suppose that {a mathematical formula}SCψ∉hd(w). Then, {a mathematical formula}¬SCψ∈hd(w) due to the maximality of the set {a mathematical formula}hd(w). Hence, by Lemma 29, for any strategy profile {a mathematical formula}s∈VC, there is an epistemic state {a mathematical formula}w′∈W such that {a mathematical formula}w→sw′ and {a mathematical formula}ψ∉hd(w′). Thus, by the induction hypothesis, for any strategy profile {a mathematical formula}s∈VC, there is a state {a mathematical formula}w′∈W such that {a mathematical formula}w→sw′ and {a mathematical formula}w′⊮ψ. Then, {a mathematical formula}w⊮SCψ by Definition 7.{a mathematical formula}(⇐) Assume that {a mathematical formula}SCψ∈hd(w). Consider strategy profile {a mathematical formula}s={sa}a∈C∈VC such that {a mathematical formula}sa=(ψ,w) for each {a mathematical formula}a∈C. By Lemma 27, for any epistemic state {a mathematical formula}w′∈W, if {a mathematical formula}w→sw′, then {a mathematical formula}ψ∈hd(w′). Hence, by the induction hypothesis, for any epistemic state {a mathematical formula}w′∈W, if {a mathematical formula}w→sw′, then {a mathematical formula}w′⊩ψ. Therefore, {a mathematical formula}w⊩SCψ by Definition 7.Finally, let formula φ have the form {a mathematical formula}HCψ.{a mathematical formula}(⇒) Suppose that {a mathematical formula}HCψ∉hd(w). Then, {a mathematical formula}¬HCψ∈hd(w) due to the maximality of the set {a mathematical formula}hd(w). Hence, by Lemma 30, for any strategy profile {a mathematical formula}s∈VC, there are epistemic states {a mathematical formula}w′,w″∈W such that {a mathematical formula}w∼Cw′, {a mathematical formula}w′→sw″, and {a mathematical formula}ψ∉hd(w″). Thus, {a mathematical formula}w″⊮ψ by the induction hypothesis. Therefore, {a mathematical formula}w⊮HCψ by Definition 7.{a mathematical formula}(⇐) Assume that {a mathematical formula}HCψ∈hd(w). Consider a strategy profile {a mathematical formula}s={sa}a∈C∈VC such that {a mathematical formula}sa=(ψ,w) for each {a mathematical formula}a∈C. By Lemma 28, for all epistemic states {a mathematical formula}w′,w″∈W, if {a mathematical formula}w∼Cw′, and {a mathematical formula}w′→sw″, then {a mathematical formula}ψ∈hd(w″). Hence, by the induction hypothesis, {a mathematical formula}w″⊩ψ. Therefore, {a mathematical formula}w⊩HCψ by Definition 7.  □
+      </paragraph>
+     </section>
+     <section label="6.6">
+      <section-title>
+       Completeness: the final step
+      </section-title>
+      <paragraph>
+       To finish the proof of Theorem 2 stated at the beginning of Section 6, suppose that ⊬φ. Let {a mathematical formula}X0 be any maximal consistent subset of set Φ such that {a mathematical formula}¬φ∈X0. Consider the canonical epistemic transition system {a mathematical formula}ETS(X0) defined in Section 6.5. Let w be the single-element sequence {a mathematical formula}X0. Note that {a mathematical formula}w∈W by Definition 10. Thus, {a mathematical formula}w⊩¬φ by Lemma 32. Therefore, {a mathematical formula}w⊮φ by Definition 7.
+      </paragraph>
+      <paragraph>
+       Note that Theorem 2 can be stated and proven in a slightly more general form known as string completeness theorem:
+      </paragraph>
+      <paragraph label="Theorem 3">
+       strong completenessFor any (possibly infinite) set of formulae{a mathematical formula}X⊆Φand any formula{a mathematical formula}φ∈Φ, if{a mathematical formula}X⊬φ, then there is an epistemic state w of an epistemic transition system such that{a mathematical formula}w⊩χfor each formula{a mathematical formula}χ∈Xand{a mathematical formula}w⊮φ. The proof of Theorem 3 is identical to the proof of Theorem 2 except for {a mathematical formula}X0 must be a maximal consistent extension of set {a mathematical formula}X∪{¬φ}.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

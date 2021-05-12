@@ -1,0 +1,675 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Incremental elicitation of Choquet capacities for multicriteria choice, ranking and sorting problems.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Preferences are pervasive in Artificial Intelligence. In particular, they are used to specify goals or desiderable behaviors for autonomous agents, and to provide automatic recommendations, adapted to the user, in decision-support tools. In various decision contexts, the quality of alternatives is assessed with respect to multiple criteria, possibly conflicting each other. An aggregation function is often used to compare alternatives evaluated on multiple criteria by synthesizing their performances into overall utility values. In this context, there is a need of elicitation methods aiming at specifying preference parameters modeling the relative importance of criteria for the Decision Maker (DM) and possibly their interactions.
+     </paragraph>
+     <paragraph>
+      Aggregation functions must be sufficiently expressive to fit the DM's preferences, allowing for instance the determination of his/her preferred alternative. The Choquet integral defines a family of non-linear aggregators that are really appealing for preference modeling. Decision models based on Choquet integrals have been initially introduced in the context of uncertainty with the Choquet Expected Utility theory [2]. The Choquet integral is also used in the field of decision-making under risk (probabilistic uncertainty), for example in the Yaari's model [3] or in the Rank Dependent Utility model proposed by Quiggin [4], to overcome some descriptive limitations of Expected Utility. Choquet integrals are also very popular in the field of multicriteria decision making [5], [6] because they enable to model different kinds of interactions between criteria and include many aggregators as special cases (e.g. linear additive models, min, max and any other order statistics, leximin and leximax, OWA and WOWA [7], [8]).
+     </paragraph>
+     <paragraph>
+      The Choquet integral has received much attention in the last decades and is now widely used in practical decision making [9]. Its usefulness has been established in various domains of artificial intelligence. For example, in machine learning, the use of Choquet integrals provides higher predictive capacities than linear models, while offering measures for quantifying the importance of individual predictor variables and the interaction between groups of variables [10]. Moreover, in recommender systems [11], the advantage provided by Choquet integrals is to allow positive and negative synergies between criteria, with enhanced descriptive and prescriptive possibilities. Similarly, in multiagent decision making [12], the Choquet integral is used to aggregate individual preferences using a possibly non-additive measure of the importance of agent coalitions, which allows one to model various notions of social welfare. In information fusion [13], the use of Choquet integrals allows one to model positive or negative reinforcements among sets of observations. Finally, in multiobjective state-space search [14], the use of Choquet integrals allows one to find compromise solutions that could not be obtained using linear aggregators.
+     </paragraph>
+     <paragraph>
+      However, to compute overall utility values using a Choquet integral, decision support systems need to be able to assess the model's parameters according to DM's preferences. These parameters used to capture the value system of the DM are characterized by a capacity function defining the weight attached to every subset of criteria. Therefore, they are in exponential number relatively to the number of criteria and their elicitation is a challenging issue. Most of the works aiming at determining a suitable capacity for the Choquet integral consider a static preference database as input, and focus on the determination of capacity values that best fit the available preferences. For example, one can minimize a quadratic error between Choquet values and target utility values prescribed by the DM on a sample of reference alternatives. Alternatively, one can impose some constraints on Choquet values to enforce the decision model to be compatible with a partial or total order available on a subset of alternatives. These approaches are illustrated in many papers see, e.g. [15], [16], [17], [18], [19], [20], [21] and [22] (Chapter 11), some of them being implemented in decision support softwares such as TOMASO [23] and MYRIAD [24].
+     </paragraph>
+     <paragraph>
+      Departing from these standard approaches, we are proposing an incremental elicitation process for the Choquet integral; in this process, informative preference queries are selected one at the time in order to progressively reduce the set of admissible capacities until a robust recommendation can be made. This active learning process could be continued as long as some uncertainty remains in the specification of the capacity but a complete determination of the model is generally not necessary to make a decision. Moreover, it would require a prohibitive amount of preference queries. Instead, we iterate queries until what we know of the capacity is enough to formulate a recommendation (e.g. a choice, ranking or sorting of the alternatives). The elicitation process is stopped when it can be proved that further specifications of the model cannot seriously challenge the current recommendation.
+     </paragraph>
+     <paragraph>
+      This approach relies on and extends previous works on the incremental elicitation of linear utility functions, going back to the ISMAUT method [25] and more recently, strategies developed within the artificial intelligence community for preference query selection using the minimax-regret criterion [26], [27], [28], [29]. Regret-based elicitation has been successfully demonstrated with real users in a prototype for decision support (UTPref) and validated in a user study [30]. Adaptation of minimax regret elicitation strategies to Choquet models is not obvious, as in general the number of constraints required to impose that the parameters of the model are valid is exponential in the number of criteria. In this paper, we propose efficient algorithms that avoid this issue by focusing on specific (but intuitive) types of preference queries. Our approach can be used for standard choice problems (where one single alternative is suggested to the DM) but also for ranking and sorting problems. We now briefly review the main differences between these three problem settings.
+     </paragraph>
+     <paragraph>
+      Choosing is the problem setting where one alternative has to be selected and recommended to the DM. We thoroughly discuss the elicitation of Choquet capacities for choice problems in Section 3. In particular, we discuss computational issues related to minimax regret optimization (Section 3.1, 3.2, 3.3), strategies for generating relevant queries within an incremental elicitation process (Section 3.4) and evaluations with numerical tests (Section 3.5).
+     </paragraph>
+     <paragraph>
+      Ranking is the problem setting where different alternatives have to be ranked from best to worst. We consider here a special case of ranking, constructed by repeated choices. As we focus on this particular ranking model, we will discuss it within Section 3 devoted to choice problems (see Section 3.6).
+     </paragraph>
+     <paragraph>
+      Sorting is the problem setting where alternatives need to be assigned to different categories ordered from best to worst. The categories are assumed to be defined a-priori and the assignment of alternatives is based on an intrinsic evaluation. Sorting (also called multipartite ranking and instance ranking in [31]) is used, for instance, in order to assess financial credit demands or to assign specific distinctions to individuals. In this paper, we consider sorting methods with thresholds: one assumes that the utility scale is divided into intervals and assignments are made by looking in which interval the utility scores fall (see Section 4).
+     </paragraph>
+     <paragraph>
+      In this paper, we propose elicitation methods for each setting and evaluate, with numeric simulations, their practical efficiency.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background and notations
+     </section-title>
+     <paragraph>
+      Let X be the set of alternatives (items, products, candidates…) that need to be compared. Any alternative {a mathematical formula}x∈X is evaluated with respect to a set of n criteria denoted {a mathematical formula}N={1,…,n}, and is characterized by a performance vector {a mathematical formula}(x1,…,xn) where {a mathematical formula}xi∈[0,1] represents the utility of x with respect to criterion i for all {a mathematical formula}i∈N. We assume that the same utility scale is used for all components so that {a mathematical formula}xi and {a mathematical formula}xj can be compared when {a mathematical formula}i≠j. Let us now recall the definitions of Choquet capacities and discrete Choquet integrals. For simplicity, x will indifferently denote the alternative or its performance vector.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Discrete Choquet integrals
+      </section-title>
+      <paragraph>
+       For any alternative {a mathematical formula}x∈X, let {a mathematical formula}(.) denote a permutation of {a mathematical formula}{1,…,n} that sorts the components of x by increasing order,{sup:1} i.e. {a mathematical formula}x(i)≤x(i+1) for {a mathematical formula}i∈〚1,n−1〛.
+      </paragraph>
+      <paragraph label="Definition 1">
+       The ith level set of x, denoted by {a mathematical formula}X(i), is defined as {a mathematical formula}X(i)={(i),…,(n)}.
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}X(i+1)⊆X(i) for all {a mathematical formula}i∈〚1,n−1〛 by definition.
+      </paragraph>
+      <paragraph label="Definition 2">
+       A normalized Choquet capacity v is a real-valued set-function defined on {a mathematical formula}2N such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}v(∅)=0, {a mathematical formula}v(N)=1(normalization constraints)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}v(A)≤v(B) for all {a mathematical formula}A⊆B⊆N(monotonicity constraints)
+       </list-item>
+      </list>
+      <paragraph label="Definition 3">
+       The Choquet integral value of alternative {a mathematical formula}x∈X is defined as:{a mathematical formula}{a mathematical formula}Cv(x) represents the overall utility of alternative x. Therefore, alternative x is as least as good as y whenever {a mathematical formula}Cv(x)≥Cv(y).
+      </paragraph>
+      <paragraph label="Example 1">
+       Consider a problem defined on 3 criteria, i.e. {a mathematical formula}N={1,2,3}, two alternatives {a mathematical formula}x=(0.7,0.6,1) and {a mathematical formula}y=(0.8,1,0.6) and the following capacity v defined on {a mathematical formula}2{1,2,3}:{a mathematical formula}Alternatives x and y induce the following level sets:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}X(1)={1,2,3}, {a mathematical formula}X(2)={1,3} and {a mathematical formula}X(3)={3};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Y(1)={1,2,3}, {a mathematical formula}Y(2)={1,2} and {a mathematical formula}Y(3)={2}.
+       </list-item>
+      </list>
+      <paragraph>
+       In multicriteria decision-making, one needs to ensure that {a mathematical formula}Cv(x)≥Cv(y) whenever x weakly Pareto-dominates y (i.e. {a mathematical formula}xi≥yi for all {a mathematical formula}i∈N). This property holds due to the monotonicity of v with respect to set inclusion, as can be seen from the following equivalent formulation of the Choquet integral:{a mathematical formula} Due to monotonicity, we have {a mathematical formula}v(X(i))−v(X(i+1))≥0 for all {a mathematical formula}i∈{1,…,n} which guarantees that {a mathematical formula}Cv(x) cannot decrease as quantities {a mathematical formula}xi increase. In many papers on multicriteria optimization with a Choquet integral, the capacity is assumed to be given [32], [33], [34], [35]. This assumes that preference elicitation methods are available to determine the capacity that best fits DM's preferences. The aim of this paper is to introduce an incremental approach for the elicitation of the capacity in the Choquet integral, following interactive elicitation schemes proposed in [25], [28], [29] for simpler utility models.
+      </paragraph>
+      <paragraph>
+       In this approach, the elicitation task is seen as a game played with the DM. At every step of the elicitation process, the system generates a preference query, and then the DM reveals a piece of his/her actual preferences. The answer provides new constraints on the set of admissible capacities thus reducing the uncertainty attached to the capacity and therefore to the Choquet values. In this process, both the problem of selecting the next query and the one of generating a recommendation are seen as a decision problem under uncertainty, where the uncertainty is due to the imperfect knowledge of preference parameters (here the capacity). The selection of the query is made so that an effective regret reduction is guaranteed whatever the answer is.
+      </paragraph>
+      <paragraph>
+       We recall now the standard background on incremental preference elicitation based on the minimax regret criterion (Sections 2.2 and 2.3). This approach is intended for choice problems in which a parameterized utility function {a mathematical formula}fθ is to be maximized, parameter θ being imprecisely known. Then, we will further specify this approach for the Choquet integral in Section 3, first in the setting of choice and then in the setting of ranking. Finally, we will propose in Section 4 an incremental elicitation method based on an alternative definition of regrets better suited to sorting problems.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Choice based on the minimax regret criterion
+      </section-title>
+      <paragraph>
+       The minimax regret is a decision criterion classically used for optimization under uncertainty [36], [37]; it has been more recently advocated for use in decision-making where the uncertainty is over utility values [29], [38]. Assume that DM's preferences can be modeled by a parameterized utility function {a mathematical formula}fθ where θ denotes the parameter of this aggregation function. In this setting, alternative {a mathematical formula}x∈X is preferred to alternative {a mathematical formula}y∈X if and only if {a mathematical formula}fθ(x)≥fθ(y). We assume here that θ is not known precisely and can initially take any value in an uncertainty set denoted Θ. Let {a mathematical formula}P be the set gathering some pairs of alternatives {a mathematical formula}(a,b) such that a is preferred to b by the DM. Let {a mathematical formula}ΘP be the subset of Θ containing all parameters θ consistent with information {a mathematical formula}P, i.e. such that {a mathematical formula}fθ(a)≥fθ(b) for all {a mathematical formula}(a,b)∈P. The problem is now to determine the most promising alternative under parameter uncertainty {a mathematical formula}ΘP. To this end, the minimax regret approach is based on the following definitions.
+      </paragraph>
+      <paragraph label="Definition 4">
+       The pairwise max regret (PMR) of alternative x with respect to the alternative y is defined as:{a mathematical formula} In other words, the pairwise max regret of x with respect to y represents the worst-case loss when recommending x instead of y. We can establish a link with the notion of possible and necessary preferences used in other papers (see e.g. [18]): remark that {a mathematical formula}PMR(x,y,ΘP)&lt;0 means that x is necessarily better than y whereas {a mathematical formula}PMR(x,y,ΘP)&gt;0 means that y is possibly better than x. Finally {a mathematical formula}PMR(x,y,ΘP)=0 means that x is necessarily as least as good as y.
+      </paragraph>
+      <paragraph label="Definition 5">
+       The max regret (MR) of alternative {a mathematical formula}x∈X is defined as:{a mathematical formula} The max regret of x is the worst-case loss when recommending x instead of one of the adversary's choices (i.e. any element of {a mathematical formula}arg⁡maxy∈X⁡PMR(x,y,ΘP)).
+      </paragraph>
+      <paragraph label="Definition 6">
+       The minimax regret (mMR) is defined as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       An optimal solution for the minimax regret criterion is an alternative that achieves the minimax regret (i.e. any element of {a mathematical formula}arg⁡minx∈X⁡MR(x,X,ΘP)). Recommending such an alternative allows one to guarantee that the worst-case loss is minimized.
+      </paragraph>
+      <paragraph>
+       To determine the best alternative according to the minimax regret criterion, we have to compute PMR for all ordered pairs of distinct alternatives. However, the computational effort can be significantly reduced by using standard pruning rules for min aggregators, as shown in [39] (but of course, the number of PMR computations remains quadratic in the worst-case). When {a mathematical formula}fθ is a linear or piece-wise linear utility function, then {a mathematical formula}ΘP is defined by a number of linear constraints approximately equal to the size of {a mathematical formula}P. In that case, PMR-optimizations (and therefore mMR) can be performed exactly quite efficiently by solving simple linear programs. This approach is more tractable than probabilistic models of utility that rely on Bayesian updates that are computationally expensive [27], [26].
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Incremental elicitation for choice problems
+      </section-title>
+      <paragraph>
+       Given a particular set of preference statements {a mathematical formula}P, the worst-case loss ensured by the minimax regret criterion might still be at an unacceptable level. By considering additional preferences statements (inducing constraints on the set of admissible parameters), this loss may be decreased. Indeed, we know that, for any set of preference statements {a mathematical formula}P′⊇P, we have {a mathematical formula}ΘP′⊆ΘP; therefore, for any {a mathematical formula}x,y∈X, we have:{a mathematical formula}{a mathematical formula}{a mathematical formula} Hence, the minimax regret cannot increase by adding new preference statements; in practice, it often strictly decreases (see [39], pp. 194–202). Therefore, the minimax regret criterion can be used within an incremental elicitation process that progressively asks preference queries to the DM until the minimax regret drops under a given tolerance threshold {a mathematical formula}δ≥0. At that time, recommending any optimal alternative for the mMR criterion ensures that the loss incurred by not choosing the true optimal alternative is bounded above by that threshold.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Different types of queries can be used when designing such an incremental elicitation process. Comparison queries are relatively simple; they require the DM to compare a pair of alternatives and state which one is preferred. Notice however that some queries are more informative than others (e.g. the minimax regret will not decrease when asking to compare an alternative with another that Pareto-dominates the former). Thus, it is important to focus on relevant queries so as to make a good recommendation without asking too many queries. A notion of myopic value of information can be used [40] to evaluate the relevance of a query. Let {a mathematical formula}Q denote the set of all queries under consideration. The worst-case minimax regret (WmMR) of a query {a mathematical formula}q∈Q is:{a mathematical formula} where {a mathematical formula}Pq denotes the set of all possible answers to the query q.
+      </paragraph>
+      <paragraph>
+       Hence the next query of the elicitation process should be chosen in:{a mathematical formula} because any optimal solution for the WmMR criterion ensures the best reduction of minimax regret in the answer's worst-case scenario. Note that computing the optimal query for WmMR can be computationally intensive when set {a mathematical formula}Q under consideration is too large. In that case, one may consider a very efficient query selection strategy (though not optimal in general) called the Current Solution Strategy (CSS) [29] consisting in asking the DM to compare, at each iteration step, an optimal solution {a mathematical formula}x⁎ for the mMR criterion with its adversarial choice {a mathematical formula}y⁎ (arbitrarily chosen in {a mathematical formula}arg⁡maxy∈X⁡PMR(x⁎,y,ΘP)). This elicitation scheme has been successfully used in various contexts, see e.g. [29], [30], [41], [42], [43].
+      </paragraph>
+      <paragraph>
+       In this paper, we adopt an incremental elicitation procedure based on minimax regret in order to acquire the most relevant information about the Choquet capacity representing the DM's preferences (capacity v taking the role of parameter θ for the Choquet integral {a mathematical formula}Cv). This is done with different, but related, goals: recommending a single alternative, providing a ranking of alternatives and sorting the alternatives by assigning them to predefined ordered categories.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Choice and ranking with a Choquet integral
+     </section-title>
+     <paragraph>
+      In this section, we focus our discussion on the Choquet integral model; in that case, {a mathematical formula}ΘP is the set of all capacities v compatible with {a mathematical formula}P. Any preference statement of type “a is preferred to b” will be interpreted as a constraint of type {a mathematical formula}Cv(a)≥Cv(b) restricting the initial admissible set of capacities Θ, where {a mathematical formula}Cv is defined by Equation (1). It is important to note that, although {a mathematical formula}Cv(a) is a non-linear function of a for fixed v (e.g. {a mathematical formula}Cv(a+b)≠Cv(a)+Cv(b) in general), {a mathematical formula}Cv(a) is linear in v for fixed a (since the permutation of {a mathematical formula}{1,…,n} is also fixed). Hence constraint {a mathematical formula}Cv(a)≥Cv(b) is linear in v for any fixed pair {a mathematical formula}(a,b)∈P. Thus, any preference statement of type “a is preferred to b” will be translated as a linear constraint bounding the set of admissible capacities. As a consequence, the set {a mathematical formula}ΘP of admissible capacities under information {a mathematical formula}P is a convex polyhedron.
+     </paragraph>
+     <paragraph>
+      In the following subsections, we first address the computation of pairwise max regrets PMR on this polyhedron with (Sections 3.1 and 3.2) or without (Section 3.3) Linear Programming. Then, we provide an efficient query generation strategy enabling the fast determination of the best alternative for the DM (Section 3.4). Finally, we consider the problem of providing a ranking of all alternatives (Section 3.6).
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       LP formulations of the PMR-optimization problem
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}v:2N→R be a set-function and {a mathematical formula}vA be the decision variable representing {a mathematical formula}v(A) for any {a mathematical formula}A⊆N. Using this notation, v will indifferently denote the set-function or the vector composed of its values in any arbitrary order. Since Choquet integrals are linear with respect to their capacity values, the computation of {a mathematical formula}PMR(x,y,ΘP) for any alternatives {a mathematical formula}x,y∈X can be performed by solving the linear program denoted by LP1 below:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Equations (6), (7), (8) ensure that v is a normalized capacity (see Definition 2) and Equation (9) ensures that v is compatible with {a mathematical formula}P. Thus, for Choquet integrals, the computation of PMR involves exponentially many variables and monotonicity constraints (8). Note however that, for 2-additive capacities,{sup:2} the number of such constraints that are actually needed is polynomial [19] in the number of criteria. However, these subclasses correspond to specific attitudes that do not necessarily match with the observed preferences. Hence, we investigate now the general case without any prior restriction on the admissible set of capacities.
+      </paragraph>
+      <paragraph>
+       We now introduce a more compact linear programming formulation for the problem modeled by LP1. For any two performance vectors x and y, let {a mathematical formula}A(x,y) be the set of all level sets of x and y (see Definition 1), i.e.{a mathematical formula} Note that sets belonging to {a mathematical formula}A(x,y) are the only ones that appear in the objective function of PL1. As a consequence, the objective function involves at most {a mathematical formula}2n−1 variables. This specificity can be exploited to simplify the optimization problem associated to the computation of pairwise max regrets. In this paper, the simplification is achieved by limiting the form of preference statements. More precisely, let us consider queries involving the following two types of fictitious alternatives:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Binary alternatives of type {a mathematical formula}1A0, where {a mathematical formula}1A0 is an alternative with a top performance on all criteria in {a mathematical formula}A⊆N and a bottom one on all others. For example, {a mathematical formula}1A0=(1,0,1,0,0) when {a mathematical formula}A={1,3} and {a mathematical formula}n=5.
+       </list-item>
+       <list-item label="•">
+        Constant utility profiles of type {a mathematical formula}Λ=(λ,…,λ)∈[0,1]n.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that, for any normalized capacity v and any set {a mathematical formula}A⊆N, we have:{a mathematical formula} This is due to the fact that all “bottom” criteria precede all “top” criteria in the permutation, and so the difference of performance between any two successive criteria is equal to zero, except for the last “bottom” criterion and the first “top” criterion, which is equal to one (refer to Definition 3). Moreover, for any normalized capacity v and any {a mathematical formula}Λ∈[0,1]n, we have:{a mathematical formula} This can easily be explained by remarking that the difference of performances between any two successive criteria is zero, except for that between the first criterion and the auxiliary criterion {a mathematical formula}x(0)=0.
+      </paragraph>
+      <paragraph>
+       We now consider preference queries where the DM is asked to compare a binary alternative with a constant utility profile:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        if {a mathematical formula}1A0 is preferred to Λ, then Equation (9) gives the simple constraint {a mathematical formula}vA≥λ, imposing a lower bound on {a mathematical formula}v(A).
+       </list-item>
+       <list-item label="•">
+        if Λ is preferred to {a mathematical formula}1A0, then Equation (9) induces the constraint {a mathematical formula}vA≤λ, imposing an upper bound on {a mathematical formula}v(A).
+       </list-item>
+      </list>
+      <paragraph>
+       Consequently, Equation (9) can be replaced by boundary constraints over decision variables; indeed, to ensure that the set-function v is compatible with {a mathematical formula}P, it is sufficient to update the boundaries of an interval {a mathematical formula}[lA,uA] whenever a preference involving {a mathematical formula}1A0 is inserted in {a mathematical formula}P; note that {a mathematical formula}l∅=u∅=0, {a mathematical formula}lN=uN=1 due to the normalization constraint, and initially, we have {a mathematical formula}[lA,uA]=[0,1] for all proper subsets A of N.
+      </paragraph>
+      <paragraph>
+       Moreover, since {a mathematical formula}ΘP∪{(1A0,Λ)} is the set of all capacities {a mathematical formula}v∈ΘP that satisfy {a mathematical formula}v(A)≥λ, and keeping in mind that all capacities are monotonic by definition, we necessarily have {a mathematical formula}v(B)≥λ for all {a mathematical formula}B⊇A, that means:{a mathematical formula} Similarly, since {a mathematical formula}ΘP∪{(Λ,1A0)} is the set of all capacities {a mathematical formula}v∈ΘP such that {a mathematical formula}v(A)≤λ, we necessarily have {a mathematical formula}v(B)≤λ for all {a mathematical formula}B⊆A, that means:{a mathematical formula} Therefore, for any {a mathematical formula}A⊆N, {a mathematical formula}λ∈[lA,uA], we perform the following updates:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        if the preference {a mathematical formula}(1A0,Λ) is inserted in {a mathematical formula}P, meaning that {a mathematical formula}1A0 is preferred to Λ, then we set {a mathematical formula}lA=λ and {a mathematical formula}lB=max⁡{lB,λ} for all {a mathematical formula}B⊃A;
+       </list-item>
+       <list-item label="•">
+        if the preference {a mathematical formula}(Λ,1A0) is inserted in {a mathematical formula}P, meaning that Λ is preferred to {a mathematical formula}1A0, then we set {a mathematical formula}uA=λ and {a mathematical formula}uB=min⁡{uB,λ} for all {a mathematical formula}B⊂A.
+       </list-item>
+      </list>
+      <paragraph>
+       It is important to note that restricting the interaction to comparison queries involving a binary alternative {a mathematical formula}1A0 and a constant utility profile Λ is sufficient to elicit all preferences of the DM. The constraints derived from the answers indeed allow us to approximate the capacity values {a mathematical formula}v(A),A⊆N, as close as we want. Hence, the knowledge of v on every subset of criteria completely determines the Choquet integral representing the DM's preferences over the entire set of alternatives. Note also that, by construction, we have {a mathematical formula}lA≤lB and {a mathematical formula}uA≤uB for all {a mathematical formula}A⊂B. Then, the following proposition holds:
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Consider intervals{a mathematical formula}[lA,uA],{a mathematical formula}A⊆N. Assume that{a mathematical formula}lA≤lBand{a mathematical formula}uA≤uBhold for all{a mathematical formula}A⊂B⊆N. Then, for any{a mathematical formula}A⊂2N, the subnetwork of monotonicity constraints{a mathematical formula}vA≤vB, where{a mathematical formula}A,B∈Aand{a mathematical formula}A⊆B, is globally consistent [44], i.e. any partial instantiation of variables{a mathematical formula}vA,A∈A, which is locally consistent (w.r.t. boundary and monotonicity constraints) can be extended to a consistent instantiation of all variables{a mathematical formula}vA,A⊆N.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}A⊂2N and let I be an instantiation of all variables in {a mathematical formula}{vA:A∈A} such that {a mathematical formula}vA∈[lA,uA] for all {a mathematical formula}A∈A and {a mathematical formula}vA≤vB for all {a mathematical formula}A,B∈A, {a mathematical formula}A⊂B (i.e. I is locally consistent). Consider the following complete extension of I:{a mathematical formula} We assume that {a mathematical formula}maxA′∈A:A′⊂A⁡vA′=−∞ when {a mathematical formula}{A′∈A:A′⊂A}=∅. We want to show that this complete instantiation satisfies boundary and monotonicity constraints.Boundary constraints: we want to prove {a mathematical formula}vA∈[lA,uA] for all {a mathematical formula}A⊆N. If {a mathematical formula}A∈A, then boundary conditions follow directly from the hypothesis. If, instead, {a mathematical formula}A∉A, we necessarily have {a mathematical formula}vA≥lA by definition (see Equation (10)). To derive {a mathematical formula}vA≤uA, recall that {a mathematical formula}uA′≤uA for all {a mathematical formula}A′⊂A. Then, we obtain:{a mathematical formula}Monotonicity constraints: we want to prove {a mathematical formula}vA≤vB for all {a mathematical formula}A⊂B⊆N. We distinguish the four following cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Case{a mathematical formula}A∈Aand{a mathematical formula}B∈A: we can directly infer the result since instantiation I is locally consistent.
+       </list-item>
+       <list-item label="•">
+        Case{a mathematical formula}A∈Aand{a mathematical formula}B∉A: in that case, we have {a mathematical formula}A∈{B′∈A:B′⊂B}. Therefore:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        Case{a mathematical formula}A∉Aand{a mathematical formula}B∈A: Consider any {a mathematical formula}A′⊂A with {a mathematical formula}A′∈A (if it exists). Since {a mathematical formula}A⊂B, we have {a mathematical formula}A′⊂B and both {a mathematical formula}A′ and B are elements of {a mathematical formula}A; hence, we necessarily have {a mathematical formula}vA′≤vB since I is locally consistent. We then write the expression of {a mathematical formula}vA according to Equation (10) and derive:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        Case {a mathematical formula}A∉A and {a mathematical formula}B∉A: Since {a mathematical formula}A⊂B, we have {a mathematical formula}lA≤lB by hypothesis. Moreover, we necessarily have {a mathematical formula}{A′∈A:A′⊂A}⊂{B′∈A:B′⊂B}. Therefore, using Equation (10), we have:{a mathematical formula} □
+       </list-item>
+      </list>
+      <paragraph>
+       Since sets belonging to {a mathematical formula}A(x,y) are the only ones that appear in the objective function of PL1, then by applying Proposition 1 to set {a mathematical formula}A=A(x,y), we know that {a mathematical formula}PMR(x,y,ΘP) can be solved by considering only monotonicity constraints involving variables {a mathematical formula}vA, {a mathematical formula}A∈A(x,y). Therefore, we can compute {a mathematical formula}PMR(x,y,ΘP) by solving the following simpler linear program:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This linear program includes at most {a mathematical formula}2n−1 variables (one per element of {a mathematical formula}A(x,y)) and only a quadratic number of monotonicity constraints.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       A more compact formulation
+      </section-title>
+      <paragraph>
+       In this subsection, we show that program LP2 can be further simplified to obtain a linear programming formulation involving only a linear number of monotonicity constraints. For any set of criteria {a mathematical formula}A∈A(x,y), let {a mathematical formula}ωA denote the coefficient of the decision variable {a mathematical formula}vA in the objective function of linear program LP2. Then, the objective function can be written {a mathematical formula}∑A∈A(x,y)ωAvA where:{a mathematical formula} Note that we cannot have {a mathematical formula}X(i)=Y(j) if i is different from j since these level sets can only be equal if they have the same cardinality. Note also that all variables {a mathematical formula}vA,A∈A(x,y), such that {a mathematical formula}ωA=0 have no impact on the objective function of program LP2. Therefore, using Proposition 1, these variables can be removed from program LP2 leading to a simplified version of this program. However, to simplify the presentation, we now assume that {a mathematical formula}ωA≠0 for all {a mathematical formula}A∈A(x,y).{sup:3}
+      </paragraph>
+      <paragraph label="Proposition 2">
+       We want to prove that Equation (13) is not required to determine the optimum of program LP2. Let LP{a mathematical formula}2′ be the linear program obtained from program LP2 by removing Equation (13). The following proposition gives us a necessary condition for optimality (the proof is given in Appendix A): Let v be an optimal solution of program LP{a mathematical formula}2′. For all{a mathematical formula}A∈A(x,y)such that{a mathematical formula}ωA&gt;0, we have:{a mathematical formula}where{a mathematical formula}Pa(A)={A′∈A(x,y):A′⊃A and ωA′&lt;0}is the set of all supersets (parents){a mathematical formula}A′of set A such that{a mathematical formula}ωA′&lt;0.
+      </paragraph>
+      <paragraph label="Proof">
+       This proposition enables us to derive the following result: Any optimal solution of LP{a mathematical formula}2′is optimal for LP2.Let v be an optimal solution of program LP{a mathematical formula}2′. We want to prove that solution v necessarily satisfies Equation (13). Let {a mathematical formula}i,j∈N be such that {a mathematical formula}X(i)⊂Y(j). We want to show that {a mathematical formula}vX(i)≤vY(j) is necessarily satisfied. Proposition 2 can be applied to {a mathematical formula}Y(j) since {a mathematical formula}ωY(j)&gt;0. Two cases may occur:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Case{a mathematical formula}vY(j)=uY(j): in that case, since {a mathematical formula}X(i)⊂Y(j), we have {a mathematical formula}uX(i)≤uY(j). Moreover, due to Equation (15), we have {a mathematical formula}vX(i)≤uX(i). Therefore:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        Case{a mathematical formula}vY(j)=minA∈Pa(Y(j))⁡vA: if {a mathematical formula}Pa(Y(j))=∅, then {a mathematical formula}vY(j)=uY(j) and so the result can be inferred just as in the first case. Otherwise, note that we have {a mathematical formula}Pa(Y(j))⊆{A∈A(x,y):ωA&lt;0}⊆{X(k),k∈N}. Therefore, in that case, there exists {a mathematical formula}k∈N such that {a mathematical formula}vY(j)=vX(k). Then, since {a mathematical formula}X(i)⊂Y(j) (by hypothesis) and {a mathematical formula}Y(j)⊂X(k) (by definition of {a mathematical formula}Pa(Y(j))), we necessarily have {a mathematical formula}X(i)⊂X(k). As a consequence, we have {a mathematical formula}vX(i)≤vX(k) due to Equation (11); hence, we have {a mathematical formula}vX(i)≤vX(k)=vY(j). □
+       </list-item>
+      </list>
+      <paragraph>
+       This proposition enables us to conclude that none of the constraints (13) are required to find the optimum.
+      </paragraph>
+      <paragraph>
+       Note that some constraints given by Equation (14) are unnecessary since they are redundant (they are implied by the other constraints). Indeed, if there exist {a mathematical formula}i,j∈N such that {a mathematical formula}Y(i)⊂X(j), then we also have {a mathematical formula}Y(i)⊂X(k) for all {a mathematical formula}k∈{1,…,j−1} which creates redundant constraints with respect to Equation (11). Thus, it is sufficient to impose {a mathematical formula}vY(i)≤vX(j) when {a mathematical formula}Y(i)⊂X(j) and {a mathematical formula}Y(i)⊈X(j+1). Moreover, we also have {a mathematical formula}Y(l)⊆X(j) for all {a mathematical formula}l∈{i+1,…,n}, which creates a redundancy with Equation (12). Finally, it is sufficient to impose:{a mathematical formula} This leads to the following simplified formulation:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Hence, we now use at most {a mathematical formula}2n−1 variables (one per element of {a mathematical formula}A(x,y)) linked by at most {a mathematical formula}3(n−1) monotonicity constraints.
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider a problem defined on 5 criteria (i.e. {a mathematical formula}N={1,2,3,4,5}), and two alternatives {a mathematical formula}x=(1,0.8,0.4,0.5,0.1) and {a mathematical formula}y=(0.8,1,0.6,0.2,0.4). The compact linear program associated with {a mathematical formula}PMR(x,y,ΘP) computation is:{a mathematical formula}{a mathematical formula}{a mathematical formula} where the constraints in (23) are those given by Equation (18), the constraints in (24) correspond to Equation (19) and the constraint in (25) is given by Equation (20); the other constraints correspond to Equations (21), (22). Thus, there are only nine monotonicity constraints.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Efficient optimization of the compact formulation
+      </section-title>
+      <paragraph>
+       Although a state-of-the-art solver easily solves any instance of linear program LP3, the computation of minimax regret may require a quadratic number of calls to LP3. To speed up computations of minimax regrets, we present now a faster solution method for LP3 without resorting to linear programming.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}G=(V,E) be the directed graph that represents the binary constraints of program LP3. More precisely, {a mathematical formula}G is defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}V={X(i),i∈N}∪{Y(i),i∈N} is composed of all sets {a mathematical formula}A⊆N associated to decision variables {a mathematical formula}vA in LP3.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}E is the set of arcs {a mathematical formula}(A,B) such that constraint {a mathematical formula}vA≥vB appears in LP3.
+       </list-item>
+      </list>
+      <paragraph>
+       Within this graph, the arcs corresponding to Equations (18), (19) form two paths characterized by the following lists of nodes: {a mathematical formula}Px=(X(1),…,X(n)) and {a mathematical formula}Py=(Y(1),…,Y(n)). Let {a mathematical formula}A− (resp. {a mathematical formula}A+) be the subsequence of {a mathematical formula}Px (resp. {a mathematical formula}Py) composed of all nodes A such that {a mathematical formula}ωA&lt;0 (resp. {a mathematical formula}ωA&gt;0) where {a mathematical formula}ωA is the coefficient of {a mathematical formula}vA in the objective function. By definition, sequences {a mathematical formula}A− and {a mathematical formula}A+ include together all the nodes in {a mathematical formula}V and have no common node; in the sequel, variables attached to nodes in {a mathematical formula}A− (resp. {a mathematical formula}A+) will be referred to as negative variables (resp. positive variables) since they have a negative (resp. positive) impact on the objective function.
+      </paragraph>
+      <paragraph>
+       Note that, by definition of level sets, we necessarily have {a mathematical formula}Ai+⊃Ai+1+ for all {a mathematical formula}i∈{1,…,|A+|−1} and {a mathematical formula}Ai−⊃Ai+1− for all {a mathematical formula}i∈{1,…,|A−|−1}, where {a mathematical formula}Ai+ (resp. {a mathematical formula}Ai−) denote the ith node in sequence {a mathematical formula}A+ (resp. {a mathematical formula}A−). Note also that, for all {a mathematical formula}i∈{1,…,|A−|}, there exists at most one arc of type {a mathematical formula}(Ai−,Aj+) in the constraint graph (see Equation (20)). An example of constraint graph {a mathematical formula}G with sequences {a mathematical formula}A+ and {a mathematical formula}A− is given below, based on Example 2:
+      </paragraph>
+      <paragraph label="Example 2 (continued)">
+       In this example, we have {a mathematical formula}N={1,2,3,4,5}, {a mathematical formula}x=(1,0.8,0.4,0.5,0.1) and {a mathematical formula}y=(0.8,1,0.6,0.2,0.4). The graph {a mathematical formula}G is depicted on Fig. 1 (left part). Within this graph, {a mathematical formula}Px=(N,{1,2,3,4},{1,2,4},{1,2},{1}) and {a mathematical formula}Py=(N,{1,2,3,5},{1,2,3},{1,2},{2}). Hence the relevant sequences are {a mathematical formula}A−=({1,2,3,4},{1,2,4},{1,2},{1}) and {a mathematical formula}A+=(N,{1,2,3,5},{1,2,3},{2}) also depicted on Fig. 1 (right part).
+      </paragraph>
+      <paragraph>
+       Since sequence {a mathematical formula}A+ (resp. {a mathematical formula}A−) includes all sets A such that variable {a mathematical formula}vA has a positive (resp. negative) impact on the objective unction, we want to maximize (resp. minimize) the variable {a mathematical formula}vA for all {a mathematical formula}A∈A+ (resp. for all {a mathematical formula}A∈A−) so as to maximize the objective function. Thus, if there exists no arc of type {a mathematical formula}(Ai−,Aj+) in {a mathematical formula}E, then the optimum of program LP3 can be easily obtained; it is indeed sufficient to set {a mathematical formula}vA to its lower bound {a mathematical formula}lA for all {a mathematical formula}A∈A− and {a mathematical formula}vA to its upper bound {a mathematical formula}uA for all {a mathematical formula}A∈A+. Otherwise, for all arcs of type {a mathematical formula}(Ai−,Aj+) in {a mathematical formula}E, we need to decide whether to set variable {a mathematical formula}vAi− to its lower bound {a mathematical formula}lAi− (at the expense of constraining variable {a mathematical formula}vAj+) or to assign {a mathematical formula}vAi− to an higher value. Moreover, for all {a mathematical formula}k∈{j+1,…,|A+|}, we implicitly impose {a mathematical formula}vAi−≥vAk+ since {a mathematical formula}Ak+⊂Aj+ (by definition of sequence {a mathematical formula}A+). As a consequence, we need to decide whether to assign variable {a mathematical formula}vAi− to its lower bound {a mathematical formula}lAi− or to set this variable to an higher value in order to preserve the variables in {a mathematical formula}{vDmi,1≤m≤|Di|}, where {a mathematical formula}Di is the subsequence of {a mathematical formula}A+ composed of all descendants of node {a mathematical formula}Ai− in the graph and {a mathematical formula}Dmi denotes the mth element in sequence {a mathematical formula}Di.
+      </paragraph>
+      <paragraph>
+       In order to make this decision, we need first to check whether we should set {a mathematical formula}vAi− to the upper bound of its first positive descendant {a mathematical formula}D1i or at a lower value. We are in the former case when the sum of the values {a mathematical formula}|ωA|, for all sets {a mathematical formula}A∈A−,A⊃D1i, is strictly smaller than {a mathematical formula}ωD1i. In this case, {a mathematical formula}vAi− is set to the upper bound of {a mathematical formula}D1i to protect {a mathematical formula}vD1i which better contributes to the objective function. Otherwise, the test must be iterated on the second descendant {a mathematical formula}D2i and so on; if the test fails for all descendants, variable {a mathematical formula}vAi− is set to its lower bound. This principle is implemented in Algorithm 1. Before establishing the validity of Algorithm 1, let us remark that it has a quadratic time complexity since {a mathematical formula}|A−|≤n and {a mathematical formula}|Di|≤|A+|≤n. The following proposition will be used to prove the correctness of Algorithm 1 (the proof is given in Appendix A).
+      </paragraph>
+      <paragraph label="Proposition 4">
+       At the end of any step i of the ‘for’ loop, we have:{a mathematical formula}where{a mathematical formula}Pai(A)={Ak−,1≤k≤i:A⊂Ak−}is the set of all supersets (parents){a mathematical formula}A′of set A such that{a mathematical formula}ωA′&lt;0and{a mathematical formula}A′⊇Ai−.
+      </paragraph>
+      <paragraph label="Proposition 5">
+       Algorithm 1returns a solution such that Equation(17)is satisfied for all{a mathematical formula}A∈A+.
+      </paragraph>
+      <paragraph label="Proof">
+       The result directly follows from Proposition 4 (with {a mathematical formula}i=|A−|) since {a mathematical formula}Pa|A−|(A)=Pa(A) by definition. □
+      </paragraph>
+      <paragraph label="Proposition 6">
+       Thus, Equation (17) actually gives us an operational way to set positive variables, when negative variables are set first. The following proposition shows the correctness of our algorithm (the proof is given in Appendix A): Algorithm 1returns an optimal solution of program LP3.
+      </paragraph>
+      <paragraph>
+       For the sake of illustration, we present the execution of Algorithm 1 on the two alternatives considered in Example 2.
+      </paragraph>
+      <paragraph label="Example 2 (continued)">
+       Recall that, in Example 2, we have {a mathematical formula}N={1,2,3,4,5}, {a mathematical formula}x=(1,0.8,0.4,0.5,0.1) and {a mathematical formula}y=(0.8,1,0.6,0.2,0.4). Let us assume that, at a given step of the elicitation procedure, the corresponding intervals {a mathematical formula}[lA,uA], {a mathematical formula}A∈A(x,y), are given here below:{a mathematical formula}We show how Algorithm 1 computes {a mathematical formula}PMR(x,y,ΘP). The algorithm starts with the execution of line 1 where the structure depicted on Fig. 1 is built. Then, according to line 2, we set {a mathematical formula}vA=uA for all {a mathematical formula}A∈A+: {a mathematical formula}vN=1, {a mathematical formula}v{1,2,3,5}=0.9, {a mathematical formula}v{1,2,3}=0.8 and {a mathematical formula}v{2}=0.4.At line 3, we start the execution of the first iteration of the outer for loop, examining {a mathematical formula}A1−={1,2,3,4}; its positive descendants are given by {a mathematical formula}D1=({1,2,3},{2}). When executing line 4, we set {a mathematical formula}v{1,2,3,4} to its minimum feasible value, i.e. {a mathematical formula}v{1,2,3,4}=l{1,2,3,4}=0.6. Then, we enter the while loop (line 8):
+       <list>
+        During the first iteration step of the while loop, we consider the descendant {a mathematical formula}D11={1,2,3}. Since {a mathematical formula}v{1,2,3}=0.8&gt;0.6=l{1,2,3,4}, we compute {a mathematical formula}ω+=ω{1,2,3}=0.2 and {a mathematical formula}ω−=ω{1,2,3,4}=−0.3. This iteration step stops since the condition {a mathematical formula}ω++ω−&gt;0 does not hold.Then, we consider the descendant {a mathematical formula}D21={2}. Since {a mathematical formula}v{2}=0.4≤0.6=l{1,2,3,4}, the second part of the condition of the while loop (line 8) is not satisfied (the while loop immediately stops).In the second iteration step of the outer for loop, we inspect the node
+       </list>
+       <paragraph>
+        {a mathematical formula}A2−={1,2,4} with only one positive descendant: {a mathematical formula}D2=({2}). We initially set {a mathematical formula}v{1,2,4} to its minimum feasible value (line 4), i.e. {a mathematical formula}v{1,2,4}=l{1,2,4}=0.3.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         We consider the descendant {a mathematical formula}D12={2}. Since {a mathematical formula}v{2}=0.4&gt;0.3=l{1,2,4}, we compute {a mathematical formula}ω+=ω{2}=0.2 and {a mathematical formula}ω−=ω{1,2,4}+ω{1,2}=−0.2. As a consequence, the condition in line 11 is not verified at this step. Then, the while loop stops since {a mathematical formula}|D2|=1.
+        </list-item>
+       </list>
+       <paragraph>
+        We perform the following update: {a mathematical formula}v{2}=min⁡{v{2},v{1,2,4}}=min⁡{0.4,0.3}=0.3.At the third iteration step, we inspect the node {a mathematical formula}A3−={1,2} whose descendants are given by {a mathematical formula}D3=({2}). At line 4, we set {a mathematical formula}v{1,2} to its minimum feasible value, i.e. {a mathematical formula}v{1,2}=l{1,2}=0.2.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         We consider the descendant {a mathematical formula}D13={2}. Since {a mathematical formula}v{2}=0.3&gt;0.2=l{1,2}, we compute {a mathematical formula}ω+=ω{2}=0.2 and {a mathematical formula}ω−=ω{1,2}=−0.1. Here, {a mathematical formula}ω++ω−&gt;0 holds, and so we need to update the value of {a mathematical formula}v{1,2} as follows: {a mathematical formula}v{1,2}=v{2}=0.3. Finally, the while loop stops due to the “break” command.
+        </list-item>
+       </list>
+       <paragraph>
+        Finally, the algorithm returns the following instantiation:{a mathematical formula}
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       A query generation strategy for Choquet capacity elicitation
+      </section-title>
+      <paragraph>
+       In the previous subsections, we have shown that, assuming that preference statements are of types {a mathematical formula}(1A0,Λ) or {a mathematical formula}(Λ,1A0), we are able to efficiently compute minimax regret values. We introduce now a query generation strategy determining the most informative query involving a binary alternative and a constant profile. Our query generation strategy uses the WmMR criterion presented in Definition 7. Since at each iteration step the DM is asked to compare a binary alternative 1A0 to a constant profile {a mathematical formula}Λ=(λ,…,λ), an optimal query for this criterion is defined by a pair {a mathematical formula}(A⊆N,λ∈[lA,uA]) that reduces the minimax regret in the worst-case as much as possible. More precisely, to find such a pair, for all sets {a mathematical formula}A⊆N, we have to determine the following value:{a mathematical formula} and then, we arbitrary select a set {a mathematical formula}A⁎ in {a mathematical formula}arg⁡minA⊆N⁡WmMR((A,λA),ΘP); thus, the pair {a mathematical formula}(A⁎,λA⁎) defines an optimal query for the WmMR criterion.
+      </paragraph>
+      <paragraph>
+       Given a set {a mathematical formula}A⊆N, determining {a mathematical formula}λA amounts to minimizing over {a mathematical formula}λ∈[lA,uA] the maximum between:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}mMR(X,ΘP∪{(1A0,Λ)}) which is a weakly decreasing function of λ, and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}mMR(X,ΘP∪{(Λ,1A0)}) which is a weakly increasing function of λ.
+       </list-item>
+      </list>
+      <paragraph>
+       Similarly to what is observed for utility functions over consequences [28], these two functions necessarily intersect since they have the same maximum, i.e. {a mathematical formula}mMR(X,ΘP). This intersection gives the value of {a mathematical formula}λA and can easily be computed by a standard bisection algorithm. An example of this phenomenon is pictured on Fig. 2.
+      </paragraph>
+      <paragraph>
+       It may happen that the WmMR value of the optimal query is equal to {a mathematical formula}mMR(X,ΘP), which means that the optimal question will not necessarily induce a regret reduction. In such cases, we propose to choose a set {a mathematical formula}A⊆N that minimizes the expected value of minimax regret over the two possible answers with an uniform distribution hypothesis over {a mathematical formula}[lA,uA], setting {a mathematical formula}λ=(lA+uA)/2.
+      </paragraph>
+      <paragraph>
+       Note that the determination of the next query implies to select {a mathematical formula}A⁎ within the {a mathematical formula}2n−2 possible proper subsets of N, a number which increases significantly with the number of criteria. To make this query generation step more efficient, as a heuristic we propose to focus on sets directly involved in the computation of {a mathematical formula}PMR(x⁎,y⁎,ΘP), where {a mathematical formula}x⁎ is an optimal alternative for the mMR criterion knowing {a mathematical formula}P, and {a mathematical formula}y⁎ is one of its adversary's choices. These sets are those in{a mathematical formula} where {a mathematical formula}X(i)⁎ and {a mathematical formula}Y(i)⁎ respectively denote the ith level set of {a mathematical formula}x⁎ and {a mathematical formula}y⁎. Thus, the heuristic will further constrain parameters inducing the current minimax regret. According to this heuristic, at most {a mathematical formula}2n−1 sets are investigated (the elements of {a mathematical formula}A(x⁎,y⁎)) instead of exactly {a mathematical formula}2n−2.
+      </paragraph>
+      <paragraph>
+       Let us remark that this incremental elicitation procedure enforces both the consistency of the set {a mathematical formula}P of preference statements collected so far, and the consistency of the induced constraints defining {a mathematical formula}ΘP, under the assumption that preferences are representable by a Choquet integral. Hence {a mathematical formula}ΘP cannot become empty at some step of the elicitation process. This important feature can be explained as follows: let {a mathematical formula}[lA,uA] be the range of admissible values for {a mathematical formula}v(A) at a given step of the elicitation procedure (resulting from {a mathematical formula}P). At this stage, for any {a mathematical formula}λ∈[lA,uA], both statements {a mathematical formula}(1A0,(λ,…,λ)) and {a mathematical formula}((λ,…,λ),1A0) are compatible with the known part of preferences. Asking the DM to compare the binary alternative {a mathematical formula}1A0 to the constant utility profile {a mathematical formula}Λ=(λ,…,λ) cannot generate any contradiction because the answer will induce one of the two constraints “{a mathematical formula}v(A)≤λ” or “{a mathematical formula}v(A)≥λ”. Such constraints will contribute to further reduce the interval {a mathematical formula}[lA,uA] into {a mathematical formula}[λ,uA] or {a mathematical formula}[lA,λ], depending on the answer, but the interval remains non-empty in both cases.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Numerical tests for choice problems
+      </section-title>
+      <paragraph>
+       The first numerical tests aim to evaluate the efficiency of the incremental elicitation procedure presented in Section 3.4 in terms of number of queries needed to make a decision. Recall that each generated query involves two fictitious alternatives carefully chosen: one binary alternative of type {a mathematical formula}1A0, {a mathematical formula}A⊆N, and one constant utility profile of type {a mathematical formula}Λ=(λ,…,λ), {a mathematical formula}λ∈[lA,uA]. Hence, as a baseline for comparison, we consider the query generation strategy that consists in choosing, at each iteration step of the elicitation procedure, both set {a mathematical formula}A⊆N and {a mathematical formula}λ∈[lA,uA] at random.
+      </paragraph>
+      <paragraph>
+       Starting from an empty set of preferences statements, simulated DMs answer to queries according to randomly generated Choquet integrals. At each iteration step of the elicitation procedures, we compute both the minimax regret and the real regret, the latter being the actual loss of utility associated with the choice of the minimax regret optimal alternative instead of the true preferred alternative (the utility is measured by the hidden Choquet integral modeling the DM's preferences). These regrets are expressed on a normalized scale assigning value 1 to the initial minimax regret (computed before collecting any preference information) and value 0 when the true preferred alternative is detected.
+      </paragraph>
+      <paragraph>
+       Fig. 3 shows the results obtained by averaging over 100 runs for instances with 10 criteria and 1000 alternatives; performance vectors of alternatives are generated by randomly picking Pareto-optimal solutions in a multiobjective knapsack problem so as to obtain alternatives which are uncomparable using Pareto-dominance and require additional preference information from the DM.
+      </paragraph>
+      <paragraph>
+       First, we can see that the minimax regret reduces much more quickly with our query strategy than with the random generation strategy. For instance, after about 20 queries on average, the minimax regret is under {a mathematical formula}10% of the initial regret with our strategy while remaining above {a mathematical formula}70% percent with the random generation strategy. The same observation applies to the real regret. Note also that the real regret is much smaller than the minimax regret (a fact that has already been observed in regret-based elicitation in other contexts [28], [40], [29]). After about 8 queries on average, the real regret observed when using our eliciation procedure is under {a mathematical formula}10% of the initial regret (while the minimax regret is still around {a mathematical formula}30%).
+      </paragraph>
+      <paragraph>
+       The next experiments aim at evaluating the efficiency of our query generation strategy in terms of regret reduction. To this end, it is compared with the standard elicitation method named Current Solution Strategy (CSS) [29] which is based on the comparison of two actual alternatives in the dataset (see Section 2.3). Results obtained by averaging over 100 runs are given in Fig. 4. We can see that our elicitation procedure provides performance very similar to the CSS in terms of regret reduction. For instance, after about 20 queries, both elicitation procedures recommend an alternative with a max regret under 10 percent of the initial regret on average. The real advantage of our approach will appear when looking at the computation times. We compare now computation times of mMR calculations within the following elicitation methods:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        M1: queries are generated according to the CSS. Pairwise max regrets are computed by solving LP1 (Section 3.1) using an LP-solver.
+       </list-item>
+       <list-item label="•">
+        M2: queries are generated according to our elicitation procedure presented in Section 3.4. The optimization of pairwise max regrets is performed by solving LP3 (see Section 3.2) using an LP-solver.
+       </list-item>
+       <list-item label="•">
+        M3: queries are here also generated according to our elicitation procedure presented in Section 3.4, but Algorithm 1 presented in Section 3.3 is used to solve LP3 (instead of using a LP-solver).
+       </list-item>
+      </list>
+      <paragraph>
+       In our experiments, we use the Gurobi solver, called from the main program written in Java (using the Gurobi–Java interface). In order to evaluate how the available preference information impacts on computation times, we report the results obtained after respectively 0, 10 and 20 iteration steps of the elicitation procedures. Computation times are obtained by averaging over 50 runs.
+      </paragraph>
+      <paragraph>
+       In Table 1, we can see that computation times with M1 drastically increase with not only the number of alternatives, which directly impacts on the number of pairwise max regret optimizations, but with the number of criteria due to the exponential number of monotonicity constraints in LP1 formulation.
+      </paragraph>
+      <paragraph>
+       As expected, we can see that M2 is faster than M1 overall. Moreover, the number of criteria has much more impact on the computation time for the latter method as it deals with an exponential number of monotonicity constraints (where LP3 has only a linear number of them). Interestingly enough, M3 is significantly faster than M1 and M2 (about five orders of magnitude) and its computations times seem to be very weakly impacted by the number of alternatives and the number of criteria. In fact, M3 generates fifty queries in a few minutes for 1000 alternatives, while M1 requires about six hours for a number of alternatives lower by an order of magnitude.
+      </paragraph>
+      <paragraph>
+       In conclusion, by restricting queries to the comparison of binary alternatives with constant profiles (rather than comparing real alternatives, as in the CSS), we obtain a drastically faster incremental elicitation procedure for Choquet integrals while preserving the efficiency of the elicitation process in terms of number of queries needed to make a decision.
+      </paragraph>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Ranking by iterated choices
+      </section-title>
+      <paragraph>
+       Ranking is a topic that has received considerable attention (from the community of machine learning [45], [46], [47], as well from psychological choice modeling [48], management science and decision aid communities [49], [50], [51], [52], [53], [54]). It is a much more complex issue than choosing a single alternative; it requires to be able to compare all pairs of alternatives instead of just identifying the best one. Although adapting an incremental elicitation scheme based on minimax regret computations to the case of ranking seems theoretically possible, minimax-regret optimizations would probably require prohibitive computation times. There are indeed factorially many possible orders on a given finite set of elements and computing explicitly pairwise regrets for all pairs of possible rankings does not seem feasible.
+      </paragraph>
+      <paragraph>
+       For this reason, we address here the problem of ranking as one of repeated choice, assuming that the DM first chooses the first alternative, then the second, and so forth. This is a very natural decision process and iteration can be interrupted at any step k if only the top k elements are of interest. When using iterated choices, constructing a ranking appears as a kind of extension of the choice problem and the tools developed for choosing may be used.
+      </paragraph>
+      <paragraph>
+       As in the choice problem, we reason with a partially specified capacity used in the Choquet integral. In this framework, an alternative x is necessarily at least as good as an alternative y when {a mathematical formula}Cv(x)≥Cv(y) for all admissible capacities {a mathematical formula}v∈ΘP, that is when {a mathematical formula}PMR(x,y,ΘP)&lt;0. In order to save queries, we might assume that x is preferred to y when {a mathematical formula}PMR(x,y,ΘP)≤δ where {a mathematical formula}δ≥0 is a (small) tolerance threshold. We will first generate preference queries and use minimax regret computations to determine a top alternative with a max regret lower than threshold δ. Then, this alternative is deleted and the selection process is iterated on the remaining set of alternatives with the same tolerance threshold. The selected alternative in this second stage will be the second best alternative in the ranking and so forth (see Algorithm 2).
+      </paragraph>
+      <paragraph>
+       This interactive ranking algorithm satisfying the following nice property:
+      </paragraph>
+      <paragraph label="Proposition 7">
+       For any pair of alternatives x and y such that x is ranked before y in the final ranking, we have{a mathematical formula}PMR(x,y,ΘP)≤δwhere{a mathematical formula}Pis the set of all preference statements collected to construct the whole ranking.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}P′ be the set of preference statements collected until the insertion of x in the ranking. Since y is ranked below x, we know that {a mathematical formula}PMR(x,y,ΘP′)≤δ. Moreover, since {a mathematical formula}P′⊆P, then we have {a mathematical formula}ΘP′⊇ΘP and (refer to Equation (2)) therefore {a mathematical formula}PMR(x,y,ΘP)≤PMR(x,y,ΘP′)≤δ. □
+      </paragraph>
+      <paragraph>
+       This property allows us to give a guarantee of the quality of the ranking obtained with our procedure; threshold δ represents the worst-case loss (in terms of utility) that we may incur by choosing x instead of any other alternative y that has a lower position in the ranking. In particular, if {a mathematical formula}δ=0, then the true ranking (sorting the alternatives from the best to the worst according to their Choquet value {a mathematical formula}Cv) has been identified with certainty.
+      </paragraph>
+      <paragraph>
+       Since the ranking is obtained by a sequence of choice problems, we can use at each step the same elicitation strategy presented in Section 3.4 for the Choquet integral. Moreover, at any step of the ranking procedure, we start from the set of preference statements collected so far to determine the next preferred element. This obviously saves a lot of preference queries as will be seen in the next paragraph dedicated to numerical tests.
+      </paragraph>
+      <paragraph>
+       Numerical tests. We now present some experimental results about our incremental ranking method. It consists in iteratively selecting the best alternative and then removing it from the dataset of alternatives; the incremental elicitation procedure presented in Section 3.4 is used to determine the best alternative at each iteration step. We want to estimate the amount of additional preference information that is needed to rank all alternatives (instead of just determining the best one). Hence, we ran tests with different tolerance thresholds δ (0.05, 0.1 and 0.15) so as to study its impact on the number of queries. Fig. 5 shows the results obtained by averaging over 50 runs for instances with 1000 alternatives and 5 criteria; performance vectors are generated as described in Section 3.5.
+      </paragraph>
+      <paragraph>
+       As expected, we can see that the number of queries reduces as the value of δ increases (since the requirement on the performance guarantee is weakened); for instance, the number of queries needed to obtain the complete ranking is halved when the performance threshold increases from 5% to 15% of the initial regret. Moreover, we observe that completing the ranking after the determination of the top alternative can be achieved at a reasonable marginal cost (no more than two times the cost of determining the best alternative). Most of preference queries appears during the first iteration (when the first item in the ranking is identified); in fact, we empirically observed that the number of alternatives has a relatively low impact on the number of queries required for completion. In fact, the marginal amount of preference queries which are necessary to find the next element decreases as the rank of the selected alternative increases.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Sorting methods with thresholds on Choquet values
+     </section-title>
+     <paragraph>
+      Sorting problems require to assign alternatives to categories. When assessing a utility score {a mathematical formula}fθ(x) for each alternative {a mathematical formula}x∈X, it is natural to sort alternatives with respect to their score by considering thresholds. This is a standard approach in multricriteria decision-making [55], [56], [57], [58]. This is also typical in binary classification problems where algorithms compute a numerical value and then assign alternatives to categories by checking if the value exceeds a given threshold. When considering ordered categories, the machine learning community uses the term multipartite ranking[59], [60], [61] or instance ranking[31].
+     </paragraph>
+     <paragraph>
+      Assume that the utility scale is divided into q intervals {a mathematical formula}[αℓ,αℓ−1], where {a mathematical formula}α0≥…≥αq. Assignments are made by looking in which interval the utility scores fall. More precisely, the method proposed in this section consists in assigning alternative {a mathematical formula}x∈X to category {a mathematical formula}Kℓ if {a mathematical formula}fθ(x)∈[αℓ,αℓ−1]. In the case that {a mathematical formula}fθ(x) is exactly the value of threshold {a mathematical formula}αℓ, we consider that the DM is indifferent between assigning x to category {a mathematical formula}Kℓ or {a mathematical formula}Kℓ+1 (the two assignments are equally valid). This view of sorting is somewhat natural; it can be seen as a “discretization” of utility into categories for situations where we want to provide an informative summary about the utilities of the alternatives.
+     </paragraph>
+     <paragraph>
+      As utility function {a mathematical formula}fθ is not known precisely, we need to define some measure of regret for possible assignments. Hence, in this section, we first propose an incremental elicitation approach for sorting problems with thresholds (Section 4.1), before addressing the associated regret-optimization problem (Section 4.2). Then, we focus on difficulties encountered when {a mathematical formula}fθ is a Choquet integral, presenting optimization techniques based on linear programming or not (Section 4.3) and an efficient query generation strategy (Section 4.4). Finally, we present evaluations with simulations (in Section 4.5).
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       An incremental elicitation approach for sorting with thresholds
+      </section-title>
+      <paragraph>
+       When sorting with thresholds, categories are associated with intervals in the utility scale, whose extreme are the thresholds. Assignment of alternatives to categories is determined by which intervals enclose the alternatives' utility values. More precisely, given parameter θ, we will assign x to the category {a mathematical formula}Kℓ such that {a mathematical formula}fθ(x)∈[αℓ,αℓ−1].
+      </paragraph>
+      <paragraph>
+       For fixed θ, the actual regret (or loss) of assigning alternative x to a category {a mathematical formula}Kℓ will then be 0 if {a mathematical formula}fθ(x) lies between {a mathematical formula}αℓ and {a mathematical formula}αℓ−1. When the assignment is made incorrectly, it is natural to assume that the regret will be higher for categories delimited by thresholds that are further away from {a mathematical formula}fθ(x). We further assume that the regret will scale linearly with the displacement of {a mathematical formula}fθ(x) from the nearest of the two thresholds {a mathematical formula}αℓ,αℓ−1 delimiting category {a mathematical formula}Kℓ. More precisely, if {a mathematical formula}fθ(x)≥αℓ−1, then we define the regret to be {a mathematical formula}fθ(x)−αℓ−1; similarly, if {a mathematical formula}fθ(x)≤αℓ, then the regret is equal to {a mathematical formula}αℓ−fθ(x). This is represented by the following expression:{a mathematical formula} Note that our formulation of regret R is consistent with the case in which {a mathematical formula}fθ(x) is exactly the value of one of the thresholds; for example, if {a mathematical formula}fθ(x)=αℓ then we have both {a mathematical formula}R(x,Kℓ,θ)=0 and {a mathematical formula}R(x,Kℓ+1,θ)=0.
+      </paragraph>
+      <paragraph>
+       In general, in our setting, parameter θ is not known precisely and we want to be able to sort alternatives under utility uncertainty. Proceeding in a way similar to the case of choice problems (see Section 2.2), we define the notion of max regret (and subsequently minimax regret), as follows:
+      </paragraph>
+      <paragraph label="Definition 8">
+       The max regret (MR) of {a mathematical formula}x∈X with respect to category {a mathematical formula}Kℓ is:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}MR(x,Kℓ,ΘP) is the maximal possible utility gap between {a mathematical formula}fθ(x) and the interval {a mathematical formula}[αℓ,αℓ−1] defining category {a mathematical formula}Kℓ.
+      </paragraph>
+      <paragraph>
+       We now define the notion of minimax regret and the MR-optimal category associated to an alternative {a mathematical formula}x∈X:
+      </paragraph>
+      <paragraph label="Definition 9">
+       The minimax regret (mMR) of {a mathematical formula}x∈X is:{a mathematical formula} The decision rule is that of assigning x to the category that minimizes {a mathematical formula}MR(x,Kℓ,ΘP); this category is called the MR-optimal category of x. The mMR represents the maximal utility gap between {a mathematical formula}fθ(x) and the interval defining the mMR-optimal category.
+      </paragraph>
+      <paragraph label="Definition 10">
+       In sorting problems, each alternative is associated with a minimax regret value (mMR). Therefore, we have a vector of {a mathematical formula}|X| minimax regret values (instead of a single mMR value for choice problems); sorting can be viewed as simultaneously solving several decision problems, one for each alternative that we need to assign to one of the categories. We now need to define an aggregate measure to evaluate the overall quality (with respect to regret values) of a complete assignment. We adopt the notion of maximum minimax regret (MmMR), defined as follows: {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Note that one could consider other criteria, for example the average of the minimax regret values (allowing to compensate high regret values with lower ones); here we focus on the maximum, as it is a choice consistent with the pessimistic notion of max regret MR and it provides a performance guarantee with respect to the worst-case.
+      </paragraph>
+      <paragraph>
+       In sorting problems, MmMR plays the role of measuring the current decision quality (as mMR did in choice problems). For a given set of preferences, it might be the case that the aggregate value MmMR is still too large according to the DM. Therefore, we can conceive incremental elicitation strategies that, as in choice problems, iteratively ask questions to the DM until the MmMR value drops below a given tolerance threshold {a mathematical formula}δ≥0. Indeed, we have {a mathematical formula}ΘP′⊆ΘP for any set of preference statements {a mathematical formula}P′⊇P; then, for any {a mathematical formula}x∈X and any {a mathematical formula}ℓ∈{1,…,q}, we have:{a mathematical formula} and so, the maximum minimax regret cannot increase by adding new preference statements; in the subsection devoted to numerical tests, we will see that, in practice, it strictly decreases when queries are chosen in a reasoned way.
+      </paragraph>
+      <paragraph>
+       In order to evaluate the relevance of a query q, one can make use of a notion of myopic value of information defined as follows:
+      </paragraph>
+      <paragraph label="Definition 11">
+       The worst-case maximum minimax regret (WMmMR) of q is:{a mathematical formula} where {a mathematical formula}Pq denotes the set of all possible answers to query q.
+      </paragraph>
+      <paragraph>
+       Then, the next query should be chosen in:{a mathematical formula} where Q denotes the set of all possible queries, because it ensures the best reduction of maximum minimax regret (MmMR) in the answer's worst-case scenario. However, when the number of queries under consideration is too large, the computation of the optimal query can be computationally intensive; hence, we may want to consider heuristics of the WMmMR criterion.
+      </paragraph>
+      <paragraph>
+       To achieve this, one possibility is to ask the DM to compare well chosen alternatives. Nevertheless, the optimal assignment (i.e. such that each alternative is assigned to its MR-optimal category) does not directly suggest the choice of the comparison query; the “semantics” of sorting problems is radically different from that of choice problems (there is neither a notion of adversarial choice for an individual alternative, nor for a complete assignment).
+      </paragraph>
+      <paragraph>
+       However, we can design strategies for generating queries in sorting problems that are similar to the Current Solution Strategy in choice problems (see Section 2.3). We can ask the DM, at each iteration, to classify one alternative associated to the highest minimax regret value mMR.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Determination of the optimal assignment
+      </section-title>
+      <paragraph>
+       The computation of max regrets (and therefore minimax regret mMR) can be efficiently performed by exploiting the following property of MR.
+      </paragraph>
+      <paragraph label="Proposition 8">
+       For any alternative{a mathematical formula}x∈X, it holds{a mathematical formula}where{a mathematical formula}fx⊤=maxθ∈ΘP⁡fθ(x)and{a mathematical formula}fx⊥=minθ∈ΘP⁡fθ(x).
+      </paragraph>
+      <paragraph label="Proof">
+       For any solution {a mathematical formula}x∈X:{a mathematical formula} □
+      </paragraph>
+      <paragraph>
+       This means that, in order to determine the MR-optimal category for x, it is sufficient to compute {a mathematical formula}maxθ∈ΘP⁡fθ(x) and {a mathematical formula}minθ∈ΘP⁡fθ(x), and then compute {a mathematical formula}MR(x,Kℓ,ΘP) according to Proposition 8 for each category {a mathematical formula}Kℓ, {a mathematical formula}ℓ∈{1,…,q}. Actually, the next property allows to simplify even more the optimization task.
+      </paragraph>
+      <paragraph label="Proposition 9">
+       For any{a mathematical formula}x∈X, the category{a mathematical formula}Kℓsuch that{a mathematical formula}is the MR-optimal category for x, where{a mathematical formula}fx⊤=maxθ∈ΘP⁡fθ(x)and{a mathematical formula}fx⊥=minθ∈ΘP⁡fθ(x).
+      </paragraph>
+      <paragraph label="Proof">
+       We want to prove that {a mathematical formula}MR(x,Kℓ,ΘP)≤MR(x,Kk,ΘP) holds for any {a mathematical formula}k∈{1,…,q}\{ℓ}. First, we prove that {a mathematical formula}MR(x,Kℓ,ΘP)≤(fx⊤−fx⊥)/2 holds.On the one hand, since {a mathematical formula}(fx⊤+fx⊥)/2≤αℓ−1 by definition of category {a mathematical formula}Kℓ, we have {a mathematical formula}fx⊤−αℓ−1≤fx⊤−(fx⊤+fx⊥)/2=(fx⊤−fx⊥)/2. On the other hand, since we also have {a mathematical formula}αℓ≤(fx⊤+fx⊥)/2 by definition of category {a mathematical formula}Kℓ, we have {a mathematical formula}αℓ−fx⊥≤(fx⊤+fx⊥)/2−fx⊥=(fx⊤−fx⊥)/2. Hence, we can deduce that we have {a mathematical formula}MR(x,Kℓ,ΘP)≤(fx⊤−fx⊥)/2 from Proposition 8.Therefore, to prove that {a mathematical formula}MR(x,Kℓ,ΘP)≤MR(x,Kk,ΘP) holds for any {a mathematical formula}k∈{1,…,q}\{ℓ}, it is sufficient to prove that {a mathematical formula}MR(x,Kk,ΘP)≥(fx⊤−fx⊥)/2 holds for any {a mathematical formula}k∈{1,…,q}\{ℓ}. For any {a mathematical formula}k&gt;ℓ, we have:{a mathematical formula} For any {a mathematical formula}k&lt;ℓ, we have:{a mathematical formula} Hence, we have {a mathematical formula}MR(x,Kk,ΘP)≥(fx⊤−fx⊥)/2 for any {a mathematical formula}k∈{1,…,q}\{ℓ}. Therefore, category {a mathematical formula}Kℓ is the MR-optimal category for x. □
+      </paragraph>
+      <paragraph>
+       In order to determine the MR-optimal category, thanks to Proposition 9, it is sufficient to compute {a mathematical formula}(fx⊤+fx⊥)/2 and then to identify the category {a mathematical formula}Kℓ whose thresholds enclose this value. Note that if {a mathematical formula}fθ is a linear function in θ, then any preference of type “{a mathematical formula}x∈Kℓ”, denoted {a mathematical formula}(x,Kℓ), induces two linear constraints on the parameter space: {a mathematical formula}fθ(x)≥αℓ and {a mathematical formula}fθ(x)≤αℓ−1. Similarly, any preference of type “a is preferred to b” impose the linear constraint {a mathematical formula}fθ(a)≥fθ(b). In that case, set {a mathematical formula}ΘP is described by linear constraints, and so the two optimization problems {a mathematical formula}fx⊤=maxθ∈ΘP⁡fθ(x) and {a mathematical formula}fx⊥=minθ∈ΘP⁡fθ(x) can be formulated as linear programs (and therefore solved very quickly for simple utility models such as linear utilities; we will discuss the use of Choquet integrals in the next section).
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Application to Choquet integrals
+      </section-title>
+      <paragraph>
+       In the following, we assume that the DM's preferences can be modeled by a Choquet integral; i.e. the aggregation of criteria is performed by computing the Choquet integral with a capacity v:{a mathematical formula} where the uncertain capacity function v takes the role of θ and the space of parameters {a mathematical formula}ΘP consists in the set of all normalized capacities compatible with the observed preferences {a mathematical formula}P.
+      </paragraph>
+      <paragraph>
+       In Section 4.1, we introduced the notion of maximum minimax regret for sorting problems, that represents an overall aggregate score to assess the quality of an assignment. According to Proposition 9 (see Section 4.2), in order to compute the maximum minimax regret MmMR, one needs to compute {a mathematical formula}fx⊤ and {a mathematical formula}fx⊥ for each alternative {a mathematical formula}x∈X. The optimization of {a mathematical formula}fx⊤ for Choquet integrals can be performed by solving the following linear program:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Similarly, the optimization of {a mathematical formula}fx⊥ for Choquet integrals can performed by solving linear program LP4 where the objective function has to be minimized. Note that Equations (27), (28), (29) ensure that v is a normalized capacity and Equations (30), (31) ensure that v is compatible with {a mathematical formula}P. We remark that the number of variables and constraints in LP4 are exponential in the number of criteria, due to the monotonicity constraints. Nevertheless, we can again obtain a more compact formulation by considering preference queries involving binary alternatives of type {a mathematical formula}1A0, with {a mathematical formula}A⊆N, and constant utility profiles of type {a mathematical formula}Λ=(λ,…,λ).
+      </paragraph>
+      <paragraph>
+       In linear program LP4 allowing to compute {a mathematical formula}fx⊤ and {a mathematical formula}fx⊥ for a given x, we notice that the set of variables involved in the objective function is the set {a mathematical formula}Ax of all level sets of x, i.e. {a mathematical formula}Ax={X(i),i∈N}. Therefore, in a way analogous to what we have done in Section 3.1, we are able to reformulate this linear program in a way that the numbers of variables and monotonicity constraints are drastically reduced. More precisely, we have seen that if we restrict ourself to preference queries that ask to compare a binary alternative with a constant utility profile, then preference constraints (Equations (30), (31)) can be replaced by boundary constraints of type {a mathematical formula}lA≤vA≤uA for all subsets of criteria {a mathematical formula}A⊆N, where {a mathematical formula}lA≤lB and {a mathematical formula}uA≤uB for all {a mathematical formula}A⊂B⊆N. Using Proposition 1 with {a mathematical formula}A=Ax, from the linear program we can remove all monotonicity constraints involving a variable {a mathematical formula}vA that is not present in the objective function of Equation (26) (i.e. {a mathematical formula}vA∉Ax), as they play no role in the optimization; we then obtain a more compact formulation with only n variables and {a mathematical formula}n−1 constraints given here below:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We now show that this compact formulation can be optimized without using a LP-solver by exploiting their specific structure. This allows to compute {a mathematical formula}fx⊤ and {a mathematical formula}fx⊥ in a more efficient way.
+      </paragraph>
+      <paragraph label="Proof">
+       The solution{a mathematical formula}vA=uAfor all{a mathematical formula}A∈Axis the optimal solution of the max version of LP5. The solution{a mathematical formula}vA=lAfor all{a mathematical formula}A∈Axis the optimal solution of the min version of LP5.We will only explicitly prove the first point as the proof of the second is very similar. For all {a mathematical formula}A∈Ax, let {a mathematical formula}wA denote the coefficient of decision variable {a mathematical formula}vA in linear program LP5; the objective function is then equal to {a mathematical formula}∑A∈AxwAvA. Recall that {a mathematical formula}wA=x(i)−x(i−1)≥0 for all {a mathematical formula}A∈Ax={X(i),i∈N} by definition of Choquet integrals. Since {a mathematical formula}wA≥0 and {a mathematical formula}vA∈[lA,uA] for all {a mathematical formula}A∈Ax, the value {a mathematical formula}∑A∈AxwAuA is an upper bound of the optimal solution of the max version of LP5. Now, we want to prove that {a mathematical formula}vA=uA holds for all {a mathematical formula}A∈Ax is a feasible solution of LP5, i.e. we want to prove that all monotonicity constraints (32) are satisfied by this solution. Note that these constraints are satisfied if and only if we have {a mathematical formula}uX(i+1)≤uX(i) for all {a mathematical formula}i∈〚1,n−1〛. Therefore, since we know that {a mathematical formula}uA≤uB holds for all {a mathematical formula}A⊆B⊆N by construction of all intervals {a mathematical formula}[lA,uA], {a mathematical formula}A⊆N, the latter condition is true and establishes the result. □
+      </paragraph>
+      <paragraph>
+       As a consequence, linear program LP5 can be solved without using a LP-solver. More precisely, to solve the maximization (resp. minimization) problem, it is enough to consider the instantiation where {a mathematical formula}vA=uA for all {a mathematical formula}A⊆N (resp. {a mathematical formula}vA=lA for all {a mathematical formula}A⊆N), and to calculate the Choquet integral of x (i.e. {a mathematical formula}∑A∈AxwAvA).
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider a problem defined on 5 criteria and 5 categories delimited by the following thresholds: {a mathematical formula}α0=1, {a mathematical formula}α1=0.9, {a mathematical formula}α2=0.7, {a mathematical formula}α3=0.4, {a mathematical formula}α4=0.2 and {a mathematical formula}α5=0. We want to determine the MR-optimal category of alternative {a mathematical formula}x=(1,0.8,0.4,0.5,0.1); intervals {a mathematical formula}[lA,uA], {a mathematical formula}A∈{X(i),i∈N}, are the same as those in Example 2. The computation of {a mathematical formula}fx⊤=maxv∈ΘP⁡Cv(x) can be performed by solving linear program LP5 given here below:{a mathematical formula} We can compute {a mathematical formula}fx⊥=minv∈ΘP⁡Cv(x) by solving the min version of the latter program. These optimizations can be performed without using a LP-solver since the associated optimal solutions are given in Proposition 10. More precisely:{a mathematical formula}{a mathematical formula} Since we have {a mathematical formula}(fx⊤+fx⊥)/2=0.585∈[α3,α2], category {a mathematical formula}K3 is the MR-optimal category of alternative x (see Fig. 6 for illustration).
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       A query generation strategy for Choquet capacity elicitation
+      </section-title>
+      <paragraph>
+       In the previous subsection, we have shown that the computation of MmMR can be performed efficiently when {a mathematical formula}P is a set of preference statements of types {a mathematical formula}(1A0,Λ) or {a mathematical formula}(Λ,1A0). Assuming that the DM is only asked to compare binary alternatives to constant profiles, we now have to identify the pair {a mathematical formula}(A,λ) that yield the most informative query. To this end, we propose a query generation strategy based on the WMmMR criterion presented in Definition 11. According to this criterion, an optimal query is defined by a pair {a mathematical formula}(A⊆N,λ∈[lA,uA]) that minimizes the maximum minimax regret (MmMR) in the worst-case scenario with respect to all possible answers. In other words, to determine this pair, for all sets {a mathematical formula}A⊆N we have to determine the following value:{a mathematical formula} and then, we arbitrarily select {a mathematical formula}A⁎ in {a mathematical formula}arg⁡minA⊆N⁡WMmMR((A,λA),ΘP); by doing so, pair {a mathematical formula}(A⁎,λA⁎) defines an optimal query for the WMmMR criterion.
+      </paragraph>
+      <paragraph>
+       In fact, for a given set {a mathematical formula}A⊆N, the determination of the optimal value {a mathematical formula}λA can be easily performed using a bisection algorithm, applying similar arguments to those of Section 3.4. The functions {a mathematical formula}MmMR(X,ΘP∪{(1A0,Λ)}) and {a mathematical formula}MmMR(X,ΘP∪{(Λ,1A0)}) are indeed, respectively, weakly decreasing and weakly increasing, while achieving the same maximum. Hence, in order to determine the optimal pair {a mathematical formula}(A⁎,λA⁎) at each iteration step of the elicitation procedure, we need to use the bisection algorithm considering that A could be any of the {a mathematical formula}2n−2 proper subsets of N. However, the number of these sets grows exponentially as the number of criteria increases. Therefore, as a heuristic, we propose to consider only the subsets of N that are involved in the computation of {a mathematical formula}mMR(x,ΘP), where x is an alternative with the highest minimax regret mMR given the current {a mathematical formula}P (the alternative responsible of the current MmMR value). These sets are the n level sets of x, i.e. {a mathematical formula}Ax={X(i),i∈N}. In this way, the heuristic will further constrain the parameters involved in the computation of {a mathematical formula}mMR(x,ΘP) which may reduce the current MmMR value.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Numerical tests
+      </section-title>
+      <paragraph>
+       The first experiments aim at evaluating the efficiency of the query generation strategy presented in Section 4.4 and based on comparison queries. This strategy is named CQ hereafter. We do not report computation times since we have already seen that optimization with preference statements of types {a mathematical formula}(1A0,Λ) or {a mathematical formula}(Λ,1A0) is very efficient, due to the reduced number of monotonicity constraints. This is even more striking without making use of a LP-solver.
+      </paragraph>
+      <paragraph>
+       Recall that CQ relies on queries involving binary alternatives {a mathematical formula}1A0 and constant utility profiles {a mathematical formula}Λ=(λ,…,λ). Hence, for a baseline comparison, we consider the random generation strategy where both {a mathematical formula}A⊆N and {a mathematical formula}λ∈[lA,uA] are selected at random at each iteration step of the elicitation procedure. Starting from an empty set of preference statements, simulated DMs answer queries according to a randomly generated Choquet integral. At each iteration step, in addition to the maximum minimax regret MmMR, we compute the maximum real regret, that is the largest actual loss of utility associated with assigning an alternative to its regret-optimal category instead of its true preferred category (the utility is measured by a latent Choquet integral modeling the DM's preferences). As for choice problems, regrets are normalized to belong to the unit interval. The results averaged over 100 runs are given in Fig. 7 for datasets with 1000 alternatives; performance vectors of alternatives are uniformly drawn in {a mathematical formula}[0,1]n and categories are defined by dividing the utility scale {a mathematical formula}[0,1] uniformly.
+      </paragraph>
+      <paragraph>
+       In Fig. 7, we can see that the maximum minimax regret MmMR reduces much faster with CQ than with the random generation strategy; the same observation applies when considering the maximum real regret with the two strategies. After about 30 queries on average, the maximum real regret observed with CQ is under 20% of the initial regret while still being larger than {a mathematical formula}50% with the random strategy. Note that the maximum real regret reduces less drastically than the real regret in choice problems (see Fig. 3). However, we observe that the average of real regrets (averaged over all alternatives that need to be classified) is below {a mathematical formula}10% after only 5 queries on average, meaning that most alternatives are well assigned reasonably quickly.
+      </paragraph>
+      <paragraph>
+       Recall that CQ focuses on alternative x inducing the current MmMR value by generating a preference query involving one of its level sets. Hence, we propose an alternative query generation strategy (named AQ for assignment queries) asking the DM which among all the categories suits most alternative x; for this strategy, max regrets are performed by optimizing the general linear programming formulations LP4 presented in Section 4.3 because the compact formulation LP5 does not apply due to the type of questions used. Fig. 8 compares strategy CQ with AQ (the results are averaged over 100 runs).
+      </paragraph>
+      <paragraph>
+       In Fig. 8, we can see here that strategy AQ is more informative than CQ since both the maximum minimax regret and the maximum real regret reduce more quickly. Note however that AQ only applies to small sorting problems involving a few criteria (so that monotonicity constraints can be handled efficiently) and a few hundred alternatives (due to the number of LP optimizations). For larger problems, strategy CQ is more appropriate as it is computationally much less demanding (due to the reduced number of monotonicity constraints) while reducing regret reasonably fast.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Discussion and conclusions
+     </section-title>
+     <paragraph>
+      In this paper, we discussed the problem of interactively eliciting the parameters of a Choquet integral in the context of multicriteria decision-making. We presented how an interactive elicitation approach can be applied to the following problems: recommending a single alternative to a decision maker (choice problems), producing a ranking of top-k alternatives (ranking problems) and assigning alternatives to a number of ordered categories (sorting problems). We have adopted the minimax regret approach of Boutilier et al. [29] allowing robust recommendations under uncertainty with guarantees with respect to the worst-case loss, and formalized ranking and sorting problems in terms of regret.
+     </paragraph>
+     <paragraph>
+      Using minimax regret in combination with a utility model based on a Choquet integral poses a number of technical difficulties; these are related to the number of parameters needed to characterize a Choquet capacity and the number of constraints required to characterize the space of admissible capacity functions. We have shown that, assuming that preferences are stated in a particular form (involving a binary alternative of type 1A0 and a constant utility profile of type {a mathematical formula}Λ=(λ,…,λ)), minimax regret optimizations can be performed efficiently in various settings (choice, ranking, sorting): we presented both a linear programming formulation and an even faster iterative algorithm maintaining lower and upper bounds. We presented experimental results validating the practical efficiency of our incremental approaches in terms of computation times, number of queries and quality of decisions. Recall that we stop when it can be proved that further specifications of the model cannot seriously challenge the current recommendation. That is where we really save time with respect to approaches that fully elicit the utility function, making elicitation feasible in practice. In our opinion, this is the specificity and the contribution of incremental elicitation for decision-making.
+     </paragraph>
+     <paragraph>
+      Our work differentiates from previous works on Choquet integrals in the focus on incremental elicitation and on the ability to provide robust recommendations using minimax regret without making any restrictive assumption on the capacity. Notably, Ah-Pine et al. [62] assess a feasible capacity for a Choquet integral given some preferential information that maximize the margin of the induced constraints (in a fashion similar to SVM classifiers). However this kind of “pointwise” estimation ignore the specificity of the available alternatives (while regret-based approach can focus elicitation on the “useful” part of the utility). Moreover, it does not directly provide a natural strategy for choosing the query to ask within an incremental elicitation setting.
+     </paragraph>
+     <paragraph>
+      The problem of minimizing regrets to derive a robust recommendation with a Choquet integral and an imprecise capacity has also been addressed in [63]. In this work, another approach to compute {a mathematical formula}MR(x,X,ΘP) is proposed, relying on the fact that {a mathematical formula}MR(x,X,ΘP)=maxv∈ΘP⁎⁡maxy∈X⁡{Cv(y)−Cv(x)} and {a mathematical formula}ΘP⁎ is the (finite) set of extreme points in {a mathematical formula}ΘP. However, the amount of extreme points seems to be prohibitively large for enumeration methods. Hence, using this approach within an incremental elicitation procedure seems unfeasible for general capacities. This approach is however interesting for two-additive capacities because, in this case, the size of {a mathematical formula}ΘP⁎ is quadratic in the number of criteria. The advantage of our approach, beside the fact that it is incremental, is that it applies to any monotone capacity, without any prior restriction.
+     </paragraph>
+     <paragraph>
+      A first direct continuation of this work is to extend the elicitation procedure for set recommendation, following the work on setwise minimax regret [40]. Indeed, while most emphasis of works in recommender systems and decision aid is on providing a single recommendation, it is often appropriate to provide a set of alternatives. The approach we have proposed in this paper extends naturally to sets but is computationally more demanding.
+     </paragraph>
+     <paragraph>
+      A second direction concerns the development of new strategies to search for highly informative queries. We are interested in the sequential evaluation of the informative value of a query; note, however, that sequential optimization of the value of a query will usually be prohibitive in most cases. Alternatively, it will be interesting to test highly informative local search approaches like the query-iteration strategy[64], [40] in our settings.
+     </paragraph>
+     <paragraph>
+      In this paper, we also addressed the problem of sorting using thresholds on the overall utility scale. These thresholds are assumed to be defined in a preliminary step with the DM, independently of the set of alternatives. For instance one may want to construct an overall intrinsic evaluation scale using the unit interval (e.g. for evaluating students, projects...) where 0.5 is the neutral point separating good and bad alternatives; one may also want that excellent alternatives receive at least 0.8 and that very bad alternatives receive at most 0.2. Using such thresholds, we have studied the set of capacities that are compatible with the assignment examples obtained from the DM and developed an incremental elicitation method to progressively reduce this set. It would be possible to learn or approximate thresholds in the same time as capacity values which would possibly provide greater flexibility to describe an assignment (but would prevent us to use thresholds prescribed by the DM). The variable thresholds approach has been proposed for instance in [58] for linear aggregators and could be adapted for Choquet integrals. This would however make thresholds and capacities interdependent and both could be influenced by the learning set. Moreover, in our approach, the fact that thresholds are known allows us to considerably simplify the optimization of regrets (see Section 4.3), which speeds-up computation and provides good interaction possibilities.
+     </paragraph>
+     <paragraph>
+      In the literature on multicriteria sorting, another prominent approach for preference-based sorting has been proposed and widely used in the context of multicriteria evaluation: sorting with reference profiles as proposed by Roy in the Electre TRI method [65] and used in multiple variants see, e.g., [66], [67], [57], [68], [69]. In such methods, we are given multicriteria profiles describing the “desiderata” (in terms of criteria) for each category; the alternatives are compared to these profiles on each criterion to derive preference indices that are then aggregated to establish the overall preference. Profiles act as multicriteria boundaries of categories used to make preference-based assignments. Various elicitation procedures have been proposed to assess some parameters in these models (e.g., weight of criteria, reference profiles), see e.g., [66], [70], [71]. Recently, the elicitation of Choquet capacities has been also studied in this context [72] but the proposed approach is not incremental. The approach we are proposing here for the incremental elicitation of capacities could easily be adapted to multicriteria sorting models based on comparisons with reference profiles.
+     </paragraph>
+     <paragraph>
+      It is worth noting that the absence of any redundancy in preference queries is a key aspect to obtain efficient questionnaires. We remind indeed that the DM is asked to compare a pair of alternatives {a mathematical formula}(x,y) only when both answers “x preferred to y” and “y preferred to x” are consistent with the preferences collected so far. Hence, we implicitly enforce consistency of stated preference statements and inferred preferences. However, we do not check the internal consistency of the DM during the elicitation process nor the adequacy of the Choquet model to her preferences. Revisiting incremental approaches to manage possible internal inconsistencies of the DM (noisy preferences) and to offer the possibility to falsify the decision model (testing consistency of the observed preferences w.r.t. the Choquet model) while keeping fast elicitation sequences would be an interesting but challenging line for further research.
+     </paragraph>
+     <paragraph>
+      Finally, an interesting direction of research, departing from the regret-based approach, would be incremental elicitation of Choquet capacities using a Bayesian approach (following works on Bayesian utility elicitation [26], [73]), adopting a less conservative criterion for selecting preference queries under uncertainty. It would not provide the same guarantee on the robustness of decisions but could possibly reduce the average number of preference queries in the elicitation process by considering the expected value of information instead of performing a worst case analysis.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <paragraph label="Proof of Proposition 2">
+      Let {a mathematical formula}v⁎ be an optimal solution of program LP{a mathematical formula}2′. Assume that {a mathematical formula}v⁎ do not satisfy Equation (17) for some {a mathematical formula}A0∈A(x,y) such that {a mathematical formula}ωA0&gt;0. Let {a mathematical formula}vˆ be the solution defined by:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}vˆA=vA⁎ for all {a mathematical formula}A∈A(x,y) such that {a mathematical formula}ωA&lt;0.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}vˆA=min⁡{uA,minA′∈Pa(A)⁡vˆA′} for all {a mathematical formula}A∈A(x,y) such that {a mathematical formula}ωA&gt;0.
+      </list-item>
+     </list>
+     <paragraph label="Proof of Proposition 4">
+      Let us prove by induction that the following statement, denoted by {a mathematical formula}P(i), holds at the end of step {a mathematical formula}i∈{0,…,|A−|}:{a mathematical formula}For step {a mathematical formula}i=0 (before entering the loop), statement {a mathematical formula}P(i) obviously holds since {a mathematical formula}Pai(A)=∅ and {a mathematical formula}vA is initialized to {a mathematical formula}uA for all {a mathematical formula}A∈A+. Assume {a mathematical formula}P(i−1) holds for some {a mathematical formula}i∈{1,…,|A−|−1}. We want to prove that {a mathematical formula}P(i) is necessarily true in that case. Let {a mathematical formula}A∈A+. At the beginning of step i, we know that {a mathematical formula}vA=min⁡{uA,minA′∈Pai−1(A)⁡vA′} by induction hypothesis. Let us remark that none of the variables {a mathematical formula}vA′, {a mathematical formula}A′∈Pai−1(A), is modified during this step. If {a mathematical formula}A⊄Ai−, then variable {a mathematical formula}vA is not modified during step i. Moreover, since {a mathematical formula}Pai(A)=Pai−1(A) in that case, we can directly infer the result. Assume now that {a mathematical formula}A⊂Ai−. During step i, variable {a mathematical formula}vA is modified as follows (see line 17):{a mathematical formula} Thus, statement {a mathematical formula}P(i) holds. Therefore, for all {a mathematical formula}i∈{0,…,|A−|}, we have {a mathematical formula}vA=min⁡{uA,minA′∈Pai(A)⁡vA′} for all {a mathematical formula}A∈A+. □
+     </paragraph>
+     <paragraph label="Proof of Proposition 6.">
+      Let us prove that Algorithm 1 constructs an optimal solution of LP3. To do so, it is sufficient to prove by induction that the following statement, denoted by {a mathematical formula}P(i), holds at the end of any step {a mathematical formula}i∈{0,…,|A−|} of the ‘for’ loop:“The instantiation of the variables in {a mathematical formula}{vAk−,1≤k≤i} , denoted by {a mathematical formula}Ii, can be extended to an optimal solution of program LP3.”If statement {a mathematical formula}P(i) is true for {a mathematical formula}i=|A−|, then it enables us to establish the result: the instantiation of all negative variables (i.e. {a mathematical formula}{vA:A∈A−}) can be extended to an optimal instantiation, while the remaining variables, which are those with a positive impact on the objective function (i.e. {a mathematical formula}{vA:A∈A+}), verify the necessary condition for optimality (due to Proposition 5).For iteration step {a mathematical formula}i=0 (i.e. before entering the loop), statement {a mathematical formula}P(i) obviously holds since set {a mathematical formula}{vAk−,1≤k≤i} is empty. Assume now that {a mathematical formula}P(i−1) holds for some {a mathematical formula}i∈{1,…,|A−|}. We want to prove that {a mathematical formula}P(i) is true. Note that none of the variables in {a mathematical formula}{vAk−,1≤k≤i−1} is updated during step i. Moreover, the instantiation {a mathematical formula}Ii−1 can be extended to an optimal solution of program LP3 by induction hypothesis. Therefore, we just need to prove that variable {a mathematical formula}vAi− is instantiated in such a way that instantiation {a mathematical formula}Ii can still be extended to an optimal solution of LP3.At iteration step i, a while loop is used to determine the value of {a mathematical formula}vAi− which iterates over the positive descendants of node {a mathematical formula}Ai− in decreasing order of size. Two cases may occur: either the value of {a mathematical formula}vAi− is fixed at line 12 or at line 4. To simplify the proof, we will only consider the first case, since the second one can be proved using very similar arguments (we will come back to this point later). Thus, we assume here that the while loop stops at some step {a mathematical formula}j∈{1,…,|Di|} due to the condition in line 11. In that case, we know that {a mathematical formula}vAi− is set to {a mathematical formula}uji, where {a mathematical formula}uji denotes the value of variable {a mathematical formula}vDji at the beginning of iteration step i (see line 12). Note that we have:{a mathematical formula} where {a mathematical formula}Pai−1(Dji)={Ak−,1≤k≤i−1:Dji⊂Ak−} (due to Proposition 4). Therefore, {a mathematical formula}uji actually represents the maximum feasible value of variable {a mathematical formula}vDji given the instantiation of the variables in {a mathematical formula}{vA:A∈Pai−1(Dji)}. Note that we have {a mathematical formula}{vA:A∈Pai−1(Dji)}⊆{vAk−:1≤k≤i−1}. As a consequence, since instantiation {a mathematical formula}Ii−1 can be extended to an optimal solution of program LP3 (by induction hypothesis), we can impose {a mathematical formula}vDji≤uji while still being able to find an optimal solution of program LP3. Hence, we can find an optimal solution of LP3 by solving the following problem:{a mathematical formula} where {a mathematical formula}f(u,A(x,y)) denotes the optimal solution of the following subproblem:{a mathematical formula} We now aim to show that there exists an optimal solution of program LP3 that extends instantiation {a mathematical formula}Ii−1 while verifying {a mathematical formula}vAi−=vDji=uji. With this aim in mind, we want to prove that {a mathematical formula}f(u,A(x,y)) is maximized for {a mathematical formula}u=uji.Let us focus on the computation of {a mathematical formula}f(u,A(x,y)) for some fixed {a mathematical formula}u∈[lDji,uji]. We define the following sets:
+      <list>
+       {a mathematical formula}S(Dji)={A∈A(x,y):A⊇Dji}: the supersets of {a mathematical formula}Dji restricted to those in {a mathematical formula}A(x,y). Each element of {a mathematical formula}S(Dji) is associated to a variable that is now bounded below by u (due to the constraint {a mathematical formula}vDji=u).{a mathematical formula}P(Dji)={A∈A(x,y):A⊂Dji}: the powerset of {a mathematical formula}Dji restricted to set {a mathematical formula}A(x,y). Each element of {a mathematical formula}P(Dji) corresponds to a variable that is now bounded above by u (due to the constraint {a mathematical formula}vDji=u).{a mathematical formula}I(Dji)={A∈A(x,y):A⊉Dji,A⊄Dji}: the sets that are incomparable to {a mathematical formula}Dji. Note that we necessarily have {a mathematical formula}I(Dji)∩A+=∅ since {a mathematical formula}Dji∈A+ and {a mathematical formula}A+ is an embedded sequence. Therefore, we have {a mathematical formula}I(Dji)⊆A− which means that {a mathematical formula}ωA&lt;0 for all {a mathematical formula}A∈I(Dji); hence, the objective function of problem (34) increases as variable {a mathematical formula}vA decreases. We want to prove that there exists an optimal solution of problem (34) such that {a mathematical formula}vA≤max⁡{lA,u} for all {a mathematical formula}A∈I(Dji). Let {a mathematical formula}A∈I(Dji). Assume first that there exists no set {a mathematical formula}A′∈A(x,y) such that {a mathematical formula}A′⊂A. In that case, Equations (18), (19), (20), (21), (22) do not include any constraint of type {a mathematical formula}vA′≤vA. Therefore, since the objective function increases as variable {a mathematical formula}vA decreases, we know that there exists an optimal solution such that {a mathematical formula}vA=lA≤max⁡{lA,uA}. Assume now that there exists {a mathematical formula}A′∈A(x,y) such that {a mathematical formula}A′⊂A. First, we want to prove that imposing {a mathematical formula}vA≤max⁡{lA,u} does not impact on variable {a mathematical formula}vA′. Two cases may occur: either {a mathematical formula}ωA′&gt;0 or {a mathematical formula}ωA′&lt;0. Let {a mathematical formula}A′∈A(x,y) be such that {a mathematical formula}A′⊂A and {a mathematical formula}ωA′&gt;0 (it exists). Note that {a mathematical formula}A′⊂Dji must hold, as otherwise we would have {a mathematical formula}Dji⊂A and {a mathematical formula}A∈I(Dji) (which yields a contradiction). As a consequence, we necessarily have {a mathematical formula}A′∈P(Dji); hence, {a mathematical formula}vA′ is bounded above by u. Therefore, imposing {a mathematical formula}vA≤max⁡{lA,u} does not impact on variable {a mathematical formula}vA′. Let {a mathematical formula}A′∈A(x,y) be such that {a mathematical formula}A′⊂A and {a mathematical formula}ωA′&lt;0 (it exists). If {a mathematical formula}A′∈P(Dji), then {a mathematical formula}vA′ is bounded above by u and so imposing {a mathematical formula}vA≤max⁡{u,lA} does not impact on variable {a mathematical formula}vA′. Otherwise, we necessarily have {a mathematical formula}A′∈I(Dji) and so the result can be obtained by iterating this complete reasoning on {a mathematical formula}A′: {a mathematical formula}vA′≤max⁡{lA′,u}≤max⁡{lA,u}. Hence, we can impose {a mathematical formula}vA≤max⁡{u,lA} without impacting on variable {a mathematical formula}vA′. As a consequence, since the objective function increases as variable {a mathematical formula}vA decreases, we know that there exists an optimal solution such that {a mathematical formula}vA≤max⁡{lA,u}.We can observe that
+      </list>
+      <paragraph>
+       {a mathematical formula}h(u,P(Dji),I(Dji)) is an increasing function of u since constraints of types “{a mathematical formula}vA≤u” or “{a mathematical formula}vA≤max⁡{lA,u}” become less constraining as u increases. Therefore, {a mathematical formula}h(u,P(Dji),I(Dji)) is maximized for {a mathematical formula}u=uji. As a consequence, in order to prove that {a mathematical formula}f(u,A(x,y)) is maximized for {a mathematical formula}u=uji, it is sufficient to show that {a mathematical formula}g(u,S(Dji)) is maximized for {a mathematical formula}u=uji.First, let us simplify the optimization problem. By induction hypothesis, all variables in {a mathematical formula}{vAk−:1≤k≤i−1} have already been “correctly” instantiated. Therefore, we can remove all these variables from the optimization and we just have to enforce consistency of the next instantiations. Moreover, given the instantiation of these variables, we can derive the optimal value of all variables in {a mathematical formula}{vA,A∈A+:A⊄Ai−} from the necessary condition (17); hence, these variables can also be removed from the optimization problem. We now want to show that {a mathematical formula}g(u,s(Dji)) is maximized for {a mathematical formula}u=uji where:{a mathematical formula} We first assume that u is a feasible value of all variables {a mathematical formula}vA, {a mathematical formula}A∈s(Dji), i.e. {a mathematical formula}lA≤u≤uA for all {a mathematical formula}A∈s(Dji). On that assumption, we aim to prove that there exists {a mathematical formula}α&gt;0 such that {a mathematical formula}g(u,s(Dji))=α×u. We decompose {a mathematical formula}s(Dji) into two disjoints sets {a mathematical formula}s(Dji)+ and {a mathematical formula}s(Dji)− defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}s(Dji)+=A+∩s(Dji)={Dmi:1≤m≤j}. This set is composed of the j first positive descendants of node {a mathematical formula}Ai−.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}s(Dji)−=A−∩s(Dji)={Ak−:i≤k≤K}, where K is the largest value k such that {a mathematical formula}i≤k≤|A−| and {a mathematical formula}Ak−⊃Dji. This set is composed of all {a mathematical formula}A∈A− such that {a mathematical formula}Dji⊂A⊆Ai−.
+       </list-item>
+      </list>
+      <paragraph>
+       First, we want to prove that all variables in {a mathematical formula}{vA:A∈s(Dji)−} can be removed from the optimization problem. Note that, for all {a mathematical formula}k∈{i,…,K}, {a mathematical formula}D1k the first positive descendant of {a mathematical formula}Ak− is necessarily included in {a mathematical formula}s(Dji)+ since {a mathematical formula}Dji is positive and {a mathematical formula}Dji⊂Ak−⊆Ai−. Therefore, we can decompose set {a mathematical formula}s(Dji)− into j disjoint sets {a mathematical formula}s(Dji)1−,…,s(Dji)j−, defined as follows:{a mathematical formula} Note that {a mathematical formula}ωA&lt;0 for all {a mathematical formula}A∈s(Dji)m−, {a mathematical formula}m∈{1,…,j}; therefore, {a mathematical formula}g(u,s(Dji)) increases as {a mathematical formula}vA decreases. Moreover, by definition of set {a mathematical formula}s(Dji)m−, we have:{a mathematical formula} Therefore, due to the monotonicity constraints, {a mathematical formula}vA=max⁡{lA,vDmi} must hold at the optimum point. Then, since {a mathematical formula}vDmi≥u (by definition of {a mathematical formula}S(Dji)) and {a mathematical formula}u≥lA (by hypothesis), we can conclude {a mathematical formula}vA=vDmi at the optimum point. As a consequence, variables {a mathematical formula}vA,A∈s(Dji)m−, can be substituted by {a mathematical formula}vDmi in the optimization problem. More precisely, {a mathematical formula}g(u,s(Dji)) can be computed by solving the following problem:{a mathematical formula} Note that this optimization problem only involves the positive variables {a mathematical formula}vDmi,m∈{1,…,j}. We want to prove that there exists an optimal solution of this subproblem such that {a mathematical formula}vD1i=…=vDji. To do so, we first study the term associated with {a mathematical formula}vD1i in the objective function defined by Equation (35). Note that its coefficient is actually equal to {a mathematical formula}ω++ω−, where {a mathematical formula}ω+ and {a mathematical formula}ω− are defined at the first step of the while loop. Since the while loop stops at step j due to line 11, we know that {a mathematical formula}ω++ω−≤0 at the first step (unless {a mathematical formula}j=1 of course). Therefore, we know that the objective function defined by Equation (35) increases as {a mathematical formula}vD1i decreases. Moreover, since {a mathematical formula}vD1i must be larger than or equal to {a mathematical formula}vD2i due to Equation (19), then we know that there exists an optimal solution such that {a mathematical formula}vD1i=max⁡{lD1i,vD2i}; then, since {a mathematical formula}vD2i≥u (by definition of g) and {a mathematical formula}u≥lD1i (by hypothesis), we can conclude {a mathematical formula}vD1i=vD2i. Therefore, we can substitute {a mathematical formula}vD1i by {a mathematical formula}vD2i in the problem, which leads to the following objective function:{a mathematical formula} By iterating this reasoning, we can conclude that:{a mathematical formula} where {a mathematical formula}α=∑A∈s(Dji)ωA. This equality only holds under the assumption that {a mathematical formula}u≥lA for all {a mathematical formula}A∈s(Dji); otherwise, some values {a mathematical formula}vA, {a mathematical formula}A∈s(Dji), have been authorized to decrease below their minimal feasible value (to improve the objective function), which only provides the following inequality: {a mathematical formula}g(u,s(Dji))≤α×u. However, this equality is true for {a mathematical formula}u=uji: we indeed have {a mathematical formula}uji≥lAi− due to line 8 and {a mathematical formula}lAi−≥lA for all {a mathematical formula}A∈s(Dji) since {a mathematical formula}Ai−⊃A. Moreover, since the while loop stops at step j due to line 11, we know that {a mathematical formula}α&gt;0 since {a mathematical formula}ω++ω−=α=∑A∈s(Dji)ωA at step j. As a consequence, for all {a mathematical formula}u≠uji, we have:{a mathematical formula} This shows that function {a mathematical formula}g(u,s(Dji)) is maximized for {a mathematical formula}u=uji; therefore, function {a mathematical formula}f(u,A(x,y)) is also maximized for {a mathematical formula}u=uji. Thus, when {a mathematical formula}vAi− is set to {a mathematical formula}uji (due to the condition in line 11), there exists an optimal solution extending {a mathematical formula}Ii−1 such that {a mathematical formula}vAi−=vD1i=vDji=uji, which means that {a mathematical formula}P(i) holds in that case. When {a mathematical formula}vAi− is set to {a mathematical formula}lAi− (due to line 4), two cases may occur:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}Di=∅ or {a mathematical formula}vD1i≤lAi−, then no positive variable conflicts with {a mathematical formula}vAi−. Moreover, since {a mathematical formula}ωAi−&lt;0, we know that the objective function strictly increases as {a mathematical formula}vAi− decreases. Therefore, {a mathematical formula}vAi− must be set to its lower bound {a mathematical formula}lAi− in that case.
+       </list-item>
+       <list-item label="•">
+        Otherwise, we can use the same arguments as those we used when {a mathematical formula}vAi− is set to {a mathematical formula}uji (due to line 12). More precisely, a similar reasoning with {a mathematical formula}j=M establishes the result, where M is the largest value m such that {a mathematical formula}1≤m≤|Di| and {a mathematical formula}vDmi&gt;lAi−. The main difference is that we obtain a decreasing function of u at the end (since all tests in line 11 fail) and so variable {a mathematical formula}vAi− must be set to its lower bound {a mathematical formula}lAi− instead.
+       </list-item>
+      </list>
+      <paragraph>
+       Therefore, {a mathematical formula}P(i) holds in all cases. Hence, our algorithm is valid. □
+      </paragraph>
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

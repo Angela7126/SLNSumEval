@@ -1,0 +1,1255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing</title>
+<!--Generated on Wed Jun 11 18:57:50 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Marie Candito
+<br class="ltx_break"/>Alpage
+<br class="ltx_break"/>Paris Diderot Univ
+<br class="ltx_break"/>INRIA
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">marie.candito@
+<br class="ltx_break"/>linguist.univ-paris-diderot.fr</span>
+
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Matthieu Constant
+<br class="ltx_break"/>Université Paris-Est
+<br class="ltx_break"/>LIGM
+<br class="ltx_break"/>CNRS
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">Matthieu.Constant@
+<br class="ltx_break"/>u-pem.fr</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">In this paper, we investigate various strategies to predict both syntactic dependency parsing and contiguous multiword expression (MWE) recognition, testing them on the dependency version of French Treebank <cite class="ltx_cite">[<a href="#bib.bib1" title="Enriching a french treebank" class="ltx_ref">1</a>]</cite>, as instantiated in the SPMRL Shared Task <cite class="ltx_cite">[<a href="#bib.bib3" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">23</a>]</cite>. Our work focuses on using an alternative representation of syntactically regular MWEs, which captures their syntactic internal structure. We obtain a system with comparable performance to that of previous works on this dataset, but which predicts both syntactic dependencies and the internal structure of MWEs. This can be useful for capturing the various degrees of semantic compositionality of MWEs.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A real-life parsing system should comprise the recognition of multi-word expressions (MWEs<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Multiword expressions can be roughly defined as continuous or discontinuous sets of tokens, which either do not exhibit full freedom in lexical selection or whose meaning is not fully compositional. We focus in this paper on <span class="ltx_text ltx_font_italic">contiguous</span> multiword expressions, also known as “words with spaces”.</span></span></span>), first because downstream
+semantic-oriented applications need some marking in order to
+distinguish between regular semantic composition and the typical
+semantic non-compositionality of MWEs.
+Second, MWE
+information, is intuitively supposed to help parsing<span class="ltx_ERROR undefined">\draftremove</span>, in particular for MWEs that exhibit irregular internal syntax.</p>
+</div><span class="ltx_ERROR undefined">\draftreplace</span>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Yet, A classical parsing scenario is to pre-group <span class="ltx_text ltx_font_italic">gold</span> MWEs <cite class="ltx_cite">[<a href="#bib.bib31" title="Lexicalization in crosslinguistic probabilistic parsing: the case of french" class="ltx_ref">2</a>]</cite>. While this non-realistic scenario has been shown
+to help parsing <cite class="ltx_cite">[<a href="#bib.bib32" title="Multiword units in syntactic parsing" class="ltx_ref">18</a>, <a href="#bib.bib30" title="Multiword expressions in statistical dependency parsing" class="ltx_ref">15</a>]</cite>,That intuition is confirmed in a classical but non-realistic setting in which <span class="ltx_text ltx_font_italic">gold</span> MWEs are pre-grouped <cite class="ltx_cite">[<a href="#bib.bib31" title="Lexicalization in crosslinguistic probabilistic parsing: the case of french" class="ltx_ref">2</a>, <a href="#bib.bib32" title="Multiword units in syntactic parsing" class="ltx_ref">18</a>, <a href="#bib.bib30" title="Multiword expressions in statistical dependency parsing" class="ltx_ref">15</a>]</cite>. But the situation is <span class="ltx_ERROR undefined">\draftreplace</span>quite differentmuch less clear when
+switching to automatic MWE prediction.
+<span class="ltx_ERROR undefined">\draftreplace</span>In that case,While <cite class="ltx_cite">Cafferkey<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib28" title="Multi-word units in treebank-based probabilistic parsing and generation" class="ltx_ref">2007</a>)</cite> report a small improvement on the pure parsing task when using external MWE lexicons to help English parsing, <cite class="ltx_cite">Constant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27" title="Discriminative strategies to integrate multiword expression recognition and parsing" class="ltx_ref">2012</a>)</cite> report results on the joint MWE recognition and parsing task, in which errors in MWE recognition alleviate their positive effect on
+parsing performance.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">While the realistic scenario of syntactic parsing with automatic MWE
+recognition (either done jointly or in a pipeline) has already been
+investigated in constituency parsing
+<cite class="ltx_cite">[<a href="#bib.bib29" title="Multiword expression identification with tree substitution grammars: a parsing tour de force with french" class="ltx_ref">16</a>, <a href="#bib.bib27" title="Discriminative strategies to integrate multiword expression recognition and parsing" class="ltx_ref">10</a>, <a href="#bib.bib2" title="Parsing models for identifying multiword expressions" class="ltx_ref">17</a>]</cite>, the French dataset of the
+SPMRL 2013 Shared Task <cite class="ltx_cite">[<a href="#bib.bib3" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">23</a>]</cite> only recently provided the opportunity to evaluate this scenario within the framework of
+dependency syntax.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The main focus of the Shared Task was on predicting both morphological and syntactic analysis for morphologically-rich languages. The French dataset is the only one containing MWEs: the French treebank has the particularity to contain a high ratio of tokens belonging to a MWE (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="12.7\%" display="inline"><mrow><mn>12.7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of non numerical tokens).</span></span></span> In such a scenario, a system predicts dependency trees with marked groupings of tokens into MWEs. The trees show syntactic dependencies between semantically sound units (made of one or several tokens), and are thus particularly appealing for downstream semantic-oriented applications, as dependency trees are considered to be closer to predicate-argument structures.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we investigate various strategies for predicting from a tokenized sentence both MWEs and syntactic dependencies, using the French dataset of the SPMRL 13 Shared Task. <span class="ltx_ERROR undefined">\draftreplace</span>The main point of our work is to investigateWe focus on the use of an alternative representation for those MWEs that exhibit regular internal syntax. The idea is to represent these using regular syntactic internal structure, while keeping the semantic information that they are MWEs.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We devote section <a href="#S2" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> to related work. <span class="ltx_ERROR undefined">\draftreplace</span>We describe the French dataset in section <a href="#S3" title="3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, with the original and modified MWE representations, and we detail the motivations for this alternative representationIn section <a href="#S3" title="3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we describe the French dataset, how MWEs are originally represented in it, and we present and motivate an alternative representation. Section <a href="#S4" title="4 Architectures for MWE Analysis and Parsing ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> describes the different architectures we test for <span class="ltx_ERROR undefined">\draftreplace</span>double prediction ofpredicting both syntax and MWEs. Section <a href="#S5" title="5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents the external resources targeted to improve MWE recognition. We describe experiments and discuss their results in section <a href="#S6" title="6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> and conclude in section <a href="#S7" title="7 Conclusion ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We gave in introduction references to previous work on predicting MWEs and constituency parsing. To our knowledge, the first works<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Concerning non contiguous MWEs, we can cite the work of <cite class="ltx_cite">Vincze<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Dependency parsing for identifying hungarian light verb constructions" class="ltx_ref">2013</a>)</cite>, who experimented joint dependency parsing and light verb construction identification.</span></span></span> on <span class="ltx_text ltx_font_italic">predicting</span> both MWEs and <span class="ltx_text ltx_font_italic">dependency trees</span> are those presented to the SPMRL 2013 Shared Task that provided scores for French (which is the only dataset containing MWEs). <cite class="ltx_cite">Constant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing" class="ltx_ref">2013</a>)</cite> proposed to combine pipeline and joint systems in a reparser <cite class="ltx_cite">[<a href="#bib.bib14" title="Parser combination by reparsing" class="ltx_ref">20</a>]</cite>, and ranked first at the Shared Task. Our contribution with respect to that work is the representation of the internal syntactic structure of MWEs, and use of MWE-specific features for the joint system.
+The system of <cite class="ltx_cite">Björkelund<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="(Re)ranking meets morphosyntax: state-of-the-art results from the spmrl 2013 shared task" class="ltx_ref">2013</a>)</cite> ranked second on French, though with close UAS/LAS scores. It is a less language-specific system that reranks n-best dependency parses from 3 parsers, informed with features from predicted constituency trees. It uses no feature nor treatment specific to MWEs as it focuses on the general aim of the Shared Task, namely coping with prediction of morphological and syntactic analysis.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Concerning related work on the representation of MWE internal structure, we can cite the Prague Dependency Bank, which captures both regular syntax of non-compositional MWEs and their MWE status, in two distinct annotation layers <cite class="ltx_cite">[<a href="#bib.bib5" title="Annotation of multiword expressions in the prague dependency treebank" class="ltx_ref">3</a>]</cite>. Our representation also resembles that of light-verb constructions (LVC) in the hungarian dependency treebank <cite class="ltx_cite">[<a href="#bib.bib35" title="Hungarian dependency treebank" class="ltx_ref">24</a>]</cite>: the construction has regular syntax, and a suffix is used on labels to express it is a LVC <cite class="ltx_cite">[<a href="#bib.bib20" title="Dependency parsing for identifying hungarian light verb constructions" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Data: MWEs in Dependency Trees</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The data we use is the SPMRL 13 dataset for French, in dependency format. It contains projective dependency trees that were automatically derived from the latest status of the French Treebank <cite class="ltx_cite">[<a href="#bib.bib1" title="Enriching a french treebank" class="ltx_ref">1</a>]</cite>, which consists of constituency trees for sentences from the newspaper <span class="ltx_text ltx_font_italic">Le Monde</span>, manually annotated with phrase structures, morphological information, and grammatical functional tags for dependents of verbs. The Shared Task used an enhanced version of the constituency-to-dependency conversion of <cite class="ltx_cite">Candito<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib34" title="Statistical french dependency parsing : treebank conversion and first results" class="ltx_ref">2010</a>)</cite>, with different handling of MWEs.
+The dataset consists of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="18535" display="inline"><mn>18535</mn></math> sentences, split into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="14759" display="inline"><mn>14759</mn></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="1235" display="inline"><mn>1235</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="2541" display="inline"><mn>2541</mn></math> sentences for training, development, and final evaluation respectively.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We describe below the flat representation of MWEs in this dataset, and the modified representation for regular MWEs that we propose.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">a. Flat representation:<span class="ltx_text ltx_font_medium"></span></span></p><span class="ltx_ERROR undefined ltx_centering">{xdag}</span><span class="ltx_ERROR undefined ltx_centering">\xdagColsep</span>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_small">=5.5pt
+<span class="ltx_ERROR undefined">\node</span>14L’
+<span class="ltx_ERROR undefined">\node</span>22<span class="ltx_text" style="color:#FF00FF;">abus</span>
+<span class="ltx_ERROR undefined">\node</span>34<span class="ltx_text" style="color:#FF00FF;">de</span>
+<span class="ltx_ERROR undefined">\node</span>44<span class="ltx_text" style="color:#FF00FF;">biens</span>
+<span class="ltx_ERROR undefined">\node</span>54<span class="ltx_text" style="color:#FF00FF;">sociaux</span>
+<span class="ltx_ERROR undefined">\node</span>63fut
+<span class="ltx_ERROR undefined">\node</span>71dénoncé
+<span class="ltx_ERROR undefined">\node</span>82<span class="ltx_text" style="color:#FF00FF;">en</span>
+<span class="ltx_ERROR undefined">\node</span>94<span class="ltx_text" style="color:#FF00FF;">vain</span>
+<span class="ltx_ERROR undefined">\edge</span>72suj
+<span class="ltx_ERROR undefined">\edge</span>21det
+<span class="ltx_ERROR undefined">\edge</span>23<span class="ltx_text" style="color:#0000FF;">dep_cpd</span>
+<span class="ltx_ERROR undefined">\edge</span>24<span class="ltx_text" style="color:#0000FF;">dep_cpd</span>
+<span class="ltx_ERROR undefined">\edge</span>25<span class="ltx_text" style="color:#0000FF;">dep_cpd</span>
+<span class="ltx_ERROR undefined">\edge</span>76aux_tps
+<span class="ltx_ERROR undefined">\edge</span>78mod
+<span class="ltx_ERROR undefined">\edge</span>89<span class="ltx_text" style="color:#0000FF;">dep_cpd</span></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">b. Structured representation:<span class="ltx_text ltx_font_medium"></span></span></p><span class="ltx_ERROR undefined ltx_centering">{xdag}</span><span class="ltx_ERROR undefined ltx_centering">\xdagColsep</span>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_small">=5.5pt
+<span class="ltx_ERROR undefined">\node</span>13L’
+<span class="ltx_ERROR undefined">\node</span>22<span class="ltx_text" style="color:#FF00FF;">abus</span>
+<span class="ltx_ERROR undefined">\node</span>33<span class="ltx_text" style="color:#FF8000;">de</span>
+<span class="ltx_ERROR undefined">\node</span>44<span class="ltx_text" style="color:#FF8000;">biens</span>
+<span class="ltx_ERROR undefined">\node</span>55<span class="ltx_text" style="color:#FF8000;">sociaux</span>
+<span class="ltx_ERROR undefined">\node</span>63fut
+<span class="ltx_ERROR undefined">\node</span>71dénoncé
+<span class="ltx_ERROR undefined">\node</span>82<span class="ltx_text" style="color:#FF00FF;">en</span>
+<span class="ltx_ERROR undefined">\node</span>94<span class="ltx_text" style="color:#FF00FF;">vain</span>
+<span class="ltx_ERROR undefined">\edge</span>72suj
+<span class="ltx_ERROR undefined">\edge</span>21det
+<span class="ltx_ERROR undefined">\edge</span>23<span class="ltx_text" style="color:#000000;">dep</span>
+<span class="ltx_ERROR undefined">\edge</span>34<span class="ltx_text" style="color:#000000;">obj.p</span>
+<span class="ltx_ERROR undefined">\edge</span>45<span class="ltx_text" style="color:#000000;">mod</span>
+<span class="ltx_ERROR undefined">\edge</span>76aux_tps
+<span class="ltx_ERROR undefined">\edge</span>78mod
+<span class="ltx_ERROR undefined">\edge</span>89<span class="ltx_text" style="color:#0000FF;">dep_cpd</span></span></p>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> French dependency tree for <span class="ltx_text ltx_font_italic">L’abus de biens sociaux fut dénoncé en vain</span> (literally <span class="ltx_text ltx_font_italic">the misuse of assets social was denounced in vain</span>, meaning <span class="ltx_text ltx_font_italic">The misuse of corporate assets was denounced in vain</span>), containing two MWEs (in red). Top: original flat representation. Bottom: Tree after regular MWEs structuring.</div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>MWEs in Gold Data: Flat representation</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In gold data, the MWEs appear in an expanded flat format: each MWE bears a part-of-speech and consists of a sequence of tokens (hereafter the “components” of the MWE), each having their proper POS, lemma and morphological features. In the dependency trees, there is no “node” for a MWE as a whole, but one node per MWE component (more generally one node per token). The first component of a MWE is taken as the head of the MWE. All
+subsequent components of the MWE depend on the first one, with the
+special label <a href="dep_cpd" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dep_cpd</span></a> (hence the name <span class="ltx_text ltx_font_italic">flat representation</span>). Furthermore, the first MWE component
+bears a feature <a href="mwehead" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">mwehead</span></a> equal to the POS of the MWE. An example is shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+The MWE <span class="ltx_text ltx_font_italic">en vain</span> (<span class="ltx_text ltx_font_italic">pointlessly</span>) is an adverb,
+containing a preposition and an adjective. The latter depends on former, which bears <a href="mwehead=ADV+" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">mwehead=ADV+</span></a>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The algorithm to recover MWEs is: any node having dependents with the <a href="dep_cpd" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dep_cpd</span></a> label forms a MWE with such dependents.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Alternative representation for regular MWEs</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the alternative representation we propose, irregular MWEs are unchanged and appear as flat MWEs (e.g. <span class="ltx_text ltx_font_italic">en vain</span> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> has pattern preposition+adjective, which is not considered regular for an adverb, and is thus unchanged). Regular MWEs appear with ’structured’ syntax: we modify the tree structure to recover the regular syntactic dependencies. For instance, in the bottom tree of the figure, <span class="ltx_text ltx_font_italic">biens</span> is attached to the preposition, and the adjective <span class="ltx_text ltx_font_italic">sociaux</span> is attached to <span class="ltx_text ltx_font_italic">biens</span>, with regular labels.
+Structured MWEs cannot be spotted using the tree topology and labels only. Features are added for that purpose: the syntactic head of the structured MWE bears a <a href="regmwehead" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">regmwehead</span></a> for the POS of the MWE (<span class="ltx_text ltx_font_italic">abus</span> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), and the other components of the MWE bear a <a href="regcomponent" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">regcomponent</span></a> feature (the orange tokens in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The syntactic head of a structured MWE may not be the first token, whereas the head token of a flat MWE is always the first one.</span></span></span>
+With this representation, the algorithm to recover regular MWEs is: any node bearing <a href="regmwehead" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">regmwehead</span></a> forms a MWE with the set of direct or indirect dependents bearing a <a href="regcomponent" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">regcomponent</span></a> feature.</p>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_centering ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Motivations</h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para ltx_centering">
+<p class="ltx_p">Our first motivation is to increase the quantity of information conveyed by the dependency trees, by distinguishing syntactic regularity and semantic regularity. Syntactically regular MWEs (hereafter regular MWEs) show various degrees of semantic non-compositionality. For instance, in the French Treebank, <span class="ltx_text ltx_font_italic">population active</span> (lit. <span class="ltx_text ltx_font_italic">active population</span>, meaning <span class="ltx_text ltx_font_italic">’working population’</span>) is a partially compositional MWE. Furthermore, some sequences are both syntactically and semantically regular, but encoded as MWE due to frozen lexical selection. This is the case for <span class="ltx_text ltx_font_italic">déficit budgétaire</span> (lit. <span class="ltx_text ltx_font_italic">budgetary deficit</span>, meaning <span class="ltx_text ltx_font_italic">’budget deficit’</span>), because it is not possible to use <span class="ltx_text ltx_font_italic">déficit du budget</span> (<span class="ltx_text ltx_font_italic">budget deficit</span>). Our alternative representation distinguishes between syntactic internal regularity and semantic regularity. This renders the syntactic description more uniform and it provides an internal structure for regular MWEs, which is meaningful if the MWE is fully or partially compositional. For instance, it is meaningful to have the adjective <span class="ltx_text ltx_font_italic">sociaux</span> attach to <span class="ltx_text ltx_font_italic">biens</span> instead of on the first component <span class="ltx_text ltx_font_italic">abus</span>. Moreover, such a distinction opens the way to a non-binary classification of MWE status: the various criteria leading to classify a sequence as MWE could be annotated separately and using nominal or scaled categories for each criteria. For instance, <span class="ltx_text ltx_font_italic">déficit budgétaire</span> could be marked as fully compositional, but with frozen lexical selection.</p>
+</div>
+<div id="S3.SS2.SSS1.p2" class="ltx_para ltx_centering">
+<p class="ltx_p">Further, annotation is often incoherent for the MWEs with both regular syntax and a certain amount of semantic compositionality, the same token sequence (with same meaning) being sometimes annotated as MWE and sometimes not.</p>
+</div><span class="ltx_ERROR undefined ltx_centering">\draftreplace</span>
+<div id="S3.SS2.SSS1.p3" class="ltx_para ltx_centering">
+<p class="ltx_p">Another advantage of representing internal MWE structure is to allow discontinuity within MWEs, which are known to show various degrees of frozenness, and do not necessarily block insertions of modifiers for instance. The representation we propose is thus a first step towards a uniform handling of MWEs and discontinuous non-compositional phenomena like light-verb constructions or verbal frozen idioms.
+More generally, keeping a regular representation would allow to better deal with the interaction between idiomatic status and regular syntax, such as the insertion of modifiers on MWE subparts (e.g. <span class="ltx_text ltx_font_italic">make a <span class="ltx_text ltx_font_bold">quick</span> decision</span>).</p>
+</div>
+<div id="S3.SS2.SSS1.p4" class="ltx_para ltx_centering">
+<p class="ltx_p">Finally, using regular syntax for MWEs provides a more uniform training set. For instance for a sequence <span class="ltx_text ltx_font_italic">N1 preposition N2</span>, though some <span class="ltx_text ltx_font_italic">external</span> attachments might vary depending on whether the sequence forms a MWE or not, some may not, and the internal dependency structure <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p4.m1" class="ltx_Math" alttext="(" display="inline"><mo>(</mo></math><span class="ltx_text ltx_font_italic">N1</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p4.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p4.m3" class="ltx_Math" alttext="(" display="inline"><mo>(</mo></math><span class="ltx_text ltx_font_italic">preposition</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p4.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <span class="ltx_text ltx_font_italic">N2<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p4.m5" class="ltx_Math" alttext="))" display="inline"><mrow><mo mathvariant="normal">)</mo><mo mathvariant="normal">)</mo></mrow></math></span> is quite regular. One objective of the current work is to investigate whether this increased uniformity eases parsing or whether it is mitigated by the additional difficulty of finding the internal structure of a MWE.</p>
+</div>
+<div id="S3.T1" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Total</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Nb of regular MWEs</th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r">nb of</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">(% of nouns, adverbs,</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r">MWEs</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">prepositions, verbs)</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">train</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">23658</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">12569 <span class="ltx_text ltx_font_italic">(64.7, 19.2, 14.6, 1.5)</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">dev</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2120</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1194 <span class="ltx_text ltx_font_italic">(66.7, 17.7, 14.7, 0.8)</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r">test</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4049</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2051 <span class="ltx_text ltx_font_italic">(64.5, 19.9, 13.6, 2.0)</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Total number of MWEs and number of regular MWEs in training, development and test set (and broken down by POS of MWE).</div>
+</div>
+</div>
+<div id="S3.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.2 </span>Implementation</h4>
+
+<div id="S3.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">We developed an ad hoc program for structuring the regular MWEs in gold data. MWEs are first classified as regular or irregular, using regular expressions over the sequence of parts-of-speech within the MWE. To define the regular expressions, we grouped gold MWEs according to the pair [global POS of the MWE + sequence of POS of the MWE components], and designed regular expressions to match the most frequent patterns that looked regular according to our linguistic knowledge. <span class="ltx_ERROR undefined">\draftreplace</span>From this matching, we applied internal attachment heuristics favoring local attachments.The internal structure for the matching MWEs was built deterministically, using heuristics favoring local attachments.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>The six regular expressions that we obtained cover nominal, prepositional, adverbial and verbal compounds. We manually evaluated both the regular versus irregular classification and the structuring of regular MWEs on the first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m1" class="ltx_Math" alttext="200" display="inline"><mn>200</mn></math> MWEs of the development set. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m2" class="ltx_Math" alttext="113" display="inline"><mn>113</mn></math> of these were classified as regular, and we judged that all of them were actually regular, and were correctly structured. Among the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m3" class="ltx_Math" alttext="87" display="inline"><mn>87</mn></math> classified as irregular, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m4" class="ltx_Math" alttext="7" display="inline"><mn>7</mn></math> should have been tagged as regular and structured. For <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m5" class="ltx_Math" alttext="4" display="inline"><mn>4</mn></math> of them, the classification error is due to errors on the (gold) POS of the MWE components.</span></span></span> <span class="ltx_ERROR undefined">\draftreplace</span>Counts of MWEs automatically structures because classified as regular are shown in Table <a href="#S3.T1" title="Table 1 ‣ 3.2.1 Motivations ‣ 3.2 Alternative representation for regular MWEs ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>Table <a href="#S3.T1" title="Table 1 ‣ 3.2.1 Motivations ‣ 3.2 Alternative representation for regular MWEs ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the proportions of MWEs classified as regular, and thus further structured. About half MWEs are structured, and about two thirds of structured MWEs are nouns.</p>
+</div>
+<div id="S3.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">For predicted parses with structured MWEs, we use an inverse transformation of structured MWEs into flat MWEs, for evaluation against the gold data. When a predicted structured MWE is flattened, all the dependents of any token of the MWE that are not themselves belonging to the MWE are attached to the head component of the MWE.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Integration of MWE features into labels</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">In some experiments, we make use of alternative representations, which we refer later as “labeled representation”, in which the MWE features are incorporated in the dependency labels, so that MWE composition and/or the POS of the MWE be totally contained in the tree topology and labels, and thus predictable via dependency parsing. Figure  shows the labeled representation for the sentence of Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F2" class="ltx_figure">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">c. Labeled representation:<span class="ltx_text ltx_font_medium"></span></span></p><span class="ltx_ERROR undefined ltx_centering">{xdag}</span><span class="ltx_ERROR undefined ltx_centering">\xdagColsep</span>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_small">=5.5pt
+<span class="ltx_ERROR undefined">\node</span>13L’
+<span class="ltx_ERROR undefined">\node</span>22<span class="ltx_text" style="color:#FF00FF;">abus</span>
+<span class="ltx_ERROR undefined">\node</span>34<span class="ltx_text" style="color:#FF8000;">de</span>
+<span class="ltx_ERROR undefined">\node</span>46<span class="ltx_text" style="color:#FF8000;">biens</span>
+<span class="ltx_ERROR undefined">\node</span>58<span class="ltx_text" style="color:#FF8000;">sociaux</span>
+<span class="ltx_ERROR undefined">\node</span>63fut
+<span class="ltx_ERROR undefined">\node</span>71dénoncé
+<span class="ltx_ERROR undefined">\node</span>82<span class="ltx_text" style="color:#FF00FF;">en</span>
+<span class="ltx_ERROR undefined">\node</span>95<span class="ltx_text" style="color:#FF00FF;">vain</span>
+<span class="ltx_ERROR undefined">\edge</span>72suj
+<span class="ltx_ERROR undefined">\edge</span>21det
+<span class="ltx_ERROR undefined">\edge</span>23<span class="ltx_text" style="color:#000000;">dep_r_N</span>
+<span class="ltx_ERROR undefined">\edge</span>34<span class="ltx_text" style="color:#000000;">obj.p_r_N</span>
+<span class="ltx_ERROR undefined">\edge</span>45<span class="ltx_text" style="color:#000000;">mod_r_N</span>
+<span class="ltx_ERROR undefined">\edge</span>76aux_tps
+<span class="ltx_ERROR undefined">\edge</span>78mod
+<span class="ltx_ERROR undefined">\edge</span>89<span class="ltx_text" style="color:#0000FF;">dep_cpd_ADV</span></span></p>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Integration of all MWE information into labels for the example of Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</div>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">For flat MWEs, the only missing information is the MWE part-of-speech: we concatenate it to the <a href="dep_cpd" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dep_cpd</span></a> labels. For instance, the arc from <span class="ltx_text ltx_font_italic">en</span> to <span class="ltx_text ltx_font_italic">vain</span> is relabeled <a href="dep_cpd_ADV" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dep_cpd_ADV</span></a>.
+For structured MWEs, in order to get full MWE account within the tree structure and labels, we need to incorporate both the MWE POS, and to mark it as belonging to a MWE. The suffixed label has the form <a href="FCT_r_POS" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">FCT_r_POS</span></a>. For instance, in bottom tree of Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, arcs pointing to the non-head components (<span class="ltx_text ltx_font_italic">de, biens, sociaux</span>) are suffixed with <a href="_r" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">_r</span></a> to mark them as belonging to a structured MWE, and with <a href="_N" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">_N</span></a> since the MWE is a noun.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">In both cases, this label suffixing is translated back into features for evaluation against gold data.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_centering ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Architectures for MWE Analysis and Parsing</h2>
+
+<div id="S4.p1" class="ltx_para ltx_centering">
+<p class="ltx_p">The architectures we investigated vary depending on whether the MWE status of sequences of tokens is predicted via dependency parsing or via an external tool (described in section <a href="#S5" title="5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), and this dichotomy applies both to structured MWEs and flat MWEs. More precisely, we consider the following alternative for irregular MWEs:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">IRREG-MERGED: gold irregular MWEs are merged for training; for parsing, irregular MWEs are predicted externally, merged into one token at parsing time, and re-expanded into several tokens for evaluation;</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">IRREG-BY-PARSER: the MWE status, flat topology and POS are all predicted via dependency parsing, using representations for training and parsing, with all information for irregular MWEs encoded in topology and labels (as for <span class="ltx_text ltx_font_italic">in vain</span> in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Integration of MWE features into labels ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div></li>
+</ul>
+<p class="ltx_p">For regular MWEs, their internal structure is always predicted by the parser. For instance the unlabeled dependencies for <span class="ltx_text ltx_font_italic">abus de biens sociaux</span> are the same, independently of predicting whether it forms a MWE or not. But we use two kinds of predictions for their MWE status and POS:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">REG-POST-ANNOTATION: the regular MWEs are encoded/predicted as shown for <span class="ltx_text ltx_font_italic">abus de biens sociaux</span> in bottom tree of Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, and their MWE status and POS is predicted after parsing, by an external tool.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">REG-BY-PARSER: all regular MWE information (topology, status, POS) is predicted via dependency parsing, using representations with all information for regular MWEs encoded in topology and labels (Figure <a href="#S3.F2" title="Figure 2 ‣ 3.3 Integration of MWE features into labels ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.T2" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Name</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">prediction of</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">prediction of</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">reg MWEs</td>
+<td class="ltx_td ltx_align_center ltx_border_r">irreg MWEs</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">JOINT</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">irreg-by-parser</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">reg-by-parser</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">JOINT-REG</th>
+<td class="ltx_td ltx_align_center ltx_border_r">irreg-merged</td>
+<td class="ltx_td ltx_align_center ltx_border_r">reg-by-parser</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">JOINT-IRREG</th>
+<td class="ltx_td ltx_align_center ltx_border_r">irreg-by-parser</td>
+<td class="ltx_td ltx_align_center ltx_border_r">reg-post-annot</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">PIPELINE</th>
+<td class="ltx_td ltx_align_center ltx_border_r">irreg-merged</td>
+<td class="ltx_td ltx_align_center ltx_border_r">reg-post-annot</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>The four architectures, depending on how regular and irregular MWEs are predicted.</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We obtain four architectures, schematized in table <a href="#S4.T2" title="Table 2 ‣ 4 Architectures for MWE Analysis and Parsing ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. We describe more precisely two of them, the other two being easily inferable:</p>
+</div>
+<div id="S4.SS3.SSS2.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">JOINT-REG architecture:</h5>
+
+<div id="S4.SS3.SSS2.P1.p1" class="ltx_para">
+<ul id="I3" class="ltx_itemize">[noitemsep,nolistsep]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">training set</span>: irregular MWEs merged into one token, regular MWEs are structured, and integration of regular MWE information into the labels (<a href="FCT_r_POS" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">FCT_r_POS</span></a>).</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">parsing</span>: <span class="ltx_text ltx_font_bold">(i)</span> MWE analysis with classification of MWEs into regular or irregular, <span class="ltx_text ltx_font_bold">(ii)</span> merge of predicted irregular MWEs, <span class="ltx_text ltx_font_bold">(iii)</span> tagging and morphological prediction, <span class="ltx_text ltx_font_bold">(iv)</span> parsing</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S4.SS3.SSS2.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">JOINT-IRREG architecture:</h5>
+
+<div id="S4.SS3.SSS2.P2.p1" class="ltx_para">
+<ul id="I4" class="ltx_itemize">[noitemsep,nolistsep]
+
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">training set</span>: flat representation of irregular MWEs, with label suffixing (<a href="dep_cpd_POS" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">dep_cpd_POS</span></a>), structured representation of regular MWEs without label suffixing.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">parsing</span>: <span class="ltx_text ltx_font_bold">(i)</span> MWE analysis and classification into regular or irregular, used for MWE-specific features, <span class="ltx_text ltx_font_bold">(ii)</span> tagging and morphological prediction, <span class="ltx_text ltx_font_bold">(iii)</span> parsing,</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS3.SSS2.P2.p2" class="ltx_para">
+<p class="ltx_p">We compare these four architectures between them and also with two simpler architectures used by <cite class="ltx_cite">[<a href="#bib.bib4" title="The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing" class="ltx_ref">9</a>]</cite> within the SPMRL 13 Shared Task, in which regular and irregular MWEs are not distinguished:</p>
+</div>
+</div>
+<div id="S4.SS3.SSS2.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Uniform joint architecture:</h5>
+
+<div id="S4.SS3.SSS2.P3.p1" class="ltx_para">
+<p class="ltx_p">The joint systems perform syntactic parsing and MWE analysis via a single dependency parser, using representations as in <a href="#S3.SS3" title="3.3 Integration of MWE features into labels ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS2.P4" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Uniform pipeline architecture:</h5>
+
+<div id="S4.SS3.SSS2.P4.p1" class="ltx_para">
+<ul id="I5" class="ltx_itemize">[noitemsep,nolistsep]
+
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">training set</span>: MWEs merged into one token</p>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">parsing</span>: <span class="ltx_text ltx_font_bold">(i)</span> MWE analysis, <span class="ltx_text ltx_font_bold">(ii)</span> merge of predicted MWEs, <span class="ltx_text ltx_font_bold">(iii)</span> tagging and morphological prediction, <span class="ltx_text ltx_font_bold">(iv)</span> parsing</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS3.SSS2.P4.p2" class="ltx_para">
+<p class="ltx_p">For each architecture, we apply the appropriate normalization procedures on the predicted parses, in order to evaluate against (i) the pseudo-gold data in structured representation, and (ii) the gold data in flat representation.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Use of external MWE resources</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In order to better deal with MWE prediction, we use external MWE resources, namely MWE lexicons and an MWE analyzer. Both resources help to predict MWE-specific features (section <a href="#S5.SS3" title="5.3 MWE-specific features ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>) to guide the MWE-aware dependency parser. Moreover, in some of the architectures, the external MWE analyzer is used either to pre-group irregular MWEs (for the architectures using IRREG-MERGED), or to post-annotate regular MWEs.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>MWE lexicons</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">MWE lexicons are exploited as sources of features for both the dependency parser and the external MWE analyzer. In particular, two large-coverage general-language lexicons are used: the Lefff<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We use the version available in the POS tagger MElt <cite class="ltx_cite">[<a href="#bib.bib11" title="Coupling an annotated corpus and a morphosyntactic lexicon for state-of-the-art POS tagging with less human effort" class="ltx_ref">14</a>]</cite>.</span></span></span> lexicon
+<cite class="ltx_cite">[<a href="#bib.bib21" title="The lefff, a freely available, accurate and large-coverage lexicon for french" class="ltx_ref">21</a>]</cite>, which contains approximately half a million inflected word forms, among which approx. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="25,000" display="inline"><mrow><mn>25</mn><mo>,</mo><mn>000</mn></mrow></math> are MWEs; and the DELA<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We use the version in the platform Unitex (http://igm.univ-mlv.fr/~unitex). We had to convert the DELA POS tagset to that of the French Treebank.</span></span></span> <cite class="ltx_cite">[<a href="#bib.bib9" title="Un système de dictionnaires électroniques pour les mots simples du français" class="ltx_ref">13</a>, <a href="#bib.bib22" title="Dictionnaire électronique DELAC : les mots composés binaires" class="ltx_ref">12</a>]</cite> lexicon, which contains approx. one million inflected forms, among which about <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="110,000" display="inline"><mrow><mn>110</mn><mo>,</mo><mn>000</mn></mrow></math> are MWEs. These resources are completed with specific lexicons freely available in the platform Unitex<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>http://igm.univ-mlv.fr/~unitex</span></span></span>: the toponym dictionary Prolex <cite class="ltx_cite">[<a href="#bib.bib16" title="The prolex data base : toponyms and gentiles for nlp" class="ltx_ref">19</a>]</cite> and a dictionary of first names. Note that the lexicons do not include any information on the irregular or the regular status of the MWEs. In order to compare the MWEs present in the lexicons and those encoded in the French treebank, we applied the following procedure (hereafter called lexicon lookup): in a given sentence, the maximum number of non overlapping MWEs according to the lexicons are systematically marked as such. We obtain about 70% recall and 50% precision with respect to MWE spanning.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>MWE Analyzer</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">The MWE analyzer is a CRF-based sequential labeler, which, given a tokenized text,
+jointly performs MWE segmentation and POS tagging (of simple tokens and of MWEs), both tasks mutually
+helping each other<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Note that in our experiments, we use this analyzer for MWE analysis only, and discard the POS tagging prediction. Tagging is performed along with lemmatization with the Morfette tool (section <a href="#S6.SS1" title="6.1 Settings and evaluation metrics ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>).</span></span></span>. The MWE analyzer integrates, among others, features computed from the external lexicons described in section <a href="#S5.SS1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>, which greatly improve POS tagging <cite class="ltx_cite">[<a href="#bib.bib11" title="Coupling an annotated corpus and a morphosyntactic lexicon for state-of-the-art POS tagging with less human effort" class="ltx_ref">14</a>]</cite> and MWE
+segmentation <cite class="ltx_cite">[<a href="#bib.bib26" title="Evaluating the impact of external lexical resources into a crf-based multiword segmenter and part-of-speech tagger" class="ltx_ref">11</a>]</cite>.
+The MWE analyzer also jointly classifies its predicted MWEs as regular or irregular (the distinction being learnt on gold training set, with structured MWEs cf. section <a href="#S3.SS2" title="3.2 Alternative representation for regular MWEs ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>).</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>MWE-specific features</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We introduce information from the external MWE resources in different ways:
+<br class="ltx_break"/></p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Flat MWE features</span>: MWE information can be integrated as features to be used by the dependency parser. We tested to incorporate the MWE-specific features as defined in the gold flat representation (section <a href="#S3.SS1" title="3.1 MWEs in Gold Data: Flat representation ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>): the <span class="ltx_text ltx_font_italic">mwehead=POS</span> feature for the MWE head token, POS being the part-of-speech of the MWE; the <span class="ltx_text ltx_font_italic">component=y</span> feature for the non-first MWE component.
+<br class="ltx_break"/></p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Switch</span>: instead or on top of using the <a href="mwehead" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">mwehead</span></a> feature, we use the POS of the MWE instead of the POS of the first component of a flat MWE. For instance in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the token <span class="ltx_text ltx_font_italic">en</span> gets <a href="pos=ADV" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">pos=ADV</span></a> instead of <a href="pos=P" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">pos=P</span></a>. The intuition behind this feature is that for an irregular MWE, the POS of the linearly first component, which serves as head, is not always representative of the external distribution of the MWE. For regular MWEs, the usefulness of such a trick is less obvious. The first component of a regular MWE is not necessarily its head (for instance for a nominal MWE with internal pattern adjective+noun), so the switch trick could be detrimental in such cases.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>We also experimented to use POS of MWE plus suffixes to force disjoint tagsets for single words, irregular MWEs and regular MWEs, but this showed comparable results.</span></span></span></p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_centering ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.T3" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr ltx_border_t" colspan="5"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">LABELED</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">STRUCTURED</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">FLAT</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr" colspan="5"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="2"><span class="ltx_text ltx_font_small">REPRES.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="3"><span class="ltx_text ltx_font_small">REPRESENTATION</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="4"><span class="ltx_text ltx_font_small">REPRESENTATION</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MWE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">swi.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">swi.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">FTM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">FTM</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">ARCHI</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">feats</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">irreg</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">reg</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_rr"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">irreg</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">irreg</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_rr"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">bsline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">89.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">83.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">80.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">73.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">70.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">JOINT</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">best</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">85.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">89.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">87.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">85.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">82.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">85.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">88.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">77.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">74.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">JOINT-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">bsline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">89.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">87.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">83.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">80.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">88.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">78.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">75.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">IRREG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">best</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">85.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">89.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">85.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">81.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">88.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">79.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">76.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">JOINT-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">bsline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">NA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">89.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">86.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">80.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">88.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">73.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">70.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">REG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">best</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">NA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">89.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">80.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">88.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">76.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">73.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">PIPE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">bsline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">NA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">89.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">86.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">80.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">87.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">78.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">76.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">LINE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">best</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">NA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">89.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">80.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">88.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">78.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">76.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Baseline and best results for the four MWE+parsing architectures on the dev set (see text for statistical significance evaluation). The UAS for the structured representation is the same as the one for the labeled representation, and is not repeated.</div>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Settings and evaluation metrics</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">MWE Analysis and Tagging</span>: For the MWE analyzer, we used the tool <span class="ltx_text ltx_font_italic">lgtagger<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup><span class="ltx_text ltx_font_upright">http://igm.univ-mlv.fr/~mconstan</span></span></span></span></span> (version 1.1) with its default set of feature templates, and a 10-fold jackknifing on the training corpus.
+<br class="ltx_break"/></p>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Parser</span>: We used the second-order graph-based parser available in <span class="ltx_text ltx_font_italic">Mate-tools<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup><span class="ltx_text ltx_font_upright">http://code.google.com/p/mate-tools/</span></span></span></span></span> <cite class="ltx_cite">[<a href="#bib.bib24" title="Top accuracy and fast dependency parsing is not a contradiction" class="ltx_ref">5</a>]</cite>. We used the <span class="ltx_text ltx_font_italic">Anna3.3</span> version, in projective mode, with default feature sets and parameters proposed in the documentation, augmented or not with MWE-specific features, depending on the experiments.
+<br class="ltx_break"/></p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Morphological prediction</span>: Predicted lemmas, POS and morphology features are computed with
+Morfette version 0.3.5
+<cite class="ltx_cite">[<a href="#bib.bib8" title="Learning morphology with morfette" class="ltx_ref">8</a>, <a href="#bib.bib33" title="Lemmatization and statistical lexicalized parsing of morphologically-rich languages" class="ltx_ref">22</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>https://sites.google.com/site/morfetteweb/</span></span></span>, using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m1" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> iterations
+for the tagging perceptron, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m2" class="ltx_Math" alttext="3" display="inline"><mn>3</mn></math> iterations for the lemmatization
+perceptron, default beam size for the decoding of the joint
+prediction, and the Lefff <cite class="ltx_cite">[<a href="#bib.bib21" title="The lefff, a freely available, accurate and large-coverage lexicon for french" class="ltx_ref">21</a>]</cite> as external lexicon used for
+out-of-vocabulary words. We performed a 10-fold jackknifing on the training
+corpus.
+
+<br class="ltx_break"/></p>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Evaluation metrics</span>: we evaluate our parsing systems by using the standard metrics for dependency parsing: Labeled Attachment Score (LAS) and Unlabeled Attachment Score (UAS), computed using all tokens including punctuation. To evaluate statistical significance of parsing performance differences, we use eval07.pl<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>http://nextens.uvt.nl/depparse-wiki/SoftwarePage</span></span></span> with -b option, and then Dan Bikel’s comparator.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup>The compare.pl script, formerly available at www.cis.upenn.edu/<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p4.m1" class="ltx_Math" alttext="~{}" display="inline"><mi/></math>dbikel/</span></span></span>
+For MWEs, we use the Fmeasure for recognition of untagged MWEs (hereafter FUM) and for recognition of tagged MWEs (hereafter FTM).</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>MWE-specific feature prediction</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">In all our experiments, for the switch trick (section <a href="#S5.SS3" title="5.3 MWE-specific features ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>), the POS of MWE is always predicted using the MWE analyzer. For the flat MWE features, we experimented both with features predicted by the MWE analyzer, and with features predicted using the external lexicons mentioned in section <a href="#S5.SS1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a> (using the lexicon lookup procedure). Both kinds of prediction lead to fairly comparable results, so in all the following, the MWE features, when used, are predicted using the external lexicons.</p>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Tuning features for each architecture</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">We ran experiments for all value combinations of the following parameters: (i) the architecture, (ii) whether MWE features are used, whether the switch trick is applied or not (iii) for irregular MWEs and (iv) for regular MWEs.</p>
+</div>
+<div id="S6.SS3.p2" class="ltx_para">
+<p class="ltx_p">We performed evaluation of the predicted parses using the three representations described in section <a href="#S3" title="3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref ltx_centering"><span class="ltx_text ltx_ref_tag">3</span></a>, namely flat, structured and labeled representations. In the last two cases, the evaluation is performed against an instance of the gold data automatically transformed to match the representation type. Moreover, for the “labeled representation” evaluation, though the MWE information in the predicted parses is obtained in various ways, depending on the architecture, we always map all this information in the dependency labels, to obtain predicted parses matching the “labeled representation”.</p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">LABELED</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">STRUCTURED</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">FLAT</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_rr"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="2"><span class="ltx_text ltx_font_small">REPRESENTATION</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="4"><span class="ltx_text ltx_font_small">REPRESENTATION</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr" colspan="4"><span class="ltx_text ltx_font_small">REPRESENTATION</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">FTM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">FTM</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">SYSTEM</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_rr"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">irreg</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">irreg</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_rr"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">baseline JOINT</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">88.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">83.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">79.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">83.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.80</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">73.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">70.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">best JOINT</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">89.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">89.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">85.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">81.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.48</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">77.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">73.5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">best JOINT-IRREG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">89.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">89.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">82.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">75.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">best JOINT-REG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">89.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">89.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">80.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">76.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">73.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">best PIPELINE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">88.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">80.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">83.88</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">77.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">74.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Final results on test set for baseline and the best system for each architecture.</div>
+</div>
+<div id="S6.SS3.p3" class="ltx_para">
+<p class="ltx_p">While the evaluation in flat representation is the only one comparable to other works on this dataset, the other two evaluations provide useful information. In the “labeled representation” evaluation, the UAS provides a measure of syntactic attachments for sequences of words, independently of the (regular) MWE status of subsequences. For the sequence <span class="ltx_text ltx_font_italic">abus de biens sociaux</span>, suppose that the correct internal structure is predicted, but not the MWE status. The UAS for labeled representation will be maximal, whereas for the flat representation, the last two tokens will count as incorrect for UAS. For LAS, in both cases the three last tokens will count as incorrect if the wrong MWE status is predicted. So to sum up on the “labeled evaluation”, we obtain a LAS evaluation for the whole task of parsing plus MWE recognition, but an UAS evaluation that penalizes less errors on MWE status, while keeping a representation that is richer: predicted parses contain not only the syntactic dependencies and MWE information, but also a classification of MWEs into regular and irregular, and the internal syntactic structure of regular MWEs.</p>
+</div>
+<div id="S6.SS3.p4" class="ltx_para">
+<p class="ltx_p">The evaluation on “structured representation” can be interpreted as an evaluation of the parsing task plus the recognition of irregular MWEs only: both LAS and UAS are measured independently of errors on regular MWE status (note the UAS is exactly the same than in the “labeled” case).</p>
+</div>
+<div id="S6.SS3.p5" class="ltx_para">
+<p class="ltx_p">For each architecture, Table <a href="#S6.T3" title="Table 3 ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results for two systems: first the baseline system without any MWE features nor switches and immediately below the best settings for the architecture.
+<span class="ltx_ERROR undefined">\draftreplace</span>The baseline appears in first row, and corresponds to a pure joint system without external MWE resources. The best score for each metric is in bold.The JOINT baseline corresponds to a “pure” joint system without external MWE resources (hence the minus sign for the first three columns).<span class="ltx_ERROR undefined">\draftremove</span>Note that columns 6 and 8 are identical, since the UAS scores for “labeled” and structured representations are the same. For each architecture except the PIPELINE one, differences between the baseline and the best setting are statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p5.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>). Differences between best PIPELINE and best JOINT-REG are not. Best JOINT has statistically significant difference (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.p5.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>) over both best JOINT-REG and best PIPELINE. The situation for best JOINT-IRREG with respect to the other three is borderline (with various p-values depending on the metrics).</p>
+</div>
+<div id="S6.SS3.p6" class="ltx_para">
+<p class="ltx_p">Concerning the tuning of parameters, it appears that the best setting is to use MWE-features, and switch for both regular and irregular MWEs, except for the pipeline architecture for which results without MWE features are slightly better. So overall, informing the parser with independently predicted POS of MWE has positive impact.
+The best architectures are JOINT and JOINT-IRREG, with the former slightly better than the latter for parsing metrics, though only some of the differences are significant between the two. It can be noted though, that JOINT-IRREG performs overall better on MWEs (last two columns of table <a href="#S6.T3" title="Table 3 ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), whereas JOINT performs better on irregular MWEs: the <span class="ltx_ERROR undefined">\draftreplace</span>full joint architecturelatter seems <span class="ltx_ERROR undefined">\draftreplace</span>on the one handto be beneficial for parsing, but is less efficient to correctly spot the regular MWEs.</p>
+</div>
+<div id="S6.SS3.p7" class="ltx_para">
+<p class="ltx_p">Concerning the three distinct representations, evaluating on structured representation (hence without looking at regular MWE status) leads to a rough 2 point performance increase for the LAS and a one point increase for the UAS, with respect to the evaluation against flat representation. This quantifies the additional difficulty of deciding for a regular sequence of tokens whether it forms a MWE or not. The evaluation on the labeled representation provides an evaluation of the full task (parsing, regular/irregular MWE recognition and regular MWEs structuring), with a UAS that is less impacted by errors on regular MWE status, while LAS reflects the full difficulty of the task.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">16</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">16</sup>The slight differences in LAS between the labeled and the flat representations are due to side effects of errors on MWE status: some wrong reattachments performed to obtain flat representation decrease the UAS, but also in some cases the LAS.</span></span></span></p>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Results on test set and comparison</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">We provide the final results on the test set in table <a href="#S6.T4" title="Table 4 ‣ 6.3 Tuning features for each architecture ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. We compare the baseline JOINT system with the best system for all four reg/irreg architectures (cf. section <a href="#S6.SS3" title="6.3 Tuning features for each architecture ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.3</span></a>). We observe the same general trend as in the development corpus, but with tinier differences. JOINT and JOINT-IRREG significantly outperform the baseline and the PIPELINE, on labeled representation and flat representation. We can see that there is no significant difference between JOINT and JOINT-IRREG and between JOINT-REG and JOINT-IRREG. JOINT slightly outperforms JOINT-REG (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS4.p1.m1" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>).
+On the structured representation, the two best systems (JOINT and JOINT-IRREG) significantly outperform the other systems (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS4.p1.m2" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math> for all; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS4.p1.m3" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math> for JOINT-REG).</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">DEV</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">TEST</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">System</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LAS</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">reg/irreg joint</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">85.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.48</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Bjork13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">88.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">84.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">87.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_italic ltx_font_small">84.37</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Const13 pipeline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">85.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">88.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">84.91</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Const13 joint</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">84.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">84.14</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">uniform joint</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">88.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">85.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">87.96</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">84.59</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Comparison on dev set of our best architecture with reg/irregular MWE distinction (first row), with the single-parser architectures of <cite class="ltx_cite">[<a href="#bib.bib4" title="The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing" class="ltx_ref">9</a>]</cite> (Const13) and <cite class="ltx_cite">[<a href="#bib.bib7" title="(Re)ranking meets morphosyntax: state-of-the-art results from the spmrl 2013 shared task" class="ltx_ref">4</a>]</cite> (Bjork13). Uniform joint is our reimplementation of Const13 joint, enhanced with mwe-features and switch.</div>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">Tasks</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">LAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">ALL MWE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">REG MWE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">IRREG MWE</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">System</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Parsing</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">MWE</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">FTM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">FTM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">FUM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">FTM</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">Our best system (best JOINT)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">all</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">85.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">88.78</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">77.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">74.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">70.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">67.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">85.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">82.6</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Uniform pipeline/gold MWEs</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">88.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">90.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">CRF-based MWE analyzer</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">all</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">78.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">76.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">73.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">71.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">84.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">80.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">JOINT-REG</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">all</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">84.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">88.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">76.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">73.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">69.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">66.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">84.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_footnote">80.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">JOINT-REG/gold irreg. MWE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">+</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">reg.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">85.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">89.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">82.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">78.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">70.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">67.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">-</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 6: </span>Comparison with simpler tasks on the flat representation of the development set.</div>
+</div>
+<div id="S6.SS4.p2" class="ltx_para">
+<p class="ltx_p">Moreover, we provide in table <a href="#S6.T5" title="Table 5 ‣ 6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> a comparison of our best architecture with reg/irregular MWE distinction with other architectures that do not make this distinction, namely the two best comparable systems designed for the SPMRL Shared Task <cite class="ltx_cite">[<a href="#bib.bib3" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">23</a>]</cite>: the pipeline simple parser based on Mate-tools of <cite class="ltx_cite">Constant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing" class="ltx_ref">2013</a>)</cite> (Const13) and the Mate-tools system (without reranker) of <cite class="ltx_cite">Björkelund<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="(Re)ranking meets morphosyntax: state-of-the-art results from the spmrl 2013 shared task" class="ltx_ref">2013</a>)</cite> (Bjork13). We also reimplemented and improved the uniform joint architecture of <cite class="ltx_cite">Constant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing" class="ltx_ref">2013</a>)</cite>, by adding MWE features and switch.
+Results can only be compared on the flat representation, because the other systems output poorer linguistic information. We computed statistical significance of differences between our systems and Const13. On dev, the best system is the enhanced uniform joint, but differences are not significant between that and the best reg/irreg joint (1st row) and the Const13 pipeline. But on the test corpus (which is twice bigger), the best system is Const13 pipeline, with statistically significant differences over our joint systems.
+So the first observation is that our architectures that distinguish between reg/irreg MWEs do not outperform uniform architectures. But we note that the differences are slight, and the output we obtain is enhanced with regular MWE internal structure. It can thus be noted that the increased syntactic uniformity obtained by our MWE representation is mitigated so far by the additional complexity of the task.
+The second observation is that currently the best system on this dataset is a pipeline system, as results on test set show (and somehow contrary to results on dev set). The joint systems that integrate MWE information in the labels seem to suffer from increased data sparseness.</p>
+</div>
+</div>
+<div id="S6.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.5 </span>Evaluating the double task with respect to simpler tasks</h3>
+
+<div id="S6.SS5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we propose to better evaluate the difficulty of combining the tasks of MWE analysis and dependency parsing by comparing our systems with systems performing simpler tasks: i.e. MWE recognition without parsing, and parsing with no or limited MWE recognition, simulated by using gold MWEs. We also provide a finer evaluation of the MWE recognition task, in particular with respect to their regular/irregular status.</p>
+</div>
+<div id="S6.SS5.p2" class="ltx_para">
+<p class="ltx_p">We first compare our best system with a parser where all MWEs have been perfectly pre-grouped, in order to quantify the difficulty that MWEs add to the parsing task.
+We also compare the performance on MWEs of our best system with that achieved by the CRF-based analyzer described in section <a href="#S5.SS2" title="5.2 MWE Analyzer ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>. Next, we compare the best JOINT-REG system with the one based on the same architecture but where the irregular MWEs are perfectly pre-identified, in order to quantify the difficulty added by the irregular MWEs. Results are given in table <a href="#S6.T6" title="Table 6 ‣ 6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. Without any surprise, the task is much easier without considering MWE recognition. We can see that without considering MWE analysis the parsing accuracy is about 2.5 points better in terms of LAS. In the JOINT-REG architecture, assuming gold irregular MWE identification, increases LAS by 1.3 point.
+In terms of MWE recognition, as compared with the CRF-based analyzer, our best system is around 2 points below. But the situation is quite different when breaking the evaluation by MWE type. Our system is 1 point better than the CRF-based analyzer for irregular MWEs. This shows that considering a larger syntactic context helps recognition of irregular MWEs. The ”weak point” of our system is therefore the identification of regular MWEs.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We experimented strategies to predict both MWE analysis and dependency structure, and tested them on the dependency version of French Treebank <cite class="ltx_cite">[<a href="#bib.bib1" title="Enriching a french treebank" class="ltx_ref">1</a>]</cite>, as instantiated in the SPMRL Shared Task <cite class="ltx_cite">[<a href="#bib.bib3" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">23</a>]</cite>.
+Our work focused on using an alternative representation of syntactically regular MWEs, which captures their syntactic internal structure. We obtain a system with comparable performance to that of previous works on this dataset, but which predicts both syntactic dependencies and the internal structure of MWEs. This can be useful for capturing the various degrees of semantic compositionality of MWEs.
+The main weakness of our system comes from the identification of regular MWEs, a property which is highly lexical. Our current use of external lexicons does not seem to suffice, and the use of data-driven external information to better cope with this identification can be envisaged.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Abeillé and N. Barrier</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Enriching a french treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lisbon, Portugal</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing</span></span>,
+<a href="#S3.p1" title="3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S7.p1" title="7 Conclusion ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Arun and F. Keller</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexicalization in crosslinguistic probabilistic parsing: the case of french</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bejček and P. Stranak</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Annotation of multiword expressions in the prague dependency treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language Resources and Evaluation</span> <span class="ltx_text ltx_bib_volume">44</span>, <span class="ltx_text ltx_bib_pages"> pp. 7–21</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Björkelund, Ö. Çetinoǧlu, T. Farkas and W. Seeker</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">(Re)ranking meets morphosyntax: state-of-the-art results from the spmrl 2013 shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, WA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS4.p2" title="6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.4</span></a>,
+<a href="#S6.T5" title="Table 5 ‣ 6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Bohnet</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Top accuracy and fast dependency parsing is not a contradiction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p2" title="6.1 Settings and evaluation metrics ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Cafferkey, D. Hogan and J. van Genabith</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-word units in treebank-based probabilistic parsing and generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Borovets, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Candito, B. Crabbé and P. Denis</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical french dependency parsing : treebank conversion and first results</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Valletta, Malta</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Data: MWEs in Dependency Trees ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Chrupała, G. Dinu and J. van Genabith</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning morphology with morfette</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Marrakech, Morocco</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Settings and evaluation metrics ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Constant, M. Candito and D. Seddah</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The ligm-alpage architecture for the spmrl 2013 shared task: multiword expression analysis and dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, WA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.SSS2.P2.p2" title="JOINT-IRREG architecture: ‣ 4 Architectures for MWE Analysis and Parsing ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S6.SS4.p2" title="6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.4</span></a>,
+<a href="#S6.T5" title="Table 5 ‣ 6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Constant, A. Sigogne and P. Watrin</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative strategies to integrate multiword expression recognition and parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390524.2390554" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Constant and I. Tellier</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating the impact of external lexical resources into a crf-based multiword segmenter and part-of-speech tagger</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Istanbul, Turkey</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 MWE Analyzer ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Courtois, M. Garrigues, G. Gross, M. Gross, R. Jung, M. Michel, A. Monceaux, A. Poncet-Montange, M. Silberztein and R. Vivés</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dictionnaire électronique DELAC : les mots composés binaires</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock">Technical Report <span class="ltx_text ltx_bib_number">56</span>,  <span class="ltx_text ltx_bib_publisher">University Paris 7</span>,  <span class="ltx_text ltx_bib_place">LADL</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Courtois</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Un système de dictionnaires électroniques pour les mots simples du français</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Langue Française</span> <span class="ltx_text ltx_bib_volume">87</span>, <span class="ltx_text ltx_bib_pages"> pp. 11–22</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Denis and B. Sagot</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coupling an annotated corpus and a morphosyntactic lexicon for state-of-the-art POS tagging with less human effort</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Hong Kong</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 MWE Analyzer ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Eryiǧit, T. Ilbay and O. Arkan Can</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiword expressions in statistical dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Dublin, Ireland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green, M. de Marneffe, J. Bauer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiword expression identification with tree substitution grammars: a parsing tour de force with french</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green, M. de Marneffe and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing models for identifying multiword expressions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">39</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 195–227</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre and J. Nilsson</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiword units in syntactic parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lisbon, Portugal</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Piton, D. Maurel and C. Belleil</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The prolex data base : toponyms and gentiles for nlp</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Klagenfurt, Austria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Sagae and A. Lavie</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parser combination by reparsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Sagot</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The lefff, a freely available, accurate and large-coverage lexicon for french</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Valletta, Malta</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 MWE lexicons ‣ 5 Use of external MWE resources ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S6.SS1.p3" title="6.1 Settings and evaluation metrics ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Seddah, G. Chrupała, O. Cetinoglu, J. van Genabith and M. Candito</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lemmatization and statistical lexicalized parsing of morphologically-rich languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Los Angeles, CA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Settings and evaluation metrics ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Seddah, R. Tsarfaty, S. K’́ubler, M. Candito, J. Choi, R. Farkas, J. Foster, I. Goenaga, K. Gojenola, Y. Goldberg, S. Green, N. Habash, M. Kuhlmann, W. Maier, J. Nivre, A. Przepiorkowski, R. Roth, W. Seeker, Y. Versley, V. Vincze, M. Woliński, A. Wróblewska and E. Villemonte de la Clérgerie</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, WA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing</span></span>,
+<a href="#S1.p3" title="1 Introduction ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS4.p2" title="6.4 Results on test set and comparison ‣ 6 Experiments ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.4</span></a>,
+<a href="#S7.p1" title="7 Conclusion ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Vincze, D. Szauter, A. Almási, G. Móra, Z. Alexin and J. Csirik</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hungarian dependency treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Valletta, Malta</span> (<span class="ltx_text ltx_bib_language">english</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 2-9517408-6-7</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Vincze, J. Zsibrita and I. Nagy T.</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency parsing for identifying hungarian light verb constructions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nagoya, Japan</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Strategies for Contiguous Multiword Expression Analysis and Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:57:50 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Generalized mirror descents in congestion games.
+   </title>
+   <abstract>
+    Different types of dynamics have been studied in repeated game play, and one of them which has received much attention recently consists of those based on “no-regret” algorithms from the area of machine learning. It is known that dynamics based on generic no-regret algorithms may not converge to Nash equilibria in general, but to a larger set of outcomes, namely coarse correlated equilibria. Moreover, convergence results based on generic no-regret algorithms typically use a weaker notion of convergence: the convergence of the average plays instead of the actual plays. Some work has been done showing that when using a specific no-regret algorithm, the well-known multiplicative updates algorithm, convergence of actual plays to equilibria can be shown and better quality of outcomes in terms of the price of anarchy can be reached for atomic congestion games and load balancing games. Are there more cases of natural no-regret dynamics that perform well in suitable classes of games in terms of convergence and quality of outcomes that the dynamics converge to? We answer this question positively in the bulletin-board model by showing that when employing the mirror-descent algorithm, a well-known generic no-regret algorithm, the actual plays converge quickly to equilibria in nonatomic congestion games. This gives rise to a family of algorithms, including the multiplicative updates algorithm and the gradient descent algorithm as well as many others. Furthermore, we show that our dynamics achieves good bounds on the outcome quality in terms of the price-of-anarchy type of measures with two different social costs: the average individual cost and the maximum individual cost. Finally, the bandit model considers a probably more realistic and prevalent setting with only partial information, in which at each time step each player only knows the cost of her own currently played strategy, but not any costs of unplayed strategies. For the class of atomic congestion games, we propose a family of bandit algorithms based on the mirror-descent algorithms previously presented, and show that when each player individually adopts such a bandit algorithm, their joint (mixed) strategy profile quickly converges with implications.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Nash equilibrium is a widely-adopted solution concept in game theory, which is used for predicting the outcomes of systems consisting of self-interested players. We are interested in repeated game play, and a Nash equilibrium describes a steady state in which the system would stay once it is reached. However, this raises the issue of how such a state can be reached. In fact, for a general game, computing a Nash equilibrium is believed to be hard (according to the PPAD-hardness results [15]), so an equilibrium may not be reached in a reasonable amount of time in general, and the outcomes that we have observed may all be far out of any equilibrium, which would render the study on equilibria meaningless. To address this issue, a line of research is to consider natural efficient dynamics which players have incentive to follow, and study how the system evolves according to such dynamics.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Best or better response dynamics. One natural dynamics is the best or better response dynamics, in which a deviating player at each time makes a best or better change in his/her strategy to improve his/her payoff given the current choice of the other players. This means that, for a player to deviate, there must be enough information regarding the current choice that the others had made. It is well-known that such dynamics leads to pure Nash equilibria in congestion games. However, a player may not have incentive to play this way because making such deviations may not be beneficial if other players also deviate at the same time.
+      </list-item>
+      <list-item label="•">
+       Generic no-regret dynamics. One may argue that a plausible incentive for a player is to maximize his/her average payoff through time, and dynamics based on “no-regret” algorithms from the area of online learning (e.g., [34, Chapter 4]) have thus been proposed in the study. The no-regret property is preserved in full or partial information models of feedback by a variety of algorithms. For a nonatomic routing game, it is known that if each infinitesimal player plays any arbitrary no-regret algorithm, the “time-averaged” flow and flows at most time steps would be at some type of approximate Nash equilibrium [10]. For a “socially concave” game, a similar time-averaged convergence result is also known [20].{sup:2} Convergence to a Nash or approximate Nash equilibrium is not always the case in general, and playing arbitrary no-regret algorithms can result in a larger set of outcomes than Nash equilibria, namely coarse correlated equilibria.{sup:3} Nevertheless, if one only cares about the outcome quality and the quality is measured by the price of anarchy [30] with the average individual cost, it is known that the price of total anarchy achieved by such no-regret algorithms can still match the price of anarchy at Nash equilibrium in special games, such as atomic congestion games [11] or even a wider class of smooth games [36]. On the other hand, there are broad classes of games and natural measures of outcome quality for which large gaps are known between no-regret outcomes and Nash equilibria.Notice that the convergence results mentioned above are, instead of the convergence of the actual strategy, about the convergence of the time-averaged strategy [10], [20] or flows at most time steps being close to equilibria [10]. Even in the latter case, those time steps where flows are close to equilibria are arbitrarily distributed over time (not guaranteed to gather toward the end in time), which means that a flow at some very late point in time can still be far away from any equilibria and flows may not stabilize. The guarantees are still not on the convergence of the actual plays. Such results are useful if the goal is to solve the computational problem of computing an approximate Nash equilibrium, but they may not tell us much about how the system actually evolves. In particular, even though the time-averaged play converges to an equilibrium or most plays are close to equilibria, the actual strategy may not converge and may be far away from an equilibrium. For many applications, for example, that require the system to stabilize, the time-averaged play convergence or most plays being close to equilibria may not be enough.
+      </list-item>
+      <list-item label="•">
+       Multiplicative updates dynamics with full information. Although it is nice to be able to have general positive results on what generic no-regret algorithms can achieve, one may wonder if going from generic no-regret algorithms to specific ones could yield stronger results, in terms of convergence or quality of outcomes that the algorithms converge to. One of the best known no-regret algorithms is the Multiplicative Updates (MU) algorithm [31], [25]. Kleinberg et al. [28] studied this for atomic congestion games in the full information setting, in which players have full information about the cost functions so that they can determine the cost of every other strategy they could have used given other players strategies at the current round. It was shown that if each player employs such an MU algorithm, the actual joint mixed strategy profile of players converges to a pure Nash equilibrium with high probability for most games. Note that here it is the actual joint strategy profile, instead of the time-averaged one, which converges. Furthermore, since the set of pure Nash equilibria can be a very small subset of correlated equilibria, the price of total anarchy achieved this way can be much smaller than that by a generic no-regret algorithm.
+      </list-item>
+      <list-item label="•">
+       Multiplicative updates dynamics with bulletin-board posting. In another work [29], Kleinberg et al. studied the smaller class of load balancing games, but in the more stringent partial-information setting of the “bulletin-board” model, in which players only know the actual cost value of each edge according to the actual strategies played at the current round. They showed that if all the players play according to a common distribution (i.e., mixed strategy) and update the distribution using such an MU algorithm, the common distribution converges to some symmetric equilibrium of the nonatomic version of the game. As a result, the price of total anarchy achieved this way is also considerably smaller than that by a generic no-regret one. However, their analysis relies crucially on the assumption that all the players at each round play according to the same distribution. This assumption may not be reasonable in other settings or in other games, which makes the applicability of their analysis somewhat limited. On the other hand, the analysis in [28] can do without the assumption and deal with general asymmetry in players' probability distributions, but it only works in the full information model.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that there is no equilibrium selection for the best (or better) response dynamics and generic no-regret dynamics, and they could converge to the worst corresponding equilibrium. Nonetheless, the results of multiplicative updates dynamics suggest that the dynamics converge to a subset of mixed outcomes, namely, pure Nash equilibria with high probability in [28] and quite uniformly distributed mixed Nash equilibria in the case of bulletin-board load balancing [29, Lemma 6]; the price-of-anarchy type of efficiency gets better since the worst (mixed) Nash equilibrium in the induced subset could be better than the worst the worst coarse correlated equilibrium, meaning equilibrium is selected by the dynamics.
+     </paragraph>
+     <paragraph>
+      These results of multiplicative updates, which form a good comparison and complement to each other, along with the results on generic no-regret plays motivate our quest for other classes of learning dynamics in suitable classes of games and settings. Are there more cases of natural no-regret dynamics that perform well in suitable classes of games in terms of convergence time and quality of outcomes that the dynamics converge to? We first answer this question positively by providing a family of such dynamics in the bulletin-board model for the class of nonatomic congestion games with cost functions of bounded slopes. More precisely, we show that in such a game, if each infinitesimal player individually plays some type of the mirror-descent algorithm [7], a well-known general no-regret algorithm, then their joint strategy profile quickly converges to an approximate notion of Wardrop equilibrium.{sup:4} We also show that our dynamics achieves good bounds on the quality of outcomes in terms of the price-of-anarchy type of measures with two different social costs: the average individual cost and the maximum individual cost.
+     </paragraph>
+     <paragraph>
+      All the previously mentioned results are based on somewhat generous information models. For instance of congestion games, edge cost functions are assumed common knowledge in the full information model of [28] so that players can determine the costs of currently unplayed strategies if they were used. A bit more stringent information model than full information was considered for the load-balancing games in [29] and for the general congestion games in our results previously mentioned, in which the edge cost functions are not common knowledge anymore, but still the cost values of all paths at each step are assumed available through “bulletin-board” posting. With such global information, players can get a grasp of the costs corresponding to played and even unplayed strategies, which allows players to update their strategies better and makes convergence of the whole system potentially easier. However, such an assumption on the information availability may not always be realistic and may limit the applicability of these results.
+     </paragraph>
+     <paragraph>
+      The “bandit” model in online learning on the other hand considers a probably more realistic and prevalent setting, in which at each time step each player only knows the cost of her (or his) own currently played strategy, but not any costs of unplayed strategies. This gives rise to the dilemma between exploration and exploitation which players have to face. In the area of online learning, many bandit algorithms with no-regret guarantee have been developed, including for example those based on the multiplicative updates algorithm for the experts problem [3] and those based on the gradient-descent algorithm for online linear or convex optimization [1], [24]. However, not much is known in the area of game theory for playing repeated games in the bandit model. Although similar convergence results of average plays can be established immediately for bandit algorithms with no-regret guarantee, we are not aware of any previous result establishing convergence of actual plays in the bandit setting. In fact, it is not clear how to design bandit algorithms with such convergence guarantee.
+     </paragraph>
+     <paragraph>
+      A natural attempt, following the standard approach for designing bandit algorithms such as those in [3], [1], [24], is to come up with estimates of the true cost values and feed these estimates to a full information algorithm, to replace the true cost values that are available in the full information setting. For this approach to work for most problems in online learning, it simply suffices to guarantee these estimates being “unbiased”, in the sense that their expected values equal the true cost values. However, in the setting of repeated game playing, using such unbiased estimates does not seem to ensure convergence of actual plays in general. This is because these estimates, even with guarantee on expected values, can still have high variance and thus have actual values very different from the true cost values. Unfortunately, this is indeed the case for adapting most existing bandit algorithms, as their estimates actually can take very different values from the true cost values with some probability (for example, see the one-point gradient estimate in [24]) although these estimates are enough for their goal of just achieving no regret therein. In particular, when using such estimates in, for example, mirror descents, each update step may go in a very different (possibly in almost opposite) direction from the desired one according to the true cost values, which does not seem likely to result in convergence to equilibrium. This motivates us to ask the question: are there natural classes of bandit algorithms which selfish players individually have incentive to adopt (by the no-regret property) and the whole system will quickly converge to an approximate Nash equilibrium (even just for some classes of instances) with social cost guarantees?
+     </paragraph>
+     <paragraph>
+      We then answer this more challenging question affirmatively as well. For the class of atomic congestion games, we propose a family of bandit algorithms based on the mirror-descent algorithms presented in the first-half part, and we mainly show that when each player individually adopts such a bandit algorithm, their joint strategy profile quickly converges. The reasons why we focus on atomic congestion games instead of nonatomic ones are two-folded: the bandit algorithm for atomic congestion games can be applied for nonatomic congestion games, by treating the joint (mixed) strategy profile of an atomic game directly as the joint (pure) strategy profile (i.e., flow distribution) of a nonatomic game; the bandit informational setting is not well defined for nonatomic congestion game since players can split their flows to literally all the allowed paths and get all the path costs.
+     </paragraph>
+     <paragraph>
+      In the bandit model, each player can only update her own strategy according to very limited and local information about the whole system, but we show that when each player individually adopts any such bandit algorithm, the whole system still quickly converges, and is to an approximate mixed-strategy equilibrium that has a small approximation error in many natural cases (but has a large approximation error in general) and is beneficial to the society as a whole. This is not only reminiscent of the result of convergence to some specific mixed Nash equilibria in load balancing with bulletin posting [29] (so a better price-of-anarchy type of efficiency is possible), but also more generally for atomic congestion games like in [28]. This may appear even less expected than that in the bulletin-board or full-information model, where each player at least has more abundant and more global information available.
+     </paragraph>
+     <paragraph>
+      We provide definitions and some preliminaries in Section 2. First, the generalized mirror-descent algorithm and convergence result in the bulletin-board model are presented in Section 3. The bandit algorithm and convergence result are then presented in Section 4. Approximate equilibria and the outcome quality bounds in terms of the price-of-anarchy type of measures are discussed along with the convergence results. We summarize with conclusions and future work in Section 5.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Discussion of our results and techniques
+      </section-title>
+      <section label="1.1.1">
+       <section-title>
+        Bulletin-board model
+       </section-title>
+       <paragraph>
+        The mirror-descent algorithm in fact can be seen as a family of algorithms. By instantiating it properly, one can recover the MU algorithm, the gradient-descent algorithm, as well as many others, and our result establishes the fast convergence of all these algorithms at once. Let us stress that as in [28], [29], our notion of convergence is the stronger one: what converges is the actual joint strategy profile. Note that in the congestion game, different players naturally have different sets of strategies, so it is no longer reasonable to assume that all the players use the same distribution to play as in [29]. Therefore, we allow players to use different distributions and moreover, we allow players to update according to different learning rates. Still, we manage to prove the convergence, just as [28] but in the more difficult bulletin model and with a concrete bound on convergence time.
+       </paragraph>
+       <paragraph>
+        Furthermore, we provide bounds on the price-of-anarchy type of measures achieved by our dynamics, in terms of the average individual cost and the maximum individual cost. Using the average individual cost as the social cost, we show that the ratio between the social cost achieved by our dynamics and the optimal one approaches some constant, which depends on the slopes of the cost functions. Using the maximum individual cost as the social cost, we show that the ratio between the social cost achieved by our dynamics and the optimal one also approaches the same constant in symmetric games. In each case, there is a tradeoff between the ratio we can achieve and the time it takes: by letting the system evolve for a longer time, it will get closer to an equilibrium, and the resulting ratio will approach closer to that constant.
+       </paragraph>
+       <paragraph>
+        Our main technical contribution is the convergence of our dynamics to an approximate equilibrium. To show this, we consider a smooth convex potential function of the game which has the joint strategy profile of players as its input. The interesting observation is that although each player individually applies the mirror descent algorithm to his/her own strategy using costs related only to him/her, we show that the updates performed by all the players collectively can be seen as following some generalized mirror descent process on the potential function. The generalized mirror descent allows different step sizes in different dimensions,{sup:5} and we need this generalization because we allow different learning rates for different players. The standard mirror descent, on the other hand, has the same step size across all the dimensions, so that it moves at each time in exactly the opposite direction of the gradient vector. It is known that doing the standard mirror descent on a smooth convex function leads to a fast convergence to its minimum [9], [33]. However, our generalized mirror descent no longer moves in the opposite direction of the gradient vector as different step sizes have different scaling effects in different dimensions, and therefore it is not clear if the process would still converge. Interestingly, we show that a similar convergence result can also be achieved, which may be of independent interest (since this works for all games with a smooth convex potential function satisfying some properties). Finally, let us remark that the standard mirror descent algorithm, instead of the generalized one, has also been used for different problems in game theory: for finding market equilibria in Fisher markets [9] and convex potential markets [16]. Our convergence result for the generalized mirror descent algorithm is an extension of that for the standard one.
+       </paragraph>
+      </section>
+      <section label="1.1.2">
+       <section-title>
+        Bandit model
+       </section-title>
+       <paragraph>
+        To be able to achieve convergence in the bandit model, the first hurdle we have to overcome is for each player to have good enough estimates for the true costs of all her allowed paths. As discussed before, we would like these estimates to have actual values (rather than expected values) close to the true cost values, but the estimation methods used in [3], [1], [24] do not work. In fact, an apparent difficulty is that a player can only learn the cost of one single path at each time, but the cost of each path actually depends on how other players choose their paths at that time, which may be very different at different times. Then how can a player possibly obtain good estimates for the true costs of those unchosen paths at that time? Inspired by the bandit algorithm in [34, Chapter 4.6], we consider dividing the time steps into episodes and letting each player play the same (mixed) strategy at each step during an episode. The expected cost of each path then becomes the same for each step in an episode, and this allows a player to obtain a good estimate for the expected cost of each allowed path, simply by choosing each path an enough number of steps and averaging the costs. With such good estimates, each player can then update her strategy for the next episode by feeding these estimates to the bulletin-board mirror-descent algorithm, to replace the true path costs it needs.
+       </paragraph>
+       <paragraph>
+        To prove our convergence results, we would like to follow the approach used in the bulletin-board model by showing that the collective update of all the players together corresponds to doing some generalized mirror descent on a convex function. However, as we consider the atomic version of the congestion game instead of the nonatomic version, there are more hurdles that we need to clear. The first is the choice of the function for analyzing the convergence of our dynamics, as the potential function Φ used in the bulletin-board model is defined over nonatomic flows of players. Actually, the function used to show the convergence of dynamics does not have to be the potential function (for ensuring existence of equilibria) of the game under study as long as the converged outcomes via such used function can be interpreted in the game under study. We find the same function Φ still suitable for us, by seeing each player's mixed strategy as a nonatomic flow. Note that this has been similarly used in atomic load balancing [29] where their mixed strategies are like converging to equilibrium flows of the nonatomic version of load-balancing games, translated into quite uniformly distributed mixed Nash equilibrium in the atomic version. Yet, this causes a subtle problem. Namely, the gradient of Φ actually corresponds to path costs according to nonatomic flows rather than those according to atomic flows that players in our atomic game have access to.{sup:6} This results in a non-negligible amount of error in the estimation of the gradient vector, which seems unavoidable for nonlinear cost functions, and we can at best do an “approximate” mirror descent with such an approximate gradient vector.
+       </paragraph>
+       <paragraph>
+        However, the convergence analysis in the bulletin-board model relies crucially on being able to move (in the mirror space) precisely in the oppositive direction of the gradient vector, in order to guarantee that the Φ value decreases, while it is not hard to find cases with increased Φ value when moving in a slightly different direction. We bypass this difficulty by showing that as long as the current Φ value compared to the minimum one is still considerably large, relative to the error of the approximate gradient vector, the next Φ value will decrease from the current one by some large amount. This provides us a way to bound the number of steps needed to reach a Φ value within some distance of the minimum one, with the distance dictated by the errors of the approximate gradient vectors.
+       </paragraph>
+       <paragraph>
+        The convergence also implies an approximate equilibrium in mixed strategies{sup:7} with a caveat that the approximation can be bad in general to make such equilibrium meaningless. Nevertheless, there are broad classes of instances when such approximate equilibrium is indeed meaningful: the approximation error can be small for some classes of cost functions, for example, linear cost functions and even more generally, when bounds (constant with respect to the amount of flow, not necessarily to the inputs of an instance) on second derivatives are small enough; for some classes of structures of allowed paths, the approximation error can still be small, for example, in the load-balancing setting like in [29].
+       </paragraph>
+      </section>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       There are numerous works regarding reaching various notions of equilibria in congestion/potential games in general: PLS-completeness [21] and inapproximability [38] of computing Pure Nash equilibria, best-response types of dynamics for converging to approximate equilibria [17], [5] or connected-component-based “sink equilibria” [26]. There are studies of no-regret algorithms in zero-sum game play [18], game play by selecting strategy profiles to query the corresponding payoffs [22], etc. Playing arbitrary no-“swap”-regret algorithms converges to correlated equilibria [34, Chapter 4.4.3] while playing arbitrary no-regret algorithms results in coarse correlated equilibria [37, Proposition 3.1]. That is to say that the no-regret property is enough to guarantee (coarse) correlated equilibria in general. On the other hand, our focus is to propose specific classes of no-regret algorithms for players to have incentives to adopt, with actual convergence guarantee even with bandit feedback.
+      </paragraph>
+      <paragraph>
+       Our modeling framework in this article is most similar to that in [28]. A vector of the probabilities for the all available actions for each player is maintained. Players sample an action according to this distribution at each time. Initially, the probabilities can be all equal, i.e., uniform distribution. Every time each player updates the weights multiplicatively preferring actions of low cost, which generalizes the weighted majority algorithm introduced by Littlestone and Warmuth [31] and the Hedge algorithm of Freund and Schapire [25]. Kleinberg et al. showed that if players use such dynamics to adjust their strategies in atomic congestion games, then game play converges to a subset of mixed Nash equilibria, so-called weakly stable equilibria. Pure Nash equilibria are weakly stable by definition, and the converse was shown true with probability 1 when congestion costs are selected at random independently on each edge.
+      </paragraph>
+      <paragraph>
+       Kleinberg et al. [29] also studied the performance of learning algorithms in load-balancing games, i.e., congestion games on parallel links, under the “bulletin board model” in which players assess edge costs according to the actual cost incurred on that edge, and not the hypothetical cost if the player had used it. This algorithm for specifying a mixed strategy at each time step is a version of the Hedge algorithm [25], modified so that players assess edge costs according to the actual cost incurred on that edge, and not the hypothetical cost if the player had used it for players that do not use the edge at this time step. It was shown that the bulletin board variant of Hedge is also a no-regret learning algorithm. Their main result is that the expected makespan of the outcome is bounded by {a mathematical formula}O(log⁡n) where n is the number of links/players, exponentially better than the known lower bounds for arbitrary no-regret algorithms. Many of our assumptions regarding atomic splittable congestion games follow [29], and the analyses for convergence share some high-level intuitions.
+      </paragraph>
+      <paragraph>
+       Even-Dar et al. studied a subclass of concave games called socially concave games in [20]. They showed that if each player follows any no-external regret minimization procedure, then the dynamics will converge in the sense that the average action vector will converge to a Nash equilibrium. Even if we change convexity to concavity and costs to utilities in our paper, potential games that we consider here are not socially concave games. Thus, their results do not directly apply.
+      </paragraph>
+      <paragraph>
+       Besides the dynamics based on no-regret learning algorithms, some other works design Markovian rerouting policies in congestion games [23], [2], where an agent's behavior only depends on the outcome of the immediately previous round and not on all the previous rounds. In nonatomic congestion games, inspired by so-called replicator dynamics[40] the algorithms of Fisher at al. [23], for an agent, adaptively sample paths with a probability proportional to the fraction of agents using this path and reroute with a chosen probability if the latency of the sampled path is smaller than that of the current one. They showed a bicriteria result, an upper bound on the total number of rounds in which it does not hold that almost all agents have a latency close to the average latency. Note that such “equilibria” are transient in the sense that these equilibria can be left again even after they are reached. This is more like in [10], but not the actual convergence in our stronger sense. Nevertheless, with exploration uniformly at random on unused paths, convergence to a Wardrop equilibrium can now be achieved, and for symmetric games they gave a polynomial bound on the number of rounds taken to get close to the optimal potential value.
+      </paragraph>
+      <paragraph>
+       Ackermann et al. [2] used what they called “concurrent imitation dynamics”, which is very similar to the rerouting policies of [23], in atomic congestion games and mainly gave similar results for symmetric atomic congestion games where the analysis needs to take probabilistic effects into account. They first showed a convergence to a local minimum of the potential in pseudopolynomial time. Their main result is a stronger bound on the expected time to reach an approximate stable state in which at most a very small fraction of the agents deviate by more than a very small fraction from the average latency. Finally, with a suitable combination of imitation with exploration that samples other strategies directly, they guaranteed convergence to Nash equilibria and gave the expected convergence time.
+      </paragraph>
+      <paragraph>
+       For a generic two-player coordination game, Mehta et al. [32] showed that, starting from all but a zero measure of initial probability distributions, a discrete multiplicative weight update algorithm known as discrete replicator dynamics converges to pure Nash equilibria. This is not like the randomized results in [28], [29]. Their results only require that any row/column of the payoff matrix consist of distinct entries, and hold even if the game has uncountably many Nash equilibria.
+      </paragraph>
+      <paragraph>
+       There is still a variety of different dynamics in repeated games. Auletta et al. [4] presented general bounds on the mixing time of “logit” dynamics for classes of strategic games. In the logit dynamics, individual participants act selfishly and keep responding according to some partial noisy knowledge in the complex system. In particular, they proved nearly tight bounds for potential games and games with dominant strategies. Kleinberg et al. [27] analyzed a game with a unique Nash equilibrium, but where natural learning dynamics only cycles, not converging to this equilibrium. They showed that the outcome of this learning process is optimal and has much better social welfare than the unique Nash equilibrium. Balcan et al. [6] showed that convergence may not lead to any meaningful notions of equilibria, but may result in good efficiency in terms of some objectives.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Nonatomic congestion games
+      </section-title>
+      <paragraph>
+       In this article, we first consider the nonatomic congestion game described by {a mathematical formula}(N,E,(Si)i∈N,(ce)e∈E), where N is the set of commodities, E is the set of edges (resources), {a mathematical formula}Si⊆2E is the collection of the allowed paths (the allowed subsets of resources) for commodity i, and {a mathematical formula}ce is the cost function of edge e, which is a nondecreasing function of the amount of load on it. A commodity is a “pseudo-player”, which we simply call a “player” throughout the discussion of nonatomic congestion games, meaning that a player herself does not act as a selfish party, but the infinitesimal parties that a player is composed of do. We describe it in more detail in the following.
+      </paragraph>
+      <paragraph>
+       Let us assume that {a mathematical formula}N={1,…,n}, {a mathematical formula}|E|=m, and each player has a load of {a mathematical formula}1/n (so the total load is 1). Each player consists of a huge infinite number of selfish agents (or see each player as a group of infinitesimal players of the same type). The agents of player i split the load of player i so that each agent has a small (infinitesimal) amount Δ of load, i.e., {a mathematical formula}Δ→0. Each agent of player i must choose one single path s from {a mathematical formula}Si and put that Δ amount of load all on s. We call the “aggregated” result of such choices of agents of player i the strategy of player i, and it can be represented by a {a mathematical formula}|Si|-dimensional vector {a mathematical formula}xi=(xi,s)s∈Si, where {a mathematical formula}xi,s∈[0,1] is the amount of the load that the agents of player i puts on the path s. Note that {a mathematical formula}∑s∈Sixi,s=1/n and let {a mathematical formula}Ki be the feasible set for all such vectors {a mathematical formula}xi. Then the strategies of all players can be jointly represented by a vector{a mathematical formula} where {a mathematical formula}d=∑i∈N|Si|, and let {a mathematical formula}K=K1×⋯×Kn be the feasible set for all such vectors x. Each allowed path of a player intersects at most k allowed paths (including that path itself) of that player. We call {a mathematical formula}xi the flow of player i and x the flow of the system.{sup:8} Note that an edge {a mathematical formula}e∈E can be shared by different paths, and the aggregated load on e, denoted by {a mathematical formula}ℓe(x), is {a mathematical formula}∑s:e∈s∑i∈Nxi,s. The cost of a path s is defined as {a mathematical formula}cs(x)=∑e∈sce(ℓe(x)), and the individual cost of player i is defined as {a mathematical formula}Ci(x)=∑s∈Sixi,scs(x). Each agent of player i chooses a path s from {a mathematical formula}Si that minimizes {a mathematical formula}cs(x) in nonatomic congestion games.{sup:9}
+      </paragraph>
+      <paragraph>
+       Such a game admits the following potential function (e.g., see [35, Eq. (1)], and it can be found as early as in [8]){sup:10}:{a mathematical formula} To see that this is indeed a potential function, note that if some player deviates an infinitesimal fraction of load from s to {a mathematical formula}s′ (where {a mathematical formula}xi,s&gt;0) such that {a mathematical formula}cs(x)&gt;cs′(x′) (where x is almost the same as {a mathematical formula}x′ except for the small fraction of moved load), then {a mathematical formula}∂Φ(x)/∂xi,s&gt;∂Φ(x′)/∂xi,s′, which means that the rate of decrease in Φ is larger than the rate of increase in Φ and thus the resulting Φ decreases. We will need the following, which we prove in Appendix A.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       The function Φ defined in(1)is convex.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Atomic congestion games
+      </section-title>
+      <paragraph>
+       We later consider the atomic congestion game, also described by {a mathematical formula}(N,E,(Si)i∈N,(ce)e∈E). Let us assume that there are n players, each player has at most d allowed paths, and each path has length at most m; let k be the maximum number of the allowed paths (including that path itself) of a player that each allowed path of that player intersects, and each player has a flow of amount {a mathematical formula}1/n to route. The strategy of each player i is to send her entire flow on a single path, chosen randomly according to some distribution over her allowed paths, which can be represented by a {a mathematical formula}|Si|-dimensional vector {a mathematical formula}πi=(πi,s)s∈Si, where {a mathematical formula}πi,s∈[0,1] is the probability of choosing path s. It turns out to be more convenient for us to represent each player's strategy {a mathematical formula}πi by an equivalent form {a mathematical formula}xi=(1/n)πi, where {a mathematical formula}1/n is the amount of flow each player has. That is, for every {a mathematical formula}i∈N and {a mathematical formula}s∈Si, {a mathematical formula}xi,s=(1/n)πi,s∈[0,1/n] and {a mathematical formula}∑s∈Sixi,s=1/n. Let {a mathematical formula}Ki denote the feasible set of all such {a mathematical formula}xi∈[0,1/n]|Si| for player i, and let {a mathematical formula}K=K1×⋯×Kn, which is the feasible set of all such joint strategy profiles {a mathematical formula}x=(x1,…,xn) of the n players.
+      </paragraph>
+      <paragraph>
+       We will still be using the same function as in (1) for convergence analysis. We are aware of the potential function of Rosenthal for atomic congestion games (see [28] for the potential function there), typically used for showing existence of pure Nash equilibria. Actually, different functions could be used for different purposes. For our purpose of doing mirror-gradient descents on some convex function to show actual convergence, the function that we are using guarantees convexity (while the Rosenthal one does not) and thereby other convenience for analysis.
+      </paragraph>
+      <paragraph>
+       To represent which path a player i actually chooses, we use another vector {a mathematical formula}Xi=(Xi,s)s∈Si∈{0,1/n}|Si|, where{a mathematical formula} We call {a mathematical formula}X=(X1,…,Xn) the choice vector of the n players. Then the cost of a path s with respect to X is defined as{a mathematical formula} where {a mathematical formula}ℓe(X) is the amount of flow passing through edge e, defined as{a mathematical formula} A useful property of the choice vector X is that as each player i chooses path s with probability {a mathematical formula}πi,s=xi,sn, the expected value of each {a mathematical formula}Xi,s is exactly {a mathematical formula}xi,s, which implies that {a mathematical formula}E[Xi]=xi for each i and {a mathematical formula}E[X]=x.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Properties and social costs
+      </section-title>
+      <paragraph>
+       As in [29], we assume that the cost functions satisfy the property that for any {a mathematical formula}y∈[0,1] and any {a mathematical formula}e∈E, {a mathematical formula}ce(0)=0, {a mathematical formula}ce(1)≤1, {a mathematical formula}ce′(y)≥A&gt;0 and {a mathematical formula}0≤ce″(y)≤B, where {a mathematical formula}A,B are positive constants.{sup:11} By Lemma 4 of [29], for constants {a mathematical formula}a=A and {a mathematical formula}b=B+1 defined accordingly, the cost functions satisfy the condition that{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Then the function Φ defined in terms of such cost functions is smooth in the following sense.
+      </paragraph>
+      <paragraph label="Definition 1">
+       A function Φ over {a mathematical formula}K is called {a mathematical formula}(α,β,λ)-smooth if for any {a mathematical formula}x∈K,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proposition 2">
+       The function Φ defined in(1)with cost functions satisfying condition(4)is{a mathematical formula}(α,β,λ)-smooth, for{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We will prove the proposition in Appendix B.
+      </paragraph>
+      <paragraph>
+       We consider two types of social cost functions. The first is the average individual cost function, defined as{a mathematical formula} and the second is the maximum individual cost function, defined as{a mathematical formula} Using them, we measure the quality of outcome for a flow {a mathematical formula}x∈K in the following two ways. The first is the ratio {a mathematical formula}CA(x)/CA(x⁎), where {a mathematical formula}x⁎=arg⁡minz∈K⁡CA(z), and the second is the ratio {a mathematical formula}CM(x)/CM(xˆ), where {a mathematical formula}xˆ=arg⁡minz∈K⁡CM(z).
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      The bulletin-board model
+     </section-title>
+     <section label="3.1">
+      <section-title>
+       Dynamics
+      </section-title>
+      <paragraph>
+       We consider the setting in which the players play the game iteratively in the following way. At step t, each player i plays the strategy {a mathematical formula}xit by sending the amount {a mathematical formula}xi,st of load on path s for each {a mathematical formula}s∈Si. After that, she gets to know the vector {a mathematical formula}cˆit=(cs(xt))s∈Si of cost values, where {a mathematical formula}cs(xt)=∑e∈sce(ℓe(xt)) is the cost value on the path s at that step. With this, she updates her next strategy {a mathematical formula}xit+1 in some way and then proceeds to the next iteration. In the alternative definition of the game, the corresponding setting is that at step t, each agent of player i sends its load of Δ all on some path {a mathematical formula}s∈Si, which is chosen according to some distribution. We assume that all agents of player i start with the same initial distribution and update their distributions at each step t using the same algorithm according to the same information {a mathematical formula}cˆit. Then we can conclude that their distributions at step t are all the same,{sup:12} which basically can be described by the flow {a mathematical formula}xit of player i, due to the law of large number as the number of agents is huge. Thus, the settings for the two definitions of the game also match.
+      </paragraph>
+      <paragraph>
+       We have not specified how the players or agents of players update their next strategies. Different update algorithms may make the whole system evolve in rather different ways, and we would like to understand if there are update algorithms which players or agents of players have incentive to adopt that can lead to desirable outcomes for the whole system. One can argue that a plausible incentive for a player is to minimize her regret. Two well-known no-regret algorithms are the gradient descent algorithm and the multiplicative update algorithm, both of which can be seen as special cases of a more general algorithm called mirror descent algorithm (see e.g. [7] for more detail). Inspired by this, we consider the following update rule for player i or agents of player i:{a mathematical formula}{a mathematical formula} Here, {a mathematical formula}ηi&gt;0 is some learning rate, {a mathematical formula}Ri:Ki→R is some regularization function, and {a mathematical formula}BRi(⋅,⋅) is the Bregman divergence with respect to {a mathematical formula}Ri defined as{a mathematical formula} for {a mathematical formula}ui,vi∈Ki. This gives rise to a family of update rules for different choices of the function {a mathematical formula}Ri. For example, it is well-known that by choosing {a mathematical formula}Ri(ui)=‖ui‖22/2, one recovers the gradient descent algorithm, while by choosing {a mathematical formula}Ri(ui)=∑s(ui,sln⁡ui,s−ui,s), one recovers the multiplicative update algorithm. Using a similar argument as in [29], one can show that this algorithm, with a properly chosen {a mathematical formula}Ri, is indeed a no-regret algorithm for each agent of player i (see Appendix C for a proof sketch), and this provides an incentive for the agents to use the algorithm. We need these {a mathematical formula}Ri's (and {a mathematical formula}BRi(⋅,⋅)'s) to satisfy the following. The choices of {a mathematical formula}Ri's that satisfy this assumption will be discussed in Section 3.2.3.
+      </paragraph>
+      <paragraph label="Assumption 3">
+       For any {a mathematical formula}i∈N and any {a mathematical formula}xi,yi∈Ki,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Then the function Φ is “smooth” with respect to these {a mathematical formula}Ri's in the following sense by Definition 1 and Assumption 3.
+      </paragraph>
+      <paragraph label="Definition 2">
+       We say that Φ is λ-smooth with respect to {a mathematical formula}(R1,…,Rn) if for any two inputs {a mathematical formula}x=(x1,…,xn) and {a mathematical formula}x′=(x1′,…,xn′) in {a mathematical formula}K,{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Convergence results and equilibria
+      </section-title>
+      <paragraph>
+       Our main result in this section is the following, which shows that if each player (or agent of a player) uses such an update algorithm, the system quickly converges, in the sense that the value of the potential function {a mathematical formula}Φ(xt) quickly approaches the minimum {a mathematical formula}Φ(q), where {a mathematical formula}q=arg⁡minz∈K⁡Φ(z).
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Consider any nonatomic congestion game of n players, with a potential function Φ which is λ-smooth with respect to some{a mathematical formula}(R1,…,Rn). Let{a mathematical formula}q=(q1,…,qn)=arg⁡minz∈K⁡Φ(z). Now suppose that each player i starts from some initial strategy{a mathematical formula}xi0, with{a mathematical formula}BRi(qi,xi0)≤γ, and updates her strategy according to the rule in(5), with{a mathematical formula}ηi∈[η,1/λ]for some η. Then for any{a mathematical formula}ε∈(0,1)there exists some{a mathematical formula}Tε≤nγ/(ηε)such that for any{a mathematical formula}t≥Tε,{a mathematical formula}Φ(xt)≤Φ(q)+ε.
+      </paragraph>
+      <paragraph>
+       We will prove this main result right after presenting its derived result. From Theorem 4, we have the following, which we will prove in Section 3.2.3.
+      </paragraph>
+      <paragraph label="Corollary 5">
+       Consider any nonatomic congestion game of n players with parameters given in Section2, and let{a mathematical formula}λ=mbk. Now if each player i plays the gradient descent algorithm by starting from any{a mathematical formula}xi0∈Kiand using any{a mathematical formula}ηi∈[η,1/λ], then{a mathematical formula}Tε≤2/(nηε). Furthermore, if each player i plays the multiplicative update algorithm by starting from a uniform{a mathematical formula}xi0(same load on each allowed path) and using any{a mathematical formula}ηi∈[η,1/λ], then{a mathematical formula}Tε≤(nln⁡(dn))/(ηε).
+      </paragraph>
+      <paragraph label="Remark 1">
+       According to Corollary 5, playing the gradient descent algorithm guarantees a faster convergence time. In particular, if each player i uses {a mathematical formula}ηi=1/λ, then adopting the gradient descent algorithm leads to a convergence time {a mathematical formula}Tε≤2mbk/(nε), while adopting the multiplicative update algorithm leads to {a mathematical formula}Tε≤(mbknln⁡(dn))/ε.
+      </paragraph>
+      <paragraph>
+       Note that the given bound on {a mathematical formula}Tε is proportional to γ by Theorem 4, which is an upper bound on {a mathematical formula}BRi(qi,xi0). In Section 3.2.3 of Proof of Corollary 5, we can see that γ is smaller in the gradient descent algorithm than in the multiplicative update algorithm. Thus, the corresponding different bounds on {a mathematical formula}Tε.
+      </paragraph>
+      <paragraph>
+       Implications of {a mathematical formula}Φ(xt) being close to {a mathematical formula}Φ(q) include {a mathematical formula}xt being an approximate equilibrium, which will be proved in Section 3.2.4, and achieving social efficiency, which will be given in Section 3.3. We say that a flow {a mathematical formula}x∈K is an δ-equilibrium if for any player {a mathematical formula}i∈N and any paths {a mathematical formula}s,s′∈Si with {a mathematical formula}xi,s&gt;0, {a mathematical formula}cs(x)≤cs′(x)+δ. Note that with {a mathematical formula}δ=0, we recover the standard definition of equilibrium for nonatomic games. The following shows that after the convergence time, the system playing our algorithm will stay in an δ-equilibrium for a small δ.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       Any{a mathematical formula}x∈Ksuch that{a mathematical formula}Φ(x)≤Φ(q)+εfor any ε must be a δ-equilibrium for some{a mathematical formula}δ≤8bmε.
+      </paragraph>
+      <section label="3.2.1">
+       <section-title>
+        Analysis
+       </section-title>
+       <paragraph>
+        To prove Theorem 4, the key observation is that the updates by all players collectively can be seen as doing a generalized version of the mirror descent, with different step sizes in different dimensions, on the potential function Φ defined in (1). To see this, note that for any {a mathematical formula}i∈N and {a mathematical formula}s∈Si, the s'th entry of {a mathematical formula}cˆit is{a mathematical formula} which means that the d-dimensional vector {a mathematical formula}(cˆit)i∈N is in fact equal to {a mathematical formula}∇Φ(xt), the gradient of Φ at {a mathematical formula}xt. That is, if we write {a mathematical formula}∇Φ(xt)=(∇1Φ(xt),…,∇nΦ(xt)), with {a mathematical formula}∇iΦ(xt) being the portion of {a mathematical formula}∇Φ(xt) corresponding to player i, then the update rule of (5) and (6) becomes the following:{a mathematical formula}{a mathematical formula} Observe that when all the {a mathematical formula}ηi's are identical, the collective update of all players moves the whole system exactly in the direction of {a mathematical formula}−∇Φ(xt), and this becomes the standard mirror descent algorithm which has the same step size across all dimensions. It is known that doing such a mirror descent on a smooth convex function leads to a fast convergence to its minimum [9], [33]. On the other hand, we consider the more general case in which different players can have different learning rates, and this corresponds to a more general mirror descent algorithm which allows different step sizes in different dimensions. Because the different step sizes have different scaling effects in different dimensions, the collective update now no longer moves the whole system in the direction of {a mathematical formula}−∇Φ(xt), and it is not clear if a similar convergence result can be obtained. Interestingly, the following theorem shows that doing such a generalized mirror descent algorithm on a general smooth convex function still gives us a fast convergence to its minimum.
+       </paragraph>
+       <paragraph label="Theorem 7">
+        Suppose{a mathematical formula}K=K1×⋯×Kn, with each{a mathematical formula}Kibeing a convex set. Let{a mathematical formula}Φ:K→Rbe any convex function which is λ-smooth with respect to some{a mathematical formula}(R1,…,Rn)and let{a mathematical formula}q=(q1,…,qn)=arg⁡minz∈K⁡Φ(z). Suppose we start from some{a mathematical formula}x0=(x10,…,xn0), with each{a mathematical formula}BRi(qi,xi0)≤γ, and then use the update rule in(8), with each{a mathematical formula}ηi∈[η,1/λ]for some η. Then for any{a mathematical formula}ε∈(0,1), there exists some{a mathematical formula}Tε≤nγ/(ηε)such that for any{a mathematical formula}t≥Tε,{a mathematical formula}Φ(xt)≤Φ(q)+ε.
+       </paragraph>
+       <paragraph>
+        We will prove Theorem 7 in Section 3.2.2. Now note that Theorem 4 follows immediately from Theorem 7 since our potential function Φ is convex by Proposition 1. On the other hand, Theorem 7 works for a general convex function (not restricted to the specific potential function given in (1)), which may have independent interest of its own.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       Proof of Theorem 7
+       <paragraph>
+        Our proof follows closely that in [9] for the special case in which all the {a mathematical formula}ηi's are identical. To simplify our notation, let us denote the gradient vector {a mathematical formula}∇Φ(xt) by {a mathematical formula}gt=(g1t,…,gnt), with {a mathematical formula}git=∇iΦ(xt).
+       </paragraph>
+       <paragraph>
+        Using the assumption that for each i, {a mathematical formula}ηi≤1/λ and thus {a mathematical formula}λ≤1/ηi, the λ-smoothness condition (7) implies that{a mathematical formula} because each {a mathematical formula}BRi(xit+1,xit) is nonnegative. Then we need the following two lemmas, which we will prove later.
+       </paragraph>
+       <paragraph label="Lemma 8">
+        For any integer{a mathematical formula}t≥0,{a mathematical formula}Φ(xt+1)≤Φ(xt).
+       </paragraph>
+       <paragraph label="Lemma 9">
+        For any integer{a mathematical formula}T≥1,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Combining these two lemmas together, we obtain{a mathematical formula}Dividing both sides by T gives us{a mathematical formula} when {a mathematical formula}T≥nγ/(ηε), and we have the theorem. It remains to prove the two lemmas, which we do next.
+       </paragraph>
+       <paragraph label="Proof of Lemma 8">
+        We know from (10) that{a mathematical formula} To bound the sum above, note that according to the definition of {a mathematical formula}xit+1 in (8), we have{a mathematical formula} Applying this to the above bound on {a mathematical formula}Φ(xt+1), Lemma 8 follows. □
+       </paragraph>
+       <paragraph label="Proof">
+        We know from (10) that for any {a mathematical formula}t≥0, {a mathematical formula}Φ(xt+1) is at most{a mathematical formula} where the second term above can be expressed as{a mathematical formula} Since {a mathematical formula}Φ(xt)+〈gt,q−xt〉≤Φ(q) for a convex Φ, we thus know that {a mathematical formula}Φ(xt+1) is at most{a mathematical formula} To bound the sum above, we rely on the following. For each i,{a mathematical formula}〈git,xit+1−qi〉is at most{a mathematical formula}According to the definition of {a mathematical formula}xit+1 in (8), it is also the minimizer of the function{a mathematical formula} over {a mathematical formula}z∈Ki, since {a mathematical formula}〈git,−qi〉 is a constant independent of z. Then from a well-known fact in convex optimization [12, pp. 139–140], we know that{a mathematical formula} Since {a mathematical formula}∇L(xit+1)=ηigit+∇Ri(xit+1)−∇Ri(xit), we have{a mathematical formula} Then according to the definition of {a mathematical formula}BRi(⋅), we have{a mathematical formula} By subtracting the second and the third equalities from the first, we obtain{a mathematical formula} Substituting this into (12) proves the proposition. □Combining the bound from this proposition with the upper bound on {a mathematical formula}Φ(xt+1) in (11), we obtain{a mathematical formula} This implies that{a mathematical formula} which proves Lemma 9.
+       </paragraph>
+      </section>
+      <section label="3.2.3">
+       Proof of Corollary 5
+       <paragraph>
+        Let us first consider the case that each player plays the gradient descent algorithm. Note that this corresponds to choosing {a mathematical formula}Ri(ui)=‖ui‖22/2 for each i, and one can show that {a mathematical formula}BRi(ui,vi)=‖ui−vi‖22/2, for {a mathematical formula}ui,vi∈Ki. Then, we have{a mathematical formula} which is at most{a mathematical formula} Therefore, we can choose {a mathematical formula}γ=2/n2 to have {a mathematical formula}BRi(qi,xi0)≤γ. Furthermore, using the Taylor expansion together with Proposition 2, we know that for any {a mathematical formula}x,x′∈K,{a mathematical formula} with {a mathematical formula}λ=mbk. Since{a mathematical formula} we can guarantee that Φ is λ-smooth with this choice of {a mathematical formula}Ri's.
+       </paragraph>
+       <paragraph>
+        Next, let us consider the case that each player plays the multiplicative update algorithm. Note that this corresponds to choosing {a mathematical formula}Ri(ui)=∑s(ui,sln⁡ui,s−ui,s) for each i, and one can show that {a mathematical formula}BRi(ui,vi)=∑sui,sln⁡(ui,s/vi,s), for {a mathematical formula}ui,vi∈Ki. Then, we have{a mathematical formula} Therefore, we can choose {a mathematical formula}γ=ln⁡(dn) to have {a mathematical formula}BRi(qi,xi0)≤γ. Furthermore, we know that{a mathematical formula} by Pinsker's inequality.{sup:13} Therefore, we can again guarantee that Φ is λ-smooth with this choice of {a mathematical formula}Ri's.
+       </paragraph>
+       <paragraph>
+        Substituting these bounds of γ and λ into Theorem 4, Corollary 5 then follows.
+       </paragraph>
+      </section>
+      <section label="3.2.4">
+       Proof of Theorem 6
+       <paragraph>
+        Consider any {a mathematical formula}x∈K such that {a mathematical formula}Φ(x)≤Φ(q)+ε and any {a mathematical formula}i∈N. Let {a mathematical formula}s0 be the path in {a mathematical formula}Si which minimizes {a mathematical formula}cs(x) among {a mathematical formula}s∈Si, and let {a mathematical formula}s1 be the path which maximizes {a mathematical formula}cs(x) among {a mathematical formula}s∈Si with {a mathematical formula}xi,s&gt;0. Let {a mathematical formula}δ=cs1(x)−cs0(x) and our goal is to show that δ is small by bounding it in terms of ε. The idea is that if δ were large, we could move a significant amount of load from {a mathematical formula}s1 to {a mathematical formula}s0 and decrease the Φ value substantially, which is impossible as {a mathematical formula}Φ(x) is close to the minimum value {a mathematical formula}Φ(q).
+       </paragraph>
+       <paragraph>
+        Formally, let us move some Δ amount, which we will set later, of load from {a mathematical formula}s1 to {a mathematical formula}s0, and let z denote the new flow. Note that the cost increase on {a mathematical formula}s0 and the cost decrease on {a mathematical formula}s1 are both at most mbΔ, since {a mathematical formula}ce′(y)≤b for any y according to the condition (4). Thus, with {a mathematical formula}Δ=δ/(4bm) (since {a mathematical formula}δ=4mbΔ, i.e., the path cost difference can be expressed by multiplying the maximum number of edges in a path, the upper bound on an edge cost changing rate, the amount of load moved, and some proper constant scaling), we can have {a mathematical formula}cs1(z)≥cs1(x)−δ/4 and {a mathematical formula}cs0(z)≤cs0(x)+δ/4, so that{a mathematical formula} which can be used to bound the decrease of the Φ value.
+       </paragraph>
+       <paragraph>
+        Moving the load decreases the Φ value by the amount{a mathematical formula} where the first inequality holds as the function {a mathematical formula}ce is nondecreasing and the last inequality holds by (13). Since z is still a feasible flow in {a mathematical formula}K, its Φ value cannot be smaller than that of q and we must have {a mathematical formula}Φ(x)−Φ(z)≤Φ(x)−Φ(q)≤ε, which implies that {a mathematical formula}Δδ/2≤ε. With {a mathematical formula}Δ=δ/(4bm), we have {a mathematical formula}δ≤8bmε (and {a mathematical formula}Δ≤ε2bm). Since this holds for any {a mathematical formula}i∈N, we have the theorem.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Social costs
+      </section-title>
+      <paragraph>
+       According to Theorem 4, the flow {a mathematical formula}xt at step {a mathematical formula}t≥Tε enjoys the nice property that {a mathematical formula}Φ(xt)≤Φ(q)+ε. In this section, we show the implication of this property on the social costs.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Average individual cost
+       </section-title>
+       <paragraph>
+        We show that after the convergence time, the average individual cost achieved by our algorithm is only within a constant factor from the optimum one.
+       </paragraph>
+       <paragraph label="Theorem 11">
+        Any{a mathematical formula}x∈Ksuch that{a mathematical formula}Φ(x)≤Φ(q)+εmust have{a mathematical formula}CA(x)CA(x⁎)≤ba(1+2mεa).
+       </paragraph>
+       <paragraph label="Proof">
+        For any {a mathematical formula}z∈K, we can rewrite {a mathematical formula}CA(z) as{a mathematical formula} Under the condition (4), we have {a mathematical formula}yce′(y)≤yb=bab0y≤bace(y) and thus{a mathematical formula} On the other hand, we also have {a mathematical formula}yce′(y)≥yb0=abby≥abce(y) and thus{a mathematical formula} Replacing z in (14) by x with {a mathematical formula}Φ(x)≤Φ(q)+ε, and replacing z in (15) by {a mathematical formula}x⁎, we obtain{a mathematical formula} as {a mathematical formula}Φ(x⁎)≥Φ(q), which gives us{a mathematical formula} Finally, using the condition (4), we have for any {a mathematical formula}z∈K that{a mathematical formula} where the second inequality is by Cauchy–Schwarz and the last inequality holds as the total load of players is 1. Substituting the bound of (17) into (16) with {a mathematical formula}z=q, we have the theorem. □
+       </paragraph>
+       <paragraph label="Remark 2">
+        We can make {a mathematical formula}CA(x)CA(x⁎)≤ba(1+σ) for any σ we want, by choosing {a mathematical formula}ε=aσ/(2m). Then by Remark 1, one can compute the corresponding convergence time {a mathematical formula}Tε, which is proportional to {a mathematical formula}1/σ.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Maximum individual cost in symmetric games
+       </section-title>
+       <paragraph>
+        In a symmetric game, {a mathematical formula}Si=S for every {a mathematical formula}i∈N. Taking advantage of this property, we show that after the convergence time the maximum individual cost achieved by our algorithm is again within a constant factor from the optimum one.
+       </paragraph>
+       <paragraph label="Theorem 12">
+        Any{a mathematical formula}x∈Ksuch that{a mathematical formula}Φ(x)≤Φ(q)+εmust have{a mathematical formula}CM(x)CM(xˆ)≤ba(1+2mεa+δmb), where{a mathematical formula}δ≤8bmε.
+       </paragraph>
+       <paragraph label="Proof">
+        Consider any {a mathematical formula}x∈K with {a mathematical formula}Φ(x)≤Φ(q)+ε. Let {a mathematical formula}s0=arg⁡mins∈S⁡cs(x) and {a mathematical formula}s1=arg⁡maxs∈S⁡cs(x). To apply Theorem 6, let us choose a player i with {a mathematical formula}xi,s1&gt;0; such a player must exist because otherwise there would be no load on {a mathematical formula}s1 and {a mathematical formula}cs1(x)=0 could not be the highest path cost. Since {a mathematical formula}Si=S in a symmetric game, {a mathematical formula}s0 is also the path of player i with the lowest path cost. Therefore, we can apply Theorem 6 and have {a mathematical formula}δ=cs1(x)−cs0(x)≤8bmε. Note that {a mathematical formula}CM(x)=cs1(x) by definition. Thus, we have{a mathematical formula} where the first inequality is by the definitions of {a mathematical formula}CM and {a mathematical formula}CA, and the second inequality follows from the fact that {a mathematical formula}cs0(x)≤CA(x) and {a mathematical formula}x⁎ minimizes {a mathematical formula}CA. Furthermore,{a mathematical formula} by Theorem 11. Finally, using a similar analysis as in the proof of Theorem 11, one can show that{a mathematical formula} Combining all the bounds together, we have the theorem. □
+       </paragraph>
+       <paragraph label="Remark 3">
+        We can make {a mathematical formula}CM(x)CM(xˆ)≤ba(1+σ) for any σ we want, by choosing {a mathematical formula}ε=aσ2/(32m). Then according to Remark 1, one can compute the corresponding convergence time {a mathematical formula}Tε, which is now proportional to {a mathematical formula}1/σ2.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      The bandit model
+     </section-title>
+     <paragraph>
+      We consider the setting in which the players play the congestion game iteratively in the following way. In step t, each player i plays some strategy {a mathematical formula}xit by sampling a path {a mathematical formula}si∈Si with probability {a mathematical formula}πi,sit=xi,sitn and sending her entire flow of amount {a mathematical formula}1/n through that path {a mathematical formula}si. After that, she gets to know the cost of that path, which is{a mathematical formula} where {a mathematical formula}Xt is the choice vector of the players in step t. With this feedback, she updates her next strategy {a mathematical formula}xit+1 in some way and then proceeds to the next step. Let us stress that the only information a player has access to in a step is the cost of the path she has just chosen, and she has no information about that of any other path she has not chosen. This is known as the bandit model in the area of online learning [34, Chapter 4], [3], [24]. It is a more challenging model compared to the bulletin-board model considered in [29] and in Section 3, in which each player i can learn the costs of all her allowed (even unchosen) paths.
+     </paragraph>
+     <paragraph>
+      We consider the same function for the convergence purpose:{a mathematical formula} for {a mathematical formula}x∈K, where{a mathematical formula} with {a mathematical formula}ℓ(⋅) being the same function defined in (3). According to Proposition 1, Φ is a convex function. We still assume that the cost functions satisfy the property in (4).
+     </paragraph>
+     <paragraph>
+      Note that this function Φ was used in Section 3 for a nonatomic version of the congestion game, with its input corresponding to splittable flows of players, and its minimizer corresponding to a pure Nash equilibrium with infinitely many agents (i.e., a Wardrop equilibrium). As we consider the atomic version of the congestion game, we now interpret its input as the mixed strategies of players. However, its minimizer corresponds no longer to a pure or mixed Nash equilibrium, but instead to an approximate Nash equilibrium, to be discussed later. We will rely on the following proposition, whose proof we omit here as it follows easily from an analysis in [29, Proof of Lemma 8] using Taylor expansion. The proposition intuitively means that the difference between the expected cost and the cost of expected flow (proportional to the probability distribution of mixed strategies) on s is bounded.
+     </paragraph>
+     <paragraph label="Proposition 13">
+      Let{a mathematical formula}x∈Kand X the choice vector sampled according to x. Then for any s,{a mathematical formula}0≤E[cs(X)]−cs(x)≤Bm8nwhere B is the bound on the second derivative of cost functions (Section2). This implies that classes of cost functions with smaller B give better bounds on the difference. In particular, with linear cost functions where{a mathematical formula}B=0, then{a mathematical formula}E[cs(X)]=cs(x)for any s.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Bandit algorithms
+      </section-title>
+      <paragraph>
+       We would like to follow the approach of Section 3.1 which showed that when each player plays a mirror-descent algorithm with her own learning rate, the joint strategy profile of the players converges quickly. However, there are two key differences in our setting which prevent us from applying their result directly. The first is that here we consider the atomic version of the congestion game, in which each player must send her entire flow on one single path, unlike the non-atomic version considered in Section 3 in which a player can split her flow across multiple paths in each step. The second difference is that the feedback model considered in Section 3 is the easier bulletin model, in which each player, after sending her flow in a step, gets to see all the costs of her allowed paths. That is, in step t, player i is able to learn the cost{a mathematical formula} for every {a mathematical formula}s∈Si, where {a mathematical formula}xt is the joint strategy profile of players, describing how each player splits her flow. It was shown in Section 3.1 that for any {a mathematical formula}i∈N and {a mathematical formula}s∈Si,{a mathematical formula} which means that each player i gets to know the part of the gradient vector {a mathematical formula}∇Φ(xt) related to her, denoted as {a mathematical formula}∇iΦ(xt), consisting of {a mathematical formula}∂Φ(xt)∂xi,s for {a mathematical formula}s∈Si. This allows each player to update her strategy in a way that the whole system of players can be seen as collectively running a generalized mirror-descent algorithm on the convex potential function Φ. However, in the more challenging bandit model we adopt in this paper, each player i does not know the whole vector {a mathematical formula}∇iΦ(xt). Instead, the only information player i has after choosing a path {a mathematical formula}si is{a mathematical formula} where {a mathematical formula}Xt is the choice vector of players at step t. Note that not only does each player i receive less information (one value instead of {a mathematical formula}|Si| values), the information {a mathematical formula}csi(Xt) she receives actually is different from the more useful value {a mathematical formula}csi(xt) that corresponds to an entry in {a mathematical formula}∇Φ(xt).
+      </paragraph>
+      <paragraph>
+       In order to follow the framework in Section 3, each player i needs to have a way to approximate the vector {a mathematical formula}∇iΦ(xt), her portion of the gradient vector {a mathematical formula}∇Φ(xt). Our basic idea is for each player to divide the time steps into episodes, each consisting of a consecutive number of steps, and to do the following in each episode. During episode τ, each player i plays some fixed strategy {a mathematical formula}xiτ for all the steps (instead of playing different strategies in different steps), collects statistics to obtain an estimate {a mathematical formula}gˆiτ for {a mathematical formula}∇iΦ(xτ), and at the end of the episode uses {a mathematical formula}gˆiτ to update her strategy for the next episode. Two keys are: how to come up with the estimate {a mathematical formula}gˆiτ and how to update the next strategy, which we describe next.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Updating the strategies
+       </section-title>
+       <paragraph>
+        With a “good” estimate {a mathematical formula}gˆiτ that we will define and show how to achieve in Section 4.1.2, we can follow Section 3.1 and consider the following update rule for each player i's strategy of the next episode:{a mathematical formula} Here, {a mathematical formula}ηi&gt;0 is some learning rate, {a mathematical formula}Ri:K¯i→R is some regularization function, and {a mathematical formula}BRi(⋅,⋅) is the Bregman divergence with respect to {a mathematical formula}Ri defined as{a mathematical formula} for {a mathematical formula}ui,vi∈K¯i. This gives rise to a family of update rules for different choices of {a mathematical formula}Ri. For example, it is known that by choosing {a mathematical formula}Ri(ui)=‖ui‖22/2 to have {a mathematical formula}BRi(xi,yi)=‖xi−yi‖22/2, one recovers the gradient descent algorithm, while by choosing {a mathematical formula}Ri(ui)=∑s(ui,sln⁡ui,s−ui,s) to have {a mathematical formula}BRi(xi,yi)=∑sxi,sln⁡(xi,s/yi,s), one recovers the multiplicative updates algorithm. In the bandit atomic model, (with a properly chosen {a mathematical formula}Ri) we may need the number of players n to be large to have low regret{sup:14} for each player in order to provide an incentive for the players to use the algorithm. We will need these {a mathematical formula}Ri's with {a mathematical formula}BRi(⋅,⋅)'s to satisfy the following, which is a bit stricter than Assumption 3.
+       </paragraph>
+       <paragraph label="Assumption 14">
+        There is some parameter Γ such that for any {a mathematical formula}i∈N and any {a mathematical formula}xi,yi∈K¯i,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Note that the parameter Γ in the assumption is determined by the choice of {a mathematical formula}Ri as well as the set {a mathematical formula}K¯i, which is a subset (defined in Section 4.1.2) of {a mathematical formula}Ki and in turn depends on the parameter Λ introduced in Section 4.1.2. It is clear that for {a mathematical formula}Ri(ui)=‖ui‖22/2 and {a mathematical formula}BRi(xi,yi)=‖xi−yi‖22/2, the assumption holds with {a mathematical formula}Γ=2. For {a mathematical formula}Ri(xi)=∑s(xi,sln⁡xi,s−xi,s) and {a mathematical formula}BRi(xi,yi)=∑sxi,sln⁡(xi,s/yi,s), the following shows that the assumption holds with {a mathematical formula}Γ=Λ/n, which we prove in Appendix D.
+       </paragraph>
+       <paragraph label="Proposition 15">
+        With{a mathematical formula}BRi(xi,yi)=∑sxi,sln⁡(xi,s/yi,s), it holds that for any{a mathematical formula}xi,yi∈K¯i,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Let us remark that we use the {a mathematical formula}L2 norm {a mathematical formula}‖⋅‖2 in the assumption, instead of a general norm, for the purpose of simplifying our presentation in the next section; one can check that our analysis there also works for a general norm, but the bounds derived would be more complicated.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Approximating the gradient
+       </section-title>
+       <paragraph>
+        Now, we define and show how to guarantee a good estimate {a mathematical formula}gˆiτ. Consider any episode τ and player i. For each path {a mathematical formula}s∈Si, she computes the average cost of that path during the episode as the corresponding entry in {a mathematical formula}gˆiτ. That is, if we let {a mathematical formula}gˆi,sτ denote the s'th entry in {a mathematical formula}gˆiτ and let {a mathematical formula}Ti,sτ denote the set of steps in episode τ that player i chose path s, then{a mathematical formula} which we would like to be a good approximation of {a mathematical formula}cs(xτ). This requires {a mathematical formula}|Ti,sτ| to be large enough which in turns needs {a mathematical formula}πi,sτ, or equivalently {a mathematical formula}xi,sτ, to be large enough. To guarantee this, we restrict each player i to play strategies in a smaller feasible set {a mathematical formula}K¯i⊆Ki, such that for any {a mathematical formula}xi∈K¯i, {a mathematical formula}xi,s≥Λ(1/n), for some parameter Λ, which implies that each path s is chosen with probability {a mathematical formula}πi,s≥Λ. One way of choosing such {a mathematical formula}K¯i is for each {a mathematical formula}yi∈Ki to include a corresponding {a mathematical formula}xi with {a mathematical formula}xi,s=(1−Λ)yi,s+Λ(1/n), for each s. In this way, one can have the guarantee that every {a mathematical formula}yi∈Ki has some {a mathematical formula}xi∈K¯i such that {a mathematical formula}‖xi−yi‖1≤dΛ(1/n). We sum up the procedure for approximating the gradient in the following.
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Then by setting the number of steps in each episode τ to{a mathematical formula} for a large enough constant ν, we have the following.
+       </paragraph>
+       <paragraph label="Lemma 16">
+        With high probability of at least{a mathematical formula}1−2κfor a small enough constant κ chosen arbitrarily, each player i in each episode τ can have{a mathematical formula}
+       </paragraph>
+       <paragraph label="Proof">
+        Fix any player i, path {a mathematical formula}s∈Si, and episode τ. Our goal is to show that{a mathematical formula} is small with high probability. We would like to show that {a mathematical formula}cs(Xt) has expected value {a mathematical formula}E[cs(Xt)] close to {a mathematical formula}cs(xτ) so that we can apply a Hoeffding bound on (22), but there is a subtlety here that we need to be careful about. Note that for a given t, although the expected value of {a mathematical formula}Xt equals {a mathematical formula}xτ when there is no additional conditioning, this is no longer true under the condition that {a mathematical formula}t∈Ti,sτ, as player i's choice does not remain random but is fixed to s according to the definition of {a mathematical formula}Ti,sτ.Let us consider a related random variable {a mathematical formula}Xˆt, which is similar to {a mathematical formula}Xt but with player i's choice left random, sampled according to {a mathematical formula}xiτ. Then it has the nice property that {a mathematical formula}E[Xˆt]=xτ, so that {a mathematical formula}E[ℓe(Xˆt)]=ℓe(xτ) for any e and hence{a mathematical formula} for any s by Proposition 13. In addition, it has costs close to those associated with {a mathematical formula}Xt, as by Taylor's expansion on {a mathematical formula}ce(ℓe(Xt)) at {a mathematical formula}ℓe(Xˆt), {a mathematical formula}|ce(ℓe(Xt))−ce(ℓe(Xˆt))| is at most{a mathematical formula} for any e, which implies that{a mathematical formula} for any s. From the bounds in (24) and (23), we have{a mathematical formula}With this, we can then apply the Hoeffding bound to get{a mathematical formula} for some small enough constant κ, whenever {a mathematical formula}|Ti,sτ|≥wτ where {a mathematical formula}wτ=νn2log⁡(ndτ)2m2 for a large enough constant ν. Let us define the following good event
+       </paragraph>
+       <list>
+        <list-item label="•">
+         G: {a mathematical formula}|Ti,sτ|≥wτ for every {a mathematical formula}τ,i,s.
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Convergence results
+      </section-title>
+      <paragraph>
+       In this section, we analyze the behavior of the system of players adopting the algorithm described in Section 4.1. Our main result is the following, which shows that the system indeed quickly converges, in the sense that the value of the potential function {a mathematical formula}Φ(xτ) quickly comes near the minimum value {a mathematical formula}Φ(q), where {a mathematical formula}q=arg⁡minz∈K⁡Φ(z), and then stays close afterwards.
+      </paragraph>
+      <paragraph label="Theorem 17">
+       Consider any atomic congestion game of n players, with a potential function Φ which is{a mathematical formula}(α,β,λ)-smooth, and let{a mathematical formula}q=arg⁡minz∈K⁡Φ(z). Suppose each player i updates her strategy according to the rule in(5), with{a mathematical formula}ηi≤1/λ, using{a mathematical formula}gˆiτdescribed in(21)with the guarantee that{a mathematical formula}Consider any η such that{a mathematical formula}η≤ηifor any i and{a mathematical formula}θ=ηΓϵn≤1, and let{a mathematical formula}δ=6ϵ+θβdΛ, where Γ is the parameter inAssumption 14and Λ is the parameter introduced in Section4.1.2. Then for{a mathematical formula}τ0=α/δand{a mathematical formula}△=3δ/θ, it holds that for any{a mathematical formula}τ≥τ0,{a mathematical formula}or equivalently,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As in Section 3.1, we consider two examples of setting the choices in the following, which will be proved in Section 4.2.3.
+      </paragraph>
+      <paragraph label="Corollary 18">
+       Consider any atomic congestion game of n players with parameters given in Section2. If each player i plays the gradient descent algorithm over{a mathematical formula}K¯iwith{a mathematical formula}ηi≤1/λ, then with high probability,{a mathematical formula}Furthermore, if each player i plays the multiplicative updates algorithm over{a mathematical formula}K¯iwith{a mathematical formula}ηi≤1/λ, then with high probability,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       From the corollary, we see that playing the gradient descent algorithm guarantees a smaller error △, as {a mathematical formula}k≤d. Take for example the load balancing game studied in [29], which has {a mathematical formula}d=n and {a mathematical formula}k=m=1. The gradient-descent algorithm can achieve {a mathematical formula}△=O(1/n), while the multiplicative updates algorithm only has {a mathematical formula}△=O(1). Although the convergence time {a mathematical formula}T0 of the gradient-descent algorithm may look higher in the corollary, one can in fact make it smaller by choosing a smaller Λ (with a slightly increased △), so that both of its {a mathematical formula}T0 and △ are smaller than those of the multiplicative updates algorithm. Note that to have a small error, both algorithms need n, the number of players, to be large. This seems unavoidable in the bandit model considered here, because the amount of flow each player has is as large as {a mathematical formula}1/n, which limits the accuracy each player can have on the estimations of the path costs and gradient vectors.
+      </paragraph>
+      <paragraph>
+       Implication of the convergence, including approximate equilibria and guarantees regarding social costs, will be discussed in Section 4.3.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Analysis
+       </section-title>
+       <paragraph>
+        The proof of the theorem is based on the idea of Section 3.1 that if each player i can actually have her portion {a mathematical formula}∇iΦ(xτ) of the gradient vector {a mathematical formula}∇Φ(xτ) and do the update{a mathematical formula} then the collective update of all players can be seen as doing some generalized mirror descent on the convex function Φ. Then it was shown in Section 3.1 that doing such a mirror descent on any convex function will lead to a quick convergence. However, in our setting, each player can only obtain an estimate {a mathematical formula}gˆiτ of the desired vector {a mathematical formula}∇iΦ(xτ), which only allows players collectively to perform an “approximate” mirror descent on the convex function. Unfortunately, the convergence analysis of Section 3.1 relies on showing that {a mathematical formula}Φ(xτ+1)≤Φ(xτ) for every τ, which depends crucially on being able to move (in the mirror space) precisely in the opposite direction of the gradient vector. As we now can no longer move in that precise direction, the next Φ value may increase, and it is not clear if convergence can still be guaranteed. Interestingly, we provide a positive answer, with the following theorem. In fact it works for any general convex function Φ, which is smooth in the sense of Definition 1.
+       </paragraph>
+       <paragraph label="Theorem 19">
+        Let{a mathematical formula}Φ:K→Rbe any{a mathematical formula}(α,β,λ)-smooth convex function, with{a mathematical formula}q=arg⁡minz∈K⁡Φ(z), where{a mathematical formula}K=K1×⋯×Kn, such that{a mathematical formula}‖x−y‖1≤2for any{a mathematical formula}x,y∈K. Suppose for each i, we have a convex{a mathematical formula}K¯i⊆Kiwith the property that any{a mathematical formula}x∈Khas some{a mathematical formula}y∈K¯=K¯1×⋯×K¯nsuch that{a mathematical formula}‖x−y‖1≤dΛ, and suppose moreover that we have{a mathematical formula}Ri's satisfyingAssumption 14so Γ is the parameter therein. Now consider the update rule in(5), with each{a mathematical formula}ηi≤1/λ, using{a mathematical formula}gˆiτsuch that{a mathematical formula}Consider any η such that{a mathematical formula}η≤ηifor any i and{a mathematical formula}θ=ηΓϵn≤1, and let{a mathematical formula}δ=6ϵ+θβdΛ. Then for{a mathematical formula}τ0=α/δand{a mathematical formula}△=3δ/θ, it holds that for any{a mathematical formula}τ≥τ0,{a mathematical formula}or equivalently,{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Note that Theorem 17 follows immediately from Theorem 19. This is because our function Φ is convex and furthermore, any {a mathematical formula}x∈K has some {a mathematical formula}y∈K¯ with {a mathematical formula}‖x−y‖1=∑i‖xi−yi‖1≤∑idΛ(1/n)=dΛ. On the other hand, Theorem 7 works for a general convex function, which may have independent interest of its own. To prove Theorem 19, we rely on the following key lemma.
+       </paragraph>
+       <paragraph label="Lemma 20">
+        Let{a mathematical formula}θ=ηΓϵnand{a mathematical formula}δ=6ϵ+θβdΛ. Then given the assumption ofTheorem 19, we have{a mathematical formula}for any integer{a mathematical formula}τ≥0. This means that{a mathematical formula}whenever{a mathematical formula}Φ(xτ)−Φ(q)≥2δ/θ.
+       </paragraph>
+       <paragraph>
+        This lemma helps us deal with the difficulty we discussed before. That is, although doing mirror descent using the exact gradient vector can guarantee a decreased Φ value, as shown in Section 3.1, this may no longer hold in general when using an approximate gradient vector. Nevertheless, Lemma 20 shows that as long as the current Φ value has a large enough gap from the minimum one, doing mirror descent using an approximate gradient vector can still guarantee a decreased Φ value. We will prove the lemma in Section 4.2.2. Assuming the lemma, now we proceed to prove Theorem 19.
+       </paragraph>
+       <paragraph label="Proof of Theorem 19">
+        From Lemma 20, we know that as long as {a mathematical formula}Φ(xτ)−Φ(q)≥2δ/θ, the next {a mathematical formula}Φ(xτ+1) will decrease from {a mathematical formula}Φ(xτ) by at least the amount δ. Since {a mathematical formula}Φ(x)≤α for any {a mathematical formula}x∈K, according to the smoothness assumption, and {a mathematical formula}Φ(q)≥0, we know that there must be some episode {a mathematical formula}τ1≤τ0=α/δ such that {a mathematical formula}Φ(xτ1)−Φ(q)&lt;2δ/θ. After that, the value of Φ may again exceed the threshold {a mathematical formula}Φ(q)+2δ/θ, but we next argue that it cannot go much higher than that.Let {a mathematical formula}τ2 denote the episode after {a mathematical formula}τ1 such that {a mathematical formula}Φ(xτ2) reaches the highest value. Then {a mathematical formula}Φ(xτ2) much have just been increased from its previous episode with a smaller Φ value, which can only happen when{a mathematical formula} On the other hand, we know from Lemma 20 that{a mathematical formula} Consequently, for any {a mathematical formula}τ≥τ0≥τ1, we must have{a mathematical formula} which completes the proof of Theorem 19. □
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       Proof of Lemma 20
+       <paragraph>
+        To simplify our notation, let us denote the gradient vector {a mathematical formula}∇Φ(xτ) by {a mathematical formula}gτ=(g1τ,…,gnτ), with {a mathematical formula}giτ=∇iΦ(xτ). Then from the assumption that Φ is {a mathematical formula}(α,β,λ)-smooth, we have{a mathematical formula} with the right-hand side above being{a mathematical formula} according to Assumption 14 together with the assumption that {a mathematical formula}ηi≤1/λ and hence {a mathematical formula}λ≤1/ηi, as well as the fact that {a mathematical formula}BRi(xτ+1,xτ) is nonnegative. To bound the sum above, let us first change {a mathematical formula}〈giτ,xiτ+1−xiτ〉 into{a mathematical formula} so that each{a mathematical formula} now becomes{a mathematical formula} The sum of the first two terms above according to the definition of {a mathematical formula}xiτ+1 in (5) is at most{a mathematical formula} for any {a mathematical formula}zi∈K¯i, while the last term above by the Cauchy–Schwarz inequality is at most{a mathematical formula} according to the assumption that {a mathematical formula}‖giτ−gˆiτ‖∞≤ϵ. Since{a mathematical formula} from the assumption of the lemma, we have{a mathematical formula} for any {a mathematical formula}zi∈K¯i.
+       </paragraph>
+       <paragraph>
+        Our goal then is to choose these {a mathematical formula}zi's to make the above small enough. Our idea is to take {a mathematical formula}z=(z1,…,zn) as a point that moves from {a mathematical formula}xτ towards{a mathematical formula} That is, we consider{a mathematical formula} for some parameter {a mathematical formula}θ∈[0,1] to be determined later. Note that {a mathematical formula}zi does belong to {a mathematical formula}K¯i because it is a convex combination of {a mathematical formula}xiτ and {a mathematical formula}q¯i, both of which are in the convex set {a mathematical formula}K¯i. With {a mathematical formula}zi−xiτ=θ(q¯i−xiτ), we are now able to relate the bound in (27) to {a mathematical formula}Φ(xτ)−Φ(q¯) because the first term there is{a mathematical formula} where the first term in (28) is{a mathematical formula} by the convexity of Φ, while the second term in (28) by the Cauchy–Schwarz inequality is at most{a mathematical formula} as {a mathematical formula}‖z−xτ‖1≤2 and {a mathematical formula}θ≤1. It remains to bound the second term in (27). Note that according to Assumption 14,{a mathematical formula} where{a mathematical formula} since {a mathematical formula}q¯i,s,xi,sτ∈[0,1n] for every s. This means that{a mathematical formula} By plugging these bounds into (27), we have{a mathematical formula} which then implies that{a mathematical formula} for any {a mathematical formula}θ∈[0,1].
+       </paragraph>
+       <paragraph>
+        The bound in (29) is still not satisfactory as it involves {a mathematical formula}q¯ instead of q. To relate {a mathematical formula}Φ(q¯) to {a mathematical formula}Φ(q), note that according to the assumption, there exists some {a mathematical formula}q′∈K¯ such that {a mathematical formula}‖q−q′‖1≤dΛ, while as {a mathematical formula}q¯ minimizes Φ over {a mathematical formula}K¯, we have{a mathematical formula} by the convexity of Φ. Then, by the Cauchy–Schwarz inequality, we have{a mathematical formula} as {a mathematical formula}‖∇Φ(q′)‖∞≤β by the smoothness assumption on Φ. Finally, by substituting this into (29), we have{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Now let us choose {a mathematical formula}θ=ηΓnϵ, and note that {a mathematical formula}θ≤1 by the assumption on η. With this choice of θ, we obtain{a mathematical formula} where{a mathematical formula} This implies that {a mathematical formula}Φ(xτ+1)≤Φ(xτ)−δ whenever {a mathematical formula}Φ(xτ)−Φ(q)≥2δ/θ, which completes the proof of Lemma 20.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       Proof of Corollary 18
+       <paragraph>
+        Note that the bounds in the theorem depend on the parameters Γ and Λ. In fact, we have the freedom to choose the parameter Λ as well as the functions {a mathematical formula}Ri(⋅)'s, while the parameter Γ is then determined by them.
+       </paragraph>
+       <paragraph>
+        The first is to choose {a mathematical formula}Ri(xi)=‖xi‖22/2 to have {a mathematical formula}BRi(xi,yi)=‖xi−yi‖22/2. In this case, each player's algorithm becomes the gradient-descent algorithm, and we can choose{a mathematical formula} which gives us{a mathematical formula} The second example is to choose {a mathematical formula}Ri(xi)=∑s(xi,sln⁡xi,s−xi,s) to have {a mathematical formula}BRi(xi,yi)=∑sxi,sln⁡(xi,s/yi,s). In this case, each player's algorithm becomes the multiplicative updates algorithm, and according to Proposition 15 we can choose{a mathematical formula} which gives us{a mathematical formula} Although we stated above the convergence bounds in terms of the number of episodes, by incorporating the sizes of the episodes, it follows that the number of steps needed for convergence is at most{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Finally, let us go back to the congestion game and substitute the parameters {a mathematical formula}α=bm/2,β=bm,λ=bmk from Proposition 2 into the bounds above. Let us set the parameter {a mathematical formula}ϵ=4bm/n according to Lemma 16 so that (26) holds for every player and episode with high probability. Moreover, let us assume for simplicity that {a mathematical formula}ηi≥Ω(1/λ) so that we have {a mathematical formula}η≥Ω(1/λ). Then we have the corollary.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Equilibria and social costs
+      </section-title>
+      <paragraph>
+       Now we briefly discuss the implication of the guarantee {a mathematical formula}Φ(xτ)≤Φ(q)+△ given by the results in Section 4.2. The first is that such an {a mathematical formula}πτ is an approximate equilibrium in mixed strategies, where we say that π is a δ-equilibrium if for any player {a mathematical formula}i∈N and any paths {a mathematical formula}s,s′∈Si with {a mathematical formula}xi,s&gt;0, {a mathematical formula}E[cs(X)]≤E[cs′(X)]+δ, where X is the choice vector sampled according to x and {a mathematical formula}xi=1nπi for any i.{sup:15} To show this, note that we know from Section 3.2.4 that any {a mathematical formula}xτ satisfying the condition {a mathematical formula}Φ(xτ)≤Φ(q)+△ must have {a mathematical formula}cs(xτ)≤cs′(xτ)+8bm△. This and Proposition 13 together imply that {a mathematical formula}E[cs(Xτ)]−Bmn≤E[cs′(Xτ)]+8bm△≤E[cs′(Xτ)]+8bm△, which gives that {a mathematical formula}E[cs(Xτ)]≤E[cs′(Xτ)]+8bm△+Bmn, where {a mathematical formula}Xτ is the choice vector sampled according to {a mathematical formula}xτ.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}Bmn can be large in general to make such equilibrium meaningless due to bad approximation. Nevertheless, there are natural cases when such approximate equilibrium is meaningful. As mentioned in Proposition 13, for classes of cost functions with small B, small {a mathematical formula}Bmn can be obtained to give meaningful δ-equilibria. For example, in particular for linear cost functions where {a mathematical formula}B=0, {a mathematical formula}E[cs(Xτ)]≤E[cs′(Xτ)]+8bm△ since {a mathematical formula}E[cs(Xτ)]=cs(xτ) for any s; more generally, even if B is not 0, it could be inherently small enough for some classes of cost functions to make {a mathematical formula}Bmn small, recalling that B (defined in Section 2) is a constant with respect to the load, not necessarily to {a mathematical formula}mn. For some classes of structures of allowed paths, the difference bound is smaller. For example, in load-balancing games of [29], it becomes that {a mathematical formula}E[cs(Xτ)]≤E[cs′(Xτ)]+8bm△+Bn since any s consists of only one edge, instead of at most m edges. Using similar analyses to those in Section 3.3, we can also derive bounds on the ratio of a social cost at convergence to that at optimum.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Proposition 1
+     <paragraph>
+      Recall that{a mathematical formula} where {a mathematical formula}ℓe(x)=∑i∈N∑s:e∈sxi,s. Let{a mathematical formula} so that {a mathematical formula}Φ(x)=∑e∈Eψe(ℓe(x)). Observe that {a mathematical formula}ℓe is a linear function of {a mathematical formula}x∈K, while {a mathematical formula}ψe is a convex function of {a mathematical formula}v∈R as {a mathematical formula}ce is assumed to be nondecreasing. Then for any {a mathematical formula}δ∈[0,1] and any {a mathematical formula}x,x′∈K,{a mathematical formula} This proves that Φ is convex.
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     Proof of Proposition 2
+     <paragraph>
+      Consider any {a mathematical formula}x∈K. First, to bound {a mathematical formula}Φ(x), recall that {a mathematical formula}ce(y)≤by for any y, so that we have{a mathematical formula} Since each player has a flow of amount {a mathematical formula}1n, we know that {a mathematical formula}ℓe(x)≤1 and hence{a mathematical formula} which implies that {a mathematical formula}Φ(x)≤bm2.
+     </paragraph>
+     <paragraph>
+      Next, to bound {a mathematical formula}‖∇Φ(x)‖∞, note that for any {a mathematical formula}i∈N and {a mathematical formula}s∈Si, the entry in {a mathematical formula}∇Φ(x) indexed by {a mathematical formula}(i,s) is{a mathematical formula} Therefore, we have {a mathematical formula}‖∇Φ(x)‖∞≤bm.
+     </paragraph>
+     <paragraph>
+      Finally, let us bound {a mathematical formula}∇2Φ(x). Consider any {a mathematical formula}i,j∈N, {a mathematical formula}s∈Si, and {a mathematical formula}r∈Sj. We know that{a mathematical formula} From this, we know that each entry of the Hessian matrix {a mathematical formula}∇2Φ(x) is either zero or at most bm. Consider any {a mathematical formula}z∈Rd. For any {a mathematical formula}i∈N and {a mathematical formula}s∈Si, let {a mathematical formula}Γi(s) denote the set of paths in {a mathematical formula}Si that intersects s. Then{a mathematical formula} where the last two inequalities both use the Cauchy–Schwarz inequality. Now observe that{a mathematical formula} and therefore we have{a mathematical formula} for any z. This implies that {a mathematical formula}∇2Φ(x)⪯λI with {a mathematical formula}λ=bmk, which proves the proposition.
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      The no-regret property of our dynamics
+     </section-title>
+     <paragraph>
+      Mirror descents is known to have the no-regret property even when the cost functions of the edges can vary with time. We consider such a setting, where the actual cost of each edge at time step t is {a mathematical formula}cet(ℓe(xt)), where {a mathematical formula}ℓe(xt) is the load of the edge in question at t. We will define a new cost function {a mathematical formula}Cet(x) as follows:{a mathematical formula} Under these new cost functions, the cost of any edge observed at time step t, {a mathematical formula}cet(ℓe(xt)), is actually the worst possible and any further increase on the load of any edge would have no effect on its cost. If this optimistic view of the costs were actually true, then the algorithm using bulletin-board posting would perform exactly as the mirror-descent algorithm and thus preserve the no-regret property. Yet, the actual cost of any strategy under the real cost functions c, when taking into account the effect of the infinitesimal deviating agent (of a player), would be at least as bad as that under the optimistic costs C. Thus, the performance of our algorithm is also of ϵ-regret for {a mathematical formula}ϵ→0 in regards to the best strategy in hindsight under the true costs.
+     </paragraph>
+    </section>
+    <section label="Appendix D">
+     Proof of Proposition 15
+     <paragraph>
+      According to the definition,{a mathematical formula} which using the fact that {a mathematical formula}∑sxi,s=1n=∑syi,s becomes{a mathematical formula} as we have {a mathematical formula}yi,s≥Λn for any {a mathematical formula}yi∈K¯i. This shows that {a mathematical formula}ΛnBRi(xi,yi)≤‖xi−yi‖22 for any {a mathematical formula}xi,yi∈K¯i. On the other hand, for any {a mathematical formula}xi,yi∈Ki,{a mathematical formula} by Pinsker's inequality. Thus, we have the proposition.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,781 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic Labelling of Topic Models Learned from Twitter by Summarisation</title>
+<!--Generated on Wed Jun 11 18:14:30 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatic Labelling of Topic Models Learned from Twitter by Summarisation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Amparo Elizabeth Cano Basave<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{{\dagger}}" display="inline"><msup><mi/><mo>†</mo></msup></math>    Yulan He<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>    Ruifeng Xu<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\S}" display="inline"><msup><mi/><mi mathvariant="normal">§</mi></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> Knowledge Media Institute, Open University, UK
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math> School of Engineering and Applied Science, Aston University, UK
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{\S}" display="inline"><msup><mi/><mi mathvariant="normal">§</mi></msup></math> Key Laboratory of Network Oriented Intelligent Computation
+<br class="ltx_break"/>Shenzhen Graduate School, Harbin Institute of Technology, China
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">amparo.cano@open.ac.uk, y.he@cantab.net, xuruifeng@hitsz.edu.cn</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Latent topics derived by topic models such as Latent Dirichlet Allocation (LDA) are the result of hidden thematic structures which provide further insights into the data. The automatic labelling of such topics derived from social media poses however new challenges since topics may characterise novel events happening in the real world.
+Existing automatic topic labelling approaches which depend on external knowledge sources become less applicable here since relevant articles/concepts of the extracted topics may not exist in external sources. In this paper we propose to address the problem of automatic labelling of latent topics learned from Twitter as a summarisation problem. We introduce a framework which apply summarisation algorithms to generate topic labels. These algorithms are independent of external sources and only rely on the identification of dominant terms in documents related to the latent topic.
+We compare the efficiency of existing state of the art summarisation algorithms. Our results suggest that summarisation algorithms generate better topic labels which capture event-related context compared to the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> terms returned by LDA.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Topic model based algorithms applied to social media data have become a mainstream technique in performing various tasks including sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib1" title="Incorporating sentiment prior knowledge for weakly supervised sentiment analysis" class="ltx_ref">11</a>]</cite> and event detection <cite class="ltx_cite">[<a href="#bib.bib28" title="Identifying event-related bursts via social media activities" class="ltx_ref">34</a>, <a href="#bib.bib27" title="Finding bursty topics from microblogs" class="ltx_ref">6</a>]</cite>. However, one of the main challenges is the task of understanding the semantics of a topic. This task has been approached by investigating methodologies for identifying meaningful topics through semantic coherence <cite class="ltx_cite">[<a href="#bib.bib36" title="Evaluating topic coherence using distributional semantics" class="ltx_ref">1</a>, <a href="#bib.bib30" title="Optimizing semantic coherence in topic models" class="ltx_ref">24</a>, <a href="#bib.bib37" title="Automatic evaluation of topic coherence" class="ltx_ref">27</a>]</cite> and for characterising the semantic content of a topic through automatic labelling techniques <cite class="ltx_cite">[<a href="#bib.bib41" title="Unsupervised graph-based topic labelling using dbpedia" class="ltx_ref">12</a>, <a href="#bib.bib21" title="Automatic labelling of topic models" class="ltx_ref">14</a>, <a href="#bib.bib40" title="Automatic labeling of multinomial topic models" class="ltx_ref">22</a>]</cite>. In this paper we focus on the latter.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Our research task of automatic labelling a topic consists on selecting a set of words that best describes the semantics of the terms involved in this topic. The most generic approach to automatic labelling has been to use as primitive labels the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> words in a topic distribution learned by a topic model such as LDA <cite class="ltx_cite">[<a href="#bib.bib39" title="Finding scientific topics" class="ltx_ref">9</a>, <a href="#bib.bib38" title="Latent dirichlet allocation." class="ltx_ref">2</a>]</cite>. Such top words are usually ranked using the marginal probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="P(w_{i}|t_{j})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> associated with each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> for a given topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>. This task can be illustrated by considering the following topic derived from social media related to Education:</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_parbox ltx_align_bottom" style="width:177.8pt;border:1px solid black;">
+<p class="ltx_p">school protest student fee choic motherlod tuition teacher anger polic</p>
+</span></p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">where the top 10 words ranked by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="P(w_{i}|t_{j})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math> for this topic are listed. Therefore the task is to find the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> terms which are more representative of the given topic. In this example, the topic certainly relates to a student protest as revealed by the top 3 terms which can be used as a good label for this topic.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">However previous work has shown that top terms are not enough for interpreting the coherent meaning of a topic <cite class="ltx_cite">[<a href="#bib.bib40" title="Automatic labeling of multinomial topic models" class="ltx_ref">22</a>]</cite>. More recent approaches have explored the use of external sources (e.g. Wikipedia, WordNet) for supporting the automatic labelling of topics by deriving candidate labels by means of lexical <cite class="ltx_cite">[<a href="#bib.bib21" title="Automatic labelling of topic models" class="ltx_ref">14</a>, <a href="#bib.bib29" title="Automatic labeling of topics" class="ltx_ref">21</a>, <a href="#bib.bib40" title="Automatic labeling of multinomial topic models" class="ltx_ref">22</a>]</cite> or graph-based <cite class="ltx_cite">[<a href="#bib.bib41" title="Unsupervised graph-based topic labelling using dbpedia" class="ltx_ref">12</a>]</cite> algorithms applied on these sources.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Mei et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Automatic labeling of multinomial topic models" class="ltx_ref">22</a>]</cite> proposed an unsupervised probabilistic methodology to automatically assign a label to a topic model. Their proposed approach was defined as an optimisation problem involving the minimisation of the KL divergence between a given topic and the candidate labels while maximising the mutual information between these two word distributions. Lau et al. <cite class="ltx_cite">[<a href="#bib.bib20" title="Best Topic Word Selection for Topic Labelling" class="ltx_ref">15</a>]</cite> proposed to label topics by selecting top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p6.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> terms to label the overall topic based on different ranking mechanisms including pointwise mutual information and conditional probabilities.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">Methods relying on external sources for automatic labelling of topics include the work by Magatti et al. <cite class="ltx_cite">[<a href="#bib.bib29" title="Automatic labeling of topics" class="ltx_ref">21</a>]</cite> which derived candidate topic labels for topics induced by LDA using the hierarchy obtained from the Google Directory service and expanded through the use of the OpenOffice English Thesaurus. Lau et al. <cite class="ltx_cite">[<a href="#bib.bib21" title="Automatic labelling of topic models" class="ltx_ref">14</a>]</cite> generated label candidates for a topic based on top-ranking topic terms and titles of Wikipedia articles. They then built a Support Vector Regression (SVR) model for ranking the label candidates. More recently, Hulpus et al. <cite class="ltx_cite">[<a href="#bib.bib41" title="Unsupervised graph-based topic labelling using dbpedia" class="ltx_ref">12</a>]</cite> proposed to make use of a structured data source (DBpedia) and employed graph centrality measures to generate semantic concept labels which can characterise the content of a topic.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Most previous topic labelling approaches focus on topics derived from well formatted and static documents. However in contrast to this type of content, the labelling of topics derived from tweets presents different challenges. In nature micropost content is sparse and present ill-formed words. Moreover, the use of Twitter as the “what’s-happening-right now” tool, introduces new event-dependent relations between words which might not have a counter part in existing knowledge sources (e.g. Wikipedia). Our original interest in labelling topics stems from work in topic model based event extraction from social media, in particular from tweets <cite class="ltx_cite">[<a href="#bib.bib25" title="A participant-based approach for event summarization using twitter streams" class="ltx_ref">32</a>, <a href="#bib.bib27" title="Finding bursty topics from microblogs" class="ltx_ref">6</a>]</cite>. As opposed to previous approaches, the research presented in this paper addresses the labelling of topics exposing event-related content that might not have a counter part on existing external sources. Based on the observation that a short summary of a collection of documents can serve as a label characterising the collection, we propose to generate topic label candidates based on the summarisation of a topic’s relevant documents. Our contributions are two-fold:
+<br class="ltx_break"/>- We propose a novel approach for topics labelling that relies on term relevance of documents relating to a topic; and
+<br class="ltx_break"/>- We show that summarisation algorithms, which are independent of extenal sources, can be used with success to label topics, presenting a higher perfomance than the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> terms baseline.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methodology</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We propose to approach the topic labelling problem as a multi-document summarisation task. The following describes our proposed framework to characterise documents relevant to a topic.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Preliminaries</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Given a set of documents the problem to be solved by topic modelling is the posterior inference of the variables, which determine the hidden thematic structures that best explain an observed set of documents. Focusing on the Latent Dirichlet Allocation (LDA) model <cite class="ltx_cite">[<a href="#bib.bib38" title="Latent dirichlet allocation." class="ltx_ref">2</a>, <a href="#bib.bib39" title="Finding scientific topics" class="ltx_ref">9</a>]</cite>, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math> be a corpus of documents denoted as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\mathcal{D}=\{{\bm{d}_{1},\bm{d}_{2},..,\bm{d}_{D}}\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>=</mo><mrow><mo>{</mo><msub><mi>𝒅</mi><mn>1</mn></msub><mo>,</mo><msub><mi>𝒅</mi><mn>2</mn></msub><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><msub><mi>𝒅</mi><mi>D</mi></msub><mo>}</mo></mrow></mrow></math>; where each document consists of a sequence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="N_{d}" display="inline"><msub><mi>N</mi><mi>d</mi></msub></math> words denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="\bm{d}=(w_{1},w_{2},..,w_{N_{d}})" display="inline"><mrow><mi>𝒅</mi><mo>=</mo><mrow><mo>(</mo><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><msub><mi>w</mi><msub><mi>N</mi><mi>d</mi></msub></msub><mo>)</mo></mrow></mrow></math>; and each word in a document is an item from a vocabulary index of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> different terms denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m6" class="ltx_Math" alttext="\{1,2,..,V\}" display="inline"><mrow><mo>{</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><mi>V</mi><mo>}</mo></mrow></math>. Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m7" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> documents containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m8" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> topics expressed over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m9" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> unique words, LDA generative process is described as follows:
+<br class="ltx_break"/>- For each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m10" class="ltx_Math" alttext="k\in\{1,...K\}" display="inline"><mrow><mi>k</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mrow><mi mathvariant="normal">…</mi><mo>⁢</mo><mi>K</mi></mrow></mrow><mo>}</mo></mrow></mrow></math> draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m11" class="ltx_Math" alttext="\phi_{k}\sim\mathop{\hbox{Dirichlet}}\nolimits(\beta)" display="inline"><mrow><msub><mi>ϕ</mi><mi>k</mi></msub><mo>∼</mo><mrow><mtext>Dirichlet</mtext><mrow><mo>(</mo><mi>β</mi><mo>)</mo></mrow></mrow></mrow></math>,
+<br class="ltx_break"/>- For each document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m12" class="ltx_Math" alttext="d\in\{1..D\}" display="inline"><mrow><mi>d</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1..</mn><mo>⁢</mo><mi>D</mi></mrow><mo>}</mo></mrow></mrow></math>:
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m13" class="ltx_Math" alttext="\star" display="inline"><mo>⋆</mo></math> draw <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m14" class="ltx_Math" alttext="\theta_{d}\sim\mathop{\hbox{Dirichlet}}\nolimits(\alpha)" display="inline"><mrow><msub><mi>θ</mi><mi>d</mi></msub><mo>∼</mo><mrow><mtext>Dirichlet</mtext><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math>;
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m15" class="ltx_Math" alttext="\star" display="inline"><mo>⋆</mo></math> For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m16" class="ltx_Math" alttext="n\in\{1..N_{d}\}" display="inline"><mrow><mi>n</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1..</mn><mo>⁢</mo><msub><mi>N</mi><mi>d</mi></msub></mrow><mo>}</mo></mrow></mrow></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m17" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>:
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m18" class="ltx_Math" alttext="\circ" display="inline"><mo>∘</mo></math> draw a topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m19" class="ltx_Math" alttext="z_{d,n}\sim\mathop{\hbox{Multinomial}}\nolimits(\theta_{d})" display="inline"><mrow><msub><mi>z</mi><mrow><mi>d</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>∼</mo><mrow><mtext>Multinomial</mtext><mrow><mo>(</mo><msub><mi>θ</mi><mi>d</mi></msub><mo>)</mo></mrow></mrow></mrow></math>;
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m20" class="ltx_Math" alttext="\circ" display="inline"><mo>∘</mo></math> draw a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m21" class="ltx_Math" alttext="w_{d,n}\sim\mathop{\hbox{Multinomial}}\nolimits(\varphi_{z_{d,n}})" display="inline"><mrow><msub><mi>w</mi><mrow><mi>d</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>∼</mo><mrow><mtext>Multinomial</mtext><mrow><mo>(</mo><msub><mi>φ</mi><msub><mi>z</mi><mrow><mi>d</mi><mo>,</mo><mi>n</mi></mrow></msub></msub><mo>)</mo></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="\phi_{k}" display="inline"><msub><mi>ϕ</mi><mi>k</mi></msub></math> is the word distribution for topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="\theta_{d}" display="inline"><msub><mi>θ</mi><mi>d</mi></msub></math> is the distribution of topics in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>.
+Topics are interpreted using the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m5" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> terms ranked based on the marginal probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m6" class="ltx_Math" alttext="p(w_{i}|t_{j})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Automatic Labelling of Topic Models</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> topics over the document collection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math>, the topic labelling task consists on discovering a sequence of words for each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="k\in\mathcal{K}" display="inline"><mrow><mi>k</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒦</mi></mrow></math>. We propose to generate topic label candidates by summarising topic relevant documents. Such documents can be derived using both the observed data from the corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math> and the inferred topic model variables. In particular, the prominent topic of a document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> can be found by</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="k_{d}=\operatorname*{arg\,max}_{k\in\mathcal{K}}p(k|d)" display="block"><mrow><msub><mi>k</mi><mi>d</mi></msub><mo>=</mo><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><mi>k</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒦</mi></mrow></msub><mi>p</mi><mrow><mo>(</mo><mi>k</mi><mo>|</mo><mi>d</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">Therefore given a topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, a set of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m7" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> documents related to this topic can be obtained via equation <a href="#S2.E1" title="(1) ‣ 2.2 Automatic Labelling of Topic Models ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">Given the set of documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math> relevant to topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, we proposed to generate a label of a desired length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> from the summarisation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math>.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Topic Labelling by Summarisation</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">We compare different summarisation algorithms based on their ability to provide a good label to a given topic. In particular we investigate the use of lexical features by comparing three different well-known multi-document summarisation algorithms against the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> topic terms baseline. These algorithms include:</p>
+</div>
+<div id="S2.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Sum Basic (<span class="ltx_text ltx_font_typewriter">SB</span>)</h4>
+
+<div id="S2.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">This is a frequency based summarisation algorithm <cite class="ltx_cite">[<a href="#bib.bib16" title="The impact of frequency on summarization" class="ltx_ref">25</a>]</cite>, which computes initial word probabilities for words in a text. It then weights each sentence in the text (in our case a micropost) by computing the average probability of the words in the sentence. In each iteration it picks the highest weighted document and from it the highest weighted word. It uses an update function which penalises words which have already been picked.</p>
+</div>
+</div>
+<div id="S2.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Hybrid TFIDF (<span class="ltx_text ltx_font_typewriter">TFIDF</span>)</h4>
+
+<div id="S2.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">It is similar to <span class="ltx_text ltx_font_typewriter">SB</span>, however rather than computing the initial word probabilities based on word frequencies it weights terms based on TFIDF. In this case the document frequency is computed as the number of times a word appears in a micropost from the collection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math>. Following the same procedure as <span class="ltx_text ltx_font_typewriter">SB</span> it returns the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P2.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> weighted terms.</p>
+</div>
+</div>
+<div id="S2.SS3.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Maximal Marginal Relevance (<span class="ltx_text ltx_font_typewriter">MMR</span>)</h4>
+
+<div id="S2.SS3.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">This is a relevance based ranking algorithm <cite class="ltx_cite">[<a href="#bib.bib44" title="The use of mmr, diversity-based reranking for reordering documents and producing summaries" class="ltx_ref">4</a>]</cite>, which avoids redundancy in the documents used for generating a summary. It measures the degree of dissimilarity between the documents considered and previously selected ones already in the ranked list.</p>
+</div>
+</div>
+<div id="S2.SS3.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Text Rank (<span class="ltx_text ltx_font_typewriter">TR</span>)</h4>
+
+<div id="S2.SS3.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">This is a graph-based summariser method <cite class="ltx_cite">[<a href="#bib.bib35" title="TextRank: Bringing Order into Texts" class="ltx_ref">23</a>]</cite> where each word is a vertex. The relevance of a vertex (term) to the graph is computed based on global information recursively drawn from the whole graph. It uses the PageRank algorithm <cite class="ltx_cite">[<a href="#bib.bib24" title="The anatomy of a large-scale hypertextual web search engine* 1" class="ltx_ref">3</a>]</cite> to recursively change the weight of the vertices. The final score of a word is therefore not only dependent on the terms immediately connected to it but also on how these terms connect to others. To assign the weight of an edge between two terms, TextRank computes word co-occurrence in windows of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P4.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> words (in our case <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P4.p1.m2" class="ltx_Math" alttext="N=10" display="inline"><mrow><mi>N</mi><mo>=</mo><mn>10</mn></mrow></math>). Once a final score is calculated for each vertex of the graph, TextRank sorts the terms in a reverse order and provided the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P4.p1.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> vertices in the ranking. Each of these algorithms produces a label of a desired length <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P4.p1.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> for a given topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.SSS0.P4.p1.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Setup</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Dataset</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our Twitter Corpus (<span class="ltx_text ltx_font_typewriter">TW</span>) was collected between November 2010 and January 2011. <span class="ltx_text ltx_font_typewriter">TW</span> comprises over 1 million tweets. We used the OpenCalais’ document categorisation service<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>OpenCalais service, http://www.opencalais.com</span></span></span> to generate categorical sets. In particular, we considered four different categories which contain many real-world events, namely: War and Conflict (<span class="ltx_text ltx_font_typewriter">War</span>), Disaster and Accident (<span class="ltx_text ltx_font_typewriter">DisAc</span>), Education (<span class="ltx_text ltx_font_typewriter">Edu</span>) and Law and Crime (<span class="ltx_text ltx_font_typewriter">LawCri</span>). The final <span class="ltx_text ltx_font_typewriter">TW</span> dataset after removing retweets and short microposts (less than 5 words after removing stopwords) contains 7000 tweets in each category.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We preprocessed <span class="ltx_text ltx_font_typewriter">TW</span> by first removing: punctuation, numbers, non-alphabet characters, stop words, user mentions, and URL links. We then performed Porter stemming <cite class="ltx_cite">[<a href="#bib.bib2" title="An algorithm for suffix stripping" class="ltx_ref">30</a>]</cite> in order to reduce the vocabulary size. Finally to address the issue of data sparseness in the <span class="ltx_text ltx_font_typewriter">TW</span> dataset, we removed words with a frequency lower than 5.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Generating the Gold Standard</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Evaluation of automatic topic labelling often relied on human assessment which requires heavy manual effort <cite class="ltx_cite">[<a href="#bib.bib21" title="Automatic labelling of topic models" class="ltx_ref">14</a>, <a href="#bib.bib41" title="Unsupervised graph-based topic labelling using dbpedia" class="ltx_ref">12</a>]</cite>. However performing human evaluations of Social Media test sets comprising thousands of inputs become a difficult task. This is due to both the corpus size, the diversity of event-related topics and the limited availability of domain experts. To alleviate this issue here, we followed the distribution similarity approach, which has been widely applied in the automatic generation of gold standards (<span class="ltx_text ltx_font_typewriter">GS</span>s) for summary evaluations <cite class="ltx_cite">[<a href="#bib.bib6" title="A comparison of rankings produced by summarization evaluation measures" class="ltx_ref">7</a>, <a href="#bib.bib7" title="An information-theoretic approach to automatic evaluation of summaries" class="ltx_ref">16</a>, <a href="#bib.bib5" title="Automatically evaluating content selection in summarization without human models" class="ltx_ref">19</a>, <a href="#bib.bib4" title="Automatically assessing machine summary content without a gold standard" class="ltx_ref">20</a>]</cite>. This approach compares two corpora, one for which no <span class="ltx_text ltx_font_typewriter">GS</span> labels exist, against a reference corpus for which a GS exists. In our case these corpora correspond to the <span class="ltx_text ltx_font_typewriter">TW</span> and a Newswire dataset (<span class="ltx_text ltx_font_typewriter">NW</span>). Since previous research has shown that headlines are good indicators of the main focus of a text, both in structure and content, and that they can act as a human produced abstract <cite class="ltx_cite">[<a href="#bib.bib10" title="Automatic text summarization of newswire: lessons learned from the document understanding conference" class="ltx_ref">26</a>]</cite>, we used headlines as the GS labels of <span class="ltx_text ltx_font_typewriter">NW</span>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">The News Corpus (<span class="ltx_text ltx_font_typewriter">NW</span>) was collected during the same period of time as the <span class="ltx_text ltx_font_typewriter">TW</span> corpus. NW consists of a collection of news articles crawled from traditional news media (BBC, CNN, and New York Times) comprising over 77,000 articles which include supplemental metadata (e.g. headline, author, publishing date). We also used the OpenCalais’ document categorisation service to automatically label news articles and considered the same four topical categories, (<span class="ltx_text ltx_font_typewriter">War</span>, <span class="ltx_text ltx_font_typewriter">DisAc</span>, <span class="ltx_text ltx_font_typewriter">Edu</span> and <span class="ltx_text ltx_font_typewriter">LawCri</span>). The same preprocessing steps were performed on <span class="ltx_text ltx_font_typewriter">NW</span>.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Therefore, following a similarity alignment approach we performed the steps oulined in Algorithm <a href="#S3.SS2" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> for generating the <span class="ltx_text ltx_font_typewriter">GS</span> topic labels of a topic in <span class="ltx_text ltx_font_typewriter">TW</span>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">[htbp]<span class="ltx_text ltx_caption ltx_font_small"><span class="ltx_text ltx_font_typewriter">GS</span> for Topic Labels</span><span class="ltx_text ltx_font_small">
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\REQUIRE</span>LDA topics for <span class="ltx_text ltx_font_typewriter">TW</span>, and the LDA topics for <span class="ltx_text ltx_font_typewriter">NW</span> for category <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="c" display="inline"><mi mathsize="normal" stretchy="false">c</mi></math>.
+<span class="ltx_ERROR undefined">\ENSURE</span>Gold standard topic label for each of the LDA topics for <span class="ltx_text ltx_font_typewriter">TW</span>.
+<span class="ltx_ERROR undefined">\FOR</span>each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="i\in\{1,2,...,100\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">2</mn><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">100</mn></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math> from <span class="ltx_text ltx_font_typewriter">TW</span>
+<span class="ltx_ERROR undefined">\FOR</span>each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="j\in\{1,2...,100\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">j</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">2...</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">100</mn></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math> from <span class="ltx_text ltx_font_typewriter">NW</span>
+<span class="ltx_ERROR undefined">\STATE</span>Compute the Cosine similarity between word distributions of topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m4" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> and topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m5" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">j</mi></msub></math>.
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span>Select topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m6" class="ltx_Math" alttext="j" display="inline"><mi mathsize="normal" stretchy="false">j</mi></math> which has the highest similarity to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m7" class="ltx_Math" alttext="i" display="inline"><mi mathsize="normal" stretchy="false">i</mi></math> and whose similarity measure is greater than a threshold (in this case 0.7)
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\FOR</span>each of the extracted topic pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m8" class="ltx_Math" alttext="({t}_{i}-{t}_{j})" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="normal" stretchy="false">-</mo><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">j</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>Collect relevant news articles <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m9" class="ltx_Math" alttext="\mathcal{C}_{NW}^{j}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒞</mi><mrow><mi mathsize="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">W</mi></mrow><mi mathsize="normal" stretchy="false">j</mi></msubsup></math> of topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m10" class="ltx_Math" alttext="{t}_{j}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">j</mi></msub></math> from the <span class="ltx_text ltx_font_typewriter">NW</span> set.
+<span class="ltx_ERROR undefined">\STATE</span>Extract the headlines of news articles from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m11" class="ltx_Math" alttext="\mathcal{C}_{NW}^{j}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒞</mi><mrow><mi mathsize="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">W</mi></mrow><mi mathsize="normal" stretchy="false">j</mi></msubsup></math> and select the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m12" class="ltx_Math" alttext="x" display="inline"><mi mathsize="normal" stretchy="false">x</mi></math> most frequent words as the gold standard label for topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m13" class="ltx_Math" alttext="{t}_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> in the <span class="ltx_text ltx_font_typewriter">TW</span> set
+<span class="ltx_ERROR undefined">\ENDFOR</span>
+</span></p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">These steps can be outlined as follows:
+<span id="I1" class="ltx_inline-enumerate">
+<span id="I1.i1" class="ltx_inline-item"><span class="ltx_tag ltx_tag_inline-enumerate">1)</span> <span class="ltx_text">We ran LDA on <span class="ltx_text ltx_font_typewriter">TW</span> and <span class="ltx_text ltx_font_typewriter">NW</span> separately for each category with the number of topics set to 100; </span></span>
+<span id="I1.i2" class="ltx_inline-item"><span class="ltx_tag ltx_tag_inline-enumerate">1)</span> <span class="ltx_text">We then aligned the Twitter topics and Newswire topics by the similarity measurement of word distributions of these topics <cite class="ltx_cite">[<a href="#bib.bib8" title="Lexical cohesion based topic modeling for summarization" class="ltx_ref">8</a>, <a href="#bib.bib9" title="Exploring content models for multi-document summarization" class="ltx_ref">10</a>, <a href="#bib.bib12" title="Multi-document summarization using sentence-based topic models" class="ltx_ref">33</a>, <a href="#bib.bib11" title="DualSum: a topic-model based approach for update summarization" class="ltx_ref">5</a>]</cite>;
+</span></span>
+<span id="I1.i3" class="ltx_inline-item"><span class="ltx_tag ltx_tag_inline-enumerate">1)</span> <span class="ltx_text">Finally to generate the GS label for each aligned topic pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.m1" class="ltx_Math" alttext="({t}_{i}-{t}_{j})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>-</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></math>, we extracted the headlines of the news articles relevant to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.m2" class="ltx_Math" alttext="{t}_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> and selected the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> most frequent words (after stop word removal and stemming)</span></span>
+</span>. The generated label was used as the gold standard label for the corresponding Twitter topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="{t}_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> in the topic pair.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We compared the results of the summarisation techniques with the top terms (<span class="ltx_text ltx_font_typewriter">TT</span>) of a topic as our baseline. These <span class="ltx_text ltx_font_typewriter">TT</span> set corresponds to the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> terms ranked based on the probability of the word given the topic (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="p(w|k)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><mi>k</mi><mo>)</mo></mrow></mrow></math>) from the topic model. We evaluated these summarisation approaches with the ROUGE-1 method <cite class="ltx_cite">[<a href="#bib.bib22" title="ROUGE: a package for automatic evaluation of summaries" class="ltx_ref">17</a>]</cite>, a widely used summarisation evaluation metric that correlates well with human evaluation <cite class="ltx_cite">[<a href="#bib.bib3" title="Correlation between rouge and human evaluation of extractive meeting summaries" class="ltx_ref">18</a>]</cite>. This method measures the overlap of words between the generated summary and a reference, in our case the <span class="ltx_text ltx_font_typewriter">GS</span> generated from the <span class="ltx_text ltx_font_typewriter">NW</span> dataset.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The evaluation was performed at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="x=\{1,..,10\}" display="inline"><mrow><mi>x</mi><mo>=</mo><mrow><mo>{</mo><mn>1</mn><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><mn>10</mn><mo>}</mo></mrow></mrow></math>. Figure <a href="#S4.F1" title="Figure 1 ‣ 4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents the ROUGE-1 performance of the summarisation approaches as the length<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> of the generated topic label increases. We can see in all four categories that the <span class="ltx_text ltx_font_typewriter">SB</span> and <span class="ltx_text ltx_font_typewriter">TFIDF</span> approaches provide a better summarisation coverage as the length of the topic label increases. In particular, in both the <span class="ltx_text ltx_font_typewriter">Education</span> and <span class="ltx_text ltx_font_typewriter">Law &amp; Crime</span> categories, both <span class="ltx_text ltx_font_typewriter">SB</span> and <span class="ltx_text ltx_font_typewriter">TFIDF</span> outperforms <span class="ltx_text ltx_font_typewriter">TT</span> and <span class="ltx_text ltx_font_typewriter">TR</span> by a large margin. The obtained ROUGE-1 performance is within the same range of performance previously reported on Social Media summarisation <cite class="ltx_cite">[<a href="#bib.bib33" title="Comparing twitter summarization algorithms for multiple post summaries" class="ltx_ref">13</a>, <a href="#bib.bib31" title="Summarizing sporting events using twitter" class="ltx_ref">28</a>, <a href="#bib.bib32" title="Personalized time-aware tweets summarization" class="ltx_ref">31</a>]</cite>.</p>
+</div>
+<div id="S4.F1" class="ltx_figure"><img src="P14-2101/image001.png" id="S4.F1.g1" class="ltx_graphics ltx_centering" width="541" height="143" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> Performance in ROUGE for Twitter-derived topic labels, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is the number of terms in the generated label</div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T1" title="Table 1 ‣ 4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents average results for ROUGE-1 in the four categories. Particularly the <span class="ltx_text ltx_font_typewriter">SB</span> and <span class="ltx_text ltx_font_typewriter">TFIDF</span> summarisation techniques consistently outperform the <span class="ltx_text ltx_font_typewriter">TT</span> baseline across all four categories. <span class="ltx_text ltx_font_typewriter">SB</span> gives the best results in three categories except <span class="ltx_text ltx_font_typewriter">War</span>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:39.8pt;" width="39.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_small">ROUGE-1</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:39.8pt;" width="39.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">TT</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">SB</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">TFIDF</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">MMR</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">TR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:39.8pt;" width="39.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">War</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.162</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.184</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#CCCCCC;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#CCCCCC;">0.192</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.154</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.141</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:39.8pt;" width="39.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">DisAc</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.134</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#CCCCCC;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#CCCCCC;">0.194</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.160</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.132</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.124</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:39.8pt;" width="39.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">Edu</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.106</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#CCCCCC;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#CCCCCC;">0.240</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.187</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.104</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.023</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:39.8pt;" width="39.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">LawCri</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.035</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#CCCCCC;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#CCCCCC;">0.159</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.149</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;" width="22.8pt"><span class="ltx_text ltx_font_small">0.034</span></td>
+<td class="ltx_td ltx_align_justify" style="width:22.8pt;background-color:#E6E6E6;" width="22.8pt"><span class="ltx_text ltx_font_bold ltx_font_small" style="background-color:#E6E6E6;">0.115</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:39.8pt;" width="39.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:22.8pt;" width="22.8pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Average ROUGE-1 for topic labels at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="x=\{1..10\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">x</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mn mathsize="normal" stretchy="false">1..10</mn><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math>, generated from the <span class="ltx_text ltx_font_typewriter">TW</span> dataset.</div>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">The generated labels with summarisation at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="x=5" display="inline"><mrow><mi>x</mi><mo>=</mo><mn>5</mn></mrow></math> are presented in Table <a href="#S4.T2" title="Table 2 ‣ 4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, where <span class="ltx_text ltx_font_typewriter">GS</span> represents the label generated from the Newswire headlines.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">Different summarisation techniques reveal words which do not appear in the top terms but which are relevant to the information clustered by the topic. In this way, the labels generated for topics belonging to different categories generally extend the information provided by the top terms. For example in Table <a href="#S4.T2" title="Table 2 ‣ 4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, the <span class="ltx_text ltx_font_typewriter">DisAc</span> headline is characteristic of the New Zealand’s Pike River’s coal mine blast accident, which is an event occurred in November 2010.</p>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">Although the top 5 terms set from the LDA topic extracted from <span class="ltx_text ltx_font_typewriter">TW</span> (listed under <span class="ltx_text ltx_font_typewriter">TT</span>) does capture relevant information related to the event, it does not provide information regarding the blast. In this sense the topic label generated by <span class="ltx_text ltx_font_typewriter">SB</span> more accurately describes this event.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">We can also notice that the <span class="ltx_text ltx_font_typewriter">GS</span> labels generated from Newswire media presented in Table <a href="#S4.T2" title="Table 2 ‣ 4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> appear on their own, to be good labels for the <span class="ltx_text ltx_font_typewriter">TW</span> topics. However as we described in the introduction we want to avoid relaying on external sources for the derivation of topic labels.</p>
+</div>
+<div id="S4.p8" class="ltx_para">
+<p class="ltx_p">This experiment shows that frequency based summarisation techniques outperform graph-based and relevance based summarisation techniques for generating topic labels that improve upon the top-terms baseline, without relying on external sources. This is an attractive property for automatically generating topic labels for tweets where their event-related content might not have a counter part on existing external sources.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:85.4pt;" width="85.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">War</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:85.4pt;" width="85.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">DisAc</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">GS</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">protest brief polic afghanistan attack world leader bomb obama pakistan</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">mine zealand rescu miner coal fire blast kill man disast</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TT</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">polic offic milit recent mosqu</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">mine coal pike river zealand</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">SB</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">terror war polic arrest offic</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">mine coal explos river pike</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TFIDF</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">polic war arrest offic terror</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">mine coal pike safeti zealand</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">MMR</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">recent milit arrest attack target</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">trap zealand coal mine explos</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TR</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">war world peac terror hope</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">mine zealand plan fire fda</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">Edu</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_small">LawCri</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_bold ltx_font_small">GS</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">school protest student fee choic motherlod tuition teacher anger polic</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">man charg murder arrest polic brief woman attack inquiri found</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:85.4pt;" width="85.4pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TT</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">student univers protest occupi plan</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">man law child deal jail</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">SB</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">student univers school protest educ</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">man arrest law kill judg</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TFIDF</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">student univers protest plan colleg</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">man arrest law judg kill</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">MMR</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">nation colleg protest student occupi</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">found kid wife student jail</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_typewriter">TR</span></td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">student tuition fee group hit</td>
+<td class="ltx_td ltx_align_justify" style="width:85.4pt;" width="85.4pt">man law child deal jail</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:11.4pt;" width="11.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:85.4pt;" width="85.4pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:85.4pt;" width="85.4pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Labelling examples for topics generated from the <span class="ltx_text ltx_font_typewriter">TW</span> Dataset. GS represents the gold-standard generated from the relevant Newswire dataset. All terms are Porter stemmed as described in subsection <a href="#S3.SS1" title="3.1 Dataset ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a></div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper we proposed a novel alternative to topic labelling which do not rely on external data sources. To the best of out knowledge no existing work has been formally studied for automatic labelling through summarisation. This experiment shows that existing summarisation techniques can be exploited to provide a better label of a topic, extending in this way a topic’s information by providing a richer context than top-terms. These results show that there is room to further improve upon existing summarisation techniques to cater for generating candidate labels.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported by the EPRSC grant EP/J020427/1, the EU-FP7 project SENSE4US (grant no. 611242), and the Shenzhen International Cooperation
+Research Funding (grant number GJHZ20120613110641217).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Aletras and M. Stevenson</span><span class="ltx_text ltx_bib_year">(2013-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating topic coherence using distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Potsdam, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 13–22</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-0102" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Preliminaries ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Brin and L. Page</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The anatomy of a large-scale hypertextual web search engine* 1</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">30</span>, <span class="ltx_text ltx_bib_pages"> pp. 107–117</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.SSS0.P4.p1" title="Text Rank (TR) ‣ 2.3 Topic Labelling by Summarisation ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Carbonell and J. Goldstein</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The use of mmr, diversity-based reranking for reordering documents and producing summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’98</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 335–336</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-58113-015-5</span>,
+<a href="http://doi.acm.org/10.1145/290941.291025" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/290941.291025" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.SSS0.P3.p1" title="Maximal Marginal Relevance (MMR) ‣ 2.3 Topic Labelling by Summarisation ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Delort and E. Alfonseca</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DualSum: a topic-model based approach for update summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EACL ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 214–223</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-19-0</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2380816.2380845" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Diao, J. Jiang, F. Zhu and E. Lim</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding bursty topics from microblogs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 536–544</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1056" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p8" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. L. Donaway, K. W. Drummey and L. A. Mather</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comparison of rankings produced by summarization evaluation measures</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL-ANLP-AutoSum ’00</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 69–78</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1567564.1567572" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Ercan and I. Cicekli</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical cohesion based topic modeling for summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CICLing’08</span>, <span class="ltx_text ltx_bib_place">Berlin, Heidelberg</span>, <span class="ltx_text ltx_bib_pages"> pp. 582–592</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 3-540-78134-X, 978-3-540-78134-9</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1787578.1787642" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. L. Griffiths and M. Steyvers</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding scientific topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">PNAS</span> <span class="ltx_text ltx_bib_volume">101</span> (<span class="ltx_text ltx_bib_number">suppl. 1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5228–5235</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Preliminaries ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi and L. Vanderwende</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring content models for multi-document summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL ’09</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 362–370</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-41-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1620754.1620807" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. He</span><span class="ltx_text ltx_bib_year">(2012-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incorporating sentiment prior knowledge for weakly supervised sentiment analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Asian Language Information Processing</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 4:1–4:19</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1530-0226</span>,
+<a href="http://doi.acm.org/10.1145/2184436.2184437" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2184436.2184437" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Hulpus, C. Hayes, M. Karnstedt and D. Greene</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised graph-based topic labelling using dbpedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">WSDM ’13</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 465–474</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1869-3</span>,
+<a href="http://doi.acm.org/10.1145/2433396.2433454" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2433396.2433454" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p7" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Inouye and J. K. Kalita</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing twitter summarization algorithms for multiple post summaries</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib34" title="PASSAT/socialcom 2011, privacy, security, risk and trust (passat), 2011 ieee third international conference on and 2011 ieee third international conference on social computing (socialcom), boston, ma, usa, 9-11 oct., 2011" class="ltx_ref">29</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 298–306</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Lau, K. Grieser, D. Newman and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labelling of topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1536–1545</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p7" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Lau, D. Newman, K. Sarvnaz and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Best Topic Word Selection for Topic Labelling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoLing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin, G. Cao, J. Gao and J. Nie</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An information-theoretic approach to automatic evaluation of summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT-NAACL ’06</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 463–470</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1220835.1220894" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1220835.1220894" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin</span><span class="ltx_text ltx_bib_year">(2004-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ROUGE: a package for automatic evaluation of summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 74–81</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Liu and Y. Liu</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Correlation between rouge and human evaluation of extractive meeting summaries</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT-Short ’08</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 201–204</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1557690.1557747" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Louis and A. Nenkova</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically evaluating content selection in summarization without human models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’09</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 306–314</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-59-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1699510.1699550" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Louis and A. Nenkova</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatically assessing machine summary content without a gold standard</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">39</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 267–300</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Magatti, S. Calegari, D. Ciucci and F. Stella</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labeling of topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ISDA ’09</span>, <span class="ltx_text ltx_bib_place">Washington, DC, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1227–1232</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-0-7695-3872-3</span>,
+<a href="http://dx.doi.org/10.1109/ISDA.2009.165" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1109/ISDA.2009.165" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p7" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Mei, X. Shen and C. Zhai</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labeling of multinomial topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">KDD ’07</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 490–499</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-59593-609-7</span>,
+<a href="http://doi.acm.org/10.1145/1281192.1281246" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1281192.1281246" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea and P. Tarau</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TextRank: Bringing Order into Texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’04</span>, <span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 404–411</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.SSS0.P4.p1" title="Text Rank (TR) ‣ 2.3 Topic Labelling by Summarisation ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Mimno, H. M. Wallach, E. Talley, M. Leenders and A. McCallum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing semantic coherence in topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 262–272</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-11-4</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2145432.2145462" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Nenkova and L. Vanderwende</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The impact of frequency on summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Microsoft Research, Redmond, Washington, Tech. Rep. MSR-TR-2005-101</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.SSS0.P1.p1" title="Sum Basic (SB) ‣ 2.3 Topic Labelling by Summarisation ‣ 2 Methodology ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Nenkova</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic text summarization of newswire: lessons learned from the document understanding conference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">AAAI’05</span>, <span class="ltx_text ltx_bib_pages"> pp. 1436–1441</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-57735-236-x</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1619499.1619564" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Newman, J. H. Lau, K. Grieser and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic evaluation of topic coherence</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 100–108</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-932432-65-5</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1857999.1858011" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nichols, J. Mahmud and C. Drews</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Summarizing sporting events using twitter</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">IUI ’12</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 189–198</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1048-2</span>,
+<a href="http://doi.acm.org/10.1145/2166966.2166999" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2166966.2166999" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_proceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PASSAT/socialcom 2011, privacy, security, risk and trust (passat), 2011 ieee third international conference on and 2011 ieee third international conference on social computing (socialcom), boston, ma, usa, 9-11 oct., 2011</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">IEEE</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4577-1931-8</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib33" title="Comparing twitter summarization algorithms for multiple post summaries" class="ltx_ref">13</a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Porter</span><span class="ltx_text ltx_bib_year">(1980)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An algorithm for suffix stripping</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Program</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 130–137</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://ontology.csse.uwa.edu.au/reference/browse_paper.php?pid=233281850" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Dataset ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Ren, S. Liang, E. Meij and M. de Rijke</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Personalized time-aware tweets summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’13</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 513–522</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-2034-4</span>,
+<a href="http://doi.acm.org/10.1145/2484028.2484052" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2484028.2484052" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experimental Results ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Shen, F. Liu, F. Weng and T. Li</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A participant-based approach for event summarization using twitter streams</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’13</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Wang, S. Zhu, T. Li and Y. Gong</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-document summarization using sentence-based topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACLShort ’09</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 297–300</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1667583.1667675" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2" title="3.2 Generating the Gold Standard ‣ 3 Experimental Setup ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhao, B. Shu, J. Jiang, Y. Song, H. Yan and X. Li</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying event-related bursts via social media activities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1466–1477</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D12-1134" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Labelling of Topic Models Learned from Twitter by Summarisation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:14:30 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

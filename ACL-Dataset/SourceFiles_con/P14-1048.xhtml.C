@@ -1,0 +1,1411 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Linear-Time Bottom-Up Discourse Parser with Constraints and Post-Editing.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Text-level discourse parsing remains a challenge. The current state-of-the-art overall accuracy in relation assignment is 55.73%, achieved by
+       Joty et al. (2013)
+       . However, their model has a high order of time complexity, and thus cannot be applied in practice. In this work, we develop a much faster model whose time complexity is linear in the number of sentences. Our model adopts a greedy bottom-up approach, with two linear-chain CRFs applied in cascade as local classifiers. To enhance the accuracy of the pipeline, we add additional constraints in the Viterbi decoding of the first CRF. In addition to efficiency, our parser also significantly outperforms the state of the art. Moreover, our novel approach of post-editing, which modifies a fully-built tree by considering information from constituents on upper levels, can further improve the accuracy.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       *EndWhile
+       *EndIf
+       *EndFor
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Discourse parsing is the task of identifying the presence and the type of the discourse relations between discourse units. While research in discourse parsing can be partitioned into several directions according to different theories and frameworks, Rhetorical Structure Theory (RST)
+        [12]
+        is probably the most ambitious one, because it aims to identify not only the discourse relations in a small local context, but also the hierarchical tree structure for the
+        full text
+        : from the relations relating the smallest discourse units (called elementary discourse units, EDUs), to the ones connecting paragraphs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        For example, Figure
+        1
+        shows a text fragment consisting of two sentences with four EDUs in total (
+        e1
+        -
+        e4
+        ). Its discourse tree representation is shown below the text, following the notation convention of RST: the two EDUs
+        e1
+        and
+        e2
+        are related by a mononuclear relation
+        Consequence
+        , where
+        e2
+        is the more salient span (called
+        nucleus
+        , and
+        e1
+        is called
+        satellite
+        );
+        e3
+        and
+        e4
+        are related by another mononuclear relation
+        Circumstance
+        , with
+        e4
+        as the nucleus; the two spans
+        e1:2
+        and
+        e3:4
+        are further related by a multi-nuclear relation
+        Sequence
+        , with both spans as the nucleus.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Conventionally, there are two major sub-tasks related to text-level discourse parsing: (1)
+        EDU segmentation
+        : to segment the raw text into EDUs, and (2)
+        tree-building
+        : to build a discourse tree from EDUs, representing the discourse relations in the text. Since the first sub-task is considered relatively easy, with the state-of-art accuracy at above 90%
+        [7]
+        , the recent research focus is on the second sub-task, and often uses manual EDU segmentation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The current state-of-the-art overall accuracy of the tree-building sub-task, evaluated on the RST Discourse Treebank (RST-DT, to be introduced in Section
+        8
+        ), is 55.73% by
+        Joty et al. (2013)
+        . However, as an optimal discourse parser, Joty et al.’s model is highly inefficient in practice, with respect to both their DCRF-based local classifiers, and their CKY-like bottom-up parsing algorithm. DCRF (Dynamic Conditional Random Fields) is a generalization of linear-chain CRFs, in which each time slice contains a set of state variables and edges
+        [17]
+        . CKY parsing is a bottom-up parsing algorithm which searches all possible parsing paths by dynamic programming. Therefore, despite its superior performance, their model is infeasible in most realistic situations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The main objective of this work is to develop a more efficient discourse parser, with similar or even better performance with respect to Joty et al.’s optimal parser, but able to produce parsing results in real time.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Our contribution is three-fold. First, with a greedy bottom-up strategy, we develop a discourse parser with a time complexity linear in the total number of sentences in the document. As a result of successfully avoiding the expensive non-greedy parsing algorithms, our discourse parser is very efficient in practice. Second, by using two linear-chain CRFs to label a sequence of discourse constituents, we can incorporate contextual information in a more natural way, compared to using traditional discriminative classifiers, such as SVMs. Specifically, in the Viterbi decoding of the first CRF, we include additional constraints elicited from common sense, to make more effective local decisions. Third, after a discourse (sub)tree is fully built from bottom up, we perform a novel post-editing process by considering information from the constituents on upper levels. We show that this post-editing can further improve the overall parsing performance.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        HILDA discourse parser
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The HILDA discourse parser by
+         Hernault et al. (2010)
+         is the first attempt at RST-style text-level discourse parsing. It adopts a pipeline framework, and greedily builds the discourse tree from the bottom up. In particular, starting from EDUs, at each step of the tree-building, a binary SVM classifier is first applied to determine which pair of adjacent discourse constituents should be merged to form a larger span, and another multi-class SVM classifier is then applied to assign the type of discourse relation that holds between the chosen pair.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         The strength of HILDA’s greedy tree-building strategy is its efficiency in practice. Also, the employment of SVM classifiers allows the incorporation of rich features for better data representation
+         [4]
+         . However, HILDA’s approach also has obvious weakness: the greedy algorithm may lead to poor performance due to local optima, and more importantly, the SVM classifiers are not well-suited for solving structural problems due to the difficulty of taking context into account.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Joty et al.’s joint model
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Joty et al. (2013)
+         approach the problem of text-level discourse parsing using a model trained by Conditional Random Fields (CRF). Their model has two distinct features.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         First, they decomposed the problem of text-level discourse parsing into two stages: intra-sentential parsing to produce a discourse tree for each sentence, followed by multi-sentential parsing to combine the sentence-level discourse trees and produce the text-level discourse tree. Specifically, they employed two separate models for intra- and multi-sentential parsing. Their choice of two-stage parsing is well motivated for two reasons: (1) it has been shown that sentence boundaries correlate very well with discourse boundaries, and (2) the scalability issue of their CRF-based models can be overcome by this decomposition.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         Second, they jointly modeled the structure and the relation for a given pair of discourse units. For example, Figure
+         2
+         shows their intra-sentential model, in which they use the bottom layer to represent discourse units; the middle layer of binary nodes to predict the connection of adjacent discourse units; and the top layer of multi-class nodes to predict the type of the relation between two units. Their model assigns a probability to each possible constituent, and a CKY-like parsing algorithm finds the globally optimal discourse tree, given the computed probabilities.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         The strength of Joty et al.’s model is their joint modeling of the structure and the relation, such that information from each aspect can interact with the other. However, their model has a major defect in its inefficiency, or even infeasibility, for application in practice. The inefficiency lies in both their DCRF-based joint model, on which inference is usually slow, and their CKY-like parsing algorithm, whose issue is more prominent. Due to the
+         O⁢(n3)
+         time complexity, where
+         n
+         is the number of input discourse units, for large documents, the parsing simply takes too long
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Overall work flow
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Figure
+        3
+        demonstrates the overall work flow of our discourse parser. The general idea is that, similar to
+        Joty et al. (2013)
+        , we perform a sentence-level parsing for each sentence first, followed by a text-level parsing to generate a full discourse tree for the whole document. However, in addition to efficiency (to be shown in Section
+        6
+        ), our discourse parser has a distinct feature, which is the post-editing component (to be introduced in Section
+        5
+        ), as outlined in dashes.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Our discourse parser works as follows. A document
+        D
+        is first segmented into a list of sentences. Each sentence
+        Si
+        , after being segmented into EDUs (not shown in the figure), goes through an intra-sentential bottom-up tree-building model
+        Mi⁢n⁢t⁢r⁢a
+        , to form a sentence-level discourse tree
+        TSi
+        , with the EDUs as leaf nodes. After that, we apply the intra-sentential post-editing model
+        Pi⁢n⁢t⁢r⁢a
+        to modify the generated tree
+        TSi
+        to
+        TSip
+        , by considering upper-level information.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        We then combine all sentence-level discourse tree
+        TSip
+        ’s using our multi-sentential bottom-up tree-building model
+        Mm⁢u⁢l⁢t⁢i
+        to generate the text-level discourse tree
+        TD
+        . Similar to sentence-level parsing, we also post-edit
+        TD
+        using
+        Pm⁢u⁢l⁢t⁢i
+        to produce the final discourse tree
+        TDp
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Bottom-up tree-building
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        For both intra- and multi-sentential parsing, our bottom-up tree-building process adopts a similar greedy pipeline framework like the HILDA discourse parser (discussed in Section
+        2.1
+        ), to guarantee efficiency for large documents. In particular, starting from the constituents on the bottom level (EDUs for intra-sentential parsing and sentence-level discourse trees for multi-sentential parsing), at each step of the tree-building, we greedily merge a pair of adjacent discourse constituents such that the merged constituent has the highest probability as predicted by our
+        structure
+        model. The
+        relation
+        model is then applied to assign the relation to the new constituent.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Linear-chain CRFs as Local models
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Now we describe the local models we use to make decisions for a given pair of adjacent discourse constituents in the bottom-up tree-building. There are two dimensions for our local models: (1) scope of the model: intra- or multi-sentential, and (2) purpose of the model: for determining structures or relations. So we have four local models,
+         Mi⁢n⁢t⁢r⁢as⁢t⁢r⁢u⁢c⁢t
+         ,
+         Mi⁢n⁢t⁢r⁢ar⁢e⁢l
+         ,
+         Mm⁢u⁢l⁢t⁢is⁢t⁢r⁢u⁢c⁢t
+         , and
+         Mm⁢u⁢l⁢t⁢ir⁢e⁢l
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         While our bottom-up tree-building shares the greedy framework with HILDA, unlike HILDA, our local models are implemented using CRFs. In this way, we are able to take into account the sequential information from contextual discourse constituents, which cannot be naturally represented in HILDA with SVMs as local classifiers. Therefore, our model incorporates the strengths of both HILDA and Joty et al.’s model, i.e., the efficiency of a greedy parsing algorithm, and the ability to incorporate sequential information with CRFs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         As shown by
+         Feng and Hirst (2012)
+         , for a pair of discourse constituents of interest, the sequential information from contextual constituents is crucial for determining structures. Therefore, it is well motivated to use Conditional Random Fields (CRFs)
+         [10]
+         , which is a discriminative probabilistic graphical model, to make predictions for a sequence of constituents surrounding the pair of interest.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         In this sense, our local models appear similar to Joty et al.’s non-greedy parsing models. However, the major distinction between our models and theirs is that we do not jointly model the structure and the relation; rather, we use two linear-chain CRFs to model the structure and the relation separately. Although joint modeling has shown to be effective in various NLP and computer vision applications
+         [17, 19, 18]
+         , our choice of using two separate models is for the following reasons:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         First, it is not entirely appropriate to model the structure and the relation at the same time. For example, with respect to Figure
+         2
+         , it is unclear how the relation node
+         Rj
+         is represented for a training instance whose structure node
+         Sj=0
+         , i.e., the units
+         Uj-1
+         and
+         Uj
+         are disjoint. Assume a special relation NO-REL is assigned for
+         Rj
+         . Then, in the tree-building process, we will have to deal with the situations where the joint model yields conflicting predictions: it is possible that the model predicts
+         Sj=1
+         and
+         Rj=NO-REL
+         , or vice versa, and we will have to decide which node to trust (and thus in some sense, the structure and the relation is no longer jointly modeled).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p6">
+        <p class="ltx_p">
+         Secondly, as a joint model, it is mandatory to use a dynamic CRF, for which exact inference is usually intractable or slow. In contrast, for linear-chain CRFs, efficient algorithms and implementations for exact inference exist.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Structure models
+       </h3>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.1
+         </span>
+         Intra-sentential structure model
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS1.p1">
+         <p class="ltx_p">
+          Figure
+          6
+          shows our intra-sentential structure model
+          Mi⁢n⁢t⁢r⁢as⁢t⁢r⁢u⁢c⁢t
+          in the form of a linear-chain CRF. Similar to Joty et al.’s intra-sentential model, the first layer of the chain is composed of discourse constituents
+          Uj
+          ’s, and the second layer is composed of binary nodes
+          Sj
+          ’s to indicate the probability of merging adjacent discourse constituents.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS1.p2">
+         <p class="ltx_p">
+          At each step in the bottom-up tree-building process, we generate a single sequence
+          E
+          , consisting of
+          U1,U2,…,Uj,…,Ut
+          , which are all the current discourse constituents in the sentence that need to be processed. For instance, initially, we have the sequence
+          E1={e1,e2,…,em}
+          , which are the EDUs of the sentence; after merging
+          e1
+          and
+          e2
+          on the second level, we have
+          E2={e1:2,e3,…,em}
+          ; after merging
+          e4
+          and
+          e5
+          on the third level, we have
+          E3={e1:2,e3,e4:5,…,em}
+          , and so on.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS1.p3">
+         <p class="ltx_p">
+          Because the structure model is the first component in our pipeline of local models, its accuracy is crucial. Therefore, to improve its accuracy, we enforce additional commonsense constraints in its Viterbi decoding. In particular, we disallow 1-1 transitions between adjacent labels (a discourse unit can be merged with at most one adjacent unit), and we disallow all-zero sequences (at least one pair must be merged).
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS1.p4">
+         <p class="ltx_p">
+          Since the computation of
+          Ei
+          does not
+          depend on a particular pair of constituents, we can use the same sequence
+          Ei
+          to compute structural probabilities for
+          all
+          adjacent constituents. In contrast, Joty et al.’s computation of intra-sentential sequences depends on the particular pair of constituents: the sequence is composed of the pair in question, with other EDUs in the sentence, even if those EDUs have already been merged. Thus, different CRF chains have to be formed for different pairs of constituents. In addition to efficiency, our use of a single CRF chain for all constituents can better capture the sequential dependencies among context, by taking into account the information from partially built discourse constituents, rather than bottom-level EDUs only.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.2
+         </span>
+         Multi-sentential structure model
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS2.p1">
+         <p class="ltx_p">
+          For multi-sentential parsing, where the smallest discourse units are single sentences, as argued by
+          Joty et al. (2013)
+          , it is not feasible to use a long chain to represent all constituents, due to the fact that it takes
+          O⁢(T⁢M2)
+          time to perform the forward-backward exact inference on a chain with
+          T
+          units and an output vocabulary size of
+          M
+          , thus the overall complexity for all possible sequences in their model is
+          O⁢(M2⁢n3)
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS2.p2">
+         <p class="ltx_p">
+          Instead, we choose to take a sliding-window approach to form CRF chains for a particular pair of constituents, as shown in Figure
+          6
+          . For example, suppose we wish to compute the structural probability for the pair
+          Uj-1
+          and
+          Uj
+          , we form three chains, each of which contains two contextual constituents:
+          C1={Uj-3,Uj-2,Uj-1,Uj}
+          ,
+          C2={Uj-2,Uj-1,Uj,Uj+1}
+          , and
+          C3={Uj-1,Uj,Uj+1,Uj+2}
+          . We then find the chain
+          Ct,1≤t≤3
+          , with the highest joint probability over the entire sequence, and assign its marginal probability
+          P(Sjt=1)
+          to
+          P(Sj=1)
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS2.p3">
+         <p class="ltx_p">
+          Similar to
+          Mi⁢n⁢t⁢r⁢as⁢t⁢r⁢u⁢c⁢t
+          , for
+          Mm⁢u⁢l⁢t⁢is⁢t⁢r⁢u⁢c⁢t
+          , we also include additional constraints in the Viterbi decoding, by disallowing transitions between two ones, and disallowing the sequence to be all zeros if it contains all the remaining constituents in the document.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Relation models
+       </h3>
+       <div class="ltx_subsubsection" id="S4.SS3.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.3.1
+         </span>
+         Intra-sentential relation model
+        </h4>
+        <div class="ltx_para" id="S4.SS3.SSS1.p1">
+         <p class="ltx_p">
+          The intra-sentential relation model
+          Mi⁢n⁢t⁢r⁢ar⁢e⁢l
+          , shown in Figure
+          9
+          , works in a similar way to
+          Mi⁢n⁢t⁢r⁢as⁢t⁢r⁢u⁢c⁢t
+          , as described in Section
+          4.2.1
+          . The linear-chain CRF contains a first layer of all discourse constituents
+          Uj
+          ’s in the sentence on level
+          i
+          , and a second layer of relation nodes
+          Rj
+          ’s to represent the relation between a pair of discourse constituents.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS1.p2">
+         <p class="ltx_p">
+          However, unlike the structure model, adjacent relation nodes do not share discourse constituents on the first layer. Rather, each relation node
+          Rj
+          attempts to model the relation of one single constituent
+          Uj
+          , by taking
+          Uj
+          ’s left and right subtrees
+          Uj,L
+          and
+          Uj,R
+          as its first-layer nodes; if
+          Uj
+          is a single EDU, then the first-layer node of
+          Rj
+          is simply
+          Uj
+          , and
+          Rj
+          is a special relation symbol
+          LEAF
+          . Since we know, a priori, that the constituents in the chains are either leaf nodes or the ones that have been merged by our structure model, we never need to worry about the
+          NO-REL
+          issue as outlined in Section
+          4.1
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS1.p3">
+         <p class="ltx_p">
+          In the bottom-up tree-building process, after merging a pair of adjacent constituents using
+          Mi⁢n⁢t⁢r⁢as⁢t⁢r⁢u⁢c⁢t
+          into a new constituent, say
+          Uj
+          , we form a chain consisting of all current constituents in the sentence to decide the relation label for
+          Uj
+          , i.e., the
+          Rj
+          node in the chain. In fact, by performing inference on this chain, we produce predictions not only for
+          Rj
+          , but also for all other
+          R
+          nodes in the chain, which correspond to all other constituents in the sentence. Since those non-leaf constituents are already labeled in previous steps in the tree-building, we can now
+          re-assign
+          their relations if the model predicts differently in this step. Therefore, this re-labeling procedure can compensate for the loss of accuracy caused by our greedy bottom-up strategy to some extent.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS3.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.3.2
+         </span>
+         Multi-sentential relation model
+        </h4>
+        <div class="ltx_para" id="S4.SS3.SSS2.p1">
+         <p class="ltx_p">
+          Figure
+          9
+          shows our multi-sentential relation model. Like
+          Mi⁢n⁢t⁢r⁢ar⁢e⁢l
+          , the first layer consists of adjacent discourse units, and the relation nodes on the second layer model the relation of each constituent separately.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS3.SSS2.p2">
+         <p class="ltx_p">
+          Similar to
+          Mm⁢u⁢l⁢t⁢is⁢t⁢r⁢u⁢c⁢t
+          introduced in Section
+          4.2.2
+          ,
+          Mm⁢u⁢l⁢t⁢ir⁢e⁢l
+          also takes a sliding-window approach to predict labels for constituents in a local context. For a constituent
+          Uj
+          to be predicted, we form three chains, and use the chain with the highest joint probability to assign or re-assign relations to constituents in that chain.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Post-editing
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        After an intra- or multi-sentential discourse tree is fully built, we perform a post-editing to consider possible modifications to the current tree, by considering useful information from the discourse constituents on upper levels, which is unavailable in the bottom-up tree-building process.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        The motivation for post-editing is that, some particular discourse relations, such as
+        Textual-Organization
+        , tend to occur on the top levels of the discourse tree; thus, information such as the depth of the discourse constituent can be quite indicative. However, the exact depth of a discourse constituent is usually unknown in the bottom-up tree-building process; therefore, it might be beneficial to modify the tree by including top-down information after the tree is fully built.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        The process of post-editing is shown in Algorithm
+        5
+        . For each input discourse tree
+        T
+        , which is already fully built by bottom-up tree-building models, we do the following:
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        Lines 5 – 5:
+        Identify the lowest level of
+        T
+        on which the constituents can be modified according to the post-editing structure component,
+        Ps⁢t⁢r⁢u⁢c⁢t
+        . To do so, we maintain a list
+        L
+        to store the discourse constituents that need to be examined. Initially,
+        L
+        consists of all the bottom-level constituents in
+        T
+        . At each step of the loop, we consider merging the pair of adjacent units in
+        L
+        with the highest probability predicted by
+        Ps⁢t⁢r⁢u⁢c⁢t
+        . If the predicted pair is not merged in the original tree
+        T
+        , then a possible modification is located; otherwise, we merge the pair, and proceed to the next iteration.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p5">
+       <p class="ltx_p">
+        Lines 5 – 5:
+        If modifications have been proposed in the previous step, we build a new tree
+        Tp
+        using
+        Ps⁢t⁢r⁢u⁢c⁢t
+        as the structure model, and
+        Pr⁢e⁢l
+        as the relation model, from the constituents on which modifications are proposed. Otherwise,
+        Tp
+        is built from the bottom-level constituents of
+        T
+        . The upper-level information, such as the depth of a discourse constituent, is derived from the initial tree
+        T
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p6">
+       <p class="ltx_p">
+        [t]
+        [1]
+        A fully built discourse tree
+        T
+        .
+        <math alttext="|T|=1" class="ltx_Math" display="inline" id="S5.p6.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mrow>
+           <mo fence="true">
+            |
+           </mo>
+           <mi>
+            T
+           </mi>
+           <mo fence="true">
+            |
+           </mo>
+          </mrow>
+          <mo>
+           =
+          </mo>
+          <mn>
+           1
+          </mn>
+         </mrow>
+        </math>
+        <span class="ltx_ERROR undefined">
+         \Return
+        </span>
+        T
+        Do nothing if it is a single EDU.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p7">
+       <p class="ltx_p">
+        L←[U1,U2,…,Ut]
+        The bottom-level constituents in
+        T
+        .
+        <math alttext="|L|&gt;2" class="ltx_Math" display="inline" id="S5.p7.m3" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mrow>
+           <mo fence="true">
+            |
+           </mo>
+           <mi>
+            L
+           </mi>
+           <mo fence="true">
+            |
+           </mo>
+          </mrow>
+          <mo>
+           &gt;
+          </mo>
+          <mn>
+           2
+          </mn>
+         </mrow>
+        </math>
+        <math alttext="i\leftarrow\textsc{PredictMerging}(L,P^{struct})" class="ltx_Math" display="inline" id="S5.p7.m4" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi>
+           i
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mrow>
+           <mtext mathvariant="normal">
+            PredictMerging
+           </mtext>
+           <mo>
+            ⁢
+           </mo>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <mi>
+              L
+             </mi>
+             <mo>
+              ,
+             </mo>
+             <msup>
+              <mi>
+               P
+              </mi>
+              <mrow>
+               <mi>
+                s
+               </mi>
+               <mo>
+                ⁢
+               </mo>
+               <mi>
+                t
+               </mi>
+               <mo>
+                ⁢
+               </mo>
+               <mi>
+                r
+               </mi>
+               <mo>
+                ⁢
+               </mo>
+               <mi>
+                u
+               </mi>
+               <mo>
+                ⁢
+               </mo>
+               <mi>
+                c
+               </mi>
+               <mo>
+                ⁢
+               </mo>
+               <mi>
+                t
+               </mi>
+              </mrow>
+             </msup>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+          </mrow>
+         </mrow>
+        </math>
+        <math alttext="p\leftarrow\textsc{Parent}(L[i],L[i+1],T)" class="ltx_Math" display="inline" id="S5.p7.m5" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi>
+           p
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mrow>
+           <mtext mathvariant="normal">
+            Parent
+           </mtext>
+           <mo>
+            ⁢
+           </mo>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <mrow>
+              <mi>
+               L
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mrow>
+               <mo>
+                [
+               </mo>
+               <mi>
+                i
+               </mi>
+               <mo>
+                ]
+               </mo>
+              </mrow>
+             </mrow>
+             <mo>
+              ,
+             </mo>
+             <mrow>
+              <mi>
+               L
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mrow>
+               <mo>
+                [
+               </mo>
+               <mrow>
+                <mi>
+                 i
+                </mi>
+                <mo>
+                 +
+                </mo>
+                <mn>
+                 1
+                </mn>
+               </mrow>
+               <mo>
+                ]
+               </mo>
+              </mrow>
+             </mrow>
+             <mo>
+              ,
+             </mo>
+             <mi>
+              T
+             </mi>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+          </mrow>
+         </mrow>
+        </math>
+        <math alttext="p" class="ltx_Math" display="inline" id="S5.p7.m6" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mi>
+          p
+         </mi>
+        </math>
+        = NULL
+        <span class="ltx_text ltx_font_bold">
+         break
+        </span>
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p8">
+       <p class="ltx_p">
+        Replace
+        L⁢[i]
+        and
+        L⁢[i+1]
+        with
+        p
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p9">
+       <p class="ltx_p">
+        |L|=2
+        <math alttext="L\leftarrow[U_{1},U_{2},\ldots,U_{t}]" class="ltx_Math" display="inline" id="S5.p9.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi>
+           L
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mrow>
+           <mo>
+            [
+           </mo>
+           <mrow>
+            <msub>
+             <mi>
+              U
+             </mi>
+             <mn>
+              1
+             </mn>
+            </msub>
+            <mo>
+             ,
+            </mo>
+            <msub>
+             <mi>
+              U
+             </mi>
+             <mn>
+              2
+             </mn>
+            </msub>
+            <mo>
+             ,
+            </mo>
+            <mi mathvariant="normal">
+             …
+            </mi>
+            <mo>
+             ,
+            </mo>
+            <msub>
+             <mi>
+              U
+             </mi>
+             <mi>
+              t
+             </mi>
+            </msub>
+           </mrow>
+           <mo>
+            ]
+           </mo>
+          </mrow>
+         </mrow>
+        </math>
+        <span class="ltx_ERROR undefined">
+         \State
+        </span>
+        Tp←BuildTree⁢(L,Ps⁢t⁢r⁢u⁢c⁢t,Pr⁢e⁢l,T)
+        <math alttext="T^{p}" class="ltx_Math" display="inline" id="S5.p9.m4" xmlns="http://www.w3.org/1998/Math/MathML">
+         <msup>
+          <mi>
+           T
+          </mi>
+          <mi>
+           p
+          </mi>
+         </msup>
+        </math>
+        Post-editing algorithm.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Local models
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         The local models,
+         P{i⁢n⁢t⁢r⁢a|m⁢u⁢l⁢t⁢i}{s⁢t⁢r⁢u⁢c⁢t|r⁢e⁢l}
+         , for post-editing is almost identical to their counterparts of the bottom-up tree-building, except that the linear-chain CRFs in post-editing includes additional features to represent information from constituents on higher levels (to be introduced in Section
+         7
+         ).
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Linear time complexity
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        Here we analyze the time complexity of each component in our discourse parser, to quantitatively demonstrate the time efficiency of our model. The following analysis is focused on the bottom-up tree-building process, but a similar analysis can be carried out for the post-editing process. Since the number of operations in the post-editing process is roughly the same (1.5 times in the worst case) as in the bottom-up tree-building, post-editing shares the same complexity as the tree-building.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Intra-sentential parsing
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         Suppose the input document is segmented into
+         n
+         sentences, and each sentence
+         Sk
+         contains
+         mk
+         EDUs. For each sentence
+         Sk
+         with
+         mk
+         EDUs, the overall time complexity to perform intra-sentential parsing is
+         O⁢(mk2)
+         . The reason is the following. On level
+         i
+         of the bottom-up tree-building, we generate a single chain to represent the structure or relation for all the
+         mk-i
+         constituents that are currently in the sentence. The time complexity for performing forward-backward inference on the single chain is
+         O⁢((mk-i)×M2)=O⁢(mk-i)
+         , where the constant
+         M
+         is the size of the output vocabulary. Starting from the EDUs on the bottom level, we need to perform inference for one chain on each level during the bottom-up tree-building, and thus the total time complexity is
+         Σi=1mk⁢O⁢(mk-i)=O⁢(mk2)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         The total time to generate sentence-level discourse trees for
+         n
+         sentences is
+         Σk=1n⁢O⁢(mk2)
+         . It is fairly safe to assume that each
+         mk
+         is a constant, in the sense that
+         mk
+         is independent of the total number of sentences in the document. Therefore, the total time complexity
+         Σk=1n⁢O⁢(mk2)≤n×O⁢(max1≤j≤n⁡(mj2))=n×O⁢(1)=O⁢(n)
+         , i.e., linear in the total number of sentences.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Multi-sentential parsing
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         For multi-sentential models,
+         Mm⁢u⁢l⁢t⁢is⁢t⁢r⁢u⁢c⁢t
+         and
+         Mm⁢u⁢l⁢t⁢ir⁢e⁢l
+         , as shown in Figures
+         6
+         and
+         9
+         , for a pair of constituents of interest, we generate multiple chains to predict the structure or the relation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p2">
+        <p class="ltx_p">
+         By including a constant number
+         k
+         of discourse units in each chain, and considering a constant number
+         l
+         of such chains for computing each adjacent pair of discourse constituents (
+         k=4
+         for
+         Mm⁢u⁢l⁢t⁢is⁢t⁢r⁢u⁢c⁢t
+         and
+         k=3
+         for
+         Mm⁢u⁢l⁢t⁢ir⁢e⁢l
+         ;
+         l=3
+         ), we have an overall time complexity of
+         O⁢(n)
+         . The reason is that it takes
+         l×O⁢(k⁢M2)=O⁢(1)
+         time, where
+         l,k,M
+         are all constants, to perform exact inference for a given pair of adjacent constituents, and we need to perform such computation for all
+         n-1
+         pairs of adjacent sentences on the first level of the tree-building. Adopting a greedy approach, on an arbitrary level during the tree-building, once we decide to merge a certain pair of constituents, say
+         Uj
+         and
+         Uj+1
+         , we only need to recompute a small number of chains, i.e., the chains which originally include
+         Uj
+         or
+         Uj+1
+         , and inference on each chain takes
+         O⁢(1)
+         . Therefore, the total time complexity is
+         (n-1)×O⁢(1)+(n-1)×O⁢(1)=O⁢(n)
+         , where the first term in the summation is the complexity of computing all chains on the bottom level, and the second term is the complexity of computing the constant number of chains on higher levels.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p3">
+        <p class="ltx_p">
+         We have thus showed that the time complexity is
+         linear
+         in
+         n
+         , which is the number of sentences in the document. In fact, under the assumption that the number of EDUs in each sentence is independent of
+         n
+         , it can be shown that the time complexity is also linear in the total number of EDUs
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Features
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        In our local models, to encode two adjacent units,
+        Uj
+        and
+        Uj+1
+        , within a CRF chain, we use the following 10 sets of features, some of which are modified from Joty et al.’s model.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P1">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Organization features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P1.p1">
+        <p class="ltx_p">
+         Whether
+         Uj
+         (or
+         Uj+1
+         ) is the first (or last) constituent in the sentence (for intra-sentential models) or in the document (for multi-sentential models); whether
+         Uj
+         (or
+         Uj+1
+         ) is a bottom-level constituent.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P2">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Textual structure features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P2.p1">
+        <p class="ltx_p">
+         Whether
+         Uj
+         contains more sentences (or paragraphs) than
+         Uj+1
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P3">
+       <h5 class="ltx_title ltx_title_paragraph">
+        N-gram features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P3.p1">
+        <p class="ltx_p">
+         The beginning (or end) lexical
+         n
+         -grams in each unit; the beginning (or end) POS
+         n
+         -grams in each unit, where
+         n∈{1,2,3}
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P4">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Dominance features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P4.p1">
+        <p class="ltx_p">
+         The PoS tags of the head node and the attachment node; the lexical heads of the head node and the attachment node; the dominance relationship between the two units.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P5">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Contextual features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P5.p1">
+        <p class="ltx_p">
+         The feature vector of the previous and the next constituent in the chain.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P6">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Substructure features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P6.p1">
+        <p class="ltx_p">
+         The root node of the left and right discourse subtrees of each unit.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P7">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Syntactic features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P7.p1">
+        <p class="ltx_p">
+         whether each unit corresponds to a single syntactic subtree, and if so, the top PoS tag of the subtree; the distance of each unit to their lowest common ancestor in the syntax tree (intra-sentential only).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P8">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Entity transition features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P8.p1">
+        <p class="ltx_p">
+         The type and the number of entity transitions across the two units. We adopt
+         Barzilay and Lapata (2008)
+         ’s entity-based local coherence model to represent a document by an entity grid, and extract local transitions among entities in continuous discourse constituents. We use bigram and trigram transitions with syntactic roles attached to each entity.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P9">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Cue phrase features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P9.p1">
+        <p class="ltx_p">
+         Whether a cue phrase occurs in the first or last EDU of each unit. The cue phrase list is based on the connectives collected by
+         Knott and Dale (1994)
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S7.SS2.SSS2.P10">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Post-editing features:
+       </h5>
+       <div class="ltx_para" id="S7.SS2.SSS2.P10.p1">
+        <p class="ltx_p">
+         The depth of each unit in the initial tree.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S8">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        8
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S8.p1">
+       <p class="ltx_p">
+        For pre-processing, we use the Stanford CoreNLP
+        [8, 3, 16]
+        to syntactically parse the texts and extract coreference relations, and we use Penn2Malt
+        to lexicalize syntactic trees to extract dominance features.
+       </p>
+      </div>
+      <div class="ltx_para" id="S8.p2">
+       <p class="ltx_p">
+        For local models, our structure models are trained using MALLET
+        [14]
+        to include constraints over transitions between adjacent labels, and our relation models are trained using CRFSuite
+        [15]
+        , which is a fast implementation of linear-chain CRFs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S8.p3">
+       <p class="ltx_p">
+        The data that we use to develop and evaluate our discourse parser is the RST Discourse Treebank (RST-DT)
+        [2]
+        , which is a large corpus annotated in the framework of RST. The RST-DT consists of 385 documents (347 for training and 38 for testing) from the
+        Wall Street Journal
+        . Following previous work on the RST-DT
+        [5, 4, 7, 6]
+        , we use 18 coarse-grained relation classes, and with nuclearity attached, we have a total set of 41 distinct relations. Non-binary relations are converted into a cascade of right-branching binary relations.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S9">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        9
+       </span>
+       Results and Discussion
+      </h2>
+      <div class="ltx_subsection" id="S9.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         9.1
+        </span>
+        Parsing accuracy
+       </h3>
+       <div class="ltx_para" id="S9.SS1.p1">
+        <p class="ltx_p">
+         We compare four different models using manual EDU segmentation. In Table
+         1
+         , the
+         j
+         CRF model in the first row is the optimal CRF model proposed by
+         Joty et al. (2013)
+         .
+         g
+         SVM
+         F⁢H
+         in the second row is our implementation of HILDA’s greedy parsing algorithm using
+         Feng and Hirst (2012)
+         ’s enhanced feature set. The third model,
+         g
+         CRF, represents our greedy CRF-based discourse parser, and the last row,
+         g
+         CRF
+         P⁢E
+         , represents our parser with the post-editing component included.
+        </p>
+       </div>
+       <div class="ltx_para" id="S9.SS1.p2">
+        <p class="ltx_p">
+         In order to conduct a direct comparison with Joty et al.’s model, we use the same set of evaluation metrics, i.e., the unlabeled and labeled precision, recall, and F-score
+         as defined by
+         Marcu (2000)
+         . For evaluating relations, since there is a skewed distribution of different relation types in the corpus, we also include the macro-averaged F1-score (MAFS)
+         as another metric, to emphasize the performance of infrequent relation types. We report the MAFS separately for the correctly retrieved constituents (i.e., the span boundary is correct) and all constituents in the reference tree.
+        </p>
+       </div>
+       <div class="ltx_para" id="S9.SS1.p3">
+        <p class="ltx_p">
+         As demonstrated by Table
+         1
+         , our greedy CRF models perform significantly better than the other two models. Since we do not have the actual output of Joty et al.’s model, we are unable to conduct significance testing between our models and theirs. But in terms of overall accuracy, our
+         g
+         CRF model outperforms their model by 1.5%. Moreover, with post-editing enabled,
+         g
+         CRF
+         P⁢E
+         significantly (
+         p&lt;.01
+         ) outperforms our initial model
+         g
+         CRF by another 1% in relation assignment, and this overall accuracy of 58.2% is close to 90% of human performance. With respect to the macro-averaged F1-scores, adding the post-editing component also obtains about 1% improvement.
+        </p>
+       </div>
+       <div class="ltx_para" id="S9.SS1.p4">
+        <p class="ltx_p">
+         However, the overall MAFS is still at the lower end of 30% for all constituents. Our error analysis shows that, for two relation classes,
+         Topic-Change
+         and
+         Textual-Organization
+         , our model fails to retrieve any instance, and for
+         Topic-Comment
+         and
+         Evaluation
+         , our model scores a class-wise
+         F1
+         score lower than 5%. These four relation classes, apart from their infrequency in the corpus, are more abstractly defined, and thus are particularly challenging.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S9.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         9.2
+        </span>
+        Parsing efficiency
+       </h3>
+       <div class="ltx_para" id="S9.SS2.p1">
+        <p class="ltx_p">
+         We further illustrate the efficiency of our parser by demonstrating the time consumption of different models.
+        </p>
+       </div>
+       <div class="ltx_para" id="S9.SS2.p2">
+        <p class="ltx_p">
+         First, as shown in Table
+         2
+         , the average number of sentences in a document is 26.11, which is already too large for optimal parsing models, e.g., the CKY-like parsing algorithm in
+         j
+         CRF, let alone the fact that the largest document contains several hundred of EDUs and sentences. Therefore, it should be seen that non-optimal models are required in most cases.
+        </p>
+       </div>
+       <div class="ltx_para" id="S9.SS2.p3">
+        <p class="ltx_p">
+         In Table
+         3
+         , we report the parsing time
+         for the last three models, since we do not know the time of
+         j
+         CRF. Note that the parsing time excludes the time cost for any necessary pre-processing. As can be seen, our
+         g
+         CRF model is considerably faster than
+         g
+         SVM
+         F⁢H
+         , because, on one hand, feature computation is expensive in
+         g
+         SVM
+         F⁢H
+         , since
+         g
+         SVM
+         F⁢H
+         utilizes a rich set of features; on the other hand, in
+         g
+         CRF, we are able to accelerate decoding by multi-threading MALLET (we use four threads). Even for the largest document with 187 sentences,
+         g
+         CRF is able to produce the final tree after about 40 seconds, while
+         j
+         CRF would take over 16 hours assuming each DCRF decoding takes only 0.01 second. Although enabling post-editing doubles the time consumption, the overall time is still acceptable in practice, and the loss of efficiency can be compensated by the improvement in accuracy.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

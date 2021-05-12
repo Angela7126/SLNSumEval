@@ -1,0 +1,1578 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Online Learning in Tensor Space.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \DeclarePairedDelimiter
+     </span>
+     ⌈⌉
+     <span class="ltx_ERROR undefined">
+      \floor
+     </span>
+     ⌊⌋
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Many NLP applications use models that try to incorporate a large number of linguistic features so that as much human knowledge of language can be brought to bear on the (prediction) task as possible.
+This also makes training the model parameters a challenging problem, since the amount of labeled training data is usually small compared to the size of feature sets: the feature weights cannot be estimated reliably.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Most traditional models are linear models, in the sense that both the features of the data and model parameters are represented as vectors in a vector space. Many learning algorithms applied to NLP problems, such as the Perceptron
+        [Collins2002]
+        , MIRA
+        [Crammer et al.2006, McDonald et al.2005, Chiang et al.2008]
+        , PRO
+        [Hopkins and May2011]
+        , RAMPION
+        [Gimpel and Smith2012]
+        etc., are based on vector-space models. Such models require learning individual feature weights directly, so that the number of parameters to be estimated is identical to the size of the feature set. When millions of features are used but the amount of labeled data is limited, it can be difficult to precisely estimate each feature weight.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper, we shift the model from vector-space to tensor-space. Data can be represented in a compact and structured way using tensors as containers. Tensor representations have been applied to computer vision problems
+        [Hazan et al.2005, Shashua and Hazan2005]
+        and information retrieval
+        [Cai et al.2006a]
+        a long time ago. More recently, it has also been applied to parsing
+        [Cohen and Collins2012, Cohen and Satta2013]
+        and semantic analysis
+        [Van de Cruys et al.2013]
+        . A linear tensor model represents both features and weights in tensor-space, hence the weight tensor can be factorized and approximated by a linear sum of rank-1 tensors. This low-rank approximation imposes structural constraints on the feature weights and can be regarded as a form of regularization. With this representation, we no longer need to estimate individual feature weights directly but only a small number of “bases” instead. This property makes the the tensor model very effective when training a large number of feature weights in a low-resource environment. On the other hand,
+tensor
+models have many more degrees of “design freedom”
+than vector space models. While this makes them very flexible, it also creates much difficulty in designing an optimal tensor structure for a given training set.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        We give detailed description of the tensor space model in Section
+        2
+        . Several issues that come with the tensor model construction are addressed in Section
+        3
+        . A tensor weight learning algorithm is then proposed in
+        4
+        . Finally we give our experimental results on a parsing task and analysis in Section
+        5
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Tensor Space Representation
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Most of the learning algorithms for NLP problems are based on vector space models, which represent data as vectors
+        ϕ∈ℝn
+        , and try to learn feature weight vectors
+        𝒘∈ℝn
+        such that a linear model
+        y=𝒘⋅ϕ
+        is able to discriminate between, say, good and bad hypotheses. While this is a natural way of representing data, it is not the only choice. Below, we reformulate the model from vector to tensor space.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Tensor Space Model
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         A tensor is a multidimensional array, and is a generalization of commonly used algebraic objects such as vectors and matrices. Specifically, a vector is a
+         1st
+         order tensor, a matrix is a
+         2nd
+         order tensor, and data organized as a rectangular cuboid is a
+         3rd
+         order tensor etc. In general, a
+         Dth
+         order tensor is represented as
+         𝒯∈ℝn1×n2×…⁢nD
+         , and an entry in
+         𝒯
+         is denoted by
+         𝒯i1,i2,…,iD
+         . Different dimensions of a tensor
+         1,2,…,D
+         are named modes of the tensor.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Using a
+         Dth
+         order tensor as container, we can assign each feature of the task a
+         D
+         -dimensional index in the tensor and represent the data as tensors. Of course, shifting from a vector to a tensor representation entails several additional degrees of freedom, e.g., the order
+         D
+         of the tensor and the sizes
+         {nd}d=1D
+         of the modes, which must be addressed when selecting a tensor model. This will be done in Section
+         3
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Tensor Decomposition
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Just as a matrix can be decomposed as a linear combination of several rank-1 matrices via SVD, tensors also admit decompositions
+         into linear combinations of “rank-1” tensors. A
+         Dth
+         order tensor
+         𝒜∈ℝn1×n2×…⁢nD
+         is rank-1 if it can be written as the outer product of
+         D
+         vectors, i.e.
+        </p>
+        𝒜=𝐚1⊗𝐚2⊗,…,⊗𝐚D,
+        <p class="ltx_p">
+         where
+         𝐚i∈ℝnd,1≤d≤D
+         . A
+         Dth
+         order tensor
+         𝒯∈ℝn1×n2×…⁢nD
+         can be factorized into a sum of component rank-1 tensors as
+        </p>
+        𝒯=∑r=1R𝒜r=∑r=1R𝐚r1⊗𝐚r2⊗,…,⊗𝐚rD
+        <p class="ltx_p">
+         where
+         R
+         , called the rank of the tensor, is the minimum number of rank-1 tensors whose sum equals
+         𝒯
+         . Via decomposition, one may approximate a tensor by the sum of
+         H
+         major rank-1 tensors with
+         H≤R
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Linear Tensor Model
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         In tensor space, a linear model may be written (ignoring a bias term) as
+        </p>
+        f⁢(𝑾)=𝑾∘𝚽,
+        <p class="ltx_p">
+         where
+         𝚽∈ℝn1×n2×…⁢nD
+         is the feature tensor,
+         𝑾
+         is the corresponding weight tensor, and
+         ∘
+         denotes the Hadamard product. If
+         𝑾
+         is further decomposed as the sum of
+         H
+         major component rank-1 tensors, i.e.
+         𝑾≈∑h=1H𝒘h1⊗𝒘h2⊗,…,⊗𝒘hD
+         , then
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left" colspan="3">
+           f⁢(𝒘11,…,𝒘1D,…,𝒘h1,…,𝒘hD)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑h=1H𝚽×1𝒘h1×2𝒘h2⁢…×D𝒘hD,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (2)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         ×l
+         is the
+         l
+         -mode product operator between a
+         Dth
+         order tensor
+         𝒯
+         and a vector
+         𝐚
+         of dimension
+         nd
+         , yielding a
+         (D-1)th
+         order tensor such that
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left" colspan="3">
+           (𝒯×l𝐚)i1,…,il-1,il+1,…,iD
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑il=1nd𝒯i1,…,il-1,il,il+1,…,iD⋅ail.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         The linear tensor model is illustrated in Figure
+         1
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.4
+        </span>
+        Why Learning in Tensor Space?
+       </h3>
+       <div class="ltx_para" id="S2.SS4.p1">
+        <p class="ltx_p">
+         So what is the advantage of learning with a tensor model instead of a vector model? Consider the case where we have defined 1,000,000 features for our task. A vector space linear model requires estimating 1,000,000 free parameters. However if we use a
+         2nd
+         order tensor model, organize the features into a
+         1000×1000
+         matrix
+         𝚽
+         , and use just one rank-1 matrix to approximate the weight tensor, then the linear model becomes
+        </p>
+        f⁢(𝒘1,𝒘2)=𝒘1T⁢𝚽⁢𝒘2,
+        <p class="ltx_p">
+         where
+         𝒘1,𝒘2∈ℝ1000
+         . That is to say, now we only need to estimate 2000 parameters!
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p2">
+        <p class="ltx_p">
+         In general, if
+         V
+         features are defined for a learning problem, and we (i) organize the feature set as a tensor
+         𝚽∈ℝn1×n2×…⁢nD
+         and (ii) use
+         H
+         component rank-1 tensors to approximate the corresponding target weight tensor. Then the total number of parameters to be learned for this tensor model is
+         H⁢∑d=1Dnd
+         , which is usually much smaller than
+         V=∏d=1Dnd
+         for a traditional vector space model. Therefore we expect the tensor model to be more effective in a low-resource training environment.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p3">
+        <p class="ltx_p">
+         Specifically, a vector space model assumes each feature weight to be a “free” parameter, and estimating them reliably could therefore be hard when training data are not sufficient or the feature set is huge. By contrast, a linear tensor model only needs to learn
+         H⁢∑d=1Dnd
+         “bases” of the
+         m
+         feature weights instead of individual weights directly. The weight corresponding to the feature
+         Φi1,i2,…,iD
+         in the tensor model is expressed as
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           wi1,i2,…,iD
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∑h=1Hwh,i11⁢wh,i22⁢…⁢wh,iDD,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         wh,ijj
+         is the
+         ijth
+         element in the vector
+         𝒘hj
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p4">
+        <p class="ltx_p">
+         In other words, a true feature weight is now approximated by a set of bases. This reminds us of the well-known low-rank matrix approximation of images via SVD, and we are applying similar techniques to approximate target feature weights, which is made possible only after we shift from vector to tensor space models.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p5">
+        <p class="ltx_p">
+         This approximation can be treated as a form of model regularization, since the weight tensor is represented in a constrained form and made highly structured via the rank-1 tensor approximation. Of course, as we reduce the model complexity, e.g. by choosing a smaller and smaller
+         H
+         , the model’s expressive ability is weakened at the same time. We will elaborate on this point in Section
+         3.1
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Tensor Model Construction
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        To apply a tensor model, we first need to convert the feature vector into a tensor
+        𝚽
+        . Once the structure of
+        𝚽
+        is determined, the structure of
+        𝑾
+        is fixed as well. As mentioned in Section
+        2.1
+        , a tensor model has many more degrees of “design freedom” than a vector model, which makes the problem of finding a good tensor structure a nontrivial one.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Tensor Order
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         The order of a tensor affects the model in two ways: the expressiveness of the model and the number of parameters to be estimated. We assume
+         H=1
+         in the analysis below, noting that one can always add as many rank-1 component tensors as needed to approximate a tensor with arbitrary precision.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Obviously, the
+         1st
+         order tensor (vector) model is the most expressive, since it is structureless and any arbitrary set of numbers can always be represented exactly as a vector. The
+         2nd
+         order rank-1 tensor (rank-1 matrix) is less expressive because not every set of numbers can be organized into a rank-1 matrix. In general, a
+         Dth
+         order rank-1 tensor is more expressive than a
+         (D+1)th
+         order rank-1 tensor, as a lower-order tensor imposes less structural constraints on the set of numbers it can express. We formally state this fact as follows:
+        </p>
+       </div>
+       <div class="ltx_theorem ltx_theorem_thm" id="Thmthm1">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Theorem 1
+         </span>
+         .
+        </h6>
+        <div class="ltx_para" id="Thmthm1.p1">
+         <p class="ltx_p">
+          A set of real numbers that can be represented by a (D+1)th order tensor 𝒬 can also be represented by a Dth order tensor 𝒫, provided 𝒫 and 𝒬 have the same volume. But the reverse is not true.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_proof">
+        <h6 class="ltx_title ltx_runin ltx_font_italic ltx_title_proof">
+         Proof.
+        </h6>
+        <div class="ltx_para" id="S3.SS1.p3">
+         <p class="ltx_p">
+          See appendix.
+∎
+         </p>
+        </div>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         On the other hand, tensor order also affects the number of parameters to be trained. Assuming that a
+         Dth
+         order has equal size on each mode (we will elaborate on this point in Section
+         3.2
+         ) and the volume (number of entries) of the tensor is fixed as
+         V
+         , then the total number of parameters of the model is
+         D⁢V1D
+         . This is a convex function of
+         D
+         , and the minimum
+         is reached at either
+         D∗=\floor⁢ln⁡V
+         or
+         D∗=\ceil⁢ln⁡V
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         Therefore, as
+         D
+         increases from 1 to
+         D*
+         , we lose more and more of the expressive power of the model but reduce the number of parameters to be trained. However it would be a bad idea to choose a
+         D
+         beyond
+         D*
+         . The optimal tensor order depends on the nature of the actual problem, and we tune this hyper-parameter on a held-out set.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Mode Size
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The size
+         nd
+         of each tensor mode,
+         d=1,…,D
+         , determines the structure of feature weights a tensor model can precisely represent, as well as the number of parameters to estimate (we also assume
+         H=1
+         in the analysis below). For example, if the tensor order is 2 and the volume
+         V
+         is 12, then we can either choose
+         n1=3,n2=4
+         or
+         n1=2,n2=6
+         . For
+         n1=3,n2=4
+         , the numbers that can be precisely represented are divided into 3 groups, each having 4 numbers, that are scaled versions of one another. Similarly for
+         n1=2,n2=6
+         , the numbers can be divided into 2 groups with different scales. Obviously, the two possible choices of
+         (n1,n2)
+         also lead to different numbers of free parameters (7 vs. 8).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Given
+         D
+         and
+         V
+         , there are many possible combinations of
+         nd,d=1,…,D
+         , and the optimal combination should indeed be determined by the structure of target features weights. However it is hard to know the structure of target feature weights before learning, and it would be impractical to try every possible combination of mode sizes, therefore we choose the criterion of determining the mode sizes as minimization of the total number of parameters, namely we solve the problem:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx4">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           minn1,…,nD⁡∑d=1Dnds.t∏d=1Dnd=V
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         The optimal solution is reached when
+         n1=n2=…=nD=V1D
+         . Of course it is not guaranteed that
+         V1D
+         is an integer, therefore we choose
+         nd=\floor⁢V1D
+         or
+         \ceil⁢V1D,d=1,…,D
+         such that
+         ∏d=1Dnd≥V
+         and
+         [∏d=1Dnd]-V
+         is minimized. The
+         [∏d=1Dnd]-V
+         extra entries of the tensor correspond to no features and are used just for padding. Since for each
+         nd
+         there are only two possible values to choose, we can simply enumerate all the possible
+         2D
+         (which is usually a small number) combinations of values and pick the one that matches the conditions given above. This way
+         n1,…,nD
+         are fully determined.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         Here we are only following the principle of minimizing the parameter number. While this strategy might work well with small amount of training data, it is not guaranteed to be the best strategy in all cases, especially when more data is available we might want to increase the number of parameters, making the model more complex so that the data can be more precisely modeled. Ideally the mode size needs to be adaptive to the amount of training data as well as the property of target weights. A theoretically guaranteed optimal approach to determining the mode sizes remains an open problem, and will be explored in our future work.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Number of Rank-1 Tensors
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The impact of using
+         H&gt;1
+         rank-1 tensors is obvious: a larger
+         H
+         increases the model complexity and makes the model more expressive, since we are able to approximate target weight tensor with smaller error. As a trade-off, the number of parameters and training complexity will be increased. To find out the optimal value of
+         H
+         for a given problem, we tune this hyper-parameter too on a held-out set.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Vector to Tensor Mapping
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         Finally, we need to find a way to map the original feature vector to a tensor, i.e. to associate each feature with an index in the tensor. Assuming the tensor volume
+         V
+         is the same as the number of features, then there are in all
+         V!
+         ways of mapping, which is an intractable number of possibilities even for modest sized feature sets, making it impractical to carry out a brute force search. However while we are doing the mapping, we hope to arrange the features in a way such that the corresponding target weight tensor has approximately a low-rank structure, this way it can be well approximated by very few component rank-1 tensors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         Unfortunately we have no knowledge about the target weights in advance, since that is what we need to learn after all. As a way out, we first run a simple vector-model based learning algorithm (say the Perceptron) on the training data and estimate a weight vector, which serves as a “surrogate” weight vector. We then use this surrogate vector to guide the design of the mapping. Ideally we hope to find a permutation of the surrogate weights to map to a tensor in such a way that the tensor has a rank as low as possible. However matrix rank minimization is in general a hard problem
+         [Fazel2002]
+         . Therefore, we follow an approximate algorithm given in Figure
+         4
+         , whose main idea is illustrated via an example in Figure
+         4
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p3">
+        <p class="ltx_p">
+         Basically, what the algorithm does is to divide the surrogate weights into hierarchical groups such that groups on the same level are approximately proportional to each other. Using these groups as units we are able to “fill” the tensor in a hierarchical way. The resulting tensor will have an approximate low-rank structure, provided that the sorted feature weights have roughly group-wise proportional relations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p4">
+        <p class="ltx_p">
+         For comparison, we also experimented a trivial solution which maps each entry of the feature tensor to the tensor just in sequential order, namely
+         ϕ0
+         is mapped to
+         Φ0,0,…,0
+         ,
+         ϕ1
+         is mapped to
+         Φ0,0,…,1
+         etc. This of course ignores correlation between features since the original feature order in the vector could be totally meaningless, and this strategy is not expected to be a good solution for vector to tensor mapping.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Online Learning Algorithm
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We now turn to the problem of learning the feature weight tensor. Here we propose an online learning algorithm similar to MIRA but modified to accommodate tensor models.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Let the model be
+        f⁢(𝑻)=𝑻∘𝚽⁢(x,y)
+        , where
+        𝑻=∑h=1H𝒘h1⊗𝒘h2⊗,…,⊗𝒘hD
+        is the weight tensor,
+        𝚽⁢(x,y)
+        is the feature tensor for an input-output pair
+        (x,y)
+        . Training samples
+        (xi,yi),i=1,…,m
+        , where
+        xi
+        is the input and
+        yi
+        is the reference or oracle hypothesis, are fed to the weight learning algorithm in sequential order. A prediction
+        zt
+        is made by the model
+        Tt
+        at time
+        t
+        from a set of candidates
+        𝒵⁢(xt)
+        , and the model updates the weight tensor by solving the following problem:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx5">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E4">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          min𝑻∈ℝn1×n2×…⁢nD⁡12⁢∥𝑻-𝑻t∥2+C⁢ξ
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (4)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          s.t.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ℒt≤ξ,ξ≥0
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        𝑻
+        is a decomposed weight tensor and
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx6">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex11">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          ℒt=𝑻∘𝚽⁢(xt,zt)-𝑻∘𝚽⁢(xt,yt)+ρ⁢(yt,zt)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        is the structured hinge loss.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        This problem setting follows the same “passive-aggressive” strategy as in the original MIRA. To optimize the vectors
+        𝒘hd,h=1,…,H,d=1,…,D
+        , we use a similar iterative strategy as proposed in
+        [Cai et al.2006b]
+        . Basically, the idea is that instead of optimizing
+        𝒘hd
+        all together, we optimize
+        𝒘11,𝒘12,…,𝒘HD
+        in turn. While we are updating one vector, the rest are fixed. For the problem setting given above, each of the sub-problems that need to be solved is convex, and according to
+        [Cai et al.2006b]
+        the objective function value will decrease after each individual weight update and eventually this procedure will converge.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        We now give this procedure in more detail. Denote the weight vector of the
+        dth
+        mode of the
+        hth
+        tensor at time
+        t
+        as
+        𝒘h,td
+        . We will update the vectors in turn in the following order:
+        𝒘1,t1,…,𝒘1,tD,𝒘2,t1,…,𝒘2,tD,…,𝒘H,t1,…,𝒘H,tD
+        . Once a vector has been updated, it is fixed for future updates.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        By way of notation, define
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx7">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex13">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left" colspan="3">
+          𝑾h,td
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="3">
+          <span class="ltx_tag ltx_tag_equation">
+           (5)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝒘h,t+11⊗,…,⊗𝒘h,t+1d-1⊗𝒘h,td⊗,…,⊗𝒘h,tD
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          (and let 𝑾h,tD+1≜𝒘h,t+11⊗,…,⊗𝒘h,t+1D),
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex15">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left" colspan="3">
+          𝑾^h,td
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="3">
+          <span class="ltx_tag ltx_tag_equation">
+           (6)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝒘h,t+11⊗,…,⊗𝒘h,t+1d-1⊗𝒘d⊗,…,⊗𝒘h,tD
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          (where ⁢𝒘d∈ℝnd⁢),
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx8">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          𝑻h,td
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∑h′=1h-1𝑾h′,tD+1+𝑾h,td+∑h′=h+1H𝑾h′,t1
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (7)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex16">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          𝑻^h,td
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∑h′=1h-1𝑾h′,tD+1+𝑾^h,td+∑h′=h+1H𝑾h′,t1
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx9">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left" colspan="3">
+          ϕh,td⁢(x,y)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="3">
+          <span class="ltx_tag ltx_tag_equation">
+           (9)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝚽(x,y)×2𝒘h,t+12…×d-1𝒘h,t+1d-1×d+1
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝒘h,td+1⁢…×D𝒘h,tD
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        In order to update from
+        𝒘h,td
+        to get
+        𝒘h,t+1d
+        , the sub-problem to solve is:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx10">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex22">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left" colspan="3">
+          min𝒘d∈ℝnd⁡12⁢∥𝑻^h,td-𝑻h,td∥2+C⁢ξ
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          min𝒘d∈ℝnd⁡12⁢∥𝑾^h,td-𝑾h,td∥2+C⁢ξ
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          min𝒘d∈ℝnd⁡12⁢βh,t+11⁢…⁢βh,t+1d-1⁢βh,td+1⁢…⁢βh,tD
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∥𝒘d-𝒘h,td∥2+C⁢ξ
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex23">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          s.t.
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ℒh,td≤ξ,ξ≥0.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx11">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex24">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          βh,td
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ∥𝒘h,td∥2
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex32">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          ℒh,td
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝑻^h,td∘𝚽⁢(xt,zt)-𝑻^h,td∘𝚽⁢(xt,yt)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          +ρ⁢(yt,zt)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+          =
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝒘d⋅(ϕh,td⁢(xt,zt)-ϕh,td⁢(xt,yt))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          -(∑h′=1h-1𝑾h′,tD+1+∑h′=h+1H𝑾h′,t1)∘
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ⁢(𝚽⁢(xt,yt)-𝚽⁢(xt,zt))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_align_baseline">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_center">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          +ρ⁢(yt,zt)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Letting
+       </p>
+       Δ⁢ϕh,td≜ϕh,td⁢(xt,yt)-ϕh,td⁢(xt,zt)
+       <p class="ltx_p">
+        and
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx12">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex34">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          sh,td≜(∑h′=1h-1𝑾h′,tD+1+∑h′=h+1H𝑾h′,t1)∘
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex35">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          (𝚽⁢(xt,yt)-𝚽⁢(xt,zt))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        we may compactly write
+       </p>
+       ℒh,td=ρ⁢(yt,zt)-sh,td-𝒘d⋅Δ⁢ϕh,td.
+       <p class="ltx_p">
+        This convex optimization problem is just like the original MIRA and may be solved in a similar way. The updating strategy for
+        𝒘h,td
+        is derived as
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="A1.EGx13">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex37">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          𝒘h,t+1d=𝒘h,td+τ⁢Δ⁢ϕh,td
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          τ=
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (10)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex38">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          min⁡{C,ρ⁢(yt,zt)-𝑻h,td∘(𝚽⁢(xt,yt)-𝚽⁢(xt,zt))∥Δ⁢ϕh,td∥2}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        The initial vectors
+        𝒘h,1i
+        cannot be made all zero, since otherwise the
+        l
+        -mode product in Equation (
+        9
+        ) would yield all zero
+        ϕh,td⁢(x,y)
+        and the model would never get a chance to be updated. Therefore, we initialize the entries of
+        𝒘h,1i
+        uniformly such that the Frobenius-norm of the weight tensor
+        𝑾
+        is unity.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        We call the algorithm above “Tensor-MIRA” and abbreviate it as T-MIRA.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this section we shows empirical results of the training algorithm on a parsing task. We used the Charniak parser
+        [Charniak et al.2005]
+        for our experiment, and we used the proposed algorithm to train the reranking feature weights. For comparison, we also investigated training the reranker with Perceptron and MIRA.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Experimental Settings
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         To simulate a low-resource training environment, our training sets were selected from sections 2-9 of the Penn WSJ treebank, section 24 was used as the held-out set and section 23 as the evaluation set. We applied the default settings of the parser. There are around
+         V=1.33
+         million features in all defined for reranking, and the
+         n
+         -best size for reranking is set to 50. We selected the parse with the highest
+         f
+         -score from the 50-best list as the oracle.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         We would like to observe from the experiments how the amount of training data as well as different settings of the tensor degrees of freedom affects the algorithm performance. Therefore we tried all combinations of the following experimental parameters:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         Here “approximate” and “sequential” means using, respectively, the algorithm given in Figure
+         4
+         and the sequential mapping mentioned in Section
+         3.4
+         . According to the strategy given in
+         3.2
+         , once the tensor order and number of features are fixed, the sizes of modes and total number of parameters to estimate are fixed as well, as shown in the tables below:
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Results and Analysis
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         The
+         f
+         -scores of the held-out and evaluation set given by T-MIRA as well as the Perceptron and MIRA baseline are given in Table
+         5
+         . From the results, we have the following observations:
+        </p>
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            When very few labeled data are available for training (compared with the number of features), T-MIRA performs much better than the vector-based models MIRA and Perceptron. However as the amount of training data increases, the advantage of T-MIRA fades away, and vector-based models catch up. This is because the weight tensors learned by T-MIRA are highly structured, which significantly reduces model/training complexity and makes the learning process very effective in a low-resource environment, but as the amount of data increases, the more complex and expressive vector-based models adapt to the data better, whereas further improvements from the tensor model is impeded by its structural constraints, making it insensitive to the increase of training data.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            To further contrast the behavior of T-MIRA, MIRA and Perceptron, we plot the
+            f
+            -scores on both the training and held-out sets given by these algorithms after each training epoch in Figure
+            7
+            . The plots are for the experimental setting with mapping=surrogate, # rank-1 tensors=2, tensor order=2, training data=sections 2-3. It is clearly seen that both MIRA and Perceptron do much better than T-MIRA on the training set. Nevertheless, with a huge number of parameters to fit a limited amount of data, they tend to over-fit and give much worse results on the held-out set than T-MIRA does.
+           </p>
+          </div>
+          <div class="ltx_para" id="I1.i2.p2">
+           <p class="ltx_p">
+            As an aside, observe that MIRA consistently outperformed Perceptron, as expected.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            Properties of linear tensor model: The heuristic vector-to-tensor mapping strategy given by Figure
+            4
+            gives consistently better results than the sequential mapping strategy, as expected.
+           </p>
+          </div>
+          <div class="ltx_para" id="I1.i3.p2">
+           <p class="ltx_p">
+            To make further comparison of the two strategies, in Figure
+            8
+            we plot the 20 largest singular values of the matrices which the surrogate weights (given by the Perceptron after running for 1 epoch) are mapped to by both strategies (from the experiment with training data sections 2-5). From the contrast between the largest and the
+            2nd
+            -largest singular values, it can be seen that the matrix generated by the first strategy approximates a low-rank structure much better than the second strategy. Therefore, the performance of T-MIRA is influenced significantly by the way features are mapped to the tensor. If the corresponding target weight tensor has internal structure that makes it approximately low-rank, the learning procedure becomes more effective.
+           </p>
+          </div>
+          <div class="ltx_para" id="I1.i3.p3">
+           <p class="ltx_p">
+            The best results are consistently given by
+            2nd
+            order tensor models, and the differences between the
+            3rd
+            and
+            4th
+            order tensors are not significant. As discussed in Section
+            3.1
+            , although
+            3rd
+            and
+            4th
+            order tensors have less parameters, the benefit of reduced training complexity does not compensate for the loss of expressiveness. A
+            2nd
+            order tensor has already reduced the number of parameters from the original 1.33 million to only 2310, and it does not help to further reduce the number of parameters using higher order tensors.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           4.
+          </span>
+          <div class="ltx_para" id="I1.i4.p1">
+           <p class="ltx_p">
+            As the amount of training data increases, there is a trend that the best results come from models with more rank-1 component tensors. Adding more rank-1 tensors increases the model’s complexity and ability of expression, making the model more adaptive to larger data sets.
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusion and Future Work
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        In this paper, we reformulated the traditional linear vector-space models as tensor-space models, and proposed an online learning algorithm named Tensor-MIRA. A tensor-space model is a compact representation of data, and via rank-1 tensor approximation, the weight tensor can be made highly structured hence the number of parameters to be trained is significantly reduced. This can be regarded as a form of model regularization.Therefore, compared with the traditional vector-space models, learning in the tensor space is very effective when a large feature set is defined, but only small amount of training data is available. Our experimental results corroborated this argument.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        As mentioned in Section
+        3.2
+        , one interesting problem that merits further investigation is how to determine optimal mode sizes. The challenge of applying a tensor model comes from finding a proper tensor structure for a given problem, and the key to solving this problem is to find a balance between the model complexity (indicated by the order and sizes of modes) and the number of parameters. Developing a theoretically guaranteed approach of finding the optimal structure for a given task will make the tensor model not only perform well in low-resource environments, but adaptive to larger data sets.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Acknowledgements
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        This work was partially supported by IBM via DARPA/BOLT contract number HR0011-12-C-0015 and by the National Science Foundation via award number IIS-0963898.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_appendix" id="A1">
+      <h2 class="ltx_title ltx_title_appendix">
+       <span class="ltx_tag ltx_tag_appendix">
+        Appendix A
+       </span>
+       Proof of Theorem
+       1
+      </h2>
+      <div class="ltx_proof">
+       <h6 class="ltx_title ltx_runin ltx_font_italic ltx_title_proof">
+        Proof.
+       </h6>
+       <div class="ltx_para" id="A1.p1">
+        <p class="ltx_p">
+         For
+         D=1
+         , it is obvious that if a set of real numbers
+         {x1,…,xn}
+         can be represented by a rank-1 matrix, it can always be represented by a vector, but the reverse is not true.
+        </p>
+       </div>
+       <div class="ltx_para" id="A1.p2">
+        <p class="ltx_p">
+         For
+         D&gt;1
+         , if
+         {x1,…,xn}
+         can be represented by
+         𝒫=𝐩1⊗𝐩2⊗…⊗𝐩D
+         , namely
+         xi=𝒫i1,…,iD=∏d=1Dpidd
+         , then for any component vector in mode
+         d
+         ,
+        </p>
+        [p1d,p2d,…,pndd]=[s1d⁢p1d,s2d⁢p1d,…,sndpd⁢p1d]
+        <p class="ltx_p">
+         where
+         ndp
+         is the size of mode
+         d
+         of
+         𝒫
+         ,
+         sjd
+         is a constant and
+         sjd=pi⁢1,…,id-1,j,id+1,…,iDpi⁢1,…,id-1,1,id+1,…,iD
+         Therefore
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx14">
+         <tr class="ltx_equation ltx_align_baseline" id="A1.E11">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           xi=𝒫i1,…,iD=x1,…,1⁢∏d=1Dsidd
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (11)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         and this representation is unique for a given
+         D
+         (up to the ordering of
+         𝐩j
+         and
+         sjd
+         in
+         𝐩j
+         , which simply assigns
+         {x1,…,xn}
+         with different indices in the tensor), due to the pairwise proportional constraint imposed by
+         xi/xj,i,j=1,…,n
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="A1.p3">
+        <p class="ltx_p">
+         If
+         xi
+         can also be represented by
+         𝒬
+         , then
+         xi=𝒬i1,…,iD+1=x1,…,1⁢∏d=1D+1tidd
+         , where
+         tjd
+         has a similar definition as
+         sjd
+         . Then it must be the case that
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A1.EGx15">
+         <tr class="ltx_equation ltx_align_baseline" id="A1.Ex40">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ∃d1,d2∈{1,…,D+1},d∈{1,…,D},d1≠d2
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="A1.Ex41">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           s.t.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="A1.E12">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           tid1d1⁢tid2d2=sidd,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (12)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="A1.Ex42">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           tidada=sidbdb, da≠d1,d2, db≠d
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         since otherwise
+         {x1,…,xn}
+         would be represented by a different set of factors than those given in Equation (
+         11
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="A1.p4">
+        <p class="ltx_p">
+         Therefore, in order for tensor
+         𝒬
+         to represent the same set of real numbers that
+         𝒫
+         represents, there needs to exist a vector
+         [s1d,…,sndd]
+         that can be represented by a rank-1 matrix as indicated by Equation (
+         12
+         ), which is in general not guaranteed.
+        </p>
+       </div>
+       <div class="ltx_para" id="A1.p5">
+        <p class="ltx_p">
+         On the other hand, if
+         {x1,…,xn}
+         can be represented by
+         𝒬
+         , namely
+        </p>
+        xi=𝒬i1,…,iD+1=∏d=1D+1qidd
+        <p class="ltx_p">
+         then we can just pick
+         d1∈{1,…,D},d2=d1+1
+         and let
+        </p>
+        𝐪′=[q1d1⁢q1d2,q1d1⁢q2d2,…,qnd2qd1⁢qnd1qd2]
+        <p class="ltx_p">
+         and
+        </p>
+        𝒬′=𝐪1⊗…⊗𝐪d1-1⊗𝐪′⊗𝐪d2+1⊗…⊗𝐪D+1
+        <p class="ltx_p">
+         Hence
+         {x1,…,xn}
+         can also be represented by a
+         Dth
+         order tensor
+         𝒬′
+         .
+∎
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

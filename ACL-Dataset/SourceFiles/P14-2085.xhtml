@@ -1,0 +1,1127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic prediction of aspectual class of verbs in context</title>
+<!--Generated on Wed Jun 11 17:58:55 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatic prediction of aspectual class of verbs in context</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Annemarie Friedrich and Alexis Palmer 
+<br class="ltx_break"/>Department of Computational Linguistics
+<br class="ltx_break"/>Saarland University, Saarbrücken, Germany
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">afried,apalmer</span>}<span class="ltx_text ltx_font_typewriter">@coli.uni-saarland.de</span>
+
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper describes a new approach to predicting the aspectual class of verbs in context, i.e., whether a verb is used in a stative or dynamic sense. We identify two challenging cases of this problem: when the verb is unseen in training data, and when the verb is ambiguous for aspectual class. A semi-supervised approach using linguistically-motivated features and a novel set of distributional features based on representative verb types allows us to predict classes accurately, even for unseen verbs. Many frequent verbs can be either stative or dynamic in different contexts, which has not been modeled by previous work; we use contextual features to resolve this ambiguity. In addition, we introduce two new datasets of clauses marked for aspectual class.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">In this work, we focus on the automatic prediction of whether a verb in context is used in a <span class="ltx_text ltx_font_italic">stative</span> or in a <span class="ltx_text ltx_font_italic">dynamic</span> sense, the most fundamental distinction in all taxonomies of <em class="ltx_emph">aspectual class</em>. The aspectual class of a discourse’s finite verbs is an important factor in conveying and interpreting temporal structure <cite class="ltx_cite">[<a href="#bib.bib18" title="Temporal ontology and temporal reference" class="ltx_ref">21</a>, <a href="#bib.bib37" title="A two-level knowledge representation for machine translation: lexical semantics and tense/aspect" class="ltx_ref">10</a>, <a href="#bib.bib38" title="Degrees of stativity: the lexical representation of verb aspect" class="ltx_ref">18</a>]</cite>; others are tense, grammatical aspect, mood and whether the utterance represents an event as completed. More accurate temporal information processing is expected to be beneficial for a variety of natural language processing tasks <cite class="ltx_cite">[<a href="#bib.bib6" title="Aspectual type and temporal relation classification" class="ltx_ref">7</a>, <a href="#bib.bib33" title="Semeval-2013 task 1: tempeval-3: evaluating time expressions, events, and temporal relations" class="ltx_ref">32</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">While most verbs have one predominant interpretation, others
+are more flexible for aspectual class and
+can occur as either stative (<a href="#I1.i1" title="• ‣ 1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) or dynamic (<a href="#I2.i1" title="• ‣ 1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) depending on the context. There are also cases that allow for both readings, such as (<a href="#I3.i1" title="• ‣ 1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<ul class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_italic">•</span></span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">The liquid </span><span class="ltx_text ltx_font_bold ltx_font_italic">fills</span><span class="ltx_text ltx_font_italic"> the container. (stative)</span></p>
+</div></li>
+</ul>
+<ul class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_italic">•</span></span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">The pool slowly </span><span class="ltx_text ltx_font_bold ltx_font_italic">filled</span><span class="ltx_text ltx_font_italic"> with water. (dynamic)</span></p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p4" class="ltx_para">
+<ul class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_italic">•</span></span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Your soul was made to be </span><span class="ltx_text ltx_font_bold ltx_font_italic">filled</span><span class="ltx_text ltx_font_italic"> with God Himself. (both)
+</span><span class="ltx_text ltx_font_typewriter ltx_font_tiny">(Brown corpus, religion)</span><span class="ltx_text ltx_font_italic"></span></p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Cases like (<a href="#I3.i1" title="• ‣ 1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) do not imply that there is a third class, but rather that two interpretations are available for the sentence, of which usually one will be chosen by a reader.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Following <cite class="ltx_cite">Siegel and McKeown (<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">2000</a>)</cite>, we aim to automatically classify clauses for <span class="ltx_text ltx_font_italic">fundamental aspectual class</span>, a function of the main verb and a select group of complements, which may differ per verb <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">26</a>, <a href="#bib.bib21" title="Linguistic indicators for language understanding: using machine learning methods to combine corpus-based indicators for aspectual classification of clauses" class="ltx_ref">28</a>]</cite>. This corresponds to the aspectual class of the clause’s main verb when ignoring any aspectual markers or transformations. For example, English sentences with perfect tense are usually considered to introduce states to the discourse <cite class="ltx_cite">[<a href="#bib.bib17" title="The parameter of aspect" class="ltx_ref">29</a>, <a href="#bib.bib39" title="On the stativity of the english perfect" class="ltx_ref">17</a>]</cite>, but we are interested in the aspectual class before this transformation takes place. The clause <span class="ltx_text ltx_font_italic">John has kissed Mary</span> introduces a state, but the fundamental aspectual class of the ‘tenseless’ clause <span class="ltx_text ltx_font_italic">John kiss Mary</span> is dynamic.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">In contrast to <cite class="ltx_cite">Siegel and McKeown (<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">2000</a>)</cite>, we do not conduct the task of predicting aspectual class solely at the type level, as such an approach ignores the minority class of ambiguous verbs. Instead we predict the aspectual class of verbs in the context of their arguments and modifiers. We show that this method works better than using only type-based features, especially for verbs with ambiguous aspectual class. In addition, we show that type-based features, including novel distributional features based on representative verbs, accurately predict predominant aspectual class for unseen verb types. Our work differs from prior work in that we treat the problem as a three-way classification task, predicting <span class="ltx_text ltx_font_smallcaps">dynamic</span>, <span class="ltx_text ltx_font_smallcaps">stative</span> or <span class="ltx_text ltx_font_smallcaps">both</span> as the aspectual class of a verb in context.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Aspectual class is well treated in the linguistic literature <cite class="ltx_cite">[<a href="#bib.bib15" title="Linguistics in philosophy" class="ltx_ref">33</a>, <a href="#bib.bib16" title="Word meaning and montague grammar" class="ltx_ref">12</a>, <a href="#bib.bib17" title="The parameter of aspect" class="ltx_ref">29</a>, for example]</cite>.
+Our notion of the stative/dynamic distinction corresponds to Bach’s <cite class="ltx_cite">[<a href="#bib.bib36" title="The algebra of events" class="ltx_ref">1</a>]</cite> distinction between states and non-states; to states versus occurrences (events and processes) according to <cite class="ltx_cite">Mourelatos (<a href="#bib.bib35" title="Events, processes, and states" class="ltx_ref">1978</a>)</cite>; and to Vendler’s <cite class="ltx_cite">[<a href="#bib.bib15" title="Linguistics in philosophy" class="ltx_ref">33</a>]</cite> distinction between states and the other three classes (activities, achievements, accomplishments).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Early studies on the computational modeling of aspectual class <cite class="ltx_cite">[<a href="#bib.bib1" title="Aspect, aspectual class, and the temporal structure of narrative" class="ltx_ref">23</a>, <a href="#bib.bib25" title="A computational model of the semantics of tense and aspect" class="ltx_ref">24</a>, <a href="#bib.bib32" title="Automatic semantic classification of verbs from their syntactic contexts: an implemented classifier for stativity" class="ltx_ref">5</a>, <a href="#bib.bib38" title="Degrees of stativity: the lexical representation of verb aspect" class="ltx_ref">18</a>]</cite> laid foundations for a cluster of papers published over a decade ago <cite class="ltx_cite">[<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">26</a>, <a href="#bib.bib21" title="Linguistic indicators for language understanding: using machine learning methods to combine corpus-based indicators for aspectual classification of clauses" class="ltx_ref">28</a>, <a href="#bib.bib19" title="Disambiguating verbs with the WordNet category of the direct object" class="ltx_ref">27</a>]</cite>. Since then, it has mostly been treated as a subtask within temporal reasoning, such as in efforts related to TimeBank <cite class="ltx_cite">[<a href="#bib.bib29" title="The timebank corpus" class="ltx_ref">25</a>]</cite> and the TempEval challenges <cite class="ltx_cite">[<a href="#bib.bib30" title="Semeval-2007 task 15: tempeval temporal relation identification" class="ltx_ref">34</a>, <a href="#bib.bib31" title="SemEval-2010 task 13: TempEval-2" class="ltx_ref">35</a>, <a href="#bib.bib33" title="Semeval-2013 task 1: tempeval-3: evaluating time expressions, events, and temporal relations" class="ltx_ref">32</a>]</cite>, where top-performing systems <cite class="ltx_cite">[<a href="#bib.bib13" title="ATT1: Temporal annotation using big windows and rich syntactic and semantic features" class="ltx_ref">16</a>, <a href="#bib.bib12" title="ClearTK-TimeML: a minimalist approach to TempEval 2013" class="ltx_ref">3</a>, <a href="#bib.bib14" title="Navytime: Event and time ordering from raw text" class="ltx_ref">6</a>]</cite> use corpus-based features, WordNet synsets, parse paths and features from typed dependencies to classify events as a joint task with determining the event’s span. <cite class="ltx_cite">Costa and Branco (<a href="#bib.bib6" title="Aspectual type and temporal relation classification" class="ltx_ref">2012</a>)</cite> explore the usefulness of a wider range of explicitly aspectual features for temporal relation classification.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Siegel and McKeown (<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">2000</a>)</cite> present the most extensive study of predicting aspectual class, which is the main inspiration for this work. While all of their linguistically motivated features (see section <a href="#S4.SS1" title="4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>) are type-based, they train on and evaluate over labeled verbs in context. Their data set taken from medical discharge summaries comprises 1500 clauses containing main verbs other than <span class="ltx_text ltx_font_italic">be</span> and <span class="ltx_text ltx_font_italic">have</span> which are marked for aspectual class.
+Their model fails to outperform a baseline of memorizing the most frequent class of a verb type, and they present an experiment testing on unseen verb types only for the related task of classifying completedness of events.
+We replicate their method using publicly available software, create a similar but larger corpus,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Direct comparison on their data is not possible; feature values for the verbs studied are available, but full texts and the English Slot Grammar parser <cite class="ltx_cite">[<a href="#bib.bib40" title="Slot grammar" class="ltx_ref">20</a>]</cite> are not.</span></span></span> and show that it is indeed possible to predict the aspectual class of unseen verbs.
+<cite class="ltx_cite">Siegel (<a href="#bib.bib19" title="Disambiguating verbs with the WordNet category of the direct object" class="ltx_ref">1998a</a>)</cite> investigates a classification method for the verb <span class="ltx_text ltx_font_italic">have</span> in context; inspired by this work, our present work goes one step further and uses a larger set of <span class="ltx_text ltx_font_italic">instance-based</span> contextual features to perform experiments on a set of 20 verbs.
+To the best of our knowledge, there is no previous work comprehensively addressing aspectual classification of verbs in context.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Data</h2>
+
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Verb type seed sets</h5>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Using the <span class="ltx_text ltx_font_bold">LCS Database</span> <cite class="ltx_cite">[<a href="#bib.bib24" title="LCS verb database" class="ltx_ref">11</a>]</cite>, we identify sets of verb types whose senses are only stative (188 verbs, e.g. <span class="ltx_text ltx_font_italic">belong, cost, possess</span>), only dynamic (3760 verbs, e.g. <span class="ltx_text ltx_font_italic">alter, knock, resign</span>), or mixed (215 verbs, e.g. <span class="ltx_text ltx_font_italic">fill, stand, take</span>), following a procedure described by <cite class="ltx_cite">Dorr and Olsen (<a href="#bib.bib9" title="Deriving verbal and compositional lexical aspect for NLP applications" class="ltx_ref">1997</a>)</cite>.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Asp-MASC</h5>
+
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_smallcaps ltx_font_small">complete</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_smallcaps ltx_font_small">w/o</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_italic ltx_font_small">have/be/none</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">genre</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">clauses</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">clauses</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">jokes</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">3462</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">0.85</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">2660</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.77</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">letters</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1848</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.71</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1444</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.62</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">news</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2565</span></td>
+<td class="ltx_td ltx_align_right ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">0.79</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2075</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.69</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">all</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">7875</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">0.80</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">6161</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.70</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_bold">Asp-MASC</span>: Cohen’s observed unweighted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="\kappa" display="inline"><mi mathsize="normal" stretchy="false">κ</mi></math>.</div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dynamic</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stative</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dynamic</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">4464</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">164</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stative</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">434</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1056</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">29</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span><span class="ltx_text ltx_font_bold">Asp-MASC</span>: confusion matrix for two annotators, without <span class="ltx_text ltx_font_italic">have/be/none</span> clauses, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="\kappa" display="inline"><mi mathsize="normal" stretchy="false">κ</mi></math> is 0.7.</div>
+</div>
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The Asp-MASC corpus consists of 7875 clauses from the letters, news and jokes sections of MASC <cite class="ltx_cite">[<a href="#bib.bib20" title="The manually annotated sub-corpus: a community resource for and by the people" class="ltx_ref">15</a>]</cite>,
+each labeled by two annotators for the aspectual class of the main verb.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Corpus freely available from
+<br class="ltx_break"/><a href="www.coli.uni-saarland.de/~afried" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.coli.uni-saarland.de/~afried</span></a>.</span></span></span> Texts were segmented into clauses using SPADE <cite class="ltx_cite">[<a href="#bib.bib41" title="Sentence level discourse parsing using syntactic and lexical information" class="ltx_ref">30</a>]</cite> with some heuristic post-processing. We parse the corpus using the Stanford dependency parser <cite class="ltx_cite">[<a href="#bib.bib28" title="Generating typed dependency parses from phrase structure parses" class="ltx_ref">8</a>]</cite> and extract the main verb of each segment. We use 6161 clauses for the classification task, omitting clauses with <span class="ltx_text ltx_font_italic">have</span> or <span class="ltx_text ltx_font_italic">be</span> as the main verb and those where no main verb could be identified due to parsing errors (<span class="ltx_text ltx_font_italic">none</span>).
+Table <a href="#S3.T1" title="Table 1 ‣ Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows inter-annotator agreement; Table <a href="#S3.T2" title="Table 2 ‣ Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the confusion matrix for the two annotators.
+Our two annotators exhibit different preferences on the 598 cases where they disagree between <span class="ltx_text ltx_font_smallcaps">dynamic</span> and <span class="ltx_text ltx_font_smallcaps">stative</span>.
+Such differences in annotation preferences are not uncommon <cite class="ltx_cite">[<a href="#bib.bib44" title="Analyzing disagreements" class="ltx_ref">2</a>]</cite>.
+We observe higher agreement in the jokes and news subcorpora than for letters; texts in the letters subcorpora are largely argumentative and thus have a different rhetorical style than the more straightforward narratives and reports found in jokes. Overall, we find substantial agreement.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">The data for our experiments uses the label <span class="ltx_text ltx_font_smallcaps">dynamic</span> or <span class="ltx_text ltx_font_smallcaps">stative</span> whenever annotators agree, and <span class="ltx_text ltx_font_smallcaps">both</span> whenever they disagree or when at least one annotator marked the clause as <span class="ltx_text ltx_font_smallcaps">both</span>, assuming that both readings are possible in such cases.
+Because we don’t want to model the authors’ personal view of the theory, we refrain from applying an adjudication step and model the data as is.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Asp-Ambig: (Brown)</h5>
+
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dynamic</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stative</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dynamic</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">1444</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">201</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stative</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">168</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">697</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">20</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_bold">Asp-Ambig</span>: confusion matrix for two annotators. Cohen’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="\kappa" display="inline"><mi mathsize="normal" stretchy="false">κ</mi></math> is 0.6.</div>
+</div>
+<div id="S3.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">In order to facilitate a first study on ambiguous verbs, we select 20 frequent verbs from the list of ‘mixed’ verbs (see section <a href="#S3.SS0.SSS0.P1" title="Verb type seed sets ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) and for each mark 138 sentences. Sentences are extracted randomly from the Brown corpus, such that the distribution of stative/dynamic usages is expected to be natural. We present entire sentences to the annotators who mark the aspectual class of the verb in question as highlighted in the sentence. The data is processed in the same way as Asp-MASC, discarding instances with parsing problems. This results in 2667 instances. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> is 0.6, the confusion matrix is shown in Table <a href="#S3.T3" title="Table 3 ‣ Asp-Ambig: (Brown) ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+Details are listed in Table <a href="#S5.T10" title="Table 10 ‣ Experiment 4: Instance-based classification ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model and Features</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">For predicting the aspectual class of verbs in context (<span class="ltx_text ltx_font_smallcaps">stative</span>, <span class="ltx_text ltx_font_smallcaps">dynamic</span>, <span class="ltx_text ltx_font_smallcaps">both</span>), we assume a supervised
+learning setting and explore features mined from a large
+background corpus, distributional features, and instance-based features. If not indicated otherwise,
+experiments use a Random Forest classifier <cite class="ltx_cite">[<a href="#bib.bib42" title="Random forests" class="ltx_ref">4</a>]</cite> trained
+with the implementation and standard parameter settings from Weka <cite class="ltx_cite">[<a href="#bib.bib43" title="The weka data mining software: an update" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Linguistic indicator features (LingInd)</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">This set of corpus-based features is a reimplementation of the linguistic indicators of <cite class="ltx_cite">Siegel and McKeown (<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">2000</a>)</cite>, who show that (some of) these features correlate with either stative or dynamic verb types. We parse the AFE and XIE sections of Gigaword <cite class="ltx_cite">[<a href="#bib.bib50" title="English gigaword" class="ltx_ref">13</a>]</cite> with the Stanford dependency parser.
+For each verb type, we obtain a normalized count showing how often it occurs with each of the indicators in Table <a href="#S4.T4" title="Table 4 ‣ 4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, resulting in one value per feature per verb. For example, for the verb <span class="ltx_text ltx_font_italic">fill</span>, the value of the feature <span class="ltx_text ltx_font_typewriter">temporal-adverb</span> is 0.0085, meaning that 0.85% of the occurrences of <span class="ltx_text ltx_font_italic">fill</span> in the corpus are modified by one of the temporal adverbs on the list compiled by <cite class="ltx_cite">Siegel (<a href="#bib.bib21" title="Linguistic indicators for language understanding: using machine learning methods to combine corpus-based indicators for aspectual classification of clauses" class="ltx_ref">1998b</a>)</cite>.
+Tense, progressive, perfect and voice are extracted
+using a set of rules following <cite class="ltx_cite">Loaiciga<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib49" title="English-French Verb Phrase Alignment in Europarl for Tense Translation Modeling" class="ltx_ref">2014</a>)</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We thank the authors for providing us their code.</span></span></span></p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Feature</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Example</span></th>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Feature</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Example</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">frequency</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">continuous</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">continually</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">present</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">says</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">adverb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">endlessly</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">past</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">said</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">evaluation</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">better</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">future</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">will say</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">adverb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">horribly</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">perfect</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">had won</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">manner</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">furiously</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">progressive</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">is winning</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">adverb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">patiently</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">negated</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">not/never</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">temporal</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">again</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">particle</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">up/in/…</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">adverb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">finally</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">no subject</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">in-PP</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">in an hour</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">for-PP</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">for an hour</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span><span class="ltx_text ltx_font_bold">LingInd</span> feature set and examples for lexical items associated with each indicator.</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Feature</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Values</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">part-of-speech tag of the verb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">VB, VBG, VBN, …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">tense</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">present, past, future</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">progressive</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">true/false</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">perfect</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">true/false</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">voice</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">active/passive</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">grammatical dependents</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">WordNet lexname/POS</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>Instance-based (<span class="ltx_text ltx_font_bold">Inst</span>) features</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Distributional Features (Dist)</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We aim to leverage existing, possibly noisy sets of representative stative, dynamic or mixed verb types extracted from LCS (see section <a href="#S3.SS0.SSS0.P1" title="Verb type seed sets ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), making up for unseen verbs and noise by averaging over distributional similarities.
+Using an existing large distributional model <cite class="ltx_cite">[<a href="#bib.bib10" title="Word meaning in context: a simple and effective vector model." class="ltx_ref">31</a>]</cite> estimated over the set of Gigaword documents marked as stories, for each verb type, we build a syntactically informed vector representing the contexts in which the verb occurs.
+We compute three numeric feature values per verb type, which correspond to the average cosine similarities with the verb types in each of the three seed sets.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Instance-based features (Inst)</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T5" title="Table 5 ‣ 4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows our set of instance-based syntactic and semantic features.
+In contrast to the above described type-based features, these features do not rely on a background corpus, but are extracted from the clause being classified. Tense, progressive, perfect and voice are extracted from dependency parses as described above.
+For features encoding grammatical dependents, we focus on a subset of grammatical relations. The feature value is either the WordNet lexical filename (e.g. <span class="ltx_text ltx_font_italic">noun.person</span>) of the given relation’s argument or its POS tag, if the former is not available. We simply use the most frequent sense for the dependent’s lemma. We also include features that indicate, if there are any, the particle of the verb and its prepositional dependents. For the sentence <span class="ltx_text ltx_font_italic">A little girl had just finished her first week of school</span>, the instance-based feature values would include <span class="ltx_text ltx_font_typewriter">tense</span>:<span class="ltx_text ltx_font_italic">past</span>, <span class="ltx_text ltx_font_typewriter">subj</span>:<span class="ltx_text ltx_font_italic">noun.person</span>, <span class="ltx_text ltx_font_typewriter">dobj</span>:<span class="ltx_text ltx_font_italic">noun.time</span> or <span class="ltx_text ltx_font_typewriter">particle</span>:<span class="ltx_text ltx_font_italic">none</span>.</p>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Features</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Accuracy</span><span class="ltx_text ltx_font_small"> (%)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline (Lemma)</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m1" class="ltx_Math" alttext="83.6" display="inline"><mn>83.6</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">LingInd</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m2" class="ltx_Math" alttext="83.8" display="inline"><mn>83.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Inst</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m3" class="ltx_Math" alttext="70.8" display="inline"><mn>70.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Inst+Lemma</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m4" class="ltx_Math" alttext="83.7" display="inline"><mn>83.7</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dist</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m5" class="ltx_Math" alttext="83.4" display="inline"><mn>83.4</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd+Inst+Dist+Lemma</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m6" class="ltx_Math" alttext="84.1" display="inline"><mn>84.1</mn></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span><span class="ltx_text ltx_font_bold">Experiment 1</span>: <span class="ltx_text ltx_font_smallcaps">Seen</span> verbs, using <span class="ltx_text ltx_font_bold">Asp-MASC</span>. Baseline memorizes most frequent class per verb type in training folds.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The experiments presented in this section aim to evaluate the effectiveness of the feature sets described in the previous section, focusing on the challenging cases of verb types unseen in the training data and highly ambiguous verbs. The feature <span class="ltx_text ltx_font_bold">Lemma</span> indicates that the verb’s lemma is used as an additional feature.</p>
+</div>
+<div id="S5.SSx1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">Experiment 1: <span class="ltx_text ltx_font_smallcaps">Seen</span> verbs</h3>
+
+<div id="S5.SSx1.p1" class="ltx_para">
+<p class="ltx_p">The setting of our first experiment follows <cite class="ltx_cite">Siegel and McKeown (<a href="#bib.bib2" title="Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights" class="ltx_ref">2000</a>)</cite>. Table <a href="#S4.T6" title="Table 6 ‣ 4.3 Instance-based features (Inst) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> reports results for 10-fold cross-validation, with occurrences of all verbs distributed evenly over the folds. No feature combination significantly<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>According to McNemar’s test with Yates’ correction for continuity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SSx1.p1.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>.</span></span></span> outperforms the baseline of simply memorizing the most frequent class of a verb type in the respective training folds.</p>
+</div>
+<div id="S5.SSx1.SSSx1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Experiment 2: <span class="ltx_text ltx_font_smallcaps">UNSEEN</span> verbs</h4>
+
+<div id="S5.SSx1.SSSx1.p1" class="ltx_para">
+<p class="ltx_p">This experiment shows a successful case of semi-supervised learning: while type-based feature values can be estimated from large corpora in an unsupervised way, some labeled training data is necessary to learn their best combination. This experiment specifically examines performance on verbs not seen in labeled training data. We use 10-fold cross validation but ensure that all occurrences of a verb type appear in the same fold: verb types in each test fold have <span class="ltx_text ltx_font_italic">not</span> been seen in the respective training data, ruling out the Lemma feature. A Logistic regression classifier <cite class="ltx_cite">[<a href="#bib.bib43" title="The weka data mining software: an update" class="ltx_ref">14</a>]</cite> works better here (using only numeric features), and we present results in Table <a href="#S5.T7" title="Table 7 ‣ Experiment 2: UNSEEN verbs ‣ Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>. Both the LingInd and Dist features generalize across verb types, and their combination works best.</p>
+</div>
+<div id="S5.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Features</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Accuracy</span><span class="ltx_text ltx_font_small"> (%)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">1</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline</span></td>
+<td class="ltx_td ltx_align_char:. ltx_border_r ltx_border_tt" style="text-align:&quot;.&quot;;"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m1" class="ltx_Math" alttext="72.5" display="inline"><mn>72.5</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dist</span></td>
+<td class="ltx_td ltx_align_char:. ltx_border_r ltx_border_t" style="text-align:&quot;.&quot;;"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m2" class="ltx_Math" alttext="78.3*" display="inline"><mrow><mn>78.3</mn><mo>*</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd</span></td>
+<td class="ltx_td ltx_align_char:. ltx_border_r ltx_border_t" style="text-align:&quot;.&quot;;"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m3" class="ltx_Math" alttext="80.4*" display="inline"><mrow><mn>80.4</mn><mo>*</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd+Dist</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m4" class="ltx_Math" alttext="81.9{\textnormal{*}\dagger}" display="inline"><mrow><mn>81.9</mn><mtext mathsize="small" stretchy="false">*</mtext><mo>†</mo></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 7: </span><span class="ltx_text ltx_font_bold">Experiment 2</span>: <span class="ltx_text ltx_font_smallcaps">Unseen</span> verb types, Logistic regression, <span class="ltx_text ltx_font_bold">Asp-MASC</span>. Baseline labels everything with the most frequent class in the training set (<span class="ltx_text ltx_font_smallcaps">dynamic</span>). *Significantly<sup class="ltx_sup"><a href="#S5.SSx1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></sup> different from line 1. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m6" class="ltx_Math" alttext="\dagger" display="inline"><mo mathsize="normal" stretchy="false">†</mo></math>Significantly<sup class="ltx_sup"><a href="#S5.SSx1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></sup> different from line 3.</div>
+</div>
+<div id="S5.T8" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Data</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Features</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Acc.</span><span class="ltx_text ltx_font_small"> (%)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">one-label</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m1" class="ltx_Math" alttext="92.8" display="inline"><mn>92.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">verbs</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m2" class="ltx_Math" alttext="92.8" display="inline"><mn>92.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dist</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m3" class="ltx_Math" alttext="92.6" display="inline"><mn>92.6</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">(1966 inst.)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Inst+Lemma</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m4" class="ltx_Math" alttext="91.4*" display="inline"><mrow><mn>91.4</mn><mo>*</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd+Inst+Lemma</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m5" class="ltx_Math" alttext="92.4" display="inline"><mn>92.4</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">multi-label</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m6" class="ltx_Math" alttext="78.9" display="inline"><mn>78.9</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">verbs</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m7" class="ltx_Math" alttext="79.0" display="inline"><mn>79.0</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dist</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m8" class="ltx_Math" alttext="79.0" display="inline"><mn>79.0</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">(4195 inst.)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Inst</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m9" class="ltx_Math" alttext="67.4*" display="inline"><mrow><mn>67.4</mn><mo>*</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Inst+Lemma</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m10" class="ltx_Math" alttext="79.9" display="inline"><mn>79.9</mn></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd+Inst+Lemma</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m11" class="ltx_Math" alttext="80.9{\textnormal{*}}" display="inline"><mrow><mn>80.9</mn><mo>⁢</mo><mtext mathsize="small" stretchy="false">*</mtext></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LingInd+Inst+Lemma+Dist</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T8.m12" class="ltx_Math" alttext="80.2{\textnormal{*}}" display="inline"><mrow><mn>80.2</mn><mo>⁢</mo><mtext mathsize="small" stretchy="false">*</mtext></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 8: </span><span class="ltx_text ltx_font_bold">Experiment 3</span>: <span class="ltx_text ltx_font_smallcaps">‘one- vs. multi-label’</span> verbs, <span class="ltx_text ltx_font_bold">Asp-MASC</span>. Baseline as in Table <a href="#S4.T6" title="Table 6 ‣ 4.3 Instance-based features (Inst) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. *Indicates that result is significantly<sup class="ltx_sup"><a href="#S5.SSx1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></sup> different from the respective baseline.</div>
+</div>
+<div id="S5.T9" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">System</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Class</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:8.5pt;" width="8.5pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Acc.</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">P</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">R</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">F</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">baseline</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">micro-avg.</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T9.m1" class="ltx_Math" alttext="78.9" display="inline"><mn>78.9</mn></math></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.75</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.79</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_small">0.76</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">LingInd</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dynamic</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:8.5pt;" width="8.5pt"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.84</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.95</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_small">0.89</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">+Inst</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stative</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:8.5pt;" width="8.5pt"/>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.76</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.69</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_small">0.72</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">+Lemma</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:8.5pt;" width="8.5pt"/>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.24</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_small">0.33</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">micro-avg.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T9.m2" class="ltx_Math" alttext="80.9{\textnormal{*}}" display="inline"><mrow><mn>80.9</mn><mo>⁢</mo><mtext mathsize="small" stretchy="false">*</mtext></mrow></math></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.78</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.81</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:11.4pt;" width="11.4pt"><span class="ltx_text ltx_font_bold ltx_font_small">0.79</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 9: </span><span class="ltx_text ltx_font_bold">Experiment 3</span>: <span class="ltx_text ltx_font_smallcaps">‘multi-label’</span>, precision, recall and F-measure, detailed class statistics for the best-performing system from Table <a href="#S5.T8" title="Table 8 ‣ Experiment 2: UNSEEN verbs ‣ Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.</div>
+</div>
+</div>
+</div>
+<div id="S5.SSx2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">Experiment 3: <span class="ltx_text ltx_font_smallcaps">one-</span> vs. <span class="ltx_text ltx_font_smallcaps">multi-label</span> verbs</h3>
+
+<div id="S5.SSx2.p1" class="ltx_para">
+<p class="ltx_p">For this experiment, we compute results separately for one-label verbs (those for which all instances in Asp-MASC have the same label) and for multi-label verbs (instances have differing labels in Asp-MASC). We expect one-label verbs to have a strong predominant aspectual class, and multi-label verbs to be more flexible.
+Otherwise, the experimental setup is as in experiment 1. Results appear in Table <a href="#S5.T8" title="Table 8 ‣ Experiment 2: UNSEEN verbs ‣ Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>. In each case, the linguistic indicator features again perform on par with the baseline.
+For multi-label verbs, the feature combination Lemma+LingInd+Inst leads to significant<sup class="ltx_sup"><a href="#S5.SSx1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></sup> improvement of 2% gain in accuracy over the baseline; Table <a href="#S5.T9" title="Table 9 ‣ Experiment 2: UNSEEN verbs ‣ Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> reports detailed class statistics and reveals a gain in F-measure of 3 points over the baseline.
+To sum up, Inst features are essential for classifying multi-label verbs, and the LingInd features provide some useful prior. These results motivate the need for an instance-based approach.</p>
+</div>
+</div>
+<div id="S5.SSx3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">Experiment 4: <span class="ltx_text ltx_font_smallcaps">Instance-based</span> classification</h3>
+
+<div id="S5.T10" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"/>
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:10.8pt;" width="10.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:14.2pt;" rowspan="4" width="14.2pt"><span class="ltx_text ltx_font_small">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:24.3pt;height:39.5833333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:28.5pt;transform:translate(-2.08pt,2.08pt) rotate(-90deg) ;-webkit-transform:translate(-2.08pt,2.08pt) rotate(-90deg) ;-ms-transform:translate(-2.08pt,2.08pt) rotate(-90deg) ;">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:28.5pt;">
+<p class="ltx_p">Inst</p>
+<p class="ltx_p">+Lemma</p>
+</span>
+</span></span></span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" rowspan="4" width="31.3pt"><span class="ltx_text ltx_font_small">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:48.6pt;height:39.5833333333333px;vertical-align:-0.0pt;"><span class="ltx_transformed_inner" style="width:28.5pt;transform:translate(10.07pt,-10.07pt) rotate(-90deg) ;-webkit-transform:translate(10.07pt,-10.07pt) rotate(-90deg) ;-ms-transform:translate(10.07pt,-10.07pt) rotate(-90deg) ;">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:28.5pt;">
+<p class="ltx_p">Inst</p>
+<p class="ltx_p">+Lemma</p>
+<p class="ltx_p">+LingInd</p>
+<p class="ltx_p">+Dist</p>
+</span>
+</span></span></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small"># of</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r" colspan="2"><span class="ltx_text ltx_font_smallcaps">Majority</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Verb</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_small">inst.</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r" colspan="2"><span class="ltx_text ltx_font_smallcaps">Class<sup class="ltx_sup"><a href="#S5.T10" title="Table 10 ‣ Experiment 4: Instance-based classification ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a></sup></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">feel</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">128</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">96.1</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stat</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">say</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">138</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">94.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">93.5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">93.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">make</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">136</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">91.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">91.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">91.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">come</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">133</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">88.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">87.2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">87.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">take</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">137</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">85.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">85.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">85.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">meet</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">130</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">83.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">86.2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">87.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">stand</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">130</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">80.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stat</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">79.2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">83.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">find</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">137</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">74.5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">69.3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">68.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">accept</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">134</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">70.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">64.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">65.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">hold</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">134</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">56.0</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">43.3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">49.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">carry</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">136</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">58.1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">look</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">138</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">55.8</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">72.5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">74.6</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">show</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">133</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">54.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">69.2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">68.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">appear</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">136</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">52.2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stat</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">64.7</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">61.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">follow</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">122</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">51.6</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">both</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">69.7</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">65.6</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">consider</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">138</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">50.7</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">61.6</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">70.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">cover</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">123</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">50.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">stat</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">46.3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">54.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">fill</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">134</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">47.8</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">66.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">62.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">bear</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">135</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">47.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">70.4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_small">67.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">allow</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">135</span></th>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">37.8</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:10.8pt;" width="10.8pt"><span class="ltx_text ltx_font_smallcaps ltx_font_small">dyn</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">48.9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">51.9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">micro-avg.</span></th>
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2667</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_small">66.3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:10.8pt;" width="10.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:14.2pt;" width="14.2pt"><span class="ltx_text ltx_font_bold ltx_font_small">71.0</span><span class="ltx_text ltx_font_small">*</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">72.0</span><span class="ltx_text ltx_font_small">*</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 10: </span><span class="ltx_text ltx_font_bold">Experiment 4</span>: <span class="ltx_text ltx_font_smallcaps">Instance-based</span>. <span class="ltx_text ltx_font_bold">Accuracy</span> (in %) on <span class="ltx_text ltx_font_bold">Asp-Ambig</span>. *Differs significantly<sup class="ltx_sup"><a href="#S5.SSx1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a></sup> from the majority class baseline.</div>
+</div>
+<div id="S5.SSx3.p1" class="ltx_para">
+<p class="ltx_p">For verbs with ambiguous aspectual class, type-based classification is
+not sufficient, as this approach selects a dominant sense for any
+given verb and then always assigns that. Therefore we propose handling ambiguous verbs separately.
+As Asp-MASC contains only few instances of each of the ambiguous verbs, we turn to the Asp-Ambig dataset. We perform a Leave-One-Out (LOO) cross validation evaluation, with
+results reported in Table <a href="#S5.T10" title="Table 10 ‣ Experiment 4: Instance-based classification ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>
+The third column also shows the outcome of using either only the Lemma, only LingInd or only Dist in LOO; all have almost the same outcome as using the majority class, numbers differ only after the decimal point.</span></span></span>
+Using the Inst features alone (not shown in Table <a href="#S5.T10" title="Table 10 ‣ Experiment 4: Instance-based classification ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>) results in a micro-average accuracy of only 58.1%: these features are only useful when combined with the feature Lemma.
+For classifying verbs whose most frequent class occurs less than 56% of the time, Lemma+Inst features are essential. Whether or not performance is improved by adding LingInd/Dist features, with their bias towards one aspectual class, depends on the verb type. It is an open research question which verb types should be treated in which way.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Discussion and conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have described a new, context-aware approach to automatically predicting aspectual class, including a new set of distributional features. We have also introduced two new data sets of clauses labeled for aspectual class.
+Our experiments show that in any setting where labeled training data is available, improvement over the most frequent class baseline can only be reached by integrating instance-based features, though type-based features (LingInd, Dist) may provide useful priors for some verbs and successfully predict predominant aspectual class for unseen verb types.
+In order to arrive at a globally well-performing system, we envision a multi-stage approach, treating verbs differently according to whether training data is available and whether or not the verb’s aspectual class distribution is highly skewed.</p>
+</div>
+<div id="S6.SSx3.SSSx1.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Acknowledgments</h5>
+
+<div id="S6.SSx3.SSSx1.P1.p1" class="ltx_para">
+<p class="ltx_p">We thank the anonymous reviewers, Omri Abend, Mike Lewis, Manfred Pinkal, Mark Steedman, Stefan Thater and Bonnie Webber for helpful comments, and our annotators A. Kirkland and R. Kühn. This research was supported in part by the MMCI Cluster of Excellence, and the first author is supported by an IBM PhD Fellowship.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bach</span><span class="ltx_text ltx_bib_year">(1986)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The algebra of events</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistics and philosophy</span> <span class="ltx_text ltx_bib_volume">9</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–16</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Beigman Klebanov, E. Beigman and D. Diermeier</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Analyzing disagreements</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 2–7</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bethard</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ClearTK-TimeML: a minimalist approach to TempEval 2013</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 10–14</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Breiman</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random forests</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. R. Brent</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic semantic classification of verbs from their syntactic contexts: an implemented classifier for stativity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 222–226</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Chambers</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Navytime: Event and time ordering from raw text</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 73–77</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Costa and A. Branco</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Aspectual type and temporal relation classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 266–275</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. De Marneffe, B. MacCartney and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating typed dependency parses from phrase structure parses</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">6</span>, <span class="ltx_text ltx_bib_pages"> pp. 449–454</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. J. Dorr and M. B. Olsen</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deriving verbal and compositional lexical aspect for NLP applications</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–158</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P1.p1" title="Verb type seed sets ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. J. Dorr</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A two-level knowledge representation for machine translation: lexical semantics and tense/aspect</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Lexical Semantics and Knowledge Representation</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 269–287</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. J. Dorr</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LCS verb database</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Online Software Database of Lexical Conceptual Structures</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">University of Maryland</span>,  <span class="ltx_text ltx_bib_place">College Park, MD</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P1.p1" title="Verb type seed sets ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Dowty</span><span class="ltx_text ltx_bib_year">(1979)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word meaning and montague grammar</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Reidel, Dordrecht</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">*****</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_generic"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hall, E. Frank, G. Holmes, B. Pfahringer, P. Reutemann and I. H. Witten</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The weka data mining software: an update</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM SIGKDD explorations newsletter</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 10–18</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SSx1.SSSx1.p1" title="Experiment 2: UNSEEN verbs ‣ Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Ide, C. Fellbaum, C. Baker and R. Passonneau</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The manually annotated sub-corpus: a community resource for and by the people</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 68–73</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Jung and A. Stent</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ATT1: Temporal annotation using big windows and rich syntactic and semantic features</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 20–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Katz</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the stativity of the english perfect</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Perfect explorations</span>, <span class="ltx_text ltx_bib_pages"> pp. 205–234</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. L. Klavans and M. Chodorow</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Degrees of stativity: the lexical representation of verb aspect</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1126–1131</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Loaiciga, T. Meyer and A. Popescu-Belis</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">English-French Verb Phrase Alignment in Europarl for Tense Translation Modeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. C. McCord</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Slot grammar</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Moens and M. J. Steedman</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Temporal ontology and temporal reference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 15–28</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">*****</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="ftp://ftp.cogsci.ed.ac.uk/pub/steedman/temporality/J88-2003.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. P.D. Mourelatos</span><span class="ltx_text ltx_bib_year">(1978)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Events, processes, and states</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistics and philosophy</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 415–434</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Nakhimovsky</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Aspect, aspectual class, and the temporal structure of narrative</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 29–43</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Passonneau</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A computational model of the semantics of tense and aspect</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">Spring 1988</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Pustejovsky, P. Hanks, R. Sauri, A. See, R. Gaizauskas, A. Setzer, D. Radev, B. Sundheim, D. Day and L. Ferro</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The timebank corpus</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2003</span>, <span class="ltx_text ltx_bib_pages"> pp. 40</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. V. Siegel and K. R. McKeown</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning methods to combine linguistic indicators: improving aspectual classification and revealing linguistic insights</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 595–628</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p7" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S5.SSx1.p1" title="Experiment 1: Seen verbs ‣ 5 Experiments ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. V. Siegel</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Disambiguating verbs with the WordNet category of the direct object</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Universite de Montreal</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. V. Siegel</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic indicators for language understanding: using machine learning methods to combine corpus-based indicators for aspectual classification of clauses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Columbia University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Linguistic indicator features (LingInd) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. S. Smith</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The parameter of aspect</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Kluwer</span>, <span class="ltx_text ltx_bib_place">Dordrecht</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Soricut and D. Marcu</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence level discourse parsing using syntactic and lexical information</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 149–156</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Asp-MASC ‣ 3 Data ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Thater, H. Fürstenau and M. Pinkal</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word meaning in context: a simple and effective vector model.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1134–1143</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Distributional Features (Dist) ‣ 4 Model and Features ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. UzZaman, H. Llorens, L. Derczynski, M. Verhagen, J. Allen and J. Pustejovsky</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semeval-2013 task 1: tempeval-3: evaluating time expressions, events, and temporal relations</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inbook"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Vendler</span><span class="ltx_text ltx_bib_year">(1957)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistics in philosophy</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 97–121</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Verhagen, R. Gaizauskas, F. Schilder, M. Hepple, G. Katz and J. Pustejovsky</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semeval-2007 task 15: tempeval temporal relation identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 75–80</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Verhagen, R. Sauri, T. Caselli and J. Pustejovsky</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2010 task 13: TempEval-2</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 57–62</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Automatic prediction of aspectual class of verbs in context" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:58:55 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

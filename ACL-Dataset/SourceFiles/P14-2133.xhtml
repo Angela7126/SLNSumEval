@@ -1,0 +1,706 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>How much do word embeddings encode about syntax?</title>
+<!--Generated on Wed Jun 11 18:37:08 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">How much do word embeddings encode about syntax?</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jacob Andreas 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Dan Klein 
+<br class="ltx_break"/>Computer Science Division 
+<br class="ltx_break"/>University of California, Berkeley 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">jda,klein</span>}<span class="ltx_text ltx_font_typewriter">@cs.berkeley.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Do continuous word embeddings encode any useful information for constituency
+parsing?
+We isolate
+three ways in which word embeddings might augment a
+state-of-the-art statistical parser: by connecting out-of-vocabulary
+words to known ones, by encouraging common behavior among related
+in-vocabulary words, and by directly providing
+features for the lexicon.
+We test each of these hypotheses with a targeted change to a state-of-the-art baseline.
+Despite small gains on extremely small supervised
+training sets, we find that extra information from embeddings appears to make
+little or no difference to a parser with adequate training data. Our results
+support an overall hypothesis that word embeddings import syntactic
+information that is ultimately redundant with distinctions learned from
+treebanks in other ways.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">This paper investigates a variety of ways in which word embeddings might augment
+a constituency parser with a discrete state space. Word embeddings—representations of
+lexical items as points in a real vector space—have a long history in natural
+language processing, going back at least as far as work on latent semantic
+analysis (LSA) for information retrieval <cite class="ltx_cite">[<a href="#bib.bib59" title="Indexing by latent semantic analysis" class="ltx_ref">4</a>]</cite>. While word
+embeddings can be constructed directly from surface distributional statistics,
+as in LSA, more sophisticated tools for unsupervised extraction of word
+representations have recently gained popularity
+<cite class="ltx_cite">[<a href="#bib.bib60" title="Natural language processing (almost) from scratch" class="ltx_ref">3</a>, <a href="#bib.bib61" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">10</a>]</cite>. Semi-supervised and
+unsupervised models for a variety of core NLP tasks, including named-entity
+recognition <cite class="ltx_cite">[<a href="#bib.bib62" title="Trained named entity recognition using distributional clusters" class="ltx_ref">5</a>]</cite>, part-of-speech tagging <cite class="ltx_cite">[<a href="#bib.bib63" title="Distributional part-of-speech tagging" class="ltx_ref">13</a>]</cite>, and
+chunking <cite class="ltx_cite">[<a href="#bib.bib64" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">15</a>]</cite> have been shown to benefit
+from the inclusion of word embeddings as features. In the other direction,
+access to a syntactic parse has been shown to be useful for constructing word
+embeddings for phrases compositionally <cite class="ltx_cite">[<a href="#bib.bib90" title="The role of syntax in vector space models of compositional semantics" class="ltx_ref">7</a>, <a href="#bib.bib2" title="A generative model of vector space semantics" class="ltx_ref">1</a>]</cite>.
+<span class="ltx_text ltx_font_italic">Dependency</span> parsers have seen gains from distributional
+statistics in the form of discrete word clusters <cite class="ltx_cite">[<a href="#bib.bib89" title="Simple semi-supervised dependency parsing" class="ltx_ref">9</a>]</cite>, and
+recent work <cite class="ltx_cite">[<a href="#bib.bib88" title="Tailoring continuous word representations for dependency parsing" class="ltx_ref">2</a>]</cite> suggests that similar gains can be
+derived from embeddings like the ones used in this paper.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">It has been less clear how (and indeed whether) word embeddings in and of
+themselves are useful for <span class="ltx_text ltx_font_italic">constituency</span> parsing.
+There certainly exist competitive parsers that internally represent lexical
+items as real-valued vectors, such as the neural network-based parser of
+<cite class="ltx_cite">Henderson (<a href="#bib.bib65" title="Discriminative training of a neural network statistical parser" class="ltx_ref">2004</a>)</cite>, and even parsers which use pre-trained word
+embeddings to represent the lexicon, such as <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib66" title="Parsing with compositional vector grammars" class="ltx_ref">2013</a>)</cite>. In these
+parsers, however,
+use of word vectors is a structural choice, rather than an added feature,
+and it is difficult to disentangle whether
+vector-space lexicons are
+actually more powerful than their discrete analogs—perhaps the performance of
+neural network parsers comes entirely from the model’s extra-lexical syntactic
+structure.
+In order to isolate the contribution from word embeddings, it is useful to
+demonstrate improvement over a parser that already
+achieves state-of-the-art performance <em class="ltx_emph">without</em> vector representations.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The fundamental question we want to explore is whether embeddings provide any
+information beyond what a conventional parser is able to induce from labeled
+parse trees. It could be that the distinctions between lexical items that
+embeddings capture are already modeled by parsers in other ways and therefore
+provide no further benefit. In this paper, we investigate this question
+empirically,
+by isolating
+three potential mechanisms for improvement
+from pre-trained word embeddings.
+Our result is mostly negative. With extremely limited training data,
+parser extensions using word embeddings give modest improvements in accuracy
+(relative error reduction on the order of 1.5%). However, with reasonably-sized
+training corpora, performance does not improve even when a wide variety of
+embedding methods, parser modifications, and parameter settings are considered.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The fact that word embedding features result in nontrivial gains for
+discriminative dependency parsing <cite class="ltx_cite">[<a href="#bib.bib88" title="Tailoring continuous word representations for dependency parsing" class="ltx_ref">2</a>]</cite>, but
+do not appear to be effective for constituency parsing,
+points to an interesting structural difference
+between the two tasks. We hypothesize that dependency parsers benefit from the
+introduction of features (like clusters and embeddings) that provide syntactic
+abstractions; but that constituency parsers already have access to
+such abstractions in the form of supervised preterminal tags.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Three possible benefits of word embeddings</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We are interested in the question of whether a state-of-the-art
+discrete-variable constituency parser can be improved with word embeddings,
+and, more precisely, what aspect (or aspects) of the parser can be altered to make effective use of embeddings.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-2133/image001.png" id="S2.F1.g1" class="ltx_graphics" width="676" height="872" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Word representations of English determiners, projected onto their
+first two principal components. Embeddings from
+<cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib60" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>.</div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">It seems clear that word embeddings exhibit some syntactic structure. Consider
+Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Three possible benefits of word embeddings ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, which shows embeddings for a variety of English
+determiners, projected onto their first two principal components. We can see
+that the quantifiers <span class="ltx_text ltx_font_italic">each</span> and <span class="ltx_text ltx_font_italic">every</span> cluster together, as do <span class="ltx_text ltx_font_italic">few</span> and <span class="ltx_text ltx_font_italic">most</span>. These are precisely the kinds of distinctions between
+determiners that state-splitting in the Berkeley parser has shown to be useful
+<cite class="ltx_cite">[<a href="#bib.bib84" title="Improved inference for unlexicalized parsing" class="ltx_ref">12</a>]</cite>, and existing work <cite class="ltx_cite">[<a href="#bib.bib87" title="Linguistic regularities in continuous space word representations" class="ltx_ref">11</a>]</cite> has
+observed that such regular embedding structure extends to many other parts of speech. But we
+don’t know how prevalent or important such “syntactic axes” are in practice.
+Thus we have two questions: Are such groupings (learned on large data sets but
+from less syntactically rich models) better than the ones the parser finds on
+its own? How much data is needed to learn them without word embeddings?</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We consider three general hypotheses about how embeddings might interact with
+a parser:</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Vocabulary expansion hypothesis</span>: Word embeddings are useful for
+handling <em class="ltx_emph">out-of-vocabulary</em> words, because they automatically ensure
+that unknown words are treated the same way as known words with similar
+representations. Example: the infrequently-occurring treebank tag UH
+dominates greetings (among other interjections). Upon encountering the
+unknown word <em class="ltx_emph">hey</em>, the parser assigns a low posterior probability of
+having been generated from UH. But its distributional representation is very
+close to the known word <em class="ltx_emph">hello</em>,
+and a model capable of mapping <em class="ltx_emph">hey</em> to its neighbor should be able to
+assign the right tag.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Statistic sharing hypothesis</span>: Word embeddings are useful for
+handling <em class="ltx_emph">in-vocabulary</em> words, by making it possible to pool
+statistics for related words. Example: individual first names are also rare
+in the treebank, but tend to cluster together in distributional
+representations. A parser which exploited this effect could use this to
+acquire a robust model of name behavior by sharing statistics from all first
+names together, preventing low counts from producing noisy models of names.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Embedding structure hypothesis</span>: The structure of the space used
+for the embeddings directly encodes syntactic information in its coordinate
+axes. Example: with the exception of <span class="ltx_text ltx_font_italic">a</span>, the vertical axis in
+Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Three possible benefits of word embeddings ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> seems to group words by definiteness. We would expect
+a feature corresponding to a word’s position along this axis to be a useful
+feature in a feature-based lexicon.</p>
+</div></li>
+</ol>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Note that these hypotheses are not all mutually exclusive, and two or all of
+them might provide independent gains. Our first task is thus to design a set of
+orthogonal experiments which make it possible to test each of the three
+hypotheses in isolation. It is also possible that other mechanisms are at play
+that are not covered by these three hypotheses, but we consider these three to
+be likely central effects.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Parser extensions</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">For the experiments in this paper, we will use the Berkeley parser
+<cite class="ltx_cite">[<a href="#bib.bib84" title="Improved inference for unlexicalized parsing" class="ltx_ref">12</a>]</cite> and the related Maryland parser
+<cite class="ltx_cite">[<a href="#bib.bib86" title="Feature-rich log-linear lexical model for latent variable pcfg grammars" class="ltx_ref">8</a>]</cite>. The Berkeley parser induces a latent,
+state-split PCFG in which each symbol <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> of the (observed) X-bar grammar is
+refined into a set of more specific symbols <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="\{V_{1},V_{2},\ldots\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi>V</mi><mn>1</mn></msub><mo>,</mo><msub><mi>V</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi></mrow><mo>}</mo></mrow></math> which
+capture more detailed grammatical behavior. This allows the parser to
+distinguish between words which share the same tag but exhibit very different
+syntactic behavior—for example, between articles and demonstrative pronouns.
+The Maryland parser builds on the state-splitting parser, replacing its basic
+word emission model with a feature-rich, log-linear representation of the
+lexicon.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The choice of this parser family has two motivations. First, these parsers are
+among the best in the literature, with a test performance of 90.7 F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> for the
+baseline Berkeley parser on the Wall Street Journal corpus (compared to 90.4 for
+<cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib66" title="Parsing with compositional vector grammars" class="ltx_ref">2013</a>)</cite> and 90.1 for <cite class="ltx_cite">Henderson (<a href="#bib.bib65" title="Discriminative training of a neural network statistical parser" class="ltx_ref">2004</a>)</cite>). Second,
+and more importantly, the fact that they use no continuous state representations
+internally makes it easy to design experiments that isolate the contributions of
+word vectors, without worrying about effects from real-valued operators higher
+up in the model.
+We consider the following extensions:</p>
+</div>
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Vocabulary expansion <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> OOV model</h3>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<br class="ltx_break"/>
+<p class="ltx_p">To evaluate the vocabulary expansion
+hypothesis, we introduce a simple but targeted out-of-vocabulary (OOV) model in
+which every unknown word is simply replaced by its nearest neighbor in the
+training set. For OOV words which are not in the dictionary of embeddings, we
+back off to the unknown word model for the underlying parser.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Statistic sharing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> Lexicon pooling model</h3>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<br class="ltx_break"/>
+<p class="ltx_p">To evaluate the statistic sharing hypothesis, we
+propose a novel smoothing technique. The Berkeley lexicon stores, for each
+latent (tag, word) pair, the probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="p(w|t)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> directly in a lookup table. If
+we want to encourage similarly-embedded words to exhibit similar behavior in the
+generative model, we need to ensure that the are preferentially mapped onto the
+same latent preterminal tag. In order to do this, we replace this direct lookup
+with a smoothed, kernelized lexicon, where:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="p(w|t)=\frac{1}{Z}\sum_{w^{\prime}}\alpha_{t,w^{\prime}}e^{-\beta||\phi(w)-%&#10;\phi(w^{\prime})||^{2}}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><mi>t</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>Z</mi></mfrac><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><msup><mi>w</mi><mo>′</mo></msup></munder><msub><mi>α</mi><mrow><mi>t</mi><mo>,</mo><msup><mi>w</mi><mo>′</mo></msup></mrow></msub><msup><mi>e</mi><mrow><mo>-</mo><mrow><mi>β</mi><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><mrow><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>w</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="Z" display="inline"><mi>Z</mi></math> a normalizing constant to ensure that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m3" class="ltx_Math" alttext="p(\cdot|t)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mo>⋅</mo><mo>|</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> sums to one over
+the entire vocabulary. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m4" class="ltx_Math" alttext="\phi(w)" display="inline"><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math> is the vector representation of the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m6" class="ltx_Math" alttext="\alpha_{t,w}" display="inline"><msub><mi>α</mi><mrow><mi>t</mi><mo>,</mo><mi>w</mi></mrow></msub></math> are per-basis weights, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m7" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> is an inverse radius parameter
+which determines the strength of the smoothing.
+Each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m8" class="ltx_Math" alttext="\alpha_{t,w}" display="inline"><msub><mi>α</mi><mrow><mi>t</mi><mo>,</mo><mi>w</mi></mrow></msub></math> is learned
+in the same way as its corresponding probability in the original parser
+model—during each M step of the training procedure, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m9" class="ltx_Math" alttext="\alpha_{w,t}" display="inline"><msub><mi>α</mi><mrow><mi>w</mi><mo>,</mo><mi>t</mi></mrow></msub></math> is set to
+the expected number of times the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m10" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> appears under the refined tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m11" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>.
+Intuitively, as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m12" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> grows small
+groups of related words will be assigned increasingly similar probabilities of
+being generated from the same tag (in the limit where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m13" class="ltx_Math" alttext="\beta=0" display="inline"><mrow><mi>β</mi><mo>=</mo><mn>0</mn></mrow></math>,
+Equation <a href="#S3.E1" title="(1) ‣ Statistic sharing → Lexicon pooling model ‣ 3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> is a uniform distribution over the entire
+vocabulary). As <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m14" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> grows large words become more independent (and in
+the limit where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m15" class="ltx_Math" alttext="\beta=\infty" display="inline"><mrow><mi>β</mi><mo>=</mo><mi mathvariant="normal">∞</mi></mrow></math>, each summand in Equation <a href="#S3.E1" title="(1) ‣ Statistic sharing → Lexicon pooling model ‣ 3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+is zero except where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m16" class="ltx_Math" alttext="w^{\prime}=w" display="inline"><mrow><msup><mi>w</mi><mo>′</mo></msup><mo>=</mo><mi>w</mi></mrow></math>, and we recover the original direct-lookup model).</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">There are computational concerns associated with this approach: the original
+scoring procedure for a (word, tag) pair was a single (constant-time) lookup;
+here it might take time linear in the size of the vocabulary. This causes
+parsing to become unacceptably slow, so an approximation is necessary.
+Luckily, the exponential decay of the kernel ensures that each word shares
+most of its weight with a small number of close neighbors, and almost none with
+words farther away. To exploit this, we pre-compute the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest-neighbor
+graph of points in the embedding space, and take the sum in
+Equation <a href="#S3.E1" title="(1) ‣ Statistic sharing → Lexicon pooling model ‣ 3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> only over this set of nearest neighbors.
+Empirically, taking <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m2" class="ltx_Math" alttext="k=20" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>20</mn></mrow></math> gives adequate performance, and increasing it does
+not seem to alter the behavior of the parser.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">As in the OOV model, we also need to worry about how to handle
+words for which we have no vector representation. In these cases, we simply
+treat the words as if their vectors were so far away from everything else they
+had no influence, and report their weights as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p3.m1" class="ltx_Math" alttext="p(w|t)=\alpha_{w}" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>w</mi><mo>|</mo><mi>t</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>α</mi><mi>w</mi></msub></mrow></math>. This
+ensures that our model continues to include the original Berkeley parser model
+as a limiting case.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Embedding structure <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> embedding features</h3>
+
+<div id="S3.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">To evaluate the embedding structure hypothesis, we take the Maryland featured
+parser, and replace the set of lexical template features used by that parser
+with a set of indicator features on a discretized version of the embedding. For
+each dimension <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, we create an indicator feature corresponding to the
+linearly-bucketed value of the feature at that index. In order to focus
+specifically on the effect of word embeddings, we remove the morphological
+features from the parser, but retain indicators on the identity of each lexical
+item.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph"/>
+
+<div id="S3.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">The extensions we propose are certainly not the only way to target the
+hypotheses described above, but they have the advantage of being minimal and
+straightforwardly interpretable, and each can be reasonably expected to improve
+parser performance if its corresponding hypothesis is true.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental setup</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We use the Maryland implementation of the Berkeley parser as our baseline for
+the kernel-smoothed lexicon, and the Maryland featured parser as our baseline
+for the embedding-featured lexicon.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Both downloaded from
+<a href="https://code.google.com/p/umd-featured-parser/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/umd-featured-parser/</span></a></span></span></span>
+For all experiments, we use 50-dimensional word embeddings. Embeddings labeled
+<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span> are from <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib60" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>; embeddings labeled
+<span class="ltx_text ltx_font_smallcaps">cbow</span> are from
+<cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib61" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013a</a>)</cite>, trained with a context window of size 2.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Experiments are conducted on the Wall Street Journal portion of the
+English Penn Treebank. We prepare three training sets: the complete training set of
+39,832 sentences from the treebank (sections 2 through 21), a smaller training
+set, consisting of the first 3000 sentences, and an even smaller set of the
+first 300.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Per-corpus-size settings of the parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> are set by searching over
+several possible settings on the development set. For each training
+corpus size we also
+choose a different setting of the number of
+splitting iterations over which the Berkeley parser is run; for 300 sentences
+this is two splits, and for 3000 four splits. This is necessary to avoid
+overfitting on smaller training sets. Consistent with the existing literature,
+we stop at six splits when using the full training corpus.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="2">Model</th>
+<td class="ltx_td ltx_align_center ltx_border_tt">300</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">3000</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">Full</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="2">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_t">71.88</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84.70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">91.13</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">OOV</th>
+<th class="ltx_td ltx_align_left ltx_border_t">(<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span>)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">72.20</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">91.22</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">OOV</th>
+<th class="ltx_td ltx_align_left">(<span class="ltx_text ltx_font_smallcaps">cbow</span>)</th>
+<td class="ltx_td ltx_align_center">72.20</td>
+<td class="ltx_td ltx_align_center">84.78</td>
+<td class="ltx_td ltx_align_center">91.22</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Pooling</th>
+<th class="ltx_td ltx_align_left ltx_border_t">(<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span>)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">72.21</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84.55</td>
+<td class="ltx_td ltx_align_center ltx_border_t">91.11</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Pooling</th>
+<th class="ltx_td ltx_align_left">(<span class="ltx_text ltx_font_smallcaps">cbow</span>)</th>
+<td class="ltx_td ltx_align_center">71.61</td>
+<td class="ltx_td ltx_align_center">84.73</td>
+<td class="ltx_td ltx_align_center">91.15</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Features</th>
+<th class="ltx_td ltx_align_left ltx_border_t">(ident)</th>
+<td class="ltx_td ltx_align_center ltx_border_t">67.27</td>
+<td class="ltx_td ltx_align_center ltx_border_t">82.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">90.65</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Features</th>
+<th class="ltx_td ltx_align_left">(<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span>)</th>
+<td class="ltx_td ltx_align_center">70.32</td>
+<td class="ltx_td ltx_align_center">83.78</td>
+<td class="ltx_td ltx_align_center">91.08</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">Features</th>
+<th class="ltx_td ltx_align_left ltx_border_bb">(<span class="ltx_text ltx_font_smallcaps">cbow</span>)</th>
+<td class="ltx_td ltx_align_center ltx_border_bb">69.87</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">84.46</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">90.86</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Contributions from OOV, lexical pooling and featured models, for two
+kinds of embeddings (<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span> and <span class="ltx_text ltx_font_smallcaps">cbow</span>). For both choices of embedding,
+the pooling and OOV models provide small gains with very little training
+data, but no gains on the full training set. The featured model never
+achieves scores higher than the generative baseline.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt">Model</th>
+<th class="ltx_td ltx_align_left ltx_border_tt">300</th>
+<th class="ltx_td ltx_align_right ltx_border_tt">3000</th>
+<th class="ltx_td ltx_align_left ltx_border_tt">Full</th>
+<th class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Baseline</th>
+<th class="ltx_td ltx_align_left ltx_border_t">72.02</th>
+<th class="ltx_td ltx_align_right ltx_border_t">84.09</th>
+<td class="ltx_td ltx_align_left ltx_border_t">90.70</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb">Pool + OOV (<span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span>)</th>
+<th class="ltx_td ltx_align_left ltx_border_bb">72.43<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></th>
+<th class="ltx_td ltx_align_right ltx_border_bb">84.36<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></th>
+<td class="ltx_td ltx_align_left ltx_border_bb">90.11</td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_border_bb"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Test set experiments with the best combination of models (based on
+development experiments). Again, we observe small gains with restricted
+training sets but no gains on the full training set. Entries marked <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math> are
+statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>) under a paired bootstrap resampling
+test.</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Various model-specific experiments are shown in Table <a href="#S5.T1" title="Table 1 ‣ 5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+We begin by investigating the OOV model. As can be seen, this model alone
+achieves small gains over the baseline for a 300-word training corpus, but
+these gains become statistically insignificant with more training data. This
+behavior is almost completely insensitive to the choice of embedding.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Next we consider the lexicon pooling model. We began by searching over
+exponentially-spaced values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> to determine an optimal setting for each
+training set size; as expected, for small
+settings of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> (corresponding to aggressive smoothing) performance
+decreased; as we increased the parameter, performance increased slightly before
+tapering off to baseline parser performance. The first block in
+Table <a href="#S5.T1" title="Table 1 ‣ 5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the best settings of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> for
+each corpus size; as can be seen, this also gives a small improvement on the
+300-sentence training corpus, but no discernible once the system has access to a
+few thousand labeled sentences.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Last we consider a model with a featured lexicon, as described in
+<cite class="ltx_cite">Huang and Harper (<a href="#bib.bib86" title="Feature-rich log-linear lexical model for latent variable pcfg grammars" class="ltx_ref">2011</a>)</cite>. A baseline featured model (“ident”)
+contains only indicator features on word identity (and performs considerably
+worse than its generative counterpart on small data sets). As described above,
+the full featured model adds indicator features on the bucketed value of each
+dimension of the word embedding. Here, the trend observed in
+the other two models is even more prominent—embedding features lead to
+improvements over the featured baseline, but in no case outperform the standard
+baseline with a generative lexicon.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt">Experiment</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">WSJ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> Brown</th>
+<th class="ltx_td ltx_align_center ltx_border_tt">French</th>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">Baseline</td>
+<td class="ltx_td ltx_align_center ltx_border_t">86.36</td>
+<td class="ltx_td ltx_align_center ltx_border_t">74.84</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb">Pool + OOV</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">86.42</td>
+<td class="ltx_td ltx_align_center ltx_border_bb">75.18</td>
+<td class="ltx_td ltx_border_bb"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Experiments for other corpora, using the same combined model (lexicon
+pooling and OOV) as in Table <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Again, we observe
+no significant gains over the baseline.</div>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">We take the best-performing combination of all of these models (based on
+development experiments, a combination of the lexical pooling model with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m1" class="ltx_Math" alttext="\beta=0.3" display="inline"><mrow><mi>β</mi><mo>=</mo><mn>0.3</mn></mrow></math>, and OOV, both using <span class="ltx_text ltx_font_smallcaps">c<span class="ltx_text ltx_font_small">&amp;</span>w</span> word embeddings), and evaluate this on the WSJ
+test set (Table <a href="#S5.T2" title="Table 2 ‣ 5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). We observe very small (but
+statistically significant) gains with 300 and 3000 train sentences, but a
+decrease in performance on the full corpus.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">To investigate the possibility that improvements from embeddings are
+exceptionally difficult to achieve on the Wall Street Journal corpus, or on
+English generally, we perform (1) a domain adaptation experiment, in which we use
+the OOV and lexicon pooling models to train on WSJ and test on the first 4000
+sentences of the Brown corpus (the “WSJ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p5.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> Brown” column in
+Table <a href="#S5.T3" title="Table 3 ‣ 5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), and (2) a multilingual experiment, in which we train and
+test on the French treebank (the “French” column). Apparent gains from
+the OOV and lexicon pooling models remain so small as to be statistically
+indistinguishable.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">With the goal of exploring how much useful syntactic information is provided by
+unsupervised word embeddings, we have presented three variations on a
+state-of-the-art parsing model, with extensions to the out-of-vocabulary model,
+lexicon, and feature set. Evaluation of these modified parsers revealed modest
+gains on extremely small training sets, which quickly vanish as training set
+size increases. Thus, at least restricted to phenomena which can be
+explained by the experiments described here, our results are consistent with two
+claims:
+(1) unsupervised word embeddings do contain some syntactically useful information,
+but (2) this information is redundant with what the model is able to
+determine for itself from only a small amount of labeled training data.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">It is important to emphasize that these results do not argue against the use of
+continuous representations in a parser’s state space, nor argue more generally
+that constituency parsers cannot possibly benefit from word embeddings. However,
+the failure to uncover gains when searching across a variety of possible
+mechanisms for improvement, training procedures for embeddings, hyperparameter
+settings, tasks, and resource scenarios suggests that these gains (if they do
+exist) are <span class="ltx_text ltx_font_italic">extremely</span> sensitive to these training conditions, and not
+nearly as accessible as they seem to be in dependency parsers.
+Indeed, our results suggest a hypothesis that
+word embeddings are useful for dependency parsing (and perhaps other tasks)
+because they provide a level of syntactic abstraction which is explicitly
+annotated in constituency parses. We leave explicit investigation of this
+hypothesis for future work.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was partially supported by BBN under DARPA contract HR0011-12-C-0014.
+The first author is supported by a National Science Foundation Graduate Research
+Fellowship.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Andreas and Z. Ghahramani</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A generative model of vector space semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib88" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Bansal, K. Gimpel and K. Livescu</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tailoring continuous word representations for dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.F1" title="Figure 1 ‣ 2 Three possible benefits of word embeddings ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Experimental setup ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib59" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. C. Deerwester, S. T. Dumais, T. K. Landauer, G. W. Furnas and R. A. Harshman</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Indexing by latent semantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Society for Information Science</span> <span class="ltx_text ltx_bib_volume">41</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 391–407</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Freitag</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Trained named entity recognition using distributional clusters</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Henderson</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training of a neural network statistical parser</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 95</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. M. Hermann and P. Blunsom</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The role of syntax in vector space models of compositional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 894–904</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Huang and M. P. Harper</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich log-linear lexical model for latent variable pcfg grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 219–227</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p3" title="5 Results ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo, X. Carreras and M. Collins</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Simple semi-supervised dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 595–603</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. S. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 3111–3119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Experimental setup ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib87" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Three possible benefits of word embeddings ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov and D. Klein</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved inference for unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Three possible benefits of word embeddings ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p1" title="3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schütze</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional part-of-speech tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 141–148</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Parser extensions ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ How much do word embeddings encode about syntax?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:37:08 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

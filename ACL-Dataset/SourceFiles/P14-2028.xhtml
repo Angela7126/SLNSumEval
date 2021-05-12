@@ -1,0 +1,1026 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improved Iterative Correction for Distant Spelling Errors</title>
+<!--Generated on Wed Jun 11 17:40:41 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improved Iterative Correction for Distant Spelling Errors</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Sergey Gubanov    
+Irina Galinskaya    
+Alexey Baytin 
+<br class="ltx_break"/>Yandex 
+<br class="ltx_break"/>16 Leo Tolstoy St., Moscow, 119021 Russia 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">esgv,galinskaya,baytin</span>}<span class="ltx_text ltx_font_typewriter">@yandex-team.ru</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Noisy channel models, widely used in modern spellers, cope with typical
+misspellings, but do not work well with infrequent and difficult spelling
+errors. In this paper, we have improved the noisy channel approach
+by iterative stochastic search for the best correction. The proposed algorithm
+allowed us to avoid local minima problem and improve the <math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> measure by 6.6%
+on distant spelling errors.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A speller is an essential part of any program associated with text input and
+processing — e-mail system, search engine, browser, form editor etc. To
+detect and correct spelling errors, the state of the art spelling correction
+systems use the noisy channel approach
+<cite class="ltx_cite">[<a href="#bib.bib8" title="A spelling correction program based on a noisy channel model" class="ltx_ref">6</a>, <a href="#bib.bib9" title="Context based spelling correction" class="ltx_ref">8</a>, <a href="#bib.bib1" title="An improved error model for noisy channel spelling correction" class="ltx_ref">1</a>]</cite>. Its models are
+usually trained on large corpora and provide high effectiveness in correction
+of typical errors (most of which consist of 1-2 wrong characters per word), but
+does not work well for complex (multi-character) and infrequent errors.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we improved effectiveness of the noisy channel for the correction
+of complex errors. In most cases, these are cognitive errors in
+loan words (<em class="ltx_emph">folsvagen</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> <em class="ltx_emph">volkswagen</em>),
+names of drugs (<em class="ltx_emph">vobemzin</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> <em class="ltx_emph">wobenzym</em>),
+names of brands (<em class="ltx_emph">scatcher</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> <em class="ltx_emph">skechers</em>),
+scientific terms (<em class="ltx_emph">heksagidron</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> <em class="ltx_emph">hexahedron</em>) and
+last names (<em class="ltx_emph">Shwartzneger</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m5" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math> <em class="ltx_emph">Schwarzenegger</em>). In all these
+cases, the misspelled word contains many errors and the corresponding error
+model penalty cannot be compensated by the LM weight of its proper form. As a
+result, either the misspelled word itself, or the other (less complicated, more
+frequent) misspelling of the same word wins the likelihood race.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">To compensate for this defect of the noisy channel, the iterative approach
+<cite class="ltx_cite">[<a href="#bib.bib5" title="Spelling correction as an iterative process that exploits the collective knowledge of web users." class="ltx_ref">3</a>]</cite> is typically used. The search for the best variant
+is repeated several times, what allows correcting rather complex errors, but
+does not completely solve the problem of falling into local minima. To overcome
+this issue we suggest to consider more correction hypotheses. For this purpose
+we used a method based on the simulated annealing algorithm. We experimentally
+demonstrate that the proposed method outperforms the baseline noisy channel and
+iterative spellers.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Many authors employ machine learning to build rankers that compensate for the
+drawbacks of the noisy channel model: <cite class="ltx_cite">[<a href="#bib.bib7" title="Using the web for language independent spellchecking and autocorrection" class="ltx_ref">9</a>, <a href="#bib.bib6" title="A large scale ranker-based system for search query spelling correction" class="ltx_ref">5</a>]</cite>.
+These techniques can be combined with the proposed method by replacing
+posterior probability of single correction in our method with an estimate
+obtained via discriminative training method.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In our work, we focus on isolated word-error correction
+<cite class="ltx_cite">[<a href="#bib.bib10" title="Techniques for automatically correcting words in text" class="ltx_ref">7</a>]</cite>, which, in a sense, is a harder task, than
+multi-word correction, because there is no context available for misspelled
+words. For experiments we used single-word queries to a commercial search
+engine.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Baseline speller</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Noisy channel spelling correction</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Noisy channel is a probabilistic model that defines posterior
+probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="P(q_{0}|q_{1})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="q_{0}" display="inline"><msub><mi>q</mi><mn>0</mn></msub></math> being the intended word, given the observed
+word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="q_{1}" display="inline"><msub><mi>q</mi><mn>1</mn></msub></math>; for such model, the optimal decision rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> is the following:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\begin{split}\mu(q_{1})&amp;=\arg\max_{q_{0}}P(q_{0}|q_{1});\\&#10;P(q_{0}|q_{1})&amp;\propto P_{\rm dist}({q_{0}}\to q_{1})P_{\rm LM}({q_{0}}),\end{split}" display="block"><mrow><mi>μ</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>=</mo><mi>arg</mi><munder><mo movablelimits="false">max</mo><msub><mi>q</mi><mn>0</mn></msub></munder><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>;</mo><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>∝</mo><msub><mi>P</mi><mi>dist</mi></msub><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>→</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><msub><mi>P</mi><mi>LM</mi></msub><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="P_{\rm LM}" display="inline"><msub><mi>P</mi><mi>LM</mi></msub></math> is the source (language) model, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m6" class="ltx_Math" alttext="P_{\rm dist}" display="inline"><msub><mi>P</mi><mi>dist</mi></msub></math>
+is the error model. Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m7" class="ltx_Math" alttext="P(q_{0}|q_{1})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></math> defined, to correct the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m8" class="ltx_Math" alttext="q_{1}" display="inline"><msub><mi>q</mi><mn>1</mn></msub></math> we
+could iterate through all ever-observed words, and choose the one, that
+maximizes the posterior probability. However, the practical considerations
+demand that we do not rank the whole list of words, but instead choose between
+a limited number of hypotheses <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m9" class="ltx_Math" alttext="h_{1},...,h_{K}" display="inline"><mrow><msub><mi>h</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>h</mi><mi>K</mi></msub></mrow></math>:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="q_{1}" display="inline"><msub><mi>q</mi><mn>1</mn></msub></math>, generate a set of hypotheses <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="h_{1},...,h_{K}" display="inline"><mrow><msub><mi>h</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>h</mi><mi>K</mi></msub></mrow></math>, such that</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\sum_{k=1}^{K}P(q_{0}=h_{k}|q_{1})\approx 1;" display="block"><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>=</mo><msub><mi>h</mi><mi>k</mi></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>≈</mo><mn>1</mn><mo>;</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Choose the hypothesis <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="h_{k}" display="inline"><msub><mi>h</mi><mi>k</mi></msub></math> that maximizes
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="P(q_{0}=h_{k}|q_{1})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>q</mi><mn>0</mn></msub><mo>=</mo><msub><mi>h</mi><mi>k</mi></msub><mo>|</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+</ol>
+<p class="ltx_p">If hypotheses constitute a major part of the posterior probability mass, it is
+highly unlikely that the intended word is not among them.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Baseline speller setup</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">In baseline speller we use a substring-based error model
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="P_{\rm dist}(q_{0}~{}\to~{}q_{1})" display="inline"><mrow><msub><mi>P</mi><mi>dist</mi></msub><mrow><mo>(</mo><mpadded width="+3.3pt"><msub><mi>q</mi><mn>0</mn></msub></mpadded><mo rspace="5.8pt">→</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></math> described in <cite class="ltx_cite">[<a href="#bib.bib1" title="An improved error model for noisy channel spelling correction" class="ltx_ref">1</a>]</cite>, the error
+model training method and the hypotheses generator are similar to
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Online spelling correction for query completion" class="ltx_ref">4</a>]</cite>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">For building language (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="P_{\rm LM^{\prime}}" display="inline"><msub><mi>P</mi><msup><mi>LM</mi><mo>′</mo></msup></msub></math>) and error (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="P_{\rm dist^{\prime}}" display="inline"><msub><mi>P</mi><msup><mi>dist</mi><mo>′</mo></msup></msub></math>) models, we
+use words collected from the 6-months query log of a commercial search
+engine.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Hypotheses generator is based on A* beam search in a trie of words, and yields
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> hypotheses <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="h_{k}" display="inline"><msub><mi>h</mi><mi>k</mi></msub></math>, for which the noisy channel scores
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="P_{\rm dist}(h_{k}~{}\to~{}q_{1})P_{\rm LM}(h_{k})" display="inline"><mrow><msub><mi>P</mi><mi>dist</mi></msub><mrow><mo>(</mo><mpadded width="+3.3pt"><msub><mi>h</mi><mi>k</mi></msub></mpadded><mo rspace="5.8pt">→</mo><msub><mi>q</mi><mn>1</mn></msub><mo>)</mo></mrow><msub><mi>P</mi><mi>LM</mi></msub><mrow><mo>(</mo><msub><mi>h</mi><mi>k</mi></msub><mo>)</mo></mrow></mrow></math> are highest possible. Hypotheses
+generator has high K-best recall (see Section <a href="#S4.SS2" title="4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>) — in 91.8%
+cases the correct hypothesis is found when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="K=30" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>30</mn></mrow></math>, which confirms the
+assumption about covering almost all posterior probability mass
+(see Equation <a href="#S2.E2" title="(2) ‣ 1. ‣ 2.1 Noisy channel spelling correction ‣ 2 Baseline speller ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Improvements for noisy channel spelling correction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">While choosing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\arg\max" display="inline"><mrow><mi>arg</mi><mo>⁢</mo><mo>max</mo></mrow></math> of the posterior probability is an optimal decision
+rule in theory, in practice it might not be optimal, due to limitations of the
+language and error modeling. For example, <em class="ltx_emph">vobemzin</em> is corrected to more
+frequent misspelling <em class="ltx_emph">vobenzin</em> (instead of correct form <em class="ltx_emph">wobenzym</em>)
+by the noisy channel, because <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="P_{\rm dist}(vobemzin\to\,wobenzym)" display="inline"><mrow><msub><mi>P</mi><mi>dist</mi></msub><mrow><mo>(</mo><mi>v</mi><mi>o</mi><mi>b</mi><mi>e</mi><mi>m</mi><mi>z</mi><mi>i</mi><mi>n</mi><mo rspace="4.2pt">→</mo><mi>w</mi><mi>o</mi><mi>b</mi><mi>e</mi><mi>n</mi><mi>z</mi><mi>y</mi><mi>m</mi><mo>)</mo></mrow></mrow></math> is too low
+(see Table <a href="#S3.T1" title="Table 1 ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="-\log P_{\rm dist}" display="inline"><mrow><mo>-</mo><mrow><mi>log</mi><mo>⁡</mo><msub><mi>P</mi><mi>dist</mi></msub></mrow></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="-\log P_{\rm LM}" display="inline"><mrow><mo>-</mo><mrow><mi>log</mi><mo>⁡</mo><msub><mi>P</mi><mi>LM</mi></msub></mrow></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="\sum" display="inline"><mo largeop="true" symmetric="true">∑</mo></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">vobenzin</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.289</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">31.75</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">34.04</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">wobenzym</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">12.52</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">26.02</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">38.54</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Noisy-channel scores for two corrections of
+<em class="ltx_emph">vobemzin</em></div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">There have been attempts <cite class="ltx_cite">[<a href="#bib.bib5" title="Spelling correction as an iterative process that exploits the collective knowledge of web users." class="ltx_ref">3</a>]</cite> to apply other rules,
+which would overcome limitations of language and error models with compensating
+changes described further.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Iterative correction</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Iterative spelling correction with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> iterations uses standard noisy-channel
+to correct the query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> repeatedly <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> times. It is motivated by the
+assumption, that we are more likely to successfully correct the query if we
+take several short steps instead of one big step <cite class="ltx_cite">[<a href="#bib.bib5" title="Spelling correction as an iterative process that exploits the collective knowledge of web users." class="ltx_ref">3</a>]</cite> .</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Iterative correction is hill climbing in the space of possible corrections:
+on each iteration we make a transition to the best point in the neighbourhood,
+i.e. to correction, that has maximal posterior probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="P(c|q)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>c</mi><mo>|</mo><mi>q</mi><mo>)</mo></mrow></mrow></math>. As any
+local search method, iterative correction is prone to local minima, stopping
+before reaching the correct word.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Stochastic iterative correction</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">A common method of avoiding local minima in optimization is the simulated
+annealing algorithm, key ideas from which can be adapted for spelling correction
+task. In this section we propose such an adaptation. Consider: we do not always
+transition deterministically to the next best correction, but instead transition
+randomly to a (potentially <em class="ltx_emph">any</em>) correction with transition probability
+being equal to the posterior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="P(c_{i}|c_{i-1})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="c_{i-1}" display="inline"><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></math> is the
+correction we transition from, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> is the correction we transition to, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="P(\cdot|\cdot)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mo>⋅</mo><mo>|</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is defined by Equation <a href="#S2.E1" title="(1) ‣ 2.1 Noisy channel spelling correction ‣ 2 Baseline speller ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Iterative correction then
+turns into a <em class="ltx_emph">random walk</em>: we start at word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="c_{0}=q" display="inline"><mrow><msub><mi>c</mi><mn>0</mn></msub><mo>=</mo><mi>q</mi></mrow></math> and stop after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>
+random steps at some word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="c_{E}" display="inline"><msub><mi>c</mi><mi>E</mi></msub></math>, which becomes our answer.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">To turn random walk into deterministic spelling correction algorithm, we
+de-randomize it, using the following transformation. Described random walk
+defines, for each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, a probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="P(c_{E}=w|q)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>E</mi></msub><mo>=</mo><mi>w</mi><mo>|</mo><mi>q</mi><mo>)</mo></mrow></mrow></math> of ending up in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+after starting a walk from the initial query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>. With that probability
+defined, our correction algorithm is the following: given query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>, pick <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="c=\arg\max_{c_{E}}P(c_{E}|q)" display="inline"><mrow><mi>c</mi><mo>=</mo><mi>arg</mi><msub><mo>max</mo><msub><mi>c</mi><mi>E</mi></msub></msub><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>E</mi></msub><mo>|</mo><mi>q</mi><mo>)</mo></mrow></mrow></math> as a correction.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Probability of getting from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="c_{0}=q" display="inline"><mrow><msub><mi>c</mi><mn>0</mn></msub><mo>=</mo><mi>q</mi></mrow></math> to some <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="c_{E}=c" display="inline"><mrow><msub><mi>c</mi><mi>E</mi></msub><mo>=</mo><mi>c</mi></mrow></math> is a sum, over all possible
+paths, of probabilities of getting from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> via specific path <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="q=c_{0}\to c_{1}\to...\to c_{E-1}\to c_{E}=c" display="inline"><mrow><mi>q</mi><mo>=</mo><msub><mi>c</mi><mn>0</mn></msub><mo>→</mo><msub><mi>c</mi><mn>1</mn></msub><mo>→</mo><mi mathvariant="normal">…</mi><mo>→</mo><msub><mi>c</mi><mrow><mi>E</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>→</mo><msub><mi>c</mi><mi>E</mi></msub><mo>=</mo><mi>c</mi></mrow></math>:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="P(c_{E}|c_{0})=\sum_{\substack{c_{1}\in W\\&#10;...\\&#10;c_{E-1}\in W}}\prod_{i=1}^{E}P(c_{i}|c_{i-1})," display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>E</mi></msub><mo>|</mo><msub><mi>c</mi><mn>0</mn></msub><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mstyle scriptlevel="+1"><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd><mrow><msub><mi>c</mi><mn>1</mn></msub><mo>∈</mo><mi>W</mi></mrow></mtd></mtr><mtr><mtd><mi mathvariant="normal">…</mi></mtd></mtr><mtr><mtd><mrow><msub><mi>c</mi><mrow><mi>E</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>∈</mo><mi>W</mi></mrow></mtd></mtr></mtable></mstyle></munder><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>E</mi></munderover><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="P(c_{i}|c_{i-1})=\frac{P_{\rm dist}(c_{i}\to c_{i-1})P_{\rm LM}(c_{i})}{P_{\rm&#10;observe%&#10;}(c_{i-1})}," display="block"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><msub><mi>P</mi><mi>dist</mi></msub><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>→</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><msub><mi>P</mi><mi>LM</mi></msub><mrow><mo>(</mo><msub><mi>c</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mrow><msub><mi>P</mi><mi>observe</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></mfrac><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> is the set of all possible words, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m7" class="ltx_Math" alttext="P_{\rm observe}(w)" display="inline"><mrow><msub><mi>P</mi><mi>observe</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></math>
+is the probability of observing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m8" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> as a query in the noisy-channel model.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">Example: if we start a random walk from <em class="ltx_emph">vobemzin</em> and make 3 steps, we
+most probably will end up in the correct form <em class="ltx_emph">wobenzym</em> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="P=0.361" display="inline"><mrow><mi>P</mi><mo>=</mo><mn>0.361</mn></mrow></math>.
+A few of the most probable random walk paths are shown in Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+Note, that despite the fact that most probable path does not lead to the
+correct word, many other paths to <em class="ltx_emph">wobenzym</em> sum up to 0.361, which is
+greater than probability of any other word. Also note, that the method works
+only because multiple misspellings of the same word are presented in our model;
+for related research see <cite class="ltx_cite">[<a href="#bib.bib4" title="How difficult is it to develop a perfect spell-checker? a cross-linguistic analysis through complex network approach" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="c_{0}\to{}c_{1}\to{}c_{2}\to{}c_{3}" display="inline"><mrow><msub><mi>c</mi><mn>0</mn></msub><mo>→</mo><msub><mi>c</mi><mn>1</mn></msub><mo>→</mo><msub><mi>c</mi><mn>2</mn></msub><mo>→</mo><msub><mi>c</mi><mn>3</mn></msub></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m5" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzin</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.074</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzim</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m7" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzym</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m8" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">wobenzym</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.065</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m10" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzim</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m11" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzim</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.052</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m12" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzim</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m13" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">vobenzim</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m14" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">wobenzym</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.034</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m15" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzym</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m16" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzym</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m17" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">wobenzym</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.031</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m18" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzim</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m19" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzym</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m20" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">wobenzym</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.028</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">vobemzin</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m21" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzyn</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m22" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small">wobenzym</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m23" class="ltx_Math" alttext="\to" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_bold ltx_font_small">wobenzym</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.022</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Most probable random walk paths starting from
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m25" class="ltx_Math" alttext="c_{0}=q=vobemzin" display="inline"><mrow><msub><mi>c</mi><mn>0</mn></msub><mo>=</mo><mi>q</mi><mo>=</mo><mrow><mi>v</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>z</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></math> (the correct form is in bold).</div>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">Also note, that while Equation <a href="#S3.E3" title="(3) ‣ 3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> uses noisy-channel posteriors, the
+method can use an arbitrary discriminative model, for example the one from
+<cite class="ltx_cite">[<a href="#bib.bib6" title="A large scale ranker-based system for search query spelling correction" class="ltx_ref">5</a>]</cite>, and benefit from a more accurate posterior estimate.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Additional heuristics</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">This section describes some common heuristic improvements, that, where
+possible, were applied both to the baseline methods and to the proposed
+algorithm.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">Basic building block of every mentioned algorithm is one-step noisy-channel
+correction. Each basic correction proceeds as described in
+Section <a href="#S2.SS1" title="2.1 Noisy channel spelling correction ‣ 2 Baseline speller ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>: a small number of hypotheses <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="h_{1},...,h_{K}" display="inline"><mrow><msub><mi>h</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>h</mi><mi>K</mi></msub></mrow></math> is
+generated for the query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>, hypotheses are scored, and scores are recomputed
+into normalized posterior probabilities (see Equation <a href="#S3.E5" title="(5) ‣ 3.3 Additional heuristics ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).
+Posterior probabilities are then either used to pick the best correction (in
+baseline and simple iterative correction), or are accumulated to later compute
+the score defined by Equation <a href="#S3.E3" title="(3) ‣ 3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\begin{split}{\rm score}(h_{i})&amp;=P_{\rm dist}(h_{i}~{}\to~{}q)^{\lambda}P_{\rm&#10;LM%&#10;}(h_{i})\\&#10;P(h_{i}|q)&amp;={\rm score}(h_{i})\Big/\sum_{j=1}^{K}{\rm score}(h_{j})\end{split}" display="block"><mrow><mi>score</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><msub><mi>P</mi><mi>dist</mi></msub><msup><mrow><mo>(</mo><mpadded width="+3.3pt"><msub><mi>h</mi><mi>i</mi></msub></mpadded><mo rspace="5.8pt">→</mo><mi>q</mi><mo>)</mo></mrow><mi>λ</mi></msup><msub><mi>P</mi><mi>LM</mi></msub><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>)</mo></mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>|</mo><mi>q</mi><mo>)</mo></mrow><mo>=</mo><mi>score</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>)</mo></mrow><mo mathsize="1.5em" stretchy="false">/</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover><mi>score</mi><mrow><mo>(</mo><msub><mi>h</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">A standard log-linear weighing trick was applied to noisy-channel model
+components, see e.g. <cite class="ltx_cite">[<a href="#bib.bib7" title="Using the web for language independent spellchecking and autocorrection" class="ltx_ref">9</a>]</cite>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is the parameter that
+controls the trade-off between precision and recall (see
+Section <a href="#S4.SS2" title="4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>) by emphasizing the importance of either the high
+frequency of the correction or its proximity to the query.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">We have also found, that resulting posterior probabilities emphasize the best
+hypothesis too much: best hypothesis gets almost all probability mass and other
+hypotheses get none. To compensate for that, posteriors were <em class="ltx_emph">smoothed</em> by
+raising each probability to some power <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="\gamma&lt;1" display="inline"><mrow><mi>γ</mi><mo>&lt;</mo><mn>1</mn></mrow></math> and re-normalizing them
+afterward:</p>
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="P_{\rm smooth}(h_{i}|q)=P(h_{i}|q)^{\gamma}\Big/\sum_{j=1}^{K}P(h_{j}|q)^{%&#10;\gamma}." display="block"><mrow><msub><mi>P</mi><mi>smooth</mi></msub><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>|</mo><mi>q</mi><mo>)</mo></mrow><mo>=</mo><mi>P</mi><msup><mrow><mo>(</mo><msub><mi>h</mi><mi>i</mi></msub><mo>|</mo><mi>q</mi><mo>)</mo></mrow><mi>γ</mi></msup><mo mathsize="1.5em" stretchy="false">/</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover><mi>P</mi><msup><mrow><mo>(</mo><msub><mi>h</mi><mi>j</mi></msub><mo>|</mo><mi>q</mi><mo>)</mo></mrow><mi>γ</mi></msup><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">In a sense, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is like temperature parameter in simulated annealing – it
+controls the entropy of the walk and the final probability distribution.
+Unlike in simulated annealing, we fix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> for all iterations of the
+algorithm.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">Finally, if posterior probability of the best hypothesis was lower than
+threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, then the original query <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> was used as the spell-checker
+output. (Posterior is defined by Equation <a href="#S3.E6" title="(6) ‣ 3.3 Additional heuristics ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> for the baseline and
+simple iterative methods and by Equations <a href="#S3.E3" title="(3) ‣ 3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S3.E6" title="(6) ‣ 3.3 Additional heuristics ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> for
+the proposed method). Parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> controls precision/recall trade-off
+(as well as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m4" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> mentioned above).</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Data</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">To evaluate the proposed algorithm we have collected two datasets.
+Both datasets were randomly sampled from single-word user queries from the
+1-week query log of a commercial search engine. We annotated them with the help
+of professional analyst. The difference between datasets is that one of them
+contained only queries with low search performance: for which the number of
+documents retrieved by the search engine was less than a fixed threshold (we
+will address it as the ”hard” dataset), while the other dataset had no such
+restrictions (we will call it ”common”). Dataset statistics are shown in
+Table <a href="#S4.T3" title="Table 3 ‣ 4.1 Data ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Dataset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Queries</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Misspelled</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Avg. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="-\log P_{\rm dist}" display="inline"><mrow><mo mathsize="normal" mathvariant="normal" stretchy="false">-</mo><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">log</mi><mo mathsize="small" mathvariant="bold" stretchy="false">⁡</mo><msub><mi mathsize="normal" stretchy="false">P</mi><mi mathsize="normal" mathvariant="normal" stretchy="false">dist</mi></msub></mrow></mrow></math></span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Common</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2240</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">224 (10%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5.98</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Hard</span></th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">2542</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1484 (58%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">9.23</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> Evaluation datasets.</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Increased average error model score and error rate of ”common” dataset
+compared to ”hard” shows, that we have indeed managed to collect
+hard-to-correct queries in the ”hard” dataset.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Experimental results</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">First of all, we evaluated the recall of hypotheses generator using
+<em class="ltx_emph">K-best recall</em> — the number of correct spelling corrections for
+misspelled queries among <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> hypotheses divided by the total number of
+misspelled queries in the test set. Resulting recall with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="K=30" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>30</mn></mrow></math> is 91.8% on
+”hard” and 98.6% on ”common”.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Next, three spelling correction methods were tested: noisy channel, iterative
+correction and our method (stochastic iterative correction).</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">For evaluation of spelling correction quality, we use the following metrics:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Precision</em>: The number of correct spelling corrections for
+misspelled words generated by the system divided by the total number of
+corrections generated by the system;</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Recall</em>: The number of correct spelling corrections for
+misspelled words generated by the system divided by the total number of
+misspelled words in the test set;</p>
+</div></li>
+</ul>
+<p class="ltx_p">For hypotheses generator, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="K=30" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>30</mn></mrow></math> was fixed: recall of 91.8% was considered
+big enough. Precision/recall tradeoff parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> (they
+are applicable to each method, including baseline) were iterated by the grid
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="(0.2,0.25,0.3,...,1.5)\times(0,0.025,0.05,...,1.0)" display="inline"><mrow><mrow><mo>(</mo><mrow><mn>0.2</mn><mo>,</mo><mn>0.25</mn><mo>,</mo><mn>0.3</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>1.5</mn></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mn>0.025</mn><mo>,</mo><mn>0.05</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>1.0</mn></mrow><mo>)</mo></mrow></mrow></math>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> (applicable to iterative and our method) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m6" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> (just our method)
+were iterated by the grid <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m7" class="ltx_Math" alttext="(2,3,4,5,7,10)\times(0.1,0.15,...1.0)" display="inline"><mrow><mrow><mo>(</mo><mrow><mn>2</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>7</mn><mo>,</mo><mn>10</mn></mrow><mo>)</mo></mrow><mo>×</mo><mrow><mo>(</mo><mrow><mn>0.1</mn><mo>,</mo><mn>0.15</mn><mo>,</mo><mrow><mi mathvariant="normal">…</mi><mo>⁢</mo><mn>1.0</mn></mrow></mrow><mo>)</mo></mrow></mrow></math>;
+for each set of parameters, precision and recall were measured on both
+datasets. Pareto frontiers for precision and recall are shown in
+Figures <a href="#S4.F1" title="Figure 1 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S4.F2" title="Figure 2 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.F1" class="ltx_figure"><img src="P14-2028/image001.png" id="S4.F1.g1" class="ltx_graphics ltx_centering" width="271" height="205" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> Precision/recall Pareto frontiers
+on ”hard” dataset</div>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-2028/image002.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="271" height="214" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> Precision/recall Pareto frontiers
+on ”common” dataset</div>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We were not able to reproduce superior performance of the iterative method over
+the noisy channel, reported by <cite class="ltx_cite">[<a href="#bib.bib5" title="Spelling correction as an iterative process that exploits the collective knowledge of web users." class="ltx_ref">3</a>]</cite>. Supposedly, it is
+because the iterative method benefits primarily from the sequential application
+of split/join operations altering query decomposition into words; since we are
+considering only one-word queries, such decomposition does not matter.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">On the ”hard” dataset the performance of the noisy channel and the iterative
+methods is inferior to our proposed method, see Figure <a href="#S4.F1" title="Figure 1 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+We tested all three methods on the ”common” dataset as well to evaluate if our
+handling of hard cases affects the performance of our approach on the common
+cases of spelling error. Our method performs well on the common cases as well,
+as Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows. The performance comparison for the
+”common” dataset shows comparable performance for all considered methods.</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">Noisy channel and iterative methods’ frontiers are considerably inferior to the
+proposed method on ”hard” dataset, which means that our method works
+better. The results on ”common” dataset show, that the proposed method doesn’t
+work worse than baseline.</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">Next, we optimized parameters for each method and each dataset separately to
+achieve the highest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> measure. Results are shown in Tables <a href="#S4.T4" title="Table 4 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+and <a href="#S4.T5" title="Table 5 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. We can see, that, given the proper tuning, our method
+can work better on any dataset (but it cannot achieve the best performance on
+both datasets at once). See Tables <a href="#S4.T4" title="Table 4 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and <a href="#S4.T5" title="Table 5 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> for
+details.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m4" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m5" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Noisy channel</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">55.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Iterative</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Stochastic iterative</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">62.5</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Best parameters and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m7" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on ”hard” dataset</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m4" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m5" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Noisy channel</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.225</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">62.06</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Iterative</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.275</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">63.15</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Stochastic iterative</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">63.9</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> Best parameters and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T5.m7" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on ”common” dataset</div>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p">Next, each parameter was separately iterated (by a coarser grid); initial
+parameters for each method were taken from Table <a href="#S4.T4" title="Table 4 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Such
+iteration serves two purposes: to show the influence of parameters on algorithm
+performance, and to show differences between datasets: in such setup parameters
+are virtually tuned using ”hard” dataset and evaluated using ”common” dataset.
+Results are shown in Table <a href="#S4.T6" title="Table 6 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.</p>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math><span class="ltx_text ltx_font_small">, common</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math><span class="ltx_text ltx_font_small">, hard</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">N.ch.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">It.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Our</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">N.ch.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">It.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Our</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math><span class="ltx_text ltx_font_small"> = 0.5</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">45.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">45.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">37.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">54.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">54.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">50.0</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.6</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">56.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.7</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.8</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.9</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">62.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">1.0</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">55.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">47.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">47.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.8</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">1.1</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">44.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">60.8</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">1.2</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">58.8</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">1.3</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">52.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">39.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">39.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">56.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">1.4</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">36.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">37.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math><span class="ltx_text ltx_font_small"> = 0</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">41.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">41.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">33.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">52.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">53.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">58.3</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.1</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">35.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.7</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.15</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">59.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">43.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">55.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.2</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">60.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">61.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">62.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.25</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">54.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.1</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.3</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">57.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">39.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">39.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">58.4</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.4</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">25.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">25.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">53.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">22.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">22.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.3</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m5" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math><span class="ltx_text ltx_font_small"> = 2</span></th>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">53.6</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">60.4</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">3</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.4</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">62.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">4</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.4</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">62.1</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">5</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">50.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">46.7</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">55.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">60.1</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m6" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math><span class="ltx_text ltx_font_small"> = 0.1</span></th>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10.1</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">6.0</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.2</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.4</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">51.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.3</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">51.4</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">61.4</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.35</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">49.4</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">62.5</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.4</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">47.5</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">62.0</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.45</span></th>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">45.8</span></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">60.8</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">0.5</span></th>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">45.2</span></td>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">60.3</span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span> Per-coordinate iteration of parameters from Table <a href="#S4.T4" title="Table 4 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>; per-method
+maximum is shown in italic, per-dataset in bold</div>
+</div>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p">The proposed method is able to successfully correct distant spelling errors
+with edit distance of 3 characters (see Table <a href="#S4.T7" title="Table 7 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>).</p>
+</div>
+<div id="S4.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Query</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Noisy channel</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Proposed method</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">akwamarin</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">akvamarin</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">aquamarine</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">maccartni</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">maccartni</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">mccartney</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">ariflaim</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">ariflaim</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">oriflame</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">epika</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">epica</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">replica</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">grid</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">grid</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">creed</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 7: </span> Correction examples for the noisy channel and the
+proposed method.</div>
+</div>
+<div id="S4.SS2.p10" class="ltx_para">
+<p class="ltx_p">However, if our method is applied to shorter and more frequent queries (as
+opposed to ”hard” dataset), it tends to suggest frequent words as
+false-positive corrections (for example, <em class="ltx_emph">grid</em> is corrected to
+<em class="ltx_emph">creed</em> – Assassin’s Creed is popular video game). As can be seen in
+Table <a href="#S4.T5" title="Table 5 ‣ 4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, in order to fix that, algorithm parameters need
+to be tuned more towards precision.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion and future work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper we introduced the stochastic iterative correction method for
+spell check corrections. Our experimental evaluation showed that the proposed
+method improved the performance of popular spelling correction approach – the
+noisy channel model – in the correction of difficult spelling errors.
+We showed how to eliminate the local minima issue of simulated annealing
+and proposed a technique to make our algorithm deterministic.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The experiments conducted on the specialized datasets have shown that our
+method significantly improves the performance of the correction of
+hard spelling errors (by 6.6% <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>) while maintaining good performance on
+common spelling errors.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">In continuation of the work we are considering to expand the method to correct
+errors in multi-word queries, extend the method to work with discriminative
+models, and use a query performance prediction method, which tells for a
+query whether our algorithm needs to be applied.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Brill and R. C. Moore</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An improved error model for noisy channel spelling correction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 286–293</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Baseline speller setup ‣ 2 Baseline speller ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Choudhury, M. Thomas, A. Mukherjee, A. Basu and N. Ganguly</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">How difficult is it to develop a perfect spell-checker? a cross-linguistic analysis through complex network approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 81–88</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p4" title="3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Cucerzan and E. Brill</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Spelling correction as an iterative process that exploits the collective knowledge of web users.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">4</span>, <span class="ltx_text ltx_bib_pages"> pp. 293–300</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.p2" title="3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS2.p4" title="4.2 Experimental results ‣ 4 Experiments ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Duan and B. P. Hsu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online spelling correction for query completion</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 117–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Baseline speller setup ‣ 2 Baseline speller ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gao, X. Li, D. Micol, C. Quirk and X. Sun</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A large scale ranker-based system for search query spelling correction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 358–366</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p5" title="3.2 Stochastic iterative correction ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Kernighan, K. W. Church and W. A. Gale</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A spelling correction program based on a noisy channel model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 205–210</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Kukich</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Techniques for automatically correcting words in text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Computing Surveys (CSUR)</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 377–439</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Mays, F. J. Damerau and R. L. Mercer</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context based spelling correction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Information Processing &amp; Management</span> <span class="ltx_text ltx_bib_volume">27</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 517–522</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Whitelaw, B. Hutchinson, G. Y. Chung and G. Ellis</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using the web for language independent spellchecking and autocorrection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 890–899</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Additional heuristics ‣ 3 Improvements for noisy channel spelling correction ‣ Improved Iterative Correction for Distant Spelling Errors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:40:41 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

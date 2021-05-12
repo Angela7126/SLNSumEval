@@ -1,0 +1,636 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Single Document Summarization based on Nested Tree Structure.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Many methods of text summarization combining sentence selection and sentence
+compression have recently been proposed. Although the dependency between words
+has been used in most of these methods, the dependency between sentences,
+i.e., rhetorical structures, has not been exploited in such joint methods.
+We used both dependency between words and dependency between sentences by
+constructing a nested tree, in which nodes in the document tree representing
+dependency between sentences were replaced by a sentence tree representing
+dependency between words. We formulated a summarization task as a combinatorial
+optimization problem, in which the nested tree was trimmed without losing
+important content in the source document.
+The results from an empirical evaluation revealed that our method based on
+the trimming of the nested tree significantly improved the summarization of texts.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Extractive summarization is one well-known approach to text summarization and
+extractive methods represent a document (or a set of documents) as a set of
+some textual units (e.g., sentences, clauses, and words) and select their subset
+as a summary. Formulating extractive summarization as a combinational optimization
+problem greatly improves the quality of summarization
+        [16, 8, 20]
+        .
+There has recently been increasing attention focused on approaches that jointly
+optimize sentence extraction and sentence compression
+        [21, 19, 17, 10, 2, 3]
+        .
+We can only extract important content by trimming redundant parts from sentences.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        However, as these methods did not include the discourse structures of documents,
+the generated summaries lacked coherence. It is important for generated summaries
+to have a discourse structure that is similar to that of the source document.
+Rhetorical Structure Theory (RST)
+        [14]
+        is one way of introducing
+the discourse structure of a document to a summarization task
+        [15, 6, 11]
+        .
+Hirao et al. recently transformed RST trees into dependency trees and used them
+for single document summarization
+        [11]
+        .
+They formulated the summarization problem as a tree knapsack problem with constraints represented by the dependency trees.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We propose a method of summarizing a single document that utilizes dependency
+between sentences obtained from rhetorical structures and dependency between words obtained from a dependency parser.
+We have explained our method with an example in Figure
+        1
+        .
+First, we represent a document as a
+        nested tree
+        , which is composed of
+two types of tree structures: a
+        document tree
+        and a
+        sentence tree
+        .
+The document tree is a tree that has sentences as nodes and head modifier
+relationships between sentences obtained by RST as edges. The sentence tree is
+a tree that has words as nodes and head modifier relationships between words
+obtained by the dependency parser as edges. We can build the nested tree by regarding
+each node of the document tree as a sentence tree. Finally, we formulate the problem
+of single document summarization as that of combinatorial optimization, which is
+based on the trimming of the nested tree. Our method jointly utilizes relations
+between sentences and relations between words, and extracts a rooted document
+subtree from a document tree whose nodes are arbitrary subtrees of the sentence tree.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Elementary Discourse Units (EDUs) in RST are defined as the minimal building blocks
+of discourse. EDUs roughly correspond to clauses. Most methods of summarization
+based on RST use EDUs as extraction textual units. We converted the rhetorical
+relations between EDUs to the relations between sentences to build the nested
+tree structure. We could thus take into account both relations between sentences
+and relations between words.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Extracting a subtree from the dependency tree of words is one approach to sentence
+compression
+        [21, 19, 17, 10]
+        .
+However, these studies have only extracted rooted subtrees from sentences.
+We allowed our model to extract a subtree that did not include the root word
+(See the sentence with an asterisk
+        *
+        in Figure
+        1
+        ).
+The method of Filippova and Strube
+        [9]
+        allows the model to extract
+non-rooted subtrees in sentence compression tasks that compress a single sentence
+with a given compression ratio. However, it is not trivial to apply their method
+to text summarization because no compression ratio is given to sentences.
+None of these methods use the discourse structures of documents.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Daumé III and Marcu
+        [6]
+        proposed a noisy-channel model that used RST.
+Although their method generated a well-organized summary, no optimality of information
+coverage was guaranteed and their method could not accept large texts because of
+the high computational cost. In addition, their method required large sets of data
+to calculate the accurate probability. There have been some studies that have used
+discourse structures locally to optimize the order of selected sentences
+        [18, 5]
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Generating summary from nested tree
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Building Nested Tree with RST
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         A document in RST is segmented into EDUs and adjacent EDUs are linked with rhetorical relations
+to build an RST-Discourse Tree (RST-DT) that has a hierarchical structure of the relations.
+There are 78 types of rhetorical relations between two spans, and each span
+has one of two aspects of a nucleus and a satellite. The nucleus is more salient
+to the discourse structure, while the other span, the satellite, represents supporting information.
+RST-DT is a tree whose terminal nodes correspond to EDUs and whose nonterminal nodes indicate the relations.
+Hirao et al. converted RST-DTs into dependency-based discourse trees (DEP-DTs)
+whose nodes corresponded to EDUs and whose edges corresponded to the head modifier
+relationships of EDUs. See Hirao et al. for details
+         [11]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Our model requires sentence-level dependency.
+Fortunately we can simply convert DEP-DTs to obtain dependency trees between sentences.
+We specifically merge EDUs that belong to the same sentence.
+Each sentence has only one root EDU that is the parent of all the other EDUs in the sentence.
+Each root EDU in a sentence has the parent EDU in another sentence.
+Hence, we can determine the parent-child relations between sentences.
+As a result, we obtain a tree that represents the parent-child relations of sentences,
+and we can use it as a document tree.
+After the document tree is obtained, we use a dependency parser to obtain
+the syntactic dependency trees of sentences. Finally, we obtain a nested tree.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        ILP formulation
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Our method generates a summary by trimming a nested tree.
+In particular, we extract a rooted document subtree from the document tree,
+and sentence subtrees from sentence trees in the document tree.
+We formulate our problem of optimization in this section as that of integer linear programming.
+Our model is shown in Figure
+         3
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Let us denote by
+         wi⁢j
+         the term weight of word
+         i⁢j
+         (word
+         j
+         in sentence
+         i
+         ).
+         xi
+         is a variable that is one if sentence
+         i
+         is selected as part of a summary,
+and
+         zi⁢j
+         is a variable that is one if word
+         i⁢j
+         is selected as part of a summary.
+According to the objective function, the score for the resulting summary is
+the sum of the term weights
+         wi⁢j
+         that are included in the summary.
+We denote by
+         ri⁢j
+         the variable that is one if word
+         i⁢j
+         is selected as a root of
+an extracting sentence subtree. Constraint (
+         1
+         ) guarantees that
+the summary length will be less than or equal to limit
+         L
+         . Constraints (
+         2
+         )
+and (
+         3
+         ) are tree constraints for a document tree and sentence trees.
+         ri⁢j
+         in Constraint (
+         3
+         ) allows the system to extract non-rooted sentence subtrees,
+as we previously mentioned. Function
+         parent⁢(i)
+         returns the parent of
+sentence
+         i
+         and function
+         parent⁢(i,j)
+         returns the parent of word
+         i⁢j
+         .
+Constraint (
+         4
+         ) guarantees that words are only selected from a selected sentence.
+Constraint (
+         5
+         ) guarantees that each selected sentence subtree has
+at least
+         θ
+         words. Function
+         len⁢(i)
+         returns the number of words
+in sentence
+         i
+         . Constraints (
+         6
+         )-(
+         10
+         ) allow the
+model to extract subtrees that have an arbitrary root node.
+Constraint (
+         6
+         ) guarantees that there is only one root per selected sentence.
+We can set the candidate for the root node of the subtree by using constraint (
+         7
+         ).
+The
+         Rc⁢(i)
+         returns a set of the nodes that are the candidates of the root nodes in sentence
+         i
+         .
+It returned the parser’s root node and the verb nodes in this study.
+Constraint (
+         8
+         ) maintains consistency between
+         zi⁢j
+         and
+         ri⁢j
+         .
+Constraint (
+         9
+         ) prevents the system from selecting the parent node of the root node.
+Constraint (
+         10
+         ) guarantees that the parser’s root node will only
+be selected when the system extracts a rooted sentence subtree.
+The
+         root⁢(i)
+         returns the word index of the parser’s root.
+Constraints (
+         11
+         ) and (
+         12
+         ) guarantee that the selected
+sentence subtree has at least one subject and one object if it has any.
+The
+         s⁢u⁢b⁢(i)
+         and
+         o⁢b⁢j⁢(i)
+         return the word indices whose dependency tag is “SUB” and “OBJ”.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Additional constraint for grammaticality
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We added two types of constraints to our model to extract a grammatical sentence
+subtree from a dependency tree:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E13">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           zi⁢k
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           zi⁢l,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (13)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E14">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∑k∈s⁢(i,j)zi⁢k
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           |s⁢(i,j)|⁢xi.
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (14)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         Equation (
+         13
+         ) means that words
+         zi⁢k
+         and
+         zi⁢l
+         have to be selected together,
+i.e., a word whose dependency tag is PMOD or VC and its parent word, a negation and its parent word,
+a word whose dependency tag is SUB or OBJ and its parent verb, a comparative (JJR) or
+superlative (JJS) adjective and its parent word, an article (a/the) and its parent word,
+and the word “to” and its parent word. Equation (
+         14
+         ) means that the
+sequence of words has to be selected together, i.e., a proper noun sequence whose
+POS tag is PRP$, WP%, or POS and a possessive word and its parent word and the
+words between them.
+The
+         s⁢(i,j)
+         returns the set of word indices that are selected together with word
+         i⁢j
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiment
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Experimental Settings
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We experimentally evaluated the test collection for single document summarization
+contained in the RST Discourse Treebank (RST-DTB)
+         [4]
+         distributed
+by the Linguistic Data Consortium (LDC)
+         .
+The RST-DTB Corpus includes 385 Wall Street Journal articles with RST annotations,
+and 30 of these documents also have one manually prepared reference summary.
+We set the length constraint,
+         L
+         , as the number of words in each reference summary.
+The average length of the reference summaries corresponded to approximately 10%
+of the length of the source document. This dataset was first used by Marcu et al.
+for evaluating a text summarization system
+         [15]
+         .
+We used ROUGE
+         [13]
+         as an evaluation criterion.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We compared our method (
+         sentence subtree
+         ) with that of EDU selection
+         [11]
+         .
+We examined two other methods, i.e.,
+         rooted sentence subtree
+         and
+         sentence selection
+         .
+These two are different from our method in the way that they select a sentence subtree.
+Rooted sentence subtree only selects rooted sentence subtrees
+         .
+Sentence selection does not trim sentence trees.
+It simply selects full sentences from a document tree
+         .
+We built all document trees from the RST-DTs that were annotated in the corpus.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         We set the term weight,
+         wi⁢j
+         , for our model as:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E15">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           wi⁢j=l⁢o⁢g⁢(1+t⁢fi⁢j)d⁢e⁢p⁢t⁢h⁢(i)2,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (15)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         t⁢fi⁢j
+         is the term frequency of word
+         i⁢j
+         in a document and
+         d⁢e⁢p⁢t⁢h⁢(i)
+         is the depth of sentence
+         i
+         within the sentence-level DEP-DT that we described
+in Section
+         3.1
+         .
+For Constraint (
+         5
+         ), we set
+         θ
+         to eight.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Results and Discussion
+       </h3>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.1
+         </span>
+         Comparing ROUGE scores
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS1.p1">
+         <p class="ltx_p">
+          We have summarized the Recall-Oriented Understudy for Gisting Evaluation (ROUGE)
+scores for each method in Table
+          1
+          .
+The score for sentence selection is low (0.254). However, introducing sentence compression
+to the system greatly improved the ROUGE score (0.354).
+The score is also higher than that with EDU selection, which is a state-of-the-art method.
+We applied a multiple test by using Holm’s method and found that our method
+significantly outperformed EDU selection and sentence selection.
+The difference between the sentence subtree and the rooted sentence subtree methods was fairly small.
+We therefore qualitatively analyzed some actual examples that will be discussed
+in Section
+          4.2.2
+          . We also examined the ROUGE scores of two LEAD
+          methods with different textual units:
+EDUs (
+          LEADEDU
+          ) and sentences (
+          LEADSNT
+          ).
+Although LEAD works well and often obtains high ROUGE scores for news articles,
+the scores for
+          LEADEDU
+          and
+          LEADSNT
+          were very low.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.2
+         </span>
+         Qualitative Evaluation of Sentence Subtree Selection
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS2.p1">
+         <p class="ltx_p">
+          This subsection compares the methods of subtree selection and rooted subtree selection.
+Figure
+          4
+          has two example sentences for which both methods selected a
+subtree as part of a summary. The
+          {⋅}
+          indicates the parser’s root word.
+The
+          [⋅]
+          indicates the word that the system selected as the root of the subtree.
+Subtree selection selected a root in both examples that differed from the parser’s root.
+As we can see, subtree selection only selected important subtrees that did not include the parser’s root,
+e.g., purpose-clauses and that-clauses. This capability is very effective because
+we have to contain important content in summaries within given length limits,
+especially when the compression ratio is high
+(i.e., the method has to generate much shorter summaries than the source documents).
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S4.SS2.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          4.2.3
+         </span>
+         Fragmentation of Information
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS3.p1">
+         <p class="ltx_p">
+          Many studies that have utilized RST have simply adopted EDUs as textual units
+          [14, 6, 11, 12]
+          .
+While EDUs are textual units for RST, they are too fine grained as textual units for
+methods of extractive summarization. Therefore, the models have tended to select small
+fragments from many sentences to maximize objective functions and have led to fragmented
+summaries being generated. Figure
+          2
+          has an example of EDUs.
+A fragmented summary is generated when small fragments are selected from many sentences.
+Hence, the number of sentences in the source document included in the resulting summary
+can be an indicator to measure the fragmentation of information.
+We counted the number of sentences in the source document that each method used to generate a
+summary
+          .
+The average for our method was 4.73 and its median was four sentences.
+In contrast, methods of EDU selection had an average of 5.77 and a median of five sentences.
+This meant that our method generated a summary with a significantly smaller number
+of sentences
+          .
+In other words, our method relaxed fragmentation without decreasing the ROUGE score.
+There are boxplots of the numbers of selected sentences in Figure
+          5
+          .
+Table
+          2
+          lists the number of words in each textual unit extracted
+by each method. It indicates that EDUs are shorter than the other textual units.
+Hence, the number of sentences tends to be large.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

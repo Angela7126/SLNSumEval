@@ -1,0 +1,1014 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improving sparse word similarity models with asymmetric measures</title>
+<!--Generated on Wed Jun 11 17:45:41 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on Mar-9-2014.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improving sparse word similarity models with asymmetric measures</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jean Mark Gawron
+<br class="ltx_break"/>San Diego State University
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">gawron@mail.sdsu.edu</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation">Mar-9-2014</div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We show that asymmetric models based on Tversky
+<cite class="ltx_cite">[<a href="#bib.bib308" title="Features of similarity" class="ltx_ref">19</a>]</cite> improve correlations with
+human similarity judgments and nearest neighbor discovery for both
+frequent and middle-rank words. In accord with Tversky’s discovery
+that asymmetric similarity judgments arise when
+comparing sparse and rich representations,
+improvement on our two tasks can be traced to
+heavily weighting the feature bias toward the rarer word
+when comparing high- and mid-frequency words.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A key assumption of most models of similarity
+is that a similarity relation is symmetric.
+This assumption is foundational for some conceptions,
+such as the idea of a similarity space,
+in which similarity is the inverse of distance; and it
+is deeply embedded into many of the algorithms that
+build on a similarity relation among objects, such
+as clustering algorithms. The symmetry assumption
+is not, however, universal, and it is not essential
+to all applications of similarity, especially when
+it comes to modeling human similarity judgments. Citing a number of empirical studies,
+Tversky <cite class="ltx_cite">[<a href="#bib.bib308" title="Features of similarity" class="ltx_ref">19</a>]</cite> calls symmetry
+directly into question, and proposes two general models
+that abandon symmetry.
+The one most directly related to a large body of
+word similarity work that followed is what he calls the <span class="ltx_text ltx_font_bold">ratio model</span>,
+which defines <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="\text{sim}(\text{a},\text{b})" display="inline"><mrow><mtext>sim</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>a</mtext><mo>,</mo><mtext>b</mtext></mrow><mo>)</mo></mrow></mrow></math> as:</p>
+<table id="S1.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E1.m1" class="ltx_Math" alttext="\frac{f(\text{A}\cap\text{B})}{f(\text{A}\cap\text{B})+\alpha f(\text{A}%&#10;\backslash\text{B})+\beta f(\text{B}\backslash\text{A})}" display="block"><mfrac><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>A</mtext><mo>\</mo><mtext>B</mtext></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>β</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>B</mtext><mo>\</mo><mtext>A</mtext></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">Here <span class="ltx_text ltx_markedasmath">A</span> and <span class="ltx_text ltx_markedasmath">B</span> represent feature sets for the
+objects a and b respectively;
+the term in the numerator is a function of
+the set of shared features, a measure of similarity,
+and the last two terms in the denominator measure dissimilarity:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m5" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> are real-number weights;
+when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m6" class="ltx_Math" alttext="\alpha\neq\beta" display="inline"><mrow><mi>α</mi><mo>≠</mo><mi>β</mi></mrow></math>, symmetry is abandoned.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">To motivate such a measure, Tversky presents
+experimental data with asymmetric similarity results,
+including similarity comparisons of countries, line drawings of faces,
+and letters.
+Tversky shows that many similarity judgment tasks
+have an inherent asymmetry; but he also
+argues, following Rosch <cite class="ltx_cite">[<a href="#bib.bib318" title="Family resemblances: studies in the internal structure of categories" class="ltx_ref">17</a>]</cite>, that certain
+kinds of stimuli are more naturally used as foci or
+standards than others.
+Goldstone <cite class="ltx_cite">[<a href="#bib.bib306" title="Similarity" class="ltx_ref">8</a>]</cite> summarizes
+the results succinctly:
+“Asymmetrical similarity occurs when an object with many features is judged as less similar to a sparser object than vice versa; for example, North Korea is judged to be more like China than China is [like] North Korea.”
+Thus, one source of asymmetry is the comparison
+of sparse and dense representations.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The relevance of such considerations to word similarity becomes clear when we
+consider that for many applications, word similarity measures need to be
+well-defined when comparing very frequent words with
+infrequent words. To make this concrete, let us consider a word representation
+in the
+word-as-vector paradigm <cite class="ltx_cite">[<a href="#bib.bib23" title="Similarity-based approaches to natural language processing" class="ltx_ref">11</a>, <a href="#bib.bib30" title="Automatic retrieval and clustering of similar words" class="ltx_ref">13</a>]</cite>,
+using a dependency-based model.
+Suppose we want to measure the semantic similarity
+of <span class="ltx_text ltx_font_italic">boat</span>, rank 682 among the nouns in the
+BNC corpus studied below, which has
+1057 nonzero dependency features based on 50 million words
+of data, with <span class="ltx_text ltx_font_italic">dinghy</span>, rank 6200,
+which has only 113 nonzero features. At the level of the vector representations we are using,
+these are events of very different dimensionality;
+that is, there are ten times as many features in
+the representation of <span class="ltx_text ltx_font_italic">boat</span> as there are in the representation
+of <span class="ltx_text ltx_font_italic">dinghy</span>. If in Tversky/Rosch terms,
+the more frequent word is also a more likely focus, then
+this is exactly the kind of situation in which
+asymmetric similarity judgments will arise.
+Below we show that an asymmetric measure, using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> biased in favor of the less frequent word,
+greatly improves the performance of a dependency-based vector model
+in capturing human similarity judgments.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Before presenting these results, it will be helpful to slightly reformulate
+and slightly generalize Tversky’s ratio model. The reformulation will
+allow us to directly draw the connection between the ratio model
+and a set of similarity measures that have played key roles
+in the similarity literature.
+First, since Tversky has primarily additive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> in mind, we can reformulate
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext="\text{f}(\text{A}\cap\text{B})" display="inline"><mrow><mtext>f</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow><mo>)</mo></mrow></mrow></math> as follows</p>
+<table id="S1.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E2.m1" class="ltx_Math" alttext="\text{f}(\text{A}\cap\text{B})=\sum_{f\in\text{A}\cap\text{B}}\text{wght}(f)" display="block"><mrow><mrow><mtext>f</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow></mrow></munder><mrow><mtext>wght</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">Next, since we are interested in generalizing from sets
+of features, to real-valued vectors of features,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m3" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m4" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math>, we define</p>
+<table id="S1.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E3.m1" class="ltx_Math" alttext="\begin{array}[t]{lll}\sigma_{\text{\sc si}}(w_{1},w_{2})=\sum_{f\in w_{1}\cap w%&#10;_{2}}\text{\sc si}(w_{1}[f],w_{2}[f]).\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mrow><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></munder><mrow><mtext mathvariant="normal">si</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></mtd><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">Here <span class="ltx_text ltx_font_smallcaps">si</span> is some numerical operation on real-number feature values (<span class="ltx_text ltx_font_smallcaps">si</span>
+stands for <span class="ltx_text ltx_font_bold">shared information</span>).
+If the operation is <span class="ltx_text ltx_font_smallcaps">min</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m5" class="ltx_Math" alttext="w_{1}[f]" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m6" class="ltx_Math" alttext="w_{2}[f]" display="inline"><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></math>
+both contain the feature weights for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m7" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math>, then</p>
+<table id="S1.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex1.m1" class="ltx_Math" alttext="\sum_{f\in\text{A}\cap\text{B}}\text{wght}(f)\begin{array}[t]{@{}l}=\sigma_{%&#10;\text{\sc min}}(w_{1},w_{2})\\&#10;=\sum_{f\in w_{1}\cap w_{2}}\text{\sc min}(w_{1}[f],w_{2}[f]),\end{array}" display="block"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><mtext>A</mtext><mo>∩</mo><mtext>B</mtext></mrow></mrow></munder><mrow><mtext>wght</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>f</mi><mo>)</mo></mrow><mo>⁢</mo><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mi/><mo>=</mo><mrow><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mi/><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></munder><mrow><mtext mathvariant="normal">min</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">so with <span class="ltx_text ltx_font_smallcaps">si</span> set to <span class="ltx_text ltx_font_smallcaps">min</span>,
+Equation (<a href="#S1.E3" title="(3) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) includes
+Equation (<a href="#S1.E2" title="(2) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) as a special case.
+Similarly, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m8" class="ltx_Math" alttext="\sigma(w_{1},w_{1})" display="inline"><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></math> represents the
+summed feature weights of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m9" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math>, and therefore,</p>
+<table id="S1.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex2.m1" class="ltx_Math" alttext="f(w_{1}\backslash\,w_{2})=\sigma(w_{1},w_{1})-\sigma(w_{1},w_{2})" display="block"><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo rspace="4.2pt">\</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">In this generalized form, then, (<a href="#S1.E1" title="(1) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>)
+becomes</p>
+<table id="S1.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E4.m1" class="ltx_Math" alttext="\begin{array}[t]{@{}lll}\frac{\sigma(w_{1},w_{2})}{\sigma(w_{1},w_{2})+\alpha[%&#10;\sigma(w_{1},w_{1})-\sigma(w_{1},w_{2})]+\beta[\sigma(w_{2},w_{2})-\sigma(w_{1%&#10;},w_{2})]}\\&#10;=\frac{\sigma(w_{1},w_{2})}{\alpha\sigma(w_{1},w_{1})+\beta\sigma(w_{2},w_{2})%&#10;+\sigma(w_{1},w_{2})-(\alpha+\beta)\sigma(w_{1},w_{2})}\par&#10;\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mfrac><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow><mo>+</mo><mrow><mi>β</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></mrow></mfrac></mtd><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mi/><mo>=</mo><mfrac><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>α</mi><mo>⁢</mo><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>β</mi><mo>⁢</mo><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mrow><mo>(</mo><mrow><mi>α</mi><mo>+</mo><mi>β</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></mtd><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Thus, if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m1" class="ltx_Math" alttext="\alpha+\beta=1" display="inline"><mrow><mrow><mi>α</mi><mo>+</mo><mi>β</mi></mrow><mo>=</mo><mn>1</mn></mrow></math>, Tversky’s ratio model becomes simply:</p>
+<table id="S1.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E5.m1" class="ltx_Math" alttext="\begin{array}[t]{lll}\text{sim}(w_{1},w_{2})&amp;=&amp;\frac{\sigma(w_{1},w_{2})}{%&#10;\alpha\sigma(w_{1},w_{1})+(1-\alpha)\sigma(w_{2},w_{2})}\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mtext>sim</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo>=</mo></mtd><mtd columnalign="left"><mfrac><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>α</mi><mo>⁢</mo><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">The computational advantage of this reformulation is that the
+core similarity operation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m2" class="ltx_Math" alttext="\sigma(w_{1},w_{2})" display="inline"><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> is done on
+what is generally only a small number of shared features,
+and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m3" class="ltx_Math" alttext="\sigma(w_{i},w_{i})" display="inline"><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></math> calculations (which we
+will call self-similarities), can be computed in advance.
+Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m4" class="ltx_Math" alttext="\text{sim}(w_{1},w_{2})" display="inline"><mrow><mtext>sim</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> is
+symmetric if and only if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m5" class="ltx_Math" alttext="\alpha=0.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.5</mn></mrow></math>.
+When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m6" class="ltx_Math" alttext="\alpha&gt;0.5" display="inline"><mrow><mi>α</mi><mo>&gt;</mo><mn>0.5</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m7" class="ltx_Math" alttext="\text{sim}(w_{1},w{2})" display="inline"><mrow><mtext>sim</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mrow><mi>w</mi><mo>⁢</mo><mn>2</mn></mrow></mrow><mo>)</mo></mrow></mrow></math>
+is biased in favor of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m8" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> as the referent;
+When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m9" class="ltx_Math" alttext="\alpha&lt;0.5" display="inline"><mrow><mi>α</mi><mo>&lt;</mo><mn>0.5</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m10" class="ltx_Math" alttext="\text{sim}(w_{1},w{2})" display="inline"><mrow><mtext>sim</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mrow><mi>w</mi><mo>⁢</mo><mn>2</mn></mrow></mrow><mo>)</mo></mrow></mrow></math>
+is biased in favor of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p5.m11" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math>.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Consider four similarity functions
+that have played important roles in the literature on similarity:</p>
+<table id="S1.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E6.m1" class="ltx_Math" alttext="\begin{array}[t]{@{}l@{\hspace{2pt}}l@{\hspace{2pt}}l@{\hspace{2pt}}l@{\hspace%&#10;{2pt}}l@{\hspace{2pt}}l}\text{\sc dice }\text{\sc prod}(w_{1},w_{2})\hskip{2.0%&#10;pt}&amp;=\hskip{2.0pt}&amp;\frac{2*w_{1}\cdot w_{2}}{\left\lVert w_{1}\right\rVert^{2}%&#10;+\left\lVert w_{2}\right\rVert^{2}}\hskip{2.0pt}\\&#10;\text{\sc dice}^{\dagger}(w_{1},w_{2})\hskip{2.0pt}&amp;=\hskip{2.0pt}&amp;\frac{2*%&#10;\sum_{f\in w_{1}\cap w_{2}}\text{min}(w_{1}[f],\&gt;w_{2}[f])}{\sum w_{1}[f]+\sum&#10;w%&#10;_{2}[f]}\hskip{2.0pt}\\&#10;\text{\sc lin}(w_{1},w_{2})\hskip{2.0pt}&amp;=\hskip{2.0pt}&amp;\frac{\sum_{f\in w_{1}%&#10;\cap w_{2}}w_{1}[f]+\&gt;w_{2}[f]}{\sum w_{1}[f]+\sum w_{2}[f]}\hskip{2.0pt}\\&#10;\text{{\sc cos}}(w_{1},w_{2})\hskip{2.0pt}&amp;=\hskip{2.0pt}&amp;\text{$\text{\sc dice%&#10; }\text{\sc prod}${} applied}\hskip{2.0pt}\\&#10;\hskip{2.0pt}&amp;\hskip{2.0pt}&amp;\text{to unit vectors}\hskip{2.0pt}\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mtext mathvariant="normal">dice </mtext><mtext mathvariant="normal">prod</mtext></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mpadded width="+2.0pt"><mfrac><mrow><mrow><mn>2</mn><mo>*</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>⋅</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mrow><msup><mrow><mo fence="true">∥</mo><msub><mi>w</mi><mn>1</mn></msub><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo fence="true">∥</mo><msub><mi>w</mi><mn>2</mn></msub><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mfrac></mpadded></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mpadded width="+2.0pt"><mfrac><mrow><mn>2</mn><mo>*</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></msub><mrow><mtext>min</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo separator="true">, </mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mrow><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow></mrow></mfrac></mpadded></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mtext mathvariant="normal">lin</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mpadded width="+2.0pt"><mfrac><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></msub><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo rspace="4.7pt">+</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mrow><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>+</mo><mrow><mo largeop="true" symmetric="true">∑</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow></mrow></mfrac></mpadded></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mtext mathvariant="normal">cos</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mpadded width="+2.0pt"><mrow><mtext mathvariant="normal">dice </mtext><mtext mathvariant="normal">prod</mtext><mtext> applied</mtext></mrow></mpadded></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd><mi/></mtd><mtd><mi/></mtd><mtd columnalign="left"><mpadded width="+2.0pt"><mtext>to unit vectors</mtext></mpadded></mtd><mtd/><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">The function <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span> is not well known in the word similarity literature, but in
+the data mining literature it is
+often just called Dice coefficient,
+because it generalized the set comparison
+function of Dice <cite class="ltx_cite">[<a href="#bib.bib95" title="Measures of the amount of ecologic association between species" class="ltx_ref">5</a>]</cite>.
+Observe that cosine is a special
+case of <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p6.m3" class="ltx_Math" alttext="\text{\sc dice}^{\dagger}" display="inline"><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup></math> was introduced in Curran <cite class="ltx_cite">[<a href="#bib.bib22" title="From Distributional to Semantic Similarity" class="ltx_ref">3</a>]</cite> and was the most successful function
+in his evaluation.
+Since <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">lin</span> was introduced in Lin <cite class="ltx_cite">[<a href="#bib.bib30" title="Automatic retrieval and clustering of similar words" class="ltx_ref">13</a>]</cite>; several different
+functions have born that name. The version used here is the one used
+in Curran <cite class="ltx_cite">[<a href="#bib.bib22" title="From Distributional to Semantic Similarity" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">The three distinct functions
+in Equation <a href="#S1.E6" title="(6) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> have a similar form.
+In fact, all can be defined in terms of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p7.m1" class="ltx_Math" alttext="\sigma" display="inline"><mi>σ</mi></math> functions differing
+only in their <span class="ltx_text ltx_font_smallcaps">si</span> operation.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m1" class="ltx_Math" alttext="\sigma_{\text{\sc si}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub></math>
+be a shared feature sum for operation <span class="ltx_text ltx_font_smallcaps">si</span>,
+as defined in Equation (<a href="#S1.E3" title="(3) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). We
+define the Tversky-normalized version of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m2" class="ltx_Math" alttext="\sigma_{\text{\sc si}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub></math>,
+written <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m3" class="ltx_Math" alttext="\text{T}_{\text{\sc si}}" display="inline"><msub><mtext>T</mtext><mtext mathvariant="normal">si</mtext></msub></math>, as:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>
+Paralleling (<a href="#S1.E7" title="(7) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>) is
+Jaccard-family normalization:
+
+<table id="S1.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex3.m1" class="ltx_Math" alttext="\sigma_{\text{\sc jacc}}(w_{1},w_{2})=\frac{\sigma(w_{1},w_{2})}{\sigma(w_{1},%&#10;w_{1})+\sigma(w_{2},w_{2})-\sigma(w_{1},w_{2})}" display="block"><mrow><mrow><msub><mi>σ</mi><mtext mathvariant="normal">jacc</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+It is easy to generalize the result from
+van Rijsbergen <cite class="ltx_cite">[<a href="#bib.bib97" title="Information retrieval" class="ltx_ref">20</a>]</cite>
+for the original set-specific versions
+of Dice and Jaccard, and show that all of the
+Tversky family functions discussed above are monotonic in Jaccard.
+</span></span></span></p>
+<table id="S1.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E7.m1" class="ltx_Math" alttext="\text{T}_{\text{{\sc si}}}(w_{1},w_{2})=\frac{2\cdot\sigma_{\text{\sc si}}(w_{%&#10;1},w_{2})}{\sigma_{\text{\sc si}}(w_{1},w_{1})+\sigma_{\text{\sc si}}(w_{2},w_%&#10;{2})}" display="block"><mrow><mrow><msub><mtext>T</mtext><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><mrow><mn>2</mn><mo>⋅</mo><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m4" class="ltx_Math" alttext="\text{T}_{\text{{\sc si}}}" display="inline"><msub><mtext>T</mtext><mtext mathvariant="normal">si</mtext></msub></math> is just the special case of Tversky’s ratio model (<a href="#S1.E5" title="(5) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>)
+in which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p8.m5" class="ltx_Math" alttext="\alpha=0.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.5</mn></mrow></math>
+and the similarity measure is symmetric.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">We define three SI operations
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m1" class="ltx_Math" alttext="\sigma_{\text{\sc prod}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">prod</mtext></msub></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m2" class="ltx_Math" alttext="\sigma_{\text{\sc prod}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">prod</mtext></msub></math>, of course, is dot product.
+</span></span></span>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m3" class="ltx_Math" alttext="\sigma_{\text{\sc min}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m4" class="ltx_Math" alttext="\sigma_{\text{\sc avg}}" display="inline"><msub><mi>σ</mi><mtext mathvariant="normal">avg</mtext></msub></math>
+as follows:</p>
+<table id="S1.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex4.m1" class="ltx_Math" alttext="\begin{array}[t]{l|ll@{\hspace{1pt}}l@{\hspace{1pt}}l}\text{SI}&amp;&amp;\hskip{1.0pt}%&#10;&amp;\sigma_{\text{{\sc si}}}(w_{1},w_{2})\hskip{1.0pt}\\&#10;\hline\text{\sc prod}&amp;&amp;\hskip{1.0pt}&amp;\begin{array}[t]{@{}ll}\sum_{f\in w_{1}%&#10;\cap w_{2}}w_{1}[f]*w_{2}[f]\\&#10;\end{array}\hskip{1.0pt}\\&#10;\text{\sc avg}&amp;&amp;\hskip{1.0pt}&amp;\begin{array}[t]{@{}ll}\sum_{f\in w_{1}\cap w_{2%&#10;}}\frac{w_{1}[f]+w_{2}[f]}{2}\\&#10;\end{array}\hskip{1.0pt}\\&#10;\text{\sc min}&amp;&amp;\hskip{1.0pt}&amp;\begin{array}[t]{@{}ll}\sum_{f\in w_{1}\cap w_{2%&#10;}}\text{\sc min}(w_{1}[f],w_{2}[f])\\&#10;\end{array}\hskip{1.0pt}\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd class="ltx_border_r" columnalign="left"><mtext>SI</mtext></mtd><mtd/><mtd><mi/></mtd><mtd columnalign="left"><mrow><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd/></mtr><mtr><mtd class="ltx_border_r ltx_border_t" columnalign="left"><mtext mathvariant="normal">prod</mtext></mtd><mtd class="ltx_border_t"/><mtd class="ltx_border_t"><mi/></mtd><mtd class="ltx_border_t" columnalign="left"><mpadded width="+1.0pt"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></munder><mrow><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo>*</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow></mtd><mtd/></mtr></mtable></mpadded></mtd><mtd class="ltx_border_t"/></mtr><mtr><mtd class="ltx_border_r" columnalign="left"><mtext mathvariant="normal">avg</mtext></mtd><mtd/><mtd><mi/></mtd><mtd columnalign="left"><mpadded width="+1.0pt"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></munder><mfrac><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo>+</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mn>2</mn></mfrac></mrow></mtd><mtd/></mtr></mtable></mpadded></mtd><mtd/></mtr><mtr><mtd class="ltx_border_r" columnalign="left"><mtext mathvariant="normal">min</mtext></mtd><mtd/><mtd><mi/></mtd><mtd columnalign="left"><mpadded width="+1.0pt"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></munder><mrow><mtext mathvariant="normal">min</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mtd><mtd/></mtr></mtable></mpadded></mtd><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This yields the three similarity functions cited above:</p>
+<table id="S1.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E8.m1" class="ltx_Math" alttext="\begin{array}[t]{l@{\hspace{2pt}}l@{\hspace{2pt}}l@{\hspace{2pt}}l@{\hspace{2%&#10;pt}}l@{\hspace{2pt}}l}\text{\sc dice }\text{\sc prod}(w_{1},w_{2})\hskip{2.0pt%&#10;}&amp;=\hskip{2.0pt}&amp;\text{T}_{\text{{\sc prod}}}(w_{1},w_{2})\hskip{2.0pt}\\&#10;\text{\sc dice}^{\dagger}(w_{1},w_{2})\hskip{2.0pt}&amp;=\hskip{2.0pt}&amp;\text{T}_{%&#10;\text{{\sc min}}}(w_{1},w_{2})\hskip{2.0pt}\\&#10;\text{\sc lin}(w_{1},w_{2})\hskip{2.0pt}&amp;=\hskip{2.0pt}&amp;\text{T}_{\text{{\sc&#10;avg%&#10;}}}(w_{1},w_{2})\hskip{2.0pt}\\&#10;\hskip{2.0pt}\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mtext mathvariant="normal">dice </mtext><mtext mathvariant="normal">prod</mtext></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mrow><msub><mtext>T</mtext><mtext mathvariant="normal">prod</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mrow><msub><mtext>T</mtext><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mtext mathvariant="normal">lin</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mo rspace="4.5pt">=</mo></mtd><mtd columnalign="left"><mrow><msub><mtext>T</mtext><mtext mathvariant="normal">avg</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd/><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">Thus, all three of these functions are special cases of
+symmetric ratio models. Below, we investigate
+asymmetric versions of all three, which we write
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m5" class="ltx_Math" alttext="\text{T}_{\alpha,\text{{\sc si}}}(w_{1},w_{2})" display="inline"><mrow><msub><mtext>T</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>, defined as:</p>
+<table id="S1.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E9.m1" class="ltx_Math" alttext="\frac{\sigma_{\text{\sc si}}(w_{1},w_{2})}{\alpha\cdot\sigma_{\text{\sc si}}(w%&#10;_{1},w_{1})+(1-\alpha)\cdot\sigma_{\text{\sc si}}(w_{2},w_{2})}" display="block"><mfrac><mrow><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mrow><mi>α</mi><mo>⋅</mo><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⋅</mo><msub><mi>σ</mi><mtext mathvariant="normal">si</mtext></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p">Following
+Lee <cite class="ltx_cite">[<a href="#bib.bib23" title="Similarity-based approaches to natural language processing" class="ltx_ref">11</a>]</cite>, who investigates a different
+family of asymmetric similarity functions,
+we will refer to these
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p9.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewed measures.</p>
+</div>
+<div id="S1.p10" class="ltx_para">
+<p class="ltx_p">We also will look at a <span class="ltx_text ltx_font_bold">rank-biased</span> family of measures:</p>
+<table id="S1.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E10.m1" class="ltx_Math" alttext="\begin{array}[t]{l@{\hspace{2pt}}l}\text{R}_{\alpha,\text{{\sc si}}}(w_{1},w_{%&#10;2})=\text{T}_{\alpha,\text{{\sc si}}}(w_{h},w_{l})\hskip{2.0pt}\\&#10;\text{ where}\begin{array}[t]{@{\hspace{2pt}}l}\hskip{2.0pt}w_{l}=\text{ arg}%&#10;\,\text{min }_{w\in\{w_{1},w_{2}\}}\;\text{Rank}(w)\\&#10;\hskip{2.0pt}w_{h}=\text{ arg}\,\text{max }_{w\in\{w_{1},w_{2}\}}\;\text{Rank}%&#10;(w)\end{array}\hskip{2.0pt}\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><msub><mtext>R</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msub><mtext>T</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>h</mi></msub><mo>,</mo><msub><mi>w</mi><mi>l</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mtext> where</mtext><mo>⁢</mo><mpadded width="+2.0pt"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><msub><mpadded lspace="2.0pt" width="+2.0pt"><mi>w</mi></mpadded><mi>l</mi></msub><mo>=</mo><mrow><mpadded width="+1.7pt"><mtext> arg</mtext></mpadded><mo>⁢</mo><mpadded width="+2.8pt"><msub><mtext>min </mtext><mrow><mi>w</mi><mo>∈</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>}</mo></mrow></mrow></msub></mpadded><mo>⁢</mo><mtext>Rank</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><msub><mpadded lspace="2.0pt" width="+2.0pt"><mi>w</mi></mpadded><mi>h</mi></msub><mo>=</mo><mrow><mpadded width="+1.7pt"><mtext> arg</mtext></mpadded><mo>⁢</mo><mpadded width="+2.8pt"><msub><mtext>max </mtext><mrow><mi>w</mi><mo>∈</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>}</mo></mrow></mrow></msub></mpadded><mo>⁢</mo><mtext>Rank</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr></mtable></mpadded></mrow></mtd><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p10.m1" class="ltx_Math" alttext="\text{T}_{\alpha,\text{{\sc si}}}(w_{h},w_{l})" display="inline"><mrow><msub><mtext>T</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>h</mi></msub><mo>,</mo><msub><mi>w</mi><mi>l</mi></msub></mrow><mo>)</mo></mrow></mrow></math> is as defined
+in (<a href="#S1.E9" title="(9) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>), and the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p10.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-weighted word is always the less frequent word.
+For example, consider comparing the 100-feature vector for
+<span class="ltx_text ltx_font_italic">dinghy</span> to the 1000 feature vector for <span class="ltx_text ltx_font_italic">boat</span>: if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p10.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is high,
+we give more weight to the proportion of <span class="ltx_text ltx_font_italic">dinghy</span>’s features
+that are shared than we give to the proportion of
+<span class="ltx_text ltx_font_italic">boat</span>’s features that are shared.</p>
+</div>
+<div id="S1.p11" class="ltx_para">
+<p class="ltx_p">In the following sections we present data
+showing that the performance of a dependency-based
+similarity system in capturing human similarity judgments
+can be greatly improved with rank-bias and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p11.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewing.
+We will investigate the three asymmetric functions
+defined above.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Interestingly, Equation (<a href="#S1.E9" title="(9) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>)
+does not yield an asymmetric version
+of cosine. Plugging unit vectors into the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p11.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewed version
+of <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span> still leaves us with a symmetric function (<span class="ltx_text ltx_font_smallcaps">cos</span>),
+whatever the value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p11.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>.</span></span></span>
+We argue that the advantages of rank bias are tied
+to improved similarity estimation when comparing
+vectors of very different dimensionality. We then turn to the problem
+of finding a word’s nearest semantic neighbors. The
+nearest neighbor problem is a rather
+a natural ground in which to try
+out ideas on asymmetry, since the nearest neighbor
+relation is itself not symmetrical. We
+show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p11.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewing can be used to
+improve the quality of nearest neighbors found for both high-
+and mid- frequency words.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Systems</h2>
+
+<div id="S2.p1" class="ltx_para">
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We parsed the BNC with the Malt Dependency parser
+<cite class="ltx_cite">[<a href="#bib.bib54" title="An efficient algorithm for projective dependency parsing" class="ltx_ref">16</a>]</cite>
+and the Stanford parser <cite class="ltx_cite">[<a href="#bib.bib256" title="Fast exact inference with a factored model for natural language parsing" class="ltx_ref">10</a>]</cite>,
+creating two dependency DBs,
+using basically the design in Lin <cite class="ltx_cite">[<a href="#bib.bib30" title="Automatic retrieval and clustering of similar words" class="ltx_ref">13</a>]</cite>,
+with features weighted by PMI <cite class="ltx_cite">[<a href="#bib.bib70" title="Word association norms, mutual information, and lexicography" class="ltx_ref">2</a>]</cite>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">For each of the 3 rank-biased similarity systems
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="\text{R}_{\alpha,\text{\sc si}}" display="inline"><msub><mtext>R</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub></math>) and cosine, we computed correlations
+with human judgments for the pairs in 2 standard wordsets:
+the combined Miller-Charles/Rubenstein-Goodenough word sets
+<cite class="ltx_cite">[<a href="#bib.bib112" title="Contextual correlates of semantic similarity" class="ltx_ref">15</a>, <a href="#bib.bib215" title="Contextual correlates of synonymy" class="ltx_ref">18</a>]</cite> and
+the Wordsim 353 word set <cite class="ltx_cite">[<a href="#bib.bib121" title="Placing search in context: the concept revisited" class="ltx_ref">6</a>]</cite>,
+as well as to a subset of the Wordsim set restricted
+to reflect semantic similarity judgments,
+which we will refer to as Wordsim 201.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">For each of 3 <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewed similarity systems
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m2" class="ltx_Math" alttext="\text{T}_{\alpha,\text{\sc si}}" display="inline"><msub><mtext>T</mtext><mrow><mi>α</mi><mo>,</mo><mtext mathvariant="normal">si</mtext></mrow></msub></math>)
+and cosine, we found the nearest neighbor from among
+BNC nouns (of any rank) for the 10,000 most frequent
+BNC nouns using the the dependency DB created in step 2.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">To evaluate of the quality of
+the nearest neighbors pairs found in Step 4, we
+scored them using the Wordnet-based Personalized Pagerank system
+described in Agirre <cite class="ltx_cite">[<a href="#bib.bib122" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">1</a>]</cite> (UKB),
+a non distributional WordNet based measure, and the best
+system in Table <a href="#S3.T1" title="Table 1 ‣ 3 Human correlations ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Human correlations</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3 Human correlations ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents the
+Spearman’s correlation with human judgments for
+Cosine, UKB, and our 3 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewed
+models using Malt-parser based vectors applied to
+the combined Miller-Charles/Rubenstein-Goodenough word sets,
+the Wordsim 353 word set,
+and the Wordsim 202 word set.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_top">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center ltx_border_rr" colspan="2">MC/RG</th>
+<th class="ltx_td ltx_align_center ltx_border_rr" colspan="2">Wdsm201</th>
+<th class="ltx_td ltx_align_center" colspan="2">Wdsm353</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="\alpha=.97" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.97</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left ltx_border_rr"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="\alpha=.97" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.97</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="\alpha=.97" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.97</mn></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">Dice</td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t">.59</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">.71</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.50</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">.60</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.35</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.44</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">lin</span></td>
+<td class="ltx_td ltx_align_left">.48</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.62</td>
+<td class="ltx_td ltx_align_left">.42</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.54</td>
+<td class="ltx_td ltx_align_left">.29</td>
+<td class="ltx_td ltx_align_left">.39</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m9" class="ltx_Math" alttext="\text{\sc dice}^{\dagger}" display="inline"><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup></math></td>
+<td class="ltx_td ltx_align_left">.58</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.67</td>
+<td class="ltx_td ltx_align_left">.49</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.58</td>
+<td class="ltx_td ltx_align_left">.34</td>
+<td class="ltx_td ltx_align_left">.43</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Euc</td>
+<td class="ltx_td ltx_align_left">Cosine</td>
+<td class="ltx_td ltx_align_left">.65</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">NA</td>
+<td class="ltx_td ltx_align_left">.56</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">NA</td>
+<td class="ltx_td ltx_align_left">.41</td>
+<td class="ltx_td ltx_align_left">NA</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">WN</td>
+<td class="ltx_td ltx_align_left ltx_border_t">UKB WN</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.80</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">NA</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.75</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">NA</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.68</td>
+<td class="ltx_td ltx_align_left ltx_border_t">NA</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>System/Human correlations. Above the
+line: MALT Parser-based systems</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The first of each of the column pairs is a symmetric system,
+and the second a rank-biased variant,
+based on Equation (<a href="#S1.E10" title="(10) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a>). In all cases,
+the biased system improves on the performance of its
+symmetric counterpart; in the case of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="\text{\sc dice}^{\dagger}" display="inline"><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup></math>and <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span>, that
+improvement is enough for the biased system to outperform
+cosine, the best of the symmetric distributionally based systems.
+The value .97 was chosen for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> because it produced the best
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-system on the MC/RG corpus.
+That value is probably probably an overtrained optimum.
+The point is that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewing always helps:
+For all three systems, the improvement
+shown in raising <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> from .5 to whatever the optimum is is
+monotonic. This is shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Human correlations ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+Table <a href="#S3.T2" title="Table 2 ‣ 3 Human correlations ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows very similar results
+using the Stanford parser, demonstrating the pattern
+is not limited to a single parsing model.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2049/image001.png" id="S3.F1.g1" class="ltx_graphics" width="338" height="258" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Scores monotonically increase with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></div>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_top">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center ltx_border_rr" colspan="3">MC/RG</th>
+<th class="ltx_td ltx_align_center ltx_border_rr" colspan="3">Wdsm201</th>
+<th class="ltx_td ltx_align_center" colspan="3">Wdsm353</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left">opt</th>
+<th class="ltx_td ltx_align_left ltx_border_rr">opt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left">opt</th>
+<th class="ltx_td ltx_align_left ltx_border_rr">opt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m5" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math></th>
+<th class="ltx_td ltx_align_left">opt</th>
+<th class="ltx_td ltx_align_left">opt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t">.65</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.70</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">.86</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.42</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.57</td>
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">.99</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.36</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.44</td>
+<td class="ltx_td ltx_align_left ltx_border_t">.98</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">lin</span></td>
+<td class="ltx_td ltx_align_left">.58</td>
+<td class="ltx_td ltx_align_left">.68</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.90</td>
+<td class="ltx_td ltx_align_left">.41</td>
+<td class="ltx_td ltx_align_left">.56</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.94</td>
+<td class="ltx_td ltx_align_left">.30</td>
+<td class="ltx_td ltx_align_left">.41</td>
+<td class="ltx_td ltx_align_left">.99</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="\text{\sc dice}^{\dagger}" display="inline"><msup><mtext mathvariant="normal">dice</mtext><mo>†</mo></msup></math></td>
+<td class="ltx_td ltx_align_left">.60</td>
+<td class="ltx_td ltx_align_left">.71</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.91</td>
+<td class="ltx_td ltx_align_left">.43</td>
+<td class="ltx_td ltx_align_left">.53</td>
+<td class="ltx_td ltx_align_left ltx_border_rr">.99</td>
+<td class="ltx_td ltx_align_left">.32</td>
+<td class="ltx_td ltx_align_left">.43</td>
+<td class="ltx_td ltx_align_left">.99</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>System/Human correlations for
+Stanford parser systems</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S3.T3" title="Table 3 ‣ 3 Human correlations ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we list the pairs whose reranking
+on the MC/RG dataset
+contributed most to the improvement of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="\alpha=.9" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.9</mn></mrow></math> system over
+the default <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="\alpha=.5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.5</mn></mrow></math> system. In the last column an approximation
+of the amount of correlation improvement provided by that pair (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math>):<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>
+The approximation is based on the formula for computing Spearman’s R
+with no ties. If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the number of items, then the improvement on that item is:
+
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\frac{6*[(\text{baseline}-\text{gold})^{2}-(\text{test}-\text{gold})^{2}]}{n*(%&#10;n^{2}-1)}" display="block"><mfrac><mrow><mn>6</mn><mo>*</mo><mrow><mo>[</mo><mrow><msup><mrow><mo>(</mo><mrow><mtext>baseline</mtext><mo>-</mo><mtext>gold</mtext></mrow><mo>)</mo></mrow><mn>2</mn></msup><mo>-</mo><msup><mrow><mo>(</mo><mrow><mtext>test</mtext><mo>-</mo><mtext>gold</mtext></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></mrow><mrow><mi>n</mi><mo>*</mo><mrow><mo>(</mo><mrow><msup><mi>n</mi><mn>2</mn></msup><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</span></span></span></p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_top">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Word 1</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Rank</th>
+<th class="ltx_td ltx_align_left">Word 2</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Rank</th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math></th>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">automobile</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">7411</th>
+<th class="ltx_td ltx_align_left ltx_border_t">car</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">100</th>
+<td class="ltx_td ltx_align_left ltx_border_t">0.030</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">asylum</th>
+<th class="ltx_td ltx_align_left ltx_border_r">3540</th>
+<th class="ltx_td ltx_align_left">madhouse</th>
+<th class="ltx_td ltx_align_left ltx_border_r">14703</th>
+<td class="ltx_td ltx_align_left">0.020</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">coast</th>
+<th class="ltx_td ltx_align_left ltx_border_r">708</th>
+<th class="ltx_td ltx_align_left">hill</th>
+<th class="ltx_td ltx_align_left ltx_border_r">949</th>
+<td class="ltx_td ltx_align_left">0.018</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">mound</th>
+<th class="ltx_td ltx_align_left ltx_border_r">3089</th>
+<th class="ltx_td ltx_align_left">stove</th>
+<th class="ltx_td ltx_align_left ltx_border_r">2885</th>
+<td class="ltx_td ltx_align_left">0.017</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">autograph</th>
+<th class="ltx_td ltx_align_left ltx_border_r">10136</th>
+<th class="ltx_td ltx_align_left">signature</th>
+<th class="ltx_td ltx_align_left ltx_border_r">2743</th>
+<td class="ltx_td ltx_align_left">0.009</td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Pairs contributing the biggest improvement, MC/RG word set</div>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Note the 3 of the 5 items contributing the most improvement this system were pairs
+with a large difference in rank.
+Choosing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\alpha=.9" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.9</mn></mrow></math>, weights recall toward
+the rarer word. We conjecture that the reason
+this helps is Tversky’s principle: It is natural
+to use the sparser representation as the focus
+in the comparison.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Nearest neighbors</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F2" title="Figure 2 ‣ 4 Nearest neighbors ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> gives the results of our nearest neighbor
+study on the BNC for the case of
+<span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span>. The graphs for the other two
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skewed systems are nearly identical,
+and are not shown due to space limitations. The target
+word, the word whose
+nearest neighbor is being found,
+always receives the weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="1-\alpha" display="inline"><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow></math>.
+The x-axis shows target word rank;
+the y-axis shows the average UKB similarity scores assigned
+to nearest neighbors every 50 ranks. All the systems show
+degraded nearest neighbor quality as target words grow rare, but
+at lower ranks,
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="\alpha=.04" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.04</mn></mrow></math> nearest neighbor system fares considerably better
+than the symmetric <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="\alpha=.50" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.50</mn></mrow></math> system; the line across the bottom
+tracks the score of a system with randomly generated nearest neighbors.
+The symmetric <span class="ltx_text ltx_markedasmath ltx_font_smallcaps">dice </span><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">prod</span> system is as an excellent
+nearest neighbor system at high ranks but drops below
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m7" class="ltx_Math" alttext="\alpha=.04" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.04</mn></mrow></math> system at around rank 3500.
+We see that the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m8" class="ltx_Math" alttext="\alpha=.8" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.8</mn></mrow></math> system
+is even better than the symmetric system
+at high ranks, but
+degrades much more quickly.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We explain these results on the basis of the
+principle developed for the human correlation
+data: To reflect natural judgments of similarity for comparisons of
+representations of differing sparseness, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> should be tipped toward
+the sparser representation.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Thus, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="\alpha=.80" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.80</mn></mrow></math> works best for high rank
+target words, because
+most nearest neighbor candidates are less frequent,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="\alpha=.8" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.8</mn></mrow></math> tips the balance toward the nontarget
+words. On the other
+hand, when the target word is a low ranking
+word, a high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> weight means it
+never receives the highest weight,
+and this is disastrous, since most good candidates are higher ranking.
+Conversely, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="\alpha=.04" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>.04</mn></mrow></math> works better.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-2049/image002.png" id="S4.F2.g1" class="ltx_graphics" width="339" height="252" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>UKB evaluation scores for nearest neighbor pairs
+across word ranks, sampled every 50 ranks.</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Previous work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">The debt owed to Tversky <cite class="ltx_cite">[<a href="#bib.bib308" title="Features of similarity" class="ltx_ref">19</a>]</cite>
+has been made clear in the introduction.
+Less clear is the debt owed to Jimenez et al. <cite class="ltx_cite">[<a href="#bib.bib258" title="Soft cardinality: a parameterized similarity function for text comparison" class="ltx_ref">9</a>]</cite>,
+which also proposes an asymmetric similarity framework based
+on Tversky’s insights. Jimenez et al. showed
+the continued relevance of Tversky’s work.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Motivated by the problem of measuring how well
+the distribution of one word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> captures the distribution
+of another <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math>, Weeds and Weir <cite class="ltx_cite">[<a href="#bib.bib317" title="Co-occurrence retrieval: a flexible framework for lexical distributional similarity" class="ltx_ref">21</a>]</cite>
+also explore asymmetric models,
+expressing similarity calculations as weighted combinations of
+several variants of what they call precision and recall. Some of their models
+are also Tverskyan
+ratio models. To see this, we divide (<a href="#S1.E9" title="(9) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>) everywhere by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="\sigma(w_{1},w_{2})" display="inline"><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>:</p>
+<table id="S5.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex6.m1" class="ltx_Math" alttext="\text{{\sc T}}_{\text{{\sc si}}}(w_{1},w_{2})=\frac{1}{\frac{\alpha\cdot\sigma%&#10;(w_{1},w_{1})}{\sigma(w_{1},w_{2})}+\frac{(1-\alpha)\cdot\sigma(w_{2},w_{2})}{%&#10;\sigma(w_{1},w_{2})}}" display="block"><mrow><mrow><msub><mtext mathvariant="normal">T</mtext><mtext mathvariant="normal">si</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mfrac><mrow><mrow><mi>α</mi><mo>⋅</mo><mi>σ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac><mo>+</mo><mfrac><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⋅</mo><mi>σ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">If the <span class="ltx_text ltx_font_smallcaps">si</span> is <span class="ltx_text ltx_font_smallcaps">min</span>, then the two terms in the denominator
+are the inverses of what W&amp;W call difference-weighted precision and recall:</p>
+<table id="S5.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex7.m1" class="ltx_Math" alttext="\begin{array}[t]{ll}\text{{\sc prec}}(w_{1},w_{2})=\frac{\sigma_{\text{{\sc min%&#10;}}}(w_{1},w_{2})}{\sigma_{\text{{\sc min}}}(w_{1},w_{1})}\\&#10;\text{{\sc rec}}(w_{1},w_{2})=\frac{\sigma_{\text{{\sc min}}}(w_{1},w_{2})}{%&#10;\sigma_{\text{{\sc min}}}(w_{2},w_{2})},\end{array}" display="block"><mtable align="top" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mtext mathvariant="normal">prec</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mrow><mrow><mtext mathvariant="normal">rec</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mi>σ</mi><mtext mathvariant="normal">min</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac></mrow><mo>,</mo></mrow></mtd><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">So for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m4" class="ltx_Math" alttext="T_{\text{\sc min}}" display="inline"><msub><mi>T</mi><mtext mathvariant="normal">min</mtext></msub></math>, (<a href="#S1.E9" title="(9) ‣ 1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a>) can be rewritten:</p>
+<table id="S5.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex8.m1" class="ltx_Math" alttext="\frac{1}{\frac{\alpha}{\text{\sc prec}(w_{1},w_{2})}+\frac{1-\alpha}{\text{\sc&#10;rec%&#10;}(w_{1},w_{2})}}" display="block"><mfrac><mn>1</mn><mrow><mfrac><mi>α</mi><mrow><mtext mathvariant="normal">prec</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac><mo>+</mo><mfrac><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mrow><mtext mathvariant="normal">rec</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">That is, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m5" class="ltx_Math" alttext="\text{{\sc T}}_{\text{{\sc min}}}" display="inline"><msub><mtext mathvariant="normal">T</mtext><mtext mathvariant="normal">min</mtext></msub></math> is a weighted
+harmonic mean of precision and recall, the so-called weighted F-measure
+<cite class="ltx_cite">[<a href="#bib.bib50" title="Foundations of statistical natural language processing" class="ltx_ref">14</a>]</cite>. W&amp;W’s additive precision/recall
+models appear not to be Tversky models, since they compute
+separate sums for precision and recall from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m6" class="ltx_Math" alttext="f\in w_{1}\cap w_{2}" display="inline"><mrow><mi>f</mi><mo>∈</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>∩</mo><msub><mi>w</mi><mn>2</mn></msub></mrow></mrow></math>, one using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m7" class="ltx_Math" alttext="w_{1}[f]" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></math>,
+and one using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m8" class="ltx_Math" alttext="w_{2}[f]" display="inline"><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>[</mo><mi>f</mi><mo>]</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Long before Weed and Weir, Lee <cite class="ltx_cite">[<a href="#bib.bib24" title="Measures of distributional similarity" class="ltx_ref">12</a>]</cite>
+proposed an asymmetric similarity
+measure as well. Like Weeds and
+Weir, her perspective
+was to calculate the effectiveness of
+using one distribution
+as a proxy for the other,
+a fundamentally asymmetric problem.
+For distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>,
+Lee’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>-skew divergence takes
+the KL-divergence of a mixture of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m4" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m6" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>,
+using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m7" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> parameter to define
+the proportions in the mixture.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have shown that Tversky’s asymmetric ratio models
+can improve performance in capturing human
+judgments and produce better nearest neighbors.
+To validate these very preliminary results,
+we need to explore applications compatible
+with asymmetry, such as the TOEFL-like synonym discovery task in
+Freitag et al. <cite class="ltx_cite">[<a href="#bib.bib320" title="New experiments in distributional representations of synonymy" class="ltx_ref">7</a>]</cite>,
+and the PP-attachment task in Dagan et al. <cite class="ltx_cite">[<a href="#bib.bib13" title="Similarity-based models of word cooccurrence probabilities" class="ltx_ref">4</a>]</cite>.
+<br class="ltx_break"/></p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work reported here was supported by
+NSF CDI grant # 1028177.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib122" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Agirre,E., E. Alfonseca, K. Hall, J. Kravalova, M. Pasca and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study on similarity and relatedness using distributional and wordnet-based approaches</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boulder, Co.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i4.p1" title="4. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K.W. Church and P. Hanks</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word association norms, mutual information, and lexicography</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 22–29</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J.R. Curran</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From Distributional to Semantic Similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Edinburgh. College of Science and Engineering. School of Informatics.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Dagan, L. Lee and F.C.N. Pereira</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Similarity-based models of word cooccurrence probabilities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 43–69</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Conclusion ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L.R. Dice</span><span class="ltx_text ltx_bib_year">(1945)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measures of the amount of ecologic association between species</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Ecology</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 297–302</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib121" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Finkelstein, E. Gabrilovich, Y. Matias, E. Rivlin, Z. Solan, G. Wolfman and Ruppin,Eytan</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Placing search in context: the concept revisited</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 116–131</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="2. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>.
+</span></li>
+<li id="bib.bib320" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Freitag, M. Blume, J. Byrnes, E. Chow, S. Kapadia, R. Rohwer and Z. Wang</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">New experiments in distributional representations of synonymy</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 25–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Conclusion ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib306" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. L. Goldstone</span><span class="ltx_text ltx_bib_year">(in press)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Similarity</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">R.A. W. Wilson and F. C. Keil (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">MIT Encylcopedia of Cognitive Sciences</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib258" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Jimenez, C. Becerra and A. Gelbukh</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Soft cardinality: a parameterized similarity function for text comparison</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 449–453</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Previous work ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib256" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast exact inference with a factored model for natural language parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Cambridge, MA</span>, <span class="ltx_text ltx_bib_pages"> pp. 3–10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Lee</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Similarity-based approaches to natural language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Harvard University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p9" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Lee</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measures of distributional similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 25–32</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Previous work ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lin</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic retrieval and clustering of similar words</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">36</span>, <span class="ltx_text ltx_bib_pages"> pp. 768–774</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C.D. Manning and H. Schütze</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Foundations of statistical natural language processing</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Previous work ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib112" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G.A. Miller and W.G. Charles</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contextual correlates of semantic similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language and Cognitive Processes</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="2. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title"> An efficient algorithm for projective dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 149–160</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib318" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Rosch and C. B. Mervis</span><span class="ltx_text ltx_bib_year">(1975)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Family resemblances: studies in the internal structure of categories</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive psychology</span> <span class="ltx_text ltx_bib_volume">7</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 573–605</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib215" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Rubenstein and J.B. Goodenough</span><span class="ltx_text ltx_bib_year">(1965)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contextual correlates of synonymy</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">8</span>, <span class="ltx_text ltx_bib_pages"> pp. 627–633</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="2. ‣ 2 Systems ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.</span></a>.
+</span></li>
+<li id="bib.bib308" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Tversky</span><span class="ltx_text ltx_bib_year">(1977)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Features of similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">84</span>, <span class="ltx_text ltx_bib_pages"> pp. 327–352</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Improving sparse word similarity models with asymmetric measures</span></span>,
+<a href="#S1.p1" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Previous work ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib97" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. J. van Rijsbergen</span><span class="ltx_text ltx_bib_year">(1979)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Butterworth-Heinemann</span>, <span class="ltx_text ltx_bib_place">Oxford</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib317" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Weeds and D. Weir</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Co-occurrence retrieval: a flexible framework for lexical distributional similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 439–475</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Previous work ‣ Improving sparse word similarity models with asymmetric measures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:45:41 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

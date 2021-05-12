@@ -1,0 +1,1517 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Single-Agent vs. Multi-Agent Techniques for Concurrent Reinforcement Learning of Negotiation Dialogue Policies</title>
+<!--Generated on Tue Jun 10 17:45:18 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Single-Agent vs. Multi-Agent Techniques for Concurrent 
+<br class="ltx_break"/>Reinforcement Learning of Negotiation Dialogue Policies</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Kallirroi Georgila, Claire Nelson, David Traum 
+<br class="ltx_break"/>University of Southern California Institute for Creative Technologies
+<br class="ltx_break"/>12015 Waterfront Drive, Playa Vista, CA 90094, USA 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">kgeorgila,traum</span>}<span class="ltx_text ltx_font_typewriter">@ict.usc.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We use single-agent and multi-agent Reinforcement Learning (RL)
+for learning dialogue
+policies in a resource allocation negotiation scenario.
+Two agents learn concurrently by interacting
+with each other without any need for simulated users (SUs) to train against
+or corpora to learn from.
+In particular, we compare the Q-learning, Policy Hill-Climbing (PHC)
+and Win or Learn Fast Policy Hill-Climbing (PHC-WoLF) algorithms,
+varying the scenario complexity (state space size), the
+number of training episodes, the learning rate, and the exploration rate.
+Our results show that generally Q-learning fails to converge
+whereas PHC and PHC-WoLF always converge and perform similarly.
+We also show that very high gradually decreasing
+exploration rates are required for convergence.
+We conclude that multi-agent RL of dialogue policies
+is a promising alternative to
+using single-agent RL and SUs or learning directly
+from corpora.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The dialogue policy of a dialogue system decides on which actions
+the system should perform given a particular
+dialogue state (i.e., dialogue context).
+Building a dialogue policy can be a challenging task especially
+for complex applications. For this reason, recently
+much attention has been drawn to machine learning
+approaches to dialogue management
+and in particular Reinforcement Learning (RL) of dialogue
+policies <cite class="ltx_cite">[<a href="#bib.bib26" title="Scaling POMDPs for spoken dialog management" class="ltx_ref">40</a>, <a href="#bib.bib31" title="Adaptive information presentation for spoken dialogue systems: evaluation with human subjects" class="ltx_ref">34</a>, <a href="#bib.bib9" title="Reinforcement learning for parameter estimation in statistical spoken dialogue systems" class="ltx_ref">22</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Typically there are three main approaches to the problem of
+learning dialogue policies using RL:
+(1) learn against a simulated
+user (SU), i.e., a model that simulates the behavior of a real user
+<cite class="ltx_cite">[<a href="#bib.bib23" title="User simulation for spoken dialogue systems: Learning and evaluation" class="ltx_ref">15</a>, <a href="#bib.bib8" title="A survey of statistical user simulation techniques for reinforcement-learning of dialogue management strategies" class="ltx_ref">35</a>]</cite>;
+(2) learn directly from a corpus <cite class="ltx_cite">[<a href="#bib.bib38" title="Hybrid reinforcement/supervised learning of dialogue policies from fixed datasets" class="ltx_ref">20</a>, <a href="#bib.bib25" title="Reinforcement learning for dialog management using least-squares policy iteration and fast feature selection" class="ltx_ref">25</a>]</cite>;
+or (3) learn via live interaction with human
+users <cite class="ltx_cite">[<a href="#bib.bib1" title="Optimizing dialogue management with reinforcement learning: Experiments with the NJFun system" class="ltx_ref">36</a>, <a href="#bib.bib18" title="On-line policy optimisation of spoken dialogue systems via live interaction with human subjects" class="ltx_ref">13</a>, <a href="#bib.bib16" title="On-line policy optimisation of Bayesian spoken dialogue systems via human interaction" class="ltx_ref">12</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We propose a fourth approach: concurrent learning of the
+system policy and the SU policy using multi-agent RL
+techniques. Both agents are trained simultaneously and there is
+no need for building a SU separately or having access to a corpus.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>
+Though corpora or SUs may still be useful for bootstrapping
+the policies and encoding real user behavior
+(see section <a href="#S6" title="6 Conclusion and Future Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).</span></span></span>
+As we discuss below, concurrent learning could potentially
+be used for learning via live interaction with human users.
+Moreover, for negotiation in particular there is one more reason
+in favor of concurrent learning as opposed to learning against a SU.
+Unlike slot-filling domains, in negotiation the behaviors of the system
+and the user are symmetric. They are both negotiators, thus
+building a good SU is as difficult as building a good
+system policy.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">So far research on using RL for dialogue policy learning
+has focused on single-agent RL techniques.
+Single-agent RL methods
+make the assumption that the system learns by interacting
+with a stationary environment, i.e., an environment that does not
+change over time.
+Here the environment is the user.
+Generally the assumption that users do not significantly change their
+behavior over time holds for simple information providing
+tasks (e.g., reserving a flight).
+But this is not necessarily
+the case for other genres of dialogue, including negotiation.
+Imagine a situation where a negotiator is so uncooperative
+and arrogant that the other negotiators decide to completely
+change their
+negotiation strategy in order to punish her.
+Therefore it is important to investigate RL approaches that
+do not make such assumptions about the user/environment.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Multi-agent RL is designed to work for non-stationary environments.
+In this case the environment of a learning agent is one or more other
+agents that
+can also be learning at the same time.
+Therefore, unlike single-agent RL, multi-agent RL can
+handle changes in user behavior or in the behavior of other
+agents participating in the interaction, and thus potentially
+lead to more realistic dialogue policies in complex dialogue
+scenarios.
+This ability of multi-agent RL can also have important
+implications for learning via live interaction with
+human users. Imagine a system that learns to change its strategy
+as it realizes that a particular user is no longer a novice user,
+or that a user no longer cares about five star restaurants.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">We apply multi-agent RL to a resource allocation negotiation
+scenario. Two agents with different preferences
+negotiate about how to share resources.
+We compare Q-learning (a single-agent RL algorithm)
+with two multi-agent RL algorithms:
+Policy Hill-Climbing (PHC)
+and Win or Learn Fast Policy Hill-Climbing (PHC-WoLF)
+<cite class="ltx_cite">[<a href="#bib.bib5" title="Multiagent learning using a variable learning rate" class="ltx_ref">3</a>]</cite>.
+We vary the scenario complexity (i.e., the quantity of
+resources to be shared and consequently the state space size), the
+number of training episodes, the learning rate, and the exploration rate.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">Our research contributions are as follows:
+(1) we propose concurrent learning using multi-agent RL
+as a way to deal with some of the issues of current approaches
+to dialogue policy learning (i.e., the need for SUs and
+corpora), which may also potentially prove useful for learning
+via live interaction with human users;
+(2) we show that concurrent
+learning can address changes in user behavior over time, and requires
+multi-agent RL techniques and variable exploration rates;
+(3) to our knowledge this is the
+first time that PHC and PHC-WoLF are used for learning
+dialogue policies;
+(4) for the first time, the above techniques
+are applied to a negotiation domain; and
+(5) this is the first study that compares Q-learning,
+PHC, and PHC-WoLF
+in such a variety of situations
+(varying a large number of parameters).</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">The paper is structured as follows. Section <a href="#S2" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>
+presents related work. Section <a href="#S3" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> provides
+a brief introduction to single-agent RL and multi-agent RL.
+Section <a href="#S4" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> describes
+our negotiation domain and experimental setup.
+In section <a href="#S5" title="5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>
+we present our results.
+Finally,
+section <a href="#S6" title="6 Conclusion and Future Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> concludes
+and provides some ideas for future work.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Most research in RL for dialogue management has been done in
+the framework of slot-filling applications
+such as restaurant recommendations
+<cite class="ltx_cite">[<a href="#bib.bib19" title="Evaluating effectiveness and portability of reinforcement learned dialogue strategies with real users: The TALK TownInfo evaluation" class="ltx_ref">24</a>, <a href="#bib.bib3" title="Bayesian update of dialogue state: a POMDP framework for spoken dialogue systems" class="ltx_ref">39</a>, <a href="#bib.bib17" title="Policy optimisation of POMDP-based dialogue systems without state space compression" class="ltx_ref">14</a>, <a href="#bib.bib4" title="A comprehensive reinforcement learning framework for dialogue management optimization" class="ltx_ref">9</a>]</cite>,
+flight reservations <cite class="ltx_cite">[<a href="#bib.bib38" title="Hybrid reinforcement/supervised learning of dialogue policies from fixed datasets" class="ltx_ref">20</a>]</cite>,
+sightseeing recommendations <cite class="ltx_cite">[<a href="#bib.bib14" title="Modeling spoken decision making dialogue and optimization of its dialogue strategy" class="ltx_ref">29</a>]</cite>,
+appointment scheduling <cite class="ltx_cite">[<a href="#bib.bib39" title="Learning dialogue strategies from older and younger simulated users" class="ltx_ref">17</a>]</cite>,
+etc.
+RL has also been applied to question-answering <cite class="ltx_cite">[<a href="#bib.bib15" title="Reinforcement learning of question-answering dialogue policies for virtual museum guides" class="ltx_ref">28</a>]</cite>,
+tutoring domains
+<cite class="ltx_cite">[<a href="#bib.bib2" title="A reinforcement learning approach to evaluating state representations in spoken dialogue systems" class="ltx_ref">38</a>, <a href="#bib.bib27" title="Empirically evaluating the application of reinforcement learning to the induction of effective and adaptive pedagogical strategies" class="ltx_ref">6</a>]</cite>, and
+learning negotiation dialogue
+policies <cite class="ltx_cite">[<a href="#bib.bib29" title="Representing the reinforcement learning state in a negotiation dialogue" class="ltx_ref">19</a>, <a href="#bib.bib32" title="Reinforcement learning of argumentation dialogue policies in negotiation" class="ltx_ref">16</a>, <a href="#bib.bib12" title="Reinforcement learning of two-issue negotiation dialogue policies" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">As mentioned in section <a href="#S1" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+there are three main approaches to the problem of
+learning dialogue policies using RL.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">In the first approach, a SU is hand-crafted or learned from
+a small corpus of human-human or human-machine dialogues.
+Then the dialogue policy can be learned by having the system
+interact with the SU for a large number of dialogues (usually
+thousands of dialogues).
+Depending on the application, building a realistic SU can be
+just as difficult as building a good dialogue policy. Furthermore, it is not
+clear what constitutes a good SU for dialogue policy learning.
+Should the SU resemble real user behavior as closely as possible, or
+should it exhibit some degree of randomness to explore
+a variety of interaction patterns?
+Despite much research on the issue, these are still open
+questions <cite class="ltx_cite">[<a href="#bib.bib8" title="A survey of statistical user simulation techniques for reinforcement-learning of dialogue management strategies" class="ltx_ref">35</a>, <a href="#bib.bib28" title="Assessing dialog system user simulation evaluation measures using human judges" class="ltx_ref">2</a>, <a href="#bib.bib7" title="A survey on metrics for the evaluation of user simulations" class="ltx_ref">32</a>]</cite>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In the second approach, no SUs are required. Instead the dialogue
+policy is learned directly from a corpus of human-human or
+human-machine dialogues. For example, <cite class="ltx_cite">Henderson<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib38" title="Hybrid reinforcement/supervised learning of dialogue policies from fixed datasets" class="ltx_ref">2008</a>)</cite>
+used a combination of RL and supervised learning
+to learn a dialogue policy in a flight reservation domain,
+whereas
+<cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Reinforcement learning for dialog management using least-squares policy iteration and fast feature selection" class="ltx_ref">2009</a>)</cite> used Least-Squares Policy Iteration
+<cite class="ltx_cite">[<a href="#bib.bib37" title="Least-squares policy iteration" class="ltx_ref">23</a>]</cite>, an RL-based
+technique that can learn directly from corpora, in a voice
+dialer application.
+However, collecting such
+corpora is not trivial, especially in new domains. Typically,
+data are collected in a Wizard-of-Oz setup where human users think that
+they interact with a system while in fact they interact with a human
+pretending to be the system, or by having human users interact with
+a preliminary version of the dialogue system. In both cases the
+resulting interactions are expected to be quite different from
+the interactions of human users with the final system. In practice
+this means that dialogue policies learned from such data could be far
+from optimal.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">The first experiment on learning via live interaction
+with human users (third approach) was reported by <cite class="ltx_cite">Singh<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib1" title="Optimizing dialogue management with reinforcement learning: Experiments with the NJFun system" class="ltx_ref">2002</a>)</cite>.
+They used RL to help the system with two choices: how much
+initiative it should allow the user, and whether or not
+to confirm information provided by the user.
+Recently, learning of “full” dialogue policies (not just
+choices at specific points in the dialogue) via live
+interaction with human users has become possible with the
+use of Gaussian processes <cite class="ltx_cite">[<a href="#bib.bib20" title="Reinforcement learning with Gaussian processes" class="ltx_ref">10</a>, <a href="#bib.bib22" title="Gaussian processes for machine learning" class="ltx_ref">33</a>]</cite>.
+Typically learning a dialogue policy is a slow process requiring
+thousands of dialogues, hence the need for SUs.
+Gaussian processes have been shown to speed up learning. This fact
+together with easy access to a large number of human users
+through crowd-sourcing has allowed dialogue policy learning via live interaction
+with human users <cite class="ltx_cite">[<a href="#bib.bib18" title="On-line policy optimisation of spoken dialogue systems via live interaction with human subjects" class="ltx_ref">13</a>, <a href="#bib.bib16" title="On-line policy optimisation of Bayesian spoken dialogue systems via human interaction" class="ltx_ref">12</a>]</cite>.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">Space constraints prevent us from providing an exhaustive list
+of previous work on using RL for dialogue management. Thus below we
+focus only on research that is directly related to our work, specifically
+research on concurrent learning of the policies of multiple agents,
+and the application of RL to negotiation domains.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">So far research on RL in the dialogue community has focused on using
+single-agent RL techniques where the stationary environment is
+the user.
+Most approaches assume that the user goal is fixed and that the
+behavior of the user is rational. Other approaches account for changes
+in user goals <cite class="ltx_cite">[<a href="#bib.bib33" title="User goal change model for spoken dialog state tracking" class="ltx_ref">27</a>]</cite>. In either case, one can build
+a user simulation model that is the average of different user behaviors
+or learn a policy
+from a corpus that contains a variety of interaction patterns,
+and thus safely assume that single-agent RL techniques will work.
+However, in the latter case if the behavior of the user changes
+significantly over time then
+the assumption that the environment is stationary will no longer hold.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">There has been a lot of research on multi-agent RL in the
+optimal control
+and robotics communities <cite class="ltx_cite">[<a href="#bib.bib10" title="Markov games as a framework for multi-agent reinforcement learning" class="ltx_ref">26</a>, <a href="#bib.bib11" title="Multiagent reinforcement learning: Theoretical framework and an algorithm" class="ltx_ref">21</a>, <a href="#bib.bib6" title="A comprehensive survey of multiagent reinforcement learning" class="ltx_ref">4</a>]</cite>.
+Here two or more agents
+learn simultaneously. Thus the environment of an agent
+is one or more other agents that continuously change their
+behavior because they are also learning at the same time.
+Therefore the environment is no longer stationary and single-agent
+RL techniques do not work well or do not work at all. We
+are particularly interested in the work of <cite class="ltx_cite">Bowling and Veloso (<a href="#bib.bib5" title="Multiagent learning using a variable learning rate" class="ltx_ref">2002</a>)</cite>
+who proposed the PHC and PHC-WoLF algorithms that we use in this paper.
+We chose these two algorithms because, unlike other multi-agent
+RL methods <cite class="ltx_cite">[<a href="#bib.bib10" title="Markov games as a framework for multi-agent reinforcement learning" class="ltx_ref">26</a>, <a href="#bib.bib11" title="Multiagent reinforcement learning: Theoretical framework and an algorithm" class="ltx_ref">21</a>]</cite>, they do not
+make assumptions that do not always hold and do not require
+quadratic or linear programming that does not always scale.</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite> were the first in the dialogue community
+to explore the idea of concurrent learning of dialogue policies.
+However, <cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite> did not use multi-agent
+RL but only standard single-agent RL, in particular an on-policy
+Monte Carlo method <cite class="ltx_cite">[<a href="#bib.bib21" title="Reinforcement learning: an introduction" class="ltx_ref">37</a>]</cite>.
+But single-agent RL techniques
+are not well suited for
+concurrent learning
+where each agent is trained against a continuously changing
+environment.
+Indeed, <cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite> reported problems
+with convergence.
+<cite class="ltx_cite">Chandramohan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="Co-adaptation in spoken dialogue systems" class="ltx_ref">2012</a>)</cite> proposed a framework for
+co-adaptation of the dialogue policy and the SU using single-agent RL.
+They applied
+Inverse Reinforcement Learning (IRL) <cite class="ltx_cite">[<a href="#bib.bib36" title="Apprenticeship learning via inverse reinforcement learning" class="ltx_ref">1</a>]</cite>
+to a corpus in order to learn
+the reward functions of both the system and the SU.
+Furthermore, <cite class="ltx_cite">Cuayáhuitl and Dethlefs (<a href="#bib.bib30" title="Hierarchical multiagent reinforcement learning for coordinating verbal and nonverbal actions in robots" class="ltx_ref">2012</a>)</cite>
+used hierarchical multi-agent RL for co-ordinating the verbal
+and non-verbal actions of a robot.
+<cite class="ltx_cite">Cuayáhuitl and Dethlefs (<a href="#bib.bib30" title="Hierarchical multiagent reinforcement learning for coordinating verbal and nonverbal actions in robots" class="ltx_ref">2012</a>)</cite> did not use PHC or PHC-WoLF
+and did not compare against single-agent RL methods.</p>
+</div>
+<div id="S2.p10" class="ltx_para">
+<p class="ltx_p">With regard to using RL for learning negotiation policies,
+the amount of research that has been performed is very limited
+compared to slot-filling.
+<cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite>
+learned negotiation policies for
+a furniture layout task. Then <cite class="ltx_cite">Heeman (<a href="#bib.bib29" title="Representing the reinforcement learning state in a negotiation dialogue" class="ltx_ref">2009</a>)</cite> extended
+this work by experimenting with different representations of the
+RL state in the same domain (this time learning against a hand-crafted
+SU).
+In both cases, to reduce the search space,
+the RL state included only information about e.g., whether
+there was a pending proposal rather than the actual value of this
+proposal.
+<cite class="ltx_cite">Paruchuri<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="POMDP based negotiation modeling" class="ltx_ref">2009</a>)</cite> performed a theoretical study on how
+Partially Observable Markov Decision Processes (POMDPs)
+can be applied to negotiation domains.</p>
+</div>
+<div id="S2.p11" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Georgila and Traum (<a href="#bib.bib32" title="Reinforcement learning of argumentation dialogue policies in negotiation" class="ltx_ref">2011</a>)</cite>
+built argumentation dialogue policies
+for negotiation against users of different cultural norms
+in a one-issue negotiation scenario.
+To learn these policies they trained SUs on a
+spoken dialogue corpus in a florist-grocer negotiation domain,
+and then tweaked these SUs towards a particular cultural norm using
+hand-crafted rules.
+<cite class="ltx_cite">Georgila (<a href="#bib.bib12" title="Reinforcement learning of two-issue negotiation dialogue policies" class="ltx_ref">2013</a>)</cite> learned argumentation dialogue policies
+from a simulated corpus
+in a two-issue negotiation scenario (organizing a party).
+Finally, <cite class="ltx_cite">Nouri<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib35" title="A cultural decision-making model for negotiation based on inverse reinforcement learning" class="ltx_ref">2012</a>)</cite> used IRL
+to learn a model for cultural decision-making in a simple negotiation
+game (the Ultimatum Game).</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Single-Agent vs. Multi-Agent Reinforcement Learning</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Reinforcement Learning (RL) is a machine learning technique used to learn
+the policy of an agent, i.e.,
+which action the agent should perform given its current state
+<cite class="ltx_cite">[<a href="#bib.bib21" title="Reinforcement learning: an introduction" class="ltx_ref">37</a>]</cite>.
+The goal of an RL-based agent is
+to maximize the reward it gets during an interaction.
+Because it is very difficult for the agent
+to know what will happen in the rest of the interaction, the agent
+must select an action based on the average reward it has previously observed
+after having performed that action in similar contexts.
+This average reward is called <em class="ltx_emph">expected future reward</em>.
+Single-agent RL is used in the framework of Markov Decision Processes
+(MDPs) <cite class="ltx_cite">[<a href="#bib.bib21" title="Reinforcement learning: an introduction" class="ltx_ref">37</a>]</cite> or
+Partially Observable Markov Decision Processes
+(POMDPs) <cite class="ltx_cite">[<a href="#bib.bib26" title="Scaling POMDPs for spoken dialog management" class="ltx_ref">40</a>]</cite>.
+Here we focus on MDPs.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">An MDP is defined as a tuple (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>) where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>
+is the set of states (representing different contexts) which the agent
+may be in, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is the set of actions
+of the agent, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m8" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is the transition function
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m9" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m10" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m11" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m12" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m13" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m14" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> [0, 1]
+which defines
+a set of transition
+probabilities between states after taking an action,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m15" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> is the reward function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m16" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m17" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m18" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m19" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m20" class="ltx_Math" alttext="\Re" display="inline"><mi mathvariant="normal">ℜ</mi></math>
+which defines the reward received when taking an action
+from the given state, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m21" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is a factor
+that discounts future rewards.
+Solving the MDP means finding a
+policy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m22" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math> : <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m23" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m24" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m25" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>.
+The quality of the policy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m26" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math>
+is measured by the expected discounted
+(with discount factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m27" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>)
+future reward also called Q-value,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m28" class="ltx_Math" alttext="Q^{\pi}" display="inline"><msup><mi>Q</mi><mi>π</mi></msup></math> : <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m29" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m30" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m31" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m32" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m33" class="ltx_Math" alttext="\Re" display="inline"><mi mathvariant="normal">ℜ</mi></math>.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">A <em class="ltx_emph">stochastic game</em>
+is defined as a tuple (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="A_{1...n}" display="inline"><msub><mi>A</mi><mrow><mn>1...</mn><mo>⁢</mo><mi>n</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="R_{1...n}" display="inline"><msub><mi>R</mi><mrow><mn>1...</mn><mo>⁢</mo><mi>n</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>)
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the number of agents, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>
+is the set of states, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m9" class="ltx_Math" alttext="A_{i}" display="inline"><msub><mi>A</mi><mi>i</mi></msub></math> is the set of actions available
+for agent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m10" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> (and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m11" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is the joint action space
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m12" class="ltx_Math" alttext="A_{1}" display="inline"><msub><mi>A</mi><mn>1</mn></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m13" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m14" class="ltx_Math" alttext="A_{2}" display="inline"><msub><mi>A</mi><mn>2</mn></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m15" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> … <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m16" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m17" class="ltx_Math" alttext="A_{n}" display="inline"><msub><mi>A</mi><mi>n</mi></msub></math>),
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m18" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is the transition function
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m19" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m20" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m21" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m22" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m23" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m24" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> [0, 1]
+which defines
+a set of transition
+probabilities between states after taking a joint action,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m25" class="ltx_Math" alttext="R_{i}" display="inline"><msub><mi>R</mi><mi>i</mi></msub></math> is the reward function for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m26" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th agent
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m27" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m28" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m29" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m30" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m31" class="ltx_Math" alttext="\Re" display="inline"><mi mathvariant="normal">ℜ</mi></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m32" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is a factor
+that discounts future rewards.
+The goal is for each agent <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m33" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> to learn a mixed policy
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m34" class="ltx_Math" alttext="\pi_{i}" display="inline"><msub><mi>π</mi><mi>i</mi></msub></math> : <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m35" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m36" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m37" class="ltx_Math" alttext="A_{i}" display="inline"><msub><mi>A</mi><mi>i</mi></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m38" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> [0, 1]
+that maps states to mixed strategies,
+which are probability distributions over the agent’s actions,
+so that the agent’s expected discounted (with
+discount factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m39" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>) future reward is maximized.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Stochastic games are a generalization of MDPs
+for multi-agent RL.
+In stochastic games there are many agents
+that select actions and the next state and rewards depend
+on the joint action of all these agents.
+The agents can have different reward functions.
+Partially Observable Stochastic Games (POSGs) are the equivalent of
+POMDPs for multi-agent RL. In POSGs, the agents have different observations,
+and uncertainty about the state they are in and the beliefs of their
+interlocutors. POSGs are very hard to solve but new algorithms continuously
+emerge in the literature.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">In this paper we use three algorithms: Q-learning,
+Policy Hill-Climbing (PHC), and Win or Learn Fast Policy Hill-Climbing
+(PHC-WoLF).
+PHC is an extension of Q-learning. For all three algorithms,
+Q-values are updated as follows:</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="Q(s,a)\leftarrow(1-\alpha)Q(s,a)+\alpha\left(r+\gamma\text{max}_{a^{{}^{\prime%&#10;}}}Q(s^{{}^{\prime}},a^{{}^{\prime}})\right)" display="block"><mrow><mrow><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>←</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>α</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>r</mi><mo>+</mo><mrow><mi>γ</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msub><mi>x</mi><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup></msub><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>s</mi><msup><mi/><mo>′</mo></msup></msup><mo>,</mo><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">In Q-learning, for a given state <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>, the agent performs the action with
+the highest
+Q-value for that state.
+In addition to Q-values, PHC and PHC-WoLF also
+maintain the current mixed policy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="\pi(s,a)" display="inline"><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></math>.
+In each step the mixed policy is updated by increasing the
+probability of selecting
+the highest valued action
+according to a learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m3" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> (see equations (2), (3), and (4) below).</p>
+</div>
+<div id="S3.p8" class="ltx_para">
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\pi(s,a)\leftarrow\pi(s,a)+\Delta_{sa}" display="block"><mrow><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>←</mo><mrow><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msub><mi mathvariant="normal">Δ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>a</mi></mrow></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.p9" class="ltx_para">
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\Delta_{sa}=\dcases-\delta_{sa}&amp;\text{if}a\neq\text{argmax}_{a^{{}^{\prime}}}Q%&#10;(s,a^{{}^{\prime}})\\&#10;\Sigma_{a^{{}^{\prime}}\neq a}\delta_{sa^{{}^{\prime}}}&amp;\text{otherwise}" display="block"><mrow><msub><mi mathvariant="normal">Δ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>a</mi></mrow></msub><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>{dcases}</mtext></merror><mo>-</mo><mrow><msub><mi>δ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>a</mi></mrow></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>a</mi></mrow></mrow><mo>≠</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msub><mi>x</mi><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup></msub><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi mathvariant="normal">Σ</mi><mrow><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup><mo>≠</mo><mi>a</mi></mrow></msub><mo>⁢</mo><msub><mi>δ</mi><mrow><mi>s</mi><mo>⁢</mo><msup><mi>a</mi><msup><mi/><mo>′</mo></msup></msup></mrow></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.p10" class="ltx_para">
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\delta_{sa}=\text{min}\left(\pi(s,a),\frac{\delta}{|A_{i}|-1}\right)" display="block"><mrow><msub><mi>δ</mi><mrow><mi>s</mi><mo>⁢</mo><mi>a</mi></mrow></msub><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mfrac><mi>δ</mi><mrow><mrow><mo fence="true">|</mo><msub><mi>A</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow></mfrac></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.p11" class="ltx_para">
+<p class="ltx_p">The difference between PHC and PHC-WoLF is that PHC
+uses a constant learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m1" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> whereas
+PHC-WoLF uses a variable learning rate (see equation (5) below).
+The main idea is that when the agent is “winning”
+the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m2" class="ltx_Math" alttext="\delta_{W}" display="inline"><msub><mi>δ</mi><mi>W</mi></msub></math>
+should be low so that the opponents
+have more time to adapt to the agent’s policy,
+which helps with convergence.
+On the other hand when the agent is “losing”
+the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m3" class="ltx_Math" alttext="\delta_{LF}" display="inline"><msub><mi>δ</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msub></math>
+should be high so that the agent
+has more time to adapt to the other agents’
+policies, which also facilitates convergence.
+Thus PHC-WoLF uses two learning rates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m4" class="ltx_Math" alttext="\delta_{W}" display="inline"><msub><mi>δ</mi><mi>W</mi></msub></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m5" class="ltx_Math" alttext="\delta_{LF}" display="inline"><msub><mi>δ</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msub></math>.
+PHC-WoLF determines whether the agent is “winning”
+or “losing” by comparing the current policy’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m6" class="ltx_Math" alttext="\pi(s,a)" display="inline"><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></math> expected payoff
+with that of the average policy <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p11.m7" class="ltx_Math" alttext="\tilde{\pi}(s,a)" display="inline"><mrow><mover accent="true"><mi>π</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>a</mi></mrow><mo>)</mo></mrow></mrow></math> over time.
+If the current policy’s expected payoff is greater then the agent is
+“winning”, otherwise it is “losing”.</p>
+</div>
+<div id="S3.p12" class="ltx_para">
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\delta=\dcases\delta_{W}&amp;\text{if}\dcases&amp;\Sigma_{\alpha^{{}^{\prime}}}\pi(s,%&#10;\alpha^{{}^{\prime}})Q(s,\alpha^{{}^{\prime}})&gt;\\&#10;&amp;\Sigma_{\alpha^{{}^{\prime}}}\tilde{\pi}(s,\alpha^{{}^{\prime}})Q(s,\alpha^{{%&#10;}^{\prime}})\\&#10;\delta_{LF}&amp;\text{otherwise}" display="block"><mrow><mi>δ</mi><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>{dcases}</mtext></merror><mo>⁢</mo><msub><mi>δ</mi><mi>W</mi></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>{dcases}</mtext></merror><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><msub><mi mathvariant="normal">Σ</mi><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></msub><mo>⁢</mo><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><msub><mi mathvariant="normal">Σ</mi><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></msub><mo>⁢</mo><mover accent="true"><mi>π</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><msup><mi>α</mi><msup><mi/><mo>′</mo></msup></msup></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>δ</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>Align</mtext></merror><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\text</mtext></merror><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S3.p13" class="ltx_para">
+<p class="ltx_p">More details about Q-learning, PHC, and PHC-WoLF can be found
+in <cite class="ltx_cite">[<a href="#bib.bib21" title="Reinforcement learning: an introduction" class="ltx_ref">37</a>, <a href="#bib.bib5" title="Multiagent learning using a variable learning rate" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S3.p14" class="ltx_para">
+<p class="ltx_p">As discussed in sections <a href="#S1" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S2" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+single-agent RL techniques, such as Q-learning, are not suitable for multi-agent
+RL. Nevertheless, despite its shortcomings
+Q-learning has been used successfully for multi-agent RL
+<cite class="ltx_cite">[<a href="#bib.bib34" title="The dynamics of reinforcement learning in cooperative multiagent systems" class="ltx_ref">7</a>]</cite>.
+Indeed, as we see in section <a href="#S5" title="5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+Q-learning can converge to the optimal policy for
+small state spaces. However, as the state space size
+increases the performance of Q-learning drops (compared
+to PHC and PHC-WoLF).</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Domain and Experimental Setup</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Our domain is a resource allocation negotiation
+scenario. Two agents
+negotiate about how to share resources. For the sake of
+readability from now on we will refer to apples and oranges.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The two agents have different goals. Also, they have
+human-like constraints of imperfect information about each other;
+they do not know each other’s reward function or degree of rationality
+(during learning our agents can be irrational).
+Thus a Nash equilibrium (if there exists one)
+cannot be computed in advance.
+Agent 1 cares more about apples and Agent 2 cares more about
+oranges.
+Table <a href="#S4.T1" title="Table 1 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the points that Agents 1 and 2
+earn for each apple and each orange that they have at the end
+of the negotiation.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Agent 1</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Agent 2</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">apple</th>
+<td class="ltx_td ltx_align_center ltx_border_t">300</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">200</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">orange</th>
+<td class="ltx_td ltx_align_center ltx_border_b">200</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">300</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Points earned by Agents 1 and 2 for each apple and each orange that they have at the end of the negotiation.</div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We use a simplified dialogue model with two types of
+speech acts: offers and acceptances.
+The dialogue proceeds as follows:
+one agent makes an offer, e.g., “I give you 3 apples and 1 orange”,
+and the other agent may choose to accept it or make a new
+offer. The negotiation finishes when one of the agents
+accepts the other agent’s offer or time runs out.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">We compare Q-learning with PHC and PHC-WoLF.
+For all algorithms and experiments each agent is rewarded only at the
+end of the dialogue based on the negotiation outcome
+(see Table <a href="#S4.T1" title="Table 1 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+Thus the two agents have different reward functions.
+There is also a penalty of -10
+for each agent action to ensure that dialogues are not too
+long.
+Also, to avoid long dialogues,
+if none of the agents accepts the other agent’s offers,
+the negotiation
+finishes after 20 pairs of exchanges
+between the two agents (20 offers from Agent 1 and 20 offers
+from Agent 2).</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">An example interaction between the two agents
+is shown in Figure <a href="#S4.F1" title="Figure 1 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+As we can see, each agent can offer any combination of apples
+and oranges.
+So if we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> apples and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m2" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math> oranges for sharing,
+there can be (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m3" class="ltx_Math" alttext="X+1" display="inline"><mrow><mi>X</mi><mo>+</mo><mn>1</mn></mrow></math>) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m4" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m5" class="ltx_Math" alttext="Y+1" display="inline"><mrow><mi>Y</mi><mo>+</mo><mn>1</mn></mrow></math>) possible offers.
+For example if we have 2 apples and 2 oranges for sharing,
+there can be 9 possible offers:
+“offer-0-0”, “offer-0-1”, …, “offer-2-2”.
+For our experiments we vary the number of fruits
+to be shared and choose to keep <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m6" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p5.m7" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>.</p>
+</div>
+<div id="S4.F1" class="ltx_figure">
+<p class="ltx_p">
+
+<span class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:199.2pt;border:1px solid black;">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Agent 1</span>: offer-2-2 (I offer you 2 A and 2 O)</p>
+<p class="ltx_p">[1ex]
+<span class="ltx_text ltx_font_italic">Agent 2</span>: offer-3-0 (I offer you 3 A and 0 O)</p>
+<p class="ltx_p">[1ex]
+<span class="ltx_text ltx_font_italic">Agent 1</span>: offer-0-3 (I offer you 0 A and 3 O)</p>
+<p class="ltx_p">[1ex]
+<span class="ltx_text ltx_font_italic">Agent 2</span>: offer-4-0 (I offer you 4 A and 0 O)</p>
+<p class="ltx_p">[1ex]
+<span class="ltx_text ltx_font_italic">Agent 1</span>: accept (I accept your offer)</p>
+</span>
+</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example interaction between Agents 1 and 2 (A: apples, O: oranges).</div>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows our state representation,
+i.e., the state variables that we keep track of with all
+the possible values they can take, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is the number of apples
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math> is the number of oranges to be shared.
+The third variable is always set to “no” until one of the agents
+accepts the other agent’s offer.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Current offer: (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="X+1" display="inline"><mrow><mi>X</mi><mo>+</mo><mn>1</mn></mrow></math>) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="Y+1" display="inline"><mrow><mi>Y</mi><mo>+</mo><mn>1</mn></mrow></math>) possible</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">   values</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">How many times the current offer has already</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">   been rejected: (0, 1, 2, 3, or 4)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Is the current offer accepted: yes, no</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> State variables. </div>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the state and action
+space sizes for different numbers of apples and oranges to be shared
+used in our experiments below.
+The number of actions includes the acceptance of an offer.
+Table <a href="#S4.T3" title="Table 3 ‣ 4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> also shows the number of state-action pairs (Q-values).
+As we will see in section <a href="#S5" title="5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, even though
+the number of states for each agent is not large,
+it takes many iterations and high exploration rates for
+convergence due to the fact that both agents are learning at the same
+time and
+the assumption of interacting with a stationary environment
+no longer holds.
+For comparison, in <cite class="ltx_cite">[<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">11</a>]</cite> the state
+specification for each agent included 5 binary variables
+resulting in 32 possible states.
+<cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite> kept track of whether there was
+an offer on the table but not of the actual value of the offer.
+For our task it is essential to keep track of the offer values,
+which of course results in much larger state spaces.
+Also, in <cite class="ltx_cite">[<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">11</a>]</cite> there were 5 possible actions
+resulting in 160 state-action pairs.
+Our state and action spaces are much larger and furthermore
+we explore the effect of different state and action space sizes
+on convergence.</p>
+</div>
+<div id="S4.p8" class="ltx_para">
+<p class="ltx_p">During learning the two agents interact for 5 epochs. Each epoch
+contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> number of episodes. We vary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p8.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> from 25,000 up to 400,000
+with a step of 25,000 episodes.
+<cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite> trained their agents
+for 200 epochs, where each epoch contained 200 episodes.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">#States</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">#Actions</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">#State-Action</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">Pairs</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1 A &amp; O</th>
+<td class="ltx_td ltx_align_center ltx_border_t">40</td>
+<td class="ltx_td ltx_align_center ltx_border_t">5</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">200</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">2 A &amp; O</th>
+<td class="ltx_td ltx_align_center">90</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center ltx_border_r">900</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">3 A &amp; O</th>
+<td class="ltx_td ltx_align_center">160</td>
+<td class="ltx_td ltx_align_center">17</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2720</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">4 A &amp; O</th>
+<td class="ltx_td ltx_align_center">250</td>
+<td class="ltx_td ltx_align_center">26</td>
+<td class="ltx_td ltx_align_center ltx_border_r">6500</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">5 A &amp; O</th>
+<td class="ltx_td ltx_align_center">360</td>
+<td class="ltx_td ltx_align_center">37</td>
+<td class="ltx_td ltx_align_center ltx_border_r">13320</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">6 A &amp; O</th>
+<td class="ltx_td ltx_align_center">490</td>
+<td class="ltx_td ltx_align_center">50</td>
+<td class="ltx_td ltx_align_center ltx_border_r">24500</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">7 A &amp; O</th>
+<td class="ltx_td ltx_align_center ltx_border_b">640</td>
+<td class="ltx_td ltx_align_center ltx_border_b">65</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">41600</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> State space, action space,
+and state-action space sizes
+for different numbers of apples and oranges to be shared
+(A: apples, O: oranges). </div>
+</div>
+<div id="S4.p9" class="ltx_para">
+<p class="ltx_p">We also vary the exploration rate
+per epoch. In particular, in the experiments reported
+in section <a href="#S5.SS1" title="5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>
+the exploration rate is set as follows:
+0.95 for epoch 1,
+0.8 for epoch 2, 0.5 for epoch 3, 0.3 for epoch 4,
+and 0.1 for epoch 5.
+Section <a href="#S5.SS2" title="5.2 Constant Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a> reports results again with
+5 epochs of training but a constant exploration rate
+per epoch set to 0.3.
+An exploration rate of 0.3 means that 30% of the time the agent
+will select an action randomly.</p>
+</div>
+<div id="S4.p10" class="ltx_para">
+<p class="ltx_p">Finally, we vary the learning rate. For PHC-WoLF we set
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m1" class="ltx_Math" alttext="\delta_{W}" display="inline"><msub><mi>δ</mi><mi>W</mi></msub></math> = 0.05 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m2" class="ltx_Math" alttext="\delta_{LF}" display="inline"><msub><mi>δ</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msub></math> = 0.2 (see section <a href="#S3" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+These values were chosen with experimentation and the basic
+idea is that the agent should learn faster when “losing”
+and slower when “winning”.
+For PHC we explore two cases.
+In the first case which from now on will be referred to as PHC-W,
+we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m3" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> to be equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m4" class="ltx_Math" alttext="\delta_{W}" display="inline"><msub><mi>δ</mi><mi>W</mi></msub></math> (also used for PHC-WoLF).
+In the second case which from now on will be referred to as PHC-LF,
+we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m5" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> to be equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p10.m6" class="ltx_Math" alttext="\delta_{LF}" display="inline"><msub><mi>δ</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msub></math> (also used for PHC-WoLF).
+So unlike PHC-WoLF, PHC-W and PHC-LF do not use a variable learning
+rate. PHC-W always learns slowly and PHC-LF always learns fast.</p>
+</div>
+<div id="S4.p11" class="ltx_para">
+<p class="ltx_p">In all the above cases, training stops after 5 epochs.
+Then we test the learned policies against each other for
+one more epoch the size of which is the same as the size
+of the epochs used for training. For example,
+if the policies were learned for 5 epochs with each epoch
+containing 25,000 episodes, then for testing the two
+policies will interact for another 25,000 episodes.
+For comparison, <cite class="ltx_cite">English and Heeman (<a href="#bib.bib24" title="Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants" class="ltx_ref">2005</a>)</cite>
+had their agents interact for 5,000 dialogues during testing.
+To ensure that the policies do not converge by chance,
+we run the training and test sessions 20 times each and we
+report averages. Thus all results presented in section <a href="#S5" title="5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>
+are averages of 20 runs.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Given that Agent 1 is more interested in apples and Agent 2
+cares more about oranges,
+the maximum total utility solution would be
+the case where each agent offers to get all the fruits it cares
+about and
+to give its interlocutor all the fruits it does not care about,
+and the other agent accepts this offer.
+Thus, when converging to the maximum total utility solution,
+in the case of 4 fruits (4 apples and 4 oranges),
+the average reward of the two agents should
+be 1200 minus 10 for making or accepting an offer.
+For 5 fruits the average reward should be 1500 minus 10, and so forth.
+We call 1200 (or 1500) the <em class="ltx_emph">convergence reward</em>,
+i.e., the reward after converging to the maximum total utility solution
+if we do not take into account the action penalty.
+For example, in the case of 4 fruits,
+if Agent 1 starts the negotiation, after converging to the maximum
+total utility solution
+the optimal interaction
+should be: Agent 1 makes an offer to Agent 2,
+namely 0 apples and 4 oranges, and
+Agent 2 accepts. Thus the reward for Agent 1 is 1190, the reward
+for Agent 2 is 1190, and the average reward of the two agents is
+also 1190.
+Also, the convergence reward for Agent 1 is 1200 and the
+convergence reward for Agent 2 is also 1200.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Below, in all the graphs that we provide, we show the average
+distance from the convergence reward.
+This is to make
+all graphs comparable because in all cases the
+optimal average distance from the convergence reward of the two agents
+should be equal to 10 (make the optimal offer or accept
+the optimal offer that the other agent makes).
+The formulas for calculating the average distance from the convergence
+reward are:</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<table id="S5.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E6.m1" class="ltx_Math" alttext="AD_{1}=\frac{\sum_{j=1}^{n_{r}}\lvert CR_{1}-R_{1j}\rvert}{n_{r}}" display="block"><mrow><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>=</mo><mfrac><mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>n</mi><mi>r</mi></msub></msubsup><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\lvert</mtext></merror><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>1</mn></msub></mrow></mrow><mo>-</mo><mrow><msub><mi>R</mi><mrow><mn>1</mn><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\rvert</mtext></merror></mrow></mrow><msub><mi>n</mi><mi>r</mi></msub></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S5.p4" class="ltx_para">
+<table id="S5.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E7.m1" class="ltx_Math" alttext="AD_{2}=\frac{\sum_{j=1}^{n_{r}}\lvert CR_{2}-R_{2j}\rvert}{n_{r}}" display="block"><mrow><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>2</mn></msub></mrow><mo>=</mo><mfrac><mrow><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><msub><mi>n</mi><mi>r</mi></msub></msubsup><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\lvert</mtext></merror><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>2</mn></msub></mrow></mrow><mo>-</mo><mrow><msub><mi>R</mi><mrow><mn>2</mn><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><merror class="ltx_ERROR undefined undefined"><mtext>\rvert</mtext></merror></mrow></mrow><msub><mi>n</mi><mi>r</mi></msub></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+<div id="S5.p5" class="ltx_para">
+<table id="S5.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E8.m1" class="ltx_Math" alttext="AD=\frac{AD_{1}+AD_{2}}{2}" display="block"><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>D</mi></mrow><mo>=</mo><mfrac><mrow><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>1</mn></msub></mrow><mo>+</mo><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>2</mn></msub></mrow></mrow><mn>2</mn></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m1" class="ltx_Math" alttext="CR_{1}" display="inline"><mrow><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>1</mn></msub></mrow></math> is the convergence reward for Agent 1,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m2" class="ltx_Math" alttext="R_{1j}" display="inline"><msub><mi>R</mi><mrow><mn>1</mn><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the reward of Agent 1 for run <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m4" class="ltx_Math" alttext="CR_{2}" display="inline"><mrow><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>2</mn></msub></mrow></math> is the convergence reward for Agent 2, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m5" class="ltx_Math" alttext="R_{2j}" display="inline"><msub><mi>R</mi><mrow><mn>2</mn><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the reward of Agent 2 for run <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>.
+Moreover, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m7" class="ltx_Math" alttext="AD_{1}" display="inline"><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>1</mn></msub></mrow></math> is the average distance from the convergence reward for Agent 1,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m8" class="ltx_Math" alttext="AD_{2}" display="inline"><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>2</mn></msub></mrow></math> is the average distance from the convergence reward for Agent 2,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m9" class="ltx_Math" alttext="AD" display="inline"><mrow><mi>A</mi><mo>⁢</mo><mi>D</mi></mrow></math> is the average of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m10" class="ltx_Math" alttext="AD_{1}" display="inline"><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>1</mn></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m11" class="ltx_Math" alttext="AD_{2}" display="inline"><mrow><mi>A</mi><mo>⁢</mo><msub><mi>D</mi><mn>2</mn></msub></mrow></math>.
+All graphs of section <a href="#S5" title="5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> show <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m12" class="ltx_Math" alttext="AD" display="inline"><mrow><mi>A</mi><mo>⁢</mo><mi>D</mi></mrow></math> values.
+Also, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m13" class="ltx_Math" alttext="n_{r}" display="inline"><msub><mi>n</mi><mi>r</mi></msub></math> is the number of runs (in our
+case always equal to 20).
+Thus in the case of 4 fruits, we will have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m14" class="ltx_Math" alttext="CR_{1}" display="inline"><mrow><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>1</mn></msub></mrow></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m15" class="ltx_Math" alttext="CR_{2}" display="inline"><mrow><mi>C</mi><mo>⁢</mo><msub><mi>R</mi><mn>2</mn></msub></mrow></math>=1200,
+and if for all runs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m16" class="ltx_Math" alttext="R_{1j}" display="inline"><msub><mi>R</mi><mrow><mn>1</mn><mo>⁢</mo><mi>j</mi></mrow></msub></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m17" class="ltx_Math" alttext="R_{2j}" display="inline"><msub><mi>R</mi><mrow><mn>2</mn><mo>⁢</mo><mi>j</mi></mrow></msub></math>=1190, then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m18" class="ltx_Math" alttext="AD" display="inline"><mrow><mi>A</mi><mo>⁢</mo><mi>D</mi></mrow></math>=10.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Q-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">PHC-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">PHC-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">PHC-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">learning</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">LF</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">W</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">WoLF</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">1 A &amp; O</th>
+<td class="ltx_td ltx_align_center ltx_border_t">10.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t">10</td>
+<td class="ltx_td ltx_align_center ltx_border_t">10</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">2 A &amp; O</th>
+<td class="ltx_td ltx_align_center">10.3</td>
+<td class="ltx_td ltx_align_center">10.3</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center ltx_border_r">10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">3 A &amp; O</th>
+<td class="ltx_td ltx_align_center">11.7</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center ltx_border_r">10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">4 A &amp; O</th>
+<td class="ltx_td ltx_align_center">15</td>
+<td class="ltx_td ltx_align_center">11.8</td>
+<td class="ltx_td ltx_align_center">11.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r">11.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">5 A &amp; O</th>
+<td class="ltx_td ltx_align_center">45.4</td>
+<td class="ltx_td ltx_align_center">29.5</td>
+<td class="ltx_td ltx_align_center">26.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">22.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">6 A &amp; O</th>
+<td class="ltx_td ltx_align_center">60.8</td>
+<td class="ltx_td ltx_align_center">33.4</td>
+<td class="ltx_td ltx_align_center">46.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">33.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">7 A &amp; O</th>
+<td class="ltx_td ltx_align_center ltx_border_b">95</td>
+<td class="ltx_td ltx_align_center ltx_border_b">56</td>
+<td class="ltx_td ltx_align_center ltx_border_b">187.8</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">88.6</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Average distance
+from convergence reward over 20 runs for 100,000 episodes per epoch
+and for different numbers of fruits to be shared
+(A: apples, O: oranges). The best possible value is 10.</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Variable Exploration Rate</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this section we report results with different exploration
+rates per training epoch (see section <a href="#S4" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows
+the average distance from the convergence reward over 20 runs
+for 100,000 episodes per epoch,
+for different numbers of fruits, and for all four methods
+(Q-learning, PHC-LF, PHC-W, and PHC-WoLF).
+It is clear that as the state space becomes larger 100,000
+training episodes per epoch are not enough for convergence.
+Also, for 1, 2, and 3 fruits all algorithms converge
+and perform comparably.
+As the number of fruits increases, Q-learning starts performing
+worse than the multi-agent RL algorithms.
+For 7 fruits PHC-W appears to perform worse than Q-learning
+but this is because, as we can see in Figure <a href="#S5.F5" title="Figure 5 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+in this case more than 400,000 episodes per epoch are required for
+convergence. Thus after only 100,000 episodes per epoch all policies
+still behave somewhat randomly.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Figures <a href="#S5.F2" title="Figure 2 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, <a href="#S5.F3" title="Figure 3 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, <a href="#S5.F4" title="Figure 4 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+and <a href="#S5.F5" title="Figure 5 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> show the average distance
+from the convergence reward as a function of the number of episodes
+per epoch during training, for 4, 5, 6, and 7 fruits
+respectively.
+For 4 fruits it takes about 125,000 episodes per epoch and
+for 5 fruits it takes about 225,000 episodes per epoch
+for the policies to converge.
+This number rises to approximately 350,000 for 6 fruits and
+becomes even higher for 7 fruits.
+Q-learning consistently performs worse than the rest of
+the algorithms. The differences between PHC-LF,
+PHC-W, and PHC-WoLF are insignificant, which is
+a bit surprising given that <cite class="ltx_cite">Bowling and Veloso (<a href="#bib.bib5" title="Multiagent learning using a variable learning rate" class="ltx_ref">2002</a>)</cite>
+showed that PHC-WoLF performed better than
+PHC in a series of benchmark tasks.
+In Figures <a href="#S5.F2" title="Figure 2 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> and <a href="#S5.F3" title="Figure 3 ‣ 5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+PHC-LF appears to be reaching convergence slightly
+faster than PHC-W and PHC-WoLF
+but this is not statistically significant.</p>
+</div>
+<div id="S5.F2" class="ltx_figure"><img src="P14-1047/image002.jpg" id="S5.F2.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>4 fruits and variable exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10.</div>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="P14-1047/image004.jpg" id="S5.F3.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>5 fruits and variable exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10.</div>
+</div>
+<div id="S5.F4" class="ltx_figure"><img src="P14-1047/image005.jpg" id="S5.F4.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>6 fruits and variable exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10. </div>
+</div>
+<div id="S5.F5" class="ltx_figure"><img src="P14-1047/image006.jpg" id="S5.F5.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>7 fruits and variable exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10.</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Constant Exploration Rate</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this section we report results with a constant exploration
+rate for all training epochs (see section <a href="#S4" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+Figures <a href="#S5.F6" title="Figure 6 ‣ 5.2 Constant Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>
+and <a href="#S5.F7" title="Figure 7 ‣ 5.2 Constant Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> show the average distance
+from the convergence reward as a function of the number of episodes
+per epoch during training, for 4 and 5 fruits
+respectively.
+Clearly having a constant exploration rate in all epochs
+is problematic. For 4 fruits, after 225,000 episodes
+per epoch there is still no convergence. For comparison,
+with a variable exploration rate it took about 125,000 episodes
+per epoch for the policies to converge.
+Likewise for 5 fruits.
+After 400,000 episodes
+per epoch there is still no convergence. For comparison,
+with a variable exploration rate it took about 225,000 episodes
+per epoch for convergence.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">The above results show that, unlike single-agent RL where having
+a constant exploration rate is perfectly acceptable, here a constant
+exploration rate does not work.</p>
+</div>
+<div id="S5.F6" class="ltx_figure"><img src="P14-1047/image001.jpg" id="S5.F6.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>4 fruits and constant exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10.</div>
+</div>
+<div id="S5.F7" class="ltx_figure"><img src="P14-1047/image003.jpg" id="S5.F7.g1" class="ltx_graphics" width="284" height="213" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>5 fruits and constant exploration rate: Average distance from convergence reward during testing (20 runs). The best possible value is 10.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We used single-agent RL and multi-agent RL
+for learning dialogue
+policies in a resource allocation negotiation scenario.
+Two agents interacted with each other and both learned at the
+same time. The advantage of this approach is that it does not
+require SUs to train against or corpora to learn
+from.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">We compared a traditional single-agent RL algorithm (Q-learning)
+against two multi-agent RL algorithms (PHC and PHC-WoLF)
+varying the scenario complexity (state space size), the
+number of training episodes, and the learning and exploration rates.
+Our results showed that Q-learning is not suitable for
+concurrent learning given that it is designed for learning
+against a stationary environment. Q-learning failed to converge
+in all cases, except for very small state space sizes.
+On the other hand, both PHC and PHC-WoLF always converged
+(or in the case of 7 fruits they needed more training episodes)
+and performed similarly.
+We also showed that in concurrent learning very high gradually decreasing
+exploration rates are required for convergence.
+We conclude that multi-agent RL of dialogue policies
+is a promising alternative to
+using single-agent RL and SUs or learning directly
+from corpora.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">The focus of this paper is on comparing single-agent RL
+and multi-agent RL for concurrent learning, and studying
+the implications for convergence and exploration/learning rates.
+Our next step is testing with human users. We are particularly interested
+in users whose behavior changes during the interaction
+and continuous testing against expert repeat users, which has never been
+done before.
+Another interesting question is whether corpora or SUs may
+still be required for designing the state and action spaces
+and the reward functions
+of the interlocutors,
+bootstrapping the policies, and ensuring that information about
+the behavior of human users is encoded in the resulting learned policies.
+<cite class="ltx_cite">Gašić<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib16" title="On-line policy optimisation of Bayesian spoken dialogue systems via human interaction" class="ltx_ref">2013</a>)</cite> showed that it is possible to learn
+“full” dialogue policies just via interaction with human users
+(without any bootstrapping using corpora or SUs).
+Similarly, concurrent learning could be used in an on-line fashion
+via live interaction with human users.
+Or alternatively concurrent learning could be used off-line to
+bootstrap the policies and then these policies could be improved
+via live interaction with human users (again using concurrent
+learning to address possible changes in user behavior).
+These are open research questions
+for future work.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Furthermore, we intend to apply multi-agent RL to
+more complex negotiation domains, e.g.,
+experiment with more than two types of resources
+(not just apples and oranges)
+and more types of actions (not just offers and acceptances).
+We would also like to compare policies learned with multi-agent
+RL techniques with policies learned with SUs or
+from corpora
+both in simulation and with human users.
+Finally, we aim to experiment with different feature-based representations
+of the state and action spaces.
+Currently all possible deal combinations are listed as possible
+actions and as elements of the state, which can quickly lead to
+very large state and action spaces
+as the application becomes more complex (in our case as the number
+of fruits increases). However, abstraction is not trivial because
+the agents have no guarantee that the value of a deal is a simple
+function of the value of its parts, and values may differ for
+different agents.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">Claire Nelson sadly died in May 2013. We continued and completed this work
+after her passing away. She is greatly missed.
+This work was funded by the NSF grant #1117313.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Abbeel and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Apprenticeship learning via inverse reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Bannf, Alberta, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p9" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Ai and D. Litman</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Assessing dialog system user simulation evaluation measures using human judges</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Bowling and M. Veloso</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiagent learning using a variable learning rate</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence</span> <span class="ltx_text ltx_bib_volume">136</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 215–250</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p8" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p13" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Variable Exploration Rate ‣ 5 Results ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Busoniu, R. Babuska and B. D. Schutter</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comprehensive survey of multiagent reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Systems, Man, and Cybernetics, Part C: Applications and Reviews</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 156–172</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Chandramohan, M. Geist, F. Lefèvre and O. Pietquin</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Co-adaptation in spoken dialogue systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Paris, France</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p9" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Chi, K. VanLehn, D. Litman and P. Jordan</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Empirically evaluating the application of reinforcement learning to the induction of effective and adaptive pedagogical strategies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">User Modeling and User-Adapted Interaction</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 137–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Claus and C. Boutilier</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The dynamics of reinforcement learning in cooperative multiagent systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place"/>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p14" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Cuayáhuitl and N. Dethlefs</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical multiagent reinforcement learning for coordinating verbal and nonverbal actions in robots</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montpellier, France</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p9" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Daubigney, M. Geist, S. Chandramohan and O. Pietquin</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comprehensive reinforcement learning framework for dialogue management optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Journal of Selected Topics in Signal Processing</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">8</span>), <span class="ltx_text ltx_bib_pages"> pp. 891–902</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Engel, S. Mannor and R. Meir</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning with Gaussian processes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Bonn, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. S. English and P. A. Heeman</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning mixed initiative dialogue strategies by using reinforcement learning on both conversants</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Vancouver, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p10" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p9" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p11" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p7" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p8" title="4 Domain and Experimental Setup ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gašić, C. Breslin, M. Henderson, D. Kim, M. Szummer, B. Thomson, P. Tsiakoulis and S. Young</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On-line policy optimisation of Bayesian spoken dialogue systems via human interaction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Vancouver, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.p3" title="6 Conclusion and Future Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gašić, F. Jurčíček, B. Thomson, K. Yu and S. Young</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On-line policy optimisation of spoken dialogue systems via live interaction with human subjects</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Big Island, Hawaii, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gašić, M. Henderson, B. Thomson, P. Tsiakoulis and S. Young</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Policy optimisation of POMDP-based dialogue systems without state space compression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Miami, Florida, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Georgila, J. Henderson and O. Lemon</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">User simulation for spoken dialogue systems: Learning and evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Pittsburgh, Pennsylvania, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Georgila and D. Traum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning of argumentation dialogue policies in negotiation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Florence, Italy</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p11" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Georgila, M. K. Wolters and J. D. Moore</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning dialogue strategies from older and younger simulated users</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Tokyo, Japan</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Georgila</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning of two-issue negotiation dialogue policies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Metz, France</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p11" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. A. Heeman</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Representing the reinforcement learning state in a negotiation dialogue</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Merano, Italy</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p10" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Henderson, O. Lemon and K. Georgila</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hybrid reinforcement/supervised learning of dialogue policies from fixed datasets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 487–511</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hu and M. P. Wellman</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiagent reinforcement learning: Theoretical framework and an algorithm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Madison, Wisconsin, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Jurčíček, B. Thomson and S. Young</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning for parameter estimation in statistical spoken dialogue systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech and Language</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 168–192</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. G. Lagoudakis and R. Parr</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Least-squares policy iteration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number"/>), <span class="ltx_text ltx_bib_pages"> pp. 1107–1149</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Lemon, K. Georgila and J. Henderson</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating effectiveness and portability of reinforcement learned dialogue strategies with real users: The TALK TownInfo evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Palm Beach, Aruba</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Li, J. D. Williams and S. Balakrishnan</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning for dialog management using least-squares policy iteration and fast feature selection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Brighton, United Kingdom</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. L. Littman</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Markov games as a framework for multi-agent reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">New Brunswick, New Jersey, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Ma</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">User goal change model for spoken dialog state tracking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Misu, K. Georgila, A. Leuski and D. Traum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning of question-answering dialogue policies for virtual museum guides</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seoul, South Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Misu, K. Sugiura, K. Ohtake, C. Hori, H. Kashioka, H. Kawai and S. Nakamura</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling spoken decision making dialogue and optimization of its dialogue strategy</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Tokyo, Japan</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Nouri, K. Georgila and D. Traum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A cultural decision-making model for negotiation based on inverse reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sapporo, Japan</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p11" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Paruchuri, N. Chakraborty, R. Zivan, K. Sycara, M. Dudik and G. Gordon</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">POMDP based negotiation modeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Pasadena, California, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p10" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Pietquin and H. Hastie</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A survey on metrics for the evaluation of user simulations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Knowledge Engineering Review</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 59–73</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. E. Rasmussen and C. K. I. Williams</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Gaussian processes for machine learning</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Rieser, S. Keizer, X. Liu and O. Lemon</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive information presentation for spoken dialogue systems: evaluation with human subjects</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nancy, France</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Schatzmann, K. Weilhammer, M. Stuttle and S. Young</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A survey of statistical user simulation techniques for reinforcement-learning of dialogue management strategies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Knowledge Engineering Review</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 97–126</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Singh, D. Litman, M. Kearns and M. Walker</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing dialogue management with reinforcement learning: Experiments with the NJFun system</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number"/>), <span class="ltx_text ltx_bib_pages"> pp. 105–133</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. S. Sutton and A. G. Barto</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reinforcement learning: an introduction</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p9" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p1" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p13" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Tetreault and D. J. Litman</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A reinforcement learning approach to evaluating state representations in spoken dialogue systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Speech Communication</span> <span class="ltx_text ltx_bib_volume">50</span> (<span class="ltx_text ltx_bib_number">8-9</span>), <span class="ltx_text ltx_bib_pages"> pp. 683–696</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Thomson and S. Young</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bayesian update of dialogue state: a POMDP framework for spoken dialogue systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech and Language</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 562–588</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Williams and S. Young</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scaling POMDPs for spoken dialog management</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Audio, Speech, and Language Processing</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">7</span>), <span class="ltx_text ltx_bib_pages"> pp. 2116–2129</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Single-Agent vs. Multi-Agent Reinforcement Learning ‣ Single-Agent vs. Multi-Agent Techniques for Concurrent  Reinforcement Learning of Negotiation Dialogue Policies" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:45:18 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

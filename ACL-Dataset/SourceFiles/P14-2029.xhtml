@@ -1,0 +1,805 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Predicting Grammaticality on an Ordinal Scale</title>
+<!--Generated on Wed Jun 11 17:40:54 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Predicting Grammaticality on an Ordinal Scale</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Michael Heilman Aoife Cahill Nitin Madnani Melissa Lopez Matthew Mulholland 
+<br class="ltx_break"/>Educational Testing Service 
+<br class="ltx_break"/>Princeton, NJ, USA 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">mheilman,acahill,nmadnani,mlopez002,mmulholland</span>}<span class="ltx_text ltx_font_typewriter">@ets.org</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Joel Tetreault 
+<br class="ltx_break"/>Yahoo! Research 
+<br class="ltx_break"/>New York, NY, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">tetreaul@yahoo-inc.com</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Automated methods for identifying whether sentences are grammatical
+have various potential applications (e.g., machine translation, automated essay scoring,
+computer-assisted language learning).
+In this work, we construct a statistical model of grammaticality using various linguistic features
+(e.g., misspelling counts, parser outputs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram language model scores).
+We also present a new publicly available dataset
+of learner sentences judged for grammaticality on an ordinal scale.
+In evaluations, we compare our system to the one from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite>
+and find that our approach yields state-of-the-art performance.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we develop a system
+for the task of predicting the grammaticality of sentences,
+and present a dataset of learner sentences rated for grammaticality.
+Such a system could be used, for example,
+to check or to rank outputs from systems for text summarization,
+natural language generation, or machine translation.
+It could also be used in educational applications
+such as essay scoring.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Much of the previous research
+on predicting grammaticality has focused on identifying (and possibly correcting) specific types of grammatical errors
+that are typically made by English language learners,
+such as prepositions <cite class="ltx_cite">[<a href="#bib.bib18" title="The Ups and Downs of Preposition Error Detection in ESL Writing" class="ltx_ref">19</a>]</cite>, articles <cite class="ltx_cite">[<a href="#bib.bib17" title="Detecting errors in English article usage by non-native speakers" class="ltx_ref">11</a>]</cite>, and collocations <cite class="ltx_cite">[<a href="#bib.bib16" title="Correcting Semantic Collocation Errors with L1-induced Paraphrases" class="ltx_ref">7</a>]</cite>.
+While some applications (e.g., grammar checking) rely on such fine-grained predictions,
+others might be better addressed by sentence-level grammaticality judgments (e.g., machine translation evaluation).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Regarding sentence-level grammaticality, there has been much work on rating the grammaticality of machine translation outputs <cite class="ltx_cite">[<a href="#bib.bib20" title="Sentence-level MT evaluation without reference translations: Beyond language modeling" class="ltx_ref">10</a>, <a href="#bib.bib19" title="E-rating machine translation" class="ltx_ref">14</a>]</cite>, such as the MT Quality Estimation Shared Tasks <cite class="ltx_cite">[<a href="#bib.bib32" title="Findings of the 2013 Workshop on Statistical Machine Translation" class="ltx_ref">2</a>, §6]</cite>,
+but relatively little on
+evaluating the grammaticality of naturally occurring text.
+Also, most other research on evaluating grammaticality
+involves <em class="ltx_emph">artificial</em> tasks or datasets <cite class="ltx_cite">[<a href="#bib.bib12" title="Detecting Erroneous Sentences using Automatically Mined Sequential Patterns" class="ltx_ref">18</a>, <a href="#bib.bib13" title="Detection of Non-Native Sentences Using Machine-Translated Training Data" class="ltx_ref">13</a>, <a href="#bib.bib1" title="Parser Features for Sentence Grammaticality Classification" class="ltx_ref">22</a>, <a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">16</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Here, we make the following contributions.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<ul id="I1" class="ltx_itemize">[itemsep=0em]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We develop a state-of-the-art approach for predicting the grammaticality of sentences on an ordinal scale, adapting various techniques from the previous work described above.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We create a dataset of grammatical and ungrammatical sentences written by English language learners, labeled on an ordinal scale for grammaticality. With this unique data set, which we will release to the research community, it is now possible to conduct realistic evaluations for predicting sentence-level grammaticality.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Dataset Description</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We created a dataset consisting of 3,129 sentences randomly selected from essays written by non-native speakers of English as part of a test of English language proficiency. We oversampled lower-scoring essays to increase the chances of finding ungrammatical sentences. Two of the authors of this paper, both native speakers of English with linguistic training, annotated the data. We refer to these annotators as expert judges. When making judgments of the sentences, they saw the previous sentence from the same essay as context. These two authors were not directly involved in development of the system in §<a href="#S3" title="3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Each sentence was annotated on a scale from 1 to 4 as described below, with 4 being the most grammatical. We use an ordinal rather than binary scale, following previous work such as that of <cite class="ltx_cite">Clark<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="Towards a statistical model of grammaticality" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Crocker and Keller (<a href="#bib.bib31" title="Probabilistic grammars as models of gradience in language processing" class="ltx_ref">2005</a>)</cite> who argue that the distinction between grammatical and ungrammatical is not simply binary. Also, for practical applications, we believe that it is useful to distinguish sentences with minor errors from those with major errors that may disrupt communication. Our annotation scheme was influenced by a translation rating scheme by <cite class="ltx_cite">Coughlin (<a href="#bib.bib33" title="Correlating automated and human assessments of machine translation quality" class="ltx_ref">2003</a>)</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Every sentence judged on the 1–4 scale must be a clause. There is an extra category (“Other”) for sentences that do not fit this criterion. We exclude instances of “Other” in our experiments (see §<a href="#S4" title="4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<dl id="I2" class="ltx_description">[leftmargin=*]
+
+<dt id="I2.ix1" class="ltx_item"><span class="ltx_tag ltx_tag_description">4. Perfect</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix1.p1" class="ltx_para">
+<p class="ltx_p">The sentence is native-sounding. It has no grammatical errors, but may contain very minor typographical and/or collocation errors, as in Example (<a href="#I2.i1" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+<span class="ltx_ERROR undefined">{examples}</span></p>
+</div></dd>
+<dt id="I2.i1" class="ltx_item"><span class="ltx_tag ltx_tag_description"/></dt>
+<dd class="ltx_item">
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">For instance, i stayed in a dorm when i went to collge.</p>
+</div></dd>
+<dt id="I2.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_description">3. Comprehensible</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix2.p1" class="ltx_para">
+<p class="ltx_p">The sentence may contain one or more minor grammatical errors, including subject-verb agreement, determiner, and minor preposition errors that do not make the meaning unclear, as in Example (<a href="#I2.i2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+<span class="ltx_ERROR undefined">{examples}</span></p>
+</div></dd>
+<dt id="I2.i2" class="ltx_item"><span class="ltx_tag ltx_tag_description"/></dt>
+<dd class="ltx_item">
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">We know during Spring Festival, Chinese family will have a abundand family banquet with family memebers.</p>
+</div>
+<div id="I2.i2.p2" class="ltx_para">
+<p class="ltx_p">“Chinese family”, which could be corrected to “Chinese families”, “each Chinese family”, etc., would be an example of a minor grammatical error involving determiners.</p>
+</div></dd>
+<dt id="I2.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_description">2. Somewhat Comprehensible</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix3.p1" class="ltx_para">
+<p class="ltx_p">The sentence may contain one or more serious grammatical errors, including missing subject, verb, object, etc., verb tense errors, and serious preposition errors. Due to these errors, the sentence may have multiple plausible interpretations, as in Example (<a href="#I2.i3" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+<span class="ltx_ERROR undefined">{examples}</span></p>
+</div></dd>
+<dt id="I2.i3" class="ltx_item"><span class="ltx_tag ltx_tag_description"/></dt>
+<dd class="ltx_item">
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">I can gain the transportations such as buses and trains.</p>
+</div></dd>
+<dt id="I2.ix4" class="ltx_item"><span class="ltx_tag ltx_tag_description">1. Incomprehensible</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix4.p1" class="ltx_para">
+<p class="ltx_p">The sentence contains so many errors that it would be difficult to correct, as in Example (<a href="#I2.i4" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+<span class="ltx_ERROR undefined">{examples}</span></p>
+</div></dd>
+<dt id="I2.i4" class="ltx_item"><span class="ltx_tag ltx_tag_description"/></dt>
+<dd class="ltx_item">
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Or you want to say he is only a little boy do not everything clearly? 
+
+The phrase “do not everything” makes the sentence practically incomprehensible since the subject of “do” is not clear.</p>
+</div></dd>
+<dt id="I2.ix5" class="ltx_item"><span class="ltx_tag ltx_tag_description">O. Other/Incomplete</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix5.p1" class="ltx_para">
+<p class="ltx_p">This sentence is incomplete. These sentences, such as Example (<a href="#I2.i5" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), appear in our corpus due to the nature of timed tests.
+<span class="ltx_ERROR undefined">{examples}</span></p>
+</div></dd>
+<dt id="I2.i5" class="ltx_item"><span class="ltx_tag ltx_tag_description"/></dt>
+<dd class="ltx_item">
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">The police officer handed the 
+
+This sentence is cut off and does not at least include one clause.</p>
+</div></dd>
+</dl>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">We measured interannotator agreement on a subset of 442 sentences that were independently annotated by both expert annotators. Exact agreement was 71.3%, unweighted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="\kappa=0.574" display="inline"><mrow><mi>κ</mi><mo>=</mo><mn>0.574</mn></mrow></math>, and Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="r=0.759" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>0.759</mn></mrow></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The reported agreement values assume that “Other” maps to 0. For the sentences where both labels were in the 1–4 range (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="n=424" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>424</mn></mrow></math>), Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="r=0.767" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>0.767</mn></mrow></math>.</span></span></span> For our experiments, one expert annotator was arbitrarily selected, and for the doubly-annotated sentences, only the judgments from that annotator were retained.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">The labels from the expert annotators are distributed as follows: 72 sentences are labeled 1; 538 are 2; 1,431 are 3; 978 are 4; and 110 are “O”.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">We also gathered 5 additional judgments using Crowdflower.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.crowdflower.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.crowdflower.com</span></a></span></span></span>
+For this, we excluded the “Other” category and any sentences that had been marked as such by the expert annotators. We used 100 (3.2%) of the judged sentences as “gold” data
+in Crowdflower to block contributors who were not following the annotation guidelines.
+For those sentences, only disagreements within 1 point of the expert annotator judgment were accepted.
+In preliminary experiments, averaging the six judgments (1 expert, 5 crowdsourced) for each item led to higher human-machine agreement.
+For all experiments reported later, we used this average of six judgments as our gold standard.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">For our experiments (§<a href="#S4" title="4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>), we randomly split the data into training (50%), development (25%), and testing (25%) sets.
+We also excluded all instances labeled “Other”.
+These are relatively uncommon and less interesting to this study.
+Also, we believe that simpler, heuristic approaches could be used
+to identify such sentences.</p>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p">We use “GUG” (“Grammatical” versus “UnGrammatical”) to refer to this dataset. The dataset is available for research at <a href="https://github.com/EducationalTestingService/gug-data" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/EducationalTestingService/gug-data</span></a>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>System Description</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">This section describes the statistical model (§<a href="#S3.SS1" title="3.1 Statistical Model ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>)
+and features (§<a href="#S3.SS2" title="3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>) used by our system.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Statistical Model</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\ell_{2}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>2</mn></msub></math>-regularized linear regression (i.e., ridge regression)
+to learn a model of sentence grammaticality from a variety of linguistic features.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We use ridge regression from the <span class="ltx_text ltx_font_typewriter">scikit-learn</span> toolkit <cite class="ltx_cite">[<a href="#bib.bib28" title="Scikit-learn: Machine Learning in Python" class="ltx_ref">15</a>]</cite> v0.23.1 and the SciKit-Learn Laboratory (<a href="http://github.com/EducationalTestingService/skll" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://github.com/EducationalTestingService/skll</span></a>).</span></span></span><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Regression models typically produce conservative predictions
+with lower variance than the original training data.
+So that predictions better match the distribution of labels in the training data,
+the system rescales its predictions.
+It saves the mean and standard deviation
+of the training data gold standard (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="M_{gold}" display="inline"><msub><mi>M</mi><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="SD_{gold}" display="inline"><mrow><mi>S</mi><mo>⁢</mo><msub><mi>D</mi><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow></math>, respectively)
+and of its own predictions on the training data
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="M_{pred}" display="inline"><msub><mi>M</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="SD_{pred}" display="inline"><mrow><mi>S</mi><mo>⁢</mo><msub><mi>D</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow></math>, respectively).
+During cross-validation, this is done for each fold.
+From an initial prediction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="\hat{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover></math>, it produces the final prediction:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="\hat{y}^{\prime}=\frac{\hat{y}-M_{pred}}{SD_{pred}}*SD_{gold}+M_{gold}" display="inline"><mrow><msup><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>′</mo></msup><mo>=</mo><mrow><mrow><mrow><mfrac><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>-</mo><msub><mi>M</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow><mrow><mi>S</mi><mo>⁢</mo><msub><mi>D</mi><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow></mfrac><mo>*</mo><mi>S</mi></mrow><mo>⁢</mo><msub><mi>D</mi><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow><mo>+</mo><msub><mi>M</mi><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow></mrow></math>.
+This transformation does not affect Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> correlations or rankings,
+but it would affect binarized predictions.</span></span></span></p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">To tune the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\ell_{2}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>2</mn></msub></math>-regularization hyperparameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>,
+the system performs 5-fold cross-validation on the data used for training.
+The system evaluates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\alpha\in 10^{\{-4,\ldots,4\}}" display="inline"><mrow><mi>α</mi><mo>∈</mo><msup><mn>10</mn><mrow><mo>{</mo><mrow><mrow><mo>-</mo><mn>4</mn></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>4</mn></mrow><mo>}</mo></mrow></msup></mrow></math> and selects the one
+that achieves the highest cross-validation correlation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Features</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Next, we describe the four types of features.</p>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Spelling Features</h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Given a sentence with with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> word tokens, the model filters out tokens containing nonalphabetic characters and then computes the number of misspelled words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m2" class="ltx_Math" alttext="n_{miss}" display="inline"><msub><mi>n</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow></msub></math> (later referred to as <span class="ltx_text ltx_font_typewriter">num_misspelled</span>), the proportion of misspelled words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m3" class="ltx_Math" alttext="\frac{n_{miss}}{n}" display="inline"><mfrac><msub><mi>n</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mi>n</mi></mfrac></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m4" class="ltx_Math" alttext="\log(n_{miss}+1)" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mi>n</mi><mrow><mi>m</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></math> as features. To identify misspellings, we use a freely available spelling dictionary for U.S. English.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="http://pythonhosted.org/pyenchant/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://pythonhosted.org/pyenchant/</span></a></span></span></span></p>
+</div>
+</div>
+<div id="S3.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.2 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram Count and Language Model Features</h4>
+
+<div id="S3.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Given each sentence, the model obtains the counts of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m2" class="ltx_Math" alttext="n=1\dots 3" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mn>1</mn><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mn>3</mn></mrow></mrow></math>) from English Gigaword and computes the following features:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We use the New York Times (nyt), the Los Angeles Times-Washington Post (ltw), and the Washington Post-Bloomberg News (wpb) sections from the fifth edition of English Gigaword (LDC2011T07).</span></span></span></p>
+</div>
+<div id="S3.SS2.SSS2.p2" class="ltx_para">
+<ul id="I3" class="ltx_itemize">[itemsep=0em]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="\displaystyle\sum_{s\in S_{n}}\frac{\log(\mbox{count}(s)+1)}{\|S_{n}\|}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>s</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder></mstyle><mstyle displaystyle="true"><mfrac><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mtext>count</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow><mrow><mo fence="true">∥</mo><msub><mi>S</mi><mi>n</mi></msub><mo fence="true">∥</mo></mrow></mfrac></mstyle></mrow></math></p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="\displaystyle\max_{s\in S_{n}}\log(\mbox{count}(s)+1)" display="inline"><mrow><munder><mo movablelimits="false">max</mo><mrow><mi>s</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mo>⁡</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mtext>count</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m1" class="ltx_Math" alttext="\displaystyle\min_{s\in S_{n}}\log(\mbox{count}(s)+1)" display="inline"><mrow><munder><mo movablelimits="false">min</mo><mrow><mi>s</mi><mo>∈</mo><msub><mi>S</mi><mi>n</mi></msub></mrow></munder><mo>⁡</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mtext>count</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+</ul>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m1" class="ltx_Math" alttext="S_{n}" display="inline"><msub><mi>S</mi><mi>n</mi></msub></math> represents the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams of order <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> from the given sentence.
+The model computes the following features from a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m4" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math>-gram language model trained on the same three sections of English Gigaword using the SRILM toolkit <cite class="ltx_cite">[<a href="#bib.bib2" title="SRILM - An Extensible Language Modeling Toolkit" class="ltx_ref">17</a>]</cite>:</p>
+</div>
+<div id="S3.SS2.SSS2.p3" class="ltx_para">
+<ul id="I4" class="ltx_itemize">[itemsep=0em]
+
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">the average log-probability of the given sentence (referred to as <span class="ltx_text ltx_font_typewriter">gigaword_avglogprob</span> later)</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">the number of out-of-vocabulary words in the sentence</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS2.SSS2.p4" class="ltx_para">
+<p class="ltx_p">Finally, the system computes the average log-probability and number of out-of-vocabulary words from a language model trained on a collection of essays written by non-native English speakers<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>This did not overlap with the data described in §<a href="#S2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> and was a subset of the data released by <cite class="ltx_cite">Blanchard<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib21" title="TOEFL11: A Corpus of Non-Native English" class="ltx_ref">2013</a>)</cite>.</span></span></span> (“non-native LM”).</p>
+</div>
+</div>
+<div id="S3.SS2.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.3 </span>Precision Grammar Features</h4>
+
+<div id="S3.SS2.SSS3.p1" class="ltx_para">
+<p class="ltx_p">Following <cite class="ltx_cite">Wagner<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A Comparative Evaluation of Deep and Shallow Approaches to the Automatic Detection of Common Grammatical Errors" class="ltx_ref">2007</a>)</cite> and <cite class="ltx_cite">Wagner<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib6" title="Judging grammaticality: Experiments in sentence classification" class="ltx_ref">2009</a>)</cite>, we use features extracted from precision grammar parsers. These grammars have been hand-crafted and designed to only provide complete syntactic analyses for grammatically correct sentences. This is in contrast to treebank-trained grammars, which will generally provide <span class="ltx_text ltx_font_italic">some</span> analysis regardless of grammaticality. Here, we use (1) the Link Grammar Parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup><a href="http://www.link.cs.cmu.edu/link/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.link.cs.cmu.edu/link/</span></a></span></span></span> and (2) the HPSG English Resource Grammar <cite class="ltx_cite">[<a href="#bib.bib34" title="An open-source grammar development environment and broad-coverage English grammar using HPSG" class="ltx_ref">4</a>]</cite> and PET parser.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup><a href="http://moin.delph-in.net/PetTop" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://moin.delph-in.net/PetTop</span></a></span></span></span></p>
+</div>
+<div id="S3.SS2.SSS3.p2" class="ltx_para">
+<p class="ltx_p">We use a binary feature, <span class="ltx_text ltx_font_typewriter">complete_link</span>, from the Link grammar that indicates whether at least one complete linkage can be found for a sentence. We also extract several features from the HPSG analyses.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>The complete list of relevant statistics used as features is: <span class="ltx_text ltx_font_typewriter">trees, unify_cost_succ, unify_cost_fail, unifications_succ, unifications_fail, subsumptions_succ, subsumptions_fail, words, words_pruned, aedges, pedges, upedges, raedges, rpedges, medges</span>. During development, we observed that some of these features vary for some inputs, probably due to parsing search timeouts. On 10 preliminary runs with the development set, this variance had minimal effects on correlations with human judgments (less than 0.00001 in terms of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS3.p2.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>).</span></span></span>
+They mostly reflect information about unification success or failure and the associated costs. In each instance, we use the logarithm of one plus the frequency.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS4" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.4 </span>PCFG Parsing Features</h4>
+
+<div id="S3.SS2.SSS4.p1" class="ltx_para">
+<p class="ltx_p">We find phrase structure trees and basic dependencies with the Stanford Parser’s English PCFG model <cite class="ltx_cite">[<a href="#bib.bib9" title="Accurate Unlexicalized Parsing" class="ltx_ref">12</a>, <a href="#bib.bib10" title="Generating Typed Dependency Parses from Phrase Structure Parses" class="ltx_ref">8</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>We use the Nov. 12, 2013 version of the Stanford Parser.</span></span></span> We then compute the following:</p>
+<ul id="I5" class="ltx_itemize">[itemsep=0em]
+
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p">the parse score as provided by the Stanford PCFG Parser, normalized for sentence length, later referred to as <span class="ltx_text ltx_font_typewriter">parse_prob</span></p>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p">a binary feature that captures whether the top node of the tree is sentential or not (i.e. the assumption is that if the top node is non-sentential, then the sentence is a fragment)</p>
+</div></li>
+<li id="I5.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i3.p1" class="ltx_para">
+<p class="ltx_p">features binning the number of <span class="ltx_text ltx_font_typewriter">dep</span> relations returned by the dependency conversion. These <span class="ltx_text ltx_font_typewriter">dep</span> relations are underspecified for function and indicate that the parser was unable to find a standard relation such as <span class="ltx_text ltx_font_typewriter">subj</span>, possibly indicating a grammatical error.</p>
+</div></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Next, we present evaluations on the GUG dataset.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Feature Ablation</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We conducted a feature ablation study to identify the contributions
+of the different types of features described in §<a href="#S3.SS2" title="3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+We compared the performance of the full model with all of the features to
+models with all but one type of feature. For this experiment,
+all models were estimated
+from the training set and evaluated on the development set.
+We report performance
+in terms of Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>
+between the averaged 1–4 human labels and unrounded system predictions.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The results are shown in Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Feature Ablation ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+From these results, the most useful features appear to be
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram frequencies
+from Gigaword and whether the link parser can fully parse the sentence.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"/>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">our system</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.668</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> non-native LM (§<a href="#S3.SS2.SSS2" title="3.2.2 n-gram Count and Language Model Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.665</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m3" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> HPSG parse (§<a href="#S3.SS2.SSS3" title="3.2.3 Precision Grammar Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.664</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> PCFG parse (§<a href="#S3.SS2.SSS4" title="3.2.4 PCFG Parsing Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.4</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.662</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m5" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> spelling (§<a href="#S3.SS2.SSS1" title="3.2.1 Spelling Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.643</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> gigaword LM (§<a href="#S3.SS2.SSS2" title="3.2.2 n-gram Count and Language Model Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.638</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> link parse (§<a href="#S3.SS2.SSS3" title="3.2.3 Precision Grammar Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.632</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m8" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> gigaword count (§<a href="#S3.SS2.SSS2" title="3.2.2 n-gram Count and Language Model Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>)</th>
+<td class="ltx_td ltx_align_center">0.630</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m13" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> on the development set, for our full system and variations excluding each feature type. “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m14" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m15" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>” indicates the full model without the “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m16" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>” features. </div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Test Set Results</h3>
+
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r" colspan="3"><span class="ltx_text ltx_font_bold">Ordinal Task</span></th>
+<th class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_bold">Binary Task</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center ltx_border_l"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="Sig._{r}" display="inline"><mrow><mi>S</mi><mi>i</mi><mi>g</mi><msub><mo>.</mo><mi>r</mi></msub></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_l">% Acc.</th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="Sig._{\%Acc.}" display="inline"><mrow><mi>S</mi><mi>i</mi><mi>g</mi><msub><mo>.</mo><mrow><mi mathvariant="normal">%</mi><mi>A</mi><mi>c</mi><mi>c</mi><mo>.</mo></mrow></msub></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">our system</th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">0.644</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.479</td>
+<td class="ltx_td ltx_align_center ltx_border_t">79.3</td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">0.419</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">our system<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="{}_{logistic}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center">0.616</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.484</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">80.7</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.428</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Post</th>
+<td class="ltx_td ltx_align_center">0.321</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.225</td>
+<td class="ltx_td ltx_align_center">75.5</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center">0.195</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Post<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="{}_{logistic}" display="inline"><msub><mi/><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_center">0.259</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.181</td>
+<td class="ltx_td ltx_align_center">74.4</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center">0.181</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">complete_link</span></th>
+<td class="ltx_td ltx_align_center">0.386</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.335</td>
+<td class="ltx_td ltx_align_center">74.8</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center">0.302</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">gigaword_avglogprob</span></th>
+<td class="ltx_td ltx_align_center">0.414</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.290</td>
+<td class="ltx_td ltx_align_center">76.7</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center">0.280</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_typewriter">num_misspelled</span></th>
+<td class="ltx_td ltx_align_center">-0.462</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center ltx_border_r">-0.370</td>
+<td class="ltx_td ltx_align_center">74.8</td>
+<td class="ltx_td ltx_align_center">*</td>
+<td class="ltx_td ltx_align_center">-0.335</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Human-machine agreement statistics for our system, the system from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite>, and simple baselines, computed from the averages of human ratings in the testing set (§<a href="#S2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). “*” in a Sig. column indicates a statistically significant difference from “our system” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m9" class="ltx_Math" alttext="p&lt;.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.05</mn></mrow></math>, see text for details). A majority baseline for the binary task achieves 74.8% accuracy. The best results for each metric are in bold. </div>
+</div>
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present results on the held-out test set for the full model and various baselines, summarized in Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Test Set Results ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+For test set evaluations,
+we trained on the combination of the training and development sets (§<a href="#S2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>), to maximize the amount of training data for the final experiments.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We also trained and evaluated on binarized versions of the ordinal GUG labels:
+a sentence was labeled 1 if the average judgment was at least 3.5 (i.e., would round to 4), and 0 otherwise.
+Evaluating on a binary scale allows us to measure how well the system
+distinguishes grammatical sentences from ungrammatical ones.
+For some applications, this two-way distinction may be more relevant than the more fine-grained 1–4 scale.
+To train our system on binarized data, we replaced the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\ell_{2}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>2</mn></msub></math>-regularized linear
+regression model with an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="\ell_{2}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>2</mn></msub></math>-regularized logistic regression
+and used Kendall’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> rank correlation between the
+predicted probabilities of the positive class
+and the binary gold standard labels
+as the grid search metric (§<a href="#S3.SS1" title="3.1 Statistical Model ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>)
+instead of Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">For the ordinal task, we report Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> between the averaged human judgments and each system.
+For the binary task, we report percentage accuracy.
+Since the predictions from the binary and ordinal systems are on different scales,
+we include the nonparametric statistic Kendall’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> as a secondary evaluation metric
+for both tasks.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">We also evaluated the binary system for the ordinal task by computing correlations
+between its estimated probabilities and the averaged human scores,
+and we evaluated the ordinal system for the binary task
+by binarizing its predictions.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>We selected a threshold for binarization from
+a grid of 1001 points from 1 to 4 that maximized the accuracy of binarized predictions
+from a model trained on the training set and evaluated on the binarized development set.
+For evaluating the three single-feature baselines discussed below, we used the same approach except with
+grid ranging from the minimum development set feature value to the maximum plus 0.1%
+of the range.</span></span></span></p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">We compare our work to a modified version
+of the publicly available<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>The <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite> system is available at <a href="https://github.com/mjpost/post2011judging" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/mjpost/post2011judging</span></a>.</span></span></span> system
+from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite>, which performed very well on an artificial dataset. To our knowledge, it is the only publicly available system for grammaticality prediction.
+It is very different from our system since it
+relies on partial tree-substitution grammar derivations as features.
+We use the feature computation components of that system but replace its
+statistical model.
+The system was designed for use with a dataset
+consisting of 50% grammatical and 50% ungrammatical sentences,
+rather than data with ordinal or continuous labels.
+Additionally, its classifier implementation does not output scores or probabilities.
+Therefore, we used the same learning algorithms as for our system (i.e., ridge regression for the ordinal task
+and logistic regression for the binary task).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>In preliminary experiments, we observed little difference in performance between logistic regression and the original support vector classifier used by the system from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite>.</span></span></span></p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">To create further baselines for comparison,
+we selected the following
+features that represent ways one might approximate grammaticality
+if a comprehensive model was unavailable:
+whether the link parser can fully parse the sentence (<span class="ltx_text ltx_font_typewriter">complete_link</span>),
+the Gigaword language model score (<span class="ltx_text ltx_font_typewriter">gigaword_avglogprob</span>),
+and the number of misspelled tokens (<span class="ltx_text ltx_font_typewriter">num_misspelled</span>).
+Note that we expect the number of misspelled tokens to be negatively correlated
+with grammaticality.
+We flipped the sign of the misspelling feature when computing accuracy for the binary task.</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">To identify whether the differences in performance for the ordinal task
+between our system and each of the baselines are statistically significant,
+we used the BC<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m1" class="ltx_Math" alttext="{}_{a}" display="inline"><msub><mi/><mi>a</mi></msub></math> Bootstrap <cite class="ltx_cite">[<a href="#bib.bib29" title="An introduction to the bootstrap" class="ltx_ref">9</a>]</cite> with 10,000 replications
+to compute 95% confidence intervals
+for the absolute value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> for our system minus
+the absolute value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> for each of the alternative methods.
+For the binary task, we used the sign test to test for significant differences in accuracy.
+The results are in Table <a href="#S4.T2" title="Table 2 ‣ 4.2 Test Set Results ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussion and Conclusions</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we developed a system for predicting grammaticality on an ordinal scale and created a labeled dataset that we have released publicly (§<a href="#S2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>)
+to enable more realistic evaluations in future research.
+Our system
+outperformed an existing state-of-the-art system <cite class="ltx_cite">[<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">16</a>]</cite> in evaluations on binary and ordinal scales. This is the most realistic evaluation of methods for predicting sentence-level grammaticality to date.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Surprisingly, the system from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite>
+performed quite poorly on the GUG dataset.
+We speculate that this is due to the fact that
+the Post system relies heavily on features extracted from automatic
+syntactic parses. While Post found that such a system can effectively
+distinguish grammatical news text sentences from sentences generated by a language model,
+measuring the grammaticality of real sentences from
+language learners seems to require a wider variety of features,
+including <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram counts, language model scores, etc.
+Of course, our findings do not indicate that syntactic features
+such as those from <cite class="ltx_cite">Post (<a href="#bib.bib4" title="Judging Grammaticality with Tree Substitution Grammar Derivations" class="ltx_ref">2011</a>)</cite> are without value.
+In future work, it may be possible to improve grammaticality measurement
+by integrating such features into a larger system.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Beata Beigman Klebanov, Yoko Futagi, Su-Youn Yoon, and the anonymous reviewers for their helpful comments. We also thank Jennifer Foster for discussions about this work and Matt Post for making his system publicly available.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Blanchard, J. Tetreault, D. Higgins, A. Cahill and M. Chodorow</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TOEFL11: A Corpus of Non-Native English</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Educational Testing Service</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS2.p4" title="3.2.2 n-gram Count and Language Model Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Bojar, C. Buck, C. Callison-Burch, C. Federmann, B. Haddow, P. Koehn, C. Monz, M. Post, R. Soricut and L. Specia</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Findings of the 2013 Workshop on Statistical Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–44</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-2201" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Clark, G. Giorgolo and S. Lappin</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards a statistical model of grammaticality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 2064–2069</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Copestake and D. Flickinger</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An open-source grammar development environment and broad-coverage English grammar using HPSG</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Athens, Greece</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS3.p1" title="3.2.3 Precision Grammar Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Coughlin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Correlating automated and human assessments of machine translation quality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 63–70</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. W. Crocker and F. Keller</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic grammars as models of gradience in language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Gradience in Grammar: Generative Perspectives</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Dataset Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Dahlmeier and H. T. Ng</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Correcting Semantic Collocation Errors with L1-induced Paraphrases</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland, UK.</span>, <span class="ltx_text ltx_bib_pages"> pp. 107–117</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D11-1010" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe, B. MacCartney and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating Typed Dependency Parses from Phrase Structure Parses</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 449–454</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS4.p1" title="3.2.4 PCFG Parsing Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.4</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Efron and R. Tibshirani</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An introduction to the bootstrap</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Chapman and Hall/CRC</span>, <span class="ltx_text ltx_bib_place">Boca Raton, FL</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p7" title="4.2 Test Set Results ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Gamon, A. Aue and M. Smets</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence-level MT evaluation without reference translations: Beyond language modeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 103–111</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Han, M. Chodorow and C. Leacock</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detecting errors in English article usage by non-native speakers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 115–129</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate Unlexicalized Parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sapporo, Japan</span>, <span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P03-1054" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1075096.1075150" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS4.p1" title="3.2.4 PCFG Parsing Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lee, M. Zhou and X. Liu</span><span class="ltx_text ltx_bib_year">(2007-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detection of Non-Native Sentences Using Machine-Translated Training Data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Rochester, New York</span>, <span class="ltx_text ltx_bib_pages"> pp. 93–96</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N07/N07-2024" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Parton, J. Tetreault, N. Madnani and M. Chodorow</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">E-rating machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland</span>, <span class="ltx_text ltx_bib_pages"> pp. 108–115</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W11-2111" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, O. Grisel, M. Blondel, P. Prettenhofer, R. Weiss, V. Dubourg, J. Vanderplas, A. Passos, D. Cournapeau, M. Brucher, M. Perrot and E. Duchesnay</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scikit-learn: Machine Learning in Python</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2825–2830</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Statistical Model ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Post</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Judging Grammaticality with Tree Substitution Grammar Derivations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 217–222</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-2038" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Predicting Grammaticality on an Ordinal Scale</span></span>,
+<a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p5" title="4.2 Test Set Results ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.T2" title="Table 2 ‣ 4.2 Test Set Results ‣ 4 Experiments ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.p1" title="5 Discussion and Conclusions ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p2" title="5 Discussion and Conclusions ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Stolcke</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SRILM - An Extensible Language Modeling Toolkit</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS2.p2" title="3.2.2 n-gram Count and Language Model Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Sun, X. Liu, G. Cong, M. Zhou, Z. Xiong, J. Lee and C. Lin</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Detecting Erroneous Sentences using Automatically Mined Sequential Patterns</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 81–88</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1011" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Tetreault and M. Chodorow</span><span class="ltx_text ltx_bib_year">(2008-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Ups and Downs of Preposition Error Detection in ESL Writing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Manchester, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 865–872</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C08-1109" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wagner, J. Foster and J. van Genabith</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Comparative Evaluation of Deep and Shallow Approaches to the Automatic Detection of Common Grammatical Errors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 112–121</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D/D07/D07-1012" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS3.p1" title="3.2.3 Precision Grammar Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wagner, J. Foster and J. van Genabith</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Judging grammaticality: Experiments in sentence classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CALICO Journal</span> <span class="ltx_text ltx_bib_volume">26</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 474–490</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSS3.p1" title="3.2.3 Precision Grammar Features ‣ 3.2 Features ‣ 3 System Description ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.3</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. J. Wong and M. Dras</span><span class="ltx_text ltx_bib_year">(2010-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parser Features for Sentence Grammaticality Classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Melbourne, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 67–75</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/U/U10/U10-1011" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Predicting Grammaticality on an Ordinal Scale" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:40:54 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

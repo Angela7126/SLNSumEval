@@ -1,0 +1,911 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Conflict-based search for optimal multi-agent pathfinding.
+   </title>
+   <abstract>
+    In the multi-agent pathfinding problem (MAPF) we are given a set of agents each with respective start and goal positions. The task is to find paths for all agents while avoiding collisions. Most previous work on solving this problem optimally has treated the individual agents as a single ‘joint agent’ and then applied single-agent search variants of the A* algorithm. In this paper we present the Conflict Based Search (CBS) a new optimal multi-agent pathfinding algorithm. CBS is a two-level algorithm that does not convert the problem into the single ‘joint agent’ model. At the high level, a search is performed on a Conflict Tree (CT) which is a tree based on conflicts between individual agents. Each node in the CT represents a set of constraints on the motion of the agents. At the low level, fast single-agent searches are performed to satisfy the constraints imposed by the high level CT node. In many cases this two-level formulation enables CBS to examine fewer states than A* while still maintaining optimality. We analyze CBS and show its benefits and drawbacks. Additionally we present the Meta-Agent CBS (MA-CBS) algorithm. MA-CBS is a generalization of CBS. Unlike basic CBS, MA-CBS is not restricted to single-agent searches at the low level. Instead, MA-CBS allows agents to be merged into small groups of joint agents. This mitigates some of the drawbacks of basic CBS and further improves performance. In fact, MA-CBS is a framework that can be built on top of any optimal and complete MAPF solver in order to enhance its performance. Experimental results on various problems show a speedup of up to an order of magnitude over previous approaches.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Single-agent pathfinding is the problem of finding a path between two vertices in a graph. It is a fundamental and important problem in AI that has been researched extensively, as this problem can be found in GPS navigation [49], robot routing [8], [3], planning [6], [23], network routing [7], and many combinatorial problems (e.g., puzzles) as well [28], [27]. Solving pathfinding problems optimally is commonly done with search algorithms based on the A* algorithm [22]. Such algorithms perform a best-first search that is guided by {a mathematical formula}f(n)=g(n)+h(n), where {a mathematical formula}g(n) is the cost of the shortest known path from the start state to state n and {a mathematical formula}h(n) is a heuristic function estimating the cost from n to the nearest goal state. If the heuristic function h is admissible, meaning that it never overestimates the shortest path from n to the goal, then A* (and other algorithms that are guided by the same cost function) are guaranteed to find an optimal path from the start state to a goal state, if one exists [11].
+     </paragraph>
+     <paragraph>
+      The multi-agent pathfinding (MAPF) problem is a generalization of the single-agent pathfinding problem for {a mathematical formula}k&gt;1 agents. It consists of a graph and a number of agents. For each agent, a unique start state and a unique goal state are given, and the task is to find paths for all agents from their start states to their goal states, under the constraint that agents cannot collide during their movements. In many cases there is an additional goal of minimizing a cumulative cost function such as the sum of the time steps required for every agent to reach its goal. MAPF has practical applications in video games, traffic control [43], [12], robotics [1] and aviation [31].
+     </paragraph>
+     <paragraph>
+      Algorithms for solving MAPF can be divided into two classes: optimal and sub-optimal solvers. Finding an optimal solution for the MAPF problem is NP-hard [56], as the state space grows exponentially with the number of agents. Sub-optimal solvers are usually used when the number of agents is large. In such cases, the aim is to quickly find a path for the different agents, and it is often intractable to guarantee that a given solution is optimal.
+     </paragraph>
+     <paragraph>
+      The problem addressed in this paper is to find an optimal solution to the MAPF problem. Optimal solvers are usually applied when the number of agents is relatively small and the task is to find an optimal, minimal-cost solution. This can be formalized as a global, single-agent search problem. Therefore, the traditional approach for solving MAPF optimally is by using A*-based searches [35], [45]. A node in the search tree consists of the set of locations for all the agents at time t. The start state and goal state consist of the initial and goal locations of the different agents, respectively. Given a graph with branching factor b, there are {a mathematical formula}O(b) possible moves for any single agent and thus the branching factor for an A* search is {a mathematical formula}O(bk) which is exponential in the number of agents. Naturally, search algorithms that are based on A* can solve this problem optimally, but they may run for a very long time or exhaust the available memory.
+     </paragraph>
+     <paragraph>
+      The first part of the paper gives a survey on MAPF research. We classify all existing work to two main categories, optimal and sub-optimal. We then further classify the different approaches for solving this problem sub-optimally. This is done through a consistent terminology that helps these classifications. In the second part of the paper we introduce a new approach for optimally solving MAPF. First, we present a novel conflict-based formalization for MAPF and a corresponding new algorithm called Conflict Based Search (CBS). CBS is a two-level algorithm, divided into high-level and low-level searches. The agents are initialized with default paths, which may contain conflicts. The high-level search is performed in a constraint tree (CT) whose nodes contain time and location constraints for a single agent. At each node in the CT, a low-level search is performed for all agents. The low-level search returns single-agent paths that are consistent with the set of constraints given at any CT node. If, after running the low level, there are still conflicts between agents, i.e. two or more agents are located in the same location at the same time, the associated high-level node is declared a non-goal node and the high-level search continues by adding more nodes with constraints that resolve the new conflict.
+     </paragraph>
+     <paragraph>
+      We study the behavior of our CBS algorithm and discuss its advantages and drawbacks when compared to A*-based approaches as well as other approaches. Based on characteristics of the problem, we show cases where CBS will be significantly more efficient than the previous approaches. We also discuss the limitations of CBS and show circumstances where CBS is inferior to the A*-based approaches. Experimental results are provided which support our theoretical understandings. While CBS is ineffective in some cases, there are many cases where CBS outperforms EPEA* [15], [20], the state-of-the-art A*-based approach for this problem. Specifically, we experimented on open grids as well as on a number of benchmark game maps from Sturtevant's pathfinding database [47]. Results show the superiority of CBS over the A*-based approaches and ICTS [42], another recent approach, on many of these domains.
+     </paragraph>
+     <paragraph>
+      Next, we mitigate the worst-case performance of CBS by generalizing CBS into a new algorithm called Meta-agent CBS (MA-CBS). In MA-CBS the number of conflicts allowed between any pair of agents is bounded by a predefined parameter B. When the number of conflicts exceeds B, the conflicting agents are merged into a meta-agent and then treated as a joint composite agent by the low-level solver. In the low-level search, MA-CBS uses any possible complete MAPF solver to find paths for the meta-agent. Thus, MA-CBS can be viewed as a solving framework where low-level solvers are plugged in. Different merge policies give rise to different special cases. The original CBS algorithm corresponds to the extreme case where {a mathematical formula}B=∞ (never merge agents), and the Independence Detection (ID) framework [45] is the other extreme case where {a mathematical formula}B=0 (always merge agents when conflicts occur). Finally, we present experimental results for MA-CBS that show the superiority of MA-CBS over the other approaches on all domains. In addition, in Appendix A we introduce a variant of CBS which has memory requirements that are linear in the depth of the CT.
+     </paragraph>
+     <paragraph>
+      Preliminary versions of this research have appeared previously [38], [39]. This paper contains a more comprehensive description of the CBS algorithm and the MA-CBS framework, with broader theoretical analysis and experimental comparisons to other MAPF algorithms.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Problem definition and terminology
+     </section-title>
+     <paragraph>
+      Many variants of the MAPF problem exist. We now define the problem and later describe the algorithms in the context of a general, commonly used variant of the problem [45], [46], [42], [38], [39]. This variant is as general as possible to allow CBS to be applicable and it includes many sub-variants. Then, in Section 6.1 we describe the specific sub-variant used in our experimental setting. Finally, in Section 7 we briefly discuss how our new algorithm can be modified to other MAPF variants.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Problem input
+      </section-title>
+      <paragraph>
+       The input to the multi-agent pathfinding problem (MAPF) is:
+      </paragraph>
+      <list>
+       <list-item>
+        A directed graph {a mathematical formula}G(V,E). The vertices of the graph are possible locations for the agents, and the edges are the possible transitions between locations.
+       </list-item>
+       <list-item>
+        k agents labeled {a mathematical formula}a1,a2…ak. Every agent {a mathematical formula}ai has a start vertex, {a mathematical formula}starti∈V and a goal vertex, {a mathematical formula}goali∈V.
+       </list-item>
+      </list>
+      <paragraph>
+       Time is discretized into time points. At time point {a mathematical formula}t0 agent {a mathematical formula}ai is located in location {a mathematical formula}starti.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Actions
+      </section-title>
+      <paragraph>
+       Between successive time points, each agent can perform a move action to a neighboring vertex or a wait action to stay idle at its current vertex. There are a number of ways to deal with the possibility of a chain of agents that are following each other in a given time step. This may not be allowed, may only be allowed if the first agent of the chain moves to an unoccupied location or it may be allowed even in a cyclic chain which does not include any empty location. Our algorithm is applicable across all these variations.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       MAPF constraints
+      </section-title>
+      <paragraph>
+       The main constraint in MAPF is that each vertex can be occupied by at most one agent at a given time. There can also be a constrain disallowing more than one agent to traverse the same edge between successive time steps. A conflict is a case where a constraint is violated.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       MAPF task
+      </section-title>
+      <paragraph>
+       A solution to the MAPF problem is a set of non-conflicting paths, one for each agent, where a path for agent {a mathematical formula}ai is a sequence of {a mathematical formula}{move,wait} actions such that if {a mathematical formula}ai performs this sequence of actions starting from {a mathematical formula}starti, it will end up in {a mathematical formula}goali.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Cost function
+      </section-title>
+      <paragraph>
+       We aim to solve a given MAPF instance while minimizing a global cumulative cost function. We describe the algorithms in this paper in the context of a common cost function that we call the sum-of-costs[12], [45], [42], [38], [39]. Sum-of-costs is the summation, over all agents, of the number of time steps required to reach the goal for the last time and never leave it again. Finding the optimal solution, i.e., the minimal sum-of-costs, has been shown to be NP-hard [56].
+      </paragraph>
+      <paragraph>
+       Other cost functions have also been used in the literature. Makespan, for example, is another common MAPF cost function which minimizes the total time until the last agent reaches its destination (i.e., the maximum of the individual costs). Another cost function is called Fuel[16], corresponding to the total amount of distance traveled by all agents (equivalent to the fuel consumed). The Fuel cost function is in a fact the sum-of-costs of all agents where only move actions incur costs but wait actions are free. In addition, giving different weights to different agents is also possible. In Section 7 we show how our algorithms can be modified for such cost functions.
+      </paragraph>
+      <paragraph>
+       Some variants of MAPF do not have a global cost function to optimize, but a set of individual cost functions, one for every agent [29]. In such variants a solution is a vector of costs, one per agent. This type of cost function is part of the broader field of multi-objective optimization, and is beyond the scope of this paper. In other MAPF variants the agents may be self-interested, and the task is to devise a mechanism that will cause them to cooperate [5]. In this work we assume that the agents are fully collaborative and are not self-interested.
+      </paragraph>
+      <paragraph>
+       Yu and Lavelle [54] studied an MAPF variant in which instead of assigning each agent with a goal position a set of goal positions is given and the task is to find a solution that brings each of the agents to any goal position. They showed that this MAPF variant is solvable in polynomial time using network flows.
+      </paragraph>
+     </section>
+     <section label="2.6">
+      <section-title>
+       Distributed vs. centralized
+      </section-title>
+      <paragraph>
+       MAPF problems can be categorized into two groups: distributed and centralized. In a distributed setting, each agent has its own computing power and different communication paradigms may be assumed (e.g., message passing, broadcasting etc.). A large body of work has addressed the distributed setting [18], [21], [2]. By contrast, the centralized setting assumes a single central computing power which needs to find a solution for all agents. Equivalently, the centralized setting also includes the case where we have a separate CPU for each of the agents but full knowledge sharing is assumed and a centralized problem solver controls all the agents. The scope of this paper is limited to centralized approaches, and we cover many of them in the next section.
+      </paragraph>
+     </section>
+     <section label="2.7">
+      <section-title>
+       An example of an MAPF problem
+      </section-title>
+      <paragraph>
+       Fig. 1 shows an example 2-agent MAPF instance that will be used throughout the paper. Each agent (mouse) must plan a full path to its respective piece of cheese. Agent {a mathematical formula}a1 has to go from {a mathematical formula}S1 to {a mathematical formula}G1 while agent {a mathematical formula}a2 has to go from {a mathematical formula}S2 to {a mathematical formula}G2. Both agents have individual paths of length 3: {a mathematical formula}〈S1,A1,D,G1〉 and {a mathematical formula}〈S2,B1,D,G2〉, respectively. However, these paths have a conflict, as they both include state D at time point {a mathematical formula}t2. One of these agents must wait one time step. Therefore, the optimal solution cost, {a mathematical formula}C⁎, is 7 in this example.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Survey of centralized MAPF algorithms
+     </section-title>
+     <paragraph>
+      Work assuming a centralized approach can be divided into three classes. The first class of solvers, used in recent work, reduce MAPF to other problems that are well studied in computer science. The second class of solvers consists of MAPF-specific sub-optimal solvers. The third class of solvers is the class of optimal solvers. The focus of this paper is on optimal solvers, but we include a brief survey of the other classes below.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Reduction-based solvers
+      </section-title>
+      <paragraph>
+       This class of solvers, used in recent work, reduces MAPF to other problems that are well studied in computer science. Prominent examples include reducing to Boolean Satisfiability (SAT) [50], Integer Linear Programming (ILP) [55] and Answer Set Programming (ASP) [13]. These methods return the optimal solution and are usually designed for the makespan cost function. They are less efficient or even not applicable for the sum of cost function. In addition, these algorithms are usually highly efficient only on small problem instances. On large problem instances the translation process from an MAPF instance to the required problem has a very large, yet polynomial, overhead which makes these approaches inefficient.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       MAPF-specific sub-optimal solvers
+      </section-title>
+      <paragraph>
+       Algorithms of this class are usually highly efficient but do not guarantee optimality and even completeness in some cases. They are commonly used when the number of agents is large and the optimal solution is intractable. MAPF-specific sub-optimal solvers can be further classified to sub-classes.
+      </paragraph>
+      <section label="3.2.1">
+       <section-title>
+        Search-based suboptimal solvers
+       </section-title>
+       <paragraph>
+        Search-based solvers usually aim to provide a high quality solution (close to optimal) but they are not complete for many cases. These solvers differ by the way they treat conflicts between agents. A prominent example of a search-based sub-optimal algorithm is Hierarchical Cooperative A* (HCA*) [43]. In HCA* the agents are planned one at a time according to some predefined order. Once the first agent finds a path to its goal, that path is written (reserved) into a global reservation table. More specifically, if the path found for any agent {a mathematical formula}ai is {a mathematical formula}vi0=starti,vi1,vi2,…,vil=goali, then the algorithm records that state {a mathematical formula}vij is occupied by agent {a mathematical formula}ai at time point {a mathematical formula}tj. Reservation tables can be implemented as a matrix of {a mathematical formula}#vertices×#timesteps, or in a more compact representation such as a hash table for the items that have been reserved. When searching for a path for a later agent, paths chosen by previous agents are blocked. That is, the agent may not traverse locations that are in conflict with previous agents. An approach similar to HCA* was presented earlier for multi-agent motion planning [14]. Windowed-HCA* (WHCA*) [43], one of several HCA* variants, only performs cooperative pathfinding within a limited window, after which other agents are ignored. A perfect single-agent heuristic is most often used to guide this search. Because HCA* is designed for games with limited memory, the heuristic cannot be pre-computed and must be calculated at runtime.
+       </paragraph>
+       <paragraph>
+        Later work extended HCA* by abstracting the size of the state space to reduce the runtime cost of building the heuristics [48]. Finally, WHCA* was enhanced such that the windows are dynamically placed only around known conflicts and agents are prioritized according to the likelihood of being involved in a conflict [4]. The HCA* idea has a few drawbacks. First, when too many agents exist, deadlocks may occur, and HCA* is not guaranteed to be complete. Second, HCA* does not provide any guarantees on the quality of its solution, and thus the solutions may be far from optimal. Finally, HCA* may even slow the search significantly. This is particularly true with the windowed variant of HCA*, WHCA*. Because individual agents are independently looking for solutions of minimal length, agents may unnecessarily collide when significant free space is available, incurring significant computational costs to resolve. The reservation table idea has also been used for managing traffic junctions where cars (agents) must cross a junction without causing collisions [12]. That system solves the online version of the problem, where cars arrive at a junction and once they cross it they disappear.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       <section-title>
+        Rule-based suboptimal solvers
+       </section-title>
+       <paragraph>
+        Rule-based approaches include specific movement rules for different scenarios and usually do not include massive search. The agents plan their route according to the specific rules. Rule-based solvers favor completeness at low computational cost over solution quality.
+       </paragraph>
+       <paragraph>
+        TASS [25] and Push and Swap (and its variants) [30], [37], [10] are two recently proposed rule-based MAPF sub-optimal algorithms that run in polynomial time.{sup:1} Both algorithms use a set of “macro” operators. For instance, the push and swap algorithm uses a “swap” macro, which is a set of operators that swaps location between two adjacent agents. Both TASS and Push and Swap do not return an optimal solution and guarantee completeness for special cases only. TASS is complete only for tree graphs while Push and Rotate [10], a variant of Push and Swap, is complete for graphs where at least two vertices are always unoccupied, i.e., {a mathematical formula}k≤|V|−2.
+       </paragraph>
+       <paragraph>
+        Predating all of this work is a polynomial-time algorithm that is complete for all graphs [9], [34]. This previous work focuses on a specific variant of MAPF called the pebble motion coordination problem (PMC). PMC is similar to MAPF where each agent is viewed as a pebble and each pebble needs to be moved to its goal location.
+       </paragraph>
+      </section>
+      <section label="3.2.3">
+       <section-title>
+        Hybrid solvers
+       </section-title>
+       <paragraph>
+        Some suboptimal solvers are hybrids and include specific movement rules as well as significant search. For example, if the graph is a grid then establishing flow restrictions similar to traffic laws can simplify the problem [52], [24]. Each row/column in the grid is assigned two directions. Agents are either suggested or forced to move in the designated directions at each location in order to significantly reduce the chance of conflicts and the branching factor at each vertex. These approaches prioritize collision avoidance over shorter paths and work well in state spaces with large open areas. These approaches are not complete for the general case, as deadlocks may occur in bottlenecks.
+       </paragraph>
+       <paragraph>
+        Another hybrid solver was presented by Wang and Botea [53]. The basic idea is to precompute a full path ({a mathematical formula}Pi) for each agent ({a mathematical formula}ai). For each pair of successive steps ({a mathematical formula}pj,pj+1∈P) an alternative sub-path is also pre-computed. If the original computed path of agent {a mathematical formula}ai is blocked by another agent {a mathematical formula}aj, we redirect agent {a mathematical formula}ai to a bypass via one of the alternative paths. The main limitation of this approach is that it is only proven to be complete for grids which have the slidable property (defined in [53]). It is not clear how to generalize this algorithm to grids that are not slidable.
+       </paragraph>
+       <paragraph>
+        Ryan introduced a search-based approach for solving MAPF problems which uses abstraction to reduce the size of the state-space [35]. The input graph G is partitioned into subgraphs with special structures such as cliques, halls and rings. Each structure represents a certain topology (e.g., a hall is a singly-linked chain of vertices with any number of entrances and exits). Each structure has a set of rule-based operators such as Enter and Leave. Once a plan is found in the abstract space, a solution is derived using the rule based operators. A general way to use these abstractions is by solving the entire MAPF problem as a Constraint Satisfaction Problem (CSP). Each special subgraph adds constraints to the CSP solver, making the CSP solver faster [36]. The efficiency of subgraph decomposition (in terms of runtime) depends on the partitioning of the input graph. Finding the optimal partitioning is a hard problem and not always feasible. Open spaces are not suitable for partitioning by the defined structures making this algorithm less effective on graphs with open spaces.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Optimal MAPF solvers
+      </section-title>
+      <paragraph>
+       Optimal MAPF solvers usually search a global search space which combines the individual states of all k agents. This state space is denoted as the k-agent state space. The states in the k-agent state space are the different ways to place k agents into {a mathematical formula}|V| vertices, one agent per vertex. In the start and goal states agent {a mathematical formula}ai is located at vertices {a mathematical formula}starti and {a mathematical formula}goali, respectively. Operators between states are all the non-conflicting actions (including wait) that all agents have. Given this general state space, any A*-based algorithm can be used to solve the MAPF problem optimally.
+      </paragraph>
+      <paragraph>
+       We use the term {a mathematical formula}bbase to denote the branching factor of a single agent, that is, the number of locations that a single agent can move to in one time-step. This paper focuses on 4-connected grids where {a mathematical formula}bbase=5, since every agent can move to the four cardinal directions or wait at its current location. The maximum possible branching factor for k agents is {a mathematical formula}bpotential=bbasek. When expanding a state in a k-agent state space, all the {a mathematical formula}bpotential combinations may be considered, but only those that have no conflicts (with other agents or with obstacles) are legal neighbors. The number of legal neighbors is denoted by {a mathematical formula}blegal. {a mathematical formula}blegal=O(bbasek), and thus for worst-case analysis one can consider {a mathematical formula}blegal to be in the same order as {a mathematical formula}bpotential, i.e., exponential in the number of agents (k). On the other hand, in dense graphs (with many agents and with a small number of empty states), {a mathematical formula}blegal can be much smaller than {a mathematical formula}bpotential. In general, identifying the {a mathematical formula}blegal neighbors from the possible {a mathematical formula}bpotential neighbors is a Constraint Satisfaction Problem (CSP), where the variables are the agents, the values are the actions they take, and the constraints are to avoid conflicts. Hereafter we simply denote {a mathematical formula}blegal by b.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Admissible heuristics for MAPF
+       </section-title>
+       <paragraph>
+        To solve MAPF more efficiently with A*, one requires a non-trivial admissible heuristic. A simple admissible heuristic is to sum the individual heuristics of the single agents such as Manhattan distance for 4-connected grids or Euclidean distance for Euclidean graphs [35]. HCA* improves on this by computing the optimal distance to the goal for each agent, ignoring other agents. As this task is strictly easier than searching with additional agents, it can be used as an admissible heuristic. HCA* performed this computation incrementally for each agent, while Standley performed the computation exhaustively a priori before solving the MAPF problem [45].
+       </paragraph>
+       <paragraph>
+        We denote this heuristic as the sum of individual costs heuristic (SIC). Formally, the SIC heuristic is calculated as follows. For each agent {a mathematical formula}ai we assume that no other agent exists and calculate its optimal individual path cost from all states in the state space to {a mathematical formula}goali; this is usually done by a reverse search from the goal. The heuristic taken in the multi-agent A* search is the sum of these costs over all agents. For the example problem in Fig. 1, the SIC heuristic is {a mathematical formula}3+3=6. Note that the maximum of the individual costs is an admissible heuristic for the makespan variant described above, in which the task is to minimize the total time elapsed.
+       </paragraph>
+       <paragraph>
+        For small input graphs, the SIC heuristic for any problem configuration can be stored as a lookup table by precalculating the all-pairs shortest-path matrix for the input graph G. For larger graphs we calculate the shortest path from each state only to the goal states of a given instance. This, however, must be recomputed for each problem instance with respect to each set of goal states.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Drawbacks of A* for MAPF
+       </section-title>
+       <paragraph>
+        A* always begins by expanding a state and inserting its successors into the open list (denoted OPEN). All states expanded are maintained in a closed list (denoted CLOSED). Because of this, A* for MAPF suffers from two drawbacks. First, the size of the state space is exponential in the number of agents (k), meaning that CLOSED cannot be maintained in memory for large problems. Second, the branching factor of a given state may be exponential in k. Consider a state with 20 agents on a 4-connected grid. Each agent may have up to 5 possible moves (4 cardinal directions and wait). Fully generating all the {a mathematical formula}520=9.53×1014 neighbors of even the start state could be computationally infeasible. The following enhancements have been proposed to overcome these drawbacks.
+       </paragraph>
+      </section>
+      <section label="3.3.3">
+       <section-title>
+        Reducing the effective number of agents with Independence Detection
+       </section-title>
+       <paragraph>
+        Since the state space of MAPF is exponential in the number of agents, an exponential speedup can be obtained by reducing the number of agents in the problem. To this end Standley introduced the Independence Detection framework (ID) [45].
+       </paragraph>
+       <paragraph>
+        Two groups of agents are independent if there is an optimal solution for each group such that the two solutions do not conflict. ID attempts to detect independent groups of agents. Algorithm 1 provides the pseudo-code for ID. First, every agent is placed in its own group (line 1). Each group is solved separately using A* (line 2). The solution returned by A* is optimal with respect to the given group of agents. The paths of all groups are then checked for validity with respect to each other. If a conflict is found, the conflicting groups are merged into one group and solved optimally using A* (lines 6–7). This process of replanning and merging groups is repeated until there are no conflicts between the plans of all groups. The resulting groups are independent w.r.t. each other. Note that ID is not perfect, in the sense that more independent subgroups may lay undetected in the groups returned by ID.
+       </paragraph>
+       <paragraph>
+        Since the complexity of an MAPF problem in general is exponential in the number of agents, the runtime of solving an MAPF problem with ID is dominated by the running time of solving the largest independent subproblem [45]. ID may identify that a solution to a k-agent MAPF problem can be composed from solutions of several independent subproblems. We use {a mathematical formula}k′ to denote the effective number of agents which is number of agents in the largest independent subproblem ({a mathematical formula}k′≤k). As the problem is exponential in the number of agents, ID reduces the exponent from k to {a mathematical formula}k′.
+       </paragraph>
+       <paragraph>
+        Consider {a mathematical formula}A*+ID on our example problem in Fig. 1 (Section 2.7), but with an additional agent. Assume that the third agent {a mathematical formula}a3 is located at state D and that its goal state is {a mathematical formula}S1. ID will work as follows. Individual optimal paths of cost 3 are found for agents {a mathematical formula}a1 (path {a mathematical formula}〈S1,A1,D,G1〉) and {a mathematical formula}a2 (path {a mathematical formula}〈S2,B1,D,G2〉), and a path of cost 2 is found for agent {a mathematical formula}a3 (path {a mathematical formula}〈D,A2,S1〉). When validating the paths of agents {a mathematical formula}a1 and {a mathematical formula}a2, a conflict occurs at state D, and agents {a mathematical formula}a1 and {a mathematical formula}a2 are merged into one group. A* is called upon this group and returns a solution of cost 7 (agent {a mathematical formula}a2 waits one step at {a mathematical formula}B1). This solution is now validated with the solution of agent {a mathematical formula}a3. No conflict is found and the algorithm halts. The largest group invoked by A* was of size 2. Without ID, A* would have to solve a problem with 3 agents. Thus, the worst-case branching factor was reduced from {a mathematical formula}bbase3 to {a mathematical formula}bbase2.
+       </paragraph>
+       <paragraph>
+        It is important to note that the ID framework can be implemented on top of any optimal MAPF solver (one that is guaranteed to return an optimal solution) in line 7. Therefore, ID can be viewed as a general framework that utilizes an MAPF solver. Hence, ID is also applicable with the algorithm proposed in this paper (CBS) instead of with A*. Indeed, in the experimental evaluation of CBS we ran ID on top of CBS.
+       </paragraph>
+      </section>
+      <section label="3.3.4">
+       <section-title>
+        Enhancements to ID
+       </section-title>
+       <paragraph>
+        In order to improve the chance of identifying independent groups of agents, Standley proposed a tie-breaking rule using a conflict avoidance table (CAT) as follows. The paths that were found for the agents are stored in the CAT. When a newly formed, merged group is solved with A* (line 7), the A* search breaks ties in favor of states that will create the fewest conflicts with the existing planned paths of other groups (agents that are not part of the merged group), as stored in the CAT. The outcome of this improvement is that the solution found by A* using the conflict avoidance tie-breaking is less likely to cause a conflict with the other agents. As a result, agents paths are more likely to be independent, resulting in substantial speedup.
+       </paragraph>
+       <paragraph>
+        Standley also presented an enhanced version of ID (EID) [45]. In this version, once two groups of agents are found to conflict, a resolve conflict procedure is called prior to merging the groups. EID tries to resolve the conflict by attempting to replan one group to avoid the plan of the other group, and vice-versa. To maintain optimality, the cost of the plan found during the replanning must be exactly at the same cost as the original optimal solution for that group. If the conflict between the groups was not resolved, the groups are merged and solved together as in the basic ID. If the resolve procedure is able to solve the conflict, the groups are not merged and the main loop continues.
+       </paragraph>
+      </section>
+      <section label="3.3.5">
+       <section-title>
+        M*
+       </section-title>
+       <paragraph>
+        An algorithm related to ID is M* [51]. It is an A*-based algorithm that dynamically changes the branching factor based on conflicts. In general, expanded nodes generate only one child in which each agent makes its optimal move towards the goal. This continues until a conflict occurs between {a mathematical formula}q≥2 agents at node n. In this case there is a need to locally increase the search dimensionality. M* traces back from n up through all the ancestors of n until the root node and all these nodes are placed back in OPEN. If one of these nodes is expanded again it will generate {a mathematical formula}bq children where the q conflicting agents make all possible moves and the {a mathematical formula}k−q non-conflicting agents make their optimal move.
+       </paragraph>
+       <paragraph>
+        An enhanced version, called Recursive M* (RM*) [51] divides the q conflicting agents into subgroups of agents each with independent conflicts. Then, RM* is called recursively on each of these groups. A variant called ODRM* [17] combines Standley's Operator Decomposition (see Section 3.3.7) on top of RM*.
+       </paragraph>
+      </section>
+      <section label="3.3.6">
+       <section-title>
+        Avoiding surplus nodes
+       </section-title>
+       <paragraph>
+        Under some restrictions, A* is known to expand the minimal number of nodes required to find an optimal solution [11]. There is no such statement regarding the number of nodes generated by A*. Some of the nodes must be generated in order for an optimal solution be found. Nodes with {a mathematical formula}f&gt;C⁎, known as surplus nodes[15], are not needed in order to find an optimal solution.
+       </paragraph>
+       <paragraph>
+        Surplus nodes are all nodes that were generated but never expanded. The number of generated nodes is the number of expanded nodes times the branching factor. Thus, in MAPF, where the branching factor is exponential in the number of agents, the number of surplus nodes is potentially huge, and avoiding generating them can yield a substantial speedup [20], [19]. The challenge is how to identify surplus nodes during the search. Next, we describe existing techniques that attempt to detect surplus nodes.
+       </paragraph>
+      </section>
+      <section label="3.3.7">
+       <section-title>
+        Operator decomposition
+       </section-title>
+       <paragraph>
+        The first step towards reducing the amount of surplus nodes was introduced by Standley in his operator decomposition technique (OD) [45]. Agents are assigned an arbitrary (but fixed) order. When a regular A* node is expanded, OD considers and applies only the moves of the first agent. Doing so introduces an intermediate node. At intermediate nodes, only the moves of a single agent are considered, generating further intermediate nodes. When an operator is applied to the last agent, a regular node is generated. Once the solution is found, intermediate nodes in OPEN are not developed further into regular nodes, so that the number of regular surplus nodes is significantly reduced.
+       </paragraph>
+      </section>
+      <section label="3.3.8">
+       <section-title>
+        Enhanced partial expansion
+       </section-title>
+       <paragraph>
+        Enhanced partial expansion A* (EPEA*) [20] is an algorithm that avoids the generation of surplus nodes and, to the best of our knowledge, is the best A*-based solver for MAPF. EPEA* uses a priori domain knowledge to avoid generating surplus nodes. When expanding a node, N, EPEA* generates only the children {a mathematical formula}Nc with {a mathematical formula}f(Nc)=f(N). The other children of N (with {a mathematical formula}f(Nc)≠f(N)) are discarded. This is done with the help of a domain-dependent operator selection function (OSF). The OSF returns the exact list of operators which will generate nodes with the desired f-value (i.e., {a mathematical formula}f(N)). N is then re-inserted into the open list with f-cost equal to that of the next best child. N might be re-expanded later, when its new f-value becomes the best in the open list. This avoids the generation of surplus nodes and dramatically reduces the number of generated nodes.
+       </paragraph>
+       <paragraph>
+        In MAPF problems, when using the SIC heuristic, the effect on the f-value of moving a single agent in a given direction can be efficiently computed. Exact details of how this OSF for MAPF is computed and implemented can be found in [20].
+       </paragraph>
+      </section>
+      <section label="3.3.9">
+       <section-title>
+        The increasing cost tree search
+       </section-title>
+       <paragraph>
+        We recently presented a novel approach for solving MAPF instances optimally searching a tree called the increasing cost tree (ICT) using a corresponding search algorithm, called the increasing cost tree search (ICTS) [40], [42]. ICTS is a two-level search algorithm.
+       </paragraph>
+       <paragraph>
+        High level: At its high level, ICTS searches the increasing cost tree (ICT). Every node in the ICT consists of a k-ary vector {a mathematical formula}[C1,…Ck] which represents all possible solutions in which the individual path cost of agent {a mathematical formula}ai is exactly {a mathematical formula}Ci. The root of the ICT is {a mathematical formula}[opt1,...,optk], where {a mathematical formula}opti is the optimal individual path cost for agent {a mathematical formula}ai, i.e. the shortest path length from {a mathematical formula}si to {a mathematical formula}gi while ignoring other agents. A child in the ICT is generated by increasing the cost limit for one of the agents by one (or some unit cost). An ICT node {a mathematical formula}[C1,..,Ck] is a goal if there is a complete non-conflicting solution such that the cost of the individual path for {a mathematical formula}ai is exactly {a mathematical formula}Ci. Fig. 2 illustrates an ICT with 3 agents, all with optimal individual path costs of 10. The total cost of a node is {a mathematical formula}C1+…+Ck. For the root this is exactly the SIC heuristic of the start state, i.e., {a mathematical formula}SIC(start)=opti+opt2+…+optk. We use Δ to denote the depth of the lowest cost ICT goal node. The size of the ICT tree is exponential in Δ. Since all nodes at the same height have the same total cost, a breadth-first search of the ICT will find the optimal solution.
+       </paragraph>
+       <paragraph>
+        Low level: The low level acts as a goal test for the high level. For each ICT node {a mathematical formula}[C1,..,Ck] visited by the high level, the low level is invoked. The task of the low level is to find a non-conflicting complete solution such that the cost of the individual path of agent {a mathematical formula}ai is exactly {a mathematical formula}Ci. For each agent {a mathematical formula}ai, ICTS stores all single-agent paths of cost {a mathematical formula}Ci in a special compact data-structure called a multi-value decision diagram (MDD) [44]. The low level searches the cross product of the MDDs in order to find a set of k non-conflicting paths for the different agents. If such a non-conflicting set of paths exists, the low level returns true and the search halts. Otherwise, false is returned and the high level continues to the next high-level node (of a different cost combination).
+       </paragraph>
+       <paragraph>
+        Pruning rules: Special pruning techniques were introduced for high-level nodes [42]. These techniques search for a sub-solution for i agents, where {a mathematical formula}i&lt;k. If there exists a sub-group for which no valid solution exists, there cannot exist a valid solution for all k agents. Thus, the high-level node can be declared as a non-goal without searching for a solution in the k-agent path space. The enhanced version of ICTS ({a mathematical formula}ICTS+pruning) [41], [42] showed up to two orders of magnitude speedup over Standley's A* approach ({a mathematical formula}A*+OD+ID) [45].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      The conflict based search algorithm (CBS)
+     </section-title>
+     <paragraph>
+      We now turn to describe our new algorithm, the conflict based search algorithm (CBS). Later, in Section 8, we present a generalization to CBS called meta-agent conflict based search (MA-CBS). In addition, a memory efficient variant of CBS is presented in Appendix A.
+     </paragraph>
+     <paragraph>
+      Recall that the state space spanned by A* in MAPF is exponential in k (the number of agents). By contrast, in a single-agent pathfinding problem, {a mathematical formula}k=1, and the state space is only linear in the graph size. CBS solves MAPF by decomposing it into a large number of constrained single-agent pathfinding problems. Each of these problems can be solved in time proportional to the size of the map and length of the solution, but there may be an exponential number of such single-agent problems.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Definitions for CBS
+      </section-title>
+      <paragraph>
+       The following definitions are used in the remainder of the paper.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        We use the term path only in the context of a single agent and use the term solution to denote a set of k paths for the given set of k agents.
+       </list-item>
+       <list-item label="•">
+        A constraint is a tuple {a mathematical formula}(ai,v,t) where agent {a mathematical formula}ai is prohibited from occupying vertex v at time step t. During the course of the algorithm, agents will be associated with constraints. A consistent path for agent {a mathematical formula}ai is a path that satisfies all its constraints. Likewise, a consistent solution is a solution that is made up from paths, such that the path for any agent {a mathematical formula}ai is consistent with the constraints of {a mathematical formula}ai.
+       </list-item>
+       <list-item label="•">
+        A conflict is a tuple {a mathematical formula}(ai,aj,v,t) where agent {a mathematical formula}ai and agent {a mathematical formula}aj occupy vertex v at time point t. A solution (of k paths) is valid if all its paths have no conflicts. A consistent solution can be invalid if, despite the fact that the individual paths are consistent with the constraints associated with their agents, these paths still have conflicts.
+       </list-item>
+      </list>
+      <paragraph>
+       The key idea of CBS is to grow a set of constraints and find paths that are consistent with these constraints. If these paths have conflicts, and are thus invalid, the conflicts are resolved by adding new constraints. CBS works in two levels. At the high level, conflicts are found and constraints are added. The low level finds paths for individual agents that are consistent with the new constraints. Next, we describe each part of this process in more detail.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       High level
+      </section-title>
+      <paragraph>
+       In the following section we describe the high-level process of CBS and the search tree it searches.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        The constraint tree
+       </section-title>
+       <paragraph>
+        At the high level, CBS searches a tree called the constraint tree (CT). A CT is a binary tree. Each node N in the CT consists of:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         A set of constraints ({a mathematical formula}N.constraints). Each of these constraints belongs to a single agent. The root of the CT contains an empty set of constraints. The child of a node in the CT inherits the constraints of the parent and adds one new constraint for one agent.
+        </list-item>
+        <list-item label="2.">
+         A solution ({a mathematical formula}N.solution). A set of k paths, one path for each agent. The path for agent {a mathematical formula}ai must be consistent with the constraints of {a mathematical formula}ai. Such paths are found by the low-level search.
+        </list-item>
+        <list-item label="3.">
+         The total cost ({a mathematical formula}N.cost) of the current solution (summed over all the single-agent path costs). This cost is referred to as the f-value of node N.
+        </list-item>
+       </list>
+       <paragraph>
+        Node N in the CT is a goal node when {a mathematical formula}N.solution is valid, i.e., the set of paths for all agents has no conflicts. The high level performs a best-first search on the CT where nodes are ordered by their costs. In our implementation, ties are broken in favor of CT nodes whose associated solution contains fewer conflicts. Further ties were broken in a FIFO manner.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Processing a node in the CT
+       </section-title>
+       <paragraph>
+        Given the list of constraints for a node N of the CT, the low-level search is invoked. The low-level search (described in detail below) returns one shortest path for each agent, {a mathematical formula}ai, that is consistent with all the constraints associated with {a mathematical formula}ai in node N. Once a consistent path has been found for each agent (with respect to its own constraints) these paths are then validated with respect to the other agents. The validation is performed by iterating through all time steps and matching the locations reserved by all agents. If no two agents plan to be at the same location at the same time, this CT node N is declared as the goal node, and the current solution ({a mathematical formula}N.solution) that contains this set of paths is returned. If, however, while performing the validation, a conflict {a mathematical formula}C=(ai,aj,v,t) is found for two or more agents {a mathematical formula}ai and {a mathematical formula}aj, the validation halts and the node is declared a non-goal node.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Resolving a conflict
+       </section-title>
+       <paragraph>
+        Given a non-goal CT node N whose solution {a mathematical formula}N.solution includes a conflict{a mathematical formula}Cn=(ai,aj,v,t) we know that in any valid solution, at most one of the conflicting agents ({a mathematical formula}ai and {a mathematical formula}aj) may occupy vertex v at time t. Therefore, at least one of the constraints {a mathematical formula}(ai,v,t) or {a mathematical formula}(aj,v,t) must be added to the set of constraints in {a mathematical formula}N.constraints. To guarantee optimality, both possibilities are examined and node N is split into two children. Both children inherit the set of constraints from N. The left child resolves the conflict by adding the constraint {a mathematical formula}(ai,v,t) and the right child adds the constraint {a mathematical formula}(aj,v,t).
+       </paragraph>
+       <paragraph>
+        Note that for a given CT node N, one does not have to save all its cumulative constraints. Instead, it can save only its latest constraint and extract the other constraints by traversing the path from N to the root via its ancestors. Similarly, with the exception of the root node, the low-level search should only be performed for agent {a mathematical formula}ai which is associated with the newly added constraint. The paths of other agents remain the same as no new constraints are added for them.
+       </paragraph>
+      </section>
+      <section label="4.2.4">
+       Conflicts of {a mathematical formula}k&gt;2 agents
+       <paragraph>
+        It may be the case that while performing the validation between the different paths a k-agent conflict is found for {a mathematical formula}k&gt;2. There are two ways to handle such k-agent conflicts. We can generate k children, each of which adds a constraint to {a mathematical formula}k−1 agents (i.e., each child allows only one agent to occupy the conflicting vertex v at time t). Or, an equivalent formalization is to only focus on the first two agents that are found to conflict, and only branch according to their conflict. This leaves further conflicts for deeper levels of the tree. This is illustrated in Fig. 3. The top tree represents a variant of CT where k-way branching is allowed for a single conflict that includes k-agents for the case where {a mathematical formula}k=3. Each new successor adds {a mathematical formula}k−1 (=2) new constraints (on all agents but one). The bottom tree presents a binary CT for the same problem. Note that the bottom middle state is a duplicate state, and if duplicate detection is not applied there will be two occurrences of this node instead of one. As can be seen the size of the deepest layer in both trees is identical. The complexity of the two approaches is similar, as they both will end up with k nodes, each with {a mathematical formula}k−1 new constraints. For simplicity we implemented and describe only the second option.
+       </paragraph>
+      </section>
+      <section label="4.2.5">
+       <section-title>
+        Edge conflicts
+       </section-title>
+       <paragraph>
+        For simplicity we described only conflicts that occur in vertices. But if according to the problem definition agents are not allowed to cross the same edge at opposite direction then edge conflicts can also occur. We define an edge conflict to be the tuple {a mathematical formula}(ai,aj,v1,v2,t) where two agents “swap” locations ({a mathematical formula}ai moves from {a mathematical formula}v1 to {a mathematical formula}v2 while {a mathematical formula}aj moves from {a mathematical formula}v2 to {a mathematical formula}v1) between time step t to time step {a mathematical formula}t+1. An edge constraint is defined as {a mathematical formula}(ai,v1,v2,t), where agent {a mathematical formula}ai is prohibited of starting to move along the edge from {a mathematical formula}v1 to {a mathematical formula}v2 at time step t (and reaching {a mathematical formula}v2 at time step {a mathematical formula}t+1). When applicable, edge conflicts are treated by the high level in the same manner as vertex conflicts.
+       </paragraph>
+      </section>
+      <section label="4.2.6">
+       <section-title>
+        Pseudo-code and example
+       </section-title>
+       <paragraph>
+        Algorithm 2 presents the pseudo code for CBS, as well as the more advanced MA-CBS that will be explained later in Section 8. Lines 11–18 are only relevant for MA-CBS. For now, assume that the {a mathematical formula}shouldMerge() function (in line 11) always returns false, skipping lines 11–18. The high level has the structure of a best-first search.
+       </paragraph>
+       <paragraph>
+        We describe CBS using our example from Fig. 1 (Section 2.7), where the mice need to get to their respective pieces of cheese. The corresponding CT is shown in Fig. 4. The root contains an empty set of constraints. In line 2 the low level returns an optimal solution for each agent, {a mathematical formula}〈S1,A1,D,G1〉 for {a mathematical formula}a1 and {a mathematical formula}〈S2,B1,D,G2〉 for {a mathematical formula}a2. Thus, the total cost of this node is 6. All this information is kept inside this node. The root is then inserted into OPEN and will be expanded next.
+       </paragraph>
+       <paragraph>
+        When validating the two-agent solution given by the two individual paths (line 7), a conflict is found when both agents arrive at vertex D at time step 2. This creates a conflict ({a mathematical formula}a1,a2,D,2) (line 10). As a result, the root is declared as a non-goal and two children are generated in order to resolve the conflict (line 19). The left child, adds the constraint {a mathematical formula}(a1,D,2) while the right child adds the constraint {a mathematical formula}(a2,D,2). The low-level search is now invoked (line 23) for the left child to find an optimal path that also satisfies the new constraint. For this, {a mathematical formula}a1 must wait one time step either at {a mathematical formula}A1 or at {a mathematical formula}S1 and the path {a mathematical formula}〈S1,A1,A1,D,G1〉 is returned for {a mathematical formula}a1. The path for {a mathematical formula}a2, {a mathematical formula}〈S2,B1,D,G2〉 remains unchanged in the left child. The total cost for the left child is now 7. In a similar way, the right child is generated, also with cost 7. Both children are inserted to OPEN (line 26). In the next iteration of the while loop (line 5) the left child is chosen for expansion, and the underlying paths are validated. Since no conflicts exist, the left child is declared a goal node (line 9) and its solution is returned as an optimal solution.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Low level: find paths for CT nodes
+      </section-title>
+      <paragraph>
+       The low-level search is given an agent, {a mathematical formula}ai, and the set of constraints associated with {a mathematical formula}ai. It performs a search in the underlying graph to find an optimal path for agent {a mathematical formula}ai that satisfies all its constraints while completely ignoring the other agents. The search space for the low-level search has two dimensions: the spatial dimension and the time dimension.{sup:2} Any single-agent pathfinding algorithm can be used to find the path for agent {a mathematical formula}ai, while verifying that the constraints are satisfied. We implemented the low-level search of CBS with A* which handled the constraints as follows. Whenever a state {a mathematical formula}(v,t) is generated where v is a location and t a time step and there exists a constraint ({a mathematical formula}ai,v,t) in the current CT (high-level) node, this state is discarded. The heuristic we used is the shortest path in the spatial dimension, ignoring other agents and constraints.
+      </paragraph>
+      <paragraph>
+       For cases where two low-level A* states have the same f-value, we used a tie-breaking policy based on Standley's tie-breaking conflict avoidance table (CAT) (described in Section 3.3.4). States that contain a conflict with a smaller number of other agents are preferred. For example, if states {a mathematical formula}s1=(v1,t1) and {a mathematical formula}s2=(v2,t2) have the same f value, but {a mathematical formula}v1 is used by two other agents at time {a mathematical formula}t1 while {a mathematical formula}v2 is not used by any other agent at time {a mathematical formula}t2, then {a mathematical formula}s2 will be expanded first. This tie-breaking policy improves the total running time by a factor of 2 compared to arbitrary tie breaking. Duplicate states detection and pruning (DD) speeds up the low-level procedure. Unlike single-agent pathfinding, the low-level state-space also includes the time dimension and dynamic ‘obstacles’ caused by constraints. Therefore, two states are considered duplicates if both the position of {a mathematical formula}ai and the time step are identical in both states.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Theoretical analysis
+     </section-title>
+     <paragraph>
+      In this section we discuss theoretical aspects of CBS. We begin with a proof that CBS returns the optimal solution followed by a proof of completeness. We then discuss the pros and cons of CBS when compared to other algorithms. All claims in this section assume the sum-of-costs cost function. Adapting these claims to other cost functions is discussed in Section 7.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Optimality of CBS
+      </section-title>
+      <paragraph>
+       We start by providing several supporting claims for the optimality proof.
+      </paragraph>
+      <paragraph label="Definition 1">
+       For a given node N in the constraint tree, let {a mathematical formula}CV(N) be the set of all solutions that are: (1) consistent with the set of constraints of N and (2) are also valid (i.e., without conflicts).
+      </paragraph>
+      <paragraph>
+       If N is not a goal node, then the solution at N will not be part of {a mathematical formula}CV(N) because the solution is not valid. For example, consider the root node. The root has no constraints thus {a mathematical formula}CV(root) equals to the set of all possible valid solutions. If the solution chosen for the root is not valid and thus is not part of {a mathematical formula}CV(root), the root will not be declared a goal.
+      </paragraph>
+      <paragraph label="Definition 2">
+       We say that node N permits a solution p if {a mathematical formula}p∈CV(N).
+      </paragraph>
+      <paragraph>
+       The root of the CT, for example, has an empty set of constraints. Any valid solution satisfies the empty set of constraints. Thus the root node permits all valid solutions.
+      </paragraph>
+      <paragraph>
+       The cost of a solution in {a mathematical formula}CV(N) is the sum of the costs of the individual agents. Let {a mathematical formula}minCost(CV(N)) be the minimum cost over all solutions in {a mathematical formula}CV(N). In the case of {a mathematical formula}CV(N)=∅ then {a mathematical formula}minCost(CV(N))=∞.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       The cost of a node N in the CT is a lower bound on{a mathematical formula}minCost(CV(N)).
+      </paragraph>
+      <paragraph label="Proof">
+       Since {a mathematical formula}N.cost is the sum of all the optimal consistent single agent solutions, it has the minimum cost among all consistent solutions. By contrast, {a mathematical formula}minCost(CV(N)) has the minimum cost among all consistent and valid solutions. Since the set of all consistent and valid solutions is a subset of all consistent solutions, it must be that {a mathematical formula}N.cost≤minCost(CV(N)).  □
+      </paragraph>
+      <paragraph label="Proof">
+       For each valid solution p, there exists at least one node N inOPENsuch that N permits p.By induction on the expansion cycle: In the base case OPEN only contains the root node, which has no constraints. Consequently, the root node permits all valid solutions. Now, assume this is true after the first {a mathematical formula}i−1 expansions. During expansion i assume that node N is expanded. The successors of node N–{a mathematical formula}N1 and {a mathematical formula}N2 are generated. Let p be a valid solution. If p is permitted by another node in OPEN, we are done. Otherwise, assume p is permitted by N. We need to show that p must be permitted by at least one of its successors. The new constraints for {a mathematical formula}N1 and {a mathematical formula}N2 share the same time and location, but constrain different agents. Suppose a solution p permitted by N has agent {a mathematical formula}a1 at the location of the constraint. Agent {a mathematical formula}a1 can only be constrained at one of {a mathematical formula}N1 and {a mathematical formula}N2, but not both, so one of these nodes must permit p. Thus, the induction holds. □
+      </paragraph>
+      <paragraph>
+       Consequence: at all times at least one CT node in OPENpermits the optimal solution (as a special case of Lemma 2).
+      </paragraph>
+      <paragraph label="Proof">
+       CBS returns an optimal solution.When a goal node G is chosen for expansion by the high level, all valid solutions are permitted by at least one node from OPEN (Lemma 2). Let p be a valid solution (with cost {a mathematical formula}p.cost) and let {a mathematical formula}N(p) be the node that permits p in OPEN. Let {a mathematical formula}N.cost be the cost of node N. {a mathematical formula}N(p).cost≤p.cost (Lemma 1). Since G is a goal node, {a mathematical formula}G.cost is a cost of a valid solution. Since the high-level search explores nodes in a best-first manner according to there cost we get that {a mathematical formula}G.cost≤N(p).cost≤p.cost. □
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Completeness of CBS
+      </section-title>
+      <paragraph>
+       The state space for the high-level search of CBS is infinite as constraints can be added for an infinite number of time steps. This raises the issue of completeness. Completeness of CBS includes two claims:
+      </paragraph>
+      <list>
+       <list-item>
+        Claim a: CBS will return a solution if one exists.
+       </list-item>
+       <list-item>
+        Claim b: CBS will identify an unsolvable problem.
+       </list-item>
+      </list>
+      <paragraph>
+       We will now show that claim a is always true while claim b requires a test independent to CBS.
+      </paragraph>
+      <section label="5.2.1">
+       Claim a
+       <paragraph label="Proof">
+        For every cost C, there is a finite number of CT nodes with cost C.Assume a CT node N with cost C. After time step C all agents are at their goal position. Consequently, no conflicts can occur after time step C. Since constraints are derived from conflicts, no constraints are generated for time steps greater than C. As the cost of every CT node is monotonically non-decreasing, all of the predecessors of the CT node N have cost ≤C. Hence, neither N nor any of its predecessors can generate constraints for time step greater than C. Since there is a finite number of such constraints (at most {a mathematical formula}k⋅|V|⋅C constraints on vertices and {a mathematical formula}k⋅|E|⋅C constraints on edges), there is also a finite number of CT nodes that contain such constraints. □
+       </paragraph>
+       <paragraph label="Proof">
+        CBS will return a solution if one exist.CBS uses a systematic best-first search, and the costs of the CT nodes are monotonically non-decreasing. Therefore, for every pair of costs X and Y, if {a mathematical formula}X&lt;Y then CBS will expand all nodes with cost X before expanding nodes of cost Y. Since for each cost there is a finite number of CT nodes (Theorem 2), then the optimal solution must be found after expanding a finite number of CT nodes. □
+       </paragraph>
+      </section>
+      <section label="5.2.2">
+       Claim b
+       <paragraph>
+        Claim b, does not always hold for CBS. For example, consider the problem presented in Fig. 5 where two agents need to switch locations. The CT will grow infinitely, adding more and more constraints, never reaching a valid solution. Fortunately, Yu and Rus [57] have recently presented an algorithm that detects weather a given MAPF instance is solvable or not. Running their algorithm prior to CBS would satisfy claim b as CBS will be called only if the instance is solvable.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Comparison with other algorithms
+      </section-title>
+      <paragraph>
+       This section compares the work done by CBS to that of A* when both aim to minimize the sum-of-costs function and both use the SIC heuristic. Assume we use A* for MAPF. Let χ be the set of (multi-agent) A* nodes with {a mathematical formula}f&lt;C⁎ when A* is executed with the SIC heuristic. Also, let {a mathematical formula}X=|χ|. It is well known that A* must expand all nodes in χ in order to guarantee optimality [11].
+      </paragraph>
+      <paragraph>
+       In prior work we analyzed the worst case behavior of A* and ICTS [42]. A* generates, in the worst case, up to {a mathematical formula}X×(bbase)k nodes. ICTS searches, in the worst case, up to {a mathematical formula}X×kΔ low-level nodes (where Δ is the depth of the lowest cost ICT goal node). Note that the low-level nodes visited by ICTS are states in the k-agent MDD search space, which is similar but not the same as the nodes visited by A*. For more details, see [42]. We limit the discussion here to comparing CBS only to A*, as the relation between A* and ICTS was already studied [42]. Let ϒ be the set of nodes with {a mathematical formula}cost&lt;C⁎ in the CT and let {a mathematical formula}Y=|ϒ|. As a best-first search guided by the cost of nodes and since cost is monotonically non-decreasing, CBS must expand all the nodes in ϒ. We restrict ourselves to giving an upper bound on Y. As the branching factor of the CT is 2, {a mathematical formula}2d nodes must be expanded in the worst case where d is the depth of the CT once a solution is found. At each node of the CT exactly one constraint is added. In the worst case an agent will be constrained to avoid every vertex except one at every time step in the solution. The total number of time steps summed over all agents is {a mathematical formula}C⁎. Thus, an upper bound on Y, the number of CT nodes that CBS must expand, is {a mathematical formula}2|V|×C⁎. For each of these nodes the low level is invoked and expands at most {a mathematical formula}|V|×C⁎ (single-agent) states for each time step. Let {a mathematical formula}Y¯ be the number of states expanded in the underlying graph (low-level states). {a mathematical formula}Y¯=O(2|V|×C⁎×|V|×C⁎). Note that we counted low-level nodes that are expanded within expanded high-level nodes. If we also want to consider the generated high-level nodes we should multiple this by 2 as each expanded CT node generates 2 new nodes. Again, in practice Y and {a mathematical formula}Y¯ can be significantly smaller.
+      </paragraph>
+      <paragraph>
+       CBS performs a high-level search in the CT and then a low-level search in the underlying graph and expands a total of {a mathematical formula}Y¯ low-level states. Thus, if {a mathematical formula}Y¯≪X, that is, if the number of states expanded in all the single-agent searches is much smaller than the number of (multi-agent) A* states with {a mathematical formula}f&lt;C⁎, then CBS will outperform A* and vice-versa. One may be surprised by this result, showing that CBS can potentially consider less states than A*, as A* is known to be “optimally efficient” in the sense that it expands only the set of nodes necessary to find optimal solution. The “optimally efficient” property of A*, however, is only true if comparing A* with another BFS searching the same state space, using the same, consistent, heuristic function, and ignoring the impact of tie-breaking between states with the same f values [11]. CBS, searches a completely different state space than the traditional A*, and thus can be arbitrarily better than A*.
+      </paragraph>
+      <paragraph>
+       Next we show special cases where {a mathematical formula}Y¯≪X (bottleneck) and where {a mathematical formula}X≪Y¯ (open space). The overall trend seems to be typical for MAPF, where the topology of the domain greatly influences the behavior of algorithms.
+      </paragraph>
+      <section label="5.3.1">
+       <section-title>
+        Example of CBS outperforming A* (bottlenecks)
+       </section-title>
+       <paragraph>
+        Our example of Fig. 1 (Section 2.7) demonstrates a case where {a mathematical formula}Y¯≪X, i.e., a case where CBS expands fewer nodes than A*. As detailed above, CBS generates a total of three CT nodes (shown in Fig. 4 in Section 4.2.6). At the root, the low level is invoked for the two agents. The low-level search finds an optimal path for each of the two agents (each of length 3), and expands a total of 8 low-level states for the CT root. Now, a conflict is found at D. Two new CT children nodes are generated. In the left child the low-level searches for an alternative path for agent {a mathematical formula}a1 that does not pass through D at time step 2. {a mathematical formula}S1 plus all m states {a mathematical formula}A1,…,Am are expanded with {a mathematical formula}f=3. Then, D and {a mathematical formula}G1 are expanded with {a mathematical formula}f=4 and the search halts and returns the path {a mathematical formula}〈S1,A1,A1,D,G1〉.
+       </paragraph>
+       <paragraph>
+        Thus, at the left child a total of {a mathematical formula}m+3 nodes are expanded. Similar, {a mathematical formula}m+3 states are expanded for the right child. Adding all these to the 8 states expanded at the root we get that a total of {a mathematical formula}Y¯=2m+14 low-level states are expanded.
+       </paragraph>
+       <paragraph>
+        Now, consider A* which is running in a 2-agent state space. The root ({a mathematical formula}S1,S2) has {a mathematical formula}f=6. It generates {a mathematical formula}m2 nodes, all in the form of {a mathematical formula}(Ai,Bj) for {a mathematical formula}(1≤i,j≤m). All these nodes are expanded with {a mathematical formula}f=6. Now, node {a mathematical formula}(A1,D) with {a mathematical formula}f=7 is expanded (agent {a mathematical formula}a1 waits at {a mathematical formula}A1). Then nodes {a mathematical formula}(D,G2) and {a mathematical formula}(G1,G2) are expanded and the solution is returned. So, in total A* expanded {a mathematical formula}X=m2+3 nodes. For {a mathematical formula}m≥5 this is larger than {a mathematical formula}2m+14 and consequently, CBS will expand fewer nodes. A* must expand the Cartesian product of single agent paths with {a mathematical formula}f=3. By contrast, CBS only tried two such paths to realize that no solution of cost 6 is valid.
+       </paragraph>
+       <paragraph>
+        Furthermore, the constant time per (low-level) node of CBS is much smaller than the constant time per node of A* for two reasons: A* expands multi-agent nodes while CBS expands single-agent states. Second, the open list maintained by CBS is much smaller because the single agent search space is linear in the size of the input graph. By contrast the open list for A* deals with the multi-agent state space which is exponentially larger. Consequently, insertion and extraction of nodes from the open list is faster in CBS. CBS also incurs overhead directly at the high-level nodes. Each non-goal high-level node requires validating the given solution and generating two successors. The number of high-level nodes is very small compared to the low-level nodes. Consequently, the overhead of the high-level is negligible.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       <section-title>
+        Example of A* outperforming CBS (open space)
+       </section-title>
+       <paragraph>
+        Fig. 6 presents a case where {a mathematical formula}Y¯≫X and A* will outperform CBS. There is an open area in the middle (in gray) and all agents must cross this area. For each agent there are four optimal paths of length 4 and thus the SIC heuristic of the start state is 8. However, each of the 16 combinations of these paths has a conflict in one of the gray cells. Consequently, {a mathematical formula}C⁎=9 as one agent must wait at least one step to avoid collision. For this problem A* will expand 5 nodes with {a mathematical formula}f=8: {a mathematical formula}{(D2,C1),(D3,C2),(D3,B1),(C2,B1),(C3,B2)} and 3 nodes with {a mathematical formula}f=9{a mathematical formula}{(B3,B2),(A3,B3),(A3,B4)} until the goal is found and a total of 8 nodes are expanded.
+       </paragraph>
+       <paragraph>
+        Now, consider CBS. CBS will build a CT which is shown in Fig. 7. The CT consists of 5 non-goal CT nodes with cost 8, and 6 goal CT nodes (dashed outline) with cost 9. The root CT node will run the low-level search for each agent to a total of 8 low-level expansions. Each non-goal CT node except the root will run the low-level search for a single agent to a total of 4 low-level expansions. Each goal CT node will expand 5 low-level nodes. In total, CBS will expand {a mathematical formula}8+4⋅4+6⋅5=54 low-level nodes.
+       </paragraph>
+       <paragraph>
+        Since the Conflict Tree grows exponentially in the number of conflicts encountered, CBS behaves poorly when a set of agents is strongly coupled, i.e., when there is a high rate of internal conflicts between agents in the group.
+       </paragraph>
+       <paragraph>
+        While it is hard to predict the performance of the algorithms in actual domains, the above observations can give some guidance. If there are more bottlenecks, CBS will have advantage over the A*-based approaches as it will rule out the f-value where agents conflict in the bottleneck very quickly and then move to solutions which bypass the bottlenecks. If there are more open spaces, A* will have the advantage over CBS as it will rule out conflicted solutions very fast. Next, we show experimental results supporting both cases.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      CBS empirical evaluation
+     </section-title>
+     <paragraph>
+      CBS, as well as the other algorithms presented in this paper, is applicable to many variants of the MAPF problem. Next, we describe the MAPF variant and experimental setting used for our empirical analysis. This specific MAPF variant and setting was chosen to conform with prior work [42], [38], [39], [45], [46].
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Experimental problem settings
+      </section-title>
+      <paragraph>
+       At each time step all agents can simultaneously perform a move or wait action. Our implementation assumes that both moving and waiting have unit cost. We also make the following two assumptions:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The agents never disappear. Even if an agent arrived at its goal it will block other agents from passing through it.
+       </list-item>
+       <list-item label="2.">
+        Wait actions at the goal cost zero only if the agent never leaves the goal later. Otherwise, they cost one.
+       </list-item>
+      </list>
+      <paragraph>
+       In addition, in our experimental setting agents are allowed to follow each other. That is, agent {a mathematical formula}ai can move from x to y if, at the same time, agent {a mathematical formula}aj also moves from y to z. Following [45], [42], [55], [13], we allow agents to follow each other in a cyclic chain. We believe that this policy is more suited to represent a multi-robot scenario, as indeed robots can move simultaneously in a circle (without an empty space). Not allowing following in a chain is more common in the pebble motion literature [9], where pebbles are moved one after the other, and thus at least one empty space is needed to initiate a movement. Edge conflicts are also prohibited. That is agent {a mathematical formula}ai is prohibited to move from x to y if at the same time agent {a mathematical formula}aj moves from y to x. Our implementation does not use a duplicate detection and pruning procedure (DD) at the high level as we found it to have a large overhead with negligible improvement. The low level, on the other hand, does use DD.
+      </paragraph>
+      <paragraph>
+       The specific global cumulative cost function used in our experiments is the sum-of-costs function explained in Section 2.4. If, for instance, it takes agents {a mathematical formula}a1 and {a mathematical formula}a2 2 and 3 time steps to reach their goal respectively, then the sum-of-costs for these two agents is {a mathematical formula}2+3=5. Note that for each agent the number of time steps are counted until the time step in which it arrives at its goal without moving away. An agent that reaches its goal but later on is forced to move away might cause a dramatic increase in the total cost. To remedy this we used the same mechanism of EPEA* [15] which generates high-level nodes one at a time according to their f-value.
+      </paragraph>
+      <paragraph>
+       For an admissible heuristic for the low-level search we used the SIC heuristic (see Section 3.3.1) in all our experiments.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Experimental results
+      </section-title>
+      <paragraph>
+       We implemented and experimented with A*, EPEA*, {a mathematical formula}ICTS+pruning (denoted ICTS) and CBS. For ICTS, we used the all triples pruning[42], which has been found to be very effective. All algorithms, excluding ICTS, are based on the SIC heuristic. ICTS uses more advanced pruning that could potentially apply to CBS and A* as advanced heuristics in the future. Despite this, CBS without this advanced heuristic still outperforms ICTS in many scenarios.
+      </paragraph>
+      <section label="6.2.1">
+       {a mathematical formula}8×8 4-connected grid
+       <paragraph>
+        We begin with an {a mathematical formula}8×8 4-connected open grid where the number of agents ranges from 3 to 21. We set a time limit of 5 minutes. If an algorithm could not solve an instance within the time limit it was halted and fail was returned. Our aim here is to study the behavior of the different algorithms for a given number of agents. When the ID framework is applied to k agents (whose start and goal locations are randomized) the resulting effective number of agents, {a mathematical formula}k′, is noisy and its variance is very large. Therefore, for this experiment we followed [42] and created problem instances where all agents are dependent, according to the ID framework.{sup:3} In such cases {a mathematical formula}k′≡k and running the ID framework is superfluous.
+       </paragraph>
+       <paragraph>
+        Fig. 8 shows the success rate, i.e., the percentage of instances that could be solved under 5 minutes by the different algorithms when the number of agents increases. In these simple problems A* is clearly inferior, and CBS holds a slight advantage over the other approaches.
+       </paragraph>
+       <paragraph>
+        Table 1 presents the number of nodes generated and the run time averaged over 100 instances. For the case of CBS both the high-level (hl) nodes and low-level (ll) states are reported. “NA” denotes problems where A* obtained less than 80% success rate (more than 20% fail) for a given number of agents. The count column states the number of instances solved by all algorithms within the time limit. Average results are presented only for those instances. Similar to [42] we do not report the number of nodes for the ICTS variants because this algorithm is not based solely on search.
+       </paragraph>
+       <paragraph>
+        The results of EPEA* and CBS are relatively similar. To investigate the statistical significance of the differences between them, we performed a paired t-test on the runtime results of these two algorithms. The resulting p-values are shown in the “p-val” column. As can be seen, for larger problem sizes the significance of the difference between the algorithms becomes smaller (high p-value corresponds to smaller significance). This is because some problems are very difficult to solve, while other problems are easy and can be solved fast. This fact, together with the exponential nature of MAPF, results in high variance of the runtime results. Clearly, pure A* is the worst algorithm while EPEA* is the strongest A* variant. CBS is faster than ICTS for more than 11 agents. Note that although CBS generates more nodes than EPEA*, it is still faster in many cases ({a mathematical formula}k′&gt;14) due to the fact that the constant time per node of the low-level CBS (single-agent state, small open list) is much smaller than that of EPEA* (multiple agents, large open list). CBS was faster than EPEA* and ICTS by up to a factor of 2 and 3 respectively.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        DAO maps
+       </section-title>
+       <paragraph>
+        We also experimented on 3 benchmark maps from the game Dragon Age: Origins[47]. Here we aimed to show the overall performance of the evaluated algorithms. Unlike the results above, here we perform ID on top of each of the evaluated algorithms. The different algorithms are given a problem instance with a given number of k agents, where the start and goal locations are uniformly randomized. ID breaks these problems into subproblems and executes the associated algorithm on each subproblem separately. We show results only for the three strongest algorithms: EPEA*, ICTS and CBS.
+       </paragraph>
+       <paragraph>
+        Fig. 9 (right) shows the success rates given the number of agents for the three maps. Here the results are mixed and there is no global winner. One can clearly see that ICTS is always better than EPEA*. The performance of CBS on these maps supports our theoretical claims that CBS is very effective when dealing with corridors and bottlenecks but rather inefficient in open spaces. For den520d (top) there are no bottlenecks but there are large open spaces; CBS was third. For ost003d (middle) there are few bottlenecks and small open spaces; CBS was intermediate in most cases. Finally, for brc202b (bottom) there are many narrow corridors and bottlenecks but very few open spaces, thus CBS was best. Note that while both den520 and ost003 have open spaces they differ in the number of bottlenecks.
+       </paragraph>
+       <paragraph>
+        Fig. 10 illustrates the conflicts encountered during the solving process of CBS. A cell where a conflict occurred in is colored red. The darkness of the red corresponds to the number of conflicts occurred in a cell. Darker red implies more conflicts. As can be seen in open spaces (den520d, ost003d) the conflicts are spread and cover a large portion of the map. By contrast, in brc202d the conflicts are concentrated in the corridors and bottlenecks. This illustrates how open spaces encourage more conflict and thus are less suitable for CBS.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      CBS using different cost functions
+     </section-title>
+     <paragraph>
+      Let SoC denote the sum-of-costs function as defined in Section 2.4. Up until now we focused on the task of minimizing the SoC function. Nevertheless, CBS can be generalized to other cost functions as follows.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       High level
+      </section-title>
+      <paragraph>
+       Generalizing CBS to the makespan cost function requires a single change to the high level – computing the cost of CT nodes according to the makespan of their corresponding solution instead of SoC (line 24 in Algorithm 2, Section 4.2.6). More generally, let Φ be a function assigning costs to MAPF solutions. To find a solution that minimizes Φ, we modify CBS to compute the cost of every CT node, N, to be {a mathematical formula}Φ(N.solution). We denote an execution of CBS with cost function Φ as {a mathematical formula}CBSΦ.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Low level
+      </section-title>
+      <paragraph>
+       Recall that each high-level node, N, keeps a multi-agent solution, {a mathematical formula}N.solution. Each multi-agent solution is composed of k single-agent paths. The low level solver, as defined above for our cost function (SoC), returns a single agent path for a given agent. The single-agent path returned by the low-level must be optimal in the sense that it keeps {a mathematical formula}Φ(N.solution) to a minimum. It is possible, however, to improve the low-level for a given cost function. During the low-level search we suggest breaking ties according to the minimal number of conflicts encountered with other agents. This can be done using a conflict avoidance table (CAT) described above.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Optimality
+      </section-title>
+      <paragraph label="Proof">
+       With minor modifications, the optimality proof for the sum of cost function (presented in Section 5.1) holds for {a mathematical formula}CBSΦ for a very wide range of cost functions. Φ is called admissible if {a mathematical formula}Φ(N)≤minCost(CV(N)) for every CT node N. If Φ is admissible then{a mathematical formula}CBSΦis guaranteed to return the optimal solution.{a mathematical formula}CBSΦ performs a best-first search according to Φ. By definition, any solution in the CT subtree below N cannot have a solution of cost smaller than {a mathematical formula}minCost(CV(N)). BFS guided by an admissible evaluation function is guaranteed to return the optimal solution [11]. □
+      </paragraph>
+      <paragraph>
+       SoC, makespan, and fuel cost functions are all admissible, as adding more constraints in subsequent CT nodes cannot lead to a solution with a lower cost. Therefore, according to Theorem 4, {a mathematical formula}CBSΦ would return optimal solutions for all these cost functions.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Completeness
+      </section-title>
+      <paragraph>
+       The proof of completeness provided in Section 5.2 holds for any cost function Φ as long as there is a finite number of solutions per given cost according to Φ. This condition holds for any cost function that has no zero cost actions. SoC and makespan are examples of such functions. The fuel cost function, on the other hand, does not have this property. For the fuel cost function there can be an infinite number of high-level nodes with a given cost as wait actions do not cost anything. Since the fuel cost function does not satisfy the above condition it calls for a slightly different approach. In their paper Yu and Rus [57] suggest that for any solvable MAPF instance no more than {a mathematical formula}O(|V|3) single agent steps are required for all agents to reach their goal. This fact can be utilized to our needs as follows. For each node N, if {a mathematical formula}SoC(N)&gt;|V|4, the node can safely be ignored. A solution larger than {a mathematical formula}|V|4 (according to SoC) must contain a time step where all agents perform a wait action simultaneously. In this case, there is a cheaper solution where this time step is removed.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Meta-agent conflict based search (MA-CBS)
+     </section-title>
+     <paragraph>
+      We now turn to explain a generalized CBS-based framework called meta-agent conflict based search (MA-CBS). First we provide motivation for MA-CBS by focusing on the behavior of the basic version of CBS that was described above.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Motivation for meta-agent CBS
+      </section-title>
+      <paragraph>
+       As explained previously, CBS is very efficient (compared to other approaches) for some MAPF problems and very inefficient for others. This general tendency for different MAPF algorithms to behave differently for different environments or topologies was discussed previously [42], [38], [39]. Furthermore, a given domain might have different areas with different topologies. This calls for an algorithm that will dynamically change its strategy based on the exact task and on the area it currently searches. There is room for a significant amount of research in understanding the relation between map topologies and MAPF algorithms performance. MA-CBS is a first step towards dynamically adapting algorithms.
+      </paragraph>
+      <paragraph>
+       As was shown in the previous section, CBS behaves poorly when a set of agents is strongly coupled, i.e., when there is a high rate of internal conflicts between agents in the set. In such cases, basic CBS may have to process a significant number of conflicts in order to produce the optimal solution. MA-CBS remedies this behavior of CBS by automatically identifying sets of strongly coupled agents and merging them into a meta-agent. Then, the high-level CBS continues, but this meta-agent is treated, from the CBS perspective, as a single agent. Consequently, the low-level solver of MA-CBS must be an MAPF solver, e.g., {a mathematical formula}A*+OD[45], EPEA* [15], M* [51]. Thus, MA-CBS is in fact a framework that can be used on top of another MAPF solver. Next, we provide the technical details of MA-CBS.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Merging agents into a meta-agent
+      </section-title>
+      <paragraph>
+       The main difference between basic CBS and MA-CBS is the new operation of merging agents into a meta-agent. A meta-agent consists of M agents. Thus, a single agent is just a meta-agent of size 1. Returning to Algorithm 2 (Section 4.2.6), we introduce the merging action which occurs just after a new conflict is found (line 10). At this point MA-CBS has two options:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Branch: In this option, we branch into two nodes based on the new conflict (lines 19–26). This is the option that is always performed by basic CBS.
+       </list-item>
+       <list-item label="•">
+        Merge: MA-CBS has another option, to perform the merging of two conflicting (meta) agents into a single meta-agent (lines 12–18).
+       </list-item>
+      </list>
+      <paragraph>
+       The merging process is done as follows. Assume a CT node N with k agents. Suppose that a conflict was found between agents {a mathematical formula}a1 and {a mathematical formula}a2, and these two agents were chosen to be merged. We now have {a mathematical formula}k−1 agents among them a new meta-agent of size 2, labeled {a mathematical formula}a{1,2}. This meta-agent will never be split again in the subtree of the CT below N; it might, however, be merged with other (meta-) agents to form new meta-agents. Since nothing changed for the other agents that were not merged, we now only call the low-level search again for this new meta-agent (line 14). The low-level search for a meta-agent of size M is in fact an optimal MAPF problem for M agents and should be solved with an optimal MAPF solver. Note that the f-cost of this CT node may increase due to this merge action, as the optimal path for a meta-agent may be larger than the sum of optimal paths of each of these agents separately. Thus, the f-value of this node is recalculated and stored (line 15). The node is then added again into OPEN (line 17).
+      </paragraph>
+      <paragraph>
+       MA-CBS has two important components (in addition to the CBS components): a merging policy to decide which option to choose (branch or merge) (line 11), and a constraint-merging mechanism to define the constraints imposed on the new meta-agent (line 13). This constraint-merging mechanism must be designed such that MA-CBS still returns an optimal solution. Next, we discuss how to implement these two components.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Merge policy
+      </section-title>
+      <paragraph>
+       We implemented the following merging policy. Two agents {a mathematical formula}ai,aj are merged into a meta-agent {a mathematical formula}a{i,j} if the number of conflicts between {a mathematical formula}ai and {a mathematical formula}aj recorded during the search exceeds a parameter B. We call B the conflict bound parameter and use the notation MA-CBS(B) to denote MA-CBS with a bound of B. Note that basic CBS is in fact MA-CBS{a mathematical formula}(∞). That is, we never choose to merge and always branch according to a conflict.
+      </paragraph>
+      <paragraph>
+       To implement this conflict bound oriented merging policy, a conflict matrix CM is maintained. {a mathematical formula}CM[i,j] accumulates the number of conflicts between agents {a mathematical formula}ai and {a mathematical formula}aj seen thus far by MA-CBS. {a mathematical formula}CM[i,j] is incremented by 1 whenever a new conflict between {a mathematical formula}ai and {a mathematical formula}aj is found (Algorithm 2, Section 4.2.6, line 10). Now, if {a mathematical formula}CM[i,j]&gt;B the {a mathematical formula}shouldMerge() function (line 11) returns true and {a mathematical formula}ai and {a mathematical formula}aj are merged into {a mathematical formula}a{i,j}. If a conflict occurs between two meta-agents, {a mathematical formula}a1 and {a mathematical formula}a2, because of two simple agents, {a mathematical formula}at∈a1 and {a mathematical formula}ak∈a2, {a mathematical formula}CM[t,k] is incremented by 1 and the {a mathematical formula}shouldMerge() function will return true if {a mathematical formula}∑CM[x,y]&gt;B over all {a mathematical formula}x∈a1,y∈a2. This policy is simple and effective. However, other merging policies are possible and could potentially obtain a significant speed up.
+      </paragraph>
+      <paragraph>
+       To illustrate MA-CBS, consider again the example shown in Fig. 1 (Section 2.7). Assume that we are using MA-CBS(0). In this case, at the root of the CT, once the conflict {a mathematical formula}(a1,a2,D,2) is found, {a mathematical formula}shouldMerge() returns true and agents {a mathematical formula}a1 and {a mathematical formula}a2 are merged into a new meta-agent {a mathematical formula}a{1,2}.
+      </paragraph>
+      <paragraph>
+       Next, the low-level solver is invoked to solve the newly created meta-agent and a (conflict-free) optimal path for the two agents is found. If A* is used, a 2-agent A* will be executed for this. The high-level node is now re-inserted into OPEN, its f-value is updated from 8 to 9. Since it is the only node in OPEN it will be expanded next. On the second expansion the search halts as no conflicts exist – there is only one meta-agent which, by definition, contains no conflicts. Thus, the solution from the root node is returned. By contrast, for MA-CBS(B) with {a mathematical formula}B&gt;0, the root node will be split according the conflict as described above in Section 4.2.6.
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Merging constraints
+      </section-title>
+      <paragraph>
+       Denote a meta-agent by {a mathematical formula}x¯. We use the following definitions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A meta constraint for a meta-agent {a mathematical formula}x¯ is a tuple {a mathematical formula}(x¯,xˆ,v,t) where a subset of agents {a mathematical formula}xˆ⊆x¯ are prohibited from occupying vertex v at time step t.
+       </list-item>
+       <list-item label="•">
+        Similarly, a meta conflict is a tuple {a mathematical formula}(x¯,y¯,v,t) where an individual agent {a mathematical formula}x′∈x¯ and an individual agent {a mathematical formula}y′∈y¯ both occupy vertex v at time point t.
+       </list-item>
+      </list>
+      <paragraph>
+       Consider the set of constraints associated with (meta-) agents {a mathematical formula}ai and {a mathematical formula}aj before the merge. They were generated due to conflicts between agents. These conflicts (and therefore the resulting constraints) can be divided to three groups.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        internal: conflicts between {a mathematical formula}ai and {a mathematical formula}aj.
+       </list-item>
+       <list-item label="2.">
+        external(i): conflicts between {a mathematical formula}ai and any other agent {a mathematical formula}ak (where {a mathematical formula}k≠j).
+       </list-item>
+       <list-item label="3.">
+        external(j): conflicts between {a mathematical formula}aj and any other agent {a mathematical formula}ak (where {a mathematical formula}k≠i).
+       </list-item>
+      </list>
+      <paragraph>
+       Since {a mathematical formula}ai and {a mathematical formula}aj are now going to be merged, internal conflicts should not be considered as {a mathematical formula}ai and {a mathematical formula}aj will be solved in a coupled manner by the low level. Thus, we only consider external constraints from that point on.
+      </paragraph>
+      <section label="8.4.1">
+       <section-title>
+        Merging external constraints
+       </section-title>
+       <paragraph>
+        Assume that agents {a mathematical formula}ai and {a mathematical formula}aj are to be merged into a new meta agent {a mathematical formula}a{i,j} and that {a mathematical formula}ai has the external constraint {a mathematical formula}(ai,v,t). This constraint means that further up in the CT, {a mathematical formula}ai had a conflict with some other agent {a mathematical formula}ar at location v at time t and therefore {a mathematical formula}ai is not allowed to be located at location v at time t.
+       </paragraph>
+       <paragraph>
+        The new meta agent must include all external constraints. Assume an external constraint {a mathematical formula}(ai,v,t). After merging {a mathematical formula}ai and {a mathematical formula}aj this constraint should apply only to the original agent, {a mathematical formula}ai, and not apply to the entire meta-agent, i.e., {a mathematical formula}{ai}∪{aj}. Therefore, the merged constraint is in the form of {a mathematical formula}(a{i,j},ai,v,t). This is done in line 13 of Algorithm 2 (Section 4.2.6).
+       </paragraph>
+       <paragraph>
+        When merging {a mathematical formula}ai and {a mathematical formula}aj one would be tempted to introduce a meta constraint {a mathematical formula}(a{i,j},{ai}∪{aj},v,t) where both agents {a mathematical formula}ai and {a mathematical formula}aj are prohibited from location v at time t. However, this might break the optimality of the algorithm because of the following scenario. Assume a 3-agent problem where in the optimal solution agent {a mathematical formula}a3 must go through vertex v at time step t. Calling MA-CBS to solve this problem creates the root CT node. Assume that in the path chosen for each agent in the root CT node both agents {a mathematical formula}a1 and {a mathematical formula}a2 are assigned vertex v at time step t. Next, MA-CBS branches according to the conflict {a mathematical formula}(a1,a2,v,t). Two new CT nodes are generated {a mathematical formula}{N1,N2}. In {a mathematical formula}N1 ({a mathematical formula}N2) agent {a mathematical formula}a1 ({a mathematical formula}a2) is constrained from taking v at time t. Next, agent {a mathematical formula}a1 ({a mathematical formula}a2) is merged with agent {a mathematical formula}a3 at node {a mathematical formula}N1 ({a mathematical formula}N2). If we allow the constraints imposed on agents {a mathematical formula}a1 and {a mathematical formula}a2 to apply to agent {a mathematical formula}a3 we will block the optimal solution in both {a mathematical formula}N1 and {a mathematical formula}N2 which are the only two nodes in OPEN.
+       </paragraph>
+       <paragraph>
+        By contrast, assume a conflict {a mathematical formula}(x¯,y¯,v,t) is detected between {a mathematical formula}x¯ and {a mathematical formula}y¯, after the meta-agent {a mathematical formula}x¯ was created. The exact identity of the conflicting agents {a mathematical formula}x′∈x¯ and {a mathematical formula}y′∈y¯ is irrelevant. The constraint on both meta-agents should include the entire meta-agent, i.e. {a mathematical formula}(x¯,v,t) or similarly on {a mathematical formula}y¯ (line 20 of Algorithm 2, Section 4.2.6). Doing so will preserve completeness as all possible solutions exist where either all agents in {a mathematical formula}x¯ or {a mathematical formula}y¯ are constrained from being at v at time t.
+       </paragraph>
+      </section>
+     </section>
+     <section label="8.5">
+      <section-title>
+       The low-level solver
+      </section-title>
+      <paragraph>
+       The low level finds a path for a given agent. In case of a meta-agent the low level needs to solve an instance of MAPF that is given by internal agents that make up the meta-agent. Any MAPF solver that possess the following three attributes may be used at the low level:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Completeness – the solver must return a solution if one exists else it must return false.
+       </list-item>
+       <list-item label="2.">
+        Constraint handling – the solver must never return a solution that violates a constraint.
+       </list-item>
+       <list-item label="3.">
+        Optimality – the solver must return the optimal solution.
+       </list-item>
+      </list>
+      <paragraph>
+       Many known MAPF algorithms are suitable for the low-level of MA-CBS, e.g., {a mathematical formula}A*+OD[45], EPEA* [15], M* [51]. ICTS [42] and CBS in their basic form are not suitable for the low level as they cannot detect an unsolvable problem instance. In Section 5.2 we presented a way to deal with this issue by applying an algorithm that detects unsolvable MAPF instances [57]. This method, however, is not directly applicable for the constrained MAPF instance passed to the low-level solver. Interestingly, MA-CBS with a merge bound smaller than infinity can be configured to serve as a low-level solver, resulting in a recursive structure of MA-CBS. To avoid cases where an MA-CBS solver calls another MA-CBS solver ad infinitum, using MA-CBS as a low-level solver requires increasing the merge threshold between successive recursive calls. The manner in which the threshold is increased is a deep question that requires extensive research.
+      </paragraph>
+     </section>
+     <section label="8.6">
+      <section-title>
+       Completeness and optimality of MA-CBS
+      </section-title>
+      <paragraph>
+       The proof of completeness provided in Section 5.2 also holds for MA-CBS as is. In order to prove the optimality of MA-CBS we will use the supporting claims and lemmas defined and proven in Section 5.1. All lemmas from Section 5.1 hold for the MA-CBS case. The proofs are not affected from the option to merge agents. The only exception is Lemma 2 which says: “For each valid solution p, there exists at least one node N such that N permits p.” The proof was by induction on a branching action. However, for MA-CBS, expanding a high-level node can result in merging agents rather than branching. We thus complete the proof by handling the merge action case. In this case, node N is expanded, a merging action is performed and node N is re-inserted into OPEN. Any valid solution in {a mathematical formula}VS(N) must remain in the new {a mathematical formula}VS(N) after the expansion process since no new constraints were added.
+      </paragraph>
+     </section>
+     <section label="8.7">
+      <section-title>
+       MA-CBS as a continuum
+      </section-title>
+      <paragraph>
+       As explained above, the extreme case of MA-CBS{a mathematical formula}(∞) is equivalent to basic CBS. We now note that the other extreme case, MA-CBS(0) is equivalent to the basic independence detection mechanism introduced by Standley [45] (see Section 3.3.3). In MA-CBS(0) we merge agents as soon as a conflict occurs. In the root node MA-CBS(0) solves each agent separately. Then, MA-CBS(0) expands the CT root node. When validating this node a conflict between the solutions of the single agents is found (if one exists). The conflicting agents will be merged as {a mathematical formula}B=0. The combined group will be solved using the low-level MAPF solver. Next, the root will be re-inserted into OPEN and a validation occurs. Since {a mathematical formula}B=0 the branching option will never be chosen and conflicts are always solved by merging the conflicted (meta) agents. Thus, this variant will only have one CT node which is being re-inserted into OPEN, merging agents that conflict until no conflicts occur. This is identical to the behavior of ID.
+      </paragraph>
+      <paragraph>
+       The enhanced ID version explained in Section 3.3.4 tries to resolve conflicts by replanning a path to one of the conflicting agents. This re-planning is a reminiscent of MA-CBS(1) as once a conflict is found, we try to bypass it by branching. If more conflicts are found, the agents are merged.
+      </paragraph>
+      <paragraph>
+       Thus, MA-CBS(B) is a continuum which has these two previous algorithms as extreme cases. However, MA-CBS(B) with varying values of B can be significantly better than ID, when it solves agents that are only loosely coupled, by adding constraints to these agents separately. For example, in the case of a bottleneck (such as Fig. 1, Section 2.7) where the individual solutions of the agents conflict, ID (≡ MA-CBS(0)) will merge these agents to a single group and solve it in a coupled manner. By contrast, MA-CBS(B) (with {a mathematical formula}B&gt;0) can avoid this bottleneck by adding a single constraint to one of the agents. Therefore, using MA-CBS(B) and choosing a suitable value of {a mathematical formula}B≥0 adds much more flexibility and may significantly outperform ID. This is clearly seen in the experimental results section described next.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      MA-CBS experimental results
+     </section-title>
+     <paragraph>
+      In this section we study the behavior of MA-CBS empirically on three standard benchmark maps from the game Dragon Age: Origins[47]. Recall that each of the three maps, shown again in Fig. 11, represents a different topology. Map den520d (top) has many large open spaces and no bottlenecks, map ost003d (middle) has a few open spaces and a few bottlenecks and map brc202d (bottom) has almost no open spaces and many bottlenecks. Our main objective was to study the effect of the conflict bound parameter B on the performance of MA-CBS. We ran MA-CBS(B) in our experiments with {a mathematical formula}B=0,1,5,10,100,500 and ∞. Since MA-CBS is a framework that can run on top of any A*-based solver, we experimented with two such solvers: A* and Enhanced Partial Expansion A* (EPEA*) [15]. Both solvers used the SIC heuristic (defined above). A* was chosen as a baseline, while EPEA* was chosen since it is currently the state-of-the-art A*-based MAPF solver.
+     </paragraph>
+     <paragraph>
+      For each of the maps we varied the number of agents k. We ran our algorithms on 100 random instances for each value of k. If an algorithm did not solve a given problem instance within five minutes it was halted. The numbers reported are an average over all instances solved by all the algorithms that managed to solve more than 70% of the instances. If an algorithm solved less then 70% we report its average results as a lower bound (including instances where the solver was halted due to time limit). These cases were denoted by “&gt;” in the tables below.
+     </paragraph>
+     <paragraph>
+      Table 2, Table 3 show runtime in ms for the experiments described above. The k column denotes the number of agents in the experiment. MA-CBS(x) is denoted by B(x). For a given number of agents, the result of the best-performing algorithm is given in bold. Table 3 shows results for the case where A* was used for the low-level search while Table 2 report results when EPEA* was used. Each frame in the tables presents a different map.
+     </paragraph>
+     <paragraph>
+      The results clearly show that as the problems become harder (longer time to solve) MA-CBS with non-extreme values, i.e., with {a mathematical formula}B≠0 and {a mathematical formula}B≠∞, is able to solve most instances faster than MA-CBS(0) (ID) and MA-CBS(∞) (basic CBS). The new variants achieved up to an order of magnitude speed-up over MA-CBS(∞) (e.g. in den520d for 35 and 40 agents with EPEA* as the low-level solver) and up to a factor of 4 over MA-CBS(0) (e.g., in ost003d with 25 agents).
+     </paragraph>
+     <paragraph>
+      Next, consider the effect of increasing the number of agents k for the den520d map where EPEA* was used (Table 2 first frame). Instances with few agents ({a mathematical formula}k&lt;25) were solved faster using MA-CBS with large B values. As the problems become denser ({a mathematical formula}k&gt;30) MA-CBS with smaller B values is faster. In addition, the relative performance of basic CBS (≡ MA-CBS(∞)) and MA-CBS(500) with respect to the best variant degrades. This is explained as follows. In dense problem instances, where there are many agents relative to the map size, many conflicts occur. Recall that basic CBS is exponential in the number of conflicts encountered. Thus, increasing the number of agents degrades the relative performance of MA-CBS with large B values (which behaves closer to basic CBS) compared to variants with small B values. In separate experiments (not reported here) in the extreme scenario, where {a mathematical formula}k=|V|−1, we observed that MA-CBS(0) performs best.
+     </paragraph>
+     <paragraph>
+      Now, consider the results where A* was used as a low-level solver (Table 3). Here, we see the same general trend as observed in the results for EPEA*. However, the best-performing value of B was larger than that of MA-CBS with EPEA* (Table 2). For example, in the den520d map with 30 agents, MA-CBS(5) with A* as the low-level solver did not obtain a significant speedup over CBS. For EPEA* as the low-level solver, MA-CBS(5) obtained an order of magnitude speedup over CBS. The same tendency can also be observed in the other maps. The reason is that for a relatively weak MAPF solver, such as A*, solving a large group of agents is very inefficient. Thus, we would like to avoid merging agents and run in a more decoupled manner. For these cases a higher B is preferred. On the other hand, with a faster MAPF solver, such as EPEA*, a lower value of B would perform better. In MA-CBS(∞) the low level is never invoked for meta-agents (only for single agents). Consequently, running A* or EPEA* at the low level makes no difference. The difference in runtime is accounted for a different set of problems that were taken into account. For B(5) EPEA* could solve many more problems compared to A* (the harder problems). Since these problems are accounted for in Table 1 the runtime results are higher compared to Table 2.
+     </paragraph>
+     <paragraph>
+      Fig. 11 shows the success rate, i.e., the number of instances solved before the timeout, for MA-CBS with {a mathematical formula}B=0,1,10,100 and ∞. The low-level solver was set to EPEA*, hence {a mathematical formula}B=0 is denoted by EPEA*. Additionally, for comparison we also report the success rate of the best ICTS variant [42]. Note that the legends are ordered according to the performance in the given map.
+     </paragraph>
+     <paragraph>
+      As can be seen, in all the experiments MA-CBS with intermediate values, {a mathematical formula}0&lt;B&lt;∞, is able to solve more instances than both extreme cases, i.e., EPEA* (≡ MA-CBS(0)) and basic CBS (≡ MA-CBS(∞)). Additionally, MA-CBS with intermediate values also outperforms the ICTS solver. Consider the performance of MA-CBS variants with {a mathematical formula}B&lt;∞ in comparison with the basic CBS ({a mathematical formula}B=∞). Basic CBS performs very poorly for den520d (top), somewhat poorly for ost003d (middle) but rather well for brc202d (bottom). This is because in maps with no bottlenecks and large open spaces, such as den520d, CBS will be inefficient, since many conflicts will occur in many different locations. This phenomenon is explained in the pathological example of CBS given in Fig. 6 (Section 5.3.2). Thus, in den520d the benefit of merging agents is high, as we avoid many conflicts. By contrast, for maps without large open spaces and many bottlenecks, such as brc202d, CBS encounters few conflicts, and thus merging agents result in only a small reduction in conflicts. Indeed, as the results show, for brc202d the basic CBS (MA-CBS(∞)) achieves almost the same performance as setting lower values of B.
+     </paragraph>
+     <paragraph>
+      In problems with a higher conflict rate it is, in general, more helpful to merge agents, and hence lower values of B perform better. B-CBS(10) obtained the highest success rates, for example, in den520d (top). By contrast, B-CBS(100) obtained the highest success rates in ost003d and brc202d.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Conclusions from experiments
+      </section-title>
+      <paragraph>
+       The experiments clearly show that there is no universal winner. The performance of each of the known algorithms depends greatly on problem features such as: density, topology of the map, the initial heuristic error and the number of conflicts encountered during the CBS solving process. It is not yet fully understood how these different features are related to the performance of each algorithm, a point we intend to research in the future. At the same time, we are trying to come up with new features to assess the performance of each algorithm prior to search. Nevertheless, we present the following general trends that we observed:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        MA-CBS with intermediate B values {a mathematical formula}(0&lt;B&lt;∞) outperforms previous algorithm A*, EPEA* and CBS. It also outperforms ICTS in most cases.
+       </list-item>
+       <list-item label="•">
+        Density. In dense maps with many agents, low values of B are more efficient.
+       </list-item>
+       <list-item label="•">
+        Topology. In maps with large open spaces and few bottlenecks, low values of B are more efficient.
+       </list-item>
+       <list-item label="•">
+        Low-level solver. If a weak MAPF solver (e.g., plain A*) is used for the low-level search, high values of B are preferred.
+       </list-item>
+      </list>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Memory restricted CBS
+     </section-title>
+     <paragraph>
+      Many recently presented optimal MAPF solvers require an exponential amount of memory. For A* variants, the memory is used to store OPEN and CLOSED. For ICTS, the memory is used for the ICT. Both are exponential (ICTS in Δ and A* variants in k). In domains with no transpositions, this memory problem can be easily solved by running Iterative-Deepening A* (IDA*) [26]. However, the efficiency of IDA* degrades substantially as it encounters more duplicate nodes. In domains such as maps and grids – the most common domain for MAPF – duplicate nodes are very frequent. For example, in a 4-connected grid the number of unique states at radius r from a given location is {a mathematical formula}O(r2) but the number of paths is {a mathematical formula}O(4r). Thus, all previous optimal MAPF solvers were memory-intensive. Next, we describe how MA-CBS can be modified to be an effective optimal solver that requires memory of size {a mathematical formula}O(k⋅C⁎⋅|V|), that is the product of the number of agents, k, the cost of the optimal solution cost, {a mathematical formula}C⁎ and the size of the input graph, {a mathematical formula}|V|.
+     </paragraph>
+     <paragraph>
+      Unlike A* and its variants, CBS searches a conceptually different state space – the constraint space. Nevertheless, duplicate state may be encountered also in this space. Fig. 12 showed an MAPF instance (left) and a corresponding CT with a duplicate state (right). In this problem there are three agents. Each has a starting location, {a mathematical formula}Si, and a goal location, {a mathematical formula}Gi. The root of the CT has no constraints and the solution found for agents ({a mathematical formula}a1, {a mathematical formula}a2, {a mathematical formula}a3) is {a mathematical formula}{〈S1,A,G1〉,〈S2,A,G2〉,〈S3,B,G3〉}. The root contains a conflict {a mathematical formula}(a1,a2,A,1) and a new CT node {a mathematical formula}N1 is created with the constraint {a mathematical formula}(a1,A,1). {a mathematical formula}N1 contains the conflict {a mathematical formula}(a1,a3,B,1). Therefore another CT node {a mathematical formula}N2 is created with the constraint {a mathematical formula}(a2,A,1) but it contains the conflict {a mathematical formula}(a2,a3,B,1). Next, CT node {a mathematical formula}N1 is expanded, creating CT node {a mathematical formula}N3 with the constraints {a mathematical formula}(a1,A,1), {a mathematical formula}(a3,B,1). Then, CT node {a mathematical formula}N2 is expanded generating CT node {a mathematical formula}N4 with the constraints {a mathematical formula}(a2,A,1), {a mathematical formula}(a3,B,1). CT node {a mathematical formula}N3 creates CT node {a mathematical formula}N5 with the constraints {a mathematical formula}(a1,A,1), {a mathematical formula}(a3,B,1), {a mathematical formula}(a2,A,1). CT node {a mathematical formula}N4 creates CT node {a mathematical formula}N6 with the constraint {a mathematical formula}(a2,A,1), {a mathematical formula}(a3,B,1), {a mathematical formula}(a1,A,1). As can be seen CT nodes {a mathematical formula}N5 and {a mathematical formula}N6 contain the same set of constraints and are thus duplicates.
+     </paragraph>
+     <paragraph>
+      Even though the above example proves duplicates may exist in the constraint tree, in practice, on 4-connected grids, we encountered very few duplicates. We ran all the experiments reported in this paper using a duplicate detection mechanism. The results, with and without duplicate detection, were almost identical in all parameters due to the low amount of duplicates. Consequently, we experimented with Iterative-Deepening as the high-level search algorithm. Iterative-Deepening is a depth first search that requires memory linear in the depth of the solution. The resulting average run time was about 12% higher For Iterative-Deepening compared to best-first search as the high-level solver.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       Domains with many duplicate states
+      </section-title>
+      <paragraph>
+       Despite the fact that 4-connected grids have very few duplicate states, other domains such as random graphs may contain many duplicates. For these domains DFID will be inefficient as the high-level solver. To solve this problem we developed a new CT branching technique which will completely prevent duplicates. In CBS, when a conflict {a mathematical formula}(a1,a2,v,t) is found the node is split into two children while adding constraint {a mathematical formula}(a1,v,t) in one child and {a mathematical formula}(a2,v,t) in the other child. For the memory efficient variant we define a new constraint {a mathematical formula}(ai,v,t¯) which means that agent {a mathematical formula}aimust be at location v at time step t. Now, when a conflict {a mathematical formula}(a1,a2,v,t) is found three children are generated. The first child adds the constraints {a mathematical formula}{(a1,v,t),(a2,v,t¯)}, i.e., {a mathematical formula}a1 cannot be located in v at time t but {a mathematical formula}a2must be at v at time t. The second adds the constraints {a mathematical formula}{(a2,v,t),(a1,v,t¯)}, i.e., {a mathematical formula}a2 cannot be located in v at time t but {a mathematical formula}a1must be at v at time t. The third child adds the constraints {a mathematical formula}{(a1,v,t),(a2,v,t)}, i.e., neither {a mathematical formula}a1 nor {a mathematical formula}a2 are allowed to be in v at time t.
+      </paragraph>
+      <paragraph>
+       This mechanism prevents the possibility of duplicates occurrences while still maintaining optimality and completeness. For memory restricted environments and domains that contain many duplicates we suggest using this formalization along with DFID as the high-level CT search algorithm.
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

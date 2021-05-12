@@ -1,0 +1,712 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Measuring Sentiment Annotation Complexity of Text</title>
+<!--Generated on Wed Jun 11 17:32:06 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Measuring Sentiment Annotation Complexity of Text</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Aditya Joshi<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1,2,3}" display="inline"><msup><mi/><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_center">Abhijit Mishra<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math></td>
+<td class="ltx_td ltx_align_center">Nivvedan Senthamilselvan<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math></td></tr>
+</tbody>
+</table>
+<br class="ltx_break"/>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_bold">Pushpak Bhattacharyya<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn mathvariant="normal">1</mn></msup></math></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>IIT Bombay, India, <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>Monash University, Australia</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{3}" display="inline"><msup><mi/><mn>3</mn></msup></math>IITB-Monash Research Academy, India</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center" colspan="3">{<span class="ltx_text ltx_font_typewriter">adityaj, abhijitmishra, nivvedan, pb</span>}<span class="ltx_text ltx_font_typewriter">@cse.iitb.ac.in</span></td></tr>
+</tbody>
+</table>
+
+</span><span class="ltx_author_notes"><span>- Aditya is funded by the TCS Research Fellowship Program.</span></span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">The effort required for a human annotator to detect sentiment is not uniform for all texts, irrespective of his/her expertise. We aim to predict a score that quantifies this effort, using linguistic properties of the text. Our proposed metric is called <em class="ltx_emph">Sentiment Annotation Complexity (SAC)</em>. As for training data, since any direct judgment of complexity by a human annotator is fraught with subjectivity, we rely on cognitive evidence from eye-tracking. The sentences in our dataset are labeled with SAC scores derived from <em class="ltx_emph">eye-fixation duration</em>. Using linguistic features and annotated SACs, we train a regressor that <em class="ltx_emph">predicts the SAC</em> with a best mean error rate of 22.02% for five-fold cross-validation. We also study the correlation between a human annotator’s perception of complexity and a machine’s confidence in polarity determination. The merit of our work lies in (a) deciding the sentiment annotation cost in, for example, a crowdsourcing setting, (b) choosing the right classifier for sentiment prediction.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The effort required by a human annotator to detect sentiment is not uniform for all texts. Compare the hypothetical tweet “<span class="ltx_text ltx_font_italic">Just what I wanted: a good pizza.</span>” with “<span class="ltx_text ltx_font_italic">Just what I wanted: a cold pizza.</span>”. The two are lexically and structurally similar. However, because of the sarcasm in the second tweet (in “cold” pizza, an undesirable situation followed by a positive sentiment phrase “just what I wanted”, as discussed in <cite class="ltx_cite"><a href="#bib.bibx21" title="" class="ltx_ref">Riloff et al.2013</a></cite>), it is more complex than the first for sentiment annotation. Thus, independent of how good the annotator is, there are sentences which will be perceived to be more complex than others. With regard to this, we introduce a metric called <em class="ltx_emph">sentiment annotation complexity (SAC)</em>. The SAC of a given piece of text (sentences, in our case) can be predicted using the linguistic properties of the text as features.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The primary question is whether such complexity measurement is necessary at all. <cite class="ltx_cite"><a href="#bib.bibx8" title="" class="ltx_ref">Fort et al2012</a></cite> describe the necessity of annotation complexity measurement in manual annotation tasks. Measuring annotation complexity is beneficial in annotation crowdsourcing. If the complexity of the text can be estimated <span class="ltx_text ltx_font_italic">even before the annotation begins</span>, the pricing model can be fine-tuned (pay less for sentences that are easy to annotate, for example). Also, in terms of an automatic SA engine which has multiple classifiers in its ensemble, a classifier may be chosen based on the complexity of sentiment annotation (for example, use a rule-based classifier for simple sentences and a more complex classifier for other sentences). Our metric adds value to sentiment annotation and sentiment analysis, in these two ways. The fact that sentiment expression may be complex is evident from a study of comparative sentences by <cite class="ltx_cite"><a href="#bib.bibx9" title="" class="ltx_ref">Ganapathibhotla and Liu2008</a></cite>, sarcasm by <cite class="ltx_cite"><a href="#bib.bibx21" title="" class="ltx_ref">Riloff et al.2013</a></cite>, thwarting by <cite class="ltx_cite"><a href="#bib.bibx20" title="" class="ltx_ref">Ramteke et al.2013</a></cite> or implicit sentiment by <cite class="ltx_cite"><a href="#bib.bibx1" title="" class="ltx_ref">Balahur et al.2011</a></cite>. To the best of our knowledge, there is no general approach to “measure” how complex a piece of text is, in terms of sentiment annotation.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The central challenge here is to annotate a data set with SAC. To measure the “actual” time spent by an annotator on a piece of text, we use an eye-tracker to record eye-fixation duration: the time for which the annotator has actually focused on the sentence during annotation. Eye-tracking annotations have been used to study the cognitive aspects of language processing tasks like translation by <cite class="ltx_cite"><a href="#bib.bibx5" title="" class="ltx_ref">Dragsted2010</a></cite> and sense disambiguation by <cite class="ltx_cite"><a href="#bib.bibx22" title="" class="ltx_ref">Joshi et al.2011</a></cite>. <cite class="ltx_cite"><a href="#bib.bibx15" title="" class="ltx_ref">Mishra et al.2013</a></cite> present a technique to determine translation difficulty index. The work closest to ours is by <cite class="ltx_cite"><a href="#bib.bibx23" title="" class="ltx_ref">Scott et al.2011</a></cite> who use eye-tracking to study the role of emotion words in reading.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The novelty of our work is three-fold: <em class="ltx_emph">(a) The proposition of a metric to measure complexity of sentiment annotation, (b) The adaptation of past work that uses eye-tracking for NLP in the context of sentiment annotation, (c) The learning of regressors that automatically predict SAC using linguistic features.</em></p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Understanding Sentiment Annotation Complexity</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The process of sentiment annotation consists of two sub-processes: comprehension (where the annotator understands the content) and sentiment judgment (where the annotator identifies the sentiment). The complexity in sentiment annotation stems from an interplay of the two and we expect SAC to capture the combined complexity of both the sub-processes. In this section, we describe how complexity may be introduced in sentiment annotation in different classical layers of NLP.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The simplest form of sentiment annotation complexity is at the <span class="ltx_text ltx_font_bold">lexical level</span>. Consider the sentence “<span class="ltx_text ltx_font_italic">It is messy, uncouth, incomprehensible, vicious and absurd</span>”. The sentiment words used in this sentence are uncommon, resulting in complexity.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The next level of sentiment annotation complexity arises due to <span class="ltx_text ltx_font_bold">syntactic complexity</span>. Consider the review: “<span class="ltx_text ltx_font_italic">A somewhat crudely constructed but gripping, questing look at a person so racked with self-loathing, he becomes an enemy to his own race.</span>”. An annotator will face difficulty in comprehension as well as sentiment judgment due to the complicated phrasal structure in this review.
+Implicit expression of sentiment introduces complexity at the <span class="ltx_text ltx_font_bold">semantic and pragmatic</span> level. Sarcasm expressed in “<span class="ltx_text ltx_font_italic">It’s like an all-star salute to disney’s cheesy commercialism</span>” leads to difficulty in sentiment annotation because of positive words like “<span class="ltx_text ltx_font_italic">an all-star salute</span>”.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Manual annotation of complexity scores may not be intuitive and reliable. Hence, we use a cognitive technique to create our annotated dataset. The underlying idea is: <span class="ltx_text ltx_font_italic">if we monitor annotation of two textual units of equal length, the more complex unit will take longer to annotate, and hence, should have a higher SAC</span>. Using the idea of “annotation time” linked with complexity, we devise a technique to create a dataset annotated with SAC.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">It may be thought that <span class="ltx_text ltx_font_italic">inter-annotator agreement (IAA)</span> provides implicit annotation: the higher the agreement, the easier the piece of text is for sentiment annotation. However, in case of multiple expert annotators, this agreement is expected to be high for most sentences, due to the expertise. For example, all five annotators agree with the label for 60% sentences in our data set. However, the duration for these sentences has a mean of 0.38 seconds and a standard deviation of 0.27 seconds. This indicates that although IAA is easy to compute, it does not determine sentiment annotation complexity of text in itself.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Creation of dataset annotated with SAC</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We wish to predict sentiment annotation complexity of the text using a supervised technique. As stated above, the time-to-annotate is one good candidate. However, “simple time measurement” is not reliable because the annotator may spend time not doing any annotation due to fatigue or distraction. To accurately record the time, we use an eye-tracking device that measures the “duration of eye-fixations<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>A long stay of the visual gaze on a single location.</span></span></span>”. Another attribute recorded by the eye-tracker that may have been used is “saccade duration<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>A rapid movement of the eyes between positions of rest on the sentence.</span></span></span>”. However, saccade duration is not significant for annotation of short text, as in our case. Hence, the SAC labels of our dataset are fixation durations with appropriate normalization.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">It may be noted that the eye-tracking device is used only to annotate training data. The actual prediction of SAC is done using linguistic features alone.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Eye-tracking Experimental Setup</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use a sentiment-annotated data set consisting of movie reviews by <cite class="ltx_cite">[<a href="#bib.bibx18" title="" class="ltx_ref">Pang and Lee2005</a>]</cite> and tweets from <a href="http://help.sentiment140.com/for-students" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://help.sentiment140.com/for-students</span></a>. A total of 1059 sentences (566 from a movie corpus, 493
+from a twitter corpus) are selected.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We then obtain two kinds of annotation from five paid annotators: (a) sentiment (positive, negative and objective), (b) eye-movement as recorded by an eye-tracker. They are given a set of instructions beforehand and can seek clarifications. This experiment is conducted as follows:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">A sentence is displayed to the annotator on the screen. The annotator verbally states the sentiment of this sentence, before (s)he can proceed to the next.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">While the annotator reads the sentence, a remote eye-tracker (Model: Tobii TX 300, Sampling rate: 300Hz) records the eye-movement data of the annotator. The eye-tracker is linked to a Translog II software <cite class="ltx_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">Carl2012</a>]</cite> in order to record the data. A snapshot of the software is shown in figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 Eye-tracking Experimental Setup ‣ 3 Creation of dataset annotated with SAC ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The dots and circles represent position of eyes and fixations of the annotator respectively.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">The experiment then continues in modules of 50 sentences at a time. This is to prevent fatigue over a period of time. Thus, each annotator participates in this experiment over a number of sittings.</p>
+</div></li>
+</ol>
+<p class="ltx_p">We ensure the quality of our dataset in different ways: (a) Our annotators are instructed to avoid unnecessary head movements and eye-movements outside the experiment environment. (b) To minimize noise due to head movements further, they are also asked to state the annotation verbally, which was then manually recorded, (c) Our annotators are students between the ages 20-24 with English as the primary language of academic instruction and have secured a TOEFL iBT score of 110 or above.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">We understand that sentiment is nuanced- towards a target, through constructs like sarcasm and presence of multiple entities. However, we want to capture the most natural form of sentiment annotation. So, the guidelines are kept to a bare minimum of “<span class="ltx_text ltx_font_italic">annotating a sentence as positive, negative and objective as per the speaker</span>”.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2007/image001.jpg" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="274" height="67" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Gaze-data recording using Translog-II</div>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">This experiment results in a data set of 1059 sentences with a fixation duration recorded for each sentence-annotator pair<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The complete eye-tracking data is available at:<a href="http://www.cfilt.iitb.ac.in/~cognitive-nlp/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cfilt.iitb.ac.in/~cognitive-nlp/</span></a>.</span></span></span> The multi-rater kappa IAA for sentiment annotation is 0.686.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Calculating SAC from eye-tracked data</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We now need to annotate each sentence with a SAC. We extract <span class="ltx_text ltx_font_italic">fixation durations</span> of the five annotators for each of the annotated sentences. A single SAC score for sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> annotators is computed as follows:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\begin{array}[]{l}SAC(s)=\frac{1}{N}\sum\limits_{n=1}^{N}\frac{z(n,dur(s,n))}{%&#10;len(s)}\\&#10;where,\\&#10;z(n,dur(s,n))\ =\ \frac{dur(s,n)-\mu(dur(n))}{\sigma(dur(n))}\\&#10;\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>A</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mfrac><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mi>w</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi></mrow><mo>,</mo></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mo rspace="7.5pt">=</mo><mfrac><mrow><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>μ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">In the above formula, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the total number of annotators while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> corresponds to a specific annotator. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="dur(s,n)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math> is the fixation duration of annotator <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> on sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="len(s)" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mi>s</mi><mo>)</mo></mrow></mrow></math> is the number of words in sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>. This normalization over number of words assumes that long sentences may have high <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="dur(s,n)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>n</mi></mrow><mo>)</mo></mrow></mrow></math> but do not necessarily have high SACs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="\mu(dur(n))" display="inline"><mrow><mi>μ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m12" class="ltx_Math" alttext="\sigma(dur(n))" display="inline"><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> is the mean and standard deviation of fixation durations for annotator n across all sentences. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m13" class="ltx_Math" alttext="z(n,.)" display="inline"><mrow><mi>z</mi><mrow><mo>(</mo><mi>n</mi><mo>,</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> is a function that z-normalizes the value for annotator <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m14" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> to standardize the deviation due to reading speeds. We convert the SAC values to a scale of 1-10 using min-max normalization.
+To understand how the formula records sentiment annotation complexity, consider the SACs of examples in section <a href="#S2" title="2 Understanding Sentiment Annotation Complexity ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. The sentence “it is messy , uncouth , incomprehensible , vicious and absurd” has a SAC of 3.3. On the other hand, the SAC for the sarcastic sentence “it’s like an all-star salute to disney’s cheesy commercialism.” is 8.3.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:108.4pt;" width="108.4pt"><span class="ltx_text ltx_font_bold">Feature</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_tt" style="width:325.2pt;" width="325.2pt"><span class="ltx_text ltx_font_bold">Description</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold">Lexical</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Word Count</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Degree of polysemy</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Average number of Wordnet senses per word</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Mean Word Length</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Average number of characters per word (commonly used in readability studies as in the case of <cite class="ltx_cite"><a href="#bib.bibx13" title="" class="ltx_ref">Pascual et al.2005</a></cite>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">%ge of nouns and adjs.</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">%ge of Out-of-vocabulary words</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Syntactic</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Dependency Distance</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt">Average distance of all pairs of dependent words in the sentence <cite class="ltx_cite">[<a href="#bib.bibx12" title="" class="ltx_ref">Lin1996</a>]</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Non-terminal to Terminal ratio</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Ratio of the number of non-terminals to the number of terminals in the constituency parse of a sentence</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Semantic</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Discourse connectors</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt">Number of discourse connectors</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Co-reference distance</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Sum of token distance between co-referring entities of anaphora in a sentence</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Perplexity</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Trigram perplexity using language models trained on a mixture of sentences from the Brown corpus, the Amazon Movie corpus and Stanford twitter corpus (mentioned in Sections <a href="#S3" title="3 Creation of dataset annotated with SAC ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S5" title="5 Discussion ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Sentiment-related</span> (Computed using SentiWordNet <cite class="ltx_cite">[<a href="#bib.bibx6" title="" class="ltx_ref">Esuli et al.2006</a>]</cite>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Subjective Word Count</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:325.2pt;" width="325.2pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Subjective Score</span></td>
+<td class="ltx_td ltx_align_justify" style="width:325.2pt;" width="325.2pt">Sum of SentiWordNet scores of all words</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:108.4pt;" width="108.4pt">- <span class="ltx_text ltx_font_bold">Sentiment Flip Count</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:325.2pt;" width="325.2pt">A positive word followed in sequence by a negative word, or vice versa counts as one sentiment flip</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Linguistic Features for the Predictive Framework</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Predictive Framework for SAC</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The previous section shows how gold labels for SAC can be obtained using eye-tracking experiments. This section describes our predictive for SAC that uses four categories of linguistic features: <span class="ltx_text ltx_font_italic">lexical, syntactic, semantic</span> and <span class="ltx_text ltx_font_italic">sentiment-related</span> in order to capture the subprocesses of annotation as described in section <a href="#S2" title="2 Understanding Sentiment Annotation Complexity ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Experiment Setup</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The linguistic features described in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Calculating SAC from eye-tracked data ‣ 3 Creation of dataset annotated with SAC ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> are extracted from the input sentences. Some of these features are extracted using Stanford Core NLP <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://nlp.stanford.edu/software/corenlp.shtml" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://nlp.stanford.edu/software/corenlp.shtml</span></a></span></span></span> tools and NLTK <cite class="ltx_cite">[<a href="#bib.bibx3" title="" class="ltx_ref">Bird et al.2009</a>]</cite>. Words that do not appear in Academic Word List <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>www.victoria.ac.nz/lals/resources/academicwordlist/</span></span></span> and General Service List <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>www.jbauman.com/gsl.htmlâ</span></span></span> are treated as out-of-vocabulary words. The training data consists of 1059 tuples, with 13 features and gold labels from eye-tracking experiments.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Kernel</th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="3">Linear</th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="3">Quadratic</th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="2">Cross Domain Linear</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Domain</th>
+<th class="ltx_td ltx_align_left">Mixed</th>
+<th class="ltx_td ltx_align_left">Movie</th>
+<th class="ltx_td ltx_align_left">Twitter</th>
+<th class="ltx_td ltx_align_left">Mixed</th>
+<th class="ltx_td ltx_align_left">Movie</th>
+<th class="ltx_td ltx_align_left">Twitter</th>
+<th class="ltx_td ltx_align_right">Movie</th>
+<th class="ltx_td ltx_align_right">Twitter</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">MSE</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.79</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.55</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.99</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.68</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.53</td>
+<td class="ltx_td ltx_align_left ltx_border_t">1.88</td>
+<td class="ltx_td ltx_align_right ltx_border_t">3.17</td>
+<td class="ltx_td ltx_align_right ltx_border_t">2.24</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">MAE</td>
+<td class="ltx_td ltx_align_left">0.93</td>
+<td class="ltx_td ltx_align_left">0.89</td>
+<td class="ltx_td ltx_align_left">0.95</td>
+<td class="ltx_td ltx_align_left">0.91</td>
+<td class="ltx_td ltx_align_left">0.88</td>
+<td class="ltx_td ltx_align_left">0.93</td>
+<td class="ltx_td ltx_align_right">1.39</td>
+<td class="ltx_td ltx_align_right">1.19</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">MPE</td>
+<td class="ltx_td ltx_align_left">22.49%</td>
+<td class="ltx_td ltx_align_left">23.8%</td>
+<td class="ltx_td ltx_align_left">25.45%</td>
+<td class="ltx_td ltx_align_left">22.02%</td>
+<td class="ltx_td ltx_align_left">23.8%</td>
+<td class="ltx_td ltx_align_left">25%</td>
+<td class="ltx_td ltx_align_right">35.01%</td>
+<td class="ltx_td ltx_align_right">38.21%</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">Correlation</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.54</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.38</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.56</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.57</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.37</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">0.6</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_t">0.38</td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_t">0.46</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Performance of Predictive Framework for 5-fold in-domain and cross-domain validation using Mean Squared Error (MSE), Mean Absolute Error (MAE)
+and Mean Percentage Error (MPE) estimates and correlation with the gold labels.</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">To predict SAC, we use Support Vector Regression (SVR) <cite class="ltx_cite">[<a href="#bib.bibx11" title="" class="ltx_ref">Joachims2006</a>]</cite>. Since we do not have any information about the nature of the relationship between the features and SAC, choosing SVR allows us to try multiple kernels. We carry out a 5-fold cross validation for both in-domain and cross-domain settings, to validate that the regressor does not overfit. The model thus learned is evaluated using: (a) Error metrics namely, Mean Squared Error estimate, Mean Absolute Error estimate and Mean Percentage Error. (b) the Pearson correlation coefficient between the gold and predicted SAC.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Results</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The results are tabulated in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Experiment Setup ‣ 4 Predictive Framework for SAC ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Our observation is that a quadratic kernel performs slightly better than linear. The correlation values are positive and indicate that even if the predicted scores are not as accurate as desired, the system is capable of ranking sentences in the correct order based on their sentiment complexity. The mean percentage error (MPE) of the regressors ranges between 22-38.21%. The cross-domain MPE is higher than the rest, as expected.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">To understand how each of the features performs, we conducted ablation tests by considering one feature at a time. Based on the MPE values, the best features are: Mean word length (MPE=27.54%), Degree of Polysemy (MPE=36.83%) and %ge of nouns and adjectives (MPE=38.55%). To our surprise, word count performs the worst (MPE=85.44%). This is unlike tasks like translation where length has been shown to be one of the best predictors in translation difficulty <cite class="ltx_cite">[<a href="#bib.bibx15" title="" class="ltx_ref">Mishra et al.2013</a>]</cite>. We believe that for sentiment annotation, longer sentences may have more lexical clues that help detect the sentiment more easily. Note that some errors may be introduced in feature extraction due to limitations of the NLP tools.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our proposed metric measures complexity of sentiment annotation, as perceived by human annotators. It would be worthwhile to study the <em class="ltx_emph">human-machine correlation</em> to see if <em class="ltx_emph">what is difficult for a machine is also difficult for a human</em>. In other words, the goal is to show that the confidence scores of a sentiment classifier are negatively correlated with SAC.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">We use three sentiment classification techniques: Naïve Bayes, MaxEnt and SVM with unigrams, bigrams and trigrams as features. The training datasets used are: a) 10000 movie reviews from Amazon Corpus <cite class="ltx_cite">[<a href="#bib.bibx14" title="" class="ltx_ref">McAuley et. al2013</a>]</cite> and b) 20000 tweets from the twitter corpus (same as mentioned in section <a href="#S3" title="3 Creation of dataset annotated with SAC ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>). Using NLTK and Scikit-learn<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>http://scikit-learn.org/stable/</span></span></span> with default settings, we generate six positive/negative classifiers, for all possible combinations of the three models and two datasets.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">The confidence score of a classifier<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>In case of SVM, the probability of predicted class is computed as given in <cite class="ltx_cite"><a href="#bib.bibx19" title="" class="ltx_ref">Platt1999</a></cite>.</span></span></span> for given text t is computed as follows:</p>
+<table id="S5.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E2.m1" class="ltx_Math" alttext="\begin{array}[]{l}P:Probability\ of\ predicted\ class\\&#10;Confidence(t)=\left\{\begin{array}[]{lr}P\;\;if\ predicted\\&#10;polarity\ is\ correct\\&#10;1-P\;\;\ otherwise\end{array}\right.\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mi>P</mi><mo>:</mo><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>y</mi></mpadded><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>f</mi></mpadded><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>d</mi></mpadded><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mi>C</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mpadded width="+5.6pt"><mi>P</mi></mpadded><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>f</mi></mpadded><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>y</mi></mpadded><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>s</mi></mpadded><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="left"><mrow><mn>1</mn><mo>-</mo><mrow><mpadded width="+8.4pt"><mi>P</mi></mpadded><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></mtd><mtd/></mtr></mtable></mrow></mrow></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt">Classifier (Corpus)</th>
+<th class="ltx_td ltx_align_left ltx_border_tt">Correlation</th>
+<td class="ltx_td ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">Naïve Bayes (Movie)</td>
+<td class="ltx_td ltx_align_left ltx_border_t">-0.06 (73.35)</td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Naïve Bayes (Twitter)</td>
+<td class="ltx_td ltx_align_left">-0.13 (71.18)</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">MaxEnt (Movie)</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">-0.29</span> (72.17)</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">MaxEnt (Twitter)</td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">-0.26</span> (71.68)</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">SVM (Movie)</td>
+<td class="ltx_td ltx_align_left">-0.24 (66.27)</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b">SVM (Twitter)</td>
+<td class="ltx_td ltx_align_left ltx_border_b">-0.19 (73.15)</td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Correlation between confidence of the classifiers with SAC; Numbers in parentheses indicate classifier accuracy (%)</div>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5 Discussion ‣ Measuring Sentiment Annotation Complexity of Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents the accuracy of the classifiers along with the correlations between the confidence score and observed SAC values. MaxEnt has the highest negative correlation of -0.29 and -0.26. For both domains, we observe a weak yet negative correlation which suggests that the perception of difficulty by the classifiers are in line with that of humans, as captured through SAC.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion &amp; Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We presented a metric called Sentiment Annotation Complexity (SAC), a metric in SA research that has been unexplored until now. First, the process of data preparation through eye tracking, labeled with the SAC score was elaborated. Using this data set and a set of linguistic features, we trained a regression model to predict SAC. Our predictive framework for SAC resulted in a mean percentage error of 22.02%, and a moderate correlation of 0.57 between the predicted and observed SAC values. Finally, we observe a negative correlation between the classifier confidence scores and a SAC, as expected. As a future work, we would like to investigate how SAC of a test sentence can be used to choose a classifier from an ensemble, and to determine the pre-processing steps (entity-relationship extraction, for example).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bibx1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Balahur et al.2011</span>
+<span class="ltx_bibblock">
+Balahur, Alexandra and Hermida, Jesús M and Montoyo, Andrés.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Detecting implicit expressions of sentiment in text based on commonsense knowledge.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the 2nd Workshop on Computational Approaches to Subjectivity and Sentiment Analysis</em>,53-60.
+
+</span></li>
+<li id="bib.bibx2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Batali and Searle1995</span>
+<span class="ltx_bibblock">
+Batali, John and Searle, John R.
+
+</span>
+<span class="ltx_bibblock">1995.
+
+</span>
+<span class="ltx_bibblock">The Rediscovery of the Mind.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph"> Artif. Intell.</em>, Vol. 77, 177-193.
+
+</span></li>
+<li id="bib.bibx3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Bird et al.2009</span>
+<span class="ltx_bibblock">
+Steven Bird and Ewan Klein and Edward Loper.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Natural Language Processing with Python
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">O’Reilly Media</em>.
+
+</span></li>
+<li id="bib.bibx4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Carl2012</span>
+<span class="ltx_bibblock">
+Carl, M.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Translog-II: A Program for Recording User Activity Data for Empirical Reading and Writing Research.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">In Proceedings of the Eight International Conference on Language Resources and Evaluation, European Language Resources Association.</em>
+
+</span></li>
+<li id="bib.bibx5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Dragsted2010</span>
+<span class="ltx_bibblock">
+Dragsted, B. 2010.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Co-ordination of reading and writing processes in translation.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Contribution to Translation and Cognition</em>. Shreve, G. and Angelone,
+E.(eds.)Cognitive Science Society.
+
+</span></li>
+<li id="bib.bibx6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Esuli et al.2006</span>
+<span class="ltx_bibblock">
+Esuli, Andrea and Sebastiani, Fabrizio.
+
+</span>
+<span class="ltx_bibblock">2006.
+
+</span>
+<span class="ltx_bibblock">Sentiwordnet: A publicly available lexical resource for opinion mining.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of LREC</em>, vol. 6, 417-422.
+
+</span></li>
+<li id="bib.bibx7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Fellbaum1998</span>
+<span class="ltx_bibblock">
+Fellbaum, Christiane
+
+</span>
+<span class="ltx_bibblock">1998.
+
+</span>
+<span class="ltx_bibblock">WordNet: An electronic lexical database. 1998.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Cambridge. MA: MIT Press</em>.
+
+</span></li>
+<li id="bib.bibx8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Fort et al2012</span>
+<span class="ltx_bibblock">
+Fort, Karën and Nazarenko, Adeline and Rosset, Sophie et al
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Modeling the complexity of manual annotation tasks: A grid of analysis
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the International Conference on Computational Linguistics</em>.
+
+</span></li>
+<li id="bib.bibx9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Ganapathibhotla and Liu2008</span>
+<span class="ltx_bibblock">
+Ganapathibhotla, G and Liu, Bing.
+
+</span>
+<span class="ltx_bibblock">2008.
+
+</span>
+<span class="ltx_bibblock">Identifying preferred entities in comparative sentences.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">22nd International Conference on Computational Linguistics (COLING)</em>.
+
+</span></li>
+<li id="bib.bibx10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Gonzalez-Iba et al.2011</span>
+<span class="ltx_bibblock">
+González-Ibáñez, Roberto and Muresan, Smaranda and Wacholder, Nina
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Identifying Sarcasm in Twitter: A Closer Look.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">ACL (Short Papers)</em> 581-586.
+
+</span></li>
+<li id="bib.bibx11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Joachims2006</span>
+<span class="ltx_bibblock">
+Joachims, T.
+
+</span>
+<span class="ltx_bibblock">2006
+
+</span>
+<span class="ltx_bibblock">Training Linear SVMs in Linear Time
+
+</span>
+<span class="ltx_bibblock">Proceedings of the <em class="ltx_emph">ACM Conference on Knowledge Discovery and Data Mining (KDD)</em>.
+
+</span></li>
+<li id="bib.bibx12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Lin1996</span>
+<span class="ltx_bibblock">
+Lin, D.
+
+</span>
+<span class="ltx_bibblock">1996
+
+</span>
+<span class="ltx_bibblock">On the structural complexity of natural language sentences.
+
+</span>
+<span class="ltx_bibblock">Proceeding of the <em class="ltx_emph">16th International
+Conference on Computational Linguistics</em> (COLING), pp. 729â733.
+
+</span></li>
+<li id="bib.bibx13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Pascual et al.2005</span>
+<span class="ltx_bibblock">
+Martınez-Gómez, Pascual and Aizawa, Akiko.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Diagnosing Causes of Reading Difficulty using Bayesian Networks
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">International Joint Conference on Natural Language Processing</em>, 1383â1391.
+
+</span></li>
+<li id="bib.bibx14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">McAuley et. al2013</span>
+<span class="ltx_bibblock">
+McAuley, Julian John and Leskovec, Jure
+
+</span>
+<span class="ltx_bibblock">2013
+
+</span>
+<span class="ltx_bibblock">From amateurs to connoisseurs: modeling the evolution of user expertise through online reviews.
+
+</span>
+<span class="ltx_bibblock">Proceedings of the <em class="ltx_emph">22nd international conference on World Wide Web.</em>
+
+</span></li>
+<li id="bib.bibx15" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mishra et al.2013</span>
+<span class="ltx_bibblock">
+Mishra, Abhijit and Bhattacharyya, Pushpak and Carl, Michael.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Automatically Predicting Sentence Translation Difficulty
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)</em>, 346-351.
+
+</span></li>
+<li id="bib.bibx16" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Narayanan et al.2009</span>
+<span class="ltx_bibblock">
+Narayanan, Ramanathan and Liu, Bing and Choudhary, Alok
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Sentiment Analysis of Conditional Sentences.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing</em>, 180-189.
+
+</span></li>
+<li id="bib.bibx17" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Pang and Lee2008</span>
+<span class="ltx_bibblock">
+Pang, Bo and Lee, Lillian.
+
+</span>
+<span class="ltx_bibblock">2008.
+
+</span>
+<span class="ltx_bibblock">Opinion mining and sentiment analysis
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Foundations and trends in information retrieval</em>, vol. 2, 1-135.
+
+</span></li>
+<li id="bib.bibx18" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Pang and Lee2005</span>
+<span class="ltx_bibblock">
+Pang, Bo and Lee, Lillian.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock">Seeing stars: Exploiting class relationships for sentiment categorization with respect to rating scales.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the 43rd Annual Meeting on Association for Computational Linguistics</em>, 115-124.
+
+</span></li>
+<li id="bib.bibx19" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Platt1999</span>
+<span class="ltx_bibblock">
+Platt, John and others.
+
+</span>
+<span class="ltx_bibblock">1999.
+
+</span>
+<span class="ltx_bibblock">Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Advances in large margin classifiers</em>, vol. 10, 61-74.
+
+</span></li>
+<li id="bib.bibx20" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Ramteke et al.2013</span>
+<span class="ltx_bibblock">
+Ramteke, Ankit and Malu, Akshat and Bhattacharyya, Pushpak and Nath, J. Saketha
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Detecting Turnarounds in Sentiment Analysis: Thwarting
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)</em>, 860-865.
+
+</span></li>
+<li id="bib.bibx21" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Riloff et al.2013</span>
+<span class="ltx_bibblock">
+Riloff, Ellen and Qadir, Ashequl and Surve, Prafulla and De Silva, Lalindra and Gilbert, Nathan and Huang, Ruihong
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Sarcasm as Contrast between a Positive Sentiment and Negative Situation
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Conference on Empirical Methods in Natural Language Processing, Seattle, USA</em>.
+
+</span></li>
+<li id="bib.bibx22" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Joshi et al.2011</span>
+<span class="ltx_bibblock">
+Salil Joshi, Diptesh Kanojia and Pushpak Bhattacharyya.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">More than meets the eye: Study of Human Cognition in Sense Annotation.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">NAACL HLT 2013, Atlanta, USA</em>.
+
+</span></li>
+<li id="bib.bibx23" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Scott et al.2011</span>
+<span class="ltx_bibblock">
+Scott G. , O Donnell P and Sereno S.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Emotion Words Affect Eye Fixations During Reading.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Journal of Experimental Psychology:Learning, Memory, and Cognition</em> 2012, Vol. 38, No. 3, 783-792
+
+</span></li>
+<li id="bib.bibx24" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Siegel and Castellan1988</span>
+<span class="ltx_bibblock">
+Siegel, Sidney and N. J. Castellan, Jr.
+
+</span>
+<span class="ltx_bibblock">1988.
+
+</span>
+<span class="ltx_bibblock"><em class="ltx_emph">Nonparametric Statistics for the Behavioral
+Sciences. Second edition. McGraw-Hill</em>.
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:32:06 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

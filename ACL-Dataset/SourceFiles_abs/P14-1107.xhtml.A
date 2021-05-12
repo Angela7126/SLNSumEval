@@ -1,0 +1,953 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Are Two Heads Better than One? Crowdsourced Translation via a Two-Step Collaboration of Non-Professional Translators and Editors.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Statistical machine translation (SMT) systems are trained using bilingual sentence-aligned parallel corpora. Theoretically, SMT can be applied to any language pair, but in practice it produces the state-of-art results only for language pairs with ample training data, like English-Arabic, English-Chinese, French-English, etc. SMT gets stuck in a severe bottleneck for many minority or ‘low resource’ languages with insufficient data.
+This drastically limits which languages SMT can be successfully applied to.
+Because of this, collecting parallel corpora for minor languages has become an interesting research challenge. There are various options for creating training data for new language pairs. Past approaches have examined harvesting translated documents from the web
+        [30, 36, 32]
+        , or discovering parallel fragments from comparable corpora
+        [26, 1, 31]
+        .
+Until relatively recently, little consideration has been given to creating parallel data from scratch. This is because the cost of hiring professional translators is prohibitively high. For instance,
+        Germann (2001)
+        hoped to hire professional translators to create a modest sized 100,000 word Tamil-English parallel corpus, but were stymied by the costs and the difficulty of finding good translators for a short-term commitment.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Recently, crowdsourcing has opened the possibility of translating large amounts of text at low cost using non-professional translators. Facebook localized its web site into different languages using volunteers
+        [35]
+        . DuoLingo turns translation into an educational game, and translates web content using its language learners
+        [37]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Rather than relying on volunteers or gamification, NLP research into crowdsourcing translation has focused on hiring workers on the Amazon Mechanical Turk (MTurk) platform
+        [9]
+        . This setup presents unique challenges, since it typically involves non-professional translators whose language skills are varied, and since it sometimes involves participants who try to cheat to get the small financial reward
+        [43]
+        .
+A natural approach for trying to shore up the skills of weak bilinguals is to pair them with a native speaker of the target language to edit their translations.
+We review relevant research from NLP and human-computer interaction (HCI) on collaborative translation processes in Section
+        2
+        .
+To sort good translations from bad, researchers often solicit multiple, redundant translations and then build models to try to predict which translations are the best, or which translators tend to produce the highest quality translations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The contributions of this paper are:
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           An analysis of the difficulties posed by a two-step collaboration between editors and translators in Mechanical Turk-style crowdsourcing environments. Editors vary in quality, and poor editing can be difficult to detect.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           A new graph-based algorithm for selecting the best translation among multiple translations of the same input. This method takes into account the collaborative relationship between the translators and the editors.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In the HCI community, several researchers have proposed protocols for collaborative translation efforts
+        [25, 24, 16, 15]
+        . These have focused on an iterative collaboration between monolingual speakers of the two languages, facilitated with a machine translation system.
+These studies are similar to ours in that they rely on native speakers’ understanding of the target language to correct the disfluencies in poor translations. In our setup the poor translations are produced by bilingual individuals who are weak in the target language, and in their experiments the translations are the output of a machine translation system.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Another significant difference is that the HCI studies assume cooperative participants. For instance,
+        Hu et al. (2010)
+        recruited volunteers from the International Children’s Digital Library
+        [13]
+        who were all well intentioned and participated out a sense of altruism and to build a good reputation among the other volunteer translators at
+        childrenslibrary.org
+        .
+Our setup uses anonymous crowd workers hired on Mechanical Turk, whose motivation to participate is financial.
+        Bernstein et al. (2010)
+        characterized the problems with hiring editors via MTurk for a word processing application. Workers were either lazy (meaning they made only minimal edits) or overly zealous (meaning they made many unnecessary edits).
+        Bernstein et al. (2010)
+        addressed this problem with a three step find-fix-verify process. In the first step, workers click on one word or phrase that needed to be corrected. In the next step, a separate group of workers proposed corrections to problematic regions that had been identified by multiple workers in the first pass. In the final step, other workers would validate whether the proposed corrections were good.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Most NLP research into crowdsourcing has focused on Mechanical Turk, following pioneering work by
+        Snow et al. (2008)
+        who showed that the platform was a viable way of collecting data for a wide variety of NLP tasks at low cost and in large volumes. They further showed that non-expert annotations are similar to expert annotations when many non-expert labelings for the same input are aggregated, through simple voting or through weighting votes based on how closely non-experts matched experts on a small amount of calibration data. MTurk has subsequently been widely adopted by the NLP community and used for an extensive range of speech and language applications
+        [7]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Although hiring professional translators to create bilingual training data for machine translation systems has been deemed infeasible, Mechanical Turk has provided a low cost way of creating large volumes of translations
+        [9, 3]
+        . For instance,
+        Zbib et al. (2012, 2013)
+        translated 1.5 million words of Levine Arabic and Egyptian Arabic, and showed that a statistical translation system trained on the dialect data outperformed a system trained on 100 times more MSA data.
+        Post et al. (2012)
+        used MTurk to create parallel corpora for six Indian languages for less than $0.01 per word. MTurk workers translated more than half a million words worth of Malayalam in less than a week. Several researchers have examined the use of active learning to further reduce the cost of translation
+        [2, 4, 6]
+        . Crowdsourcing allowed real studies to be conducted whereas most past active learning were simulated.
+        Pavlick et al. (2014)
+        conducted a large-scale demographic study of the languages spoken by workers on MTurk by translating 10,000 words in each of 100 languages.
+        Chen and Dolan (2012)
+        examined the steps necessary to build a persistent multilingual workforce on MTurk.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        This paper is most closely related to previous work by
+        Zaidan and Callison-Burch (2011)
+        , who showed that non-professional translators could approach the level of professional translators. They solicited multiple redundant translations from different Turkers for a collection of Urdu sentences that had been previously professionally translated by the Linguistics Data Consortium. They built a model to try to predict on a sentence-by-sentence and Turker-by-Turker which was the best translation or translator. They also hired US-based Turkers to edit the translations, since the translators were largely based in Pakistan and exhibited errors that are characteristic of speakers of English as a language.
+        Zaidan and Callison-Burch (2011)
+        observed only modest improvements when incorporating these edited translation into their model. We attempt to analyze why this is, and we proposed a new model to try to better leverage their data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Crowdsourcing Translation
+      </h2>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Setup
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         We conduct our experiments using the data collected by
+         Zaidan and Callison-Burch (2011)
+         . This data set consists 1,792 Urdu sentences from a variety of news and online sources, each paired with English translations provided by non-professional translators on Mechanical Turk.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p2">
+        <p class="ltx_p">
+         Each Urdu sentence was translated redundantly by 3 distinct translators, and each translation was edited by 3 separate (native English-speaking) editors to correct for grammatical and stylistic errors. In total, this gives us 12 non-professional English candidate sentences (3 unedited, 9 edited) per original Urdu sentence. 52 different Turkers took part in the translation task, each translating 138 sentences on average. In the editing task, 320 Turkers participated, averaging 56 sentences each. For comparison, the data also includes 4 different reference translations for each source sentence, produced by professional translators.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p3">
+        <p class="ltx_p">
+         Table
+         1
+         gives an example of an unedited translation, an edited translation, and a professional translation for the same sentence. The translations provided by translators on MTurk are generally done conscientiously, preserving the meaning of the source sentence, but typically contain simple mistakes like misspellings, typos, and awkward word choice. English-speaking editors, despite having no knowledge of the source language, are able to fix these errors. In this work, we show that the collaboration design of two heads– non-professional Urdu translators and non-professional English editors– yields better translated output than would either one working in isolation, and can better approximate the quality of professional translators.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Analysis
+       </h4>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         We know from inspection that translations seem to improve with editing (Table
+         1
+         ). Given the data from MTurk, we explore whether this is the case in general: Do all translations improve with editing? To what extent does the individual translator and the individual editor effect the quality of the final sentence?
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p2">
+        <p class="ltx_p">
+         We use
+         translation edit rate
+         (TER) as a measure of translation similarity. TER represents the amount of change necessary to transform one sentence into another, so a low TER means the two sentences are very similar. To capture the quality (“professionalness”) of a translation, we take the average TER of the translation against each of our gold translations. That is, we define TER
+         g⁢o⁢l⁢d
+         of translation
+         t
+         as
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p3">
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           T⁢E⁢Rg⁢o⁢l⁢d=14⁢∑i=14T⁢E⁢R⁢(g⁢o⁢l⁢di,t)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p4">
+        <p class="ltx_p">
+         where a lower TER
+         g⁢o⁢l⁢d
+         is indicative of a higher quality (more professional-sounding) translation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p5">
+        <p class="ltx_p">
+         We first look at editors along two dimensions: their aggressiveness and their effectiveness. Some editors may be very aggressive (they make many changes to the original translation) but still be ineffective (they fail to bring the quality of the translation closer to that of a professional). We measure aggressiveness by looking at the TER between the pre- and post-edited versions of each editor’s translations; higher TER implies more aggressive editing. To measure effectiveness, we look at the change in TER
+         g⁢o⁢l⁢d
+         that results from the editing; negative
+         Δ
+         TER
+         g⁢o⁢l⁢d
+         means the editor effectively improved the quality of the translation, while positive
+         Δ
+         TER
+         g⁢o⁢l⁢d
+         means the editing actually brought the translation further from our gold standard.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p6">
+        <p class="ltx_p">
+         Figure
+         1
+         shows the relationship between these two qualities for individual editor/translation pairs. We see that while most translations require only a few edits, there are a large number of translations which improve substantially after heavy editing. This trend conforms to our intuition that editing is most useful when the translation has much room for improvement, and opens the question of whether good editors can offer improvements to translations of all qualities.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p7">
+        <p class="ltx_p">
+         To address this question, we split our translations into 5 bins, based on their TER
+         g⁢o⁢l⁢d
+         . We also split our editors into 5 bins, based on their effectiveness (i.e. the average amount by which their editing reduces TER
+         g⁢o⁢l⁢d
+         ). Figure
+         2
+         shows the degree to which editors at each level are able to improve the translations from each bin. We see that good editors are able to make improvements to translations of all qualities, but that good editing has the greatest impact on lower quality translations. This result suggests that finding good editor/translator pairs, rather than good editors and good translators in isolation, should produce the best translations overall. Figure
+         3
+         gives an example of how an initially medium-quality translation, when combined with good editing, produces a better result than the higher-quality translation paired with mediocre editing.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Problem Formulation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The problem definition of the crowdsourcing translation task is straightforward: given a set of candidate translations for a source sentence, we want to choose the best output translation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        This output translation is the result of the combined translation and editing stages. Therefore, our method operates over a heterogeneous network that includes translators and post-editors as well as the translated sentences that they produce. We frame the problem as follows. We form two graphs: the first graph (
+        GT
+        ) represents Turkers (translator/editor pairs) as nodes; the second graph (
+        GC
+        ) represents candidate translated and post-edited sentences (henceforth “candidates”) as nodes. These two graphs,
+        GT
+        and
+        GC
+        are combined as subgraphs of a third graph (
+        GT⁢C
+        ). Edges in
+        GT⁢C
+        connect author pairs (nodes in
+        GT
+        ) to the candidate that they produced (nodes in
+        GC
+        ). Together,
+        GT
+        ,
+        GC
+        , and
+        GT⁢C
+        define a co-ranking problem
+        [39, 41, 40]
+        with linkage establishment
+        [38, 42]
+        , which we define formally as follows.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Let
+        G
+        denote the heterogeneous graph with nodes
+        V
+        and edges
+        E
+        . Let
+        G
+        = (
+        V
+        ,
+        E
+        ) = (
+        VT,VC,ET,EC,ET⁢C)
+        .
+        G
+        is divided into three subgraphs,
+        GT
+        ,
+        GC
+        , and
+        GT⁢C
+        .
+        GC
+        = (
+        VC,EC
+        ) is a weighted undirected graph representing the candidates and their lexical relationships to one another. Let
+        VC
+        denote a collection of translated and edited candidates, and
+        EC
+        the lexical similarity between the candidates (see Section
+        4.3
+        for details).
+        GT
+        = (
+        VT,ET
+        ) is a weighted undirected graph representing collaborations between Turkers.
+        VT
+        is the set of translator/editor pairs. Edges
+        ET
+        connect translator/editor pairs in
+        VT
+        which share a translator and/or editor. Each collaboration (i.e. each node in
+        VT
+        ) produces a candidate (i.e. a node in
+        VC
+        ).
+        GT⁢C=(VT⁢C,ET⁢C)
+        is an unweighted bipartite graph that ties
+        GT
+        and
+        GC
+        together and represents “authorship”. The graph
+        G
+        consists of nodes
+        VT⁢C
+        =
+        VT∪VC
+        and edges
+        ET⁢C
+        connecting each candidate with its authoring translator/post-editor pair. The three sub-networks (
+        GT
+        ,
+        GC
+        , and
+        GT⁢C
+        ) are illustrated in Figure
+        4
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Inter-Graph Ranking
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         The framework includes three random walks, one on
+         GT
+         , one on
+         GC
+         and one on
+         GT⁢C
+         . A random walk on a graph is a Markov chain, its states being the vertices of the graph. It can be described by a stochastic square matrix, where the dimension is the number of vertices in the graph, and the entries describe the transition probabilities from one vertex to the next. The mutual reinforcement framework couples the two random walks on
+         GT
+         and
+         GC
+         that rank candidates and Turkers in isolation. The ranking method allows us to obtain a global ranking by taking into account the intra-/inter-component dependencies. In the following sections, we describe how we obtain the rankings on
+         GT
+         and
+         GC
+         , and then move on to discuss how the two are coupled.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Our algorithm aims to capture the following intuitions. A candidate is important if 1) it is similar to many of the other proposed candidates and 2) it is authored by better qualified translators and/or post-editors. Analogously, a translator/editor pair is believed to be better qualified if 1) the editor is collaborating with a good translator and vice versa and 2) the pair has authored important candidates. This ranking schema is actually a reinforced process across the heterogeneous graphs. We use two vectors
+         𝐜=[π⁢(c)]|c|×1
+         and
+         𝐭=[π⁢(t)]|t|×1
+         to denote the saliency scores
+         π(.)
+         of candidates and Turker pairs. The above-mentioned intuitions can be formulated as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         ∙
+         Homogeneity.
+         We use adjacency matrix
+         [M]|𝐜|×|𝐜|
+         to describe the homogeneous affinity between candidates and
+         [N]|𝐭|×|𝐭|
+         to describe the affinity between Turkers.
+        </p>
+        𝐜∝MT⁢𝐜,  𝐭∝NT⁢𝐭
+
+(2)
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         where
+         c=|VC|
+         is the number of vertices in the candidate graph and
+         t=|VT|
+         is the number of vertices in the Turker graph. The adjacency matrix
+         [M]
+         denotes the transition probabilities between candidates, and analogously matrix
+         [N]
+         denotes the affinity between Turker collaboration pairs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         ∙
+         Heterogeneity.
+         We use an adjacency matrix
+         [W^]|𝐜|×|𝐭|
+         and
+         [W¯]|𝐭|×|𝐜|
+         to describe the authorship between the output candidate and the producer Turker pair from both of the candidate-to-Turker and Turker-to-candidate perspectives.
+        </p>
+        𝐜∝W^T⁢𝐭,  𝐭∝W¯T⁢𝐜
+
+(3)
+       </div>
+       <div class="ltx_para" id="S4.SS1.p6">
+        <p class="ltx_p">
+         All affinity matrices will be defined in the next section. By fusing the above equations, we can have the following iterative calculation in matrix forms. For numerical computation of the saliency scores, the initial scores of all sentences and Turkers are set to 1 and the following two steps are alternated until convergence to select the best candidate.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p7">
+        <p class="ltx_p">
+         Step 1
+         : compute the saliency scores of candidates, and then normalize using
+         ℓ
+         -1 norm.
+        </p>
+        <table class="ltx_equationgroup" id="S4.E4">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E4X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝐜(n)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =(1-λ)⁢MT⁢𝐜(n-1)+λ⁢W^⁢𝐭(n-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (4)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E4Xa">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝐜(n)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =𝐜(n)/||𝐜(n)||1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p8">
+        <p class="ltx_p">
+         Step 2
+         : compute the saliency scores of Turker pairs, and then normalize using
+         ℓ
+         -1 norm.
+        </p>
+        <table class="ltx_equationgroup" id="S4.E5">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E5X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝐭(n)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =(1-λ)⁢NT⁢𝐭(n-1)+λ⁢W¯⁢𝐜(n-1)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E5Xa">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝐭(n)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =𝐭(n)/||𝐭(n)||1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         λ
+         specifies the relative contributions to the saliency score trade-off between the homogeneous affinity and the heterogeneous affinity. In order to guarantee the convergence of the iterative form, we must force the transition matrix to be stochastic and irreducible. To this end, we must make the
+         c
+         and
+         t
+         column stochastic
+         [20]
+         .
+         c
+         and
+         t
+         are therefore normalized after each iteration of Equation (4) and (5).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Intra-Graph Ranking
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The standard PageRank algorithm starts from an arbitrary node and randomly selects to either follow a random out-going edge (considering the weighted transition matrix) or to jump to a random node (treating all nodes with equal probability).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         In a simple random walk, it is assumed that all nodes in the transitional matrix are equi-probable before the walk starts. Then
+         c
+         and
+         t
+         are calculated as:
+        </p>
+        𝐜=μ⁢MT⁢𝐜+(1-μ)⁢𝟏|VC|
+
+(6)
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         and
+        </p>
+        𝐭=μ⁢NT⁢𝐭+(1-μ)⁢𝟏|VT|
+
+(7)
+        <p class="ltx_p">
+         where
+         1
+         is a vector with all elements equaling to 1 and the size is correspondent to the size of
+         VC
+         or
+         VT
+         .
+         μ
+         is the damping factor usually set to 0.85, as in the PageRank algorithm.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Affinity Matrix Establishment
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We introduce the affinity matrix calculation, including homogeneous affinity (i.e.,
+         M,N
+         ) and heterogeneous affinity (i.e.,
+         W^,W¯
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         As discussed, we model the collection of candidates as a weighted undirected graph,
+         GC
+         , in which nodes in the graph represent candidate sentences and edges represent lexical relatedness. We define an edge’s weight to be the cosine similarity between the candidates represented by the nodes that it connects. The adjacency matrix M describes such a graph, with each entry corresponding to the weight of an edge.
+        </p>
+        <table class="ltx_equationgroup" id="S4.E8">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E8X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ℱ
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (ci,cj)=ci⋅cj||ci||⁢||cj||
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (8)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E8Xa">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Mi⁢j=ℱ⁢(ci,cj)∑kℱ⁢(ci,ck)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         ℱ(.)
+         is the cosine similarity and
+         c
+         is a term vector corresponding to a candidate. We treat a candidate as a short document and weight each term with
+         tf.idf
+         [23]
+         , where
+         tf
+         is the term frequency and
+         idf
+         is the inverse document frequency.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         The Turker graph,
+         GT
+         , is an undirected graph whose edges represent “collaboration.” Formally, let
+         ti
+         and
+         tj
+         be two translator/editor pairs; we say that pair
+         ti
+         “collaborates with” pair
+         tj
+         (and therefore, there is an edge between
+         ti
+         and
+         tj
+         ) if
+         ti
+         and
+         tj
+         share either a translator or an editor (or share both a translator and an editor). Let the function
+         ℐ⁢(ti,tj)
+         denote the number of “collaborations” (
+         #⁢c⁢o⁢l
+         ) between
+         ti
+         and
+         tj
+         .
+        </p>
+        <table class="ltx_equationgroup" id="S4.E9">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E9X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ℐ⁢(ti,tj)
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ={#⁢c⁢o⁢l(ei⁢j∈ET)0otherwise,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (9)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p4">
+        <p class="ltx_p">
+         Then the adjacency matrix N is then defined as
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p5">
+        <table class="ltx_equationgroup" id="S4.E10">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E10X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           Ni⁢j
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =ℐ⁢(ti,tj)∑kℐ⁢(ti,tk)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (10)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p6">
+        <p class="ltx_p">
+         In the bipartite candidate-Turker graph
+         GT⁢C
+         , the entry
+         ET⁢C⁢(i,j)
+         is an indicator function denoting whether the candidate
+         ci
+         is generated by
+         tj
+         :
+        </p>
+        𝒜⁢(ci,tj)={1(ei⁢j∈ET⁢C)0otherwise
+
+(11)
+       </div>
+       <div class="ltx_para" id="S4.SS3.p7">
+        <p class="ltx_p">
+         Through
+         ET⁢C
+         we define the weight matrices
+         W¯i⁢j
+         and
+         W^i⁢j
+         , containing the conditional probabilities of transitions from
+         ci
+         to
+         tj
+         and vice versa:
+        </p>
+        <table class="ltx_equationgroup" id="S4.E12">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E12X">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           W¯i⁢j=𝒜⁢(ci,tj)∑k𝒜⁢(ci,tk),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equationgroup">
+            (12)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E12Xa">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           W^i⁢j=𝒜⁢(ci,tj)∑k𝒜⁢(ck,tj)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We are interested in testing our random walk method, which incorporates information from both the candidate translations and from the Turkers. We want to test two versions of our proposed collaborative co-ranking method: 1) based on the unedited translations only and 2) based on the edited sentences after translator/editor collaborations.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS3.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Metric
+       </h4>
+       <div class="ltx_para" id="S5.SS3.SSS0.P1.p1">
+        <p class="ltx_p">
+         Since we have four professional translation sets, we can calculate the Bilingual Evaluation Understudy (BLEU) score
+         [27]
+         for one professional translator (P1) using the other three (P2,3,4) as a reference set. We repeat the process four times, scoring each professional translator against the others, to calculate the expected range of professional quality translation. In the following sections, we evaluate each of our methods by calculating BLEU scores against the same four sets of three reference translations. Therefore, each number reported in our experimental results is an average of four numbers, corresponding to the four possible ways of choosing 3 of the 4 reference sets. This allows us to compare the BLEU score achieved by our methods against the BLEU scores achievable by professional translators.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS3.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Baselines
+       </h4>
+       <div class="ltx_para" id="S5.SS3.SSS0.P2.p1">
+        <p class="ltx_p">
+         As a naive baseline, we choose one candidate translation at random for each input Urdu sentence. To establish an upper bound for our methods, and to determine if there exist high-quality Turker translations at all, we compute four oracle scores. The first oracle operates at the segment level on the sentences produced by translators only: for each source segment, we choose from the translations the one that scores highest (in terms of BLEU) against the reference sentences. The second oracle is applied similarly, but chooses from the candidates produced by the collaboration of translator/post-editor pairs. The third oracle operates at the worker level: for each source segment, we choose from the translations the one provided by the worker whose translations (over all sentences) score the highest on average. The fourth oracle also operates at the worker level, but selects from sentences produced by translator/post-editor collaborations. These oracle methods represent ideal solutions under our scenario. We also examine two voting-inspired methods. The first method selects the translation with the minimum average TER
+         [33]
+         against the other translations; intuitively, this would represent the “consensus” translation. The second method selects the translation generated by the Turker who, on average, provides translations with the minimum average TER.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS3.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Results
+       </h4>
+       <div class="ltx_para" id="S5.SS3.SSS0.P3.p1">
+        <p class="ltx_p">
+         A summary of our results in given in Table
+         2
+         . As expected, random selection yields bad performance, with a BLEU score of 30.52. The oracles indicate that there is usually an acceptable translation from the Turkers for any given sentence. Since the oracles select from a small group of only 4 translations per source segment, they are not overly optimistic, and rather reflect the true potential of the collected translations. On average, the reference translations give a score of 42.38. To put this in perspective, the output of a state-of-the-art machine translation system (the syntax-based variant of Joshua) achieves a score of 26.91, which is reported in
+         [43]
+         . The approach which selects the translations with the minimum average TER
+         [33]
+         against the other three translations (the “consensus” translation) achieves BLEU scores of 35.78.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.SSS0.P3.p2">
+        <p class="ltx_p">
+         Using the raw translations without post-editing, our graph-based ranking method achieves a BLEU score of 38.89, compared to
+         Zaidan and Callison-Burch (2011)
+         ’ s reported score of 28.13, which they achieved using a linear feature-based classification. Their linear classifier achieved a reported score of 39.06
+         when combining information from both translators and editors. In contrast, our proposed graph-based ranking framework achieves a score of 41.43 when using the same information. This boost in BLEU score confirms our intuition that the hidden collaboration networks between candidate translations and transltor/editor pairs are indeed useful.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS3.SSS0.P4">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Parameter Tuning
+       </h4>
+       <div class="ltx_para" id="S5.SS3.SSS0.P4.p1">
+        <p class="ltx_p">
+         There are two parameters in our experimental setups:
+         μ
+         controls the probability of starting a new random walk and
+         λ
+         controls the coupling between the candidate and Turker sub-graphs. We set the damping factor
+         μ
+         to 0.85, following the standard PageRank paradigm. In order to determine a value for
+         λ
+         , we used the average BLEU, computed against the professional reference translations, as a tuning metric. We experimented with values of
+         λ
+         ranging from 0 to 1, with a step size of 0.05 (Figure
+         5
+         ). Small
+         λ
+         values place little emphasis on the candidate/Turker coupling, whereas larger values rely more heavily on the co-ranking. Overall, we observed better performance with values within the range of 0.05-0.15. This suggests that both sources of information– the candidate itself and its authors– are important for the crowdsourcing translation task. In all of our reported results, we used the
+         λ
+         = 0.1.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS3.SSS0.P5">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Analysis
+       </h4>
+       <div class="ltx_para" id="S5.SS3.SSS0.P5.p1">
+        <p class="ltx_p">
+         We examine the relative contribution of each component of our approach on the overall performance. We first examine the centroid-based ranking on the candidate sub-graph (
+         GC
+         ) alone to see the effect of voting among translated sentences; we denote this strategy as
+         plain ranking
+         . Then we incorporate the standard random walk on the Turker graph (
+         GT
+         ) to include the structural information but without yet including any collaboration information; that is, we incorporate information from
+         GT
+         and
+         GC
+         without including edges linking the two together. The co-ranking paradigm is exactly the same as the framework described in Section 3.2, but with simplified structures.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.SSS0.P5.p2">
+        <p class="ltx_p">
+         Finally, we examine the two-step collaboration based candidate-Turker graph using several variations on edge establishment. As before, the nodes are the translator/post-editor working pairs. We investigate three settings in which 1) edges connect two nodes when they share only a translator, 2) edges connect two nodes when they share only a post-editor, and 3) edges connect two nodes when they share either a translator or a post-editor. These results are summarized in Table
+         3
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.SSS0.P5.p3">
+        <p class="ltx_p">
+         Interestingly, we observe that when modeling the linkage between the collaboration pairs, connecting Turker pairs which share either a translator or the post-editor achieves better performance than connecting pairs that share only translators or connecting pairs which share only editors. This result supports the intuition that a denser collaboration matrix will help propagate saliency to good translators/post-editors and hence provides better predictions for candidate quality.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        We have proposed an algorithm for using a two-step collaboration between non-professional translators and post-editors to obtain professional-quality translations. Our method, based on a co-ranking model, selects the best crowdsourced translation from a set of candidates, and is capable of selecting translations which near professional quality.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        Crowdsourcing can play a pivotal role in future efforts to create parallel translation datasets. In addition to its benefits of cost and scalability, crowdsourcing provides access to languages that currently fall outside the scope of statistical machine translation research. In future work on crowdsourced translation, further benefits in quality improvement and cost reduction could stem from 1) building ground truth data sets based on high-quality Turkers’ translations and 2) identifying when sufficient data has been collected for a given input, to avoid soliciting unnecessary redundant translations.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

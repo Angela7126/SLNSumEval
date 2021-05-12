@@ -1,0 +1,1235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A chance-corrected measure of inter-annotator agreement for syntax.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Following the works of
+       Carletta96 and
+       Art:Poe08, there is
+an increasing consensus within the field that in order to properly gauge
+the reliability of an annotation effort, chance-corrected measures of
+inter-annotator agreement should be used. With this in mind, it is
+striking that virtually all evaluations of syntactic annotation efforts
+use uncorrected parser evaluation metrics such as bracket
+       F1
+       (for
+phrase structure) and accuracy scores (for dependencies).
+      </p>
+      <p class="ltx_p">
+       In this work we present a chance-corrected metric based on Krippendorff’s
+       α
+       , adapted to the structure of syntactic annotations and applicable
+both to phrase structure and dependency annotation without any
+modifications. To evaluate our metric we first present a number of
+synthetic experiments to better control the sources of noise and gauge the
+metric’s responses, before finally contrasting the behaviour of our
+chance-corrected metric with that of uncorrected parser evaluation metrics
+on real corpora.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       edgefromparent/.style=-¿,draw,font=
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        It is a truth universally acknowledged that an annotation task in good
+standing be in possession of a measure of inter-annotator agreement (IAA).
+However, no such measure is in widespread use for the task of syntactic
+annotation. This is due to a mismatch between the formulation of the agreement
+measures, which assumes that the annotations have no or
+relatively little internal structure, and syntactic annotation where structure
+is the entire point of the annotation. For this reason efforts to gauge the
+quality of syntactic annotation are hampered by the need to fall back to
+simple accuracy measures. As shown in
+        Art:Poe08, such measures are
+biased in favour of annotation schemes with fewer categories and do not
+account for skewed distributions between classes, which can give high
+observed agreement, even if the annotations are inconsistent.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In this article we propose a family of chance-corrected measures of agreement,
+applicable to both dependency- and constituency-based syntactic annotation,
+based on Krippendorff’s
+        α
+        and tree edit distance. First we give an
+overview of traditional agreement measures and why they are insufficient for
+syntax, before presenting our proposed metrics. Next, we present a number of
+synthetic experiments performed in order to find the best distance function
+for this kind of annotation; finally we contrast our new metric and simple
+accuracy scores as applied to real-world corpora before concluding and
+presenting some potential avenues for future work.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S1.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         1.1
+        </span>
+        Previous work
+       </h3>
+       <div class="ltx_para" id="S1.SS1.p1">
+        <p class="ltx_p">
+         The definitive reference for agreement measures in computational linguistics
+is
+         Art:Poe08, who argue forcefully in favour of the use of
+chance-corrected measures of agreement over simple accuracy measures. However,
+most evaluations of syntactic treebanks use simple accuracy measures such as
+bracket
+         F1
+         scores for constituent trees (NEGRA,
+         []
+         ; TIGER,
+         []
+         ; Cat3LB,
+         []
+         ; The Arabic Treebank,
+         []
+         ) or labelled or unlabelled attachment scores for
+dependency syntax (PDT,
+         []
+         ; PCEDT
+         []
+         ; Norwegian
+Dependency Treebank,
+         []
+         ). The only work we know of using
+chance-corrected metrics is
+         Rag:Dic13, who use MASI
+         []
+         to measure agreement on dependency relations and head selection in
+multi-headed dependency syntax, and
+         Bha:Sha12, who compute Cohen’s
+         κ
+         []
+         on dependency relations in single-headed dependency
+syntax. A limitation of the first approach is that token ID becomes the
+relevant category for the purposes of agreement, while the second approach
+only computes agreements on relations, not on structure.
+        </p>
+       </div>
+       <div class="ltx_para" id="S1.SS1.p2">
+        <p class="ltx_p">
+         In grammar-driven treebanking (or parsebanking), the problems encountered are
+slightly different. In HPSG and LFG treebanking annotators do not annotate
+structure directly. Instead, the grammar parses the input sentences, and the
+annotator selects the correct parse (or rejects all the candidates) based on
+discriminants
+         of the
+parse forest. In this context,
+         deCastro11 developed a variant of
+         κ
+         that measures agreement over discriminant selection. This is
+different from our approach in that agreement is computed on annotator
+decisions rather than on the treebanked analyses, and is only applicable to
+grammar-based approaches such as HPSG and LFG treebanking.
+        </p>
+       </div>
+       <div class="ltx_para" id="S1.SS1.p3">
+        <p class="ltx_p">
+         The idea of using edit distance as the basis for an inter-annotator agreement
+metric has previously been explored by
+         Fournier13. However that work
+used a boundary edit distance as the basis of a metric for the task of text
+segmentation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S1.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         1.2
+        </span>
+        Notation
+       </h3>
+       <div class="ltx_para" id="S1.SS2.p1">
+        <p class="ltx_p">
+         In this paper, we mostly follow the notation and terminology of
+         Art:Poe08, with some additions. The key components in an agreement
+study are the
+         items
+         annotated, the
+         coders
+         who make judgements on
+individual items, and the
+         annotations
+         created for the items. We denote
+these as follows:
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            The set of items
+            I={i1,i2,…}
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            The set of coders
+            C={c1,c2,…}
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            The set of annotations
+            X
+            is a set of sets
+            X={Xi|i∈I}
+            where each set
+            Xi={xi⁢c|c∈C}
+            contains the annotations
+for each item. If not all coders annotate all items, the different
+            Xi
+            will be of different sizes.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         In the case of nominal categorisation we will also use the set
+         K
+         of
+possible categories.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       The metric
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        The most common metrics used in computational linguistics are the metrics
+        κ
+        [, introduced to computational linguistics by
+[]]
+        and
+        π
+        []
+        . These metrics express
+agreement on a nominal coding task as the ratio
+        κ,π=Ao-Ae/1-Ae
+        where
+        Ao
+        is the observed agreement and
+        Ae
+        the expected
+agreement according to some model of “random” annotation. Both metrics have
+essentially the same model of expected agreement:
+       </p>
+       Ae=∑k∈KP(k|c1)P(k|c2)
+
+(1)
+       <p class="ltx_p">
+        differing only in how they estimate the probabilities:
+        κ
+        assigns
+separate probability distributions to each coder based on their observed
+behaviour, while
+        π
+        uses the same distribution for both coders based on
+their aggregate behaviour.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Now, if we want to perform this same kind of evaluation on syntactic
+annotation it is not possible to use
+        κ
+        or
+        π
+        directly. In the case
+of dependency-based syntax we could conceivably use a variant of these metrics
+by considering the ID of a token’s head as a categorical variable (the
+approach taken in
+        []
+        ), but we argue that this is not
+satisfactory. This use of the metrics would consider agreement on categories
+such as “tokens whose head is token number 24”, which is obviously not a
+linguistically informative category. Thus we have to reject this way of
+assessing the reliability of dependency syntax annotation. Also, this approach
+is not directly generalisable to constituency-based syntax.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        For dependency syntax we could generalise these metrics similarly to how
+        κ
+        is generalised to
+        κw
+        to handle partial credit for overlapping
+annotations. Let the function
+        LAS⁢(t1,t2)
+        be the number of tokens
+with the same head and label in the two trees
+        t1
+        and
+        t2
+        ,
+        T⁢(i)
+        the set
+of trees possible for an item
+        i∈I
+        , and
+        tokens
+        the number of
+tokens in the corpus. Then we can compute an expected agreement as follows:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_gather" id="Sx1.EGx1">
+        <tr class="ltx_equation ltx_align_baseline" id="S2.E2">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_align_center">
+          Ae=1tokens⁢∑i∈I∑t1,t2∈T⁢(i)2LASe⁢(t1,t2)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (2)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_align_center">
+          LASe(t1,t2)=P(t1|c1)P(t2|c2)LAS(t1,t2)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        We see three problems with this approach. First of all the number of possible
+trees for a sentence grows exponentially with sentence length, which means
+that explicitly iterating over all possible such pairs is computationally
+intractable, nor have we been able to easily derive an algorithm for this
+particular problem from standard algorithms.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Second, the question of which model to use for
+        P(t|c)
+        is not
+straightforward. It is possible to use generative parsing models such as PCFGs
+or the generative dependency models of
+        Eisner96, but agreement metrics
+require a model of
+        random
+        annotation, and as such using models designed
+for parsing runs the risk of over-estimating
+        Ae
+        , resulting in artificially
+low agreement scores.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        Finally, it may be hard to establish a consensus in the field of which
+particular metric to use. As shown by the existence of three different metrics
+(
+        κ
+        ,
+        π
+        and
+        S
+        []
+        ) for the relatively simple task
+of nominal coding, the choice of model for
+        P(t|c)
+        will not be obvious, and
+thus differing choices of generative model as well as different choices for
+parameters such as smoothing will result in subtly different agreement
+metrics. The results of these different metrics will not be directly
+comparable, which will make the results of groups using different metrics
+unnecessarily hard to compare.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        Instead, we propose to use an agreement measure based on Krippendorff’s
+        α
+        []
+        and tree edit distance. In this
+approach we compare tree structures directly, which is extremely parsimonious
+in terms of assumptions, and furthermore sidesteps the problem of
+probabilistically modelling annotators’ behaviour entirely. Krippendorff’s
+        α
+        is not as commonly used as
+        κ
+        and
+        π
+        , but it has the
+advantage of being expressed in terms of an arbitrary
+        distance function
+        δ
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        A full derivation of
+        α
+        is beyond the scope of this article, and we will
+simply state the formula used to compute the agreement. Krippendorff’s
+        α
+        is normally expressed in terms of the ratio of observed and expected
+disagreements:
+        α=1-Do/De
+        , where
+        Do
+        is the mean squared
+distance between annotations of the same item and
+        De
+        the mean squared
+distance between all pairs of annotations:
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p9">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex2">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Do
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =∑i∈I1|Xi|-1⁢∑c∈C∑c′∈Cδ⁢(xi⁢c,xi⁢c′)2
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex3">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          De
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =1∑i∈I|Xi|-1⁢∑i∈I∑c∈C∑i′∈I∑c′∈Cδ⁢(xi⁢c,xi′⁢c′)2
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S2.p10">
+       <p class="ltx_p">
+        Note that in the expression for
+        De
+        , we are computing the difference between
+annotations for
+        different
+        items; thus, our distance function for
+syntactic trees needs to be able to compute the difference between arbitrary
+trees for completely unrelated sentences. The function
+        δ
+        can be any
+function as long as it is a metric; that is, it must be (1) non-negative, (2)
+symmetric, (3) zero only for identical inputs, and (4) it must obey the
+triangle inequality:
+       </p>
+       <ol class="ltx_enumerate" id="I2">
+        <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I2.i1.p1">
+          <p class="ltx_p">
+           ∀x,y:δ⁢(x,y)≥0
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I2.i2.p1">
+          <p class="ltx_p">
+           ∀x,y:δ⁢(x,y)=δ⁢(x,y)
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          3.
+         </span>
+         <div class="ltx_para" id="I2.i3.p1">
+          <p class="ltx_p">
+           ∀x,y:δ⁢(x,y)=0⇔x=y
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          4.
+         </span>
+         <div class="ltx_para" id="I2.i4.p1">
+          <p class="ltx_p">
+           ∀x,y,z:δ⁢(x,y)+δ⁢(y,z)≥δ⁢(x,z)
+          </p>
+         </div>
+        </li>
+       </ol>
+      </div>
+      <div class="ltx_para" id="S2.p11">
+       <p class="ltx_p">
+        This immediately excludes metrics like ParsEval
+        []
+        and
+Leaf-Ancestor
+        []
+        , since they assume that the trees being
+compared are parses of the same sentence. Instead, we base our work on tree
+edit distance. The tree edit distance (TED) problem is defined analogously to
+the more familiar problem of string edit distance: what is the minimum number
+of edit operations required to transform one tree into the other? See
+        Bille05 for a thorough introduction to the tree edit distance problem
+and other related problems. For this work, we used the algorithm of
+        Zha:Sha89. Tree edit distance has previously been used in the
+        TedEval
+        software
+        []
+        for parser
+evaluation agnostic to both annotation scheme and theoretical framework, but
+this by itself is still an uncorrected accuracy measure and thus unsuitable
+for our purposes.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p12">
+       <p class="ltx_p">
+        When comparing syntactic trees, we only want to compare dependency relations
+or non-terminal categories. Therefore we remove the leaf nodes in the case of
+phrase structure trees, and in the case of dependency trees we compare trees
+whose edges are unlabelled and nodes are labelled with the dependency relation
+between that word and its head; the root node receives the label
+        ϵ
+        .
+An example of this latter transformation is shown in Figure
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p13">
+       <p class="ltx_p">
+        We propose three different distance functions for the agreement computation:
+the unmodified tree edit distance function, denoted
+        δp⁢l⁢a⁢i⁢n
+        , a second
+function
+        δd⁢i⁢f⁢f⁢(x,y)=TED⁢(x,y)-abs⁢(|x|-|y|)
+        , the edit distance
+minus the difference in length between the two sentences, and finally
+        δn⁢o⁢r⁢m⁢(x,y)=TED⁢(x,y)/|x|+|y|
+        , the edit distance normalised
+to the range
+        [0,1]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p14">
+       <p class="ltx_p">
+        The plain TED is the simplest in terms of parsimony assumptions, however it
+may overestimate the difference between sentences, we intuitively find to be
+syntactically similar. For example the only difference between the two
+leftmost trees in Figure
+        2
+        is a modifier, but
+        δp⁢l⁢a⁢i⁢n
+        gives them distance 4 and
+        δd⁢i⁢f⁢f
+        0. On the other
+hand,
+        δd⁢i⁢f⁢f
+        might underestimate some distances as well; for example
+the leftmost and rightmost trees also have distance zero using
+        δd⁢i⁢f⁢f
+        , despite our syntactic intuition that the difference between a
+transitive and an intransitive should be taken account of.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p15">
+       <p class="ltx_p">
+        The third distance function,
+        δn⁢o⁢r⁢m
+        , takes into account a slightly
+different concern; namely that when comparing a long sentence and a short
+sentence, the distance has to be quite large simply to account for the
+difference in number of nodes, unlike comparing two short or two long
+sentences. Normalising to the range
+        [0,1]
+        puts all pairs on an equal
+footing.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p16">
+       <p class="ltx_p">
+        However, we cannot
+        a priori
+        say which of the three functions is the
+optimal choice of distance functions. The different functions have different
+properties, and different advantages and drawbacks, and the nature of their
+strengths and weaknesses differ. We will therefore perform a number of
+synthetic experiments to investigate their properties in a controlled
+environment, before applying them to real-world data.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Synthetic experiments
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In the previous section, we proposed three different agreement metrics
+        αp⁢l⁢a⁢i⁢n
+        ,
+        αd⁢i⁢f⁢f
+        and
+        αn⁢o⁢r⁢m
+        , each involving
+different trade-offs. Deciding which of these metrics is the best one for our
+purposes of judging the consistency of syntactic annotation poses a bit of a
+conundrum. We could at this point apply our metrics to various real corpora
+and compare the results, but since the consistency of the corpora is unknown,
+it’s impossible to say whether the best metric is the one resulting in the
+highest scores, the lowest scores or somewhere in the middle. To properly
+settle this question, we first performed a number of synthetic experiments to
+gauge how the different metrics respond to disagreement.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        The general approach we take is based on that used by
+        Mathet:etal12,
+adapted to dependency trees. An already annotated corpus, in our case 100
+randomly selected sentences from the Norwegian Dependency Treebank
+        []
+        , are taken as correct and then permuted to produce
+“annotations” of different quality. For dependency trees, the input corpus
+is permuted as follows:
+       </p>
+       <ol class="ltx_enumerate" id="I3">
+        <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          1.
+         </span>
+         <div class="ltx_para" id="I3.i1.p1">
+          <p class="ltx_p">
+           Each token has a probability
+           pr⁢e⁢l⁢a⁢b⁢e⁢l
+           of being assigned a
+different label uniformly at random from the set of labels used in the
+corpus.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_enumerate">
+          2.
+         </span>
+         <div class="ltx_para" id="I3.i2.p1">
+          <p class="ltx_p">
+           Each token has a probability
+           pr⁢e⁢a⁢t⁢t⁢a⁢c⁢h
+           of being assigned a new
+head uniformly at random from the set of tokens not dominated by the
+token.
+          </p>
+         </div>
+        </li>
+       </ol>
+       <p class="ltx_p">
+        The second permutation process is dependent on the order the tokens are
+processed, and we consider the tokens in the post-order
+        as dictated by the original
+tree. This way tokens close to the root have a fair chance of having candidate
+heads if they are selected. A pre-order traversal would result in tokens close
+to the root having few options, and in particular if the root has a single
+child, that node has no possible new heads unless one of its children has been
+assigned the root as its new head first. For example in the trees in figure
+        2
+        , assigning any other head than the root to the
+        Pred
+        nodes directly dominated by the root will result in invalid
+(cyclic and unconnected) dependency trees. Traversing the tokens in the linear
+order dictated by the sentence has similar issues for tokens close to the root
+and close to the start of the sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        For our first set of experiments, we set
+        pr⁢e⁢l⁢a⁢b⁢e⁢l=pr⁢e⁢a⁢t⁢t⁢a⁢c⁢h
+        and
+evaluated the different agreement metrics for 10 evenly spaced
+        p
+        -values
+between 0.1 and 1.0. Initial exploration of the data showed that the mean
+follows the median very closely regardless of metric and perturbation level,
+and therefore we only report the mean scores across runs in this paper. The
+results of these experiments are shown in Figure
+        3
+        ,
+with the labelled attachment score
+        (LAS) for
+comparison.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        The
+        αd⁢i⁢f⁢f
+        metric is clearly extremely sensitive to noise, with
+        p=0.1
+        yielding mean
+        αd⁢i⁢f⁢f=15.8⁢%
+        , while
+        αn⁢o⁢r⁢m
+        is more
+lenient than both LAS and
+        αp⁢l⁢a⁢i⁢n
+        , with mean
+        αn⁢o⁢r⁢m=14.5⁢%
+        at
+        p=1
+        , quite high compared to
+        LAS=0.9⁢%
+        ,
+        αp⁢l⁢a⁢i⁢n=-6.8⁢%
+        and
+        αd⁢i⁢f⁢f=-246⁢%
+        . To further study the sensitivity of the metrics to
+the two kinds of noise, we performed an additional set of experiments, setting
+one
+        p=0
+        while varying the other over the same range as in the previous
+experiment, the results of which are shown in Figures
+        4
+        and
+        5
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        The LAS curves are mostly unremarkable, with one exception: Mean LAS at
+        pr⁢e⁢a⁢t⁢t⁢a⁢c⁢h=1
+        of Figure
+        5
+        is 23.9%, clearly much
+higher than we would expect if the trees were completely random. In
+comparison, mean LAS when only labels are perturbed is 4.1%, and since the
+sample space of trees of size
+        n
+        is clearly much larger than that of
+relabellings, a uniform random selection of tree would yield a LAS much closer
+to 0. This shows that our tree shuffling algorithm has a non-uniform
+distribution over the sample space.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p6">
+       <p class="ltx_p">
+        While the behaviour of our alphas and LAS are relatively similar in Figure
+        3
+        , Figures
+        4
+        and
+        5
+        show that they do in fact have important
+differences. Whereas LAS responds linearly to perturbation of both labels and
+structure, with its parabolic behaviour in Figure
+        3
+        being simply the product of these two linear responses, the
+        α
+        metrics
+respond differently to structural noise and label noise, with label
+disagreements being penalised less harshly than structural disagreements.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p7">
+       <p class="ltx_p">
+        The reason for the strictness of the
+        αd⁢i⁢f⁢f
+        metric and the laxity of
+        αn⁢o⁢r⁢m
+        is the effects the modified distance functions have on the
+distribution of distances. The
+        δd⁢i⁢f⁢f
+        function causes an extreme
+shift of the distances towards 0; more than 30% of the sentence pairs have
+distance 0, 1, or 2, which causes
+        Ded⁢i⁢f⁢f
+        to be extremely low and thus
+gives disproportionally large weight to non-zero distances in
+        Dod⁢i⁢f⁢f
+        . On
+the other hand
+        δn⁢o⁢r⁢m
+        causes a rightward shift of the distances,
+which results in a high
+        Den⁢o⁢r⁢m
+        and thus individual disagreements having
+less weight.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Real-world corpora
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Synthetic experiments do not always fully reflect real-world behaviour,
+however. Therefore we will also evaluate our metrics on real-world
+inter-annotator agreement data sets. In our evaluation, we will contrast
+labelled accuracy, the standard parser evaluation metric, and our three
+        α
+        metrics. In particular, we are interested in the correlation (or lack
+thereof) between LAS and the alphas, and whether the results of our synthetic
+experiments correspond well with the results on real-world IAA sets. Finally,
+we also evaluate the metric on both dependency and phrase structure data.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        The corpora
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We obtained
+         data from four different corpora. Three of the data sets are
+dependency treebanks (NDT, CDT, PCEDT) and one phrase structure treebank
+(SSD), and of the dependency treebanks the PCEDT contains semantic
+dependencies, while the other two have traditional syntactic dependencies. The
+number of annotators and sizes of the different data sets are summarised in
+Table
+         <span class="ltx_ref ltx_ref_self">
+          LABEL:tbl:corpora
+         </span>
+         .
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         NDT
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P1.p1">
+         <p class="ltx_p">
+          The Norwegian Dependency Treebank
+          []
+          is a
+dependency treebank constructed at the National Library of Norway. The data
+studied in this work has previously been used by
+          Skjaerholt13 to study
+agreement, but using simple accuracy measures (UAS, LAS) rather than
+chance-corrected measures. The IAA data set is divided into three parts,
+corresponding to different parsers used to preprocess the data before
+annotation; what we term NDT 1 through 3 correspond to what
+          Skjaerholt13 labels Danish, Swedish and Norwegian, respectively.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         CDT
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p1">
+         <p class="ltx_p">
+          The Copenhagen Dependency Treebanks
+          []
+          is a collection of parallel dependency
+treebanks, containing data from the Danish PAROLE corpus
+          []
+          in the original Danish and translated into English,
+Italian and Spanish.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P2.p2">
+         <p class="ltx_p">
+          [botcap,
+caption=Sizes of the different IAA corpora,
+label=tbl:corpora,
+mincapwidth=]lcc
+          [a]2 annotators
+          [b]4 annotators, avg. 2.8 annotators/text (min. 2, max. 4)
+          [c]3 annotators, avg. 2.7 annotators/text
+          [d]11 annotators, avg. 2.5 annotators/text (min. 2, max. 6)
+          [e]3 annotators, avg. 2.9 annotators/sent.
+          Corpus
+          Sentences
+          Tokens
+          NDT 1
+          [a]
+          130
+          1674
+          NDT 2
+          [a]
+          110
+          1594
+          NDT 3
+          [a]
+          150
+          1997
+          CDT (da)
+          [a]
+          162
+          2394
+          CDT (en)
+          [a]
+          264
+          5528
+          CDT (es)
+          [b]
+          55
+          924
+          CDT (it)
+          [c]
+          136
+          3057
+          PCEDT
+          [d]
+          3531
+          61737
+          SSD
+          [e]
+          96
+          1581
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P3">
+        <h4 class="ltx_title ltx_title_paragraph">
+         PCEDT
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P3.p1">
+         <p class="ltx_p">
+          The Prague Czech-English Dependency Treebank 2.0
+          PCEDT2 is a parallel corpus of English and Czech, consisting of
+English data from the Wall Street Journal Section of the Penn Treebank
+          []
+          and Czech translations of the English data. The syntactic
+annotations are layered and consist of an analytical layer similar to the
+annotations in most other dependency treebanks, and a more semantic
+tectogrammatical layer.
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS1.SSS0.P3.p2">
+         <p class="ltx_p">
+          Our data set consists of a common set of analytical annotations shared by all
+the annotators, and the tectogrammatical analyses built on top of this common
+foundation. A distinguishing feature of the tectogrammatical analyses, vis a
+vis the other treebanks we are using, is that semantically empty words only
+take part in the analytical annotation layer and nodes are inserted at the
+tectogrammatical layer to represent covert elements of the sentence not
+present in the surface syntax of the analytical layer. Thus, inserting and
+deleting nodes is a central part of the task of tectogrammatical annotation,
+unlike the more surface-oriented annotation of our other treebanks, where the
+tokenisation is fixed before the text is annotated.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS1.SSS0.P4">
+        <h4 class="ltx_title ltx_title_paragraph">
+         SSD
+        </h4>
+        <div class="ltx_para" id="S4.SS1.SSS0.P4.p1">
+         <p class="ltx_p">
+          The Star-Sem Data is a portion of the dataset released for the
+*SEM 2012 shared task
+          []
+          , parsed using the LinGO English
+Resource Grammar (ERG,
+          []
+          ) and the resulting parse forest
+disambiguated based on discriminants. The ERG is an HPSG-based grammar, and as
+such its analyses are attribute-value matrices (AVMs); an AVM is not a tree
+but a directed acyclic graph however, and for this reason we compute agreement
+not on the AVM but the so-called
+          derivation tree
+          . This tree describes
+the types of the lexical items in the sentence and the bottom-up ordering of
+rule applications used to produce the final analysis and can be handled by our
+procedure like any phrase-structure tree.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Agreement results
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         To evaluate our corpora, we compute the three
+         α
+         variants described in
+the previous two sections, and compare these with labelled accuracy scores.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         When there are more than two annotators, we generalise the metric to be the
+average pairwise LAS for each sentence, weighted by the length of the
+sentence. Let
+         LAS⁢(t1,t2)
+         be the fraction of tokens with
+identical head and label in the trees
+         t1
+         and
+         t2
+         ; the pairwise labelled
+accuracy
+         LASp⁢(X)
+         of a set of annotations
+         X
+         as described in
+section
+         1.2
+         is:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_gather" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_align_center">
+           LASp⁢(X)=1∑i|xi⁢1|⁢∑|xi⁢1|⁢Λ⁢(Xi)|Xi|⁢(|Xi|-1)/2
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_align_center">
+           Λ⁢(Xi)=∑c=1|C|∑c′=c+1|C|LAS⁢(xi⁢c,xi⁢c′)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         This is equivalent to the traditional metric in the case where there are only
+two annotators.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         [botcap,
+caption=Agreement scores on real-world corpora,
+label=tbl:alpha-real,
+mincapwidth=]lcccc
+         [a]2 sentences ignored
+         [b]15 sentences ignored
+         [c]1178 sentences ignored
+         [d]Mean pairwise Jaccard similarity
+         Corpus
+         αp⁢l⁢a⁢i⁢n
+         αd⁢i⁢f⁢f
+         αn⁢o⁢r⁢m
+         LAS
+         NDT 1
+         98.4
+         93.0
+         98.8
+         94.0
+         NDT 2
+         98.9
+         95.0
+         99.1
+         94.4
+         NDT 3
+         97.9
+         91.2
+         98.7
+         95.3
+         CDT (da)
+         95.7
+         84.7
+         96.2
+         90.4
+         CDT (en)
+         92.4
+         70.7
+         95.0
+         88.4
+         CDT (es)
+         86.6
+         48.8
+         85.8
+         78.9
+         [a]
+         CDT (it)
+         84.5
+         55.7
+         89.2
+         81.3
+         [b]
+         PCEDT
+         95.9
+         89.9
+         96.5
+         68.0
+         [c]
+         SSD
+         99.1
+         98.6
+         99.3
+         87.9
+         [d]
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         As our uncorrected metric for comparing two phrase structure trees we do not
+use the traditional bracket
+         F1
+         as it does not generalise well to more than
+two annotators, but rather Jaccard similarity. The Jaccard similarity of two
+sets
+         A
+         and
+         B
+         is the ratio of the size of their intersection to the size of
+their union:
+         J⁢(A,B)=|A∩B|/|A∪B|
+         , and we use the Jaccard
+similarity of the sets of labelled bracketings of two trees as our uncorrected
+measure. To compute the similarity for a complete set of annotations we use
+the mean pairwise Jaccard similarity weighted by sentence length; that is, the
+same procedure as in
+         3
+         , but using Jaccard similarity rather
+than LAS.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         Since LAS assumes that both of the sentences compared have identical sets of
+tokens, we had to exclude a number of sentences from the LAS computation in
+the cases of the English and Italian CDT corpora, and especially the PCEDT.
+The large number of sentences excluded in the PCEDT is due to the fact that in
+the tectogrammatical analysis of the PCEDT, inserting and deleting nodes is an
+important part of the annotation task.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p6">
+        <p class="ltx_p">
+         Looking at the results in Table
+         <span class="ltx_ref ltx_ref_self">
+          LABEL:tbl:alpha-real
+         </span>
+         , we observe two things.
+Most obvious, is the extremely large gap between the LAS and
+         α
+         metrics
+for the PCEDT data. However, there is a more subtle point; the orderings of
+the corpora by the different metrics are not the same. LAS order the corpora
+NDT 3, 2, 1, CDT da, en, it, es, PCEDT, whereas
+         αd⁢i⁢f⁢f
+         and
+         αn⁢o⁢r⁢m
+         gives the order NDT 2, 1, 3, PCEDT, CDT da, en, it, es, and
+         αp⁢l⁢a⁢i⁢n
+         gives the same order as the other alphas but with CDT es and
+it changing places. Furthermore, as the scatterplot in Figure
+         6
+         shows, there is a clear correlation between the
+         α
+         metrics and LAS, if we disregard the PCEDT results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p7">
+        <p class="ltx_p">
+         The reason the PCEDT gets such low LAS is essentially the same as the reason
+many sentences had to be excluded from the computation in the first place;
+since inserting and deleting nodes is an integral part of the tectogrammatical
+annotation task, the assumption implicit in the LAS computation that sentences
+with the same number of nodes have the same nodes in the same order is
+obviously false, resulting in a very low LAS.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p8">
+        <p class="ltx_p">
+         The corpus that scores the highest for all three metrics is the SSD corpus;
+the reason for this is uncertain, as our corpora differ along many dimensions,
+but the fact that the annotation was done by professional linguists who are
+very familiar with the grammar used to parse the data is likely a contributing
+factor. The difference between the
+         α
+         metrics and the Jaccard similarity
+is larger than the difference between
+         α
+         and LAS for our dependency
+corpora, however the two similarity metrics are not comparable, and it is well
+known that for phrase structures single disagreements such as a PP-attachment
+disagreement can result in multiple disagreeing bracketings.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

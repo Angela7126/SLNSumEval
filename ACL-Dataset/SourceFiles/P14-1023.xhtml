@@ -1,0 +1,1614 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Don’t count, predict! A systematic comparison ofcontext-counting vs. context-predicting semantic vectors</title>
+<!--Generated on Tue Jun 10 17:21:49 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document"><em class="ltx_emph">Don’t count, predict!</em> A systematic comparison of
+<br class="ltx_break"/>context-counting vs. context-predicting semantic vectors</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Marco Baroni 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Georgiana Dinu 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Germán Kruszewski
+<br class="ltx_break"/>Center for Mind/Brain Sciences (University of Trento, Italy)
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">(marco.baroni|georgiana.dinu|german.kruszewski)@unitn.it</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Context-predicting models (more commonly known as embeddings or
+neural language models) are the new kids on the distributional
+semantics block. Despite the buzz surrounding these models, the
+literature is still lacking a systematic comparison of the
+predictive models with classic, count-vector-based distributional
+semantic approaches. In this paper, we perform such an extensive
+evaluation, on a wide range of lexical semantics tasks and across
+many parameter settings. The results, to our own surprise, show that
+the buzz is fully justified, as the context-predicting models obtain
+a thorough and resounding victory against their count-based
+counterparts.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">A long tradition in computational linguistics has shown that
+contextual information provides a good approximation to word meaning,
+since semantically similar words tend to have similar contextual
+distributions <cite class="ltx_cite">[<a href="#bib.bib314" title="Contextual correlates of semantic similarity" class="ltx_ref">36</a>]</cite>. In concrete,
+<em class="ltx_emph">distributional semantic models</em> (DSMs) use vectors that keep
+track of the contexts (e.g., co-occurring words) in which target terms
+appear in a large corpus as proxies for meaning representations, and
+apply geometric techniques to these vectors to measure the similarity in meaning of the corresponding words
+<cite class="ltx_cite">[<a href="#bib.bib105" title="Vector space models of lexical meaning" class="ltx_ref">13</a>, <a href="#bib.bib150" title="Vector space models of word meaning and phrase meaning: a survey." class="ltx_ref">16</a>, <a href="#bib.bib445" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">45</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">It has been clear for decades now that raw co-occurrence counts don’t
+work that well, and DSMs achieve much higher performance when various
+transformations are applied to the raw vectors, for example by
+reweighting the counts for context informativeness and smoothing them
+with dimensionality reduction techniques. This vector optimization
+process is generally unsupervised, and based on independent
+considerations (for example, context reweighting is often justified by
+information-theoretic considerations, dimensionality reduction
+optimizes the amount of preserved variance, etc.). Occasionally, some kind
+of indirect supervision is used: Several parameter settings are tried,
+and the best setting is chosen based on performance on a semantic task
+that has been selected for tuning.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The last few years have seen the development of a new generation of
+DSMs that frame the vector estimation problem directly as a supervised
+task, where the weights in a word vector are set to maximize the
+probability of the contexts in which the word is observed in the
+corpus
+<cite class="ltx_cite">[<a href="#bib.bib50" title="A neural probabilistic language model" class="ltx_ref">6</a>, <a href="#bib.bib110" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">15</a>, <a href="#bib.bib111" title="Natural language processing (almost) from scratch" class="ltx_ref">14</a>, <a href="#bib.bib223" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">25</a>, <a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">32</a>, <a href="#bib.bib434" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">44</a>]</cite>. The
+traditional construction of context vectors is turned on its head:
+Instead of first collecting context vectors and then reweighting these
+vectors based on various criteria, the vector weights are directly set
+to optimally predict the contexts in which the corresponding words
+tend to appear. Since similar words occur in similar contexts, the
+system naturally learns to assign similar vectors to similar words.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">This new way to train DSMs is attractive because it replaces the
+essentially heuristic stacking of vector transforms in earlier models
+with a single, well-defined supervised learning step. At the same
+time, supervision comes at no manual annotation cost, given that the
+context windows used for training can be automatically extracted from
+an unannotated corpus (indeed, they are the very same data used to
+build traditional DSMs). Moreover, at least some of the relevant
+methods can efficiently scale up to process very large amounts of
+input data.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The idea to directly learn a parameter vector
+based on an objective optimum function is shared by Latent Dirichlet
+Allocation (LDA) models <cite class="ltx_cite">[<a href="#bib.bib59" title="Latent Dirichlet allocation" class="ltx_ref">8</a>, <a href="#bib.bib195" title="Topics in semantic representation" class="ltx_ref">21</a>]</cite>,
+where parameters are set to optimize the joint probability
+distribution of words and documents. However, the fully
+probabilistic LDA models have problems scaling up to large data
+sets.</span></span></span></p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We will refer to DSMs built in the traditional way as <em class="ltx_emph">count</em>
+models (since they initialize vectors with co-occurrence counts), and
+to their training-based alternative as <em class="ltx_emph">predict(ive)</em>
+models.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We owe the first term to Hinrich Schütze
+(p.c.). Predictive DSMs are also called neural language models,
+because their supervised context prediction training is performed
+with neural networks, or, more cryptically, “embeddings”.</span></span></span> Now,
+the most natural question to ask, of course, is which of the two
+approaches is best in empirical terms. Surprisingly, despite the long
+tradition of extensive evaluations of alternative count DSMs on
+standard benchmarks
+<cite class="ltx_cite">[<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">1</a>, <a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">5</a>, <a href="#bib.bib83" title="Extracting semantic representations from word co-occurrence statistics: a computational study" class="ltx_ref">10</a>, <a href="#bib.bib84" title="Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming and SVD" class="ltx_ref">11</a>, <a href="#bib.bib386" title="The Word-Space Model" class="ltx_ref">41</a>, <a href="#bib.bib341" title="Dependency-based construction of semantic space models" class="ltx_ref">37</a>]</cite>,
+the existing literature contains very little in terms of direct
+comparison of count vs. predictive DSMs. This is in part due to the
+fact that context-predicting vectors were first developed as an
+approach to language modeling and/or as a way to initialize feature
+vectors in neural-network-based “deep learning” NLP architectures,
+so their effectiveness as semantic representations was initially seen
+as little more than an interesting side effect. Sociological reasons
+might also be partly responsible for the lack of systematic
+comparisons: Context-predictive models were developed within the
+neural-network community, with little or no awareness of recent DSM
+work in computational linguistics.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Whatever the reasons, we know of just three works reporting direct
+comparisons, all limited in their scope. <cite class="ltx_cite">Huang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib223" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">2012</a>)</cite>
+compare, in passing, one count model and several predict DSMs on the
+standard WordSim353 benchmark (Table 3 of their paper). In this
+experiment, the count model actually outperforms the best predictive
+approach. Instead, in a word-similarity-in-context task (Table 5), the
+best predict model outperforms the count model, albeit not by a large
+margin.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Blacoe and Lapata (<a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">2012</a>)</cite> compare count and predict representations
+as input to composition functions. Count vectors make for better
+inputs in a phrase similarity task, whereas the two representations
+are comparable in a paraphrase classification experiment.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We
+refer here to the updated results reported in the erratum at
+<a href="http://homepages.inf.ed.ac.uk/s1066731/pdf/emnlp2012erratum.pdf" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://homepages.inf.ed.ac.uk/s1066731/pdf/emnlp2012erratum.pdf</span></a></span></span></span></p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Finally, <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib311" title="Linguistic regularities in continuous space word representations" class="ltx_ref">2013d</a>)</cite> compare their predict models to
+“Latent Semantic Analysis” (LSA) count vectors on syntactic and
+semantic analogy tasks, finding that the predict models are highly
+superior. However, they provide very little details about the LSA
+count vectors they use.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib96" title="The expressive power of word embeddings" class="ltx_ref">2013</a>)</cite> present an
+extended empirical evaluation, that is however limited to
+alternative context-predictive models, and does not include the
+word2vec variant we use here.</span></span></span></p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">In this paper, we overcome the comparison scarcity problem by
+providing a direct evaluation of count and predict DSMs across many
+parameter settings and on a large variety of mostly standard lexical
+semantics benchmarks. Our title already gave away what we discovered.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Distributional semantic models</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Both count and predict models are extracted from a corpus of about 2.8
+billion tokens constructed by concatenating
+ukWaC,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="http://wacky.sslmit.unibo.it" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://wacky.sslmit.unibo.it</span></a></span></span></span> the English
+Wikipedia<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><a href="http://en.wikipedia.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://en.wikipedia.org</span></a></span></span></span> and the British
+National Corpus.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup><a href="http://www.natcorp.ox.ac.uk" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.natcorp.ox.ac.uk</span></a></span></span></span> For both
+model types, we consider the top 300K most frequent words in the
+corpus both as target and context elements.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Count models</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">We prepared the count models using the DISSECT
+toolkit.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup><a href="http://clic.cimec.unitn.it/composes/toolkit/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://clic.cimec.unitn.it/composes/toolkit/</span></a></span></span></span>
+We extracted count vectors from symmetric context windows of two and
+five words to either side of target. We considered two weighting
+schemes: positive Pointwise Mutual Information and Local Mutual
+Information (akin to the widely used Log-Likelihood Ratio scheme)
+<cite class="ltx_cite">[<a href="#bib.bib152" title="The statistics of word cooccurrences" class="ltx_ref">17</a>]</cite>. We used both full and compressed vectors. The
+latter were obtained by applying the Singular Value Decomposition
+<cite class="ltx_cite">[<a href="#bib.bib183" title="Matrix computations (3rd ed.)" class="ltx_ref">20</a>]</cite> or Non-negative Matrix Factorization
+<cite class="ltx_cite">[<a href="#bib.bib265" title="Algorithms for Non-negative Matrix Factorization" class="ltx_ref">29</a>]</cite>, <cite class="ltx_cite">Lin (<a href="#bib.bib3a" title="Projected gradient methods for Nonnegative Matrix Factorization" class="ltx_ref">2007</a>)</cite> algorithm, with reduced sizes ranging from 200 to 500 in
+steps of 100. In total, 36 count models were evaluated.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Count models have such a long and rich history that we can only
+explore a small subset of the counting, weighting and compressing
+methods proposed in the literature. However, it is worth pointing out
+that the evaluated parameter subset encompasses settings (narrow
+context window, positive PMI, SVD reduction) that have been found to
+be most effective in the systematic explorations of the parameter
+space conducted by Bullinaria and Levy
+<cite class="ltx_cite">[<a href="#bib.bib83" title="Extracting semantic representations from word co-occurrence statistics: a computational study" class="ltx_ref">10</a>, <a href="#bib.bib84" title="Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming and SVD" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Predict models</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">We trained our predict models with the word2vec
+toolkit.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup><a href="https://code.google.com/p/word2vec/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/word2vec/</span></a></span></span></span> The
+toolkit implements both the skip-gram and CBOW approaches of Mikolov
+et al. <cite class="ltx_cite">[<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">32</a>, <a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">34</a>]</cite>. We
+experimented only with the latter, which is also the more computationally-efficient
+model of the two, following <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Exploiting similarities among languages for Machine Translation" class="ltx_ref">2013b</a>)</cite> which recommends CBOW as more suitable for larger datasets.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The CBOW model learns to predict the word in the middle of a symmetric
+window based on the sum of the vector representations of the words in
+the window. We considered context windows of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="2" display="inline"><mn>2</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math> words to
+either side of the central element. We vary vector dimensionality
+within the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="200" display="inline"><mn>200</mn></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="500" display="inline"><mn>500</mn></math> range in steps of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="100" display="inline"><mn>100</mn></math>. The word2vec
+toolkit implements two efficient alternatives to the standard
+computation of the output word probability distributions by a softmax
+classifier. Hierarchical softmax is a computationally efficient way to
+estimate the overall probability distribution using an output layer
+that is proportional to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="log(unigram.perplexity(W))" display="inline"><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mrow><mo>(</mo><mi>u</mi><mi>n</mi><mi>i</mi><mi>g</mi><mi>r</mi><mi>a</mi><mi>m</mi><mo>.</mo><mi>p</mi><mi>e</mi><mi>r</mi><mi>p</mi><mi>l</mi><mi>e</mi><mi>x</mi><mi>i</mi><mi>t</mi><mi>y</mi><mrow><mo>(</mo><mi>W</mi><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m7" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>
+(for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m8" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> the vocabulary size).
+As an alternative, negative sampling estimates the probability of an
+output word by learning to distinguish it from draws from a noise
+distribution. The number of these draws (number of <em class="ltx_emph">negative
+samples</em>) is given by a parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m9" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>. We test both hierarchical
+softmax and negative sampling with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m10" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m11" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m12" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math>. Very frequent words such as <em class="ltx_emph">the</em> or <em class="ltx_emph">a</em> are not very
+informative as context features. The word2vec toolkit implements a
+method to downsize their effect (and simultaneously improve speed
+performance). More precisely, words in the training data are discarded
+with a probability that is proportional to their frequency (capturing
+the same intuition that motivates traditional count vector weighting
+measures such as PMI). This is controlled by a parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m13" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> and words
+that occur with higher frequency than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m14" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> are aggressively
+subsampled. We train models without subsampling and with subsampling
+at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m15" class="ltx_Math" alttext="t=1e^{-5}" display="inline"><mrow><mi>t</mi><mo>=</mo><mrow><mn>1</mn><mo>⁢</mo><msup><mi>e</mi><mrow><mo>-</mo><mn>5</mn></mrow></msup></mrow></mrow></math> (the toolkit page suggests <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m16" class="ltx_Math" alttext="1e^{-3}-1e^{-5}" display="inline"><mrow><mrow><mn>1</mn><mo>⁢</mo><msup><mi>e</mi><mrow><mo>-</mo><mn>3</mn></mrow></msup></mrow><mo>-</mo><mrow><mn>1</mn><mo>⁢</mo><msup><mi>e</mi><mrow><mo>-</mo><mn>5</mn></mrow></msup></mrow></mrow></math> as a
+useful range based on empirical observations).</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">In total, we evaluate 48 predict models, a number comparable to that
+of the count models we consider.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Out-of-the-box models</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite> make the vectors of their best-performing
+<em class="ltx_emph">Distributional Memory</em> (dm) model
+available.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup><a href="http://clic.cimec.unitn.it/dm/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://clic.cimec.unitn.it/dm/</span></a></span></span></span> This model,
+based on the same input corpus we use, exemplifies a “linguistically
+rich” count-based DSM, that relies on lemmas instead or raw word
+forms, and has dimensions that encode the syntactic relations and/or
+lexico-syntactic patterns linking targets and contexts. Baroni and
+Lenci showed, in a large scale evaluation, that dm reaches
+near-state-of-the-art performance in a variety of semantic tasks.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">We also experiment with the popular predict vectors made available by
+Ronan Collobert.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup><a href="http://ronan.collobert.com/senna/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://ronan.collobert.com/senna/</span></a></span></span></span>
+Following the earlier literature, with refer to them as
+<em class="ltx_emph">Collobert and Weston</em> (cw) vectors. These are 100-dimensional
+vectors trained for two months (!) on the Wikipedia. In particular,
+the vectors were trained to optimize the task of choosing the right
+word over a random alternative in the middle of an 11-word context
+window <cite class="ltx_cite">[<a href="#bib.bib111" title="Natural language processing (almost) from scratch" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Evaluation materials</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We test our models on a variety of benchmarks, most of them already
+widely used to test and compare DSMs. The following benchmark
+descriptions also explain the figures of merit and state-of-the-art
+results reported in Table <a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Semantic relatedness</h4>
+
+<div id="S3.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">A first set of semantic benchmarks
+was constructed by asking human subjects to rate the degree of
+semantic similarity or relatedness between two words on a numerical
+scale. The performance of a computational model is assessed in terms
+of correlation between the average scores that subjects assigned to
+the pairs and the cosines between the corresponding vectors in the
+model space (following the previous art, we use Pearson correlation
+for rg, Spearman in all other cases). The classic data set of
+<cite class="ltx_cite">Rubenstein and Goodenough (<a href="#bib.bib379" title="Contextual correlates of synonymy" class="ltx_ref">1965</a>)</cite> (rg) consists of 65 noun
+pairs. State of the art performance on this set has been reported by
+<cite class="ltx_cite">Hassan and Mihalcea (<a href="#bib.bib207" title="Semantic relatedness using salient semantic analysis" class="ltx_ref">2011</a>)</cite> using a technique that exploits the
+Wikipedia linking structure and word sense disambiguation
+techniques. <cite class="ltx_cite">Finkelstein<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib160" title="Placing search in context: the concept revisited" class="ltx_ref">2002</a>)</cite> introduced the widely used
+WordSim353 set (ws) that, as the name suggests, consists of 353
+pairs. The current state of the art is reached by
+<cite class="ltx_cite">Halawi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib198" title="Large-scale learning of word relatedness with constraints" class="ltx_ref">2012</a>)</cite> with a method that is in the spirit of the
+predict models, but lets synonymy information from WordNet constrain
+the learning process (by favoring solutions in which WordNet synonyms
+are near in semantic space). <cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">2009</a>)</cite> split the ws
+set into similarity (wss) and relatedness (wsr) subsets. The first
+contains tighter taxonomic relations, such as synonymy and co-hyponymy
+(<em class="ltx_emph">king/queen</em>) whereas the second encompasses broader, possibly
+topical or syntagmatic relations (<em class="ltx_emph">family/planning</em>). We report
+state-of-the-art performance on the two subsets from the work of
+Agirre and colleagues, who used different kinds of count vectors
+extracted from a very large corpus (orders of magnitude larger than
+ours). Finally, we use (the test section of) MEN (men), that comprises
+1,000 word pairs. <cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib78" title="Multimodal distributional semantics" class="ltx_ref">2013</a>)</cite>, the developers of this
+benchmark, achieve state-of-the-art performance by extensive tuning on
+<em class="ltx_emph">ad-hoc</em> training data, and by using both textual and
+image-extracted features to represent word meaning.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Synonym detection</h4>
+
+<div id="S3.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The classic TOEFL (toefl) set was
+introduced by <cite class="ltx_cite">Landauer and Dumais (<a href="#bib.bib262" title="A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">1997</a>)</cite>. It contains 80
+multiple-choice questions that pair a target term with 4 synonym
+candidates. For example, for the target <em class="ltx_emph">levied</em> one must choose
+between <em class="ltx_emph">imposed</em> (correct), <em class="ltx_emph">believed</em>, <em class="ltx_emph">requested</em>
+and <em class="ltx_emph">correlated</em>. The DSMs compute cosines of each candidate
+vector with the target, and pick the candidate with largest cosine as
+their answer. Performance is evaluated in terms of correct-answer
+accuracy. <cite class="ltx_cite">Bullinaria and Levy (<a href="#bib.bib84" title="Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming and SVD" class="ltx_ref">2012</a>)</cite> achieved 100% accuracy by a
+very thorough exploration of the count model parameter space.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Concept categorization</h4>
+
+<div id="S3.SS3.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Given a set of nominal concepts,
+the task is to group them into natural categories (e.g.,
+<em class="ltx_emph">helicopters</em> and <em class="ltx_emph">motorcycles</em> should go to the
+<em class="ltx_emph">vehicle</em> class, <em class="ltx_emph">dogs</em> and <em class="ltx_emph">elephants</em> into the
+<em class="ltx_emph">mammal</em> class). Following previous art, we tackle categorization
+as an unsupervised clustering task. The vectors produced by a model
+are clustered into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS0.P3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> groups (with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS0.P3.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> determined by the gold
+standard partition) using the CLUTO toolkit <cite class="ltx_cite">[<a href="#bib.bib237" title="CLUTO: a clustering toolkit" class="ltx_ref">26</a>]</cite>, with
+the repeated bisections with global optimization method and CLUTO’s
+default settings otherwise (these are standard choices in the
+literature). Performance is evaluated in terms of <em class="ltx_emph">purity</em>, a
+measure of the extent to which each cluster contains concepts from a
+single gold category. If the gold partition is reproduced perfectly,
+purity reaches 100%; it approaches 0 as cluster quality
+deteriorates. The Almuhareb-Poesio (ap) benchmark contains 402
+concepts organized into 21 categories
+<cite class="ltx_cite">[<a href="#bib.bib7" title="Attributes in lexical acquisition" class="ltx_ref">2</a>]</cite>. State-of-the-art purity was reached by
+<cite class="ltx_cite">Rothenhäusler and Schütze (<a href="#bib.bib378" title="Unsupervised classification with dependency based word spaces" class="ltx_ref">2009</a>)</cite> with a count model based on
+carefully crafted syntactic links. The ESSLLI 2008 Distributional
+Semantic Workshop shared-task set (esslli) contains 44 concepts
+to be clustered into 6 categories <cite class="ltx_cite">[<a href="#bib.bib31" title="Bridging the gap between semantic theory and computational simulations: proceedings of the esslli workshop on distributional lexical semantic" class="ltx_ref">4</a>]</cite> (we ignore
+here the 3- and 2-way higher-level partitions coming with this
+set). <cite class="ltx_cite">Katrenko and Adriaans (<a href="#bib.bib242" title="Qualia structures and their impact on the concrete noun categorization task" class="ltx_ref">2008</a>)</cite> reached top performance on this
+set using the full Web as a corpus and manually crafted,
+linguistically motivated patterns. Finally, the Battig (battig) test
+set introduced by <cite class="ltx_cite">Baroni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib37" title="Strudel: a distributional semantic model based on properties and types" class="ltx_ref">2010</a>)</cite> includes 83 concepts from
+10 categories. Current state of the art was reached by the
+window-based count model of <cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite>.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Selectional preferences</h4>
+
+<div id="S3.SS3.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">We experiment with two data sets
+that contain verb-noun pairs that were rated by subjects for the
+typicality of the noun as a subject or object of the verb (e.g.,
+<em class="ltx_emph">people</em> received a high average score as subject of <em class="ltx_emph">to
+eat</em>, and a low score as object of the same verb). We follow the
+procedure proposed by <cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite> to tackle this
+challenge: For each verb, we use the corpus-based tuples they make
+available to select the 20 nouns that are most strongly associated to
+the verb as subjects or objects, and we average the vectors of these
+nouns to obtain a “prototype” vector for the relevant argument
+slot. We then measure the cosine of the vector for a target noun with
+the relevant prototype vector (e.g., the cosine of <em class="ltx_emph">people</em> with
+the <em class="ltx_emph">eating</em> subject prototype vector). Systems are evaluated by
+Spearman correlation of these cosines with the averaged human
+typicality ratings. Our first data set was introduced by Ulrike
+<cite class="ltx_cite">Padó (<a href="#bib.bib342" title="The integration of syntax and semantic plausibility in a wide-coverage model of sentence processing" class="ltx_ref">2007</a>)</cite> and includes 211 pairs (up). Top-performance was
+reached by the supervised count vector system of
+<cite class="ltx_cite">Herdağdelen and Baroni (<a href="#bib.bib218" title="BagPack: a general framework to represent semantic relations" class="ltx_ref">2009</a>)</cite> (supervised in the sense that they
+directly trained a classifier on gold data, as opposed to the 0-cost
+supervision of the context-learning methods). The mcrae set
+<cite class="ltx_cite">[<a href="#bib.bib306" title="Modeling the influence of thematic fit (and other constraints) in on-line sentence comprehension" class="ltx_ref">31</a>]</cite> consists of 100 noun–verb pairs, with top
+performance reached by the DepDM system of
+<cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite>, a count DSM relying on syntactic
+information.</p>
+</div>
+</div>
+<div id="S3.SS3.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Analogy</h4>
+
+<div id="S3.SS3.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">While all the previous data sets are relatively
+standard in the DSM field to test traditional count models, our last
+benchmark was introduced in <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite> specifically
+to test predict models. The data-set contains about 9K semantic and
+10.5K syntactic analogy questions. A semantic question gives an
+example pair (<em class="ltx_emph">brother</em>-<em class="ltx_emph">sister</em>), a test word
+(<em class="ltx_emph">grandson</em>) and asks to find another word that instantiates the
+relation illustrated by the example with respect to the test word
+(<em class="ltx_emph">granddaughter</em>). A syntactic question is similar, but in this
+case the relationship is of a grammatical nature
+(<em class="ltx_emph">work</em>–<em class="ltx_emph">works</em>, <em class="ltx_emph">speak</em>…
+<em class="ltx_emph">speaks</em>). Mikolov and colleagues tackle the challenge by
+subtracting the second example term vector from the first, adding the
+test term, and looking for the nearest neighbour of the resulting
+vector (what is the nearest neighbour of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.SSS0.P5.p1.m1" class="ltx_Math" alttext="\vec{brother}-\vec{sister}+\vec{grandson}" display="inline"><mrow><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow><mo stretchy="false">→</mo></mover><mo>-</mo><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover></mrow></math>?). Systems are evaluated
+in terms of proportion of questions where the nearest neighbour from
+the whole semantic space is the correct answer (the given example and
+test vector triples are excluded from the nearest neighbour
+search). <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite> reach top accuracy on the
+syntactic subset (ansyn) with a CBOW predict model akin to ours
+(but trained on a corpus twice as large). Top accuracy on the entire
+data set (an) and on the semantic subset (ansem) was
+reached by <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013c</a>)</cite> using a skip-gram predict
+model. Note however that, because of the way the task is framed,
+performance also depends on the size of the vocabulary to be searched:
+<cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite> pick the nearest neighbour among vectors
+for 1M words, <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013c</a>)</cite> among 700K words, and we
+among 300K words.</p>
+</div>
+<div id="S3.SS3.SSS0.P5.p2" class="ltx_para">
+<p class="ltx_p">Some characteristics of the benchmarks we use are summarized in Table
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">name</th>
+<th class="ltx_td ltx_align_left ltx_border_t">task</th>
+<th class="ltx_td ltx_align_left ltx_border_t">measure</th>
+<th class="ltx_td ltx_align_left ltx_border_t">source</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">soa</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">rg</td>
+<td class="ltx_td ltx_align_left ltx_border_t">relatedness</td>
+<td class="ltx_td ltx_align_left ltx_border_t">Pearson</td>
+<td class="ltx_td ltx_align_left ltx_border_t">Rubenstein and Goodenough</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><cite class="ltx_cite">Hassan and Mihalcea (<a href="#bib.bib207" title="Semantic relatedness using salient semantic analysis" class="ltx_ref">2011</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left">(1965)</td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">ws</td>
+<td class="ltx_td ltx_align_left">relatedness</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Finkelstein<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib160" title="Placing search in context: the concept revisited" class="ltx_ref">2002</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Halawi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib198" title="Large-scale learning of word relatedness with constraints" class="ltx_ref">2012</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">wss</td>
+<td class="ltx_td ltx_align_left">relatedness</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">2009</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">2009</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">wsr</td>
+<td class="ltx_td ltx_align_left">relatedness</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">2009</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="A study on similarity and relatedness using distributional and WordNet-based approaches" class="ltx_ref">2009</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">men</td>
+<td class="ltx_td ltx_align_left">relatedness</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib78" title="Multimodal distributional semantics" class="ltx_ref">2013</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib78" title="Multimodal distributional semantics" class="ltx_ref">2013</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">toefl</td>
+<td class="ltx_td ltx_align_left">synonyms</td>
+<td class="ltx_td ltx_align_left">accuracy</td>
+<td class="ltx_td ltx_align_left">Landauer and Dumais</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Bullinaria and Levy (<a href="#bib.bib84" title="Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming and SVD" class="ltx_ref">2012</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left">(1997)</td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">ap</td>
+<td class="ltx_td ltx_align_left">categorization</td>
+<td class="ltx_td ltx_align_left">purity</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Almuhareb (<a href="#bib.bib7" title="Attributes in lexical acquisition" class="ltx_ref">2006</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r">Rothenhäusler and Schütze</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(2009)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">esslli</td>
+<td class="ltx_td ltx_align_left">categorization</td>
+<td class="ltx_td ltx_align_left">purity</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Baroni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib31" title="Bridging the gap between semantic theory and computational simulations: proceedings of the esslli workshop on distributional lexical semantic" class="ltx_ref">2008</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r">Katrenko and Adriaans</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(2008)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">battig</td>
+<td class="ltx_td ltx_align_left">categorization</td>
+<td class="ltx_td ltx_align_left">purity</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Baroni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib37" title="Strudel: a distributional semantic model based on properties and types" class="ltx_ref">2010</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">up</td>
+<td class="ltx_td ltx_align_left">sel pref</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Padó (<a href="#bib.bib342" title="The integration of syntax and semantic plausibility in a wide-coverage model of sentence processing" class="ltx_ref">2007</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r">Herdağdelen and Baroni</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left ltx_border_r">(2009)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">mcrae</td>
+<td class="ltx_td ltx_align_left">sel pref</td>
+<td class="ltx_td ltx_align_left">Spearman</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">McRae<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib306" title="Modeling the influence of thematic fit (and other constraints) in on-line sentence comprehension" class="ltx_ref">1998</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">an</td>
+<td class="ltx_td ltx_align_left">analogy</td>
+<td class="ltx_td ltx_align_left">accuracy</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013c</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">ansyn</td>
+<td class="ltx_td ltx_align_left">analogy</td>
+<td class="ltx_td ltx_align_left">accuracy</td>
+<td class="ltx_td ltx_align_left"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">ansem</td>
+<td class="ltx_td ltx_align_left ltx_border_b">analogy</td>
+<td class="ltx_td ltx_align_left ltx_border_b">accuracy</td>
+<td class="ltx_td ltx_align_left ltx_border_b"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib312" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">2013c</a>)</cite></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Benchmarks used in experiments, with type of task, figure of merit (measure), original reference (source) and reference to current state-of-the-art system (soa).</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results</h2>
+
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">rg</td>
+<td class="ltx_td ltx_align_center ltx_border_t">ws</td>
+<td class="ltx_td ltx_align_center ltx_border_t">wss</td>
+<td class="ltx_td ltx_align_center ltx_border_t">wsr</td>
+<td class="ltx_td ltx_align_center ltx_border_t">men</td>
+<td class="ltx_td ltx_align_center ltx_border_t">toefl</td>
+<td class="ltx_td ltx_align_center ltx_border_t">ap</td>
+<td class="ltx_td ltx_align_center ltx_border_t">esslli</td>
+<td class="ltx_td ltx_align_center ltx_border_t">battig</td>
+<td class="ltx_td ltx_align_center ltx_border_t">up</td>
+<td class="ltx_td ltx_align_center ltx_border_t">mcrae</td>
+<td class="ltx_td ltx_align_center ltx_border_t">an</td>
+<td class="ltx_td ltx_align_center ltx_border_t">ansyn</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">ansem</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="15"><em class="ltx_emph">best setup on each task</em></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">cnt</th>
+<td class="ltx_td ltx_align_center ltx_border_t">74</td>
+<td class="ltx_td ltx_align_center ltx_border_t">62</td>
+<td class="ltx_td ltx_align_center ltx_border_t">70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">59</td>
+<td class="ltx_td ltx_align_center ltx_border_t">72</td>
+<td class="ltx_td ltx_align_center ltx_border_t">76</td>
+<td class="ltx_td ltx_align_center ltx_border_t">66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">41</td>
+<td class="ltx_td ltx_align_center ltx_border_t">27</td>
+<td class="ltx_td ltx_align_center ltx_border_t">49</td>
+<td class="ltx_td ltx_align_center ltx_border_t">43</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">60</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">pre</th>
+<td class="ltx_td ltx_align_center">84</td>
+<td class="ltx_td ltx_align_center">75</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">80</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">70</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">80</span></td>
+<td class="ltx_td ltx_align_center">91</td>
+<td class="ltx_td ltx_align_center">75</td>
+<td class="ltx_td ltx_align_center">86</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">99</span></td>
+<td class="ltx_td ltx_align_center">41</td>
+<td class="ltx_td ltx_align_center">28</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">68</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">66</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="15"><em class="ltx_emph">best setup across tasks</em></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">cnt</th>
+<td class="ltx_td ltx_align_center ltx_border_t">70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">62</td>
+<td class="ltx_td ltx_align_center ltx_border_t">70</td>
+<td class="ltx_td ltx_align_center ltx_border_t">57</td>
+<td class="ltx_td ltx_align_center ltx_border_t">72</td>
+<td class="ltx_td ltx_align_center ltx_border_t">76</td>
+<td class="ltx_td ltx_align_center ltx_border_t">64</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">37</td>
+<td class="ltx_td ltx_align_center ltx_border_t">27</td>
+<td class="ltx_td ltx_align_center ltx_border_t">43</td>
+<td class="ltx_td ltx_align_center ltx_border_t">41</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">44</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">pre</th>
+<td class="ltx_td ltx_align_center">83</td>
+<td class="ltx_td ltx_align_center">73</td>
+<td class="ltx_td ltx_align_center">78</td>
+<td class="ltx_td ltx_align_center">68</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">80</span></td>
+<td class="ltx_td ltx_align_center">86</td>
+<td class="ltx_td ltx_align_center">71</td>
+<td class="ltx_td ltx_align_center">77</td>
+<td class="ltx_td ltx_align_center">98</td>
+<td class="ltx_td ltx_align_center">41</td>
+<td class="ltx_td ltx_align_center">26</td>
+<td class="ltx_td ltx_align_center">67</td>
+<td class="ltx_td ltx_align_center">69</td>
+<td class="ltx_td ltx_align_center ltx_border_r">64</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="15"><em class="ltx_emph">worst setup across tasks</em></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">cnt</th>
+<td class="ltx_td ltx_align_center ltx_border_t">11</td>
+<td class="ltx_td ltx_align_center ltx_border_t">16</td>
+<td class="ltx_td ltx_align_center ltx_border_t">23</td>
+<td class="ltx_td ltx_align_center ltx_border_t">4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">21</td>
+<td class="ltx_td ltx_align_center ltx_border_t">49</td>
+<td class="ltx_td ltx_align_center ltx_border_t">24</td>
+<td class="ltx_td ltx_align_center ltx_border_t">43</td>
+<td class="ltx_td ltx_align_center ltx_border_t">38</td>
+<td class="ltx_td ltx_align_center ltx_border_t">-6</td>
+<td class="ltx_td ltx_align_center ltx_border_t">-10</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">pre</th>
+<td class="ltx_td ltx_align_center">74</td>
+<td class="ltx_td ltx_align_center">60</td>
+<td class="ltx_td ltx_align_center">73</td>
+<td class="ltx_td ltx_align_center">48</td>
+<td class="ltx_td ltx_align_center">68</td>
+<td class="ltx_td ltx_align_center">71</td>
+<td class="ltx_td ltx_align_center">65</td>
+<td class="ltx_td ltx_align_center">82</td>
+<td class="ltx_td ltx_align_center">88</td>
+<td class="ltx_td ltx_align_center">33</td>
+<td class="ltx_td ltx_align_center">20</td>
+<td class="ltx_td ltx_align_center">27</td>
+<td class="ltx_td ltx_align_center">40</td>
+<td class="ltx_td ltx_align_center ltx_border_r">10</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="15"><em class="ltx_emph">best setup on rg</em></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">cnt</th>
+<td class="ltx_td ltx_align_center ltx_border_t">(74)</td>
+<td class="ltx_td ltx_align_center ltx_border_t">59</td>
+<td class="ltx_td ltx_align_center ltx_border_t">66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">52</td>
+<td class="ltx_td ltx_align_center ltx_border_t">71</td>
+<td class="ltx_td ltx_align_center ltx_border_t">64</td>
+<td class="ltx_td ltx_align_center ltx_border_t">64</td>
+<td class="ltx_td ltx_align_center ltx_border_t">84</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">37</td>
+<td class="ltx_td ltx_align_center ltx_border_t">20</td>
+<td class="ltx_td ltx_align_center ltx_border_t">35</td>
+<td class="ltx_td ltx_align_center ltx_border_t">42</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">26</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">pre</th>
+<td class="ltx_td ltx_align_center">(84)</td>
+<td class="ltx_td ltx_align_center">71</td>
+<td class="ltx_td ltx_align_center">76</td>
+<td class="ltx_td ltx_align_center">64</td>
+<td class="ltx_td ltx_align_center">79</td>
+<td class="ltx_td ltx_align_center">85</td>
+<td class="ltx_td ltx_align_center">72</td>
+<td class="ltx_td ltx_align_center">84</td>
+<td class="ltx_td ltx_align_center">98</td>
+<td class="ltx_td ltx_align_center">39</td>
+<td class="ltx_td ltx_align_center">25</td>
+<td class="ltx_td ltx_align_center">66</td>
+<td class="ltx_td ltx_align_center">70</td>
+<td class="ltx_td ltx_align_center ltx_border_r">61</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="15"><em class="ltx_emph">other models</em></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">soa</th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">62</td>
+<td class="ltx_td ltx_align_center ltx_border_t">76</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">100</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">96</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t">61</td>
+<td class="ltx_td ltx_align_center ltx_border_t">64</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r">dm</th>
+<td class="ltx_td ltx_align_center">82</td>
+<td class="ltx_td ltx_align_center">35</td>
+<td class="ltx_td ltx_align_center">60</td>
+<td class="ltx_td ltx_align_center">13</td>
+<td class="ltx_td ltx_align_center">42</td>
+<td class="ltx_td ltx_align_center">77</td>
+<td class="ltx_td ltx_align_center">76</td>
+<td class="ltx_td ltx_align_center">84</td>
+<td class="ltx_td ltx_align_center">94</td>
+<td class="ltx_td ltx_align_center">51</td>
+<td class="ltx_td ltx_align_center">29</td>
+<td class="ltx_td ltx_align_center">NA</td>
+<td class="ltx_td ltx_align_center">NA</td>
+<td class="ltx_td ltx_align_center ltx_border_r">NA</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r">cw</th>
+<td class="ltx_td ltx_align_center ltx_border_b">48</td>
+<td class="ltx_td ltx_align_center ltx_border_b">48</td>
+<td class="ltx_td ltx_align_center ltx_border_b">61</td>
+<td class="ltx_td ltx_align_center ltx_border_b">38</td>
+<td class="ltx_td ltx_align_center ltx_border_b">57</td>
+<td class="ltx_td ltx_align_center ltx_border_b">56</td>
+<td class="ltx_td ltx_align_center ltx_border_b">58</td>
+<td class="ltx_td ltx_align_center ltx_border_b">61</td>
+<td class="ltx_td ltx_align_center ltx_border_b">70</td>
+<td class="ltx_td ltx_align_center ltx_border_b">28</td>
+<td class="ltx_td ltx_align_center ltx_border_b">15</td>
+<td class="ltx_td ltx_align_center ltx_border_b">11</td>
+<td class="ltx_td ltx_align_center ltx_border_b">12</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">9</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Performance of count (cnt), predict (pre), dm and cw models on all tasks. See Section <a href="#S3" title="3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and Table <a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> for figures of merit and state-of-the-art results (soa). Since dm has very low coverage of the an* data sets, we do not report its performance there.</div>
+</div>
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> summarizes the evaluation results. The first
+block of the table reports the maximum per-task performance (across
+all considered parameter settings) for count and predict vectors. The
+latter emerge as clear winners, with a large margin over count vectors
+in most tasks. Indeed, the predictive models achieve an impressive
+overall performance, beating the current state of the art in several
+cases, and approaching it in many more. It is worth stressing that, as
+reviewed in Section <a href="#S3" title="3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the state-of-the-art results
+were obtained in almost all cases using specialized approaches that
+rely on external knowledge, manually-crafted rules, parsing, larger
+corpora and/or task-specific tuning. Our predict results were instead
+achieved by simply downloading the word2vec toolkit and running it
+with a range of parameter choices recommended by the toolkit
+developers.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The success of the predict models cannot be blamed on poor performance
+of the count models. Besides the fact that this would not explain the
+near-state-of-the-art performance of the predict vectors, the count
+model results are actually quite good in absolute terms. Indeed, in
+several cases they are close, or even better than those attained by
+dm, a linguistically-sophisticated count-based approach that was shown
+to reach top performance across a variety of tasks by
+<cite class="ltx_cite">Baroni and Lenci (<a href="#bib.bib38" title="Distributional Memory: a general framework for corpus-based semantics" class="ltx_ref">2010</a>)</cite>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Interestingly, count vectors achieve performance comparable to that of
+predict vectors only on the selectional preference tasks. The up task
+in particular is also the only benchmark on which predict models are
+seriously lagging behind state-of-the-art and dm performance. Recall
+from Section <a href="#S3" title="3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> that we tackle selectional
+preference by creating average vectors representing typical verb
+arguments. We conjecture that this averaging approach, that worked
+well for dm vectors, might be problematic for prediction-trained
+vectors, and we plan to explore alternative methods to build the
+prototypes in future research.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">Are our results robust to parameter choices, or are they due to very
+specific and brittle settings? The next few blocks of Table
+<a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> address this question. The second block reports
+results obtained with single count and predict models that are best in
+terms of average performance rank across tasks (these are the models
+on the top rows of tables <a href="#S4.T3" title="Table 3 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and
+<a href="#S4.T4" title="Table 4 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, respectively). We see that, for both
+approaches, performance is not seriously affected by using the single
+best setup rather than task-specific settings, except for a
+considerable drop in performance for the best predict model on esslli
+(due to the small size of this data set?), and an even more dramatic
+drop of the count model on ansem. A more cogent and interesting
+evaluation is reported in the third block of Table <a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+where we see what happens if we use the single models with
+<em class="ltx_emph">worst</em> performance across tasks (recall from Section
+<a href="#S2" title="2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> above that, in any case, we are exploring a space of
+reasonable parameter settings, of the sort that an experimenter might
+be tempted to choose without tuning). The count model performance is
+severely affected by this unlucky choice (2-word window, Local Mutual
+Information, NMF, 400 dimensions, mean performance rank: 83), whereas
+the predict approach is much more robust: To put its worst
+instantiation (2-word window, hierarchical softmax, no subsampling,
+200 dimensions, mean rank: 51) into perspective, its performance is
+more than 10% below the <em class="ltx_emph">best</em> count model only for the an and
+ansem tasks, and actually higher than it in 3 cases (note how on
+esslli the worst predict models performs much better than the best
+one, confirming our suspicion about the brittleness of this small data
+set). The fourth block reports performance in what might be the most
+realistic scenario, namely by tuning the parameters on a development
+task. Specifically, we pick the models that work best on the small rg
+set, and report their performance on all tasks (we obtained similar
+results by picking other tuning sets). The selected count model is the
+third best overall model of its class as reported in Table
+<a href="#S4.T3" title="Table 3 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The selected predict model is the fourth best
+model in Table <a href="#S4.T4" title="Table 4 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. The overall count performance is
+not greatly affected by this choice. Again, predict models confirm
+their robustness, in that their rg-tuned performance is always close
+(and in 3 cases better) than the one achieved by the best overall
+setup.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">Tables <a href="#S4.T3" title="Table 3 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and <a href="#S4.T4" title="Table 4 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> let us take a
+closer look at the most important count and predict parameters, by
+reporting the characteristics of the best models (in terms of average
+performance-based ranking across tasks) from both classes. For the
+count models, PMI is clearly the better weighting scheme, and SVD
+outperforms NMF as a dimensionality reduction technique. However, no
+compression at all (using all 300K original dimensions) works
+best. Compare this to the best overall predict vectors, that have 400
+dimensions only, making them much more practical to use. For the
+predict models, we observe in Table <a href="#S4.T4" title="Table 4 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> that
+negative sampling, where the task is to distinguish the target output word from samples drawn from the noise distribution, outperforms the more costly hierarchical softmax method. Subsampling frequent words, which downsizes the importance of these words similarly to PMI weighting in count models, is also bringing significant improvements.</p>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">Finally, we go back to Table <a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> to point out the poor
+performance of the out-of-the-box cw model. We must leave the
+investigation of the parameters that make our predict vectors so much
+better than cw (more varied training corpus? window size? objective
+function being used? subsampling? …) to further work. Still, our
+results show that it’s not just training by context prediction that
+ensures good performance. The cw approach is very popular (for example
+both <cite class="ltx_cite">Huang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib223" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Blacoe and Lapata (<a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">2012</a>)</cite> used
+it in the studies we discussed in Section <a href="#S1" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). Had
+we also based our systematic comparison of count and predict vectors
+on the cw model, we would have reached opposite conclusions from the
+ones we can draw from our word2vec-trained vectors!</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t">window</th>
+<th class="ltx_td ltx_align_center ltx_border_t">weight</th>
+<th class="ltx_td ltx_align_center ltx_border_t">compress</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">dim.</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">mean</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r">rank</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t">2</td>
+<td class="ltx_td ltx_align_center ltx_border_t">PMI</td>
+<td class="ltx_td ltx_align_center ltx_border_t">no</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">300K</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">35</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300K</td>
+<td class="ltx_td ltx_align_left ltx_border_r">38</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_r">500</td>
+<td class="ltx_td ltx_align_left ltx_border_r">42</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">46</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_r">500</td>
+<td class="ltx_td ltx_align_left ltx_border_r">47</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_r">50</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">51</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">NMF</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_r">52</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">PMI</td>
+<td class="ltx_td ltx_align_center">NMF</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">53</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center ltx_border_b">PMI</td>
+<td class="ltx_td ltx_align_center ltx_border_b">SVD</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">53</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Top count models in terms of mean performance-based model ranking across all tasks. The first row states that the window-2, PMI, 300K count model was the best count model, and, across all tasks, its average rank, when ALL models are decreasingly ordered by performance, was 35. See Section <a href="#S2.SS1" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a> for explanation of the parameters.</div>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t">win.</th>
+<th class="ltx_td ltx_align_center ltx_border_t">hier.</th>
+<th class="ltx_td ltx_align_center ltx_border_t">neg.</th>
+<th class="ltx_td ltx_align_center ltx_border_t">subsamp.</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">dim</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">mean</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l"/>
+<th class="ltx_td ltx_align_center">softm.</th>
+<th class="ltx_td ltx_align_center">samp.</th>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r">rank</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t">5</td>
+<td class="ltx_td ltx_align_center ltx_border_t">no</td>
+<td class="ltx_td ltx_align_center ltx_border_t">10</td>
+<td class="ltx_td ltx_align_center ltx_border_t">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">10</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_r">13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">5</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">5</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_r">13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_r">13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">5</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">400</td>
+<td class="ltx_td ltx_align_left ltx_border_r">15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">5</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">200</td>
+<td class="ltx_td ltx_align_left ltx_border_r">15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center">no</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_r">500</td>
+<td class="ltx_td ltx_align_left ltx_border_r">15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l">2</td>
+<td class="ltx_td ltx_align_center ltx_border_b">no</td>
+<td class="ltx_td ltx_align_center ltx_border_b">5</td>
+<td class="ltx_td ltx_align_center ltx_border_b">yes</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">300</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">16</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Top predict models in terms of mean performance-based model ranking across all tasks. See Section <a href="#S2.SS2" title="2.2 Predict models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> for explanation of the parameters.</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">This paper has presented the first systematic comparative evaluation of
+count and predict vectors. As seasoned distributional semanticists with thorough experience in
+developing and using count vectors, we set out to conduct this study
+because we were annoyed by the triumphalist overtones often
+surrounding predict models, despite the almost complete lack of a
+proper comparison to count vectors.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>Here is an example, where
+word2vec is called the crown jewel of natural language processing:
+<a href="http://bit.ly/1ipv72M" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://bit.ly/1ipv72M</span></a></span></span></span> Our secret wish was to discover that it
+is all hype, and count vectors are far superior to their predictive
+counterparts. A more realistic expectation was that a complex picture
+would emerge, with predict and count vectors beating each other on
+different tasks. Instead, we found that the predict models are so good
+that, while the triumphalist overtones still sound excessive, there
+are very good reasons to switch to the new architecture. However, due to space limitations we have only focused here on quantitative measures: It remains to be seen whether the two types of models are complementary in the errors they make, in which case combined models could be an interesting avenue for further work.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The space of possible parameters of count DSMs is very large, and it’s
+entirely possible that some options we did not consider would have
+improved count vector performance somewhat. Still, given that the
+predict vectors also outperformed the syntax-based dm model, and often
+approximated state-of-the-art performance, a more proficuous way
+forward might be to focus on parameters and extensions of the predict
+models instead: After all, we obtained our already excellent results
+by just trying a few variations of the word2vec defaults. Add to this
+that, beyond the standard lexical semantics challenges we tested here,
+predict models are currently been successfully applied in cutting-edge
+domains such as representing phrases
+<cite class="ltx_cite">[<a href="#bib.bib313" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">34</a>, <a href="#bib.bib408" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">43</a>]</cite> or fusing language and
+vision in a common semantic space
+<cite class="ltx_cite">[<a href="#bib.bib168" title="DeViSE: a deep visual-semantic embedding model" class="ltx_ref">19</a>, <a href="#bib.bib409" title="Zero-shot learning through cross-modal transfer" class="ltx_ref">42</a>]</cite>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Based on the results reported here and the considerations we just
+made, we would certainly recommend anybody interested in using DSMs
+for theoretical or practical applications to go for the predict
+models, with the important caveat that they are not all created equal
+(cf. the big difference between word2vec and cw models). At the same
+time, given the large amount of work that has been carried out on
+count DSMs, we would like to explore, in the near future, how certain
+questions and methods that have been considered with respect to
+traditional DSMs will transfer to predict models. For example, the
+developers of Latent Semantic Analysis <cite class="ltx_cite">[<a href="#bib.bib262" title="A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">28</a>]</cite>,
+Topic Models <cite class="ltx_cite">[<a href="#bib.bib195" title="Topics in semantic representation" class="ltx_ref">21</a>]</cite> and related DSMs have shown
+that the dimensions of these models can be interpreted as general
+“latent” semantic domains, which gives the corresponding models some
+<em class="ltx_emph">a priori</em> cognitive plausibility while paving the way for
+interesting applications. Another important line of DSM research
+concerns “context engineering”: There has been for example much work
+on how to encode syntactic information into context features
+<cite class="ltx_cite">[<a href="#bib.bib341" title="Dependency-based construction of semantic space models" class="ltx_ref">37</a>]</cite>, and more recent studies construct and combine
+feature spaces expressing topical vs. functional information
+<cite class="ltx_cite">[<a href="#bib.bib441" title="Domain and function: a dual-space model of semantic relations and compositions" class="ltx_ref">46</a>]</cite>. To give just one last example, distributional
+semanticists have looked at whether certain properties of vectors
+reflect semantic relations in the expected way: e.g., whether the
+vectors of hypernyms “distributionally include” the vectors of
+hyponyms in some mathematical precise sense.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Do the dimensions of predict models also encode latent semantic
+domains? Do these models afford the same flexibility of count vectors
+in capturing linguistically rich contexts? Does the structure of
+predict vectors mimic meaningful semantic relations? Does all of this
+even matter, or are we on the cusp of discovering radically new ways
+to tackle the same problems that have been approached as we just
+sketched in traditional distributional semantics?</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">Either way, the results of the present investigation indicate that
+these are important directions for future research in computational
+semantics.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We acknowledge ERC 2011 Starting Independent Research Grant
+n. 283554 (COMPOSES).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, E. Alfonseca, K. Hall, J. Kravalova, M. Pasça and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study on similarity and relatedness using distributional and WordNet-based approaches</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boulder, CO</span>, <span class="ltx_text ltx_bib_pages"> pp. 19–27</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Almuhareb</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Attributes in lexical acquisition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">PhD thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Essex</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni, E. Barbu, B. Murphy and M. Poesio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Strudel: a distributional semantic model based on properties and types</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Science</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 222–254</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">M. Baroni, S. Evert and A. Lenci (Eds.)</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bridging the gap between semantic theory and computational simulations: proceedings of the esslli workshop on distributional lexical semantic</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">FOLLI</span>, <span class="ltx_text ltx_bib_place">Hamburg</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni and A. Lenci</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional Memory: a general framework for corpus-based semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">36</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 673–721</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Out-of-the-box models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.SS3.SSS0.P4.p1" title="Selectional preferences ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p2" title="4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Janvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Blacoe and M. Lapata</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comparison of vector-based representations for semantic composition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 546–556</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p7" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p6" title="4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib59" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Blei, A. Ng and M. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib78" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, N. K. Tran and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multimodal distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">In press; <span class="ltx_ERROR undefined">\url</span>http://clic.cimec.unitn.it/marco/publications/mmds-jair.pdf</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Bullinaria and J. Levy</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting semantic representations from word co-occurrence statistics: a computational study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods</span> <span class="ltx_text ltx_bib_volume">39</span>, <span class="ltx_text ltx_bib_pages"> pp. 510–526</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Bullinaria and J. Levy</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming and SVD</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods</span> <span class="ltx_text ltx_bib_volume">44</span>, <span class="ltx_text ltx_bib_pages"> pp. 890–907</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.SS3.SSS0.P2.p1" title="Synonym detection ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib96" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Chen, B. Perozzi, R. Al-Rfou’ and S. Skiena</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The expressive power of word embeddings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, GA</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Published online: <span class="ltx_ERROR undefined">\url</span>https://sites.google.com/site/deeplearningicml2013/accepted_papers</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib105" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Clark</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector space models of lexical meaning</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">S. Lappin and C. Fox (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Handbook of Contemporary Semantics, 2nd ed.</span>,
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">In press; <span class="ltx_ERROR undefined">\url</span>http://www.cl.cam.ac.uk/ sc609/pubs/sem_handbook.pdf</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib111" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Out-of-the-box models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Helsinki, Finland</span>, <span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib150" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Erk</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector space models of word meaning and phrase meaning: a survey.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language and Linguistics Compass</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">10</span>), <span class="ltx_text ltx_bib_pages"> pp. 635–653</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib152" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Evert</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The statistics of word cooccurrences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D dissertation</span>, <span class="ltx_text ltx_bib_publisher">Stuttgart University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib160" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Finkelstein, E. Gabrilovich, Y. Matias, E. Rivlin, Z. Solan, G. Wolfman and E. Ruppin</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Placing search in context: the concept revisited</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 116–131</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib168" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Frome, G. Corrado, J. Shlens, S. Bengio, J. Dean, M. Ranzato and T. Mikolov</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DeViSE: a deep visual-semantic embedding model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2129</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib183" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Golub and C. Van Loan</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Matrix computations (3rd ed.)</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">JHU Press</span>, <span class="ltx_text ltx_bib_place">Baltimore, MD</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib195" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Griffiths, M. Steyvers and J. Tenenbaum</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topics in semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">114</span>, <span class="ltx_text ltx_bib_pages"> pp. 211–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p3" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib198" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Halawi, G. Dror, E. Gabrilovich and Y. Koren</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale learning of word relatedness with constraints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1406–1414</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib207" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Hassan and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic relatedness using salient semantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Francisco, CA</span>, <span class="ltx_text ltx_bib_pages"> pp. 884–889</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib218" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Herdağdelen and M. Baroni</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BagPack: a general framework to represent semantic relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Athens, Greece</span>, <span class="ltx_text ltx_bib_pages"> pp. 33–40</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P4.p1" title="Selectional preferences ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib223" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Huang, R. Socher, C. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving word representations via global context and multiple word prototypes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 873–882</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p6" title="4 Results ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib237" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Karypis</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CLUTO: a clustering toolkit</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock">Technical Report <span class="ltx_text ltx_bib_number">02-017</span>,  <span class="ltx_text ltx_bib_publisher">University of Minnesota Department of Computer Science</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib242" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Katrenko and P. Adriaans</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Qualia structures and their impact on the concrete noun categorization task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Hamburg, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 17–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib262" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Landauer and S. Dumais</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">104</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 211–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P2.p1" title="Synonym detection ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p3" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib265" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lee and S. Seung</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Algorithms for Non-negative Matrix Factorization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 556–562</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib3a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Projected gradient methods for Nonnegative Matrix Factorization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Computation</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">10</span>), <span class="ltx_text ltx_bib_pages"> pp. 2756–2779</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Count models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib306" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. McRae, M. Spivey-Knowlton and M. Tanenhaus</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling the influence of thematic fit (and other constraints) in on-line sentence comprehension</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Memory and Language</span> <span class="ltx_text ltx_bib_volume">38</span>, <span class="ltx_text ltx_bib_pages"> pp. 283–312</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P4.p1" title="Selectional preferences ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib312" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://arxiv.org/abs/1301.3781/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Predict models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS3.SSS0.P5.p1" title="Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, Q. Le and I. Sutskever</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting similarities among languages for Machine Translation</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://arxiv.org/abs/1309.4168</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Predict models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib313" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 3111–3119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Predict models ‣ 2 Distributional semantic models ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.SS3.SSS0.P5.p1" title="Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p2" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib311" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib314" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Miller and W. Charles</span><span class="ltx_text ltx_bib_year">(1991)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contextual correlates of semantic similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language and Cognitive Processes</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–28</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib341" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Padó and M. Lapata</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency-based construction of semantic space models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 161–199</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p3" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib342" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">U. Padó</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The integration of syntax and semantic plausibility in a wide-coverage model of sentence processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Dissertation</span>, <span class="ltx_text ltx_bib_publisher">Saarland University</span>, <span class="ltx_text ltx_bib_place">Saarbrücken</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P4.p1" title="Selectional preferences ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ Analogy ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib378" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Rothenhäusler and H. Schütze</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised classification with dependency based word spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Athens, Greece</span>, <span class="ltx_text ltx_bib_pages"> pp. 17–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P3.p1" title="Concept categorization ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib379" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Rubenstein and J. Goodenough</span><span class="ltx_text ltx_bib_year">(1965)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contextual correlates of synonymy</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">10</span>), <span class="ltx_text ltx_bib_pages"> pp. 627–633</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.SSS0.P1.p1" title="Semantic relatedness ‣ 3 Evaluation materials ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib386" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Sahlgren</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Word-Space Model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D dissertation</span>, <span class="ltx_text ltx_bib_publisher">Stockholm University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib409" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, M. Ganjoo, C. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Zero-shot learning through cross-modal transfer</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Lake Tahoe, Nevada</span>, <span class="ltx_text ltx_bib_pages"> pp. 935–943</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib408" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, B. Huval, C. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic compositionality through recursive matrix-vector spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1201–1211</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib434" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib445" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Turney and P. Pantel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From frequency to meaning: vector space models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">37</span>, <span class="ltx_text ltx_bib_pages"> pp. 141–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib441" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Turney</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain and function: a dual-space model of semantic relations and compositions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">44</span>, <span class="ltx_text ltx_bib_pages"> pp. 533–585</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Conclusion ‣ Don’t count, predict! A systematic comparison of context-counting vs. context-predicting semantic vectors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:21:49 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

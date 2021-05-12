@@ -1,0 +1,1043 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Dependency-Based Word Embeddings</title>
+<!--Generated on Wed Jun 11 17:46:24 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Dependency-Based Word Embeddings</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Omer Levy 
+</span><span class="ltx_author_notes"><span> Supported by the European Community’s Seventh Framework
+Programme (FP7/2007-2013) under grant agreement no. 287923 (EXCITEMENT).</span></span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yoav Goldberg 
+<br class="ltx_break"/>Computer Science Department 
+<br class="ltx_break"/>Bar-Ilan University 
+<br class="ltx_break"/>Ramat-Gan, Israel 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">omerlevy,yoav.goldberg</span>}<span class="ltx_text ltx_font_typewriter">@gmail.com</span>
+
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">While continuous word embeddings are gaining popularity, current models
+are based solely on linear contexts.
+In this work, we generalize the skip-gram model with negative sampling
+introduced by Mikolov et al. to include arbitrary contexts. In particular,
+we perform experiments with dependency-based contexts, and show that they
+produce markedly different embeddings. The dependency-based embeddings are
+less topical and exhibit more functional similarity than the original
+skip-gram embeddings.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Word representation is central to natural language processing.
+The default approach of representing words as discrete and distinct symbols is insufficient
+for many tasks, and suffers from poor generalization. For example, the
+symbolic representation of the words “pizza” and “hamburger” are completely
+unrelated: even if we know that the word “pizza” is a good argument for
+the verb “eat”, we cannot infer that “hamburger” is also a good argument.
+We thus seek a representation that captures semantic and syntactic
+similarities between words. A very common paradigm for acquiring such
+representations is based on the distributional hypothesis of Harris
+<cite class="ltx_cite">[<a href="#bib.bib19" title="Distributional structure" class="ltx_ref">16</a>]</cite>, stating that words in similar contexts have similar
+meanings.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Based on the distributional hypothesis, many methods of deriving word
+representations were explored in the NLP community. On one end of the spectrum,
+words are grouped into clusters based on their contexts
+<cite class="ltx_cite">[<a href="#bib.bib70" title="Class-based n-gram models of natural" class="ltx_ref">5</a>, <a href="#bib.bib72" title="Distributed word clustering for large scale class-based language modeling in machine translation" class="ltx_ref">32</a>]</cite>. On the other end, words are represented as
+a very high dimensional but sparse vectors in which each entry is a measure of the association between
+the word and a particular context (see <cite class="ltx_cite">[<a href="#bib.bib20" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">30</a>, <a href="#bib.bib21" title="Distributional memory: a general framework for corpus-based semantics" class="ltx_ref">3</a>]</cite> for
+a comprehensive survey).
+In some works, the dimensionality of the sparse word-context vectors is reduced,
+using techniques such as SVD <cite class="ltx_cite">[<a href="#bib.bib5" title="Extracting semantic representations from word co-occurrence statistics: a computational study" class="ltx_ref">6</a>]</cite> or LDA
+<cite class="ltx_cite">[<a href="#bib.bib28" title="A latent dirichlet allocation method for selectional preferences" class="ltx_ref">25</a>, <a href="#bib.bib29" title="Latent variable models of selectional preference" class="ltx_ref">27</a>, <a href="#bib.bib36" title="Domain adaptation of a dependency parser with a class-class selectional preference model" class="ltx_ref">8</a>]</cite>.
+Most recently, it has been proposed to represent words as dense vectors that are
+derived by various training methods inspired from neural-network language modeling
+<cite class="ltx_cite">[<a href="#bib.bib55" title="A neural probabilistic language model" class="ltx_ref">4</a>, <a href="#bib.bib56" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">10</a>, <a href="#bib.bib57" title="A scalable hierarchical distributed language model" class="ltx_ref">23</a>, <a href="#bib.bib17" title="Extensions of recurrent neural network language model" class="ltx_ref">20</a>, <a href="#bib.bib53" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">21</a>]</cite>.
+These representations, referred to as “neural embeddings” or “word
+embeddings”,
+have been shown to perform well across a variety of tasks <cite class="ltx_cite">[<a href="#bib.bib13" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">29</a>, <a href="#bib.bib18" title="Natural language processing (almost) from scratch" class="ltx_ref">9</a>, <a href="#bib.bib15" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">26</a>, <a href="#bib.bib12" title="Polyglot: distributed word representations for multilingual nlp" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Word embeddings are easy to work with because they enable efficient computation of
+word similarities through low-dimensional matrix operations.
+Among the state-of-the-art word-embedding methods is the
+<em class="ltx_emph">skip-gram with negative sampling</em> model (<span class="ltx_text ltx_font_smallcaps">SkipGram</span>), introduced by Mikolov et al. <cite class="ltx_cite">[<a href="#bib.bib53" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">21</a>]</cite> and
+implemented in the <span class="ltx_text ltx_font_typewriter">word2vec</span> software.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="code.google.com/p/word2vec/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">code.google.com/p/word2vec/</span></a></span></span></span>
+Not only does it produce
+useful word representations, but it is also very efficient
+to train, works in an online fashion, and scales well to huge copora
+(billions of words) as well as very large word and context vocabularies.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Previous work on neural word embeddings take the
+contexts of a word to be its <em class="ltx_emph">linear context</em> – words that precede and
+follow the target word, typically in a window of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> tokens to each side.
+However, other types of contexts can be explored too.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In this work, we generalize the <span class="ltx_text ltx_font_smallcaps">SkipGram</span> model, and move from linear bag-of-words
+contexts to arbitrary word contexts. Specifically,
+following work in sparse
+vector-space models
+<cite class="ltx_cite">[<a href="#bib.bib22" title="Automatic retrieval and clustering of similar words" class="ltx_ref">18</a>, <a href="#bib.bib24" title="Dependency-based construction of semantic space models" class="ltx_ref">24</a>, <a href="#bib.bib21" title="Distributional memory: a general framework for corpus-based semantics" class="ltx_ref">3</a>]</cite>,
+we experiment with
+<em class="ltx_emph">syntactic contexts</em> that are
+derived from automatically produced dependency parse-trees.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">The different kinds of contexts produce noticeably different embeddings, and
+induce different word similarities. In particular, the bag-of-words nature of
+the contexts in the “original” <span class="ltx_text ltx_font_smallcaps">SkipGram</span> model yield <em class="ltx_emph">broad topical
+similarities</em>, while the dependency-based contexts
+yield more <em class="ltx_emph">functional</em> similarities of a <em class="ltx_emph">cohyponym</em> nature.
+This effect is demonstrated using both qualitative and quantitative analysis
+(Section <a href="#S4" title="4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">The neural word-embeddings are considered opaque, in the sense that it is hard
+to assign meanings to the dimensions of the induced representation.
+In Section <a href="#S5" title="5 Model Introspection ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> we show that
+the <span class="ltx_text ltx_font_smallcaps">SkipGram</span> model does allow for some introspection by querying it for contexts that
+are “activated by” a target word. This allows us to peek into the learned
+representation and explore the contexts that are found by the learning process
+to be most discriminative of particular words (or groups of words).
+To the best of our knowledge, this is the first work to suggest such an analysis
+of discriminatively-trained word-embedding models.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>The Skip-Gram Model</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our departure point is the skip-gram neural embedding model introduced in
+<cite class="ltx_cite">[<a href="#bib.bib51" title="Efficient estimation of word representations in vector space" class="ltx_ref">19</a>]</cite> trained using the negative-sampling procedure
+presented in <cite class="ltx_cite">[<a href="#bib.bib53" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">21</a>]</cite>. In this section we summarize
+the model and training objective following the derivation presented by Goldberg and Levy <cite class="ltx_cite">[<a href="#bib.bib76" title="Word2vec explained: deriving mikolov et al.’s negative-sampling word-embedding method" class="ltx_ref">13</a>]</cite>, and highlight the ease of
+incorporating arbitrary contexts in the model.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In the skip-gram model, each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="w\in W" display="inline"><mrow><mi>w</mi><mo>∈</mo><mi>W</mi></mrow></math> is associated with a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="v_{w}\in R^{d}" display="inline"><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>∈</mo><msup><mi>R</mi><mi>d</mi></msup></mrow></math> and
+similarly each context <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="c\in C" display="inline"><mrow><mi>c</mi><mo>∈</mo><mi>C</mi></mrow></math> is represented as a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="v_{c}\in R^{d}" display="inline"><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>∈</mo><msup><mi>R</mi><mi>d</mi></msup></mrow></math>, where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> is the words vocabulary, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m6" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> is the contexts vocabulary, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the
+embedding dimensionality. The entries in the vectors are latent, and treated as
+parameters to be learned. Loosely speaking, we seek parameter values
+(that is, vector representations for both words and contexts) such
+that the dot product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m8" class="ltx_Math" alttext="v_{w}\cdot v_{c}" display="inline"><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>c</mi></msub></mrow></math> associated with “good” word-context pairs
+is maximized.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">More specifically, the negative-sampling objective assumes a
+dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> of observed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> pairs of words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and the contexts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>, which
+appeared in a large body of text.
+Consider a word-context pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math>. Did this pair come from the
+data? We denote by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m6" class="ltx_Math" alttext="p(D=1|w,c)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> the probability that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m7" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> came from
+the data, and by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m8" class="ltx_Math" alttext="p(D=0|w,c)=1-p(D=1|w,c)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>0</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow><mo>=</mo><mn>1</mn><mo>-</mo><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> the probability that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m9" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> did not.
+The distribution is modeled as:</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center">
+<span class="ltx_inline-block ltx_markedasmath ltx_transformed_outer" style="width:110.9pt;height:23.0555555555556px;vertical-align:-4.7pt;"><span class="ltx_transformed_inner" style="transform:translate(-13.9pt,-2.1pt) scale(0.8,0.8) ;-webkit-transform:translate(-13.9pt,-2.1pt) scale(0.8,0.8) ;-ms-transform:translate(-13.9pt,-2.1pt) scale(0.8,0.8) ;">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1.m1" class="ltx_Math" alttext="p(D=1|w,c)=\frac{1}{1+e^{-v_{w}\cdot v_{c}}}" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>-</mo><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>c</mi></msub></mrow></mrow></msup></mrow></mfrac></mrow></math></p>
+</span></span></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m10" class="ltx_Math" alttext="v_{w}" display="inline"><msub><mi>v</mi><mi>w</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m11" class="ltx_Math" alttext="v_{c}" display="inline"><msub><mi>v</mi><mi>c</mi></msub></math> (each a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m12" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>-dimensional vector) are the model parameters
+to be learned. We seek to maximize the log-probability of the
+observed pairs belonging to the data, leading to the objective:</p>
+<table id="S2.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center">
+<span class="ltx_inline-block ltx_markedasmath ltx_transformed_outer" style="width:160.6pt;height:30.4166666666666px;vertical-align:-5.1pt;"><span class="ltx_transformed_inner" style="transform:translate(-20.1pt,-2.7pt) scale(0.8,0.8) ;-webkit-transform:translate(-20.1pt,-2.7pt) scale(0.8,0.8) ;-ms-transform:translate(-20.1pt,-2.7pt) scale(0.8,0.8) ;">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1.m1" class="ltx_Math" alttext="\arg\max_{v_{w},v_{c}}\sum_{(w,c)\in D}\log\frac{1}{1+e^{-v_{c}\cdot v_{w}}}" display="inline"><mrow><mi>arg</mi><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>,</mo><msub><mi>v</mi><mi>c</mi></msub></mrow></msub><mo>⁡</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>D</mi></mrow></msub><mrow><mi>log</mi><mo>⁡</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>-</mo><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>w</mi></msub></mrow></mrow></msup></mrow></mfrac></mrow></mrow></mrow></mrow></math></p>
+</span></span></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This objective admits a trivial solution in which
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m13" class="ltx_Math" alttext="p(D=1|w,c)=1" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow><mo>=</mo><mn>1</mn></mrow></math> for every pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m14" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math>. This can be easily achieved by setting
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m15" class="ltx_Math" alttext="v_{c}=v_{w}" display="inline"><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>=</mo><msub><mi>v</mi><mi>w</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m16" class="ltx_Math" alttext="v_{c}\cdot v_{w}=K" display="inline"><mrow><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>w</mi></msub></mrow><mo>=</mo><mi>K</mi></mrow></math> for all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m17" class="ltx_Math" alttext="c,w" display="inline"><mrow><mi>c</mi><mo>,</mo><mi>w</mi></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m18" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> is large enough number.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In order to prevent the trivial solution, the objective is extended with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m1" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> pairs for which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m2" class="ltx_Math" alttext="p(D=1|w,c)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>w</mi><mo>,</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> must be low, i.e. pairs which are not in the data,
+by generating the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m3" class="ltx_Math" alttext="D^{\prime}" display="inline"><msup><mi>D</mi><mo>′</mo></msup></math> of random <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m4" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> pairs (assuming they
+are all incorrect), yielding the negative-sampling training objective:</p>
+<table id="S2.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center">
+<span class="ltx_inline-block ltx_markedasmath ltx_transformed_outer" style="width:239.0pt;height:26.5277777777778px;vertical-align:-4.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-51.2pt,-4.1pt) scale(0.7,0.7) ;-webkit-transform:translate(-51.2pt,-4.1pt) scale(0.7,0.7) ;-ms-transform:translate(-51.2pt,-4.1pt) scale(0.7,0.7) ;">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1.m1" class="ltx_Math" alttext="\arg\max_{v_{w},v_{c}}\left(\prod_{(w,c)\in D}p(D=1|c,w)\prod_{(w,c)\in D^{%&#10;\prime}}p(D=0|c,w)\right)" display="inline"><mrow><mi>arg</mi><msub><mo>max</mo><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>,</mo><msub><mi>v</mi><mi>c</mi></msub></mrow></msub><mrow><mo>(</mo><msub><mo largeop="true" symmetric="true">∏</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>D</mi></mrow></msub><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>1</mn><mo>|</mo><mi>c</mi><mo>,</mo><mi>w</mi><mo>)</mo></mrow><msub><mo largeop="true" symmetric="true">∏</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msup><mi>D</mi><mo>′</mo></msup></mrow></msub><mi>p</mi><mrow><mo>(</mo><mi>D</mi><mo>=</mo><mn>0</mn><mo>|</mo><mi>c</mi><mo>,</mo><mi>w</mi><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></p>
+</span></span></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">which can be rewritten as:</p>
+<table id="S2.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center">
+<span class="ltx_inline-block ltx_markedasmath ltx_transformed_outer" style="width:255.8pt;height:26.5277777777778px;vertical-align:-4.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-54.8pt,-4.1pt) scale(0.7,0.7) ;-webkit-transform:translate(-54.8pt,-4.1pt) scale(0.7,0.7) ;-ms-transform:translate(-54.8pt,-4.1pt) scale(0.7,0.7) ;">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1.m1" class="ltx_Math" alttext="\arg\max_{v_{w},v_{c}}\left(\sum_{(w,c)\in D}\log\sigma(v_{c}\cdot v_{w})+\sum%&#10;_{(w,c)\in D^{\prime}}\log\sigma(-v_{c}\cdot v_{w})\right)" display="inline"><mrow><mi>arg</mi><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><msub><mi>v</mi><mi>w</mi></msub><mo>,</mo><msub><mi>v</mi><mi>c</mi></msub></mrow></msub><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>D</mi></mrow></msub><mrow><mrow><mi>log</mi><mo>⁡</mo><mi>σ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>w</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><msup><mi>D</mi><mo>′</mo></msup></mrow></msub><mrow><mrow><mi>log</mi><mo>⁡</mo><mi>σ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>-</mo><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>w</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></p>
+</span></span></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m5" class="ltx_Math" alttext="\sigma(x)=1/(1+e^{x})" display="inline"><mrow><mrow><mi>σ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mn>1</mn><mo>/</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mi>x</mi></msup></mrow><mo>)</mo></mrow></mrow></mrow></math>.
+The objective is trained in an online fashion using stochastic-gradient updates over
+the corpus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m6" class="ltx_Math" alttext="D\cup D^{\prime}" display="inline"><mrow><mi>D</mi><mo>∪</mo><msup><mi>D</mi><mo>′</mo></msup></mrow></math>.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">The negative samples <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="D^{\prime}" display="inline"><msup><mi>D</mi><mo>′</mo></msup></math> can be constructed in various ways.
+We follow the method proposed by Mikolov et al.:
+for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="(w,c)\in D" display="inline"><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi>D</mi></mrow></math> we construct <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> samples
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="(w,c_{1}),\ldots,(w,c_{n})" display="inline"><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><msub><mi>c</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><msub><mi>c</mi><mi>n</mi></msub></mrow><mo>)</mo></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is a hyperparameter and each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m6" class="ltx_Math" alttext="c_{j}" display="inline"><msub><mi>c</mi><mi>j</mi></msub></math> is drawn according to its unigram distribution raised to the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m7" class="ltx_Math" alttext="3/4" display="inline"><mrow><mn>3</mn><mo>/</mo><mn>4</mn></mrow></math> power.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">Optimizing this objective makes observed word-context pairs have similar
+embeddings, while scattering unobserved pairs. Intuitively, words that appear in
+similar contexts should have similar embeddings, though we have not yet found a formal proof that <span class="ltx_text ltx_font_smallcaps">SkipGram</span> does indeed maximize the dot product of similar words.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Embedding with Arbitrary Contexts</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In the <span class="ltx_text ltx_font_smallcaps">SkipGram</span> embedding algorithm, the contexts of a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> are the words
+surrounding it in the text. The context vocabulary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> is thus identical
+to the word vocabulary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>.
+However, this restriction is not required by the model; contexts need not
+correspond to words, and the number of context-types can be substantially larger
+than the number of word-types.
+We generalize <span class="ltx_text ltx_font_smallcaps">SkipGram</span> by replacing the bag-of-words
+contexts with arbitrary contexts.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">In this paper we experiment with dependency-based <em class="ltx_emph">syntactic contexts</em>.
+Syntactic contexts capture different information than bag-of-word
+contexts, as we demonstrate using the sentence
+“<em class="ltx_emph">Australian scientist discovers star with telescope”.</em></p>
+</div>
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Linear Bag-of-Words Contexts</h4>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">This is the context used by
+<span class="ltx_text ltx_font_typewriter">word2vec</span> and many other neural embeddings.
+Using a window of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> around the target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="2k" display="inline"><mrow><mn>2</mn><mo>⁢</mo><mi>k</mi></mrow></math> contexts are produced:
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> words before and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> words after <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. For <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m7" class="ltx_Math" alttext="k=2" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow></math>, the contexts of the
+target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m8" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m9" class="ltx_Math" alttext="w_{-2},w_{-1},w_{+1},w_{+2}" display="inline"><mrow><msub><mi>w</mi><mrow><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>w</mi><mrow><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>w</mi><mrow><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>w</mi><mrow><mo>+</mo><mn>2</mn></mrow></msub></mrow></math>.
+In our example, the contexts of <em class="ltx_emph">discovers</em> are <em class="ltx_emph">Australian</em>,
+<em class="ltx_emph">scientist</em>, <em class="ltx_emph">star</em>, <em class="ltx_emph">with</em>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><span class="ltx_text ltx_font_typewriter">word2vec</span>’s implementation is slightly
+more complicated. The software defaults to prune rare words based on their
+frequency, and has an option for sub-sampling the frequent words. These pruning
+and sub-sampling happen <em class="ltx_emph">before</em> the context extraction, leading to a
+dynamic window size. In addition, the window size is not fixed to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m10" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> but is
+sampled uniformly in the range <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m11" class="ltx_Math" alttext="[1,k]" display="inline"><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>k</mi></mrow><mo>]</mo></mrow></math> for each word.</span></span></span></p>
+</div>
+<div id="S3.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Note that a context window of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p2.m1" class="ltx_Math" alttext="2" display="inline"><mn>2</mn></math> may miss some important
+contexts (<em class="ltx_emph">telescope</em> is not a context of <em class="ltx_emph">discovers</em>), while
+including some accidental ones (<em class="ltx_emph">Australian</em> is a context
+<em class="ltx_emph">discovers</em>). Moreover, the contexts are unmarked, resulting in
+<em class="ltx_emph">discovers</em> being a context of both <em class="ltx_emph">stars</em> and <em class="ltx_emph">scientist</em>, which may result in
+<em class="ltx_emph">stars</em> and <em class="ltx_emph">scientists</em> ending up as neighbours in the embedded
+space.
+A window size of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p2.m2" class="ltx_Math" alttext="5" display="inline"><mn>5</mn></math> is commonly used to capture broad topical content, whereas smaller windows contain more focused information about the target word.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Dependency-Based Contexts</h4>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">An alternative to the bag-of-words approach is to derive contexts based on the
+syntactic relations the word participates in. This is facilitated by
+recent advances in parsing technology <cite class="ltx_cite">[<a href="#bib.bib73" title="A dynamic oracle for the arc-eager system" class="ltx_ref">14</a>, <a href="#bib.bib74" title="Training deterministic parsers with non-deterministic oracles" class="ltx_ref">15</a>]</cite> that
+allow parsing to syntactic dependencies with very high speed and
+near state-of-the-art accuracy.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">After parsing each sentence, we derive
+word contexts as follows:
+for a target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> with modifiers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m2" class="ltx_Math" alttext="m_{1},\ldots,m_{k}" display="inline"><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>m</mi><mi>k</mi></msub></mrow></math> and a head <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m3" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math>, we consider
+the contexts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m4" class="ltx_Math" alttext="(m_{1},lbl_{1}),\ldots,(m_{k},lbl_{k}),(h,lbl^{-1}_{h})" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>m</mi><mn>1</mn></msub><mo>,</mo><mrow><mi>l</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><msub><mi>l</mi><mn>1</mn></msub></mrow></mrow><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>m</mi><mi>k</mi></msub><mo>,</mo><mrow><mi>l</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><msub><mi>l</mi><mi>k</mi></msub></mrow></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mrow><mi>l</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><msubsup><mi>l</mi><mi>h</mi><mrow><mo>-</mo><mn>1</mn></mrow></msubsup></mrow></mrow><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m5" class="ltx_Math" alttext="lbl" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>l</mi></mrow></math> is
+the type of the dependency relation between the head and the modifier (e.g.
+<em class="ltx_emph">nsubj</em>, <em class="ltx_emph">dobj</em>, <em class="ltx_emph">prep_with</em>, <em class="ltx_emph">amod</em>) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m6" class="ltx_Math" alttext="lbl^{-1}" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><msup><mi>l</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></math>
+is used to mark the inverse-relation.
+Relations that include a preposition are “collapsed” prior to context
+extraction, by directly connecting the head and the object of the preposition, and
+subsuming the preposition itself into the dependency label. An example of the dependency
+context extraction is given in Figure <a href="#S3.F1" title="Figure 1 ‣ Dependency-Based Contexts ‣ 3 Embedding with Arbitrary Contexts ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">Notice that syntactic dependencies are both more inclusive and more focused than
+bag-of-words. They capture relations to words that are far apart and thus
+“out-of-reach” with small window bag-of-words (e.g. the instrument of <em class="ltx_emph">discover</em> is
+<em class="ltx_emph">telescope/prep_with</em>), and also filter out “coincidental” contexts
+which are within the window but not directly related to the target word (e.g.
+<em class="ltx_emph">Australian</em> is not used as the context for <em class="ltx_emph">discovers</em>).
+In addition, the contexts are typed, indicating, for example, that <em class="ltx_emph">stars</em>
+are objects of discovery and <em class="ltx_emph">scientist</em>s are subjects.
+We thus expect the syntactic contexts to yield more focused embeddings,
+capturing more functional and less topical similarity.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<span class="ltx_inline-block ltx_transformed_outer" style="width:360.0pt;height:30px;vertical-align:-16.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-45.0pt,-2.7pt) scale(0.8,0.8) ;-webkit-transform:translate(-45.0pt,-2.7pt) scale(0.8,0.8) ;-ms-transform:translate(-45.0pt,-2.7pt) scale(0.8,0.8) ;"><span class="ltx_ERROR undefined">{dependency}</span>
+<p class="ltx_p">[theme=simple]
+<span class="ltx_ERROR undefined">{deptext}</span>[column sep=0.2cm]
+Australian &amp; scientist &amp; discovers &amp; star &amp; with &amp; telescope 
+<br class="ltx_break"/>
+<span class="ltx_ERROR undefined">\depedge</span>21amod
+<span class="ltx_ERROR undefined">\depedge</span>32nsubj
+<span class="ltx_ERROR undefined">\depedge</span>34dobj
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=dashed]35prep
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=dashed]56pobj</p>
+</span></span>
+<span class="ltx_inline-block ltx_transformed_outer" style="width:348.0pt;height:30px;vertical-align:-16.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-43.5pt,-2.7pt) scale(0.8,0.8) ;-webkit-transform:translate(-43.5pt,-2.7pt) scale(0.8,0.8) ;-ms-transform:translate(-43.5pt,-2.7pt) scale(0.8,0.8) ;"><span class="ltx_ERROR undefined">{dependency}</span>
+<p class="ltx_p">[theme=simple]
+<span class="ltx_ERROR undefined">{deptext}</span>[column sep=0.2cm]
+Australian &amp; scientist &amp; discovers &amp; star &amp; telescope 
+<br class="ltx_break"/>
+<span class="ltx_ERROR undefined">\depedge</span>21amod
+<span class="ltx_ERROR undefined">\depedge</span>32nsubj
+<span class="ltx_ERROR undefined">\depedge</span>34dobj
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=thick]35prep_with</p>
+</span></span>
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:348.0pt;height:128.472222222222px;vertical-align:-1.6pt;"><span class="ltx_transformed_inner" style="transform:translate(-43.5pt,-11.6pt) scale(0.8,0.8) ;-webkit-transform:translate(-43.5pt,-11.6pt) scale(0.8,0.8) ;-ms-transform:translate(-43.5pt,-11.6pt) scale(0.8,0.8) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_smallcaps">word</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">contexts</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">australian</th>
+<td class="ltx_td ltx_align_left ltx_border_t">scientist/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m1" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">scientist</th>
+<td class="ltx_td ltx_align_left">australian/amod, discovers/nsubj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">discovers</th>
+<td class="ltx_td ltx_align_left">scientist/nsubj, star/dobj, telescope/prep_with</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">star</th>
+<td class="ltx_td ltx_align_left">discovers/dobj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m3" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b">telescope</th>
+<td class="ltx_td ltx_align_left ltx_border_b">discovers/prep_with<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m4" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Dependency-based context extraction example. <span class="ltx_text ltx_font_bold">Top:</span> preposition relations are
+collapsed into single arcs, making <em class="ltx_emph">telescope</em> a direct modifier of
+<em class="ltx_emph">discovers</em>. <span class="ltx_text ltx_font_bold">Bottom:</span> the contexts extracted for each word in the
+sentence.</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments and Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We experiment with 3 training conditions: <span class="ltx_text ltx_font_smallcaps">BoW5</span> (bag-of-words
+contexts with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="k=5" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>5</mn></mrow></math>), <span class="ltx_text ltx_font_smallcaps">BoW2</span> (same, with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="k=2" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow></math>) and <span class="ltx_text ltx_font_smallcaps">Deps</span>
+(dependency-based syntactic contexts).
+We modified <span class="ltx_text ltx_font_typewriter">word2vec</span> to support arbitrary contexts, and
+to output the context embeddings in addition to the word embeddings.
+For bag-of-words contexts we used the original <span class="ltx_text ltx_font_typewriter">word2vec</span> implementation, and for
+syntactic contexts, we used our modified version. The negative-sampling
+parameter (how many negative contexts to sample for every correct one) was 15.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">All embeddings were trained on English Wikipedia.
+For <span class="ltx_text ltx_font_smallcaps">Deps</span>,
+the corpus was tagged with parts-of-speech using the Stanford tagger
+<cite class="ltx_cite">[<a href="#bib.bib75" title="Feature-rich part-of-speech tagging with a cyclic dependency network" class="ltx_ref">28</a>]</cite>
+and parsed into labeled Stanford dependencies <cite class="ltx_cite">[<a href="#bib.bib71" title="The Stanford typed dependencies representation" class="ltx_ref">11</a>]</cite> using an
+implementation of the parser described in <cite class="ltx_cite">[<a href="#bib.bib73" title="A dynamic oracle for the arc-eager system" class="ltx_ref">14</a>]</cite>.
+All tokens were converted to lowercase, and
+words and contexts that appeared less than 100
+times were filtered. This resulted in a vocabulary of about 175,000 words, with over 900,000 distinct syntactic contexts.
+We report results for 300 dimension embeddings, though
+similar trends were also observed with 600 dimensions.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Qualitative Evaluation</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our first evaluation is qualitative: we manually inspect the 5 most similar words
+(by cosine similarity) to a given set of target words (Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Qualitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The first target word,
+<em class="ltx_emph">Batman</em>, results in similar sets across the different setups. This is
+the case for many target words. However, other target words show clear
+differences between embeddings.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">In <em class="ltx_emph">Hogwarts</em> - the school of magic from the fictional Harry Potter series - it
+is evident that <span class="ltx_text ltx_font_smallcaps">BoW</span> contexts reflect the <em class="ltx_emph">domain</em> aspect, whereas
+<span class="ltx_text ltx_font_smallcaps">Deps</span> yield a list of famous schools, capturing the
+<em class="ltx_emph">semantic type</em> of the target word. This observation holds for <em class="ltx_emph">Turing</em><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><span class="ltx_text ltx_font_smallcaps">Deps</span> generated a list of scientists whose name ends with “ing”. This is may be a result of occasional POS-tagging errors. Still, the embedding does a remarkable job and retrieves scientists, despite the noisy POS. The list contains more mathematicians without “ing” further down.</span></span></span>
+and many other nouns as well; <span class="ltx_text ltx_font_smallcaps">BoW</span> find words that
+<em class="ltx_emph">associate</em> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, while <span class="ltx_text ltx_font_smallcaps">Deps</span> find words that
+<em class="ltx_emph">behave</em> like <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>. Turney <cite class="ltx_cite">[<a href="#bib.bib65" title="Domain and function: a dual-space model of semantic relations and compositions" class="ltx_ref">31</a>]</cite> described this
+distinction as
+<em class="ltx_emph">domain similarity</em> versus <em class="ltx_emph">functional similarity</em>.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">The <em class="ltx_emph">Florida</em> example presents an ontological difference; bag-of-words
+contexts generate meronyms (counties or cities within Florida), while
+dependency-based contexts provide cohyponyms (other US states).
+We observed the same behavior with other geographical locations, particularly
+with countries (though not all of them).</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">The next two examples demonstrate that similarities induced from <span class="ltx_text ltx_font_smallcaps">Deps</span>
+share a syntactic function (adjectives and gerunds), while similarities based on
+<span class="ltx_text ltx_font_smallcaps">BoW</span> are more diverse.
+Finally, we observe that while both <span class="ltx_text ltx_font_smallcaps">BoW5</span> and <span class="ltx_text ltx_font_smallcaps">BoW2</span> yield
+topical similarities, the larger window size result in more topicality, as
+expected.</p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">We also tried using the subsampling option <cite class="ltx_cite">[<a href="#bib.bib53" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">21</a>]</cite> with <span class="ltx_text ltx_font_smallcaps">BoW</span> contexts (not shown). Since <span class="ltx_text ltx_font_typewriter">word2vec</span> removes the subsampled words from the corpus <em class="ltx_emph">before</em> creating the window contexts, this option effectively increases the window size, resulting in greater topicality.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:307.1pt;height:490px;vertical-align:-1.3pt;"><span class="ltx_transformed_inner" style="transform:translate(-90.2pt,-103.6pt) scale(0.63,0.63) ;-webkit-transform:translate(-90.2pt,-103.6pt) scale(0.63,0.63) ;-ms-transform:translate(-90.2pt,-103.6pt) scale(0.63,0.63) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Target Word</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">BoW5</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">BoW2</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Deps</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="5">batman</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">nightwing</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">superman</td>
+<td class="ltx_td ltx_align_left ltx_border_t">superman</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">aquaman</td>
+<td class="ltx_td ltx_align_left ltx_border_r">superboy</td>
+<td class="ltx_td ltx_align_left">superboy</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">catwoman</td>
+<td class="ltx_td ltx_align_left ltx_border_r">aquaman</td>
+<td class="ltx_td ltx_align_left">supergirl</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">superman</td>
+<td class="ltx_td ltx_align_left ltx_border_r">catwoman</td>
+<td class="ltx_td ltx_align_left">catwoman</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">manhunter</td>
+<td class="ltx_td ltx_align_left ltx_border_r">batgirl</td>
+<td class="ltx_td ltx_align_left">aquaman</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="5">hogwarts</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">dumbledore</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">evernight</td>
+<td class="ltx_td ltx_align_left ltx_border_t">sunnydale</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">hallows</td>
+<td class="ltx_td ltx_align_left ltx_border_r">sunnydale</td>
+<td class="ltx_td ltx_align_left">collinwood</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">half-blood</td>
+<td class="ltx_td ltx_align_left ltx_border_r">garderobe</td>
+<td class="ltx_td ltx_align_left">calarts</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">malfoy</td>
+<td class="ltx_td ltx_align_left ltx_border_r">blandings</td>
+<td class="ltx_td ltx_align_left">greendale</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">snape</td>
+<td class="ltx_td ltx_align_left ltx_border_r">collinwood</td>
+<td class="ltx_td ltx_align_left">millfield</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="5">turing</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">nondeterministic</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">non-deterministic</td>
+<td class="ltx_td ltx_align_left ltx_border_t">pauling</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">non-deterministic</td>
+<td class="ltx_td ltx_align_left ltx_border_r">finite-state</td>
+<td class="ltx_td ltx_align_left">hotelling</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">computability</td>
+<td class="ltx_td ltx_align_left ltx_border_r">nondeterministic</td>
+<td class="ltx_td ltx_align_left">heting</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">deterministic</td>
+<td class="ltx_td ltx_align_left ltx_border_r">buchi</td>
+<td class="ltx_td ltx_align_left">lessing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">finite-state</td>
+<td class="ltx_td ltx_align_left ltx_border_r">primality</td>
+<td class="ltx_td ltx_align_left">hamming</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="5">florida</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">gainesville</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">fla</td>
+<td class="ltx_td ltx_align_left ltx_border_t">texas</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">fla</td>
+<td class="ltx_td ltx_align_left ltx_border_r">alabama</td>
+<td class="ltx_td ltx_align_left">louisiana</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">jacksonville</td>
+<td class="ltx_td ltx_align_left ltx_border_r">gainesville</td>
+<td class="ltx_td ltx_align_left">georgia</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">tampa</td>
+<td class="ltx_td ltx_align_left ltx_border_r">tallahassee</td>
+<td class="ltx_td ltx_align_left">california</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">lauderdale</td>
+<td class="ltx_td ltx_align_left ltx_border_r">texas</td>
+<td class="ltx_td ltx_align_left">carolina</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" rowspan="5">object-oriented</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">aspect-oriented</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">aspect-oriented</td>
+<td class="ltx_td ltx_align_left ltx_border_t">event-driven</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">smalltalk</td>
+<td class="ltx_td ltx_align_left ltx_border_r">event-driven</td>
+<td class="ltx_td ltx_align_left">domain-specific</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">event-driven</td>
+<td class="ltx_td ltx_align_left ltx_border_r">objective-c</td>
+<td class="ltx_td ltx_align_left">rule-based</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">prolog</td>
+<td class="ltx_td ltx_align_left ltx_border_r">dataflow</td>
+<td class="ltx_td ltx_align_left">data-driven</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">domain-specific</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4gl</td>
+<td class="ltx_td ltx_align_left">human-centered</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t" rowspan="5">dancing</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">singing</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">singing</td>
+<td class="ltx_td ltx_align_left ltx_border_t">singing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">dance</td>
+<td class="ltx_td ltx_align_left ltx_border_r">dance</td>
+<td class="ltx_td ltx_align_left">rapping</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">dances</td>
+<td class="ltx_td ltx_align_left ltx_border_r">dances</td>
+<td class="ltx_td ltx_align_left">breakdancing</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">dancers</td>
+<td class="ltx_td ltx_align_left ltx_border_r">breakdancing</td>
+<td class="ltx_td ltx_align_left">miming</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">tap-dancing</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">clowning</td>
+<td class="ltx_td ltx_align_left ltx_border_b">busking</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Target words and their 5 most similar
+words, as induced by different embeddings.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Quantitative Evaluation</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We supplement the examples in Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Qualitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> with quantitative evaluation
+to show that the qualitative differences pointed out in the previous section
+are indeed widespread. To that end, we use the WordSim353 dataset
+<cite class="ltx_cite">[<a href="#bib.bib68" title="Placing search in context: the concept revisited" class="ltx_ref">12</a>, <a href="#bib.bib67" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">1</a>]</cite>.
+This dataset contains pairs of similar words that reflect either <em class="ltx_emph">relatedness</em>
+(topical similarity) or <em class="ltx_emph">similarity</em> (functional similarity)
+relations.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Some word pairs are judged to exhibit both types of
+similarity, and were ignored in this experiment.</span></span></span>
+We use the embeddings in a retrieval/ranking setup, where
+the task is to rank the <em class="ltx_emph">similar</em> pairs in the dataset above
+the <em class="ltx_emph">related</em> ones.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The pairs are ranked according to cosine similarities between the embedded
+words. We then draw a recall-precision curve that describes the embedding’s affinity
+towards one subset (“similarity”) over another (“relatedness”). We expect
+<span class="ltx_text ltx_font_smallcaps">Deps</span>’s curve to be higher than <span class="ltx_text ltx_font_smallcaps">BoW2</span>’s curve, which
+in turn is expected to be higher than <span class="ltx_text ltx_font_smallcaps">BoW5</span>’s. The graph
+in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>a shows this is indeed the case.
+We repeated the experiment with a different dataset
+<cite class="ltx_cite">[<a href="#bib.bib66" title="Semantic and associative priming in the cerebral hemispheres: some words do, some words don’t… sometimes, some places" class="ltx_ref">7</a>]</cite> that was used by Turney <cite class="ltx_cite">[<a href="#bib.bib65" title="Domain and function: a dual-space model of semantic relations and compositions" class="ltx_ref">31</a>]</cite> to distinguish between
+domain and functional similarities. The results show a similar trend
+(Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>b). When reversing the task such that the goal is to
+rank the <em class="ltx_emph">related</em> terms above the <em class="ltx_emph">similar</em> ones, the results are
+reversed, as expected (not shown).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Additional
+experiments (not presented in this paper) reinforce our conclusion. In particular, we found that <span class="ltx_text ltx_font_smallcaps">Deps</span> perform dramatically worse than <span class="ltx_text ltx_font_smallcaps">BoW</span> contexts on analogy tasks as in <cite class="ltx_cite">[<a href="#bib.bib50" title="Linguistic regularities in continuous space word representations" class="ltx_ref">22</a>, <a href="#bib.bib77" title="Linguistic regularities in sparse and explicit word representations" class="ltx_ref">17</a>]</cite>.</span></span></span></p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-2050/image001.png" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="324" height="159" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Recall-precision curve when attempting to rank the <em class="ltx_emph">similar</em> words
+above the <em class="ltx_emph">related</em> ones.
+(a) is based on the WordSim353 dataset, and (b) on the Chiarello
+et al. dataset.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Model Introspection</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Neural word embeddings are often considered opaque and
+uninterpretable, unlike sparse vector space representations in which each
+dimension corresponds to a particular known context, or LDA models where
+dimensions correspond to latent topics. While this is true to a large extent,
+we observe that <span class="ltx_text ltx_font_smallcaps">SkipGram</span> does allow a non-trivial amount of
+introspection. Although we cannot assign a meaning to any particular dimension, we
+can indeed get a glimpse at the kind of information being captured by the
+model, by examining which contexts are “activated” by a target word.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Recall that the learning procedure is attempting to maximize the dot product
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="v_{c}\cdot v_{w}" display="inline"><mrow><msub><mi>v</mi><mi>c</mi></msub><mo>⋅</mo><msub><mi>v</mi><mi>w</mi></msub></mrow></math> for good <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="(w,c)" display="inline"><mrow><mo>(</mo><mrow><mi>w</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math> pairs and minimize it for bad ones. If we keep
+the context embeddings, we can query the model for the contexts that
+are most activated by (have the highest dot product with) a given target word. By doing so, we can see what the model
+learned to be a good discriminative context for the word.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">To demonstrate, we list the 5 most activated contexts for our example
+words with <span class="ltx_text ltx_font_smallcaps">Deps</span> embeddings in
+Table <a href="#S5.T2" title="Table 2 ‣ 5 Model Introspection ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+Interestingly, the most discriminative syntactic contexts in
+these cases are
+not associated with subjects or objects of verbs (or their inverse), but rather
+with conjunctions, appositions, noun-compounds and adjectivial modifiers. Additionally,
+the collapsed preposition relation is very
+useful (e.g. for capturing the <em class="ltx_emph">school</em> aspect of <em class="ltx_emph">hogwarts</em>).
+The presence of many conjunction contexts, such as <span class="ltx_text ltx_font_typewriter">superman/conj</span> for <em class="ltx_emph">batman</em> and <span class="ltx_text ltx_font_typewriter">singing/conj</span> for
+<em class="ltx_emph">dancing</em>, may explain the functional similarity observed in
+Section <a href="#S4" title="4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>; conjunctions in natural language tend to
+enforce their conjuncts to share the same semantic types and inflections.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">In the future, we hope that insights from such model
+introspection will allow us to develop better contexts, by
+focusing on conjunctions and prepositions for example, or by trying to figure out why the
+subject and object relations are absent and finding ways of increasing their
+contributions.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:271.9pt;height:225.555555555555px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-58.3pt,-34.8pt) scale(0.7,0.7) ;-webkit-transform:translate(-58.3pt,-34.8pt) scale(0.7,0.7) ;-ms-transform:translate(-58.3pt,-34.8pt) scale(0.7,0.7) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">batman</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">hogwarts</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">turing</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">superman/conj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t">students/prep_at<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t">machine/nn<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">spider-man/conj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">educated/prep_at<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">test/nn<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">superman/conj</td>
+<td class="ltx_td ltx_align_left">student/prep_at<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m7" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">theorem/poss<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m8" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">spider-man/conj</td>
+<td class="ltx_td ltx_align_left">stay/prep_at<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m9" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">machines/nn<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m10" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">robin/conj</td>
+<td class="ltx_td ltx_align_left">learned/prep_at<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m11" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">tests/nn<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m12" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">florida</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">object-oriented</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">dancing</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t">marlins/nn<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m13" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t">programming/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m14" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_t">dancing/conj</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">beach/appos<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m15" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">language/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m16" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">dancing/conj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m17" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">jacksonville/appos<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m18" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">framework/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m19" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">singing/conj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m20" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">tampa/appos<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m21" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">interface/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m22" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left">singing/conj</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b">florida/conj<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m23" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_b">software/amod<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m24" class="ltx_Math" alttext="{}^{-1}" display="inline"><msup><mi/><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_border_b">ballroom/nn</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Words and their top syntactic contexts.</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We presented a generalization of the <span class="ltx_text ltx_font_smallcaps">SkipGram</span> embedding model in which
+the linear bag-of-words contexts are replaced with arbitrary ones, and
+experimented with dependency-based contexts, showing that they produce markedly
+different kinds of similarities. These results are expected, and follow similar
+findings in the distributional semantics literature. We also demonstrated how the resulting
+embedding model can be queried for the discriminative contexts for a given word,
+and observed that the learning procedure seems to favor relatively local
+syntactic contexts, as well as conjunctions and objects of preposition. We hope
+these insights will facilitate further research into improved context modeling
+and better, possibly task-specific, embedded representations.
+Our software, allowing for experimentation with arbitrary contexts, together
+with the embeddings described in this
+paper, are available for download at the authors’ websites.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib67" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, E. Alfonseca, K. Hall, J. Kravalova, M. Pasca and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study on similarity and relatedness using distributional and wordnet-based approaches</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boulder, Colorado</span>, <span class="ltx_text ltx_bib_pages"> pp. 19–27</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N/N09/N09-1003" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Al-Rfou, B. Perozzi and S. Skiena</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Polyglot: distributed word representations for multilingual nlp</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni and A. Lenci</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional memory: a general framework for corpus-based semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">36</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 673–721</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Jauvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. F. Brown, R. L. Mercer, V. J. Della Pietra and J. C. Lai</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Class-based n-gram models of natural</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">4</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. A. Bullinaria and J. P. Levy</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting semantic representations from word co-occurrence statistics: a computational study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods</span> <span class="ltx_text ltx_bib_volume">39</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 510–526</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chiarello, C. Burgess, L. Richards and A. Pollock</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic and associative priming in the cerebral hemispheres: some words do, some words don’t… sometimes, some places</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Brain and Language</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 75–104</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Cohen, Y. Goldberg and M. Elhadad</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation of a dependency parser with a class-class selectional preference model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 43–48</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W12-3308" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2008-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Stanford typed dependencies representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Manchester, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W08-1301" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Finkelstein, E. Gabrilovich, Y. Matias, E. Rivlin, Z. Solan, G. Wolfman and E. Ruppin</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Placing search in context: the concept revisited</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 116–131</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib76" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and O. Levy</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word2vec explained: deriving mikolov et al.’s negative-sampling word-embedding method</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1402.3722</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 The Skip-Gram Model ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib73" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and J. Nivre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A dynamic oracle for the arc-eager system</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Dependency-Based Contexts ‣ 3 Embedding with Arbitrary Contexts ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.p2" title="4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib74" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and J. Nivre</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training deterministic parsers with non-deterministic oracles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the association for Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">1</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P2.p1" title="Dependency-Based Contexts ‣ 3 Embedding with Arbitrary Contexts ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Harris</span><span class="ltx_text ltx_bib_year">(1954)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional structure</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Word</span> <span class="ltx_text ltx_bib_volume">10</span> (<span class="ltx_text ltx_bib_number">23</span>), <span class="ltx_text ltx_bib_pages"> pp. 146–162</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Levy and Y. Goldberg</span><span class="ltx_text ltx_bib_year">(2014-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in sparse and explicit word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Baltimore, Maryland, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lin</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic retrieval and clustering of similar words</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’98</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 768–774</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/980691.980696" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/980691.980696" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoRR</span> <span class="ltx_text ltx_bib_volume">abs/1301.3781</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 The Skip-Gram Model ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, S. Kombrink, L. Burget, J. Cernocky and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extensions of recurrent neural network language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 5528–5531</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. S. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 3111–3119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 The Skip-Gram Model ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p6" title="4.1 Qualitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1090" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Mnih and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A scalable hierarchical distributed language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1081–1088</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Padó and M. Lapata</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency-based construction of semantic space models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 161–199</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ritter, Mausam and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A latent dirichlet allocation method for selectional preferences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 424–434</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Ó. Séaghdha</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent variable models of selectional preference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 435–444</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib75" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 384–394</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P.D. Turney and P. Pantel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From frequency to meaning: vector space models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 141–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain and function: a dual-space model of semantic relations and compositions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">44</span>, <span class="ltx_text ltx_bib_pages"> pp. 533–585</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Qualitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Quantitative Evaluation ‣ 4 Experiments and Evaluation ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Uszkoreit and T. Brants</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed word clustering for large scale class-based language modeling in machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 755–762</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Dependency-Based Word Embeddings" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:46:24 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

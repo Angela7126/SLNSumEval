@@ -1,0 +1,1180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Localising iceberg inconsistencies.
+   </title>
+   <abstract>
+    In artificial intelligence, it is important to handle and analyse inconsistency in knowledge bases. Inconsistent pieces of information suggest questions like “where is the inconsistency?” and “how severe is it?”. Inconsistency measures have been proposed to tackle the latter issue, but the former seems underdeveloped and is the focus of this paper. Minimal inconsistent sets have been the main tool to localise inconsistency, but we argue that they are like the exposed part of an iceberg, failing to capture contradictions hidden under the water. Using classical propositional logic, we develop methods to characterise when a formula is contributing to the inconsistency in a knowledge base and when a set of formulas can be regarded as a primitive conflict. To achieve this, we employ an abstract consequence operation to “look beneath the water level”, generalising the minimal inconsistent set concept and the related free formula notion. We apply the framework presented to the problem of measuring inconsistency in knowledge bases, putting forward relaxed forms for two debatable postulates for inconsistency measures. Finally, we discuss the computational complexity issues related to the introduced concepts.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The occurrence of inconsistencies in data and knowledge is an important issue for the application of knowledge representation and reasoning technologies that are based on standard logics. To develop ways of dealing with an inconsistent set of formulas, it is important to understand the inconsistency, analysing its properties. Given an inconsistent knowledge base (a set of formulas), natural questions that arise are “where is the inconsistency?” and “how severe is it?”. To answer the second question in a qualitative way, inconsistent knowledge bases were classified by the severity of their inconsistency [17]. Recently, to numerically quantify the extent to which a knowledge base is inconsistent, many inconsistency measures have been proposed [29], [24], [25], [19], [28], [27], [20], [42], [43]. In contrast, the first question appears quite underdeveloped, and it is the subject of the present work.
+     </paragraph>
+     <paragraph>
+      Inconsistency localisation can mean different things. One may want for instance to spot which part of the language is “contaminated” by the inconsistency, looking for the logical variables involved in contradictions (see e.g. [22], [25]). Alternatively, one might assign numeric inconsistency values for formulas in a knowledge base, indicating the extent to which they are involved in the inconsistency, according to a given definition (e.g. [23], [25]). In this paper, we focus on localising the inconsistency in a knowledge base, showing how it unfolds among the formulas.{sup:1} That is, given an inconsistent knowledge base, we are interested in discovering which subsets of formulas are contributing to the inconsistency, being its causes, and which formulas are not involved whatsoever.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Motivation
+      </section-title>
+      <paragraph>
+       When a knowledge base is inconsistent, it is not necessarily the case that its inconsistency is spread over all its formulas. For example, consider the set formed by the propositions: “Alice is a cat”, “Alice is not a cat” and “Bob is a dog”. Even though the whole set is inconsistent, intuition tends towards regarding the first two propositions as controversial and the third one as free of inconsistency somehow. To capture such intuition, minimal inconsistent sets (inconsistent sets whose all proper subsets are consistent) have been construed as the “purest form of inconsistency” [24], [25]. Accordingly, a formula not contained in any minimal inconsistent set — a free formula — has been regarded as “uncontroversial”. As the first two propositions are already contradicting each other, the whole base is not a minimal inconsistent set. Furthermore, the third proposition contradicts neither the first nor the second proposition, hence “Bob is a dog” is indeed technically free, for not being in a minimal inconsistent set. Such a simple solution to the problem of localising the inconsistency probably is the reason for the lack of a systematic investigation of this issue. Nonetheless, the situation is more complex than might at first appear, since minimal inconsistent sets are alike the exposed part of the iceberg, ignoring all the inconsistency hidden under the water, as illustrated in Fig. 1.
+      </paragraph>
+      <paragraph>
+       The recognition of these iceberg inconsistencies can find application in different areas where inconsistent pieces of information have to be dealt with. For instance, in software engineering, requirements extraction might reveal users' expectations that cannot hold together, calling for a method for localising the conflicts. In data integration/fusion, as well as in belief merging, the proper identification of the sources of information, or the agents, that are conflicting each other allows one to narrow its attention to the focus of the problem, ignoring uncontroversial data/beliefs. In formal argumentation, inconsistency can be localised in order to show how a set of arguments is conflicting. Inconsistency localisation may also bring important clues in fraud investigation, for instance in the analysis of contradicting tax forms of a given taxpayer. In general, any decision making under inconsistent information might benefit from localising the inconsistency. For example, a physician facing several different medical tests of a given patient with inconsistent results might need to choose which ones should be performed again. Example 1.1 brings a concrete situation where a decision can be influenced by inconsistency localisation.
+      </paragraph>
+      <paragraph label="Example 1.1">
+       The police is investigating a robbery on a jewellery shop that occurred on a weekday, during working hours. The investigators have taken testimony from all employees that were working on the day of the crime. The witnesses' statements include the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        salesperson: “I did not open the safe, and the criminals carried no guns!”
+       </list-item>
+       <list-item label="•">
+        security chief: “Only the manager or the salesperson could have opened the safe, and the criminals carried guns.”
+       </list-item>
+       <list-item label="•">
+        manager: “I did not open the safe.”
+       </list-item>
+      </list>
+      <paragraph>
+       To answer the questions raised in the example above, we need a tool to tell the “uncontroversial” from the “controversial” formulas in a knowledge base, since we are only interested in knowing whether the manager's testimony is involved in the inconsistency, raising suspicion that he/she lied. This can be regarded as the relaxed form of the problem of localising inconsistency, whose solution is a partition of the inconsistent knowledge base into “controversial” and “uncontroversial” formulas. Free formulas are intended to encompass all and only “uncontroversial” formulas in a knowledge base, but we shall argue that they are not suitable for all contexts. For instance, in the example above, the manager's testimony is free (because it is not in any minimal inconsistent set), but it also seems to contradict the others in some way.
+      </paragraph>
+      <paragraph>
+       A harder problem is identifying the atomic inconsistencies, or the primitive conflicts, in a knowledge base and can be illustrated by the following situation:
+      </paragraph>
+      <paragraph label="Example 1.2">
+       A university has hired a company to design a library management software to be used by all its members. In order to extract the design specifications, the company has collected requirements from the head of each department, which include:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Ecology: “The software should be open source, contributing to the whole academic community.”
+       </list-item>
+       <list-item label="•">
+        Marketing: “It can't be freely available, we need to keep our university edge in IT systems as a differential that attracts new students.”
+       </list-item>
+       <list-item label="•">
+        Philosophy: “Both graduate and undergraduate students shall have the same rights in the system and it must be remotely accessible.”
+       </list-item>
+       <list-item label="•">
+        Economy: “Due to their different demands, graduate students need some privileges. If the system is to be remotely accessible, its software should not be open source, otherwise it could be vulnerable.”
+       </list-item>
+       <list-item label="•">
+        Theology: “Department heads shall have no exclusive privileges.”
+       </list-item>
+       <list-item label="•">
+        Arts: “I have no specific requirements.”
+       </list-item>
+      </list>
+      <paragraph>
+       Within a set of controversial formulas, not every subset is essentially forming a conflict, thus inconsistency can be further analysed. This notion of conflict primitiveness, or inconsistency atomicity, is strongly linked to the procedure of restoring the consistency of — or consolidate — the knowledge base. The rationale behind it is that consolidating a knowledge base is resolving its primitive conflicts, or atomic inconsistencies. For these reasons, the atomic inconsistencies have been characterised via minimal inconsistent sets, as removing a formula from each consolidates the knowledge base. However, withdrawing formulas may be an unsuitable way of achieving consistency in some situations. In Example 1.1, that approach would lead to the loss of valuable information, since a police investigation is not about having a consistent set of witnesses, but it is about fully analysing what they say. Therefore, minimal inconsistent sets may fail to spot all problematic sets of formulas in a base. For instance, while the only two minimal inconsistent subsets in Example 1.2 are the contradictions Ecology vs Marketing and Philosophy vs Economy, apparently Ecology, Philosophy and Economy requirements are also conflicting.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Our approach
+      </section-title>
+      <paragraph>
+       In a nutshell, the problem with Example 1.1, Example 1.2 is that parts of the propositions are conflicting, and this is not captured by minimal inconsistent sets. If a set of inconsistent formulas is like an iceberg, we need a way to look under the water, or “inside” the formulas. To achieve that, one can use an arbitrary consequence operation {a mathematical formula}Cn⋆ that can return “parts” of the formulas. Another way of seeing the issue with the aforementioned examples is considering an underlying consolidation procedure. If the testimonies or the requirements are to be consolidated via discarding witnesses or departments, minimal inconsistent sets indeed encode all causes of inconsistency, and free formulas are indeed “uncontroversial”. Nevertheless, other consolidation procedures, which allow for formula weakening instead of withdrawal, yield different characterisations of atomic inconsistency or primitive conflicts and of “uncontroversial” formulas. Once more, a generic consequence operation {a mathematical formula}Cn⋆ can be used to formalise these consistency restoring procedures, as we shall see.
+      </paragraph>
+      <paragraph>
+       Using a generic consequence operation {a mathematical formula}Cn⋆ to look under the water level, we put forward methods for telling controversial from uncontroversial formulas and characterising the atomic inconsistencies in a knowledge base, revealing the hidden iceberg conflicts. We introduce the concepts of ⋆-innocuous formulas, ⋆-free formulas and ⋆-conflicts, all parameterised by an arbitrary consequence operation {a mathematical formula}Cn⋆, in order to generalise the free formula and minimal inconsistent set notions.
+      </paragraph>
+      <paragraph>
+       Apart from its intrinsic interest, localising inconsistency in knowledge bases can be useful in measuring inconsistency, to which we draw our attention in the second part of the paper. A straightforward method to assess the inconsistency in a knowledge base is to count its primitive conflicts. Thus, while presenting new primitive conflict characterisations, we are implicitly defining inconsistency measures, which will be explored.
+      </paragraph>
+      <paragraph>
+       The devising of inconsistency measures has been influenced by a set of rationality postulates proposed by Hunter and Konieczny [25]. Among these basic requirements, the postulates of (Independence) and (Dominance) have been subject to debate [8], [27], [11]. The postulate of (Independence) is strongly related to minimal inconsistent sets as the primitive conflict characterisation [8], [11], and such a link may be undesirable sometimes. As to (Dominance), it fails to hold for most syntactic inconsistency measures [27], including the one that simply counts minimal inconsistent sets. Applying the framework here developed, we propose parameterising (Independence) and (Dominance) by a consequence operation {a mathematical formula}Cn⋆, yielding two spectra of properties that have the original postulates as the strongest particular cases.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       Organisation of the paper
+      </section-title>
+      <paragraph>
+       After fixing notation in Section 2, we show in Section 3 how minimal inconsistent sets and free formulas do no exhaust the problem of localising inconsistency in knowledge bases. In Section 4, we generalise the notion of free formula by considering an underlying consolidation procedure based on an abstract consequence operation. Section 5 explores the use of such consequence operation to generalise minimal inconsistent sets. Related works and how they interact with the concepts we introduce are discussed in Section 6. Section 7 presents applications of the framework we put forward to the problem of measuring inconsistency in knowledge bases, introducing new measures and flexibilising rationality postulates. Computational complexity issues related to the introduced concepts are discussed in Section 8.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this work, we deal mainly with knowledge bases formed by propositions from classical logic. A propositional logic language is a set of formulas formed by atomic propositions combined with logical connectives, possibly with punctuation elements (parentheses). We assume a countably infinite set of symbols {a mathematical formula}X={x1,x2,x3,…} corresponding to atomic propositions (atoms). Formulas are constructed inductively with connectives ({a mathematical formula}¬,∧,∨,→), atomic propositions as usual, possibly with parentheses. The set of all these well-formed formulas is the propositional language over X, denoted by {a mathematical formula}L. Additionally, ⊤ denotes {a mathematical formula}xi∨¬xi for some {a mathematical formula}xi∈Xn, and ⊥ denotes ¬⊤. A formula {a mathematical formula}φ∈L is a literal if either {a mathematical formula}φ=xi or {a mathematical formula}φ=¬xi for some {a mathematical formula}xi∈X. For any {a mathematical formula}φ∈L, {a mathematical formula}Lit(φ) denotes the set of literals that are subformulas of φ. A clause is a formula in {a mathematical formula}L formed by the disjunction of literals. A knowledge base (KB) is a set {a mathematical formula}Γ⊆L, and {a mathematical formula}K is the set of all knowledge bases. For any {a mathematical formula}Γ∈K, {a mathematical formula}Lit(Γ) denotes the set {a mathematical formula}⋃{Lit(φ)|φ∈Γ}.
+     </paragraph>
+     <paragraph>
+      A valuation (or truth assignment) is a function {a mathematical formula}v:X→{0,1}, where 1 and 0 denote TRUE and FALSE, respectively. Each valuation can be extended to the whole set {a mathematical formula}L following the classical semantics of the connectives, as usual. A formula {a mathematical formula}φ∈L is consistent (or satisfiable) if there is a valuation v such that {a mathematical formula}v(φ)=1, when we say v satisfies φ. A formula {a mathematical formula}φ∈L is said to be valid if ¬φ is unsatisfiable. A knowledge base {a mathematical formula}Γ∈K is consistent (satisfiable) if there is a valuation satisfying all {a mathematical formula}φ∈Γ. Deciding whether a knowledge base is satisfiable is the Boolean satisfiability problem (SAT). The classical consequence operation is the function {a mathematical formula}Cn:K→K such that, for all {a mathematical formula}Γ∈K and {a mathematical formula}φ∈L, {a mathematical formula}φ∈Cn(Γ) iff {a mathematical formula}Γ∪{¬φ} is inconsistent.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Minimal inconsistent sets and free formulas
+     </section-title>
+     <paragraph>
+      The task of localising the inconsistency in a knowledge base can be split into two subtasks, in increasing order of difficulty:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       discriminating the “controversial” formulas from the “uncontroversial” ones;
+      </list-item>
+      <list-item label="•">
+       identifying the atomic (or primitive) conflicts.
+      </list-item>
+     </list>
+     <paragraph>
+      The first subproblem can indeed be seen as a relaxed version of the second. By identifying “controversial” formulas as those involved in some primitive conflicts (according to a given characterisation), finding the “uncontroversial” formulas in a knowledge base (solving the first subproblem) means finding, via set complement, the union of such conflicts. Meanwhile, solving the second subtask, identifying the primitive conflicts, leads to a solution to the first task by considering whether or not a formula is involved in a conflict. In fact, the commonest way of localising inconsistency tackles directly the hardest problem, through minimal inconsistent sets:
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      Minimal inconsistent setA knowledge base {a mathematical formula}Γ∈K is a minimal inconsistent set (MIS) if Γ is inconsistent and every set {a mathematical formula}Γ′⊊Γ is consistent.
+     </paragraph>
+     <paragraph>
+      When a minimal inconsistent set Δ is a subset of a base {a mathematical formula}Γ∈K, we say Δ is a minimal inconsistent subset of Γ — a MIS of Γ. The set of all MISes in a base {a mathematical formula}Γ∈K is denoted by {a mathematical formula}MIS(Γ). A derived definition intend to capture when a formula is “uncontroversial”, not causing the inconsistency in a base:
+     </paragraph>
+     <paragraph label="Definition 3.2">
+      Free formulaA formula φ in a base {a mathematical formula}Γ∈K is said to be free in Γ if, for all {a mathematical formula}Δ∈MIS(Γ), {a mathematical formula}φ∉Δ.
+     </paragraph>
+     <paragraph>
+      Despite the widespread employment of MISes and free formulas in order to localise inconsistency in a knowledge base, there are situations where such concepts are not suitable, failing to capture all causes of inconsistency and identifying as “uncontroversial” some “controversial” formulas.
+     </paragraph>
+     <paragraph label="Example 3.3">
+      Recall the situation of Example 1.1 and consider the following atomic propositions:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       s stands for “the salesperson opened the safe”;
+      </list-item>
+      <list-item label="•">
+       m stands for “the manager opened the safe”;
+      </list-item>
+      <list-item label="•">
+       g stands for “the criminals carried guns”.
+      </list-item>
+     </list>
+     <paragraph>
+      From the example above, we can conclude that, under some circumstances, the concept of free formula may misguide the localisation of “uncontroversial” pieces of information in a knowledge base. Dually, we could say that not every “controversial” formula takes part in a minimal inconsistent set. Even in cases where minimal inconsistent sets capture all controversial formulas, they might not properly identify which sets of formulas are actually conflicting, as the example below indicates.
+     </paragraph>
+     <paragraph label="Example 3.4">
+      Back to Example 1.2, let us formalise the system requirements suggested by the heads of the departments via the following atomic propositions:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       o stands for “the software is open source”;
+      </list-item>
+      <list-item label="•">
+       g stands for “graduate students have more rights than undergraduate students”;
+      </list-item>
+      <list-item label="•">
+       r stands for “the system can be remotely accessed”;
+      </list-item>
+      <list-item label="•">
+       h stands for “heads of departments have exclusive privileges”.
+      </list-item>
+     </list>
+     <paragraph>
+      These examples motivate our quest for new tools for localising inconsistency in a knowledge base. We are interested in alternative ways of both telling the “uncontroversial” formulas from the “controversial” ones and identifying the primitive conflicts within the latter. Every definition of primitive conflict yields a notion of “uncontroversial” formulas as being those not involved in a conflict. Nevertheless, it is in principle possible to define the latter without introducing the former, solving only the problem of localising the controversial formulas, but not discriminating them into atomic inconsistencies. For the sake of presentation, we follow this path, firstly looking independently for refinements of the free formula concept to then investigate characterisation of conflicts afterwards.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Refining the notion of free formulas
+     </section-title>
+     <paragraph>
+      Before proceeding to develop the free formula concept refinement, we take a quick look at an existing proposal. A stronger form of free formula has already been suggested in the literature. Hunter and Konieczny [25] defined a safe formula as a consistent one whose atomic propositions are disjoint from those in the rest of the base. The intuition is that a safe formula cannot be “controversial” in a base since its atomic propositions are not used in other formulas in the base, thus it is logically independent in some sense. Although safe formulas are easily recognisable, we expect them to be rare in practice, due to the natural logical dependencies among propositions within a knowledge base. Furthermore, safe formulas are a primitive concept, not derived from a characterisation of atomic inconsistencies — as free formulas are derived from MISes. Hence, the problem of localising inconsistency would only partially be solved, with the set of safe formulas being the “uncontroversial” ones, but without means to discriminate the conflicts within the possibly “controversial” part. More importantly, not every non-safe formula seems to be “controversial”: consider for instance {a mathematical formula}x1 in the knowledge base {a mathematical formula}{x1,x1∧x2,¬x2}. That is, the safe formula concept is too conservative, failing to spot most “uncontroversial” formulas. We are looking for a weaker, more useful notion of “uncontroversial” formulas, between safe and free, for which the “controversial” formulas could indeed be regarded as such — for instance, via some primitive conflict characterisation.
+     </paragraph>
+     <paragraph>
+      A way of understanding what is happening in Example 3.3 is via the way the conflict between the salesperson and the security chief was solved. Once the contradiction has been spotted, one does not need to completely ignore one of the witnesses, because he/she was lying, but consistency can be achieved by discarding only part of some testimony. In Example 1.1, the salesperson could have misled, by not noticing the guns, and his/her statement about not having opened the safe (¬s) could still be believed. This connection between a conflict characterisation and a procedure to restore consistency is clear in the case of MISes and free formulas.
+     </paragraph>
+     <paragraph>
+      The concept of free formula is based on the idea that minimal inconsistent sets are the causes of inconsistencies. Such an idea can be understood by noting that the classical way of handling inconsistency is through ruling out formulas, as Reiter proposed in his diagnosis problem [36] and as the standard AGM paradigm of belief revision – named after Alchourrón, Gärdenfors and Makinson [1] – defines base contraction (see [21] for a general view of the AGM paradigm). Reiter's hitting sets technique views a repair of some inconsistency set of formulas as giving up of at least one element from each minimal inconsistent set. For such a repair to be minimal, no free formula should be discarded. In the AGM paradigm, the consolidation process of a belief base can be interpreted as the contraction of ⊥, the contradiction. The inclusion postulate claims that the result of a contraction is a subset of the belief base in question, and the success postulate states that, while contracting by ⊥, the result should be consistent. That is, to perform a consolidation in the AGM framework, we can only discard formulas, and again focus on the MISes if we want to minimally do so. Indeed, the relevance postulate forces the contraction of ⊥ to contain all free formulas of the base. This is due to the fact that free formulas are consistent with any consistent subset of the knowledge base, which is a consolidation in the AGM theory:
+     </paragraph>
+     <paragraph label="Definition 4.1">
+      AGM-consolidationLet Γ be a knowledge base in {a mathematical formula}K. An AGM-consolidation of Γ is any consistent subset {a mathematical formula}Γ′⊆Γ.
+     </paragraph>
+     <paragraph>
+      Using AGM-consolidations, free formulas could be alternatively defined.{sup:3}
+     </paragraph>
+     <paragraph label="Proposition 4.2">
+      Consider a knowledge base{a mathematical formula}Γ∈Kand a formula{a mathematical formula}φ∈Γ. φ is free in Γ iff, for any AGM-consolidation{a mathematical formula}Γ′of Γ,{a mathematical formula}Γ′∪{φ}is consistent.
+     </paragraph>
+     <paragraph>
+      The result above provides a new way of equivalently defining a free formula without mentioning minimal inconsistent sets, but using AGM-consolidations. If other forms of restoring consistency are conceived, different notions of “uncontroversial” formulas might arise.
+     </paragraph>
+     <paragraph>
+      While consolidating a knowledge base, we could preserve part of the information conveyed by the formulas being discarded, instead of completely forgetting them. Hence, we conceive more general consolidation procedures than the one employed by Reiter and the AGM framework. We are interested in consolidation procedures that allow for formulas being weakened, not only deleted. Different methods can be employed to weaken a formula: discarding conjuncts or adding disjuncts [18], employing prime implicates [27], applying dilation [19], etc. To generally encompass all these procedures, we employ an arbitrary consequence operation {a mathematical formula}Cn⋆:K→K. Some properties a consequence operation can enjoy are listed in the following:
+     </paragraph>
+     <paragraph label="Definition 4.3">
+      Consider arbitrary bases {a mathematical formula}Γ,Δ∈K, an arbitrary formula {a mathematical formula}φ∈L and a {a mathematical formula}Cn⋆:K→K. {a mathematical formula}Cn⋆ satisfies
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Monotonicity if {a mathematical formula}Γ⊆Δ implies {a mathematical formula}Cn⋆(Γ)⊆Cn⋆(Δ);
+      </list-item>
+      <list-item label="•">
+       Idempotence if {a mathematical formula}Cn⋆(Cn⋆(Γ))⊆Cn⋆(Γ);
+      </list-item>
+      <list-item label="•">
+       Inclusion if {a mathematical formula}Γ⊆Cn⋆(Γ);
+      </list-item>
+      <list-item label="•">
+       (Strict) Subclassicality if {a mathematical formula}Cn⋆(Γ)⊆Cn(Γ) ({a mathematical formula}Cn⋆(Γ)⊊Cn(Γ));
+      </list-item>
+      <list-item label="•">
+       Modularity if {a mathematical formula}Cn⋆(Γ)=⋃{Cn⋆({φ})|φ∈Γ}.
+      </list-item>
+     </list>
+     <paragraph>
+      If {a mathematical formula}Cn⋆ satisfies monotonicity, inclusion and idempotence, we say it is Tarskian[40]. For instance, the classical consequence operation Cn is Tarskian, but not modular.
+     </paragraph>
+     <paragraph>
+      Using a consequence operation with some properties, we can define a more general sort of consolidation operation that allows some, but not all consequences of a knowledge base to be present in its consolidation, following ideas from [39] and [12].
+     </paragraph>
+     <paragraph label="Definition 4.4">
+      ⋆-consolidationLet Γ be a knowledge base in {a mathematical formula}K and {a mathematical formula}Cn⋆ be a subclassical, Tarskian consequence operation. A ⋆-consolidation of Γ is any consistent set {a mathematical formula}Γ′⊆Cn⋆(Γ).
+     </paragraph>
+     <paragraph>
+      Of course not all subclassical, Tarskian consequence operations yields interesting ⋆-consolidation definitions. For instance, using the classical consequence operation Cn, an inconsistent {a mathematical formula}Γ∈K would imply {a mathematical formula}Cn(Γ)=L, and any consistent knowledge base could be the ⋆-consolidation of Γ. That is why we focus on strictly subclassical {a mathematical formula}Cn⋆.
+     </paragraph>
+     <paragraph>
+      If we want to restrict ⋆-consolidations to contain only formulas that are weaker than those in the original knowledge base, {a mathematical formula}Cn⋆ must be modular. In this case, the consequence operation is dual to a (weakening) relation on pairs of formulas:
+     </paragraph>
+     <paragraph label="Definition 4.5">
+      Modular consequence relation {a mathematical formula}⊢⋆For a given modular consequence operation {a mathematical formula}Cn⋆:K→K, {a mathematical formula}⊢⋆⊆L×L is such that, for every {a mathematical formula}φ,ψ∈L, {a mathematical formula}〈φ,ψ〉∈⊢⋆ (denoted by {a mathematical formula}φ⊢⋆ψ) iff {a mathematical formula}ψ∈Cn⋆({φ}). We say {a mathematical formula}⊢⋆ is a modular consequence relation.
+     </paragraph>
+     <paragraph>
+      We use ⊢ to denote the classical entailment relation between formulas {a mathematical formula}φ,ψ∈L: {a mathematical formula}φ⊢ψ iff {a mathematical formula}ψ∈Cn({φ}). Note that any given modular consequence relation {a mathematical formula}⊢⋆⊆L×L also uniquely determines a modular consequence operation {a mathematical formula}Cn⋆ via {a mathematical formula}Cn⋆({φ})={ψ∈L|φ⊢⋆ψ} and {a mathematical formula}Cn⋆(Γ)=⋃{Cn⋆({φ})|φ∈Γ}. That is, a given modular consequence operation {a mathematical formula}Cn⋆ defines a modular consequence relation {a mathematical formula}⊢⋆ that in turn uniquely characterises {a mathematical formula}Cn⋆. Due to this bijection, we sometimes use {a mathematical formula}⊢⋆ to refer to the corresponding modular {a mathematical formula}Cn⋆.
+     </paragraph>
+     <paragraph>
+      Throughout the paper, {a mathematical formula}Cn⋆ will be instantiated often as one of the following modular consequence operations:
+     </paragraph>
+     <paragraph label="Definition 4.6">
+      {a mathematical formula}CnId:K→K, {a mathematical formula}Cn∧:K→K, {a mathematical formula}Cn2∧:K→K and {a mathematical formula}Cnmod:K→K are modular consequence operators, defined, for any {a mathematical formula}φ∈L, as:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}CnId({φ})={φ};
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}Cn∧({φ})={ψ|φ=ψ,φ=ψ∧γ,φ=θ∧ψ or φ=θ∧ψ∧γ};
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}Cn2∧({φ})={ψ∈Cn∧({φ})|{ψ}=Cn∧({ψ})};
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}Cnmod({φ})=Cn({φ}).
+      </list-item>
+     </list>
+     <paragraph>
+      The consequence operation {a mathematical formula}CnId is simply an identity function. Informally, {a mathematical formula}ψ∈Cn∧{φ} if ψ is a conjunct of φ. For instance, if {a mathematical formula}Γ={x1∧x2∧x3}, {a mathematical formula}Cn∧(Γ)={x1,x2,x3,x1∧x2,x2∧x3,x1∧x2∧x3}. In contrast, {a mathematical formula}Cn2∧ considers only the smallest conjuncts, and {a mathematical formula}Cn2∧(Γ)=Γ∪{x1,x2,x3}. Also note that {a mathematical formula}Cnmod=Cn⋆ implies {a mathematical formula}⊢⋆=⊢, so {a mathematical formula}Cnmod is a modular version of the classical consequence operation Cn. From their definition, one can see that {a mathematical formula}CnId, {a mathematical formula}Cn∧, {a mathematical formula}Cn2∧ and {a mathematical formula}Cnmod are subclassical and Tarskian.
+     </paragraph>
+     <paragraph label="Example 4.7">
+      Back to Example 3.3, consider the knowledge base {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g}, which encodes the testimonies given by the salesperson and the security chief. The knowledge base {a mathematical formula}Δ′={¬s,(s∨m)∧g} can be seen as a ⋆-consolidation of Δ if {a mathematical formula}Cn⋆=Cn∧.
+     </paragraph>
+     <paragraph label="Definition 4.8">
+      Using these concepts, a new notion of “uncontroversial” formula arises: Innocuous formulaLet Γ be a knowledge base in {a mathematical formula}K. A formula {a mathematical formula}φ∈Γ is ⋆-innocuous in Γ if, for every ⋆-consolidation Δ of Γ, {a mathematical formula}Δ∪{φ} is consistent.
+     </paragraph>
+     <paragraph label="Example 4.9">
+      Recall from Example 3.3 that the knowledge base {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g} is the only MIS in {a mathematical formula}Γ=Δ∪{¬m}, thus {a mathematical formula}θ=¬m is free in Γ. Nevertheless, taking {a mathematical formula}Cn⋆=Cn∧, we have that {a mathematical formula}Δ′={¬s,(s∨m)∧g} is a ⋆-consolidation of Γ, and {a mathematical formula}Δ′∪{θ}={¬s,(s∨m)∧g,¬m} is inconsistent, so θ is not ⋆-innocuous.
+     </paragraph>
+     <paragraph>
+      The reason why ⋆-innocuous formulas can be taken as uncontroversial is that one can ignore them while ⋆-consolidating a knowledge base. Given an inconsistent knowledge base Γ, to AGM-consolidate it — discarding formulas —, one can focus on the non-free part of the base, withdrawing formulas until consistency is reached, and then concatenate the free formulas again, due to Proposition 4.2. Using ⋆-consolidation instead of AGM-consolidation, ⋆-innocuous formulas can be ignored (or bypassed), as they can be consistently added in the end:
+     </paragraph>
+     <paragraph label="Proposition 4.10">
+      Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K, a knowledge base{a mathematical formula}Γ∈Kand a{a mathematical formula}Δ⊆Γthat contains only formulas that are ⋆-innoucuous in Γ. If{a mathematical formula}Ψ′is a ⋆-consolidation of{a mathematical formula}Ψ=Γ∖Δ, then{a mathematical formula}Ψ′∪Δis a ⋆-consolidation of Γ.
+     </paragraph>
+     <paragraph>
+      Since ⋆-consolidations are AGM-consolidations, we can prove:
+     </paragraph>
+     <paragraph label="Proposition 4.11">
+      Let Γ be a knowledge base in{a mathematical formula}K. If a formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ, then φ is free in Γ.
+     </paragraph>
+     <paragraph>
+      The concept of ⋆-innocuous formula is parameterised by the entailment relation {a mathematical formula}Cn⋆, which has two extreme instances, due to monotonicity and subclassicality:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}Cn⋆=CnId and ⋆-consolidations are AGM-consolidations;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}Cn⋆=Cn, and for any inconsistent {a mathematical formula}Γ∈K, any consistent {a mathematical formula}Δ⊆Cn⋆(Γ)=L is a ⋆-consolidation.
+      </list-item>
+     </list>
+     <paragraph>
+      In the first case, {a mathematical formula}Cn⋆ is the identity function, and ⋆-innocuous formulas are equal to free formulas, due to the characterisation given by Proposition 4.2. In the second case, no falsifiable (i.e., non-valid) formula φ can be ⋆-innocuous in an inconsistent Γ, for {a mathematical formula}{¬φ}⊆Cn(Γ) is a ⋆-consolidation. Conversely, for any subclassical {a mathematical formula}Cn⋆, every valid formula is ⋆-innocuous, for it is consistent with any ⋆-consolidation. Hence, in the second case, the ⋆-innocuous formulas in any inconsistent knowledge base are exactly its tautologies, a rather conservative definition.
+     </paragraph>
+     <paragraph>
+      When we limit our attention to modular {a mathematical formula}Cn⋆, two extreme cases arise as well. The weakest modular consequence operation is {a mathematical formula}Cn⋆=CnId, just discussed above. Since we assume subclassicalility, the strongest modular consequence operation is {a mathematical formula}Cn⋆=Cnmod, because {a mathematical formula}⊢⋆=⊢. Although {a mathematical formula}Cnmod is weaker than the classical consequence operation Cn, it can also yield undesired consequences:
+     </paragraph>
+     <paragraph label="Example 4.12">
+      Recall the scenario of Example 3.4, where {a mathematical formula}Γ={o,¬o,¬g∧r,g∧(r→¬o),¬h,⊤} is the base containing the original requirements. Suppose the Marketing head had weakened his requirement (¬o) to {a mathematical formula}¬o∨o as before, but the second meeting had taken a different course, as follows. Both department heads (Philosophy and Economy) are very reluctant to weaken their requirements ({a mathematical formula}¬g∧r and {a mathematical formula}g∧(r→¬o), respectively). In order to end the conflict, they find a solution that pleases both: or their original requirements have to be met, or department heads must have exclusive rights in the system. That is, the Philosophy head's new requirement is {a mathematical formula}(¬g∧r)∨h, and the Economy head's is {a mathematical formula}(g∧(r→¬o))∨h. Now, the knowledge base containing the updated requirements is {a mathematical formula}Γ2={o,¬o∨o,(¬g∧r)∨h,(g∧(r→¬o))∨h,¬h,⊤}. It happens that {a mathematical formula}{(¬g∧r)∨h,(g∧(r→¬o))∨h,¬h}⊆Γ2 is a MIS, and {a mathematical formula}Γ2 is inconsistent.Note that each head's new requirement is a logical consequence of his/her old one. Thus, considering {a mathematical formula}Cn⋆=Cnmod, {a mathematical formula}Ψ={o,¬o∨o,¬g∧r∨h,(g∧(r→¬o))∨h,⊤}⊆Cn⋆(Γ) is consistent and is a ⋆-consolidation of Γ. Hence, as {a mathematical formula}Ψ∪{¬h}=Γ2 is inconsistent, ¬h is not ⋆-innocuous in Γ (see Fig. 4). Nonetheless, it is somewhat against the intuition that the requirement of the head of the Theology department be “controversial”, since it is the only one about head's privileges — it is safe. The problem is that such a {a mathematical formula}Cn⋆ is too strong, allowing the department heads to weaken their requirements by including arbitrary alternative possibilities, not related to their original ones.
+     </paragraph>
+     <paragraph>
+      In fact, the strange situation in the example above can be generalised, showing that allowing any classical consequences of each formula in a ⋆-consolidation yields a trivial notion of ⋆-innocuous formula.
+     </paragraph>
+     <paragraph label="Theorem 4.13">
+      Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Given an inconsistent{a mathematical formula}Γ∈K, a formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ iff φ is valid.
+     </paragraph>
+     <paragraph>
+      Since the notion of free formula has been shown to be sometimes unsuitable to identify the “uncontroversial” elements in a knowledge base, we put forward the more general notion of ⋆-innocuous formula, which is parameterised by a consequence relation {a mathematical formula}Cn⋆. The intuition behind “uncontroversial” here is based on an underlying consolidation procedure. The choice of a method to restore the consistency of a knowledge base will yield the definition of its ⋆-innocuous formulas, which can be bypassed (in the sense of Proposition 4.10) during the consolidation procedure. Although this new concept can in a sense tell “uncontroversial” formulas from the “controversial” ones, it cannot identify the atomic inconsistencies, or the primitive conflicts, in the latter. To achieve that, we generalise the notion of minimal inconsistent subsets.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Refining the notion of minimal inconsistent sets
+     </section-title>
+     <paragraph>
+      The question of where is the inconsistency in a knowledge base is only partially answered by the non-⋆-innocuous formulas. Even though these formulas are involved in the inconsistency somehow, we cannot still tell which subsets are producing the inconsistency or which are the primitive conflicts. Note that the union of minimal inconsistent sets is the complement of the set of free formulas in a knowledge base, so all (and only) non-free formulas can be assigned to the MISes that contains them. In other words, a formula is said to be “uncontroversial” (in some sense) if it belongs to no atomic inconsistency, understood as a MIS. Preferably, we would like to define a primitive conflict in such a way that a formula is ⋆-innocuous iff it is not involved in such a conflict. Furthermore, we expect that a conflict be an inconsistent subset of the base. We could artificially define a conflict that is the set containing all formulas that are not ⋆-innocuous in a knowledge base. Even though such a set could be proven to be always inconsistent when not empty (in inconsistent bases), it would lack the atomicity we are looking for. Such a set would be analogous to the union of all minimal inconsistent sets, but we search for a more fundamental, atomic notion of conflict. As modular consequence operations allow a straightforward conflict characterisation, we first investigate them before the general case.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Modular consequence operations
+      </section-title>
+      <paragraph>
+       In order to derive a method for characterising primitive conflicts, we can recall Example 3.4, where {a mathematical formula}Γ={o,¬o,¬g∧r,g∧(r→¬o),¬h,⊤}. A way of grasping the hidden inconsistencies in Γ is by noticing how the parts of the requirements are conflicting. The fact that a formula does not belong to a minimal inconsistent subset of a knowledge base does not mean that such a formula cannot contradict parts of the formulas in that MIS. What happens with the knowledge base Γ is that a part of each formula in {a mathematical formula}{o,¬g∧r,g∧(r→¬o)} is essentially involved in a conflict, forming the MIS {a mathematical formula}{o,¬g∧r,r→¬o}. In other words, even though o is not in the MIS {a mathematical formula}{¬g∧r,g∧(r→¬o)}, it is essentially involved in an inconsistency with the subformulas {a mathematical formula}¬g∧r and {a mathematical formula}r→¬o. A natural idea for characterising conflicts is thus to inspect “inside” the formulas, searching for “hidden” minimal inconsistent sets.
+      </paragraph>
+      <paragraph>
+       To look at the “parts” of a formula, we can employ an arbitrary relation {a mathematical formula}⊢⋆:L×L, which corresponds to a modular consequence operation {a mathematical formula}Cn⋆:K→K. Once more, we require that {a mathematical formula}Cn⋆ be Tarskian and subclassical. As a consequence, when we look “inside” a formula, we can never see logically stronger formulas, but we can always see the formula itself. For a given {a mathematical formula}Cn⋆, the set {a mathematical formula}Cn⋆(Γ) contains all “parts” of the formulas, so one can look at the knowledge bases in {a mathematical formula}MIS(Cn⋆(Γ)) to find the formulas that have “parts”{sup:4} essentially forming a conflict. Now we can generalise the concept of minimal inconsistent set, considering a given modular {a mathematical formula}Cn⋆ and the corresponding {a mathematical formula}⊢⋆:
+      </paragraph>
+      <paragraph label="Definition 5.1">
+       ⋆-weakeningConsider a modular subclassical Tarskian consequence operation {a mathematical formula}Cn⋆:K→K. A knowledge base Δ is a ⋆-weakening of Γ if there is a surjective function {a mathematical formula}f:Δ→Γ such that {a mathematical formula}f(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Δ.
+      </paragraph>
+      <paragraph label="Definition 5.2">
+       ⋆-conflictA knowledge base Γ is a ⋆-conflict if it has a ⋆-weakening Δ that is a minimal inconsistent set.
+      </paragraph>
+      <paragraph>
+       Intuitively, for a Γ to be a ⋆-conflict, each formula {a mathematical formula}φ∈Γ must have at least one “part” involved in a conflict {a mathematical formula}Δ∈MIS(Cn⋆(Γ)); and the fact that the function f in the definition above is surjective guarantees that. Furthermore, f being a function means that each {a mathematical formula}ψ∈Δ corresponds to exactly one {a mathematical formula}φ∈Γ. As f is not required to be injective, the same formula {a mathematical formula}φ∈Γ may contribute more than one “part” to form the MIS.
+      </paragraph>
+      <paragraph label="Example 5.3">
+       Let {a mathematical formula}Cn⋆ be the modular, subclassical, Tarskian consequence operation {a mathematical formula}Cn∧. Consider the knowledge base {a mathematical formula}Γ={x1,x1∧x1,¬x1} in {a mathematical formula}K. Note that {a mathematical formula}Δ={x1,¬x1} is in {a mathematical formula}MIS(Cn⋆(Γ)). Even though {a mathematical formula}¬x1⊢⋆¬x1, {a mathematical formula}x1∧x1⊢⋆x1 and {a mathematical formula}x1⊢⋆x1, this does not entail that Γ is a ⋆-conflict, for there is no surjective function {a mathematical formula}f:Δ→Γ. In other words, {a mathematical formula}x1∈Δ can count as a “part” of either {a mathematical formula}x1∈Γ or {a mathematical formula}x1∧x1∈Γ, but not both.Now let {a mathematical formula}Cn⋆ be the modular, subclassical, Tarskian consequence operation {a mathematical formula}Cn2∧, which breaks formulas into their smallest conjuncts. Consider the knowledge base {a mathematical formula}Γ={x1∧x2∧x3,(x1→x4)∧¬x3,x2→¬x4} in {a mathematical formula}K. We have that {a mathematical formula}Δ={x1,x2,(x1→x4),x2→¬x4} is a minimal inconsistent subset of {a mathematical formula}Cn⋆(Γ). We can construct a surjective function {a mathematical formula}f:Δ→Γ, defined as {a mathematical formula}f(x1)=f(x2)=x1∧x2∧x3, {a mathematical formula}f(x1→x4)=(x1→x4)∧¬x3 and {a mathematical formula}f(x2→¬x4)=x2→¬x4, such that {a mathematical formula}f(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Δ; therefore, Γ is a ⋆-conflict. Note that {a mathematical formula}x1∧x2∧x3 contributes two parts in the conflict Δ.
+      </paragraph>
+      <paragraph>
+       Due to the properties required of the modular {a mathematical formula}Cn⋆, we have:
+      </paragraph>
+      <paragraph label="Proposition 5.4">
+       Consider a modular subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a minimal inconsistent set, Γ is a ⋆-conflict.
+      </paragraph>
+      <paragraph label="Proposition 5.5">
+       Consider a modular subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a ⋆-conflict, it is inconsistent.
+      </paragraph>
+      <paragraph label="Example 5.6">
+       Recall from Example 4.9 that the knowledge base {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g} is the only MIS in {a mathematical formula}Γ=Δ∪{¬m}. Therefore, Δ is also a ⋆-conflict, by Proposition 5.4. Nevertheless, taking {a mathematical formula}Cn⋆=Cn∧, the base {a mathematical formula}Γ′={¬s,(s∨m)∧g,¬m} is in {a mathematical formula}MIS(Cn⋆(Γ)). As each formula in Γ contributes one formula in {a mathematical formula}Γ′, {a mathematical formula}Γ′ is a ⋆-weakening of Γ. Therefore, Γ is a ⋆-conflict.
+      </paragraph>
+      <paragraph label="Example 5.7">
+       Back to Example 3.4, consider the knowledge base {a mathematical formula}Γ={o,¬o,¬g∧r,g∧(r→¬o),¬h,⊤} in {a mathematical formula}K. Remember that the only minimal inconsistent sets in Γ are {a mathematical formula}Δ={o,¬o} and {a mathematical formula}Ψ={¬g∧r,g∧(r→¬o)} and that ¬h and ⊤ are the only free formulas in Γ. Depending on how we look “inside” formulas, we have different conflicts. For instance, the following two scenarios correspond to Example 3.4, Example 4.12, respectively:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Scenario I: Consider the modular consequence operation {a mathematical formula}Cn⋆=Cn∧. Note that {a mathematical formula}{o,¬g∧r,r→¬o} is a MIS and a ⋆-weakening of {a mathematical formula}Φ1={o,¬g∧r,g∧(r→¬o)}, which is a ⋆-conflict. Nevertheless, {a mathematical formula}Φ2={¬g∧r,g∧(r→¬o),¬h} has no ⋆-weakening that is a MIS, so it is not a ⋆-conflict.
+       </list-item>
+       <list-item label="•">
+        Scenario II: Consider the modular consequence operation {a mathematical formula}Cn⋆=Cnmod. Note that {a mathematical formula}{(¬g∧r)∨h,(r→¬o)∨h,¬h} is a MIS and a ⋆-weakening of {a mathematical formula}Φ2={¬g∧r,g∧(r→¬o),¬h}, which is a ⋆-conflict.
+       </list-item>
+      </list>
+      <paragraph>
+       As the example above shows, different modular {a mathematical formula}Cn⋆ may yield different notions of ⋆-conflict. This new definition of conflict also has two extreme cases that arise from the choice of {a mathematical formula}⊢⋆ (or the modular {a mathematical formula}Cn⋆). If {a mathematical formula}Cn⋆=CnId, then we are not looking strictly “inside” the formulas, and ⋆-conflicts are MISes, for {a mathematical formula}Γ=Cn⋆(Γ). At the other end, when {a mathematical formula}Cn⋆=Cnmod ({a mathematical formula}⊢⋆=⊢), we obtain a ⋆-conflict notion that is too general, thus not interesting, as hinted in the second scenario of Example 5.7. Consider the following example:
+      </paragraph>
+      <paragraph label="Example 5.8">
+       Let {a mathematical formula}Γ={x1,¬x1,x1∧x1} be a knowledge base in {a mathematical formula}K and consider the consequence operation {a mathematical formula}Cn⋆=Cn∧. We want to prove that Γ is a ⋆-conflict, by showing a ⋆-weakening that is a MIS. Note that {a mathematical formula}{x1,¬x1}⊊Γ is already MIS. We can try to employ the strategy from the second scenario of Example 5.7, adding the disjunct “{a mathematical formula}∨¬(x1∧x1)” to the first two formulas in Γ, as “{a mathematical formula}∨h” was added to the requirements of the Philosophy and the Economy heads. Doing so, we have the ⋆-weakening {a mathematical formula}{x1∨¬(x1∧x1),¬x1∨¬(x1∧x1),x1∧x1}, which is not a MIS, for the last two formulas are already contradicting each other. Nevertheless, we can apply a more general technique to show a ⋆-weakening of Γ that is indeed a MIS. Firstly, we need {a mathematical formula}|Γ|=3 “disjoint” formulas that are not related to the formulas in Γ. We employ atomic propositions not occurring in Γ, {a mathematical formula}x2,x3,x4, to form them. Consider the following formulas in {a mathematical formula}L: {a mathematical formula}ψ1=x2∧¬x3∧¬x4, {a mathematical formula}ψ2=¬x2∧x3∧¬x4 and {a mathematical formula}ψ3=¬x2∧¬x3∧x4. Note that each valuation satisfies at most one of these formulas. Now, let {a mathematical formula}φ1, {a mathematical formula}φ2 and {a mathematical formula}φ3 denote {a mathematical formula}x1, {a mathematical formula}¬x1 and {a mathematical formula}x1∧x1, respectively, so that {a mathematical formula}Γ={φ1,φ2,φ3}. Then, consider the formulas:{a mathematical formula} For instance, {a mathematical formula}φ1′=(x1∨¬x2∧x3∧¬x4)∧¬(¬x1)∨(¬x2∧¬x3∧x4)∧¬(x1∧x1). Note that, for any {a mathematical formula}1≤i≤3, {a mathematical formula}φi⊢φi′. Therefore, {a mathematical formula}Γ′={φ1′,φ2′,φ3′} is a ⋆-weakening of Γ. To prove that {a mathematical formula}Γ′ is a MIS, consider its proper subset {a mathematical formula}Δ1=Γ′∖{φ1′}={φ2′,φ3′}. Both {a mathematical formula}φ2′ and {a mathematical formula}φ3′ have {a mathematical formula}ψ1∧¬φ1=(x2∧¬x3∧¬x4)∧¬x1 as a disjunct. Since this formula is satisfiable, {a mathematical formula}Δ1 is consistent. Similar reasoning applies to both {a mathematical formula}Δ2=Γ′∖{φ2′} and {a mathematical formula}Δ3=Γ′∖{φ3′}. To see that {a mathematical formula}Γ′ is a inconsistent, suppose it is satisfied by a given valuation v. Since Γ is inconsistent, {a mathematical formula}v(φi)=0 for some {a mathematical formula}φi; say {a mathematical formula}v(φ2)=0. As v satisfies {a mathematical formula}Γ′, it follows that {a mathematical formula}v(φ2′)=1, thus {a mathematical formula}v(ψ1∧¬φ1)=1 or {a mathematical formula}v(ψ3∧¬φ3)=1. If {a mathematical formula}v(ψ1∧¬φ1)=1, then {a mathematical formula}v(x2)=1 and {a mathematical formula}v(ψ2)=v(ψ3)=0 and, for {a mathematical formula}v(φ1)=0, {a mathematical formula}v(φ1′)=0, a contradiction. If {a mathematical formula}v(ψ3∧¬φ3)=1, a contradiction would follow in the same manner.
+      </paragraph>
+      <paragraph>
+       To characterise the ⋆-conflicts derived from {a mathematical formula}⊢⋆=⊢, we need the following intermediate result, which generalises the example above:
+      </paragraph>
+      <paragraph label="Lemma 5.9">
+       Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Every finite, inconsistent{a mathematical formula}Γ∈Kthat does not contain valid formulas has a ⋆-weakening that is a MIS.
+      </paragraph>
+      <paragraph label="Theorem 5.10">
+       Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Any finite knowledge base{a mathematical formula}Γ∈Kis a ⋆-conflict iff it is inconsistent and it does not contain valid formulas.
+      </paragraph>
+      <paragraph>
+       As the concept of minimal inconsistent set induces the definition of “uncontroversial” formulas (i.e., the free formulas), we can also characterise “uncontroversial” formulas using ⋆-conflicts, which would contain the “controversial” ones. Considering Example 4.9, Example 5.6, we note that θ is not ⋆-innocuous in Γ, which is a ⋆-conflict. Additionally, Theorem 4.13, Theorem 5.10 also point to such duality, as does the observation that ⋆-conflicts are MISes for the same {a mathematical formula}Cn⋆=CnId that collapses ⋆-innocuous and free formulas. Indeed, ⋆-conflicts could be used to define ⋆-innocuous formulas:
+      </paragraph>
+      <paragraph label="Theorem 5.11">
+       Consider a knowledge base{a mathematical formula}Γ∈Kand a modular{a mathematical formula}Cn⋆:K→K. A formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ iff it is in no ⋆-conflict of Γ.
+      </paragraph>
+      <paragraph>
+       The result above shows that, given a modular consequence operation {a mathematical formula}Cn⋆, the formulas in a knowledge base Γ can be split into two groups: the formulas involved in some ⋆-conflict; and the ⋆-innocuous formulas, which are consistent with any ⋆-consolidation {a mathematical formula}Γ′∈Cn⋆(Γ). As a consequence, due to Proposition 4.10, while ⋆-consolidating a knowledge base, one can focus on the formulas involved in the ⋆-conflicts, ignoring ⋆-innocuous formulas, in the same way that AGM-consolidation can focus on the union of the MISes, ignoring free formulas:
+      </paragraph>
+      <paragraph>
+       When we force a ⋆-consolidation to be a ⋆-weakening, where consistency is restored by weakening each formula, the analogy between MISes and ⋆-conflicts is more evident. To consolidate via withdrawal of formulas, it suffices to discard at least one formula of each MIS, so consolidating each MIS implies consolidating the whole knowledge base. Similarly, a ⋆-weakening solving each ⋆-conflict ⋆-consolidates the whole base:
+      </paragraph>
+      <paragraph label="Proposition 5.12">
+       Suppose{a mathematical formula}Γ′∈Kis a ⋆-weakening of{a mathematical formula}Γ∈K. If, for each ⋆-conflict{a mathematical formula}Δ⊆Γ, all ⋆-weakenings{a mathematical formula}Δ′⊆Γ′of Δ are consistent, then{a mathematical formula}Γ′is a ⋆-consolidation of Γ.
+      </paragraph>
+      <paragraph>
+       For a modular consequence operation {a mathematical formula}Cn⋆, the introduced concept of ⋆-conflict holds several desirable properties, being a plausible way of characterising primitive conflicts. For instance, every ⋆-conflict is an inconsistent knowledge base, and every inconsistent base contains a ⋆-conflict. As a consequence, the ⋆-conflict concept generalises the notion of a minimal inconsistent set. Furthermore, ⋆-conflicts dually define ⋆-innocuous formulas, which can be ignored while ⋆-consolidating a base, and capture the intuition that parts of formulas are conflicting. Now we turn our attention to a general, possibly non-modular {a mathematical formula}Cn⋆, looking for a conflict characterisation with the same desirable properties.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       General consequence operations
+      </section-title>
+      <paragraph>
+       When we consider a possibly non-modular consequence operation, the derivation of a conflict characterisation is not straightforward. For modular {a mathematical formula}Cn⋆, a ⋆-conflict was defined via taking some “part” of each formula in a base {a mathematical formula}Γ∈K to form a minimal inconsistent set, using a relation {a mathematical formula}⊢⋆ intended to capture the “parts” of formulas. In the general case, a conflict can be formed not only through weakening each formula, but also using consequences of sets of formulas, so ⋆-weakenings are not sufficient to grasp which conflicts can be derived from the base. To exemplify this, we define a non-modular consequence operation:
+      </paragraph>
+      <paragraph label="Definition 5.13">
+       {a mathematical formula}Cn→:K→K is such that, for all {a mathematical formula}Γ∈K, {a mathematical formula}Cn→(Γ) is defined as the smallest set satisfying:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Γ⊆Cn→(Γ) and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}{φ|ψ,ψ→φ∈Cn∧(Cn→(Γ))}⊆Cn→(Γ).
+       </list-item>
+      </list>
+      <paragraph>
+       One can think of {a mathematical formula}Cn→(Γ) as the result of starting with the formulas in Γ and recursively applying modus ponens to their conjuncts. For example, if {a mathematical formula}Γ={x1∧(x2→x3),x2∧(x3→x4)}, {a mathematical formula}Cn→(Γ)=Γ∪{x3,x4}, but note that {a mathematical formula}x2,x2→x3,x3→x4∉Cn→(Γ). From its definition, one can see that {a mathematical formula}Cn→ is subclassical and Tarskian.
+      </paragraph>
+      <paragraph label="Example 5.14">
+       Consider the knowledge base {a mathematical formula}Γ={φ1,φ2,φ3,φ4}, with {a mathematical formula}φ1=x1, {a mathematical formula}φ2=x1→x2, {a mathematical formula}φ3=x1∧(x2→x3) and {a mathematical formula}φ4=¬x3, and the consequence operation {a mathematical formula}Cn⋆=Cn→. The only two MISes of {a mathematical formula}Cn⋆(Γ) are {a mathematical formula}Ψ={x1→x2,x1∧(x2→x3),¬x3} (which is also a MIS of Γ) and {a mathematical formula}Δ={x2,x1∧(x2→x3),¬x3}. Note that Δ is not a ⋆-weakening of Γ, for no formula ⋆-implies {a mathematical formula}x2 on its own.
+      </paragraph>
+      <paragraph>
+       To ⋆-consolidate a base {a mathematical formula}Γ∈K, one can compute its closure {a mathematical formula}Cn⋆(Γ) and then discard formulas to construct a consistent {a mathematical formula}Γ′⊆Cn⋆(Γ). That is, a ⋆-consolidation of Γ is an AGM-consolidation of {a mathematical formula}Cn⋆(Γ) (see [39], [12] for more on this). Therefore, to ⋆-consolidate Γ, one can focus on the MISes in {a mathematical formula}Cn⋆(Γ), withdrawing at least one formula from each one of them. The next result show the relation between ⋆-innocuous formulas and the MISes in the closure {a mathematical formula}Cn⋆(Γ):
+      </paragraph>
+      <paragraph label="Proposition 5.15">
+       A formula φ is ⋆-innocuous in a base{a mathematical formula}Γ∈Kiff, for all{a mathematical formula}Δ∈MIS(Cn⋆(Γ)),{a mathematical formula}φ∉Δ.
+      </paragraph>
+      <paragraph>
+       Consequently, to perform a ⋆-consolidation, the conflicts that really matter are in {a mathematical formula}MIS(Cn⋆(Γ)). However, these conflicts are not generally in the base Γ, where we in fact want to localise the inconsistency. Following the iceberg analogy, the conflicts in {a mathematical formula}MIS(Cn⋆(Γ)) are those under the water line in Fig. 2, Fig. 3, Fig. 4. We need somehow to project those conflicts onto the knowledge base, finding the formulas in the base responsible for them. When the hidden conflict is simply a ⋆-weakening, as in the situations illustrated in Fig. 2, Fig. 3, Fig. 4, such projection is trivial, for each formula under the water line is derived from a single formula in the knowledge base. In contrast, with non-modular consequence operations, a set of formulas may be needed to derive each element in the hidden conflict, as it happens with {a mathematical formula}x2 in Example 5.14. Thus, given a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)), we look for the premises in Γ involved in the derivation of each formula in Δ in order to project the conflict onto the knowledge base. We would like the subset of the base onto which the conflict is projected to be inconsistent, and such projection should provide a concept that has ⋆-conflict, for modular {a mathematical formula}Cn⋆, as a particular case.
+      </paragraph>
+      <paragraph>
+       For a knowledge base {a mathematical formula}Γ∈K, consider a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) and a {a mathematical formula}Ψ⊆Γ. In the modular case, a surjective function {a mathematical formula}f:Δ→Ψ from the ⋆-weakening definition can be seen as linking each {a mathematical formula}ψ∈Δ to a minimal set of premises {a mathematical formula}{f(ψ)} entailing it, which will be a singleton. As the range of f is {a mathematical formula}Ψ⊆Γ, it is somehow projecting the conflict {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) into the subset {a mathematical formula}Ψ⊆Γ. In the general case, for Ψ to be projection of Δ, we need a function that links each {a mathematical formula}ψ∈Δ to a general subset (not necessarily a singleton) of Ψ implying it, thus we employ an {a mathematical formula}f:Δ→2Ψ. To avoid blaming “innocent” formulas, we require that {a mathematical formula}f(ψ) be a minimal subset implying ψ. Additionally, for {a mathematical formula}Ψ⊆Γ to reflect the conflict {a mathematical formula}Δ∈MIS(Cn⋆(Γ)), every formula in {a mathematical formula}Ψ⊆Γ should be employed to derive an element of {a mathematical formula}Δ∈MIS(Cn⋆(Γ)). The following definition captures both notions:
+      </paragraph>
+      <paragraph label="Definition 5.16">
+       ⋆-mappingGiven two knowledge bases {a mathematical formula}Δ,Γ∈K, we say {a mathematical formula}f:Δ→2Γ is a ⋆-mapping if {a mathematical formula}⋃ψ∈Δf(ψ)=Γ and, for all {a mathematical formula}ψ∈Δ, {a mathematical formula}ψ∈Cn⋆(f(ψ)) and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ).
+      </paragraph>
+      <paragraph>
+       In fact, ⋆-mappings could be used to define ⋆-weakening, thus ⋆-conflict, for modular {a mathematical formula}Cn⋆:
+      </paragraph>
+      <paragraph label="Proposition 5.17">
+       Consider a knowledge base{a mathematical formula}Γ∈K, a minimal inconsistent set{a mathematical formula}Δ∈Kand a modular, subclassical, Tarskian{a mathematical formula}Cn⋆. Δ is a ⋆-weakening of Γ iff there is a ⋆-mapping{a mathematical formula}f:Δ→2Γ.
+      </paragraph>
+      <paragraph>
+       Given the result above, we can safely extend the definition of ⋆-conflicts in order to consider also non-modular consequence operations:
+      </paragraph>
+      <paragraph label="Definition 5.18">
+       ⋆-conflictConsider a base {a mathematical formula}Γ∈K and a subclassical, Tarskian {a mathematical formula}Cn⋆. Γ is a ⋆-conflict if there are a minimal inconsistent set {a mathematical formula}Δ∈Cn⋆(Γ) and a ⋆-mapping {a mathematical formula}f:Δ→2Γ.
+      </paragraph>
+      <paragraph label="Example 5.19">
+       Recall Example 5.14, where {a mathematical formula}Γ={φ1,…,φ4}={x1,x1→x2,x1∧(x2→x3),¬x3}, {a mathematical formula}Cn⋆=Cn→ and {a mathematical formula}Cn⋆(Γ)=Γ∪{x2}. The only MISes of {a mathematical formula}Cn⋆(Γ) are {a mathematical formula}Δ={x2,φ3,φ4} and {a mathematical formula}Ψ=Γ∖{x1}. Remember that {a mathematical formula}x2 is both in {a mathematical formula}Cn⋆({φ1,φ2}) and in {a mathematical formula}Cn⋆({φ2,φ3}), but, for all {a mathematical formula}φi∈Γ, {a mathematical formula}x2∉Cn⋆({φi}). Consider two ⋆-mappings, {a mathematical formula}f:Δ→2Γ and {a mathematical formula}f′:Δ→2Γ, defined as {a mathematical formula}f(φ3)=f′(φ3)={φ3}, {a mathematical formula}f(φ4)=f′(φ4)={φ4}, {a mathematical formula}f(x2)={φ1,φ2} and {a mathematical formula}f′(x2)={φ2,φ3}. Note that, for any {a mathematical formula}g∈{f,f′}, for all {a mathematical formula}ψ∈Δ, {a mathematical formula}ψ∈Cn⋆(g(ψ)) and {a mathematical formula}Ψ⊊g(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ). As {a mathematical formula}⋃ψ∈Δf(ψ)=Γ and {a mathematical formula}⋃ψ∈Δf′(ψ)=Ψ, both Γ and Ψ are ⋆-conflicts. That is, the “blame” for {a mathematical formula}x2 in the MIS {a mathematical formula}Δ⊆Cn⋆(Γ) can be assigned to either {a mathematical formula}{x1,x1→x2}⊆Γ (via f) or {a mathematical formula}{x1→x2,x1∧(x2→x3)}⊆Γ (via {a mathematical formula}f′), leading to two different ⋆-conflicts.
+      </paragraph>
+      <paragraph>
+       When {a mathematical formula}Cn⋆ is modular, Proposition 5.17 makes Definition 5.2, Definition 5.18 equivalent, but the latter also allows for non-modular {a mathematical formula}Cn⋆ in the definition of ⋆-conflicts. Henceforth, unless differently stated, ⋆-conflict refers to Definition 5.18.
+      </paragraph>
+      <paragraph>
+       As desired, ⋆-conflicts are always inconsistent subsets of a given knowledge base, and Proposition 5.5 can be generalised:
+      </paragraph>
+      <paragraph label="Proposition 5.20">
+       Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a ⋆-conflict, it is inconsistent.
+      </paragraph>
+      <paragraph>
+       This more general concept also generalises minimal inconsistent sets, so we can prove Proposition 5.4 for the extended notion of ⋆-conflict.
+      </paragraph>
+      <paragraph label="Proposition 5.21">
+       If a knowledge base{a mathematical formula}Γ∈Kis a minimal inconsistent set, then it is ⋆-conflict.
+      </paragraph>
+      <paragraph>
+       Once more, the choice of the subclassical, Tarskian consequence operation {a mathematical formula}Cn⋆ yields two extreme instances for the ⋆-conflict concept:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        At one extreme, {a mathematical formula}Cn⋆=CnId is the identity function (the weakest modular case), and ⋆-conflicts are simply MISes;
+       </list-item>
+       <list-item label="•">
+        At the other extreme {a mathematical formula}Cn⋆=Cn, the classical consequence operation.
+       </list-item>
+      </list>
+      <paragraph>
+       Using Lemma 5.9, we can show that the second case is not interesting, leading to the ⋆-conflict related to {a mathematical formula}Cn⋆=Cnmod (see Theorem 5.10):
+      </paragraph>
+      <paragraph label="Theorem 5.22">
+       Consider the consequence operation{a mathematical formula}Cn⋆=Cn. Any finite knowledge base{a mathematical formula}Γ∈Kis a ⋆-conflict iff it is inconsistent and it does not contain valid formulas.
+      </paragraph>
+      <paragraph>
+       In the same way that minimal inconsistent sets are used to define free formulas, we can employ ⋆-conflicts to introduce a new sort of “uncontroversial” formula, defined as not taking part in these conflicts. For a modular consequence operation {a mathematical formula}Cn⋆, formulas out of any ⋆-conflict are exactly the ⋆-innocuous formulas (see Theorem 5.11), dispensing with the introduction of a new concept. Nonetheless, the next example shows this may be not the case with a non-modular {a mathematical formula}Cn⋆.
+      </paragraph>
+      <paragraph label="Example 5.23">
+       Recall Example 5.14, Example 5.19 and the corresponding {a mathematical formula}Cn⋆=Cn→. As {a mathematical formula}Γ={x1,x1→x2,x1∧(x2→x3),¬x3} is a ⋆-conflict. Nevertheless, {a mathematical formula}x1 is not involved in any MIS of {a mathematical formula}Cn(Γ)=Γ∪{x2}, which are {a mathematical formula}Ψ={x1→x2,x1∧(x2→x3),¬x3} and {a mathematical formula}Δ={x2,x1∧(x2→x3),¬x3}; thus {a mathematical formula}x1 is ⋆-innocuous, despite being in a ⋆-conflict. How “controversial” is {a mathematical formula}x1? On the one hand, it is consistent with any ⋆-consolidation of Γ, for it is ⋆-innocuous, and may be ignored if one is to ⋆-consolidate Γ. On the other hand, {a mathematical formula}x1 can be used together with {a mathematical formula}x1→x2 to derive {a mathematical formula}x2 in the MIS {a mathematical formula}{x2,x1∧(x2→x3),¬x3}⊆Cn⋆(Γ).
+      </paragraph>
+      <paragraph>
+       The situation in the example above motivates the introduction of a new concept to capture this type of “uncontroversial” formulas.
+      </paragraph>
+      <paragraph label="Definition 5.24">
+       ⋆-freeA formula φ in a base {a mathematical formula}Γ∈K is said to be ⋆-free in Γ if, for all ⋆-conflict Δ in Γ, {a mathematical formula}φ∉Δ.
+      </paragraph>
+      <paragraph label="Corollary 5.25">
+       If a formula φ is ⋆-free in a base{a mathematical formula}Γ∈K, then φ is free in Γ.
+      </paragraph>
+      <paragraph label="Corollary 5.26">
+       Consider a modular consequence operation{a mathematical formula}Cn⋆. A formula φ is ⋆-free in a base{a mathematical formula}Γ∈Kiff φ is ⋆-innocuous in Γ.
+      </paragraph>
+      <paragraph>
+       When we consider a general consequence operations {a mathematical formula}Cn⋆, ⋆-free formula is a stronger concept than ⋆-innocuous.
+      </paragraph>
+      <paragraph label="Proposition 5.27">
+       If a formula φ is ⋆-free in{a mathematical formula}Γ∈K, then φ is ⋆-innocuous in Γ.
+      </paragraph>
+      <paragraph>
+       In the end, for a general {a mathematical formula}Cn⋆, we put forward two distinct ways of telling the controversial from the uncontroversial formulas in a knowledge base.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        ⋆-innocuous formulas: those that can be ignored while performing a ⋆-consolidation, since they might be consistently added after ⋆-consolidating the rest of the base;
+       </list-item>
+       <list-item label="•">
+        ⋆-free formulas: those not involved in the derivation of (i.e., that do not belong to a minimal set of premises for deriving) a formula in a minimal inconsistent subset of the {a mathematical formula}Cn⋆-closure.
+       </list-item>
+      </list>
+      <paragraph>
+       As we have shown, both concepts are equivalent for a modular consequence operation {a mathematical formula}Cn⋆, which seems to be the most useful case. For non-modular {a mathematical formula}Cn⋆, deciding which definition of controversial/uncontroversial formulas to use depends on the application one is addressing.
+      </paragraph>
+      <paragraph>
+       The key results on localising inconsistency related to the choice of the consequence operation {a mathematical formula}Cn⋆∈{CnId,Cnmod,Cn} are summarised in Table 1, where the entailed ⋆-conflict and ⋆-innocuous/free formula concepts are described. For the other consequence operations presented, we could not provide a brief characterisation for the yielded ⋆-conflicts and ⋆-innocuous/free formulas concepts, which follow from their definitions. Fig. 5 organises all particular instances of {a mathematical formula}Cn⋆ discussed here by their strength.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Related approaches
+     </section-title>
+     <paragraph>
+      Before presenting how the machinery introduced in the previous sections can be deployed in measuring inconsistency, we explore some works from the literature that explicitly or implicitly characterise conflicts in a knowledge base and show how they can be related to our framework.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Prime implicates
+      </section-title>
+      <paragraph>
+       Jabbour et al. investigate the problem of measuring inconsistency in knowledge bases via counting conflicts [27]. The sort of atomic inconsistency they propose to count has clear similarities to the ⋆-conflicts we put forward. Two key differences are that they fix a modular consequence operation, allowing formulas to be weakened only via discarding prime implicates, and conceive a conflict as a pair, in which only one element is a subset of the base. To summarise their approach, we need some definitions:
+      </paragraph>
+      <paragraph label="Definition 6.1">
+       Prime implicateA clause ψ is a prime implicate of a formula {a mathematical formula}φ∈L if
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}φ⊢ψ and
+       </list-item>
+       <list-item label="•">
+        for every clause {a mathematical formula}ψ′, if {a mathematical formula}φ⊢ψ′ and {a mathematical formula}ψ′⊢ψ, then ψ and {a mathematical formula}ψ′ are equivalent.
+       </list-item>
+      </list>
+      <paragraph>
+       Intuitively, prime implicates can be seen as the strongest clauses implied by a formula. For a given {a mathematical formula}φ∈L, we denote by {a mathematical formula}PI(φ) the set of all prime implicates of φ.
+      </paragraph>
+      <paragraph label="Example 6.2">
+       Consider the formula {a mathematical formula}φ=x1∧(x1∨x2)∧(¬x1∨x3)∧(x3∨x4) in {a mathematical formula}L. Note that each conjunct in φ is a clause implied by it: {a mathematical formula}x1,x1∨x2,¬x1∨x3,x3∨x4∈Cn({φ}). As {a mathematical formula}x1 implies {a mathematical formula}x1∨x2, the latter is not a prime implicate of φ. Applying resolution to {a mathematical formula}x1 and {a mathematical formula}¬x1∨x3, we can see that {a mathematical formula}φ⊢x3. As {a mathematical formula}x3 implies both {a mathematical formula}¬x1∨x3 and {a mathematical formula}x3∨x4, these two clauses are not prime implicates either. As there are no stronger clauses implied by φ, {a mathematical formula}PI(φ)={x1,x3}.
+      </paragraph>
+      <paragraph>
+       Jabbour et al. [27] then employ prime implicates to define a type of conflict, generalising MISes{sup:5}:
+      </paragraph>
+      <paragraph label="Definition 6.3">
+       DMISLet {a mathematical formula}Γ∈K be a knowledge base and {a mathematical formula}M=〈Δ,Ψ〉 be such that {a mathematical formula}Δ={φ1,…,φm}⊆Γ and {a mathematical formula}Ψ={ψ1,…,ψm}⊆K. M is a MIS modulo logical deduction DMIS if:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}φi⊢ψi for all {a mathematical formula}1≤i≤m;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PI(ψi)⊆PI(φi) for all {a mathematical formula}1≤i≤m;
+       </list-item>
+       <list-item label="•">
+        Ψ is a MIS;
+       </list-item>
+       <list-item label="•">
+        For all {a mathematical formula}ψ∈Ψ, there is no {a mathematical formula}ψ′∈L such that
+       </list-item>
+      </list>
+      <paragraph>
+       As the authors point out, the idea is to capture conflicts between subformulas, where the latter are understood via prime implicates. The last condition imposes a kind of minimality for the MIS Ψ, where further weakening a {a mathematical formula}ψ∈Ψ would make Ψ consistent.
+      </paragraph>
+      <paragraph label="Example 6.4">
+       To illustrate how DMISes work, consider again Example 3.3, where {a mathematical formula}Γ={¬s∧¬g,(s∨m)∧g,¬m}. Recall that {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g} is the only MIS in Γ. One can see that {a mathematical formula}〈Δ,{¬g,g}〉 satisfies the definition of DMIS. Besides, note that ¬s, {a mathematical formula}s∨m and ¬m are consequences and prime implicates of {a mathematical formula}¬s∧¬g, {a mathematical formula}(s∨m)∧g and ¬m, respectively. Furthermore, {a mathematical formula}Ψ={¬s,s∨m,¬m} is a MIS satisfying the last condition in the definition above. Hence {a mathematical formula}〈Γ,Ψ〉 is also a DMIS.
+      </paragraph>
+      <paragraph>
+       A working assumption in the present work is that conflicts must be localised in the knowledge base; i.e., that every conflict of a knowledge base should be its subset. DMIS is defined as a pair, where the first element is a subset of the knowledge base, while the second is a minimal inconsistent set that can be derived from it. Therefore, to present a correspondence between the framework we introduced and DMISes, we consider only their first element:
+      </paragraph>
+      <paragraph label="Definition 6.5">
+       DMIS-conflictA knowledge base {a mathematical formula}Γ∈K is a DMIS-conflict if there is a DMIS {a mathematical formula}〈Γ,Δ〉.
+      </paragraph>
+      <paragraph>
+       Now we can investigate the relation between DMIS-conflicts and ⋆-conflicts. Since DMIS-conflicts employ prime implicates to find the parts of formulas forming a conflict, we employ a corresponding consequence operation {a mathematical formula}Cn⋆. Let {a mathematical formula}CnPI:K→K be a modular consequence operator such that, for all {a mathematical formula}φ,ψ∈L, {a mathematical formula}ψ∈CnPI({φ}) iff {a mathematical formula}φ⊢ψ and {a mathematical formula}PI(ψ)⊆PI(φ).
+      </paragraph>
+      <paragraph label="Proposition 6.6">
+       Consider the consequence operation{a mathematical formula}Cn⋆=CnPIand a knowledge base{a mathematical formula}Γ∈K. If Γ is a DMIS-conflict, then Γ is a ⋆-conflict.
+      </paragraph>
+      <paragraph>
+       The equivalence between DMIS-conflicts and ⋆-conflicts, for {a mathematical formula}Cn⋆=CnPI, does not hold, due to the fact that DMIS-conflicts are defined via weakening each formula once, while ⋆-weakenings allow multiple consequences of the same formula.
+      </paragraph>
+      <paragraph label="Example 6.7">
+       Consider the consequence operation {a mathematical formula}Cn⋆=CnPI, the formulas {a mathematical formula}φ=(x1∨x2)∧(¬x2∨x3∨x4)∧(x1∨x3), {a mathematical formula}ψ=¬x1∧¬x3 and {a mathematical formula}θ=¬x4 in {a mathematical formula}L and the knowledge base {a mathematical formula}Γ={φ,ψ,θ} in {a mathematical formula}K. Computing the prime implicates of each formula in Γ, we have:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}PI(φ)={x1∨x2,¬x2∨x3∨x4,x1∨x3};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PI(ψ)={¬x1,¬x3};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PI(θ)={¬x4}.
+       </list-item>
+      </list>
+      <paragraph>
+       What happens in the example above is that more than one {a mathematical formula}CnPI-consequence of φ is needed to form a MIS together with {a mathematical formula}ψ,θ, and, due the nature of prime implicates, their conjunction is not necessarily in {a mathematical formula}CnPI({φ}). While ⋆-conflicts can capture this, DMIS-conflicts fall short, for imposing that each formula in a conflict contributes exactly one formula in the derived MIS. Depending on the application and on the context, one or the other conflict characterisation can be preferred. For instance, if a knowledge base Γ is to be consolidated via weakening each formula exactly once, then DMIS-conflicts are more suitable than ⋆-conflicts. Indeed, we could define a different type of ⋆-weakening, forcing each formula to be weakened exactly once (using a bijective f in Definition 5.1), to derive a notion of ⋆-conflict notion that is equivalent to the DMIS-conflict concept.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Minimal proofs for opposite literals
+      </section-title>
+      <paragraph>
+       Another conflict characterisation is implicitly proposed by Jabbour and Raddaoui [28]. They introduced an inconsistency measure (presented in Section 7.2) based on minimal proofs for opposite literals, {a mathematical formula}xi∈X and {a mathematical formula}¬xi. In this section we focus on the notion of conflict underlying their inconsistency measure, relating it to the ⋆-conflicts we propose.
+      </paragraph>
+      <paragraph>
+       While characterising atomic inconsistencies in a knowledge base, instead of looking for minimal subsets implying ⊥, one could search for two minimal sets entailing {a mathematical formula}xi and {a mathematical formula}¬xi, respectively, for some {a mathematical formula}xi∈X. Formally, given a {a mathematical formula}Γ∈K, {a mathematical formula}π⊆Γ is a minimal proof for a literal y if [28]:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}y∈Lit(π);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}y∈Cn(π);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}π′⊊π implies {a mathematical formula}y∉Cn(π′).
+       </list-item>
+      </list>
+      <paragraph>
+       For a given knowledge base {a mathematical formula}Γ∈K, let {a mathematical formula}PmΓ(y)⊆2Γ denote the set of the minimal proofs (in Γ) of the literal y.
+      </paragraph>
+      <paragraph label="Example 6.8">
+       Consider the base {a mathematical formula}Γ={¬s∧¬g,(s∨m)∧g,¬m} from Example 3.3. For each atomic proposition involved, we list the minimal proofs for the corresponding literals:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}PmΓ(s)={{(s∨m)∧g,¬m}}, {a mathematical formula}PmΓ(¬s)={{¬s∧¬g}};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PmΓ(g)={{(s∨m)∧g}}, {a mathematical formula}PmΓ(¬g)={{¬s∧¬g}};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PmΓ(m)={{¬s∧¬g,(s∨m)∧g}}, {a mathematical formula}PmΓ(¬m)={{¬m}}.
+       </list-item>
+      </list>
+      <paragraph>
+       Jabbour and Raddaoui [28] proceed to define an inconsistency measure that counts in how many different ways {a mathematical formula}xi and {a mathematical formula}¬xi can be proved from a base, for every {a mathematical formula}xi appearing in the base. Putting it differently, they suggest the degree of inconsistency of a knowledge base is the number of pairs {a mathematical formula}〈Δ,Δ′〉 such that Δ is a minimal proof for {a mathematical formula}xi and {a mathematical formula}Δ′ is a minimal proof for {a mathematical formula}¬xi. Even though the authors do not explicitly define it, each such pair can be regarded as a sort of conflict in the base. As we want a conflict to be simply a subset of the base, we can take the union of such minimal proofs:
+      </paragraph>
+      <paragraph label="Definition 6.9">
+       Opposite-literals conflictA knowledge base {a mathematical formula}Γ∈K is an opposite-literals conflict if there are {a mathematical formula}Δ,Δ′⊆Γ and a {a mathematical formula}xi∈X such that Δ and {a mathematical formula}Δ′ are minimal proofs of {a mathematical formula}xi and {a mathematical formula}¬xi, respectively, and {a mathematical formula}Γ=Δ∪Δ′.
+      </paragraph>
+      <paragraph>
+       Minimal inconsistent sets are naturally opposite-literals conflicts, but the converse does not hold, as the following example shows:
+      </paragraph>
+      <paragraph label="Example 6.10">
+       Back to Example 3.3, Example 6.8, where {a mathematical formula}Γ={¬s∧¬g,(s∨m)∧g,¬m}, recall that {a mathematical formula}Ψ={¬s∧¬g,(s∨m)∧g} is the only MIS in Γ. Nevertheless, taking the minimal proofs of s and ¬s, we have {a mathematical formula}Δ={(s∨m)∧g,¬m} and {a mathematical formula}Δ′=¬s∧¬g, respectively. Since {a mathematical formula}Γ=Δ∪Δ′, Γ is an opposite-literals conflict. Considering the literals {a mathematical formula}m,¬m, we would arrive at the same conclusion.
+      </paragraph>
+      <paragraph>
+       Contrarily to minimal inconsistent sets, opposite-literal conflicts take into account the path to prove the contradiction. In the example above, premises for the contradiction to be proved via g and ¬g are strictly contained on the premises used to prove ⊥ through s and ¬s, making MISes unable to capture the larger conflict.
+      </paragraph>
+      <paragraph>
+       To relate conflicts based on contradicting atomic propositions to our framework, we need a consequence operation that derives these pairs of opposite literals. Let {a mathematical formula}CnPm:K→K be a consequence operation defined as {a mathematical formula}CnPm(Γ)={y∈Cn(Γ)|y is a literal} for any {a mathematical formula}Γ∈K. As {a mathematical formula}CnPm(Γ) contains only literals, every minimal inconsistent subset {a mathematical formula}CnPm(Γ) has the form {a mathematical formula}{xi,¬xi}, for some atomic proposition {a mathematical formula}xi∈X. For a given {a mathematical formula}Ψ={xi,¬xi} in {a mathematical formula}MIS(CnPm(Γ)), we can employ a function {a mathematical formula}f:Ψ→Γ to trace back the minimal set of premises in Γ used to derive each literal in Ψ. Each opposite-literals conflict corresponds then to a ⋆-conflict yielded by the range of such a function.
+      </paragraph>
+      <paragraph label="Proposition 6.11">
+       Consider the consequence operation{a mathematical formula}Cn⋆=CnPm. If a knowledge base{a mathematical formula}Γ∈Kis an opposite-literals conflict, then it is a ⋆-conflict.
+      </paragraph>
+      <paragraph>
+       Note that the converse is not true. Consider for instance the base {a mathematical formula}Γ={x1∧¬x1,x2∧¬x2}. As {a mathematical formula}x1∈CnPm({x1∧¬x1}) and {a mathematical formula}¬x1∈CnPm({x2∧¬x2}), Γ is a ⋆-conflict. Nevertheless, as {a mathematical formula}x1 does not appear in {a mathematical formula}x2∧¬x2, the latter is not a minimal proof of a literal involving the former. Analogously, {a mathematical formula}x1∧¬x1 is not a minimal proof of {a mathematical formula}x2 or {a mathematical formula}¬x2. Therefore, Γ is not a opposite-literals conflict.
+      </paragraph>
+      <paragraph>
+       In order to find a ⋆-conflict definition that is equivalent to the opposite-literals conflict concept, we can try to adapt {a mathematical formula}CnPm, forcing an entailed literal to appear in the premises, as minimal proofs do. Let {a mathematical formula}Cn2Pm:K→K be a consequence operation defined as {a mathematical formula}Cn2Pm(Γ)={y∈Cn(Γ)|y∈Lit(Γ)}. The next example points out the difference between {a mathematical formula}CnPm and {a mathematical formula}Cn2Pm.
+      </paragraph>
+      <paragraph label="Example 6.12">
+       Consider the knowledge base {a mathematical formula}Γ={x1∧¬x1,x2∨x3}. As Γ is inconsistent, {a mathematical formula}Cn(Γ)=L. Therefore, {a mathematical formula}CnPm(Γ)={y∈L|y is a literal}, and {a mathematical formula}x1,x2,…∈CnPm(Γ). In contrast, to be in {a mathematical formula}Cn2Pm(Γ), a literal must additionally appear in Γ. Hence, {a mathematical formula}x1,x2,x3∈Cn2Pm(Γ), but {a mathematical formula}x4,x5,…∉Cn2Pm(Γ). Taking {a mathematical formula}Ψ={x1∧¬x1}, we have again that {a mathematical formula}CnPm(Ψ)={y∈L|y is a literal}, but {a mathematical formula}Cn2Pm(Ψ)={x1,¬x1}.
+      </paragraph>
+      <paragraph>
+       Using {a mathematical formula}Cn⋆=Cn2Pm, we can also prove that opposite-literal conflicts are ⋆-conflicts:
+      </paragraph>
+      <paragraph label="Proposition 6.13">
+       Consider the consequence operation{a mathematical formula}Cn⋆=Cn2Pm. If a knowledge base{a mathematical formula}Γ∈Kis an opposite-literals conflict, then it is a ⋆-conflict.
+      </paragraph>
+      <paragraph>
+       Again, the converse does not hold. Consider {a mathematical formula}Γ={x1∧¬x1,x2∨x3,¬x2}. Note that {a mathematical formula}x2 is in {a mathematical formula}Cn2Pm({x1∧¬x1,x2∨x3}) but not in {a mathematical formula}Cn2Pm({x1∧¬x1}). Thus, the MIS {a mathematical formula}{x2,¬x2}⊆Cn2Pm(Γ) corresponds to the ⋆-conflict Γ. Nonetheless, there is no minimal proof of {a mathematical formula}x2 in Γ, and {a mathematical formula}{x1∧¬x1} is its only opposite-literals conflict.
+      </paragraph>
+      <paragraph>
+       The reason for no ⋆-conflict concept having been shown equivalent to the opposite-literals conflict notion is the fact that minimal proofs of y must imply y and contain y, but the minimality is required only for the implication. Nevertheless, since each ⋆-conflict presented, {a mathematical formula}Cn⋆=CnPm and {a mathematical formula}Cn⋆=Cn2Pm, encompass all opposite-literals conflicts, their usefulness shall be clear in Section 7.2.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Applications to inconsistency measuring
+     </section-title>
+     <paragraph>
+      Localising the controversial portion of an inconsistent knowledge base, as well as each primitive conflict, may be an end in itself or useful for some consolidation procedures, as Example 4.9, Example 5.7 indicate. Furthermore, via straightforward applications to measuring inconsistency, the role of conflict characterisation in inconsistency handling becomes evident. New primitive conflict characterisations automatically give new inconsistency measures. Additionally, controversial postulates for inconsistency measures can also be reworked on the basis of the framework introduced here.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       New inconsistency measures
+      </section-title>
+      <paragraph>
+       The problem of measuring inconsistency in knowledge bases over logical languages has increasingly received attention during recent years (for a survey, see [42], [43]). An inconsistency measure is a function {a mathematical formula}I:K→[0,∞)∪{∞}.{sup:7} which takes knowledge bases and returns non-negative real numbers or ∞. Additionally, one expects that such a function hold basic properties, which were proposed by Hunter and Konieczny [24], [25] in their basic inconsistency measure definition and became rationality postulates:
+      </paragraph>
+      <paragraph label="Definition 7.1">
+       Let {a mathematical formula}I:K→[0,∞)∪{∞} be an inconsistency measure:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        (Consistency) For any {a mathematical formula}Γ∈K, {a mathematical formula}I(Γ)=0 iff Γ is consistent.
+       </list-item>
+       <list-item label="•">
+        (Monotonicity) For any {a mathematical formula}Γ∪{α}∈K, {a mathematical formula}I(Γ∪{α})≥I(Γ).
+       </list-item>
+       <list-item label="•">
+        (Independence) For any {a mathematical formula}Γ∈K and {a mathematical formula}φ∈Γ, if φ is free in Γ, then {a mathematical formula}I(Γ∖{φ})=I(Γ).
+       </list-item>
+       <list-item label="•">
+        (Dominance) For any {a mathematical formula}Γ∈K and {a mathematical formula}φ,ψ∈L, if {a mathematical formula}φ⊢ψ and {a mathematical formula}φ⊬⊥, then {a mathematical formula}I(Γ∪{φ})≥I(Γ∪{ψ}).
+       </list-item>
+      </list>
+      <paragraph>
+       A direct approach to try to satisfy these postulates is measuring the inconsistency of a knowledge base through its minimal inconsistent subsets. The underlying rationale is that the more MISes a base contains, the more inconsistent it is. The simplest MIS-based measure just counts the MISes in the base [24]:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Despite the fact that {a mathematical formula}IMIS considers the number of minimal inconsistent sets, it does not assess their severity. A way to accomplish that is grounded in the idea that the larger the MIS, the less inconsistent it is. Based on this, the following inconsistency measure is defined in a way that each MIS's contribution to the whole inconsistency is inversely proportional to its size [24]:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Even though {a mathematical formula}IMIS and {a mathematical formula}IMISC satisfy (Consistency), (Monotony) and (Independence) but not (Dominance), they clearly fail to capture conflicts different from minimal inconsistent sets.
+      </paragraph>
+      <paragraph label="Example 7.2">
+       Consider again {a mathematical formula}Γ={¬s∧¬g,(s∨m)∧g,¬m} from Example 3.3. The single MIS in Γ is {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g,}. Hence, {a mathematical formula}IMIS(Γ)=IMIS(Δ)=1 and {a mathematical formula}IMISC(Γ)=IMISC(Δ)=1/2. In fact, since ¬m is free in Γ, (Independence) requires that its withdrawal from the base does not alter the inconsistency measurement. Therefore, any inconsistency measure {a mathematical formula}I satisfying (Independence) is such that {a mathematical formula}I(Γ)=I(Δ). Nevertheless, as we argued in Example 3.3, ¬m is somehow contributing to the inconsistency.
+      </paragraph>
+      <paragraph>
+       As minimal inconsistent sets have been generalised to ⋆-conflicts, parameterised by a consequence operation {a mathematical formula}Cn⋆, new inconsistency measures naturally arise.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Given a consequence operation {a mathematical formula}Cn⋆, {a mathematical formula}I⋆ and {a mathematical formula}I⋆C are measures designed to capture the derived ⋆-conflicts. Consequently, these inconsistency measures are capable of discriminating the knowledge bases Γ and Δ presented in Example 7.2, which is not achieved by any measure satisfying (Independence), such as the recently proposed {a mathematical formula}ICC, {a mathematical formula}IW and {a mathematical formula}Icf[26] for instance. This is due the fact that {a mathematical formula}Δ=Γ∖{¬m}, with ¬m being free in Γ, hence {a mathematical formula}I(Γ)=I(Δ) for any {a mathematical formula}I satisfying (Independence).
+      </paragraph>
+      <paragraph label="Example 7.3">
+       Recall from Example 5.6 that {a mathematical formula}Γ={¬s∧¬g,(s∨m)∧g,¬m} is a ⋆-conflict if {a mathematical formula}¬s∈Cn⋆(¬s∧¬g). By Proposition 5.21, the MIS {a mathematical formula}Δ={¬s∧¬g,(s∨m)∧g,} is also a ⋆-conflict. As the other subsets of Γ are consistent, and {a mathematical formula}Cn⋆ is subclassical, Γ and Δ are the only ⋆-conflicts in Γ. Hence, {a mathematical formula}I⋆(Γ)=2&gt;1=I⋆(Δ) and {a mathematical formula}I⋆C(Γ)=1/2+1/3=5/6&gt;1/2=I⋆C(Δ).
+      </paragraph>
+      <paragraph label="Proposition 7.4">
+       Consider a subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (Consistency) and (Monotonicity).
+      </paragraph>
+      <paragraph>
+       The postulates of (Independence) and (Dominance) can be either satisfied or violated by {a mathematical formula}I⋆ and {a mathematical formula}I⋆C, depending on the choice of the consequence operation {a mathematical formula}Cn⋆. In Sections 7.2 and 7.3, these postulates are parametrised by {a mathematical formula}Cn⋆, yielding properties that will be shown to hold for {a mathematical formula}I⋆ and {a mathematical formula}I⋆C for any Tarskian {a mathematical formula}Cn⋆.
+      </paragraph>
+      <paragraph>
+       To better characterise {a mathematical formula}I⋆ and {a mathematical formula}I⋆C, we consider some additional properties for inconsistency measures from the literature [41]:
+      </paragraph>
+      <paragraph label="Definition 7.5">
+       Let {a mathematical formula}I:K→[0,∞)∪{∞} be an inconsistency measure:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        (Super-additivity) For any {a mathematical formula}Γ,Δ∈K, if {a mathematical formula}Γ∩Δ=∅, then {a mathematical formula}I(Γ∪Δ)≥I(Γ)+I(Δ).
+       </list-item>
+       <list-item label="•">
+        (Penalty) For any {a mathematical formula}Γ∈K and {a mathematical formula}φ∈Γ, if φ is not free in Γ, then {a mathematical formula}I(Γ∖{φ})&lt;I(Γ).
+       </list-item>
+       <list-item label="•">
+        (Attenuation) For any {a mathematical formula}Γ∈K, if {a mathematical formula}Δ1,Δ2∈MIS(Γ) and {a mathematical formula}I(Δ1)&lt;I(Δ2), then {a mathematical formula}|Δ1|&gt;|Δ2|.
+       </list-item>
+       <list-item label="•">
+        (Equal-conflict) For any {a mathematical formula}Γ∈K, if {a mathematical formula}Δ1,Δ2∈MIS(Γ) and {a mathematical formula}I(Δ1)=I(Δ2), then {a mathematical formula}|Δ1|=|Δ2|.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 7.6">
+       Consider a subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (Super-additivity), (Penalty) and (Attenuation). (Equal-conflict) is satisfied by{a mathematical formula}I⋆Cand violated by{a mathematical formula}I⋆.
+      </paragraph>
+      <paragraph>
+       Another way of assessing the behaviour of an inconsistency measure is through its expressivity power. Thimm [42] proposes a method to quantify this expressivity in four dimensions, defined via bounding either the size of, or the number of atoms in, either the whole knowledge base or each formula. Although we do not formally present Thimm's whole framework, it can be proved that, for any Tarskian {a mathematical formula}Cn⋆, {a mathematical formula}I⋆ and {a mathematical formula}I⋆C, similarly to {a mathematical formula}IMIS and {a mathematical formula}IMISC, have the highest possible expressivity for three of out the four dimensions. This is due to the fact that every minimal inconsistent set is a ⋆-conflict. The remaining dimension is when the size of knowledge bases is fixed, when both {a mathematical formula}I⋆ and {a mathematical formula}I⋆C have finite range.
+      </paragraph>
+      <paragraph>
+       Inconsistency measures can be employed to guide the repair of inconsistent knowledge bases. For instance, Grant and Hunter [18] presented a stepwise inconsistency resolution procedure where at each step a formula is weakened, split or deleted, aiming at reducing the inconsistency degree of the knowledge base. Although a detailed discussion of such methods is out of the scope of this work, a modular consequence operation {a mathematical formula}Cn⋆ can formalise a particular way of weakening formulas, yielding measures {a mathematical formula}I⋆ and {a mathematical formula}I⋆C that could drive a repair method for knowledge bases.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       New independence properties
+      </section-title>
+      <paragraph>
+       Apart from enabling us to put forward new inconsistency measures, the concepts introduced in the present work allow us to generalise some postulates for inconsistency measures. From Example 7.3, where discarding the free formula ¬m decreases the inconsistency measurement, one can note that the corresponding {a mathematical formula}I⋆ and {a mathematical formula}I⋆C fail to satisfy (Independence). This is not surprising, since this postulate is strongly linked to minimal inconsistent sets being conceived as the primitive conflicts or atomic inconsistencies in a knowledge base. The (Independence) postulate has been criticised for this [8], [11], and a relaxed version was proposed in the probabilistic logic context [11]. Actually, the proponents of (Independence) have acknowledged that it may be too strong a property to require in some cases [25], suggesting a weaker version:
+      </paragraph>
+      <paragraph label="Postulate 7.7">
+       Weak independenceFor any{a mathematical formula}Γ∈Kand{a mathematical formula}φ∈Γ, if φ is safe in Γ, then{a mathematical formula}I(Γ∖{φ})=I(Γ).
+      </paragraph>
+      <paragraph>
+       Considering the possibility of {a mathematical formula}I⋆ and {a mathematical formula}I⋆C satisfying (Weak Independence) for any subclassical, Tarskian {a mathematical formula}Cn⋆, Theorem 4.13 points to a negative answer as well. For instance, consider a modular consequence operation such that {a mathematical formula}⊢⋆=⊢. In the base {a mathematical formula}Γ={x1∧¬x1,x2}, {a mathematical formula}x2 is safe, and (Weak Independence) implies {a mathematical formula}I(Γ)=I(Γ∖{x2}). Nevertheless, by Theorem 4.13, {a mathematical formula}x2 is not ⋆-innocuous, for it is not valid — note that {a mathematical formula}{x1∧¬x1∨¬x2,x2} is a MIS and ⋆-weakening of Γ. By Theorem 5.11, {a mathematical formula}x2 must be in a ⋆-conflict of Γ, thus discarding {a mathematical formula}x2 should impact the inconsistency degree given by {a mathematical formula}I⋆ and {a mathematical formula}I⋆C. Indeed, Γ and {a mathematical formula}Γ∖{x2} are the only ⋆-conflicts in Γ, so {a mathematical formula}I⋆(Γ)&gt;I⋆(Γ∖{x2}) and {a mathematical formula}I⋆C(Γ)&gt;I⋆C(Γ∖{x2}).
+      </paragraph>
+      <paragraph>
+       Since the problem with (Independence) is its strong dependency on minimal inconsistent sets, and these are generalised by ⋆-conflicts, a natural idea is to parameterise the postulate by the conflict characterisation.
+      </paragraph>
+      <paragraph label="Property 7.8">
+       ⋆-IndependenceFor any{a mathematical formula}Γ∈Kand{a mathematical formula}φ∈Γ, if φ is ⋆-free in Γ, then{a mathematical formula}I(Γ∖{φ})=I(Γ).
+      </paragraph>
+      <paragraph>
+       We call (⋆-Independence) a property, and not a postulate, due to the fact that we do not intend to impose any instance of it as a rationality constraint on inconsistency measures.
+      </paragraph>
+      <paragraph>
+       Recall that a formula is ⋆-free in a knowledge base Γ if it does not belong to any ⋆-conflict in Γ. If {a mathematical formula}Cn⋆ is the identity function, then ⋆-conflicts are the minimal inconsistent subsets of the base, and (⋆-Independence) is equivalent to (Independence). In the other extreme, if {a mathematical formula}Cn⋆ is the classical consequence operation Cn, or even a modular consequence operation such that {a mathematical formula}⊢⋆=⊢, then only valid formulas are ⋆-free in inconsistent bases. In that case, (⋆-Independence) becomes independence from tautologies, which is the weakest instance of the property. Arguably, the raising of this instance of (⋆-Independence) to a postulate would be the least disputable.
+      </paragraph>
+      <paragraph>
+       Naturally, measures entirely based on ⋆-conflicts enjoy (⋆-Independence):
+      </paragraph>
+      <paragraph label="Proposition 7.9">
+       Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (⋆-Independence).
+      </paragraph>
+      <paragraph>
+       Given a consequence operation {a mathematical formula}Cn⋆, we have both a pair of inconsistency measures {a mathematical formula}I⋆ and {a mathematical formula}I⋆C and a (⋆-Independence) property that holds for them. That is, each possible (⋆-Independence) property is satisfied by some inconsistency measure. This can be regarded as a rather trivial achievement, for both the measures and the property are based on ⋆-conflicts. Nevertheless, we put forward (⋆-Independence) properties to be employed as a tool to classify inconsistency measures that do not satisfy the original (Independence), capturing the sort of atomic inconsistencies they are independent from. To illustrate that usefulness, we analyse two measures from the literature.
+      </paragraph>
+      <paragraph>
+       Grant and Hunter [19], [20] introduce a family of inconsistency measures based on distance from consistency. They consider the set of valuations satisfying each formula in a knowledge base and then measure how much these sets should be modified for their intersection to be non-empty. Formally, if V is the set of valuations {a mathematical formula}v:L→{0,1}, the Dalal distance [9] is a function {a mathematical formula}d:V×V→[0,∞)∪{∞} defined as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In other words, {a mathematical formula}d(v,v′) counts the number of atomic propositions on which the valuations v and {a mathematical formula}v′ disagree. Using this distance between valuations, a distance {a mathematical formula}D:V×2V→[0,∞)∪{∞} can be defined, for any {a mathematical formula}v∈V and any non-empty set {a mathematical formula}W⊆V, as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Given an inconsistent knowledge base Γ that is formed by consistent formulas, one can compute the distance between a given valuation {a mathematical formula}v∈V and the set of valuations satisfying each {a mathematical formula}φ∈Γ. By looking for the valuation {a mathematical formula}v∈V minimising the sum or the maximum of such distances, two inconsistency measures arise. Let {a mathematical formula}Kc denote the set of knowledge bases in {a mathematical formula}K containing only consistent formulas. For any {a mathematical formula}φ∈L, define {a mathematical formula}[[φ]]={v∈V,v(φ)=1}. For any {a mathematical formula}Γ∈K, the inconsistency measures {a mathematical formula}IDalalsum:Kc→[0,∞) and {a mathematical formula}IDalalmax:Kc→[0,∞) are defined as:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 7.10">
+       Let {a mathematical formula}Γ={x1∧x2∧x3∧x4,¬x1∧¬x2∧x5∧x6,(¬x3∨¬x5)∧(¬x4∨¬x6)} be a knowledge base in {a mathematical formula}K. Consider the valuation {a mathematical formula}v:L→{0,1} such that {a mathematical formula}v(x1∧¬x2∧x3∧x4∧x5∧x6)=1. Computing the Dalal distances, we have:{a mathematical formula} Consequently, {a mathematical formula}∑φ∈ΓD(v,[[φ]])=4 and {a mathematical formula}maxφ∈Γ⁡D(v,[[φ]])=2. The reader can check that there is no other valuation yielding a lesser sum (or maximum) for the Dalal distances. Intuitively, the conflicts {a mathematical formula}{x1,¬x1}, {a mathematical formula}{x2,¬x2}, {a mathematical formula}{x3,x5,¬x3∨¬x5} and {a mathematical formula}{x4,x6,¬x4∨¬x6} are each responsible for a unitary summand in {a mathematical formula}∑φ∈ΓD(v,[[φ]])=4. Therefore, any valuation {a mathematical formula}v′:L→{0,1} is such that {a mathematical formula}∑φ∈ΓD(v′,[[φ]])≥4. Hence, at least a {a mathematical formula}φ∈Γ must be such that {a mathematical formula}D(v′,[[φ]])≥2, for any {a mathematical formula}v′. So we have {a mathematical formula}IDalalsum(Γ)=4 and {a mathematical formula}IDalalmax(Γ)=2.Now note that {a mathematical formula}Δ={x1∧x2∧x3∧x4,¬x1∧¬x2∧x5∧x6} is the only minimal inconsistent subset of Γ. Using the same valuation, we have {a mathematical formula}∑φ∈ΔD(v,[[φ]])=2 and {a mathematical formula}maxφ∈Δ⁡D(v,[[φ]])=1. Again, the reader can check that these are the minimum attainable values, thus {a mathematical formula}IDalalsum(Δ)=2 and {a mathematical formula}IDalalmax(Δ)=1.
+      </paragraph>
+      <paragraph>
+       In the example above, one can tell that (Independence) is violated by both {a mathematical formula}IDalalsum and {a mathematical formula}IDalalmax: {a mathematical formula}θ=(¬x3∨¬x5)∧(¬x4∨¬x6) is free in Γ, but {a mathematical formula}IDalalsum(Γ)&gt;IDalalsum(Γ∖{θ}) and {a mathematical formula}IDalalmax(Γ)&gt;IDalalmax(Γ∖{θ}).
+      </paragraph>
+      <paragraph>
+       A ⋆-conflict whose corresponding (⋆-Independence) is satisfied by {a mathematical formula}IDalalsum and {a mathematical formula}IDalalmax can be constructed via analysing the underlying consolidation procedure of the measures. These measures dilate the set of valuations satisfying each formula until the knowledge base is satisfiable. Such dilation in the models is dual to a weakening in the formulas, which can be encoded into a modular consequence operation.
+      </paragraph>
+      <paragraph>
+       Formally, for any {a mathematical formula}φ∈L and {a mathematical formula}n∈N∪{∞}, let {a mathematical formula}φn∈L denote an arbitrary formula such that {a mathematical formula}[[φn]]={v∈V|D(v,[[φ]])≤n}. Let {a mathematical formula}CnDalal:K→K be a modular consequence operation such that {a mathematical formula}ψ∈CnDalal(φ) iff ψ is equivalent to {a mathematical formula}φn for some {a mathematical formula}n∈N∪{∞}.{sup:8} Since {a mathematical formula}CnDalal is modular, the corresponding ⋆-conflicts can be defined via ⋆-weakenings, using Definition 5.2, and the derived definition of ⋆-free yields a suitable version of (⋆-Independence):
+      </paragraph>
+      <paragraph label="Proposition 7.11">
+       Consider the consequence operation{a mathematical formula}Cn⋆=CnDalal.{a mathematical formula}IDalalsumand{a mathematical formula}IDalalmaxsatisfy (⋆-Independence).
+      </paragraph>
+      <paragraph>
+       For instance, recall the situation in Example 7.10, where {a mathematical formula}Γ={φ,ψ,(¬x3∨¬x5)∧(¬x4∨¬x6)}, where {a mathematical formula}φ=x1∧x2∧x3∧x4 and {a mathematical formula}ψ=¬x1∧¬x2∧x5∧x6. Using {a mathematical formula}Cn⋆=CnDalal, we can weaken φ and ψ to form:{a mathematical formula} Note that {a mathematical formula}φ1∈CnDalal({φ}) and {a mathematical formula}ψ1∈CnDalal({ψ}), thus {a mathematical formula}φ1,ψ1∈CnDalal(Γ), for {a mathematical formula}CnDalal is modular. The base {a mathematical formula}Δ={φ1,ψ1,(¬x3∨¬x5)∧(¬x4∨¬x6)}⊆CnDalal(Γ) is a ⋆-weakening of Γ. As Δ is a MIS, Γ is a ⋆-conflict. Therefore, {a mathematical formula}θ=(¬x3∨¬x5)∧(¬x4∨¬x6) is not ⋆-free in Γ. Consequently, the fact that {a mathematical formula}IDalalsum(Γ)&gt;IDalalsum(Γ∖{θ}) and {a mathematical formula}IDalalmax(Γ)&gt;IDalalmax(Γ∖{θ}) does not imply violating (⋆-Independence).
+      </paragraph>
+      <paragraph>
+       Another example of inconsistency measure in which ⋆-conflicts can be suitably applied to find the “uncontroversial” formulas is due to Jabbour and Raddaoui [28]. They introduced an inconsistency measure based on minimal proofs for opposite literals — which are presented in Section 6.2. Their measure intuitively counts in how many different ways a contradiction of the form {a mathematical formula}{xi,¬xi} can be proved from an inconsistent Γ, in terms of the premises for deriving each conflicting literal.
+      </paragraph>
+      <paragraph>
+       Formally, recall from Section 6.2 that {a mathematical formula}PmΓ(y)⊆2Γ denotes the set of the minimal proofs (in Γ) of the literal y. The authors then define the inconsistency measure {a mathematical formula}IPm:K→[0,∞)∪∞, for all {a mathematical formula}Γ∈K, as [28]{sup:9}:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 7.12">
+       Jabbour and Raddaoui [28] provide the following example: {a mathematical formula}Γ={x1∧¬x1,x1}. There are two minimal proofs of {a mathematical formula}x1, {a mathematical formula}{x1∧¬x1} and {a mathematical formula}{x1}, and only one minimal proof of {a mathematical formula}¬x1, {a mathematical formula}{x1∧¬x1}. As no other literal appears in Γ, in order to compute {a mathematical formula}IPm(Γ) one can ignore other atomic propositions than {a mathematical formula}x1:{a mathematical formula} If one considers the singleton {a mathematical formula}Δ={x1∧¬x1}, there is only one minimal proof for each {a mathematical formula}y∈{x1,¬x1}, and {a mathematical formula}IPm(Δ)=1.
+      </paragraph>
+      <paragraph>
+       Jabbour and Raddaoui [28] note that {a mathematical formula}IPm does not satisfy (Independence), pointing to the counterexample above — note that {a mathematical formula}x1 is free in Γ. Using the consequence operations {a mathematical formula}Cn⋆=CnPm or {a mathematical formula}Cn⋆=Cn2Pm, introduced in Section 6.2, we can again employ the ⋆-free formula concept to identify the formulas that do not contribute to the base's degree of inconsistency. As proved in Section 6.2, the corresponding ⋆-conflict definitions captures the subsets of a base that are the union of minimal proofs of both {a mathematical formula}xi and {a mathematical formula}¬xi, for some {a mathematical formula}xi. Consequently, the corresponding ⋆-free formulas yield (⋆-Independence) properties suitable for {a mathematical formula}IPm:
+      </paragraph>
+      <paragraph label="Proposition 7.13">
+       If either{a mathematical formula}Cn⋆=CnPmor{a mathematical formula}Cn⋆=Cn2Pm, then{a mathematical formula}IPmsatisfies (⋆-Independence).
+      </paragraph>
+      <paragraph>
+       In this section, to derive new versions of the (Independence) postulate, we have replaced “free formula” by “⋆-free formula” in its definition. Alternatively, we could have used ⋆-innocuous formulas to define another form of (Independence):
+      </paragraph>
+      <paragraph label="Property 7.14">
+       {a mathematical formula}⋆-Independence′For any{a mathematical formula}Γ∈Kand{a mathematical formula}φ∈Γ, if φ is ⋆-innocuous in Γ, then{a mathematical formula}I(Γ∖{φ})=I(Γ).
+      </paragraph>
+      <paragraph label="Corollary 7.15">
+       If{a mathematical formula}Cn⋆is a modular, subclassical, Tarskian consequence operation, (⋆-Independence) and (⋆-Independence') are equivalent.
+      </paragraph>
+      <paragraph>
+       In some contexts, this might be a more useful property. For instance, if one considers ⋆-consolidating a knowledge base, an inconsistency measure satisfying (⋆-Independence′) will ignore exactly those (⋆-innocuous) formulas that can be bypassed while restoring consistency (see Proposition 4.10).
+      </paragraph>
+      <paragraph>
+       A postulate related to (Independence) is (Ind-Decomposability) [26], which requires that inconsistency measures be additive over partitions of the knowledge base that do not break any minimal inconsistent set. Replacing minimal inconsistent sets by ⋆-conflicts in the definition of (Ind-decomposability) we could similarly obtain a property parameterised by {a mathematical formula}Cn⋆, which would hold for instance for {a mathematical formula}I⋆ and {a mathematical formula}I⋆C.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       New dominance properties
+      </section-title>
+      <paragraph>
+       An arguably more problematic postulate is (Dominance). This postulate seems sensible to the extent that it requires that replacing a consistent formula in a knowledge base by a logically weaker one should not increase its inconsistency degree. Besnard [8] argues against (Dominance), analysing its behaviour on disjunctions. Jabbour et al. [27] note that the measure {a mathematical formula}IMIS, based on minimal inconsistent sets, does not satisfy (Dominance), and that it would be “rarely (be) satisfied by syntactic measures”. They propose a weaker version of the postulate, claimed as more rational, that is satisfied by an inconsistency measure they also introduce. What neither author criticise is the following consequence of (Dominance) along with (Monotonicity), which was noted by Besnard, but not remarked on as a problem [8]:
+      </paragraph>
+      <paragraph label="Proposition 7.16">
+       Let{a mathematical formula}I:K→[0,∞)∪{∞}be an inconsistency measure that satisfies (Monotonicity) and (Dominance) and consider a{a mathematical formula}Γ∈K. If a{a mathematical formula}ψ∈Lis such that{a mathematical formula}ψ∈Cn(φ)for some consistent{a mathematical formula}φ∈Γ, then{a mathematical formula}I(Γ)=I(Γ∪{ψ}).
+      </paragraph>
+      <paragraph>
+       To grasp the consequences of the proposition above, consider an inconsistent base {a mathematical formula}Γ={φ1,…,φm} formed by consistent formulas. Let {a mathematical formula}φi′∉Γ be a formula equivalent to {a mathematical formula}φi, for {a mathematical formula}1≤i≤m, and define {a mathematical formula}Δ={φ1′,…,φm′}. Any measure {a mathematical formula}I satisfying (Dominance) and (Monotonicity) must be such that {a mathematical formula}I(Γ)=I(Γ∪Δ). In other words, the fact that all conflicts of Γ (MISes or ⋆-conflicts) are duplicated in {a mathematical formula}Γ∪Δ does not impact the inconsistency degree. Iterating this argument, a base could have its conflicts arbitrarily replicated without having its inconsistency measurement affected. Even though this consequence might be conceivable under some circumstances, we cannot see the case for this being a strict requirement, implied by rationality postulates. As (Monotonicity) naturally has a great appeal to intuition, (Dominance) seems too strong to be demanded. Fortunately, this issue can be easily fixed by strictly encoding the intuition that replacing a consistent formula for a weaker one should not increase the inconsistency degree{sup:10}:
+      </paragraph>
+      <paragraph label="Postulate 7.17">
+       Dominance′For any{a mathematical formula}Γ∈Kand{a mathematical formula}φ,ψ∈L∖Γ, if{a mathematical formula}φ⊢ψand{a mathematical formula}φ⊬⊥, then{a mathematical formula}I(Γ∪{φ})≥I(Γ∪{ψ}.
+      </paragraph>
+      <paragraph>
+       Besnard's [8] objections to (Dominance) also apply to (Dominance′), although we do not endorse them. His argument considers a knowledge base {a mathematical formula}Γ={x1∧x2∧…∧xn} and the formulas {a mathematical formula}φ=¬x1 and {a mathematical formula}ψ=¬x1∨(¬x2∧¬x3∧…∧¬xn) in {a mathematical formula}L, for some large {a mathematical formula}n≥3. He states that the inconsistency in {a mathematical formula}Γ∪{φ} is {a mathematical formula}x1 versus {a mathematical formula}¬x1, while the inconsistency in {a mathematical formula}Γ∪{ψ} is either the same ({a mathematical formula}x1 versus {a mathematical formula}¬x1) or {a mathematical formula}x2∧x3∧…xn versus {a mathematical formula}¬x2∧¬x3∧…¬xn, and the latter inconsistency could be viewed as more severe than the former. He concludes that it is conceivable that {a mathematical formula}I(Γ∪{φ})&lt;I(Γ∪{ψ}), violating (Dominance) and (Dominance′). To address this, Besnard proposes a system of postulates that does not include (Dominance) but implies it. To replace (Dominance), Besnard suggests a postulate he calls (Conjunction Dominance), which implies, in his objection, {a mathematical formula}I(Γ∪{φ∧ψ})≥I(Γ∪{ψ}). This postulate, together with {a mathematical formula}I(Γ∪{φ})&lt;I(Γ∪{ψ}) (claimed as conceivable), would imply {a mathematical formula}I(Γ∪{φ})&lt;I(Γ∪{ψ})≤I(Γ∪{φ∧ψ}). Nevertheless, note that φ is equivalent to {a mathematical formula}φ∧ψ in his objection, and thus it does not seem reasonable that {a mathematical formula}I(Γ∪{φ∧ψ})&gt;I(Γ∪{φ}).
+      </paragraph>
+      <paragraph>
+       As for the objections from Jabbour et al. [27], (Dominance′) is satisfied by some measures from the literature that arguably possess syntactic traits, as {a mathematical formula}Inc presented in [42] (adapted from [13]), Thimm's {a mathematical formula}Ihs[42], Knight's η-(in)consistency [29],{sup:11} and Grant and Hunter's {a mathematical formula}Idhit[19], [20]. However, (Dominance′) still does not hold for the arguably basic measure {a mathematical formula}IMIS, as the next example shows.
+      </paragraph>
+      <paragraph label="Example 7.18">
+       Consider the knowledge base {a mathematical formula}Γ={x1,x2,x2∧x3} in {a mathematical formula}K and the formulas {a mathematical formula}φ=¬x1 and {a mathematical formula}ψ=x2→¬x1 in {a mathematical formula}L. The only MIS in {a mathematical formula}Γ∪{φ} is {a mathematical formula}{x1,¬x1}, thus {a mathematical formula}IMIS(Γ∪{φ})=1. The knowledge base {a mathematical formula}Γ∪{ψ} has two MISes, {a mathematical formula}{x1,x2,x2→¬x1} and {a mathematical formula}{x1,x2∧x3,x2→¬x1}, hence {a mathematical formula}IMIS(Γ∪{ψ})=2. As {a mathematical formula}φ,ψ∉Γ, φ is consistent and {a mathematical formula}φ⊢ψ, but {a mathematical formula}IMIS(Γ∪{φ})&lt;IMIS(Γ∪{ψ}), (Dominance′) does not hold for {a mathematical formula}IMIS.
+      </paragraph>
+      <paragraph>
+       Jabbour et al. [27] put forward both a weaker version of (Dominance) and a new measure via counting conflicts in order to achieve compatibility. Their approach is based on prime implicates, as indicated in Section 6.1. Using the consequence operation {a mathematical formula}CnPI, introduced in Section 6.1, and departing from (Dominance′),{sup:12} their postulate can be stated as:
+      </paragraph>
+      <paragraph label="Postulate 7.19">
+       Weak dominanceFor any{a mathematical formula}Γ∈Kand{a mathematical formula}φ,ψ∈L∖Γ, if{a mathematical formula}ψ∈CnPI({φ})and{a mathematical formula}φ⊬⊥, then{a mathematical formula}I(Γ∪{φ})≥I(Γ∪{ψ}.
+      </paragraph>
+      <paragraph>
+       Jabbour et al. [27] prove that an inconsistency measure based on DMISes (see section 6.1) satisfies this postulate. Since {a mathematical formula}CnPI can be replaced, in the postulate above, by a general modular consequence operation {a mathematical formula}Cn⋆, we can define a more general property:
+      </paragraph>
+      <paragraph label="Property 7.20">
+       ⋆-DominanceFor any{a mathematical formula}Γ∈Kand{a mathematical formula}φ,ψ∈L∖Γ, if{a mathematical formula}φ⊢⋆ψand{a mathematical formula}φ⊬⊥, then{a mathematical formula}I(Γ∪{φ})≥I(Γ∪{ψ}.
+      </paragraph>
+      <paragraph>
+       Adopting the consequence operation {a mathematical formula}Cn⋆=CnPI, the (⋆-Dominance) property becomes equivalent to the (Weak Dominance) postulate. Therefore, the inconsistency measure proposed by Jabbour et al. [27] also satisfies this instance of (⋆-Dominance).
+      </paragraph>
+      <paragraph>
+       The motivations of Jabbour et al. [27] apparently include the search for one way of reconciling a version of (Dominance) with an inconsistency measure based on counting conflicts. Towards that aim, we can prove that the general inconsistency measures {a mathematical formula}I⋆ and {a mathematical formula}I⋆C, based on arbitrary ⋆-conflicts, satisfy the corresponding version of the dominance property, for the corresponding {a mathematical formula}Cn⋆. Putting it differently, each modular, subclassical Tarskian consequence operation {a mathematical formula}Cn⋆ gives us a way of reconciling (Dominance) with conflict-based measures.
+      </paragraph>
+      <paragraph label="Proposition 7.21">
+       Consider a modular, subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (⋆-Dominance).
+      </paragraph>
+      <paragraph>
+       As done for (Independence) in Section 7.2, (⋆-Dominance) properties form a scale parameterised by the modular consequence operation {a mathematical formula}Cn⋆. The stronger the consequence operation, the more (⋆-Dominance) requires from an inconsistency measure. At one extreme, {a mathematical formula}⊢⋆=⊢ and (⋆-Dominance) is equivalent to (Dominance′). At the other extreme, {a mathematical formula}φ⊢⋆ψ implies {a mathematical formula}φ=ψ and (⋆-Dominance) is vacuous. In the middle, there is a myriad of properties including those deriving from {a mathematical formula}CnDalal and {a mathematical formula}CnPI, for instance. Furthermore, for each (⋆-Dominance), we have a pair of measures — {a mathematical formula}I⋆ and {a mathematical formula}I⋆C — satisfying it, showing the whole spectrum is populated. Within this entire range, we do not see sufficient reason to lift a single (⋆-Dominance) property, and its logical consequences, to the status of postulate, for the choice of the corresponding {a mathematical formula}Cn⋆ would be arbitrary if not inside with respect to a given context.
+      </paragraph>
+      <paragraph>
+       The weakening of (Dominance) proposed by Jabbour et al. [27] was formulated in a way that enabled it to be satisfied by an inconsistency measure based solely on the number of conflicts in the bases. That raises the question of why both the postulate and the conflict characterisation had to be modified. In principle, there could be a weaker version of (Dominance′) that holds for {a mathematical formula}IMIS. Alternatively, counting another sort of conflict could yield an inconsistency measure satisfying (Dominance′) or even (Dominance), which could support the corresponding postulate endorsement. We proceed to investigate both possibilities.
+      </paragraph>
+      <paragraph>
+       Suppose one wants to weaken somehow the (Dominance′) postulate for it to hold for {a mathematical formula}IMIS, the measure that simply counts minimal inconsistent subsets in a base. Considering the possible instances of (⋆-Dominance), we find that only a trivial {a mathematical formula}⊢⋆ renders a property satisfied by {a mathematical formula}IMIS:
+      </paragraph>
+      <paragraph label="Proposition 7.22">
+       Let{a mathematical formula}Cn⋆:K→Kbe a modular, subclassical, Tarskian consequence operator.{a mathematical formula}IMISsatisfies (⋆-Dominance) iff{a mathematical formula}φ⊢⋆ψimplies φ and ψ are equivalent for all consistent, non-valid{a mathematical formula}φ,ψ∈L.
+      </paragraph>
+      <paragraph>
+       In other words, the version of dominance satisfied by {a mathematical formula}IMIS is based on a very weak modular consequence operation: for a consistent φ, {a mathematical formula}Cn⋆({φ}) contains only tautologies besides formulas equivalent to φ. It is hard to conceive a sensible inconsistency measure violating such (⋆-Dominance). This can be assessed as enough evidence supporting the promotion of this specific (⋆-Dominance) to a postulate. Although it is a reasonable requirement indeed, the strength of the related {a mathematical formula}Cn⋆ barely justifies the term “dominance”.
+      </paragraph>
+      <paragraph>
+       Instead of justifying some weakening of (Dominance) via {a mathematical formula}IMIS, one might wonder which conflict characterisation could lead to an inconsistency measure satisfying (Dominance′) or the original (Dominance), arguing in its favour. Let {a mathematical formula}C denote a set of knowledge bases in {a mathematical formula}K that can be regarded as atomic inconsistencies according to some definition. We define {a mathematical formula}IC:K→[0,∞)∪{∞} as the inconsistency measure such that, for all {a mathematical formula}Γ∈K:{a mathematical formula} For {a mathematical formula}IC to satisfy (Consistency), we need to require that it contains only inconsistent bases and all MISes in {a mathematical formula}K. For instance, if {a mathematical formula}C is the set of all ⋆-conflicts, {a mathematical formula}IC=I⋆. Now, we can abandon the idea of finding a set {a mathematical formula}C of conflicts whose counting gives an inconsistency measure satisfying (Dominance) in its strongest form.
+      </paragraph>
+      <paragraph label="Proposition 7.23">
+       Let{a mathematical formula}Cbe a set of inconsistent knowledge bases such that{a mathematical formula}MIS(L)⊆C.{a mathematical formula}ICdoes not satisfy (Dominance).
+      </paragraph>
+      <paragraph label="Corollary 7.24">
+       There is no subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→Ksuch that{a mathematical formula}I⋆satisfies (Dominance).
+      </paragraph>
+      <paragraph>
+       We can then focus on looking for conflict characterisations that suit the weaker (Dominance′). In fact, we can show a rather uninteresting set {a mathematical formula}C of conflicts whose counting satisfies the property.
+      </paragraph>
+      <paragraph label="Proposition 7.25">
+       Let{a mathematical formula}C⊆Kbe the set of all inconsistent knowledge bases not containing valid formulas.{a mathematical formula}ICsatisfies (Dominance′).
+      </paragraph>
+      <paragraph>
+       Recall from Theorem 5.10, Theorem 5.22 that any {a mathematical formula}Cn⋆∈{Cnmod,Cn} yields the definition of ⋆-conflict as being inconsistent bases with no valid formulas. That is, for such {a mathematical formula}Cn⋆, {a mathematical formula}I⋆ satisfies (Dominance′), which is equivalent to the corresponding (⋆-Dominance). Even though we have provided a definition of conflict that induces an inconsistency measure satisfying (Dominance′), the characterisation looks quite loose. Hence, this does not seem to prove the case for (Dominance′). But, it must be remarked that we are not showing that there is no more meaningful conflict notion that could be the basis for an inconsistency measure satisfying (Dominance′). Furthermore, the existence of such a conflict definition is not a strict requirement for endorsing (Dominance′), thus we are not thoroughly rejecting this postulate. We are just suggesting that the whole spectrum of (⋆-Dominance) properties can be used to provide a more refined description of the behaviour of inconsistency measures, in case they do not enjoy (Dominance′).
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Computational complexity
+     </section-title>
+     <paragraph>
+      The possibility of applying the introduced concepts of ⋆-free/innocuous formula and ⋆-conflict to a real-world problem depends on the computational cost with which their instances can be recognised/computed. In this section, we discuss this matter, providing computational complexity bounds for the problems of recognising ⋆-free/innocuous formulas and ⋆-conflicts, given some assumptions on the corresponding consequence operation {a mathematical formula}Cn⋆.
+     </paragraph>
+     <paragraph>
+      We focus on three decision problems: recognising whether a given {a mathematical formula}φ∈L is ⋆-free in a given knowledge base {a mathematical formula}Γ∈K, whether φ is ⋆-innocuous in Γ, and whether a given knowledge base Γ is a ⋆-conflict. Computational complexity bounds for these decision problems imply bounds for the corresponding tasks of actually finding the ⋆-conflicts and ⋆-innocuous/free formulas in a knowledge base. Formally, these decisions problems are encoded via languages, which are sets of strings; i.e., we are interested in the problem of deciding whether a given input (string) is in a set (language):
+     </paragraph>
+     <paragraph label="Definition 8.1">
+      Consider a subclassical, Tarskian consequence operation {a mathematical formula}Cn⋆.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       ⋆-FREE is the language formed by the pairs {a mathematical formula}〈φ,Γ〉∈L×K such that φ is ⋆-free in Γ.
+      </list-item>
+      <list-item label="•">
+       ⋆-INNOCUOUS is the language formed by the pairs {a mathematical formula}〈φ,Γ〉∈L×K such that φ is ⋆-innocuous in Γ.
+      </list-item>
+      <list-item label="•">
+       ⋆-CONFLICT is the language formed by the knowledge bases {a mathematical formula}Γ∈K that are ⋆-conflicts.
+      </list-item>
+      <list-item label="•">
+       ⋆-CONSEQUENCE is the language formed by the pairs {a mathematical formula}〈φ,Γ〉∈L×K such that {a mathematical formula}φ∈Cn⋆(Γ).
+      </list-item>
+     </list>
+     <paragraph>
+      We denote by FREE and MIS the particular cases of ⋆-FREE and ⋆-CONFLICT, respectively, where {a mathematical formula}Cn⋆=CnId. The fourth language in the definition above captures the computational complexity of the consequence operation {a mathematical formula}Cn⋆, to which the complexity of the other languages are clearly tied.
+     </paragraph>
+     <paragraph>
+      To classify these decision problems, we employ the standard complexity classes {a mathematical formula}P, {a mathematical formula}NP, {a mathematical formula}coNP, {a mathematical formula}PSPACE, {a mathematical formula}Σip and {a mathematical formula}Πip, for {a mathematical formula}i∈N, and the notion of completeness for a class (see for instance [5] for a computational complexity introduction). As usual, {a mathematical formula}PNP and {a mathematical formula}NPNP are the classes of problems that are in {a mathematical formula}P or {a mathematical formula}NP, respectively, if an oracle for Boolean satisfiability (SAT) is given. Additionally, we use {a mathematical formula}DP[35] to denote the class containing the languages {a mathematical formula}A∩B where A is a language in {a mathematical formula}NP and B is a language in {a mathematical formula}coNP. As these computational complexity classes relate the time/space usage to the size of the input, we use {a mathematical formula}‖x‖ to denote the length of string x where, for any {a mathematical formula}〈φ,Γ〉∈L×K, {a mathematical formula}‖〈φ,Γ〉‖=‖φ‖+‖Γ‖, {a mathematical formula}‖Γ‖=∑φ∈Γ‖φ‖ and {a mathematical formula}‖φ‖ is the quantity of symbols (variables, connectives, parentheses) used in φ.
+     </paragraph>
+     <paragraph>
+      In order to obtain complexity results, some assumption on {a mathematical formula}Cn⋆ is needed. Consider the language ⋆-CONFLICT. By definition, a given Γ is in ⋆-CONFLICT iff there if there are a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) and a ⋆-mapping {a mathematical formula}f:Δ→2Γ. That is, to confirm that a knowledge base Γ is a ⋆-conflict, we have to find such a Δ in {a mathematical formula}Cn⋆(Γ). Without any restriction on the size of Δ, we cannot give any bound on the time and space required to decide whether Γ is in ⋆-CONFLICT. This is due to the fact that in principle the smallest {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) enjoying the sought-after properties can be arbitrarily large since {a mathematical formula}Cn⋆(Γ) can indeed be infinite. As ⋆-free formulas are defined through ⋆-conflicts, this issue inflicts the complexity analysis of ⋆-FREE as well, which is equal to ⋆-INNOCUOUS for modular {a mathematical formula}Cn⋆. In order to circumvent this situation in such a way that these decisions problems stay within the polynomial hierarchy, we impose some restrictions on {a mathematical formula}Cn⋆:
+     </paragraph>
+     <paragraph label="Definition 8.2">
+      p-boundedA subclassical, Tarskian consequence operation {a mathematical formula}Cn⋆ is p-bounded if there is a polynomial {a mathematical formula}q:R→R such that, for every ⋆-conflict {a mathematical formula}Γ∈K, there are a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)), with {a mathematical formula}‖Δ‖≤q(‖Γ‖), and a ⋆-mapping {a mathematical formula}f:Δ→2Γ.
+     </paragraph>
+     <paragraph>
+      Informally, for p-bounded consequence operations {a mathematical formula}Cn⋆, a ⋆-conflict is characterised as the union of the minimal sets of premises used to derive each element in a minimal inconsistent set whose size is polynomially bounded. In the modular case, a consequence operation is p-bounded simply if every ⋆-conflict has a polynomially size-bounded ⋆-weakening that is a minimal inconsistent set. Most consequence operations presented here are in fact p-bounded:
+     </paragraph>
+     <paragraph label="Proposition 8.3">
+      Cn,{a mathematical formula}Cnmod,{a mathematical formula}Cnid,{a mathematical formula}Cn∧,{a mathematical formula}Cn2∧,{a mathematical formula}Cn→,{a mathematical formula}CnPmand{a mathematical formula}Cn2Pmare p-bounded.
+     </paragraph>
+     <paragraph>
+      Now we are ready to provide some complexity bound to ⋆-CONFLICT and ⋆-FREE, linked to a bound for the corresponding ⋆-CONSEQUENCE:
+     </paragraph>
+     <paragraph label="Proposition 8.4">
+      Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆that is p-bounded. If ⋆-CONSEQUENCE is in{a mathematical formula}Σ2p∩Π2p, or ⋆-CONSEQUENCE is in{a mathematical formula}Σ2pand{a mathematical formula}Cn⋆is modular, then ⋆-CONFLICT is in{a mathematical formula}Σ2p, and ⋆-FREE is in{a mathematical formula}Π2p.
+     </paragraph>
+     <paragraph>
+      Regarding space complexity, just recall that {a mathematical formula}Σ2p,Π2p⊆PSPACE, thus Proposition 8.4 also implies polynomial-space bounds.
+     </paragraph>
+     <paragraph>
+      When {a mathematical formula}Cn⋆ is modular, ⋆-FREE and ⋆-INNOCUOUS are the same language, thus in the same complexity class. In the general case, however, the {a mathematical formula}Cn⋆ being p-bounded seems not enough to put ⋆-INNOCUOUS in {a mathematical formula}Π2p, though an extra restriction could suffice: that for any ⋆-innocuous formula φ in Γ there is a polynomial-sized {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) containing φ.
+     </paragraph>
+     <paragraph>
+      As Proposition 8.4 points out, for modular consequence operations, the restriction on ⋆-CONSEQUENCE can be slightly relaxed for the same complexity bounds to follow. Note that even for a general {a mathematical formula}Cn⋆ the conditions imposed on ⋆-CONSEQUENCE to obtain the results above are not very strong. For instance, ⋆-CONSEQUENCE is {a mathematical formula}coNP-complete for the classical consequence operation {a mathematical formula}Cn=Cn⋆, and {a mathematical formula}coNP⊆Σ2p∩Π2p. In fact, that condition holds for most consequence operations presented in this work:
+     </paragraph>
+     <paragraph label="Proposition 8.5">
+      If{a mathematical formula}Cn⋆is Cn,{a mathematical formula}Cnmod,{a mathematical formula}CnPm,{a mathematical formula}Cn2Pm,{a mathematical formula}CnId,{a mathematical formula}Cn∧,{a mathematical formula}Cn2∧,{a mathematical formula}Cn→or{a mathematical formula}CnPIthen ⋆-CONSEQUENCE is in{a mathematical formula}Σ2p∩Π2p.
+     </paragraph>
+     <paragraph>
+      To have an idea of how hard it is to recognise ⋆-conflicts and ⋆-free/innocuous formulas, we can recall the computational complexity analysis of their classical counterparts: minimal inconsistent sets (the language MIS) and free formulas (the language FREE). MIS is {a mathematical formula}DP-complete [34], and we have that {a mathematical formula}NP⊆DP⊆PNP⊆Σ2p∩Π2p⊆NPNP=Σ2p[35]. That is, {a mathematical formula}DP is between the first and second levels of the polynomial hierarchy, hence deciding MIS can be regarded as slightly less costly than deciding ⋆-CONFLICT, for a p-bounded {a mathematical formula}Cn⋆. It is worth noting that, if the polynomial hierarchy collapses in the first level ({a mathematical formula}NP=coNP), then it will follow that {a mathematical formula}DP=Σ2p, and deciding ⋆-CONFLICT, for a p-bounded {a mathematical formula}Cn⋆, will be no harder than deciding MIS. It is clear that FREE is in {a mathematical formula}Π2p, as a particular case of ⋆-FREE, and we could find no better bound for it. Hence, to the best of our knowledge, recognising a ⋆-free (⋆-innocuous) formula, for a p-bounded (modular) {a mathematical formula}Cn⋆, is theoretically as hard as verifying if the formula is free in the knowledge base. In practice, the proof provided for Proposition 8.4 can form the basis for naive algorithms, based on guessing and verifying, that find ⋆-conflicts and ⋆-free formulas, although further research should reveal more efficient methods.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs of technical results
+     </section-title>
+     <paragraph label="Proof">
+      Consider a knowledge base{a mathematical formula}Γ∈Kand a formula{a mathematical formula}φ∈Γ. φ is free in Γ iff, for any AGM-consolidation{a mathematical formula}Γ′of Γ,{a mathematical formula}Γ′∪{φ}is consistent.(→) Suppose φ is free in Γ. Consider an arbitrary AGM-consolidation {a mathematical formula}Γ′ of Γ. As {a mathematical formula}Γ′⊆Γ is consistent, it has no MIS, and adding φ cannot create a MIS, for it would be a MIS in Γ containing φ, which is free. Thus, {a mathematical formula}Γ′∪{φ} is consistent.(←) Suppose φ is not free in Γ. Then, there is a {a mathematical formula}Δ∈MIS(Γ) such that {a mathematical formula}φ∈Δ. Now consider the base {a mathematical formula}Ψ=Δ∖{φ}, which is consistent, and a AGM-consolidation Γ, but {a mathematical formula}Ψ∪{φ}=Δ is inconsistent.  □
+     </paragraph>
+     <paragraph label="Proposition 4.10">
+      Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K, a knowledge base{a mathematical formula}Γ∈Kand a{a mathematical formula}Δ⊆Γthat contains only formulas that are ⋆-innoucuous in Γ. If{a mathematical formula}Ψ′is a ⋆-consolidation of{a mathematical formula}Ψ=Γ∖Δ, then{a mathematical formula}Ψ′∪Δis a ⋆-consolidation of Γ.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose {a mathematical formula}Ψ′ is a ⋆-consolidation of {a mathematical formula}Ψ=Γ∖Δ. That is, {a mathematical formula}Ψ′ is a consistent subset of {a mathematical formula}Cn⋆(Γ∖Δ). Since {a mathematical formula}Cn⋆ satisfies monotonicity, {a mathematical formula}Cn⋆(Γ∖Δ)⊆Cn⋆(Γ), and {a mathematical formula}Ψ′ is also a ⋆-consolidation of Γ. If {a mathematical formula}Δ=∅, the result is trivial, so suppose {a mathematical formula}Δ={φ1,φ2,…} — Δ can be either finite or infinite. Now define {a mathematical formula}Ψ=Ψ0. For each {a mathematical formula}φi∈Δ, define {a mathematical formula}Ψi=Ψi−1∪{φi}. As each {a mathematical formula}φi is ⋆-innocuous in Γ, if {a mathematical formula}Ψi−1 is a ⋆-consolidation of Γ, so is {a mathematical formula}Ψi−1∪{φi}=Ψi. As {a mathematical formula}Ψ0=Ψ′ is a ⋆-consolidation of Γ, {a mathematical formula}Ψi also is, for all i such that {a mathematical formula}φi∈Δ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let Γ be a knowledge base in{a mathematical formula}K. If a formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ, then φ is free in Γ.It follows directly from Proposition 4.2, as {a mathematical formula}Cn⋆ is assumed to be Tarskian.  □
+     </paragraph>
+     <paragraph label="Theorem 4.13">
+      Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Given an inconsistent{a mathematical formula}Γ∈K, a formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ iff φ is valid.
+     </paragraph>
+     <paragraph label="Proof">
+      The (←)-part is trivial, for a valid formula is consistent with any consistent set, so we focus on the (→)-direction of the proof. Suppose {a mathematical formula}φ∈Γ is ⋆-innocuous in Γ and consider a {a mathematical formula}Δ∈MIS(Γ). By Proposition 4.11, φ is free, hence {a mathematical formula}φ∉Δ. Define {a mathematical formula}Δ′={ψ∨¬φ|ψ∈Δ}, noting that {a mathematical formula}ψ∨¬φ∈Cn⋆(ψ) for any {a mathematical formula}ψ∈L. To prove by contradiction, suppose φ is not valid. Hence, ¬φ is satisfiable, and so is {a mathematical formula}Δ′⊆Cn⋆(Γ), which is a ⋆-consolidation of Γ. Nevertheless, {a mathematical formula}Δ′∪{φ} is inconsistent, thus φ is not ⋆-innocuous, a contradiction.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a modular subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a minimal inconsistent set, Γ is a ⋆-conflict.Suppose Γ is a MIS. Since {a mathematical formula}Cn⋆ is monotonic, {a mathematical formula}Γ∈MIS(Cn⋆(Γ)). Just consider the function {a mathematical formula}f:Γ→Γ as the identity function for Γ to be a ⋆-conflict by definition.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a modular subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a ⋆-conflict, it is inconsistent.Suppose Γ is a ⋆-conflict. Thus, there is an inconsistent {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) and a surjective function {a mathematical formula}f:Δ→Γ such that {a mathematical formula}f(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Δ. As {a mathematical formula}Cn⋆ is subclassical, a valuation v satisfying a {a mathematical formula}φ∈Γ would satisfy any {a mathematical formula}ψ∈Δ such that {a mathematical formula}f(ψ)=φ. Hence, any valuation satisfying Γ also satisfies Δ. As Δ is inconsistent, so must be Γ.  □
+     </paragraph>
+     <paragraph label="Lemma 5.9">
+      Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Every finite, inconsistent{a mathematical formula}Γ∈Kthat does not contain valid formulas has a ⋆-weakening that is a MIS.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose {a mathematical formula}Γ={φ1,…,φm} is inconsistent and contains no valid formulas. Let {a mathematical formula}y1,…,ym be atomic propositions not occurring in Γ and define {a mathematical formula}ψi=yi∧⋀j=1;j≠im¬yj for all {a mathematical formula}1≤i≤m. For all {a mathematical formula}1≤i≤m, define {a mathematical formula}φi′=φi∨⋁j=1;j≠im¬φj∧ψj and note that {a mathematical formula}φi⊢⋆φi′. Note that {a mathematical formula}Γ′={φ1′,…,φm′} is in {a mathematical formula}Cn⋆(Γ) and there is a surjective function {a mathematical formula}f:Γ′→Γ, defined as {a mathematical formula}f(φi′)=φi, such that {a mathematical formula}f(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Γ′. Now we prove {a mathematical formula}Γ′ is MIS. Consider the set {a mathematical formula}Γj′=Γ′∖{φj′} for some {a mathematical formula}1≤i≤m. As no {a mathematical formula}φj∈Γ is valid, every {a mathematical formula}¬φj is satisfiable. Consequently, for any {a mathematical formula}1≤j≤m, {a mathematical formula}¬φj∧ψj is consistent, for {a mathematical formula}ψj is consistent and formed from different atomic propositions. By construction, {a mathematical formula}¬φj∧ψj is disjunct in {a mathematical formula}φi′ with {a mathematical formula}i≠j. Therefore, a valuation satisfying {a mathematical formula}¬φj∧ψj also satisfies {a mathematical formula}Γj′, which must be consistent, regardless of the value of {a mathematical formula}1≤j≤m. To prove by contradiction that {a mathematical formula}Γ′ is inconsistent, suppose there is a valuation v satisfying {a mathematical formula}Γ′. As Γ is inconsistent, {a mathematical formula}v(φi)=0 for some {a mathematical formula}1≤i≤m. Thus, {a mathematical formula}v(φi′)=1 implies {a mathematical formula}v(¬φj∧ψj)=1 for some {a mathematical formula}1≤j≤m. Note that {a mathematical formula}v(ψk)=1 implies {a mathematical formula}v(ψk′)=0 for all {a mathematical formula}k′≠k, {a mathematical formula}1≤k′≤m. Therefore, we finally have that {a mathematical formula}v(φj′)=0, a contradiction; thus {a mathematical formula}Γ′ is a MIS.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the modular consequence operation{a mathematical formula}Cn⋆=Cnmod. Any finite knowledge base{a mathematical formula}Γ∈Kis a ⋆-conflict iff it is inconsistent and it does not contain valid formulas.(→) Suppose Γ is a ⋆-conflict. By Proposition 5.5, Γ must be inconsistent. Suppose {a mathematical formula}φ∈Γ is valid, so any {a mathematical formula}ψ∈Cn⋆({φ}) is valid. Nevertheless, no MIS {a mathematical formula}Δ⊆Cn⋆(Γ) can contain a valid formula, and any ψ in a MIS is not in {a mathematical formula}Cn⋆(φ). Thus, for any MIS {a mathematical formula}Δ⊆Cn⋆(Γ) there can be no surjective function {a mathematical formula}f:Δ→Γ such that {a mathematical formula}f(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Δ. This contradicts the fact that Γ is a ⋆-conflict.(←) Direct consequence of Lemma 5.9.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a knowledge base{a mathematical formula}Γ∈Kand a modular{a mathematical formula}Cn⋆:K→K. A formula{a mathematical formula}φ∈Γis ⋆-innocuous in Γ iff it is in no ⋆-conflict of Γ.(→) Let φ be ⋆-innocuous in Γ. Suppose there is a ⋆-conflict {a mathematical formula}Δ⊆Γ such that {a mathematical formula}φ∈Δ. Since {a mathematical formula}Δ=Ψ∪{φ} is a ⋆-conflict, it must have a ⋆-weakening {a mathematical formula}Ψ′∪{θ}, with {a mathematical formula}φ⊢⋆θ, that is a MIS. Thus, {a mathematical formula}Ψ′⊆Cn⋆(Ψ)⊆Cn⋆(Γ) is consistent and it is a ⋆-consolidation of Γ. Due to the fact that φ is ⋆-innocuous in Γ, {a mathematical formula}Ψ′∪{φ} is consistent. However, since {a mathematical formula}Ψ′∪{θ} is inconsistent, {a mathematical formula}θ∈Cn(φ) implies that {a mathematical formula}Ψ′∪{φ} is inconsistent; a contradiction.(←) Suppose φ is not innocuous in Γ. Then there is a ⋆-consolidation {a mathematical formula}Γ′⊆Cn⋆(Γ) such that {a mathematical formula}Γ′∪{φ} is inconsistent. As {a mathematical formula}Γ′ is consistent, there must be a MIS {a mathematical formula}Δ⊆Γ′∪{φ} such that {a mathematical formula}φ∈Δ. Construct a function {a mathematical formula}f:Δ→Γ such that {a mathematical formula}f(φ)=φ and, for each {a mathematical formula}ψ∈Δ∖{φ}, make {a mathematical formula}f(ψ)=θ for some θ such that {a mathematical formula}θ⊢⋆ψ. Let {a mathematical formula}Δ′ be the range of f, and define a function {a mathematical formula}f′:Δ→Δ′ such that {a mathematical formula}f′(ψ)=f(ψ) for all {a mathematical formula}ψ∈Δ. As {a mathematical formula}f′ is surjective, {a mathematical formula}Δ′ is a ⋆-conflict containing φ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose{a mathematical formula}Γ′∈Kis a ⋆-weakening of{a mathematical formula}Γ∈K. If, for each ⋆-conflict{a mathematical formula}Δ⊆Γ, all ⋆-weakenings{a mathematical formula}Δ′⊆Γ′of Δ are consistent, then{a mathematical formula}Γ′is a ⋆-consolidation of Γ.We prove via the contrapositive. If {a mathematical formula}Γ′ is not a ⋆-consolidation of Γ, {a mathematical formula}Γ′ is inconsistent and must contain at least one minimal inconsistent set, that we denote by Ψ. For each {a mathematical formula}θ∈Ψ, take a {a mathematical formula}φ∈Γ such that {a mathematical formula}φ⊢⋆θ, and let Δ be the set of such φ's in Γ — that is, {a mathematical formula}Ψ⊆Γ′ is a ⋆-weakening of {a mathematical formula}Δ⊆Γ. By definition, Δ is an ⋆-conflict.  □
+     </paragraph>
+     <paragraph label="Proof">
+      A formula φ is ⋆-innocuous in a base{a mathematical formula}Γ∈Kiff, for all{a mathematical formula}Δ∈MIS(Cn⋆(Γ)),{a mathematical formula}φ∉Δ.(→) Suppose there is a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) such that {a mathematical formula}φ∈Δ. Then, {a mathematical formula}Δ∖{φ} is a consistent subset of {a mathematical formula}Cn⋆(Γ), so it is a ⋆-consolidation. However, {a mathematical formula}(Δ∖{φ})∪{φ}=Δ is inconsistent, so φ cannot be ⋆-innocuous.(←) Suppose now φ is not ⋆-innocuous in Γ. Then, there is a (consistent) ⋆-consolidation {a mathematical formula}Γ′⊆Cn⋆(Γ) such that {a mathematical formula}Γ′∪{φ} is inconsistent. Therefore, all minimal inconsistent subsets in {a mathematical formula}Δ=Γ′∪{φ} must contain φ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a knowledge base{a mathematical formula}Γ∈K, a minimal inconsistent set{a mathematical formula}Δ∈Kand a modular, subclassical, Tarskian{a mathematical formula}Cn⋆. Δ is a ⋆-weakening of Γ iff there is a ⋆-mapping{a mathematical formula}f:Δ→2Γ.(→) Suppose Δ is a ⋆-weakening of Γ, so {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) and there is a surjective function {a mathematical formula}f′:Δ→Γ such that {a mathematical formula}f′(ψ)⊢⋆ψ for all {a mathematical formula}ψ∈Δ. Consider the function {a mathematical formula}f:Δ→2Γ defined as {a mathematical formula}f(ψ)={f′(ψ)}, for all {a mathematical formula}ψ∈Δ. As {a mathematical formula}f′ is surjective, {a mathematical formula}⋃ψ∈Δf(ψ)=Γ. Furthermore, as Δ is a MIS, it should contain no valid formula, and {a mathematical formula}ψ∈Δ implies {a mathematical formula}ψ∉Cn⋆(∅), for {a mathematical formula}Cn⋆ is subclassical. Therefore, {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ).(←) Now suppose there is ⋆-mapping a {a mathematical formula}f:Δ→2Γ. Hence, {a mathematical formula}⋃ψ∈Δf(ψ)=Γ and, for all {a mathematical formula}ψ∈Δ, {a mathematical formula}ψ∈Cn⋆(f(ψ)) and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ). As Δ is a MIS, it has no valid formulas, so {a mathematical formula}ψ∉Cn⋆(∅) for every {a mathematical formula}ψ∈Δ, since {a mathematical formula}Cn⋆ is subclassical. Furthermore, {a mathematical formula}Cn⋆ is modular and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ), thus {a mathematical formula}f(ψ) is a singleton for every {a mathematical formula}ψ∈Δ. Consider the function {a mathematical formula}f′:Δ→Γ such that, for all {a mathematical formula}ψ∈Δ, {a mathematical formula}f′(ψ)=φ, where {a mathematical formula}f(ψ)={φ}. Finally, since {a mathematical formula}⋃ψ∈Δf(ψ)=Γ, {a mathematical formula}f′ is surjective and Δ is a ⋆-weakening of Γ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K. If a{a mathematical formula}Γ∈Kis a ⋆-conflict, it is inconsistent.Suppose Γ is a ⋆-conflict, thus there is a MIS {a mathematical formula}Δ⊆Cn⋆(Γ). As {a mathematical formula}Cn⋆ is subclassical, {a mathematical formula}Δ⊆Cn⋆(Γ) implies {a mathematical formula}Δ⊆Cn(Γ). Since Δ is inconsistent, {a mathematical formula}⊥∈Cn(Δ). As Cn is Tarskian, {a mathematical formula}⊥∈Cn(Δ) implies {a mathematical formula}⊥∈Cn(Γ); therefore, Γ is inconsistent.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If a knowledge base{a mathematical formula}Γ∈Kis a minimal inconsistent set, then it is ⋆-conflict.Recall that {a mathematical formula}Cn⋆ must be monotonic. Hence, {a mathematical formula}Γ∈MIS(Cn⋆(Γ)). Consider the function {a mathematical formula}f:Γ→2Γ such that {a mathematical formula}f(φ)={φ} for all {a mathematical formula}φ∈Γ. f is such that for all {a mathematical formula}ψ∈Γ, {a mathematical formula}ψ∈Cn⋆(f(ψ))=Cn⋆({ψ}) and {a mathematical formula}Ψ⊊f(ψ)={ψ} implies {a mathematical formula}ψ∉Cn⋆(Ψ), because ψ is not valid ({a mathematical formula}ψ∉Cn⋆(∅)⊆Cn(∅)). Therefore, f is a ⋆-mapping and Γ is a ⋆-conflict.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the consequence operation{a mathematical formula}Cn⋆=Cn. Any finite knowledge base{a mathematical formula}Γ∈Kis a ⋆-conflict iff it is inconsistent and it does not contain valid formulas.(→) Suppose Γ is a ⋆-conflict. By Proposition 5.20, Γ must be inconsistent. Suppose a {a mathematical formula}φ∈Γ is valid. There must be a {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) and a function {a mathematical formula}f:Δ→2Γ such that {a mathematical formula}⋃ψ∈Δf(ψ)=Γ and, for all {a mathematical formula}ψ∈Δ, {a mathematical formula}ψ∈Cn⋆(f(ψ)) and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ). Hence, there is a {a mathematical formula}ψ∈Δ such that {a mathematical formula}φ∈f(ψ). Nevertheless, {a mathematical formula}Cn(Ψ∖{φ})=Cn(Ψ), for φ is valid; a contradiction.(←) Now suppose Γ is inconsistent and it does not contain valid formulas. By Lemma 5.9, if {a mathematical formula}Cn⋆=Cnmod, Γ has a ⋆-weakening Δ that is a MIS. Hence {a mathematical formula}Δ∈MIS(Cnmod(Γ))⊆Cn(Γ) and, by Proposition 5.17, there is a ⋆-mapping {a mathematical formula}f:Δ→2Γ (for {a mathematical formula}Cn⋆=Cnmod). For any {a mathematical formula}ψ∈Δ, {a mathematical formula}Cnmod(f(ψ))⊆Cn(f(ψ)). Additionally, since {a mathematical formula}Cnmod is modular, {a mathematical formula}f(ψ) is a singleton for each {a mathematical formula}ψ∈Δ, and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}Ψ=∅. Therefore, {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn(Ψ)=Cn(∅), as ψ is non-valid, for any {a mathematical formula}ψ∈Δ. Thus, {a mathematical formula}f:Δ→2Γ is also a ⋆-mapping for {a mathematical formula}Cn⋆=Cn and Γ is a ⋆-conflict for {a mathematical formula}Cn⋆=Cn.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If a formula φ is ⋆-free in a base{a mathematical formula}Γ∈K, then φ is free in Γ.Direct consequence of Proposition 5.21.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a modular consequence operation{a mathematical formula}Cn⋆. A formula φ is ⋆-free in a base{a mathematical formula}Γ∈Kiff φ is ⋆-innocuous in Γ.Direct consequence of Theorem 5.11.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If a formula φ is ⋆-free in{a mathematical formula}Γ∈K, then φ is ⋆-innocuous in Γ.Suppose φ is not ⋆-innocuous in Γ. By Proposition 5.15, there must be a minimal inconsistent subset {a mathematical formula}Δ⊆Cn⋆(Γ) that contains φ. Consequently, φ is not valid and {a mathematical formula}φ∉Cn⋆(∅), for {a mathematical formula}Cn⋆ is subclassical. Define a function {a mathematical formula}f:Δ→2Γ in the following way: {a mathematical formula}f(φ)={φ} and, for each {a mathematical formula}ψ∈Δ∖{φ}, {a mathematical formula}f(ψ)=Ψ for a minimal {a mathematical formula}Ψ⊆Γ such that {a mathematical formula}ψ∈Cn⋆(Ψ). Define {a mathematical formula}Δ′=⋃ψ∈Δf(ψ). Note that {a mathematical formula}g:Δ→2Δ′, defined as {a mathematical formula}g(ψ)=f(ψ) for all {a mathematical formula}ψ∈Δ, is a ⋆-mapping. Hence, {a mathematical formula}Δ′ is a ⋆-conflict, {a mathematical formula}φ∈Δ′ is not ⋆-free.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the consequence operation{a mathematical formula}Cn⋆=CnPIand a knowledge base{a mathematical formula}Γ∈K. If Γ is a DMIS-conflict, then Γ is a ⋆-conflict.Suppose that Γ is a DMIS-conflict. Hence, there is a DMIS {a mathematical formula}〈Γ,Δ〉. Just note that the MIS Δ is a ⋆-weakening of Γ, thus, by Proposition 5.17, Γ is a ⋆-conflict.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the consequence operation{a mathematical formula}Cn⋆=CnPm. If a knowledge base{a mathematical formula}Γ∈Kis an opposite-literals conflict, then it is a ⋆-conflict.Suppose {a mathematical formula}Γ∈K is an opposite-literals conflict. Then, there are {a mathematical formula}Δ,Δ′⊆Γ and a literal y such that Δ and {a mathematical formula}Δ′ are minimal proofs of y and ¬y, respectively, and {a mathematical formula}Γ=Δ∪Δ′. Hence, {a mathematical formula}{y,¬y}∈Cn⋆(Γ). Define {a mathematical formula}f:{y,¬y}→2Γ as {a mathematical formula}f(y)=Δ and {a mathematical formula}f(¬y)=Δ′. Since Δ and {a mathematical formula}Δ′ are minimal proofs of y and ¬y, f is such that {a mathematical formula}Ψ⊊f(y)=Δ ({a mathematical formula}Ψ′⊊f(¬y)=Δ′) implies {a mathematical formula}y∉Cn⋆(Ψ) ({a mathematical formula}¬y∉Cn⋆(Ψ′)). Finally, for {a mathematical formula}⋃ψ∈{y,¬y}f(ψ)=Δ∪Δ′=Γ, f is a ⋆-mapping and Γ is a ⋆-conflict.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the consequence operation{a mathematical formula}Cn⋆=Cn2Pm. If a knowledge base{a mathematical formula}Γ∈Kis an opposite-literals conflict, then it is a ⋆-conflict.Suppose {a mathematical formula}Γ∈K is an opposite-literals conflict. Then, there are {a mathematical formula}Δ,Δ′⊆Γ and a {a mathematical formula}y∈Lit(Δ) such that Δ and {a mathematical formula}Δ′ are minimal proofs of y and ¬y, respectively, and {a mathematical formula}Γ=Δ∪Δ′. The remaining is the same as the proof of Proposition 6.11.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (Consistency) and (Monotonicity).(Monotonicity) holds trivially, for the fact that the ⋆-conflicts in a {a mathematical formula}Γ∈K are also present in any knowledge base {a mathematical formula}Δ⊇Γ. To see that (Consistency) holds, note that any ⋆-conflict is inconsistent, by Proposition 5.20, thus a consistent {a mathematical formula}Γ∈K must contain no ⋆-conflict and {a mathematical formula}I⋆(Γ)=I⋆C(Γ)=0. Conversely, if {a mathematical formula}Γ∈K is inconsistent, it must contain at least a MIS {a mathematical formula}Δ⊆Γ. By Proposition 5.21, Δ is also a ⋆-conflict and {a mathematical formula}I⋆(Γ),I⋆C(Γ)≥&gt;0.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (Super-additivity), (Penalty) and (Attenuation). (Equal-conflict) is satisfied by{a mathematical formula}I⋆Cand violated by{a mathematical formula}I⋆.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       (Super-additivity): Consider {a mathematical formula}Γ,Δ∈K with {a mathematical formula}Γ∩Δ=∅. Note that any {a mathematical formula}I∈{I⋆,I⋆C} is such that {a mathematical formula}I(Γ∪Δ)=∑{I(Ψ)|Ψ⊆Γ∪Δ is a ⋆-conflict}. As each ⋆-conflict in either Γ or Δ are also in {a mathematical formula}Γ∪Δ, {a mathematical formula}I(Γ∪Δ)≥I(Γ)+I(Δ).
+      </list-item>
+      <list-item label="•">
+       (Penalty): Consider a {a mathematical formula}Γ∈K and a {a mathematical formula}φ∈Γ such that φ is not free in Γ. Hence, there is a {a mathematical formula}Δ∈MIS(Γ) such that {a mathematical formula}φ∈Γ. By Proposition 5.4, Δ is a ⋆-conflict. Therefore, the set of ⋆-conflicts in {a mathematical formula}Γ∖{φ} is strictly included in the set of ⋆-conflicts in Γ, and {a mathematical formula}I(Γ∖{φ})&lt;I(Γ) for any {a mathematical formula}I∈{I⋆.
+      </list-item>
+      <list-item label="•">
+       (Attenuation) and (Equal-conflict): Consider a {a mathematical formula}Γ∈K with {a mathematical formula}Δ1,Δ2∈MIS(Γ). By Proposition 5.4, {a mathematical formula}Δ1 and {a mathematical formula}Δ2 are ⋆-conflicts. As every proper subset of {a mathematical formula}Δ1 or {a mathematical formula}Δ2 is consistent, it is not a ⋆-conflict, by Proposition 5.20. Therefore, {a mathematical formula}Δi is the only ⋆-conflict in {a mathematical formula}Δi, yielding {a mathematical formula}I⋆(Δi)=1 and {a mathematical formula}I⋆C=1/|Δi|, for {a mathematical formula}i∈{1,2}. Consequently, (Attenuation) holds for {a mathematical formula}I⋆ and {a mathematical formula}I⋆C, and the latter also enjoys (Equal-conflict). To see that (Equal-conflict) is violated by {a mathematical formula}I⋆, note that {a mathematical formula}I⋆(Δ1)=1=I⋆(Δ2) even when {a mathematical formula}|Δ1|&lt;|Δ2|. □
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      It follows direct from the definition of the measures and the property.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider the consequence operation{a mathematical formula}Cn⋆=CnDalal.{a mathematical formula}IDalalsumand{a mathematical formula}IDalalmaxsatisfy (⋆-Independence).Consider a knowledge base {a mathematical formula}Γ∈K, let {a mathematical formula}φ∈Γ be ⋆-free in Γ and define {a mathematical formula}Δ=Γ∖{φ}. One can note that {a mathematical formula}IDalalsum and {a mathematical formula}IDalalmax satisfy (Monotonicity), so {a mathematical formula}IDalalsum(Γ)≥IDalalsum(Δ) and {a mathematical formula}IDalalmax(Γ)≥IDalalmax(Δ). For each {a mathematical formula}ψi∈Δ, let {a mathematical formula}ψiji be a formula such that {a mathematical formula}[[ψiji]]={v∈V|D(v,[[ψi]])≤ji}. If {a mathematical formula}IDalalsum(Δ)=∞ or {a mathematical formula}IDalalmax(Δ)=∞, the corresponding results follow trivially, so we focus on the finite case. Consider the enumeration {a mathematical formula}Δ={ψ1,ψ2,…}. If {a mathematical formula}IDalalsum(Δ)=k (or {a mathematical formula}IDalalmax(Δ)=k), then, each {a mathematical formula}ψi∈Δ can be weakened to a {a mathematical formula}ψiji in such a way that {a mathematical formula}∑{ji|ψi∈Δ}=k ({a mathematical formula}max⁡{ji|ψi∈Δ}=k) and {a mathematical formula}Δ′={ψiji|ψi∈Δ} is consistent. As {a mathematical formula}Cn⋆ is modular and φ is ⋆-free, ψ is also ⋆-innocuous, by Theorem 5.11. Since {a mathematical formula}Δ′⊆Cn⋆(Δ)⊆Cn⋆(Γ), {a mathematical formula}Δ′ is a ⋆-consolidation of both Δ and Γ, and {a mathematical formula}Γ′=Δ′∪{φ} must be consistent. Hence, there is valuation {a mathematical formula}v:L→{0,1} satisfying {a mathematical formula}Δ′ such that {a mathematical formula}v(φ)=1. Note that {a mathematical formula}∑{D(v,[[ψi]])|ψi∈Δ}=k ({a mathematical formula}max⁡{D(v,[[ψi]])|ψi∈Δ}=k) and {a mathematical formula}D(v,[[φ]])=0. Finally, {a mathematical formula}∑{D(v,[[θ]])|θ∈Γ}=k and {a mathematical formula}IDalalsum(Δ)=k ({a mathematical formula}max⁡{D(v,[[θ]])|θ∈Γ}=k and {a mathematical formula}IDalalmax(Δ)=k).  □
+     </paragraph>
+     <paragraph label="Proof">
+      If either{a mathematical formula}Cn⋆=CnPmor{a mathematical formula}Cn⋆=Cn2Pm, then{a mathematical formula}IPmsatisfies (⋆-Independence).Suppose {a mathematical formula}Cn⋆=CnPm or {a mathematical formula}Cn⋆=Cn2Pm. Consider a knowledge base {a mathematical formula}Γ∈K, consider a ⋆-free φ in Γ and define {a mathematical formula}Δ=Γ∖{φ}. One can note that {a mathematical formula}IPm satisfy (Monotonicity), so {a mathematical formula}IPm(Γ)≥IPm(Δ). If {a mathematical formula}IPm(Δ)=∞ the result follows trivially, so we focus on the finite case. To prove by contradiction, suppose {a mathematical formula}IPm(Γ)&gt;IPm(Δ). Then, there must be some literal y such that there is minimal proof {a mathematical formula}πy⊆Γ of y and a minimal proof {a mathematical formula}π¬y⊆Γ of ¬y such that {a mathematical formula}φ∈πy∪π¬y. Therefore, {a mathematical formula}πy∪π¬y is an opposite-literals conflict. By Proposition 6.11, Proposition 6.13, {a mathematical formula}πy∪π¬y is a ⋆-conflict, contradicting the fact that {a mathematical formula}φ∈πy∪π¬y is ⋆-free.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}Cn⋆is a modular, subclassical, Tarskian consequence operation, (⋆-Independence) and (⋆-Independence') are equivalent.Direct consequence of Corollary 5.26.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}I:K→[0,∞)∪{∞}be an inconsistency measure that satisfies (Monotonicity) and (Dominance) and consider a{a mathematical formula}Γ∈K. If a{a mathematical formula}ψ∈Lis such that{a mathematical formula}ψ∈Cn(φ)for some consistent{a mathematical formula}φ∈Γ, then{a mathematical formula}I(Γ)=I(Γ∪{ψ}).By (Monotonicity), {a mathematical formula}I(Γ)≤I(Γ∪{ψ}). By (Dominance), {a mathematical formula}I(Γ)≥I(Γ∪{ψ}), as {a mathematical formula}Γ=Γ∪{φ}.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a modular, subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆:K→K.{a mathematical formula}I⋆and{a mathematical formula}I⋆Csatisfy (⋆-Dominance).Consider a base {a mathematical formula}Γ∈K and suppose there are formulas {a mathematical formula}φ,ψ∈L∖Γ such that {a mathematical formula}ψ∈Cn⋆({φ}). We prove that {a mathematical formula}Γ∪{φ} has at least the same number of ⋆-conflicts of size k as {a mathematical formula}Γ∪{φ} for any positive {a mathematical formula}k∈N — this would imply {a mathematical formula}I(Γ∪{φ})≥I(Γ∪{ψ}) for any {a mathematical formula}I∈{I⋆,I⋆C}. Let Δ be a ⋆-conflict in {a mathematical formula}Γ∪{ψ}. There are two cases to consider: {a mathematical formula}ψ∈Δ and {a mathematical formula}ψ∉Δ. If {a mathematical formula}ψ∉Δ, then {a mathematical formula}Δ⊆Γ and {a mathematical formula}Δ⊆Γ∪{φ}. Thus, we focus on an arbitrary ⋆-conflict {a mathematical formula}Δ⊆Γ∪{ψ} such that {a mathematical formula}ψ∈Δ. We prove that {a mathematical formula}Δ′=(Δ∖{ψ})∪{φ} is a ⋆-conflict in {a mathematical formula}Γ∪{φ}, noting that {a mathematical formula}|Δ|=|Δ′|. Since Δ is a ⋆-conflict, it has a ⋆-weakening {a mathematical formula}Ψ∈MIS(Cn⋆(Γ∪{ψ})) and there exists a surjective function {a mathematical formula}f:Ψ→Δ such that {a mathematical formula}f(θ)⊢⋆θ for all {a mathematical formula}θ∈Ψ. As {a mathematical formula}Cn⋆ satisfies inclusion and monotonicity, {a mathematical formula}Γ⊆Cn⋆(Γ∪{φ}), and as {a mathematical formula}ψ∈Cn⋆({φ}), monotonicity implies {a mathematical formula}Γ∪{ψ}⊆Cn⋆(Γ∪{φ}). Due to monotonicity and idempotence, {a mathematical formula}Cn⋆(Γ∪{ψ})⊆Cn⋆(Γ∪{φ}). Hence, {a mathematical formula}Ψ⊆Cn⋆(Γ∪{φ}). Consider the function {a mathematical formula}f′:Ψ→Δ′ defined as {a mathematical formula}f′(θ)=f(θ) if {a mathematical formula}f(θ)≠ψ, otherwise {a mathematical formula}f(θ)=φ, for all {a mathematical formula}θ∈Ψ. As f is surjective on Δ, so is {a mathematical formula}f′ on {a mathematical formula}Δ′. Since {a mathematical formula}Cn⋆ satisfies monotonicity and idempotence, {a mathematical formula}f(θ)=ψ implies {a mathematical formula}θ∈Cn⋆({ψ})⊆Cn⋆({φ}). Hence, {a mathematical formula}f′(θ)⊢⋆θ for all {a mathematical formula}θ∈Ψ. Therefore, {a mathematical formula}Ψ∈MIS(Cn⋆(Γ∪{φ})) is a ⋆-weakening of {a mathematical formula}Δ′⊆Γ∪{φ}, and the latter is a ⋆-conflict. Note that, if {a mathematical formula}Δ1 and {a mathematical formula}Δ2 are different ⋆-conflicts of {a mathematical formula}Γ∪{ψ}, {a mathematical formula}Δ1′=(Δ1∖{ψ})∪{φ} and {a mathematical formula}Δ2′=(Δ1∖{ψ})∪{φ} are different ⋆-conflicts of {a mathematical formula}Γ∪{φ}. Consequently, each ⋆-conflict Δ in {a mathematical formula}Γ∪{ψ} corresponds to a different ⋆-conflict {a mathematical formula}Δ′ of {a mathematical formula}Γ∪{φ} such that {a mathematical formula}|Δ|=|Δ′|, finishing the proof.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}Cn⋆:K→Kbe a modular, subclassical, Tarskian consequence operator.{a mathematical formula}IMISsatisfies (⋆-Dominance) iff{a mathematical formula}φ⊢⋆ψimplies φ and ψ are equivalent for all consistent, non-valid{a mathematical formula}φ,ψ∈L.(→) To prove via the contrapositive, suppose there are consistent, non-valid {a mathematical formula}φ,ψ∈L such that {a mathematical formula}φ⊢⋆ψ but φ and ψ are not equivalent. As {a mathematical formula}Cn⋆ is subclassical, {a mathematical formula}φ⊢⋆ψ implies {a mathematical formula}φ⊢ψ, thus {a mathematical formula}ψ⊬φ. Consider the knowledge base {a mathematical formula}Γ={¬φ,ψ→φ,ψ→φ∧⊤}. Note that {a mathematical formula}{¬φ,φ} is the only MIS in {a mathematical formula}Γ∪{φ} but {a mathematical formula}Γ∪{ψ} contains two MISes, {a mathematical formula}{¬φ,ψ→φ,ψ},{¬φ,ψ→φ∧⊤,ψ}, since {a mathematical formula}{¬φ,ψ} is consistent, for {a mathematical formula}ψ⊬φ. Therefore, {a mathematical formula}IMIS(Γ∪{φ})=1&lt;2=IMIS(Γ∪{ψ}), violating (⋆-Dominance).(←) Now suppose {a mathematical formula}Cn⋆ is such that {a mathematical formula}φ⊢⋆ψ implies φ and ψ are equivalent for all consistent, non-valid {a mathematical formula}φ,ψ∈L. Consider a knowledge base {a mathematical formula}Γ∈K and two formulas {a mathematical formula}φ,ψ∈L∖Γ such that {a mathematical formula}φ⊢⋆ψ and {a mathematical formula}φ⊬⊥. We prove that each MIS in {a mathematical formula}Γ∪{ψ} corresponds to a different MIS in {a mathematical formula}Γ∪{ψ}. Let Δ be a MIS in {a mathematical formula}Γ∪{ψ}. There are two cases to consider: {a mathematical formula}ψ∈Δ and {a mathematical formula}ψ∉Δ. If {a mathematical formula}ψ∉Δ, then {a mathematical formula}Δ⊆Γ and {a mathematical formula}Δ⊆Γ∪{φ}. Thus, we suppose that {a mathematical formula}ψ∈Δ. As ψ is in a MIS, it is not valid, thus neither is φ, since {a mathematical formula}Cn⋆ is subclassical. As φ is consistent, so is ψ, for {a mathematical formula}Cn⋆ is subclassical. Hence, by supposition, φ and ψ are equivalent, and {a mathematical formula}Δ′=(Δ∖{ψ})∪{φ} is a MIS in {a mathematical formula}Γ∪{φ}.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}Cbe a set of inconsistent knowledge bases such that{a mathematical formula}MIS(L)⊆C.{a mathematical formula}ICdoes not satisfy (Dominance).Consider the inconsistent knowledge base {a mathematical formula}Γ={x1,¬x1} in {a mathematical formula}K and the formulas {a mathematical formula}φ=x1 and {a mathematical formula}ψ=x1∧x1. For any {a mathematical formula}C, {a mathematical formula}IC(Γ)=1, for Γ contain only one inconsistent subset (itself) and it is a MIS. Note that {a mathematical formula}Γ∪{ψ} contains two MISes, Γ and {a mathematical formula}{¬x1,x1∧x1}, thus {a mathematical formula}IC(Γ∪{ψ})≥2. As {a mathematical formula}Γ∪{φ}=Γ, {a mathematical formula}IC(Γ∪{φ})&lt;IC(Γ∪{ψ}), violating (Dominance).  □
+     </paragraph>
+     <paragraph label="Proof">
+      There is no subclassical Tarskian consequence operation{a mathematical formula}Cn⋆:K→Ksuch that{a mathematical formula}I⋆satisfies (Dominance).Direct consequence of Proposition 7.23 and Proposition 5.21.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}C⊆Kbe the set of all inconsistent knowledge bases not containing valid formulas.{a mathematical formula}ICsatisfies (Dominance′).Consider a knowledge base {a mathematical formula}Γ∈K and two formulas {a mathematical formula}φ,ψ∈L∖Γ such that {a mathematical formula}φ⊢ψ and {a mathematical formula}φ⊬⊥. We prove that each {a mathematical formula}Δ⊆(Γ∪{ψ}) in {a mathematical formula}C corresponds to a different {a mathematical formula}Δ′⊆(Γ∪{φ}) in {a mathematical formula}C. Let {a mathematical formula}Δ∈C be a subset of {a mathematical formula}Γ∪{ψ}. There are two cases to consider: {a mathematical formula}ψ∈Δ and {a mathematical formula}ψ∉Δ. If {a mathematical formula}ψ∉Δ, then {a mathematical formula}Δ⊆Γ and {a mathematical formula}Δ⊆Γ and {a mathematical formula}Δ⊆Γ∪{φ}. Thus, we focus on an arbitrary {a mathematical formula}Δ⊆Γ∪{ψ} such that {a mathematical formula}ψ∈Δ. As {a mathematical formula}Δ∈C, it is inconsistent and contains no valid formulas. Since ψ is in a Δ, it is not valid, and neither is φ, for {a mathematical formula}φ⊢ψ. Hence, {a mathematical formula}Δ′=(Δ∖{ψ})∪{φ} contains no valid formulas. Furthermore, as {a mathematical formula}φ⊢ψ, {a mathematical formula}Δ′ is also inconsistent and in {a mathematical formula}C. Finally, {a mathematical formula}Γ∪{φ} has at least the same number of subsets in {a mathematical formula}C as {a mathematical formula}Γ∪{ψ} has, {a mathematical formula}IC(Γ∪{φ})≥IC(Γ∪{ψ}) and (Dominance′) is satisfied.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Cn,{a mathematical formula}Cnmod,{a mathematical formula}Cnid,{a mathematical formula}Cn∧,{a mathematical formula}Cn2∧,{a mathematical formula}Cn→,{a mathematical formula}CnPmand{a mathematical formula}Cn2Pmare p-bounded.In the case of {a mathematical formula}Cn⋆∈{Cnid,Cn∧,Cn2∧,Cn→}, note that, for any {a mathematical formula}Γ∈K, {a mathematical formula}‖Cn⋆(Γ)‖=‖Γ‖, {a mathematical formula}‖Cn⋆(Γ)‖≤‖Γ‖2, {a mathematical formula}‖Cn⋆(Γ)‖≤2‖Γ‖ and {a mathematical formula}‖Cn⋆(Γ)‖≤(‖Γ‖+1)2 (see proof of Proposition 8.5), respectively. When {a mathematical formula}Cn⋆∈{CnPm,Cn2Pm}, {a mathematical formula}Δ∈MIS(Cn⋆(Γ)) implies {a mathematical formula}Δ={xi,¬xi} for some atomic proposition {a mathematical formula}xi, so {a mathematical formula}‖Δ‖ would actually be constant. Consider now that {a mathematical formula}Cn⋆∈{Cn,Cnmod}. Using Theorem 5.10, Theorem 5.22, a given ⋆-conflict {a mathematical formula}Γ={φ1,…,φm} is inconsistent with no valid formulas. In the proof of Lemma 5.9, a minimal inconsistent set {a mathematical formula}Γ′={φ1′,…,φm′} is provided as a ⋆-weakening (for {a mathematical formula}Cn⋆=Cnmod) for Γ. Hence, {a mathematical formula}Γ′∈MIS(Cnmod(Γ))⊆MIS(Cn(Γ)) and, by Proposition 5.17, there is a ⋆-mapping {a mathematical formula}f:Γ′→2Γ (for {a mathematical formula}Cn⋆=Cnmod), such that {a mathematical formula}⋃φ∈Γ′f(φ)=Γ and {a mathematical formula}ψ∈Γ′, {a mathematical formula}ψ∈Cnmod(f(ψ))⊆Cn(f(ψ)) and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn⋆(Ψ)⊆Cn(Ψ). As {a mathematical formula}Cnmod is modular, each {a mathematical formula}f(ψ) is a singleton, and {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}Ψ=∅. Thus, {a mathematical formula}Ψ⊊f(ψ) implies {a mathematical formula}ψ∉Cn(Ψ) for any {a mathematical formula}ψ∈Γ′. Thus, f is a ⋆-mapping also for {a mathematical formula}Cn⋆=Cn. Finally, because {a mathematical formula}‖Γ′‖ is polynomial in {a mathematical formula}‖Γ‖, by construction, both Cn and {a mathematical formula}Cnmod are p-bound.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Consider a subclassical, Tarskian consequence operation{a mathematical formula}Cn⋆that is p-bounded. If ⋆-CONSEQUENCE is in{a mathematical formula}Σ2p∩Π2p, or ⋆-CONSEQUENCE is in{a mathematical formula}Σ2pand{a mathematical formula}Cn⋆is modular, then ⋆-CONFLICT is in{a mathematical formula}Σ2p, and ⋆-FREE is in{a mathematical formula}Π2p.⋆-CONFLICT, General case. Our proof for ⋆-CONFLICT employs polynomial reductions to the satisfiability of quantified Boolean formula with two alternations of quantifiers ({a mathematical formula}∃x1,…,xn,∀xn+1,…,xmφ, {a mathematical formula}φ∈L), {a mathematical formula}Σ2SAT (see e.g. [5]), which is {a mathematical formula}Σ2p-complete. Suppose ⋆-CONSEQUENCE is in {a mathematical formula}Σ2p∩Π2p. As ⋆-CONSEQUENCE is in {a mathematical formula}Σ2p, it can be polynomially reduced, via a function {a mathematical formula}fΣ, to {a mathematical formula}Σ2SAT. Similarly, as ⋆-CONSEQUENCE is in {a mathematical formula}Π2p, its complement, NOT-⋆-CONSEQUENCE, can also be polynomially reduced, via a function {a mathematical formula}fΠ, to {a mathematical formula}Σ2SAT. Thus, for a given {a mathematical formula}〈φ,Γ〉∈L×K, there are quantified Boolean formulas {a mathematical formula}fΣ(φ,Γ) and {a mathematical formula}fΠ(φ,Γ) (in the form {a mathematical formula}∃x1,…,xn,∀xn+1,…,xn′θ), with {a mathematical formula}‖fΣ(φ,Γ)‖,‖fΨ(φ,Γ)‖ being polynomial in {a mathematical formula}‖〈φ,Γ〉‖, such that {a mathematical formula}φ∈Cn⋆(Γ) iff {a mathematical formula}fΣ(φ,Γ)∈Σ2SAT and {a mathematical formula}φ∉Cn⋆(Γ) iff fΠ(φ,Γ)∈Σ2SAT. As {a mathematical formula}Cn⋆ is p-bounded, there is a polynomial q such that a given {a mathematical formula}Γ={φ1,…,φm} is in ⋆-CONFLICT iff there are a {a mathematical formula}Δ={ψ1,…,ψk}∈MIS(Cn⋆(Γ)), with {a mathematical formula}‖Δ‖≤q(‖Γ‖), and a ⋆-mapping {a mathematical formula}f:Δ→2Γ. There exists a ⋆-mapping {a mathematical formula}f:Δ→2Γ iff there are subsets {a mathematical formula}Γ1,…,Γk⊆Γ such that {a mathematical formula}∪j=1kΓj=Γ and, for each {a mathematical formula}1≤j≤k, {a mathematical formula}ψj∈Cn⋆(Γj) and {a mathematical formula}Γj′⊆Γj implies {a mathematical formula}ψj∉Cn⋆(Γ). The idea is to encode these conditions using {a mathematical formula}fΣ and {a mathematical formula}fΠ, then deciding if the resulting formulas are in {a mathematical formula}Σ2SAT by guessing truth values for ∃-bound variables and calling a SAT-oracle. Note that a given quantified Boolean formula {a mathematical formula}∃x1,…,xn,∀xn+1,…,xn′θ(x1,…,xn′) is true if there are {a mathematical formula}y1,…,yn∈{⊤,⊥}n such that {a mathematical formula}∀xn+1,…,xn′θ(y1,…,yn,xn+1,…,xn′) is true ({a mathematical formula}θ(y1,…,yn,xn+1,…,xn′) is a propositional tautology). Assume we have an oracle to Boolean satisfiability ({a mathematical formula}SAT), which also recognises a tautology φ, for ¬φ would be unsatisfiable. A given Γ is a ⋆-conflict iff we can guess a {a mathematical formula}Δ={ψ1,…,ψk}∈K, subsets {a mathematical formula}Γ1,…,Γk⊆Γ with {a mathematical formula}∪j=1kΓj=Γ, and the truth values for ∃-bound variables in {a mathematical formula}fΣ(ψj,Γj) and in {a mathematical formula}fΠ(ψj,Γj∖{φji}), for each {a mathematical formula}1≤j≤k and {a mathematical formula}1≤i≤|Γj|, and then verify, using the {a mathematical formula}SAT-oracle, that Δ is a minimal inconsistent set (Δ is unsatisfiable and each {a mathematical formula}Δ∖{ψj} is satisfiable), {a mathematical formula}fΣ(ψj,Γj) and in {a mathematical formula}fΠ(ψj,Γj∖{φji}) are true, for each {a mathematical formula}1≤j≤k and {a mathematical formula}1≤i≤|Γj|. Note that Δ and each {a mathematical formula}Γj have all polynomial size on {a mathematical formula}‖Γ‖. Furthermore, each {a mathematical formula}fΣ(ψj,Γj) and each {a mathematical formula}fΠ(ψj,Γj∖{φji}) can be computed in polynomial time. Hence, ⋆-CONFLICT is in {a mathematical formula}NPNP=Σ2p.⋆-CONFLICT, Modular case. Suppose now {a mathematical formula}Cn⋆ is modular and ⋆-CONSEQUENCE is in {a mathematical formula}Σ2p. As {a mathematical formula}Cn⋆ is p-bounded, there is a polynomial q such that a given {a mathematical formula}Γ={φ1,…,φm} is in ⋆-CONFLICT iff it has a ⋆-weakening {a mathematical formula}Δ={ψ1,…,ψk}∈MIS(Cn⋆(Γ)) satisfying {a mathematical formula}‖Δ‖≤q(‖Γ‖). {a mathematical formula}Δ={ψ1,…,ψk} is a ⋆-weakening of Γ iff we can guess an onto function {a mathematical formula}g:Δ→Γ such that, for each {a mathematical formula}ψj∈Δ, {a mathematical formula}g(ψj)⊢⋆ψj ({a mathematical formula}ψj∈Cn⋆({g(ψj)})). Again, this consequence relation can be encoded via {a mathematical formula}fΣ. Hence, Γ is a ⋆-conflict iff we can guess a {a mathematical formula}Δ={ψ1,…,ψk}∈K, an onto function {a mathematical formula}g:Δ→Γ and the truth values for ∃-bound variables in {a mathematical formula}fΣ(ψj,g(ψj)) for each {a mathematical formula}1≤j≤k and then verify, using the {a mathematical formula}SAT-oracle, that Δ is a minimal inconsistent set and {a mathematical formula}fΣ(ψj,g(ψj)) is true, for each {a mathematical formula}1≤j≤k. Note that an onto function {a mathematical formula}g:Δ→Γ can be encoded in polynomial size in {a mathematical formula}‖Γ‖ and {a mathematical formula}‖Δ‖≤q(‖Γ‖). Hence, as in the case for general {a mathematical formula}Cn⋆, we can conclude that ⋆-CONFLICT is in {a mathematical formula}Σ2p.⋆-FREE, Both cases. To see that ⋆-FREE is in {a mathematical formula}Π2p, in both cases (modular and general {a mathematical formula}Cn⋆, with ⋆-CONSEQUENCE respectively in {a mathematical formula}Σ2p and in {a mathematical formula}Σ2p∩Π2p), consider the problem of verifying whether a given {a mathematical formula}φ∈L is not ⋆-free in a given {a mathematical formula}Γ′∈K. Just add the guessing of a {a mathematical formula}Γ⊂Γ′, with {a mathematical formula}φ∈Γ, to the corresponding procedure above (modular or general {a mathematical formula}Cn⋆) and repeat the other steps to verify whether this Γ is a ⋆-conflict. Note that this extra guessing has polynomial size, since {a mathematical formula}‖Γ‖≤‖Γ′‖. Therefore, checking that a formula is not ⋆-free is also in {a mathematical formula}Σ2p, and ⋆-FREE is in {a mathematical formula}Π2p.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If{a mathematical formula}Cn⋆is Cn,{a mathematical formula}Cnmod,{a mathematical formula}CnPm,{a mathematical formula}Cn2Pm,{a mathematical formula}CnId,{a mathematical formula}Cn∧,{a mathematical formula}Cn2∧,{a mathematical formula}Cn→or{a mathematical formula}CnPIthen ⋆-CONSEQUENCE is in{a mathematical formula}Σ2p∩Π2p.Consider a given pair {a mathematical formula}〈φ,Γ〉∈L×K. For {a mathematical formula}Cn⋆=Cn, ⋆-CONSEQUENCE is in {a mathematical formula}coNP⊆Σ2p∩Π2p, as {a mathematical formula}φ∈Cn(Γ) iff {a mathematical formula}Γ∪{¬φ} is unsatisfiable. Hence, for {a mathematical formula}Cn⋆=Cnmod, to decide whether {a mathematical formula}〈φ,Γ〉 is in ⋆-CONSEQUENCE, one can check whether {a mathematical formula}ψ∈Cn({φ}) for each {a mathematical formula}φ∈Γ, and ⋆-CONSEQUENCE is in {a mathematical formula}PNP⊆Σ2p∩Π2p.Since {a mathematical formula}CnPm(Γ)={ψ∈Cn(Γ)|ψ is a literal} and {a mathematical formula}Cn2Pm(Γ)={ψ∈Cn(Γ)|ψ∈Lit(Γ)}, for {a mathematical formula}Cn⋆∈{CnPm,Cn2Pm}, deciding whether {a mathematical formula}〈φ,Γ〉∈⋆-CONSEQUENCE can be done via deciding whether {a mathematical formula}φ∈Cn(Γ), employing an SAT-oracle (see proof of Proposition 8.4), and whether φ is a literal (in Γ), which can be done in polynomial time. Therefore ⋆-CONSEQUENCE is in {a mathematical formula}PNP⊆Σ2p∩Π2p is this case as well.For {a mathematical formula}Cn⋆∈{CnId,Cn∧,Cn2∧}, it is clear that {a mathematical formula}φ∈Cn⋆(Γ) can be verified in a polynomial number of steps, thus ⋆-CONSEQUENCE is in {a mathematical formula}P⊆Σ2p∩Π2p.Now consider {a mathematical formula}Cn⋆=Cn→. Let {a mathematical formula}f→:K→K be defined as {a mathematical formula}f→(Δ)=Δ∪{ψ|θ,θ→ψ∈Cn∧(Δ)} for any {a mathematical formula}Δ∈K. Note that {a mathematical formula}f→ can be computed in polynomial time. For any positive {a mathematical formula}n∈N, let {a mathematical formula}f→n denote the n-th iterated of {a mathematical formula}f→ (for instance, {a mathematical formula}f→3(Δ)=f→(f→(f→(Δ)))). Note that {a mathematical formula}φ∈Cn⋆(Γ) iff there is an {a mathematical formula}n∈N such that {a mathematical formula}φ∈f→n(Γ). As the number of connectives → in Γ is limited by {a mathematical formula}‖Γ‖, {a mathematical formula}Cn⋆(Γ)=f→‖Γ‖(Γ). Thus, {a mathematical formula}φ∈Cn⋆(Γ) iff {a mathematical formula}φ∈f→‖Γ‖(Γ). By construction, {a mathematical formula}‖f→n(Δ)‖≤(n+1)‖Δ‖, for any {a mathematical formula}Δ∈K and positive {a mathematical formula}n∈N. Therefore, one can compute {a mathematical formula}f→‖Γ‖(Γ)=Cn⋆(Γ) and check whether {a mathematical formula}φ∈Cn⋆(Γ) in polynomial time in {a mathematical formula}‖Γ‖, and ⋆-CONSEQUENCE is in {a mathematical formula}P⊆Σ2p∩Π2p.If {a mathematical formula}Cn⋆=CnPI, then {a mathematical formula}φ∈Cn⋆(Γ) iff φ is a prime implicate of some {a mathematical formula}ψ∈Γ. Hence, to decide whether {a mathematical formula}φ∈Cn⋆(Γ), after verifying in polynomial time that φ is a clause, one can check, for each {a mathematical formula}ψ∈Γ, if the following conditions hold: (i) {a mathematical formula}ψ⊢φ); (ii) if θ is a clause in {a mathematical formula}Cn({ψ}) and {a mathematical formula}θ⊢φ, then φ and θ are equivalent. Condition (i) can be checked with a single call to a SAT-oracle. To check condition (ii), it suffices to test the clauses θ formed by discarding a disjunct from φ, ensuring they are not in {a mathematical formula}Cn({φ}). Hence, as deciding {a mathematical formula}ψ⊢θ takes one call to a SAT-oracle and there are linear number of θ to be tested for each {a mathematical formula}ψ∈Γ, conditions (i) and (ii) take a polynomial number of SAT-oracle calls for each {a mathematical formula}ψ∈Γ. Therefore, with a SAT-oracle, we can decide ⋆-CONSEQUENCE in polynomial time, and ⋆-CONSEQUENCE is in {a mathematical formula}PNP⊆Σ2p∩Π2p.  □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

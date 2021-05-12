@@ -1,0 +1,2149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Tractable approximate deduction for OWL.
+   </title>
+   <abstract>
+    Today's ontology applications require efficient and reliable description logic (DL) reasoning services. Expressive DLs usually have high worst case complexity while tractable DLs are restricted in terms of expressive power. This brings a new challenge: can users use expressive DLs to build their ontologies and still enjoy the efficient services as in tractable languages? Approximation has been considered as a solution to this challenge; however, traditional approximation approaches have limitations in terms of performance and usability. In this paper, we present a tractable approximate reasoning framework for OWL 2 that improves efficiency and guarantees soundness. Evaluation on ontologies from benchmarks and real-world use cases shows that our approach can do reasoning on complex ontologies efficiently with a high recall.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      With the growing volume and complexity of ontologies [27] and large-scale linked data{sup:1} available, there is a pressing need for efficient ontology reasoning services. Modern ontology language OWL 2, the second version of OWL (Web Ontology Language), is based on a family of different Description Logics (DLs) [3]. For example, OWL 2 DL, the most expressive and decidable OWL, is based on {a mathematical formula}SROIQ[30], a very expressive but complex DL. Its three tractable profiles OWL 2 EL, OWL 2 QL and OWL 2 RL are based on simpler but less expressive formalisms {a mathematical formula}EL++[1], {a mathematical formula}DL-LiteR[11] and DLP[26], respectively. Such a spectrum of DLs leads to different approaches of ontology reasoning.
+     </paragraph>
+     <paragraph>
+      One approach is to develop fully-fledged universal algorithms that can be applied on any decidable DL. For example, tableau-based algorithms [17], [31], [32] with complexity up to N2ExpTime-complete [40] can provide TBox (terminology) reasoning services, such as classification for very expressive DLs including {a mathematical formula}SROIQ. ABox (assertion) reasoning, such as checking whether a given individual is an instance of a given concept, is usually realised by extensions of TBox algorithms [33], or by reduction to TBox reasoning [69]. To reduce non-determinism in tableau algorithms, different absorption techniques [80], [79], [36] have been extensively investigated, which are later generalised by the hypertableau calculus [59]. Decomposition-based approaches have been developed to improve performance of ontology classification [67] and conjunctive query answering [18]. Other work [37] reduces ontologies into disjunctive datalog to provide dedicated ABox reasoning. Due to the high worst case complexity of the algorithms employed, some of the expressive and difficult ones, such as the Foundational Model of Anatomy Constitutional ontology (FMA Constitutional), can hardly be classified by any fully-fledged OWL reasoner in reasonable time. Given the current efforts of ontology construction, it might not take long before many other even larger and more complicated ontologies appear and go beyond the capability of existing DL reasoners.
+     </paragraph>
+     <paragraph>
+      Another approach to ontology reasoning is to develop dedicated and very efficient algorithms for specific light-weight DLs/profiles. For example, reasoning in {a mathematical formula}EL family is PTime-complete [1] and can be executed even in parallel [42]. Similar consequence-based algorithms can further be extended to support non-tractable DLs such as Horn-{a mathematical formula}SHIQ[41] and {a mathematical formula}ALCH[73]. However, such light-weight DLs usually impose strong expressiveness restrictions that are difficult to be satisfied in real-world scenario. First of all, many applications inherently require highly expressive ontology languages. For example, in software engineering extending UML (Unified Modeling Language) or DSL (Domain Specific Language) with OWL [63], [84] requires combinations of many OWL constructors not supported by any single profile. Secondly, forcing users to use profiles in ontology engineering will under-specify the ontologies because they have to give up the knowledge that can only be represented with more expressive languages. Last but not least, in a linked data scenario, it is almost impossible to guarantee that all the connected ontologies belong to the same profile. As a consequence, many real-world ontologies are beyond any tractable profile and require an OWL 2 DL reasoner to reason with.
+     </paragraph>
+     <paragraph>
+      Like any other software, ontology engineering involves development and deployment. In the development stage, ontology engineers would like to construct their ontologies with as much expressiveness as possible. While in the deployment stage, ontology users want to reason with the ontologies as efficient as possible. Given the trade-off between expressiveness and performance, it is difficult for either of the above approaches to satisfy both requirements. This brings a new challenge: can users use OWL 2 DL to build their ontologies and still enjoy the efficient reasoning as in tractable profiles?
+     </paragraph>
+     <paragraph>
+      To answer this challenge, approximation-based approaches have been studied and evaluated. Essentially, approximation approaches bring a new dimension – quality, in terms of completeness and soundness of reasoning, into the trade-off between expressiveness and performance, attempting to strike a balance among the three. This is motivated by the fact that real-world knowledge and data are hardly perfect or complete. Hence sacrificing some theoretical quality to achieve more engineering flexibility and practical efficiency can be desirable in many scenarios. Some approximation approaches apply the idea of knowledge compilation[72] and language weakening by transforming ontologies in complex DLs into other easier-to-reason-with formalisms [61], [16], [51], [6]. Some apply the idea of approximate deduction by treating complex expressions or constructors in ontologies or queries as simpler ones [70], [68], [25], [76], [83], [28], [81]. There is also approach that improves reasoning efficiency by identifying and removing difficult sub-ontologies, known as hotspots [24]. However, most of the existing approximation approaches still have important limitations in the sense that they cannot always guarantee a reduction of complexity, or they rely on other reasoners that impose restrictions on expressive power, or they require non-trivial off-line computation.
+     </paragraph>
+     <paragraph>
+      One important aspect on approximation is quality of approximation. Pan and Thomas [61] proposed a notion of strongest weaker approximations (or semantic approximations) of DL ontologies, which come with a conditional completeness result: their approximation guarantees both soundness and completeness for database style conjunctive quires (i.e., queries in which variables could only be bounded to named individuals). In other words, database style conjunctive queries can not tell the difference between an original ontology and its semantic approximation. However, computing such optimal approximation is expense. Reasoning is needed to compute semantic approximations; therefore, the construction of semantic approximations is usually done off line. In fact, for ontologies in intractable DLs, it is in general not possible to compute in polynomial time, the strongest weaker approximations in tractable DLs. Otherwise, the classification of the original ontologies can be achieved in polynomial time by classifying the tractable approximations.
+     </paragraph>
+     <paragraph>
+      In this paper we present recursive syntactic approximation, a less expensive yet soundness preserving approximate reasoning approach to supporting TBox and ABox reasoning in OWL 2 DL. The hypothesis behind syntactic approximation is that many real-world ontologies, although use expressive ontology constructors, mostly use them in a way that their interactions can be captured by tractable algorithms. And consequently, it is possible to develop very efficient algorithms to reason with these expressive ontologies without losing too much completeness. Particularly, our approach reduces reasoning complexity from N2ExpTime-hard to PTime-complete and the reasoning result is reasonably complete (mostly from {a mathematical formula}97% to {a mathematical formula}100%) according to our evaluations. More precisely, our contributions are:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       We losslessly transform an OWL 2 DL ontology into an {a mathematical formula}EL++ ontology with additional data structures to maintain non-{a mathematical formula}EL++ semantics, such as complement, cardinality and inverse role, then extend the {a mathematical formula}EL++ reasoning with approximate deduction rules to perform materialisation for both TBox and ABox. These additional rules are designed to partially recover the non-{a mathematical formula}EL++ semantics. We show that such materialisation services are all tractable (cf. Theorem 4 and Theorem 10) and soundness-preserving (cf. Theorem 5 and Theorem 11).
+      </list-item>
+      <list-item label="2.">
+       To improve the performance on large data sets, we present and discuss several more and more fine-grained ABox reasoning optimisations, all of which are tractable and soundness-preserving. We also show that these optimisations will not affect the completeness of approximation in materialisation (cf. Theorem 12, Theorem 14 and Theorem 15).
+      </list-item>
+      <list-item label="3.">
+       To evaluate the performance of our approach, we implement the presented approximate reasoning mechanisms in the REL reasoner (one of the component reasoners in TrOWL [78], [62], [60]) and conduct comprehensive evaluations on both benchmark ontologies and real-world ontologies. Results show that REL outperforms fully-fledged OWL 2 DL reasoners and yields high recall on all tested ontologies. This further verifies our hypothesis. The ontologies we evaluated in this paper and the REL reasoner we implemented are available for reproduction of our results. They can be downloaded from http://homepages.abdn.ac.uk/jeff.z.pan/pages/link/AIJReproductionPackage.zip.
+      </list-item>
+     </list>
+     <paragraph>
+      Compared to our previous work [65], [66] on which this paper is based, the current paper revises and extends the definition of transformations (cf. Definition 4 and Definition 8) and the rule sets extensively (from Table 5 to Table 10). Preservation of reasoning results by transformations is discussed (cf. Theorem 2 and Theorem 8). We also present formal proofs on the equivalence of different ABox optimisation approaches in materialisation. The evaluation has also be extended to support the new technical extensions. More extensive discussion on the relation to existing works, incompleteness and partial completeness (Theorem 17) is included.
+     </paragraph>
+     <paragraph>
+      The rest of this paper is organised as follows: in Sec. 2 we introduce preliminaries about DLs. In Sec. 3 we review related work and discuss the technical challenges of existing reasoning approaches. In Sec. 4 we outline our approach with examples. In Secs. 5 and 6 we present our approaches to syntactic approximation. In Sec. 7 we present evaluation results of our approaches. In Sec. 8 we discuss the relation to existing works, incompleteness and partial completeness of our approach. In Sec. 9 we conclude the paper. As our approach is soundness preserving, it is important to clarify the characterisation of incompleteness of our approach. For this purpose, we have included, in Sec. 6.4, an example (Example 8) to illustrate motivation of our approach in the light of the trade-off between incompleteness and intractability. In Sec. 7, we have detailed discussions about recall, including the causes of incompleteness found in the evaluation. In Sec. 8.2, we show that fixing certain types of incompleteness issues will lead to intractability issues. In Sec. 8.3, we show how one could exploit above trade-off between incompleteness and intractability for a conditional completeness approach for the ELHI DL.
+     </paragraph>
+     <paragraph>
+      For the sake of conciseness, we only present sketchy proofs for formal results throughout the paper. Complete proofs are deferred to Appendix A after the end of the paper.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background knowledge
+     </section-title>
+     <paragraph>
+      In this section, we briefly introduce description logics and ontology. To facilitate the presentation of syntactic approximation and its formal properties, we focus on two DL dialects, namely {a mathematical formula}SROIQ and {a mathematical formula}EL++ and present their syntax, semantics and inference problems. For the sake of conciseness, in this paper we will omit the DL elements that are not relevant to our technical work (e.g. datatypes).
+     </paragraph>
+     <paragraph>
+      The description logics is a family of logic formalisms that describe the domain of discourse with so called concept and role expressions and their instances. A signature is a triple {a mathematical formula}Σ=(CN,RN,IN) consisting of three mutually disjoint sets of named concepts {a mathematical formula}CN, named roles {a mathematical formula}RN and individuals {a mathematical formula}IN. In DLs, concept expressions (or concepts for short) and roles expressions (or roles for short) can be constructed inductively from a signature with different constructors. The kinds of constructors that can be used and the ways they can be combined determine the level of expressiveness of the particular DL. Different DLs have different expressive power.
+     </paragraph>
+     <section label="2.1">
+      {a mathematical formula}SROIQ syntax
+      <paragraph>
+       In {a mathematical formula}SROIQ, the underpinning logic of OWL 2 DL [57], the set of roles is {a mathematical formula}RN∪{R−|R∈RN}. On this set, the inverse role function {a mathematical formula}Inv(.) is defined as {a mathematical formula}Inv(R)=R− and {a mathematical formula}Inv(R−)=R where {a mathematical formula}R∈RN. The set of role axioms, namely the RBox {a mathematical formula}R, is a finite set of either Inclusion axioms of form {a mathematical formula}R1⊑R2 or {a mathematical formula}R1∘R2⊑R3, or Disjointness axioms of form {a mathematical formula}Dis(S1,S2), where R, {a mathematical formula}R1…R3 are roles, and {a mathematical formula}S1, {a mathematical formula}S2 are simple roles which we will define later.
+      </paragraph>
+      <paragraph>
+       In the full specification of {a mathematical formula}SROIQ[30], there are other role axioms such as reflexivity and irreflexivity, which we will omit in this paper and refer our readers to that paper for more detail. Role inclusions axioms (RIAs) with role chains of more than two roles, such as {a mathematical formula}R1∘R2∘⋯∘Rn⊑Rn+1, can also be normalised into binary role chain role inclusions as we defined above in linear time [4]. Two roles {a mathematical formula}R1 and {a mathematical formula}R2 are Equivalent if they mutually include each other, denoted by {a mathematical formula}R1≡R2. Besides, Symmetry{a mathematical formula}Sym(R) can be defined as {a mathematical formula}R≡Inv(R). Asymmetry{a mathematical formula}Asy(S) can be defined as {a mathematical formula}Dis(R,Inv(R)). Transitivity{a mathematical formula}Trans(R) can be defined as {a mathematical formula}R∘R⊑R.
+      </paragraph>
+      <paragraph>
+       The notion of Simple Role is inductively defined in {a mathematical formula}R as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}S∈RN is simple if S does not appear on the RHS (right hand side) of any RIA in {a mathematical formula}R;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}S∈RN is simple if {a mathematical formula}Inv(S) is simple;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}S∈RN is simple if for each {a mathematical formula}R⊑S∈R, R is simple.
+       </list-item>
+      </list>
+      <paragraph>
+       Given {a mathematical formula}Σ=(CN,RN,IN), the set of {a mathematical formula}SROIQ concepts is the smallest set containing every concept of the following form: atomic concept A, nominal{a mathematical formula}{a}, the top concept ⊤, the bottom concept ⊥, complement ¬C, conjunction{a mathematical formula}C⊓D, existential restriction{a mathematical formula}∃R.C and at-least restriction{a mathematical formula}≥nS.C, where {a mathematical formula}A∈CN, {a mathematical formula}a∈IN, C and D are concepts, R is a role, S is a simple role, and n is a non-negative integer.
+      </paragraph>
+      <paragraph>
+       Conventionally, disjunction {a mathematical formula}C⊔D, universal restriction {a mathematical formula}∀R.C and at-most restriction {a mathematical formula}≤nR.C are used to abbreviate {a mathematical formula}¬(¬C⊓¬D),¬∃R.¬C and {a mathematical formula}¬≥(n+1)R.C, respectively. Enumeration {a mathematical formula}{a1,a2,…,an} can be regarded as abbreviation of {a mathematical formula}{a1}⊔{a2}⊔⋯⊔{an}.
+      </paragraph>
+      <paragraph>
+       A TBox {a mathematical formula}T is a finite set of general concept inclusions (GCIs) of the form {a mathematical formula}C⊑D. Two concepts C and D are Equivalent if they mutually include each other, denoted by {a mathematical formula}C≡D. An ABox {a mathematical formula}A is a finite set of concept assertion {a mathematical formula}a:C, role assertion {a mathematical formula}(a,b):R, negative role assertion {a mathematical formula}(a,b):¬R, individual equality {a mathematical formula}a≐b and individual inequality {a mathematical formula}a≐̸b, for C a concept, R a role and {a mathematical formula}a,b∈IN. A {a mathematical formula}SROIQ knowledge base (or ontology) K is a triple {a mathematical formula}(T,R,A). In what follows, for sake of simplicity, we include the RBox {a mathematical formula}R into TBox {a mathematical formula}T, and simplify a {a mathematical formula}SROIQ knowledge base as tuple {a mathematical formula}(T,A) in which {a mathematical formula}T contains all the GCIs and role axioms.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      {a mathematical formula}EL++ syntax
+      <paragraph>
+       The {a mathematical formula}EL family is dedicated for large TBox reasoning and has been widely applied in some largest ontologies, e.g. SNOMED CT [75]. {a mathematical formula}EL++, the underpinning logic of OWL 2 EL [56], supports the following concept constructors:{a mathematical formula} in which {a mathematical formula}A∈CN, C and D are {a mathematical formula}EL++ concepts and {a mathematical formula}a∈IN. Different from {a mathematical formula}SROIQ, role r can only be an atomic role. Similar as {a mathematical formula}SROIQ, an {a mathematical formula}EL++ ontology K is a tuple {a mathematical formula}(T,A), in which {a mathematical formula}T is a TBox consisting of finite GCIs and RIAs, and {a mathematical formula}A is an ABox consisting of finite concept assertions, role assertions, individual equality and inequality axioms, but without negative role assertions. {a mathematical formula}EL++ was further extended by Franz Baader et al. [2] to support range restrictions of form {a mathematical formula}⊤⊑∀r.C, where C is a valid {a mathematical formula}EL++ concept. Some other features included in the OWL 2 EL profile, such as Reflexivity, will be omitted in this paper.
+      </paragraph>
+      <paragraph>
+       Krötzsch et al. [44] showed that using nominals liberally in {a mathematical formula}EL++ ontologies will make reasoning more difficult. To address this problem, the authors later identified the nominal-safe criteria in which nominals can be used without increasing the difficulty of reasoning [43]. An {a mathematical formula}EL++ ontology is nominal-safe if all GCIs are of form {a mathematical formula}CNS⊑CS, where{a mathematical formula} Note that although axiom {a mathematical formula}{a}≡{b} and {a mathematical formula}{a}⊓{b}⊑⊥ are not included in the above nominal-safety syntax, they can be equivalently rewritten as {a mathematical formula}a≐b and {a mathematical formula}a≐̸b, respectively, so we regard these kinds of axioms as nominal-safe. In this paper, we restrict ourselves to the kind of {a mathematical formula}SROIQ ontologies whose approximate reasoning closures, as we will define in later sections, are always nominal-safe {a mathematical formula}EL++ ontologies (Definition 6, Definition 7 and Theorem. 6). This restriction is due to the following reasons:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        As indicated by Markus et al., reasoning procedure of nominal-safe {a mathematical formula}EL++ ontologies is simpler and more efficient.
+       </list-item>
+       <list-item label="2.">
+        Many real-world ontologies, including the majority of ontologies we used for evaluation in this paper, satisfy such a nominal-safe {a mathematical formula}SROIQ criteria. More detailed analysis will be presented in Sec. 7.3.
+       </list-item>
+      </list>
+      <paragraph>
+       Without loss of generality, in what follows, we assume all the concepts to be in their negation normal forms (NNF){sup:2} and use {a mathematical formula}~C to denote the NNF of ¬C. We also slightly abuse the notion of atomic concept to include ⊤, ⊥ and all nominals {a mathematical formula}{a} as well, i.e. {a mathematical formula}CN:=CN∪{⊤,⊥}∪{{a}|a∈IN}. Given a knowledge base K, we also use {a mathematical formula}CNK ({a mathematical formula}RNK, {a mathematical formula}INK) to denote the set of atomic concepts (atomic roles, individuals) in K and use {a mathematical formula}ΣK=(CNK,RNK,INK) to denote the signature of K. Given an axiom α, we also use {a mathematical formula}Σα to denote the signature of {a mathematical formula}{α}.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       DL semantics
+      </section-title>
+      <paragraph>
+       The semantics of a DL is defined in terms of interpretations. An interpretation{a mathematical formula}I is a pair {a mathematical formula}(ΔI,·I) where {a mathematical formula}ΔI is a non-empty set and {a mathematical formula}·I is a function that maps each atomic concept {a mathematical formula}A∈CN to a subset {a mathematical formula}AI⊆ΔI, each atomic role {a mathematical formula}r∈RN to a binary relation {a mathematical formula}rI⊆ΔI×ΔI and each individual a to an object {a mathematical formula}aI∈ΔI. Interpretation function {a mathematical formula}·I can be extended to complex concept and role expressions. Particularly, given an interpretation {a mathematical formula}I=(ΔI,·I), concepts C, D, roles R, S, and non-negative integer n, the interpretation of complex concept or role expressions used in the {a mathematical formula}SROIQ and {a mathematical formula}EL++ is inductively defined as in the upper part of Table 1, where ♯X denotes the cardinality of a set X. In addition to the original {a mathematical formula}SROIQ role expressions, we also include the complement of a role R, denoted by ¬R. It is interpreted by the set of pairs of objects that are not included in {a mathematical formula}RI. Such a expression will be used in approximation of role disjointness.
+      </paragraph>
+      <paragraph label="Definition 1">
+       {a mathematical formula}I is a model of K, written {a mathematical formula}I⊨K, if it satisfies all axioms of K as shown in the lower part of Table 1. A knowledge base is consistent if it has a model. An axiom α is entailed by a knowledge base K, written {a mathematical formula}K⊨α, iff all interpretations {a mathematical formula}I of K satisfies α. A concept C is satisfiable w.r.t. a knowledge base K if there exists {a mathematical formula}I⊨K and {a mathematical formula}CI≠∅. In DLs there are several typical inference problems. In this paper, we are particularly interested in computing materialisations defined as follows: MaterialisationFor an ontology {a mathematical formula}O, its ontology materialisation is the set {a mathematical formula}{A⊑B|A,B∈CNO,O⊨A⊑B}∪{a:A|A∈CNO,a∈INO,O⊨a:A}∪{(a,b):r|r∈RNO,a,b,∈INO,O⊨(a,b):r}. The TBox part of the materialisation, also called TBox classification. is the set {a mathematical formula}{A⊑B|A,B∈CNO,O⊨A⊑B}.
+      </paragraph>
+      <paragraph>
+       A materialisation of an ontology tells us what the extension of each of its concepts and roles is, and likewise which concepts in the ontology subsume each other. For example, given the following TBox {a mathematical formula}T1 (in {a mathematical formula}ALC), we can infer that {a mathematical formula}Koala⊑Herbivore is in its materialisation/TBox classification.
+      </paragraph>
+      <paragraph label="Example 1">
+       An example TBox {a mathematical formula}T1 includes the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Related work and motivations
+     </section-title>
+     <paragraph>
+      In this section, we motivate our work on tractable approximate deduction by reviewing different existing approaches of ontology reasoning. As we discussed in the introduction, we categorise these approaches into fully-fledged universal solutions for expressive DLs, dedicated solutions for tractable DLs and solutions that exploit the gaps in between, such as approximation.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Reasoning in expressive DLs
+      </section-title>
+      <paragraph>
+       Traditionally in expressive DLs, reasoning is performed by tableau-based algorithms [17], [31], [32]. It constructs a tableau (as a witness of a model of ontology) as a graph in which each node x represents an individual and is labelled with a set of concepts it must satisfy, each edge {a mathematical formula}〈x,y〉 represents a pair of individuals satisfying all roles that label the edge. Subsumption checking {a mathematical formula}Σ⊨C⊑D can be reduced to consistency checking of an extended knowledge base {a mathematical formula}Σ∪{x:C⊓¬D}, where x is a fresh individual. To test this, a tableau is initialised with the concept and role assertions in Σ and a node x labelled with {a mathematical formula}C⊓¬D, and is then expanded by repeatedly applying the completion rules. To classify an ontology, tableau algorithms in general iterate all necessary pairs of concepts, and try to construct a model of the ontology that violates the subsumption relation between them [41]. Instance checking {a mathematical formula}Σ⊨a:C is reduced in a similar way to consistency checking of {a mathematical formula}Σ∪{a:¬C}[69].
+      </paragraph>
+      <paragraph>
+       Due to the model construction mechanism of the tableau algorithms, GCIs become major sources of non-determinism for such algorithms and contribute to their intractability. For each GCI {a mathematical formula}C⊑D in the ontology, a tableau algorithm will add a meta-constraint {a mathematical formula}¬C⊔D into the label of each node of the tableau. The algorithm then first extends with one of the disjuncts ¬C (or D). If it finds a clash, it backtracks and extends with the other disjunct D (or ¬C). If there are n GCIs, in worst case this will lead to {a mathematical formula}2n expansions for each node of the tableau. This exponentially enlarges the search space.
+      </paragraph>
+      <paragraph>
+       Some techniques have been developed to deal with GCIs. Absorption[80] can reduce a GCI, e.g. {a mathematical formula}A⊓C⊑D with A being an atomic concept, into a non-GCI, e.g., {a mathematical formula}A⊑¬C⊔D; however, it is only applicable for GCIs whose LHS is a conjunction with an atomic concept as a conjunct or whose RHS is a complement of atomic concept or a disjunction with a complement of atomic concept as a disjunct. (Extended) Role Absorption[79, Sec. 4.1] can absorb GCIs of form {a mathematical formula}∃r.C⊑D ({a mathematical formula}C⊑∀r.D) into domain (range) constrains. For example axiom (3) can be decomposed into {a mathematical formula}∃partof.Plant⊑VegeFood and thus be absorbed as {a mathematical formula}∃partof.⊤⊑VegeFood⊔¬∃partof.Plant, which means that the domain of partof is {a mathematical formula}VegeFood⊔¬∃partof.Plant. However, the applicability of this approach is still limited and it still contains a disjunction in the domain. Binary Absorption[36] tries to rewrite GCIs into form {a mathematical formula}A1⊓A2⊑C where {a mathematical formula}A1 and {a mathematical formula}A2 are named concepts. To sum up, the above absorptions can only be applied to a limited patterns of GCIs; e.g., axiom (4) can not be dealt with by any absorption optimisation.
+      </paragraph>
+      <paragraph>
+       Motik et al. [59] proposed a novel reasoning calculus for very expressive DLs by combining hypertableau and hyperresolution technologies, which is later implemented in the HermiT reasoner. This calculus generalises all known absorption variants by transforming DL axioms into DL-clauses while maintaining their Hornness as much as possible. This approach can eliminate all unnecessarily non-determinism introduced by Horn-GCIs hence it is deterministic and very efficient for Horn-TBox. However, similar as other absorption technologies, it can not deal with non-Horn GCIs, such as the axiom (4) in our example. Even for a pure Horn-TBoxes, its reasoning efficiency is restricted by the complexity of the corresponding Horn-DLs, which in most cases is the same as their non-Horn siblings [46].
+      </paragraph>
+      <paragraph>
+       Sirin et al. [74] claimed that the appearance of nominals will introduce new challenges to tableau algorithm and presented a suite of techniques for optimising tableau algorithm in the presence of nominals. These techniques extensively exploited the use of “OneOf” (i.e. {a mathematical formula}{a,b,c,…}) and “hasValue” (i.e. {a mathematical formula}∃R.{a}) constructs in ontologies to absorb GCIs with nominals. For example, axiom {a mathematical formula}{a1,a2,…,an}⊑C can be equivalently replaced by a set of axioms {a mathematical formula}a1:C, {a mathematical formula}a2:C, …, {a mathematical formula}an:C. However, such an optimisation (together with many other optimisations presented by Sirin [74]) can not cover GCIs of many other patterns. For example, from {a mathematical formula}A≡∀r.{a,b}, {a mathematical formula}B≡∀r.{a} it will be intuitive to infer that {a mathematical formula}B⊑A but the two GCIs can not be absorbed by any existing absorption technique. Even with optimisations, state-of-the-art fully-fledged tableau and hypertableau reasoners still cannot provide “responsive” reasoning services for some (smallish) ontologies with complex GCIs and nominals, such as the WINE Ontology.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Reasoning in tractable DLs
+      </section-title>
+      <paragraph>
+       Tractable DLs such as the DL-Lite family [11] and {a mathematical formula}EL family [1] enjoy a much lower complexity than expressive DLs. In this paper, we are mainly interested in {a mathematical formula}EL++ reasoning. Baader et al. [1] presented a set of TBox completion rules (Table 2){sup:3} to compute, given a normalised {a mathematical formula}EL++ TBox {a mathematical formula}T, the TBox classification of {a mathematical formula}T. The reasoning is initialised with {a mathematical formula}T∪⋃A∈CNT{A⊑A,A⊑⊤}, and performed by repeatedly applying R1–R8 until no more rule can be applied. Such a procedure is tractable [1] and sound. Kazakov et al. [43] later showed that this procedure is also complete for nominal-safe {a mathematical formula}EL++ ontologies. In this case, R6 will only be applicable to inference of subsumptions between singleton nominals, i.e. if {a mathematical formula}{x}⊑{a} and {a mathematical formula}{y}⊑{a}, then {a mathematical formula}{x}⊑{y}. Note that this implies {a mathematical formula}{x}⊑{y} if {a mathematical formula}{y}⊑{x}. In this paper we will extend on this procedure. When an ABox {a mathematical formula}A presents, an additional concept {a mathematical formula}CA:=⨅C(a)∈A∃u.({a}⊓C)⊓⨅r(a,b)∈A∃u.({a}⊓∃r.{b}), where u is a fresh role name, is introduced. To this end, instance checking {a mathematical formula}a:C can be reduced to subsumption checking {a mathematical formula}{a}⊓CA⊑C, which can be realised by R1–R8. In general, such a reasoning approach that computes the closure of a set of completion rules on a set of axioms is called a consequence-based (or consequence-driven, completion-based, saturation-based by different authors) procedure.
+      </paragraph>
+      <paragraph>
+       Kazakov et al. [42] showed that a consequence-based reasoning procedure of {a mathematical formula}EL, a slightly weaker DL, can be parallelised with carefully designed completion rules. Such a parallel algorithm has been implemented in the ELK reasoner and demonstrated high performance on some of the most difficult {a mathematical formula}EL ontologies. Krötzsch also showed that a consequence-based procedure can be developed for classification of other tractable DLs such as OWL 2 RL [45].
+      </paragraph>
+      <paragraph>
+       More importantly, by revising and extending the {a mathematical formula}EL completion rules, Kazakov showed that a very efficient consequence-based TBox classification procedure can be developed for intractable DL Horn-{a mathematical formula}SHIQ[41]. This procedure is further extended to support non-Horn DL {a mathematical formula}ALCH[73].
+      </paragraph>
+      <paragraph>
+       Nevertheless, the consequence-based algorithms are restricted to limited expressive power when applied on the {a mathematical formula}EL family or OWL 2 RL, and lose their tractability when applied on more expressive but intractable DLs such as Horn-{a mathematical formula}SHIQ and {a mathematical formula}ALCH.
+      </paragraph>
+      <paragraph>
+       Dedicated {a mathematical formula}EL algorithms can also be combined with intractable algorithms to provide better performance on ontologies beyond {a mathematical formula}EL. A recent work by Romero et. al [67] tries to combine the strength of a fully-fledged {a mathematical formula}SROIQ reasoner and a very efficient {a mathematical formula}EL reasoner in TBox classification by applying modularisation techniques. Particularly, the atomic concepts of an ontology is partitioned into two sets, one's classification can be fully realised by only some {a mathematical formula}EL axioms in the ontology, the other's can only be fully realised by involving some non-{a mathematical formula}EL axioms in the ontology. Then a {a mathematical formula}SROIQ reasoner such as HermiT is used to classify the non-{a mathematical formula}EL signature, and an {a mathematical formula}EL reasoner such as ELK is used to classify the {a mathematical formula}EL signature. This approach systematically analyses and exploits the phenomena that not all axioms in an ontology are equally complex. The result is sound, complete and shown rather efficient in evaluation.
+      </paragraph>
+      <paragraph>
+       Nevertheless, it has a limitation that it does not always guarantee reduction of complexity. Hence its applicability is restricted to ontologies with large percentages of {a mathematical formula}EL axioms. When only a small number of the concepts can be fully classified by {a mathematical formula}EL axioms alone, its effect on improving reasoning efficiency might not be significant. This can be seen when the ontology axioms are quite complex or are tightly coupled. The FMA ontology in our evaluation is an example.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Reasoning with approximation-based approaches
+      </section-title>
+      <paragraph>
+       The trade-off between representation expressiveness and computational efficiency has been acknowledged in research of Artificial Intelligence and Knowledge Representation for decades [50]. In order to address this trade-off, various early works on approximate reasoning of propositional and first-order logic have been developed. Horvitz investigated the use of incomplete inference mechanism by limiting the inference steps in resource-bounded environment [34], [35]. Levesque [47], [48], [49], Frisch [22], [23] and Patel-Schneider [64] explored approximation deduction with non-traditional semantics, such as multi-valued logics, or weaker notion of inferences that disallow complex inference steps. Another important research track follows the spirit of anytime reasoners [5], in which, it provides partial answers if it is stopped anytime during the computation, but the completeness improves with the time used in computing the answer. Suck kind of anytime reasoning is also suggested by Kautz [38] in the algorithm of knowledge compiling. Dalal [14], [15] firstly designed a approximation family for clausal logic, in which each reasoner can be decided in polynomial time. An anytime family of reasoners is a sequence {a mathematical formula}⊢0,⊢1,… of reasoners such that each reasoner is tractable, each {a mathematical formula}⊢i+1 is at least as complete as {a mathematical formula}⊢i, and for each theory Π, there is a {a mathematical formula}⊢k complete for reasoning with Π. This polynomial approach was further extended by Finger [19] to full classical logic.
+      </paragraph>
+      <paragraph>
+       Kautz and Selman [38], [39], [71], [72] proposed the knowledge compilation approach. This approach essentially consists of two stages: In the off-line stage, it compiles a knowledge base KB in a more expressive logic into two knowledge bases {a mathematical formula}KBU and {a mathematical formula}KBL in less expressive logics, such that {a mathematical formula}KBL⊨KB⊨KBU. {a mathematical formula}KBL is called the lower bound and {a mathematical formula}KBU is called the upper bound. In the on-line stage, if {a mathematical formula}KBL and {a mathematical formula}KBU yield the same results for a reasoning problem, then KB should also yield the same result. Since {a mathematical formula}KBL and {a mathematical formula}KBU are easier to reason with than KB, such results can be computed more efficiently than on KB. If the upper bound and lower bound yield different results, one can always use a fully-fledged reasoner to perform reasoning in KB. For more details of knowledge compilation, we refer our readers to the survey written by Cadoli and Donini [7].
+      </paragraph>
+      <paragraph>
+       Cadoli and Schaerf furthered the idea of approximate deduction and proposed the approximate entailment approach [8], [70], [9]. They model a reasoning problem as deciding whether a string x belongs to a set D or not. Their method then generates approximate sets {a mathematical formula}D0,…,Dm and {a mathematical formula}D0,…,Dn such that {a mathematical formula}D0⊆⋯⊆Dm=D=Dn⊆⋯⊆D0, where n and m are polynomially bounded by x. Then, x belongs to D if it belongs to any {a mathematical formula}Di, and x does not belong to D if it does not belong to some {a mathematical formula}Dj. {a mathematical formula}Di ({a mathematical formula}Dj) is generated in a way that deciding membership in {a mathematical formula}D0 ({a mathematical formula}D0) is a polynomial problem and gets exponentially harder as i grows but is no harder than deciding membership in D. Hence, the original reasoning problem can be computed more efficiently by proving (disproving) membership in {a mathematical formula}D0,…,Dm ({a mathematical formula}D0,…,Dn). Their approach was later extended by Massacci [53], Finger and Wassermann [21], [20].
+      </paragraph>
+      <paragraph>
+       The ideas of many propositional and first-order approximate reasoning approaches have been adopted by DL researchers. Many approximation approaches [61], [16], [51], [6] combine the idea of knowledge compilation and language weakening by first compiling an ontology in a more complex DL {a mathematical formula}L1 into one (or two) ontology(ies) in a less complex formalism {a mathematical formula}L2, and then using a {a mathematical formula}L2 reasoner to reason with the compiled ontology(ies), which can be regarded as approximation(s) of the original ontology. For example, the semantic approximation technology [61] (also referred to as global semantic approximations [13]) uses a fully-fledged DL reasoner to compute all entailments of an ontology that can be expressed with a tractable DL, such as DL-Lite. The computed entailments are compiled into a DL-Lite ontology and can be queried against with a DL-Lite reasoner in run-time. When both the compilation and {a mathematical formula}L2 reasoning are tractable, the entire approximate reasoning procedure is tractable.
+      </paragraph>
+      <paragraph>
+       Other approximation approaches [25], [76], [83], [28], [81] apply the idea of approximate deduction by simplifying the treatment of complex axioms, expressions or constructors in ontology reasoning. Such a simplification can be realised by replacing a complex concept expression with a simpler one in the ontology [25] or query [76] or both [83], or by replacing a harder-to-deal-with constructor, such as disjunction that leads to non-determinism, with a easier-to-deal-with constructor, such as conjunction [28], [81]. Either, the deduction procedures are simplified as they do not need to operate w.r.t. the full semantics of the original problem. For example, Groot et al. [25] adopted the approximate entailment idea to speed up concept unsatisfiability checking via approximation. Given a concept C, it constructs a sequence of {a mathematical formula}Ci⊤ such that {a mathematical formula}C⊑⋯⊑C1⊤⊑C0⊤, and a sequence of {a mathematical formula}Ci⊥ such that {a mathematical formula}C0⊥⊑C1⊥⊑…C by replacing all existential restrictions ({a mathematical formula}∃R.D) after i universal quantifiers (∀) inside C with ⊤ and ⊥ respectively. Then C is unsatisfiable (satisfiable) if some {a mathematical formula}Ci⊤ ({a mathematical formula}Ci⊥) is unsatisfiable (satisfiable). Since {a mathematical formula}Ci⊤ ({a mathematical formula}Ci⊥) is usually simpler than C, its (un)satisfiability checking should also be easier.
+      </paragraph>
+      <paragraph>
+       The hotspot-based approximation [24] applies a similar idea as the modularisation-based reasoning. It identifies a small subset of the ontology, called a hotspot, whose removal will significantly reduce the classification time of the rest of the ontology, and then removes this hotspot to boost reasoning.
+      </paragraph>
+      <paragraph>
+       Despite the successful application of approximation technologies, most DL approximation approaches still have one of the following limitations:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        No substantial reduction of complexity: For example, Groot et al.'s approximate deduction approach [25] simplifies the unsatisfiability of a concept expression by replacing the existential restrictions in the test concept with ⊤ and ⊥. However, this approach only approximates the tested concept, but not the ontology. Also, When the test concept subsumption contains no existential restriction, such as {a mathematical formula}Koala⊑Herbivore, this approach doesn't work. Thus the unsatisfiability checking still requires fully-fledged reasoning of the original ontology. In other words, it does not necessarily reduce the complexity of reasoning.
+       </list-item>
+       <list-item label="2.">
+        Limited expressive power: For example, Hitzler et al.'s resolution-based approximation [28] uses the KAON2 algorithm to perform reasoning. Similarly, the SCREECH[28], [81] approach utilises the KAON2 algorithm to translate a {a mathematical formula}SHIQ TBox into disjunctive datalog, and execute the rules together with a {a mathematical formula}SHIQ ABox and a query by a datalog engine. By rewriting or eliminating all the disjunctive rules the data complexity can be reduced from coNP-complete of OWL DL to polynomial time. Both of them rely on the specific {a mathematical formula}SHIQ reasoner KAON2 [55]. The SHER system [16] summaries the ABox to provide more efficient instance retrieval for the DL {a mathematical formula}SHIN, a sub-language of {a mathematical formula}SHIQ. The DLog system [51] applies Prolog to support efficient {a mathematical formula}SHIQ reasoning. Because {a mathematical formula}SHIQ does not support role chain or nominal, the applicability of these approaches are affected.
+       </list-item>
+       <list-item label="3.">
+        Non-trivial off-line compilation: Semantic Approximation [61], [6] directly applies knowledge compilation. Particularly, Pan and Thomas' approach [61] approximates to {a mathematical formula}DL-LiteF and is later extended by Botoeva et al. to approximate to {a mathematical formula}DL-LiteA[6] by introducing fresh names to represent complex expressions. Both approaches can produce optimal approximations in terms of soundness and completeness of query results. However such a guarantee of quality is expensive. They both use a fully-fledged reasoner to materialise the ontology and store in a database to speed up on-line query answering. Although they supports arbitrary language, they need time-consuming preprocessing. The hotspot-based approximation [24] discovers hotspots by comparing the effect of removing different candidates, which itself requires a lot of time, and in many cases making the whole procedure taking even longer time than classifying the ontology directly. Therefore they are not efficient for on-line applications.
+       </list-item>
+      </list>
+      <paragraph>
+       To sum up, fully-fledged reasoning algorithms (Sec. 3.1) have difficulties to handle complex structured axioms; tractable DL algorithms and modularisation-based approach (Sec. 3.2) can not support more expressive languages without losing tractability; traditional approximation approaches (Sec. 3.3) do not always reduce reasoning complexity and can be limited on expressive power and/or efficiency. In what follows, we present our approach which is motivated and inspired by these works, and show that it works well with real-world and benchmark ontologies.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Approach overview
+     </section-title>
+     <paragraph>
+      Before presenting the formal technical details, in this section we outline our approach with examples and a brief overview. The basic idea behind our approach is that expressive constructors used in ontologies do not always contribute to reasoning in a necessarily complex manner, hence expressions involving them can be approximated with simpler ones and be exploited with simpler inference procedures.
+     </paragraph>
+     <paragraph>
+      Considering the {a mathematical formula}T1 in Example 1, it is easy to derive the following axiom:{a mathematical formula} Given this, it is sufficient to derive the following axiom, in which we use underline to highlight the expressions appearing in the above axiom:{a mathematical formula} Note that this can be achieved by a tractable inference rule:{a mathematical formula} or the combination of two tractable inference rules:{a mathematical formula} Although there are other more complex axioms in {a mathematical formula}T1, such as axiom (4), they are not necessarily required in this step of inference. From this point, we can further combine with axiom (1) and (4) to perform the following inference, in which we also use underline to highlight the sub- and super-expressions from the previous axiom:{a mathematical formula} As we can see, although both {a mathematical formula}∀eat.∃partof.Eucalypt and {a mathematical formula}∀eat.VegeFood contains expressive constructors, these constructors do not contribute to the inference of {a mathematical formula}Koala⊑Herbivore. Hence the two complex expressions can be simply treated as named concepts in this step of inference.
+     </paragraph>
+     <paragraph>
+      This procedure can be applied on ABox reasoning as well. Most straight-forwardly, one can always internalise ABox into TBox and use the same TBox reasoning procedure to materialise ABox. Or, when the ontology contains no nominal, such as the {a mathematical formula}T1 in the Koala example, one can always classify TBox first and then use a more specialised and optimised version of TBox reasoning procedure on ABox. When the ontology contains nominal only in a restricted manner, such as under the nominal-safety condition, further optimisation can be made.
+     </paragraph>
+     <paragraph>
+      To summarise the above findings, we can perform tractable reasoning with complex ontologies by:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       treating complex expressions as names because the expressive constructors used within do not necessarily contribute to reasoning;
+      </list-item>
+      <list-item label="2.">
+       applying tractable inference procedure of a simpler DL since the above procedure have simplified the syntax of ontology. For example, in the above inference we are primarily using {a mathematical formula}EL++ inference;
+      </list-item>
+      <list-item label="3.">
+       extending inference procedure with additional tractable rules to partially capture the semantics beyond the simpler DL. The {a mathematical formula}C⊑D→¬D⊑¬C above is an example;
+      </list-item>
+      <list-item label="4.">
+       extending formalisms to support the above additional rules. For example {a mathematical formula}EL++ does not support complement. To apply the {a mathematical formula}C⊑D→¬D⊑¬C, we need to maintain the complementary relations between concepts;
+      </list-item>
+      <list-item label="5.">
+       optimising inference rules to support ABox with TBox containing nominals.
+      </list-item>
+     </list>
+     <paragraph>
+      The above 5 points constitute the major components of our approach. Particularly, points 1 and 4 are formalised with the transformations we will present later, which will be used to support the {a mathematical formula}EL++ inference rules and additional tractable rules. Points 2, 3 and 5 are formalised with the approximate deduction. For ontologies satisfying certain syntactic or semantic criteria, more optimised ABox rules can be applied. In the next two sections, we will present the formalisations and their characteristics.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Syntactic approximation for TBox reasoning
+     </section-title>
+     <paragraph>
+      In this section, we present syntactic approximation as an approach to tractable approximate reasoning for TBox. We introduce the definition of approximation and completion rules. In later sections, they will be extended to support ABox reasoning.
+     </paragraph>
+     <paragraph label="Definition 2">
+      In approximation, we only consider concepts and roles (together they are called predicates) corresponding to the particular ontology in question. We use the notion term to refer to these “interesting” concept and role expressions: TermFor an ontology {a mathematical formula}O, a concept or a role expression t is a term of {a mathematical formula}O if
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       t appears in any axiom of {a mathematical formula}O, or
+      </list-item>
+      <list-item label="2.">
+       the complement of t is a term, or
+      </list-item>
+      <list-item label="3.">
+       the inverse of t is a term when t is a role expression, or
+      </list-item>
+      <list-item label="4.">
+       the syntactic sub-expression of t is a term when t is a concept expression.
+      </list-item>
+     </list>
+     <paragraph>
+      In situation 2, the complement of a role can be interpreted as shown in Table 1. In order to represent all these terms that will be used in {a mathematical formula}EL++ reasoning, we first assign names to them.
+     </paragraph>
+     <paragraph label="Definition 3">
+      Name assignmentGiven an ontology {a mathematical formula}O, a name assignment{a mathematical formula}fa(·) is a function such that for each concept expression C (each role expression R) constructed from {a mathematical formula}ΣO, we have: {a mathematical formula}fa(C)=C if {a mathematical formula}C∈CNO, {a mathematical formula}fa(R)=R if {a mathematical formula}R∈RNO, otherwise {a mathematical formula}fa(C) or {a mathematical formula}fa(R) is a fresh name.
+     </paragraph>
+     <paragraph>
+      For each ontology there can be infinite number of concepts and roles to assign names to. The following Table 3 illustrates name assignments of some complex terms in Example 1. They will be used in this section to illustrate the idea of syntactic approximation. These fresh names are chosen arbitrarily. It is easy to see that {a mathematical formula}∀eat.∃partof.Eucalypt is a complement of {a mathematical formula}∃eat.∀partof.¬Eucalypt, hence we assign {a mathematical formula}C1 and {a mathematical formula}cC1 to them, respectively, just to make the complementary relation clearer. Similar applies to other complementary terms.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       TBox transformation
+      </section-title>
+      <paragraph>
+       Now we transform an {a mathematical formula}SROIQ TBox to an {a mathematical formula}EL++ TBox plus a complement table (CT), a cardinality table (QT) and a inverse table (IT). Elements of CT are pairs {a mathematical formula}(A,B) where A and B are names assigned to a term and its complement, respectively. Elements of QT are 4-tuples {a mathematical formula}(A,B,r,n) where A and B are term names, r a role name and n an integer number. Elements of IT are pairs {a mathematical formula}(r,s) where r and s are names assigned to a role expression and its inverse. The basic idea is to represent (non-{a mathematical formula}EL++) terms with their name assignments.
+      </paragraph>
+      <paragraph label="Definition 4">
+       {a mathematical formula}ELCQI++ TBox transformationGiven an ontology {a mathematical formula}O and a name assignment {a mathematical formula}fa(·), its {a mathematical formula}ELCQI++TBox approximation{a mathematical formula}TAfa,ELCQI++(O) is a four-tuple {a mathematical formula}(T,CT,QT,IT) constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T,CT,QT and IT are all initialised to ∅.
+       </list-item>
+       <list-item label="2.">
+        for each {a mathematical formula}C⊑D ({a mathematical formula}C≡D) in {a mathematical formula}O, {a mathematical formula}T=T∪{fa(C)⊑fa(D)} ({a mathematical formula}T=T∪{fa(C)≡fa(D)}).
+       </list-item>
+       <list-item label="3.">
+        for each RI axiom {a mathematical formula}β∈O, {a mathematical formula}T=T∪{β′}, where {a mathematical formula}β′ is obtained by replacing each role R in β with {a mathematical formula}fa(R).
+       </list-item>
+       <list-item label="4.">
+        for each axiom {a mathematical formula}Dis(R,S)∈O, {a mathematical formula}T=T∪{fa(R)⊑fa(¬S)}
+       </list-item>
+       <list-item label="5.">
+        for each term C in {a mathematical formula}O, {a mathematical formula}CT=CT∪{(fa(C),fa(~C))}, and if C is of the form:
+       </list-item>
+       <list-item label="6.">
+        for each {a mathematical formula}r∈RNO,IT=IT∪{(fa(r),fa(Inv(r))),(fa(Inv(r)),fa(r)),(fa(¬r),fa(¬(Inv(r)))),(fa(¬(Inv(r))),fa(¬r))}.
+       </list-item>
+      </list>
+      <paragraph>
+       The {a mathematical formula}ELCQI++ in definition indicates that the transformation extends {a mathematical formula}EL++ with additional information maintaining complements ({a mathematical formula}C), cardinality restrictions ({a mathematical formula}Q) and inverse roles ({a mathematical formula}I), and is an extension of the {a mathematical formula}ELC++, {a mathematical formula}ELCQ++ transformations presented in our earlier work [65]. In the rest of the paper, we will omit the {a mathematical formula}ELCQI++ to simplify the notation since in this paper all the work are based on only the {a mathematical formula}ELCQI++ transformation. Hence we will simply call TBox transformation and denote it with {a mathematical formula}TAfa(O).
+      </paragraph>
+      <paragraph>
+       As we mentioned in the overview section, the transformation and its components will be used in reasoning. For convenience, we also define a complement function{a mathematical formula}fc(·) as: for each concept (including nominal) or role name A such that {a mathematical formula}(A,B)∈CT, {a mathematical formula}fc(A)=B and {a mathematical formula}fc(B)=A. And we define a inverse name function{a mathematical formula}fi(·) as: for each role name r with {a mathematical formula}(r,s)∈IT, we have {a mathematical formula}fi(r)=s and {a mathematical formula}fi(s)=r. Since both CT and IT contain only symmetric pairs, {a mathematical formula}fc(·) and {a mathematical formula}fi(·) are well-defined.
+      </paragraph>
+      <paragraph>
+       This Definition 4 deserves some explanations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Step-2 rewrites all the CIs;
+       </list-item>
+       <list-item label="•">
+        Step-3 rewrites all the RIs;
+       </list-item>
+       <list-item label="•">
+        Step-4 defines the relations between disjoint roles;
+       </list-item>
+       <list-item label="•">
+        Step-5 approximates terms and constructs the complement table CT and the cardinality table QT. Non-{a mathematical formula}EL++ terms such as disjunctions will be approximated via their complements. For example, {a mathematical formula}≤nR.D will be approximated via the approximation of its complement {a mathematical formula}≥(n+1)R.D. Furthermore, this step also constructs the subsumption between a cardinality restriction and an existential restriction. Particularly, if {a mathematical formula}i≥2, then {a mathematical formula}≥ir.A⊑∃r.A;
+       </list-item>
+       <list-item label="•">
+        Step-6 maintains the inverse relations.
+       </list-item>
+      </list>
+      <paragraph>
+       Based on Table 3, we can transform the TBox {a mathematical formula}T1 into {a mathematical formula}(TKoala,CTKoala,QTKoala,ITKoala) as follows:
+      </paragraph>
+      <paragraph label="Example 2">
+       {a mathematical formula}TKoala contains axioms generated by Step 2 and 8. Particularly, axiom (1){a mathematical formula}Koala⊑∀eat.(∃partof.Eucalypt) is transformed into:{a mathematical formula}{a mathematical formula}{a mathematical formula} Axiom (2) {a mathematical formula}Eucalypt⊑Plant is preserved. Axiom (3){a mathematical formula}Plant⊑∃partof.Plant⊑VegeFood is transformed into:{a mathematical formula}{a mathematical formula}{a mathematical formula} Axiom (4){a mathematical formula}∀eat.VegeFood⊑Herbivore is transformed into:{a mathematical formula}{a mathematical formula}{a mathematical formula}CTKoala contains pairs such as {a mathematical formula}(C1,cC1), {a mathematical formula}(C2,cC2), {a mathematical formula}(C3,cC3), {a mathematical formula}(C4,cC4), {a mathematical formula}(C5,cC5), {a mathematical formula}(Plant,cPlant), {a mathematical formula}(VegeFood,cVegeFood), etc.
+      </paragraph>
+      <paragraph>
+       It is easy to show that the TBox transformation can be performed in linear time since it monotonically generates linear-sized results:
+      </paragraph>
+      <paragraph label="Proposition 1">
+       TBox linear transformationInDefinition 4, transforming from{a mathematical formula}Oto{a mathematical formula}TAfa(O)can be done in linear time.
+      </paragraph>
+      <paragraph>
+       This proposition can be easily proved by investigating the origins of different axioms in the approximation (cf. Appendix A).
+      </paragraph>
+      <paragraph>
+       The transformation results can also be regarded as a syntactic variants of the original ontology that preserves TBox classification:
+      </paragraph>
+      <paragraph label="Theorem 2">
+       TBox reasoning preservationFor any ontology{a mathematical formula}O=(TO,AO)and its TBox transformation{a mathematical formula}(T,CT,QT,IT), let{a mathematical formula}T′be a TBox constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T′is initialised as{a mathematical formula}T;
+       </list-item>
+       <list-item label="2.">
+        for any concept pair{a mathematical formula}(A,B)∈CT,{a mathematical formula}T′=T′∪{A≡¬B};
+       </list-item>
+       <list-item label="3.">
+        for any role pair{a mathematical formula}(r,s)∈CT,{a mathematical formula}T′=T′∪{Dis(r,s)};
+       </list-item>
+       <list-item label="4.">
+        for any{a mathematical formula}(A,B,r,n)∈QT,{a mathematical formula}T′=T′∪{A≡≥nr.B};
+       </list-item>
+       <list-item label="5.">
+        for any{a mathematical formula}(r,s)∈IT,{a mathematical formula}T′=T′∪{r≡Inv(s)};
+       </list-item>
+      </list>
+      <paragraph>
+       This theorem can be proved by showing that {a mathematical formula}TO∪T′∪Tfa is a {a mathematical formula}ΣTO-conservative extension [52] of both {a mathematical formula}TO and {a mathematical formula}T′, where {a mathematical formula}Tfa is the set of definition {a mathematical formula}fa(P)≡P for all term P of {a mathematical formula}O except complement of roles. Note that a TBox {a mathematical formula}T1 is an Σ-conservative extension of another TBox {a mathematical formula}T2 if {a mathematical formula}T2⊆T1, {a mathematical formula}Sigma⊆SigmaT2 and for each GCI α with {a mathematical formula}Σα⊆Σ, we have {a mathematical formula}T1⊨α implies {a mathematical formula}T2⊨α. Recall that {a mathematical formula}ΣT is the signature of {a mathematical formula}T and {a mathematical formula}Σα is the signature of {a mathematical formula}{α}. Hence, {a mathematical formula}TO⊨α iff {a mathematical formula}TO∪T′∪Tfa⊨α iff {a mathematical formula}T′⊨α. The full proof is deferred to the appendix.
+      </paragraph>
+      <paragraph>
+       An important implication of this theorem is that the TBox transformation itself can be used to fully preserve the semantics of the original TBox, if the information in CT, QT, IT can be fully exploited, while the {a mathematical formula}T alone is a naive soundness preserving {a mathematical formula}EL++ approximation of the original ontology.
+      </paragraph>
+      <paragraph label="Proposition 3">
+       TBox approximationFor an ontology{a mathematical formula}O, let{a mathematical formula}TAfa(O)be{a mathematical formula}(T,CT,QT,IT)as defined inDefinition 4, then{a mathematical formula}Tis an{a mathematical formula}EL++TBox such that for any axiom α with{a mathematical formula}Σα⊆ΣO, we have{a mathematical formula}T⊨αonly if{a mathematical formula}O⊨α.
+      </paragraph>
+      <paragraph>
+       As we can see, there is a gap between {a mathematical formula}T and {a mathematical formula}T′. Such a gap can be bridged as much as possible by utilising CT, QT and IT. To achieve this while preserving the tractability of reasoning is a major motivation behind the rules we will introduce later in this section. In Sec. 8.2 we will show that there are certain gaps that can hardly be bridged in a tractable manner, notably resolution, cardinality counting and interactions between existential restrictions and inverse roles.
+      </paragraph>
+      <paragraph>
+       In order to apply the {a mathematical formula}EL++ reasoning rules, we further perform normalisation of {a mathematical formula}T by rewriting axioms of form {a mathematical formula}C⊑D1⊓⋯⊓Dn into {a mathematical formula}C⊑D1,…,C⊑Dn. Since we only consider RIAs with no more than 3 roles, we do not need to further normalise RIAs. The normalisation can be done in linear time (this is the same case as in {a mathematical formula}EL+[4]). Apparently such rewriting does not change the semantics or vocabulary of {a mathematical formula}T and the CT, QT and IT will not be changed. In the following, we assume {a mathematical formula}T to be always normalised.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       TBox approximate deduction rules
+      </section-title>
+      <paragraph>
+       Now we can do TBox approximate reasoning by utilising the complementary relations in CT, the cardinality information in QT and the inverse relations in IT. In addition to the original {a mathematical formula}EL++ rules R1–R8 in Table 2, we devise some additional rules. Particularly, the CT information can be exploited by rules in Table 4. Note that the {a mathematical formula}fc(·) is the complement function we have introduced after Definition 4.
+      </paragraph>
+      <paragraph>
+       R9 realises axiom {a mathematical formula}A⊓~A⊑⊥. R10 realises {a mathematical formula}A⊑B→~A⊑~B. R11 builds up the relations between conjuncts of a conjunction, e.g.{a mathematical formula}A⊓B⊑⊥ implies {a mathematical formula}A⊑~B. R12 deals with disjoint roles, i.e. disjoint roles should not share any instance. Thus if instances of A and B are related to the same individual with disjoint relations, then A and B should also be disjoint with each other.
+      </paragraph>
+      <paragraph>
+       Now we can infer {a mathematical formula}Koala⊑Herbivore from Example 2. Particularly, from (2) we can infer that {a mathematical formula}cC2⊑cC4. With R10 we can further infer that {a mathematical formula}C4⊑C2. Hence combining with (9) we can infer the following:{a mathematical formula} Similarly, applying R10 on (8) we can infer the following:{a mathematical formula} Combining (13) and (14) we can derive {a mathematical formula}cVegeFood⊑C2, which further leads to {a mathematical formula}cC5⊑cC1. Applying R10 again we will have {a mathematical formula}C1⊑C5 and finally {a mathematical formula}Koala⊑Herbivore can be derived.
+      </paragraph>
+      <paragraph label="Example 3">
+       Now we consider a new example, in which cardinality restrictions are used: A TBox {a mathematical formula}T3 contains the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula} Apparently, from this TBox we have {a mathematical formula}Human⊑⊥. This is an intuitive result due to the inconsistent understanding of Leg, i.e. in (15)Leg actually means limb while in (16)Leg means lower limb.
+      </paragraph>
+      <paragraph>
+       Assuming {a mathematical formula}TAfa(T3)=(TPrimate,CTPrimate,QTPrimate,ITPrimate). Apparently, after transformation we should be able to obtain the following axioms from {a mathematical formula}TPrimate:{a mathematical formula}{a mathematical formula} where {a mathematical formula}C6=fa(≥4hasLeg.Leg) and {a mathematical formula}C7=fa(≤2hasLeg.Leg). We also have {a mathematical formula}(C7,cC7)∈CTPrimate and {a mathematical formula}(C6,Leg,hasLeg,4), {a mathematical formula}(cC7,Leg,hasLeg,3)∈QTPrimate, where {a mathematical formula}cC7=fa(≥3hasLeg.Leg).
+      </paragraph>
+      <paragraph>
+       To derive the unsatisfiability of Human we exploit the QT information with the rule in Table 5.
+      </paragraph>
+      <paragraph>
+       R13 realises inference {a mathematical formula}A⊑B,R⊑S,i≥j→≥iR.A⊑≥jS.B. Note that this R13 is equivalent to the R12 in our previous work [65]. While the R13–R16 in our previous work are omitted in this paper because they can be realised by the combination of the above R13, step 5.(c).iii of Definition 4 and the rules R1, R4 and/or R8.
+      </paragraph>
+      <paragraph>
+       With this additional rule {a mathematical formula}Human⊑⊥ can be derived. First of all, applying R13 we should have {a mathematical formula}C6⊑cC7. This leads to the result that {a mathematical formula}Primate⊑cC7 and hence {a mathematical formula}Human⊑cC7. Together with (19) we apply rule R9 to derive that {a mathematical formula}Human⊑⊥.
+      </paragraph>
+      <paragraph>
+       Due to the involvement of disjoint roles, inverse roles and nominals in axioms, the RIAs in the above rules becomes non-trivial. Therefore we propose the following additional rules (Table 6) to compute the RIAs and exploit the IT. For each role r, we initialise {a mathematical formula}r⊑r. Note that the {a mathematical formula}fi(·) is the inverse function we have introduced after Definition 4.
+      </paragraph>
+      <paragraph>
+       R14 realises {a mathematical formula}R⊑S,S⊑T→R⊑T. R15 realises {a mathematical formula}R⊑S→R−⊑S−. R16 realises {a mathematical formula}R⊑S→¬S⊑¬R. R17 realises {a mathematical formula}R1∘R2⊑R3→R2−∘R1−⊑R3−. Due to the role chain normalisation, this can be generalised to {a mathematical formula}R1∘⋯∘Rn⊑S→Rn−∘⋯∘R1−⊑S−.
+      </paragraph>
+      <paragraph>
+       R18 needs more explanations: It realises a possible impact of nominal relations on role inclusions. According to DL semantics, {a mathematical formula}R⊑Siff{a mathematical formula}RI⊆SI where {a mathematical formula}RI and {a mathematical formula}SI are the interpretations of R and S, respectively. Given a role R, the domain and range restrictions make up a super set of {a mathematical formula}RI. Whereas ABox axioms regarding R make up a subset of {a mathematical formula}RI. Therefore, suppose {a mathematical formula}∃R.⊤⊑A and {a mathematical formula}∃R−.⊤⊑B, if {a mathematical formula}a∈A,b∈B,(a,b):S can be entailed, then {a mathematical formula}R⊑S can be entailed. R18 detects such a pattern by matching the transformed axioms.
+      </paragraph>
+      <paragraph label="Example 4">
+       Due to the above reason, nominal relations become non-trivial. R19 realises the inverse relations between nominals. Although we are not considering ABox reasoning in this stage and only considering nominal-safe ontologies, such relation can still be important for TBox materialisation. An example is given in the following: Given a TBox {a mathematical formula}T4 containing the following axioms:{a mathematical formula} using R19 to infer {a mathematical formula}{Scotland}⊑∃fi(include).{Britain} is significant for the derivation of {a mathematical formula}ScottishIsland⊑BritishPlace.
+      </paragraph>
+      <paragraph>
+       R20 infers individual inequality due to combination of disjoint relations and inverse relations, i.e. {a mathematical formula}a:∃r.A and {a mathematical formula}A⊑∃fi(fc(r)).{b} imply {a mathematical formula}a≐̸b because if {a mathematical formula}a≐b then there is some {a mathematical formula}c:A s.t. {a mathematical formula}(a,c):r and {a mathematical formula}(a,c):fc(r), which is inconsistent.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       TBox approximate reasoning tractability &amp; soundness
+      </section-title>
+      <paragraph label="Definition 5">
+       We call the rules R1–R20 (Table 2, Table 4, Table 5, Table 6) the R rule set. With the R rules, TBox approximate reasoning can be performed by repeatedly applying the R rules until no new results can be derived. The results of applying these rules is defined as follows. As we can see, the reasoning is initialised with the approximated {a mathematical formula}EL++ TBox and certain tautology axioms. TBox approximate reasoning closureFor an ontology {a mathematical formula}O that is transformed into {a mathematical formula}TAfa(O)=(T,CT,QT,IT) w.r.t. name assignment {a mathematical formula}fa(·), its corresponding TBox Approximate Reasoning Closure, denoted by {a mathematical formula}ST(TAfa(O)), is the set of axioms computed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        initialising {a mathematical formula}ST(TAfa(O)) as {a mathematical formula}T∪{fa(P)⊑fa(P)|P is a term in O}∪{fa(C)⊑⊤|C is a concept term in O};
+       </list-item>
+       <list-item label="2.">
+        repeatedly applying the R rules on {a mathematical formula}ST(TAfa(O)), CT, QT, IT and adding inferred new axioms into {a mathematical formula}ST(TAfa(O)) until no new results can be inferred.
+       </list-item>
+      </list>
+      <paragraph label="Theorem 4">
+       Computation of TBox approximate reasoning closure is tractable: TBox approximate reasoning complexityFor an ontology{a mathematical formula}O, its TBox Approximate Reasoning Closure{a mathematical formula}ST(TAfa(O))can be computed in polynomial time w.r.t. the size of{a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       This theorem can be proved by showing that the size of {a mathematical formula}ST(TAfa(O)) is polynomial w.r.t. {a mathematical formula}|CNT|+|RNT|, and it can be computed incrementally.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       This theorem shows that the overall complexity of perform TBox syntactic approximate reasoning is PTime-Complete. The reasoning is also soundness guaranteed: TBox approximation reasoning soundnessFor an ontology{a mathematical formula}O, let α be an axiom such that{a mathematical formula}Σα⊆ΣO, then{a mathematical formula}α∈ST(TAfa(O))only if{a mathematical formula}O⊨α.
+      </paragraph>
+      <paragraph>
+       In Sec. 7 we will also see that, our approach have practically high recall on many benchmark and/or real-world ontologies.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Nominal-safety under approximate reasoning
+      </section-title>
+      <paragraph label="Definition 6">
+       As we explained in Sec. 2.2, in this paper we will focus on ontologies whose approximate reasoning closure is nominal-safe. With the notion of TBox approximate reasoning closure, we can now define the notion of nominal-safety under approximate reasoning. Semantic nominal-safety under approximate reasoningAn ontology {a mathematical formula}O is semantic nominal-safe under approximate reasoning if {a mathematical formula}ST(TAfa(O)) is a nominal-safe {a mathematical formula}EL++ ontology (axioms of form {a mathematical formula}{a}≡{b} and {a mathematical formula}{a}⊓{b}⊑⊥ are allowed).
+      </paragraph>
+      <paragraph label="Definition 7">
+       Basically, an ontology is safe if its closure is always safe. As we mentioned earlier, the nominal-safety condition is useful to improve the effectiveness of the {a mathematical formula}EL++ completion rules in approximate reasoning. However it requires computation of the closure hence cannot be checked before reasoning. Given the R rules, we define a syntactic notion of nominal-safety: Syntactic nominal-safety under approximate reasoningAn ontology {a mathematical formula}O is syntactic nominal-safe under approximate reasoning if {a mathematical formula}TAfa(O)=(T,CT,QT,IT) satisfies the following syntactic properties, where A is a concept such that A, {a mathematical formula}fc(A)∈CNT, {a mathematical formula}B(i) is an arbitrary concept, a and b are individuals and r is a named role:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T is a nominal-safe {a mathematical formula}EL++ TBox;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}fc({a})⊑A∉T;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}fc({a})⊑{b}∉T;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}B1⊓⋯⊓fc({a})⊓⋯⊓Bn⊑⊥∉T;
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}fc({a})⊑∃r.A∉T;
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}fc({a})⊑∃r.{b}∉T;
+       </list-item>
+       <list-item label="7.">
+        {a mathematical formula}fc({a})⊑∃r.fc({b})∉T.
+       </list-item>
+      </list>
+      <paragraph>
+       This syntactic condition can be checked directly on the transformation results. It can be shown that when an ontology is syntactic nominal-safe, it is also semantic nominal-safe:
+      </paragraph>
+      <paragraph label="Theorem 6">
+       Nominal-safety under approximate reasoningIf an ontology{a mathematical formula}Osatisfies the syntactic nominal-safety condition defined inDefinition 7, then it is semantic nominal-safe under approximate reasoning, as defined inDefinition 6.
+      </paragraph>
+      <paragraph>
+       In the rest of the paper, we consider only ontologies that satisfy the syntactic conditions specified in Definition 7 and simply call them nominal-safe ontologies. As we will show in the next section, this condition is important to guarantee the quality of some ABox reasoning optimisations.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       TBox syntactic approximation summary
+      </section-title>
+      <paragraph>
+       So far, we have presented the definition of TBox Transformation (Definition 4) and the corresponding approximate deduction rules – the R rule set. The results of such approximate reasoning is soundness-guaranteed (Theorem 5) and tractable (Theorem 4). In the Evaluation section (Sec. 7) we will conduct experiments on TBox classification and compare with other off-the-shelf reasoners to show that our approach is indeed efficient and yields high recalls.
+      </paragraph>
+      <paragraph>
+       Comparing to our previous work [65], the transformation and completion rules are extended and revised to support more expressive power such as inverse roles, role disjointness and nominals. We also formally characterised the relation between the original ontology and transformed TBox (Theorem 2). Furthermore, we presented the semantic (Definition 6) and syntactic (Definition 7) conditions of nominal-safety under approximate reasoning. We assume that such conditions are satisfied in the rest of the paper. In the next section, we will extend the transformation and approximate deduction to supporting ABox reasoning.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Syntactic approximation for ABox reasoning
+     </section-title>
+     <paragraph>
+      TBox transformation does not include information about ABox axioms in the original ontology thus can not be used for ABox materialisation. Also, when the TBox contains nominals, ABox materialisation and TBox classification can not always be completely separated. The {a mathematical formula}T4 (p. 107) is an example in which axiom {a mathematical formula}{Britain}⊑∃include.{Scotland} can be regarded as an ABox axiom.
+     </paragraph>
+     <paragraph>
+      In this section, we further extend syntactic approximation as an approach to tractable approximate reasoning for ABox. Combined with the TBox approximate reasoning introduced in Sec. 5 we can provide syntactic approximation for the entire ontology. Similar as the last section, we first present the transformation (Sec. 6.1), then the approximate deduction approaches with different optimisations, including internalisation (Sec. 6.2), separate ABox reasoning for nominal-free ontology (Sec. 6.3) and combined TBox and ABox reasoning with nominals (Sec. 6.4).
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       ABox transformation
+      </section-title>
+      <paragraph>
+       We perform ABox transformation in a similar manner as the TBox transformation in Definition 4, with an addition of an {a mathematical formula}EL++ ABox:
+      </paragraph>
+      <paragraph label="Definition 8">
+       {a mathematical formula}ELCQI++ transformationGiven an Ontology {a mathematical formula}O and a name assignment {a mathematical formula}fa(·), let {a mathematical formula}TAfa=(T′,CT′,QT′,IT′) be its TBox transformation, its {a mathematical formula}ELCQI++transformation{a mathematical formula}Afa(O) is a five-tuple {a mathematical formula}(T,A,CT,QT,IT) constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T=T′, {a mathematical formula}CT=CT′, {a mathematical formula}QT=QT′, {a mathematical formula}IT=IT′.
+       </list-item>
+       <list-item label="2.">
+        for each {a mathematical formula}a:C∈O, {a mathematical formula}A=A∪{a:fa(C)}.
+       </list-item>
+       <list-item label="3.">
+        for each {a mathematical formula}(a,b):R∈O, {a mathematical formula}A=A∪{(a,b):fa(R)}.
+       </list-item>
+       <list-item label="4.">
+        for each {a mathematical formula}(a,b):¬R∈O, {a mathematical formula}A=A∪{(a,b):fa(¬R)}.
+       </list-item>
+       <list-item label="5.">
+        for each axiom {a mathematical formula}a≐̸b∈O, {a mathematical formula}A=A∪{a≐̸b}.
+       </list-item>
+       <list-item label="6.">
+        for each axiom {a mathematical formula}a≐b∈O, {a mathematical formula}A=A∪{a≐b}.
+       </list-item>
+      </list>
+      <paragraph>
+       Similar as the TBox transformation, the {a mathematical formula}ELCQI++ transformation will also be used to support the approximate deduction procedures. Step-1 reuses the TBox transformation. Note that in the TBox transformation we have already considered all the terms, even if they appear only in ABox. Thus we do not need to change any of the CT, QT or IT; Steps-2 to 6 rewrite all the ABox axioms; Also similar as before, we omit the {a mathematical formula}ELCQI++ in the notation in the rest of the paper, simply calling it the transformation and denoting it with {a mathematical formula}Afa(O).
+      </paragraph>
+      <paragraph>
+       The transformation can be illustrated with the following example:
+      </paragraph>
+      <paragraph label="Example 5">
+       Ontology {a mathematical formula}O5 contains TBox {a mathematical formula}T5 and ABox {a mathematical formula}A5. {a mathematical formula}T5 contains axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}A5 contains axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}A name assignment {a mathematical formula}fa(·) assigns the following names (among others):{a mathematical formula}Then by Definition 8, we have {a mathematical formula}Afa(O5)=(Tcity,Acity,CTcity,QTcity,ITcity), where {a mathematical formula}Tcity contains axiom (21) and the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}Acity contains axioms (22), (23) and{a mathematical formula}{a mathematical formula}CTcity contains corresponding name pairs for complementary terms, such as {a mathematical formula}(C3,cC3), {a mathematical formula}(ScottishArea,cSArea). Note that pairs of nominals and their complements such as {a mathematical formula}({aberdeen},cAberdeen) and {a mathematical formula}({grampian},cGrampian) are not included in {a mathematical formula}CTcity because {a mathematical formula}{aberdeen} and {a mathematical formula}{grampian} are not terms of {a mathematical formula}O5.{a mathematical formula}QTcity is empty.{a mathematical formula}ITcity contains corresponding name pairs for locatedIn and its inverse.
+      </paragraph>
+      <paragraph>
+       The transformation can also be performed in linear time:
+      </paragraph>
+      <paragraph label="Proposition 7">
+       Nominal-safety under approximate reasoningInDefinition 8, the transformation from{a mathematical formula}Oto{a mathematical formula}Afa(O)can be done in linear time.
+      </paragraph>
+      <paragraph>
+       Similar as the TBox transformation, this transformation results can also be regarded as a syntactic variants of the original ontology that preserves reasoning of the original signature:
+      </paragraph>
+      <paragraph label="Theorem 8">
+       Ontology reasoning preservationFor any ontology{a mathematical formula}Oand its transformation{a mathematical formula}(T,A,CT,QT,IT), let{a mathematical formula}O′=(T′,A′)be an ontology constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T′is constructed in the same way as inTheorem 2;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}A′=A;
+       </list-item>
+      </list>
+      <paragraph>
+       Similar as Theorem 2, this theorem can be proved by showing that {a mathematical formula}O∪O′∪Tfa conservatively extends both {a mathematical formula}O and {a mathematical formula}O′ on {a mathematical formula}ΣO, where {a mathematical formula}Tfa is the set of definition {a mathematical formula}fa(P)≡P for all term P of {a mathematical formula}O except complement of roles. The full proof is deferred to the appendix. This theorem also indicates that the transformation itself fully preserves the semantics of the original ontology, while the {a mathematical formula}(T,A) is a naive soundness preserving {a mathematical formula}EL++ approximation of the original ontology:
+      </paragraph>
+      <paragraph label="Proposition 9">
+       ApproximationFor an Ontology{a mathematical formula}O, let its transformation results{a mathematical formula}Afa(O)be{a mathematical formula}(T,A,CT,QT,IT)as specified inDefinition 8, then ({a mathematical formula}T,A) is an{a mathematical formula}EL++ontology such that for any axiom α with{a mathematical formula}Σα⊆ΣO, we have{a mathematical formula}(T,A)⊨αonly if{a mathematical formula}O⊨α.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       ABox approximate deduction via internalisation
+      </section-title>
+      <paragraph>
+       ABox reasoning can be done as in classical {a mathematical formula}EL++ (cf. Sec. 3) by encoding the ABox as a concept. However this approach introduces a rather complex concept and will introduce additional concept names in the normalisation phase, making reasoning more difficult. Also, for each instance checking, a separate subsumption checking needs to be performed, making it less efficient for materialisation. Alternatively, we can do the following internalisation:
+      </paragraph>
+      <paragraph label="Definition 9">
+       ABox internalisationGiven an ontology {a mathematical formula}O and its transformation {a mathematical formula}Afa(O)=(T′,A′,CT′,QT′,IT′), its ABox internalisation, denoted by {a mathematical formula}AI(Afa(O)), is a four-tuple {a mathematical formula}(T,CT,QT,IT) constructed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}T is initialised as {a mathematical formula}T′, CT is initialised as {a mathematical formula}CT′.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}QT=QT′, {a mathematical formula}IT=IT′.
+       </list-item>
+       <list-item label="3.">
+        for each {a mathematical formula}a∈INO, {a mathematical formula}CT={({a},fa(¬{a})),(fa(¬{a}),{a})}.
+       </list-item>
+       <list-item label="4.">
+        for each {a mathematical formula}a∈INO, {a mathematical formula}T=T∪{{a}⊑{a},fc({a})⊑fc({a}),{a}⊑⊤,fc({a})⊑⊤}.
+       </list-item>
+       <list-item label="5.">
+        for each {a mathematical formula}a:A∈A′, {a mathematical formula}T=T∪{{a}⊑A}.
+       </list-item>
+       <list-item label="6.">
+        for each {a mathematical formula}(a,b):r∈A′, {a mathematical formula}T=T∪{{a}⊑∃r.{b}}.
+       </list-item>
+       <list-item label="7.">
+        for each {a mathematical formula}a≐b∈A′, {a mathematical formula}T=T∪{{a}≡{b}}.
+       </list-item>
+       <list-item label="8.">
+        for each {a mathematical formula}a≐̸b∈A′, {a mathematical formula}T=T∪{{a}⊑fc({b})}.
+       </list-item>
+      </list>
+      <paragraph>
+       In this definition, all ABox axioms are internalised into the approximated {a mathematical formula}EL++ TBox. And singleton of each individual and its complement are now treated as terms of the ontology.
+      </paragraph>
+      <paragraph label="Example 6">
+       Applying the above definition on the transformation described in Example 5 yields the following results: {a mathematical formula}AI(Afa(O5))=(Tcity′,CTcity′,QTcity,ITcity), where {a mathematical formula}Tcity′ includes {a mathematical formula}Tcity and the following axioms (among the others):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}CTcity′=CTcity∪{({aberdeen},cAberdeen), {a mathematical formula}(cAberdeen,{aberdeen}), {a mathematical formula}({grampian},cGrampian), {a mathematical formula}(cGrampian,{grampian})}.
+      </paragraph>
+      <paragraph label="Definition 10">
+       It's easy to show that such internalisation can be constructed in linear time and the result {a mathematical formula}(T,CT,QT,IT) is still linear w.r.t. the size of {a mathematical formula}O. Also, {a mathematical formula}T is normalised if {a mathematical formula}T′ normalised. So {a mathematical formula}AI(Afa(O)) is syntactically similar to a TBox transformation. To this end, we reduce ABox reasoning to TBox reasoning on {a mathematical formula}T and the same R rule set can be used. The result of applying these rules is defined as follows: Approximate reasoning closure via internalisationFor an ontology {a mathematical formula}O, let {a mathematical formula}AI(Afa(O)) be its ABox internalisation, its corresponding Approximate Reasoning Closure via Internalisation, denoted by {a mathematical formula}SIfa(O), is computed as {a mathematical formula}SIfa(O)=ST(AI(Afa(O))).
+      </paragraph>
+      <paragraph>
+       Note that although many nominals internalised from individuals are not terms of the original {a mathematical formula}O, hence will not be used to initialise some tautology axioms as in step-1 of Definition 5, such axioms will still be included in the initialisation of the closure due to step-4 of Definition 9.
+      </paragraph>
+      <paragraph label="Theorem 10">
+       The computation of the closure is tractable and soundness-preserving: ComplexityGiven an ontology{a mathematical formula}O, its approximate reasoning closure via internalisation{a mathematical formula}SIfa(O)can be computed in polynomial time w.r.t. the size of{a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       This theorem can be proved by showing that the internalisation described in Definition 9 is tractable in terms of both time and size.
+      </paragraph>
+      <paragraph label="Theorem 11">
+       Approximate reasoning via internalisation soundnessFor an ontology{a mathematical formula}O, let α be an axiom with{a mathematical formula}Σα⊆ΣO, then{a mathematical formula}α∈SIfa(O)only if{a mathematical formula}O⊨α.
+      </paragraph>
+      <paragraph>
+       Note that the closure is a nominal-safe {a mathematical formula}EL++ ontology if the original ontology {a mathematical formula}O is nominal-safe (Theorem 6), because the internalised ABox axioms will not affect the nominal-safety of the TBox. Also note that the closure contains not only concept subsumptions, but also concept assertions in form of {a mathematical formula}{a}⊑A and role assertions in form of {a mathematical formula}{a}⊑∃r.{b}. For example, we can infer that {a mathematical formula}{aberdeen}⊑BritishCity∈SIfa(O5). First applying R3 on axiom (29) and (33) derives {a mathematical formula}{grampian}⊑∃locatedIn.ScottishArea. Applying R8 on this axiom and axiom (21) and (32) derives{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Applying R10 on axiom (28) we have {a mathematical formula}ScottishArea⊑C3. Combining with axiom (27) and the above axiom (34) we can apply R4 to derive {a mathematical formula}{aberdeen}⊑C2. Further combining with axiom (26) and (31) we can apply R2 to derive {a mathematical formula}{aberdeen}⊑C1. Eventually, combining with axiom (25) we can apply R1 to derive {a mathematical formula}{aberdeen}⊑BritishCity.
+      </paragraph>
+      <paragraph>
+       The ABox internalisation internalises the entire ABox into the TBox and reduces ABox reasoning to TBox reasoning. However, a critical limitation is that, treating individuals as nominals will significantly increase the number of terms in the transformation result (Step-3 and 4 of Definition 9) and produce many intermediate results that are neither desired by nor contributing to ontology materialisation. For example, when {a mathematical formula}{a}⊑A is entailed, another entailment {a mathematical formula}fc(A)⊑fc({a}) will be derived by rule R10. As we will show later, such entailments do not contribute more than what {a mathematical formula}{a}⊑A can offer. With a large amount of individuals, such non-desired intermediate results require a lot of computation and should be minimised.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       ABox approximate deduction for nominal-free ontologies
+      </section-title>
+      <paragraph>
+       To optimise the performance we devise more fine-grained reasoning mechanisms for combined TBox and ABox. In this sub-section, we start from a simpler case, in which the transformed TBox contains no nominals, such as the {a mathematical formula}O5 in Example 5. In this case, the ABox reasoning has no effect on the TBox reasoning, which can thus be precomputed. After that, ABox materialisation can be performed directly using ABox axioms and TBox materialisation closure without internalisation. To do that, the nominal-free ABox completion rules in Table 7 are required. In rule AR1d, AR1e and AR10, we have {a mathematical formula}♯∈{≐,≐̸}.
+      </paragraph>
+      <paragraph>
+       We call the rules AR1–19 (in Table 7) the AR rules. Each rule ARi(a,b,c,d,e) is analogous to the corresponding TBox completion rule Ri.
+      </paragraph>
+      <paragraph label="Definition 11">
+       In reasoning, the execution of rules are performed as in the following definition: Nominal-free approximate reasoning closureFor an ontology {a mathematical formula}O that is transformed into {a mathematical formula}Afa(O)=(T,A,CT,QT,IT) w.r.t. name assignment {a mathematical formula}fa(·), its corresponding nominal-free approximate reasoning closure, denoted by {a mathematical formula}SNFfa(O), is the set of axioms computed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        initialising {a mathematical formula}SNFfa(O) as {a mathematical formula}ST((T,CT,QT,IT))∪A∪{a≐a,a:⊤|a∈INO};
+       </list-item>
+       <list-item label="2.">
+        repeatedly applying the AR rules on {a mathematical formula}SNFfa(O), CT, QT, IT and adding inferred new axioms into {a mathematical formula}SNFfa(O) until no new results can be inferred;
+       </list-item>
+      </list>
+      <paragraph>
+       Step-1 in the above definition shows that TBox materialisation using the R rules should be performed before computing the ABox materialisation. Note that duo to the absence of nominals, rules R6, 12, 18, 19 and 20 won't be executed.
+      </paragraph>
+      <paragraph>
+       The nominal-free closure also contains desired materialisation results. For example, with the same ontology {a mathematical formula}O5 and its transformation {a mathematical formula}Afa(O5) as in Example 5, we can derive {a mathematical formula}aberdeen:BritishCity∈SNFfa(O5). First applying AR3a on axiom (29) and (30) derives {a mathematical formula}grampian:∃locatedIn.ScottishArea. Applying AR8b on this axiom and axiom (21) and (23) derives{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Applying R10 on axiom (28) we have {a mathematical formula}ScottishArea⊑C3. Combining with axiom (27) and the above axiom (35) we can apply AR4a to derive {a mathematical formula}aberdeen:C2. Further combining with axiom (22) and (26) we can apply AR2 to derive {a mathematical formula}aberdeen:C1. Eventually, combining with axiom (25) we can apply AR1a to derive {a mathematical formula}aberdeen:BritishCity. The procedure and result are similar to deriving {a mathematical formula}{aberdeen}⊑BritishCity∈SIfa(O5).
+      </paragraph>
+      <paragraph>
+       Compared with the internalisation approach, nominals are not used. Consequently, entailments involving Complements of Nominals (CoNs for short, e.g. {a mathematical formula}fc({a})) are not computed at all. This reduces the size of the closure and improves efficiency.
+      </paragraph>
+      <paragraph>
+       The analogousness of completion rules indicates that similar algorithms can be applied and tractability and soundness are preserved. We show that this approach should be as complete as the internalisation approach when the ontology contains no nominal:
+      </paragraph>
+      <paragraph label="Theorem 12">
+       For a nominal-free ontology{a mathematical formula}O, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, then the following holds:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}A⊑B∈SIfa(O) iff {a mathematical formula}A⊑B∈SNFfa(O);
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}{a}⊑A∈SIfa(O) iff {a mathematical formula}a:A∈SNFfa(O);
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}{a}⊑∃r.{b}∈SIfa(O) iff {a mathematical formula}(a,b):r∈SNFfa(O).
+       </list-item>
+      </list>
+      <paragraph>
+       The ← direction is obvious because the AR rules are special cases of the corresponding R rules where certain atomic concepts are restricted to nominals.
+      </paragraph>
+      <paragraph label="Lemma 13">
+       The → directions of the theorem can be shown by proving the following stronger lemma: For a nominal-free ontology{a mathematical formula}O, let{a mathematical formula}Afa(O)=(T,A,CT,QT,IT)and{a mathematical formula}AI(Afa(O))be{a mathematical formula}(T′,CT,QT,IT). If we use SI to denote{a mathematical formula}SIfa(O), ST to denote{a mathematical formula}ST((T,CT,QT,IT)), and SNF to denote{a mathematical formula}SNFfa(O), then the following invariants hold in each step of computation of SI, where{a mathematical formula}a,b∈INOare two individuals,{a mathematical formula}A,B∈CNT∪{⊤,⊥}are two concepts, and{a mathematical formula}r∈RNOis a role:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Apparently the → directions of the theorem hold if the above lemma holds. This lemma can further be proved by induction on application of rules. A detailed proof is deferred to Appendix A.
+      </paragraph>
+      <paragraph>
+       Theorem 12 shows that when the original ontology is nominal-free, the combination of the R rules and AR rules without using CoNs in transformation and reasoning can achieve as complete results as the internalisation approach. When the materialisation contains a lot of class assertion axioms of individuals, this significantly reduces the memory and computation cost of reasoning.
+      </paragraph>
+      <paragraph>
+       The Lemma 13 also shows that internalising an individual a into nominal {a mathematical formula}{a} alone will not introduce unnecessary inference results, because for each inferred axiom involving {a mathematical formula}{a} in internalisation there is a corresponding inferred axiom involving a without internalisation. The major source of unnecessary results is the introduction of CoNs. Particularly, invariant 37 and invariant 41 suggest that certain axioms involving CoNs are redundant as they can be replaced by other inferred axioms. In the next section, we will exploit this observation to develop more fine-grained algorithms for reasoning with nominals.
+      </paragraph>
+      <section label="6.3.1">
+       <section-title>
+        Optimising for ontologies with transitive-only role chains
+       </section-title>
+       <paragraph>
+        We can further restrict the syntax of ontology to simplify the intermediate results of materialisation. Particularly, if the original ontology contains only one type of role chain – the transitive role, then we can avoid computing axioms of form {a mathematical formula}a:∃r.A at all in ABox materialisation. More precisely, in the approximate deduction of such an ontology, rules AR3a, 3b, 4a, 5a, 7a, 8a, 8b can be replaced by the alternative rules illustrated in Table 8.
+       </paragraph>
+       <paragraph>
+        We use the TR rules to denote the set containing AR1(a,b,c,d,e), AR2, AR3c, AR4b, TR4(a,b), AR5b, AR7b, AR8c, AR9(a,b), AR10, AR11, AR12, AR19. In other words, the TR rule set is the AR rule set after replacing rules involving axioms of form {a mathematical formula}a:∃r.A with the two alternative rules in Table 8.
+       </paragraph>
+       <paragraph label="Definition 12">
+        In reasoning, the execution of rules are performed as in the following definition: Transitive-only nominal-free approximate reasoning closureFor a nominal-free ontology {a mathematical formula}O that is transformed into {a mathematical formula}Afa(O)=(T,A,CT,QT,IT) w.r.t. name assignment {a mathematical formula}fa(·), its corresponding transitive-only nominal-free approximate reasoning closure, denoted by {a mathematical formula}STNFfa(O), is the set of axioms computed as follows:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         initialising {a mathematical formula}STNFfa(O) as {a mathematical formula}ST((T,CT,QT,IT))∪A∪{a≐a,a:⊤|a∈INO};
+        </list-item>
+        <list-item label="2.">
+         repeatedly applying the TR rules on {a mathematical formula}STNFfa(O), CT, QT, IT and adding inferred new axioms into {a mathematical formula}STNFfa(O) until no new results can be inferred.
+        </list-item>
+       </list>
+       <paragraph>
+        As can be seen from the definition, the transitive-only closure (Definition 12) is similar as the normal nominal-free closure (Definition 11) except that the former is closed under the TR rules while the later is closed under the AR rules.
+       </paragraph>
+       <paragraph>
+        The TR rules can also compute desired materialisation results. For example, the {a mathematical formula}O5 in Example 5 is an ontology with transitive-only role chains. We can derive {a mathematical formula}aberdeen:BritishCity∈STNFfa(O5) with the TR rules. First we can derive {a mathematical formula}ScottishArea⊑C3 in the same way as before. Then we apply TR4b on this axiom and axioms (21), (23), (27), (29) and (30), which yield {a mathematical formula}aberdeen:C2. After that we can derive {a mathematical formula}aberdeen:BritishCity in the same way as before.
+       </paragraph>
+       <paragraph>
+        Compared with the AR rules, entailments involving {a mathematical formula}a:∃r.A are not computed at all. This reduces the size of the closure and improves efficiency.
+       </paragraph>
+       <paragraph>
+        The tractability and soundness of computing the transitive-only nominal-free closure is quite obvious. We show that this approach should be as complete as the normal nominal-free approximate reasoning approach when the ontology contains no other role chains except the role transitivity:
+       </paragraph>
+       <paragraph label="Theorem 14">
+        For a nominal-free ontology{a mathematical formula}O, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, if for any{a mathematical formula}r1∘…rn⊑s∈O, we have{a mathematical formula}n=2and{a mathematical formula}r1=⋯=rn=s, then the following holds:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}A⊑B∈SNFfa(O) iff {a mathematical formula}A⊑B∈STNFfa(O);
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}{a}⊑A∈SNFfa(O) iff {a mathematical formula}a:A∈STNFfa(O);
+        </list-item>
+        <list-item label="3.">
+         {a mathematical formula}{a}⊑∃r.{b}∈SNFfa(O) iff {a mathematical formula}(a,b):r∈STNFfa(O).
+        </list-item>
+       </list>
+       <paragraph>
+        This theorem can be proved in a similar manner as Theorem 12, by showing some invariants with induction on rule applications.
+       </paragraph>
+       <paragraph>
+        The above theorem shows that when a nominal-free ontology contains no role chains except the role transitivity axioms, its ABox approximate reasoning can be significantly simplified due to the fact that intermediate results of form {a mathematical formula}a:∃r.A no longer need to be computed and maintained. Such an optimisation will not affect the quality of reasoning and is rather practical as many of the existing real-world ontologies do not employ complex role chains.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Combined TBox and ABox approximate deduction with nominals
+      </section-title>
+      <paragraph label="Example 7">
+       ABox completion presented in Sec. 6.3 has a restriction that the approximated TBox should contain no nominals. Following our objective of combining TBox and ABox approximate reasoning, in this section we further investigate how to handle ABox when TBox contains nominals. Considering the following ontology: Ontology {a mathematical formula}O7 contains TBox {a mathematical formula}T7 and ABox {a mathematical formula}A7. {a mathematical formula}T7 contains axiom (21) and two other axioms as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}A7 contains axiom (22) and another axiom as follows:{a mathematical formula}A name assignment {a mathematical formula}fa(·) assigns the following names (among others):{a mathematical formula}Then by Definition 8, we have {a mathematical formula}Afa(O7)=(Tcity⁎,Acity⁎,CTcity⁎,QTcity⁎,ITcity⁎), where {a mathematical formula}Tcity⁎ contains axiom (21) and the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}Acity⁎ contains axiom (22) and the following axiom:{a mathematical formula}{a mathematical formula}CTcity⁎ contains name pairs for complementary terms, such as {a mathematical formula}({england},cEngland), {a mathematical formula}({scotland},cScotland), {a mathematical formula}({wales},cWales), {a mathematical formula}(C7,cC7). Note that {a mathematical formula}({aberdeen},cAberdeen) is not included in {a mathematical formula}CTcity because {a mathematical formula}{aberdeen} is not a term of {a mathematical formula}O7.{a mathematical formula}QTcity⁎ is empty.{a mathematical formula}ITcity⁎ contains corresponding name pairs for locatedIn and its inverse.
+      </paragraph>
+      <paragraph>
+       This ontology contains nominals in the TBox. Using the internalisation approach will introduce a new nominal {a mathematical formula}{aberdeen} and new CoN cAberdeen, which will trigger further unnecessary inference, e.g. deriving {a mathematical formula}fc(BritishCity)⊑cAberdeen.
+      </paragraph>
+      <paragraph>
+       One naive strategy for materialising such ontologies is to partition the transformed ABox {a mathematical formula}A into two disjoint-union subsets {a mathematical formula}AI and {a mathematical formula}AE such that {a mathematical formula}AI contains all axioms that are syntactically reachable from the nominals{sup:4} while {a mathematical formula}AE contains the others. When doing reasoning, {a mathematical formula}AI can be internalised into the TBox to compute a closure under the R rules. Then the closure can be combined with the {a mathematical formula}AE to further compute a closure under the AR rules. Because {a mathematical formula}AI contains all nominal reachable ABox axioms and {a mathematical formula}AE contains none, it is easy to realise that such a closure should contain the same ontology materialisation results as the internalisation approach presented in Sec. 6.2. But the individuals in {a mathematical formula}AE do not need to be treated as nominals and the reasoning can be simplified for these individuals as the approach presented in Sec. 6.3.
+      </paragraph>
+      <paragraph>
+       This partitioning-internalisation approach is similar to the spirit of the modularisation-based classification recently presented by Armas Romero et al. [67] and provides a means to combine the approximate reasoning of TBox and ABox when nominals present. However, it still has its limitations when applied on real-world ontologies. Particularly, when the ontology is tightly coupled, the nominal-reachable partitioning becomes too coarser, resulting in {a mathematical formula}AI almost as large as {a mathematical formula}A. In this case, the reasoner has to internalise almost the entire ABox, making the partitioning almost useless. For example, the nominal reachable part of {a mathematical formula}Acity⁎ actually contains all its axioms.
+      </paragraph>
+      <paragraph>
+       Recall that Lemma 13 suggests that the introduction of CoNs, i.e. concepts of form {a mathematical formula}¬{a}, is the major source of redundancy in the internalisation approach. Hence they should be minimised. In what follows, we show that when the {a mathematical formula}EL++ ontology obtained through transformation satisfies the nominal-safe criteria described in Theorem 6, TBox and ABox reasoning can be combined and no non-native CoN is needed in reasoning, where a CoN {a mathematical formula}¬{a} is native w.r.t. an ontology {a mathematical formula}Oiff it is a term of {a mathematical formula}O. Note that in the ABox internalisation approach (Definition 9) many non-native CoNs can be created in addition to the native terms.
+      </paragraph>
+      <paragraph>
+       Such a combined reasoning approach involves the following major components:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        In order to classify TBox with nominals, the R rules will be needed. Especially, in R18, the condition {a mathematical formula}{ai}⊑∃s.{bj} ({a mathematical formula}1≤i≤n,1≤j≤m) should be changed to {a mathematical formula}(ai,bj):s(1≤i≤n,1≤j≤m) because now these relations are all converted into ABox.
+       </list-item>
+       <list-item label="2.">
+        Similarly, the AR rules will all be needed.
+       </list-item>
+       <list-item label="3.">
+        When introduced nominals are much fewer than individuals, such duplication of entailments will not significantly increase the size of reasoning closure. Nevertheless it's worth mentioning that in reasoner implementation it is easy to use one of the two forms to represent the other to reduce redundancy. Consequently, syntactic variations of corresponding rules need to be implemented as well.
+       </list-item>
+       <list-item label="4.">
+        The above R rules and AR rules do not deal with nominals in axioms. To handle them, additional rules illustrated in Table 10 are needed. Note that CR8a introduces non-native nominals when certain semantic criteria are met. Nevertheless, their introduction is not accompanied by introduction of any CoN, thus shall not introduce redundancy.
+       </list-item>
+      </list>
+      <paragraph>
+       We use the name CR rules to denote the set of rules containing all the R rules (Table 2, Table 4, Table 5, Table 6), AR rules (Table 7), IR1-8 rules (Table 9) and the rules in Table 10. In reasoning the executions of the R rules yield the following closure:
+      </paragraph>
+      <paragraph label="Definition 13">
+       Combined approximate reasoning closureFor a ontology {a mathematical formula}O that is transformed to {a mathematical formula}Afa(O)=(T,A,CT,QT,IT) w.r.t. a name assignment {a mathematical formula}fa(·), its corresponding Combined Approximate Reasoning Closure, denoted by {a mathematical formula}SCfa(O), is the set of axioms computed as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        initialising {a mathematical formula}SCfa(O) as {a mathematical formula}T∪A;
+       </list-item>
+       <list-item label="2.">
+        for each term P of {a mathematical formula}O, {a mathematical formula}SCfa(O)=SCfa(O)∪{fa(P)⊆fa(P)};
+       </list-item>
+       <list-item label="3.">
+        for each concept term C of {a mathematical formula}O, {a mathematical formula}SCfa(O)=SCfa(O)∪{fa(C)⊑⊤};
+       </list-item>
+       <list-item label="4.">
+        for each individual a in {a mathematical formula}O, {a mathematical formula}SCfa(O)=SCfa(O)∪{a≐a,a:⊤};
+       </list-item>
+       <list-item label="5.">
+        repeatedly applying the CR rules on {a mathematical formula}SCfa(O), CT, QT, IT and adding inferred new axioms into {a mathematical formula}SCfa(O) until no new results can be inferred.
+       </list-item>
+      </list>
+      <paragraph>
+       As can be seen from the above definition, the combined closure (Definition 13) is similar to the combination of the TBox closure (Definition 5) and nominal-free ABox closure (Definition 11) except that this time TBox and ABox reasonings are not separated, and more importantly, non-native CoNs are not introduced as in steps-3 and 4 of Definition 9.
+      </paragraph>
+      <paragraph>
+       The CR rules produce the desired results in the closure. For example, {a mathematical formula}aberdeen:BritishCity∈SCfa(O7) can be derived without introducing non-native CoN {a mathematical formula}¬{aberdeen}. First of all, we can re-derive axiom (47) by applying AR3a on axiom (54) and axiom (55). Then we can re-derive axiom (46) by applying R3 on axiom (52) and (53). Combining these two axioms with axiom (21), applying CR8b we can infer{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       On the other hand, applying R10 on axiom (51) yields that {a mathematical formula}{scotland}⊑C7. Combining this with axiom (50) and the above axiom (56), applying AR4b we can derive {a mathematical formula}aberdeen:C6. Together with axiom (22) we can further derive {a mathematical formula}aberdeen:C5. Together with axiom (48) we can eventually derive {a mathematical formula}aberdeen:BritishCity. As we can see, in this inference procedure, {a mathematical formula}{aberdeen} or {a mathematical formula}¬{aberdeen} does not need to be introduced.
+      </paragraph>
+      <paragraph>
+       Given the forms of the additional rules in the CR rule set, it is apparent that soundness and tractability of reasoning can be guaranteed. Furthermore, the results should be as complete as the internalisation approach:
+      </paragraph>
+      <paragraph label="Theorem 15">
+       For a nominal-safe ontology{a mathematical formula}Ounder approximate reasoning, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, then the following holds:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}A⊑B∈SIfa(O) iff {a mathematical formula}A⊑B∈SCfa(O);
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}{a}⊑A∈SIfa(O) iff {a mathematical formula}a:A∈SCfa(O);
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}{a}⊑∃r.{b}∈SIfa(O) iff {a mathematical formula}(a,b):r∈SCfa(O).
+       </list-item>
+      </list>
+      <paragraph>
+       The theorem is similar to Theorem 12 hence we follow a similar proof. The ← direction is obvious because the additional CR rules are special cases of the corresponding R rules where certain atomic concepts are restricted to nominals.
+      </paragraph>
+      <paragraph label="Lemma 16">
+       We can prove the → directions of the theorem by proving the following stronger lemma: For an ontology{a mathematical formula}O, let{a mathematical formula}Afa(O)=(T,A,CT,QT,IT)and{a mathematical formula}AI(Afa(O))be{a mathematical formula}(T′,CT,QT,IT). If we use SI to denote{a mathematical formula}SIfa(O), and SC to denote{a mathematical formula}SCfa(O), then the following invariants hold in each step of computation of SI, where{a mathematical formula}a,b∈INOare two individuals,{a mathematical formula}A,B∈CNTare two concepts, and{a mathematical formula}r∈RNOis a role:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Apparently the → directions of the theorem hold if the above lemma holds. Similar as in the proof of Theorem 12, this lemma can further be proved by induction on application of rules. A detailed proof is deferred to Appendix A.
+      </paragraph>
+      <paragraph label="Example 8">
+       It is worth mentioning that, although the syntactic nominal-safety condition as defined in Definition 7 ensures that the optimisation of ABox reasoning presented in this section can yield the same results as the internalisation approach, it does not guarantee the completeness of ABox reasoning in general, even when the TBox classification results are complete. Below is an example: Ontology {a mathematical formula}O8 contains the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}It is easy to see that {a mathematical formula}O8 satisfies the syntactic and semantic nominal safety conditions and {a mathematical formula}O8⊨a:A. However, using the syntactic approximation techniques presented so far, {a mathematical formula}a:A or {a mathematical formula}{a}⊑A will not be included in the computed closure.The incompleteness is because our approach does not count the unique r-objects of a. Later in Sec. 8.2, we will show that supporting such kind of counting with arbitrary cardinality values will in general lead to intractability.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       ABox syntactic approximation summary
+      </section-title>
+      <paragraph>
+       In this section, we presented the transformation (Definition 8) and different approximate deduction approaches, realised with different rule sets – internalisation with the R rules, or the AR rules, the TR rules or the CR rules.
+      </paragraph>
+      <paragraph>
+       This section is based on one of our previous work [66] but has been extensively revised. All definitions and reasoning rule sets have been extended to support a more expressive DL. Relation between the original ontology and the transformation result is characterised by Theorem 8. A new optimisation for transitive-only role chain is introduced (Sec. 6.3.1). A new optimisation for combined TBox and ABox reasoning with nominals is also developed (Sec. 6.4). The equivalence of results between different ABox approximate reasoning approaches is now formally characterised (Theorem 12, Theorem 14, Theorem 15). We explicitly show that the combined approach yields the same materialisation results as the internalisation approach without introducing unnecessary complements of nominals when the transformation results of the ontology is nominal-safe as specified in Theorem 6. This further indicates that they should all be tractable (Theorem 10) and soundness-guaranteed (Theorem 11).
+      </paragraph>
+      <paragraph>
+       Notably, in the combined approach (Sec. 6.4) the introduction of non-native CoNs is completely eliminated. And the introduction of non-native unpaired nominal is minimised to a single rule CR8a. As we indicated earlier, such introduction will not substantially increase the cost of computation or the size of the closure. This makes the combined approach the overall most preferred solution among the ones introduced in this section. When the ontology contains no nominal, this approach is as efficient as the nominal-free approach (Sec. 6.3) since it contains all the AR rules. When the ontology contains nominals, it is much more efficient than the internalisation approach (Sec. 6.2) due to the smaller number of terms. In the next section we will conduct experiments on ontology materialisation and compare with other off-the-shelf reasoners to show that this approach is indeed efficient and yields high recalls.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      To evaluate the effectiveness of our approach and compare to other reasoners, we implemented a syntactic approximation reasoner REL based on the {a mathematical formula}ELCQI++ transformation (cf. Definition 8) and the CR rules. Hence, its reasoning results will be the combined approximate reasoning closure (cf. Definition 13). We then conducted experiments on both TBox classification and ontology materialisation as defined in Definition 1 with the recent versions of mainstream fully-fledged OWL 2 DL reasoners. The reasoners we compared with were Pellet 2.3.0,{sup:5} HermiT 1.3.8{sup:6} and FaCT++ 1.6.2.{sup:7} All of these reasoners and our implementation were using the same OWLAPI 3.4.5 for parsing of ontologies and retrieval of results. All experiments were conducted in an environment of 64-bit Ubuntu 14.04 with 3.20 GHz CPU and 10 GB RAM allocated to the JVM.
+     </paragraph>
+     <paragraph>
+      In each of the following tests, each reasoner was given a 30-minute execution time on each ontology, to create the corresponding OWLReasoner, to load the OWLOntology object created by OWLAPI, to perform reasoning, to retrieve results and then count the numbers. The recall of REL was calculated against the results of complete reasoners.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       TBox classification evaluation
+      </section-title>
+      <paragraph>
+       In this evaluation, we mainly examined the ontologies from the HermiT benchmark [27] and the OWL 2 DL category ontologies from the OWL Reasoner Evaluation Workshop 2013 (ORE2013).{sup:8}
+      </paragraph>
+      <paragraph>
+       There are 393 ontologies in the HermiT Benchmark. Among these ontologies:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        17 ontologies do not conform to the OWL 2 standard (with malformed literals or violating the global restrictions).
+       </list-item>
+       <list-item label="2.">
+        5 ontologies had different results from the 3 fully-fledged reasoners (when the reasoner could finishing reasoning with the ontology).
+       </list-item>
+       <list-item label="3.">
+        One ontology was identified as inconsistent by all the 4 reasoners.
+       </list-item>
+      </list>
+      <paragraph>
+       We removed these ontologies from comparison as they did not have consistent and coherent classification results. This left us 370 ontologies that reasoning results from fully-fledged reasoners were coherent. Among these ontologies:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        HermiT ran out of time on 2 ontologies and was terminated due to error on another one. It successfully classified the remaining 367 ones.
+       </list-item>
+       <list-item label="2.">
+        FaCT++ ran out of time on 6 ontologies and was terminated due to error on another 22. It successfully classified the remaining 342 ones.
+       </list-item>
+       <list-item label="3.">
+        Pellet ran out of time on 10 ontologies and ran out of memory on another one. It successfully classified the remaining 359 ones.
+       </list-item>
+       <list-item label="4.">
+        REL successfully classified all of them within 5 minutes.
+       </list-item>
+      </list>
+      <paragraph>
+       The classification time of REL in comparison to that of HermiT, FaCT++ and Pellet on ontologies that could be classified by the corresponding fully-fledged reasoner is shown in Fig. 1, Fig. 2, Fig. 3, respectively. The ontologies in each figure are sorted w.r.t. their classification time by HermiT, FaCT++ and Pellet, respectively. Time unit is second in all figures.
+      </paragraph>
+      <paragraph>
+       As we can see from Fig. 1, Fig. 2, Fig. 3, REL was in general more efficient than the fully-fledged reasoners when classifying the HermiT benchmark. Particularly, REL was slower than HermiT on only 12 ontologies, slower than FaCT++ on only 19 ontologies, and slower than Pellet on only 11 ontologies. And none of these ontologies took REL more than 5 seconds. On the other hand, REL was faster than fully-fledged on all ontologies that took either of them more than 1.5 seconds.
+      </paragraph>
+      <paragraph>
+       In the 370 comparable ontologies, 367 ones could be classified by at least one of the fully-fledged reasoners. On each of these ontologies, we counted the total number of ancestor and equivalent concepts for each concept (excluding ⊤ and ⊥). We compared the numbers returned by REL and other reasoners to calculate the recall of REL. A breakdown of the recall distribution is shown in Table 11.
+      </paragraph>
+      <paragraph>
+       As we can see from the distribution. REL was empirically highly complete on the HermiT benchmark. The only one ontology with less than 98% recall contains axioms with empty conjunction and disjunction, e.g. of form {a mathematical formula}A⊑⨅B∈∅B. After removing such axioms, REL could achieve 100% recall. All the ontologies that REL was incomplete are relatively easy. They could be classified by HermiT in less than 8 seconds. REL yielded high recall on ontologies that were hard for fully-fledged reasoners. In Table 12 we show the time of all reasoners and recall of REL on ontologies that none of the fully-fledged reasoners could classify in 10 seconds. Note that there were 2 almost identical variants of FMA Lite. In the table we show the average classification time on these 2 ontologies. As we can see in the table, apart from the Gazetteer ontology, these difficult ontologies are not in tractable DLs. In our additional study, we have also confirmed that syntactic approximation can achieve 100% recall on the FMA Constitutional ontology [60].
+      </paragraph>
+      <paragraph>
+       The OWL 2 DL category of the ORE2013 benchmark was used for TBox classification competition, in which HermiT was the winner. Hence, we classified these ontologies with both HermiT and REL. Same as before, HermiT and REL were given 30 minutes to classify each of the 203 ontologies. Among these ontologies, HermiT managed to finish reasoning 191 of them without timeout. REL managed to finish reasoning all of them without timeout. In the ontologies finished by HermiT, 5 were inconsistent. REL was able to identify 2 of them. The classification time of REL and Hermit on the 186 ontologies that both reasoners classified without inconsistency are illustrated in Fig. 4. The ontologies are sorted by their classification time of HermiT. The time unit is second.
+      </paragraph>
+      <paragraph>
+       As one can see from the figure, REL was in general faster than HermiT. Out of the 186 ontologies, REL was faster on 162 of them, and took between {a mathematical formula}100% to {a mathematical formula}500% time of HermiT on another 21 of them, took more than 10 times time on only 2 of them. In total, REL classification time was about 13.55% of HermiT classification time on these ontologies. REL was notably faster than HermiT on ontologies that were difficult for HermiT (on the right end of Fig. 4). Furthermore, on the 12 ontologies that HermiT ran out of time, REL spent at most 22.71 seconds and in average 5.80 seconds.
+      </paragraph>
+      <paragraph>
+       The distribution of recall of REL on the 186 ontologies is shown in Table 13.
+      </paragraph>
+      <paragraph>
+       As one can see, REL was complete on {a mathematical formula}79.57% of the ontologies, was rather complete (recall {a mathematical formula}≥95%) on most of the remaining ontologies. The ontologies that REL was incomplete are relatively simple ontologies. They could be classified by HermiT within 10 seconds.
+      </paragraph>
+      <paragraph>
+       To better understand the incompleteness of REL, we also looked into the ontologies with incomplete results and analysed the causes for incompleteness:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        All of the 4 ontologies with recall lower than {a mathematical formula}60% are caused by disjointness between datatypes, such as literal and long. Since datatypes were not discussed in this paper and were not fully supported in the evaluated REL, the reasoner failed to recognise such disjointness, and hence failed to infer the unsatisfiability of many concepts. This significantly reduced the recall of REL. Nevertheless, such a problem can be easily resolved by treating datatypes as concepts and asserting the disjointness among them. By doing so REL could achieve 100% recall on these ontologies.
+       </list-item>
+       <list-item label="2.">
+        Among the other incomplete ontologies, 14 of them are variants of the Pizza ontology.{sup:9} This ontology contains cardinality restrictions in axioms such as:{a mathematical formula}This axiom is similar to the axiom (69) in Example 8. In order to infer that a given Pizza is an InterestingPizza, the reasoner needs to identify 3 mutually disjoint hasTopping-fillers of the concept. This can be realised by the following rule:{a mathematical formula}In general, this rule is intractable, as we will discuss in more detail in Sec. 8.2. Nevertheless, when the maximal value of n in this rule is a constant, the above rule is tractable. For the pizza ontology variants, {a mathematical formula}n≤3. Hence, this rule can be executed in a tractable manner. By including this rule in the rule set of REL, REL yields {a mathematical formula}100% results on all the 14 pizza variants.
+       </list-item>
+       <list-item label="3.">
+        Another pattern similar as the above one involves universal restriction with an enumeration as filler. For example, if there are following axioms in the ontology:{a mathematical formula} then it is possible to infer that {a mathematical formula}X⊑Y if there are at least {a mathematical formula}(n−k) pairs of equivalent individuals in {a mathematical formula}a1,…,an. With syntactic approximation, such a pattern can be resolved using the same cardinality restriction checking rule as shown before. But it will leads to intractability in the same way in general case if the maximal cardinality value is not fixed.
+       </list-item>
+      </list>
+      <paragraph>
+       Such observation shows that REL is in general efficient and rather complete on the majority of ontologies in the ORE2013 benchmark. The recall of REL can be further improved without affecting its tractability by considering more tailored rules based on the axiom patterns in ontologies.
+      </paragraph>
+      <paragraph>
+       To give an indication about why it is non-trivial to perform the syntactic approximation, we also used a pure {a mathematical formula}EL++ reasoner ELK 0.4.1{sup:10} to classify the ontologies tested in the TBox classification evaluation and investigated its recall. Although ELK was rather efficient on these ontologies, it ignored all axioms with expressive power beyond {a mathematical formula}EL++. This led to rather incomplete results on some complex ontologies. For example, FMA has 33,433 unsatisfiable concepts [60]. ELK was not able to find any of them except the ⊥. Hence, its recall was as low as {a mathematical formula}0.4% on this ontology. Such a phenomena can also be observed on the ORE benchmark. The distribution of recall of ELK on the same 186 ontologies that REL, HermiT and ELK could classify is presented in Table 14. Comparing Table 14 to Table 13, it can be seen that ELK is much less complete than REL on these ontologies and the additional rules implemented in REL helped improve the recall.
+      </paragraph>
+      <paragraph>
+       The comparison between recalls of REL and ELK clearly suggests that using only an {a mathematical formula}EL++ algorithm to reason with ontologies in more expressive DLs will often leads to significantly incomplete results. The approximate deduction rules utilised in syntactic approximation can exploit the semantics of the non-{a mathematical formula}EL++ axioms in these ontologies to partially fill the incompleteness gap and yield high recall on these ontologies.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Ontology materialisation evaluation
+      </section-title>
+      <paragraph>
+       In this evaluation, we created a test suite using both benchmark and real-world ontologies. We included all ontologies in the HermiT Benchmark with more than 100 individuals. We also included the SEMINTEC{sup:11} ontology, which is developed for semantic web mining, and the VICODI{sup:12} ontology, which is developed to represent the history of Europe. Both of them have been used as benchmark for ABox reasoning [58]. Besides, we used the ADOxx Metamodelling ontologies provided by the BoC-group.{sup:13} These ontologies followed the research in the MOST (Marrying Ontology and Software Technologies) project,{sup:14} using ontologies to represent meta-modelling information in model-driven software development and using reasoning to detect inconsistencies. We used 3 such ontologies with identical TBox and varying size of ABoxes.{sup:15} We also used the Travel ontology (v26) from the SWAT (Semantic Web Authoring Tool) project.{sup:16} Both the BoC ontologies and the Travel ontology are in highly expressive DLs and have complex TBox and ABox. Some of the ontologies have imported other ontologies (such as Travel). We have merged these ontologies with their imported ontologies so the materialisation results presented later are all for the import closures.
+      </paragraph>
+      <paragraph>
+       For each ontology, we performed ontology materialisation, getting all the subsumptions between named concepts, all named classifications of all individuals and all named relations between all pairs of individuals. Recall was then calculated for each of these 3 categories of results.
+      </paragraph>
+      <paragraph>
+       There are 46 ontologies in the HermiT Benchmark with more than 100 individuals. Among these ontologies, there are 2 ontologies that the fully-fledged reasoners yielded different results (when they were able to finish materialising). Another ontology was identified inconsistent by all 4 reasoners. This left us 43 materialisable ontologies that the fully-fledged reasoners did not have conflicting results. In these ontologies:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        HermiT ran out of time on one of them and finished materialisation on the remaining 42.
+       </list-item>
+       <list-item label="2.">
+        FaCT++ ran out of time on 3 of them and was terminated with error on the other 4. It successfully materialised 36 ontologies.
+       </list-item>
+       <list-item label="3.">
+        Pellet ran out of time on one of them and was terminated with error on another. It successfully materialised 41 ontologies.
+       </list-item>
+       <list-item label="4.">
+        REL finished materialising all of them. The hardest one took REL about 3 seconds.
+       </list-item>
+      </list>
+      <paragraph>
+       The materialisation time of REL in comparison to that of the fully-fledged reasoners on their corresponding materialisable ontologies is shown in Fig. 5. The ontologies are sorted w.r.t. their materialisation time by the fully-fledged reasoners. Time unit is second.
+      </paragraph>
+      <paragraph>
+       As we can see from Fig. 5, REL was in general more efficient than the other reasoners on the materialised ontologies. Particularly, REL was slower than HermiT on 5 ontologies and slower than Pellet on 4 ontologies. None of these ontologies took REL more than 3 seconds. On the other hand, REL was more efficient than HermiT or Pellet on any ontology that took them more than 2 seconds and was at least 4 times faster than FaCT++ on all ontologies.
+      </paragraph>
+      <paragraph>
+       The recalls of REL on entailed named concept subsumptions, named concept assertions and named role assertions were calculated for all ontologies that at least one fully-fledged reasoner could materialise. The distribution of these recalls is shown in Table 15.
+      </paragraph>
+      <paragraph>
+       As we can see from Table 15, the recall of REL is practically high on materialising the HermiT Benchmark. Subsumption and role assertion recalls are 100%. Class assertion is incomplete on only 2 ontologies, and the recalls are both above 95%. Similar as in the TBox classification, the two ontologies on which REL was incomplete are not very difficult. Both of them could be materialised by HermiT within one second. While REL performed well on ontologies difficult for other reasoners. In Table 16 we show the time of all reasoners and recall of REL on ontologies that none of the fully-fledged reasoners could materialise in 5 seconds. Note that, there were 3 almost identical variants of the Wine/Food ontology. In the table we show the average time and recall on these 3 ontologies for Wine/Food. Also, the 100% recall of REL means that REL had all the results that were yielded by the fully-fledged reasoner.
+      </paragraph>
+      <paragraph>
+       The results shown in Table 16 suggest that REL was efficient and yielded all intended results when materialising the hardest ontologies in the HermiT Benchmark. It is worth mentioning that such difficult ontologies are not necessarily big. For example, the Wine/Food ontology contains only 138 concepts, 16 roles, 206 individuals and 889 axioms. But it was still not easy for fully-fledged reasoners to materialise. Also note that apart from the Teleost taxonomy, the other ontologies are not in tractable DLs. Hence, the efficient and highly complete results of REL on these ontologies could not have been achieved without approximation.
+      </paragraph>
+      <paragraph>
+       The additional ontologies we used for materialisation evaluation are shown in Table 17. Similar as before, every reasoner was given 30 minutes to materialise each ontology. No ontology had different results from the fully-fledged reasoners (when they were able to materialise). Recall of REL was calculated by comparing results of REL and the fully-fledged reasoners. The time of all reasoners and recall of REL on these ontologies are shown in Table 18. Time unit is second.
+      </paragraph>
+      <paragraph>
+       From the results in Table 18 we can see that in general REL preformed very well on materialisation of these ontologies, especially when the ontology was hard for fully-fledged reasoners. Notably, REL had a 100% recall on all ontologies except the Travel, even if some of the ontologies are in very expressive DL and are quite complex. This means that REL had 100% results for named concept subsumption, named class assertion and named role assertion, respectively.
+      </paragraph>
+      <paragraph>
+       We were, however, unable to obtain the accurate recall of REL on the Travel ontology. This is because HermiT, as the only fully-fledged reasoner able to materialise the Travel ontology, did not yield all materialisation results. For example, Travel ontology contains the following axioms:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In addition, HermiT was able to entail that:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       It should have further entail the following two results but it did not:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Hence, the results yielded by HermiT were incomplete and we cannot know what the complete results should be. We did notice that the results of REL were also incomplete. By looking into the details of this ontology we realised that Travel is actually not a nominal-safe ontology. It contains axioms like the following{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Assuming {a mathematical formula}fa({continental_europe}⊓∃is_occupied_by.{italy})=X, the above axiom will lead to an {a mathematical formula}ELCQI++ transformation including the following axiom{a mathematical formula} which is not a nominal-safe {a mathematical formula}EL++ axiom. Hence the relation {a mathematical formula}(continental_europe,italy):is_occupied_by cannot be inferred with the current rule set in REL. We have identified other similar axioms in both TBox and ABox of Travel that are not nominal-safe, which partially explains the missing of some results and also motivates us to investigate approximation based on a complete {a mathematical formula}EL++ rule set in the future.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Entailments with unsafe nominals in evaluation benchmark
+      </section-title>
+      <paragraph>
+       In the evaluation presented in the previous two sections, we have tested ontologies with different levels of expressive powers, including ontologies without nominals, with only safe nominals as defined in Definition 7, and potentially with unsafe nominals. As we have shown in Theorem 12 and Theorem 15, the rule set implemented in the evaluated REL should yield as many results as an internalisation-based approach (as presented in Sec. 6.2) on nominal-free and nominal-safe ontologies. In order to have a better overview of nominal-free and nominal-safe ontologies in our evaluation benchmark. We obtained statistics of unsafe entailments (entailments with unsafe nominals) computed by REL in the evaluation benchmark.
+      </paragraph>
+      <paragraph>
+       In the 585 ontologies we used, there are 326 ones with at least one individual. The others apparently will not cause any unsafe entailment. In the 326 ontologies with individuals, there are 242 ones without any unsafe entailment. These ontologies are either nominal free, or they satisfy the nominal-safety condition. Some of the hardest ontologies for fully-fledged reasoners, such as FMA Constitutional, are included in these 242 ones. In the other 84 ontologies with unsafe entailments, such entailments are few and constitute only a small percentage of the total entailments inferred by REL. Only 28 ontologies have more than 10 unsafe entailments. Only one ontology has more than 200 unsafe entailments. The one with the most unsafe entailments is GALEN-Full-Union_ALCHOI(D), on which REL inferred 635 unsafe entailments. This ontology, however, has a closure as large as 1,656,159 entailments, in which unsafe ones constitute only {a mathematical formula}0.04%. Only 6 ontologies have more than 1% unsafe entailments in their closure. The highest percentage of unsafe entailments is {a mathematical formula}4.23% in these ontologies.
+      </paragraph>
+      <paragraph>
+       These statistics suggest that the nominal-free and nominal-safety conditions can be satisfied by a large number of real-world ontologies, including some of the most difficult ones such as FMA Constitutional. Even when it is not satisfied, an ontology usually contains only a very small percentage of unsafe entailments in its closure. Using syntactic approximation on these ontologies may lead to incomplete results. But as our evaluation shows, in most cases, the recall is empirically high.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this section, we discuss the relation between our approach and other related works. After that, we will analyse in more detail the incompleteness of our approach and present the idea and first result of a partial completeness guarantee of our approach.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       Our approach is related to and different from several existing works:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        As shown in the previous sections, the reasoning of our approach is achieved by computing the closure of some completion rule set that includes the original {a mathematical formula}EL++ completion-rules and additional rules that exploit the non-{a mathematical formula}EL++ features. Hence, our approach can be regarded as a consequence-based approach.Our rule sets include the rules presented in Table 2 and therefore it is sound and complete for nominal-safe {a mathematical formula}EL++. A difference is that, the transformation presented in Definition 4 introduces a pair {a mathematical formula}(fa(C),fa(~C)) into CT for each term C in the ontology, even if C is an {a mathematical formula}EL++ concept, and such a structure will be exploited by the additional rules. Hence, the closure computed by our approach will be larger than that computed by the original {a mathematical formula}EL++ rules even when applied on {a mathematical formula}EL++ ontologies. For example, if the original ontology contains an axiom {a mathematical formula}C⊑D, then due to the involvement of rule R10, the closure of our approach will include {a mathematical formula}fa(~D)⊑fa(~C), which corresponds to {a mathematical formula}¬D⊑¬C in the original ontology. Such unnecessary entailments in the closure will not increase the complexity of reasoning but will make our approach less efficient than dedicated {a mathematical formula}EL++ reasoners on pure {a mathematical formula}EL++ ontologies.Similar to other consequence-based procedures, the consequences of executing a completion rule can be used to identify the next rules to be executed. Due to the fact that the consequences of our rules are always normal form {a mathematical formula}EL++ axioms, our rule set can be implemented with a rule-chaining mechanism similar to the one presented by Baader et al. [4]. A difference from other consequence-based procedures is that, our rule sets include rules whose premise and consequence do not share any concept or role. For example in R10, the premise is {a mathematical formula}A⊑B, while the consequence is {a mathematical formula}fc(B)⊑fc(A). Although A and {a mathematical formula}fc(A) (B and {a mathematical formula}fc(B)) are related in the CT, they are not structurally or syntactically related in the closure. To incorporate such rules, the {a mathematical formula}EL++ due-ontology classification mechanism [77] can be applied so that the completion procedure can be treated as incremental reasoning with the consequences of these rules as newly added axioms. The REL reasoner we evaluated in Sec. 7 was implemented with such mechanisms.
+       </list-item>
+       <list-item label="2.">
+        The NP-hardness of computing the least upper bound also leads to the separation of off-line and on-line computation in knowledge compilation. In order to achieve tractable reasoning in the on-line stage, intractable compilation is performed off line and can be time-consuming. Our approach presented in this paper does not require such an off-line compilation stage and its entire procedure is tractable.
+       </list-item>
+       <list-item label="3.">
+        Of course, avoiding intractable rule execution will affect the completeness of our rule sets on expressive DLs. In the next section, we will further discuss such impact in more detail with examples.
+       </list-item>
+      </list>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Incompleteness
+      </section-title>
+      <paragraph>
+       Our approach is soundness guaranteed but incomplete. Due to the intractability of {a mathematical formula}SROIQ, it is in general not possible to develop a tractable procedure that guarantees complete results for {a mathematical formula}SROIQ. In fact, the simple combination of {a mathematical formula}EL++ with inverse role will cause intractability [1]. In this section, we show that repairing certain incompleteness of our approach will lead to an intractable procedure.
+      </paragraph>
+      <paragraph>
+       The first type of such incompleteness is related to resolution. Consider the following example:
+      </paragraph>
+      <paragraph label="Example 9">
+       Ontology {a mathematical formula}O9 contains the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}A name assignment {a mathematical formula}fa(·) assigns the following names (among others):{a mathematical formula}Then we shall have {a mathematical formula}Afa(O9)=(T9,A9,CT9,QT9,IT9), where {a mathematical formula}T9 contains the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}CT9 contains pairs such as {a mathematical formula}(Xi,cXi)(i=1,2,3), {a mathematical formula}(A,cA), {a mathematical formula}(B,cB), {a mathematical formula}(C,cC), {a mathematical formula}(D,cD).
+      </paragraph>
+      <paragraph>
+       Obviously, we have {a mathematical formula}O9⊨A⊑E. However, such a result cannot be computed by our approach proposed in this paper. This is because our approach does not resolve conjunctive disjunctions, e.g. resolving {a mathematical formula}(B⊔C)⊓(D⊔¬C) into {a mathematical formula}B⊔D. One can, for example, extend the rule set with the following resolution rule:{a mathematical formula} Then the rule set will be able to infer that {a mathematical formula}A⊑E. Particularly, from (84) and (85) one can infer that {a mathematical formula}cX1⊑cA and {a mathematical formula}cX2⊑cA. Then applying the above resolution rule together with (87) and (88) yields that {a mathematical formula}cB⊓cD⊑cA. Together with (89) this implies that {a mathematical formula}cX3⊑cA, which can be further combined with (86) to infer that {a mathematical formula}A⊑E.
+      </paragraph>
+      <paragraph>
+       However, such a new rule will generate consequences of form {a mathematical formula}A1⊓…An⊑X, where {a mathematical formula}Ai are atomic concepts in the approximated TBox and n is bounded by the size of the vocabulary. In worst case, the total number of such axioms will be exponential w.r.t. the size of the ontology. This means that the inclusion of such a rule will lead to intractability of the completion closure. In fact, consequence-based algorithm for {a mathematical formula}ALCH[73] includes a variation of the above resolution rule (the {a mathematical formula}R⊓n rule) and consequently such an algorithm is intractable.
+      </paragraph>
+      <paragraph>
+       This intractability result is not surprising. It has been shown that an exponential lower bound can be established for the time complexity of resolution [82]. Therefore, it is impossible to develop a tractable algorithm that supports resolution in general. In order to provide worst-case tractable classification and materialisation, our approach does not fully cover resolution and is incomplete in this regard.
+      </paragraph>
+      <paragraph label="Example 10">
+       Another type of incompleteness is related to cardinality. In Example 8 we already discussed such kind of incompleteness. It is also the reason behind the incompleteness of REL on the Pizza ontology variants in our evaluation. Below is an example showing a more generic case: Ontology {a mathematical formula}O10 contains the following axioms (among others):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}And there is a set {a mathematical formula}B1⊆{B1,…,Bk} and another set {a mathematical formula}B2⊆{Bk+1,…,Bn} s.t. the following holds:{a mathematical formula}{a mathematical formula}A name assignment {a mathematical formula}fa(·) assigns names such that{a mathematical formula}Then we shall have {a mathematical formula}Afa(O10)=(T10,A10,CT10,QT10,IT10). Particularly, the above axioms (93) will be approximated into {a mathematical formula}X⊑Yj∈T10, where {a mathematical formula}(Yj,Bj,rj,Nj)∈QT10. The above axiom (96) will be approximated into {a mathematical formula}Z⊑Y∈T10, where {a mathematical formula}(Z,B,r,N)∈QT10. And the above axioms in (97) will be approximated into {a mathematical formula}(Bi⊑cBj)∈T10, where {a mathematical formula}(Bj,cBj)∈CT10.
+      </paragraph>
+      <paragraph>
+       It can be shown that {a mathematical formula}O10⊨X⊑Y:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Let x be an arbitrary instance of X, x will have an {a mathematical formula}ri-object of type {a mathematical formula}Bi for each {a mathematical formula}Bi∈B1, due to axioms (90).
+       </list-item>
+       <list-item label="2.">
+        Similarly, x will have {a mathematical formula}Nj{a mathematical formula}rj-objects of type {a mathematical formula}Bj for each {a mathematical formula}Bj∈B2, due to axioms (93).
+       </list-item>
+       <list-item label="3.">
+        Since {a mathematical formula}ri/j⊑r and {a mathematical formula}Bi/j⊑B, x will have {a mathematical formula}|B1|+ΣBj∈B2Njr-objects.
+       </list-item>
+       <list-item label="4.">
+        Due to condition (97), all these r-objects are different from each other.
+       </list-item>
+       <list-item label="5.">
+        Due to condition (98), x is of type {a mathematical formula}≥Nr.B, hence x is also an instance of Y.
+       </list-item>
+      </list>
+      <paragraph>
+       However, it can be realised that {a mathematical formula}X⊑Y will not be computed by our approach presented in this paper. This is because our approach does not count the unique fillers of existential and minimal cardinality restrictions. Such incompleteness can be repaired by the following cardinality counting rule:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Our approach can infer that {a mathematical formula}X⊑Y with the extended rule set.
+      </paragraph>
+      <paragraph>
+       Nevertheless, such a new rule will also introduce intractability into the reasoning procedure. Although the rule does not generate new form of consequence, its premise has a larger search space. Particularly, there are in total k{a mathematical formula}Bis and {a mathematical formula}(n−k){a mathematical formula}Yjs in {a mathematical formula}Afa(O10). In order to execute the rule for {a mathematical formula}Afa(O10), the algorithm needs to find l{a mathematical formula}Bis from the total k ones and {a mathematical formula}(m−l){a mathematical formula}Yjs (and correspondingly the {a mathematical formula}Bjs) from the total {a mathematical formula}(n−k) ones that satisfy the cardinality restriction and disjointness. Note that {a mathematical formula}1≤m≤n is a variable. In worst case, it will need to search for {a mathematical formula}2n combinations of {a mathematical formula}Bis and {a mathematical formula}Bjs. Even if we disallow the use of axioms similar to (93) in the original ontology, the algorithm will still need to search for {a mathematical formula}k!N! combinations of mutually-disjoint {a mathematical formula}Bis. If the ontology contains multiple cardinality restriction axioms of form (96) with different values of N, in worst case, the algorithm still needs to perform {a mathematical formula}2k searches, where k is bounded by the size of the concept vocabulary.
+      </paragraph>
+      <paragraph>
+       In order to avoid intractability in our approach, we did not include the above cardinality counting rule in the rule set presented in this paper.
+      </paragraph>
+      <paragraph>
+       Nevertheless, when the maximal value of cardinality in all cardinality restrictions is a constant, the above rule is tractable. Such a phenomenon is exploited by our TrOWL reasoner{sup:17} to provide efficient reasoning in ontology-based pharmacogenomic decision support solution with the Genomic-CDS ontology [54].
+      </paragraph>
+      <paragraph label="Example 11">
+       A further type of incompleteness is caused by the interaction between existential restrictions and universal restrictions. Below is a simple example illustrating such an interaction: Ontology {a mathematical formula}O11 contains the following axioms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}A name assignment {a mathematical formula}fa(·) assigns the following names:{a mathematical formula}Then we shall have {a mathematical formula}Afa(O11)=(T11,A11,CT11,QT11,IT11). Particularly, the above axiom (100) will be approximated to {a mathematical formula}Y⊑B and {a mathematical formula}Y≡∃ir.X in {a mathematical formula}T11. {a mathematical formula}IT11 will include {a mathematical formula}(r,ir).
+      </paragraph>
+      <paragraph>
+       From the example it can be derived that {a mathematical formula}O11⊨X⊑D. Particularly, axioms (100) is equivalent to {a mathematical formula}X⊑∀r.B, which together with axiom (99) entails the following{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This entailment is exactly what is missing from our approach, which makes it not possible to derive {a mathematical formula}X⊑D with our approach. It can be recovered if the rule set is extended with the following rule, where C is of form {a mathematical formula}A1⊓⋯⊓An(n≥1):{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In fact, a more generalised variation of the above rule is used in consequence-based algorithms for Horn-{a mathematical formula}SHIQ[41] and {a mathematical formula}ALCH[73] to deal with similar forms of interactions between existential restrictions and inverse roles (note that an {a mathematical formula}ALCH axiom of form {a mathematical formula}X⊑∀r.B is equivalent to the axiom (100) in our example). Nevertheless, the computational price is that such a rule will generate consequences of form {a mathematical formula}X⊑∃r.(A1⊓⋯⊓An) with {a mathematical formula}n≥1. This results in an exponential increase of the size of the closure. This contributes to the worst-case exponential complexity of the said Horn-{a mathematical formula}SHIQ and {a mathematical formula}ALCH algorithms. In order to ensure the tractability of our approach, we did not include such a rule in our rule set.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Towards partial completeness
+      </section-title>
+      <paragraph>
+       As we observed in the previous section, there are several patterns of axioms on which our approach will yield incomplete results. Such observations can be exploited to develop partial completeness-guarantee for our approach. To illustrate the idea, in this section, we present a partial completeness-guarantee for restricted {a mathematical formula}ELHI ontologies based on the pattern shown in Example 11. A comprehensive investigation of the (partial) completeness of tractable algorithms on intractable DLs is beyond the scope of the current paper and will be left for future work.
+      </paragraph>
+      <paragraph>
+       The DL {a mathematical formula}ELHI is an extension of {a mathematical formula}EL with inverse roles. Without lose of generality, in this section we focus on its TBox classification. We also assume such TBoxes consist of only normal form axioms. In {a mathematical formula}ELHI, normal form TBox axioms can be of the following forms:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} where {a mathematical formula}A(i),B can be ⊤, ⊥ or named concepts, R and S are named roles or their inverse. Note that an axiom of form {a mathematical formula}∃R.⊤⊑B is essentially a range restriction of {a mathematical formula}inv(R) and can always be eliminated without affecting the semantics of the TBox [1]. Hence, we omit such a form of axioms here for the sake of conciseness. An example of such an {a mathematical formula}ELHI TBox is the ontology {a mathematical formula}O11 in Example 11. Following the intractability result of {a mathematical formula}ELI[1], we know that the worst case complexity for {a mathematical formula}ELHI TBox classification is exponential.
+      </paragraph>
+      <paragraph>
+       As Example 11 shows, the incompleteness of our approach on {a mathematical formula}ELHI occurs when there are interactions between existential restrictions and inverse roles. Such incompleteness can be avoided if we restrict the interactions. There are many ways to achieve this goal. In this section, we employ the idea of safe role developed by Carral et al. [12] and use it to establish a sufficient condition for restricted {a mathematical formula}ELHI in which our approach yields complete results. Particularly, a role R is safe in an {a mathematical formula}ELHI TBox {a mathematical formula}Oiff one of the following two situations occurs:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        R does not occur in any axiom of form {a mathematical formula}A⊑∃R.B∈O;
+       </list-item>
+       <list-item label="2.">
+        If there is an axiom {a mathematical formula}∃S.A⊑B∈O, then {a mathematical formula}R⋠⁎inv(S), where {a mathematical formula}R≼S if one of the following situations occurs:
+       </list-item>
+      </list>
+      <paragraph label="Theorem 17">
+       With this notion, the following theorem shows that our approach is complete for classification of {a mathematical formula}ELHI TBoxes with only safe roles: Let{a mathematical formula}Obe an{a mathematical formula}ELHITBox with only safe roles and{a mathematical formula}TAfa(O)its TBox transformation with name assignment{a mathematical formula}fa(·), then for any{a mathematical formula}A,B∈CNO,{a mathematical formula}O⊨A⊑B iff {a mathematical formula}A⊑B∈ST(TAfa(O))or{a mathematical formula}A⊑⊥∈ST(TAfa(O)).
+      </paragraph>
+      <paragraph>
+       The ← direction of this theorem immediately follows from the soundness of our approach (Theorem 5) therefore we will only need to prove the completeness. The → direction of this theorem can be proved with model construction and contrapositive. Particularly, assuming there are {a mathematical formula}X,Y∈CNO s.t. {a mathematical formula}O⊨X⊑Y, {a mathematical formula}X⊑Y∉ST(TAfa(O)) and {a mathematical formula}X⊑⊥∉ST(TAfa(O)), we can show that a model {a mathematical formula}Iof {a mathematical formula}O can be constructed such that {a mathematical formula}I⊭X⊑Y.
+      </paragraph>
+      <paragraph>
+       This theorem has the following implications:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Given the tractability of our approach, this theorem also confirms part of the results of Carral et al. [12], i.e. {a mathematical formula}ELHI ontologies with only safe roles can be reasoned with by tractable algorithms with complete results.
+       </list-item>
+       <list-item label="2.">
+        Note that another tractable description logic {a mathematical formula}DL-LiteR[10], which is the logic underpinning the OWL 2 QL profile, always satisfies the condition in this theorem. Hence, our approach is also complete for {a mathematical formula}DL-LiteR.
+       </list-item>
+       <list-item label="3.">
+        The condition identified in this theorem is a sufficient condition but it is not necessary. Our approach may yield complete results even if an ontology does not satisfy the safe-role-only condition. For example, the ontology {a mathematical formula}O11 in Example 11 contains an unsafe role r. It remains unsafe if we extend {a mathematical formula}O11 with an additional axiom {a mathematical formula}A⊑B. However, with such an extension, our approach will now be able to infer that {a mathematical formula}X⊑D. This suggests that a weaker completeness guarantee can be developed. We will look into this in our future work.
+       </list-item>
+      </list>
+      <paragraph>
+       As we mentioned at the beginning of this section, it is not the focus of this paper to develop a comprehensive completeness guarantee. Therefore, the partial completeness guarantee developed in this section is limited. For example, it does not cover the tractable OWL 2 RL profile. Nevertheless, covering OWL 2 RL with only our approach is not really significant because it can be easily achieved by incorporating into our rule set the complete and tractable completion rules of OWL 2 RL [45]. What will interest us is to identify the conditions in which combinations of {a mathematical formula}ELHI, RL and even more expressive DL features such as cardinality restrictions and complements can be covered by our approach or its extensions. The partial completeness study presented in this section points out a direction to address this problem, i.e. limiting the interactions between different DL features. Particularly, we conjecture that it is possible to extend the result in Theorem 17 to a sufficient condition for completeness guarantee of our approach on DL {a mathematical formula}SRIQ by eliminating the necessity of performing resolution and cardinality counting. We will look into this problem in our future work.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <paragraph>
+      In this appendix we provide proofs for all propositions, lemmas and theorems in the paper.
+     </paragraph>
+     <paragraph>
+      The proofs for Proposition 1, Proposition 3, Theorem 4, Theorem 5, Proposition 7, Proposition 9, Theorem 10 and Theorem 11 are relatively simple. The other proofs are more sophisticated.
+     </paragraph>
+     <paragraph label="Proof">
+      TBox linear transformationInDefinition 4, transforming from{a mathematical formula}Oto{a mathematical formula}TAfa(O)can be done in linear time.We prove the proposition by showing that for any ontology {a mathematical formula}O and its TBox transformation {a mathematical formula}(T,CT,QT,IT), if {a mathematical formula}O contains {a mathematical formula}nO number of terms, then we have:
+      <list>
+       {a mathematical formula}|T|≤nO+|O|;{a mathematical formula}|CT|=nO;{a mathematical formula}|QT|≤nO;{a mathematical formula}|IT|=4×|RNO|;Particularly:
+      </list>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}|T|: For each axiom in {a mathematical formula}O, at most one axiom is added into {a mathematical formula}T (Step-2 to 4). For each term in {a mathematical formula}O, at most one axiom is added into {a mathematical formula}T (Step-5). Together {a mathematical formula}|T|≤nO+|TO|.
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}|CT|: For each term in {a mathematical formula}O, one element is added into CT (Step-5).
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}|QT|: For each term in {a mathematical formula}O, at most one element is added into QT (Step-5.c.iii).
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}|IT|: For each role in {a mathematical formula}O, four elements are added into IT (Step-6). □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 2">
+      TBox reasoning preservationFor any ontology{a mathematical formula}O=(TO,AO)and its TBox transformation{a mathematical formula}(T,CT,QT,IT), let{a mathematical formula}T′be a TBox constructed as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}T′is initialised as{a mathematical formula}T;
+      </list-item>
+      <list-item label="2.">
+       for any concept pair{a mathematical formula}(A,B)∈CT,{a mathematical formula}T′=T′∪{A≡¬B};
+      </list-item>
+      <list-item label="3.">
+       for any role pair{a mathematical formula}(r,s)∈CT,{a mathematical formula}T′=T′∪{Dis(r,s)};
+      </list-item>
+      <list-item label="4.">
+       for any{a mathematical formula}(A,B,r,n)∈QT,{a mathematical formula}T′=T′∪{A≡≥nr.B};
+      </list-item>
+      <list-item label="5.">
+       for any{a mathematical formula}(r,s)∈IT,{a mathematical formula}T′=T′∪{r≡Inv(s)};
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      This theorem can be proved by showing that {a mathematical formula}TO∪T′∪Tfa is a {a mathematical formula}ΣTO-conservative extension [52] of both {a mathematical formula}TO and {a mathematical formula}T′, where {a mathematical formula}Tfa is the set of definition {a mathematical formula}fa(P)≡P for all term P of {a mathematical formula}O except complement of roles. A TBox {a mathematical formula}T1 is a Σ-conservative extension of another TBox {a mathematical formula}T2 for {a mathematical formula}Σ⊆ΣT2 iff {a mathematical formula}T2⊆T1 and for any GCI α with {a mathematical formula}Σα∈Σ, {a mathematical formula}T1⊨α implies {a mathematical formula}T2⊨α.We first show that {a mathematical formula}TO∪Tfa∪T′ is a conservative extension (CE) of {a mathematical formula}TO by induction. Apparently {a mathematical formula}TO⊆TO∪T′∪Tfa and {a mathematical formula}TO∪Tfa is a CE of {a mathematical formula}TO since it only adds definitions of fresh names. Assuming some {a mathematical formula}Ti with {a mathematical formula}TO∪Tfa⊆Ti⊆TO∪Tfa∪T′ is a CE of {a mathematical formula}TO, an axiom {a mathematical formula}β∈T′∖Ti can be of the following origins:
+      <list>
+       β is generated by Step-2 or Step-3 of Definition 4: β simply rewrites an axiom in {a mathematical formula}TO with the name assignments of the corresponding LHS and RHS of the axiom. Given that all name assignments are defined by {a mathematical formula}Tfa except those of complement of roles, and complement of roles don't appear in {a mathematical formula}TO, we have {a mathematical formula}Ti⊨β. Hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-4 of Definition 4: β is of form {a mathematical formula}r⊑s where r is a named assignment defined by {a mathematical formula}Tfa and s as the name assignment of some role S do not appear anywhere in {a mathematical formula}TO, we shall still have {a mathematical formula}Ti∪{β} a CE of {a mathematical formula}TO;β is generated by Step-5.(a) of Definition 4: Given that {a mathematical formula}Tfa⊆Ti we know that {a mathematical formula}Ti⊨β hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-5.(b) of Definition 4: here we have two possibilities:β is generated by Step-5.(c).i of Definition 4, then β is a tautology.β is generated by Step-5.(c).ii of Definition 4, then it is similar to the above situation of 5.(b) that {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-5.(c).iii of Definition 4: since {a mathematical formula}C≡≥nR.D is a tautology, we have {a mathematical formula}Ti⊨C⊑∃R.D. With {a mathematical formula}Tfa⊆Ti it is easy to show that {a mathematical formula}Ti⊨β hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-2 in Theorem 2: apparently there is a concept term C of {a mathematical formula}O s.t. {a mathematical formula}β=fa(C)⊑¬fa(~C). Given that {a mathematical formula}Tfa⊆Ti, we have {a mathematical formula}Ti⊨β and hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-3 in Theorem 2: apparently there is a role term R of {a mathematical formula}O s.t. {a mathematical formula}β=Dis(fa(R),fa(~R)). Since complement of roles are not supported in {a mathematical formula}SROIQ TBox, either {a mathematical formula}fa(R) or {a mathematical formula}fa(~R) is a fresh role name that do not appear in {a mathematical formula}TO. Hence {a mathematical formula}Tfa∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-4 in Theorem 2: apparently there is a concept term {a mathematical formula}C=≥nR.D in {a mathematical formula}O s.t. {a mathematical formula}β=fa(C)≡≥nfa(R).fa(D). Given that {a mathematical formula}Tfa⊆Ti, we have {a mathematical formula}T⊨β and hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO;β is generated by Step-5 in Theorem 2: apparently there is a role term R in {a mathematical formula}O s.t. {a mathematical formula}β=fa(R)≡Inv(()fa(Inv(R))). Given that {a mathematical formula}{R≡fa(R), {a mathematical formula}fa(Inv(R))≡riR}⊆Tfa⊆Ti, we have {a mathematical formula}Ti⊨β and hence {a mathematical formula}Ti∪{β} is still a CE of {a mathematical formula}TO.We can show that
+      </list>
+      <paragraph>
+       {a mathematical formula}TO∪Tfa∪T′ is a CE of {a mathematical formula}T′ by showing that {a mathematical formula}T′⊨Tfa and {a mathematical formula}T′∪Tfa⊨TO.For every axiom {a mathematical formula}β=fa(P)≡P∈Tfa, we perform structural induction on P. Note that P is in negation normal form hence P may contain constructors such as ⊔, ∀, ≤:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}P∈CNO∪RNO, according to Definition 3β is a tautology and obviously {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="2.">
+        If P is of form ¬C, {a mathematical formula}β=fa(¬C)≡¬C. Since C is also a term, by structural induction we have {a mathematical formula}T′⊨fa(C)≡C. We also have {a mathematical formula}(C,¬C)∈CT, hence by Step-2 of Theorem 2 we have {a mathematical formula}fa(C)≡¬fa(¬C)∈T′. Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="3.">
+        If P is of form {a mathematical formula}C⊓D, {a mathematical formula}β=fa(C⊓D)≡C⊓D. Since C and D are also terms, by structural induction we have {a mathematical formula}T′⊨fa(C)≡C and {a mathematical formula}T′⊨fa(D)≡D. By Step-5.(a) of Definition 4 we have {a mathematical formula}fa(C⊓D)≡fa(C)⊓fa(D)∈T′. Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="4.">
+        If P is of form {a mathematical formula}C⊔D, {a mathematical formula}β=fa(C⊔D)≡C⊔D. Since {a mathematical formula}~C and {a mathematical formula}~D are terms, by structural induction we have {a mathematical formula}T′⊨{fa(~C)≡¬C, {a mathematical formula}fa(~D)≡¬D}. Since {a mathematical formula}~C⊓~D is also a term, by Definition 4 we also have {a mathematical formula}fa(~C⊓~D)≡fa(~C)⊓fa(~D). By Step-2 of Theorem 2 we also have {a mathematical formula}fa(C⊔D)≡¬fa(~C⊓~D)∈T′. Together we can infer that {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="5.">
+        If P is of form {a mathematical formula}∃R.C, {a mathematical formula}β=fa(∃R.C)≡∃R.C. Both R and C are terms. By structural induction we have {a mathematical formula}T′⊨fa(R)≡R and {a mathematical formula}fa(C)≡C. We also have {a mathematical formula}fa(∃R.C)≡∃fa(R).fa(C)∈T′. Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="6.">
+        If P is of form {a mathematical formula}∀R.C, {a mathematical formula}β=fa(∀R.C)≡∀R.C. R and {a mathematical formula}~C are terms hence we have {a mathematical formula}T′⊨{fa(R)≡R, {a mathematical formula}fa(~C)≡¬C}. {a mathematical formula}∃R.~C is also a term, by Definition 4 we have {a mathematical formula}fa(∃R.~C)≡∃fa(R).fa(~C)∈T′. By Step-2 of Theorem 2 we also have {a mathematical formula}fa(∀R.C)≡¬fa(∃R.~C)∈T′. Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="7.">
+        If P is of form {a mathematical formula}≥nS.C, {a mathematical formula}β=fa(≥nS.C)≡≥nS.C. S and C are terms hence we have {a mathematical formula}T′⊨{fa(R)≡R, {a mathematical formula}fa(C)≡C}. By Definition 4 we have {a mathematical formula}(fa(≥nS.C),fa(C),fa(S),n)∈QT. From Step-4 of Theorem 2 we also have {a mathematical formula}fa(≥nS.C)≡≥nfa(S).fa(C)∈T′. Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="8.">
+        If P is of form {a mathematical formula}≤nS.C, {a mathematical formula}β=fa(≤nS.C)≡≤nS.C. S and C are terms hence we have {a mathematical formula}T′⊨{fa(R)≡R, {a mathematical formula}fa(C)≡C}. {a mathematical formula}≥n+1S.C is also a term. By Definition 4 we have {a mathematical formula}(fa(≥n+1S.C),fa(C),fa(S),n+1)∈QT. From Step-4 of Theorem 2 we further have {a mathematical formula}fa(≥n+1S.C)≡≥n+1fa(S).fa(C)∈T′. From Step-2 of Theorem 2 we also have {a mathematical formula}fa(≤nS.C)≡¬fa(≥n+1S.C). Together we have {a mathematical formula}T′⊨β;
+       </list-item>
+       <list-item label="9.">
+        If P is of form {a mathematical formula}R−, {a mathematical formula}β=fa(R−)≡R−. R is term hence we have {a mathematical formula}T′⊨fa(R)≡R. By Definition 4 we have {a mathematical formula}(fa(R),fa(R−))∈IT. Together with Step-5 of Theorem 2 we have {a mathematical formula}fa(R−)≡fa(R)−. Together we have {a mathematical formula}T′⊨β.
+       </list-item>
+      </list>
+      <paragraph>
+       By induction we can show that {a mathematical formula}T′⊨Tfa.For every axiom {a mathematical formula}β∈TO, β can be either a GCI, or an RI, or a role disjointness axiom:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If β is a GCI or an RI, then it is obvious that {a mathematical formula}T′∪Tfa⊨β because {a mathematical formula}T′ contains β with expressions replaced by names and {a mathematical formula}Tfa contains the equivalence between expressions and corresponding names;
+       </list-item>
+       <list-item label="2.">
+        If β is of form {a mathematical formula}Dis(R,S). From Step-4 of Definition 4 we have {a mathematical formula}fa(R)⊑fa(¬S)∈T′. From Step-3 of Theorem 2 we have {a mathematical formula}Dis(fa(S),fa(¬S))∈T′. We also have {a mathematical formula}fa(R)≡R and {a mathematical formula}fa(S)≡S∈Tfa. By semantics of role disjointness we have {a mathematical formula}T′∪Tfa⊨β.
+       </list-item>
+      </list>
+      <paragraph>
+       Together we have {a mathematical formula}T′∪Tfa⊨TO. Since we also have {a mathematical formula}T′⊨Tfa we have {a mathematical formula}T′⊨Tfa∪TO. Hence we know that {a mathematical formula}T′∪Tfa∪TO is a CE of {a mathematical formula}T′.Note that {a mathematical formula}ΣTO⊆ΣT′. Together with the conclusion that {a mathematical formula}T′∪Tfa∪TO is also a CE of {a mathematical formula}TO, we can infer that for any GCI α with {a mathematical formula}Σα⊆ΣTO, we have {a mathematical formula}TO⊨α iff {a mathematical formula}T′∪Tfa∪TO⊨α iff {a mathematical formula}T′⊨α. □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof">
+      TBox approximationFor an ontology{a mathematical formula}O, let{a mathematical formula}TAfa(O)be{a mathematical formula}(T,CT,QT,IT)as defined inDefinition 4, then{a mathematical formula}Tis an{a mathematical formula}EL++TBox such that for any axiom α with{a mathematical formula}Σα⊆ΣO, we have{a mathematical formula}T⊨αonly if{a mathematical formula}O⊨α.It is obvious that {a mathematical formula}T only contains {a mathematical formula}EL++ TBox axioms.The soundness of {a mathematical formula}T w.r.t. {a mathematical formula}O is an apparent corollary of Theorem 2 since {a mathematical formula}T⊆T′, which preserves all semantics of {a mathematical formula}TO, the TBox of {a mathematical formula}O. □
+     </paragraph>
+     <paragraph label="Proof">
+      TBox approximate reasoning complexityFor an ontology{a mathematical formula}O, its TBox Approximate Reasoning Closure{a mathematical formula}ST(TAfa(O))can be computed in polynomial time w.r.t. the size of{a mathematical formula}O.Assume {a mathematical formula}TAfa=(T,CT,QT,IT), from Proposition 1 we know that {a mathematical formula}T, CT, QT and IT are all in linear size, and can be generated in linear time w.r.t. the size of {a mathematical formula}O. Also, the normalisation of {a mathematical formula}T can be performed in linear time.It is sufficient to prove this theorem by showing that {a mathematical formula}ST(TAfa(O)) can be computed in polynomial time w.r.t. {a mathematical formula}|CNT|+|RNT|: First of all, it is easy to implement an algorithm that initialises {a mathematical formula}ST(TAfa(O)) as specified by Step-1 in Definition 5. Then the algorithm repeatedly applies all rules until no more changes can be made on {a mathematical formula}ST(TAfa(O)).Due to the following facts that:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       there are at most {a mathematical formula}|CNT|×|CNT| atomic concept subsumptions of the form {a mathematical formula}A⊑B;
+      </list-item>
+      <list-item label="2.">
+       there are at most {a mathematical formula}|CNT|×|RNT|×|CNT| concept inclusions of the form {a mathematical formula}A⊑∃r.B;
+      </list-item>
+      <list-item label="3.">
+       there are at most {a mathematical formula}|RNT|×|RNT| role inclusions of the form {a mathematical formula}r⊑s;
+      </list-item>
+      <list-item label="4.">
+       there are at most {a mathematical formula}|RNT|3 role inclusions of the form {a mathematical formula}r1∘r2⊑⁎r3;
+      </list-item>
+      <list-item label="5.">
+       each rule application generates one axiom of one of the above forms, and once an axiom is inferred it will not be removed.
+      </list-item>
+     </list>
+     <paragraph label="Theorem 5">
+      TBox approximation reasoning soundnessFor an ontology{a mathematical formula}O, let α be an axiom such that{a mathematical formula}Σα⊆ΣO, then{a mathematical formula}α∈ST(TAfa(O))only if{a mathematical formula}O⊨α.
+     </paragraph>
+     <paragraph label="Proof">
+      This theorem directly follows from the facts:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       As Theorem 2 shows, the transformation in Definition 4 is a syntactic variant of the original TBox that replaces each concept expression with a atomic concept, each role expression with an atomic role. Additional axioms are essentially tautologies.
+      </list-item>
+      <list-item label="2.">
+       The normalisation of the transformed TBox is also a conservative rewriting that does not affect soundness of entailments constructed using {a mathematical formula}ΣO.
+      </list-item>
+      <list-item label="3.">
+       All the R rules preserve the correctness of the results.  □
+      </list-item>
+     </list>
+     <paragraph label="Theorem 6">
+      Syntactic nominal-safety under approximate reasoningFor an ontology{a mathematical formula}O, let{a mathematical formula}TAfa(O)=(T,CT,QT,IT), then{a mathematical formula}Ois semantic nominal-safe under approximate reasoning if{a mathematical formula}Tsatisfies the following syntactic properties, where A is a concept such that A,{a mathematical formula}fc(A)∈CNT,{a mathematical formula}B(i)is an arbitrary concept, a and b are individuals and r is a named role:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}Tis a nominal-safe{a mathematical formula}EL++TBox;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}fc({a})⊑A∉T;
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}fc({a})⊑{b}∉T;
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}B1⊓⋯⊓fc({a})⊓⋯⊓Bn⊑⊥∉T;
+      </list-item>
+      <list-item label="5.">
+       {a mathematical formula}fc({a})⊑∃r.A∉T;
+      </list-item>
+      <list-item label="6.">
+       {a mathematical formula}fc({a})⊑∃r.{b}∉T;
+      </list-item>
+      <list-item label="7.">
+       {a mathematical formula}fc({a})⊑∃r.fc({b})∉T.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      We use TA to denote {a mathematical formula}TAfa(O)=(T,CT,QT,IT) and we use ST to denote {a mathematical formula}ST(TAfa(O)). Assuming ST is obtained by applying R rules for n times, we use {a mathematical formula}STi to denote the state of ST after i application of R rules. Obviously, {a mathematical formula}ST0=T and {a mathematical formula}STn=ST.This theorem can be proved by showing that when the conditions in theorem are satisfied, the following stronger claims hold:{a mathematical formula}We prove the above claims by induction on the number of reasoning steps. First of all, all claims hold in {a mathematical formula}ST0. Now we assume all claims hold in {a mathematical formula}STk, e.g. {a mathematical formula}A⊑{a}∉STk, and investigate the inclusion of these entailments in {a mathematical formula}STk+1 via different rules.{a mathematical formula}A⊑{a} can be derived by R1, 2, 4, 10, 11, 12:
+      <list>
+       R1 is not applicable due to the hypothesis on {a mathematical formula}A⊑{a} and {a mathematical formula}fc({a})⊑{a};R2, 4 are not applicable due to the condition that {a mathematical formula}T is a nominal-safe {a mathematical formula}EL++ TBox hence GCIs with {a mathematical formula}{a} as the right-hand side do not appear in {a mathematical formula}T;R10 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑A;R11 is not applicable due to the condition that {a mathematical formula}B1⊓⋯⊓fc({a})⊓⋯⊓Bn⊑⊥∉T;R12 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.{b}.{a mathematical formula}fc({a})⊑A
+      </list>
+      <paragraph>
+       can be derived by R1, 2, 4, 10, 11, 12:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        R1 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑A and {a mathematical formula}fc({a})⊑{b};
+       </list-item>
+       <list-item label="2.">
+        R2 is not applicable due to the same reason as above, except the situation that {a mathematical formula}⨅i=1nfc({bi})⊑A∈T and {a mathematical formula}fc({a})⊑fc({bi})∈STk for {a mathematical formula}i=1,…,n. In this case, we essentially have {a mathematical formula}a≐bi and {a mathematical formula}fc({a})⊑A∈STk, which is against the hypothesis;
+       </list-item>
+       <list-item label="3.">
+        R4 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.A, {a mathematical formula}fc({a})⊑∃r.{b} and {a mathematical formula}fc({a})⊑∃r.fc({b});
+       </list-item>
+       <list-item label="4.">
+        R10 is not applicable due to the hypothesis on {a mathematical formula}A⊑{a};
+       </list-item>
+       <list-item label="5.">
+        R11 is not applicable due to the condition that {a mathematical formula}B1⊓⋯⊓fc({a})⊓⋯⊓Bn⊑⊥∉T and the hypothesis on {a mathematical formula}fc({a})⊑A and {a mathematical formula}fc({a})⊑{b};
+       </list-item>
+       <list-item label="6.">
+        R12 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.{b}.
+       </list-item>
+      </list>
+      <paragraph>
+       Together we know that {a mathematical formula}fc({a})⊑A∉STk+1.{a mathematical formula}fc({a})⊑{b} can be derived by R1, 2, 4, 10, 11, 12:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        R1 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑A and {a mathematical formula}fc({a})⊑{b};
+       </list-item>
+       <list-item label="2.">
+        R2, 4 are not applicable due to the condition that {a mathematical formula}T is a nominal-safe {a mathematical formula}EL++ TBox.
+       </list-item>
+       <list-item label="3.">
+        R10 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑{b};
+       </list-item>
+       <list-item label="4.">
+        R11 is not applicable due to the condition that {a mathematical formula}B1⊓⋯⊓fc({a})⊓⋯⊓Bn⊑⊥∉T;
+       </list-item>
+       <list-item label="5.">
+        R12 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.{b}.
+       </list-item>
+      </list>
+      <paragraph>
+       Together we know that {a mathematical formula}fc({a})⊑{b}∉STk+1.{a mathematical formula}fc({a})⊑∃r.A can be derived by R3, 7, 8:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        R3 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑A, {a mathematical formula}fc({a})⊑{b} and {a mathematical formula}fc({a})⊑∃r.A;
+       </list-item>
+       <list-item label="2.">
+        R7 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.A;
+       </list-item>
+       <list-item label="3.">
+        R8 is not applicable due to the hypothesis on {a mathematical formula}fc({a})⊑∃r.A, {a mathematical formula}fc({a})⊑∃r.{b} and {a mathematical formula}fc({a})⊑∃r.fc({b}).
+       </list-item>
+      </list>
+      <paragraph>
+       Together we know that {a mathematical formula}fc({a})⊑∃r.A∉STk+1.{a mathematical formula}fc({a})⊑∃r.{b}∉STk+1 and {a mathematical formula}fc({a})⊑∃r.fc({b})∉STk+1 can be proved in a similar manner as above.Now we have proved that all the claims hold in {a mathematical formula}STk+1 if they hold in {a mathematical formula}STk. Combined with the fact that they hold in {a mathematical formula}ST0, by induction we know that they all hold in {a mathematical formula}STn=ST. Hence we have {a mathematical formula}A⊑{a}∉ST. This shows that {a mathematical formula}O is a semantic nominal-safe ontology under approximate reasoning and proves the theorem. □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proposition 7">
+      Linear transformationInDefinition 8, the transformation from{a mathematical formula}Oto{a mathematical formula}Afa(O)can be done in linear time.
+     </paragraph>
+     <paragraph label="Proof">
+      We prove the proposition by showing that for any ontology {a mathematical formula}O=(TO,AO) and its transformation {a mathematical formula}(T,A,CT,QT,IT), if {a mathematical formula}O contains {a mathematical formula}nO number of terms, then we have:
+      <list>
+       {a mathematical formula}|T|≤nO+|TO|;{a mathematical formula}|A|=|AO|;{a mathematical formula}|CT|=nO;{a mathematical formula}|QT|≤nO;{a mathematical formula}|IT|=4×|RNO|;The size of
+      </list>
+      <paragraph>
+       {a mathematical formula}T, CT, QT and IT directly follow from Proposition 1.Regarding the size of {a mathematical formula}A, for each axiom in {a mathematical formula}AO, at most one axiom is added into {a mathematical formula}A (Steps-2 to 6). □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Theorem 8">
+      Ontology reasoning preservationFor any ontology{a mathematical formula}Oand its transformation{a mathematical formula}(T,A,CT,QT,IT), let{a mathematical formula}O′=(T′,A′)be an ontology constructed as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}T′is constructed in the same way as inTheorem 2;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}A′=A;
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Similar as Theorem 2, this theorem can be proved by showing that {a mathematical formula}O∪O′∪Tfa conservatively extends both {a mathematical formula}O and {a mathematical formula}O′ on {a mathematical formula}ΣO, where {a mathematical formula}Tfa is the set of definition {a mathematical formula}fa(P)≡P for all term P of {a mathematical formula}O except complement of roles. Here we slightly extend the notion of conservation extension (CE) to the entire ontology, i.e. an ontology {a mathematical formula}O1 is a Σ-CE of another ontology {a mathematical formula}O2 for {a mathematical formula}Σ⊆ΣO2 iff {a mathematical formula}O2⊆O1 and for any axiom α with {a mathematical formula}Σα⊆Σ, {a mathematical formula}O1⊨α implies {a mathematical formula}O2⊨α.The proof is also similar to the proof of Theorem 2. We first show that {a mathematical formula}O∪Tfa∪O′ is a CE of {a mathematical formula}O by induction. Apparently {a mathematical formula}O⊆O∪O′∪Tfa and {a mathematical formula}O∪Tfa is a CE of {a mathematical formula}O since it only extends with definitions of fresh names. Assuming some {a mathematical formula}Oi with {a mathematical formula}O∪Tfa⊆Oi⊆O∪Tfa∪T′ is a CE of {a mathematical formula}O, and axiom {a mathematical formula}β∈O′∖Oi can either be a TBox axiom or an ABox axiom. When β is a TBox axiom, it can be shown similar as in the proof of Theorem 2 that {a mathematical formula}Oi∪{β} is still a CE of {a mathematical formula}O. When β is an ABox axiom, we consider the following situations:
+      <list>
+       If β is a concept assertion axiom, it is apparent that {a mathematical formula}Oi⊨β because β is an ABox axiom in {a mathematical formula}O with the predicate replaced by its name, which is defined in {a mathematical formula}Tfa. Hence {a mathematical formula}Oi∪{β} is still a CE of {a mathematical formula}O;If β is a role assertion axiom {a mathematical formula}(a,b):r∈O′. There are two possibilities:We can also show that
+      </list>
+      <paragraph>
+       {a mathematical formula}O∪Tfa∪O′ is a CE of {a mathematical formula}O′ by showing that {a mathematical formula}O′⊨Tfa and {a mathematical formula}O′∪Tfa⊨O. The former can be proved in the same way as in the proof of Theorem 2. To prove the latter, let {a mathematical formula}β∈O, β can be either a TBox axiom or an ABox axiom. When β is a TBox axiom, we can still show in the same way as in the proof of Theorem 2 that {a mathematical formula}O′∪Tfa⊨β. When β is an ABox axiom:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If β is an individual equality or inequality axiom, then {a mathematical formula}β∈O′ and it's apparent {a mathematical formula}O′∪Tfa⊨β;
+       </list-item>
+       <list-item label="2.">
+        If β is a concept assertion or role assertion axiom, it is apparent that {a mathematical formula}O′∪Tfa⊨β because {a mathematical formula}O′ contains β with expressions replaced by names and {a mathematical formula}Tfa contains the equivalence between expressions and corresponding names;
+       </list-item>
+       <list-item label="3.">
+        If β is a negative role assertion {a mathematical formula}(a,b):¬R, by Step-4 of Definition 8 we have {a mathematical formula}(a,b):fa(¬R)∈O′. By Definition 4 we also have {a mathematical formula}(fa(R),fa(¬R))∈CT. Combined with Step-3 of Theorem 2 we have {a mathematical formula}Dis(fa(R),fa(¬R))∈O′. We also have {a mathematical formula}fa(R)≡R∈Tfa. Together we have {a mathematical formula}O′∪Tfa⊨β.
+       </list-item>
+      </list>
+      <paragraph>
+       From the above we have {a mathematical formula}O′∪Tfa⊨O. Since we also have {a mathematical formula}O′⊨Tfa we have {a mathematical formula}O′⊨Tfa∪O. Hence we know that {a mathematical formula}O′∪Tfa∪O is a CE of {a mathematical formula}O′.Note that {a mathematical formula}ΣO⊆ΣO′. Together with the conclusion that {a mathematical formula}O′∪Tfa∪O is also a CE of {a mathematical formula}O, we can infer hat for any axiom α with {a mathematical formula}Σα⊆ΣO, we have {a mathematical formula}O⊨α iff {a mathematical formula}O′∪Tfa∪O⊨α iff {a mathematical formula}O′⊨α.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof">
+      ApproximationFor an Ontology{a mathematical formula}O, let its transformation results{a mathematical formula}Afa(O)be{a mathematical formula}(T,A,CT,QT,IT)as specified inDefinition 8, then ({a mathematical formula}T,A) is an{a mathematical formula}EL++ontology such that for any axiom α with{a mathematical formula}Σα⊆ΣO, we have{a mathematical formula}(T,A)⊨αonly if{a mathematical formula}O⊨α.It is obvious that {a mathematical formula}T only contains {a mathematical formula}EL++ TBox axioms and {a mathematical formula}A only contains {a mathematical formula}EL++ ABox axioms.The soundness of {a mathematical formula}(T,A) w.r.t. {a mathematical formula}O is an apparent corollary of Theorem 8 since {a mathematical formula}(T,A)⊆O′, which preserves all semantics of {a mathematical formula}O. □
+     </paragraph>
+     <paragraph label="Proof">
+      ComplexityGiven an ontology{a mathematical formula}O, its approximate reasoning closure via internalisation{a mathematical formula}SIfa(O)can be computed in polynomial time w.r.t. the size of{a mathematical formula}O.According to Definition 10, we have {a mathematical formula}SIfa(O)=ST(AI(Afa(O))). Assuming {a mathematical formula}AI(Afa(O))=(T,CT,QT,IT), from the proof of Theorem 4 we know that {a mathematical formula}SIfa(O) can be computed in polynomial time w.r.t. {a mathematical formula}|CNT|+|RNT|. Thus it is sufficient to prove that:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}AI(Afa(O)) can be computed in polynomial time w.r.t. the size of {a mathematical formula}O;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}|CNT|+|RNT| is polynomial w.r.t. the size of {a mathematical formula}O.
+      </list-item>
+     </list>
+     <paragraph label="Theorem 11">
+      Approximate reasoning via internalisation soundnessFor an ontology{a mathematical formula}O, let α be an axiom with{a mathematical formula}Σα⊆ΣO, then{a mathematical formula}α∈SIfa(O)only if{a mathematical formula}O⊨α.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}O=(T,A), where {a mathematical formula}T and {a mathematical formula}A are TBox and ABox of {a mathematical formula}O, respectively. We construct a new ontology {a mathematical formula}O′=(T′,∅) as follows:
+      <list>
+       {a mathematical formula}T is initialised as {a mathematical formula}T;For each {a mathematical formula}a∈INO, {a mathematical formula}T′=T′∪{{a}⊑{a},¬{a}⊑¬{a},{a}⊑⊤,¬{a}⊑⊤};For each {a mathematical formula}a:C∈A, {a mathematical formula}T′=T′∪{{a}⊑C};For each {a mathematical formula}(a,b):R∈A, {a mathematical formula}T′=T′∪{{a}⊑∃R.{b}};For each {a mathematical formula}(a,b):¬R∈A, {a mathematical formula}T′=T′∪{{a}⊑∃fa(¬R).{b},Dis(R,fa(¬R))};For each {a mathematical formula}a≐b∈A, {a mathematical formula}T′=T′∪{{a}≡{b}};For each {a mathematical formula}a≐̸b∈A, {a mathematical formula}T′=T′∪{{a}⊑~{b}}.From
+      </list>
+      <paragraph>
+       Definition 4, Definition 8 and Definition 9 it is obvious that {a mathematical formula}AI(Afa(O))=TAfa(O′). Thus {a mathematical formula}SIfa(O)=ST(AI(Afa(O)))=ST(TAfa(O′)). According to Theorem 5 we know that {a mathematical formula}ST(TAfa(O′)) is soundness-preserving, thus {a mathematical formula}SIfa(O) should also be soundness-preserving. This proves the theorem.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Theorem 12">
+      Concept subsumption checkingFor a nominal-free ontology{a mathematical formula}O, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, then the following holds:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}A⊑B∈SIfa(O) iff {a mathematical formula}A⊑B∈SNFfa(O);
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}{a}⊑A∈SIfa(O) iff {a mathematical formula}a:A∈SNFfa(O);
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}{a}⊑∃r.{b}∈SIfa(O) iff {a mathematical formula}(a,b):r∈SNFfa(O).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The ← direction is obvious because the AR rules are special cases of the corresponding R rules where certain atomic concepts are restricted to nominals. If we rewrite the ABox axioms into corresponding nominal form TBox axioms, the AR rules are the same as or can be reduced to combinations of R rules. Some rules require further explanations:
+      <list>
+       The premises of AR1c rule are reduced to {a mathematical formula}{x}⊑A and {a mathematical formula}{y}⊑fc(A), which can derive their consequence {a mathematical formula}{x}⊑fc({y}) by combination of R1 and R10.The AR1e rule seems unnecessary but it is to derive {a mathematical formula}{a}⊑{b} from {a mathematical formula}{a}⊑⊥ and {a mathematical formula}⊥⊑{b}, which does not have an ABox counterpart form.When {a mathematical formula}♯=≐, the AR10 rule is an apparent tautology, due to internalisation of individual equality in Step-5 of Definition 9.When {a mathematical formula}♯=≐̸, the AR10 rule is reduced to R10 due to the internalisation of individual inequality in Step-6 of Definition 9.Let
+      </list>
+      <paragraph>
+       {a mathematical formula}Afa(O)=(T,A,CT,QT,IT) and {a mathematical formula}AI(Afa(O))={T′,CT,QT,IT}. In the following, we use SI to denote {a mathematical formula}SIfa(O), ST to denote {a mathematical formula}ST((T,CT,QT,IT)), and SNF to denote {a mathematical formula}SNFfa(O). Note that when the ontology {a mathematical formula}O is nominal free, {a mathematical formula}T does not contain any nominal or names for complement of nominal. Hence {a mathematical formula}CNT also does not include names for complement of nominal.Before we prove the → direction, we analyse the forms of axioms in SI. Because the ontology is nominal-free, all axioms in the initial {a mathematical formula}T′ should not have {a mathematical formula}fc({a}) as the LHS unless the RHS is ⊤ or also some {a mathematical formula}fc({b}), and should not have {a mathematical formula}{a} as the RHS unless the LHS is ⊥ or also some nominal.Also, most of the R rules that are applicable on nominal-free ontology have the following features: if the rule derives a consequence of form {a mathematical formula}A⊑B, where A and B are either atomic concepts or nominals, then there is a premise axiom with B as the RHS, and a premise axiom with A as the LHS. The only exceptions are the R10 which derive consequence with LHS and RHS not appearing in premises, and the R11, where the consequence has RHS not appearing in premise. However, to derive {a mathematical formula}{a} as the RHS of consequence by R10, it is required to have a premise with {a mathematical formula}fc({a}) as the LHS, and vice versa. The same applies to deriving {a mathematical formula}{a} as the RHS of consequence by R11. Thus by induction, we know that for a nominal-free ontology {a mathematical formula}O, SI have the following properties, where {a mathematical formula}A,B are named concepts or ⊤, ⊥, and a, b are individuals:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}A⊑{a}∉SI unless {a mathematical formula}A⊑⊥∈SI;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}fc({a})⊑B∉SI unless {a mathematical formula}⊤⊑B∈SI;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}fc({a})⊑{b}∉SI.
+       </list-item>
+      </list>
+      <paragraph>
+       Similarly, we know that SI have the following properties when the ontology is nominal-free:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}A⊑∃r.{a}∉SI unless {a mathematical formula}A⊑⊥∈SI;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}A⊑∃r.fc({a})∉SI unless {a mathematical formula}A⊑⊥∈SI;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}{a}⊑∃r.fc({a})∉SI;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}fc({a})⊑∃r.A∉SI;
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}fc({a})⊑∃r.{b}∉SI;
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}fc({a})⊑∃r.fc({b})∉SI.
+       </list-item>
+      </list>
+      <paragraph label="Lemma 13">
+       Then we show that, the above invariants hold for each of the corresponding axioms derived by each of the corresponding rules.Invariant36:{a mathematical formula}A⊑B∈SI can be derived by R1, 2, 4, 5, 9, 10, 11, 13. Note that R12 can not derive {a mathematical formula}A⊑B∈SI when the original ontology {a mathematical formula}O is nominal-free. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1. Then there is a concept X s.t. {a mathematical formula}A⊑X and {a mathematical formula}X⊑B in SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R2, then there are concepts {a mathematical formula}A1,…,An s.t. {a mathematical formula}A⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑B∈T′. Given the form of the later, it should also be in {a mathematical formula}T. And also {a mathematical formula}Ai∈CNT. In this case, by induction of invariant 36 and the non-applicability of R2 we have {a mathematical formula}A⊑B∈ST.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT′ and two concepts X and {a mathematical formula}X′ such that {a mathematical formula}A⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑B∈T′. Given the form of {a mathematical formula}∃r.X′⊑B, it should also be in {a mathematical formula}T and {a mathematical formula}X′ must be in {a mathematical formula}CNT. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R5, then {a mathematical formula}B=⊥ and there is concept X and {a mathematical formula}r∈RNT s.t. {a mathematical formula}A⊑∃r.X∈SI and {a mathematical formula}X⊑⊥∈SI. We make a case distinction on the form of X:
+        <list>
+         If {a mathematical formula}X∈CNT. When {a mathematical formula}A⊑⊥∈SI we trivially have {a mathematical formula}A⊑B∈ST as before. Otherwise by invariant 42 we have {a mathematical formula}A⊑∃r.X∈ST and {a mathematical formula}X⊑⊥∈ST. Due to the non-applicability of R5 we have {a mathematical formula}A⊑B∈ST.If X is a nominal {a mathematical formula}{a}, then we have {a mathematical formula}A⊑∃r.{a}∈SI. Given the possible forms of axioms in SI, we have {a mathematical formula}A⊑⊥∈SI. Hence by induction of invariant 36 we have {a mathematical formula}A⊑B∈ST.If X is of form {a mathematical formula}fc({a}), then we have {a mathematical formula}fc({a})⊑⊥∈SI, which is contradictory to the possible forms of axioms in SI thus we omit this situation.Considering the form of
+        </list>
+        <paragraph>
+         {a mathematical formula}A⊑∃r.X, we know that
+        </paragraph>
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R9, then {a mathematical formula}B=⊥ and there is a concept X s.t. {a mathematical formula}A⊑X and {a mathematical formula}A⊑fc(X). We make a case distinction on form of X:
+       </list-item>
+       <list-item label="6.">
+        If it is derived by R10, then we have {a mathematical formula}fc(B)⊑fc(A)∈SI. Because {a mathematical formula}A,B∈CNT, {a mathematical formula}fc(A) and {a mathematical formula}fc(B) are also in {a mathematical formula}CNT. By induction on invariant 36 we have {a mathematical formula}fc(B)⊑fc(A)∈ST. Due to the non-applicability of rule R10 we have {a mathematical formula}A⊑B∈ST.
+       </list-item>
+       <list-item label="7.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}B=fc(Ai) and {a mathematical formula}A⊑Aj∈SI ({a mathematical formula}1≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. Given the possible forms of axioms in SI, we know that {a mathematical formula}A1,…,An∈CNT. Due to invariant 36 we have {a mathematical formula}A⊑Aj∈ST ({a mathematical formula}1≤j≤n,j≠i). Thus by non-applicability of rule R11 we have {a mathematical formula}A⊑B∈ST.
+       </list-item>
+       <list-item label="8.">
+        If it is derived by R13, then by induction of invariant 36 it is obvious that {a mathematical formula}A⊑B∈ST because the internalisation does not change QT.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 36 is proved.Invariant37:{a mathematical formula}A⊑fc({a})∈SI can be derived by R1, 10. Note that R2 can not derive {a mathematical formula}A⊑fc({a}) because in {a mathematical formula}T′ there is no GCI with {a mathematical formula}fc({a}) as the RHS and a conjunction as the LHS. Similarly, R4 can not derive {a mathematical formula}A⊑fc({a}).We skip the obvious situation where {a mathematical formula}A=⊥ and make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}A⊑X∈SI and {a mathematical formula}X⊑fc({a})∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R10, then there is {a mathematical formula}{a}⊑fc(A)∈SI. By induction of invariant 38 we have {a mathematical formula}a:fc(A)∈SNF.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 37 is proved. Invariant38:{a mathematical formula}{a}⊑B∈SI can be derived by R1, 2, 4, 5, 9, 10, 11.We skip the obvious situation where {a mathematical formula}B=⊤ and make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1. Then there is a concept X s.t. {a mathematical formula}{a}⊑X and {a mathematical formula}X⊑B. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R2, then there are concepts {a mathematical formula}A1,…,An s.t. {a mathematical formula}{a}⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑B∈T′. Given the form of the later, it should also be in {a mathematical formula}T. And also {a mathematical formula}Ai∈CNT. In this case, by induction of invariant 38 and the non-applicability of AR2 we have {a mathematical formula}x:B∈SNF.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT and two concepts X and {a mathematical formula}X′ such that {a mathematical formula}{a}⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑B∈T′. Given the form of {a mathematical formula}∃r.X′⊑B, it should also be in {a mathematical formula}T and {a mathematical formula}X′ must be in {a mathematical formula}CNT. We skip the obvious situation where {a mathematical formula}{a}⊑⊥∈SI before R4 is applied. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R5, then {a mathematical formula}B=⊥ and there are concept X and {a mathematical formula}r∈RNT s.t. {a mathematical formula}{a}⊑∃r.X∈SI and {a mathematical formula}X⊑⊥∈SI. Similar as above, we skip the obvious situation where {a mathematical formula}{a}⊑⊥∈SI before R5 is applied. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R9, then {a mathematical formula}B=⊥ and there is a concept X s.t. {a mathematical formula}{a}⊑X∈SI and {a mathematical formula}{a}⊑fc(X)∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="6.">
+        If it is derived by R10, then we have {a mathematical formula}fc(B)⊑fc({a})∈SI. By induction of invariant 37 we have {a mathematical formula}a:B∈SNF.
+       </list-item>
+       <list-item label="7.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}B=fc(Ai) and {a mathematical formula}{a}⊑Aj∈SI ({a mathematical formula}2≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. Given the possible forms of axioms in SI, we know that {a mathematical formula}A1,…,An∈CNT. By induction of invariant 38 we have {a mathematical formula}a:Aj∈SNF ({a mathematical formula}1≤j≤n,j≠i). Due to the non-applicability of AR11 we have {a mathematical formula}a:B∈SNF.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 38 is proved.Invariant39:{a mathematical formula}{a}⊑{b} can be derived by R1, 6, 10. For the similar reason as of {a mathematical formula}A⊑fc({a}), R2 and R4 can not derive {a mathematical formula}{a}⊑{b}.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}{a}⊑X∈SI and {a mathematical formula}X⊑{b}∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R6, then there is {a mathematical formula}{b}⊑{a}∈SI. As we explained earlier in the proof, if {a mathematical formula}{b}⊑{a} is an initial element of SI without any inference, then we have {a mathematical formula}b≐a∈SNF. This is because the original ontology is nominal free so that {a mathematical formula}{b}⊑{a}∈SI can only be included due to either Step-4 or Step-7 of Definition 9, which both leads to {a mathematical formula}b≐a∈SNF. Alternatively, if {a mathematical formula}{b}⊑{a}∈SI is derived, then by induction of invariant 39 we have {a mathematical formula}b≐a∈SNF. In either case, by non-applicability of AR10 we have {a mathematical formula}a≐b∈SNF.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R10, then there is {a mathematical formula}fc({b})⊑fc({a})∈SI. By induction of invariant 41 we have {a mathematical formula}b≐a∈SNF. Due to the non-applicability of AR10 we have {a mathematical formula}a≐b∈SNF.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 39 is proved.Invariant40: Similar as above, {a mathematical formula}{a}⊑fc({b}) can be derived by R1, 10, 12, 20. In the following, we skip the obvious situation where {a mathematical formula}{a}⊑⊥∈SI is derived before the corresponding rule is applied, in which case we have {a mathematical formula}a:⊥∈SNF by induction of invariant 38. Then due to the non-applicability of AR1e we can derive {a mathematical formula}a≐̸b∈SNF. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}{a}⊑X∈SI and {a mathematical formula}X⊑fc({b})∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R10, then there is {a mathematical formula}{b}⊑fc({a})∈SI. By induction of invariant 40 we have {a mathematical formula}b≐̸a∈SNF. Due to the non-applicability of AR10 we have {a mathematical formula}a≐̸b∈SNF.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R12, then there is {a mathematical formula}r∈RNT and {a mathematical formula}c∈INT s.t. {a mathematical formula}{a}⊑∃r.{c},{b}⊑∃fc(r).{c}∈SI. By induction of invariant 44 we have {a mathematical formula}(a,c):r∈SNF and {a mathematical formula}(b,c):fc(r)∈SNF. Due to the non-applicability of AR12 we have {a mathematical formula}x≐̸y.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R20, then there is concept X s.t. {a mathematical formula}{a}⊑∃r.X,X⊑∃fi(fc(r)).{b}∈SI. We make a case distinction on the form of X:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 40 is proved.Invariant41: Similar as above again, {a mathematical formula}fc({a})⊑fc({b}) can be derived by R1, 10.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}fc({a})⊑X∈SI and {a mathematical formula}X⊑fc({b})∈SI. We make a case distinction on form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R10, then there is {a mathematical formula}{b}⊑{a}∈SI. By induction of invariant 39 we have {a mathematical formula}b≐a∈SNF. Due to the non-applicability of AR10 we have {a mathematical formula}a≐b∈SNF.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 41 is proved.Invariant42:{a mathematical formula}A⊑∃r.B∈SI can be derived by R3, 7, 8. Note that {a mathematical formula}A⊑⊥∉SI. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is a concept X s.t. {a mathematical formula}A⊑X,X⊑∃r.B∈SI. Given the possible forms of axioms in SI, we only have {a mathematical formula}X∈CNT. Then by induction of invariant 36 we have {a mathematical formula}A⊑X∈ST. By induction of invariant 42 we have {a mathematical formula}X⊑∃r.B∈ST. Due to the non-applicability of rule R3 we have {a mathematical formula}A⊑∃r.B∈ST.
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}A⊑∃s.B∈SI and {a mathematical formula}s⊑r∈SI which should also be in ST. By induction of invariant 42 we have {a mathematical formula}A⊑∃s.B∈ST. Due to non-applicability of R7 we have {a mathematical formula}A⊑∃r.B∈ST.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, there are concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}A⊑∃r1.X,X⊑∃r2.B,r1∘r2⊑R∈SI. Given the possible forms of axioms in SI, we have {a mathematical formula}X∈CNT. By induction of invariant 42 we have {a mathematical formula}A⊑∃r1.X,X⊑∃r2.B∈ST. Due to the non-applicability of R8 we have {a mathematical formula}A⊑∃r.B∈ST.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 42 is proved.Invariant43: Similarly as above, {a mathematical formula}{a}⊑∃r.B∈SI can be derived by R3, 7, 8. Note that {a mathematical formula}{a}⊑⊥∉SI. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is a concept X s.t. {a mathematical formula}{a}⊑X,X⊑∃r.B∈SI. We make a case distinction on form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}{a}⊑∃s.B∈SI and {a mathematical formula}s⊑r∈SI which should also be in ST. By induction of invariant 43 we have {a mathematical formula}a:∃s.B∈SNF. Due to non-applicability of AR7a we have {a mathematical formula}a:∃r.B∈SNF.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, there are concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}{a}⊑∃r1.X,X⊑∃r2.B,r1∘r2⊑R∈SI. We make a case distinction on form of X:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 43 is proved.Invariant44:{a mathematical formula}{a}∃r.{b}∈SI can be derived by R3, 7, 8, 19. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is concept X s.t. {a mathematical formula}{a}⊑X,X⊑∃r.{b}∈SI. Given the possible form of axioms in SI, X can only be a nominal {a mathematical formula}{c}. Thus by induction of invariant 39 we have {a mathematical formula}a≐c∈SNF. By induction of invariant 44 we have {a mathematical formula}(c,b):r∈SNF. Due to the non-applicability of AR3c we have {a mathematical formula}(a,b):r∈SNF.
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, then there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}{a}⊑∃s.{b},s⊑r∈SI. By induction of invariant 44 we have {a mathematical formula}(a,b):s∈SNF. Due to the non-applicability of AR7b we have {a mathematical formula}(a,b):r∈SNF.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, then there are a concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}{a}⊑∃r1.X,X⊑∃r2.{b},r1∘r2⊑r∈SI. Given the possible forms of axioms in SI, X can only be a nominal {a mathematical formula}{c}. By induction of invariant 44 we have {a mathematical formula}(a,c):r1,(c,b):r2∈SNF. Due to the non-applicability of AR8c we have {a mathematical formula}(a,b):r∈SNF.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R19, then we have {a mathematical formula}{b}⊑∃fi(r).{a}∈SI. By induction of invariant 44 we have {a mathematical formula}(b,a):fi(r)∈SNF. Due to the non-applicability of AR19 we have {a mathematical formula}(a,b):r.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 44 is proved.With inductions of all invariants proved for each of the corresponding rules, we proved Lemma 13.This further proves the → directions of the Theorem and hence the Theorem 12.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Theorem 14">
+      For a nominal-free ontology{a mathematical formula}O, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, if for any{a mathematical formula}r1∘…rn⊑s∈O, we have{a mathematical formula}n=2and{a mathematical formula}r1=⋯=rn=s, then the following holds:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}A⊑B∈SNFfa(O) iff {a mathematical formula}A⊑B∈STNFfa(O);
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}{a}⊑A∈SNFfa(O) iff {a mathematical formula}a:A∈STNFfa(O);
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}{a}⊑∃r.{b}∈SNFfa(O) iff {a mathematical formula}(a,b):r∈STNFfa(O).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Similar as in the proof of Theorem 12, we use SNF to denote {a mathematical formula}SNFfa(O) and use STNF to denote {a mathematical formula}STNFfa(O).The first claim of the theorem is quite obvious because:
+      <list>
+       Both SNF and STNF include {a mathematical formula}ST((T,CT,QT,IT)),Neither the AR rules nor the TR rules infer any new axioms that do not involve any individual.Thus we have
+      </list>
+      <paragraph>
+       {a mathematical formula}A⊑B∈SNFiff{a mathematical formula}A⊑B∈ST((T,CT,QT,IT)), which holds iff{a mathematical formula}A⊑B∈STNF. For the same reason, we have {a mathematical formula}A⊑∃r.B∈SNFiff{a mathematical formula}A⊑∃r.B∈STNF.The third claim of the theorem is also obvious because:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Both SNF and STNF contain the same original ABox axioms from {a mathematical formula}A.
+       </list-item>
+       <list-item label="2.">
+        All entailments of form {a mathematical formula}(x,y):r are either original or derived by rules AR3c, 7b, 8c and 19.
+       </list-item>
+       <list-item label="3.">
+        All of the above rules are in both AR rules and TR rules.
+       </list-item>
+       <list-item label="4.">
+        Their premises are of forms {a mathematical formula}(x,y):r, {a mathematical formula}x≐y, {a mathematical formula}r⊑s, and {a mathematical formula}r1∘r2⊑s.
+       </list-item>
+       <list-item label="5.">
+        No axiom of the any of above forms is derived by the different rules between AR and TR.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus we know that replacing the AR rules with the TR rules will not affect the derivation of role assertion axioms. Therefore any {a mathematical formula}(x,y):r∈SNF, no matter being original or derived, should also be in STNF.Similarly, we can also show that {a mathematical formula}x≐y∈SNFiff{a mathematical formula}x≐y∈STNF because all rules that derive it or any of their premises are included in both AR and R.The ← direction of the second claim is also obvious. The rule TR4a is a combination of the rules AR3a and AR4a. The rule TR4b is a combination of the rules AR3, AR4a, AR7a and AR8b. Thus any entailment derived by any of these two rules can be derived by the AR rules.The → direction of the second claim can be proved by showing that the following invariants hold:{a mathematical formula}{a mathematical formula}{a mathematical formula}These invariants can also be proved with inductions. Initially, before applying either AR rules or TR rules, SNF and STNF contain the same axioms thus satisfy the invariants. We prove the invariants for each of the corresponding rules.Invariant109:{a mathematical formula}a:B∈SNF can be derived by AR1a, 1b, 2, 4a, 4b, 5a, 5b, 9a, 9b, 11. We skip the cases of AR1a, 1b, 2, 4b, 5b, 9a, 9b, 11, as they can all be easily proved by induction of the above invariants and the non-applicability of rules shared by AR and TR. We consider the rest of the rules:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by AR4a, then there are A, {a mathematical formula}A′∈CNT and {a mathematical formula}r∈RNT s.t. {a mathematical formula}a:∃r.A, {a mathematical formula}A⊑A′, {a mathematical formula}∃r.A′⊑B∈SNF. Apparently we have {a mathematical formula}A⊑A′,∃r.A′⊑B∈STNF as well. By induction of invariant 111 we have one of the following three situations:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by AR5a, then {a mathematical formula}B=⊥, and there are {a mathematical formula}A∈CNT and {a mathematical formula}r∈RNT s.t. {a mathematical formula}a:∃r.A, {a mathematical formula}A⊑⊥∈SNF. Apparently we have {a mathematical formula}A⊑⊥∈STNF as well. By induction of invariant 111 we have one of the following three situations:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 109 is proved.Invariant110:{a mathematical formula}a≐̸b∈SNF can be derived by AR1c, 1d, 10, 12. The proof of all these situations is quite straightforward, simply making directly use of the induction of the above invariants.Invariant111:{a mathematical formula}a:∃r.B∈SNF can be derived by AR3a, 3b, 7a, 8a, 8b. We make a case distinction:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by AR3a then there is {a mathematical formula}A∈CNT s.t. {a mathematical formula}x:A, {a mathematical formula}A⊑∃r.B∈SNF. The later is also in STNF. By induction of invariant 109 we have {a mathematical formula}x:A∈STNF. Together they satisfy the first possibility of the invariant.
+       </list-item>
+       <list-item label="2.">
+        If it is derived by AR3b then there is {a mathematical formula}b∈INA s.t. {a mathematical formula}a≐b, {a mathematical formula}b:∃r.B∈SNF. By induction of invariant 110 we have {a mathematical formula}a≐b∈STNF. The later indicates one of the following three situations by induction of invariant 111:
+       </list-item>
+       <list-item label="3.">
+        If it is derived by AR7a then there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}a:∃s.B, {a mathematical formula}s⊑r∈SNF. Apparently we have {a mathematical formula}s⊑r∈STNF. The former is in one of the following three situations:
+       </list-item>
+       <list-item label="4.">
+        If it is derived by AR8a then there is {a mathematical formula}A∈CNT s.t. {a mathematical formula}a:∃r.A, {a mathematical formula}A⊑∃r.B, {a mathematical formula}r∘r⊑r∈SNF. Apparently we have the later two in STNF. The former is in one of the following three situations:
+       </list-item>
+       <list-item label="5.">
+        If it is derived by AR8b then there is {a mathematical formula}b∈INA s.t. {a mathematical formula}(a,b):r, {a mathematical formula}b:∃r.B, {a mathematical formula}r∘r⊑r∈SNF. Apparently we have {a mathematical formula}(a,b):r, {a mathematical formula}r∘r⊑r∈STNF. The {a mathematical formula}b:∃r.B is in one of the following three situations:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 111 is proved. Thus we prove the → direction of the second claim of the theorem and hence prove the theorem.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Theorem 15">
+      For a nominal-safe ontology{a mathematical formula}Ounder approximate reasoning, let{a mathematical formula}a,b∈INObe two individuals,{a mathematical formula}A,B∈CNObe two concepts, and{a mathematical formula}r∈RNObe a role, then the following holds:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}A⊑B∈SIfa(O) iff {a mathematical formula}A⊑B∈SCfa(O);
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}{a}⊑A∈SIfa(O) iff {a mathematical formula}a:A∈SCfa(O);
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}{a}⊑∃r.{b}∈SIfa(O) iff {a mathematical formula}(a,b):r∈SCfa(O).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The theorem is similar to Theorem 12 hence we follow a similar proof.The ← direction is obvious because the additional CR rules are special cases of the corresponding R rules where certain concepts are restricted to nominals. If we rewrite the ABox axioms into corresponding nominal form TBox axioms, the CR rules are the same as or can be reduced to combinations of R rules.Let {a mathematical formula}Afa(O)=(T,A,CT,QT,IT) and {a mathematical formula}AI(Afa(O))={T′,CT,QT,IT}. In the following, we use SI to denote {a mathematical formula}SIfa(O), and SC to denote {a mathematical formula}SCfa(O).Before we prove the → direction, we analyse the forms of axioms in SI. Because the ontology is nominal-safe, all axioms in the initial {a mathematical formula}T′ should not have {a mathematical formula}fc({a}) as the LHS if its RHS is not of the same form, or {a mathematical formula}{a} as the RHS if its LHS is not a nominal.Hence, as a consequence of Theorem 6, we know that for a nominal-safe ontology {a mathematical formula}O, SI have the following properties, where A, B, {a mathematical formula}fc(A), {a mathematical formula}fc(B)∈CNT and a, b are individuals:
+      <list>
+       {a mathematical formula}A⊑{a}∉SI unless {a mathematical formula}A⊑⊥∈SI;{a mathematical formula}fc({a})⊑B∉SI unless {a mathematical formula}⊤⊑B∈SI;{a mathematical formula}fc({a})⊑{b};{a mathematical formula}fc({a})⊑∃r.A∉SI unless {a mathematical formula}⊤⊑∃r.A∈SI;{a mathematical formula}fc({a})⊑∃r.{b}∉SI unless {a mathematical formula}⊤⊑∃r.{b}∈SI;{a mathematical formula}fc({a})⊑∃r.fc({b})∉SI unless {a mathematical formula}⊤⊑∃r.fc({b})∈SI;{a mathematical formula}C1⊓⋯⊓Cn⊑{a}∉SI where {a mathematical formula}Ci is a named concept, nominal, ⊤ or ⊥.Furthermore, because the
+      </list>
+      <paragraph label="Lemma 16">
+       Then we show that, the above invariants hold for each of the corresponding axioms derived by each of the corresponding rules.Invariant57:{a mathematical formula}A⊑B∈SI can be derived by R1, 2, 4, 5, 9, 10, 11, 12, 13. Note that R6 can not derive {a mathematical formula}A⊑B∈SI when the {a mathematical formula}O is nominal-safe. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1. Then there is a concept X s.t. {a mathematical formula}A⊑X and {a mathematical formula}X⊑B. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R2, then there are concepts {a mathematical formula}A1,…,An s.t. {a mathematical formula}A⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑B∈T′. Given the form of the later, it should also be in {a mathematical formula}T. We make a case distinction on the form of {a mathematical formula}Ai as follows:
+        <list>
+         If {a mathematical formula}Ai,fc(Ai)∈CNT, then by induction of invariant 57 we have {a mathematical formula}A⊑Ai∈SC.If {a mathematical formula}Ai is a nominal {a mathematical formula}{a}, then we have {a mathematical formula}A⊑{a}∈SI, which is contradictory to the form of axioms appearing in SI unless {a mathematical formula}A⊑⊥∈SI, in which case by induction of invariant 57 we have {a mathematical formula}A⊑⊥∈SC and hence {a mathematical formula}A⊑B∈SC.If {a mathematical formula}Ai is of form {a mathematical formula}fc({a}), they by induction of invariant 58 we have {a mathematical formula}a:fc(A)∈SC. Given that {a mathematical formula}fc({a}) is in {a mathematical formula}A1⊓⋯⊓An⊑B, {a mathematical formula}{a} is native and introduced. Thus due to the non-applicability of IR1 we have {a mathematical formula}{a}⊑fc(A)∈SC. Due to the non-applicability of R10 we have {a mathematical formula}A⊑fc({a})∈SC.Together, due to the non-applicability of
+        </list>
+        <paragraph>
+         R2 we have {a mathematical formula}A⊑B∈SC.
+        </paragraph>
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT′ and two concepts X and {a mathematical formula}X′ such that {a mathematical formula}A⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑B∈T′. Given the form of {a mathematical formula}∃r.X′⊑B, it should also be in {a mathematical formula}T. We make a case distinction on the form of X and {a mathematical formula}X′:
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R5, then {a mathematical formula}B=⊥ and there is concept X and {a mathematical formula}r∈RNT s.t. {a mathematical formula}A⊑∃r.X∈SI and {a mathematical formula}X⊑⊥∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R9, then {a mathematical formula}B=⊥ and there is a concept X s.t. {a mathematical formula}A⊑X and {a mathematical formula}A⊑fc(X). We make a case distinction on form of X:
+       </list-item>
+       <list-item label="6.">
+        If it is derived by R10, then we have {a mathematical formula}fc(B)⊑fc(A)∈SI. We also have {a mathematical formula}fc(A), {a mathematical formula}fc(B)∈CNT, by induction on invariant 57 we have {a mathematical formula}fc(B)⊑fc(A)∈SC. Due to the non-applicability of rule R10 we have {a mathematical formula}A⊑B∈SC.
+       </list-item>
+       <list-item label="7.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}B=fc(Ai) and {a mathematical formula}A⊑Aj∈SI ({a mathematical formula}1≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. We make a case distinction on the form of {a mathematical formula}Aj as follows:
+        <list>
+         If {a mathematical formula}Aj,fc(Aj)∈CNT, then by induction of invariant 57 we have {a mathematical formula}A⊑Aj∈SC.If {a mathematical formula}Aj is a nominal {a mathematical formula}{a}, then we have {a mathematical formula}A⊑{a}∈SI, which is contradictory to the form of axioms appearing in SI unless {a mathematical formula}A⊑⊥∈SI, in which case by induction of invariant 57 we have {a mathematical formula}A⊑⊥∈SC and hence {a mathematical formula}A⊑B∈SC.If {a mathematical formula}Aj is of form {a mathematical formula}fc({a}), they by induction of invariant 58 we have {a mathematical formula}a:fc(A)∈SC. Given that {a mathematical formula}fc({a}) is in {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T, {a mathematical formula}{a} is native. Thus due to the non-applicability of IR1 we have {a mathematical formula}{a}⊑fc(A)∈SC. Due to the non-applicability of R10 we have {a mathematical formula}A⊑fc({a})∈SC.Together, due to the non-applicability of
+        </list>
+        <paragraph>
+         R11 we have {a mathematical formula}A⊑B∈SC.
+        </paragraph>
+       </list-item>
+       <list-item label="8.">
+        If it is derived by R12, then there is individual {a mathematical formula}a∈INA and role {a mathematical formula}r∈RNT s.t. {a mathematical formula}A⊑∃r.{a}∈SI and {a mathematical formula}fc(B)⊑∃fc(r).{a}∈SI. By induction of invariant 60 we have {a mathematical formula}A⊑∃r.{a}∈SC and {a mathematical formula}fc(B)⊑∃fc(r).{a}∈SC. Due to the non-applicability of R12 we have {a mathematical formula}A⊑B∈SC.
+       </list-item>
+       <list-item label="9.">
+        If it is derived by R13, then there are concepts X and Y, roles r, {a mathematical formula}s∈RNT and integers i and j s.t. {a mathematical formula}X⊑Y∈SI, {a mathematical formula}(A,X,r,i)∈QT, {a mathematical formula}(B,Y,s,j)∈QT, {a mathematical formula}r⊑s∈SI and {a mathematical formula}i≥j. By induction of invariant 64 we have {a mathematical formula}r⊑s∈SC. {a mathematical formula}(A,X,r,i),(B,Y,s,j)∈QT should also remain as QT is the same in computation of SI and SC. And it's apparent that {a mathematical formula}i≥j remains the same. We make a case distinction on the form of X and Y as follows:
+        <list>
+         If {a mathematical formula}X,fc(X)∈CNT:If X is a nominal {a mathematical formula}{a}, because {a mathematical formula}(A,{a},r,i)∈QT we know that {a mathematical formula}{a} is native:If X is of form {a mathematical formula}fc({a}), we know that {a mathematical formula}fc({a}) is native:In all the above situations where
+        </list>
+        <paragraph>
+         X is satisfiable, we have {a mathematical formula}X⊑Y∈SC. Hence due to the non-applicability of R13 we have {a mathematical formula}A⊑B∈SC.
+        </paragraph>
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 57 is proved.Invariant58:{a mathematical formula}A⊑fc({a})∈SI can be derived by R1, 2, 4, 10, 11, 12. We skip the obvious situation where {a mathematical formula}A=⊥ and make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}A⊑X∈SI and {a mathematical formula}X⊑fc({a})∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R2, then there are concepts {a mathematical formula}A1,…,An s.t. {a mathematical formula}A⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑fc({a})∈T. Hence {a mathematical formula}{a} is a native nominal. In this case, {a mathematical formula}A⊑fc({a})∈SC can be proved in the same way as {a mathematical formula}A⊑B∈SC. Due to the non-applicability of R10 we have {a mathematical formula}{a}⊑fc(A)∈SC. Due to the non-applicability of IR1 we have {a mathematical formula}a:fc(A)∈SC.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT and two concepts X and {a mathematical formula}X′ such that {a mathematical formula}A⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑fc({a})∈T′. Given the form of {a mathematical formula}∃r.X′⊑fc({a}), it should also be in {a mathematical formula}T. This indicates that {a mathematical formula}{a} is a native nominal. In this case, {a mathematical formula}A⊑fc({a})∈SC can be proved in the same way as {a mathematical formula}A⊑B∈SC. Then similar as the above situation we have {a mathematical formula}a:fc(A)∈SC.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R10, then there is {a mathematical formula}{a}⊑fc(A)∈SI. By induction of invariant 61 we have {a mathematical formula}a:fc(A)∈SC.
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}Ai={a} and {a mathematical formula}A⊑Aj∈SI ({a mathematical formula}1≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. Given that {a mathematical formula}Ai is in an original axiom in {a mathematical formula}T, we know that {a mathematical formula}{a} is a native nominal. In this case, {a mathematical formula}A⊑fc({a})∈SC can be proved in the same way as {a mathematical formula}A⊑B∈SC. Then similar as the R4 situation we have {a mathematical formula}a:fc(A)∈SC.
+       </list-item>
+       <list-item label="6.">
+        If it is derived by R12, then there is individual {a mathematical formula}b∈INA and role {a mathematical formula}r∈RNT s.t. {a mathematical formula}A⊑∃r.{b}∈SI and {a mathematical formula}{a}⊑∃fc(r).{b}∈SI. By induction of invariant 60 we have {a mathematical formula}A⊑∃r.{b}∈SC. By induction of invariant 66 we have {a mathematical formula}(a,b):fc(r)∈SC. Due to the non-applicability of CR12 we have {a mathematical formula}a:fc(A)∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 58 is proved.Invariant59:{a mathematical formula}A⊑∃r.B∈SI can be derived by R3, 7, 8. Note that {a mathematical formula}A⊑⊥∉SI. The situations where it is derived by R3 or R7 can be proved in the same way as invariant 42 in the proof of Theorem 12 so we skip them.If it is derived by R8, there are concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}A⊑∃r1.X,X⊑∃r2.B,r1∘r2⊑R∈SI. By induction of invariant 67 we have {a mathematical formula}r1∘r2⊑R∈SC. We make a case distinction on the form of X as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}X,fc(X)∈CNT. By induction of invariant 59 we have {a mathematical formula}A⊑∃r1.X,X⊑∃r2.B∈SC. Due to the non-applicability of R8 we have {a mathematical formula}A⊑∃r.B∈SC.
+       </list-item>
+       <list-item label="2.">
+        If X is a nominal {a mathematical formula}{a}, then we have {a mathematical formula}A⊑∃r1.{a}∈SI and {a mathematical formula}{a}⊑∃r2.B∈SI. By induction of invariant 60 we have {a mathematical formula}A⊑∃r1.{a}∈SC, implying that {a mathematical formula}{a} is an introduced nominal. By induction of invariant 68 we have {a mathematical formula}a:∃r2.B∈SC. Because {a mathematical formula}{a} is introduced, due to the non-applicability of IR5 we have {a mathematical formula}{a}⊑∃r2.B∈SC. Due to the non-applicability of R8 we have {a mathematical formula}A⊑∃r.B∈SC.
+       </list-item>
+       <list-item label="3.">
+        If X is of form {a mathematical formula}fc({a}), then we have {a mathematical formula}fc({a})⊑∃r2.B∈SI. This occurs only when we have {a mathematical formula}⊤⊑∃r.2B∈SI. By induction of invariant 59 we have {a mathematical formula}⊤⊑∃r.2B∈SC. Since we have {a mathematical formula}fc({a}) introduced, we know that it is also native. Hence we have {a mathematical formula}fc({a})⊑⊤∈SC. Due to the non-applicability of R3 we have {a mathematical formula}fc({a})⊑∃r.2B∈SC. Together due to the non-applicability of R8 we have {a mathematical formula}A⊑∃r.B∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 59 is proved.Invariant60:{a mathematical formula}A⊑∃r.{a}∈SI can be derived by R3, 7, 8. Note that {a mathematical formula}A⊑⊥∉SI. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is concept X s.t. {a mathematical formula}A⊑X∈SI and {a mathematical formula}X⊑∃r.{a}∈SI. Given the possible forms of axioms in SI we have {a mathematical formula}X∈CNT. By induction of invariant 57 we have {a mathematical formula}A⊑X∈SC. By induction of invariant 60 we have {a mathematical formula}X⊑∃r.{a}∈SC. Due to the non-applicability of R3 we have {a mathematical formula}A⊑∃r.{a}∈SC.
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, then simply by induction of invariant 60 and invariant 64, and due to the non-applicability of R7 we have {a mathematical formula}A⊑∃r.{a}∈SC.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, there are concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}A⊑∃r1.X,X⊑∃r2.{a},r1∘r2⊑r∈SI. By induction of invariant 67 we have {a mathematical formula}r1∘r2⊑r∈SC. We make a case distinction on the form of X as follows:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 60 is proved.Invariant61:{a mathematical formula}{a}⊑B∈SI can be derived by R1, 2, 4, 5, 9, 10, 11, 12. The situations where it is derived by R1, 5, 9, 10 can be proved in the same way as invariant 38 in the proof of Theorem 12 so we skip them.We make a case distinction on the other rules as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R2, then there are concepts {a mathematical formula}A1,…,An s.t. {a mathematical formula}{a}⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑B∈T′. Given the form of the later, it should also be in {a mathematical formula}T. We make a case distinction on the form of {a mathematical formula}Ai as follows:
+        <list>
+         If {a mathematical formula}Ai,fc(Ai)∈CNT, then by induction of invariant 61 we have {a mathematical formula}a:Ai∈SC.If {a mathematical formula}Ai is a nominal {a mathematical formula}{b}, then by induction of invariant 62 we have {a mathematical formula}a≐b∈SC. Given that {a mathematical formula}{b} is native and introduced, due to the non-applicability of IR6 we have {a mathematical formula}a:{b}∈SC.If {a mathematical formula}Ai is of form {a mathematical formula}fc({b}), they by induction of invariant 65 we have {a mathematical formula}a≐̸b∈SC. Given that {a mathematical formula}fc({b}) is native an introduced, due to the non-applicability of IR7 we have {a mathematical formula}a:fc({b})∈SC.Together, due to the non-applicability of
+        </list>
+        <paragraph>
+         AR2 we have {a mathematical formula}x:B∈SNF.
+        </paragraph>
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT and two concepts X and {a mathematical formula}X′ such that {a mathematical formula}{a}⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑B∈T′. Given the form of {a mathematical formula}∃r.X′⊑B, it should also be in {a mathematical formula}T. We skip the obvious situation where {a mathematical formula}{a}⊑⊥∈SI before R4 is applied. We make a case distinction on the form of X and {a mathematical formula}X′:
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}B=fc(Ai) and {a mathematical formula}{a}⊑Aj∈SI ({a mathematical formula}2≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. Given the form of the later, it should also be in {a mathematical formula}T. Similar as the proof for situation R2, due to the non-applicability of AR11 we have {a mathematical formula}a:B∈SC.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R12, then there is individual {a mathematical formula}b∈INA and role {a mathematical formula}r∈RNT s.t. {a mathematical formula}{a}⊑∃r.{b}∈SI and {a mathematical formula}fc(B)⊑∃fc(r).{b}∈SI. By induction of invariant 66 we have {a mathematical formula}(a,b):r∈SC. By induction of invariant 60 we have {a mathematical formula}fc(B)⊑∃fc(r).{b}∈SC. Due to the non-applicability of CR12 we have {a mathematical formula}a:B∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 61 is proved.Invariant62:{a mathematical formula}{a}⊑{b} can be derived by R1, 6, 10, 11, 12. Note that R2 and R4 can not derive {a mathematical formula}{a}⊑{b} because {a mathematical formula}{b} should not appear as the RHS in {a mathematical formula}T.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}{a}⊑X∈SI and {a mathematical formula}X⊑{b}∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R6, then there is {a mathematical formula}{b}⊑{a}∈SI. As we explained earlier in the proof, if {a mathematical formula}{b}⊑{a} is an initial element of SI without any inference, then we have {a mathematical formula}b≐a∈SC, due to the non-applicability of IR3. Alternatively, if {a mathematical formula}{b}⊑{a}∈SI is derived, then by induction of invariant 62 we have {a mathematical formula}b≐a∈SC. In either case, by non-applicability of AR10 we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R10, then there is {a mathematical formula}fc({b})⊑fc({a})∈SI. By induction of invariant 63 we have {a mathematical formula}b≐a∈SC. Due to the non-applicability of AR10 we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}{b}=fc(Ai) and {a mathematical formula}{a}⊑Aj∈SI ({a mathematical formula}1≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. Similar as the proof for situation R11 of invariant 61, due to the non-applicability of AR11 we have {a mathematical formula}a:{b}∈SC. Due to the non-applicability of IR6 we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R12, then there is individual {a mathematical formula}c∈INA and role {a mathematical formula}r∈RNT s.t. {a mathematical formula}{a}⊑∃r.{c}∈SI and {a mathematical formula}fc({b})⊑∃fc(r).{c}∈SI. By induction of invariant 66 we have {a mathematical formula}(a,c):r∈SC. {a mathematical formula}fc({b})⊑∃fc(r).{c}∈SI is contradictory to the possible forms of axioms in SI unless we have {a mathematical formula}⊤⊑∃fc(r).{c}∈SI. By induction of invariant 60 we have {a mathematical formula}⊤⊑∃fc(r).{c}∈SC. Because we have {a mathematical formula}a:⊤∈SC, due to the non-applicability of AR3a we have {a mathematical formula}a:∃fc(r).{c}∈SC. Due to the non-applicability of IR8 we have {a mathematical formula}(a,c):fc(r)∈SC. Due to the non-applicability of AR12 we have {a mathematical formula}a≐̸a∈SC. Because we also have {a mathematical formula}a≐a∈SC, due to the non-applicability of AR9b we have {a mathematical formula}a:⊥∈SC. Finally, due to the non-applicability of AR1e we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 62 is proved.Invariant63: Similar as invariant 58, {a mathematical formula}fc({a})⊑fc({b}) can be derived by R1, 2, 4, 10, 11, 12. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R1, then there is a concept X s.t. {a mathematical formula}fc({a})⊑X∈SI and {a mathematical formula}X⊑fc({b})∈SI. We make a case distinction on form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R2, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}fc({a})⊑Ai∈SI and {a mathematical formula}A1⊓⋯⊓An⊑fc({b})∈T. We make a case distinction on the form of {a mathematical formula}Ai:
+        <list>
+         If {a mathematical formula}Ai,fc(Ai)∈CNT, given the form of axiom we have {a mathematical formula}⊤⊑Ai∈SI. By induction of invariant 57 we have {a mathematical formula}⊤⊑Ai∈SC.If {a mathematical formula}Ai is a nominal {a mathematical formula}{c} then we have {a mathematical formula}fc({a})⊑{c}∈SI which is contradictory to the possible forms of axioms in SI thus we omit this situation.If {a mathematical formula}Ai is of form {a mathematical formula}fc({c}), then by induction of invariant 63 we have {a mathematical formula}a≐c∈SC.Combining the above possibilities, due to the non-applicability of
+        </list>
+        <paragraph>
+         CR2 we have {a mathematical formula}a≐b∈SC.
+        </paragraph>
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R4, then there is {a mathematical formula}r∈RNT and two concepts X and {a mathematical formula}X′ s.t. {a mathematical formula}fa({a})⊑∃r.X∈SI, {a mathematical formula}X⊑X′∈SI and {a mathematical formula}∃r.X′⊑fc({b})∈T′. Given the form of {a mathematical formula}∃r.X′⊑fc({b}), it should also be in {a mathematical formula}T. Regardless the form of X, given the possible forms of axioms in SI, we always have {a mathematical formula}⊤⊑∃r.X∈SI. Regardless the form of {a mathematical formula}X′ is, we can always prove that {a mathematical formula}b:⊥∈SC as in the proof for situation R4 of invariant 58. Hence due to the non-applicability of AR1e we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R10, then there is {a mathematical formula}{b}⊑{a}∈SI. By induction of invariant 62 we have {a mathematical formula}b≐a∈C. Due to the non-applicability of AR10 we have {a mathematical formula}a≐b∈SC.
+       </list-item>
+       <list-item label="5.">
+        If it is derived by R11, then we have {a mathematical formula}A1,…,An s.t. {a mathematical formula}Ai={b} and {a mathematical formula}fc({a})⊑Aj∈SI ({a mathematical formula}1≤j≤n,j≠i) and {a mathematical formula}A1⊓⋯⊓An⊑⊥∈T. We make a case distinction on the form of {a mathematical formula}Aj as follows:
+       </list-item>
+       <list-item label="6.">
+        If it is derived by R12, then there is individual {a mathematical formula}c∈INA and role {a mathematical formula}r∈RNT s.t. {a mathematical formula}fc({a})⊑∃r.{c}∈SI and {a mathematical formula}{b}⊑∃fc(r).{c}∈SI. Then follow a similar proof for situation R12 of invariant 62 we can prove that {a mathematical formula}a≐b∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 63 is proved.Invariant64:{a mathematical formula}r⊑s∈SI can be derived by R14, 15, 16, 18. The situation of R14, 15 and 18 so we skip them.When it is derived by R18, then we have {a mathematical formula}∃r.⊤⊑X, {a mathematical formula}∃fi(r).⊤⊑Y, {a mathematical formula}⨅1≤i≤nfc({ai})⊑fc(A) and {a mathematical formula}⨅1≤j≤mfc({bj})⊑fc(B)∈T′. Given the form of these axioms, they should also be in {a mathematical formula}T. We also have {a mathematical formula}X⊑A, {a mathematical formula}Y⊑B, {a mathematical formula}fc(A)⊑fc({ai}) ({a mathematical formula}1≤i≤n), {a mathematical formula}fc(B)⊑fc({bj}) ({a mathematical formula}1≤j≤m) and {a mathematical formula}{ai}⊑∃s.{bj}∈SI(1≤i≤n,1≤j≤m). By induction of invariant 66 we should have {a mathematical formula}(ai,bj):s∈SC(1≤i≤n,1≤j≤m). Note that all the {a mathematical formula}{ai} and {a mathematical formula}{bj} are native. Hence we should have {a mathematical formula}{ai}⊑∃s.{bj}∈SC(1≤i≤n,1≤j≤m). Now we make a case distinction on the form of X and A:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}A,fc(A)∈CNT, by induction of invariant 58 we have {a mathematical formula}ai:A∈SC. Given that {a mathematical formula}{ai} and {a mathematical formula}fc({ai}) are native, due to the non-applicability of IR1 and R10 we have {a mathematical formula}fc(A)⊑fc({ai})∈SC(1≤i≤n):
+       </list-item>
+       <list-item label="2.">
+        If A is a nominal {a mathematical formula}{c}, by induction of invariant 63 we have {a mathematical formula}c≐ai∈SC. Given the {a mathematical formula}{ai}, {a mathematical formula}fc({ai}), {a mathematical formula}{c} and {a mathematical formula}fc({c}) are all native. We should have {a mathematical formula}fc({c})⊑fc({ai})∈SC(1≤i≤n):
+       </list-item>
+       <list-item label="3.">
+        If A is of form {a mathematical formula}fc({c}), by induction of invariant 65 we have {a mathematical formula}c≐̸ai∈SC(1≤i≤n). Given that {a mathematical formula}{c}=fc(A) is native, and {a mathematical formula}{ai} is native, eventually we have {a mathematical formula}{c}⊑fc({ai})∈SC(1≤i≤n):
+       </list-item>
+      </list>
+      <paragraph>
+       Hence in all the above situations we have {a mathematical formula}X⊑A∈SC and {a mathematical formula}fc(A)⊑fc({ai})∈SC(1≤i≤n). Similarly, we can also prove that we always have {a mathematical formula}Y⊑B∈SC and {a mathematical formula}fc(B)⊑fc({bj})∈SC(1≤j≤m). Together, due to the non-applicability of R18 we have {a mathematical formula}r⊑s∈SC.Thus the induction of invariant 64 is proved.Invariant65:{a mathematical formula}{a}⊑fc({b}) can be derived by R1, 2, 4, 10, 11, 12, 20.Situations R1, 10, 12 can be proved in a similar way as in proof of invariant 40 so we skip them.If it is derived by R2, R4 or R11, we can prove in a similar manner as situations R2, 4, 11 of invariant 61, that {a mathematical formula}a:fc({b})∈SC. Due to the non-applicability of IR7 we have {a mathematical formula}a≐̸b∈SC.We also skip the obvious situation where {a mathematical formula}{a}⊑⊥∈SI is derived before the corresponding rule is applied, in which case we have {a mathematical formula}a:⊥∈SC by induction of invariant 61. Then due to the non-applicability of AR1e we can derive {a mathematical formula}a≐̸b∈SC.If it is derived by R20, then there is concept X s.t. {a mathematical formula}{a}⊑∃r.X,X⊑∃fi(fc(r)).{b}∈SI. We make a case distinction on the form of X:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}X,fc(X)∈CNT, by induction of invariant 68 we have {a mathematical formula}a:∃r.X∈SC. By induction of invariant 60 we have {a mathematical formula}X⊑⊑∃fi(fc(r)).{b}∈SC. Together due to the non-applicability of CR20 we have {a mathematical formula}a≐̸b∈SC.
+       </list-item>
+       <list-item label="2.">
+        If X is a nominal {a mathematical formula}{c}, by induction of invariant 44 we have {a mathematical formula}(a,c):r∈SC and {a mathematical formula}(c,b):fi(fc(r))∈SC. Due to the non-applicability of AR19 we have {a mathematical formula}(c,a):fi(r)∈SC. Because {a mathematical formula}fi(fc(r))=fc(fi(r)), due to the non-applicability of AR12 we have {a mathematical formula}a≐̸b∈SC.
+       </list-item>
+       <list-item label="3.">
+        If X is of form {a mathematical formula}fc({c}), by induction of invariant 66 we have {a mathematical formula}a:∃r.fc({c})∈SC, which also implies that {a mathematical formula}fc({c}) is native. We also have {a mathematical formula}fc({c})⊑∃fi(fc(r)).{b}∈SI, which is contradictory to the possible forms of axioms in SI unless {a mathematical formula}⊤⊑∃fi(fc(r)).{b}∈SI. By induction of invariant 60 we have {a mathematical formula}⊤⊑∃fi(fc(r)).{b}∈SC. Because {a mathematical formula}fc({c}) is native, we have {a mathematical formula}fc({c})⊑⊤∈SC. Due to the non-applicability of R3 we have {a mathematical formula}fc({c})⊑∃fi(fc(r)).{b}∈SC. Due to the non-applicability of CR20 we have {a mathematical formula}a≐̸b∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 65 is proved.Invariant66:{a mathematical formula}{a}∃r.{b}∈SI can be derived by R3, 7, 8, 19. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is concept X s.t. {a mathematical formula}{a}⊑X,X⊑∃r.{b}∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, then there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}{a}⊑∃s.{b},s⊑r∈SI. By induction of invariant 66 we have {a mathematical formula}(a,b):s∈SC. By induction of invariant 64 we have {a mathematical formula}s⊑r∈SC. Due to the non-applicability of AR7b we have {a mathematical formula}(a,b):r∈SC.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, then there are a concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}{a}⊑∃r1.X,X⊑∃r2.{b},r1∘r2⊑r∈SI. We make a case distinction on the form of X:
+       </list-item>
+       <list-item label="4.">
+        If it is derived by R19, then we have {a mathematical formula}{b}⊑∃fi(r).{a}∈SI. By induction of invariant 66 we have {a mathematical formula}(b,a):fi(r)∈SC. Due to the non-applicability of AR19 we have {a mathematical formula}(a,b):r∈SC.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 66 is proved.Invariant67:{a mathematical formula}r1∘r2⊑s∈SI can only be derived by R17. It is easy to show that by induction of invariant 67 itself and the non-applicability of R17 we have {a mathematical formula}r1∘r2⊑s∈SC. Thus the induction of invariant 67 is proved.Invariant68:{a mathematical formula}{a}⊑∃r.B∈SI can be derived by R3, 7, 8. Note that {a mathematical formula}{a}⊑⊥∉SI. We make a case distinction as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If it is derived by R3, then there is a concept X s.t. {a mathematical formula}{a}⊑X,X⊑∃r.B∈SI. We make a case distinction on form of X:
+       </list-item>
+       <list-item label="2.">
+        If it is derived by R7, there is {a mathematical formula}s∈RNT s.t. {a mathematical formula}{a}⊑∃s.B∈SI and {a mathematical formula}s⊑r∈SI. By induction of invariant 68 we have {a mathematical formula}a:∃s.B∈SC. By induction of invariant 64 we have {a mathematical formula}s⊑r∈SC. Due to non-applicability of AR7a we have {a mathematical formula}a:∃r.B∈SC.
+       </list-item>
+       <list-item label="3.">
+        If it is derived by R8, there are concept X and roles {a mathematical formula}r1,r2∈RNT s.t. {a mathematical formula}{a}⊑∃r1.X,X⊑∃r2.B,r1∘r2⊑r∈SI. By induction of invariant 67 we have {a mathematical formula}r1∘r2⊑r∈SC. We make a case distinction on form of X:
+       </list-item>
+      </list>
+      <paragraph>
+       Thus the induction of invariant 68 is proved.With inductions of all invariants proved for each of the corresponding rules, we proved Lemma 16.This further proves the → directions of the Theorem and hence the Theorem 15.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}Obe an{a mathematical formula}ELHITBox with only safe roles and{a mathematical formula}TAfa(O)its TBox transformation with name assignment{a mathematical formula}fa(·), then for any{a mathematical formula}A,B∈CNO,{a mathematical formula}O⊨A⊑B iff {a mathematical formula}A⊑B∈ST(TAfa(O))or{a mathematical formula}A⊑⊥∈ST(TAfa(O)).The ← direction immediately follows from the soundness of our approach (Theorem 5) therefore we will only need to prove the completeness.The → direction can be proved with model construction and contrapositive. For the sake of conciseness, in this proof we use ST to abbreviate {a mathematical formula}ST(TAfa(O)). Particularly, assuming there are {a mathematical formula}X,Y∈CNO s.t. {a mathematical formula}O⊨X⊑Y, {a mathematical formula}X⊑Y∉ST and {a mathematical formula}X⊑⊥∉ST, we want to show that a model {a mathematical formula}Iof {a mathematical formula}O can be constructed such that {a mathematical formula}I⊭X⊑Y.In order to construct such a model, we define a relation ≈ on ST s.t. {a mathematical formula}A≈Biff{a mathematical formula}A≡B∈ST (or {a mathematical formula}A⊑B∈ST when {a mathematical formula}B=⊥). Obviously ≈ is an equivalence relation. We use ≈ to partition the {a mathematical formula}CNST and use {a mathematical formula}[A] to denote the set {a mathematical formula}{B|A≈B}. Obviously, the following holds:
+      <list>
+       If {a mathematical formula}A⊑B∈ST, then for any {a mathematical formula}A′∈[A], we have {a mathematical formula}A′⊑B∈ST. And for any {a mathematical formula}B′∈[B], we have {a mathematical formula}A⊑B′∈ST.If {a mathematical formula}A⊑∃r.B∈ST, then for any {a mathematical formula}A′∈[A], we have {a mathematical formula}A′⊑∃r.B∈ST.We also show that for roles
+      </list>
+      <paragraph>
+       {a mathematical formula}R,S that occur in {a mathematical formula}O, we have {a mathematical formula}R≼⁎S if we have {a mathematical formula}fa(R)⊑fa(S)∈ST. This can be shown by induction:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For each original RIA {a mathematical formula}fa(R)⊑fa(S) in the transformed TBox, we know that there is {a mathematical formula}R⊑S∈O. Hence {a mathematical formula}R≼⁎S.
+       </list-item>
+       <list-item label="2.">
+        For each tautology RIA {a mathematical formula}fa(R)⊑fa(R) in the initialisation of ST, we have {a mathematical formula}R=R hence {a mathematical formula}R≼⁎R.
+       </list-item>
+       <list-item label="3.">
+        If {a mathematical formula}fa(R)⊑fa(S) is derived by rule R14, then there is some {a mathematical formula}fa(T) s.t. {a mathematical formula}fa(R)⊑fa(T)∈ST and {a mathematical formula}fa(T)⊑fa(S)∈ST. Inductively, we know that {a mathematical formula}R≼⁎T and {a mathematical formula}T≼⁎S. Hence {a mathematical formula}R≼⁎S.
+       </list-item>
+       <list-item label="4.">
+        If {a mathematical formula}fa(R)⊑fa(S) is derived by rule R15, then there is {a mathematical formula}fi(fa(R))⊑fi(fa(S))∈ST. Note that {a mathematical formula}fi(fa(R))=fa(inv(R)) and {a mathematical formula}fi(fa(S))=fa(inv(S)), we have {a mathematical formula}fa(inv(R))⊑fa(inv(S))∈ST. Inductively, there is {a mathematical formula}inv(R)≼⁎inv(S). According to the definition of safe role we have {a mathematical formula}R≼⁎S.
+       </list-item>
+      </list>
+      <paragraph>
+       Now assume there are {a mathematical formula}X,Y∈CNO s.t. {a mathematical formula}O⊨X⊑Y, {a mathematical formula}X⊑Y∉ST and {a mathematical formula}X⊑⊥∉ST. We know that X must be satisfiable in ST. This implies that a model {a mathematical formula}I=〈ΔI,·I〉 constructed as follows should exist with a non-empty {a mathematical formula}ΔI:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ΔI={[A]|A∉[⊥]};
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}AI={[B]|B⊑A∈ST}∖[⊥];
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}rI=direct(r)∪inverse(r), where:
+       </list-item>
+      </list>
+      <paragraph>
+       Apparently, since {a mathematical formula}X⊑X∈ST, we have {a mathematical formula}[X]∈XI. Also, {a mathematical formula}X⊑Y∉ST, therefore {a mathematical formula}[X]∉YI. Hence, {a mathematical formula}I⊭X⊑Y.Now we show that {a mathematical formula}I is indeed a model of {a mathematical formula}O. This can be done by analysing each axiom {a mathematical formula}α∈O in a case by case manner:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If α is of form {a mathematical formula}A⊑B, then obviously such an axiom will be preserved after transformation and be included in ST. For any {a mathematical formula}[C]∈AI, we know that {a mathematical formula}C⊑A∈ST as well. Due to the non-applicability of rule R1, we have {a mathematical formula}X⊑A∈ST, which implies that {a mathematical formula}[X]∈BI. Hence, {a mathematical formula}I⊨α.
+       </list-item>
+       <list-item label="2.">
+        If α is of form {a mathematical formula}A1⊓⋯⊓An⊑B, then this axiom will be transformed into the following two axioms during TBox transformation:{a mathematical formula}{a mathematical formula} Obviously, both of these axioms will be included in ST as well. For any {a mathematical formula}[C]∈(A1⊓⋯⊓An)I, by the semantics of conjunction we know that {a mathematical formula}[C]∈AiI for each {a mathematical formula}i=1,…,n. Hence, we have {a mathematical formula}C⊑Ai∈ST. Due to the non-applicability of rule R2 and axiom (113), we have {a mathematical formula}C⊑fa(A1⊓⋯⊓An)∈ST. Further with axiom (112) we have {a mathematical formula}C⊑B∈ST. This implies that {a mathematical formula}[C]∈BI and {a mathematical formula}I⊨α.
+       </list-item>
+       <list-item label="3.">
+        If α is of form {a mathematical formula}A⊑∃R.B, then the following axioms will be created in the TBox transformation:{a mathematical formula}{a mathematical formula} Similar as before, these two axioms will also be included in ST. For any {a mathematical formula}[C]∈AI, we have {a mathematical formula}C⊑A∈ST. Due to the non-applicability of rule R3 and the above two axioms in ST, we will have {a mathematical formula}C⊑∃fa(R).B∈ST. Since {a mathematical formula}[C]∈ΔI we know that {a mathematical formula}C∉[⊥]. Consequently we know that {a mathematical formula}B∉[⊥]. Hence, {a mathematical formula}[B]∈BI. Also, {a mathematical formula}C⊑∃fa(R).B∈ST suggests that {a mathematical formula}〈[C],[B]〉∈direct(fa(R))⊆fa(R)I. Now we make a case distinction on R:
+       </list-item>
+       <list-item label="4.">
+        If α is of form {a mathematical formula}∃R.A⊑B, then the following axioms will be created in the TBox transformation:{a mathematical formula}{a mathematical formula} These two axioms will also be included in ST. For any {a mathematical formula}[C]∈fa(∃R.A)I, by definition of DL semantics, we know that there is some {a mathematical formula}[D]∈AI s.t. {a mathematical formula}〈[C],[D]〉∈RI. From the former we have {a mathematical formula}D⊑A∈ST. For the latter we make a case distinction on R:
+       </list-item>
+       <list-item label="5.">
+        If α is of form {a mathematical formula}R⊑S, then we will have {a mathematical formula}fa(R)⊑fa(S) in the transformed TBox and also ST. For any {a mathematical formula}〈[C],[D]〉∈RI, we make the following case distinction:
+       </list-item>
+      </list>
+      <paragraph>
+       Together, we can conclude that {a mathematical formula}Isatisfies each axiom in {a mathematical formula}O. This means that {a mathematical formula}I is a model of {a mathematical formula}O. Given that {a mathematical formula}I⊭X⊑Y, we know that {a mathematical formula}O⊭X⊑Y. This is contradictory to the assumption that {a mathematical formula}O⊨X⊑Y, which means that it is not possible to find {a mathematical formula}X,Y∈CNO s.t. {a mathematical formula}O⊨X⊑Y but {a mathematical formula}X⊑Y∉ST. This proves the → direction and the theorem.  □
+      </paragraph>
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,525 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    STR3: A path-optimal filtering algorithm for table constraints.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Algorithms that establish Generalized Arc Consistency (GAC) on constraint problems (networks) filter out inconsistent values from variable domains in order to reduce the combinatorial search spaces of such problems. They have been a staple of Constraint Programming (CP) since its origin in the field of Artificial Intelligence (AI) in the seventies, with for example the introduction of algorithms (G)AC3 [2] and (G)AC4 [3], [4]. Typically, GAC is enforced at each step of a complete backtrack search, leading to the so-called MAC, Maintaining (generalized) Arc Consistency, algorithm [5]. This paper introduces a new GAC algorithm, called STR3, that works with positive table constraints. Furthermore, unlike most GAC algorithms, STR3 is specifically conceived to be used within MAC rather than being standalone.
+     </paragraph>
+     <paragraph>
+      A table is just a relation, as in classical relational database, and a positive table constraint contains (in a table) all permitted combinations of values for a subset of variables (whereas a negative table constraint contains all forbidden combinations of values). Table constraints have been well studied in the artificial intelligence literature and arise naturally in many application areas. For example, in configuration and databases, they are introduced to model the problem no matter whatever the domain is. Besides, table constraints can be viewed as the universal mechanism for representing constraints, provided that space requirements can be controlled. The importance of table constraints makes them commonly implemented in all major constraint solvers that we are aware of (e.g., Choco, GeCode, JaCoP, OR-Tools).
+     </paragraph>
+     <paragraph>
+      For table constraints, many classical filtering algorithms that reduce search through inference (such as [6], [7], [8], [9]) work with constraints that stay unaltered while running. However, recent developments suggested that reducing the amount of traversal by discarding irrelevant tuples from tables can lead to faster algorithms. Simple Tabular Reduction (STR) and its improvements [10], [11] fall into this category and have been shown to be among the best GAC algorithms for positive table constraints.
+     </paragraph>
+     <paragraph>
+      The main idea behind simple tabular reduction is to remove invalid tuples from tables as soon as possible in a systematic fashion. STR3 is based on the same principle as STR1 [10] and STR2 [11] but employs a different representation of table constraints. Similarly to a few other algorithms (e.g., GAC-allowed [6] and GAC-va [8]), STR3 provides an index for each constraint table, enabling a tuple sought with respect to a domain value to be found without visiting irrelevant tuples, thus reducing time complexity. Fig. 1 shows an example for a ternary constraint. Importantly, for each constraint relation, STR3 maintains some specific data structures designed so that no constraint tuple is processed more than once along any path, through the search tree, going from the root to a leaf.
+     </paragraph>
+     <paragraph>
+      Most of the GAC algorithms for table constraints previously introduced in the literature suffer from repeatedly traversing the same tables or related data structures during search [11], [12]. In contrast, STR3 avoids such repetition and is path-optimal: each element of a table is examined at most once along any path of the search tree. An important feature of STR3 is that it is designed specifically to be interleaved with backtracking search, where the main goal is to maintain the consistency while minimizing the cost of backtracking. As such, unlike most other GAC algorithms, STR3 is only applicable within the context of search: STR3 maintains GAC, but before commencement of search, GAC must be enforced by some other algorithm, such as STR2 for example.
+     </paragraph>
+     <paragraph>
+      We also investigated a promising circular manner for traversing tables in STR3. Although this seemed attractive at first because the circular approach described in [13] has an optimal run time per branch when amortized across a search tree, our experiments found that it was not really effective for STR3 in practice. To conclude our theoretical analysis, we discuss the relationships between STR3 and two other optimal GAC algorithms for table constraints, namely, GAC4 [4] and AC5TC-Tr [14].
+     </paragraph>
+     <paragraph>
+      We present an extensive experimental study that demonstrates that STR3 is competitive with state-of-the-art algorithms. In particular, our experiments show that STR3 is rather complementary to STR2. STR2 is faster than STR3 where simple tabular reduction can eliminate so many tuples from the tables that they become largely empty. STR3, by contrast, outperforms STR2 when constraint relations do not shrink very much during search (this is when STR2 is the more costly). Hence, STR3 is complementary to STR2.
+     </paragraph>
+     <paragraph>
+      This paper is organized as follows. Technical background is provided in Section 2. In Section 3, the concept of STR3 is explained together with its algorithm. A detailed example of STR3's step-by-step execution is given in Section 4. Section 5 analyzes the relationships among STR's data structures in greater detail. Theoretical analysis of STR3 is carried out in Sections 6 and 7. A variant of STR3 is studied in Section 8. Previous works related to STR3 are discussed in Section 9. Experimental results are reported in Section 10. The paper concludes in Section 11.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we introduce some technical background concerning the constraint satisfaction problem, and we recall the operation of a data structure called sparse set, which is key to STR3's optimality.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Constraint satisfaction problem
+      </section-title>
+      <paragraph>
+       A finite constraint network{a mathematical formula}P is a pair {a mathematical formula}(X,C) where {a mathematical formula}X is a finite set of n variables and {a mathematical formula}C is a finite set of e constraints. Each variable{a mathematical formula}X∈X has an initial domain, denoted by {a mathematical formula}D(X), which is the set of values that can be assigned to X. Each constraint{a mathematical formula}C∈C involves an ordered subset of variables of {a mathematical formula}X, denoted by {a mathematical formula}scp(C), that is called the scope of C. The arity of a constraint C is the number of variables involved in C, i.e., {a mathematical formula}|scp(C)|. A binary constraint involves two variables whereas a non-binary constraint involves strictly more than two variables. The semantics of a constraint C is given by a relation, denoted by {a mathematical formula}rel(C); if {a mathematical formula}scp(C)={X1,…,Xr}, then {a mathematical formula}rel(C)⊆∏i=1r{a mathematical formula}D(Xi) represents the set of satisfying combinations of values, called allowed tuples, for the variables in {a mathematical formula}scp(C).
+      </paragraph>
+      <paragraph>
+       A solution to a constraint network is an assignment of a value to every variable such that every constraint is satisfied. A constraint network is satisfiable iff at least a solution exists. The Constraint Satisfaction Problem (CSP) is the NP-complete task of determining whether a given constraint network is satisfiable or not. Thus, a CSP instance is defined by a constraint network, which is solved either by finding a solution or by proving that no solution exists. Solving a CSP instance usually involves a complete backtrack search that is interleaved with some inference processes to reduce the search space. In this paper, we shall focus on MAC (Maintaining Arc Consistency) [15], which is considered to be among the most efficient generic search algorithms for CSP. MAC explores the search space depth-first, backtracks when dead-ends occur, and enforces a property called (generalized) arc consistency after each decision (variable assignment or value refutation) taken during search.
+      </paragraph>
+      <paragraph>
+       Below, we introduce some notations and definitions that will be useful in the rest of the paper.
+      </paragraph>
+      <paragraph>
+       During search, {a mathematical formula}Dc(X) denotes the current domain of a variable {a mathematical formula}X∈X; we always have {a mathematical formula}Dc(X)⊆D(X). If a value {a mathematical formula}a∈Dc(X), we say that a is (currently) present; otherwise we say that a is absent. We use {a mathematical formula}(X,a) to denote the value {a mathematical formula}a∈D(X) (or simply a when the context is clear), and we use {a mathematical formula}τ[Xi] to denote the value {a mathematical formula}ai in any r-tuple {a mathematical formula}τ=(a1,…,ar) associated with a r-ary constraint C such that {a mathematical formula}scp(C)={X1,…,Xr}. A tuple {a mathematical formula}τ∈rel(C) is valid iff {a mathematical formula}τ[X]∈Dc(X) for each {a mathematical formula}X∈scp(C); otherwise τ is invalid. A tuple {a mathematical formula}τ∈rel(C) is a support of {a mathematical formula}(X,a) on C iff τ is valid and {a mathematical formula}τ[X]=a. We can now define Generalized Arc Consistency (GAC) as follows. A value {a mathematical formula}(X,a) is generalized arc-consistent (GAC) on a constraint C involving X iff there exists a support of {a mathematical formula}(X,a) on C. A constraint C is GAC iff for each {a mathematical formula}X∈scp(C) and for each {a mathematical formula}a∈Dc(X), {a mathematical formula}(X,a) is GAC on C. A constraint network is GAC iff each of its constraints is GAC.
+      </paragraph>
+      <paragraph>
+       When {a mathematical formula}rel(C) is specified by enumerating its elements in a list, C is called a positive table constraint. Alternatively, {a mathematical formula}rel(C) may denote the set of forbidden combinations of values for the variables in {a mathematical formula}scp(C), in which case its extensional form is called a negative table constraint. A positive table constraint can be converted into a negative table constraint and vice versa. In this paper we deal only with positive table constraints. For any such constraint C, we assume a total ordering on {a mathematical formula}rel(C) and define {a mathematical formula}pos(C,τ) to be the position of the tuple τ in that ordering (also called “tuple identifier” in the database literature, or tid for short [16], [17]) whereas {a mathematical formula}tup(C,k) denotes the k-th tuple of {a mathematical formula}rel(C). Thus, {a mathematical formula}τ=tup(C,pos(C,τ)) for any tuple {a mathematical formula}τ∈rel(C), and {a mathematical formula}k=pos(C,tup(C,k)) for any {a mathematical formula}k∈{1,…,t} where {a mathematical formula}t=|rel(C)|.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Sparse sets
+      </section-title>
+      <paragraph>
+       The sparse set data structure was first proposed in [18], with the motivation to provide fast operations on sets of objects. These operations are clear-set, insertion, deletion, membership test, and iteration. Sparse sets have played a crucial role in many recent CP algorithms [12], [19], [20]. In the context of backtracking search, we are concerned with the speed of only three basic operations, which are insertion, membership test, and deletion.
+      </paragraph>
+      <paragraph>
+       A sparse set S is an abstract structure composed of two arrays, traditionally called dense and sparse, together with an integer variable called members. Both arrays are of equal size n, with an index ranging from 1 to n, because possible elements are drawn from the universe {a mathematical formula}{1,…,n}. The array dense acts like a normal array container, with all elements packed at the left, while the array sparse carries each element present in the set to its location in dense. The value of members indicates the number of elements in S. Arrays dense and sparse adhere to the following property:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       An illustration is given by Fig. 2a, where the sparse set representation of a set currently containing 4 values (out of 8 possible ones) is shown. Note that the arrays dense and sparse require no initialization.{sup:1} Pseudo-code for insertion and membership test is given in Fig. 3. Deletion in LIFO (Last In, First Out) order is achieved by decreasing the value of members.
+      </paragraph>
+      <paragraph>
+       In practice, membership tests may occur more frequently than insertions. In this case, a trade-off can be made so that the cost of testing the membership of a value v in a sparse set S is reduced to simply checking whether {a mathematical formula}S.sparse[v]≤S.members, at the expense of a more expensive insertion [20]. The idea is to have the array dense containing a permutation of the n values. Operations on the set maintain such a permutation by swapping elements in and out of S. Because both arrays dense and sparse are initially filled with values from 1 to n, there must be only a single copy of each value in dense at any time. The condition {a mathematical formula}S.dense[S.sparse[v]]=v is thus unnecessary. The pseudo-code of the modified addMember and isMember is given in Fig. 4. In addition, note that the enumeration of the elements that are not present in S is as simple as iterating from {a mathematical formula}members+1 to n in dense. An illustration is given by Fig. 2b.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      STR3
+     </section-title>
+     <paragraph>
+      This section introduces STR3, an algorithm based on simple tabular reduction for enforcing GAC on positive table constraints. GAC algorithms normally follow the same pattern: a domain value is proved to be consistent by producing a valid tuple containing that value (in the case of positive table constraints) or by producing some evidence from auxiliary structures, e.g., a path in case of BDDs (Boolean Decision Diagrams), MDDs (Multi-valued Decision Diagrams), or tries [12], [21], [22]. This is usually done by traversing these structures and running tests on each sub-structure. Reducing the amount of traversal has long been the focus of many works. For table constraints, optimization techniques include skipping over irrelevant rows or columns [7], [8], or by compressing the tables themselves [12], [21], [22].
+     </paragraph>
+     <paragraph>
+      Simple Tabular Reduction (STR) [10], called STR1 in this paper, is a GAC algorithm that dynamically revises tables during search. While other GAC algorithms treat tables like fixed structures or resort to tackling comparable structures created from those tables, STR1 shows that handling tables directly during backtracking search is not as expensive as once thought. STR1 works by scanning each tuple one by one. If a tuple is invalid, it is removed and the table is contracted by one row as a result. Otherwise, the tuple is valid and its components are therefore domain values that have been proved to have a support. STR1 then considers the tuple again to collect these values into designated sets (called {a mathematical formula}gacValues(X) and defined for every variable X in the scope of the constraint). When STR1 has finished going through the whole table, any value not present in those sets has no support and will be removed from its domain.
+     </paragraph>
+     <paragraph>
+      STR2 [11] provides two improvements to STR1. When a tuple τ is being inspected for validity, there is no need to check whether {a mathematical formula}τ[X]∈Dc(X) if there has been no change to the domain of X since the last time STR2 was called on this constraint. In addition, in case τ is valid, when the algorithm goes through each component of τ, {a mathematical formula}τ[X] is skipped over if it is known that {a mathematical formula}gacValues(X)=Dc(X) (i.e., every single value of {a mathematical formula}Dc(X) is already supported). The first improvement however involves additional data structures which must be maintained in order to deliver full optimization benefit. STR2 with these data structures maintained is called STR2+ [11]. Throughout this paper and especially in the experiments section, when we refer to STR2 we mean STR2+. STR2w [49] improves the lower bound of STR2 through redesign and incorporation of watched tuples.
+     </paragraph>
+     <paragraph>
+      Like STR1 and STR2, STR3 no longer examines a tuple once it has been recognized as invalid. Unlike STR1 and STR2, STR3 does not immediately discard invalid tuples from tables. Indeed, STR3 does not process tables directly, but instead employs indexes allowing rapid identification of all tuples containing a given value of a given variable. STR3 keeps a separate data structure that enables validity checks to be done in constant time, rather than revising indexes dynamically during search.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Structures and features
+      </section-title>
+      <paragraph>
+       The main data structures used in STR3 are the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For any {a mathematical formula}C∈C,X∈scp(C), and {a mathematical formula}a∈D(X), we introduce {a mathematical formula}table(C,X,a), called sub-table of C for {a mathematical formula}(X,a), as the set of tids for allowed tuples of C involving {a mathematical formula}(X,a), i.e., {a mathematical formula}{pos(C,τ)|τ∈rel(C)∧τ[X]=a}. We implement {a mathematical formula}table(C,X,a) as a simple array, with indexing starting at 1; the i-th element of {a mathematical formula}table(C,X,a) is then denoted by {a mathematical formula}table(C,X,a)[i]. We use an integer {a mathematical formula}table(C,X,a).sep, whose value lies between 1 and {a mathematical formula}|table(C,X,a)|, which we call the separator of {a mathematical formula}table(C,X,a). The separator is such that {a mathematical formula}table(C,X,a)[table(C,X,a).sep] is the position of the last known support of {a mathematical formula}(X,a) on C. For the sake of brevity, we sometimes use {a mathematical formula}table(C,X,a)[↑] instead of {a mathematical formula}table(C,X,a)[table(C,X,a).sep]. The value of sep is maintained during search, that is to say, subject to save and restore operations.
+       </list-item>
+       <list-item label="•">
+        For any {a mathematical formula}C∈C, we introduce {a mathematical formula}inv(C) as the set of tids for allowed invalid tuples of C, i.e., {a mathematical formula}{pos(C,τ)|τ∈rel(C)∧τ is invalid}. We implement {a mathematical formula}inv(C) as a sparse set. The value of {a mathematical formula}inv(C).members is subject to save/restore operations during search.
+       </list-item>
+       <list-item label="•">
+        For any {a mathematical formula}C∈C and {a mathematical formula}k∈{1,…,|rel(C)|}, we introduce {a mathematical formula}dep(C,k) as the dependency list associated with the k-th tuple of {a mathematical formula}rel(C). If {a mathematical formula}(X,a)∈{a mathematical formula}dep(C,k), this means that the tuple {a mathematical formula}τ=tup(C,k) provides the justification for a to be present in {a mathematical formula}Dc(X), i.e., {a mathematical formula}(X,a)depends on τ. We implement {a mathematical formula}dep(C,k) as a simple array (with indexing starting at 1) since only sequential iterations and basic transfers are required. The dependency lists may be altered during search but they are not maintained (i.e., subject to save/restore operations).
+       </list-item>
+       <list-item label="•">
+        We introduce two stacks, denoted by stackS (S stands for Separator) and stackI (I stands for Invalid), that allow us to store values of the form {a mathematical formula}table(C,X,a).sep and {a mathematical formula}inv(C).members at different levels of search. Whenever a node in the search tree is visited for the first time, it is assumed that an empty container is placed on top of stackS and stackI.
+       </list-item>
+      </list>
+      <paragraph>
+       STR3 is a fine-grained filtering algorithm, meaning that the filtering process, called propagation, is guided by events corresponding to deleted values that are put in a so-called propagation queue. Here are some important attributes of STR3:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        When a value {a mathematical formula}(X,a) is deleted, it is put in the propagation queue. This value is then picked from the queue later by the main constraint propagation procedure (not detailed in this paper), and STR3 is invoked for every constraint C such that {a mathematical formula}X∈scp(C). This invocation merges {a mathematical formula}table(C,X,a) into {a mathematical formula}inv(C), because {a mathematical formula}table(C,X,a) contains the tids of all tuples that involve the deleted value {a mathematical formula}(X,a).
+       </list-item>
+       <list-item label="•">
+        Subsequently, STR3 recognizes that a value {a mathematical formula}(Y,b) is GAC on C if {a mathematical formula}table(C,Y,b)∖inv(C) is not empty.
+       </list-item>
+       <list-item label="•">
+        The separator {a mathematical formula}table(C,X,a).sep is useful to distinguish between two regions: the explored region which contains tids of tuples (of {a mathematical formula}rel(C) involving {a mathematical formula}(X,a)) known to be invalid, and the unexplored region which contain tids of tuples not yet examined. Each separator moves sequentially from one end of {a mathematical formula}table(C,X,a) to the other in a fixed direction. As search progresses, the explored region expands until it encompasses the whole set, at which point {a mathematical formula}(X,a) has been proved not to be GAC on C.
+       </list-item>
+       <list-item label="•">
+        To check whether k is the tid of a tuple that has been found to be invalid, STR3 tests whether {a mathematical formula}k∈inv(C), through a call of the form {a mathematical formula}isMember(inv(C),k).
+       </list-item>
+       <list-item label="•">
+        Whenever a tuple of tid k becomes invalid, STR3 must look for a new support for every value in the dependency list {a mathematical formula}dep(C,k).
+       </list-item>
+      </list>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Algorithm
+      </section-title>
+      <paragraph>
+       We emphasize that STR3's sole purpose is to maintain GAC during search [23], [24]. It is not designed to establish GAC stand-alone. For that role, a separate GAC algorithm that is able to enforce GAC from scratch is required, and it must be invoked before the search commences, usually in the preprocessing stage.
+      </paragraph>
+      <paragraph>
+       Pseudo-code of STR3 is given in Fig. 5, Fig. 6. GACInit (lines 1–9) is called first to remove all invalid tuples (by calling another GAC algorithm at line 2) and to initialize all data structures. In the beginning, {a mathematical formula}inv(C).members is set to zero as the remaining tuples are all valid (line 3), while the separator of each {a mathematical formula}table(C,X,a) is set to its last possible index (recall that we start indexing at 1). We also put each value {a mathematical formula}(X,a) into an arbitrary dependency list.
+      </paragraph>
+      <paragraph>
+       During search, STR3 (lines 10–33) is called for a constraint C every time a value a is removed from the domain of a variable X involved in C. Note that the instantiation of a variable X effectively invokes {a mathematical formula}STR3(C,X,a) for every value a that is present in the domain of X at the time of the assignment but which is not the value assigned to X. For each removed value {a mathematical formula}(X,a), every tuple whose tid is in {a mathematical formula}table(C,X,a) becomes invalid. STR3 then merges these tids into {a mathematical formula}inv(C) if they are not already present (lines 12–15). Values that need new supports are later processed (lines 19–32); we shall discuss this part of the algorithm in more details in Section 5. Upon backtracking, functions restoreS and restoreI are called so as to restore elements {a mathematical formula}table(C,X,a).sep and {a mathematical formula}inv(C).members, through the use of the stacks stackS and stackI. Values are stored in these stacks at lines 18 and 30 by calling function save.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Illustration
+     </section-title>
+     <paragraph>
+      In this section, we trace the execution of STR3 on the ternary positive table constraint C, with scope {a mathematical formula}{X,Y,Z}, depicted in Fig. 1a. For each value in the table, its index or sub-table is given in Fig. 1b. After GAC preprocessing, separators and dependency lists are initialized as shown in Fig. 7. The symbol {a mathematical formula}◃p, where p is a number, points to the value whose position is assigned to sep at node {a mathematical formula}ηp. We also denote the fact that {a mathematical formula}inv(C).members is assigned the value k at node {a mathematical formula}ηp by placing {a mathematical formula}↑p at column k on the row titled {a mathematical formula}inv(C).members. For instance at node {a mathematical formula}η1, we have {a mathematical formula}inv(C).members=0 and {a mathematical formula}table(C,X,a).sep=3 (because {a mathematical formula}|table(C,X,a)|=3 the value of the separator ranges from 1 to 3, from top to bottom). We can also observe for example that {a mathematical formula}table(C,X,a)={1,4,6} and {a mathematical formula}table(C,X,a)[3]=6 (this will be always true since sub-tables are never directly modified; only the separators can change).
+     </paragraph>
+     <paragraph>
+      Assume values h, i, and o are eliminated. The result after STR3's propagation converges is shown in Fig. 8. In all figures hereafter, we mark a domain value that has been deleted by putting it inside a box. STR3 eventually merges the tids of tuples that involve these values ({a mathematical formula}table(C,Y,h), {a mathematical formula}table(C,Y,i), {a mathematical formula}table(C,Z,o)) into {a mathematical formula}inv(C), making {a mathematical formula}inv(C).dense={6,7,8,5}. Values that depend on the tuples with those tids are in need of new supports. They are {a mathematical formula}⋃5≤k≤8dep(C,k)∖{h,i,o}={g,a,d,b,n} (values h, i, and o are already absent so they stay at their positions according to the condition in line 21 of STR3). Let us look first at what happens to g. STR3 locates a new valid support for g which is {a mathematical formula}tup(C,3). The value of {a mathematical formula}table(C,Y,g).sep is then changed from 1 to 0 and g is transferred from {a mathematical formula}dep(C,5) to {a mathematical formula}dep(C,3). Similar operations are performed with respect to a and b. Now, concerning values d and n, it is clear that no other support exists. Consequently, these values can be deleted from their respective domains while continuing to exist in {a mathematical formula}dep(C,7) and {a mathematical formula}dep(C,8).
+     </paragraph>
+     <paragraph>
+      Now suppose that the search backtracks to {a mathematical formula}η1. The result is shown in Fig. 9. The dependency lists {a mathematical formula}dep(C,k) are unaffected: they remain as in {a mathematical formula}η2, but note that they are different from those initially in {a mathematical formula}η1 (see Fig. 7 for comparison). This is an example of unsynchronized supports, which will be discussed in the next section. On the other hand, separators and {a mathematical formula}inv(C).members have been rolled back to their previous values, as initially in {a mathematical formula}η1.
+     </paragraph>
+     <paragraph>
+      From this point, we suppose that e and n are eliminated. Fig. 10 shows the results after STR3 is called. The tids from both values' indexes (3 and 8) are first added to {a mathematical formula}inv(C). Values for which STR3 needs to produce new supports are {a mathematical formula}⋃k∈{3,8}dep(C,k)∖{e,n}={g,i}. Value i is removed because it has no further support. Value g stays present because {a mathematical formula}tup(C,table(C,Y,g)[↑]){sup:2} = {a mathematical formula}tup(C,5) is a support of g. STR3 then moves g from {a mathematical formula}dep(C,3) to {a mathematical formula}dep(C,5). Notice that the value of {a mathematical formula}table(C,Y,g).sep remains unchanged from Fig. 9. Finally, while it is true that the invalidation of {a mathematical formula}table(C,X,b)[↑]=8 deprives b of a support, since b is not part of {a mathematical formula}dep(C,8) STR3 will not try to find a new support for b. As a matter of fact, {a mathematical formula}b∈dep(C,2). As a result, STR3 will start seeking a new support for b only after {a mathematical formula}tup(C,2) becomes invalid.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Synchronized vs. unsynchronized supports
+     </section-title>
+     <paragraph>
+      Central to STR3 is the relationship between the separators and the dependency lists. A present value {a mathematical formula}(X,a) is GAC on C because (1) {a mathematical formula}(X,a)∈dep(C,k) for some {a mathematical formula}k∉inv(C), or (2) {a mathematical formula}table(C,X,a)[↑]=k′ with {a mathematical formula}k′∉inv(C). Only one of the two conditions is sufficient for {a mathematical formula}(X,a) to be proved to be GAC, and when both conditions are true, STR3 does not necessarily force the tid k to be equal to the tid{a mathematical formula}k′ as might be expected. This flexibility allows STR3 to keep a maximum of two different supports for each value with virtually no effort, thus almost doubling the chance that STR3 can avoid seeking a new support later. This section studies when and how this happens.
+     </paragraph>
+     <paragraph>
+      When {a mathematical formula}k=k′, we say that the dependency lists and the separators are synchronized at {a mathematical formula}(X,a) (or that the supports of {a mathematical formula}(X,a) are synchronized). GACInit initializes separators and dependency lists so that they are synchronized from the beginning (see lines 6–9). In this case, the role of the dependency lists is straightforward: it just mirrors what happens to the separators. As soon as a tuple {a mathematical formula}tup(C,k) becomes invalid, STR3 looks for a new support for each value in the dependency list indexed at k, i.e., {a mathematical formula}dep(C,k) (line 21). Potential supports for a value {a mathematical formula}(Y,b) are in the sub-table {a mathematical formula}table(C,Y,b), so, they are tested one by one against {a mathematical formula}inv(C), starting from the separator of the sub-table (lines 22–24). If no support is found the value is removed (line 26), and STR3 immediately fails when that value is the last one left in the domain (line 27). If a new support is found, the value of the current separator is recorded for backtrack purposes (line 30) before being replaced by the position of the new support (line 31). Dependency lists are always updated accordingly (line 32).
+     </paragraph>
+     <paragraph>
+      The separators and the dependency lists remain synchronized until backtracking occurs. Given {a mathematical formula}(X,a)∈dep(C,k) for some tid k, when the search backtracks {a mathematical formula}dep(C,k) remains unperturbed whereas {a mathematical formula}table(C,X,a).sep must revert back to its previous state if possible. For this reason, the separators and the dependency lists may no longer be synchronized at {a mathematical formula}(X,a). In such cases, the tuples {a mathematical formula}tup(C,table(C,X,a)[↑]) and {a mathematical formula}tup(C,k) diverge and become two distinct supports of {a mathematical formula}(X,a) on C.
+     </paragraph>
+     <paragraph>
+      We now consider in details different circumstances during STR3's execution when the validity of these two tuples later change (not including the cases where STR3 reports inconsistency). These relationships are portrayed in Fig. 11. We assume {a mathematical formula}|table(C,X,a)|&gt;1 for all {a mathematical formula}(X,a) so that the claim of two distinct supports is not trivially unfeasible. The diagram is explained in details as follows. We consider {a mathematical formula}(X,a)∈dep(C,k) for some tid{a mathematical formula}k∉inv(C) and {a mathematical formula}table(C,X,a)[↑]=k′ for some tid{a mathematical formula}k′∉inv(C). In Fig. 11, dep and sep failing means that k and {a mathematical formula}k′ are in {a mathematical formula}inv(C), respectively.
+     </paragraph>
+     <paragraph>
+      Supports are synchronized at the beginning, which means {a mathematical formula}k=k′. There are two possible transitions:
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       {a mathematical formula}tup(C,k)becomes invalid. STR3 must seek a new support in this case. Consequently, both supports remain synchronized (albeit with a tid different from k).
+      </list-item>
+      <list-item label="(2)">
+       {a mathematical formula}table(C,X,a).sepis restored to some previous value. This is caused by backtracking. The two supports of {a mathematical formula}(X,a) become unsynchronized.
+      </list-item>
+     </list>
+     <paragraph>
+      Suppose there are two distinct supports for {a mathematical formula}(X,a) at this point. There are three possible transitions, namely (3), (6), and (7).
+     </paragraph>
+     <list>
+      <list-item label="(3)">
+       {a mathematical formula}tup(C,k′)becomes invalid while{a mathematical formula}tup(C,k)remains valid. Because STR3 seeks a new valid support for {a mathematical formula}(X,a) only when {a mathematical formula}tup(C,k) is invalid (line 21), nothing needs to be done. This is what happens to value b in Fig. 10. There are two possible choices after this state:
+      </list-item>
+      <list-item label="(6)">
+       {a mathematical formula}tup(C,k′)remains valid while{a mathematical formula}tup(C,k)becomes invalid.{a mathematical formula}(X,a) is simply shifted to another dependency list (i.e., from {a mathematical formula}dep(C,k) to {a mathematical formula}dep(C,k′) by line 32). Because {a mathematical formula}tup(C,k′) is valid, the second condition in line 23 will fail and the separator pointing at {a mathematical formula}k′ will never move. The dependency lists and the separators are synchronized at {a mathematical formula}(X,a) as a result. In effect, the remaining support is copied over when the other fails. This is what happens to value g in Fig. 10.
+      </list-item>
+      <list-item label="(7)">
+       {a mathematical formula}table(C,X,a).sepis restored to some previous value. Same as (2) and (5).
+      </list-item>
+     </list>
+     <paragraph>
+      Even though the trigger for STR3 to seek a new support is set up only on dependency lists, from the diagram it is clear that both {a mathematical formula}tup(C,k) and {a mathematical formula}tup(C,k′) in fact provide two different sources of supports for {a mathematical formula}(X,a); when one fails STR3 will draw on the other for support equally, and only after both fail does STR3 start seeking a new support. In an interesting scenario, a support in a dependency list may fail and get replaced by another support successively without STR3 having to explicitly seek a new support. The reason is that STR3 may cycle from synchronized to unsynchronized state and back repeatedly through cases (2) and (6), where the limit is the depth of the search tree.
+     </paragraph>
+     <paragraph>
+      While STR3 starts off with synchronized supports, unsynchronized supports are possible too. Indeed, because STR3 requires a form of preprocessing in order to remove invalid tuples, the ones that remain are all supports. Consider Fig. 1 for instance. After GAC preprocessing the tuples {a mathematical formula}tup(C,2), {a mathematical formula}tup(C,3), and {a mathematical formula}tup(C,4) are all recognized as supports for {a mathematical formula}(Z,m). In line 7, {a mathematical formula}table(C,Z,m).sep is assigned the value 3, therefore the ordinary STR3 that starts with synchronized supports would add {a mathematical formula}(Z,m) to {a mathematical formula}dep(C,table(C,Z,m)[3])=dep(C,4). However, because the tuples {a mathematical formula}tup(C,2), {a mathematical formula}tup(C,3), and {a mathematical formula}tup(C,4) are all supports of {a mathematical formula}(Z,m), we could choose adding {a mathematical formula}(Z,m) to {a mathematical formula}dep(C,table(C,Z,m)[1])=dep(C,2), or to {a mathematical formula}dep(C,table(C,Z,m)[2])=dep(C,3) as well. Since the separator moves down from the last cell to 1, choosing 1, the furthest cell away at the opposite end, would be the most natural choice. Line 8 would then be changed to:{a mathematical formula} In our experiments, we use a variant of STR3 that starts with unsynchronized supports (thus benefiting initially from two supports for each value).
+     </paragraph>
+     <paragraph>
+      Observe that the separators and the dependency lists are somewhat comparable to watched literals [25] introduced for SAT. However, there are significant differences as follows. To begin with, for a given value, the relevant dependency list is the only activation point, working as a primary support while the separator serves as a possible backup; the separator points to a tuple that may or may not be valid. In contrast, there are always two watched literals for SAT, both equivalent in every way. For STR3, the separators are rigid and must maintain their values at all times while the dependency lists are not maintained, just like the two watched literals for SAT. Separators and dependency lists can be synchronized or unsynchronized depending on circumstances, in effect providing either a single support or two distinct supports whereas for SAT the two watched literals are always distinct where possible.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Correctness
+     </section-title>
+     <paragraph>
+      This section proves properties that are crucial to STR3's correctness. An invariant is taken to be a property that remains true throughout the search, at the points before and after STR3 is enforced, but not necessarily while STR3 is running. For simplicity, arrays are sometimes perceived as mathematical sets in what follows.
+     </paragraph>
+     <paragraph>
+      The first invariant states that the dependency lists associated with a constraint C represent a disjoint collection of all domain values for the variables in the scope of C.
+     </paragraph>
+     <paragraph label="Proof">
+      For any constraint{a mathematical formula}C∈C, the collection of sets{a mathematical formula}S:={dep(C,i):i∈1…|rel(C)|}represents a partition of{a mathematical formula}D:=⋃X∈scp(C)D(X)such that every element of{a mathematical formula}Dis in one and only one set of{a mathematical formula}S.The invariant holds initially after GACInit is called. Line 32 contains the only statement that affects dependency lists and it moves one element from one list to another, thus preserving the invariant.  □
+     </paragraph>
+     <paragraph>
+      The second invariant states that {a mathematical formula}inv(C) contains all tids of invalid tuples from {a mathematical formula}rel(C) and nothing else.
+     </paragraph>
+     <paragraph label="Proof">
+      For any constraint{a mathematical formula}C∈C,{a mathematical formula}inv(C)=⋃X∈scp(C),a∉Dc(X)table(C,X,a).This is obvious from the fact that STR3 merges {a mathematical formula}table(C,X,a) into {a mathematical formula}inv(C) as soon as {a mathematical formula}(X,a) becomes invalid, but it is worth emphasizing that there are exactly {a mathematical formula}|scp(C)| copies for each tid and they are distributed among different subtables (see Fig. 1b for example). Line 14 ensures that {a mathematical formula}inv(C) does not include duplicates and therefore conforms to the prerequisite of sparse sets. The invariant holds after backtracking because the right-hand side of the equation, {a mathematical formula}⋃X∈scp(C),a∉Dc(X)table(C,X,a), is conditioned upon domain values while the left-hand side, {a mathematical formula}inv(C), is controlled through {a mathematical formula}inv(C).members, both of which are maintained by STR3.  □
+     </paragraph>
+     <paragraph>
+      The third invariant guarantees that no support resides in the explored regions, i.e., after separators. We use {a mathematical formula}table(C,X,a).explored to denote {a mathematical formula}table(C,X,a)[sep+1…size] where {a mathematical formula}sep=table(C,X,a).sep and {a mathematical formula}size=|table(C,X,a)|.
+     </paragraph>
+     <paragraph label="Proof">
+      For any{a mathematical formula}C∈C,{a mathematical formula}X∈scp(C), and{a mathematical formula}a∈Dc(X), no tid of any support of{a mathematical formula}(X,a)on C exists in{a mathematical formula}table(C,X,a).explored.This invariant holds when the search starts since GACInit initially eliminates all invalid tuples and assigns the separators to their maximum values. Afterwards, when the tuple {a mathematical formula}tup(C,table(C,X,a)[↑]) becomes invalid, STR3 scans down {a mathematical formula}table(C,X,a) until a new valid support is found, in which case the separator is set to the new value; the invariant holds. If no valid support is found, a is removed and the separator remains unchanged. The invariant still holds because it is conditioned on a being present in the domain. When a backtrack occurs, a becomes present again and the invariant still holds because the separator is maintained.  □
+     </paragraph>
+     <paragraph>
+      Finally, the fourth invariant states that values stored in dependency lists do correspond to supports (for present values).
+     </paragraph>
+     <paragraph label="Proof">
+      For any{a mathematical formula}C∈C,{a mathematical formula}X∈scp(C), and{a mathematical formula}a∈Dc(X), if{a mathematical formula}(X,a)∈dep(C,k), then{a mathematical formula}tup(C,k)is a support of{a mathematical formula}(X,a)on C.The invariant holds right after GACInit. From the code, we see that whenever {a mathematical formula}tup(C,k) becomes invalid, any {a mathematical formula}(X,a) in {a mathematical formula}dep(C,k) will be moved to another {a mathematical formula}dep(C,k′) when a different valid tid{a mathematical formula}k′ is found (line 32). The invariants associated with {a mathematical formula}dep(C,k) and {a mathematical formula}dep(C,k′) are preserved. If no valid tid is found, {a mathematical formula}(X,a) becomes invalid. The invariant remains true because it deals only with present values.We now look at the relationship between {a mathematical formula}table(C,X,a).sep and dependency lists when a backtrack is involved. If {a mathematical formula}(X,a) switches from being absent to present after a backtrack, the invariant remains true, because either (1) {a mathematical formula}(X,a) was removed as a consequence of the instantiation of X to some other value {a mathematical formula}b≠a, in which case the invariant is unaffected, or (2) chronological backtracking ensures that the tuple that {a mathematical formula}(X,a) depended on most recently is restored as well (through rolling back of separators and {a mathematical formula}inv(C).members). An interesting situation happens when {a mathematical formula}(X,a) is present before and after backtracking. In this case, {a mathematical formula}table(C,X,a).sep may be reverted. Assume the value of {a mathematical formula}table(C,X,a)[↑] is k before the backtrack, and {a mathematical formula}k′ after the backtrack (with {a mathematical formula}k&lt;k′). This means of course that {a mathematical formula}(X,a) is in {a mathematical formula}dep(C,k) before the backtrack. Now, consider {a mathematical formula}dep(C,k) and {a mathematical formula}dep(C,k′) after backtrack. Because backtracking never invalidates tuples, the tuple {a mathematical formula}tup(C,k) must still be valid after backtrack, and because dependency lists are not maintained, {a mathematical formula}(X,a) remains in {a mathematical formula}dep(C,k). For this reason, the invariant for {a mathematical formula}dep(C,k) is still true, although {a mathematical formula}table(C,X,a)[↑] is no longer k. The invariants involving values in {a mathematical formula}dep(C,k′) are unaffected.Next, consider what happens if the search moves forward when there are two distinct supports. That is, {a mathematical formula}(X,a)∈dep(C,k) while {a mathematical formula}table(C,X,a)[↑]=k′≠k. If {a mathematical formula}tup(C,k) becomes invalid, we need to find a new support for {a mathematical formula}(X,a). If there exists {a mathematical formula}1≤k″≤k′ such that {a mathematical formula}tup(C,k″) is valid, STR3 merely moves {a mathematical formula}(X,a) from {a mathematical formula}dep(C,k) to {a mathematical formula}dep(C,k″). The invariants for {a mathematical formula}dep(C,k) and {a mathematical formula}dep(C,k″) hold afterward. If no valid support is found, {a mathematical formula}(X,a) remains in {a mathematical formula}dep(C,k) and a becomes absent, making the invariant trivially true.  □
+     </paragraph>
+     <paragraph>
+      We can now prove that STR3 does maintain GAC during backtrack search.
+     </paragraph>
+     <paragraph label="Sketch of proof">
+      STR3 maintains GAC.We assume the standard value-based propagation framework and that the network is already GAC before STR3 is called for the first time. Two key observations for the completion of a proof are as follows. First, a value is deleted and put in the propagation queue as soon as STR3 exhausts all possibilities for supports (Invariant 3 where {a mathematical formula}table(C,X,a).explored=table(C,X,a) and line 26). Second, every present value has at least one valid support. This is due to Invariant 1, Invariant 4 and the fact that a present value depends on exactly one tuple of a table constraint.  □
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Complexity
+     </section-title>
+     <paragraph>
+      Many algorithms repeatedly compute a new value from an old one after a small modification to the computation context. An algorithm is incremental if it does not compute the new value from scratch but exploits both the old value and the modifications made to the environment. STR3 is designed to be incremental by avoiding repeated domain checks along the same path, going from the root to a leaf, in the search tree. In the following analysis, we consider the worst-case accumulated cost along a single path of length m in the search tree. It is assumed that (1) each variable domain is of size d, (2) each positive table constraint is of arity r and contains t tuples, (3) the tables do not contain invalid tuples before STR3 starts. Also, we consider that {a mathematical formula}d≤t (a value {a mathematical formula}a∈D(X) must initially appear in all tables involving the variable X).
+     </paragraph>
+     <paragraph label="Proof">
+      The worst-case space complexity of STR3 is{a mathematical formula}O(rt+mrd)per constraint.There are three main data structures in STR3: table, inv and dep. According to Invariant 1, the space complexity for dep is {a mathematical formula}O(rd). For inv, it is {a mathematical formula}O(t) whereas it is {a mathematical formula}O(rt) for table. For managing the restoration of data structures, we have stackI, which is {a mathematical formula}O(m), and stackS, which is {a mathematical formula}O(mrd), assuming that we may need to record information up to m levels. The total cost is {a mathematical formula}O(rd+t+t+rt+m+mrd), which is {a mathematical formula}O(rt+mrd).  □
+     </paragraph>
+     <paragraph label="Proof">
+      The worst-case time complexity of STR3 along a single path of length m in the search tree is{a mathematical formula}O(rt+m)per constraint.STR3's operations can be seen from the point of view of the three main data structures: table, inv, and dep. We consider them in this order:
+      <list>
+       For a value a that stays present along a path, the cost of STR3 on {a mathematical formula}table(C,X,a) is {a mathematical formula}O(|table(C,X,a).explored|). If a is absent, there is an extra cost for merging the rest of {a mathematical formula}table(C,X,a) into {a mathematical formula}inv(C) (line 12), which is {a mathematical formula}O(|table(C,X,a)[1…sep]|). In both cases, the cost is {a mathematical formula}O(|table(C,X,a)|). The total cost is {a mathematical formula}O(∑X∈scp(C),a∈D(X)|table(C,X,a)|)=O(rt).The maximum size of {a mathematical formula}inv(C) is t. Because {a mathematical formula}inv(C) is implemented as a sparse set, adding a member takes {a mathematical formula}O(1) time. The size of {a mathematical formula}inv(C) can only grow along the path so the cost of STR3 in dealing with {a mathematical formula}inv(C) is {a mathematical formula}O(t).Lastly, we consider the cost associated with dependency lists. When the tuple {a mathematical formula}tup(C,k) becomes invalid, each element in {a mathematical formula}dep(C,k) is processed and shifted if necessary. For each value {a mathematical formula}(X,a), it can be shifted around at most {a mathematical formula}|table(C,X,a)| times. Because each dependency list {a mathematical formula}dep(C,k) is processed sequentially once along the path, the total cost is {a mathematical formula}O(∑X∈scp(C),a∈D(X)|table(C,X,a)|)=O(rt).The worst-case time complexity of STR3 along a single path is thus
+      </list>
+      <paragraph>
+       {a mathematical formula}O(rt+t+rt+m)=O(rt+m), as all other statements have fixed costs ({a mathematical formula}O(1)) at each node.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      As in the case of disjoint set union operations [26], a cascading series of transfers in dependency lists, where the number of elements to be moved keeps growing, is conceivable. This has no bearing on the complexity cost associated with dependency lists since we already show it to be {a mathematical formula}O(rt) through another argument, but it should be noted that the cascading cost is small due to the limited size of each list {a mathematical formula}dep(C,k), which holds no more than r elements. It follows that the worst-case cost in a monotonically increasing series of transfers is {a mathematical formula}O(∑k=1r−1k)=O(r2). Incidentally, the practical upper bound on operations involving dependency lists should be much closer to {a mathematical formula}O(rd) (the lower bound) than {a mathematical formula}O(rt) since absent values in dependency lists are never touched (line 21).
+     </paragraph>
+     <paragraph label="Property 1">
+      The worst-case time complexity along a single path of length m in the search tree can be as much as{a mathematical formula}O(rtm)for STR2 per constraint.Reasoning: Recall that STR2 improves over standard STR1 in two major ways. First, any {a mathematical formula}(X,a) can be disregarded if {a mathematical formula}Dc(X) is fully supported. Second, no validity check is necessary for {a mathematical formula}(X,a) if it is known that there is no change to the domain of X since the last time STR2 was called. Because STR2 is sensitive to ordering, we can build a table constraint and a search path such that (1) each call to STR2 involves a domain reduction of exactly one value on every domain, so that the second improvement is useless, (2) each call to STR2 eliminates exactly one tuple, which is found at the end of the table. As a result, the cost is {a mathematical formula}O(∑i=1mr(t−i)), which is {a mathematical formula}O(rtm) when {a mathematical formula}m≪t.  □
+     </paragraph>
+     <paragraph>
+      It can be shown in a similar fashion that {a mathematical formula}MDDc[12] or tries [21] are not path-optimal. On the other hand, each backtrack costs {a mathematical formula}O(rd) in the worst-case for STR3, whereas it is {a mathematical formula}O(r) for STR2.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      STR3 with circular seek
+     </section-title>
+     <paragraph>
+      Gent [13] reported that seeking an element in an array in a circular fashion during backtracking search can be proved optimal when the cost is amortized. In other words, there is no theoretical difference with the traditional optimal procedure where a cursor's position is saved and restored upon backtrack. The circular approach is a factor of two slower in the worst case, but experiments with SAT solvers show that it can be faster in practice [13].
+     </paragraph>
+     <paragraph>
+      Because STR3 is based on incremental scans of the sub-tables, its cursors (separators) can be made to move circularly as well. The question is whether STR3 with circular seek remains optimal. This section addresses this variation of STR3 with respect to correctness, optimality, and performance.
+     </paragraph>
+     <paragraph>
+      Pseudo-code of STR3 with circular seek ({a mathematical formula}STR3circ) is given in Fig. 12. Differences from ordinary STR3 are:
+     </paragraph>
+     <list>
+      <list-item label="d1">
+       The search of supports performed from line 22 to 24 in Fig. 5 is modified to accommodate circular seek (line 13 to 21 in Fig. 12). The routine restoreS as well as the trailing of the separators at line 30 of Algorithm STR3 in Fig. 5 are no longer needed.
+      </list-item>
+      <list-item label="d2">
+       The condition of the for-loop in line 12 of Algorithm STR3 in Fig. 5 is changed. The result is shown in line 3 in Fig. 12.
+      </list-item>
+     </list>
+     <paragraph label="Sketch of proof">
+      {a mathematical formula}STR3circmaintains GAC.{a mathematical formula}STR3circ's correctness can be derived from STR3's when their differences are accounted for as follows:Case d1: The circular move guarantees that, unless a variable X is assigned to a value {a mathematical formula}b≠a, the only condition for the value a to be removed is the absence of support in the sub-table involving {a mathematical formula}(X,a). Because separators are not maintained, it is always true that {a mathematical formula}(X,a)∈dep(C,k)⇔table(C,X,a).sep=k. That is, separators and dependency lists are always synchronized. Invariant 4 holds as a result.Case d2: In STR3, the subarray {a mathematical formula}table(C,X,a).explored always contains only tids of invalid tuples because the separators are not maintained. In {a mathematical formula}STR3circ, this is no longer true. Every tid in table has to be checked against {a mathematical formula}inv(C), but the effect on {a mathematical formula}inv(C) is the same as STR3's.  □
+     </paragraph>
+     <paragraph label="Proof">
+      The worst case time complexity of{a mathematical formula}STR3circalong a single path of length m in the search tree is{a mathematical formula}O(rt+m)per constraint.We need to look only at the operations involving table as the ones involving dep and inv are unchanged from STR3. For any value {a mathematical formula}(X,a) that stays present along a single path, the cost of circular scan on {a mathematical formula}table(C,X,a) is {a mathematical formula}O(|table(C,X,a)|) according to Theorem 13 in [13]. If a is absent, there is an extra cost for merging {a mathematical formula}table(C,X,a) into {a mathematical formula}inv(C) (line 3 of Fig. 12). The cost is {a mathematical formula}O(|table(C,X,a)|+|table(C,X,a)|)=O(|table(C,X,a)|) for either case. Summing on X and a makes the final complexity {a mathematical formula}O(rt+m), where the factor m includes other {a mathematical formula}O(1) costs at each node.  □
+     </paragraph>
+     <paragraph>
+      Proposition 14 in [13] indicates that overheads of the circular move can be a constant factor of two larger than the trailing of separators. For {a mathematical formula}STR3circ, there is a further cost of merging {a mathematical formula}table(C,X,a) for an absent value as mentioned in the proof above, which is another {a mathematical formula}O(rt) in total. Thus, the time complexity of {a mathematical formula}STR3circ hides a constant factor of three larger than STR3's. Our experiments show that {a mathematical formula}STR3circ is slower than both STR2 and STR3 on every problem instance tested.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Related works
+     </section-title>
+     <paragraph>
+      A number of fine-grained (G)AC algorithms have been proposed in the literature, for example, AC5 [27], AC6 [28], AC7 [29], GAC4 [4], and AC5TC-Tr [14]. In this section, we discuss about the connections existing between GAC4, AC5TC-Tr, and STR3 since they are all optimal and closely related algorithms.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       GAC4
+      </section-title>
+      <paragraph>
+       GAC4 [4] is a generalized version of AC4 [3] for non-binary constraints. The pseudocode for the propagation portion of GAC4 is given by Fig. 13.
+      </paragraph>
+      <paragraph>
+       GAC4's approach to propagation is based on an incremental reduction of the support lists; the list of supports of a value {a mathematical formula}(X,a) on a constraint C is denoted by {a mathematical formula}sup⁡(C,X,a). When a value {a mathematical formula}(X,a) becomes absent, every tuple τ involving that value becomes invalid. Because it may be a support for other values, {a mathematical formula}sup⁡(C,Y,τ[Y]) for every {a mathematical formula}Y≠X must be updated as well. A value {a mathematical formula}(X,a) has no longer a support on a constraint C when {a mathematical formula}sup⁡(C,X,a)=∅. It is then removed from {a mathematical formula}Dc(X) and put on the queue Q for further processing.
+      </paragraph>
+      <paragraph>
+       In order to keep the time complexity optimal, it is proposed in [4] that the list of supports be implemented as a doubly linked list. Removing an element of a support list therefore takes {a mathematical formula}O(1) time. The use of an additional data structure containing pointers to elements of support lists is suggested so that these elements can also be accessed in {a mathematical formula}O(1) time — specifically, a two-dimensional array {a mathematical formula}ptr(C) of size {a mathematical formula}|rel(C)|×|scp(C)|. For every tuple {a mathematical formula}tup(C,k), {a mathematical formula}1≤k≤|rel(C)|, {a mathematical formula}ptr(C)[k] is a one-dimensional array of size r, where {a mathematical formula}scp(C)={X1,…,Xr}, such that for all {a mathematical formula}1≤i≤r, if {a mathematical formula}tup(C,k)[Xi]=a then {a mathematical formula}ptr(C)[k][i] points to a node in {a mathematical formula}sup⁡(C,Xi,a) whose value is k. Fig. 14 illustrates this with a ternary constraint C such that {a mathematical formula}scp(C)={X,Y,Z}.
+      </paragraph>
+      <paragraph>
+       Although attractive because admitting an optimal time complexity, GAC4 remains basically a standalone GAC algorithm. Indeed, no provision has been made for it to be used as a filtering step during backtracking search, although one can always make a simple adaptation by trailing all the relevant data structures, which are sup and ptr in this case. This incurs overheads, and it is unclear how costly the maintenance would be in practice since MGAC4 has never been reported in any experiment as far as we are aware. However, note that GAC4 remains useful when pre-caching of all supports is considered worthwhile. For instance, an extension of GAC4 is employed to find a form of interchangeable values in interactive configuration problems [30].
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       AC5TC-Tr
+      </section-title>
+      <paragraph>
+       Several optimal GAC algorithms for table constraints are described in [14], [31]. As a representative example, we focus our attention here on AC5TC-Tr [14] (see [31] for a comprehensive treatment of GAC algorithms for table constraints based on the AC5 structure [27]). We provide pseudocode of a key procedure of AC5TC-Tr in Fig. 15 and explain its function as follows.
+      </paragraph>
+      <paragraph>
+       In AC5TC-Tr, a support list on C for a value {a mathematical formula}(X,a) is dynamically maintained as a doubly linked list headed by {a mathematical formula}FS(C,X,a) (“first support”) while its elements are connected via pointers nextTr and predTr. Both pointers satisfy the following invariants for every variable {a mathematical formula}X∈scp(C) and every tuple {a mathematical formula}tup(C,i) where {a mathematical formula}1≤i≤t=|rel(C)|:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}D(X,Q,C) denotes the “local view” of the domain {a mathematical formula}D(X) with respect to the propagation queue Q, defined as {a mathematical formula}D(X,Q,C)=D(X)∪{a|(C,X,a)∈Q}. For any {a mathematical formula}V⊆X, {a mathematical formula}D(V,Q,C)=∏V∈XD(V,Q,C).
+      </paragraph>
+      <paragraph>
+       Furthermore, {a mathematical formula}FS(C,X,a), must satisfy the following invariant (a top value ⊤ is the largest value while a bottom ⊥ is the smallest).{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       valRemoveTC-Tr is a primary function of AC5TC-Tr that deals with the consequences of the removal of a value {a mathematical formula}(X,a) with respect to a constraint C. When {a mathematical formula}(X,a) becomes absent, the function goes through each tuple τ in the support list of {a mathematical formula}(X,a) and updates the support list of each value {a mathematical formula}(Y,b) that contains τ. The idea is fundamentally the same as MGAC4, but with the operations on doubly linked lists spelled out. One important difference is that the data structure ptr is not used. Indeed, although the use of ptr was put forward in [4] it is actually not necessary because tuples are already grouped along domain values of a given variable. That is, assuming a total order on {a mathematical formula}rel(C), both {a mathematical formula}nextTr(C,X,i) and {a mathematical formula}predTr(C,X,i) return unique tuples (row positions). Thus next and previous tuples can be referred to directly through two pieces of information, namely, i (row) and X (column), as done in valRemoveTC-Tr.
+      </paragraph>
+      <paragraph>
+       STR3 and AC5TC-Tr achieve path-optimality through different routes. Both algorithms are based on the same concept of support lists, although STR3 works exclusively on row indexes. Traversals on the lists are analogous, whether through the doubly linked lists in AC5TC-Tr or through table in STR3. We discuss their differences in the rest of this section.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Indicators for the first valid supports. The data structure FS plays the same role in AC5TC-Tr as sep does in STR3. Both mark the earliest valid support found according to the ordering in {a mathematical formula}rel(C). Due to its representation, STR3 needs dep as a reverse pointer in addition to sep. Because dep does not need trailing, STR3 is able to sidestep some of AC5TC-Tr's efforts. However this notion can be replicated in AC5TC-Tr by adding a similar data structure, which in this case serves purely as residues [32].
+       </list-item>
+       <list-item label="•">
+        Overheads of doubly linked lists. Besides the obvious extra traversal cost of doubly linked lists, the more important concern is its maintenance overheads during backtracks. AC5TC-Tr must keep track of the positions of all removed elements as well as the depth of the search when such removals happen. Should backtracks occur, AC5TC-Tr would use this information in order to restore these elements to their original positions. These removals may not be consecutive, and hence their restorations can be more expensive than the simple STR3's trailing mechanism.
+       </list-item>
+       <list-item label="•">
+        Centralization of invalid tuples. STR3 takes a lazy approach by partitioning a support list into two contiguous parts: an explored region known not to have any valid support, and an unexplored region. The two regions are separated by a cursor. As a result, when a tuple is proved invalid it must be remembered as such so that this fact can be recalled later when an unknown region is examined. To this end, STR3 channels all handling of invalid tuples through a centralized facility (inv). By contrast, AC5TC-Tr actively maintains support lists: when a tuple becomes invalid it is immediately removed from all involving support lists so it will not be encountered again in the future.
+       </list-item>
+       <list-item label="•">
+        Local views and granularity of invariants. AC5TC-Tr is derived from the AC5 framework, whose correctness stems in turn from invariants on its data structures. These invariants differ from STR3's in two respects. First, in AC5 they deal with local views instead of the current domains. Invariants must therefore hold even for values that are absent but still remain in the local views; for instance the invariant on FS must be maintained even for some absent values. By contrast, STR3 suspends all operations on a value once it becomes absent. Second, AC5's invariants hold at the point before and after each value {a mathematical formula}(X,a) is dequeued and processed. STR3's invariants, on the other hand, are coarser. During search they hold at the point before and after STR3 is completely executed, not during its execution where the filtering may not have yet converged to a fixed point.
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, STR3 can be regarded as an improved version of AC5TC-Sparse (previously called AC5TC-Cutoff in [14]) where an additional data structure is introduced for recording supports, which avoids restoring and checking operations to some extent.
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Experimental results
+     </section-title>
+     <paragraph>
+      In order to show the practical interest of STR3, we have conducted an experimentation (with our solver AbsCon) using a cluster of bi-quad cores Xeon processors at 2.66 GHz with 16 GB of RAM under Linux. We have compared STR3, first with other classical STR variants, and then with other related GAC algorithms developed for table constraints. For all our experiments, we have used the backtrack search algorithm called MAC, which maintains (G)AC during search, equipped with the variable ordering heuristic dom/ddeg[5] and the value ordering heuristic lexico. For each tested problem instance, we have searched to find a solution or prove that no solution exists, within 1200 seconds. It is important to note that the two chosen heuristics guarantee that we explore the very same search tree regardless of the filtering algorithm used (contrary to, for example, dom/wdeg[33]).
+     </paragraph>
+     <section label="10.1">
+      <section-title>
+       STR3 versus STR2: comparison on problem series
+      </section-title>
+      <paragraph>
+       Because it has been shown that STR2 is state-of-the-art on many series of instances [11], we have compared the respective behavior of STR3 and STR2. Also included as a baseline are the results obtained with the original STR algorithm, as proposed by Ullmann [10] and referred to as STR1 here.
+      </paragraph>
+      <paragraph>
+       First, we have considered some classical series of instances{sup:3} involving positive table constraints with arity greater than 2. We give a brief description of these series:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The Crossword puzzle involves filling a blank grid using words from a specified dictionary. We have used four series of instances, called crosswords-lex, crosswords-uk, crosswords-words and crosswords-ogd, which have been generated from a set of grids without any black square, called Vg, and four dictionaries, called lex, uk, words and ogd. Dictionaries lex and words are small whereas uk and ogd are large. The arity of the constraints is given by the size of the grids: for example, crosswords-ogd-5-6 involves table constraints of arity 5 and 6 (the grid being 5 by 6).
+       </list-item>
+       <list-item label="•">
+        A Renault Megane configuration problem, converted from symbolic domains to numeric ones, has been introduced in [34]. The series renault-mod contains instances generated from the original one, after introducing a form of perturbation. Such instances involve domains containing up to 42 values and some constraints of large arity (8 to 10); the largest table contains about 50 000 6-tuples.
+       </list-item>
+       <list-item label="•">
+        A Nonogram is built on a rectangular grid and requires filling in some of the squares in the unique feasible way according to some clues given on each row and column. Such clues can be modeled with table constraints. Constraint have typically large arities as for a grid of size {a mathematical formula}r×c, we get r constraints of arity c and c constraints of arity r. The size of the tables vary accordingly the size of the grids and the specified clues: some tables only contain a few tuples whereas the largest ones may usually contain tens or hundreds of thousands of tuples. The series nonogram here corresponds to the instances introduced in [35].
+       </list-item>
+       <list-item label="•">
+        Table constraints can be naturally derived from BDDs and MDDs. Series bdd-15-21 and bdd-18-21 were introduced in [22]: the former contains instances with table constraints of arity 15 and size 2713 whereas the latter contain instances with table constraints of arity 18 and size 133. Series mdd-7-25-05 and mdd-7-25-09 contain instances with constraints of arity 7 derived from MDDs built in a post-order manner with a specified probability p that controls how likely a previously created sub-MDD will be reused [12]. For the first series (also called mdd-half), the probability p is 0.5 whereas it is 0.9 for the second one.
+       </list-item>
+       <list-item label="•">
+        Series denoted by rand-r-n stand for random instances where each instance involves n variables and some constraints of arity r. The series rand-3-20, rand-5-12, rand-8-20 and rand-10-60 will permit us to experiment on random instances with various arity (from arity 3 to 10).
+       </list-item>
+      </list>
+      <paragraph>
+       The results that we shall present include the following metrics:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        CPU time (in seconds); note that the CPU time for STR3 includes the preprocessing step (in which STR2 is employed).
+       </list-item>
+       <list-item label="•">
+        memory (mem) usage in MB.
+       </list-item>
+       <list-item label="•">
+        avgP (average proportion), which is the ratio “size of the current table” to “size of the initial table” averaged over all table constraints and over all nodes of the search tree; this is a relative value.
+       </list-item>
+       <list-item label="•">
+        avgS (average size), which is the size of the current table averaged over all table constraints and over all nodes of the search tree; this is an absolute value.
+       </list-item>
+      </list>
+      <paragraph>
+       In order to avoid some “noise” generated by very easy instances, we have decided to discard from our results all instances that were systematically solved within 3 seconds (when embedding any filtering algorithm).
+      </paragraph>
+      <paragraph>
+       Table 1 shows mean results per series. Following the name of each series is the number of tested instances, which corresponds to the number of instances that are not too easy (as mentioned above) and not too difficult (solved by MAC within 1200 seconds when using any of the three algorithms). A first observation is that STR3 requires on average up to two times more memory than STR2; more memory was expected, but this is much better than what worst-case complexity suggests. A second observation is that the results seem to vary widely. STR2 and STR3 are respectively the best approaches on different series: nonogram, bdd-15-21, bdd-18-21, mdd-7-25-05 and rand-8-20 for STR2; crosswords-ogd, rand-3-20, rand-5-12, and rand-10-60 for STR3. On other series, the gap between STR2 and STR3 is less significant. Table 2 gives details on some representative instances.
+      </paragraph>
+      <paragraph>
+       What is interesting to note, when looking at Table 1, Table 2, is that there appears to be a correlation between the values of avgP and avgS and the ranking of STR2 and STR3: the higher the values of avgP and avgS are, the more competitive STR3 becomes. Note that instances in Table 2 are ranked according to the values of avgP (from {a mathematical formula}0.5% to {a mathematical formula}51,2% for structured instances, and from {a mathematical formula}0.2% to {a mathematical formula}25,6% for random instances) in order to make the transition more apparent. Intuitively, higher values of avgP and avgS also imply that there are fewer chances that the solver can reach deeper levels of the search tree, which in turn suggests a connection to unsatisfiability. To confirm this hypothesis, Table 3 divides crossword instances (all series taken together) according to satisfiability, an avgP threshold (pragmatically set to 10%) and avgS threshold (pragmatically set to 1000). Clearly, it appears that STR3 is the best approach when tables are not reduced too much in proportion and/or size (on average), contrary to STR2. For example, on the 46 Crossword instances for which avgS &lt;1000, STR2 is about {a mathematical formula}20% speedier than STR3 whereas on the 39 Crossword instances for which avgS ≥1000, STR3 is about {a mathematical formula}40% speedier than STR2.
+      </paragraph>
+      <paragraph>
+       Next, we tried to push the limit of the Crossword benchmarks by using a new dictionary crosswords-ogd08, which is twice larger than ogd (itself the largest one among the four dictionaries mentioned previously). There are 807 624 words in ogd08 versus 435 705 in ogd. Most instances are of extreme cases: 45 instances are timed-out in all three algorithms tested and 12 are trivially solved (finished by both STR2 and STR3 within 3 seconds). The remaining instances are shown in Table 4 in order of the grid size (i.e. arity). Here we can see clearly the transition from satisfiable instances with low avgP and avgS values to unsatisfiable instances with high avgP and avgS values. STR2 is faster on the 4 first instances while STR3 is faster on the 4 last instances.
+      </paragraph>
+      <paragraph>
+       While it is not immediately clear what factors are involved concerning table reduction, one thing is certain: we know that every time a variable X is assigned a value a, all but tuples involving a are removed from the table of any constraint involving X, making avgP for this constraint low as a result. We have seen a surprising number of benchmarks with tables that are virtually wiped out by simple tabular reduction (no more than a few percent of the initial tuples remained on average) and variable instantiation may play an outsized role in this regard. We introduce now a benchmark where the instantiation is localized and has minimal effect on overall table reduction. A pigeonhole problem of size k is composed of k variables, each with {a mathematical formula}{0,…,k−1} domain, and any two variables are connected by a binary inequality constraint, making the problem unsatisfiable. Unlike most benchmarks, the pigeonhole problem allows its tables to be reduced gradually during search until a variable directly involved is instantiated. An augmented pigeonhole ph-k-j adds an extra j-ary table and j new variables for each of the k variables and chain them together. The extra variables have larger domains to prevent the variable ordering heuristic from picking them prematurely (i.e., heuristics involving domain size) and the extra tables are very loose. Variable heuristics would be steered toward picking variables from the unsatisfiable core as a first priority. Results are shown in Table 5, where, once again, it is clear that STR3 is efficient with high values of avgP and avgS.
+      </paragraph>
+     </section>
+     <section label="10.2">
+      <section-title>
+       STR3 versus STR2: overall comparison
+      </section-title>
+      <paragraph>
+       We present now a few scatter plots to provide an overall insight of the respective behaviors of STR2 and STR3. We use a large set of 2005 instances including the series introduced earlier, and also:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the series of instances introduced in [31] that can be found at http://becool.info.ucl.ac.be/resources/,
+       </list-item>
+       <list-item label="•">
+        the series of instances introduced in [36],
+       </list-item>
+       <list-item label="•">
+        the series of instances introduced in [35] for problem kakuro.
+       </list-item>
+      </list>
+      <paragraph>
+       In each plot, a dot represents an instance whose coordinates are defined by, on the horizontal axis, the CPU time required to solve the instance with STR2, and on the vertical axis, the CPU time required to solve the instance with STR3. Thus, every dot below the line {a mathematical formula}x=y corresponds to an instance solved more efficiently by STR3, and every dot above the line {a mathematical formula}x=y corresponds to an instance solved more efficiently by STR2.
+      </paragraph>
+      <paragraph>
+       Fig. 16 depicts with a first scatter plot the results obtained with STR2 and STR3 (within MAC) on the full set of 2005 instances. This scatter plot confirms that STR2 and STR3 are complementary: evidently, there are series/instances where STR2 is faster than STR3 and other ones where STR3 is faster than STR2. Fig. 17, Fig. 18, Fig. 19 compare the performance of STR2 vs. STR3 with respect to satisfiability, value of avgP, and value of avgS. Finally, Fig. 20 plots the relative efficiency of STR2 against STR3 with respect to the value of avgS, when considering the 2005 instances of our experimental study. On some cases, where tables remain large (&gt;1000), STR3 can be up to 3.6× faster than STR2.
+      </paragraph>
+     </section>
+     <section label="10.3">
+      <section-title>
+       STR3 versus STR2: comparison on classes of random problems
+      </section-title>
+      <paragraph>
+       In the following set of experiments, we focus on classes of random problems, starting with those that can be found at the phase transition. We have generated different classes of instances from Model RD [37]. Each generated class {a mathematical formula}(r,60,2,20,t) contains instances involving 60 Boolean variables and 20 r-ary constraints of tightness t. Provided that the arity r of the constraints is greater than or equal to 8, Theorem 2 [37] holds: an asymptotic phase transition is guaranteed at the threshold point {a mathematical formula}tcr=0.875. It means that the hardest instances are generated when the tightness t is close to {a mathematical formula}tcr. Fig. 21a shows the mean CPU time required by MAC to solve 20 instances of each class {a mathematical formula}(13,60,2,20,t) where t ranges from 0.8 to 0.96. On these instances of intermediate difficulty, we observe that STR3 is worse off than even STR1. Results on different classes of r follow the same pattern. Closer inspection reveals that avgP for this class is very low, especially at the phase transition where avgP is less than 4%.
+      </paragraph>
+      <paragraph>
+       For random problems, the metric avgP can be made higher when the instances that are generated do not lie in the phase transition area (therefore, there is no theoretical guarantee about their hardness). So, we have generated several classes of under-constrained instances. Each generated class {a mathematical formula}(5,12,12,200,t) contains instances involving 12 variables with 12 possible values, and 200 constraints of arity 5 and tightness t. Fig. 21b shows the mean CPU time required by MAC to solve 10 instances of each class {a mathematical formula}(5,12,12,200,t) where t ranges from 0.51 to 0.99; the size of the tables ranges from {a mathematical formula}121928 (when {a mathematical formula}t=0.51) to 2488 (when {a mathematical formula}t=0.99). On these instances whose difficulty decreases with the tightness, we observe that STR3 is far better than STR2. Indeed, the values of both avgS and avgP are large: avgS ranges from 1093 to 8170 whereas avgP may reach up to 43%.
+      </paragraph>
+     </section>
+     <section label="10.4">
+      <section-title>
+       Comparison with other GAC algorithms
+      </section-title>
+      <paragraph>
+       As mentioned in Section 9, STR3 and GAC4 are both optimal filtering algorithms. However, the overhead of maintaining the data structures of GAC4 during search can be significant. To confirm this, we have implemented GAC4 for it to be used within MAC by simply trailing its relevant data structures. Fig. 22 depicts with a scatter plot the results obtained with STR3 and GAC4 (within MAC) on the full set of 2005 instances involving table constraints. This scatter plot clearly shows that GAC4 is largely outperformed by STR3. Note that many crosses appear on the right of the figure, at {a mathematical formula}x=1200. They correspond to instances timed out by GAC4.
+      </paragraph>
+      <paragraph>
+       AC5TC, which has been proposed recently [31] is also an optimal algorithm. However, the solver AbsCon that we use does not permit, in its current shape, to implement easily this type of algorithms. This is the reason why we present in Table 6 an excerpt (with the kind permission of the authors) of the results obtained by Mairy, Van Hentenryck and Deville with the solver Comet. As mentioned in their paper (and can be observed from Table 6), STR2, STR3 and {a mathematical formula}MDDc outperform AC5TC when table constraints have large arity (i.e., greater than 4). However, on constraints of arity 3 and 4, AC5TC is shown to be very fast (see details in [31]).
+      </paragraph>
+      <paragraph>
+       The reader must be aware that compression-based filtering algorithms remain appropriate when compression is highly effective. This has been shown in [38], [22], [39], [12], [36]. Typically, when the compression ratio is high, an algorithm such as {a mathematical formula}MDDc outperforms STR algorithms.
+      </paragraph>
+      <paragraph>
+       There are also three well-known binary encodings of non-binary constraint networks, called dual encoding [40], hidden variable encoding [41] and double encoding [42]. One could wonder whether or not a classical generic AC algorithm applied on such encodings could be competitive with simple tabular reduction. Actually, this has already been studied in [11], with respect to STR2: it is shown in that paper that the dual and the double encodings can rapidly run out of memory, and that STR2 is usually two or three times faster than {a mathematical formula}AC3bit+rm[43] and HAC [42] on the hidden variable encoding.
+      </paragraph>
+      <paragraph>
+       Finally, we would like to finish this presentation of experimental results with binary problems. Most of the recent works about filtering table constraints concentrate solely on non-binary constraints even though binary constraints in extensional form are tables too. Only after [31] was published that it was made clear the compression-based and the STR methods are not competitive with generic binary AC algorithms such as {a mathematical formula}AC3rm[44] and {a mathematical formula}AC3bit+rm[43]. We confirm their findings with the results in Table 7.
+      </paragraph>
+     </section>
+    </section>
+    <section label="11">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      We have introduced STR3, a new GAC algorithm for positive table constraints that is competitive and complementary to STR2, a state-of-the-art algorithm. STR3 is able to completely avoid unnecessary traversal of tables. Along with AC5TC [31], STR3 is one of the only two path-optimal GAC algorithms that have been reported so far. Unlike AC5TC's performance, which declines as arity increases, STR3's is consistent across a wide range of arity. Indeed, we have shown that it correlates to the average proportion (avgP) and number (avgS) of tuples remaining in tables during search. Compared to STR2, STR3 is faster on problems in which avgP and avgS are not low. Interestingly, the advantage of STR2 appears to depend largely on excessively high rates of table reduction (very low avgP). As soon as the reduction rate drops below 90%, STR2 becomes much less effective. Another dividing line is satisfiability: STR3 is stronger on unsatisfiable problems but weaker on satisfiable problems whereas STR2 is the opposite.
+     </paragraph>
+     <paragraph>
+      STR3 is an instance of fine-grained algorithms as its propagation is guided by deleted values. Both STR2 and STR3 are extended to handle compressed tuples (c-tuples) in [36]. While STR3 is more complex than STR2, once implemented the algorithm is easier to extend because it is based on just one notion: checking a tuple's validity; as a result, only the routine involving validity test needs modification. By contrast, STR2 may process a tuple twice in different manners — testing its validity and then collecting values from its components. Extending STR2 to cope with c-tuples is therefore twice more complicated conceptually. This is true for fine-grained vs. coarse-grained propagation in general. In recent years, STR2 has been incorporated into many other algorithms [45], [46], [47], [48], and it remains to be seen whether STR3 can be adopted in a similar fashion. The work which extends STR2 and STR3 to c-tuples [36] is a start in this direction.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,724 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Learning New Semi-Supervised Deep Auto-encoder Features for Statistical Machine Translation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       In this paper, instead of designing new features based on intuition, linguistic knowledge and domain, we learn some new and effective features using the deep auto-encoder (DAE) paradigm for phrase-based translation model. Using the unsupervised pre-trained deep belief net (DBN) to initialize DAE’s parameters and using the input original phrase features as a teacher for semi-supervised fine-tuning, we learn new semi-supervised DAE features, which are more effective and stable than the unsupervised DBN features. Moreover, to learn high dimensional feature representation, we introduce a natural horizontal composition of more DAEs for large hidden layers feature learning. On two Chinese-English tasks, our semi-supervised DAE features obtain statistically significant improvements of 1.34/2.45 (IWSLT) and 0.82/1.52 (NIST) BLEU points over the unsupervised DBN features and the baseline features, respectively.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Recently, many new features have been explored for SMT and significant performance have been obtained in terms of translation quality, such as syntactic features, sparse features, and reordering features. However, most of these features are manually designed on linguistic phenomena that are related to bilingual language pairs, thus they are very difficult to devise and estimate.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Instead of designing new features based on intuition, linguistic knowledge and domain, for the first time, Maskey and Zhou (2012) explored the possibility of inducing new features in an unsupervised fashion using deep belief net (DBN)
+        [Hinton et al.2006]
+        for hierarchical phrase-based translation model. Using the 4 original phrase features in the phrase table as the input features, they pre-trained the DBN by contrastive divergence
+        [Hinton2002]
+        , and generated new unsupervised DBN features using forward computation. These new features are appended as extra features to the phrase table for the translation decoder.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        However, the above approach has two major shortcomings. First, the input original features for the DBN feature learning are too simple, the limited 4 phrase features of each phrase pair, such as bidirectional phrase translation probability and bidirectional lexical weighting
+        [Koehn et al.2003]
+        , which are a bottleneck for learning effective feature representation. Second, it only uses the unsupervised layer-wise pre-training of DBN built with stacked sets of Restricted Boltzmann Machines (RBM)
+        [Hinton2002]
+        , does not have a training objective, so its performance relies on the empirical parameters. Thus, this approach is unstable and the improvement is limited. In this paper, we strive to effectively address the above two shortcomings, and systematically explore the possibility of learning new features using deep (multi-layer) neural networks (DNN, which is usually referred under the name
+        Deep Learning
+        ) for SMT.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        To address the first shortcoming, we adapt and extend some simple but effective phrase features as the input features for new DNN feature learning, and these features have been shown significant improvement for SMT, such as, phrase pair similarity
+        [Zhao et al.2004]
+        , phrase frequency, phrase length
+        [Hopkins and May2011]
+        , and phrase generative probability
+        [Foster et al.2010]
+        , which also show further improvement for new phrase feature learning in our experiments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        To address the second shortcoming, inspired by the successful use of DAEs for handwritten digits recognition
+        [Hinton and Salakhutdinov2006, Hinton et al.2006]
+        , information retrieval
+        [Salakhutdinov and Hinton2009, Mirowski et al.2010]
+        , and speech spectrograms
+        [Deng et al.2010]
+        , we propose new feature learning using semi-supervised DAE for phrase-based translation model. By using the input data as the teacher, the “semi-supervised” fine-tuning process of DAE addresses the problem of “back-propagation without a teacher”
+        [Rumelhart et al.1986]
+        , which makes the DAE learn more powerful and abstract features
+        [Hinton and Salakhutdinov2006]
+        . For our semi-supervised DAE feature learning task, we use the unsupervised pre-trained DBN to initialize DAE’s parameters and use the input original phrase features as the “teacher” for semi-supervised back-propagation. Compared with the unsupervised DBN features, our semi-supervised DAE features are more effective and stable.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Moreover, to learn high dimensional feature representation, we introduce a natural horizontal composition for DAEs (HCDAE) that can be used to create large hidden layer representations simply by horizontally combining two (or more) DAEs
+        [Baldi2012]
+        , which shows further improvement compared with single DAE in our experiments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        It is encouraging that, non-parametric feature expansion using gaussian mixture model (GMM)
+        [Nguyen et al.2007]
+        , which guarantees invariance to the specific embodiment of the original features, has been proved as a feasible feature generation approach for SMT. Deep models such as DNN have the potential to be much more representationally efficient for feature learning than shallow models like GMM. Thus, instead of GMM, we use DNN (DBN, DAE and HCDAE) to learn new non-parametric features, which has the similar evolution in speech recognition
+        [Dahl et al.2012, Hinton et al.2012]
+        . DNN features are learned from the non-linear combination of the input original features, they strong capture high-order correlations between the activities of the original features, and we believe this deep learning paradigm induces the original features to further reach their potential for SMT.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        Finally, we conduct large-scale experiments on IWSLT and NIST Chinese-English translation tasks, respectively, and the results demonstrate that our solutions solve the two aforementioned shortcomings successfully. Our semi-supervised DAE features significantly outperform the unsupervised DBN features and the baseline features, and our introduced input phrase features significantly improve the performance of DAE feature learning.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p9">
+       <p class="ltx_p">
+        The remainder of this paper is organized as follows. Section
+        2
+        briefly summarizes the recent related work about the applications of DNN for SMT tasks. Section
+        3
+        presents our introduced input features for DNN feature learning. Section
+        4
+        describes how to learn our semi-supervised DAE features for SMT. Section
+        5
+        describes and discusses the large-scale experimental results. Finally, we end with conclusions in section
+        6
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Recently, there has been growing interest in use of DNN for SMT tasks. Le et al. (2012) improved translation quality of n-gram translation model by using a bilingual neural LM, where translation probabilities are estimated using a continuous representation of translation units in lieu of standard discrete representations. Kalchbrenner and Blunsom (2013) introduced recurrent continuous translation models that comprise a class for purely continuous sentence-level translation models. Auli et al. (2013) presented a joint language and translation model based on a recurrent neural network which predicts target words based on an unbounded history of both source and target words. Liu et al. (2013) went beyond the log-linear model for SMT and proposed a novel additive neural networks based translation model, which overcome some of the shortcomings suffered by the log-linear model: linearity and the lack of deep interpretation and representation in features. Li et al. (2013) presented an ITG reordering classifier based on recursive auto-encoders, and generated vector space representations for variable-sized phrases, which enable predicting orders to exploit syntactic and semantic information. Lu et al. (2014) adapted and extended the max-margin based RNN
+        [Socher et al.2011]
+        into HPB translation with force decoding and converting tree, and proposed a RNN based word topology model for HPB translation, which successfully capture the topological structure of the words on the source side in a syntactically and semantically meaningful order.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        However, none of these above works have focused on learning new features automatically with input data, and while learning suitable features (representations) is the superiority of DNN since it has been proposed. In this paper, we systematically explore the possibility of learning new features using DNN for SMT.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Input Features for DNN Feature Learning
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        The phrase-based translation model
+        [Koehn et al.2003, Och and Ney2004]
+        has demonstrated superior performance and been widely used in current SMT systems, and we employ our implementation on this translation model. Next, we adapt and extend some original phrase features as the input features for DAE feature learning.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Baseline phrase features
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We assume that source phrase
+         f=f1,⋯,flf
+         and target phrase
+         e=e1,⋯,ele
+         include
+         lf
+         and
+         le
+         words, respectively. Following
+         [Maskey and Zhou2012]
+         , we use the following 4 phrase features of each phrase pair
+         [Koehn et al.2003]
+         in the phrase table as the first type of input features, bidirectional phrase translation probability (
+         P(e|f)
+         and
+         P(f|e)
+         ), bidirectional lexical weighting (
+         Lex(e|f)
+         and
+         Lex(f|e)
+         ),
+        </p>
+        X1→P(f|e),Lex(f|e),P(e|f),Lex(e|f)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Phrase pair similarity
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Zhao et al. (2004) proposed a way of using term weight based models in a vector space as additional evidences for phrase pair translation quality. This model employ phrase pair similarity to encode the weights of content and non-content words in phrase translation pairs. Following
+         [Zhao et al.2004]
+         , we calculate bidirectional phrase pair similarity using cosine distance and BM25 distance as,
+        </p>
+        Sic⁢o⁢s⁢(e,f)=∑j=1le∑i=1lfwejp(ej|fi)wfis⁢q⁢r⁢t⁢(∑j=1lewej2)⁢s⁢q⁢r⁢t⁢(∑j=1lewaej2)
+        Sdc⁢o⁢s⁢(f,e)=∑i=1lf∑j=1lewfip(fi|ej)wejs⁢q⁢r⁢t⁢(∑i=1lfwfi2)⁢s⁢q⁢r⁢t⁢(∑i=1lfwafi2)
+        <p class="ltx_p">
+         where,
+         p(ej|fi)
+         and
+         p(fi|ej)
+         represents bidirectional word translation probability.
+         wfi
+         and
+         wej
+         are term weights for source and target words,
+         waej
+         and
+         wafi
+         are the transformed weights mapped from all source/target words to the target/source dimension at word
+         ej
+         and
+         fi
+         , respectively.
+        </p>
+        Sib⁢m⁢25⁢(e,f)=∑i=1lfi⁢d⁢ffi⁢(k1+1)⁢wfi⁢(k3+1)⁢wafi(K+wfi)⁢(k3+wafi)
+        Sdb⁢m⁢25⁢(f,e)=∑j=1lei⁢d⁢fej⁢(k1+1)⁢wej⁢(k3+1)⁢waej(K+wej)⁢(k3+waej)
+        <p class="ltx_p">
+         where,
+         k1
+         ,
+         b
+         ,
+         k3
+         are set to be 1, 1 and 1000, respectively.
+         K=k1⁢((1-b)+J/a⁢v⁢g⁢(l))
+         , and
+         J
+         is the phrase length (
+         le
+         or
+         lf
+         ),
+         a⁢v⁢g⁢(l)
+         is the average phrase length. Thus, we have the second type of input features
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        X2→Sic⁢o⁢s⁢(f,e),Sib⁢m⁢25⁢(f,e),Sdc⁢o⁢s⁢(e,f),Sdb⁢m⁢25⁢(e,f)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Phrase generative probability
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We adapt and extend bidirectional phrase generative probabilities as the input features, which have been used for domain adaptation
+         [Foster et al.2010]
+         . According to the background LMs, we estimate the bidirectional (source/target side) forward and backward phrase generative probabilities as
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        Pf(f)=P(f1)P(f2|f1)⋯P(flf|flf-n+1,⋯,flf-1)
+        Pf(e)=P(e1)P(e2|e1)⋯P(ele|ele-n+1,⋯,ele-1)
+        Pb(f)=P(flf)P(flf-1|flf)⋯P(f1|fn,⋯,f2)
+        Pb(e)=P(ele)P(ele-1|ele)⋯P(e1|en,⋯,e2)
+        <p class="ltx_p">
+         where, the bidirectional forward and backward
+         background 4-gram LMs are trained by the corresponding side of bilingual corpus
+         . Then, we have the third type of input features
+        </p>
+        X3→Pf⁢(e),Pb⁢(e),Pf⁢(f),Pb⁢(f)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Phrase frequency
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         We consider bidirectional phrase frequency as the input features, and estimate them as
+        </p>
+        P⁢(f)=c⁢o⁢u⁢n⁢t⁢(f)∑|fi|=|f|c⁢o⁢u⁢n⁢t⁢(fi)
+        P⁢(e)=c⁢o⁢u⁢n⁢t⁢(e)∑|ej|=|e|c⁢o⁢u⁢n⁢t⁢(ej)
+        <p class="ltx_p">
+         where, the
+         c⁢o⁢u⁢n⁢t⁢(f)
+         /
+         c⁢o⁢u⁢n⁢t⁢(e)
+         are the total number of phrase f/e appearing in the source/target side of the bilingual corpus, and the denominator are the total number of the phrases whose length are equal to
+         |f|
+         /
+         |e|
+         , respectively. Then, we have the forth type of input features
+        </p>
+        X4→P⁢(f),P⁢(e)
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.5
+        </span>
+        Phrase length
+       </h3>
+       <div class="ltx_para" id="S3.SS5.p1">
+        <p class="ltx_p">
+         Phrase length plays an important role in the translation process
+         [Koehn2010, Hopkins and May2011]
+         . We normalize bidirectional phrase length by the maximum phrase length, and introduce them as the last type of input features
+        </p>
+        X5→len,lfn
+       </div>
+       <div class="ltx_para" id="S3.SS5.p2">
+        <p class="ltx_p">
+         In summary, except for the first type of phrase feature
+         X1
+         which is used by
+         [Maskey and Zhou2012]
+         , we introduce another four types of effective phrase features
+         X2
+         ,
+         X3
+         ,
+         X4
+         and
+         X5
+         . Now, the input original phrase features
+         X
+         includes 16 features in our experiments, as follows,
+        </p>
+        X→X1,X2,X3,X4,X5
+       </div>
+       <div class="ltx_para" id="S3.SS5.p3">
+        <p class="ltx_p">
+         We build the DAE network where the first layer with visible nodes equaling to 16, and each visible node
+         vi
+         corresponds to the above original features
+         X
+         in each phrase pair.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Semi-Supervised Deep Auto-encoder Features Learning for SMT
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Each translation rule in the phrase-based translation model has a set number of features that are combined in the log-linear model
+        [Och and Ney2002]
+        , and our semi-supervised DAE features can also be combined in this model. In this section, we design our DAE network with various network structures for new feature learning.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Learning a Deep Belief Net
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Inspired by
+         [Maskey and Zhou2012]
+         , we first learn a deep generative model for feature learning using DBN. DBN is composed of multiple layers of latent variables with the first layer representing the visible feature vectors, which is built with stacked sets of RBMs
+         [Hinton2002]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         For a RBM, there is full connectivity between layers, but no connections within either layer. The connection weight
+         W
+         , hidden layer biases
+         c
+         and visible layer biases
+         b
+         can be learned efficiently using the contrastive divergence
+         [Hinton2002, Carreira-Perpinan and Hinton2005]
+         . When given a hidden layer
+         h
+         , factorial conditional distribution of visible layer
+         v
+         can be estimated by
+        </p>
+        P(v=1|h)=σ(b+hTWT)
+        <p class="ltx_p">
+         where
+         σ
+         denotes the logistic sigmoid. Given
+         v
+         , the element-wise conditional distribution of
+         h
+         is
+        </p>
+        P(h=1|v)=σ(c+vTW)
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         The two conditional distributions can be shown to correspond to the generative model,
+        </p>
+        P⁢(v,h)=1Z⁢e⁢x⁢p⁢(-E⁢(v,h))
+        <p class="ltx_p">
+         where,
+        </p>
+        Z=∑v,he-E⁢(v,h)
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        E⁢(v,h)=-bT⁢v-cT⁢h-vT⁢W⁢h
+       </div>
+       <div class="ltx_para" id="S4.SS1.p5">
+        <p class="ltx_p">
+         After learning the first RBM, we treat the activation probabilities of its hidden units, when they are being driven by data, as the data for training a second RBM. Similarly, a
+         nt⁢h
+         RBM is built on the output of the
+         n-1t⁢h
+         one and so on until a sufficiently deep architecture is created. These
+         n
+         RBMs can then be composed to form a DBN in which it is easy to infer the states of the
+         nt⁢h
+         layer of hidden units from the input in a single forward pass
+         [Hinton et al.2006]
+         , as shown in Figure
+         1
+         . This greedy, layer-by-layer pre-training can be repeated several times to learn a deep, hierarchical model (DBN) in which each layer of features captures strong high-order correlations between the activities of features in the layer below.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p6">
+        <p class="ltx_p">
+         To deal with real-valued input features
+         X
+         in our task, we use an RBM with Gaussian visible units (GRBM)
+         [Dahl et al.2012]
+         with a variance of 1 on each dimension. Hence,
+         P(v|h)
+         and
+         E⁢(v,h)
+         in the first RBM of DBN need to be modified as
+        </p>
+        P(v|h)=𝒩(v;b+hTWT,I)
+        E⁢(v,h)=12⁢(v-b)T⁢(v-b)-cT⁢h-vT⁢W⁢h
+        <p class="ltx_p">
+         where
+         I
+         is the appropriate identity matrix.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p7">
+        <p class="ltx_p">
+         To speed-up the pre-training, we subdivide the entire phrase pairs (with features
+         X
+         ) in the phrase table into small mini-batches, each containing 100 cases, and update the weights after each mini-batch. Each layer is greedily pre-trained for 50 epochs through the entire phrase pairs. The weights are updated using a learning rate of 0.1, momentum of 0.9, and a weight decay of 0.0002
+         ×
+         weight
+         ×
+         learning rate. The weight matrix
+         W
+         are initialized with small random values sampled from a zero-mean normal distribution with variance 0.01.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p8">
+        <p class="ltx_p">
+         After the pre-training, for each phrase pair in the phrase table, we generate the DBN features
+         [Maskey and Zhou2012]
+         by passing the original phrase features
+         X
+         through the DBN using forward computation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        From DBN to Deep Auto-encoder
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         To learn a semi-supervised DAE, we first “unroll” the above n layer DBN by using its weight matrices to create a deep, 2n-1 layer network whose lower layers use the matrices to “encode” the input and whose upper layers use the matrices in reverse order to “decode” the input
+         [Hinton and Salakhutdinov2006, Salakhutdinov and Hinton2009, Deng et al.2010]
+         , as shown in Figure
+         2
+         . The layer-wise learning of DBN as above must be treated as a pre-training stage that finds a good region of the parameter space, which is used to initialize our DAE’s parameters. Starting in this region, the DAE is then fine-tuned using average squared error (between the output and input) back-propagation to minimize reconstruction error, as to make its output as equal as possible to its input.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         For the fine-tuning of DAE, we use the method of conjugate gradients on larger mini-batches of 1000 cases, with three line searches performed for each mini-batch in each epoch. To determine an adequate number of epochs and to avoid overfitting, we fine-tune on a fraction phrase table and test performance on the remaining validation phrase table, and then repeat fine-tuning on the entire phrase table for 100 epochs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         We experiment with various values for the noise variance and the threshold, as well as the learning rate, momentum, and weight-decay parameters used in the pre-training, the batch size and epochs in the fine-tuning. Our results are fairly robust to variations in these parameters. The precise weights found by the pre-training do not matter as long as it finds a good region of the parameter space from which to start the fine-tuning.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         The fine-tuning makes the feature representation in the central layer of the DAE work much better
+         [Salakhutdinov and Hinton2009]
+         . After the fine-tuning, for each phrase pair in the phrase table, we estimate our DAE features by passing the original phrase features
+         X
+         through the “encoder” part of the DAE using forward computation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         To combine these learned features (DBN and DAE feature) into the log-linear model, we need to eliminate the impact of the non-linear learning mechanism. Following
+         [Maskey and Zhou2012]
+         , these learned features are normalized by the average of each dimensional respective feature set. Then, we append these features for each phrase pair to the phrase table as extra features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Horizontal Composition of Deep Auto-encoders (HCDAE)
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Although DAE can learn more powerful and abstract feature representation, the learned features usually have smaller dimensionality compared with the dimensionality of the input features, such as the successful use for handwritten digits recognition
+         [Hinton and Salakhutdinov2006, Hinton et al.2006]
+         , information retrieval
+         [Salakhutdinov and Hinton2009, Mirowski et al.2010]
+         , and speech spectrograms
+         [Deng et al.2010]
+         . Moreover, although we have introduced another four types of phrase features (
+         X2
+         ,
+         X3
+         ,
+         X4
+         and
+         X5
+         ), the only 16 features in
+         X
+         are a bottleneck for learning large hidden layers feature representation, because it has limited information, the performance of the high-dimensional DAE features which are directly learned from single DAE is not very satisfactory.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         To learn high-dimensional feature representation and to further improve the performance, we introduce a natural horizontal composition for DAEs that can be used to create large hidden layer representations simply by horizontally combining two (or more) DAEs
+         [Baldi2012]
+         , as shown in Figure
+         3
+         . Two single DAEs with architectures
+         16/m1/16
+         and
+         16/m2/16
+         can be trained and the hidden layers can be combined to yield an expanded hidden feature representation of size
+         m1+m2
+         , which can then be fed to the subsequent layers of the overall architecture. Thus, these new
+         m1+m2
+         -dimensional DAE features are added as extra features to the phrase table.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         Differences in
+         m1
+         - and
+         m2
+         -dimensional hidden representations could be introduced by many different mechanisms (e.g., learning algorithms, initializations, training samples, learning rates, or distortion measures)
+         [Baldi2012]
+         . In our task, we introduce differences by using different initializations and different fractions of the phrase table.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments and Results
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Experimental Setup
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We now test our DAE features on the following two Chinese-English translation tasks.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         IWSLT
+         . The bilingual corpus is the Chinese-English part of Basic Traveling Expression corpus (BTEC) and China-Japan-Korea (CJK) corpus (0.38M sentence pairs with 3.5/3.8M Chinese/English words). The LM corpus is the English side of the parallel data (BTEC, CJK and CWMT08
+         ) (1.34M sentences). Our development set is IWSLT 2005 test set (506 sentences), and our test set is IWSLT 2007 test set (489 sentences).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         NIST
+         . The bilingual corpus is LDC
+         (3.4M sentence pairs with 64/70M Chinese/English words). The LM corpus is the English side of the parallel data as well as the English Gigaword corpus (LDC2007T07) (11.3M sentences). Our development set is NIST 2005 MT evaluation set (1084 sentences), and our test set is NIST 2006 MT evaluation set (1664 sentences).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p">
+         We choose the Moses
+         [Koehn et al.2007]
+         framework to implement our phrase-based machine system. The 4-gram LMs are estimated by the SRILM toolkit with modified Kneser-Ney discounting. We perform pairwise ranking optimization
+         [Hopkins and May2011]
+         to tune feature weights. The translation quality is evaluated by case-insensitive IBM BLEU-4 metric.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p5">
+        <p class="ltx_p">
+         The baseline translation models are generated by Moses with default parameter settings. In the contrast experiments, our DAE and HCDAE features are appended as extra features to the phrase table. The details of the used network structure in our experiments are shown in Table
+         1
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Table
+         2
+         presents the main translation results. We use DBN, DAE and HCDAE (with 6 layers’ network depth), input features
+         X1
+         and
+         X
+         , to learn 2-, 4- and 8-dimensional features, respectively. From the results, we can get some clear trends:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         1. Adding new DNN features as extra features significantly improves translation accuracy (row 2-17 vs. 1), with the highest increase of 2.45 (IWSLT) and 1.52 (NIST) (row 14 vs. 1) BLEU points over the baseline features.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         2. Compared with the unsupervised DBN features, our semi-supervised DAE features are more effective for translation decoder (row 3 vs. 2; row 5 vs. 4; row 8 vs. 7; row 11 vs. 10; row 13 vs. 12; row 16 vs. 15). Specially, Table
+         3
+         shows the variance distributions of the learned each dimensional DBN and DAE feature, our DAE features have bigger variance distributions which means our DAE features have more discriminative power, and also their variance distributions are more stable.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         3. HCDAE outperforms single DAE for high dimensional feature learning (row 6 vs. 5; row 9 vs. 8; row 14 vs. 13; row 17 vs. 16), and further improve the performance of DAE feature learning, which can also somewhat address the bring shortcoming of the limited input features.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p5">
+        <p class="ltx_p">
+         4. Except for the phrase feature
+         X1
+         [Maskey and Zhou2012]
+         , our introduced input features
+         X
+         significantly improve the DAE feature learning (row 11 vs. 3; row 13 vs. 5; row 16 vs. 8). Specially, Table
+         4
+         shows the detailed effectiveness of our introduced input features for DAE feature learning, and the results show that each type of features are very effective for DAE feature learning.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p6">
+        <p class="ltx_p">
+         5. Adding the original features (
+         X2
+         ,
+         X3
+         ,
+         X4
+         and
+         X5
+         ) and DAE/HCDAE features together can further improve translation performance (row 19-23 vs. 18), with the highest increase of 3.16 (IWSLT) and 2.06 (NIST) (row 21 vs. 1) BLEU points over the baseline features. DAE and HCDAE features are learned from the non-linear combination of the original features, they strong capture high-order correlations between the activities of the original features, as to be further interpreted to reach their potential for SMT. We suspect these learned features are complementary to the original features.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Analysis
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Figure
+         4
+         shows our DAE features are not only more effective but also more stable than DBN features with various network structures. Also, adding more input features (
+         X
+         vs.
+         X1
+         ) not only significantly improves the performance of DAE feature learning, but also slightly improves the performance of DBN feature learning.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         Figure
+         5
+         shows there is little change in the performance of using single DAE to learn different dimensional DAE features, but the 4-dimensional features work more better and more stable. HCDAE outperforms the single DAE and learns high-dimensional representation more effectively, especially for the peak point in each condition.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         Figures
+         5
+         also shows the best network depth for DAE feature learning is 6 layers. When the network depth of DBN is 7 layers, the network depth of corresponding DAE during the fine-tuning is 13 layers. Although we have pre-trained the corresponding DBN, this DAE network is so deep, the fine-tuning does not work very well and typically finds poor local minima. We suspect this leads to the decreased performance.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

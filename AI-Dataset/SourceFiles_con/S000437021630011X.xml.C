@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    A formalization of programs in first-order logic with a discrete linear order.
+   </title>
+   <abstract>
+    We consider the problem of representing and reasoning about computer programs, and propose a translation from a core procedural iterative programming language to first-order logic with quantification over the domain of natural numbers that includes the usual successor function and the “less than” linear order, essentially a first-order logic with a discrete linear order. Unlike Hoare's logic, our approach does not rely on loop invariants. Unlike the typical temporal logic specification of a program, our translation does not require a transition system model of the program, and is compositional on the structures of the program. Some non-trivial examples are given to show the effectiveness of our translation for proving properties of programs.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In computer science, how to represent and reason about computer programs effectively has been a major concern since the beginning. For imperative, non-concurrent programs that we are considering here, notable approaches include Dijkstra's calculus of weakest preconditions [1], [2], Hoare's logic [3], dynamic logic [4], and separation logic [5]. For the most part, these logics provide rules for proving assertions about programs. In particular, for proving assertions about iterative loops, these logics rely on what have been known as Hoare's loop invariants. In this paper, we propose a way to translate a program to a first-order theory with quantification over natural numbers. The properties that we need about natural numbers are that they have a smallest element (zero), are linearly ordered, and each of them has a successor (plus one). Thus we are essentially using first-order logic with a predefined discrete linear order. This logic is closely related to linear temporal logic, which is a main formalism for specifying concurrent programs [6].
+     </paragraph>
+     <paragraph>
+      Given a program, we translate it to a first-order theory that captures the relationship between the input and output values of the program variables, independent of what one may want to prove about the program. For instance, trivially, the following assignment
+     </paragraph>
+     <list>
+      <list-item>
+       X=X+Y
+      </list-item>
+     </list>
+     <paragraph>
+      can be captured by the following two axioms:{a mathematical formula} where X and Y denote the initial values of the corresponding program variables and {a mathematical formula}X′ and {a mathematical formula}Y′ their values after the statement is performed. Obviously, the question is how the same can be done for loops. This is where quantification over natural numbers comes in. Consider the following while loop
+     </paragraph>
+     <list>
+      <list-item>
+       whileX&lt;Mdo{X=X+1}
+      </list-item>
+     </list>
+     <paragraph>
+      It can be captured by the following set of axioms:{a mathematical formula} where N is a natural number constant denoting the total number of iterations that the loop runs to termination, and {a mathematical formula}X(n) the value of X after the nth iteration. Thus the third axiom says that if the program enters the loop, then the output value of the program variable X, denoted by {a mathematical formula}X′, is {a mathematical formula}X(N), the value of X when the loop exits.
+     </paragraph>
+     <paragraph>
+      The purpose of this paper is to describe how this set of axioms can be systematically generated, and show by some examples how reasoning can be done with this set of axioms. Without going into details, one can already see that unlike Hoare's logic, our axiomatization does not make use of loop invariants. One can also see that unlike typical temporal logic specification of a program, we do not need a transition system model of the program, and do not need to keep track of program execution traces. We will discuss related work in more detail later.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We use a typed first-order language. We assume a type for natural numbers (non-negative integers). Depending on the programs, other types such as integers may be used. For natural numbers, we use constant 0, linear ordering relation &lt; (and ≤), successor function {a mathematical formula}n+1, and predecessor function {a mathematical formula}n−1. We follow the convention in logic to use lower case letters, possibly with subscripts, for logical variables. In particular, we use m and n for natural number variables, and x, y, and z for generic variables. The variables in a program will be treated as functions in logic, and written as either upper case letters or strings of letters.
+     </paragraph>
+     <paragraph>
+      We use the following shorthands. The conditional expression:{a mathematical formula} is a shorthand for the conjunction of the following two sentences:{a mathematical formula} where {a mathematical formula}x→ are all the free variables in φ and {a mathematical formula}ei, {a mathematical formula}i=1,2,3. Typically, all free variables in φ occur in {a mathematical formula}e1.
+     </paragraph>
+     <paragraph>
+      Our most important shorthand is the following expression which says that e is the smallest natural number that satisfies {a mathematical formula}φ(n):{a mathematical formula} is a shorthand for the following formula:{a mathematical formula} where n is a natural number variable in φ, m a new natural number variable not in e or φ, {a mathematical formula}φ(n/e) the result of replacing n in φ by e, similarly for {a mathematical formula}φ(n/m). For example, {a mathematical formula}smallest(M,k,k&lt;N∧found(k)) says that M is the smallest natural number such that {a mathematical formula}M&lt;N∧found(M):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Finally, we use the convention that free variables in a displayed sentence are implicitly universally quantified from outside. For instance, the following displayed formula{a mathematical formula} stands for {a mathematical formula}∀n.n&lt;M→¬(n&lt;N∧found(n)), where the universal quantification is over the domain of natural numbers as n is a natural number variable. Notice however, in the macro {a mathematical formula}smallest(M,k,k&lt;N∧found(k)), k is not a free variable.
+     </paragraph>
+     <paragraph>
+      The following are some useful properties about the smallest macro.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      Let{a mathematical formula}x→be the free variables other than n in{a mathematical formula}φ(n), and m a variable not in{a mathematical formula}φ(n). We have that{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Let{a mathematical formula}x→be the free variables other than n in{a mathematical formula}φ(n), and m a variable not in{a mathematical formula}φ(n). We have that{a mathematical formula}Furthermore,{a mathematical formula}where k is a variable not in{a mathematical formula}φ(n).For any given {a mathematical formula}x→ and m, suppose {a mathematical formula}smallest(m,n,φ(n))∧m&gt;0. Then {a mathematical formula}φ(m) and {a mathematical formula}∀k.k&lt;m→¬φ(k). Since {a mathematical formula}m&gt;0, thus {a mathematical formula}¬φ(m−1). Now suppose that {a mathematical formula}φ(m)∧¬φ(m−1) and for some M,{a mathematical formula} This means that {a mathematical formula}M=m−1, and {a mathematical formula}smallest(m,n,φ(n)).  □
+     </paragraph>
+     <paragraph>
+      To motivate our next proposition, consider again the following loop
+     </paragraph>
+     <list>
+      <list-item>
+       whileX&lt;Mdo{X=X+1}
+      </list-item>
+     </list>
+     <paragraph>
+      Given input M, the number {a mathematical formula}N(M) of the iterations for this loop to exit is captured by the formula {a mathematical formula}smallest(N(M),n,¬X(n)&lt;M). It can be seen that {a mathematical formula}N(M+1)=N(M)+1, i.e. the number of iterations before the loop exits on input {a mathematical formula}M+1 is one more than that of on input M. This can be proved using the following proposition.
+     </paragraph>
+     <paragraph label="Proposition 3">
+      Let{a mathematical formula}x→be the free variables other than n in{a mathematical formula}φ1(n)and{a mathematical formula}φ2(n), and{a mathematical formula}m1,m2,kand t variables not in{a mathematical formula}φ1or{a mathematical formula}φ2. We have{a mathematical formula}
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      A simple class of programs
+     </section-title>
+     <paragraph>
+      Consider the following simple class of programs P constructed from a set of array identifiers array, a set of functions operator, and a set of Boolean operators boolean-op:
+     </paragraph>
+     <list>
+      <list-item>
+       E::=array(E,...,E)|operator(E,...,E)B::=E=E|boolean-op(B,...,B)P::=array(E,...,E)=E|ifBthenPelseP|P;P|whileBdoP
+      </list-item>
+     </list>
+     <paragraph>
+      Here E denotes expressions, B boolean expressions, and P programs. Notice that instead of, for example “array[i][j]” commonly used in programming languages to refer to an array element, we use the notation “array(i,j)” more commonly used in mathematics and logic.
+     </paragraph>
+     <paragraph>
+      As one can see, programs here are constructed using assignments, sequences, if-then-else, and while loops. Other constructs such as if-then and for-loop can be defined using these constructs. For instance, “if B then P” can be defined as “if B then P else X=X”.
+     </paragraph>
+     <paragraph>
+      We assume a base first-order language {a mathematical formula}L that contains functions and predicates that are static in the sense that their semantics are fixed and cannot be changed by programs. They include functions that correspond to operator, predicates that correspond to boolean-op, and possibly other functions and predicates for formalizing the domain knowledge. In the following, we call {a mathematical formula}L the base language.
+     </paragraph>
+     <paragraph>
+      Given a program P, we extend the base language {a mathematical formula}L by functions to represent program variables in the program. These functions are dynamic in that their values may be changed during the execution of a program. We assume that program variables are new, not already used in {a mathematical formula}L. We also assume that there is no overloading so that two different program variables cannot have the same name but different arities. Thus we can use the same program variables as functions in our first-order language. Specifically, if V is a program variable for an n-ary array, then we add V and {a mathematical formula}V′ as new n-ary functions to {a mathematical formula}L: {a mathematical formula}V(x1,...,xn) and {a mathematical formula}V′(x1,...,xn) denote the values of the {a mathematical formula}(x1,...,xn)th cell in V at the input and the output, respectively, of the program P. For their values during the execution of P, we'll introduce temporary function symbols to denote them. These temporary function symbols can be systematically named using statement labels (see Section 6 below) and are useful when one is interested about properties that hold during the execution of a program. For now, we assume that we are interested only in the program outputs.
+     </paragraph>
+     <paragraph>
+      Given a program P and a set {a mathematical formula}X→ of program variables including all variables used in P, we define inductively the set of axioms for P and {a mathematical formula}X→, written {a mathematical formula}ΠPX→, as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+     </list>
+     <paragraph>
+      While we have used {a mathematical formula}ΠPX→ to denote “the” set of axioms for P and {a mathematical formula}X→, the construction above does not yield a unique set of axioms as the temporary functions introduced when constructing axioms for program sequences and while-loops are not unique. However, {a mathematical formula}ΠPX→ is unique up to the renaming of these new functions. In particular, any two different sets of these axioms are logically equivalent when considering only program variables from {a mathematical formula}X→, i.e. when the temporary functions are “forgotten”. More precisely, given two theories {a mathematical formula}Σ1 and {a mathematical formula}Σ2, we say that they are equivalent when considering a subset Ω of their vocabularies if any model {a mathematical formula}M1 of {a mathematical formula}Σ1 can be modified into a model {a mathematical formula}M2 of {a mathematical formula}Σ2 such that {a mathematical formula}M1 and {a mathematical formula}M2 agree on Ω, and conversely any model of {a mathematical formula}Σ2 can be similarly modified into a model of {a mathematical formula}Σ1.
+     </paragraph>
+     <paragraph>
+      Appendix A proves the correctness of {a mathematical formula}ΠPX→ under an operational semantics. In the following, we give some simple properties about our axiomatization.
+     </paragraph>
+     <paragraph>
+      The following proposition says that a program is local, in that it has effects only on variables in it.
+     </paragraph>
+     <paragraph label="Proposition 4">
+      Let{a mathematical formula}Y→be a tuple of program variables that are not in P and not used in{a mathematical formula}ΠPX→. Then considering only{a mathematical formula}X→∪Y→,{a mathematical formula}ΠPX→∪Y→is equivalent to the union of{a mathematical formula}ΠPX→and the set of following “frame axioms”:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The construction rule for a sequence {a mathematical formula}P;Q can also be modified so that temporary functions only need to be introduced for those that occur in both P and Q.
+     </paragraph>
+     <paragraph label="Proposition 5">
+      Let{a mathematical formula}X→be a tuple of program variables including those used in either P or Q, and{a mathematical formula}V→=(V1,...,Vk)the tuple of program variables used in both P and Q (thus a subset of{a mathematical formula}X→). When considering only{a mathematical formula}X→,{a mathematical formula}ΠP;QX→is equivalent to the set of following axioms:{a mathematical formula}where{a mathematical formula}Y→=(Y1,...,Yk)is a tuple of temporary functions such that each{a mathematical formula}Yiis of the same arity as{a mathematical formula}Viin{a mathematical formula}V→. Again we assume that, by renaming if necessary,{a mathematical formula}ΠPX→and{a mathematical formula}ΠQX→have no common function symbols other than those in{a mathematical formula}X→or in the base language{a mathematical formula}L.
+     </paragraph>
+     <paragraph>
+      The following important property about our axiomatization says that we do not need to wait until we have the full set of axioms to do simplification. During the construction of the axioms for a program, we can simplify first the axioms for its subprograms. This greatly simplifies the above recursive procedure for constructing axioms of a program.
+     </paragraph>
+     <paragraph label="Proposition 6">
+      Let{a mathematical formula}X→be a tuple of program variables, including all those that occur in program P. For any subprogram{a mathematical formula}P′, if T is equivalent to{a mathematical formula}ΠP′X→when considering only{a mathematical formula}X→, then if we use T instead of{a mathematical formula}ΠP′X→in computing{a mathematical formula}ΠPX→, the resulting theory is equivalent to{a mathematical formula}ΠPX→when considering only{a mathematical formula}X→as well.
+     </paragraph>
+     <paragraph>
+      Notice that in the above proposition, when we use T instead of {a mathematical formula}ΠP′X→ in computing {a mathematical formula}ΠPX→, we assume that we will also rename temporary function symbols when necessary to avoid name conflicts. For example, if P is {a mathematical formula}P1;P2, and a theory equivalent to {a mathematical formula}ΠP1X→ is{a mathematical formula} If {a mathematical formula}ΠP2X→ also uses the temporary function symbol Y, then we need to rename either the Y in (1) or the Y in {a mathematical formula}ΠP2X→ when constructing {a mathematical formula}ΠPX→.
+     </paragraph>
+     <paragraph>
+      Before we consider more interesting examples, we illustrate our construction of {a mathematical formula}ΠPX→ using two simple programs.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       A simple sequence
+      </section-title>
+      <paragraph>
+       Consider the following program P and two program variables {a mathematical formula}X1 and {a mathematical formula}X2 (notice that {a mathematical formula}X1 is used in P, but {a mathematical formula}X2 is not):
+      </paragraph>
+      <list>
+       <list-item>
+        X1=1;X1=X1+1
+       </list-item>
+      </list>
+      <paragraph>
+       {a mathematical formula}ΠX1=1(X1,X2) is the set of the following two sentences{a mathematical formula} and {a mathematical formula}ΠX1=X1+1(X1,X2) the set of following two sentences:{a mathematical formula} Thus {a mathematical formula}ΠP(X1,X2) is{a mathematical formula} Eliminating the temporary constants {a mathematical formula}Y1 and {a mathematical formula}Y2, we get {a mathematical formula}X1′=2 and {a mathematical formula}X2′=X2.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       A simple loop
+      </section-title>
+      <paragraph>
+       Consider the following program P with a simple loop.
+      </paragraph>
+      <list>
+       <list-item>
+        whileI&lt;NdoifX&lt;A(I)thenX=A(I);I=I+1
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that the program variables are X, A, I, and N. Among them, A is unary (a list), and the rest are 0-ary (constants).
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}P1 be the body of the loop. {a mathematical formula}ΠP1(X,A,I,N) is equivalent to the set of following sentences (up to the choice of temporary names {a mathematical formula}Y1,Y2,Y3,Y4):{a mathematical formula} Instead of using this set to compute {a mathematical formula}ΠP(X,A,I,N), by Proposition 6, we can simplify it first by eliminating {a mathematical formula}Y1,Y2,Y3,Y4, and get the following equivalent set of axioms:{a mathematical formula} Thus {a mathematical formula}ΠP(X,A,I,N) is{a mathematical formula} Clearly {a mathematical formula}A(x) and N do not change: {a mathematical formula}A(x,n)=A(x) and {a mathematical formula}N(n)=N. So we get the following sentences by expanding the smallest macro:{a mathematical formula} Now suppose that initially {a mathematical formula}I=0. Solving the recurrence:{a mathematical formula} we have {a mathematical formula}I(n)=n. Thus we have{a mathematical formula} which imply that {a mathematical formula}M=N. So we can eliminate {a mathematical formula}I(n) and M and get the following axioms:{a mathematical formula} An example assertion to prove about the program is the following{a mathematical formula} which is equivalent to{a mathematical formula} which can be proved by induction on N. The base case of {a mathematical formula}N=0 is trivial. For the inductive case, suppose the result holds for {a mathematical formula}N=K. Let {a mathematical formula}N=K+1. There are two cases to consider: {a mathematical formula}X(K)&lt;A(K) and {a mathematical formula}X(K)≥A(K). We show the first case here. The second case is similar. In the first case, {a mathematical formula}X(K+1)=A(K) and we need to show that{a mathematical formula} Two cases for {a mathematical formula}0≤n&lt;K+1: {a mathematical formula}0≤n&lt;K or {a mathematical formula}n=K. The second case is trivial. For the first case, {a mathematical formula}A(K)≥A(n) follows from the inductive assumption and that {a mathematical formula}X(K)&lt;A(K).
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Partial and total correctness
+      </section-title>
+      <paragraph>
+       A program is partially correct w.r.t. a specification if the program satisfies the specification when it terminates. It is totally correct if it is partially correct and terminates.
+      </paragraph>
+      <paragraph>
+       In our framework, a program P with variables {a mathematical formula}X→ is represented by a set of sentences, {a mathematical formula}ΠPX→. Whatever properties that one wants to show about P are proved using this set of sentences. A partial correctness result corresponds to proving a sentence about {a mathematical formula}X→ and {a mathematical formula}X→′ from {a mathematical formula}ΠPX→. An example is the assertion (2) above for the simple loop. On the other hand, termination of a program is proved by showing that the new natural number constants introduced by the loops and used in the smallest macro expressions are well-defined, which in logic means that the resulting theory {a mathematical formula}ΠPX→ is consistent, thus there is a model where the new constants are mapped to natural numbers. For instance, for the above simple loop, the smallest macro is {a mathematical formula}smallest(M,n,¬I(n)&lt;N(n)). By Proposition 1 and the fact that {a mathematical formula}I(N)≥N holds, it can be verified that the theory is consistent because there is indeed a natural number M that satisfies this macro expression.
+      </paragraph>
+      <paragraph>
+       If a loop does not terminate, then its smallest macro will cause a contradiction. For instance, consider the following loop:
+      </paragraph>
+      <list>
+       <list-item>
+        whileI&lt;MdoifI&gt;0thenI=I+1.
+       </list-item>
+      </list>
+      <paragraph>
+       If initially {a mathematical formula}I=0 and {a mathematical formula}M&gt;0, then it will loop forever. Our axioms for the loop are:{a mathematical formula} If we add {a mathematical formula}I=0∧0&lt;M to these axioms, we will conclude {a mathematical formula}∀n.I(n)&lt;M, which contradicts the last axiom {a mathematical formula}I(N)≥M. Of course in logic, this also means that the axioms for the loops will entail that {a mathematical formula}¬(I=0∧0&lt;M), which can be taken as a pre-condition of the loop.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Our formalization of the simple loop above also illustrates the difference between our approach and Hoare's logic, arguably the dominant approach for reasoning about non-parallel imperative computer programs. To begin with, an assertion like (2) would be represented by a triple like{a mathematical formula} in Hoare's logic. To prove this assertion, one would need to find a suitable “loop invariant”, a formula that if true initially will continue to be true after each iteration. In general, there are infinite number of such loop invariants. The key is to find one that, in conjunction with the negation of the loop condition, can entail the postcondition in the assertion. For this simple loop, the following is such a loop invariant:{a mathematical formula} Finding suitable loop invariants is at the heart of Hoare's logic, and it is not surprising that there has been much work on discovering loop invariants (e.g. [7], [8], [9], [10], [11]).
+     </paragraph>
+     <paragraph>
+      In comparison, our proof of (2) uses ordinary mathematical induction and recurrences on {a mathematical formula}I(n) and {a mathematical formula}X(n). See Appendix B for more details.
+     </paragraph>
+     <paragraph>
+      Another difference between our approach and Hoare's logic is that Hoare's logic is a set of general rules about program assertions, while we provide a translation from programs to first-order theories with quantification over natural numbers. Once the translation is done, assertions about it are proved with respect to the translated first-order theory, without reference to the original program. This is similar to Pnueli's temporal logic approach to program semantics [6]. According to a common classification used in the formal methods community (cf. [12], [13]): approaches like Hoare's logic and dynamic logic are exogenous in that they have programs explicitly in the language, while in the temporal logic approach, program semantics is typically endogenous in that a fixed program is often assumed and a program execution counter is part of the specification language. Our approach is certainly not exogenous. It is a little endogenous as we use natural numbers to keep track of loop iterations, but not as endogenous as typical temporal logic specifications which requires program counters to be part of states. In particular, our mapping from programs to theories is compositional, built up from the structure of the program. Barringer et al. [14] proposed a compositional approach using temporal logic, but only in the style of Hoare's logic, using Hoare triples. However, a caveat is that so far the temporal logic approach to program semantics have been mainly for concurrent programs, while what we have proposed is for non-parallel programs. Given the close relationship between temporal logics and first-order logic with a linear order, if there are no nested loops, then our translation can be reformulated in a temporal logic. It is hard to see how this can be done when there are nested loops, as this will lead to nested time lines, modeled here by predicates with multiple natural number arguments. Of course, one can always construct a transition graph of a program, and model it in a temporal logic. But then the structure of the original program is lost.
+     </paragraph>
+     <paragraph>
+      We are certainly not the first to use first-order logic with a linear order to model dynamic systems. For instance, it has been used to model Turing machines in the proof of Trakhtenbrot's theorem in finite model theory (see, e.g. [15]).
+     </paragraph>
+     <paragraph>
+      A closely related work is Charguéraud's characteristic formulas for functional programs [16], [17]. However, these formulas are higher-order formulas that reformulate Hoare's rules by quantifying over preconditions and postconditions.
+     </paragraph>
+     <paragraph>
+      Our use of natural numbers as “indices” to model iterations is similar to Wallace's use of natural numbers to model rule applications in his semantics for logic programs [18].
+     </paragraph>
+     <paragraph>
+      While we use natural numbers to formalize loops, Levesque et al. [19] used second-order logic to capture Golog programs with loops in the situation calculus. Recently, Lin [20] showed that under the foundational axioms of the situation calculus, Golog programs can be defined in first-order logic as well. However, the crucial difference between the work here and the work in the situation calculus on Golog is that our axioms try to capture the changes of states in terms of values of program variables, while the semantics of Golog programs is more about defining legal sequences of executions. To illustrate the difference here, consider a program that consists of assignments that make no change (nil actions). For this program, it would still be non-trivial to define sequences of legal executions, although it does not matter which sequences are legal as none of them change the values of program variables. Another difference is that we consider only assignments and deterministic programs, while Golog programs allow any actions that can be axiomatized by successor state axioms, and can have nondeterministic choices.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Cohen's integer division algorithm
+     </section-title>
+     <paragraph>
+      For a more complex example, consider the following program P which implements the well-known Cohen's integer division algorithm [21] (our program below is adapted from [11]). It has two loops, one nested inside another. The program variables are {a mathematical formula}A,B,Q,R,X,Y, where X and Y are inputs, and Q is the output. Let {a mathematical formula}X→=(A,B,Q,R,X,Y). There are two loops. Let's name the inner loop Inner, and outer loop Outer. When computing {a mathematical formula}ΠPX→, we again consider only equivalence under {a mathematical formula}X→ and use Proposition 6 to simplify the process.
+     </paragraph>
+     <list>
+      <list-item>
+       //XandYaretwoinputintegers;Y&gt;0Q=0;//quotientR=X;//remainderwhile(R&gt;=Y)do{A=1;//AandBaresomethatatanytimeforB=Y;//somen,A=2^nandB=2^n*Ywhile(R&gt;=2*B)do{A=2*A;B=2*B;}R=R-B;Q=Q+A}//returnQ=X/Y;
+      </list-item>
+     </list>
+     <paragraph>
+      It is easy to see that {a mathematical formula}ΠPX→ is equivalent to {a mathematical formula}ΠOuterX→∪{Q=0,R=X}. To compute {a mathematical formula}ΠOuterX→, we compute first {a mathematical formula}ΠInnerX→, which is equivalent to the set of following sentences:{a mathematical formula} Solving the recurrences, we have{a mathematical formula} We can now eliminate terms like {a mathematical formula}A(n) and {a mathematical formula}B(n), expand the smallest macro expression, and obtain {a mathematical formula}ΠInnerX→ as the set of following sentences:{a mathematical formula} Thus the set of sentences for the body of the loop Outer is equivalent to the set of the following sentences:{a mathematical formula} Thus {a mathematical formula}ΠOuterX→∪{Q=0,R=X} is equivalent to{a mathematical formula} Now get rid of {a mathematical formula}X(n) and {a mathematical formula}Y(n) as they do not change: {a mathematical formula}X(n)=X and {a mathematical formula}Y(n)=Y, get rid of A and B as they are irrelevant now, and expand the smallest macro expression, we obtain {a mathematical formula}ΠPX→ as the set of following sentences:{a mathematical formula} From these axioms, we can show the partial correctness of Cohen's algorithm by proving the following two properties, under the precondition that {a mathematical formula}X≥0 and {a mathematical formula}Y≥1:{a mathematical formula} For the first property, {a mathematical formula}R′&lt;Y trivially follows from the condition of the Outer loop. For {a mathematical formula}R′≥0, we have {a mathematical formula}R′=R(M)=R(M−1)−2N(M−1)Y. By the axiom{a mathematical formula} let {a mathematical formula}n=M−1 and {a mathematical formula}m=N(M−1)−1, we have {a mathematical formula}R(M−1)≥2(N(M−1)−1)+1Y=2N(M−1)Y. Thus {a mathematical formula}R′≥0. For the second property, we have{a mathematical formula} Again this is partial correctness. To prove the termination, we need to show that the new terms introduced by the smallest macro expressions are all well-defined. For this program, it means that M (the outer loop counter) is bounded, and for every n, {a mathematical formula}N(n) (the inner loop counter for each outer loop iteration) is bounded. By Proposition 1, these can be proved by showing the following two properties:{a mathematical formula} Notice that these properties must be proved without those axioms about M and {a mathematical formula}N(n). Since {a mathematical formula}R(n+1) is inductively defined in terms of {a mathematical formula}N(n), we prove the second property by induction on n, thus showing that {a mathematical formula}N(n) is well-defined. Since {a mathematical formula}R(0)=X and {a mathematical formula}Y&gt;1, {a mathematical formula}∃m.R(0)&lt;2m+1Y is easy to see: we can let {a mathematical formula}m=X. Thus {a mathematical formula}N(0) is well-defined. Inductively, suppose {a mathematical formula}N(k) is well-defined and {a mathematical formula}∃m.R(k)&lt;2m+1Y. Since {a mathematical formula}R(k+1)&lt;R(k), we have {a mathematical formula}∃m.R(k+1)&lt;2m+1Y as well. Thus {a mathematical formula}N(k+1) is well-defined. Now to show the first property {a mathematical formula}∃m.R(m)&lt;Y, observe that {a mathematical formula}R(m)≤X−mY, thus {a mathematical formula}∃m.R(m)&lt;0&lt;Y.
+     </paragraph>
+     <paragraph>
+      It may not seem obvious how properties like these can be proved in general. As we mentioned, logical consistency is what we meant for terms like {a mathematical formula}N(n) to be well-defined. Thus all one needs to show is that the set of axioms is consistent under the assumption that {a mathematical formula}Y&gt;0 and {a mathematical formula}X≥0. Using Proposition 1 is just one way of showing this: if the axioms that do not mention N are consistent and entail {a mathematical formula}∃n.φ(n), then adding {a mathematical formula}smallest(N,n,φ(n)) to the axioms will also be consistent.
+     </paragraph>
+     <paragraph>
+      Again we remark that we relied on mathematical induction in our proof and made no use of loop invariants. Notice also that our proof actually shows that for integer division, any program of the following form is correct:
+     </paragraph>
+     <list>
+      <list-item>
+       //XandYaretwoinputintegers;Y&gt;0Q=0;//quotientR=X;//remainderwhile(R&gt;=Y)do{A=1;B=Y;while(R&gt;=k*B)do{A=k*A;B=k*B;}R=R-B;Q=Q+A}//returnQ=X/Y;
+      </list-item>
+     </list>
+     <paragraph>
+      where {a mathematical formula}k&gt;1 can be any constant.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Properties of programs during execution
+     </section-title>
+     <paragraph>
+      As we mentioned, our proposed translation to first order logic has been tailored for the program behaviors in terms of input and output conditions. Sometimes one may be interested in properties of a program during its execution. We have been using temporary function symbols to denote the values of program variables during the execution of a program. So to reason about properties of a program during its execution, all we need to do is to give these temporary functions explicit names. One way to do this is to label program statements and use these labels as the point of reference. Consider the following class of labeled programs:
+     </paragraph>
+     <list>
+      <list-item>
+       E::=array(E,...,E)|operator(E,...,E)B::=E=E|boolean-op(B,...,B)P::=L:array(E,...,E)=E|L:ifBthenPelseP|L:whileBdoP|P;P
+      </list-item>
+     </list>
+     <paragraph>
+      Here L is a label, typically a natural number. Notice that there is no label in front of a sequence. In general, a program P is a sequence of statements:{a mathematical formula} where {a mathematical formula}Pi is either an assignment, a conditional or a while loop. We call {a mathematical formula}Pk the last statement of P, and the output of P is the same as the output of {a mathematical formula}Pk.
+     </paragraph>
+     <paragraph>
+      Again assume that program variable names are unique and not in the base language {a mathematical formula}L. Now given a program P, for each program variable V and label L, we add functions V and {a mathematical formula}VL to {a mathematical formula}L. Again, {a mathematical formula}V(x→) denotes the value at the input, where {a mathematical formula}x→ are the indices of the corresponding array. The value at the end of a statement L is now denoted by {a mathematical formula}VL(x→). Of course, {a mathematical formula}V′ is {a mathematical formula}VL when L is the label of the last statement in the program.
+     </paragraph>
+     <paragraph>
+      Given a program P and a set {a mathematical formula}X→ of program variables including all variables used in P, we again use {a mathematical formula}ΠPX→ to denote the set of axioms for P and {a mathematical formula}X→:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+     </list>
+     <paragraph>
+      As an example, consider the simple loop in Section 3.2, with labels added:
+     </paragraph>
+     <list>
+      <list-item>
+       1:whileI&lt;Ndo2:ifX&lt;A(I)then3:X=A(I);4:I=I+1
+      </list-item>
+     </list>
+     <paragraph>
+      The axioms for the body of the loop are (we ignore {a mathematical formula}A(x) and N as they do not change):{a mathematical formula} Thus the axioms for the program are:{a mathematical formula} This set of axioms looks more complicated, which is natural as it has more information. One could query it about the values of program variables at any point during the execution of the program. For instance, to say that statement 2 does not change the value of I during the execution, we write {a mathematical formula}∀n.I2(n)=I1(n). Notice that {a mathematical formula}I1(n) denotes the value of I at the beginning of the nth iteration of the loop.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Functions
+     </section-title>
+     <paragraph>
+      One may ask how general our proposed approach is. Can it be done for programs with more complex structures like pointers, functions, classes, concurrency? We believe so. We have extended it to pointers and functions. Classes should present no problem as they are basically user defined types. We are currently working on extending it to handle Java-like threads. In this section, we describe how the same approach can be used to axiomatize programs with user defined functions. We consider pointers in the next section.
+     </paragraph>
+     <paragraph>
+      In practice, a program consists of a set of functions. To illustrate how we can handle functions, including recursive functions, consider the following class of programs:
+     </paragraph>
+     <list>
+      <list-item>
+       E::=array(E,...,E)|operator(E,...,E)|function(E,...,E)|B::=E=E|boolean-op(B,...,B)Body::=array(E,...,E)=E|ifBthenPelseP|P;P|whileBdoP|returnEF::=function(variable,...,variable){Body}P::=F|P;P
+      </list-item>
+     </list>
+     <paragraph>
+      Thus a program is a collection of functions. Presumably, one of them is the “main” function, the one that will be executed first when the program is run. In some programming languages, these functions can communicate by sharing some global variables. To simplify things, we assume here that there are no global variables, and that all program variables in the body of a function must occur in the parameter list of the function.
+     </paragraph>
+     <paragraph>
+      If P is {a mathematical formula}F1;⋯;Fk, then the set of axioms for P is the union of the sets of axioms for {a mathematical formula}Fi, {a mathematical formula}1≤i≤k, with renaming of program variables in them if needed to avoid conflict of names.
+     </paragraph>
+     <paragraph>
+      Given a function definition {a mathematical formula}f(X→){Body}, we first capture the return value of the function on input {a mathematical formula}X→ by using a special keyword Result. Then the function is defined by universally quantifying over {a mathematical formula}X→. More precisely, the set of sentences for f, written {a mathematical formula}Πf, consists of the following ones:{a mathematical formula} where
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}φ(X→/x→)(Result′/f(x→)) is the result of replacing in φ each {a mathematical formula}Xi in {a mathematical formula}X→ by {a mathematical formula}xi, {a mathematical formula}Xi′ by a new function name {a mathematical formula}g(x→), and {a mathematical formula}Result′ by {a mathematical formula}f(x→). We assume that Result is a reserved word used to denote the value of the function. Notice that once we replace each {a mathematical formula}Xi by a variable {a mathematical formula}xi, {a mathematical formula}Xi′, the value of {a mathematical formula}Xi when the function exits, is no longer relevant. Here we just replace it by a dummy new function g.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ΠBodyX→∪{Result} is defined as before, except that when Body is return E, the axioms are{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      Notice that according to our axiomatization here, while the body of a function may execute the return statement multiple times, only the last time matters. For example, given
+     </paragraph>
+     <list>
+      <list-item>
+       foo(){return1;return2}
+      </list-item>
+     </list>
+     <paragraph>
+      only the second return statement is meaningful because {a mathematical formula}Result′ from the first return statement is replaced by a temporary variable when constructing axioms for the sequence, and thus discarded. So the function is captured by the axiom {a mathematical formula}foo()=2. One could argue that it does not make sense for more than one instance of the return statement to be executed, and it is the programmer's responsibility to make sure that this does not happen. Alternatively, one can assume that as soon as a return statement is executed, the function exits. This can be modeled by introducing a special flag Exit, and replace each return statement by
+     </paragraph>
+     <list>
+      <list-item>
+       if-Exitthen{returnE;Exit=true}
+      </list-item>
+     </list>
+     <paragraph>
+      For a more meaningful example, consider the following two mutually defined functions isEven and isOdd:
+     </paragraph>
+     <list>
+      <list-item>
+       isEven(N){ifN=0thenreturntrueelsereturnisOdd(N-1)}isOdd(N){ifN=0thenreturnfalseelsereturnisEven(N-1)}
+      </list-item>
+     </list>
+     <paragraph>
+      Suppose that we denote the body of {a mathematical formula}isEven(N) by {a mathematical formula}Body1, and that of {a mathematical formula}isOdd(N) by {a mathematical formula}Body2. Then {a mathematical formula}ΠBody1(N,Result) consists of the following axioms:{a mathematical formula} and similarly for {a mathematical formula}ΠBody2(N,Result):{a mathematical formula} Thus {a mathematical formula}ΠisOdd∪ΠisEven is{a mathematical formula} where f and g are two new functions used to denote the values of x when the functions {a mathematical formula}isEven(x) and {a mathematical formula}isOdd(x), respectively, return. They are irrelevant, so the two corresponding axioms can be deleted. By induction on n, it is easy to prove that the following hold for all {a mathematical formula}n≥0:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Now consider the following program with a type definition:
+     </paragraph>
+     <list>
+      <list-item>
+       List::=[]|a::Listlength(X:List){ifX=[]thenreturn0elsereturnlength(tail(X))+1}tail(X:List){ifX=[]thenreturn[]elseifX=a::X1thenreturnX1}append(X:List,Y:List){ifX=[]thenreturnYelseifX=a::X1thenreturna::append(X1,Y)}
+      </list-item>
+     </list>
+     <paragraph>
+      where a::List is list concatenation: the new list is obtained by adding a into List as the first element.
+     </paragraph>
+     <paragraph>
+      To model the data type List, we introduce a corresponding List sort in our first-order language, and write {a mathematical formula}(x:List) to mean that x is of sort List. In first-order terms, the definition of List yields the following axioms:{a mathematical formula} and the three functions yield the following axioms:{a mathematical formula} With these axioms, one can prove, for example {a mathematical formula}length(a::b::[])=2. However, they are not sufficient for proving general properties like the following simple one:{a mathematical formula} To prove properties like this, we need induction on lists. This can be done by using a second-order axiom on sort List, similar to the one on natural numbers. However, since we already have natural numbers, this is not necessary. We can introduce lists of n elements, and define a list to be a list of n elements, for some n. This way, we can use mathematical induction on natural numbers to prove inductive properties about lists. We show how this is done here. We introduce a binary predicate {a mathematical formula}List(x,n), meaning that x is a list with exactly n elements:{a mathematical formula} We first show that if x is a list, then there is a unique n such that {a mathematical formula}List(x,n) holds:{a mathematical formula} Suppose x is a list, and {a mathematical formula}List(x,m) and {a mathematical formula}List(x,n) are true. We do simultaneous induction on n and m. If {a mathematical formula}n=0, then {a mathematical formula}x=[]. If {a mathematical formula}m≠0, then for some k, {a mathematical formula}m=k+1 and {a mathematical formula}x=[]=a::y for some a and list y, a contradiction with one of our axioms about lists. Thus {a mathematical formula}m=0 as well. Similarly, if {a mathematical formula}m=0, then {a mathematical formula}n=0 as well. Suppose {a mathematical formula}n=k1+1 and {a mathematical formula}m=k2+1, and suppose inductively that for any {a mathematical formula}i,j&lt;max{m,n}, we have that{a mathematical formula} for any list y. We then have {a mathematical formula}x=y1::z1 for some list {a mathematical formula}z1 such that {a mathematical formula}List(z1,k1) holds, and {a mathematical formula}x=y2::z2 for some list {a mathematical formula}z2 such that {a mathematical formula}List(z2,k2) holds. From {a mathematical formula}y1::z1=y2::z2, we have {a mathematical formula}z1=z2, thus by the inductive assumption, {a mathematical formula}k1=k2. So {a mathematical formula}m=n. This concludes the inductive step, thus the proof of (3).
+     </paragraph>
+     <paragraph>
+      Using (3), we can then prove the induction schema on lists: for any formula {a mathematical formula}φ(x),{a mathematical formula} Suppose the premise is true and for some list x, {a mathematical formula}¬φ(x). By (3) there is a unique n such that {a mathematical formula}List(x,n). Suppose x is a shortest such list: for any list y, if {a mathematical formula}List(y,m)∧m&lt;n, then {a mathematical formula}φ(y) holds. If {a mathematical formula}n=0, then {a mathematical formula}x=[], which satisfies φ, a contradiction. Suppose {a mathematical formula}n=m+1, then there are some a and y such that {a mathematical formula}x=a::y∧List(y,m). By our assumption about x, {a mathematical formula}φ(y) holds. By the premise, {a mathematical formula}φ(a::y) holds as well, a contradiction.
+     </paragraph>
+     <paragraph>
+      The same idea can be used to axiomatize in first-order logic other inductively defined data structures such as trees.
+     </paragraph>
+     <paragraph>
+      For recursive functions, a challenge is to distinguish between cycles and undefined values. Consider the following example.
+     </paragraph>
+     <list>
+      <list-item>
+       foo(X){ifX=0thenreturnfoo(X)elseifx=1thenreturn1}
+      </list-item>
+     </list>
+     <paragraph>
+      With our axiomatization, the set of axioms for {a mathematical formula}foo(x) is equivalent to a single fact {a mathematical formula}foo(1)=1. It leaves completely open the possible values for {a mathematical formula}foo(x) when {a mathematical formula}x≠1. One could argue whether this is a right formalization. But operationally, there is a difference between function calls {a mathematical formula}foo(0) and {a mathematical formula}foo(2): calling {a mathematical formula}foo(0) will cause a cycle, but calling foo(2) will terminate without any value being returned. The former causes stack overflow and the latter abnormal exit.
+     </paragraph>
+     <paragraph>
+      In the following, we provide an axiomatization of functions that can differentiate these two cases. The key idea is to keep a counter of the number of times a recursive function has been called.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}f1,f2,...,fk be functions that are mutually defined recursively: {a mathematical formula}fi(X1,...,Xm){Bi}. Extend these functions with one more argument:{a mathematical formula} where
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}Bi0 is the result of replacing each function call {a mathematical formula}fj(T1,...,Tm) in {a mathematical formula}Bi by Cycle, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}Bi1 is the result of replacing each function call {a mathematical formula}fj(T1,...,Tm) in {a mathematical formula}Bi by {a mathematical formula}fj(T1,...,Tm,M−1).
+      </list-item>
+      <list-item label="•">
+       M is a natural number, and Cycle is a new constant.
+      </list-item>
+     </list>
+     <paragraph>
+      The set {a mathematical formula}Πfi of axioms for {a mathematical formula}fi is then{a mathematical formula} This axiomatization is similar to the iterated version of the least fixed-point semantics for recursive functions: {a mathematical formula}Bi0 is the base case and {a mathematical formula}Bi1 is the inductive case.
+     </paragraph>
+     <paragraph>
+      Consider again function {a mathematical formula}foo() defined above. We have
+     </paragraph>
+     <list>
+      <list-item>
+       foo(X,M){ifM=0then{ifX=0thenreturnCycleelseifX=1thenreturn1}else{ifX=0thenreturnfoo(X,M-1)elseifX=1thenreturn1}
+      </list-item>
+     </list>
+     <paragraph>
+      and the following axioms for {a mathematical formula}foo(X) and {a mathematical formula}foo(X,M):{a mathematical formula} Thus {a mathematical formula}∀n.foo(0,n)=Cycle and {a mathematical formula}∀n.foo(1,n)=1. So {a mathematical formula}foo(0)=Cycle and {a mathematical formula}foo(1)=1. The axioms again leave open the possible values for {a mathematical formula}foo(x) when x is not equal to 0 or 1.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Pointers
+     </section-title>
+     <paragraph>
+      To illustrate how this approach can handle pointers and reference variables, we consider here a language with some simple pointer operations similar to those in C. In particular, for a program variable X, we use &amp;X to refer to the address of the memory location assigned to X, and for a pointer variable L, use #L to refer to the value in the location pointed to by L. Thus for a variable X, #(&amp;X) and X return the same value when evaluated in an expression.
+     </paragraph>
+     <list>
+      <list-item>
+       E::=IE|PE|BIE::=id|operator(E,...,E)|#PEPE::=pointer|&amp;id|pointer-op(E,...,E)B::=E=E|boolean-op(E,...,E)P::=id=IE|pointer=PE|#PE=E|ifBthenPelseP|P;P|whileBdoP
+      </list-item>
+     </list>
+     <paragraph>
+      Here id is an integer program variable, and pointer a pointer program variable. For simplicity, we do not consider arrays here. operator is a function that returns an integer value, pointer-op a pointer value, and boolean-op a truth value.
+     </paragraph>
+     <paragraph>
+      Our axiomatization of this class of programs will model directly how the compiler works. We assume a set of storage locations which can hold a value which is either an integer or the location of another storage cell. A program variable will be assigned to a location by the compiler at the beginning and this will not be changed during the execution of the program. The value of a program variable will be the value stored at the location.
+     </paragraph>
+     <paragraph>
+      Thus we assume a location sort in our language. In our axiomatization above, we represent a program variable V by a function (of the same name) in our language. The value of this function denotes the value of the program variable in the program. Here, we are going to make a conceptual shift: we are going to represent a program variable by a function of location sort so that the value of the function denotes the location assigned to the program variable by the compiler. So for a program variable V, while before its corresponding function V in the first-order language was dynamic as its value changes during the execution of the program, now V is static as the location assigned to this program variable by the compiler will not change. What is changing during the program execution is the values stored in the memory locations, and this will be modeled by a dynamic function val:{a mathematical formula} Thus if V is an integer variable, then {a mathematical formula}val(V) will be an integer. If V is a pointer, then {a mathematical formula}val(V) will be a location.
+     </paragraph>
+     <paragraph>
+      To summarize, given a program and a program variable V, instead of using V and {a mathematical formula}V′ to denote its values at the input and output of the program, respectively, we now use V to denote a memory location and {a mathematical formula}val(V) and {a mathematical formula}val′(V) to denote these two values, respectively. We need to do a similar translation from an expression E in the program to a term {a mathematical formula}val(E) (and similarly {a mathematical formula}val′(E)) in our first-order language:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}val(&amp;id) is id, if id is an integer program variable.
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}val(#PE) is {a mathematical formula}val(val(PE)), if PE is a pointer expression.
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}val(f(E1,...,Ek)) is {a mathematical formula}f(val(E1),...,val(Ek)), if f is either an operator, pointer-op, or boolean-op, assuming that we have a corresponding function f in our language.
+      </list-item>
+     </list>
+     <paragraph>
+      Given a program P, our axioms for it, denoted {a mathematical formula}ΠP, will be in terms of val and {a mathematical formula}val′.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       If P is
+      </list-item>
+      <list-item label="•">
+       The cases for conditionals and while loops are similar as before.
+      </list-item>
+     </list>
+     <paragraph>
+      Consider the program
+     </paragraph>
+     <list>
+      <list-item>
+       L=&amp;V;#L=1
+      </list-item>
+     </list>
+     <paragraph>
+      where V is an integer variable and L a pointer. Given that {a mathematical formula}val(&amp;V)=V, we have the following axioms:{a mathematical formula} Assuming that {a mathematical formula}L≠V (they are assigned different locations by the compiler), we have {a mathematical formula}val′(V)=1, {a mathematical formula}val′(L)=V, and{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Now consider the following program:
+     </paragraph>
+     <list>
+      <list-item>
+       whileX&lt;YdoifMax&lt;#next(A,X)thenMax=#next(A,X);X=X+1
+      </list-item>
+     </list>
+     <paragraph>
+      where A is a pointer variable and next(A,X) is a pointer pointing to the Xth location after the one pointed to by A. In C notation, next(A,X) would be A+X and “+” is addition in pointer arithmetic. We use next in order to distinguish it from the normal addition operator arithmetic. We assume the following unique names axioms on locations:{a mathematical formula} Again we compute the axioms for the body of the loop first, which can be simplified into the following axioms under the above unique names axioms:{a mathematical formula} Thus the axioms for the program are{a mathematical formula} From these axioms, we can deduce that{a mathematical formula} Thus if we assume that {a mathematical formula}val(X,0)=0 and {a mathematical formula}val(Y,0)=N for a natural number N, then we have {a mathematical formula}M=N and{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Compared to the formalization in Section 3, the one here looks more compact as it quantifies over program variables which are locations. This representation is more low level. For instance, some axioms about the next function will be needed before they can be used to infer anything interesting about the program. For more details on how this can be done, see [22].
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Correctness under an operational semantics
+     </section-title>
+     <paragraph>
+      In this appendix we provide an operational semantics to the language in Section 3 and show the correctness of our axiomatization with respect to this semantics.
+     </paragraph>
+     <paragraph>
+      Given a program, we define its models to be sequences of states from its executions. We represent states by first-order structures. As before, we assume a base language that contains functions and predicates corresponding to build-in functions and operators. Given a program P, and a tuple {a mathematical formula}X→ of functions that includes all program variables used in P, we extend the base language to a new language {a mathematical formula}LX→ by adding functions in {a mathematical formula}X→. Notice that this means that if V is a program variable in P for an n-ary array, then we assume that {a mathematical formula}V∈X→ is an n-ary function. Again, we assume that the program variable names are unique and there is no overloading of names.
+     </paragraph>
+     <paragraph>
+      For the class of programs that we consider here, executing a program in a state either does not terminate or yields a finite sequence of assignments. This can be defined in a standard way. Now a finite sequence {a mathematical formula}[M1,⋯,Mn] of {a mathematical formula}LX→ structures is a model of P if when executed in {a mathematical formula}M1, P terminates with a sequence of assignments {a mathematical formula}α1,⋯,αn−1 such that for each {a mathematical formula}1≤i&lt;n, {a mathematical formula}Mi+1 is the result of executing {a mathematical formula}αi in {a mathematical formula}Mi: given a structure M, {a mathematical formula}M′ is the result of executing the assignment {a mathematical formula}V(t1,...,tk)=e in M if M and {a mathematical formula}M′ have the same domains, same interpretation for predicates, same interpretation for functions except V, and for V, its value in {a mathematical formula}M′ is defined as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Now consider our translation {a mathematical formula}ΠPX→. It uses a language that is an extension of {a mathematical formula}LX→. In particular, for each variable V, it has a new “primed” function {a mathematical formula}V′. Given a model M of {a mathematical formula}ΠPX→, we can project it on {a mathematical formula}LX→ as usual. Furthermore, we say that a structure I of {a mathematical formula}LX→ is the primed-projection of M if for any symbol τ in {a mathematical formula}LX→, if τ does not have a primed version in {a mathematical formula}ΠPX→, then its interpretation in I is the same as its in M, but if τ has a primed version, then its interpretation in I is according to {a mathematical formula}τ′ in M. We have If M is a model of{a mathematical formula}ΠPX→, then there is a model{a mathematical formula}[M1,...,Mk]of P such that{a mathematical formula}{a mathematical formula}Conversely, if{a mathematical formula}[M1,...,Mk]is a model of P, then there is a model M of{a mathematical formula}ΠPX→such that(A.1)and(A.2)hold.We prove the first half of the proposition. The second half is similar and easier. We prove by induction on P. The base case is when P is an assignment
+      <list>
+       V(E1,...,Ek)=EInductively suppose the result holds for the subprograms of
+      </list>
+      <paragraph>
+       P. There are three cases: conditional statements, sequences and loops. Suppose P is
+      </paragraph>
+      <list>
+       <list-item>
+        ifBthenP1elseP2
+       </list-item>
+      </list>
+      <paragraph>
+       then a sequence {a mathematical formula}[M1,...,Mk] of states is a model of P iff either B is true in {a mathematical formula}M1 and {a mathematical formula}[M1,...,Mk] is a model of {a mathematical formula}P1 or B is false in {a mathematical formula}M1 and {a mathematical formula}[M1,...,Mk] is a model of {a mathematical formula}P2.Recall that {a mathematical formula}ΠPX→ is constructed from {a mathematical formula}ΠP1X→ and {a mathematical formula}ΠP2X→ as follows:{a mathematical formula} Observe that a model M of {a mathematical formula}ΠPX→ satisfies B iff the projection of M on {a mathematical formula}LX→, {a mathematical formula}MX→, satisfies B. Thus M is a model of {a mathematical formula}ΠPX→ iff either B is true in {a mathematical formula}MX→ and M is a model of {a mathematical formula}ΠP1X→, or B is false in {a mathematical formula}MX→ and M is a model of {a mathematical formula}ΠP2X→. By inductive assumption, suppose now M is a model of {a mathematical formula}ΠPX→. Then either B is true in {a mathematical formula}MX→ and for some {a mathematical formula}Mi, {a mathematical formula}[MX→,M1,...,Mk,MX′→] is a model of {a mathematical formula}P1 or B is false in {a mathematical formula}MX→ and for some {a mathematical formula}Mi, {a mathematical formula}[MX→,M1,...,Mk,MX′→] is a model of {a mathematical formula}P2, where {a mathematical formula}MX′→ is the primed projection of M on {a mathematical formula}LX→. In either case, for some {a mathematical formula}Mi, {a mathematical formula}MX→,M1,...,Mk,MX′→ is a model of P.Suppose P is
+      </paragraph>
+      <list>
+       <list-item>
+        P1;P2
+       </list-item>
+      </list>
+      <paragraph>
+       then a sequence of states {a mathematical formula}[M1,...,Mk] is a model of P iff for some {a mathematical formula}1&lt;i&lt;k, {a mathematical formula}[M1,...,Mi] is a model of {a mathematical formula}P1 and {a mathematical formula}[Mi,...,Mk] is a model of {a mathematical formula}P2.Recall that {a mathematical formula}ΠPX→ is constructed from {a mathematical formula}ΠP1X→ and {a mathematical formula}ΠP2X→ by connecting the outputs of {a mathematical formula}P1 with the inputs of {a mathematical formula}P2 as follows:{a mathematical formula} where {a mathematical formula}Y→=(Y1,...,Yk) is a tuple of new function symbols such that each {a mathematical formula}Yi is of the same arity as {a mathematical formula}Xi in {a mathematical formula}X→. Now suppose M is a model of {a mathematical formula}ΠPX→. Construct two models {a mathematical formula}M1 and {a mathematical formula}M2 from M as follows: {a mathematical formula}M1 is the same as M except that for each {a mathematical formula}Xi′, its interpretation in {a mathematical formula}M1 is the same as the interpretation of {a mathematical formula}Yi in M; and {a mathematical formula}M2 is the same as M except that for each {a mathematical formula}Xi, its interpretation in {a mathematical formula}M2 is the same as the interpretation of {a mathematical formula}Yi in M. Then {a mathematical formula}Mi is a model of {a mathematical formula}ΠPiX→, {a mathematical formula}i=1,2. Notice that this is because {a mathematical formula}Y→ is a tuple of new functions not in {a mathematical formula}ΠPiX→, {a mathematical formula}i=1,2. By the inductive assumption, there is a model {a mathematical formula}[M1i,...,Mkii] of {a mathematical formula}Pi, {a mathematical formula}i=1,2, such that {a mathematical formula}M1i and {a mathematical formula}Mkoi is the projection and the primed projection of {a mathematical formula}Mi, respectively. By our construction, {a mathematical formula}Mk11=M12. Thus {a mathematical formula}[M11,...,Mk11,M22,...,Mk22] is a model of P. Notice that we also assume that {a mathematical formula}ΠP1X→ and {a mathematical formula}ΠP2X→ do not share any temporary variables. This assumption is not needed here but needed for the second half of the proposition.Our last case is loops. Suppose that P is
+      </paragraph>
+      <list>
+       <list-item>
+        whileBdoP1
+       </list-item>
+      </list>
+      <paragraph>
+       Then {a mathematical formula}[M1,...,Mk] is a model of P iff there are some {a mathematical formula}Q≥0, some {a mathematical formula}1=k0≤k1&lt;⋯&lt;kQ=k such that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}[Mki,...,Mki+1] is a model of {a mathematical formula}P1, {a mathematical formula}0≤i&lt;Q.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Mki⊨B, {a mathematical formula}0≤i&lt;Q.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MkQ⊨¬B.
+       </list-item>
+      </list>
+      <paragraph>
+       Recall that {a mathematical formula}ΠPX→ consists of the following axioms:{a mathematical formula} where n is a new natural number variable not already in φ, and N a new natural number constant not already used in {a mathematical formula}ΠP1X→.Let {a mathematical formula}LP be the language of {a mathematical formula}ΠPX→, and {a mathematical formula}LP1 the language of {a mathematical formula}ΠP1X→. Notice that every symbol in {a mathematical formula}LP1 not in the base language is also in {a mathematical formula}LP but extended by a natural number argument, as described in the construction of {a mathematical formula}φ[n].Suppose M is a model of {a mathematical formula}ΠPX→. Let Q be the value of N in M (notice that N is a constant in the language and Q a natural number in the domain). For all {a mathematical formula}0≤i&lt;Q, {a mathematical formula}M⊨B[i] and {a mathematical formula}M⊨¬B[Q]. For each natural number i, let {a mathematical formula}Mi be constructed from M as follows: {a mathematical formula}Mi is the same as M except that for each symbol X in {a mathematical formula}ΠP1X→ that has been extended by a natural number parameter, the interpretation of X in {a mathematical formula}Mi is the same as the interpretation of {a mathematical formula}X(i) in M and the interpretation of {a mathematical formula}X′ in {a mathematical formula}Mi is the same as the interpretation of {a mathematical formula}X(i+1) in M. Notice that M is a structure for language {a mathematical formula}LP and {a mathematical formula}Mi a structure for {a mathematical formula}LP1. It can be seen that for all i, {a mathematical formula}Mi is a model of {a mathematical formula}ΠP1X→. By our inductive assumption, for each i, there is a sequence {a mathematical formula}M1i,...,Mkii of states that is a model of {a mathematical formula}P1 and that {a mathematical formula}M1i and {a mathematical formula}Mkii are the projection and primed projection of {a mathematical formula}Mi on {a mathematical formula}LX→. Observe that {a mathematical formula}Mkii=M1i+1, it is not hard to see then that the sequence {a mathematical formula}[M10,...,Mk00,M21,...,Mk11,...,M2Q−1,...,MkQ−1Q−1] is a model of P.  □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Loop invariants
+     </section-title>
+     <paragraph>
+      Our approach translates programs to first-order theories. Once the translation is done, properties of programs can be proved using whatever methods that are valid in first-order logic. In particular, for programs with loops, one can use loop invariants.
+     </paragraph>
+     <paragraph>
+      Consider a loop of the form while C do P. A condition φ is a loop invariant if whenever φ and C are true initially, φ will continue to hold after P is performed. In our notation, this means that the theory corresponding to the program entails the following sentence:{a mathematical formula} Now if a postcondition Q can be proved using the invariant φ:{a mathematical formula} then we can prove in our theory that {a mathematical formula}Q′ holds as {a mathematical formula}Q′ is {a mathematical formula}Q[N] for the N that satisfies {a mathematical formula}smallest(N,n,¬C[n]).
+     </paragraph>
+     <paragraph>
+      Consider the simple example of the following loop for computing factorials:
+     </paragraph>
+     <list>
+      <list-item>
+       F=1;I=0;whileI&lt;XdoI=I+1;F=I*F
+      </list-item>
+     </list>
+     <paragraph>
+      Given a non-negative integer input X, the output value of F is the factorial of X: {a mathematical formula}F′=fact(X).
+     </paragraph>
+     <paragraph>
+      To prove the correctness of this program, we first need to assume a definition of factorial, which can be defined inductively as: {a mathematical formula}fact(0)=1 and {a mathematical formula}∀n.fact(n+1)=n×fact(n).
+     </paragraph>
+     <paragraph>
+      One can see that the following is a loop invariant:{a mathematical formula} Given that this condition is true when the loop initiates, if the loop terminates, then we have:{a mathematical formula} which implies {a mathematical formula}I=X and {a mathematical formula}F=fact(X).
+     </paragraph>
+     <paragraph>
+      We have implemented a translator{sup:1} for programs in Section 3. The direct translation of the program without any simplification gives the following axioms:{a mathematical formula} From this set of equations, it is easy to verify the loop invariant:{a mathematical formula} Thus{a mathematical formula} Instantiate {a mathematical formula}n=N1−1 in the above equation, we have {a mathematical formula}I(N1)≤X(N1). Thus {a mathematical formula}I(N1)=X(N1). So {a mathematical formula}F′=F(N1)=fact(I(N1))=fact(X(N1))=fact(X′).
+     </paragraph>
+     <paragraph>
+      Our translator simplifies the translated theory as much as possible by getting rid of temporary variables and making use of Mathematica{sup:2} to solve recurrences as much as possible. For the factorial program, it generates the following set Π of formulas:{a mathematical formula} Notice that {a mathematical formula}I(n) has been eliminated: from the recurrences {a mathematical formula}I(0)=0 and {a mathematical formula}I(n+1)=I(n)+1, Mathematica computes the closed form solution {a mathematical formula}I(n)=n. Thus the loop invariant (B.1) cannot be used anymore.
+     </paragraph>
+     <paragraph>
+      Looking at the formulas in Π, it is clear that {a mathematical formula}F(n)=fact(n) (e.g. this can be verified using Mathematica). Thus to show that {a mathematical formula}F′=fact(X), it all comes down to proving that {a mathematical formula}N1=X, which also proves that the program terminates.
+     </paragraph>
+     <paragraph>
+      By the definition of the smallest macro, to prove that {a mathematical formula}N1=X, we need to prove the following two assertions:{a mathematical formula} which are obvious – they can be easily verified using, e.g. Mathematica.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

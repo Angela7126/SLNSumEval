@@ -1,0 +1,1365 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   New Word Detection for Sentiment Analysis.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <span class="ltx_ERROR undefined">
+      \XeTeXlinebreaklocale
+     </span>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       ”zh”
+       =0ptplus1pt
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        New words on the Internet have been emerging all the time, particularly in user-generated content.
+Users like to update and share their information on social websites with their own language styles,
+among which new political/social/cultural words are constantly used.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        However, such new words have made many natural language processing tasks more challenging.
+Automatic extraction of new words is indispensable to many tasks such as Chinese word segmentation, machine translation, named entity extraction,
+question answering, and sentiment analysis.
+New word detection is one of the most critical issues in Chinese word segmentation.
+Recent studies
+        [17]
+        [3]
+        have shown that more than 60% of word segmentation errors result from new words.
+Statistics show that more than 1000 new Chinese words appear every year
+        [19]
+        . These words are mostly domain-specific technical terms
+and time-sensitive political/social /cultural terms. Most of them are not yet correctly recognized by the segmentation algorithm, and remain as out of vocabulary (OOV) words.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        New word detection is also important for sentiment analysis such as opinionated phrase extraction and polarity classification.
+A sentiment phrase with complete meaning should have a correct boundary, however, characters in a new word may be
+broken up. For example, in a sentence ” 表演/n 非常/adv 给/v 力/n （artists’ performance is very impressive）” the two Chinese characters
+“给/v 力/n(cool; powerful)” should always be extracted together. In polarity classification, new words can be informative features for classification models.
+In the previous example, ”给力(cool; powerful)” is a strong feature for classification models while each single character is not.
+Adding new words as feature in classification models will improve the performance of polarity classification, as demonstrated later in this paper.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        This paper aims to detect new word for sentiment analysis. We are particulary interested in extracting
+        new sentiment word
+        that can express opinions or sentiment, which is of high value towards sentiment analysis.
+        New sentiment word
+        , as exemplified in Table
+        1
+        , is a sub-class of multi-word expressions which is a sequence of neighboring words
+        ”whose exact and unambiguous meaning or connotation cannot be derived from the meaning or connotation of its components”
+        [5]
+        .
+Such new words cannot be directly identified using grammatical rules, which poses a major challenge to automatic analysis.
+Moreover, existing lexical resources never have adequate and timely coverage since new words appear constantly. People thus resort to statistical methods
+such as Pointwise Mutual Information
+        [6]
+        , Symmetrical Conditional Probability
+        [7]
+        , Mutual Expectation
+        [8]
+        ,
+Enhanced Mutual Information
+        [22]
+        , and Multi-word Expression Distance
+        [2]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Our central idea for new sentiment word detection is as follows:
+Starting from very few seed words (for example, just one seed word),
+we can extract lexical patterns that have strong statistical association with the seed words;
+the extracted lexical patterns can be further used in finding more new words, and the most probable new words can be added into
+the seed word set for the next iteration; and the process can be
+run iteratively until a stop condition is met.
+The key issues are to measure the utility of a pattern and to quantify the possibility
+of a word being a new word.
+The main contributions of this paper are summarized as follows:
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We propose a novel framework for new word detection from large-scale user-generated data. This framework is fully unsupervised and purely data-driven, and requires very lightweight linguistic resources (i.e., only POS tags).
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We design statistical measures to quantify the utility of a pattern and to quantify the possibility of a word being a new word, respectively. No elaborated linguistic rules are needed to filter undesirable results. This feature may enable our approach to be portable to other languages.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           We investigate the problem of polarity prediction of new sentiment word and demonstrate that inclusion of new sentiment word benefits sentiment classification tasks.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        The rest of the paper is structured as follows:
+we will introduce related work in the next section.
+We will describe the proposed method in Section 3, including definitions,
+the overview of the algorithm, and the statistical measures for addressing the two key issues.
+We then present the experiments in Section 4. Finally, the work is summarized
+in Section 5.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        New word detection has been usually interweaved with word segmentation, particularly in Chinese NLP.
+In these works, new word detection is considered as an integral part of segmentation, where new words
+are identified as the most probable segments inferred by the probabilistic models;
+and the detected new word can be further used to improve word segmentation.
+Typical models include conditional random fields proposed by
+        [14]
+        ,
+and a joint model trained with adaptive online gradient descent based on feature frequency information
+        [18]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Another line is to treat new word detection as a separate task, usually preceded by part-of-speech tagging.
+The first genre of such studies is to leverage complex linguistic rules or knowledge.
+For example, Justeson and Katz
+        [11]
+        extracted technical terminologies from documents using a regular expression.
+Argamon et al.
+        [1]
+        segmented the POS sequence of a multi-word into small POS tiles, counted tile
+frequency in the new word and non-new-word on the training set respectively, and detected new words using these counts.
+Chen and Ma
+        [4]
+        employed morphological and statistical rules to extract Chinese new word.
+The second genre of the studies is to treat new word detection as a classification problem.
+Zhou
+        [25]
+        proposed a discriminative Markov Model to detect new words by chunking one or more separated words.
+In
+        [12]
+        , new word detection was viewed as a binary classification problem. However,
+these supervised models requires not only heavy engineering of linguistic features, but also expensive annotation of training data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        User behavior data has recently been explored for finding new words.
+Zheng et al.
+        [24]
+        explored user typing behaviors in Sogou Chinese Pinyin input method to detect new words.
+Zhang et al.
+        [23]
+        proposed to use dynamic time warping to detect new words from query logs.
+However, both of the work are limited due to the public unavailability of expensive commercial resources.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Statistical methods for new word detection have been extensively studied, and in some sense exhibit advantages over linguistics-based methods.
+In this setting, new word detection is mostly known as multi-word expression extraction.
+To measure multi-word association, the first model is Pointwise Mutual Information (PMI)
+        [6]
+        .
+Since then, a variety of statistical methods have been proposed to measure
+        b⁢i
+        -gram association,
+such as Log-likelihood
+        [9]
+        and Symmetrical Conditional Probability (SCP)
+        [7]
+        .
+Among all the 84
+        b⁢i
+        -gram association measures, PMI has been reported to be the best one in Czech data
+        [13]
+        .
+In order to measure arbitrary
+        n
+        -grams, most common strategies are to separate
+        n
+        -gram into two parts X and Y so that existing
+        b⁢i
+        -gram methods can be used
+        [7, 8, 16]
+        .
+Zhang et al.
+        [22]
+        proposed Enhanced Mutual Information (EMI) which measures the cohesion of
+        n
+        -gram
+by the frequency of itself and the frequency of each single word.
+Based on the information distance theory, Bu et al.
+        [2]
+        proposed multi-word expression distance (MED) and the normalized version,
+and reported superior performance to EMI, SCP, and other measures.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Methodology
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Definitions
+       </h3>
+       <div class="ltx_theorem ltx_theorem_definition" id="S3.Thmtheorem1">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Definition 3.1
+         </span>
+         (Adverbial word).
+        </h6>
+        <div class="ltx_para" id="S3.Thmtheorem1.p1">
+         <p class="ltx_p">
+          Words that are used mainly to modify a verb or an adjective, such as
+”太(too)”, ”非常(very)”, ”十分(very)”, and ”特别(specially)”.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_theorem ltx_theorem_definition" id="S3.Thmtheorem2">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Definition 3.2
+         </span>
+         (Auxiliary word).
+        </h6>
+        <div class="ltx_para" id="S3.Thmtheorem2.p1">
+         <p class="ltx_p">
+          Words that are auxiliaries, model particles, or punctuation marks.
+In Chinese, such words are like ”着,了,啦,的,啊”, and punctuation marks include ”，。！？；：” and so on.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_theorem ltx_theorem_definition" id="S3.Thmtheorem3">
+        <h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem">
+         <span class="ltx_tag ltx_tag_theorem">
+          Definition 3.3
+         </span>
+         (Lexical Pattern).
+        </h6>
+        <div class="ltx_para" id="S3.Thmtheorem3.p1">
+         <p class="ltx_p">
+          A lexical pattern is a triplet
+          &lt;AD,*,AU&gt;
+          , where
+          A⁢D
+          is an adverbial word,
+the wildcard
+          *
+          means an arbitrary number of words
+          ,
+and
+          A⁢U
+          denotes an auxiliary word.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Table
+         2
+         gives some examples of lexical patterns.
+In order to obtain lexical patterns, we can define regular expressions with POS tags
+         and apply the regular expressions on POS tagged texts.
+Since the tags of adverbial and auxiliary words are relatively static and can be easily identified,
+such a method can safely obtain lexical patterns.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        The Algorithm Overview
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The algorithm works as follows:
+starting from very few seed words (for example, a word in Table
+         1
+         ),
+the algorithm can find lexical patterns that have strong statistical association with the seed words in which
+the likelihood ratio test (LRT) is used to quantify the degree of association.
+Subsequently, the extracted lexical patterns can be further used in finding more new words.
+We design several measures to quantify the possibility of a candidate word being a new word,
+and the top-ranked words will be added into the seed word set for the next iteration.
+The process can be run iteratively until a stop condition is met.
+Note that we do not augment the pattern set (
+         𝒫
+         ) at each iteration, instead,
+we keep a fixed small number of patterns during iteration because this strategy produces optimal results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         From linguistic perspectives, new sentiment words are commonly modified by adverbial words
+and thus can be extracted by lexical patterns. This is the reason why the algorithm will work.
+Our algorithm is in spirit to
+double propagation
+         [15]
+         , however, the differences are apparent in that: firstly,
+we use very lightweight linguistic information (except POS tags); secondly, our major contributions are
+to propose statistical measures to address the following key issues: first, to measure the utility of lexical patterns;
+second, to measure the possibility of a candidate word being a new word.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         [t]
+         New word detection algorithm
+         <math alttext="\mathcal{D}" class="ltx_Math" display="inline" id="S3.SS2.p3.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mi class="ltx_font_mathcaligraphic">
+           𝒟
+          </mi>
+         </math>
+         : a large set of POS tagged posts
+         <math alttext="\mathcal{W}_{s}" class="ltx_Math" display="inline" id="S3.SS2.p3.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+          <msub>
+           <mi class="ltx_font_mathcaligraphic">
+            𝒲
+           </mi>
+           <mi>
+            s
+           </mi>
+          </msub>
+         </math>
+         : a set of seed words
+         <math alttext="k_{p}" class="ltx_Math" display="inline" id="S3.SS2.p3.m3" xmlns="http://www.w3.org/1998/Math/MathML">
+          <msub>
+           <mi>
+            k
+           </mi>
+           <mi>
+            p
+           </mi>
+          </msub>
+         </math>
+         : the number of patterns chosen at each iteration
+         <math alttext="k_{c}" class="ltx_Math" display="inline" id="S3.SS2.p3.m4" xmlns="http://www.w3.org/1998/Math/MathML">
+          <msub>
+           <mi>
+            k
+           </mi>
+           <mi>
+            c
+           </mi>
+          </msub>
+         </math>
+         : the number of patterns in the candidate pattern set
+         <math alttext="k_{w}" class="ltx_Math" display="inline" id="S3.SS2.p3.m5" xmlns="http://www.w3.org/1998/Math/MathML">
+          <msub>
+           <mi>
+            k
+           </mi>
+           <mi>
+            w
+           </mi>
+          </msub>
+         </math>
+         : the number of words added at each iteration
+         <math alttext="K" class="ltx_Math" display="inline" id="S3.SS2.p3.m6" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mi>
+           K
+          </mi>
+         </math>
+         : the number of words returned
+         A list of ranked new words
+         𝒲
+         Obtain all lexical patterns using regular expressions on
+         𝒟
+         Count the frequency of each lexical pattern and extract words matched by each pattern  
+Obtain top
+         kc
+         frequent patterns as candidate pattern set
+         𝒫c
+         and top 5,000 frequent words as
+candidate word set
+         𝒲c
+         𝒫=Φ
+         ;
+         𝒲
+         =
+         𝒲s
+         ; t = 0
+         |𝒲|&lt;K
+         Use
+         𝒲
+         to score each pattern in
+         𝒫c
+         with
+         U⁢(p)
+         𝒫={t⁢o⁢p⁢kp⁢p⁢a⁢t⁢t⁢e⁢r⁢n⁢s}
+         Use
+         𝒫
+         to extract new words and if the words are in
+         𝒲c
+         , score them with
+         F⁢(w)
+         𝒲=𝒲⁢⋃{t⁢o⁢p⁢kw⁢w⁢o⁢r⁢d⁢s}
+         𝒲c
+         =
+         𝒲c
+         -
+         𝒲
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         Sort words in
+         𝒲
+         with
+         F⁢(w)
+         Output the ranked list of words in
+         𝒲
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Measuring the Utility of a Pattern
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The first key issue is to quantify the utility of a pattern at each iteration.
+This can be measured by the association of a pattern to the current word set used in the algorithm.
+The likelihood ratio tests
+         [9]
+         is used for this purpose. This association model has also been used
+to model association between opinion target words by
+         [10]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         The LRT is well known for not relying critically on the assumption of normality, instead, it uses the asymptotic assumption of the generalized likelihood ratio. In practice, the use of likelihood ratios tends to result in significant improvements in text-analysis performance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         In our problem, LRT computes a contingency table of a pattern
+         p
+         and a word
+         w
+         ,
+derived from the corpus statistics, as given in Table
+         3
+         , where
+         k1⁢(w,p)
+         is the number of documents that
+         w
+         matches pattern
+         p
+         ,
+         k2⁢(w,p¯)
+         is the number of documents that
+         w
+         occurs while
+         p
+         does not,
+         k3⁢(w¯,p)
+         is the number of documents that
+         p
+         occurs while
+         w
+         does not, and
+         k4⁢(w¯,p¯)
+         is the number of documents containing neither
+         p
+         nor
+         w
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p4">
+        <p class="ltx_p">
+         Based on the statistics shown in Table
+         3
+         , the likelihood ratio tests (LRT) model captures the statistical association between a pattern
+         p
+         and a word
+         w
+         by employing the following formula:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p5">
+        L⁢R⁢T⁢(p,w)=l⁢o⁢g⁢L⁢(ρ1,k1,n1)*L⁢(ρ2,k2,n2)L⁢(ρ,k1,n1)*L⁢(ρ,k2,n2)
+
+(1)
+        <p class="ltx_p">
+         where:
+         <math alttext="L(\rho,k,n)=\rho^{k}*(1-\rho)^{n-k}" class="ltx_Math" display="inline" id="S3.SS3.p5.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mi>
+             L
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <mo>
+              (
+             </mo>
+             <mrow>
+              <mi>
+               ρ
+              </mi>
+              <mo>
+               ,
+              </mo>
+              <mi>
+               k
+              </mi>
+              <mo>
+               ,
+              </mo>
+              <mi>
+               n
+              </mi>
+             </mrow>
+             <mo>
+              )
+             </mo>
+            </mrow>
+           </mrow>
+           <mo>
+            =
+           </mo>
+           <mrow>
+            <msup>
+             <mi>
+              ρ
+             </mi>
+             <mi>
+              k
+             </mi>
+            </msup>
+            <mo>
+             *
+            </mo>
+            <msup>
+             <mrow>
+              <mo>
+               (
+              </mo>
+              <mrow>
+               <mn>
+                1
+               </mn>
+               <mo>
+                -
+               </mo>
+               <mi>
+                ρ
+               </mi>
+              </mrow>
+              <mo>
+               )
+              </mo>
+             </mrow>
+             <mrow>
+              <mi>
+               n
+              </mi>
+              <mo>
+               -
+              </mo>
+              <mi>
+               k
+              </mi>
+             </mrow>
+            </msup>
+           </mrow>
+          </mrow>
+         </math>
+         ;
+         n1=k1+k3
+         ;
+         n2=k2+k4
+         ;
+         ρ1=k1/n1
+         ;
+         ρ2=k2/n2
+         ;
+         ρ=(k1+k2)/(n1+n2)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p6">
+        <p class="ltx_p">
+         Thus, the utility of a pattern can be measured as follows:
+        </p>
+        U⁢(p)=∑wi∈𝒲L⁢R⁢T⁢(p,wi)
+
+(2)
+        <p class="ltx_p">
+         where
+         𝒲
+         is the current word set used in the algorithm (see Algorithm 1).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Measuring the Possibility of Being New Words
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         Another key issue in the proposed algorithm is to quantify the possibility of a candidate word being a new word.
+We consider several factors for this purpose.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.1
+         </span>
+         Likelihood Ratio Test
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS1.p1">
+         <p class="ltx_p">
+          Very similar to the pattern utility measure, LRT can also be used to measure the association of a candidate word to a given pattern set, as follows:
+         </p>
+         L⁢R⁢T⁢(w)=∑pi∈𝒫L⁢R⁢T⁢(w,pi)
+
+(3)
+         <p class="ltx_p">
+          where
+          𝒫
+          is the current pattern set used in the algorithm (see Algorithm 1),
+and
+          pi
+          is a lexical pattern.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS1.p2">
+         <p class="ltx_p">
+          This measure only quantifies the association of a candidate word to the given pattern set. It
+tells nothing about the possibility of a word being a new word, however, a new
+          sentiment
+          word,
+should have close association with the lexical patterns.
+This has linguistic interpretations because new sentiment
+words are commonly modified by adverbial words
+and thus should have close association with lexical patterns.
+This measure is proved to be an influential factor by our experiments in Section
+          4.3
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.2
+         </span>
+         Left Pattern Entropy
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS2.p1">
+         <p class="ltx_p">
+          If a candidate word is a new word, it will be more commonly used with diversified lexical patterns since the non-compositionality of new word means that the word can be used in many different linguistic scenarios. This can be measured by information entropy, as follows:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS2.p2">
+         L⁢P⁢E⁢(w)=-∑li∈L⁢(𝒫c,w)c⁢(li,w)N⁢(w)*l⁢o⁢g⁢c⁢(li,w)N⁢(w)
+
+(4)
+         <p class="ltx_p">
+          where
+          L⁢(𝒫c,w)
+          is the set of left word of all patterns by which word
+          w
+          can be matched in
+          𝒫c
+          ,
+          c⁢(li,w)
+          is the count that word
+          w
+          can be matched by patterns whose left word is
+          li
+          ,
+and
+          N⁢(w)
+          is the count that word
+          w
+          can be matched by the patterns in
+          𝒫c
+          .
+Note that we use
+          𝒫c
+          , instead of
+          𝒫
+          , because the latter set is very small while computing entropy needs a large number of patterns.
+Tuning the size of
+          𝒫c
+          will be further discussed in Section
+          4.4
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.3
+         </span>
+         New Word Probability
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS3.p1">
+         <p class="ltx_p">
+          Some words occur very frequently and can be widely matched by lexical patterns,
+but they are not new words. For example, ” 爱吃(love to eat)” and ” 爱说(love to talk)”
+can be matched by many lexical patterns, however, they are not new words due to the lack of
+non-compositionality. In such words, each single character
+has high probability to be a word. Thus, we design the following measure to favor this observation.
+         </p>
+         N⁢W⁢P⁢(w)=∏i=1np⁢(wi)1-p⁢(wi)
+
+(5)
+         <p class="ltx_p">
+          where
+          w=w1⁢w2⁢…⁢wn
+          , each
+          wi
+          is a single character, and
+          p⁢(wi)
+          is the probability of the character
+          wi
+          being a word,
+as computed as follows:
+         </p>
+         p⁢(wi)=a⁢l⁢l⁢(wi)-s⁢(wi)a⁢l⁢l⁢(wi)
+         <p class="ltx_p">
+          where
+          a⁢l⁢l⁢(wi)
+          is the total frequency of
+          wi
+          , and
+          s⁢(wi)
+          is the frequency of
+          wi
+          being a single character word. Obviously, in order to obtain the value of
+          s⁢(wi)
+          , some particular Chinese
+word segmentation tool is required. In this work, we resort to ICTCLAS
+          [21]
+          ,
+a widely used tool in the literature.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS4">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.4
+         </span>
+         Non-compositionality Measures
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS4.p1">
+         <p class="ltx_p">
+          New words are usually multi-word expressions,
+where a variety of statistical measures have been proposed to detect multi-word expressions.
+Thus, such measures can be naturally incorporated into our algorithm.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS4.p2">
+         <p class="ltx_p">
+          The first measure is enhanced mutual information (EMI)
+          [22]
+          :
+         </p>
+         E⁢M⁢I⁢(w)=l⁢o⁢g2⁢F/N∏i=1nFi-FN
+
+(6)
+         <p class="ltx_p">
+          where
+          F
+          is the number of posts in which a multi-word expression
+          w=w1⁢w2⁢…⁢wn
+          occurs,
+          Fi
+          is the number of posts where
+          wi
+          occurs,
+and
+          N
+          is the total number of posts.
+The key idea of EMI is to measure word pair’s dependency as the ratio of its probability of being a multi-word to its probability of not being a multi-word.
+The larger the value, the more possible the expression will be a multi-word expression.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS4.p3">
+         <p class="ltx_p">
+          The second measure we take into account is normalized multi-word expression distance
+          [2]
+          , which has been proposed to measure the non-compositionality of multi-word expressions.
+         </p>
+         N⁢M⁢E⁢D⁢(w)=l⁢o⁢g⁢|μ⁢(w)|-l⁢o⁢g⁢|ϕ⁢(w)|l⁢o⁢g⁢N-l⁢o⁢g⁢|ϕ⁢(w)|
+
+(7)
+         <p class="ltx_p">
+          where
+          μ⁢(w)
+          is the set of documents in which all single words in
+          w=w1⁢w2⁢…⁢wn
+          co-occur,
+          ϕ⁢(w)
+          is the set of documents in which word
+          w
+          occurs as a whole, and
+          N
+          is the total number of
+documents.
+Different from EMI, this measure is a strict distance metric, meaning that a smaller value
+indicates a larger possibility of being a multi-word expression.
+As can be seen from the formula, the key idea of this metric is to compute the ratio of the co-occurrence of
+all words in a multi-word expressions to the occurrence of the whole expression.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS4.SSS5">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.4.5
+         </span>
+         Configurations to Combine Various Factors
+        </h4>
+        <div class="ltx_para" id="S3.SS4.SSS5.p1">
+         <p class="ltx_p">
+          Taking into account the aforementioned factors, we have different settings to score a new word, as follows:
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS4.SSS5.p2">
+         FL⁢R⁢T⁢(w)=L⁢R⁢T⁢(w)
+
+(8)
+         FL⁢P⁢E⁢(w)=L⁢R⁢T⁢(w)*L⁢P⁢E⁢(w)
+
+(9)
+         FN⁢W⁢P⁢(w)=L⁢R⁢T⁢(w)*L⁢P⁢E⁢(w)*N⁢W⁢P⁢(w)
+
+(10)
+         FE⁢M⁢I⁢(w)=L⁢R⁢T⁢(w)*L⁢P⁢E⁢(w)*E⁢M⁢I⁢(w)
+
+(11)
+         FN⁢M⁢E⁢D⁢(w)=L⁢R⁢T⁢(w)*L⁢P⁢E⁢(w)N⁢M⁢E⁢D⁢(w)
+
+(12)
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiment
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In this section, we will conduct the following experiments: first, we will compare our method to several
+baselines, and perform parameter tuning with extensive experiments; second, we will classify polarity
+of new sentiment words using two methods; third, we will demonstrate how new sentiment words will benefit
+sentiment classification.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Data Preparation
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We crawled 237,108,977 Weibo posts from http://www.weibo.com, the largest social website in China.
+These posts range from January of 2011 to December of 2012.
+The posts were then part-of-speech tagged using a Chinese word segmentation tool named ICTCLAS
+         [21]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Then, we asked two annotators to label the top 5,000 frequent words
+that were extracted by lexical patterns as described in Algorithm 1.
+The annotators were requested to judge whether a candidate
+word is a new word, and also to judge the polarity of a new word (positive, negative, and neutral).
+If there is a disagreement on either of the two tasks, discussions are required to make the final decision.
+The annotation led to 323 new words, among which there are 116 positive words, 112 negative words,
+and 95 neutral words
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Evaluation Metric
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         As our algorithm outputs a ranked list of words, we adapt average precision to evaluate the performance of
+new sentiment word detection. The metric is computed as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        A⁢P⁢(K)=∑k=1KP⁢(k)*r⁢e⁢l⁢(k)∑k=1Kr⁢e⁢l⁢(k)
+        <p class="ltx_p">
+         where
+         P⁢(k)
+         is the precision at cut-off
+         k
+         ,
+         r⁢e⁢l⁢(k)
+         is 1 if the word at position
+         k
+         is a new word and 0 otherwise, and
+         K
+         is the number of words in the ranked list.
+A perfect list (all top
+         K
+         items are correct) has an AP value of 1.0.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Evaluation of Different Measures and Comparison to Baselines
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         First, we assess the influence of likelihood ratio test, which measures the association of a word to the pattern set.
+As can be seen from Table
+         4
+         ,
+the association model (LRT) remarkably boosts the performance of new word detection, indicating LRT is a key factor for new sentiment word extraction. From linguistic perspectives, new sentiment words are commonly modified by adverbial words and thus should have close association with lexical patterns.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         Second, we compare different settings of our method to two baselines. The first one is enhanced mutual information (EMI) where we set
+         F⁢(w)=E⁢M⁢I⁢(w)
+         [22]
+         and
+the second baseline is normalized multi-word expression distance (NMED)
+         [2]
+         where we set
+         F⁢(w)=N⁢M⁢E⁢D⁢(w)
+         .
+The results are shown
+in Figure
+         1
+         . As can be seen, all the proposed measures outperform
+the two baselines (
+         E⁢M⁢I
+         and
+         N⁢M⁢E⁢D
+         ) remarkably and consistently.
+The setting of
+         FN⁢M⁢E⁢D
+         produces the best performance.
+Adding
+         N⁢M⁢E⁢D
+         or
+         E⁢M⁢I
+         leads to remarkable improvements because of their capability
+of measuring non-compositionality of new words. Only using
+         L⁢R⁢T
+         can obtain a fairly good
+results when
+         K
+         is small, however, the performance drops sharply because it’s unable to measure non-compositionality. Comparison between
+         L⁢R⁢T+L⁢P⁢E
+         (or
+         L⁢R⁢T+L⁢P⁢E+N⁢W⁢P
+         ) and
+         L⁢R⁢T
+         shows that inclusion of left pattern entropy also boosts the performance apparently.
+However, the new word probability (
+         N⁢W⁢P
+         ) has only marginal contribution to improvement.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         In the above experiments, we set
+         kp=5
+         (the number of patterns chosen at each iteration) and
+         kw=10
+         (the number of words added at each iteration),
+which is the optimal setting and will be discussed in the next subsection.
+And only one seed word ”坑爹(reverse one’s expectation)” is used.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Parameter Tuning
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         Firstly, we will show how to obtain the optimal settings of
+         kp
+         and
+         kw
+         .
+The measure setting we take here is
+         FN⁢M⁢E⁢D⁢(w)
+         , as shown in Formula (
+         12
+         ).
+Again, we choose only one seed word ”坑爹(reverse one’s expectation)”, and the number of words returned is set to
+         K=300
+         . Results in Table
+         5
+         show that the performance drops consistently across different
+         kw
+         settings when the number of patterns increases. Note that at the early stage of Algorithm 1, larger
+         kp
+         (perhaps with noisy patterns) may lead to lower quality of new words; while larger
+         kw
+         (perhaps with noisy seed words) may lead to lower quality of lexical patterns.
+Therefore, we choose the optimal setting to small numbers, as
+         kp=5,kw=10
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         Secondly, we justify whether the proposed algorithm is sensitive to the number of seed words.
+We set
+         kp=5
+         and
+         kw=10
+         , and take
+         FN⁢M⁢E⁢D
+         as the weighting measure of new word.
+We experimented with only one seed word, two, three, and four seed words, respectively. The results in Table
+         6
+         show
+very stable performance when different numbers of seed words are chosen.
+It’s interesting that the performance is totally the same with different numbers of seed words.
+By looking into the pattern set and the selected words at each iteration,
+we found that the pattern set (
+         𝒫
+         ) converges soon to the same set after a few iterations;
+and at the beginning several iterations, the selected words are almost the same although the order of adding the words is different.
+Since the algorithm will finally sort the words at step (11) and
+         𝒫
+         is the same, the ranking of the words becomes
+all the same.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p3">
+        <p class="ltx_p">
+         Lastly, we need to decide the optimal number of patterns in
+         𝒫c
+         (that is,
+         kc
+         in Algorithm 1) because
+the set has been used in computing left pattern entropy, see Formula (
+         4
+         ).
+Too small size of
+         𝒫c
+         may lead to insufficient estimation of left pattern entropy. Results in Table
+         7
+         shows that larger
+         𝒫c
+         decrease the performance, particularly when the number of words returned (
+         K
+         ) becomes larger. Therefore, we set
+         |𝒫c|=100
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.5
+        </span>
+        Polarity Prediction of New Sentiment Words
+       </h3>
+       <div class="ltx_para" id="S4.SS5.p1">
+        <p class="ltx_p">
+         In this section, we attempt to classifying the polarity of the annotated 323 new words.
+Two methods are adapted with different settings for this purpose.
+The first one is majority vote (MV), and the second one is pointwise mutual information,
+similar to
+         [20]
+         . The majority vote method is formulated as below:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p2">
+        M⁢V⁢(w)=∑wp∈P⁢W#⁢(w,wp)|P⁢W|-∑wn∈N⁢W#⁢(w,wn)|N⁢W|
+        <p class="ltx_p">
+         where
+         P⁢W
+         and
+         N⁢W
+         are a positive and negative set of emoticons (or seed words) respectively,
+and
+         #⁢(w,wp)
+         is the co-occurrence count of the input word
+         w
+         and the item
+         wp
+         .
+The polarity is judged according to this rule: if
+         M⁢V⁢(w)&gt;t⁢h1
+         , the word
+         w
+         is positive;
+if
+         M⁢V⁢(w)&lt;-t⁢h1
+         the word negative; otherwise neutral. The threshold
+         t⁢h1
+         is manually tuned.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p3">
+        <p class="ltx_p">
+         And PMI is computed as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p4">
+        P⁢M⁢I⁢(w)=∑wp∈P⁢WP⁢M⁢I⁢(w,wp)|P⁢W|-∑wn∈N⁢WP⁢M⁢I⁢(w,wn)|N⁢W|
+        <p class="ltx_p">
+         where
+         P⁢M⁢I⁢(x,y)=l⁢o⁢g2⁢(P⁢r⁢(x,y)P⁢r⁢(x)*P⁢r⁢(y))
+         , and
+         P⁢r⁢(⋅)
+         denotes probability.
+The polarity is judged according to the rule:
+if
+         P⁢M⁢I⁢(w)&gt;t⁢h2
+         ,
+         w
+         is positive; if
+         P⁢M⁢I⁢(w)&lt;-t⁢h2
+         negative; otherwise neutral. The threshold
+         t⁢h2
+         is manually tuned.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p5">
+        <p class="ltx_p">
+         As for the resources
+         P⁢W
+         and
+         N⁢W
+         , we have three settings. The first setting (denoted by Large_Emo) is a set of most frequent 36 emoticons
+in which there are 21 positive and 15 negative emoticons respectively.
+The second one (denoted by Small_Emo) is a set of 10 emoticons, which are chosen from the 36 emoticons,
+as shown in Table
+         8
+         .
+The third one (denoted by Opin_Words) is two sets of seed opinion words, where
+         P⁢W
+         ={
+高兴(happy),大方(generous),漂亮(beautiful), 善良(kind), 聪明(smart)}
+and
+         N⁢W=
+         {伤心(sad),小气(mean),难看(ugly), 邪恶(wicked), 笨(stupid)}.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p6">
+        <p class="ltx_p">
+         The performance of polarity prediction is shown in Table
+         9
+         .
+In two-class polarity classification, we remove neutral words and only make prediction with positive/negative classes.
+The first observation is that the performance of using emoticons is much better than that of using seed opinion words.
+We conjecture that this may be because new sentiment words are more frequently co-occurring with emoticons than with these opinion words.
+The second observation is that three-class polarity classification is much more difficult than
+two-class polarity classification because many extracted new words are nouns such as ”基友(gay)”,”菇凉(girl)”, and
+”盆友(friend)”. Such nouns are more difficult to classify sentiment orientation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS6">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.6
+        </span>
+        Application of New Sentiment Words to Sentiment Classification
+       </h3>
+       <div class="ltx_para" id="S4.SS6.p1">
+        <p class="ltx_p">
+         In this section, we justify whether inclusion of new sentiment word would benefit sentiment classification.
+For this purpose, we randomly sampled and annotated 4,500 Weibo posts that contain at least one opinion word in the union of the Hownet
+         opinion lexicons and our annotated new words.
+We apply two models for polarity classification. The first model is a lexicon-based model (denoted by
+         L⁢e⁢x⁢i⁢c⁢o⁢n
+         ) that counts the number of
+positive and negative opinion words in a post respectively, and classifies a post to be positive if there are more positive words than negative ones,
+and to be negative otherwise.
+The second model is a SVM model in which opinion words are used as feature, and 5-fold cross validation is conducted.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS6.p2">
+        <p class="ltx_p">
+         We experiment with different settings of Hownet lexicon resources:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Hownet opinion words (denoted by Hownet): After removing some obviously inappropriate words,
+the left lexicons have 627 positive opinion words and 1,038 negative opinion words, respectively.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Compact Hownet opinion words (denoted by cptHownet): we count the frequency of the above opinion words on the training data and remove words whose document frequency is less than 2. This results in 138 positive words and 125 negative words.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         Then, we add into the above resources the labeled new polar words(denoted by
+         N⁢W
+         , including 116 positive and 112 negative words) and the top 100 words produced by the algorithm (denoted by
+         T⁢100
+         ), respectively.
+Note that the lexicon-based model requires the sentiment orientation of each dictionary entry
+         , we thus manually label the polarity of all top 100 words (we did NOT remove incorrect new word). This results in 52 positive and 34 negative words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS6.p3">
+        <p class="ltx_p">
+         Results in Table
+         10
+         show that
+inclusion of new words in both models improves the performance remarkably.
+In the setting of the original lexicon (Hownet), both models obtain 2-3% gains
+from the inclusion of new words. Similar improvement is observed in the setting
+of the compact lexicon. Note, that
+         T⁢100
+         is automatically obtained
+from Algorithm 1 so that it may contain words that are not new sentiment words, but
+the resource also improves performance remarkably.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In order to extract
+        new sentiment words
+        from large-scale user-generated content,
+this paper proposes a fully unsupervised, purely data-driven, and almost knowledge-free (except POS tags) framework.
+We design statistical measures to quantify the utility of a lexical pattern and
+to measure the possibility of a word being a new word, respectively.
+The method is almost free of linguistic resources (except POS tags),
+and does not rely on elaborated linguistic rules.
+We conduct extensive experiments to reveal the influence of different statistical measures in new word finding.
+Comparative experiments show that our proposed method outperforms baselines remarkably.
+Experiments also demonstrate that inclusion of new sentiment words benefits sentiment classification definitely.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        From linguistic perspectives, our framework is capable to extract
+        adjective
+        new words
+because the lexical patterns usually modify adjective words. As future work,
+we are considering how to extract other types of new sentiment words,
+such as
+        nounal
+        new words that can express sentiment.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

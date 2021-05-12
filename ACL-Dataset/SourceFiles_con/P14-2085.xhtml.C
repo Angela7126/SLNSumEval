@@ -1,0 +1,517 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Automatic prediction of aspectual class of verbs in context.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       This paper describes a new approach to predicting the aspectual class of verbs in context, i.e., whether a verb is used in a stative or dynamic sense. We identify two challenging cases of this problem: when the verb is unseen in training data, and when the verb is ambiguous for aspectual class. A semi-supervised approach using linguistically-motivated features and a novel set of distributional features based on representative verb types allows us to predict classes accurately, even for unseen verbs. Many frequent verbs can be either stative or dynamic in different contexts, which has not been modeled by previous work; we use contextual features to resolve this ambiguity. In addition, we introduce two new datasets of clauses marked for aspectual class.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        In this work, we focus on the automatic prediction of whether a verb in context is used in a
+        stative
+        or in a
+        dynamic
+        sense, the most fundamental distinction in all taxonomies of
+        aspectual class
+        . The aspectual class of a discourse’s finite verbs is an important factor in conveying and interpreting temporal structure
+        [21, 10, 18]
+        ; others are tense, grammatical aspect, mood and whether the utterance represents an event as completed. More accurate temporal information processing is expected to be beneficial for a variety of natural language processing tasks
+        [7, 32]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        While most verbs have one predominant interpretation, others
+are more flexible for aspectual class and
+can occur as either stative (
+        1
+        ) or dynamic (
+        1
+        ) depending on the context. There are also cases that allow for both readings, such as (
+        1
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <ul class="ltx_itemize">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           The liquid
+           fills
+           the container. (stative)
+          </p>
+         </div>
+        </li>
+       </ul>
+       <ul class="ltx_itemize">
+        <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i1.p1">
+          <p class="ltx_p">
+           The pool slowly
+           filled
+           with water. (dynamic)
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <ul class="ltx_itemize">
+        <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I3.i1.p1">
+          <p class="ltx_p">
+           Your soul was made to be
+           filled
+           with God Himself. (both)
+           (Brown corpus, religion)
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Cases like (
+        1
+        ) do not imply that there is a third class, but rather that two interpretations are available for the sentence, of which usually one will be chosen by a reader.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Following
+        Siegel and McKeown (2000)
+        , we aim to automatically classify clauses for
+        fundamental aspectual class
+        , a function of the main verb and a select group of complements, which may differ per verb
+        [26, 28]
+        . This corresponds to the aspectual class of the clause’s main verb when ignoring any aspectual markers or transformations. For example, English sentences with perfect tense are usually considered to introduce states to the discourse
+        [29, 17]
+        , but we are interested in the aspectual class before this transformation takes place. The clause
+        John has kissed Mary
+        introduces a state, but the fundamental aspectual class of the ‘tenseless’ clause
+        John kiss Mary
+        is dynamic.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        In contrast to
+        Siegel and McKeown (2000)
+        , we do not conduct the task of predicting aspectual class solely at the type level, as such an approach ignores the minority class of ambiguous verbs. Instead we predict the aspectual class of verbs in the context of their arguments and modifiers. We show that this method works better than using only type-based features, especially for verbs with ambiguous aspectual class. In addition, we show that type-based features, including novel distributional features based on representative verbs, accurately predict predominant aspectual class for unseen verb types. Our work differs from prior work in that we treat the problem as a three-way classification task, predicting
+        dynamic
+        ,
+        stative
+        or
+        both
+        as the aspectual class of a verb in context.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Aspectual class is well treated in the linguistic literature
+        [33, 12, 29, for example]
+        .
+Our notion of the stative/dynamic distinction corresponds to Bach’s
+        [1]
+        distinction between states and non-states; to states versus occurrences (events and processes) according to
+        Mourelatos (1978)
+        ; and to Vendler’s
+        [33]
+        distinction between states and the other three classes (activities, achievements, accomplishments).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Early studies on the computational modeling of aspectual class
+        [23, 24, 5, 18]
+        laid foundations for a cluster of papers published over a decade ago
+        [26, 28, 27]
+        . Since then, it has mostly been treated as a subtask within temporal reasoning, such as in efforts related to TimeBank
+        [25]
+        and the TempEval challenges
+        [34, 35, 32]
+        , where top-performing systems
+        [16, 3, 6]
+        use corpus-based features, WordNet synsets, parse paths and features from typed dependencies to classify events as a joint task with determining the event’s span.
+        Costa and Branco (2012)
+        explore the usefulness of a wider range of explicitly aspectual features for temporal relation classification.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Siegel and McKeown (2000)
+        present the most extensive study of predicting aspectual class, which is the main inspiration for this work. While all of their linguistically motivated features (see section
+        4.1
+        ) are type-based, they train on and evaluate over labeled verbs in context. Their data set taken from medical discharge summaries comprises 1500 clauses containing main verbs other than
+        be
+        and
+        have
+        which are marked for aspectual class.
+Their model fails to outperform a baseline of memorizing the most frequent class of a verb type, and they present an experiment testing on unseen verb types only for the related task of classifying completedness of events.
+We replicate their method using publicly available software, create a similar but larger corpus,
+        and show that it is indeed possible to predict the aspectual class of unseen verbs.
+        Siegel (1998a)
+        investigates a classification method for the verb
+        have
+        in context; inspired by this work, our present work goes one step further and uses a larger set of
+        instance-based
+        contextual features to perform experiments on a set of 20 verbs.
+To the best of our knowledge, there is no previous work comprehensively addressing aspectual classification of verbs in context.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Data
+      </h2>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P1">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Verb type seed sets
+       </h5>
+       <div class="ltx_para" id="S3.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         Using the
+         LCS Database
+         [11]
+         , we identify sets of verb types whose senses are only stative (188 verbs, e.g.
+         belong, cost, possess
+         ), only dynamic (3760 verbs, e.g.
+         alter, knock, resign
+         ), or mixed (215 verbs, e.g.
+         fill, stand, take
+         ), following a procedure described by
+         Dorr and Olsen (1997)
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P2">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Asp-MASC
+       </h5>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         The Asp-MASC corpus consists of 7875 clauses from the letters, news and jokes sections of MASC
+         [15]
+         ,
+each labeled by two annotators for the aspectual class of the main verb.
+         Texts were segmented into clauses using SPADE
+         [30]
+         with some heuristic post-processing. We parse the corpus using the Stanford dependency parser
+         [8]
+         and extract the main verb of each segment. We use 6161 clauses for the classification task, omitting clauses with
+         have
+         or
+         be
+         as the main verb and those where no main verb could be identified due to parsing errors (
+         none
+         ).
+Table
+         1
+         shows inter-annotator agreement; Table
+         2
+         shows the confusion matrix for the two annotators.
+Our two annotators exhibit different preferences on the 598 cases where they disagree between
+         dynamic
+         and
+         stative
+         .
+Such differences in annotation preferences are not uncommon
+         [2]
+         .
+We observe higher agreement in the jokes and news subcorpora than for letters; texts in the letters subcorpora are largely argumentative and thus have a different rhetorical style than the more straightforward narratives and reports found in jokes. Overall, we find substantial agreement.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS0.SSS0.P2.p2">
+        <p class="ltx_p">
+         The data for our experiments uses the label
+         dynamic
+         or
+         stative
+         whenever annotators agree, and
+         both
+         whenever they disagree or when at least one annotator marked the clause as
+         both
+         , assuming that both readings are possible in such cases.
+Because we don’t want to model the authors’ personal view of the theory, we refrain from applying an adjudication step and model the data as is.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S3.SS0.SSS0.P3">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Asp-Ambig: (Brown)
+       </h5>
+       <div class="ltx_para" id="S3.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         In order to facilitate a first study on ambiguous verbs, we select 20 frequent verbs from the list of ‘mixed’ verbs (see section
+         3
+         ) and for each mark 138 sentences. Sentences are extracted randomly from the Brown corpus, such that the distribution of stative/dynamic usages is expected to be natural. We present entire sentences to the annotators who mark the aspectual class of the verb in question as highlighted in the sentence. The data is processed in the same way as Asp-MASC, discarding instances with parsing problems. This results in 2667 instances.
+         κ
+         is 0.6, the confusion matrix is shown in Table
+         3
+         .
+Details are listed in Table
+         10
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Model and Features
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        For predicting the aspectual class of verbs in context (
+        stative
+        ,
+        dynamic
+        ,
+        both
+        ), we assume a supervised
+learning setting and explore features mined from a large
+background corpus, distributional features, and instance-based features. If not indicated otherwise,
+experiments use a Random Forest classifier
+        [4]
+        trained
+with the implementation and standard parameter settings from Weka
+        [14]
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Linguistic indicator features (LingInd)
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         This set of corpus-based features is a reimplementation of the linguistic indicators of
+         Siegel and McKeown (2000)
+         , who show that (some of) these features correlate with either stative or dynamic verb types. We parse the AFE and XIE sections of Gigaword
+         [13]
+         with the Stanford dependency parser.
+For each verb type, we obtain a normalized count showing how often it occurs with each of the indicators in Table
+         4
+         , resulting in one value per feature per verb. For example, for the verb
+         fill
+         , the value of the feature
+         temporal-adverb
+         is 0.0085, meaning that 0.85% of the occurrences of
+         fill
+         in the corpus are modified by one of the temporal adverbs on the list compiled by
+         Siegel (1998b)
+         .
+Tense, progressive, perfect and voice are extracted
+using a set of rules following
+         Loaiciga et al. (2014)
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Distributional Features (Dist)
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We aim to leverage existing, possibly noisy sets of representative stative, dynamic or mixed verb types extracted from LCS (see section
+         3
+         ), making up for unseen verbs and noise by averaging over distributional similarities.
+Using an existing large distributional model
+         [31]
+         estimated over the set of Gigaword documents marked as stories, for each verb type, we build a syntactically informed vector representing the contexts in which the verb occurs.
+We compute three numeric feature values per verb type, which correspond to the average cosine similarities with the verb types in each of the three seed sets.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Instance-based features (Inst)
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Table
+         5
+         shows our set of instance-based syntactic and semantic features.
+In contrast to the above described type-based features, these features do not rely on a background corpus, but are extracted from the clause being classified. Tense, progressive, perfect and voice are extracted from dependency parses as described above.
+For features encoding grammatical dependents, we focus on a subset of grammatical relations. The feature value is either the WordNet lexical filename (e.g.
+         noun.person
+         ) of the given relation’s argument or its POS tag, if the former is not available. We simply use the most frequent sense for the dependent’s lemma. We also include features that indicate, if there are any, the particle of the verb and its prepositional dependents. For the sentence
+         A little girl had just finished her first week of school
+         , the instance-based feature values would include
+         tense
+         :
+         past
+         ,
+         subj
+         :
+         noun.person
+         ,
+         dobj
+         :
+         noun.time
+         or
+         particle
+         :
+         none
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        The experiments presented in this section aim to evaluate the effectiveness of the feature sets described in the previous section, focusing on the challenging cases of verb types unseen in the training data and highly ambiguous verbs. The feature
+        Lemma
+        indicates that the verb’s lemma is used as an additional feature.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SSx1">
+       <h3 class="ltx_title ltx_title_subsection">
+        Experiment 1:
+        Seen
+        verbs
+       </h3>
+       <div class="ltx_para" id="S5.SSx1.p1">
+        <p class="ltx_p">
+         The setting of our first experiment follows
+         Siegel and McKeown (2000)
+         . Table
+         6
+         reports results for 10-fold cross-validation, with occurrences of all verbs distributed evenly over the folds. No feature combination significantly
+         outperforms the baseline of simply memorizing the most frequent class of a verb type in the respective training folds.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SSx1.SSSx1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         Experiment 2:
+         UNSEEN
+         verbs
+        </h4>
+        <div class="ltx_para" id="S5.SSx1.SSSx1.p1">
+         <p class="ltx_p">
+          This experiment shows a successful case of semi-supervised learning: while type-based feature values can be estimated from large corpora in an unsupervised way, some labeled training data is necessary to learn their best combination. This experiment specifically examines performance on verbs not seen in labeled training data. We use 10-fold cross validation but ensure that all occurrences of a verb type appear in the same fold: verb types in each test fold have
+          not
+          been seen in the respective training data, ruling out the Lemma feature. A Logistic regression classifier
+          [14]
+          works better here (using only numeric features), and we present results in Table
+          7
+          . Both the LingInd and Dist features generalize across verb types, and their combination works best.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SSx2">
+       <h3 class="ltx_title ltx_title_subsection">
+        Experiment 3:
+        one-
+        vs.
+        multi-label
+        verbs
+       </h3>
+       <div class="ltx_para" id="S5.SSx2.p1">
+        <p class="ltx_p">
+         For this experiment, we compute results separately for one-label verbs (those for which all instances in Asp-MASC have the same label) and for multi-label verbs (instances have differing labels in Asp-MASC). We expect one-label verbs to have a strong predominant aspectual class, and multi-label verbs to be more flexible.
+Otherwise, the experimental setup is as in experiment 1. Results appear in Table
+         8
+         . In each case, the linguistic indicator features again perform on par with the baseline.
+For multi-label verbs, the feature combination Lemma+LingInd+Inst leads to significant
+         <sup class="ltx_sup">
+          5
+         </sup>
+         improvement of 2% gain in accuracy over the baseline; Table
+         9
+         reports detailed class statistics and reveals a gain in F-measure of 3 points over the baseline.
+To sum up, Inst features are essential for classifying multi-label verbs, and the LingInd features provide some useful prior. These results motivate the need for an instance-based approach.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SSx3">
+       <h3 class="ltx_title ltx_title_subsection">
+        Experiment 4:
+        Instance-based
+        classification
+       </h3>
+       <div class="ltx_para" id="S5.SSx3.p1">
+        <p class="ltx_p">
+         For verbs with ambiguous aspectual class, type-based classification is
+not sufficient, as this approach selects a dominant sense for any
+given verb and then always assigns that. Therefore we propose handling ambiguous verbs separately.
+As Asp-MASC contains only few instances of each of the ambiguous verbs, we turn to the Asp-Ambig dataset. We perform a Leave-One-Out (LOO) cross validation evaluation, with
+results reported in Table
+         10
+         .
+         Using the Inst features alone (not shown in Table
+         10
+         ) results in a micro-average accuracy of only 58.1%: these features are only useful when combined with the feature Lemma.
+For classifying verbs whose most frequent class occurs less than 56% of the time, Lemma+Inst features are essential. Whether or not performance is improved by adding LingInd/Dist features, with their bias towards one aspectual class, depends on the verb type. It is an open research question which verb types should be treated in which way.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

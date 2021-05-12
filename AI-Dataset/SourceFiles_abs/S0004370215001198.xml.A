@@ -1,0 +1,1049 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Coalition structure generation: A survey.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The multi-agent systems research field is concerned with understanding and building systems containing multiple autonomous software entities (called agents) that may have different preferences, goals, beliefs, and capabilities [85]. One of the key objectives of the multi-agent systems domain is to build agents that can take joint, coordinated actions, for example to improve their performance, or to achieve goals that are beyond the capabilities of individual agents. Such interaction may be useful both in cases where the agents are cooperative (i.e., their goal is to maximize some overarching system-wide objective) as well as cases where they are selfish (i.e., each agent acts in its own best interests, regardless of the consequences on other agents).
+     </paragraph>
+     <paragraph>
+      The way the agents are organized in a system influences, or even governs, their interaction. For example, if the agents are organized hierarchically, then an agent would only be able to coordinate with its parent and/or children in the hierarchy. Clearly, there are many alternative organizational paradigms (not just hierarchies), each with their own strengths and weaknesses [32]. One such paradigm, which has received much attention in the literature, involves the formation of coalitions, i.e., groups of agents that typically exhibit the following characteristics: Firstly, they are goal-directed and short-lived; they are formed with a purpose in mind and dissolve when that purpose no longer exists, or when they cease to suit that purpose. Secondly, coordination occurs among members of the same coalition, but not among members of different coalitions. Thirdly, the organizational structure within each coalition is usually flat (rather than hierarchical, for example).
+     </paragraph>
+     <paragraph>
+      A wide range of potential applications of coalition formation have been considered in the literature. For example, by forming coalitions: autonomous sensors can improve their surveillance of certain areas [31]; virtual power plants can reduce the uncertainty of their expected energy output [13]; cognitive radio networks can increase their throughput [38]; and buyers can obtain lower prices through bulk purchasing [39]. It should be noted, however, that the coalition structure generation problem, being an abstraction, only serves as a first step towards understanding and building real-world solutions (as is the case with many research topics in cooperative game theory, where the focus on abstraction means that the solutions disregard much domain-specific information that may be critical when solving real-world problems).
+     </paragraph>
+     <paragraph>
+      Generally speaking, the coalition-formation process involves three main activities [78]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Forming a coalition structure. This activity involves each agent joining a coalition.{sup:2} This is done either endogenously (by the agents deciding autonomously among themselves using some bargaining procedure), or exogenously (e.g., by a system designer). The resulting set of coalitions is called a coalition structure. Typically, we are interested in the coalition structure that maximizes social welfare, or minimizes the agents' incentive to deviate from their coalitions.
+      </list-item>
+      <list-item label="•">
+       Solving the optimization problem of each coalition. This activity addresses the following question: How should the members of a coalition coordinate their activities such that the performance of the coalition is maximized?
+      </list-item>
+      <list-item label="•">
+       Dividing the reward of each coalition among its members. If the benefits of cooperative action are accrued to a coalition as a whole, then the members of that coalition will need to agree on how to divide these benefits amongst themselves. Typically the goal is to do this in such a way as to satisfy certain desirable criteria, such as fairness (where each agent's reward reflects its contribution to the game), or stability (where no group of agents can selfishly benefit by forming their own coalition). In this context, a solution concept specifies (i) which coalitions to form, and (ii) how the payoff of every formed coalition is divided among its members.
+      </list-item>
+     </list>
+     <paragraph>
+      In this article, we focus on the problem of identifying coalition structures that maximize social welfare. While the relevance of this problem is clear when the agents are cooperative, it is perhaps less so when the agents are selfish. The main relevance in the latter setting arises when we need to compute solution concepts that inherently require the agents to be partitioned optimally. This is the case, for instance, with the core—one of the key solution concepts in coalitional game theory [24], [29]. According to this scheme, for any division of rewards to be stable, a necessary condition is that the agents form a social welfare-maximizing coalition structure (see, e.g., [16], Proposition 2.21). In other words, computing a stable outcome implies solving the coalition structure generation problem. Other fundamental game theoretic contexts where the solution to this problem may be useful are the Price of Anarchy and the Price of Stability. Specifically, in the coalitional game context, the Price of Anarchy is defined as the ratio between the worst stable{sup:3} coalition structure and the welfare-maximizing coalition structure [35]. Similarly, the Price of Stability is defined as the ratio between the best stable coalition structure and the welfare-maximizing coalition structure [3].
+     </paragraph>
+     <paragraph>
+      Arguably, the first attempts to study the algorithmic aspects of coalition formation in the multi-agent community were those made by Shehory and Kraus [81], by Ketchpel [37], and by Zlotkin and Rosenschein [96]. Prior to these works, the primary focus in the literature was on the theoretical analysis of the properties of various solution concepts, rather than focusing on the development of coalition formation algorithms. Several heuristic algorithms were later on proposed by Shehory and Kraus for various settings [82], [83], [84]. Continuing this line of research, the seminal work by Sandholm et al. [78] studied the computational aspects of identifying coalition structures with worst-case guarantees on solution quality. Since then, numerous algorithms have been proposed to solve this problem, using a range of different techniques. In what follows, we present a comprehensive survey of this literature, and discuss a variety of directions from which the coalition structure generation problem has been approached. Careful attention has been given to ensure that the intuitions behind the different algorithms and their underlying theorems are presented in an accessible and clear manner. As such, the reader is not assumed to have expertise in combinatorial optimization or game theory.
+     </paragraph>
+     <paragraph>
+      The remainder of the paper is structured as follows.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Section2 (page 141) introduces our key definitions and notational conventions.
+      </list-item>
+      <list-item label="•">
+       Section3 (page 143) presents alternative representations of the search space (i.e., the space of possible coalition structures).
+      </list-item>
+      <list-item label="•">
+       Section4 (page 143) presents a dynamic programming algorithm that computes an optimal coalition structure. This is an exact algorithm, but not an anytime algorithm.
+      </list-item>
+      <list-item label="•">
+       Section5 (page 147) presents exact, anytime algorithms whose solution quality improves monotonically over time. In particular:
+      </list-item>
+      <list-item label="•">
+       Section6 (page 154) presents metaheuristic algorithms, which do not provide any guarantees on solution quality, but can handle very large problems.
+      </list-item>
+      <list-item label="•">
+       Section7 (page 155) discusses the coalition structure generation problem under various compact representations of the characteristic function. More specifically:
+      </list-item>
+      <list-item label="•">
+       Section8 (page 163) considers settings where a coalition is allowed to form if it satisfies certain constraints. In more detail:
+      </list-item>
+      <list-item label="•">
+       Section9 (page 167) focuses on Partition Function Games (PFGs), where the value of a coalition may differ depending on how non-members are partitioned. In particular:
+      </list-item>
+      <list-item label="•">
+       Section11 (page 171) concludes the article and outlines potential future directions.
+      </list-item>
+      <list-item label="•">
+       Appendix A (page 172) summarizes the main notation used throughout the article.
+      </list-item>
+     </list>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries and problem definition
+     </section-title>
+     <paragraph>
+      The basic assumption underpinning the work surveyed in this article is that the agents in the multi-agent system can coordinate their activities, and that there is potentially some benefit to be gained from such collective action. A cooperative game is a natural way to model such a setting.{sup:4} Here, the setting is called a game, which is populated by n players (or agents), the set of which is denoted by {a mathematical formula}A={a1,a2,…,an}, and the term “coalition” is used to refer to a non-empty subset of A. Furthermore, a collection of pairwise-disjoint coalitions is called a “coalition structure”. Formally:
+     </paragraph>
+     <paragraph label="Definition 1">
+      For any coalition, C, a coalition structure over C is a collection of coalitions, {a mathematical formula}CS={C1,…,Ck}, such that {a mathematical formula}⋃CS=C, and {a mathematical formula}Ci∩Cj=∅ for any {a mathematical formula}i,j∈{1,…,k}:i≠j. The set of coalition structures over C will be denoted by {a mathematical formula}ΠC.
+     </paragraph>
+     <paragraph>
+      For example, given a set of five agents, {a mathematical formula}A={a1,a2,a3,a4,a5}, and a coalition, {a mathematical formula}C={a3,a4,a5}, a possible coalition structure over A is: {a mathematical formula}{{a1},{a2,a3},{a4,a5}}, and a possible coalition structure over C is: {a mathematical formula}{{a3},{a4,a5}}. As is common in the literature, when talking about a coalition structure over some coalition, {a mathematical formula}C⊆A, we will often omit “over C” if it is clear from the context, and simply write “coalition structure”. We will denote an arbitrary coalition in a coalition structure using the notation C, possibly with subscripts (e.g., {a mathematical formula}C1 or {a mathematical formula}Ci), or with primes (e.g., {a mathematical formula}C′ or {a mathematical formula}C″). Next, we introduce the notion of an “embedded coalition”:
+     </paragraph>
+     <paragraph label="Definition 2">
+      An embedded coalition is a pair, {a mathematical formula}(C,CS), where C is a coalition, and CS is a coalition structure over A that contains C. That is, {a mathematical formula}CS∈ΠA:C∈CS. The set of all embedded coalitions will be denoted by EC.
+     </paragraph>
+     <paragraph>
+      In some settings modeled by coalitional games, the reward (or value) attainable by a coalition can be expressed in monetary terms; the reward can be placed in one big pot, and the agents can then decide on how to distribute it among themselves. Such a setting is called a transferable utility game. In contrast, there are settings in which the reward of a coalition is expressed as a vector that specifies the individual reward of every member; an agent cannot alter this allocation, say, by transferring (some of) its reward to other agents. Such a setting is called a non-transferable utility game[60]. Between those two classes, transferable utility games have received most attention from the multi-agent systems community to date. Given this, we will restrict our attention to transferable utility games and from now on simply write “game” instead of “coalitional game with transferable utility”.
+     </paragraph>
+     <paragraph>
+      The following are two distinct classes of games that differ in terms of the factors that influence a coalition's value:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Characteristic function games (CFGs) are those where the value of a coalition depends solely on the identities of its members. Such a game is given by a pair, {a mathematical formula}(A,v), where A is the set of agents and v is a function—called the characteristic function—that maps each coalition, C, to its value, {a mathematical formula}v(C). Formally: {a mathematical formula}v:2A→R.
+      </list-item>
+      <list-item label="•">
+       Partition function games (PFGs) are those where the value of a coalition entirely depends on both the identities of its members as well as the way non-members are partitioned. Such a game is given by a pair, {a mathematical formula}(A,w), where A is the set of agents and w is a function—called the partition function—that maps each embedded coalition, {a mathematical formula}(C,CS), to its value, {a mathematical formula}w((C,CS)). Formally, {a mathematical formula}w:EC→R. We will write {a mathematical formula}w(C,CS) instead of {a mathematical formula}w((C,CS)) for brevity.
+      </list-item>
+     </list>
+     <paragraph>
+      Observe that CFGs form a proper subclass of PFGs. Furthermore, a coalition {a mathematical formula}C⊆A has exactly one value in CFGs, while in PFGs it has as many values as there are ways to partition the agents in {a mathematical formula}A∖C. As such, CFGs tend to be much easier to work with (which is, perhaps, why they have received more attention in the literature on algorithmic game theory). This fact is reflected in this article; all of the remaining sections deal with CFGs, apart from Section 9, which focuses on PFGs.
+     </paragraph>
+     <paragraph>
+      A common assumption in the literature is that the worth (or value) of a coalition structure is simply the sum of the values of the coalitions in it. More formally, in CFGs, for any coalition, {a mathematical formula}C⊆A, the value of a coalition structure, {a mathematical formula}CS∈ΠC, is denoted by {a mathematical formula}V(CS) and is given by:{a mathematical formula} On the other hand, in PFGs, the value of CS is denoted by {a mathematical formula}W(CS) and is given by:{a mathematical formula} As is standard in the literature (e.g., [78], [19], [67]) we assume that {a mathematical formula}v(C)≥0 for any {a mathematical formula}C⊆A, and that {a mathematical formula}w(C,CS)≥0 for any {a mathematical formula}(C,CS)∈EC. Now, we are ready to define the computational problem that we focus on throughout this article.
+     </paragraph>
+     <paragraph label="Definition 3">
+      The coalition structure generation problem is the problem of finding a coalition structure over A whose value is maximal. Such a coalition structure is said to be “optimal”, and is denoted by {a mathematical formula}CS⁎. More specifically, in CFGs, coalition structure generation is the problem of finding {a mathematical formula}CS⁎∈argmaxCS∈ΠAV(CS), while in PFGs it is the problem of finding {a mathematical formula}CS⁎∈argmaxCS∈ΠAW(CS).
+     </paragraph>
+     <paragraph>
+      This is a combinatorial optimization problem, which in principle could be solved to optimality by brute-force search. However, this is not practicable, as the number of possible coalition structures over n agents—known as the Bell number and denoted by {a mathematical formula}Bn[9]—satisfies:{a mathematical formula} for some positive constant α (see, e.g., Sandholm et al. [78] for proofs of these bounds and de Bruijn [20] for an asymptotically tight bound). Unfortunately, in PFGs, it is not possible to avoid brute-force search given an arbitrary partition function. This is because knowing the value of a coalition structure, {a mathematical formula}CS∈ΠA, tells us nothing about the value of any other coalition structure, {a mathematical formula}CS′∈ΠA:CS′≠CS, even if CS and {a mathematical formula}CS′ have some elements (i.e., coalitions) in common. Therefore, studying the coalition structure generation problem in PFGs is only interesting when additional assumptions are placed on the partition function w (see Section 9 for more details).
+     </paragraph>
+     <paragraph>
+      On the other hand, in CFGs, brute-force search can sometimes be avoided, as we will show in subsequent sections. Nevertheless, finding an optimal coalition structure in CFGs is NP-complete given oracle access to the characteristic function (see Proposition 2 in [78]). The proof is based on a reduction from the set-packing decision problem—where we are given a constant q and a family of sets {a mathematical formula}S and we need to determine whether a set of q mutually-disjoint sets exists—to the following decision problem: given a characteristic function with which every coalition in {a mathematical formula}S has a value of 1, and every coalition outside of {a mathematical formula}S has a value of 0, determine whether a coalition structure exists whose value is at least q.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Space representations
+     </section-title>
+     <paragraph>
+      Understood in its simplest terms, the coalition structure generation problem implies searching {a mathematical formula}ΠA—the space of all possible coalition structures over A—in order to find one whose value is maximal. Several approaches to this problem are based on the observation that the set {a mathematical formula}ΠA has some structure, which can be exploited to speed up the search process. To understand how these approaches work, it is useful to consider representations for {a mathematical formula}ΠA that exploit this structure. We therefore begin by presenting the two main representations of {a mathematical formula}ΠA that have been proposed. Observe that every coalition structure in {a mathematical formula}ΠA represents a possible solution to the coalition structure generation problem. As such, the terms “coalition structure”, “partition”, and “solution” will be used interchangeably, and {a mathematical formula}ΠA will often be referred to as the “search space”.
+     </paragraph>
+     <paragraph>
+      The first representation we consider was proposed by Sandholm et al. [78], and is called the coalition structure graph. Specifically, in this undirected graph:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Every node represents a coalition structure. These nodes are categorized into levels, {a mathematical formula}Π1A,…,ΠnA, where level {a mathematical formula}ΠiA contains the nodes that represent all coalition structures containing exactly i coalitions.
+      </list-item>
+      <list-item label="•">
+       An edge connects two coalition structures if and only if: (1) they belong to two consecutive levels {a mathematical formula}ΠiA and {a mathematical formula}Πi−1A, and (2) the coalition structure in {a mathematical formula}ΠiA can be obtained from the one in {a mathematical formula}Πi−1A by splitting one coalition into two.
+      </list-item>
+     </list>
+     <paragraph>
+      A four-agent example can be seen in Fig. 1.{sup:5}
+     </paragraph>
+     <paragraph>
+      While the above representation categorizes the coalition structures according to the number of coalitions they contain, an alternative representation was proposed to categorize them based on the sizes of the coalitions they contain [71]. More specifically, this representation divides the space of coalition structures into disjoint subspaces that are each represented by an integer partition of n. Recall that an integer partition of n is a multiset of positive integers, or parts, whose sum (with multiplicities) is equal to n[2]. We will denote the set of all such integer partitions by {a mathematical formula}In. For instance, {a mathematical formula}I4={{4},{1,3},{2,2},{1,1,2},{1,1,1,1}}. For every {a mathematical formula}I∈In, we denote by {a mathematical formula}ΠIA⊆ΠA the subspace consisting of all the coalition structures within which the sizes of the coalitions match the parts of I. For instance, {a mathematical formula}Π{1,1,2}{a1,a2,a3,a4} is the subspace consisting of all the coalition structures within which two coalitions are of size 1 and one coalition is of size 2. This representation can be encoded by an integer partition graph[62]. This is an undirected graph, where every subspace is represented by a node, and two nodes representing {a mathematical formula}I,I′∈In, are connected via an edge if and only if there exists two parts {a mathematical formula}i,j∈I such that {a mathematical formula}I′=(I∖{i,j})⊎{i+j} (here ⊎ denotes the multiset union operation). For example, Fig. 2 shows the integer partition graph of four agents, as well as the subspaces that correspond to every node in the graph.
+     </paragraph>
+     <paragraph>
+      Having described some key representations for the search space, we will now present different approaches to the coalition structure generation problem, some of which depend directly upon those representations.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Dynamic programming algorithms
+     </section-title>
+     <paragraph label="Theorem 1">
+      The first dynamic programming algorithm for the coalition structure generation problem, called DP, was proposed by Yeh [93]. The DP algorithm depends directly on the following theorem. Given a coalition{a mathematical formula}C⊆A, let{a mathematical formula}f(C)be the value of an optimal coalition structure over C. That is,{a mathematical formula}f(C)=maxCS∈ΠC⁡V(CS). Then{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      The result is immediate when {a mathematical formula}|C|=1. Thus, for the remainder of the proof we will assume that {a mathematical formula}|C|&gt;1. We make use of the following lemma.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      For any coalition{a mathematical formula}C⊆A, if{a mathematical formula}CS={C1,…,Ck&gt;1}is an optimal coalition structure over (i.e., an optimal partition of) C, then for any{a mathematical formula}j:1≤j&lt;k, it holds that{a mathematical formula}CS′={C1,…,Cj}is an optimal coalition structure over{a mathematical formula}C′=∪CS′, and{a mathematical formula}CS″={Cj+1,…,Ck}is an optimal coalition structure over{a mathematical formula}C″=∪CS″.
+     </paragraph>
+     <paragraph label="Proof of Lemma 1">
+      Observe that {a mathematical formula}C=C′∪C″ and that {a mathematical formula}CS=CS′∪CS″ and {a mathematical formula}V(CS)=V(CS′)+V(CS″). Suppose for the sake of contradiction that {a mathematical formula}CS′ was not an optimal coalition structure over {a mathematical formula}C′. Then there exists another one, say {a mathematical formula}CS†∈ΠC′, such that {a mathematical formula}V(CS†)&gt;V(CS′). However, this implies that {a mathematical formula}CS†∪CS″ is a coalition structure whose value—{a mathematical formula}V(CS†)+V(CS″)—is greater than {a mathematical formula}V(CS)=V(CS′)+V(CS″), which contradicts the assumption that CS is optimal.The same contradiction is reached if we assume that {a mathematical formula}CS″ is not an optimal coalition structure over {a mathematical formula}C″, which completes the proof of the lemma.  □
+     </paragraph>
+     <paragraph>
+      Now, let {a mathematical formula}opt(C) be some optimal partition of C, i.e., {a mathematical formula}opt(C)∈argmaxP∈ΠCV(P). Lemma 1 shows that if {a mathematical formula}|opt(C)|&gt;1, then there exists a coalition structure {a mathematical formula}{C′,C″}∈ΠC such that {a mathematical formula}opt(C)=opt(C′)∪opt(C″). On the other hand, if {a mathematical formula}|opt(C)|=1, then surely we would have {a mathematical formula}opt(C)={C} and {a mathematical formula}V(opt(C))=v(C). Equation (1) covers both possibilities by taking the maximum over {a mathematical formula}v(C) and {a mathematical formula}max{C′,C″}∈ΠC⁡(f(C′)+f(C″)). This concludes the proof of Theorem 1.  □
+     </paragraph>
+     <paragraph>
+      Based on Theorem 1, the way DP works is by iterating over all the coalitions of size 1, and then over all those of size 2, and then size 3, and so on until size n. For every such coalition, C, it computes {a mathematical formula}f(C) using Equation (1). As can be seen from the equation, whenever {a mathematical formula}|C|≠1, the algorithm must compare {a mathematical formula}v(C) with {a mathematical formula}max{C′,C″}∈ΠC⁡f(C′)+f(C″) to determine which one is greater. The outcome of this comparison is stored in a variable called {a mathematical formula}t(C). In more detail:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       if {a mathematical formula}v(C) was greater, the algorithm sets {a mathematical formula}t(C)={C}, indicating that it is not beneficial to split C.
+      </list-item>
+      <list-item label="•">
+       if {a mathematical formula}v(C) was smaller, the algorithm sets {a mathematical formula}t(C)=argmax{C′,C″}∈ΠCf(C′)+f(C″) to record the best way of splitting C into two coalitions.
+      </list-item>
+     </list>
+     <paragraph>
+      As for cases where {a mathematical formula}|C|=1, the algorithm always sets {a mathematical formula}t(C)={C} (because it is not possible to split C). By the end of this process, {a mathematical formula}f(A) will be computed, which is by definition equal to {a mathematical formula}V(CS⁎). What remains is to compute {a mathematical formula}CS⁎ itself. This is done recursively as illustrated in the following example:
+     </paragraph>
+     <paragraph label="Example 1">
+      Given {a mathematical formula}A={a1,a2,a3,a4}, suppose that {a mathematical formula}t(A)={{an inline-figure}{an inline-figure}}, i.e., it is most beneficial to split A into {an inline-figure} and {an inline-figure}. Moreover, suppose that {a mathematical formula}t({an inline-figure})={{an inline-figure},{an inline-figure}}, while {a mathematical formula}t({an inline-figure})={an inline-figure}, i.e., it is most beneficial to split {an inline-figure} into {an inline-figure} and {an inline-figure}, and not to split {an inline-figure}. Then, {a mathematical formula}CS⁎={{an inline-figure},{an inline-figure},{an inline-figure}}.
+     </paragraph>
+     <paragraph>
+      Fig. 3 illustrates the workings of DP given a sample characteristic function and a set of four agents (Example 1 is illustrated as “step 5” in the figure). DP takes hours on a modern desktop computer to partition 30 agents.
+     </paragraph>
+     <paragraph label="Theorem 2">
+      Given a set of n agents, the dynamic programming algorithm, DP, computes an optimal coalition structure in{a mathematical formula}O(3n)time.
+     </paragraph>
+     <paragraph label="Proof">
+      For every coalition of size s, DP checks all possible ways of splitting it in two, so the number of operations is: {a mathematical formula}∑s=1n(ns)2s−1. It is straightforward to show that this number equals {a mathematical formula}123n−12, simply by using the following standard equality, and assigning {a mathematical formula}a=2 and {a mathematical formula}b=1:{a mathematical formula}  □
+     </paragraph>
+     <paragraph>
+      Having described DP, let us now analyze its workings. The operation of the DP algorithm can usefully be visualized on the coalition structure graph [63]. In particular, what DP actually does is the following: (1) evaluate every movement upward in the graph, (2) store the best movements in the table t, and finally (3) move upwards in the graph, starting from the bottom node, as long as it is beneficial to do so. To better understand the intuition behind this, observe that every movement upward in the graph corresponds to splitting one coalition into two (see Fig. 1). Also observe that DP works by determining, for every coalition {a mathematical formula}C⊆A, whether it is beneficial to split C, and if so what is the best such split (the answer to this question is stored in {a mathematical formula}t(C)). This means that if DP were to move upwards in the graph, starting from the bottom node, then every time it reaches a node (i.e., a coalition structure) that contains C, it can determine (based on {a mathematical formula}t(C)) whether it is beneficial to make a movement that involves splitting C, and if so what is the best such movement. Finally, once DP evaluates all possible movements (i.e., once it computes {a mathematical formula}t(C) for all {a mathematical formula}C⊆A), it starts making a series of movements upward until an optimal node is reached, after which no movement is beneficial. For instance, the way DP reached {a mathematical formula}{{a1},{a2},{a3,a4}} in Example 1 can be visualized as movements through the dashed path in Fig. 1, where the first movement involved splitting {a mathematical formula}{a1,a2,a3,a4} into {a mathematical formula}{a1,a2} and {a mathematical formula}{a3,a4}, and the second movement involved splitting {a mathematical formula}{a1,a2} into {a mathematical formula}{a1} and {a mathematical formula}{a2}.
+     </paragraph>
+     <paragraph>
+      From this visualization it is clear that, for every {a mathematical formula}CS:|CS|&gt;2, there are multiple paths that start from the bottom node of the graph, and end with the node containing CS (see Fig. 1). This raises the following question: Can DP reach an optimal node through any of the paths leading to that node? The answer is “yes” [63]. To understand the intuition behind this, recall that if it is beneficial to split a coalition C, then DP sets {a mathematical formula}t(C)=argmax{C′,C″}∈ΠCf(C′)+f(C″). This implies that if there is more than one solution, DP has no preference over which one to store in {a mathematical formula}t(C). The argmax that ends up stored in {a mathematical formula}t(C) will determine the movement that DP makes whenever it encounters a node representing some {a mathematical formula}CS:C∈CS. However, by definition, all the moves that correspond to those argmaxes will eventually lead to an equally favorable partition of C.
+     </paragraph>
+     <paragraph>
+      The above observation raises yet another question: what happens if DP is modified so that it avoids evaluating some of the movements? Rahwan et al. [64] proved that, as long as there still exists a path of evaluated movements, leading from the bottom node to an optimal solution, DP will still be able to reach that solution. To understand the intuition behind this, suppose that for some coalition C, the algorithm did not evaluate a movement that involves splitting C into two particular coalitions, {a mathematical formula}C1 and {a mathematical formula}C2. In other words, suppose that the term: {a mathematical formula}max{C′,C″}∈ΠC⁡f(C′)+f(C″) in Equation (1) was replaced with: {a mathematical formula}max{C′,C″}∈ΠC\{{C1,C2}}⁡f(C′)+f(C″). This implies that, whenever a coalition structure {a mathematical formula}CS:C∈C is reached, the movement from CS to the coalition structure {a mathematical formula}CS′=(CS\C)∪{C1,C2} would no longer be an option. Similarly, every path containing this movement would not be an option. This can be visualized by removing the edge that connects CS to {a mathematical formula}CS′. Importantly, however, this removal does not affect DP's evaluation of any path not containing the removed edge. This is precisely why, if there still exists a path of evaluated movements that lead to {a mathematical formula}CS′, then DP would still be able to reach {a mathematical formula}CS′.
+     </paragraph>
+     <paragraph>
+      Based on the above observation, Rahwan et al. [64] developed a version of DP which avoids the evaluation of many movements, without losing the guarantee of having a path that leads to every node in the graph. To describe Rahwan et al.'s version more formally, we need additional notation. To this end, for any two coalitions {a mathematical formula}C′,C″∈CA, let us write {a mathematical formula}C′&lt;C″ if and only if {a mathematical formula}C′ precedes {a mathematical formula}C″ lexicographically, e.g., we write {a mathematical formula}{a1,a3,a9}&lt;{a1,a4,a5} and {a mathematical formula}{a4}&lt;{a4,a5}. Now, given two disjoint coalitions {a mathematical formula}C1 and {a mathematical formula}C2, let {a mathematical formula}mC1,C2 denote the movement that corresponds to splitting {a mathematical formula}C=C1∪C2 into {a mathematical formula}C1 and {a mathematical formula}C2. Moreover, let {a mathematical formula}M denote the set of all possible movements in the graph. Finally, let {a mathematical formula}M⁎ be a subset of movements defined as follows:{a mathematical formula} While DP evaluates every movement in {a mathematical formula}M, Rahwan et al.'s version only evaluates the movements in {a mathematical formula}M⁎ based on the following theorem.
+     </paragraph>
+     <paragraph label="Theorem 3">
+      Starting from the bottom node in the coalition structure graph, it is possible to reach every node in the graph through a series of movements in{a mathematical formula}M⁎.
+     </paragraph>
+     <paragraph label="Proof">
+      It suffices to prove that for every {a mathematical formula}k≥2, every {a mathematical formula}CS={C1,…,Ck} is reachable from some coalition structure {a mathematical formula}CS′ with {a mathematical formula}|CS′|=k−1 via some movement in {a mathematical formula}M⁎. Assume without loss of generality that {a mathematical formula}C1&lt;⋯&lt;Ck. We will show that CS is reachable from the coalition structure {a mathematical formula}(CS\{C1,C2})∪{C1∪C2} via {a mathematical formula}M⁎. To this end, it suffices to show that {a mathematical formula}mC1,C2∈M⁎.First, suppose that {a mathematical formula}k=2. In this case, we have {a mathematical formula}CS={C1,C2}, and so {a mathematical formula}C1∪C2=A. This means that {a mathematical formula}mC1,C2∈M⁎.Now, suppose that {a mathematical formula}k&gt;2. In this case, since {a mathematical formula}C1&lt;⋯&lt;Ck, we obtain {a mathematical formula}C1&lt;C2&lt;(C3∪…∪Ck), and hence {a mathematical formula}C1&lt;C2&lt;A∖(C∪C′). Thus, we also have {a mathematical formula}mC1,C2∈M⁎.  □
+     </paragraph>
+     <paragraph>
+      Rahwan et al. [64] proved that {a mathematical formula}|M⁎|=|Π2A|+|Π3A|. They also proved that it is not possible to evaluate fewer movements than {a mathematical formula}|M⁎|, while still maintaining the guarantee of finding an optimal solution. This makes {a mathematical formula}M⁎optimal in the sense that it minimizes the number of evaluated movements. Based on this, the version of DP that evaluates {a mathematical formula}M⁎ is called ODP, which stands for Optimal DP.
+     </paragraph>
+     <paragraph>
+      ODP avoids approximately two thirds of the operations compared to DP, making it the fastest algorithm guaranteed to find an optimal solution in {a mathematical formula}O(3n) time to date. This is significantly less than {a mathematical formula}ω(nn/2)—the time required to exhaustively enumerate all coalition structures. However, the disadvantage is that ODP provides no interim solution before completion, meaning that it is not possible to trade computation time for solution quality.
+     </paragraph>
+     <paragraph>
+      Finally, we mention the dynamic-programming algorithm by [14], which is based on the inclusion–exclusion principle. The algorithm uses an interesting technique in which information is encoded into extremely large numbers (e.g., consisting of hundreds, or even thousands, of digits each). This is the state-of-the-art algorithm in terms of worst-case complexity: it runs in {a mathematical formula}O(2n). In practice, however, the algorithm is slow since the theoretical analysis does not take into consideration the time required to for the many inevitable multiplications of such huge numbers. In fact, in practice, the algorithm has been shown to have a running time of approximately {a mathematical formula}6n. So, for example, it takes several months to solve a problem of 15 agents, while ODP requires only 0.01 seconds for that many agents.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Anytime exact algorithms
+     </section-title>
+     <paragraph>
+      An anytime algorithm is one whose solution quality improves monotonically as computation time increases [95]. In our case, this is particularly desirable as the agents might not always have sufficient time to run the algorithm to completion due to the exponential size of the search space. Moreover, being anytime makes the algorithm robust against failure; if the execution is stopped before the algorithm would normally have terminated, then it can still return a solution that is better than the initial—or any other intermediate—one.
+     </paragraph>
+     <paragraph>
+      In this section, we will focus on anytime algorithms that return optimal solutions or, at least, provide worst-case guarantees on the quality of their solutions. In more detail, Section 5.1 presents algorithms that divide the space into subspaces, and specify the order in which these subspaces must be searched, so as to ensure that the worst-case guarantee on solution quality improves after each subspace. Section 5.2 presents an algorithm that searches the subspaces of the integer partition graph one at a time, using depth-first branch-and-bound search. Section 5.3 presents anytime algorithms that use dynamic programming techniques. Finally, Section 5.4 presents an integer programming formulation of the coalition structure generation problem.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Identifying subspaces with worst-case guarantees
+      </section-title>
+      <paragraph>
+       If the space is too large to be fully searched, then can we search through only a subset of this space, and be guaranteed to find a solution that is within a certain bound β from the optimal solution?
+      </paragraph>
+      <paragraph>
+       To address this question, a number of algorithms have been proposed, which all work by (1) dividing the search space into disjoint and exhaustive subspaces, and (2) identifying a sequence in which these subsets are searched, such that the worst-case bound on solution quality is guaranteed to improve after each subspace. In particular, after each subspace is searched, a bound is established by comparing the coalition structures that have already been searched against those that are yet to be searched. This comparison is carried out “offline”, i.e., without analyzing the characteristic function at hand. Having bounds that are independent of the coalition values themselves means that the bounds are guaranteed for any characteristic function. This also makes such algorithms applicable in any situation where the coalition structure values are observable, but the coalition values are not. Observe that such algorithms do not specify how each subspace is searched. However, one can extend such an algorithm (possibly in many directions) by specifying the techniques used to search each subspace. Such techniques can capitalize on the extra information accrued during the search, e.g., to avoid brute-force search and hopefully establish better bounds than those established offline. Next, we provide an overview of those algorithms for characteristic function games.{sup:6}
+      </paragraph>
+      <paragraph>
+       The first such algorithm was proposed in the seminal paper by Sandholm et al. [78], and is mainly based on the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       To establish a worst-case bound β, it suffices to search the lowest two levels of the coalition structure graph, i.e.,{a mathematical formula}Π1Aand{a mathematical formula}Π2A. With this search, the bound is{a mathematical formula}β=n, and the number of searched coalition structures is{a mathematical formula}2n−1. Moreover, no algorithm can establish any bound by searching a different set of at most{a mathematical formula}2n−1coalition structures.
+      </paragraph>
+      <paragraph label="Proof">
+       For a partial search to establish a bound on solution quality, every coalition {a mathematical formula}C⊆A must appear in at least one of the searched coalition structures. This is due to the possibility of having a single coalition whose value is arbitrarily greater than that of other coalitions. Now, since the grand coalition appears in {a mathematical formula}Π1A, and every other coalition {a mathematical formula}C⊂A appears in {a mathematical formula}{C,A\C}∈Π2A, then the value of the best coalition structure in {a mathematical formula}Π1A∪Π2A is no less than: {a mathematical formula}maxC⊆A⁡v(C). On the other hand, since {a mathematical formula}CS⁎ can include at most n coalitions, its value is no greater than: {a mathematical formula}n×maxC⊆A⁡v(C). This means {a mathematical formula}V(CS⁎)maxCS∈Π1A∪Π2A⁡V(CS)≤n.As for the number of searched coalition structures, it suffices to note that: {a mathematical formula}Π1A∪Π2A=∪C⊆N:a1∈C{C,A\C}, and so that number is: {a mathematical formula}|C⊆N:a1∈C|=2n−1.Finally, we need to prove that for every set of coalition structures {a mathematical formula}X≠Π1A∪Π2A whose search establishes a bound, the following holds: {a mathematical formula}|X|&gt;2n−1. Since searching X establishes a bound, every coalition must belong to at least one coalition structure in X. This implies that {a mathematical formula}{A}∈X, i.e., {a mathematical formula}Π1A⊆X. Now, let {a mathematical formula}Y={{P1,Q1},⋯,{Pk,Qk}} denote the coalition structures in {a mathematical formula}Π2A that are not in X. Observe that for {a mathematical formula}i,j:i≠j, at least one of the following is true: {a mathematical formula}Pi∩Pj≠∅, {a mathematical formula}Pi∩Qj≠∅, or {a mathematical formula}Qi∩Qj≠∅. Thus, we must have at least {a mathematical formula}k+1 coalition structures in X that are not in {a mathematical formula}Π2A (this is the only way to ensure that every coalition in {a mathematical formula}{P1,⋯,Pk,Q1,⋯,Qk} appears in some coalition structure in X, given that {a mathematical formula}X∩Y=∅).  □
+      </paragraph>
+      <paragraph>
+       Based on Theorem 4, the algorithm starts by searching the bottom two levels. After that, if additional time is available, the algorithm searches the remaining levels one by one, starting from the top level and moving downwards, i.e., the algorithm's entire sequence is: {a mathematical formula}〈(Π1A∪Π2A),ΠnA,Πn−1A,…,Π3A〉. Sandholm et al. proved that the bound improves after each step. In particular, once the algorithm completes searching level {a mathematical formula}ΠiA, the bound becomes {a mathematical formula}β=⌊n/h⌋, where {a mathematical formula}h=⌊(n−i)/2⌋+2. The only exception is when {a mathematical formula}n≡h−1(modh) and {a mathematical formula}n≡i(mod2), in which case the bound becomes {a mathematical formula}β=⌈n/h⌉. Importantly, this means that after searching {a mathematical formula}(Π1A∪Π2A) and establishing the bound {a mathematical formula}β=n, one can drop (i.e., improve) the bound to {a mathematical formula}β=⌈n/2⌉ by searching {a mathematical formula}ΠnA, which only contains a single coalition structure.
+      </paragraph>
+      <paragraph>
+       Dang and Jennings [19] proposed a different algorithm, which starts by searching {a mathematical formula}Π1A∪Π2A and then searches {a mathematical formula}ΠnA (as Sandholm et al.'s algorithm does). After that, however, instead of searching {a mathematical formula}ΠiA with i running from {a mathematical formula}n−1 down to 3 (as Sandholm et al. do), the algorithm searches all coalition structures that have at least one coalition whose size is not smaller than {a mathematical formula}⌈n(q−1)/q⌉, with q running from {a mathematical formula}⌊(n+1)/4⌋ down to 2. Dang and Jennings proved that, for any given value of q, the algorithm establishes a bound {a mathematical formula}β=2q−1.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       So far, we have established bounds on solution quality in certain subspaces (those are the subspaces specified by Sandholm et al. and by Dang and Jennings). But how can we establish a bound on solution quality in an arbitrary subspace? Furthermore, for each of the aforementioned subspaces, the bound is established on the best solution in that subspace with respect to the best solution in the entire space, i.e., {a mathematical formula}CS⁎. This raises yet another question: Can we bound the best solution in a subspace, with respect to the best solution in some other (possibly overlapping) subspace? To answer these questions, we need additional notation. Recall that {a mathematical formula}ΠA denotes the set of possible partitions of A. In a similar way, let {a mathematical formula}ΠCS denote the set of possible partitions of CS. For instance, given {a mathematical formula}CS={{a1},{a2,a3},{a4}} we have:{a mathematical formula} Finally, for every subspace {a mathematical formula}Π′⊆ΠA, let {a mathematical formula}δ(Π′) be the set consisting of every non-empty subset of every coalition structure in {a mathematical formula}Π′. For instance, if {a mathematical formula}Π′={CS1,CS2} where {a mathematical formula}CS1={{{a1,a2},{a3}} and {a mathematical formula}CS2={{a1},{a2,a3}}}, then {a mathematical formula}δ(Π′) consists of all non-empty subsets of {a mathematical formula}CS1 or {a mathematical formula}CS2, i.e., the following six subsets: (1) {a mathematical formula}{{a1,a2}}, (2) {a mathematical formula}{{a3}}, (3) {a mathematical formula}{{a1,a2},{a3}}, (4) {a mathematical formula}{{a1}}, (5) {a mathematical formula}{{a2,a3}}, and (6) {a mathematical formula}{{a1},{a2,a3}}. Now, we are ready to answer the above questions with the following theorem [69]: For any two subspaces,{a mathematical formula}Π′,Π″⊆ΠA, a bound can be established on{a mathematical formula}maxCS∈Π″⁡V(CS)maxCS∈Π′⁡V(CS)if and only if the following holds for every{a mathematical formula}C⊆A:{a mathematical formula}Furthermore, if the above condition holds, then we can establish the following bound:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       If condition (3) is not satisfied, then there exists a coalition that appears in {a mathematical formula}Π″ but not in {a mathematical formula}Π′. Since this coalition can be arbitrarily better than all other coalitions, it is not possible to establish a bound on {a mathematical formula}maxCS∈Π″⁡V(CS)maxCS∈Π′⁡V(CS).On the other hand, if condition (3) is satisfied, then Theorem 5 states that (4) holds. To understand the intuition behind this, let us revisit the proof of Theorem 4. In particular, that proof was primarily based on the following observations:
+       <list>
+        the best solution in {a mathematical formula}ΠA, i.e., {a mathematical formula}argmaxCS∈ΠAV(CS), contains at mostncoalitions,and every one of those coalitions appears in some {a mathematical formula}CS∈Π1A∪Π2A,then {a mathematical formula}argmaxCS∈ΠAV(CS)is at mostntimes better than {a mathematical formula}argmaxCS∈Π1A∪Π2AV(CS).Let us first focus on a
+       </list>
+       <paragraph>
+        single coalition structure in{a mathematical formula}Π″, namely {a mathematical formula}CS″. We know from condition (4) that every {a mathematical formula}C∈CS″ appears somewhere in {a mathematical formula}Π′. This implies that {a mathematical formula}CS″ can be partitioned into groups of disjoint coalition, each appearing somewhere in {a mathematical formula}Π′.{sup:7} In other words, there exists at least one partition of {a mathematical formula}CS″ consisting of elements of {a mathematical formula}δ(Π′). Let us focus on the partition of {a mathematical formula}CS″ consisting of the smallest number of such elements. This number is: {a mathematical formula}x=minP∈ΠCS″:P⊆δ(Π′)⁡|P|. By partitioning {a mathematical formula}CS″ in this way, we have shown that {a mathematical formula}CS″ contains at most x groups of disjoint coalitions, each being an element of {a mathematical formula}δ(Π′) (i.e., every one of those groups appears in some {a mathematical formula}CS∈Π′). Therefore, {a mathematical formula}CS″ is at most x times better than {a mathematical formula}argmaxCS∈Π′V(CS).Finally, if we take all coalition structures in{a mathematical formula}Π″ into consideration, we find that none of them can be more than {a mathematical formula}x⁎ times better than {a mathematical formula}argmaxCS∈Π′V(CS), where {a mathematical formula}x⁎=maxCS∈Π″⁡(minP∈ΠCS:P⊆δ(Π′)⁡|P|).  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 1">
+       Now if {a mathematical formula}Π′ and {a mathematical formula}Π″ can each be represented by some integer partition(s) of n, i.e., if:{a mathematical formula} then we will show how the result in Theorem 5 can be simplified. To this end, just as {a mathematical formula}ΠCS denotes the set of partitions of CS, let {a mathematical formula}ΠI denote the set of partitions of the integer partition I, e.g., {a mathematical formula}Π{1,1,2} consists of the following four partitions: {a mathematical formula}{{1,1,2}}, {a mathematical formula}{{1,1},{2}}, {a mathematical formula}{{1,2},{1}}, and {a mathematical formula}{{1},{1},{2}}. Moreover, just as {a mathematical formula}δ(Π′) denotes the set of every non-empty subset of every {a mathematical formula}CS∈Π′, let {a mathematical formula}δ(I′) denote the set of every non-empty subset of every {a mathematical formula}I∈I′, e.g., {a mathematical formula}δ({{1,1,2},{1,3}}) consists of the following seven subsets: {1}, {2}, {3}, {a mathematical formula}{1,1}, {a mathematical formula}{1,2}, {a mathematical formula}{1,3} and {a mathematical formula}{1,1,2}. Now, we are ready to state the following corollary, which can be thought of as an integer-partition version of Theorem 5: Let{a mathematical formula}I′,I″⊆Inbe two arbitrary sets of integer partitions, and let{a mathematical formula}Π′=⋃I∈I′ΠIAand{a mathematical formula}Π″=⋃I∈I″ΠIA. A bound can be established on{a mathematical formula}maxCS∈Π″⁡V(CS)maxCS∈Π′⁡V(CS)if and only if the following holds for every{a mathematical formula}i∈{1,…,n}:{a mathematical formula}Furthermore, if the above condition holds, then we can establish the following bound{sup:8}:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Based on the above corollary, Rahwan et al. [69] proposed an algorithm that searches through a sequence of subspaces, each being {a mathematical formula}ΠIA for some {a mathematical formula}I∈In. This has been shown to outperform both Sandholm et al.'s algorithm and Dang and Jennings's algorithm (e.g., to reach a bound of 2 given 9 agents, Rahwan et al. search around 2000 solutions, while Sandholm et al. search around 10,000 and Dang and Jennings search around 21,000). The reason behind this gain is that Rahwan et al.'s algorithm is (in a sense) a generalization of the other two algorithms.
+      </paragraph>
+      <paragraph>
+       Observe that this latter algorithm specifies an order in which integer-partition based subspaces should be searched, and the specifies how the bound improves during this search. However, it does not specify how each subspace should be searched. As such, it would be useful to have an algorithm that can efficiently search such subspaces. In the following subsection, we present an algorithm that does exactly that.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Integer partition-based search
+      </section-title>
+      <paragraph>
+       An anytime algorithm, called IP, was developed by Rahwan et al. [73] based on the integer partition-based representation from Section 3. In particular, it is based on the observation that, for any subspace {a mathematical formula}ΠIA, it is possible to compute upper and lower bounds on the value of the best coalition structure in that subspace. More formally, let {a mathematical formula}MaxsA and {a mathematical formula}AvgsA be the maximum and average values of all coalitions of size s, respectively. It turns out that one can compute the average value of the coalition structures in each {a mathematical formula}ΠIA:I∈In without inspecting these coalition structures [73]:
+      </paragraph>
+      <paragraph label="Theorem 6">
+       For every{a mathematical formula}I∈In, let{a mathematical formula}I(i)be the multiplicity of i in I. Then:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       For every coalition {a mathematical formula}C⊆A, the number of coalition structures in {a mathematical formula}ΠIA that contain C depends solely on the size of C. In other words, this number is equal for any two coalitions that are of the same size. Let us denote this number by {a mathematical formula}NI|C|. Formally, for every {a mathematical formula}C⊆A, we set {a mathematical formula}NI|C|=|{CS∈ΠIA:C∈CS}|. Then, we have{a mathematical formula} where {a mathematical formula}(ni) is the binomial coefficient (i.e., the number of possible coalitions of size i). Thus, to prove (7) it suffices to prove that:{a mathematical formula} This can be done by proving that the following holds for all {a mathematical formula}i∈I:{a mathematical formula} Observe that every {a mathematical formula}CS∈ΠIA contains exactly {a mathematical formula}I(i) coalitions of size i. Then:{a mathematical formula} We have shown that {a mathematical formula}∑C:|C|=iNI|C|=|ΠIA|⋅I(i). On the other hand, since {a mathematical formula}NI|C| is any coalitions of size {a mathematical formula}|C|, then: {a mathematical formula}∑C:|C|=iNI|C|=(ni)⋅NIi. Thus, Equation (8) holds.  □
+      </paragraph>
+      <paragraph>
+       Note that, for every {a mathematical formula}I∈In, the value of the best coalition structure in {a mathematical formula}ΠIA is always greater than, or equal to, the average value of all coalition structures in {a mathematical formula}ΠIA. Thus, based on Theorem 6, we obtain a lower bound on the value of the best coalition structure in {a mathematical formula}ΠIA, which is: {a mathematical formula}LBIA=∑i∈II(i)AvgiA. Furthermore, by replacing {a mathematical formula}AvgiA with {a mathematical formula}MaxiA in this expression, we obtain an upper bound{a mathematical formula}UBIA on the value of the best coalition structure in {a mathematical formula}ΠIA, which is: {a mathematical formula}UBIA=∑i∈II(i)MaxiA. Using these bounds, the algorithm computes an upper bound {a mathematical formula}UB⁎=maxI∈In⁡UBIA and a lower bound {a mathematical formula}LB⁎=maxI∈In⁡LBIA on the value of the optimal coalition structure {a mathematical formula}CS⁎. By computing {a mathematical formula}UB⁎, we can establish a bound on the quality of the best coalition structure found at any point in time, denoted by {a mathematical formula}CS⁎⁎; this bound is {a mathematical formula}β=UB⁎/V(CS⁎⁎). On the other hand, by computing {a mathematical formula}LB⁎, we can identify any subspaces that cannot possibly contain an optimal coalition structure, which are {a mathematical formula}ΠIA:UBIA&lt;LB⁎. These subspaces are pruned from the search space. As for the remaining subspaces, the algorithm searches them one at a time. During this search, if a solution is found whose value is greater than, or equal to, the upper bound of a not-yet-searched subspace, the algorithm safely skips searching that subspace. Next, we explain how a subspace is searched.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}CiA denote the set of coalitions of size i. Generally speaking, given an integer partition {a mathematical formula}I={i1,…,i|I|}, one way of searching the corresponding subspace {a mathematical formula}ΠIA is by simply going through the cartesian product of the sets {a mathematical formula}Ci1A,…,Ci|I|A and checking every combination of coalitions to determine whether it is invalid or redundant. Here, an invalid combination is one that contains overlapping coalitions, and a redundant combination is one that has already been examined with a different ordering of the coalitions. For example, given {a mathematical formula}Π{1,2,2}A, and having examined {a mathematical formula}{{a1},{a2,a3},{a4,a5}}, the following combination is redundant and so no longer needs to be examined: {a mathematical formula}{{a1},{a3,a4},{a1,a2}}. Searching through the cartesian product, while correct, is inefficient because it involves examining a number of combinations that is significantly larger than the number of coalition structures in {a mathematical formula}ΠIA. To avoid this, IP uses a depth-first search technique that iterates over {a mathematical formula}Ci1A. For every coalition {a mathematical formula}C1∈Ci1A that the algorithm encounters, it only iterates over the coalitions in {a mathematical formula}Ci2A that do not overlap with {a mathematical formula}C1 nor lead to redundant coalition structures. Similarly, for every two coalitions {a mathematical formula}C1∈Ci1A,C2∈Ci2A that the algorithm encounters, it only iterates over the coalitions in {a mathematical formula}Ci3A that do not overlap with {a mathematical formula}C1∪C2 nor lead to redundant coalition structures. This is repeated until the coalition {a mathematical formula}C|I|∈Ci|I|A is encountered, in which case the algorithm would have a set {a mathematical formula}{C1∈Ci1A,…,C|I|∈Ci|I|A} which is guaranteed to be a unique coalition structure in {a mathematical formula}ΠIA. This process is repeated until all coalition structures in {a mathematical formula}ΠIA have been visited.
+      </paragraph>
+      <paragraph>
+       To speed up the search, IP applies a branch-and-bound technique. In particular, given some coalitions {a mathematical formula}C1∈Ci1A,C2∈Ci2A,…,Ck∈CikA:k&lt;|I|, and before iterating through the relevant coalitions in {a mathematical formula}Cik+1A,…,Ci|I|A, the algorithm checks the following condition, where {a mathematical formula}CS⁎⁎ is the best coalition structure found so far by the algorithm:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now if the above inequality holds, then none of the coalition structures containing {a mathematical formula}C1,…,Ck can improve upon the quality of the best solution found so far, in which case, the algorithm skips this part of the search. Fig. 4 illustrates how IP searches {a mathematical formula}Π{1,3,4}A given 8 agents.
+      </paragraph>
+      <paragraph>
+       The IP algorithm runs in {a mathematical formula}O(nn) time. In the worst case, it can end up constructing every possible coalition structure. In practice, however, IP is significantly faster than ODP for many coalition-value distributions (e.g., when tested against random characteristic functions on a modern desktop computer it took seconds to solve problems of 30 agents). Moreover, the bound that it generates, i.e., {a mathematical formula}β=UB⁎/V(CS⁎⁎), is significantly better than those obtained by searching particular subsets as per the previous subsection. Finally, we remark that a decentralized version of IP has been developed by Michalak et al. [47].
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Anytime, dynamic programming-based, search
+      </section-title>
+      <paragraph>
+       A number of algorithms have been developed that combine techniques from the dynamic programming approach and the anytime approach. The first such algorithm is called ODP-IP [62], [64]. As the name suggests, the algorithm combines ODP (from Section 4) with IP (from Section 5.2). Next, we explain the basic idea behind this combination.{sup:9}
+      </paragraph>
+      <paragraph>
+       As discussed earlier in Section 4, the operation of ODP can be interpreted as the evaluation of movements through edges in the coalition structure graph (Fig. 1). Furthermore, avoiding the evaluation of any movements can be visualized by removing the corresponding edges from that graph. Importantly, however, the way ODP works can also be visualized on the integer partition graph (Fig. 2). Basically, by making a movement (in the coalition structure graph) from {a mathematical formula}CS′ to {a mathematical formula}CS″, ODP is also making a movement (in the integer partition graph) from {a mathematical formula}I′:ΠI′A∋CS′ to {a mathematical formula}I″:ΠI″A∋CS″. For instance, the movement from {a mathematical formula}{{a1,a2},{a3,a4}} to {a mathematical formula}{{a1},{a2},{a3,a4}} in Fig. 1 corresponds to the movement from {a mathematical formula}{2,2} to {a mathematical formula}{1,1,2} in Fig. 2. Moreover, by removing (from the coalition structure graph) all the edges that correspond to the splitting of a coalition of size s into two coalitions of sizes {a mathematical formula}s′ and {a mathematical formula}s″, ODP is also removing (from the integer partition graph) the edges that connect every {a mathematical formula}I:I∋s to {a mathematical formula}I′=(I∖{s})⊎{s′,s″}. This visualization provides the link between ODP and IP since the latter algorithm deals with subspaces that are represented by integer partitions.
+      </paragraph>
+      <paragraph>
+       Having presented the link between ODP and IP, we now show how to modify ODP so that it becomes compatible with IP. To this end, observe that for a given triple of positive integers {a mathematical formula}s,s′,s″ with {a mathematical formula}s′+s″=s, avoiding the evaluation of all possible ways of splitting all coalitions of size s into two coalitions of sizes {a mathematical formula}s′ and {a mathematical formula}s″ corresponds to the removal of the edges from every {a mathematical formula}I:I∋s to {a mathematical formula}I′=(I∖{s})⊎{s′,s″}. The problem with ODP is that it avoids evaluating only some of the movements from coalitions of a given size. For instance, given {a mathematical formula}n=4 and {a mathematical formula}s=2, ODP avoids evaluating the movements from the coalitions: {a mathematical formula}{a1,a3}, {a mathematical formula}{a1,a4}, {a mathematical formula}{a2,a3}, {a mathematical formula}{a2,a4} and {a mathematical formula}{a3,a4}, but evaluates the movement from {a mathematical formula}{a1,a2}. To circumvent this, Rahwan et al. developed a size-based version of ODP (called IDP). Specifically, for any three sizes {a mathematical formula}s,s′,s″∈{1,…,n} such that {a mathematical formula}s=s′+s″, IDP evaluates either all or none of the movements in which a coalition of size s is split into coalitions of sizes {a mathematical formula}s′ and {a mathematical formula}s″. More specifically, given two positive integers {a mathematical formula}s′,s″∈Z+, let {a mathematical formula}Ms′,s″⊆M be the set of all movements in which a coalition of size {a mathematical formula}s′+s″ is split into two coalitions of sizes {a mathematical formula}s′ and {a mathematical formula}s″. That is, {a mathematical formula}Ms′,s″={mC′,C″∈M:|C′|=s′,|C″|=s″}. Then, unlike ODP which evaluates the movements in {a mathematical formula}M⁎ (see Equation (2)), IDP evaluates the movements in {a mathematical formula}M⁎⁎, where:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Theorem 7">
+       Starting from the bottom node in the coalition structure graph, it is possible to reach every node in the graph through a series of movements in{a mathematical formula}M⁎⁎.
+      </paragraph>
+      <paragraph>
+       The above theorem is very similar to Theorem 3, except that {a mathematical formula}M⁎ is now replaced with {a mathematical formula}M⁎⁎. Thus, the proof is omitted due to space constraints.
+      </paragraph>
+      <paragraph>
+       Observe that the movements in {a mathematical formula}M⁎⁎ are evaluated in the following order: {a mathematical formula}mC′,C″∈M⁎⁎:|C′|+|C″|=s, with s running from 1 to n. Now, let us introduce a parameter, m, which takes any value between 1 and {a mathematical formula}n−1. This parameter controls a modified version of IDP, which only evaluates {a mathematical formula}mC′,C″∈M⁎⁎:|C′|+|C″|=s for {a mathematical formula}s=1,⋯,m,n. This means that for every {a mathematical formula}C:|C|∈{1,⋯,m,n}, IDP computes {a mathematical formula}f(C) and {a mathematical formula}t(C) as usual, while for every {a mathematical formula}C:|C|∈{m+1,⋯,n−1}, it simply sets {a mathematical formula}f(C)=C and {a mathematical formula}t(C)={C}. This corresponds to the removal of the edges (in the integer partition graph) that involve splitting an integer {a mathematical formula}i:m&lt;i&lt;n. Importantly, even with the removal of those edges, IDP can still reach some nodes (i.e., subspaces) in the integer partition graph. For example, given {a mathematical formula}n=8 and {a mathematical formula}m=3, Fig. 5(A) illustrates how, after removing every edge that involves splitting an integer {a mathematical formula}i:3&lt;i&lt;8, IDP can still reach some nodes in the integer partition graph. This means if IDP now keeps making the best movements upwards in the graph (out of all evaluated movements, starting from the bottom node), it would find in linear time the best coalition structure in all the subspaces highlighted in Fig. 5(A). As for the remaining subspaces, IDP cannot search them as they are disconnected from the bottom component of the graph. Take, for example, the subspace {a mathematical formula}Π{2,3,3}A. As can be seen in Fig. 5(A), if only IDP could reach this subspace (i.e., if it could reach the integer partition {a mathematical formula}{2,3,3}), it would be able to make further movements upwards. More precisely, IDP would be able to search in linear time all subspaces that correspond to integer partitions reachable from {a mathematical formula}{2,3,3}. Fortunately, as we will show next, a modified version of IP could help IDP reach an otherwise unreachable subspace, such as {a mathematical formula}Π{2,3,3}A in Fig. 5(A).
+      </paragraph>
+      <paragraph>
+       A key observation is that, for any {a mathematical formula}CS∈ΠA and any {a mathematical formula}m∈{1,⋯,n−1}, the value of the best coalition structure reachable from CS (using only the movements evaluated by IDP) is: {a mathematical formula}∑C∈CSf(C), where {a mathematical formula}f(C) is computed for every {a mathematical formula}C:|C|∈{1,⋯,m,n} as usual, while for every {a mathematical formula}C:|C|∈{m+1,⋯,n−1}, we simply have {a mathematical formula}f(C)=C. Based on this, out of all CS in some subspace {a mathematical formula}ΠIA, the most beneficial one for IDP to start moving from is a coalition structure in:{a mathematical formula} On the other hand, as we have seen in Section 5.2, IP can find a coalition structure in:{a mathematical formula} Based on the above, to find the best coalition structure in {a mathematical formula}ΠIA for IDP to start moving from, we can simply use a modified version of IP which searches {a mathematical formula}ΠIA as usual, except that the worth of every {a mathematical formula}CS∈ΠIA is measured as {a mathematical formula}∑C∈CSf(C) instead of {a mathematical formula}∑C∈CSv(C). Then, IDP can proceed with the movements upward, and easily search all subspaces reachable from {a mathematical formula}ΠIA as illustrated in Fig. 5(B). Similarly, every subspace that has no edge leading to it must first be searched by IP, followed by IDP.
+      </paragraph>
+      <paragraph>
+       When m is set to 1, every subspace will have no edge leading to it, and so must be searched by IP. In this case, the combination of IDP and IP becomes identical to IP. On the other hand, Rahwan and Jennings [63] proved that, when m is set to {a mathematical formula}⌊2×n3⌋, every subspace will have an edge leading to it, and so IP will never be used. In this case, the combination of IDP and IP becomes identical to IDP. More importantly, by setting m anywhere between those two extremes, one can determine how much of IDP, and how much of IP, to put in the mix. Rahwan and Jennings showed that, for small values of m, IDP evaluates most of the edges in the graph (e.g., {a mathematical formula}&gt;99%) with ease. However, as m increases, the effectiveness of IDP drops exponentially, and it becomes more efficient to continue the search using IP.
+      </paragraph>
+      <paragraph>
+       A modified version of the above algorithm was subsequently proposed by Rahwan et al., which runs IDP and IP in parallel, thus enabling the partial outcome of IDP to be used to speed up the branch-and-bound technique of IP and to search multiple subspaces simultaneously [65], [64]. At the time of writing, we believe this is the fastest exact anytime algorithm in the literature (it still takes seconds to partition 30 agents given various random characteristic functions on a modern desktop computer, and is unlikely to solve problems of 40 agents or more).
+      </paragraph>
+      <paragraph>
+       A different algorithm was proposed by Service and Adams [80]. The basic idea is to compute, for every coalition C, the following values: {a mathematical formula}f†(C)=maxC′⊆C⁡v(C) and {a mathematical formula}t†(C)=argmaxC′⊆Cv(C).{sup:10} This computation is done using a dedicated dynamic programming algorithm that runs in {a mathematical formula}O(n2n) time. After computing those values, a modified version of IDP is used. In particular, while iterating over all coalitions to compute f and t, the algorithm keeps track of the coalition that maximizes {a mathematical formula}f(C)+f†(A\C). Let us denote this coalition by {a mathematical formula}C⁎. Now, suppose that this modified version of IDP was terminated prematurely, and that it had already computed f and t for every coalition of size {a mathematical formula}s≤⌊nr⌋. Then:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The best known partition of {a mathematical formula}C⁎, denoted by {a mathematical formula}P⁎, can be computed using {a mathematical formula}t(C⁎) (just like the optimal partition of A was computed using {a mathematical formula}t(A) in Example 1). The value of this partition is {a mathematical formula}f(C⁎).
+       </list-item>
+       <list-item label="•">
+        The best subset of {a mathematical formula}A\C can obtained instantly from {a mathematical formula}t†(A\C⁎). The value of this subset is {a mathematical formula}f†(A\C⁎).
+       </list-item>
+      </list>
+      <paragraph>
+       Based on the above, any coalition structure containing {a mathematical formula}P⁎ and {a mathematical formula}t†(A\C⁎) has a value that is {a mathematical formula}≥f(C⁎)+f†(A\C⁎). This implies that any such coalition structure is guaranteed to be within a bound {a mathematical formula}β=r according to the following theorem:
+      </paragraph>
+      <paragraph label="Theorem 8">
+       {a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}{P1,⋯,Pr} be a partition of {a mathematical formula}CS⁎ into r parts (i.e., each {a mathematical formula}Pi is a possibly-empty set of coalitions).{sup:11} Also, for each {a mathematical formula}Pi, let {a mathematical formula}V(Pi)=∑C∈Piv(C). Without loss of generality, let us assume that {a mathematical formula}V(P1)≥⋯≥V(Pr). Moreover, let the coalitions in {a mathematical formula}Pi be denoted by {a mathematical formula}P1i,⋯,Pkii, where {a mathematical formula}v(P1i)≥⋯≥v(Pkii). The partition {a mathematical formula}{P1,⋯,Pr} is said to be balanced if {a mathematical formula}V(CS⁎) is distributed equally among the parts, i.e., if {a mathematical formula}V(Pi)=V(CS⁎)/r for all {a mathematical formula}Pi. Based on this, let us define the imbalance of {a mathematical formula}{P1,⋯,Pr} as:{a mathematical formula} Now, let {a mathematical formula}P={P1,⋯,Pr} be a partition of {a mathematical formula}CS⁎ that minimizes the imbalance. Then, we will prove that the following holds for any {a mathematical formula}Pi∈P:{a mathematical formula} This can be proved by contradiction: if (11) does not hold, then it is possible to reduce the imbalance of P by replacing {a mathematical formula}P1 with {a mathematical formula}P1\{P11} and replacing {a mathematical formula}Pi with {a mathematical formula}Pi∪{P11}, which contradicts the definition of P.Having proved the correctness of (11), let us now add {a mathematical formula}v(P11) to both of its sides. We get: {a mathematical formula}v(P11)+V(Pi)≥V(P1) for all {a mathematical formula}Pi∈P. On the other hand, it is easy to see that the following holds no matter how small the imbalance of P is: {a mathematical formula}V(P1)≥V(CS⁎)r. Thus, for all {a mathematical formula}Pi∈P:{a mathematical formula} Since there are n agents and r parts, there exists a part, say {a mathematical formula}Pj, that contains at most {a mathematical formula}⌊nr⌋ agents. Let us denote the set of those agents by {a mathematical formula}Cj, i.e., {a mathematical formula}Cj=⋃Pj. Since {a mathematical formula}f(Cj) is the value of the optimal partition of {a mathematical formula}Cj, then:{a mathematical formula} On the other hand, since the agents in {a mathematical formula}Pj do not overlap with those in {a mathematical formula}P1, then {a mathematical formula}P11 must be a subset of {a mathematical formula}A\Cj, and so:{a mathematical formula} From (12), (13) and (14), we find that:{a mathematical formula} Since {a mathematical formula}C⁎ maximizes the right-hand side of (15), then (10) holds.  □
+      </paragraph>
+      <paragraph>
+       Service and Adams showed that the total number of operations that is required to compute {a mathematical formula}P⁎ is:{a mathematical formula} For instance, to get the bounds {a mathematical formula}r=2, 3, 4, the algorithm runs in {a mathematical formula}O(n2.83n), {a mathematical formula}O(n2.38n), {a mathematical formula}O(n2.09n) time respectively. Moreover, to get any bound {a mathematical formula}r≥5, the algorithm runs in {a mathematical formula}O(n2n) time.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Integer programming
+      </section-title>
+      <paragraph>
+       A fundamentally different approach to those that we have seen so far is to formulate the coalition structure generation problem as an integer program. More specifically, let {a mathematical formula}C1,C2,…,C2n denote the possible coalitions. Moreover, let z be an {a mathematical formula}n×2n binary matrix, where every row represents an agent and every column represents a coalition, such that {a mathematical formula}zi,j=1 if and only if {a mathematical formula}ai∈Cj. Finally, let us have {a mathematical formula}2n decision variables, {a mathematical formula}x1,x2,…,x2n, where {a mathematical formula}xj=1 corresponds to {a mathematical formula}Cj being selected in the solution. The coalition structure generation problem can then be modeled as:{a mathematical formula} With this formulation, it is possible to apply any integer programming solver. However, this approach has been shown to be inefficient, e.g., even an industrial-strength solver such as ILOG's CPLEX was shown to be significantly slower than both IDP and IP, and quickly runs out of memory given problems consisting of about 20 agents on a modern desktop computer [72].
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Metaheuristic algorithms
+     </section-title>
+     <paragraph>
+      In all the algorithms that were presented so far, the focus was on finding an optimal solution, or a solution that is within a known bound from optimum. However, as the number of agents increases, the problem becomes too hard, and the only practical option is to use metaheuristic algorithms. Such algorithms do not guarantee that an optimal solution is ever found, nor do they provide any guarantees on the quality of their solutions. However, they can usually be applied with very large problems (e.g., consisting of thousands of agents). We now describe some of these algorithms.
+     </paragraph>
+     <paragraph>
+      Among the first researchers to propose algorithms for coalition formation were Shehory and Kraus [81], [82], [83], [84]. The algorithms that they proposed included a decentralized, greedy algorithm for coalition structure generation [84]. This algorithm ignores coalitions containing more than a certain number of agents. It returns a coalition structure CS that is constructed iteratively in a greedy manner; at every iteration, the best of all candidate coalitions is added to CS, where a candidate coalition is one that does not overlap with any of the coalitions that were added to CS in previous iterations. The search for the best candidate coalition is done in a distributed fashion; the agents negotiate over which one of them searches which coalitions.{sup:12} Although this algorithm was rather simple, it made the first step towards addressing the need to develop algorithms that can produce a feasible coalition structure—a need that was first highlighted in the multi-agent community by Shehory and Kraus.
+     </paragraph>
+     <paragraph>
+      Another heuristic algorithm was later on proposed by Sen and Dutta [79]. This is a genetic algorithm that starts with an initial, randomly generated, set of coalition structures, called a population. After that, the algorithm repeats the following three steps: (1) evaluation, (2) selection, and (3) recombination. More specifically, the algorithm evaluates every member of the current population, selects members based on the outcome of the evaluation, and constructs new members from the selected ones by exchanging and/or modifying their contents.
+     </paragraph>
+     <paragraph>
+      A few years later, Keinänen [36] subsequently proposed an algorithm based on Simulated Annealing—a generic, stochastic local search technique. At every iteration, the algorithm moves from the current coalition structure to a coalition structure in its neighborhood, where neighborhoods can be defined using a variety of criteria. More specifically, the algorithm starts by generating a random coalition structure CS. Then, at every iteration, it samples a random coalition structure {a mathematical formula}CS′ in the neighborhood of CS. If {a mathematical formula}CS′ is better than CS, then the algorithm sets {a mathematical formula}CS=CS′. Otherwise, it sets {a mathematical formula}CS=CS′ with a probability {a mathematical formula}e(V(CS′)−V(CS))/temp, where temp is the temperature parameter that decreases after each iteration according to an annealing schedule{a mathematical formula}temp=αtemp, where {a mathematical formula}0&lt;α&lt;1.
+     </paragraph>
+     <paragraph>
+      Another greedy algorithm was put forward by Mauro et al. [44] based on GRASP—a general purpose greedy technique which, after each iteration, performs a quick local search to try and improve its solution [27]. In the coalition structure generation version of GRASP, a coalition structure CS is formed iteratively as follows. Initially, the algorithm sets {a mathematical formula}CS:=∅. Every iteration afterwards consists of two phases: a constructive phase and a local search phase.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The constructive phase involves choosing an agent {a mathematical formula}ai∈N∖⋃CS, who will either be added to CS as a singleton, i.e., {a mathematical formula}CS:=CS∪{{ai}}, or added to some coalition {a mathematical formula}Cj∈CS, i.e., {a mathematical formula}CS:=(CS∖{Cj})∪({Cj∪{ai}}). The candidate coalitions are then:{a mathematical formula} This set is sorted according to the impact of each candidate coalition on the value of CS. A coalition is then chosen uniformly at random from the top {a mathematical formula}x% of the list, where x is a parameter that can be set by the user to control greediness; the smaller x is, the greedier the algorithm becomes.
+      </list-item>
+      <list-item label="•">
+       The local search phase explores different neighborhoods of CS. A “neighbor” of CS is defined as a coalition structure that results from one of the following five operations: (i) split a coalition in CS in two, (ii) merge two coalitions into one, (iii) swap two agents belonging to different coalitions, (iv) move an agent from one coalition to another, or (v) take an agent out of a coalition, and put that agent as a singleton.
+      </list-item>
+     </list>
+     <paragraph>
+      Those two steps are repeated until {a mathematical formula}∪C∈CSC=A. Furthermore, the whole process of forming a coalition structure is repeated over and over. This algorithm has been shown to work particularly well, with empirical results suggesting that it is the best metaheuristic algorithm for coalition structure generation to date.
+     </paragraph>
+     <paragraph>
+      We conclude with yet another greedy algorithm, called C-Link, which was recently proposed by Farinelli et al. [26]. It starts at the top node in the coalition structure graph, and then moves downwards in a greedy fashion. That, is, out of all downward movements from the current node, the algorithm picks the one that has the highest immediate reward, without taking into consideration the future consequences of this choice. The algorithm terminates when no downward movement is immediately beneficial. Since there are n levels, and the number of downward movements from any node is at most {a mathematical formula}n(n−1)/2, the run time is {a mathematical formula}O(n3). However, like other algorithms in this class, no guarantee can be placed on solution quality.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Coalition structure generation under compact representations
+     </section-title>
+     <paragraph>
+      An implicit assumption in the survey thus far has been that one can obtain the value {a mathematical formula}v(C) of a coalition C in unit time. This amounts to assuming that we have access to an oracle for v; we have remained silent until now on how the characteristic function v might actually be represented in a form suitable for practical computation. The oracle representation is, in fact, quite a strong assumption: it amounts to assuming that the optimization problem facing coalition C (i.e., the problem of C determining how to collectively act so as to obtain maximal benefit) can be solved in unit time. And yet, even with this strong assumption in place, as we noted earlier, the coalition structure generation problem is NP-hard. In this section, we survey algorithms that solve this problem given specific concrete representations for characteristic functions v. Such representations have been the subject of intense research over the past decade [16].
+     </paragraph>
+     <paragraph>
+      This section is structured as follows. Section 7.1 considers a setting in which the computation of a coalition's value requires solving a distributed constraint optimization problem. Section 7.2 considers a setting where every agent has a set of skills, and a coalition's value depends on the skills that are collectively possessed by its members. Section 7.3 considers a game in which some of the agents are identical. Section 7.4 considers a representation whereby only the coalitions with synergy are explicitly modeled. Finally, Section 7.5 considers a setting in which the characteristic function is expressed using the Marginal Contribution net (MC-net) representation.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Distributed constraint optimization
+      </section-title>
+      <paragraph>
+       The Distributed Constraint Optimization Problem (DCOP) framework has recently become a popular approach for modelling cooperative agents [52]. In this framework: (1) each agent has a choice of actions, (2) the possibly-negative reward is determined by the combination of actions, and (3) the goal is for every agent to choose an action so as to maximize the sum of the rewards. Ueda et al. [89] considered the coalition structure generation problem where the multi-agent system is represented as one big DCOP, and every coalition's value is computed as the optimal solution of the DCOP among the members of that coalition.
+      </paragraph>
+      <paragraph>
+       At first glance, this might seem too computationally expensive since there are {a mathematical formula}2n possible coalitions. Thus, to find the optimal coalition structure, one might need to solve {a mathematical formula}2n instances of the NP-hard DCOP problem. Interestingly, however, Ueda et al. showed that the process of finding an optimal, or near optimal, coalition structure does not have to be divided into two independent stages: (1) computing all coalition values, and (2) finding an optimal combination of disjoint and exhaustive coalitions. Instead, the big DCOP that represents the multi-agent system can be modified such that those two stages are merged. This means the desired coalition structure can be obtained by solving a single, modified, DCOP.
+      </paragraph>
+      <paragraph>
+       The modification is controlled by a single parameter, called σ, which specifies the maximum number of coalitions that are allowed to contain more than one agent. We will call these multi-agent coalitions. The basic idea behind the modification is to change every agent's domain, i.e., set of possible actions. Specifically, every action {a mathematical formula}dj in the original domain is replaced by σ actions, {a mathematical formula}dj,1,…,dj,σ, where {a mathematical formula}dj,i means that the agent performs action {a mathematical formula}dj while joining the ith multi-agent coalition. The new domain also contains an action called “independent”, which means that the agent acts independently. The modified DCOP can be solved using any existing algorithms that can obtain an optimal solution, e.g., ADOPT [52] or DPOP [59]. Assuming that the original number of possible actions per agent is d, the search space size for the original DCOP is {a mathematical formula}dn, while for the modified DCOP it is {a mathematical formula}(σd+1)n. Assuming that the value of each coalition is greater than, or equal to, zero, the following theorem implies that the optimal solution of the modified DCOP is within a bound {a mathematical formula}β=⌊n2⌋/σ from optimum.
+      </paragraph>
+      <paragraph label="Theorem 9">
+       Let{a mathematical formula}Ikn⊆Inbe the set in which every integer partition contains at most k integers that are greater than 1. Then, the best coalition structure in{a mathematical formula}∪I∈IknΠIAis within a bound{a mathematical formula}β=⌊n2⌋/kfrom optimum.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that the optimal coalition structure, {a mathematical formula}CS⁎, does not belong to {a mathematical formula}Ikn. In other words, assume that {a mathematical formula}CS⁎ contains exactly l multi-agent coalitions, {a mathematical formula}C1,…,Cl, where {a mathematical formula}l&gt;k. Furthermore, without loss of generality, assume that {a mathematical formula}v(C1)≥⋯≥v(Cl). This latter assumption implies that {a mathematical formula}∑i=k+1lv(Ci)≤l−klV(CS⁎).Now, consider a new coalition structure, {a mathematical formula}CS′, which is identical to {a mathematical formula}CS⁎ except that every {a mathematical formula}Ci:i∈{k+1,…,l} is split into single-agent coalitions. Clearly, {a mathematical formula}CS′ contains exactly k multi-agent coalitions, namely {a mathematical formula}C1,…,Ck, and so {a mathematical formula}CS′∈Ikn. Furthermore, the total value of {a mathematical formula}Ck+1,…,Cl is at most {a mathematical formula}l−klV(CS⁎), while the total value of the single-agent coalitions (that result from splitting {a mathematical formula}Ck+1,…,Cl) is at least 0. Thus, the maximum possible difference in value between {a mathematical formula}CS′ and {a mathematical formula}CS⁎ is: {a mathematical formula}l−klV(CS⁎). This implies that {a mathematical formula}V(CS⁎)V(CS′)≤lk. It remains to observe that {a mathematical formula}l≤⌊n2⌋ since {a mathematical formula}CS⁎ cannot possibly contain more than {a mathematical formula}⌊n2⌋ multi-agent coalitions.  □
+      </paragraph>
+      <paragraph>
+       Ueda et al. [89] proved that, under the DCOP representation, the decision version of the coalition structure generation problem is NP-complete (this version involves checking whether a coalition structure exists whose value is greater than or equal to some given constant, q). The proof starts by highlighting the fact that, for a given coalition structure CS, checking whether {a mathematical formula}V(CS)≥q can be done in polynomial time, meaning that the problem is in NP. The proof then proceeds based on a reduction from a Constraint Optimization Problem (COP) in which all rewards are non-negative, to a coalition structure generation problem consisting of the same variables and reward functions. Since all rewards are non-negative, the coalition structure containing the grand coalition is optimal. This implies that the solution to the COP is identical to the solution of the corresponding coalition structure generation problem. Finally, since the decision version of the original problem is NP-complete, the solution to the corresponding problem is also NP-complete.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Coalitional games with skills
+      </section-title>
+      <paragraph>
+       In many settings, the value of a coalition can be defined in terms of the skills that are possessed by the agents. A simple representation formalism that is based on this idea was proposed by Ohta et al. [57]: there is a set of skills S, each agent {a mathematical formula}ai∈A has a subset of the skills {a mathematical formula}Sai⊆S, and there is a function {a mathematical formula}u:2S→R which for every subset of skills {a mathematical formula}S′⊆S specifies the payoff of a coalition that collectively possesses all the skills in {a mathematical formula}S′ and none of the skills in {a mathematical formula}S∖S′. The value of a coalition {a mathematical formula}C⊆A is then:{a mathematical formula} Clearly, this representation is complete (i.e., it can represent any characteristic function game), as we can in the worst case identify each agent {a mathematical formula}ai with a unique skill {a mathematical formula}sai and set {a mathematical formula}u(S′)=v({ai|sai∈S′}) for any subset {a mathematical formula}S′ of the skill set. However, this representation can be succinct, especially when the performance of each coalition can be expressed in terms of a small number of skills possessed by its members. A more structured representation was later on proposed by Bachrach and Rosenschein [7], where coalition values are expressed in terms of skills and tasks. Specifically, in addition to the set of skills S, there is a set of tasks Γ, and every task {a mathematical formula}τ∈Γ has a skill requirement{a mathematical formula}Sτ⊆S and a payoff. As before, each agent {a mathematical formula}ai∈A has a set of skills {a mathematical formula}Sai⊆S. A coalition {a mathematical formula}C⊆Aachieves a task τ if it has all skills that are required for τ, i.e., if {a mathematical formula}Sτ⊆∪ai∈CSai. Finally, there is a task value function{a mathematical formula}F:2Γ→R, which for every subset {a mathematical formula}Γ′⊆Γ of tasks specifies the payoff that can be obtained by a coalition that achieves all tasks in {a mathematical formula}Γ′. The value of a coalition C is then given by{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Bachrach et al. [6] considered the coalition structure generation problem in coalitional skill games. While this problem is, in general, very hard computationally, Bachrach et al. showed that it admits an efficient algorithm as long as the number of tasks and the treewidth of a certain associated hypergraph are small. To describe their algorithm, we need a few additional definitions.
+      </paragraph>
+      <paragraph>
+       Given a skill set S, its skill graph is a hypergraph {a mathematical formula}g=〈V,E〉 in which every agent is represented as a node, and every skill {a mathematical formula}si is represented as a hyperedge {a mathematical formula}esi∈E that connects all agents that possess this skill. The “complexity” of a hypergraph can be measured using the notion of treewidth. The following definitions are reproduced from [21], and an illustration is provided in Fig. 6:
+      </paragraph>
+      <paragraph label="Definition 4">
+       Given a hypergraph {a mathematical formula}g=〈V,E〉, a tree decomposition of g is a pair {a mathematical formula}(Q,B), where B is a family of subsets of V (each such subset {a mathematical formula}Bi∈B is called a bag), and Q is a tree whose node set is B, such that: (1) for each {a mathematical formula}e∈E, there is a bag {a mathematical formula}Bi∈B such that {a mathematical formula}e∈Bi; (2) for each {a mathematical formula}vj∈V(g) the set {a mathematical formula}{Bi∈B|vj∈Bi} is non-empty and connected in Q. The treewidth of {a mathematical formula}(Q,B) is {a mathematical formula}maxBi∈B⁡|Bi|−1. The treewidth of g is the minimum treewidth of {a mathematical formula}(Q,B) over all possible tree decompositions {a mathematical formula}(Q,B) of g.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}CSG(m,w) be the class of all coalitional skill games where the number of tasks is at most m, and the treewidth of the corresponding skill graph is at most w. We will show that, for a fixed m and w, the coalition structure generation problem for a game in {a mathematical formula}CSG(m,w) can be solved in time polynomial in the number of agents n and the number of skills {a mathematical formula}|S| (but exponential in m and w).{sup:13} The basic idea is as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Step 1: show that the coalition structure generation problem is equivalent to the problem of solving multiple constraint satisfaction problems{sup:14} (CSP for short), whose underlying graph is the skill graph g;
+       </list-item>
+       <list-item label="•">
+        Step 2: show that each of the above CSPs can be solved by solving a “dual” CSP whose underlying graph is the tree decomposition of g. This is important because the tree decomposition of g is a tree, and CSPs whose underlying graph is a tree are solvable in polynomial time [75].
+       </list-item>
+      </list>
+      <paragraph>
+       Next, we describe the above two steps in detail.
+      </paragraph>
+      <paragraph>
+       Step 1: Observe that a single task can be achieved multiple times by a single coalition structure CS. To be more precise, a task that requires a single skill which only x agents share can be achieved at most x times (this is when each one of those x agents appears in a different coalition in CS). Thus, if we denote by {a mathematical formula}h′ the largest number of agents sharing a single skill, then a coalition structure can achieve at most {a mathematical formula}h′|Γ| tasks. Based on this, we will define a candidate task solution as a set {a mathematical formula}{Γi}i=1h where each {a mathematical formula}Γi is a subset of tasks, and {a mathematical formula}h≤h′|Γ|. For every coalition structure {a mathematical formula}CS={Ci}i=1h, we say that CS achieves{a mathematical formula}{Γi}i=1h if {a mathematical formula}Ci achieves {a mathematical formula}Γi for all {a mathematical formula}i=1,…,h. We say that {a mathematical formula}{Γi}i=1h is feasible if there exists at least one coalition structure that achieves it. Clearly, the total value obtained by achieving these tasks is {a mathematical formula}∑i=1hF(Γi). The problem of finding an optimal coalition structure is thus equivalent to the problem of finding a feasible {a mathematical formula}{Γi}i=1h that maximizes {a mathematical formula}∑i=1hF(Γi). One way of doing this is to iterate over all possible choices of {a mathematical formula}{Γi}i=1h and, for each such choice, solve the following problem: Determine whether it is feasible and, if so, find a coalition structure that achieves it. This problem can be represented as a CSP whose underlying graph is the skill graph g, based on the observation that every coalition structure can be viewed as a coloring of the agents, where all agents with the same color form a coalition. Generally speaking, a CSP is a problem of finding an assignment of variables that satisfies some constraints. Here:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the variables correspond to the agents;
+       </list-item>
+       <list-item label="•">
+        the domain (i.e., the possible values) of each variable (i.e., agent) consists of the possible colors (i.e., the possible coalitions that the agent can join);
+       </list-item>
+       <list-item label="•">
+        For each skill s, we have the following constraint: For each{a mathematical formula}i=1,…,h, if some task in{a mathematical formula}Γirequires s, then at least one agent in{a mathematical formula}Cipossesses s.
+       </list-item>
+      </list>
+      <paragraph>
+       Step 2: To solve the above “primal” CSP, we first check if the treewidth of g is bounded by w, and if so return a tree decomposition (this can be done in time polynomial in n and {a mathematical formula}|S|, see [30]). Then, to solve the primal problem, we define a “dual” problem. This is another CSP whose underlying graph is the tree decomposition of g and:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the variables correspond to the bags in the tree decomposition;
+       </list-item>
+       <list-item label="•">
+        the domain of every bag consists of the possible colorings of the agents in the bag. The size of this domain is {a mathematical formula}O((h)w+1) since every bag contains at most {a mathematical formula}w+1 agents, and every agent has h possible colors;
+       </list-item>
+       <list-item label="•">
+        the constraints are of two types. The first prevents an agent from getting different colors in two neighboring bags. This, in turn, ensures that every agent gets the same color in all bags (due to the structure of the tree decomposition). The second type of constraints is exactly the same as the one in the primal problem (i.e., if a skill is required for at least one task in{a mathematical formula}Γi, then at least one agent in{a mathematical formula}Cipossesses that skill).
+       </list-item>
+      </list>
+      <paragraph>
+       Note that a solution to the dual problem is in fact a valid solution to the primal problem. Since the underlying graph of the dual problem is a tree, it can be solved in time polynomial in n and {a mathematical formula}|S|[75], [6].
+      </paragraph>
+      <paragraph>
+       Having described how to handle skills in polynomial time under the Coalitional Skill Game representation of Bachrach and Rosenschein [7], we end this subsection by briefly mentioning a generalization of this representation, called the Coalitional Skill Vector (CSV) representation [86]. The key novelty here is that each agent is characterized not by a subset of available skills but by a skill vector. Formally, each agent {a mathematical formula}ai is assigned an {a mathematical formula}|S|-dimensional vector of skills, {a mathematical formula}ri=(ri1,…,ri|S|), where S is the set of skills. The values in this vector reflect the level at which the agent has mastered the corresponding skills. In other words, while in Coalitional Skill Games the relation between an agent and a task is binary, i.e., any agent either possesses or does not possess a certain skill, in the CSV representation it is possible to express any intermediate state, i.e., that an agent has mastered any skill to a certain degree.
+      </paragraph>
+      <paragraph>
+       To define the value function for the CSV representation, we first define the skill vector of a coalition {a mathematical formula}C⊆A as {a mathematical formula}r(C)=∑ai∈Cri. We also need {a mathematical formula}d(r1,r2) which is the distance between vectors {a mathematical formula}r1 and {a mathematical formula}r2 in some norm L. The agents aim to achieve a set of goals and, in order to do so, they have to possess the level of skill required to achieve the different goals. More specifically, the list of goal-requirements is expressed as a set of skill vectors {a mathematical formula}G⊆R|S|. The value of coalition C is then:{a mathematical formula} where {a mathematical formula}d(r(C),G)=ming∈G⁡d(r(C),g) is the distance from {a mathematical formula}r(C) to G, and {a mathematical formula}f:R+∪{0}→R is the value function of d. The intuitive interpretation is as follows: the value of a coalition is a function over the distance between the coalition's skill vector and the set of goals G. In this way, an agent that has relevant skills can pull its coalition closer towards a desired goal.
+      </paragraph>
+      <paragraph>
+       In addition to being fully expressive{sup:15} and significantly more concise for certain classes of games than the classical representations, Tran-Thanh et al. [86] showed that the CSV representation facilitates the development of a comparatively efficient MIP-based algorithm to solve the coalition structure generation problem using linear relaxation (e.g., their algorithm minutes on a modern desktop computer to solve problems consisting of hundreds of agents and hundreds of constraints).
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Agent-type representation
+      </section-title>
+      <paragraph>
+       Aziz and de Keijzer [4] and Ueda et al. [90] studied the coalition structure generation problem under the agent-type representation, where there is a set of types, {a mathematical formula}T={t1,…,t|T|}, and a partition of A, denoted by {a mathematical formula}{A1,…,A|T|}, such that all agents in {a mathematical formula}Ai are of type {a mathematical formula}ti. Intuitively, agents of the same type have the same contribution to any coalition they belong to. That is, for any {a mathematical formula}aj,ak∈Ai, and any coalition C such that {a mathematical formula}aj,ak∉C, we have: {a mathematical formula}v(C∪{aj})=v(C∪{ak}). This implies that the value of any coalition depends solely on the number of agents that it contains from each type. More formally, for any coalition C, let us define the coalition-type of C as a vector, {a mathematical formula}ψ=〈n1,…,n|T|〉, where each {a mathematical formula}ni denotes the number of agents in C that are of type {a mathematical formula}ti. Then, coalitions of the same coalition-type have the same value. This means the conventional characteristic function, {a mathematical formula}v:2A→R, can be replaced with the more concise type-based characteristic function, {a mathematical formula}vt:Ψ→R, where Ψ is the set of all possible coalition-types, i.e., {a mathematical formula}Ψ={〈n1,…,n|T|〉:0≤ni≤|Ai|}. This function requires {a mathematical formula}O(|A||T|) space, since {a mathematical formula}|Ψ|=(|A1|+1)×⋯×(|A|T||+1)&lt;|A||T|.{sup:16} Now, let us introduce the following definitions:
+      </paragraph>
+      <paragraph label="Definition 5">
+       For every coalition-type, {a mathematical formula}ψ=〈n1,…,n|T|〉, a type-partition of ψ is a set of coalition-types, {a mathematical formula}λ={〈ni1,…,ni|T|〉}i=1|λ| such that the following holds: {a mathematical formula}〈∑i=1|λ|ni1,…,∑i=1|λ|ni|T|〉=ψ. For example, {a mathematical formula}{〈0,1,2〉,〈4,3,2〉} is one of the possible type-partitions of {a mathematical formula}〈4,4,4〉 because {a mathematical formula}〈0+4,1+3,2+2〉=〈4,4,4〉.
+      </paragraph>
+      <paragraph label="Definition 6">
+       The value of a type-partition{a mathematical formula}λ={〈ni1,…,ni|T|〉}i=1|λ|, is computed in the following way: {a mathematical formula}Vt(ψ)=∑i=1|ψ|vt(〈ni1,…,ni|T|〉). For example, {a mathematical formula}Vt({〈0,1,2〉,〈4,3,2〉})=vt(〈0,1,2〉)+vt(〈4,3,2〉}).
+      </paragraph>
+      <paragraph>
+       Thus, while we typically deal with “coalitions” and “coalition structures”, in an agent-type representation we deal with “coalition-types” and “type-partitions”. The problem of finding an optimal coalition structure is then equivalent to that of finding an optimal type-partition of {a mathematical formula}〈|A1|,…,|A|T||〉. For example, if we have four types and five agents of each type, we need to find an optimal type-partition of {a mathematical formula}〈5,5,5,5〉. Two dynamic programming algorithms were proposed to solve this problem; both run in {a mathematical formula}O(n2|T|) time [4], [90]. We will present the one given by Aziz and de Keijzer [4] since it is less heavy on notation.
+      </paragraph>
+      <paragraph>
+       For any coalition-type {a mathematical formula}ψ∈Ψ, let {a mathematical formula}ft(ψ) denote the value of the optimal type-partition of ψ. Then, we can compute {a mathematical formula}ft(ψ) recursively as follows [4]:{a mathematical formula} Based on this recursive formula, we can compute the optimal type-partition by dynamic programming. Specifically, the algorithm works by filling two tables, namely R and Q, each with an entry for every coalition-type. Entry {a mathematical formula}R[〈n1,…,nT〉] of table R stores an optimal type-partition of {a mathematical formula}〈n1,…,nT〉, whereas entry {a mathematical formula}Q[〈n1,…,nT〉] of table Q stores the value of this type-partition. The algorithm fills out these tables using Equation (16), where “lower” entries are filled in first, i.e., if {a mathematical formula}mi≤ni for all {a mathematical formula}i=1,…,T, then {a mathematical formula}〈m1,…,mT〉 is dealt with before {a mathematical formula}〈n1,…,nT〉. For each {a mathematical formula}〈n1,…,n|T|〉, the algorithm finds a coalition-type {a mathematical formula}〈x1,…,x|T|〉 that maximizes the max-expression of (16), and then sets{a mathematical formula} By the end of this process, we compute {a mathematical formula}Q[〈|A1|,…,|A|T||〉] and {a mathematical formula}R[〈|A1|,…,|A|T||〉], which provide the solution to the coalition structure generation problem. Filling out each cell of R and Q requires {a mathematical formula}O(n|T|) operations, and the size of each table is {a mathematical formula}|Ψ|&lt;n|T|. Hence, the algorithm runs in time {a mathematical formula}O(n2|T|). This algorithm has been shown to solve problems consisting of 100 agents and 5 agent-types in a matter of seconds on a modern desktop computer [90].
+      </paragraph>
+      <paragraph>
+       We conclude this subsection by mentioning the work of Rahwan et al. [70] who proposed a network flow-based representation, which conveniently models coalitional games with agent types. The authors showed that under this representation, the coalition structure generation problem in a task-based setting can be reformulated as a mathematical program related to the widely-studied production-transportation problem [87]. This produces approximate solutions to problems consisting of 5000 agents and 100 tasks in a matter of seconds on a modern desktop computer.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Synergy Coalition Groups
+      </section-title>
+      <paragraph>
+       Another concise representation under which the coalition structure generation problem was considered is Synergy Coalition Groups (SCG)[17]. An interesting property of this representation is that the very basic operation of computing a coalition's value may itself require solving a small coalition structure generation problem. In more detail, the SCG representation is built upon the observation that in certain settings cooperation within many coalitions does not produce any value added. In other words, there is no synergy achieved by creating such coalitions. Thus, the rational choice of the agents involved in such coalitions is to work in smaller (and possibly more effective) sub-coalitions. In such settings, instead of explicitly representing the values of all possible coalitions, the main idea behind SCG is to only represent the values of coalitions in which there is synergy among the members. More formally, SCG consists of a set of pairs of the form: {a mathematical formula}(C,v(C)), where C is a coalition the formation of which produces synergy.{sup:17} If there is no synergy from the creation of a coalition, then it is assumed that agents in such a coalition partition themselves into sub-coalitions in the best possible way. Formally, if {a mathematical formula}(C,v(C))∉SCG then {a mathematical formula}v(C)=maxCS∈ΠC⁡∑Ci∈CSv(Ci), where the following two conditions are met:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for all the {a mathematical formula}Ci it holds that {a mathematical formula}(Ci,v(Ci))∈SCG; and
+       </list-item>
+       <list-item label="•">
+        for all {a mathematical formula}CS′⊆CS, where {a mathematical formula}|CS′|≥2, it holds that {a mathematical formula}(⋃Ci∈CS′Ci,v(⋃Ci∈CS′Ci)) is not an element of SCG.
+       </list-item>
+      </list>
+      <paragraph>
+       Intuitively, the latter condition states that, while computing the value of a coalition C that does not appear in SCG, we cannot choose {a mathematical formula}CS∈ΠC such that union of any of the coalitions in CS appears in SCG. Ohta et al. [56] showed that this condition is needed to ensure that the SCG representation is fully expressive.
+      </paragraph>
+      <paragraph label="Example 2">
+       Let {a mathematical formula}A={a1,a2,a3,a4,a5} and {a mathematical formula}SCG={({a1},0), {a mathematical formula}({a2},0), {a mathematical formula}({a3},1), {a mathematical formula}({a4},2), {a mathematical formula}({a5},1), {a mathematical formula}({a1,a2},3), {a mathematical formula}({a1,a2,a3},3)}. In this case, {a mathematical formula}v({a4,a5})=v({a4})+v({a5})=3, and {a mathematical formula}v({a1,a2,a3,a4,a5})=v({a1,a2,a3})+v({a4})+v({a5})=6. For {a mathematical formula}v({a1,a2,a3,a4,a5}), we cannot use {a mathematical formula}v({a1,a2}+v({a3})+v({a4})+v({a5})=7, because {a mathematical formula}{a1,a2}∪{a3}={a1,a2,a3} appears in SCG.
+      </paragraph>
+      <paragraph>
+       Ohta et al. [56] proved that following theorem:
+      </paragraph>
+      <paragraph label="Theorem 10">
+       There exists an optimal coalition structure{a mathematical formula}CS⁎such that{a mathematical formula}∀Ci∈CS⁎,(Ci,v(Ci))∈SCG.
+      </paragraph>
+      <paragraph label="Proof">
+       If there existed some {a mathematical formula}CS⁎ such that {a mathematical formula}V(CS⁎) was strictly greater than any coalition structure whose coalitions are all in SCG, then it would be possible to construct some CS from {a mathematical formula}CS⁎ by replacing all coalitions {a mathematical formula}Ci∈CS⁎:Ci∉SCG by their best possible partitions into sub-coalitions. By doing so, the value of CS would be at least equal to the value of {a mathematical formula}CS⁎—we obtain a contradiction.  □
+      </paragraph>
+      <paragraph>
+       Interestingly, due to Theorem 10, the coalition structure generation problem under the SCG representation becomes equivalent to a weighted set packing problem, also known as the winner-determination problem in combinatorial auctions [77]. As such, all the results for these two problems are directly applicable in our context. In particular:
+      </paragraph>
+      <paragraph label="Theorem 11">
+       (See[77].) Under the SCG representation, the optimal coalition structure generation problem is NP-hard. Moreover, unless NP = ZPP, there exists no polynomial-time{a mathematical formula}O(|SCG|1−ϵ)approximation algorithm for any{a mathematical formula}ϵ&gt;0.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows directly from the corresponding results on the winner determination problem [77] and on the maximum independent set problem [97].  □
+      </paragraph>
+      <paragraph>
+       Also the MIP formulation directly corresponds to a standard winner determination formulation:{a mathematical formula} where {a mathematical formula}x(C) is 1 if C is included in {a mathematical formula}CS⁎, and 0 otherwise. Ohta et al. [56] report solving problems consisting of around a hundred agents, and a few hundred pairs in the corresponding SCG, in a few milliseconds on a modern desktop computer.
+      </paragraph>
+      <paragraph>
+       In the spirit of a recent literature on representing coalitional games using decision diagrams [10], [1], Sakurai et al. [76] proposed a representation that uses Multi-Terminal Zero-suppressed Decision Diagrams (ZDD, [51]) to reduce the size of the SCG representation. The resulting combined ZDD-SCG representation also admits an MIP formulation to solve the coalition structure generation problem.
+      </paragraph>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Marginal contribution nets
+      </section-title>
+      <paragraph>
+       Ieong and Shoham [34] proposed a concise representation called Marginal contribution nets, or MC-nets, where a game is described by a collection of rules {a mathematical formula}R. Each rule {a mathematical formula}r∈R is of the form {a mathematical formula}Br→ϑr, where {a mathematical formula}Br is a Boolean formula over a set of variables {a mathematical formula}{b1,…,bn} and {a mathematical formula}ϑr is a real value. We say that a rule {a mathematical formula}r∈R is applicable to coalition C if {a mathematical formula}Br is satisfied by the following truth assignment: {a mathematical formula}bi=true if {a mathematical formula}ai∈C and {a mathematical formula}bi=false if {a mathematical formula}ai∉C. Let {a mathematical formula}RC denote the set of rules that are applicable to C. Then, the characteristic function of the game described by {a mathematical formula}R={B1→ϑ1,…,Bk→ϑk} is computed as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 3">
+       The MC-net that consists of the rules {a mathematical formula}R={b2→3,b1∧b2→5}, corresponds to a coalitional game {a mathematical formula}G=(A,v), where {a mathematical formula}A={a1,a2}, {a mathematical formula}v({a1})=0, {a mathematical formula}v({a2})=2, {a mathematical formula}v({a1,a2})=8. The intuitive interpretation of the rules in {a mathematical formula}R is as follows: whenever {a mathematical formula}a2 is in a coalition, C, it improves the performance of C by 3 units of utility, and whenever {a mathematical formula}a1 and {a mathematical formula}a2 are together in a coalition, they improve its performance by 5 units of utility.
+      </paragraph>
+      <paragraph>
+       An MC-net is said to be basic if the left-hand side of any rule is a conjunction of literals, i.e., a conjunction of variables or their negations. In this case, we write a rule {a mathematical formula}r∈R as {a mathematical formula}(Pr,Nr)→ϑr, where {a mathematical formula}Pr and {a mathematical formula}Nr are the sets of positive and negative literals, respectively. Thus, r is applicable to coalition C if C contains every agent in {a mathematical formula}Pr and none of the agents in {a mathematical formula}Nr. It is not hard to see that any coalitional game {a mathematical formula}G=(A,v) with {a mathematical formula}|A|=n can be represented by a basic MC-net with {a mathematical formula}2n−1 rules: for each coalition {a mathematical formula}C⊆A we create a rule{a mathematical formula} However, many interesting games admit a more succinct representation (i.e., they do not require as many as {a mathematical formula}2n−1 rules), especially if we allow MC-nets that are not basic.
+      </paragraph>
+      <paragraph>
+       Ohta et al. [56] studied the coalition structure generation problem given a restricted class of basic MC-nets, where {a mathematical formula}Pr≠∅ and {a mathematical formula}ϑr&gt;0 for every r.{sup:18} In particular, they define a set of rules {a mathematical formula}R′⊆R to be feasible if all the rules in {a mathematical formula}R′ are applicable at the same time to some coalition structure. In other words, {a mathematical formula}R′ is feasible if there exists a coalition structure CS such that every rule {a mathematical formula}r∈R′ is applicable to some {a mathematical formula}C∈CS. The problem of finding an optimal coalition structure is then equivalent to the problem of finding a feasible set of rules {a mathematical formula}R′ such that {a mathematical formula}∑r∈R′ϑr is maximized. While this problem is NP-hard, Ohta et al. showed that it admits a mixed integer programming (MIP) formulation. The remainder of this section will first explain the intuition behind the MIP, and then explain why (and how) it should be modified in order to handle rules with negative values. After that, it will briefly discuss the work by Liao et al. [40] that builds upon MC-Nets to solve the coalition structure generation problem with an off-the-shelve MaxSAT solver. Finally, it will consider the Induced Subgraph[22] representation, which is basically a simplified, graph-based version of MC-Nets.
+      </paragraph>
+      <paragraph>
+       The MIP of Ohta et al. [56] is based on the observation that, for any two rules {a mathematical formula}r,r′, the possible relations between r and {a mathematical formula}r′ can be classified into the following four cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Incompatible (IC): This is when {a mathematical formula}Pr∩Pr′≠∅ and ({a mathematical formula}Pr∩Nr′≠∅ or {a mathematical formula}Pr′∩Nr≠∅). For example, {a mathematical formula}({a1,a2},∅)→ϑ1 and {a mathematical formula}({a2,a3},{a1})→ϑ2 are not applicable at the same time, because the first requires {a mathematical formula}a1 and {a mathematical formula}a2 to appear together in a coalition, while the second required {a mathematical formula}a2 and {a mathematical formula}a3 to appear together in a coalition that does not contain {a mathematical formula}a1.
+       </list-item>
+       <list-item label="•">
+        Compatible on the same coalition (CS): This is when {a mathematical formula}Pr∩Pr′≠∅ and {a mathematical formula}Pr∩Nr′=Pr′∩Nr=∅. For example, {a mathematical formula}({a1,a2},∅)→ϑ1 and {a mathematical formula}({a2,a3},{a4})→ϑ2 are applicable at the same time in some coalition structure CS as long as there exists {a mathematical formula}C∈CS such that {a mathematical formula}{a1,a2,a3}⊆C and {a mathematical formula}a4∉C. Note that both rules apply to the same coalition.
+       </list-item>
+       <list-item label="•">
+        Compatible on different coalitions (CD): This is when {a mathematical formula}Pr∩Pr′=∅ and ({a mathematical formula}Pr∩Nr′≠∅ or {a mathematical formula}Pr′∩Nr≠∅). For example, {a mathematical formula}({a1,a2},∅)→ϑ1 and {a mathematical formula}({a3,a4},{a1})→ϑ2 are applicable at the same time in some CS as long as {a mathematical formula}a1,a2 appear in a coalition {a mathematical formula}C∈CS and {a mathematical formula}a3,a4 appear in a different coalition {a mathematical formula}C′∈CS.
+       </list-item>
+       <list-item label="•">
+        Independent (ID): This is when {a mathematical formula}Pr∩Pr′=Pr∩Nr′=Pr′∩Nr=∅.
+       </list-item>
+      </list>
+      <paragraph label="Theorem 12">
+       Consider a graphical representation of an MC-net in which every node is a rule, and between any two nodes there exists an edge whose type is one of the four cases described above (see, e.g., Fig. 7). Then, the following holds: A set of rules{a mathematical formula}R′is feasible if and only if (1) it includes no pair of rules that are connected by an edge of typeIC, and (2) for any two rules{a mathematical formula}r1,r2∈R′, if{a mathematical formula}r1can be reached from{a mathematical formula}r2via a series of edges of typeCS, then the edge{a mathematical formula}(r1,r2)must not be of typeCD.
+      </paragraph>
+      <paragraph>
+       To understand the intuition behind the proof, consider the example from Fig. 7. Here, {a mathematical formula}r1 and {a mathematical formula}r2 are connected by an edge of type CS. Thus, they must be applicable to a single coalition in CS, say {a mathematical formula}C′, such that {a mathematical formula}P1∪P2⊆C′. Similarly, an edge of type CS connects {a mathematical formula}r2 and {a mathematical formula}r3, and so they must be applicable to a single coalition in CS, say {a mathematical formula}C″, such that {a mathematical formula}P2∪P3⊆C″. Now, since {a mathematical formula}P1∪P2 overlaps with {a mathematical formula}P2∪P3, and since the coalitions in CS are pairwise disjoint, we must have {a mathematical formula}C′=C″. This means that {a mathematical formula}r1,r2,r3 must all be applicable to the same coalition. In other words, the edge between {a mathematical formula}r1 and {a mathematical formula}r3 must not be of the type IC or CD. However, in our example we happen to have an edge of type CD between {a mathematical formula}r1 and {a mathematical formula}r3. Therefore, any rule set containing {a mathematical formula}r1,r2,r3 is not feasible.
+      </paragraph>
+      <paragraph>
+       The above example can be generalized to any set of rules, say {a mathematical formula}r1,r2,…,rm, where an edge of type CS connects every {a mathematical formula}ri&lt;m to {a mathematical formula}ri+1; these rules must all be applicable to a single coalition, which contains {a mathematical formula}P1∪⋯∪Pm.
+      </paragraph>
+      <paragraph>
+       Based on Theorem 12, Ohta et al. proposed the following MIP formulation.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Here, we have a binary variable {a mathematical formula}xr for every rule r, where {a mathematical formula}xr=1 means that r is selected in the solution. Thus, condition (1) of Theorem 12 is enforced by the constraint (17), which ensures that two rules connected by an edge of type IC are never selected at the same time. What remains is to enforce condition (2) of the theorem. To do this, for every edge e of type CD, and for every rule r that is an endpoint of e or an endpoint of some other edge of type CS, we define a variable {a mathematical formula}yre. For example, since {a mathematical formula}e3 in Fig. 7 is an edge of type CD, we define the variables {a mathematical formula}yr1e3,yr2e3,yr3e3 (because every rule {a mathematical formula}r1,r2,r3 is either an endpoint of {a mathematical formula}e3 or an endpoint of some edge of type CS). These variables are used in constraints (18), (19), (20), (21) to enforce condition (2) of Theorem 12. In more detail, for every edge {a mathematical formula}e=(ri,rj) of type CD, we have:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Constraints (18) and (19) ensure that {a mathematical formula}yrie≠yrje.
+       </list-item>
+       <list-item label="•">
+        Constraints (20) and (21) ensure that, for any edge {a mathematical formula}(rk,rℓ) of type CS, we have: {a mathematical formula}yrke=yrℓe whenever {a mathematical formula}rk and {a mathematical formula}rℓ are selected (i.e., whenever {a mathematical formula}xk=1 and {a mathematical formula}xℓ=1).
+       </list-item>
+      </list>
+      <paragraph>
+       This way, if {a mathematical formula}ri and {a mathematical formula}rj are connected by a path of edges of type CS, then the rules on this path cannot be selected at the same time. In Fig. 7, for example, {a mathematical formula}e3=(r1,r3) is an edge of type CD, and {a mathematical formula}r1 is connected to {a mathematical formula}r3 by a path of edges of type CS. Therefore, the rules on this path, i.e., {a mathematical formula}r1,r2,r3, cannot be selected at the same time. This is enforced by constraints (18) and (19), which ensure that {a mathematical formula}yr1e3≠yr3e3, as well as the constraints (20) and (21), which ensure that {a mathematical formula}yr1e3=yr2e3 (whenever {a mathematical formula}r1 and {a mathematical formula}r2 are selected) and {a mathematical formula}yr2e3=yr3e3 (whenever {a mathematical formula}r2 and {a mathematical formula}r3 are selected). By enforcing both conditions of Theorem 12, every solution of the MIP formulation is guaranteed to be a feasible rule set.
+      </paragraph>
+      <paragraph>
+       Ueda et al. [88] highlighted the fact that the above MIP cannot handle rules with negative values, which is unfortunate since the incorporation of negative-valued rules can potentially make the MC-net representation exponentially smaller for some games. Recall that the value of a coalition in MC-nets is the sum of all the values of the rules that are applicable to that coalition. Therefore, when evaluating a coalition structure, CS, the rules that are applicable to the coalitions in CS must all be taken into consideration, even if some of those rules have a negative value. However, the constraints in the above MIP only specify the rules that cannot all be taken into consideration. With such constraints, the solver will never incorporate a negative-valued rule, because doing so decreases the solution quality, and is not necessary as far as the solver is concerned. To handle such rules correctly, the authors proposed (and compared) three alternative modifications to the above MIP. Here, we explain the most effective one according to their evaluation. Basically, assume without loss of generality that every negative-valued rule is of the form:{a mathematical formula} For every such rule, the authors add to the MIP the following dummy rules: {a mathematical formula}rn,i:a1∧¬ai→0 for every {a mathematical formula}i=2,…,k and {a mathematical formula}rn,i:a1∧ai→0 for every {a mathematical formula}i=k+1,…,m. They also add a binary variable {a mathematical formula}xn for the rule {a mathematical formula}rn, and a binary variable {a mathematical formula}xn,i for every dummy rule {a mathematical formula}rn,i. Importantly, the authors proved that {a mathematical formula}rn is applicable to a coalition, C, if and only if every {a mathematical formula}rn,i is not applicable to C. Therefore, to force the solver to select the negative-valued rule {a mathematical formula}rn whenever it is applicable, it suffices to add the following constraint to the MIP: {a mathematical formula}xrn+xrn,1+⋯+xrn,m≥1. This implies that if every {a mathematical formula}rn,i were not selected in the solution, then {a mathematical formula}rnmust be selected in the solution.
+      </paragraph>
+      <paragraph>
+       We now turn our attention to the work by Liao et al. [40], who built upon the results by Ohta et al. [56] and Ueda et al. [88] to tackle the coalition structure generation problem with off-the-shelf MaxSAT solvers. To this end, the relations IC, CS, CD, and ID were used to encode MC-nets into propositional Boolean logic so that the coalition structure generation problem becomes the Weighted Partial MaxSAT problem [74]. Simulation results presented by Liao et al. [40] suggest that the MaxSAT solver SAT4j [11] returns a solution significantly faster than ILOG's CPLEX used by Ohta et al. [56] and Ueda et al. [88] to solve the MIP formulations outlined above (e.g., it solves instances of 150 agents and 150 rules in a few seconds on a modern desktop computer, and seems to scale very well).
+      </paragraph>
+      <paragraph>
+       Finally, we briefly mention the work by Bachrach et al. [5] who considered the coalition structure generation problem under the induced-subgraph representation of Deng and Papadimitriou [22] which, in fact, can be interpreted as a simplified version of the MC-nets representation. In more detail, the induced-subgraph representation is built upon weighted graphs, where a node is interpreted as an agent, and the (possibly negative) weight of an edge is interpreted as the value of cooperation between the two connected agents.{sup:19} The value of any coalition is then defined as the sum of weights of all its internal edges, i.e., the weights of edges belonging to a subgraph induced by members of the coalition. It is not difficult to see that any weighted edge can be readily translated to an MC-net rule. In particular, an edge that connects two agents {a mathematical formula}ai and {a mathematical formula}aj can be written as:{a mathematical formula} On the other hand, a self-loop of an agent {a mathematical formula}ai becomes:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 4">
+       A three-agent example of this formalism from Michalak et al. [48] is presented in Fig. 8. In this game, values of coalitions {a mathematical formula}{v1}=1, {a mathematical formula}{v2}=1, {a mathematical formula}{v3}=1, {a mathematical formula}{v1,v2}=1+1+2, {a mathematical formula}{v1,v3}=1+1+3, {a mathematical formula}{v2,v3}=1+1+4, and {a mathematical formula}{v1,v2,v3}=1+1+1+2+3+4. This game can be represented with the following MC-net rules: {a mathematical formula}a1→1, {a mathematical formula}a2→1, {a mathematical formula}a3→1, {a mathematical formula}a1∧a2→2, {a mathematical formula}a1∧a3→4, and {a mathematical formula}a2∧a3→3.
+      </paragraph>
+      <paragraph>
+       Bachrach et al. [5] proved that the coalition structure generation problem under the induced-subgraph representation is NP-complete. The proof is based on a reduction from the independent-set problem, which involves testing whether there exists a subset of k nodes with no edges between them in a graph G. More specifically, the authors reduce this problem to a coalition structure generation problem, by first setting all the weights in G to be −k each. After that, they add to G one additional node, and connect it to every other node in G with an edge whose weight is 1. One can see how a coalition structure whose value is k exists if and only if there exists a set of k nodes with no edges between them in G.
+      </paragraph>
+      <paragraph>
+       On the up side, the authors proposed constant factor approximation algorithms for planar, minor-free and bounded degree graphs.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Constraints on the set of feasible coalitions
+     </section-title>
+     <paragraph>
+      So far, we assumed that agents can split into teams in any way they like. However, in practice some coalition structures may be inadmissible due to various constraints present in the problem domain. This section discusses some of the works have addressed this issue. More specifically, Section 8.1 focuses on a setting where constraints are expressed in terms of subsets of agents whose presence in a coalition is desirable, and other subsets whose presence in a coalition is prohibited. Section 8.2, on the other hand, focuses on a setting where we are given a graph specifying which agents are connected to one another, and the feasible coalitions are those that induce a connected subgraph.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Constrained coalition formation model
+      </section-title>
+      <paragraph>
+       Rahwan et al. [68] proposed the constrained coalition formation (CCF) framework, which allows one to impose constraints on the coalition structures that can be formed. Formally, a CCF game is a tuple {a mathematical formula}〈A,Π¨A,v〉 where A is the set of agents, {a mathematical formula}Π¨A is the set of coalition structures that are feasible (i.e., allowed to form), and v is the characteristic function that assigns a real value to every coalition that appears in some feasible coalition structure. Note that, in the general case, the notion of feasibility is defined for coalition structures rather than coalitions. For instance, if {a mathematical formula}A={a1,a2,a3,a4} and we define {a mathematical formula}Π¨A as the set of all coalition structures in which all coalitions have the same size, then the coalition structure {a mathematical formula}{{a1},{a2},{a3,a4}} is not feasible, even though each of its component coalitions may be a part of a feasible coalition structure. There are, however, many settings of interest where the constraints implied by {a mathematical formula}Π¨A can be reduced to constraints on individual coalitions. More formally, a CCF game {a mathematical formula}G=〈A,Π¨A,v〉 is locally constrained if there exists a set of coalitions {a mathematical formula}C¨A⊆2A such that {a mathematical formula}Π¨A={CS∈ΠA|CS⊆C¨A}. We will refer to the coalitions in {a mathematical formula}C¨A as feasible coalitions.
+      </paragraph>
+      <paragraph>
+       To represent the constraints succinctly, the authors propose the use of propositional logic. More formally, let {a mathematical formula}BA={bi|ai∈A} be a set of Boolean variables, and let ϕ be a propositional formula over {a mathematical formula}BA, constructed using the usual classical connectives ({a mathematical formula}∧,∨,¬,→,…). A coalition C satisfies ϕ if ϕ is satisfied under the truth assignment that sets all {a mathematical formula}bi with {a mathematical formula}ai∈C to true and all {a mathematical formula}bi with {a mathematical formula}ai∉C to false. For example, any coalition containing {a mathematical formula}a1 and {a mathematical formula}a2 satisfies {a mathematical formula}ϕ=b1∧b2. It has been shown that this language can represent any locally constrained CCF game, and that it can be extended so as to represent any CCF game [68].
+      </paragraph>
+      <paragraph>
+       The authors defined a natural subclass of locally constrained CCF games, which they called basic CCF games. Intuitively, the constraints in a basic CCF game are expressed in the form of (1) sizes of coalitions that are allowed to form, and (2) subsets of agents whose presence in any coalition is viewed as desirable/prohibited. The constraints of the former type are called size constraints, denoted by {a mathematical formula}S⊆{1,…,n}. As for the latter type of constraints, the desirable subsets of agents are called positive constraints, denoted by {a mathematical formula}P⊆2A, while the prohibited subsets are called negative constraints, denoted by {a mathematical formula}N⊆2A. Thus, a coalition C is feasible if (1) its size is permitted, i.e., {a mathematical formula}|C|∈S, and (2) it contains at least one of the desirable subsets and none of the prohibited ones, i.e., {a mathematical formula}∃P∈P:P⊆C and {a mathematical formula}∀N∈N,N⊈C. We will denote the set of all such feasible coalitions by {a mathematical formula}c(A,P,N,S).
+      </paragraph>
+      <paragraph>
+       The set of constraints in a basic CCF game can be transformed into another, isomorphic set so as to facilitate both the process of identifying feasible coalitions and the process of searching for an optimal, feasible coalition structure. This transformation is based on the observation that, for any agent {a mathematical formula}ai∈A, the coalitions in {a mathematical formula}c(A,P,N,S) can be divided into:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        coalitions that contain {a mathematical formula}ai. For those, any constraint {a mathematical formula}P∈P:ai∈P has the same effect as {a mathematical formula}P\{ai}. Similarly, any {a mathematical formula}N∈N:ai∈N has the same effect as {a mathematical formula}N\{ai}. Thus, every such P or N can be replaced with {a mathematical formula}P\{ai} or {a mathematical formula}N\{ai}, respectively;
+       </list-item>
+       <list-item label="•">
+        coalitions that do not contain {a mathematical formula}ai. For those, every positive or negative constraint that contains {a mathematical formula}ai has no effect, and so can be removed.
+       </list-item>
+      </list>
+      <paragraph>
+       Thus, the problem of dealing with {a mathematical formula}c(A,P,N,S) can be replaced with two simpler problems; we can then apply the same procedure recursively. This can be visualized as a tree, where the root is {a mathematical formula}c(A,P,N,S), and each node has two outgoing edges; one leads to a subtree containing some agent {a mathematical formula}ai and the other leads to a subtree that does not contain {a mathematical formula}ai. As we go further down the tree, the problem becomes simpler and simpler, until one of the following two cases is reached: (1) a case where one can easily generate the feasible coalitions, which is called a base case, or (2) a case where one can easily verify that there are no feasible coalitions (i.e., the constraints cannot be satisfied), which we call an impossible case. This is illustrated in Fig. 9(A), where the edge-labels {a mathematical formula}ai and {a mathematical formula}ai‾ indicate whether the branch contains, or does not contain, {a mathematical formula}ai respectively. By generating the feasible coalitions in all base cases, one ends up with all the feasible coalitions in {a mathematical formula}c(A,P,N,S).
+      </paragraph>
+      <paragraph>
+       The tree structure described above also facilitates the search for an optimal, feasible, coalition structure. Indeed, observe that every such tree contains exactly one path that (1) starts with the root, (2) ends with a leaf, and (3) consists of edges that are each labeled with {a mathematical formula}ai‾ for some {a mathematical formula}ai∈A. In Fig. 9, for example, this path is the one connecting {a mathematical formula}c(A,P,N,S) to {a mathematical formula}baseCase15. Now, let us denote by {a mathematical formula}A⁎ the sequence of agents that appear in the labels of this path. For instance, in Fig. 9, we have {a mathematical formula}A⁎=〈a5,a2,a1,a8〉. Finally, let us denote by {a mathematical formula}ai⁎ the ith agent in {a mathematical formula}A⁎.
+      </paragraph>
+      <paragraph>
+       With these definitions in place, we can now present the coalition structure generation algorithm of Rahwan et al. [68]; we will call this algorithm DC as it uses a divide-and-conquer techniques. The basic idea is to create lists, {a mathematical formula}L1⁎,⋯,L|A⁎|+1⁎, where {a mathematical formula}L1⁎ consists of the base cases that contain {a mathematical formula}a1⁎, and each {a mathematical formula}Li⁎:i∈{2,…,|A⁎|} consists of the base cases that contain {a mathematical formula}ai⁎ but none of {a mathematical formula}a1⁎,…,ai−1⁎, while {a mathematical formula}L|A⁎|+1⁎ consists of the base cases that do not contain any of {a mathematical formula}a1⁎,…,a|A⁎|⁎. This is illustrated in Fig. 9(B). Importantly, by constructing the lists in this way, every feasible coalition structure contains exactly one coalition from {a mathematical formula}L1⁎, and at most one coalition from {a mathematical formula}Li⁎, {a mathematical formula}i&gt;1. Thus, the algorithm picks a coalition, say {a mathematical formula}C1, from some base case in {a mathematical formula}L1⁎, and checks whether {a mathematical formula}{C1} is a feasible coalition structure. If not, then the agents in {a mathematical formula}C1 are added to the negative constraints of all base cases in {a mathematical formula}L2⁎. This places further constraints on the coalitions in those base cases, so as to ensure that they do not overlap with {a mathematical formula}C1. Next, the algorithm picks a coalition, say {a mathematical formula}C2, from some base case in (the now modified) list {a mathematical formula}L2⁎, and checks whether {a mathematical formula}{C1,C2} is a feasible coalition, and so on. Eventually, all feasible coalition structures are examined. To speed up the search, the algorithm applies a branch-and-bound technique (see [68] for more details). This algorithm was compared against a modified version of the integer programming formulation that we presented earlier in Section 5.4, where z contains a column for every feasible coalition, instead of a column for every possible coalition. This comparison showed that DC outperforms the integer programming approach by orders of magnitude (DC can solve random instances consisting of 30 agents and 1000 constraints in a few seconds on a modern desktop computer, but seems unlikely to scale beyond tens of agents).
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Games restricted by graphs
+      </section-title>
+      <paragraph>
+       Myerson [54] introduced graph-restricted games—a class of games where the set of feasible coalitions is specified by an underlying graph {a mathematical formula}G(A,E). More specifically, the nodes of the graph represent the agents, while the edges can be interpreted as communication channels, or trust relationships, which facilitate the cooperation. As such, a coalition is feasible if and only if it induces a connected subgraph of G. Following convention, we assume that G is connected.{sup:20}
+      </paragraph>
+      <paragraph>
+       Voice et al. [92] proposed a version of the IDP algorithm (from Section 5.3) for graph-restricted games. This algorithm, called DyCE, is very similar to IDP except that {a mathematical formula}f(C) is set to −∞ if C is not feasible. Otherwise, if C is feasible, then out of all possible splits of C that are considered by IDP to compute {a mathematical formula}f(C), DyCE only considers a split {a mathematical formula}{C′,C∖C′} if {a mathematical formula}C′ is feasible.{sup:21}
+      </paragraph>
+      <paragraph>
+       An alternative algorithm was proposed by Bistaffa et al. [12], based on edge contraction—a basic operation in graph theory which involves: (i) removing an edge from a graph, and (ii) merging the two nodes that were previously joined by that edge. In our context of graph-restricted games, since every node represents an agent (i.e., a singleton coalition), “merging the two nodes” corresponds to merging the two coalitions that were represented by those nodes. An example is illustrated in Fig. 10(A).
+      </paragraph>
+      <paragraph>
+       Taking the entire graph into consideration, the contraction of an edge can be interpreted as a transition from one coalition structure to another. For instance, the contraction of the edge {a mathematical formula}({a1},{a3}) in Fig. 10(B) corresponds to the transition from {a mathematical formula}{{a1},{a2},{a3},{a4},{a5}} to {a mathematical formula}{{a1,a3},{a2},{a4},{a5}}. Based on this observation, the algorithm repeats the process of contracting different edges, in order to eventually visit all coalition structures. During this process, to ensure that each coalition structure is visited no more than once, the algorithm marks all previously-contracted edges to avoid contracting them again in the future. In Fig. 10, the marked edges are illustrated as dashed lines. Here, it is important to note that the contraction of an edge may result in merging other edges. In Fig. 10(B) for example, contracting {a mathematical formula}({a1},{a3}) results in merging {a mathematical formula}({a1},{a4}) with {a mathematical formula}({a3},{a4}), as well as merging {a mathematical formula}({a1},{a2}) with {a mathematical formula}({a3},{a2}). Whenever this happens, if one of the merged edges happens to be dashed, the edge that results from the merger must also be dashed, again see Fig. 10(B). This ensures that the agents appearing at the two ends of a dashed edge never appear together in the same coalition.
+      </paragraph>
+      <paragraph>
+       Fig. 10(C) illustrates the sequence in which the algorithm visits all possible coalition structures given the graph {a mathematical formula}G=(A,E) where {a mathematical formula}A={a1,a2,a3,a4} and {a mathematical formula}E={(a1,a2),(a1,a4),(a3,a2),(a3,a4)}. Each coalition structure is represented as a node in the illustrated search tree, and the numbers on the edges represent the order in which the algorithm visits the different coalition structures.
+      </paragraph>
+      <paragraph>
+       To speed up the search, a branch-and-bound technique is used whenever the algorithm visits a node CS in the search tree. The purpose of this technique is to determine whether it is worthwhile to search {a mathematical formula}TCS—the sub-tree rooted at CS. The general idea is to compute an upper bound, denoted {a mathematical formula}UB(TCS), on the values of all solutions in {a mathematical formula}TCS. Then, if this upper bound was not greater than the value of the best solution found so far, the algorithm skips searching {a mathematical formula}T(CS). Bistaffa et al. proposed a way of computing {a mathematical formula}UB(TCS) for cases where the game under consideration happens to be the sum of two games: a weakly superadditive game, and a weakly subadditive game.{sup:22} In this case, we write {a mathematical formula}(A,v)=(A,vsup)+(A,vsub), where {a mathematical formula}(A,vsup) denotes the weakly superadditive game, while {a mathematical formula}(A,vsub) denotes the weakly subadditive game. Here, it is possible to compute an upper bound {a mathematical formula}UB(TCS) based on the following observations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Every coalition structure in {a mathematical formula}TCS is the result of merging some (if not all) of the coalitions in CS that are connected via solid edges. Here, the only constraint is that agents appearing at the two ends of a dashed edge must not appear together in the same coalition.
+       </list-item>
+       <list-item label="•">
+        Merging coalitions in CS can never improve solution quality in a weakly subadditive game. Thus, {a mathematical formula}Vsub(CS)=maxCS′∈TCS⁡Vsub(CS′).
+       </list-item>
+       <list-item label="•">
+        Merging coalitions in CS can never reduce solution quality in a weakly superadditive game. Thus, no solution in {a mathematical formula}TCS can be better than the solution obtained by (i) removing all dashed edges, and (ii) merging all coalitions in CS that are connected via solid edges. Let us denote this solution as {a mathematical formula}CSmerge. Then, {a mathematical formula}Vsup(CSmerge)≥maxCS′∈TCS⁡Vsup(CS′).
+       </list-item>
+      </list>
+      <paragraph>
+       Based on the above observations, we can establish the following upper bound on solution quality: {a mathematical formula}UB(TCS)=Vsub(CS)+Vsup(CSmerge). The authors experiment with two specific characteristic functions that satisfy the above conditions (i.e., each being the sum of a weakly superadditive function and a weakly subadditive function). Results show that the algorithm solves problems of 60 nodes in a matter of seconds, but is unlikely to scale beyond tens of agents.
+      </paragraph>
+      <paragraph>
+       So far in this subsection, we looked at coalition structure generation when feasible coalitions are represented as a graph. Voice et al. [91] worked on a different model, which is also based on a given underlying graph {a mathematical formula}G=(A,E). In their model, all the coalitions are feasible, and so the graph G is not used as before (to determine the feasible coalitions). Instead, G is used to place the following constraint on the marginal contributions{sup:23} of agents:{a mathematical formula} That is, if two agents {a mathematical formula}ai and {a mathematical formula}aj are not connected in G, then the presence of {a mathematical formula}ai does not affect the marginal contribution of {a mathematical formula}aj to any coalition C. This property is called independence of disconnected members (IDM)[91]. Theorem 13 implies the following: Given a characteristic function game {a mathematical formula}(A,v), if v satisfies IDM, then we can assume {a mathematical formula}(A,v) to be a graph-restricted game without losing the guarantee of finding an optimal coalition structure. This is particularly desirable if G is sparse, as it means we could restrict our attention to a much smaller set of possible coalitions (instead of considering every subset of A to be a feasible coalition).
+      </paragraph>
+      <paragraph label="Theorem 13">
+       Let{a mathematical formula}(A,v)be a characteristic function game. If v satisfies IDM, then there exists an optimal coalition structure in which every coalition induces a connected subgraph of G.
+      </paragraph>
+      <paragraph label="Proof">
+       First, observe that for any coalition C, and any permutation of the members of C, denoted as {a mathematical formula}π=(a1π,…,aCπ), the following holds:{a mathematical formula} In other words, imagine that the members of C arrived one at a time, in the order specified by π (i.e., {a mathematical formula}a1π arrived first, followed by {a mathematical formula}a2π, then {a mathematical formula}a3π and so on). Then, it is possible to compute {a mathematical formula}v(C) by adding up the marginal contribution that each agent makes when joining the agents who already arrived at C before it.Now, let {a mathematical formula}CS⁎ be an optimal coalition structure, and let {a mathematical formula}C⁎∈CS⁎ be a coalition that induces a disconnected subgraph of G. This implies that there exists a partition of C, namely {a mathematical formula}{C1,…,Ck&gt;1}, such that every {a mathematical formula}Cx induces a connected subgraph of G, and every {a mathematical formula}Cx,Cy:x≠y are disconnected. Thus, due to the IDM property, we have:{a mathematical formula} Based on (23) and (22), the following holds, where {a mathematical formula}πx=(a1πx,…,a|C⁎|πx) denotes a permutation of the members of {a mathematical formula}Cx:{a mathematical formula} This implies that the value of {a mathematical formula}CS⁎ is the same as that of {a mathematical formula}(CS⁎∖{C})∪{C1}∪…∪{Ck}. In so doing, we have replaced C, which induces a disconnected subgraph, by a number of coalitions that each induce a connected subgraph.  □
+      </paragraph>
+      <paragraph>
+       Voice et al. [91] analyzed the coalition structure generation problem of a CFG game {a mathematical formula}(A,v) where v satisfies IDM on a graph G. They proved the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The problem is solvable in {a mathematical formula}O(n) steps if the maximum treewidth (see Definition 4) of G is bounded by some constant.
+       </list-item>
+       <list-item label="•">
+        The problem is solvable in {a mathematical formula}O(nγn+O(1)) steps, for {a mathematical formula}γ=2/(1−2/3, if G is a planar graph (i.e., it can be drawn on the plane in such a way that no edges cross each other).
+       </list-item>
+       <list-item label="•">
+        The problem is NP-complete if G is a weighted planar graph, and v evaluates each coalition by summing up the weighted of the edges therein.
+       </list-item>
+      </list>
+      <paragraph>
+       The proofs are somewhat lengthy, and so are omitted due to space constraints.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Coalition structure generation in partition function games
+     </section-title>
+     <paragraph>
+      Until now, we assumed that coalitions are not affected by the way non-members are partitioned. However, in many realistic settings, the performance of a coalition may be influenced by the cooperative arrangements of other agents (as discussed in the following subsection). To model such situations, Lucas and Thrall [43] proposed Partition Function Games (PFGs). In this formalism, the value of a coalition C not only depends on the identities of its members, but also depends on the coalition structure in which C is embedded. More formally, as mentioned earlier in Section 2, a partition function game is a pair, {a mathematical formula}(A,w), where A is the set of agents and w is the partition function, which maps each embedded coalition, {a mathematical formula}(C,CS)∈EC, to its value, {a mathematical formula}w(C,CS).
+     </paragraph>
+     <paragraph>
+      This section focuses on the coalition structure generation problem in PFGs. In more detail, Section 9.1 introduces externalities—a central notion in PFGs. After that, Section 9.2 shows how to establish a bound on solution quality by only searching part of the solution space.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Introducing externalities
+      </section-title>
+      <paragraph>
+       A central notion in PFGs is that of an externality, which is the change in a coalition's value as a result of merging two other co-existing coalitions.{sup:24} For instance, given {a mathematical formula}CS={C1,C2,C3} and {a mathematical formula}CS′={C1,C2∪C3}, the value of {a mathematical formula}C1 may be different in CS than in {a mathematical formula}CS′. In this case, we say that the formation of {a mathematical formula}(C2∪C3,CS′)—which is the result of merging {a mathematical formula}(C2,CS′) with {a mathematical formula}(C3,CS)—imposes an externality on {a mathematical formula}(C1,CS′), computed as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We remark that the coalition structure graph (see Fig. 1) provides a convenient overview of all externalities in a partition function game. Specifically, since every edge represents a merger of two coalitions, it can be associated with the externalities imposed on other coalitions as a result of this merger.
+      </paragraph>
+      <paragraph>
+       Interestingly, although characteristic function games are a special case of partition function games where the externalities are always zero, the space of possible solutions to the coalition structure generation problem is the same in both cases. The main difference, however, lies in the size of the input, which is {a mathematical formula}O(2n) for games with no externalities, but {a mathematical formula}O(nn) when externalities are present.
+      </paragraph>
+      <paragraph>
+       Generally speaking, for a game with arbitrary externalities, it is not possible to solve the coalition structure generation problem without examining every single coalition structure. This is because even if all but one have been examined, that remaining one could have a value that is arbitrarily greater than that of all other coalition structures (as a result of the arbitrary externalities therein). However, as we will show in the following subsections, the situation is not as bleak when considering the following two classes of PFGs, which were first introduced in the coalition structure generation literature by Rahwan et al. [66]:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}PFG−—games with weakly negative externalities. Here, the merger of any two coalitions is never beneficial to other co-existing coalitions. Formally, {a mathematical formula}ϵ(C,CS,CS′)≤0.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}PFG+—games with weakly positive externalities. Here, merging any two coalitions is never detrimental to other coalitions in the system. Formally, {a mathematical formula}ϵ(C,CS,CS′)≥0.
+       </list-item>
+      </list>
+      <paragraph>
+       In fact, many applications of games with externalities naturally belong to one of the above two classes:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Examples of a {a mathematical formula}PFG− setting include collusion in oligopolies, where cooperating companies seek to undermine the competitive position of other firms in the market [94]. Another example is multi-agent systems with shared resources [23], [78]. Here, if the formation of a coalition leads its members to consume more resources, then this leads to fewer resources being available to the other coalitions. This is the case, for instance, in congestion games [55].
+       </list-item>
+       <list-item label="•">
+        Examples of a {a mathematical formula}PFG+ setting include the decision by one group of countries to reduce pollution, which has a positive impact on other countries or regions [28], [94]. Another example is multi-agent systems with overlapping or partially overlapping goals. In such systems, while satisfying their own goals, some coalitions may also satisfy (some of) the goals of other coalitions [78].
+       </list-item>
+      </list>
+      <paragraph>
+       In the following subsection, we propose some of the theoretical results developed for {a mathematical formula}PFG+ and {a mathematical formula}PFG− settings.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Establishing a bound with partial search
+      </section-title>
+      <paragraph>
+       Recall how in Section 5.1 we presented algorithms that (i) divide the space into subspaces, and (ii) specify a sequence in which these subspaces must be searched, so that the worst-case guarantee on solution quality improves after each subspace. All those algorithms were designed for characteristic function games (CFGs). In this section, we present two algorithms that follow the same design paradigm, but can be applied in certain classes of PFGs, where the value of a coalition may differ from one coalition structure to another.
+      </paragraph>
+      <paragraph>
+       The first such algorithm was proposed by Rahwan et al. [67] for {a mathematical formula}PFG+ and {a mathematical formula}PFG− settings. This algorithm is based on a number of theorems that we will present next. Here, for any {a mathematical formula}C⊆A, the coalition consisting of the agents in {a mathematical formula}A∖C will be denoted as {a mathematical formula}C‾={a‾1,…,a‾k}.
+      </paragraph>
+      <paragraph>
+       We start with the following theorem, which is similar to Theorem 5 except that it deals with PFG settings. Recall that in Theorem 5 we use {a mathematical formula}δ(Π′) which is defined as:{a mathematical formula} In the following theorem, instead of {a mathematical formula}δ(Π′), we use {a mathematical formula}δmax(Π′) which is defined as:{a mathematical formula} In other words, just like {a mathematical formula}δ(Π′), the set {a mathematical formula}δmax(Π′) consists of every subset of every {a mathematical formula}CS′∈Π; the only difference is that every such subset does not belong to {a mathematical formula}δmax(Π′) unless it appears with its maximum value in {a mathematical formula}CS′, i.e., its value in {a mathematical formula}CS′ is greater than, or equal to, its value in any other coalition structure.
+      </paragraph>
+      <paragraph label="Theorem 14">
+       Given a PFG setting and a subspace,{a mathematical formula}Π′⊆ΠA, a bound can be established on{a mathematical formula}maxCS∈ΠA⁡W(CS)maxCS∈Π′⁡W(CS)if and only if:{a mathematical formula}Furthermore, if the above condition holds, then we can establish the following bound:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Sketch of Proof">
+       If condition (24) is not satisfied, then there exists a coalition whose value in some coalition structure {a mathematical formula}ΠA is greater than its value in any of the coalition structures in {a mathematical formula}Π′. Since the difference in value could be arbitrarily large, it is not possible to establish a bound on {a mathematical formula}maxCS∈ΠA⁡W(CS)maxCS∈Π′⁡W(CS).Conversely, if condition (24) is satisfied, then Theorem 14 states that (25) holds. The intuition behind this is very similar to the intuition behind the proof of Theorem 5. Roughly speaking, if we can identify a set consisting of groups of disjoint coalitions, such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the best solution in {a mathematical formula}ΠA, i.e., {a mathematical formula}argmaxCS∈ΠAW(CS), contains at mostxgroups,
+       </list-item>
+       <list-item label="•">
+        and every one of those groups appears with its maximum value in some {a mathematical formula}CS∈Π′,
+       </list-item>
+       <list-item label="•">
+        then {a mathematical formula}argmaxCS∈ΠAW(CS)is at mostxtimes better than {a mathematical formula}argmaxCS∈Π′W(CS).
+       </list-item>
+      </list>
+      <paragraph>
+       The above theorem is general for any PFG, and states that a bound can only be established by examining coalition structures in which coalitions (or certain groups of coalitions) appear with their maximum value. The following theorem identifies such coalition structures given a {a mathematical formula}PFG− or {a mathematical formula}PFG+ setting.
+      </paragraph>
+      <paragraph label="Theorem 15">
+       Consider a{a mathematical formula}PFG−({a mathematical formula}PFG+) setting. For every coalition{a mathematical formula}C⊆A, and every partition of C, i.e.,{a mathematical formula}P∈ΠC, and every{a mathematical formula}CS:P⊆CS, the following holds:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Theorem 16">
+       To simplify notation, let {a mathematical formula}CS′={C‾}∪P and {a mathematical formula}CS″={{a‾1},…,{a‾k}}∪P. Also, without loss of generality, assume that {a mathematical formula}CS≠CS′ and {a mathematical formula}CS≠CS″. Then, given a {a mathematical formula}PFG− ({a mathematical formula}PFG+) setting, we first need to prove that:{a mathematical formula} Starting from CS, it is always possible to reach {a mathematical formula}CS′ by performing multiple steps, each involving the merging of two coalitions into one. In each step, the coalitions in P remain unchanged, and due to negative (positive) externalities, their values can only decrease (increase). As a result, the inequality in (26) holds. Similarly, starting from {a mathematical formula}CS″, it can be shown that:{a mathematical formula}  □To establish a bound β on the value of a coalition structure given a{a mathematical formula}PFG+setting, every subspace{a mathematical formula}ΠIA:I∈In:|I|≤2must be searched. With this search, the number of coalition structures searched is{a mathematical formula}2n−1, and the bound is{a mathematical formula}β=n. On the other hand, given a{a mathematical formula}PFG−setting, every subspace{a mathematical formula}ΠIA:I∈{{n},{n−1,1},{n−2,1,1},⋯,{1,1,⋯,1}}must be searched. With this search, the number of coalition structures searched is{a mathematical formula}2n−n+1, and the bound is{a mathematical formula}β=⌈n2⌉.
+      </paragraph>
+      <paragraph label="Proof">
+       To establish a bound, the maximum possible value of each coalition C has to be observed (in some coalition structure). Given a {a mathematical formula}PFG+ setting, the only coalition structure in which C is guaranteed to have its maximum value is {a mathematical formula}{C,A\C} (see Theorem 15). Based on this, the subspaces {a mathematical formula}ΠIA:I∈In:|I|≤2 must be searched, and these collectively contain {a mathematical formula}2n−1 coalition structures.To prove that {a mathematical formula}β=n, we use Theorem 14. Here, the set of coalition structures that have been searched is: {a mathematical formula}Π′=⋃I∈In:|I|≤2ΠIA. Furthermore, {a mathematical formula}δmax(Π′)=2A (because every coalition has been observed in {a mathematical formula}Π′ with its maximum value). Thus, based on (25):{a mathematical formula} Moving on to the {a mathematical formula}PFG− case, the only coalition structure in which C is guaranteed to have its maximum value is: {a mathematical formula}{C,{a‾1},…,{a‾k}} (see Theorem 15). Based on this, the following subspaces have to be searched: {a mathematical formula}ΠIA:I∈{{n},{n−1,1},{n−2,1,1},…,{1,1,…,1}}. With this search, the number of searched coalition structures is {a mathematical formula}2n−n+1, because every possible coalition appears in a unique coalition structure, except for singletons which all appear in a single coalition structure.Finally, to prove that {a mathematical formula}β=⌈n2⌉, we use Theorem 14. Here, the set of coalition structures that have been searched is {a mathematical formula}Π′=⋃I∈{{n},{n−1,1},{n−2,1,1},…,{1,1,…,1}}ΠIA. Moreover {a mathematical formula}δmax(Π′)=2A∪{P⊆2A:∀C∈P,|C|=1} (because every coalition, and every combination of singletons, has been observed in {a mathematical formula}Π′ with its maximum value). Thus, based on (25), we have:{a mathematical formula} This is because, out of all {a mathematical formula}CS∈ΠA, the ones that need the maximum number of groups from {a mathematical formula}δmax(Π′) to partition them are those in {a mathematical formula}P{2,2,⋯,2,1}A when the number of agents is odd, and those in {a mathematical formula}P{2,2,⋯,2}A when the number of agents is even. In either case, the number of groups from {a mathematical formula}δmax(Π′) that partition any such coalition structure is: {a mathematical formula}⌈n2⌉.  □
+      </paragraph>
+      <paragraph>
+       Interestingly, in CFGs, it is sufficient to search the first and second levels of the coalition structure graph in order to establish bound β (see Theorem 4).{sup:25} On the other hand, given a {a mathematical formula}PFG− setting, it is necessary to search {a mathematical formula}ΠIA:I∈{{n},{n−1,1},{n−2,1,1},⋯,{1,1,⋯,1}} and, given a {a mathematical formula}PFG+ setting, it is necessary to search {a mathematical formula}ΠIA:I∈In:|I|≤2 (see Theorem 16).
+      </paragraph>
+      <paragraph>
+       Rahwan et al. [67] developed an algorithm that can improve the above bounds with further search. They also developed a version of the IP algorithm for {a mathematical formula}PFG+ and {a mathematical formula}PFG− settings, called {a mathematical formula}IP+/−, which builds upon a general framework introduced by Michalak et al. [45]. A decentralized version of {a mathematical formula}IP+/− was recently developed by Epstein and Bazzan [25].
+      </paragraph>
+      <paragraph>
+       Some of the above results were extended by Banerjee and Kraemer [8] to settings where agents are grouped into “types” (see Section 7.3 for more details on agent types). Specifically, the authors assume that if two coalitions {a mathematical formula}C1 and {a mathematical formula}C2 merge, then the externality imposed by this merge on a third coalition {a mathematical formula}C3 is weakly positive if the types of the agents in {a mathematical formula}C1∪C2 do not overlap with those of the agents in {a mathematical formula}C3. Otherwise, the externality is weakly negative. Banerjee and Kraemer [8] argue that this class is intuitive, and maps to a number of applications.
+      </paragraph>
+      <paragraph>
+       Finally, in terms of concise representations of PFGs, we note that Ichimura et al. [33] extended the mixed integer programming formulation of Ohta et al. [56] (from Section 7.5) to solve the coalition structure generation problem under the Embedded MC-nets representation of Michalak et al. [46], which is an extension of standard MC-nets that captures externalities. A follow-up result was obtained by Liao et al. [41] and Liao et al. [42], who showed that, similarly to MC-nets (see Section 7.5), it is also possible to encode Embedded MC-Nets into propositional Boolean logic and solve the coalition structure generation problem with an off-the-shelve MaxSAT solver.
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this section, we discuss the scopes of the different representations and how they stand in relation to each other. Fig. 11 provides an illustration, and outlines the relevant references discussed in this survey.
+     </paragraph>
+     <paragraph>
+      We start with characteristic function games, or CFGs (Sections 4, 5 and 6), which represent settings in which every coalition is admissible, and every coalition value is represented by a real number that depends solely on the identities of the members. We studied two well-known representations for CFGs:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the first is under the DCOP representation (Section 7.1), where the value of a coalition equals the solution to a Distributed Constraint Optimization Problem (DCOP) involving the coalition members;
+      </list-item>
+      <list-item label="•">
+       the second is under the induced-subgraph representation (end of Section 7.5), where the characteristic function is based on a weighted graph in which the nodes correspond to the agents in the system. Here, the value of a coalition is the sum of the weights of the edges whose ends belong to the coalition (if no such edges exists, the value is 0).
+      </list-item>
+     </list>
+     <paragraph>
+      We discussed in this article four alternative representations to CFGs. These are:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the skill-based representations (Section 7.2), where every agent has a set of skills, and the value of a coalition depends on the skills of its members. For any CFG, one can define a set of skills that represent that game, see Section 7.2;
+      </list-item>
+      <list-item label="•">
+       the agent-type representation (Section 7.3), whereby agents are classified into types based on their contributions: agents of the same type make the same contribution to any coalition they belong to. This clearly can represent any CFG (if none of the agents were identical, the agent-type representation will simply define a unique type for every agent);
+      </list-item>
+      <list-item label="•">
+       the Synergy Coalition Groups representation, where only the coalitions with synergy are explicitly modeled. As mentioned earlier in Section 7.4, this representation is fully expressive under certain conditions, i.e., it can represent any CFG;
+      </list-item>
+      <list-item label="•">
+       the Marginal Contribution net (MC-net) representation, which is fully expressive, see Section 7.5.
+      </list-item>
+     </list>
+     <paragraph>
+      Importantly, in all of the above representations, every coalition is permitted. There are cases, however, where certain coalitions are inadmissible; these cannot be represented by CFGs. Instead:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       One can use graph-restricted games (Section 8.2), where agents are connected via a graph, and a coalition is feasible if it induces a connected subgraph. Observe that CFGs form a proper subclass of graph-restricted games, where the graph happens to be complete; in this case every coalition is admissible.
+      </list-item>
+      <list-item label="•">
+       One can also use the constrained coalition formation (or CCF) model (Section 8.1), where constraints are expressed in terms of acceptable coalition sizes, and in terms of subsets of agents whose presence in a coalition is desirable (each such subset is a positive constraint in {a mathematical formula}P), and other subsets whose presence is prohibited (each such subset is a negative constraint in {a mathematical formula}N). Note that graph-restricted games form a proper subclass of CCF games. This is based on two observations:
+      </list-item>
+     </list>
+     <paragraph>
+      Finally, let us consider partition function games (or PFGs), where the same coalition can have different values depending on the way non-members are partitioned. Clearly, CFGs form a proper subclass of PFGs where a coalition has the same value for every partition of non-members. An extension of MC-nets, called embedded MC-nets, was proposed to represent PFGs.
+     </paragraph>
+    </section>
+    <section label="11">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      The coalition structure generation problem is a simple abstraction of a basic challenge in team formation: How can agents divide themselves into groups to optimize overall performance? This article has provided a comprehensive synthesis of the current state of the research into this problem. We did this by: (i) presenting various representations of the search space, (ii) discussing a number of dynamic programming techniques to solve this problem, (iii) describing the main theoretical results on how to establish worst-case guarantees with partial search, (iv) presenting a number of anytime exact algorithms, (v) outlining the main findings on how to solve large problem instances with metaheuristics, (vi) describing how to approach the problem under various concise representations, e.g., MC-nets, Skill Games, agent-types etc., (vii) reviewing the main methods that handle constraints, whether represented using propositional logic or in the form of a graph, (viii) describing the main findings on how to handle externalities—influences between co-existing coalitions. All of these results were presented in a self-contained manner, with an emphasis on exposing the underlying intuition whenever possible.
+     </paragraph>
+     <paragraph>
+      We envisage two broad future directions in this growing area of research. On one hand, there is a need to consider richer and more sophisticated models to capture the various factors that influence the coalition formation process in the real world. Examples include overlapping coalition formation [15], and generalized characteristic functions, where the order of agents in a coalition matters [50]. A potential downside here is that richer models may render the coalition structure generation problem harder to solve (as we saw in the case of partition function games). On the other hand, there is a need for further research on tractability and scalability. Here, perhaps one of the most promising directions is that of concise representations. These may not necessarily be fully expressive, but instead focus on capturing specific properties in a way that facilitates an efficient computation of the coalition structure generation problem.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Summary of main notation
+     </section-title>
+     <list>
+      <list-item>
+       the set of agents (or players).
+      </list-item>
+      <list-item>
+       an agent (or a player) in A.
+      </list-item>
+      <list-item>
+       the number of agents in A.
+      </list-item>
+      <list-item>
+       the power set of A, i.e., the set of all possible coalitions.
+      </list-item>
+      <list-item>
+       a coalition.
+      </list-item>
+      <list-item>
+       a coalition structure.
+      </list-item>
+      <list-item>
+       an optimal coalition structure.
+      </list-item>
+      <list-item>
+       the best coalition structure found at any point in time (i.e., the current best solution found so far).
+      </list-item>
+      <list-item>
+       the established bound on the quality of {a mathematical formula}CS⁎⁎, i.e., {a mathematical formula}V(CS⁎)V(CS⁎⁎)≤β.
+      </list-item>
+      <list-item>
+       the set of all coalition structures over A.
+      </list-item>
+      <list-item>
+       the set of all coalition structures over A that are of size s.
+      </list-item>
+      <list-item>
+       the set of all coalition structures over A in which the coalition sizes match the parts in integer partition I.
+      </list-item>
+      <list-item>
+       the set of all partitions of coalition C.
+      </list-item>
+      <list-item>
+       the set of possible partitions of the integer partition I.
+      </list-item>
+      <list-item>
+       the set of possible partitions of the coalition structure CS.
+      </list-item>
+      <list-item>
+       a partition.
+      </list-item>
+      <list-item>
+       an element in partition P.
+      </list-item>
+      <list-item>
+       a coalition C embedded in a coalition structure CS.
+      </list-item>
+      <list-item>
+       the value of C in CS given a partition function game.
+      </list-item>
+      <list-item>
+       the value of P in CS given a partition function game, i.e., {a mathematical formula}∑C∈Pw(P,CS).
+      </list-item>
+      <list-item>
+       the value of CS given a partition function game, i.e., {a mathematical formula}∑C∈CSw(C,CS).
+      </list-item>
+      <list-item>
+       the value of CS given a characteristic function game, i.e., {a mathematical formula}∑C∈CSv(C).
+      </list-item>
+      <list-item>
+       the value of the coalition C given a characteristic function game.
+      </list-item>
+      <list-item>
+       the value of the optimal partition of C.
+      </list-item>
+      <list-item>
+       the externality imposed on C by forming CS from {a mathematical formula}CS′.
+      </list-item>
+      <list-item>
+       the set of all integer partitions of some integer, k.
+      </list-item>
+      <list-item>
+       an integer partition.
+      </list-item>
+      <list-item>
+       the maximum value of all coalitions of size s.
+      </list-item>
+      <list-item>
+       the average value of all coalitions of size s.
+      </list-item>
+      <list-item>
+       upper bound on the value of {a mathematical formula}CS⁎.
+      </list-item>
+      <list-item>
+       lower bound on the value of {a mathematical formula}CS⁎.
+      </list-item>
+      <list-item>
+       upper bound on the value of the best coalition structure in {a mathematical formula}ΠIA.
+      </list-item>
+      <list-item>
+       lower bound on the value of the best coalition structure in {a mathematical formula}ΠIA.
+      </list-item>
+      <list-item>
+       the set of movements in the coalition structure graph.
+      </list-item>
+      <list-item>
+       the subset of {a mathematical formula}M evaluated by the algorithm ODP.
+      </list-item>
+      <list-item>
+       the subset of {a mathematical formula}M evaluated by the IDP—the size-based version of ODP.
+      </list-item>
+     </list>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,1444 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Semantic Parsing via Paraphrasing</title>
+<!--Generated on Wed Jun 11 19:04:21 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Semantic Parsing via Paraphrasing</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jonathan Berant 
+<br class="ltx_break"/>Stanford University 
+<br class="ltx_break"/>joberant@stanford.edu 
+<br class="ltx_break"/>&amp;Percy Liang 
+<br class="ltx_break"/>Stanford University 
+<br class="ltx_break"/>pliang@cs.stanford.edu 
+<br class="ltx_break"/>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">A central challenge in semantic parsing is handling the myriad ways in which
+knowledge base predicates can be expressed.
+Traditionally, semantic parsers are trained primarily from text paired with
+knowledge base information.
+Our goal is to exploit the much larger amounts of raw text not tied to
+any knowledge base.
+In this paper, we turn semantic parsing on its head.
+Given an input utterance, we first use a
+simple method to deterministically generate a set of candidate logical forms
+with a canonical realization in natural language for each.
+Then, we use a paraphrase model to choose the realization
+that best paraphrases the input, and output the corresponding logical form.
+We present two simple paraphrase models,
+an <em class="ltx_emph">association</em> model and a <em class="ltx_emph">vector space</em> model, and train them
+jointly from question-answer pairs. Our system <span class="ltx_text ltx_font_smallcaps">ParaSempre</span> improves state-of-the-art
+accuracies on two recently released question-answering datasets.</p>
+</div><span class="ltx_ERROR undefined">\setdescription</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">leftmargin=0cm,labelindent=0cm</p>
+</div><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\definition</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\assumption</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\proposition</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\theorem</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\lemma</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\corollary</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\alg</span><span class="ltx_ERROR undefined">\ifthenelse</span><span class="ltx_ERROR undefined">\isundefined</span><span class="ltx_ERROR undefined">\example</span>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">We consider the semantic parsing problem of mapping natural language utterances into
+logical forms to be executed on a knowledge base (KB)
+<cite class="ltx_cite">[<a href="#bib.bib385" title="Learning to parse database queries using inductive logic proramming." class="ltx_ref">35</a>, <a href="#bib.bib245" title="Learning to map sentences to logical form: structured classification with probabilistic categorial grammars" class="ltx_ref">36</a>, <a href="#bib.bib252" title="Learning synchronous grammars for semantic parsing with lambda calculus" class="ltx_ref">34</a>, <a href="#bib.bib365" title="Inducing probabilistic CCG grammars from logical form with higher-order unification" class="ltx_ref">20</a>]</cite>.
+Scaling semantic parsers to large knowledge bases
+has attracted substantial attention recently
+<cite class="ltx_cite">[<a href="#bib.bib478" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">1</a>, <a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">19</a>]</cite>,
+since it drives applications such as question answering (QA) and information
+extraction (IE).</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1133/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="307" height="139" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> 
+<span class="ltx_text ltx_font_footnote">
+Semantic parsing via paraphrasing:
+For each candidate logical form (in red), we generate canonical utterances (in purple).
+The model is trained to
+paraphrase the input utterance (in green) into the
+canonical utterances associated with the correct denotation (in blue).
+
+</span></div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Semantic parsers need to somehow associate natural language phrases with logical
+predicates, e.g., they must learn that the constructions
+<span class="ltx_text ltx_font_italic">“What does X do for a living?”</span>, <span class="ltx_text ltx_font_italic">“What is X’s profession?”</span>, and
+<span class="ltx_text ltx_font_italic">“Who is X?”</span>, should all map to the logical predicate <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Profession</span>.
+To learn these mappings,
+traditional semantic parsers use data
+which pairs natural language with the KB.
+However, this leaves untapped a vast amount of text not related to the KB.
+For instance, the utterances
+<span class="ltx_text ltx_font_italic">“Where is ACL in 2014?”</span> and <span class="ltx_text ltx_font_italic">“What is the location of ACL 2014?”</span> cannot
+be used in traditional semantic parsing methods, since the KB does not contain
+an entity <span class="ltx_text ltx_font_typewriter ltx_font_footnote">ACL2014</span>, but this pair clearly
+contains valuable linguistic information.
+As another reference point, out of 500,000 relations
+extracted by the ReVerb Open IE system <cite class="ltx_cite">[<a href="#bib.bib452" title="Identifying relations for open information extraction" class="ltx_ref">9</a>]</cite>, only
+about 10,000 can be aligned to
+Freebase <cite class="ltx_cite">[<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">1</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we present a novel approach for semantic parsing based on
+paraphrasing
+that can exploit large amounts of text not
+covered by the KB (Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+Our approach targets factoid questions with a modest amount of
+compositionality.
+Given an input utterance,
+we first use a simple deterministic procedure
+to construct a manageable set of candidate logical forms
+(ideally, we would generate canonical utterances
+for all possible logical forms, but this is intractable).
+Next, we heuristically generate <em class="ltx_emph">canonical utterances</em> for each logical
+form based on the text descriptions of predicates from the KB.
+Finally, we choose the canonical utterance that best paraphrases the input
+utterance, and thereby the logical form that generated it.
+We use two complementary
+paraphrase models: an <em class="ltx_emph">association model</em> based on
+aligned phrase pairs extracted from a monolingual parallel corpus, and a
+<em class="ltx_emph">vector space model</em>, which represents each utterance as a vector and
+learns a similarity score between them. The entire system is trained jointly
+from question-answer pairs only.</p>
+</div>
+<div id="S1.F2" class="ltx_figure"><img src="P14-1133/image002.png" id="S1.F2.g1" class="ltx_graphics ltx_centering" width="248" height="148" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> 
+<span class="ltx_text ltx_font_footnote">
+The main challenge in semantic parsing is coping with the <em class="ltx_emph">mismatch</em> between
+language and the KB.
+(a) Traditionally, semantic parsing maps utterances directly to logical forms.
+(b) <cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">2013</a>)</cite> map the utterance to an underspecified logical form,
+and perform ontology matching to handle the mismatch.
+(c) We approach the problem in the other direction, generating canonical utterances
+for logical forms, and use paraphrase models to handle the mismatch.
+
+</span></div>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Our work relates to recent lines of research in semantic parsing and question answering.
+<cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">2013</a>)</cite> first maps
+utterances to a domain-independent
+<em class="ltx_emph">intermediate logical form</em>, and then performs ontology matching to produce
+the final logical form.
+In some sense, we approach the problem from the opposite end,
+using an <em class="ltx_emph">intermediate utterance</em>,
+which allows us to employ paraphrasing methods (Figure <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).
+<cite class="ltx_cite">Fader<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib474" title="Paraphrase-driven learning for open question answering" class="ltx_ref">2013</a>)</cite> presented a QA system
+that maps questions onto simple queries against Open IE extractions,
+by learning paraphrases from a large monolingual parallel corpus, and
+performing a single paraphrasing step.
+We adopt the idea of using paraphrasing
+for QA, but suggest a more general paraphrase model and work against a formal
+KB (Freebase).</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We apply our semantic parser on two datasets: <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">1</a>]</cite>, which contains
+5,810 question-answer pairs with common questions
+asked by web users; and <span class="ltx_text ltx_font_smallcaps">Free917</span> <cite class="ltx_cite">[<a href="#bib.bib478" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">2</a>]</cite>,
+which has 917 questions manually authored by annotators.
+On <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>, we obtain a relative improvement of 12% in accuracy over
+the state-of-the-art, and on <span class="ltx_text ltx_font_smallcaps">Free917</span>
+we match the current best performing system.
+The source code of our system <span class="ltx_text ltx_font_smallcaps">ParaSempre</span> is released at
+<a href="http://www-nlp.stanford.edu/software/sempre/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www-nlp.stanford.edu/software/sempre/</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Setup</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our task is as follows: Given
+(i) a knowledge base <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\mathcal{K}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒦</mi></math>, and (ii) a training set of question-answer pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="\{(x_{i},y_{i})\}_{i=1}^{n}" display="inline"><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup></math>,
+output a semantic parser that maps new questions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> to answers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>
+via latent logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\mathcal{E}" display="inline"><mi class="ltx_font_mathcaligraphic">ℰ</mi></math> denote a set of <em class="ltx_emph">entities</em> (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">BillGates</span>),
+and let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m7" class="ltx_Math" alttext="\mathcal{P}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒫</mi></math> denote a set of <em class="ltx_emph">properties</em> (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">PlaceOfBirth</span>).
+A <em class="ltx_emph">knowledge base</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m8" class="ltx_Math" alttext="\mathcal{K}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒦</mi></math> is a set of <em class="ltx_emph">assertions</em>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m9" class="ltx_Math" alttext="(e_{1},p,e_{2})\in\mathcal{E}\times\mathcal{P}\times\mathcal{E}" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><mi>p</mi><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℰ</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">𝒫</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">ℰ</mi></mrow></mrow></math>
+(e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m10" class="ltx_Math" alttext="(\text{\footnotesize{\tt BillGates}},\text{\footnotesize{\tt PlaceOfBirth}},%&#10;\text{\footnotesize{\tt Seattle}})" display="inline"><mrow><mo>(</mo><mrow><mtext mathsize="small" stretchy="false">𝙱𝚒𝚕𝚕𝙶𝚊𝚝𝚎𝚜</mtext><mo>,</mo><mtext mathsize="small" stretchy="false">𝙿𝚕𝚊𝚌𝚎𝙾𝚏𝙱𝚒𝚛𝚝𝚑</mtext><mo>,</mo><mtext mathsize="small" stretchy="false">𝚂𝚎𝚊𝚝𝚝𝚕𝚎</mtext></mrow><mo>)</mo></mrow></math>).
+We use the Freebase KB <cite class="ltx_cite">[<a href="#bib.bib483" title="Freebase data dumps (2013-06-09)" class="ltx_ref">13</a>]</cite>,
+which has 41M entities, 19K properties, and 596M
+assertions.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">To query the KB, we use a logical language called
+<em class="ltx_emph">simple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>-DCS</em>.
+In simple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>-DCS, an entity (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Seattle</span>) is a unary predicate (i.e., a subset
+of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="\mathcal{E}" display="inline"><mi class="ltx_font_mathcaligraphic">ℰ</mi></math>) denoting a singleton set containing that entity.
+A property (which is a binary predicate) can be joined with a unary predicate;
+e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Founded.Microsoft</span> denotes the entities that are Microsoft
+founders. In
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="\text{\footnotesize{\tt PlaceOfBirth.Seattle}}\sqcap\text{\footnotesize{\tt&#10;Founded%&#10;.Microsoft}}" display="inline"><mrow><mtext mathsize="small" mathvariant="monospace" stretchy="false">PlaceOfBirth.Seattle</mtext><mo>⊓</mo><mtext mathsize="small" mathvariant="monospace" stretchy="false">Founded.Microsoft</mtext></mrow></math>,
+an intersection operator allows us to
+denote
+the set of Seattle-born Microsoft founders. A reverse operator reverses
+the order of arguments: <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5.m1" class="ltx_Math" alttext="\mathbf{R}" display="inline"><mi>𝐑</mi></math><span class="ltx_text ltx_font_typewriter ltx_font_footnote">[PlaceOfBirth].BillGates</span></span> denotes
+Bill Gates’s birthplace (in contrast to <span class="ltx_text ltx_markedasmath ltx_font_typewriter ltx_font_footnote">PlaceOfBirth.Seattle</span>). Lastly,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="\text{\footnotesize{\tt count}}(\text{\footnotesize{\tt Founded}}.\text{%&#10;\footnotesize{\tt Microsoft}})" display="inline"><mrow><mtext mathsize="small" stretchy="false">𝚌𝚘𝚞𝚗𝚝</mtext><mrow><mo>(</mo><mtext mathsize="small" stretchy="false">𝙵𝚘𝚞𝚗𝚍𝚎𝚍</mtext><mo>.</mo><mtext mathsize="small" stretchy="false">𝙼𝚒𝚌𝚛𝚘𝚜𝚘𝚏𝚝</mtext><mo>)</mo></mrow></mrow></math> denotes set cardinality,
+in this case, the number of Microsoft founders.
+The denotation of a logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m8" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> with respect to a KB <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m9" class="ltx_Math" alttext="\mathcal{K}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒦</mi></math>
+is given by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m10" class="ltx_Math" alttext="{\llbracket z\rrbracket}_{\mathcal{K}}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\llbracket</mtext></merror><mo>⁢</mo><mi>z</mi><mo>⁢</mo><msub><merror class="ltx_ERROR undefined undefined"><mtext>\rrbracket</mtext></merror><mi class="ltx_font_mathcaligraphic">𝒦</mi></msub></mrow></math>.
+For a formal description of simple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m11" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>-DCS,
+see <cite class="ltx_cite">Liang (<a href="#bib.bib1" title="Lambda dependency-based compositional semantics" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Model overview</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We now present the general framework for semantic parsing via
+paraphrasing, including the model and the learning algorithm.
+In Sections <a href="#S4" title="4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and <a href="#S5" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+we provide the details of our implementation.</p>
+</div>
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Canonical utterance construction</h4>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Given an utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and the
+KB, we construct a set of candidate logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math>,
+and then for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="z\in\mathcal{Z}_{x}" display="inline"><mrow><mi>z</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></mrow></math> generate a small set of canonical
+natural language utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="\mathcal{C}_{z}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒞</mi><mi>z</mi></msub></math>. Our goal at this point is only to generate
+a manageable set of logical forms containing the correct one, and then generate
+an appropriate canonical utterance from it. This strategy
+is feasible in factoid QA where compositionality is
+low, and so the size of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P1.p1.m5" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math> is limited (Section <a href="#S4" title="4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Paraphrasing</h4>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We score the canonical utterances in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathcal{C}_{z}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒞</mi><mi>z</mi></msub></math> with respect to the input
+utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> using a paraphrase model, which offers two advantages.
+First, the paraphrase model is decoupled from the KB, so we can
+train it from large text corpora. Second,
+natural language utterances often do not express predicates explicitly, e.g.,
+the question <span class="ltx_text ltx_font_italic">“What is Italy’s money?”</span> expresses the binary predicate <span class="ltx_text ltx_font_typewriter ltx_font_footnote">CurrencyOf</span> with a possessive
+construction. Paraphrasing methods are well-suited for handling such
+text-to-text gaps.
+Our framework accommodates any paraphrasing method,
+and in this paper we propose an <em class="ltx_emph">association model</em> that learns to
+associate natural language phrases that co-occur frequently in a monolingual
+parallel corpus, combined with a <em class="ltx_emph">vector space model</em>, which learns to
+score the similarity between vector representations
+of natural language utterances (Section <a href="#S5" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Model</h4>
+
+<div id="S3.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We define a discriminative log-linear model that places a probability
+distribution over pairs of logical forms and canonical utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m1" class="ltx_Math" alttext="(c,z)" display="inline"><mrow><mo>(</mo><mrow><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></math>,
+given an utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle p_{\theta}(c,z\mid x)=\frac{\exp\{\phi(x,c,z)^{\top}\theta\}}{%&#10;\sum_{z^{\prime}\in\mathcal{Z}_{x},c^{\prime}\in\mathcal{C}_{z}}\exp\{\phi(x,c%&#10;^{\prime},z^{\prime})^{\top}\theta\}}," display="inline"><mrow><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>,</mo><mi>z</mi><mo>∣</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>{</mo><mrow><mi>ϕ</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><mi>θ</mi></mrow><mo>}</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><msup><mi>z</mi><mo>′</mo></msup><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></mrow><mo>,</mo><mrow><msup><mi>c</mi><mo>′</mo></msup><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒞</mi><mi>z</mi></msub></mrow></mrow></msub><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>{</mo><mrow><mi>ϕ</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>c</mi><mo>′</mo></msup><mo>,</mo><msup><mi>z</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><mi>θ</mi></mrow><mo>}</mo></mrow></mrow></mrow></mfrac></mstyle><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m3" class="ltx_Math" alttext="\theta\in\mathbb{R}^{b}" display="inline"><mrow><mi>θ</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>b</mi></msup></mrow></math> is the vector of parameters to be learned,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m4" class="ltx_Math" alttext="\phi(x,c,z)" display="inline"><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></mrow></math> is a feature vector extracted from the input utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, the
+canonical utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>, and the logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m7" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>.
+Note that the candidate set of logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m8" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math>
+and canonical utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p1.m9" class="ltx_Math" alttext="\mathcal{C}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒞</mi><mi>x</mi></msub></math> are constructed during the canonical utterance
+construction phase.</p>
+</div>
+<div id="S3.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">The model score decomposes into two terms:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\displaystyle\phi(x,c,z)^{\top}\theta=\phi_{\text{pr}}(x,c)^{\top}\theta_{%&#10;\text{pr}}+\phi_{\text{lf}}(x,z)^{\top}\theta_{\text{lf}}," display="inline"><mrow><mrow><mrow><mi>ϕ</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><mi>θ</mi></mrow><mo>=</mo><mrow><mrow><msub><mi>ϕ</mi><mtext>pr</mtext></msub><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><msub><mi>θ</mi><mtext>pr</mtext></msub></mrow><mo>+</mo><mrow><msub><mi>ϕ</mi><mtext>lf</mtext></msub><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><msub><mi>θ</mi><mtext>lf</mtext></msub></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m1" class="ltx_Math" alttext="\theta_{\text{pr}}" display="inline"><msub><mi>θ</mi><mtext>pr</mtext></msub></math> define the paraphrase model (Section <a href="#S5" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), which is based on features
+extracted from text only (the input and canonical utterance). The parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p2.m2" class="ltx_Math" alttext="\theta_{\text{lf}}" display="inline"><msub><mi>θ</mi><mtext>lf</mtext></msub></math>
+correspond to semantic parsing features based on the logical form and input utterance, and
+are briefly described in this section.</p>
+</div>
+<div id="S3.SS0.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">Many existing paraphrase models introduce latent variables to describe the
+<em class="ltx_emph">derivation</em> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p3.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P3.p3.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, e.g., with transformations
+<cite class="ltx_cite">[<a href="#bib.bib531" title="Tree edit models for recognizing textual entailments, paraphrases, and answers to questions" class="ltx_ref">16</a>, <a href="#bib.bib538" title="A confidence model for syntactically-motivated entailment proofs" class="ltx_ref">29</a>]</cite> or alignments
+<cite class="ltx_cite">[<a href="#bib.bib572" title="Robust textual inference via graph matching" class="ltx_ref">14</a>, <a href="#bib.bib536" title="Paraphrase identification as probabilistic quasi-synchronous recognition" class="ltx_ref">6</a>, <a href="#bib.bib550" title="Discriminative learning over constrained latent representations" class="ltx_ref">3</a>]</cite>.
+However, we opt for a simpler paraphrase model without latent variables
+in the interest of efficiency.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Logical form features</h4>
+
+<div id="S3.SS0.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">The parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m1" class="ltx_Math" alttext="\theta_{\text{lf}}" display="inline"><msub><mi>θ</mi><mtext>lf</mtext></msub></math> correspond to the following
+features adopted from <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">2013</a>)</cite>. For a logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m2" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>, we
+extract the size of its denotation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m3" class="ltx_Math" alttext="{\llbracket z\rrbracket}_{\mathcal{K}}" display="inline"><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\llbracket</mtext></merror><mo>⁢</mo><mi>z</mi><mo>⁢</mo><msub><merror class="ltx_ERROR undefined undefined"><mtext>\rrbracket</mtext></merror><mi class="ltx_font_mathcaligraphic">𝒦</mi></msub></mrow></math>. We also add all binary predicates
+in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m4" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> as features. Moreover, we extract a popularity feature for predicates based on
+the number of instances they have in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m5" class="ltx_Math" alttext="\mathcal{K}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒦</mi></math>. For Freebase entities, we extract a popularity
+feature based on the entity frequency in an entity linked subset of Reverb
+<cite class="ltx_cite">[<a href="#bib.bib489" title="Entity linking at web scale" class="ltx_ref">22</a>]</cite>. Lastly, Freebase formulas have types (see Section <a href="#S4" title="4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>),
+and we conjoin the type of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m6" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> with the first
+word of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P4.p1.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, to capture the correlation between a word (e.g., <span class="ltx_text ltx_font_italic">“where”</span>)
+with the Freebase type (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Location</span>).</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Learning</h4>
+
+<div id="S3.SS0.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">As our training data consists of question-answer pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m1" class="ltx_Math" alttext="(x_{i},y_{i})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>,
+we maximize the log-likelihood of the correct answer.
+The probability of an answer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is obtained by marginalizing over
+canonical utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m4" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> whose denotation is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m5" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>.
+Formally, our objective function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m6" class="ltx_Math" alttext="\mathcal{O}(\theta)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math> is as follows:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m2" class="ltx_Math" alttext="\displaystyle\mathcal{O}(\theta)=\sum_{i=1}^{n}\log p_{\theta}(y_{i}\mid x_{i}%&#10;)-\lambda\|\theta\|_{1}," display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mi>log</mi><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>∣</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>-</mo><mi>λ</mi><mo>∥</mo><mi>θ</mi><msub><mo>∥</mo><mn>1</mn></msub><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m2" class="ltx_Math" alttext="\displaystyle p_{\theta}(y\mid x)=\sum_{z\in\mathcal{Z}_{x}:y={\llbracket z%&#10;\rrbracket}_{\mathcal{K}}}\sum_{c\in\mathcal{C}_{z}}p_{\theta}(c,z\mid x)." display="inline"><mrow><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>y</mi><mo>∣</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mi>z</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></mrow><mo>:</mo><mrow><mi>y</mi><mo>=</mo><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\llbracket</mtext></merror><mo>⁢</mo><mi>z</mi><mo>⁢</mo><msub><merror class="ltx_ERROR undefined undefined"><mtext>\rrbracket</mtext></merror><mi class="ltx_font_mathcaligraphic">𝒦</mi></msub></mrow></mrow></mrow></munder></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>c</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒞</mi><mi>z</mi></msub></mrow></munder></mstyle><msub><mi>p</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>c</mi><mo>,</mo><mi>z</mi><mo>∣</mo><mi>x</mi><mo>)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">The strength <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m7" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m8" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> regularizer is set based on
+cross-validation.
+We optimize the objective by initializing the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P5.p1.m9" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> to zero
+and running AdaGrad <cite class="ltx_cite">[<a href="#bib.bib387" title="Adaptive subgradient methods for online learning and stochastic optimization" class="ltx_ref">8</a>]</cite>.
+We approximate the set of pairs of logical forms and canonical utterances with
+a beam of size 2,000.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Canonical utterance construction</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We construct canonical utterances in two steps.
+Given an input utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>,
+we first construct a set of logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math>, and then
+generate canonical utterances from each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="z\in\mathcal{Z}_{x}" display="inline"><mrow><mi>z</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></mrow></math>.
+Both steps are performed
+with a small and simple set of deterministic rules,
+which suffices for our datasets,
+as they consist of factoid questions with a modest amount of compositional
+structure.
+We describe these rules below for completeness.
+Due to its soporific effect though,
+we advise the reader to skim it quickly.</p>
+</div>
+<div id="S4.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Candidate logical forms</h4>
+
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">#</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:65.4pt;" width="65.4pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Template</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Example</span></th>
+<th class="ltx_td ltx_align_justify" style="width:128.0pt;" width="128.0pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Question</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_footnote">1</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:65.4pt;" width="65.4pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="p.e" display="inline"><mrow><mi>p</mi><mo separator="true">.</mo><mi>e</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">Directed.TopGun</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:128.0pt;" width="128.0pt"><em class="ltx_emph ltx_font_footnote">Who directed Top Gun?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_footnote">2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:65.4pt;" width="65.4pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="p_{1}.p_{2}.e" display="inline"><mrow><msub><mi>p</mi><mn>1</mn></msub><mo separator="true">.</mo><msub><mi>p</mi><mn>2</mn></msub><mo separator="true">.</mo><mi>e</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">Employment.EmployerOf.SteveBalmer</span></td>
+<td class="ltx_td ltx_align_justify" style="width:128.0pt;" width="128.0pt"><em class="ltx_emph ltx_font_footnote">Where does Steve Balmer work?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_footnote">3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:65.4pt;" width="65.4pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m3" class="ltx_Math" alttext="p.(p_{1}.e_{1}\sqcap p_{2}.e_{2})" display="inline"><mrow><mi>p</mi><mo>.</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>1</mn></msub><mo>.</mo><msub><mi>e</mi><mn>1</mn></msub><mo>⊓</mo><msub><mi>p</mi><mn>2</mn></msub><mo>.</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">Character.(Actor.BradPitt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="\sqcap" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">⊓</mo></math> Film.Troy)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:128.0pt;" width="128.0pt"><em class="ltx_emph ltx_font_footnote">Who did Brad Pitt play in Troy?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_footnote">4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:65.4pt;" width="65.4pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m5" class="ltx_Math" alttext="\text{\footnotesize{\tt Type}}.t\sqcap z" display="inline"><mrow><mtext mathsize="small" stretchy="false">𝚃𝚢𝚙𝚎</mtext><mo separator="true">.</mo><mrow><mi>t</mi><mo>⊓</mo><mi>z</mi></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">Type.Composer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="\sqcap" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">⊓</mo></math> SpeakerOf.French</span></td>
+<td class="ltx_td ltx_align_justify" style="width:128.0pt;" width="128.0pt"><em class="ltx_emph ltx_font_footnote">What composers spoke French?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:5.7pt;" width="5.7pt"><span class="ltx_text ltx_font_footnote">5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:65.4pt;" width="65.4pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">count</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="(z)" display="inline"><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:199.2pt;" width="199.2pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">count(BoatDesigner.NatHerreshoff)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:128.0pt;" width="128.0pt"><em class="ltx_emph ltx_font_footnote">How many ships were designed by Nat Herreshoff?</em></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_footnote">
+Logical form templates, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m12" class="ltx_Math" alttext="p,p_{1},p_{2}" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">p</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">p</mi><mn mathsize="normal" stretchy="false">2</mn></msub></mrow></math> are Freebase properties, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m13" class="ltx_Math" alttext="e,e_{1},e_{2}" display="inline"><mrow><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">e</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">e</mi><mn mathsize="normal" stretchy="false">2</mn></msub></mrow></math> are Freebase entities, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m14" class="ltx_Math" alttext="t" display="inline"><mi mathsize="normal" stretchy="false">t</mi></math> is a
+Freebase type, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m15" class="ltx_Math" alttext="z" display="inline"><mi mathsize="normal" stretchy="false">z</mi></math> is a logical form.
+</span></div>
+</div>
+<div id="S4.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We consider logical forms
+defined by a set of templates, summarized in Table <a href="#S4.T1" title="Table 1 ‣ Candidate logical forms ‣ 4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+The basic template is a join of a binary and an entity,
+where a binary can either be one property <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="p.e" display="inline"><mrow><mi>p</mi><mo separator="true">.</mo><mi>e</mi></mrow></math> (#1 in the table) or two properties <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="p_{1}.p_{2}.e" display="inline"><mrow><msub><mi>p</mi><mn>1</mn></msub><mo separator="true">.</mo><msub><mi>p</mi><mn>2</mn></msub><mo separator="true">.</mo><mi>e</mi></mrow></math> (#2). To handle cases of events involving multiple arguments
+(e.g., <span class="ltx_text ltx_font_italic">“Who did Brad Pitt play in Troy?”</span>), we introduce the template <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="p.(p_{1}.e_{1}\sqcap p_{2}.e_{2})" display="inline"><mrow><mi>p</mi><mo>.</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>1</mn></msub><mo>.</mo><msub><mi>e</mi><mn>1</mn></msub><mo>⊓</mo><msub><mi>p</mi><mn>2</mn></msub><mo>.</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math> (#3), where the main event
+is modified by more than one entity. Logical forms
+can be further modified by a unary “filter”, e.g., the answer to <span class="ltx_text ltx_font_italic">“What composers spoke French?”</span> is a set
+of composers, i.e., a subset of all people (#4). Lastly, we handle
+aggregation formulas for utterances such as <span class="ltx_text ltx_font_italic">“How many teams are in the
+NCAA?”</span> (#5).</p>
+</div>
+<div id="S4.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">To construct candidate logical forms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m1" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math> for a given
+utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, our strategy is to find an entity in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>
+and grow the logical form from that entity.
+As we show later, this procedure actually produces a
+set with better coverage than constructing logical forms recursively from spans of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>,
+as is done in traditional semantic parsing.
+Specifically, for every span of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>,
+we take at most 10 entities whose Freebase descriptions approximately match the
+span.
+Then, we join each entity
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m6" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> with all type-compatible<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Entities in Freebase are associated with
+a set of types, and
+properties have a type signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m7" class="ltx_Math" alttext="(t_{1},t_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math>
+We use these types to compute an expected type <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m8" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> for any logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m9" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>.
+</span></span></span>
+binaries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m10" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>, and add these logical forms to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p2.m11" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math> (#1 and #2).</p>
+</div>
+<div id="S4.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">To construct logical forms with multiple entities (#3) we do the following:
+For any logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m1" class="ltx_Math" alttext="z=p.p_{1}.e_{1}" display="inline"><mrow><mrow><mi>z</mi><mo>=</mo><mi>p</mi></mrow><mo separator="true">.</mo><msub><mi>p</mi><mn>1</mn></msub><mo separator="true">.</mo><msub><mi>e</mi><mn>1</mn></msub></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m2" class="ltx_Math" alttext="p_{1}" display="inline"><msub><mi>p</mi><mn>1</mn></msub></math> has type signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m3" class="ltx_Math" alttext="(t_{1},*)" display="inline"><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo separator="true">, </mo><mo>*</mo></mrow><mo>)</mo></mrow></math>,
+we look for other entities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m4" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math> that were matched in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. Then, we add the
+logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m6" class="ltx_Math" alttext="p.(p_{1}.e_{1}\sqcap p_{2}.e_{2})" display="inline"><mrow><mi>p</mi><mo>.</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>1</mn></msub><mo>.</mo><msub><mi>e</mi><mn>1</mn></msub><mo>⊓</mo><msub><mi>p</mi><mn>2</mn></msub><mo>.</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math>,
+if there exists a binary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m7" class="ltx_Math" alttext="p_{2}" display="inline"><msub><mi>p</mi><mn>2</mn></msub></math> with a compatible type signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m8" class="ltx_Math" alttext="(t_{1},t_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><msub><mi>t</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m9" class="ltx_Math" alttext="t_{2}" display="inline"><msub><mi>t</mi><mn>2</mn></msub></math> is one of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m10" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math>’s types.
+For example, for the logical form
+<span class="ltx_text ltx_font_typewriter ltx_font_footnote">Character.Actor.BradPitt</span>, if we match the entity <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Troy</span> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m11" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, we obtain
+<span class="ltx_text ltx_font_typewriter ltx_font_footnote">Character.(Actor.BradPitt <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m12" class="ltx_Math" alttext="\sqcap" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">⊓</mo></math> Film.Troy)</span>. We further modify
+logical forms by intersecting with a unary filter (#4): given
+a formula <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m13" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> with some Freebase type (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">People</span>),
+we look at all Freebase sub-types <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m14" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> (e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Composer</span>), and check whether
+one of their Freebase descriptions (e.g., <span class="ltx_text ltx_font_italic">“composer”</span>) appears in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m15" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.
+If so, we add the formula <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m16" class="ltx_Math" alttext="\text{\footnotesize{\tt Type}}.t\sqcap z" display="inline"><mrow><mtext mathsize="small" stretchy="false">𝚃𝚢𝚙𝚎</mtext><mo separator="true">.</mo><mrow><mi>t</mi><mo>⊓</mo><mi>z</mi></mrow></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m17" class="ltx_Math" alttext="\mathcal{Z}_{x}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒵</mi><mi>x</mi></msub></math>. Finally, we check whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P1.p3.m18" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>
+is an aggregation formula by identifying whether it
+starts with phrases such as <span class="ltx_text ltx_font_italic">“how many”</span> or <span class="ltx_text ltx_font_italic">“number of”</span> (#5).</p>
+</div>
+<div id="S4.SS0.SSS0.P1.p4" class="ltx_para">
+<p class="ltx_p">On <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>, this results in 645 formulas per utterance on average.
+Clearly, we can increase the expressivity of this step by expanding the
+template set.
+For example,
+we could handle superlative utterances (<span class="ltx_text ltx_font_italic">“What NBA player
+is tallest?”</span>) by adding a template with an <span class="ltx_text ltx_font_typewriter ltx_font_footnote">argmax</span> operator.</p>
+</div>
+</div>
+<div id="S4.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Utterance generation</h4>
+
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="\boldsymbol{d(p)}" display="inline"><mrow><mi>𝒅</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝒑</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_bold ltx_font_footnote">Categ.</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Rule</span></th>
+<th class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Example</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:22.8pt;" width="22.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="p.e" display="inline"><mrow><mi>p</mi><mo separator="true">.</mo><mi>e</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">has</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">as</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">election contest</span> has <span class="ltx_text ltx_font_bold">George Bush</span> as <span class="ltx_text ltx_font_bold">winner?</span></em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">(AUX)</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">radio station</span> <span class="ltx_text ltx_font_bold">serves area</span> <span class="ltx_text ltx_font_bold">New-York</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">PP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">PP</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m8" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">beer</span> <span class="ltx_text ltx_font_bold">from region Argentina</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP VP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m9" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">the</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m10" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">mass transportation system</span> <span class="ltx_text ltx_font_bold">served</span> the <span class="ltx_text ltx_font_bold">area</span> <span class="ltx_text ltx_font_bold">Berlin</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:22.8pt;" width="22.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m11" class="ltx_Math" alttext="\mathbf{R}(p).e" display="inline"><mrow><mrow><mi>𝐑</mi><mo>⁢</mo><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></mrow><mo separator="true">.</mo><mi>e</mi></mrow></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m12" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">is the</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">of</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m13" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">location</span> is the <span class="ltx_text ltx_font_bold">place of birth</span> of <span class="ltx_text ltx_font_bold">Elvis Presley</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m14" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">AUX</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m15" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">film</span> is <span class="ltx_text ltx_font_bold">Brazil</span> <span class="ltx_text ltx_font_bold">featured in</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">PP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m16" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m17" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">PP</span><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">destination</span> <span class="ltx_text ltx_font_bold">Spanish steps</span> <span class="ltx_text ltx_font_bold">near travel destination</span>?</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:22.8pt;" width="22.8pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:48.4pt;" width="48.4pt"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP VP</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:113.8pt;" width="113.8pt"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">WH</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">NP</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">is</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">VP</span><span class="ltx_text ltx_font_footnote"> </span><span class="ltx_text ltx_font_typewriter ltx_font_footnote">by</span><span class="ltx_text ltx_font_footnote"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m18" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> ?</span></td>
+<td class="ltx_td ltx_align_justify" style="width:216.2pt;" width="216.2pt"><em class="ltx_emph ltx_font_footnote">What <span class="ltx_text ltx_font_bold">structure</span> is <span class="ltx_text ltx_font_bold">designed</span> by Herod?</em></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>
+<span class="ltx_text ltx_font_footnote">
+Generation rules for templates of the form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m24" class="ltx_Math" alttext="p.e" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" separator="true" stretchy="false">.</mo><mi mathsize="normal" stretchy="false">e</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m25" class="ltx_Math" alttext="\mathbf{R}[p].e" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">𝐑</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">]</mo></mrow></mrow><mo mathsize="small" separator="true" stretchy="false">.</mo><mi mathsize="normal" stretchy="false">e</mi></mrow></math>
+based on the syntactic category of the property description. Freebase descriptions for the type, entity, and property are denoted by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m26" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m27" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m28" class="ltx_Math" alttext="d(p)" display="inline"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> respectively. The surface form of the auxiliary <span class="ltx_text ltx_font_typewriter">AUX</span> is determined by the POS tag of the verb inside the <span class="ltx_text ltx_font_smallcaps">VP</span> tree.
+</span></div>
+</div>
+<div id="S4.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">While mapping general language utterances to logical forms is hard,
+we observe that it is much easier to
+generate a <em class="ltx_emph">canonical</em> natural language utterances of our choice
+given a logical form.
+Table <a href="#S4.T2" title="Table 2 ‣ Utterance generation ‣ 4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> summarizes the rules used to generate canonical utterances from the template
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m1" class="ltx_Math" alttext="p.e" display="inline"><mrow><mi>p</mi><mo separator="true">.</mo><mi>e</mi></mrow></math>. Questions begin with a question word, are followed by the Freebase
+description of the expected answer type (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m2" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math>), and followed by Freebase
+descriptions of the entity (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m3" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>) and binary (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m4" class="ltx_Math" alttext="d(p)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></mrow></math>).
+To fill in auxiliary verbs, determiners, and prepositions,
+we parse the description <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p1.m5" class="ltx_Math" alttext="d(p)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></mrow></math> into one of
+<span class="ltx_text ltx_font_smallcaps">NP</span>,
+<span class="ltx_text ltx_font_smallcaps">VP</span>,
+<span class="ltx_text ltx_font_smallcaps">PP</span>,
+or <span class="ltx_text ltx_font_smallcaps">NP VP</span>.
+This determines the generation rule to be used.</p>
+</div>
+<div id="S4.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Each Freebase property <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> has an explicit property <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m2" class="ltx_Math" alttext="p^{\prime}" display="inline"><msup><mi>p</mi><mo>′</mo></msup></math> equivalent to the reverse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m3" class="ltx_Math" alttext="\mathbf{R}[p]" display="inline"><mrow><mi>𝐑</mi><mo>⁢</mo><mrow><mo>[</mo><mi>p</mi><mo>]</mo></mrow></mrow></math>
+(e.g., <span class="ltx_text ltx_font_typewriter ltx_font_footnote">ContainedBy</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m4" class="ltx_Math" alttext="\mathbf{R}[\text{\footnotesize{\tt Contains}}]" display="inline"><mrow><mi>𝐑</mi><mo>⁢</mo><mrow><mo>[</mo><mtext mathsize="small" stretchy="false">𝙲𝚘𝚗𝚝𝚊𝚒𝚗𝚜</mtext><mo>]</mo></mrow></mrow></math>).
+For each logical form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m5" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>, we also generate using equivalent logical forms
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m6" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is replaced with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p2.m7" class="ltx_Math" alttext="\mathbf{R}[p^{\prime}]" display="inline"><mrow><mi>𝐑</mi><mo>⁢</mo><mrow><mo>[</mo><msup><mi>p</mi><mo>′</mo></msup><mo>]</mo></mrow></mrow></math>.
+Reversed formulas have different generation rules,
+since entities in these formulas are in the subject position rather than object position.</p>
+</div>
+<div id="S4.SS0.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">We generate the description <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m1" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> from the Freebase description of the type of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m2" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> (this handles #4).
+For the template <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m3" class="ltx_Math" alttext="p_{1}.p_{2}.e" display="inline"><mrow><msub><mi>p</mi><mn>1</mn></msub><mo separator="true">.</mo><msub><mi>p</mi><mn>2</mn></msub><mo separator="true">.</mo><mi>e</mi></mrow></math> (#2), we have a similar set of rules, which
+depends on the syntax of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m4" class="ltx_Math" alttext="d(p_{1})" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m5" class="ltx_Math" alttext="d(p_{2})" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math> and is omitted for brevity.
+The template <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m6" class="ltx_Math" alttext="p.(p_{1}.e_{1}\sqcap p_{2}.e_{2})" display="inline"><mrow><mi>p</mi><mo>.</mo><mrow><mo>(</mo><msub><mi>p</mi><mn>1</mn></msub><mo>.</mo><msub><mi>e</mi><mn>1</mn></msub><mo>⊓</mo><msub><mi>p</mi><mn>2</mn></msub><mo>.</mo><msub><mi>e</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math> (#3) is generated by
+appending the prepositional phrase <span class="ltx_text ltx_font_typewriter">in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p3.m7" class="ltx_Math" alttext="d(e_{2})" display="inline"><mrow><mi>d</mi><mo mathvariant="monospace">⁢</mo><mrow><mo mathvariant="monospace">(</mo><msub><mi>e</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="monospace">)</mo></mrow></mrow></math></span>,
+e.g, <span class="ltx_text ltx_font_italic">“What character is the character of Brad Pitt in Troy?”</span>.
+Lastly, we choose the question phrase <span class="ltx_text ltx_font_italic">“How many”</span>
+for aggregation formulas (#5), and <span class="ltx_text ltx_font_italic">“What”</span> for all other formulas.</p>
+</div>
+<div id="S4.SS0.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">We also generate canonical utterances using an alignment lexicon,
+released by <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">2013</a>)</cite>, which maps text phrases to Freebase
+binary predicates. For a binary predicate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m1" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>
+mapped from text phrase <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m2" class="ltx_Math" alttext="d(b)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>b</mi><mo>)</mo></mrow></mrow></math>, we generate the utterance
+<span class="ltx_text ltx_font_typewriter">WH <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m3" class="ltx_Math" alttext="d(t)" display="inline"><mrow><mi>d</mi><mo mathvariant="monospace">⁢</mo><mrow><mo mathvariant="monospace">(</mo><mi>t</mi><mo mathvariant="monospace">)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m4" class="ltx_Math" alttext="d(b)" display="inline"><mrow><mi>d</mi><mo mathvariant="monospace">⁢</mo><mrow><mo mathvariant="monospace">(</mo><mi>b</mi><mo mathvariant="monospace">)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m5" class="ltx_Math" alttext="d(e)" display="inline"><mrow><mi>d</mi><mo mathvariant="monospace">⁢</mo><mrow><mo mathvariant="monospace">(</mo><mi>e</mi><mo mathvariant="monospace">)</mo></mrow></mrow></math> ?</span>. On the <span class="ltx_text ltx_font_smallcaps">WebQuestions</span> dataset,
+we generate an average of 1,423 canonical
+utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m6" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> per input utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS0.SSS0.P2.p4.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.
+In Section <a href="#S6" title="6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, we show that an even simpler
+method of generating canonical utterances by concatenating Freebase
+descriptions hurts accuracy by only a modest amount.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Paraphrasing</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Once the candidate set of logical forms paired with canonical utterances is constructed,
+our problem is reduced to scoring pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="(c,z)" display="inline"><mrow><mo>(</mo><mrow><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>)</mo></mrow></math> based on a paraphrase model.
+The NLP paraphrase literature is vast and ranges from simple methods employing surface
+features <cite class="ltx_cite">[<a href="#bib.bib544" title="Using dependency-based features to take the “para-farce” out of paraphrase" class="ltx_ref">32</a>]</cite>, through vector space models <cite class="ltx_cite">[<a href="#bib.bib534" title="Dynamic pooling and unfolding recursive autoencoders for paraphrase detection" class="ltx_ref">28</a>]</cite>, to
+latent variable models <cite class="ltx_cite">[<a href="#bib.bib536" title="Paraphrase identification as probabilistic quasi-synchronous recognition" class="ltx_ref">6</a>, <a href="#bib.bib539" title="Probabilistic tree-edit models with structured latent variables for textual entailment and question answering" class="ltx_ref">33</a>, <a href="#bib.bib538" title="A confidence model for syntactically-motivated entailment proofs" class="ltx_ref">29</a>]</cite>.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we focus on two paraphrase models that emphasize simplicity and efficiency.
+This is important since for each question-answer pair,
+we consider thousands of canonical utterances as potential paraphrases.
+In contrast, traditional paraphrase detection
+<cite class="ltx_cite">[<a href="#bib.bib545" title="Unsupervised construction of large paraphrase corpora: exploiting massively parallel news sources" class="ltx_ref">7</a>]</cite> and Recognizing Textual Entailment (RTE) tasks
+<cite class="ltx_cite">[<a href="#bib.bib565" title="Recognizing textual entailment: models and applications" class="ltx_ref">4</a>]</cite> consider examples consisting of only a single pair of
+candidate paraphrases.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Our paraphrase model decomposes into an <em class="ltx_emph">association model</em> and a
+<em class="ltx_emph">vector space model</em>:</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex5.m1" class="ltx_Math" alttext="\displaystyle\phi_{\text{pr}}(x,c)^{\top}\theta_{\text{pr}}=\phi_{\text{as}}(x%&#10;,c)^{\top}\theta_{\text{as}}+\phi_{\text{vs}}(x,c)^{\top}\theta_{\text{vs}}." display="inline"><mrow><mrow><mrow><msub><mi>ϕ</mi><mtext>pr</mtext></msub><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><msub><mi>θ</mi><mtext>pr</mtext></msub></mrow><mo>=</mo><mrow><mrow><msub><mi>ϕ</mi><mtext>as</mtext></msub><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><msub><mi>θ</mi><mtext>as</mtext></msub></mrow><mo>+</mo><mrow><msub><mi>ϕ</mi><mtext>vs</mtext></msub><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><msub><mi>θ</mi><mtext>vs</mtext></msub></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Association model</h3>
+
+<div id="S5.F3" class="ltx_figure"><img src="P14-1133/image003.png" id="S5.F3.g1" class="ltx_graphics ltx_centering" width="263" height="47" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span> 
+<span class="ltx_text ltx_font_footnote">
+Token associations extracted for a paraphrase pair. Blue and dashed (red and solid)
+indicate positive (negative) score. Line width is proportional
+to the absolute value of the score.
+
+</span></div>
+</div>
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The goal of the association model is to determine whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>
+contain phrases that are likely to be paraphrases.
+Given an utterance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m3" class="ltx_Math" alttext="x=\langle x_{0},x_{1},..,x_{n-1}\rangle" display="inline"><mrow><mi>x</mi><mo>=</mo><mrow><mo>⟨</mo><msub><mi>x</mi><mn>0</mn></msub><mo>,</mo><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mo>.</mo><mo>.</mo><mo>,</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⟩</mo></mrow></mrow></math>, we denote by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m4" class="ltx_Math" alttext="x_{i:j}" display="inline"><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub></math> the
+span from token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> to token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>. For each pair of utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m7" class="ltx_Math" alttext="(x,c)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math>,
+we go through all spans of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m8" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m9" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and identify
+a set of pairs
+of potential paraphrases <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m10" class="ltx_Math" alttext="(x_{i:j},c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub></mrow><mo>)</mo></mrow></math>,
+which we call <em class="ltx_emph">associations</em>.
+(We will describe how associations are identified shortly.)
+We then define features on each association;
+the weighted combination of these features yields a score.
+In this light, associations can be viewed as soft paraphrase rules.
+Figure <a href="#S5.F3" title="Figure 3 ‣ 5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents examples of associations extracted
+from a paraphrase pair and visualizes the learned scores.
+We can see that our model
+learns a positive score for associating <span class="ltx_text ltx_font_italic">“type”</span> with <span class="ltx_text ltx_font_italic">“genres”</span>,
+and a negative score for associating <span class="ltx_text ltx_font_italic">“is”</span> with <span class="ltx_text ltx_font_italic">“play”</span>.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">We define associations in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> primarily by looking up phrase
+pairs in a phrase table constructed using the <span class="ltx_text ltx_font_smallcaps">Paralex</span> corpus
+<cite class="ltx_cite">[<a href="#bib.bib474" title="Paraphrase-driven learning for open question answering" class="ltx_ref">10</a>]</cite>.
+<span class="ltx_text ltx_font_smallcaps">Paralex</span> is a large monolingual parallel corpora,
+containing 18 million pairs of question paraphrases from <span class="ltx_text ltx_font_typewriter">wikianswers.com</span>,
+which were tagged as having the same meaning by users.
+<span class="ltx_text ltx_font_smallcaps">Paralex</span> is suitable for our needs
+since it focuses on <em class="ltx_emph">question</em> paraphrases.
+For example, the phrase <span class="ltx_text ltx_font_italic">“do for a living”</span>
+occurs mostly in questions, and we can extract associations for this phrase from <span class="ltx_text ltx_font_smallcaps">Paralex</span>.
+Paraphrase pairs in <span class="ltx_text ltx_font_smallcaps">Paralex</span> are word-aligned using standard machine translation methods.
+We use the word alignments to construct a phrase table
+by applying the consistent phrase pair heuristic <cite class="ltx_cite">[<a href="#bib.bib547" title="The alignment template approach to statistical machine translation" class="ltx_ref">24</a>]</cite>
+to all 5-grams.
+This results in a phrase table with
+approximately 1.3 million phrase pairs.
+We let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m3" class="ltx_Math" alttext="\mathcal{A}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒜</mi></math> denote this set of mined candidate associations.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:34.1pt;" width="34.1pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Category</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_bold ltx_font_footnote">Description</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_tt" style="width:34.1pt;" width="34.1pt"><span class="ltx_text ltx_font_footnote">Assoc.</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\text{lemma}(x_{i:j})\land\text{lemma}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>∧</mo><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:34.1pt;" width="34.1pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="\text{pos}(x_{i:j})\land\text{pos}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">pos</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>∧</mo><mrow><mtext mathsize="small" stretchy="false">pos</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:34.1pt;" width="34.1pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="\text{lemma}(x_{i:j})=\text{lemma}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_footnote">?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:34.1pt;" width="34.1pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m4" class="ltx_Math" alttext="\text{pos}(x_{i:j})=\text{pos}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mrow><mtext mathsize="small" stretchy="false">pos</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mtext mathsize="small" stretchy="false">pos</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_footnote">?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:34.1pt;" width="34.1pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m5" class="ltx_Math" alttext="\text{lemma}(x_{i:j})" display="inline"><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> and </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m6" class="ltx_Math" alttext="\text{lemma}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> are synonyms?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:34.1pt;" width="34.1pt"/>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:170.7pt;" width="170.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m7" class="ltx_Math" alttext="\text{lemma}(x_{i:j})" display="inline"><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> and </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m8" class="ltx_Math" alttext="\text{lemma}(c_{i^{\prime}:j^{\prime}})" display="inline"><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>c</mi><mrow><msup><mi>i</mi><mo>′</mo></msup><mo>:</mo><msup><mi>j</mi><mo>′</mo></msup></mrow></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_footnote"> are derivations?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r ltx_border_t" style="width:34.1pt;" width="34.1pt"><span class="ltx_text ltx_font_footnote">Deletions</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_footnote">Deleted lemma and POS tag</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_footnote">
+Full feature set in the association model. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m16" class="ltx_Math" alttext="x_{i:j}" display="inline"><msub><mi mathsize="normal" stretchy="false">x</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">:</mo><mi mathsize="normal" stretchy="false">j</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m17" class="ltx_Math" alttext="c_{i^{\prime}:j^{\prime}}" display="inline"><msub><mi mathsize="normal" stretchy="false">c</mi><mrow><msup><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">:</mo><msup><mi mathsize="normal" stretchy="false">j</mi><mo mathsize="normal" stretchy="false">′</mo></msup></mrow></msub></math> denote spans from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m18" class="ltx_Math" alttext="x" display="inline"><mi mathsize="normal" stretchy="false">x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m19" class="ltx_Math" alttext="c" display="inline"><mi mathsize="normal" stretchy="false">c</mi></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m20" class="ltx_Math" alttext="\text{pos}(x_{i:j})" display="inline"><mrow><mtext mathsize="small" stretchy="false">pos</mtext><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="normal" stretchy="false">x</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">:</mo><mi mathsize="normal" stretchy="false">j</mi></mrow></msub><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m21" class="ltx_Math" alttext="\text{lemma}(x_{i:j})" display="inline"><mrow><mtext mathsize="small" stretchy="false">lemma</mtext><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="normal" stretchy="false">x</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">:</mo><mi mathsize="normal" stretchy="false">j</mi></mrow></msub><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> denote the POS tag and lemma sequence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m22" class="ltx_Math" alttext="x_{i:j}" display="inline"><msub><mi mathsize="normal" stretchy="false">x</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">:</mo><mi mathsize="normal" stretchy="false">j</mi></mrow></msub></math>.
+</span></div>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">For a pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="(x,c)" display="inline"><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></math>, we also consider as candidate associations the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math> (represented implicitly),
+which contains token pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m3" class="ltx_Math" alttext="(x_{i},c_{i^{\prime}})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><msup><mi>i</mi><mo>′</mo></msup></msub></mrow><mo>)</mo></mrow></math> such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m4" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m5" class="ltx_Math" alttext="c_{i^{\prime}}" display="inline"><msub><mi>c</mi><msup><mi>i</mi><mo>′</mo></msup></msub></math> share the
+same lemma, the same POS tag, or are linked through a <em class="ltx_emph">derivation</em> link on WordNet <cite class="ltx_cite">[<a href="#bib.bib548" title="WordNet: an electronic lexical database" class="ltx_ref">11</a>]</cite>.
+This allows us to learn paraphrases for words that appear in our datasets but are not covered
+by the phrase table, and to handle nominalizations for phrase pairs such as <span class="ltx_text ltx_font_italic">“Who designed the
+game of life?”</span> and <span class="ltx_text ltx_font_italic">“What game designer is the designer of the game of life?”</span>.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">Our model goes over all possible spans of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and constructs all possible associations from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m3" class="ltx_Math" alttext="\mathcal{A}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒜</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m4" class="ltx_Math" alttext="\mathcal{B}" display="inline"><mi class="ltx_font_mathcaligraphic">ℬ</mi></math>.
+This results in many poor associations (e.g., <span class="ltx_text ltx_font_italic">“play”</span> and <span class="ltx_text ltx_font_italic">“the”</span>),
+but as illustrated in Figure <a href="#S5.F3" title="Figure 3 ‣ 5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+we learn weights that discriminate good from bad associations.
+Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> specifies the full set of features.
+Note that unlike standard paraphrase detection
+and RTE systems, we use lexicalized features,
+firing approximately 400,000 features on <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>.
+By extracting POS features, we obtain soft syntactic rules, e.g., the feature
+“<span class="ltx_text ltx_font_typewriter">JJ N</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m5" class="ltx_Math" alttext="\land" display="inline"><mo>∧</mo></math> <span class="ltx_text ltx_font_typewriter">N</span>” indicates that omitting adjectives before nouns is possible. Once associations are constructed, we mark tokens in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m6" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m7" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> that were
+not part of any association, and extract deletion features for their lemmas and POS tags. Thus, we learn that
+deleting pronouns is acceptable, while deleting nouns is not.</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">To summarize, the association model links phrases of two utterances in multiple overlapping ways.
+During training, the model learns which associations are characteristic of
+paraphrases and which are not.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Vector space model</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">The association model relies on having a good set of candidate associations,
+but mining associations suffers from coverage issues.
+We now introduce a vector space (VS) model,
+which assigns a vector representation for each utterance, and learns a scoring
+function that ranks paraphrase candidates.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">We start by constructing vector representations of words.
+We run the <span class="ltx_text ltx_font_smallcaps">word2vec</span> tool <cite class="ltx_cite">[<a href="#bib.bib549" title="Efficient estimation of word representations in vector space" class="ltx_ref">23</a>]</cite> on lower-cased Wikipedia text
+(1.59 billion tokens), using the CBOW model with a window of 5 and hierarchical softmax.
+We also experiment with publicly released word embeddings
+<cite class="ltx_cite">[<a href="#bib.bib507" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">17</a>]</cite>, which were trained using both local and global
+context. Both result in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-dimensional vectors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="k=50" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>50</mn></mrow></math>).
+Next, we construct a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="v_{x}\in\mathbb{R}^{k}" display="inline"><mrow><msub><mi>v</mi><mi>x</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>k</mi></msup></mrow></math> for each utterance
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> by simply averaging the vectors of all content words (nouns,
+verbs, and adjectives) in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">We can now estimate a paraphrase score for
+two utterances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> via a weighted combination of the components of the vector representations:</p>
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex6.m1" class="ltx_Math" alttext="\displaystyle v_{x}^{\top}Wv_{c}=\sum_{i,j=1}^{k}w_{ij}v_{x,i}v_{c,j}" display="inline"><mrow><mrow><msubsup><mi>v</mi><mi>x</mi><mo>⊤</mo></msubsup><mo>⁢</mo><mi>W</mi><mo>⁢</mo><msub><mi>v</mi><mi>c</mi></msub></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>=</mo><mn>1</mn></mrow><mi>k</mi></munderover></mstyle><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><msub><mi>v</mi><mrow><mi>x</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>⁢</mo><msub><mi>v</mi><mrow><mi>c</mi><mo>,</mo><mi>j</mi></mrow></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m3" class="ltx_Math" alttext="W\in\mathbb{R}^{k\times k}" display="inline"><mrow><mi>W</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>k</mi><mo>×</mo><mi>k</mi></mrow></msup></mrow></math> is a parameter matrix.
+In terms of our earlier notation,
+we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m4" class="ltx_Math" alttext="\theta_{\text{vs}}=\text{vec}(W)" display="inline"><mrow><msub><mi>θ</mi><mtext>vs</mtext></msub><mo>=</mo><mrow><mtext>vec</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>W</mi><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m5" class="ltx_Math" alttext="\phi_{\text{vs}}(x,c)=\text{vec}(v_{x}v_{c}^{\top})" display="inline"><mrow><mrow><msub><mi>ϕ</mi><mtext>vs</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mtext>vec</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>x</mi></msub><mo>⁢</mo><msubsup><mi>v</mi><mi>c</mi><mo>⊤</mo></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m6" class="ltx_Math" alttext="\text{vec}(\cdot)" display="inline"><mrow><mtext>vec</mtext><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> unrolls a matrix into a vector.
+In Section <a href="#S6" title="6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, we experiment with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m7" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> equal to the identity matrix,
+constraining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m8" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> to be diagonal, and learning a full <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m9" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> matrix.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">The VS model can identify correct paraphrases in cases where it is hard to directly associate phrases from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>. For example, the answer to <span class="ltx_text ltx_font_italic">“Where is made Kia car?”</span> (from <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>), is given
+by the canonical utterance <span class="ltx_text ltx_font_italic">“What city is Kia motors a headquarters of?”</span>. The association model does not associate <span class="ltx_text ltx_font_italic">“made”</span>
+and <span class="ltx_text ltx_font_italic">“headquarters”</span>, but the VS model is able to determine that these utterances are semantically related.
+In other cases, the VS model cannot distinguish correct paraphrases from incorrect ones.
+For example, the association model identifies
+that the paraphrase for <span class="ltx_text ltx_font_italic">“What type of music did Richard Wagner Play?”</span> is <span class="ltx_text ltx_font_italic">“What is the musical genres of Richard Wagner?”</span>, by relating phrases such as <span class="ltx_text ltx_font_italic">“type of music”</span> and <span class="ltx_text ltx_font_italic">“musical genres”</span>.
+The VS model ranks the canonical utterance <span class="ltx_text ltx_font_italic">“What composition has Richard Wagner as lyricist?”</span> higher, as this utterance is also in the music domain.
+Thus, we combine the two models to benefit from their complementary nature.</p>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">In summary, while the association model aligns particular phrases to one
+another, the vector space model provides a soft vector-based representation for
+utterances.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Empirical evaluation</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this section, we evaluate our system on
+<span class="ltx_text ltx_font_smallcaps">WebQuestions</span> and <span class="ltx_text ltx_font_smallcaps">Free917</span>.
+After describing the setup (Section <a href="#S6.SS1" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>), we
+present our main empirical results
+and analyze the components of the system (Section <a href="#S6.SS2" title="6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>).</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Setup</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the <span class="ltx_text ltx_font_smallcaps">WebQuestions</span> dataset <cite class="ltx_cite">[<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">1</a>]</cite>, which
+contains 5,810 question-answer pairs. This dataset was created by crawling
+questions through the Google Suggest API, and then obtaining answers using
+Amazon Mechanical Turk. We use the original train-test split, and divide the
+training set into 3 random 80%–20% splits for development. This dataset is
+characterized by questions that are commonly asked on the web (and are
+not necessarily grammatical), such as <span class="ltx_text ltx_font_italic">“What
+character did Natalie Portman play in Star Wars?”</span> and <span class="ltx_text ltx_font_italic">“What kind of money to
+take to Bahamas?”</span>.</p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">Dataset</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote"># examples</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote"># word types</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Free917</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">917</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2,036</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">WebQuestions</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">5,810</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">4,525</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span><span class="ltx_text ltx_font_footnote">Statistics on <span class="ltx_text ltx_font_smallcaps">WebQuestions</span> and <span class="ltx_text ltx_font_smallcaps">Free917</span>.</span></div>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_smallcaps">Free917</span> dataset contains 917 questions, authored by two annotators and annotated with logical forms.
+This dataset contains questions on rarer topics (for example, <span class="ltx_text ltx_font_italic">“What is the engine in a 2010 Ferrari California?”</span> and <span class="ltx_text ltx_font_italic">“What was the cover price of the X-men Issue 1?”</span>),
+but the phrasing of questions tends to be more rigid compared to
+<span class="ltx_text ltx_font_smallcaps">WebQuestions</span>. Table <a href="#S6.T4" title="Table 4 ‣ 6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> provides some statistics on
+the two datasets.
+Following <cite class="ltx_cite">Cai and Yates (<a href="#bib.bib478" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">2013</a>)</cite>, we hold out 30% of the data for the final test, and perform 3 random 80%-20% splits of the training set for development. Since we train from question-answer pairs, we collect answers by executing the gold logical forms against Freebase.</p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">We execute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p3.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>-DCS queries by converting them into SPARQL and executing them against a copy of Freebase using the Virtuoso database engine. We evaluate our system with accuracy, that is, the proportion of questions we answer correctly. We run all questions through the Stanford CoreNLP pipeline <cite class="ltx_cite">[<a href="#bib.bib564" title="Feature-rich part-of-speech tagging with a cyclic dependency network" class="ltx_ref">30</a>, <a href="#bib.bib498" title="Incorporating non-local information into information extraction systems by Gibbs sampling" class="ltx_ref">12</a>, <a href="#bib.bib111" title="Accurate unlexicalized parsing" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+<div id="S6.SS1.p4" class="ltx_para">
+<p class="ltx_p">We tuned the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p4.m1" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> regularization strength,
+developed features,
+and ran analysis experiments on the development set (averaging across random splits).
+On <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>,
+without <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p4.m2" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> regularization, the number of non-zero features was 360K;
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.p4.m3" class="ltx_Math" alttext="L_{1}" display="inline"><msub><mi>L</mi><mn>1</mn></msub></math> regularization brings it down to 17K.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Results</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">We compare our system to <cite class="ltx_cite">Cai and Yates (<a href="#bib.bib478" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">2013</a>)</cite> (<span class="ltx_text ltx_font_smallcaps">CY13</span>), <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">2013</a>)</cite> (<span class="ltx_text ltx_font_smallcaps">BCFL13</span>), and <cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">2013</a>)</cite> (<span class="ltx_text ltx_font_smallcaps">KCAZ13</span>).
+For <span class="ltx_text ltx_font_smallcaps">BCFL13</span>, we obtained results using the <span class="ltx_text ltx_font_smallcaps">Sempre</span> package<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://www-nlp.stanford.edu/software/sempre/</span></span></span> and running <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Semantic parsing on Freebase from question-answer pairs" class="ltx_ref">2013</a>)</cite>’s system on the datasets.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents results on the test set.
+We achieve a substantial relative improvement of 12% in accuracy
+on <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>, and match the best results on <span class="ltx_text ltx_font_smallcaps">Free917</span>.
+Interestingly, our system gets an <em class="ltx_emph">oracle accuracy</em> of 63% on
+<span class="ltx_text ltx_font_smallcaps">WebQuestions</span> compared to 48% obtained by <span class="ltx_text ltx_font_smallcaps">BCFL13</span>, where
+the oracle accuracy is the fraction of questions for which at least
+one logical form in the candidate set produced by the system is correct.
+This demonstrates that our method for constructing candidate logical forms is
+reasonable. To further examine this, we ran <span class="ltx_text ltx_font_smallcaps">BCFL13</span> on the development
+set, allowing it to use only predicates from logical forms suggested by
+our logical form construction step. This improved oracle accuracy on the development set to 64.5%, but accuracy was 32.2%. This shows that the improvement in accuracy should not be attributed only to better logical form generation, but also to the paraphrase model.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Free917</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">WebQuestions</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">CY13</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">59.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">BCFL13</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">62.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">35.7</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">KCAZ13</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">68.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">This work</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">68.5</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">39.9</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span><span class="ltx_text ltx_font_footnote">
+Results on the test set.
+
+</span></div>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Free917</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">WebQuestions</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Our system</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">73.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">41.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">–</span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Vsm</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">71.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">40.5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">–</span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Association</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">52.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">35.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">–</span><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Paraphrase</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">31.8</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">21.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">SimpleGen</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">73.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">40.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Full matrix</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">52.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">35.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Diagonal</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">50.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">30.6</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Identity</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">50.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">30.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Jaccard</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">69.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">31.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">Edit</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">40.8</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">24.8</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_smallcaps ltx_font_footnote">WDDC06</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">71.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">29.8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span><span class="ltx_text ltx_font_footnote">
+Results for ablations and baselines on development set.
+
+</span></div>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">We now perform more extensive analysis of our system’s components and compare it to various baselines.</p>
+</div>
+<div id="S6.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Component ablation</h4>
+
+<div id="S6.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We ablate the association model,
+the VS model, and the entire paraphrase model (using only logical form features).
+Table <a href="#S6.T5" title="Table 5 ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows that our full system obtains highest accuracy,
+and that removing the association model results in a much larger degradation
+compared to removing the VS model.</p>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Utterance generation</h4>
+
+<div id="S6.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our system generates relatively natural utterances from logical forms using simple rules based on Freebase descriptions (Section <a href="#S4" title="4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+We now consider simply concatenating Freebase descriptions.
+For example, the logical form
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathbf{R}" display="inline"><mi>𝐑</mi></math><span class="ltx_text ltx_font_typewriter ltx_font_footnote">[PlaceOfBirth].ElvisPresley</span> would generate the utterance <span class="ltx_text ltx_font_italic">“What location Elvis Presley place of birth?”</span>.
+Row <span class="ltx_text ltx_font_smallcaps">SimpleGen</span> in Table <a href="#S6.T6" title="Table 6 ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>
+demonstrates that we still get good results in this setup.
+This is expected given that our paraphrase models are not sensitive to the
+syntactic structure of the generated utterance.</p>
+</div>
+<div id="S6.F4" class="ltx_figure"><img src="P14-1133/image004.png" id="S6.F4.g1" class="ltx_graphics ltx_centering" width="211" height="281" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span> 
+<span class="ltx_text ltx_font_footnote">
+Values of the paraphrase score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m5" class="ltx_Math" alttext="v_{x_{i}}^{\top}Wv_{c_{i^{\prime}}}" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">v</mi><msub><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="normal" stretchy="false">⊤</mo></msubsup><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">W</mi><mo mathsize="small" stretchy="false">⁢</mo><msub><mi mathsize="normal" stretchy="false">v</mi><msub><mi mathsize="normal" stretchy="false">c</mi><msup><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">′</mo></msup></msub></msub></mrow></math> for
+all content word tokens <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m6" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m7" class="ltx_Math" alttext="c_{i^{\prime}}" display="inline"><msub><mi mathsize="normal" stretchy="false">c</mi><msup><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">′</mo></msup></msub></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F4.m8" class="ltx_Math" alttext="W" display="inline"><mi mathsize="normal" stretchy="false">W</mi></math> is an arbitrary full matrix, a diagonal matrix, or the identity matrix.
+We omit scores for the words <span class="ltx_text ltx_font_italic">“czech”</span> and <span class="ltx_text ltx_font_italic">“republic”</span> since they
+appear in all canonical utterances for this example.
+</span></div>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">VS model</h4>
+
+<div id="S6.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Our system learns parameters for a full <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> matrix. We now examine
+results when learning parameters for a full matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>, a diagonal
+matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>, and when setting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> to be the identity matrix.
+Table <a href="#S6.T6" title="Table 6 ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> (third section) illustrates that learning a full matrix substantially improves accuracy.
+Figure <a href="#S6.F4" title="Figure 4 ‣ Utterance generation ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> gives an example for a
+correct paraphrase pair, where the full matrix model boosts the overall model score.
+Note that the full matrix assigns
+a high score for the phrases <span class="ltx_text ltx_font_italic">“official language”</span> and <span class="ltx_text ltx_font_italic">“speak”</span> compared to the simpler models,
+but other pairs are less interpretable.</p>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Baselines</h4>
+
+<div id="S6.SS2.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">We also compared our system to the following implemented baselines:</p>
+<ul id="I1" class="ltx_itemize">[noitemsep,topsep=0pt]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Jaccard</span>: We compute the Jaccard score between the tokens of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and
+define <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m3" class="ltx_Math" alttext="\phi_{\text{pr}}(x,c)" display="inline"><mrow><msub><mi>ϕ</mi><mtext>pr</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow></math> to be this single feature.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">Edit</span>: We compute the token edit distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> and
+define <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m3" class="ltx_Math" alttext="\phi_{\text{pr}}(x,c)" display="inline"><mrow><msub><mi>ϕ</mi><mtext>pr</mtext></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow></math> to be this single feature.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_smallcaps">WDDC06</span>: We re-implement 13 features from <cite class="ltx_cite">Wan<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib544" title="Using dependency-based features to take the “para-farce” out of paraphrase" class="ltx_ref">2006</a>)</cite>, who obtained close to state-of-the-art performance on the Microsoft Research paraphrase corpus.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We implement all features that do not require dependency parsing.</span></span></span></p>
+</div></li>
+</ul>
+</div>
+<div id="S6.SS2.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T6" title="Table 6 ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> demonstrates that we improve performance over all baselines. Interestingly, <span class="ltx_text ltx_font_smallcaps">Jaccard</span> and
+<span class="ltx_text ltx_font_smallcaps">WDDC06</span> obtain reasonable performance on <span class="ltx_text ltx_font_smallcaps">Free917</span> but perform much worse on <span class="ltx_text ltx_font_smallcaps">WebQuestions</span>.
+We surmise this is because questions in <span class="ltx_text ltx_font_smallcaps">Free917</span> were generated by annotators
+prompted by Freebase facts, whereas questions in <span class="ltx_text ltx_font_smallcaps">WebQuestions</span> originated independently of Freebase.
+Thus, word choice in <span class="ltx_text ltx_font_smallcaps">Free917</span>
+is often close to the generated Freebase descriptions, allowing simple baselines to perform well.</p>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Error analysis</h4>
+
+<div id="S6.SS2.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">We sampled examples from the development set to examine the main reasons <span class="ltx_text ltx_font_smallcaps">ParaSempre</span> makes errors. We notice
+that in many cases the paraphrase model can be further improved. For example, <span class="ltx_text ltx_font_smallcaps">ParaSempre</span> suggests that
+the best paraphrase for <span class="ltx_text ltx_font_italic">“What company did Henry Ford work for?”</span> is <span class="ltx_text ltx_font_italic">“What written work novel by Henry Ford?”</span> rather than
+<span class="ltx_text ltx_font_italic">“The employer of Henry Ford”</span>, due to the exact match of the word <span class="ltx_text ltx_font_italic">“work”</span>. Another example is the question
+<span class="ltx_text ltx_font_italic">“Where is the Nascar hall of fame?”</span>, where <span class="ltx_text ltx_font_smallcaps">ParaSempre</span> suggests that
+<span class="ltx_text ltx_font_italic">“What hall of fame discipline has Nascar hall of fame as halls of fame?”</span> is the best canonical utterance. This is because
+our simple model allows to associate <span class="ltx_text ltx_font_italic">“hall of fame”</span> with the canonical utterance three times. Entity recognition also accounts
+for many errors, e.g., the entity chosen in <span class="ltx_text ltx_font_italic">“where was the gallipoli campaign waged?”</span> is <span class="ltx_text ltx_font_typewriter ltx_font_footnote">Galipoli</span> and not <span class="ltx_text ltx_font_typewriter ltx_font_footnote">GalipoliCampaign</span>. Last, <span class="ltx_text ltx_font_smallcaps">ParaSempre</span>
+does not handle temporal information, which causes errors in questions like <span class="ltx_text ltx_font_italic">“Where did Harriet Tubman live after the civil war?”</span></p>
+</div>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Discussion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this work, we approach the problem of semantic parsing from a paraphrasing viewpoint.
+A fundamental motivation and long standing goal of the paraphrasing and RTE communities
+has been to cast various semantic applications as paraphrasing/textual entailment
+<cite class="ltx_cite">[<a href="#bib.bib565" title="Recognizing textual entailment: models and applications" class="ltx_ref">4</a>]</cite>. While it has been shown that paraphrasing methods are useful
+for question answering <cite class="ltx_cite">[<a href="#bib.bib566" title="Methods for using textual entailment in open-domain question answering" class="ltx_ref">15</a>]</cite> and relation extraction <cite class="ltx_cite">[<a href="#bib.bib567" title="Investigating a generic paraphrase-based approach for relation extraction" class="ltx_ref">27</a>]</cite>,
+this is, to the best of our knowledge, the first paper
+to perform semantic parsing through paraphrasing. Our paraphrase model
+emphasizes simplicity and efficiency, but the framework
+is agnostic to the internals of the paraphrase method.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">On the semantic parsing side, our work is most related to <cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">2013</a>)</cite>.
+The main challenge in semantic parsing is coping with the <em class="ltx_emph">mismatch</em> between
+language and the KB. In both <cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib519" title="Scaling semantic parsers with on-the-fly ontology matching" class="ltx_ref">2013</a>)</cite> and this work,
+an intermediate representation is employed to
+handle the mismatch, but while they use a logical representation, we opt for a text-based one.
+Our choice allows us to benefit from the parallel monolingual corpus <span class="ltx_text ltx_font_smallcaps">ParaLex</span> and from word vectors
+trained on Wikipedia.
+We believe that our approach is particularly suitable for
+scenarios such as factoid question answering,
+where the space of logical forms is somewhat constrained and a few generation rules suffice
+to reduce the problem to paraphrasing.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">Our work is also related to <cite class="ltx_cite">Fader<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib474" title="Paraphrase-driven learning for open question answering" class="ltx_ref">2013</a>)</cite>, who presented a
+paraphrase-driven
+question answering system. One can view this work as a generalization of
+Fader et al. along three dimensions. First, Fader et al. use a KB over natural language
+extractions rather than a formal KB and so querying the KB does not require a generation step –
+they paraphrase questions to KB entries directly. Second, they
+suggest a particular paraphrasing method that maps a test question to a question for which
+the answer is already known in a single step.
+We propose a general paraphrasing framework and instantiate it with
+two paraphrase models. Lastly, Fader et al. handle
+queries with only one property and entity whereas we generalize to more types of logical forms.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">Since our generated questions are passed to a paraphrase model,
+we took a very simple approach, mostly ensuring that we preserved the semantics
+of the utterance without striving for the most fluent realization.
+Research on generation <cite class="ltx_cite">[<a href="#bib.bib319" title="CORAL: using natural language generation for navigational assistance" class="ltx_ref">5</a>, <a href="#bib.bib315" title="Choosing words in computer-generated weather forecasts" class="ltx_ref">26</a>, <a href="#bib.bib318" title="Generating approximate geographic descriptions" class="ltx_ref">31</a>, <a href="#bib.bib568" title="Varieties of question generation: introduction to this special issue" class="ltx_ref">25</a>]</cite>
+typically focuses on generating natural utterances for human consumption,
+where fluency is important.</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p">In conclusion, the main contribution of this paper is a novel approach for semantic parsing
+based on a simple generation procedure and a paraphrase model.
+We achieve state-of-the-art results on two recently released datasets.
+We believe that our approach opens a window of
+opportunity for learning semantic parsers from raw text not necessarily related to the target KB.
+With more sophisticated generation and paraphrase, we hope to tackle
+compositionally richer utterances.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Kai Sheng Tai for performing the error analysis.
+Stanford University gratefully acknowledges the support of the Defense
+Advanced Research Projects Agency (DARPA) Deep Exploration and Filtering
+of Text (DEFT) Program under Air Force Research Laboratory (AFRL)
+contract no. FA8750-13-2-0040. Any opinions, findings, and conclusion or
+recommendations expressed in this material are those of the authors and
+do not necessarily reflect the view of the DARPA, AFRL, or the US
+government.
+The second author is supported
+by a Google Faculty Research Award.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Berant, A. Chou, R. Frostig and P. Liang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic parsing on Freebase from question-answer pairs</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Setup ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS0.SSS0.P4.p1" title="Logical form features ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.SS0.SSS0.P2.p4" title="Utterance generation ‣ 4 Canonical utterance construction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S6.SS1.p1" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib478" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Cai and A. Yates</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale semantic parsing via schema matching and lexicon extension</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS1.p2" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib550" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Chang, D. Goldwasser, D. Roth and V. Srikumar</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative learning over constrained latent representations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p3" title="Model ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib565" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Dagan, D. Roth, M. Sammons and F. M. Zanzotto</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing textual entailment: models and applications</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Morgan and Claypool Publishers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S7.p1" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib319" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Dale, S. Geldof and J. Prost</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CORAL: using natural language generation for navigational assistance</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 35–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib536" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Das and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Paraphrase identification as probabilistic quasi-synchronous recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 468–476</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p3" title="Model ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p1" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib545" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Dolan, C. Quirk and C. Brockett</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised construction of large paraphrase corpora: exploiting massively parallel news sources</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib387" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive subgradient methods for online learning and stochastic optimization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P5.p1" title="Learning ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib452" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fader, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying relations for open information extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib474" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fader, L. Zettlemoyer and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Paraphrase-driven learning for open question answering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S7.p3" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib548" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Fellbaum</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: an electronic lexical database</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p3" title="5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib498" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel, T. Grenager and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incorporating non-local information into information extraction systems by Gibbs sampling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 363–370</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib483" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Google</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freebase data dumps (2013-06-09)</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>https://developers.google.com/freebase/data</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Setup ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib572" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Haghighi, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Robust textual inference via graph matching</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p3" title="Model ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib566" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Harabagiu and A. Hickl</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Methods for using textual entailment in open-domain question answering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib531" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Heilman and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tree edit models for recognizing textual entailments, paraphrases, and answers to questions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1011–1019</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p3" title="Model ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib507" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. H. Huang, R. Socher, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving word representations via global context and multiple word prototypes</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Vector space model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib111" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib519" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kwiatkowski, E. Choi, Y. Artzi and L. Zettlemoyer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scaling semantic parsers with on-the-fly ontology matching</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS2.p1" title="6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>,
+<a href="#S7.p2" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib365" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kwiatkowski, L. Zettlemoyer, S. Goldwater and M. Steedman</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing probabilistic CCG grammars from logical form with higher-order unification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1223–1233</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Liang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lambda dependency-based compositional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">ArXiv</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Setup ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib489" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Lin, Mausam and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entity linking at web scale</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P4.p1" title="Logical form features ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib549" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and Jeffrey</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">ArXiv</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Vector space model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib547" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och and H. Ney</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The alignment template approach to statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">30</span>, <span class="ltx_text ltx_bib_pages"> pp. 417–449</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p2" title="5.1 Association model ‣ 5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib568" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Piwek and K. E. Boyer</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Varieties of question generation: introduction to this special issue</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Dialogue and Discourse</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib315" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Reiter, S. Sripada, J. Hunter, J. Yu and I. Davy</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Choosing words in computer-generated weather forecasts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence</span> <span class="ltx_text ltx_bib_volume">167</span>, <span class="ltx_text ltx_bib_pages"> pp. 137–169</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib567" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Romano, M. kouylekov, I. Szpektor, I. Dagan and A. Lavelli</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Investigating a generic paraphrase-based approach for relation extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib534" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, E. H. Huang, J. Pennin, C. D. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic pooling and unfolding recursive autoencoders for paraphrase detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 801–809</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib538" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Stern and I. Dagan</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A confidence model for syntactically-motivated entailment proofs</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 455–462</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS0.SSS0.P3.p3" title="Model ‣ 3 Model overview ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p1" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib564" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.p3" title="6.1 Setup ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib318" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Turner, Y. Sripada and E. Reiter</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating approximate geographic descriptions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 42–49</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Discussion ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib544" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Wan, M. Dras, R. Dale and C. Paris</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using dependency-based features to take the “para-farce” out of paraphrase</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i3.p1" title="Baselines ‣ 6.2 Results ‣ 6 Empirical evaluation ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>,
+<a href="#S5.p1" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib539" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Wang and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic tree-edit models with structured latent variables for textual entailment and question answering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1164–1172</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Paraphrasing ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib252" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. W. Wong and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning synchronous grammars for semantic parsing with lambda calculus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 960–967</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib385" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Zelle and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to parse database queries using inductive logic proramming.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1050–1055</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib245" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. S. Zettlemoyer and M. Collins</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to map sentences to logical form: structured classification with probabilistic categorial grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 658–666</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Parsing via Paraphrasing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 19:04:21 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

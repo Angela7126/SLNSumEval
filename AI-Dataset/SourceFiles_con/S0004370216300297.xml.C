@@ -1,0 +1,1076 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Datalog rewritability of Disjunctive Datalog programs and non-Horn ontologies.
+   </title>
+   <abstract>
+    We study the problem of rewriting a Disjunctive Datalog program into an equivalent plain Datalog program (i.e., one that entails the same facts for every dataset). We show that a Disjunctive Datalog program is Datalog rewritable if and only if it can be rewritten into a linear program (i.e., having at most one IDB body atom in each rule), thus providing a novel characterisation of Datalog rewritability in terms of linearisability. Motivated by this result, we propose the class of markable programs, which extends both Datalog and linear Disjunctive Datalog and admits Datalog rewritings of polynomial size. We show that our results can be seamlessly applied to ontological reasoning and identify two classes of non-Horn ontologies that admit Datalog rewritings of polynomial and exponential size, respectively. Finally, we shift our attention to conjunctive query answering and extend our results to the problem of computing a rewriting of a Disjunctive Datalog program that yields the same answers to a given query w.r.t. arbitrary data. Our empirical results suggest that a fair number of non-Horn ontologies are Datalog rewritable and that query answering over such ontologies becomes feasible using a Datalog engine.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Disjunctive Datalog, which extends plain Datalog by allowing disjunction in the head of rules, is a powerful knowledge representation formalism that has found many applications in the areas of deductive databases, information integration, and ontological reasoning [3], [4]. Expressiveness comes, however, at the expense of computational cost: fact entailment is co-NExpTime-complete in combined complexity and co-NP-complete with respect to data [3]. Thus, even with the development of optimised implementations [5], [6], robust behaviour of reasoners in data-intensive applications cannot be guaranteed.
+     </paragraph>
+     <paragraph>
+      Plain Datalog offers more favourable computational properties at the expense of a loss in expressive power, namely ExpTime-completeness in combined complexity and PTime-completeness in data [4]. Tractability in data complexity is an appealing property for data-intensive applications of ontologies. In particular, the RL profile of the ontology language OWL 2 was designed so that each ontology corresponds to a Datalog program [7]. Furthermore, Datalog programs obtained from RL ontologies contain rules of a restricted shape, and hence can be evaluated in polynomial time also in combined complexity, thus providing the ground for robust implementations. The standardisation of OWL 2 RL has spurred the development of reasoning engines within industry and academia, such as GraphDB [8] (formerly known as OWLIM), Oracle's RDF Semantic Graph [9], and RDFox [10].
+     </paragraph>
+     <paragraph>
+      In this paper, we study the problem of rewriting a Disjunctive Datalog program into a Datalog program that entails the same facts for every dataset. By computing such rewritings, not only we can ensure tractability in data, but also exploit the highly optimised reasoning infrastructure available for Datalog.
+     </paragraph>
+     <paragraph>
+      Our first contribution is a novel characterisation of Datalog rewritability based on linearity: a restriction that requires each rule to contain at most one body atom with an IDB predicate (i.e., a predicate occurring in head position). For plain Datalog, linearity is known to limit the effect of recursion and lead to reduced data and combined complexity of reasoning [11]. For Disjunctive Datalog programs the effects of the linearity restriction are, to the best of our knowledge, unknown.
+     </paragraph>
+     <paragraph>
+      In Section 3, we show that every linear Disjunctive Datalog program admits a Datalog rewriting of polynomial size; conversely, every Datalog program can be polynomially rewritten into linear Disjunctive Datalog. We thus show that linear Disjunctive Datalog and Datalog have the same computational properties, and linearisability of Disjunctive Datalog programs is equivalent to their rewritability into Datalog. We establish these results by means of program transposition—a novel polynomial transformation in which the rules of a given Disjunctive Datalog program {a mathematical formula}P are inverted by moving all IDB atoms between head and body while at the same time replacing their corresponding predicates with relevant auxiliary predicates of higher arity. If {a mathematical formula}P is linear, transposition yields a Datalog program; conversely, if {a mathematical formula}P is Datalog, then transposition yields a linear program.
+     </paragraph>
+     <paragraph>
+      Motivated by these results we propose in Section 4 the class of markable Disjunctive Datalog programs, which extends both Datalog and linear Disjunctive Datalog while at the same time ensuring that polynomial Datalog rewritings can be computed by a refinement of transposition. The idea behind markable programs stems from a natural relaxation of the linearity requirement: instead of applying to all IDB predicates, it applies only to a subset of marked IDB predicates. We show that our extended class of programs is efficiently recognisable via a reduction to 2-SAT and that each markable program admits a polynomial Datalog rewriting. In this way, our language based on markability is capable of capturing disjunctive information while retaining the favourable computational properties of Datalog.
+     </paragraph>
+     <paragraph>
+      Unfortunately, in the case of programs that do not satisfy our markability condition we have no algorithmic means to determine whether they can be rewritten into Datalog; indeed, checking Datalog rewritability (or equivalently, linearisability) of Disjunctive Datalog programs is undecidable. To go a step farther and identify an even larger class of rewritable programs, we propose in Section 5 a linearisation procedure based on program unfolding transformations [12], [13]. Our procedure picks a non-markable rule and a “culprit” body atom and replaces it with markable rules by unfolding the selected atom. Our procedure is sound but incomplete: if it succeeds, it outputs a markable program that is then rewritten into Datalog; if it fails, no conclusion can be drawn.
+     </paragraph>
+     <paragraph>
+      In Section 6 we study the applicability of our results to ontology reasoning. We first consider the natural syntactic intersection between OWL 2 and Disjunctive Datalog (which we call {a mathematical formula}RL⊔), and show that fact entailment over {a mathematical formula}RL⊔ ontologies corresponding to a markable program is tractable in combined complexity (and hence no harder than in OWL 2 RL [7]). We then lift the markability condition to ontologies with existentially quantified axioms, and show that markable ontologies in the expressive Description Logic {a mathematical formula}SHI admit an exponential size Datalog rewriting.
+     </paragraph>
+     <paragraph>
+      In Section 7, we shift our attention to conjunctive query answering. In this setting, it is no longer possible to obtain query-independent Datalog rewritings. Lutz and Wolter [14] showed that for any program containing at least one disjunctive rule there exists a conjunctive query such that answering the (fixed) query with respect to the (fixed) program and an input dataset is co-NP-hard; thus, under standard complexity-theoretic assumptions, no Datalog rewriting for such query and program exists. We therefore propose classes of conjunctive queries and Disjunctive Datalog programs that admit Datalog rewritings and discuss the implications of these results for ontology reasoning.
+     </paragraph>
+     <paragraph>
+      We have implemented and evaluated our techniques on a wide range of ontologies. Our experiments indicate that a fair number of non-Horn ontologies used in practice admit a Datalog rewriting. Additionally, our experiments also demonstrate that our rewriting techniques can significantly improve reasoning performance and robustness in practice.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We assume standard first-order logic notions of terms, atoms, literals, formulae, sentences, and entailment. We also consider basic notions in first-order theorem proving such as substitution, unification, most general unifiers (MGUs), clauses, and clause subsumption [15]. Positive factoring (PF) and binary resolution (BR) are the following inference rules, where σ is an MGU of atoms A and B:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Rule languages such as Disjunctive Datalog typically support non-monotonic negation as failure in the Logic Programming literature [4]. In this paper, however, our focus is on monotonic reasoning and hence we will restrict ourselves to rules in the context of first-order logic, where negation as failure is not allowed.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Rule languages
+      </section-title>
+      <paragraph>
+       We assume a first-order signature Σ (with function symbols) where the set of predicates is partitioned into extensional (or EDB) and intensional (or IDB). We say that an atom is EDB (IDB) if so is its predicate.
+      </paragraph>
+      <paragraph>
+       A fact is a function-free ground EDB atom over Σ and a dataset is a finite set of facts. A rule (or first-order clause) is a sentence over Σ of the form{a mathematical formula} where tuples of variables {a mathematical formula}x→ and {a mathematical formula}z→ are disjoint, {a mathematical formula}φ(x→,z→) is a (possibly empty) conjunction of distinct atoms over variables {a mathematical formula}x→∪z→, and {a mathematical formula}ψ(x→) is a (possibly empty) disjunction of distinct IDB atoms over {a mathematical formula}x→. Formula φ is the body of r, and ψ is the head. Quantifiers in rules are omitted for brevity. We assume that rules are safe, i.e., all variables in the head of a rule occur in the body.
+      </paragraph>
+      <paragraph>
+       We say that a rule is
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Horn if its head consists of at most one atom, and disjunctive otherwise;
+       </list-item>
+       <list-item label="•">
+        Disjunctive Datalog if it is function-free;
+       </list-item>
+       <list-item label="•">
+        Datalog if it is both Disjunctive Datalog and Horn; and
+       </list-item>
+       <list-item label="•">
+        linear if it contains at most one IDB atom in the body.
+       </list-item>
+      </list>
+      <paragraph>
+       A program is a finite set of rules. Additionally, we say that a program is of one of the aforementioned types if so are all of its rules.
+      </paragraph>
+      <paragraph>
+       We conclude this section with a few remarks on the structure of programs that will allow us to substantially simplify later on the presentation of our technical results. These considerations are without loss of generality.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The reader may have noticed that the restriction that IDB predicates do not occur in datasets is not typically adopted in AI applications. This assumption can be seamlessly lifted as explained next (see, e.g., [16]). Let θ be a predicate substitution mapping each IDB predicate Q in {a mathematical formula}P to a fresh predicate {a mathematical formula}Q′. The IDB expansion{a mathematical formula}Pe of {a mathematical formula}P is obtained by first applying θ to {a mathematical formula}P and then adding a rule {a mathematical formula}Q(x→)→Q′(x→) for each IDB predicate Q, where {a mathematical formula}x→ is a vector of distinct variables and where Q is now treated as an EDB predicate. Then, for each dataset {a mathematical formula}D and each formula φ over the signature of {a mathematical formula}P, we have {a mathematical formula}P∪D⊨φ iff {a mathematical formula}Pe∪D⊨φθ. Thus, we can lift all our results in this paper to allow for IDB atoms in datasets by simply replacing {a mathematical formula}P with its IDB expansion.
+       </list-item>
+       <list-item label="2.">
+        We use the language of first-order rules to capture prominent Knowledge Representation formalisms such as Description Logics. To this end, we require that signatures Σ contain the special predicates in first-order logic for universal truth ⊤, and falsehood ⊥. For convenience, however, we treat them in a non-standard way as ordinary predicates and assume that their special meaning is axiomatised. Specifically, we assume that ⊤ is unary and EDB, whereas ⊥ is nullary and IDB. We will assume that every dataset {a mathematical formula}D and program {a mathematical formula}P contain a fact {a mathematical formula}⊤(a) for each constant in their signature. This assumption allows us to treat ⊤ as a proper EDB predicate. Furthermore, every program {a mathematical formula}P is of the form {a mathematical formula}P=P0∪P⊥, where each rule in {a mathematical formula}P0 has a non-empty head and does not mention ⊥ in the body, and where {a mathematical formula}P⊥ is empty if ⊥ does not occur in {a mathematical formula}P0 and it consists of a single rule with ⊥ in the body and an empty head otherwise.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Hyperresolution
+      </section-title>
+      <paragraph>
+       Reasoning w.r.t. programs can be realised by means of the hyperresolution calculus (also referred to as forward chaining in the literature) [15], [16], [17]. Let {a mathematical formula}r=⋀i=1nβi→φ be a rule and, for each {a mathematical formula}1≤i≤n, let {a mathematical formula}ψi be a disjunction of ground atoms {a mathematical formula}ψi=χi∨αi with {a mathematical formula}αi a single atom. Let σ be an MGU of each {a mathematical formula}βi,αi. Then, the disjunction of ground atoms {a mathematical formula}φ′=φσ∨χ1∨…∨χn is a hyperresolvent of r and {a mathematical formula}ψ1,…,ψn.{sup:1}
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}P be a program, let {a mathematical formula}D be a dataset, and let φ be a disjunction of ground atoms. A (hyperresolution) derivation of φ from {a mathematical formula}P∪D is a pair {a mathematical formula}ρ=(T,λ), where T is a tree, λ a labeling function mapping each node in T to a disjunction of ground atoms, and the following properties hold for each {a mathematical formula}v∈T:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        if v is the root of T then {a mathematical formula}λ(v)=φ;
+       </list-item>
+       <list-item label="2.">
+        if v is a leaf in T then either {a mathematical formula}λ(v)∈D or {a mathematical formula}(→λ(v))∈P; and
+       </list-item>
+       <list-item label="3.">
+        if v has children {a mathematical formula}w1,…,wn, then {a mathematical formula}λ(v) is a hyperresolvent of a rule {a mathematical formula}r∈P and {a mathematical formula}λ(w1),…,λ(wn).
+       </list-item>
+      </list>
+      <paragraph>
+       We call a node in a derivation EDB (resp. IDB) if it is labeled by a single EDB fact (resp. a disjunction of IDB atoms); it follows from the definition of a derivation that every node is either EDB or IDB.
+      </paragraph>
+      <paragraph>
+       We write {a mathematical formula}P∪D⊢φ to denote that φ has a derivation from {a mathematical formula}P∪D. Then, hyperresolution is sound and complete in the following sense: {a mathematical formula}P∪D is unsatisfiable iff {a mathematical formula}P∪D⊢⊥; furthermore, if {a mathematical formula}P∪D is satisfiable then {a mathematical formula}P∪D⊨α iff {a mathematical formula}P∪D⊢α for every ground atom α.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Queries, reasoning problems, and rewritings
+      </section-title>
+      <paragraph>
+       A conjunctive query (CQ) q is a formula of the form {a mathematical formula}∃y→.φ(x→,y→), with φ a conjunction of function-free atoms. A CQ is Boolean if it is a sentence, and it is atomic if {a mathematical formula}φ(x→,y→) consists of a single atom and {a mathematical formula}y→ is empty.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}L be a class of programs. Fact entailment w.r.t. {a mathematical formula}L is the problem of deciding whether {a mathematical formula}P∪D⊨α when given as input a program {a mathematical formula}P∈L, a dataset {a mathematical formula}D and a fact α. The set of all facts entailed by {a mathematical formula}P∪D is typically referred to as the materialisation of {a mathematical formula}P∪D. Similarly, CQ entailment w.r.t. {a mathematical formula}L is the problem of deciding whether {a mathematical formula}P∪D⊨q when given as input {a mathematical formula}P∈L, a dataset {a mathematical formula}D and a Boolean CQ q. CQ entailment reduces to fact entailment if we require the input query q to be atomic.
+      </paragraph>
+      <paragraph>
+       The computational properties of these problems are well-understood (e.g., see [4]). Both problems are undecidable already for the class of Horn programs (which may contain function symbols). For Disjunctive Datalog, they are co-NExpTime-complete in combined complexity and co-NP-complete w.r.t. data. Finally, for plain Datalog they are ExpTime-complete in combined complexity and PTime-complete w.r.t. data.
+      </paragraph>
+      <paragraph>
+       Finally, we say that a program {a mathematical formula}P is a rewriting of a CQ q w.r.t. a set of first-order sentences {a mathematical formula}F if there exists a predicate {a mathematical formula}Aq such that for each dataset {a mathematical formula}D over the signature of {a mathematical formula}F and each tuple of constants {a mathematical formula}a→ we have {a mathematical formula}F∪D⊨q(a→) iff {a mathematical formula}P∪D⊨Aq(a→). Program {a mathematical formula}P is a rewriting of {a mathematical formula}F if it is a rewriting of every atomic query over the signature of {a mathematical formula}F. In particular, if {a mathematical formula}F is a program, then {a mathematical formula}P∪D and {a mathematical formula}F∪D are equisatisfiable for each dataset {a mathematical formula}D.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A characterisation of Datalog rewritability
+     </section-title>
+     <paragraph>
+      In this section we establish a strong correspondence between linear Disjunctive Datalog and plain Datalog. This correspondence leads to a new characterisation of Datalog rewritability: a Disjunctive Datalog program is Datalog rewritable if and only if it is rewritable into linear Disjunctive Datalog.
+     </paragraph>
+     <paragraph>
+      Our results stem from the correctness of program transposition: a novel polynomial transformation Ξ applicable to an arbitrary Disjunctive Datalog program {a mathematical formula}P in which the rules of {a mathematical formula}P are inverted by moving all IDB atoms from head to body and vice versa while at the same time replacing their corresponding predicates by auxiliary predicates of higher arity. Intuitively, each fact over an auxiliary predicate captures a relevant dependency in hyperresolution proofs between the corresponding facts over predicates in {a mathematical formula}P. Such dependencies are then “propagated” by the transposed rules so that the derivation of each fact in {a mathematical formula}P∪D can be captured by a derivation in {a mathematical formula}Ξ(P)∪D, with {a mathematical formula}Ξ(P) the transposition of {a mathematical formula}P. In this way, transposition preserves fact entailment: for every dataset {a mathematical formula}D and fact α over the predicates of the original program {a mathematical formula}P, it holds that {a mathematical formula}P∪D entails α if and only if so does {a mathematical formula}Ξ(P)∪D. Program transposition is presented in Section 3.1 and its correctness is established in Section 3.2.
+     </paragraph>
+     <paragraph>
+      In Section 3.3, we exploit transposition to establish our characterisation of Datalog rewritability of Disjunctive Datalog programs. It follows from the definition of transposition that {a mathematical formula}Ξ(P) is Datalog whenever {a mathematical formula}P is a linear Disjunctive Datalog program; conversely, {a mathematical formula}Ξ(P) is linear whenever {a mathematical formula}P is Datalog. Consequently, Ξ can be directly exploited to polynomially rewrite linear Disjunctive Datalog programs into Datalog, and vice versa. In this way, we not only can conclude that fact entailment over linear Disjunctive Datalog programs has exactly the same data and combined complexity as over plain Datalog programs, but also that a Disjunctive Datalog program admits a Datalog rewriting if and only if it is linearisable. Datalog rewritability and linearisability of Disjunctive Datalog programs are thus equivalent problems.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Program transposition
+      </section-title>
+      <paragraph>
+       To motivate program transposition, consider as an example the following Disjunctive Datalog program {a mathematical formula}P1, which we aim to rewrite into plain Datalog:{a mathematical formula}{a mathematical formula}{a mathematical formula} Intuitively, this program encodes non-2-colourability: a property of graphs which is expressible in plain Datalog [18]. Every dataset {a mathematical formula}D encoding a graph with (symmetric) edge relation E and vertex predicate C is non-2-colourable if and only if {a mathematical formula}P1∪D entails any fact over the IDB predicates B and G.
+      </paragraph>
+      <paragraph>
+       We next construct the transposition {a mathematical formula}Ξ(P1) of {a mathematical formula}P1. The transposed program {a mathematical formula}Ξ(P1) will be a rewriting of {a mathematical formula}P1: for any dataset {a mathematical formula}D over the EDB predicates E and C and fact α over the signature of {a mathematical formula}P1, we have {a mathematical formula}P1∪D⊨α iff {a mathematical formula}Ξ(P1)∪D⊨α.
+      </paragraph>
+      <paragraph>
+       Since predicates C and E are EDB, their extension w.r.t. {a mathematical formula}D depends solely on the facts in {a mathematical formula}D; as a result, the EDB atoms in {a mathematical formula}P will remain unaffected by the transposition. To ensure that {a mathematical formula}P1 and {a mathematical formula}Ξ(P1) entail the same IDB facts we introduce in {a mathematical formula}Ξ(P1) fresh binary predicates {a mathematical formula}B‾G, {a mathematical formula}B‾B, {a mathematical formula}G‾B, and {a mathematical formula}G‾G. The intended meaning of these auxiliary predicates is as follows: if a fact {a mathematical formula}X‾Y(c,d) holds in {a mathematical formula}Ξ(P1)∪D, with {a mathematical formula}X,Y∈{B,G}, then proving {a mathematical formula}X(c) suffices for proving {a mathematical formula}Y(d) in {a mathematical formula}P1∪D; that is, {a mathematical formula}P1∪D logically entails the propositional implication {a mathematical formula}X(c)→Y(d). The key step in our transformation is then to flip the direction of all rules in {a mathematical formula}P1 by moving all IDB atoms from the head to the body and vice versa while at the same time replacing their predicates with the relevant auxiliary predicates of higher arity. Since {a mathematical formula}P1 is linear, our transformation will ensure that the resulting rules are Datalog and hence have a single atom in the head. In particular, Rule (2) leads to the following two rules in {a mathematical formula}Ξ(P1):{a mathematical formula} These rules are natural consequences of Rule (2) under the intended meaning of the auxiliary predicates: if we can prove a goal {a mathematical formula}X(z) by proving first {a mathematical formula}B(x) and {a mathematical formula}E(x,y), then by Rule (2) we deduce that proving {a mathematical formula}G(y) suffices to prove {a mathematical formula}X(z).
+      </paragraph>
+      <paragraph>
+       In contrast to (2), Rule (1) contains no IDB body atoms. We transpose this rule in a slightly different way by introducing the following rules:{a mathematical formula} Similarly to the previous case, this rule follows from Rule (1): if {a mathematical formula}C(x) holds and we can establish that {a mathematical formula}X(z) can be proved from {a mathematical formula}B(x) and also from {a mathematical formula}G(x), then {a mathematical formula}X(z) must hold.
+      </paragraph>
+      <paragraph>
+       Finally, since {a mathematical formula}D does not contain any facts over the auxiliary predicates, Rules (2′) and (1′) are not applicable. Therefore, we introduce the following rules in {a mathematical formula}Ξ(P1) in order to “initialise” the extension of these auxiliary predicates:{a mathematical formula} Rules (4) encode tautological information under the intended meaning of the auxiliary predicates (a fact {a mathematical formula}B‾B(c,c) intuitively means that {a mathematical formula}B(c) suffices to prove itself). The initialisation rules ensure that all auxiliary predicates are instantiated and the remaining rules in the transposed program become applicable.
+      </paragraph>
+      <paragraph>
+       In sum, {a mathematical formula}Ξ(P1) is the following Datalog program, where each rule mentioning X stands for one rule where {a mathematical formula}X=B and one where {a mathematical formula}X=G:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Let us now consider the following Datalog program {a mathematical formula}P2, which encodes path system accessibility (a canonical PTime-complete problem [19]):{a mathematical formula}{a mathematical formula} Note that {a mathematical formula}P2 is not linear since Rule (6) contains two IDB atoms in the body. Furthermore, reasoning in linear Datalog is NLogSpace-complete in data and hence, under standard complexity-theoretic assumptions, {a mathematical formula}P2 cannot be linearised within plain Datalog. In contrast, we can exploit transposition to rewrite {a mathematical formula}P2 into the following linear Disjunctive Datalog program {a mathematical formula}Ξ(P2):{a mathematical formula}{a mathematical formula}{a mathematical formula} As in the previous example, the predicate {a mathematical formula}A‾A is fresh and carries the same intended meaning as before: if {a mathematical formula}Ξ(P2)∪D entails a disjunction {a mathematical formula}⋁iA‾A(ci,d), then {a mathematical formula}P2∪D entails the implication {a mathematical formula}(⋀iA(ci))→A(d). The initialisation rule (7) is again used to instantiate the auxiliary predicate, whereas Rules (5′) and (6′) are obtained by transposing (5) and (6), respectively. Rules (5′) and (6′) in {a mathematical formula}Ξ(P2) are natural consequences of their counterparts in {a mathematical formula}P2 under the intended meaning of the fresh predicate. For example, to justify Rule (6′), assume that {a mathematical formula}R(a,b,c) holds and {a mathematical formula}A(d) follows from {a mathematical formula}A(a); then, by Rule (6) we can conclude that {a mathematical formula}A(d) also follows from {a mathematical formula}A(b)∧A(c).
+      </paragraph>
+      <paragraph>
+       We are now ready to define program transposition formally. Transposition is a quadratic transformation and the arity of predicates is at most doubled.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Let {a mathematical formula}P be a Disjunctive Datalog program. For each pair {a mathematical formula}(P,Q) of IDB predicates in {a mathematical formula}P, let {a mathematical formula}P‾Q be a fresh predicate of arity {a mathematical formula}arity(P)+arity(Q). The transposition of {a mathematical formula}P is the smallest program {a mathematical formula}Ξ(P) containing all Rules 1–3 given next, where {a mathematical formula}ξ⊤ is the least conjunction of ⊤-atoms needed to make a rule safe, φ is the conjunction of all EDB atoms in a rule, all predicates {a mathematical formula}Pi are IDB, and {a mathematical formula}y→=y1…yarity(R) is a vector of distinct fresh variables:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ξ⊤→R‾R(y→,y→) for each IDB predicate R;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ξ⊤∧φ∧⋀iP‾iR(s→i,y→)→⋁jQ‾jR(t→j,y→) for each IDB predicate R and rule in {a mathematical formula}P of the form {a mathematical formula}φ∧⋀jQj(t→j)→⋁iPi(s→i) for {a mathematical formula}⋀jQj(t→j) nonempty; and
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}φ∧⋀iP‾iR(s→i,y→)→R(y→) for each IDB predicate R and each rule in {a mathematical formula}P of the form {a mathematical formula}φ→⋁iPi(s→i). ◇
+       </list-item>
+      </list>
+      <paragraph>
+       It follows from Definition 1 that program transposition can be used to transform linear Disjunctive Datalog programs into plain Datalog, and vice versa.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program. Then:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Ξ(P)is Datalog if and only if{a mathematical formula}Pis linear;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Ξ(P)is linear if and only if{a mathematical formula}Pis Datalog.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Given a rule s, we write {a mathematical formula}|s|h for the number of atoms in the head of s and {a mathematical formula}|s|b for the number of IDB atoms in the body of s. Let {a mathematical formula}r∈P and let {a mathematical formula}r′ be the transposition of r in {a mathematical formula}Ξ(P). Both claims follow since (i){a mathematical formula}|r′|h=max⁡{1,|r|b}, (ii){a mathematical formula}|r′|b=|r|h, and (iii) all rules in {a mathematical formula}Ξ(P) that are not derived from rules in {a mathematical formula}P are both Datalog and linear. □
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Correctness of transposition
+      </section-title>
+      <paragraph>
+       In this section we show the key property of transposition, namely that it preserves fact entailment for every dataset. Let us sketch the main intuitions on our example program {a mathematical formula}P1 consisting of Rules (1), (2), (3) and {a mathematical formula}D1={C(a), {a mathematical formula}C(b), {a mathematical formula}C(c), {a mathematical formula}E(a,b),E(b,a){a mathematical formula}E(b,c),E(c,b){a mathematical formula}E(a,c),E(c,a)}.{sup:2}Fig. 1(a) shows a derivation {a mathematical formula}ρ1 of {a mathematical formula}B(a) from {a mathematical formula}P1∪D1 while 1(b) shows a derivation {a mathematical formula}ρ2 of the same fact from {a mathematical formula}Ξ(P1)∪D1. Recall that we represent derivations as trees whose nodes are labeled with disjunctions of facts and where each inner node is derived from its children using a rule of the program. In particular, to derive {a mathematical formula}B(a) in {a mathematical formula}ρ1 we start from fact {a mathematical formula}C(c) and use Rule (1) to obtain {a mathematical formula}B(c)∨G(c); since fact {a mathematical formula}E(a,c) holds in {a mathematical formula}D1, we can apply hyperresolution to the previously derived disjunction {a mathematical formula}B(c)∨G(c), fact {a mathematical formula}E(a,c) and Rule (2) to derive {a mathematical formula}B(c)∨B(a). Similarly, we can then obtain the disjunction {a mathematical formula}G(b)∨B(a) using the fact {a mathematical formula}E(b,c) and Rule (3). Finally, Rule (2) allows us to resolve away fact {a mathematical formula}E(a,b) from {a mathematical formula}D1 with the disjunct {a mathematical formula}G(b) from {a mathematical formula}G(b)∨B(a) and derive {a mathematical formula}B(a)∨B(a), which simplifies to {a mathematical formula}B(a).
+      </paragraph>
+      <paragraph>
+       We first show that if {a mathematical formula}B(a) is provable in {a mathematical formula}P1∪D1 via a derivation such as {a mathematical formula}ρ1, then it is entailed by {a mathematical formula}Ξ(P1)∪D1. The crux of the proof is to show that each (disjunction of) IDB fact(s) in {a mathematical formula}ρ1 corresponds to (disjunctions of) facts over the auxiliary predicates entailed by {a mathematical formula}Ξ(P1)∪D1. These facts about the auxiliary predicates must be of the form {a mathematical formula}X‾B(u,a), where {a mathematical formula}B(a) is the goal, u is a constant, and {a mathematical formula}X∈{B,G}. For example, {a mathematical formula}B(c)∨G(c) in {a mathematical formula}ρ1 corresponds to facts {a mathematical formula}B‾B(c,a) and {a mathematical formula}G‾B(c,a), which are provable from {a mathematical formula}Ξ(P1)∪D1, as witnessed by {a mathematical formula}ρ2.
+      </paragraph>
+      <paragraph>
+       Finally, we show the converse: if {a mathematical formula}B(a) is provable from {a mathematical formula}Ξ(P1)∪D1 by a derivation such as {a mathematical formula}ρ2 then it follows from {a mathematical formula}P1∪D1. For this, we show that each fact in {a mathematical formula}ρ2 about an auxiliary predicate carries the intended meaning, e.g., for {a mathematical formula}G‾B(b,a) we must have {a mathematical formula}P1∪D1⊨G(b)→B(a).
+      </paragraph>
+      <paragraph label="Theorem 3">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program. Then, program{a mathematical formula}Ξ(P)is a rewriting of{a mathematical formula}Pof polynomial size.
+      </paragraph>
+      <paragraph label="Proof">
+       We show the claim in two steps, which we outline next. For the rest of the proof, we fix an arbitrary dataset {a mathematical formula}D over the EDB predicates of {a mathematical formula}P and an IDB fact {a mathematical formula}P(a→) (if P is EDB, then the claim is immediate).
+       <list>
+        The statement of the theorem follows directly from the properties shown in Steps 1 and 2 and the completeness of hyperresolution. We next show each step.Step 1.
+       </list>
+       <paragraph>
+        Suppose {a mathematical formula}P∪D⊢P(a→) and let {a mathematical formula}ρ=(T,λ) be a derivation of {a mathematical formula}P(a→) from {a mathematical formula}P∪D. We show {a mathematical formula}Ξ(P)∪D⊨P(a→).We call a nonempty subtree U of T an upper portion of T if (i) T and U have the same root and (ii) for each node in U, U contains all or none of its children in T. We begin by showing the following claim, where {a mathematical formula}Ψ(v1,…,vn) denotes the set {a mathematical formula}{⋁i=1nQ‾iP(b→i,a→)|Qi(b→i)∈λ(vi)}.Claim {a mathematical formula}(⋄). Let U be an upper portion of T and let {a mathematical formula}{v1,…,vn} be the IDB leaves of U. Then{a mathematical formula}We show the claim inductively. For the base case, suppose U consists of a single node. Then the claim reduces to {a mathematical formula}Ξ(P)∪D⊨P(a→)∨P‾P(a→,a→), which follows since {a mathematical formula}ξ⊤→P‾P(y→,y→)∈Ξ(P) and {a mathematical formula}Ξ(P)∪D⊨ξ⊤(a→).For the inductive step, assume that U contains at least two nodes and let {a mathematical formula}{v1,…,vn} be the IDB leaves of U. Then, U has a node w of height 1. W.l.o.g., let {a mathematical formula}v1,…,vk ({a mathematical formula}0≤k≤n) be the IDB and {a mathematical formula}u1,…,ul the EDB children of w in U and let {a mathematical formula}r=φ∧⋀i=1kRi(s→i)→⋁j=1mSj(t→j)∈P (for some m) be the rule used in ρ to derive {a mathematical formula}λ(w) from {a mathematical formula}λ(v1),…,λ(vk),λ(u1),…,λ(ul) with substitution σ. We distinguish two cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If {a mathematical formula}k=0, then we can observe the following:
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}k≥1, then we can observe the following:
+        </list-item>
+       </list>
+       <paragraph>
+        This concludes the proof of Claim {a mathematical formula}(⋄).We next use {a mathematical formula}(⋄) to show {a mathematical formula}Ξ(P)∪D⊨P(a→). Let {a mathematical formula}{v1,…,vn} be the IDB leaves of T. By {a mathematical formula}(⋄), {a mathematical formula}Ξ(P)∪D⊨P(a→)∨⋀Ψ(v1,…,vn).{sup:3} Thus, it suffices to show {a mathematical formula}Ξ(P)∪D∪Ψ(v1,…,vn)⊨P(a→).We show {a mathematical formula}Ξ(P)∪D∪Ψ(v1,…,vi)⊨P(a→) for each {a mathematical formula}i≤n by induction on i. If {a mathematical formula}i=0 (base case), the claim is immediate. For the inductive step, let {a mathematical formula}i≥1. Then {a mathematical formula}Ψ(v1,…,vi)={ψ∨Q‾P(b→,a→)|ψ∈Ψ(v1,…,vi−1),Q(b→)∈λ(vi)}. By the inductive hypothesis, {a mathematical formula}Ξ(P)∪D∪Ψ(v1,…,vi−1)⊨P(a→), and hence {a mathematical formula}Ξ(P)∪D∪Ψ(v1,…,vi)⊨P(a→)∨Q‾P(b→,a→) for each {a mathematical formula}Q(b→)∈λ(vi). Hence, it suffices to show {a mathematical formula}Ξ(P)∪D∪{Q‾P(b→,a→)|Q(b→)∈λ(vi)}⊨P(a→). For this, note that {a mathematical formula}λ(vi) is a leaf in T obtained by a rule {a mathematical formula}(→λ(vi)) where {a mathematical formula}λ(vi)=⋁j=1mQj(b→j). Then {a mathematical formula}⋀j=1mQ‾jP(b→j,y→)→P(y→)∈Ξ(P) and the claim follows.Step 2. We show that {a mathematical formula}Ξ(P)∪D⊢P(a→) implies {a mathematical formula}P∪D⊨P(a→). For this, we first show that derivations from {a mathematical formula}Ξ(P)∪D have a certain shape, which we define next. We call a disjunction of facts φ focused on an IDB fact{a mathematical formula}Q(b→), with Q occurring in {a mathematical formula}P, if every disjunct in φ is either {a mathematical formula}Q(b→) or a fact of the form {a mathematical formula}R‾Q(c→,b→) for some R and {a mathematical formula}c→. Let {a mathematical formula}ρ=(T,λ) be a derivation. We call ρ focused on{a mathematical formula}Q(b→) if so is the label of each IDB node in T.Claim {a mathematical formula}(♣). Every derivation of a nonempty disjunction from {a mathematical formula}Ξ(P)∪D is focused on some fact.Let {a mathematical formula}ρ=(T,λ) be a derivation of a nonempty disjunction from {a mathematical formula}Ξ(P)∪D. We show that ρ is focused on some fact by induction on ρ. Let v be the root of T. For the base case, suppose v is the only node in T. We distinguish the following cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}λ(v)∈D. Then, v is EDB and the claim is vacuous.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}arity(Q)=0 and {a mathematical formula}λ(v) is obtained by a rule of the form {a mathematical formula}(→R‾Q)∈Ξ(P) for some IDB predicate Q in {a mathematical formula}P and {a mathematical formula}R∈{Q,⊥}. Then ρ is focused on Q.
+        </list-item>
+       </list>
+       <paragraph>
+        For the inductive step, let {a mathematical formula}v1,…,vm be the successors of v. We distinguish cases depending on the shape of the rule {a mathematical formula}r∈Ξ(P) used to derive {a mathematical formula}λ(v) from {a mathematical formula}λ(v1),…,λ(vm).
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}r=ξ⊤∧φ∧⋀j=1kR‾jQ(t→j,y→)→⋁i=1nP‾iQ(s→i,y→) ({a mathematical formula}n≥1 and {a mathematical formula}k≤m). Let σ be the substitution used in the hyperresolution step. W.l.o.g., let {a mathematical formula}R‾jQ(t→jσ,y→σ)∈λ(vj) for {a mathematical formula}j∈[1,k]. Then {a mathematical formula}λ(vj)∈ξ⊤∪φ for {a mathematical formula}j∈[k+1,m]. Moreover, by the inductive hypothesis, the subderivations rooted at {a mathematical formula}v1,…,vk are focused on {a mathematical formula}Q(y→σ). The claim follows since we have {a mathematical formula}λ(v)⊆λ(v1)∪…∪λ(vk)∪{P‾iQ(s→iσ,y→σ)|i∈[1,n]}.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}r=φ∧⋀j=1kR‾jQ(t→j,y→)→Q(y→). The argument is analogous to the preceding case.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}r=ξ⊤→R‾Q(t→,y→) where {a mathematical formula}R∈{Q,⊥}. Let σ be the substitution used in the hyperresolution step. Then ρ is focused on {a mathematical formula}Q(y→σ).
+        </list-item>
+       </list>
+       <paragraph>
+        This concludes the proof of Claim {a mathematical formula}(♣).Let {a mathematical formula}ρ=(T,λ) be a derivation of {a mathematical formula}P(a→) from {a mathematical formula}Ξ(P)∪D. By {a mathematical formula}(♣), ρ is focused on {a mathematical formula}P(a→) since the root w of ρ is labeled with {a mathematical formula}P(a→). Given {a mathematical formula}v∈T, we write {a mathematical formula}λbase(v) to denote the set {a mathematical formula}{Q(b→)|Q‾P(b→,a→)∈λ(v)}. We conclude our proof by showing the following property, which implies {a mathematical formula}P∪D⊨P(a→) since {a mathematical formula}λbase(w)=∅.{a mathematical formula}We show this property by induction on the height of v in T. Note that we only need to consider cases that can occur in a derivation focused on {a mathematical formula}P(a→). For the base case, suppose v is a leaf in T. Since v is IDB, we have {a mathematical formula}λ(v)∉D. Thus, we distinguish the following cases.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}λ(v) is obtained by a rule of the form {a mathematical formula}→⊥‾P where {a mathematical formula}arity(P)=0. Then the claim reduces to {a mathematical formula}P∪D⊨⊥→P, which is tautological.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}λ(v) is obtained by a rule of the form {a mathematical formula}→P‾P where {a mathematical formula}arity(P)=0. Then the claim reduces to {a mathematical formula}P∪D⊨P→P, which is tautological.
+        </list-item>
+       </list>
+       <paragraph>
+        For the inductive step, let {a mathematical formula}v1,…,vm be the successors of v in T. We distinguish cases depending on the shape of the rule {a mathematical formula}r∈Ξ(P) used to obtain {a mathematical formula}λ(v) from {a mathematical formula}λ(v1),…,λ(vm):
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}r=ξ⊤∧φ∧⋀j=1kQ‾jP(t→j,y→)→⋁i=1nR‾iP(s→i,y→) such that {a mathematical formula}k≤m, {a mathematical formula}n≥1 and {a mathematical formula}r′=φ∧⋀i=1nRi(s→i)→⋁j=1kQj(t→j)∈P. Let σ be the substitution used in the corresponding hyperresolution step and let, w.l.o.g., {a mathematical formula}Q‾jP(t→jσ,y→σ)∈λ(vj) for each {a mathematical formula}j∈[1,k]. By the inductive hypothesis, {a mathematical formula}P∪D⊨(⋀α∈λbase(vj)α)→P(a→) for {a mathematical formula}j∈[1,k]. Moreover, we have {a mathematical formula}⋃j=1k(λbase(vj)∖{Qj(t→jσ)})∪⋃i=1n{Ri(s→iσ)}⊆λbase(v). The claim follows since {a mathematical formula}P∪D⊨φσ and hence {a mathematical formula}P∪D⊨(⋀α∈λbase(v)α)→⋁j=1kQj(t→jσ) by rule {a mathematical formula}r′.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}r=φ∧⋀j=1kQ‾jP(t→j,y→)→P(y→) such that {a mathematical formula}r′=φ→⋁j=1kQ(t→)∈P. Let σ be the relevant substitution and {a mathematical formula}Q‾jP(t→jσ,y→σ)∈λ(vj) for each {a mathematical formula}j∈[1,k]. By induction, {a mathematical formula}P∪D⊨(⋀α∈λbase(vj)α)→P(a→). Moreover, we have {a mathematical formula}⋃j=1k(λbase(vj)∖{Qj(t→jσ)})⊆λbase(v). The claim holds since {a mathematical formula}P∪D⊨φσ and hence, by rule {a mathematical formula}r′, {a mathematical formula}P∪D⊨(⋀α∈λbase(v)α)→⋁j=1kQj(t→jσ).
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}r=ξ⊤→⊥‾P(y→). Since ρ is focused on {a mathematical formula}P(a→), the claim reduces to the tautology {a mathematical formula}P∪D⊨⊥→P(a→).
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}r=ξ⊤→P‾P(y→,y→). Since ρ is focused on {a mathematical formula}P(a→), the claim reduces to the tautology {a mathematical formula}P∪D⊨P(a→)→P(a→).
+        </list-item>
+       </list>
+       <paragraph>
+        This completes the proof of Theorem 3.  □
+       </paragraph>
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Correspondence between Datalog and linear Disjunctive Datalog
+      </section-title>
+      <paragraph>
+       Theorem 3 and Proposition 2 have the following direct implication. On the one hand, if {a mathematical formula}P is a linear Disjunctive Datalog program, then its transposition results in a polynomial-size Datalog rewriting of {a mathematical formula}P. On the other hand, if {a mathematical formula}P is Datalog, then its transposition is a polynomial-size rewriting of {a mathematical formula}P in linear Disjunctive Datalog.
+      </paragraph>
+      <paragraph>
+       A characterisation of Datalog rewritability immediately becomes apparent: a Disjunctive Datalog program is Datalog rewritable if and only if it is linearisable. But not only that, the fact that program transposition is a polynomial transformation also means that linear Disjunctive Datalog enjoys the same favourable computational properties as plain Datalog, such as tractability of reasoning in data complexity.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       A Disjunctive Datalog program{a mathematical formula}Pis Datalog rewritable if and only if it is rewritable into linear Disjunctive Datalog. Moreover, fact entailment w.r.t. linear Disjunctive Datalog programs isExpTime-complete in combined complexity andPTime-complete w.r.t. data.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Markable programs
+     </section-title>
+     <paragraph>
+      We have established that every linear Disjunctive Datalog program can be polynomially rewritten into Datalog. It is, however, rather straightforward to come up with disjunctive programs that are syntactically non-linear, but also admit a polynomial Datalog rewriting. In this section, we introduce markable programs: a larger class of Disjunctive Datalog programs that admit polynomial Datalog rewritings by means of a generalisation of transposition.
+     </paragraph>
+     <paragraph>
+      To illustrate the main ideas behind markable programs, we will start by first introducing in Section 4.1 a more restricted (but also more intuitive) class of weakly linear (WL) programs. We will then exploit these intuitions to motivate in Section 4.2 the notions of marking and markable program. In Section 4.3 we show that markable programs can be efficiently recognised by means of a reduction into 2-SAT. Finally, in Sections 4.4 and 4.5 we show how transposition can be extended in order to polynomially rewrite markable programs into Datalog.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Weakly linear programs
+      </section-title>
+      <paragraph>
+       Consider the following program {a mathematical formula}P3, which extends our example program {a mathematical formula}P1 in Section 3 with the following rules:
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Since E is IDB in {a mathematical formula}P3, Rules (2) and (3) have two IDB atoms, which breaks the linearity condition. The main idea behind weak linearity is simple: instead of requiring rule bodies to contain at most one occurrence of an IDB predicate, we require at most one occurrence of a disjunctive predicate—a predicate whose extension for some dataset could depend on the application of a disjunctive rule. In particular, the extension of predicate E in {a mathematical formula}P3 depends only on the newly introduced Datalog rules (8) and (9), and hence E would not be disjunctive.
+      </paragraph>
+      <paragraph>
+       This intuition is formalised as follows using the standard notion of a dependency graph in Logic Programming [20], [21].
+      </paragraph>
+      <paragraph label="Definition 5">
+       The dependency graph of a program {a mathematical formula}P is the smallest edge-labeled digraph {a mathematical formula}GP=(V,E,μ) such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        V contains every predicate occurring in {a mathematical formula}P;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}r∈μ(P,Q) whenever {a mathematical formula}P,Q∈V, {a mathematical formula}r∈P, P occurs in the body of r, and Q occurs in the head of r; and
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}(P,Q)∈E whenever {a mathematical formula}μ(P,Q) is nonempty.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that, if {a mathematical formula}P is Datalog, then all its predicates are Horn and {a mathematical formula}P is WL; furthermore, every disjunctive predicate is IDB and hence every linear Disjunctive Datalog program is also WL. Thus, the class of WL programs extends both Datalog and linear Disjunctive Datalog.
+      </paragraph>
+      <paragraph>
+       The dependency graph {a mathematical formula}GP3 of our example program {a mathematical formula}P3 is then as given next. We can observe that predicates A and C are EDB and hence do not depend on any rule. As already mentioned, predicate E depends only on Datalog rules and hence is Horn. Finally, B and G depend on Rule (1) and hence are disjunctive. Consequently, {a mathematical formula}P3 is WL.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Transposition can be easily adapted to polynomially rewrite WL programs into plain Datalog. Rather than moving all IDB atoms between head and body, it suffices to move only disjunctive atoms. In this way, rules that contain only Horn predicates remain unaffected by the transformation. In particular, the refined transposition of our example program {a mathematical formula}P3 would consist of the following rules, where, once again, each rule mentioning X stands for one rule where {a mathematical formula}X=B and one where {a mathematical formula}X=G:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Note that Rules (1′), (2′), (3′), (4) are the same as in {a mathematical formula}Ξ(P1) whereas Rules (8) and (9) are copied from {a mathematical formula}P3 since they contain only Horn predicates.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Markings and markable programs
+      </section-title>
+      <paragraph>
+       The class of markable programs is obtained by further relaxing the weak linearity requirement to apply only to a subset of marked disjunctive predicates in a program {a mathematical formula}P. These predicates, however, must be chosen in such a way that the transposition of {a mathematical formula}P where only marked atoms are transposed between head and body results in a Horn program. A program can admit many different markings, and markable programs are those that admit at least one marking.
+      </paragraph>
+      <paragraph label="Definition 6">
+       A marking of a program {a mathematical formula}P is a set M of disjunctive predicates in {a mathematical formula}P with the following properties, where we say that a predicate is marked if it is in M and an atom is marked if so is its predicate:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        each rule in {a mathematical formula}P has at most one marked body atom;
+       </list-item>
+       <list-item label="2.">
+        each rule in {a mathematical formula}P has at most one unmarked head atom; and
+       </list-item>
+       <list-item label="3.">
+        if Q is marked and P is reachable from Q in {a mathematical formula}GP, then P is marked.
+       </list-item>
+      </list>
+      <paragraph>
+       Condition 1 in Definition 6 ensures that at most one atom is moved from body to head during transposition. Condition 2 ensures that all but possibly one head atom are moved to the body. Finally, Condition 3 requires that all predicates depending on a marked predicate are also marked. Markability generalises weak linearity: a program is WL if and only if the set of all its disjunctive predicates constitutes a marking. Consider now program {a mathematical formula}P4, which extends our example program {a mathematical formula}P3 with the following rules:
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The dependency graph is given next. Note that C, U, B, G, and ⊥ are disjunctive as they depend on Rule (10). Thus, (11) has two disjunctive body atoms and {a mathematical formula}P4 is not WL. The program, however, has two different markings: {a mathematical formula}{C,B,G,⊥} and {a mathematical formula}{U,B,G,⊥}.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Checking markability
+      </section-title>
+      <paragraph>
+       We next show that markability can be efficiently checked via a quadratic reduction to 2-SAT. The reduction assigns to each predicate Q in {a mathematical formula}P a distinct propositional variable {a mathematical formula}XQ; it then encodes directly the constraints in Definition 6 as binary clauses. Furthermore, our reduction provides tight complexity bounds for markability checking since 2-SAT is NLogSpace-complete.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       Markability isNLogSpace-complete and can be checked in time quadratic in the size of the input{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       For each rule in {a mathematical formula}P of the form {a mathematical formula}φ∧⋀i=1nPi(s→i)→⋁j=1mQj(t→j), where φ is the conjunction of all its Horn atoms, we obtain the following clauses:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}¬XPi∨¬XPj for all {a mathematical formula}1≤i&lt;j≤n;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}¬XPi∨XQj for all {a mathematical formula}1≤i≤n and {a mathematical formula}1≤j≤m; and
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}XQi∨XQj for all {a mathematical formula}1≤i&lt;j≤m.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Rewriting markable Disjunctive Datalog programs into Datalog
+      </section-title>
+      <paragraph>
+       We finally show how transposition can be refined in order to polynomially rewrite markable programs into Datalog.
+      </paragraph>
+      <paragraph>
+       Consider program {a mathematical formula}P4 and the marking {a mathematical formula}M={U,B,G,⊥}. The transposition of {a mathematical formula}P4 will depend on the particular marking under consideration, so let us denote the M-transposed program as {a mathematical formula}ΞM(P4). We introduce fresh binary predicates {a mathematical formula}X‾Y, where X and Y are disjunctive and X is required to be marked. Such predicates {a mathematical formula}X‾Y carry the same intended meaning as in the original notion of transposition: if a fact {a mathematical formula}B‾G(c,d) holds in {a mathematical formula}ΞM(P4)∪D then proving {a mathematical formula}B(c) suffices for proving {a mathematical formula}G(d) in {a mathematical formula}P4∪D (i.e., {a mathematical formula}P4∪D⊨B(c)→G(d)). The extension of these predicates is again initialised with rules {a mathematical formula}⊤(x)→X‾X(x,x) for each {a mathematical formula}X∈M.
+      </paragraph>
+      <paragraph>
+       For each unmarked disjunctive predicate X and each disjunctive predicate Y (marked or not) we now introduce a fresh predicate {a mathematical formula}XY that comes with a different intuitive interpretation: if a fact {a mathematical formula}CU(c,d) holds in {a mathematical formula}ΞM(P4)∪D then {a mathematical formula}P4∪D entails {a mathematical formula}C(c)∨U(d).
+      </paragraph>
+      <paragraph>
+       As usual in transposition, the key step is to transpose atoms between head and body while replacing their predicates with auxiliary ones. Now, however, we do this only for those rules that involve the marked predicates B, G and U. For example, Rule (2) leads to the following rules in {a mathematical formula}ΞM(P4), for each unary disjunctive predicate Y as well as for ⊥:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Unmarked disjunctive atoms are also modified by replacing their predicate with an auxiliary one; however, in contrast to marked atoms, they are not moved from one side of the rule to the other. Thus, Rules (10) and (11) yield the following rules for the ⊥ predicate and each unary disjunctive predicate Y:{a mathematical formula} Indeed, these rules are consequences of (10) and (11), respectively, under the intended meaning of the auxiliary predicates corresponding to unmarked disjunctive predicates: {a mathematical formula}V(a) and {a mathematical formula}U(a)→Y(b) imply {a mathematical formula}C(a)∨Y(b) by (10), while {a mathematical formula}C(a)∨Y(b), {a mathematical formula}⊥→Y(b) (a tautology), and {a mathematical formula}U(a) imply {a mathematical formula}Y(b) by (11).
+      </paragraph>
+      <paragraph>
+       We are now ready to define our transformation. As in the previous case, the transformation is quadratic and the arity of predicates is at most doubled.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Let {a mathematical formula}P be a Disjunctive Datalog program and let M be a marking of {a mathematical formula}P. For each pair {a mathematical formula}(P,Q) of disjunctive predicates in {a mathematical formula}P, let {a mathematical formula}PQ and {a mathematical formula}P‾Q be fresh predicates of arity {a mathematical formula}arity(P)+arity(Q). The M-transposition of {a mathematical formula}P is the smallest program {a mathematical formula}ΞM(P) containing each rule in {a mathematical formula}P with no disjunctive predicates and all Rules 1–5 given next, where {a mathematical formula}ξ⊤ is the least conjunction of ⊤-atoms needed to make a rule safe, φ is the conjunction of all Horn atoms in a rule, predicates {a mathematical formula}Pi, {a mathematical formula}Qj are disjunctive, and {a mathematical formula}y→,z→ are vectors of distinct fresh variables:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ξ⊤→R‾R(y→,y→) for each disjunctive predicate {a mathematical formula}R∈M;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ξ⊤∧φ∧⋀jQjR(t→j,y→)∧⋀iP‾iR(s→i,y→)→Q‾R(t→,y→) for each rule {a mathematical formula}r∈P of the form {a mathematical formula}φ∧Q(t→)∧⋀jQj(t→j)→⋁iPi(s→i) and each disjunctive predicate R in {a mathematical formula}P, where {a mathematical formula}Q(t→) is the (unique) marked body atom of r;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}φ∧⋀jQjR(t→j,y→)∧⋀iP‾iR(s→i,y→)→R(y→) for each rule {a mathematical formula}r∈P of the form {a mathematical formula}φ∧⋀jQj(t→j)→⋁iPi(s→i) and each disjunctive predicate R in {a mathematical formula}P, where r has no marked body atoms and no unmarked head atoms;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}ξ⊤∧φ∧⋀jQjR(t→j,y→)∧⋀iP‾iR(s→i,y→)→PR(s→,y→) for each rule {a mathematical formula}r∈P of the form {a mathematical formula}φ∧⋀jQj(t→j)→P(s→)∨⋁iPi(s→i) and each disjunctive predicate R, where r has no marked body atoms and {a mathematical formula}P(s→) is the only unmarked head atom; and
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}RR(y→,y→)→R(y→) for each disjunctive predicate {a mathematical formula}R∉M. ◇
+       </list-item>
+      </list>
+      <paragraph>
+       Rules 1–3 are analogous to those in Definition 1, with the difference that rules of type 1 are generated only for marked predicates, different auxiliary predicates are used depending on whether the relevant base predicates are marked or not, and only marked atoms are moved in rules of type 2 and 3. Rules of type 4 are analogous to those of type 2, but deal with the case where the relevant rule in {a mathematical formula}P contains no marked body atom. Finally, rules of type 5 ensure that unmarked predicates R are instantiated with constants {a mathematical formula}a→ whenever rules of type 4 yield facts {a mathematical formula}RR(a→,a→); thus, these rules encode a tautology under the intended meaning of the auxiliary predicates {a mathematical formula}RR.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Correctness of the rewriting
+      </section-title>
+      <paragraph>
+       The rest of this section is devoted to showing that {a mathematical formula}ΞM(P) is indeed a Datalog rewriting of a Disjunctive Datalog program {a mathematical formula}P whenever M is a marking of {a mathematical formula}P. The correctness argument is similar in structure to the proof of Theorem 3 but it is more involved, as it requires a separate treatment for the auxiliary predicates depending on whether or not the relevant base predicate is marked.
+      </paragraph>
+      <paragraph label="Theorem 9">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program and M a marking of{a mathematical formula}P. Then{a mathematical formula}ΞM(P)is a polynomial-size Datalog rewriting of{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       As in the proof of Theorem 3, we proceed in two steps, which together imply the theorem. We fix an arbitrary markable program {a mathematical formula}P, a marking M of {a mathematical formula}P, a dataset {a mathematical formula}D over the EDB predicates of {a mathematical formula}P, and a fact {a mathematical formula}P(a→) with P disjunctive in {a mathematical formula}P (if P is Horn the claim is immediate).
+       <list>
+        In Step 1, we show that {a mathematical formula}P∪D⊢P(a→) implies {a mathematical formula}ΞM(P)∪D⊨P(a→). To this end, we consider a derivation ρ of {a mathematical formula}P(a→) from {a mathematical formula}P∪D and show that for every disjunctive atom {a mathematical formula}Q(b→) in the label of a node in ρ, we have {a mathematical formula}ΞM(P)∪D⊨Q‾P(b→,a→) if {a mathematical formula}Q∈M and {a mathematical formula}ΞM(P)∪D⊨QP(b→,a→) otherwise. This claim, in turn, is shown by first showing a more general statement and then instantiating it with ρ.In Step 2, we show that {a mathematical formula}ΞM(P)∪D⊢P(a→) implies {a mathematical formula}P∪D⊨P(a→). Again, we first prove a general claim that holds for any derivation from {a mathematical formula}ΞM(P)∪D and then instantiate the claim with a derivation of {a mathematical formula}P(a→).Step 1.
+       </list>
+       <paragraph>
+        Suppose {a mathematical formula}P∪D⊢P(a→). We show {a mathematical formula}ΞM(P)∪D⊨P(a→). We begin by proving the following claim.Claim {a mathematical formula}(⋄). Let {a mathematical formula}φ=Q1(b→1)∨…∨Qn(b→n) be a non-empty disjunction of facts satisfying the following properties: (i){a mathematical formula}ΞM(P)∪D⊨Q‾iP(b→i,a→) for each {a mathematical formula}Qi∈M. (ii) φ is derivable from {a mathematical formula}P∪D. Then, for each derivation ρ of φ from {a mathematical formula}P∪D and each atom {a mathematical formula}R(c→) with R disjunctive in the label of a node in ρ, we have {a mathematical formula}ΞM(P)∪D⊨R‾P(c→,a→) if {a mathematical formula}R∈M and {a mathematical formula}ΞM(P)∪D⊨RP(c→,a→) otherwise.The claim is proved by induction on {a mathematical formula}ρ=(T,λ). W.l.o.g., the root v of T has a disjunctive predicate in its label (otherwise, the claim is vacuous). Since disjunctive predicates are IDB, we have {a mathematical formula}φ∉D and hence it is obtained by a rule application.For the base case, suppose v has no children labeled with disjunctive predicates. Thus, φ is obtained by a rule {a mathematical formula}ψ→φ′∈P where ψ is a conjunction of Horn atoms and, for some σ, {a mathematical formula}φ=φ′σ and {a mathematical formula}P∪D⊨ψσ. If {a mathematical formula}{Q1,…,Qn}⊆M, then the claim is immediate by assumption (i), so let us assume w.l.o.g. that {a mathematical formula}Q1∉M. By the definition of a marking, we then have {a mathematical formula}{Q2,…,Qn}⊆M, and hence it suffices to show {a mathematical formula}ΞM(P)∪D⊨Q1P(b→1,a→). For this, note that {a mathematical formula}ψ→φ′∈P, {a mathematical formula}{Q2,…,Qn}⊆M, and {a mathematical formula}Q1∉M implies {a mathematical formula}r′=ξ⊤∧ψ∧⋀i=2nQ‾iP(x→i,y→)→Q1P(x→1,y→)∈ΞM(P) for some variables {a mathematical formula}x→i such that {a mathematical formula}x→i=b→i. Moreover, by assumption (i), we have {a mathematical formula}ΞM(P)∪D⊨⋀i=2nQ‾iP(b→i,a→). Finally, since {a mathematical formula}ΞM(P)∪D and {a mathematical formula}P∪D entail the same Horn facts, we have {a mathematical formula}ΞM(P)∪D⊨ψσ and {a mathematical formula}ΞM(P)∪D⊨ξ⊤σ. Thus, the claim follows with {a mathematical formula}r′.For the inductive step, let v have children {a mathematical formula}w1,…,wm in T labeled with disjunctive predicates. W.l.o.g., there is a rule {a mathematical formula}r=ψ∧⋀i=1mRi(t→i)→⋁j=1kQj(s→j) in {a mathematical formula}P (with ψ a conjunction of Horn atoms, {a mathematical formula}0≤k≤n, and all {a mathematical formula}Ri disjunctive in {a mathematical formula}P) such that {a mathematical formula}λ(v) is obtained by a hyperresolution step using r from ψσ and {a mathematical formula}λ(w1),…,λ(wm) where σ is a substitution mapping every atom {a mathematical formula}Ri(t→i) to a disjunct in {a mathematical formula}λ(wi). In particular, we have {a mathematical formula}s→jσ=b→j, {a mathematical formula}Ri(t→iσ)∈λ(wi), and {a mathematical formula}P∪D⊨ψσ. We distinguish three cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}{Q1,…,Qk}⊆M and {a mathematical formula}{R1,…,Rm}∩M=∅. For each {a mathematical formula}i∈[1,m], every marked atom in {a mathematical formula}λ(wi) also occurs in {a mathematical formula}λ(v); furthermore, every unmarked atom in {a mathematical formula}λ(v) occurs in {a mathematical formula}λ(wi) for some {a mathematical formula}i∈[1,m]. By the latter statement, it suffices to show the claim for the subderivations rooted at {a mathematical formula}w1,…,wm.Let {a mathematical formula}i∈[1,m]. By the fact that every marked atom in {a mathematical formula}λ(wi) also occurs in {a mathematical formula}λ(v) and assumption (i), we have {a mathematical formula}ΞM(P)∪D⊨S‾P(d→,a→) for every marked disjunct {a mathematical formula}S(d→) in {a mathematical formula}λ(wi). Then, we can apply the inductive hypothesis to the subderivation rooted at {a mathematical formula}wi and the claim follows.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}{Q1,…,Qk}⊆M, {a mathematical formula}R1∈M, and {a mathematical formula}{R2,…,Rm}∩M=∅ (note that {a mathematical formula}R1∈M implies {a mathematical formula}{R2,…,Rm}∩M=∅ since M is a marking). Then (a) for every {a mathematical formula}i∈[1,m], every marked atom in {a mathematical formula}λ(wi) except for possibly {a mathematical formula}R1(t1σ) in {a mathematical formula}λ(w1) also occurs in {a mathematical formula}λ(v), and (b) every unmarked atom in {a mathematical formula}λ(v) occurs in {a mathematical formula}λ(wi) for some {a mathematical formula}i∈[1,m]. Also, we have (c) {a mathematical formula}ξ⊤∧ψ∧⋀i=2mRiP(t→i,y→)∧⋀j=1kQ‾jP(s→j,y→)→R‾1P(t→1,y→)∈ΞM(P). As in the preceding case, by (b), it suffices to show the claim for the subderivations rooted at {a mathematical formula}w1,…,wm. For {a mathematical formula}w2,…,wn, we proceed as follows. Let {a mathematical formula}i∈[2,m]. By (a) and assumption (i), we have {a mathematical formula}ΞM(P)∪D⊨S‾P(d→,a→) for every marked disjunct {a mathematical formula}S(d→) in {a mathematical formula}λ(wi). Thus, we can apply the inductive hypothesis to the subderivation rooted at {a mathematical formula}wi. In particular, we obtain {a mathematical formula}ΞM(P)∪D⊨RiP(t→iσ,a→). In the case of {a mathematical formula}w1, we need to show {a mathematical formula}ΞM(P)∪D⊨R‾1P(t→1σ,a→) in order to apply the inductive hypothesis. This follows by (c) and assumption (i) since {a mathematical formula}ΞM(P)∪D⊨ψσ, {a mathematical formula}{Q1(s→1σ),…,Qk(s→kσ)}⊆λ(v), {a mathematical formula}ΞM(P)∪D⊨RiP(t→iσ,a→) for {a mathematical formula}i∈[2,m], and {a mathematical formula}ΞM(P)∪D⊨ξ⊤σ.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Q1∉M, {a mathematical formula}{Q2,…,Qk}⊆M, and {a mathematical formula}{R1,…,Rm}∩M=∅ (note that {a mathematical formula}Q1∉M implies {a mathematical formula}{Q2,…,Qk}⊆M and {a mathematical formula}{R1,…,Rm}∩M=∅). Then (a) for every {a mathematical formula}i∈[1,m], every marked atom in {a mathematical formula}λ(wi) also occurs in {a mathematical formula}λ(v), and (b) every unmarked atom in {a mathematical formula}λ(v) except for possibly {a mathematical formula}Q1(b→1) (but including {a mathematical formula}Q2(b2),…,Qm(bm)) occurs in {a mathematical formula}λ(wi) for some {a mathematical formula}i∈[1,m]. By (b), it suffices to show the main claim for the subderivations rooted at {a mathematical formula}w1,…,wm and also that {a mathematical formula}ΞM(P)∪D⊨Q1P(b→1,a→). Let {a mathematical formula}i∈[1,m]. The main claim for the subderivations follows from (a) and assumption (i), which imply that {a mathematical formula}ΞM(P)∪D⊨S‾P(d→,a→) for every marked disjunct {a mathematical formula}S(d→) in {a mathematical formula}λ(wi); as a result, we can apply the inductive hypothesis to the subderivation rooted at {a mathematical formula}wi. Finally, {a mathematical formula}ξ⊤∧ψ∧⋀i=1mRiP(t→i,y→)∧⋀j=2kQ‾jP(s→j,y→)→Q1P(s→1,y→)∈ΞM(P) (since {a mathematical formula}r∈P). Then, {a mathematical formula}ΞM(P)∪D⊨Q1P(b→1,a→) follows from {a mathematical formula}ΞM(P)∪D⊨ψσ, the inductive hypothesis (which implies {a mathematical formula}ΞM(P)∪D⊨RiP(t→iσ,a→)), and the assumption (i) (which implies {a mathematical formula}ΞM(P)∪D⊨Q‾jP(s→jσ,a→)).
+        </list-item>
+       </list>
+       <paragraph>
+        This concludes the proof of Claim {a mathematical formula}(⋄).We next instantiate {a mathematical formula}(⋄) to show the claim in Step 1. Let {a mathematical formula}φ=P(a→). We have assumed in Step 1 that {a mathematical formula}P(a→) is derivable from {a mathematical formula}P∪D, and hence condition (ii) in {a mathematical formula}(⋄) holds. Furthermore, {a mathematical formula}ΞM(P)∪D⊨P‾P(a→,a→) since {a mathematical formula}ξ⊤(y→)→P‾P(y→,y→)∈ΞM(P) and {a mathematical formula}ΞM(P)∪D⊨ξ⊤(a→); hence, condition (i) in {a mathematical formula}(⋄) also holds.Now, let {a mathematical formula}ρ=(T,λ) be a derivation of {a mathematical formula}P(a→) from {a mathematical formula}P∪D. We exploit {a mathematical formula}(⋄) applied to ρ to show that {a mathematical formula}ΞM(P)∪D⊨P(a→). We distinguish two cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}P∉M. Since {a mathematical formula}P(a→) labels the root of ρ we can apply {a mathematical formula}(⋄) to obtain {a mathematical formula}ΞM(P)∪D⊨PP(a→,a→); the claim follows since {a mathematical formula}PP(y→,y→)→P(y→)∈ΞM(P).
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}P∈M. Then, there is an IDB node v in ρ such that: {a mathematical formula}λ(v) contains only marked atoms and v has no successor w in T such that all atoms in {a mathematical formula}λ(w) are marked. Since v is IDB, it has successors {a mathematical formula}v1,…,vn ({a mathematical formula}n≥0) in T such that {a mathematical formula}λ(v) is a hyperresolvent of {a mathematical formula}λ(v1),…,λ(vn) and a rule in {a mathematical formula}P of the form {a mathematical formula}⋀i=1nQi(s→i)→⋁j=1mRj(t→j), where the atoms {a mathematical formula}Qi(s→i) are resolved with {a mathematical formula}λ(vi). Since {a mathematical formula}λ(v) contains only marked atoms but {a mathematical formula}λ(v1),…,λ(vn) all contain Horn or unmarked atoms, all {a mathematical formula}Qi must be Horn or unmarked and all {a mathematical formula}Rj must be marked. Hence, {a mathematical formula}ΞM(P) contains a rule {a mathematical formula}r=(⋀i=1kQi(s→i))∧(⋀l=k+1nQlP(s→l,y→))∧⋀j=1mR‾jP(t→j,y→)→P(y→) where, w.l.o.g., {a mathematical formula}Q1,…,Qk are Horn and {a mathematical formula}Qk+1,…,Qn are disjunctive and unmarked. Let σ be the substitution used in the hyperresolution step deriving {a mathematical formula}λ(v). By {a mathematical formula}(⋄), we then have {a mathematical formula}ΞM(P)∪D⊨QlP(s→lσ,a→) for every {a mathematical formula}l∈[k+1,n] and {a mathematical formula}ΞM(P)∪D⊨R‾jP(t→jσ,a→) for every {a mathematical formula}j∈[1,m]. Moreover, we have {a mathematical formula}λ(vi)=Qi(s→iσ) and hence {a mathematical formula}ΞM(P)∪D⊨Qi(s→iσ) for every {a mathematical formula}i∈[1,k]. The claim follows with r.
+        </list-item>
+       </list>
+       <paragraph>
+        Step 2. Let {a mathematical formula}ΞM(P)∪D⊢P(a→) with ρ a derivation of {a mathematical formula}P(a→) from {a mathematical formula}ΞM(P)∪D. The fact that {a mathematical formula}P∪D⊨P(a→) follows directly from Statement 2 in Claim {a mathematical formula}(♣), which we show next.Claim {a mathematical formula}(♣). Let ρ be a derivation from {a mathematical formula}ΞM(P)∪D with root v. Then:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         The label {a mathematical formula}λ(v) of v has one of the following forms:
+        </list-item>
+        <list-item label="2.">
+         If {a mathematical formula}λ(v)=Q(b→) where Q occurs in {a mathematical formula}P, then {a mathematical formula}P∪D⊨Q(b→).
+        </list-item>
+        <list-item label="3.">
+         If {a mathematical formula}λ(v)=Q‾R(b→,c→), then {a mathematical formula}P∪D⊨Q(b→)→R(c→).
+        </list-item>
+        <list-item label="4.">
+         If {a mathematical formula}λ(v)=QR(b→,c→), then {a mathematical formula}P∪D⊨Q(b→)∨R(c→).
+        </list-item>
+       </list>
+       <paragraph>
+        We begin with Statement 1. Since {a mathematical formula}ΞM(P) is Datalog {a mathematical formula}λ(v) contains only one atom. The claim follows since {a mathematical formula}D contains only predicates in {a mathematical formula}P and the rules of {a mathematical formula}ΞM(P) can only infer facts of one of the three forms. We next show the remaining statements by simultaneous induction on ρ. For the base case, suppose v is the only node in ρ. We distinguish the following four cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If {a mathematical formula}λ(v)∈D, then {a mathematical formula}D⊨λ(v) holds and the claim is immediate.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}λ(v)=Q(b→), where Q is Horn in {a mathematical formula}P and {a mathematical formula}r=(→Q(b→))∈ΞM(P), then {a mathematical formula}r∈P and the claim follows.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}λ(v)=⊥‾Q, {a mathematical formula}arity(Q)=0, {a mathematical formula}⊥∈M, and {a mathematical formula}(→⊥‾Q)∈ΞM(P), then the claim reduces to the tautology {a mathematical formula}P⊨⊥→Q.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}λ(v)=Q‾Q where Q is disjunctive in {a mathematical formula}P and {a mathematical formula}arity(Q)=0, then the claim reduces to the tautology {a mathematical formula}P∪D⊨Q→Q.
+        </list-item>
+       </list>
+       <paragraph>
+        For the inductive step, suppose v has children {a mathematical formula}v1,…,vn and, {a mathematical formula}λ(v) is a hyperresolvent of {a mathematical formula}λ(v1),…,λ(vn) and a rule {a mathematical formula}r∈ΞM(P). We distinguish the following six cases:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If r contains no disjunctive predicates, then the claim follows since {a mathematical formula}P∪D and {a mathematical formula}ΞM(P)∪D entail the same facts over a Horn predicate.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}r=ξ⊤→R‾R(y→,y→) where R is disjunctive in {a mathematical formula}P, then {a mathematical formula}α=R‾R(b→,b→) for some {a mathematical formula}b→, and the claim ({a mathematical formula}P∪D⊨R(b→)→R(b→)) is immediate.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}r=RR(y→,y→)→R(y→), then {a mathematical formula}λ(v)=R(b→) for some {a mathematical formula}b→. By the inductive hypothesis, {a mathematical formula}P∪D⊨R(b→)∨R(b→), and the claim is immediate.
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}r=ξ⊤∧φ∧⋀j=1mQjR(t→j,y→)∧⋀i=1nP‾iR(s→i,y→)→Q‾R(t→,y→) where {a mathematical formula}ξ⊤∧φ is the conjunction of all Horn atoms in r and {a mathematical formula}r′=φ∧Q(t→)∧⋀j=1mQj(t→j)→⋁i=1nPi(s→i)∈P, then {a mathematical formula}λ(v)=Q‾R(b→,c→) for some {a mathematical formula}b→ and {a mathematical formula}c→. For some σ, we have {a mathematical formula}P∪D⊨φσ, {a mathematical formula}t→σ=b→ and, for each {a mathematical formula}i,j, {a mathematical formula}ΞM(P)∪D⊨P‾iR(s→iσ,c→) and {a mathematical formula}ΞM(P)∪D⊨QjR(t→jσ,c→). Then, by the inductive hypothesis, {a mathematical formula}P∪D⊨Pi(s→iσ)→R(c→) and {a mathematical formula}P∪D⊨Qj(t→jσ)∨R(c→). With {a mathematical formula}r′, we obtain {a mathematical formula}P∪D⊨Q(b→)→R(c→).
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}r=φ∧⋀j=1mQjR(t→j,y→)∧⋀i=1nP‾iR(s→i,y→)→R(y→) where φ is the conjunction of all Horn atoms in r and {a mathematical formula}r′=φ∧⋀j=1mQj(t→j)→⋁i=1nPi(s→i)∈P, then {a mathematical formula}λ(v)=R(b→) for some {a mathematical formula}b→. For some σ, we then have {a mathematical formula}P∪D⊨φσ and, for each {a mathematical formula}i,j, {a mathematical formula}ΞM(P)∪D⊨P‾iR(s→iσ,b→) and {a mathematical formula}ΞM(P)∪D⊨QjR(t→jσ,b→). Then, by the inductive hypothesis, {a mathematical formula}P∪D⊨Pi(s→iσ)→R(b→) and {a mathematical formula}P∪D⊨Qj(t→jσ)∨R(b→). With {a mathematical formula}r′, we obtain {a mathematical formula}P∪D⊨R(b→).
+        </list-item>
+        <list-item label="•">
+         If {a mathematical formula}r=ξ⊤∧φ∧⋀j=1mQjR(t→j,y→)∧⋀i=1nP‾iR(s→i,y→)→P′R(s→,y→) where {a mathematical formula}ξ⊤∧φ is the conjunction of all Horn atoms in r and {a mathematical formula}r′=φ∧⋀j=1mQj(t→j)→P′(s→)∨⋁i=1nPi(s→i) in {a mathematical formula}P, then {a mathematical formula}λ(v)=P′R(b→,c→) for some {a mathematical formula}b→ and {a mathematical formula}c→. For some σ we then have {a mathematical formula}P∪D⊨φσ, {a mathematical formula}s→σ=b→ and, for each {a mathematical formula}i,j, {a mathematical formula}ΞM(P)∪D⊨P‾iR(s→iσ,c→) and {a mathematical formula}ΞM(P)∪D⊨QjR(t→jσ,c→). Then, by the inductive hypothesis, {a mathematical formula}P∪D⊨Pi(s→iσ)→R(c→) and {a mathematical formula}P∪D⊨Qj(t→jσ)∨R(c→). With {a mathematical formula}r′, we obtain {a mathematical formula}P∪D⊨P′(b→)∨R(c→).
+        </list-item>
+       </list>
+       <paragraph>
+        This concludes the proofs of Claim {a mathematical formula}(♣), Step 2, and thus Theorem 9. □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Rewriting programs via unfolding
+     </section-title>
+     <paragraph>
+      Unfortunately, in the case of programs that do not satisfy the markability condition we have no algorithmic means to determine whether they can be rewritten into Datalog. Indeed, Bienvenu et al. [22] showed that Datalog rewritability of atomic queries is undecidable w.r.t. ontologies in the Description Logic {a mathematical formula}ALCF. Since each {a mathematical formula}ALCF ontology admits a Disjunctive Datalog rewriting [23], we can conclude that checking Datalog rewritability (or, equivalently, linearisability) of Disjunctive Datalog programs is an undecidable problem.
+     </paragraph>
+     <paragraph>
+      In this section, we present a rewriting procedure that combines our results in Section 4 with the work of Gergatsoulis [13] on program transformation for Disjunctive Datalog programs. Our procedure iteratively applies the unfolding transformation to eliminate rules that preclude markability; it stops when the program becomes markable, in which case it outputs a Datalog program as in Section 4. The procedure is sound: if it succeeds, the output is a Datalog rewriting. It is, however, both incomplete (linearisability cannot be semi-decided just by unfolding) and non-terminating. Nevertheless, our experiments suggest that unfolding can be effective in practice since a number of non-markable Disjunctive Datalog programs obtained from realistic ontologies can be rewritten into Datalog after just a few unfolding steps.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       The unfolding transformation
+      </section-title>
+      <paragraph>
+       Given a Disjunctive Datalog program {a mathematical formula}P, a rule r in {a mathematical formula}P, and a body atom α of r, Gergatsoulis defines the unfolding of r at α in {a mathematical formula}P as a transformation that replaces r in {a mathematical formula}P with a set of resolvents of r with other rules in the program, where resolution is applied over α. We next recapitulate this notion.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Let {a mathematical formula}r=α∧φr→ψr and {a mathematical formula}s=φs→β∨ψs be rules such that α is unifiable with β with MGU θ. The elementary unfolding{a mathematical formula}ElemUnfold(r,α,s,β) of r at α using s at β is the pair {a mathematical formula}((φr∧φs→ψr∨ψs)θ,θ). ◇
+      </paragraph>
+      <paragraph label="Definition 11">
+       Elementary unfolding thus amounts to resolving the relevant rules over the given predicates. Unfolding is then a transformation where a rule is replaced with a sequence of elementary unfoldings in an equivalence-preserving way. Let {a mathematical formula}P be a Disjunctive Datalog program, let {a mathematical formula}r∈P and let α be a body atom in r; then the unfolding of r at α in{a mathematical formula}P, denoted {a mathematical formula}Unfold(P,r,α), is the result of applying Procedure 1 to {a mathematical formula}P, r, and α. ◇
+      </paragraph>
+      <paragraph>
+       As shown by Gergatsoulis, performing all possible elementary unfoldings of r at α using rules in {a mathematical formula}P does not suffice to eliminate r. Instead, given r and α, Procedure 1 computes a “closure” under elementary unfoldings. Gergatsoulis shows that Procedure 1 terminates (each {a mathematical formula}s′ introduced in iteration i occurs in fewer tuples in {a mathematical formula}Si+1 than the rule it was obtained from does in {a mathematical formula}Si), and its output is unique up to variable renaming. The termination argument yields an exponential bound on the size of {a mathematical formula}Unfold(P,r,α) in the number of head atoms in {a mathematical formula}P unifiable with α. Gergatsoulis also shows that unfolding preserves all entailed disjunctions of facts.
+      </paragraph>
+      <paragraph label="Theorem 12">
+       The result of Gergatsoulis, however, applies to a fixed program and dataset (where the data is incorporated in the program as ground rules). To compute Datalog rewritings via unfolding we need a stronger, data-independent result. Let{a mathematical formula}Pbe a Disjunctive Datalog program, r a rule in{a mathematical formula}P, and α an IDB body atom of r. Then, for every dataset{a mathematical formula}Dover the EDB predicates in{a mathematical formula}Pand every disjunction of facts φ, we have{a mathematical formula}P∪D⊨φif and only if{a mathematical formula}Unfold(P,r,α)∪D⊨φ.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that {a mathematical formula}Unfold(P,r,α)∪D⊨φ. By soundness of resolution, {a mathematical formula}P⊨Unfold(P,r,α) and hence {a mathematical formula}P∪D⊨φ.Assume now that {a mathematical formula}P∪D⊨φ. W.l.o.g., let r be of the form {a mathematical formula}⋀i=1nαi→ψ, where {a mathematical formula}n≥1 and {a mathematical formula}α=α1. We show the following claim {a mathematical formula}(♠), which we then exploit to obtain {a mathematical formula}Unfold(P,r,α)∪D⊨φ.Claim {a mathematical formula}(♠). Let σ be a ground substitution and let {a mathematical formula}χα1,…χαn be disjunctions of facts such that {a mathematical formula}Unfold(P,r,α)∪D⊨αiσ∨χαi for every {a mathematical formula}i∈[1,n]. Then {a mathematical formula}Unfold(P,r,α)∪D⊨ψσ∨χα1∨…∨χαn.Let {a mathematical formula}ρ=(T,λ) be a derivation, rooted at v, of {a mathematical formula}ασ∨χα′ from {a mathematical formula}Unfold(P,r,α)∪D for some {a mathematical formula}χα′⊆χα (ρ exists by completeness of hyperresolution). Let s be the rule used to derive the label of v (i.e., {a mathematical formula}ασ∨χα′) from the labels of its children {a mathematical formula}v1,…,vm, and let τ be substitution used in the respective hyperresolution step. Then, {a mathematical formula}s=⋀j=1mβj→α1′∨…∨αl′∨ψα′ with {a mathematical formula}λ(vj)=βjτ∨χβj for each {a mathematical formula}j∈[1,m], {a mathematical formula}ασ=α1′τ=⋯=αl′τ and {a mathematical formula}χα′=ψα′τ∨χβ1∨…∨χβm. Let {a mathematical formula}r1 be the rule obtained by elementary unfolding of r at α using s at {a mathematical formula}α1′, and let {a mathematical formula}rk ({a mathematical formula}2≤k≤l) be the rule obtained by elementary unfolding of r at α using {a mathematical formula}rk−1 at {a mathematical formula}αk′. Then {a mathematical formula}(⋀j=1mβjτ)∧(⋀i=2nαiσ) is a substitution instance of the body of {a mathematical formula}rl and {a mathematical formula}ψα′τ∨ψσ is the corresponding instance of the head of {a mathematical formula}rl. Hence, since {a mathematical formula}Unfold(P,r,α)∪D⊨αiσ∨χαi for every {a mathematical formula}i∈[2,n] and, by soundness of hyperresolution, {a mathematical formula}Unfold(P,r,α)∪D⊨βjτ∨χβj for every {a mathematical formula}j∈[1,m], with {a mathematical formula}rl we obtain {a mathematical formula}Unfold(P,r,α)∪D⊨ψα′τ∨ψσ∨χβ1∨…∨χβm∨χα2∨…∨χαn=ψσ∨χα′∨χα2∨…∨χαn⊆ψσ∨χα∨χα2∨…∨χαn=ψσ∨χα1∨…∨χαn. This concludes the proof of Claim {a mathematical formula}(♠).We now use Claim {a mathematical formula}(♠) to show {a mathematical formula}Unfold(P,r,α)∪D⊨φ. W.l.o.g., let {a mathematical formula}ρ=(T,λ) be a derivation of φ from {a mathematical formula}P∪D (the claim easily adapts if ρ derives some {a mathematical formula}φ′⊆φ) and let v be the root of ρ. We proceed by induction on ρ.For the base case, suppose v is the only node in ρ. Then either {a mathematical formula}λ(v)∈D, in which case the claim is immediate, or φ is derived by a rule {a mathematical formula}s∈P with an empty body. Then the claim follows since {a mathematical formula}s≠r and hence {a mathematical formula}s∈Unfold(P,r,α).For the inductive step, let {a mathematical formula}v1,…,vn be the successors of v. By the induction hypothesis, {a mathematical formula}Unfold(P,r,α)∪D⊨λ(vi) for every {a mathematical formula}i∈[1,n]. We distinguish two cases, depending on the rule {a mathematical formula}s∈P used to derive {a mathematical formula}λ(v) from {a mathematical formula}λ(v1),…,λ(vn). If {a mathematical formula}s≠r, we have {a mathematical formula}s∈Unfold(P,r,α), and the claim follows with s. If {a mathematical formula}s=r, the claim follows by {a mathematical formula}(♠).  □Theorem 12 implies that {a mathematical formula}Unfold(P,r,α) is a rewriting of {a mathematical formula}P for every r and α.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       The rewriting procedure
+      </section-title>
+      <paragraph label="Definition 13">
+       Our rewriting procedure exploits unfolding to iteratively eliminate rules that violate markability. To identify such culprit rules we exploit a relaxed notion of a marking, in which the first condition in Definition 6 is no longer required. A pseudo-marking of {a mathematical formula}P is a set M of disjunctive predicates in {a mathematical formula}P satisfying conditions (2) and (3) in Definition 6. Pseudo-marking M is minimal if {a mathematical formula}P has no pseudo-marking {a mathematical formula}M′ such that {a mathematical formula}M′⊊M. ◇
+      </paragraph>
+      <paragraph>
+       The set of all disjunctive predicates in {a mathematical formula}P is a pseudo-marking of {a mathematical formula}P; thus, every program has a pseudo-marking, and hence also a minimal one. Moreover, if {a mathematical formula}P is not markable, then for every pseudo-marking M of {a mathematical formula}P there is a rule in {a mathematical formula}P with more than one marked body atom (otherwise M would be a marking of {a mathematical formula}P).
+      </paragraph>
+      <paragraph>
+       In each iteration, our procedure {a mathematical formula}Rewrite computes a minimal pseudo-marking of the current program, finds a rule with more than one marked body atom, and unfolds it on one such atom. The process is repeated (maybe indefinitely) until the program becomes markable. To obtain smaller rewritings and ensure termination in more cases, our procedure employs redundancy elimination. Given a program {a mathematical formula}P, we write {a mathematical formula}DeleteRed(P) for the program obtained from {a mathematical formula}P by removing all tautologous rules as well as all rules properly subsumed by other rules in {a mathematical formula}P. Note that for every program {a mathematical formula}P we have {a mathematical formula}DeleteRed(P)⊆P and {a mathematical formula}DeleteRed(P)⊨P, and thus {a mathematical formula}P≡DeleteRed(P).
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Correctness of {a mathematical formula}Rewrite is established by the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 14">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program. If{a mathematical formula}Rewriteterminates on{a mathematical formula}Pwith output{a mathematical formula}P′, then{a mathematical formula}P′is a Datalog rewriting of{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       By Theorem 12, {a mathematical formula}Unfold(P,r,α) is a rewriting of {a mathematical formula}P, and so is the logically equivalent program {a mathematical formula}DeleteRed(Unfold(P,r,α)). Since the property of being a rewriting is transitive, we conclude that the program obtained in Step 6 of {a mathematical formula}Rewrite is, on the one hand, a rewriting of {a mathematical formula}P and, on the other hand, a markable program. The claim then follows directly from Theorem 9. □
+      </paragraph>
+      <paragraph>
+       To conclude this section let us consider as an example the following program {a mathematical formula}P5, which admits no marking.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The set {a mathematical formula}{M,P,W,⊥} is the only pseudo-marking of {a mathematical formula}P5. Thus, {a mathematical formula}Rewrite must unfold Rule (16) as it is the only rule containing several marked body atoms. We choose to unfold on atom {a mathematical formula}M(x) and replace (16) with the following rule:{a mathematical formula} Rule (17) is a tautology and hence it is eliminated by {a mathematical formula}DeleteRed. Thus, Step 5 in {a mathematical formula}Rewrite amounts to simply deleting Rule (16) from {a mathematical formula}P5. The resulting program {a mathematical formula}P5′ is markable (and even linear), with {a mathematical formula}{M,P,W} being the only marking. Our procedure then returns the transposition of {a mathematical formula}P5′ w.r.t. this marking, which by Theorem 14 yields a Datalog rewriting of {a mathematical formula}P5.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Applications to ontologies
+     </section-title>
+     <paragraph>
+      In this section we study the implications of markability on ontology reasoning. After providing a brief overview of Description Logics and ontologies in Section 6.1, we show in Section 6.2 that our notion of markability can be seamlessly adapted to ontologies. Then, we focus on the complexity of reasoning over markable OWL 2 ontologies. In Section 6.3, we study the natural extension of the OWL 2 RL profile based on markability and show that fact entailment in the resulting language is tractable in combined complexity. Subsequently, we consider in Section 6.4 ontologies in the expressive Description Logic {a mathematical formula}SHI and show that markable {a mathematical formula}SHI ontologies admit a (possibly exponential size) Datalog rewriting, which implies tractability of fact entailment w.r.t. data complexity (as opposed to co-NP-completeness in the case of unrestricted {a mathematical formula}SHI ontologies).
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Ontologies and OWL 2
+      </section-title>
+      <paragraph label="Definition 15">
+       We assume basic familiarity with Description Logics (DLs) and ontology languages and refer the reader to the literature for further details [24], [25]. A DL signature Σ consists of disjoint countable sets of concept names {a mathematical formula}ΣC, role names {a mathematical formula}ΣR, and individuals {a mathematical formula}ΣI. A role is an element of {a mathematical formula}ΣR∪{R−|R∈ΣR}. W.l.o.g., we consider normalised DL axioms as in Table 1. The table also provides the translation π of normalised DL axioms into rules with equality {a mathematical formula}(≈). We will treat equality as an ordinary IDB binary predicate, the meaning of which is axiomatised. An ontology {a mathematical formula}O is a finite set of DL axioms. We define {a mathematical formula}π(O) as the smallest program containing (i){a mathematical formula}π(α) for each axiom α in {a mathematical formula}O, and (ii) the standard (Datalog) axiomatisation of equality as a congruence relation over the predicates in {a mathematical formula}O, whenever {a mathematical formula}O contains an axiom of type A9 or A10.{sup:4} ◇
+      </paragraph>
+      <paragraph>
+       It can be observed that all axioms in Table 1 correspond to Disjunctive Datalog rules, with the only exception of existentially quantified axioms of type A8, where the corresponding rules contain function symbols.
+      </paragraph>
+      <paragraph>
+       An ontology consisting of axioms of type A1–A10 in Table 1 is
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}SHIQ if it has no axiom of type A10 and {a mathematical formula}R=S=T in each axiom of type A7{sup:5};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}SHI if it is {a mathematical formula}SHIQ and it contains no axiom of type A9;
+       </list-item>
+       <list-item label="•">
+        Horn if {a mathematical formula}m=1 for each axiom of type A1 and A9, and RL if it is Horn and it has no axiom of type A8.
+       </list-item>
+      </list>
+      <paragraph>
+       The logics {a mathematical formula}SHIQ and {a mathematical formula}SHI are typically referred to in the literature as expressive DLs due to their high complexity of reasoning: fact entailment for these logics is ExpTime-complete in combined complexity and co-NP-complete w.r.t. data [26]. In contrast, OWL 2 RL is a lightweight ontology language, where fact entailment is tractable in combined complexity [7].{sup:6} The favourable computational properties of OWL 2 RL have spurred the development of scalable reasoning engines such as GraphDB [8] and RDFox [10].
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Markability for ontologies
+      </section-title>
+      <paragraph>
+       Our notions of weak linearity and markability are formulated for arbitrary first-order programs and hence they can be seamlessly adapted to ontologies.
+      </paragraph>
+      <paragraph label="Definition 16">
+       An ontology {a mathematical formula}O is weakly linear if so is the program {a mathematical formula}π(O). Furthermore, we say that a set of predicates M is a marking of an ontology {a mathematical formula}O if it is a marking of {a mathematical formula}π(O), and {a mathematical formula}O is markable if it admits a marking. ◇
+      </paragraph>
+      <paragraph label="Example 17">
+       Consider the ontology {a mathematical formula}O1 and its corresponding program {a mathematical formula}π(O1):{a mathematical formula} Ontology {a mathematical formula}O1 is markable since {a mathematical formula}{Person,Man,Woman} is a marking of {a mathematical formula}π(O1). ◇
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Extending OWL 2 RL with disjunctive axioms
+      </section-title>
+      <paragraph label="Definition 18">
+       We next consider a natural extension of OWL 2 RL that allows for an unrestricted use of disjunctive axioms of the form {a mathematical formula}⨅i=1nAi⊑⨆j=1mCj. Thus, ontologies in this language correspond to Disjunctive Datalog programs. An {a mathematical formula}RL⊔ontology is a finite set of DL axioms of type A1–A7 and A9–A10 in Table 1, where {a mathematical formula}m=1 for each axiom of type A9. ◇
+      </paragraph>
+      <paragraph>
+       Extending OWL 2 RL in this way leads to increased complexity of reasoning since we can now encode standard graph search problems.
+      </paragraph>
+      <paragraph label="Proposition 19">
+       Fact entailment w.r.t.{a mathematical formula}RL⊔ontologies is co-NP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       Membership in co-NP follows from the fact that both the rules in Table 1 and the rules axiomatising equality and ⊥ contain a bounded number of variables; hence, the corresponding programs can be grounded in polynomial time and entailment in the resulting propositional program can be checked in co-NP. For hardness, it suffices to provide a fairly standard encoding of non-3-colourability (a very similar reduction can be found, e.g., in [27]). Clearly, the following ontology {a mathematical formula}O can be normalised into an {a mathematical formula}RL⊔ ontology:{a mathematical formula} Given an undirected graph {a mathematical formula}G=(V,E), the dataset {a mathematical formula}DG contains a fact {a mathematical formula}V(a) for each node {a mathematical formula}a∈V and a fact {a mathematical formula}edge(a,b) for each edge connecting a and b in E. Then G is non-3-colourable iff {a mathematical formula}O∪DG⊨⊥. □
+      </paragraph>
+      <paragraph>
+       If we restrict {a mathematical formula}RL⊔ ontologies {a mathematical formula}O to be markable, however, we can pick a marking M and exploit the transformation {a mathematical formula}ΞM in Definition 8 to compute a Datalog rewriting {a mathematical formula}P of {a mathematical formula}π(O). Tractability of fact entailment for markable {a mathematical formula}RL⊔ ontologies is established by the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 20">
+       Fact entailment w.r.t. markable ontologies expressed in{a mathematical formula}RL⊔isPTime-complete in both data and combined complexity.
+      </paragraph>
+      <paragraph label="Proof">
+       Hardness follows directly from the fact that the problem is already PTime-hard if {a mathematical formula}O is an RL ontology; thus, we focus on proving membership in PTime. Let M be a marking of {a mathematical formula}O. Let {a mathematical formula}π(O)e be the IDB expansion of {a mathematical formula}π(O) and θ the corresponding substitution as defined in Section 2.1, and let {a mathematical formula}P=ΞM(π(O)e).{sup:7} By Theorem 9, {a mathematical formula}O∪D⊨α iff {a mathematical formula}P∪D⊨αθ. Thus, it suffices to show that the evaluation of {a mathematical formula}P over {a mathematical formula}D can be computed in polynomial time in the size of {a mathematical formula}O and {a mathematical formula}D. First, {a mathematical formula}P is of size at most quadratic in the size of {a mathematical formula}O, and the arity of a predicate in {a mathematical formula}P is at most double the arity of a predicate in {a mathematical formula}O. As we can see in Table 1, the rules in {a mathematical formula}π(O) contain at most 3 variables; hence, the number of variables in each rule in {a mathematical formula}P is bounded by 6. Since fact entailment in Datalog is tractable for input programs having a bounded number of variables per rule the claim of the theorem immediately follows.  □
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Expressive ontology languages
+      </section-title>
+      <paragraph>
+       Our Datalog rewriting techniques are not applicable to ontologies containing existentially quantified axioms (i.e., axioms of type A8 in Table 1). Hustadt et al. [23], however, developed an algorithm for transforming a {a mathematical formula}SHIQ ontology into a Disjunctive Datalog program that preserves entailment of facts over non-transitive roles. This technique was extended by Cuenca Grau et al. [28] to preserve all facts (an alternative translation from an extension of {a mathematical formula}SHIQ to Disjunctive Datalog that preserves all ground consequences was developed by Rudolph et al. [29]). It follows that every {a mathematical formula}SHIQ ontology {a mathematical formula}O admits a Disjunctive Datalog rewriting, the size of which may be exponential in the size of {a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       When applied to {a mathematical formula}SHI ontologies, the algorithm in [23] can be seen as a resolution calculus having binary resolution and factoring as inference rules, which are restricted in a suitable way to ensure termination. The key observation that allows us to transfer our results is captured by the following lemma, which establishes that binary resolution and factoring preserve markability.
+      </paragraph>
+      <paragraph label="Lemma 21">
+       Let M be a marking of a program{a mathematical formula}P, and let{a mathematical formula}P′be obtained from{a mathematical formula}Pby applying binary resolution and factoring. Then M is a marking of{a mathematical formula}P′.
+      </paragraph>
+      <paragraph label="Proof">
+       Note that markability of {a mathematical formula}P is not affected if {a mathematical formula}P is extended by factors of rules that are already in {a mathematical formula}P: if M is a marking of r, then M is a marking of every factor of r. As for resolution, it suffices to show that whenever M is a marking of two rules r and {a mathematical formula}r′, M is a marking of their resolvent e. W.l.o.g., let{a mathematical formula} where φ and {a mathematical formula}φ′ contain all Horn atoms in r and {a mathematical formula}r′, respectively, and σ is the MGU of α and {a mathematical formula}α′. We distinguish the following cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If α is unmarked, then each {a mathematical formula}αi is unmarked and each {a mathematical formula}βj is marked. Thus, e has as many marked body atoms and unmarked head atoms as {a mathematical formula}r′.
+       </list-item>
+       <list-item label="•">
+        If α is marked and, say, {a mathematical formula}β1 is unmarked, then each {a mathematical formula}αi is unmarked, each {a mathematical formula}βj with {a mathematical formula}j≥2 is marked, each {a mathematical formula}αi′ is unmarked (since {a mathematical formula}α′ is marked), and each {a mathematical formula}βj′ is marked. Thus, e has {a mathematical formula}β1σ as the only unmarked head atom and has no marked body atom.
+       </list-item>
+       <list-item label="•">
+        If every head atom in r is marked (including α), then {a mathematical formula}α′ is marked, each {a mathematical formula}αi′ is unmarked, and each {a mathematical formula}βj′ is marked. Consequently, e contains only marked head atoms and as many marked body atoms as r.
+       </list-item>
+      </list>
+      <paragraph>
+       We conclude from Lemma 21 and the results in [23] that markable {a mathematical formula}SHI ontologies admit a (possibly exponential size) Datalog rewriting.
+      </paragraph>
+      <paragraph label="Theorem 22">
+       Let{a mathematical formula}Obe a markable{a mathematical formula}SHIontology. There exists a Datalog rewriting of{a mathematical formula}Othat can be computed in exponential time in the size of{a mathematical formula}O.
+      </paragraph>
+      <paragraph label="Proof">
+       Let M be a marking of {a mathematical formula}O. By the results in [23], [28], {a mathematical formula}O is exponential-time rewritable to a Disjunctive Datalog program {a mathematical formula}P by means of binary resolution and factoring, where {a mathematical formula}|P| is exponentially bounded in {a mathematical formula}|O|. By Lemma 21, M is a marking of {a mathematical formula}P. Then {a mathematical formula}ΞM(Pe) is a Datalog rewriting of {a mathematical formula}P, and hence of {a mathematical formula}O. The claim follows since {a mathematical formula}ΞM(Pe) is polynomial-time computable in {a mathematical formula}|P|.  □
+      </paragraph>
+      <paragraph>
+       We can now establish tight bounds on the complexity of reasoning over markable {a mathematical formula}SHI ontologies.
+      </paragraph>
+      <paragraph label="Theorem 23">
+       Fact entailment w.r.t. markable ontologies expressed in{a mathematical formula}SHIisPTime-complete in data andExpTime-complete in combined complexity.
+      </paragraph>
+      <paragraph label="Proof">
+       The ExpTime upper bound is immediate since fact entailment over unrestricted {a mathematical formula}SHI ontologies is known to be ExpTime-complete. Furthermore, the PTime upper bound for data complexity follows directly from Theorem 22.The lower bounds follow from existing results for Horn-{a mathematical formula}ALC, where we say that a {a mathematical formula}SHI ontology is Horn-{a mathematical formula}ALC if it is Horn and contains no axiom of type A7. Indeed, fact entailment for Horn-{a mathematical formula}ALC is ExpTime-hard [30] and PTime-hard in data; furthermore, every Horn-{a mathematical formula}ALC ontology is trivially markable as it corresponds to a Horn program.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Conjunctive queries
+     </section-title>
+     <paragraph>
+      We have so far been interested in computing Datalog rewritings that preserve the entailment of facts (or, equivalently, the answers to all atomic queries). We now shift our attention to Datalog rewritings that preserve the answers to unrestricted CQs.
+     </paragraph>
+     <paragraph>
+      In this setting, it is no longer possible to obtain query-independent rewritings. Lutz and Wolter [14] showed that for any Disjunctive Datalog program {a mathematical formula}P containing at least one disjunctive rule there exists a conjunctive query q such that answering the (fixed) query q w.r.t. the (fixed) program {a mathematical formula}P and an input dataset is co-NP-hard. Under standard complexity-theoretic assumptions, this implies that there cannot exist a Datalog rewriting of {a mathematical formula}P that preserves the answers to all CQs (and, in particular, those of q).
+     </paragraph>
+     <paragraph>
+      If we impose restrictions on both program {a mathematical formula}P and query q, however, it is still possible to identify situations where it is feasible to compute a Datalog rewriting. In this section, we investigate classes of queries and Disjunctive Datalog programs that admit Datalog rewritings, and we discuss the implications of these results on ontology reasoning.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Characterising Datalog rewritability for conjunctive queries
+      </section-title>
+      <paragraph>
+       In Section 3, we established a characterisation of Datalog rewritability based on linearity: a Disjunctive Datalog program {a mathematical formula}P is rewritable into a Datalog program {a mathematical formula}P1 iff it is rewritable into a linear Disjunctive Datalog program {a mathematical formula}P2. In this case, the requirement imposed on such {a mathematical formula}P1 and {a mathematical formula}P2 is that they preserve the answers to all atomic queries for every dataset over the signature of {a mathematical formula}P.
+      </paragraph>
+      <paragraph>
+       We next show that this characterisation can be seamlessly lifted to CQs. For this, it suffices to observe that answering a CQ {a mathematical formula}q(x→)=∃y→.φ(x→,y→) w.r.t. a Disjunctive Datalog program {a mathematical formula}P reduces to answering the atomic query {a mathematical formula}Q(x→) w.r.t. the program {a mathematical formula}P∪{φ(x→,y→)→Q(x→)}, for Q a fresh predicate.
+      </paragraph>
+      <paragraph label="Theorem 24">
+       A CQ q is Datalog rewritable w.r.t. a Disjunctive Datalog program{a mathematical formula}Piff q is rewritable w.r.t.{a mathematical formula}Pinto linear Disjunctive Datalog.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}q(x→)=∃y→.φ(x→,y→), and let Q be a fresh predicate of the same arity as q. Then, for every {a mathematical formula}D and {a mathematical formula}a→, {a mathematical formula}P∪D⊨q(a→) iff {a mathematical formula}P∪{φ(x→,y→)→Q(x→)}∪D⊨Q(a→). It suffices to show that {a mathematical formula}Q(x→) is Datalog rewritable w.r.t. {a mathematical formula}P∪{φ(x→,y→)→Q(x)} iff {a mathematical formula}Q(x→) is rewritable w.r.t. {a mathematical formula}P∪{φ(x→,y→)→Q(x)} into linear Disjunctive Datalog. This, in turn, follows by Theorem 3 and Proposition 2: if {a mathematical formula}P′ is a Datalog (or linear Disjunctive Datalog) rewriting of {a mathematical formula}Q(x→) w.r.t. {a mathematical formula}P∪{φ(x→,y→)→Q(x)}, then {a mathematical formula}Ξ(P′) is a linear Disjunctive Datalog (resp., Datalog) rewriting of {a mathematical formula}Q(x→) w.r.t. {a mathematical formula}P∪{φ(x→,y→)→Q(x)}. □
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Exploiting the markability condition
+      </section-title>
+      <paragraph>
+       A Datalog rewriting of a fixed atomic query {a mathematical formula}Q(x→) w.r.t. a markable program {a mathematical formula}P must only preserve the answers to Q (rather than the answers to all atomic queries). Thus, the rewriting {a mathematical formula}ΞM(P) can be optimised by deleting all rules involving auxiliary predicates {a mathematical formula}XR and {a mathematical formula}X‾R for {a mathematical formula}R≠Q. In particular, if Q is a Horn predicate in {a mathematical formula}P∪{φ(x→,y→)→Q(x→)}, the optimised rewriting does not need to contain any auxiliary predicates.
+      </paragraph>
+      <paragraph label="Definition 25">
+       Let {a mathematical formula}P be a Disjunctive Datalog program, let M be a marking of {a mathematical formula}P, and let S be a set of predicates. The M-transposition of{a mathematical formula}Pw.r.t. S is the program {a mathematical formula}ΞMS(P) obtained from {a mathematical formula}ΞM(P) by removing all rules involving a predicate {a mathematical formula}XR or {a mathematical formula}X‾R for {a mathematical formula}R∉S. ◇
+      </paragraph>
+      <paragraph>
+       The transposition {a mathematical formula}ΞMS(P) is linear in the size of {a mathematical formula}P for a fixed S. It is easily seen that {a mathematical formula}ΞMS(P) is a rewriting of each atomic query over predicates in S.
+      </paragraph>
+      <paragraph label="Theorem 26">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program, let M be a marking of{a mathematical formula}P, and let S be a set of predicates. Then,{a mathematical formula}ΞMS(P)is a Datalog rewriting of all atomic queries over S w.r.t.{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       The claim is shown analogously to Theorem 9 with the additional observation that Step 1 of the proof only needs rules involving auxiliary predicates of the form {a mathematical formula}Q‾P and {a mathematical formula}QP to show facts about a predicate P. □
+      </paragraph>
+      <paragraph>
+       Based on these observations, we can exploit our results on markability to identify a class of Disjunctive Datalog programs and CQs admitting a Datalog rewriting, and for which CQ entailment is tractable in data complexity.
+      </paragraph>
+      <paragraph label="Theorem 27">
+       Let{a mathematical formula}P be a Disjunctive Datalog program and let{a mathematical formula}q(x→)=∃y→.φ(x→,y→)be a CQ. Furthermore, assume that there exists some marking M of{a mathematical formula}Pthat marks at most one atom of q, and let Q be a fresh predicate of arity{a mathematical formula}|x→|. Then the following properties hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ΞM{Q}(P∪{φ(x→,y→)→Q(x→)})is a Datalog rewriting of q w.r.t.{a mathematical formula}P.
+       </list-item>
+       <list-item label="2.">
+        For every tuple of constants{a mathematical formula}a→with{a mathematical formula}|a→|=|x→|, answering the (fixed) Boolean CQ{a mathematical formula}q(a→)w.r.t. (fixed){a mathematical formula}Pand arbitrary data is a tractable problem.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Statement 2 in the theorem follows directly from the first one, which we show next. Clearly, {a mathematical formula}P∪D⊨q(a→) if and only if {a mathematical formula}P∪{φ(x→,y→)→Q(x→)}∪D⊨Q(a→) for every {a mathematical formula}D and {a mathematical formula}a→, and hence {a mathematical formula}ΞM{Q}(P∪{φ(x→,y→)→Q(x→)}) is a Datalog rewriting of q w.r.t. {a mathematical formula}P provided M is a marking of {a mathematical formula}P∪{φ(x→,y→)→Q(x→)}. This holds since M is a marking of {a mathematical formula}P, φ has at most one marked atom, and Q does not occur in {a mathematical formula}P.  □ Since {a mathematical formula}RL⊔ ontologies correspond to Disjunctive Datalog programs, the result in Theorem 27 also applies to markable {a mathematical formula}RL⊔ ontologies. Note also that the theorem is always applicable whenever the input query has at most one disjunctive atom. As we will see in our evaluation, in typical non-Horn ontologies more than {a mathematical formula}70% of predicates are Horn; hence, it is reasonable to expect that the theorem will be applicable to many queries in practice.
+      </paragraph>
+      <paragraph>
+       The following example illustrates the rewriting of a conjunctive query w.r.t. an {a mathematical formula}RL⊔ ontology.
+      </paragraph>
+      <paragraph label="Example 28">
+       Consider the following {a mathematical formula}RL⊔ ontology {a mathematical formula}O and query q{sup:8}:{a mathematical formula} The program {a mathematical formula}π(O) corresponding to {a mathematical formula}O is as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} We can check that the Datalog program {a mathematical formula}P={B(x)→B′(x),C(x)→C′(x)} is a rewriting of {a mathematical formula}O. This program, however, is not a rewriting of q, as witnessed by the following dataset {a mathematical formula}D for which {a mathematical formula}O∪D⊨q(a):{a mathematical formula} Clearly, {a mathematical formula}M={B′} is a marking of {a mathematical formula}O, and q contains one marked atom. Moreover, {a mathematical formula}M′={B′,Q} is a marking of {a mathematical formula}π(O)∪{rq}, where{a mathematical formula} and {a mathematical formula}P′=ΞM′{Q}(π(O)∪{rq}) contains the following rules:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Then, {a mathematical formula}P′ is a rewriting of q; Fig. 2 shows a derivation of {a mathematical formula}Q(a) from {a mathematical formula}P′∪D. ◇
+      </paragraph>
+      <paragraph>
+       To conclude this section, observe that Theorem 27 only transfers to {a mathematical formula}SHI (or potentially {a mathematical formula}SHIQ) ontologies if the CQ q corresponds to a normalised {a mathematical formula}SHIQ axiom. This is because the reduction to Disjunctive Datalog in [23], [28] is only complete for inputs equivalent to {a mathematical formula}SHIQ ontologies.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The computational complexity and expressive power of Disjunctive and plain Datalog are well-understood, and we refer the interested reader to [4] for an excellent survey. Disjunctive Datalog with negation as failure has also been extensively studied in the Logic Programming literature [3], [31].
+     </paragraph>
+     <paragraph>
+      The specification of fragments of (Disjunctive) Datalog with more favourable computational properties has also received significant attention. The class of head-cycle free Disjunctive Datalog programs with negation as failure was studied by Ben-Eliyahu-Zohary et al. [31], [32], who showed that certain reasoning problems are tractable for such programs (fact entailment, however, remains intractable in data complexity). In particular, head-cycle free programs are amenable to a program transformation technique known as shifting[33], [34], [35] that bears some resemblance to program transposition. Semantic characterisations of first-order rewritability in the context of non-monotonic programs were studied in [36]. Furthermore, there is a large body of work on Datalog and first-order rewritability of Horn Description Logics and related languages [37], [38], [39], [40], [41], [42], [43], [44], [45]. Finally, linearity has been extensively studied in the context of plain Datalog and it is known to limit the effect of recursion and lead to reduced complexity of reasoning, namely NLogSpace vs PTime in the case of data complexity and PSpace vs ExpTime for combined complexity [11].
+     </paragraph>
+     <paragraph>
+      Gottlob et al. [46] investigated the complexity of reasoning over disjunctive tuple-generating dependencies (TGDs), which extend Disjunctive Datalog by allowing existentially quantified variables in the head of rules. In particular, they showed tractability (in data complexity) of fact entailment for a class of disjunctive TGDs with single-atom bodies. This class of rules is incomparable to weakly-linear and markable Disjunctive Datalog as it allows existential quantification (and hence function symbols) in the head of rules. Artale et al. [47] showed tractability of fact entailment w.r.t. data for DLs of the {a mathematical formula}DL-Litebool family. This result is strongly related to that in [46] since many variants of {a mathematical formula}DL-Litebool can be normalised as disjunctive TGDs with singleton bodies. Finally, combined complexity of CQ answering for different classes of disjunctive TGDs was studied by Bourhis et al. [48].
+     </paragraph>
+     <paragraph>
+      Lutz and Wolter [14] investigated non-uniform data complexity of CQ answering w.r.t. extensions of {a mathematical formula}ALC, and related CQ answering to constraint satisfaction problems. This connection was explored by Bienvenu et al. [22], who showed NExpTime-completeness of first-order and Datalog rewritability of atomic queries for {a mathematical formula}SHI.
+     </paragraph>
+     <paragraph>
+      A goal-directed resolution procedure for computing first-order and Datalog rewritings of Disjunctive Datalog programs was proposed in [28] and further refined in [2]. Termination of the procedure in [28] is guaranteed for {a mathematical formula}DL-Litebool logics, and it was extended to a restricted class of {a mathematical formula}SHI ontologies in [2]. Both classes of ontologies are incomparable to WL or markable ontologies. The procedures in [2], [28] do not run in polynomial time or compute polynomial-size rewritings. The procedure in [28] is used in [49] to show first-order/Datalog rewritability of two fragments of the DL {a mathematical formula}ELU. Notably, both fragments yield linear programs and hence are subsumed by those studied in this paper.
+     </paragraph>
+     <paragraph>
+      Transposition bears a superficial resemblance to the Magic Sets method [50] for Datalog, which has been extended to apply also to Disjunctive Datalog programs [51], [52]. Note, however, that the goal of Magic Sets is not to eliminate the need for disjunctive reasoning (the Magic Set transformation of a Disjunctive Datalog program will still contain disjunctive rules), but rather to restrict bottom-up computation in the presence of a query so as to only compute facts that are relevant to the query; in particular, Magic Sets are inherently query-dependent while our technique is essentially query-independent. Transposition and Magic Sets are thus largely orthogonal.
+     </paragraph>
+     <paragraph>
+      The idea of merging two atoms of smaller arity into one atom of larger arity has been exploited by Faber and Woltran [53], albeit for a different purpose and with a different intended semantics for the merged atoms.
+     </paragraph>
+     <paragraph>
+      Finally, our unfolding-based rewriting procedure is motivated by the work of Afrati et al. [54] on linearisation of plain Datalog programs by means of program transformation techniques [12], [13], [55].
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Practical considerations
+     </section-title>
+     <paragraph>
+      In this section we discuss various optimisations that were instrumental in applying our rewriting techniques to ontological reasoning over large datasets.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Optimising transposition
+      </section-title>
+      <paragraph>
+       Our transposition transformation introduces body atoms over the unary predicate ⊤ to ensure safety of the resulting rules (recall Definition 1, Definition 8). This, however, can lead to performance issues.
+      </paragraph>
+      <paragraph>
+       Consider again the example program {a mathematical formula}P1 from Section 3.1. The initialisation rule {a mathematical formula}⊤(x)→B‾B(x,x) in {a mathematical formula}Ξ(P1) derives a fact {a mathematical formula}B‾B(a,a) for each constant a in the input dataset {a mathematical formula}D, which can then trigger the derivation of new facts. An auxiliary fact {a mathematical formula}B‾B(a,a), however, is only relevant to the rewriting if {a mathematical formula}B(a) follows from {a mathematical formula}P1∪D, and hence initialising {a mathematical formula}B‾B with all constants may lead to unnecessarily large materialisations. Although the facts derivable from {a mathematical formula}P1∪D are unknown in advance, we can overapproximate them. For this, we introduce fresh predicates {a mathematical formula}Bu and {a mathematical formula}Gu representing the overapproximation of the disjunctive predicates B and G and construct a program {a mathematical formula}P1′ by replacing every disjunctive predicate with its corresponding fresh predicate and splitting all disjunctive rules into different Datalog rules as given next:{a mathematical formula} Finally, we add to {a mathematical formula}P1′ all rules in the transposition {a mathematical formula}Ξ(P1) while replacing ⊤ in the initialisation rules (4) with the freshly introduced predicates as follows:{a mathematical formula} In this way, the predicates {a mathematical formula}X‾X are initialised with the extension of {a mathematical formula}Xu. Consider now a fact {a mathematical formula}X‾X(a,a). If it is not included in the materialisation of {a mathematical formula}P1′∪D then neither is {a mathematical formula}Xu(a); but then, since {a mathematical formula}Xu overapproximates X, we also have that {a mathematical formula}X(a) does not follow from {a mathematical formula}P1∪D, which implies that {a mathematical formula}X‾X(a,a) is irrelevant.
+      </paragraph>
+      <paragraph>
+       We next capture these ideas formally by defining the optimised transposition {a mathematical formula}ΞMu as an extension of {a mathematical formula}ΞM. The definition can be straightforwardly adapted to the transformations Ξ and {a mathematical formula}ΞMS in Definitions 1 and 25, respectively.
+      </paragraph>
+      <paragraph label="Definition 29">
+       Let {a mathematical formula}P be a Disjunctive Datalog program and let M be a marking of {a mathematical formula}P. For each disjunctive predicate Q in {a mathematical formula}P, let {a mathematical formula}Qu be fresh and of the same arity as Q. Then, {a mathematical formula}ΞMu(P) is the smallest program with all rules given next:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}(⋀i=1nαi→βj)θ for each rule {a mathematical formula}⋀i=1nαi→⋁j=1mβj in {a mathematical formula}P and {a mathematical formula}j∈[1,m], where θ maps every disjunctive predicate Q to {a mathematical formula}Qu;
+       </list-item>
+       <list-item label="2.">
+        every rule in {a mathematical formula}P with no disjunctive predicates;
+       </list-item>
+       <list-item label="3.">
+        every rule in {a mathematical formula}ΞM(P) of type 3 or 5 in Definition 8;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}Ru(y→)→R‾R(y→,y→) for each rule {a mathematical formula}ξ⊤→R‾R(y→,y→) in {a mathematical formula}ΞM(P);
+       </list-item>
+       <list-item label="5.">
+        {a mathematical formula}Qu(t→)∧Ru(y→)∧ψ→Q‾R(t→,y→) for each {a mathematical formula}ξ⊤∧ψ→Q‾R(t→,y→) in {a mathematical formula}ΞM(P); and
+       </list-item>
+       <list-item label="6.">
+        {a mathematical formula}Pu(s→)∧Ru(y→)∧ψ→PR(s→,y→) for each {a mathematical formula}ξ⊤∧ψ→PR(s→,y→) in {a mathematical formula}ΞM(P). ◇
+       </list-item>
+      </list>
+      <paragraph>
+       We can show that this optimised transformation can also be exploited to polynomially rewrite markable programs into Datalog.
+      </paragraph>
+      <paragraph label="Theorem 30">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program and M a marking of{a mathematical formula}P. Then{a mathematical formula}ΞMu(P)is a polynomial-size Datalog rewriting of{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof (Sketch)">
+       Let {a mathematical formula}D be a dataset. First, we note that the new predicates in {a mathematical formula}ΞMu(P) overapproximate the disjunctive predicates in {a mathematical formula}P in the following sense.Claim {a mathematical formula}(♣). For every disjunction of facts φ derivable by hyperresolution from {a mathematical formula}P∪D and every disjunctive atom {a mathematical formula}Q(a→)∈φ, we have {a mathematical formula}ΞMu(P)∪D⊨Qu(a→).The claim follows by a simple induction on a derivation of φ from {a mathematical formula}P∪D. Using this claim, the proof of Theorem 9 can be easily adapted with the following observations.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Rules in {a mathematical formula}ΞM(P) with head atoms of the form {a mathematical formula}QR(s→,y→) or {a mathematical formula}Q‾R(s→,y→) can only participate in derivations of facts about the predicate R (among all predicates in {a mathematical formula}P). Thus, by Claim {a mathematical formula}(♣), the body of every such rule can be extended with {a mathematical formula}Ru(y→) without affecting the rule's consequences over the predicates in {a mathematical formula}P.
+       </list-item>
+       <list-item label="2.">
+        Whenever a rule {a mathematical formula}r∈ΞM(P) with a head of the form {a mathematical formula}QR(s→,y→) or {a mathematical formula}Q‾R(s→,y→) is used in the proof of Theorem 9 with some substitution σ, we have {a mathematical formula}P∪D⊢φ where {a mathematical formula}Q(s→σ)∈φ. By Claim {a mathematical formula}(♣), we have {a mathematical formula}ΞMu∪D⊨Qu(s→σ), and hence the body of r can be extended with {a mathematical formula}Qu(s→) without affecting the rule's consequences over the predicates in {a mathematical formula}P. □
+       </list-item>
+      </list>
+      <paragraph>
+       Even with this optimisation, the presence of transposed rules that rely on predicates {a mathematical formula}Pu for safety may still lead to performance issues. A common source of such problematic rules are constraints of the form {a mathematical formula}φ∧A(x)→⊥ where φ is a conjunction of Horn atoms mentioning variable x and A is marked. Such rules are rewritten to {a mathematical formula}φ∧⊥‾P(y→)→A‾P(x,y→) for every predicate P, where the extension of {a mathematical formula}⊥‾P is determined by the rule {a mathematical formula}Pu(x→)→⊥‾P(x→). Thus, the extension of {a mathematical formula}A‾P in {a mathematical formula}ΞMu(P)∪D is populated by the Cartesian product of the extension of φ and the extension of {a mathematical formula}Pu. Hence, even if φ and {a mathematical formula}Pu are both linearly bounded in the size of {a mathematical formula}D, the extension of {a mathematical formula}A‾P will be quadratic in {a mathematical formula}D.
+      </paragraph>
+      <paragraph>
+       This can often be remedied by unfolding the problematic rules. For instance, let {a mathematical formula}r=E(x)∧A(x)→⊥∈P where E is Horn in {a mathematical formula}P, and let {a mathematical formula}B(x)∧C(x)→A(x) and {a mathematical formula}D(x)→A(x)∨F(x), with {a mathematical formula}B,C,D,F all disjunctive in {a mathematical formula}P, be the only rules in {a mathematical formula}P where predicate A occurs in the head. Then {a mathematical formula}Unfold(P,r,A(x)) replaces r in {a mathematical formula}P with the rules {a mathematical formula}E(x)∧B(x)∧C(x)→⊥ and {a mathematical formula}E(x)∧D(x)→⊥∨F(x). Unlike r, the new rules each contain at least two disjunctive atoms besides ⊥, and hence their rewritings contain at least one disjunctive body atom that is not {a mathematical formula}⊥‾P(y→), typically leading to smaller materialisations.
+      </paragraph>
+      <paragraph>
+       We can realise this idea using Procedure 3, which unfolds rules of the form {a mathematical formula}φ∧α→⊥ where α is marked by M and φ is a conjunction of Horn atoms. Note that the procedure terminates for every {a mathematical formula}P and M since every iteration of the main loop that modifies {a mathematical formula}P strictly reduces the number of problematic rules. Procedure {a mathematical formula}RewriteConstraints can then be incorporated into Procedure {a mathematical formula}Rewrite from Section 5 by replacing {a mathematical formula}ΞM(P) with {a mathematical formula}ΞMu(RewriteConstraints(P,M)) in Step 7 of the procedure. This modification preserves correctness of {a mathematical formula}Rewrite since (i) the program computed by {a mathematical formula}RewriteConstraints for a program {a mathematical formula}P and any M is a rewriting of {a mathematical formula}P (Theorem 12), and (ii) every marking M of {a mathematical formula}P is a marking of {a mathematical formula}RewriteConstraints(P,M), as established by Lemma 21.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Guiding the unfolding
+      </section-title>
+      <paragraph>
+       The success of our rewriting procedure {a mathematical formula}Rewrite described in Section 5 largely depends on the choice of rule and atom to unfold in Steps 3 and 4. In our implementation we have refined the rule selection strategy given in Steps 2 and 3. Rather than computing a pseudo-marking of {a mathematical formula}P, we exploit instead the data structures used for markability checking; specifically, we use the notion of implication graph introduced by Aspvall et al. [56] for solving 2-SAT.
+      </paragraph>
+      <paragraph label="Definition 31">
+       Let {a mathematical formula}N be a 2-SAT instance. Given a proposition literal l, we write {a mathematical formula}l¯ for the negation of l, i.e., {a mathematical formula}l¯=¬X if {a mathematical formula}l=X and {a mathematical formula}l¯=X if {a mathematical formula}l=¬X. The implication graph of {a mathematical formula}N is the smallest digraph {a mathematical formula}GN containing nodes l and {a mathematical formula}l¯ for each literal l in {a mathematical formula}N, and edges {a mathematical formula}(l¯1,l2) and {a mathematical formula}(l¯2,l1) for each clause {a mathematical formula}l1∨l2 in {a mathematical formula}N.A clash in {a mathematical formula}GN is a directed cycle involving some literal l and its negation {a mathematical formula}l¯. A literal is clashing if it is involved in a clash. ◇
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}P be a program and {a mathematical formula}N the 2-SAT instance encoding its markability. Then {a mathematical formula}P is markable iff {a mathematical formula}N is satisfiable iff {a mathematical formula}GN contains no clash (the latter equivalence due to Aspvall et al. [56]). The following proposition establishes that, in order to obtain a markable program, it suffices to remove from {a mathematical formula}P all rules that contain at least two clashing body atoms. Thus, in our implementation of {a mathematical formula}Rewrite we always select one such rule in Step 3.
+      </paragraph>
+      <paragraph label="Proposition 32">
+       Let{a mathematical formula}Pbe a Disjunctive Datalog program and let{a mathematical formula}Nbe the 2-SAT instance encoding markability of{a mathematical formula}P. Then{a mathematical formula}Pis markable if and only if it contains no rule that has two distinct body atoms{a mathematical formula}P(s→),{a mathematical formula}Q(t→)such that{a mathematical formula}XP,{a mathematical formula}XQare clashing in{a mathematical formula}GN.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that {a mathematical formula}P is markable. Then {a mathematical formula}N is satisfiable, and hence no literal is clashing in {a mathematical formula}GN, which trivially implies the claim. Assume now that {a mathematical formula}P is not markable. Then, {a mathematical formula}P contains a rule r with two distinct disjunctive body atoms {a mathematical formula}P(s→), {a mathematical formula}Q(t→) such that {a mathematical formula}(XP,¬XQ) or {a mathematical formula}(XQ,¬XP) is part of a clash in {a mathematical formula}GN; note that edges coming only from clauses of the form (2) and (3) in {a mathematical formula}N cannot lead to a clash, which needs to be present since {a mathematical formula}P is not markable. Let l and {a mathematical formula}l¯ be the clashing literals and let, w.l.o.g., {a mathematical formula}π1=l,…,XP,¬XQ,…,l¯ be a directed path from l to {a mathematical formula}l¯ and {a mathematical formula}π2 be a directed path from {a mathematical formula}l¯ to l. An easy induction on n reveals that for every path {a mathematical formula}l1,…,ln in {a mathematical formula}GN, the sequence {a mathematical formula}l¯n,…,l¯1 also constitutes a path in {a mathematical formula}GN. From this we can conclude that {a mathematical formula}π1′=l,…,XQ,¬XP,…,l¯ is a path from l to {a mathematical formula}l¯. We next argue that both {a mathematical formula}XP and {a mathematical formula}XQ are clashing. For {a mathematical formula}XP, the concatenation of the subpath {a mathematical formula}XP,¬XQ,…,l¯ of {a mathematical formula}π1, the path {a mathematical formula}π2, and the subpath {a mathematical formula}l,…,XQ,¬XP of {a mathematical formula}π1′ is a path from {a mathematical formula}XP to {a mathematical formula}¬XP. Moreover, the concatenation of {a mathematical formula}¬XP,…,l¯ from {a mathematical formula}π1′, {a mathematical formula}π2 and {a mathematical formula}l,…,XP from {a mathematical formula}π1 is a path from {a mathematical formula}¬XP to {a mathematical formula}XP. Analogously, the concatenation {a mathematical formula}π1′π2π1π2 is a directed cycle between {a mathematical formula}XQ and {a mathematical formula}¬XQ, as required. □
+      </paragraph>
+      <paragraph label="Definition 33">
+       The choice of atom to unfold on in Step 4 of {a mathematical formula}Rewrite is determined heuristically. We choose an atom with minimal “depth”, as defined next. Let {a mathematical formula}GP be the dependency graph of a program {a mathematical formula}P. Given predicates {a mathematical formula}P,Q in {a mathematical formula}P, let {a mathematical formula}P∼Q hold iff P and Q belong to the same strongly connected component of {a mathematical formula}GP. The depth of an atom{a mathematical formula}Q(t→)in{a mathematical formula}P is the depth of the strongly connected component of Q in the quotient graph {a mathematical formula}GP/∼.{sup:9} ◇
+      </paragraph>
+      <paragraph>
+       This heuristic aims at avoiding unfolding cycles where predicates are repeatedly replaced with predicates from the same strongly connected component.
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Proof of concept evaluation
+     </section-title>
+     <paragraph>
+      We have implemented weak linearity and markability checkers as well as the unfolding-based rewriting procedure {a mathematical formula}Rewrite in Section 5.2. Additionally, we have implemented the transposition transformation for markable Disjunctive Datalog programs described in Sections 4 and 9.1.
+     </paragraph>
+     <paragraph>
+      We have conducted two kinds of experiments, the results of which are described in Sections 10.1 and 10.2.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Rewritability experiments, where we have evaluated whether the non-Horn ontologies available in well-known ontology repositories can be rewritten into Datalog using our techniques. To this end, we have first exploited the KAON2 reasoner [57] to transform ontologies into Disjunctive Datalog and then applied our rewriting algorithms to the resulting programs.
+      </list-item>
+      <list-item label="•">
+       Query answering experiments, where we have evaluated the potential benefits of our approach for optimising query answering over Disjunctive Datalog programs obtained from ontologies. We considered two non-Horn ontologies that, on the one hand, come with a large-scale dataset and, on the other hand, correspond to a markable Disjunctive Datalog program.
+      </list-item>
+     </list>
+     <paragraph>
+      All experiments were conducted on a machine equipped with two Intel Xeon E5-2670 processors and 256 GB RAM. Our prototype implementation as well as all test ontologies and datasets used in the evaluation are available online.{sup:10}
+     </paragraph>
+     <section label="10.1">
+      <section-title>
+       Rewritability experiments
+      </section-title>
+      <paragraph>
+       We collected non-Horn ontologies from BioPortal,{sup:11} the Protégé library,{sup:12} the corpus of Gardiner et al. [58], the EBI RDF Platform,{sup:13} and the repository of the ISKP Group at the University of Thessaloniki.{sup:14} In total, we gathered 128 ontologies from these sources.
+      </paragraph>
+      <paragraph>
+       The version of KAON2 available to us is restricted to the {a mathematical formula}SHIN fragment of OWL DL. Hence, we modified some of the test ontologies in a minimal possible way so that they are accepted by the KAON2 parser. In addition to ineffectual changes (e.g., removing all annotations) we made the following modifications that may have an impact on rewritability:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        We turned data properties into object properties and replaced all datatype related axioms with their corresponding axioms for object properties.
+       </list-item>
+       <list-item label="2.">
+        We approximated nominals (i.e., axioms A10 in Table 1 from Section 6.1) by replacing them with fresh classes in the usual way [59], and approximated self restrictions and qualified number restrictions using existential and universal restrictions.
+       </list-item>
+       <list-item label="3.">
+        We removed reflexive and irreflexive properties as well as property chain axioms from the ontology, and then added them back as Datalog rules to the Disjunctive Datalog program computed by KAON2.
+       </list-item>
+      </list>
+      <paragraph>
+       In total, we approximated 61 out of our 128 test ontologies in this way. Note that the changes in Point 1 may only facilitate rewritability if there exist semantic dependencies between the datatypes used in the ontology. Furthermore, the approximation in Point 3 implies that the affected axioms are not taken into account during the resolution stage of KAON2, but are only considered later on for markability checking. Although this is a sound but incomplete approximation, it is the most faithful one we could provide given the restrictions of KAON2.
+      </paragraph>
+      <paragraph>
+       Out of the 128 ontologies we considered, 16 ontologies were already {a mathematical formula}RL⊔ and could be directly normalised as Disjunctive Datalog programs. From the remaining 112 ontologies, KAON2 succeeded in computing Disjunctive Datalog programs in 99 cases. Out of the total of 115 Disjunctive Datalog programs, we found that 40 were markable (with 36 of them already WL, and where 9 of them had been modified for KAON2). Furthermore, our unfolding-based procedure {a mathematical formula}Rewrite succeeded on 6 additional programs when given a time limit of 60 seconds (5 of which were modified for KAON2); these programs required no more than 34 unfolding steps, and the programs after unfolding were no more than 50% larger than the original ones (with one exception, where the unfolded program was 6 times larger than the original program while taking only 3 unfolding steps to compute). On average, 78% of the predicates in all the tested Disjunctive Datalog programs were Horn, and so could be queried using a Datalog engine (even if the program itself could not be rewritten).
+      </paragraph>
+     </section>
+     <section label="10.2">
+      <section-title>
+       Query answering experiments
+      </section-title>
+      <paragraph>
+       We now consider the task of answering (atomic) queries w.r.t. Disjunctive Datalog programs obtained from OWL ontologies and RDF datasets. The main goal of our experiments is to confirm that rewriting a markable Disjunctive Datalog program into Datalog can lead to improved performance and more robust scalability of query answering, even if the reasoner of choice is highly-optimised for disjunctive reasoning.
+      </paragraph>
+      <paragraph>
+       It is well-known that finding interesting test ontologies that come with a substantial dataset is a major challenge for the evaluation of query answering. In our case, we had the additional constraints that test ontologies are non-Horn and correspond to a markable program. We could find two interesting test cases satisfying these requirements.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        ChEMBL is a real-world ontology publicly available through the European Bioinformatics Institute (EBI) linked data platform.{sup:15} This ontology is {a mathematical formula}RL⊔ and it comes with a large-scale dataset, which is also publicly available. To evaluate scalability, we have used a sampling algorithm based on random walks to extract subsets of the data of increasing size.
+       </list-item>
+       <list-item label="•">
+        UOBM is a widely-used reasoning benchmark that comes with a manually created ontology and a data generator which produces synthetic datasets according to a parameter n that determines data size [60]. KAON2 does not succeed in rewriting the UOBM ontology into Disjunctive Datalog; hence, we considered its {a mathematical formula}RL⊔ fragment in our experiments.
+       </list-item>
+      </list>
+      <paragraph>
+       Table 2 summarises our test ontologies and datasets. The table indicates (i) the number of ontology axioms; (ii) the number of rules in the corresponding Disjunctive Datalog program as well as the number of non-Horn rules; (iii) the number of predicates together with the number of Horn and disjunctive IDB predicates; and (iv) the number of facts in the accompanying datasets, where in the case of UOBM this number is parametrised by n. We restricted our evaluation to queries over disjunctive predicates; the remaining atomic queries (i.e., those over EDB and Horn predicates) are uninteresting as their computation is not affected by our rewriting techniques.
+      </paragraph>
+      <paragraph>
+       In our experiments, we considered the well-known Disjunctive Datalog reasoners DLV [5] and Clingo [6] and assessed their scalability on our test ontologies and their corresponding Datalog rewritings. Additionally, we assessed the scalability of the dedicated Datalog reasoner RDFox [10] on the rewritten ontologies.
+      </paragraph>
+      <paragraph>
+       We proceeded as follows for each test ontology {a mathematical formula}O and reasoning system:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        We normalised the ontology as a Disjunctive Datalog program {a mathematical formula}PO and computed its Datalog rewriting {a mathematical formula}PO′ via transposition.
+       </list-item>
+       <list-item label="•">
+        For each test dataset {a mathematical formula}D we used the reasoner to compute the answers to all atomic queries over disjunctive predicates w.r.t. {a mathematical formula}PO∪D and {a mathematical formula}PO′∪D, respectively. In the case of RDFox, we only considered the latter.
+       </list-item>
+      </list>
+      <paragraph>
+       Table 3 summarises our results. The first column indicates the tested ontology and data. In the case of ChEMBL, percentages indicate the size of the data sample w.r.t. the total size of the dataset as in Table 2; in the case of UOBM, the size of the data is determined by the value of the parameter n as in Table 2. For each reasoner, results are split between those obtained for the input ontology (“ontology”) and its Datalog rewriting (“rewriting”). Times indicate the average time in seconds needed to answer an atomic query, whereas errors refer to the number of queries for which the 20 minute time-out was exceeded. Additionally, average query answering times for the rewritten ontologies are visualised in Fig. 3.
+      </paragraph>
+      <paragraph>
+       We can observe that the performance of Disjunctive Datalog reasoners consistently improves after rewriting. This is so despite the fact that both DLV and Clingo are highly optimised in their treatment of disjunctions.
+      </paragraph>
+      <paragraph>
+       As we can see, performance improvements can be very significant. For instance, DLV could not answer any query on ChEMBL for most of our data samples; after rewriting, however, it succeeded in answering all queries in under a minute on average. Similarly, Clingo failed for all queries on UOBM for {a mathematical formula}n≥40, but succeeded on all queries for all datasets after rewriting. Furthermore, we can observe in Fig. 3 that query answering times after rewriting increased linearly in data size for all cases.
+      </paragraph>
+      <paragraph>
+       Finally, our results also suggest that a dedicated Datalog reasoner such as RDFox can offer very favourable scalability when answering queries over large datasets and Datalog programs obtained via transposition. In particular, RDFox was capable of answering all queries for ChEMBL in under 10 seconds on average, even for the largest dataset we considered. Similarly, RDFox could answer all queries in just over a minute, even for UOBM(100).
+      </paragraph>
+      <paragraph>
+       To sum up, we can draw two main conclusions from our experiments. On the one hand, there is a fair number of ontologies used in practice that correspond (either directly or by means of KAON2-style rewritings) to markable Disjunctive Datalog programs, to which our rewriting techniques are applicable. On the other hand, when the program is markable, rewriting it first into Datalog via transposition can significantly improve reasoning performance and robustness.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,966 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Soft Linear Constraints with Application to Citation Field Extraction</title>
+<!--Generated on Tue Jun 10 17:57:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Soft Linear Constraints with Application to Citation Field Extraction</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Sam Anzaroot   Alexandre Passos   David Belanger   Andrew McCallum 
+<br class="ltx_break"/>Department of Computer Science 
+<br class="ltx_break"/>University of Massachusetts, Amherst 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">anzaroot, apassos, belanger, mccallum</span>}<span class="ltx_text ltx_font_typewriter">@cs.umass.edu</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Accurately segmenting a citation string into fields for authors, titles, etc. is a challenging task because the output typically obeys various global constraints. Previous work has shown that modeling <span class="ltx_text ltx_font_italic">soft constraints</span>, where the model is encouraged, but not require to obey the constraints, can substantially improve segmentation performance. On the other hand, for imposing <span class="ltx_text ltx_font_italic">hard constraints</span>, dual decomposition is a popular technique for efficient prediction given existing algorithms for unconstrained inference. We extend dual decomposition to perform prediction subject to soft constraints. Moreover, with a technique for performing inference given soft constraints, it is easy to automatically generate large families of constraints and learn their costs with a simple convex optimization problem during training. This allows us to obtain substantial gains in accuracy on a new, challenging citation extraction dataset.</p>
+</div><span class="ltx_ERROR undefined">\newfloat</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">algorithmttop</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.F1" class="ltx_figure">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">4 .<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m1" class="ltx_Math" alttext="{}_{\mbox{\tiny{{ref-marker}}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="bold" stretchy="false">ref-marker</mtext></msub></math> <span class="ltx_text ltx_font_bold">[</span>  
+J. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math>  D. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="{}_{\mbox{\tiny{{middle}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐦𝐢𝐝𝐝𝐥𝐞</mtext></msub></math>  Monk
+,<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m5" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math> <span class="ltx_text ltx_font_bold">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m6" class="ltx_Math" alttext="{}_{\mbox{\tiny{authors}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">authors</mtext></msub></math></span> <span class="ltx_text ltx_font_bold">[</span> Cardinal
+Functions on Boolean Algebra , <span class="ltx_text ltx_font_bold">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m7" class="ltx_Math" alttext="{}_{\mbox{\tiny{title}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">title</mtext></msub></math></span> <span class="ltx_text ltx_font_bold">[</span>
+ Lectures in Mathematics , ETH Zurich ,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m8" class="ltx_Math" alttext="{}_{\mbox{\tiny{{series}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑠𝑒𝑟𝑖𝑒𝑠</mtext></msub></math>  BirkhÂ¨ause Verlag , <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m9" class="ltx_Math" alttext="{}_{\mbox{\tiny{{publisher}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑢𝑏𝑙𝑖𝑠ℎ𝑒𝑟</mtext></msub></math>
+ Basel , Boston , Berlin , <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m10" class="ltx_Math" alttext="{}_{\mbox{\tiny{{address}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑎𝑑𝑑𝑟𝑒𝑠𝑠</mtext></msub></math>
+  1990 . <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m11" class="ltx_Math" alttext="{}_{\mbox{\tiny{{year}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐲𝐞𝐚𝐫</mtext></msub></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m12" class="ltx_Math" alttext="{}_{\mbox{\tiny{{date}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑑𝑎𝑡𝑒</mtext></msub></math> <span class="ltx_text ltx_font_bold">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m13" class="ltx_Math" alttext="{}_{\mbox{\tiny{venue}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">venue</mtext></msub></math></span></span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example labeled citation</div>
+</div>
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Citation field extraction, an instance of information extraction, is the task of segmenting and labeling research paper citation strings into their constituent parts, including authors, editors, year, journal, volume, conference venue, etc. This task is important because citation data is often provided only in plain text; however, having an accurate structured database of bibliographic information is necessary for many scientometric tasks, such as mapping scientific sub-communities, discovering research trends, and analyzing networks of researchers. Automated citation field extraction needs further research because it has not yet reached a level of accuracy at which it can be practically deployed in real-world systems.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Hidden Markov models and linear-chain conditional random fields (CRFs) have previously been applied to citation extraction <cite class="ltx_cite">[<a href="#bib.bib18" title="A simple method for citation metadata extraction using hidden markov models" class="ltx_ref">9</a>, <a href="#bib.bib20" title="Accurate information extraction from research papers using conditional random fields" class="ltx_ref">14</a>]</cite> . These models support efficient dynamic-programming inference, but only model <span class="ltx_text ltx_font_slanted">local</span> dependencies in the output label sequence. However citations have strong <span class="ltx_text ltx_font_slanted">global</span> regularities not captured by these models. For example many book citations contain both an <span class="ltx_text ltx_font_sansserif">author</span> section and an <span class="ltx_text ltx_font_sansserif">editor</span> section, but none have two disjoint <span class="ltx_text ltx_font_sansserif">author</span> sections. Since linear-chain models are unable to capture more than Markov dependencies, the models sometimes mislabel the <span class="ltx_text ltx_font_slanted">editor</span> as a second author. If we could enforce the global constraint that there should be only one <span class="ltx_text ltx_font_sansserif">author</span> section, accuracy could be improved.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">One framework for adding such global constraints into tractable models is <span class="ltx_text ltx_font_italic">constrained inference</span>, in which at inference time the original model is augmented with restrictions on the outputs such that they obey certain global regularities. When hard constraints can be encoded as linear equations on the output variables, and the underlying model’s inference task can be posed as linear optimization, one can formulate this constrained inference problem as an <span class="ltx_text ltx_font_italic">integer linear program</span> (ILP) <cite class="ltx_cite">[<a href="#bib.bib34" title="A linear programming formulation for global inference in natural language tasks" class="ltx_ref">15</a>]</cite>. Alternatively, one can employ <span class="ltx_text ltx_font_italic">dual decomposition</span> <cite class="ltx_cite">[<a href="#bib.bib6" title="On dual decomposition and linear programming relaxations for natural language processing" class="ltx_ref">17</a>]</cite>. Dual decompositions’s advantage over ILP is is that it can leverage existing inference algorithms for the original model as a black box. Such a modular algorithm is easy to implement, and works quite well in practice, providing certificates of optimality for most examples.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The above two approaches have previously been applied to impose <span class="ltx_text ltx_font_slanted">hard</span> constraints on a model’s output. On the other hand, recent work has demonstrated improvements in citation field extraction by imposing <span class="ltx_text ltx_font_slanted">soft</span> constraints <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>. Here, the model is not required obey the global constraints, but merely pays a penalty for their violation.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">This paper introduces a novel method for imposing soft constraints via dual decomposition. We also propose a method for learning the penalties the prediction problem incurs for violating these soft constraints. Because our learning method drives many penalties to zero, it allows practitioners to perform ‘constraint selection,’ in which a large number of automatically-generated candidate global constraints can be considered and automatically culled to a smaller set of useful constraints, which can be run quickly at test time.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Using our new method, we are able to incorporate not only all the soft global constraints of Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>, but also far more complex data-driven constraints, while also providing stronger optimality certificates than their beam search technique. On a new, more broadly representative, and challenging citation field extraction data set, we show that our methods achieve a 17.9% reduction in error versus a linear-chain conditional random field. Furthermore, we demonstrate that our inference technique can use and benefit from the constraints of Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>, but that including our data-driven constraints on top of these is beneficial. While this paper focusses on an application to citation field extraction, the novel methods introduced here would easily generalize to many problems with global output regularities.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Background</h2>
+
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Structured Linear Models</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The overall modeling technique we employ is to add soft constraints to a simple model for which we have an existing efficient prediction algorithm. For this underlying model, we employ a chain-structured conditional random field (CRF), since CRFs have been shown to perform better than other simple unconstrained models like hidden markov models for citation extraction <cite class="ltx_cite">[<a href="#bib.bib20" title="Accurate information extraction from research papers using conditional random fields" class="ltx_ref">14</a>]</cite>. We produce a prediction by performing <span class="ltx_text ltx_font_italic">MAP inference</span> <cite class="ltx_cite">[<a href="#bib.bib1" title="Probabilistic graphical models: principles and techniques" class="ltx_ref">10</a>]</cite>.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The MAP inference task in a CRF be can expressed as an optimization problem with a linear objective <cite class="ltx_cite">[<a href="#bib.bib45" title="Approximate inference in graphical models using lp relaxations" class="ltx_ref">21</a>, <a href="#bib.bib3" title="Introduction to dual decomposition for inference" class="ltx_ref">20</a>]</cite>. Here, we define a binary indicator variable for each candidate setting
+of each factor in the graphical model. Each of these indicator
+variables is associated with the score that the factor takes on
+when it has the indictor variable’s corresponding value. Since the
+log probability of some <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> in the CRF is proportional to sum of
+the scores of all the factors, we can concatenate the indicator
+variables as a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and the scores as a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> and write the MAP problem as</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\vspace{-0.5em}\begin{array}[]{&gt;{\displaystyle}r*4{&gt;{\displaystyle}l}}%&#10;\displaystyle\textbf{max.}&amp;\displaystyle\left\langle w,y\right\rangle\\&#10;\displaystyle\textbf{s.t.}&amp;\displaystyle y\in\mathcal{U},\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="right"><mtext mathvariant="bold">max.</mtext></mtd><mtd columnalign="left"><mrow><mo>⟨</mo><mrow><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="right"><mtext mathvariant="bold">s.t.</mtext></mtd><mtd columnalign="left"><mrow><mrow><mi>y</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒰</mi></mrow><mo>,</mo></mrow></mtd><mtd/><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where the set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="\mathcal{U}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒰</mi></math> represents the set of valid configurations
+of the indicator variables. Here, the constraints are that all neighboring factors agree on the components of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m5" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> in their overlap.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Structured Linear Models</span> are the general family of models
+where prediction requires solving a problem of the
+form (<a href="#S2.E1" title="(1) ‣ 2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), and they do not always correspond to a
+probabilistic model. The algorithms we present in later sections
+for handling soft global constraints and for learning the penalties of
+these constraints can be applied to general structured linear models,
+not just CRFs, provided we have an available algorithm for
+performing MAP inference.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Dual Decomposition for Global Constraints</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">In order to perform prediction subject to various global constraints, we may need to augment the problem (<a href="#S2.E1" title="(1) ‣ 2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) with additional constraints. Dual Decomposition is a popular method for performing MAP inference in this scenario, since it leverages known algorithms for MAP in the base problem where these extra constraints have not been added <cite class="ltx_cite">[<a href="#bib.bib51" title="MRF optimization via dual decomposition: message-passing revisited" class="ltx_ref">11</a>, <a href="#bib.bib3" title="Introduction to dual decomposition for inference" class="ltx_ref">20</a>, <a href="#bib.bib2" title="A tutorial on dual decomposition and lagrangian relaxation for inference in natural language processing" class="ltx_ref">18</a>]</cite>. In this case, the MAP problem can be formulated as a structured linear model
+similar to equation (<a href="#S2.E1" title="(1) ‣ 2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), for which we have a MAP algorithm, but
+where we have imposed some additional constraints <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="Ay\leq b" display="inline"><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>y</mi></mrow><mo>≤</mo><mi>b</mi></mrow></math> that no longer allow us to use the algorithm. In other words,
+we consider the problem</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\vspace{-0.5em}\begin{array}[]{&gt;{\displaystyle}r*4{&gt;{\displaystyle}l}}%&#10;\displaystyle\textbf{max.}&amp;\displaystyle\left\langle w,y\right\rangle\\&#10;\displaystyle\textbf{s.t.}&amp;\displaystyle y\in\mathcal{U}\\&#10;&amp;\displaystyle Ay\leq b,\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="right"><mtext mathvariant="bold">max.</mtext></mtd><mtd columnalign="left"><mrow><mo>⟨</mo><mrow><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="right"><mtext mathvariant="bold">s.t.</mtext></mtd><mtd columnalign="left"><mrow><mi>y</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒰</mi></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd/><mtd columnalign="left"><mrow><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>y</mi></mrow><mo>≤</mo><mi>b</mi></mrow><mo>,</mo></mrow></mtd><mtd/><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">for an arbitrary matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math>. We can write the
+Lagrangian of this problem as</p>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="L(y,\lambda)=\left\langle w,y\right\rangle+\lambda^{T}(Ay-b)." display="block"><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>λ</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo>⟨</mo><mrow><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow><mo>+</mo><mrow><msup><mi>λ</mi><mi>T</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>y</mi></mrow><mo>-</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">Regrouping terms and maximizing over the primal variables, we have
+the dual problem</p>
+<table id="S2.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\mathbf{min.}_{\lambda}D(\lambda)=\max_{y\in\mathcal{U}}\left\langle w+A^{T}%&#10;\lambda,y\right\rangle-\lambda^{T}b." display="block"><mrow><mi>𝐦𝐢𝐧</mi><msub><mo>.</mo><mi>λ</mi></msub><mi>D</mi><mrow><mo>(</mo><mi>λ</mi><mo>)</mo></mrow><mo>=</mo><munder><mo movablelimits="false">max</mo><mrow><mi>y</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒰</mi></mrow></munder><mrow><mo>⟨</mo><mi>w</mi><mo>+</mo><msup><mi>A</mi><mi>T</mi></msup><mi>λ</mi><mo>,</mo><mi>y</mi><mo>⟩</mo></mrow><mo>-</mo><msup><mi>λ</mi><mi>T</mi></msup><mi>b</mi><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">For any <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>, we can evaluate the dual objective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="D(\lambda)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mi>λ</mi><mo>)</mo></mrow></mrow></math>, since the
+maximization in (<a href="#S2.E4" title="(4) ‣ 2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) is of the same form as the original
+problem (<a href="#S2.E1" title="(1) ‣ 2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>), and we assumed
+we had a method for performing MAP in this. Furthermore, a subgradient of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="D(\lambda)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mi>λ</mi><mo>)</mo></mrow></mrow></math> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m7" class="ltx_Math" alttext="Ay^{*}-b" display="inline"><mrow><mrow><mi>A</mi><mo>⁢</mo><msup><mi>y</mi><mo>*</mo></msup></mrow><mo>-</mo><mi>b</mi></mrow></math>, for an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m8" class="ltx_Math" alttext="y^{*}" display="inline"><msup><mi>y</mi><mo>*</mo></msup></math> which maximizes this inner optimization problem. Therefore, we
+can minimize <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m9" class="ltx_Math" alttext="D(\lambda)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mi>λ</mi><mo>)</mo></mrow></mrow></math> with the projected subgradient method
+<cite class="ltx_cite">[<a href="#bib.bib46" title="Convex optimization" class="ltx_ref">2</a>]</cite>, and the optimal <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m10" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> can be obtained when
+evaluating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m11" class="ltx_Math" alttext="D(\lambda^{*})" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>λ</mi><mo>*</mo></msup><mo>)</mo></mrow></mrow></math>. Note that the subgradient of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m12" class="ltx_Math" alttext="D(\lambda)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mi>λ</mi><mo>)</mo></mrow></mrow></math> is the amount by which each constraint is
+violated by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m13" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> when maximizing over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m14" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_caption">DD: projected subgradient for dual decomposition with hard constraints</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_text ltx_font_small">
+<span class="ltx_ERROR undefined">\While</span>has not converged
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="y^{(t)}=\operatornamewithlimits{argmax}_{y\in\mathcal{U}}\left\langle w+A^{T}%&#10;\lambda,y\right\rangle" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mrow><munder><mo mathsize="normal" movablelimits="false" stretchy="false">argmax</mo><mrow><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">∈</mo><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒰</mi></mrow></munder><mo mathsize="small" stretchy="false">⁡</mo><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mrow><mi mathsize="normal" stretchy="false">w</mi><mo mathsize="normal" stretchy="false">+</mo><mrow><msup><mi mathsize="normal" stretchy="false">A</mi><mi mathsize="normal" stretchy="false">T</mi></msup><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">λ</mi></mrow></mrow><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">y</mi></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="\lambda^{(t)}=\Pi_{0\leq\cdot}\left[\lambda^{(t-1)}-\eta^{(t)}(Ay-b)\right]" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">λ</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">Π</mi><mrow><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">≤</mo><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">⋅</mo></mrow></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">[</mo><mrow><msup><mi mathsize="normal" stretchy="false">λ</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">-</mo><mrow><msup><mi mathsize="normal" stretchy="false">η</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mrow><mi mathsize="normal" stretchy="false">A</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">y</mi></mrow><mo mathsize="normal" stretchy="false">-</mo><mi mathsize="normal" stretchy="false">b</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow><mo mathsize="small" stretchy="false">]</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\EndWhile</span></span></p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Algorithm <a href="#S2.SS2" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> depicts the basic projected subgradient
+descent algorithm for dual decomposition. The projection operator
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="\Pi" display="inline"><mi mathvariant="normal">Π</mi></math> consists of truncating all negative coordinates of
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> to 0. This is necessary because <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is a vector of dual variables for
+inequality constraints. The algorithm has converged when each constraint is
+either satisfied by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="y^{(t)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup></math> with equality or its corresponding component of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m5" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is
+0, due to complimentary slackness <cite class="ltx_cite">[<a href="#bib.bib46" title="Convex optimization" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Soft Constraints in Dual Decomposition</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We now introduce an extension of Algorithm <a href="#S2.SS2" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> to
+handle soft constraints. In our formulation, a soft-constrained model imposes a
+penalty for each unsatisfied constraint, proportional to the
+amount by which it is violated. Therefore, our derivation parallels how
+soft-margin SVMs are derived from hard-margin SVMs by introducing
+auxiliary slack variables <cite class="ltx_cite">[<a href="#bib.bib47" title="Support-vector networks" class="ltx_ref">7</a>]</cite>. Note that when performing MAP subject to soft constraints, optimal solutions might not satisfy some constraints, since doing so would reduce
+the model’s score by too much.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Consider the optimization problems of the form:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\vspace{-0.5em}\begin{array}[]{&gt;{\displaystyle}r*4{&gt;{\displaystyle}l}}%&#10;\displaystyle\textbf{max.}&amp;\displaystyle\left\langle w,y\right\rangle-\left%&#10;\langle c,z\right\rangle\\&#10;\displaystyle\textbf{s.t.}&amp;\displaystyle y\in\mathcal{U}\\&#10;&amp;\displaystyle Ay-b\leq z\\&#10;&amp;\displaystyle-z\leq 0,\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="right"><mtext mathvariant="bold">max.</mtext></mtd><mtd columnalign="left"><mrow><mrow><mo>⟨</mo><mrow><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow><mo>-</mo><mrow><mo>⟨</mo><mrow><mi>c</mi><mo>,</mo><mi>z</mi></mrow><mo>⟩</mo></mrow></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd columnalign="right"><mtext mathvariant="bold">s.t.</mtext></mtd><mtd columnalign="left"><mrow><mi>y</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒰</mi></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd/><mtd columnalign="left"><mrow><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>y</mi></mrow><mo>-</mo><mi>b</mi></mrow><mo>≤</mo><mi>z</mi></mrow></mtd><mtd/><mtd/><mtd/></mtr><mtr><mtd/><mtd columnalign="left"><mrow><mrow><mrow><mo>-</mo><mi>z</mi></mrow><mo>≤</mo><mn>0</mn></mrow><mo>,</mo></mrow></mtd><mtd/><mtd/><mtd/></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">For positive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math>, it is clear that an optimal <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> will be
+equal to the degree to which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="a_{i}^{T}y\leq b_{i}" display="inline"><mrow><mrow><msubsup><mi>a</mi><mi>i</mi><mi>T</mi></msubsup><mo>⁢</mo><mi>y</mi></mrow><mo>≤</mo><msub><mi>b</mi><mi>i</mi></msub></mrow></math> is
+violated. Therefore, we pay a cost <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> times the degree to which
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th constraint is violated, which mirrors how slack
+variables are used to represent the hinge loss for SVMs. Note that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> has to be positive, otherwise this linear program is
+unbounded and an optimal value can be obtained by setting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> to
+infinity.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Using a similar construction as in section <a href="#S2.SS2" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>
+we write the Lagrangian as:
+<span class="ltx_ERROR undefined">{dmath}</span>
+
+L(y,z,λ,μ) = ⟨w,y ⟩ - ⟨c,z ⟩ + λ^T(Ay - b - z) + μ^T (-z).
+
+The optimality constraints with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> tell us that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="-c-\lambda-\mu=0" display="inline"><mrow><mrow><mo>-</mo><mi>c</mi><mo>-</mo><mi>λ</mi><mo>-</mo><mi>μ</mi></mrow><mo>=</mo><mn>0</mn></mrow></math>, hence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="\mu=-c-\lambda" display="inline"><mrow><mi>μ</mi><mo>=</mo><mrow><mo>-</mo><mi>c</mi><mo>-</mo><mi>λ</mi></mrow></mrow></math>. Substituting, we have</p>
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="L(y,\lambda)=\left\langle w,y\right\rangle+\lambda^{T}(Ay-b)," display="block"><mrow><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>λ</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo>⟨</mo><mrow><mi>w</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow><mo>+</mo><mrow><msup><mi>λ</mi><mi>T</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>A</mi><mo>⁢</mo><mi>y</mi></mrow><mo>-</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">except the constraint that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="\mu=-c-\lambda" display="inline"><mrow><mi>μ</mi><mo>=</mo><mrow><mo>-</mo><mi>c</mi><mo>-</mo><mi>λ</mi></mrow></mrow></math> implies that for
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> to be positive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="\lambda\leq c" display="inline"><mrow><mi>λ</mi><mo>≤</mo><mi>c</mi></mrow></math>.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Since this Lagrangian has the same form as equation (<a href="#S2.E3" title="(3) ‣ 2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), we can also derive a dual problem, which is the same as in
+equation (<a href="#S2.E4" title="(4) ‣ 2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>), with the additional constraint that each
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\lambda_{i}" display="inline"><msub><mi>λ</mi><mi>i</mi></msub></math> can not be bigger than its cost <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math>. In other
+words, the dual problem can not penalize the violation of a
+constraint more than the soft constraint model in the primal would penalize you if you violated
+it.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">This optimization problem
+can still be solved with projected subgradient
+descent and is depicted in Algorithm <a href="#S3" title="3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The only modifications to Algorithm <a href="#S2.SS2" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> are replacing the
+coordinate-wise projection <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="\Pi_{0\leq\cdot}" display="inline"><msub><mi mathvariant="normal">Π</mi><mrow><mn>0</mn><mo>⁣</mo><mo>≤</mo><mo>⁣</mo><mo>⋅</mo></mrow></msub></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="\Pi_{0\leq\cdot\leq c}" display="inline"><msub><mi mathvariant="normal">Π</mi><mrow><mn>0</mn><mo>⁣</mo><mo>≤</mo><mo>⁣</mo><mo>⋅</mo><mo>⁣</mo><mrow><mi/><mo>≤</mo><mi>c</mi></mrow></mrow></msub></math> and how we check for convergence. Now, we check for the KKT
+conditions of (<a href="#S3.E5" title="(5) ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>), where for every constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>,
+either the constraint is satisfied with equality, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m4" class="ltx_Math" alttext="\lambda_{i}=0" display="inline"><mrow><msub><mi>λ</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn></mrow></math>, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m5" class="ltx_Math" alttext="\lambda_{i}=c_{i}" display="inline"><mrow><msub><mi>λ</mi><mi>i</mi></msub><mo>=</mo><msub><mi>c</mi><mi>i</mi></msub></mrow></math>.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">Therefore, implementing soft-constrained
+dual decomposition is as easy as implementing hard-constrained
+dual decomposition, and the per-iteration complexity is the
+same. We encourage further applications of soft-constraint dual
+decomposition to existing and new NLP problems.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_caption">Soft-DD: projected subgradient for dual decomposition with soft constraints</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_text ltx_font_small">
+<span class="ltx_ERROR undefined">\While</span>has not converged
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="y^{(t)}=\operatornamewithlimits{argmax}_{y\in\mathcal{U}}\left\langle w+A^{T}%&#10;\lambda,y\right\rangle" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mrow><munder><mo mathsize="normal" movablelimits="false" stretchy="false">argmax</mo><mrow><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">∈</mo><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒰</mi></mrow></munder><mo mathsize="small" stretchy="false">⁡</mo><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mrow><mi mathsize="normal" stretchy="false">w</mi><mo mathsize="normal" stretchy="false">+</mo><mrow><msup><mi mathsize="normal" stretchy="false">A</mi><mi mathsize="normal" stretchy="false">T</mi></msup><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">λ</mi></mrow></mrow><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">y</mi></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="\lambda^{(t)}=\Pi_{0\leq\cdot\leq c}\left[\lambda^{(t-1)}-\eta^{(t)}(Ay-b)\right]" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">λ</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">Π</mi><mrow><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">≤</mo><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">⋅</mo><mo mathsize="small" stretchy="false">⁣</mo><mrow><mi/><mo mathsize="normal" stretchy="false">≤</mo><mi mathsize="normal" stretchy="false">c</mi></mrow></mrow></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">[</mo><mrow><msup><mi mathsize="normal" stretchy="false">λ</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">-</mo><mrow><msup><mi mathsize="normal" stretchy="false">η</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mrow><mi mathsize="normal" stretchy="false">A</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">y</mi></mrow><mo mathsize="normal" stretchy="false">-</mo><mi mathsize="normal" stretchy="false">b</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow><mo mathsize="small" stretchy="false">]</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\EndWhile</span></span></p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Learning Penalties</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">One consideration when using soft v.s. hard constraints is that
+soft constraints present a new training problem, since
+we need to choose the vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>, the penalties for violating the
+constraints.
+An important property of problem (<a href="#S3.E5" title="(5) ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) in the previous
+section is that it corresponds to a
+structured linear model over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>. Therefore, we can apply known training algorithms for
+estimating the parameters of structured linear models to choose
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">All we need to employ the structured perceptron algorithm <cite class="ltx_cite">[<a href="#bib.bib49" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">6</a>]</cite> or the
+structured SVM algorithm <cite class="ltx_cite">[<a href="#bib.bib50" title="Support vector machine learning for interdependent and structured output spaces" class="ltx_ref">23</a>]</cite> is a
+black-box procedure for performing MAP inference in the structured
+linear model given an arbitrary cost vector. Fortunately, the MAP problem for  (<a href="#S3.E5" title="(5) ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) can be solved using Soft-DD, in Algorithm <a href="#S3" title="3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Each penalty <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> has to be non-negative; otherwise, the
+optimization problem in equation (<a href="#S3.E5" title="(5) ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>) is ill-defined. This can be ensured by simple modifications of the perceptron and subgradient descent optimization of the structured SVM objective simply by truncating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> coordinate-wise to be non-negative at every learning iteration.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">Intuitively, the perceptron update increases the penalty for a constraint if it is satisfied in the ground truth and not in an inferred prediction, and decreases the penalty if the constraint is satisfied in the prediction and not the ground truth. Since we truncate penalties at 0, this suggests that we will learn a penalty of 0 for constraints in three categories: constraints that do not hold in the ground truth, constraints that hold in the ground truth but are satisfied in practice by performing inference in the base CRF model, and constraints that are satisfied in practice as a side-effect of imposing non-zero penalties on some other constraints . A similar analysis holds for the structured SVM approach.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">Therefore, we can view learning the values of the penalties not just as parameter tuning, but as a means to perform ‘constraint selection,’ since constraints that have a penalty of 0 can be ignored. This property allows us to consider large families of constraints, from which the useful ones are automatically identified.</p>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p">We found it beneficial, though it is not theoretically necessary,
+to learn the constraints on a held-out development set, separately
+from the other model parameters, as during training most
+constraints are satisfied due to overfitting, which leads to an
+underestimation of the relevant penalties.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Citation Extraction Data</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We consider the UMass citation dataset, first introduced in Anzaroot and McCallum <cite class="ltx_cite">[<a href="#bib.bib39" title="A new dataset for fine-grained citation field extraction" class="ltx_ref">1</a>]</cite>. It has over 1800 citation from many academic fields,
+extracted from the arXiv. This dataset contains both coarse-grained
+and fine-grained labels; for example it contains labels for the
+segment of all authors, segments for each individual author, and
+for the first and last name of each author. There are 660
+citations in the development set and 367 citation in the test set.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The labels in the UMass dataset are a concatenation of labels from a hierarchically-defined schema. For example, a first name of an author is tagged as: <span class="ltx_text ltx_font_italic">authors/person/first</span>. In addition, individual tokens are labeled using a BIO label schema for each level in the hierarchy.
+BIO is a commonly used labeling schema for information extraction tasks. BIO labeling allows individual labels on tokens to label segmentation information as well as labels for the segments. In this schema, labels that begin segments are prepended with a <span class="ltx_text ltx_font_italic">B</span>, labels that continue a segment are prepended with an <span class="ltx_text ltx_font_italic">I</span>, and tokens that don’t have a labeling in this schema are given an <span class="ltx_text ltx_font_italic">O</span> label. For example, in a hierarchical BIO label schema the first token in the first name for the second author may be labeled as: <span class="ltx_text ltx_font_italic">I-authors/B-person/B-first</span>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">An example labeled citation in this dataset can be viewed in figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Global Constraints for Citation Extraction</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Constraint Templates</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We now describe the families of global constraints we consider for citation extraction.
+Note these constraints are all
+linear, since they depend only on the counts of each possible
+conditional random field label. Moreover, since our labels are
+BIO-encoded, it is possible, by counting B tags, to count how
+often each citation tag itself appears in a sentence. The first two
+families of constraints that we describe are general to any sequence
+labeling task while the last is specific to hierarchical labeling
+such as available in the UMass dataset.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Our sequence output is denoted as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and an element of this sequence is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math>.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">We denote <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="\left[\left[y_{k}=i\right]\right]" display="inline"><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>i</mi><mo>]</mo></mrow><mo>]</mo></mrow></math> as the function
+that outputs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m3" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math> has a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m4" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> at index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m6" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math> otherwise.
+Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m7" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math> represents an output tag of the CRF, so if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m8" class="ltx_Math" alttext="\left[\left[y_{k}=i\right]\right]" display="inline"><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>i</mi><mo>]</mo></mrow><mo>]</mo></mrow></math> = 1, then we have that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m9" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math> was given a label with index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m10" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Singleton Constraints</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Singleton constraints ensure that each label can appear at most once in a citation. These are same global constraints that were used for citation field extraction in Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>. We define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="s(i)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> to be the number of times the label with index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is predicted in a citation, formally:</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<table id="S5.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m1" class="ltx_Math" alttext="s(i)=\sum_{y_{k}\in y}\left[\left[y_{k}=i\right]\right]" display="block"><mrow><mi>s</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>i</mi><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">The constraint that each label can appear at most once takes the form:</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<table id="S5.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex2.m1" class="ltx_Math" alttext="s(i)&lt;=1" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Pairwise Constraints</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Pairwise constraints are constraints on the counts of two labels in a citation. We define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="z_{1}(i,j)" display="inline"><mrow><msub><mi>z</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> to be</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<table id="S5.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex3.m1" class="ltx_Math" alttext="z_{1}(i,j)=\sum_{y_{k}\in y}\left[\left[y_{k}=i\right]\right]+\sum_{y_{k}\in y%&#10;}\left[\left[y_{k}=j\right]\right]" display="block"><mrow><msub><mi>z</mi><mn>1</mn></msub><mrow><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>i</mi><mo>]</mo></mrow><mo>]</mo></mrow><mo>+</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>j</mi><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p3.m1" class="ltx_Math" alttext="z_{2}(i,j)" display="inline"><mrow><msub><mi>z</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> to be</p>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<table id="S5.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex4.m1" class="ltx_Math" alttext="z_{2}(i,j)=\sum_{y_{k}\in y}\left[\left[y_{k}=i\right]\right]-\sum_{y_{k}\in y%&#10;}\left[\left[y_{k}=j\right]\right]" display="block"><mrow><msub><mi>z</mi><mn>2</mn></msub><mrow><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>i</mi><mo>]</mo></mrow><mo>]</mo></mrow><mo>-</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo>[</mo><mrow><mo>[</mo><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><mi>j</mi><mo>]</mo></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">We consider all constraints of the forms: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m1" class="ltx_Math" alttext="z(i,j)\leq{0,1,2,3}" display="inline"><mrow><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>≤</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m2" class="ltx_Math" alttext="z(i,j)\geq{0,1,2,3}" display="inline"><mrow><mrow><mi>z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>≥</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow></mrow></math>.</p>
+</div>
+<div id="S5.SS3.p6" class="ltx_para">
+<p class="ltx_p">Note that some pairs of these constraints are redundant or logically incompatible. However, we are using them as soft constraints, so these constraints will not necessarily be satisfied by the output of the model, which eliminates concern over enforcing logically impossible outputs. Furthermore, in section <a href="#S3.SS1" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a> we described how our procedure for learning penalties will drive some penalties to 0, which effectively removes them from our set of constraints we consider. It can be shown, for example, that we will never learn non-zero penalties for certain pairs of logically incompatible constraints using the perceptron-style algorithm described in section <a href="#S3.SS1" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a> .</p>
+</div>
+<div id="S5.F2" class="ltx_figure">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unconstrained</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:375.6pt;"><span class="ltx_text ltx_font_small">[17]</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m1" class="ltx_Math" alttext="{}_{\mbox{\tiny{{ref-marker}}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="bold" stretchy="false">ref-marker</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  D.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m2" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> Sivia ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m3" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m4" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small">  J.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m5" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> Skilling ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m6" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m7" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m8" class="ltx_Math" alttext="{}_{\mbox{\tiny{authors}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">authors</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  Data Analysis : A Bayesian Tutorial ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m9" class="ltx_Math" alttext="{}_{\mbox{\tiny{{\color{red}{booktitle}}}}}" display="inline"><msub><mi/><mtext mathcolor="#FF0000" mathsize="small" stretchy="false">𝑏𝑜𝑜𝑘𝑡𝑖𝑡𝑙𝑒</mtext></msub></math><span class="ltx_text ltx_font_small">  Oxford University Press , </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m10" class="ltx_Math" alttext="{}_{\mbox{\tiny{{publisher}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑢𝑏𝑙𝑖𝑠ℎ𝑒𝑟</mtext></msub></math><span class="ltx_text ltx_font_small">   2006 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m11" class="ltx_Math" alttext="{}_{\mbox{\tiny{{year}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐲𝐞𝐚𝐫</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m12" class="ltx_Math" alttext="{}_{\mbox{\tiny{{date}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑑𝑎𝑡𝑒</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m13" class="ltx_Math" alttext="{}_{\mbox{\tiny{venue}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">venue</mtext></msub></math></span><span class="ltx_text ltx_font_small"></span></p></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:284.5pt;" width="284.5pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Constrained</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:375.6pt;"><span class="ltx_text ltx_font_small">[17]</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m14" class="ltx_Math" alttext="{}_{\mbox{\tiny{{ref-marker}}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="bold" stretchy="false">ref-marker</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  D.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m15" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> Sivia ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m16" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m17" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small">  J.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m18" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> Skilling ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m19" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m20" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m21" class="ltx_Math" alttext="{}_{\mbox{\tiny{authors}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">authors</mtext></msub></math></span><span class="ltx_text ltx_font_small">  Data Analysis : A Bayesian Tutorial ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m22" class="ltx_Math" alttext="{}_{\mbox{\tiny{{\color{red}{title}}}}}" display="inline"><msub><mi/><mtext mathcolor="#FF0000" mathsize="small" stretchy="false">𝑡𝑖𝑡𝑙𝑒</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  Oxford University Press , </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m23" class="ltx_Math" alttext="{}_{\mbox{\tiny{{publisher}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑢𝑏𝑙𝑖𝑠ℎ𝑒𝑟</mtext></msub></math><span class="ltx_text ltx_font_small">   2006 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m24" class="ltx_Math" alttext="{}_{\mbox{\tiny{{year}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐲𝐞𝐚𝐫</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m25" class="ltx_Math" alttext="{}_{\mbox{\tiny{{date}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑑𝑎𝑡𝑒</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m26" class="ltx_Math" alttext="{}_{\mbox{\tiny{venue}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">venue</mtext></msub></math></span><span class="ltx_text ltx_font_small"></span></p></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:284.5pt;" width="284.5pt"/></tr>
+</tbody>
+</table>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unconstrained</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:375.6pt;"><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  Sobol’ ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m27" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> I.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m28" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> M.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m29" class="ltx_Math" alttext="{}_{\mbox{\tiny{{middle}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐦𝐢𝐝𝐝𝐥𝐞</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m30" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m31" class="ltx_Math" alttext="{}_{\mbox{\tiny{authors}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">authors</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small"> (1990) .</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m32" class="ltx_Math" alttext="{}_{\mbox{\tiny{{year}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑦𝑒𝑎𝑟</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m33" class="ltx_Math" alttext="{}_{\mbox{\tiny{date}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">date</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">On sensitivity estimation for nonlinear mathematical models .</span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m34" class="ltx_Math" alttext="{}_{\mbox{\tiny{title}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">title</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small"> Matematicheskoe Modelirovanie ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m35" class="ltx_Math" alttext="{}_{\mbox{\tiny{{journal}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑗𝑜𝑢𝑟𝑛𝑎𝑙</mtext></msub></math><span class="ltx_text ltx_font_small"> 2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m36" class="ltx_Math" alttext="{}_{\mbox{\tiny{{volume}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑣𝑜𝑙𝑢𝑚𝑒</mtext></msub></math><span class="ltx_text ltx_font_small"> (1) :</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m37" class="ltx_Math" alttext="{}_{\mbox{\tiny{{number}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑛𝑢𝑚𝑏𝑒𝑟</mtext></msub></math><span class="ltx_text ltx_font_small"> 112–118 .</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m38" class="ltx_Math" alttext="{}_{\mbox{\tiny{{pages}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑎𝑔𝑒𝑠</mtext></msub></math><span class="ltx_text ltx_font_small">  ( In Russian ) . </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m39" class="ltx_Math" alttext="{}_{\mbox{\tiny{{{\color{red} status}}}}}" display="inline"><msub><mi/><mtext mathcolor="#FF0000" mathsize="small" mathvariant="italic" stretchy="false"> status</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m40" class="ltx_Math" alttext="{}_{\mbox{\tiny{venue}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">venue</mtext></msub></math></span></p></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:284.5pt;" width="284.5pt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Constrained</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t">
+<p class="ltx_p ltx_parbox ltx_align_middle" style="width:375.6pt;"><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">  Sobol’ ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m41" class="ltx_Math" alttext="{}_{\mbox{\tiny{{last}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐥𝐚𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> I.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m42" class="ltx_Math" alttext="{}_{\mbox{\tiny{{first}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐟𝐢𝐫𝐬𝐭</mtext></msub></math><span class="ltx_text ltx_font_small"> M.</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m43" class="ltx_Math" alttext="{}_{\mbox{\tiny{{middle}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝐦𝐢𝐝𝐝𝐥𝐞</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m44" class="ltx_Math" alttext="{}_{\mbox{\tiny{{person}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑒𝑟𝑠𝑜𝑛</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m45" class="ltx_Math" alttext="{}_{\mbox{\tiny{authors}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">authors</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small"> (1990) .</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m46" class="ltx_Math" alttext="{}_{\mbox{\tiny{{year}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑦𝑒𝑎𝑟</mtext></msub></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m47" class="ltx_Math" alttext="{}_{\mbox{\tiny{date}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">date</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small">On sensitivity estimation for nonlinear mathematical models .</span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m48" class="ltx_Math" alttext="{}_{\mbox{\tiny{title}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">title</mtext></msub></math></span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">[</span><span class="ltx_text ltx_font_small"> Matematicheskoe Modelirovanie ,</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m49" class="ltx_Math" alttext="{}_{\mbox{\tiny{{journal}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑗𝑜𝑢𝑟𝑛𝑎𝑙</mtext></msub></math><span class="ltx_text ltx_font_small"> 2</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m50" class="ltx_Math" alttext="{}_{\mbox{\tiny{{volume}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑣𝑜𝑙𝑢𝑚𝑒</mtext></msub></math><span class="ltx_text ltx_font_small"> (1) :</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m51" class="ltx_Math" alttext="{}_{\mbox{\tiny{{number}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑛𝑢𝑚𝑏𝑒𝑟</mtext></msub></math><span class="ltx_text ltx_font_small"> 112–118 .</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m52" class="ltx_Math" alttext="{}_{\mbox{\tiny{{pages}}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">𝑝𝑎𝑔𝑒𝑠</mtext></msub></math><span class="ltx_text ltx_font_small">  ( In Russian ) . </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m53" class="ltx_Math" alttext="{}_{\mbox{\tiny{{{\color{red} language}}}}}" display="inline"><msub><mi/><mtext mathcolor="#FF0000" mathsize="small" mathvariant="italic" stretchy="false"> language</mtext></msub></math><span class="ltx_text ltx_font_small">  </span><span class="ltx_text ltx_font_bold ltx_font_small">]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m54" class="ltx_Math" alttext="{}_{\mbox{\tiny{venue}}}" display="inline"><msub><mi/><mtext mathsize="small" mathvariant="normal" stretchy="false">venue</mtext></msub></math></span></p></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:284.5pt;" width="284.5pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> Two examples where imposing soft global constraints improves field extraction errors. Soft-DD converged in 1 iteration on the first example, and 7 iterations on the second.
+When a reference is citing a book and not a section of the book, the correct labeling of the name of the book is <span class="ltx_text ltx_font_sansserif">title</span>. In the first example, the baseline CRF incorrectly outputs <span class="ltx_text ltx_font_sansserif">booktitle</span>, but this is fixed by Soft-DD, which penalizes outputs based on the constraint that <span class="ltx_text ltx_font_sansserif">booktitle</span> should co-occur with an <span class="ltx_text ltx_font_sansserif">address</span> label.
+In the second example, the unconstrained CRF output violates the constraint that <span class="ltx_text ltx_font_sansserif">title</span> and <span class="ltx_text ltx_font_sansserif">status</span> labels should not co-occur. The ground truth labeling also violates a constraint that <span class="ltx_text ltx_font_sansserif">title</span> and <span class="ltx_text ltx_font_sansserif">language</span> labels should not co-occur. At convergence of the Soft-DD algorithm, the correct labeling of <span class="ltx_text ltx_font_sansserif">language</span> is predicted, which is possible because of the use of soft constraints. </div>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Hierarchical Equality Constraints</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">The labels in the citation dataset are hierarchical labels. This means that the labels are the concatenation of all the levels in the hierarchy. We can create constraints that are dependent on only one or couple of elements in the hierarchy.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">We define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m1" class="ltx_Math" alttext="C(x,i)" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></math> as the function that returns 1 if the output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> contains the label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> in the hierarchy and 0 otherwise. We define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p2.m4" class="ltx_Math" alttext="e(i,j)" display="inline"><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> to be</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<table id="S5.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex5.m1" class="ltx_Math" alttext="e(i,j)=\sum_{y_{k}\in y}\left[\left[C(y_{k},i)\right]\right]-\sum_{y_{k}\in y}%&#10;\left[\left[C(y_{k},j)\right]\right]" display="block"><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo fence="true">[[</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow><mo fence="true">]]</mo></mrow></mrow><mo>-</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>∈</mo><mi>y</mi></mrow></munder><mrow><mo fence="true">[[</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow><mo fence="true">]]</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS4.p4" class="ltx_para">
+<p class="ltx_p">Hierarchical equality constraints take the forms:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S5.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E7.m1" class="ltx_Math" alttext="\displaystyle e(i,j)" display="inline"><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E7.m2" class="ltx_Math" alttext="\displaystyle\geq" display="inline"><mo>≥</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E7.m3" class="ltx_Math" alttext="\displaystyle 0" display="inline"><mn>0</mn></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+<tr id="S5.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E8.m1" class="ltx_Math" alttext="\displaystyle e(i,j)" display="inline"><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E8.m2" class="ltx_Math" alttext="\displaystyle\leq" display="inline"><mo>≤</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E8.m3" class="ltx_Math" alttext="\displaystyle 0" display="inline"><mn>0</mn></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.5 </span>Local constraints</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p class="ltx_p">We constrain the output labeling of the chain-structured CRF to be a valid BIO encoding. This both improves performance of the underlying model when used without global constraints, as well as ensures the validity of the global constraints we impose, since they operate only on <span class="ltx_text ltx_font_italic">B</span> labels. The constraint that the labeling is valid BIO can be expressed as a collection of pairwise constraints on adjacent labels in the sequence. Rather than enforcing these constraints using dual decomposition, they can be enforced directly when performing MAP inference in the CRF by modifying the dynamic program of the Viterbi algorithm to only allow valid pairs of adjacent labels.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Constraints</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">F1 score</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Sparsity</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"># of cons</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">94.44</span></td>
+<td class="ltx_td ltx_border_r ltx_border_tt"/>
+<td class="ltx_td ltx_border_r ltx_border_tt"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Only-one</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">94.62</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Hierarchical</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">94.55</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">56.25%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">16</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Pairwise</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">95.23</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">43.19%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">609</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">All</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">95.39</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">32.96%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">628</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">All DD</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">94.60</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">628</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Set of constraints learned and F1 scores. The last row depicts the result of inference using all constraints as hard constraints.</div>
+</div>
+</div>
+<div id="S5.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.6 </span>Constraint Pruning</h3>
+
+<div id="S5.SS6.p1" class="ltx_para">
+<p class="ltx_p">While the techniques from section <a href="#S3.SS1" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>
+can easily cope with a large numbers of constraints at training
+time, this can be computationally costly, specially if one is
+considering very large constraint families. This is problematic because the size of some constraint families we consider grows quadratically with the number of candidate labels, and there are about 100 in the UMass dataset. Such a family consists of constraints that the sum of the
+counts of two different label types has to be bounded (a useful
+example is that there can’t be more than one out of “phd
+thesis” and “journal”). Therefore, quickly pruning bad constraints can save a substantial amount of training time, and can lead to better generalization.</p>
+</div>
+<div id="S5.SS6.p2" class="ltx_para">
+<p class="ltx_p">To do so, we calculate a score that estimates how useful each
+constraint is expected to be. Our score compares how often the
+constraint is violated in the ground truth examples versus our predictions. Here, prediction is done with respect to the base chain-structured CRF tagger and does not include global constraints.
+Note that it may make sense to consider a
+constraint that is sometimes violated in the ground truth, as the penalty learning
+algorithm can learn a small penalty for it, which will allow it to be
+violated some of the time. Our importance score is defined as, for
+each constraint <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> on labeled set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m2" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>,</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E9.m1" class="ltx_Math" alttext="\displaystyle imp(c)=\frac{\sum_{d\in D}[[max_{y}w_{d}^{T}y]]_{c}}{\sum_{d\in D%&#10;}[[y_{d}]]_{c}}," display="inline"><mrow><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>d</mi><mo>∈</mo><mi>D</mi></mrow></msub><msub><mrow><mo fence="true">[[</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msub><mi>x</mi><mi>y</mi></msub><mo>⁢</mo><msubsup><mi>w</mi><mi>d</mi><mi>T</mi></msubsup><mo>⁢</mo><mi>y</mi></mrow><mo fence="true">]]</mo></mrow><mi>c</mi></msub></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>d</mi><mo>∈</mo><mi>D</mi></mrow></msub><msub><mrow><mo fence="true">[[</mo><msub><mi>y</mi><mi>d</mi></msub><mo fence="true">]]</mo></mrow><mi>c</mi></msub></mrow></mfrac></mstyle></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m3" class="ltx_Math" alttext="[[y]]_{c}" display="inline"><msub><mrow><mo fence="true">[[</mo><mi>y</mi><mo fence="true">]]</mo></mrow><mi>c</mi></msub></math> is 1 if the constraint is violated on output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and 0 otherwise. Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m5" class="ltx_Math" alttext="y_{d}" display="inline"><msub><mi>y</mi><mi>d</mi></msub></math> denotes the ground truth labeling and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p2.m6" class="ltx_Math" alttext="w_{d}" display="inline"><msub><mi>w</mi><mi>d</mi></msub></math> is the vector of scores for the CRF tagger.</p>
+</div>
+<div id="S5.SS6.p3" class="ltx_para">
+<p class="ltx_p">We prune constraints by picking a cutoff value for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p3.m1" class="ltx_Math" alttext="imp(c)" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></math>. A
+value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p3.m2" class="ltx_Math" alttext="imp(c)" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> above 1 implies that the constraint is more
+violated on the predicted examples than on the ground truth, and
+hence that we might want to keep it.</p>
+</div>
+<div id="S5.SS6.p4" class="ltx_para">
+<p class="ltx_p">We also find that the constraints that have the largest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p4.m1" class="ltx_Math" alttext="imp" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>p</mi></mrow></math>
+values are semantically interesting.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">There are multiple previous examples of augmenting chain-structured sequence models with terms capturing global relationships by expanding the chain to a more complex graphical model with non-local dependencies between the outputs. Inference in these models can be performed, for example, with loopy belief propagation <cite class="ltx_cite">[<a href="#bib.bib36" title="Collective information extraction with relational markov networks" class="ltx_ref">3</a>, <a href="#bib.bib37" title="Collective segmentation and labeling of distant entities in information extraction" class="ltx_ref">22</a>]</cite> or Gibbs sampling <cite class="ltx_cite">[<a href="#bib.bib38" title="Incorporating non-local information into information extraction systems by gibbs sampling" class="ltx_ref">8</a>]</cite>. Belief propagation is prohibitively expensive in our model due to the high cardinalities of the output variables and of the global factors, which involve all output variables simultaneously. There are various methods for exploiting the combinatorial structure of these factors, but performance would still have higher complexity than our method. While Gibbs sampling has been shown to work well tasks such as named entity recognition <cite class="ltx_cite">[<a href="#bib.bib38" title="Incorporating non-local information into information extraction systems by gibbs sampling" class="ltx_ref">8</a>]</cite>, our previous experiments show that it does not work well for citation extraction, where it found only low-quality solutions in practice because the sampling did not mix well, even on a simple chain-structured CRF.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Recently, dual decomposition has become a popular method for solving complex structured prediction problems in NLP <cite class="ltx_cite">[<a href="#bib.bib5" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">12</a>, <a href="#bib.bib6" title="On dual decomposition and linear programming relaxations for natural language processing" class="ltx_ref">17</a>, <a href="#bib.bib2" title="A tutorial on dual decomposition and lagrangian relaxation for inference in natural language processing" class="ltx_ref">18</a>, <a href="#bib.bib7" title="Implicitly intersecting weighted automata using dual decomposition" class="ltx_ref">13</a>, <a href="#bib.bib48" title="Combining local and non-local information with dual decomposition for named entity recognition from text" class="ltx_ref">5</a>]</cite>. Soft constraints can be implemented inefficiently using hard constraints and dual decomposition— by introducing copies of output variables and an auxiliary graphical model, as in Rush et al. <cite class="ltx_cite">[<a href="#bib.bib4" title="Improved parsing and pos tagging using inter-sentence consistency constraints" class="ltx_ref">16</a>]</cite>. However, at every iteration of dual decomposition, MAP must be run in this auxiliary model. Furthermore the copying of variables doubles the number of iterations needed for information to flow between output variables, and thus slows convergence. On the other hand, our approach to soft constraints has identical per-iteration complexity as for hard constraints, and is a very easy modification to existing hard constraint code.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Initial work in machine learning for citation extraction used Markov models with no global constraints. Hidden Markov models (HMMs), were originally employed for automatically extracting information from research papers on the CORA dataset <cite class="ltx_cite">[<a href="#bib.bib23" title="Learning hidden markov model structure for information extraction" class="ltx_ref">19</a>, <a href="#bib.bib18" title="A simple method for citation metadata extraction using hidden markov models" class="ltx_ref">9</a>]</cite>. Later, CRFs were shown to perform better on CORA, improving the results from the Hmm’s token-level F1 of 86.6 to 91.5 with a CRF<cite class="ltx_cite">[<a href="#bib.bib20" title="Accurate information extraction from research papers using conditional random fields" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">Recent work on globally-constrained inference in citation extraction used an HMM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p4.m1" class="ltx_Math" alttext="{}^{CCM}" display="inline"><msup><mi/><mrow><mi>C</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>M</mi></mrow></msup></math>, which is an HMM with the addition of global features that are restricted to have positive weights <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>. Approximate inference is performed using beam search. This method increased the HMM token-level accuracy from 86.69 to 93.92 on a test set of 100 citations from the CORA dataset. The global constraints added into the model are simply that each label only occurs once per citation. This approach is limited in its use of an HMM as an underlying model, as it has been shown that CRFs perform significantly better, achieving 95.37 token-level accuracy on CORA <cite class="ltx_cite">[<a href="#bib.bib20" title="Accurate information extraction from research papers using conditional random fields" class="ltx_ref">14</a>]</cite>. In our experiments, we demonstrate that the specific global constraints used by Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite> help on the UMass dataset as well.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Experimental Results</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Our baseline is the one used in Anzaroot and McCallum <cite class="ltx_cite">[<a href="#bib.bib39" title="A new dataset for fine-grained citation field extraction" class="ltx_ref">1</a>]</cite>, with some labeling errors removed. This is a chain-structured CRF trained to maximize the conditional likelihood using L-BFGS with L2 regularization.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">We use the same features as Anzaroot and McCallum <cite class="ltx_cite">[<a href="#bib.bib39" title="A new dataset for fine-grained citation field extraction" class="ltx_ref">1</a>]</cite>, which include word type, capitalization, binned location in citation, regular expression matches, and matches into lexicons. In addition, we use a rule-based segmenter that segments the citation string based on punctuation as well as probable start or end segment words (e.g. ‘in’ and ‘volume’). We add a binary feature to tokens that correspond to the start of a segment in the output of this simple segmenter. This final feature improves the F1 score on the cleaned test set from 94.0 F1 to 94.44 F1, which we use as a baseline score.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">We then use the development set to learn the penalties for the soft constraints, using the perceptron algorithm described in section <a href="#S3.SS1" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>. MAP inference in the model with soft constraints is performed using Soft-DD, shown in Algorithm <a href="#S3" title="3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">We instantiate constraints from each template in section <a href="#S5.SS1" title="5.1 Constraint Templates ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>, iterating over all possible labels that contain a <span class="ltx_text ltx_font_italic">B</span> prefix at any level in the hierarchy and pruning all constraints with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p4.m1" class="ltx_Math" alttext="imp(c)&lt;2.75" display="inline"><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>&lt;</mo><mn>2.75</mn></mrow></math> calculated on the development set. We asses performance in terms of field-level F1 score, which is the harmonic mean of precision and recall for predicted segments.</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5.5 Local constraints ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows how each type of constraint family improved the F1 score on the dataset. Learning all the constraints jointly provides the largest improvement in F1 at 95.39. This improvement in F1 over the baseline CRF as well as the improvement in F1 over using only-one constraints was shown to be statistically significant using the Wilcoxon signed rank test with p-values <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p5.m1" class="ltx_Math" alttext="&lt;0.05" display="inline"><mrow><mi/><mo>&lt;</mo><mn>0.05</mn></mrow></math>. In the all-constraints settings, 32.96% of the constraints have a learned parameter of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p5.m2" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math>, and therefore only 421 constraints are active.
+Soft-DD converges, and thus solves the constrained inference problem exactly, for all test set examples after at most 41 iterations. Running Soft-DD to convergence requires 1.83 iterations on average per example. Since performing inference in the CRF is by far the most computationally intensive step in the iterative algorithm, this means our procedure requires approximately twice as much work as running the baseline CRF on the dataset. On examples where unconstrained inference does not satisfy the constraints, Soft-DD converges after 4.52 iterations on average. For 11.99% of the examples, the Soft-DD algorithm satisfies constraints that were not satisfied during unconstrained inference, while in the remaining 11.72% Soft-DD converges with some constraints left unsatisfied, which is possible since we are imposing them as soft constraints.</p>
+</div>
+<div id="S7.p6" class="ltx_para">
+<p class="ltx_p">We could have enforced these constraints as hard constraints rather than soft ones. This experiment is shown in the last row of Table <a href="#S5.T1" title="Table 1 ‣ 5.5 Local constraints ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, where F1 only improves to 94.6. In addition, running the DD algorithm with these constraints takes 5.21 iterations on average per example, which is 2.8 times slower than Soft-DD with learned penalties.</p>
+</div>
+<div id="S7.p7" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S7.T2" title="Table 2 ‣ 7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we analyze the performance of Soft-DD when we don’t necessarily run it to convergence, but stop after a fixed number of iterations on each test set example. We find that a large portion of our gain in accuracy can be obtained when we allow ourselves as few as 2 dual decomposition iterations. However, this only amounts to 1.24 times as much work as running the baseline CRF on the dataset, since the constraints are satisfied immediately for many examples.</p>
+</div>
+<div id="S7.p8" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S5.F2" title="Figure 2 ‣ 5.3 Pairwise Constraints ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> we consider two applications of our Soft-DD algorithm, and provide analysis in the caption.</p>
+</div>
+<div id="S7.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Stop</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">F1 score</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Convergence</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Avg Iterations</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">94.44</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">76.29%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">95.07</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">83.38%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.24</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">5</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">95.12</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">95.91%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.61</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">10</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">95.39</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">99.18%</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.73</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Performance from terminating Soft-DD early. Column 1 is the number of iterations we allow each example. Column 3 is the % of test examples that converged. Column 4 is the average number of necessary iterations, a surrogate for the slowdown over performing unconstrained inference. </div>
+</div>
+<div id="S7.p9" class="ltx_para">
+<p class="ltx_p">We train and evaluate on the UMass dataset instead of CORA, because it is significantly larger, has a useful finer-grained labeling schema, and its annotation is more consistent. We were able to obtain better performance on CORA using our baseline CRF than the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p9.m1" class="ltx_Math" alttext="HMM^{CCM}" display="inline"><mrow><mi>H</mi><mo>⁢</mo><mi>M</mi><mo>⁢</mo><msup><mi>M</mi><mrow><mi>C</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><mi>M</mi></mrow></msup></mrow></math> results presented in Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite>, which include soft constraints. Given this high performance of our base model on CORA, we did not apply our Soft-DD algorithm to the dataset. Furthermore, since the dataset is so small, learning the penalties for our large collection of constraints is difficult, and test set results are unreliable. Rather than compare our work to Chang et al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Structured learning with constrained conditional models" class="ltx_ref">4</a>]</cite> via results on CORA, we apply their constraints on the UMass data using Soft-DD and demonstrate accuracy gains, as discussed above.</p>
+</div>
+<div id="S7.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">7.1 </span>Examples of learned constraints</h3>
+
+<div id="S7.SS1.p1" class="ltx_para">
+<p class="ltx_p">We now describe a number of the useful constraints that receive non-zero learned penalties and have high importance scores, defined in Section <a href="#S5.SS6" title="5.6 Constraint Pruning ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.6</span></a>. The importance score of a constraint provides information about how often it is violated by the CRF, but holds in the ground truth, and a non-zero penalty implies we enforce it as a soft constraint at test time.</p>
+</div>
+<div id="S7.SS1.p2" class="ltx_para">
+<p class="ltx_p">The two singleton constraints with highest importance score are that there should only be at most one <span class="ltx_text ltx_font_sansserif">title</span> segment in a citation and that there should be at most one <span class="ltx_text ltx_font_sansserif">author</span> segment in a citation. The only one <span class="ltx_text ltx_font_sansserif">author</span> constraint is particularly useful for correctly labeling <span class="ltx_text ltx_font_sansserif">editor</span> segments in cases where unconstrained inference mislabels them as <span class="ltx_text ltx_font_sansserif">author</span> segments. As can be seen in Table  <a href="#S7.T3" title="Table 3 ‣ 7.1 Examples of learned constraints ‣ 7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, <span class="ltx_text ltx_font_sansserif">editor</span> fields are among the most improved with our new method, largely due to this constraint.</p>
+</div>
+<div id="S7.SS1.p3" class="ltx_para">
+<p class="ltx_p">The two hierarchical constraints with the highest importance scores with non-zero learned penalties constrain the output such that number of <span class="ltx_text ltx_font_sansserif">person</span> segments does not exceed the number of <span class="ltx_text ltx_font_sansserif">first</span> segments and vice-versa. Together, these constraints penalize outputs in which the number of <span class="ltx_text ltx_font_sansserif">person</span> segments do not equal the number of <span class="ltx_text ltx_font_sansserif">first</span> segments, i.e., every author should have a first name.</p>
+</div>
+<div id="S7.SS1.p4" class="ltx_para">
+<p class="ltx_p">One important pairwise constraint penalizes outputs in which <span class="ltx_text ltx_font_sansserif">thesis</span> segments don’t co-occur with <span class="ltx_text ltx_font_sansserif">school</span> segments. <span class="ltx_text ltx_font_sansserif">School</span> segments label the name of the university that the thesis was submitted to. The application of this constraint increases the performance of the model on <span class="ltx_text ltx_font_sansserif">school</span> segments dramatically, as can be seen in table <a href="#S7.T3" title="Table 3 ‣ 7.1 Examples of learned constraints ‣ 7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S7.SS1.p5" class="ltx_para">
+<p class="ltx_p">An interesting form of pairwise constraints penalize outputs in which some labels do not co-occur with other labels. Some examples of constraints in this form enforce that <span class="ltx_text ltx_font_sansserif">journal</span> segments should co-occur with <span class="ltx_text ltx_font_sansserif">pages</span> segments and that <span class="ltx_text ltx_font_sansserif">booktitle</span> segments should co-occur with <span class="ltx_text ltx_font_sansserif">address</span> segments. An example of the latter constraint being employed during inference is the first example in Figure <a href="#S5.F2" title="Figure 2 ‣ 5.3 Pairwise Constraints ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Here, the constrained inference penalizes output which contains a <span class="ltx_text ltx_font_sansserif">booktitle</span> segment but no <span class="ltx_text ltx_font_sansserif">address</span> segment. This penalization leads allows the constrained inference to correctly label the <span class="ltx_text ltx_font_sansserif">booktitle</span> segment as a <span class="ltx_text ltx_font_sansserif">title</span> segment.</p>
+</div>
+<div id="S7.SS1.p6" class="ltx_para">
+<p class="ltx_p">The above example constraints are almost always satisfied on the ground truth, and would be useful to enforce as hard constraints. However, there are a number of learned constraints that are often violated on the ground truth but are still useful as soft constraints.
+Take, for example, the constraint that the number of <span class="ltx_text ltx_font_sansserif">number</span> segments does not exceed the number of <span class="ltx_text ltx_font_sansserif">booktitle</span> segments, as well as the constraint that it does not exceed the number of <span class="ltx_text ltx_font_sansserif">journal</span> segments. These constraints are moderately violated on ground truth examples, however. For example, when <span class="ltx_text ltx_font_sansserif">booktitle</span> segments co-occur with <span class="ltx_text ltx_font_sansserif">number</span> segments but not with <span class="ltx_text ltx_font_sansserif">journal</span> segments, the second constraint is violated. It is still useful to impose these soft constraints, as strong evidence from the CRF allows us to violate them, and they can guide the model to good predictions when the CRF is unconfident.</p>
+</div>
+<div id="S7.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Label</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">U</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">C</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">+</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">venue/series</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">35.29</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">66.67</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">31.37</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">venue/editor/person/first</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">66.67</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.74</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">28.07</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">venue/school</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">40.00</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">66.67</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">26.67</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">venue/editor/person/last</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">75.00</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.74</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">19.74</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">venue/editor</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">77.78</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.00</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">12.22</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">venue/editor/person/middle</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">81.82</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">91.67</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">9.85</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Labels with highest improvement in F1. U is in unconstrained inference. C is the results of constrained inference. + is the improvement in F1.</div>
+</div>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Conclusion</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">We introduce a novel modification to the standard projected subgradient dual decomposition algorithm for performing MAP inference subject to hard constraints to one for performing MAP in the presence of soft constraints. In addition, we offer an easy-to-implement procedure for learning the penalties on soft constraints. This method drives many penalties to zero, which allows users to automatically discover discriminative constraints from large families of candidates.</p>
+</div>
+<div id="S8.p2" class="ltx_para">
+<p class="ltx_p">We show via experiments on a recent substantial dataset that using soft constraints, and selecting which constraints to use with our penalty-learning procedure, can lead to significant gains in accuracy. We achieve a 17% gain in accuracy over a chain-structured CRF model, while only needing to run MAP in the CRF an average of less than 2 times per example. This minor incremental cost over Viterbi, plus the fact that we obtain certificates of optimality on 100% of our test examples in practice, suggests the usefulness of our algorithm for large-scale applications. We encourage further use of our Soft-DD procedure for other structured prediction problems.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work was supported in part by the Center for Intelligent Information Retrieval, in part by DARPA under agreement number FA8750-13-2-0020, in part by NSF grant #CNS-0958392, and in part by IARPA via DoI/NBC contract #D11PC20152. The U.S. Government is authorized to reproduce and distribute reprint for Governmental purposes notwithstanding any copyright annotation thereon. Any opinions, findings and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect those of the sponsor.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Anzaroot and A. McCallum</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A new dataset for fine-grained citation field extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Citation Extraction Data ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S7.p1" title="7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>,
+<a href="#S7.p2" title="7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. P. Boyd and L. Vandenberghe</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Convex optimization</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge university press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Bunescu and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collective information extraction with relational markov networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 438</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Chang, L. Ratinov and D. Roth</span><span class="ltx_text ltx_bib_year">(2012-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structured learning with constrained conditional models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Learning</span> <span class="ltx_text ltx_bib_volume">88</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 399–431</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://cogcomp.cs.illinois.edu/papers/ChangRaRo12.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p6" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.SS2.p1" title="5.2 Singleton Constraints ‣ 5 Global Constraints for Citation Extraction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>,
+<a href="#S6.p4" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S7.p9" title="7 Experimental Results ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. L. Chieu and L. Teow</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining local and non-local information with dual decomposition for named entity recognition from text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 231–238</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Cortes and V. Vapnik</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Support-vector networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine learning</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 273–297</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel, T. Grenager and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Incorporating non-local information into information extraction systems by gibbs sampling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 363–370</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Hetzner</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A simple method for citation metadata extraction using hidden markov models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 280–284</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Koller and N. Friedman</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic graphical models: principles and techniques</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">The MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Komodakis, N. Paragios and G. Tziritas</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MRF optimization via dual decomposition: message-passing revisited</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo, A. M. Rush, M. Collins, T. Jaakkola and D. Sontag</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition for parsing with non-projective head automata</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1288–1298</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. J. Paul and J. Eisner</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Implicitly intersecting weighted automata using dual decomposition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 232–242</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Peng and A. McCallum</span><span class="ltx_text ltx_bib_year">(2004-May 2 - May 7)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate information extraction from research papers using conditional random fields</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boston, Massachusetts, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 329–336</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S6.p3" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p4" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Roth and W. Yih</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A linear programming formulation for global inference in natural language tasks</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Defense Technical Information Center</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush, R. Reichart, M. Collins and A. Globerson</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved parsing and pos tagging using inter-sentence consistency constraints</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1434–1444</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush, D. Sontag, M. Collins and T. Jaakkola</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On dual decomposition and linear programming relaxations for natural language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–11</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush and M. Collins</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tutorial on dual decomposition and lagrangian relaxation for inference in natural language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Artif. Intell. Res. (JAIR)</span> <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 305–362</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S6.p2" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Seymore, A. McCallum and R. Rosenfeld</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning hidden markov model structure for information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 37–42</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p3" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sontag, A. Globerson and T. Jaakkola</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to dual decomposition for inference</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">S. Sra, S. Nowozin and S. J. Wright (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Optimization for Machine Learning</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Dual Decomposition for Global Constraints ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sontag</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Approximate inference in graphical models using lp relaxations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Massachusetts Institute of Technology</span>, <span class="ltx_text ltx_bib_place">Department of Electrical Engineering and Computer Science</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p2" title="2.1 Structured Linear Models ‣ 2 Background ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Sutton and A. McCallum</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collective segmentation and labeling of distant entities in information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">DTIC Document</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Tsochantaridis, T. Hofmann, T. Joachims and Y. Altun</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Support vector machine learning for interdependent and structured output spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 104</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Learning Penalties ‣ 3 Soft Constraints in Dual Decomposition ‣ Learning Soft Linear Constraints with Application to Citation Field Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:57:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

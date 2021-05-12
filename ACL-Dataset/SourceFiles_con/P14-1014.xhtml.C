@@ -1,0 +1,2119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Tagging The Web: Building A Robust Web Tagger with Neural Network.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       In this paper
+       , we address the problem of web-domain POS tagging using a two-phase approach.
+The first phase learns representations that capture regularities underlying web text.
+The representation is integrated as features into a neural network that serves as a scorer for an easy-first POS tagger.
+Parameters of the neural network are trained using guided learning in the second phase.
+Experiment on the SANCL 2012 shared task show that our approach achieves
+       93.27⁢%
+       average tagging accuracy, which is the best accuracy reported so far on this data set, higher than those given by ensembled syntactic parsers.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Analysing and extracting useful information from the web has become an increasingly important research direction for the NLP community, where many tasks require part-of-speech (POS) tagging as a fundamental preprocessing step.
+However, state-of-the-art POS taggers in the literature
+        [5, 23]
+        are mainly optimized on the the Penn Treebank (PTB), and when shifted to web data, tagging accuracies drop significantly
+        [18]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The problem we face here can be considered as a special case of
+        domain adaptation
+        , where we have access to labelled data on the source domain (PTB) and unlabelled data on the target domain (web data). Exploiting useful information from the web data can be the key to improving web domain tagging.
+Towards this end, we adopt the idea of learning representations which has been demonstrated useful in capturing hidden regularities underlying the raw input data (web text, in our case).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Our approach consists of two phrases. In the pre-training phase, we learn an encoder that converts the web text into an intermediate representation, which acts as useful features for prediction tasks.
+We integrate the learned encoder with a set of well-established features for POS tagging
+        [21, 5]
+        in a single neural network, which is applied as a scorer to an easy-first POS tagger.
+We choose the easy-first tagging approach since it has been demonstrated to give higher accuracies than the standard left-to-right POS tagger
+        [23, 15]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In the fine-tuning phase, the parameters of the network are optimized on a set of labelled training data using guided learning.
+The learned model preserves the property of preferring to tag
+        easy
+        words first.
+To our knowledge, we are the first to investigate guided learning for neural networks.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The idea of learning representations from unlabelled data and then fine-tuning a model with such representations according to some supervised criterion has been studied before
+        [26, 6, 8]
+        . While most previous work focus on in-domain sequential labelling or cross-domain classification tasks, we are the first to learn representations for web-domain structured prediction.
+Previous work treats the learned representations either as model parameters that are further optimized in supervised fine-tuning
+        [6]
+        or as fixed features that are kept unchanged
+        [26, 8]
+        .
+In this work, we investigate both strategies and give empirical comparisons in the cross-domain setting.
+Our results suggest that while both strategies improve in-domain tagging accuracies, keeping the learned representation unchanged consistently results in better cross-domain accuracies.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        We conduct experiments on the official data set provided by the SANCL 2012 shared task
+        [18]
+        .
+Our method achieves a
+        93.27⁢%
+        average accuracy across the web-domain, which
+is the best result reported so far on this data set, higher than those given by ensembled syntactic parsers.
+Our code will be publicly available at https://github.com/majineu/TWeb.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Learning from Web Text
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Unsupervised learning is often used for training encoders that convert the input data to abstract representations (i.e. encoding vectors).
+Such representations capture hidden properties of the input, and can be used as features for supervised tasks
+        [3, 20]
+        .
+Among the many proposed encoders, we choose the restricted Boltzmann machine (RBM), which has been successfully used in many tasks
+        [14, 10]
+        .
+In this section, we give some background on RBMs and then show how they can be used to learn representations of the web text.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Restricted Boltzmann Machine
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The RBM is a type of graphical model that contains two layers of binary stochastic units
+         𝐯∈{0,1}V
+         and
+         𝐡∈{0,1}H
+         , corresponding to a set of visible and hidden variables, respectively.
+The RBM defines the joint probability distribution over
+         𝐯
+         and
+         𝐡
+         by an energy function
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        E⁢(𝐯,𝐡)=-𝐜′⁢𝐡-𝐛′⁢𝐯-𝐡′⁢𝐖𝐯,
+
+(1)
+        <p class="ltx_p">
+         which is factorized by a visible bias
+         𝐛∈ℝV
+         , a hidden bias
+         𝐜∈ℝH
+         and a weight matrix
+         𝐖∈ℝH×V
+         .
+The joint distribution
+         P⁢(𝐯,𝐡)
+         is given by
+        </p>
+        P⁢(𝐯,𝐡)=1Z⁢exp⁡(E⁢(𝐯,𝐡)),
+
+(2)
+        <p class="ltx_p">
+         where
+         Z
+         is the partition function.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         The affine form of
+         E
+         with respect to
+         𝐯
+         and
+         𝐡
+         implies that the visible variables are conditionally independent with each other given the hidden layer units, and vice versa.
+This yields the conditional distribution:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P(𝐯|𝐡)=∏j=1VP(vj|𝐡)P(𝐡|𝐯)=∏i=1HP(hi|𝐯)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        P(vj=1|𝐡)=σ(𝐛j+W⋅j𝐡)
+
+(3)
+        P(hi=1|𝐯)=σ(𝐜j+Wi⁣⋅𝐯)
+
+(4)
+        <p class="ltx_p">
+         Here
+         σ
+         denotes the sigmoid function.
+Parameters of RBMs
+         θ={𝐛,𝐜,𝐖}
+         can be trained efficiently using contrastive divergence learning (CD), see
+         [11]
+         for detailed descriptions of CD.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Encoding Web Text with RBM
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Most of the indicative features for POS disambiguation can be found from the words and word combinations within a local context
+         [21, 5]
+         .
+Inspired by this observation, we apply the RBM to learn feature representations from word n-grams.
+More specifically, given the
+         it⁢h
+         word
+         wi
+         of a sentence, we apply RBMs to model the joint distribution of the n-gram
+         (wi-l,⋯,wi+r)
+         , where
+         l
+         and
+         r
+         denote the left and right window, respectively.
+Note that the visible units of RBMs are binary. While in our case, each visible variable corresponds to a word, which may take on tens-of-thousands of different values.
+Therefore, the RBM need to be re-factorized to make inference tractable.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         We utilize the Word Representation RBM (WRRBM) factorization proposed by
+         Dahl et al. (2012)
+         .
+The basic idea is to share word representations across different positions in the input n-gram while using position-dependent weights to distinguish between different word orders.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         Let
+         wk
+         be the
+         k
+         -th entry of lexicon
+         L
+         , and
+         𝐰k
+         be its
+         one-hot
+         representation (i.e., only the
+         k
+         -th component of
+         𝐰k
+         is 1, and all the others are 0).
+Let
+         𝐯(j)
+         represents the
+         j
+         -th visible variable of the WRRBM, which is a vector of length
+         |L|
+         .
+Then
+         𝐯(j)=𝐰k
+         means that the
+         j
+         -th word in the n-gram is
+         wk
+         .
+Let
+         𝐃∈ℝD×|L|
+         be a projection matrix, then
+         𝐃𝐰k
+         projects
+         wk
+         into a
+         D
+         -dimensional real value vector (embedding).
+For each position
+         j
+         , there is a weight matrix
+         𝐖(j)∈ℝH×D
+         , which is used to model the interaction between the hidden layer and the word projection in position
+         j
+         .
+The visible biases are also shared across different positions
+         (b(j)=b⁢∀j)
+         and the energy function is:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           E⁢(𝐯,𝐡)=-𝐜′⁢𝐡-∑j=1n(𝐛′⁢𝐯(j)+𝐡′⁢𝐖(j)⁢𝐃𝐯(j)),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         which yields the conditional distributions:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P(𝐯|𝐡)=∏j=1nP(𝐯(j)|𝐡)P(𝐡|𝐯)=∏i=1P(hi|𝐯)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        P(hi=1|𝐯)=σ(ci+∑j=1n𝐖i⁣⋅(j)𝐃𝐯(j))
+
+(6)
+        P(𝐯(j)=𝐰k|𝐡)=1Zexp(𝐛′𝐰k+𝐡′𝐖(j)𝐃𝐰k)
+
+(7)
+        <p class="ltx_p">
+         Again
+         Z
+         is the partition function.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         The parameters
+         {𝐛,𝐜,𝐃,𝐖(1),…,𝐖(n)}
+         can be trained using a Metropolis-Hastings-based CD variant and the learned word representations also capture certain syntactic information; see
+         Dahl et al. (2012)
+         for more details.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        <p class="ltx_p">
+         Note that one can stack standard RBMs on top of a WRRBM to construct a Deep Belief Network (DBN).
+By adopting greedy layer-wise training
+         [10, 2]
+         , DBNs are capable of modelling higher order non-linear relations between the input, and has been demonstrated to improve performance for many computer vision tasks
+         [10, 2, 13]
+         .
+However, in this work we do not observe further improvement by employing DBNs.
+This may partly be due to the fact that unlike computer vision tasks, the input structure of POS tagging or other sequential labelling tasks is relatively simple, and a single non-linear layer is enough to model the interactions within the input
+         [27]
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Neural Network for POS Disambiguation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We integrate the learned WRRBM into a neural network, which serves as a scorer for POS disambiguation.
+The main challenge to designing the neural network structure is: on the one hand, we hope that the model can take the advantage of information provided by the learned WRRBM, which reflects general properties of web texts, so that the model generalizes well in the web domain;
+on the other hand, we also hope to improve the model’s discriminative power by utilizing well-established POS tagging features, such as those of
+        Ratnaparkhi (1996)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Our approach is to leverage the two sources of information in one neural network by combining them though a shared output layer, as shown in Figure 1.
+Under the output layer, the network consists of two modules:
+        the web-feature module
+        , which incorporates knowledge from the pre-trained WRRBM,
+and
+        the sparse-feature module
+        , which makes use of other POS tagging features.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        The Web-Feature Module
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         The web-feature module, shown in the lower left part of Figure 1, consists of a input layer and two hidden layers.
+The input for the this module is the word n-gram
+         (wi-l,…,wi+r)
+         , the form of which is identical to the training data of the pre-trained WRRBM.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The first layer is a linear projection layer, where each word in the input is projected into a
+         D
+         -dimensional real value vector using the projection operation described in Section 2.2.
+The output of this layer
+         𝐨w1
+         is the concatenation of the projections of
+         wi-l,…,wi+r
+         :
+        </p>
+        𝐨w1=(𝐌w1⁢𝐰i-l⋮𝐌w1⁢𝐰i+r)
+
+(8)
+        <p class="ltx_p">
+         Here
+         𝐌w1
+         denotes the parameters of the first layer of the web-feature module, which is a
+         D×|L|
+         projection matrix.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         The second layer is a sigmoid layer to model non-linear relations between the word projections:
+        </p>
+        𝐨w2=σ⁢(𝐌w2⁢𝐨w1+𝐛w2)
+
+(9)
+        <p class="ltx_p">
+         Parameters of this layer include: a bias vector
+         𝐛w2∈ℝH
+         and a weight matrix
+         𝐌w2∈ℝH×n⁢D
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         The web-feature module enables us to explore the learned WRRBM in various ways.
+First, it allows us to investigate knowledge from the WRRBM incrementally.
+We can choose to use only the
+         word
+         representations of the learned WRRBM.
+This can be achieved by initializing only the first layer of the web module with the projection matrix
+         𝐃
+         of the learned WRRBM:
+        </p>
+        𝐌w1←𝐃.
+
+(10)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         Alternatively, we can choose to use the hidden states of the WRRBM, which can be treated as the representations of the input
+         n-gram
+         .
+This can be achieved by
+         also
+         initializing the parameters of the second layer of the web-feature module using the position-dependent weight matrix and hidden bias of the learned WRRBM:
+        </p>
+        𝐛w2←𝐜
+
+(11)
+        𝐌w2←(𝐖(1),…,𝐖(n))
+
+(12)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p6">
+        <p class="ltx_p">
+         Second, the web-feature module also allows us to make a comparison between whether or not to further adjust the pre-trained representation in the supervised fine-tuning phase, which corresponds to the supervised learning strategies of
+         Turian et al. (2010)
+         and
+         Collobert et al. (2011)
+         , respectively.
+To our knowledge, no investigations have been presented in the literature on this issue.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        The Sparse-Feature Module
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The sparse-feature module, as shown in the lower right part of Figure 1, is designed to incorporate commonly-used tagging features.
+The input for this module is a vector of boolean values
+         Φ⁢(x)=(f1⁢(x),…,fk⁢(x))
+         , where
+         x
+         denotes the partially tagged input sentence and
+         fi⁢(x)
+         denotes a feature function, which returns 1 if the corresponding feature fires and 0 otherwise.
+The first layer of this module is a linear transformation layer, which converts the high dimensional sparse vector into a fixed-dimensional real value vector:
+        </p>
+        𝐨s=𝐌s⁢Φ⁢(x)+𝐛s
+
+(13)
+        <p class="ltx_p">
+         Depending on the specific task being considered, the output of this layer can be further fed to other non-linear layers, such as a sigmoid or hyperbolic tangent layer, to model more complex relations.
+For POS tagging, we found that a simple linear layer yields satisfactory accuracies.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         The web-feature and sparse-feature modules are combined by a linear output layer, as shown in the upper part of Figure 1.
+The value of each unit in this layer denotes the score of the corresponding POS tag.
+        </p>
+        𝐨o=𝐌o⁢(𝐨w𝐨s)+𝐛o
+
+(14)
+        <p class="ltx_p">
+         In some circumstances, probability distribution over POS tags might be a more preferable form of output.
+Such distribution can be easily obtained by adding a soft-max layer on top of the output layer to perform a local normalization, as done by
+         Collobert et al. (2011)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         [t]
+         Easy-first POS tagging
+         [1]
+         <math alttext="x" class="ltx_Math" display="inline" id="S3.SS2.p3.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mi>
+           x
+          </mi>
+         </math>
+         a sentence of
+         m
+         words
+         w1,…,wm
+         tag sequence of
+         x
+         <math alttext="\mathbf{U}\leftarrow[w_{1},\ldots,w_{m}]\quad" class="ltx_Math" display="inline" id="S3.SS2.p3.m5" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mi>
+            𝐔
+           </mi>
+           <mo>
+            ←
+           </mo>
+           <mrow>
+            <mo>
+             [
+            </mo>
+            <mrow>
+             <msub>
+              <mi>
+               w
+              </mi>
+              <mn>
+               1
+              </mn>
+             </msub>
+             <mo>
+              ,
+             </mo>
+             <mi mathvariant="normal">
+              …
+             </mi>
+             <mo>
+              ,
+             </mo>
+             <msub>
+              <mi>
+               w
+              </mi>
+              <mi>
+               m
+              </mi>
+             </msub>
+            </mrow>
+            <mo>
+             ]
+            </mo>
+           </mrow>
+          </mrow>
+         </math>
+         // untagged words
+         <math alttext="\mathbf{U}\neq[]" class="ltx_Math" display="inline" id="S3.SS2.p3.m6" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mi>
+            𝐔
+           </mi>
+           <mo>
+            ≠
+           </mo>
+           <mrow>
+            <mo>
+             [
+            </mo>
+            <mrow>
+            </mrow>
+            <mo>
+             ]
+            </mo>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="(\hat{w},\hat{t})\leftarrow\arg\max_{(w,t)\in\mathbf{U}\times{\mathbf{T}}}S(w,t)" class="ltx_Math" display="inline" id="S3.SS2.p3.m7" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <mover accent="true">
+              <mi>
+               w
+              </mi>
+              <mo stretchy="false">
+               ^
+              </mo>
+             </mover>
+             <mo>
+              ,
+             </mo>
+             <mover accent="true">
+              <mi>
+               t
+              </mi>
+              <mo stretchy="false">
+               ^
+              </mo>
+             </mover>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+           <mo>
+            ←
+           </mo>
+           <mrow>
+            <mi>
+             arg
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <msub>
+              <mo>
+               max
+              </mo>
+              <mrow>
+               <mrow>
+                <mo>
+                 (
+                </mo>
+                <mrow>
+                 <mi>
+                  w
+                 </mi>
+                 <mo>
+                  ,
+                 </mo>
+                 <mi>
+                  t
+                 </mi>
+                </mrow>
+                <mo>
+                 )
+                </mo>
+               </mrow>
+               <mo>
+                ∈
+               </mo>
+               <mrow>
+                <mi>
+                 𝐔
+                </mi>
+                <mo>
+                 ×
+                </mo>
+                <mi>
+                 𝐓
+                </mi>
+               </mrow>
+              </mrow>
+             </msub>
+             <mo>
+              ⁡
+             </mo>
+             <mrow>
+              <mi>
+               S
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mrow>
+               <mo>
+                (
+               </mo>
+               <mrow>
+                <mi>
+                 w
+                </mi>
+                <mo>
+                 ,
+                </mo>
+                <mi>
+                 t
+                </mi>
+               </mrow>
+               <mo>
+                )
+               </mo>
+              </mrow>
+             </mrow>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="\hat{w}.t\leftarrow\hat{t}" class="ltx_Math" display="inline" id="S3.SS2.p3.m8" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mover accent="true">
+            <mi>
+             w
+            </mi>
+            <mo stretchy="false">
+             ^
+            </mo>
+           </mover>
+           <mo separator="true">
+            .
+           </mo>
+           <mrow>
+            <mi>
+             t
+            </mi>
+            <mo>
+             ←
+            </mo>
+            <mover accent="true">
+             <mi>
+              t
+             </mi>
+             <mo stretchy="false">
+              ^
+             </mo>
+            </mover>
+           </mrow>
+          </mrow>
+         </math>
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         𝐔←𝐔/[w^]
+         // remove
+         w^
+         from
+         𝐔
+        </p>
+       </div>
+       <span class="ltx_ERROR undefined">
+        \RETURN
+       </span>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         [w1.t,…,wm.t]
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Easy-first POS tagging with Neural Network
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The neural network proposed in Section 3 is used for POS disambiguation by the easy-first POS tagger.
+Parameters of the network are trained using guided learning, where learning and search interact with each other.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Easy-first POS tagging
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Pseudo-code of easy-first tagging is shown in Algorithm 1.
+Rather than tagging a sentence from left to right, easy-first tagging is based on a deterministic process, repeatedly selecting the
+         easiest
+         word to tag.
+Here “easiness” is evaluated based on a statistical model.
+At each step, the algorithm adopts a scorer, the neural network in our case, to assign a score to each possible word-tag pair
+         (w,t)
+         , and then selects the highest score one
+         (w^,t^)
+         to tag (i.e., tag
+         w^
+         with
+         t^
+         ).
+The algorithm repeats until all words are tagged.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Training
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The training algorithm repeats for several iterations over the training data, which is a set of sentences labelled with gold standard POS tags.
+In each iteration, the procedure shown in Algorithm 2 is applied to each sentence in the training set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         At each step during the processing of a training example, the algorithm calculates a
+         margin loss
+         based on two word-tag pairs
+         (w¯,t¯)
+         and
+         (w^,t^)
+         (line 4
+         ∼
+         line 6).
+         (w¯,t¯)
+         denotes the word-tag pair that has the highest model score among those that are
+         inconsistent
+         with the gold standard, while
+         (w^,t^)
+         denotes the one that has the highest model score among those that are
+         consistent
+         with the gold standard.
+If the loss is zero, the algorithm continues to process the next untagged word.
+Otherwise, parameters are updated using back-propagation.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         The standard back-propagation algorithm
+         [22]
+         cannot be applied directly.
+This is because the standard loss is calculated based on a
+         unique
+         input vector.
+This condition does not hold in our case, because
+         w^
+         and
+         w¯
+         may refer to different words, which means that the margin loss in line 6 of Algorithm 2 is calculated based on two different input vectors, denoted by
+         ⟨w^⟩
+         and
+         ⟨w¯⟩
+         , respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         We solve this problem by decomposing the margin loss in line 6 into two parts:
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            1+n⁢n⁢(w¯,t¯)
+            , which is associated with
+            ⟨w¯⟩
+            ;
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            -n⁢n⁢(w^,t^)
+            , which is associated with
+            ⟨w^⟩
+            .
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         In this way, two separate back-propagation updates can be used to update the model’s parameters (line 8
+         ∼
+         line 11).
+For the special case where
+         w^
+         and
+         w¯
+         do refer to the same word
+         w
+         , it can be easily verified that the two separate back-propagation updates equal to the standard back-propagation with a loss
+         1+n⁢n⁢(w,t¯)-n⁢n⁢(w,t^)
+         on the input
+         ⟨w⟩
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         The algorithm proposed here belongs to a general framework named
+         guided learning
+         , where search and learning interact with each other.
+The algorithm learns not only a local classifier, but also the inference order.
+While previous work
+         [23, 29, 9]
+         apply guided learning to train a linear classifier by using variants of the perceptron algorithm, we are the first to combine guided learning with a neural network, by using a margin loss and a modified back-propagation algorithm.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p6">
+        <p class="ltx_p">
+         [t]
+         Training over one sentence
+         [1]
+         <math alttext="(x,t)" class="ltx_Math" display="inline" id="S4.SS2.p6.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mo>
+            (
+           </mo>
+           <mrow>
+            <mi>
+             x
+            </mi>
+            <mo>
+             ,
+            </mo>
+            <mi>
+             t
+            </mi>
+           </mrow>
+           <mo>
+            )
+           </mo>
+          </mrow>
+         </math>
+         a tagged sentence, neural net
+         n⁢n
+         updated neural net
+         n⁢n′
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p7">
+        <p class="ltx_p">
+         𝐔←[w1,…,wm]
+         // untagged words
+         <math alttext="\mathbf{R}\leftarrow[(w_{1},t_{1}),\ldots,(w_{m},t_{m})]" class="ltx_Math" display="inline" id="S4.SS2.p7.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mi>
+            𝐑
+           </mi>
+           <mo>
+            ←
+           </mo>
+           <mrow>
+            <mo>
+             [
+            </mo>
+            <mrow>
+             <mrow>
+              <mo>
+               (
+              </mo>
+              <mrow>
+               <msub>
+                <mi>
+                 w
+                </mi>
+                <mn>
+                 1
+                </mn>
+               </msub>
+               <mo>
+                ,
+               </mo>
+               <msub>
+                <mi>
+                 t
+                </mi>
+                <mn>
+                 1
+                </mn>
+               </msub>
+              </mrow>
+              <mo>
+               )
+              </mo>
+             </mrow>
+             <mo>
+              ,
+             </mo>
+             <mi mathvariant="normal">
+              …
+             </mi>
+             <mo>
+              ,
+             </mo>
+             <mrow>
+              <mo>
+               (
+              </mo>
+              <mrow>
+               <msub>
+                <mi>
+                 w
+                </mi>
+                <mi>
+                 m
+                </mi>
+               </msub>
+               <mo>
+                ,
+               </mo>
+               <msub>
+                <mi>
+                 t
+                </mi>
+                <mi>
+                 m
+                </mi>
+               </msub>
+              </mrow>
+              <mo>
+               )
+              </mo>
+             </mrow>
+            </mrow>
+            <mo>
+             ]
+            </mo>
+           </mrow>
+          </mrow>
+         </math>
+         // reference
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p8">
+        <p class="ltx_p">
+         𝐔≠[]
+         <math alttext="(\overline{w},\overline{t})\leftarrow\arg\max_{(w,t)\in(\mathbf{U}\times{%
+\mathbf{T}}/\mathbf{R})}nn(w,t)" class="ltx_Math" display="inline" id="S4.SS2.p8.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <mover accent="true">
+              <mi>
+               w
+              </mi>
+              <mo>
+               ¯
+              </mo>
+             </mover>
+             <mo>
+              ,
+             </mo>
+             <mover accent="true">
+              <mi>
+               t
+              </mi>
+              <mo>
+               ¯
+              </mo>
+             </mover>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+           <mo>
+            ←
+           </mo>
+           <mrow>
+            <mi>
+             arg
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <msub>
+              <mo>
+               max
+              </mo>
+              <mrow>
+               <mrow>
+                <mo>
+                 (
+                </mo>
+                <mrow>
+                 <mi>
+                  w
+                 </mi>
+                 <mo>
+                  ,
+                 </mo>
+                 <mi>
+                  t
+                 </mi>
+                </mrow>
+                <mo>
+                 )
+                </mo>
+               </mrow>
+               <mo>
+                ∈
+               </mo>
+               <mrow>
+                <mo>
+                 (
+                </mo>
+                <mrow>
+                 <mrow>
+                  <mi>
+                   𝐔
+                  </mi>
+                  <mo>
+                   ×
+                  </mo>
+                  <mi>
+                   𝐓
+                  </mi>
+                 </mrow>
+                 <mo>
+                  /
+                 </mo>
+                 <mi>
+                  𝐑
+                 </mi>
+                </mrow>
+                <mo>
+                 )
+                </mo>
+               </mrow>
+              </mrow>
+             </msub>
+             <mo>
+              ⁡
+             </mo>
+             <mrow>
+              <mi>
+               n
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mi>
+               n
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mrow>
+               <mo>
+                (
+               </mo>
+               <mrow>
+                <mi>
+                 w
+                </mi>
+                <mo>
+                 ,
+                </mo>
+                <mi>
+                 t
+                </mi>
+               </mrow>
+               <mo>
+                )
+               </mo>
+              </mrow>
+             </mrow>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="(\hat{w},\hat{t})\leftarrow\arg\max_{(w,t)\in\mathbf{R}}nn(w,t)" class="ltx_Math" display="inline" id="S4.SS2.p8.m3" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <mover accent="true">
+              <mi>
+               w
+              </mi>
+              <mo stretchy="false">
+               ^
+              </mo>
+             </mover>
+             <mo>
+              ,
+             </mo>
+             <mover accent="true">
+              <mi>
+               t
+              </mi>
+              <mo stretchy="false">
+               ^
+              </mo>
+             </mover>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+           <mo>
+            ←
+           </mo>
+           <mrow>
+            <mi>
+             arg
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <msub>
+              <mo>
+               max
+              </mo>
+              <mrow>
+               <mrow>
+                <mo>
+                 (
+                </mo>
+                <mrow>
+                 <mi>
+                  w
+                 </mi>
+                 <mo>
+                  ,
+                 </mo>
+                 <mi>
+                  t
+                 </mi>
+                </mrow>
+                <mo>
+                 )
+                </mo>
+               </mrow>
+               <mo>
+                ∈
+               </mo>
+               <mi>
+                𝐑
+               </mi>
+              </mrow>
+             </msub>
+             <mo>
+              ⁡
+             </mo>
+             <mrow>
+              <mi>
+               n
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mi>
+               n
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mrow>
+               <mo>
+                (
+               </mo>
+               <mrow>
+                <mi>
+                 w
+                </mi>
+                <mo>
+                 ,
+                </mo>
+                <mi>
+                 t
+                </mi>
+               </mrow>
+               <mo>
+                )
+               </mo>
+              </mrow>
+             </mrow>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p9">
+        <p class="ltx_p">
+         l⁢o⁢s⁢s←max⁡(0,1+n⁢n⁢(w¯,t¯)-n⁢n⁢(w^,t^))
+         <math alttext="loss&gt;0" class="ltx_Math" display="inline" id="S4.SS2.p9.m2" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mi>
+             l
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mi>
+             o
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mi>
+             s
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mi>
+             s
+            </mi>
+           </mrow>
+           <mo>
+            &gt;
+           </mo>
+           <mn>
+            0
+           </mn>
+          </mrow>
+         </math>
+         <math alttext="\hat{e}\leftarrow nn.\textrm{BackPropErr}(\langle\hat{w}\rangle,-nn(\hat{w},%
+\hat{t}))" class="ltx_Math" display="inline" id="S4.SS2.p9.m3" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mover accent="true">
+             <mi>
+              e
+             </mi>
+             <mo stretchy="false">
+              ^
+             </mo>
+            </mover>
+            <mo>
+             ←
+            </mo>
+            <mrow>
+             <mi>
+              n
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              n
+             </mi>
+            </mrow>
+           </mrow>
+           <mo separator="true">
+            .
+           </mo>
+           <mrow>
+            <mtext>
+             BackPropErr
+            </mtext>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <mo>
+              (
+             </mo>
+             <mrow>
+              <mrow>
+               <mo>
+                ⟨
+               </mo>
+               <mover accent="true">
+                <mi>
+                 w
+                </mi>
+                <mo stretchy="false">
+                 ^
+                </mo>
+               </mover>
+               <mo>
+                ⟩
+               </mo>
+              </mrow>
+              <mo>
+               ,
+              </mo>
+              <mrow>
+               <mo>
+                -
+               </mo>
+               <mrow>
+                <mi>
+                 n
+                </mi>
+                <mo>
+                 ⁢
+                </mo>
+                <mi>
+                 n
+                </mi>
+                <mo>
+                 ⁢
+                </mo>
+                <mrow>
+                 <mo>
+                  (
+                 </mo>
+                 <mrow>
+                  <mover accent="true">
+                   <mi>
+                    w
+                   </mi>
+                   <mo stretchy="false">
+                    ^
+                   </mo>
+                  </mover>
+                  <mo>
+                   ,
+                  </mo>
+                  <mover accent="true">
+                   <mi>
+                    t
+                   </mi>
+                   <mo stretchy="false">
+                    ^
+                   </mo>
+                  </mover>
+                 </mrow>
+                 <mo>
+                  )
+                 </mo>
+                </mrow>
+               </mrow>
+              </mrow>
+             </mrow>
+             <mo>
+              )
+             </mo>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="\overline{e}\leftarrow nn.\textrm{BackPropErr}(\langle\overline{w}\rangle,1+nn%
+(\overline{w},\overline{t}))" class="ltx_Math" display="inline" id="S4.SS2.p9.m4" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mover accent="true">
+             <mi>
+              e
+             </mi>
+             <mo>
+              ¯
+             </mo>
+            </mover>
+            <mo>
+             ←
+            </mo>
+            <mrow>
+             <mi>
+              n
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              n
+             </mi>
+            </mrow>
+           </mrow>
+           <mo separator="true">
+            .
+           </mo>
+           <mrow>
+            <mtext>
+             BackPropErr
+            </mtext>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <mo>
+              (
+             </mo>
+             <mrow>
+              <mrow>
+               <mo>
+                ⟨
+               </mo>
+               <mover accent="true">
+                <mi>
+                 w
+                </mi>
+                <mo>
+                 ¯
+                </mo>
+               </mover>
+               <mo>
+                ⟩
+               </mo>
+              </mrow>
+              <mo>
+               ,
+              </mo>
+              <mrow>
+               <mn>
+                1
+               </mn>
+               <mo>
+                +
+               </mo>
+               <mrow>
+                <mi>
+                 n
+                </mi>
+                <mo>
+                 ⁢
+                </mo>
+                <mi>
+                 n
+                </mi>
+                <mo>
+                 ⁢
+                </mo>
+                <mrow>
+                 <mo>
+                  (
+                 </mo>
+                 <mrow>
+                  <mover accent="true">
+                   <mi>
+                    w
+                   </mi>
+                   <mo>
+                    ¯
+                   </mo>
+                  </mover>
+                  <mo>
+                   ,
+                  </mo>
+                  <mover accent="true">
+                   <mi>
+                    t
+                   </mi>
+                   <mo>
+                    ¯
+                   </mo>
+                  </mover>
+                 </mrow>
+                 <mo>
+                  )
+                 </mo>
+                </mrow>
+               </mrow>
+              </mrow>
+             </mrow>
+             <mo>
+              )
+             </mo>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="nn.\textrm{Update}(\langle\hat{w}\rangle,\hat{e})" class="ltx_Math" display="inline" id="S4.SS2.p9.m5" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mi>
+             n
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mi>
+             n
+            </mi>
+           </mrow>
+           <mo separator="true">
+            .
+           </mo>
+           <mrow>
+            <mtext>
+             Update
+            </mtext>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <mo>
+              (
+             </mo>
+             <mrow>
+              <mrow>
+               <mo>
+                ⟨
+               </mo>
+               <mover accent="true">
+                <mi>
+                 w
+                </mi>
+                <mo stretchy="false">
+                 ^
+                </mo>
+               </mover>
+               <mo>
+                ⟩
+               </mo>
+              </mrow>
+              <mo>
+               ,
+              </mo>
+              <mover accent="true">
+               <mi>
+                e
+               </mi>
+               <mo stretchy="false">
+                ^
+               </mo>
+              </mover>
+             </mrow>
+             <mo>
+              )
+             </mo>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <math alttext="nn.\textrm{Update}(\langle\overline{w}\rangle,\overline{e})" class="ltx_Math" display="inline" id="S4.SS2.p9.m6" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mrow>
+            <mi>
+             n
+            </mi>
+            <mo>
+             ⁢
+            </mo>
+            <mi>
+             n
+            </mi>
+           </mrow>
+           <mo separator="true">
+            .
+           </mo>
+           <mrow>
+            <mtext>
+             Update
+            </mtext>
+            <mo>
+             ⁢
+            </mo>
+            <mrow>
+             <mo>
+              (
+             </mo>
+             <mrow>
+              <mrow>
+               <mo>
+                ⟨
+               </mo>
+               <mover accent="true">
+                <mi>
+                 w
+                </mi>
+                <mo>
+                 ¯
+                </mo>
+               </mover>
+               <mo>
+                ⟩
+               </mo>
+              </mrow>
+              <mo>
+               ,
+              </mo>
+              <mover accent="true">
+               <mi>
+                e
+               </mi>
+               <mo>
+                ¯
+               </mo>
+              </mover>
+             </mrow>
+             <mo>
+              )
+             </mo>
+            </mrow>
+           </mrow>
+          </mrow>
+         </math>
+         <span class="ltx_ERROR undefined">
+          \STATE
+         </span>
+         𝐔←𝐔/{w^}, 𝐑←𝐑/(w^,t^)
+         <span class="ltx_ERROR undefined">
+          \ENDWHILE
+         </span>
+         <math alttext="nn" class="ltx_Math" display="inline" id="S4.SS2.p9.m8" xmlns="http://www.w3.org/1998/Math/MathML">
+          <mrow>
+           <mi>
+            n
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            n
+           </mi>
+          </mrow>
+         </math>
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Setup
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         Our experiments are conducted on the data set provided by the SANCL 2012 shared task, which aims at building a single robust syntactic analysis system across the web-domain.
+The data set consists of labelled data for both the source (Wall Street Journal portion of the Penn Treebank) and target (web) domains.
+The web domain data can be further classified into five sub-domains, including emails, weblogs, business reviews, news groups and Yahoo!Answers.
+While emails and weblogs are used as the development sets, reviews, news groups and Yahoo!Answers are used as the final test sets.
+Participants are not allowed to use web-domain labelled data for training.
+In addition to labelled data, a large amount of unlabelled data on the web domain is also provided.
+Statistics about labelled and unlabelled data are summarized in Table 1 and Table 2, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         The raw web domain data contains much noise, including spelling error, emotions and inconsistent capitalization.
+Following some participants
+         [12]
+         , we conduct simple preprocessing steps to the input of the development and the test sets
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Neutral quotes are transformed to opening or closing quotes.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Tokens starting with “www.”, “http.” or ending with “.org”, “.com” are converted to a “#URL” symbol
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Repeated punctuations such as “!!!!” are collapsed into one.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            Left brackets such as “
+            &lt;
+            ”,“{” and “[” are converted to “-LRB-”. Similarly, right brackets are converted to “-RRB-”
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i5" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i5.p1">
+           <p class="ltx_p">
+            Upper cased words that contain more than 4 letters are lowercased.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i6" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i6.p1">
+           <p class="ltx_p">
+            Consecutive occurrences of one or more digits within a word are replaced with “#DIG”
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         We apply the same preprocessing steps to all the unlabelled data.
+In addition, following
+         Dahl et al. (2012)
+         and
+         Turian et al. (2010)
+         , we also lowercased all the unlabelled data and removed those sentences that contain less than 90% a-z letters.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         The tagging performance is evaluated according to the official evaluation metrics of SANCL 2012.
+The tagging accuracy is defined as the percentage of words (punctuations included) that are correctly tagged.
+The averaged accuracies are calculated across the web domain data.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p">
+         We trained the WRRBM on web-domain data of different sizes (number of sentences).
+The data sets are generated by first concatenating all the cleaned unlabelled data, then selecting sentences evenly across the concatenated file.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p5">
+        <p class="ltx_p">
+         For each data set, we investigate an extensive set of combinations of hyper-parameters:
+the n-gram window
+         (l,r)
+         in
+         {(1,1),(2,1),(1,2),(2,2)}
+         ;
+the hidden layer size in
+         {200,300,400}
+         ;
+the learning rate in
+         {0.1,0.01,0.001}
+         .
+All these parameters are selected according to the averaged accuracy on the development set.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Baseline
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         We reimplemented the greedy easy-first POS tagger of Ma et al. (2013), which is used for all the experiments.
+While the tagger of Ma et al. (2013) utilizes a linear scorer, our tagger adopts the neural network as its scorer.
+The neural network of our baseline tagger only contains the sparse-feature module.
+We use this baseline to examine the performance of a tagger trained purely on the source domain.
+Feature templates are shown in Table 3, which are based on those of Ratnaparkhi (1996) and Shen et al. (2007).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Accuracies of the baseline tagger are shown in the upper part of Table 6.
+Compared with the performance of the official baseline (row 4 of Table 6), which is evaluated based on the output of BerkeleyParser
+         [16, 17]
+         , our baseline tagger achieves comparable accuracies on both the source and target domain data.
+With data preprocessing, the average accuracy boosts to about 92.02 on the test set of the target domain.
+This is consistent with previous work (Le Roux et al., 2011), which found that for noisy data such as web domain text, data cleaning is a effective and necessary step.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Exploring the Learned Knowledge
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         As mentioned in Section 3.1, the knowledge learned from the WRRBM can be investigated incrementally,
+using
+         word representation
+         , which corresponds to initializing only the projection layer of web-feature module with the projection matrix of the learned WRRBM,
+or
+         ngram-level representation
+         , which corresponds to initializing both the projection and sigmoid layers of the web-feature module by the learned WRRBM.
+In each case, there can be two different
+         training strategies
+         depending on whether the learned representations are further adjusted or kept unchanged during the fine-turning phrase.
+Experimental results under the 4 combined settings on the development sets are illustrated in Figure 2, 3 and 4, where the x-axis denotes the size of the training data and y-axis denotes tagging accuracy.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS3.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.3.1
+         </span>
+         Effect of the Training Strategy
+        </h4>
+        <div class="ltx_para" id="S5.SS3.SSS1.p1">
+         <p class="ltx_p">
+          From Figure 2 we can see that when knowledge from the pre-trained WRRBM is incorporated, both the
+          training strategies
+          (“word-fixed” vs “word-adjusted”, “ngram-fixed” vs “ngram-adjusted”) improve accuracies on the source domain, which is consistent with previous findings (Turian et al., 2010; Collobert et al., 2011).
+In addition, adjusting the learned representation or keeping them fixed does not result in too much difference in tagging accuracies.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS3.SSS1.p2">
+         <p class="ltx_p">
+          On the web-domain data, shown in Figure 3 and 4, we found that leaving the learned representation unchanged (“word-fixed”, “ngram-fixed”) yields consistently higher performance gains.
+This result is to some degree expected.
+Intuitively, unsupervised pre-training moves the parameters of the WRRBM towards the region where properties of the
+          web domain
+          data are properly modelled.
+However, since fine-tuning is conducted with respect to the
+          source domain
+          , adjusting the parameters of the pre-trained representation towards optimizing source domain tagging accuracies would disrupt its ability in modelling the web domain data.
+Therefore, a better idea is to keep the representation unchanged so that we can learn a function that maps the general web-text properties to its syntactic categories.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS3.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.3.2
+         </span>
+         Word and N-gram Representation
+        </h4>
+        <div class="ltx_para" id="S5.SS3.SSS2.p1">
+         <p class="ltx_p">
+          From Figures 2, 3 and 4, we can see that adopting the ngram-level representation consistently achieves better performance compared with using word representations only (“word-fixed” vs “ngram-fixed”, “word-adjusted” vs “ngram-adjusted”).
+This result illustrates that the ngram-level knowledge captures more complex interactions of the web text, which cannot be recovered by using only word embeddings.
+Similar result was reported by Dahl et al. (2012), who found that using both the word embeddings and the hidden units of a tri-gram WRRBM as additional features for a CRF chunker yields larger improvements than using word embeddings only.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS3.SSS2.p2">
+         <p class="ltx_p">
+          Finally, more detailed accuracies under the 4 settings on the email domain are shown in Table 4.
+We can see that the improvement of using word representations mainly comes from better accuracy of out-of-vocabulary (oov) words.
+By contrast, using n-gram representations improves the performance on both oov and non-oov.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Effect of Unlabelled Domain Data
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         In some circumstances, we may know beforehand that the target domain data belongs to a certain sub-domain, such as the email domain.
+In such cases, it might be desirable to train WRRBM using data only on that domain.
+We conduct experiments to test whether using the target domain data to train the WRRBM yields better performance compared with using mixed data from all sub-domains.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         We trained 3 WRRBMs using the email domain data (RBM-E), weblog domain data (RBM-W) and mixed domain data (RBM-M), respectively, with each data set consisting of 300k sentences.
+Tagging performance and lexicon coverages of each data set on the development sets are shown in Table 5.
+We can see that using the target domain data achieves similar improvements compared with using the mixed data.
+However, for the email domain, RBM-W yields much smaller improvement compared with RBM-E, and vice versa.
+From the lexicon coverages, we can see that the sub-domains varies significantly.
+The results suggest that using mixed data can achieve almost as good performance as using the target sub-domain data, while using mixed data yields a much more robust tagger across all sub-domains.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.5
+        </span>
+        Final Results
+       </h3>
+       <div class="ltx_para" id="S5.SS5.p1">
+        <p class="ltx_p">
+         The best result achieved by using a 4-gram WRRBM,
+         (wi-2,…,wi+1)
+         , with 300 hidden units learned on 1,000k web domain sentences are shown in row 3 of Table 6.
+Performance of the top 2 systems of the SANCL 2012 task are also shown in Table 6.
+Our greedy tagger achieves
+         93.27⁢%
+         tagging accuracy, which is significantly better than the baseline’s
+         92.02⁢%
+         accuracy (
+         p&lt;0.05
+         by McNemar’s test).
+Moreover, we achieve the highest tagging accuracy reported so far on this data set, surpassing those achieved using parser combinations based on self-training
+         [24, 12]
+         .
+In addition, different from
+         Le Roux et al. (2012)
+         , we do not use any external resources in data cleaning.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        Learning representations has been intensively studied in computer vision tasks
+        [2, 13]
+        .
+In NLP, there is also much work along this line.
+In particular,
+        Collobert et al. (2011)
+        and
+        Turian et al. (2010)
+        learn word embeddings to improve the performance of in-domain POS tagging, named entity recognition, chunking and semantic role labelling.
+        Yang et al. (2013)
+        induce bi-lingual word embeddings for word alignment.
+        Zheng et al. (2013)
+        investigate Chinese character embeddings for joint word segmentation and POS tagging.
+While those approaches mainly explore token-level representations (word or character embeddings), using WRRBM is able to utilize both word and n-gram representations.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        Titov (2011)
+        and
+        Glorot et al. (2011)
+        propose to learn representations from the mixture of both source and target domain unlabelled data to improve cross-domain sentiment classification.
+        Titov (2011)
+        also propose a regularizer to constrain the inter-domain variability.
+In particular, their regularizer aims to minimize the Kullback-Leibler (KL) distance between the marginal distributions of the learned representations on the source and target domains.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        Their work differs from ours in that their approaches learn representations from the feature vectors for sentiment classification, which might be of thousands of dimensions.
+Such high dimensional input gives rise to high computational cost and it is not clear whether those approaches can be applied to large scale unlabelled data, with hundreds of millions of training examples.
+Our method learns representations from only word n-grams with
+        n
+        ranging from 3 to 5, which can be easily applied to large scale-data.
+In addition, while
+        Titov (2011)
+        and
+        Glorot et al. (2011)
+        use the learned representation to improve cross-domain classification tasks, we are the first to apply it to cross-domain structured prediction.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        Blitzer et al. (2006)
+        propose to induce shared representations for domain adaptation, which is based on the alternating structure optimization (ASO) method of
+        Ando and Zhang (2005)
+        .
+The idea is to project the original feature representations into low dimensional representations, which yields a high-accuracy classifier on the target domain.
+The new representations are induced based on the auxiliary tasks defined on unlabelled data together with a dimensionality reduction technique.
+Such auxiliary tasks can be specific to the supervised task.
+As pointed out by
+        Plank (2009)
+        , for many NLP tasks, defining the auxiliary tasks is a non-trivial engineering problem.
+Compared with
+        Blitzer et al. (2006)
+        , the advantage of using RBMs is that it learns representations in a pure unsupervised manner, which is much simpler.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        Regarding using neural networks for sequential labelling, our approach shares similarity with that of
+        Collobert et al. (2011)
+        .
+In particular, we both use a non-linear layer to model complex relations underling word embeddings.
+However, our network differs from theirs in the following aspects.
+        Collobert et al. (2011)
+        model the dependency between neighbouring tags in a generative manner, by employing a transition score
+        Ai⁢j
+        .
+Training the score involves a forward process of complexity
+        O⁢(n⁢T2)
+        , where
+        T
+        denotes the number of tags.
+Our model captures such a dependency in a discriminative manner, by just adding tag-related features to the sparse-feature module.
+In addition,
+        Collobert et al. (2011)
+        train their network by maximizing the training set likelihood, while our approach is to minimize the margin loss using guided learning.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

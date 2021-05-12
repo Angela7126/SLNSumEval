@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Optimal social choice functions: A utilitarian view.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Classic models in social choice theory assume that the preferences of a set of agents over a set of alternatives are represented as linear orders; a social choice function, given these preferences as input, outputs a single socially desirable alternative. A host of clever social choice functions have been designed to satisfy various normative criteria. Most work in computational social choice studies computational aspects of these models, addressing questions such as the complexity of computing social choice functions [5], [17] or manipulating them (see the survey by Faliszewski and Procaccia [13]).
+     </paragraph>
+     <paragraph>
+      Under ordinal preferences, an axiomatic approach to obtaining a socially desirable outcome seems—on the face of it—necessary, absent concrete measures of the quality of an alternative. In contrast, some work in economics assumes cardinal preferences and takes a utilitarian approach. This viewpoint dates to the work of Bentham at the end of the 18th century, who argued that “it is the greatest happiness of the greatest number that is the measure of right and wrong.” This axiom suggests that happiness can be quantified, and indeed, having coined the term utility, Bentham proposed that the goal of government is to maximize the sum of individual utilities—the social welfare (defying contemporary wisdom that the goal of government is to enrich the coffers of the ruler). The utilitarian approach is prevalent, for example, in mechanism design, and perhaps even more so in algorithmic mechanism design [25].
+     </paragraph>
+     <paragraph>
+      In this paper we view the social choice problem through this utilitarian lens. Our premise is that agents have (possibly implicit) utility functions, and the goal of a social choice function is to maximize the (utilitarian) social welfare{sup:3}—i.e., (possibly weighted) sum of agent utilities—of the selected alternative. The utilitarian perspective is not appropriate for all social choice problems (a point we discuss further below). However, the methods of social choice—especially voting systems—are finding increasing application in recommender systems, web search, product design, and many more practical domains, in which the primary aim is often, as in much of mechanism design, to aggregate preferences so that utility or efficiency is maximized. Indeed, one motivation for our work is the development of group recommendation systems for a variety of domains, including low-stakes consumer applications and higher profile public policy and corporate decisions. Our work can be viewed as a step toward supporting groups of users making decisions using social choice functions that are automatically optimized for their needs. In these settings, a utilitarian perspective is often called for.
+     </paragraph>
+     <paragraph>
+      If we could directly access the utilities of agents, the socially desirable alternative could be easily identified. However, such access is often not feasible for a variety of reasons. As a result, we use agent preference orders as a proxy for their utility functions; and the social choice function, taking preference orders as input, should perform well with respect to the underlying utilities. From this point of view, a social choice function is optimal if it maximizes social welfare given the available information. Using a preference order as proxy for utility in this fashion serves several purposes. First, behavioral economists have argued that people find it difficult to construct utilities for alternatives. Second, the cognitive and communication burden of articulating precise utilities has long been recognized within decision analysis, behavioral economics, and psychology. By contrast, simply comparing and ordering alternatives is considerably easier for most people, which makes soliciting preference orders more practical than eliciting utilities. Furthermore, choice behavior among alternatives can often be interpreted as revealing ordinal (rather than cardinal) preference information, providing ready access to (sometimes incomplete) orders in many of the domains described above. Hence we content ourselves with orders as inputs.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Our results
+      </section-title>
+      <paragraph>
+       Our study of optimal social choice functions incorporates three distinct but related models, each with its own assumptions regarding available information and therefore its own notion of optimality. One common thread is that the family of scoring functions—social choice functions that score alternatives based only on their position in each agent's preference order—plays a key role in optimizing social welfare.
+      </paragraph>
+      <paragraph>
+       In Section 3 we study a model where no information about agents' utility functions is available when constructing the social choice function. A worst-case analysis is thus called for. We believe that the study of this model is of theoretical interest, but it is certainly the least practical of our three models. Specifically, given a collection of agents' preferences—a preference profile—there are many consistent collections of utility functions—utility profiles—that induce this preference profile in the natural way (by ranking alternatives with higher utility closer to the top). The distortion of a social choice function on a preference profile is the worst-case ratio (over feasible utility profiles) of the social welfare of the best alternative to the social welfare of the alternative that is selected by the function. A worst-case optimal social choice function minimizes the distortion on every preference profile.
+      </paragraph>
+      <paragraph>
+       We first derive upper and lower bounds on the least distortion that one can hope for, focusing on randomized social choice functions. We show that there exists a preference profile where every randomized social choice function must have distortion at least {a mathematical formula}Ω(m), where m is the number of alternatives. We complement this result with a randomized social choice function whose distortion on every preference profile is {a mathematical formula}O(mlog⁎⁡m). A slightly weaker upper bound is obtained via a randomized variation of a natural scoring function that we call the harmonic scoring function (a new canonical scoring function that may be of independent interest). Finally, we establish that the worst-case optimal social choice function (which achieves minimum distortion on every profile) is polynomial-time computable. The proof is based on linear programming, and (roughly speaking) relies on embedding the dual of a sub-problem within a carefully constructed larger LP, in order to avoid quadratic constraints.
+      </paragraph>
+      <paragraph>
+       In Section 4 we study an average-case model, assuming a known distribution D over utility functions. We assume that the utility function of each agent is drawn independently from D. Given reported agent preferences, one can compute the expected utility any agent has for an alternative with respect to D. An average-case optimal social choice function selects an alternative that maximizes expected social welfare given the reported profile. We show that when D is neutral, i.e., symmetric with respect to alternatives, the average-case optimal social choice function must be a scoring function. The proof leverages Young's [36] characterization of the family of scoring functions. As a corollary, we show that when D is uniform over an interval, the average-case optimal social choice function is the famous scoring function known as the Borda count.
+      </paragraph>
+      <paragraph>
+       In Section 5 we develop and analyze a learning-theoretic model. Rather than assuming a known distribution D over utility profiles, we have access only to sampled utility profiles from D. We use these profiles to compute sample-optimal social choice functions. The quality of a sample-optimal function is measured by comparing its expected social welfare to that of the (truly) optimal social choice function for D. We address two natural questions. First we derive sample complexity results for two classes of social choice functions, k-approval functions and more general scoring functions; specifically, we derive necessary and sufficient bounds on the number of samples such that the sample-optimal function in this class will have social welfare that is within a small tolerance of the optimal choice function with high probability. Second, we show that computing the sample-optimal scoring function is {a mathematical formula}APX-hard, but describe a mixed integer programming formulation of this problem that solves it in practice. Empirical results on a random utility model and a real data set suggest that sample-optimal scoring functions (as well as several more stylized functions, including Borda count) have very low expected distortion.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Perspective and related work
+      </section-title>
+      <paragraph>
+       While the utilitarian perspective on social choice—especially the goal of optimizing the (possibly weighted) sum of individual utilities—has been overshadowed by the more axiomatic perspective to a great extent, its foundations are nonetheless firm [15], and it does have its advocates. Our work adopts this utilitarian perspective, and assumes that social welfare is measured using the sum of individual agent utilities in the classic “Benthamite” fashion. Naturally, this position requires making a number of assumptions about the problem domain including: the existence of agent (cardinal) utility functions; the validity of interpersonal comparison of utilities; and having as one's goal the maximization of the sum of individual utilities.
+      </paragraph>
+      <paragraph>
+       None of these assumptions is valid in all social choice settings. The foundations of von Neumann and Morgenstern [32] expected utility theory treat the strength of preference for alternatives expressed by a utility function as representing an individual's (ordinal) preferences over lotteries or gambles involving those alternatives. While this theory can be operationalized to (roughly) determine an individual's utility function (e.g., using standard gamble queries, as is common in decision analysis), it provides little foundation for a satisfactory account of interpersonal utility comparison. Furthermore, even if one accepts that such interpersonal comparisons are meaningful, many social choice functions and voting schemes studied in the social choice literature cannot, in any sense, be interpreted as maximizing the sum of individual utilities, or as assuming that individual utilities even exist.
+      </paragraph>
+      <paragraph>
+       Despite this, the three key assumptions above hold (at least approximately) in many settings, including those of interest in computational economics, algorithmic mechanism design, and e-commerce. Most work in mechanism design assumes that agents possess real-valued utility or valuation functions over alternatives, and while arbitrary social choice functions may be considered, one of the most common is social welfare maximization, which is, for example, the social choice function implemented by the celebrated VCG mechanism [25], which requires monetary transfers (in order to achieve truthfulness). Other papers also assume cardinal utilities and deal with truthfulness and social welfare maximization but in settings without money. For example, in a recent paper, Azrieli and Kim [4] characterize social choice functions that maximize social welfare subject to truthfulness when there are two alternatives—they are weighted majority rules with appropriate weights. In this light, our work can be viewed as providing the means to approximately maximize social welfare, while reducing the elicitation burden of classic mechanisms by having agents rank alternatives rather than specify valuations.
+      </paragraph>
+      <paragraph>
+       While many of our results on the optimality of scoring rules in the worst-case and average-case models depend on using the sum of utilities as our social choice function, our learning-theoretic model and corresponding empirical optimization framework could, in principle, be adapted to other measures of social welfare (including the “Rawlsian” maximin and other measures) that take as input the utility functions of a collection of agents. In this sense, our framework does not require a commitment to maximizing the sum of individual utilities.
+      </paragraph>
+      <paragraph>
+       Some researchers argue that agents should express their preferences by explicitly reporting utilities. While very common in decision analysis, this perspective is also sometimes adopted in social choice. For example, utilitarian voting[18] (or range voting) allows voters to express utilities for alternatives in some predefined range, e.g., {a mathematical formula}{1,…,10}, {a mathematical formula}{−1,0,1}, or {a mathematical formula}{0,1} (the last coincides with approval voting[8]). While utilitarian in approach, such work differs from ours, as we take the (prevalent) view that human voters are far more comfortable expressing ordinal preferences—we seek to optimize the choice of alternative with respect to implicit utility functions.
+      </paragraph>
+      <paragraph>
+       The worst-case model in Section 3 is closely related to work by Procaccia and Rosenschein [27]. Their work shares the premise that ordinal utilities are a proxy for underlying cardinal utilities. They too argue that a social choice function should maximize social welfare, and introduce the notion of distortion to quantify the gap between optimum social welfare and the total utility of the social choice based on the induced preference orders. The main difference from our approach is that they consider deterministic social choice functions, whereas we focus on randomized functions. Deterministic functions inevitably have trivially high distortion, which Procaccia and Rosenschein mitigate by focusing attention on highly structured utility functions. In contrast, our study provides rich theoretical results under a very mild assumption on utility functions.
+      </paragraph>
+      <paragraph>
+       A recent paper by Caragiannis and Procaccia [10] builds on [27], and is also closely related to our worst-case results. Although they also aim to optimize social welfare, their work is fundamentally different on a conceptual level: they consider settings where agents are software agents that can easily compute exact utilities for alternatives, and the need for voting arises because of communication restrictions. Hence they focus on simple, fixed social choice functions with low communication requirements, and optimize the embedding by which agents translate their utility functions into reported votes. For example, an agent can map its utility function to a plurality vote—which designates a single, favorite alternative, and therefore requires only {a mathematical formula}log2⁡m bits—by voting for each alternative with probability proportional to that alternative's utility. While such embeddings are well-motivated in cooperative multiagent systems, in our setting, agents may be people whose utility functions are translated into preference orders in the natural way; thus we optimize the social choice function. Fig. 1 illustrates the two different optimization processes.
+      </paragraph>
+      <paragraph>
+       Several papers study models that are similar to our average-case model in Section 4. For example, Pivato [26] shows that when cardinal utilities are drawn from a distribution satisfying certain assumptions, a Condorcet winner exists and maximizes the social welfare with high probability. And early empirical work by Bordley [7] and Merrill [24] shows that plurality achieves lower social welfare than other social choice functions.
+      </paragraph>
+      <paragraph>
+       The unpublished work of Weber [34] is even more closely related. His motivation is similar to ours, but his model and results differ in several important ways. First, he optimizes a measure different from ours. Second, he restricts attention to (a slight generalization of) the family of scoring functions (whereas we identify optimal social choice functions, which just happen to be scoring functions). Third, he assumes that the utility of each agent for each alternative is independently and uniformly distributed on an interval, while our assumptions are less restrictive. Weber's main result is that Borda count is asymptotically optimal (w.r.t. his measure) among scoring functions. Interestingly, under his more restrictive assumptions we show that Borda count is average-case (exactly) optimal (w.r.t. our measure, expected social welfare of the winner) among all social choice functions.
+      </paragraph>
+      <paragraph>
+       Section 4 is also closely related to independent{sup:4} work by Apesteguia et al. [3], who prove a result that is very similar to our Theorem 4.2. Our result is somewhat stronger, in that we assume that the utility function of each agent is drawn i.i.d. from a neutral distribution D, whereas they assume that each agent's utility for each alternative is drawn i.i.d. Moreover, our proof—which builds on a result by Young [36]—is completely different.
+      </paragraph>
+      <paragraph>
+       The learning-theoretic model in Section 5 is related to a study of the learnability of social choice functions by Procaccia et al. [28]. They consider the reconstruction of a scoring function based on examples, where an example is a preference profile and a winning alternative for that profile. In contrast, in our learning-theoretic setting we optimize expected social welfare, and examples are utility profiles. On a conceptual level, their motivation is fundamentally different; on a technical level, we require new tools, but leverage some of their results to derive novel results in our setting.
+      </paragraph>
+      <paragraph>
+       Finally, we are seeing increasingly more work in computational social choice that views the social choice problem as an optimization problem [21], [12]. One such approach views social choice functions as maximum likelihood estimators [11]. This line of work, dating to the 18th century, was revived by Young [37], who studied “optimal” voting rules, but his notion of optimality is very different from ours. Specifically, the maximum likelihood perspective assumes that agents order alternatives reflecting their personal assessment of the relative likelihood that particular alternatives are “objectively best”. Voting is intended to determine the alternative (or ranking) with maximum likelihood of being the best given these assessments, assuming that each agent is more likely to rank any pair of alternatives correctly than incorrectly. Young's view of optimality (and the MLE perspective more broadly) is thus purely statistical and does not address issues of social welfare or utility maximization.{sup:5}
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      Let {a mathematical formula}N={1,…,n} be a set of agents and {a mathematical formula}A={a1,…,am} a set of alternatives. Each agent has a preference order over A, which is a strict total order. Letting {a mathematical formula}[k]={1,…,k}, we can equivalently view a preference order as a bijection {a mathematical formula}σ:A→[m] mapping each alternative to its rank. Let {a mathematical formula}Sm be the set of such bijections. The alternative ranked in position k under ranking σ is given by {a mathematical formula}σ−1(k).
+     </paragraph>
+     <paragraph>
+      For each {a mathematical formula}i∈N, let {a mathematical formula}σi be the preference order of agent i. The vector of agent preferences {a mathematical formula}σ→=(σ1,…,σn)∈(Sm)n is a preference profile. A social choice function{a mathematical formula}f:(Sm)n→A maps preference profiles to alternatives. We draw special attention to a class of social choice functions known as scoring functions. A scoring function is defined by a vector {a mathematical formula}s→=(s1,…,sm). Given preference profile {a mathematical formula}σ→, the score of {a mathematical formula}a∈A is {a mathematical formula}∑i∈Nsσi(a), i.e., a is awarded {a mathematical formula}sk points for each agent who ranks it in position k. The scoring function{a mathematical formula}fs→induced by{a mathematical formula}s→ selects some {a mathematical formula}a∈A with maximum score with ties broken in some fashion (we revisit tie breaking as it becomes relevant). The well-known Borda scoring function (or count) is induced by the vector {a mathematical formula}(m−1,m−2,…,0).
+     </paragraph>
+     <paragraph>
+      Unlike classical social choice models, we assume that agents have utility functions over alternatives. As discussed above, however, these are not reported or used by the social choice function. Let {a mathematical formula}u:A→R+ be a utility function. We say a ranking σ is consistent with u if {a mathematical formula}u(a)&gt;u(a′) implies {a mathematical formula}σ(a)&lt;σ(a′); i.e., alternatives with higher utility must be ranked higher than those with lower utility.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}p(u) be the set of rankings consistent with (or induced by) u; {a mathematical formula}p(u) is a set to account for ties in utility. We occasionally presume agents use some (randomized) method for selecting a specific ranking {a mathematical formula}σ∈p(u) when they possess utility function u; in such a case, we use {a mathematical formula}σ(u) to denote the corresponding random variable (with domain {a mathematical formula}p(u)). Abusing notation slightly, let {a mathematical formula}p−1(σ) be the set of utility functions u such that {a mathematical formula}σ∈p(u), i.e., the set of utility functions consistent with σ. The vector {a mathematical formula}u→=(u1,…,un) of agent utility functions is a utility profile. Let {a mathematical formula}p(u→)=p(u1)×⋯×p(un) be the set of preference profiles consistent with {a mathematical formula}u→. Similarly, let {a mathematical formula}σ→(u→) denote the random variable over {a mathematical formula}p(u→) representing the (joint) choice of rankings, and {a mathematical formula}p−1(σ→) denote the set of utility profiles consistent with preference profile {a mathematical formula}σ→.
+     </paragraph>
+     <paragraph>
+      Positing a utility model allows one to quantify the social welfare of an alternative. For utility profile {a mathematical formula}u→, let {a mathematical formula}sw(a,u→)=∑i∈Nui(a) be the (utilitarian) social welfare of a.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      The worst-case model
+     </section-title>
+     <paragraph>
+      We begin our study of optimal social choice functions with a worst-case model. A social choice function has access only to a preference profile, but this preference profile is induced by some unknown utility profile. To quantify the quality of a social choice function, we use the notion of distortion[27], [10], which reflects the degree to which the social choice can become distorted when cardinal preferences are mapped to ordinal preferences. More precisely, the distortion of social choice function f on a preference profile {a mathematical formula}σ→ is given by{a mathematical formula} In other words, distortion is the worst-case ratio (over consistent utility profiles) of the social welfare of the optimal alternative to that of the alternative selected by f.
+     </paragraph>
+     <paragraph>
+      As observed by Procaccia and Rosenschein [27], deterministic social choice functions must have high distortion. For example, consider a preference profile where {a mathematical formula}n/2 agents rank a first, and {a mathematical formula}n/2 agents rank b first. Assume (w.l.o.g.) a social choice function selects a. Suppose the agents that rank b first have utility 1 for b and 0 for other alternatives, while agents that rank a first have utility {a mathematical formula}1/m for all alternatives. The ratio between the social welfare of b and a is {a mathematical formula}Ω(m). To reduce potential distortion, Procaccia and Rosenschein [27] adopt an extremely restrictive assumption on utility functions (specifically, that utilities are Borda scores). We instead turn to randomization.
+     </paragraph>
+     <paragraph>
+      We consider randomized social choice functions{a mathematical formula}f:(Sm)n→Δ(A), in which {a mathematical formula}f(σ→) is a distribution (or random variable) over A. We extend the definition of distortion to randomized functions in the natural way:{a mathematical formula} In general, even randomized social choice functions cannot achieve a distortion lower than {a mathematical formula}Ω(m). Consider a preference profile where each {a mathematical formula}a∈A is ranked first at least once. Given a randomized social choice function, there is some alternative {a mathematical formula}a⁎∈A that is selected with probability at most {a mathematical formula}1/m given this preference profile. However, this profile is induced by the utility profile where one agent gives arbitrarily high utility to {a mathematical formula}a⁎, and all other utilities are arbitrarily low. The ratio between the social welfare of {a mathematical formula}a⁎ and the function's expected social welfare would therefore be {a mathematical formula}Ω(m).
+     </paragraph>
+     <paragraph>
+      To avoid this, we make the following assumption in this section:
+     </paragraph>
+     <paragraph label="Assumption 3.1">
+      (Only in Section 3.) For each agent {a mathematical formula}i∈N, {a mathematical formula}∑a∈Aui(a)=1.
+     </paragraph>
+     <paragraph>
+      This ensures that agents have equal “weights,” or equal pools of “utility points” to distribute among the alternatives. Otherwise, if, say, agent 1 has utility 1 for a and 0 for the rest, and agent 2 has utility 1/2 for b and 0 for the rest, then agent 1 has twice as much influence as agent 2 in determining the socially optimal alternative. The same assumption is also made by Caragiannis and Procaccia [10].
+     </paragraph>
+     <paragraph>
+      Our first result establishes a lower bound on the distortion of randomized social choice functions under Assumption 3.1 (which is almost tight, see below).
+     </paragraph>
+     <paragraph label="Theorem 3.2">
+      Assume that{a mathematical formula}n≥m. Then there exists a{a mathematical formula}σ→∈(Sm)nsuch that for any randomized social choice function f,{a mathematical formula}dist(f,σ→)=Ω(m).
+     </paragraph>
+     <paragraph label="Proof">
+      For ease of exposition assume that {a mathematical formula}m divides n. Partition the agents into {a mathematical formula}m equal subsets {a mathematical formula}N1,…,Nm. Consider the preference profile {a mathematical formula}σ→ where {a mathematical formula}σi(ak)=1, for all {a mathematical formula}i∈Nk, and the remaining alternatives are ranked arbitrarily.For any randomized f there must be a {a mathematical formula}k⁎∈{1,…,m} such that {a mathematical formula}Pr⁡[f(σ→)=ak⁎]≤1/m. Let {a mathematical formula}u→ be a utility profile such that for all {a mathematical formula}i∈Nk⁎, {a mathematical formula}vi(ak⁎)=1 and {a mathematical formula}ui(a)=0 for all {a mathematical formula}a∈A∖{ak⁎}. For all {a mathematical formula}i∉Nk⁎ and {a mathematical formula}a∈A, {a mathematical formula}vi(a)=1/m. It holds that{a mathematical formula} and for all {a mathematical formula}a∈A∖{ak⁎}, {a mathematical formula}sw(a,u→)≤n/m. Therefore:{a mathematical formula}  □
+     </paragraph>
+     <paragraph>
+      We next establish the existence of a randomized social choice function that nearly achieves this lower bound on every preference profile, leaving a tiny gap of only {a mathematical formula}log⁎⁡m (iterated logarithm of m).
+     </paragraph>
+     <paragraph label="Theorem 3.3">
+      There exists a randomized social choice function f such that for every{a mathematical formula}σ→∈(Sm)n,{a mathematical formula}dist(f,σ→)=O(m⋅log⁎⁡m).
+     </paragraph>
+     <paragraph>
+      The rather intricate proof of this theorem is provided in Appendix A. Here we present a much simpler proof of a weaker upper bound of {a mathematical formula}O(mlog⁡m). This latter proof uses the novel harmonic scoring function, given by score vector {a mathematical formula}(h1,…,hm), where {a mathematical formula}hk=1/k.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}sc(a,σ→) be the score of a under {a mathematical formula}σ→ using the harmonic scoring function. It holds that {a mathematical formula}ui(a)≤1/σi(a) for all {a mathematical formula}i∈N and {a mathematical formula}a∈A, because if {a mathematical formula}i∈N ranks {a mathematical formula}a∈A in position k and gives it utility {a mathematical formula}ui(a), each of the {a mathematical formula}k−1 alternatives ranked above a must have utility at least {a mathematical formula}ui(a), but the sum of utilities is one. Therefore, for any {a mathematical formula}u→∈p−1(σ→) and any a,{a mathematical formula} In addition, note that for any {a mathematical formula}σ→,{a mathematical formula}Consider the randomized f that chooses one of the following two schemes (each with probability 1/2): (i) select an alternative uniformly at random, and (ii) select an alternative with probability {a mathematical formula}sc(a,σ→)/(∑a′∈Asc(a′,σ→)) (i.e., proportional to {a mathematical formula}sc(a,σ→)). Let {a mathematical formula}σ→∈(Sm)n, {a mathematical formula}u→∈p−1(σ→), and {a mathematical formula}a∈A. It is sufficient to show that{a mathematical formula}We consider two cases. First, assume that {a mathematical formula}sc(a,σ→)≥n(ln⁡m+1)/m. With probability 1/2, a winner is selected proportionally to its score. Using Eq. (2), the probability that a is selected is at least{a mathematical formula} It follows that{a mathematical formula}Second, assume that {a mathematical formula}sc(a,σ→)&lt;n⋅(ln⁡m+1)/m. From Eq. (1) it follows that {a mathematical formula}sw(a,u→)&lt;n⋅(ln⁡m+1)/m. With probability 1/2, a winner is selected uniformly at random. We have that{a mathematical formula} and therefore {a mathematical formula}E[sw(f(σ→),u→)]≥n/(2m). We conclude that{a mathematical formula}  □
+     </paragraph>
+     <paragraph>
+      An interesting aspect of this proof is its use of the harmonic scoring function. Despite a large body of (especially computational) work on scoring functions (see, e.g., [16], [35], [28]), only three scoring functions are considered canonical: Borda count; plurality, defined by vector {a mathematical formula}(1,0,…,0); and veto (or anti-plurality), defined by vector {a mathematical formula}(1,…,1,0). We hope that the harmonic function, with natural parameters and attractive theoretical properties, may in time be accepted into this exclusive club.
+     </paragraph>
+     <paragraph>
+      While Theorem 3.3 offers attractive theoretical guarantees, its randomized social choice function need not be optimal. While there are preference profiles where distortion must be at least {a mathematical formula}Ω(m), there may be many profiles where low distortion is achievable but this function nevertheless yields relatively high distortion. We are thus most interested in worst-case optimal (randomized) social choice functions. By this, we simply mean that for every{a mathematical formula}σ→∈(Sm)n, the function f has minimum possible distortion on {a mathematical formula}σ→. We can show that such a social choice function is polynomial-time computable via linear programming duality.
+     </paragraph>
+     <paragraph label="Theorem 3.4">
+      The worst-case optimal randomized social choice function is polynomial-time computable.
+     </paragraph>
+     <paragraph label="Proof">
+      For an alternative {a mathematical formula}a⁎∈A and {a mathematical formula}σ→∈(Sm)n, let{a mathematical formula} Given a preference profile {a mathematical formula}σ→∈(Sm)n, an alternative {a mathematical formula}a⁎∈A, a vector of non-negative values {a mathematical formula}{pa}a∈A, and non-negative β, define the set of inequalities {a mathematical formula}INEQ({pa}a∈A,β,σ→,a⁎) as follows:{a mathematical formula} The connection of this set of inequalities to randomized social choice functions is revealed in the following statement.A randomized social choice function f that uses probability distribution{a mathematical formula}{pa=Pr⁡[f(σ→)=a]}a∈Afor profile{a mathematical formula}σ→has distortion at most{a mathematical formula}β−1when{a mathematical formula}β∈(0,1]with respect to utility profiles in{a mathematical formula}U(σ→,a⁎)if and only if the set of inequalities{a mathematical formula}INEQ({pa(σ→)}a∈A,β,σ→,a⁎)is satisfied.The fact that the distortion is at most {a mathematical formula}β−1 is equivalent to the following linear program having a non-negative objective value.{a mathematical formula} In the above LP, the variable {a mathematical formula}uj(a) denotes the utility of agent {a mathematical formula}j∈N for alternative {a mathematical formula}a∈A while the variable q is the maximum social welfare among all alternatives. The constraints guarantee that {a mathematical formula}u→∈U(σ→,a⁎).Next, consider the dual linear program using the variable {a mathematical formula}x(a⁎,a⁎) for the first constraint, the variables {a mathematical formula}x(a,a⁎) for the second set of constraints, the variables {a mathematical formula}y(j,a⁎) for the third set of constraints, and the variables {a mathematical formula}z(k,j,a⁎) for the fourth set of constraints. This program maximizes {a mathematical formula}∑j∈Ny(j,a⁎), subject to the constraints in {a mathematical formula}INEQ({pa}a∈A,β,σ→,a⁎) except Equation (3). By LP duality, the maximum objective value of the dual LP should be non-negative as well. Observe that this is exactly the requirement that {a mathematical formula}INEQ({pa(σ→)}a∈A,β,σ→,a⁎) is satisfied. □We are now ready to define the worst-case optimal randomized social choice function {a mathematical formula}f⁎, i.e., the one that achieves optimal distortion {a mathematical formula}β(σ→)−1 with respect to every profile {a mathematical formula}σ→∈(Sm)n. To do so, we consider the probability distribution {a mathematical formula}{pa(σ→)=Pr⁡[f⁎(σ→)=a]}a∈A as a set of variables and {a mathematical formula}β(σ→) as our objective that has to be maximized. We employ an LP that is defined as follows.{a mathematical formula}Using Lemma 3.5 we find that the probability distribution obtained as (part of) the solution to this LP induces the lowest possible distortion {a mathematical formula}β(σ→)−1 with respect to {a mathematical formula}σ→.We conclude that in order to compute the worst-case optimal social choice function {a mathematical formula}f⁎ with respect to any preference profile, it suffices to solve a linear program with {a mathematical formula}O(nm2) variables and {a mathematical formula}O(nm2) constraints. We observe that leveraging LP duality is crucial to the proof, as naïvely embedding the primal LP presented in Lemma 3.5 into the above LP would result in a quadratic program. □
+     </paragraph>
+     <paragraph>
+      Interestingly, even though we can concisely describe the optimal function, we do not know whether its distortion on every profile is at most {a mathematical formula}O(m). Of course, by Theorem 3.3, we do know that its distortion on any profile can only be slightly larger: at most {a mathematical formula}O(mlog⁎⁡m).
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      The average-case model
+     </section-title>
+     <paragraph>
+      We now consider a model in which agent utility functions are drawn from a probability distribution D. As discussed in Section 1, this model is closely related to independent work by Apesteguia et al. [3]. We do not assume that utilities are normalized (as in Section 3), but we do assume (in this section only) that each agent's utility function is drawn independently from the same distribution.
+     </paragraph>
+     <paragraph label="Assumption 4.1">
+      (Only in Section 4.) Agent utility functions {a mathematical formula}u1,…,un are drawn i.i.d. from D.
+     </paragraph>
+     <paragraph>
+      This assumption, while admittedly restrictive, enables us to prove strong results; it will not be used when we move to a more general learning-theoretic model in Section 5.
+     </paragraph>
+     <paragraph>
+      This model gives rise to the product distribution {a mathematical formula}Dn over utility profiles. As above, utility profiles induce preference profiles in the natural way, but since we will need to reason about the induced distribution over preference profiles, we make the specific, but mild, assumption that ties in utility are broken uniformly at random; that is, if {a mathematical formula}u(a)=u(b) then {a mathematical formula}Pr⁡[(σ(u))(a)&lt;(σ(u))(b)]=Pr⁡[(σ(u))(b)&lt;(σ(u))(a)]=1/2. This assumption is essentially without loss of generality under non-atomic distributions (since ties occur with probability zero).
+     </paragraph>
+     <paragraph>
+      The notion of optimality takes a slightly different meaning in this setting: instead of maximizing the ratio to the optimal social welfare, a social choice function should perform as well as possible on average. We say that a social choice function f is average-case optimal if for every preference profile {a mathematical formula}σ→ it maximizes expected social welfare {a mathematical formula}E[sw(f(σ→(u→)),u→)|σ→(u→)]. Note that expectation is conditional on the reported preference profile {a mathematical formula}σ→(u→).
+     </paragraph>
+     <paragraph>
+      In this section, we consider distributions D that possess a special structure. Distribution D is neutral{sup:6} if for any measurable {a mathematical formula}U⊆R+m and any permutation {a mathematical formula}π∈Sm, we have {a mathematical formula}D(U)=D(U∘π), where {a mathematical formula}U∘π={u∘π:u∈U} (here {a mathematical formula}u∘π denotes a permutation of utility function u). Informally, a neutral distribution is symmetric with respect to alternatives. A neutral distribution induces a distribution over preference profiles where each agent draws a ranking σ independently and uniformly at random; this is exactly the impartial culture assumption, a model that plays an important role in social choice theory [31], [30]. We now show that scoring functions play a crucial role in the average-case model, underscoring even more deeply the importance of this family in the study of optimal social choice functions.
+     </paragraph>
+     <paragraph label="Theorem 4.2">
+      Assume a neutral distribution D over utility functions. Then the average-case optimal social choice function is a scoring function.
+     </paragraph>
+     <paragraph>
+      Apesteguia et al. [3] independently prove a similar theorem, but make the stronger assumption that each agent's utility for each alternative is drawn i.i.d. Importantly, they use a direct proof, whereas we provide a completely different, potentially more broadly useful proof by exploiting machinery developed by Young [36].
+     </paragraph>
+     <paragraph>
+      To this end, we define a social choice correspondence as a function from preference profiles to nonempty subsets of A. A scoring correspondence is defined by a vector {a mathematical formula}s→ as before, but selects all alternatives with maximum score. An anonymous social choice correspondence operates on anonymous preference profiles, i.e., vectors {a mathematical formula}x→∈Nm! that count the number of agents holding each of the m! possible rankings of A in the preference profile (i.e., without regard for which agent holds what preference). Let {a mathematical formula}xσ denote the number of agents holding ranking σ in {a mathematical formula}x→.
+     </paragraph>
+     <paragraph>
+      An anonymous social choice correspondence f is: consistent if {a mathematical formula}f(x→+y→)=f(x→)∩f(y→) when {a mathematical formula}f(x→)∩f(y→)≠∅; continuous if whenever {a mathematical formula}f(x→)={a} then for any anonymous profile {a mathematical formula}y→ there is {a mathematical formula}T∈N such that {a mathematical formula}f(y→+tx→)={a} for every {a mathematical formula}t≥T; and neutral if {a mathematical formula}f∘σ=σ∘f for every {a mathematical formula}σ∈Sm. Denote by {a mathematical formula}p⁎(u→) the set of anonymous preference profiles consistent with {a mathematical formula}u→.
+     </paragraph>
+     <paragraph label="Lemma 4.3">
+      (See Young[36].) An anonymous social choice correspondence is a scoring correspondence if and only if it is neutral, consistent, and continuous.
+     </paragraph>
+     <paragraph label="Proof of Theorem 4.2">
+      An optimal social choice function is clearly anonymous and neutral because agent utilities are i.i.d. and D is neutral. Thus, we restrict our attention to functions that receive anonymous preference profiles as input.Let {a mathematical formula}f⁎ be the social choice correspondence that, given an anonymous preference profile {a mathematical formula}x→, returns all {a mathematical formula}a∈A that maximize {a mathematical formula}E[sw(a,u→)|x→∈p⁎(u→)], i.e.,{a mathematical formula} It is sufficient to show that {a mathematical formula}f⁎ is a scoring correspondence. Indeed, if {a mathematical formula}f⁎ is a scoring correspondence then any choice from {a mathematical formula}f⁎ (i.e., a choice from {a mathematical formula}f⁎(σ→) for every preference profile {a mathematical formula}σ→) is a scoring function. Moreover, the set of choices from {a mathematical formula}f⁎ is exactly the set of optimal choice functions.To show that {a mathematical formula}f⁎ is a scoring correspondence, it suffices, by Lemma 4.3, to demonstrate that {a mathematical formula}f⁎ is consistent and continuous. To see that {a mathematical formula}f⁎ is consistent, let {a mathematical formula}x→ and {a mathematical formula}y→ be two anonymous profiles such that {a mathematical formula}f⁎(x→)∩f⁎(y→)≠∅, and let {a mathematical formula}a,a′∈A such that {a mathematical formula}a∈f⁎(x→)∩f⁎(y→) and {a mathematical formula}a′∉f⁎(x→)∩f⁎(y→). Then{a mathematical formula} and{a mathematical formula} where one of the inequalities is strict. Moreover, for any {a mathematical formula}b∈A,{a mathematical formula} This last equality simply says that the overall expected social welfare of an alternative with respect to two separate electorates—whose preferences are represented as {a mathematical formula}x→ and {a mathematical formula}y→ on the right hand side—is equal to the expected social welfare of that alternative when the two electorates are put together. We conclude that{a mathematical formula} This shows that {a mathematical formula}a∈f⁎(x→+y→) and {a mathematical formula}a′∉f⁎(x→+y→), proving that {a mathematical formula}f(x→+y→)=f(x→)∩f(y→).To prove continuity, assume {a mathematical formula}f⁎(x→)={a}. Then there exists an {a mathematical formula}ϵ&gt;0 such that{a mathematical formula} for every {a mathematical formula}a′∈A∖{a}. Let {a mathematical formula}y→ and let {a mathematical formula}T&gt;(E[sw(a′,u→)|y→∈p⁎(u→)])/ϵ for every {a mathematical formula}a′∈A. Then for every {a mathematical formula}t≥T and every {a mathematical formula}a′∈A∖{a},{a mathematical formula} It follows that {a mathematical formula}f⁎(y→+tx→)={a} for every {a mathematical formula}t≥T, and therefore continuity is satisfied. □
+     </paragraph>
+     <paragraph>
+      The proof implies that the optimal social choice function scores alternatives based only on their position in each agent's preference order. This observation allows us to construct the optimal scoring function given the distribution D.
+     </paragraph>
+     <paragraph label="Corollary 4.4">
+      Assume a neutral distribution D over utility functions. For each{a mathematical formula}k=1,…,m, let{a mathematical formula}sk⁎=E[u(a)|(σ(u))(a)=k]for some arbitrary{a mathematical formula}a∈A. Then the average-case optimal social choice function is a scoring function with parameters{a mathematical formula}(s1⁎,…,sm⁎).
+     </paragraph>
+     <paragraph>
+      The optimal scoring function has an especially natural form: the score {a mathematical formula}sk⁎ for position k is simply the expected utility of any alternative a for any agent conditional on a being ranked kth by that agent. (Notice that the arbitrary choice of a is justified by the neutrality of D.) We now consider the special case where agent utilities for each alternative are drawn uniformly from some interval (w.l.o.g., take this to be {a mathematical formula}[0,1]).
+     </paragraph>
+     <paragraph label="Corollary 4.5">
+      Let D be the uniform distribution over{a mathematical formula}[0,1]m(i.e., the utility for each alternative is drawn independently and uniformly from{a mathematical formula}[0,1]). Then the average-case optimal social choice function is the Borda count.
+     </paragraph>
+     <paragraph label="Proof">
+      It suffices to compute {a mathematical formula}sk⁎ for {a mathematical formula}k=1,…,m. A folk theorem about the expectation of k-order statistics immediately implies that {a mathematical formula}sk⁎=(m+1−k)/(m+1); we provide an informal proof for completeness. Consider the random variables {a mathematical formula}X1,…,Xm, where {a mathematical formula}Xk is the utility of the alternative ranked in position k. The lengths of the {a mathematical formula}m+1 intervals {a mathematical formula}[0,Xm],[Xm,Xm−1],…,[X1,1] are identically distributed (to see this, choose {a mathematical formula}m+1 points on a circle uniformly at random—their distances are identically distributed—and then cut the circle at the first point, which becomes both 0 and 1), and the sum of their lengths is 1. Thus the expected length of each interval is {a mathematical formula}1/(m+1).Now, clearly the scoring functions defined by the vectors {a mathematical formula}s→ and {a mathematical formula}c⋅s→, or {a mathematical formula}s→ and {a mathematical formula}s→+(c,…,c), are identical (up to tie breaking). The optimal scoring function defined by the vector {a mathematical formula}(m/(m+1),…,1/(m+1)) is therefore equivalent to the Borda count. □
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      The learning-theoretic model
+     </section-title>
+     <paragraph>
+      We now consider a learning-theoretic model for computing optimal social choice functions that is likely to have the greatest practical impact of our three models. Similarly to the average case model in the previous section, we assume some (possibly unknown) distribution D over utility profiles (rather than utility functions, as in Section 4). However, strong analytical results were made possible in the average case model only by accepting strong assumptions about the distribution, essentially equivalent to the impartial culture assumption. This model is unrealistic for a variety of reasons (e.g., see critiques by Regenwetter et al. [29]).
+     </paragraph>
+     <paragraph>
+      Instead, we devise techniques to compute approximately optimal social choice functions—specifically, optimal scoring functions—for arbitrary distributions D over utility profiles, without assuming a specific parameterized or stylized form, or independence of agent preferences. Most realistic distributions are likely to be analytically intractable, so we develop a sample-based optimization framework for this purpose. We assume access only to a set of sampled profiles from D—or the ability to generate such samples from a known distribution. With sufficiently many samples, the optimal scoring function with respect to these samples will be approximately optimal for D.
+     </paragraph>
+     <paragraph>
+      Because we rely only on samples from D, the model can be interpreted as learning an optimal social choice function. We first address the question of sample complexity by deriving bounds on the number of samples needed to compute approximately optimal scoring functions (as well as the more restricted class of k-approval functions). We then consider the problem of computing an optimal scoring function for a given sample set. We show that this problem (i.e., computing scores to optimize social welfare) is {a mathematical formula}APX-hard, but develop a mixed integer program (MIP) for its optimization. While we discuss the model in learning-theoretic terms, we emphasize that the approach is equally valid when D is known: sample-based optimization offers a viable and very general computational model in this case.{sup:7}
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Requisite concepts
+      </section-title>
+      <paragraph>
+       To quantify sample complexity, we rely on two well-known measures of the complexity of a class of functions. Let {a mathematical formula}F be some class of functions of the form {a mathematical formula}f:X→A for some set A. We say a sample {a mathematical formula}x1,…,xd∈X is shattered by {a mathematical formula}F if there exist {a mathematical formula}f,g∈F such that {a mathematical formula}f(xi)≠g(xi) for each {a mathematical formula}i≤d, and for every boolean vector {a mathematical formula}(b1,…,bd)∈{0,1} there is an {a mathematical formula}h∈F such that {a mathematical formula}h(xi)=f(xi) if {a mathematical formula}bi=1 and {a mathematical formula}h(xi)=g(xi) if {a mathematical formula}bi=0. The generalized dimension{a mathematical formula}DG(F) of {a mathematical formula}F is the maximum d such that some sample {a mathematical formula}x1,…,xd∈X is shattered by {a mathematical formula}F.{sup:8} The pseudo-dimension is a variation of this concept defined for real-valued functions. If {a mathematical formula}F is a class of functions of the form {a mathematical formula}f:X→R, the pseudo-dimension {a mathematical formula}DP(F) of {a mathematical formula}F is the maximum d such that there are some {a mathematical formula}x1,…,xd∈X and thresholds {a mathematical formula}t1,…,td∈R such that, for every {a mathematical formula}(b1,…,bd)∈{0,1}d, there exists an {a mathematical formula}h∈F such that {a mathematical formula}h(xi)≥ti if {a mathematical formula}bi=1 and {a mathematical formula}h(xi)&lt;ti if {a mathematical formula}bi=0.
+      </paragraph>
+      <paragraph>
+       We will use bounds on the pseudo-dimension to derive bounds on the sample complexity. We first observe:
+      </paragraph>
+      <paragraph label="Observation 5.1">
+       For any finite function class{a mathematical formula}F, its (generalized or pseudo-) dimension is no greater than{a mathematical formula}log2⁡|F|.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Fn,m be some class of randomized social choice functions over n agents and m alternatives. For any {a mathematical formula}f∈Fn,m, we can adopt the usual perspective, where {a mathematical formula}f:(Sm)n→Δ(A) maps preference profiles into distributions over alternatives—in this case, we focus on the generalized dimension of{a mathematical formula}Fn,m, by which we refer to the generalized dimension of the correspondence defined by mapping {a mathematical formula}u→ to the support of {a mathematical formula}f(u→). We can take a different perspective by transforming f as follows: define {a mathematical formula}fˆ(u→)=E[sw(f(σ→(u→)),u→)], where {a mathematical formula}fˆ maps a utility profile {a mathematical formula}u→ into the expected social welfare realized by applying f to the preference profile {a mathematical formula}σ→(u→) induced by {a mathematical formula}u→. Define {a mathematical formula}Fˆn,m={fˆ:f∈Fn,m}. With this view, we focus on the pseudo-dimension of {a mathematical formula}Fˆn,m. These are not unrelated:
+      </paragraph>
+      <paragraph label="Lemma 5.2">
+       For any set of randomized social choice functions{a mathematical formula}Fn,m,{a mathematical formula}DG(Fn,m)≤DP(Fˆn,m).
+      </paragraph>
+      <paragraph label="Proof">
+       Assume {a mathematical formula}DG(Fn,m)=d. Let {a mathematical formula}σ→1,…,σ→d be d preference profiles that are shattered by {a mathematical formula}Fn,m, and let {a mathematical formula}f,g∈Fn,m be two social choice functions that differ on each of these profiles. Define utility profiles {a mathematical formula}u→1,…,u→d that induce {a mathematical formula}σ→1,…,σ→d such that {a mathematical formula}E[sw(f(σ→i),u→i)]≠E[sw(g(σ→i),u→i)] for all i; this is always possible using some small perturbation in the utility of a relevant candidate. For each {a mathematical formula}i≤d, let {a mathematical formula}ti=(E[sw(f(σ→i),u→i)]+E[sw(g(σ→i),u→i)])/2.Given any {a mathematical formula}(b1′,…,bd′)∈{0,1}, we need to show that there is some {a mathematical formula}hˆ∈Fˆn,m such that {a mathematical formula}hˆ(u→i)≥ti if {a mathematical formula}bi′=1 and {a mathematical formula}hˆ(u→i)&lt;ti if {a mathematical formula}bi′=0. Let {a mathematical formula}(b1,…,bd) be a binary vector which we set as follows: if {a mathematical formula}E[sw(f(σ→i),u→i)]≥ti and {a mathematical formula}E[sw(g(σ→i),u→i)]&lt;ti, set {a mathematical formula}bi=bi′; otherwise if {a mathematical formula}E[sw(f(σ→i),u→i)]&lt;ti and {a mathematical formula}E[sw(g(σ→i),u→i)]≥ti, set {a mathematical formula}bi=1−bi′. Since {a mathematical formula}Fn,m shatters {a mathematical formula}σ→1,…,σ→d, there is an {a mathematical formula}h∈Fn,m that serves as a witness for {a mathematical formula}σ→1,…,σ→d w.r.t. {a mathematical formula}(b1,…,bd). By construction, its corresponding {a mathematical formula}hˆ∈Fˆn,m serves as a witness (relative to {a mathematical formula}fˆ,gˆ) to the shattering of the same d profiles given {a mathematical formula}(b1′,…,bd′). Hence {a mathematical formula}DP(Fˆn,m) is at least d. □
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Sample-based optimization
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}Fn,m be some class of social choice functions from which we must select an optimal function {a mathematical formula}f⁎ relative to some (possibly unknown) distribution D over utility profiles. We assume access to t sampled profiles, {a mathematical formula}u→1,…,u→t. These may be samples from a population of interest, or drawn randomly from a generative model or known distribution. For each {a mathematical formula}u→i, we also sample, generate, or compute the corresponding (possibly random, due to ties) preference profile {a mathematical formula}σ→i. We treat these collectively as our sample: {a mathematical formula}T=[(u→1,σ→1),…,(u→t,σ→t)]. A sample-optimal social choice function for sample T is{a mathematical formula} In a learning-theoretic sense, {a mathematical formula}fˆ is the empirical risk minimizer, while from an optimization standpoint, {a mathematical formula}fˆ is the solution to a sample-based optimization problem.
+      </paragraph>
+      <paragraph>
+       In a sample-based model, we must content ourselves with approximate optimality. Let {a mathematical formula}f⁎ be an optimal social choice function w.r.t. distribution D. We say a social choice function {a mathematical formula}f¯ is ε-optimal for some {a mathematical formula}ε≥0 if, for any utility profile {a mathematical formula}u→,{a mathematical formula} This definition will also be used relative to restricted classes of functions {a mathematical formula}Fn,m.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      Sample complexity of k-approval
+      <paragraph>
+       We first consider the class of social choice functions known as k-approval functions. For any {a mathematical formula}1≤k≤m−1, the k-approval function is the scoring function, denoted {a mathematical formula}fk, with score vector {a mathematical formula}s→k=(1,1,…,0,0) that has exactly k ones and {a mathematical formula}m−k zeros. We assume ties among highest-scoring alternatives are broken uniformly at random.
+      </paragraph>
+      <paragraph>
+       Given distribution D, the optimal k-approval function—where our only choice is over the value of k—maximizes expected social welfare w.r.t. D. We denote this function by {a mathematical formula}fk⁎D. With only a collection of t sample profiles, the best we can attain is approximate optimality with the sample-optimal function {a mathematical formula}fˆ. We determine the required sample complexity t, that is, the number of samples needed to ensure that {a mathematical formula}fˆ is approximately optimal to some desired degree ε with high probability {a mathematical formula}1−δ (for some {a mathematical formula}δ&gt;0).
+      </paragraph>
+      <paragraph>
+       Our class of social choice functions is very limited: let {a mathematical formula}Fappn,m={fk:1≤k≤m−1} be the class of k-approval functions with n agents and m alternatives. Define, as above, {a mathematical formula}Fˆappn,m={fˆk:fk∈Fappn,m}. Let {a mathematical formula}sck(σ→,a) be the k-approval score of {a mathematical formula}a∈A under preference profile {a mathematical formula}σ→. Sample complexity depends on the pseudo-dimension of k-approval functions; since there are only {a mathematical formula}m−1 such functions, we can provide an immediate upper bound using Observation 5.1:
+      </paragraph>
+      <paragraph label="Observation 5.3">
+       {a mathematical formula}DP(Fˆappn,m)≤log2⁡(m−1).
+      </paragraph>
+      <paragraph>
+       This bound is asymptotically tight:
+      </paragraph>
+      <paragraph label="Theorem 5.4">
+       For all{a mathematical formula}m≥6and{a mathematical formula}n≥2m−3,{a mathematical formula}DP(Fˆappn,m)=Ω(log⁡m).
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}d≥1 be an integer. We will show that the generalized dimension {a mathematical formula}DG(Fappn,m) of k-approval functions on preference profiles with {a mathematical formula}m≥2d+1+2 alternatives and {a mathematical formula}n≥2d+2+1 agents is at least d. We will first construct d preference profiles {a mathematical formula}σ→1, {a mathematical formula}σ→2, …, {a mathematical formula}σ→d with exactly {a mathematical formula}2d+1+2 alternatives, including two special ones a and b, and exactly {a mathematical formula}2d+2+1 agents with the following property. For any integers {a mathematical formula}k=2,3,…,2d+1 and {a mathematical formula}t=1,2,…,d, k-approval returns as the sole winner in profile {a mathematical formula}σ→t:
+       <list>
+        alternative a, if the t-th bit in the binary representation of {a mathematical formula}k−2 is 1, andalternative b otherwise.Our construction for preference profile
+       </list>
+       <paragraph>
+        {a mathematical formula}σ→t is as follows. The set of alternatives contains the two special alternatives a and b as well as two disjoint sets of alternatives {a mathematical formula}A1 and {a mathematical formula}A2, each of size {a mathematical formula}2d. Each profile has {a mathematical formula}2d+2+1 agents partitioned into five disjoint sets: a set of {a mathematical formula}2d agents {a mathematical formula}Nq for {a mathematical formula}q=1,2,3,4, and an extra agent. For {a mathematical formula}q∈{1,2}, the agents in {a mathematical formula}Nq rank alternatives a and b in the first two positions (in arbitrary order), then the alternatives in {a mathematical formula}Aq (in arbitrary order), and then the alternatives in {a mathematical formula}A3−q (again, in arbitrary order). All the agents in {a mathematical formula}N3 rank alternative a last. For {a mathematical formula}j=0,1,…,2d−t−1, {a mathematical formula}2t agents of {a mathematical formula}N3 rank alternative b in position {a mathematical formula}2+j2t. The remaining top {a mathematical formula}2d+1 positions in the ranking of each agent in {a mathematical formula}N3 are occupied by alternatives in {a mathematical formula}A1 in arbitrary order; the next {a mathematical formula}2d positions are occupied by alternatives in {a mathematical formula}A2 (again, in arbitrary order). All the agents in {a mathematical formula}N4 rank alternative b last. For {a mathematical formula}j=0,1,…,2d−t−1, {a mathematical formula}2t agents of {a mathematical formula}N4 rank alternative a in position {a mathematical formula}2+2t−1+j2t. The remaining top {a mathematical formula}2d+1 positions in the ranking of each agent in {a mathematical formula}N4 are occupied by alternatives in {a mathematical formula}A2 in arbitrary order; the next {a mathematical formula}2d positions are occupied by alternatives in {a mathematical formula}A1 (again, in arbitrary order). Finally, the extra agent ranks alternative a first, alternative b last, and the alternatives in {a mathematical formula}A1∪A2 in between in arbitrary order.Now, note that each alternative in {a mathematical formula}Aq is ranked in the first {a mathematical formula}2d+1 positions by at most {a mathematical formula}2d+1+1 agents (the agents in {a mathematical formula}Nq∪N2+q and, possibly, the extra agent). Hence, the k-approval score of each alternative in {a mathematical formula}A1∪A2 is at most {a mathematical formula}2d+1+1 for every k in {a mathematical formula}{2,…,2d+1}. Also, observe that alternative b is ranked in one of the top two positions by at least {a mathematical formula}2d+1+2 agents (the agents in {a mathematical formula}N1∪N2 as well as {a mathematical formula}2t agents of {a mathematical formula}N3). Hence, no alternative from {a mathematical formula}A1∪A2 is a winner in profile {a mathematical formula}σ→t under k-approval, for {a mathematical formula}t=1,…,d and {a mathematical formula}k=2,…,2d+1.It remains to compute the k-approval score of alternatives a and b. Consider profile {a mathematical formula}σ→t. Observe that, for every {a mathematical formula}k=2,…,2d+1, the number of agents in {a mathematical formula}N3 that rank alternative b in the top k positions is{a mathematical formula} and similarly the number of agents in {a mathematical formula}N4 that rank alternative a in the top k positions is {a mathematical formula}2t⌊k−2+2t−12t⌋. Hence, the k-approval scores of a and b are {a mathematical formula}2d+1+1+2t⌊k−2+2t−12t⌋ and {a mathematical formula}2d+1+2t⌊k−2+2t2t⌋, respectively. Let {a mathematical formula}bt be the t-th least significant bit in the binary representation of {a mathematical formula}k−2 and let {a mathematical formula}λ,ν be unique integers such that {a mathematical formula}0≤λ≤2t−1−1, {a mathematical formula}0≤ν≤2d−t−1, and {a mathematical formula}k−2=λ+bt2t−1+ν2t. Then,{a mathematical formula} where the third and fifth equalities hold because {a mathematical formula}0≤λ≤2t−1−1 (and {a mathematical formula}bt∈{0,1}). Using the fact that {a mathematical formula}t≥1, observe that {a mathematical formula}sck(a,σ→t)−sck(b,σ→t) is strictly positive if {a mathematical formula}bt=1 and strictly negative if {a mathematical formula}bt=0. Hence, the sole winner under k-approval is alternative a if {a mathematical formula}bk=1 and alternative b otherwise.To complete the proof, it suffices to modify the construction above and capture the more general case of {a mathematical formula}m≥2d+1+2 alternatives and {a mathematical formula}n≥2d+2+1 agents as follows. Each of the {a mathematical formula}2d+2+1 agents in the above construction ranks the {a mathematical formula}m−2d+1−2 additional alternatives in the last positions of its ranking. In addition to these agents, there are {a mathematical formula}n−2d+2−1 agents that rank alternatives a and b in the first two positions (in arbitrary order) and then the remaining alternatives (again, in arbitrary order). These modifications do not change the winner of profile {a mathematical formula}σ→t under k-approval for every {a mathematical formula}k∈{2,3,…,2d+1}. This is due to the facts that alternative b still has strictly higher k-approval score than any other alternative different than a (alternative b is ranked above all alternatives besides a by the additional agents and is clearly ranked above the additional alternatives by all agents), and the difference in the k-approval scores between a and b is not affected by the additional agents (since {a mathematical formula}k≥2). □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Observation 5.3 and Theorem 5.4 show that {a mathematical formula}DP(Fˆappn,m)=Θ(log⁡m) provided that {a mathematical formula}n≥2m−3. Standard learning-theoretic results [2] allow us to bound sample complexity for optimizing k-approval (within a constant factor).
+      </paragraph>
+      <paragraph label="Theorem 5.5">
+       For any{a mathematical formula}ε,δ&gt;0, there exists a{a mathematical formula}C&gt;0such that if{a mathematical formula}t≥Clog⁡(m/δ)/ε2, then for any distribution D over utility profiles, with probability at least{a mathematical formula}1−δover t i.i.d. utility profiles, the sample-optimal k-approval function{a mathematical formula}fˆkis ε-optimal for D. Furthermore, for{a mathematical formula}n≥2m−3, there is a{a mathematical formula}C′&gt;0such that no algorithm can construct an ε-optimal k-approval function, with probability at least{a mathematical formula}1−δ, if{a mathematical formula}t&lt;C′log⁡(m/δ)/ε2.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Sample complexity of scoring functions
+      </section-title>
+      <paragraph>
+       The class of k-approval functions is quite restrictive, so we now consider construction of an approximately optimal scoring function without restricting score vector structure. Limiting attention to scoring functions does not ensure optimality within the class of arbitrary functions. However, it is a natural restriction, first, because of the prominence of scoring functions as illustrated above, and second, because of the natural interpretation and appeal of such social choice functions.{sup:9}
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}fs→ denote the scoring (social choice) function induced by score vector {a mathematical formula}s→, and let {a mathematical formula}Fsn,m={fs→:s→∈Rm} be the class of all scoring functions with n agents and m alternatives. We again assume ties among highest-scoring alternatives are broken uniformly at random. Define {a mathematical formula}Fˆsn,m={fˆs→:fs→∈Fsn,m}. We derive the sample complexity for scoring functions, i.e., the number of sampled utility profiles needed to ensure that the sample-optimal {a mathematical formula}fˆs→ is ε-optimal for some desired ε, with probability at least {a mathematical formula}1−δ.
+      </paragraph>
+      <paragraph>
+       We first bound the pseudo-dimension of {a mathematical formula}Fˆsn,m. Procaccia et al. [28] prove a lower bound of {a mathematical formula}m−3 on {a mathematical formula}DG(Fsn,m) for all {a mathematical formula}n≥4 and {a mathematical formula}m≥4. By Lemma 5.2, we obtain the following statement.
+      </paragraph>
+      <paragraph label="Corollary 5.6">
+       For all{a mathematical formula}n≥4and{a mathematical formula}m≥4,{a mathematical formula}DP(Fˆsn,m)≥m−3.
+      </paragraph>
+      <paragraph>
+       In the same paper, Procaccia et al. [28] prove that the number of distinct scoring functions is at most {a mathematical formula}2O(m2log⁡n). Even though their original result assumes a deterministic tie-breaking rule, their proof can be adapted for randomized tie-breaking. Using this bound together with Observation 5.1, we immediately obtain that {a mathematical formula}DP(Fˆsn,m)=O(m2log⁡n). We can derive a significantly better upper bound that depends only on m:
+      </paragraph>
+      <paragraph label="Theorem 5.7">
+       {a mathematical formula}DP(Fˆsn,m)=O(mlog⁡m).
+      </paragraph>
+      <paragraph>
+       We require the following result of Warren [33] (though we use an extension due to Alon [1], where the signum function takes values in {a mathematical formula}{−1,0,1}):
+      </paragraph>
+      <paragraph label="Lemma 5.8">
+       (See[33], [1].) Let{a mathematical formula}Pbe a set of K polynomials of degree τ on ℓ real variables. Then, the number of different sign patterns{a mathematical formula}Pmay have is at most{a mathematical formula}(8eτKℓ)ℓ.
+      </paragraph>
+      <paragraph>
+       In the context of the lemma, a sign pattern is a vector of values in {a mathematical formula}{−1,0,1} that is obtained by applying each polynomial in {a mathematical formula}P to the same input.
+      </paragraph>
+      <paragraph label="Proof of Theorem 5.7">
+       Let A be a set of {a mathematical formula}m≥3 alternatives. Consider a sample of d preference profiles {a mathematical formula}σ→1, {a mathematical formula}σ→2, …, {a mathematical formula}σ→d from {a mathematical formula}(Sm)n, corresponding utility profiles {a mathematical formula}u→1, …, {a mathematical formula}u→d, and real thresholds {a mathematical formula}t1,t2,…,td such that for every binary vector b with d entries, there exists a scoring function {a mathematical formula}fs→b, with score vector {a mathematical formula}s→b, such that {a mathematical formula}E[sw(fs→b(σ→i),u→i)]≥ti if {a mathematical formula}bi=1 and {a mathematical formula}E[sw(fs→b(σ→i),u→i)]&lt;ti otherwise. Denote by {a mathematical formula}F⁎⊆Fsn,m the set of these scoring functions. We will show that {a mathematical formula}d&lt;6mlog2⁡m.For {a mathematical formula}i=1,…,d, we partition the set of alternatives A into the sets {a mathematical formula}Ai+={a∈A:sw(a,u→i)≥ti} and {a mathematical formula}Ai−={a∈A:sw(a,u→i)&lt;ti}. By definition of the scoring functions in {a mathematical formula}F⁎, the sets {a mathematical formula}Ai+ and {a mathematical formula}Ai− are non-empty. In addition, for {a mathematical formula}i=1,…,d and any pair of alternatives {a mathematical formula}a+∈Ai+ and {a mathematical formula}a−∈Ai−, define the function{a mathematical formula} This is a linear function on m variables, the entries of the score vector {a mathematical formula}s→. Let {a mathematical formula}sgn:R→{−1,0,1} denote the signum function. The sign of {a mathematical formula}La+,a−i(s→) denotes whether the score of alternative {a mathematical formula}a+ under {a mathematical formula}fs→ on profile {a mathematical formula}σ→i is lower than, equal to, or higher than the score of alternative {a mathematical formula}a−, respectively. Let L denote the collection of the functions above and observe that there are at most {a mathematical formula}dm2/4 such functions.We will show that the score vectors of the functions in {a mathematical formula}F⁎ define at least {a mathematical formula}2d different sign patterns for L. Consider two binary vectors {a mathematical formula}b1 and {a mathematical formula}b0 that differ in the i-th coordinate. W.l.o.g., assume that {a mathematical formula}bi1=1 and {a mathematical formula}bi0=0. For {a mathematical formula}k∈{0,1}, let {a mathematical formula}Ak=argmaxa∈A{scs→bk(a,σ→i)} be the set of alternatives with the highest score under {a mathematical formula}fs→bk(σ→i). Observe that the sets {a mathematical formula}Ai+∩A1 and {a mathematical formula}Ai−∩A0 are non-empty since {a mathematical formula}E[sw(fs→b1(σ→i),u→i)]≥ti and {a mathematical formula}E[sw(fs→b0(σ→i),u→i)]&lt;ti.We claim that there are two alternatives {a mathematical formula}a1∈Ai+∩A1 and {a mathematical formula}a0∈Ai−∩A0 such that either {a mathematical formula}a0∉A1 or {a mathematical formula}a1∉A0. Assume that this is not the case; it follows that {a mathematical formula}Ai+∩(A1∖A0)=∅ and {a mathematical formula}Ai−∩(A0∖A1)=∅. Hence, for every {a mathematical formula}a∈A0∖A1 (if any) it holds that {a mathematical formula}a∈Ai+ and hence {a mathematical formula}sw(a,u→i)≥ti. Similarly, for every alternative {a mathematical formula}a∈A1∖A0 (if any) it holds that {a mathematical formula}a∈Ai− and hence {a mathematical formula}sw(a,u→i)&lt;ti. Using these observations together with the fact that {a mathematical formula}fs→b1(σ→i) and {a mathematical formula}fs→b0(σ→i) select the winning alternative uniformly at random among {a mathematical formula}A1 and {a mathematical formula}A0, respectively, and {a mathematical formula}E[sw(fs→b1(σ→i),u→i)]≥ti&gt;E[sw(fs→b0(σ→i),u→i)], we obtain{a mathematical formula} a contradiction.If {a mathematical formula}a1∈A1∖A0, this means that {a mathematical formula}scs→b1(a1,σ→i)≥scs→b1(a0,σ→i) and {a mathematical formula}scs→b0(a1,σ→i)&lt;scs→b0(a0,σ→i) (i.e., {a mathematical formula}La1,a0i(s→b1)≥0 and {a mathematical formula}La1,a0i(s→b0)&lt;0). Similarly, if {a mathematical formula}a0∈A0∖A1, then {a mathematical formula}scs→b1(a1,σ→i)&gt;scs→b1(a0,σ→i) and {a mathematical formula}scs→b0(a1,σ→i)≤scs→b0(a0,σ→i) (i.e., {a mathematical formula}La1,a0i(s→b1)&gt;0 and {a mathematical formula}La1,a0i(s→b0)≤0). Both cases imply that the sign patterns of L corresponding to {a mathematical formula}s→b1 and {a mathematical formula}s→b0 are different.Hence, we have obtained a lower bound of {a mathematical formula}2d on the number of different sign patterns of L. By applying Lemma 5.8 (with {a mathematical formula}K≤dm2/4, {a mathematical formula}τ=1, and {a mathematical formula}ℓ=m), we obtain an upper bound of {a mathematical formula}(2edm)m on the number of different sign patterns for L. Hence, {a mathematical formula}2d≤(2edm)m and, equivalently, {a mathematical formula}2d/dm≤(2em)m.For the sake of contradiction, assume that {a mathematical formula}d≥6mlog2⁡m and observe that {a mathematical formula}2d/dm increases with d in this range. Then, {a mathematical formula}2d/dm≥(m66mlog2⁡m)m which, together with the above inequality, yields {a mathematical formula}m4≤12elog2⁡m; a contradiction since {a mathematical formula}m≥3. □
+      </paragraph>
+      <paragraph>
+       Again, standard results allow us to bound the sample complexity:
+      </paragraph>
+      <paragraph label="Theorem 5.9">
+       For any{a mathematical formula}ε,δ&gt;0, there exists a{a mathematical formula}C&gt;0such that if{a mathematical formula}t≥C[mlog2⁡m+log⁡(1/δ)]/ε2, then for any distribution D over utility profiles, with probability at least{a mathematical formula}1−δover t i.i.d. utility profiles, the sample-optimal scoring function{a mathematical formula}fˆs→is ε-optimal for D. Furthermore, there is a{a mathematical formula}C′&gt;0such that no algorithm can construct an ε-optimal scoring function, with probability at least{a mathematical formula}1−δ, if{a mathematical formula}t&lt;C′[m+log⁡(1/δ)]/ϵ2.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Computing optimal scoring functions
+      </section-title>
+      <paragraph>
+       We now turn our attention to the question of computing approximately optimal scoring functions. Specifically, given a sample {a mathematical formula}T=[(u→1,σ→1),…,(u→t,σ→t)], we must compute the scoring vector {a mathematical formula}s→ corresponding to the sample-optimal scoring function {a mathematical formula}fˆs→:{a mathematical formula} This problem turns out to be computationally hard.
+      </paragraph>
+      <paragraph label="Theorem 5.10">
+       Computing the sample-optimal scoring function is{a mathematical formula}APX-hard.
+      </paragraph>
+      <paragraph>
+       The theorem, whose proof appears in Appendix B, implies that, if {a mathematical formula}P≠NP, the problem does not even admit a polynomial time approximation scheme.
+      </paragraph>
+      <paragraph>
+       On the positive side, we formulate the problem of computing sample-optimal scoring functions as a MIP. Its primary variables are the scores {a mathematical formula}si. We describe key variables and constraints in the MIP in turn.{sup:10}
+      </paragraph>
+      <paragraph>
+       Any scoring vector {a mathematical formula}s→=(s1,…,sm) can be normalized without impacting the choice function, so we constrain {a mathematical formula}s→ as follows:{a mathematical formula} Ties are again broken uniformly at random. Function {a mathematical formula}fs→ selects an alternative for each {a mathematical formula}σ→i. To encode this, first abbreviate the score of a given {a mathematical formula}σ→i via the linear expression{a mathematical formula} where {a mathematical formula}Jaji is the number of agents in {a mathematical formula}σ→i that rank a in position j. Note that {a mathematical formula}Jaji is a constant and {a mathematical formula}sc(a,σ→i)∈[0,n] is continuous as a function of {a mathematical formula}σ→i. Let {a mathematical formula}Iabi, for any alternatives {a mathematical formula}a≠b and {a mathematical formula}i≤t, be a binary variable indicating whether a's score is at least that of b given {a mathematical formula}σ→i. We encode this as follows:{a mathematical formula}{a mathematical formula} where γ is a (fixed) parameter that handles optimization-dependent floating point accuracy (corresponding to the level of discretization among scores). If the score difference is non-negative then constraint (6) forces {a mathematical formula}Iabi=1 and (7) must be satisfied. If the difference is negative, then (7) forces {a mathematical formula}Iabi=0 and (6) is satisfied. Let binary variable {a mathematical formula}Iai indicate if a is selected (possibly tied), given {a mathematical formula}s→ under {a mathematical formula}σ→i. We require:{a mathematical formula} Our objective is to choose {a mathematical formula}s→ to maximize the average social welfare over our samples; however, we must account for random tie-breaking, leading to the following objective:{a mathematical formula} We can linearize the objective using indicator variables {a mathematical formula}Ski, for {a mathematical formula}k≤m and {a mathematical formula}i≤t, where {a mathematical formula}Ski=1 iff {a mathematical formula}k=∑aIai, requiring that{a mathematical formula} Our objective then becomes{a mathematical formula} Finally, let {a mathematical formula}Zaki indicate if {a mathematical formula}Iai⋅Ski=1, which is encoded as{a mathematical formula} Pulling these together, our MIP is:{a mathematical formula} which has {a mathematical formula}(2m2+m+1)t variables and {a mathematical formula}4m2t+2t+m+1 constraints.
+      </paragraph>
+     </section>
+     <section label="5.6">
+      <section-title>
+       Experiments
+      </section-title>
+      <paragraph>
+       We now empirically investigate the performance of both average-case optimal social choice functions and sample-optimal scoring functions by measuring their distortion. In the former case, we consider random utility profiles, while in the latter, we use a real data set with user-provided ratings of alternatives as a surrogate for utilities.
+      </paragraph>
+      <paragraph>
+       Our first experiment (uniform) investigates the uniform utility distribution described in Section 4. While Borda optimizes expected social welfare in this model (Corollary 4.5), it may not minimize distortion. We empirically measure its expected distortion by randomly generating {a mathematical formula}t=1000 profiles from the uniform model for various values of m and n, and computing the distortion of Borda count (vis-à-vis the socially optimal alternative). Results are shown in the four leftmost histograms of Fig. 2. Each histogram shows the distortions of the 1000 utility profiles, for a fixed m and n (note the logarithmic scaling on the y-axis). Clearly, overall distortion is very small: average distortion is much less than 1.01 in each case, and never exceeds 1.1 for any random profile. We also see that average distortion decreases as either m or n increases.
+      </paragraph>
+      <paragraph>
+       Our second experiment uses the jester dataset [14], which consists of 4.1M user ratings of 100 different jokes by over 60,000 users. Ratings are on a continuous scale between {a mathematical formula}[−10,10], which we rescale to the range {a mathematical formula}[0,20]. We define the set of alternatives to be the eight most-rated jokes, and draw agents from the set of 50,699 users who rated all eight. We create a sample of 100 “training profiles” from this data set, each with 100 voters, and use this sample to learn an approximately optimal scoring function.{sup:11} The score vector that results is {a mathematical formula}s→⁎=(0.25,0.15,0.14,0.13,0.12,0.11,0.1,0.0). Note the significant dip from {a mathematical formula}s1 to {a mathematical formula}s2, the gradual drop to {a mathematical formula}s7, then the significant drop to {a mathematical formula}s8, which is rather “un-Borda-like.” We divide the remaining users into 406 test profiles (each with 100 users), and evaluate the distortion of the learned function {a mathematical formula}fs→⁎ on each. For comparison, we also evaluate the Borda, harmonic and 3-approval functions on the same profiles. Results are shown in the four rightmost histograms of Fig. 2. We see clearly that distortion is almost negligible for the {a mathematical formula}fs→⁎, Borda and harmonic functions, with average distortion less than 1.009 (and at worst roughly 1.1). By contrast, 3-approval is somewhat worse, with average distortion of 1.0113 (and in the worst case about 1.15). The sample-optimal function {a mathematical formula}fs→⁎ performs slightly worse than Borda, due to mild overfitting on the training profiles (note that the theoretical sample complexity for this problem is much greater than the 100 samples used). These results are of course limited, and merely suggestive; but they do indicate that scoring functions, either empirically optimized, or relying on stylized scoring vectors like Borda and harmonic score, can very closely approximate optimal social choice functions in practice.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      Our work offers three different but related perspectives on utilitarian social choice. Each model makes fundamentally different assumptions about the mechanism's knowledge of the agents' utility information. In the worst-case model, we study the distortion of randomized social choice functions assuming no information about the underlying utilities. In the average-case model, we derive the optimal social choice function with respect to distributions that are i.i.d. and neutral. Finally, in the learning-theoretic model, we develop a method for approximately optimizing (scoring-based) social choice functions under arbitrary utility distributions, establish sample complexity bounds and provide encouraging empirical results.
+     </paragraph>
+     <paragraph>
+      Our work raises a number of important questions and directions for future research. Access to sampled utility profiles, as assumed in our learning-theoretic model, may be difficult to obtain in practice. However, techniques from decision analysis and preference elicitation using lotteries, or more readily comprehensible queries involving simple comparisons, can be used to assess the utility functions of specific agents [9], while econometric techniques often use revealed preference or stated choice data to develop probabilistic models of utilities [20]. Applying these methods to the design of optimal (ranking-based) social choice functions is an important direction for future work.
+     </paragraph>
+     <paragraph>
+      One of our motivations is to reduce the cognitive and communication burden associated with utilities or valuations by allowing the agents to specify rankings. This burden can be further reduced by intelligent elicitation of partial ranking information [19], [22]. Our utilitarian model offers a novel perspective on vote elicitation and raises the possibility of designing schemes that perform well with respect to utilitarian social welfare.
+     </paragraph>
+     <paragraph>
+      The utilitarian perspective also suggests new ways of assessing the potential manipulation of social choice functions. By assuming agents have utility functions, and probabilistic information about the utilities of their counterparts, one can quantify the gains of potential misreports in terms of expected utility, providing a Bayesian view of manipulation [23]. The design of scoring functions that make appropriate trade-offs between degree of optimality and degree of manipulability is another important problem to which our methods may be adapted.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Theorem 3.3
+     <paragraph>
+      We begin by defining a randomized social choice function f. For a non-negative integer i, define the sets of alternatives {a mathematical formula}Bi(σ→) as follows. Set {a mathematical formula}B0(σ→) consists of all alternatives in A. For {a mathematical formula}i≥1, an alternative {a mathematical formula}a∈Bi−1(σ→) belongs to {a mathematical formula}Bi(σ→) if there exists a utility profile {a mathematical formula}u→a∈p−1(σ→) in which a has maximum social welfare and, furthermore,{a mathematical formula} for all {a mathematical formula}ℓ∈{0,i−1}.
+     </paragraph>
+     <paragraph>
+      Given the preference profile {a mathematical formula}σ→∈(Sm)n, our randomized social choice function f first computes the sets {a mathematical formula}B0(σ→), {a mathematical formula}B1(σ→),…,Bk(σ→) where k is the smallest integer such that either {a mathematical formula}|Bk(σ→)|&lt;3m or {a mathematical formula}Bk+1(σ→)=∅. Deciding whether an alternative of {a mathematical formula}Bi−1(σ→) is included in {a mathematical formula}Bi(σ→) can be done in polynomial time by checking the feasibility of a straightforward linear program. Then, the function f picks an integer {a mathematical formula}i∈{0,…,k} uniformly at random, and selects equiprobably among the alternatives in {a mathematical formula}Bi(σ→).
+     </paragraph>
+     <paragraph>
+      In the remainder of the proof we show that for every {a mathematical formula}σ→∈(Sm)n, {a mathematical formula}dist(f,σ→)=O(m⋅log⁎⁡m). Specifically, we will establish that the distortion is less than {a mathematical formula}3m(log⁎⁡m+1) for {a mathematical formula}m≥9.
+     </paragraph>
+     <paragraph>
+      Given a preference profile {a mathematical formula}σ→, consider a utility profile {a mathematical formula}u→ consistent with {a mathematical formula}σ→, and let {a mathematical formula}a⁎ be an alternative with the highest social welfare. Let t be the largest integer in {a mathematical formula}{0,1,…,k} such that {a mathematical formula}a⁎∈Bt(σ→). First consider the special case where {a mathematical formula}t=k and {a mathematical formula}|Bk(σ→)|&lt;3m; f picks alternative {a mathematical formula}a⁎ with probability higher than {a mathematical formula}13(k+1)m.
+     </paragraph>
+     <paragraph>
+      In any other case, alternative {a mathematical formula}a⁎ does not belong to set {a mathematical formula}Bt+1(σ→). This means that {a mathematical formula}u→ (and every other utility profile in {a mathematical formula}p−1(σ→) in which {a mathematical formula}a⁎ has the highest social welfare) satisfies{a mathematical formula} for some {a mathematical formula}ℓ∈{0,t}. With probability {a mathematical formula}1k+1, the algorithm picks a random alternative from {a mathematical formula}Bℓ(σ→). Therefore, its expected social welfare is at least{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The theorem will follow by proving that {a mathematical formula}k≤log⁎⁡m. To do this, we assume that {a mathematical formula}m≥9, and show that, for every integer {a mathematical formula}i≥1 such that {a mathematical formula}|Bi−1(σ→)|≥3m, it holds that{a mathematical formula} This implies that {a mathematical formula}|Blog⁎⁡(2m/3)(σ→)|&lt;3m and, hence,{a mathematical formula} The remainder of the proof is therefore devoted to establishing Equation (13).
+     </paragraph>
+     <paragraph>
+      In the following, we will show that inequality (13) is true for {a mathematical formula}i≥1 assuming that {a mathematical formula}|Bi−1(σ→)|≥3m. For each alternative {a mathematical formula}a∈Bi(σ→), let {a mathematical formula}u→a be a utility profile satisfying inequality (12). For such an alternative, denote by {a mathematical formula}N1(a) the set of agents which rank less than {a mathematical formula}|Bi−1(σ→)|m alternatives of {a mathematical formula}Bi−1(σ→) above a. Let {a mathematical formula}N2(a)=N∖N1(a). Also, for {a mathematical formula}s∈{1,2}, let{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      First, observe that for each agent {a mathematical formula}j∈N2(a), there are at least {a mathematical formula}|Bi−1(σ→)|m alternatives {a mathematical formula}a′ of {a mathematical formula}Bi−1(σ→) with {a mathematical formula}uja(a′)≥uja(a). Hence, we have{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      In addition, since each alternative in {a mathematical formula}Bi(σ→) satisfies inequality (12) for {a mathematical formula}ℓ=i−1, we have{a mathematical formula} It follows from (14) and (15) that {a mathematical formula}U1≥2U2. Now, using inequality (12) for {a mathematical formula}ℓ=0, we have{a mathematical formula} where the last equality follows from Assumption 3.1 and the fact that {a mathematical formula}|B0(σ→)|=m. Also, observe that {a mathematical formula}U1 is upper-bounded by the total harmonic score of alternatives in the first {a mathematical formula}⌈|Bi−1(σ→)|/m⌉ positions in each agent's preference, i.e.,{a mathematical formula} where {a mathematical formula}Hk is the kth harmonic number. The second inequality follows from the fact that {a mathematical formula}|Bi−1(σ→)|≥3m and {a mathematical formula}H⌈t⌉≤3log2⁡2t3 for every {a mathematical formula}t≥3. By (16) and (17), we obtain inequality (13) as desired. The proof of Theorem 3.3 is therefore complete. □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     Proof of Theorem 5.10
+     <paragraph>
+      We will use a reduction from Independent Set in 3-regular graphs and an explicit inapproximability result due to Berman and Karpinski [6].
+     </paragraph>
+     <paragraph label="Theorem 6.1">
+      (See Berman and Karpinski[6].) Given a 3-regular graph G with 284T nodes and 426T edges for some integer{a mathematical formula}T≥2and any constant{a mathematical formula}ϵ∈(0,1/2), it is{a mathematical formula}NP-hard to distinguish between the following two cases:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       G has an independent set of size at least{a mathematical formula}(140−ϵ)T.
+      </list-item>
+      <list-item label="•">
+       Any independent set of G has size at most{a mathematical formula}(139+ϵ)T.
+      </list-item>
+     </list>
+     <paragraph>
+      The proof of Theorem 6.1 in [6] can be thought of as a polynomial-time reduction that transforms an instance ϕ of the generic {a mathematical formula}NP-hard problem of Satisfiability to an instance of Independent set on a 284T-node 3-regular graph. The reduction is such that G has an independent set of size {a mathematical formula}(140−ϵ)T if ϕ is satisfiable while any independent set of G has size at most {a mathematical formula}(139+ϵ)T otherwise. Our reduction will use the particular instances in the proof of [6]. Given such an instance with an integer parameter {a mathematical formula}T≥2 and any constant {a mathematical formula}ϵ∈(0,1/2), our reduction constructs in polynomial time a family of 710T utility profiles that uniquely defines a family {a mathematical formula}R of corresponding preference profiles for some integer {a mathematical formula}T≥2, so that:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If the input graph has an independent set of size at least {a mathematical formula}(140−ϵ)T, then there is a scoring vector {a mathematical formula}s→ such that the total expected social welfare of the winning alternatives under {a mathematical formula}fs→ over all profiles in {a mathematical formula}R is at least {a mathematical formula}(39,764−69ϵ)T2.
+      </list-item>
+      <list-item label="•">
+       If any independent set of G has size at most {a mathematical formula}(139−ϵ)T, then for every scoring vector {a mathematical formula}s→, the total expected social welfare of the winning alternatives under {a mathematical formula}fs→ over all profiles in {a mathematical formula}R is at most {a mathematical formula}(39,695+69ϵ)T2.
+      </list-item>
+     </list>
+     <paragraph>
+      In this way we will conclude that distinguishing between these two cases for the profiles returned by our reduction is an {a mathematical formula}NP-hard problem. In other words, the problem is hard to approximate within a factor better than {a mathematical formula}39,764/39,695≈1.00174.
+     </paragraph>
+     <section>
+      <section>
+       <section>
+        <section-title>
+         The reduction
+        </section-title>
+        <paragraph>
+         Let {a mathematical formula}G=(V,E) be a 3-regular graph with 284T nodes (and 426T edges). We assume that the nodes of V are identified by the integers 1, 2, …, {a mathematical formula}|V|. We construct {a mathematical formula}|V| preference profiles corresponding to the nodes in V and {a mathematical formula}|E| preference profiles corresponding to the edges of E (i.e., 710T profiles in total). Denote by {a mathematical formula}R the family of these preference profiles. All profiles have {a mathematical formula}284T−3 agents and {a mathematical formula}3|V|−1=852T−1 alternatives. Among them, there are two special alternatives {a mathematical formula}a1 and {a mathematical formula}b1 as well as alternatives {a mathematical formula}ai, {a mathematical formula}bi, and {a mathematical formula}ci for {a mathematical formula}i=2,…,|V|. The corresponding utility profiles are such that the total utility of each agent for all alternatives is exactly 1 and, furthermore, these utilities are all different so that the corresponding preference profile is uniquely defined.
+        </paragraph>
+        <paragraph>
+         Specifically, for each node v, the preference profile {a mathematical formula}σ→v is defined as follows. The agents are partitioned into 5 sets {a mathematical formula}N1, …, {a mathematical formula}N5:
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Set {a mathematical formula}N1 consists of {a mathematical formula}2T−2 agents that rank alternative {a mathematical formula}ai at position i for {a mathematical formula}i=1,…,|V|, alternative {a mathematical formula}b1 at position {a mathematical formula}|V|+1, and alternatives {a mathematical formula}ci and {a mathematical formula}bi at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N2 consists of 140T agents that rank alternative {a mathematical formula}ai at position i for {a mathematical formula}i=1,…,v, alternative {a mathematical formula}b1 at position {a mathematical formula}v+1, alternative {a mathematical formula}ai at position {a mathematical formula}i+1 for {a mathematical formula}i=v+1,…,|V|, and alternatives {a mathematical formula}ci and {a mathematical formula}bi at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N3 consists of {a mathematical formula}2T−2 agents that rank alternative {a mathematical formula}bi at position i for {a mathematical formula}i=1,…,|V|, alternative {a mathematical formula}ai at position {a mathematical formula}|V|+i for {a mathematical formula}i=1,…,|V|, and alternative {a mathematical formula}ci at position {a mathematical formula}2|V|+i−1 for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N4 consists of 140T agents that rank alternative {a mathematical formula}a1 at position v, alternative {a mathematical formula}bi at position i for {a mathematical formula}i=1,…,v−1, alternative {a mathematical formula}bi at position {a mathematical formula}i+1 for {a mathematical formula}i=v+1,…,|V|+1, and alternatives {a mathematical formula}ai and {a mathematical formula}c2 at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N5 consists of one agent that ranks alternative {a mathematical formula}b1 first, alternative {a mathematical formula}ci at position i for {a mathematical formula}i=2,…,|V|, alternative {a mathematical formula}a1 at position {a mathematical formula}|V|+1, and alternatives {a mathematical formula}bi and {a mathematical formula}ci at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+        </list>
+        <paragraph>
+         See Fig. 3 for an example. The corresponding utility profile {a mathematical formula}u→v is such that {a mathematical formula}sw(a1,u→v)=70T, {a mathematical formula}sw(b1,u→v)=T, and {a mathematical formula}sw(a,u→v)≤T for alternative {a mathematical formula}a∈A∖{a1,b1}, so that it uniquely induces {a mathematical formula}σ→v. Observe that the {a mathematical formula}142T−2 agents of {a mathematical formula}N1∪N2 always rank alternative {a mathematical formula}a1 first and the {a mathematical formula}2T−1&gt;T agents of {a mathematical formula}N3∪N5 always rank alternative {a mathematical formula}b1 first; hence the definition of {a mathematical formula}u→v is clearly feasible and the construction can be implemented in polynomial time.
+        </paragraph>
+        <paragraph>
+         For each edge {a mathematical formula}e=(v,w) with {a mathematical formula}v&lt;w, the preference profile {a mathematical formula}σ→e is defined as follows. The agents are partitioned into 5 sets {a mathematical formula}N1, …, {a mathematical formula}N5:
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Set {a mathematical formula}N1 consists of {a mathematical formula}71T−1 agents that rank alternative {a mathematical formula}b1 at position v, alternative {a mathematical formula}ai at position i for {a mathematical formula}i=1,…,v−1, alternative {a mathematical formula}ai at position {a mathematical formula}i+1 for {a mathematical formula}i=v,…,|V|, and alternatives {a mathematical formula}bi and {a mathematical formula}ci at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N2 consists of {a mathematical formula}71T−1 agents that rank alternative {a mathematical formula}ai at position i for {a mathematical formula}i=1,…,w−1, alternative {a mathematical formula}b1 at position w, alternative {a mathematical formula}ai at position {a mathematical formula}i+1 for {a mathematical formula}i=w+1,…,|V|, and alternatives {a mathematical formula}bi and {a mathematical formula}ci at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N3 consists of one agent that ranks alternative {a mathematical formula}a1 first, alternative {a mathematical formula}ci at position i for {a mathematical formula}i=2,…,|V|, alternative {a mathematical formula}b1 at position {a mathematical formula}|V|+1, and alternatives {a mathematical formula}ai and {a mathematical formula}bi at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N4 consists of {a mathematical formula}71T−1 agents that rank alternative {a mathematical formula}bi at position i for {a mathematical formula}i=1,…,v, alternative {a mathematical formula}a1 at position {a mathematical formula}v+1, alternative {a mathematical formula}bi at position {a mathematical formula}i+1 for {a mathematical formula}i=v+1,…,|V|, and alternatives {a mathematical formula}ci and {a mathematical formula}ai at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+         <list-item label="•">
+          Set {a mathematical formula}N5 consists of {a mathematical formula}71T−1 agents that rank alternative {a mathematical formula}bi at position i for {a mathematical formula}i=1,…,w, alternative {a mathematical formula}a1 at position {a mathematical formula}w+1, alternative {a mathematical formula}bi at position {a mathematical formula}i+1 for {a mathematical formula}i=w+1,…,|V|, and alternatives {a mathematical formula}ci and {a mathematical formula}ai at positions {a mathematical formula}|V|+i and {a mathematical formula}2|V|+i−1, respectively, for {a mathematical formula}i=2,…,|V|.
+         </list-item>
+        </list>
+        <paragraph>
+         See Fig. 4 for an example. The corresponding utility profile {a mathematical formula}u→e is such that {a mathematical formula}sw(a1,u→e)=70T, {a mathematical formula}sw(b1,u→e)=T, and {a mathematical formula}sw(a,u→e)≤T for {a mathematical formula}a∈A∖{a1,b1}, so that it uniquely induces {a mathematical formula}σ→e. Observe that the 71T agents of {a mathematical formula}N1∪N3 always rank alternative {a mathematical formula}a1 first and the {a mathematical formula}142T−2 agents of {a mathematical formula}N4∪N5 always rank alternative {a mathematical formula}b1 first; hence the definition of {a mathematical formula}u→e is clearly feasible and the construction can be implemented in polynomial time.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Proof of correctness
+        </section-title>
+        <paragraph>
+         We proceed with some definitions. For a preference profile {a mathematical formula}σ→∈R, we use the notation {a mathematical formula}u→(σ→) to denote its corresponding utility profile. Also, define{a mathematical formula} to be the total expected social welfare of the winning alternative under score {a mathematical formula}s→. We remark that in order to simplify the proof (and avoid reasoning about monotonicity of the score vector entries), we consider each scoring rule as computing a linear combination of k-approval scores for {a mathematical formula}k=1,…,3|V|−1. The non-negative entries of the score vector are the multipliers of the corresponding approval score in this linear combination. In particular, denote by {a mathematical formula}appk(a,σ→) the number of agents that rank alternative a in some of the first k positions in the preference profile {a mathematical formula}σ→ (i.e., the k-approval score of alternative a). Then, the score under the score vector {a mathematical formula}s→ is defined as {a mathematical formula}scs→(a,σ→)=∑k=13|V|−1appk(a,σ→)⋅sk. Clearly, this definition is equivalent to the standard one for scoring rules (by adjusting the score vector entries appropriately).
+        </paragraph>
+        <paragraph>
+         The next three claims provide information about the winning alternatives in each profile depending on the entries of the score vector {a mathematical formula}s→.
+        </paragraph>
+        <paragraph label="Claim B.2">
+         Let{a mathematical formula}s→be a score vector. In every profile of{a mathematical formula}R, one of the alternatives{a mathematical formula}a1and{a mathematical formula}b1has the highest score under{a mathematical formula}s→. If an alternative{a mathematical formula}a∉{a1,b1}has the highest score under{a mathematical formula}s→in some profile of{a mathematical formula}Rthen{a mathematical formula}sk=0for{a mathematical formula}k=1,…,|V|and alternatives{a mathematical formula}a1and{a mathematical formula}b1have the highest score as well.
+        </paragraph>
+        <paragraph label="Proof">
+         Observe that in each profile, the {a mathematical formula}284T−3 agents have one of the alternatives {a mathematical formula}a1 and {a mathematical formula}b1 in their top position. Furthermore, all agents rank alternatives {a mathematical formula}a1 and {a mathematical formula}b1 in one of the first {a mathematical formula}|V|+1 positions. Hence, the sum of the scores of these two alternatives is at least{a mathematical formula} For every other alternative a, the number of agents that rank it in some of the first {a mathematical formula}|V| positions is at most {a mathematical formula}142T−2. Hence, the score of such an alternative is at most{a mathematical formula} Clearly, if {a mathematical formula}sk&gt;0 for some {a mathematical formula}k∈{1,…,|V|}, then at least one of the alternatives {a mathematical formula}a1 and {a mathematical formula}b1 has score strictly higher than a. Otherwise, the alternatives {a mathematical formula}a1 and {a mathematical formula}b1 still have the highest score (possibly together with some alternative {a mathematical formula}a∉{a1,b1}). □
+        </paragraph>
+        <paragraph label="Claim B.3">
+         Let{a mathematical formula}v∈Vbe a node of G. Given a score vector{a mathematical formula}s→, define{a mathematical formula}Then
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Alternative{a mathematical formula}a1is the sole winner under{a mathematical formula}s→in profile{a mathematical formula}σ→vif and only if{a mathematical formula}Witv(s→)&gt;0.
+         </list-item>
+         <list-item label="•">
+          Alternative{a mathematical formula}b1is the sole winner under{a mathematical formula}s→in profile{a mathematical formula}σ→vif and only if{a mathematical formula}Witv(s→)&lt;0.
+         </list-item>
+         <list-item label="•">
+          Alternatives{a mathematical formula}a1and{a mathematical formula}b1are tied as highest-scoring alternatives under{a mathematical formula}s→in profile{a mathematical formula}σ→vif and only if{a mathematical formula}Witv(s→)=0.
+         </list-item>
+        </list>
+        <paragraph label="Proof">
+         Consider a node {a mathematical formula}v∈V and its corresponding preference profile {a mathematical formula}σ→v. By the definition of {a mathematical formula}σ→v, we have that the difference {a mathematical formula}appk(a1,σ→v)−appk(b1,σ→v) of the k-approval scores of alternatives {a mathematical formula}a1 and {a mathematical formula}b1 is −1 for {a mathematical formula}k=1,…,v−1,v+1,…,|V|, {a mathematical formula}140T−1 for {a mathematical formula}k=v, and 0 for {a mathematical formula}k=|V|+1,…,3|V|−1. Therefore{a mathematical formula} Now the claim follows using Claim B.2, because {a mathematical formula}Witv(s→)≠0 implies that {a mathematical formula}sk&gt;0 for some {a mathematical formula}k∈{1,…,|V|} and, hence, no alternative other than {a mathematical formula}a1 and {a mathematical formula}b1 can have maximum score. □
+        </paragraph>
+        <paragraph label="Claim B.4">
+         Let{a mathematical formula}e=(v,w)∈Ebe an edge of G. Given a score vector{a mathematical formula}s→, define{a mathematical formula}Then
+        </paragraph>
+        <list>
+         <list-item label="•">
+          Alternative{a mathematical formula}a1is the sole winner under{a mathematical formula}s→in profile{a mathematical formula}σ→eif and only if{a mathematical formula}Wite(s→)&lt;0.
+         </list-item>
+         <list-item label="•">
+          Alternative{a mathematical formula}b1is the sole winner under{a mathematical formula}s→in profile{a mathematical formula}σ→eif and only if{a mathematical formula}Wite(s→)&gt;0.
+         </list-item>
+         <list-item label="•">
+          Alternatives{a mathematical formula}a1and{a mathematical formula}b1are tied as highest-scoring alternatives under{a mathematical formula}s→in profile{a mathematical formula}σ→eif and only if{a mathematical formula}Wite(s→)=0.
+         </list-item>
+        </list>
+        <paragraph label="Proof">
+         Consider an edge {a mathematical formula}e=(v,w)∈E and its corresponding preference profile {a mathematical formula}σ→e. By the definition of {a mathematical formula}σ→e, the difference {a mathematical formula}appk(a1,σ→e)−appk(b1,σ→e) of the k-approval scores of alternatives {a mathematical formula}a1 and {a mathematical formula}b1 is 1 for {a mathematical formula}k=1,…,v−1,v+1,…,w−1,w+1,…,|V|, {a mathematical formula}−71T+2 for {a mathematical formula}k=v or {a mathematical formula}k=w, and 0 for {a mathematical formula}k=|V|+1,…,3|V|−1. We have{a mathematical formula} As before, the claim now follows directly from Claim B.2. □
+        </paragraph>
+        <paragraph>
+         The correctness of our reduction will follow by the next two lemmas.
+        </paragraph>
+        <paragraph label="Lemma B.5">
+         For every independent set I of size{a mathematical formula}K∈[71T,140T)in G, there is a scoring protocol{a mathematical formula}s→such that{a mathematical formula}SW(s→)≥30,104T2+69TK.
+        </paragraph>
+        <paragraph label="Proof">
+         For every node v of G, we set {a mathematical formula}sv=1/K if {a mathematical formula}v∈I, and {a mathematical formula}sv=0 otherwise. We also set {a mathematical formula}sv=0 for every v in {a mathematical formula}{|V|+1,…,3|V|−1}. First, consider the preference profile {a mathematical formula}σ→v for some node v of G. We have{a mathematical formula} Now, observe that the right-hand side in the above equality is strictly positive if {a mathematical formula}v∈I (since {a mathematical formula}sk=1/K and {a mathematical formula}K&lt;140T) and strictly negative if {a mathematical formula}v∉I (since {a mathematical formula}sv=0). Hence, by Claim B.2, Claim B.3, we conclude that alternative {a mathematical formula}a1 (respectively, {a mathematical formula}b1) is the sole winner in profile {a mathematical formula}σ→v if {a mathematical formula}v∈I (respectively, if {a mathematical formula}v∉I).Now, consider the preference profile {a mathematical formula}σ→e for some edge {a mathematical formula}e=(v,w) of G. We have{a mathematical formula} The first inequality holds since at most one of the adjacent nodes v and w belongs in the independent set I and the second one since {a mathematical formula}K≥71T. By Claim B.2, Claim B.4, we conclude that alternative {a mathematical formula}a1 is the sole winner under {a mathematical formula}s→ in profile {a mathematical formula}σ→e, for every edge e of E.Summing the expected social welfare of the winner under {a mathematical formula}s→ over all profiles, we have{a mathematical formula} as desired. □
+        </paragraph>
+        <paragraph label="Lemma B.6">
+         Let{a mathematical formula}s→be a score vector such that{a mathematical formula}SW(s→)≥30,104T2+69TK. Then G has an independent set of size K.
+        </paragraph>
+        <paragraph label="Proof">
+         First, we will prove that {a mathematical formula}sk&gt;0 for some {a mathematical formula}k∈{1,…,|V|}. Indeed, if this not the case, by Claim B.3, Claim B.4, {a mathematical formula}a1 and {a mathematical formula}b1 are both highest-scoring alternatives (possibly, together with some other alternative). Then, the expected social welfare of the winner under {a mathematical formula}s→ in any profile {a mathematical formula}σ→∈R is at most {a mathematical formula}12(sw(a1,u→(σ→))+sw(b1,u→(σ→)))=71T/2. In total, we have that {a mathematical formula}SW(s→)≤(|E|+|V|)71T/2=25,205T2, contradicting the assumption of the lemma.Furthermore, we can assume that {a mathematical formula}Witv(s→)≠0 for every node {a mathematical formula}v∈V and {a mathematical formula}Wite(s→)≠0 for every edge {a mathematical formula}e∈E. If this is not the case, we can transform the score vector in order to get another one that satisfies these conditions as well as the assumption of the lemma. This can be done as follows. Let η be the minimum non-zero value of the quantities {a mathematical formula}|Witv(s→)| and {a mathematical formula}|Wite(s→)| over all nodes {a mathematical formula}v∈V and edges {a mathematical formula}e∈E. Now, let {a mathematical formula}v∈V be a node with {a mathematical formula}sv&gt;0 (by the argument above, such a node certainly exists). Define two score vectors {a mathematical formula}s→′ and {a mathematical formula}s→″ as follows: set {a mathematical formula}sv′=sv−η200T and {a mathematical formula}sv′=sv+η200T; all other scores in {a mathematical formula}s→′ and {a mathematical formula}s→″ are the same as those of {a mathematical formula}s→. Observe that for every non-zero {a mathematical formula}Witv(s→), {a mathematical formula}Witv(s→′) and {a mathematical formula}Witv(s→″) are non-zero and have the same sign as {a mathematical formula}Witv(s→). Similarly, for every non-zero {a mathematical formula}Wite(s→), {a mathematical formula}Wite(s→′) and {a mathematical formula}Wite(s→″) are non-zero and have the same sign as {a mathematical formula}Wite(s→). This means that each such profile {a mathematical formula}σ→v or {a mathematical formula}σ→e has the same sole winner under scores {a mathematical formula}s→, {a mathematical formula}s→′, and {a mathematical formula}s→″. For every node v such that {a mathematical formula}Witv(s→)=0, {a mathematical formula}Witv(s→′)Witv(s→″)&lt;0, i.e., they are non-zero and have different signs. Similarly, for every edge e such that {a mathematical formula}Wite(s→)=0, {a mathematical formula}Wite(s→′)Wite(s→″)&lt;0. Hence, alternatives {a mathematical formula}a1 and {a mathematical formula}b1 are the only winners in profiles {a mathematical formula}σ→v and {a mathematical formula}σ→e under {a mathematical formula}s→′ and {a mathematical formula}s→″ while they both have the same highest score under {a mathematical formula}s→. Clearly, {a mathematical formula}SW(s→′)+SW(s→″)≥2SW(s→) which implies that one of the score vectors {a mathematical formula}s→′ or {a mathematical formula}s→″ has the desired properties.So, in the following, we assume that {a mathematical formula}Witv(s→)≠0 and {a mathematical formula}Wite(s→)≠0 for every node {a mathematical formula}v∈V and every edge {a mathematical formula}e∈E. Define {a mathematical formula}H={e∈E:Wite(s→)&lt;0} and {a mathematical formula}I={v∈V:Witv(s→)&gt;0}. Hence, the sole winner under {a mathematical formula}s→ in profile {a mathematical formula}σ→e is alternative {a mathematical formula}a1 if {a mathematical formula}e∈H and alternative {a mathematical formula}b1 otherwise. Similarly, the sole winner in profile {a mathematical formula}σ→v is alternative {a mathematical formula}a1 if {a mathematical formula}v∈I and alternative {a mathematical formula}b1 otherwise. It follows that{a mathematical formula} Also, observe that the assumption of the lemma implies that{a mathematical formula} By the above two equations, we obtain that {a mathematical formula}|I|≥K+|E|−|H|. Now, consider the subgraph {a mathematical formula}G′ of G induced by the nodes of I and let {a mathematical formula}E(G′) be its set of edges. Since for each edge {a mathematical formula}e=(v,w) of {a mathematical formula}E(G′), nodes v and w belong to I, it holds that{a mathematical formula} i.e., {a mathematical formula}E(G′)⊆|E∖H|. Since {a mathematical formula}|I|−|E(G′)| is a lower bound on the number of connected components in {a mathematical formula}G′, the graph {a mathematical formula}G′ (and, consequently, graph G) has an independent set of size {a mathematical formula}|I|−|E(G′)|≥|I|−|E∖H|≥K. □
+        </paragraph>
+        <paragraph>
+         The properties of our reduction follow from the last two lemmas. If G has an independent set of size {a mathematical formula}(140−ϵ)T, using Lemma B.5, we obtain that there is a score vector {a mathematical formula}s→ such that {a mathematical formula}SW(s→)≥(39764−69ϵ)T2. On the other hand, if any independent set in G has size at most {a mathematical formula}(139+ϵ)T, then {a mathematical formula}SW(s→)≤(39,695+69ϵ)T2. Assuming otherwise, we obtain a contradiction using Lemma B.6.  □
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,1094 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees</title>
+<!--Generated on Tue Jun 10 17:19:51 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">      Yuan Zhang, Tao Lei, Regina Barzilay, Tommi Jaakkola
+<br class="ltx_break"/>     Massachusetts Institute of Technology 
+<br class="ltx_break"/>      {<span class="ltx_text ltx_font_typewriter">yuanzh, taolei, regina, tommi</span>}<span class="ltx_text ltx_font_typewriter">@csail.mit.edu</span> 
+<br class="ltx_break"/>&amp;            Amir Globerson 
+<br class="ltx_break"/>            The Hebrew University 
+<br class="ltx_break"/>            <span class="ltx_text ltx_font_typewriter">gamir@cs.huji.ac.il</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Much of the recent work on dependency parsing has been focused on solving inherent combinatorial problems associated with rich scoring functions. In contrast, we demonstrate that highly expressive scoring functions can be
+used with substantially simpler inference procedures. Specifically, we introduce a sampling-based parser that can easily handle arbitrary global features. Inspired by SampleRank, we learn to take guided stochastic steps towards a high scoring parse. We introduce two samplers for traversing the space of trees, Gibbs and Metropolis-Hastings with Random Walk.
+The model outperforms state-of-the-art results when evaluated on 14 languages of non-projective CoNLL datasets. Our sampling-based approach naturally extends to joint prediction scenarios, such as joint parsing and POS correction. The resulting method outperforms the best reported results on the CATiB dataset, approaching performance of parsing with gold tags.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The
+source code for the work is available at <a href="http://groups.csail.mit.edu/rbg/code/global/acl2014" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://groups.csail.mit.edu/rbg/code/global/acl2014</span></a>.</span></span></span></p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Dependency parsing is commonly cast as a maximization problem over a parameterized scoring function. In this view, the use of more expressive scoring functions leads to more challenging combinatorial problems of finding the maximizing parse. Much of the recent work on parsing has been focused on improving methods for solving the combinatorial maximization inference problems. Indeed, state-of-the-art results have been obtained by adapting powerful tools from optimization <cite class="ltx_cite">[<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">16</a>, <a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">17</a>, <a href="#bib.bib18" title="Vine pruning for efficient multi-pass dependency parsing" class="ltx_ref">27</a>]</cite>. We depart from this view and instead focus on using highly expressive scoring functions with substantially simpler inference procedures. The key ingredient in our approach is how learning is coupled with inference. Our combination outperforms the state-of-the-art parsers and remains comparable even if we adopt their scoring functions.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Rich scoring functions have been used for some time. They first appeared in the context of reranking <cite class="ltx_cite">[<a href="#bib.bib35" title="Discriminative reranking for natural language parsing" class="ltx_ref">6</a>]</cite>, where a simple parser is used to generate a candidate list which is then reranked according to the scoring function. Because the number of alternatives is small, the scoring function could in principle involve arbitrary (global) features of parse trees. The power of this methodology is nevertheless limited by the initial set of alternatives from the simpler parser. Indeed, the set may already omit the gold parse. We dispense with the notion of a candidate set and seek to exploit the scoring function more directly.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we introduce a sampling-based parser that places few or no constraints on the scoring function. Starting with an initial candidate tree, our inference procedure climbs the scoring function in small (cheap) stochastic steps towards a high scoring parse. The proposal distribution over the moves is derived from the scoring function itself. Because the steps are small, the complexity of the scoring function has limited impact on the computational cost of the procedure. We explore two alternative proposal distributions. Our first strategy is akin to Gibbs sampling and samples a new head for each word in the sentence, modifying one arc at a time. The second strategy relies on a provably correct sampler for first-order scores <cite class="ltx_cite">[<a href="#bib.bib33" title="Generating random spanning trees more quickly than the cover time" class="ltx_ref">33</a>]</cite>, and uses it within a Metropolis-Hastings algorithm for general scoring functions. It turns out that the latter optimizes the score more efficiently than the former.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Because the inference procedure is so simple, it is important that the parameters of the scoring function are chosen in a manner that facilitates how we climb the scoring function in small steps. One way to achieve this is to make sure that improvements in the scoring functions are correlated with improvements in the quality of the parse. This approach was suggested in the SampleRank framework <cite class="ltx_cite">[<a href="#bib.bib8" title="SampleRank: training factor graphs with atomic gradients" class="ltx_ref">32</a>]</cite> for training structured prediction models. This method was originally developed for a sequence labeling task with local features, and was shown to be more effective than state-of-the-art alternatives. Here we apply SampleRank to parsing, applying several modifications such as the proposal distributions mentioned earlier.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The benefits of sampling-based learning go beyond stand-alone parsing. For instance, we can use the framework to correct preprocessing mistakes in features such as part-of-speech (POS) tags. In this case, we combine the scoring function for trees with a stand-alone tagging model. When proposing a small move, i.e., sampling a head of the word, we can also jointly sample its POS tag from a set of alternatives provided by the tagger. As a result, the selected tag is influenced by a broad syntactic context above and beyond the initial tagging model and is directly optimized to improve parsing performance. Our joint parsing-tagging model provides an alternative to the widely-adopted pipeline setup.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">We evaluate our method on benchmark multilingual dependency corpora. Our method outperforms the Turbo parser across 14 languages on average by 0.5%. On four languages, we top the best published results. Our method provides a more effective mechanism for handling global features than reranking, outperforming it by 1.3%. In terms of joint parsing and tagging on the CATiB dataset, we nearly bridge (88.38%) the gap between independently predicted (86.95%) and gold tags (88.45%). This is better than the best published results in the 2013 SPMRL shared task <cite class="ltx_cite">[<a href="#bib.bib22" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">28</a>]</cite>, including parser ensembles.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Earlier works on dependency parsing focused on inference with tractable scoring functions. For instance, a scoring function that operates over each single dependency can be optimized using the maximum spanning tree algorithm <cite class="ltx_cite">[<a href="#bib.bib7" title="Non-projective dependency parsing using spanning tree algorithms" class="ltx_ref">21</a>]</cite>. It was soon realized that using higher order features could be beneficial, even at the cost of using approximate inference and sacrificing optimality. The first successful approach in this arena was reranking <cite class="ltx_cite">[<a href="#bib.bib35" title="Discriminative reranking for natural language parsing" class="ltx_ref">6</a>, <a href="#bib.bib15" title="Coarse-to-fine n-best parsing and maxent discriminative reranking" class="ltx_ref">5</a>]</cite> on constituency parsing. Reranking can be combined with an arbitrary scoring function, and thus can easily incorporate global features over the entire parse tree. Its main disadvantage is that the output parse can only be one of the few parses passed to the reranker.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Recent work has focused on more powerful inference mechanisms that consider the full search space <cite class="ltx_cite">[<a href="#bib.bib26" title="Generalized higher-order dependency parsing with cube pruning" class="ltx_ref">34</a>, <a href="#bib.bib18" title="Vine pruning for efficient multi-pass dependency parsing" class="ltx_ref">27</a>, <a href="#bib.bib11" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">14</a>, <a href="#bib.bib29" title="Forest reranking: discriminative parsing with non-local features." class="ltx_ref">12</a>]</cite>. For instance,
+<cite class="ltx_cite">Nakagawa (<a href="#bib.bib38" title="Multilingual dependency parsing using global features." class="ltx_ref">2007</a>)</cite> deals with tractability issues by using sampling to approximate marginals.
+Another example is the dual decomposition (DD) framework <cite class="ltx_cite">[<a href="#bib.bib11" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">14</a>, <a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">17</a>]</cite>. The idea in DD is to decompose the hard maximization problem into smaller parts that can be efficiently maximized and enforce agreement among these via Lagrange multipliers.
+The method is essentially equivalent to linear programming relaxation approaches <cite class="ltx_cite">[<a href="#bib.bib10" title="Concise integer linear programming formulations for dependency parsing" class="ltx_ref">19</a>, <a href="#bib.bib17" title="Introduction to dual decomposition for inference" class="ltx_ref">29</a>]</cite>, and also similar in spirit to ILP approaches <cite class="ltx_cite">[<a href="#bib.bib14" title="Semantic role labeling via integer linear programming inference" class="ltx_ref">26</a>]</cite>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">A natural approach to approximate global inference is via search. For instance, a transition-based parsing system <cite class="ltx_cite">[<a href="#bib.bib37" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">36</a>]</cite> incrementally constructs a parsing structure using greedy beam-search. Other approaches operate over full trees and generate a sequence of candidates that successively increase the score <cite class="ltx_cite">[<a href="#bib.bib13" title="Search-based structured prediction" class="ltx_ref">8</a>, <a href="#bib.bib9" title="Fixed-point model for structured labeling" class="ltx_ref">15</a>, <a href="#bib.bib8" title="SampleRank: training factor graphs with atomic gradients" class="ltx_ref">32</a>]</cite>. Our work builds on one such approach — SampleRank <cite class="ltx_cite">[<a href="#bib.bib8" title="SampleRank: training factor graphs with atomic gradients" class="ltx_ref">32</a>]</cite>, a sampling-based learning algorithm. In SampleRank, the parameters are adjusted so as to guide the sequence of candidates closer to the target structure along the search path. The method has been successfully used in sequence labeling and machine translation <cite class="ltx_cite">[<a href="#bib.bib32" title="SampleRank training for phrase-based machine translation" class="ltx_ref">11</a>]</cite>. In this paper, we demonstrate how to adapt the method for parsing with rich scoring functions.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Sampling-Based Dependency Parsing with Global Features</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we introduce our novel sampling-based dependency parser which can incorporate arbitrary global features.
+We begin with the notation before addressing the decoding and learning algorithms. Finally, we extend our model to a joint parsing and POS correction task.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Notations</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We denote sentences by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> and the corresponding dependency trees by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="y\in\mathcal{Y}(x)" display="inline"><mrow><mi>y</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math>. Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="\mathcal{Y}(x)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is the set of valid (projective or non-projective) dependency trees for sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="x_{j}" display="inline"><msub><mi>x</mi><mi>j</mi></msub></math> to refer to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>th word of sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="h_{j}" display="inline"><msub><mi>h</mi><mi>j</mi></msub></math> to the head word of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="x_{j}" display="inline"><msub><mi>x</mi><mi>j</mi></msub></math>. A training set of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is given as a set of pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m11" class="ltx_Math" alttext="\mathcal{D}=\{(x^{(i)},y^{(i)})\}_{i=1}^{N}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>=</mo><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m12" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> is the ground truth parse for sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m13" class="ltx_Math" alttext="x^{(i)}" display="inline"><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We parameterize the scoring function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> as</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="s(x,y)=\theta\cdot f(x,y)" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>θ</mi><mo>⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="f(x,y)" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> is the feature vector associated with tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> for sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.
+We do not make any assumptions about how the feature function decomposes.
+In contrast, most state-of-the-art parsers operate under the assumption that the feature function decomposes into a sum of simpler terms. For example, in the second-order MST parser <cite class="ltx_cite">[<a href="#bib.bib1" title="Online learning of approximate dependency parsing algorithms." class="ltx_ref">23</a>]</cite>, all the feature terms involve arcs or consecutive siblings. Similarly, parsers based on dual decomposition <cite class="ltx_cite">[<a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">17</a>, <a href="#bib.bib11" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">14</a>]</cite> assume that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> decomposes into a sum of
+terms where each term can be maximized over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> efficiently.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Decoding</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The decoding problem consists of finding a valid dependency tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="y\in\mathcal{Y}(x)" display="inline"><mrow><mi>y</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math> that maximizes the score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="s(x,y)=\theta\cdot f(x,y)" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>θ</mi><mo>⋅</mo><mi>f</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></math> with parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. For scoring functions that extend beyond first-order arc preferences, finding the maximizing non-projective tree is known to be NP-hard <cite class="ltx_cite">[<a href="#bib.bib1" title="Online learning of approximate dependency parsing algorithms." class="ltx_ref">23</a>]</cite>. We find a high scoring tree through sampling, and (later) learn the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> so as to further guide this process.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Our sampler generates a sequence of dependency structures so as to approximate independent samples from</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="p(y|x,T,\theta)\propto\exp\left(s(x,y)/T\right)\vspace{-0.2em}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>,</mo><mi>T</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>∝</mo><mi>exp</mi><mrow><mo>(</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>/</mo><mi>T</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">The temperature parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> controls how concentrated the samples are around the maximum of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> (e.g., see <cite class="ltx_cite">Geman and Geman (<a href="#bib.bib16" title="Stochastic relaxation, gibbs distributions, and the bayesian restoration of images" class="ltx_ref">1984</a>)</cite>). Sampling from target distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is typically as hard as (or harder than) that maximizing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math>. We follow here a Metropolis-Hastings sampling algorithm (e.g., see <cite class="ltx_cite">Andrieu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="An introduction to mcmc for machine learning" class="ltx_ref">2003</a>)</cite>) and explore different alternative proposal distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="q(y^{\prime}|x,y,\theta,T)" display="inline"><mrow><mi>q</mi><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>|</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>θ</mi><mo>,</mo><mi>T</mi><mo>)</mo></mrow></mrow></math>. The distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> governs the small steps that are taken in generating a sequence of structures. The target distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> folds into the procedure by defining the probability that we will accept the proposed move. The general structure of our sampling algorithm is given in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:209.6pt;border:1px solid black;"><span class="ltx_ERROR undefined">{algorithmic}</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">Inputs:<span class="ltx_text ltx_font_medium"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi mathsize="normal" stretchy="false">θ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="x" display="inline"><mi mathsize="normal" stretchy="false">x</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m3" class="ltx_Math" alttext="T_{0}" display="inline"><msub><mi mathsize="normal" stretchy="false">T</mi><mn mathsize="normal" mathvariant="normal" stretchy="false">0</mn></msub></math> (initial temperature), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m4" class="ltx_Math" alttext="c" display="inline"><mi mathsize="normal" stretchy="false">c</mi></math> (temperature update rate), proposal distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m5" class="ltx_Math" alttext="q" display="inline"><mi mathsize="normal" stretchy="false">q</mi></math>.</span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">Outputs:<span class="ltx_text ltx_font_medium"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m6" class="ltx_Math" alttext="y^{*}" display="inline"><msup><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m7" class="ltx_Math" alttext="T\leftarrow T_{0}" display="inline"><mrow><mi>T</mi><mo>←</mo><msub><mi>T</mi><mn>0</mn></msub></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">Set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m8" class="ltx_Math" alttext="y^{0}" display="inline"><msup><mi mathsize="normal" stretchy="false">y</mi><mn mathsize="normal" stretchy="false">0</mn></msup></math> to some random tree</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m9" class="ltx_Math" alttext="y^{*}\leftarrow y^{0}" display="inline"><mrow><msup><mi>y</mi><mo>*</mo></msup><mo>←</mo><msup><mi>y</mi><mn>0</mn></msup></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\REPEAT</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m10" class="ltx_Math" alttext="y^{\prime}\leftarrow q(\cdot|x,y^{t},T,\theta)" display="inline"><mrow><msup><mi>y</mi><mo>′</mo></msup><mo>←</mo><mi>q</mi><mrow><mo>(</mo><mo>⋅</mo><mo>|</mo><mi>x</mi><mo>,</mo><msup><mi>y</mi><mi>t</mi></msup><mo>,</mo><mi>T</mi><mo>,</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\IF</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m11" class="ltx_Math" alttext="s(x,y^{\prime})&gt;s(x,y^{*})" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>y</mi><mo>*</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m12" class="ltx_Math" alttext="y^{*}\leftarrow y^{\prime}" display="inline"><mrow><msup><mi>y</mi><mo>*</mo></msup><mo>←</mo><msup><mi>y</mi><mo>′</mo></msup></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m13" class="ltx_Math" alttext="\alpha=\min\left[1,\frac{p(y^{\prime})q(y^{t}|y^{\prime})}{p(y^{t})q(y^{\prime%&#10;}|y^{t})}\right]" display="inline"><mrow><mi>α</mi><mo>=</mo><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mfrac><mrow><mi>p</mi><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>)</mo></mrow><mi>q</mi><mrow><mo>(</mo><msup><mi>y</mi><mi>t</mi></msup><mo>|</mo><msup><mi>y</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow><mrow><mi>p</mi><mrow><mo>(</mo><msup><mi>y</mi><mi>t</mi></msup><mo>)</mo></mrow><mi>q</mi><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>|</mo><msup><mi>y</mi><mi>t</mi></msup><mo>)</mo></mrow></mrow></mfrac></mrow><mo>]</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">Sample Bernouli variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m14" class="ltx_Math" alttext="Z" display="inline"><mi mathsize="normal" stretchy="false">Z</mi></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m15" class="ltx_Math" alttext="P[Z=1]=\alpha" display="inline"><mrow><mi mathsize="normal" stretchy="false">P</mi><mrow><mo mathsize="normal" stretchy="false">[</mo><mi mathsize="normal" stretchy="false">Z</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="normal" stretchy="false">]</mo></mrow><mo mathsize="normal" stretchy="false">=</mo><mi mathsize="normal" stretchy="false">α</mi></mrow></math>.
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m16" class="ltx_Math" alttext="Z=0" display="inline"><mrow><mi mathsize="normal" stretchy="false">Z</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0</mn></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m17" class="ltx_Math" alttext="y^{t+1}\leftarrow y^{t}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msup><mo mathsize="normal" stretchy="false">←</mo><msup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">t</mi></msup></mrow></math>
+<span class="ltx_ERROR undefined">\ELSE</span><span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m18" class="ltx_Math" alttext="y^{t+1}\leftarrow y^{\prime}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msup><mo mathsize="normal" stretchy="false">←</mo><msup><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">′</mo></msup></mrow></math>
+<span class="ltx_ERROR undefined">\ENDIF</span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m19" class="ltx_Math" alttext="t\leftarrow t+1" display="inline"><mrow><mi>t</mi><mo>←</mo><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m20" class="ltx_Math" alttext="T\leftarrow c\cdot T" display="inline"><mrow><mi>T</mi><mo>←</mo><mrow><mi>c</mi><mo>⋅</mo><mi>T</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\UNTIL</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">convergence</span></p><span class="ltx_ERROR undefined">\RETURN</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m21" class="ltx_Math" alttext="y^{*}" display="inline"><msup><mi>y</mi><mo>*</mo></msup></math><span class="ltx_text ltx_font_small"></span></p>
+</span>
+</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Sampling-based algorithm for decoding (i.e., approximately maximizing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m23" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math>).</div>
+</div>
+<div id="S3.F2" class="ltx_figure">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:209.6pt;border:1px solid black;"><span class="ltx_ERROR undefined">{algorithmic}</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">Inputs:<span class="ltx_text ltx_font_medium"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m1" class="ltx_Math" alttext="x" display="inline"><mi mathsize="normal" stretchy="false">x</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m2" class="ltx_Math" alttext="y^{t}" display="inline"><msup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">t</mi></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m3" class="ltx_Math" alttext="\theta" display="inline"><mi mathsize="normal" stretchy="false">θ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m4" class="ltx_Math" alttext="K" display="inline"><mi mathsize="normal" stretchy="false">K</mi></math> (number of heads to change).</span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_small">Outputs:<span class="ltx_text ltx_font_medium"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m5" class="ltx_Math" alttext="y^{\prime}" display="inline"><msup><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" mathvariant="normal" stretchy="false">′</mo></msup></math></span></span></p><span class="ltx_ERROR undefined">\FOR</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m6" class="ltx_Math" alttext="i=1" display="inline"><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></math><span class="ltx_text ltx_font_small"> <span class="ltx_ERROR undefined">\TO</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m7" class="ltx_Math" alttext="|x|" display="inline"><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">x</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></math></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m8" class="ltx_Math" alttext="inTree[i]\leftarrow false" display="inline"><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow><mo>←</mo><mrow><mi>f</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math><span class="ltx_text ltx_font_small">
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m9" class="ltx_Math" alttext="ChangeNode[i]\leftarrow false" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">g</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">[</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">]</mo></mrow></mrow><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span>Set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m10" class="ltx_Math" alttext="ChangeNode" display="inline"><mrow><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">g</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow></math> to true for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m11" class="ltx_Math" alttext="K" display="inline"><mi mathsize="normal" stretchy="false">K</mi></math> random nodes.</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m12" class="ltx_Math" alttext="head[0]\leftarrow-1" display="inline"><mrow><mrow><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mn>0</mn><mo>]</mo></mrow></mrow><mo>←</mo><mrow><mo>-</mo><mn>1</mn></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\FOR</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m13" class="ltx_Math" alttext="i=1" display="inline"><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></math><span class="ltx_text ltx_font_small"> <span class="ltx_ERROR undefined">\TO</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m14" class="ltx_Math" alttext="|x|" display="inline"><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">x</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></math></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m15" class="ltx_Math" alttext="u\leftarrow i" display="inline"><mrow><mi>u</mi><mo>←</mo><mi>i</mi></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\WHILE</span><span class="ltx_ERROR undefined">\NOT</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m16" class="ltx_Math" alttext="inTree[u]" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\IF</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m17" class="ltx_Math" alttext="ChangeNode[u]" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>N</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m18" class="ltx_Math" alttext="head[u]\leftarrow" display="inline"><mrow><mrow><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow><mo>←</mo><mi/></mrow></math><span class="ltx_text ltx_font_small"> randomHead(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m19" class="ltx_Math" alttext="u,\theta" display="inline"><mrow><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">θ</mi></mrow></math>)</span></p><span class="ltx_ERROR undefined">\ELSE</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m20" class="ltx_Math" alttext="head[u]\leftarrow y^{t}(u)" display="inline"><mrow><mrow><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow><mo>←</mo><mrow><msup><mi>y</mi><mi>t</mi></msup><mo>⁢</mo><mrow><mo>(</mo><mi>u</mi><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m21" class="ltx_Math" alttext="u\leftarrow head[u]" display="inline"><mrow><mi>u</mi><mo>←</mo><mrow><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\IF</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">LoopExist(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m22" class="ltx_Math" alttext="head" display="inline"><mrow><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">d</mi></mrow></math>)</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">EraseLoop(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m23" class="ltx_Math" alttext="head" display="inline"><mrow><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">d</mi></mrow></math>)</span></p><span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m24" class="ltx_Math" alttext="u\leftarrow i" display="inline"><mrow><mi>u</mi><mo>←</mo><mi>i</mi></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\WHILE</span><span class="ltx_ERROR undefined">\NOT</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m25" class="ltx_Math" alttext="inTree[u]" display="inline"><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m26" class="ltx_Math" alttext="inTree[u]\leftarrow true" display="inline"><mrow><mrow><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>T</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow><mo>←</mo><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>e</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m27" class="ltx_Math" alttext="u\leftarrow head[u]" display="inline"><mrow><mi>u</mi><mo>←</mo><mrow><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>u</mi><mo>]</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p><span class="ltx_ERROR undefined">\ENDWHILE</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\RETURN</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">Construct tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m28" class="ltx_Math" alttext="y^{\prime}" display="inline"><msup><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">′</mo></msup></math> from the head array.</span></p>
+</span>
+</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>A proposal distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m32" class="ltx_Math" alttext="q(y^{\prime}|y^{t})" display="inline"><mrow><mi>q</mi><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>|</mo><msup><mi>y</mi><mi>t</mi></msup><mo>)</mo></mrow></mrow></math> based on the random walk sampler of <cite class="ltx_cite">Wilson (<a href="#bib.bib33" title="Generating random spanning trees more quickly than the cover time" class="ltx_ref">1996</a>)</cite>. The function randomHead samples a new head for node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m33" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> according to the first-order weights given by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m34" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>.</div>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1019/image001.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="675" height="506" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span> An illustration of random walk sampler. The index on each edge indicates its order on each walk path. The heads of the red words are sampled while others are fixed. The blue edges represent the current walk path and the black ones are already in the tree. Note that the walk direction is opposite to the dependency direction. (a) shows the original tree before sampling; (b) and (c) show the walk path and how the tree is generated in two steps. The loop <span class="ltx_text ltx_font_italic">not<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo mathvariant="normal">→</mo></math> Monday <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo mathvariant="normal">→</mo></math> not</span> in (b) is erased.</div>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Gibbs Sampling </h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">Perhaps the most natural choice of the proposal distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m1" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> is a conditional distribution from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>. This is feasible if we restrict the proposed moves to only small changes in the current tree. In our case, we choose a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> randomly, and then sample its head <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m4" class="ltx_Math" alttext="h_{j}" display="inline"><msub><mi>h</mi><mi>j</mi></msub></math> according to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m5" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> with the constraint that we obtain a valid tree (when projective trees are sought, this constraint is also incorporated). For this choice of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m6" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>, the probability of accepting the new tree (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS1.p1.m7" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) is identically one. Thus new moves are always accepted.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.2 </span>Exact First-Order Sampling </h4>
+
+<div id="S3.SS2.SSS2.p1" class="ltx_para">
+<p class="ltx_p">One shortcoming of the Gibbs sampler is that it only changes one variable (arc) at a time. This usually leads to slow mixing, requiring more samples to get close to the parse with maximum score. Ideally, we would change multiple heads in the parse tree simultaneously, and sample those choices from the corresponding conditional distribution of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>. While in general this is increasingly difficult with more heads, it is indeed tractable if the model corresponds to a first-order parser. One such sampling algorithm is the random walk sampler of <cite class="ltx_cite">Wilson (<a href="#bib.bib33" title="Generating random spanning trees more quickly than the cover time" class="ltx_ref">1996</a>)</cite>. It can be used to obtain i.i.d. samples from distributions of the form:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="p(y)\propto\prod_{i\rightarrow j\in y}w_{ij}," display="block"><mrow><mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>∝</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>→</mo><mi>j</mi><mo>∈</mo><mi>y</mi></mrow></munder><msub><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> corresponds to a tree with a spcified root and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m3" class="ltx_Math" alttext="w_{ij}" display="inline"><msub><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the exponential of the first-order score. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is always a valid parse tree if we allow multiple children of the root and do not impose projective constraint.
+The algorithm in <cite class="ltx_cite">Wilson (<a href="#bib.bib33" title="Generating random spanning trees more quickly than the cover time" class="ltx_ref">1996</a>)</cite> iterates over all the nodes, and for each node performs a random walk according to the weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m5" class="ltx_Math" alttext="w_{ij}" display="inline"><msub><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> until the walk creates a loop or hits a tree.
+In the first case the algorithm erases the loop and continues the walk. If the walk hits the current tree, the walk path is added to form a new tree with more nodes.
+This is repeated until all the nodes are included in the tree. It can be shown that this procedure generates i.i.d. trees from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p1.m6" class="ltx_Math" alttext="p(y)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.SSS2.p2" class="ltx_para">
+<p class="ltx_p">Since our features do not by design correspond to a first-order parser, we cannot use the Wilson algorithm as it is. Instead we use it as the proposal function and sample a subset of the dependencies from the first-order distribution of our model, while fixing the others. In each step we uniformly sample <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> nodes to update and sample their new heads using the Wilson algorithm (in the experiments we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m2" class="ltx_Math" alttext="K=4" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>4</mn></mrow></math>). Note that blocked Gibbs sampling would be exponential in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m3" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math>, and is thus very slow already at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS2.p2.m4" class="ltx_Math" alttext="K=4" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>4</mn></mrow></math>. The procedure is described in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> with a graphic illustration in Figure <a href="#S3.F3" title="Figure 3 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Training</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe how to learn the adjustable parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> in the scoring function. The parameters are learned in an on-line fashion by successively imposing soft constraints between pairs of dependency structures. We introduce both margin constraints and constraints pertaining to successive samples generated along the search path. We demonstrate later that both types of constraints are essential.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">We begin with the standard margin constraints. An ideal scoring function would always rank the gold parse higher than any alternative. Moreover, alternatives that are far from the gold parse should score even lower. As a result, we require that</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="s(x^{(i)},y^{(i)})-s(x^{(i)},y)\geq\Delta(y^{(i)},y)\quad\forall y" display="block"><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>≥</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo separator="true"> </mo><mrow><mo>∀</mo><mi>y</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="\Delta(y^{(i)},y)" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> is the number of head mistakes in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> relative to the gold parse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>. We adopt here a shorthand <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="Err(y)=\Delta(y^{(i)},y)" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>, where the dependence on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> is implied from context. Note that Equation <a href="#S3.E4" title="(4) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> contains exponentially many constraints and cannot be enforced jointly for general scoring functions. However, our sampling procedure generates a small number of structures along the search path. We enforce only constraints corresponding to those samples.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">The second type of constraints are enforced between successive samples along the search path. To illustrate the idea, consider a parse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> that differs from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m2" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in only one arc, and a parse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m3" class="ltx_Math" alttext="y^{\prime}" display="inline"><msup><mi>y</mi><mo>′</mo></msup></math> that differs from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m4" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math> in ten arcs. We cannot necessarily assume that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m5" class="ltx_Math" alttext="s(x,y)" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> is greater than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m6" class="ltx_Math" alttext="s(x,y^{\prime})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></math> without additional encouragement. Thus, we can complement the constraints in Equation <a href="#S3.E4" title="(4) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> with additional pairwise constraints <cite class="ltx_cite">[<a href="#bib.bib8" title="SampleRank: training factor graphs with atomic gradients" class="ltx_ref">32</a>]</cite>:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="s(x^{(i)},y)-s(x^{(i)},y^{\prime})\geq Err(y^{\prime})-Err(y)" display="block"><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>≥</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where similarly to Equation <a href="#S3.E4" title="(4) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, the difference in scores scales with the differences in errors with respect to the target <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m7" class="ltx_Math" alttext="y^{(i)}" display="inline"><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>. We only enforce the above constraints for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m8" class="ltx_Math" alttext="y,y^{\prime}" display="inline"><mrow><mi>y</mi><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow></math> that are consecutive samples in the course of the sampling process. These constraints serve to guide the sampling process derived from the scoring function towards the gold parse.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">We learn the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> in an on-line fashion to satisfy the above constraints. This is done via the MIRA algorithm <cite class="ltx_cite">[<a href="#bib.bib6" title="Ultraconservative online algorithms for multiclass problems" class="ltx_ref">7</a>]</cite>. Specifically, if the current parameters are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m2" class="ltx_Math" alttext="\theta_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math>, and we enforce constraint Equation <a href="#S3.E5" title="(5) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> for a particular pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m3" class="ltx_Math" alttext="y,y^{\prime}" display="inline"><mrow><mi>y</mi><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow></math>, then we will find <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m4" class="ltx_Math" alttext="\theta_{t+1}" display="inline"><msub><mi>θ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub></math> that minimizes</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\begin{array}[]{ll}\min&amp;||\theta-\theta_{t}||^{2}+C\xi\\&#10;{\mbox{s}.t.}&amp;\theta\cdot\left(f(x,y)-f(x,y^{\prime})\right)\geq Err(y^{\prime%&#10;})-Err(y)-\xi\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo movablelimits="false">min</mo></mtd><mtd columnalign="left"><mrow><msup><mrow><mo fence="true">||</mo><mrow><mi>θ</mi><mo>-</mo><msub><mi>θ</mi><mi>t</mi></msub></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>ξ</mi></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mtext mathsize="small" stretchy="false">s</mtext><mo separator="true">.</mo><mi>t</mi></mrow><mo>.</mo></mrow></mtd><mtd columnalign="left"><mrow><mrow><mi>θ</mi><mo>⋅</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mo>≥</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>y</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>-</mo><mi>ξ</mi></mrow></mrow></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">The updates can be calculated in closed form. Figure <a href="#S3.F4" title="Figure 4 ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> summarizes the learning algorithm. We repeatedly generate parses based on the current parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m1" class="ltx_Math" alttext="\theta_{t}" display="inline"><msub><mi>θ</mi><mi>t</mi></msub></math> for each sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m2" class="ltx_Math" alttext="x^{(i)}" display="inline"><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>, and use successive samples to enforce constraints in Equation <a href="#S3.E4" title="(4) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> and Equation <a href="#S3.E5" title="(5) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> one at a time.</p>
+</div>
+<div id="S3.F4" class="ltx_figure">
+<p class="ltx_p">
+<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:209.6pt;border:1px solid black;"><span class="ltx_ERROR undefined">{algorithmic}</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_script">Inputs:<span class="ltx_text ltx_font_medium"> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m1" class="ltx_Math" alttext="\mathcal{D}=\{(x^{(i)},y^{(i)})\}_{i=1}^{N}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mo mathsize="normal" mathvariant="normal" stretchy="false">=</mo><msubsup><mrow><mo mathsize="small" mathvariant="normal" stretchy="false">{</mo><mrow><mo mathsize="small" mathvariant="normal" stretchy="false">(</mo><mrow><msup><mi mathsize="normal" stretchy="false">x</mi><mrow><mo mathvariant="normal">(</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathvariant="normal">)</mo></mrow></msup><mo mathsize="small" mathvariant="normal" stretchy="false">,</mo><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mo mathvariant="normal">(</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathvariant="normal">)</mo></mrow></msup></mrow><mo mathsize="small" mathvariant="normal" stretchy="false">)</mo></mrow><mo mathsize="small" mathvariant="normal" stretchy="false">}</mo></mrow><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" mathvariant="normal" stretchy="false">=</mo><mn mathsize="normal" mathvariant="normal" stretchy="false">1</mn></mrow><mi mathsize="normal" stretchy="false">N</mi></msubsup></mrow></math>.</span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_script">Outputs:<span class="ltx_text ltx_font_medium"> Learned parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m2" class="ltx_Math" alttext="\theta" display="inline"><mi mathsize="normal" stretchy="false">θ</mi></math>.</span></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m3" class="ltx_Math" alttext="\theta_{0}\leftarrow\textbf{0}" display="inline"><mrow><msub><mi>θ</mi><mn>0</mn></msub><mo>←</mo><mtext mathsize="small" stretchy="false">𝟎</mtext></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\FOR</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m4" class="ltx_Math" alttext="e=1" display="inline"><mrow><mi>e</mi><mo>=</mo><mn>1</mn></mrow></math><span class="ltx_text ltx_font_script"> <span class="ltx_ERROR undefined">\TO</span>#epochs</span></p><span class="ltx_ERROR undefined">\FOR</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m5" class="ltx_Math" alttext="i=1" display="inline"><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></math><span class="ltx_text ltx_font_script"> <span class="ltx_ERROR undefined">\TO</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m6" class="ltx_Math" alttext="N" display="inline"><mi mathsize="normal" stretchy="false">N</mi></math></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m7" class="ltx_Math" alttext="y^{\prime}\leftarrow q(\cdot|x^{(i)},y_{i}^{t_{i}},\theta_{t})" display="inline"><mrow><msup><mi>y</mi><mo>′</mo></msup><mo>←</mo><mi>q</mi><mrow><mo>(</mo><mo>⋅</mo><mo>|</mo><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup><mo>,</mo><msub><mi>θ</mi><mi>t</mi></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m8" class="ltx_Math" alttext="y^{+}=\operatorname*{arg\,min}_{y\in\left\{y_{i}^{t_{i}},y^{\prime}\right\}}%&#10;Err(y)" display="inline"><mrow><msup><mi>y</mi><mo>+</mo></msup><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>min</mi></mrow><mrow><mi>y</mi><mo>∈</mo><mrow><mo>{</mo><mrow><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>}</mo></mrow></mrow></msub><mo>⁡</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi></mrow></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m9" class="ltx_Math" alttext="y^{-}=\operatorname*{arg\,max}_{y\in\left\{y_{i}^{t_{i}},y^{\prime}\right\}}%&#10;Err(y)" display="inline"><mrow><msup><mi>y</mi><mo>-</mo></msup><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><mi>y</mi><mo>∈</mo><mrow><mo>{</mo><mrow><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup><mo>,</mo><msup><mi>y</mi><mo>′</mo></msup></mrow><mo>}</mo></mrow></mrow></msub><mo>⁡</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi></mrow></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m10" class="ltx_Math" alttext="y_{i}^{t_{i}+1}\leftarrow" display="inline"><mrow><msubsup><mi>y</mi><mi>i</mi><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>+</mo><mn>1</mn></mrow></msubsup><mo>←</mo><mi/></mrow></math><span class="ltx_text ltx_font_script"> acceptOrReject(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m11" class="ltx_Math" alttext="y^{\prime},y_{i}^{t_{i}},\theta_{t}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">,</mo><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></msubsup><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">θ</mi><mi mathsize="normal" stretchy="false">t</mi></msub></mrow></math>)</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m12" class="ltx_Math" alttext="t_{i}\leftarrow t_{i}+1" display="inline"><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>←</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>+</mo><mn>1</mn></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m13" class="ltx_Math" alttext="\nabla f=f(x^{(i)},y^{+})-f(x^{(i)},y^{-})" display="inline"><mrow><mrow><mo>∇</mo><mo>⁡</mo><mi>f</mi></mrow><mo>=</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mo>+</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mo>-</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m14" class="ltx_Math" alttext="\Delta Err=Err(y^{+})-Err(y^{-})" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi></mrow><mo>=</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>y</mi><mo>+</mo></msup><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>y</mi><mo>-</mo></msup><mo>)</mo></mrow></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\IF</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m15" class="ltx_Math" alttext="\Delta Err\neq 0" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi></mrow><mo>≠</mo><mn>0</mn></mrow></math><span class="ltx_text ltx_font_script"> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m16" class="ltx_Math" alttext="\theta_{t}\cdot\nabla f&lt;\Delta Err" display="inline"><mrow><mrow><msub><mi mathsize="normal" stretchy="false">θ</mi><mi mathsize="normal" stretchy="false">t</mi></msub><mo mathsize="normal" stretchy="false">⋅</mo><mrow><mo mathsize="normal" stretchy="false">∇</mo><mo mathsize="small" stretchy="false">⁡</mo><mi mathsize="normal" stretchy="false">f</mi></mrow></mrow><mo mathsize="normal" stretchy="false">&lt;</mo><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">Δ</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow></mrow></math></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m17" class="ltx_Math" alttext="\theta_{t+1}\leftarrow" display="inline"><mrow><msub><mi>θ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>←</mo><mi/></mrow></math><span class="ltx_text ltx_font_script"> updateMIRA(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m18" class="ltx_Math" alttext="\nabla f,\Delta Err,\theta_{t}" display="inline"><mrow><mrow><mo mathsize="normal" stretchy="false">∇</mo><mo mathsize="small" stretchy="false">⁡</mo><mi mathsize="normal" stretchy="false">f</mi></mrow><mo mathsize="small" stretchy="false">,</mo><mrow><mi mathsize="normal" mathvariant="normal" stretchy="false">Δ</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">θ</mi><mi mathsize="normal" stretchy="false">t</mi></msub></mrow></math>)</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m19" class="ltx_Math" alttext="t\leftarrow t+1" display="inline"><mrow><mi>t</mi><mo>←</mo><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m20" class="ltx_Math" alttext="\nabla f_{g}=f(x^{(i)},y^{(i)})-f(x^{(i)},y_{i}^{t_{i}})" display="inline"><mrow><mrow><mo>∇</mo><mo>⁡</mo><msub><mi>f</mi><mi>g</mi></msub></mrow><mo>=</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\IF</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m21" class="ltx_Math" alttext="\theta_{t}\cdot\nabla f_{g}&lt;Err(y_{i}^{t_{i}})" display="inline"><mrow><mrow><msub><mi>θ</mi><mi>t</mi></msub><mo>⋅</mo><mrow><mo>∇</mo><mo>⁡</mo><msub><mi>f</mi><mi>g</mi></msub></mrow></mrow><mo>&lt;</mo><mrow><mi>E</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m22" class="ltx_Math" alttext="\theta_{t+1}\leftarrow" display="inline"><mrow><msub><mi>θ</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>←</mo><mi/></mrow></math><span class="ltx_text ltx_font_script"> updateMIRA(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m23" class="ltx_Math" alttext="\nabla f_{g},Err(y_{i}^{t_{i}}),\theta_{t}" display="inline"><mrow><mrow><mo mathsize="normal" stretchy="false">∇</mo><mo mathsize="small" stretchy="false">⁡</mo><msub><mi mathsize="normal" stretchy="false">f</mi><mi mathsize="normal" stretchy="false">g</mi></msub></mrow><mo mathsize="small" stretchy="false">,</mo><mrow><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></msubsup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">θ</mi><mi mathsize="normal" stretchy="false">t</mi></msub></mrow></math>)</span></p><span class="ltx_ERROR undefined">\STATE</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m24" class="ltx_Math" alttext="t\leftarrow t+1" display="inline"><mrow><mi>t</mi><mo>←</mo><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></mrow></math><span class="ltx_text ltx_font_script"></span></p><span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\RETURN</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_script">Average of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m25" class="ltx_Math" alttext="\theta_{0},\ldots,\theta_{t}" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">θ</mi><mn mathsize="normal" stretchy="false">0</mn></msub><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">θ</mi><mi mathsize="normal" stretchy="false">t</mi></msub></mrow></math> parameters.</span></p>
+</span>
+</p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>SampleRank algorithm for learning. The rejection strategy is as in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m29" class="ltx_Math" alttext="y_{i}^{t_{i}}" display="inline"><msubsup><mi>y</mi><mi>i</mi><msub><mi>t</mi><mi>i</mi></msub></msubsup></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m30" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math>th tree sample of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F4.m31" class="ltx_Math" alttext="x^{(i)}" display="inline"><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></math>. The first MIRA update (see Equation <a href="#S3.E6" title="(6) ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>) enforces a ranking constraint between two sampled parses. The second MIRA update enforces constraints between a sampled parse and the gold parse. In practice several samples are drawn for each sentence in each epoch.</div>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Joint Parsing and POS Correction</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">It is easy to extend our sampling-based parsing framework to joint prediction of parsing and other labels.
+Specifically, when sampling the new heads, we can also sample the values of
+other variables at the same time. For instance, we can sample the POS tag, the dependency relation or morphology information. In this
+work, we investigate a joint POS correction scenario in which only the predicted POS tags are provided in the testing
+phase, while both gold and predicted tags are available for the training set.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">We extend our model such that it jointly learns how to predict a parse tree and also
+correct the predicted POS tags for a better parsing performance.
+
+We generate the POS candidate list for each word based on the confusion matrix on the training set.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="c(t_{g},t_{p})" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>g</mi></msub><mo>,</mo><msub><mi>t</mi><mi>p</mi></msub></mrow><mo>)</mo></mrow></mrow></math> be the count when the gold tag is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="t_{g}" display="inline"><msub><mi>t</mi><mi>g</mi></msub></math> and the predicted one is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="t_{p}" display="inline"><msub><mi>t</mi><mi>p</mi></msub></math>.
+For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, we first prune out its POS candidates by using the vocabulary from the training set.
+We don’t prune anything if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is unseen.
+Assuming that the predicted tag for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m6" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m7" class="ltx_Math" alttext="t_{p}" display="inline"><msub><mi>t</mi><mi>p</mi></msub></math>, we further remove those tags <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m8" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> if their counts
+are smaller than some threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m9" class="ltx_Math" alttext="c(t,t_{p})&lt;\alpha\cdot c(t_{p},t_{p})" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><msub><mi>t</mi><mi>p</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>&lt;</mo><mrow><mrow><mi>α</mi><mo>⋅</mo><mi>c</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>p</mi></msub><mo>,</mo><msub><mi>t</mi><mi>p</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>In our work we choose
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m10" class="ltx_Math" alttext="\alpha=0.003" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.003</mn></mrow></math>, which gives a 98.9% oracle POS tagging accuracy on the CATiB development set.</span></span></span>.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">After generating the candidate lists for each word, the rest of the extension is rather straightforward.
+ For each sampling, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m1" class="ltx_Math" alttext="\mathcal{H}" display="inline"><mi class="ltx_font_mathcaligraphic">ℋ</mi></math> be the set of candidate heads and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m2" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> be the set of
+candidate POS tags. The Gibbs sampler will generate a new sample from the space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p3.m3" class="ltx_Math" alttext="\mathcal{H}\times\mathcal{T}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℋ</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></math>.
+The other parts of the algorithm remain the same.</p>
+</div>
+<div id="S3.F5" class="ltx_figure"><img src="P14-1019/image002.png" id="S3.F5.g1" class="ltx_graphics ltx_centering" width="675" height="506" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>First- to third-order features.</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Features</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">First- to Third-Order Features </span>
+The feature templates of first- to third-order features are mainly drawn from previous work
+on graph-based parsing <cite class="ltx_cite">[<a href="#bib.bib1" title="Online learning of approximate dependency parsing algorithms." class="ltx_ref">23</a>]</cite>, transition-based parsing <cite class="ltx_cite">[<a href="#bib.bib25" title="Labeled pseudo-projective dependency parsing with support vector machines" class="ltx_ref">25</a>]</cite>
+and dual decomposition-based parsing <cite class="ltx_cite">[<a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">17</a>]</cite>. As shown in Figure <a href="#S3.F5" title="Figure 5 ‣ 3.4 Joint Parsing and POS Correction ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, the <span class="ltx_text ltx_font_italic">arc</span> is the basic structure
+for first-order features. We also define features based on consecutive
+sibling, grandparent, arbitrary sibling, head bigram, grand-sibling and tri-siblings, which are also used in the Turbo parser <cite class="ltx_cite">[<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">16</a>]</cite>. In addition to
+these first- to third-order structures, we also consider grand-grandparent and sibling-grandchild structures. There
+are two types of sibling-grandchild structures: (1) inner-sibling when the sibling is between the head and the modifier and (2) outer-sibling for the other cases.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Global Features </span>
+We used feature shown promising in prior reranking work <cite class="ltx_cite">Charniak and Johnson (<a href="#bib.bib15" title="Coarse-to-fine n-best parsing and maxent discriminative reranking" class="ltx_ref">2005</a>)</cite>, <cite class="ltx_cite">Collins (<a href="#bib.bib35" title="Discriminative reranking for natural language parsing" class="ltx_ref">2000</a>)</cite> and <cite class="ltx_cite">Huang (<a href="#bib.bib29" title="Forest reranking: discriminative parsing with non-local features." class="ltx_ref">2008</a>)</cite>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<ul id="I1" class="ltx_itemize">[leftmargin=10pt,parsep=2pt,topsep=2pt]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Right Branch </span> This feature enables the model to prefer right or left-branching trees. It counts
+the number of words on the path from the root node to the right-most non-punctuation word, normalized by the length of the sentence.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Coordination </span> In a coordinate structure, the two adjacent conjuncts usually agree with each other on POS tags and their span lengths. For instance, in <span class="ltx_text ltx_font_italic">cats and dogs</span>,
+the conjuncts are both short noun phrases.
+Therefore, we add different features to capture POS tag and span length consistency in a coordinate structure.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">PP Attachment</span> We add features of lexical tuples involving the head, the argument and the preposition
+of prepositional phrases. Generally, this feature can be defined based on an instance of grandparent structure.
+However, we also handle the case of coordination. In this case, the arguments should be the conjuncts rather than the coordinator.
+Figure <a href="#S4.F6" title="Figure 6 ‣ 4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows an example.</p>
+</div>
+<div id="S4.F6" class="ltx_figure"><img src="P14-1019/image003.png" id="S4.F6.g1" class="ltx_graphics ltx_centering" width="293" height="220" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>An example of PP attachment with coordination. The arguments should be <span class="ltx_text ltx_font_italic">knife</span> and <span class="ltx_text ltx_font_italic">fork</span>, not <span class="ltx_text ltx_font_italic">and</span>.</div>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Span Length</span> This feature captures the distribution of the binned span length of each POS tag.
+It also includes flags of whether the span reaches the end of the sentence and whether the span is followed by the punctuation.</p>
+</div></li>
+<li id="I1.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Neighbors</span> The POS tags of the neighboring words to the left and right of
+each span, together with the binned span length and the POS tag at the span root.</p>
+</div></li>
+<li id="I1.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i6.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Valency</span> We consider valency features for each POS tag. Specifically,
+we add two types of valency information: (1) the binned number of non-punctuation modifiers
+and (2) the concatenated POS string of all those modifiers.</p>
+</div></li>
+<li id="I1.i7" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i7.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Non-projective Arcs</span> A flag indicating if a dependency is projective or not (i.e. if it spans a word that does not descend from its head) <cite class="ltx_cite">[<a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">17</a>]</cite>. This flag is also combined with the POS tags or the lexical words of the head and the modifier.</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">POS Tag Features </span>
+In the joint POS correction scenario, we also add additional features specifically for POS prediction. The feature
+templates are inspired by previous feature-rich POS tagging work <cite class="ltx_cite">[<a href="#bib.bib34" title="Feature-rich part-of-speech tagging with a cyclic dependency network" class="ltx_ref">31</a>]</cite>. However, we are free to add higher order features
+because we do not rely on dynamic programming decoding. In our work we use feature templates up to 5-gram. Table <a href="#S4.T1" title="Table 1 ‣ 4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>
+summarizes all POS tag feature templates.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_footnote">  </span><span class="ltx_text ltx_font_footnote">1-gram</span><span class="ltx_text ltx_font_footnote"></span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="\langle t_{i}\rangle,\langle t_{i},w_{i-2}\rangle,\langle t_{i},w_{i-1}\rangle%&#10;,\langle t_{i},w_{i}\rangle,\langle t_{i},w_{i+1}\rangle," display="inline"><mrow><mrow><mrow><mo>⟨</mo><msub><mi>t</mi><mi>i</mi></msub><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>i</mi></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>⟩</mo></mrow></mrow><mo>,</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="\langle t_{i},w_{i+2}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_footnote">  </span><span class="ltx_text ltx_font_footnote">2-gram</span><span class="ltx_text ltx_font_footnote"></span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m3" class="ltx_Math" alttext="\langle t_{i-1},t_{i}\rangle,\langle t_{i-2},t_{i}\rangle,\langle t_{i-1},t_{i%&#10;},w_{i-1}\rangle," display="inline"><mrow><mrow><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>⟩</mo></mrow></mrow><mo>,</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="\langle t_{i-1},t_{i},w_{i}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>i</mi></msub></mrow><mo>⟩</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_footnote">  </span><span class="ltx_text ltx_font_footnote">3-gram</span><span class="ltx_text ltx_font_footnote"></span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m5" class="ltx_Math" alttext="\langle t_{i-1},t_{i},t_{i+1}\rangle,\langle t_{i-2},t_{i},t_{i+1},\rangle,%&#10;\langle t_{i-1},t_{i},t_{i+2}\rangle," display="inline"><mrow><mrow><mo>⟨</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub><mo>⟩</mo></mrow><mo>,</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="\langle t_{i-2},t_{i},t_{i+2}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_footnote">  </span><span class="ltx_text ltx_font_footnote">4-gram</span><span class="ltx_text ltx_font_footnote"></span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="\langle t_{i-2},t_{i-1},t_{i},t_{i+1}\rangle,\langle t_{i-2},t_{i-1},t_{i},t_{%&#10;i+2}\rangle," display="inline"><mrow><mrow><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow></mrow><mo>,</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m8" class="ltx_Math" alttext="\langle t_{i-2},t_{i},t_{i+1},t_{i+2}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">  5-gram</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m9" class="ltx_Math" alttext="\langle t_{i-2},t_{i-1},t_{i},t_{i+1},t_{i+2}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub></mrow><mo>⟩</mo></mrow></math><span class="ltx_text ltx_font_footnote"></span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 1: </span>POS tag feature templates. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m14" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m15" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">w</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> denotes the POS tag and the word at the current position. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m16" class="ltx_Math" alttext="t_{i-x}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">-</mo><mi mathsize="normal" stretchy="false">x</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m17" class="ltx_Math" alttext="t_{i+x}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">+</mo><mi mathsize="normal" stretchy="false">x</mi></mrow></msub></math>
+denote the left and right context tags, and similarly for words. </div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Setup</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Datasets</span> We evaluate our model on standard benchmark corpora — CoNLL 2006 and
+CoNLL 2008 <cite class="ltx_cite">[<a href="#bib.bib19" title="CoNLL-x shared task on multilingual dependency parsing" class="ltx_ref">4</a>, <a href="#bib.bib20" title="The conll-2008 shared task on joint parsing of syntactic and semantic dependencies" class="ltx_ref">30</a>]</cite> — which include dependency treebanks for 14 different languages. Most of these data sets contain non-projective dependency trees. We use all sentences in CoNLL datasets during training and testing. We also use the Columbia Arabic Treebank (CATiB) <cite class="ltx_cite">[<a href="#bib.bib23" title="SPMRLâ13 shared task system: the cadim arabic dependency parser" class="ltx_ref">20</a>]</cite>. CATiB mostly includes projective trees. The trees are annotated with both gold and predicted versions of POS tags and morphology information. Following <cite class="ltx_cite">Marton<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="SPMRLâ13 shared task system: the cadim arabic dependency parser" class="ltx_ref">2013</a>)</cite>, for this dataset we use 12 core POS tags, word lemmas, determiner features, rationality features and functional genders and numbers.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Some CATiB sentences exceed 200 tokens. For efficiency, we limit the sentence length to 70 tokens in training and development sets. However, we do not impose this constraint during testing. We handle long sentences during testing by applying a simple split-merge strategy. We split the sentence based on the ending punctuation, predict the parse tree for each segment and group the roots of resulting trees into a single node.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Evaluation Measures</span>
+Following standard practice, we use Unlabeled Attachment Score (UAS) as the evaluation metric in all our experiments. We report UAS excluding punctuation on CoNLL datasets, following <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">2013</a>)</cite>. For the CATiB dataset, we report UAS including punctuation in order to be consistent with the published results in the 2013 SPMRL shared task <cite class="ltx_cite">[<a href="#bib.bib22" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">28</a>]</cite>.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Baselines</span> We compare our model with the Turbo parser and the MST
+parser. For the Turbo parser, we directly compare with the recent published results
+in <cite class="ltx_cite">[<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">16</a>]</cite>. For the MST parser, we
+train a second-order non-projective model using the most recent
+version of the code<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://sourceforge.net/projects/mstparser/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://sourceforge.net/projects/mstparser/</span></a></span></span></span>.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">We also compare our model against a discriminative reranker. The reranker operates over the top-50 list obtained from the MST parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The MST parser is trained in projective mode for reranking because generating top-k list from second-order non-projective model is intractable.</span></span></span>. We use a 10-fold cross-validation to generate candidate lists for training.
+We then train the reranker by running 10 epochs of cost-augmented MIRA. The reranker uses the same features as our model, along with the tree scores obtained from the MST parser (which is a standard practice in reranking).</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_script">Our Model (UAS)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_script">Turbo (UAS)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_script">MST 2nd-Ord. (UAS)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_script">Best Published UAS</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_script">Top-50 Reranker</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_script">Top-500 Reranker</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">Turbo Feat.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">Full Feat.</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">Arabic</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">79.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">80.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">79.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">78.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">81.12 (Ma11)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">79.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">78.91</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Bulgarian</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">94.02 (Zh13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Chinese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_script">92.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">89.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.77</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">91.89 (Ma10)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Czech</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_script">91.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">87.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">90.32 (Ma13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">88.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Danish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.80</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.48</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">92.00 (Zh13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.88</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.91</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Dutch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">85.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_script">86.47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">84.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">86.19 (Ma13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">81.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">English</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.22</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.54</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">93.22 (Ma13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">German</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.07</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">92.41 (Ma13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Japanese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">93.72 (Ma11)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">93.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Portuguese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">92.69</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">93.03 (Ko10)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Slovene</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">83.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">86.95 (Ma11)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">84.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">85.37</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Spanish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_script">88.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">88.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">85.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">84.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">87.96 (Zh13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">87.21</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Swedish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.48</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">91.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">89.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">91.62 (Zh13)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Turkish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">76.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">77.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">76.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">74.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_script">77.55 (Ko10)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">76.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">76.23</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">Average</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">88.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">89.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">88.72</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">86.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">89.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">87.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results of our model, the Turbo parser, and the MST parser.
+“Best Published UAS” includes the most accurate parsers among <cite class="ltx_cite">Nivre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Labeled pseudo-projective dependency parsing with support vector machines" class="ltx_ref">2006</a>)</cite>, <cite class="ltx_cite">McDonald<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Multilingual dependency analysis with a two-stage discriminative parser" class="ltx_ref">2006</a>)</cite>,
+<cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Turbo parsers: dependency parsing by approximate variational inference" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">2011</a>)</cite>, <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">2013</a>)</cite>, <cite class="ltx_cite">Koo<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Rush and Petrov (<a href="#bib.bib18" title="Vine pruning for efficient multi-pass dependency parsing" class="ltx_ref">2012</a>)</cite>, <cite class="ltx_cite">Zhang and McDonald (<a href="#bib.bib26" title="Generalized higher-order dependency parsing with cube pruning" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Zhang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="Online learning for inexact hypergraph search" class="ltx_ref">2013</a>)</cite>.
+<cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">2013</a>)</cite> is the current Turbo parser. The last two columns shows UAS of the discriminative reranker.</div>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Experimental Details</span> Following <cite class="ltx_cite">Koo and Collins (<a href="#bib.bib36" title="Efficient third-order dependency parsers" class="ltx_ref">2010</a>)</cite>, we always first train a first-order
+pruner. For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>, we prune away the incoming dependencies <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m2" class="ltx_Math" alttext="\langle h_{i},x_{i}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>h</mi><mi>i</mi></msub><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mo>⟩</mo></mrow></math> with probability less than 0.005 times the probability of the most likely head,
+and limit the number of candidate heads up to 30. This gives a 99% pruning recall on the CATiB development set.
+
+The first-order model is also trained using the algorithm in Figure <a href="#S3.F4" title="Figure 4 ‣ 3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+
+After pruning, we tune the regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m3" class="ltx_Math" alttext="C=\{0.1,0.01,0.001\}" display="inline"><mrow><mi>C</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>0.1</mn><mo>,</mo><mn>0.01</mn><mo>,</mo><mn>0.001</mn></mrow><mo>}</mo></mrow></mrow></math> on development sets for different languages. Because the CoNLL datasets do not have a standard development set, we randomly select a held out of 200 sentences from the training set. We also pick the training epochs from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m4" class="ltx_Math" alttext="\{50,100,150\}" display="inline"><mrow><mo>{</mo><mrow><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>150</mn></mrow><mo>}</mo></mrow></math> which gives the best performance on the development set for each language. After tuning, the model is trained on the full training set with the selected parameters.</p>
+</div>
+<div id="S5.p7" class="ltx_para">
+<p class="ltx_p">We apply the Random Walk-based sampling method (see Section <a href="#S3.SS2.SSS2" title="3.2.2 Exact First-Order Sampling ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>) for the standard dependency parsing task.
+However, for the joint parsing and POS correction on the CATiB dataset we do not use the Random Walk method because the first-order features in normal parsing are no longer first-order when POS tags are also variables. Therefore, the first-order distribution is not well-defined and we only employ Gibbs sampling for simplicity.
+On the CATiB dataset, we restrict the sample trees to always be projective as described in Section <a href="#S3.SS2.SSS1" title="3.2.1 Gibbs Sampling ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.1</span></a>.
+However, we do not impose this constraint for the CoNLL datasets.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Results</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Comparison with State-of-the-art Parsers</span> Table <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> summarizes the performance of our model and of the baselines. We first compare our model to the Turbo parser using the Turbo parser feature set. This is meant to test how our learning and inference methods compare to a dual decomposition approach. The first column in Table <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the result for our model with an average of 88.87%, and the third column shows the results for the Turbo parser with an average of 88.72%. This suggests that our learning and inference procedures are as effective as the dual decomposition method in the Turbo parser.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Next, we add global features that are not used by the Turbo parser. The performance of our model is shown in the second column with an average of 89.23%. It outperforms the Turbo parser by 0.5% and achieves the best reported performance on four languages. Moreover, our model also outperforms the 88.80% average UAS reported in <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Dual decomposition with many overlapping components" class="ltx_ref">2011</a>)</cite>, which is the top performing single parsing system (to the best of our knowledge).</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Comparison with Reranking</span> As column 6 of Table <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows, our model outperforms the reranker by 1.3%<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Note that
+the comparison is conservative because we can also add MST scores as features in our model as in reranker. With these features our model achieves an average UAS 89.28%.</span></span></span>. One possible explanation of this performance gap between the reranker and our model is the small number of candidates considered by the reranker. To test this hypothesis, we performed experiments with top-500 list for a subset of languages.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We ran this experiment on 5 languages with small datasets due to the scalability issues associated with reranking top-500 list.</span></span></span> As column 7 shows, this increase in the list size does not change the relative performance of the reranker and our model.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Joint Parsing and POS Correction</span> Table <a href="#S6.T3" title="Table 3 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results of joint parsing and POS correction on the CATiB dataset, for our model and state-of-the-art systems. As the upper part of the table shows, the parser with corrected tags reaches 88.38% compared to the accuracy of 88.46% on the gold tags. This is a substantial increase from the parser that uses predicted tags (86.95%).</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">To put these numbers into perspective, the bottom part of Table <a href="#S6.T3" title="Table 3 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the accuracy of the best systems from the 2013 SPMRL shared task on Arabic parsing using predicted information <cite class="ltx_cite">[<a href="#bib.bib22" title="Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages" class="ltx_ref">28</a>]</cite>.
+Our system not only outperforms the best single system <cite class="ltx_cite">[<a href="#bib.bib24" title="(Re)ranking meets morphosyntax: state-of-the-art results from the SPMRL 2013 shared task" class="ltx_ref">2</a>]</cite> by 1.4%, but it also tops the ensemble system that combines three powerful parsers: the Mate parser <cite class="ltx_cite">[<a href="#bib.bib28" title="Top accuracy and fast dependency parsing is not a contradiction" class="ltx_ref">3</a>]</cite>, the Easy-First parser <cite class="ltx_cite">[<a href="#bib.bib27" title="An efficient algorithm for easy-first non-directional dependency parsing" class="ltx_ref">10</a>]</cite> and the Turbo parser <cite class="ltx_cite">[<a href="#bib.bib5" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">16</a>]</cite></p>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Impact of Sampling Methods</span> We compare two sampling methods introduced in Section <a href="#S3.SS2" title="3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> with respect to their decoding efficiency. Specifically, we measure the score of the retrieved trees in testing as a function of the decoding speed, measured by the number of tokens per second.
+We change the temperature update rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p6.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> in order to decode with different speed. In Figure <a href="#S6.F9" title="Figure 9 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> we show the corresponding curves for two languages: Arabic
+and Chinese. We select these two languages as they correspond to two extremes in sentence length: Arabic has the longest sentences on average, while Chinese has the shortest ones.
+For both languages, the tree score improves over time. Given sufficient time, both sampling methods achieve the same score. However, the Random Walk-based sampler performs better when the quality is traded for speed. This result is to be expected given that each iteration of this sampler makes multiple changes to the tree, in contrast to a single-edge change of Gibbs sampler.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_script">Dev. Set (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m1" class="ltx_Math" alttext="\leq 70" display="inline"><mrow><mi/><mo>≤</mo><mn>70</mn></mrow></math><span class="ltx_text ltx_font_script">)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_script">Testing Set</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_rr"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">POS Acc.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">POS Acc.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">UAS</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">Gold</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">90.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">88.46</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">Predicted</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">96.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">88.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">96.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.95</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">POS Correction</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">97.72</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">90.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">97.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_script">88.38</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_script">CADIM</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">96.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">87.4-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">96.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">85.78</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_rr"><span class="ltx_text ltx_font_script">IMS-Single</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">86.96</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_script">IMS-Ensemble</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_script">88.32</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_table">Table 3: </span>Results for parsing and corrective tagging on the CATiB dataset. The upper part shows UAS of our model with gold/predicted information or POS correction. Bottom part shows UAS of the best systems in the SPMRL shared task. IMS-Single <cite class="ltx_cite">[<a href="#bib.bib24" title="(Re)ranking meets morphosyntax: state-of-the-art results from the SPMRL 2013 shared task" class="ltx_ref">2</a>]</cite> is the best single parsing system, while IMS-Ensemble <cite class="ltx_cite">[<a href="#bib.bib24" title="(Re)ranking meets morphosyntax: state-of-the-art results from the SPMRL 2013 shared task" class="ltx_ref">2</a>]</cite> is the best ensemble parsing system. We also show results for CADIM <cite class="ltx_cite">[<a href="#bib.bib23" title="SPMRLâ13 shared task system: the cadim arabic dependency parser" class="ltx_ref">20</a>]</cite>, the second best system, because we use their predicted features.</div>
+</div>
+<div id="S6.F9" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45 
+<img src="P14-1019/image004.png" id="S6.F9.g1" class="ltx_graphics ltx_centering" width="675" height="297" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Arabic</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[b]0.45 
+<img src="P14-1019/image005.png" id="S6.F9.g2" class="ltx_graphics ltx_centering ltx_centering" width="675" height="297" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>Chinese</div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 9: </span>Total score of the predicted test trees as a function of the decoding speed, measured in the number of tokens per second.</div>
+</div>
+<div id="S6.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">The Effect of Constraints in Learning</span> Our training method updates parameters to satisfy the pairwise constraints between (1) subsequent samples on the sampling path and (2) selected samples and the ground truth. Figure <a href="#S6.F10" title="Figure 10 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">10</span></a> shows that applying both types of constraints is consistently better than using either of them alone. Moreover, these results demonstrate that comparison between
+subsequent samples is more important than comparison against the gold tree.</p>
+</div>
+<div id="S6.F10" class="ltx_figure"><img src="P14-1019/image006.png" id="S6.F10.g1" class="ltx_graphics ltx_centering" width="676" height="342" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 10: </span>UAS on four languages when training with different constraints. “Neighbor” corresponds to pairwise
+constraints between subsequent samples, “Gold” represents constraints between a single sample and the ground truth, “Both” means applying both types of constraints.</div>
+</div>
+<div id="S6.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Decoding Speed</span> Our sampling-based parser is an anytime algorithm, and therefore its running time can be traded for performance. Figure <a href="#S6.F9" title="Figure 9 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">9</span></a> illustrates this trade-off.
+In the experiments reported above, we chose a conservative cooling rate and continued to sample until the score no longer changed. The parser still managed to process all the datasets in a reasonable time. For example, the time that it took to decode all the test sentences in Chinese and Arabic were 3min and 15min, respectively. Our current implementation is in Java and can be further optimized for speed.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">This paper demonstrates the power of combining a simple inference procedure with a highly expressive scoring function. Our model achieves the best results on the standard dependency parsing benchmark, outperforming parsing methods with elaborate inference procedures. In addition, this framework provides simple and effective means for joint parsing and corrective tagging.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research is developed in collaboration with the Arabic Language Technologies (ALT) group at Qatar Computing Research Institute (QCRI) within the <span class="ltx_text ltx_font_smallcaps">Iyas</span> project.
+The authors acknowledge the support of the MURI program (W911NF-10-1-0533, the DARPA BOLT program and the US-Israel Binational Science Foundation (BSF, Grant No 2012330).
+We thank the MIT NLP group and the ACL reviewers for their comments.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Andrieu, N. De Freitas, A. Doucet and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An introduction to mcmc for machine learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine learning</span> <span class="ltx_text ltx_bib_volume">50</span> (<span class="ltx_text ltx_bib_number">1-2</span>), <span class="ltx_text ltx_bib_pages"> pp. 5–43</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Björkelund, O. Cetinoglu, R. Farkas, T. Mueller and W. Seeker</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">(Re)ranking meets morphosyntax: state-of-the-art results from the SPMRL 2013 shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 135–145</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-4916" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.T3" title="Table 3 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S6.p5" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Bohnet</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Top accuracy and fast dependency parsing is not a contradiction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 89–97</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p5" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Buchholz and E. Marsi</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CoNLL-x shared task on multilingual dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 149–164</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charniak and M. Johnson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coarse-to-fine n-best parsing and maxent discriminative reranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 173–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative reranking for natural language parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’00</span>, <span class="ltx_text ltx_bib_pages"> pp. 175–182</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Crammer and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ultraconservative online algorithms for multiclass problems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 951–991</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p4" title="3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Daumé III, J. Langford and D. Marcu</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Search-based structured prediction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine learning</span> <span class="ltx_text ltx_bib_volume">75</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 297–325</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Geman and D. Geman</span><span class="ltx_text ltx_bib_year">(1984)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stochastic relaxation, gibbs distributions, and the bayesian restoration of images</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Pattern Analysis and Machine Intelligence, IEEE Transactions on</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 721–741</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Goldberg and M. Elhadad</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient algorithm for easy-first non-directional dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 742–750</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p5" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Haddow, A. Arun and P. Koehn</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SampleRank training for phrase-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 261–271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Forest reranking: discriminative parsing with non-local features.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 586–594</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo and M. Collins</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient third-order dependency parsers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–11</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p6" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo, A. M. Rush, M. Collins, T. Jaakkola and D. Sontag</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition for parsing with non-projective head automata</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1288–1298</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Notations ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Li, J. Wang, Z. Tu and D. P. Wipf</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fixed-point model for structured labeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 214–221</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, M. B. Almeida and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Turning on the turbo: fast third-order non-projective turbo parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.p3" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p4" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p5" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, N. A. Smith, P. M. Aguiar and M. A. Figueiredo</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition with many overlapping components</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 238–249</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i7.p1" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S1.p1" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Notations ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.p1" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.p2" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, N. A. Smith, E. P. Xing, P. M. Aguiar and M. A. Figueiredo</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Turbo parsers: dependency parsing by approximate variational inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 34–44</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, N. A. Smith and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Concise integer linear programming formulations for dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 342–350</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Marton, N. Habash, O. Rambow and S. Alkhulani</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SPMRLâ13 shared task system: the cadim arabic dependency parser</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 76–80</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.T3" title="Table 3 ‣ 6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, F. Pereira, K. Ribarov and J. Hajic</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Non-projective dependency parsing using spanning tree algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 523–530</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Lerman and F. Pereira</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual dependency analysis with a two-stage discriminative parser</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 216–220</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. T. McDonald and F. C. Pereira</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning of approximate dependency parsing algorithms.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Notations ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.p1" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Nakagawa</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual dependency parsing using global features.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 952–956</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre, J. Hall, J. Nilsson, G. EryiÇ§it and S. Marinov</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Labeled pseudo-projective dependency parsing with support vector machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 221–225</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Punyakanok, D. Roth, W. Yih and D. Zimak</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic role labeling via integer linear programming inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1346</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush and S. Petrov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vine pruning for efficient multi-pass dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 498–507</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Seddah, R. Tsarfaty, S. Kübler, M. Candito, J. D. Choi, R. Farkas, J. Foster, I. Goenaga, K. G. Galletebeitia and Y. Goldberg</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the spmrl 2013 shared task: a cross-framework evaluation of parsing morphologically rich languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 146–182</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p6" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p3" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p5" title="6 Results ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sontag, A. Globerson and T. Jaakkola</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to dual decomposition for inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Optimization for Machine Learning</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 219–254</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, R. Johansson, A. Meyers, L. Màrquez and J. Nivre</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The conll-2008 shared task on joint parsing of syntactic and semantic dependencies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 159–177</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. D. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 173–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p4" title="4 Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. L. Wick, K. Rohanimanesh, K. Bellare, A. Culotta and A. McCallum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SampleRank: training factor graphs with atomic gradients</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 777–784</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS3.p3" title="3.3 Training ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. B. Wilson</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating random spanning trees more quickly than the cover time</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 296–303</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.F2" title="Figure 2 ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.SSS2.p1" title="3.2.2 Exact First-Order Sampling ‣ 3.2 Decoding ‣ 3 Sampling-Based Dependency Parsing with Global Features ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2.2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Zhang and R. McDonald</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generalized higher-order dependency parsing with cube pruning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 320–331</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Zhang, L. H. K. Zhao and R. McDonald</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning for inexact hypergraph search</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.T2" title="Table 2 ‣ 5 Experimental Setup ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and J. Nivre</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transition-based dependency parsing with rich non-local features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 188–193</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Steps to Excellence: Simple Inference with Refined Scoring of Dependency Trees" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:19:51 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Improving Multi-Modal Representations Using Image Dispersion:Why Less is Sometimes More</title>
+<!--Generated on Wed Jun 11 18:38:07 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Improving Multi-Modal Representations Using Image Dispersion:
+<br class="ltx_break"/>Why Less is Sometimes More</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Douwe Kiela*, Felix Hill*, Anna Korhonen and Stephen Clark
+<br class="ltx_break"/>University of Cambridge 
+<br class="ltx_break"/>Computer Laboratory 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">douwe.kiela|felix.hill|anna.korhonen|stephen.clark</span>}<span class="ltx_text ltx_font_typewriter">@cl.cam.ac.uk </span> 
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Models that learn semantic representations from both linguistic and perceptual input outperform text-only models in many contexts and better reflect human concept acquisition. However, experiments suggest that while the inclusion of perceptual input improves representations of certain concepts, it degrades the representations of others. We propose an unsupervised method to determine whether to include perceptual input for a concept, and show that it significantly improves the ability of multi-modal models to learn and represent word meanings. The method relies solely on image data, and can be applied to a variety of other NLP tasks.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Multi-modal models that learn semantic concept representations from both linguistic and perceptual input were originally motivated by parallels with human concept acquisition, and evidence that many concepts are <em class="ltx_emph">grounded</em> in the perceptual system <cite class="ltx_cite">[<a href="#bib.bib17" title="Grounding conceptual knowledge in modality-specific systems" class="ltx_ref">3</a>]</cite>. Such models extract information about the perceptible characteristics of words from data collected in property norming experiments <cite class="ltx_cite">[<a href="#bib.bib23" title="A multimodal LDA model integrating textual, cognitive and visual modalities" class="ltx_ref">22</a>, <a href="#bib.bib22" title="Grounded models of semantic representation" class="ltx_ref">24</a>]</cite> or directly from ‘raw’ data sources such as images <cite class="ltx_cite">[<a href="#bib.bib48" title="Visual information in semantic representation" class="ltx_ref">11</a>, <a href="#bib.bib24" title="Distributional semantics in technicolor" class="ltx_ref">6</a>]</cite>. This input is combined with information from linguistic corpora to produce enhanced representations of concept meaning. Multi-modal models outperform language-only models on a range of tasks, including modelling conceptual association and predicting compositionality <cite class="ltx_cite">[<a href="#bib.bib24" title="Distributional semantics in technicolor" class="ltx_ref">6</a>, <a href="#bib.bib22" title="Grounded models of semantic representation" class="ltx_ref">24</a>, <a href="#bib.bib23" title="A multimodal LDA model integrating textual, cognitive and visual modalities" class="ltx_ref">22</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Despite these results, the advantage of multi-modal over linguistic-only models has only been demonstrated on concrete concepts, such as <em class="ltx_emph">chocolate</em> or <em class="ltx_emph">cheeseburger</em>, as opposed to abstract concepts such as such as <em class="ltx_emph">guilt</em> or <em class="ltx_emph">obesity</em>. Indeed, experiments indicate that while the addition of perceptual input is generally beneficial for representations of concrete concepts <cite class="ltx_cite">[<a href="#bib.bib62" title="Concreteness and corpora: a theoretical and practical analysis" class="ltx_ref">13</a>, <a href="#bib.bib3" title="Multimodal distributional semantics" class="ltx_ref">7</a>]</cite>, it can in fact be detrimental to representations of abstract concepts <cite class="ltx_cite">[<a href="#bib.bib62" title="Concreteness and corpora: a theoretical and practical analysis" class="ltx_ref">13</a>]</cite>. Further, while the theoretical importance of the perceptual modalities to concrete representations is well known, evidence suggests this is not the case for more abstract concepts <cite class="ltx_cite">[<a href="#bib.bib4" title="Mental representations: a dual coding approach" class="ltx_ref">21</a>, <a href="#bib.bib49" title="A quantitative empirical analysis of the abstract/concrete distinction" class="ltx_ref">14</a>]</cite>. Indeed, perhaps the most influential characterization of the abstract/concrete distinction, the Dual Coding Theory <cite class="ltx_cite">[<a href="#bib.bib4" title="Mental representations: a dual coding approach" class="ltx_ref">21</a>]</cite>, posits that concrete representations are encoded in both the linguistic and perceptual modalities whereas abstract concepts are encoded only in the linguistic modality.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Existing multi-modal architectures generally extract and process all the information from their specified sources of perceptual input. Since perceptual data sources typically contain information about both abstract and concrete concepts, such information is included for both concept types. The potential effect of this design decision on performance is significant because the vast majority of meaning-bearing words in everyday language correspond to abstract concepts. For instance, 72% of word tokens in the British National Corpus <cite class="ltx_cite">[<a href="#bib.bib41" title="CLAWS4: the tagging of the british national corpus" class="ltx_ref">17</a>]</cite> were rated by contributors to the University of South Florida dataset (USF) <cite class="ltx_cite">[<a href="#bib.bib58" title="The University of South Florida free association, rhyme, and word fragment norms" class="ltx_ref">20</a>]</cite> as more abstract than the noun <em class="ltx_emph">war</em>, a concept that many would consider quite abstract.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In light of these considerations, we propose a novel algorithm for approximating conceptual concreteness. Multi-modal models in which perceptual input is filtered according to our algorithm learn higher-quality semantic representations than previous approaches, resulting in a significant performance improvement of up to 17% in capturing the semantic similarity of concepts. Further, our algorithm constitutes the first means of quantifying conceptual concreteness that does not rely on labor-intensive experimental studies or annotators. Finally, we demonstrate the application of this unsupervised concreteness metric to the semantic classification of adjective-noun pairs, an existing NLP task to which concreteness data has proved valuable previously.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Experimental Approach</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our experiments focus on multi-modal models that extract their perceptual input automatically from images. Image-based models more naturally mirror the process of human concept acquisition than those whose input derives from experimental datasets or expert annotation. They are also more scalable since high-quality tagged images are freely available in several web-scale image datasets.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We use <em class="ltx_emph">Google Images</em> as our image source, and extract the first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> image results for each concept word. It has been shown that images from Google yield higher-quality representations than comparable sources such as <em class="ltx_emph">Flickr</em> <cite class="ltx_cite">[<a href="#bib.bib63" title="Using visual information to predict lexical preference." class="ltx_ref">4</a>]</cite>. Other potential sources, such as ImageNet <cite class="ltx_cite">[<a href="#bib.bib32" title="Imagenet: a large-scale hierarchical image database" class="ltx_ref">9</a>]</cite> or the ESP Game Dataset <cite class="ltx_cite">[<a href="#bib.bib33" title="Labeling images with a computer game" class="ltx_ref">30</a>]</cite>, either do not contain images for abstract concepts or do not contain sufficient images for the concepts in our evaluation sets.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Image Dispersion-Based Filtering</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Following the motivation outlined in Section 1, we aim to distinguish visual input corresponding to concrete concepts from visual input corresponding to abstract concepts. Our algorithm is motivated by the intuition that the diversity of images returned for a particular concept depends on its concreteness (see Figure 1). Specifically, we anticipate greater congruence or similarity among a set of images for, say, <em class="ltx_emph">elephant</em> than among images for <em class="ltx_emph">happiness</em>. By exploiting this connection, the method approximates the concreteness of concepts, and provides a basis to filter the corresponding perceptual information.</p>
+</div>
+<div id="S2.F1" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subgraphics"><img src="P14-2135/image005.jpg" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="271" height="103" alt=""/></td>
+<td class="ltx_subgraphics"><img src="P14-2135/image004.jpg" id="S2.F1.g2" class="ltx_graphics ltx_centering" width="271" height="124" alt=""/></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example images for a concrete (<em class="ltx_emph">elephant</em> – little diversity, low dispersion) and an abstract concept (<em class="ltx_emph">happiness</em> – greater diversity, high dispersion).</div>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">Formally, we propose a measure, <em class="ltx_emph">image dispersion</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> of a concept word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, defined as the average pairwise cosine distance between all the image representations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="\{\vec{w_{1}}\dots\vec{w_{n}}\}" display="inline"><mrow><mo>{</mo><mrow><mover accent="true"><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false">→</mo></mover><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mover accent="true"><msub><mi>w</mi><mi>n</mi></msub><mo stretchy="false">→</mo></mover></mrow><mo>}</mo></mrow></math> in the set of images for that concept:</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="d(w)=\frac{1}{2n(n-1)}\sum_{i&lt;j\leq n}1-\frac{\vec{w_{i}}\cdot\vec{w_{j}}}{|%&#10;\vec{w_{i}}||\vec{w_{j}}|}" display="block"><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mrow><mn>2</mn><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi><mo>≤</mo><mi>n</mi></mrow></munder><mn>1</mn></mrow></mrow><mo>-</mo><mfrac><mrow><mover accent="true"><msub><mi>w</mi><mi>i</mi></msub><mo stretchy="false">→</mo></mover><mo>⋅</mo><mover accent="true"><msub><mi>w</mi><mi>j</mi></msub><mo stretchy="false">→</mo></mover></mrow><mrow><mrow><mo fence="true">|</mo><mover accent="true"><msub><mi>w</mi><mi>i</mi></msub><mo stretchy="false">→</mo></mover><mo fence="true">|</mo></mrow><mo>⁢</mo><mrow><mo fence="true">|</mo><mover accent="true"><msub><mi>w</mi><mi>j</mi></msub><mo stretchy="false">→</mo></mover><mo fence="true">|</mo></mrow></mrow></mfrac></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">We use an average pairwise distance-based metric because this emphasizes the total variation more than e.g. the mean distance from the centroid. In all experiments we set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m1" class="ltx_Math" alttext="n=50" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>50</mn></mrow></math>.</p>
+</div>
+<div id="S2.F2" class="ltx_figure ltx_align_center"><img src="P14-2135/image003.png" id="S2.F2.g1" class="ltx_graphics" width="304" height="133" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Computation of PHOW descriptors using dense SIFT for levels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m3" class="ltx_Math" alttext="l=0" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>0</mn></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m4" class="ltx_Math" alttext="l=2" display="inline"><mrow><mi>l</mi><mo>=</mo><mn>2</mn></mrow></math> and the corresponding histogram representations <cite class="ltx_cite">[<a href="#bib.bib26" title="Image classification using random forests and ferns" class="ltx_ref">5</a>]</cite>.</div>
+</div>
+<div id="S2.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Generating Visual Representations</h4>
+
+<div id="S2.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Visual vector representations for each image were obtained using the well-known <span class="ltx_text ltx_font_italic">bag of visual words</span> (BoVW) approach <cite class="ltx_cite">[<a href="#bib.bib83" title="Video Google: a text retrieval approach to object matching in videos" class="ltx_ref">25</a>]</cite>. BoVW obtains a vector representation for an image by mapping each of its local descriptors to a cluster histogram using a standard clustering algorithm such as k-means.</p>
+</div>
+<div id="S2.SS1.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Previous NLP-related work uses <span class="ltx_text ltx_font_italic">SIFT</span> <cite class="ltx_cite">[<a href="#bib.bib48" title="Visual information in semantic representation" class="ltx_ref">11</a>, <a href="#bib.bib24" title="Distributional semantics in technicolor" class="ltx_ref">6</a>]</cite> or <span class="ltx_text ltx_font_italic">SURF</span> <cite class="ltx_cite">[<a href="#bib.bib23" title="A multimodal LDA model integrating textual, cognitive and visual modalities" class="ltx_ref">22</a>]</cite> descriptors for identifying points of interest in an image, quantified by 128-dimensional local descriptors. We apply <span class="ltx_text ltx_font_italic">Pyramid Histogram Of visual Words</span> (PHOW) descriptors, which are particularly well-suited for object categorization, a key component of image similarity and thus dispersion <cite class="ltx_cite">[<a href="#bib.bib26" title="Image classification using random forests and ferns" class="ltx_ref">5</a>]</cite>. PHOW is roughly equivalent to running SIFT on a dense grid of locations at a fixed scale and orientation and at multiple scales (see Fig 2), but is both more efficient and more accurate than regular (dense) SIFT approaches <cite class="ltx_cite">[<a href="#bib.bib26" title="Image classification using random forests and ferns" class="ltx_ref">5</a>]</cite>. We resize the images in our dataset to 100x100 pixels and compute PHOW descriptors using <em class="ltx_emph">VLFeat</em> <cite class="ltx_cite">[<a href="#bib.bib27" title="VLFeat: an open and portable library of computer vision algorithms" class="ltx_ref">29</a>]</cite>.</p>
+</div>
+<div id="S2.SS1.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">The descriptors for the images were subsequently clustered using mini-batch <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p3.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-means <cite class="ltx_cite">[<a href="#bib.bib25" title="Web-scale k-means clustering" class="ltx_ref">23</a>]</cite> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p3.m2" class="ltx_Math" alttext="k=50" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>50</mn></mrow></math> to obtain histograms of visual words, yielding 50-dimensional visual vectors for each of the images.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Generating Linguistic Representations</h4>
+
+<div id="S2.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We extract continuous vector representations (also of 50 dimensions) for concepts using the continuous log-linear skipgram model of <cite class="ltx_cite">Mikolov<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib13" title="Efficient estimation of word representations in vector space" class="ltx_ref">2013a</a>)</cite>, trained on the 100M word British National Corpus <cite class="ltx_cite">[<a href="#bib.bib41" title="CLAWS4: the tagging of the british national corpus" class="ltx_ref">17</a>]</cite>. This model learns high quality lexical semantic representations based on the distributional properties of words in text, and has been shown to outperform simple distributional models on applications such as semantic composition and analogical mapping <cite class="ltx_cite">[<a href="#bib.bib2" title="Distributed representations of words and phrases and their compositionality" class="ltx_ref">19</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Evaluation Gold-standards</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">We evaluate models by measuring the Spearman correlation of model output with two well-known gold-standards reflecting semantic proximity – a standard measure for evaluating the quality of representations (see e.g. <cite class="ltx_cite">Agirre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib82" title="A study on similarity and relatedness using distributional and wordnet-based approaches" class="ltx_ref">2009</a>)</cite>).</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">To test the ability of our model to capture concept similarity, we measure correlations with WordSim353 <cite class="ltx_cite">[<a href="#bib.bib9" title="Placing search in context: the concept revisited" class="ltx_ref">12</a>]</cite>, a selection of 353 concept pairs together with a similarity rating provided by human annotators. WordSim has been used as a benchmark for distributional semantic models in numerous studies (see e.g. <cite class="ltx_cite">[<a href="#bib.bib20" title="Improving word representations via global context and multiple word prototypes" class="ltx_ref">15</a>, <a href="#bib.bib24" title="Distributional semantics in technicolor" class="ltx_ref">6</a>]</cite>).</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">As a complementary gold-standard, we use the University of South Florida Norms (USF) <cite class="ltx_cite">[<a href="#bib.bib58" title="The University of South Florida free association, rhyme, and word fragment norms" class="ltx_ref">20</a>]</cite>. This dataset contains scores for <em class="ltx_emph">free association</em>, an experimental measure of cognitive association, between over 40,000 concept pairs. The USF norms have been used in many previous studies to evaluate semantic representations <cite class="ltx_cite">[<a href="#bib.bib40" title="Integrating experiential and distributional data to learn semantic representations." class="ltx_ref">2</a>, <a href="#bib.bib48" title="Visual information in semantic representation" class="ltx_ref">11</a>, <a href="#bib.bib22" title="Grounded models of semantic representation" class="ltx_ref">24</a>, <a href="#bib.bib23" title="A multimodal LDA model integrating textual, cognitive and visual modalities" class="ltx_ref">22</a>]</cite>. The USF evaluation set is particularly appropriate in the present context because concepts in the dataset are also rated for conceptual concreteness by at least 10 human annotators.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">We create a representative evaluation set of USF pairs as follows. We randomly sample 100 concepts from the upper quartile and 100 concepts from the lower quartile of a list of all USF concepts ranked by concreteness. We denote these sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, for <em class="ltx_emph">concrete</em>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> for abstract respectively. We then extract all pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m3" class="ltx_Math" alttext="(w_{1},w_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math> in the USF dataset such that both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m4" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m5" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math> are in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m6" class="ltx_Math" alttext="A\cup C" display="inline"><mrow><mi>A</mi><mo>∪</mo><mi>C</mi></mrow></math>. This yields an evaluation set of 903 pairs, of which 304 are such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m7" class="ltx_Math" alttext="w_{1},w_{2}\in C" display="inline"><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>∈</mo><mi>C</mi></mrow></math> and 317 are such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m8" class="ltx_Math" alttext="w_{1},w_{2}\in A" display="inline"><mrow><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><msub><mi>w</mi><mn>2</mn></msub></mrow><mo>∈</mo><mi>A</mi></mrow></math>.</p>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">The images used in our experiments and the evaluation gold-standards can be downloaded from <a href="http://www.cl.cam.ac.uk/~dk427/dispersion.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cl.cam.ac.uk/~dk427/dispersion.html</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Improving Multi-Modal Representations</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We apply <em class="ltx_emph">image dispersion-based filtering</em> as follows: if both concepts in an evaluation pair have an image dispersion below a given threshold, both the linguistic and the visual representations are included. If not, in accordance with the Dual Coding Theory of human concept processing <cite class="ltx_cite">[<a href="#bib.bib4" title="Mental representations: a dual coding approach" class="ltx_ref">21</a>]</cite>, only the linguistic representation is used. For both datasets, we set the threshold as the median image dispersion, although performance could in principle be improved by adjusting this parameter. We compare dispersion filtered representations with linguistic, perceptual and standard multi-modal representations (concatenated linguistic and perceptual representations). Similarity between concept pairs is calculated using cosine similarity.</p>
+</div>
+<div id="S3.F3" class="ltx_figure ltx_align_center"><img src="P14-2135/image001.png" id="S3.F3.g1" class="ltx_graphics" width="338" height="277" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Performance of conventional multi-modal (visual input included for all concepts) vs. image dispersion-based filtering models (visual input only for concepts classified as concrete) on the two evaluation gold-standards.</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">As Figure <a href="#S3.F3" title="Figure 3 ‣ 3 Improving Multi-Modal Representations ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows, dispersion-filtered multi-modal representations significantly outperform standard multi-modal representations on both evaluation datasets. We observe a 17% increase in Spearman correlation on WordSim353 and a 22% increase on the USF norms. Based on the correlation comparison method of <cite class="ltx_cite">Steiger (<a href="#bib.bib81" title="Tests for comparing elements of a correlation matrix." class="ltx_ref">1980</a>)</cite>, both represent significant improvements (WordSim353, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="t=2.42" display="inline"><mrow><mi>t</mi><mo>=</mo><mn>2.42</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>; USF, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="t=1.86" display="inline"><mrow><mi>t</mi><mo>=</mo><mn>1.86</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="p&lt;0.1" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.1</mn></mrow></math>). In both cases, models with the dispersion-based filter also outperform the purely linguistic model, which is not the case for other multi-modal approaches that evaluate on WordSim353 (e.g. <cite class="ltx_cite">Bruni<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib24" title="Distributional semantics in technicolor" class="ltx_ref">2012</a>)</cite>).</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Concreteness and Image Dispersion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The filtering approach described thus far improves multi-modal representations because image dispersion provides a means to distinguish concrete concepts from more abstract concepts. Since research has demonstrated the applicability of concreteness to a range of other NLP tasks <cite class="ltx_cite">[<a href="#bib.bib46" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">28</a>, <a href="#bib.bib6" title="A preliminary study on the impact of lexical concreteness on word sense disambiguation." class="ltx_ref">16</a>]</cite>, it is important to examine the connection between image dispersion and concreteness in more detail.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Quantifying Concreteness</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">To evaluate the effectiveness of image dispersion as a proxy for concreteness we evaluated our algorithm on a binary classification task based on the set of 100 concrete and 100 abstract concepts <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="A\cup C" display="inline"><mrow><mi>A</mi><mo>∪</mo><mi>C</mi></mrow></math> introduced in Section 2. By classifying concepts with image dispersion below the median as concrete and concepts above this threshold as abstract we achieved an abstract-concrete prediction accuracy of 81%.</p>
+</div>
+<div id="S4.F4" class="ltx_figure ltx_align_center"><img src="P14-2135/image002.png" id="S4.F4.g1" class="ltx_graphics" width="338" height="277" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Visual input is valuable for representing concepts that are classified as concrete by the image dispersion algorithm, but not so for concepts classified as abstract. All correlations are with the USF gold-standard.</div>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">While well-understood intuitively, concreteness is not a formally defined notion. Quantities such as the USF concreteness score depend on the subjective judgement of raters and the particular annotation guidelines. According to the Dual Coding Theory, however, concrete concepts are precisely those with a salient perceptual representation. As illustrated in Figure <a href="#S4.F4" title="Figure 4 ‣ 4.1 Quantifying Concreteness ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, our binary classification conforms to this characterization. The importance of the visual modality is significantly greater when evaluating on pairs for which both concepts are classified as concrete than on pairs of two abstract concepts.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Image dispersion is also an effective predictor of concreteness on samples for which the abstract/concrete distinction is less clear. On a different set of 200 concepts extracted by random sampling from the USF dataset stratified by concreteness rating (including concepts across the concreteness spectrum), we observed a high correlation between abstractness and dispersion (Spearman <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="\rho=0.61,p&lt;0.001" display="inline"><mrow><mrow><mi>ρ</mi><mo>=</mo><mn>0.61</mn></mrow><mo>,</mo><mrow><mi>p</mi><mo>&lt;</mo><mn>0.001</mn></mrow></mrow></math>). On this more diverse sample, which reflects the range of concepts typically found in linguistic corpora, image dispersion is a particularly useful diagnostic for identifying the very abstract or very concrete concepts. As Table 1 illustrates, the concepts with the lowest dispersion in this sample are, without exception, highly concrete, and the concepts of highest dispersion are clearly very abstract.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">It should be noted that all previous approaches to the automatic measurement of concreteness rely on annotator ratings, dictionaries or manually-constructed resources. <cite class="ltx_cite">Kwong (<a href="#bib.bib6" title="A preliminary study on the impact of lexical concreteness on word sense disambiguation." class="ltx_ref">2008</a>)</cite> proposes a method based on the presence of hard-coded phrasal features in dictionary entries corresponding to each concept. By contrast, <cite class="ltx_cite">Sánchez<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib7" title="Ontology-based information content computation" class="ltx_ref">2011</a>)</cite> present an approach based on the position of word senses corresponding to each concept in the WordNet ontology <cite class="ltx_cite">[<a href="#bib.bib10" title="WordNet" class="ltx_ref">10</a>]</cite>. <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> propose a method that extends a large set of concreteness ratings similar to those in the USF dataset. The Turney et al. algorithm quantifies the concreteness of concepts that lack such a rating based on their proximity to rated concepts in a semantic vector space. In contrast to each of these approaches, the image dispersion approach requires no hand-coded resources. It is therefore more scalable, and instantly applicable to a wide range of languages.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold">Concept</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">Image Dispersion</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">Conc. (USF)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph">shirt</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">.488</td>
+<td class="ltx_td ltx_align_center ltx_border_t">6.05</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">bed</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.495</td>
+<td class="ltx_td ltx_align_center">5.91</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">knife</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.560</td>
+<td class="ltx_td ltx_align_center">6.08</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">dress</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.578</td>
+<td class="ltx_td ltx_align_center">6.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">car</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.580</td>
+<td class="ltx_td ltx_align_center">6.35</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><em class="ltx_emph">ego</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.000</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.93</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">nonsense</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.999</td>
+<td class="ltx_td ltx_align_center">1.90</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">memory</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.999</td>
+<td class="ltx_td ltx_align_center">1.78</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">potential</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.997</td>
+<td class="ltx_td ltx_align_center">1.90</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">know</em></th>
+<td class="ltx_td ltx_align_center ltx_border_r">.996</td>
+<td class="ltx_td ltx_align_center">2.70</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Concepts with highest and lowest image dispersion scores in our evaluation set, and concreteness ratings from the USF dataset.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Classifying Adjective-Noun Pairs</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Finally, we explored whether image dispersion can be applied to specific NLP tasks as an effective proxy for concreteness. <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> showed that concreteness is applicable to the classification of adjective-noun modification as either literal or non-literal. By applying a logistic regression with noun concreteness as the predictor variable, Turney et al. achieved a classification accuracy of 79% on this task. This model relies on significant supervision in the form of over 4,000 human lexical concreteness ratings.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The MRC Psycholinguistics concreteness ratings <cite class="ltx_cite">[<a href="#bib.bib30" title="The MRC psycholinguistic database" class="ltx_ref">8</a>]</cite> used by <cite class="ltx_cite">Turney<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Literal and metaphorical sense identification through concrete and abstract context" class="ltx_ref">2011</a>)</cite> are a subset of those included in the USF dataset.</span></span></span> Applying image dispersion in place of concreteness in an identical classifier on the same dataset, our entirely unsupervised approach achieves an accuracy of 63%. This is a notable improvement on the largest-class baseline of 55%.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We presented a novel method, image dispersion-based filtering, that improves multi-modal representations by approximating conceptual concreteness from images and filtering model input. The results clearly show that including more perceptual input in multi-modal models is not always better. Motivated by this fact, our approach provides an intuitive and straightforward metric to determine whether or not to include such information.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">In addition to improving multi-modal representations, we have shown the applicability of the image dispersion metric to several other tasks. To our knowledge, our algorithm constitutes the first unsupervised method for quantifying conceptual concreteness as applied to NLP, although it does, of course, rely on the Google Images retrieval algorithm. Moreover, we presented a method to classify adjective-noun pairs according to modification type that exploits the link between image dispersion and concreteness. It is striking that this apparently linguistic problem can be addressed solely using the raw data encoded in images.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">In future work, we will investigate the precise quantity of perceptual information to be included for best performance, as well as the optimal filtering threshold. In addition, we will explore whether the application of image data, and the interaction between images and language, can yield improvements on other tasks in semantic processing and representation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">DK is supported by EPSRC grant EP/I037512/1. FH is supported by St John’s College, Cambridge. AK is supported by The Royal Society. SC is supported by ERC Starting Grant DisCoTex (306920) and EPSRC grant EP/I037512/1. We thank the anonymous reviewers for their helpful comments.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, E. Alfonseca, K. Hall, J. Kravalova, M. Paşca and A. Soroa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study on similarity and relatedness using distributional and wordnet-based approaches</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL ’09</span>, <span class="ltx_text ltx_bib_place">Boulder, Colorado</span>, <span class="ltx_text ltx_bib_pages"> pp. 19–27</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-41-1</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Andrews, G. Vigliocco and D. Vinson</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Integrating experiential and distributional data to learn semantic representations.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological review</span> <span class="ltx_text ltx_bib_volume">116</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 463</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. W. Barsalou, W. Kyle Simmons, A. K. Barbey and C. D. Wilson</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grounding conceptual knowledge in modality-specific systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Trends in cognitive sciences</span> <span class="ltx_text ltx_bib_volume">7</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 84–91</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bergsma and R. Goebel</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using visual information to predict lexical preference.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 399–405</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Bosch, A. Zisserman and X. Munoz</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Image classification using random forests and ferns</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.F2" title="Figure 2 ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS1.SSS0.P1.p2" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, G. Boleda, M. Baroni and N. Tran</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional semantics in technicolor</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 136–145</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS0.P1.p2" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S3.p3" title="3 Improving Multi-Modal Representations ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Bruni, N. K. Tran and M. Baroni</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multimodal distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">49</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–47</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Coltheart</span><span class="ltx_text ltx_bib_year">(1981)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The MRC psycholinguistic database</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Quarterly Journal of Experimental Psychology</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 497–505</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Classifying Adjective-Noun Pairs ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Deng, W. Dong, R. Socher, L. Li, K. Li and L. Fei-Fei</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Imagenet: a large-scale hierarchical image database</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 248–255</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Fellbaum</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Wiley Online Library</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p5" title="4.1 Quantifying Concreteness ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Feng and M. Lapata</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Visual information in semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 91–99</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS0.P1.p2" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Finkelstein, E. Gabrilovich, Y. Matias, E. Rivlin, Z. Solan, G. Wolfman and E. Ruppin</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Placing search in context: the concept revisited</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 406–414</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Hill, D. Kiela and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Concreteness and corpora: a theoretical and practical analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CMCL 2013</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Hill, A. Korhonen and C. Bentz</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A quantitative empirical analysis of the abstract/concrete distinction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive science</span> <span class="ltx_text ltx_bib_volume">38</span> (<span class="ltx_text ltx_bib_number">1</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. H. Huang, R. Socher, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving word representations via global context and multiple word prototypes</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 873–882</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Y. Kwong</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A preliminary study on the impact of lexical concreteness on word sense disambiguation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 235–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p5" title="4.1 Quantifying Concreteness ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.p1" title="4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Leech, R. Garside and M. Bryant</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CLAWS4: the tagging of the british national corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 622–628</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS0.P2.p1" title="Generating Linguistic Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Scottsdale, Arizona, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P2.p1" title="Generating Linguistic Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, I. Sutskever, K. Chen, G. S. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed representations of words and phrases and their compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 3111–3119</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P2.p1" title="Generating Linguistic Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. L. Nelson, C. L. McEvoy and T. A. Schreiber</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The University of South Florida free association, rhyme, and word fragment norms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Behavior Research Methods, Instruments, &amp; Computers</span> <span class="ltx_text ltx_bib_volume">36</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 402–407</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Paivio</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mental representations: a dual coding approach</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Oxford University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Improving Multi-Modal Representations ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Roller and S. Schulte im Walde</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A multimodal LDA model integrating textual, cognitive and visual modalities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1146–1157</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS0.P1.p2" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sculley</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Web-scale k-means clustering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1177–1178</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P1.p3" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Silberer and M. Lapata</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Grounded models of semantic representation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1423–1433</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p3" title="2.2 Evaluation Gold-standards ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Sivic and A. Zisserman</span><span class="ltx_text ltx_bib_year">(2003-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Video Google: a text retrieval approach to object matching in videos</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 1470–1477</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P1.p1" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Steiger</span><span class="ltx_text ltx_bib_year">(1980)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tests for comparing elements of a correlation matrix.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_volume">87</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 245</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Improving Multi-Modal Representations ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Sánchez, M. Batet and D. Isern</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ontology-based information content computation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Knowledge-Based Systems</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 297–303</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p5" title="4.1 Quantifying Concreteness ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney, Y. Neuman, D. Assaf and Y. Cohen</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Literal and metaphorical sense identification through concrete and abstract context</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 680–690</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p5" title="4.1 Quantifying Concreteness ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Classifying Adjective-Noun Pairs ‣ 4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.p1" title="4 Concreteness and Image Dispersion ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Vedaldi and B. Fulkerson</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">VLFeat: an open and portable library of computer vision algorithms</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://www.vlfeat.org/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P1.p2" title="Generating Visual Representations ‣ 2.1 Image Dispersion-Based Filtering ‣ 2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Von Ahn and L. Dabbish</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Labeling images with a computer game</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 319–326</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Experimental Approach ‣ Improving Multi-Modal Representations Using Image Dispersion: Why Less is Sometimes More" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:38:07 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>How to Speak a Language without Knowing It</title>
+<!--Generated on Wed Jun 11 17:45:06 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">How to Speak a Language without Knowing It</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xing Shi and Kevin Knight 
+<br class="ltx_break"/>Information Sciences Institute 
+<br class="ltx_break"/>Computer Science Department 
+<br class="ltx_break"/>University of Southern California 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">xingshi, knight</span>}<span class="ltx_text ltx_font_typewriter">@isi.edu</span> 
+<br class="ltx_break"/>&amp;Heng Ji 
+<br class="ltx_break"/>Computer Science Department 
+<br class="ltx_break"/>Rensselaer Polytechnic Institute 
+<br class="ltx_break"/>Troy, NY 12180, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">jih@rpi.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We develop a system that lets people overcome language barriers by letting them speak a language they do not know. Our system accepts text entered by a user, translates the text, then converts the translation into a phonetic spelling in the user’s own orthography. We trained the system on phonetic spellings in travel phrasebooks.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Can people speak a language they don’t know? Actually, it happens frequently. Travel phrasebooks contain phrases in the speaker’s language (e.g., ‘‘thank you’’) paired with foreign-language translations (e.g., ‘‘
+спасибо’’). Since the speaker may not be able to pronounce the foreign-language orthography, phrasebooks additionally provide phonetic spellings that approximate the sounds of the foreign phrase. These spellings employ the familiar writing system and sounds of the speaker’s language. Here is a sample entry from a French phrasebook for English speakers:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">English:</td>
+<td class="ltx_td ltx_align_left">Leave me alone.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">French:</td>
+<td class="ltx_td ltx_align_left">Laissez-moi tranquille.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Franglish:</td>
+<td class="ltx_td ltx_align_left">Less-ay mwah trahn-KEEL.</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The user ignores the French and goes straight to the Franglish. If the Franglish is well designed, an English speaker can pronounce it and be understood by a French listener.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows a sample entry from another book—an English phrasebook for Chinese speakers. If a Chinese speaker wants to say ‘‘<span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai非常感谢你这顿美餐’’, she need only read off the Chinglish “<span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai三可 油 否 热斯 弯德否 米欧”, which approximates the sounds of “Thank you for this wonderful meal” using Chinese characters.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Phrasebooks permit a form of accurate, personal, oral communication that speech-to-speech translation devices lack. However, the user is limited to a small set of fixed phrases. In this paper, we lift this restriction by designing and evaluating a software program with the following:</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Input: Text entered by the speaker, in her own language.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Output: Phonetic rendering of a foreign-language translation of that text, which, when pronounced by the speaker, can be understood by the listener.</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-2046/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="203" height="65" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Snippet from phrasebook</div>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">The main challenge is that different languages have different orthographies, different phoneme inventories, and different phonotactic constraints, so mismatches are inevitable. Despite this, the system’s output should be both unambiguously pronounceable by the speaker and readily understood by the listener.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">Our goal is to build an application that covers many language pairs and directions. The current paper describes a single system that lets a Chinese person speak English.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">We take a statistical modeling approach to this problem, as is done in two lines of research that are most related. The first is machine transliteration <cite class="ltx_cite">[<a href="#bib.bib6" title="Machine transliteration" class="ltx_ref">3</a>]</cite>, in which names and technical terms are translated across languages with different sound systems. The other is respelling generation <cite class="ltx_cite">[<a href="#bib.bib5" title="Automatic generation of English respellings" class="ltx_ref">2</a>]</cite>, where an English speaker is given a phonetic hint about how to pronounce a rare or foreign word to another English speaker. By contrast, we aim to help people issue full utterances that cross language barriers.</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Chinese</th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai已经八点了</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">It’s eight o’clock now</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai意思埃特额克劳克闹 (yi si ai te e ke lao ke nao)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Chinese</th>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai这件衬衫又时髦又便宜</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">this shirt is very stylish and not very expensive</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai迪思舍特意思危锐思掉利失安的闹特危锐伊克思班西五</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Chinese</th>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai我们外送的最低金额是15美金</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">our minimum charge for delivery is fifteen dollars</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai奥儿米尼们差只佛低利沃锐意思发五听到乐思</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Examples of &lt;Chinese, English, Chinglish&gt; tuples from a phrasebook.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Evaluation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Our system’s input is Chinese. The output is a string of Chinese characters that approximate English sounds, which we call Chinglish. We build several candidate Chinese-to-Chinglish systems and evaluate them as follows:</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">We compute the normalized edit distance between the system’s output and a human-generated Chinglish reference.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">A Chinese speaker pronounces the system’s output out loud, and an English listener takes dictation. We measure the normalized edit distance against an English reference.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">We automate the previous evaluation by replace the two humans with: (1) a Chinese speech synthesizer, and (2) a English speech recognizer.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Data</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We seek to imitate phonetic transformations found in phrasebooks, so phrasebooks themselves are a good source of training data. We obtained a collection of 1312 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>Chinese, English, Chinglish<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> phrasebook tuples <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Dataset can be found at <a href="http://www.isi.edu/natural-language/mt/chinglish-data.txt" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.isi.edu/natural-language/mt/chinglish-data.txt</span></a></span></span></span> (see Table <a href="#S1.T1" title="Table 1 ‣ 1 Introduction ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We use 1182 utterances for training, 65 for development, and 65 for test. We know of no other computational work on this type of corpus.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Our Chinglish has interesting gross empirical properties. First, because Chinglish and Chinese are written with the same characters, they render the same inventory of 416 distinct syllables. However, the distribution of Chinglish syllables differs a great deal from Chinese (Table <a href="#S3.T2" title="Table 2 ‣ 3 Data ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). Syllables ‘‘si’’ and ‘‘te’’ are very popular, because while consonant clusters like English ‘‘st’’ are impossible to reproduce exactly, the particular vowels in ‘‘si’’ and ‘‘te’’ are fortunately very weak.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Frequency Rank</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Chinese</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Chinglish</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">1</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">de</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">si</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">shi</td>
+<td class="ltx_td ltx_align_center ltx_border_t">te</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">yi</td>
+<td class="ltx_td ltx_align_center ltx_border_t">de</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">ji</td>
+<td class="ltx_td ltx_align_center ltx_border_t">yi</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">5</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">zhi</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">fu</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Top 5 frequent syllables in Chinese <cite class="ltx_cite">[<a href="#bib.bib2" title="The lancaster corpus of Mandarin Chinese: a corpus for monolingual and contrastive language study" class="ltx_ref">5</a>]</cite> and Chinglish</div>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">We find that multiple occurrences of an English word type are generally associated with the same Chinglish sequence. Also, Chinglish characters do not generally span multiple English words. It is reasonable for ‘‘can I’’ to be rendered as ‘‘kan nai’’, with ‘‘nai’’ spanning both English words, but this is rare.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We model Chinese-to-Chinglish translation with a cascade of weighted finite-state transducers (wFST), shown in Figure <a href="#S4.F2" title="Figure 2 ‣ 4 Model ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. We use an online MT system to convert Chinese to an English word sequence (Eword), which is then passed through FST A to generate an English sound sequence (Epron). FST A is constructed from the CMU Pronouncing Dictionary <cite class="ltx_cite">[<a href="#bib.bib1" title="The CMU pronunciation dictionary, release 0.7a" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Next, wFST B translates English sounds into Chinese sounds (Pinyin-split). Pinyin is an official syllable-based romanization of Mandarin Chinese characters, and Pinyin-split is a standard separation of Pinyin syllables into initial and final parts. Our wFST allows one English sound token to map to one or two Pinyin-split tokens, and it also allows two English sounds to map to one Pinyin-split token.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Finally, FST C converts Pinyin-split into Pinyin, and FST D chooses Chinglish characters. We also experiment with an additional wFST E that translates English words directly into Chinglish.</p>
+</div>
+<div id="S4.F2" class="ltx_figure"><img src="P14-2046/image002.jpg" id="S4.F2.g1" class="ltx_graphics ltx_centering" width="227" height="273" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Finite-state cascade for modeling the relation between Chinese and Chinglish.</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Training</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">FSTs A, C, and D are unweighted, and remain so throughout this paper.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Phoneme-based model</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We must now estimate the values of FST B parameters, such as P(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="si|S" display="inline"><mrow><mi>s</mi><mi>i</mi><mo>|</mo><mi>S</mi></mrow></math>). To do this, we first take our phrasebook triples and construct sample string pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>Epron, Pinyin-split<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m3" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> by pronouncing the phrasebook English with FST A, and by pronouncing the phrasebook Chinglish with FSTs D and C. Then we run the EM algorithm to learn FST B parameters (Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Phoneme-based model ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) and Viterbi alignments, such as:</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ae n</td>
+<td class="ltx_td ltx_align_left">d</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">uan</td>
+<td class="ltx_td ltx_align_left">d e</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">labeled Epron</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Pinyin-split</th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="P(p|e)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>p</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">d</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">d</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.46</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">d e</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.40</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">d i</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.06</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">s</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.01</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">ao r</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">u</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.26</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">o</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">ao</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.06</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">ou</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">0.01</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Learned translation tables for the phoneme based model</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Phoneme-phrase-based model</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Mappings between phonemes are context-sensitive. For example, when we decode English ‘‘grandmother’’, we get:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ae n</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d</td>
+<td class="ltx_td ltx_align_left ltx_border_r">m</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ah</td>
+<td class="ltx_td ltx_align_left ltx_border_r">dh</td>
+<td class="ltx_td ltx_align_left">er</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">an</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">m u</td>
+<td class="ltx_td ltx_align_left ltx_border_r">e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d</td>
+<td class="ltx_td ltx_align_left">e</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">where as the reference Pinyin-split sequence is:</p>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">g</td>
+<td class="ltx_td ltx_align_left">e</td>
+<td class="ltx_td ltx_align_left">r</td>
+<td class="ltx_td ltx_align_left">uan</td>
+<td class="ltx_td ltx_align_left">d</td>
+<td class="ltx_td ltx_align_left">e</td>
+<td class="ltx_td ltx_align_left">m</td>
+<td class="ltx_td ltx_align_left">a</td>
+<td class="ltx_td ltx_align_left">d</td>
+<td class="ltx_td ltx_align_left">e</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">Here, ‘‘ae n’’ should be decoded as ‘‘uan’’ when preceded by ‘‘r’’. Following phrase-based methods in statistical machine translation <cite class="ltx_cite">[<a href="#bib.bib4" title="Statistical phrase-based translation" class="ltx_ref">4</a>]</cite> and machine transliteration <cite class="ltx_cite">[<a href="#bib.bib9" title="Phrase-based machine transliteration" class="ltx_ref">1</a>]</cite>, we model substitution of longer sequences. First, we obtain Viterbi alignments using the phoneme-based model, e.g.:</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ae n</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d</td>
+<td class="ltx_td ltx_align_left ltx_border_r">m</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ah</td>
+<td class="ltx_td ltx_align_left ltx_border_r">dh</td>
+<td class="ltx_td ltx_align_left">er</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">g e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">r</td>
+<td class="ltx_td ltx_align_left ltx_border_r">uan</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d e</td>
+<td class="ltx_td ltx_align_left ltx_border_r">m</td>
+<td class="ltx_td ltx_align_left ltx_border_r">a</td>
+<td class="ltx_td ltx_align_left ltx_border_r">d</td>
+<td class="ltx_td ltx_align_left">e</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p">Second, we extract phoneme phrase pairs consistent with these alignments. We use no phrase-size limit, but we do not cross word boundaries. From the example above, we pull out phrase pairs like:</p>
+</div>
+<div id="S5.SS2.p6" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">g</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <span class="ltx_text ltx_font_typewriter">g e</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">g r</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <span class="ltx_text ltx_font_typewriter">g e r</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">…</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">r</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <span class="ltx_text ltx_font_typewriter">r</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">r ae n</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p6.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> <span class="ltx_text ltx_font_typewriter">r uan</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">…</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS2.p7" class="ltx_para">
+<p class="ltx_p">We add these phrase pairs to FST B, and call this the phoneme-phrase-based model.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Model</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Top-1 Overall</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Top-1 Valid</td>
+<td class="ltx_td ltx_align_center ltx_border_t" rowspan="2">Coverage</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r">Average Edit Distance</td>
+<td class="ltx_td ltx_align_center ltx_border_r">Average Edit Distance</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word based</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.664</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.042</td>
+<td class="ltx_td ltx_align_center ltx_border_t">29/65</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word-based hybrid training</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.659</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.029</td>
+<td class="ltx_td ltx_align_center ltx_border_t">29/65</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Phoneme based</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.611</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.583</td>
+<td class="ltx_td ltx_align_center ltx_border_t">63/65</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Phoneme-phrase based</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.194</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.136</td>
+<td class="ltx_td ltx_align_center ltx_border_t">63/65</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">Hybrid training and decoding</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">0.175</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">0.115</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">63/65</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>English-to-Pinyin decoding accuracy on a test set of 65 utterances. Numbers are average edit distances between system output and Pinyin references. Valid average edit distance is calculated based only on valid outputs (e.g. 29 outputs for word based model).</div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Word-based model</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We now turn to WFST E, which short-cuts directly from English words to Pinyin. We create <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>English, Pinyin<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> training pairs from our phrasebook simply by pronouncing the Chinglish with FST D. We initially allow each English word type to map to any sequence of Pinyin, up to length 7, with uniform probability. EM learns values for parameters like <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m3" class="ltx_Math" alttext="P(\mbox{nai te}|night)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>nai te</mtext><mo>|</mo><mi>n</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mo>)</mo></mrow></mrow></math>, plus Viterbi alignments such as:</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">accept</td>
+<td class="ltx_td ltx_align_left">tips</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">a ke sha pu</td>
+<td class="ltx_td ltx_align_left">te ti pu si</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">Notice that this model makes alignment errors due to sparser data (e.g., the word ‘‘tips’’ and ‘‘ti pu si’’ only appear once each in the training data).</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Hybrid training</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">To improve the accuracy of word-based EM alignment, we use the phoneme based model to decode each English word in the training data to Pinyin. From the 100-best list of decodings, we collect combinations of start/end Pinyin syllables for the word. We then modify the initial, uniform English-to-Pinyin mapping probabilities by giving higher initial weight to mappings that respect observed start/end pairs. When we run EM, we find that alignment errors for ‘‘tips’’ in section <a href="#S5.SS3" title="5.3 Word-based model ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a> are fixed:</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">accept</td>
+<td class="ltx_td ltx_align_left">tips</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">a ke sha pu te</td>
+<td class="ltx_td ltx_align_left">ti pu si</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.5 </span>Hybrid decoding</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p class="ltx_p">The word-based model can only decode 29 of the 65 test utterances, because wFST E fails if an utterance contains a new English word type, previously unseen in training. The phoneme-based models are more robust, able to decode 63 of the 65 utterances, failing only when some English word type falls outside the CMU pronouncing dictionary (FST A).</p>
+</div>
+<div id="S5.SS5.p2" class="ltx_para">
+<p class="ltx_p">Our final model combines these two, using the word-based model for known English words, and the phoneme-based models for unknown English words.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Chinese</th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai年夜饭都要吃些什么</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Reference English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">what do you have for the Reunion dinner</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Reference Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai沃特 杜 又 海夫 佛 则 锐又尼恩 低呢</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Hybrid training/decoding Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai我忒 度 优 嗨佛 佛 得 瑞优你恩 低呢</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Dictation English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">what do you have for the reunion dinner</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">ASR English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">what do you high for 43 Union Cena</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Chinese</th>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai等等我</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Reference English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">wait for me</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Reference Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai唯特 佛 密 (wei te fo mi)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Hybrid training/decoding Chinglish</th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span>UTF8gkai位忒 佛 密 (wei te fo mi)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Dictation English</th>
+<td class="ltx_td ltx_align_left ltx_border_t">wait for me</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">ASR English</th>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t">wait for me</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Chinglish generated by hybrid training and decoding method and corresponding recognized English by dictation and automatic synthesis-recognition method. </div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Our first evaluation (Table <a href="#S5.T4" title="Table 4 ‣ 5.2 Phoneme-phrase-based model ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) is intrinsic, measuring our Chinglish output against references from the test portion of our phrasebook, using edit distance. Here, we start with reference English and measure the accuracy of Pinyin syllable production, since the choice of Chinglish character does not affect the Chinglish pronunciation. We see that the Word-based method has very high accuracy, but low coverage. Our best system uses the Hybrid training/decoding method. As Table <a href="#S6.T6" title="Table 6 ‣ 6 Experiments ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows, the ratio of unseen English word tokens is small, thus large portion of tokens are transformed using word-based method. The average edit distance of phoneme-phrase model and that of hybrid training/decoding model are close, indicating that long phoneme-phrase pairs can emulate word-pinyin mappings.</p>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Unseen</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Total</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Ratio</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word Type</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">62</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">249</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.249</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">Token</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">62</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">436</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">0.142</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Unseen English word type and tokens in test data.</div>
+</div>
+<div id="S6.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Model</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Valid Average</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Edit Distance</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Reference English</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.477</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Phoneme based</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.696</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">Hybrid training and decoding</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">0.496</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7: </span>Chinglish-to-English accuracy in dictation task.</div>
+</div>
+<div id="S6.T8" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Model</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Valid Average</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Edit Distance</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word based</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.925</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Word-based hybrid training</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.925</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Phoneme based</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.937</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Phoneme-phrase based</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.896</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">Hybrid training and decoding</td>
+<td class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">0.898</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 8: </span>Chinglish-to-English accuracy in automatic synthesis-recognition (ASR) task. Numbers are average edit distance between recognized English and reference English.</div>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Our second evaluation is a dictation task. We speak our Chinglish character sequence output aloud and ask an English monolingual person to transcribe it. (Actually, we use a Chinese synthesizer to remove bias.) Then we measure edit distance between the human transcription and the reference English from our phrasebook. Results are shown in Table <a href="#S6.T7" title="Table 7 ‣ 6 Experiments ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">Finally, we repeat the last experiment, but removing the human from the loop, using both automatic Chinese speech synthesis and English speech recognition. Results are shown in Table <a href="#S6.T8" title="Table 8 ‣ 6 Experiments ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>. Speech recognition is more fragile than human transcription, so edit distances are greater. Table <a href="#S5.T5" title="Table 5 ‣ 5.5 Hybrid decoding ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows a few examples of the Chinglish generated by the hybrid training and decoding method, as well as the recognized English from the dictation and ASR tasks.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Our work aims to help people speak foreign languages they don’t know, by providing native phonetic spellings that approximate the sounds of foreign phrases. We use a cascade of finite-state transducers to accomplish the task. We improve the model by adding phrases, word boundary constraints, and improved alignment.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">In the future, we plan to cover more language pairs and directions. Each target language raises interesting new challenges that come from its natural constraints on allowed phonemes, syllables, words, and orthography.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Finch and E. Sumita</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Phrase-based machine transliteration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 13–18</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p3" title="5.2 Phoneme-phrase-based model ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Hauer and G. Kondrak</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic generation of English respellings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 634–643</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Knight and J. Graehl</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Machine transliteration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 599–612</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p8" title="1 Introduction ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, F. J. Och and D. Marcu</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 48–54</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p3" title="5.2 Phoneme-phrase-based model ‣ 5 Training ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. McEnery and Z. Xiao</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The lancaster corpus of Mandarin Chinese: a corpus for monolingual and contrastive language study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Religion</span> <span class="ltx_text ltx_bib_volume">17</span>, <span class="ltx_text ltx_bib_pages"> pp. 3–4</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.T2" title="Table 2 ‣ 3 Data ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Weide</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The CMU pronunciation dictionary, release 0.7a</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Carnegie Mellon University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Model ‣ How to Speak a Language without Knowing It" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:45:06 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

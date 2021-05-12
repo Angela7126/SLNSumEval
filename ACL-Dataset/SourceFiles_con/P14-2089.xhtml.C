@@ -1,0 +1,662 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Improving Lexical Embeddings with Semantic Knowledge.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Word embeddings learned on unlabeled data are a popular tool in semantics, but may not
+capture the desired semantics.
+We propose a new learning objective that incorporates both a neural language model objective
+       []
+       and prior knowledge from semantic resources to learn improved lexical semantic embeddings.
+We demonstrate that our embeddings improve over those learned solely on raw text in three settings:
+language modeling, measuring semantic similarity, and predicting human judgements.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Word embeddings are popular representations for syntax
+        []
+        , semantics
+        []
+        , morphology
+        []
+        and other areas.
+A long line of embeddings work, such as LSA and randomized embeddings
+        []
+        ,
+has recently turned to neural language models
+        []
+        .
+Unsupervised learning can
+take advantage of large corpora, which can produce impressive results.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        However, the main drawback of unsupervised learning is that the learned embeddings
+may not be suited for the task of interest.
+Consider semantic embeddings, which may capture a notion of semantics that
+improves one semantic task but harms another.
+Controlling this behavior is challenging with an unsupervised objective.
+However, rich prior knowledge exists for many tasks, and there are
+numerous such semantic resources.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We propose a new training objective for learning word embeddings that incorporates prior knowledge.
+Our model builds on word2vec
+        []
+        ,
+a neural network based language model that learns word
+embeddings by maximizing the probability of raw text.
+We extend the objective to include prior knowledge about synonyms from semantic resources;
+we consider both the Paraphrase Database
+        []
+        and WordNet
+        []
+        ,
+which annotate semantic relatedness between words.
+The latter was also used in
+        []
+        for training a network for predicting synset relation.
+The combined objective maximizes both the probability of the raw corpus
+and encourages embeddings to capture semantic relations from the resources.
+We demonstrate improvements in our embeddings
+on three tasks: language modeling, measuring word similarity, and predicting human judgements
+on word pairs.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Learning Embeddings
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We present a general model for learning word embeddings that incorporates prior
+knowledge available for a domain. While in this work we consider semantics, our model
+could incorporate prior knowledge from many types of resources.
+We begin by reviewing the word2vec objective and then present
+augmentations of the objective for prior knowledge, including different training strategies.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Word2vec
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Word2vec
+         []
+         is an algorithm for learning embeddings using a neural language model.
+Embeddings are represented by a set of latent (hidden) variables, and each word is represented by a specific instantiation of these
+variables. Training learns these representations for each word
+         wt
+         (the
+         t
+         th word in a corpus of size
+         T
+         )
+so as to maximize the log likelihood of each token given its context: words within a window sized
+         c
+         :
+        </p>
+        max1T∑t=1Tlogp(wt|wt-ct+c),
+
+(1)
+        <p class="ltx_p">
+         where
+         wt-ct+c
+         is the set of words in the window of size
+         c
+         centered at
+         wt
+         (
+         wt
+         excluded).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Word2vec offers two choices for modeling of Eq. (
+         1
+         ): a skip-gram model and
+a continuous bag-of-words model (cbow). The latter worked better in our experiments so we focus on it in our presentation.
+cbow defines
+         p(wt|wt-ct+c)
+         as:
+        </p>
+        exp⁡(ewt′⊤⋅∑-c≤j≤c,j≠0ewt+j)∑wexp⁡(ew′⊤⋅∑-c≤j≤c,j≠0ewt+j),
+
+(2)
+        <p class="ltx_p">
+         where
+         ew
+         and
+         ew′
+         represent the input and output embeddings respectively, i.e., the assignments to the latent variables
+for word
+         w
+         . While some learn a single representation for each word (
+         ew′≜ew
+         ), our results improved when
+we used a separate embedding for input and output in cbow.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Relation Constrained Model
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Suppose we have a resource that indicates relations between words.
+In the case of semantics, we could have a resource that encodes semantic similarity between words.
+Based on this resource, we learn embeddings that predict one word from another related word.
+We define
+         𝐑
+         as a set of relations between
+two words
+         w
+         and
+         w′
+         .
+         𝐑
+         can contain typed relations (e.g.,
+         w
+         is related to
+         w′
+         through a specific type of semantic relation), and relations can have associated scores indicating
+their strength. We assume a single relation type of uniform strength,
+though it is straightforward to include additional characteristics into the objective.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         Define
+         𝐑w
+         to be the subset of relations in
+         𝐑
+         which involve word
+         w
+         . Our objective
+maximizes the (log) probability of all relations by summing over all words
+         N
+         in the vocabulary:
+        </p>
+        1N∑i=1N∑w∈𝐑wilogp(w|wi),
+
+(3)
+        <p class="ltx_p">
+         p(w|wi)=exp(ew′Tewi)/∑w¯exp(ew¯′Tewi)
+         takes a form similar to Eq. (
+         2
+         ) but without the context:
+         e
+         and
+         e′
+         are again the input and output embeddings. For our semantic relations
+         ew′
+         and
+         ew
+         are symmetrical, so we use a single embedding.
+Embeddings are learned such that they are predictive of related words in the resource.
+We call this the Relation Constrained Model (RCM).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Joint Model
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         The cbow and RCM objectives use separate data for learning. While RCM learns
+embeddings suited to specific tasks based on knowledge resources, cbow learns embeddings for words
+not included in the resource but appear in a corpus. We form a joint model through a linear combination of the two (weighted
+by
+         C
+         ):
+        </p>
+        1T∑t=1Tlogp(wt|wt-ct+c)+CN∑i=1N∑w∈𝐑wilogp(w|wi)
+        <p class="ltx_p">
+         Based on our initial experiments, RCM uses the output embeddings of cbow.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        <p class="ltx_p">
+         We learn embeddings using stochastic gradient ascent. Updates for the first term for
+         e′
+         and
+         e
+         are:
+        </p>
+        ew′-αcbow⁢(σ⁢(f⁢(w))-I[w=wt])⋅∑j=t-ct+cewj
+        ewj-αcbow⁢∑w(σ⁢(f⁢(w))-I[w=wt])⋅ew′,
+        <p class="ltx_p">
+         where
+         σ⁢(x)=exp⁡{x}/(1+exp⁡{x})
+         ,
+         I[x]
+         is 1 when
+         x
+         is true,
+         f⁢(w)=ew′⊤⁢∑j=t-ct+cewj
+         .
+Second term updates are:
+        </p>
+        ew′-αRCM⁢(σ⁢(f′⁢(w))-I[w∈Rwi])⋅ewi′
+        ewi′-αRCM⁢∑w(σ⁢(f′⁢(w))-I[w∈Rwi])⋅ew′,
+        <p class="ltx_p">
+         where
+         f′⁢(w)=ew′⊤⁢ewi′
+         . We use two learning rates:
+         αcbow
+         and
+         αRCM
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.4
+        </span>
+        Parameter Estimation
+       </h3>
+       <div class="ltx_para" id="S2.SS4.p1">
+        <p class="ltx_p">
+         All three models (cbow, RCM and joint) use the same training scheme based on
+         .
+There are several choices to make in parameter estimation; we present the best performing choices used in our results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p2">
+        <p class="ltx_p">
+         We use noise contrastive estimation (NCE)
+         []
+         , which approximately maximizes the log probability of the softmax objective
+(Eq.
+         2
+         ).
+For each objective (cbow or RCM), we sample 15 words as negative samples for each training instance according
+to their frequencies in raw texts (i.e. training data of cbow).
+Suppose
+         w
+         has frequency
+         u⁢(w)
+         , then the probability of sampling
+         w
+         is
+         p⁢(w)∝u⁢(w)3/4
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p3">
+        <p class="ltx_p">
+         We use distributed training, where shared embeddings are updated by each thread based on training data within
+the thread, i.e., asynchronous stochastic gradient ascent. For the joint model,
+we assign threads to the cbow or RCM objective with a balance
+of 12:1(i.e.
+         C
+         is approximately
+         112
+         ). We allow the cbow threads to control convergence; training stops when these threads finish processing the data.
+We found this an effective method for balancing the two objectives.
+We trained each cbow objective using a single pass over the data set (except for those in Section
+         4.1
+         ), which we
+empirically verified was sufficient to ensure stable performances on semantic tasks.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p4">
+        <p class="ltx_p">
+         Model pre-training is critical in deep learning
+         []
+         . We evaluate two
+strategies: random initialization, and pre-training the embeddings. For pre-training, we first learn using cbow
+with a random initialization. The resulting trained model is then used to initialize the RCM model. This enables
+the RCM model to benefit from the unlabeled data, but refine the embeddings constrained by the given relations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS4.p5">
+        <p class="ltx_p">
+         Finally, we consider a final model for training embeddings that uses a specific training regime.
+While the joint model balances between fitting the text and learning relations, modeling
+the text at the expense of the relations may negatively impact the final embeddings for tasks that use
+the embeddings outside of the context of word2vec.
+Therefore, we use the embeddings from a trained joint model to pre-train an RCM model.
+We call this setting Joint
+         →
+         RCM.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        For training cbow we use the New York Times (NYT) 1994-97 subset from Gigaword v5.0
+        []
+        .
+We select 1,000 paragraphs each for dev and test data from
+the December 2010 portion of the NYT.
+Sentences are tokenized using OpenNLP
+        , yielding
+518,103,942 tokens for training, 42,953 tokens for dev and 41,344 for test.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        We consider two resources for training the RCM term:
+the Paraphrase Database (PPDB)
+        []
+        and
+WordNet
+        []
+        . For each semantic pair extracted from these
+resources, we add a relation to the RCM objective. Since we use both resources
+for evaluation, we divide each into train, dev and test.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        PPDB is an automatically extracted dataset containing tens of millions of paraphrase pairs, including words and phrases.
+We used the “lexical” version of PPDB (no phrases) and filtered to include pairs that
+contained words found in the 200,000 most frequent
+words in the NYT corpus, which ensures each word in the relations had support in the text corpus.
+Next, we removed duplicate pairs: if
+        &lt;
+        A,B
+        &gt;
+        occurred in PPDB, we removed relations of
+        &lt;
+        B,A
+        &gt;
+        .
+PPDB is organized into 6 parts, ranging from S (small) to XXXL. Division into these sets is based on an automatically
+derived accuracy metric. Since S contains the most accurate paraphrases, we used these for evaluation.
+We divided S into a dev set (1582 pairs) and test set (1583 pairs). Training was based on one of the other sets minus relations
+from S.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        We created similar splits using WordNet, extracting synonyms using the 100,000 most frequent NYT words.
+We divide the vocabulary into three sets: the most frequent 10,000 words, words with ranks between 10,001-30,000 and 30,001-100,000.
+We sample 500 words from each set to construct a dev and test set. For each word we sample one synonym
+to form a pair. The remaining words and their synonyms are used for training.
+However we did not use the training data because it is too small to affect the results.
+Table
+        1
+        summarizes the datasets.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        The goal of our experiments is to demonstrate the value of learning semantic embeddings with information from
+semantic resources. In each setting, we will compare the word2vec baseline
+embedding trained with cbow against RCM alone, the joint model and Joint
+        →
+        RCM.
+We consider three evaluation tasks:
+language modeling, measuring semantic similarity, and predicting human judgements on semantic relatedness.
+In all of our experiments, we conducted model development and tuned model parameters (
+        C
+        ,
+        αcbow
+        ,
+        αRCM
+        , PPDB dataset, etc.)
+on development data, and evaluate the best performing model on test data.
+The models are notated as follows: word2vec for the baseline objective (cbow or skip-gram), RCM-r/p and Joint-r/p for random and pre-trained
+initializations of the RCM and Joint objectives, and Joint
+        →
+        RCM for pre-training RCM with Joint embeddings.
+Unless otherwise notes, we train using PPDB XXL.
+We initially created WordNet training data, but found it too small to affect results.
+Therefore, we include only RCM results
+        trained
+        on PPDB, but show evaluations on both PPDB and WordNet.
+We trained 200-dimensional embeddings and used output embeddings for measuring similarity.
+During the training of cbow objectives we remove all words with frequencies less than 5, which is the default setting of word2vec.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Language Modeling
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Word2vec is fundamentally a language model, which allows us to compute standard
+evaluation metrics on a held out dataset. After obtaining trained embeddings from any of our objectives,
+we use the embeddings in the word2vec model to measure perplexity of the test set.
+Measuring perplexity means computing the exact probability of each word, which requires summation over
+all words in the vocabulary in the denominator of the softmax.
+Therefore, we also trained the language models with hierarchical classification
+         []
+         strategy (HS).
+The averaged perplexities are reported on the NYT test set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         While word2vec and joint are trained as language models, RCM is not. In fact, RCM does not even observe all the words that appear
+in the training set, so it makes little sense to use the RCM embeddings directly for language modeling.
+Therefore, in order to make fair comparison, for every set of trained embeddings, we fix them as input embedding for word2vec, then
+learn the remaining input embeddings (words not in the relations) and all the output embeddings using cbow.
+Since this involves running cbow on NYT data for 2 iterations (one iteration for word2vec-training/pre-training/joint-modeling and the other for tuning the language
+model),
+we use Joint-r (random initialization)
+for a fair comparison.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Table
+         2
+         shows the results for language modeling on test data.
+All of our proposed models improve over the baseline in terms of perplexity when NCE is used for training LMs.
+When HS is used, the perplexities are greatly improved. However in this situation only the joint models improve the results;
+and Joint
+         →
+         RCM performs similar to the baseline, although it is not designed for language modeling.
+We include the optimal
+         αRCM
+         in the table; while set
+         αcbow=0.025
+         (the default setting of word2vec).
+Even when our goal is to strictly model the raw text corpus, we obtain improvements
+by injecting semantic information into the objective. RCM can effectively shift learning
+to obtain more informative embeddings.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Measuring Semantic Similarity
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Our next task is to find semantically related words using the embeddings, evaluating on relations from
+PPDB and WordNet. For each of the word pairs
+in the evaluation set
+         &lt;
+         A,B
+         &gt;
+         , we use the cosine distance between the embeddings
+to score
+         A
+         with a candidate word
+         B′
+         .
+We use a large sample of candidate words (10k, 30k or 100k)
+and rank all candidate words for pairs where
+         B
+         appears in the candidates.
+We then measure the rank of the correct
+         B
+         to compute mean reciprocal rank (MRR). Our goal is to use word
+         A
+         to select word
+         B
+         as the closest matching word from the large set of candidates.
+Using this strategy, we evaluate the embeddings from all of our objectives
+and measure which embedding most accurately selected the true correct word.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Table
+         3
+         shows MRR results for both PPDB and WordNet dev and test datasets
+for all models. All of our methods improve over the baselines in nearly every test set result.
+In nearly every case, Joint
+         →
+         RCM obtained the largest improvements. Clearly,
+our embeddings are much more effective at capturing semantic similarity.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Human Judgements
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Our final evaluation is to predict human judgements of semantic relatedness.
+We have pairs of words from PPDB scored by annotators
+on a scale of 1 to 5 for quality of similarity. Our data are the judgements used by
+         , which we filtered to include only those
+pairs for which we learned embeddings, yielding 868 pairs.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         We assign a score using the dot product between the output embeddings of each word in the pair,
+then order all 868 pairs according to this score. Using the human judgements, we compute
+the swapped pairs rate:
+the ratio between the number of swapped pairs and the number of all pairs.
+For pair
+         p
+         scored
+         yp
+         by the embeddings and judged
+         y^p
+         by an annotator, the swapped pair rate is:
+        </p>
+        ∑p1,p2∈DI[(yp1-yp2)(y^p2-y^p1)&lt;0]∑p1,p2∈DI[yp1≠yp2]
+
+(4)
+        <p class="ltx_p">
+         where
+         I⁢[x]
+         is 1 when
+         x
+         is true.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         Table
+         4
+         shows that all of our
+models obtain reductions in error as compared to the baseline (cbow),
+with Joint
+         →
+         RCM obtaining the largest reduction.
+This suggests that our embeddings are better suited for semantic tasks, in this case
+judged by human annotations.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Analysis
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         We conclude our experiments with an analysis of modeling choices. First, pre-training RCM models gives
+significant improvements in both measuring semantic similarity and capturing human judgements (compare “p” vs. “r” results.)
+Second, the number of relations used for RCM training is an important factor. Table
+         5
+         shows the effect
+on dev data of using various numbers of relations. While we see improvements from XL to XXL (5 times as many relations), we
+get worse results on XXXL, likely because this set contains the lowest quality relations in PPDB.
+Finally, Table
+         6
+         shows different learning rates
+         αRCM
+         for the RCM objective.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         The baseline word2vec and the joint model have nearly the same averaged running times (2,577s and 2,644s respectively), since they have same number of threads for the CBOW objective and the joint model uses additional threads for the RCM objective. The RCM models are trained with single thread for 100 epochs. When trained on the PPDB-XXL data, it spends 2,931s on average.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

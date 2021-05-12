@@ -1,0 +1,1099 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Minimal sets on propositional formulae. Problems and reductions.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The practical success of Propositional Satisfiability (SAT) solvers has motivated an ever increasing range of applications. Many applications are naturally formulated as decision procedures. In contrast, a growing number of applications involve solving function as opposed to decision problems. Representative examples include computing maximum satisfiability, minimum satisfiability, minimal unsatisfiable subsets of clauses, minimal correction subsets of clauses, minimal and maximal models, the backbone of a formula, the maximum autark assignment, prime implicants and implicates, among many others.
+     </paragraph>
+     <paragraph>
+      In recent years, the most widely used approach for solving a comprehensive range of function problems defined on Boolean formulae consists of using the SAT solver as an oracle, which is called a number of times polynomial in the size of the problem representation. It is interesting to observe that this approach matches in some sense well-known query complexity characterizations of function problems [48], [121]. Analysis of the solutions developed for different problems reveals similarities in the algorithms used, and often motivates the question whether a common set of algorithms could be considered instead. Among many other examples, this is apparent in algorithms for computing minimal unsatisfiable formulae and for computing the backbone of a propositional formula.
+     </paragraph>
+     <paragraph>
+      Moreover, as shown in [25], [26], [107], representative function problems can be viewed as computing a minimal set given some monotone predicate (MSMP), with the goal being to develop algorithms for computing a minimal set subject to a monotone predicate. This earlier work motivates the additional question of whether a more comprehensive set of function problems can be formulated as computing a minimal set subject to a monotone predicate. The consequences can be significant, both in terms of new algorithms for different problems, as well as possible new insights into some of these problems. This paper addresses this question, and shows that a large number of function problems defined on Boolean formulae can be cast as computing a minimal set subject to a monotone predicate.{sup:1} As a result, the algorithms developed earlier [25], [26], [107] for some function problems can also be used for this much larger set of function problems. Similarly, algorithms specific to some function problems can be generalized and applied in the more general setting of computing a minimal set subject to a monotone predicate.
+     </paragraph>
+     <paragraph>
+      The main contributions of this paper can be summarized as follows. First, the paper formalizes the MSMP framework to a greater extent than earlier work [107]. Second, the paper identifies a large number of function problems that can be reduced to MSMP, and details one or more reductions in each case. Although the paper focuses on function problems defined on propositional formulae, the proposed ideas are readily applicable in other settings, including Constraint Satisfaction Problems (CSP) and Satisfiability Modulo Theories (SMT). Moreover, the presentation of the different reductions to MSMP outlines a methodology that could serve to easily identify additional function problems that can be reduced to the MSMP problem. Third, the paper develops a better understanding of the general properties of MSMP, including hitting set duality. Fourth and finally, the paper opens the avenue for developing generic MSMP solvers, capable of solving a wide range of function problems, and thereby contributing to eliminate the rediscovery of essentially the same algorithms in different settings.
+     </paragraph>
+     <paragraph>
+      It is important to note that recent work has already exploited relationships between different problems, enabling new insights for solving a growing number of function problems. Besides developing the MSMP framework and the progression algorithm, [107] shows that the QuickXplain [73] and FastDiag [47] algorithms correspond to the same algorithm, by changing only the predicate used and the argument to the predicate. A similar observation was made regarding the deletion-based algorithm [6], [34] for finding minimal unsatisfiable subsets and the grow procedure [5], [120] for finding minimal correction subsets. The relationship between minimal unsatisfiable subsets and minimal equivalent subsets was investigated in [10], [9]. Recent work showed that maximum autarkies could be computed with minimal correction subsets [104], and enabled developing new families of algorithms for computing maximum autarkies [89]. The problem of minimal independent support has been solved by reduction to computing minimal unsatisfiable subsets [65]. Monotonicity has been investigated in other settings including Satisfiability Modulo Theories (SMT) solving [7], but also for exploiting duality relationships [141]. Further relationships between problems that can be directly related with computing minimal correction subsets can now exploit the body of recent work on computing minimal correction subsets [103], [3], [50], [114]. The same applies to computing the backbone of a propositional formula [69], not to mention the growing range of algorithms for computing minimal unsatisfiable subsets [118], [152], [11], [4].
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. Section 2 introduces the notation and definitions used throughout the paper. Section 3 defines and overviews the function problems studied in later sections. Section 4 shows how all the function problems described in Section 3 can be reduced to solving an instance of the more general MSMP problem. This section also develops more fine-grained reductions, and proposing the aggregation of different function problems into related classes. Section 5 studies relationships between the different predicate forms used in previous sections, including hitting set duality. Section 6 discusses the practical impact of MSMP. Section 7 concludes the paper, by summarizing the main contributions and outlining a number of research directions.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      This section introduces the notation used in the remainder of the paper, covering propositional formulae, monotone predicates, complexity classes, and problem reductions.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Propositional formulae
+      </section-title>
+      <paragraph>
+       Standard propositional logic definitions are used throughout the paper (e.g. [79], [20]), some of which are reviewed in this section.
+      </paragraph>
+      <paragraph>
+       Sets are represented in calligraphic font, e.g. {a mathematical formula}R,T,I… Propositional formulae are also represented in calligraphic font, e.g. {a mathematical formula}F,H,S,M… Propositional variables are represented with letters from the end of the alphabet, e.g. {a mathematical formula}x,w,y,z, and indices can be used, e.g. {a mathematical formula}x1,w1… An atom is a propositional variable. A literal is a variable {a mathematical formula}xi or its complement {a mathematical formula}¬xi. A propositional formula{sup:2} (or simply a formula) {a mathematical formula}F is defined inductively over a set of propositional variables, with the standard logical connectives, ¬, ∧, ∨, as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        An atom is a formula.
+       </list-item>
+       <list-item label="2.">
+        If {a mathematical formula}F is a formula, then {a mathematical formula}(¬F) is a formula.
+       </list-item>
+       <list-item label="3.">
+        If {a mathematical formula}F and {a mathematical formula}G are formulae, then {a mathematical formula}(F∨G) is a formula.
+       </list-item>
+       <list-item label="4.">
+        If {a mathematical formula}F and {a mathematical formula}G are formulae, then {a mathematical formula}(F∧G) is a formula.
+       </list-item>
+      </list>
+      <paragraph>
+       The inductive step could be extended to include other logical connectives, e.g. → and ↔. (The use of parenthesis is not enforced, and standard binding rules apply, e.g. [79], with parenthesis being used only to clarify the presentation of formulae.) The inductive definition of a propositional formula allows for associating a parse tree with each formula, which can be used to evaluate truth assignments. The variables of a propositional formula {a mathematical formula}F are represented by {a mathematical formula}var(F). For simplicity, the set of variables of a formula will be denoted by {a mathematical formula}X≜var(F). A clause c is a non-tautologous disjunction of literals. A term t is a non-contradictory conjunction of literals. Commonly used representations of propositional formulae include conjunctive and disjunctive normal forms (resp. CNF and DNF). A CNF formula {a mathematical formula}F is a conjunction of clauses. A DNF formula {a mathematical formula}F is a disjunction of terms. CNF and DNF formulae can also be viewed as sets of sets of literals. Both representations will be used interchangeably throughout the paper. In the remainder of the paper, propositional formulae are referred to as formulae, and this can either represent an arbitrary propositional formula, a CNF formula, or a DNF formula. The necessary qualification will be used when necessary. The following sets are used throughout. {a mathematical formula}F denotes the set of propositional formulae, {a mathematical formula}C⊂F denotes the set of CNF formulae, and {a mathematical formula}D⊂F denotes the set of DNF formulae.
+      </paragraph>
+      <paragraph>
+       When the set of variables of a formula {a mathematical formula}F is relevant, the notation {a mathematical formula}F[X] is used, meaning that F is defined in terms of variables from X. Replacements of variables will be used. The notation {a mathematical formula}F[xi/yi] represents formula {a mathematical formula}F with variable {a mathematical formula}xi replaced with {a mathematical formula}yi. This definition can be extended to more than one variable. For the general case, if {a mathematical formula}X={x1,…,xn} and {a mathematical formula}Y={y1,…,yn}, then the notation {a mathematical formula}F[X/Y] represents formula {a mathematical formula}F with {a mathematical formula}x1 replaced by {a mathematical formula}y1, {a mathematical formula}x2 replaced by {a mathematical formula}y2,... , and {a mathematical formula}xn replaced by {a mathematical formula}yn. Alternatively, one could write {a mathematical formula}F[x1/y1,x2/x2,…,xn/yn]. Given {a mathematical formula}vi∈{0,1}, {a mathematical formula}F[xi/vi] represents formula {a mathematical formula}F with variable {a mathematical formula}xi replaced with {a mathematical formula}vi. Similarly, the notation {a mathematical formula}Fxi=vi can be used.
+      </paragraph>
+      <paragraph>
+       The paper addresses mainly plain CNF formulae, i.e. formulae where any clause can be dropped (or relaxed) from the formula, being referred to as soft clauses [92]. Nevertheless, in some settings, CNF formulae can have hard clauses, i.e. clauses that cannot be dropped (or relaxed). In these cases, {a mathematical formula}F can be viewed as a 2-tuple {a mathematical formula}〈H,B〉, where {a mathematical formula}H denotes the hard clauses, and {a mathematical formula}B denotes the soft (or relaxable, or breakable) clauses. (Observe that any satisfiability test involving {a mathematical formula}F requires the hard clauses to be satisfied, whereas some of the clauses in {a mathematical formula}B may discarded.) Moreover, weights can be associated with the soft clauses as follows. A weight function {a mathematical formula}ω:H∪B→R∪{⊤} associates a positive weight with each clause. For any soft clause {a mathematical formula}c∈B, {a mathematical formula}ω(c)≠⊤, whereas for any hard clause {a mathematical formula}c∈H, {a mathematical formula}ω(c)=⊤, where ⊤ is such that it exceeds {a mathematical formula}∑c∈Bω(c), meaning that hard clauses are too costly to falsify. Throughout the paper, and unless otherwise stated, it is assumed that either {a mathematical formula}H=∅ or {a mathematical formula}B=∅ , i.e. all clauses are soft or all clauses are hard, and so {a mathematical formula}F corresponds to {a mathematical formula}B or to {a mathematical formula}H, respectively. Moreover, the (implicit) weight function assigns cost 1 to each (soft) clause. Finally, the above definitions can be extended to handle groups of clauses, i.e. settings where formulae are partitioned into disjoint sets of clauses called groups (e.g. [99], [57]).
+      </paragraph>
+      <paragraph>
+       Given a formula {a mathematical formula}F, a truth assignment ν is a map from the variables of {a mathematical formula}F to {a mathematical formula}{0,1}, {a mathematical formula}ν:var(F)→{0,1}. Given a truth assignment ν, the value taken by a formula, denoted {a mathematical formula}Fν is defined inductively as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If x is a variable, {a mathematical formula}xν=ν(x).
+       </list-item>
+       <list-item label="2.">
+        If {a mathematical formula}F=(¬G), then{a mathematical formula}
+       </list-item>
+       <list-item label="3.">
+        If {a mathematical formula}F=(E∨G), then{a mathematical formula}
+       </list-item>
+       <list-item label="4.">
+        If {a mathematical formula}F=(E∧G), then{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph label="Definition 1">
+       The inductive step could be extended to include additional propositional connectives, e.g. → and ↔. A truth assignment ν such that {a mathematical formula}Fν=1 is referred to as a satisfying truth assignment. A formula {a mathematical formula}F is satisfiable if it has a satisfying truth assignment; otherwise it is unsatisfiable. As a result, the problem of propositional satisfiability is defined as follows: Propositional Satisfiability (SAT)Given a formula {a mathematical formula}F, the decision problem SAT consists of deciding whether {a mathematical formula}F is satisfiable.
+      </paragraph>
+      <paragraph>
+       The standard semantic entailment notation is used throughout. Let {a mathematical formula}A,C∈F. {a mathematical formula}A⊨C denotes that for every truth assignment ν to the variables in {a mathematical formula}var(A)∪var(C), {a mathematical formula}(Aν=1)⇒(Cν=1). The equivalence notation {a mathematical formula}A≡C is used to denote that {a mathematical formula}A⊨C∧C⊨A, indicating that {a mathematical formula}A and {a mathematical formula}C have the same satisfying truth assignments, when {a mathematical formula}var(A)=var(C). In this case {a mathematical formula}A and {a mathematical formula}C are said to be equisatisfiable. If a formula {a mathematical formula}F∈F is satisfiable, we write {a mathematical formula}F⊭⊥. If a formula {a mathematical formula}F is unsatisfiable, we write {a mathematical formula}F⊨⊥. Moreover, if ν is a satisfying truth assignment of {a mathematical formula}F, the notation {a mathematical formula}ν⊨F is also used. Finally, if {a mathematical formula}F is a tautology, then the notation {a mathematical formula}⊤⊨F is used, whereas {a mathematical formula}⊤⊭F denotes that {a mathematical formula}F is not a tautology.
+      </paragraph>
+      <paragraph>
+       The following results are well-known, e.g. [79], and will be used throughout.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Let{a mathematical formula}F∈C, with{a mathematical formula}F⊭⊥. Then,{a mathematical formula}∀E∈C,(E⊆F)⇒(E⊭⊥).
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Let{a mathematical formula}U∈C, with{a mathematical formula}U⊨⊥. Then,{a mathematical formula}∀T∈C,(T⊇U)⇒(T⊨⊥).
+      </paragraph>
+      <paragraph label="Proposition 3">
+       Let{a mathematical formula}F∈D, with{a mathematical formula}⊤⊭F. Then,{a mathematical formula}∀E∈D,(E⊆F)⇒(⊤⊭E).
+      </paragraph>
+      <paragraph label="Proposition 4">
+       Let{a mathematical formula}U∈D, with{a mathematical formula}⊤⊨U. Then,{a mathematical formula}∀T∈D,(T⊇U)⇒(⊤⊨T).
+      </paragraph>
+      <paragraph>
+       Proposition 1, Proposition 2, Proposition 3, Proposition 4 are well-known, and follow from the compactness theorem. These will be used in the proofs provided in Section 4; however, since they are very well-known, they will not be explicitly mentioned for the sake of simplicity.
+      </paragraph>
+      <paragraph>
+       Given a formula {a mathematical formula}F, with set of variables {a mathematical formula}X=var(F), the following additional definitions apply. {a mathematical formula}L(X)≜{x,¬x|x∈X} represents the set of literals given the variables in X. A truth assignment ν can be represented as a set of literals {a mathematical formula}V⊆L such that {a mathematical formula}|V|=|X| and {a mathematical formula}∀x∈X,(x∉V)∨(¬x∉V), interpreted as a conjunction of literals or a term, where each literal in {a mathematical formula}V encodes the value assigned to a given variable {a mathematical formula}x∈X, i.e. literal x if {a mathematical formula}ν(x)=1 and literal ¬x if {a mathematical formula}ν(x)=0. In the remainder of the paper, an assignment can either be represented as a map or as a set of literals as defined above. This will be clear from the context.
+      </paragraph>
+      <paragraph>
+       Sets of literals are also used to represent partial truth assignments. The set of all partial truth assignments {a mathematical formula}A, given {a mathematical formula}X≜var(F), is defined by {a mathematical formula}A(X)≜{V⊆L(X)|(∀x∈X,(x∉V)∨(¬x∉V))}. (For simplicity, and when clear from the context, the dependency of {a mathematical formula}L and {a mathematical formula}A with X will be omitted.) Sets of literals can also be used to satisfy or falsify CNF or DNF formulae.
+      </paragraph>
+      <paragraph>
+       As noted above, sets of literals are in most cases interpreted as the conjunction of the literals, e.g. as a term. However, in some situations, it is convenient to interpret a set of literals as a disjunction of the literals, e.g. as a clause. Throughout the paper, the following convention is used. A set of literals qualified as a term, as a truth assignment, or as an implicant (defined below) is interpreted as a conjunction of literals. A set of literals qualified as a clause, or as an implicate (defined below) is interpreted as a disjunction of literals. Given {a mathematical formula}F∈F, a term {a mathematical formula}t∈A is an implicant of {a mathematical formula}F iff {a mathematical formula}t⊨F. (Alternatively, we could write {a mathematical formula}t∈A is an implicant of {a mathematical formula}F iff {a mathematical formula}∧l∈t(l)⊨F.) Similarly, a clause {a mathematical formula}c∈A is an implicate of {a mathematical formula}F iff {a mathematical formula}F⊨c. (Similarly, we could write {a mathematical formula}c∈A is an implicate of {a mathematical formula}F iff {a mathematical formula}F⊨(∨l∈cl).)
+      </paragraph>
+      <paragraph>
+       In some settings it is necessary to reason with the variables assigned value 1. This is the case for example when reasoning with minimal and maximal models. Given a truth assignment, ν, with {a mathematical formula}V the associated set of literals, the variables assigned value 1 are given by {a mathematical formula}M=V∩X. The function {a mathematical formula}ν(M,X) allows recovering the truth assignment associated with a set {a mathematical formula}M of variables assigned value 1. If the assignment ν, associated with a set {a mathematical formula}M of variables assigned value 1, is satisfying, then {a mathematical formula}M is referred to as a model. Moreover, the notation {a mathematical formula}ν(M,X)⊨F is used to denote that, given a set {a mathematical formula}M of variables assigned value 1, the associated truth assignment is satisfying. In contrast, {a mathematical formula}ν(M,X)⊨¬F is used to denote that the truth assignment falsifies the formula.
+      </paragraph>
+      <paragraph>
+       Most of the algorithms described in this paper use sequences of calls to a SAT solver. A SAT solver accepts a (CNF-encoded) propositional formula {a mathematical formula}F as a single argument and returns a 2-tuple {a mathematical formula}(st,α), i.e. {a mathematical formula}(st,ν)=SAT(F), where {a mathematical formula}st∈{0,1} denotes whether the formula is unsatisfiable ({a mathematical formula}st=0, or simply unsat) or satisfiable ({a mathematical formula}st=1, or simply sat), and ν is a (satisfying) truth assignment in case the formula is satisfiable. ν will also be referred to as a witness of satisfiability. For simplicity, in this paper it is assumed the SAT solver does not return unsatisfiable subformulae when the outcome is unsat, although this feature is available in many modern SAT solvers, e.g. [43], [19]. Throughout the paper, it will be implicitly assumed that a SAT solver call yields not only the 0/1 outcome, but the actual 2-tuple {a mathematical formula}(st,ν).
+      </paragraph>
+      <paragraph>
+       Modern SAT solvers typically accept CNF formulae [110]. Procedures for CNF-encoding (or clausifying) arbitrary propositional formulae are well-known (e.g. [146], [122]). These procedures run in linear time on the size of the formula, and generate a new formula that is linear on the size of the original formula, and which uses at most a linear number of additional new variables. Throughout the paper the propositional formulae passed to SAT solvers are often not in CNF. For simplicity, it is left implicit that a clausification procedure would be invoked if necessary. Moreover, additional non-clausal constraints will be used. These include pseudo-Boolean constraints and cardinality constraints, e.g. [132], [123], [44]. Examples of clausification approaches are described in [123], [44].
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Monotone predicates &amp; MSMP
+      </section-title>
+      <paragraph>
+       Given a predicate {a mathematical formula}P:2R→{0,1}, defined on a reference set {a mathematical formula}R, a minimal set over P is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Let P be a predicate, and let {a mathematical formula}M⊆R such that {a mathematical formula}P(M) holds. {a mathematical formula}M is minimal over P if and only if {a mathematical formula}∀M′⊊M,¬P(M′).
+      </paragraph>
+      <paragraph>
+       This paper focuses on a special kind of predicates, referred to as monotone (e.g. [25]).
+      </paragraph>
+      <paragraph label="Definition 3">
+       A predicate P, defined on a set {a mathematical formula}R, is said to be monotone if whenever {a mathematical formula}P(R0) holds, with {a mathematical formula}R0⊆R, then {a mathematical formula}P(R1) also holds, with {a mathematical formula}R0⊆R1⊆R.
+      </paragraph>
+      <paragraph>
+       Observe that {a mathematical formula}P(R) can be assumed, but this is not required. Also, {a mathematical formula}P(R) can be tested with a single predicate test. Moreover, observe that, if there exists a set {a mathematical formula}R0⊆R such that {a mathematical formula}P(R0) holds, and P is monotone, then {a mathematical formula}P(R) also holds. Otherwise, no minimal set exists.
+      </paragraph>
+      <paragraph label="Example 1">
+       It is simple to conclude that, given a finite set {a mathematical formula}W, predicate {a mathematical formula}P(W)≜[|W|≥K], for some {a mathematical formula}K≥0, is monotone. In contrast, predicate {a mathematical formula}P(W)≜[|W|mod2=1] is not monotone.
+      </paragraph>
+      <paragraph>
+       Minimality over a monotone predicate can be tested without the need of considering all the proper subsets of a given set. This is captured by the following lemma, which will be used throughout.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let P be a monotone predicate,{a mathematical formula}Ra set such that{a mathematical formula}P(R)holds, and{a mathematical formula}M⊆R.{a mathematical formula}Mis a minimal set over P if{a mathematical formula}P(M)holds and{a mathematical formula}∀u∈M,¬P(M∖{u}).
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}P(M) holds, {a mathematical formula}∀u∈M,¬P(M∖{u}) and {a mathematical formula}M is not minimal. Then there must be a set {a mathematical formula}M′⊊M s.t. {a mathematical formula}P(M′) holds. Since P is monotone, for all {a mathematical formula}M″ s.t. {a mathematical formula}M′⊆M″⊆M, {a mathematical formula}P(M″) holds. Therefore, there exists {a mathematical formula}u∈M s.t. {a mathematical formula}P(M∖{u}) holds. A contradiction.  □
+      </paragraph>
+      <paragraph label="Definition 4">
+       MSMP ProblemGiven a monotone predicate P, the Minimal Set over a Monotone Predicate (MSMP) problem consists in finding a minimal subset {a mathematical formula}M of {a mathematical formula}R such that {a mathematical formula}P(M) holds.
+      </paragraph>
+      <paragraph>
+       Monotone predicates were used in [25], [26] to describe algorithms for computing a prime implicate of a propositional formula given a clause. The MSMP problem was introduced in [107]. The same work [107] also showed that a number of additional function problems defined on propositional formulae could be reduced to the MSMP problem, including the function problems of computing minimal unsatisfiable subsets, minimal correction subsets and minimal models.
+      </paragraph>
+      <paragraph>
+       Algorithm 1 for the MSMP problem illustrates the practical relevance of this framework. It shows what is referred to as the deletion-based approach. Given a monotone predicate P and a reference set {a mathematical formula}R, it iteratively refines an upper-approximation {a mathematical formula}M⊆R of a minimal set over P. Initially, {a mathematical formula}M is set to {a mathematical formula}R. Then, for each {a mathematical formula}u∈M, the algorithm tests whether u can be dropped from {a mathematical formula}M so that the predicate still holds. If this is the case, the element u is dropped from {a mathematical formula}M. Otherwise it is kept. Eventually, {a mathematical formula}P(M) holds, and for all {a mathematical formula}u∈M, {a mathematical formula}P(M∖{u}) does not hold, i.e. {a mathematical formula}M is a minimal set over P.
+      </paragraph>
+      <paragraph>
+       Deletion-based approaches have been extensively used to compute minimal unsatisfiable subsets (MUSes) [6], and irreducible infeasible constraint sets [34]. The deletion-based algorithm has a query complexity of {a mathematical formula}Θ(n) predicate tests, with {a mathematical formula}n=|R|. This same algorithm can also be shown to correspond to the grow procedure [5] or linear search procedure for computing minimal correction subsets (MCSes) [120], [103].
+      </paragraph>
+      <paragraph>
+       As shown in earlier work [107], different MUS extraction algorithms can be generalized to MSMP, and so can be used for a wide range of function problems. Besides deletion-based, shown above, other algorithms include insertion[140], QuickXplain [73], dichotomic[55], and progression[107], [90].{sup:3} Moreover, other MUS extraction algorithms [109] can be easily adapted.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Function problems
+      </section-title>
+      <paragraph>
+       For many computational problems, the main goal is not to solve a decision problem, but to solve instead a function problem[121, Section 10.3].{sup:4} The goal of a function problem is to compute some solution, e.g. a satisfying truth assignment in the case of SAT, the size of a prime implicate, the actual prime implicate, the largest number of clauses that any truth assignment can satisfy in a CNF formula, etc. This paper addresses function problems defined on propositional formulae, which are defined in Section 3. The main focus of the paper are function problems that can be related with computing a minimal set over a monotone predicate, i.e. function problems that can be reduced to the MSMP problem.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Problem reductions
+      </section-title>
+      <paragraph>
+       The notation {a mathematical formula}A≤pB is used to denote that any instance of a function problem A can be solved by solving instead a polynomially-related instance of another function problem B. In this paper, B denotes the MSMP problem, and any reduction {a mathematical formula}A≤pB indicates that the solution to the function problem A for a concrete instance a can be obtained by computing a minimal set (subject to a monotone predicate) for some resulting concrete instance b of the MSMP problem. Moreover, all reductions described in the paper are provided with enough detail to make it straightforward to conclude that the problem instances are polynomially related.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       The work in this paper is motivated by the use of monotone predicates for computing a prime implicate of a propositional formula given an implicate (e.g. a clause) [25], [26]. This work was recently extended to show that monotone predicates can be applied to other problems, namely MUSes, MCSes, minimal models and (also) prime implicates given a clause [107]. The same work, [107], also proposed the progression algorithm for the MSMP problem. The work in [107] also enabled a characterization of the query complexity of different function problems [106], [70], with new results for the case of computing the backbone of a formula or computing a minimal unsatisfiable subset, when the number of these is constant.
+      </paragraph>
+      <paragraph>
+       A tightly related concept in computational complexity is hereditarity[32], [33], which was proposed in the 90s to develop lower and upper bounds on the query complexity of computing maximal solutions. A concrete example is the computation of minimal unsatisfiability and maximal satisfiability [32], [33]. In contrast, other function problems, e.g. minimal and maximal models, involve different definitions from those standard in AI (e.g. [13]). Moreover, one concern of function problem solving with SAT solvers is to develop a rigorous characterization of a SAT solver as an oracle. As argued elsewhere [106], if the time spent on the SAT solver is ignored, then a SAT solver can viewed as a witness oracle [29].
+      </paragraph>
+      <paragraph>
+       The paper addresses function problems defined on Boolean formulae, which intersect a wide range of areas of research. References to related work, both on the actual function problems, and associated areas of research are included throughout the paper.
+      </paragraph>
+      <paragraph>
+       Finally, as indicated in Section 1, monotone predicates have already influenced a number of areas of research. Besides algorithms for function problem solving, other investigated topics include monotonicity in general settings [7] and duality also in general settings [141].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Target function problems
+     </section-title>
+     <paragraph>
+      This section provides a brief overview of the function problems studied in the rest of the paper. All function problems studied in this section are defined on Boolean formulae. Nevertheless, the work can be extended to function problems defined on more expressive domains, e.g. ILP, SMT, CSP, etc.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Problem definitions
+      </section-title>
+      <paragraph>
+       The function problems described below can be organized as follows: (i) minimal unsatisfiability (and maximal satisfiability); (ii) irredundant subformulae; (iii) maximal falsifiability (and minimal satisfiability); (iv) minimal and maximal models; (v) prime implicates and implicants; (vi) backbone literals; (vii) formula entailment; (viii) variable independence; (ix) maximum autarkies; and (x) minimal independent support. Afterwards, Section 4 shows that all these function problems can be reduced to the MSMP problem. In what follows, and unless otherwise stated, {a mathematical formula}F denotes an arbitrary Boolean formula. In some specific cases, {a mathematical formula}F is restricted to be in CNF (or in DNF), and this will be noted.
+      </paragraph>
+      <section label="3.1.1">
+       <section-title>
+        Minimal unsatisfiability &amp; maximal satisfiability
+       </section-title>
+       <paragraph>
+        Minimal unsatisfiability and maximal satisfiability have been extensively studied in a number of contexts (e.g. [78], [92], [11], [117] and references therein). In this paper, the following definitions are used.
+       </paragraph>
+       <paragraph label="Definition 5">
+        MUS; FMUSLet {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥. {a mathematical formula}M⊆F is a Minimal Unsatisfiable Subset (MUS) iff {a mathematical formula}M⊨⊥ and {a mathematical formula}∀M′⊊M,M′⊭⊥. FMUS is the function problem of computing an MUS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 6">
+        MCS; FMCSLet {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥. {a mathematical formula}C⊆F is a Minimal Correction Subset (MCS) iff {a mathematical formula}F∖C⊭⊥ and {a mathematical formula}∀C′⊊C,F∖C′⊨⊥. FMCS is the function problem of computing an MCS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 7">
+        MSS; FMSSLet {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥. {a mathematical formula}S⊆F is a Maximal Satisfiable Subset (MSS) iff {a mathematical formula}S⊭⊥ and {a mathematical formula}∀F⊇S′⊋S,S′⊨⊥. FMSS is the function problem of computing an MSS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        In short, an MUS is an unsatisfiable subset of the clauses of {a mathematical formula}F that becomes satisfiable whenever any of its clauses are dropped from it. An MCS is a subset of the clauses of {a mathematical formula}F whose removal renders {a mathematical formula}F satisfiable, but such that adding any of these clauses back into {a mathematical formula}F makes it unsatisfiable. An MSS is the complement of an MCS. This relationship is well-known, e.g. [21], [99]:
+       </paragraph>
+       <paragraph label="Remark 1">
+        {a mathematical formula}C is an MCS of {a mathematical formula}F iff {a mathematical formula}S=F∖C is an MSS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 2">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(x1),(¬x1)}. {a mathematical formula}F has two MUSes: {a mathematical formula}M1={(x1∨x2),(x1∨¬x2),(¬x1)} and {a mathematical formula}M2={(x1),(¬x1)}. The MCSes of {a mathematical formula}F are {a mathematical formula}C1={(¬x1)}, {a mathematical formula}C2={(x1∨x2),(x1)} and {a mathematical formula}C3={(x1∨¬x2),(x1)}. The MSSes of {a mathematical formula}F are {a mathematical formula}S1={(x1∨x2),(x1∨¬x2),(x1)}, {a mathematical formula}S2={(x1∨¬x2),(¬x1)} and {a mathematical formula}S3={(x1∨x2),(¬x1)}.
+       </paragraph>
+       <paragraph label="Definition 8">
+        The MaxSAT problem is defined assuming unweighted clauses. LMSS; FLMSS/MaxSATLet {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥. An MSS {a mathematical formula}S of {a mathematical formula}F is a largest MSS (LMSS) iff for any MSS {a mathematical formula}S′ of {a mathematical formula}F, {a mathematical formula}|S′|≤|S|. FLMSS (or MaxSAT) is the function problem of computing an LMSS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Observation 1">
+        Observe that MaxSAT is defined as the function problem of computing one largest MSS. In some contexts, other definitions are used, namely as the problem of computing the largest number of simultaneously satisfied clauses [83]. This distinction is quite significant for the unweighted case of MaxSAT. The definition used in this paper aims to model the function problem actually solved by modern MaxSAT solvers. Since practical MaxSAT solvers always compute a witness of the reported solution, this avoids the issue with reproducing a witness in the case an NP oracle was considered.
+       </paragraph>
+       <paragraph label="Definition 9">
+        SMCS; FSMCSLet {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥. An MCS {a mathematical formula}C of {a mathematical formula}F is a smallest MCS (SMCS) iff for any MCS {a mathematical formula}C′ of {a mathematical formula}F, {a mathematical formula}|C′|≥|C|. FSMCS is the function problem of computing an SMCS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Remark 2">
+        Clearly, {a mathematical formula}S⊆F is an LMSS of {a mathematical formula}F iff {a mathematical formula}C=F∖S is an SMCS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        Moreover, it is straightforward to extend the above definitions to cases where there are hard clauses (i.e. clauses that cannot be dropped from the formula) and where soft clauses have weights [92]. There exists a large body of theoretical and practical work on computing MUSes, MCSes and on solving MaxSAT, including a well-known minimal hitting set duality relationship between MUSes and MCSes [129], [21], [99]. Recent references describing new algorithms and surveys for these problems include [52], [92], [102], [11], [1], [103], [117], [50], [3], [114]. There is a growing number of practical applications of both minimal unsatisfiability and maximal satisfiability (e.g. see [52], [102], [11], [117] and references therein). Recent examples of applications include design debugging [133], fault localization [71], [72], model checking [81], [54] or interactive reconfiguration [68]. Extraction of MUSes for non-clausal formulae and for SMT formulae is addressed in [78], [12], [155], [81], [68], [54].
+       </paragraph>
+       <paragraph>
+        Finally, we should note that similar definitions can be developed for DNF formulae, by considering minimal validity instead of minimal unsatisfiability. This would also allow developing several tightly related function problems, as above.
+       </paragraph>
+       <section>
+        <section-title>
+         MSSes with assumptive contexts
+        </section-title>
+        <paragraph>
+         A problem tightly related with finding MSSes is that of computing MSSes given assumptive contexts, which may be mutually contradictory [16]. A number of practical applications of finding MSSes given assumptive contexts is covered in past work [16].
+        </paragraph>
+        <paragraph label="Definition 10">
+         MSSes with Assumptive Contexts; FACMCSLet {a mathematical formula}F∈C and {a mathematical formula}Γ⊊F, with Γ finite. {a mathematical formula}M is a maximal satisfiable subset of {a mathematical formula}F under a set of assumptive contexts Γ, i.e. {a mathematical formula}M is an {a mathematical formula}AC−MSS(F,Γ) iff,
+        </paragraph>
+        <list>
+         <list-item label="•">
+          {a mathematical formula}∀γ∈ΓM∪{γ}⊭⊥.
+         </list-item>
+         <list-item label="•">
+          {a mathematical formula}∀c∈F∖M∃γ∈ΓM∪{c}∪{γ}⊨⊥.
+         </list-item>
+        </list>
+        <paragraph>
+         Observe that earlier work [16] also requires {a mathematical formula}M⊆F⊭⊥, but this condition is redundant given the other ones. Similarly, the definition above can be extended to the concept of multiple contraction [51], if cardinality minimality is replaced by subset minimality. Multiple contraction of set of clauses {a mathematical formula}F by a set of formulae Γ is a maximum cardinality subset of {a mathematical formula}F from which no formula of Γ can be deduced. This implies that MSMP can also be applied in the context of multiple contraction, again provided that cardinality minimality is replaced by subset minimality. In addition, the same comment can be made for anti-subsumptive knowledge enforcement [49].
+        </paragraph>
+       </section>
+      </section>
+      <section label="3.1.2">
+       <section-title>
+        Irredundant subformulae
+       </section-title>
+       <paragraph>
+        The definitions for minimal unsatisfiability (see previous section) can be reformulated for the case where the goal is to remove redundancy from a CNF formula, as follows.
+       </paragraph>
+       <paragraph label="Definition 11">
+        MES; FMESLet {a mathematical formula}F∈C. {a mathematical formula}E⊆F is a Minimal Equivalent Subset (MES) iff {a mathematical formula}E≡F and {a mathematical formula}∀E′⊊E,E′≢F. FMES is the function problem of computing an MES of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 12">
+        MDS; FMDSLet {a mathematical formula}F∈C. {a mathematical formula}D⊆F is a Minimal Distinguishing Subset (MDS) iff {a mathematical formula}F∖D≢F and {a mathematical formula}∀D′⊊D,F∖D′≡F. FMDS is the function problem of computing an MDS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 13">
+        MNS; FMNSLet {a mathematical formula}F∈C. {a mathematical formula}N⊆F is a Maximal Non-equivalent Subset (MNS) iff {a mathematical formula}N≢F and {a mathematical formula}∀F⊇N′⊋N,N′≡F. FMNS is the function problem of computing an MNS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        An MES can be seen as a generalization of an MUS. It is a subset of clauses of {a mathematical formula}F that is equivalent to {a mathematical formula}F but dropping any of its clauses makes it non-equivalent to {a mathematical formula}F. Similarly, an MDS (MNS) can be seen as a generalization of an MCS (MSS). An MDS is a subset of the clauses of {a mathematical formula}F whose removal makes the formula non-equivalent to what initially was, but adding any of these clauses back into {a mathematical formula}F makes it equivalent. As with MCSes/MSSes, an MNS is the complement of an MDS, and vice-versa.
+       </paragraph>
+       <paragraph label="Remark 3">
+        {a mathematical formula}D is an MDS of {a mathematical formula}F iff {a mathematical formula}N=F∖D is an MNS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 3">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(x1)}. The MESes of {a mathematical formula}F are {a mathematical formula}E1={(x1∨x2),(x1∨¬x2)} and {a mathematical formula}E2={(x1)}. The MDSes of {a mathematical formula}F are {a mathematical formula}D1={(x1∨x2),(x1)} and {a mathematical formula}D2={(x1∨¬x2),(x1)}. The MNSes of {a mathematical formula}F are {a mathematical formula}N1={(x1∨¬x2)} and {a mathematical formula}N2={(x1∨x2)}.
+       </paragraph>
+       <paragraph>
+        This paper also considers the optimization version of FMDS (FMNS), that is, computing a cardinality minimal MDS (cardinality maximum MDS). As before, these problems are defined considering unweighted clauses.
+       </paragraph>
+       <paragraph label="Definition 14">
+        LMNS; FLMNSLet {a mathematical formula}F∈C. An MNS {a mathematical formula}N of {a mathematical formula}F is a largest MNS (LMNS) iff for any MNS {a mathematical formula}N′ of {a mathematical formula}F, {a mathematical formula}|N′|≤|N|. FLMNS is the function problem of computing an LMNS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 15">
+        SMDS; FSMDSLet {a mathematical formula}F∈C. An MDS {a mathematical formula}D of {a mathematical formula}F is a smallest MDS (SMDS) iff for any MDS {a mathematical formula}D′ of {a mathematical formula}F, {a mathematical formula}|D′|≥|D|. FSMDS is the function problem of computing an SMDS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Remark 4">
+        Clearly, {a mathematical formula}N⊆F is an LMNS of {a mathematical formula}F iff {a mathematical formula}D=F∖N is an SMDS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        Moreover, it is straightforward to extend the above definitions to cases where there are hard clauses (i.e. clauses that cannot be dropped from the formula) and where soft clauses have weights.
+       </paragraph>
+       <paragraph>
+        Complexity characterizations of computing irredundant subformulae were studied in [94], [95], [96], [87]. Recent practical algorithms include [24], [35], [9], [10].
+       </paragraph>
+       <paragraph>
+        Finally, we should note that definitions of irredundancy can be developed for DNF formulae in terms of a subset-minimal set of terms equivalent to the original formula. As before, this would allow defining additional function problems, as above.
+       </paragraph>
+      </section>
+      <section label="3.1.3">
+       <section-title>
+        Minimal satisfiability &amp; maximal falsifiability
+       </section-title>
+       <paragraph>
+        In some settings, the goal is to minimize the number of satisfied clauses. This is generally referred to as the Minimum Satisfiability (MinSAT) problem [80]. By analogy with the MaxSAT case, one can also consider extremal sets [62].
+       </paragraph>
+       <paragraph label="Definition 16">
+        All-FalsifiableLet {a mathematical formula}F∈C. {a mathematical formula}U⊆F is All-Falsifiable if there exists a truth assignment ν, to {a mathematical formula}var(U), such that ν falsifies all clauses in {a mathematical formula}U.
+       </paragraph>
+       <paragraph label="Definition 17">
+        MFS; FMFSGiven {a mathematical formula}F∈C, a Maximal Falsifiable Subset (MFS) of {a mathematical formula}F is a set {a mathematical formula}M⊆F such that {a mathematical formula}M is all-falsifiable and, {a mathematical formula}∀F⊇N⊋M, {a mathematical formula}N is not all-falsifiable. FMFS is the function problem of computing an MFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 18">
+        MCFS; FMCFSGiven {a mathematical formula}F∈C, a Minimal Correction (for Falsifiability) Subset (MCFS) is a set {a mathematical formula}C⊆F such that {a mathematical formula}F∖C is all-falsifiable and {a mathematical formula}∀C′⊊C,F∖C′ is not all-falsifiable. FMCFS is the function problem of computing an MCFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Remark 5">
+        {a mathematical formula}M is an MFS of {a mathematical formula}F iff {a mathematical formula}N=F∖D is an MCFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 4">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(x1∨x3)}. {a mathematical formula}F has two MFSes: {a mathematical formula}M1={(x1∨x2),(x1∨x3)} and {a mathematical formula}M2={(x1∨¬x2),(x1∨x3)}. The MCFSes of {a mathematical formula}F are {a mathematical formula}C1={(x1∨¬x2)} and {a mathematical formula}C2={(x1∨x2)}.
+       </paragraph>
+       <paragraph>
+        As before, optimization problems for maximum falsifiability and minimum satisfiability are considered.
+       </paragraph>
+       <paragraph label="Definition 19">
+        LMFS; FLMFS/MaxFalseLet {a mathematical formula}F∈C. An MFS {a mathematical formula}M of {a mathematical formula}F is a largest MFS (LMFS) iff for any MFS {a mathematical formula}M′ of {a mathematical formula}F, {a mathematical formula}|M′|≤|M|. FLMFS (or Maximum Falsifiability, MaxFalse) is the function problem of computing an LMFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 20">
+        SMCFS; FSMCFS/MinSATLet {a mathematical formula}F∈C. An MCFS {a mathematical formula}C of {a mathematical formula}F is a smallest MCFS (SMCFS) iff for any MCFS {a mathematical formula}C′ of {a mathematical formula}F, {a mathematical formula}|C′|≥|C|. FSMCFS (or Minimum Satisfiability, MinSAT) is the function problem of computing an SMCFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Remark 6">
+        Clearly, {a mathematical formula}M⊆F is an LMFS of {a mathematical formula}F iff {a mathematical formula}C=F∖M is an SMCFS of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Remark 7">
+        Given Remark 5, one can conclude that the MinSAT problem consists of computing the smallest MCFS, and this represents the complement of the MaxFalse solution. Thus, for {a mathematical formula}F∈C, where {a mathematical formula}nt and {a mathematical formula}nf denote respectively the MinSAT and the MaxFalse solutions, then {a mathematical formula}|F|=nt+nf.
+       </paragraph>
+       <paragraph>
+        As with minimal unsatisfiability and irredundancy, maximal falsifiability can be generalized to the case when some clauses are hard and when soft clauses have weights. Similarly, one could consider the DNF formulae, and function problems related with all-true terms.
+       </paragraph>
+       <paragraph>
+        The MinSAT problem has been studied in [80], [101], [2], [93], [61]. The problem of maximal falsifiability is studied in [62].
+       </paragraph>
+       <paragraph>
+        Moreover, it should be noted that, although this paper addresses MUSes/MCSes/MSSes/MESes/MDSes/MNSes/MFSes/MCFSes defined solely on sets of clauses, other variants could be considered, namely groups of clauses or variables. The formalizations of these variants as instances of the MSMP problem mimic the formalizations developed for the case of sets of clauses. (See [99], [40], [118], [56], [8], [57] for related work on groups of clauses and variables.)
+       </paragraph>
+      </section>
+      <section label="3.1.4">
+       <section-title>
+        Minimal &amp; maximal models
+       </section-title>
+       <paragraph>
+        Minimal and maximal models are additional examples of function problems associated with propositional formulae.
+       </paragraph>
+       <paragraph label="Definition 21">
+        Minimal Model; FMnMGiven {a mathematical formula}F∈F, a model {a mathematical formula}M⊆X of {a mathematical formula}F is minimal iff {a mathematical formula}ν(M,X)⊨F and {a mathematical formula}∀M′⊊M,ν(M′,X)⊭F. FMnM is the function problem of computing a minimal model of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 22">
+        Maximal Model; FMxMGiven {a mathematical formula}F∈F, a model {a mathematical formula}M⊆X of {a mathematical formula}F is maximal iff {a mathematical formula}ν(M,X)⊨F and {a mathematical formula}∀X⊇M′⊋M,ν(M′,X)⊭F. FMxM is the function problem of computing a maximal model of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 5">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(x2∨x3)}. The models {a mathematical formula}M1={x1,x2} and {a mathematical formula}M2={x1,x3} are minimal models. The model {a mathematical formula}M3={x1,x2,x3} is a maximal model of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Observation 2">
+        Both minimal and maximal models can be computed subject to a set Z of variables other than {a mathematical formula}X≜var(F)[13], i.e. the so-called Z-minimal and Z-maximal models. The above definitions can easily be modified for this more general definition.
+       </paragraph>
+       <paragraph>
+        Minimal models find a wide range of applications, including non-monotonic reasoning and bioinformatics (e.g. [45], [143]). Algorithms for computing minimal and maximal models have been studied in the past (e.g. [13], [119], [14], [75], [82]). In some contexts, minimal and maximal models have been referred to as {a mathematical formula}MIN-ONE⊆ and {a mathematical formula}MAX-ONE⊆ solutions (e.g. [131]).
+       </paragraph>
+       <paragraph>
+        As before, we can define smallest minimal models.
+       </paragraph>
+       <paragraph label="Definition 23">
+        SMnM; FSMnMLet {a mathematical formula}F∈F, with {a mathematical formula}F⊭⊥. A minimal model {a mathematical formula}M of {a mathematical formula}F is a smallest minimal model (SMnM) iff for any minimal model {a mathematical formula}M′ of {a mathematical formula}F, {a mathematical formula}|M′|≥|M|. FSMnM is the function problem of computing an SMnM of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        The definition of largest maximal model mimics the one above.
+       </paragraph>
+      </section>
+      <section label="3.1.5">
+       <section-title>
+        Implicants &amp; implicates
+       </section-title>
+       <paragraph>
+        Two relevant function problems associated with propositional formulae consist of computing prime implicants, starting from an implicant represented as a term, and prime implicates, starting from an implicate represented as a clause.{sup:5}
+       </paragraph>
+       <paragraph label="Definition 24">
+        Prime Implicant (given term); FPItGiven {a mathematical formula}F∈F and an implicant {a mathematical formula}t∈A of {a mathematical formula}F, i.e. {a mathematical formula}t⊨F, term {a mathematical formula}u⊆t is a prime implicant of {a mathematical formula}F iff {a mathematical formula}u⊨F and {a mathematical formula}∀v⊊u,v⊭F. FPIt is the function problem of computing a prime implicant of {a mathematical formula}F given an implicant t of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 25">
+        Prime Implicate (given clause); FPIcGiven {a mathematical formula}F∈F and an implicate {a mathematical formula}c∈A of {a mathematical formula}F, i.e. {a mathematical formula}F⊨c, clause {a mathematical formula}p⊆c is a prime implicate of {a mathematical formula}F iff {a mathematical formula}F⊨p and {a mathematical formula}∀q⊊p,F⊭q. FPIc is the function problem of computing a prime implicate of {a mathematical formula}F given an implicate c of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 6">
+        Lef {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(¬x2∨¬x3)}. Given the implicant {a mathematical formula}t=(x1∧¬x2∧¬x3), the terms {a mathematical formula}u1=(x1∧¬x2) and {a mathematical formula}u2=(x1∧¬x3) are prime implicants of {a mathematical formula}F. Given the implicate {a mathematical formula}c=(x1∨¬x3), the clause {a mathematical formula}p=(x1) is a prime implicate of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        Observe that computing a prime implicant from a given implicant for a formula in CNF can be done in polynomial time (e.g. [128], [39]). Similarly, computing a prime implicate from a given implicate for a formula in DNF can also be done in polynomial time.
+       </paragraph>
+       <paragraph>
+        For the general case of arbitrary Boolean formulae these function problems become significantly harder, and the algorithms described in this paper require a number of SAT solver calls that is linear in the number of variables in the worst case (see [33], [147] for similar approaches and conclusions).
+       </paragraph>
+       <paragraph>
+        Prime implicates and implicants find many practical applications, including truth maintenance systems [130], [77], knowledge compilation [38], [124], expert systems [144], conformant planning [145], the simplification of Boolean functions [127], [112], [64], abstraction in model checking [26], [25], minimization of counterexamples in model checking [128], [137], [136], among many others. A wealth of algorithms exist for computing prime implicates and implicants (e.g. [23], [30], [111], [66], [124] and references therein).
+       </paragraph>
+       <paragraph>
+        Another problem of interest in practice is the Longest Extension of Implicant problem [147] for DNF formulae. By analogy, we also consider the Longest Extension of Implicate problem for CNF formulae.
+       </paragraph>
+       <paragraph label="Definition 26">
+        Longest Extension of Implicant; FLEItLet t be an implicant of {a mathematical formula}F∈D, i.e. {a mathematical formula}t⊨F. Term u, with {a mathematical formula}A⊇u⊇t, is a longest extension of implicant t iff {a mathematical formula}(F∖{t})∪{u}≡F and {a mathematical formula}∀u′⊋u,(F∖{t})∪{u′}≢F. The FLEIt function problem consists of computing a longest extension of implicant t of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 27">
+        Longest Extension of Implicate; FLEIcLet c be an implicate of {a mathematical formula}F∈C, i.e. {a mathematical formula}F⊨c. Clause u, with {a mathematical formula}A⊇u⊇c, is a longest extension of implicate c iff {a mathematical formula}(F∖{c})∪{u}≡F and {a mathematical formula}∀u′⊋u,(F∖{c})∪{u}≢F. The FLEIc function problem consists of computing a longest extension of implicate c of {a mathematical formula}F.
+       </paragraph>
+      </section>
+      <section label="3.1.6">
+       <section-title>
+        Formula entailment
+       </section-title>
+       <paragraph>
+        A number of problems related with formula entailment can also be considered. We address two function problems: computing a minimal set entailing a formula and computing a maximal set entailed by a formula.
+       </paragraph>
+       <paragraph label="Definition 28">
+        Minimal Entailing Subset; FMnESLet {a mathematical formula}J∈C and {a mathematical formula}I∈F be such that {a mathematical formula}J⊨I. {a mathematical formula}M⊆J is a Minimal Entailing Subset (MnES) of {a mathematical formula}I iff {a mathematical formula}M⊨I and {a mathematical formula}∀M′⊊MM′⊭I. FMnES is the function problem of computing a minimal entailing subset of {a mathematical formula}J given {a mathematical formula}I.
+       </paragraph>
+       <paragraph label="Example 7">
+        Let {a mathematical formula}J={(x1∨x2),(¬x2∨¬x3),(x3∨x4)} and {a mathematical formula}I={(x1∨¬x3)}. The formula {a mathematical formula}M={(x1∨x2),(¬x2∨¬x3)} is an MnES of {a mathematical formula}I.
+       </paragraph>
+       <paragraph label="Observation 3">
+        The function problem FMnES from Definition 28 can be generalized to capture the case of logic-based abduction [46] when the universe of hypotheses is consistent with the theory, and the minimality criterion is subset minimality.
+       </paragraph>
+       <paragraph label="Observation 4">
+        Computing minimal entailing subsets also finds application in abstract argumentation [150]. This becomes evident when we allow {a mathematical formula}J to be a conjunction of propositional formulae. Another example of the application of minimal sets in argumentation is [17].
+       </paragraph>
+       <paragraph label="Definition 29">
+        Maximal Entailed Subset; FMxESLet {a mathematical formula}J∈F and {a mathematical formula}N∈C be such that {a mathematical formula}J⊭N. {a mathematical formula}I⊆N is a Maximal Entailed Subset (MxES) iff {a mathematical formula}J⊨I and {a mathematical formula}∀N⊇I′⊋IJ⊭I′. FMxES is the function problem of computing a maximal entailed subset of {a mathematical formula}N given {a mathematical formula}J.
+       </paragraph>
+       <paragraph label="Example 8">
+        Let {a mathematical formula}J={(x1∨x2),(¬x2∨x3),(¬x3∨x4)} and {a mathematical formula}N={(x1∨x3),(x1∨x4),(x2)}. The formula {a mathematical formula}I={(x1∨x3),(x1∨x4)} is a MxES of {a mathematical formula}J.
+       </paragraph>
+      </section>
+      <section label="3.1.7">
+       <section-title>
+        Backbone literals
+       </section-title>
+       <paragraph>
+        The problem of computing the backbone of a Boolean formula, i.e. the literals that are common to all satisfying assignments of the formula, finds a wide range of applications. Two definitions are considered.
+       </paragraph>
+       <paragraph label="Definition 30">
+        Backbone; FBBGiven {a mathematical formula}F∈F, the backbone of {a mathematical formula}F is a maximal set of literals {a mathematical formula}B∈A which are true in all models of {a mathematical formula}F, i.e. {a mathematical formula}F⊨∧l∈B(l). FBB is the function problem of computing the backbone of {a mathematical formula}F∈F.
+       </paragraph>
+       <paragraph label="Example 9">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2),(¬x1∨¬x3)}. The backbone of {a mathematical formula}F is the set of literals {a mathematical formula}B={x1,¬x3}.
+       </paragraph>
+       <paragraph>
+        In practice, algorithms for computing the backbone of a formula often start from a reference model [108], [69]. This allows a slightly different formulation of the backbone function problem.
+       </paragraph>
+       <paragraph label="Definition 31">
+        FBBrLet ν be a model of {a mathematical formula}F∈F and {a mathematical formula}V the associated set of literals. The backbone of {a mathematical formula}F is a maximal set of literals {a mathematical formula}B⊆V such that {a mathematical formula}F⊨∧l∈B(l). FBBr is the function problem of computing the backbone of {a mathematical formula}F∈F given {a mathematical formula}V.
+       </paragraph>
+       <paragraph>
+        Backbones of Boolean formulae were first studied in the context of work on phase transitions and problem hardness [115], [142], [76]. In addition, backbones find several practical applications, that include configuration [138], [139], abstract argumentation [151], cyclic causal models [59], debugging of fabricated circuits [156], among others. A number of recent algorithms have been proposed for computing the backbone of Boolean formulae [74], [67], [108], [157], [69]. Recently, generalized backbones were studied in [36].
+       </paragraph>
+       <paragraph>
+        For constraint networks, researchers have recently investigated global inverse consistency (GIC) [18], which can be viewed as a generalization of backbone literals for non-Boolean domains.
+       </paragraph>
+      </section>
+      <section label="3.1.8">
+       <section-title>
+        Variable independence
+       </section-title>
+       <paragraph>
+        A formula {a mathematical formula}F is (semantically) independent from a variable x if the set of models of {a mathematical formula}F does not change by fixing x to any truth value [91, Def. 4, Prop. 7].
+       </paragraph>
+       <paragraph label="Definition 32">
+        Variable Independence; FVIndA {a mathematical formula}F∈F is independent from {a mathematical formula}x∈var(F) iff {a mathematical formula}F≡Fx=0 (or, {a mathematical formula}F≡Fx=1). FVInd is the function problem of computing a maximal set of variables of which {a mathematical formula}F is independent from.
+       </paragraph>
+       <paragraph label="Example 10">
+        Let {a mathematical formula}F={(x1∨x2),(x1∨¬x2)}. {a mathematical formula}F is independent from variable {a mathematical formula}x1.
+       </paragraph>
+       <paragraph>
+        Observe that, as indicated earlier, the definition of MESes can be extended to variables. However, FVInd is defined in a more general setting, since {a mathematical formula}F need not be in CNF. Variable independence (and also literal independence) are important in a number of settings [91]. Variables declared independent are also known as redundant or inessential, e.g. [41], [28], [37]. In later sections, and for simplicity, if {a mathematical formula}F is independent from x, then we write that x is redundant for {a mathematical formula}F.
+       </paragraph>
+      </section>
+      <section label="3.1.9">
+       <section-title>
+        Maximum autarkies
+       </section-title>
+       <paragraph>
+        This section provides a brief overview of the problem of identifying the (maximum) autarkies of unsatisfiable CNF formulae.
+       </paragraph>
+       <paragraph label="Definition 33">
+        Autarky; FAutGiven {a mathematical formula}F∈C, with {a mathematical formula}F⊨⊥, a set {a mathematical formula}A⊆var(F) is an autarky iff there exists a truth assignment to the variables in {a mathematical formula}A that satisfies all clauses containing literals in the variables of {a mathematical formula}A. FAut is the function problem of computing the maximal autarky of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 11">
+        Let {a mathematical formula}F={(¬x1),(x1∨x2),(x1∨¬x2),(¬x2∨x3),(¬x3∨x4)}. The set of variables {a mathematical formula}A={x3,x4} is the maximal autarky of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        Autarkies were first proposed in the context of improving exponential upper bounds of SAT algorithms [116], [149], and have later been studied in the context of minimal unsatisfiable subformulae [84], [78], [86]. More recently, autarkies were used in model elimination [148] and for speeding up MCS/MUS enumeration algorithms [100]. Algorithms for computing autarkies were studied in [85], [88], [100], [78], [104].
+       </paragraph>
+      </section>
+      <section label="3.1.10">
+       <section-title>
+        Minimal independent support
+       </section-title>
+       <paragraph>
+        If a propositional formula {a mathematical formula}F is defined on a set of variables X, then X is referred to as the support of {a mathematical formula}F. Let {a mathematical formula}I⊆X be such that for every satisfying assignment of {a mathematical formula}F, the truth values assigned to the variables in {a mathematical formula}I uniquely determine the values of {a mathematical formula}X∖I. Then, {a mathematical formula}I is called and independent support of {a mathematical formula}F and {a mathematical formula}D=X∖I is called the dependent support [31], [65]. A minimal independent support {a mathematical formula}I is an independent support of {a mathematical formula}F such that none of its proper subsets is an independent support of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Definition 34">
+        Minimal Independent Support; FMISLet {a mathematical formula}F∈F with support X. {a mathematical formula}I⊆X is a Minimal Independent Support (MIS) of {a mathematical formula}F iff for any two satisfying assignments {a mathematical formula}ν1,ν2 that agree on {a mathematical formula}I then {a mathematical formula}ν1=ν2; and for all {a mathematical formula}I′⊊I there exist two satisfying assignments {a mathematical formula}ν1′,ν2′ that agree on {a mathematical formula}I′ and {a mathematical formula}ν1′≠ν2′. FMIS is the function problem of computing a minimal independent support of {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Example 12">
+        Let {a mathematical formula}F={(x1∨¬x2)∨(¬x1∨x2)}. The sets of variables {a mathematical formula}I1={x1} and {a mathematical formula}I2={x2} are MISes of {a mathematical formula}F.
+       </paragraph>
+       <paragraph>
+        A minimum independent support is a minimal independent support of smallest cardinality. Minimal independent support was recently shown to find application in model sampling and counting [65].
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Properties
+      </section-title>
+      <paragraph>
+       This section summarizes properties of some of the function problems presented in the previous section, which are essential for some of the results presented later.
+      </paragraph>
+      <paragraph label="Proposition 5">
+       For some function problems, the number of maximal/minimal sets is very restricted. In fact, for FLEIt, FLEIc, FMxES, FBBr, FBB, FVInd and FAut, the following holds. For the function problems FLEIt, FLEIc, FMxES, FBB, FBBr, FVInd and FAut there is a unique maximal set, which is maximum.
+      </paragraph>
+      <paragraph label="Proof">
+       For each case, the proof is by contradiction.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        For FLEIt, let u be a subset-maximal extension of t such that {a mathematical formula}u⊨F, and let {a mathematical formula}lx be a literal not included in u such that {a mathematical formula}t∧lx⊨F. Then, {a mathematical formula}u∧lx⊨F; a contradiction.
+       </list-item>
+       <list-item label="2.">
+        For FLEIc the proof is similar to the previous case. Let u be a subset-maximal extension of clause c such that {a mathematical formula}F⊨u, and let {a mathematical formula}lx be a literal not included in u such that {a mathematical formula}F⊨(c∨lx). Then, {a mathematical formula}F⊨(u∨lx); a contradiction.
+       </list-item>
+       <list-item label="3.">
+        For FMxES, let {a mathematical formula}I be a maximal set such that {a mathematical formula}J⊨I, and assume there exists clause {a mathematical formula}c∈N∖I such that {a mathematical formula}J⊨c. Then, any model of {a mathematical formula}J satisfies both {a mathematical formula}I and c, and so {a mathematical formula}J⊨I∪{c}; a contradiction.
+       </list-item>
+       <list-item label="4.">
+        For FBB/FBBr, the proof is similar. Let {a mathematical formula}B denote a maximal set of backbone literals, and let {a mathematical formula}l∉B be a backbone literal. Then, for any model of the formula, all literals in {a mathematical formula}B∪{l} are true; a contradiction.
+       </list-item>
+       <list-item label="5.">
+        For FVInd, by definition, a formula {a mathematical formula}F is independent from {a mathematical formula}xi iff {a mathematical formula}F≡Fxi=0≡Fxi=1. Thus, we can check each variable separately for independence. Let {a mathematical formula}I be a maximal set of variables {a mathematical formula}F is independent from, and assume there exists a variable {a mathematical formula}xj independent from {a mathematical formula}F such that {a mathematical formula}xj∉I. Since {a mathematical formula}xj is independent from {a mathematical formula}F, then {a mathematical formula}F≡Fxj=0≡Fxj=1; a contradiction.
+       </list-item>
+       <list-item label="6.">
+        For FAut, the proof is again similar. Let {a mathematical formula}A1 be a maximal autarky, let {a mathematical formula}A2 be another autarky, and let {a mathematical formula}A2∖A1≠∅. Then {a mathematical formula}K=A1∪A2 is an autarky and {a mathematical formula}A1⊊K; a contradiction.
+       </list-item>
+      </list>
+      <paragraph>
+       The following result provides a compact definition for variable independence. It will be useful in the following section.
+      </paragraph>
+      <paragraph label="Proposition 6">
+       A formula{a mathematical formula}Fis independent from{a mathematical formula}xi∈Xiff{a mathematical formula}F≡F[xi/yi], where{a mathematical formula}yiis a new variable with{a mathematical formula}yi∉X.
+      </paragraph>
+      <paragraph label="Proof">
+       By definition, {a mathematical formula}F is independent from {a mathematical formula}xi iff {a mathematical formula}F≡Fxi=0 or {a mathematical formula}F≡Fxi=1. Hence, {a mathematical formula}∀yi∈{0,1}F≡F[xi/yi], with {a mathematical formula}yi∉X. Thus, {a mathematical formula}F≡F[xi/yi] with {a mathematical formula}yi∉X.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Reductions to MSMP
+     </section-title>
+     <paragraph>
+      This section shows how each of the function problems defined in Section 3 can be represented as an instance of the MSMP problem. Section 4.1 introduces general predicate forms, which are shown to be monotone, and which simplify the presentation of the reductions in the Section 4.2. Section 4.2 is structured similarly to Section 3.1: (i) minimal unsatisfiability (and maximal satisfiability); (ii) irredundant subformulae; (iii) maximal falsifiability (and minimal satisfiability); (iv) minimal and maximal models; (v) prime implicates and implicants; (vi) backbone literals; (vii) formula entailment; (viii) variable independence; (ix) maximum autarkies; and (x) minimal independent support.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Predicate forms
+      </section-title>
+      <paragraph>
+       In the next section, several function problems are reduced to the MSMP. The reduction involves specifying a reference set {a mathematical formula}R and a monotone predicate P defined in terms of a set {a mathematical formula}W⊆R. To simplify the description of the different monotone predicates, this section develops general predicate forms, which capture all of the monotone predicates developed in the next sections, and proves that all predicates of any of these forms are monotone. As a result, for any concrete predicate, monotonicity is an immediate consequence of the monotonicity of the general predicate forms.
+      </paragraph>
+      <paragraph label="Definition 35">
+       Let element {a mathematical formula}ui∈R represent either a literal or a clause. Moreover, {a mathematical formula}σ(ui) represents a Boolean formula built from {a mathematical formula}ui, where new variables may be used, but such that {a mathematical formula}ui is the only element from {a mathematical formula}R used in {a mathematical formula}σ(ui). For example, {a mathematical formula}σ(ui) can represent the negation of a literal or a clause, etc. Let {a mathematical formula}G be a propositional formula that is independent from the elements in {a mathematical formula}W, i.e. {a mathematical formula}G does not change with {a mathematical formula}W. Then, the following general predicate forms are defined. Predicates of Form {a mathematical formula}LA predicate P is of form{a mathematical formula}L iff its general form is given by,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 37">
+       Predicates of Form {a mathematical formula}PA predicate P is of form{a mathematical formula}P iff its general form is given by,{a mathematical formula}Predicates of Form {a mathematical formula}BA predicate P is of form{a mathematical formula}B iff its general form is given by,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proposition 7">
+       Predicates of the forms{a mathematical formula}L,{a mathematical formula}Band{a mathematical formula}Pare monotone.
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item label="1.">
+         Let P be a predicate of form {a mathematical formula}L. Let {a mathematical formula}P(R0) hold, with {a mathematical formula}R0⊆R, i.e. the argument to the SAT oracle is satisfiable. Then, by Proposition 1, for any {a mathematical formula}R1, with {a mathematical formula}R1⊇R0 (and so {a mathematical formula}R∖R1⊆R∖R0), {a mathematical formula}P(R1) also holds, since the argument to the SAT oracle call is the conjunction of a subset of the constraints used for the case of {a mathematical formula}R0, and so also satisfiable. Thus, P is monotone.
+        </list-item>
+        <list-item label="2.">
+         Let P be a predicate of form {a mathematical formula}P. Let {a mathematical formula}P(R0) hold, with {a mathematical formula}R0⊆R, i.e. the argument to the SAT oracle is unsatisfiable. Then, by Proposition 2, for any {a mathematical formula}R1, with {a mathematical formula}R1⊇R0, {a mathematical formula}P(R1) also holds, since the argument to the SAT oracle call is the conjunction of a superset of the constraints used for the case of {a mathematical formula}R0, and so also unsatisfiable. Thus, P is monotone.
+        </list-item>
+        <list-item label="3.">
+         Let P be a predicate of form {a mathematical formula}B. Let {a mathematical formula}P(R0) hold, with {a mathematical formula}R0⊆R, i.e. the argument to the SAT oracle is unsatisfiable. Then, for any {a mathematical formula}R1, with {a mathematical formula}R1⊇R0, {a mathematical formula}P(R1) also holds, since the clause created from {a mathematical formula}R∖R1 has fewer elements than for the case of {a mathematical formula}R∖R0, and so it is also unsatisfiable (i.e. all literals in the clause will also be resolved away). Thus, P is monotone. □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Observe that Proposition 7 provides sufficient conditions for monotonicity. As shown later, there are monotone predicates that are not represented in one of the proposed forms, which will be used in some reductions.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Minimal sets
+      </section-title>
+      <paragraph>
+       In the remainder of this section the reference set is denoted {a mathematical formula}R and the monotone predicate P is defined in terms of a set {a mathematical formula}W⊆R. All function problems considered are defined in Section 3.
+      </paragraph>
+      <paragraph>
+       The proofs presented in this section follow a general structure: they first introduce a predicate that reduces the given problem to an instance of MSMP. Then, monotonicity is proved identifying the predicate as one of form {a mathematical formula}L, {a mathematical formula}P or {a mathematical formula}B. Finally, the correctness of the reduction is proven, showing that a minimal set over the predicate, or its complement, represents a solution to the given problem.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Minimal unsatisfiability &amp; maximal satisfiability
+       </section-title>
+       <paragraph>
+        The following propositions consider the function problems of computing a Minimal Unsatisfiable Subset (FMUS) and a Minimal Correction Subset (FMCS) of an unsatisfiable formula {a mathematical formula}F in CNF.
+       </paragraph>
+       <paragraph label="Proposition 8">
+        {a mathematical formula}FMUS≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜F and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (4)) is of form {a mathematical formula}P, with {a mathematical formula}G≜∅, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set for which {a mathematical formula}P(M) holds, i.e. {a mathematical formula}M⊨⊥. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}M′⊭⊥. Thus, by Definition 5, {a mathematical formula}M is an MUS of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph label="Proposition 9">
+        {a mathematical formula}FMCS≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜F and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (5)) is of form {a mathematical formula}L, with {a mathematical formula}G≜∅, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}F∖M⊭⊥. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}F∖M′⊨⊥. Thus, by Definition 6, {a mathematical formula}M is an MCS of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph label="Remark 8">
+        By Remark 1, an MSS of {a mathematical formula}F∈C can be computed as follows. Compute an MCS {a mathematical formula}M of {a mathematical formula}F and return {a mathematical formula}F∖M.
+       </paragraph>
+       <section>
+        <section-title>
+         MSSes with assumptive contexts
+        </section-title>
+        <paragraph>
+         Recent work showed that computing one AC-MSS (see Definition 10) can be reduced to a sequence of calls to an NP oracle and a call to an MSS extractor [16]. We adapt this reduction to obtain a reduction of AC-MSS to MSMP.
+        </paragraph>
+        <paragraph label="Proposition 10">
+         {a mathematical formula}AC−MCS≤pMSMP.
+        </paragraph>
+        <paragraph label="Proof">
+         Reduction. Associate with each clause {a mathematical formula}ci∈F a relaxation variable {a mathematical formula}ri, and consider a relaxed version of {a mathematical formula}F, defined on {a mathematical formula}X∪R, with {a mathematical formula}X≜var(F), and where R denotes the relaxation variables:{a mathematical formula} Create one copy of {a mathematical formula}FR for each {a mathematical formula}γj∈Γ, by replacing X with a new set of variables {a mathematical formula}Xj, i.e. {a mathematical formula}FR[X/Xj]. Conjoin each such copy with the corresponding {a mathematical formula}γj, and create the formula:{a mathematical formula} Now, let {a mathematical formula}R≜R, and let,{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (8)) is of form {a mathematical formula}L, with {a mathematical formula}G≜FAC, {a mathematical formula}ui≜ri, and {a mathematical formula}σ(ri)≜ri. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}FAC∧∧ri∈R∖M(ri)⊭⊥, and so {a mathematical formula}(F∖Mc)∧{γj}⊭⊥ for all {a mathematical formula}γj∈Γ, where {a mathematical formula}Mc denotes the clauses in {a mathematical formula}F corresponding to the relaxation variables in {a mathematical formula}M. Note that the {a mathematical formula}ri variables enable deciding which clauses of {a mathematical formula}F to include. This is then reflected in the different copies of {a mathematical formula}F, obtained by using new sets of variables. However, since the {a mathematical formula}ri variables are shared, then the set of clauses considered for each copy of {a mathematical formula}F is the same. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, and so we have that for all {a mathematical formula}r′∈M, {a mathematical formula}FAC∧∧ri∈R∖(M−{r′})(ri)⊨⊥, and thus for all {a mathematical formula}c′∈Mc, {a mathematical formula}(F∖Mc)∧{c′}∧{γj}⊨⊥ for some {a mathematical formula}γj∈Γ. Thus, by Definition 10, {a mathematical formula}F∖Mc is an MSS of {a mathematical formula}F under a set of assumptive contexts Γ. Its complement, {a mathematical formula}Mc represents an AC-MCS.  □
+        </paragraph>
+        <paragraph>
+         Compared to earlier work [16], the proposed reduction trades off a possibly larger representation for a possible smaller number of oracle calls. Whereas earlier work [16] requires a number of NP oracle calls (linear on the number of assumptive formulae) to simplify the problem representation for extracting one MSS, our reduction only requires extracting one MCS (and so one MSS) at the expense of a possibly larger representation.
+        </paragraph>
+       </section>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Irredundant subformulae
+       </section-title>
+       <paragraph>
+        This section provides reductions for the function problems of computing a Minimal Equivalent Subset (FMES) and a Minimal Distinguishing Subset (FMDS) of a formula {a mathematical formula}F in CNF.
+       </paragraph>
+       <paragraph label="Proposition 11">
+        {a mathematical formula}FMES≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜F and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (9)) is of form {a mathematical formula}P, with {a mathematical formula}G≜¬F, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}M⊨F. Also, as {a mathematical formula}F∈C and {a mathematical formula}M⊆F, then {a mathematical formula}F⊨M. So, {a mathematical formula}F≡M. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}M′⊭F (thus {a mathematical formula}F≢M′). Thus, by Definition 11, {a mathematical formula}M is an MES of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph label="Observation 5">
+        Observe that the problem of computing an irredundant subformula can be reduced to the problem of computing a (group) MUS [9]. Thus, an MUS for the resulting problem is an MES for the original problem.
+       </paragraph>
+       <paragraph>
+        Also, note that the argument of the predicate in (9) can be simplified:{a mathematical formula} Thus, the predicate in (9) can be formulated as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Observe that the reduction above that does not respect the monotonicity conditions outlined earlier. However, the proposed predicate is monotone. As highlighted earlier, Proposition 7 represents sufficient conditions for monotonicity, and there are monotone predicates not represented in one of the proposed forms {a mathematical formula}P, {a mathematical formula}L or {a mathematical formula}B.
+       </paragraph>
+       <paragraph>
+        Throughout the paper, (9) is used, since it facilitates relating this predicate with others. However, for practical purposes (10) would be preferred.
+       </paragraph>
+       <paragraph label="Proposition 12">
+        {a mathematical formula}FMDS≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜F and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (11)) is of form {a mathematical formula}L, with {a mathematical formula}G≜¬F, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}D be a minimal set such that {a mathematical formula}P(D) holds, i.e. {a mathematical formula}¬F∧(F∖D)⊭⊥. Thus {a mathematical formula}F∖D⊭F, and so {a mathematical formula}F≢F∖D. By Definition 2, since {a mathematical formula}D is minimal for P, then for any {a mathematical formula}D′⊊D the predicate does not hold, i.e. {a mathematical formula}F∖D′⊨F. At the same time, as {a mathematical formula}F∈C and {a mathematical formula}F∖D′⊆F, then {a mathematical formula}F⊨F∖D′, and so {a mathematical formula}F≡F∖D′. Thus, by Definition 12, {a mathematical formula}D is an MDS of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph>
+        Note that the proof of Proposition 12 makes use of the following equivalence, given two propositional formulae {a mathematical formula}F1 and {a mathematical formula}F2: {a mathematical formula}(F1∧¬F2)⊭⊥ iff {a mathematical formula}F1⊭F2.
+       </paragraph>
+       <paragraph label="Observation 6">
+        The problem of computing an irredundant subformula can be reduced to the problem of computing a (group) MUS (see Observation 5 and [9]), and so an MCS for the resulting problem is an MDS for the original problem.
+       </paragraph>
+       <paragraph>
+        Similarly to the FMES case, the argument to the predicate in (11) can be simplified:{a mathematical formula} Thus, the predicate in (11) can be formulated as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Observe that the reduction above that does not respect the monotonicity conditions outlined earlier. However, the proposed predicate is monotone. This represents another example illustrating that Proposition 7 represents sufficient conditions for monotonicity, and that there are monotone predicates not represented in one of the proposed forms {a mathematical formula}P, {a mathematical formula}L or {a mathematical formula}B.
+       </paragraph>
+       <paragraph>
+        Throughout the paper, (11) is used, since it facilitates relating this predicate with others. However, for practical purposes (12) would be preferred.
+       </paragraph>
+       <paragraph label="Remark 9">
+        By Remark 3, an MNS of {a mathematical formula}F∈C can be computed as follows. Compute an MDS {a mathematical formula}D of {a mathematical formula}F and return {a mathematical formula}F∖D.
+       </paragraph>
+      </section>
+      <section label="4.2.3">
+       <section-title>
+        Minimal satisfiability &amp; maximal falsifiability
+       </section-title>
+       <paragraph>
+        This section provides a reduction for the function problem of computing a Minimal Correction (for Falsifiability) Subset (FMCFS) of a formula {a mathematical formula}F in CNF.
+       </paragraph>
+       <paragraph label="Proposition 13">
+        {a mathematical formula}FMCFS≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜F and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (13)) is of form {a mathematical formula}L, with {a mathematical formula}G≜∅, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜¬c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}F∖M is all-falsifiable. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}F∖M′ is not all-falsifiable. Thus, by Definition 17, {a mathematical formula}M is an MCFS of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph>
+        It should be noted that given a CNF formula composed only of soft clauses, an FMCFS as formulated above can be computed in polynomial time, e.g. by using unit propagation or a greedy procedure. However, if the problem formulation contains hard clauses, then a SAT solver is necessary.
+       </paragraph>
+       <paragraph label="Remark 10">
+        By Remark 5, an MFS of {a mathematical formula}F∈C can be computed as follows. Compute an MCFS {a mathematical formula}C of {a mathematical formula}F and return {a mathematical formula}F∖C.
+       </paragraph>
+      </section>
+      <section label="4.2.4">
+       <section-title>
+        Minimal &amp; maximal models
+       </section-title>
+       <paragraph>
+        This section considers the computation of minimal models (FMnM) and maximal models (FMxM) of an arbitrary propositional formula {a mathematical formula}F.
+       </paragraph>
+       <paragraph label="Proposition 14">
+        {a mathematical formula}FMnM≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜X≜var(F) and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (14)) is of form {a mathematical formula}L, with {a mathematical formula}G≜F, {a mathematical formula}ui≜x, and {a mathematical formula}σ(x)≜¬x. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds. Note that {a mathematical formula}M denotes the set of variables that can be assigned value 1 (since the other variables must be assigned value 0). As {a mathematical formula}P(M) holds, there exists {a mathematical formula}M′⊆M such that {a mathematical formula}ν(M′,X)⊨F, i.e. {a mathematical formula}M′ is a model of {a mathematical formula}F. As {a mathematical formula}M is minimal for P, then {a mathematical formula}M equals {a mathematical formula}M′, and thus {a mathematical formula}ν(M,X)⊨F, i.e. {a mathematical formula}M is a model of {a mathematical formula}F. Also, by Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M″⊊M the predicate does not hold, i.e. {a mathematical formula}ν(M″,X)⊭F. Thus, by Definition 21, {a mathematical formula}M is a minimal model of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph label="Proposition 15">
+        {a mathematical formula}FMxM≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Let {a mathematical formula}FC be constructed from {a mathematical formula}F by flipping the polarity of all literals in {a mathematical formula}F, i.e. replace l with ¬l for {a mathematical formula}l∈{x,¬x|x∈var(F)}. Observe that, {a mathematical formula}F and {a mathematical formula}FC have the same parse tree excluding the leaves. Now, compute a minimal model {a mathematical formula}MC for {a mathematical formula}FC, e.g. using Proposition 14. Then, as shown next, a maximal model for {a mathematical formula}F is given by {a mathematical formula}var(F)∖MC.Let {a mathematical formula}MC be any model of {a mathematical formula}FC, and let {a mathematical formula}νC(MC,X) denote the associated truth assignment. Consider the truth assignment ν obtained by flipping the value of all variables, and let {a mathematical formula}M denote the variables assigned value 1, i.e. {a mathematical formula}M=X∖MC. Clearly, {a mathematical formula}MC is minimal iff {a mathematical formula}M is maximal. Moreover, let {a mathematical formula}F be obtained from {a mathematical formula}FC by complementing all of its literals. Thus, the leaves of the parse tree of {a mathematical formula}FC are complemented and the values assigned to the leaves are also complemented. Now, recall that, with the exception of the leaves, both {a mathematical formula}F and {a mathematical formula}FC have the same parse tree, and the leaves are assigned the same values in both cases. Thus, by structural induction it follows that {a mathematical formula}νC⊨FC iff {a mathematical formula}ν⊨F.  □
+       </paragraph>
+       <paragraph>
+        Maximal models can also be captured by a specific monotone predicate.
+       </paragraph>
+       <paragraph label="Proposition 16">
+        {a mathematical formula}FMxM≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜X≜var(F) and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (15)) is of form {a mathematical formula}L, with {a mathematical formula}G≜F, {a mathematical formula}ui≜x, and {a mathematical formula}σ(x)≜x. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds. Note that {a mathematical formula}M denotes the set of variables that can be assigned value 0 and {a mathematical formula}R∖M is a set of variables that must be assigned value 1. As {a mathematical formula}P(M) holds, there exists {a mathematical formula}M′⊆M such that {a mathematical formula}ν(R∖M′,X)⊨F, i.e. {a mathematical formula}R∖M′ is a model of {a mathematical formula}F. As {a mathematical formula}M is minimal for P, then {a mathematical formula}M equals {a mathematical formula}M′, and thus {a mathematical formula}ν(R∖M,X)⊨F, i.e. {a mathematical formula}R∖M is a model of {a mathematical formula}F. Also, by Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M″⊊M the predicate does not hold, i.e. {a mathematical formula}ν(R∖M″,X)⊭F. As {a mathematical formula}M is minimal {a mathematical formula}R∖M is maximal. Thus, by Definition 22, {a mathematical formula}R∖M is a maximal model of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph label="Observation 7">
+        Regarding the reduction in the proof of Proposition 16, note that a maximal model of {a mathematical formula}F is given by {a mathematical formula}X∖M, with {a mathematical formula}M a minimal set over the predicate (15).
+       </paragraph>
+      </section>
+      <section label="4.2.5">
+       <section-title>
+        Implicants &amp; implicates
+       </section-title>
+       <paragraph>
+        This section considers the function problems of computing a prime implicant given a term (FPIt), a prime implicate given a clause (FPIc), as well as the longest extension of an implicant (FLEIt) and the longest extension of an implicate (FLEIc). Recall that for FPIt and FPIc, {a mathematical formula}F is an arbitrary propositional formula, whereas for FLEIt, {a mathematical formula}F is in DNF and for FLEIc, {a mathematical formula}F is in CNF.
+       </paragraph>
+       <paragraph label="Proposition 17">
+        {a mathematical formula}FPIt≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜L(t)≜{l|l∈t} and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (16)) is of form {a mathematical formula}P, with {a mathematical formula}G≜¬F, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds. Thus, {a mathematical formula}∧l∈M(l)⊨F. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}∧l∈M′(l)⊭F. Hence, as {a mathematical formula}M⊆L(t), by Definition 24, the conjunction of the literals in {a mathematical formula}M is a prime implicant of {a mathematical formula}F given term t.  □
+       </paragraph>
+       <paragraph>
+        Similarly, we can reduce the computation of a prime implicate given a clause to MSMP. (This reduction of FPIc to MSMP was first described in [25], [26].)
+       </paragraph>
+       <paragraph label="Proposition 18">
+        {a mathematical formula}FPIc≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜L(c)≜{l|l∈c} and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (17)) is of form {a mathematical formula}P, with {a mathematical formula}G≜F, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜¬l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds. Thus, {a mathematical formula}F⊨(∨l∈Ml). By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}F⊭(∨l∈M′l). Hence, as {a mathematical formula}M⊆L(c), by Definition 25, the disjunction of the literals in {a mathematical formula}M is a prime implicate of {a mathematical formula}F given clause c.  □
+       </paragraph>
+       <paragraph>
+        Regarding FLEIt, {a mathematical formula}F is in DNF, {a mathematical formula}F=∨j=1mtj, and let the implicant to extend be {a mathematical formula}tk, with {a mathematical formula}1≤k≤m. Also, let define {a mathematical formula}FItX≜(F)∧¬(F∖{tk}), that is, {a mathematical formula}FItX≜(∨j=1mtj)∧¬((∨j=1;j≠kmtj)), which can be simplified to {a mathematical formula}FItX≜tk∧∧i=1,i≠km(¬ti).
+       </paragraph>
+       <paragraph label="Proposition 19">
+        {a mathematical formula}FLEIt≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜L and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (18)) is of form {a mathematical formula}B, with {a mathematical formula}G≜FItX, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜¬l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that P holds, and let {a mathematical formula}u=(∨l∈R∖M¬l) be a clause and {a mathematical formula}q=¬u be a term, i.e. {a mathematical formula}q=∧l∈R∖M(l). As {a mathematical formula}P(M) holds, {a mathematical formula}FItX∧{u}⊨⊥, which is equivalent to {a mathematical formula}(F)∧¬(F∖{tk})∧{u}⊨⊥, and so {a mathematical formula}F⊨(F∖{tk})∨q. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. for any {a mathematical formula}q′=∧l∈R∖M′l, we have {a mathematical formula}F⊭(F∖{tk})∨q′. Note {a mathematical formula}q′⊋q. Now we show that {a mathematical formula}tk⊆q. As {a mathematical formula}FItX≜tk∧¬(F∖{tk}), for any {a mathematical formula}l∈tk, we have {a mathematical formula}tk∧¬(F∖{tk})⊨l, and so {a mathematical formula}F⊨(F∖{tk})∨l. Suppose there is one {a mathematical formula}l∈tk such that {a mathematical formula}l∉q, then we would have {a mathematical formula}F⊨(F∖{tk})∨(q∧l), thus contradicting the minimality of {a mathematical formula}M (maximality of q). As {a mathematical formula}tk⊨F and {a mathematical formula}(F∖{tk})⊨F (recall {a mathematical formula}F∈D) and {a mathematical formula}tk⊆q, then {a mathematical formula}(F∖{tk})∨q⊨F. Hence, {a mathematical formula}F≡(F∖{tk})∨q and, by Definition 26, q is the longest extension of implicant {a mathematical formula}tk of {a mathematical formula}F. Moreover, by Proposition 5, q is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Observation 8">
+        Regarding the reduction in the proof of Proposition 19, note that the longest extension of implicant {a mathematical formula}tk of {a mathematical formula}F is given by the conjunction of the literals in {a mathematical formula}L∖M, being {a mathematical formula}M a minimal set over the predicate (18).
+       </paragraph>
+       <paragraph>
+        Regarding FLEIc, {a mathematical formula}F is in CNF, {a mathematical formula}F=∧j=1m(cj), and let the implicate to extend be {a mathematical formula}ck, with {a mathematical formula}1≤k≤m. Moreover, let define {a mathematical formula}FIcX≜(¬F)∧(F∖{ck}), which can be simplified to {a mathematical formula}FIcX≜(¬ck)∧∧i=1,i≠km(ci).
+       </paragraph>
+       <paragraph label="Proposition 20">
+        {a mathematical formula}FLEIc≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜L and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (19)) is of form {a mathematical formula}B, with {a mathematical formula}G≜FIcX, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that P holds, and let {a mathematical formula}u=(∨l∈R∖Ml). As {a mathematical formula}P(M) holds, {a mathematical formula}FIcX∧{u}⊨⊥, which is equivalent to {a mathematical formula}(¬F)∧(F∖{ck})∧{u}⊨⊥, and so {a mathematical formula}(F∖{ck})∧{u}⊨F. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. for any {a mathematical formula}u′=(∨l∈R∖M′l), we have {a mathematical formula}(F∖{ck})∧{u′}⊭F. Note {a mathematical formula}u′⊋u. Now we show that {a mathematical formula}ck⊆u. As {a mathematical formula}FIcX≜(¬ck)∧(F∖{ck}), for any {a mathematical formula}l∈ck, we have {a mathematical formula}(¬ck)∧(F∖{ck})⊨¬l. Suppose there is one {a mathematical formula}l∈ck such that {a mathematical formula}l∉u, then we would have {a mathematical formula}(F∖{ck})∧({u}∨l)⊨F, thus contradicting the minimality of {a mathematical formula}M (maximality of u). As {a mathematical formula}F⊨{ck} and {a mathematical formula}F⊨(F∖{ck}) (recall {a mathematical formula}F∈C) and {a mathematical formula}ck⊆u, then {a mathematical formula}F⊨(F∖{ck})∧{u}. Hence, {a mathematical formula}F≡(F∖{ck})∧{u} and, by Definition 27, u is the longest extension of implicate {a mathematical formula}ck of {a mathematical formula}F. Moreover, by Proposition 5, u is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Observation 9">
+        Regarding the reduction in the proof of Proposition 20, note that the longest extension of clause {a mathematical formula}ck of {a mathematical formula}F is given by the disjunction of the literals in {a mathematical formula}L∖M, being {a mathematical formula}M a minimal set over the predicate (19).
+       </paragraph>
+      </section>
+      <section label="4.2.6">
+       <section-title>
+        Formula entailment
+       </section-title>
+       <paragraph>
+        The following propositions consider the function problems of computing a Minimal Entailing Subset (FMnES) and a Maximal Entailed Subset (FMxES). Recall that for FMnES, {a mathematical formula}I is an arbitrary propositional formula and {a mathematical formula}J is in CNF. For FMxES, {a mathematical formula}J is an arbitrary propositional formula and {a mathematical formula}N is in CNF.
+       </paragraph>
+       <paragraph label="Proposition 21">
+        {a mathematical formula}FMnES≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜J and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (20)) is of form {a mathematical formula}P, with {a mathematical formula}G≜¬I, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}M⊨I. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, that is, {a mathematical formula}M′⊭I. Hence, by Definition 28, {a mathematical formula}M is a minimal entailing subset of {a mathematical formula}J given {a mathematical formula}I.  □
+       </paragraph>
+       <paragraph label="Proposition 22">
+        {a mathematical formula}FMxES≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜N and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (21)) is of form {a mathematical formula}B, with {a mathematical formula}G≜J, {a mathematical formula}ui≜c, and {a mathematical formula}σ(c)≜¬c. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}J⊨(R∖M). By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold, that is, {a mathematical formula}J⊭(R∖M′). Hence, by Definition 29, {a mathematical formula}N∖M is a maximal entailed subset of {a mathematical formula}N given {a mathematical formula}J. Moreover, by Proposition 5, {a mathematical formula}N∖M is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Observation 10">
+        Regarding the reduction in the proof of Proposition 22, note that the maximal entailed subset of {a mathematical formula}N given {a mathematical formula}J is given by {a mathematical formula}N∖M, being {a mathematical formula}M a minimal set over the predicate (21).
+       </paragraph>
+      </section>
+      <section label="4.2.7">
+       <section-title>
+        Backbone literals
+       </section-title>
+       <paragraph>
+        This section provides reductions for the function problem of computing the backbone (FBB) of a an arbitrary propositional formula {a mathematical formula}F. Recall that FBBr refers to computing the backbone given a model.
+       </paragraph>
+       <paragraph label="Proposition 23">
+        {a mathematical formula}FBBr≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. Consider a set of literals {a mathematical formula}V, obtained from an initial satisfying assignment ν. The reduction is defined as follows. {a mathematical formula}R≜V and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (22)) is of form {a mathematical formula}B, with {a mathematical formula}G≜F, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜¬l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}F⊨∧l∈R∖Ml. So, for all {a mathematical formula}l∈R∖M, we have {a mathematical formula}F⊨l, i.e. l is a backbone literal of {a mathematical formula}F. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. Then, for each {a mathematical formula}l′∈M, {a mathematical formula}P(M−{l′}) does not hold, and so we have that {a mathematical formula}F⊭∧l∈(R∖M)∪{l′}l. Thus, {a mathematical formula}l′ is not a backbone literal of {a mathematical formula}F. Thus, by Definition 31, {a mathematical formula}V∖M is a maximal set of backbone literals of {a mathematical formula}F. Moreover, by Proposition 5, {a mathematical formula}V∖M is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Observation 11">
+        Regarding the reduction in the proof Proposition 23, the computed minimal set {a mathematical formula}T is the complement of the set of backbone literals, which is given by {a mathematical formula}V∖T.
+       </paragraph>
+       <paragraph>
+        In practice, and for efficiency reasons, algorithms for computing the backbone of a Boolean formula start from a reference satisfying assignment (i.e. the FBBr function problem) [69]. However, the reduction of the general backbone computation problem to MSMP yields interesting insights into the worst-case number of SAT oracle queries needed to compute the backbone of a Boolean formula.
+       </paragraph>
+       <paragraph>
+        In this respect, there are two different alternatives: A predicate that computes the set of backbone variables, and a predicate that computes the set of backbone literals. In the first case, after computing the backbone variables, a call to a SAT solver is required in order to discover the polarities of the variables, i.e., the backbone literals. These reductions are illustrated in the two following propositions.
+       </paragraph>
+       <paragraph label="Proposition 24">
+        {a mathematical formula}FBB≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction is defined as follows. {a mathematical formula}R≜X, with {a mathematical formula}X=var(F). Consider one auxiliary set of variables {a mathematical formula}X′, with {a mathematical formula}|X′|=|X|, and let:{a mathematical formula} Finally, let:{a mathematical formula}Monotonicity. The predicate (see (24)) is of form {a mathematical formula}B, with {a mathematical formula}G≜FBB, {a mathematical formula}ui≜x, and {a mathematical formula}σ(x)≜x∧¬x′, where {a mathematical formula}x′ is a new variable not in {a mathematical formula}R, but associated with x. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}FBB⊨∧x∈R∖M(¬x∨x′). So, for all {a mathematical formula}x∈R∖M, we have that {a mathematical formula}FBB⊨x or {a mathematical formula}FBB⊨¬x, and thus {a mathematical formula}F⊨x or {a mathematical formula}F⊨¬x, i.e. x is a backbone variable of {a mathematical formula}F. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. Then, for each {a mathematical formula}y∈M, {a mathematical formula}P(M−{y}) does not hold, and so we have that {a mathematical formula}F⊭y and {a mathematical formula}F⊭¬y. Thus, y is not a backbone variable of {a mathematical formula}F. Thus, {a mathematical formula}V∖M is a maximal set of backbone variables of {a mathematical formula}F. Moreover, {a mathematical formula}V∖M is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Proposition 25">
+        {a mathematical formula}FBB≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. Consider the set of literals {a mathematical formula}L of {a mathematical formula}F, as the reference set. The reduction is defined as follows. {a mathematical formula}R≜L and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (25)) is of form {a mathematical formula}B, with {a mathematical formula}G≜F, {a mathematical formula}ui≜l, and {a mathematical formula}σ(l)≜¬l. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}F⊨∧l∈R∖Ml. So, for all {a mathematical formula}l∈R∖M, we have {a mathematical formula}F⊨l, i.e. l is a backbone literal of {a mathematical formula}F. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. Then, for each {a mathematical formula}l′∈M, {a mathematical formula}P(M−{l′}) does not hold, and so we have that {a mathematical formula}F⊭∧l∈(R∖M)∪{l′}l. Thus, {a mathematical formula}l′ is not a backbone literal of {a mathematical formula}F. Thus, by Definition 31, {a mathematical formula}L∖M is a maximal set of backbone literals of {a mathematical formula}F. Moreover, by Proposition 5, {a mathematical formula}L∖M is maximal and unique.  □
+       </paragraph>
+       <paragraph>
+        Because of the reduction proposed in the previous proof, the function problem that is solved is the identification of the set of backbone literals. In this case, it is not necessary to make an additional call to the SAT solver, such as in the reductions shown in Proposition 23, where the SAT call is made at the beginning to obtain a model, and in Proposition 24, where the backbone variables are identified and a SAT call is necessary at the end to discover the backbone literals (i.e. the polarities of these variables). Nevertheless, the size of the reference set is, in this case, twice the size in the two previous cases.
+       </paragraph>
+       <paragraph>
+        Observe that devising a predicate for generalized backbones [36] is straightforward; simply use (25) but let {a mathematical formula}R capture the set of possible variable equivalences. Similarly, it is simple to reduce global inverse consistency [18] to MSMP. (The notation from [18] is assumed.) For simplicity, let N denote a constraint network and let {a mathematical formula}F≜CNF(N) denote the CNF encoding of N. Also, let {a mathematical formula}X={x1,…,xn} denote the set of variables of N, all with domain {a mathematical formula}D={d1,…,dk}. Moreover, consider a direct encoding where Boolean variable {a mathematical formula}yij is assigned value 1 iff variable {a mathematical formula}xi is assigned value {a mathematical formula}vj. Finally, let {a mathematical formula}R≜{yij}. Given the above, the reduction is as follows:{a mathematical formula} with {a mathematical formula}W⊆R. The single minimal set {a mathematical formula}M⊆R for which {a mathematical formula}P(M) holds contains all the assignments for which there is no satisfying assignment. More interestingly, and given the results in [106], this means that GIC can be solved with a logarithmic number of oracle queries. Concretely, [106] proves that predicates of form {a mathematical formula}B can be solved with a logarithmic number of witness oracle queries. Since GIC is reduced to MSMP in form {a mathematical formula}B, then it can be solved with a logarithmic number of oracle queries.
+       </paragraph>
+      </section>
+      <section label="4.2.8">
+       <section-title>
+        Variable independence
+       </section-title>
+       <paragraph>
+        The following reduction captures the function problem of computing the set of independent variables (FVInd) from an arbitrary propositional formula.
+       </paragraph>
+       <paragraph label="Proposition 26">
+        {a mathematical formula}FVInd≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. Consider the original set of variables X and another set of variables Y, such that {a mathematical formula}|Y|=|X|. {a mathematical formula}F is to be checked for equivalence against {a mathematical formula}F[X/Y], i.e. a copy of itself using new variables. An additional constraint is that some of these variables are equivalent. The non-equivalence between the two formulae is captured as follows:{a mathematical formula} Given {a mathematical formula}FVInd, the reduction is defined as follows. {a mathematical formula}R≜X and{a mathematical formula}Monotonicity. The predicate (see (28)) is of form {a mathematical formula}P, with {a mathematical formula}G≜FVInd, {a mathematical formula}ui≜xi, and {a mathematical formula}σ(xi)≜xi↔yi, where {a mathematical formula}yi is a new variable not in {a mathematical formula}R, but associated with {a mathematical formula}xi. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}F[X/X]≡F[X/Y] whenever {a mathematical formula}∧xi∈M(xi↔yi). By Proposition 6, the variables in {a mathematical formula}R∖M are redundant for {a mathematical formula}F, as {a mathematical formula}F remains equivalent regardless of the value they take. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. So, for each {a mathematical formula}x′∈M, {a mathematical formula}P(M−{x′}) does not hold, and so we have that {a mathematical formula}F[X/X]≢F[X/Y] whenever {a mathematical formula}∧xi∈M−{x′}(xi↔yi). Thus, we can conclude {a mathematical formula}x′ is not redundant for {a mathematical formula}F. Hence, by Definition 32, {a mathematical formula}X∖M is a maximal set of variables {a mathematical formula}F is independent from. Moreover, by Proposition 5, {a mathematical formula}X∖M is maximal and unique.  □
+       </paragraph>
+       <paragraph label="Observation 12">
+        Regarding the reduction in the proof of Proposition 26, note that the set of independent variables of {a mathematical formula}F is given by {a mathematical formula}X∖M, being {a mathematical formula}M a minimal set over the predicate (28).
+       </paragraph>
+      </section>
+      <section label="4.2.9">
+       <section-title>
+        Maximum autarkies
+       </section-title>
+       <paragraph>
+        Autarkies can be captured with two different monotone predicate forms. The first predicate is of form {a mathematical formula}L.
+       </paragraph>
+       <paragraph label="Proposition 27">
+        {a mathematical formula}FAut≤pMSMP(form{a mathematical formula}L).
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. The reduction uses a simplified version of the model proposed in [100]. Consider a CNF formula {a mathematical formula}F with a set of variables {a mathematical formula}X=var(F). Create new sets of variables {a mathematical formula}X+, {a mathematical formula}X0, {a mathematical formula}X1, such that for {a mathematical formula}x∈X, {a mathematical formula}x+ indicates whether a variable is selected, and {a mathematical formula}x1 and {a mathematical formula}x0 replace, respectively, the literals x and ¬x in the clauses of {a mathematical formula}F. Thus, {a mathematical formula}F is transformed into a new formula {a mathematical formula}F0,1, where each literal in x is translated either into {a mathematical formula}x1 or {a mathematical formula}x0. The resulting CNF formula, {a mathematical formula}FAut, consists of CNF-encoding the following sets of constraints. For each {a mathematical formula}x∈X, add to {a mathematical formula}FAut (the clauses resulting from encoding) {a mathematical formula}x1↔x+∧x and {a mathematical formula}x0↔x+∧¬x. If a clause {a mathematical formula}c0,1∈F0,1 has a literal in x, then add to {a mathematical formula}FAut the clause {a mathematical formula}(x+→c0,1). So, the variable {a mathematical formula}x+ activates all {a mathematical formula}c0,1 that mention x and either {a mathematical formula}x0 or {a mathematical formula}x1 (depending on the value of x). Now, {a mathematical formula}R≜X+ and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (29)) is of form {a mathematical formula}L, with {a mathematical formula}G≜FAut, {a mathematical formula}ui≜x+, and {a mathematical formula}σ(x+)=x+. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}FAut∧∧x+∈R∖M(x+) is satisfiable. So, by the construction of {a mathematical formula}FAut, there exists an assignment to the variables associated with {a mathematical formula}R∖M that satisfies the subformula of {a mathematical formula}F comprising the clauses with some literal in the variables associated with those in {a mathematical formula}R∖M. Hence, the set of variables associated with {a mathematical formula}R∖M is an autarky. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. Then, the set of variables associated with those in {a mathematical formula}R∖M′ is not an autarky. Thus, by Definition 33, {a mathematical formula}R∖M denotes a maximal autarky of {a mathematical formula}F. Moreover, by Proposition 5, the maximal autarky is unique and maximum.  □
+       </paragraph>
+       <paragraph label="Observation 13">
+        Regarding the reduction in the proof Proposition 27, the computed minimal set {a mathematical formula}M is the complement of the set of autark variables, which is given by {a mathematical formula}var(F)∖M.
+       </paragraph>
+       <paragraph>
+        The model used in the reduction of Proposition 27 is referred to as {a mathematical formula}Γ1 in [104]. The same paper proposes two additional and more compact models, derived from {a mathematical formula}Γ1, that should be preferred for practical purposes. An alternative predicate for FAut is of form {a mathematical formula}B, as shown next.
+       </paragraph>
+       <paragraph label="Proposition 28">
+        {a mathematical formula}FAut≤pMSMP(form{a mathematical formula}B).
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. As before, the reduction uses a simplified version of the model proposed in [100] (see proof of Proposition 27). Given these definitions, {a mathematical formula}R≜X+ and{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (30)) is of form {a mathematical formula}B, with {a mathematical formula}G≜FAut, {a mathematical formula}ui≜x+, and {a mathematical formula}σ(x+)=x+. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}FAut⊨∧x+∈R∖M(¬x+) and so, for all {a mathematical formula}x+∈R∖M, {a mathematical formula}FAut⊨(¬x+). By the construction of {a mathematical formula}FAut, there is no assignment to the variables associated with {a mathematical formula}R∖M that satisfies the subformula of {a mathematical formula}F comprising the clauses with some literal in the variable associated with {a mathematical formula}R∖M. Hence, {a mathematical formula}R∖M denotes a set of non-autark variables. By Definition 2, since {a mathematical formula}M is minimal for P, then for any {a mathematical formula}M′⊊M the predicate does not hold. Then, for all {a mathematical formula}x′∈M, {a mathematical formula}FAut⊭∧x+∈(R∖M)∪{x′}(¬x+), and so, {a mathematical formula}x′ is an autark variable. Thus, {a mathematical formula}R∖M denotes a maximal set of non-autark variables. By Proposition 5, there is a unique maximal set of autark variables. From this, we can also conclude the uniqueness of the maximal set of non-autark variables ({a mathematical formula}R∖M). So, by Definition 33, {a mathematical formula}M denotes the maximal autarky of {a mathematical formula}F.  □
+       </paragraph>
+      </section>
+      <section label="4.2.10">
+       <section-title>
+        Minimal independent support
+       </section-title>
+       <paragraph>
+        Recent work showed that computing one MIS can be reduced to group MUS [65]. We follow a similar approach to reduce FMIS to MSMP.
+       </paragraph>
+       <paragraph label="Proposition 29">
+        {a mathematical formula}FMIS≤pMSMP.
+       </paragraph>
+       <paragraph label="Proof">
+        Reduction. Associate with each variable in X an integer index. Let {a mathematical formula}IX be the set of integer indices of the variables in X. Two additional sets of variables are considered, Y and Z, and let the same indices be used. Moreover let,{a mathematical formula}{a mathematical formula}FMIS holds if there are two satisfying assignments of {a mathematical formula}F that differ in some variable. Define {a mathematical formula}R≜IX, and let,{a mathematical formula} with {a mathematical formula}W⊆R.Monotonicity. The predicate (see (32)) is of form {a mathematical formula}P, with {a mathematical formula}G≜FMIS, {a mathematical formula}ui≜i, and {a mathematical formula}σ(i)≜yi↔zi where {a mathematical formula}yi and {a mathematical formula}zi are new variables not in {a mathematical formula}R, but associated with the indices in i. Thus, by Proposition 7 the predicate is monotone.Correctness. Let {a mathematical formula}M be a minimal set such that {a mathematical formula}P(M) holds, i.e. {a mathematical formula}FMIS∧∧i∈M(yi↔zi)⊨⊥, and so there are no two satisfying assignments of {a mathematical formula}F that agree on the variables with indices in {a mathematical formula}M and disagree on some other variables. Thus, the variables with indices in {a mathematical formula}M are an independent support of {a mathematical formula}F. By Definition 2, since {a mathematical formula}M is minimal for {a mathematical formula}P′, then for any {a mathematical formula}M′⊊M the predicate does not hold, i.e. {a mathematical formula}FMIS∧∧i∈M′(yi↔zi)⊭⊥, and so the variables with indices in {a mathematical formula}M′ are not an independent support of {a mathematical formula}F. Thus, by Definition 34, the variables with indices in {a mathematical formula}M are a minimal independent support of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph>
+        In contrast with FVInd, and as pointed out in earlier work [65], there can be multiple solutions of FMIS.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Optimization problems
+      </section-title>
+      <paragraph>
+       To illustrate the modeling flexibility of monotone predicates, this section investigates how to solve optimization problems, namely computing a smallest Minimal Correction Subset (FSMCS), a smallest Minimal Distinguishing Subset (FSMDS), a largest Maximal Falsifiable Subset (FLMFS) and a smallest minimal model (FSMnM). In contrast with the previous section, the objective here is not to develop efficient algorithms or insight, but to show other uses of monotone predicates. It should be noted that computing cardinality minimal sets for some of the other function problems, e.g. FMUS, FMES, FPIt, FPIc, etc., is significantly harder, since these function problems are in the second level of the polynomial hierarchy, e.g. [53], [147].
+      </paragraph>
+      <paragraph>
+       In the remainder of this section, unweighted formulations are considered, i.e. each clause is soft with weight 1.
+      </paragraph>
+      <paragraph label="Proposition 30">
+       {a mathematical formula}FSMCS≤pMSMP.
+      </paragraph>
+      <paragraph label="Proof">
+       Reduction. Let {a mathematical formula}B={0,1,2,…,|F|} denote the possible numbers of clauses that are required to be satisfied. Furthermore, for each clause {a mathematical formula}ci∈F, create a relaxed copy {a mathematical formula}(¬pi∨ci) and let {a mathematical formula}FR denote the CNF formula where each clause {a mathematical formula}ci is replaced by its relaxed version. Let {a mathematical formula}P denote the set of selection variables. For each {a mathematical formula}bj∈B create the constraint {a mathematical formula}∑pi∈Ppi≥bj. Each of these constraints defines a lower bound on the number of satisfied clauses. Define {a mathematical formula}R≜B. Moreover, given {a mathematical formula}W⊆R let,{a mathematical formula} Finally, the predicate is defined as follows:{a mathematical formula} Note that the reduction is indeed polynomial.Monotonicity. Given the definition of {a mathematical formula}Q(W) in (33), the predicate (34) is of form {a mathematical formula}L, with {a mathematical formula}G≜FR, {a mathematical formula}ui≜bj, and {a mathematical formula}σ(bj)≜(∑pi∈Ppi≥bj). Thus, by Proposition 7 the predicate is monotone.Correctness. The set of true {a mathematical formula}pi variables picks a subset {a mathematical formula}S of the clauses in {a mathematical formula}F, which is to be checked for satisfiability. Given the formulation, it holds that a subset-minimal set must correspond to a cardinality minimal set. If, by removing from {a mathematical formula}W the element associated with some value {a mathematical formula}bj satisfies the predicate, then removing from {a mathematical formula}W any element associated with the {a mathematical formula}bk of value no greater than {a mathematical formula}bj also satisfies the predicate, and this holds with the same truth assignment, namely the same set of selected clauses. Thus, any minimal set must exclude the element associated with the largest value {a mathematical formula}bj such that the predicate holds, and must also exclude any element associated with {a mathematical formula}bk of value no greater than {a mathematical formula}bj. Thus, the elements not removed from {a mathematical formula}W are associated with {a mathematical formula}bk representing sizes of sets of clauses such that not all can be simultaneously satisfied. Hence, the minimal set represents a smallest MCS of {a mathematical formula}F.  □
+      </paragraph>
+      <paragraph label="Proposition 31">
+       {a mathematical formula}FSMDS≤pMSMP.
+      </paragraph>
+      <paragraph label="Proof">
+       Reduction. The definitions of the reduction in the proof of Proposition 30 apply. As a result, the predicate is defined as follows:{a mathematical formula}Monotonicity. Given the definition of {a mathematical formula}Q(W) in (33), the predicate (35) is of form {a mathematical formula}L, with {a mathematical formula}G≜¬F∧FR, {a mathematical formula}ui≜bj, and {a mathematical formula}σ(bj)≜(∑pi∈Ppi≥bj). Thus, by Proposition 7 the predicate is monotone.Correctness. The set of true {a mathematical formula}pi variables picks a subset {a mathematical formula}S of the clauses in {a mathematical formula}F. Thus, it must hold that {a mathematical formula}F⊨S. Then, one wants to pick a largest subset {a mathematical formula}N of {a mathematical formula}F such that {a mathematical formula}N⊭F. A minimal set {a mathematical formula}M⊆R over P corresponds to a maximal set {a mathematical formula}R∖M, containing all the constraints {a mathematical formula}(∑pi∈Ppi≥bj) that can be satisfied. Hence, this gives a largest set {a mathematical formula}N of selected clauses such that {a mathematical formula}N⊭F, i.e. {a mathematical formula}N constitutes, by Definition 14, a largest MNS of {a mathematical formula}F. Thus, its complement, {a mathematical formula}M, corresponds to a smallest MDS of {a mathematical formula}F.  □
+      </paragraph>
+      <paragraph label="Proposition 32">
+       {a mathematical formula}FSMCFS≤pMSMP.
+      </paragraph>
+      <paragraph label="Proof">
+       Reduction. The elements to relax in this case are the complements of the clauses, which will be satisfied (so that the clauses are falsified). As a result, define {a mathematical formula}NR≜∧ci∈F(¬pi∨¬ci). The predicate can then be defined as follows:{a mathematical formula}Monotonicity. Given the definition of {a mathematical formula}Q(W) in (33), the predicate (36) is of form {a mathematical formula}L, with {a mathematical formula}G≜NR, {a mathematical formula}ui≜bj, and {a mathematical formula}σ(bj)≜(∑pi∈Ppi≥bj). Thus, by Proposition 7 the predicate is monotone.Correctness. The set of true {a mathematical formula}pi variables picks a subset {a mathematical formula}S of the clauses in {a mathematical formula}F. In this case, by the construction of {a mathematical formula}NR, the predicate holds for the subset {a mathematical formula}S iff {a mathematical formula}¬S⊭⊥, i.e. iff {a mathematical formula}S is all-falsifiable. A minimal set {a mathematical formula}M⊆R over P corresponds to a maximal set {a mathematical formula}R∖M, containing all the constraints {a mathematical formula}(∑pi∈Ppi≥bj) which is all-falsifiable. Hence, by Definition 19, {a mathematical formula}R∖M constitutes a largest MFS of {a mathematical formula}F. Thus, {a mathematical formula}M is a smallest MCFS of {a mathematical formula}F.  □
+      </paragraph>
+      <paragraph label="Proposition 33">
+       {a mathematical formula}FSMnM≤pMSMP.
+      </paragraph>
+      <paragraph label="Proof">
+       Reduction. The elements to relax in this case are the variables assigned value true. As a result, define {a mathematical formula}VR≜∧xi∈V(¬pi∨¬xi). The predicate can then be defined as follows:{a mathematical formula}Monotonicity. Given the definition of {a mathematical formula}Q(W) in (33), the predicate (37) is of form {a mathematical formula}L, with {a mathematical formula}G≜F∧VR, {a mathematical formula}ui≜bj, and {a mathematical formula}σ(bj)≜(∑pi∈Ppi≥bj). Thus, by Proposition 7 the predicate is monotone.Correctness. The set of true {a mathematical formula}pi variables picks a subset {a mathematical formula}V of the variables in {a mathematical formula}F that must be assigned value 0. Then, one wants to pick a largest set of variables that must be assigned value 0. A minimal set {a mathematical formula}M⊆R over P corresponds to a maximal set {a mathematical formula}R∖M, containing all the constraints {a mathematical formula}(∑pi∈Ppi≥bj) such that there exists a model of {a mathematical formula}F assigning value 0 to all the variables in {a mathematical formula}R∖M. This model is given by {a mathematical formula}M. Hence, {a mathematical formula}R∖M constitutes a largest set of variables assigned value 0 in a model of {a mathematical formula}F, and thus, by Definition 23, {a mathematical formula}M is a smallest minimal model of {a mathematical formula}F.  □
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Summary of reductions
+      </section-title>
+      <paragraph>
+       Table 1 summarizes the reductions described in Section 4.2 and in Section 4.3. For each problem, the associated reference provides the complete details of the reduction to the MSMP problem. The first part denotes function problems where the goal is to compute a minimal set. The second part denotes function problems that represent optimization problems. Besides the function problems summarized in Table 1, Section 3.1 and also Section 4.2 indicate that several other problems related with Boolean formulae can also be mapped into the MSMP problem. These include variants of the presented problems when considering groups of clauses, variables, hard clauses, etc.
+      </paragraph>
+      <paragraph>
+       Finally, the GIC problem [18] in CSP (see (26) on page 41) serves to illustrate that MSMP also finds application in non-Boolean domains.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Relationships between predicate forms
+     </section-title>
+     <paragraph>
+      This section establishes some relations among different predicates. The first part establishes hitting set duality between predicate forms {a mathematical formula}P and {a mathematical formula}L. The second part investigates the relationship between predicate forms {a mathematical formula}L and {a mathematical formula}B.
+     </paragraph>
+     <section label="5.1">
+      Hitting set duality between predicates of forms {a mathematical formula}L and {a mathematical formula}P
+      <paragraph>
+       Hitting set duality relationships can be traced to the work of Reiter [129], with additional results for propositional formulae over the years [21], [5], [99]. A recent treatment of duality is exemplified by the work of Slaney [141], which also addresses the issue of monotone predicates. This section shows that hitting set duality manifests itself in terms of the predicate forms considered, and so can be viewed as a refinement of recent results [141].
+      </paragraph>
+      <paragraph>
+       Consider arbitrary but fixed set {a mathematical formula}R, formula {a mathematical formula}G, elements {a mathematical formula}ui and function σ.
+      </paragraph>
+      <paragraph>
+       Let predicate {a mathematical formula}PL be defined as {a mathematical formula}PL(W)≜SAT(G∧∧ui∈R∖W(σ(ui))) and let {a mathematical formula}ML(R) be the set of all minimal sets over {a mathematical formula}PL. Moreover, let predicate {a mathematical formula}PP be defined as {a mathematical formula}PP(W)≜¬SAT(G∧∧ui∈W(σ(ui))) and let {a mathematical formula}MP(R) be the set of all minimal sets over {a mathematical formula}PP. The following result holds (the proof follows a structure similar to proofs presented in previous works [129], [21], [5], [99], [141]).
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Let{a mathematical formula}M⊆Rand{a mathematical formula}U⊆R. The following holds:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}M∈ML(R)if and only if{a mathematical formula}Mis an irreducible hitting set of{a mathematical formula}MP(R)
+       </list-item>
+       <list-item>
+        {a mathematical formula}U∈MP(R)if and only if{a mathematical formula}Uis an irreducible hitting set of{a mathematical formula}ML(R)
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Part 1, If: Let {a mathematical formula}M be an irreducible hitting set of {a mathematical formula}MP(R), and let {a mathematical formula}S=R∖M. First, since {a mathematical formula}M is a hitting set of {a mathematical formula}MP(R), S cannot contain a set in {a mathematical formula}MP(R), and so, {a mathematical formula}¬PP(S), that is {a mathematical formula}SAT(G∧∧ui∈S(σ(ui))) holds, which is equivalent to {a mathematical formula}SAT(G∧∧ui∈R∖M(σ(ui))). Thus {a mathematical formula}PL(M) holds. Since {a mathematical formula}M is an irreducible hitting set of {a mathematical formula}MP(R), for any element {a mathematical formula}u∈M, there exists {a mathematical formula}U∈MP(R) such that {a mathematical formula}M∩U={u}. Hence, for any {a mathematical formula}u∈M, the set {a mathematical formula}S∪{u} includes some minimal set in {a mathematical formula}MP(R), and so {a mathematical formula}PP(S∪{u}) holds, i.e. {a mathematical formula}¬SAT(G∧∧ui∈S∪{u}(σ(ui))), which is equivalent to {a mathematical formula}¬SAT(G∧∧ui∈R∖(M−{u})(σ(ui))). Thus {a mathematical formula}PL(M−{u}) does not hold. We conclude that {a mathematical formula}M is a minimal set over {a mathematical formula}PL.Part 1, Only If: Let {a mathematical formula}M be a minimal set over {a mathematical formula}PL and let {a mathematical formula}S=R∖M. Since {a mathematical formula}SAT(G∧∧ui∈R∖M(σ(ui))) holds, {a mathematical formula}SAT(G∧∧ui∈S(σ(ui))) holds, and thus {a mathematical formula}¬SAT(G∧∧ui∈S(σ(ui))) does not hold, i.e., {a mathematical formula}PP(S) does not hold. Hence, for any {a mathematical formula}U∈MP(R), {a mathematical formula}U∖S≠∅ (otherwise {a mathematical formula}U⊆S), and so {a mathematical formula}U∩M≠∅, that is, {a mathematical formula}M is a hitting set of {a mathematical formula}MP(R). Now, since {a mathematical formula}M is a minimal set over {a mathematical formula}PL, for every element {a mathematical formula}u∈M, {a mathematical formula}PL(M−{u}) does not hold, i.e. {a mathematical formula}¬SAT(G∧∧ui∈R∖(M−{u})(σ(ui))) holds, which is equivalent to {a mathematical formula}¬SAT(G∧∧ui∈S∪{u}(σ(ui))). Thus {a mathematical formula}PP(S∪{u}) holds. Thus, for every element {a mathematical formula}u∈M, there exists a minimal set {a mathematical formula}U over {a mathematical formula}PP such that {a mathematical formula}M∩U={u}. By definition, {a mathematical formula}M is an irreducible hitting set of {a mathematical formula}MP(R).Part 2, If: Let {a mathematical formula}U be an irreducible hitting set of {a mathematical formula}ML(R). So, for any {a mathematical formula}M∈ML(R), {a mathematical formula}U∩M≠∅. Since {a mathematical formula}M is a minimal set such that {a mathematical formula}SAT(G∧∧ui∈R∖M(σ(ui))) holds , {a mathematical formula}S=R∖M is a maximal set such that {a mathematical formula}SAT(G∧∧ui∈S(σ(ui))) holds, or equivalently, such that {a mathematical formula}PP does not hold. As for no {a mathematical formula}S we have {a mathematical formula}U⊆S, we can conclude {a mathematical formula}PP(U) holds. Since {a mathematical formula}U is irreducible, for every element {a mathematical formula}u∈U, there exists a set {a mathematical formula}M∈ML(R) such that {a mathematical formula}U∩M={u}. Thus, for every {a mathematical formula}u∈U, there exists {a mathematical formula}M such that {a mathematical formula}U′=U∖{u}⊆R∖M, and as {a mathematical formula}SAT(G∧∧ui∈R∖M(σ(ui))) holds, {a mathematical formula}SAT(G∧∧ui∈U′(σ(ui))) holds as well. Thus, {a mathematical formula}PP(U′) does not hold. We conclude that {a mathematical formula}U is a minimal set over {a mathematical formula}PP.Part 2, Only If: Let {a mathematical formula}U be a minimal set over {a mathematical formula}PP. Since {a mathematical formula}¬SAT(G∧∧ui∈U(σ(ui))) holds, {a mathematical formula}U cannot be included in any maximal set {a mathematical formula}S such that {a mathematical formula}PP(S) does not hold, i.e. {a mathematical formula}SAT(G∧∧ui∈S(σ(ui))), and so, for every set {a mathematical formula}M=R∖S∈ML(R), we have {a mathematical formula}U∩M≠∅, i.e. {a mathematical formula}U is a hitting set of {a mathematical formula}ML(R). Now, since {a mathematical formula}U is a minimal set over {a mathematical formula}PP, for any element {a mathematical formula}u∈U, {a mathematical formula}PP(U∖{u}) does not hold, and so the set {a mathematical formula}U∖{u} is included in some maximal set {a mathematical formula}S such that {a mathematical formula}SAT(G∧∧ui∈S(σ(ui))) holds, being {a mathematical formula}S=R∖M for some minimal set {a mathematical formula}M such that {a mathematical formula}PL(M) holds. Hence, for any element {a mathematical formula}u∈U there exists a minimal set {a mathematical formula}M over {a mathematical formula}PL such that {a mathematical formula}U∩M={u}. So, by definition, {a mathematical formula}U is a minimal hitting set of {a mathematical formula}ML(R).  □
+      </paragraph>
+      <paragraph>
+       An immediate corollary of Theorem 1 is the well-known hitting set duality between MUSes and MCSes of propositional formulae [129]. It also captures the hitting set duality between MESes and MDSes of propositional formulae. In addition, the general hitting set duality between predicates of form {a mathematical formula}P and predicates of form {a mathematical formula}L could serve to obtain additional insights. For instance, exploiting hitting set duality is the basis for current state-of-the-art MUS enumeration algorithms [99], [125], [97], [98], [158] or prime implicants/implicates knowledge compilation methods [124], as well as for approaches aimed at solving hard optimization problems in the second level of the polynomial hierarchy, such as computing a cardinality minimal MUS [63] or formula simplification [64]. Thus, the general hitting set duality proved above can also serve to obtain new algorithms for other challenging enumeration or optimization problems.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      Equivalence between predicates of forms {a mathematical formula}B and {a mathematical formula}L
+      <paragraph>
+       We have seen that there are some function problems, such as autarkies, that can be captured by different predicates of both forms {a mathematical formula}B and {a mathematical formula}L. At this point, the reader may be wondering if there exists a general relationship between these two kinds of predicates regardless of the particular function problem they represent. We show that for any predicate of form {a mathematical formula}B there exists an equivalent predicate of form {a mathematical formula}L, the size of the latter being bounded by a quadratic increment w.r.t. the former.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Given a predicate{a mathematical formula}PBof form{a mathematical formula}B, the problem of computing a minimal set over{a mathematical formula}PBcan be reduced to the problem of computing a minimal set over{a mathematical formula}PLof form{a mathematical formula}L.
+      </paragraph>
+      <paragraph label="Proof">
+       This is an immediate consequence of the results in [106], [70].  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Practical impact
+     </section-title>
+     <paragraph>
+      The development of MSMP as a framework for representing minimal set problems has impacted research in a number of related areas, both from a practical and from a theoretical perspective.
+     </paragraph>
+     <paragraph>
+      The most visible impact is arguably the new generation of algorithms for finding minimal correction subsets [103], [114], [113]. Some of these new algorithms for finding MCSes require fewer than linear number of calls to a SAT oracle, this while retaining the original problem variables. Recent work on finding minimal unsatisfiable subformulas has also been influenced by MSMP [4]. Similarly, work on finding minimal equivalent subformulas [10] has been directly influenced by MSMP.
+     </paragraph>
+     <paragraph>
+      Some recent algorithms for MaxSAT represent another relevant line of work, that was motivated by insights from work on MSMP [60].
+     </paragraph>
+     <paragraph>
+      The insights provided by MSMP also enable developing a new generation of algorithms for computing autarkies [104], [89], again achieving worst-case number of oracle calls that significantly improve earlier results.
+     </paragraph>
+     <paragraph>
+      The ability to relate apparently different problems resulted in an ever-increasing number of techniques being proposed for solving problems in novel ways [103], [10], [69], [114].
+     </paragraph>
+     <paragraph>
+      Investigation on approaches for reducing the worst-case number of oracle calls also enabled novel results for computing the backbone of a propositional formula as well as the for MUS extraction when the number of MUSes is known to be constant [106], [70].
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions &amp; research directions
+     </section-title>
+     <paragraph>
+      This paper extends recent work [25], [26], [107] on monotone predicates and shows that a large number of function problems defined on Boolean formulae can be reduced to computing a minimal set over a monotone predicate. Besides Boolean formulae, the paper argues that monotone predicates find application in more expressive domains, including ILP, SMT and CSP.
+     </paragraph>
+     <paragraph>
+      A number of research directions can be envisioned. A natural question is to identify other function problems that can be reduced to the MSMP problem. Algorithms for MSMP are described elsewhere [107]. Another natural research question is whether additional algorithms can be developed. In addition, most practical algorithms for solving minimal set problems exploit a number of practical optimizations to reduce the number of oracle queries [11], [107], [103]. Another natural research question is whether these practical optimizations can be used in the more general setting of MSMP. Finally, another line of research is to develop precise query complexity characterizations of instantiations of the MSMP, with [106], [70] representing initial work. Concrete examples of interest include FMUS, FPIc, FPIt, FBB, FVInd, among others.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

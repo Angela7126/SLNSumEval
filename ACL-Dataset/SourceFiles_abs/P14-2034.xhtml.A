@@ -1,0 +1,551 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Word Segmentation of Informal Arabic with Domain Adaptation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Segmentation of words, clitics, and affixes is essential for a number
+of natural language processing (NLP) applications, including machine translation,
+parsing, and speech recognition [1, 14, 9]. Segmentation is a common practice
+in Arabic NLP due to the language’s morphological richness. Specifically, clitic
+separation has been shown to improve performance on Arabic parsing [5] and
+Arabic-English machine translation [8]. However, the variety of Arabic dialects
+presents challenges in Arabic NLP. Dialectal Arabic contains non-standard
+orthography, vocabulary, morphology, and syntax. Tools that depend on corpora
+or grammatical properties that only consider formal Modern Standard Arabic (MSA)
+do not perform well when confronted with these differences. The creation of
+annotated corpora in dialectal Arabic [11] has promoted the development of new
+systems that support dialectal Arabic, but these systems tend to be tailored
+to specific dialects and require separate efforts for Egyptian Arabic,
+Levantine Arabic, Maghrebi Arabic, etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        We present a single clitic segmentation model that is accurate on both
+MSA and informal Arabic. The model is an extension of the character-level conditional
+random field (CRF) model of Green and DeNero (2012). Our work goes beyond theirs in three aspects.
+First, we handle two Arabic orthographic normalization rules that commonly require
+rewriting of tokens after segmentation. Second, we add new features that improve segmentation accuracy.
+Third, we show that dialectal data can be handled in the framework of domain adaptation.
+Specifically, we show that even simple feature space augmentation [3] yields
+significant improvements in task accuracy.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We compare our work to the original Green and DeNero model and two other Arabic
+segmentation systems: the MADA+TOKAN toolkit v.3.1 [6] and its Egyptian dialect variant,
+MADA-ARZ v.0.4 [7]. We demonstrate that our system achieves better performance across the
+board, beating all three systems on MSA newswire, informal broadcast news, and Egyptian
+dialect. Our segmenter achieves a 95.1% F1 segmentation score evaluated against a gold standard
+on Egyptian dialect data, compared to 90.8% for MADA-ARZ and 92.9% for Green and DeNero.
+In addition, our model decodes input an order of magnitude faster than either version of MADA.
+Like the Green and DeNero system, but unlike MADA and MADA-ARZ, our system does not rely
+on a morphological analyzer, and can be applied directly to any dialect for which segmented
+training data is available. The source code is available in the latest public release of
+the Stanford Word Segmenter (http://nlp.stanford.edu/software/ segmenter.shtml).
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Arabic Word Segmentation Model
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        A CRF model [10] defines a distribution p(𝐘|𝐗;θ), where 𝐗={x1,…,xN} is the observed input sequence
+and 𝐘={y1,…,yN} is the sequence of labels we seek to predict. Green and DeNero use a linear-chain model with 𝐗
+as the sequence of input characters, and 𝐘* chosen according to the decision rule. </p>
+       𝐘*=arg⁢max𝐘⁢∑i=1Nθ⊤⁢ϕ⁢(𝐗,yi,…,yi-3,i).
+       <p class="ltx_p">
+        Where ϕ is the feature map defined in Section 2.1. Their model classifies each yi
+as one of I (continuation of a segment), O (whitespace outside any segment), B (beginning of
+a segment), or F (pre-grouped foreign characters).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Our segmenter expands this label space in order to handle two Arabic-specific
+orthographic rules. In our model, each yi can take on one of the six values {I,O,B,F,RewAl,RewTa}.
+       </p>
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           RewAl indicates that the current character, which is always
+the Arabic letter &lt;l&gt;, starts a new segment and should additionally
+be transformed into the definite article &lt;al—&gt; when segmented.
+This type of transformation occurs after the prefix &lt;li—&gt; ‘‘to’’.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           RewTa
+           indicates that the current character, which is always
+the Arabic letter &lt;t&gt;, is a continuation but should be transformed
+into the letter &lt;T&gt; when segmented. Arabic orthography rules restrict
+the occurrence of &lt;T&gt; to the word-final position, writing it instead
+as &lt;t&gt; whenever it is followed by a suffix.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Features
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The model of Green and DeNero is a third-order (i.e., 4-gram) Markov CRF, employing
+the following indicator features:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            a five-character window around the current character: for each -2≤δ≤2 and 1≤i≤N, the triple (xi+δ,δ,yi).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            n-grams consisting of the current character and up to three preceding
+characters: for each 2≤n≤4 and n≤i≤N, the character-sequence/label-sequence pair (xi-n+1⁢…⁢xi,yi-n+1⁢…⁢yi).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            whether the current character is punctuation.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            whether the current character is a digit.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i5" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i5.p1">
+           <p class="ltx_p">
+            the Unicode block of the current character.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i6" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i6.p1">
+           <p class="ltx_p">
+            the Unicode character class of the current character.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         In addition to these, we include two other types of features motivated
+by specific errors the original system made on Egyptian dialect development data:
+        </p>
+        <ul class="ltx_itemize" id="I3">
+         <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I3.i1.p1">
+           <p class="ltx_p">
+            Word length and position within a word: for each 1≤i≤N,
+the pairs (ℓ,yi), (a,yi), and (b,yi), where ℓ, a, and b are the total length of the word containing xi,
+the number of characters after xi in the word, and the number of characters before xi in the word, respectively.
+Some incorrect segmentations produced by the original system could be ruled out with the knowledge of these statistics.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I3.i2.p1">
+           <p class="ltx_p">
+            First and last two characters of the current word, separately influencing the
+first two labels and the last two labels: for each word consisting of characters xs⁢…⁢xt, the tuples
+(xsxs+1, xt-1⁢xt, ys⁢ys+1, “begin”) and (xsxs+1, xt-1⁢xt, yt-1⁢yt, “end”).
+This set of features addresses a particular dialectal Arabic construction,
+the negation &lt;mA&gt;- + [verb] + &lt;-^s&gt;, which requires a matching
+prefix and suffix to be segmented simultaneously. This feature set
+also allows the model to take into account other interactions between
+the beginning and end of a word, particularly those involving the
+definite article &lt;al—&gt;.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         A notable property of this feature set is that it remains highly dialect-agnostic,
+even though our additional features were chosen in response to errors
+made on text in Egyptian dialect. In particular, it does not depend
+on the existence of a dialect-specific lexicon or morphological analyzer.
+As a result, we expect this model to perform similarly well when applied
+to other Arabic dialects.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Domain adaptation
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         In this work, we train our model to segment Arabic text drawn from
+three domains: newswire, which consists of formal text in MSA; broadcast
+news, which contains scripted, formal MSA as well as extemporaneous
+dialogue in a mix of MSA and dialect; and discussion forum posts written
+primarily in Egyptian dialect.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         The approach to domain adaptation we use is that of feature space augmentation [3]. Each indicator
+feature from the model described in Section 2.1 is replaced by N+1 features in the augmented model, where N
+is the number of domains from which the data is drawn (here, N=3). These N+1 features consist of the
+original feature and N ‘‘domain-specific’’ features, one for each of the N domains, each of which
+is active only when both the original feature is present and the current text comes from its assigned domain.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We train and evaluate on three corpora: parts 1–3 of the newswire Arabic Treebank (ATB),
+the Broadcast News Arabic Treebank (BN), and parts 1–8 of the BOLT Phase 1 Egyptian Arabic Treebank (ARZ).
+These correspond respectively to the domains in section 2.2. We target the segmentation scheme used by
+these corpora (leaving morphological affixes and the definite article attached). For the ATB, we use the same
+split as Chiang et al. (2006). For each of the other two corpora, we split the data into 80% training, 10%
+development, and 10% test in chronological order by document. We train the Green and DeNero model
+and our improvements using L-BFGS with L2 regularization.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Evaluation metrics
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We use two evaluation metrics in our experiments. The first is an F1 precision-recall measure,
+ignoring orthographic rewrites. F1 scores provide a more informative assessment of performance
+than word-level or character-level accuracy scores, as over 80% of tokens in the development sets consist
+of only one segment, with an average of one segmentation every 4.7 tokens (or one every 20.4 characters).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The second metric we use is the TEDEval metric [13]. TEDEval was developed to evaluate
+joint segmentation and parsing in Hebrew, which requires a greater variety of orthographic rewrites
+than those possible in Arabic. Its edit distance-based scoring algorithm
+is robust enough to handle the rewrites produced by both MADA and our segmenter.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         We measure the statistical significance of differences in these metrics
+with an approximate randomization test [15, 12], with R=10,000 samples.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Table 1 contains results on the development set for the model of Green
+and DeNero and our improvements. Using domain adaptation alone helps performance
+on two of the three datasets (with a statistically insignificant decrease on broadcast news),
+and that our additional features further improve segmentation on all datasets.
+Table 2 shows the segmentation scores our model achieves when evaluated on the three test sets,
+as well as the results for MADA and MADA-ARZ. Our segmenter achieves higher scores than
+MADA and MADA-ARZ on all datasets under both evaluation metrics. In addition, our segmenter
+is faster than MADA. Table 3 compares the running times of the three systems. Our segmenter achieves a 7x
+or more speedup over MADA and MADA-ARZ on all datasets.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Error Analysis
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We sampled 100 errors randomly from all errors made by our final model
+(trained on all three datasets with domain adaptation and additional features)
+on the ARZ development set; see Table 4. These errors fall into three general categories:
+       </p>
+       <ul class="ltx_itemize" id="I4">
+        <li class="ltx_item" id="I4.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I4.i1.p1">
+          <p class="ltx_p">
+           typographical errors and annotation inconsistencies in the gold data.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I4.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I4.i2.p1">
+          <p class="ltx_p">
+           errors that can be fixed with a fuller analysis of just the problematic
+token, and therefore represent a deficiency in the feature set.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I4.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I4.i3.p1">
+          <p class="ltx_p">
+           errors that would require additional context or sophisticated
+semantic awareness to fix.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Typographical errors and annotation inconsistencies
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Of the 100 errors we sampled, 33 are due to typographical errors or
+inconsistencies in the gold data. We classify 7 as typos and 26 as
+annotation inconsistencies, although the distinction between the two is murky:
+typos are intentionally preserved in the treebank data, but segmentation of typos varies
+depending on how well they can be reconciled with standard Arabic
+orthography. Four of the seven typos are the result of a missing space, such as:
+        </p>
+        <ul class="ltx_itemize" id="I5">
+         <li class="ltx_item" id="I5.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I5.i1.p1">
+           <p class="ltx_p">
+            &lt;yas|har-bi-al-layAlI&gt; ‘‘staysawakeatnight’’ (&lt;yashar&gt; + &lt;bi-&gt; + &lt;al-layAlI&gt;).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I5.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I5.i2.p1">
+           <p class="ltx_p">
+            &lt;‘amilatnA-’an&gt; ‘‘madeus’’ (&lt;‘amilat&gt; + &lt;—nA&gt; + &lt;’an&gt;).
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         The first example is segmented in the Egyptian treebank but is left unsegmented by our system;
+the second is left as a single token in the treebank but is split into the above three segments by our system.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Of the annotation inconsistencies that do not involve typographical errors,
+a handful are segmentation mistakes; however, in the majority of these cases,
+the annotator chose not to segment a word for justifiable but arbitrary reasons. In particular, a few
+colloquial ‘‘filler’’ expressions are sometimes not segmented, despite being compound Arabic words that are segmented
+elsewhere in the data. These include &lt;rabbinA&gt; ‘‘[our] Lord’’ (oath); &lt;‘indamA&gt; ‘‘when’’/‘‘while’’;
+and &lt;_hallIk&gt; ‘‘keep’’/‘‘stay’’. Also, tokens containing foreign words are sometimes not segmented,
+despite carrying Arabic affixes. An example of this is &lt;wamistur&gt; ‘‘and Mister [English]’’,
+which could be segmented as &lt;wa&gt;-+ &lt;mistur&gt;.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Features too local
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         In 36 of the 100 sampled errors, we conjecture that the presence of
+the error indicates a shortcoming of the feature set,
+resulting in segmentations that make sense locally but are not plausible
+given the full token. Two examples of these are:
+        </p>
+        <ul class="ltx_itemize" id="I6">
+         <li class="ltx_item" id="I6.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I6.i1.p1">
+           <p class="ltx_p">
+            &lt;wafi.tarIqaT&gt; “and in the way” segmented as &lt;wa&gt;- + &lt;fi.tarIqaT&gt;
+(correct analysis is &lt;wa&gt;- + &lt;fi—&gt; + &lt;.tarIqaT&gt;). &lt;f.tr&gt; ‘‘break’’/‘‘breakfast’’
+is a common Arabic root, but the presence of &lt;q&gt; should indicate that &lt;f.tr&gt; is not the root in this case.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I6.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I6.i2.p1">
+           <p class="ltx_p">
+            &lt;walAyuhimmhum&gt; ‘‘and it’s not important to them’’ segmented as
+&lt;wa&gt;- + &lt;li—&gt; + &lt;—ayuhimm&gt; + &lt;—hum&gt; (correct analysis is
+&lt;wa&gt;- + &lt;lA&gt; + &lt;yuhimm&gt; + &lt;—hum&gt;). The 4-character window
+&lt;lAyh&gt; occurs commonly with a segment boundary after the &lt;l&gt;,
+but the segment &lt;—ayuhimm&gt; is not a well-formed Arabic word.
+           </p>
+          </div>
+         </li>
+        </ul>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Context-sensitive segmentations and multiple word senses
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         In the remaining 31 of 100 errors, external context is needed.
+In many of these, it is not clear how to address the error without sophisticated semantic reasoning
+about the surrounding sentence.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         One token accounts for five of these errors: &lt;wlA&gt;, which in Egyptian
+dialect can be analyzed as &lt;wa&gt;- + &lt;lA&gt; ‘‘and [do/does] not’’
+or as &lt;wallA&gt; ‘‘or’’. In a few cases, either is syntactically correct,
+and the meaning must be inferred from context.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         Two other ambiguities are a frequent cause of error and seem to require
+sophisticated disambiguation. The first is &lt;—nA&gt;, which is both
+a first person plural object pronoun and a first person plural
+past tense ending. The former is segmented, while the latter is not. An example of this is the pair &lt;‘ilmunA&gt;
+‘‘our knowledge’’ (&lt;‘ilmu&gt; + &lt;—nA&gt;) versus &lt;‘alimnA&gt; ‘‘we knew’’
+(one segment). The other is &lt;—y&gt;, which is both a
+first person singular possessive pronoun and the nisba adjective ending (which turns a noun
+into an adjective meaning ‘‘of or related to’’); only the
+former is segmented. One example of this distinction that appeared
+in the development set is the pair &lt;maw.dU‘I&gt; ‘‘my topic’’ (&lt;maw.dU‘&gt;
++ &lt;—y&gt;) versus &lt;maw.dU‘Iy&gt; ‘‘topical’’, ‘‘objective’’.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this paper we demonstrate substantial gains on Arabic clitic segmentation
+for both formal and dialectal text using a single model with dialect-independent
+features and a simple domain adaptation strategy. We present a new
+Arabic segmenter which performs better than tools employing sophisticated
+linguistic analysis, while also giving impressive speed improvements. We evaluated our segmenter on broadcast news and Egyptian
+Arabic due to the current availability of annotated data in these domains. However, as data for other Arabic dialects and genres becomes available, we expect that the model’s simplicity and the domain adaptation
+method we use will allow the system to be applied to these dialects
+with minimal effort and without a loss of performance in the original
+domains.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

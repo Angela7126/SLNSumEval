@@ -1,0 +1,1023 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Topic Model for Building Fine-grained Domain-specific Emotion Lexicon.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       ‡]
+       MinYang
+       §]
+       BaolinPeng
+       §]
+       ZhengChen
+       †,¶]
+       DingjuZhu
+       ‡]
+       Kam-PuiChow
+       [†]SchoolofComputerScience,SouthChinaNormalUniversity,Guangzhou,China
+       []
+       dingjuzhu@gmail.com
+       [‡]DepartmentofComputerScience,TheUniversityofHongKong,HongKong
+       []{
+       myang,chow
+       }
+       @cs.hku.hk
+       [§]DepartmentofComputerScience,BeihangUniversity,Beijing,China
+       []
+       b.peng@cse.buaa.edu.cn,tzchen86@gmail.com
+       [¶]ShenzhenInstitutesofAdvancedTechnology,ChineseAcademyofSciences,Shenzhen,China
+      </p>
+     </div>
+     <div class="ltx_para" id="p2">
+      <p class="ltx_p">
+       english
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Due to the popularity of opinion-rich resources (e.g., online review
+sites, forums, blogs and the microblogging websites), automatic extraction
+of opinions, emotions and sentiments in text is of great significance
+to obtain useful information for social and security studies. Various
+opinion mining applications have been proposed by different researchers,
+such as question answering, opinion mining, sentiment summarization,
+etc. As the fine-grained annotated data are expensive to get, the
+unsupervised approaches are preferred and more used in reality. Usually,
+a high quality emotion lexicon play a significant role when apply
+the unsupervised approaches for fine-grained emotion classification.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Thus far, most lexicon construction approaches focus on constructing
+general-purpose emotion lexicons
+        [11, 7, 16, 4]
+        .
+However, since a specific word can carry various emotions in different
+domains, a general-purpose emotion lexicon is less accurate and less
+informative than a domain-specific lexicon
+        [1]
+        .
+        In addition, in previous work, most of the lexicons label the words
+on coarse-grained dimensions (positive, negative and neutrality).
+Such lexicons cannot accurately reflect the complexity of human emotions
+and sentiments. Lastly, previous emotion lexicons are mostly annotated
+based on many manually constructed resources (e.g., emotion lexicon,
+parsers, etc.). This limits the applicability of these methods to
+a broader range of tasks and languages.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        To meet the challenges mentioned above, we propose
+a novel EaLDA model to construct a domain-specific emotion lexicon
+consisting of six primary emotions (i.e., anger, disgust, fear, joy,
+sadness and surprise). The proposed EaLDA model extends the standard
+Latent Dirichlet Allocation (LDA) [3] model by
+employing a small set of seeds to
+        guide the model generating topics.
+Hence, the topics consequently group semantically related words into
+a same emotion category. The lexicon is thus able to best meet the
+user’s specific needs. Our approach is a weakly supervised approach
+since only some seeds emotion sentiment words are needed to lanch
+the process of lexicon construction. In practical applications, asking
+users to provide some seeds is easy as they usually have a good knowledge
+what are important in their domains.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Extensive experiments are carried out to evaluate our model both qualitatively
+and quantitatively using benchmark dataset. The results demonstrate
+that our EaLDA model improves the quality and the coverage of state-of-the-art
+fine-grained lexicon.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Emotion lexicon plays an important role in opinion mining and sentiment
+analysis. In order to build such a lexicon, many researchers have
+investigated various kinds of approaches. However, these methods could
+roughly be classified into two categories in terms of the used information.
+The first kind of approaches is based on thesaurus that utilizes synonyms
+or glosses
+        to d
+        etermine the sentiment orientation
+of a word. The availability of the WordNet
+        [9]
+        database is an important starting point for many
+thesaurus-based approaches [8, 7, 5].
+The second kind of approaches is based on an idea that emotion words
+co-occurring with each others are likely to convey the same polarity.
+There are numerous studies in this field [14, 15, 5, 2].
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Most of the previous studies for emotion lexicon construction are
+limited to positive and negative emotions. Recently, to enhance the
+increasingly emotional data, a few researches have been done to identity
+the fine-grained emotion of words
+        [12, 6, 10]
+        .
+For example,
+        Gill et al. (2008)
+        utilize computational linguistic
+tools to identity the emotions of the words (such as, joy, sadness,
+acceptance, disgust, fear, anger, surprise and anticipation). While,
+this approach is mainly for public use in general domains.
+        Rao et al. (2012) propose an method of automatically building
+the word-emotion mapping dictionary for social emotion detection.
+However, the emtion lexicon is not outputed explicitly in this paper,
+and the approach is fully unsupervised which may be difficult to be
+adjusted to fit the personalized data set.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Our approach relates most closely to the method proposed by
+        Xie and Li (2012)
+        for the construction of lexicon annotated for polarity based on LDA
+model. Our approach differs from
+        [17]
+        in two important
+ways: first, we do not address the task of polarity lexicon construction,
+but instead we focus on building fine-grained emotion lexicon. Second,
+we don’t assume that every word in documents is subjective, which
+is impractical in real world corpus.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Algorithm
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we rigorously define the emotion-aware LDA model
+and its learning algorithm. We descrige with the model description,
+a Gibbs sampling algorithm to infer the model parameters, and finally
+how to generate a emotion lexicon based on the model output.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Model Description
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Like the standard LDA model, EaLDA is a generative model. To prevent
+conceptual confusion, we use a superscript “(e)” to indicate variables
+related to emotion topics, and use a superscript “(n)” to indicate
+variables of non-emotion topics. We assume that each document has
+two classes of topics:
+         M
+         emotion topics (corresponding to
+         M
+         different emotions) and
+         K
+         non-emotion topics (corresponding to
+topics that are not associated with any emotion). Each topic is represented
+by a multinomial distribution over words. In addition, we assume that
+the corpus vocabulary consists of
+         V
+         distinct words indexed by
+         {1,…,V}
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         For emotion topics, the EaLDA model draws the word distribution from
+a biased Dirichlet prior
+         Dir⁢(βk(e))
+         . The vector
+         βk(e)∈ℝV
+         is constructed with
+         βk(e):=γ0(e)⁢(1V-Ωk)+γ1(e)⁢Ωk
+         ,
+for
+         k∈{1,…,M}
+         .
+         Ωk,w=1
+         if and only if word
+         w
+         is a seed word for emotion
+         k
+         , otherwise
+         Ωk,w=0
+         . The
+scalars
+         γ0(e)
+         and
+         γ1(e)
+         are hyperparameters
+of the model. Intuitively, when
+         γ1(e)&gt;γ0(e)
+         ,
+the biased prior ensures that the seed words are more probably drawn
+from the associated emotion topic.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         The generative process of word distributions for non-emotion topics
+follows the standard LDA definition with a scalar hyperparameter
+         β(n)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         For each word in the document, we decide whether its topic is an emotion
+topic or a non-emotion topic by flipping a coin with head-tail probability
+         (p(e),p(n))
+         , where
+         (p(e),p(n))∼Dir⁢(α)
+         .
+The emotion (or non-emotion) topic is sampled according to a multinomial
+distribution
+         Mult⁢(θ(e))
+         (or
+         Mult⁢(θ(n))
+         ).
+Here, both
+         θ(e)
+         and
+         θ(n)
+         are document-level
+latent variables. They are generated from Dirichlet priors
+         Dir⁢(α(e))
+         and
+         Dir⁢(α(n))
+         with
+         α(s)
+         and
+         α(n)
+         being hyperparameters.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         We summarize the generative process of the EaLDA model as below:
+        </p>
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            for each emotion topic
+            k∈{1,…,M}
+            , draw
+            ϕk(e)∼Dir⁢(βk(e))
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            for each non-emotion topic
+            k∈{1,…,K}
+            , draw
+            ϕk(n)∼Dir⁢(β(n))
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           3.
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            for each document
+           </p>
+          </div>
+          <div class="ltx_para" id="I1.i3.p2">
+           <ol class="ltx_enumerate" id="I1.I1">
+            <li class="ltx_item" id="I1.I1.i1" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (a)
+             </span>
+             <div class="ltx_para" id="I1.I1.i1.p1">
+              <p class="ltx_p">
+               draw
+               θ(e)∼Dir⁢(α(e))
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i2" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (b)
+             </span>
+             <div class="ltx_para" id="I1.I1.i2.p1">
+              <p class="ltx_p">
+               draw
+               θ(n)∼Dir⁢(α(n))
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i3" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (c)
+             </span>
+             <div class="ltx_para" id="I1.I1.i3.p1">
+              <p class="ltx_p">
+               draw
+               (p(e),p(n))∼D⁢i⁢r⁢(α)
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i4" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_enumerate">
+              (d)
+             </span>
+             <div class="ltx_para" id="I1.I1.i4.p1">
+              <p class="ltx_p">
+               for each word in document
+              </p>
+             </div>
+             <div class="ltx_para" id="I1.I1.i4.p2">
+              <ol class="ltx_enumerate" id="I1.I1.I1">
+               <li class="ltx_item" id="I1.I1.I1.i1" style="list-style-type:none;">
+                <span class="ltx_tag ltx_tag_enumerate">
+                 i.
+                </span>
+                <div class="ltx_para" id="I1.I1.I1.i1.p1">
+                 <p class="ltx_p">
+                  draw topic class indicator
+                  s∼Bernoulli⁢(ps)
+                 </p>
+                </div>
+               </li>
+               <li class="ltx_item" id="I1.I1.I1.i2" style="list-style-type:none;">
+                <span class="ltx_tag ltx_tag_enumerate">
+                 ii.
+                </span>
+                <div class="ltx_para" id="I1.I1.I1.i2.p1">
+                 <p class="ltx_p">
+                  if
+                  s=“emotion topic”
+                 </p>
+                </div>
+                <div class="ltx_para" id="I1.I1.I1.i2.p2">
+                 <ol class="ltx_enumerate" id="I1.I1.I1.I1">
+                  <li class="ltx_item" id="I1.I1.I1.I1.i1" style="list-style-type:none;">
+                   <span class="ltx_tag ltx_tag_enumerate">
+                    A.
+                   </span>
+                   <div class="ltx_para" id="I1.I1.I1.I1.i1.p1">
+                    <p class="ltx_p">
+                     draw
+                     z(e)∼Mult⁢(θ(e))
+                    </p>
+                   </div>
+                  </li>
+                  <li class="ltx_item" id="I1.I1.I1.I1.i2" style="list-style-type:none;">
+                   <span class="ltx_tag ltx_tag_enumerate">
+                    B.
+                   </span>
+                   <div class="ltx_para" id="I1.I1.I1.I1.i2.p1">
+                    <p class="ltx_p">
+                     draw
+                     w∼Mult⁢(ϕz(e)(e))
+                     , emit word
+                     w
+                    </p>
+                   </div>
+                  </li>
+                 </ol>
+                </div>
+               </li>
+               <li class="ltx_item" id="I1.I1.I1.i3" style="list-style-type:none;">
+                <span class="ltx_tag ltx_tag_enumerate">
+                 iii.
+                </span>
+                <div class="ltx_para" id="I1.I1.I1.i3.p1">
+                 <p class="ltx_p">
+                  otherwise
+                 </p>
+                </div>
+                <div class="ltx_para" id="I1.I1.I1.i3.p2">
+                 <ol class="ltx_enumerate" id="I1.I1.I1.I2">
+                  <li class="ltx_item" id="I1.I1.I1.I2.i1" style="list-style-type:none;">
+                   <span class="ltx_tag ltx_tag_enumerate">
+                    A.
+                   </span>
+                   <div class="ltx_para" id="I1.I1.I1.I2.i1.p1">
+                    <p class="ltx_p">
+                     draw
+                     z(n)∼Mult⁢(θ(n))
+                    </p>
+                   </div>
+                  </li>
+                  <li class="ltx_item" id="I1.I1.I1.I2.i2" style="list-style-type:none;">
+                   <span class="ltx_tag ltx_tag_enumerate">
+                    B.
+                   </span>
+                   <div class="ltx_para" id="I1.I1.I1.I2.i2.p1">
+                    <p class="ltx_p">
+                     draw
+                     w∼Mult⁢(ϕz(n)(n))
+                     , emit word
+                     w
+                    </p>
+                   </div>
+                  </li>
+                 </ol>
+                </div>
+               </li>
+              </ol>
+             </div>
+            </li>
+           </ol>
+          </div>
+         </li>
+        </ol>
+        <p class="ltx_p">
+         As an alternative representation, the graphical model of the the generative
+process is shown by Figure
+         1
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Inference Algorithm
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Assuming hyperparameters
+         α
+         ,
+         α(e)
+         ,
+         α(n)
+         ,
+and
+         β(e)
+         ,
+         β(n)
+         , we develop a collapsed Gibbs sampling
+algorithm to estimate the latent variables in the EaLDA model. The
+algorithm iteratively takes a word
+         w
+         from a document and sample
+the topic that this word belongs to.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Let the whole corpus excluding the current word be denoted by
+         D
+         .
+Let
+         ni,w(e)
+         (or
+         nj,w(n)
+         ) indicate the number of
+occurrences of topic
+         i(e)
+         (or topic
+         j(n)
+         ) with word
+         w
+         in the whole corpus. Let
+         mi(e)
+         (or
+         mj(n)
+         ) indicate
+the number of occurrence of topic
+         i(e)
+         (or topic
+         j(n)
+         )
+in the current document. All these counts are defined excluding the
+current word. Using the definition of the EaLDA model and the Bayes
+Rule, we find that the joint density of these random variables are
+equal to
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="S5.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Pr(p(e),p(n),θ(e),ϕ(e),θ(n),ϕ(n)|D)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∝
+          </td>
+          <td class="ltx_td ltx_align_left">
+           Pr⁢(p(e),p(n),θ(e),ϕ(e),θ(n),ϕ(n))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ×Pr(D|p(e),p(n),θ(e),ϕ(e),θ(n),ϕ(n))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∝
+          </td>
+          <td class="ltx_td ltx_align_left">
+           (p(e))α+(∑i=1Mmi(e))⋅(p(n))α+(∑j=1Kmj(n))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ⋅∏i=1M(θi(e))α(e)+mi(e)-1⋅∏j=1K(θj(n))α(n)+mj(n)-1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ⋅∏i=01∏w=1V(ϕi,w(e))βi,w(e)+ni,w(e)-1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ⋅∏j=1K∏w=1V(ϕj,w(n))β(n)+nj,w(n)-1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (1)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         According to equation (
+         1
+         ), we see that
+         {p(e),p(n)}
+         ,
+         {θi(e),θj(n)}
+         ,
+         {ϕi,w(e)}
+         and
+         {ϕj,w(n)}
+         are mutually independent sets of random
+variables. Each of these random variables satisfies Dirichlet distribution
+with a specific set of parameters. By the mutual independence, we
+decompose the probability of the topic
+         z
+         for the current word as
+        </p>
+        Pr(z=i(e)|D)∝𝔼[p(e)]⋅𝔼[θi(e)]⋅𝔼[ϕi,w(e)]
+
+(2)
+        Pr(z=j(n)|D)∝𝔼[p(n)]⋅𝔼[θi(n)]⋅𝔼[ϕj,w(n)]
+
+(3)
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         Then, by examining the property of Dirichlet distribution, we can
+compute expectations on the right hand side of equation (
+         2
+         )
+and equation (
+         3
+         ) by
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S5.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[p(e)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           α+∑i=01mi(e)2⁢α+∑i=1Mmi(e)+∑j=1Kmj(n)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (4)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[p(n)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           α+∑j=1Kmj(n)2⁢α+∑i=1Mmi(e)+∑j=1Kmj(n)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[θi(e)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           α(e)+mi(e)M⁢α(e)+∑i′=1Mmi′(e)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[θj(n)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           α(e)+mj(n)K⁢α(n)+∑j′=1Kmj′(n)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (7)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E8">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[ϕi,w(e)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           βi,w(e)+ni,w(e)∑w′=1V(βi,w′(e)+ni,w′(e))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (8)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E9">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝔼⁢[ϕj,w(n)]
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           βj,w(n)+nj,w(n)V⁢β(n)+∑w′=1Vnj,w′(n)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (9)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <p class="ltx_p">
+         Using the above equations, we can sample the topic
+         z
+         for each word
+iteratively and estimate all latent random variables.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Constructing Emotion Lexicon
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Our final step is to construct the domain-specific emotion lexicon
+from the estimates
+         ϕ(e)
+         and
+         ϕ(n)
+         that we obtained
+from the EaLDA model.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         For each word
+         w
+         in the vocabulary, we compare the
+         M+1
+         values
+         {ϕ1,w(e),…,ϕM,w(e)}
+         and
+         1K⁢∑i=1Kϕi,w(n)
+         .
+If
+         ϕi,w(e)
+         is the largest, then the word
+         w
+         is added
+to the emotion dictionary for the
+         i
+         th emotion. Otherwise,
+         1K⁢∑i=1Kϕi,w(n)
+         is the largest among the
+         M+1
+         values, which suggests that the word
+         w
+         is more probably drawn from a non-emotion topic. Thus, the word
+is considered neutral and not included in the emotion dictionary.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In this section, we report empirical evaluations of our proposed model.
+Since there is no metric explicitly measuring the quality of an emotion
+lexicon, we demonstrate the performance of our algorithm in two ways:
+(1) we perform a case study for the lexicon generated by our algorithm,
+and (2) we compare the results of solving emotion classification task
+using our lexicon against different methods, and demonstrate the advantage
+of our lexicon over other lexicons and other emotion classification
+systems.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Datasets
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We conduct experiments to evaluate the effectiveness of our model
+on SemEval-2007 dataset. This is an gold-standard English dataset
+used in the 14th task of the SemEval-2007 workshop which focuses on
+classification of emotions in the text. The attributes include the
+news headlines, the score of emotions of anger, disgust, fear, joy,
+sad and surprise normalizing from 0 to 100. Two data sets are available:
+a training data set consisting of 250 records, and a test data set
+with 1000 records. Following the strategy used in
+         [12]
+         ,
+the task was carried out in an unsupervised setting for experiments.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         In experiments, data preprocessing is performed on the data set. First,
+the texts are tokenized with a natural language toolkit NLTK
+         . Then, we remove non-alphabet characters, numbers, pronoun, punctuation
+and stop words from the texts. Finally, Snowball stemmer
+         is applied so as to reduce the vocabulary size and settle the issue
+of data spareness.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Emotion Lexicon Construction
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We first settle down the implementation details for the EaLDA model,
+specifying the hyperparameters that we choose for the experiment.
+We set topic number
+         M=6
+         ,
+         K=4
+         , and hyperparameters
+         α=0.75
+         ,
+         α(e)=α(n)=0.45
+         ,
+         β(n)=0.5
+         . The vector
+         β(e)
+         is constructed from the seed dictionary using
+         γ=(0.25,0.95)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         As mentioned, we use a few domain-independent seed words as prior
+information for our model. To be specific, the seed words list contains
+8 to 12 emotional words for each of the six emotion categories.
+         However, it is important to note that the proposed models are flexible
+and do not need to have seeds for every topic.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Example words for each emotion gener
+         ated from the
+SemEval-2007 dataset are reported in Table 1. The
+judgment is to some extent subjective. What we reported here are based
+on our judgments what are appropriate and what are not for each emotion
+topic. From Table 1, we observe that the generated
+words are informative and coherent. For example, the words “flu”
+and “cancer” are seemingly neutral by its surface meaning, actually
+expressing fear emotion for SemEval dataset. These domain-specific
+words are mostly not included in any other existing general-purpose
+emotion lexicons. The experimental results
+         show that our algorithm
+can successfully construct a fine-grained domain-specific emotion
+lexicon for this corpus that is able to understand the connotation
+of the words that may not be obvious without the context.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Document-level Emotion Classification
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We compare the performance between a popular emotion lexicon WordNet-Affect
+         [13]
+         and our approach for emotion classifica
+         tion
+task. We also compare our results with those obtained by three systems
+participating in the SemEval-2007 emotion annotation task: SWAT, UPAR7
+and UA. The emotion classification results is evaluated for each emotion
+category separately. For each emotion category, we evaluates it as
+a binary classification problem. In the evaluation of emotion lexicons,
+the binary classification is performed in a very simple way. For each
+emotion category and each text, we compare the number of words within
+this emotion category, and the average number of words within other
+emotion categories, to output a binary prediction of 1 or 0. This
+simple approach is chosen to evaluate the robustness of our emotion
+lexicon.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         In the experiments, performance is evaluated in
+terms of F1-score. We summarize the results in Table 2.
+As an easy observation, the emotion lexicon generated by the EaLDA
+model consistently and significantly outperforms the WordNet-Affect
+emotion lexicon and other three emotion classification systems. In
+particular, we are able to obtain an overall F1-score of 10.52% for
+disgust classification task which is difficult to work out using previously
+proposed methods. The advantage of our model may come from its capability
+of exploring domain-specific emotions which include not only explicit
+emotion words, but also implicit ones.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusions and Future Work
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        In this paper, we have presented a novel emotion-aware LDA model that
+is able to quickly build a fine-grained domain-specific emotion lexicon
+for languages without many manually constructed resources. The proposed
+EaLDA model extends the standard LDA model by accepting a set of domain-independent
+emotion words as prior knowledge, and guiding to group semantically
+related words into the same emotion category. Thus, it makes the emotion
+lexicon containing much richer and adaptive domain-specific emotion
+words. Experimental results showed that the emotional lexicons generated
+by our algorithm is of high quality, and can assist emotion classification
+task.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        For future works, we hope to extend the proposed EaLDA model by exploiting
+discourse structure knowledge, which has been shown significant in
+identifying the polarity of content-aware words.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

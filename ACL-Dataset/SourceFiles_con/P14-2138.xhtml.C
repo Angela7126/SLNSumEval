@@ -1,0 +1,970 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Does the Phonology of L1 Show Up in L2 Texts?
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       The relative frequencies of character bigrams
+appear to contain much information for predicting
+the first language (L1) of the writer of a text in another language (L2).
+       Tsur and Rappoport (2007)
+       interpret this fact
+as evidence that
+word choice is dictated by the phonology of L1.
+In order to test their hypothesis,
+we design an algorithm to identify the most discriminative words
+and the corresponding character bigrams,
+and perform two experiments to quantify
+their impact on the L1 identification task.
+The results strongly suggest an alternative explanation
+of the effectiveness of character bigrams
+in identifying the native language of a writer.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The task of Native Language Identification (NLI)
+is to determine the first language
+of the writer of a text in another language.
+In a ground-breaking paper,
+        Koppel et al. (2005)
+        propose a set of features for this task:
+function words, character
+        n
+        -grams,
+rare part-of-speech bigrams, and various types of errors.
+They report 80% accuracy
+in classifying a set of English texts into five L1 languages
+using a multi-class linear SVM.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        The First Shared Task on Native Language Identification
+        [24]
+        attracted submissions from 29 teams.
+The accuracy on a set of English texts
+representing eleven L1 languages
+ranged from 31% to 83%.
+Many types of features were employed, including
+word length,
+sentence length,
+paragraph length,
+document length,
+sentence complexity,
+punctuation and capitalization,
+cognates,
+dependency parses,
+topic models,
+word suffixes,
+collocations,
+function word
+        n
+        -grams,
+skip-grams,
+word networks,
+Tree Substitution Grammars,
+string kernels,
+cohesion,
+and passive constructions
+        [1, 17, 3, 5, 7, 9, 11, 12, 4, 16, 18, 19, 20, 21, 22, 23, 26]
+        .
+In particular,
+word
+        n
+        -gram features appear to be particularly effective,
+as they were used by the most competitive teams,
+including the one that achieved the highest overall
+accuracy
+        [13]
+        .
+Furthermore,
+the most discriminative
+word
+        n
+        -grams often contained the name
+of the native language, or countries where it is commonly spoken
+        [8, 19, 21]
+        .
+We refer to such words as
+        toponymic terms
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        There is no doubt that the toponymic terms are useful for
+increasing the NLI accuracy;
+however,
+from the
+psycho-linguistic perspective,
+we are more interested in what characteristics of L1
+show up in L2 texts.
+Clearly, L1 affects the L2 writing in general,
+and the choice of words in particular,
+but what is the role played by the phonology?
+        Tsur and Rappoport (2007)
+        observe that
+limiting the set of features to
+the relative frequency of the
+200 most frequent character bigrams
+yields a respectable 66% accuracy on a 5-language classification task.
+The authors propose the following hypothesis to explain this finding:
+“
+        the choice of words
+        [emphasis added]
+people make when writing in a second language
+is strongly influenced
+by the phonology of their native language”.
+As the orthography of alphabetic languages is at least partially representative
+of the underlying phonology,
+character bigrams may capture these phonological preferences.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In this paper, we provide evidence against the above hypothesis.
+We design an algorithm to identify the most discriminative
+words and the character bigrams that are indicative of such words,
+and perform two experiments to quantify their impact on the NLI task.
+The results of the first experiment demonstrate that
+the removal of a relatively small set of discriminative words from
+the training data
+significantly impairs the accuracy of a bigram-based classifier.
+The results of the second experiment reveal that
+the most indicative bigrams are quite similar across different language sets.
+We conclude that
+character bigrams are effective in determining L1 of the author
+because they reflect
+differences in L2 word usage
+that are unrelated to the phonology of L1.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Method
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Tsur and Rappoport (2007)
+        report that character bigrams
+are more effective for the NLI task than either unigrams or trigrams.
+We are interested in identifying the
+character bigrams that
+are indicative of the most discriminative words
+in order to quantify their impact on the bigram-based classifier.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        We follow both
+        Koppel et al. (2005)
+        and
+        Tsur and Rappoport (2007)
+        in using a multi-class SVM classifier for the NLI task.
+The classifier computes a weight for each feature coupled with each L1 language
+by attempting to maximize the overall accuracy on the training set.
+For example,
+if we train the classifier using
+words as features,
+with values representing their frequency relative to
+the length of the document,
+the features corresponding to the word
+        China
+        might receive the following weights:
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        These weights indicate that the word
+provides strong positive evidence for Chinese as L1,
+as opposed to the other four languages.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        We propose to quantify the importance of each word
+by converting its SVM feature weights into a single score
+using the following formula:
+       </p>
+       W⁢o⁢r⁢d⁢S⁢c⁢o⁢r⁢ei=∑j=1Nwi⁢j2
+       <p class="ltx_p">
+        where
+        N
+        is the number of languages,
+and
+        wi⁢j
+        is the feature weight of word
+        i
+        in language
+        j
+        .
+The formula assigns higher scores to words
+with weights of high magnitude, either positive or negative.
+We use the Euclidean norm rather than the sum of raw weights
+because we are interested in the discriminative power of the words.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        We normalize the word scores by dividing them
+by the score of the 200th word.
+Consequently, only the top 200 words have scores greater than or equal to
+        1.0
+        .
+For our previous example,
+the 200
+        t⁢h
+        word
+has a word score of 1493,
+while
+        China
+        has a word score of 1930,
+which is normalized to
+        1930/1493=1.29
+        .
+On the other hand,
+the 1000
+        t⁢h
+        word
+gets a normalized score of 0.43.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <p class="ltx_p">
+        [t]
+        Computing the scores of words and bigrams in the data.
+        [1]
+        create list of words in training data
+        train SVM using words as features
+        words i
+        <math alttext="WordScore_{i}=\sqrt{\sum_{j=1}^{N}{{w_{ij}}^{2}}}" class="ltx_Math" display="inline" id="S2.p6.m1" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mrow>
+           <mi>
+            W
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            o
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            r
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            d
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            S
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            c
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            o
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            r
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <msub>
+            <mi>
+             e
+            </mi>
+            <mi>
+             i
+            </mi>
+           </msub>
+          </mrow>
+          <mo>
+           =
+          </mo>
+          <msqrt>
+           <mrow>
+            <msubsup>
+             <mo largeop="true" symmetric="true">
+              ∑
+             </mo>
+             <mrow>
+              <mi>
+               j
+              </mi>
+              <mo>
+               =
+              </mo>
+              <mn>
+               1
+              </mn>
+             </mrow>
+             <mi>
+              N
+             </mi>
+            </msubsup>
+            <mmultiscripts>
+             <mi>
+              w
+             </mi>
+             <mrow>
+              <mi>
+               i
+              </mi>
+              <mo>
+               ⁢
+              </mo>
+              <mi>
+               j
+              </mi>
+             </mrow>
+             <none>
+             </none>
+             <none>
+             </none>
+             <mn>
+              2
+             </mn>
+            </mmultiscripts>
+           </mrow>
+          </msqrt>
+         </mrow>
+        </math>
+        <span class="ltx_ERROR undefined">
+         \STATE
+        </span>
+        sort words by WordScore
+        NormValue = WordScore
+        200
+        create list of 200 most frequent bigrams
+        bigrams k = 1 to 200
+        <math alttext="BigramScore_{k}=\prod_{k\in i}\frac{WordScore_{i}}{NormValue}" class="ltx_Math" display="inline" id="S2.p6.m3" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mrow>
+           <mi>
+            B
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            i
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            g
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            r
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            a
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            m
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            S
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            c
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            o
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <mi>
+            r
+           </mi>
+           <mo>
+            ⁢
+           </mo>
+           <msub>
+            <mi>
+             e
+            </mi>
+            <mi>
+             k
+            </mi>
+           </msub>
+          </mrow>
+          <mo>
+           =
+          </mo>
+          <mrow>
+           <msub>
+            <mo largeop="true" symmetric="true">
+             ∏
+            </mo>
+            <mrow>
+             <mi>
+              k
+             </mi>
+             <mo>
+              ∈
+             </mo>
+             <mi>
+              i
+             </mi>
+            </mrow>
+           </msub>
+           <mfrac>
+            <mrow>
+             <mi>
+              W
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              o
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              r
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              d
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              S
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              c
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              o
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              r
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <msub>
+              <mi>
+               e
+              </mi>
+              <mi>
+               i
+              </mi>
+             </msub>
+            </mrow>
+            <mrow>
+             <mi>
+              N
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              o
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              r
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              m
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              V
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              a
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              l
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              u
+             </mi>
+             <mo>
+              ⁢
+             </mo>
+             <mi>
+              e
+             </mi>
+            </mrow>
+           </mfrac>
+          </mrow>
+         </mrow>
+        </math>
+        <span class="ltx_ERROR undefined">
+         \STATE
+        </span>
+        sort character bigrams by BigramScore
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        In order to identify the bigrams
+that are indicative of the most discriminative words,
+we promote those that appear in the high-scoring words,
+and downgrade those that appear in the low-scoring words.
+Some bigrams that appear often in the high-scoring words may be very common.
+For example, the bigram
+        an
+        occurs in words like
+        Japan
+        ,
+        German
+        , and
+        Italian
+        ,
+but also by itself as a determiner, as an adjectival suffix, and as
+part of the conjunction
+        and
+        .
+Therefore,
+we calculate the importance score for each character bigram
+by multiplying the scores of each word in which the bigram occurs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <p class="ltx_p">
+        Algorithm
+        2
+        summarizes our method of
+identifying the discriminative words and indicative character bigrams.
+In line 2, we train an SVM on the words encountered in the training data.
+In lines 3 and 4, we assign the Euclidean norm of the weight vector of
+each word
+as its score.
+Starting in line 7, we determine
+which character bigrams are representative of high scoring words.
+In line 10, we calculate the bigram scores.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we describe two experiments
+aimed at quantifying the importance of
+the discriminative words and the indicative character bigrams
+that are identified by Algorithm
+        2
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Data
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We use two different NLI corpora.
+We follow the setup of
+         Tsur and Rappoport (2007)
+         by extracting
+two sets,
+denoted I1 and I2 (Table
+         1
+         ),
+from the International Corpus of Learner English (ICLE),
+Version 2
+         [10]
+         .
+Each set consists of 238 documents per language,
+randomly selected from the ICLE corpus.
+Each of the documents corresponds to a different author,
+and contains between 500 and 1000 words.
+We follow the methodology of the paper in
+performing 10-fold cross-validation on
+the sets of languages used by the authors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         For the development of the method
+described in Section
+         2
+         ,
+we used a different corpus, namely
+the TOEFL Non-Native English Corpus
+         [2]
+         .
+It consists of essays written by native speakers of eleven languages,
+divided into three English proficiency levels.
+In order to maintain consistency with the ICLE sets,
+we extracted three sets of five languages apiece
+(Table
+         1
+         ),
+with each set including both related and unrelated languages:
+European languages that use Latin script (T1),
+non-European languages that use non-Latin scripts (T2),
+and a mixture of both types
+(T3).
+Each sub-corpus was divided into a training set of 80
+         %
+         , and development and
+test sets of 10
+         %
+         each.
+The training sets are composed of approximately
+700 documents per language,
+with an average length of 350 words per document.
+There are over 5000 word types per language,
+and over 1000 character bigrams in total.
+The test sets include approximately 90 documents per language.
+We report results on the test sets,
+after training on both the training and development sets.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Setup
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         We replicate the experiments of
+         Tsur and Rappoport (2007)
+         by
+limiting the features to
+the 200 most frequent character bigrams.
+         The feature values are set to
+the frequency of the character bigrams
+normalized by the length of the document.
+We use these feature vectors as input to
+the SVM-Multiclass classifier
+         [14]
+         .
+The results are shown in the
+         Baseline
+         column of Table
+         2
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Discriminative Words
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         The objective of the first experiment
+is to quantify the influence of the most discriminative words
+on the accuracy of the bigram-based classifier.
+Using Algorithm
+         2
+         ,
+we identify the 100 most discriminative words,
+and remove them from the training data.
+The bigram counts are then recalculated,
+and the new 200 most frequent bigrams are used as features for the
+character-level SVM.
+Note that
+the number of the features in the classifier remains unchanged.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         The results are shown in the
+         Discriminative Words
+         column of Table
+         2
+         .
+We see a statistically significant drop in the accuracy of the classifier
+with respect to the baseline
+in all sets except T3.
+The words that are identified as the most discriminative include
+function words, punctuation,
+very common content words,
+and the toponymic terms.
+The 10 highest scoring words from T1 are:
+         indeed, often, statement, :
+         (colon),
+         question, instance, …
+         (ellipsis),
+         opinion, conclude
+         , and
+         however
+         .
+In addition,
+         France
+         ,
+         Turkey
+         ,
+         Italian
+         ,
+         Germany
+         ,
+and
+         Italy
+         are all found among the top 70 words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         For comparison,
+we attempt to quantify the effect of removing
+the same number of randomly-selected words
+from the training data.
+Specifically,
+we discard all tokens that correspond to
+100 word types that have the same or slightly higher frequency as
+the discriminative words.
+The results are shown in the
+         Random Words
+         column of Table
+         2
+         .
+The decrease is much smaller for I1, I2, and T1,
+while the accuracy actually increases
+for T2 and T3.
+This illustrates the impact that the most discriminative words have on the
+bigram-based classifier
+beyond simple reduction in the amount of the training data.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Indicative Bigrams
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         Using Algorithm
+         2
+         ,
+we identify the top 20 character bigrams,
+and replace them with randomly selected bigrams.
+The results of this experiment are reported in
+the
+         Indicative Bigrams
+         column of Table
+         2
+         .
+It is to be expected that the replacement of any 20 of the top bigrams with
+20 less useful bigrams
+will result in some drop in accuracy, regardless of which bigrams are
+chosen for replacement.
+For comparison,
+the
+         Random Bigrams
+         column of
+Table
+         2
+         shows the mean accuracy over 100 trials
+obtained when 20 bigrams randomly selected from the set of 200 bigrams
+are replaced with random bigrams from outside of the set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         The results indicate that our algorithm
+indeed identifies 20 bigrams that are on average more important
+than the other 180 bigrams.
+What is really striking is that
+the sets of 20 indicative character bigrams
+overlap substantially across different sets.
+Table
+         3
+         shows
+17 bigrams that are common across the three TOEFL corpora,
+ordered by their score,
+together with some of the highly scored words in which they occur.
+Four of the bigrams consist of punctuation marks and a
+space.
+         The remaining bigrams indicate
+function words,
+toponymic terms like
+         Germany
+         ,
+and frequent content words like
+         take
+         and
+         new
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p3">
+        <p class="ltx_p">
+         The situation is similar in the ICLE sets,
+where likewise 17 out of 20 bigrams are common.
+The inter-fold overlap is even greater, with
+19 out of 20 bigrams appearing in each of the 10 folds.
+In particular,
+the bigrams
+         fr
+         and
+         bu
+         can be traced to
+both the function words
+         from
+         and
+         but
+         ,
+and the presence of French and Bulgarian in I1.
+However,
+the fact that the two bigrams are also on the list for the I2 set,
+which does not include these languages,
+suggests that their importance is mostly due to the function words.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.5
+        </span>
+        Discussion
+       </h3>
+       <div class="ltx_para" id="S3.SS5.p1">
+        <p class="ltx_p">
+         In the first experiment,
+we showed that
+the removal of the 100 most discriminative words
+from the training data
+results in a significant drop in the accuracy of the classifier
+         that is based exclusively on character bigrams
+         .
+If the hypothesis of
+         Tsur and Rappoport (2007)
+         was true,
+this should not be the case,
+as the phonology of L1 would influence the choice of
+words across the lexicon.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS5.p2">
+        <p class="ltx_p">
+         In the second experiment,
+we found that the majority of the
+most indicative character bigrams
+         are shared among different language sets
+         .
+The bigrams appear to reflect primarily high-frequency function words.
+If the hypothesis
+was true, this should not be the case,
+as the diverse L1 phonologies would
+induce different sets of bigrams.
+In fact, the highest scoring bigrams reflect punctuation patterns,
+which have little to do with word choice.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

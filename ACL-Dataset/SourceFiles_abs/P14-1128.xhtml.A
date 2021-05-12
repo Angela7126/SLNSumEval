@@ -1,0 +1,963 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Toward Better Chinese Word Segmentation for SMT via Bilingual Constraints.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Word segmentation is regarded as a critical procedure for high-level Chinese language processing tasks, since Chinese scripts are written in continuous characters without explicit word boundaries (e.g., space in English). The empirical works show that word segmentation can be beneficial to Chinese-to-English statistical machine translation (SMT)
+        [23, 4, 31]
+        . In fact most current SMT models assume that parallel bilingual sentences should be segmented into sequences of tokens that are meant to be “words”
+        [12]
+        . The practice in state-of-the-art MT systems is that Chinese sentences are tokenized by a monolingual supervised word segmentation model trained on the hand-annotated treebank data, e.g., Chinese treebank (CTB)
+        [25]
+        . These models are conducive to MT to some extent, since they commonly have relatively good aggregate performance and segmentation consistency
+        [4]
+        . But one outstanding problem is that these models may leave out some crucial segmentation features for SMT, since the output words conform to the treebank segmentation standard designed for monolingually linguistic intuition, rather than specific to the SMT task.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In recent years, a number of works
+        [23, 4, 12, 22]
+        attempted to build segmentation models for SMT based on bilingual unsegmented data, instead of monolingual segmented data. They proposed to learn gainful bilingual knowledge as golden-standard segmentation supervisions for training a bilingual unsupervised model. Frequently, the bilingual knowledge refers to the mappings of an individual English word to one or more consecutive Chinese characters, generated via statistical character-based alignment. They leverage such mappings to either constitute a Chinese word dictionary for maximum-matching segmentation
+        [24]
+        , or form labeled data for training a sequence labeling model
+        [18]
+        . The prior works showed that these models help to find some segmentations tailored for SMT, since the bilingual word occurrence feature can be captured by the character-based alignment
+        [15]
+        . However, these models tend to miss out other linguistic segmentation patterns as monolingual supervised models, and suffer from the negative effects of erroneously alignments to word segmentation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        This paper proposes an alternative Chinese Word Segmentation (CWS) model adapted to the SMT task, which seeks not only to maintain the advantages of a monolingual supervised model, having hand-annotated linguistic knowledge, but also to assimilate the relevant bilingual segmentation nature. We propose leveraging the bilingual knowledge to form learning constraints that guide a supervised segmentation model toward a better solution for SMT. Besides the bilingual motivated models, character-based alignment is also employed to achieve the mappings of the successive Chinese characters and the target language words. Instead of directly merging the characters into concrete segmentations, this work attempts to extract word boundary distributions for character-level trigrams (types) from the “chars-to-word” mappings. Furthermore, these word boundaries are encoded into a graph propagation (GP) expression, in order to widen the influence of the induced bilingual knowledge among Chinese texts. The GP expression constrains similar types having approximated word boundary distributions. Crucially, the GP expression with the bilingual knowledge is then used as side information to regularize a CRFs (conditional random fields) model’s learning over treebank and bitext data, based on the posterior regularization (PR) framework
+        [9]
+        . This constrained learning amounts to a jointly coupling of GP and CRFs, i.e., integrating GP into the estimation of a parametric structural model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        This paper is structured as follows: Section 2 points out the main differences with the related works of this study. Section 3 presents the details of the proposed segmentation model. Section 4 reports the experimental results of the proposed model for a Chinese-to-English MT task. The conclusion is drawn in Section 5.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In the literature, many approaches have been proposed to learn CWS models for SMT. They can be put into two categories, monolingual-motivated and bilingual-motivated. The former primarily optimizes monolingual supervised models according to some predefined segmentation properties that are manually summarized from empirical MT evaluations. Chang et al.
+        [4]
+        enhanced a CRFs segmentation model in MT tasks by tuning the word granularity and improving the segmentation consistence. Zhang et al.
+        [29]
+        produced a better segmentation model for SMT by concatenating various corpora regardless of their different specifications. Distinct from their behaviors, this work uses automatically learned constraints instead of manually defined ones. Most importantly, the constraints have a better learning guidance since they originate from the bilingual texts. On the other hand, the bilingual-motivated CWS models typically rely on character-based alignments to generate segmentation supervisions. Xu et al.
+        [24]
+        proposed to employ “chars-to-word” alignments to generate a word dictionary for maximum matching segmentation in SMT task. The works in
+        [12, 31]
+        extended the dictionary extraction strategy. Ma and Way
+        [12]
+        adopted co-occurrence frequency metric to iteratively optimize “candidate words” extract from the alignments. Zhao et al.
+        [31]
+        attempted to find an optimal subset of the dictionary learned by the character-based alignment to maximize the MT performance. Paul et al.
+        [18]
+        used the words learned from “chars-to-word” alignments to train a maximum entropy segmentation model. Rather than playing the “hard” uses of the bilingual segmentation knowledge, i.e., directly merging “char-to-word” alignments to words as supervisions, this study extracts word boundary information of characters from the alignments as soft constraints to regularize a CRFs model’s learning.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The graph propagation (GP) technique provides a natural way to represent data in a variety of target domains (Belkin et al., 2006). In this technique, the constructed graph has vertices consisting of labeled and unlabeled examples. Pairs of vertices are connected by weighted edges encoding the degree to which they are expected to have the same label (Zhu et al., 2003). Many recent works, such as by Subramanya et al.
+        [20]
+        , Das and Petrov
+        [6]
+        , Zeng et al.
+        [27, 26]
+        and Zhu et al.
+        [32]
+        , proposed GP for inferring the label information of unlabeled data, and then leverage these GP outcomes to learn a semi-supervised scalable model (e.g., CRFs). These approaches are referred to as pipelined learning with GP. This study also works with a similarity graph, encoding the learned bilingual knowledge. But, unlike the prior pipelined approaches, this study performs a joint learning behavior in which GP is used as a learning constraint to interact with the CRFs model estimation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        One of our main objectives is to bias CRFs model’s learning on unlabeled data, under a non-linear GP constraint encoding the bilingual knowledge. This is accomplished by the posterior regularization (PR) framework
+        [9]
+        . PR performs regularization on posteriors, so that the learned model itself remains simple and tractable, while during learning it is driven to obey the constraints through setting appropriate parameters. The closest prior study is constrained learning, or learning with prior knowledge. Chang et al.
+        [4]
+        described constraint driven learning (CODL) that augments model learning on unlabeled data by adding a cost for violating expectations of constraint features designed by domain knowledge. Mann and McCallum
+        [13]
+        and McCallum et al.
+        [14]
+        proposed to employ generalized expectation criteria (GE) to specify preferences about model expectations in the form of linear constraints on some feature expectations.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Methodology
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        This work aims at building a CWS model adapted to the SMT task. The model induction is shown in Algorithm 1. The input data requires two types of training resources, segmented Chinese sentences from treebank
+        𝒟lc
+        and parallel unsegmented sentences of Chinese and foreign language
+        𝒟uc
+        and
+        𝒟uf
+        . The first step is to conduct character-based alignment over bitexts
+        𝒟uc
+        and
+        𝒟uf
+        , where every Chinese character is an alignment target. Here, we are interested on
+        n
+        -to-1 alignment patterns, i.e., one target word is aligned to one or more source Chinese characters. The second step aims to collect word boundary distributions for all types, i.e., character-level trigrams, according to the
+        n
+        -to-1 mappings (Section 3.1). The third step is to encode the induced word boundary information into a
+        k
+        -nearest-neighbors (
+        k
+        -NN) similarity graph constructed over the entire set of types from
+        𝒟lc
+        and
+        𝒟uc
+        (Section 3.2). The final step trains a discriminative sequential labeling model, conditional random fields, on
+        𝒟lc
+        and
+        𝒟uc
+        under bilingual constraints in a graph propagation expression (Section 3.3). This constrained learning is carried out based on posterior regularization (PR) framework
+        [9]
+        .
+        CWS model induction with bilingual constraints
+        [1]
+        Segmented Chinese sentences from treebank
+        𝒟lc
+        ; Parallel sentences of Chinese and foreign language
+        𝒟uc
+        and
+        𝒟uf
+        <math alttext="\theta" class="ltx_Math" display="inline" id="S3.p1.m17" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mi>
+          θ
+         </mi>
+        </math>
+        : the CRFs model parameters
+        <math alttext="\mathcal{D}^{c\leftrightarrow f}\leftarrow" class="ltx_Math" display="inline" id="S3.p1.m18" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <msup>
+           <mi class="ltx_font_mathcaligraphic">
+            𝒟
+           </mi>
+           <mrow>
+            <mi>
+             c
+            </mi>
+            <mo>
+             ↔
+            </mo>
+            <mi>
+             f
+            </mi>
+           </mrow>
+          </msup>
+          <mo>
+           ←
+          </mo>
+          <mi>
+          </mi>
+         </mrow>
+        </math>
+        char_align_bitext
+        (𝒟uc,𝒟uf)
+        <math alttext="r\leftarrow" class="ltx_Math" display="inline" id="S3.p1.m20" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi>
+           r
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mi>
+          </mi>
+         </mrow>
+        </math>
+        learn_word_bound
+        (𝒟c↔f)
+        <math alttext="\mathcal{G}\leftarrow{\textbf{\small encode\_graph\_constraint}}~{}(\mathcal{D%
+}^{c}_{l},\mathcal{D}^{c}_{u},r)" class="ltx_Math" display="inline" id="S3.p1.m22" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi class="ltx_font_mathcaligraphic">
+           𝒢
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mrow>
+           <mpadded width="+3.3pt">
+            <mtext mathsize="small" mathvariant="bold" stretchy="false">
+             encode_graph_constraint
+            </mtext>
+           </mpadded>
+           <mo>
+            ⁢
+           </mo>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <msubsup>
+              <mi class="ltx_font_mathcaligraphic">
+               𝒟
+              </mi>
+              <mi>
+               l
+              </mi>
+              <mi>
+               c
+              </mi>
+             </msubsup>
+             <mo>
+              ,
+             </mo>
+             <msubsup>
+              <mi class="ltx_font_mathcaligraphic">
+               𝒟
+              </mi>
+              <mi>
+               u
+              </mi>
+              <mi>
+               c
+              </mi>
+             </msubsup>
+             <mo>
+              ,
+             </mo>
+             <mi>
+              r
+             </mi>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+          </mrow>
+         </mrow>
+        </math>
+        <math alttext="\theta\leftarrow{\textbf{\small pr\_crf\_graph}}~{}(\mathcal{D}^{c}_{l},%
+\mathcal{D}^{c}_{u},\mathcal{G})" class="ltx_Math" display="inline" id="S3.p1.m23" xmlns="http://www.w3.org/1998/Math/MathML">
+         <mrow>
+          <mi>
+           θ
+          </mi>
+          <mo>
+           ←
+          </mo>
+          <mrow>
+           <mpadded width="+3.3pt">
+            <mtext mathsize="small" mathvariant="bold" stretchy="false">
+             pr_crf_graph
+            </mtext>
+           </mpadded>
+           <mo>
+            ⁢
+           </mo>
+           <mrow>
+            <mo>
+             (
+            </mo>
+            <mrow>
+             <msubsup>
+              <mi class="ltx_font_mathcaligraphic">
+               𝒟
+              </mi>
+              <mi>
+               l
+              </mi>
+              <mi>
+               c
+              </mi>
+             </msubsup>
+             <mo>
+              ,
+             </mo>
+             <msubsup>
+              <mi class="ltx_font_mathcaligraphic">
+               𝒟
+              </mi>
+              <mi>
+               u
+              </mi>
+              <mi>
+               c
+              </mi>
+             </msubsup>
+             <mo>
+              ,
+             </mo>
+             <mi class="ltx_font_mathcaligraphic">
+              𝒢
+             </mi>
+            </mrow>
+            <mo>
+             )
+            </mo>
+           </mrow>
+          </mrow>
+         </mrow>
+        </math>
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Word Boundaries Learned from Character-based Alignments
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         The gainful supervisions toward a better segmentation solution for SMT are naturally extracted from MT training resources, i.e., bilingual parallel data. This study employs an approximated method introduced in
+         [24, 12, 5]
+         to learn bilingual segmentation knowledge. This relies on statistical character-based alignment: first, every Chinese character in the bitexts is divided by a white space so that individual characters are regarded as special “words” or alignment targets, and second, they are connected with English words by using a statistical word aligner, e.g., GIZA++
+         [15]
+         . Note that the aligner is restricted to use an
+         n
+         -to-1 alignment pattern. The primary idea is that consecutive Chinese characters are grouped to a candidate word, if they are aligned to the same foreign word. It is worth mentioning that prior works presented a straightforward usage for candidate words, treating them as golden segmentations, either dictionary units or labeled resources. But this study treats the induced candidate words in a different way. We propose to extract the word boundary distributions
+         for character-level trigrams (
+         type
+         )
+         , as shown in Figure 1, instead of the very specific words. There are two main reasons to do so. First, it is a more general expression which can reduce the impact amplification of erroneous character alignments. Second, boundary distributions can play more flexible roles as constraints over labelings to bias the model learning.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         The type-level word boundary extraction is formally described as follows. Given the
+         i
+         th sentence pair
+         ⟨xic,xif,𝒜ic→f⟩
+         of the aligned bilingual corpus
+         𝒟c↔f
+         , the Chinese sentence
+         xic
+         consisting of
+         m
+         characters
+         {xi,1c,xi,2c,…,xi,mc}
+         , and the foreign language sentence
+         xif
+         , consisting of
+         n
+         words
+         {xi,1f,xi,2f,…,xi,nf}
+         ,
+         𝒜ic→f
+         represents a set of alignment pairs
+         aj=⟨Cj,xi,jf⟩
+         that defines connections between a few Chinese characters
+         Cj={xi,j1c,xi,j2c,…,xi,jkc}
+         and a single foreign word
+         xi,jf
+         . For an alignment
+         aj=⟨Cj,xi,jf⟩
+         , only the sequence of characters
+         Cj={xi,j1c,xi,j2c,…,xi,jkc}⁢∀d∈[1,k-1],jd+1-jd=1
+         constitutes a valid candidate word. For the whole bilingual corpus, we assign each character in the candidate words with a word boundary tag
+         T∈{B,M,E,S}
+         , and then count across the entire corpus to collect the tag distributions
+         ri={ri,t;t∈T}
+         for each type
+         xi,j-1c⁢xi,jc⁢xi,j+1c
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Constraints Encoded by Graph Propagation Expression
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The previous step contributes to generate bilingual segmentation supervisions, i.e., type-level word boundary distributions. An intuitive manner is to directly leverage the induced boundary distributions as label constraints to regularize segmentation model learning, based on a constrained learning algorithm. This study, however, makes further efforts to elevate the positive effects of the bilingual knowledge via the graph propagation technique. We adopt a similarity graph to encode the learned type-level word boundary distributions. The GP expression will be defined as a PR constraint in Section 3.3 that reflects the interactions between the graph and the CRFs model. In other words, GP is integrated with estimation of parametric structural model. This is greatly different from the prior pipelined approaches
+         [20, 6, 27]
+         , where GP is run first and its propagated outcomes are then used to bias the structural model. This work seeks to capture the GP benefits during the modeling of sequential correlations.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         In what follows, the graph setting and propagation expression are introduced. As in conventional GP examples
+         [7]
+         , a similarity graph
+         𝒢=(V,E)
+         is constructed over
+         N
+         types extracted from Chinese training data, including treebank
+         𝒟lc
+         and bitexts
+         𝒟uc
+         . Each vertex
+         Vi
+         has a
+         |T|
+         -dimensional estimated measure
+         vi={vi,t;t∈T}
+         representing a probability distribution on word boundary tags. The induced type-level word boundary distributions
+         ri={ri,t;t∈T}
+         are empirical measures for the corresponding
+         M
+         graph vertices. The edges
+         E∈Vi×Vj
+         connect all the vertices. Scores between pairs of graph vertices (types),
+         wi⁢j
+         , refer to the similarities of their syntactic environment, which are computed following the method in
+         [20, 6, 27]
+         . The similarities are measured based on co-occurrence statistics over a set of predefined features (introduced in Section 4.1). Specifically, the point-wise mutual information (PMI) values, between vertices and each feature instantiation that they have in common, are summed to sparse vectors, and their cosine distances are computed as the similarities. The nature of this similarity graph enforces that the connected types with high weights appearing in different texts should have similar word boundary distributions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         The quality (smoothness) of the similarity graph can be estimated by using a standard propagation function, as shown in Equation 1. The square-loss criterion
+         [33, 3]
+         is used to formulate this function:
+        </p>
+        𝒫(v)=∑t=1T(∑i=1M(vi,t-ri,t)2+μ∑j=1N∑i=1Nwi⁢j(vi,t-vj,t)2+ρ∑i=1N(vi,t)2)
+
+(1)
+        <p class="ltx_p">
+         The first term in this equation refers to seed matches that compute the distances between the estimated measure
+         vi
+         and the empirical probabilities
+         ri
+         . The second term refers to edge smoothness that measures how vertices
+         vi
+         are smoothed with respect to the graph. Two types connected by an edge with high weight should be assigned similar word boundary distributions. The third term, a
+         ℓ2
+         norm, evaluates the distribution sparsity
+         [7]
+         per vertex. Typically, the GP process amounts to an optimization process with respect to parameter
+         v
+         such that Equation 1 is minimized. This propagation function can be used to reflect the graph smoothness, where the higher the score, the lower the smoothness.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        PR Learning with GP Constraint
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Our learning problem belongs to semi-supervised learning (SSL), as the training is done on treebank labeled data
+         (XL,YL)={(x1,y1),…,(xl,yl)}
+         , and bilingual unlabeled data
+         (XU)={x1,…,xu}
+         where
+         xi={x1,…,xm}
+         is an input word sequence and
+         yi={y1,…,ym},y∈T
+         is its corresponding label sequence. Supervised linear-chain CRFs can be modeled in a standard conditional log-likelihood objective with a Gaussian prior:
+        </p>
+        ℒ(θ)=pθ(yi|xi)-∥θ∥22⁢σ
+
+(2)
+        <p class="ltx_p">
+         The conditional probabilities
+         pθ
+         are expressed as a log-linear form:
+        </p>
+        pθ(yi|xi)=exp⁢(∑k=1mθT⁢f⁢(yik-1,yik,xi))Zθ⁢(xi)
+
+(3)
+        <p class="ltx_p">
+         Where
+         Zθ⁢(xi)
+         is a partition function that normalizes the exponential form to be a probability distribution, and
+         f⁢(yik-1,yik,xi)
+         are arbitrary feature functions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         In our setting, the CRFs model is required to learn from unlabeled data. This work employs the posterior regularization (PR) framework
+         [9]
+         to bias the CRFs model’s learning on unlabeled data, under a constraint encoded by the graph propagation expression. It is expected that similar types in the graph should have approximated expected taggings under the CRFs model. We follow the approach introduced by
+         [10]
+         to set up a penalty-based PR objective with GP: the CRFs likelihood is modified by adding a regularization term, as shown in Equation 4, representing the constraints:
+        </p>
+        ℛU(θ,q)=KL(q||pθ)+λ𝒫(v)
+
+(4)
+        <p class="ltx_p">
+         Rather than regularize CRFs model’s posteriors
+         pθ(𝒴|xi)
+         directly, our model uses an auxiliary distribution
+         q(𝒴|xi)
+         over the possible labelings
+         𝒴
+         for
+         xi
+         , and penalizes the CRFs marginal log-likelihood by a
+         KL-divergence
+         term
+         , representing the distance between the estimated posteriors
+         p
+         and the desired posteriors
+         q
+         , as well as a
+         penalty
+         term, formed by the GP function. The hyperparameter
+         λ
+         is used to control the impacts of the penalty term. Note that the penalty is fired if the graph score computed based on the expected taggings given by the current CRFs model is increased vis-a-vis the previous training iteration. This nature requires that the penalty term
+         𝒫⁢(v)
+         should be formed as a function of posteriors
+         q
+         over CRFs model predictions
+         , i.e.,
+         𝒫⁢(q)
+         . To state this, a mapping
+         ℳ:({1,…,u},{1,…,m})→V
+         from words in the corpus to vertices in the graph is defined. We can thus decompose
+         vi,t
+         into a function of
+         q
+         as follows:
+        </p>
+        vi,t=∑a=1u∑b=1;ℳ⁢(a,b)=Vim∑c=1T∑y∈𝒴𝟏(yb=t,yb-1=c)q(y|xa)∑a=1u∑b=1m𝟏(ℳ(a,b)=Vi)
+
+(5)
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         The final learning objective combines the CRFs likelihood with the PR regularization term:
+         𝒥⁢(θ,q)=ℒ⁢(θ)+ℛU⁢(θ,q)
+         . This joint objective, over
+         θ
+         and
+         q
+         , can be optimized by an expectation maximization (EM) style algorithm as reported in
+         [9]
+         . We start from initial parameters
+         θ0
+         , estimated by supervised CRFs model training on treebank data. The E-step is to minimize
+         ℛU⁢(θ,q)
+         over the posteriors
+         q
+         that are constrained to the probability simplex. Since the penalty term
+         𝒫⁢(v)
+         is a non-linear form, the optimization method in
+         [9]
+         via projected gradient descent on the dual is inefficient
+         . This study follows the optimization method
+         [10]
+         that uses exponentiated gradient descent (EGD) algorithm. It allows that the variable update expression, as shown in Equation 6, takes a multiplicative rather than an additive form.
+        </p>
+        q(w+1)(y|xi)=q(w)(y|xi)exp(-η∂⁡ℛ∂q(w)(y|xi))
+
+(6)
+        <p class="ltx_p">
+         where the parameter
+         η
+         controls the optimization rate in the E-step. With the contributions from the E-step that further encourage
+         q
+         and
+         p
+         to agree, the M-step aims to optimize the objective
+         𝒥⁢(θ,q)
+         with respect to
+         θ
+         . The M-step is similar to the standard CRFs parameter estimation, where the gradient ascent approach still works. This EM-style approach monotonically increases
+         𝒥⁢(θ,q)
+         and thus is guaranteed to converge to a local optimum.
+        </p>
+        E-step:q(t+1)=arg⁢min𝑞⁢ℛU⁢(θ(t),q(t))M-step:θ(t+1)=arg⁢max𝜃⁢ℒ⁢(θ)+δ∑i=1u∑y∈𝒴q(t+1)(y|xi)logpθ(y|xi)
+
+(7)
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Data and Setup
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         The experiments in this study evaluated the performances of various CWS models in a Chinese-to-English translation task. The influence of the word segmentation on the final translation is our main investigation. We adopted three state-of-the-art metrics, BLEU
+         [17]
+         , NIST
+         [8]
+         and METEOR
+         [2]
+         , to evaluate the translation quality.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         The monolingual segmented data,
+         trainTB
+         , is extracted from the Penn Chinese Treebank (CTB-7)
+         [25]
+         , containing 51,447 sentences. The bilingual training data,
+         trainMT
+         , is formed by a large in-house Chinese-English parallel corpus
+         [21]
+         . There are in total 2,244,319 Chinese-English sentence pairs crawled from online resources, concentrated in 5 different domains including
+         laws
+         ,
+         novels
+         ,
+         spoken
+         ,
+         news
+         and
+         miscellaneous
+         . This in-house bilingual corpus is the MT training data as well. The target-side language model is built on over 35 million monolingual English sentences,
+         trainLM
+         , crawled from online resources. The NIST evaluation campaign data, MT-03 and MT-05, are selected to comprise the MT development data,
+         devMT
+         , and testing data,
+         testMT
+         , respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         For the settings of our model, we adopted the standard feature templates introduced by Zhao et al.
+         [30]
+         for CRFs. The character-based alignment for achieving the “chars-to-word” mappings is accomplished by GIZA++ aligner
+         [15]
+         . For the GP, a 10-NNs similarity graph was constructed
+         . Following
+         [20, 27]
+         , the features used to compute similarities between vertices were (Suppose given a type “
+         w2⁢w3⁢w4
+         ” surrounding contexts “
+         w1⁢w2⁢w3⁢w4⁢w5
+         ”):
+         unigram
+         (
+         w3
+         ),
+         bigram
+         (
+         w1⁢w2
+         ,
+         w4⁢w5
+         ,
+         w2⁢w4
+         ),
+         trigram
+         (
+         w2⁢w3⁢w4
+         ,
+         w2⁢w4⁢w5
+         ,
+         w1⁢w2⁢w4
+         ),
+         trigram+context
+         (
+         w1⁢w2⁢w3⁢w4⁢w5
+         ) and
+         character classes
+         in number, punctuation, alphabetic letter and other (
+         t⁢(w2)⁢t⁢(w3)⁢t⁢(w4)
+         ). There are four hyperparameters in our model to be tuned by using the development data (
+         devMT
+         ) among the following settings: for the graph propagation,
+         μ∈{0.2,0.5,0.8}
+         and
+         ρ∈{0.1,0.3,0.5,0.8}
+         ; for the PR learning,
+         λ∈{0≤λi≤1}
+         and
+         σ∈{0≤σi≤1}
+         where the step is 0.1. The best performed joint settings,
+         μ=0.5,ρ=0.5,λ=0.9
+         and
+         σ=0.8
+         , were used to measure the final performance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         The MT experiment was conducted based on a standard log-linear phrase-based SMT model. The GIZA++ aligner was also adopted to obtain word alignments
+         [15]
+         over the segmented bitexts. The heuristic strategy of
+         grow-diag-final-and
+         [11]
+         was used to combine the bidirectional alignments for extracting phrase translations and reordering tables. A 5-gram language model with Kneser-Ney smoothing was trained with SRILM
+         [19]
+         on monolingual English data. Moses
+         [11]
+         was used as decoder. The Minimum Error Rate Training (MERT)
+         [16]
+         was used to tune the feature parameters on development data.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Various Segmentation Models
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         To provide a thorough analysis, the MT experiments in this study evaluated three baseline segmentation models and two off-the-shelf models, in addition to four variant models that also employ the bilingual constraints. We start from three baseline models:
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            Character Segmenter (CS)
+            : this model simply divides Chinese sentences into sequences of characters.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            Supervised Monolingual Segmenter (SMS)
+            : this model is trained by CRFs on treebank training data (
+            trainTB
+            ). The same feature templates
+            [30]
+            are used. The standard four-tags (
+            B
+            ,
+            M
+            ,
+            E
+            and
+            S
+            ) were used as the labels. The stochastic gradient descent is adopted to optimize the parameters.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            Unsupervised Bilingual Segmenter (UBS)
+            : this model is trained on the bitexts (trainMT) following the approach introduced in
+            [12]
+            . The optimal set of the model parameter values was found on
+            devMT
+            to be
+            k=3,tA⁢C=0.0
+            and
+            tC⁢O⁢O⁢C=15
+            .
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         The comparison candidates also involve two popular off-the-shelf segmentation models:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Stanford Segmenter
+            : this model, trained by Chang et al.
+            [4]
+            , treats CWS as a binary word boundary decision task. It covers several features specific to the MT task, e.g., external lexicons and proper noun features.
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            ICTCLAS Segmenter
+            : this model, trained by Zhang et al.
+            [28]
+            , is a hierarchical HMM segmenter that incorporates parts-of-speech (POS) information into the probability models and generates multiple HMM models for solving segmentation ambiguities.
+           </p>
+          </div>
+         </li>
+        </ul>
+        <p class="ltx_p">
+         This work also evaluated four variant models
+         that perform alternative ways to incorporate the bilingual constraints based on two state-of-the-art graph-based SSL approaches.
+        </p>
+        <ul class="ltx_itemize" id="I3">
+         <li class="ltx_item" id="I3.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I3.i1.p1">
+           <p class="ltx_p">
+            Self-training Segmenters (STS)
+            : two variant models were defined by the approach reported in
+            [20]
+            that uses the supervised CRFs model’s decodings, incorporating empirical and constraint information, for unlabeled examples as additional labeled data to retrain a CRFs model. One variant (STS-NO-GP) skips the GP step, directly decoding with type-level word boundary probabilities induced from bitexts, while the other (STS-GP-PL) runs the GP at first and then decodes with GP outcomes. The optimal hyperparameter values were found to be: STS-NO-GP (
+            α=0.8
+            ) and
+            η=0.6
+            ) and STS-GP-PL (
+            μ=0.5,ρ=0.3,α=0.8
+            and
+            η=0.6
+            ).
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I3.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I3.i2.p1">
+           <p class="ltx_p">
+            Virtual Evidences Segmenters (VES)
+            : Two variant models based on the approach in
+            [27]
+            were defined. The type-level word boundary distributions, induced by the character-based alignment (VES-NO-GP), and the graph propagation (VES-GP-PL), are regarded as virtual evidences to bias CRFs model’s learning on the unlabeled data. The optimal hyperparameter values were found to be: VES-NO-GP (
+            α=0.7
+            ) and VES-GP-PL (
+            μ=0.5,ρ=0.3
+            and
+            α=0.7
+            ).
+           </p>
+          </div>
+         </li>
+        </ul>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Main Results
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Table 1 summarizes the final MT performance on the MT-05 test data, evaluated with ten different CWS models. In what follows, we summarized four major observations from the results. Firstly, as expected, having word segmentation does help Chinese-to-English MT. All other nine CWS models outperforms the CS baseline which does not try to identify Chinese words at all. Secondly, the other two baselines, SMS and UBS, are on a par with each other, showing less than 0.36 average performance differences on the three evaluation metrics. This outcome validated that the models, trained by either the treebank or the bilingual data, performed reasonably well. But they only capture partial segmentation features so that less gains for SMT are achieved when comparing to other sophisticated models. Thirdly, we notice that the two off-the-shelf models, Stanford and ICTCLAS, just brought minor improvements over the SMS baseline, although they are trained using richer supervisions. This behaviour illustrates that the conventional optimizations to the monolingual supervised model, e.g., accumulating more supervised data or predefined segmentation properties, are insufficient to help model for achieving better segmentations for SMT. Finally, highlighting the five models working with the bilingual constraints, most of them can achieve significant gains over the other ones without using the bilingual constraints. This strongly demonstrates that bilingually-learned segmentation knowledge does helps CWS for SMT. The models working with GP, STS-GP-PL, VES-GP-PL and ours outperform all others. We attribute this to the role of GP in assisting the spread of bilingual knowledge on the Chinese side. Importantly, it can be observed that our model outperforms STS-GP, VES-GP, which greatly supports that joint learning of CRFs and GP can alleviate the error transfer by the pipelined models. This is one of the most crucial findings in this study. Overall, the boldface numbers in the last row illustrate that our model obtains average improvements of 1.89, 1.76 and 1.61 on BLEU, NIST and METEOR over others.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Analysis &amp; Discussion
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         This section aims to further analyze the three primary observations concluded in Section 4.3:
+         i
+         ) word segmentation is useful to SMT;
+         i⁢i
+         ) the treebank and the bilingual segmentation knowledge are helpful, performing segmentation of different nature; and
+         i⁢i⁢i
+         ) the bilingual constraints lead to learn segmentations better tailored for SMT.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         The first observation derives from the comparisons between the CS baseline and other models. Our results, showing the significant CWS benefits to SMT, are consistent with the works reported in the literature
+         [24, 4]
+         . In our experiment, two additional evidences found in the translation model are provided to further support that NO tokenization of Chinese (i.e., the CS model’s output) could harm the MT system. First, the SMT phrase extraction, i.e., building “phrases” on top of the character sequences, cannot fully capture all meaningful segmentations produced by the CS model. The character based model leads to missing some useful longer phrases, and to generate many meaningless or redundant translations in the phrase table. Moreover, it is affected by translation ambiguities, caused by the cases where a Chinese character has very different meanings in different contextual environments.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p3">
+        <p class="ltx_p">
+         The second observation shifts the emphasis to SMS and UBS, based on the treebank and the bilingual segmentation, respectively. Our results show that both segmentation patterns can bring positive effects to MT. Through analyzing both models’ segmentations for
+         trainMT
+         and
+         testMT
+         , we attempted to get a closer inspection on the segmentation preferences and their influence on MT. Our first finding is that the segmentation consensuses between SMS and UBS are positive to MT. There have about 35% identical segmentations produced by the two models. If these identical segmentations are removed, and the experiments are rerun, the translation scores decrease (on average) by 0.50, 0.85 and 0.70 on BLEU, NIST and METEOR, respectively. Our second finding is that SMS exhibits better segmentation consistency than UBS. One representative example is the segmentations for “
+         UTF8gbsnå­¤é¶é¶ (lonely)”. All the outputs of SMS were “
+         UTF8gbsnå­¤é¶é¶”, while UBS generated three ambiguous segmentations, “
+         UTF8gbsnå­¤(alone)_
+         UTF8gbsné¶é¶(double zero)”, “
+         UTF8gbsnå­¤é¶(lonely)_
+         UTF8gbsné¶(zero)” and “
+         UTF8gbsnå­¤(alone)_
+         UTF8gbsné¶(zero)_
+         UTF8gbsné¶(zero)”. The segmentation consistency of SMS rests on the high-quality treebank data and the robust CRFs tagging model. On the other hand, the advantage of UBS is to capture the segmentations matching the aligned target words. For example, UBS grouped “
+         UTF8gbsnå½(country)_
+         UTF8gbsné(border)_
+         UTF8gbsné´(between)” to a word “
+         UTF8gbsnå½éé´(international)”, rather than two words “
+         UTF8gbsnå½é(international)_
+         UTF8gbsné´(between)” (as given by SMS), since these three characters are aligned to a single English word “international”. The above analysis shows that SMS and UBS have their own merits and combining the knowledge derived from both segmentations is highly encouraged.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p4">
+        <p class="ltx_p">
+         The third observation concerns the great impact of the bilingual constraints to the segmentation models in the MT task. The use of the bilingual constraints is the prime objective of this study. Our first contribution for this purpose is on using the word boundary distributions to capture the bilingual segmentation supervisions. This representation contributes to reduce the negative impacts of erroneous “chars-to-word” alignments. The ambiguous types (having relatively uniform boundary distribution), caused by alignment errors, cannot directly bias the model tagging preferences. Furthermore, the word boundary distributions are convenient to make up the learning constraints over the labelings among various constrained learning approaches. They have successfully played in three types of constraints for our experiments: PR penalty (Our model), decoding constraints in self-training (STS) and virtual evidences (VES). The second contribution is the use of GP, illustrated by STS-GP-PL, VES-GP-PL and Our model. The major effect is to multiply the impacts of the bilingual knowledge through the similarity graph. The graph vertices (types)
+         , without any supervisions, can learn the word boundary information from their similar types (neighborhoods) having the empirical boundary probabilities. The segmentations given by the three GP models show about 70% positive segmentation changes, affected by the unlabeled graph vertices, with respect to the ones given by the NO-GP models, STS-NO-GP and VES-NO-GP. In our opinion, the learning mechanism of our approach, joint coupling of GP and CRFs, rather than the pipelined one as the other two models, contributes to maximizing the graph smoothness effects to the CRFs estimation so that the error propagation of the pipelined approaches is alleviated.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        This paper proposed a novel CWS model for the SMT task. This model aims to maintain the linguistic segmentation supervisions from treebank data and simultaneously integrate useful bilingual segmentations induced from the bitexts. This objective is accomplished by three main steps: 1) learn word boundaries from character-based alignments; 2) encode the learned word boundaries into a GP constraint; and 3) training a CRFs model, under the GP constraint, by using the PR framework. The empirical results indicate that the proposed model can yield better segmentations for SMT.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

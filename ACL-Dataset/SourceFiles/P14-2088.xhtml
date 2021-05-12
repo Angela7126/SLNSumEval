@@ -1,0 +1,852 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Fast Easy Unsupervised Domain Adaptationwith Marginalized Structured Dropout</title>
+<!--Generated on Wed Jun 11 18:00:02 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Fast Easy Unsupervised Domain Adaptation
+<br class="ltx_break"/>with Marginalized Structured Dropout</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yi Yang 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jacob Eisenstein 
+<br class="ltx_break"/>School of Interactive Computing 
+<br class="ltx_break"/>Georgia Institute of Technology 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">yiyang, jacobe</span>}<span class="ltx_text ltx_font_typewriter">@gatech.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Unsupervised domain adaptation often relies on transforming the instance representation. However, most such approaches are designed for bag-of-words models, and ignore the structured features present in many problems in NLP. We propose a new technique called <span class="ltx_text ltx_font_bold">marginalized structured dropout</span>, which exploits feature structure to obtain a remarkably simple and efficient feature projection. Applied to the task of fine-grained part-of-speech tagging on a dataset of historical Portuguese, marginalized structured dropout yields state-of-the-art accuracy while increasing speed by more than an order-of-magnitude over previous work.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Unsupervised domain adaptation is a fundamental problem for natural language processing, as we hope to apply our systems to datasets unlike those for which we have annotations. This is particularly relevant as labeled datasets become stale in comparison with rapidly evolving social media writing styles <cite class="ltx_cite">[<a href="#bib.bib184" title="What to do about bad language on the internet" class="ltx_ref">8</a>]</cite>, and as there is increasing interest in natural language processing for historical texts <cite class="ltx_cite">[<a href="#bib.bib2a" title="Natural language processing for historical texts" class="ltx_ref">23</a>]</cite>. While a number of different approaches for domain adaptation have been proposed <cite class="ltx_cite">[<a href="#bib.bib186" title="A survey on transfer learning" class="ltx_ref">21</a>, <a href="#bib.bib187" title="Semi-supervised learning and domain adaptation in natural language processing" class="ltx_ref">26</a>]</cite>, they tend to emphasize bag-of-words features for classification tasks such as sentiment analysis. Consequently, many approaches rely on each instance having a relatively large number of active features, and fail to exploit the structured feature spaces that characterize syntactic tasks such as sequence labeling and parsing <cite class="ltx_cite">[<a href="#bib.bib392" title="Linguistic structure prediction" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">As we will show, substantial efficiency improvements can be obtained by designing domain adaptation methods for learning in structured feature spaces. We build on work from the deep learning community, in which <em class="ltx_emph">denoising autoencoders</em> are trained to remove synthetic noise from the observed instances <cite class="ltx_cite">[<a href="#bib.bib397" title="Deep sparse rectifier networks" class="ltx_ref">11</a>]</cite>. By using the autoencoder to transform the original feature space, one may obtain a representation that is less dependent on any individual feature, and therefore more robust across domains. <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> showed that such autoencoders can be learned even as the noising process is analytically marginalized; the idea is similar in spirit to feature noising <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature noising for log-linear structured prediction" class="ltx_ref">29</a>]</cite>. While the marginalized denoising autoencoder (mDA) is considerably faster than the original denoising autoencoder, it requires solving a system of equations that can grow very large, as realistic NLP tasks can involve <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="10^{5}" display="inline"><msup><mn>10</mn><mn>5</mn></msup></math> or more features.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper we investigate noising functions that are explicitly designed for <em class="ltx_emph">structured feature spaces</em>, which are common in NLP. For example, in part-of-speech tagging, <cite class="ltx_cite">Toutanova<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib419" title="Feature-rich part-of-speech tagging with a cyclic dependency network" class="ltx_ref">2003</a>)</cite> define several feature “templates”: the current word, the previous word, the suffix of the current word, and so on. For each feature template, there are thousands of binary features. To exploit this structure, we propose two alternative noising techniques: (1) <span class="ltx_text ltx_font_bold">feature scrambling</span>, which randomly chooses a feature template and randomly selects an alternative value within the template, and (2) <span class="ltx_text ltx_font_bold">structured dropout</span>, which randomly eliminates all but a single feature template. We show how it is possible to marginalize over both types of noise, and find that the solution for structured dropout is substantially simpler and more efficient than the mDA approach of <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite>, which does not consider feature structure.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We apply these ideas to fine-grained part-of-speech tagging on a dataset of Portuguese texts from the years 1502 to 1836 <cite class="ltx_cite">[<a href="#bib.bib189" title="Tycho Brahe Parsed Corpus of Historical Portuguese" class="ltx_ref">9</a>]</cite>, training on recent texts and evaluating on older documents. Both structure-aware domain adaptation algorithms perform as well as standard dropout — and better than the well-known structural correspondence learning (SCL) algorithm <cite class="ltx_cite">[<a href="#bib.bib4" title="Biographies, bollywood, boom-boxes and blenders: domain adaptation for sentiment classification" class="ltx_ref">1</a>]</cite> — but structured dropout is more than an order-of-magnitude faster. As a secondary contribution of this paper, we demonstrate the applicability of unsupervised domain adaptation to the syntactic analysis of historical texts.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Model</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section we first briefly describe the denoising autoencoder <cite class="ltx_cite">[<a href="#bib.bib6" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">12</a>]</cite>, its application to domain adaptation, and the analytic marginalization of noise <cite class="ltx_cite">[<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">4</a>]</cite>. Then we present three versions of marginalized denoising autoencoders (mDA) by incorporating different types of noise, including two new noising processes that are designed for structured features.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Denoising Autoencoders</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Assume instances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{x}_{1},\dots,\mathbf{x}_{n}" display="inline"><mrow><msub><mi>𝐱</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>𝐱</mi><mi>n</mi></msub></mrow></math>, which are drawn from both the source and target domains. We will “corrupt” these instances by adding different types of noise, and denote the corrupted version of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{x}_{i}" display="inline"><msub><mi>𝐱</mi><mi>i</mi></msub></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="\tilde{\mathbf{x}}_{i}" display="inline"><msub><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></math>. Single-layer denoising autoencoders reconstruct the corrupted inputs with a projection matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math> : <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="\mathbb{R}^{d}\rightarrow\mathbb{R}^{d}" display="inline"><mrow><msup><mi>ℝ</mi><mi>d</mi></msup><mo>→</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math>,
+which is estimated by minimizing the squared reconstruction loss</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\mathcal{L}=\frac{1}{2}\sum_{i=1}^{n}||\mathbf{x}_{i}-\mathbf{W}\tilde{\mathbf%&#10;{x}}_{i}||^{2}." display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msup><mrow><mo fence="true">||</mo><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>-</mo><mrow><mi>𝐖</mi><mo>⁢</mo><msub><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">If we write <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="\mathbf{X}=[\mathbf{x}_{1},\dots,\mathbf{x}_{n}]\in\mathbb{R}^{d\times n}" display="inline"><mrow><mi>𝐗</mi><mo>=</mo><mrow><mo>[</mo><mrow><msub><mi>𝐱</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>𝐱</mi><mi>n</mi></msub></mrow><mo>]</mo></mrow><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow></math>, and we write its corrupted version <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="\tilde{\mathbf{X}}" display="inline"><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover></math>, then the loss in (<a href="#S2.E1" title="(1) ‣ 2.1 Denoising Autoencoders ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) can be written as</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\mathcal{L}(\mathbf{W})=\frac{1}{2n}tr\left[\left(\mathbf{X}-\mathbf{W}\tilde{%&#10;\mathbf{X}}\right)^{\top}\left(\mathbf{X}-\mathbf{W}\tilde{\mathbf{X}}\right)%&#10;\right]." display="block"><mrow><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐖</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mrow><mn>2</mn><mo>⁢</mo><mi>n</mi></mrow></mfrac><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msup><mrow><mo>(</mo><mrow><mi>𝐗</mi><mo>-</mo><mrow><mi>𝐖</mi><mo>⁢</mo><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover></mrow></mrow><mo>)</mo></mrow><mo>⊤</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐗</mi><mo>-</mo><mrow><mi>𝐖</mi><mo>⁢</mo><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover></mrow></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">In this case, we have the well-known closed-form solution for this ordinary least square problem:</p>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\mathbf{W}=\mathbf{P}\mathbf{Q}^{-1}," display="block"><mrow><mrow><mi>𝐖</mi><mo>=</mo><msup><mi>𝐏𝐐</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="\mathbf{Q}=\tilde{\mathbf{X}}\tilde{\mathbf{X}}^{\top}" display="inline"><mrow><mi>𝐐</mi><mo>=</mo><mrow><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><msup><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover><mo>⊤</mo></msup></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="\mathbf{P}=\mathbf{X}\tilde{\mathbf{X}}^{\top}" display="inline"><mrow><mi>𝐏</mi><mo>=</mo><mrow><mi>𝐗</mi><mo>⁢</mo><msup><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover><mo>⊤</mo></msup></mrow></mrow></math>. After obtaining the weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math>, we can insert nonlinearity into the output of the denoiser, such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m4" class="ltx_Math" alttext="\tanh(\mathbf{W}\mathbf{X})" display="inline"><mrow><mi>tanh</mi><mo>⁡</mo><mrow><mo>(</mo><mi>𝐖𝐗</mi><mo>)</mo></mrow></mrow></math>. It is also possible to apply stacking, by passing this vector through another autoencoder <cite class="ltx_cite">[<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">4</a>]</cite>. In pilot experiments, this slowed down estimation and had little effect on accuracy, so we did not include it.</p>
+</div>
+<div id="S2.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">High-dimensional setting</h4>
+
+<div id="S2.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Structured prediction tasks often have much more features than simple bag-of-words representation, and performance relies on the rare features. In a naive implementation of the denoising approach, both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m1" class="ltx_Math" alttext="\mathbf{P}" display="inline"><mi>𝐏</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathbf{Q}" display="inline"><mi>𝐐</mi></math> will be dense matrices with dimensionality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m3" class="ltx_Math" alttext="d\times d" display="inline"><mrow><mi>d</mi><mo>×</mo><mi>d</mi></mrow></math>, which would be roughly <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m4" class="ltx_Math" alttext="10^{11}" display="inline"><msup><mn>10</mn><mn>11</mn></msup></math> elements in our experiments.
+To solve this problem, <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> propose to use a set of pivot features, and train the autoencoder to reconstruct the pivots from the full set of features. Specifically,
+the corrupted input is divided to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m5" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> subsets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m6" class="ltx_Math" alttext="\tilde{\mathbf{x}}_{i}=\left[{(\tilde{\mathbf{x}})^{1}_{i}}^{\top},\dots,{(%&#10;\tilde{\mathbf{x}})^{S}_{i}}^{\top}\right]^{\top}" display="inline"><mrow><msub><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub><mo>=</mo><msup><mrow><mo>[</mo><mrow><mmultiscripts><mrow><mo>(</mo><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mo>)</mo></mrow><mi>i</mi><mn>1</mn><none/><mo>⊤</mo></mmultiscripts><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mmultiscripts><mrow><mo>(</mo><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mo>)</mo></mrow><mi>i</mi><mi>S</mi><none/><mo>⊤</mo></mmultiscripts></mrow><mo>]</mo></mrow><mo>⊤</mo></msup></mrow></math>.
+We obtain a projection matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m7" class="ltx_Math" alttext="\mathbf{W}^{s}" display="inline"><msup><mi>𝐖</mi><mi>s</mi></msup></math> for each subset by reconstructing the pivot features from the features in this subset; we can then use the sum of all reconstructions as the new features, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P1.p1.m8" class="ltx_Math" alttext="\tanh(\sum_{s=1}^{S}\mathbf{W}^{s}\mathbf{X}^{s})" display="inline"><mrow><mi>tanh</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>s</mi><mo>=</mo><mn>1</mn></mrow><mi>S</mi></msubsup><mrow><msup><mi>𝐖</mi><mi>s</mi></msup><mo>⁢</mo><msup><mi>𝐗</mi><mi>s</mi></msup></mrow></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S2.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Marginalized Denoising Autoencoders</h4>
+
+<div id="S2.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">In the standard denoising autoencoder, we need to generate multiple versions of the corrupted data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m1" class="ltx_Math" alttext="\tilde{\mathbf{X}}" display="inline"><mover accent="true"><mi>𝐗</mi><mo stretchy="false">~</mo></mover></math> to reduce the
+variance of the solution <cite class="ltx_cite">[<a href="#bib.bib6" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">12</a>]</cite>. But <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> show that it is possible to marginalize over the noise, analytically computing expectations of both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathbf{P}" display="inline"><mi>𝐏</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m3" class="ltx_Math" alttext="\mathbf{Q}" display="inline"><mi>𝐐</mi></math>, and computing</p>
+<table id="S2.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\mathbf{W}=E[\mathbf{P}]E[\mathbf{Q}]^{-1}," display="block"><mrow><mrow><mi>𝐖</mi><mo>=</mo><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow><mo>⁢</mo><mi>E</mi><mo>⁢</mo><msup><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m4" class="ltx_Math" alttext="E[\mathbf{P}]=\sum_{i=1}^{n}E[\mathbf{x}_{i}\tilde{\mathbf{x}}_{i}^{\top}]" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow><mo>=</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>⁢</mo><msubsup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi><mo>⊤</mo></msubsup></mrow><mo>]</mo></mrow></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m5" class="ltx_Math" alttext="E[\mathbf{Q}]=\sum_{i=1}^{n}E[\tilde{\mathbf{x}}_{i}\tilde{\mathbf{x}}_{i}^{%&#10;\top}]" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow><mo>=</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub><mo>⁢</mo><msubsup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi><mo>⊤</mo></msubsup></mrow><mo>]</mo></mrow></mrow></mrow></mrow></math>. This is equivalent to
+corrupting the data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.SSS0.P2.p1.m6" class="ltx_Math" alttext="m\rightarrow\infty" display="inline"><mrow><mi>m</mi><mo>→</mo><mi mathvariant="normal">∞</mi></mrow></math> times. The computation of these expectations depends on the type of noise.</p>
+</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Noise distributions</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">2012</a>)</cite> used dropout noise for domain adaptation, which we briefly review. We then describe two novel types of noise that are designed for structured feature spaces, and explain how they can be marginalized to efficiently compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math>.</p>
+</div>
+<div id="S2.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Dropout noise</h4>
+
+<div id="S2.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">In dropout noise, each feature is set to zero with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="p&gt;0" display="inline"><mrow><mi>p</mi><mo>&gt;</mo><mn>0</mn></mrow></math>.
+If we define the scatter matrix of the uncorrupted input as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathbf{S}=\mathbf{X}\mathbf{X}^{\top}" display="inline"><mrow><mi>𝐒</mi><mo>=</mo><msup><mi>𝐗𝐗</mi><mo>⊤</mo></msup></mrow></math>, the solutions under dropout noise are</p>
+</div>
+<div id="S2.SS2.SSS0.P1.p2" class="ltx_para">
+<table id="S2.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E5.m1" class="ltx_Math" alttext="E[\mathbf{Q}]_{\alpha,\beta}=\begin{cases}(1-p)^{2}\mathbf{S}_{\alpha,\beta}&amp;%&#10;\mbox{if }\alpha\neq\beta\\&#10;(1-p)\mathbf{S}_{\alpha,\beta}&amp;\mbox{if }\alpha=\beta\end{cases}," display="block"><mrow><mrow><mrow><mi>E</mi><mo>⁢</mo><msub><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mn>2</mn></msup><mo>⁢</mo><msub><mi>𝐒</mi><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>α</mi></mrow><mo>≠</mo><mi>β</mi></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>𝐒</mi><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>α</mi></mrow><mo>=</mo><mi>β</mi></mrow></mtd></mtr></mtable></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">and</p>
+<table id="S2.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E6.m1" class="ltx_Math" alttext="E[\mathbf{P}]_{\alpha,\beta}=(1-p)\mathbf{S}_{\alpha,\beta}," display="block"><mrow><mrow><mrow><mi>E</mi><mo>⁢</mo><msub><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>𝐒</mi><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS2.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p3.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p3.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> index two features. The form of these solutions means that computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p3.m3" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math> requires solving a system of equations equal to the number of features (in the naive implementation), or several smaller systems of equations (in the high-dimensional version). Note also that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P1.p3.m4" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is a tunable parameter for this type of noise.</p>
+</div>
+</div>
+<div id="S2.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Structured dropout noise</h4>
+
+<div id="S2.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">In many NLP settings, we have several feature templates, such as previous-word, middle-word, next-word, etc, with only one feature per template firing on any token. We can exploit this structure by using an alternative dropout scheme: for each token, choose exactly one feature template to keep, and zero out all other features that consider this token (transition feature templates such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="\langle y_{t},y_{t-1}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mi>y</mi><mi>t</mi></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>⟩</mo></mrow></math> are not considered for dropout). Assuming we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> feature templates, this noise leads to very simple solutions for the marginalized matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="E[\mathbf{P}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p1.m4" class="ltx_Math" alttext="E[\mathbf{Q}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow></math>,</p>
+<table id="S2.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E7.m1" class="ltx_Math" alttext="E[\mathbf{Q}]_{\alpha,\beta}=\begin{cases}0&amp;\mbox{if }\alpha\neq\beta\\&#10;\frac{1}{K}\mathbf{S}_{\alpha,\beta}&amp;\mbox{if }\alpha=\beta\end{cases}" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><msub><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>α</mi></mrow><mo>≠</mo><mi>β</mi></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mfrac><mn>1</mn><mi>K</mi></mfrac><mo>⁢</mo><msub><mi>𝐒</mi><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></mtd><mtd columnalign="left"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mi>α</mi></mrow><mo>=</mo><mi>β</mi></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS2.SSS0.P2.p2" class="ltx_para">
+<table id="S2.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E8.m1" class="ltx_Math" alttext="E[\mathbf{P}]_{\alpha,\beta}=\frac{1}{K}\mathbf{S}_{\alpha,\beta}," display="block"><mrow><mrow><mrow><mi>E</mi><mo>⁢</mo><msub><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>K</mi></mfrac><mo>⁢</mo><msub><mi>𝐒</mi><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS2.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">For <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m1" class="ltx_Math" alttext="E[\mathbf{P}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow></math>, we obtain a scaled version of the scatter matrix, because in each instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m2" class="ltx_Math" alttext="\tilde{\mathbf{x}}" display="inline"><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover></math>, there is exactly a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m3" class="ltx_Math" alttext="1/K" display="inline"><mrow><mn>1</mn><mo>/</mo><mi>K</mi></mrow></math> chance that each individual feature survives dropout. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m4" class="ltx_Math" alttext="E[\mathbf{Q}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow></math> is diagonal, because for any off-diagonal entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m5" class="ltx_Math" alttext="E[\mathbf{Q}]_{\alpha,\beta}" display="inline"><mrow><mi>E</mi><mo>⁢</mo><msub><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow><mrow><mi>α</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></math>, at least one of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m6" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m7" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> will drop out for every instance. We can therefore view the projection matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m8" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math> as a row-normalized version of the scatter matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m9" class="ltx_Math" alttext="\mathbf{S}" display="inline"><mi>𝐒</mi></math>. Put another way, the contribution of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m10" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> to the reconstruction for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m11" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is equal to the co-occurence count of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m12" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m13" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>, divided by the count of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p3.m14" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>.</p>
+</div>
+<div id="S2.SS2.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">Unlike standard dropout, there are no free hyper-parameters to tune for structured dropout. Since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m1" class="ltx_Math" alttext="E[\mathbf{Q}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow></math> is a diagonal matrix, we eliminate the cost of matrix inversion (or of solving a system of linear equations). Moreover, to extend mDA for high dimensional data, we no longer need to divide the corrupted input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m2" class="ltx_Math" alttext="\tilde{\mathbf{x}}" display="inline"><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover></math> to several subsets.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m3" class="ltx_Math" alttext="E[\mathbf{P}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow></math> is an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m5" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> matrix, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p4.m6" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is the number of pivots.</span></span></span></p>
+</div>
+<div id="S2.SS2.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">For intuition, consider standard feature dropout with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p5.m1" class="ltx_Math" alttext="p=\frac{K-1}{K}" display="inline"><mrow><mi>p</mi><mo>=</mo><mfrac><mrow><mi>K</mi><mo>-</mo><mn>1</mn></mrow><mi>K</mi></mfrac></mrow></math>. This will look very similar to structured dropout: the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p5.m2" class="ltx_Math" alttext="E[\mathbf{P}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow></math> is identical, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p5.m3" class="ltx_Math" alttext="E[\mathbf{Q}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow></math> has off-diagonal elements which are scaled by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p5.m4" class="ltx_Math" alttext="(1-p)^{2}" display="inline"><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mn>2</mn></msup></math>, which goes to zero as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P2.p5.m5" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> is large. However, by including these elements, standard dropout is considerably slower, as we show in our experiments.</p>
+</div>
+</div>
+<div id="S2.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Scrambling noise</h4>
+
+<div id="S2.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">A third alternative is to “scramble” the features by randomly selecting alternative features within each template. For a feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> belonging to a template <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>, with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> we will
+draw a noise feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> also belonging to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m5" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>, according to some distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m6" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math>. In this work, we use an uniform distribution,
+in which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p1.m7" class="ltx_Math" alttext="q_{\beta}=\frac{1}{|F|}" display="inline"><mrow><msub><mi>q</mi><mi>β</mi></msub><mo>=</mo><mfrac><mn>1</mn><mrow><mo fence="true">|</mo><mi>F</mi><mo fence="true">|</mo></mrow></mfrac></mrow></math>. However, the below solutions will also hold for other scrambling distributions, such as mean-preserving distributions.</p>
+</div>
+<div id="S2.SS2.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Again, it is possible to analytically marginalize over this noise. Recall that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m1" class="ltx_Math" alttext="E[\mathbf{Q}]=\sum_{i=1}^{n}E[\tilde{\mathbf{x}}_{i}\tilde{\mathbf{x}}_{i}^{%&#10;\top}]" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐐</mi><mo>]</mo></mrow></mrow><mo>=</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub><mo>⁢</mo><msubsup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mi>i</mi><mo>⊤</mo></msubsup></mrow><mo>]</mo></mrow></mrow></mrow></mrow></math>. An off-diagonal entry in the
+matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m2" class="ltx_Math" alttext="\tilde{\mathbf{x}}\tilde{\mathbf{x}}^{\top}" display="inline"><mrow><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><msup><mover accent="true"><mi>𝐱</mi><mo stretchy="false">~</mo></mover><mo>⊤</mo></msup></mrow></math> which involves features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m3" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m4" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math> belonging to different templates (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m5" class="ltx_Math" alttext="F_{\alpha}\neq F_{\beta}" display="inline"><mrow><msub><mi>F</mi><mi>α</mi></msub><mo>≠</mo><msub><mi>F</mi><mi>β</mi></msub></mrow></math>) can
+take four different values (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m6" class="ltx_Math" alttext="\mathbf{x}_{i,\alpha}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>,</mo><mi>α</mi></mrow></msub></math> denotes feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m7" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p2.m8" class="ltx_Math" alttext="\mathbf{x}_{i}" display="inline"><msub><mi>𝐱</mi><mi>i</mi></msub></math>):</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="\mathbf{x}_{i,\alpha}\mathbf{x}_{i,\beta}" display="inline"><mrow><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>,</mo><mi>α</mi></mrow></msub><mo>⁢</mo><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>,</mo><mi>β</mi></mrow></msub></mrow></math> if both features are unchanged, which happens with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="(1-p)^{2}" display="inline"><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mn>2</mn></msup></math>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> if both features are chosen as noise features, which happens with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="p^{2}q_{\alpha}q_{\beta}" display="inline"><mrow><msup><mi>p</mi><mn>2</mn></msup><mo>⁢</mo><msub><mi>q</mi><mi>α</mi></msub><mo>⁢</mo><msub><mi>q</mi><mi>β</mi></msub></mrow></math>.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="\mathbf{x}_{i,\alpha}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>,</mo><mi>α</mi></mrow></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m2" class="ltx_Math" alttext="\mathbf{x}_{i,\beta}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>,</mo><mi>β</mi></mrow></msub></math> if one feature is unchanged and the other one is chosen as the noise feature, which happens with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m3" class="ltx_Math" alttext="p(1-p)q_{\beta}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>q</mi><mi>β</mi></msub></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m4" class="ltx_Math" alttext="p(1-p)q_{\alpha}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msub><mi>q</mi><mi>α</mi></msub></mrow></math>.</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS2.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">The diagonal entries take the first two values above, with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m1" class="ltx_Math" alttext="1-p" display="inline"><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m2" class="ltx_Math" alttext="pq_{\alpha}" display="inline"><mrow><mi>p</mi><mo>⁢</mo><msub><mi>q</mi><mi>α</mi></msub></mrow></math> respectively. Other entries will be all
+zero (only one feature belonging to the same template will fire in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m3" class="ltx_Math" alttext="\mathbf{x}_{i}" display="inline"><msub><mi>𝐱</mi><mi>i</mi></msub></math>). We can use similar reasoning to compute the expectation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m4" class="ltx_Math" alttext="\mathbf{P}" display="inline"><mi>𝐏</mi></math>. With probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m5" class="ltx_Math" alttext="(1-p)" display="inline"><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>p</mi></mrow><mo>)</mo></mrow></math>, the original features are preserved, and we add the outer-product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m6" class="ltx_Math" alttext="\mathbf{x}_{i}\mathbf{x}^{\top}_{i}" display="inline"><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>⁢</mo><msubsup><mi>𝐱</mi><mi>i</mi><mo>⊤</mo></msubsup></mrow></math>; with probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m7" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, we add the outer-product <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m8" class="ltx_Math" alttext="\mathbf{x}_{i}q^{\top}" display="inline"><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>⁢</mo><msup><mi>q</mi><mo>⊤</mo></msup></mrow></math>. Therefore <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.SSS0.P3.p3.m9" class="ltx_Math" alttext="E[\mathbf{P}]" display="inline"><mrow><mi>E</mi><mo>⁢</mo><mrow><mo>[</mo><mi>𝐏</mi><mo>]</mo></mrow></mrow></math> can be computed as the sum of these terms.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experiments</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We compare these methods on historical Portuguese part-of-speech tagging, creating domains over historical epochs.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Experiment setup</h3>
+
+<div id="S3.SS1.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Datasets</h4>
+
+<div id="S3.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We use the Tycho Brahe corpus to evaluate our methods. The corpus contains a total of 1,480,528 manually tagged words. It uses a set of 383 tags and is composed of various texts from historical Portuguese, from 1502 to 1836. We divide the texts into fifty-year periods to create different domains. Table <a href="#S3.T1" title="Table 1 ‣ Datasets ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents some statistics of the datasets. We hold out 5% of data as development data to tune parameters. The two most recent domains (1800-1849 and 1750-1849) are treated as source domains, and the other domains are target domains. This scenario is motivated by training a tagger on a modern newstext corpus and applying it to historical documents.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">Dataset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="5"><span class="ltx_text ltx_font_small"># of Tokens</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Total</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Narrative</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Letters</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Dissertation</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Theatre</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">1800-1849</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">125719</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">91582</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">34137</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1750-1799</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">202346</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">57477</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">84465</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">60404</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1700-1749</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">278846</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">130327</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">148519</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1650-1699</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">248194</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">83938</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">115062</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">49194</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1600-1649</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">295154</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">117515</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">115252</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">62387</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1550-1599</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">148061</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">148061</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">1500-1549</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">182208</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">126516</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">55692</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">0</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">Overall</span></th>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">1480528</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">625089</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">479243</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">315792</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">60404</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of the Tycho Brahe Corpus</div>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">CRF tagger</h4>
+
+<div id="S3.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We use a conditional random field tagger, choosing CRFsuite because it supports arbitrary real valued features <cite class="ltx_cite">[<a href="#bib.bib6a" title="CRFsuite: a fast implementation of conditional random fields (crfs)" class="ltx_ref">20</a>]</cite>, with SGD optimization. Following the work of <cite class="ltx_cite">Nogueira Dos Santos<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib18" title="Portuguese part-of-speech tagging using entropy guided transformation learning" class="ltx_ref">2008</a>)</cite> on this dataset, we apply the feature set of <cite class="ltx_cite">Ratnaparkhi (<a href="#bib.bib20" title="A maximum entropy model for part-of-speech tagging" class="ltx_ref">1996</a>)</cite>. There are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m1" class="ltx_Math" alttext="16" display="inline"><mn>16</mn></math> feature templates and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m2" class="ltx_Math" alttext="372,902" display="inline"><mrow><mn>372</mn><mo>,</mo><mn>902</mn></mrow></math> features in total.
+Following <cite class="ltx_cite">Blitzer<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Domain adaptation with structural correspondence learning" class="ltx_ref">2006</a>)</cite>, we consider pivot features that appear more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m3" class="ltx_Math" alttext="50" display="inline"><mn>50</mn></math> times in all the domains. This
+leads to a total of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P2.p1.m4" class="ltx_Math" alttext="1572" display="inline"><mn>1572</mn></math> pivot features in our experiments.</p>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Methods</h4>
+
+<div id="S3.SS1.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We compare mDA with three alternative approaches. We refer to <span class="ltx_text ltx_font_italic">baseline</span> as training a CRF tagger
+on the source domain and testing on the target domain with only base features. We also include <span class="ltx_text ltx_font_italic">PCA</span> to project
+the entire dataset onto a low-dimensional sub-space (while still including the original features). Finally, we compare against Structural Correspondence Learning
+(<span class="ltx_text ltx_font_italic">SCL</span>; Blitzer et al., 2006)<cite class="ltx_cite"/>, another feature learning algorithm. In all cases, we include the entire dataset to compute the feature projections; we also conducted experiments using only the test and training data for feature projections, with very similar results.</p>
+</div>
+</div>
+<div id="S3.SS1.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Parameters</h4>
+
+<div id="S3.SS1.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">All the hyper-parameters are decided with our development data on the training set. We try different low dimension <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m2" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m3" class="ltx_Math" alttext="2000" display="inline"><mn>2000</mn></math> for PCA. Following <cite class="ltx_cite">Blitzer (<a href="#bib.bib5" title="Domain adaptation of natural language processing systems" class="ltx_ref">2008</a>)</cite> we perform feature centering/normalization, as well as rescaling for SCL. The best parameters for SCL are dimensionality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m4" class="ltx_Math" alttext="K=25" display="inline"><mrow><mi>K</mi><mo>=</mo><mn>25</mn></mrow></math> and rescale factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m5" class="ltx_Math" alttext="\alpha=5" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>5</mn></mrow></math>, which are the same as in the original paper. For mDA, the best corruption level is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m6" class="ltx_Math" alttext="p=0.9" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>0.9</mn></mrow></math> for dropout noise, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS0.P4.p1.m7" class="ltx_Math" alttext="p=0.1" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>0.1</mn></mrow></math> for scrambling noise. Structured dropout noise has no free hyper-parameters.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Results</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Results ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> presents results for different domain adaptation tasks. We also compute the <span class="ltx_text ltx_font_italic">transfer ratio</span>, which is defined as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\frac{\text{\it adaptation accuracy}}{\text{\it baseline accuracy}}" display="inline"><mfrac><mtext mathvariant="italic">adaptation accuracy</mtext><mtext mathvariant="italic">baseline accuracy</mtext></mfrac></math>, shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Results ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The generally positive trend of these graphs indicates that adaptation becomes progressively more important as we select test sets that are more temporally remote from the training data.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In general, mDA outperforms SCL and PCA, the latter of which shows little improvement over the base features. The various noising approaches for mDA give very similar results. However, structured dropout is orders of magnitude faster than the alternatives, as shown in Table <a href="#S3.T3" title="Table 3 ‣ 3.2 Results ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The scrambling noise is most time-consuming, with cost dominated by a matrix multiplication.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">Task</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">baseline</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">PCA</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">SCL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_small">mDA</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">dropout</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">structured</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">scrambling</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">from 1800-1849</span></th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1750</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.12</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.09</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.69</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">90.08</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">90.08</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.01</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1700</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.43</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.43</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">91.06</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">91.56</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">91.57</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">91.55</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1650</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.45</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.52</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">87.09</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.69</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">88.70</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.57</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1600</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">87.56</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">87.58</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.47</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.60</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">89.61</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1550</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.66</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">89.61</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.57</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">91.39</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">91.39</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">91.36</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1500</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">85.58</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">85.63</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">86.99</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">88.96</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.95</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">88.91</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">from 1750-1849</span></th>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m7" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1700</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.64</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.62</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.81</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">95.08</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">95.08</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">95.02</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m8" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1650</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">91.98</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.97</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.37</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.83</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.84</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">90.80</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1600</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">92.95</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">92.91</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">93.17</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">93.78</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">93.78</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">93.71</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m10" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1550</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">93.27</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">93.21</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">93.75</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_small">94.06</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.05</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">94.02</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m11" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math><span class="ltx_text ltx_font_small"> 1500</span></th>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">89.80</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">89.75</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">90.59</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">91.71</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">91.71</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb"><span class="ltx_text ltx_font_small">91.68</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Accuracy results for adaptation from labeled data in 1800-1849, and in 1750-1849.</div>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2088/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="450" height="150" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Transfer ratio for adaptation to historical text</div>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">Method</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">PCA</span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_small">SCL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_small">mDA</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">dropout</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">structured</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">scambling</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">Time</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">7,779</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">38,849</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">8,939</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">339</span></td>
+<td class="ltx_td ltx_align_left ltx_border_bb ltx_border_t"><span class="ltx_text ltx_font_small">327,075</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Time, in seconds, to compute the feature transformation</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Related Work</h2>
+
+<div id="S4.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Domain adaptation</h4>
+
+<div id="S4.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Most previous work on domain adaptation focused on the supervised setting, in which some labeled data is available in the target domain <cite class="ltx_cite">[<a href="#bib.bib12" title="Instance weighting for domain adaptation in nlp" class="ltx_ref">16</a>, <a href="#bib.bib10" title="Frustratingly easy domain adaptation" class="ltx_ref">5</a>, <a href="#bib.bib13" title="Hierarchical bayesian domain adaptation" class="ltx_ref">10</a>]</cite>. Our work focuses on unsupervised domain adaptation, where no labeled data is available in the target domain. Several representation learning methods have been proposed to solve this problem. In structural correspondence learning (SCL), the induced representation is based on the task of predicting the presence of pivot features. Autoencoders apply a similar idea, but use the denoised instances as the latent representation <cite class="ltx_cite">[<a href="#bib.bib396" title="Extracting and composing robust features with denoising autoencoders" class="ltx_ref">28</a>, <a href="#bib.bib6" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">12</a>, <a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">4</a>]</cite>. Within the context of denoising autoencoders, we have focused on dropout noise, which has also been applied as a general technique for improving the robustness of machine learning, particularly in neural networks <cite class="ltx_cite">[<a href="#bib.bib2" title="Improving neural networks by preventing co-adaptation of feature detectors" class="ltx_ref">13</a>, <a href="#bib.bib7" title="Feature noising for log-linear structured prediction" class="ltx_ref">29</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">On the specific problem of sequence labeling, <cite class="ltx_cite">Xiao and Guo (<a href="#bib.bib17" title="Domain adaptation for sequence labeling tasks with a probabilistic language adaptation model" class="ltx_ref">2013</a>)</cite> proposed a supervised domain adaptation method by using a log-bilinear language adaptation model. <cite class="ltx_cite">Dhillon<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Multi-view learning of word embeddings via cca." class="ltx_ref">2011</a>)</cite> presented a spectral method to estimate low dimensional context-specific word representations for sequence labeling. Huang and Yates <cite class="ltx_cite">[<a href="#bib.bib14" title="Distributional representations for handling sparsity in supervised sequence-labeling" class="ltx_ref">14</a>, <a href="#bib.bib15" title="Biased representation learning for domain adaptation" class="ltx_ref">15</a>]</cite> used an HMM model to learn latent representations, and then leverage the Posterior Regularization framework to incorporate specific biases. Unlike these methods, our approach uses a standard CRF, but with transformed features.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Historical text</h4>
+
+<div id="S4.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our evaluation concerns syntactic analysis of historical text, which is a topic of increasing interest for NLP <cite class="ltx_cite">[<a href="#bib.bib2a" title="Natural language processing for historical texts" class="ltx_ref">23</a>]</cite>. <cite class="ltx_cite">Pennacchiotti and Zanzotto (<a href="#bib.bib3a" title="Natural language processing across time: an empirical investigation on italian" class="ltx_ref">2008</a>)</cite> find that part-of-speech tagging degrades considerably when applied to a corpus of historical Italian. <cite class="ltx_cite">Moon and Baldridge (<a href="#bib.bib1" title="Part-of-speech tagging for middle english through alignment and projection of parallel diachronic texts." class="ltx_ref">2007</a>)</cite> tackle the challenging problem of tagging Middle English, using techniques for projecting syntactic annotations across languages. Prior work on the Tycho Brahe corpus applied supervised learning to a random split of test and training data <cite class="ltx_cite">[<a href="#bib.bib5a" title="Comparing two markov methods for part-of-speech tagging of portuguese" class="ltx_ref">17</a>, <a href="#bib.bib4a" title="Portuguese part-of-speech tagging using entropy guided transformation learning" class="ltx_ref">7</a>]</cite>; they did not consider the domain adaptation problem of training on recent data and testing on older historical text.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Denoising autoencoders provide an intuitive solution for domain adaptation: transform the features into a representation that is resistant to the noise that may characterize the domain adaptation process. The original implementation of this idea produced this noise directly <cite class="ltx_cite">[<a href="#bib.bib6" title="Domain adaptation for large-scale sentiment classification: a deep learning approach" class="ltx_ref">12</a>]</cite>; later work showed that dropout noise could be analytically marginalized <cite class="ltx_cite">[<a href="#bib.bib8" title="Marginalized denoising autoencoders for domain adaptation" class="ltx_ref">4</a>]</cite>. We take another step towards simplicity by showing that structured dropout can make marginalization even easier, obtaining dramatic speedups without sacrificing accuracy.</p>
+</div>
+<div id="S5.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Acknowledgments</h4>
+
+<div id="S5.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">: We thank the reviewers for useful feedback. This research was supported by National Science Foundation award 1349837.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer, M. Dredze and F. Pereira</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biographies, bollywood, boom-boxes and blenders: domain adaptation for sentiment classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer, R. McDonald and F. Pereira</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation with structural correspondence learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’06</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 120–128</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-932432-73-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1610075.1610094" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS0.P2.p1" title="CRF tagger ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS1.SSS0.P3.p1" title="Methods ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Blitzer</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation of natural language processing systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Pennsylvania</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS0.P4.p1" title="Parameters ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Chen, Z. Xu, K. Weinberger and F. Sha</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Marginalized denoising autoencoders for domain adaptation</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. Langford and J. Pineau (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Proceedings of the 29th International Conference on Machine Learning (ICML-12)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’12</span>, <span class="ltx_text ltx_bib_pages"> pp. 767–774</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1285-1</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.SSS0.P1.p1" title="High-dimensional setting ‣ 2.1 Denoising Autoencoders ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS1.SSS0.P2.p1" title="Marginalized Denoising Autoencoders ‣ 2.1 Denoising Autoencoders ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS1.p3" title="2.1 Denoising Autoencoders ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS2.p1" title="2.2 Noise distributions ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S2.p1" title="2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p1" title="5 Conclusion and Future Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Daumé III</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frustratingly easy domain adaptation</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1785</span>, <span class="ltx_text ltx_bib_pages"> pp. 1787</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. S. Dhillon, D. P. Foster and L. H. Ungar</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-view learning of word embeddings via cca.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">24</span>, <span class="ltx_text ltx_bib_pages"> pp. 199–207</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p2" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib4a" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. N. Dos Santos, R. L. Milidiú and R. P. Rentería</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Portuguese part-of-speech tagging using entropy guided transformation learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Computational Processing of the Portuguese Language</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 143–152</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P2.p1" title="Historical text ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib184" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Eisenstein</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What to do about bad language on the internet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, GA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib189" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Faria</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tycho Brahe Parsed Corpus of Historical Portuguese</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://www.tycho.iel.unicamp.br/ tycho/corpus/en/index.html</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Finkel and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical bayesian domain adaptation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 602–610</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib397" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep sparse rectifier networks</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 315–323</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation for large-scale sentiment classification: a deep learning approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 513–520</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.SSS0.P2.p1" title="Marginalized Denoising Autoencoders ‣ 2.1 Denoising Autoencoders ‣ 2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.p1" title="2 Model ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.p1" title="5 Conclusion and Future Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton, N. Srivastava, A. Krizhevsky, I. Sutskever and R. R. Salakhutdinov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving neural networks by preventing co-adaptation of feature detectors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1207.0580</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Huang and A. Yates</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributional representations for handling sparsity in supervised sequence-labeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 495–503</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p2" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Huang and A. Yates</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biased representation learning for domain adaptation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1313–1323</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p2" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Jiang and C. Zhai</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Instance weighting for domain adaptation in nlp</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2007</span>, <span class="ltx_text ltx_bib_pages"> pp. 22</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib5a" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. N. Kepler and M. Finger</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing two markov methods for part-of-speech tagging of portuguese</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Advances in Artificial Intelligence-IBERAMIA-SBIA 2006</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 482–491</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P2.p1" title="Historical text ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Moon and J. Baldridge</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Part-of-speech tagging for middle english through alignment and projection of parallel diachronic texts.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 390–399</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P2.p1" title="Historical text ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Nogueira Dos Santos, R. L. Milidiú and R. P. Rentería</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Portuguese part-of-speech tagging using entropy guided transformation learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">PROPOR ’08</span>, <span class="ltx_text ltx_bib_place">Berlin, Heidelberg</span>, <span class="ltx_text ltx_bib_pages"> pp. 143–152</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-3-540-85979-6</span>,
+<a href="http://dx.doi.org/10.1007/978-3-540-85980-2_15" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/978-3-540-85980-2_15" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS0.P2.p1" title="CRF tagger ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib6a" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Okazaki</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CRFsuite: a fast implementation of conditional random fields (crfs)</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.chokkan.org/software/crfsuite/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS0.P2.p1" title="CRF tagger ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib186" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. J. Pan and Q. Yang</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A survey on transfer learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Knowledge and Data Engineering, IEEE Transactions on</span> <span class="ltx_text ltx_bib_volume">22</span> (<span class="ltx_text ltx_bib_number">10</span>), <span class="ltx_text ltx_bib_pages"> pp. 1345–1359</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3a" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Pennacchiotti and F. M. Zanzotto</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing across time: an empirical investigation on italian</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Advances in Natural Language Processing</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 371–382</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P2.p1" title="Historical text ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib2a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Piotrowski</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing for historical texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Synthesis Lectures on Human Language Technologies</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–157</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.SSS0.P2.p1" title="Historical text ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ratnaparkhi</span><span class="ltx_text ltx_bib_year">(1996-April 16)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A maximum entropy model for part-of-speech tagging</span>.
+</span>
+<span class="ltx_bibblock">(<span class="ltx_text ltx_bib_language">en</span>).
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Adwait Ratnaparkhi (University of Pennsylvania; Dept . of Computer and Information Science);</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://citeseer.ist.psu.edu/581830.html" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.SSS0.P2.p1" title="CRF tagger ‣ 3.1 Experiment setup ‣ 3 Experiments ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib392" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. A. Smith</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic structure prediction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Synthesis Lectures on Human Language Technologies</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–274</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib187" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Søgaard</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised learning and domain adaptation in natural language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Synthesis Lectures on Human Language Technologies</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–103</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib419" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. D. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://portal.acm.org/citation.cfm?id=1073478" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib396" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Vincent, H. Larochelle, Y. Bengio and P. Manzagol</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting and composing robust features with denoising autoencoders</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1096–1103</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. I. Wang, M. Wang, S. Wager, P. Liang and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature noising for log-linear structured prediction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.SSS0.P1.p1" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Xiao and Y. Guo</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptation for sequence labeling tasks with a probabilistic language adaptation model</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">28</span>, <span class="ltx_text ltx_bib_pages"> pp. 293–301</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://jmlr.csail.mit.edu/proceedings/papers/v28/xiao13.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P1.p2" title="Domain adaptation ‣ 4 Related Work ‣ Fast Easy Unsupervised Domain Adaptation with Marginalized Structured Dropout" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:00:02 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

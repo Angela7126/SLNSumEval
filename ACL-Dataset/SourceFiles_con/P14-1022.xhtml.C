@@ -1,0 +1,747 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Less Grammar, More Features.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We present a parser that relies primarily on extracting information directly from surface spans rather than on propagating information through enriched grammar structure. For example, instead of creating separate grammar symbols to mark the definiteness of an NP, our parser might instead capture the same information from the first word of the NP. Moving context out of the grammar and onto surface features can greatly simplify the structural component of the parser: because so many deep syntactic cues have surface reflexes, our system can still parse accurately with context-free backbones as minimal as X-bar grammars. Keeping the structural backbone simple and moving features to the surface also allows easy adaptation to new languages and even to new tasks. On the SPMRL 2013 multilingual constituency parsing shared task
+       [25]
+       , our system outperforms the top single parser system of
+       Björkelund et al. (2013)
+       on a range of languages. In addition, despite being designed for syntactic analysis, our system also achieves state-of-the-art numbers on the structural sentiment task of
+       Socher et al. (2013)
+       . Finally, we show that, in both syntactic parsing and sentiment analysis, many broad linguistic trends can be captured via surface features.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Naïve context-free grammars, such as those embodied by standard treebank annotations, do not parse well because their symbols have too little context to constrain their
+syntactic behavior. For example,
+        to
+        PPs usually attach to verbs and
+        of
+        PPs usually attach to nouns, but a context-free PP symbol can equally well attach to either. Much of the last few decades of parsing research has
+therefore focused on propagating contextual information from the leaves of the tree to internal nodes. For example, head lexicalization
+        [9, 7, 5]
+        , structural annotation
+        [15, 16]
+        , and
+state-splitting
+        [18, 21]
+        are all
+designed to take coarse symbols like PP and decorate them with additional context. The underlying reason that such propagation is even needed is that PCFG parsers score trees based on local
+configurations only, and any information that is
+not threaded through the tree becomes inaccessible
+to the scoring function. There have been non-local
+approaches as well, such as tree-substitution
+parsers
+        [2, 26]
+        , neural net
+parsers
+        [13]
+        , and rerankers
+        [6, 4, 14]
+        . These non-local approaches can actually go even further in enriching the grammar’s structural complexity by coupling larger domains in various ways, though their non-locality generally complicates inference.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In this work, we instead try to
+        minimize
+        the structural complexity of the grammar by moving as much context as possible
+onto local surface features. We examine the position that grammars should not propagate any information that is available from
+surface strings, since a discriminative parser can access that information directly. We therefore begin with a minimal grammar
+and iteratively augment it with rich input features that do not enrich the context-free backbone. Previous work has also used
+surface features in their parsers, but the focus has been on machine learning methods
+        [28]
+        , latent
+annotations
+        [24, 23]
+        , or implementation
+        [10]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        By contrast, we investigate the extent to which we need a grammar at all. As a thought experiment, consider a parser with no grammar, which functions by independently classifying each span
+        (i,j)
+        of a sentence as an NP, VP, and so on, or
+        null
+        if that span is a non-constituent. For example, spans that begin with
+        the
+        might tend to be
+NPs, while spans that end with
+        of
+        might tend to be non-constituents. An independent classification approach
+is actually very viable for part-of-speech tagging
+        [29]
+        , but is problematic for parsing – if
+nothing else, parsing comes with a structural requirement that the output be a well-formed, nested tree. Our parser uses a minimal PCFG backbone grammar to ensure a basic level of structural well-formedness, but relies mostly on features of surface spans to drive accuracy. Formally, our model is a CRF where the features factor over anchored rules of a small backbone grammar, as shown in Figure
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Some aspects of the parsing problem, such as the tree constraint, are clearly best captured by a PCFG. Others, such as heaviness effects, are naturally captured using surface information. The open question is whether surface features are adequate for key effects like subcategorization, which have deep definitions but regular surface reflexes (e.g. the preposition selected by a verb will often linearly follow it). Empirically, the answer seems to be yes, and our system produces strong results, e.g. up to 90.5 F1 on English parsing. Our parser is also able to generalize well across languages with little tuning: it achieves state-of-the-art results on multilingual parsing, scoring higher than the best single-parser system from the SPMRL 2013 Shared Task on a range of languages, as well as on the competition’s average F1 metric.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        One advantage of a system that relies on surface features and a simple grammar is that it is portable not only
+across languages but also across tasks to an extent. For example,
+        Socher et al. (2013)
+        demonstrates that
+sentiment analysis, which is usually approached as a flat classification task, can be viewed as tree-structured. In their work, they propagate real-valued vectors up a tree using neural tensor nets and see gains from their recursive approach. Our parser can be easily adapted to this task by replacing the X-bar grammar over treebank symbols with a grammar over the sentiment values to encode the output variables and then adding n-gram indicators to our feature set to capture the bulk of the lexical effects. When applied to this task, our system generally matches their accuracy overall and is able to outperform it on the overall sentence-level subtask.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Parsing Model
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        In order to exploit non-independent surface features of the input, we use a discriminative formulation. Our model is a
+conditional random field
+        [17]
+        over trees, in the same vein as
+        Finkel et al. (2008)
+        and
+        Petrov and Klein (2008)
+        . Formally, we define the
+probability of a tree
+        T
+        conditioned on a sentence
+        𝐰
+        as
+       </p>
+       p(T|𝐰)∝exp(θ⊺∑r∈Tf(r,𝐰))
+
+(1)
+       <p class="ltx_p">
+        where the feature domains
+        r
+        range over the (anchored) rules used in the tree. An anchored rule
+        r
+        is the conjunction of an unanchored grammar rule
+        rule⁢(r)
+        and the start, stop, and split indexes where that rule is anchored, which we refer to as
+        span⁢(r)
+        . It is important to note that the richness of the backbone grammar is reflected in the structure of the trees
+        T
+        , while the features that condition directly on the input enter the equation through the anchoring
+        span⁢(r)
+        .
+To optimize model parameters, we use the Adagrad algorithm of
+        Duchi et al. (2010)
+        with L2 regularization.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        We start with a simple X-bar grammar whose only symbols are NP, NP-bar, VP, and so on. Our base model has no surface features: formally, on each anchored rule
+        r
+        we have only an indicator of the (unanchored) rule identity,
+        rule⁢(r)
+        . Because the X-bar grammar is so minimal, this grammar does not parse very accurately, scoring just 73 F1 on
+the standard English Penn Treebank task.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        In past work that has used tree-structured CRFs in this way, increased accuracy partially came from decorating trees
+        T
+        with additional
+annotations, giving a tree
+        T′
+        over a more complex symbol set. These annotations
+introduce additional context into the model, usually capturing
+linguistic intuition about the factors that influence grammaticality.
+For instance, we might annotate every constituent
+        X
+        in the tree
+with its parent
+        Y
+        , giving a tree with symbols
+        X⁢[^⁢Y]
+        .
+        Finkel et al. (2008)
+        used parent annotation, head tag
+annotation, and horizontal sibling annotation together in a single
+large grammar. In
+        Petrov and Klein (2008)
+        and
+        Petrov and Klein (2008)
+        , these annotations were latent; they
+were inferred automatically during training.
+        Hall and Klein (2012)
+        employed
+both kinds of annotations, along with lexicalized head word annotation. All of these past CRF parsers do also exploit span features, as did the structured margin parser of
+        Taskar et al. (2004)
+        ; the current work primarily differs in shifting the work from the grammar to the surface features.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        The problem with rich annotations is that they increase the state space
+of the grammar substantially. For example, adding parent annotation can square
+the number of symbols, and each subsequent annotation causes a
+multiplicative increase in the size of the state space.
+        Hall and Klein (2012)
+        attempted to reduce this state space by
+factoring these annotations into individual components. Their
+approach changed the multiplicative penalty of annotation into an
+additive penalty, but even so their individual grammar projections are much larger than the base X-bar grammar.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        In this work, we want to see how much of the expressive capability
+of annotations can be captured using surface evidence, with little or no annotation of the underlying grammar. To that end,
+we avoid annotating our trees at all, opting instead to see
+how far simple surface features will go in achieving a high-performance
+parser. We will return to the question of annotation in Section
+        5
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Surface Feature Framework
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        To improve the performance of our X-bar grammar, we will add a number of
+surface feature templates derived only from the words in the sentence.
+We say that an indicator is a surface property if it can be extracted without reference to the parse tree. These features can be
+implemented without reference to structured linguistic notions like headedness; however, we will argue that they still capture a
+wide range of linguistic phenomena in a data-driven way.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Throughout this and the following section, we will draw on motivating examples from the English
+Penn Treebank, though similar examples could be equally argued for other languages. For performance on
+other languages, see Section
+        6
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Recall that our CRF factors over anchored rules
+        r
+        , where each
+        r
+        has identity
+        rule⁢(r)
+        and anchoring
+        span⁢(r)
+        . The X-bar grammar has only indicators of
+        rule⁢(r)
+        , ignoring the anchoring. Let a
+        surface property
+        of
+        r
+        be an indicator function of
+        span⁢(r)
+        and the sentence itself. For example, the first word in a constituent is a surface property, as is the word directly preceding the constituent. As illustrated in Figure
+        1
+        , the actual features of the model are obtained by conjoining surface properties with various abstractions of the rule identity. For rule abstractions, we use two templates: the parent of the rule and the identity of the rule. The surface features are somewhat more involved, and so we introduce them incrementally.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        One immediate computational and statistical issue arises from the
+sheer number of possible surface features. There are a great number
+of spans in a typical treebank; extracting features for every
+possible combination of span and rule is prohibitive. One simple
+solution is to only extract features for rule/span pairs that are
+actually observed in gold annotated examples during training. Because
+these “positive” features correspond to observed
+constituents, they are far less numerous than the set of
+all possible features extracted from all spans. As far as we can tell,
+all past CRF parsers have used “positive” features only.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        However, negative features—features that are not observed in any
+tree—are still powerful indicators of (un)grammaticality: if we
+have never seen a PRN that starts with “has,” or a span that begins
+with a quotation mark and ends with a close bracket, then we would
+like the model to be able to place negative weights on these features.
+Thus, we use a simple feature hashing scheme where positive features
+are indexed individually, while negative features are bucketed
+together. During training there are no collisions between
+positive features, which generally receive positive weight, and negative
+features, which generally receive negative weight; only negative features can collide. Early
+experiments indicated that using a number of negative buckets equal
+to the number of positive features was effective.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Features
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Our goal is to use surface features to replicate the functionality
+of other annotations, without increasing the state space of our
+grammar, meaning that the rules
+        rule⁢(r)
+        remain simple, as does the state space used during inference.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        Before we present our main features, we briefly discuss the issue of feature sparsity. While lexical features
+are a powerful driver of our parser, firing features on rare words would allow it to overfit the training data
+quite heavily. To that end, for the purposes of computing our features, a word is represented by its longest
+suffix that occurs 100 or more times in the training data (which will be the entire word, for common
+words).
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Table
+        1
+        shows the results of incrementally building up our feature set on the Penn Treebank development set.
+        Rule
+        specifies that we use only indicators on rule identity for binary production and nonterminal unaries. For this experiment and all others, we include a basic set of lexicon features, i.e. features on preterminal part-of-speech tags. A given preterminal unary at position
+        i
+        in the sentence includes features on the words (suffixes) at position
+        i-1
+        ,
+        i
+        , and
+        i+1
+        . Because the lexicon is especially sensitive to morphological effects, we also fire features on all prefixes and suffixes of the current word up to length 5, regardless of frequency.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        Subsequent lines in Table
+        1
+        indicate additional surface feature templates computed over the span, which are then
+conjoined with the rule identity as shown in Figure
+        1
+        to give additional features. In the rest of the section,
+we describe the features of this type that we use. Note that many of these features have been used
+before
+        [28, 10, 23]
+        ; our goal here is not to amass as many feature templates as possible, but
+rather to examine the extent to which a simple set of features can replace a complicated state space.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Basic Span Features
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We start with some of the most obvious properties available
+to us, namely, the identity of the first and last words of a span.
+Because heads of constituents are often at the beginning or the end
+of a span, these feature templates can (noisily) capture monolexical properties of heads without having to incur the inferential cost of lexicalized
+annotations. For example, in English, the syntactic head of a verb phrase is
+typically at the beginning of the span, while the head of a simple noun phrase
+is the last word. Other languages, like Korean or Japanese, are
+more consistently head final.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Structural contexts like those captured by parent
+annotation
+         [15]
+         are more subtle. Parent annotation
+can capture, for instance, the difference in distribution in NPs
+that have S as a parent (that is, subjects) and NPs under VPs
+(objects). We try to capture some of this same intuition by
+introducing a feature on the length of a span. For instance, VPs
+embedded in NPs tend to be short, usually as embedded gerund
+phrases. Because constituents in the treebank can be quite long, we
+bin our length features into 8 buckets, of lengths 1, 2, 3, 4, 5, 10, 20, and
+         ≥
+         21 words.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Adding these simple features (first word, last word, and lengths) as span features
+of the X-bar grammar already gives us a substantial improvement over our baseline system, improving
+the parser’s performance from 73.0 F1 to 85.0 F1 (see Table
+         1
+         ).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Span Context Features
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Of course, there is no reason why we should confine ourselves to
+just the words within the span: words outside the span also provide
+a rich source of context. As an example, consider disambiguating the POS tag of the word
+         read
+         in
+Figure
+         2
+         . A VP is most frequently preceded by a subject NP, whose rightmost word is
+often its head. Therefore, we fire features that (separately) look at the words immediately preceding and immediately following the span.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Split Point Features
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Another important source of features are the words at and around the split point of a binary rule application. Figure
+         3
+         shows an example of one instance of this feature template.
+         impact
+         is a noun that is more likely to take a PP than other nouns, and so we expect this feature to have high weight and encourage the attachment; this feature proves generally useful in resolving such cases of right-attachments to noun phrases, since the last word of the noun phrase is often the head. As another example, coordination can be represented by an indicator of the conjunction, which comes immediately after the split point. Finally, control structures with infinitival complements can be captured with a rule S
+         →
+         NP VP with the word “to” at the split point.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Span Shape Features
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         We add one final feature characterizing the span, which we call span shape. Figure
+         4
+         shows how this feature is computed. For each word in the span,
+         we indicate whether that word begins with a capital
+letter, lowercase letter, digit, or punctuation mark. If it begins with punctuation, we indicate the
+punctuation mark explicitly. Figure
+         4
+         shows that this is especially useful in
+characterizing constructions such as parentheticals and quoted expressions. Because this feature indicates capitalization, it can also capture properties of NP internal structure relevant to named entities, and its sensitivity to capitalization and punctuation makes it useful for recognizing appositive constructions.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Annotations
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We have built up a strong set of features by this point, but have not yet answered the question of whether or not
+grammar annotation is useful on top of them. In this section, we examine two of the most commonly used types of
+additional annotation, structural annotation, and lexical annotation. Recall from Section
+        3
+        that every span feature is conjoined with indicators over rules and rule parents to produce features over anchored rule productions; when we consider adding an annotation layer to the grammar, what that does is refine the rule indicators that are conjoined with every span feature. While this is a powerful way of refining features, we show that common successful annotation schemes provide at best modest benefit on top of the base parser.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Structural Annotation
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         The most basic, well-understood kind of annotation on top of an X-bar grammar is structural annotation, which annotates each nonterminal with properties of its environment
+         [15, 16]
+         . This includes vertical annotation (parent, grandparent, etc.) as well as horizontal annotation (only partially Markovizing rules as opposed to using an X-bar grammar).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         Table
+         2
+         shows the performance of our feature set in grammars with several different levels of structural annotation.
+         Klein and Manning (2003)
+         find large gains (6% absolute improvement, 20% relative improvement) going from
+         v=0,h=0
+         to
+         v=1,h=1
+         ; however, we do not find the same level of benefit. To the extent that our parser needs to make use of extra information in order to apply a rule correctly, simply inspecting the input to determine this information appears to be almost as effective as relying on information threaded through the parser.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         In Section
+         6
+         and Section
+         7
+         , we use
+         v=1
+         and
+         h=0
+         ; we find that
+         v=1
+         provides a small, reliable improvement across a range of languages and tasks, whereas other annotations are less clearly beneficial.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Lexical Annotation
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Another commonly-used kind of structural annotation is lexicalization
+         [9, 7, 5]
+         . By annotating grammar nonterminals with
+their headwords, the idea is to better model phenomena that depend heavily on the semantics of the words involved, such as coordination and PP attachment.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         Table
+         2
+         shows results from lexicalizing the X-bar grammar; it provides meager
+improvements. One probable reason for this is that our parser already includes monolexical features that
+inspect the first and last words of each span, which captures the syntactic or the semantic head in many
+cases or can otherwise provide information about what the constituent’s type may be and how it is likely to
+combine. Lexicalization allows us to capture bilexical relationships along dependency arcs, but it has been
+previously shown that these add only marginal benefit to Collins’s model anyway
+         [11]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        English Evaluation
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Finally, Table
+         3
+         shows our final evaluation on Section 23 of the Penn Treebank. We use the
+         v=1,h=0
+         grammar. While we do not do as well as the Berkeley parser, we will see in Section
+         6
+         that our parser does a substantially better job of generalizing to other languages.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Other Languages
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        Historically, many annotation schemes for parsers have required language-specific engineering: for example, lexicalized parsers require a set of head rules and manually-annotated grammars require detailed analysis of the treebank itself
+        [16]
+        . A key strength of a parser that does not rely heavily on an annotated grammar is that it may be more portable to other languages. We show that this is indeed the case: on nine languages, our system is competitive with or better than the Berkeley parser, which is the best single parser
+        for the majority of cases we consider.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        We evaluate on the constituency treebanks from the Statistical Parsing of Morphologically Rich Languages Shared Task
+        [25]
+        .
+We compare to the Berkeley parser
+        [22]
+        as well as two variants. First, we use the “Replaced” system of
+        Björkelund et al. (2013)
+        (Berkeley-Rep), which is their best single parser.
+        The “Replaced” system modifies the Berkeley parser by replacing rare words with morphological descriptors of those words computed using language-specific modules, which have been hand-crafted for individual languages or are trained with additional annotation layers in the treebanks that we do not exploit.
+Unfortunately,
+        Björkelund et al. (2013)
+        only report results on the development set for the Berkeley-Rep model; however, the task organizers also use a version of the Berkeley parser provided with parts of speech from high-quality POS taggers for each language (Berkeley-Tags). These part-of-speech taggers often incorporate substantial knowledge of each language’s morphology. Both Berkeley-Rep and Berkeley-Tags make up for some shortcomings of the Berkeley parser’s unknown word model, which is tuned to English.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        In Table
+        4
+        , we see that our performance is overall substantially higher than that of the
+Berkeley parser. On the development set, we outperform the Berkeley parser and match the performance of the
+Berkeley-Rep parser. On the test set, we outperform both the Berkeley parser and the Berkeley-Tags parser
+on seven of nine languages, losing only on Arabic and French.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        These results suggest that the Berkeley parser may be heavily fit to English, particularly in its lexicon.
+However, even when language-specific unknown word handling is added to the parser, our model still
+outperforms the Berkeley parser overall, showing that our model generalizes even better across languages
+than a parser for which this is touted as a strength
+        [22]
+        . Our span features appear to
+work well on both head-initial and head-final languages (see Basque and Korean in the table), and the fact
+that our parser performs well on such morphologically-rich languages as Hungarian indicates that our suffix
+model is sufficient to capture most of the morphological effects relevant to parsing. Of course, a language
+that was heavily prefixing would likely require this feature to be modified. Likewise, our parser does not
+perform as well on Arabic and Hebrew. These closely related languages use templatic morphology, for
+which suffixing is not appropriate; however, using additional surface features based on the output of a morphological analyzer did not lead to increased performance.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        Finally, our high performance on languages such as Polish and Swedish, whose training treebanks consist of 6578 and 5000 sentences, respectively, show that our feature-rich model performs robustly even on treebanks much smaller than the Penn Treebank.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Sentiment Analysis
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        Finally, because the system is, at its core, a classifier of spans, it can be used equally well for tasks that do not normally use parsing algorithms.
+One example is sentiment analysis.
+While approaches to sentiment analysis often simply classify the sentence monolithically, treating it as a bag of
+        n
+        -grams
+        [19, 20, 31]
+        , the recent dataset of
+        Socher et al. (2013)
+        imposes a layer of structure on the problem that we can exploit. They annotate every constituent in a number of training trees with an integer sentiment value from 1 (very negative) to 5 (very positive), opening the door for models such as ours to learn how syntax can structurally affect sentiment.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        Figure
+        5
+        shows an example that requires some analysis of sentence structure to correctly
+understand. The first constituent conveys positive sentiment with
+        never lethargic
+        and the second conveys negative sentiment with
+        hindered
+        , but to determine the overall sentiment of the sentence, we need to exploit the fact that
+        while
+        signals a discounting of the information that follows it. The grammar rule 2
+        →
+        4 1 already encodes the notion of the sentiment of the right child being dominant, so when this is conjoined with our span feature on the first word (
+        While
+        ), we end up with a feature that captures this effect.
+Our features can also lexicalize on other discourse connectives such as
+        but
+        or
+        however
+        , which often occur at the split point between two spans.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S7.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         7.1
+        </span>
+        Adapting to Sentiment
+       </h3>
+       <div class="ltx_para" id="S7.SS1.p1">
+        <p class="ltx_p">
+         Our parser is almost entirely unchanged from the parser that we used for syntactic analysis. Though the treebank grammar is substantially different, with the nonterminals consisting of five integers with very different semantics from syntactic nonterminals, we still find that parent annotation is effective and otherwise additional annotation layers are not useful.
+        </p>
+       </div>
+       <div class="ltx_para" id="S7.SS1.p2">
+        <p class="ltx_p">
+         One structural difference between sentiment analysis and syntactic parsing lies in where the relevant information is present in a span.
+Syntax is often driven by heads of constituents, which tend to be located at the beginning or the end,
+whereas sentiment is more likely to depend on modifiers such as adjectives, which are typically present in the middle of spans.
+Therefore, we augment our existing model with standard sentiment analysis features that look at unigrams and bigrams in the span
+         [31]
+         .
+Moreover, the Stanford Sentiment Treebank is unique in that each constituent was annotated in isolation, meaning that context never affects sentiment and that every word always has the same tag. We exploit this by adding an additional feature template similar to our span shape feature from Section
+         4.4
+         which uses the (deterministic) tag for each word as its descriptor.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S7.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         7.2
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S7.SS2.p1">
+        <p class="ltx_p">
+         We evaluated our model on the fine-grained sentiment analysis task presented in
+         Socher et al. (2013)
+         and compare to their released system.
+The task is to predict the root sentiment label of each parse tree; however, because the data is annotated with sentiment at each span of each parse tree, we can also evaluate how well our model does at these intermediate computations.
+Following their experimental conditions, we filter the test set so that it only contains trees with non-neutral sentiment labels at the root.
+        </p>
+       </div>
+       <div class="ltx_para" id="S7.SS2.p2">
+        <p class="ltx_p">
+         Table
+         5
+         shows that our model outperforms the model of
+         Socher et al. (2013)
+         —both the published numbers and latest released version—on the task of root classification, even though the system was not explicitly designed for this task. Their model has high capacity to model complex interactions of words through a combinatory tensor, but it appears that our simpler, feature-driven model is just as effective at capturing the key effects of compositionality for sentiment analysis.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

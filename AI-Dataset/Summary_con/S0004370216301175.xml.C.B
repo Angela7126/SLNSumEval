@@ -1,0 +1,23 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:16, WORD_NUM:577">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">In this work we have introduced an argumentative approach to single-agent decision making.</a>
+<a href="#1" id="1">The proposed formalism, called Abstract Decision Framework, was defined as a tuple {a mathematical formula}〈X,C,>C,K,Γ〉 and involves: a set X of mutually exclusive alternatives, a set of distinguished literals {a mathematical formula}C where each {a mathematical formula}ci∈C represents a different binary preference relation for comparing alternatives in X, a strict total order {a mathematical formula}>C among elements of {a mathematical formula}C, a dynamic argumentation framework {a mathematical formula}K used for representing preferences relations and conflicts among the available alternatives, and a set of decision rules Γ that implements the agent's decision making policy.</a>
+<a href="#2" id="2">Our formalism is not attached to any particular agent architecture, and since is based on abstract argumentation framework, some elements of the formalism can be instantiated with a particular argumentation system.</a>
+<a href="#3" id="3">This is a key issue, given that this abstract argumentation-based framework for decision making can be conceived as a template for building decision frameworks based on concrete argumentation formalisms.</a>
+<a href="#4" id="4">Besides, the resulting concrete instantiation, would result in a decision framework having a choice behavior consistent with the PBA and CBA approaches described in Section 2.</a>
+<a href="#5" id="5">Our proposal takes advantage of the formalism of dynamic argumentation frameworks [55], where the set of available evidence (that represents the situation of a particular environment where the agent is immersed) activates some arguments of the framework, and those arguments are used for computing the agent's justified conclusions with respect to that evidence.</a>
+<a href="#6" id="6">For deciding between conflicting arguments, the formalization relies in an order over the preference criteria defined for the application domain.</a>
+<a href="#7" id="7">In this article, we focused on the “argumentation-based view” to decision making and establishing formal connections to Classical Decision Theory.</a>
+<a href="#8" id="8">However, as we saw in Section 6.6, other qualitative, quantitative, and hybrid approaches have played a key role in decision making research.</a>
+<a href="#9" id="9">As future work, we plan to establish explicit connections with those influential approaches; our studies will include a formal comparison with other qualitative representations such as multi-attribute ceteris paribus preference statements [20], [22] and semantics for extensions that support quantitative comparisons involving tradeoffs [42], [44], [45].</a>
+<a href="#10" id="10">In this context, an important aspect to analyze is the computational burden involved in recompiling utility functions in some recent hybrid approaches [42] versus the flexibility provided by argumentation approaches that support numeric strengths in their arguments in the context of changing environments.</a>
+<a href="#11" id="11">Therefore, to get some insights on this matter, it would be interesting to model the decision making formalism presented in [27] (based on P-DeLP) as an instance of our abstract framework.</a>
+<a href="#12" id="12">Also, to test its adequacy as an abstract decision framework, other instantiations will be performed with argumentative formalisms having semantics resembling a dialogical discussion; for instance [49].</a>
+<a href="#13" id="13">Moreover, as aforementioned in Section 6.7, new research lines arising from psychology and behavioral economics are taking into account non-rational behavior in decision making based on Simon's seminal works (e.g., see [59], [60]).</a>
+<a href="#14" id="14">Nevertheless, as stated in [16], perfect rational models are still the prevailing models; hereof, we have formalized the choice behavior of the proposed framework with respect to the general theory of choice of Classical Decision Theory (as motivated by Parsons and Fox in [48] and already mentioned in Sections 1 and 6).</a>
+<a href="#15" id="15">As future work, following the thorough presentation in [16], we will also study how our framework can be redefined to model some of the proposals concerning non-rational decision making, given that argumentation-based approaches are alike to human reasoning.</a>
+</body>
+</html>

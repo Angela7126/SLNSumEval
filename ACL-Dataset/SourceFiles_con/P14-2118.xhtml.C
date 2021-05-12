@@ -1,0 +1,463 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Concreteness and Subjectivity as Dimensions of Lexical Meaning.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We quantify the lexical subjectivity of adjectives using a corpus-based method, and show for the first time that it correlates with noun concreteness in large corpora. These cognitive dimensions together influence how word meanings combine, and we exploit this fact to achieve performance improvements on the semantic classification of adjective-noun pairs.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Concreteness
+        , the degree to which language has a perceptible physical referent, and
+        subjectivity
+        , the extent to which linguistic meaning depends on the perspective of the speaker, are well established cognitive and linguistic notions. Recent results suggest that they could also be useful knowledge for natural language processing systems that aim to extract and represent the meaning of language.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Insight into concreteness can help systems to classify adjective-noun pairs according to their semantics. In the non-literal expressions
+        kill the process
+        or
+        black comedy
+        , a verb or adjective that occurs with a concrete argument in literal phrases takes an abstract argument.
+        Turney et al. (2011)
+        present a supervised model that exploits this effect to correctly classify 79% of adjective-noun pairs as having literal or non-literal meaning.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Subjectivity analysis has already proved highly applicable to a range of NLP applications, including sentiment analysis, information extraction and text categorization
+        [22, 24]
+        . For such applications, subjectivity is analyzed at the phrasal or document level. However, recent work has highlighted the application of subjectivity analysis to lexical semantics, for instance to the tasks of disambiguating words according to their usage or sense
+        [28, 2]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The importance of concreteness to NLP systems is likely to grow with the emergence of multi-modal semantic models
+        [8, 25]
+        . Such models, which learn representations from both linguistic and perceptual input, outperform text-only models on a range of evaluations. However, while multi-modal models acquire richer representations of concrete concepts, their ability to represent abstract concepts can be weaker than text-only models
+        [13]
+        . A principled treatment of concreteness is thus likely to be important if the multi-modal approach is to prove effective on a wider range of concepts. In a similar vein, interest in subjectivity analysis is set to grow with interest in extracting sentiment and opinion from the web and social media
+        [3]
+        . Moreover, given that humans seem to exploit both concreteness
+        [20]
+        and subjectivity
+        [10]
+        clues when processing language, it is likely that the same clues should benefit computational models aiming to replicate human-level performance in this area.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        In this paper, we show how concreteness and subjectivity can be applied together to produce performance improvements on two classification problems: distinguishing literal and non-literal adjective-noun pairs
+        [27]
+        , and classifying the modification type exhibited by such pairs
+        [5]
+        . We describe an unsupervised corpus-based method to quantify adjective subjectivity, and show that it effectively predicts the labels of a hand-coded subjectivity lexicon. Further, we show for the first time that adjective subjectivity correlates with noun concreteness in large corpora. In addition, we analyse the effect of noun concreteness and adjective subjectivity on meaning combination, illustrating how the interaction of these dimensions enables the accurate classification of adjective-noun pairs according to their semantics. We conclude by discussing other potential applications of concreteness and subjectivity to NLP.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Dimensions of meaning
+      </h2>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Concreteness
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         A large and growing body of empirical evidence indicates clear differences between concrete concepts, such as
+         donut
+         or
+         hotdog
+         and abstract concepts, such as
+         guilt
+         or
+         obesity
+         . Concrete words are more easily learned, remembered and processed than abstract words
+         [21]
+         , while differences in brain activity
+         [4]
+         and cognitive representation
+         [13]
+         have also been observed. In linguistic conctructions, concreteness appears to influence compound and phrasal semantics
+         [26, 7, 27]
+         . Together with the practical applications outlined in Section 1, these facts indicate the potential value of concreteness for models aiming to replicate human performance in language processing tasks.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P1.p2">
+        <p class="ltx_p">
+         While automatic methods have been proposed for the quantification of lexical concreteness, they each rely on dictionaries or similar hand-coded resources
+         [15, 27]
+         . We instead extract scores from a recently released dataset of lexical concepts rated on a 1-5 scale for concreteness by 20 annotators in a crowdsourcing experiment
+         [9]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Subjectivity
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         Subjectivity is the degree to which language is interpretable independently of the speaker’s perspective
+         [17]
+         . For example, the utterance
+         he sits across the table
+         is more subjective than
+         he sits opposite Sam
+         as its truth depends on the speaker’s position. Language may also be subjective because it conveys evaluations or opinions
+         [19]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p2">
+        <p class="ltx_p">
+         Computational applications of subjectivity, including sentiment analysis and information extraction, have focused largely on phrase or document meaning.
+         In contrast, here we present six corpus-based features designed to quantify the
+         lexical
+         subjectivity of adjectives. The features
+         Comparability
+         and
+         Modifiability
+         are identified as predictors of subjectivity by
+         Wiebe (2000)
+         . The remainder are motivated by corpus studies and/or observations from the theoretical literature.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p3">
+        <p class="ltx_p">
+         Adverbiability
+         :
+         Quirk et al. (1985)
+         theorizes that subjective adjectives tend to develop derived adverbial forms, whereas more objective adjectives do not. We thus define adverbiability as the frequency of derived adverbial forms relative to the frequency of their base form, e.g.
+        </p>
+        ∑h⁢o⁢t⁢l⁢y∑h⁢o⁢t+∑h⁢o⁢t⁢l⁢y
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p4">
+        <p class="ltx_p">
+         Comparability
+         :
+         Wiebe (2000)
+         oberve that
+         gradable
+         are more likely to be subjective. Following Wiebe, we note that the existence of comparative forms for an adjective are indicative of gradability. We thus define comparability as the frequency of comparative or superlative forms relative to the frequency of the base form, e.g.
+        </p>
+        ∑h⁢o⁢t⁢t⁢e⁢r+∑h⁢o⁢t⁢t⁢e⁢s⁢t∑h⁢o⁢t+∑h⁢o⁢t⁢t⁢e⁢r+∑h⁢o⁢t⁢t⁢e⁢s⁢t
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p5">
+        <p class="ltx_p">
+         LeftTendency
+         :
+         Adamson (2000)
+         proposes that more subjective adjectives typically occur furthest from the noun in multiple-modifier strings such as (
+         hot crossed buns
+         ). We consequently extract the LeftTendency of our adjectives, defined as the frequency of occurrence as the leftmost of two adjectives as a proportion of the overall frequency of occurrence in multiple-modifier strings.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p6">
+        <p class="ltx_p">
+         Modifiability
+         : Another characteristic of gradable adjectives noted by
+         Wiebe (2000)
+         is that they admit degree modifiers (
+         very/quite delicious
+         ). We therefore extract the relative frequency of occurrence with one of a hand-coded list of English degree modifiers.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p7">
+        <p class="ltx_p">
+         Predicativity
+         :
+         Bolinger (1967)
+         proposed that subjective adjectives occur in predicative constructions (
+         the cake is sweet
+         ), rather than attributive constructions (
+         the German capital
+         ) more frequently than objective adjectives. We therefore extract the relative frequency of occurrence in such constructions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p8">
+        <p class="ltx_p">
+         Non-nominality
+         : Many adjectives also function as nouns (
+         sweet cake
+         vs. (
+         boiled sweet
+         ). Unlike nouns, many adjectives are inherently subjective, and the number of adjectives in texts correlates with human judgements of their subjectivity
+         [12]
+         . We therefore extract the frequency with which concepts are tagged as adjectives relative to as nouns, on the assumption that ‘pure’ adjectives are on average more subjective than nominal-style adjectives.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P3">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Concreteness meets Subjectivity
+       </h4>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         Demonstrable commonalities in how different people perceive the physical world suggest that concrete language may be more objective than abstract language
+         [16]
+         . Intuitively, adjectives ascribing physical properties (
+         wooden shed
+         ) are more objective than those conveying abstract traits (
+         suspicious man
+         ). Indeed, in certain cases the original, apparently objective, senses of polysemous adjectives are not modifiable (
+         very wooden shed
+         ?), while their more abstract sense extensions are (
+         very wooden personality
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p2">
+        <p class="ltx_p">
+         Motivated by these observations, in the following sections we test two hypotheses. (1) Subjective / objective adjectives are more likely to modify abstract / concrete nouns respectively. (2) Subjectivity and concreteness can predict aspects of how adjective and noun concepts combine.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Analysis
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In addressing (1), we extracted the 2,000 highest-frequency nouns from the
+        Brysbaert et al. (2013)
+        concreteness dataset. We denote by
+        C⁢O⁢N⁢C⁢(n)
+        the mean concreteness rating for noun
+        n
+        . For the 24,908 adjectives that occur in some adjective-noun pair with one of these nouns in the British National Corpus (BNC)
+        [18]
+        , we extracted subjectivity features from the Google Books Corpus
+        [11]
+        . Since each of the six features takes values on
+        [0,1]
+        , we define the overall subjectivity of an adjective
+        a
+        with feature vector
+        𝐬a=[s1a⁢…⁢s6a]
+        as
+       </p>
+       S⁢U⁢B⁢J⁢(a)=∑i=16sia.
+       <p class="ltx_p">
+        To verify the quality of our subjectivity features, we measured their performance as predictors in a logistic regression classifying the 3,250 adjectives labelled as subjective or not in the
+        Wilson et al. (2005)
+        lexicon.
+        The combination of all features produced an overall classifiction accuracy of 79%. The performance of individual features as predictors in isolation is shown in Figure 1 (top).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        We first tested the relationship between concreteness and subjectivity with a correlation analysis over noun concepts. For each noun
+        n
+        we defined its
+        subjectivity profile
+        as the mean of the subjectivity vectors of its modifying adjectives
+       </p>
+       S⁢U⁢B⁢J⁢p⁢f⁢l⁢(n)=1|An|⁢∑a∈An𝐬a
+       <p class="ltx_p">
+        where the bag
+        An
+        contains an adjective
+        a
+        for each occurrence of the pair
+        (a,n)
+        in the BNC. As hypothesized,
+        C⁢O⁢N⁢C⁢(n)
+        was a significant predictor of the magnitude of the subjectivity profile (Pearson
+        r=-0.421,p&lt;0.01
+        ). This effect is illustrated in Figure 1 (bottom).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        To explore the relationship between concreteness, subjectivity and meaning, we plotted the 20,000 highest frequency
+        (a,n)
+        pairs in the BNC in the
+        CONC-SUBJ
+        semantic space (Figure 2, top). In addition, to examine the effect of concreteness alone on adjective-noun semantics, we defined a new adjective feature
+       </p>
+       E⁢x⁢p⁢C⁢O⁢N⁢C⁢(a)=1|Na|⁢∑n∈NaC⁢O⁢N⁢C⁢(n)
+       <p class="ltx_p">
+        where the bag
+        Na
+        contains noun
+        n
+        for each occurrence of the pair
+        (a,n)
+        in the BNC. Figure 2 (bottom) illustrates the the
+        CONC-ExpCONC
+        space.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        In both spaces, the extremities reflect particular meaning combination types. Pairs in the bottom-left region of the
+        CONC-SUBJ
+        space (objective adjectives with abstract nouns, such as
+        green politics
+        ) seem to exhibit a non-literal, or at least non prototypical modification type. In contrast, for pairs in the objective+concrete corner, the adjectives appear to perform a classifying or categorizing function (
+        baptist minister
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        In the
+        CONC-ExpCONC
+        space, on the diagonal, where noun-concreteness is ‘as expected’, pairings appear to combine literally. Away from the diagonal, meaning composition is less predictable. In the top-left, where
+        ExpCONC
+        is greater than
+        CONC
+        , the combinations are almost all non-literal, as shown in Table 2.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p6">
+       <p class="ltx_p">
+        In this section we have outlined a set of corpus features that, taken together, enable effective approximation of adjective subjectivity. The results of our analyses also demonstrate a clear interaction between subjectivity and concreteness scores for nouns attributed by human raters. Specifically, objective adjectives are more likely to modify concrete nouns and subjective adjectives are more likely to modify abstract nouns. Qualitative investigations further suggest the interaction between these dimensions to be useful in the semantic characterization of adjective-noun pairs, a proposition we test formally in the next section.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We evaluate the potential of our adjective subjectivity features, together with noun concreteness, to predict adjective-noun semantics, based on two existing classification tasks.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Non-literal Composition Task
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         To evaluate their model of lexical concreteness,
+         Turney et al. (2011)
+         developed a list of 100 common adjective-noun pairs classified as either
+         denotative
+         (used literally) or
+         connotative
+         (non-literal) by five annotators. Using an identical supervised learning procedure to Turney et al. (logistic regression with 10-fold cross-validation), we test whether our lexical representations based on subjectivity and concreteness convey sufficient information to perform the same classification.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Modification-type Classification
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Boleda et al. (2012)
+         introduce a set of 370 adjective-noun pairs grouped into modification types by human judges. Because a
+         red car
+         is both a car and red, the pair is classed as
+         intersective
+         , whereas
+         dark humour
+         , which is not literally dark, is classed as
+         subsective
+         . To create a distinct but analogous binary categorization problem to the composition task, we filtered out pairs not unanimously allocated to either class. We again aim to classify the remaining 211 intersective and 93 subsective pairs with a logistic regression.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         Models were trained with concreteness features (
+         CONC
+         and
+         ExpCONC
+         ), subjectivity features (
+         SUBJ
+         and
+         SUBJpfl
+         ) and the combination of both types (
+         Combined
+         ). The performance of each model is presented in Table 3, along with a baseline score reflecting the strategy of allocating all pairs to the largest class.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         On the non-literal composition task, the concreteness (83.0) and combined (85.0) models outperform that of Turney et al. (79.0). The concreteness model performance represents further confirmation of the link between concreteness and composition. The improvement of this model over
+         Turney et al. (2011)
+         is perhaps to be expected, since our model exploits the wide scope of the new
+         Brysbaert et al. (2013)
+         crowdsourced data whereas Turney et al. infer concreteness scores from a smaller training set. Notably, our combined model improves on the concreteness-only model, confirming that the interaction of concreteness and subjectivity provides additional information pertinent to meaning composition.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         The modification-type task has no performance benchmark since
+         Boleda et al. (2012)
+         do not use their data for classification. Although all models improve on the majority-class baseline, the combined model was again most effective. Additive improvement over the baseline in each case was lower than for the composition task, which may reflect the greater subtlety inherent in the subsective/intersective classification. Indeed, inter-annotator agreement for this goldstandard (Cohen’s
+         κ=0.87
+         ) was lower than for the composition task (0.95), implying a less cognitively salient distinction.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Acknowledgements
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        The authors are supported by St John’s College, Cambridge and The Royal Society.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

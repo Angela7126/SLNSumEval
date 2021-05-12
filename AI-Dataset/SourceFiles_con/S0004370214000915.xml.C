@@ -1,0 +1,1281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Finding explanations of inconsistency in multi-context systems.
+   </title>
+   <abstract>
+    Interlinking knowledge sources to enable information exchange is basic means to build enriched knowledge-based systems, which gains importance with the spread of the Internet. Inconsistency, however, arises easily in such systems, which is not least due to their heterogeneity, but also due to their independent design. This makes developing methods for consistency management of such systems a pressing issue. An important aspect is that in many relevant cases, the information at individual sources may not be amenable to change in order to resolve inconsistency, like in case of autonomous management of the sources. We thus aim at analyzing inconsistency of a system by means of the interlinking of sources and changes thereof. More concretely, we consider the powerful framework of Multi-Context Systems, in which decentralized and heterogeneous system parts interact via (possibly nonmonotonic) bridge rules for information exchange. Nonmonotonicity and potential cyclic dependencies pose additional challenges that call for suitable methods of inconsistency analysis. We thus provide two approaches for explaining inconsistency, which both characterize inconsistency in terms of bridge rules, but in different ways: by pointing out rules which need to be altered for restoring consistency, and by finding combinations of rules which cause inconsistency. We show duality and modularity properties of these notions, give precise complexity characterizations, and provide algorithms for their computation, which have been implemented in a prototype, by means of so-called hex-programs. Our results provide a basis for inconsistency management in heterogeneous knowledge systems which, different from and orthogonal to other works, explicitly addresses the knowledge interlinks in order to restore consistency.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In recent years, there has been increasing interest in interlinking information, driven by—and reflected in—the development of the World Wide Web. Increasing demands not only concern the large number of available sources and the degree of interlinking, but also the quality of the information. From its initial conception as a means to link textual data, the Internet has evolved to a medium for interlinking, accessing, and exchanging
+     </paragraph>
+     <paragraph>
+      more structured information including relational and semi-structured data, and in the last years also semantically richer knowledge sources. Systems can be built in which individual information sources are connected, such that more informed and accurate answers can be given to specific user problems. Typically, these sources are expressed in different formalisms, and they are autonomously managed by third parties, such that a real integration is difficult.
+     </paragraph>
+     <paragraph>
+      Developing uniform, high-level formalisms to capture such systems has thus become a relevant issue in knowledge representation and reasoning (KRR). The Multi-Context System (MCS) framework [14], [21], [24], [53], [85], [87], which evolved from MultiLanguage systems [54], [55], is an expressive framework for this purpose. It is a powerful knowledge representation formalism for many application scenarios where heterogeneity and inter-contextual information exchange are essential. Multi-context systems as introduced in [21] consist of knowledge bases (in possibly heterogeneous and/or nonmonotonic logics) at nodes (called contexts) that formulate the exchange of information via so called bridge rules, such as{a mathematical formula} informally, this rule states that if X_Risk is a low rate insurance company according to knowledge source (context) {a mathematical formula}c2, and it is not known to be blacklisted according to context {a mathematical formula}c3, then context {a mathematical formula}c1 adds the fact {a mathematical formula}ok(X_Risk) to its knowledge base.
+     </paragraph>
+     <paragraph>
+      MCS enable knowledge exchange at a general level, by interlinking possibly heterogeneous formalisms such as ontologies, databases, and logic programs. However, due to their decentralized nature, information exchange can have unforeseen effects, and in particular cause an MCS to be inconsistent. For example, consider a system for supporting health care decisions in a hospital, that comprises several components: (i) a database of laboratory test results; (ii) a patient record database; (iii) an ontology for disease classification; and (iv) a decision support system suggesting suitable treatments for patients. Modeled as an MCS, each component is a context and the information flow between them is specified by suitable bridge rules (see Fig. 1 for an overview and further details which will become relevant later on). Thanks to bridge rules existing systems might be easily incorporated. Suppose that the decision support system concludes that a patient must be given a special drug, but the patient database states that she is allergic to that drug, thus counter-indicating its use. The whole system gets inconsistent (which renders the system useless) unless such special cases were anticipated when contexts and bridge rules were modeled.
+     </paragraph>
+     <paragraph>
+      In real world applications, system complexity tends to increase, in terms of both contexts and interconnectivity. Extensive testing that considers all possible states of a system is often infeasible, especially if legacy information systems are employed as contexts in an MCS. Therefore, and specifically due to the heterogeneity of individual system components that are linked together, inconsistency arises easily and methods for handling inconsistency are an important issue. Our work aims at analyzing inconsistencies in MCS, in order to understand where and why such inconsistencies occur, and how they might be removed. It thus provides a basis for the specification of concrete strategies to handle inconsistencies and to extend systems with inconsistency management mechanisms (in addition to some basic operations that can be obtained directly from our approach).
+     </paragraph>
+     <paragraph>
+      Various approaches to cope with inconsistent information have been developed for different KRR formalisms (see Section 7 for works closely related to ours and Appendix B for a more general overview). Specifically in traditional data integration scenarios, inconsistency problems also surface naturally and methods for consistency restoring or maintenance have been studied extensively. Compared to that, however, our work proposes novel concepts that differ beyond settings and formalisms considered in prior works: the important point is that we focus on the exchange of information, its interlinking, i.e., on adjusting bridge rules instead of modifying the data in the contexts. In data integration terms, we thus consider modifications of the mapping as a potential for resolving inconsistency rather than repairing or cleaning the data. While the importance of maintaining and repairing mappings has been recognized in database integration [31], progress on this has been on a slow pace.
+     </paragraph>
+     <paragraph>
+      The motivation for addressing inconsistency in MCS on the level of bridge rules stems from the fact that an MCS usually models a loose integration scenario with autonomous sources (e.g., if companies link their business logics), where changing contexts or their data to restore consistency may not be an option. Compared to data integration settings that globally materialize (at least virtually) the data of the individual sources, it may not be possible to modify (or even access all the) data that is internal to one of the knowledge bases employed in an MCS. This applies in particular to cases of cyclic information exchange. Therefore, we resort to bridge rules as the source of inconsistency, and their modification as a possibility of counteracting. On the one hand, under the reasonable assumption that each context is consistent if bridge rules are disregarded, we can fully capture reasons of inconsistency in terms of bridge rules. On the other hand, negation and potential cyclic dependencies (as opposed to acyclic mappings or cyclic mappings of limited query depth in data integration [8]) render the task of characterizing and analyzing inconsistency non-trivial.
+     </paragraph>
+     <paragraph>
+      Starting from this, our contributions are summarized as follows:
+     </paragraph>
+     <paragraph>
+      (1) In the spirit of debugging approaches used in the nonmonotonic reasoning community, especially in logic programming [20], [62], [72], [80], [90], we introduce two notions of explaining inconsistency in MCS: a consistency-based notion, called diagnosis, and an entailment-based notion, called explanation. Intuitively, a diagnosis characterizes inconsistency in terms of modified sets of bridge rules that admit equilibria (i.e., consistency of the system), while explanations point out subsets of bridge rules that are sufficient for inconsistency in the system. Potential nonmonotonicity makes these notions challenging, because both removing and adding bridge rules can cause as well as prevent inconsistency in an MCS. Despite that, our notions have appealing properties. We investigate refinements and restrictions of our notions; however, we also show that these can be expressed in terms of our basic notions.
+     </paragraph>
+     <paragraph>
+      (2) We establish useful properties of our notions. First, conversion and duality results between diagnoses and explanations show that, while representing different analytic properties, they identify the same overall set of bridge rules as relevant for inconsistency. This in fact generalizes a similar classic result by Reiter [84], who characterized the consistency-based diagnoses of system description in classical (monotonic) logic in terms of conflict sets. Furthermore, we establish modularity properties in the spirit of Splitting Sets [71], which allow for an incremental computation of diagnoses and explanations, taking the MCS topology into account.
+     </paragraph>
+     <paragraph>
+      (3) We exactly characterize the computational complexity of identifying explanations, under varying assumptions on the complexity of reasoning in contexts (note that by the underlying assumption, consistency-based explanations always exist). It turns out that this problem has for a range of context complexities no (or only mildly) higher complexity than the contexts themselves. As a consequence, computing explanations is in some cases not harder than consistency checking.
+     </paragraph>
+     <paragraph>
+      (4) Finally, we consider how consistency- and entailment-based explanations in the sense above can be computed, i.e., modified sets of bridge rules that admit equilibria respectively are sufficient for inconsistency of the system. To this end, we resort here to hex-programs, which are a generalization of Answer Set Programming (ASP) by so-called external atoms that provide access to external sources of computation. An experimental prototype has been implemented, while more advanced implementations are underway.
+     </paragraph>
+     <paragraph>
+      Our results provide a basis for building enhanced MCS systems which are capable of analyzing and reasoning about emerging inconsistencies. Rather than automatically resolving inconsistency, as e.g. in [13], we envisage a (semi-)automatic approach with user support for locating and tracking parts that cause inconsistency. Indeed, user invention may be needed as often no automatic solution is feasible. For instance in our healthcare example, giving the special drug would resolve the inconsistency, but this should only be done after approval by a medical doctor.
+     </paragraph>
+     <paragraph>
+      Structure. The remainder of this article is organized as follows. Section 2 provides necessary preliminaries on the MCS framework and introduces a running example. In Section 3, diagnoses and explanations are introduced, while Section 4 contains conversion results and modularity properties that depend on the interlinking of MCS. Section 5 contains a detailed analysis of the computational complexity of identifying both diagnoses and explanations, and in Section 6 we elaborate on how they can be computed using hex programs. A comprehensive discussion of related work is given in Section 7, followed by concluding remarks and directions for future work in Section 8. We give more details to some of our examples in Appendix A, discuss a broad range of related work in Appendix B, and provide proofs for all results in Appendix C .
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we recall nonmonotonic MCS from [21]. Further background is given in [22], [32], which discuss extensions of MCS, compare them to other related formalisms, and survey computational issues.
+     </paragraph>
+     <paragraph>
+      Loosely speaking, a nonmonotonic MCS consists of contexts, each composed of a knowledge base with an underlying abstract logic, and a set of bridge rules which control the information flow between contexts. For a running example we use an MCS shown in Fig. 1 whose details are fully explained in Example 2 and in the remainder of this section. The MCS framework uses a minimalistic, abstract model of logics, which consists of possible sets of formulas, possible sets of beliefs, and a satisfiability relation.
+     </paragraph>
+     <paragraph label="Definition 1">
+      A logic {a mathematical formula}L=(KBL,BSL,ACCL) consists, in an abstract view, of the following components:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}KBL is the set of well-formed knowledge bases of L. We assume each element of {a mathematical formula}KBL is a set (of “formulas”).
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}BSL is the set of possible belief sets, where the elements of a belief set are statements that possibly hold, given a knowledge base.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ACCL:KBL→2BSL is a function describing the “semantics” of the logic by assigning to each knowledge base a set of acceptable belief sets.
+      </list-item>
+     </list>
+     <paragraph>
+      Intuitively, a belief set is a set of statements (beliefs) that a reasoner may jointly hold, and {a mathematical formula}ACCi(kb) singles out, given a knowledge base kb, the belief sets that are justifiably acceptable. To accommodate nonmonotonic formalisms where knowledge base may have multiple such acceptable belief sets (e.g., answer sets of logic program; extensions of a default theory; expansions of an autoepistemic theory), {a mathematical formula}ACCi(kb) is designed as a multi-valued function. Note that the possible belief sets in {a mathematical formula}BSL are abstract without imposing any conditions a priori. This allows to flexibly capture a host of concrete applications and arbitrary context reasoning capabilities viewing belief sets as an abstract interface. E.g., for classical logic, belief sets might contain only atoms, only literals, or formulas of certain structure or nesting depth; they may be logically closed or not, depending on the particular capability of belief set formation.
+     </paragraph>
+     <paragraph>
+      This abstract notion of a purely functional “logic” captures many monotonic and nonmonotonic logics, e.g., classical logic, description logics, modal, default, and autoepistemic logics, circumscription, and logic programs under answer set semantics. Moreover, it allows also to consider formalisms not based on logic (e.g., Dung-style argumentation systems) under a suitable representation.
+     </paragraph>
+     <paragraph label="Example 1">
+      We illustrate how this abstraction of a logic captures some well-known knowledge-representation formalisms. The introduced logics are also used in formalizing our running example.Classical propositional logic. To capture classical (propositional) logic over a set At of propositional atoms, we may define:
+      <list>
+       {a mathematical formula}KBc=2Σ is the set of all subsets of Σ, where Σ is the set of well-formed formulas over At built using the connectives {a mathematical formula}∧,∨,¬,→;{a mathematical formula}BSc=2Σ, i.e., each set of formulas is a possible belief set; and{a mathematical formula}ACCc returns for each set {a mathematical formula}kb∈KBc of well-formed formulas a singleton set that contains the set of formulas entailed by kb; if {a mathematical formula}⊨c denotes classical entailment, then {a mathematical formula}ACCc(kb)={{F∈Σ|kb⊨cF}}.In practice, the formulas in knowledge bases and belief sets might be restricted to particular forms, e.g., to literals; we denote the respective logic by
+      </list>
+      <paragraph>
+       {a mathematical formula}LΣpl=(KBpl,BSpl,ACCpl). Note that{a mathematical formula}For our running example we employ two contexts, {a mathematical formula}C1 and {a mathematical formula}C2, using signatures {a mathematical formula}Σ1={allergy_strong_ab} and {a mathematical formula}Σ2={blood_marker,xray_pneumonia}, and logics {a mathematical formula}LΣ1pl and {a mathematical formula}LΣ2pl, respectively. Their knowledge bases are as follows:{a mathematical formula}{a mathematical formula} Those knowledge bases provide information that the patient is allergic to strong antibiotics ({a mathematical formula}kb1), respectively that a certain blood marker is present and that pneumonia was detected in an X-ray examination ({a mathematical formula}kb2).The corresponding semantics is given by {a mathematical formula}ACC(kb1)={{allergy_strong_ab}} for {a mathematical formula}C1, and {a mathematical formula}ACC(kb2)={{blood_marker,xray_pneumonia}} for {a mathematical formula}C2.Description logic. For ontologies with syntax and semantics of the description logic {a mathematical formula}ALC (see [2]), we use the abstract logic {a mathematical formula}LA(for details see Example 13 in Appendix A). An {a mathematical formula}LA-knowledge base contains both A-Box and T-Box axioms. An accepted belief set of such a knowledge base is the set of atomic assertions that follow from the knowledge base.For a running example, we use an ontology about diseases, given by context {a mathematical formula}C3 using {a mathematical formula}LA. Its knowledge base, {a mathematical formula}kb3, consists of two axioms, where the first states that pneumonia is a bacterial disease and the second states that pneumonia which has an associated blood-marker implies an atypical pneumonia (that is a severe form of pneumonia). The corresponding knowledge base is:{a mathematical formula} As {a mathematical formula}kb3 is satisfiable and contains only terminological knowledge, no assertions follow from this knowledge base, thus {a mathematical formula}ACC(kb3)={∅}. Adding the assertions that d is pneumonia and that the role has_marker holds between d and m1 results in the conclusion that d is also a bacterial disease and atypical pneumonia, i.e.,{a mathematical formula}Disjunctive answer set programming. For normal disjunctive logic programs under answer set semantics over a non-ground signature Σ (cf. [45] and [83]), we use the abstract logic {a mathematical formula}LΣasp, which is detailed in the appendix in Example 14. We employ {a mathematical formula}LΣasp for a context, {a mathematical formula}C4, suggesting proper treatments where {a mathematical formula}Σ={give_strong,give_weak,need_ab,allow_strong_ab,give_nothing}. The knowledge base for {a mathematical formula}C4 is:{a mathematical formula}{a mathematical formula}C4 suggests a treatment which is either a strong antibiotics, a weak antibiotics, or no medication at all. Without further information, {a mathematical formula}kb4 thus concludes that nothing is required, i.e., {a mathematical formula}ACC(kb4)={{give_nothing}}. If need_ab is added, however, {a mathematical formula}kb4 results in two answer sets, i.e., {a mathematical formula}ACC(kb4∪{need_ab.})={A1,A2} where {a mathematical formula}A1={give_strong,need_ab} and {a mathematical formula}A2={give_weak,need_ab}.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      A bridge rule can add information to a context, depending on the belief sets which are accepted at other contexts. Let {a mathematical formula}L=(L1,…,Ln) be a sequence of logics. An {a mathematical formula}Lk-bridge rule r over L is of the form{a mathematical formula} where for each {a mathematical formula}i∈{1,…,m} we have {a mathematical formula}1≤ci≤n (using integers as context identifiers), {a mathematical formula}pi is an element of some belief set of {a mathematical formula}Lci, and s is a knowledge-base formula of {a mathematical formula}Lk (i.e. {a mathematical formula}s∈⋃KBLk).
+     </paragraph>
+     <paragraph>
+      We denote by {a mathematical formula}φ(r) the formula s in the head of r and by {a mathematical formula}Ch(r) the context k where r belongs to. The full head of r is denoted by {a mathematical formula}head(r)=(k:s), thus {a mathematical formula}head(r)=(Ch(r):φ(r)). The literals in the body of r are referred to by {a mathematical formula}body(r), {a mathematical formula}body+(r), {a mathematical formula}body−(r), and {a mathematical formula}Body(r) which respectively denote the sets {a mathematical formula}{(c1:p1),…,(cm:pm)}, {a mathematical formula}{(c1:p1),…,(cj:pj)}, {a mathematical formula}{(cj+1:pj+1),…,(cm:pm)}, and {a mathematical formula}{(c1:p1),…,(cj:pj),not(cj+1:pj+1),…,not(cm:pm)}. Furthermore, {a mathematical formula}Cb(r) denotes the set of contexts referenced in r's body, i.e., {a mathematical formula}Cb(r)={ci|(ci:pi)∈body(r)}. For technical use later, we denote by {a mathematical formula}cf(r) the condition-free bridge rule stemming from r by removing all elements in its body, i.e., {a mathematical formula}cf(r) is {a mathematical formula}(k:s)←., and for any set of bridge rules R, we let {a mathematical formula}cf(R)=⋃r∈Rcf(r).
+     </paragraph>
+     <paragraph label="Definition 2">
+      A multi-context system {a mathematical formula}M=(C1,…,Cn) is a collection of contexts {a mathematical formula}Ci=(Li,kbi,bri), {a mathematical formula}1≤i≤n, where {a mathematical formula}Li=(KBi,BSi,ACCi) is a logic as above, {a mathematical formula}kbi∈KBi a knowledge base, and {a mathematical formula}bri is a set of {a mathematical formula}Lk-bridge rules over {a mathematical formula}L=(L1,…,Ln). Furthermore, for each {a mathematical formula}H⊆{φ(r)|r∈bri} it holds that {a mathematical formula}kbi∪H∈KBLi, i.e., adding bridge rule heads to a knowledge base again yields a knowledge base.
+     </paragraph>
+     <paragraph>
+      By {a mathematical formula}br(M)=⋃i=1nbri and {a mathematical formula}C(M)={C1,…,Cn} we denote the set of all bridge rules, resp. the set of all contexts of M. We write {a mathematical formula}bri(M) to denote the set of bridge rules of context i of M, i.e., {a mathematical formula}bri(M)={r∈br(M)|Ch(r)=i}. In the following, we formally introduce our running example.
+     </paragraph>
+     <paragraph label="Example 2">
+      Consider an MCS M embodying a health care decision support system that contains the following contexts: a patient history database ({a mathematical formula}C1), a blood and X-Ray analysis database ({a mathematical formula}C2), a disease ontology ({a mathematical formula}C3), and a decision support system ({a mathematical formula}C4) which suggests proper treatments. The corresponding abstract logics and knowledge bases are those in Example 1. The knowledge bases and bridge rules of M are shown in Fig. 1, where each bridge rule {a mathematical formula}r∈{r1,…,r5} with {a mathematical formula}Ch(r)=j and {a mathematical formula}i∈Cb(r) is depicted as an arrow from {a mathematical formula}Ci to {a mathematical formula}Cj.Rules {a mathematical formula}r1 and {a mathematical formula}r2 (belonging to context {a mathematical formula}C3) provide input for disease classification to the ontology; they assert facts about a new individual ‘d’ corresponding to the patient. Rules {a mathematical formula}r3 and {a mathematical formula}r4 (belonging to context {a mathematical formula}C4) link disease information with medication requirements, while {a mathematical formula}r5 (also belonging to context {a mathematical formula}C4) relates acceptance of strong antibiotics with an allergy check on the patient database.  □
+     </paragraph>
+     <paragraph>
+      The semantics of MCS is defined over locally accepted belief sets as follows. A belief state of an MCS {a mathematical formula}M=(C1,…,Cn) is a sequence {a mathematical formula}S=(S1,…,Sn) of belief sets {a mathematical formula}Si∈BSi, {a mathematical formula}1≤i≤n. A bridge rule r of form (1) is applicable in S, denoted {a mathematical formula}S|⇝r, iff for all {a mathematical formula}(j:p)∈body+(r) it holds that {a mathematical formula}p∈Sj, and for all {a mathematical formula}(j:p)∈body−(r) it holds that {a mathematical formula}p∉Sj. For a set R of bridge rules, {a mathematical formula}app(R,S)={r∈R|S|⇝r}, denotes the set of applicable bridge rules.
+     </paragraph>
+     <paragraph>
+      The equilibrium semantics defines acceptable belief states of an MCS. Intuitively, it selects a belief state S of an MCS M as acceptable, if each context {a mathematical formula}Ci takes the heads of all bridge rules that are applicable in S into account, and accepts its belief set {a mathematical formula}Si.
+     </paragraph>
+     <paragraph label="Definition 3">
+      A belief state {a mathematical formula}S=(S1,…,Sn) of M is an equilibrium iff for every belief set {a mathematical formula}Si, {a mathematical formula}1≤i≤n, it holds that {a mathematical formula}Si∈ACCi(kbi∪{φ(r)|r∈app(bri,S)}).
+     </paragraph>
+     <paragraph label="Example 3">
+      Imagine that we make a small modification to our running example MCS M (Fig. 1), such that{a mathematical formula} i.e., imagine that the blood marker is not present. Then M has a single equilibrium {a mathematical formula}S=(S1,S2,S3,S4) where{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The only rules applicable in S are {a mathematical formula}r1 and {a mathematical formula}r3, as {a mathematical formula}app(br1(M),S)=app(br2(M),S)=∅, {a mathematical formula}app(br3(M),S)={r1}, and {a mathematical formula}app(br4(M),S)={r3}. Note that if we replace {a mathematical formula}S4 with {a mathematical formula}{need_ab,give_strong,allow_strong_ab}, then the resulting belief state is not an equilibrium: {a mathematical formula}C4 uses answer set semantics, therefore {a mathematical formula}allow_strong_ab cannot be part of {a mathematical formula}S4 unless it is added by a bridge rule. The only bridge rule with this head is {a mathematical formula}r5, and its applicability is blocked by the presence of {a mathematical formula}allergy_strong_ab in {a mathematical formula}kb1 and in {a mathematical formula}S1.  □
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Diagnoses and explanations for inconsistency
+     </section-title>
+     <paragraph>
+      Inconsistency in an MCS is the lack of an equilibrium. As the combination and interaction of heterogeneous, possibly autonomous, systems can easily have unforeseen and intricate effects, inconsistency is a major problem in MCS. To provide support for restoring consistency, we seek to understand and give reasons for inconsistency.
+     </paragraph>
+     <paragraph label="Example 4">
+      The MCS in our running example (Fig. 1) is inconsistent since, unlike in Example 3, {a mathematical formula}r2 and {a mathematical formula}r4 are applicable, which in turn requires strong antibiotics. This is in conflict with the patient's allergy. Note that applicability of {a mathematical formula}r5 would resolve this inconsistency by activating {a mathematical formula}allow_strong_ab. However, presence of the fact {a mathematical formula}allergy_strong_ab in {a mathematical formula}kb1 together with body atom ‘{a mathematical formula}not(1:allergy_strong_ab)’ in {a mathematical formula}r5 prevents the applicability of {a mathematical formula}r5 (due to negation as failure).  □
+     </paragraph>
+     <paragraph>
+      We will use the following notation. Given an MCS M and a set R of bridge rules (that are compatible with M), we denote by {a mathematical formula}M[R] the MCS obtained from M by replacing its set of bridge rules {a mathematical formula}br(M) with R; e.g., {a mathematical formula}M[br(M)]=M and {a mathematical formula}M[∅] is M with no bridge rules. By {a mathematical formula}M⊨⊥ we denote that M has no equilibrium, i.e., is inconsistent, and by {a mathematical formula}M⊭⊥ the opposite.
+     </paragraph>
+     <paragraph>
+      In the following, we consider two possibilities for explaining inconsistency in MCS: first, a consistency-based formulation, which identifies a subset of the bridge rules which need to be changed to restore consistency. Second, an entailment-based formulation, which identifies a subset of the bridge rules which is required to make the MCS inconsistent. Following common terminology, we call the first formulation diagnosis (cf. [84]) and the second inconsistency explanation.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Diagnoses
+      </section-title>
+      <paragraph>
+       As well-known, adding knowledge in nonmonotonic reasoning can both cause and prevent inconsistency; the same is true for removing knowledge.
+      </paragraph>
+      <paragraph label="Definition 4">
+       For our consistency-based explanation of inconsistency, we therefore consider pairs of sets of bridge rules, such that if we deactivate the rules in the first set, and add the rules in the second set in unconditional form, the MCS becomes consistent (i.e., admits an equilibrium). Adding rules unconditionally is the most severe form of modification of a rule's body, but as we later see, this notion also allows to capture more fine-grained forms of modification. Given an MCS M, a diagnosis of M is a pair {a mathematical formula}(D1,D2), {a mathematical formula}D1,D2⊆br(M), such that {a mathematical formula}M[br(M)∖D1∪cf(D2)]⊭⊥. By notation, {a mathematical formula}D±(M) is the set of all diagnoses.
+      </paragraph>
+      <paragraph>
+       To obtain a more relevant set of diagnoses, by Occam's razor we prefer subset-minimal diagnoses, where for pairs {a mathematical formula}A=(A1,A2) and {a mathematical formula}B=(B1,B2) of sets, the pointwise subset relation {a mathematical formula}A⊆B holds iff {a mathematical formula}A1⊆B1 and {a mathematical formula}A2⊆B2.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Given an MCS M, {a mathematical formula}Dm±(M) is the set of all pointwise subset-minimal diagnoses of an MCS M, i.e.,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 5">
+       Any or none of the above possibilities might be the right choice: such decisions ought to be taken by a domain specialist (e.g., a doctor) and cannot be done automatically. Therefore analysis of inconsistency is important to identify reasons for it.  □
+      </paragraph>
+      <paragraph>
+       Preference on diagnoses can be defined in general, relying on some notion of plausibility (see e.g., for abduction [25]). This is, however, beyond the scope of this work, as we investigate basic notions of inconsistency here.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Explanations
+      </section-title>
+      <paragraph>
+       In the spirit of abductive reasoning, we also propose an entailment-based notion of explaining inconsistency. An inconsistency explanation (in short, an explanation) is a pair of sets of bridge rules, whose presence or, expected absence entails a relevant inconsistency in the given MCS.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Given an MCS M, an inconsistency explanation of M is a pair {a mathematical formula}(E1,E2) of sets {a mathematical formula}E1,E2⊆br(M) of bridge rules, such that for all {a mathematical formula}(R1,R2) where {a mathematical formula}E1⊆R1⊆br(M) and {a mathematical formula}R2⊆br(M)∖E2, it holds that {a mathematical formula}M[R1∪cf(R2)]⊨⊥. By {a mathematical formula}E±(M) we denote the set of all inconsistency explanations of M, and by {a mathematical formula}Em±(M) the set of all pointwise subset-minimal ones.
+      </paragraph>
+      <paragraph>
+       The intuition about {a mathematical formula}E1 is as follows: bridge rules in {a mathematical formula}E1 are crucial to create an inconsistency in M (i.e., {a mathematical formula}M[E1]⊨⊥), moreover this inconsistency is relevant for M in the sense that adding some bridge rules from {a mathematical formula}br(M) to {a mathematical formula}M[E1] never yields a consistent system, i.e., {a mathematical formula}M[E1∪R]⊨⊥ for all {a mathematical formula}R⊆br(M).
+      </paragraph>
+      <paragraph>
+       This condition of relevancy is necessary for non-monotonic reasoning systems; for example the program {a mathematical formula}P={a←nota.} is inconsistent under the answer set semantics, but its superset {a mathematical formula}P′={a←nota.a.} is consistent. The inconsistency of P does not matter for {a mathematical formula}P′. In terms of MCS, a set of bridge rules may create an inconsistency that is irrelevant if the system is consistent when more or all bridge rules are present.
+      </paragraph>
+      <paragraph>
+       The intuition about {a mathematical formula}E2 regards inconsistency w.r.t. the application of bridge rules: {a mathematical formula}M[E1] cannot be made consistent unless at least one bridge rule from {a mathematical formula}E2 fires, i.e., {a mathematical formula}M[E1∪cfR]⊨⊥ if {a mathematical formula}R⊆br(M)∖E2.
+      </paragraph>
+      <paragraph>
+       In summary, bridge rules {a mathematical formula}E1 create a relevant inconsistency, and at least one bridge rule in {a mathematical formula}E2 must be applied in unconditional form to repair that inconsistency.
+      </paragraph>
+      <paragraph label="Example 6">
+       In our running example (Fig. 1), we have one minimal inconsistency explanation, namely {a mathematical formula}({r1,r2,r4},{r5}). To trigger the only possible inconsistency, which is in {a mathematical formula}C4, we need to import need_strong (using {a mathematical formula}r4) and we must not import {a mathematical formula}allow_strong_ab (using {a mathematical formula}r5). Furthermore, {a mathematical formula}r4 can only fire if {a mathematical formula}C3 accepts the belief {a mathematical formula}d:AtypPneumonia, which is only possible if {a mathematical formula}r1 and {a mathematical formula}r2 fire. Therefore, {a mathematical formula}r1, {a mathematical formula}r2, and {a mathematical formula}r4must be present to get inconsistency, and the head of {a mathematical formula}r5must not be present.  □
+      </paragraph>
+      <paragraph label="Proposition 1">
+       From Definition 6 the following property follows immediately. Given an explanation E of an MCS M, every{a mathematical formula}E′such that{a mathematical formula}E⊆E′⊆(br(M),br(M))is also an explanation.
+      </paragraph>
+      <paragraph>
+       The following example shows how explanations separate reasons for inconsistency.
+      </paragraph>
+      <paragraph label="Example 7">
+       Consider {a mathematical formula}Ma=(Ca1,Ca2,Ca3,Ca4,Ca5) depicted in Fig. 2a: all contexts use logic {a mathematical formula}LΣasp from Example 1 with {a mathematical formula}Σ={a,b,…,z}. This system is inconsistent, because u is a fact in {a mathematical formula}Ca4 and therefore {a mathematical formula}ra4 adds fact t to {a mathematical formula}Ca5 which makes {a mathematical formula}Ca5 inconsistent. An alternative source of inconsistency is that z is a fact in {a mathematical formula}Ca3, therefore {a mathematical formula}ra3 adds fact w to {a mathematical formula}Ca4 which makes {a mathematical formula}Ca4 inconsistent. In both cases, consistency cannot be restored by adding rules or making rules unconditional. {a mathematical formula}Em±(M) contains only the explanations {a mathematical formula}({ra3},∅) and {a mathematical formula}({ra4},∅), which each capture one of these sources of inconsistency. Note that {a mathematical formula}Ma[{ra2}] also is an inconsistent system, because {a mathematical formula}ra2 adds the fact w to {a mathematical formula}Ca4, which makes {a mathematical formula}Ca4 inconsistent. But, since {a mathematical formula}Ma[{ra1,ra2}] is consistent, this inconsistency is not relevant and therefore not reported by our notions.We next consider the MCS {a mathematical formula}Mb=(Cb1,Cb2,Cb3,Cb4) depicted in Fig. 2b to show that mutually exclusive bridge rules can be part of the same explanation, and some advantage of subset- over cardinality-minimality. Again, all contexts use logic {a mathematical formula}LΣasp from Example 1 with {a mathematical formula}Σ={a,b,…,z}. {a mathematical formula}Mb is inconsistent, as p causes inconsistency in {a mathematical formula}Cb4 and p is added to the knowledge base of {a mathematical formula}Cb4 by bridge rule {a mathematical formula}rb3. Due to bridge rule {a mathematical formula}rb1, r is always believed by {a mathematical formula}Cb2, hence {a mathematical formula}rb3 is always applicable. This inconsistency cannot be prevented by bridge rules of {a mathematical formula}Mb, or unconditional versions thereof. Therefore {a mathematical formula}({rb1,rb3},∅) is a minimal explanation of {a mathematical formula}Mb. Another minimal explanation is {a mathematical formula}({rb2,rb3,rb4},∅), where the bodies of {a mathematical formula}rb2 and {a mathematical formula}rb3 are mutually exclusive. However, only together they ensure that {a mathematical formula}Cb4 is inconsistent, regardless of whether {a mathematical formula}rb1 is present and whether fact r is believed at {a mathematical formula}Cb2.  □
+      </paragraph>
+      <paragraph>
+       The above example also shows that cardinality-minimal explanations cannot identify all sources of inconsistency, since there are two ⊆-minimal explanations, but only one cardinality-minimal one. Additionally, the set of cardinality-minimal explanations does not point out all bridge rules that must be modified to obtain a consistent system.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Deletion-diagnoses/deletion-explanations
+      </section-title>
+      <paragraph label="Definition 7">
+       For domains where removal of bridge rules is preferred to making rules unconditional, we specialize {a mathematical formula}D± to obtain diagnoses of the form {a mathematical formula}(D1,∅). By Occam's razor, subset-minimal diagnoses are preferred. Given an MCS M, a deletion-diagnosis of M is a set {a mathematical formula}D⊆br(M) such that {a mathematical formula}M[br(M)∖D]⊭⊥. The set of all deletion-diagnoses (resp., ⊆-minimal deletion-diagnoses) is {a mathematical formula}D−(M) (resp., {a mathematical formula}Dm−(M)).
+      </paragraph>
+      <paragraph>
+       Specializing inconsistency explanations to the first component, i.e., disregarding that rules may be made unconditional, all explanations are of the form {a mathematical formula}(E1,br(M)).
+      </paragraph>
+      <paragraph label="Definition 8">
+       Given an MCS M, a deletion-explanation of M is a set {a mathematical formula}E⊆br(M) such that each R, where {a mathematical formula}E⊆R⊆br(M), satisfies {a mathematical formula}M[R]⊨⊥. The set of all such (⊆-minimal) explanations is denoted by {a mathematical formula}E+(M), and the set of ⊆-minimal ones by {a mathematical formula}Em+(M).
+      </paragraph>
+      <paragraph>
+       In our running example {a mathematical formula}Dm−(M)={{r1},{r2},{r4}} while the only (and thus minimal) deletion-explanation is given by {a mathematical formula}{r1,r2,r4}.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Refined notions of diagnosis and explanation
+      </section-title>
+      <section>
+       <section>
+        <section-title>
+         Refined diagnoses
+        </section-title>
+        <paragraph>
+         One can generalize Definition 4 to refined changes of bridge rules, such that bridge rules that need to be applicable for consistency, become applicable by only removing some body atoms instead of all. This achieves consistency with a less drastic change of the system. Intuitively this natural extension of diagnosis may let one expect an increase in expressivity of the refined notion. As we show in the following, however, the expressivity actually does not increase.
+        </paragraph>
+        <paragraph>
+         Let {a mathematical formula}brref(M) denote the set of bridge rules of M where some body literals have been removed, i.e., {a mathematical formula}brref(M)={head(r)←B.|B⊆Body(r),r∈br(M)} (where we identify the body of a bridge rule with the set of its literals). A function {a mathematical formula}fg:br(M)→brref(M) is called a body-reduction function; it maps bridge rules to rules where some or no body atoms are removed. In the following, for any set {a mathematical formula}R⊆br(M) we let {a mathematical formula}fg(R)={fg(r)|r∈R}.
+        </paragraph>
+        <paragraph label="Definition 9">
+         A refined diagnosis is a triple {a mathematical formula}(D1,D2,fg) consisting of sets of bridge rules {a mathematical formula}D1,D2⊆br(M) and a body-reduction function {a mathematical formula}fg:br(M)→brref(M), such that the resulting MCS is consistent, i.e., {a mathematical formula}M[br(M)∖D1∪fg(D2)]⊭⊥. The set of all refined diagnoses is denoted by {a mathematical formula}D±,r(M).
+        </paragraph>
+        <paragraph>
+         Again, by Occam's razor, we seek minimal refined diagnoses. To that end, we seek to change a minimal set of bridge rules and within this set, we seek a minimal change of bridge rule bodies. Therefore more conservation of body atoms is considered more minimal. Formally, let fg and {a mathematical formula}fg′ be two body-reduction functions on {a mathematical formula}br(M), then fg is more conservative than {a mathematical formula}fg′, written {a mathematical formula}fg≤fg′, iff for every {a mathematical formula}r∈br(M) it holds that {a mathematical formula}Body(fg(r))⊇Body(fg′(r)). Furthermore, we write {a mathematical formula}fg&lt;fg′ iff {a mathematical formula}fg≤fg′ and {a mathematical formula}fg≠fg′.
+        </paragraph>
+        <paragraph>
+         A refined diagnosis {a mathematical formula}(D1,D2,fg)∈D±,r(M) is called minimal, iff for every {a mathematical formula}(D1′,D2′,fg′)∈D±,r(M) such that {a mathematical formula}D1′⊆D1 and {a mathematical formula}D2′⊆D2 it holds that {a mathematical formula}D1=D1′,D2=D2′, and {a mathematical formula}fg′≮fg. The set of all minimal refined diagnoses is denoted by {a mathematical formula}Dm±,r(M). Observe that the conservation of the body-reduction functions only comes into play if the sets of bridge rules are minimal.
+        </paragraph>
+        <paragraph>
+         Note that one could also think of refining rules in {a mathematical formula}D1, i.e., ensuring that a rule in {a mathematical formula}D1 is not applicable by adding additional atoms to its body. But as there are no hints to which atoms should be added, such a process would result in a large and arbitrary search space. For example, adding {a mathematical formula}notallergy_strong_ab to {a mathematical formula}r2 would result in{a mathematical formula} which would make the MCS of our running example consistent. Nevertheless, such a rule does not convey any meaning beyond making the MCS consistent, therefore we disregard such kind of manipulations.
+        </paragraph>
+        <paragraph>
+         But even in the case of minimal refined diagnoses, there is little information gain: every minimal diagnosis {a mathematical formula}(D1,D2)∈Dm±(M), together with a (witnessing) equilibrium {a mathematical formula}Sw of {a mathematical formula}(D1,D2), can be refined to a minimal diagnosis {a mathematical formula}(D1,D2,fg) using the following refine function. Let {a mathematical formula}S be the set of belief states of the MCS M, then {a mathematical formula}refine(D2,Sw):2br(M)×S→(br(M)→brref(M)) is given by {a mathematical formula}(D2,Sw)↦fg where fg is the body-reduction function defined as follows:{a mathematical formula}
+        </paragraph>
+        <paragraph>
+         Observe that a refined diagnosis {a mathematical formula}(D1,D2,fg) obtained in such way also admits the equilibrium {a mathematical formula}Sw, as all rules of {a mathematical formula}fg(D2) are applicable in {a mathematical formula}Sw and therefore all head beliefs of {a mathematical formula}D2 are added to the respective contexts, which results in the same knowledge bases as for {a mathematical formula}cf(D2).
+        </paragraph>
+        <paragraph label="Proposition 2">
+         A triple{a mathematical formula}(D1,D2,fg)is a minimal refined diagnosis of M iff there exists a diagnosis{a mathematical formula}(D1,D2)∈Dm±(M)and a (witnessing) equilibrium{a mathematical formula}Sw, such that{a mathematical formula}refine(D2,Sw)=fgand no (witnessing) equilibrium{a mathematical formula}Sw′exists where{a mathematical formula}refine(D2,Sw′)=fg′and{a mathematical formula}fg′&lt;fg.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Refined explanations
+        </section-title>
+        <paragraph>
+         Similar to diagnoses, it is possible to consider refined modifications of rules (rather than {a mathematical formula}cf(R2)) in Definition 6.
+        </paragraph>
+        <paragraph label="Definition 10">
+         A refined explanation is a triple {a mathematical formula}(E1,E2,fg) consisting of sets of bridge rules {a mathematical formula}E1,E2⊆br(M) and a body-reduction function fg, such that {a mathematical formula}M[R1∪fg′(R2)]⊨⊥ holds, for every {a mathematical formula}E1⊆R1⊆br(M), {a mathematical formula}R2⊆br(M), and every body-reduction function {a mathematical formula}fg′ where {a mathematical formula}r∈E2 implies {a mathematical formula}Body(fg(r))⊆Body(fg′(r)).
+        </paragraph>
+        <paragraph>
+         Here, we shift the “prevention of inconsistency” expressed by {a mathematical formula}E2 in Definition 6 to the body-reduction fg: we do not add unconditional bridge rules, i.e., from {a mathematical formula}br(M)∖E2, but rather consider all body-reductions {a mathematical formula}fg′ for which it holds that bridge rules in {a mathematical formula}E2 retain all literals indicated by fg.
+        </paragraph>
+        <paragraph label="Example 8">
+         Consider a slight modification of our running example where data from the patient history is only imported in the decision support system if the patient is currently under treatment in the hospital. So bridge rule {a mathematical formula}r5 is changed to{a mathematical formula} and our patient is at the hospital, i.e., {a mathematical formula}kb1={allergy_strong_ab,under_treatment}.Let {a mathematical formula}fg(r5′)=(4:allow_strong_ab)←(1:under_treatment) and {a mathematical formula}fg(r)=r for all {a mathematical formula}r∈br(M) with {a mathematical formula}r≠r5′. Then, {a mathematical formula}(∅,{r5′},fg)∈Dm±,r(M), since {a mathematical formula}fg(r5′) allows the strong antibiotic if the patient merely is under treatment. The set of minimal diagnoses is the same (exchanging {a mathematical formula}r5 with {a mathematical formula}r5′) as for the running example, in particular {a mathematical formula}(∅,{r5′}) is a minimal diagnosis. The refinement of this diagnosis can be computed using its (only) witnessing equilibrium{a mathematical formula} where only the negated literal of {a mathematical formula}r5′ is deleted, this is sufficient to make the rule applicable under {a mathematical formula}Sw, i.e., {a mathematical formula}fg(r5′)=(4:allow_strong_ab)←(1:under_treatment) and {a mathematical formula}(∅,{r5′},fg)∈Dm±,r(M).A refined explanation is {a mathematical formula}(E1,E2,fg) where {a mathematical formula}E1={r1,r2, {a mathematical formula}r4}, {a mathematical formula}E2={r5′}, and {a mathematical formula}fg(r5′)=(4:allow_strong_ab)←not(1:allergy_strong_ab).  □
+        </paragraph>
+        <paragraph label="Proposition 3">
+         The notion of a refined explanation is a generalization of the notion of explanation and there is a 1-to-1 correspondence between them. For an inconsistent MCS M, it holds that{a mathematical formula}(E1,E2)∈E±(M)iff there exists a body-reduction function fg such that{a mathematical formula}(E1,E2,fg)is a refined explanation.
+        </paragraph>
+        <paragraph>
+         In contrast to diagnoses, an explanation does not admit a witnessing equilibrium. Therefore, we cannot infer from an explanation whether the addition of a reduced version of a bridge rule would yield consistency. However, this can be achieved considering a transformed MCS: Consider {a mathematical formula}M=(C1,…,Cn), then {a mathematical formula}Mr=(C1,…,Cn,Cα) is the transformed MCS where {a mathematical formula}Cα is a context whose acceptable belief states contain exactly those formulas added to it via bridge rules, e.g., {a mathematical formula}Cα uses the logic {a mathematical formula}Lasp and an empty knowledge base {a mathematical formula}kbα=∅. Furthermore, the bridge rules of {a mathematical formula}br(Mr) are obtained from {a mathematical formula}br(M) in such a way that every bridge rule {a mathematical formula}r∈br(M) of form (1) is split via transformation {a mathematical formula}tr(⋅) into a core rule ({a mathematical formula}r(0)) and a supplementary rule for each body atom ({a mathematical formula}r(1),…,r(m)). The set {a mathematical formula}tr(r) of transformed rules corresponding to r is given by:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Finally, {a mathematical formula}Mr contains for each bridge rule of M the corresponding transformed rules, i.e., {a mathematical formula}br(Mr)=⋃r∈br(M)tr(r). Note that, for readability, this transformation assumes beliefs of different contexts to be disjoint.
+        </paragraph>
+        <paragraph>
+         For example, a bridge rule r: {a mathematical formula}(c1:h)←(c2:a),not(c3:b) of M is transformed into bridge rules {a mathematical formula}r(0): {a mathematical formula}(c1:h)←(cα:a′),(cα:b′); {a mathematical formula}r(1): {a mathematical formula}(cα:a′)←(c2:a); and {a mathematical formula}r(2): {a mathematical formula}(cα:b′)←not(c3:b) of {a mathematical formula}Mr.
+        </paragraph>
+        <paragraph>
+         An explanation {a mathematical formula}(E1,E2)∈E±(Mr) then allows to construct a refined explanation {a mathematical formula}(E1,E2r,fg) for M as follows: For every {a mathematical formula}r∈br(M), it holds that {a mathematical formula}r∈E2r iff {a mathematical formula}tr(r)∩E2≠∅. Furthermore, let {a mathematical formula}sup(r)={Body(r′)|r′∈tr(r)∧r′≠r(0)}, then fg is a body-reduction function on {a mathematical formula}br(M) such that {a mathematical formula}fg(r)=head(r)←sup(r) if {a mathematical formula}r∈E2 and {a mathematical formula}fg(r)=(r) otherwise.
+        </paragraph>
+        <paragraph>
+         For example, if the supplementary rules {a mathematical formula}(cα:a′)←(c2:a)., is in {a mathematical formula}E2, then the removal of the corresponding literal, here {a mathematical formula}(c2:a), from the original bridge rule in M contributes to avoiding the explained inconsistency in M. Removal of all corresponding literals indicated by {a mathematical formula}E2 yields a change of bridge rule bodies to avoid the explained inconsistency completely.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Properties
+     </section-title>
+     <paragraph>
+      In this section we first show that, to some extent, diagnoses can be converted to explanations and vice versa; specifically, minimal diagnoses and minimal explanations point out the same bridge rules, a property we call duality. We then prove a useful non-intersection property of minimal diagnoses, and show how modularity of an MCS (defined in the spirit of splitting sets of logic programs) is reflected in the structure of its diagnoses and explanations.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Converting between diagnoses and explanations
+      </section-title>
+      <paragraph>
+       While duality expresses that minimal diagnoses and minimal inconsistency explanations point out the same set of bridge rules, in the following we consider the relationships between these notions in more detail. We show that it is possible to characterize explanations in terms of diagnoses, and vice versa minimal diagnoses in terms of minimal explanations.
+      </paragraph>
+      <paragraph>
+       For the following theorem we generalize the notion of a hitting set [84] from sets to pairs of sets. Given a collection {a mathematical formula}C={(A1,B1),…,(An,Bn)} of pairs of sets {a mathematical formula}(Ai,Bi), {a mathematical formula}Ai,Bi⊆U over a set U, a hitting set of{a mathematical formula}C is a pair of sets {a mathematical formula}(X,Y), {a mathematical formula}X,Y⊆U such that for every pair {a mathematical formula}(Ai,Bi)∈C, (i) {a mathematical formula}Ai∩X≠∅ or (ii) {a mathematical formula}Bi∩Y≠∅. A hitting set {a mathematical formula}(X,Y) of {a mathematical formula}C is minimal, if no {a mathematical formula}(X′,Y′)⊂(X,Y) is a hitting set of {a mathematical formula}C.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       We consider hitting sets over pairs of sets of bridge rules, and denote by {a mathematical formula}HSM(C) (respectively, {a mathematical formula}minHSM(C)) the set of all (respectively, all minimal) hitting sets of {a mathematical formula}C over {a mathematical formula}U=br(M). Note that in particular {a mathematical formula}HSM(∅)={(∅,∅)}, and {a mathematical formula}HSM({(∅,∅)})=∅. For every MCS M,
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        a pair{a mathematical formula}(E1,E2)with{a mathematical formula}E1,E2⊆br(M)is an inconsistency explanation of M iff{a mathematical formula}(E1,E2)∈HSM(D±(M)), i.e.,{a mathematical formula}(E1,E2)is a hitting set of{a mathematical formula}D±(M); and
+       </list-item>
+       <list-item label="(b)">
+        a pair{a mathematical formula}(E1,E2)with{a mathematical formula}E1,E2⊆br(M)is a minimal inconsistency explanation of M iff{a mathematical formula}(E1,E2)∈minHSM(D±(M)), i.e.,{a mathematical formula}(E1,E2)is a minimal hitting set of{a mathematical formula}D±(M).
+       </list-item>
+      </list>
+      <paragraph label="Corollary 1">
+       Clearly, a hitting set of a collection X is the same as a hitting set of the collection of the ⊆-minimal elements in X, we therefore obtain the following from Theorem 1. For every MCS M,
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        a pair{a mathematical formula}(E1,E2)with{a mathematical formula}E1,E2⊆br(M)is an inconsistency explanation of M iff{a mathematical formula}(E1,E2)∈HSM(Dm±(M)); and
+       </list-item>
+       <list-item label="(b)">
+        a pair{a mathematical formula}(E1,E2)with{a mathematical formula}E1,E2⊆br(M)is a minimal inconsistency explanation of M iff{a mathematical formula}(E1,E2)∈minHSM(Dm±(M)).
+       </list-item>
+      </list>
+      <paragraph label="Lemma 1">
+       For our next result, we use the following generalization of a well-known result for minimal hitting sets [7]. For every collection{a mathematical formula}X={X1,…,Xn}of pairs{a mathematical formula}Xi=(X1i,X2i)of sets,{a mathematical formula}1≤i≤n, such that X is an anti-chain w.r.t. ⊆, i.e., elements in X are pairwise incomparable ({a mathematical formula}Xi⊆Xjwith{a mathematical formula}1≤i,j≤nimplies{a mathematical formula}Xi={a mathematical formula}Xj) it holds that{a mathematical formula}minHSM(minHSM(X))=X.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Combined with Corollary 1(b) we thus obtain. A pair{a mathematical formula}(D1,D2)with{a mathematical formula}D1,D2⊆br(M)is a minimal diagnosis of M iff{a mathematical formula}(D1,D2)is a minimal hitting set of{a mathematical formula}Em±(M), formally{a mathematical formula}Dm±(M)=minHSM(Em±(M)).
+      </paragraph>
+      <paragraph>
+       As for computation, Theorem 1 provides a way to compute the set of explanations {a mathematical formula}E±(M) from the set {a mathematical formula}D±(M) of diagnoses, while Theorem 2 allows us to compute the set {a mathematical formula}Dm±(M) of minimal diagnoses from the set of minimal explanations {a mathematical formula}Em±(M). Corollary 1 shows that, for computing {a mathematical formula}E±(M) and {a mathematical formula}Em±(M), it is sufficient to know the set {a mathematical formula}Dm±(M) of minimal diagnoses.
+      </paragraph>
+      <paragraph>
+       Note that Theorem 2 generalizes a result of Reiter's approach to diagnosis [84], since the former describes relationships between minimal hitting sets in a sense similar to the relationship between diagnoses and conflict sets of the latter. In contrast, note that Theorem 1(a) uses hitting sets without the requirement of ⊆-minimality.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Duality
+       </section-title>
+       <paragraph>
+        As it appears, explanations and diagnoses point out bridge rules as causes of inconsistency on a dual basis. Intuitively, bridge rules in {a mathematical formula}E1 of an explanation {a mathematical formula}(E1,E2) cause inconsistency, while bridge rules in {a mathematical formula}D1 of a diagnosis {a mathematical formula}(D1,D2) remove inconsistency; furthermore, adding unconditional forms of bridge rules from {a mathematical formula}E2 spoils inconsistency, while not adding unconditional forms of bridge rules from {a mathematical formula}D2 spoils consistency.
+       </paragraph>
+       <paragraph>
+        Both notions point out rules that are erroneous in the way that those rules contribute to inconsistency. This naturally gives rise to the question whether diagnoses and explanations point out the same rules of an MCS as erroneous, or whether they characterize different aspects.
+       </paragraph>
+       <paragraph>
+        To formalize this question, we introduce relevancy for inconsistency. Given an MCS M, a bridge rule {a mathematical formula}r∈br(M) is relevant for diagnosis (d-relevant) iff there exists a minimal diagnosis {a mathematical formula}(D1,D2) of M with {a mathematical formula}r∈D1∪D2. Analogously, r is relevant for explanation (e-relevant) iff there exists a minimal explanation with {a mathematical formula}r∈E1∪E2.
+       </paragraph>
+       <paragraph>
+        As the following proposition shows, the component-wise coincidence is not accidental. Not only are the d-relevant rules exactly the same that are e-relevant, but this even holds if the components of diagnoses and explanations are treated separately. Formalizing this, for any set X of pairs {a mathematical formula}(A,B) we write ⋃X for {a mathematical formula}(⋃{A|(A,B)∈X},⋃{B|(A,B)∈X}).
+       </paragraph>
+       <paragraph label="Proposition 4">
+        For every inconsistent MCS M,{a mathematical formula}⋃Dm±(M)=⋃Em±(M), i.e., the unions of all minimal diagnoses and all minimal inconsistency explanations coincide.
+       </paragraph>
+       <paragraph>
+        Proposition 4 is an immediate consequence of the close structural relationships between diagnoses and explanations, which are shown by Theorem 1, Theorem 2.
+       </paragraph>
+       <paragraph>
+        This provides evidence for our view that both notions capture exactly those parts of an MCS that are relevant for inconsistency, as duality shows that
+       </paragraph>
+       <paragraph>
+        two very different perspectives on inconsistency state exactly the same parts of the MCS as erroneous.
+       </paragraph>
+       <paragraph>
+        In practice this allows one to compute the set of all bridge rules which are relevant for making an MCS consistent (i.e., appear in at least one diagnosis) in two ways: either to compute all minimal explanations, or to compute all minimal diagnoses. Furthermore, the duality result allows to exclude, under Occam's razor, all bridge rules that are not part of any diagnosis (or explanation) from further investigation as they can be skipped savely.
+       </paragraph>
+       <paragraph label="Proof">
+        Our running example suggests that duality also holds for deletion-diagnoses and -explanations, which indeed is true: For every inconsistent MCS M,{a mathematical formula}⋃Dm−(M)=⋃Em+(M), i.e., the unions of all minimal deletion-diagnoses and all minimal deletion-inconsistency explanations coincide.This is a direct consequence of Theorem 4 (set in its proof the second components of diagnoses and explanations to the empty set).  □
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Asymmetry
+       </section-title>
+       <paragraph>
+        We now investigate why it is possible to obtain the set of explanations from the set of diagnoses, while the other direction only works under ⊆-minimality. The following example illustrates this.
+       </paragraph>
+       <paragraph label="Example 9">
+        Consider the MCS {a mathematical formula}M=(C1) with the ASP context {a mathematical formula}C1={←a.}, and the bridge rules {a mathematical formula}br(M)={r1=(1:a)←(1:a).,r2=(1:a)←not(1:b)}. Then {a mathematical formula}D±(M)={({r2},∅),({r1,r2},∅)}, while {a mathematical formula}Em±(M)={({r2},∅)}, because only {a mathematical formula}r2 is relevant (cf. Section 3.2) for inconsistency. Furthermore, {a mathematical formula}E±(M) contains all pointwise supersets of {a mathematical formula}({r2},∅), viz {a mathematical formula}({r2},∅), {a mathematical formula}({r1,r2},∅), {a mathematical formula}({r2},{r1}), {a mathematical formula}({r2},{r2}), {a mathematical formula}({r1,r2},{r1}), {a mathematical formula}({r1,r2},{r2}), and {a mathematical formula}({r1,r2},{r1,r2}). Now the set of (non-minimal) hitting sets of the set {a mathematical formula}E±(M) of explanations is the set {a mathematical formula}E±(M) itself, while the set {a mathematical formula}D±(M) of diagnoses only contains two elements.  □
+       </paragraph>
+       <paragraph>
+        The reason behind this asymmetry is that the notion of explanation is a monotonic (order-increasing) concept, i.e., all supersets of an explanation are also explanations, while the notion of diagnosis is not, i.e., a superset of a diagnosis is not necessarily a diagnosis.
+       </paragraph>
+       <paragraph>
+        This difference is due to the fact that explanations characterize only relevant inconsistencies (as discussed in Section 3.2) and by its definition, all supersets of an explanation are explanations. Therefore the set of minimal explanations characterizes the set of explanations. For the notion of diagnosis this is not the case: a system might contain inconsistent bridge rule configurations which do not appear in explanations because they are irrelevant in the original system. Non-minimal diagnoses provide modifications of the system which might cause and at the same time suppress such an irrelevant inconsistency in order to achieve overall consistency.
+       </paragraph>
+       <paragraph>
+        In summary, a minimal hitting set of the set of diagnoses characterizes the set of minimal explanations (Corollary 1(b)) and a minimal hitting set of the set of explanations characterizes the set of minimal diagnoses (Theorem 2). With non-minimality it looks different: the non-minimal hitting sets of {a mathematical formula}D±(M) characterize the set {a mathematical formula}E±(M) of explanations (see Theorem 1(a)), however the non-minimal hitting sets of {a mathematical formula}E±(M) do not characterize the set {a mathematical formula}D±(M) of diagnoses (see Example 9 for a counterexample).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Non-overlap in minimal diagnoses
+      </section-title>
+      <paragraph label="Proposition 5">
+       We note a simple but useful property of minimal diagnoses. Definition 4 reveals that, {a mathematical formula}(D1,D2) such that {a mathematical formula}r∈D2 is a diagnosis regardless of whether {a mathematical formula}r∈D1. Therefore, Every minimal diagnosis{a mathematical formula}(D1,D2)of an MCS M, fulfills{a mathematical formula}D1∩D2=∅, i.e., no rule occurs in both components.
+      </paragraph>
+      <paragraph>
+       An analogous property does not hold for inconsistency explanations: e.g., the bridge rule {a mathematical formula}r:(1:a)←not(1:a) may cause an inconsistency which can be repaired only by adding {a mathematical formula}cf(r) to the system, hence the system has a minimal explanation {a mathematical formula}({r},{r}).
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Modularity of explanations and diagnoses
+      </section-title>
+      <paragraph>
+       We next give a syntactic criterion which enables the computation of explanations for an MCS M in a divide-and-conquer fashion. In particular, minimal explanations of M are then just combinations of the minimal explanations of the smaller parts. Based on the results about conversion between explanations and diagnoses, these results then carry over to diagnoses as well. This can be exploited to compute minimal explanations and minimal diagnoses for certain classes of MCS more efficiently.
+      </paragraph>
+      <paragraph>
+       An approach to modularization (in particular for hierarchical and partitionable MCS) is that some part does not impact the rest of the system. To this end, we adapt the notion of a splitting set as introduced by [71] in the context of logic programming; a splitting set characterizes a subset of a logic program which is independent of other rules in the program by a syntactic property.
+      </paragraph>
+      <paragraph>
+       Since an MCS may include contexts with arbitrary logics, a purely syntactical criterion can only be obtained by resorting to beliefs occurring in bridge rules, under the implicit assumption that every output belief of a context depends on every input belief of the context. Hence, we split at the level of contexts, i.e., a splitting set is a set of contexts rather than a set of literals.
+      </paragraph>
+      <paragraph label="Definition 11">
+       A set of contexts {a mathematical formula}U⊆C(M) is a splitting set of an MCS M, if every rule {a mathematical formula}r∈br(M) such that {a mathematical formula}Ch(r)∈U satisfies {a mathematical formula}Cb(r)⊆U. More formally, U is a splitting set iff {a mathematical formula}U⊇⋃{Cb(r)|r∈br(M),Ch(r)∈U}. Furthermore, for such U, the set {a mathematical formula}bU={r∈br(M)|Ch(r)∈U} is called the bottom relative to U.
+      </paragraph>
+      <paragraph label="Example 10">
+       In our running example, we have {a mathematical formula}C(M)={C1,…,C4}, with e.g., {a mathematical formula}Ch(r1)=Ch(r2)=C3, and {a mathematical formula}Cb(r1)=Cb(r2)={C2}. So the set {a mathematical formula}U1={C2,C3} is a splitting set of M; its bottom is {a mathematical formula}bU1={r1,r2}. The other splitting sets of M are {a mathematical formula}U2={C1} with {a mathematical formula}bU2=∅, {a mathematical formula}U3={C2} with {a mathematical formula}bU3=∅, and {a mathematical formula}U4={C4,C3,C2,C1} with bottom {a mathematical formula}bU4=brM.  □
+      </paragraph>
+      <paragraph>
+       Intuitively, if U is a splitting set of M, then the consistency (respectively inconsistency) of contexts in U does not depend on the contexts in {a mathematical formula}C(M)∖U. Thus, if {a mathematical formula}M[bU] is inconsistent, M stays inconsistent (under the assumption that {a mathematical formula}M[∅]⊭⊥).
+      </paragraph>
+      <paragraph>
+       For a pair {a mathematical formula}R=(R1,R2) of sets of bridge rules compatible with M and a set U of contexts we say that R is U-headed iff {a mathematical formula}r∈(R1∪R2) implies {a mathematical formula}Ch(r)∈U.
+      </paragraph>
+      <paragraph label="Proposition 6">
+       Suppose U is a splitting set of an MCS M. Then,
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}E∈E±(M[bU])iff{a mathematical formula}E∈E±(M)and E is U-headed, and
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}D∈D±(M[bU])iff there exists some{a mathematical formula}D′∈D±(M)such that{a mathematical formula}D⊆D′.
+       </list-item>
+      </list>
+      <paragraph label="Corollary 2">
+       Every minimal explanation of{a mathematical formula}M[bU]is a minimal explanation of M.
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}M[bU] does not yield all explanations that contain rules from {a mathematical formula}bU, but it yields all explanations that contain only rules from {a mathematical formula}M[bU].
+      </paragraph>
+      <paragraph>
+       In the particular case that two splitting sets form a partitioning of the MCS, then both partitions can be treated without considering the other one. This means that explanations only contain rules from one partition and diagnoses of the whole MCS are obtained by simply combining diagnoses of each of the partitions.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       Suppose that both, U and{a mathematical formula}U′=C(M)∖U, are splitting sets of an MCS M. Then, every{a mathematical formula}E∈Em±(M)is either U-headed or{a mathematical formula}U′-headed.
+      </paragraph>
+      <paragraph label="Corollary 3">
+       Suppose U and{a mathematical formula}U′=C(M)∖Uare splitting sets of an MCS M. Then,{a mathematical formula}Em±(M)=Em±(M[bU])∪Em±(M[bU′]).
+      </paragraph>
+      <paragraph>
+       Thus, using {a mathematical formula}U,U′ the MCS M can be partitioned into two parts where minimal explanations can be computed independently. From this and Theorem 2 we can conclude that for a partitionable MCS, the set of all minimal diagnoses can be obtained by combining the minimal diagnoses of each partition.
+      </paragraph>
+      <paragraph label="Proposition 8">
+       Suppose that U and{a mathematical formula}U′=C(M)∖Uare splitting sets of an MCS M. Then,{a mathematical formula}Dm±(M)={(A1∪B1,A2∪B2)|(A1,A2)∈Dm±(M[bU])and(B1,B2)∈Dm±(M[bU′])}.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Computational complexity
+     </section-title>
+     <paragraph>
+      We next consider the complexity of consistency checking, and of diagnosis and explanation recognition in MCS in a parametric fashion. To this end, we recall the complexity classes that we will use, and show that we can abstract an MCS to beliefs used in bridge rules. We use context complexity as a parameter to characterize the overall complexity and we establish for hardness generic results for all complexity classes that are closed under conjunction and projection. Table 1 summarizes our results for complexity classes that are typically encountered in knowledge representation.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Complexity classes
+      </section-title>
+      <paragraph>
+       Recall that P, EXPTIME, and PSPACE are the classes of problems that can be decided using a deterministic Turing machine in polynomial time, exponential time, and polynomial space, respectively. Furthermore NP (resp., coNP) is the class of problems that can be decided on a nondeterministic Turing machine in polynomial time, where one (resp., all) execution paths accept. Recall the polynomial hierarchy, where {a mathematical formula}Σ0P=Π0P=PΣiP is NP with a {a mathematical formula}Σi−1P oracle, and {a mathematical formula}ΠiP is coNP with a {a mathematical formula}Σi−1P oracle.
+      </paragraph>
+      <paragraph>
+       Given complexity class C, we denote by {a mathematical formula}D(C) the “difference class” of C, i.e., {a mathematical formula}D(C)={L1×L2|L1∈C,L2∈co-C} denotes the complexity class of decision problems that are the “conjunction” of a problem {a mathematical formula}L1 in C and a problem {a mathematical formula}L2 in co-C. Two particular classes that we use are {a mathematical formula}D1P=D(NP) and {a mathematical formula}DiP=D(ΣiP). A prototypical problem complete for {a mathematical formula}D1P is deciding, given a pair {a mathematical formula}(F1,F2) of propositional Boolean formulas, whether {a mathematical formula}F1 is satisfiable and {a mathematical formula}F2 is unsatisfiable. Note in particular that {a mathematical formula}D(PSPACE)=PSPACE and that {a mathematical formula}D(EXPTIME)=EXPTIME.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Closure under conjunction and projection
+        </section-title>
+        <paragraph>
+         A complexity class C is closed under conjunction, if the following holds: given a problem L in C,
+        </paragraph>
+        <paragraph>
+         it holds that the problem {a mathematical formula}L′={(I1,…,In)|n≥0,Ij∈L} is also in C, where the ‘yes’ instances of {a mathematical formula}L′ are arbitrarily long but finite list of ‘yes’ instances of L. All classes P, NP, {a mathematical formula}ΣiP, {a mathematical formula}ΠiP, {a mathematical formula}D(ΣiP), PSPACE, etc. here are closed under conjunction.
+        </paragraph>
+        <paragraph>
+         A decision problem {a mathematical formula}L⊆Σ⋆×Σ⋆, where {a mathematical formula}Σ⋆ is as usual the set of all finite strings over Σ, is polynomially balanced, if some polynomial p exists such that {a mathematical formula}|I′|≤p(|I|) for all {a mathematical formula}(I,I′)∈L. Moreover, L is a polynomial projection of {a mathematical formula}L′⊆Σ⋆×Σ⋆ if {a mathematical formula}L={I|∃I′:(I,I′)∈L′} and {a mathematical formula}L′ is polynomially balanced (intuitively, {a mathematical formula}I′ is a witness of polynomial size for I). Given a complexity class C, let {a mathematical formula}π(C) contain all problems which are a polynomial projection of a problem {a mathematical formula}L′ in C. Then a complexity class C is closed under projection if {a mathematical formula}π(C)⊆C. The classes {a mathematical formula}ΣiP, NP, EXPTIME, PSPACE are closed under projection, while coNP and {a mathematical formula}ΠiP are presumably not. For further background see [76].
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Output-projected equilibria
+      </section-title>
+      <paragraph>
+       Computing equilibria by guessing and verifying so-called “kernels of context belief sets” has been outlined in [32]. For the purpose of recognizing diagnoses and explanations, it suffices to check for consistency, i.e., for existence of an arbitrary equilibrium in an MCS.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Here we first define output beliefs, which are the beliefs used in bodies of bridge rules. Then we show that for checking consistency of an MCS, it is sufficient to consider equilibria projected to output beliefs. Given an MCS {a mathematical formula}M=(C1,…,Cn), the set of output beliefs of{a mathematical formula}Ci, {a mathematical formula}OUTi={p|(i:p)∈body(r),r∈br(M)}, is the set of beliefs p of {a mathematical formula}Ci that occur in the bodies of bridge rules.
+      </paragraph>
+      <paragraph>
+       Using the notion of output beliefs, we let {a mathematical formula}Sio=Si∩OUTi be the projection of {a mathematical formula}Si to {a mathematical formula}OUTi, and for any belief state {a mathematical formula}S=(S1,…,Sn) we let {a mathematical formula}So=(S1o,…,Sno) be the output-projected belief state{a mathematical formula}So of S.
+      </paragraph>
+      <paragraph label="Definition 13">
+       An output-projected belief state provides sufficient information for evaluating the applicability of bridge rules. We next show how to obtain witnesses for equilibria using this projection. An output-projected equilibrium of an MCS M is an output-projected belief state {a mathematical formula}T=(T1,…,Tn) such that for all {a mathematical formula}1≤i≤n,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Lemma 2">
+       T contains information about all (and only about) output beliefs. As these are the beliefs that determine bridge rule applicability, in every equilibrium S, {a mathematical formula}app(R,S)=app(R,So); thus we obtain: For each equilibrium S of an MCS M,{a mathematical formula}Sois an output-projected equilibrium. Conversely, for each output-projected equilibrium T of M, there exists some equilibrium S of M such that{a mathematical formula}So=T.
+      </paragraph>
+      <paragraph>
+       Given an MCS M, we denote by Eq{a mathematical formula}(oM) the set of output-projected equilibria of M. Every equilibrium is witnessed by a single output-projected equilibrium, and every output-projected equilibrium witnesses at least one equilibrium. For consistency checking (i.e., equilibrium existence) it is therefore sufficient to consider output-projected equilibria.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Context complexity
+      </section-title>
+      <paragraph>
+       The complexity of consistency checking for an MCS clearly depends on the complexity of its contexts. We next define a notion of context complexity by considering the roles which contexts play in the problem of consistency checking.
+      </paragraph>
+      <paragraph>
+       For all complexity considerations, we represent logics {a mathematical formula}Li of contexts {a mathematical formula}Ciimplicitly; they are fixed and we do not consider these (possibly infinite) objects to be part of the input of the decision problems we investigate. Accordingly, the instance size of a given MCS M will be denoted by {a mathematical formula}|M|=|kbM|+|br(M)| where {a mathematical formula}|kbM| denotes the size of knowledge bases in M and {a mathematical formula}|br(M)| denotes the size of its set of bridge rules.
+      </paragraph>
+      <paragraph>
+       Consistency of an MCS M can be decided by a Turing machine with input M which (a) guesses an output-projected belief state {a mathematical formula}T∈OUT1×⋯×OUTn, (b) evaluates the bridge rules on T, yielding for each context {a mathematical formula}Ci a set of active bridge rule heads {a mathematical formula}Hi w.r.t. T, and (c) checks for each context whether it accepts the guessed T w.r.t. {a mathematical formula}Hi. We call the complexity of step (c) context complexity, formalized as follows.
+      </paragraph>
+      <paragraph label="Definition 14">
+       Given a context {a mathematical formula}Ci=(kbi,bri,Li) and a pair {a mathematical formula}(H,Ti), with {a mathematical formula}H⊆INi and {a mathematical formula}Ti⊆OUTi, the context complexity{a mathematical formula}CC(Ci) of {a mathematical formula}Ci is the computational complexity of deciding whether there exists an {a mathematical formula}Si∈ACCi(kbi∪H) such that {a mathematical formula}Si∩OUTi=Ti.
+      </paragraph>
+      <paragraph>
+       We now give examples for context complexities of logics in Example 1, then we give context complexities for other well-known knowledge-based formalisms. Contexts with propositional logic{a mathematical formula}LΣc have {a mathematical formula}D1P-complete context complexity. On the other hand, the restricted logic {a mathematical formula}LΣpl which is used in our running example for contexts {a mathematical formula}C1 and {a mathematical formula}C2, is tractable: the context complexity is {a mathematical formula}O(n). Default Logic programs and disjunctive logic programs ({a mathematical formula}LΣasp) have {a mathematical formula}Σ2P-complete acceptability checking and thus also complexity [29], [56]. For contexts hosting ontological reasoning in the Description Logic{a mathematical formula}ALC ({a mathematical formula}LA)
+      </paragraph>
+      <paragraph>
+       acceptability checking corresponds to a set of instance checks. As individual instance checking is EXPTIME-complete [2] and EXPTIME is closed under conjunction, such a context is in EXPTIME. For {a mathematical formula}|OUTi|=1 we see that such a context is also EXPTIME-hard. Therefore a context using logic {a mathematical formula}LA has context complexity EXPTIME. A relational database can be captured by knowledge bases and belief sets which are sets of tuples in relations. Acceptability of a belief set computes whether a belief set is the closure of a knowledge base w.r.t. a fixed set of (possibly recursive) Datalog view definitions. Such a context is complete for P[29]. A propositional answer set program can be captured by a context where knowledge bases are sets of rules and belief sets are sets of propositions. Acceptability of such a context then checks whether a set of propositions is an answer set of a knowledge base. Such a context is complete for NP[29]. Similarly, satisfiability checking of Boolean formulas can be captured by NP contexts. An agent using one of the widely-known modal logics{a mathematical formula}Kn, {a mathematical formula}Tn, or {a mathematical formula}S4n with {a mathematical formula}n≥1 knowledge operators can be represented as a context. Assuming that such a context has knowledge bases and belief sets consisting of formulas, and that the context accepts the closure {a mathematical formula}CX of a set of formulas X in the knowledge base, this context is PSPACE-complete [58].
+      </paragraph>
+      <paragraph label="Example 11">
+       Given an MCS M, we say M has upper context complexity C, denoted {a mathematical formula}CC(M)≤C, if {a mathematical formula}CC(Ci)⊆C for every context {a mathematical formula}Ci of M; We say M has lower context complexity C, denoted {a mathematical formula}CC(M)≥C, if {a mathematical formula}C⊆CC(Ci) for some context {a mathematical formula}Ci of M. We say that M has context complexity C, denoted {a mathematical formula}CC(M)=C, iff {a mathematical formula}CC(M)≤C and {a mathematical formula}CC(M)≥C. That is, if {a mathematical formula}CC(M)=C all contexts in M have complexity at most {a mathematical formula}CC(M), and some context in M has C-complete complexity, provided the class C has complete problems. In our running example, for {a mathematical formula}M=(C1,C2,C3,C4) we have {a mathematical formula}CC(C1)=CC(C2)=O(n), {a mathematical formula}CC(C3)=EXPTIME, and {a mathematical formula}CC(C4)=Σ2P. As {a mathematical formula}O(n)⊆Σ2P⊆EXPTIME, we obtain {a mathematical formula}CC(M)≤EXPTIME, and as {a mathematical formula}C2 is EXPTIME-complete, we obtain {a mathematical formula}CC(M)≥EXPTIME; hence {a mathematical formula}CC(M)=EXPTIME.  □
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Overview of complexity results
+      </section-title>
+      <paragraph>
+       We now give an overview of complexity results, and brief intuition about the proofs that are available in Appendices Appendix A Examples, Appendix B Related work in broader context, Appendix C Proofs.
+      </paragraph>
+      <paragraph>
+       We study the decision problem for consistency (MCSeq) and recognition problems for diagnoses (MCSd), minimal diagnoses ({a mathematical formula}MCSdm), explanations (MCSe), and minimal explanations ({a mathematical formula}MCSem). Note that existence of diagnoses and explanations is trivial by our assumptions that M is inconsistent and that {a mathematical formula}M[∅] is consistent.
+      </paragraph>
+      <paragraph>
+       Table 1 summarizes our results for context complexities that are present in typical monotonic and nonmonotonic KR formalisms. Corresponding theorems are given in Section 5.6, which are more general than the results shown in Table 1.
+      </paragraph>
+      <paragraph>
+       For a given context complexity {a mathematical formula}CC(M) of an MCS M, MCSeq has the same computational complexity as MCSd. If context complexity is NP or above, this complexity is equal to context complexity; for context complexity P, it is NP. Intuitively, this is explained as follows: for context complexity NP and above, guessing a belief state and checking whether it is an equilibrium can be incorporated into context complexity without exceeding checking cost; if context complexity is P, this complexity is NP.
+      </paragraph>
+      <paragraph>
+       Recognizing minimal diagnoses {a mathematical formula}MCSdm is complete for the complexity of MCSd, which captures diagnosis recognition, and an additional complementary problem of refuting MCSd, which captures diagnosis minimality recognition. For context complexity P we have that {a mathematical formula}MCSdm is {a mathematical formula}DP-complete.
+      </paragraph>
+      <paragraph>
+       The complexity of MCSe is in the complementary class of the corresponding problem MCSd. Intuitively this is because diagnosis involves existential quantification and explanation involves universal quantification. Accordingly, the complexity of {a mathematical formula}MCSem is complementary to {a mathematical formula}MCSdm. As the complexity classes of {a mathematical formula}MCSdm are closed under complement, {a mathematical formula}MCSem and {a mathematical formula}MCSdm have the same complexity.
+      </paragraph>
+      <paragraph>
+       These results show that minimal diagnosis and minimal explanation recognition are harder than checking consistency (under usual complexity assumptions), while they are polynomially reducible to each other.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Proof outline
+      </section-title>
+      <paragraph>
+       We treat context complexity of NP and above uniformly and the case of P separately. For hardness results we use MCS structures depicted in Fig. 3.
+      </paragraph>
+      <paragraph>
+       For context complexity P we use reductions from SAT, UNSAT or SAT-UNSAT instances F and/or G to MCS with context complexity P. These reductions use the structure shown in Fig. 3a, where contexts {a mathematical formula}CgenU and {a mathematical formula}CgenV generate a set of possible truth assignments to sets of variables, {a mathematical formula}CevalF and {a mathematical formula}CevalG evaluate formulas F and G under these assignments, and {a mathematical formula}Ccheck checks whether the formulas are satisfiable and/or unsatisfiable. We obtain the hardness via the nondeterministic guess that arises from the different belief sets accepted by contexts {a mathematical formula}CgenU and {a mathematical formula}CgenV. (See also the description of logic {a mathematical formula}LGUESS in the following.) Our reductions use an acyclic system topology without negation as failure in bridge rules. Note that hardness can also be obtained using a nonmonotonic guess in cyclic bridge rules which contain negation as failure; in that case all contexts of the reduction can be deterministic, i.e., every context accepts at most one belief set for any input. We give such an alternative hardness reduction in the proof of Proposition 9, where we prove NP hardness of MCSeq in an MCS of context complexity P.
+      </paragraph>
+      <paragraph>
+       Hardness results for context complexity NP and above are established by a generic reduction: we reduce the problem of acceptability checking of contexts {a mathematical formula}Ca (resp., {a mathematical formula}Cb) with context complexity X to decision problems in an MCS M with complexity X. These reductions use the scheme shown in Fig. 3b, where {a mathematical formula}Ca′ (resp., {a mathematical formula}Cb′) evaluates the acceptability checking problem of {a mathematical formula}Ca (resp., {a mathematical formula}Cb), and {a mathematical formula}Ccheck tests whether the original problems are “yes” or “no” instances.
+      </paragraph>
+      <paragraph>
+       For hardness reductions we use the following context logics.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}LASP is a logic for contexts that contain stratified propositional ASPs with constraints. More in detail, if {a mathematical formula}LASP=(BS,KB,ACC), then BS is the collection of sets of atoms over a propositional alphabet Σ, KB is a set of logic programming rules over Σ, and given a knowledge base {a mathematical formula}kb∈KB, we define {a mathematical formula}ACC(kb)=AS(kb), i.e., the context accepts the set of answer sets of the logic program kb. If clear, Σ is omitted. In case of stratified propositional ASPs with constraints, a program has at most one answer set. From [29, Theorem 4.2] it follows that whether an atom A is part of this model is P-complete. Thus, deciding given {a mathematical formula}OUTi whether {a mathematical formula}Ti⊆OUTi is a projected accepted belief set, is P-complete; therefore context complexity is P.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}LGUESS(B) is a trivial logic over the set B that accepts all subsets of its knowledge base. In detail, if logic {a mathematical formula}LGUESS(B)=(BS,KB,ACC) then {a mathematical formula}BS=KB=2B is the powerset of B, and {a mathematical formula}ACC(kb)=2kb for {a mathematical formula}kb∈KB. If clear, B is omitted. The check whether belief set {a mathematical formula}Ti is accepted by knowledge base {a mathematical formula}kbi can be done in time {a mathematical formula}O(|kbi|+|Ti|).
+      </paragraph>
+     </section>
+     <section label="5.6">
+      <section-title>
+       Detailed results
+      </section-title>
+      <paragraph label="Definition 16">
+       We first formally define the decision problems we consider and then report the complexity results. Given an MCS M, MCSeq is the problem of deciding whether M has an equilibrium.Given an MCS M and a pair {a mathematical formula}(A,B) with {a mathematical formula}A,B⊆br(M),
+      </paragraph>
+      <list>
+       <list-item label="•">
+        MCSd decides whether {a mathematical formula}(A,B)∈D±(M), i.e., whether {a mathematical formula}(A,B) is a diagnosis of M;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MCSdm decides whether {a mathematical formula}(A,B)∈Dm±(M), i.e., whether {a mathematical formula}(A,B) is a minimal diagnosis of M;
+       </list-item>
+       <list-item label="•">
+        MCSe decides whether {a mathematical formula}(A,B)∈E±(M), i.e., whether {a mathematical formula}(A,B) is an inconsistency explanation of M; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}MCSem decides whether {a mathematical formula}(A,B)∈Em±(M), i.e., whether {a mathematical formula}(A,B) is a minimal inconsistency explanation of M.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 9">
+       We next formulate the complexity results. The problemMCSeqis
+      </paragraph>
+      <list>
+       <list-item label="•">
+        NP-complete if{a mathematical formula}CC(M)=P, and
+       </list-item>
+       <list-item label="•">
+        C-complete if{a mathematical formula}CC(M)=Cand C is a class with complete problems that is closed under conjunction and projection.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 10">
+       Diagnosis recognition can be done by transforming the MCS using the given diagnosis candidate and deciding MCSeq. On the other hand, MCSeq can be reduced to diagnosis recognition of the empty diagnosis candidate {a mathematical formula}(∅,∅). Therefore, diagnosis recognition has the same complexity as consistency checking. The problemMCSdis
+      </paragraph>
+      <list>
+       <list-item label="•">
+        NP-complete if{a mathematical formula}CC(M)=P, and
+       </list-item>
+       <list-item label="•">
+        C-complete if{a mathematical formula}CC(M)=Cand C is a class with complete problems that is closed under conjunction and projection.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 11">
+       Deciding whether a pair {a mathematical formula}(A,B) is a ⊆-minimal diagnosis of an MCS M requires two checks: (a) whether {a mathematical formula}(A,B) is a diagnosis, and (b) whether no pair {a mathematical formula}(A′,B′)⊂(A,B) is a diagnosis. The pair {a mathematical formula}(A,B) is a minimal diagnosis iff both checks succeed. This intuitively leads to the following complexity result. The problem{a mathematical formula}MCSdmis
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}D1P-complete if{a mathematical formula}CC(M)=P,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}D(C)-complete if{a mathematical formula}CC(M)=Cand C is a class with complete problems that is closed under conjunction and projection.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that, as shown in Table 1, the second item implies that {a mathematical formula}MCSdm is {a mathematical formula}DiP-complete if {a mathematical formula}CC(M) is complete for {a mathematical formula}ΣiP with {a mathematical formula}i≥1.
+      </paragraph>
+      <paragraph label="Proposition 12">
+       Refuting a candidate {a mathematical formula}(A,B) as an explanation of M can be done by guessing a pair of sets {a mathematical formula}(R1,R2) from Definition 6 and checking that {a mathematical formula}M[R1∪cf(R2)] is inconsistent. Then {a mathematical formula}(A,B) is a yes instance iff all guesses succeed, which leads to complementary complexity of consistency checking for that problem. Hardness for context complexity classes C that are closed under conjunction and projection is established via reducing two contexts of complexity C to an MCS which (a) is consistent if both instances are ‘yes’ instances, (b) has a minimal diagnosis D if both instances are ‘no’ instances, and (c) has a nonempty minimal diagnosis which is a subset of D if one is a ‘yes’ and the other a ‘no’ instance. For context complexity P we use a similar approach with two SAT instances. The problemMCSeis
+      </paragraph>
+      <list>
+       <list-item label="•">
+        coNP-complete if{a mathematical formula}CC(M)=P, and
+       </list-item>
+       <list-item label="•">
+        co-C-complete if{a mathematical formula}CC(M)=Cand C is a class with complete problems that is closed under conjunction and projection.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that, as shown in Table 1, the second item implies that MCSe is {a mathematical formula}ΠiP-complete if {a mathematical formula}CC(M) is complete for {a mathematical formula}ΣiP with {a mathematical formula}i≥1.
+      </paragraph>
+      <paragraph>
+       For complexity results of recognizing minimal explanations we need the following lemma which limits the number of explanations that need to be checked to verify subset-minimality.
+      </paragraph>
+      <paragraph label="Lemma 3">
+       An explanation{a mathematical formula}Q=(Q1,Q2)is ⊆-minimal iff no pair{a mathematical formula}(Q1,Q2∖{r})with{a mathematical formula}r∈Q2is an explanation and no pair{a mathematical formula}(Q1∖{r},Q2)with{a mathematical formula}r∈Q1is an explanation.
+      </paragraph>
+      <paragraph>
+       Hence, we can check subset-minimality of explanations by deciding whether for linearly many subsets of the candidate {a mathematical formula}(A,B), none is an explanation, i.e., whether for each subset, some {a mathematical formula}(R1,R2) exists s.t. {a mathematical formula}M[R1∪cf(R2)] is consistent. As NP (resp., {a mathematical formula}ΣiP) is closed under conjunction and projection, this check is in NP (resp., {a mathematical formula}ΣiP). In combination with checking whether the candidate is an explanation, this leads to a complexity of {a mathematical formula}D1P (resp., {a mathematical formula}DiP). For context complexity {a mathematical formula}C∈PSPACE (resp., {a mathematical formula}C∈EXPTIME), {a mathematical formula}D(C)=C. The hardness reduction for {a mathematical formula}MCSem is very similar to the one for {a mathematical formula}MCSdm.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       The problem{a mathematical formula}MCSemis
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}D1P-complete if{a mathematical formula}CC(M)=P,
+       </list-item>
+       <list-item label="•">
+        complete for{a mathematical formula}D(C)if{a mathematical formula}CC(M)=Cand C is a class with complete problems that is closed under conjunction and projection.
+       </list-item>
+      </list>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Computation
+     </section-title>
+     <paragraph>
+      In this section, we first recall hex-programs, which extend answer set programs, then show how to use hex to compute diagnoses and explanations of MCS, and finally give an overview of the mcs-ie tool,{sup:1} which is an open source experimental prototype.
+     </paragraph>
+     <section label="6.1">
+      Preliminaries: hex-programs
+      <paragraph>
+       hex-programs [41], [42] extend disjunctive logic programs by allowing for access to external information with external atoms, and by predicate variables. In this paper, we only use ground (variable-free) hex-programs and thus recall simplified definitions.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}C and {a mathematical formula}G be mutually disjoint sets of constants and external predicate names, respectively. Elements from {a mathematical formula}G are prefixed with “&amp;”. An ordinary atom is a formula {a mathematical formula}p(c1,…,cn) where {a mathematical formula}p,c1,…,cn are constants. An external atom is a formula {a mathematical formula}&amp;g[v→](w→), where {a mathematical formula}v→=Y1,…,Yn and {a mathematical formula}w→=X1,…,Xm are two lists of constants (called input and output lists, respectively), and {a mathematical formula}&amp;g∈G is an external predicate name. Intuitively, an external atom provides a way for deciding the truth value of tuple {a mathematical formula}w→ depending on the extension of input predicates {a mathematical formula}v→. For example the external predicate named &amp;temp could measure temperature with a particular sensor: atom {a mathematical formula}&amp;temp[front](5,7) then is true if the ‘front’ sensor detects a value between 5 and 7.
+      </paragraph>
+      <paragraph>
+       A hexrule r is of the form{a mathematical formula} where all {a mathematical formula}αi are ordinary atoms and all {a mathematical formula}βj are ordinary or external atoms. Rule r is a constraint, if {a mathematical formula}k=0; it is a fact if {a mathematical formula}n=0 (in this case we omit ←). A hex-program (or program) is a finite set of hex rules, it is ordinary if it contains only ordinary atoms.
+      </paragraph>
+      <paragraph>
+       The semantics of hex-programs is defined as a conservative extension of answer sets as in [52] (see also Appendix C. hex-programs can be evaluated using the dlvhex solver.{sup:2} A detailed comparison of hex programs and MCS, showing similarities and differences, is given in [32].
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Computing diagnoses
+      </section-title>
+      <paragraph>
+       We can compute diagnoses for some MCS M by guessing a candidate diagnosis and output beliefs of contexts, defining bridge rule applicability, and checking with external atoms whether each context accepts the guessed output beliefs given applicable bridge rule inputs.
+      </paragraph>
+      <paragraph>
+       We only consider diagnoses {a mathematical formula}(D1,D2) where {a mathematical formula}D1∩D2=∅; diagnoses with {a mathematical formula}D1∩D2≠∅ are trivially obtained from these, and they are never minimal (cf. Proposition 5); while we are often interested only in the latter.
+      </paragraph>
+      <paragraph>
+       Given an MCS M, we assemble a hex-program {a mathematical formula}PpD(M) as follows. For each bridge rule {a mathematical formula}r∈br(M), we add the following guessing rule. Here and in the following, we simply write r for a constant symbol denoting r.{a mathematical formula} Intuitively, the predicates {a mathematical formula}d1 and {a mathematical formula}d2 hold bridge rules that are removed from M; respectively are added in unconditional form to M; um denotes unmodified bridge rules.
+      </paragraph>
+      <paragraph>
+       We guess presence or absence of each output belief p of each context in M.{a mathematical formula} Given an interpretation I of {a mathematical formula}Pp(M), we use {a mathematical formula}Ai(I)={p|presi(p)∈I}, {a mathematical formula}1≤i≤n, to denote the set of output beliefs at context {a mathematical formula}Ci, corresponding to the guess in (4).
+      </paragraph>
+      <paragraph>
+       We evaluate each bridge rule (1) by two corresponding hex rules, depending on output beliefs guessed in (4) and on the diagnosis guessed in (3).{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If {a mathematical formula}d1(r) is true, then (5) becomes inactive corresponding to removing r from the MCS; conversely if {a mathematical formula}d2(r) is true, then (6) will be applicable just as if we would add {a mathematical formula}cf(r) to the MCS. Given an interpretation I of {a mathematical formula}Pp(M), we use {a mathematical formula}Bi(I)={s|ini(s)∈I} to denote the set of bridge rule heads at context {a mathematical formula}Ci, activated by the output-projected belief state {a mathematical formula}A(I)=(A1(I),…,An(I)).
+      </paragraph>
+      <paragraph>
+       Finally, we ensure that answer sets of {a mathematical formula}Pp(M) correspond to output-projected equilibria by checking whether each context {a mathematical formula}Ci accepts the guessed {a mathematical formula}Ai(I) w.r.t. the set {a mathematical formula}Bi(I) of bridge rule heads activated by bridge rules. For that, we create an external atom {a mathematical formula}&amp;con_outi[presi,bi]() which computes {a mathematical formula}ACCi in an external computation. This external atom returns true iff context {a mathematical formula}Ci, when given {a mathematical formula}Bi(I), accepts a belief set {a mathematical formula}Si such that its projection to output-beliefs {a mathematical formula}OUTi is equal to {a mathematical formula}Ai(I). Formally,{a mathematical formula} We complete {a mathematical formula}PpD(M) by adding the following constraints.{a mathematical formula}
+      </paragraph>
+      <paragraph label="Theorem 4">
+       The answer sets of {a mathematical formula}PpD(M) then correspond to the diagnoses and the output-projected equilibria of the modified/repaired MCS as follows. Let M be an MCS, and let{a mathematical formula}PpD(M)be as above. Then
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        for each answer set I of{a mathematical formula}PpD(M), the pair{a mathematical formula}(DI,1,DI,2)=({r∈br(M)|d1(r)∈I},{r∈br(M)|d2(r)∈I})is a diagnosis of M and{a mathematical formula}A(I)=(A1(I),…,An(I))is an output-projected equilibrium of{a mathematical formula}M[br(M)∖DI,1∪cf(DI,2)]; and
+       </list-item>
+       <list-item label="(ii)">
+        for each diagnosis{a mathematical formula}(D1,D2)∈D±(M)where{a mathematical formula}D1∩D2=∅, and for each output-projected equilibrium T of{a mathematical formula}M[br(M)∖D1∪cf(D2)], there exists an answer set I of{a mathematical formula}PpD(M)such that{a mathematical formula}(D1,D2)=(DI,1,DI,2)and{a mathematical formula}T=A(I).
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the above encoding computes all diagnoses. Computing only ⊆-minimal diagnoses is possible with hex, however this requires a more involved encoding using saturation (see the next section) or other external atoms. Our tool mcs-ie obtains the ⊆-minimal diagnoses by filtering the diagnoses generated via the encoding {a mathematical formula}PpD(M).
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Computing explanations
+      </section-title>
+      <paragraph>
+       We next address computing explanations and present an encoding in hex. This encoding is more involved since explanations show relevant inconsistencies only and this relevancy requires to check that all pairs of sets of bridge rules in the explanation range yield inconsistent systems. Given an explanation candidate {a mathematical formula}E=(E1,E2)∈2br(M)×2br(M), the explanation range of E is{a mathematical formula} Intuitively, {a mathematical formula}Rg(E) are “relevant pairs” for E. It follows directly from Definition 6 that, {a mathematical formula}E=(E1,E2)∈E±(M) iff {a mathematical formula}M[R1∪cf(R2)]⊨⊥ for all {a mathematical formula}(R1,R2)∈Rg(E).
+      </paragraph>
+      <paragraph>
+       So, the computational complexity of diagnosis recognition is not the same as the one for explanation recognition (for {a mathematical formula}CC(M) being P it is NP versus coNP). In the following we present a direct encoding, {a mathematical formula}PPE(M), in hex using a technique from answer-set programming called saturation (cf. [40], [69]). We first guess an explanation candidate {a mathematical formula}E=(E1,E2) and then ensure via saturation, that for all pairs of sets {a mathematical formula}(R1,R2)∈Rg(E) the modified system is inconsistent, i.e., we check for every {a mathematical formula}(R1,R2)∈Rg(E) and for every belief state S, that some context does not accept S under the bridge rules {a mathematical formula}R1∪cf(R2).
+      </paragraph>
+      <paragraph>
+       For each {a mathematical formula}r∈br(M), {a mathematical formula}PPE(M) contains the following rules to guess an explanation candidate.{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To give some intuition of the saturation technique, assume that I is the (partial) interpretation corresponding to an explanation candidate guessed by the above rules. To check that every {a mathematical formula}(R1,R2)∈Rg(E) yields an inconsistent system, saturation is used as follows: via disjunctive rules, {a mathematical formula}(R1,R2)∈Rg(E) is guessed as well as a belief state S. If S is not an equilibrium for {a mathematical formula}M[R1∪cf(R2)], then the atom spoil is concluded to be true. This in turn leads to the truth of all other atoms that occur in rules to guess {a mathematical formula}R1,R2,S, and all other atoms that are necessary to check that S is not an equilibrium. The resulting interpretation, {a mathematical formula}I⋆, is said to be saturated (or spoiled); formally, it contains {a mathematical formula}Ispoil, which is given by:{a mathematical formula} Most importantly, {a mathematical formula}I⋆ is a maximal model of {a mathematical formula}fPPE(M)I and every other guess for {a mathematical formula}(R1,R2) and S will result in the same interpretation {a mathematical formula}I⋆, if S is not an equilibrium of {a mathematical formula}M[R1∪cf(R2)].
+      </paragraph>
+      <paragraph>
+       On the other hand, if there is a guess for {a mathematical formula}(R1,R2) and S such that S is an equilibrium of {a mathematical formula}M[R1∪cf(R2)], then the corresponding interpretation {a mathematical formula}I′ will not be saturated. Since {a mathematical formula}I⋆ is a maximal model, it then holds that {a mathematical formula}I′⊂I⋆, hence {a mathematical formula}I⋆ is not a minimal model of {a mathematical formula}fPPE(M)I. Thus, if {a mathematical formula}I⋆ is indeed the minimal model of {a mathematical formula}fPPE(M)I, then there cannot exist such an {a mathematical formula}I′, i.e., for all {a mathematical formula}(R1,R2) and S it then holds that S is not an equilibrium of {a mathematical formula}M[R1∪cf(R2)].
+      </paragraph>
+      <paragraph>
+       Since we are only interested in explanation candidates E where no equilibrium exists for any {a mathematical formula}(R1,R2)∈Rg(E), a constraint is added to ensure that only saturated models comprise an answer set, i.e, we ensure that only {a mathematical formula}I⋆ may yield an answer set.
+      </paragraph>
+      <paragraph>
+       To generate {a mathematical formula}(R1,R2)∈Rg(E), for every {a mathematical formula}r∈br(M) we have the following rules:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} We guess a belief state of M, so {a mathematical formula}PPE(M) contains for each {a mathematical formula}a∈OUTi with {a mathematical formula}1≤i≤n the following rule:{a mathematical formula} Recall that I is an answer set of {a mathematical formula}PPE(M) iff I is a ⊆-minimal model of {a mathematical formula}fPPE(M)I. As we use saturation and external atoms, this can lead to the undesired effect that some {a mathematical formula}r∈fPPE(M)I is unsupported, i.e., for a being the head of r it can happen that {a mathematical formula}a∈I but the body of r is false under I and no other rule's body with head a is true. To avoid this, each bridge rule of M is encoded such that {a mathematical formula}a∈I implies that a corresponding body also evaluates to true. This is achieved by the addition of a unique atom {a mathematical formula}body(r) for each {a mathematical formula}r∈br(M) and by further rules ensuring that each literal in the body of r holds if {a mathematical formula}body(r)∈I. {a mathematical formula}PPE(M) contains for each {a mathematical formula}r∈br(M) of form {a mathematical formula}(i:b)←(i1:b1),…,(ik−1:bk−1),not(ik:bk),…,not(im:bm) the following rules:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Rules (21) and (22) ensure that the head of r is derived if either the body holds, or if r is unconditional, i.e., {a mathematical formula}r∈R2. For the head {a mathematical formula}(i:b) of r, let {a mathematical formula}[(i:b)] be the set of bridge rules whose head is the same, i.e., {a mathematical formula}[(i:b)]={r∈br(M)|Ch(r)=i∧φ(r)=b}. For each head {a mathematical formula}(i:b) of a bridge rule with {a mathematical formula}[(i:b)]={r1,…,rk} the following rule of {a mathematical formula}PPE(M) ensures that {a mathematical formula}(i:b) is supported:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       So far {a mathematical formula}PPE(M) guesses an explanation candidate E, a pair {a mathematical formula}(R1,R2)∈Rg(E), a belief state encoded by pres and abs, and the beliefs of applicable bridge rule heads are computed. To ensure that E is an explanation it must be the case that for every pair {a mathematical formula}(R1,R2) and belief state S some context {a mathematical formula}Ci does not accept {a mathematical formula}Si given the input encoded by {a mathematical formula}ini. If some context does not accept {a mathematical formula}Si then a special atom spoil is derived, i.e., if the external atom {a mathematical formula}&amp;con_outi′[spoil,presi,ini,outi]() is false then spoil is derived. This atom is also derived if the guess of S and {a mathematical formula}(R1,R2) is contradictory by itself. So for every {a mathematical formula}r∈br(M),a∈OUTi,i∈{1,…,n} the following rules are in {a mathematical formula}PPE(M):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We slightly extend the external atom {a mathematical formula}&amp;con_outi[presi,ini]() for checking consistency of a context: if spoil is present, then the external atom must be false. This is needed, since a spoiled interpretation {a mathematical formula}I⋆ must be a model of the hex program, which is only guaranteed if the external atom is false in {a mathematical formula}I⋆. So, {a mathematical formula}&amp;con_outi′[spoil,presi,ini]() is based on {a mathematical formula}&amp;con_outi[presi,ini]() as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To saturate all guesses, we add the following rules, for all {a mathematical formula}r∈br(M),i∈ci(M),a∈OUTi,b∈INi, to {a mathematical formula}PPE(M):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As an interpretation I of a program P is only an answer set if it is a minimal model of {a mathematical formula}fPI, it follows that I is not an answer set if there is a model {a mathematical formula}I′ of {a mathematical formula}fPI with {a mathematical formula}I′⊂I. If the guess for {a mathematical formula}(R1,R2) and the belief state S is not acceptable at context {a mathematical formula}Ci, then spoil is derived and saturation takes place, i.e., {a mathematical formula}I′ becomes ⊂-maximal. If, however, some guess for {a mathematical formula}(R1,R2) and S yields an equilibrium of M, then the corresponding interpretation {a mathematical formula}I′ is a subset of the saturated guesses, thus making the explanation candidate no minimal model of its reduct.
+      </paragraph>
+      <paragraph>
+       To obtain only valid explanations, {a mathematical formula}PPE(M) contains the following constraint:{a mathematical formula} It ensures that only saturated interpretations {a mathematical formula}I⋆ can be answer sets. {a mathematical formula}I⋆ is a ⊆-minimal model of {a mathematical formula}fPPE(M)I⋆ only if no {a mathematical formula}I′⊂I⋆ exists, i.e., if all {a mathematical formula}(R1,R2)∈Rg(E) yield an inconsistent system. For details on the saturation technique we refer to [43], [70].
+      </paragraph>
+      <paragraph label="Theorem 5">
+       The answer sets of {a mathematical formula}PPE(M) now exactly encode all explanations of the inconsistent MCS M. Let M be an inconsistent MCS. Then{a mathematical formula}(E1,E2)∈E±(M)iff there exists an answer set I of{a mathematical formula}PPE(M)where{a mathematical formula}E1={r|e1(r)∈I}and{a mathematical formula}E2={r|e2(r)∈I}.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Implementation
+      </section-title>
+      <paragraph>
+       We have implemented the rewritings to hex in the mcs-ie{sup:3} tool, the MCS Inconsistency Explainer [18], which is an experimental prototype based on the dlvhexsolver. mcs-ie solves the reasoning tasks of enumerating output-projected equilibria, diagnoses, minimal diagnoses, explanations, and minimal explanations of a given MCS.
+      </paragraph>
+      <paragraph>
+       Contexts can be realized as ASP programs, or by writing a context reasoning module using a C++ interface which allows for implementing arbitrary formalisms that can be captured by MCS contexts.
+      </paragraph>
+      <paragraph>
+       An online version of mcs-ie is available,{sup:4} which is a useful research tool for quick analysis of inconsistency in small-scale MCS. It requires no installation of additional software on the user side and allows direct editing of bridge rules and context knowledge-bases. A list of showcase MCS allows to directly compute (minimal) diagnoses and (minimal) explanations also for MCS given in this paper.
+      </paragraph>
+      <paragraph label="Example 12">
+       Fig. 4 shows files which encode our running example MCS in the mcs-ie input format. Contexts {a mathematical formula}C1, {a mathematical formula}C2, and {a mathematical formula}C4 are formalized in ASP, with knowledge bases kb1.dlv, kb2.dlv, and kb4.dlv, these contexts are evaluated through a hex-plugin for external atoms, which in turn uses the dlv solver. On the other hand, ontology reasoning {a mathematical formula}C3 is implemented in C++. For more details about the format and the interface we refer to [18].  □
+      </paragraph>
+      <paragraph>
+       Fig. 5 shows the architecture of the mcs-ie system, which is implemented as a plugin to the dlvhexsolver. The MCS M at hand is described by the user in a master input file, which specifies all bridge rules and contexts (it may refer to context knowledge base files). Depending on the configuration of mcs-ie, the desired reasoning tasks are solved using one of the three rewritings {a mathematical formula}Pp(M), {a mathematical formula}PpD(M), resp. {a mathematical formula}PE(M), on the input MCS M. mcs-ie enumerates answer sets of the rewritten program, and potentially uses a ⊆-minimization module, and a module which realizes the conversions between diagnosis and explanation notions as described in Theorem 2 and Corollary 1. Explanations can be computed by mcs-ie using the direct encoding given in Section 6.3 or through the conversion from diagnoses.
+      </paragraph>
+      <paragraph>
+       As expected, mcs-ie shows the following behavior w.r.t. efficiency: the rewriting {a mathematical formula}PpD(M), which uses guess-and-check, shows better performance than the rewriting {a mathematical formula}PE(M), which expresses the coNP task of recognizing explanations in the {a mathematical formula}Σ2P formalism of full-fledged disjunctive hex programs.
+      </paragraph>
+      <paragraph>
+       Nevertheless, it appeared that also {a mathematical formula}PpD(M) does not scale well. This has led to the development of a better hex evaluation framework, which divides and conquers the guessing space more efficiently [33]. While the old evaluation of {a mathematical formula}PpD(M) scales exponentially in the total number of output beliefs and bridge rules, the improved one scales exponentially only in the number of output beliefs and bridge rules of the largest context of M. For a thorough experimental evaluation of the above encodings using different version of the dlvhex solver, we refer to [33, Section 5] and [34, Section 6.1].
+      </paragraph>
+      <paragraph>
+       Other approaches to compute diagnoses and explanations of MCS may be faster than the hex rewriting approach, e.g., distributed evaluation with an extended version of the DMCS algorithm [4]. However, the primary focus of this work are the notions of diagnosis and explanation, investigation of their properties, and an experimental framework for evaluation; therefore the efficient (and more intricate) evaluation methods are left for future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Non-monotonicity in MCS was introduced in [85] and then further developed in [21], [24] to eventually allow heterogeneous as well as nonmonotonic systems, and in particular nonmonotonic MCS [21] as considered in this article (cf. [22] for a more comprehensive account of work related to MCS). However, issues arising from inconsistency of such systems have been largely disregarded.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Inconsistency in MCS
+      </section-title>
+      <paragraph>
+       A remarkable exception, and thus most closely related to ours (see also [37]), is [15], where inconsistency in a homogeneous MCS setting is addressed. The approach is to consider defeasible bridge rules for inconsistency removal, i.e., a rule is applicable only if its conclusion does not cause inconsistency. This concept is described in terms of an argumentation semantics in [14]. The decision which bridge rules to ignore is based, for every context, on a strict total order of all contexts. The set of rules that are ignored thus corresponds to a unique deletion-only diagnosis whose declarative description is more involved compared to our notion, but which is polynomially computable. Note however, that the second component of diagnoses, i.e., rules that are forced to be applicable, have no counterpart in the defeasible MCS inconsistency management approach. Furthermore, the strict total order over contexts forces the user to make (perhaps unwanted) decisions at design time; alternative orders would require a redesign and separate evaluation. Our approach avoids this and can be refined to respect various kinds of orderings and preferences.
+      </paragraph>
+      <paragraph>
+       Another formalism for homogenous contextualized reasoning that incorporates a form of inconsistency tolerance is the Contextualized Knowledge Repository (CKR) approach [87]. It is similar to the MCS approach of formalizing context-dependent knowledge, i.e., a CKR is a set of contexts. Contexts are based on description logic and a hierarchical coverage relation is used to specify that the knowledge of one context, regarding specified topics, is broader than the knowledge of another context. A CKR model then is a collection containing a local DL-model for each context such that constants, concepts and roles that are covered are interpreted exactly the same way in both contexts. The coverage relation itself is specified using a DL-like meta-language.
+      </paragraph>
+      <paragraph>
+       Consider a DL assertion {a mathematical formula}P(a): if context {a mathematical formula}C1 covers context {a mathematical formula}C2, then the concept P is interpreted in {a mathematical formula}C1 and in {a mathematical formula}C2 in the same way, as well as the individual a. MCS are different since the interpretation of {a mathematical formula}P(a) in {a mathematical formula}C1 is not related to that in {a mathematical formula}C2. Similar as in bridge rules of MCS, a CKR context can refer to knowledge from other contexts using a so-called qualifier, e.g., {a mathematical formula}P(a){location=Italy,time=2010} refers to {a mathematical formula}P(a) of a context that covers knowledge about Italy in the year 2010.
+      </paragraph>
+      <paragraph>
+       A CKR is inconsistency tolerant in the sense that if some context is inconsistent (i.e., its local model is the one with empty domain), then this inconsistency does not propagate to other unrelated contexts. The same property also holds for MCS, but in contrast to CKR, our approach allows to restore consistency by modifying the interlinking of contexts.
+      </paragraph>
+      <paragraph>
+       Similar in vein to CKR systems are Modular Ontologies, i.e., a framework where consistent description logic modules utilize and realize a set of interfaces [44]. These interfaces are connected by bridge rules for Distributed Description Logic (DDL) [19]. Consistent query answering in a module is achieved by using the maximum consistent set of interfaces utilized by this module only, therefore whole interfaces will be ignored if they would cause any inconsistency in the module. Again, in addition to addressing a more general setting in terms of heterogeneity, our work considers potential modifications of bridge rules that allow to go beyond simple masking of inconsistent parts of the system in order to analyze inconsistency and potentially restore consistency.
+      </paragraph>
+      <paragraph>
+       Conceptually close to the above homogeneous forms of MCS are Federated Databases, a distributed formalism for linked databases [59]: objects can be exported and imported using a decentralized negotiation between two databases. Notably, [89] is a survey that, in addition to autonomy (access granting and revoking), is taking up on issues of heterogeneity, however mostly referring to the integration of different query languages. Existing approaches handle incoherence in a database-typical manner of cascading or rejecting local or distributed constraints. For instance, several protocols for global integrity constraint enforcement are presented in [57]. These protocols define the quiescent state of the system—when it is at rest—and ensure that no constraints are violated in such states. Hence, inconsistency in federated databases is addressed at the level of the (individual) databases rather than their interlinking. Even though resorting to SQL and stratified Datalog allows for non-monotonicity, the possibility of instability in a distributed database system—due to a cyclic dependencies—has not been addressed in the literature. Our work would be suitable to deal with such situations, given that federated databases can be described as MCS with stratified (mostly monotonic) contexts including constraints, and with positive bridge rules.
+      </paragraph>
+      <paragraph>
+       Concerning the complexity results we established for diagnoses of MCS, we remark that they are related to respective results in abduction: by associating abducible hypotheses with bridge rules, due to the non-monotonicity of the system, recognition of diagnoses corresponds to cancellation abduction problems. The latter have been shown to be NP-complete in [25] under the assumption of a tractable underlying theory (i.e., for P contexts in our terminology).
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Broader context
+      </section-title>
+      <paragraph>
+       In a broader context, we have explored the relationship of our work to approaches and methods for inconsistency management in knowledge bases, grouped into debugging techniques (e.g., for Prolog [80], [81] and ASP [51], [74]), repairing methods (for instance based on abductive reasoning [62], discrimination among fusion rules [61], or policies for subquery propagation in peer-to-peer systems [8]), consistent query answering (e.g., over ontologies [65], propositional knowledge bases in peer-to-peer systems [16], etc.), and paraconsistent reasoning (applying, e.g., syntactic [12], logic-based [86], or domain-specific [46] methods). We refer to Appendix B resp. [38] for more details. Different from most approaches our primary aim is to provide a solid theoretical framework for analyzing inconsistency; we do not aim at automatically restoring consistency (but our notions can be used to achieve that).
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Examples
+     </section-title>
+     <paragraph>
+      In this section, we give the abstract logics {a mathematical formula}LA and {a mathematical formula}LΣasp in detail.
+     </paragraph>
+     <paragraph label="Example 13">
+      We formally introduce the abstract logic {a mathematical formula}LA to capture ontologies and description logic. Over a signature of atomic concepts {a mathematical formula}C, roles {a mathematical formula}R, and individuals I, T-Box axioms and A-Box axioms are defined based on the notion of concepts. Concepts are inductively defined as follows: every atomic concept is a concept, and if {a mathematical formula}C,D are concepts and {a mathematical formula}R∈R is a role, then {a mathematical formula}C⊓D, {a mathematical formula}C⊔D, ¬C, {a mathematical formula}∀R.C, and {a mathematical formula}∃R.C are concepts. Given concepts {a mathematical formula}C,D, a role {a mathematical formula}R∈R, and individuals {a mathematical formula}a,b∈I, a T-Box axiom (terminological axiom) is a formula of the form {a mathematical formula}C⊑D, and an A-Box axiom (assertional axiom) is either of the form {a mathematical formula}a:C, or of the form {a mathematical formula}(a,b):R. Finally, {a mathematical formula}ALC axioms are either T-Box axioms or A-Box axioms.Then, {a mathematical formula}LA is composed of
+     </paragraph>
+     <list>
+      <list-item label="•">
+       KB, being the collection of sets of {a mathematical formula}ALC axioms,
+      </list-item>
+      <list-item label="•">
+       BS, being the set of possibly believed assertions, i.e., BS is the powerset of the set of atomic A-Box axioms, and
+      </list-item>
+      <list-item label="•">
+       □
+      </list-item>
+     </list>
+     <paragraph label="Example 14">
+      We give the formal definition of {a mathematical formula}LΣasp, the abstract logic for disjunctive logic programs under the answer-set semantics over a non-ground signature Σ. For {a mathematical formula}LΣasp=(KB,BS,ACC),
+     </paragraph>
+     <list>
+      <list-item label="•">
+       KB is the set of normal disjunctive logic programs over Σ, i.e., each {a mathematical formula}kb∈KB is a set of rules of the form{a mathematical formula} where all {a mathematical formula}ai, {a mathematical formula}bj, are atoms over a first-order language Σ, and {a mathematical formula}n+m&gt;0. Let r be a rule of the aforementioned form, then {a mathematical formula}H(r)={a1,…,an}, {a mathematical formula}B+(r)={b1,…,bi}, {a mathematical formula}B−={bi+1,…,bm}, and {a mathematical formula}B(r)=B+(r)∪B−(r). Each rule {a mathematical formula}r∈kb must be safe, i.e., {a mathematical formula}vars(H(r))∪vars(B−(r))⊆vars(B+(r)), where for a set of atoms A, {a mathematical formula}vars(A)={vars(a)|a∈A} and {a mathematical formula}vars(a) is the set of first-order variables occurring in the atom a,
+      </list-item>
+      <list-item label="•">
+       BS is the set of Herbrand interpretations over Σ, i.e, each {a mathematical formula}bs∈BS is a set of ground atoms from Σ, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}ACC(kb) returns the set of kb's answer sets: for {a mathematical formula}P∈KB and {a mathematical formula}T∈BS let {a mathematical formula}PT={r∈grnd(P)|T⊨B(r)} be the FLP-reduct of P w.r.t. T, where {a mathematical formula}grnd(P) returns the ground version of all rules in P. Then {a mathematical formula}bs∈BS is an answer set, i.e., {a mathematical formula}bs∈ACC(kb), iff bs is a minimal model of {a mathematical formula}kbbs.  □
+      </list-item>
+     </list>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Related work in broader context
+     </section-title>
+     <paragraph>
+      For putting our work in a broader context, we subsequently relate it more generally to work on inconsistency management in knowledge bases. We classify and discuss some of the most relevant literature according to the following basic approaches:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       debugging techniques serve the purpose of diagnosing information systems, aiming at identifying sources of unexpected and in most cases unintended computation outcomes, and at explaining the latter;
+      </list-item>
+      <list-item label="•">
+       repairing techniques modify the content of knowledge bases in order restore consistency, in particular when new information is incorporated into a knowledge base, or when several knowledge bases are integrated into a single one;
+      </list-item>
+      <list-item label="•">
+       consistent query answering virtually repairs a knowledge base or system, often by ignoring a minimal subset of beliefs or subsystems, and operates on the resulting (virtual) consistent system (i.e., no knowledge is permanently removed);
+      </list-item>
+      <list-item label="•">
+       paraconsistent reasoning accepts contradictory knowledge and, rather than repairing or ignoring (parts of) the information, a more tolerant mode of reasoning is applied that handles also inconsistent pieces of knowledge in a non-trivial way.
+      </list-item>
+     </list>
+     <paragraph>
+      As already mentioned above, different from most approaches to inconsistency management our main goal is a solid analytic framework for inconsistency rather then automatic consistency restoring.
+     </paragraph>
+     <section label="B.1">
+      <section-title>
+       Debugging in logic programming
+      </section-title>
+      <paragraph>
+       Debugging in logic programming, i.e., finding out why some logic program has no or an unexpected answer, is remotely related to the problem considered in this paper given that bridge rules look similar to rules of logic programming. A major difference is that in MCS we take contexts with an opaque content into account. In logic programming, presence of an atom in a model of a program directly depends on the firing of rules, which in turn directly depends on the presence or absence of other atoms in the bodies; in the MCS framework, which allows to capture arbitrary logics by abstract belief set functions, there is in general no visible link between the firing of bridge rules and beliefs accepted by a context.
+      </paragraph>
+      <section label="B.1.1">
+       <section-title>
+        Prolog debugging
+       </section-title>
+       <paragraph>
+        A framework for debugging Prolog programs was developed in [88]. It relies strongly on the operational specifics of Prolog and consists of a diagnosis and a bug-correction component, where three basic types of errors are considered: (i) termination with incorrect output, (ii) termination with missing output, and (iii) nontermination. For the latter, the approach identifies rules that behave unexpectedly by tracing procedure calls and querying the user whether the procedure call at hand of the form {a mathematical formula}〈procedure,input,output〉 is correct. A similar goal is achieved in [78], where the user should not tell whether such a triple is wrong, but point to a wrong subterm of a procedure call; for that, the implementation builds on a modified unification algorithm that keeps track of the origins of subterms. This is further refined in [79], where the different types of bugs are treated uniformly and by the use of a heuristics the number of questions to the user is reduced.
+       </paragraph>
+       <paragraph>
+        In comparison, our notion of inconsistency diagnosis roughly corresponds to type (i) and (ii) errors: in a diagnosis {a mathematical formula}(D1,D2), {a mathematical formula}D1 contains bridge rules whose head belief is “incorrect”, while {a mathematical formula}D2 contains bridge rules whose head belief is “missing”. As for (iii), nontermination is not an issue for MCS since no infinite recursion can emerge (modulo computations inside contexts). Furthermore, our approach is fully declarative, without operational attachment adherent to Prolog, and it does not require user input; on the other hand, it only covers consistency and no further aspects. Nonetheless, it is possible to mimic behavior under user input to some extent by using a technique similar to the meta-reasoning transformation in [39].
+       </paragraph>
+       <paragraph>
+        A purely declarative perspective on Prolog debugging is taken in [72], based on the formal semantics of extended programs under SLDNF resolution. Again two types of errors are considered, so called “wrong clause instances” (wrong solutions) and “uncovered atoms” (missing solutions). To pinpoint the origin of such errors, the user must specify the intended interpretation of the program, by repeatedly answering queries about the behavior of the rules.
+       </paragraph>
+       <paragraph>
+        In [81] a connection between logic program debugging and abductive diagnosis is investigated. It considers extended logic programs (with strong and default negation) under closed-world assumption (CWA). Based on revisables, i.e., a subset R of the set of literals {a mathematical formula}notL assumed true by CWA, and the notion of supported sets {a mathematical formula}SS(L) of a literal L, the removal sets of L are defined as the hitting sets of {a mathematical formula}SS(L) restricted to R; the ones of the literal ⊥ indicate how to obtain a non-contradictory program. Using a transformed program {a mathematical formula}P1 of P and information about wrong and missing solutions in P, so called minimal revising assumptions (MRAs) of {a mathematical formula}P1 are computed in an iterative manner which identify the reasons for wrong and missing solutions. For programs P that model diagnostic problems, minimal solutions can be obtained from the MRAs.
+       </paragraph>
+       <paragraph>
+        The ideas and notions in [80], [81] are merged in [72], [80] for normal logic programs with constraint rules under well-founded semantics. Referring to them, a diagnosis for a set U of literals is a pair {a mathematical formula}D=〈Unc,InR〉 where Unc are uncovered atoms and InR are incorrect rules of P, such that U is contained in the well-founded model (WFM) of the program {a mathematical formula}P′ that results from P by removing all incorrect rules and adding all uncovered atoms. In case of a single minimal diagnosis, the bug in the program is pinpointed precisely; otherwise, the user is asked which diagnosis corresponds to the intended interpretation. This leads to an iterative debugging algorithm that only asks disambiguating queries, i.e., it asks about a subset of the intended interpretation and adds the answer to U. Our notion of inconsistency diagnosis, where {a mathematical formula}D=(D1,D2) is a diagnosis iff {a mathematical formula}M[br(M)∖D1∪cf(D2)]⊭⊥ resembles this notion for {a mathematical formula}U=∅; the underlying semantics of MCS is however very different from WMF. Furthermore, there is no counterpart of our inconsistency explanations, nor have refined diagnoses been considered.
+       </paragraph>
+      </section>
+      <section label="B.1.2">
+       <section-title>
+        ASP debugging
+       </section-title>
+       <paragraph>
+        Answer-set Programming (ASP) is as a rule-based paradigm related to MCS, yet more under grounded equilibrium semantics, which imposes a minimality condition on equilibria [21]; in fact, answer-set programs can be modeled as particular MCS with monotonic rules and non-monotonic bridge rules.
+       </paragraph>
+       <paragraph>
+        The declarative debugging of answer-set programs was approached by [90] for programs that have no cycles of odd length; in subsequent works, tagging [20], meta-programming for ground [51] and non-ground programs [74], and establishing procedural techniques (breakpoints, step-wise execution) [75] have been considered. The idea is that an expected answer-set E and an (erroneous) ASP program P are transformed into a program T whose answer-sets explain why E is not an answer-set of P. Explanations cover that an instantiation of some rule in P is not satisfied by E, as well as the presence of unfounded loops (i.e., lack of foundedness). The latter could be of interest for developing diagnosis of MCS under grounded equilibria semantics; this remains for future work. On the other hand, the procedural techniques seem to be less promising, as MCS lack rule chaining at the abstract level.
+       </paragraph>
+       <paragraph>
+        A different approach to debug answer-set programs is given in [5], where A-Prolog (an ASP-based language) is extended by consistency-restoring (CR) rules of the form{a mathematical formula} which intuitively reads as: if {a mathematical formula}l1,…,lm are accepted beliefs while {a mathematical formula}lm+1,…,ln are not, then one of {a mathematical formula}h1,…,hk “may possibly” be believed. In addition, a preference relation on the rules may be provided. The semantics of CR rules is defined via a translation to abductive logic programs, i.e., logic programs where certain atoms are abducibles (cf. [63]). In answer sets of such programs, a minimal set of abducibles may be assumed to be true without further justification.
+       </paragraph>
+       <paragraph>
+        Disregarding possible rule preferences, a logic program P with CR rules CR can be embedded to an MCS {a mathematical formula}M=(C1), where the single context {a mathematical formula}C1 is over disjunctive logic programs, such that the answer sets of P with CR correspond to the witnessing equilibria of the minimal diagnoses {a mathematical formula}(D1,D2) of M. In more detail, {a mathematical formula}C1 has the knowledge base {a mathematical formula}kb1=P∪{cr(r)|r∈CR} and bridge rules {a mathematical formula}br1={(c1:ab(r))←a⊥.|r∈CR}, where {a mathematical formula}a⊥ and {a mathematical formula}ab(r) are fresh atoms, for each r as above, and{a mathematical formula} informally, unconditional firing of a bridge rule simulates the corresponding CR rule; note that {a mathematical formula}D1=∅.
+       </paragraph>
+      </section>
+     </section>
+     <section label="B.2">
+      <section-title>
+       Content-based methods
+      </section-title>
+      <paragraph>
+       The methods and approaches underlying research issues and works presented in this subsection exhibit more foundational differences to our approach. Therefore, we will mostly discuss them on a more general level, pointing to some seminal works and survey articles for more extensive coverage of the relevant literature.
+      </paragraph>
+      <section label="B.2.1">
+       <section-title>
+        Repair approaches in integrating information
+       </section-title>
+       <paragraph>
+        A lot of work on inconsistency management has been concentrating on the repair of data when merging, incorporating, or integrating data from different sources. In contrast to our work, in such approaches usually the mappings that relate data of different knowledge bases are fixed, while the contents of the knowledge bases are subject to change in order to restore consistency. This subsumes approaches that do not actually modify original data but modify it virtually (i.e., a view), or operate on a copy.
+       </paragraph>
+       <paragraph>
+        Belief revision and belief merging are well understood problems, in particular for classical propositional theories [64], [77]. They address how to incorporate a new belief into an existing knowledge base, respectively how to combine knowledge bases, such that the resulting knowledge base is consistent. In this regard, our approach is more related to belief merging than to belief revision. A major difference to belief merging is, however, that MCS connect heterogeneous knowledge bases in a decentralized fashion (compared to a centralized merge of uniform knowledge bases), and that selective information exchange among knowledge bases is possible via bridge rules in complex topologies. Furthermore, our work concentrates on changing the mappings between these components in case of conflict, while belief merging strives for modified contents (i.e., knowledge base).
+       </paragraph>
+       <paragraph>
+        Abductive reasoning is often applied to identify pieces of information that need to be changed in order to repair a logical theory or knowledge base, cf. [62], [73], [92]. In particular, in [62] abduction is applied to repair theories in (nonmonotonic) logic based on notions of ‘explanation’ and ‘anti-explanation’. Given a theory K and a set Γ of abducible formulas, they remove the formulas of a set {a mathematical formula}O⊆Γ, and add the formulas of a set {a mathematical formula}I⊆Γ, to entail (resp. not entail) an observation F; i.e., {a mathematical formula}(K∪I)∖O⊨F (explanation), resp. {a mathematical formula}(K∪I)∖O⊭F (anti-explanation). A repair of an inconsistent theory K is given by an anti-explanation of {a mathematical formula}F=⊥; in particular, if {a mathematical formula}Γ=K and {a mathematical formula}I=∅, then such a repair is a maximal consistent subset of K; the use of such sets to restore consistency is central to many approaches of belief revision. Our notion of diagnosis may be regarded as a generalized 2-sorted variant of such anti-explanations, where {a mathematical formula}O⊆ΓO and {a mathematical formula}I⊆ΓI; moreover, under suitable conditions, it is reducible to ordinary anti-explanations. In particular, for {a mathematical formula}ΓI=∅ and {a mathematical formula}ΓO=K, the maximal consistent subsets of K correspond to the minimal diagnoses of {a mathematical formula}MK. Indeed, for the MCS {a mathematical formula}M=(C1) with single context {a mathematical formula}C1 having knowledge base {a mathematical formula}kb1=K and bridge rules {a mathematical formula}br1=brΓ⊤∪brΓ⊥, where {a mathematical formula}brΓ⊤={(c1:ϕ)←(c1:⊤)|ϕ∈Γ} and {a mathematical formula}brΓ⊥={(c1:ϕ)←(c1:⊥)|ϕ∈Γ}, then the minimal diagnoses of M correspond to the repairs of K. One may replace Γ with {a mathematical formula}ΓO in both, {a mathematical formula}brΓ⊤ and {a mathematical formula}brΓ⊥; furthermore, modified bodies in {a mathematical formula}brΓ⊤ allow for conditional removal of formulas, with conditions that might be beyond the expressiveness of the language of K. As regards explanations, our notion of explanation has no counterpart in the approach of [62].
+       </paragraph>
+       <paragraph>
+        Information integration approaches (see, e.g., [31], [61], [67], [68]) wrap several information sources and materialize the information into one schema. Differences exist in whether the global schema is expressed as a view in terms of the local schemata (global-as-view approaches), or vice versa (local-as-view). The relevant relationships are represented as mappings, which often are specified by database queries; inconsistencies are resolved by modifying the materialized information, thus again by changing contents. However, since the original information sources are not altered, one might consider it closer in spirit to our approach than belief merging.
+       </paragraph>
+       <paragraph>
+        The information fusion approach described in [61] uses fusion rules that look similar to bridge rules and handle inconsistency using preferences, voting, and generalizations of conflicting values (e.g., ‘truck’ and ‘van’ could generalize to ‘car’). Different from our approach in MCS, fusion rules anticipate potential inconsistencies instead of analyzing it, moreover they assemble a single target knowledge base without cycles in the system such that achieving consistency does not require a global view of the system.
+       </paragraph>
+       <paragraph>
+        Inconsistency management in information integration systems, and in particular the global-as-view approach, may be regarded as implicit change of mappings, by discarding tuples and/or generating missing tuples. Naturally, this corresponds to deactivating bridge rules and forcing bridge rules to fire, respectively. Different from MCS however, information integration approaches rely on hierarchical, acyclic system topologies and monotone semantics (that can be evaluated using fixpoint algorithms). On the other hand, they apply a more expressive mapping formalism compared to bridge rules in MCS.
+       </paragraph>
+       <paragraph>
+        Peer-to-peer data integration systems [27] allow for a dynamically changing architecture of a data integration scenario in which peers can enter or leave the system anytime. Inconsistency handling in such systems resorts mainly to approaches that are motivated or akin to techniques of consistent query answering; we thus postpone this to the respective subsection below. The approach in [8] allows cyclic queries and topologies, however “[the peer-to-peer querying layer] also needs a policy on how far to propagate subqueries transitively through chains of P2P connections, which can be arbitrarily long and cyclic”. Opposed to that approach, MCS resolve cyclic dependencies using equilibrium semantics, which is a more clean and predictable approach, as MCS do not require cycle breaking at some predefined nesting depth.
+       </paragraph>
+       <paragraph>
+        Ontology mapping[28] and the related tasks of ontology alignment, merging, and integration aim at reusing ontologies in a suitable combination. To this end, mappings between concepts, roles, and individuals are identified to denote the same entity in different ontologies, usually by automatic, statistical methods to ‘discover’ mappings. They may introduce inconsistency in the (global or local) view on the resulting ontology, even if each individual ontology is consistent. Consistency is achieved by disregarding a mapping if it would add an inconsistency. Heterogeneity in ontology mapping usually refers to different nomenclatures prevailing in different ontologies, or to ontologies in different yet closely related formalisms (e.g., different description logics). In contrast, in MCS heterogeneity refers to combining systems based on different logical formalisms, which need not share any relationship. More notably, however, our work aims at explaining inconsistency, and to provide via diagnoses a more fine-grained possibility to achieve consistency than by simply discarding mappings.
+       </paragraph>
+       <paragraph>
+        To summarize, the main difference between our work and the contributions to these rather diverse settings of integrating information—and in particular the issue of achieving integrity in doing so—is that we consider modifying the ‘mapping’, i.e., the interlinking, rather than the data. While the importance of maintaining and repairing mappings has been recognized [31], major breakthroughs are still missing.
+       </paragraph>
+      </section>
+      <section label="B.2.2">
+       <section-title>
+        Consistent query answering
+       </section-title>
+       <paragraph>
+        The approaches considered in this section do not actually modify data to repair an inconsistent system, but virtually consider possible repairs in order to return consistent answers to queries. As this includes (partial) ignorance of information (and thus inconsistency) for the sake of reasoning on a consistent system, the approaches may be regarded as in between repairing and paraconsistent reasoning.
+       </paragraph>
+       <paragraph>
+        The term consistent query answering (CQA) has been coined in the database area where various settings (w.r.t. integrity constraints and operations for repair) have been considered [1], [9], [10]. For instance, in the case of denial constraints (including key constraints, functional dependencies, etc.), it is sufficient to restrict the attention to tuple deletions for obtaining repairs and answering queries consistently. Thus, CQA might be regarded as an approach that automatically applies deletion-diagnoses to suppress inconsistent information for answering queries over inconsistent relational databases. Despite this superficial similarity to our work, the differences are apart from heterogeneity much more fundamental: diagnoses and explanations address the interlinking of knowledge bases rather than their content and they aim at making inconsistencies amenable to analysis, explicitly hinting at problems that should be investigated, rather than treating them implicitly for the sake of providing consistent answers. CQA techniques have also been extended to description logic ontologies, e.g., in [65], [66], where the taxonomy part is considered to be correct but the data part as possibly inconsistent. Consistent answers to queries are then obtained on maximal consistent subsets of the data w.r.t. the taxonomy part (and potential further constraints).
+       </paragraph>
+       <paragraph>
+        Other approaches (but similar in nature) have been applied to answering queries in peer-to-peer data integration settings. An automatic approach for repair was presented in [26] that ignores inconsistent components, resp. the beliefs held by a minority of peers in the system. Another work on peer-to-peer systems over propositional knowledge bases [16] answers queries over a maximal consistent subset of the knowledge bases. Besides the conceptual difference to MCS regarding the system architecture (dynamic vs. static), our approach explains inconsistency by pointing out mappings that must be changed to achieve consistency. Furthermore, its does not aim at automatic fixes to the system, and in particular not by ignoring entire contexts or beliefs held by a minority among them.
+       </paragraph>
+      </section>
+      <section label="B.2.3">
+       <section-title>
+        Paraconsistent approaches
+       </section-title>
+       <paragraph>
+        Paraconsistent reasoning approaches (see, e.g., [11], [60]) aim upfront at ignoring or tolerating inconsistency in knowledge bases, providing means to reason on them without knowledge explosion, i.e., without justifying arbitrary beliefs (ex falso quodlibet); thus, they do not focus on eliminating inconsistency. Nevertheless, in addition to keeping information systems operable in case of inconsistency, paraconsistent reasoning may, similar to our aim, also serve the purpose of analyzing inconsistency.
+       </paragraph>
+       <paragraph>
+        Taking again a very general perspective, in particular disregarding heterogeneity and even the fact that our techniques apply to the interlinking of information, syntactic approaches such as [12] would be closest to our approach. They essentially restrict theories to the intersection of maximal consistent subsets of formulae as a basis for drawing paraconsistent conclusions. However, while minimal deletion-diagnoses might be viewed as corresponding to maximal consistent subsets, our approach does not prescribe a particular reasoning mode upon them (like considering the system obtained by their intersection). Moreover, our notions of diagnosis and explanation provide more fine-grained structures for analysis than just considering deletion diagnosis, and they deal with nonmonotonic behavior.
+       </paragraph>
+       <paragraph>
+        The methods that are applied in logic-based approaches to paraconsistent reasoning are completely orthogonal to our techniques. The most prominent representatives resort to many-valued logics in order to deal with inconsistency (cf. [6], [82]). The same applies to paraconsistent logic programming[17] (see e.g. [35] for more references and recent works), which therefore also elude themselves from a detailed comparison. Nevertheless, developing model-based techniques for paraconsistent reasoning from inconsistent MCS is an interesting topic for future research. In this regard, [86] can be inspiring, where trust on information sources on the web has been modeled using an extension of Belnap's four-valued logic [6] and bridge-rule like constructions based on external predicates govern the information flow.
+       </paragraph>
+       <paragraph>
+        In the area of process modeling and requirements engineering, [46] describes an approach of inconsistency management where inconsistencies are considered an important part of the system and not necessarily removed. In this approach, so-called ViewPoints [47] describe stakeholders in an engineering process which use different formalisms and representations, where coordination is performed using inter-ViewPoint coordination rules. The inconsistency handling approach in [46] uses temporal action logic to specify reactions to detected inconsistencies. Similar to inconsistency explanations in MCS, this inconsistency handling is based on the subset of knowledge that evoked the inconsistency. MCS describe distributed knowledge based systems and inconsistency is absence of a global equilibrium; different from that, ViewPoints describe distributed processes with synchronization points and inconsistency is defined as inconsistency during an inter-ViewPoint coordination effort.
+       </paragraph>
+       <paragraph>
+        We conclude this section with a pointer to Gabbay and Hunter [48] who argued strongly for managing inconsistency, in contrast to avoiding, removing, or ignoring it. Their point is that an inconsistent system requires actions to be taken, and in order to do so, different issues need to be taken into account that require a variety of methods. Notably they also developed a corresponding framework in a relational database setting [49], [50]. In this spirit, we consider the notions of diagnosis and inconsistency explanation for MCS as providing a foundational basis for developing methods for more specific tasks on top in order to manage inconsistency of the system.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Proofs
+     </section-title>
+     <paragraph label="Proof of Proposition 2">
+      {a mathematical formula}(⇒) Let {a mathematical formula}Dr=(D1,D2,fg)∈Dm±,r(M), we have to prove that {a mathematical formula}(D1,D2)∈Dm±(M).We first show that {a mathematical formula}(D1,D2)∈D±(M). Since {a mathematical formula}Dr is a refined diagnosis, it holds that {a mathematical formula}M[br(M)∖D1∪fg(D2)]⊭⊥. Let {a mathematical formula}Sw be a witnessing equilibrium of {a mathematical formula}M[br(M)∖D1∪fg(D2)], then it holds for every {a mathematical formula}r∈D2 that {a mathematical formula}Sw|⇝fg(r) since {a mathematical formula}Dr is minimal. Therefore, {a mathematical formula}Sw is an equilibrium of {a mathematical formula}M[br(M)∖D1∪cf(D2)], hence {a mathematical formula}(D1,D2)∈D±(M). Since {a mathematical formula}Dr is minimal, it follows that {a mathematical formula}Sw|⇝head(r)←Body(fg(r))∪B., where {a mathematical formula}Body(fg(r))⊂B⊆Body(r), does not hold for any {a mathematical formula}r∈D2, hence {a mathematical formula}refine(D2,Sw)=fg.It remains to show that {a mathematical formula}(D1,D2)∈Dm±(M). Assume for contradiction that there exists {a mathematical formula}(D1′,D2′)⊂(D1,D2) such that {a mathematical formula}(D1′,D2′)∈Dm±(M). Let {a mathematical formula}Sw′ be a witnessing equilibrium of {a mathematical formula}(D1′,D2′) and {a mathematical formula}fg′=refine(D2′,Sw′), then it holds that {a mathematical formula}(D1′,D2′,fg′)∈D±,r(M) since {a mathematical formula}Sw′ is a witnessing equilibrium of {a mathematical formula}M[br(M)∖D1′∪fg′(D2′)]. Since {a mathematical formula}(D1′,D2′,fg′)∈D±,r(M) and {a mathematical formula}(D1′,D2′)⊂(D1,D2) it holds that {a mathematical formula}Dr is not a minimal refined diagnosis, which is a contradiction. Therefore, no such {a mathematical formula}(D1′,D2′) exists and {a mathematical formula}(D1,D2)∈Dm±(M).(⇐) Let {a mathematical formula}D=(D1,D2)∈Dm±(M), let {a mathematical formula}Sw be a witnessing equilibrium of D, and let {a mathematical formula}refine(D2,Sw)=fg. Furthermore, it holds that no witnessing equilibrium {a mathematical formula}Sw′ exists with {a mathematical formula}refine(D2,Sw′)=fg′ and {a mathematical formula}fg′&lt;fg. We show that {a mathematical formula}(D1,D2,fg) is a minimal refined diagnosis of M. By definition of refine it holds for every {a mathematical formula}r∈D2 that {a mathematical formula}Sw|⇝fg(r). Furthermore, there is no body-reduction function {a mathematical formula}fg′ such that it holds for every {a mathematical formula}r∈D2 that {a mathematical formula}Sw|⇝fg′(r). Therefore, {a mathematical formula}Sw is an equilibrium of {a mathematical formula}M[br(M)∖D1∪fg(D2)] and {a mathematical formula}(D1,D2,fg)∈D±,r(M).Towards contradiction assume that {a mathematical formula}(D1,D2,fg) is not minimal, then there exists {a mathematical formula}(D1′,D2′,fg′)∈Dm±,r(M) such that {a mathematical formula}(D1′,D2′)⊂(D1,D2) or {a mathematical formula}D1=D1′, {a mathematical formula}D2=D2′, and {a mathematical formula}fg′&lt;fg. In the former case, there exists a witnessing equilibrium {a mathematical formula}Sw′ of {a mathematical formula}M[br(M)∖D1′∪fg′(D2′)]. Therefore {a mathematical formula}Sw′ is a witnessing equilibrium of {a mathematical formula}M[br(M)∖D1′∪cf({r∈D2′|Sw′|⇝fg′(r)})], i.e., {a mathematical formula}D″=(D1′,{r∈D2′|Sw′|⇝fg′(r)})∈D±(M). Since {a mathematical formula}D″⊂D this is a contradiction to {a mathematical formula}D∈Dm±(M). In the latter case holds {a mathematical formula}fg′&lt;fg and there exists a witnessing equilibrium {a mathematical formula}Sw′ of {a mathematical formula}M[br(M)∖D1∪fg′(D2)]. Since {a mathematical formula}(D1′,D2′,fg′)∈Dm±,r(M) and {a mathematical formula}D1′=D1,D2′=D2, it holds that {a mathematical formula}Sw′ also is an equilibrium of {a mathematical formula}M[br(M)∖D1∪cf(D2)] and {a mathematical formula}refine(D2,Sw′)=fg′. Then, {a mathematical formula}fg′&lt;fg directly contradicts that our assumption that no such {a mathematical formula}Sw′ and {a mathematical formula}fg′ exist. Since all cases are contradicting, it must hold that {a mathematical formula}(D1,D2,fg) is a minimal refined diagnosis.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 3">
+      {a mathematical formula}(⇒) Let {a mathematical formula}(E1,E2)∈E±(M), pick fg such that for every {a mathematical formula}r∈E2 holds {a mathematical formula}fg(r)=head(r)←., i.e. {a mathematical formula}{fg(r)|r∈E2}=cf(E2). Observe that for every {a mathematical formula}r∈E2 holds that {a mathematical formula}fg(r)=r, therefore for all sets {a mathematical formula}R1,R2 of bridge rules with {a mathematical formula}r∈R2 holds that {a mathematical formula}R1∪fg(R2)=R1∪{r}∪fg(R2∖{r}). Then, for all {a mathematical formula}E1⊆R1⊆br(M), {a mathematical formula}R2⊆br(M), and body-reduction functions {a mathematical formula}fg′ such that {a mathematical formula}Body(fg(r))⊆Body(fg′(r)) holds if {a mathematical formula}r∈E2, it holds that {a mathematical formula}M[R1∪fg′(R2)]⊨⊥, i.e., {a mathematical formula}(E1,E2,fg) is a refined explanation.{a mathematical formula}(⇐) Let {a mathematical formula}(E1,E2,fg) be a refined explanation, i.e., {a mathematical formula}M[R1∪fg′(R2)]⊨⊥ for every {a mathematical formula}E1⊆R1⊆br(M), {a mathematical formula}R2⊆br(M), and body-reduction function {a mathematical formula}fg′ with {a mathematical formula}Body(fg(r))⊆Body(fg′(r)) for every {a mathematical formula}r∈E2. Consider the body-reduction function {a mathematical formula}fg′ such that for all {a mathematical formula}r∈br(M)∖E2 it holds that {a mathematical formula}fg′(r)=head(r)←., i.e., {a mathematical formula}fg′(R2′)=cf(R2′) for every {a mathematical formula}R2′⊆br(M)∖E2. Observe that {a mathematical formula}Body(fg(r))⊆Body(fg′(r)) holds for every {a mathematical formula}r∈E2, therefore {a mathematical formula}M[R1∪fg′(R2)]⊨⊥ for every {a mathematical formula}E1⊆R1⊆br(M) and {a mathematical formula}R2⊆br(M). Hence, {a mathematical formula}M[R1∪cf(R2′)]⊨⊥ for every {a mathematical formula}R2′⊆br(M)∖E2 and thus {a mathematical formula}(E1,E2)∈E±(M).  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 1">
+      In this proof, we denote by {a mathematical formula}X¯ the complement of a set X w.r.t. {a mathematical formula}br(M), i.e., {a mathematical formula}X¯=br(M)∖X.(a) Consider a pair {a mathematical formula}(E1,E2)⊆(br(M),br(M)). Then for all diagnoses {a mathematical formula}(D1,D2)∈D±(M), {a mathematical formula}D1∩E1 or {a mathematical formula}D2∩E2 or both are nonempty iff
+      <list>
+       for all {a mathematical formula}(D1,D2)⊆(br(M),br(M)) we have that{a mathematical formula}(b) As
+      </list>
+      <paragraph label="Proof of Theorem 2">
+       {a mathematical formula}minHSM(X) contains the ⊆-minimal elements in {a mathematical formula}HSM(X), and {a mathematical formula}Em±(M) contains the ⊆-minimal elements in {a mathematical formula}E±(M), (b) follows from (a).  □Let {a mathematical formula}min(X) be the set of ⊆-minimal elements in a collection X of sets. Then for every {a mathematical formula}(A,B)∈X∖min(X) there is a pair {a mathematical formula}(A′,B′)∈min(X) with {a mathematical formula}(A′,B′)⊆(A,B). Given {a mathematical formula}HSM(min(X)), every pair {a mathematical formula}(A,B)∈X∖min(X) is hit by every pair {a mathematical formula}(C,D)∈HSM(min(X)). Therefore {a mathematical formula}HSM(min(X))=HSM(X). Then (a) immediately follows from Theorem 1(a), and (b) immediately follows from Theorem 1(b).  □A collection of sets {a mathematical formula}C={C1,…,Cn} over a universe, i.e., {a mathematical formula}Ci⊆U, {a mathematical formula}1≤i≤n, can be seen as a hypergraph{a mathematical formula}H=(U,C) with vertices U and hyperedges {a mathematical formula}Ci∈C. If no hyperedge {a mathematical formula}Ci is contained in any hyperedge {a mathematical formula}Cj, {a mathematical formula}i≠j, it is called simple. A hitting set on C is called transversal, and the hypergraph {a mathematical formula}(U,C′) containing as hyperedges {a mathematical formula}C′ all minimal hitting sets of the hypergraph {a mathematical formula}H is called transversal hypergraph{a mathematical formula}Tr(H).We can map a collection {a mathematical formula}X={X1,…,Xn} of pairs {a mathematical formula}Xi=(X1i,X2i) of sets, {a mathematical formula}X1i,{a mathematical formula}X2i⊆U bijectively to a collection {a mathematical formula}μ(X)={μ(X1),…,μ(Xn)} over {a mathematical formula}U∪{u′|u∈U} where {a mathematical formula}μ(X1i,X2i)=X1i∪{u′|u∈X2i}. Then, {a mathematical formula}(A,B) is a hitting set of X iff {a mathematical formula}μ(A,B) is a hitting set of {a mathematical formula}μ(X), and well-known results for transversal hypergraphs [7] carry over to minimal hitting sets over pairs.In particular, given a simple hypergraph {a mathematical formula}H=μ(X), it holds that {a mathematical formula}Tr(Tr(μ(X)))=μ(X). This directly translates into the lemma, because {a mathematical formula}μ(X) is a simple hypergraph due to incomparability (also called the anti-chain property) of X, and μ is bijective, therefore transversal hypergraphs can be mapped back to minimal hitting sets.  □From Corollary 1(b) we have that {a mathematical formula}Em±(M)=minHSM(Dm±(M)). Applying {a mathematical formula}minHSM on both sides of this formula and then using Lemma 1 yields {a mathematical formula}minHSM(Em±(M))=minHSM(minHSM(Dm±(M)))=Dm±(M).  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof of Proposition 5">
+      Let {a mathematical formula}(D1,D2)∈Dm±(M) and let S be a witnessing belief state for it, i.e., S is an equilibrium of {a mathematical formula}M[br(M)∖D1∪cf(D2)]. Towards contradiction, assume that {a mathematical formula}D1∩D2≠∅. Consider any bridge rule {a mathematical formula}r∈D1∩D2 and let {a mathematical formula}Ch(r)=i and {a mathematical formula}φ(r)=p. Furthermore, consider {a mathematical formula}r′=cf(r)=(i:p)←., then {a mathematical formula}body(r′)=∅ and thus {a mathematical formula}r′ is applicable in any belief state. Therefore, {a mathematical formula}r′∈app(bri(M[br(M)∖D1∪cf(D2)]),S) and consequently {a mathematical formula}p∈{φ(r)|r∈app(bri(M[br(M)∖D1∪cf(D2)]),S)}. For {a mathematical formula}(D1′,D2′)=(D1∖{r},D2), we thus obtain that {a mathematical formula}p∈{φ(r)|r∈app(bri(M[br(M)∖D1′∪cf(D2′)]),S)} and since all other bridge rules are as before, we conclude that {a mathematical formula}app(bri(M[br(M)∖D1′∪cf(D2′)]),S)=app(bri(M[br(M)∖D1∪cf(D2)]),S) for all {a mathematical formula}i∈C(M). Consequently S is an equilibrium of {a mathematical formula}M[br(M)∖D1′∪cf(D2′)] and {a mathematical formula}(D1′,D2′)∈D±(M). But {a mathematical formula}(D1′,D2′)⊂(D1,D2) contradicts {a mathematical formula}(D1,D2)∈Dm±(M), which proves the result.  □
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Let U be a splitting set of an MCS M and let{a mathematical formula}R1,R2⊆br(M). Then, U is also a splitting set of{a mathematical formula}M[R1∪cf(R2)].
+     </paragraph>
+     <paragraph label="Proof">
+      Towards contradiction assume that U is not a splitting set for {a mathematical formula}M[R1∪cf(R2)], i.e., there exists a rule {a mathematical formula}r∈br(M[R1∪cf(R2)]) such that {a mathematical formula}Ch(r)∈U and {a mathematical formula}Cb(r)⊈U. Thus, there exists {a mathematical formula}(i:p)∈body(r) such that {a mathematical formula}i∉U. Since {a mathematical formula}body(r′)=∅ for all {a mathematical formula}r′∈cf(R2), it follows that {a mathematical formula}r∈R1 and since {a mathematical formula}R1⊆br(M), it follows that {a mathematical formula}r∈br(M). By the assumption that {a mathematical formula}Ch(r)∈U and because U is a splitting set of M, it follows that {a mathematical formula}i∈U for all {a mathematical formula}(i:p)∈body(r), which contradicts that {a mathematical formula}Cb(r)⊈U. Therefore, no such r can exist and U is also a splitting set of {a mathematical formula}M[R1∪cf(R2)].  □
+     </paragraph>
+     <paragraph label="Lemma 5">
+      Let M be an MCS, let B be a set of bridge rules compatible with M, and let{a mathematical formula}U⊆C(M)be a splitting set for{a mathematical formula}M[B]. Then, for every{a mathematical formula}i∈Uand belief state{a mathematical formula}S=(S1,…,Sn)of M it holds that:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We first show that {a mathematical formula}bri(M[bU])=bri(M[B]) holds for all {a mathematical formula}i∈U:{a mathematical formula}(⊆) From the definition of the bottom, {a mathematical formula}bU, it follows that {a mathematical formula}bU⊆B, thus {a mathematical formula}bri(M[bU])⊆bri(M[B]).{a mathematical formula}(⊇) Consider {a mathematical formula}r∈bri(M[B]), it holds that {a mathematical formula}Ch(r)=i. Since U is a splitting set and {a mathematical formula}i∈U it follows that {a mathematical formula}r∈bU by definition of the bottom {a mathematical formula}bU. Hence, {a mathematical formula}bri(M[bU])⊇bri(M[B]).As a consequence of the above, i.e., of {a mathematical formula}bri(M[bU])=bri(M[B]), it follows that {a mathematical formula}app(bri(M[bU]),S)=app(bri(M[B]),S) holds for all {a mathematical formula}i∈U, and therefore it is also the case that {a mathematical formula}ACCi(kbi∪app(bri(M[bU]),S))=ACCi(kbi∪app(bri(M[B]),S)), which proves the lemma.  □
+     </paragraph>
+     <paragraph label="Lemma 6">
+      Observe that splitting sets preserve acceptability not only when bridge rules in the remainder of the MCS are modified (as in Lemma 5), but also when belief sets in the remainder are exchanged. For two belief states {a mathematical formula}S=(S1,…,Sn) and {a mathematical formula}S′=(S1′,…,Sn′) of an MCS, we say that S coincides with {a mathematical formula}S′ on U, written {a mathematical formula}S=US′, if for all {a mathematical formula}i∈U holds {a mathematical formula}Si=Si′. Let M be an MCS, let B be a set of bridge rules compatible with M, and let U be a splitting set for{a mathematical formula}M[B]. Furthermore, let{a mathematical formula}S=(S1,…,Sn)and{a mathematical formula}S′=(S1′,…,Sn′)be belief states of M, and let{a mathematical formula}bU⊆R⊆B. Then,{a mathematical formula}S=US′implies{a mathematical formula}ACCi(kbi∪app(bri(M[B]),S))=ACCi(kbi∪app(bri(M[R]),S′)).
+     </paragraph>
+     <paragraph label="Proof">
+      Since {a mathematical formula}bU⊆R it holds for all {a mathematical formula}i∈U that {a mathematical formula}bri(M[B])=bri(M[R]). Furthermore, because U is a splitting set, it follows that {a mathematical formula}c∈U for all {a mathematical formula}(c:p)∈body(r) such that {a mathematical formula}r∈bri(M[B]) and {a mathematical formula}i∈U. As a consequence {a mathematical formula}p∈Sc iff {a mathematical formula}p∈Sc′ since S and {a mathematical formula}S′ coincide on U and {a mathematical formula}r∈bri(M[B]) iff {a mathematical formula}r∈bri(M[R]).  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 6">
+      This establishes item (i).Next we prove Item (ii): {a mathematical formula}D∈D±(M[bU]) holds iff there exists {a mathematical formula}D′∈D±(M) such that {a mathematical formula}D⊆D′.{a mathematical formula}(⇒) Let {a mathematical formula}D=(D1,D2)∈D±(M[bU]). Then, there exists an equilibrium S of {a mathematical formula}M[R] where {a mathematical formula}R=(bU∖D1)∪cf(D2). Consider {a mathematical formula}(D1′,D2′)=(D1∪(br(M)∖bU),D2) and observe that {a mathematical formula}(br(M)∖D1′)∪cf(D2′)=R, because {a mathematical formula}br(M)∖D1′=bU∖D1. Since S is an equilibrium of {a mathematical formula}M[R], it follows that {a mathematical formula}D′∈D±(M).{a mathematical formula}(⇐) Assume {a mathematical formula}D′∈D±(M) where {a mathematical formula}D′=(D1′,D2′). First assume that {a mathematical formula}E±(M[bU])=∅, i.e., {a mathematical formula}M[bU] is consistent. Then, {a mathematical formula}D=(∅,∅)∈D±(M[bU]), hence {a mathematical formula}D⊆D′ and {a mathematical formula}D∈D±(M[bU]).Otherwise, {a mathematical formula}E±(M[bU])≠∅. Consider {a mathematical formula}(D1,D2)=(D1′∩bU,D2′∩bU) and let {a mathematical formula}R′=br(M)∖D1′∪cf(D2′) and {a mathematical formula}R=bU∖D1∪cf(D2). Observe that {a mathematical formula}brj(M[R])=∅ for all {a mathematical formula}j∈C(M)∖U, because {a mathematical formula}R⊆bU∪cf(bU) and for no rule {a mathematical formula}r∈bU∪cf(bU) it holds that {a mathematical formula}Ch(r)=j.As {a mathematical formula}M[∅] is consistent, there exists some {a mathematical formula}Sj0∈ACCj(kbj) for every {a mathematical formula}j∈C(M). Let {a mathematical formula}S′=(S1′,…,Sn′) be an equilibrium for {a mathematical formula}M[R′] (which exists because {a mathematical formula}D′∈D±(M)). Let {a mathematical formula}S=(S1,…,Sn) such that {a mathematical formula}Si=Si′ if {a mathematical formula}i∈U, and {a mathematical formula}Si=Si0 otherwise. Then, S is an equilibrium for {a mathematical formula}M[R]. Indeed, first consider {a mathematical formula}i∈C(M)∖U. Since {a mathematical formula}bri(M[R])=∅, it follows that {a mathematical formula}app(bri(M[R]),S)=∅, hence {a mathematical formula}Si0∈ACCi(kbi∪app(bri(M[R]),S)). Second, consider {a mathematical formula}i∈U. Note that U is a splitting set of {a mathematical formula}M[R], because {a mathematical formula}brj(M[R])=∅ for all {a mathematical formula}j∈C(M)∖U. Since {a mathematical formula}bU⊆R⊆R′ and {a mathematical formula}S=US′, it follows from Lemma 6 that {a mathematical formula}ACCi(kbi∪app(bri(M[R]),S))=ACCi(kbi∪app(bri(M[R′]),S′)). From {a mathematical formula}Si′∈ACCi(kbi∪app(bri(M[R′]),S′)) and {a mathematical formula}Si=Si′, it thus follows that {a mathematical formula}Si∈ACCi(kbi∪app(bri(M[R]),S)).Consequently, {a mathematical formula}Si∈ACCi(kbi∪app(bri(M[R]),S)) for all {a mathematical formula}i∈C(M); hence S is an equilibrium of {a mathematical formula}M[R]. Since {a mathematical formula}R1∪R2⊆bU, it follows that {a mathematical formula}D∈D±(M[bU]).  □
+     </paragraph>
+     <paragraph label="Proof of Corollary 2">
+      Let {a mathematical formula}E∈Em±(M[bU]), then it follows from Proposition 6 that {a mathematical formula}E∈E±(M) and E is U-headed. Assume for a contradiction that {a mathematical formula}E∉Em±(M). Hence, there exists some {a mathematical formula}E′∈E±(M) such that {a mathematical formula}E′⊂E. Since E is U-headed, it follows that {a mathematical formula}E′ also is U-headed. Thus by Proposition 6 it follows that {a mathematical formula}E′∈E±(M[bU]), which contradicts that {a mathematical formula}E∈Em±(M[bU]).  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 7">
+      As in the proof of Proposition 6, let {a mathematical formula}(R1,R2)∈Rg(E,B) iff {a mathematical formula}E1⊆R1⊆B and {a mathematical formula}R2⊆B∖E2.Wlog. assume that {a mathematical formula}M=(C1,…,Cn), {a mathematical formula}U={1,…,k}, and {a mathematical formula}U′={k+1,…,n}, where {a mathematical formula}1≤k≤n. Towards a contradiction assume that some {a mathematical formula}E=(E1,E2)∈Em±(M) exists which contains rules from both, {a mathematical formula}bU and {a mathematical formula}bU′. Consider an arbitrary {a mathematical formula}(R1,R2)∈Rg(E,br(M)). Since E is an explanation, it holds that {a mathematical formula}M[R1∪cf(R2)]⊨⊥.Given {a mathematical formula}R=(R1,R2) s.t. {a mathematical formula}R1,R2⊆bU⊆br(M) and V, we say that the V-projection of R is inconsistent iff {a mathematical formula}M[(R1∩V)∪cf(R2∩V)]⊨⊥. We prove that for every {a mathematical formula}R=(R1,R2)∈Rg(E,br(M)) either its U-projection or its {a mathematical formula}U′-projection is inconsistent, or both.Towards contradiction assume that neither projection is inconsistent. Then, there exists an equilibrium {a mathematical formula}S=(S1,…,Sn) of {a mathematical formula}M[(R1∩U)∪cf(R2∩U)] and an equilibrium {a mathematical formula}S′=(S1′,…,Sn′) of {a mathematical formula}M[(R1∩U′)∪cf(R2∩U′)]. Consider the belief state {a mathematical formula}S″=(S1,…,Sk,Sk+1′,…,Sn′). By Lemma 6, it holds that {a mathematical formula}Si∈ACCi(kbi∪app(bri(M[R1∪cf(R2)]),S″) for all {a mathematical formula}i∈U, because U is a splitting set of M, {a mathematical formula}bU⊆(R1∩U)∪cf(R2∩U)⊆R1∪cf(R2), and {a mathematical formula}S=US″. Analogously, it holds that {a mathematical formula}Si′∈ACCi(kbi∪app(bri(M[R1∪cf(R2)]),S″) for all {a mathematical formula}i∈U′. Consequently, {a mathematical formula}S″ is an equilibrium of {a mathematical formula}M[R1∪cf(R2)], which contradicts that E is an explanation. Therefore, for every {a mathematical formula}R∈Rg(E,br(M)) it holds that either the U-projection of R, the {a mathematical formula}U′-projection of R, or both are inconsistent.Next, we distinguish for all {a mathematical formula}R∈Rg(E,br(M)) which projections are inconsistent.Case (1): For every {a mathematical formula}R∈Rg(E,br(M)) its U-projection is inconsistent. Then, {a mathematical formula}E′=(E1∩bU,E2∩bU) is an explanation, since for every {a mathematical formula}R′∈Rg(E′,br(M)) it holds that {a mathematical formula}R′ is a U-projection of some {a mathematical formula}R∈Rg(E,br(M)), which is inconsistent. Since {a mathematical formula}E1∪E2⊈bU, we have {a mathematical formula}E′⊂E. Since {a mathematical formula}E′∈E±(M), it follows that {a mathematical formula}E∉Em±(M), which contradicts the assumption that {a mathematical formula}E∈Em±(M).Case (2): For all {a mathematical formula}R∈Rg(E,br(M)) it holds that the {a mathematical formula}U′-projection is inconsistent. Analogously to the previous case, we conclude that {a mathematical formula}E′=(E1∩bU′,E2∩bU′) is an explanation of M such that {a mathematical formula}E′⊂E, which contradicts the assumption that {a mathematical formula}E∈Em±(M).Case (3): Neither case (1) nor case (2) applies. That is, for some {a mathematical formula}R=(R1,R2)∈Rg(E,br(M)) the U-projection is consistent, and also for some {a mathematical formula}R′=(R1′,R2′)∈Rg(E,br(M)) the {a mathematical formula}U′-projection is consistent. This means that there exists some belief state {a mathematical formula}S=(S1,…,Sn) such that {a mathematical formula}Si∈ACCi(kbi∪app(bri(M[(R1∩bU)∪cf(R2∩bU)]),S)) for all {a mathematical formula}i∈C(M) and there exists some belief state {a mathematical formula}S′=(S1′,…,Sn′) such that {a mathematical formula}Si′∈ACCi(kbi∪app(bri(M[(R1′∩bU′)∪cf(R2′∩bU′)]),S)) for all {a mathematical formula}i∈C(M).Now consider {a mathematical formula}R″=(R1″,R2″)=((R1∩bU)∪(R1′∩bU′),(R2∩bU)∪(R2′∩bU′)). First, we show that {a mathematical formula}R″∈Rg(E,br(M)). Since U and {a mathematical formula}U′ partition {a mathematical formula}C(M) it holds that {a mathematical formula}E1=(E1∩bU)∪(E1∩bU′); since {a mathematical formula}E1⊆R1, clearly {a mathematical formula}E1∩bU⊆R1∩bU. Analogously, it holds that {a mathematical formula}E1∩bU′⊆R1∩bU′. Consequently, {a mathematical formula}E1=(E1∩bU)∪(E1∩bU′)⊆(R1∩bU)∪(R1′∩bU′); hence {a mathematical formula}E1⊆R1″⊆br(M). For {a mathematical formula}R2″ observe that {a mathematical formula}(R2∪R2′)∩E2=∅ since both, {a mathematical formula}R2 and {a mathematical formula}R2′, are disjoint with {a mathematical formula}E2 by definition. Therefore {a mathematical formula}((R2∩bU)∪(R2′∩bU′))∩E2=∅; hence {a mathematical formula}R2″⊆br(M)∖E2. In conclusion, it holds that {a mathematical formula}R″∈Rg(E,br(M)).Second, we show that {a mathematical formula}S″=(S1,…,Sk,Sk+1′,…,Sn′) is an equilibrium of the MCS {a mathematical formula}M[R1″∪cf(R2″)]. Since {a mathematical formula}S″=US and as already shown, {a mathematical formula}R1∩bU⊆R1″ and {a mathematical formula}cf(R2∩bU)⊆cf(R2″), it follows by Lemma 6 that {a mathematical formula}Si∈ACCi(kbi∪app(bri(M[R1″∪cf(R2″)]),S″)) for all {a mathematical formula}i∈U. Analogously, the same is shown for {a mathematical formula}U′, i.e., {a mathematical formula}Si′∈ACCi(kbi∪app(bri(M[R1″∪cf(R2″)]),S″)) for all {a mathematical formula}i∈U′. Therefore, {a mathematical formula}S″ is an equilibrium of {a mathematical formula}M[R1″∪cf(R2″)]. Since {a mathematical formula}R″∈Rg(E,br(M)), it follows that {a mathematical formula}E∉E±(M). This is a contradiction to the assumption that {a mathematical formula}E∈Em±(M).Since all cases yield a contradiction, it follows that every {a mathematical formula}E∈Em±(M) is either U-headed or {a mathematical formula}U′-headed.  □
+     </paragraph>
+     <paragraph label="Proof of Corollary 3">
+      {a mathematical formula}(⊆) Let {a mathematical formula}Em±(M). Then by Proposition 7, E is either U-headed or {a mathematical formula}U′-headed. If E is U-headed, then by Proposition 6{a mathematical formula}E∈E±(M[bU]). Assume that {a mathematical formula}E∉Em±(M[bU]), hence some {a mathematical formula}E′⊂E exists such that {a mathematical formula}E′∈Em±(M[bU]). By Proposition 7, {a mathematical formula}E′∈Em±(M). This contradicts that {a mathematical formula}E∈Em±(M), which gives {a mathematical formula}E∈Em±(M[bU). Analogously, if E is {a mathematical formula}U′-headed, then {a mathematical formula}E∈Em±(M[bU′]). It follows that {a mathematical formula}E∈Em±(M[bU])∪Em±(M[bU′]).{a mathematical formula}(⊇) Let {a mathematical formula}E∈Em±(M[bU]) (respectively {a mathematical formula}E∈Em±(M[bU′])). Since U (respectively {a mathematical formula}U′) is a splitting set of M, from Corollary 2 it follows that {a mathematical formula}E∈Em±(M). In conclusion it holds that {a mathematical formula}Em±(M)⊇Em±(M[bU])∪Em±(M[bU′]).  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 8">
+      By Corollary 3, {a mathematical formula}Em±(M)=Em±(M[bU])∪Em±(M[bU′]), while by Theorem 2 each diagnosis is a minimal hitting set on {a mathematical formula}Em±(M). Because U and {a mathematical formula}U′ partition M, {a mathematical formula}Em±(M[bU]) and {a mathematical formula}Em±(M[bU′]) are on disjoint sets. Therefore the minimal hitting set of their unions is the pairwise combination of their minimal hitting sets. That is, {a mathematical formula}(D1,D2)∈minHSM(Em±(M)) iff {a mathematical formula}(D1,D2)=(A1∪B1,A2∪B2) with {a mathematical formula}(A1,A2)∈minHSM(Em±(M[bU]) and {a mathematical formula}(B1,B2)∈minHSM(Em±(M[bU′]). From Theorem 2 it follows that {a mathematical formula}Dm±(M)=minHSM(M). This proves the proposition.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 13">
+      (⇒) Let {a mathematical formula}S=(S1,…,Sn). Then {a mathematical formula}Si∈ACC(kbi∪Hi), where the set {a mathematical formula}Hi of active bridge rule heads at context {a mathematical formula}Ci is {a mathematical formula}app(bri,S). Bridge rule applicability depends on output beliefs only, hence {a mathematical formula}app(bri,S)=app(bri,So). Thus {a mathematical formula}So=(S1o,…,Sno) with {a mathematical formula}Sio=Si∩OUTi is an output-projected equilibrium of M.(⇐) Let {a mathematical formula}T=(T1,…,Tn), then, as T is an output-projected equilibrium, for each i, {a mathematical formula}1≤i≤n, {a mathematical formula}T∈{Sio|Si∈ACCi(kbi∪{φ(r)|r∈app(bri,T)})}, and therefore for each Q there exists some belief set {a mathematical formula}Si such that {a mathematical formula}Si∈ACCi(kbi∪{φ(r)|r∈app(bri,T)}) and {a mathematical formula}T=Si∩OUTi. If we take for each i some arbitrary {a mathematical formula}Si satisfying the above condition, we obtain {a mathematical formula}S=(S1,…,Sn). As T and S agree on all output beliefs of all contexts, {a mathematical formula}app(bri,T)=app(bri,S) and hence S is an equilibrium of M. By construction of S, it holds that also {a mathematical formula}So=T.  □(Membership) Given an MCS {a mathematical formula}M=(C1,…,Cn) we compute {a mathematical formula}OUTi for all {a mathematical formula}Ci in {a mathematical formula}O(|br(M)|), then we guess output projected belief sets {a mathematical formula}Ti⊆OUTi, {a mathematical formula}1≤i≤n, yielding an output-projected belief state T. We evaluate bridge rule applicability of all rules in T in time {a mathematical formula}O(|br(M)|) and thereby obtain a set of active bridge rule heads {a mathematical formula}Hi for each context {a mathematical formula}Ci, {a mathematical formula}1≤i≤n. Finally we check acceptability of T for all contexts {a mathematical formula}Ci, i.e., whether {a mathematical formula}T∈ACCi(kbi∪Hi)|OUTi. We accept if all contexts accept, otherwise we reject. This check is a conjunction of n independent acceptability checks of maximum complexity equal to the smallest upper bound C on context complexities which is {a mathematical formula}C=CC(M). If C is closed under conjunction, we can unite these checks into one check of complexity C over an instance of size {a mathematical formula}O(|M|). Then the overall acceptability check is in C as well. This way we check the output-projected equilibrium property for all possible output-projected equilibria. Therefore if no computation path accepts, then the MCS M is inconsistent. If there is one path that accepts, then the output-projected belief state T corresponding to the guesses on this path is an output-projected equilibrium which fulfills all conditions of Definition 13. Therefore M is consistent iff at least one path accepts. Hence if C is closed under conjunction and projection, then the guess of size {a mathematical formula}O(|br(M)|) can be projected away (i.e., incorporated into {a mathematical formula}I′, see Section 5) and the complexity of MCSeq is in C. For {a mathematical formula}CC(M)=P (which is presumably not closed under projection) the complexity of MCSeq is in NP.(NP-hardness for {a mathematical formula}CC(M)=P) We show that consistency checking in an MCS M with lower context complexity {a mathematical formula}CC(M)≥P is NP-hard. We use the part of the MCS structure in Fig. 3a labeled with MCSeq. We reduce a 3-SAT instance {a mathematical formula}F=c1∧⋯∧cn on variables {a mathematical formula}X={x1,…,xk} and clauses {a mathematical formula}ci=ci,1∨ci,2∨ci,3 with {a mathematical formula}ci,j∈X∪{¬x|x∈X} to consistency checking in an MCS {a mathematical formula}M=(CgenU,CevalF,Ccheck). Context {a mathematical formula}CgenU=(LGUESS,kbgenU,brgenU) with {a mathematical formula}kbgenU=X and {a mathematical formula}brgenU=∅ has linear complexity, while {a mathematical formula}CevalF=(LASP,kbevalF,brevalF) and {a mathematical formula}Ccheck=(LASP,kbcheck,brcheck) have context complexity P. M contains the following bridge rules:{a mathematical formula}{a mathematical formula} Hence {a mathematical formula}brevalF={ru,i|∀i:1≤i≤k} and {a mathematical formula}brcheck={rα}. The knowledge base {a mathematical formula}kbevalF is as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} The knowledge base {a mathematical formula}kbcheck is as follows:{a mathematical formula} Context {a mathematical formula}CgenU accepts all possible subsets of {a mathematical formula}X, representing all possible truth assignments for the variables {a mathematical formula}X. (C.2) imports the truth assignment into {a mathematical formula}CevalF, which evaluates F under that truth assignment using rules (C.4) and (C.5). Then {a mathematical formula}CevalF puts the belief sat in its belief set iff F is satisfied given the truth assignment accepted by {a mathematical formula}CgenU. Finally {a mathematical formula}Ccheck imports the belief nsat iff sat is not accepted at {a mathematical formula}CevalF. Therefore constraint (C.6) makes {a mathematical formula}Ccheck inconsistent, i.e., accepts no belief set, iff sat is not true in {a mathematical formula}CevalF iff there is no satisfying truth assignment for F. Therefore, if F has a satisfying assignment with variables {a mathematical formula}T⊆X set to t and variables {a mathematical formula}X∖T set to f, then M has an equilibrium {a mathematical formula}S=(SgenU,SevalF,Scheck) where {a mathematical formula}SgenU=T, {a mathematical formula}SevalF=T∪{sati|1≤i≤n}∪{sat}, and {a mathematical formula}Scheck=∅. Conversely, if M has an equilibrium {a mathematical formula}S=(SgenU,SevalF,Scheck), then {a mathematical formula}Scheck does not contain nsat due to constraint (C.6). Hence {a mathematical formula}SevalF must contain sat, thus {a mathematical formula}SevalF contains {a mathematical formula}{sat}∪{sati|1≤i≤n} due to (C.5). It follows that the set of bridge rule heads active at {a mathematical formula}CevalF corresponds to a satisfying assignment of F. This shows that MCS M is consistent iff F is a satisfiable 3-SAT instance. As the size of M is linear in the size of the formula F and 3-SAT is an NP-hard problem, hardness for equilibrium existence follows.({a mathematical formula}CC(M)-hardness) We show that consistency checking in an MCS M with lower context complexity {a mathematical formula}CC(M)≥C is C-hard if C is a class with complete problems that is closed under conjunction and projection. For that we use part of the MCS structure labeled with MCSeq in Fig. 3b. We reduce context acceptability checking, i.e., an instance {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca=(kba,bra,La) with {a mathematical formula}INa, {a mathematical formula}OUTa and context complexity {a mathematical formula}CC(Ca) to consistency checking in an MCS {a mathematical formula}M=(Ca′,Ccheck) such that the context complexity {a mathematical formula}CC(Ca′)=CC(Ca) and {a mathematical formula}CC(Ccheck)=P. Intuitively, {a mathematical formula}Ca′ gets input {a mathematical formula}Ha, bridge rule {a mathematical formula}rα is applicable only if {a mathematical formula}Sa is accepted by {a mathematical formula}Ha, and {a mathematical formula}Ccheck verifies whether {a mathematical formula}rα is applicable. Then M is consistent iff {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance. Formally, {a mathematical formula}Ca′=(kba∪Ha,∅,La) uses knowledge base and logic from {a mathematical formula}Ca, while {a mathematical formula}Ccheck=(kbcheck,brcheck,LASP) use the specific logic {a mathematical formula}LASP that can be decided in P. Bridge rules of M are as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} The knowledge base {a mathematical formula}kbcheck is as follows:{a mathematical formula} Bridge rule {a mathematical formula}ren ensures that {a mathematical formula}Ccheck fulfills our assumption that a context without input is consistent. Wlog. we assume that {a mathematical formula}Ca accepts some belief set given input {a mathematical formula}Ha. {a mathematical formula}Ca′ contains the logic of {a mathematical formula}Ca and its knowledge base already contains bridge rule heads {a mathematical formula}Ha. Therefore {a mathematical formula}Ca′ accepts a belief set {a mathematical formula}Safull, such that {a mathematical formula}Safull∪OUTa=Sa, iff {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance. Therefore, belief state {a mathematical formula}S=(Safull,{equalSa′,en}) is an equilibrium iff {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance. All belief states where {a mathematical formula}Ca′ accepts a belief set T with {a mathematical formula}T∩OUTa≠Sa trigger constraint (C.9) and therefore lead to an inconsistency. Therefore M has an equilibrium, and this equilibrium is S iff context {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance for context acceptability checking. We thus have reduced context acceptability checking to consistency checking in M and hardness follows. For an alternative reduction showing NP-hardness for P-contexts see [38, p. 57].  □(Membership) Given MCS M and {a mathematical formula}D1,D2⊆br(M), we compute {a mathematical formula}M′=M[br(M)∖D1∪cf(D2)] and return the result of deciding MCSeq on {a mathematical formula}M′. By Definition 4, this returns ‘yes’ iff {a mathematical formula}(D1,D2)∈D±(M). The transformation can be done in time {a mathematical formula}O(|M|) therefore MCSd is in the same complexity class as MCSeq.(Hardness) Deciding whether {a mathematical formula}(∅,∅) is a diagnosis of M can be decided by checking consistency of M, because {a mathematical formula}(∅,∅)∈D±(M) iff M is consistent. Therefore MCSd is as hard as MCSeq for respective context complexity.  □(Membership) Given an MCS M and {a mathematical formula}D1,D2⊆br(M), we solve two independent decision problems: (a) we decide whether {a mathematical formula}(D1,D2) is a diagnosis of M, and (b) we check whether a smaller diagnosis {a mathematical formula}(D′,D″)⊂(D1,D2) exists in M. We return ‘yes’ if (a) returns ‘yes’ and (b) returns ‘no’. Thus, this procedure returns ‘yes’ iff (a) {a mathematical formula}(D1,D2) is a diagnosis and (b) no ⊆-smaller diagnosis exists. Therefore the computation yields the correct result. For (a) we decide MCSd on M and {a mathematical formula}(D1,D2). For (b) we guess for each bridge rule in {a mathematical formula}D1 whether it is contained in {a mathematical formula}D′, and for each bridge rule in {a mathematical formula}D2 whether it is contained in {a mathematical formula}D″. Then we continue with the decision procedure MCSd on M and {a mathematical formula}(D′,D″), i.e., we guess presence of output belief sets, evaluate bridge rule applicability, and check acceptability for each context. Consequently for deciding (b) we decide the complement of a polynomial projection of MCSd. Therefore {a mathematical formula}MCSdm is in the complexity class of solving the MCSd problem and independently solving the complement of a polynomially projected MCSd problem. Hence if {a mathematical formula}CC(M) is closed under conjunction and projection, then the complexity of {a mathematical formula}MCSdm is in {a mathematical formula}D(CC(M)). For {a mathematical formula}CC(M)=P (which is presumably not closed under projection) the complexity of {a mathematical formula}MCSdm is in {a mathematical formula}D1P.({a mathematical formula}DP-hardness for {a mathematical formula}CC(M)=P) We reuse ideas from the MCSeq hardness proof for 3-SAT, but we now use the complete topology shown in Fig. 3a. We reduce two 3-SAT instances F and G on variables {a mathematical formula}X and {a mathematical formula}Y, respectively, to minimal diagnosis recognition on MCS {a mathematical formula}M=(CgenV,CevalF,CgenU,CevalG,Ccheck). Intuitively, {a mathematical formula}CgenU and {a mathematical formula}CevalF provide NP-hardness for satisfiability of F, while {a mathematical formula}CgenV and {a mathematical formula}CevalG provide coNP-hardness for unsatisfiability of G. {a mathematical formula}CgenU and {a mathematical formula}CevalF are constructed from F exactly as for the proof of MCSeq hardness. Similarly, {a mathematical formula}CgenV and {a mathematical formula}CevalG are constructed from G with bridge rules {a mathematical formula}rv,j transferring a guessed set {a mathematical formula}V⊆Y from {a mathematical formula}CgenV to {a mathematical formula}CevalG. The bridge rules in M are as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Context {a mathematical formula}Ccheck has the following knowledge base {a mathematical formula}kbcheck:{a mathematical formula}{a mathematical formula} If F and G are both satisfiable, M is consistent so {a mathematical formula}(∅,∅)∈Dm±(M). If F is satisfiable and G is unsatisfiable, M is inconsistent and a minimal diagnosis for M is {a mathematical formula}({rγ},∅). If F and G are both unsatisfiable, M is inconsistent and a minimal diagnosis is {a mathematical formula}({rα,rγ},∅)∈Dm±(M). If F is unsatisfiable and G is satisfiable, M is inconsistent; {a mathematical formula}({rγ},∅) is no minimal diagnosis, because every diagnosis containing {a mathematical formula}rγ in {a mathematical formula}D1 must also contain {a mathematical formula}rα in {a mathematical formula}D1 to restore consistency in M. Therefore {a mathematical formula}({rγ},∅) is a minimal diagnosis of M iff F is satisfiable and G is unsatisfiable. Therefore recognizing a minimal diagnosis in an MCS with {a mathematical formula}CC(M)=P is hard for {a mathematical formula}DP. Note that it is possible to do this reduction with one context that evaluates F and G and checks the result, using bridge rules that guess U and V and bridge rules that individually activate satisfiability checking for F and G. However this would make the reduction less readable.({a mathematical formula}D(CC(M))-hardness) We show that recognizing minimal diagnoses in an MCS M with lower context complexity {a mathematical formula}CC(M)≥C is hard for {a mathematical formula}D(C) if C is a class with complete problems that is closed under conjunction and projection. We reduce two context complexity check instances {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca with {a mathematical formula}INa, {a mathematical formula}OUTa and {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb with {a mathematical formula}INb, {a mathematical formula}OUTb to an MCS {a mathematical formula}M=(Ca′,Cb′,Ccheck) with the topology shown in Fig. 3b. Similar to the generic hardness reduction for MCSeq, we reduce {a mathematical formula}Ha and {a mathematical formula}Ca=(kba,bra,La) to the context {a mathematical formula}Ca′=(kba∪Ha,∅,La) and we reduce {a mathematical formula}Hb and {a mathematical formula}Cb=(kbb,brb,Lb) to the context {a mathematical formula}Cb′=(kbb∪Hb,∅,Lb). Then {a mathematical formula}CC(Ca′)=CC(Ca) and {a mathematical formula}CC(Cb′)=CC(Cb). Furthermore {a mathematical formula}Ca′ accepts a belief set {a mathematical formula}Safull with {a mathematical formula}Safull∩OUTa=Sa iff {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance. Similarly {a mathematical formula}Cb′ accepts a belief set {a mathematical formula}Sbfull with {a mathematical formula}Sbfull∩OUTb=Sb iff {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb is a ‘yes’ instance. The bridge rules {a mathematical formula}brcheck are as follows.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The knowledge base {a mathematical formula}kbcheck is as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} Bridge rule {a mathematical formula}ren ensures that {a mathematical formula}Ccheck fulfills our assumption that a context without input is consistent. Wlog. we assume that {a mathematical formula}Ca and {a mathematical formula}Cb accept some belief set given input {a mathematical formula}Ha and {a mathematical formula}Hb, respectively. Bridge rule {a mathematical formula}rα adds {a mathematical formula}equalSa′ to {a mathematical formula}Ccheck iff the first instance {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca we reduce from is a ‘yes’ instance. The same is true for {a mathematical formula}rγ, {a mathematical formula}equalSb′ and the second instance. Therefore there exists an equilibrium {a mathematical formula}S=(Safull,Sbfull,{equalSa′,equalSb′,en}) in M, i.e., {a mathematical formula}(∅,∅)∈Dm±(M), iff both instances are ‘yes’ instances. Moreover, if the first instance is a ‘yes’ instance and the second instance is a ‘no’ instance, then the system is inconsistent and there is a minimal diagnosis {a mathematical formula}(∅,{rγ})∈Dm±(M). If both instances are ‘no’ instances, activating {a mathematical formula}equalSb′ is not sufficient for restoring consistency, and a minimal diagnosis for M is then {a mathematical formula}(∅,{rα,rγ}). Therefore {a mathematical formula}(∅,{rγ}) is a minimal diagnosis for M iff {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance and {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb is a ‘no’ instance of context acceptability checking. Therefore we have established that {a mathematical formula}MCSdm is hard for {a mathematical formula}D(C). Note that by nesting contexts {a mathematical formula}Ca′ and {a mathematical formula}Cb′ into a new context it is possible, although more complicated, to obtain a reduction with just one context that is hard for {a mathematical formula}D(C).  □(Membership) For deciding {a mathematical formula}(E1,E2)∈E±(M), we guess {a mathematical formula}R1,R2⊆br(M) and check whether {a mathematical formula}E1⊆R2 and {a mathematical formula}R2⊆br(M)∖E2. If not, we immediately reject, otherwise we decide MCSeq of {a mathematical formula}M[R1∪cf(R2)]. Then all execution paths reject iff {a mathematical formula}(E1,E2) is an explanation. Therefore, if {a mathematical formula}CC(M) is a class with complete problems that is closed under conjunction and projection, the complexity is in co-{a mathematical formula}CC(M). For {a mathematical formula}CC(M)=P (which is presumably not closed under projection) we obtain that MCSe is in coNP.(coNP-hardness for {a mathematical formula}CC(M)=P) We reuse the MCSeq hardness proof where a 3-SAT instance F was reduced to MCS {a mathematical formula}M=(CgenU,CevalF,Ccheck). Then satisfiability of F implies consistency, therefore {a mathematical formula}E±(M)=∅, i.e., no inconsistency explanations exist. Unsatisfiability of F implies inconsistency, and in that case, {a mathematical formula}({rα},∅) is an inconsistency explanation of M. Therefore {a mathematical formula}({rα},∅) is recognized as inconsistency explanation of M iff F is unsatisfiable. Therefore the problem MCSe in an MCS with {a mathematical formula}CC(M)≥P is hard for coNP.(co-{a mathematical formula}CC(M)-hardness) We reuse the MCSeq hardness proof where we reduced an instance {a mathematical formula}I=(Ha,Sa), {a mathematical formula}Ca to an MCS {a mathematical formula}MI=(Ca′,Ccheck). If I is a ‘yes’ instance, then {a mathematical formula}MI is consistent so no inconsistency explanation exists. If I is a ‘no’ instance, an inconsistency explanation of {a mathematical formula}MI is {a mathematical formula}({ren},{rγ})∈E±(MI). Therefore the problem MCSe in an MCS M with lower context complexity {a mathematical formula}CC(M)≥C is hard for co-C if C is a class with complete problems that is closed under conjunction and projection.  □We write {a mathematical formula}(A1,A2)⊂(B1,B2) iff both, {a mathematical formula}(A1,A2)⊆(B1,B2) and {a mathematical formula}(A1,A2)≠(B1,B2).{a mathematical formula}(⇒) Assume {a mathematical formula}Q=(Q1,Q2) is a minimal explanation. Contrary to the lemma, assume there exists another explanation {a mathematical formula}Q′, such that {a mathematical formula}Q′=(Q1,Q2∖{r}) with {a mathematical formula}r∈Q2 or {a mathematical formula}Q′=(Q1∖{r},Q2) with {a mathematical formula}r∈Q1. Then {a mathematical formula}Q′⊂Q, therefore Q is not minimal, contradicting the assumption.{a mathematical formula}(⇐) Assume an explanation {a mathematical formula}Q=(Q1,Q2), and no pair {a mathematical formula}(Q1,Q2∖{r}) with {a mathematical formula}r∈Q2 or {a mathematical formula}(Q1∖{r},Q2) with {a mathematical formula}r∈Q1 is an explanation. Contrary to the Lemma, assume another explanation {a mathematical formula}P=(P1,P2) exists with {a mathematical formula}P⊂Q. By {a mathematical formula}P⊂Q, either a) {a mathematical formula}P1⊂Q1 and {a mathematical formula}P2⊆Q2 or b) {a mathematical formula}P1⊆Q1 and {a mathematical formula}P2⊂Q2. For a) we create {a mathematical formula}T′=(Q1∖{r},Q2) for some {a mathematical formula}r∈Q1∖P1. Then {a mathematical formula}P⊆T′⊂Q. Due to Corollary 1, {a mathematical formula}T′ is an explanation, contradicting the initial assumption. The case b) is similar.  □(Membership) We can decide {a mathematical formula}(E1,E2)∈Em±(M) by using Lemma 3, i.e., we decide (1) whether {a mathematical formula}(E1,E2)∈E±(M), and (2) whether all of {a mathematical formula}(E1,E2∖{r|r∈E2})∉E±(M) and {a mathematical formula}(E1∖{r|r∈E1,E2})∉E±(M) are true. Note that the number of {a mathematical formula}E±-checks in (2) is linear in the size of the instance, hence we obtain the following membership results: if the upper context complexity {a mathematical formula}CC(M) is a class with complete problems that is closed under conjunction and projection, deciding (1) is in co-{a mathematical formula}CC(M) and deciding (2) is in {a mathematical formula}CC(M), therefore {a mathematical formula}MCSem is in {a mathematical formula}D(CC(M)). For upper context complexity {a mathematical formula}CC(M)=P (which is not closed under projection) deciding (1) is in coNP and deciding (2) is in NP and therefore {a mathematical formula}MCSem is in {a mathematical formula}D1P.({a mathematical formula}DP-hardness for {a mathematical formula}CC(M)=P) We use the same topology as for the {a mathematical formula}MCSdm hardness proof, i.e., the complete topology shown in Fig. 3a. We reduce two 3-SAT instances F and G on variables {a mathematical formula}X and {a mathematical formula}Y, respectively, to minimal explanation recognition on MCS {a mathematical formula}M=(CgenV,CevalF,CgenU,CevalG,Ccheck). Again, {a mathematical formula}CgenU and {a mathematical formula}CevalF provide NP-hardness for satisfiability of F, while {a mathematical formula}CgenV and {a mathematical formula}CevalG provide coNP-hardness for unsatisfiability of G. All contexts except for {a mathematical formula}Ccheck are constructed from F and G exactly as in the {a mathematical formula}MCSdm hardness proof. Wlog. we assume that F is not valid. The bridge rules in M are as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Context {a mathematical formula}Ccheck has the following knowledge base {a mathematical formula}kbcheck:{a mathematical formula} If G is satisfiable, M is consistent, so {a mathematical formula}Em±(M)=∅. If F and G are unsatisfiable, the belief sat is never accepted at {a mathematical formula}CevalF; therefore the bridge rule {a mathematical formula}rβ is sufficient for creating inconsistency in M (i.e., {a mathematical formula}M[{rβ}]⊨⊥) and forcing {a mathematical formula}rγ to become applicable is the only way to restore consistency. Therefore if F and G are unsatisfiable, {a mathematical formula}({rβ},{rγ})∈E±(M). If F is satisfiable and G is unsatisfiable, the belief sat may or may not be accepted at {a mathematical formula}CevalF, depending on the input {a mathematical formula}CevalF gets from {a mathematical formula}CgenU. Therefore both bridge rules {a mathematical formula}rα and {a mathematical formula}rβ are required for ensuring inconsistency in M, and they are also sufficient. Again, forcing {a mathematical formula}rγ to become applicable is the only way to restore consistency. Therefore if F is satisfiable and G is unsatisfiable, then {a mathematical formula}({rα,rβ},{rγ})∈E±(M). Thus {a mathematical formula}({rα,rβ},{rγ}) is a minimal inconsistency explanation for M iff F is satisfiable and G is unsatisfiable. Note that if G is satisfiable, no explanations exist, while if F is unsatisfiable, the above explanation exists but is no longer minimal. Therefore recognizing a minimal inconsistency explanation in an MCS with {a mathematical formula}CC(M)=P is hard for {a mathematical formula}DP. ({a mathematical formula}D(CC(M))-hardness) We use the same topology as for the {a mathematical formula}MCSdm hardness proof, i.e., the complete topology shown in Fig. 3b. We also use a very similar reduction. The only change is in the checking context {a mathematical formula}Ccheck. We reduce two context complexity check instances {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca with {a mathematical formula}INa, {a mathematical formula}OUTa and {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb with {a mathematical formula}INb, {a mathematical formula}OUTb to an MCS {a mathematical formula}M=(Ca′,Cb′,Ccheck). The bridge rules {a mathematical formula}brcheck are as follows.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Note that {a mathematical formula}rα and {a mathematical formula}rβ have the same body but different heads, moreover only {a mathematical formula}rβ differs from the {a mathematical formula}MCSdm-reduction. The knowledge base {a mathematical formula}kbcheck is as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} The bridge rule {a mathematical formula}ren ensures that {a mathematical formula}Ccheck fulfills our assumption that a context without input is consistent. Wlog. we assume that {a mathematical formula}Ca and {a mathematical formula}Cb accept some belief set given input {a mathematical formula}Ha and {a mathematical formula}Hb, respectively. The bridge rule {a mathematical formula}rα adds {a mathematical formula}equalSa′ to {a mathematical formula}Ccheck iff the first instance {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance. Under the same condition, {a mathematical formula}rβ adds make_inc. The bridge rule {a mathematical formula}rγ adds {a mathematical formula}equalSb′ to {a mathematical formula}Ccheck iff the second instance {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb is a ‘yes’ instance. In that case, M is consistent, i.e., {a mathematical formula}Em±(M)=∅, because {a mathematical formula}rγ becomes applicable and this deactivates constraint (C.34) such that {a mathematical formula}Ccheck can no longer become inconsistent. If both instances are ‘no’ instances, M is inconsistent and for explaining this inconsistency it is sufficient to have {a mathematical formula}ren present and the heads of the bridge rules {a mathematical formula}rα and {a mathematical formula}rγ absent. Therefore, in that case, {a mathematical formula}({ren},{rα,rγ}) is a minimal inconsistency explanation for M. Finally, if {a mathematical formula}(Ha,Sa), {a mathematical formula}Ca is a ‘yes’ instance and {a mathematical formula}(Hb,Sb), {a mathematical formula}Cb is a ‘no’ instance, M is inconsistent and for this inconsistency it is sufficient to have {a mathematical formula}ren and {a mathematical formula}rβ present and heads of bridge rules {a mathematical formula}rα and {a mathematical formula}rγ absent, so {a mathematical formula}({ren,rβ},{rα,rγ})∈Em±(M). Therefore {a mathematical formula}({ren,rβ},{rα,rγ})∈Em±(M) iff the first instance is a ‘yes’ instance and the second instance is a ‘no’ instance. Note that if the second instance is a ‘yes’ instance, no explanations exist, while if the first instance is a ‘no’ instance, the above explanation exists but is no longer minimal. Therefore we have established that {a mathematical formula}MCSem is hard for {a mathematical formula}D(C) where {a mathematical formula}CC(M)=C if C is a class with complete problems that is closed under conjunction and projection.  □
+     </paragraph>
+     <section>
+      <section>
+       <section>
+        Semantics of hex-programs
+        <paragraph>
+         The (ordinary) Herbrand base{a mathematical formula}HBPo of a hex-program P is the set of all ordinary atoms {a mathematical formula}p(c1,…,cn) occurring in P. An interpretation I of P is any subset {a mathematical formula}I⊆HBPo; I satisfies (is a model of)
+        </paragraph>
+        <list>
+         <list-item label="•">
+          an atom α, denoted {a mathematical formula}I⊨α, if {a mathematical formula}α∈I for an ordinary atom α, or if {a mathematical formula}f&amp;g(I,v→,w→)=1 in the case where {a mathematical formula}α=&amp;g[v→](w→) and {a mathematical formula}F&amp;g:2HBPo×Cn×Cm→{0,1} is a (fixed) {a mathematical formula}(|v→|+|w→|+1)-ary Boolean function associated with {a mathematical formula}&amp;g;
+         </list-item>
+         <list-item label="•">
+          a rule r of form (2) ({a mathematical formula}I⊨r), if either {a mathematical formula}I⊨αi for some {a mathematical formula}αi, or {a mathematical formula}I⊨βj for some {a mathematical formula}j∈{m+1,…,n}, or {a mathematical formula}I⊭βi for some {a mathematical formula}i∈{1,…,m};
+         </list-item>
+         <list-item label="•">
+          a program P ({a mathematical formula}I⊨P), iff {a mathematical formula}I⊨r for all {a mathematical formula}r∈P.
+         </list-item>
+        </list>
+        <paragraph>
+         The FLP-reduct[45] of a program P w.r.t. an interpretation I is the set {a mathematical formula}fPI⊆P of all rules r of form (2) in P such that {a mathematical formula}I⊨βi for all {a mathematical formula}i∈{1,…,m} and {a mathematical formula}I⊭βj for all {a mathematical formula}j∈{m+1,…,n}, i.e., I satisfies the body of (2). Then I is an answer set of P iff I is a ⊆-minimal model of {a mathematical formula}fPI. We denote by {a mathematical formula}AS(P) the collection of all answer sets of P. For P without external atoms, this coincides with answer sets as in [52], for a discussion on the relation between FLP-reduct and GL-reduct see [45].
+        </paragraph>
+        <paragraph label="Proof">
+         For proving the correctness of our hex encodings, we use some lemmas. Let{a mathematical formula}P=R∪Cbe ahexprogram consisting of an ordinaryhex-program R and a set of constraints C which contain external atoms. Then for every{a mathematical formula}I∈AS(P)it holds that{a mathematical formula}I∈AS(R)and I does not satisfy the body of any constraint in C.From {a mathematical formula}I∈AS(P) we know that {a mathematical formula}I⊨P and therefore {a mathematical formula}I⊨R and {a mathematical formula}I⊨C. From the latter we infer that I does not satisfy the body of any constraint in C (i.e., the second claim). Thus the reduct {a mathematical formula}fPI does not contain any constraint from C. Hence {a mathematical formula}fPI=fRI and I is a minimal model of {a mathematical formula}fRI as it is a minimal model of {a mathematical formula}fPI.  □Let P be ahexprogram, and let{a mathematical formula}I∈AS(P)be an answer set of P. Then for every atom{a mathematical formula}a∈Iit holds that there is a rule{a mathematical formula}r∈Pof form(2)with{a mathematical formula}a∈{a1,…,ak}and I satisfies the body of r.Assume towards a contradiction that {a mathematical formula}I∈AS(P), {a mathematical formula}a∈I and no rule {a mathematical formula}r∈P is such that a is in the head of r and I satisfies the body of r. Due to the latter assumption, no rule that contains a in the head is contained in {a mathematical formula}fPI. Since I is an answer set of P, {a mathematical formula}I⊨fPI, therefore the bodies of all rules in {a mathematical formula}fPI are satisfied by I. Hence every rule in {a mathematical formula}fPI has a nonempty intersection of its head with I (otherwise {a mathematical formula}I⊭fPI). Because no rule in {a mathematical formula}fPI contains a in the head, it follows that {a mathematical formula}I∖{a}⊨fPI, therefore I is no minimal model of {a mathematical formula}fPI and no answer set, which is a contradiction.  □
+        </paragraph>
+        <paragraph label="Proof of Theorem 4">
+         (i) Given {a mathematical formula}I∈AS(PpD(M)), due to Lemma 7 we have (a) {a mathematical formula}I∈AS(R) where R contains rules (3), (4), (5), and (6); and (b) no constraint (7) has a satisfied body.In R, only rules (3) have {a mathematical formula}d1 and {a mathematical formula}d2 atoms in the head, therefore {a mathematical formula}(DI,1,DI,2) is such that {a mathematical formula}DI,1, {a mathematical formula}DI,2⊆br(M). In R, only rules (4) have {a mathematical formula}presi and {a mathematical formula}absi atoms in the head, therefore {a mathematical formula}Ai(I)⊆OUTi for each context {a mathematical formula}Ci∈c(M). Hence {a mathematical formula}A(I) is an output-projected belief state of M. Due to Lemma 8, I contains {a mathematical formula}bi(s) iff at least one of the following is true: {a mathematical formula}d2(r)∈I and accordingly {a mathematical formula}r∈DI,2, or there is at least one bridge rule {a mathematical formula}r∈br(M) such that {a mathematical formula}d1(r)∉I and in the corresponding rule (5) we have that for all i, {a mathematical formula}1≤i≤j, {a mathematical formula}presci(pi)∈I, and for all l, {a mathematical formula}j&lt;l≤m, {a mathematical formula}prescl(pl)∉I; this holds iff {a mathematical formula}r∉DI,1 and {a mathematical formula}r∈app(bri(M),A(I)), which holds iff {a mathematical formula}r∈app(bri(M)∖DI,1,A(I)). Therefore, for each context {a mathematical formula}Ci∈c(M) we have {a mathematical formula}Bi(I)={φ(r)|r∈app(bri(M)∖DI,1,A(I))}∪{φ(r)|r∈DI,2}. The condition-free bridge rules are always applicable, therefore {a mathematical formula}Bi(I)={φ(r)|r∈app(bri(M[br(M)∖DI,1∪cf(DI,2)]),A(I))}. Note that in this expression, first all bridge rules of M are modified using {a mathematical formula}DI,1 and {a mathematical formula}DI,2, then the bridge rules of context {a mathematical formula}Ci of the result are extracted using {a mathematical formula}bri(⋅). From (b) we know that for every context {a mathematical formula}Ci∈c(M), the external atom in (7) returns false, therefore {a mathematical formula}Ai(I)∈ACCi(kbi∪Bi(I))|OUTi for every {a mathematical formula}Ci∈c(M). Substituting {a mathematical formula}Bi(I) we obtain {a mathematical formula}Ai(I)∈ACCi(kbi∪{φ(r)|r∈app(bri(M[br(M)∖DI,1∪cf(DI,2)]),A(I))})|OUTi. Therefore {a mathematical formula}A(I) is an output-projected equilibrium of MCS {a mathematical formula}M[br(M)∖DI,1∪cf(DI,2)] and it holds that {a mathematical formula}(DI,1,DI,2)∈D±(M).(ii) Given a diagnosis {a mathematical formula}(D1,D2)∈D±(M) and given an output-projected equilibrium {a mathematical formula}T=(T1,…,Tn) of {a mathematical formula}M′=M[br(M)∖D1∪cf(D2)] we assemble the interpretation{a mathematical formula} where {a mathematical formula}Hi=app(bri(M′),T). Since T is an output-projected equilibrium, I satisfies constraints (7), therefore they are not part of the reduct {a mathematical formula}fPpD(M)I. By construction of I, those rules in (5) where {a mathematical formula}r∈D1 or r is not applicable in {a mathematical formula}A(I) have an unsatisfied rule body, so these rules are not part of the reduct. Those rules in (6) where {a mathematical formula}r∈D2 have a satisfied rule body, so these rules are always part of the reduct. Other rules in (5) or (6) are satisfied by I as their body is not satisfied. For each applicable bridge rule r, the according head atom {a mathematical formula}bi(s) is part of I, and {a mathematical formula}PpD(M) contains no cyclic dependencies between rules (hence neither does the reduct {a mathematical formula}fPpD(M)I). Therefore I is a minimal model of rules (5) and (6) in the reduct. Rules (3) and (4) are contained in the reduct, and I by construction is a minimal model of these rules. Therefore, I is a model of {a mathematical formula}PpD(M) and a minimal model of {a mathematical formula}fPpD(M)I, hence {a mathematical formula}I∈AS(PpD(M)).  □
+        </paragraph>
+        <paragraph>
+         For the following proofs we assume {a mathematical formula}M=(C1,…,Cn) to be an arbitrary but fixed MCS and {a mathematical formula}PPE(M) to be the explanation encoding for M.
+        </paragraph>
+        <paragraph>
+         Given a hex rule r of form (2), we write {a mathematical formula}BHEX(r)={β1,…,βn} and {a mathematical formula}HHEX(r)={α1,…,αk} to denote body and head of r respectively. For an interpretation I and a hex rule r, we write {a mathematical formula}I⊨BHEX(r) iff {a mathematical formula}I⊨βi for all {a mathematical formula}i∈{1,…,m} and {a mathematical formula}I⊭βj for all {a mathematical formula}j∈{m+1,…,n}. Similarly, we write {a mathematical formula}I⊨HHEX(r) iff {a mathematical formula}I⊨αi for some {a mathematical formula}i∈{1,…,k}.
+        </paragraph>
+        <paragraph>
+         For referring to a specific rule of {a mathematical formula}PPE(M), we write {a mathematical formula}trN(v1,…,vℓ) where N is the rule of form (N) instantiated with {a mathematical formula}v1,…,vℓ. We denote by {a mathematical formula}TRn(M) the set of all instantiations of a rule w.r.t. an MCS M. For example, let {a mathematical formula}r7∈br(M), then {a mathematical formula}tr10(r7) denotes the hex rule {a mathematical formula}r1(r7)←e1(r7)., while {a mathematical formula}TR10(M)={tr10(r)|r∈br(M)}. For brevity, we write only those values necessary to identify the instantiation, e.g., for rules of form (15) we write {a mathematical formula}tr15(r) where {a mathematical formula}r∈br(M); for a rule of form (23), we write {a mathematical formula}tr23(i,b) where {a mathematical formula}(i:b) is the head of some {a mathematical formula}r∈br(M).
+        </paragraph>
+        <paragraph>
+         We say an interpretation I consistently encodes an explanation candidate {a mathematical formula}E=(E1,E2) where {a mathematical formula}E1={r∈br(M)|e1(r)∈I}, {a mathematical formula}E2={r∈br(M)|e2(r)∈I}, for all {a mathematical formula}r∈br(M): (i) {a mathematical formula}e1(r)∈I iff {a mathematical formula}ne1(r)∉I, and (ii) {a mathematical formula}e2(r)∈I iff {a mathematical formula}ne2(r)∉I.
+        </paragraph>
+        <paragraph label="Proof">
+         Every answer set I of{a mathematical formula}PPE(M)consistently encodes an explanation candidate.Let I be an answer set of {a mathematical formula}PPE(M). Then, by definition I must be a minimal model of {a mathematical formula}fPPE(M)I. Assume for contradiction that I does not consistently encode an explanation candidate. Then, for some {a mathematical formula}r∈br(M) one of the following cases holds.
+        </paragraph>
+        <list>
+         <list-item label="(i)">
+          {a mathematical formula}e1(r)∈I and {a mathematical formula}ne1(r)∈I: Consider {a mathematical formula}I′=I∖{e1(r)}. For all {a mathematical formula}tr∈fPPE(M)I with {a mathematical formula}e1(r)∉HHEX(tr) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}I⊨tr. There is only one rule {a mathematical formula}tr′ such that {a mathematical formula}e1(r)∈HHEX(tr′), namely {a mathematical formula}tr′=tr8(r). Since {a mathematical formula}ne1(r)∈I′ and {a mathematical formula}ne1(r)∈HHEX(tr8(r)) it holds that {a mathematical formula}I′⊨tr, hence {a mathematical formula}I′⊨fPPE(M)I. Since {a mathematical formula}I′⊂I this contradicts that I is a minimal model of {a mathematical formula}fPPE(M)I.
+         </list-item>
+         <list-item label="(ii)">
+          {a mathematical formula}e1(r)∉I and {a mathematical formula}ne1(r)∉I. Since {a mathematical formula}BHEX(tr8(r))=∅, it holds that {a mathematical formula}tr8(r)∈fPPE(M)I while {a mathematical formula}I⊭HHEX(tr8(r)). Hence, in contradiction to the assumption, it holds that {a mathematical formula}I⊭fPPE(M)I.
+         </list-item>
+         <list-item label="(iii)">
+          {a mathematical formula}e2(r)∈I and {a mathematical formula}ne2(r)∈I: This is similar to case (i), just replace e1 by e2 and {a mathematical formula}tr8(r) by {a mathematical formula}tr9(r).
+         </list-item>
+         <list-item label="(iv)">
+          {a mathematical formula}e2(r)∉I and {a mathematical formula}ne2(r)∉I: This is similar to case (ii), just replace e1 by e2 and {a mathematical formula}tr8(r) by {a mathematical formula}tr9(r).
+         </list-item>
+        </list>
+        <paragraph label="Lemma 10">
+         If I is an answer set for{a mathematical formula}PPE(M)and{a mathematical formula}E=(E1,E2)is the explanation candidate consistently encoded by I, then{a mathematical formula}fPPE(M)Iexactly contains
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          {a mathematical formula}TR14(M)∪⋯∪TR31(M).
+         </list-item>
+         <list-item label="2.">
+          {a mathematical formula}{tr10(r)|r∈E1}∪{tr11(r)|r∈br(M)∖E1}∪{tr12(r)|r∈E2}∪{tr13(r)|r∈br(M)∖E2}.
+         </list-item>
+        </list>
+        <paragraph label="Proof">
+         Let I be an answer set for {a mathematical formula}PPE(M) encoding an explanation candidate {a mathematical formula}E=(E1,E2).1. By the constraint rule (32), it holds that {a mathematical formula}spoil∈I, thus rules {a mathematical formula}TR28(M)∪⋯∪TR31(M) are in {a mathematical formula}fPPE(M)I. Let {a mathematical formula}tr∈TR28(M)∪⋯∪TR31(M), then it holds that {a mathematical formula}I⊨BHEX(tr), hence it follows that {a mathematical formula}I⊨HHEX(tr). Therefore, {a mathematical formula}I⊨BHEX(tr′) and {a mathematical formula}tr′∈fPPE(M)I, where {a mathematical formula}tr′∈TR14(M)∪⋯∪TR27(M). Specifically, it holds for {a mathematical formula}tr24(i), where {a mathematical formula}1≤i≤n, that {a mathematical formula}I⊨BHEX(tr24(i)), because {a mathematical formula}spoil∈I which implies that {a mathematical formula}f&amp;con_outi′(I,spoil,presi,ini)=0.2. Let {a mathematical formula}r∈E1. Then {a mathematical formula}e1(r)∈I and {a mathematical formula}ne1(r)∉I since I consistently encodes E. Thus, {a mathematical formula}I⊨BHEX(tr10(r)), therefore {a mathematical formula}tr10(r)∈fPPE(M)I. Furthermore, {a mathematical formula}I⊭BHEX(tr11(r)), hence {a mathematical formula}tr11(r)∉fPPE(M)I.Let {a mathematical formula}r∈br(M)∖E1. Then {a mathematical formula}e1(r)∉I and {a mathematical formula}ne1(r)∈I since I consistently encodes E. Thus, {a mathematical formula}I⊨BHEX(tr11(r)), therefore {a mathematical formula}tr11(r)∈fPPE(M)I. Furthermore, {a mathematical formula}I⊭BHEX(tr10(r)), hence {a mathematical formula}tr10(r)∉fPPE(M)I.The remaining cases for {a mathematical formula}E2 are analogous.  □
+        </paragraph>
+        <paragraph label="Definition 17">
+         An interpretation I of {a mathematical formula}PPE(M) is called contradiction-free (regarding {a mathematical formula}r1,nr1,r2,nr2,presi,absi) if and only if the following conditions hold:{a mathematical formula}We say that a contradiction-free interpretation I consistently encodes a belief state {a mathematical formula}S=(S1,…,Sn) and a pair {a mathematical formula}(R1,R2) of sets of bridge rules such that: {a mathematical formula}a∈Si iff {a mathematical formula}presi(a)∈I, {a mathematical formula}r∈R1 iff {a mathematical formula}r1(r)∈I, and {a mathematical formula}r∈R2 iff {a mathematical formula}r2(r)∈I.
+        </paragraph>
+        <paragraph>
+         Notice that rule (32) and Lemma 10 ensure that no answer set I of {a mathematical formula}PPE(M) is contradiction-free, because it holds that {a mathematical formula}spoil∈I and the rules of {a mathematical formula}TR28(M)∪⋯∪TR31(M) ensure the saturation of I. The notion, however, is useful for reasoning about (minimal) models of {a mathematical formula}fPPE(M)I.
+        </paragraph>
+        <paragraph label="Lemma 11">
+         {a mathematical formula}PPE(M) guarantees that a contradiction-free interpretation I that encodes a belief state S and a pair {a mathematical formula}(R1,R2) of sets of bridge rules also contains a representation of the set of heads of bridge rules applicable under S and {a mathematical formula}(R1,R2), as the following lemma shows. Let I be a contradiction-free interpretation that encodes the belief state{a mathematical formula}S=(S1,…,Sn)of M, and let{a mathematical formula}(R1,R2)such that{a mathematical formula}R1,R2⊆br(M). If I is a minimal model of{a mathematical formula}P⊆PPE(M)such that{a mathematical formula}TR15(M)∪⋯∪TR23(M)is a subset of P, then{a mathematical formula}{b∈INi|ini(b)∈I}={φ(r)|r∈app(bri(M[R1∪cf(R2)]),S)}for every{a mathematical formula}1≤i≤n.
+        </paragraph>
+        <paragraph label="Proof">
+         {a mathematical formula}(⊆): Let {a mathematical formula}b∈{b∈INi|ini(b)∈I} and let {a mathematical formula}{r1,…,rk}=[(i:b)] be the set of bridge rules of {a mathematical formula}M[R1∪cf(R2)] whose head is {a mathematical formula}(i:b). Since {a mathematical formula}I⊨BHEX(tr23(i,b)), it must hold for some rule {a mathematical formula}rj with {a mathematical formula}1≤j≤k that {a mathematical formula}r2(rj)∈I or {a mathematical formula}body(rj)∈I.In the former case it follows that {a mathematical formula}rj∈R2 and thus {a mathematical formula}rj∈app(bri(M[R1∪cf(R2)]),S), hence {a mathematical formula}b∈{φ(r)|r∈app(bri(M[R1∪cf(R2)]),S)}.In the latter case, {a mathematical formula}body(rj)∈I together with rules {a mathematical formula}tr17(rj),…,tr20(rj) implies that each literal in the body of {a mathematical formula}rj is satisfied by the belief state S. Furthermore, from {a mathematical formula}I⊨tr16(rj) it follows that {a mathematical formula}r1(rj)∈I, hence {a mathematical formula}rj∈R1. Therefore, {a mathematical formula}rj∈app(bri(M[R1∪cf(R2)]),S), hence {a mathematical formula}b∈{φ(rj)|app(bri(M[R1∪cf(R2)]),S)}.(⊇) Let {a mathematical formula}b∈app(bri(M[R1∪cf(R2)]),S)} and let {a mathematical formula}{r1,…,rk}=[(i:b)] be the bridge rules in {a mathematical formula}M[R1∪cf(R2)] whose head is {a mathematical formula}(i:b). By definition of applicability, it must hold for some {a mathematical formula}rj with {a mathematical formula}1≤j≤k that either {a mathematical formula}rj∈R2 or {a mathematical formula}rj∈R1 and the body of {a mathematical formula}rj is satisfied w.r.t. S. In the former case {a mathematical formula}r2(rj)∈I and by {a mathematical formula}tr22(rj) it must hold that {a mathematical formula}ini(b)∈I, hence {a mathematical formula}b∈{b∈INi|ini(b)∈I}. In the latter case observe that {a mathematical formula}S⊨rj and as I consistently encodes S and {a mathematical formula}(R1,R2), it holds that {a mathematical formula}I⊨BHEX(tr15(rj)). Therefore {a mathematical formula}ini(b)∈I, hence {a mathematical formula}b∈{b∈INi|ini(b)∈I}.  □Proof of Theorem 5.
+        </paragraph>
+        <paragraph>
+         Recall the concept of a saturated (“spoiled”) interpretation. An interpretation is saturated, if it is a superset of {a mathematical formula}Ispoil, which is defined as follows:{a mathematical formula}
+        </paragraph>
+        <paragraph>
+         Soundness{a mathematical formula}(⇐) Let I be an answer set of {a mathematical formula}PPE(M). Then by Lemma 9I consistently encodes an explanation candidate {a mathematical formula}E=(E1,E2) where {a mathematical formula}E1={r∈br(M)|e1(r)∈I} and {a mathematical formula}E2={r∈br(M)|e2(r)∈I}. We show that E is an explanation of M.
+        </paragraph>
+        <paragraph>
+         Since I is an answer set of {a mathematical formula}PPE(M), it is a minimal model of {a mathematical formula}fPPE(M)I and by Lemma 10 all rules of {a mathematical formula}TR14(M)∪⋯∪TR31(M) are in {a mathematical formula}fPPE(M)I, so I must be a minimal model of those rules. By rule (32) it follows that {a mathematical formula}spoil∈I, therefore for each {a mathematical formula}tr∈TR28(M)∪⋯∪TR31(M) it holds that {a mathematical formula}HHEX(tr)∈I since {a mathematical formula}I⊨BHEX(tr). Therefore, {a mathematical formula}Ispoil⊆I.
+        </paragraph>
+        <paragraph>
+         Towards a contradiction, assume that E is not an explanation. Then, there exists {a mathematical formula}(R1,R2)∈Rg(E) such that {a mathematical formula}M′⊭⊥ holds for {a mathematical formula}M′=M[R1∪cf(R2)], i.e., {a mathematical formula}M′ has an equilibrium {a mathematical formula}S=(S1,…,Sn).
+        </paragraph>
+        <paragraph>
+         Consider the interpretation {a mathematical formula}IS,(R1,R2) corresponding to S and {a mathematical formula}(R1,R2), i.e., {a mathematical formula}I′ is a contradiction-free interpretation regarding {a mathematical formula}r1,nr1,r2,nr2,presi,absi that consistently encodes S and {a mathematical formula}(R1,R2). Let {a mathematical formula}IS,(R1,R2),E=IS,(R1,R2)∪{e1(r)∈I}∪{ne1(r)∈I}∪{e2(r)∈I}∪{ne2(r)∈I} be the interpretation consistently encoding E, S, and {a mathematical formula}(R1,R2). Finally, let {a mathematical formula}Iapp={ini(b)|b∈app(bri(M′),S)}∪{body(r)|r∈R1∧S⊨r} correspond to the set of bridge rule heads and bodies applicable under S. Combining them, we obtain an interpretation {a mathematical formula}I′=IS,(R1,R2),E∪Iapp. Note that {a mathematical formula}I′⊂I, since I is saturated and both I and {a mathematical formula}I′ consistently encode E.
+        </paragraph>
+        <paragraph>
+         As we show in the following, it holds that {a mathematical formula}I′⊨fPPE(M)I:
+        </paragraph>
+        <list>
+         <list-item label="•">
+          For every {a mathematical formula}tr∈TR8(M)∪TR9(M) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}I⊨tr and I agrees with {a mathematical formula}I′ on atoms {a mathematical formula}e1,ne1,e2, and ne2.
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}tr∈TR10(M)∪⋯∪TR13(M) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}(R1,R2)∈Rg(E) and {a mathematical formula}I′ consistently encodes {a mathematical formula}(R1,R2).
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}tr∈TR14(M) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}I′ consistently encodes S.
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}r∈br(M) it holds that {a mathematical formula}I′⊨tr15(r) since {a mathematical formula}Iapp⊆I′ and {a mathematical formula}Iapp is defined such that {a mathematical formula}S|⇝r and {a mathematical formula}r∈R1 implies that {a mathematical formula}body(r)∈I′.
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}r∈br(M) it holds that {a mathematical formula}I′⊨tr16(r) since {a mathematical formula}body(r)∈I′ implies {a mathematical formula}r∈R1, hence by {a mathematical formula}I′ encoding {a mathematical formula}(R1,R2) it follows that {a mathematical formula}r1(r)∈I′.
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}r∈br(M) it holds that {a mathematical formula}I′⊨tr17(r),…I′⊨tr20(r), because {a mathematical formula}body(r)∈I′ only if {a mathematical formula}S⊨r, hence by {a mathematical formula}I′ encoding S the following hold: {a mathematical formula}HHEX(tr17(r))∈I′,…,HHEX(tr20(r))∈I′.
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}r∈br(M) it holds that {a mathematical formula}I′⊨tr21(r), respectively {a mathematical formula}I′⊨tr22(r) since {a mathematical formula}S⊨r and {a mathematical formula}r∈R1, respectively {a mathematical formula}r∈R2, implies that {a mathematical formula}r∈app(bri(M′),S), hence {a mathematical formula}ini(b)∈I′ where {a mathematical formula}i∈ci(M) and {a mathematical formula}φ(r)=b.
+         </list-item>
+         <list-item label="•">
+          For every head {a mathematical formula}(i:b) of a bridge rule it holds that {a mathematical formula}I′⊨tr23(i,b), because: if {a mathematical formula}ini(b)∈I′ for some {a mathematical formula}i∈ci(M), then by definition of {a mathematical formula}I′ there exists {a mathematical formula}r∈app(bri(M′),S) such that one of the following holds:
+         </list-item>
+         <list-item label="•">
+          {a mathematical formula}I′⊨tr24(i) holds for all {a mathematical formula}1≤i≤n: By definition of {a mathematical formula}Iapp, it holds that {a mathematical formula}{b|ini(b)∈I′}=app(bri(M′),S) and since {a mathematical formula}I′ encodes S, it also it holds that {a mathematical formula}{a|presi(a)}=Si. By assumption S is an equilibrium of {a mathematical formula}M′, hence {a mathematical formula}Si∈ACCi(app(bri(M′),S)). Therefore, {a mathematical formula}f&amp;con_outi′(I′,presi,ini)=1 and {a mathematical formula}I′⊭BHEX(tr24(i)).
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}tr∈TR25(M)∪⋯∪TR27(M) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}I′ is conflict-free and {a mathematical formula}I′⊭BHEX(tr).
+         </list-item>
+         <list-item label="•">
+          For every {a mathematical formula}tr∈TR28(M)∪⋯∪TR31(M) it holds that {a mathematical formula}I′⊨tr since {a mathematical formula}spoil∉I′.
+         </list-item>
+         <list-item label="•">
+          Rule (32): is not in the reduct {a mathematical formula}fPPE(M)I, hence it needs not be satisfied by {a mathematical formula}I′.
+         </list-item>
+        </list>
+        <paragraph>
+         Therefore, all rules of {a mathematical formula}fPPE(M)I are satisfied and it follows that {a mathematical formula}I′ is a model of {a mathematical formula}fPPE(M)I. Since {a mathematical formula}I′⊂I, I is not a minimal model of {a mathematical formula}fPPE(M)I, which contradicts that I is an answer set of {a mathematical formula}PPE(M). This proves that {a mathematical formula}E∈E±(M).
+        </paragraph>
+        <paragraph>
+         Completeness{a mathematical formula}(⇒) Let {a mathematical formula}E=(E1,E2)∈E±(M). Then for every {a mathematical formula}(R1,R2)∈Rg(E) it holds that {a mathematical formula}M′⊨⊥ where {a mathematical formula}M′=M[R1∪cf(R2)], i.e., for every belief state {a mathematical formula}S=(S1,…,Sn) exists some {a mathematical formula}1≤i≤n such that {a mathematical formula}Si∉ACCi(app(bri(M′),S)).
+        </paragraph>
+        <paragraph>
+         We show that {a mathematical formula}IE={e1(r)|r∈E1}∪{ne1(r)|r∈br(M)∖E1}∪{e2(r)|r∈E2}∪{ne2(r)|r∈br(M)∖E2}∪Ispoil is an answer set of {a mathematical formula}PPE(M).
+        </paragraph>
+        <paragraph>
+         Since {a mathematical formula}IE contains respective instances for {a mathematical formula}e1,ne1,e2, and ne2, {a mathematical formula}fPPE(M)IE contains the following rules: {a mathematical formula}tr10(r) such that {a mathematical formula}r∈E1; {a mathematical formula}tr11(r) such that {a mathematical formula}r∈br(M)∖E1; {a mathematical formula}tr12(r) such that {a mathematical formula}r∈E2; and {a mathematical formula}tr13(r) such that {a mathematical formula}r∈br(M)∖E2. Furthermore, because {a mathematical formula}IE contains {a mathematical formula}Ispoil, {a mathematical formula}fPPE(M)IE contains all rules in {a mathematical formula}TR8(M)∪TR9(M)∪TR14(M)∪⋯∪TR31(M). Given that {a mathematical formula}Ispoil⊂IE, it is easy to see that {a mathematical formula}IE is a model of {a mathematical formula}fPPE(M)IE. It remains to show that {a mathematical formula}IE is a ⊆-minimal model of {a mathematical formula}fPPE(M)IE.
+        </paragraph>
+        <paragraph>
+         Assume for contradiction that some {a mathematical formula}I′⊂IE is a model of {a mathematical formula}fPPE(M)IE. Observe that {a mathematical formula}IE consistently encodes E by definition. Since it must hold that {a mathematical formula}I′⊨tr where {a mathematical formula}tr∈TR8(M)∪TR9(M) and {a mathematical formula}I′⊂IE, it follows that {a mathematical formula}I′ also consistently encodes E.
+        </paragraph>
+        <paragraph>
+         Since {a mathematical formula}fPPE(M)IE contains rules {a mathematical formula}TR28(M)∪⋯∪TR31(M) which must be satisfied by {a mathematical formula}I′ either {a mathematical formula}spoil∉I′ or all respective heads are in {a mathematical formula}I′, which means that {a mathematical formula}I′ is saturated. The latter implies that {a mathematical formula}I′=IE, which contradicts the assumption {a mathematical formula}I′⊂IE, it follows that {a mathematical formula}spoil∉I′. This requires that {a mathematical formula}I′⊭BHEX(tr) where {a mathematical formula}tr∈TR24(M)∪TR25(M)∪TR26(M)∪TR27(M).
+        </paragraph>
+        <paragraph>
+         Since it holds that {a mathematical formula}I⊭BHEX(tr24(i)) for all {a mathematical formula}1≤i≤n, there exists a contradiction-free guess regarding {a mathematical formula}r1,nr1,r2,nr2,presi,absi such that {a mathematical formula}f&amp;con_outi′(I′,presi,ini)=1. Let {a mathematical formula}S=(S1,…,Sn) be the belief state consistently encoded by {a mathematical formula}I′ and let {a mathematical formula}(R1,R2) be the pair of sets of bridge rules consistently encoded by {a mathematical formula}I′. It holds that {a mathematical formula}(R1,R2)∈Rg(E), because {a mathematical formula}TR10(M) and {a mathematical formula}TR12(M) together with the fact that {a mathematical formula}I′ is contradiction-free ensure: {a mathematical formula}e1(r)∈I′ implies {a mathematical formula}r1(r)∈I′ and {a mathematical formula}r2(r)∈I′ implies that {a mathematical formula}ne2(r)∈I′. In other words, {a mathematical formula}R1⊆E1 and {a mathematical formula}R2⊆br(M)∖E2, hence {a mathematical formula}(R1,R2)∈Rg(E).
+        </paragraph>
+        <paragraph>
+         By Lemma 11, {a mathematical formula}{b∈INi|ini(b)∈I′}={φ(r)|r∈app(bri(M[R1∪cf(R2)]),S)} for every {a mathematical formula}1≤i≤n, which implies that {a mathematical formula}Si∈ACCi({φ(r)|r∈app(bri(M[R1∪cf(R2)]),S)}); i.e., S is an equilibrium of {a mathematical formula}M[R1∪cf(R2)]. Since {a mathematical formula}(R1,R2)∈Rg(E), this contradicts that E is an explanation of M. It follows that no {a mathematical formula}I′⊂IE is a model of {a mathematical formula}fPPE(M)IE. Hence {a mathematical formula}IE is an answer set of {a mathematical formula}PPE(M).  □
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>
